@@ -5,7 +5,10 @@ import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Module.Submodule.Ker
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Nat.Prime.Int
+import Mathlib.Data.Nat.Prime.Infinite
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.Filtration
+import Mathlib.RingTheory.Localization.Submodule
 
 /-!
 # Examples, Chapter 14: Nonsplit locally split sequence
@@ -91,7 +94,34 @@ noncomputable def primeLocalizedIntegerShortComplex :
 theorem primeLocalizedIntegerShortComplex_shortExact :
     (primeLocalizedIntegerShortComplex).ShortExact := by
   apply LinearMap.shortExact_shortComplexKer
-  sorry
+  intro q
+  rcases Nat.exists_infinite_primes (q.den + 1) with ⟨p, hp, hprime⟩
+  have hpd : ¬p ∣ q.den := by
+    intro h
+    have hle : p ≤ q.den := Nat.le_of_dvd (Nat.pos_of_ne_zero q.den_nz) h
+    omega
+  let pp : PrimeIndex := ⟨p, hprime⟩
+  have hpd' : ¬(p : ℤ) ∣ (q.den : ℤ) := by
+    exact fun h => hpd (Int.natCast_dvd_natCast.mp h)
+  have hs : (q.den : ℤ) ∈ (primeIdeal pp).primeCompl := by
+    change (q.den : ℤ) ∉ Ideal.span {(p : ℤ)}
+    simpa [Ideal.mem_span_singleton] using hpd'
+  let x := IsLocalization.mk' (primeLocalizedInteger pp) q.num ⟨q.den, hs⟩
+  refine ⟨DirectSum.lof ℤ PrimeIndex (fun p => primeLocalizedInteger p) pp x, ?_⟩
+  rw [primeLocalizedIntegerSumToRat, DirectSum.toModule_lof]
+  change primeLocalizedIntegerToRat pp x = q
+  dsimp [x]
+  rw [primeLocalizedIntegerToRat, IsLocalization.lift_mk'_spec]
+  change (q.num : ℚ) = (q.den : ℚ) * q
+  have hden : (q.den : ℚ) ≠ 0 := by exact_mod_cast q.den_nz
+  have hq : q = (q.num : ℚ) / q.den := by
+    simpa [Rat.divInt_eq_div] using q.num_divInt_den.symm
+  calc
+    (q.num : ℚ) = (q.num : ℚ) / q.den * q.den :=
+      (div_mul_cancel₀ _ hden).symm
+    _ = q.den * ((q.num : ℚ) / q.den) := by ring
+    _ = q.den * q :=
+      (congrArg (fun z : ℚ => (q.den : ℚ) * z) hq).symm
 
 /-! ## Nonsplitting and localization -/
 
@@ -99,7 +129,39 @@ theorem primeLocalizedIntegerShortComplex_shortExact :
 theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
     (φ : ℚ →ₗ[ℤ] primeLocalizedInteger p) :
     φ = 0 := by
-  sorry
+  let I : Ideal (primeLocalizedInteger p) :=
+    Ideal.map (algebraMap ℤ (primeLocalizedInteger p)) (primeIdeal p)
+  have hI : I ≠ ⊤ := by
+    rw [show I = Ideal.map (algebraMap ℤ (primeLocalizedInteger p)) (primeIdeal p) by rfl,
+      IsLocalization.AtPrime.map_eq_maximalIdeal]
+    exact (IsLocalRing.maximalIdeal.isMaximal _).ne_top
+  apply LinearMap.ext
+  intro q
+  have hmem : φ q ∈ ⨅ n : ℕ, I ^ n := by
+    rw [Ideal.mem_iInf]
+    intro n
+    have hpn : (p.1 : ℚ) ^ n ≠ 0 := by
+      exact pow_ne_zero _ (by exact_mod_cast p.2.ne_zero)
+    have hq : q = (p.1 : ℤ) ^ n • (q / (p.1 : ℚ) ^ n) := by
+      calc
+        q = q / (p.1 : ℚ) ^ n * (p.1 : ℚ) ^ n :=
+          (div_mul_cancel₀ q hpn).symm
+        _ = (p.1 : ℚ) ^ n * (q / (p.1 : ℚ) ^ n) := by ring
+        _ = (p.1 : ℤ) ^ n • (q / (p.1 : ℚ) ^ n) := by
+          simp [Algebra.smul_def]
+    rw [hq, map_smul]
+    have hp : algebraMap ℤ (primeLocalizedInteger p) (p.1 : ℤ) ∈ I :=
+      Ideal.mem_map_of_mem _ (by
+      simpa [primeIdeal] using (Ideal.mem_span_singleton_self (p.1 : ℤ)))
+    have hpow : algebraMap ℤ (primeLocalizedInteger p) ((p.1 : ℤ) ^ n) ∈ I ^ n := by
+      rw [map_pow]
+      exact Ideal.pow_mem_pow hp n
+    simpa only [Algebra.smul_def] using
+      (Ideal.mul_mem_right (φ (q / (p.1 : ℚ) ^ n)) (I ^ n) hpow)
+  have hz : φ q ∈ (⊥ : Ideal (primeLocalizedInteger p)) := by
+    rw [← Ideal.iInf_pow_eq_bot_of_isLocalRing I hI]
+    exact hmem
+  simpa using hz
 
 /-- The displayed short-exact sequence is nonsplit. -/
 theorem primeLocalizedIntegerShortComplex_not_split :

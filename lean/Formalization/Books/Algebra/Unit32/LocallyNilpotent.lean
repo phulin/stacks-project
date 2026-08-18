@@ -277,8 +277,16 @@ theorem idempotent_sub_odd_pow_eq
   have hcube : (e₁ - e₂) ^ 3 = e₁ - e₂ :=
     idempotent_sub_cube_eq he₁ he₂
   have hpow : (e₁ - e₂) ^ (2 * n + 1) = e₁ - e₂ := by
-    induction n <;>
-      simp [mul_add, add_assoc, pow_add _ (2 * _) 3, ← pow_succ, hcube, *]
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        calc
+          (e₁ - e₂) ^ (2 * (n + 1) + 1) =
+              (e₁ - e₂) ^ ((2 * n + 1) + 2) := by congr 1 <;> omega
+          _ = (e₁ - e₂) ^ (2 * n + 1) * (e₁ - e₂) ^ 2 := by rw [pow_add]
+          _ = (e₁ - e₂) * (e₁ - e₂) ^ 2 := by rw [ih]
+          _ = (e₁ - e₂) ^ 3 := by ring
+          _ = e₁ - e₂ := hcube
   exact hpow
 
 theorem exists_idempotent_lift_polynomial
@@ -341,7 +349,7 @@ theorem exists_idempotent_lift_polynomial
   have ev_mul (r s : Polynomial ℤ) : ev (r * s) = ev r * ev s := by
     apply Polynomial.eval₂_mul_noncomm
     intro k
-    simp [ev]
+    simp
   have ev_sub (r s : Polynomial ℤ) : ev (r - s) = ev r - ev s := by
     dsimp [ev]
     rw [Polynomial.eval₂_sub]

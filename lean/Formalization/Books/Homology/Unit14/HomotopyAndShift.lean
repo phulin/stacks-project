@@ -1,5 +1,6 @@
 import Formalization.Books.Homology.Unit13.Complexes
 import Mathlib.Algebra.Torsor.Defs
+import Mathlib.Algebra.Torsor.Basic
 import Mathlib.Algebra.Homology.HomotopyCategory.ShiftSequence
 
 /-!
@@ -210,7 +211,11 @@ theorem chain_homology_shift_functorial
       ∃ eB : B.homology (i + k) ≅ ((shiftFunctor C k).obj B).homology i,
         eA.hom ≫ HomologicalComplex.homologyMap ((shiftFunctor C k).map f) i =
           HomologicalComplex.homologyMap f (i + k) ≫ eB.hom := by
-  sorry
+  let E := chainHomologyShiftComparisonIso (C := C) k i
+  refine ⟨E.app A, E.app B, ?_⟩
+  change E.hom.app A ≫ homologyMap ((shiftFunctor C k).map f) i =
+    homologyMap f (i + k) ≫ E.hom.app B
+  exact (E.hom.naturality f).symm
 
 /-- The shift comparisons can be chosen compatibly with two successive
 shifts and the comparison `shiftFunctor (k + l) ≅ shiftFunctor k ⋙
@@ -224,7 +229,13 @@ theorem chain_homology_shift_coherent
         e.hom ≫
             HomologicalComplex.homologyMap
               ((shift_add (C := C) k l).hom.app K) i = e'.hom := by
-  sorry
+  let e := (chainHomologyShiftComparisonIso (C := C) (k + l) i).app K
+  let q := (HomologicalComplex.homologyFunctor C (ComplexShape.down ℤ) i).mapIso
+    ((shift_add (C := C) k l).app K)
+  refine ⟨e, e ≪≫ q, ?_⟩
+  change e.hom ≫ HomologicalComplex.homologyMap ((shift_add (C := C) k l).hom.app K) i =
+    (e ≪≫ q).hom
+  rfl
 
 end ChainComplex
 
@@ -236,7 +247,85 @@ variable {A B : ChainComplex C ℤ}
 /-- A self-homotopy is parametrized by a map into the shifted target. -/
 theorem chain_homotopy_shift_self (a : A ⟶ B) :
     Nonempty (Homotopy a a ≃ (A ⟶ (shiftFunctor C 1).obj B)) := by
-  sorry
+  let F : Homotopy a a → (A ⟶ (shiftFunctor C 1).obj B) := fun h =>
+    { f := fun i => h.hom i (i + 1)
+      comm' := by
+        intro i j hij
+        simp only [ComplexShape.down] at hij
+        subst i
+        dsimp [shiftFunctor]
+        simp only [Units.neg_smul, one_smul]
+        rw [Preadditive.comp_neg, neg_eq_iff_add_eq_zero]
+        have ht := congrArg (fun z => z - a.f (j + 1)) (h.comm (j + 1))
+        rw [dNext_eq h.hom (show (ComplexShape.down ℤ).Rel (j + 1) j by simp),
+          prevD_eq h.hom
+            (show (ComplexShape.down ℤ).Rel (j + 2) (j + 1) by
+              norm_num [ComplexShape.down, add_assoc])] at ht
+        have hj : j + 1 + 1 = j + 2 := by norm_num [add_assoc]
+        rw [hj]
+        simpa [add_assoc, add_comm, add_left_comm] using ht.symm }
+  let G : (A ⟶ (shiftFunctor C 1).obj B) → Homotopy a a := fun g =>
+    { hom := fun i j => dite (j = i + 1)
+          (fun h => g.f i ≫ (shiftFunctorObjXIso B 1 i j h).hom)
+          (fun _ => 0)
+      zero := by
+        intro i j hij
+        dsimp
+        split_ifs with h
+        · exfalso
+          apply hij
+          simp only [ComplexShape.down]
+          exact h.symm
+        · rfl
+      comm := by
+        intro i
+        let H : ∀ i j, A.X i ⟶ B.X j := fun i j => dite (j = i + 1)
+          (fun h => g.f i ≫ (shiftFunctorObjXIso B 1 i j h).hom)
+          (fun _ => 0)
+        let hi : i = i - 1 + 1 := (sub_add_cancel i 1).symm
+        let ρ := (shiftFunctorObjXIso B 1 (i - 1) i hi).hom
+        have hg := congrArg (fun z => z ≫ ρ) (g.comm i (i - 1))
+        rw [dNext_eq H (show (ComplexShape.down ℤ).Rel i (i - 1) by simp),
+          prevD_eq H (show (ComplexShape.down ℤ).Rel (i + 1) i by
+            norm_num [ComplexShape.down, add_assoc])]
+        simp only [H, dif_pos hi, dif_pos rfl]
+        have hs :
+            (g.f i ≫ (shiftFunctorObjXIso B 1 i (i + 1) rfl).hom) ≫
+                B.d (i + 1) i = g.f i ≫ B.d (i + 1) i := by
+          dsimp [shiftFunctorObjXIso, shiftFunctor]
+          simp only [Category.comp_id]
+        rw [hs]
+        have hz :
+            A.d i (i - 1) ≫ g.f (i - 1) ≫
+                (shiftFunctorObjXIso B 1 (i - 1) i hi).hom +
+              g.f i ≫ B.d (i + 1) i = 0 := by
+          dsimp [shiftFunctor, ρ] at hg
+          simp only [Units.neg_smul, one_smul, Category.assoc,
+            Preadditive.comp_neg] at hg
+          rw [← neg_eq_iff_add_eq_zero]
+          have hg' := congrArg Neg.neg hg
+          convert hg'.symm using 1 <;> simp
+          all_goals exact Eq.refl _
+        rw [hz, zero_add] }
+  refine ⟨{ toFun := F, invFun := G, left_inv := ?_, right_inv := ?_ }⟩
+  · intro h
+    ext i j
+    dsimp [F, G]
+    split_ifs with hij
+    · subst j
+      dsimp [shiftFunctorObjXIso, shiftFunctor]
+      simp only [Category.comp_id]
+    · symm
+      apply h.zero i j
+      intro hji
+      exact hij hji.symm
+  · intro g
+    ext i
+    dsimp [F, G]
+    split_ifs with hij
+    · dsimp [shiftFunctorObjXIso, shiftFunctor]
+      simp only [Category.comp_id]
+    · exact (hij rfl).elim
 
 /-- For two maps, the homotopy set is empty or a principal homogeneous space
 under the additive group of maps into the shifted target. -/
@@ -244,7 +333,47 @@ theorem chain_homotopy_shift_principal (a b : A ⟶ B) :
     IsEmpty (Homotopy a b) ∨
       Nonempty (AddTorsor (A ⟶ (shiftFunctor C 1).obj B)
         (Homotopy a b)) := by
-  sorry
+  classical
+  by_cases hne : Nonempty (Homotopy a b)
+  · right
+    rcases hne with ⟨h₀⟩
+    let e := (chain_homotopy_shift_self (a := a)).some
+    let f : Homotopy a b → (A ⟶ (shiftFunctor C 1).obj B) :=
+      fun h' => e (h'.trans h₀.symm)
+    have hf : Function.Injective f := by
+      intro h₁ h₂ hh
+      have hh' : h₁.trans h₀.symm = h₂.trans h₀.symm := by
+        apply e.injective
+        simpa [f] using hh
+      ext i j
+      have hhij := congrArg (fun z => z.hom i j) hh'
+      dsimp [Homotopy.trans, Homotopy.symm] at hhij
+      exact add_right_cancel hhij
+    have hsurj : Function.Surjective f := by
+      intro c
+      refine ⟨(e.symm c).trans h₀, ?_⟩
+      change e (((e.symm c).trans h₀).trans h₀.symm) = c
+      have heq : ((e.symm c).trans h₀).trans h₀.symm = e.symm c := by
+        ext i j
+        simp [Homotopy.trans, Homotopy.symm, add_assoc]
+      rw [heq, e.apply_symm_apply]
+    let q : Homotopy a b ≃ (A ⟶ (shiftFunctor C 1).obj B) :=
+      Equiv.ofBijective f ⟨hf, hsurj⟩
+    let vadd : VAdd (A ⟶ (shiftFunctor C 1).obj B) (Homotopy a b) :=
+      ⟨fun c h' => q.symm (c + q h')⟩
+    let vsub : VSub (A ⟶ (shiftFunctor C 1).obj B) (Homotopy a b) :=
+      ⟨fun h₁ h₂ => q h₁ - q h₂⟩
+    let hQ : Nonempty (Homotopy a b) := ⟨h₀⟩
+    refine ⟨@Function.Injective.addTorsor _ _ _ inferInstance inferInstance
+      vadd vsub hQ f hf ?_ ?_⟩
+    · intro c h'
+      change f (vadd.vadd c h') = c + f h'
+      change q (q.symm (c + q h')) = c + q h'
+      exact q.apply_symm_apply _
+    · intro h₁ h₂
+      change vsub.vsub h₁ h₂ = f h₁ - f h₂
+      apply Eq.refl
+  · exact Or.inl ⟨fun x => hne ⟨x⟩⟩
 
 end ChainComplex
 

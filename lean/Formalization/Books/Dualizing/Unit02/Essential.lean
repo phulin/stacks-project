@@ -196,7 +196,66 @@ theorem essentialSurjection_comp {𝒜 : Type u} [Category.{v} 𝒜] [Abelian �
     {A B D : 𝒜} (f : A ⟶ B) (g : B ⟶ D)
     (hf : EssentialSurjection f) (hg : EssentialSurjection g) :
     EssentialSurjection (f ≫ g) := by
-  sorry
+  rcases hf with ⟨hf, hfess⟩
+  rcases hg with ⟨hg, hgess⟩
+  constructor
+  · infer_instance
+  · intro P hP
+    have hQ : (Subobject.«exists» f).obj P ≠ (⊤ : Subobject B) := hfess P hP
+    have hR : (Subobject.«exists» g).obj ((Subobject.«exists» f).obj P) ≠
+        (⊤ : Subobject D) := hgess _ hQ
+    intro hzero
+    apply hR
+    apply top_unique
+    have hle :
+        (Subobject.«exists» (f ≫ g)).obj P ≤
+          (Subobject.«exists» g).obj ((Subobject.«exists» f).obj P) := by
+      let Ff := Subobject.imageFactorisation f P
+      let Fg := Subobject.imageFactorisation g ((Subobject.«exists» f).obj P)
+      let Fc := Subobject.imageFactorisation (f ≫ g) P
+      have hIf : Ff.F.I = ((Subobject.«exists» f).obj P : 𝒜) := rfl
+      have hIg : Fg.F.I =
+          ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P) : 𝒜) := rfl
+      let F' : MonoFactorisation (P.arrow ≫ f ≫ g) :=
+        { I := ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P) : 𝒜)
+          m := ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P)).arrow
+          m_mono := inferInstance
+          e := Ff.F.e ≫ eqToHom hIf ≫ Fg.F.e ≫ eqToHom hIg
+          fac := by
+            have hmf : Ff.F.m = ((Subobject.«exists» f).obj P).arrow := by
+              exact Subobject.imageFactorisation_F_m f P
+            have hmg : Fg.F.m =
+                ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P)).arrow := by
+              exact Subobject.imageFactorisation_F_m g ((Subobject.«exists» f).obj P)
+            have hIfcomp : eqToHom hIf ≫ ((Subobject.«exists» f).obj P).arrow = Ff.F.m := by
+              rw [eqToHom_comp_iff]
+              exact hmf.symm.trans (eq_of_heq (eqToHom_comp_heq Ff.F.m hIf.symm).symm)
+            have hIgcomp : eqToHom hIg ≫
+                ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P)).arrow = Fg.F.m := by
+              rw [eqToHom_comp_iff]
+              exact hmg.symm.trans (eq_of_heq (eqToHom_comp_heq Fg.F.m hIg.symm).symm)
+            calc
+              (Ff.F.e ≫ eqToHom hIf ≫ Fg.F.e ≫ eqToHom hIg) ≫
+                  ((Subobject.«exists» g).obj ((Subobject.«exists» f).obj P)).arrow =
+                  Ff.F.e ≫ eqToHom hIf ≫ (Fg.F.e ≫ Fg.F.m) := by
+                    simp only [Category.assoc]
+                    rw [hIgcomp]
+              _ = Ff.F.e ≫
+                  eqToHom hIf ≫ (((Subobject.«exists» f).obj P).arrow ≫ g) := by
+                    rw [Fg.F.fac]
+              _ = Ff.F.e ≫ Ff.F.m ≫ g := by
+                    rw [← Category.assoc (eqToHom hIf)
+                      ((Subobject.«exists» f).obj P).arrow g, hIfcomp]
+              _ = P.arrow ≫ f ≫ g := by
+                simp only [← Category.assoc, Ff.F.fac] }
+      let q := Fc.isImage.lift F'
+      refine Subobject.le_of_comm q ?_
+      dsimp [q]
+      change Fc.isImage.lift F' ≫ F'.m = Fc.F.m
+      exact Fc.isImage.lift_fac F'
+    calc
+      (⊤ : Subobject D) = (Subobject.«exists» (f ≫ g)).obj P := hzero.symm
+      _ ≤ (Subobject.«exists» g).obj ((Subobject.«exists» f).obj P) := hle
 
 /-! The quotient appearing in the fourth assertion. -/
 
@@ -231,7 +290,120 @@ theorem essentialSurjection_quotient
     {A B D : 𝒜} (f : A ⟶ B) (g : A ⟶ D)
     (hf : EssentialSurjection f) [Epi g] :
     EssentialSurjection (essentialQuotientMap f g) := by
-  sorry
+  rcases hf with ⟨hf, hfess⟩
+  let e := essentialQuotientMap f g
+  let q := quotientByImageOfKernelProjection f g
+  letI : Epi q := by
+    dsimp [q, quotientByImageOfKernelProjection]
+    infer_instance
+  have heq : g ≫ e = f ≫ q := by
+    dsimp [e, essentialQuotientMap, q]
+    exact Abelian.comp_epiDesc g (f ≫ cokernel.π (kernel.ι g ≫ f)) _
+  haveI : Epi e := by
+    haveI : Epi (f ≫ q) := by infer_instance
+    haveI : Epi (g ≫ e) := by rw [heq]; infer_instance
+    exact epi_of_epi g e
+  constructor
+  · infer_instance
+  · intro P hP
+    let Q : Subobject A := (Subobject.pullback g).obj P
+    let a := Subobject.pullbackπ g P
+    have hcond : a ≫ P.arrow = Q.arrow ≫ g := by
+      dsimp [a, Q]
+      exact (Subobject.isPullback g P).w
+    haveI : Epi a := by
+      dsimp [a]
+      exact Abelian.epi_fst_of_isLimit P.arrow g (Subobject.isPullback g P).isLimit
+    have hQ : Q ≠ (⊤ : Subobject A) := by
+      intro hQ
+      apply hP
+      letI : IsIso Q.arrow := (Subobject.isIso_arrow_iff_eq_top Q).2 hQ
+      haveI : Epi (Q.arrow ≫ g) := inferInstance
+      haveI : Epi (a ≫ P.arrow) := by
+        rw [hcond]
+        infer_instance
+      haveI : Epi P.arrow :=
+        epi_of_epi_fac (f := a) (g := P.arrow) (h := a ≫ P.arrow) rfl
+      haveI : IsIso P.arrow := isIso_of_mono_of_epi _
+      exact (Subobject.isIso_arrow_iff_eq_top P).mp inferInstance
+    intro hzero
+    have hpe : Epi (P.arrow ≫ e) := by
+      let Fx := Subobject.imageFactorisation e P
+      have hmx : Fx.F.m = ((Subobject.«exists» e).obj P).arrow := by
+        exact Subobject.imageFactorisation_F_m e P
+      have htop : Subobject.mk Fx.F.m = (⊤ : Subobject (quotientByImageOfKernel f g)) := by
+        have hmk : Subobject.mk Fx.F.m =
+            Subobject.mk ((Subobject.«exists» e).obj P).arrow := by
+          apply Subobject.mk_eq_mk_of_comm Fx.F.m
+            ((Subobject.«exists» e).obj P).arrow (Iso.refl _)
+          change (𝟙 _ ≫ ((Subobject.«exists» e).obj P).arrow) = Fx.F.m
+          rw [Category.id_comp]
+          exact hmx.symm
+        rw [hmk, Subobject.mk_arrow, hzero]
+      haveI : IsIso Fx.F.m := (Subobject.isIso_iff_mk_eq_top _).2 htop
+      haveI : Epi Fx.F.e := by
+        have h := IsImage.e_isoExt_hom
+          (Abelian.imageStrongEpiMonoFactorisation (P.arrow ≫ e)).toMonoIsImage
+          Fx.isImage
+        rw [← h]
+        infer_instance
+      rw [← Fx.F.fac]
+      infer_instance
+    have hrel : Q.arrow ≫ f ≫ q = a ≫ (P.arrow ≫ e) := by
+      rw [← heq, ← Category.assoc Q.arrow g e, ← hcond]
+      exact Category.assoc _ _ _
+    haveI : Epi (Q.arrow ≫ f ≫ q) := by
+      rw [hrel]
+      infer_instance
+    have hQf : Epi (Q.arrow ≫ f) := by
+      apply Preadditive.epi_of_cancel_zero
+      intro Z d hd
+      let k := kernel.ι g ≫ f
+      have hk : k ≫ d = 0 := by
+        let l := (Subobject.isPullback g P).lift (0 : kernel g ⟶ (P : 𝒜))
+          (kernel.ι g) (by simp)
+        have hl : l ≫ Q.arrow = kernel.ι g := by
+          dsimp [l, Q]
+          simp
+        dsimp [k]
+        calc
+          k ≫ d = (l ≫ Q.arrow) ≫ f ≫ d := by
+            change (kernel.ι g ≫ f) ≫ d = (l ≫ Q.arrow) ≫ f ≫ d
+            simpa only [Category.assoc] using
+              (congrArg (fun x => x ≫ f ≫ d) hl).symm
+          _ = l ≫ ((Q.arrow ≫ f) ≫ d) := by simp only [Category.assoc]
+          _ = 0 := by rw [hd, comp_zero]
+      let l := cokernel.desc (kernel.ι g ≫ f) d (by simpa [k] using hk)
+      have hld : q ≫ l = d := by
+        dsimp [l, q, quotientByImageOfKernelProjection, quotientByImageOfKernel]
+        exact cokernel.π_desc _ _ _
+      have hlzero : l = 0 := by
+        apply zero_of_epi_comp (Q.arrow ≫ f ≫ q)
+        have h' : (Q.arrow ≫ f) ≫ (q ≫ l) = 0 := by
+          rw [hld, hd]
+        simpa [Category.assoc] using h'
+      rw [← hld, hlzero, comp_zero]
+    have htop : (Subobject.«exists» f).obj Q = (⊤ : Subobject B) := by
+      let Fq := Subobject.imageFactorisation f Q
+      haveI : Epi (Fq.F.e ≫ Fq.F.m) := by
+        rw [Fq.F.fac]
+        infer_instance
+      haveI : Epi Fq.F.m := epi_of_epi Fq.F.e Fq.F.m
+      haveI : IsIso Fq.F.m := isIso_of_mono_of_epi _
+      have hm : Subobject.mk Fq.F.m = (⊤ : Subobject B) :=
+        (Subobject.isIso_iff_mk_eq_top _).mp inferInstance
+      have hmf : Fq.F.m = ((Subobject.«exists» f).obj Q).arrow := by
+        exact Subobject.imageFactorisation_F_m f Q
+      have hmk : Subobject.mk Fq.F.m =
+          Subobject.mk ((Subobject.«exists» f).obj Q).arrow := by
+        apply Subobject.mk_eq_mk_of_comm Fq.F.m
+          ((Subobject.«exists» f).obj Q).arrow (Iso.refl _)
+        change (𝟙 _ ≫ ((Subobject.«exists» f).obj Q).arrow) = Fq.F.m
+        rw [Category.id_comp]
+        exact hmf.symm
+      rw [hmk, Subobject.mk_arrow] at hm
+      exact hm
+    exact hfess Q hQ htop
 
 /-! ## Filtered unions of essential extensions -/
 

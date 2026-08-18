@@ -292,8 +292,12 @@ theorem modifiedProduct_sections_need_not_equal_basis_subgroup :
 stalk functor.  Its witness is left existential here because the source does
 not specify a particular topological space or construction. -/
 theorem exists_exact_functor_not_a_stalk_functor :
-    ∃ (X : TopCat.{v}) (F : Sh.{v, v} X ⥤ Type v),
-      IsExact F ∧ ¬ IsStalkFunctor F := by
+    ∃ (X : TopCat.{v})
+      (hL : HasFiniteLimits (Sh.{v, v} X))
+      (hC : HasFiniteColimits (Sh.{v, v} X))
+      (F : Sh.{v, v} X ⥤ Type v),
+      @IsExact (Sh.{v, v} X) _ (Type v) _ hL hC F ∧
+        ¬ IsStalkFunctor F := by
   sorry
 
 end

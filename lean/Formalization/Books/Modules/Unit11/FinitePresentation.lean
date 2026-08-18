@@ -46,6 +46,15 @@ def HasFinitePresentationOn {X : RingedSpace.{v}}
         Mod (ringedOpenSubspace X U).structureSheaf)),
     Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ)
 
+/-- The generators-and-relations form of a finite presentation on an open.
+
+This is Mathlib's canonical packaging of the two clauses following the
+source definition: finitely many sections generate the restriction, and
+finitely many sections generate the kernel of the resulting epimorphism. -/
+def HasFiniteGeneratorsAndRelationsOn {X : RingedSpace.{v}}
+    (F : Mod X.structureSheaf) (U : Opens X.carrier) : Prop :=
+  ∃ P : ((openModuleRestrictionFunctor X U).obj F).Presentation, P.IsFinite
+
 /-- The pointwise local form of finite presentation. -/
 def LocallyFinitePresentation {X : RingedSpace.{v}}
     (F : Mod X.structureSheaf) : Prop :=
@@ -67,6 +76,13 @@ formulation. -/
 theorem isFinitePresentation_iff_locallyFinitePresentation
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
     IsFinitePresentation F ↔ LocallyFinitePresentation F := by
+  sorry
+
+/-- The finite-cokernel and finite-generators-and-relations descriptions on
+an open are equivalent. -/
+theorem hasFinitePresentationOn_iff_hasFiniteGeneratorsAndRelationsOn
+    {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier) :
+    HasFinitePresentationOn F U ↔ HasFiniteGeneratorsAndRelationsOn F U := by
   sorry
 
 /-- The displayed finite-cokernel sequence is exact, and conversely an exact

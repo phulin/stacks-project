@@ -13,7 +13,10 @@ unramified algebra.  Mathlib's `Algebra.Extension` is the canonical interface
 for a surjection of algebras, and its `Cotangent` is the canonical
 presentation-independent `I/I²` module.  The declarations below add the
 universal property and record the quotient, localization, and differential
-statements from the source section.
+statements from the source section.  The universal-property predicate itself
+is stated independently of the hypothesis used by the existence lemma, which
+lets the quotient construction be recorded directly before relating it to a
+chosen universal thickening.
 -/
 
 namespace Formalization.Books.Algebra.Unit149
@@ -82,6 +85,12 @@ noncomputable def universalFirstOrderThickeningMap
     (universalFirstOrderThickening h).Ring →ₐ[R] S :=
   IsScalarTower.toAlgHom R (universalFirstOrderThickening h).Ring S
 
+theorem universalFirstOrderThickeningMap_surjective
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (h : Algebra.FormallyUnramified R S) :
+    Function.Surjective (universalFirstOrderThickeningMap h) :=
+  (universalFirstOrderThickening h).algebraMap_surjective
+
 /-- The conormal module, represented by Mathlib's canonical `I/I²` module. -/
 abbrev conormalModule
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -115,6 +124,11 @@ noncomputable def quotientFirstOrderThickeningMap
     (quotientFirstOrderThickening I).Ring →ₐ[R] R ⧸ I :=
   IsScalarTower.toAlgHom R (quotientFirstOrderThickening I).Ring (R ⧸ I)
 
+theorem quotientFirstOrderThickeningMap_surjective
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Function.Surjective (quotientFirstOrderThickeningMap I) :=
+  (quotientFirstOrderThickening I).algebraMap_surjective
+
 /-- The quotient `R/I² → R/I` is the universal first-order thickening. -/
 theorem universal_first_order_thickening_quotient
     {R : Type u} [CommRing R] (I : Ideal R) :
@@ -124,6 +138,13 @@ theorem universal_first_order_thickening_quotient
 /-- The quotient description of the conormal module is `I/I²`. -/
 abbrev quotientConormalModule
     {R : Type u} [CommRing R] (I : Ideal R) : Type u := I.Cotangent
+
+theorem quotient_first_order_thickening_conormal
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty
+      ((quotientFirstOrderThickening I).Cotangent ≃ₗ[R ⧸ I]
+        quotientConormalModule I) := by
+  sorry
 
 theorem conormalModule_quotient
     {R : Type u} [CommRing R] (I : Ideal R)

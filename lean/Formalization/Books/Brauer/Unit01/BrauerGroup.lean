@@ -599,8 +599,7 @@ private theorem base_change_similarity (k k' : Type*) [Field k] [Field k']
               apply q.injective
               simp [hq]
             rw [hq']
-            simp [Algebra.TensorProduct.comm_tmul,
-              Matrix.one_apply]
+            simp [Algebra.TensorProduct.comm_tmul]
           have hmtA' :
               matrixTensorEquiv k A'.carrier k' m
                   (Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r)) =
@@ -671,8 +670,7 @@ private theorem base_change_similarity (k k' : Type*) [Field k] [Field k']
               apply q.injective
               simp [hq]
             rw [hq']
-            simp [Algebra.TensorProduct.comm_tmul,
-              Matrix.one_apply]
+            simp [Algebra.TensorProduct.comm_tmul]
           change gk (Matrix.scalar (Fin n) ((1 : A.carrier) ⊗ₜ[k] r)) =
             Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r)
           change (matrixTensorEquiv k A'.carrier k' m).symm
@@ -760,7 +758,7 @@ theorem brauer_group_is_abelian (k : Type*) [Field k] :
           brauerClass k (tensorCSA k B A)
         exact Quotient.sound (tensor_similarity_comm k A B) }
   refine ⟨G, ?_⟩
-  letI : CommGroup (BrauerGroup k) := G
+  let : CommGroup (BrauerGroup k) := G
   refine ⟨rfl, ?_, ?_⟩
   · intro A B
     refine ⟨tensorCSA k A B, ?_, ?_⟩
@@ -829,10 +827,10 @@ private theorem base_change_tensor_equiv (k k' : Type*) [Field k] [Field k']
                     ← Algebra.smul_def r y]
                   exact (mul_smul_comm r x y).symm
                 simp [TensorProduct.AlgebraTensorModule.cancelBaseChange,
-                  Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+                  Algebra.smul_def, mul_assoc]
                 rw [hcent r₂ a₁ a₂]
             | add r₂ s₂ hr₂ hs₂ =>
-                simp only [mul_add, TensorProduct.tmul_add, map_add, add_mul, hr₂, hs₂]
+                simp only [mul_add, TensorProduct.tmul_add, map_add, hr₂, hs₂]
         | add r₁ s₁ hr₁ hs₁ =>
             simp only [add_mul, TensorProduct.tmul_add, map_add, hr₁, hs₁])
       (by
@@ -884,15 +882,15 @@ private noncomputable def shrunkBaseChangeCSA (k : Type u_k) (k' : Type u_A)
   let _ : Algebra k' (A.carrier ⊗[k] k') :=
     Algebra.TensorProduct.rightAlgebra
   let C := baseChangeCSA k k' A
-  letI : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
-  letI : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
-  letI : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
-  letI : Small.{u_A} (A.carrier ⊗[k] k') :=
+  let : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
+  let : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
+  let : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
+  let : Small.{u_A} (A.carrier ⊗[k] k') :=
     Module.Finite.small k' (A.carrier ⊗[k] k')
   let e : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ (A.carrier ⊗[k] k') :=
     (equivShrink (A.carrier ⊗[k] k')).symm
-  letI : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
-  letI : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
+  let : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
+  let : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
   let ealg : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ₐ[k']
       (A.carrier ⊗[k] k') := Equiv.algEquiv k' e
   exact
@@ -926,15 +924,15 @@ private theorem shrunk_base_change_equiv (k : Type u_k) (k' : Type u_A)
     Algebra.TensorProduct.rightAlgebra
   dsimp [shrunkBaseChangeCSA]
   let C := baseChangeCSA k k' A
-  letI : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
-  letI : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
-  letI : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
-  letI : Small.{u_A} (A.carrier ⊗[k] k') :=
+  let : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
+  let : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
+  let : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
+  let : Small.{u_A} (A.carrier ⊗[k] k') :=
     Module.Finite.small k' (A.carrier ⊗[k] k')
   let e : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ (A.carrier ⊗[k] k') :=
     (equivShrink (A.carrier ⊗[k] k')).symm
-  letI : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
-  letI : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
+  let : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
+  let : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
   let ealg : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ₐ[k']
       (A.carrier ⊗[k] k') := Equiv.algEquiv k' e
   exact ⟨ealg.symm⟩

@@ -25,7 +25,7 @@ theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
   classical
   let E := Module.End Aᵐᵒᵖ M
   let T := Module.End E M
-  letI : Nontrivial M := Submodule.nontrivial_iff_ne_bot.mpr hM
+  let : Nontrivial M := Submodule.nontrivial_iff_ne_bot.mpr hM
   let r : Aᵐᵒᵖ →+* T := Module.toModuleEnd E (S := Aᵐᵒᵖ) M
   have hr : Function.Bijective r := by
     constructor
@@ -38,7 +38,7 @@ theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
           intro htop
           exact (not_subsingleton M)
             (Module.annihilator_eq_top_iff.mp htop))
-      letI : FaithfulSMul Aᵐᵒᵖ M := Module.annihilator_eq_bot.mp hAnn
+      let : FaithfulSMul Aᵐᵒᵖ M := Module.annihilator_eq_bot.mp hAnn
       apply FaithfulSMul.eq_of_smul_eq_smul (α := M)
       intro m
       exact DFunLike.congr_fun hab m
@@ -47,7 +47,7 @@ theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
         ((LinearMap.mulLeft Aᵐᵒᵖ (n : A)).domRestrict M).codRestrict M
           (fun z => M.smul_mem (MulOpposite.op (z : A)) n.property)
       let I : Ideal A := Submodule.span A (M : Set A)
-      letI : I.IsTwoSided := ⟨fun b ha => by
+      let : I.IsTwoSided := ⟨fun b ha => by
         induction ha using Submodule.span_induction with
         | mem x hx =>
             exact Submodule.subset_span (by simpa using M.smul_mem (MulOpposite.op b) hx)

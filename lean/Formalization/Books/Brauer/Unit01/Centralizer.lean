@@ -95,26 +95,26 @@ private theorem centralizer_core_dimension (k A : Type*) [Field k] [Ring A]
       Module.finrank k C' := by
   obtain ⟨n, hn, K, hK, hKalg, hKfinite, ⟨eMatrix⟩, _⟩ :=
     finite_module_end_is_matrix_and_double_commutant k D M
-  letI : NeZero n := hn
-  letI : DivisionRing K := hK
-  letI : Algebra k K := hKalg
-  letI : FiniteDimensional k K := hKfinite
+  let : NeZero n := hn
+  let : DivisionRing K := hK
+  let : Algebra k K := hKalg
+  let : FiniteDimensional k K := hKfinite
   have hEsimple : IsSimpleRing (Module.End D M) := by
     exact IsSimpleRing.of_ringEquiv eMatrix.toRingEquiv.symm inferInstance
   obtain ⟨S, hS⟩ := finite_algebra_has_simple_submodule k D
-  letI : IsSimpleModule D S := hS
-  letI : Nontrivial S := IsSimpleModule.nontrivial D S
-  letI : Module.Finite k S :=
+  let : IsSimpleModule D S := hS
+  let : Nontrivial S := IsSimpleModule.nontrivial D S
+  let : Module.Finite k S :=
     simple_module_over_finite_algebra_is_finite_dimensional k D S
   obtain ⟨nM, ⟨eM⟩⟩ := finite_module_is_direct_sum_of_simple k D M S
   have hEdim : Module.finrank k (Module.End D M) = nM ^ 2 *
       Module.finrank k (Module.End D S) := by
     let comm_D_k_M' : SMulCommClass D k M :=
       smulCommClass_of_algebra k D M
-    letI : SMulCommClass D k M := comm_D_k_M'
+    let : SMulCommClass D k M := comm_D_k_M'
     let comm_D_k_S' : SMulCommClass D k S :=
       smulCommClass_of_algebra k D S
-    letI : SMulCommClass D k S := comm_D_k_S'
+    let : SMulCommClass D k S := comm_D_k_S'
     exact @finrank_end_finrank_of_linearEquiv k D M S nM
       _ _ _ _ inferInstance _ comm_D_k_M' inferInstance _ _ _ comm_D_k_S' _ eM
   have hnM : nM ≠ 0 := by
@@ -122,7 +122,7 @@ private theorem centralizer_core_dimension (k A : Type*) [Field k] [Ring A]
     subst nM
     have hnontriv : Nontrivial (Fin 0 → S) := eM.injective.nontrivial
     exact (not_nontrivial (Fin 0 → S)) hnontriv
-  letI : Module.Free k S := Module.Free.of_divisionRing k S
+  let : Module.Free k S := Module.Free.of_divisionRing k S
   let eMk := eM.restrictScalars k
   have hMdim : Module.finrank k M = nM * Module.finrank k S := by
     exact finrank_eq_mul_finrank_of_linearEquiv k M S nM eMk
@@ -170,21 +170,21 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
           Module.finrank k (Subalgebra.centralizer k (B' : Set A)) := by
     classical
     intro B' hB'
-    letI : IsSimpleRing B' := hB'
+    let : IsSimpleRing B' := hB'
     let C' : Subalgebra k A := Subalgebra.centralizer k (B' : Set A)
     change IsSimpleRing C' ∧
       Module.finrank k A = Module.finrank k B' * Module.finrank k C'
     obtain ⟨M, hM⟩ := finite_algebra_has_simple_submodule k A
-    letI : IsSimpleModule A M := hM
-    letI : Nontrivial M := IsSimpleModule.nontrivial A M
-    letI : Module.Finite k M :=
+    let : IsSimpleModule A M := hM
+    let : Nontrivial M := IsSimpleModule.nontrivial A M
+    let : Module.Finite k M :=
       simple_module_over_finite_algebra_is_finite_dimensional k A M
     let L := Module.End A M
-    letI : FiniteDimensional k L :=
+    let : FiniteDimensional k L :=
       (simple_module_center_and_dimension k A M).2.1
     let eCenter : Subalgebra.center k A ≃ₐ[k] Subalgebra.center k L :=
       Classical.choice (simple_module_center_and_dimension k A M).1
-    letI : Algebra.IsCentral k L := by
+    let : Algebra.IsCentral k L := by
       constructor
       intro z hz
       let z' : Subalgebra.center k A := eCenter.symm ⟨z, hz⟩
@@ -197,7 +197,7 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
         exact hr.symm
       have hz'' := congrArg (fun w : Subalgebra.center k A => (eCenter w : L)) hz'
       have hza : (eCenter za : L) = algebraMap k L r := by
-        simpa [za] using eCenter.commutes r
+        simp [za]
       calc
         algebraMap k L r = (eCenter za : L) := hza.symm
         _ = (eCenter z' : L) := hz''.symm
@@ -205,7 +205,7 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
     let module_B : Module B' M := Module.compHom M B'.val.toRingHom
     let tower_B : @IsScalarTower k B' M _
         module_B.toDistribMulAction.toSMul _ := by
-      letI : Module B' M := module_B
+      let : Module B' M := module_B
       exact IsScalarTower.of_algebraMap_smul (R := k) (A := B') (M := M)
         (fun r m => by
           change B'.val (algebraMap k B' r) • m = r • m
@@ -214,7 +214,7 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
     let tower_L : IsScalarTower k L M := Module.End.apply_isScalarTower
     let comm_B_L : @SMulCommClass B' L M
         module_B.toDistribMulAction.toSMul _ := by
-      letI : Module B' M := module_B
+      let : Module B' M := module_B
       exact ⟨by
         intro b l m
         change (b : A) • (l • m) = l • ((b : A) • m)
@@ -228,11 +228,11 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
       exact TensorProduct.Algebra.module
     let tower_D : @IsScalarTower k D M _
         module_D.toDistribMulAction.toSMul _ := by
-      letI : Module B' M := module_B
-      letI : IsScalarTower k B' M := tower_B
-      letI : IsScalarTower k L M := tower_L
-      letI : SMulCommClass B' L M := comm_B_L
-      letI : Module D M := module_D
+      let : Module B' M := module_B
+      let : IsScalarTower k B' M := tower_B
+      let : IsScalarTower k L M := tower_L
+      let : SMulCommClass B' L M := comm_B_L
+      let : Module D M := module_D
       exact IsScalarTower.of_algebraMap_smul (R := k) (A := D) (M := M)
         (fun r m => by
           change (algebraMap k (B' ⊗[k] L) r) • m = r • m
@@ -243,18 +243,18 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
           rw [one_smul]
           exact IsScalarTower.algebraMap_smul L r m)
     let finite_D : @Module.Finite D M _ _ module_D := by
-      letI : Module D M := module_D
-      letI : IsScalarTower k D M := tower_D
+      let : Module D M := module_D
+      let : IsScalarTower k D M := tower_D
       exact Module.Finite.of_restrictScalars_finite k D M
-    letI : IsSimpleRing D := tensor_product_simple_of_simple_algebras k B' L
-    letI : FiniteDimensional k D := inferInstance
-    letI : Module D M := module_D
-    letI : IsScalarTower k D M := tower_D
-    letI : Module.Finite D M := finite_D
+    let : IsSimpleRing D := tensor_product_simple_of_simple_algebras k B' L
+    let : FiniteDimensional k D := inferInstance
+    let : Module D M := module_D
+    let : IsScalarTower k D M := tower_D
+    let : Module.Finite D M := finite_D
     let E := Module.End D M
     let comm_A_L : @SMulCommClass A L M _ _ :=
       ⟨fun a l m => (l.map_smul a m).symm⟩
-    letI : SMulCommClass A L M := comm_A_L
+    let : SMulCommClass A L M := comm_A_L
     let rho : A →ₐ[k] Module.End L M :=
       { toRingHom := Module.toModuleEnd L (S := A) M
         commutes' := by
@@ -269,7 +269,7 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
         intro htop
         exact (not_subsingleton M)
           (Module.annihilator_eq_top_iff.mp htop))
-    letI : FaithfulSMul A M := Module.annihilator_eq_bot.mp hAnn
+    let : FaithfulSMul A M := Module.annihilator_eq_bot.mp hAnn
     have hrho : Function.Injective rho := by
       intro a b h
       apply (Module.toModuleEnd L (S := A) M).injective
@@ -297,10 +297,10 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
                 map_add' := u.map_add
                 map_smul' := by
                   intro l m
-                  letI : Module B' M := module_B
-                  letI : IsScalarTower k B' M := tower_B
-                  letI : IsScalarTower k L M := tower_L
-                  letI : SMulCommClass B' L M := comm_B_L
+                  let : Module B' M := module_B
+                  let : IsScalarTower k B' M := tower_B
+                  let : IsScalarTower k L M := tower_L
+                  let : SMulCommClass B' L M := comm_B_L
                   have hs : ((1 : B') ⊗ₜ[k] l) • m = l • m := by
                     change (1 : B') • (l • m) = l • m
                     simp
@@ -339,10 +339,10 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
       simp [e_toA, rhoE]
       change rho (b : A) * e_toEnd u = e_toEnd u * rho (b : A)
       ext m
-      letI : Module B' M := module_B
-      letI : IsScalarTower k B' M := tower_B
-      letI : IsScalarTower k L M := tower_L
-      letI : SMulCommClass B' L M := comm_B_L
+      let : Module B' M := module_B
+      let : IsScalarTower k B' M := tower_B
+      let : IsScalarTower k L M := tower_L
+      let : SMulCommClass B' L M := comm_B_L
       have hs : ((⟨b, hb⟩ : B') ⊗ₜ[k] (1 : L)) • m = (b : A) • m := by
         change (b : A) • ((1 : L) • m) = (b : A) • m
         simp
@@ -375,10 +375,10 @@ private theorem centralizer_core (k A : Type*) [Field k] [Ring A] [Algebra k A]
             exact (rho (z : A)).map_add x y
           map_smul' := by
             intro d m
-            letI : Module B' M := module_B
-            letI : IsScalarTower k B' M := tower_B
-            letI : IsScalarTower k L M := tower_L
-            letI : SMulCommClass B' L M := comm_B_L
+            let : Module B' M := module_B
+            let : IsScalarTower k B' M := tower_B
+            let : IsScalarTower k L M := tower_L
+            let : SMulCommClass B' L M := comm_B_L
             induction d using TensorProduct.induction_on with
             | zero =>
                 rw [zero_smul (M₀ := D) (A := M) m]
@@ -485,9 +485,9 @@ theorem central_simple_tensor_decomposition (k A : Type*) [Field k]
     apply Subtype.ext
     have hr' := congrArg Subtype.val hr
     simpa [xB] using hr'
-  letI : IsSimpleRing C := hCsimple
-  letI : Algebra.IsCentral k C := hCcentral
-  letI : IsSimpleRing (B ⊗[k] C) :=
+  let : IsSimpleRing C := hCsimple
+  let : Algebra.IsCentral k C := hCcentral
+  let : IsSimpleRing (B ⊗[k] C) :=
     tensor_product_simple_of_simple_algebras k B C
   let f : B ⊗[k] C →ₐ[k] A :=
     Algebra.TensorProduct.lift B.val C.val (by
@@ -518,7 +518,7 @@ theorem self_centralizing_subfield_tfae (k A K : Type*) [Field k] [Ring A]
   let eK : K ≃ₐ[k] S := AlgEquiv.ofInjective f hf
   have hSdim : Module.finrank k S = Module.finrank k K :=
     eK.toLinearEquiv.finrank_eq.symm
-  haveI : IsSimpleRing S :=
+  have : IsSimpleRing S :=
     IsSimpleRing.of_ringEquiv eK.toRingEquiv inferInstance
   have hScomm : ∀ x y : S, (x : A) * (y : A) = (y : A) * (x : A) := by
     intro x y
@@ -605,7 +605,7 @@ theorem self_centralizing_subfield_tfae (k A K : Type*) [Field k] [Ring A]
                 simpa only [Set.mem_singleton_iff] using hbX
               subst b
               rfl
-        haveI : IsMulCommutative T :=
+        have : IsMulCommutative T :=
           Algebra.isMulCommutative_adjoin k hgens
         have hTcomm : ∀ u v : T, Commute (u : A) (v : A) := by
           intro u v

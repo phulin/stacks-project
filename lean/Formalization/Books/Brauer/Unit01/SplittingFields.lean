@@ -374,7 +374,7 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
             Module.finrank k B.carrier = Module.finrank k k' ^ 2 := by
   constructor
   · rintro ⟨d, hsplit⟩
-    letI : Algebra k' (A.carrier ⊗[k] k') :=
+    let : Algebra k' (A.carrier ⊗[k] k') :=
       Algebra.TensorProduct.rightAlgebra
     dsimp [SplitsInDegree] at hsplit
     obtain ⟨e⟩ := hsplit
@@ -387,15 +387,15 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
     let V := Fin d → k'
     let moduleE : Module (A.carrier ⊗[k] k') V :=
       Module.compHom V e.toRingHom
-    letI : IsScalarTower k k' k' := by
+    let : IsScalarTower k k' k' := by
       exact IsScalarTower.of_algebraMap_smul (by
         intro r c
         simp [Algebra.smul_def])
-    letI : IsScalarTower k k' V := by
+    let : IsScalarTower k k' V := by
       infer_instance
     let towerE : @IsScalarTower k (A.carrier ⊗[k] k') V _
         moduleE.toDistribMulAction.toSMul _ := by
-      letI : Module (A.carrier ⊗[k] k') V := moduleE
+      let : Module (A.carrier ⊗[k] k') V := moduleE
       exact IsScalarTower.of_algebraMap_smul (by
         intro r v
         change e (algebraMap k (A.carrier ⊗[k] k') r) • v = r • v
@@ -411,24 +411,24 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
       Module.compHom V iA.toRingHom
     let towerA : @IsScalarTower k A.carrier V _
         moduleA.toDistribMulAction.toSMul _ := by
-      letI : Module (A.carrier ⊗[k] k') V := moduleE
-      letI : Module A.carrier V := moduleA
-      letI : IsScalarTower k (A.carrier ⊗[k] k') V := towerE
+      let : Module (A.carrier ⊗[k] k') V := moduleE
+      let : Module A.carrier V := moduleA
+      let : IsScalarTower k (A.carrier ⊗[k] k') V := towerE
       exact IsScalarTower.of_algebraMap_smul (by
         intro r v
         change (algebraMap k A.carrier r) • v = r • v
         exact IsScalarTower.algebraMap_smul (A.carrier ⊗[k] k') r v)
     let commA : @SMulCommClass A.carrier k V
         moduleA.toDistribMulAction.toSMul _ := by
-      letI : Module A.carrier V := moduleA
-      letI : IsScalarTower k A.carrier V := towerA
+      let : Module A.carrier V := moduleA
+      let : IsScalarTower k A.carrier V := towerA
       exact ⟨by
         intro a r v
         change a • (r • v) = r • (a • v)
         rw [← IsScalarTower.algebraMap_smul A.carrier r v,
           ← IsScalarTower.algebraMap_smul A.carrier r (a • v)]
         rw [← mul_smul, ← mul_smul, Algebra.commutes]⟩
-    letI : IsScalarTower k k V := by
+    let : IsScalarTower k k V := by
       exact IsScalarTower.of_algebraMap_smul (by
         intro r v
         simp [Algebra.smul_def])
@@ -440,16 +440,16 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
           intro v
           change (algebraMap k A.carrier r) • v = r • v
           exact IsScalarTower.algebraMap_smul A.carrier r v }
-    letI : NeZero d := ⟨hd0⟩
-    letI : Nonempty (Fin d) := ⟨⟨0, Nat.pos_of_ne_zero hd0⟩⟩
-    letI : Nontrivial V := inferInstance
-    letI : Module.Finite k V := Module.Finite.trans k' V
-    letI : Module.Free k V := Module.Free.of_divisionRing k V
+    let : NeZero d := ⟨hd0⟩
+    let : Nonempty (Fin d) := ⟨⟨0, Nat.pos_of_ne_zero hd0⟩⟩
+    let : Nontrivial V := inferInstance
+    let : Module.Finite k V := Module.Finite.trans k' V
+    let : Module.Free k V := Module.Free.of_divisionRing k V
     let b := Module.Free.chooseBasis k V
     let R := Module.End k V
-    letI : IsSimpleRing R :=
+    let : IsSimpleRing R :=
       IsSimpleRing.of_ringEquiv (algEquivMatrix b).toRingEquiv.symm inferInstance
-    letI : Algebra.IsCentral k R := inferInstance
+    let : Algebra.IsCentral k R := inferInstance
     have hrho : Function.Injective rho := by
       intro x y hxy
       have hxy' : ∀ v : V, x • v = y • v := by
@@ -467,9 +467,9 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
       exact heq
     let S : Subalgebra k R := AlgHom.range rho
     let eS : A.carrier ≃ₐ[k] S := AlgEquiv.ofInjective rho hrho
-    letI : IsSimpleRing S :=
+    let : IsSimpleRing S :=
       IsSimpleRing.of_ringEquiv eS.toRingEquiv inferInstance
-    letI : Algebra.IsCentral k S := by
+    let : Algebra.IsCentral k S := by
       refine { out := ?_ }
       intro z hz
       obtain ⟨a, rfl⟩ := eS.surjective z
@@ -490,7 +490,6 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
     let commK : @SMulCommClass k' k V _ _ := by
       exact ⟨by
         intro c r v
-        change c • (r • v) = r • (c • v)
         rw [← IsScalarTower.algebraMap_smul k' r v,
           ← IsScalarTower.algebraMap_smul k' r (c • v)]
         rw [← mul_smul, ← mul_smul, Algebra.commutes]⟩

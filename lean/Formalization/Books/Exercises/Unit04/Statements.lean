@@ -1,5 +1,8 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Ring.Prod
+import Mathlib.CategoryTheory.Linear.LinearFunctor
+import Mathlib.CategoryTheory.Monoidal.Linear
+import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
 
 import Formalization.Books.Exercises.Unit04.Core
 
@@ -40,7 +43,14 @@ original product ring. -/
 theorem additive_not_R_linear_example :
     exampleAdditiveFunctor.Additive ∧
       ¬ Functor.Linear exampleRing exampleAdditiveFunctor := by
-  sorry
+  refine ⟨{ map_add := by intros; rfl }, ?_⟩
+  intro h
+  have h' := (Functor.linear_iff exampleRing exampleAdditiveFunctor).mp h
+  let X := ModuleCat.of exampleRing (ULift exampleRing)
+  have hx := h' X ((1, 0) : exampleRing)
+  have hx' := congrArg (fun f => f (ULift.up ((1, 0) : exampleRing))) hx
+  change ULift.up ((1, 0) : exampleRing) = ULift.up ((0, 0) : exampleRing) at hx'
+  exact (by norm_num : ((1, 0) : exampleRing) ≠ (0, 0)) (ULift.up.inj hx')
 
 /-! ## (2) Tensoring with a fixed module -/
 
@@ -55,19 +65,24 @@ noncomputable def tensorProductFunctor
 theorem tensorProductFunctor_is_R_linear
     {R : Type u} [CommRing R] (N : ModuleCat.{u} R) :
     IsRLinearFunctor (tensorProductFunctor N) := by
-  sorry
+  unfold IsRLinearFunctor tensorProductFunctor
+  exact ⟨CategoryTheory.tensorRight_additive N, CategoryTheory.tensorRight_linear R N⟩
 
 /-- Tensoring with `N` is right exact. -/
 theorem tensorProductFunctor_is_right_exact
     {R : Type u} [CommRing R] (N : ModuleCat.{u} R) :
     PreservesFiniteColimits (tensorProductFunctor N) := by
-  sorry
+  unfold tensorProductFunctor
+  refine ⟨fun J _ _ => ⟨fun {K} => ?_⟩⟩
+  exact CategoryTheory.MonoidalCategory.Limits.preservesColimit_of_braided_and_preservesColimit_tensor_left K N
 
 /-- Tensoring with `N` commutes with arbitrary direct sums. -/
 theorem tensorProductFunctor_commutes_with_direct_sums
     {R : Type u} [CommRing R] (N : ModuleCat.{u} R) :
     CommutesWithDirectSums (tensorProductFunctor N) := by
-  sorry
+  unfold CommutesWithDirectSums tensorProductFunctor
+  intro ι M
+  infer_instance
 
 /-! ## (3) The converse characterization -/
 

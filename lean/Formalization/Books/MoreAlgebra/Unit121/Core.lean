@@ -49,10 +49,12 @@ structure Morph (X Y : FiniteLengthEndomorphism.{u, v} R) where
 @[ext]
 theorem Morph.ext {X Y : FiniteLengthEndomorphism.{u, v} R} {f g : Morph X Y}
     (h : f.hom = g.hom) : f = g := by
-  cases f
-  cases g
-  cases h
-  rfl
+  cases f with
+  | mk fhom fcomm =>
+    cases g with
+    | mk ghom gcomm =>
+      cases h
+      rfl
 
 instance : Category (FiniteLengthEndomorphism.{u, v} R) where
   Hom X Y := Morph X Y

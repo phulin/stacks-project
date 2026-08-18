@@ -5,7 +5,7 @@ import Formalization.Books.MoreAlgebra.Unit74.DerivedHom
 /-!
 # Dualizing Complexes, Chapter 1: Introduction
 
-The numbered source section is introductory prose, except for the definition
+The numbered source section is introductory prose except for the definition
 of a dualizing complex over a Noetherian ring.  The bounded-below derived
 category, finite cohomology modules, finite injective dimension, and derived
 internal Hom all use the earlier project APIs.
@@ -26,10 +26,11 @@ noncomputable section
 /-! ## The self-duality map -/
 
 /- The earlier derived-Hom API supplies `RHom`, but does not expose the
-canonical unit map from the regular derived module to `RHom K K`.  The
-source-facing interface therefore records the map together with the
-condition that it is an isomorphism in the derived category (the derived
-category formulation of being a quasi-isomorphism). -/
+canonical unit map from the regular derived module to `RHom K K`.  This
+structure is therefore the source-facing interface for that map: its `map`
+field is the canonical map supplied by a later construction, and `isIso`
+records the source's quasi-isomorphism condition after passage to the derived
+category. -/
 structure SelfDualityData {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     (K : DPlus (ModuleCat.{u} A)) where

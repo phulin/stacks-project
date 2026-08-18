@@ -289,13 +289,40 @@ abbrev outerSquare {C : Type u} [Bicategory.{w, v} C]
 end BaseChangeData
 
 /-- Base change along a 2-cartesian square gives an equivalence of dotted-arrow
-categories. -/
+categories.
+
+Proof roadmap:
+
+1. Keep the checked forward functor below: it postcomposes the dotted arrow
+   with `B.q`, with associator transports providing its two invertible
+   comparison cells.
+2. Use `B.right_cartesian` to choose a lift of every outer dotted arrow and
+   the unique two-morphisms between such lifts. These define the inverse
+   functor; normalize the identity and composition laws with the left unitor.
+3. Construct the unit from uniqueness between `leftToP A` and the chosen
+   lift of `forward.obj A`. Its naturality should be proved by applying the
+   final-object uniqueness proposition once to the two complete
+   `TwoCommutativeDiagram.TwoHom`s, instead of simplifying their left and
+   right fields independently.
+4. Construct the counit from the invertible right leg of the chosen lift.
+   Prove naturality after whiskering the `liftMapHom` right equation by the
+   left-unitor isomorphism, then cancel the chosen lift legs.
+5. Close the triangle identity by the same final-object uniqueness argument.
+
+The preserved attempt currently fails in step 3 around its unit-naturality
+fields: simplification leaves dependent `eqToHom`/unitor transports, and the
+final triangle proof lacks a local `IsIso` instance for a chosen lift leg.
+The construction through the inverse functor is otherwise retained below
+for continuation.
+-/
 theorem dottedArrow_baseChange_equivalence
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
     {hC : Bicategory.IsLocallyGroupoid C} (B : BaseChangeData hC) :
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
+  sorry
+/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -1235,6 +1262,7 @@ theorem dottedArrow_baseChange_equivalence
         inv (liftHom (forward.obj A)).right = 𝟙 _
     simpa [unitHom, leftToP, TwoCommutativeDiagram.Hom.comp,
       Category.id_comp, Category.assoc] using hδ)⟩
+-/
 
 
 

@@ -2,11 +2,17 @@ import Formalization.Books.Proetale.Unit02.SomeTopology
 import Formalization.Books.Proetale.Unit04.IndZariski
 import Mathlib.Algebra.Category.Ring.FilteredColimits
 import Mathlib.AlgebraicGeometry.Scheme
+import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
+import Mathlib.AlgebraicGeometry.Properties
 import Mathlib.CategoryTheory.Category.Preorder
 import Mathlib.CategoryTheory.Limits.Shapes.Products
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
 import Mathlib.RingTheory.Etale.Weakly
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
+import Mathlib.RingTheory.RingHom.Etale
+import Mathlib.RingTheory.RingHom.QuasiFinite
+import Mathlib.RingTheory.RingHom.Unramified
 
 /-!
 # Pro-étale Cohomology, Chapter 5: Constructing w-local affine schemes
@@ -39,6 +45,10 @@ local instance instDecidableEq (A : Type u) : DecidableEq A := Classical.decEq A
 /-- An affine scheme is w-local when its spectrum is a w-local space. -/
 def IsWLocalAffine {A : Type u} [CommRing A] : Prop :=
   IsWLocalSpace (PrimeSpectrum A)
+
+def IsWLocalRingMap {A B : Type u} [CommRing A] [CommRing B]
+    (f : A →+* B) : Prop :=
+  IsWLocalMap (PrimeSpectrum.comap f)
 
 /-- A locally closed piece of an affine spectrum in the form `D(f) ∩ V(I)`. -/
 structure LocallyClosedPiece (A : Type u) [CommRing A] where
@@ -76,10 +86,23 @@ def localizedPieceRingHom {A : Type u} [CommRing A]
     (Z : LocallyClosedPiece A) : A →+* localizedPieceRing Z :=
   algebraMap A (localizedPieceRing Z)
 
+instance localizedPieceRing.algebra {A : Type u} [CommRing A]
+    (Z : LocallyClosedPiece A) : Algebra A (localizedPieceRing Z) :=
+  (localizedPieceRingHom Z).toAlgebra
+
 /-- The points of `Spec(A)` specializing to a subset. -/
 def pointsSpecializingToPiece {A : Type u} [CommRing A]
     (Z : LocallyClosedPiece A) : Set (PrimeSpectrum A) :=
   pointsSpecializingTo Z.carrier
+
+abbrev LocallyClosedPointSpace {A : Type u} [CommRing A]
+    (Z : LocallyClosedPiece A) :=
+  {x : PrimeSpectrum A // x ∈ pointsSpecializingToPiece Z}
+
+instance locallyClosedPointSpace.topologicalSpace
+    {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
+    TopologicalSpace (LocallyClosedPointSpace Z) :=
+  TopologicalSpace.induced Subtype.val inferInstance
 
 def localizedPieceSpectrumMap {A : Type u} [CommRing A]
     (Z : LocallyClosedPiece A) :
@@ -98,7 +121,7 @@ theorem localization_piece_properties
     {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
     ∃ S : Submonoid A,
       Nonempty (Homeomorph (PrimeSpectrum (Localization S))
-        (Subtype (pointsSpecializingToPiece Z))) ∧
+        (LocallyClosedPointSpace Z)) ∧
         IsClosedAffineLocus
           (localizedPieceSpectrumMap Z ⁻¹' Z.carrier) := by
   sorry
@@ -107,7 +130,7 @@ theorem localization_piece_properties
 theorem localizedPieceRing_depends_only_on_carrier
     {A : Type u} [CommRing A] (Z Z' : LocallyClosedPiece A)
     (h : Z.carrier = Z'.carrier) :
-    Nonempty (localizedPieceRing Z ≃+* localizedPieceRing Z') := by
+    Nonempty (localizedPieceRing Z ≃ₐ[A] localizedPieceRing Z') := by
   sorry
 
 /-- Functoriality of the localization along locally closed pieces. -/
@@ -137,7 +160,7 @@ structure StratumPartition {A : Type u} (E : Finset A) where
 
 def stratumPiece {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) : LocallyClosedPiece A where
-  f := ∏ a in p.nonvanishing, a
+  f := p.nonvanishing.prod id
   I := Ideal.span (↑p.vanishing : Set A)
 
 /-- The stratum with the prescribed vanishing pattern. -/
@@ -145,11 +168,32 @@ def stratum {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) : Set (PrimeSpectrum A) :=
   (stratumPiece p).carrier
 
+theorem mem_stratum_iff_vanishing_pattern
+    {A : Type u} [CommRing A] {E : Finset A}
+    (p : StratumPartition E) (x : PrimeSpectrum A) :
+    x ∈ stratum p ↔
+      (∀ f ∈ p.nonvanishing, f ∉ x.asIdeal) ∧
+        (∀ f ∈ p.vanishing, f ∈ x.asIdeal) := by
+  sorry
+
+def basicOpen {A : Type u} [CommRing A] (f : A) : Set (PrimeSpectrum A) :=
+  {x | f ∉ x.asIdeal}
+
+def zeroLocus {A : Type u} [CommRing A] (I : Ideal A) : Set (PrimeSpectrum A) :=
+  {x | ∀ a ∈ I, a ∈ x.asIdeal}
+
 /-- The displayed description of a stratum as `D(∏ E') ∩ V((E''))`. -/
 theorem stratum_eq_basicOpen_inter_zeroLocus
     {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) :
-    stratum p = (stratumPiece p).carrier := rfl
+    stratum p = basicOpen (p.nonvanishing.prod id) ∩
+      zeroLocus (Ideal.span (↑p.vanishing : Set A)) := by
+  rfl
+
+theorem stratum_isConstructible
+    {A : Type u} [CommRing A] {E : Finset A}
+    (p : StratumPartition E) : IsConstructible (stratum p) := by
+  sorry
 
 /-- The vanishing-pattern strata are pairwise disjoint and cover the spectrum. -/
 theorem strata_pairwise_disjoint_and_cover
@@ -211,21 +255,20 @@ def stageClosedLocus {A : Type u} [CommRing A] (E : Finset A) :
 
 /-- The spectrum of the product is canonically the disjoint union of the
 localized spectra. -/
-theorem exists_stageSpectrumHomeomorph
+theorem exists_stageSpectrumEquiv
     {A : Type u} [CommRing A] (E : Finset A) :
-    Nonempty (Homeomorph (stageSpectrum E)
-      (PrimeSpectrum (stageRing E))) := by
+    Nonempty (stageSpectrum E ≃ PrimeSpectrum (stageRing E)) := by
   sorry
 
-noncomputable def stageSpectrumHomeomorph
+noncomputable def stageSpectrumEquiv
     {A : Type u} [CommRing A] (E : Finset A) :
-    Homeomorph (stageSpectrum E) (PrimeSpectrum (stageRing E)) :=
-  Classical.choice (exists_stageSpectrumHomeomorph E)
+    stageSpectrum E ≃ PrimeSpectrum (stageRing E) :=
+  Classical.choice (exists_stageSpectrumEquiv E)
 
 /-- The closed subscheme `Z_E`, transported to `Spec(A_E)`. -/
 def stageClosedLocusOnSpectrum {A : Type u} [CommRing A] (E : Finset A) :
     Set (PrimeSpectrum (stageRing E)) :=
-  stageSpectrumHomeomorph E '' stageClosedLocus E
+  stageSpectrumEquiv E '' stageClosedLocus E
 
 theorem stageClosedLocus_isClosed
     {A : Type u} [CommRing A] (E : Finset A) :
@@ -238,24 +281,34 @@ theorem stageClosedLocus_contains_closedPoints
       stageClosedLocusOnSpectrum E := by
   sorry
 
+theorem stageClosedLocus_every_point_specializes
+    {A : Type u} [CommRing A] (E : Finset A) :
+    ∀ x : PrimeSpectrum (stageRing E),
+      ∃ z ∈ stageClosedLocusOnSpectrum E, x ⤳ z := by
+  sorry
+
 /-! ## Transition maps and the w-localization -/
 
 def restrictPartition {A : Type u} {E₁ E₂ : Finset A}
     (h : E₁ ⊆ E₂) (p : StratumPartition E₂) : StratumPartition E₁ where
-  nonvanishing := Finset.inter p.nonvanishing E₁
-  vanishing := Finset.inter p.vanishing E₁
+  nonvanishing := p.nonvanishing.filter (fun a => a ∈ E₁)
+  vanishing := p.vanishing.filter (fun a => a ∈ E₁)
   disjoint := by
-    exact p.disjoint.mono inf_le_left inf_le_left
+    exact p.disjoint.mono (Finset.filter_subset _ _) (Finset.filter_subset _ _)
   union_eq := by
     ext a
     constructor
     · intro ha
-      exact h ha
+      rcases Finset.mem_union.mp ha with ha | ha
+      · exact (Finset.mem_filter.mp ha).2
+      · exact (Finset.mem_filter.mp ha).2
     · intro ha
-      simp only [Finset.mem_union, Finset.mem_inter]
-      rcases p.union_eq ▸ ha with ha | ha
-      · exact Or.inl ⟨ha, by exact h (p.union_eq ▸ Finset.mem_union.mpr (Or.inl ha))⟩
-      · exact Or.inr ⟨ha, by exact h (p.union_eq ▸ Finset.mem_union.mpr (Or.inr ha))⟩
+      have ha' : a ∈ p.nonvanishing ∪ p.vanishing := by
+        rw [p.union_eq]
+        exact h ha
+      rcases Finset.mem_union.mp ha' with ha' | ha'
+      · exact Finset.mem_union.mpr (Or.inl (Finset.mem_filter.mpr ⟨ha', ha⟩))
+      · exact Finset.mem_union.mpr (Or.inr (Finset.mem_filter.mpr ⟨ha', ha⟩))
 
 /-- The transition map between the localized factors. -/
 theorem exists_stratumTransition
@@ -275,18 +328,44 @@ noncomputable def stratumTransition
 /-- The induced transition map `A_E₁ → A_E₂`. -/
 theorem exists_stageRingHom
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
-    ∃! g : stageRing E₁ ⟶ stageRing E₂, True := by
+    Nonempty (stageRing E₁ ⟶ stageRing E₂) := by
   sorry
 
 noncomputable def stageRingHom
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
     stageRing E₁ ⟶ stageRing E₂ :=
-  Classical.choose (exists_stageRingHom h)
+  Classical.choice (exists_stageRingHom h)
+
+def stageScheme {A : Type u} [CommRing A] (E : Finset A) :
+    AlgebraicGeometry.Scheme :=
+  AlgebraicGeometry.Spec (stageRing E)
+
+noncomputable def stageTransitionScheme
+    {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
+    stageScheme E₂ ⟶ stageScheme E₁ := by
+  change AlgebraicGeometry.Spec (stageRing E₂) ⟶
+    AlgebraicGeometry.Spec (stageRing E₁)
+  exact AlgebraicGeometry.Spec.map (stageRingHom h)
+
+def stageTransitionPoints
+    {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
+    PrimeSpectrum (stageRing E₂) → PrimeSpectrum (stageRing E₁) :=
+  PrimeSpectrum.comap (stageRingHom h).hom
+
+theorem stageTransition_maps_closedLocus
+    {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
+    MapsTo (stageTransitionPoints h) (stageClosedLocusOnSpectrum E₂)
+      (stageClosedLocusOnSpectrum E₁) := by
+  sorry
 
 /-- The finite stages form the directed system used in the construction. -/
 structure StageFunctorData (A : Type u) [CommRing A] where
   functor : Finset A ⥤ CommRingCat
   object_eq : ∀ E, functor.obj E = stageRing E
+  map_eq : ∀ {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂),
+    functor.map (homOfLE h) =
+      eqToHom (object_eq E₁) ≫ stageRingHom h ≫
+        eqToHom (object_eq E₂).symm
 
 theorem exists_stageFunctorData {A : Type u} [CommRing A] :
     Nonempty (StageFunctorData A) := by
@@ -294,36 +373,62 @@ theorem exists_stageFunctorData {A : Type u} [CommRing A] :
 
 noncomputable def stageFunctor {A : Type u} [CommRing A] :
     Finset A ⥤ CommRingCat :=
-  (Classical.choice (exists_stageFunctorData A)).functor
+  (Classical.choice (exists_stageFunctorData (A := A))).functor
 
 /-- The colimit ring `A_w`. -/
 noncomputable def wLocalRing {A : Type u} [CommRing A] : CommRingCat :=
   colimit (stageFunctor (A := A))
 
 /-- The affine scheme `X_w = Spec(A_w)`. -/
-def wLocalSpectrum {A : Type u} [CommRing A] : Scheme :=
-  AlgebraicGeometry.Scheme.Spec (wLocalRing (A := A))
+def wLocalSpectrum {A : Type u} [CommRing A] : AlgebraicGeometry.Scheme :=
+  AlgebraicGeometry.Spec (wLocalRing (A := A))
 
 /-- The closed-point locus denoted `Z` in the source's inverse-limit formula. -/
 def wLocalClosedLocus {A : Type u} [CommRing A] :
     Set (PrimeSpectrum (wLocalRing (A := A))) :=
   closedPoints (PrimeSpectrum (wLocalRing (A := A)))
 
+theorem exists_wLocalRingMap {A : Type u} [CommRing A] :
+    Nonempty (A →+* wLocalRing (A := A)) := by
+  sorry
+
+noncomputable def wLocalRingMap {A : Type u} [CommRing A] :
+    A →+* wLocalRing (A := A) :=
+  Classical.choice (exists_wLocalRingMap (A := A))
+
+def wLocalSpectrumMap {A : Type u} [CommRing A] :
+    PrimeSpectrum (wLocalRing (A := A)) → PrimeSpectrum A :=
+  PrimeSpectrum.comap (wLocalRingMap (A := A))
+
+theorem exists_wLocal_closedLocus_homeomorph
+    {A : Type u} [CommRing A] :
+    Nonempty
+      {e : wLocalClosedLocus (A := A) ≃ₜ PrimeSpectrum A //
+        ∀ z, e z = wLocalSpectrumMap (A := A) z} := by
+  sorry
+
 theorem wLocalRing_isIndZariski_and_faithfullyFlat
     {A : Type u} [CommRing A] :
-    IsIndZariski (CommRingCat.ofHom
-      (algebraMap A (wLocalRing (A := A)))) ∧
-      RingHom.FaithfullyFlat (algebraMap A (wLocalRing (A := A))) := by
+    IsIndZariski (wLocalRingMap (A := A)) ∧
+      RingHom.FaithfullyFlat (wLocalRingMap (A := A)) := by
   sorry
 
 theorem wLocalConstruction_properties
     {A : Type u} [CommRing A] :
-    IsIndZariski (algebraMap A (wLocalRing (A := A))) ∧
+    IsIndZariski (wLocalRingMap (A := A)) ∧
       Nonempty (wLocalClosedLocus (A := A) ≃ₜ PrimeSpectrum A) ∧
         IsClosed (wLocalClosedLocus (A := A)) ∧
           ∀ x : PrimeSpectrum (wLocalRing (A := A)),
             ∃! z : wLocalClosedLocus (A := A),
               x ⤳ (z : PrimeSpectrum (wLocalRing (A := A))) := by
+  sorry
+
+theorem wLocal_closedLocus_is_reduced
+    {A : Type u} [CommRing A] :
+    ∃ Y : AlgebraicGeometry.Scheme,
+      ∃ i : Y ⟶ wLocalSpectrum (A := A),
+        AlgebraicGeometry.IsClosedImmersion i ∧ AlgebraicGeometry.IsReduced Y ∧
+          Set.range i.base = wLocalClosedLocus (A := A) := by
   sorry
 
 /-! ## The size remark and the universal property -/
@@ -337,8 +442,9 @@ theorem wLocalRing_cardinal_le
 theorem wLocalRing_universal
     {A B : Type u} [CommRing A] [CommRing B]
     (f : A →+* B) (hB : IsWLocalAffine (A := B)) :
-    ∃! g : wLocalRing A ⟶ CommRingCat.of B,
-      (algebraMap A (wLocalRing A)) ≫ g.hom = f := by
+    ∃! g : wLocalRing (A := A) ⟶ CommRingCat.of B,
+      CommRingCat.ofHom (wLocalRingMap (A := A)) ≫ g =
+        CommRingCat.ofHom f ∧ IsWLocalRingMap g.hom := by
   sorry
 
 /-! ## Profinite spectra and permanence -/
@@ -356,11 +462,20 @@ theorem profinite_spectrum_of_fibre_condition
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
 
+def HasAlgebraicResidueExtensions
+    {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B) : Prop :=
+  ∀ q : PrimeSpectrum B,
+    let I := q.asIdeal.comap f
+    letI : I.IsPrime := q.isPrime.comap f
+    letI : q.asIdeal.IsPrime := q.isPrime
+    let g := Ideal.ResidueField.map I q.asIdeal f rfl
+    letI := g.toAlgebra
+    Algebra.IsAlgebraic I.ResidueField q.asIdeal.ResidueField
+
 theorem profinite_spectrum_of_algebraic_residue_extensions
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
-    (hres : ∀ q : PrimeSpectrum B,
-      Algebra.IsAlgebraic (A ⧸ q.asIdeal.comap f) (B ⧸ q.asIdeal)) :
+    (hres : HasAlgebraicResidueExtensions f) :
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
 
@@ -381,36 +496,40 @@ theorem profinite_spectrum_of_identifies_local_rings
 theorem profinite_spectrum_of_weakly_etale
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
-    (hf : RingHom.IsWeaklyEtale f) :
+    (hf : letI := f.toAlgebra; Algebra.WeaklyEtale A B) :
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
 
 theorem profinite_spectrum_of_quasiFinite
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
-    (hf : RingHom.QuasiFinite f) :
+    (hf : f.QuasiFinite) :
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
 
 theorem profinite_spectrum_of_unramified
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
-    (hf : RingHom.Unramified f) :
+    (hf : f.FormallyUnramified) :
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
 
 theorem profinite_spectrum_of_etale
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsProfiniteSpace (PrimeSpectrum A)) (f : A →+* B)
-    (hf : RingHom.Etale f) :
+    (hf : f.Etale) :
     IsProfiniteSpace (PrimeSpectrum B) := by
   sorry
+
+noncomputable def filteredColimitRing
+    {F : Type v} [Category.{v} F] (G : F ⥤ CommRingCat) : CommRingCat :=
+  colimit G
 
 theorem profinite_spectrum_of_filtered_colimit
     {A : Type u} [CommRing A] (F : Type v) [Category.{v} F]
     [IsFiltered F] (G : F ⥤ CommRingCat)
     (hG : ∀ i, IsProfiniteSpace (PrimeSpectrum (G.obj i))) :
-    IsProfiniteSpace (PrimeSpectrum (colimit G)) := by
+    IsProfiniteSpace (PrimeSpectrum (filteredColimitRing G)) := by
   sorry
 
 /-! ## Localizing along a closed profinite subset -/
@@ -418,7 +537,7 @@ theorem profinite_spectrum_of_filtered_colimit
 theorem exists_indZariski_wLocal_with_closed_points
     {A : Type u} [CommRing A] (I : Ideal A)
     (hV : IsProfiniteSpace {x : PrimeSpectrum A | ∀ a ∈ I, a ∈ x.asIdeal}) :
-    ∃ B : CommRingCat, ∃ f : A ⟶ B,
+    ∃ B : CommRingCat, ∃ f : CommRingCat.of A ⟶ B,
       IsIndZariski f.hom ∧
         IsWLocalAffine (A := B) ∧
           closedPoints (PrimeSpectrum B) =
@@ -433,19 +552,37 @@ def wLocalClosedPointIdeal {A : Type u} [CommRing A]
   sInf {I : Ideal A | closedPoints (PrimeSpectrum A) =
     {x : PrimeSpectrum A | ∀ a ∈ I, a ∈ x.asIdeal}}
 
+theorem wLocalClosedPointIdeal_isRadical
+    {A : Type u} [CommRing A] (hA : IsWLocalAffine (A := A)) :
+    (wLocalClosedPointIdeal hA).IsRadical := by
+  sorry
+
+theorem wLocalClosedPointIdeal_vanishing
+    {A : Type u} [CommRing A] (hA : IsWLocalAffine (A := A)) :
+    closedPoints (PrimeSpectrum A) =
+      {x : PrimeSpectrum A |
+        ∀ a ∈ wLocalClosedPointIdeal hA, a ∈ x.asIdeal} := by
+  sorry
+
 theorem wLocal_algebraic_residue_extensions
     {A B : Type u} [CommRing A] [CommRing B]
     (hA : IsWLocalAffine (A := A)) (f : A →+* B)
-    (hres : ∀ q : PrimeSpectrum B,
-      Algebra.IsAlgebraic (A ⧸ q.asIdeal.comap f) (B ⧸ q.asIdeal)) :
-    (∀ q : PrimeSpectrum B,
-        (∀ a ∈ Ideal.map f (wLocalClosedPointIdeal hA), a ∈ q.asIdeal)) ∧
+    (hres : HasAlgebraicResidueExtensions f) :
+    ({q : PrimeSpectrum B |
+        ∀ a ∈ Ideal.map f (wLocalClosedPointIdeal hA), a ∈ q.asIdeal} ⊆
+      closedPoints (PrimeSpectrum B)) ∧
       ∃ C : CommRingCat, ∃ g : CommRingCat.of B ⟶ C,
         IsIndZariski g.hom ∧
           Nonempty (B ⧸ Ideal.map f (wLocalClosedPointIdeal hA) ≃+*
             C ⧸ Ideal.map g.hom (Ideal.map f (wLocalClosedPointIdeal hA))) ∧
-          IsWLocalAffine (A := C) := by
+          IsWLocalAffine (A := C) ∧
+          IsWLocalRingMap (g.hom.comp f) ∧
+          PrimeSpectrum.comap (g.hom.comp f) ⁻¹'
+              closedPoints (PrimeSpectrum A) =
+            closedPoints (PrimeSpectrum C) := by
   sorry
+
+end
 
 end
 

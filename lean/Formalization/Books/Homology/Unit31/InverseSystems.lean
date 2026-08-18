@@ -2623,7 +2623,11 @@ theorem inverseSystem_cohomology_zero_iso_limit
     dsimp [q, eZ, eZhom, η]
     simp only [limit.lift_π]
     let hobj_Zi : (Z 0).obj i = HomologicalComplex.cycles (K.obj i) 0 := by rfl
-    convert hnat using 1
+    change (limit.π K i).f (-1) ≫
+        HomologicalComplex.toCycles (K.obj i) (-1) 0 =
+      HomologicalComplex.toCycles (limit K) (-1) 0 ≫
+        HomologicalComplex.cyclesMap (limit.π K i) 0
+    exact hnat
   let hhom := (inverseSystemLimit K).homologyIsCokernel (j := 0) (-1) (by
     simpa using (CochainComplex.prev ℤ 0))
   let hqcol := hTq.gIsCokernel

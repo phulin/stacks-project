@@ -30,7 +30,7 @@ namespace Formalization.Books.Algebra.Unit82
 
 open CategoryTheory
 open CategoryTheory.Limits
-open scoped BigOperators
+open scoped BigOperators TensorProduct
 
 universe u v w
 
@@ -239,6 +239,110 @@ theorem universallyExact_of_directedSplitColimit
   exact congrArg (fun k => k.hom) s.f_r
 
 /-! ## The finite-presentation criteria -/
+
+private theorem universallyExact_factor_finiteFree
+    {R : Type u} {M₁ M₂ : Type u} [CommRing R]
+    [AddCommGroup M₁] [Module R M₁]
+    [AddCommGroup M₂] [Module R M₂]
+    {f₁ : M₁ →ₗ[R] M₂}
+    (h : universallyInjective f₁)
+    {n m : ℕ}
+    (a : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
+    (u : (Fin n →₀ R) →ₗ[R] M₁)
+    (v : (Fin m →₀ R) →ₗ[R] M₂)
+    (ha : v.comp a = f₁.comp u) :
+    ∃ w : (Fin m →₀ R) →ₗ[R] M₁, w.comp a = u := by
+  let A : (Fin m →₀ R) →ₗ[R] (Fin n →₀ R) :=
+    Finsupp.linearCombination R (fun j =>
+      ∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1)
+  let Q : Type u := (Fin n →₀ R) ⧸ LinearMap.range A
+  let q : (Fin n →₀ R) →ₗ[R] Q := Submodule.mkQ _
+  let tx : M₁ ⊗[R] Q :=
+    ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] q (Finsupp.single i 1)
+  have htx : (f₁.rTensor Q) tx = 0 := by
+    dsimp [tx]
+    simp only [map_sum, LinearMap.rTensor_tmul]
+    have ha' (i : Fin n) :
+        f₁ (u (Finsupp.single i 1)) = v (a (Finsupp.single i 1)) := by
+      simpa [LinearMap.comp_apply] using
+        (LinearMap.congr_fun ha (Finsupp.single i 1)).symm
+    simp_rw [ha']
+    classical
+    have ha_basis (i : Fin n) :
+        a (Finsupp.single i 1) =
+          ∑ j, (a (Finsupp.single i 1)) j • Finsupp.single j 1 := by
+      ext j
+      simp
+    calc
+      _ = ∑ i, v (∑ j, (a (Finsupp.single i 1)) j •
+          Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact congrArg (fun z => v z ⊗ₜ[R] q (Finsupp.single i 1)) (ha_basis i)
+      _ = ∑ i, ∑ j, (a (Finsupp.single i 1)) j •
+          (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) := by
+        simp_rw [map_sum, TensorProduct.sum_tmul, map_smul, TensorProduct.smul_tmul,
+          TensorProduct.tmul_smul]
+      _ = ∑ j, ∑ i, (a (Finsupp.single i 1)) j •
+          (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) := by
+        exact Finset.sum_comm
+      _ = 0 := by
+        apply Finset.sum_eq_zero
+        intro j hj
+        change ∑ i, (a (Finsupp.single i 1)) j •
+            (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) = 0
+        simp_rw [← TensorProduct.tmul_smul]
+        rw [← TensorProduct.tmul_sum]
+        simp_rw [← map_smul]
+        rw [← map_sum]
+        rw [show (∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1) =
+            A (Finsupp.single j 1) by
+              simp [A, Finsupp.linearCombination_single]]
+  have htx0 : tx = 0 := (h Q) htx
+  let t0 : M₁ ⊗[R] (Fin n →₀ R) :=
+    ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] Finsupp.single i 1
+  have ht0 : (LinearMap.lTensor M₁ q) t0 = tx := by
+    dsimp [t0, tx]
+    simp only [map_sum, LinearMap.lTensor_tmul]
+  have ht0zero : (LinearMap.lTensor M₁ q) t0 = 0 := ht0.trans htx0
+  have hex : Function.Exact (LinearMap.lTensor M₁ A) (LinearMap.lTensor M₁ q) :=
+    _root_.lTensor_exact M₁ A.exact_map_mkQ_range (Submodule.mkQ_surjective _)
+  have hrange : t0 ∈ LinearMap.range (LinearMap.lTensor M₁ A) := by
+    rw [← hex.linearMap_ker_eq]
+    exact ht0zero
+  obtain ⟨t, ht⟩ := hrange
+  have hcontract (z : M₁ ⊗[R] (Fin m →₀ R))
+    (b : (Fin m →₀ R) →ₗ[R] R) :
+      TensorProduct.rid R M₁ (LinearMap.lTensor M₁ b z) =
+        ∑ j, b (Finsupp.single j 1) •
+          TensorProduct.rid R M₁
+            (LinearMap.lTensor M₁ (Finsupp.lapply j) z) := by
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul x y =>
+        simp only [TensorProduct.rid_tmul, LinearMap.lTensor_tmul]
+        have hy : y = ∑ j, y j • Finsupp.single j 1 := by
+          ext j
+          simp
+        rw [hy]
+        have hb : b (∑ j, y j • Finsupp.single j 1) =
+            ∑ j, y j • b (Finsupp.single j 1) := by
+          simp only [map_sum, map_smul]
+        have hl (j : Fin m) :
+            (Finsupp.lapply j) (∑ k, y k • Finsupp.single k 1) = y j := by
+          change (∑ k, y k • Finsupp.single k 1) j = y j
+          simp
+        rw [hb]
+        simp_rw [hl]
+        simp only [smul_smul]
+        apply congrArg (fun r : R => r • x)
+        apply Finset.sum_congr rfl
+        intro j hj
+        rw [mul_comm]
+    | add x y hx hy =>
+        simp only [map_add, LinearMap.lTensor_add, hx, hy,
+          Finset.sum_add_distrib, smul_add]
+  sorry
 
 /-- The six equivalent criteria for a short exact sequence to be universally
 exact.  Finite free modules are represented by finitely supported functions. -/

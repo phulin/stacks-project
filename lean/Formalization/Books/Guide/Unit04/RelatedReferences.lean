@@ -477,7 +477,29 @@ theorem siteTorsorClassContractedProduct_inverse_right {C : Type u} [Category.{v
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X P (siteTorsorClassInverse J G X P) =
       siteTorsorClassZero J G X := by
-  sorry
+  induction P using Quotient.inductionOn with
+  | _ P =>
+    change Quotient.mk _ (siteTorsorContractedProduct P (siteTorsorInverse P)) =
+      Quotient.mk _ (siteTorsorTrivial J G X)
+    apply Quotient.sound
+    have hdouble : Nonempty (SiteTorsorEquivalence
+        (siteTorsorInverse (siteTorsorInverse P)) P) := by
+      refine ⟨{ map := Iso.refl _, equivariant := ?_, inverse_equivariant := ?_ }⟩
+      · intro U a p
+        unfold siteTorsorInverse at *
+        simp
+      · intro U a p
+        unfold siteTorsorInverse at *
+        simp
+    have hprod := siteTorsorContractedProduct_respects_equivalence
+      (P := siteTorsorInverse (siteTorsorInverse P)) (P' := P)
+      (Q := siteTorsorInverse P) (Q' := siteTorsorInverse P)
+      hdouble (Nonempty.intro (SiteTorsorEquivalence.refl (siteTorsorInverse P)))
+    have hleft := siteTorsorContractedProduct_inverse_left_representative
+      (P := siteTorsorInverse P)
+    rcases hprod with ⟨e⟩
+    rcases hleft with ⟨f⟩
+    exact ⟨e.symm.trans f⟩
 
 theorem siteTorsorClassContractedProduct_assoc {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)

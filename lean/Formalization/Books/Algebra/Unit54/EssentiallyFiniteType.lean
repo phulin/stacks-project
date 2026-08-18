@@ -78,14 +78,14 @@ private theorem essFinitePresentation_respectsIso :
     RingHom.RespectsIso @RingHom.EssFinitePresentation := by
   constructor
   · intro R S T _ _ _ f e hf
-    letI : Algebra R S := f.toAlgebra
+    let : Algebra R S := f.toAlgebra
     change essFinitePresentation R S at hf
     rcases hf with ⟨A, hA, g, M, q, hq, hcomp, hloc⟩
-    letI : CommRing A := hA
+    let : CommRing A := hA
     let q' := e.toRingHom.comp q
-    letI : Algebra A S := q.toAlgebra
-    letI : Algebra A T := q'.toAlgebra
-    letI : Algebra R T := (e.toRingHom.comp f).toAlgebra
+    let : Algebra A S := q.toAlgebra
+    let : Algebra A T := q'.toAlgebra
+    let : Algebra R T := (e.toRingHom.comp f).toAlgebra
     let e' : S ≃ₐ[A] T :=
       { toRingEquiv := e
         commutes' := by intro a; rfl }
@@ -93,21 +93,22 @@ private theorem essFinitePresentation_respectsIso :
     refine ⟨A, hA, g, M, q', hq, ?_, ?_⟩
     · dsimp [q']
       rw [RingHom.comp_assoc, hcomp]
+      rfl
     · exact IsLocalization.isLocalization_of_algEquiv M e'
   · intro R S T _ _ _ f e hf
-    letI : Algebra S T := f.toAlgebra
+    let : Algebra S T := f.toAlgebra
     change essFinitePresentation S T at hf
     rcases hf with ⟨A, hA, g, M, q, hq, hcomp, hloc⟩
-    letI : CommRing A := hA
+    let : CommRing A := hA
     let g' := g.comp e.toRingHom
-    letI : Algebra A T := q.toAlgebra
-    letI : Algebra R T := (f.comp e.toRingHom).toAlgebra
+    let : Algebra A T := q.toAlgebra
+    let : Algebra R T := (f.comp e.toRingHom).toAlgebra
     change essFinitePresentation R T
     refine ⟨A, hA, g', M, q,
       RingHom.FinitePresentation.comp hq (RingHom.FinitePresentation.of_bijective e.bijective),
       ?_, hloc⟩
     · dsimp [g']
-      rw [RingHom.comp_assoc, hcomp, ← RingHom.comp_assoc]
+      rw [← RingHom.comp_assoc, hcomp]
       rfl
 
 /- The corresponding assertions for essentially finite presentation are
@@ -135,14 +136,14 @@ theorem finite_iff_finite_residue
     RingHom.Finite f ↔
       RingHom.Finite ((Ideal.Quotient.mk m).comp f) := by
   algebraize [f, (Ideal.Quotient.mk m).comp f]
-  letI : Algebra R (S ⧸ m) := ((Ideal.Quotient.mk m).comp f).toAlgebra
+  let : Algebra R (S ⧸ m) := ((Ideal.Quotient.mk m).comp f).toAlgebra
   refine ⟨?_, ?_⟩
   · intro hf
     exact RingHom.Finite.comp
       (RingHom.Finite.of_surjective _ Ideal.Quotient.mk_surjective) hf
   · intro hf
     change Module.Finite R (S ⧸ m) at hf
-    letI : Module.Finite R (S ⧸ m) := hf
+    let : Module.Finite R (S ⧸ m) := hf
     exact Module.finite_of_surjective_of_ker_le_nilradical
       (Ideal.Quotient.mkₐ R m) Ideal.Quotient.mk_surjective (by
         change RingHom.ker (Ideal.Quotient.mkₐ R m : S →+* S ⧸ m) ≤ nilradical S
@@ -160,7 +161,7 @@ theorem finiteType_iff_finiteType_residue
     RingHom.FiniteType f ↔
       RingHom.FiniteType ((Ideal.Quotient.mk m).comp f) := by
   algebraize [f, (Ideal.Quotient.mk m).comp f]
-  letI : Algebra R (S ⧸ m) := ((Ideal.Quotient.mk m).comp f).toAlgebra
+  let : Algebra R (S ⧸ m) := ((Ideal.Quotient.mk m).comp f).toAlgebra
   refine ⟨?_, ?_⟩
   · intro hf
     exact RingHom.FiniteType.comp

@@ -348,13 +348,13 @@ theorem fittingIdealInt_ofNat
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (k : ℕ) :
     fittingIdealInt R M k = fittingIdeal R M k := by
-  sorry
+  rfl
 
 theorem fittingIdealInt_negOne
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     fittingIdealInt R M (-1) = fittingIdealNegOne R M := by
-  sorry
+  rfl
 
 /-- Independence of the Fitting ideal from the chosen finite-free surjection. -/
 theorem fittingIdealOfSurjection_eq

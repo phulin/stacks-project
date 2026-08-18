@@ -2,6 +2,7 @@ import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.RingTheory.Flat.EquationalCriterion
+import Mathlib.RingTheory.Flat.Equalizer
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
 import Mathlib.RingTheory.Flat.Localization
 import Mathlib.RingTheory.Ideal.GoingDown
@@ -413,14 +414,162 @@ theorem flatness_descends_more_general
     (Module.Flat R M → Module.Flat R (S' ⊗[S] M)) ∧
       (Module.FaithfullyFlat S S' →
         (Module.Flat R M ↔ Module.Flat R (S' ⊗[S] M))) := by
-  sorry
+  have hforward : Module.Flat R M → Module.Flat R (S' ⊗[S] M) := by
+    intro hM
+    let _ : Module.Flat R M := hM
+    let _ : Module.Flat S S' := hflat
+    apply (Module.Flat.iff_lTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ f hf
+    have hfM : Function.Injective (f.lTensor M) :=
+      Module.Flat.lTensor_preserves_injective_linearMap f hf
+    let fS := TensorProduct.AlgebraTensorModule.lTensor S M f
+    have hfS0 : Function.Injective (fS.restrictScalars R) := by
+      simpa [fS] using hfM
+    have hfS : Function.Injective ((fS.lTensor S').restrictScalars R) := by
+      simpa using (Module.Flat.lTensor_preserves_injective_linearMap fS hfS0)
+    let eN := TensorProduct.AlgebraTensorModule.assoc R S S' S' M N
+    let eN' := TensorProduct.AlgebraTensorModule.assoc R S S' S' M N'
+    have hcomm :
+        (eN'.toLinearMap.restrictScalars R).comp (f.lTensor (S' ⊗[S] M)) =
+          ((fS.lTensor S').restrictScalars R).comp (eN.toLinearMap.restrictScalars R) := by
+      apply LinearMap.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => rw [map_add, map_add, hx, hy]
+      | tmul a n =>
+        induction a using TensorProduct.induction_on with
+        | zero => simp
+        | add a b ha hb =>
+          rw [TensorProduct.add_tmul]
+          simp only [LinearMap.comp_apply, map_add]
+          have ha' :
+              (eN'.toLinearMap.restrictScalars R)
+                  ((f.lTensor (S' ⊗[S] M)) (a ⊗ₜ[R] n)) =
+                ((fS.lTensor S').restrictScalars R)
+                  ((eN.toLinearMap.restrictScalars R) (a ⊗ₜ[R] n)) := by
+            simpa only [LinearMap.comp_apply] using ha
+          have hb' :
+              (eN'.toLinearMap.restrictScalars R)
+                  ((f.lTensor (S' ⊗[S] M)) (b ⊗ₜ[R] n)) =
+                ((fS.lTensor S').restrictScalars R)
+                  ((eN.toLinearMap.restrictScalars R) (b ⊗ₜ[R] n)) := by
+            simpa only [LinearMap.comp_apply] using hb
+          rw [ha', hb']
+        | tmul s m => simp [eN, eN', fS]
+    intro x y hxy
+    apply eN.injective
+    apply hfS
+    have hxy' := congrArg (fun z => eN' z) hxy
+    change ((eN'.toLinearMap.restrictScalars R).comp
+        (f.lTensor (S' ⊗[S] M))) x =
+      ((eN'.toLinearMap.restrictScalars R).comp
+        (f.lTensor (S' ⊗[S] M))) y at hxy'
+    rw [hcomm, LinearMap.comp_apply] at hxy'
+    exact hxy'
+  refine ⟨hforward, ?_⟩
+  intro hfaithful
+  let _ : Module.FaithfullyFlat S S' := hfaithful
+  constructor
+  · exact hforward
+  · intro hT
+    let _ : Module.Flat R (S' ⊗[S] M) := hT
+    apply (Module.Flat.iff_lTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ f hf
+    have hfT : Function.Injective (f.lTensor (S' ⊗[S] M)) :=
+      Module.Flat.lTensor_preserves_injective_linearMap f hf
+    let fS := TensorProduct.AlgebraTensorModule.lTensor S M f
+    let eN := TensorProduct.AlgebraTensorModule.assoc R S S' S' M N
+    let eN' := TensorProduct.AlgebraTensorModule.assoc R S S' S' M N'
+    have hcomm :
+        (eN'.toLinearMap.restrictScalars R).comp (f.lTensor (S' ⊗[S] M)) =
+          ((fS.lTensor S').restrictScalars R).comp (eN.toLinearMap.restrictScalars R) := by
+      apply LinearMap.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => rw [map_add, map_add, hx, hy]
+      | tmul a n =>
+        induction a using TensorProduct.induction_on with
+        | zero => simp
+        | add a b ha hb =>
+          rw [TensorProduct.add_tmul]
+          simp only [LinearMap.comp_apply, map_add]
+          have ha' :
+              (eN'.toLinearMap.restrictScalars R)
+                  ((f.lTensor (S' ⊗[S] M)) (a ⊗ₜ[R] n)) =
+                ((fS.lTensor S').restrictScalars R)
+                  ((eN.toLinearMap.restrictScalars R) (a ⊗ₜ[R] n)) := by
+            simpa only [LinearMap.comp_apply] using ha
+          have hb' :
+              (eN'.toLinearMap.restrictScalars R)
+                  ((f.lTensor (S' ⊗[S] M)) (b ⊗ₜ[R] n)) =
+                ((fS.lTensor S').restrictScalars R)
+                  ((eN.toLinearMap.restrictScalars R) (b ⊗ₜ[R] n)) := by
+            simpa only [LinearMap.comp_apply] using hb
+          rw [ha', hb']
+        | tmul s m => simp [eN, eN', fS]
+    have hfbase : Function.Injective ((fS.lTensor S').restrictScalars R) := by
+      intro x y hxy
+      apply eN.symm.injective
+      apply hfT
+      apply eN'.injective
+      have hxy' :
+          (((fS.lTensor S').restrictScalars R).comp
+              (eN.toLinearMap.restrictScalars R)) (eN.symm x) =
+            (((fS.lTensor S').restrictScalars R).comp
+              (eN.toLinearMap.restrictScalars R)) (eN.symm y) := by
+        simp [LinearMap.comp_apply, hxy]
+      rw [← hcomm] at hxy'
+      exact hxy'
+    have hfS : Function.Injective fS := by
+      apply (Module.FaithfullyFlat.lTensor_injective_iff_injective S S' fS).mp
+      exact hfbase
+    simpa [fS] using hfS
 
 theorem flat_permanence
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module R M] [Module S M] [IsScalarTower R S M]
     (hflat : Module.Flat R M) (hfaithful : Module.FaithfullyFlat S M) :
     Module.Flat R S := by
-  sorry
+  let _ : Module.FaithfullyFlat S M := hfaithful
+  rw [Module.Flat.iff_lTensor_preserves_injective_linearMap]
+  intro N N' _ _ _ _ f hf
+  have hfM : Function.Injective (f.lTensor M) :=
+    Module.Flat.lTensor_preserves_injective_linearMap f hf
+  let fS := TensorProduct.AlgebraTensorModule.lTensor S S f
+  have hfS : Function.Injective fS := by
+    apply (Module.FaithfullyFlat.lTensor_injective_iff_injective S M fS).mp
+    let eN := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S M N
+    let eN' := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S M N'
+    have hcomm :
+        (TensorProduct.AlgebraTensorModule.lTensor S M f).comp eN.toLinearMap =
+          eN'.toLinearMap.comp
+            (TensorProduct.AlgebraTensorModule.lTensor S M
+              (TensorProduct.AlgebraTensorModule.lTensor S S f)) := by
+      have hcomp :=
+        TensorProduct.AlgebraTensorModule.lTensor_comp_cancelBaseChange
+          (R := R) (A := S) (B := S) (M := M) (N := N) (Q := N') f
+      simpa [eN, eN', fS, LinearMap.baseChange] using hcomp
+    intro x y hxy
+    apply eN.injective
+    apply hfM
+    change
+      (TensorProduct.AlgebraTensorModule.lTensor S M
+        (TensorProduct.AlgebraTensorModule.lTensor S S f)) x =
+      (TensorProduct.AlgebraTensorModule.lTensor S M
+        (TensorProduct.AlgebraTensorModule.lTensor S S f)) y at hxy
+    have hxy' := congrArg (fun z => eN' z) hxy
+    change
+      (eN'.toLinearMap.comp
+        (TensorProduct.AlgebraTensorModule.lTensor S M
+          (TensorProduct.AlgebraTensorModule.lTensor S S f))) x =
+      (eN'.toLinearMap.comp
+        (TensorProduct.AlgebraTensorModule.lTensor S M
+          (TensorProduct.AlgebraTensorModule.lTensor S S f))) y at hxy'
+    rw [← hcomm, LinearMap.comp_apply] at hxy'
+    simpa using hxy'
+  simpa [fS] using hfS
 
 end BaseChangeAndDescent
 
@@ -445,7 +594,8 @@ theorem flat_tensor_short_exact
     (hexact : Exact f g) (hinjective : Injective f) (hsurjective : Surjective g) :
     Injective (f.lTensor N) ∧ Exact (f.lTensor N) (g.lTensor N) ∧
       Surjective (g.lTensor N) := by
-  sorry
+  refine ⟨?_, lTensor_exact N hexact hsurjective, LinearMap.lTensor_surjective N hsurjective⟩
+  exact LinearMap.lTensor_injective_of_exact_of_flat g hsurjective f hinjective hexact N
 
 theorem flat_short_exact
     {R M' M M'' : Type*} [CommRing R]
@@ -455,7 +605,85 @@ theorem flat_short_exact
     (hinjective : Injective f) (hsurjective : Surjective g) :
     (Module.Flat R M' → Module.Flat R M'' → Module.Flat R M) ∧
       (Module.Flat R M → Module.Flat R M'' → Module.Flat R M') := by
-  sorry
+  constructor
+  · intro hM' hM''
+    let _ : Module.Flat R M' := hM'
+    let _ : Module.Flat R M'' := hM''
+    apply (Module.Flat.iff_rTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ i hi
+    have hiM' : Function.Injective (i.rTensor M') :=
+      Module.Flat.rTensor_preserves_injective_linearMap i hi
+    have hiM'' : Function.Injective (i.rTensor M'') :=
+      Module.Flat.rTensor_preserves_injective_linearMap i hi
+    have hshortN :=
+      flat_tensor_short_exact (R := R) (M'' := M') (M' := M) (M := M'') (N := N)
+        f g hexact hinjective hsurjective
+    have hfN : Function.Injective (f.lTensor N) := hshortN.1
+    have hexN : Exact (f.lTensor N) (g.lTensor N) := hshortN.2.1
+    have hshortN' :=
+      flat_tensor_short_exact (R := R) (M'' := M') (M' := M) (M := M'') (N := N')
+        f g hexact hinjective hsurjective
+    have hfN' : Function.Injective (f.lTensor N') := hshortN'.1
+    have hcommg :
+        (i.rTensor M'').comp (g.lTensor N) =
+          (g.lTensor N').comp (i.rTensor M) := by
+      rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+    have hcommf :
+        (i.rTensor M).comp (f.lTensor N) =
+          (f.lTensor N').comp (i.rTensor M') := by
+      rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+    apply LinearMap.ker_eq_bot.mp
+    rw [eq_bot_iff]
+    intro x hx
+    change (i.rTensor M) x = 0 at hx
+    have hgx : (g.lTensor N) x = 0 := by
+      apply hiM''
+      change ((i.rTensor M'').comp (g.lTensor N)) x = 0
+      rw [hcommg, LinearMap.comp_apply, hx]
+      simp
+    have hxker : x ∈ LinearMap.ker (g.lTensor N) := by
+      change (g.lTensor N) x = 0
+      exact hgx
+    rw [hexN.linearMap_ker_eq] at hxker
+    obtain ⟨y, hy⟩ := hxker
+    have hfy : (f.lTensor N') ((i.rTensor M') y) = 0 := by
+      have htemp : (i.rTensor M) ((f.lTensor N) y) = 0 := by
+        rw [hy, hx]
+      change ((f.lTensor N').comp (i.rTensor M')) y = 0
+      rw [← hcommf, LinearMap.comp_apply]
+      exact htemp
+    have hiy : (i.rTensor M') y = 0 := hfN' hfy
+    have hy0 : y = 0 := hiM' hiy
+    have hx0 : x = 0 := by
+      rw [← hy, hy0]
+      simp
+    simpa using hx0
+  · intro hM hM''
+    let _ : Module.Flat R M := hM
+    let _ : Module.Flat R M'' := hM''
+    apply (Module.Flat.iff_rTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ i hi
+    have hiM : Function.Injective (i.rTensor M) :=
+      Module.Flat.rTensor_preserves_injective_linearMap i hi
+    have hshortN :=
+      flat_tensor_short_exact (R := R) (M'' := M') (M' := M) (M := M'') (N := N)
+        f g hexact hinjective hsurjective
+    have hfN : Function.Injective (f.lTensor N) := hshortN.1
+    have hcommf :
+        (i.rTensor M).comp (f.lTensor N) =
+          (f.lTensor N').comp (i.rTensor M') := by
+      rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+    apply LinearMap.ker_eq_bot.mp
+    rw [eq_bot_iff]
+    intro x hx
+    change (i.rTensor M') x = 0 at hx
+    have hfx : (f.lTensor N) x = 0 := by
+      apply hiM
+      change ((i.rTensor M).comp (f.lTensor N)) x = 0
+      rw [hcommf, LinearMap.comp_apply, hx]
+      simp
+    have hx0 : x = 0 := hfN hfx
+    simpa using hx0
 
 end ExactSequences
 

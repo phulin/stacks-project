@@ -257,8 +257,16 @@ noncomputable def associatedSheafFromPresheaf
 noncomputable abbrev associatedSheafModule
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
-    Mod X.structureSheaf :=
+  Mod X.structureSheaf :=
   associatedSheafFromPresheaf α M
+
+/- The presheaf construction is the source's third description.  Keeping
+the comparison as an explicit theorem makes the fact that the bundled and
+carrier-type interfaces are the same construction available to clients. -/
+theorem associatedSheafFromPresheaf_eq_associatedSheafModule
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    associatedSheafFromPresheaf α M = associatedSheafModule α M := rfl
 
 /-- The source notation `F_M` when `M` is presented by its carrier type. -/
 noncomputable abbrev associatedSheaf
@@ -511,6 +519,16 @@ structure AssociatedSheafDescriptions
         associatedSheafModule α M)
   presheafToAssociated : Nonempty
     (associatedSheafFromPresheaf α M ≅ associatedSheafModule α M)
+
+/-- The bundled associated-sheaf object is quasi-coherent, and its presheaf
+description is definitionally the same object. -/
+theorem associatedSheafModule_isQuasiCoherent_and_presheaf_eq
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    IsQuasiCoherent (associatedSheafModule α M) ∧
+      associatedSheafFromPresheaf α M = associatedSheafModule α M := by
+  exact ⟨associatedSheafModule_isQuasiCoherent α M,
+    associatedSheafFromPresheaf_eq_associatedSheafModule α M⟩
 
 theorem exists_associatedSheafDescriptions
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
@@ -768,6 +786,12 @@ structure WedgeOfLinesExample where
   locallyFinite : LocallyFiniteBranchCoefficients coefficients
   map : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
     (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf)
+  coefficientSections : ℕ →
+    (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf).sections
+  map_on_generators : ∀ j,
+    (SheafOfModules.freeHomEquiv
+      (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf) map)
+        (ULift.up j) = coefficientSections j
   no_local_matrix : NotLocallyFiniteLinearCombination map neighbourhood
 
 theorem exists_wedgeOfLinesExample : Nonempty WedgeOfLinesExample := by

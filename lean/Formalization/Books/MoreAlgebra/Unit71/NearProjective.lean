@@ -5,7 +5,6 @@ import Mathlib.LinearAlgebra.Dual.Defs
 import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.RingTheory.Finiteness.Finsupp
-import Mathlib.Tactic.TFAE
 
 /-!
 # More on Algebra, Chapter 71: Modules which are close to being projective

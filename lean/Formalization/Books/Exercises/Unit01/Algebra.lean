@@ -1023,7 +1023,84 @@ def SplitsAfterFaithfullyFlatBaseChange {A B : CommRingCat.{u}} (f : A ⟶ B)
 /-- There is a nonsplit short exact sequence of modules over the integers. -/
 theorem exists_nonsplit_short_exact_sequence :
     ∃ S : ShortComplex (ModuleCat ℤ), S.ShortExact ∧ ¬ Nonempty S.Splitting := by
-  sorry
+  let f₀ : ℤ →ₗ[ℤ] ℤ := LinearMap.mulLeft ℤ 2
+  let g₀ : ℤ →ₗ[ℤ] ZMod 2 :=
+    (Int.castRingHom (ZMod 2)).toIntAlgHom.toLinearMap
+  let f : ULift ℤ →ₗ[ℤ] ULift ℤ :=
+    ULift.moduleEquiv.symm.toLinearMap.comp (f₀.comp ULift.moduleEquiv.toLinearMap)
+  let g : ULift ℤ →ₗ[ℤ] ULift (ZMod 2) :=
+    ULift.moduleEquiv.symm.toLinearMap.comp (g₀.comp ULift.moduleEquiv.toLinearMap)
+  have hcomp : g.comp f = 0 := by
+    apply LinearMap.ext
+    intro x
+    apply ULift.ext
+    change ((2 * x.down : ℤ) : ZMod 2) = 0
+    rw [ZMod.intCast_zmod_eq_zero_iff_dvd]
+    exact ⟨x.down, rfl⟩
+  have hexact : Function.Exact f g := by
+    intro x
+    constructor
+    · intro hx
+      have hx0 : (x.down : ZMod 2) = 0 := by
+        simpa [g, g₀] using congrArg ULift.down hx
+      obtain ⟨y, hy⟩ := (ZMod.intCast_zmod_eq_zero_iff_dvd x.down 2).mp hx0
+      refine ⟨ULift.up y, ?_⟩
+      apply ULift.ext
+      change (2 : ℤ) * y = x.down
+      exact hy.symm
+    · rintro ⟨y, rfl⟩
+      apply ULift.ext
+      change ((2 * y.down : ℤ) : ZMod 2) = 0
+      rw [ZMod.intCast_zmod_eq_zero_iff_dvd]
+      exact ⟨y.down, rfl⟩
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    apply ULift.ext
+    have hxy' := congrArg ULift.down hxy
+    simpa [f, f₀] using mul_left_cancel₀ (show (2 : ℤ) ≠ 0 by norm_num) hxy'
+  have hsurj : Function.Surjective g := by
+    intro z
+    obtain ⟨y, hy⟩ := ZMod.intCast_surjective z.down
+    refine ⟨ULift.up y, ?_⟩
+    apply ULift.ext
+    simpa [g, g₀] using hy
+  let S : ShortComplex (ModuleCat ℤ) := ShortComplex.moduleCatMk f g hcomp
+  have hS : S.ShortExact := by
+    exact ModuleCat.shortComplex_shortExact S hexact hinj hsurj
+  refine ⟨S, hS, ?_⟩
+  rintro ⟨s⟩
+  have hsection := ModuleCat.hom_ext_iff.mp s.s_g
+  have hsection1 := LinearMap.congr_fun hsection (ULift.up (1 : ZMod 2))
+  change S.g.hom (s.s.hom (ULift.up (1 : ZMod 2))) =
+    (ULift.up (1 : ZMod 2) : ULift (ZMod 2)) at hsection1
+  have ht : (2 : ℤ) • ULift.up (1 : ZMod 2) = 0 := by
+    apply ULift.ext
+    exact (ZMod.intCast_zmod_eq_zero_iff_dvd 2 2).2 ⟨1, rfl⟩
+  have hzero_down : ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0 := by
+    have hmap' : (2 : ℤ) • s.s.hom (ULift.up (1 : ZMod 2)) = 0 := by
+      calc
+        (2 : ℤ) • s.s.hom (ULift.up (1 : ZMod 2)) =
+            s.s.hom ((2 : ℤ) • ULift.up (1 : ZMod 2)) :=
+          (s.s.hom.map_smul _ _).symm
+        _ = s.s.hom 0 := congrArg s.s.hom ht
+        _ = 0 := map_zero _
+    have hmul := congrArg ULift.down hmap'
+    change (2 : ℤ) * ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0 at hmul
+    rcases mul_eq_zero.mp hmul with h | h
+    · norm_num at h
+    · exact h
+  have hzero : s.s.hom (ULift.up (1 : ZMod 2)) = 0 := by
+    apply ULift.ext
+    change ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0
+    exact hzero_down
+  have hgzero : S.g.hom (s.s.hom (ULift.up (1 : ZMod 2))) = 0 := by
+    rw [hzero]
+    exact map_zero _
+  have hcontra : (0 : ULift (ZMod 2)) = ULift.up (1 : ZMod 2) :=
+    hgzero.symm.trans hsection1
+  have h01 : (0 : ZMod 2) = 1 := by
+    simpa using congrArg ULift.down hcontra
+  exact zero_ne_one h01
 /-
   let f₀ : ℤ →ₗ[ℤ] ℤ := LinearMap.mulLeft ℤ 2
   let g₀ : ℤ →ₗ[ℤ] ZMod 2 :=

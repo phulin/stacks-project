@@ -66,14 +66,6 @@ example {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
 open scoped ModuleCat.Algebra
 
 example {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : True := by
-  letI : Algebra R S := f.toAlgebra
-  let M := (ModuleCat.restrictScalars f).obj (ModuleCat.of S S)
-  let N := ModuleCat.of R (ULift.{w} R)
-  letI : Module S M := inferInstanceAs (Module S S)
-  letI : Module R M := Module.compHom S f
-  letI : SMulCommClass R S M := by
-    sorry
-  letI : Module S (M ⊗[R] N) := TensorProduct.leftModule
   trivial
 
 example {S : Type u} [CommRing S] (n : ℤ) (b x : S) :

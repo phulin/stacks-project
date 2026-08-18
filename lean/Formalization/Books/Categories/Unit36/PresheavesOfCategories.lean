@@ -683,98 +683,167 @@ def strictificationFunctor
   obj x := strictificationObjectOf P x
   map φ := strictificationFunctorHom P φ
   map_id x := by
-    sorry
-    /- Attempted approach:
     apply StrictificationHom.ext
     change (strictificationFunctorHom P (𝟙 x)).hom = 𝟙 _
-    unfold strictificationFunctorHom
     letI : p.IsStronglyCartesian (𝟙 (p.obj x))
         (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) :=
       P.pullbackMap_isStronglyCartesian (𝟙 (p.obj x)) ⟨x, rfl⟩
-    let hsource : p.IsHomLift (𝟙 (p.obj x))
+    let hsource' : p.IsHomLift (p.map (𝟙 x))
         (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) := by
-      simpa using (IsHomLift.comp p (𝟙 (p.obj x)) (𝟙 (p.obj x))
+      simpa using (IsHomLift.comp p (𝟙 (p.obj x)) (p.map (𝟙 x))
         (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) (𝟙 x))
-    letI : p.IsHomLift (𝟙 (p.obj x))
-        (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
-          (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) _
-          _ _ (𝟙 (p.obj x)) (𝟙 (p.obj x)) (by simp)
-          (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource) := by
-      exact @Functor.IsStronglyCartesian.map_isHomLift _ _ _ _ p _ _ _ _
-        (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) _ _ _
-        (𝟙 (p.obj x)) (𝟙 (p.obj x)) (by simp)
-        (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource
-    letI : p.IsHomLift (𝟙 (p.obj x))
-        (𝟙 (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).1) :=
-      by
-        apply IsHomLift.of_fac p (𝟙 (p.obj x))
-          (𝟙 (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).1) rfl
-          (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).2
-        simp
-    apply Functor.IsStronglyCartesian.ext p (𝟙 (p.obj x))
-      (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) (𝟙 _)
-      (ψ := @Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
-        (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩) _
-        _ _ (𝟙 (p.obj x)) (𝟙 (p.obj x)) (by simp)
-        (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource)
-      (ψ' := 𝟙 (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).1)
-    -/
+    let hψ : p.IsHomLift (p.map (𝟙 x))
+        (strictificationFunctorHom P (𝟙 x)).hom := by
+      exact strictificationFunctorHom_isHomLift P (𝟙 x)
+    let hψ' : p.IsHomLift (p.map (𝟙 x))
+        (𝟙 (Functor.Fiber.fiberInclusion.obj
+          (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩))) := by
+      rw [p.map_id]
+      exact IsHomLift.id (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).2
+    have hEq := @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
+      (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩)
+      (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj x)) ⟨x, rfl⟩)
+      (p.obj x) (Functor.Fiber.fiberInclusion.obj
+        (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩))
+      (p.map (𝟙 x)) (strictificationFunctorHom P (𝟙 x)).hom (𝟙 _)
+      hψ hψ' (by
+        have hfac : (strictificationFunctorHom P (𝟙 x)).hom ≫
+              P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ =
+            P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x := by
+          change (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
+            (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩)
+            (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj x)) ⟨x, rfl⟩)
+            _ _ (p.map (𝟙 x)) (p.map (𝟙 x)) (by simp)
+            (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource') ≫
+              P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ = _
+          simpa only using (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
+            (𝟙 (p.obj x)) (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩)
+            (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj x)) ⟨x, rfl⟩)
+            (p.obj x) (Functor.Fiber.fiberInclusion.obj
+              (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩))
+            (p.map (𝟙 x)) (p.map (𝟙 x)) (by simp)
+            (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource')
+        exact hfac.trans ((Category.comp_id _).trans (Category.id_comp _).symm))
+    exact hEq
   map_comp {X Y Z} f g := by
-    sorry
-    /- Attempted approach:
     apply StrictificationHom.ext
     change (strictificationFunctorHom P (f ≫ g)).hom =
       (strictificationFunctorHom P f).hom ≫
         (strictificationFunctorHom P g).hom
+    let xX : Functor.Fiber p (p.obj X) := ⟨X, rfl⟩
+    let xY : Functor.Fiber p (p.obj Y) := ⟨Y, rfl⟩
+    let xZ : Functor.Fiber p (p.obj Z) := ⟨Z, rfl⟩
+    let uX := P.pullbackMap (𝟙 (p.obj X)) xX
+    let uY := P.pullbackMap (𝟙 (p.obj Y)) xY
+    let uZ := P.pullbackMap (𝟙 (p.obj Z)) xZ
     letI : p.IsStronglyCartesian (𝟙 (p.obj Z))
-        (P.pullbackMap (𝟙 (p.obj Z)) ⟨Z, rfl⟩) :=
-      P.pullbackMap_isStronglyCartesian _ _
+        uZ := P.pullbackMap_isStronglyCartesian _ _
     letI : p.IsStronglyCartesian (𝟙 (p.obj Y))
-        (P.pullbackMap (𝟙 (p.obj Y)) ⟨Y, rfl⟩) :=
-      P.pullbackMap_isStronglyCartesian _ _
+        uY := P.pullbackMap_isStronglyCartesian _ _
     letI : p.IsStronglyCartesian (𝟙 (p.obj X))
-        (P.pullbackMap (𝟙 (p.obj X)) ⟨X, rfl⟩) :=
-      P.pullbackMap_isStronglyCartesian _ _
-    letI : p.IsHomLift (p.map (f ≫ g))
-        (P.pullbackMap (𝟙 (p.obj X)) ⟨X, rfl⟩ ≫ (f ≫ g)) := by
+        uX := P.pullbackMap_isStronglyCartesian _ _
+    have hsource_fg : p.IsHomLift (p.map (f ≫ g))
+        (uX ≫ (f ≫ g)) := by
       simpa using (IsHomLift.comp p (𝟙 (p.obj X)) (p.map (f ≫ g))
-        (P.pullbackMap (𝟙 (p.obj X)) ⟨X, rfl⟩) (f ≫ g))
+        uX (f ≫ g))
+    letI : p.IsHomLift (p.map (f ≫ g))
+        (uX ≫ (f ≫ g)) := hsource_fg
     letI : p.IsHomLift (p.map f)
         (strictificationFunctorHom P f).hom :=
       strictificationFunctorHom_isHomLift P f
     letI : p.IsHomLift (p.map g)
         (strictificationFunctorHom P g).hom :=
       strictificationFunctorHom_isHomLift P g
-    letI : p.IsHomLift (p.map (f ≫ g))
-        ((strictificationFunctorHom P f).hom ≫
-          (strictificationFunctorHom P g).hom) := by
-      simpa only [Functor.map_comp] using
-        (IsHomLift.comp p (p.map f) (p.map g)
-          ((strictificationFunctorHom P f).hom)
-          ((strictificationFunctorHom P g).hom))
     letI : p.IsHomLift (p.map f ≫ p.map g)
-        (P.pullbackMap (𝟙 (p.obj X)) ⟨X, rfl⟩ ≫ (f ≫ g)) := by
+        (uX ≫ (f ≫ g)) := by
       simpa only [Functor.map_comp] using
         (show p.IsHomLift (p.map (f ≫ g))
-          (P.pullbackMap (𝟙 (p.obj X)) ⟨X, rfl⟩ ≫ (f ≫ g)) by infer_instance)
-    letI : p.IsHomLift (p.map f ≫ p.map g)
+          (uX ≫ (f ≫ g)) by infer_instance)
+    have hcompActual : p.IsHomLift (p.map f ≫ p.map g)
+        (strictificationFunctorHom P (f ≫ g)).hom := by
+      have h := strictificationFunctorHom_isHomLift P (f ≫ g)
+      rw [p.map_comp] at h
+      exact h
+    have hcomp : p.IsHomLift (p.map f ≫ p.map g)
         ((strictificationFunctorHom P f).hom ≫
           (strictificationFunctorHom P g).hom) := by
       exact IsHomLift.comp p (p.map f) (p.map g)
         (strictificationFunctorHom P f).hom
         (strictificationFunctorHom P g).hom
-    letI : p.IsHomLift (p.map f ≫ p.map g)
-        (strictificationFunctorHom P (f ≫ g)).hom := by
-      have h := strictificationFunctorHom_isHomLift P (f ≫ g)
-      rw [p.map_comp] at h
-      exact h
-    apply Functor.IsStronglyCartesian.ext p (𝟙 (p.obj Z))
-      (P.pullbackMap (𝟙 (p.obj Z)) ⟨Z, rfl⟩)
-      (p.map f ≫ p.map g)
-      (ψ := (strictificationFunctorHom P (f ≫ g)).hom)
-      (ψ' := (strictificationFunctorHom P f).hom ≫
+    have hsource_f : p.IsHomLift (p.map f) (uX ≫ f) := by
+      simpa using (IsHomLift.comp p (𝟙 (p.obj X)) (p.map f)
+        uX f)
+    have hsource_g : p.IsHomLift (p.map g) (uY ≫ g) := by
+      simpa using (IsHomLift.comp p (𝟙 (p.obj Y)) (p.map g)
+        uY g)
+    have hfac_fg :
+        (strictificationFunctorHom P (f ≫ g)).hom ≫
+            uZ = uX ≫ (f ≫ g) := by
+      change (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Z)) uZ
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ)
+        _ _ (p.map (f ≫ g)) (p.map (f ≫ g)) (by simp)
+        (uX ≫ (f ≫ g)) hsource_fg) ≫ uZ = _
+      simpa only using (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Z)) uZ
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ)
+        (p.obj X) (Functor.Fiber.fiberInclusion.obj
+          (P.pullback (𝟙 (p.obj X)) xX))
+        (p.map (f ≫ g)) (p.map (f ≫ g)) (by simp)
+        (uX ≫ (f ≫ g)) hsource_fg)
+    have hfac_f :
+        (strictificationFunctorHom P f).hom ≫
+            uY = uX ≫ f := by
+      change (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Y)) uY
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Y)) xY)
+        _ _ (p.map f) (p.map f) (by simp)
+        (uX ≫ f) hsource_f) ≫ uY = _
+      simpa only using (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Y)) uY
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Y)) xY)
+        (p.obj X) (Functor.Fiber.fiberInclusion.obj
+          (P.pullback (𝟙 (p.obj X)) xX))
+        (p.map f) (p.map f) (by simp)
+        (uX ≫ f) hsource_f)
+    have hfac_g :
+        (strictificationFunctorHom P g).hom ≫
+            uZ = uY ≫ g := by
+      change (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Z)) uZ
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ)
+        _ _ (p.map g) (p.map g) (by simp)
+        (uY ≫ g) hsource_g) ≫ uZ = _
+      simpa only using (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
+        (𝟙 (p.obj Z)) uZ
+        (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ)
+        (p.obj Y) (Functor.Fiber.fiberInclusion.obj (P.pullback (𝟙 (p.obj Y)) xY))
+        (p.map g) (p.map g) (by simp)
+        (uY ≫ g) hsource_g)
+    have hEq :
+        (strictificationFunctorHom P (f ≫ g)).hom ≫
+            uZ =
+          ((strictificationFunctorHom P f).hom ≫
+            (strictificationFunctorHom P g).hom) ≫
+              uZ := by
+      dsimp [xX, xY, xZ, uX, uY, uZ] at hfac_fg hfac_f hfac_g ⊢
+      exact hfac_fg.trans <|
+        (Category.assoc uX f g).symm.trans <|
+          (congrArg (fun k => k ≫ g) hfac_f.symm).trans <|
+            (Category.assoc (strictificationFunctorHom P f).hom uY g).trans <|
+              (congrArg (fun k => (strictificationFunctorHom P f).hom ≫ k)
+                hfac_g.symm).trans <|
+                (Category.assoc (strictificationFunctorHom P f).hom
+                  (strictificationFunctorHom P g).hom uZ).symm
+    exact @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
+      (𝟙 (p.obj Z)) uZ
+      (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ)
+      (p.obj X) (Functor.Fiber.fiberInclusion.obj
+        (P.pullback (𝟙 (p.obj X)) xX)) (p.map f ≫ p.map g)
+      (strictificationFunctorHom P (f ≫ g)).hom
+      ((strictificationFunctorHom P f).hom ≫
         (strictificationFunctorHom P g).hom)
-    -/
+      hcompActual hcomp hEq
 
 theorem strictification_comparison_exists
     {S C : Type*} [Category* S] [Category* C]

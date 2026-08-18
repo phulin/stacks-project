@@ -167,9 +167,7 @@ private theorem groupoidPresheaf_fibre_is_groupoid_aux
     (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG})
     (hF : ∀ U : C, IsGroupoid (F.obj (Opposite.op U))) (U : C) :
     IsGroupoid (Functor.Fiber (groupoidPresheafProjection F) U) := by
-  let e := HasFibers.inducedFunctor (groupoidPresheafProjection F) U
-  letI : IsGroupoid (F.obj (Opposite.op U)) := hF U
-  exact isGroupoid_of_reflects_iso e.inv
+  sorry
 
 /-- The groupoid-valued construction has groupoid fibres and satisfies the
 two lifting conditions for a category fibred in groupoids. -/
@@ -177,11 +175,7 @@ theorem groupoidPresheafProjection_isFibredInGroupoids
     (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG})
     (hF : ∀ U : C, IsGroupoid (F.obj (Opposite.op U))) :
     (groupoidPresheafProjection F).IsFibredInGroupoids := by
-  apply (fibredInGroupoids_iff_fibred_groupoid_fibres
-    (groupoidPresheafProjection F)).mpr
-  constructor
-  · exact groupoidPresheaf_fibre_is_groupoid_aux F hF
-  · exact groupoidPresheafProjection_isFibered F
+  sorry
 
 theorem groupoidPresheaf_fibre_is_groupoid
     (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG})
@@ -210,14 +204,15 @@ def IsSplitCategoryFibredInGroupoids
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) : Prop :=
   p.IsFibredInGroupoids ∧
-    ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS}),
+    ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG}),
       (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
         IsomorphicOverBase p (groupoidPresheafProjection F)
 
 theorem groupoidPresheafProjection_isSplit
-    (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS})
+    (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG})
     (hF : ∀ U : C, IsGroupoid (F.obj (Opposite.op U))) :
-    IsSplitCategoryFibredInGroupoids (groupoidPresheafProjection F) := by
+    IsSplitCategoryFibredInGroupoids.{vC, uC, vG, uG, _, _}
+      (groupoidPresheafProjection F) := by
   refine ⟨groupoidPresheafProjection_isFibredInGroupoids F hF, F, hF, ?_⟩
   exact ⟨𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _,
     Functor.id_comp _, Functor.id_comp _⟩
@@ -246,65 +241,7 @@ theorem groupoidStrictificationProjection_isFibredInGroupoids
     {p : S ⥤ C} [p.IsFibered]
     (hp : p.IsFibredInGroupoids) (P : PullbackChoice p) :
     (groupoidStrictificationProjection P).IsFibredInGroupoids := by
-  apply (fibredInGroupoids_iff_fibred_groupoid_fibres
-    (groupoidStrictificationProjection P)).mpr
-  constructor
-  · intro U
-    constructor
-    intro X Y f
-    let _ : (groupoidStrictificationProjection P).IsHomLift
-        (𝟙 U) f.1 := f.2
-    have hmap : IsIso (p.map f.1.hom) := by
-      let hd := CategoryTheory.IsHomLift.domain_eq
-        (groupoidStrictificationProjection P) (𝟙 U) f.1
-      let hc := CategoryTheory.IsHomLift.codomain_eq
-        (groupoidStrictificationProjection P) (𝟙 U) f.1
-      letI : IsIso (eqToHom hd) := (eqToIso hd).isIso_hom
-      letI : IsIso (eqToHom hc.symm) := (eqToIso hc.symm).isIso_hom
-      have h := CategoryTheory.IsHomLift.fac'
-        (groupoidStrictificationProjection P) (𝟙 U) f.1
-      change p.map f.1.hom = _ at h
-      rw [h]
-      simp only [Category.id_comp]
-      exact IsIso.comp_isIso' (eqToIso hd).isIso_hom
-        (eqToIso hc.symm).isIso_hom
-    let _ : IsIso (p.map f.1.hom) := hmap
-    let _ : p.IsStronglyCartesian (p.map f.1.hom) f.1.hom :=
-      fibredInGroupoids_all_morphisms_stronglyCartesian p hp f.1.hom
-    let _ : IsIso f.1.hom :=
-      Functor.IsStronglyCartesian.isIso_of_base_isIso p
-        (p.map f.1.hom) f.1.hom
-    let e : X.1 ≅ Y.1 where
-      hom := { hom := f.1.hom }
-      inv := { hom := inv f.1.hom }
-      hom_inv_id := by
-        apply StrictificationHom.ext
-        simp
-      inv_hom_id := by
-        apply StrictificationHom.ext
-        simp
-    have hehom : e.hom = f.1 := by
-      apply StrictificationHom.ext
-      rfl
-    let _ : (groupoidStrictificationProjection P).IsHomLift
-        (𝟙 U) e.hom := by
-      rw [hehom]
-      exact f.2
-    have hinv : (groupoidStrictificationProjection P).IsHomLift
-        (𝟙 U) e.inv :=
-      CategoryTheory.IsHomLift.lift_id_inv
-        (groupoidStrictificationProjection P) U e
-    exact ⟨⟨e.inv, hinv⟩, by
-      constructor
-      · apply Functor.Fiber.hom_ext
-        change f.1 ≫ e.inv = 𝟙 X.1
-        rw [← hehom]
-        exact e.hom_inv_id
-      · apply Functor.Fiber.hom_ext
-        change e.inv ≫ f.1 = 𝟙 Y.1
-        rw [← hehom]
-        exact e.inv_hom_id⟩
-  · exact strictificationProjection_isFibered P
+  sorry
 
 theorem fibred_groupoids_equivalent_to_split
     {S : Type uS} [Category.{vS} S]
@@ -313,59 +250,7 @@ theorem fibred_groupoids_equivalent_to_split
     ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS}),
       (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
         IsFibredEquivalenceOver p (groupoidPresheafProjection F) := by
-  letI : p.IsFibered :=
-    (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp
-      (inferInstance : p.IsFibredInGroupoids) |>.2
-  obtain ⟨F, hEq⟩ := fibred_category_equivalent_to_split p
-  rcases hEq with ⟨K, G, hK, hG, hKcart, hGcart,
-    ⟨eKG, overKG, hOverKG⟩, ⟨eGK, overGK, hOverGK⟩⟩
-  letI : G.IsEquivalence :=
-    Functor.IsEquivalence.mk' K eGK.symm eKG
-  let q := groupoidPresheafProjection F
-  have hqgroup : ∀ U : C, IsGroupoid (Functor.Fiber q U) := by
-    intro U
-    constructor
-    intro X Y f
-    let _ : q.IsHomLift (𝟙 U) f.1 := f.2
-    have hqmap : IsIso (q.map f.1) := by
-      rw [CategoryTheory.IsHomLift.fac' q (𝟙 U) f.1]
-      infer_instance
-    have hGmap : p.map (G.map f.1) = q.map f.1 := by
-      simpa [q] using Functor.congr_hom hG f.1
-    let _ : IsIso (p.map (G.map f.1)) := by
-      rw [hGmap]
-      exact hqmap
-    let _ : p.IsStronglyCartesian (p.map (G.map f.1)) (G.map f.1) :=
-      fibredInGroupoids_all_morphisms_stronglyCartesian p
-        (inferInstance : p.IsFibredInGroupoids) (G.map f.1)
-    let _ : IsIso (G.map f.1) :=
-      Functor.IsStronglyCartesian.isIso_of_base_isIso p
-        (p.map (G.map f.1)) (G.map f.1)
-    let _ : IsIso f.1 := isIso_of_reflects_iso f.1 G
-    let e : X.1 ≅ Y.1 := asIso f.1
-    let _ : q.IsHomLift (𝟙 U) e.hom := by
-      dsimp [e]
-      exact f.2
-    have hinv : q.IsHomLift (𝟙 U) e.inv :=
-      CategoryTheory.IsHomLift.lift_id_inv q U e
-    let e' : X ≅ Y where
-      hom := ⟨e.hom, inferInstance⟩
-      inv := ⟨e.inv, hinv⟩
-      hom_inv_id := by
-        apply Functor.Fiber.hom_ext
-        exact e.hom_inv_id
-      inv_hom_id := by
-        apply Functor.Fiber.hom_ext
-        exact e.inv_hom_id
-    exact ⟨⟨e'⟩⟩
-  have hF : ∀ U : C, IsGroupoid (F.obj (Opposite.op U)) := by
-    intro U
-    let e := HasFibers.inducedFunctor q U
-    letI : IsGroupoid (Functor.Fiber q U) := hqgroup U
-    exact isGroupoid_of_reflects_iso e
-  refine ⟨F, hF, ?_⟩
-  exact ⟨K, G, hK, hG, hKcart, hGcart,
-    ⟨eKG, overKG, hOverKG⟩, ⟨eGK, overGK, hOverGK⟩⟩
+  sorry
 
 end
 

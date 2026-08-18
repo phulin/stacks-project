@@ -1,4 +1,7 @@
 import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.PrimeFin
+import Mathlib.RingTheory.Ideal.NatInt
+import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.Topology.Separation.Hausdorff
 
@@ -30,14 +33,82 @@ theorem integer_spectrum_prime_ideals :
     ∀ p : PrimeSpectrum ℤ,
       p = integerGenericPoint ∨
         ∃ q : Nat.Primes, p.asIdeal = Ideal.span {(q.1 : ℤ)} := by
-  sorry
+  intro p
+  rcases (Ideal.isPrime_int_iff (P := p.asIdeal)).mp p.2 with h | ⟨q, hq, hp⟩
+  · left
+    apply PrimeSpectrum.ext
+    exact h
+  · right
+    exact ⟨⟨q, hq⟩, hp⟩
 
 /-- The closed subsets of `Spec(ℤ)` are the whole space and finite sets of
 closed points. -/
 theorem integer_spectrum_closed_sets (Z : Set (PrimeSpectrum ℤ)) :
     IsClosed Z ↔
       Z = Set.univ ∨ (Z.Finite ∧ integerGenericPoint ∉ Z) := by
-  sorry
+  classical
+  constructor
+  · intro hZ
+    by_cases hg : integerGenericPoint ∈ Z
+    · left
+      apply Set.eq_univ_of_forall
+      intro p
+      have hcl : closure ({integerGenericPoint} : Set (PrimeSpectrum ℤ)) ⊆ Z :=
+        hZ.closure_subset_iff.mpr (Set.singleton_subset_iff.mpr hg)
+      apply hcl
+      rw [PrimeSpectrum.closure_singleton]
+      exact (PrimeSpectrum.mem_zeroLocus p (integerGenericPoint.asIdeal : Set ℤ)).2 (by
+        change (⊥ : Ideal ℤ) ≤ p.asIdeal
+        exact bot_le)
+    · right
+      refine ⟨?_, hg⟩
+      rcases (PrimeSpectrum.isClosed_iff_zeroLocus_radical_ideal Z).mp hZ with ⟨I, hI, hIZ⟩
+      have hnot : ¬ I ≤ (⊥ : Ideal ℤ) := by
+        intro hIbot
+        apply hg
+        rw [hIZ]
+        exact (PrimeSpectrum.mem_zeroLocus integerGenericPoint (I : Set ℤ)).2 hIbot
+      obtain ⟨a, haI, ha0⟩ := SetLike.not_le_iff_exists.mp hnot
+      have ha0z : a ≠ 0 := by
+        intro ha
+        apply ha0
+        exact ha.symm ▸ Ideal.zero_mem _
+      have ha0n : a.natAbs ≠ 0 := by
+        intro h
+        apply ha0z
+        exact Int.natAbs_eq_zero.mp h
+      let Q : Set Nat.Primes := {q | (q : ℕ) ∈ a.natAbs.primeFactors}
+      have hQ : Q.Finite := by
+        dsimp [Q]
+        exact (Finset.finite_toSet _).preimage Subtype.val_injective.injOn
+      let hpoint : Nat.Primes → PrimeSpectrum ℤ := fun q =>
+        ⟨Ideal.span {(q.1 : ℤ)},
+          (Ideal.isPrime_int_iff.mpr (Or.inr ⟨q.1, q.2, rfl⟩))⟩
+      refine (hQ.image hpoint).subset ?_
+      intro p hp
+      rcases integer_spectrum_prime_ideals p with rfl | ⟨q, hpq⟩
+      · exact (hg hp).elim
+      · refine ⟨q, ?_, ?_⟩
+        · change q.1 ∈ a.natAbs.primeFactors
+          apply Nat.mem_primeFactors.mpr
+          refine ⟨q.2, ?_, ha0n⟩
+          apply Int.natCast_dvd.mp
+          rw [← Ideal.mem_span_singleton]
+          rw [← hpq]
+          exact (PrimeSpectrum.mem_zeroLocus p (I : Set ℤ)).1 (hIZ ▸ hp) haI
+        · apply PrimeSpectrum.ext
+          dsimp [hpoint]
+          exact hpq.symm
+  · intro hZ
+    rcases hZ with rfl | ⟨hfin, hg⟩
+    · exact isClosed_univ
+    · rw [← Set.biUnion_of_singleton Z]
+      exact hfin.isClosed_biUnion (fun p hp => by
+        apply (PrimeSpectrum.isClosed_singleton_iff_isMaximal p).2
+        rcases integer_spectrum_prime_ideals p with rfl | ⟨q, hpq⟩
+        · exact (hg hp).elim
+        · rw [hpq]
+          exact @Int.ideal_span_isMaximal_of_prime q.1 ⟨q.2⟩)
 
 /-! ## Standard opens, radical ideals, and compactness -/
 
@@ -55,7 +126,22 @@ theorem radical_ideal_closed_bijection {A : Type u} [CommRing A] :
         (⟨PrimeSpectrum.zeroLocus (I.1 : Set A),
           PrimeSpectrum.isClosed_zeroLocus (I.1 : Set A)⟩ :
           {Z : Set (PrimeSpectrum A) // IsClosed Z})) := by
-  sorry
+  constructor
+  · intro I J h
+    apply Subtype.ext
+    have hv := congrArg PrimeSpectrum.vanishingIdeal (congrArg Subtype.val h)
+    simpa only [PrimeSpectrum.vanishingIdeal_zeroLocus_eq_radical, I.2.radical, J.2.radical]
+      using hv
+  · intro Z
+    let Z' : Set (PrimeSpectrum A) := Z
+    let I : {I : Ideal A // I.IsRadical} :=
+      ⟨PrimeSpectrum.vanishingIdeal Z',
+        PrimeSpectrum.isRadical_vanishingIdeal Z'⟩
+    refine ⟨I, ?_⟩
+    apply Subtype.ext
+    change PrimeSpectrum.zeroLocus (I.1 : Set A) = Z'
+    dsimp [I]
+    rw [PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure, Z.2.closure_eq]
 
 /-- `Spec(A)` is quasi-compact, with quasi-compactness expressed by
 `IsCompact` of the whole space. -/
@@ -68,7 +154,13 @@ theorem spectrum_is_quasi_compact {A : Type u} [CommRing A] :
 /-- The spectrum of the integers supplies a concrete non-Hausdorff spectrum. -/
 theorem integer_spectrum_not_hausdorff :
     ¬ T2Space (PrimeSpectrum ℤ) := by
-  sorry
+  intro h
+  let _ : T2Space (PrimeSpectrum ℤ) := h
+  have hm : integerGenericPoint.asIdeal.IsMaximal :=
+    (PrimeSpectrum.isClosed_singleton_iff_isMaximal integerGenericPoint).mp isClosed_singleton
+  have : IsField ℤ :=
+    (Ring.isField_iff_maximal_bot (R := ℤ)).mpr (by simpa [integerGenericPoint] using hm)
+  exact Int.not_isField this
 
 /-- Every affine spectrum is `T₀`. -/
 theorem spectrum_is_t0 {A : Type u} [CommRing A] :

@@ -462,7 +462,7 @@ theorem closedSetSheafRestriction_directImage_iso {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) (F : TopCat.Sheaf (Type v) (closedSubspace Z)) :
     Nonempty ((closedSetSheafRestriction Z hZ).obj
       ((closedSheafDirectImage (Type v) Z hZ).obj F) ≅ F) := by
-  letI : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction (Type v)
+  let : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction (Type v)
       (closedInclusion Z)).counit) :=
     closedSheafRestriction_directImage_counit_isIso hZ
   exact ⟨asIso ((TopCat.Sheaf.pullbackPushforwardAdjunction (Type v)
@@ -473,7 +473,7 @@ theorem closedAbelianSheafRestriction_directImage_iso {X : TopCat.{v}} (Z : Set 
     (hZ : IsClosed Z) (F : TopCat.Sheaf (AddCommGrpCat.{v}) (closedSubspace Z)) :
     Nonempty ((closedAbelianSheafRestriction Z hZ).obj
       ((closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).obj F) ≅ F) := by
-  letI : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+  let : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
       (closedInclusion Z)).counit) :=
     closedSheafRestriction_directImage_counit_isIso hZ
   exact ⟨asIso ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
@@ -490,7 +490,7 @@ theorem closedAlgebraicSheafRestriction_directImage_iso
     (F : AlgebraicSheaf C (closedSubspace Z)) :
     Nonempty ((closedAlgebraicSheafRestriction C Z hZ).obj
       ((closedAlgebraicSheafDirectImage C Z hZ).obj F) ≅ F) := by
-  letI : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction C
+  let : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction C
       (closedInclusion Z)).counit) :=
     closedSheafRestriction_directImage_counit_isIso hZ
   exact ⟨asIso ((TopCat.Sheaf.pullbackPushforwardAdjunction C

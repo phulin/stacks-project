@@ -1136,7 +1136,185 @@ theorem silly_normal_short_exact
     Function.Injective (sillyNormalLeft x y) ∧
       Function.Exact (sillyNormalLeft x y) (sillyNormalRight x y) ∧
       Function.Surjective (sillyNormalRight x y) := by
-  sorry
+  classical
+  let hxunit : IsUnit (algebraMap R (ratioLocalization R x y) x) :=
+    IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_right x y)
+  let hyunit : IsUnit (algebraMap R (ratioLocalization R x y) y) :=
+    IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_left y x)
+  have hxi : (algebraMap R (ratioLocalization R x y) x) *
+      ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+        ratioLocalization R x y) = 1 := by
+    calc
+      _ = (hxunit.unit : ratioLocalization R x y) *
+          ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y) := by rw [hxunit.unit_spec]
+      _ = 1 := hxunit.unit.mul_inv
+  have hyi : (algebraMap R (ratioLocalization R x y) y) *
+      ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+        ratioLocalization R x y) = 1 := by
+    calc
+      _ = (hyunit.unit : ratioLocalization R x y) *
+          ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y) := by rw [hyunit.unit_spec]
+      _ = 1 := hyunit.unit.mul_inv
+  have hxy : (ratioXY x y : ratioLocalization R x y) * ratioYX x y = 1 := by
+    change ((algebraMap R (ratioLocalization R x y) x) *
+        ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+          ratioLocalization R x y)) *
+      ((algebraMap R (ratioLocalization R x y) y) *
+        ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+          ratioLocalization R x y)) = 1
+    calc
+      _ = ((algebraMap R (ratioLocalization R x y) x) *
+          ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y)) *
+        ((algebraMap R (ratioLocalization R x y) y) *
+          ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y)) := by ring
+      _ = 1 := by rw [hxi, hyi]; simp
+  have hpow (t u : ratioLocalization R x y) (h : t * u = 1) (i j : ℕ) :
+      u ^ j * t ^ i =
+        if j ≤ i then t ^ (i - j) else u ^ (j - i) := by
+    have hcancel (n : ℕ) : t ^ n * u ^ n = 1 := by
+      rw [← mul_pow, h, one_pow]
+    by_cases hji : j ≤ i
+    · obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hji
+      rw [if_pos (Nat.le_add_right j k), Nat.add_sub_cancel_left]
+      calc
+        u ^ j * t ^ (j + k) = (t ^ j * u ^ j) * t ^ k := by ring
+        _ = t ^ k := by rw [hcancel]; simp
+    · have hij : i ≤ j := Nat.le_of_lt (Nat.lt_of_not_ge hji)
+      obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hij
+      rw [if_neg (by omega), Nat.add_sub_cancel_left]
+      calc
+        u ^ (i + k) * t ^ i = (t ^ i * u ^ i) * u ^ k := by ring
+        _ = u ^ k := by rw [hcancel]; simp
+  let tA : ratioXYSubalgebra x y :=
+    ⟨ratioXY x y, by exact Algebra.subset_adjoin (by simp)⟩
+  let uB : ratioYXSubalgebra x y :=
+    ⟨ratioYX x y, by exact Algebra.subset_adjoin (by simp)⟩
+  let Good : ratioLocalization R x y → Prop :=
+    fun z => ∃ a : ratioXYSubalgebra x y, ∃ b : ratioYXSubalgebra x y,
+      (a : ratioLocalization R x y) + b = z
+  have hgood_add {z w : ratioLocalization R x y} :
+      Good z → Good w → Good (z + w) := by
+    rintro ⟨a, b, hab⟩ ⟨a', b', hab'⟩
+    refine ⟨a + a', b + b', ?_⟩
+    dsimp [Good] at *
+    rw [← hab, ← hab']
+    simp [add_left_comm, add_comm]
+  have hgood_A (a : ratioXYSubalgebra x y) : Good (a : ratioLocalization R x y) := by
+    exact ⟨a, 0, by simp [Good]⟩
+  have hgood_B (b : ratioYXSubalgebra x y) : Good (b : ratioLocalization R x y) := by
+    exact ⟨0, b, by simp [Good]⟩
+  have hgood_monomial (n m : ℕ) (a b : R)
+      (hpow' : (ratioXY x y) ^ n * (ratioYX x y) ^ m =
+        if m ≤ n then (ratioXY x y) ^ (n - m)
+        else (ratioYX x y) ^ (m - n)) :
+      Good ((algebraMap R (ratioLocalization R x y) (a * b)) *
+        (ratioXY x y) ^ n * (ratioYX x y) ^ m) := by
+    by_cases hmn : m ≤ n
+    · refine ⟨algebraMap R (ratioXYSubalgebra x y) (a * b) * tA ^ (n - m), 0, ?_⟩
+      dsimp [Good]
+      calc
+        (↑(algebraMap R (ratioXYSubalgebra x y) (a * b) * tA ^ (n - m)) :
+            ratioLocalization R x y) + ↑(0 : ratioYXSubalgebra x y) =
+            (algebraMap R (ratioLocalization R x y) (a * b)) *
+              (ratioXY x y) ^ (n - m) := by simp [tA]
+        _ = (algebraMap R (ratioLocalization R x y) (a * b)) *
+            ((ratioXY x y) ^ n * (ratioYX x y) ^ m) := by
+              rw [hpow', if_pos hmn]
+        _ = _ := by ring
+    · refine ⟨0, algebraMap R (ratioYXSubalgebra x y) (a * b) * uB ^ (m - n), ?_⟩
+      dsimp [Good]
+      calc
+        (↑(0 : ratioXYSubalgebra x y) : ratioLocalization R x y) +
+            ↑(algebraMap R (ratioYXSubalgebra x y) (a * b) * uB ^ (m - n)) =
+            (algebraMap R (ratioLocalization R x y) (a * b)) *
+              (ratioYX x y) ^ (m - n) := by simp [uB]
+        _ = (algebraMap R (ratioLocalization R x y) (a * b)) *
+            ((ratioXY x y) ^ n * (ratioYX x y) ^ m) := by
+              rw [hpow', if_neg hmn]
+        _ = _ := by ring
+  have hpow' (n m : ℕ) :
+      (ratioXY x y) ^ n * (ratioYX x y) ^ m =
+        if m ≤ n then (ratioXY x y) ^ (n - m)
+        else (ratioYX x y) ^ (m - n) := by
+    simpa [mul_comm] using hpow (ratioXY x y) (ratioYX x y) hxy n m
+  have hpoly_monomial (n : ℕ) (a : R) (q : Polynomial R) :
+      Good (Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+        (ratioXY x y) (Polynomial.monomial n a) *
+        Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+          (ratioYX x y) q) := by
+    induction q using Polynomial.induction_on' with
+    | add q r hq hr =>
+        rw [Polynomial.eval₂_add, mul_add]
+        exact hgood_add hq hr
+    | monomial m b =>
+        convert hgood_monomial n m a b (hpow' n m) using 1 <;>
+          simp [Polynomial.eval₂_monomial] <;> ring
+  have hpoly (p q : Polynomial R) :
+      Good (Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+        (ratioXY x y) p *
+        Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+          (ratioYX x y) q) := by
+    induction p using Polynomial.induction_on' generalizing q with
+    | add p r hp hr =>
+        rw [Polynomial.eval₂_add, add_mul]
+        exact hgood_add (hp q) (hr q)
+    | monomial n a =>
+        exact hpoly_monomial n a q
+  have hcross (a : ratioXYSubalgebra x y) (b : ratioYXSubalgebra x y) :
+      Good ((a : ratioLocalization R x y) * b) := by
+    obtain ⟨p, hp⟩ := Algebra.adjoin_eq_exists_aeval R (ratioXY x y) a
+    obtain ⟨q, hq⟩ := Algebra.adjoin_eq_exists_aeval R (ratioYX x y) b
+    simpa only [Polynomial.aeval_def] using (hp ▸ hq ▸ hpoly p q)
+  have hgood_mul {z w : ratioLocalization R x y} :
+      Good z → Good w → Good (z * w) := by
+    rintro ⟨a, b, hab⟩ ⟨a', b', hab'⟩
+    have hs :=
+      hgood_add (hgood_add (hgood_add (hgood_A (a * a'))
+        (hcross a b')) (hcross a' b)) (hgood_B (b * b'))
+    rw [← hab, ← hab']
+    dsimp [Good] at hs ⊢
+    rcases hs with ⟨A, B, hAB⟩
+    refine ⟨A, B, ?_⟩
+    rw [hAB]
+    simp only [mul_add, add_mul]
+    ring_nf
+  have hgood_both (z : ratioLocalization R x y)
+      (hz : z ∈ ratioBothSubalgebra x y) : Good z := by
+    rw [ratioBothSubalgebra_eq_adjoin] at hz
+    refine Algebra.adjoin_induction (p := fun z _ => Good z) ?_ ?_ ?_ ?_ hz
+    · intro z hz
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+      rcases hz with rfl | rfl
+      · exact hgood_A tA
+      · exact hgood_B uB
+    · intro r
+      simpa using hgood_A (algebraMap R (ratioXYSubalgebra x y) r)
+    · intro z w hz hw hzw hww
+      exact hgood_add hzw hww
+    · intro z w hz hw hzw hww
+      exact hgood_mul hzw hww
+  have hsurj : Function.Surjective (sillyNormalRight x y) := by
+    intro z
+    obtain ⟨a, b, hab⟩ := hgood_both (z : ratioLocalization R x y) z.property
+    refine ⟨(a, b), ?_⟩
+    apply Subtype.ext
+    change (a : ratioLocalization R x y) + b = z
+    exact hab
+  have hxyreg : x * y ∈ nonZeroDivisors R :=
+    (mul_mem_nonZeroDivisors).2 ⟨hx, hy⟩
+  have hinjR : Function.Injective
+      (algebraMap R (ratioLocalization R x y)) :=
+    IsLocalization.injective _
+      (Submonoid.powers_le.mpr hxyreg)
+  have hinjLeft : Function.Injective (sillyNormalLeft x y) := by
+    intro r s hrs
+    apply hinjR
+    have hsecond := congrArg (fun p => (p.2 : ratioLocalization R x y)) hrs
+    simpa [sillyNormalLeft] using hsecond
 
 end
 

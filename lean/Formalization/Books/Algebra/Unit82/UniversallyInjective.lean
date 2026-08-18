@@ -3,6 +3,9 @@ import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.Algebra.Homology.ShortComplex.Limits
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.Algebra.Category.ModuleCat.AB
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Exact
+import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.LocalizedModule.Exact
@@ -111,17 +114,103 @@ theorem universallyExact_of_directedColimit
       ∀ i, universallyExact (P.presentation.diag.obj i).f.hom
         (P.presentation.diag.obj i).g.hom) :
     universallyExact f₁ f₂ := by
-  /- Prior attempt:
   letI : Category.{u} P.index := P.indexCategory
   letI : IsFiltered P.index := P.indexFiltered
-  have hcol₁ := isColimitOfPreserves
-    (π₁ : ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R)
-    P.presentation.isColimit
-  exact False.elim (by
-    have := hcol₁
-    trivial)
-  -/
-  sorry
+  have hc₁ : IsColimit ((ShortComplex.π₁ :
+      ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R).mapCocone
+        P.presentation.cocone) :=
+    isColimitOfPreserves
+      (ShortComplex.π₁ : ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R)
+      P.presentation.isColimit
+  have hc₂ : IsColimit ((ShortComplex.π₂ :
+      ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R).mapCocone
+        P.presentation.cocone) :=
+    isColimitOfPreserves
+      (ShortComplex.π₂ : ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R)
+      P.presentation.isColimit
+  have hc₃ : IsColimit ((ShortComplex.π₃ :
+      ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R).mapCocone
+        P.presentation.cocone) :=
+    isColimitOfPreserves
+      (ShortComplex.π₃ : ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R)
+      P.presentation.isColimit
+  let S : ShortComplex (P.index ⥤ ModuleCat.{u} R) :=
+    ShortComplex.mk
+      (Functor.whiskerLeft P.presentation.diag ShortComplex.π₁Toπ₂)
+      (Functor.whiskerLeft P.presentation.diag ShortComplex.π₂Toπ₃) (by
+        rw [← Functor.whiskerLeft_comp,
+          ShortComplex.π₁Toπ₂_comp_π₂Toπ₃]
+        rfl)
+  let hEval : JointlyReflectIsomorphisms
+      (fun i : P.index => (evaluation P.index (ModuleCat.{u} R)).obj i) :=
+    { isIso := fun f => by
+        apply NatIso.isIso_of_isIso_app }
+  have hS : S.Exact := by
+    apply (hEval.exact_iff S).2
+    intro i
+    exact ModuleCat.shortComplex_exact _ (hstage i).2.1
+  have hexC :
+      (ShortComplex.moduleCatMk f₁ f₂ P.comp_eq_zero).Exact := by
+    have h := CategoryTheory.Limits.colim.exact_mapShortComplex hS hc₁
+      hc₂ hc₃ (ModuleCat.ofHom f₁) (ModuleCat.ofHom f₂)
+      (fun i => by
+        change (P.presentation.ι.app i).τ₁ ≫ ModuleCat.ofHom f₁ =
+          (P.presentation.diag.obj i).f ≫ (P.presentation.ι.app i).τ₂
+        exact (P.presentation.ι.app i).comm₁₂)
+      (fun i => by
+        change (P.presentation.ι.app i).τ₂ ≫ ModuleCat.ofHom f₂ =
+          (P.presentation.diag.obj i).g ≫ (P.presentation.ι.app i).τ₃
+        exact (P.presentation.ι.app i).comm₂₃)
+    change (ShortComplex.moduleCatMk f₁ f₂ P.comp_eq_zero).Exact at h
+    exact h
+  have hex : Function.Exact f₁ f₂ :=
+    (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).1 hexC
+  letI : ∀ i, Mono (S.f.app i) := fun i =>
+    (ModuleCat.mono_iff_injective _).mpr (hstage i).1
+  letI : Mono S.f := NatTrans.mono_of_mono_app S.f
+  have hmono : Mono (ModuleCat.ofHom f₁) :=
+    CategoryTheory.Limits.colim.map_mono' S.f hc₁ hc₂ (ModuleCat.ofHom f₁)
+      (fun i => by
+        change (P.presentation.ι.app i).τ₁ ≫ ModuleCat.ofHom f₁ =
+          (P.presentation.diag.obj i).f ≫ (P.presentation.ι.app i).τ₂
+        exact (P.presentation.ι.app i).comm₁₂)
+  letI : ∀ i, Epi (S.g.app i) := fun i =>
+    (ModuleCat.epi_iff_surjective _).mpr (hstage i).2.2.1
+  have hepi : Epi (ModuleCat.ofHom f₂) :=
+    CategoryTheory.Limits.colim.map_epi' S.g
+      (ShortComplex.π₂.mapCocone P.presentation.cocone) hc₃
+      (ModuleCat.ofHom f₂) (fun i => by
+        change (P.presentation.ι.app i).τ₂ ≫ ModuleCat.ofHom f₂ =
+          (P.presentation.diag.obj i).g ≫ (P.presentation.ι.app i).τ₃
+        exact (P.presentation.ι.app i).comm₂₃)
+  refine ⟨(ModuleCat.mono_iff_injective _).mp hmono, hex,
+    (ModuleCat.epi_iff_surjective _).mp hepi, ?_⟩
+  intro Q _ _
+  let T : ModuleCat.{u} R ⥤ ModuleCat.{u} R :=
+    MonoidalCategory.tensorRight (ModuleCat.of R Q)
+  letI : ∀ i, Mono ((Functor.whiskerRight S.f T).app i) := fun i => by
+    apply (ModuleCat.mono_iff_injective _).mpr
+    change Function.Injective ((P.presentation.diag.obj i).f.hom.rTensor Q)
+    exact (hstage i).2.2.2 Q
+  letI : Mono (Functor.whiskerRight S.f T) :=
+    NatTrans.mono_of_mono_app (Functor.whiskerRight S.f T)
+  let fT : (T.mapCocone (ShortComplex.π₁.mapCocone P.presentation.cocone)).pt ⟶
+      (T.mapCocone (ShortComplex.π₂.mapCocone P.presentation.cocone)).pt := by
+    exact T.map (ShortComplex.moduleCatMk f₁ f₂ P.comp_eq_zero).f
+  have hmonoQ : Mono fT :=
+    CategoryTheory.Limits.colim.map_mono'
+      (Functor.whiskerRight S.f T)
+      (isColimitOfPreserves T hc₁) (isColimitOfPreserves T hc₂)
+      fT (fun i => by
+        change T.map ((P.presentation.ι.app i).τ₁) ≫
+            T.map (ShortComplex.moduleCatMk f₁ f₂ P.comp_eq_zero).f =
+          T.map ((P.presentation.diag.obj i).f) ≫ T.map ((P.presentation.ι.app i).τ₂)
+        have hcomm := congrArg (fun k => T.map k) (P.presentation.ι.app i).comm₁₂
+        dsimp at hcomm ⊢
+        simpa only [T.map_comp] using hcomm)
+  have hmonoQ' := (ModuleCat.mono_iff_injective fT).mp hmonoQ
+  change Function.Injective (f₁.rTensor Q) at hmonoQ'
+  exact hmonoQ'
 
 /-- A colimit of split short exact sequences is universally exact. -/
 theorem universallyExact_of_directedSplitColimit
@@ -132,7 +221,22 @@ theorem universallyExact_of_directedSplitColimit
     {f₁ : M₁ →ₗ[R] M₂} {f₂ : M₂ →ₗ[R] M₃}
     (P : DirectedSplitExactColimitPresentation M₁ M₂ M₃ f₁ f₂) :
     universallyExact f₁ f₂ := by
-  sorry
+  letI : Category.{u} P.index := P.indexCategory
+  letI : IsFiltered P.index := P.indexFiltered
+  apply universallyExact_of_directedColimit P.toDirectedUniversallyExactColimitPresentation
+  intro i
+  have hsplit := P.stage_split (i := i)
+  have hshort := hsplit.1 i
+  have hs := hsplit.2
+  obtain ⟨s⟩ := hs
+  apply universallyExact_of_split
+    ⟨hshort.moduleCat_injective_f,
+      (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+        (P.presentation.diag.obj i)).1 hshort.exact,
+      hshort.moduleCat_surjective_g⟩
+    s.r.hom
+  change s.r.hom.comp (P.presentation.diag.obj i).f.hom = LinearMap.id
+  exact congrArg (fun k => k.hom) s.f_r
 
 /-! ## The finite-presentation criteria -/
 

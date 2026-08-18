@@ -134,6 +134,29 @@ structure GodementSimplicialData {C : Type u} [Category.{v} C]
         eqToHom (object_obj (n + 1)) =
       godementSimplicialDegeneracy Y s n j
 
+/-! The unique map from degree zero to degree `n` is useful when spelling out
+the section constructed later in this chapter. -/
+
+def simplicialUnitMap {D : Type u} [Category.{v} D]
+    (U : SimplicialObject D) (n : ℕ) :
+    U.obj (op (SimplexCategory.mk 0)) ⟶
+      U.obj (op (SimplexCategory.mk n)) :=
+  U.map (SimplexCategory.const (SimplexCategory.mk n)
+    (SimplexCategory.mk 0) 0).op
+
+def godementUnitMap {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementSimplicialData Y d s) (n : ℕ) :
+    godementDegree Y 0 ⟶ godementDegree Y n :=
+  eqToHom (data.object_obj 0).symm ≫
+    simplicialUnitMap data.object n ≫ eqToHom (data.object_obj n)
+
+theorem godementUnitMap_zero {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementSimplicialData Y d s) :
+    godementUnitMap Y d s data 0 = 𝟙 (godementDegree Y 0) := by
+  sorry
+
 theorem godement_simplicial_data
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
@@ -314,6 +337,53 @@ def godementZeroMap {A : Type u} {B : Type u'} {C : Type v}
   Functor.whiskerRight
     (Functor.whiskerLeft F (Functor.rightUnitor Y).inv) G
 
+/-- The degree-zero augmentation after transporting the explicit source
+`F ⋙ Y ⋙ G` to the chosen degree-zero object. -/
+def godementWhiskeredDegreeZeroAugmentation
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B) (d : Y ⟶ 𝟭 C) :
+    F ⋙ Y ⋙ G ⟶ F ⋙ G :=
+  godementZeroMap F Y G ≫
+    godementWhiskeredAugmentationComponent F Y G d 0
+
+/-! This is the component formula used in the proof of the section lemma. -/
+
+def godementWhiskeredSectionComponent
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementWhiskeredSimplicialData F Y G d s)
+    (h₀ : F ⋙ G ⟶ F ⋙ Y ⋙ G) (n : ℕ) :
+    F ⋙ G ⟶ godementWhiskeredDegree F Y G n :=
+  h₀ ≫ godementZeroMap F Y G ≫ eqToHom (data.object_obj 0).symm ≫
+    simplicialUnitMap data.object n ≫ eqToHom (data.object_obj n)
+
+/-! A section is recorded as an actual morphism of simplicial objects.  The
+degreewise component structure below is retained as the explicit source-facing
+normal form for calculations with the Godement maps. -/
+
+structure GodementAugmentationSection
+    {D : Type u} [Category.{v} D]
+    (U : SimplicialObject D) (X : D)
+    (ε : Formalization.Books.Simplicial.Unit20.Augmentation U X) where
+  map : (SimplicialObject.const D).obj X ⟶ U
+  section_condition : map ≫ ε = 𝟙 ((SimplicialObject.const D).obj X)
+
+theorem godement_section_morphism
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementWhiskeredAugmentationData F Y G d s)
+    (h₀ : F ⋙ G ⟶ F ⋙ Y ⋙ G)
+    (h₀_condition : h₀ ≫ godementWhiskeredDegreeZeroAugmentation F Y G d =
+      𝟙 (F ⋙ G)) :
+    Nonempty (GodementAugmentationSection data.simplicial.object
+      (F ⋙ G) data.augmentation) := by
+  sorry
+
 structure GodementSection {A : Type u} {B : Type u'} {C : Type v}
     [Category.{v'} A] [Category.{u} B] [Category.{v} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
@@ -338,8 +408,8 @@ theorem godement_section_components
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (h₀ : F ⋙ G ⟶ F ⋙ Y ⋙ G)
     (h₀_condition :
-      h₀ ≫ godementZeroMap F Y G ≫
-        godementWhiskeredAugmentationComponent F Y G d 0 = 𝟙 (F ⋙ G))
+      h₀ ≫ godementWhiskeredDegreeZeroAugmentation F Y G d =
+        𝟙 (F ⋙ G))
     (h : GodementEquations Y d s) :
     Nonempty (GodementSection F Y G d s h₀) := by
   sorry
@@ -359,6 +429,10 @@ def godementInnerAugmentationComponent {A : Type u} {C : Type v}
     F ⋙ godementDegree Y n ⟶ F :=
   Functor.whiskerLeft F (godementAugmentationComponent Y d n) ≫
     (Functor.rightUnitor F).hom
+
+/-! The following two structures spell out, degree by degree, the assertion
+that the given families are morphisms of simplicial objects and commute with
+the augmentation. -/
 
 structure GodementOuterMorphism {B : Type u'} {C : Type v}
     [Category.{u} B] [Category.{v} C]
@@ -443,6 +517,31 @@ abbrev GodementSelfHomotopy {C : Type u} [Category.{v} C]
     (fun n j => godementFace Y d (n := n + 1) j)
     (fun n j => godementDegeneracy Y s (n := n) j) left right
 
+/-! The two endpoint maps in Lemma 33.5. -/
+
+def godementTwoMapLeft
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
+    (a : G ⟶ G')
+    (bₙ : ∀ n, F ⋙ godementDegree Y n ⟶ F' ⋙ godementDegree Y n)
+    (n : ℕ) :
+    godementWhiskeredDegree F Y G n ⟶
+      godementWhiskeredDegree F' Y G' n :=
+  Functor.whiskerRight (bₙ n) G ≫
+    Functor.whiskerLeft (F' ⋙ godementDegree Y n) a
+
+def godementTwoMapRight
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F F' : A ⥤ C) (Y : C ⥤ C) (G G' : C ⥤ B)
+    (aₙ : ∀ n, godementDegree Y n ⋙ G ⟶ godementDegree Y n ⋙ G')
+    (b : F ⟶ F') (n : ℕ) :
+    godementWhiskeredDegree F Y G n ⟶
+      godementWhiskeredDegree F' Y G' n :=
+  Functor.whiskerLeft F (aₙ n) ≫
+    Functor.whiskerRight b (godementDegree Y n ⋙ G')
+
 theorem godement_two_maps_homotopic
     {A : Type u} {B : Type u'} {C : Type v}
     [Category.{v'} A] [Category.{u} B] [Category.{v} C]
@@ -455,12 +554,8 @@ theorem godement_two_maps_homotopic
     (bₙ : ∀ n, F ⋙ godementDegree Y n ⟶ F' ⋙ godementDegree Y n)
     (hb : GodementInnerMorphism F F' Y d s b bₙ) :
     Nonempty (GodementWhiskeredHomotopy F F' Y G G' d s
-      (fun n =>
-        Functor.whiskerRight (bₙ n) G ≫
-          Functor.whiskerLeft (F' ⋙ godementDegree Y n) a)
-      (fun n =>
-        Functor.whiskerLeft F (aₙ n) ≫
-          Functor.whiskerRight b (godementDegree Y n ⋙ G'))) := by
+      (godementTwoMapLeft F F' Y G G' a bₙ)
+      (godementTwoMapRight F F' Y G G' aₙ b)) := by
   sorry
 
 def godementBeforeMap {C : Type u} [Category.{v} C]
@@ -493,6 +588,22 @@ structure GodementSelfMorphism {C : Type u} [Category.{v} C]
     maps n ≫ godementAugmentationComponent Y d n =
       godementAugmentationComponent Y d n ≫ f
 
+/-! An actual morphism of the packaged simplicial objects, with its
+degreewise components transported to the explicit Godement degrees. -/
+
+structure GodementActualSelfMorphism {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementAugmentationData Y d s)
+    (f : 𝟭 C ⟶ 𝟭 C)
+    (maps : ∀ n, godementDegree Y n ⟶ godementDegree Y n) where
+  map : data.simplicial.object ⟶ data.simplicial.object
+  component : ∀ n,
+    eqToHom (data.simplicial.object_obj n).symm ≫
+        map.app (op (SimplexCategory.mk n)) ≫
+        eqToHom (data.simplicial.object_obj n) = maps n
+  augmentation : map ≫ data.augmentation =
+    data.augmentation ≫ (SimplicialObject.const (C ⥤ C)).map f
+
 theorem godement_before_after_maps
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s)
@@ -500,6 +611,16 @@ theorem godement_before_after_maps
     Nonempty (GodementSelfMorphism Y d s f
       (fun n => godementBeforeMap Y f n)) ∧
     Nonempty (GodementSelfMorphism Y d s f
+      (fun n => godementAfterMap Y f n)) := by
+  sorry
+
+theorem godement_before_after_actual_maps
+    {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementAugmentationData Y d s) (f : 𝟭 C ⟶ 𝟭 C) :
+    Nonempty (GodementActualSelfMorphism Y d s data f
+      (fun n => godementBeforeMap Y f n)) ∧
+    Nonempty (GodementActualSelfMorphism Y d s data f
       (fun n => godementAfterMap Y f n)) := by
   sorry
 
@@ -519,6 +640,20 @@ theorem godement_before_after_homotopic
     Nonempty (GodementSelfHomotopy Y d s
       (fun n => godementBeforeMap Y f n)
       (fun n => godementAfterMap Y f n)) := by
+  sorry
+
+theorem godement_before_after_actual_homotopic
+    {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (data : GodementAugmentationData Y d s) (f : 𝟭 C ⟶ 𝟭 C) :
+    Nonempty (Σ before : GodementActualSelfMorphism
+        Y d s data f
+        (fun n => godementBeforeMap Y f n),
+      Σ after : GodementActualSelfMorphism
+        Y d s data f
+        (fun n => godementAfterMap Y f n),
+        Formalization.Books.Simplicial.Unit26.Homotopy
+          before.map after.map) := by
   sorry
 
 end Formalization.Books.Simplicial.Unit33

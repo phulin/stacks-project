@@ -303,7 +303,23 @@ theorem nakayama_part_nine
     [AddCommGroup M] [Module R M] (I : Ideal R)
     (hIM : I • (⊤ : Submodule R M) = ⊤) (hI : IsNilpotent I) :
     Subsingleton M := by
-  sorry
+  obtain ⟨n, hn⟩ := hI
+  have hpow : ∀ k : ℕ, I ^ k • (⊤ : Submodule R M) = ⊤ := by
+    intro k
+    induction k with
+    | zero => simp
+    | succ k ih =>
+      rw [pow_succ, Submodule.mul_smul, hIM, ih]
+  have htop : (⊤ : Submodule R M) = ⊥ := by
+    rw [← hpow n, hn]
+    simp
+  refine ⟨?_⟩
+  intro x y
+  have hx : x ∈ (⊥ : Submodule R M) := htop ▸ Submodule.mem_top
+  have hy : y ∈ (⊥ : Submodule R M) := htop ▸ Submodule.mem_top
+  have hx0 : x = 0 := by simpa using hx
+  have hy0 : y = 0 := by simpa using hy
+  exact hx0.trans hy0.symm
 
 /-- Nakayama, part (10): the nilpotent version of part (4). -/
 theorem nakayama_part_ten
@@ -312,7 +328,32 @@ theorem nakayama_part_ten
     (N N' : Submodule R M)
     (hM : (⊤ : Submodule R M) = N ⊔ I • N') (hI : IsNilpotent I) :
     N = ⊤ := by
-  sorry
+  have hsup : N ⊔ I • (⊤ : Submodule R M) = ⊤ := by
+    apply le_antisymm le_top
+    calc
+      (⊤ : Submodule R M) = N ⊔ I • N' := hM
+      _ ≤ N ⊔ I • (⊤ : Submodule R M) := by
+        apply sup_le le_sup_left
+        apply Submodule.smul_le.2
+        intro r hr m hm
+        apply Submodule.mem_sup_right
+        exact Submodule.smul_mem_smul hr
+          (show m ∈ (⊤ : Submodule R M) from Submodule.mem_top)
+  have hq : I • (⊤ : Submodule R (M ⧸ N)) = ⊤ := by
+    calc
+      I • (⊤ : Submodule R (M ⧸ N)) =
+          I • ((⊤ : Submodule R M).map N.mkQ) := by
+        rw [Submodule.map_top, Submodule.range_mkQ]
+      _ = (I • (⊤ : Submodule R M)).map N.mkQ :=
+        (Submodule.map_smul'' (I := I) (N := (⊤ : Submodule R M)) N.mkQ).symm
+      _ = ⊤ := (Submodule.map_mkQ_eq_top (p := N)
+        (p' := I • (⊤ : Submodule R M))).mpr hsup
+  have hzero : Subsingleton (M ⧸ N) := nakayama_part_nine I hq hI
+  refine top_unique ?_
+  intro x hx
+  have hx0 : (Submodule.mkQ N) x = 0 := Subsingleton.elim _ _
+  have hxN : x ∈ N := by simpa using hx0
+  exact hxN
 
 /-- Nakayama, part (11): the nilpotent version of part (6). -/
 theorem nakayama_part_eleven
@@ -324,7 +365,19 @@ theorem nakayama_part_eleven
         (Submodule.smul_top_le_comap_smul_top I φ)))
     (hI : IsNilpotent I) :
     Function.Surjective φ := by
-  sorry
+  have hM : (⊤ : Submodule R M) = LinearMap.range φ ⊔ I • (⊤ : Submodule R M) := by
+    have hq : LinearMap.range
+        ((I • (⊤ : Submodule R N)).mapQ (I • (⊤ : Submodule R M)) φ
+          (Submodule.smul_top_le_comap_smul_top I φ)) = ⊤ :=
+      LinearMap.range_eq_top.mpr hφ
+    rw [Submodule.range_mapQ] at hq
+    rw [Submodule.map_mkQ_eq_top] at hq
+    have hq' : (⊤ : Submodule R M) = I • (⊤ : Submodule R M) ⊔ LinearMap.range φ :=
+      hq.symm
+    rw [sup_comm] at hq'
+    exact hq'
+  rw [← LinearMap.range_eq_top]
+  exact nakayama_part_ten I (LinearMap.range φ) (⊤ : Submodule R M) hM hI
 
 /-- Nakayama, part (12): arbitrary generating families lift across a
 nilpotent ideal. -/
@@ -335,7 +388,34 @@ theorem nakayama_part_twelve
       (Set.range (fun a => (I • (⊤ : Submodule R M)).mkQ (x a))) = ⊤)
     (hI : IsNilpotent I) :
     Submodule.span R (Set.range x) = ⊤ := by
-  sorry
+  let ψ : (A →₀ R) →ₗ[R] M := Finsupp.linearCombination R x
+  have hq : LinearMap.range
+      ((I • (⊤ : Submodule R (A →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) = ⊤ := by
+    rw [Submodule.range_mapQ, Finsupp.range_linearCombination]
+    rw [Submodule.map_span]
+    have himage :
+        (I • (⊤ : Submodule R M)).mkQ '' Set.range x =
+          Set.range (fun a => (I • (⊤ : Submodule R M)).mkQ (x a)) := by
+      ext y
+      constructor
+      · rintro ⟨z, ⟨a, rfl⟩, rfl⟩
+        exact ⟨a, rfl⟩
+      · rintro ⟨a, rfl⟩
+        exact ⟨x a, ⟨a, rfl⟩, rfl⟩
+    rw [himage]
+    exact hx
+  have hφ : Function.Surjective
+      ((I • (⊤ : Submodule R (A →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) :=
+    LinearMap.range_eq_top.mp hq
+  have hsurj : Function.Surjective ψ :=
+    nakayama_part_eleven I ψ hφ hI
+  rw [span_range_eq_top_iff_surjective_finsuppLinearCombination R]
+  change Function.Surjective ψ
+  exact hsurj
 
 /-! ## Localization form and the two stated special cases -/
 

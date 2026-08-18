@@ -161,6 +161,27 @@ def localizationPreimage
     (P : Algebra.Extension.{u} R S) (M : Submonoid S) : Submonoid P.Ring :=
   M.comap (algebraMap P.Ring S)
 
+/- The source's base-localization statement uses the localization of the
+   extension ring at the image of the base multiplicative set.  This is the
+   canonical ring map from that localization to the localized target. -/
+noncomputable def baseLocalizationMap
+    {A B Bₘ : Type u} [CommRing A] [CommRing B] [CommRing Bₘ]
+    [Algebra A B] [Algebra B Bₘ] [Algebra A Bₘ] [IsScalarTower A B Bₘ]
+    (P : Algebra.Extension.{u} A B) (M : Submonoid A)
+    [IsLocalization (M.map (algebraMap A B)) Bₘ] :
+    Localization (M.map (algebraMap A P.Ring)) →+* Bₘ := by
+  let h : ∀ y : M.map (algebraMap A P.Ring),
+      IsUnit ((algebraMap B Bₘ)
+        ((algebraMap P.Ring B) (y : P.Ring))) := by
+    rintro ⟨_, ⟨a, ha, rfl⟩⟩
+    change IsUnit ((algebraMap B Bₘ)
+      ((algebraMap P.Ring B) ((algebraMap A P.Ring) a)))
+    rw [← IsScalarTower.algebraMap_apply A P.Ring B]
+    exact IsLocalization.map_units Bₘ
+      ⟨algebraMap A B a, Submonoid.mem_map_of_mem (algebraMap A B) ha⟩
+  exact IsLocalization.lift (M := M.map (algebraMap A P.Ring))
+    (g := (algebraMap B Bₘ).comp (IsScalarTower.toAlgHom A P.Ring B).toRingHom) h
+
 /-- Localization of the target preserves the universal first-order property.
 
 `P.localization M` has underlying ring
@@ -197,8 +218,10 @@ theorem universal_first_order_thickening_localize_base
     ∃ Q : Algebra.Extension.{u} Aₘ Bₘ,
       IsUniversalFirstOrderThickening Q ∧
         Nonempty (Bₘ ⊗[B] P.Cotangent ≃ₗ[Bₘ] Q.Cotangent) ∧
-        Nonempty
-          (Q.Ring ≃ₐ[Aₘ] Localization (M.map (algebraMap A P.Ring))) := by
+        ∃ e : Q.Ring ≃ₐ[Aₘ] Localization (M.map (algebraMap A P.Ring)),
+          ((IsScalarTower.toAlgHom Aₘ Q.Ring Bₘ : Q.Ring →ₐ[Aₘ] Bₘ).toRingHom) =
+            (baseLocalizationMap (Bₘ := Bₘ) P M).comp
+              e.toRingEquiv.toRingHom := by
   sorry
 
 /-! ## Differentials -/

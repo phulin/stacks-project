@@ -534,8 +534,191 @@ theorem cokernel_flat
           intro x
           simpa [LinearMap.comp_apply] using DFunLike.congr_fun hleft x)
     · exact hd
-  refine ⟨hopen_injective, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals sorry
+  have hsurjective_data := map_between_finite φ
+  have hopen_surjective : IsOpen (fiberSurjectiveLocus φ) := by
+    rw [← hsurjective_data.1]
+    exact hsurjective_data.2.1
+  have haway_surjective (f : R)
+      (hf : (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
+        fiberSurjectiveLocus φ) :
+      Function.Surjective (localizedMapAway φ f) := by
+    apply hsurjective_data.2.2 f
+    rw [hsurjective_data.1]
+    exact hf
+  have hrange_finite : Module.Finite R (LinearMap.range φ) := by
+    apply Module.Finite.of_surjective φ.rangeRestrict
+    intro y
+    rcases y with ⟨y, x, rfl⟩
+    exact ⟨x, rfl⟩
+  let : Module.Finite R (LinearMap.range φ) := hrange_finite
+  have hcoker_fp : Module.FinitePresentation R (P₂ ⧸ LinearMap.range φ) := by
+    apply Module.finitePresentation_of_surjective (LinearMap.range φ).mkQ
+      (Submodule.mkQ_surjective _)
+    rw [Submodule.ker_mkQ]
+    exact Module.Finite.iff_fg.mp (inferInstance : Module.Finite R (LinearMap.range φ))
+  have hfree_coker (q : PrimeSpectrum R)
+      (hq : q ∈ fiberInjectiveLocus φ) :
+      Module.Free (Localization.AtPrime q.asIdeal)
+        (LocalizedModule q.asIdeal.primeCompl
+          (P₂ ⧸ LinearMap.range φ)) := by
+    let A := Localization.AtPrime q.asIdeal
+    let l := localizedMapAtPrime φ q
+    let : Module.Finite A
+        (LocalizedModule q.asIdeal.primeCompl P₁) :=
+      Module.Finite.of_isLocalizedModule q.asIdeal.primeCompl
+        (Rₚ := A) (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₁)
+    let : Module.Finite A
+        (LocalizedModule q.asIdeal.primeCompl P₂) :=
+      Module.Finite.of_isLocalizedModule q.asIdeal.primeCompl
+        (Rₚ := A) (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₂)
+    let : Module.Projective A
+        (LocalizedModule q.asIdeal.primeCompl P₂) :=
+      Module.projective_of_isLocalizedModule q.asIdeal.primeCompl
+        (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₂)
+    let : Module.Flat A
+        (LocalizedModule q.asIdeal.primeCompl P₂) := inferInstance
+    let : Module.Free A
+        (LocalizedModule q.asIdeal.primeCompl P₂) :=
+      Module.free_of_flat_of_isLocalRing
+    have hlt : Function.Injective (l.lTensor q.asIdeal.ResidueField) := by
+      obtain ⟨r, hr⟩ := hsplit q hq
+      exact
+        (IsLocalRing.split_injective_iff_lTensor_residueField_injective l).mp
+          ⟨r, hr⟩
+    have hfreeQ : Module.Free A
+        (LocalizedModule q.asIdeal.primeCompl P₂ ⧸ LinearMap.range l) :=
+      Module.free_of_lTensor_residueField_injective l
+        (LinearMap.range l).mkQ (Submodule.mkQ_surjective _)
+        l.exact_map_mkQ_range hlt
+    have hrange : LinearMap.range l =
+        (LinearMap.range φ).localized q.asIdeal.primeCompl := by
+      simpa [l, localizedMapAtPrime, LocalizedModule.map,
+        IsLocalizedModule.mapExtendScalars] using
+        (LinearMap.localized'_range_eq_range_localizedMap
+          (S := A) (p := q.asIdeal.primeCompl)
+          (f := LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₁)
+          (f' := LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₂) φ).symm
+    have hfreeQ' : Module.Free A
+        (LocalizedModule q.asIdeal.primeCompl P₂ ⧸
+          (LinearMap.range φ).localized q.asIdeal.primeCompl) := by
+      rw [← hrange]
+      exact hfreeQ
+    let e₂ := localizedQuotientEquiv q.asIdeal.primeCompl
+      (LinearMap.range φ)
+    let : Module.Free A
+        (LocalizedModule q.asIdeal.primeCompl P₂ ⧸
+          (LinearMap.range φ).localized q.asIdeal.primeCompl) := hfreeQ'
+    exact Module.Free.of_equiv e₂
+  have haway_injective (f : R)
+      (hf : (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
+        fiberInjectiveLocus φ) :
+      Function.Injective (localizedMapAway φ f) := by
+    let S := Submonoid.powers f
+    have hksub : Subsingleton (LocalizedModule S (LinearMap.ker φ)) := by
+      apply (LocalizedModule.subsingleton_iff_support_subset).2
+      intro q hq
+      rw [PrimeSpectrum.mem_zeroLocus]
+      by_contra hqf
+      have hqf' : f ∉ q.asIdeal := by
+        intro h
+        exact hqf (Set.singleton_subset_iff.mpr h)
+      exact (hker q (hf ((PrimeSpectrum.mem_basicOpen f q).2 hqf'))) hq
+    apply IsLocalizedModule.injective_of_map_zero (S := S)
+      (LocalizedModule.mkLinearMap S P₁)
+      (g := (localizedMapAway φ f).restrictScalars R)
+    intro m hm
+    obtain ⟨s, hs⟩ :=
+      (IsLocalizedModule.eq_zero_iff S
+        (f := LocalizedModule.mkLinearMap S P₂)).mp (by
+      simpa [localizedMapAway, S] using hm)
+    have hsm : s.1 • m ∈ LinearMap.ker φ := by
+      rw [LinearMap.mem_ker]
+      simpa [map_smul, hs]
+    obtain ⟨c, hc, hcm⟩ :=
+      (LocalizedModule.subsingleton_iff (S := S)).mp hksub ⟨s.1 • m, hsm⟩
+    apply (IsLocalizedModule.eq_zero_iff S
+      (f := LocalizedModule.mkLinearMap S P₁)).2
+    refine ⟨⟨c, hc⟩ * s, ?_⟩
+    simpa [Submonoid.smul_def, mul_smul] using congrArg Subtype.val hcm
+  refine ⟨hopen_injective, ?_, hopen_surjective, ?_, ?_, ?_⟩
+  · intro f hf
+    refine ⟨haway_injective f hf, ?_⟩
+    let : Module.FinitePresentation R (P₂ ⧸ LinearMap.range φ) := hcoker_fp
+    refine ⟨inferInstance, ?_⟩
+    apply Module.basicOpen_subset_freeLocus_iff.mp
+    intro q hq
+    exact Module.mem_freeLocus.mpr (hfree_coker q (hf hq))
+  · intro f hf
+    have hsurj : Function.Surjective (localizedMapAway φ f) := haway_surjective f hf
+    refine ⟨hsurj, ?_⟩
+    let S := Submonoid.powers f
+    let A := Localization.Away f
+    let l := localizedMapAway φ f
+    let : Module.Finite A (LocalizedModule S P₁) :=
+      Module.Finite.of_isLocalizedModule S
+        (Rₚ := A) (LocalizedModule.mkLinearMap S P₁)
+    let : Module.Projective A (LocalizedModule S P₁) :=
+      Module.projective_of_isLocalizedModule S
+        (LocalizedModule.mkLinearMap S P₁)
+    let : Module.Finite A (LocalizedModule S P₂) :=
+      Module.Finite.of_isLocalizedModule S
+        (Rₚ := A) (LocalizedModule.mkLinearMap S P₂)
+    let : Module.Projective A (LocalizedModule S P₂) :=
+      Module.projective_of_isLocalizedModule S
+        (LocalizedModule.mkLinearMap S P₂)
+    obtain ⟨s, hs⟩ := Module.projective_lifting_property l LinearMap.id hsurj
+    let r : LocalizedModule S P₁ →ₗ[A] LinearMap.ker l :=
+      (LinearMap.id - s.comp l).codRestrict _ (by
+        intro x
+        rw [LinearMap.mem_ker]
+        change l (x - s (l x)) = 0
+        rw [map_sub, ← LinearMap.comp_apply, hs]
+        simp only [LinearMap.id_apply, sub_self]
+      )
+    have hr : r.comp (LinearMap.ker l).subtype = LinearMap.id := by
+      ext x
+      simp [r]
+    let : Module.Projective A (LinearMap.ker l) :=
+      Module.Projective.of_split (LinearMap.ker l).subtype r hr
+    let : Module.Finite A (LinearMap.ker l) := by
+      apply Module.Finite.of_surjective r
+      intro x
+      refine ⟨x.1, ?_⟩
+      simpa only [Submodule.subtype_apply, LinearMap.comp_apply, LinearMap.id_apply] using
+        DFunLike.congr_fun hr x
+    let e₁ := Submodule.localizedEquiv S (LinearMap.ker φ)
+    let e₂ : (LinearMap.ker φ).localized S ≃ₗ[A] LinearMap.ker l :=
+      LinearEquiv.ofEq _ _ (by
+        simpa [l, localizedMapAway, LocalizedModule.map,
+          IsLocalizedModule.mapExtendScalars] using
+          (LinearMap.localized'_ker_eq_ker_localizedMap
+            (S := A) (p := S)
+            (f := LocalizedModule.mkLinearMap S P₁)
+            (f' := LocalizedModule.mkLinearMap S P₂) φ))
+    let e := e₁.symm.trans e₂
+    have hproj : Module.Projective A
+        (LocalizedModule S (LinearMap.ker φ)) :=
+      Module.Projective.of_equiv' e.symm
+    have hfin : Module.Finite A
+        (LocalizedModule S (LinearMap.ker φ)) := by
+      exact Module.Finite.of_surjective e.symm.toLinearMap e.symm.surjective
+    exact ⟨hfin, hproj⟩
+  · exact hopen_injective.inter hopen_surjective
+  · intro f hf
+    have hsubinj : (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
+        fiberInjectiveLocus φ := by
+      intro q hq
+      exact (show q ∈ fiberInjectiveLocus φ ∩ fiberSurjectiveLocus φ from by
+        simpa [fiberIsomorphismLocus, fiberInjectiveLocus,
+          fiberSurjectiveLocus, Function.Bijective] using hf hq).1
+    have hsubsurj : (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
+        fiberSurjectiveLocus φ := by
+      intro q hq
+      exact (show q ∈ fiberInjectiveLocus φ ∩ fiberSurjectiveLocus φ from by
+        simpa [fiberIsomorphismLocus, fiberInjectiveLocus,
+          fiberSurjectiveLocus, Function.Bijective] using hf hq).2
+    refine ⟨?_, haway_surjective f hsubsurj⟩
+    exact haway_injective f hsubinj
 
 end
 

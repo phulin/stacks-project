@@ -1,11 +1,17 @@
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.ZMod.Basic
+import Mathlib.Data.ZMod.QuotientRing
+import Mathlib.Analysis.Complex.Polynomial.Basic
+import Mathlib.Algebra.Polynomial.BigOperators
+import Mathlib.Algebra.Polynomial.Splits
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
+import Mathlib.RingTheory.OrderOfVanishing.Basic
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.Tactic.NormNum
 
 /-!
 # Exercises, Chapter 9: Length
@@ -41,7 +47,18 @@ abbrev integerLengthExample : Type := ZMod 120
 /-- The length of `ℤ / 120ℤ` as a `ℤ`-module. -/
 theorem integer_quotient_120_length :
     Module.length ℤ integerLengthExample = 5 := by
-  sorry
+  let e : (ℤ ⧸ Ideal.span ({(120 : ℤ)} : Set ℤ)) ≃ₗ[ℤ] integerLengthExample :=
+    (Int.quotientSpanNatEquivZMod 120).toAddEquiv.toIntLinearEquiv
+  rw [← e.length_eq]
+  change Ring.ord ℤ 120 = 5
+  rw [show (120 : ℤ) = 2 ^ 3 * 3 * 5 by norm_num]
+  rw [Ring.ord_mul ℤ (by simp : (5 : ℤ) ∈ nonZeroDivisors ℤ)]
+  rw [Ring.ord_mul ℤ (by simp : (3 : ℤ) ∈ nonZeroDivisors ℤ)]
+  rw [Ring.ord_pow (by simp : (2 : ℤ) ∈ nonZeroDivisors ℤ)]
+  rw [Ring.ord_of_irreducible (by norm_num [irreducible_iff_prime]; decide : Irreducible (2 : ℤ)),
+    Ring.ord_of_irreducible (by norm_num [irreducible_iff_prime]; decide : Irreducible (3 : ℤ)),
+    Ring.ord_of_irreducible (by norm_num [irreducible_iff_prime]; decide : Irreducible (5 : ℤ))]
+  norm_num
 
 /- The polynomial relations in the two complex/real examples. -/
 def complexLengthPolynomial : Polynomial ℂ :=
@@ -65,7 +82,62 @@ abbrev realLengthExample : Type :=
 /-- The length of `ℂ[x]/(x^100 + x + 1)` over `ℂ[x]`. -/
 theorem complex_polynomial_quotient_length :
     Module.length (Polynomial ℂ) complexLengthExample = 100 := by
-  sorry
+  change Ring.ord (Polynomial ℂ) complexLengthPolynomial = 100
+  unfold complexLengthPolynomial
+  have hsplit : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).Splits :=
+    IsAlgClosed.splits _
+  have hdegree : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).degree ≤ 100 := by
+    have hpow : (Polynomial.X ^ 100 : Polynomial ℂ).degree ≤ 100 := by
+      rw [Polynomial.degree_X_pow]
+      exact le_rfl
+    have hX : (Polynomial.X : Polynomial ℂ).degree ≤ 100 := by
+      rw [Polynomial.degree_X]
+      exact_mod_cast (by norm_num : (1 : ℕ) ≤ 100)
+    have hone : (1 : Polynomial ℂ).degree ≤ 100 := by
+      rw [Polynomial.degree_one]
+      exact_mod_cast (by norm_num : (0 : ℕ) ≤ 100)
+    have hdeg1 : (Polynomial.X ^ 100 + Polynomial.X : Polynomial ℂ).degree ≤ 100 := by
+      exact Polynomial.degree_add_le_of_degree_le hpow hX
+    exact Polynomial.degree_add_le_of_degree_le hdeg1 hone
+  have hcoeff : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).coeff 100 = 1 := by
+    rw [Polynomial.coeff_add, Polynomial.coeff_add, Polynomial.coeff_X_pow,
+      if_pos rfl, Polynomial.coeff_X_of_ne_one (by norm_num), Polynomial.coeff_one]
+    norm_num
+  have hcoeff_ne : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).coeff 100 ≠ 0 := by
+    rw [hcoeff]
+    exact one_ne_zero
+  have hmonic : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).Monic :=
+    Polynomial.monic_of_degree_le 100 hdegree hcoeff
+  have hprod : ∀ s : Multiset ℂ,
+      Ring.ord (Polynomial ℂ) (s.map (fun x => Polynomial.X - Polynomial.C x)).prod =
+        s.card := by
+    intro s
+    induction s using Multiset.induction_on with
+    | empty => simp
+    | @cons a s ih =>
+        have hne : (s.map (fun x => Polynomial.X - Polynomial.C x)).prod ≠ 0 := by
+          apply Multiset.prod_ne_zero
+          simp [Polynomial.X_sub_C_ne_zero]
+        rw [Multiset.map_cons, Multiset.prod_cons,
+          Ring.ord_mul (Polynomial ℂ) (by simp [hne] :
+            (s.map (fun x => Polynomial.X - Polynomial.C x)).prod ∈
+              nonZeroDivisors (Polynomial ℂ)),
+          Ring.ord_of_irreducible (Polynomial.irreducible_X_sub_C a), ih]
+        simp [add_comm]
+  have hnd : (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).natDegree = 100 :=
+    Polynomial.natDegree_eq_of_degree_eq_some
+      (Polynomial.degree_eq_of_le_of_coeff_ne_zero hdegree hcoeff_ne)
+  calc
+    Ring.ord (Polynomial ℂ)
+          (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ) =
+        Ring.ord (Polynomial ℂ)
+          ((Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).roots.map
+            (Polynomial.X - Polynomial.C ·)).prod :=
+      congrArg (Ring.ord (Polynomial ℂ)) (hsplit.eq_prod_roots_of_monic hmonic)
+    _ = (Polynomial.X ^ 100 + Polynomial.X + 1 : Polynomial ℂ).roots.card := hprod _
+    _ = 100 := by
+      rw [← hsplit.natDegree_eq_card_roots]
+      exact_mod_cast hnd
 
 /-- The length of `ℝ[x]/(x^4 + 2x^2 + 1)` over `ℝ[x]`. -/
 theorem real_polynomial_quotient_length :
@@ -88,7 +160,34 @@ abbrev planeOriginIdeal (k : Type u) [Field k] : Ideal (planePolynomialRing k) :
    localization-at-a-prime construction below. -/
 instance planeOriginIdeal_isPrime (k : Type u) [Field k] :
     (planeOriginIdeal k).IsPrime := by
-  sorry
+  have hker :
+      RingHom.ker (MvPolynomial.constantCoeff : planePolynomialRing k →+* k) =
+        planeOriginIdeal k := by
+    ext p
+    rw [RingHom.mem_ker]
+    constructor
+    · intro hp
+      change p ∈ Ideal.span (Set.range (MvPolynomial.X : Fin 2 → planePolynomialRing k))
+      rw [← Set.image_univ, MvPolynomial.mem_ideal_span_X_image]
+      intro m hm
+      by_contra h
+      have hm0 : m = 0 := by
+        apply Finsupp.ext
+        intro i
+        exact not_ne_iff.mp (fun hmi => h ⟨i, by simp, hmi⟩)
+      exact (MvPolynomial.mem_support_iff.mp hm)
+        (by simpa [hm0, MvPolynomial.constantCoeff_eq] using hp)
+    · intro hp
+      change p ∈ Ideal.span (Set.range (MvPolynomial.X : Fin 2 → planePolynomialRing k)) at hp
+      rw [← Set.image_univ, MvPolynomial.mem_ideal_span_X_image] at hp
+      by_contra h
+      have hmem : (0 : Fin 2 →₀ ℕ) ∈ p.support :=
+        MvPolynomial.mem_support_iff.mpr
+          (by simpa [MvPolynomial.constantCoeff_eq] using h)
+      obtain ⟨i, hi, hmi⟩ := hp 0 hmem
+      exact hmi (by simp)
+  rw [← hker]
+  exact RingHom.ker_isPrime _
 
 /-- The local ring `k[x,y]_(x,y)` from the source. -/
 abbrev planeLocalRing (k : Type u) [Field k] :=

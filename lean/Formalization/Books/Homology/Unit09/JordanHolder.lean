@@ -252,8 +252,8 @@ theorem isArtinianObject_of_shortExact_subobject
     (S : ShortComplex C) (hS : S.ShortExact)
     (h₂ : IsArtinianObject S.X₂) :
     IsArtinianObject S.X₁ := by
-  letI : IsArtinianObject S.X₂ := h₂
-  letI : Mono S.f := hS.mono_f
+  let : IsArtinianObject S.X₂ := h₂
+  let : Mono S.f := hS.mono_f
   exact isArtinianObject_of_mono S.f
 
 theorem isNoetherianObject_of_shortExact_subobject
@@ -261,8 +261,8 @@ theorem isNoetherianObject_of_shortExact_subobject
     (S : ShortComplex C) (hS : S.ShortExact)
     (h₂ : IsNoetherianObject S.X₂) :
     IsNoetherianObject S.X₁ := by
-  letI : IsNoetherianObject S.X₂ := h₂
-  letI : Mono S.f := hS.mono_f
+  let : IsNoetherianObject S.X₂ := h₂
+  let : Mono S.f := hS.mono_f
   exact isNoetherianObject_of_mono S.f
 
 /-! ## Stability under short exact sequences -/
@@ -528,10 +528,10 @@ theorem jordanHolderLattice_iso_subobjectQuotient
       have hφmono : Mono φ := by
         dsimp [φ]
         exact Abelian.mono_cokernel_map_of_isPullback hsq
-      letI : Simple (cokernel (Subobject.ofLE x (x ⊔ y) le_sup_left)) := by
+      let : Simple (cokernel (Subobject.ofLE x (x ⊔ y) le_sup_left)) := by
         change Simple (subobjectQuotient x (x ⊔ y) le_sup_left)
         exact (simple_subobjectQuotient_iff_covBy le_sup_left).mpr hm
-      letI : Simple (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)) := by
+      let : Simple (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)) := by
         change Simple (subobjectQuotient (x ⊓ y) y inf_le_right)
         exact (simple_subobjectQuotient_iff_covBy inf_le_right).mpr hiy
       have hφne : φ ≠ 0 := by
@@ -540,7 +540,7 @@ theorem jordanHolderLattice_iso_subobjectQuotient
           @IsZero.of_mono_eq_zero _ _ _ _ _ φ hφmono hφzero
         exact (Simple.not_isZero (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)))
           hsourcezero
-      letI : IsIso φ := isIso_of_mono_of_nonzero hφne
+      let : IsIso φ := isIso_of_mono_of_nonzero hφne
       exact Or.inr ⟨le_sup_left, inf_le_right, ⟨(asIso φ).symm⟩⟩
     exact h
   rcases he with hbad | ⟨_, _, ⟨i⟩⟩

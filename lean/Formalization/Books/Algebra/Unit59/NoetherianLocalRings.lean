@@ -2,6 +2,8 @@ import Formalization.Books.Algebra.Unit51.MoreNoetherianRings
 import Formalization.Books.Algebra.Unit52.Length
 import Formalization.Books.Algebra.Unit58.NoetherianGradedRings
 import Mathlib.Algebra.Polynomial.Eval.Defs
+import Mathlib.RingTheory.Finiteness.Ideal
+import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.Ideal.Operations
 
 /-!
@@ -44,6 +46,67 @@ def moduleLengthNat
     [AddCommGroup M] [Module R M] : ℕ :=
   (Module.length R M).toNat
 
+private theorem finiteLength_of_maximalIdeal_pow_smul_top_eq_bot
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M]
+    (hM : ∃ s : ℕ,
+      (IsLocalRing.maximalIdeal R) ^ s • (⊤ : Submodule R M) = ⊥) :
+    IsFiniteLength R M := by
+  obtain ⟨s, hs⟩ := hM
+  let K : Ideal R := (IsLocalRing.maximalIdeal R) ^ s
+  have hkill : K • (⊤ : Submodule R M) = ⊥ := by
+    simpa [K] using hs
+  by_cases hK : K = ⊤
+  · letI : Subsingleton M := by
+      constructor
+      intro x y
+      apply sub_eq_zero.mp
+      have hx : x - y ∈ K • (⊤ : Submodule R M) := by
+        rw [hK]
+        simpa using (show x - y ∈ (⊤ : Submodule R M) from Submodule.mem_top)
+      rw [hkill] at hx
+      simpa using hx
+    exact IsFiniteLength.of_subsingleton
+  · let S := R ⧸ K
+    letI : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hK
+    letI : IsLocalRing S :=
+      IsLocalRing.of_surjective' (Ideal.Quotient.mk K)
+        Ideal.Quotient.mk_surjective
+    letI : IsNoetherianRing S :=
+      isNoetherianRing_of_surjective R S (Ideal.Quotient.mk K)
+        Ideal.Quotient.mk_surjective
+    have hmap :
+        (IsLocalRing.maximalIdeal R).map (Ideal.Quotient.mk K) =
+          IsLocalRing.maximalIdeal S :=
+      IsLocalRing.map_maximalIdeal_of_surjective (Ideal.Quotient.mk K)
+        Ideal.Quotient.mk_surjective
+    letI : IsSemiprimaryRing S :=
+      { isSemisimpleRing := by
+          have hJac : Ring.jacobson S = IsLocalRing.maximalIdeal S :=
+            IsLocalRing.ringJacobson_eq_maximalIdeal S
+          let _ := Ideal.Quotient.field (IsLocalRing.maximalIdeal S)
+          exact (Ideal.quotEquivOfEq hJac).symm.isSemisimpleRing
+        isNilpotent := by
+          rw [IsLocalRing.ringJacobson_eq_maximalIdeal S, ← hmap]
+          refine ⟨s, ?_⟩
+          rw [← Ideal.map_pow, Ideal.zero_eq_bot,
+            Ideal.map_eq_bot_iff_le_ker, Ideal.mk_ker] }
+    have htors : Module.IsTorsionBySet R M K := by
+      rw [Module.isTorsionBySet_iff_subset_annihilator]
+      change K ≤ Module.annihilator R M
+      rw [← Submodule.annihilator_top, Submodule.le_annihilator_iff]
+      exact hkill
+    letI : Module S M := htors.module
+    letI : Module.Finite S M := Module.Finite.of_restrictScalars_finite R S M
+    have hfinS : IsNoetherian S M := inferInstance
+    have hArtS : IsArtinian S M :=
+      (IsSemiprimaryRing.isNoetherian_iff_isArtinian (R := S) (M := M)).mp hfinS
+    have hArtR : IsArtinian R M :=
+      (LinearMap.isArtinian_iff_of_bijective htors.semilinearMap
+        Function.bijective_id).mpr hArtS
+    exact isFiniteLength_iff_isNoetherian_isArtinian.mpr ⟨inferInstance, hArtR⟩
+
 /-! ## The maximal-ideal Hilbert functions -/
 
 def hilbertFunction
@@ -76,13 +139,19 @@ def IsIdealOfDefinition
 theorem maximalIdeal_isIdealOfDefinition
     (R : Type u) [CommRing R] [IsLocalRing R] :
     IsIdealOfDefinition R (IsLocalRing.maximalIdeal R) := by
-  sorry
+  unfold IsIdealOfDefinition
+  exact (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical
 
 theorem exists_pow_maximalIdeal_le_of_isIdealOfDefinition
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     (I : Ideal R) (hI : IsIdealOfDefinition R I) :
     ∃ r : ℕ, (IsLocalRing.maximalIdeal R) ^ r ≤ I := by
-  sorry
+  unfold IsIdealOfDefinition at hI
+  have hrad : IsLocalRing.maximalIdeal R ≤ I.radical := by
+    simp [hI]
+  have hfg : (IsLocalRing.maximalIdeal R).FG :=
+    Ideal.FG.of_isNoetherianRing _
+  exact Ideal.exists_pow_le_of_le_radical_of_fg hrad hfg
 
 theorem finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
@@ -90,7 +159,17 @@ theorem finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
     [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
     (hM : ∃ r : ℕ, I ^ r • (⊤ : Submodule R M) = ⊥) :
     IsFiniteLength R M := by
-  sorry
+  obtain ⟨r, hr⟩ := exists_pow_maximalIdeal_le_of_isIdealOfDefinition I hI
+  obtain ⟨s, hs⟩ := hM
+  have hmax :
+      (IsLocalRing.maximalIdeal R) ^ (r * s) • (⊤ : Submodule R M) = ⊥ := by
+    apply le_antisymm
+    · have hpow :
+          (IsLocalRing.maximalIdeal R) ^ (r * s) ≤ I ^ s := by
+        simpa [pow_mul] using Ideal.pow_right_mono hr s
+      exact (Submodule.smul_mono_left hpow).trans_eq hs
+    · exact bot_le
+  exact finiteLength_of_maximalIdeal_pow_smul_top_eq_bot ⟨r * s, hmax⟩
 
 def idealHilbertFunction
     {R : Type u} [CommRing R] (I : Ideal R) (M : Type v)

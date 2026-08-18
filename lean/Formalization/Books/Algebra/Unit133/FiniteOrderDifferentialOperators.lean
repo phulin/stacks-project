@@ -730,13 +730,175 @@ abbrev principalPartsUniversal (k : ℕ) :
   ⟨principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k,
     principalPartsUniversalLinearMap_isDifferentialOperator (R := R) (S := S) (M := M) k⟩
 
+private theorem principalParts_factorization_unique_aux (k : ℕ) (N : Type*)
+    [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N]
+    (D : differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k) :
+    ∃! α : PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N,
+      (α.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D.1 := by
+  classical
+  let L : (M →₀ S) →ₗ[S] N :=
+    Finsupp.lsum S (fun m : M =>
+      ((LinearMap.id : S →ₗ[S] S).smulRight (D.1 m)))
+  have hEval : ∀ (j : ℕ) (E : M →ₗ[R] N),
+      IsDifferentialOperator (R := R) (S := S) j E →
+        ∀ (g : Fin (j + 1) → S) (m : M),
+          principalPartsHigherEvaluation (R := R) (S := S) j E g m = 0 := by
+    intro j
+    induction j with
+    | zero =>
+        intro E hE g m
+        have hg : g = fun _ => g 0 := by
+          funext i
+          exact congrArg g (Fin.eq_zero i)
+        rw [hg, principalPartsHigherEvaluation_zero]
+        exact sub_eq_zero.mpr (hE (g 0) m).symm
+    | succ j ih =>
+        intro E hE g m
+        let s : S := g (Fin.last (j + 1))
+        let g₀ : Fin (j + 1) → S := fun i => g i.castSucc
+        have hg : g = fun i => Fin.lastCases s g₀ i := by
+          funext i
+          cases i using Fin.lastCases with
+          | last => simp [s]
+          | cast i => simp [g₀]
+        rw [hg, principalPartsHigherEvaluation_succ]
+        have hcomm :
+            principalPartsHigherEvaluation (R := R) (S := S) j
+                (differentialOperatorCommutator E s) g₀ m =
+              principalPartsHigherEvaluation (R := R) (S := S) j E g₀ (s • m) -
+                s • principalPartsHigherEvaluation (R := R) (S := S) j E g₀ m := by
+          simp [principalPartsHigherEvaluation, differentialOperatorCommutator,
+            Finset.smul_sum, smul_sub, smul_smul, mul_assoc, mul_comm, mul_left_comm]
+        have hz := ih (differentialOperatorCommutator E s) (hE s) g₀ m
+        rw [hcomm] at hz
+        exact sub_eq_zero.mpr (sub_eq_zero.mp hz).symm
+  have hL : principalPartsRelationSubmodule (R := R) (S := S) (M := M) k ≤
+      LinearMap.ker L := by
+    apply Submodule.span_le.2
+    intro x hx
+    rcases hx with hx | ⟨⟨g, m⟩, rfl⟩
+    · rcases hx with ⟨p, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
+      · change L (principalPartsAddRelation p.1 p.2) = 0
+        change (Finsupp.lsum S (fun m : M =>
+          ((LinearMap.id : S →ₗ[S] S).smulRight (D.1 m))))
+          (Finsupp.single (p.1 + p.2) 1 - Finsupp.single p.1 1 -
+            Finsupp.single p.2 1) = 0
+        rw [map_sub, map_sub, Finsupp.lsum_single, Finsupp.lsum_single,
+          Finsupp.lsum_single]
+        simp [D.1.map_add, sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+      · change L (principalPartsScalarRelation r m) = 0
+        change (Finsupp.lsum S (fun m : M =>
+          ((LinearMap.id : S →ₗ[S] S).smulRight (D.1 m))))
+          ((algebraMap R S r) • Finsupp.single m 1 - Finsupp.single (r • m) 1) = 0
+        rw [map_sub, map_smul, Finsupp.lsum_single, Finsupp.lsum_single]
+        simp only [LinearMap.smulRight_apply, LinearMap.id_apply, one_smul]
+        rw [IsScalarTower.algebraMap_smul S r (D.1 m), D.1.map_smul]
+        exact sub_self _
+    · change L (principalPartsHigherRelation k g m) = 0
+      change principalPartsHigherEvaluationMap (R := R) (S := S) D.1
+          (principalPartsHigherRelation k g m) = 0
+      rw [← principalPartsHigherEvaluation_eq_map (R := R) (S := S) k D.1 g m]
+      exact hEval k D.1 D.2 g m
+  have hex : ∃ α : PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N,
+      (α.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D.1 := by
+    refine ⟨Submodule.liftQ _ L hL, ?_⟩
+    ext m
+    rw [LinearMap.comp_apply, principalPartsUniversalLinearMap_apply,
+      principalPartsGenerator]
+    change (Submodule.liftQ _ L hL)
+      (Submodule.mkQ _ (Finsupp.single m 1)) = D.1 m
+    have hm := congrArg (fun F : (M →₀ S) →ₗ[S] N => F (Finsupp.single m 1))
+      (Submodule.liftQ_mkQ
+        (p := principalPartsRelationSubmodule (R := R) (S := S) (M := M) k)
+        (f := L) hL)
+    simpa [LinearMap.comp_apply, L, Finsupp.lsum_single] using hm
+  rcases hex with ⟨α, hα⟩
+  refine ⟨α, hα, ?_⟩
+  intro β hβ
+  let q : (M →₀ S) →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) k :=
+    Submodule.mkQ _
+  have hgen : ∀ m : M,
+      β (principalPartsGenerator (R := R) (S := S) (M := M) k m) =
+        α (principalPartsGenerator (R := R) (S := S) (M := M) k m) := by
+    intro m
+    have hβm := congrArg (fun E => E m) hβ
+    have hαm := congrArg (fun E => E m) hα
+    change β (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k m) = D.1 m at hβm
+    change α (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k m) = D.1 m at hαm
+    simpa [principalPartsUniversalLinearMap_apply, principalPartsGenerator] using
+      hβm.trans hαm.symm
+  have hmaps : β.comp q = α.comp q := by
+    apply LinearMap.ext
+    intro x
+    induction x using Finsupp.induction_linear with
+    | zero => simp
+    | add x y hx hy => simp only [map_add]; rw [hx, hy]
+    | single m s =>
+        change β (q (Finsupp.single m s)) = α (q (Finsupp.single m s))
+        calc
+          β (q (Finsupp.single m s)) =
+              β (s • q (Finsupp.single m 1)) := by
+                rw [← Finsupp.smul_single_one m s, q.map_smul]
+          _ = s • β (q (Finsupp.single m 1)) := by rw [map_smul]
+          _ = s • α (q (Finsupp.single m 1)) := by
+            simpa [q, principalPartsGenerator] using
+              congrArg (fun z => s • z) (hgen m)
+          _ = α (s • q (Finsupp.single m 1)) := by rw [map_smul]
+          _ = α (q (Finsupp.single m s)) := by
+            congr 1
+            rw [← q.map_smul, Finsupp.smul_single_one]
+  apply LinearMap.ext
+  intro x
+  obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective _ x
+  exact congrArg (fun z => z y) hmaps
+
 theorem principalParts_universal_property_exists (k : ℕ) (N : Type*)
     [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N] :
     Nonempty
       (↥(differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k)
         ≃ₗ[S]
         (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N)) := by
-  sorry
+  classical
+  let backward :
+      (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N) →ₗ[S]
+        differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k :=
+    { toFun := fun α => differentialOperatorPostcompose α
+        (principalPartsUniversal (R := R) (S := S) (M := M) k)
+      map_add' := by
+        intro α β
+        apply Subtype.ext
+        ext m
+        rfl
+      map_smul' := by
+        intro c α
+        apply Subtype.ext
+        ext m
+        rfl }
+  have hinj : Function.Injective backward := by
+    intro α β h
+    rcases principalParts_factorization_unique_aux (R := R) (S := S) (M := M) k N
+        (backward α) with ⟨γ, hγ, huniq⟩
+    apply (huniq α ?_).trans (huniq β ?_).symm
+    · change (α.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) =
+        (backward α).1
+      rfl
+    · change (β.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) =
+        (backward α).1
+      have h' := congrArg (fun E => E.1) h
+      change (backward α).1 = (backward β).1 at h'
+      exact h'.symm
+  have hsurj : Function.Surjective backward := by
+    intro D
+    rcases principalParts_factorization_unique_aux (R := R) (S := S) (M := M) k N D with
+      ⟨α, hα, _⟩
+    refine ⟨α, ?_⟩
+    apply Subtype.ext
+    exact hα
+  exact ⟨(LinearEquiv.ofBijective backward ⟨hinj, hsurj⟩).symm⟩
 
 noncomputable def principalPartsHomEquiv (k : ℕ)
     (N : Type*) [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N] :
@@ -751,7 +913,7 @@ theorem principalParts_factorization_unique (k : ℕ) (N : Type*)
     ∃! α : PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N,
       (α.restrictScalars R).comp
           (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D.1 := by
-  sorry
+  exact principalParts_factorization_unique_aux (R := R) (S := S) (M := M) k N D
 
 theorem principalPartsHomEquiv_natural (k : ℕ)
     {N N' : Type*} [AddCommGroup N] [AddCommGroup N']
@@ -771,7 +933,59 @@ noncomputable def principalPartsFreeEvaluation : (M →₀ S) →ₗ[S] M :=
 theorem principalParts_relation_le_ker_evaluation (k : ℕ) :
     principalPartsRelationSubmodule (R := R) (S := S) (M := M) k ≤
       LinearMap.ker (principalPartsFreeEvaluation (S := S) (M := M)) := by
-  sorry
+  classical
+  have hHigher : ∀ (j : ℕ) (g : Fin (j + 1) → S) (m : M),
+      principalPartsHigherEvaluation (R := R) (S := S) j
+          (LinearMap.id : M →ₗ[R] M) g m = 0 := by
+    intro j
+    induction j with
+    | zero =>
+        intro g m
+        have hg : g = fun _ => g 0 := by
+          funext i
+          exact congrArg g (Fin.eq_zero i)
+        rw [hg, principalPartsHigherEvaluation_zero]
+        simp
+    | succ j ih =>
+        intro g m
+        let s : S := g (Fin.last (j + 1))
+        let g₀ : Fin (j + 1) → S := fun i => g i.castSucc
+        have hg : g = fun i => Fin.lastCases s g₀ i := by
+          funext i
+          cases i using Fin.lastCases with
+          | last => simp [s]
+          | cast i => simp [g₀]
+        rw [hg, principalPartsHigherEvaluation_succ, ih, ih]
+        simp
+  apply Submodule.span_le.2
+  intro x hx
+  rcases hx with hx | ⟨⟨g, m⟩, rfl⟩
+  · rcases hx with ⟨p, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
+    · change principalPartsFreeEvaluation (S := S) (M := M)
+          (principalPartsAddRelation p.1 p.2) = 0
+      change (Finsupp.lsum S (fun m : M =>
+        ((LinearMap.id : S →ₗ[S] S).smulRight m)))
+          (Finsupp.single (p.1 + p.2) 1 - Finsupp.single p.1 1 -
+            Finsupp.single p.2 1) = 0
+      rw [map_sub, map_sub, Finsupp.lsum_single, Finsupp.lsum_single,
+        Finsupp.lsum_single]
+      simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+    · change principalPartsFreeEvaluation (S := S) (M := M)
+          (principalPartsScalarRelation r m) = 0
+      change (Finsupp.lsum S (fun m : M =>
+        ((LinearMap.id : S →ₗ[S] S).smulRight m)))
+          ((algebraMap R S r) • Finsupp.single m 1 - Finsupp.single (r • m) 1) = 0
+      rw [map_sub, map_smul, Finsupp.lsum_single, Finsupp.lsum_single]
+      simp only [LinearMap.smulRight_apply, LinearMap.id_apply, one_smul]
+      rw [IsScalarTower.algebraMap_smul S r m]
+      exact sub_self _
+  · change principalPartsFreeEvaluation (S := S) (M := M)
+        (principalPartsHigherRelation k g m) = 0
+    change principalPartsHigherEvaluationMap (R := R) (S := S)
+        (LinearMap.id : M →ₗ[R] M) (principalPartsHigherRelation k g m) = 0
+    rw [← principalPartsHigherEvaluation_eq_map (R := R) (S := S) k
+      (LinearMap.id : M →ₗ[R] M) g m]
+    exact hHigher k g m
 
 noncomputable def principalPartsProjection (k : ℕ) :
     PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] M :=

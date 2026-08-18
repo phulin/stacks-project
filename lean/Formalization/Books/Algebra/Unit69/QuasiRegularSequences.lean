@@ -288,7 +288,7 @@ theorem isMQuasiRegular_in_neighborhood
 
 theorem isMQuasiRegular_tail
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
-    {f : List R} (hf : IsMQuasiRegular R M f) (i : ℕ) (hi : i ≤ f.length) :
+    {f : List R} (hf : IsMQuasiRegular R M f) (i : ℕ) :
     IsMQuasiRegular (R ⧸ Ideal.ofList (f.take i))
       (M ⧸ (Ideal.ofList (f.take i) • (⊤ : Submodule R M)))
       ((f.drop i).map (Ideal.Quotient.mk (Ideal.ofList (f.take i)))) := by

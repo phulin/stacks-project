@@ -784,6 +784,7 @@ theorem symmetricPower_relation_range_eq_kernel
         change symmetricPowerQuotientMap n g
             (symmetricPowerRelationMap f hn
               (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁ y)) = 0 at hy
+        rw [map_add]
         rw [hx, hy]
         simp
     · intro y₁ y₂ hy₁ hy₂
@@ -794,6 +795,7 @@ theorem symmetricPower_relation_range_eq_kernel
           (symmetricPowerRelationMap f hn y₁) = 0 at hy₁
       change symmetricPowerQuotientMap n g
           (symmetricPowerRelationMap f hn y₂) = 0 at hy₂
+      rw [map_add]
       rw [hy₁, hy₂]
       simp
   · sorry

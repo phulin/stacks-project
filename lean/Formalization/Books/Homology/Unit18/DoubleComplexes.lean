@@ -1176,18 +1176,18 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
           tripleOrder12D2Component A (n + 1) s p := by
     dsimp [tripleOrder12D2Component, tripleOrder12D3Component]
     simp only [Category.assoc]
-    rw [← eqToHom_naturality_assoc
+    erw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d3 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
         ((s + 1) - p, (n + 1) - (s + 1)) by
         congr 1 <;> ring)]
-    rw [← eqToHom_naturality_assoc
+    erw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
-      (show (s - p, (n + 1) - s) =
-        (s - p, (n + 1) - s) by rfl)]
-    simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
-        (A.comm23 p (s - p) (n - s)).symm
+      (show (s - p, n - s + 1) =
+        (s - p, n + 1 - s) by
+        congr 1 <;> ring)]
+    rw [← Category.assoc, ← A.comm23 p (s - p) (n - s)]
+    simp
   have h11' :
       tripleOrder12D1Component A n s p ≫
           tripleOrder12D1Component A (n + 1) (s + 1) (p + 1) ≫
@@ -1218,13 +1218,342 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
           Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
             ((n + 1 + 1) - (s + 1 + 1))) (p + 1) ≫
           Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
-            ((n + 1 + 1) - u)) (s + 1) =
+            ((n + 1 + 1) - u)) (s + 1 + 1) =
         tripleOrder12D2Component A n s p ≫
           tripleOrder12D1Component A (n + 1) (s + 1) p ≫
           Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
             ((n + 1 + 1) - (s + 1 + 1))) (p + 1) ≫
           Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) := by
+    rw [← Category.assoc, h12]
+    simp only [Category.assoc]
+  have h13' :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) (s + 1) (p + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+            ((n + 1 + 1) - (s + 1))) (p + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) =
+        tripleOrder12D3Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) s p ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+            ((n + 1 + 1) - (s + 1))) (p + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) := by
+    rw [← Category.assoc, h13]
+    simp only [Category.assoc]
+  have h23' :
+      tripleOrder12D2Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) (s + 1) p ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+            ((n + 1 + 1) - (s + 1))) p ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1) =
+        tripleOrder12D3Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) s p ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+            ((n + 1 + 1) - (s + 1))) p ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
             ((n + 1 + 1) - u)) (s + 1) := by
+    rw [← Category.assoc, h23]
+    simp only [Category.assoc]
+  have hs1p :
+      tripleTotalSign₁ (p + 1) ((s + 1) - (p + 1)) =
+        -tripleTotalSign₁ p (s - p) := by
+    dsimp [tripleTotalSign₁]
+    simp [Int.negOnePow_succ]
+  have hs1q :
+      tripleTotalSign₁ p ((s + 1) - p) = tripleTotalSign₁ p (s - p) := by
+    dsimp [tripleTotalSign₁]
+    congr 1 <;> ring
+  have hs2p :
+      tripleTotalSign₂ (p + 1) ((s + 1) - (p + 1)) =
+        -tripleTotalSign₂ p (s - p) := by
+    dsimp [tripleTotalSign₂]
+    simp [Int.negOnePow_succ]
+  have hs2q :
+      tripleTotalSign₂ p ((s + 1) - p) =
+        -tripleTotalSign₂ p (s - p) := by
+    dsimp [tripleTotalSign₂]
+    simp [Int.negOnePow_succ]
+  have hs1q_raw :
+      (p + ((s + 1) - p)).negOnePow = (p + (s - p)).negOnePow := by
+    congr 1 <;> ring
+  have hs2p_raw :
+      ((p + 1) + ((s + 1) - (p + 1))).negOnePow =
+        -(p + (s - p)).negOnePow := by
+    simp [Int.negOnePow_succ]
+  have hs2q_raw :
+      (p + ((s + 1) - p)).negOnePow = -(p + (s - p)).negOnePow := by
+    simp [Int.negOnePow_succ]
+  have hzero : g p ≫ tripleOrder12Differential A (n + 1) =
+      (0 : A.obj p (s - p) (n - s) ⟶
+        ∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+          ((n + 1 + 1) - u)) := by
+    let g' : ∀ r : ℤ, A.obj r (s - r) (n - s) ⟶
+        ∐ fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+          ((n + 1) - u) := fun r => g r
+    let d' :
+        (∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+          ((n + 1) - u)) ⟶
+          ∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+            ((n + 1 + 1) - u) :=
+      tripleOrder12Differential A (n + 1)
+    have hnext' (t r : ℤ) :
+        Sigma.ι (fun u : ℤ => A.obj u (t - u) (n + 1 - t)) r ≫
+            Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+              (n + 1 - u)) t ≫ d' =
+          tripleOrder12D1Component A (n + 1) t r ≫
+              Sigma.ι (fun u : ℤ => A.obj u ((t + 1) - u)
+                ((n + 1 + 1) - (t + 1))) (r + 1) ≫
+              Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+                ((n + 1 + 1) - u)) (t + 1) +
+            tripleTotalSign₁ r (t - r) •
+              (tripleOrder12D2Component A (n + 1) t r ≫
+                Sigma.ι (fun u : ℤ => A.obj u ((t + 1) - u)
+                  ((n + 1 + 1) - (t + 1))) r ≫
+                Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+                  ((n + 1 + 1) - u)) (t + 1)) +
+            tripleTotalSign₂ r (t - r) •
+              (tripleOrder12D3Component A (n + 1) t r ≫
+                Sigma.ι (fun u : ℤ => A.obj u (t - u)
+                  ((n + 1 + 1) - t)) r ≫
+                Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+                ((n + 1 + 1) - u)) t) := by
+      simpa only [d', tripleTotalizationOrder12Term] using hnext t r
+    change g' p ≫ d' = 0
+    simp only [g', g]
+    rw [Preadditive.add_comp, Preadditive.add_comp]
+    simp only [Linear.units_smul_comp, Category.assoc]
+    rw [hnext' (s + 1) (p + 1), hnext' (s + 1) p, hnext' s p]
+    simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
+      hs1p, hs1q, hs2p, hs2q, h11', h22', h33', h12', h13', h23',
+      Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+    rw [hs1q_raw, hs2p_raw, hs2q_raw]
+    simp only [Units.neg_smul, neg_smul, neg_one_smul, one_smul, smul_smul,
+      Int.units_mul_self, mul_comm]
+    rw [← smul_smul]
+    simp only [smul_neg]
+    abel
+  have hcomp := congrArg
+    (fun f => f ≫ tripleOrder12Differential A (n + 1)) hps
+  rw [Sigma.ι_desc] at hcomp
+  erw [comp_zero, comp_zero]
+  dsimp [tripleTotalizationOrder12Term] at hcomp hzero
+  have hassoc :
+      (Sigma.ι (fun r : ℤ => A.obj r (s - r) (n - s)) p ≫
+          (Sigma.ι (fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+            (n - u)) s ≫ tripleOrder12Differential A n)) ≫
+          tripleOrder12Differential A (n + 1) =
+        Sigma.ι (fun r : ℤ => A.obj r (s - r) (n - s)) p ≫
+            (Sigma.ι (fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+              (n - u)) s ≫
+              (tripleOrder12Differential A n ≫
+                tripleOrder12Differential A (n + 1))) := by
+    exact (Category.assoc
+      (Sigma.ι (fun r : ℤ => A.obj r (s - r) (n - s)) p)
+      (Sigma.ι (fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+        (n - u)) s ≫ tripleOrder12Differential A n)
+      (tripleOrder12Differential A (n + 1))).trans
+      (congrArg
+        (fun f => Sigma.ι (fun r : ℤ => A.obj r (s - r) (n - s)) p ≫ f)
+        (Category.assoc
+          (Sigma.ι (fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
+            (n - u)) s)
+          (tripleOrder12Differential A n)
+          (tripleOrder12Differential A (n + 1))))
+  exact hassoc.symm.trans (hcomp.trans hzero)
+  -/
+  apply Sigma.hom_ext
+  intro s
+  apply Sigma.hom_ext
+  intro p
+  let g : ∀ r : ℤ, A.obj r (s - r) (n - s) ⟶
+      tripleTotalizationOrder12Term A (n + 1) :=
+    fun r =>
+      tripleOrder12D1Component A n s r ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+            ((n + 1) - (s + 1))) (r + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1) - u)) (s + 1) +
+        tripleTotalSign₁ r (s - r) •
+          (tripleOrder12D2Component A n s r ≫
+            Sigma.ι (fun t : ℤ => A.obj t ((s + 1) - t)
+              ((n + 1) - (s + 1))) r ≫
+            Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+              ((n + 1) - u)) (s + 1)) +
+        tripleTotalSign₂ r (s - r) •
+          (tripleOrder12D3Component A n s r ≫
+            Sigma.ι (fun t : ℤ => A.obj t (s - t)
+              ((n + 1) - s)) r ≫
+            Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+              ((n + 1) - u)) s)
+  have hp :
+      Sigma.ι (fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r) (n - u)) s ≫
+          tripleOrder12Differential A n =
+        Sigma.desc g := by
+    apply Sigma.hom_ext
+    intro r
+    dsimp [g, tripleOrder12Differential]
+    rw [Sigma.ι_desc]
+  have hps := congrArg
+    (fun f => Sigma.ι (fun r : ℤ => A.obj r (s - r) (n - s)) p ≫ f) hp
+  have hnext (t r : ℤ) :
+      Sigma.ι (fun u : ℤ => A.obj u (t - u) (n + 1 - t)) r ≫
+          Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+            (n + 1 - u)) t ≫ tripleOrder12Differential A (n + 1) =
+        tripleOrder12D1Component A (n + 1) t r ≫
+            Sigma.ι (fun u : ℤ => A.obj u ((t + 1) - u)
+              ((n + 1 + 1) - (t + 1))) (r + 1) ≫
+            Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+              ((n + 1 + 1) - u)) (t + 1) +
+          tripleTotalSign₁ r (t - r) •
+            (tripleOrder12D2Component A (n + 1) t r ≫
+              Sigma.ι (fun u : ℤ => A.obj u ((t + 1) - u)
+                ((n + 1 + 1) - (t + 1))) r ≫
+              Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+                ((n + 1 + 1) - u)) (t + 1)) +
+          tripleTotalSign₂ r (t - r) •
+            (tripleOrder12D3Component A (n + 1) t r ≫
+              Sigma.ι (fun u : ℤ => A.obj u (t - u)
+                ((n + 1 + 1) - t)) r ≫
+              Sigma.ι (fun u : ℤ => ∐ fun v : ℤ => A.obj v (u - v)
+                ((n + 1 + 1) - u)) t) := by
+    dsimp [tripleOrder12Differential]
+    rw [Sigma.ι_desc]
+    dsimp [tripleTotalizationOrder12Term]
+    rw [Sigma.ι_desc]
+  have h11 :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) (s + 1) (p + 1) = 0 := by
+    dsimp [tripleOrder12D1Component]
+    simp [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d1 (p + 1) qr.1 qr.2)
+      (show (s - p, n - s) =
+        ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.d1_sq p (s - p) (n - s))
+  have h22 :
+      tripleOrder12D2Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) (s + 1) p = 0 := by
+    dsimp [tripleOrder12D2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
+      (show ((s - p) + 1, n - s) =
+        ((s + 1) - p, (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.d2_sq p (s - p) (n - s))
+  have h33 :
+      tripleOrder12D3Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) s p = 0 := by
+    dsimp [tripleOrder12D3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun r : ℤ => A.d3 p (s - p) r)
+      (show n - s + 1 = n + 1 - s by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.d3_sq p (s - p) (n - s))
+  have h12 :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) (s + 1) (p + 1) =
+        tripleOrder12D2Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) (s + 1) p := by
+    dsimp [tripleOrder12D1Component, tripleOrder12D2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d2 (p + 1) qr.1 qr.2)
+      (show (s - p, n - s) =
+        ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    rw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d1 p qr.1 qr.2)
+      (show ((s - p) + 1, n - s) =
+        ((s + 1) - p, (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.comm12 p (s - p) (n - s)).symm
+  have h13 :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) (s + 1) (p + 1) =
+        tripleOrder12D3Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) s p := by
+    dsimp [tripleOrder12D1Component, tripleOrder12D3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d3 (p + 1) qr.1 qr.2)
+      (show (s - p, n - s) =
+        ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    rw [← eqToHom_naturality_assoc
+      (fun r : ℤ => A.d1 p (s - p) r)
+      (show n - s + 1 = n + 1 - s by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.comm13 p (s - p) (n - s)).symm
+  have h23 :
+      tripleOrder12D2Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) (s + 1) p =
+        tripleOrder12D3Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) s p := by
+    dsimp [tripleOrder12D2Component, tripleOrder12D3Component]
+    simp only [Category.assoc]
+    erw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d3 p qr.1 qr.2)
+      (show ((s - p) + 1, n - s) =
+        ((s + 1) - p, (n + 1) - (s + 1)) by
+        congr 1 <;> ring)]
+    erw [← eqToHom_naturality_assoc
+      (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
+      (show (s - p, n - s + 1) =
+        (s - p, n + 1 - s) by
+        congr 1 <;> ring)]
+    rw [← Category.assoc, ← A.comm23 p (s - p) (n - s)]
+    simp
+  have h11' :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) (s + 1) (p + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
+            ((n + 1 + 1) - (s + 1 + 1))) (p + 1 + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) = 0 := by
+    rw [← Category.assoc, h11, zero_comp]
+  have h22' :
+      tripleOrder12D2Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) (s + 1) p ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
+            ((n + 1 + 1) - (s + 1 + 1))) p ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) = 0 := by
+    rw [← Category.assoc, h22, zero_comp]
+  have h33' :
+      tripleOrder12D3Component A n s p ≫
+          tripleOrder12D3Component A (n + 1) s p ≫
+          Sigma.ι (fun t : ℤ => A.obj t (s - t)
+            ((n + 1 + 1) - s)) p ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) s = 0 := by
+    rw [← Category.assoc, h33, zero_comp]
+  have h12' :
+      tripleOrder12D1Component A n s p ≫
+          tripleOrder12D2Component A (n + 1) (s + 1) (p + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
+            ((n + 1 + 1) - (s + 1 + 1))) (p + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) =
+        tripleOrder12D2Component A n s p ≫
+          tripleOrder12D1Component A (n + 1) (s + 1) p ≫
+          Sigma.ι (fun t : ℤ => A.obj t ((s + 1 + 1) - t)
+            ((n + 1 + 1) - (s + 1 + 1))) (p + 1) ≫
+          Sigma.ι (fun u : ℤ => ∐ fun t : ℤ => A.obj t (u - t)
+            ((n + 1 + 1) - u)) (s + 1 + 1) := by
     rw [← Category.assoc, h12]
     simp only [Category.assoc]
   have h13' :
@@ -1363,8 +1692,6 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
           (tripleOrder12Differential A n)
           (tripleOrder12Differential A (n + 1))))
   exact hassoc.symm.trans (hcomp.trans hzero)
-  -/
-  sorry
 
 def tripleTotalizationOrder12Complex [HasCountableCoproducts C]
     (A : TripleComplex C) : CochainComplex C ℤ where

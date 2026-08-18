@@ -166,8 +166,8 @@ noncomputable def chainShiftShortComplexFunctorIso (k i : ℤ) :
         simp only [Category.id_comp, Linear.comp_units_smul, Linear.units_smul_comp,
           smul_smul, Int.units_mul_self, one_smul, d_comp_XIsoOfEq_hom]))
     (fun {X} {Y} f ↦ by
-      ext <;> simp [ShortComplex.isoMk, HomologicalComplex.shortComplexFunctor',
-        shiftFunctorObjXIso, shiftFunctor, Units.smul_def]
+      ext <;> simp [HomologicalComplex.shortComplexFunctor',
+        shiftFunctor]
       · change f.f _ ≫ (k.negOnePow • (Y.XIsoOfEq _).hom) =
           (k.negOnePow • (X.XIsoOfEq _).hom) ≫ f.f _
         simp [XIsoOfEq_hom_naturality]

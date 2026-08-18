@@ -686,7 +686,8 @@ theorem isMittagLefflerModule_of_finitePresentation
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R)
     (hM : Module.FinitePresentation R M) :
     IsMittagLefflerModule M := by
-  sorry
+  intro P hP f
+  exact ⟨M, hM, f, ⟨by intro Q _ _; exact le_rfl, by intro Q _ _; exact le_rfl⟩⟩
 
 /-! ## Flat modules, tensor products, and finite-free tests -/
 
@@ -700,7 +701,56 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
     (hfinite : ∀ i, Module.Finite R (P.diag.obj i))
     (hdual : (homInverseSystem P.diag (ModuleCat.of R R)).IsMittagLeffler) :
     IsMittagLefflerModule M := by
-  sorry
+  have hcond3 :
+      ∀ i : I, ∃ (j : I) (hij : i ≤ j),
+        ∀ (k : I) (hik : i ≤ k),
+          ∃ h : (P.diag.obj k : Type w) →ₗ[R] (P.diag.obj j : Type w),
+            directedMap P.diag hij = h.comp (directedMap P.diag hik) := by
+    intro i
+    obtain ⟨jop, f, hf⟩ := hdual (Opposite.op i)
+    let hij : i ≤ jop.unop := le_of_op_hom f
+    refine ⟨jop.unop, hij, ?_⟩
+    intro k hik
+    let g := (homOfLE hik).op
+    let u : (P.diag.obj i : Type w) →ₗ[R] (P.diag.obj jop.unop : Type w) :=
+      directedMap P.diag hij
+    let v : (P.diag.obj i : Type w) →ₗ[R] (P.diag.obj k : Type w) :=
+      directedMap P.diag hik
+    have hfactor (λ : (P.diag.obj jop.unop : Type w) →ₗ[R] R) :
+        ∃ μ : (P.diag.obj k : Type w) →ₗ[R] R, μ.comp v = λ.comp u := by
+      have hmem : λ.comp u ∈ Set.range
+          (homInverseSystem P.diag (ModuleCat.of R R)).map f := by
+        refine ⟨λ, ?_⟩
+        change λ.comp (P.diag.map f.unop).hom = λ.comp u
+        congr 1
+        apply Subsingleton.elim
+      obtain ⟨μ, hμ⟩ := hf g hmem
+      refine ⟨μ, ?_⟩
+      change μ.comp (P.diag.map g.unop).hom = λ.comp u at hμ
+      simpa [g, v, u] using hμ
+    letI : Module.Free R (P.diag.obj jop.unop : Type w) := hfree jop.unop
+    letI : Module.Finite R (P.diag.obj jop.unop : Type w) := hfinite jop.unop
+    let ι := Module.Free.ChooseBasisIndex R (P.diag.obj jop.unop : Type w)
+    let b : Basis ι R (P.diag.obj jop.unop : Type w) :=
+      Module.Free.chooseBasis R (P.diag.obj jop.unop : Type w)
+    let μ : ι → (P.diag.obj k : Type w) →ₗ[R] R :=
+      fun a => (hfactor (b.coord a)).choose
+    let c : (P.diag.obj k : Type w) →ₗ[R] (ι → R) :=
+      LinearMap.pi μ
+    let h : (P.diag.obj k : Type w) →ₗ[R] (P.diag.obj jop.unop : Type w) :=
+      b.repr.symm.toLinearMap.comp
+        ((Finsupp.linearEquivFunOnFinite R R ι).symm.toLinearMap.comp c)
+    have hcomp : u = h.comp v := by
+      apply LinearMap.ext
+      intro x
+      apply b.repr.injective
+      ext a
+      have ha := (hfactor (b.coord a)).choose_spec
+      simp [h, c, μ, ha]
+    refine ⟨h, ?_⟩
+    simpa [u, v] using hcomp
+  have h13 := (mittagLeffler_characterization P hfinite).out 0 2
+  exact h13.mpr hcond3
 
 /-- Tensor products of Mittag-Leffler modules are Mittag-Leffler. -/
 theorem tensorProduct_isMittagLefflerModule
@@ -718,7 +768,68 @@ theorem isMittagLefflerModule_iff_finiteFreeTest
         ∀ f : (F : Type w) →ₗ[R] (M : Type w),
           ∃ Q : ModuleCat.{w} R, Module.FinitePresentation R Q ∧
             ∃ g : (F : Type w) →ₗ[R] (Q : Type w), mutuallyDominates g f := by
-  sorry
+  constructor
+  · intro h F hFfree hFfinite f
+    letI : Module.Free R (F : Type w) := hFfree
+    letI : Module.Finite R (F : Type w) := hFfinite
+    exact h F inferInstance f
+  · intro h P hP f
+    letI : Module.FinitePresentation R (P : Type w) := hP
+    obtain ⟨n, m, p, q, hp, hpq⟩ := Module.FinitePresentation.exists_fin' R (P : Type w)
+    let F : ModuleCat.{w} R := ModuleCat.of R (Fin n → R)
+    let p' : (F : Type w) →ₗ[R] (P : Type w) := p
+    obtain ⟨Q, hQ, g, hmut⟩ := h F (by infer_instance) (by infer_instance)
+      (f.comp p')
+    have hker : LinearMap.ker p' ≤ LinearMap.ker g := by
+      intro x hx
+      apply LinearMap.mem_ker.mpr
+      have hpx : p' x = 0 := LinearMap.mem_ker.mp hx
+      have hx' : (f.comp p').rTensor R
+          ((TensorProduct.rid R (F : Type w)).symm x) = 0 := by
+        rw [TensorProduct.rid_symm_apply]
+        simp [hpx]
+      have hg' := hmut.1 R (LinearMap.mem_ker.mpr hx')
+      have hg'0 := LinearMap.mem_ker.mp hg'
+      have hg'' := congrArg (TensorProduct.rid R (Q : Type w)) hg'0
+      simpa [TensorProduct.rid_symm_apply] using hg''
+    let e : (F : Type w) ⧸ LinearMap.ker p' ≃ₗ[R] (P : Type w) :=
+      p'.quotKerEquivOfSurjective hp
+    let g' : (P : Type w) →ₗ[R] (Q : Type w) :=
+      (LinearMap.ker p').liftQ g hker |>.comp e.symm.toLinearMap
+    have hg' : g'.comp p' = g := by
+      apply LinearMap.ext
+      intro x
+      simp [g', e]
+    have hdom₁ : dominates g' f := by
+      intro X _ _
+      intro z hz
+      have hz0 := LinearMap.mem_ker.mp hz
+      obtain ⟨y, hy⟩ := LinearMap.rTensor_surjective X hp z
+      have hyf : (f.comp p').rTensor X y = 0 := by
+        rw [LinearMap.rTensor_comp_apply, hy, hz0]
+      have hyg := LinearMap.mem_ker.mp (hmut.1 X (LinearMap.mem_ker.mpr hyf))
+      have hcomp := congrArg (fun t => t.rTensor X) hg'
+      rw [LinearMap.rTensor_comp] at hcomp
+      apply LinearMap.mem_ker.mpr
+      rw [← hy]
+      have hcomp' := congrArg (fun t => t y) hcomp
+      simpa [LinearMap.comp_apply, hyg] using hcomp'
+    have hdom₂ : dominates f g' := by
+      intro X _ _
+      intro z hz
+      have hz0 := LinearMap.mem_ker.mp hz
+      obtain ⟨y, hy⟩ := LinearMap.rTensor_surjective X hp z
+      have hcomp := congrArg (fun t => t.rTensor X) hg'
+      rw [LinearMap.rTensor_comp] at hcomp
+      have hyg : (g.rTensor X) y = 0 := by
+        have hcomp' := congrArg (fun t => t y) hcomp
+        rw [LinearMap.comp_apply, hy] at hcomp'
+        exact hcomp'.symm.trans hz0
+      have hyf := LinearMap.mem_ker.mp (hmut.2 X (LinearMap.mem_ker.mpr hyg))
+      apply LinearMap.mem_ker.mpr
+      rw [← hy]
+      simpa [LinearMap.rTensor_comp_apply] using hyf
+    exact ⟨Q, hQ, g', ⟨hdom₁, hdom₂⟩⟩
 
 /-! ## Restriction of scalars and quotients -/
 

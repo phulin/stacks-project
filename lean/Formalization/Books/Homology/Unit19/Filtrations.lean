@@ -1625,25 +1625,186 @@ theorem strict_biproduct_lift_of_strict_mono {C : Type u} [Category.{v} C]
     (hf : Strict f) (hfmono : FilteredInjective f) :
     Strict (filteredBiproductLift f g) ∧
       FilteredInjective (filteredBiproductLift f g) := by
-  sorry
+  let : Mono f.hom := hfmono
+  let h := filteredBiproductLift f g
+  have hmono : FilteredInjective h := by
+    change Mono (biprod.lift f.hom g.hom)
+    constructor
+    intro Z a b hab
+    apply (cancel_mono f.hom).mp
+    calc
+      a ≫ f.hom = (a ≫ biprod.lift f.hom g.hom) ≫ biprod.fst := by
+        rw [Category.assoc, biprod.lift_fst]
+      _ = (b ≫ biprod.lift f.hom g.hom) ≫ biprod.fst := by rw [hab]
+      _ = b ≫ f.hom := by rw [Category.assoc, biprod.lift_fst]
+  refine ⟨?_, hmono⟩
+  apply (strict_iff_induced_filtration h hmono).2
+  intro i
+  let T : Subobject (B.carrier ⊞ D.carrier) :=
+    Subobject.mk (biprod.map (B.filtration.obj i).arrow
+      (D.filtration.obj i).arrow)
+  let H : A.carrier ⟶ (B.carrier ⊞ D.carrier) :=
+    biprod.lift f.hom g.hom
+  let P := (Subobject.pullback H).obj T
+  change A.filtration.obj i = P
+  apply le_antisymm
+  · apply Subobject.le_of_factors
+    apply (CategoryTheory.Limits.pullback_factors_iff H T
+      (A.filtration.obj i).arrow).2
+    change T.Factors
+      ((A.filtration.obj i).arrow ≫ biprod.lift f.hom g.hom)
+    simpa [h, H, filteredBiproductLift, filteredBiproduct, T] using
+      h.map_filtration i
+  · rw [(strict_iff_induced_filtration f hfmono).1 hf i]
+    apply Subobject.le_of_factors
+    apply (CategoryTheory.Limits.pullback_factors_iff f.hom
+      (B.filtration.obj i) P.arrow).2
+    have hPfac : T.Factors (P.arrow ≫ H) :=
+      (CategoryTheory.Limits.pullback_factors_iff H T P.arrow).1
+        (Subobject.factors_self P)
+    have hTfst : (B.filtration.obj i).Factors
+        (T.arrow ≫ biprod.fst) := by
+      have hfac := Subobject.factors_comp_arrow
+        ((Subobject.underlyingIso
+          (biprod.map (B.filtration.obj i).arrow
+            (D.filtration.obj i).arrow)).hom ≫ biprod.fst)
+      rw [Category.assoc, ← biprod.map_fst
+        (B.filtration.obj i).arrow (D.filtration.obj i).arrow,
+        ← Category.assoc,
+        Subobject.underlyingIso_hom_comp_eq_mk] at hfac
+      exact hfac
+    have hcomp := Subobject.factors_of_factors_right
+      (T.factorThru (P.arrow ≫ H) hPfac)
+      (g := T.arrow ≫ biprod.fst) hTfst
+    have heq :
+        T.factorThru (P.arrow ≫ H) hPfac ≫
+            (T.arrow ≫ biprod.fst) =
+          (P.arrow ≫ H) ≫ biprod.fst := by
+      calc
+        T.factorThru (P.arrow ≫ H) hPfac ≫
+              (T.arrow ≫ biprod.fst) =
+            (T.factorThru (P.arrow ≫ H) hPfac ≫ T.arrow) ≫
+              biprod.fst := (Category.assoc _ _ _).symm
+        _ = (P.arrow ≫ H) ≫ biprod.fst := by
+          rw [Subobject.factorThru_arrow]
+    rw [heq] at hcomp
+    have hh : H ≫ biprod.fst = f.hom := by
+      dsimp [H]
+      simp
+    rw [Category.assoc, hh] at hcomp
+    exact hcomp
 
 def filteredBiproductDesc {C : Type u} [Category.{v} C] [Abelian C]
     {A B D : FilteredObject C} (f : B ⟶ A) (g : D ⟶ A) :
     filteredBiproduct B D ⟶ A := by
   refine ⟨biprod.desc f.hom g.hom, ?_⟩
-  sorry
+  intro i
+  let T : Subobject (B.carrier ⊞ D.carrier) :=
+    Subobject.mk (biprod.map (B.filtration.obj i).arrow
+      (D.filtration.obj i).arrow)
+  change (A.filtration.obj i).Factors
+    (T.arrow ≫ biprod.desc f.hom g.hom)
+  apply (Subobject.factors_iff _ _).mpr
+  let u := (A.filtration.obj i).factorThru
+    ((B.filtration.obj i).arrow ≫ f.hom) (f.map_filtration i)
+  let v := (A.filtration.obj i).factorThru
+    ((D.filtration.obj i).arrow ≫ g.hom) (g.map_filtration i)
+  refine ⟨(Subobject.underlyingIso
+      (biprod.map (B.filtration.obj i).arrow (D.filtration.obj i).arrow)).hom ≫
+    biprod.desc u v, ?_⟩
+  dsimp [u, v]
+  calc
+    ((Subobject.underlyingIso
+      (biprod.map (B.filtration.obj i).arrow
+        (D.filtration.obj i).arrow)).hom ≫
+      biprod.desc
+        ((A.filtration.obj i).factorThru
+          ((B.filtration.obj i).arrow ≫ f.hom) (f.map_filtration i))
+        ((A.filtration.obj i).factorThru
+          ((D.filtration.obj i).arrow ≫ g.hom) (g.map_filtration i))) ≫
+        (A.filtration.obj i).arrow =
+      (Subobject.underlyingIso
+        (biprod.map (B.filtration.obj i).arrow
+          (D.filtration.obj i).arrow)).hom ≫
+        (biprod.map (B.filtration.obj i).arrow
+          (D.filtration.obj i).arrow) ≫
+        biprod.desc f.hom g.hom := by
+            rw [Category.assoc]
+            congr 1
+            simp [biprod.desc_eq, Category.assoc]
+    _ = T.arrow ≫ biprod.desc f.hom g.hom := by
+      simp [T]
 
 theorem strict_biproduct_desc_of_strict_epi {C : Type u} [Category.{v} C]
     [Abelian C] {A B D : FilteredObject C} (f : B ⟶ A) (g : D ⟶ A)
     (hf : Strict f) (hfepi : FilteredSurjective f) :
     Strict (filteredBiproductDesc f g) ∧
       FilteredSurjective (filteredBiproductDesc f g) := by
-  sorry
+  let : Epi f.hom := hfepi
+  have hdesc_epi : FilteredSurjective (filteredBiproductDesc f g) := by
+    change Epi (biprod.desc f.hom g.hom)
+    exact epi_of_epi_fac (biprod.inl_desc f.hom g.hom)
+  refine ⟨?_, hdesc_epi⟩
+  apply (strict_iff_quotient_filtration
+    (filteredBiproductDesc f g) hdesc_epi).2
+  intro i
+  let T : Subobject (B.carrier ⊞ D.carrier) :=
+    Subobject.mk (biprod.map (B.filtration.obj i).arrow
+      (D.filtration.obj i).arrow)
+  let d : (B.carrier ⊞ D.carrier) ⟶ A.carrier :=
+    biprod.desc f.hom g.hom
+  let J := (Subobject.«exists» d).obj T
+  change A.filtration.obj i = J
+  apply le_antisymm
+  · rw [(strict_iff_quotient_filtration f hfepi).1 hf i]
+    have hBinl : (B.filtration.obj i) ≤
+        (Subobject.pullback biprod.inl).obj T := by
+      apply Subobject.le_of_factors
+      apply (CategoryTheory.Limits.pullback_factors_iff biprod.inl T
+        (B.filtration.obj i).arrow).2
+      apply (Subobject.factors_iff _ _).mpr
+      refine ⟨biprod.inl ≫ (Subobject.underlyingIso
+        (biprod.map (B.filtration.obj i).arrow
+          (D.filtration.obj i).arrow)).inv, ?_⟩
+      simp [T, Category.assoc]
+    have hunit : T ≤ (Subobject.pullback d).obj J :=
+      ((Subobject.existsPullbackAdj
+        d).homEquiv T J
+        (CategoryTheory.homOfLE (show
+          (Subobject.«exists» d).obj T ≤ J
+            from le_rfl))).le
+    have hcomp : f.hom = biprod.inl ≫ d := by
+      symm
+      dsimp [d]
+      exact biprod.inl_desc _ _
+    have hBpull : (B.filtration.obj i) ≤
+        (Subobject.pullback f.hom).obj J := by
+      rw [hcomp, Subobject.pullback_comp]
+      exact hBinl.trans ((Subobject.pullback biprod.inl).monotone hunit)
+    exact ((Subobject.existsPullbackAdj f.hom).homEquiv
+      (B.filtration.obj i) J).symm
+      (CategoryTheory.homOfLE hBpull) |>.le
+  · have hTle : T ≤ (Subobject.pullback
+        d).obj (A.filtration.obj i) := by
+      apply Subobject.le_of_factors
+      apply (CategoryTheory.Limits.pullback_factors_iff
+        d (A.filtration.obj i) T.arrow).2
+      change (A.filtration.obj i).Factors
+        (T.arrow ≫ biprod.desc f.hom g.hom)
+      exact (filteredBiproductDesc f g).map_filtration i
+    exact ((Subobject.existsPullbackAdj
+      d).homEquiv T
+        (A.filtration.obj i)).symm
+      (CategoryTheory.homOfLE hTle) |>.le
 
 theorem strict_induced_iff {C : Type u} [Category.{v} C] [Abelian C]
     {A : FilteredObject C} (X : Subobject A.carrier) :
     Strict (inducedFilteredHom A X) := by
-  sorry
+  apply (strict_iff_induced_filtration (inducedFilteredHom A X) (by
+    change Mono X.arrow
+    infer_instance)).2
+  intro i
+  rfl
 
 theorem strict_quotient_iff {C : Type u} [Category.{v} C] [Abelian C]
     {A : FilteredObject C} {Y : C} (π : A.carrier ⟶ Y) [Epi π] :

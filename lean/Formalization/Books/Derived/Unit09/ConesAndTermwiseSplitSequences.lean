@@ -392,8 +392,8 @@ theorem make_injective
     obtain ⟨nK, hnK⟩ := hK
     obtain ⟨nL, hnL⟩ := hL
     let n := min (nK - 1) nL
-    letI : K.IsStrictlyGE nK := hnK
-    letI : L.IsStrictlyGE nL := hnL
+    let : K.IsStrictlyGE nK := hnK
+    let : L.IsStrictlyGE nL := hnL
     have hcone :
         (CochainComplex.mappingCone (𝟙 K)).IsStrictlyGE n := by
       apply CochainComplex.isStrictlyGE_mappingCone (𝟙 K) nK nK n
@@ -410,8 +410,8 @@ theorem make_injective
     obtain ⟨nK, hnK⟩ := hK
     obtain ⟨nL, hnL⟩ := hL
     let n := max nK nL
-    letI : K.IsStrictlyLE nK := hnK
-    letI : L.IsStrictlyLE nL := hnL
+    let : K.IsStrictlyLE nK := hnK
+    let : L.IsStrictlyLE nL := hnL
     have hcone :
         (CochainComplex.mappingCone (𝟙 K)).IsStrictlyLE n := by
       rw [CochainComplex.isStrictlyLE_iff]
@@ -430,8 +430,8 @@ theorem make_injective
       (IsBounded K ∧ IsBounded L) → IsBounded L' := by
     rintro ⟨⟨pK, qK, hpK, hqK⟩, ⟨pL, qL, hpL, hqL⟩⟩
     refine ⟨min (pK - 1) pL, max qK qL, ?_, ?_⟩
-    · letI : K.IsStrictlyGE pK := hpK
-      letI : L.IsStrictlyGE pL := hpL
+    · let : K.IsStrictlyGE pK := hpK
+      let : L.IsStrictlyGE pL := hpL
       have hcone :
           (CochainComplex.mappingCone (𝟙 K)).IsStrictlyGE (min (pK - 1) pL) := by
         apply CochainComplex.isStrictlyGE_mappingCone (𝟙 K) pK pK _
@@ -441,8 +441,8 @@ theorem make_injective
       refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
       simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
       exact ⟨hcone j hj, L.isZero_of_isStrictlyGE pL j (by omega)⟩
-    · letI : K.IsStrictlyLE qK := hqK
-      letI : L.IsStrictlyLE qL := hqL
+    · let : K.IsStrictlyLE qK := hqK
+      let : L.IsStrictlyLE qL := hqL
       have hcone :
           (CochainComplex.mappingCone (𝟙 K)).IsStrictlyLE (max qK qL) := by
         rw [CochainComplex.isStrictlyLE_iff]
@@ -548,12 +548,12 @@ theorem make_surjective
     obtain ⟨nK, hnK⟩ := hK
     obtain ⟨nL, hnL⟩ := hL
     let n := min nK nL
-    letI : K.IsStrictlyGE nK := hnK
-    letI : L.IsStrictlyGE nL := hnL
+    let : K.IsStrictlyGE nK := hnK
+    let : L.IsStrictlyGE nL := hnL
     have hcone0 :
         (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (nL - 1) := by
       apply CochainComplex.isStrictlyGE_mappingCone (𝟙 L) nL nL (nL - 1)
-    letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (nL - 1) := hcone0
+    let : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (nL - 1) := hcone0
     have hcone' :
         (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE nL := by
       dsimp [CochainComplex.mappingCocone]
@@ -579,8 +579,8 @@ theorem make_surjective
     obtain ⟨nK, hnK⟩ := hK
     obtain ⟨nL, hnL⟩ := hL
     let n := max nK (nL + 1)
-    letI : K.IsStrictlyLE nK := hnK
-    letI : L.IsStrictlyLE nL := hnL
+    let : K.IsStrictlyLE nK := hnK
+    let : L.IsStrictlyLE nL := hnL
     have hcone0 :
         (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE nL := by
       rw [CochainComplex.isStrictlyLE_iff]
@@ -588,7 +588,7 @@ theorem make_surjective
       simp only [CochainComplex.mappingCone.isZero_X_iff]
       exact ⟨L.isZero_of_isStrictlyLE nL (j + 1) (by omega),
         L.isZero_of_isStrictlyLE nL j (by omega)⟩
-    letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE nL := hcone0
+    let : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE nL := hcone0
     have hcone' :
         (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE (nL + 1) := by
       dsimp [CochainComplex.mappingCocone]
@@ -612,12 +612,12 @@ theorem make_surjective
       (IsBounded K ∧ IsBounded L) → IsBounded K' := by
     rintro ⟨⟨pK, qK, hpK, hqK⟩, ⟨pL, qL, hpL, hqL⟩⟩
     refine ⟨min pK pL, max qK (qL + 1), ?_, ?_⟩
-    · letI : K.IsStrictlyGE pK := hpK
-      letI : L.IsStrictlyGE pL := hpL
+    · let : K.IsStrictlyGE pK := hpK
+      let : L.IsStrictlyGE pL := hpL
       have hcone0 :
           (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (pL - 1) := by
         apply CochainComplex.isStrictlyGE_mappingCone (𝟙 L) pL pL (pL - 1)
-      letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (pL - 1) := hcone0
+      let : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (pL - 1) := hcone0
       have hcone' :
           (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE pL := by
         dsimp [CochainComplex.mappingCocone]
@@ -1122,7 +1122,7 @@ theorem nilpotent
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.g = 0)
     (h₃ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.f ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' = 0)
-    {h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
+    (_h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₃.g = 0) :
     (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map (b ≫ b') = 0 := by
   let q : BookComplex C ⥤ BookHomotopyCategory C :=
@@ -1361,17 +1361,17 @@ theorem same_up_to_isomorphisms_of_map
     · dsimp [r, s, i, g, u, M]
       change r n ≫ i.f n + g.f n ≫ s n = 𝟙 _
       ext
-        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
           CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_snd, coneInclusion]
+          Category.assoc, hs_fst, coneInclusion]
         simpa [add_comm] using
           (CochainComplex.mappingCone.id_X (𝟙 K) n (n + 1) (by omega))
-        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
           CochainComplex.mappingCone.desc_f,
           Category.assoc, hs_snd, coneInclusion]
-        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          Category.assoc, hs_snd, coneInclusion]
-        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          Category.assoc, hs_fst, coneInclusion]
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
           Category.assoc, hs_snd, coneInclusion]
   let S : TermwiseSplitExactSequence K M (Cone f) := {
     f := i

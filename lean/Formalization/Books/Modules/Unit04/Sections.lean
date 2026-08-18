@@ -45,7 +45,9 @@ theorem globalSectionMap_app {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (s : F.sections)
     (U : Opens X) (f : O.obj.obj (op U)) :
     ((globalSectionMap s).val.app (op U)).hom f = f • s.eval (op U) := by
-  sorry
+  change (LinearMap.ringLmapEquivSelf (O.obj.obj (op U)) ℤ
+    (F.val.obj (op U))).symm (s.val (op U)) f = f • s.eval (op U)
+  simp [LinearMap.ringLmapEquivSelf]
 
 /-- Every morphism out of the rank-one sheaf is the morphism associated to
 the global section obtained by evaluating it at `1`. -/
@@ -81,7 +83,11 @@ theorem globallyGenerated_iff {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (F : Mod O) :
     globallyGenerated F ↔
       ∃ (I : Type v) (s : I → F.sections), globallyGenerates s := by
-  sorry
+  constructor
+  · rintro ⟨σ⟩
+    exact ⟨σ.I, σ.s, σ.epi⟩
+  · rintro ⟨I, s, hs⟩
+    exact ⟨{ I := I, s := s, epi := hs }⟩
 
 /-! ## Global sections and stalks -/
 
@@ -160,7 +166,13 @@ theorem localSectionPresheafSubmodule_contains {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O}
     (S : Set (LocalSection O F)) (t : LocalSection O F) (ht : t ∈ S) :
     t.s ∈ (localSectionPresheafSubmodule S).obj (op t.U) := by
-  sorry
+  change t.s ∈ (sInf {N | localSectionPresheafContains S N}).obj (op t.U)
+  change t.s ∈ ⨅ N ∈ {N | localSectionPresheafContains S N}, N.obj (op t.U)
+  rw [Submodule.mem_iInf]
+  intro N
+  rw [Submodule.mem_iInf]
+  intro hN
+  exact hN t ht
 
 /-- The sheafification of the smallest presheaf submodule, mapped into the
 ambient sheaf. -/

@@ -96,6 +96,22 @@ noncomputable def sheafPullbackCompIso (C : Type u) [Category.{v} C]
     ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
       (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
 
+private theorem sheafPullbackCompIso_assoc_app (C : Type u) [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ A B, FunLike (FC A B) (CC A) (CC B)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y Z T : TopCat.{v}} (f : X ⟶ Y) (g : Y ⟶ Z) (h : Z ⟶ T)
+    (F : TopCat.Sheaf C T) :
+    (sheafPullbackCompIso C f (g ≫ h)).hom.app F ≫
+        (sheafPullback C f).map ((sheafPullbackCompIso C g h).hom.app F) =
+      (sheafPullbackCompIso C (f ≫ g) h).hom.app F ≫
+        (sheafPullbackCompIso C f g).hom.app
+          ((sheafPullback C h).obj F) := by
+  simp [sheafPullbackCompIso, Category.assoc]
+
 /-- Restriction of sheaves to an open subspace. -/
 noncomputable abbrev sheafRestriction (C : Type u) [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
@@ -295,7 +311,57 @@ theorem glue_maps_of_concrete_category (C : Type u) [Category.{v} C]
     (φ : ∀ i, (sheafRestriction C (U i)).obj F ⟶
       (sheafRestriction C (U i)).obj G)
     (hφ : SheafMapGlueingCondition C U φ) :
-    ∃! ψ : F ⟶ G, ∀ i, (sheafRestriction C (U i)).map ψ = φ i := by sorry
+    ∃! ψ : F ⟶ G, ∀ i, (sheafRestriction C (U i)).map ψ = φ i := by
+  let localMap (i : ι) :
+      ((Opens.grothendieckTopology X).overPullback C (U i)).obj F ⟶
+        ((Opens.grothendieckTopology X).overPullback C (U i)).obj G := by
+    let eF := (U i).isOpenEmbedding.sheafPullbackIso C
+    let eG := (U i).isOpenEmbedding.sheafPullbackIso C
+    exact (U i).sheafRestrictSheafEquivOver.inv.app F ≫
+      (U i).sheafEquivOver.inverse.map
+        (eF.inv.app F ≫ φ i ≫ eG.hom.app G) ≫
+        (U i).sheafRestrictSheafEquivOver.hom.app G
+  let H := CategoryTheory.sheafHom F G
+  let localSection (i : ι) : H.1.obj (op (U i)) := localMap i
+  have hlocal : TopCat.Presheaf.IsCompatible H.1 U localSection := by
+    intro i j
+    simpa [H, localSection, localMap] using hφ i j
+  have htop : (⊤ : Opens X) ≤ iSup U := by
+    rw [hU.iSup_eq_top]
+  obtain ⟨s₀, hs₀, hs₀_unique⟩ := TopCat.Sheaf.existsUnique_gluing' H U (⊤ : Opens X)
+    (fun i => homOfLE (show U i ≤ ⊤ from le_top)) htop localSection hlocal
+  let sec : H.1.sections :=
+    ⟨fun V => H.1.map (homOfLE le_top).op s₀, by
+      intro V W f
+      change H.1.map f
+          (H.1.map (homOfLE (show V.unop ≤ ⊤ from le_top)).op s₀) =
+        H.1.map (homOfLE (show W.unop ≤ ⊤ from le_top)).op s₀
+      rw [← ConcreteCategory.comp_apply, ← H.1.map_comp]
+      congr 1
+      simp⟩
+  let ψ : F ⟶ G := (CategoryTheory.sheafHomSectionsEquiv F G) sec
+  refine ⟨ψ, ?_, ?_⟩
+  · intro i
+    have hi := hs₀ i
+    simpa [ψ, sec, localSection, localMap] using hi
+  · intro ψ' hψ'
+    let sec' : H.1.sections :=
+      (CategoryTheory.sheafHomSectionsEquiv F G).symm ψ'
+    have hs' (i : ι) :
+        H.1.map (homOfLE (show U i ≤ ⊤ from le_top)).op (sec'.val (op ⊤)) =
+          localSection i := by
+      simpa [sec', localSection, localMap] using hψ' i
+    have htop_eq : sec'.val (op ⊤) = s₀ := by
+      apply hs₀_unique
+      exact hs'
+    have hsec_eq : sec' = sec := by
+      apply (Functor.sections_ext_iff).2
+      intro V
+      have hsec' := sec'.property (homOfLE le_top).op
+      have hsec := sec.property (homOfLE le_top).op
+      rw [← hsec', ← hsec, htop_eq]
+    apply (CategoryTheory.sheafHomSectionsEquiv F G).injective
+    simpa [ψ, sec'] using hsec_eq
 /-
   let localMap (i : ι) :
       ((Opens.grothendieckTopology X).overPullback C (U i)).obj F ⟶
@@ -727,7 +793,11 @@ theorem glueingSectionRestrict_compatible
     (D : SetSheafGlueingData U) {W W' : Opens X} (h : W' ≤ W)
     (s : GlueingSection D W) (i j : ι) :
       glueingSectionCompatibilityAt D W'
-      (fun i => glueingSectionRestrictValue D h s i) i j := by sorry
+      (fun i => glueingSectionRestrictValue D h s i) i j := by
+  have hs := s.compatible i j
+  unfold glueingSectionCompatibilityAt at hs ⊢
+  dsimp [glueingSectionRestrictValue] at hs ⊢
+  simpa [Category.assoc] using hs
 /-
   have hs := s.compatible i j
   unfold glueingSectionCompatibilityAt at hs ⊢

@@ -1181,17 +1181,21 @@ theorem setPresheaf_morphism_description
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS)
     {X Y : setPresheafCategory F} (f : X ⟶ Y) :
-    ∃ h : F.map f.base.op (setPresheafObjectValue F Y) =
+      ∃ h : F.map f.base.op (setPresheafObjectValue F Y) =
         setPresheafObjectValue F X,
       f = setPresheafHomOf F (X := X) (Y := Y) f.base h := by
-  sorry
+  refine ⟨setPresheafHom_fibre_condition F f, ?_⟩
+  apply Pseudofunctor.CoGrothendieck.Hom.ext
+  · rfl
+  · exact Subsingleton.elim _ _
 
 theorem setPresheafHom_ext
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS)
     {X Y : setPresheafCategory F} {f g : X ⟶ Y}
     (h : f.base = g.base) : f = g := by
-  sorry
+  apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
+  exact Subsingleton.elim _ _
 
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
@@ -1283,7 +1287,22 @@ theorem setPresheaf_fibre_is_discrete
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (U : C) :
     IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
-  sorry
+  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
+  intro X Y f
+  rcases X with ⟨⟨X, x⟩, hX⟩
+  rcases Y with ⟨⟨Y, y⟩, hY⟩
+  cases hX
+  cases hY
+  letI : (setPresheafProjection F).IsHomLift (𝟙 _) f.val := f.2
+  have hbase := CategoryTheory.IsHomLift.eq_of_isHomLift
+    (setPresheafProjection F) (𝟙 _) f.val
+  change (𝟙 _) = f.val.base at hbase
+  cases hbase
+  have hfiber := Discrete.eq_of_hom f.val.fiber
+  have hxy : x = y := by
+    simpa using congrArg Discrete.as hfiber
+  cases hxy
+  rfl
 
 /- The construction is already fibred in groupoids by the generic
    CoGrothendieck lifting theorem from Unit 37.  The extra assertion here

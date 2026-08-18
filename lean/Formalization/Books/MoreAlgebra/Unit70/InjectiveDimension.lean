@@ -216,7 +216,12 @@ section DedekindDomainExample
 variable {R : Type u} [CommRing R] [IsDedekindDomain R]
 variable [HasDerivedCategory.{w} (ModuleCat.{u} R)]
 
-/-! ## The Dedekind-domain example -/
+/-! ## The Dedekind-domain example
+
+The source says that `R/I` has projective dimension `1`.  The usable
+statement here is the canonical bound `≤ 1`: it is what the subsequent
+injective-dimension argument uses, and exact equality would fail for the
+nonzero ideal `I = ⊤`. -/
 
 /-- The source's Dedekind-domain example, including the finite-projective
 ideal assertion, the injective-dimension bound, Ext vanishing in degrees at

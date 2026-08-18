@@ -430,7 +430,7 @@ theorem jacobi_zariski_h1_base_change_of_flat
     Function.Exact
       ((Algebra.H1Cotangent.map R R S T).liftBaseChange T)
       (Algebra.H1Cotangent.map R S T T) := by
-  sorry
+  exact Algebra.H1Cotangent.exact_liftBaseChange_map_of_flat R S T
 
 /- The Tor hypotheses in the full Jacobi--Zariski statement are used on the
    two-term presentation complex.  This is the tensor-exactness bridge for
@@ -449,7 +449,164 @@ theorem exact_lTensor_h1Cotangentι_cotangentComplex_of_tor_vanishing
     Function.Exact
       (LinearMap.lTensor T P.toExtension.h1Cotangentι)
       (LinearMap.lTensor T P.toExtension.cotangentComplex) := by
-  sorry
+  let d := P.toExtension.cotangentComplex
+  let i := P.toExtension.h1Cotangentι
+  let q := P.toExtension.toKaehler
+  have h₁id : Function.Exact i d.rangeRestrict := by
+    rw [LinearMap.exact_iff, LinearMap.ker_rangeRestrict]
+    exact LinearMap.exact_iff.mp P.toExtension.exact_hCotangentι_cotangentComplex
+  have h₂id : Function.Exact (LinearMap.range d).subtype q := by
+    intro x
+    constructor
+    · intro hx
+      obtain ⟨y, rfl⟩ := (P.toExtension.exact_cotangentComplex_toKaehler _).mp hx
+      exact ⟨⟨d y, ⟨y, rfl⟩⟩, rfl⟩
+    · intro hx
+      obtain ⟨y, rfl⟩ := hx
+      exact (P.toExtension.exact_cotangentComplex_toKaehler _).mpr y.property
+  have h₂comp : q.comp (LinearMap.range d).subtype = 0 := by
+    apply LinearMap.ext
+    intro x
+    exact (h₂id _).mpr ⟨x, rfl⟩
+  let C : ShortComplex (ModuleCat (S)) :=
+    ModuleCat.shortComplexOfCompEqZero
+      (M := LinearMap.range d) (N := P.toExtension.CotangentSpace)
+      (LinearMap.range d).subtype q h₂comp
+  have hC : C.ShortExact := by
+    apply ModuleCat.shortComplex_shortExact C h₂id
+    · intro x y hxy
+      exact Subtype.ext hxy
+    · exact P.toExtension.toKaehler_surjective
+  obtain ⟨H⟩ := Formalization.Books.Algebra.Unit75.exists_tor_long_exact_sequence
+    (ModuleCat.of S T) C hC
+  have hTor : IsZero (Formalization.Books.Algebra.Unit75.Tor
+      (ModuleCat.of S T)
+      (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)) 1) :=
+    h₁.of_iso (Formalization.Books.Algebra.Unit75.torLeftRightIso
+      (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S))
+      (ModuleCat.of S T) 1).symm
+  have hTorData : IsZero (Formalization.Books.Algebra.Unit75.Tor
+      (ModuleCat.of S T)
+      (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)) 1) ∧
+      IsZero (Formalization.Books.Algebra.Unit75.Tor
+        (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S))
+        (ModuleCat.of S T) 2) := ⟨hTor, h₂⟩
+  let hSubsingleton : Subsingleton (Formalization.Books.Algebra.Unit75.Tor
+      (ModuleCat.of S T) C.X₃ 1) := by
+    simpa [C] using ModuleCat.subsingleton_of_isZero hTorData.1
+  have hTensorInjective : Function.Injective (LinearMap.lTensor T (LinearMap.range d).subtype) := by
+    intro x y hxy
+    have hz : (LinearMap.lTensor T (LinearMap.range d).subtype) (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    obtain ⟨z, hz'⟩ := (H.exact₃ _).mp hz
+    have hz0 : z = 0 := @Subsingleton.elim _ hSubsingleton _ _
+    rw [hz0, map_zero] at hz'
+    exact sub_eq_zero.mp hz'.symm
+  have hTensorExact := @lTensor_exact S P.toExtension.H1Cotangent
+      P.toExtension.Cotangent (LinearMap.range d) _ _ _ _ _ _ _ i d.rangeRestrict T
+      _ _ h₁id (LinearMap.surjective_rangeRestrict d)
+  change Function.Exact (LinearMap.lTensor T i) (LinearMap.lTensor T d)
+  intro x
+  constructor
+  · intro hx
+    have hx' : (LinearMap.lTensor T (LinearMap.range d).subtype)
+        ((LinearMap.lTensor T d.rangeRestrict) x) = 0 := by
+      change ((LinearMap.lTensor T (LinearMap.range d).subtype).comp
+        (LinearMap.lTensor T d.rangeRestrict)) x = 0
+      rw [← LinearMap.lTensor_comp]
+      change (LinearMap.lTensor T d) x = 0
+      exact hx
+    have hx'' : (LinearMap.lTensor T d.rangeRestrict) x = 0 :=
+      by
+        apply hTensorInjective
+        simpa using hx'
+    exact (hTensorExact _).mp hx''
+  · rintro ⟨y, rfl⟩
+    change ((LinearMap.lTensor T d).comp (LinearMap.lTensor T i)) y = 0
+    rw [← LinearMap.lTensor_comp]
+    have hzero : d.comp i = 0 := by
+      apply LinearMap.ext
+      intro z
+      exact (P.toExtension.exact_hCotangentι_cotangentComplex _).mpr ⟨z, rfl⟩
+    rw [hzero, LinearMap.lTensor_zero]
+    simp
+
+private theorem exact_liftBaseChange_map_of_tensor_exact
+    {R S T ι σ : Type*} [CommRing R] [CommRing S] [CommRing T]
+    [Algebra R S] [Algebra R T] [Algebra S T] [IsScalarTower R S T]
+    (Q : Algebra.Generators S T ι) (P : Algebra.Generators R S σ)
+    (hP : Function.Exact
+      (LinearMap.lTensor T P.toExtension.h1Cotangentι)
+      (LinearMap.lTensor T P.toExtension.cotangentComplex)) :
+    Function.Exact
+      ((Algebra.Extension.H1Cotangent.map (Q.toComp P).toExtensionHom).liftBaseChange T)
+      (Algebra.Extension.H1Cotangent.map (Q.ofComp P).toExtensionHom) := by
+  rw [LinearMap.exact_iff]
+  refine le_antisymm ?_
+    (Algebra.Generators.H1Cotangent.liftBaseChange_range_le Q P)
+  rintro ⟨x, x_in⟩ hx
+  replace hx : Algebra.Extension.Cotangent.map (Q.ofComp P).toExtensionHom x = 0 := by
+    change Algebra.Extension.H1Cotangent.map (Q.ofComp P).toExtensionHom
+        ⟨x, x_in⟩ = 0 at hx
+    have hx' := congrArg (fun z => Algebra.Extension.h1Cotangentι z) hx
+    have hmap' := DFunLike.congr_fun
+      (Algebra.Extension.Cotangent.map_comp_h1Cotangentι
+        (Q.ofComp P).toExtensionHom) ⟨x, x_in⟩
+    change Algebra.Extension.Cotangent.map (Q.ofComp P).toExtensionHom x =
+      Algebra.Extension.h1Cotangentι
+        (Algebra.Extension.H1Cotangent.map (Q.ofComp P).toExtensionHom ⟨x, x_in⟩) at hmap'
+    rw [← hmap'] at hx'
+    change Algebra.Extension.Cotangent.map (Q.ofComp P).toExtensionHom x = 0 at hx'
+    exact hx'
+  rw [← LinearMap.mem_ker,
+    (Algebra.Generators.Cotangent.exact Q P).linearMap_ker_eq] at hx
+  rcases hx with ⟨x, rfl⟩
+  have auxMemKer : ∀ z : T ⊗[S] P.toExtension.H1Cotangent,
+      LinearMap.liftBaseChange T
+          (Algebra.Extension.Cotangent.map (Q.toComp P).toExtensionHom)
+          ((LinearMap.lTensor T Algebra.Extension.h1Cotangentι) z) ∈
+        (Q.comp P).toExtension.cotangentComplex.ker := by
+    intro z
+    induction z with
+    | zero =>
+      apply LinearMap.mem_ker.mpr
+      simp
+    | tmul x y =>
+      have hy : P.toExtension.cotangentComplex
+          (Algebra.Extension.h1Cotangentι y) = 0 :=
+        (P.toExtension.exact_hCotangentι_cotangentComplex _).mpr ⟨y, rfl⟩
+      simp [← Algebra.Extension.CotangentSpace.map_cotangentComplex, hy]
+    | add x y hx hy => simpa using Submodule.add_mem _ hx hy
+  rw [LinearMap.mem_ker, ← LinearMap.comp_apply,
+    ← Algebra.Generators.H1Cotangent.map_comp_cotangentComplex_baseChange, LinearMap.comp_apply,
+    ← LinearMap.mem_ker,
+    LinearMap.ker_eq_bot.mpr (Algebra.Generators.CotangentSpace.map_toComp_injective Q P),
+    Submodule.mem_bot, LinearMap.baseChange_eq_ltensor, ← LinearMap.mem_ker,
+    hP.linearMap_ker_eq] at x_in
+  rcases x_in with ⟨x, rfl⟩
+  use x
+  induction x with
+  | zero =>
+    apply Subtype.ext
+    simp
+  | tmul x y =>
+    apply Subtype.ext
+    have hmap := DFunLike.congr_fun
+      (Algebra.Extension.Cotangent.map_comp_h1Cotangentι
+        (Q.toComp P).toExtensionHom) y
+    change Algebra.Extension.Cotangent.map (Q.toComp P).toExtensionHom
+        (Algebra.Extension.h1Cotangentι y) =
+      Algebra.Extension.h1Cotangentι
+        (Algebra.Extension.H1Cotangent.map (Q.toComp P).toExtensionHom y) at hmap
+    change x • Algebra.Extension.h1Cotangentι
+        (Algebra.Extension.H1Cotangent.map (Q.toComp P).toExtensionHom y) = _
+    exact congrArg (fun z => x • z) hmap.symm
+  | add x y hx hy =>
+    rw [map_add]
+    rw [hx (auxMemKer x), hy (auxMemKer y)]
+    apply Subtype.ext
+    simp only [map_add]
+    rfl
 
 /- The presentation-level exactness is the input needed by the canonical
    H¹ comparison.  Keeping this step separate makes the Tor bridge reusable
@@ -464,7 +621,22 @@ theorem jacobi_zariski_h1_base_change_of_tensor_exact
         (Algebra.Generators.self R S).toExtension.cotangentComplex)) :
     Function.Exact ((Algebra.H1Cotangent.map R R S T).liftBaseChange T)
       (Algebra.H1Cotangent.map R S T T) := by
-  sorry
+  let Q := Algebra.Generators.self S T
+  let P := Algebra.Generators.self R S
+  let W := Algebra.Generators.self R T
+  rw [← LinearEquiv.conj_exact_iff_exact _ _
+    (Algebra.Generators.H1Cotangent.equiv W (Q.comp P))]
+  convert! exact_liftBaseChange_map_of_tensor_exact Q P hP
+  · change Algebra.Extension.H1Cotangent.map
+        (W.defaultHom (Q.comp P)).toExtensionHom ∘ₗ _ = _
+    rw [Algebra.H1Cotangent.map, LinearMap.liftBaseChange_comp,
+      ← Algebra.Extension.H1Cotangent.map_comp,
+      Algebra.Extension.H1Cotangent.map_eq]
+  · change (Algebra.Extension.H1Cotangent.map
+        (Algebra.Generators.defaultHom W Q).toExtensionHom).restrictScalars T ∘ₗ
+      Algebra.Extension.H1Cotangent.map _ = _
+    rw [← Algebra.Extension.H1Cotangent.map_comp,
+      Algebra.Extension.H1Cotangent.map_eq]
 
 /- The full source hypothesis is the vanishing of `Tor₁` and `Tor₂`.  The
    Mathlib theorem above is its currently available flat-base-change
@@ -536,7 +708,11 @@ theorem jacobi_zariski_composition_is_null_homotopic
       Algebra.Extension.CotangentSpace.map (Q.ofComp P).toExtensionHom ∘ₗ
           (Algebra.Extension.CotangentSpace.map (Q.toComp P).toExtensionHom).liftBaseChange T =
         Q.toExtension.cotangentComplex ∘ₗ h := by
-  sorry
+  refine ⟨0, ?_⟩
+  apply LinearMap.ext
+  intro x
+  simpa only [LinearMap.comp_apply, LinearMap.zero_apply, map_zero] using
+    ((Algebra.Generators.CotangentSpace.exact Q P) _).mpr ⟨x, rfl⟩
 
 /-! ## Surjections, applications, and base change -/
 

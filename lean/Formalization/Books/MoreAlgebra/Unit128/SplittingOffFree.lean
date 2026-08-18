@@ -161,7 +161,7 @@ private theorem map_finsupp_linearCombination {A P Q : Type u} {ι : Type v} [Co
     q (Finsupp.linearCombination A v c) =
       Finsupp.linearCombination A (fun i => q (v i)) c := by
   classical
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [finsupp_linearCombination_eq_sum, finsupp_linearCombination_eq_sum]
   simp [map_sum, map_smul]
 
@@ -336,8 +336,8 @@ private theorem smul_left_inverse_of_directSummand [Module.FinitePresentation R 
       apply hprime.mem_of_pow_mem n
       rw [hn]
       exact hqI
-    have hbpow : (b : R) ∈ Submonoid.powers f := by simpa [S] using b.property
-    have hapow : (a : R) ∈ Submonoid.powers f := by simpa [S] using a.property
+    have hbpow : (b : R) ∈ Submonoid.powers f := by simp [S]
+    have hapow : (a : R) ∈ Submonoid.powers f := by simp [S]
     rcases hprime.mem_or_mem hba with hbI | haI
     · exact hpow hbpow hbI
     · exact hpow hapow haI
@@ -464,7 +464,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       (fun φ : M →ₗ[R] R => Submodule.span K {flip a φ}) htop
     rcases hfin with ⟨T, hT⟩
     let T₀ := {φ : M →ₗ[R] R // φ ∈ T}
-    letI : Fintype T₀ := Fintype.ofFinite T₀
+    let : Fintype T₀ := Fintype.ofFinite T₀
     let mat : (T₀ → K) →ₗ[K] (Fin r → K) :=
       { toFun := fun c i => ∑ φ : T₀, c φ * a i φ
         map_add' := by

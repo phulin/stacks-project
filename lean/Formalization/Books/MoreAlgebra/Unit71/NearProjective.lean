@@ -5,6 +5,7 @@ import Mathlib.LinearAlgebra.Dual.Defs
 import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.RingTheory.Finiteness.Finsupp
+import Mathlib.Tactic.TFAE
 
 /-!
 # More on Algebra, Chapter 71: Modules which are close to being projective
@@ -144,7 +145,46 @@ theorem factorsThroughFiniteProjective_of_factorsThroughProjective
     {M N : ModuleCat.{u} R} [Module.Finite R M] {φ : M ⟶ N}
     (hφ : FactorsThroughProjective φ) :
     FactorsThroughFiniteProjective φ := by
-  sorry
+  classical
+  rcases hφ with ⟨P, hP, f, g, hfg⟩
+  obtain ⟨s, hs⟩ := hP.out
+  let f₀ : M →ₗ[R] (P →₀ R) := s.comp f.hom
+  have hfg₀ : (LinearMap.range f₀).FG := Submodule.fg_range f₀
+  obtain ⟨T, hT⟩ := hfg₀
+  let S : Finset P := T.biUnion Finsupp.support
+  let U : Submodule R (P →₀ R) := Finsupp.supported R R (↑S : Set P)
+  have hTU : ∀ x ∈ T, x ∈ U := by
+    intro x hx
+    rw [Finsupp.mem_supported]
+    intro p hp
+    exact Finset.mem_biUnion.mpr ⟨x, hx, hp⟩
+  have hrange : LinearMap.range f₀ ≤ U := by
+    rw [← hT]
+    exact Submodule.span_le.2 hTU
+  have hmem : ∀ x, f₀ x ∈ U := fun x => hrange ⟨x, rfl⟩
+  let e : U ≃ₗ[R] (S →₀ R) :=
+    Finsupp.supportedEquivFinsupp (R := R) (M := R) (↑S : Set P)
+  let f₁ : M →ₗ[R] (S →₀ R) :=
+    e.toLinearMap.comp (LinearMap.codRestrict U f₀ hmem)
+  let i : (S →₀ R) →ₗ[R] (P →₀ R) :=
+    (Submodule.subtype U).comp e.symm.toLinearMap
+  have hi : i.comp f₁ = f₀ := by
+    ext x p
+    simp [i, f₁]
+  let g₁ : (S →₀ R) →ₗ[R] N :=
+    (g.hom : P →ₗ[R] N).comp
+      ((Finsupp.linearCombination R (id : P → P)).comp i)
+  have h₁ : g₁.comp f₁ = φ.hom := by
+    ext x
+    change g.hom ((Finsupp.linearCombination R (id : P → P)) (i (f₁ x))) = φ.hom x
+    rw [show i (f₁ x) = f₀ x by rw [← LinearMap.comp_apply, hi]]
+    change g.hom ((Finsupp.linearCombination R id) (s (f.hom x))) = φ.hom x
+    rw [hs (f.hom x)]
+    simpa only [ModuleCat.comp_apply] using congrArg (fun k : M ⟶ N => k x) hfg
+  refine ⟨ModuleCat.of R (S →₀ R), inferInstance, inferInstance,
+    ModuleCat.ofHom f₁, ModuleCat.ofHom g₁, ?_⟩
+  apply ModuleCat.hom_ext
+  exact h₁
 
 end FactorThrough
 
@@ -164,7 +204,49 @@ theorem nearProjective_characterization (I : Ideal R) (M : ModuleCat.{u} R) :
       (∀ a : R, a ∈ I → FactorsThroughProjective (a • 𝟙 M)),
       (∀ a : R, a ∈ I → FactorsThroughFree (a • 𝟙 M)),
       ExtOneAnnihilatedByIdeal I M] := by
-  sorry
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h a ha
+      exact (factorsThroughProjective_iff_factorsThroughFree (a • 𝟙 M)).mp (h a ha)
+    · intro h a ha
+      exact (factorsThroughProjective_iff_factorsThroughFree (a • 𝟙 M)).mpr (h a ha)
+  tfae_have 1 → 3 := by
+    intro h N a ha e
+    rcases h a ha with ⟨P, hP, f, g, hfg⟩
+    let _ : Module.Projective R (P : Type u) := hP
+    have hcomp :
+        (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 M)).comp e
+            (zero_add 1) = 0 := by
+      rw [← hfg, ← CategoryTheory.Abelian.Ext.mk₀_comp_mk₀_assoc]
+      have hz :
+          (CategoryTheory.Abelian.Ext.mk₀ g).comp e (zero_add 1) = 0 :=
+        CategoryTheory.Abelian.Ext.eq_zero_of_projective _
+      rw [hz]
+      simp only [CategoryTheory.Abelian.Ext.comp_zero]
+    simpa only [CategoryTheory.Abelian.Ext.mk₀_smul,
+      CategoryTheory.Abelian.Ext.smul_comp,
+      CategoryTheory.Abelian.Ext.mk₀_id_comp] using hcomp
+  tfae_have 3 → 1 := by
+    intro h a ha
+    let S := ModuleCat.projectiveShortComplex M
+    have hS : S.ShortExact := ModuleCat.shortExact_projectiveShortComplex M
+    have hP : Module.Projective R S.X₂ := inferInstance
+    have hzero : a • hS.extClass = 0 := h S.X₁ a ha hS.extClass
+    have hcomp :
+        (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 M)).comp hS.extClass
+            (zero_add 1) = 0 := by
+      simpa only [CategoryTheory.Abelian.Ext.mk₀_smul,
+        CategoryTheory.Abelian.Ext.smul_comp,
+        CategoryTheory.Abelian.Ext.mk₀_id_comp] using hzero
+    obtain ⟨x₂, hx₂⟩ :=
+      CategoryTheory.Abelian.Ext.covariant_sequence_exact₃ S.X₃ hS
+        (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 M)) (zero_add 1) hcomp
+    obtain ⟨f', rfl⟩ :=
+      CategoryTheory.Abelian.Ext.homEquiv₀.symm.surjective x₂
+    have hfa : f' ≫ S.g = a • 𝟙 M :=
+      CategoryTheory.Abelian.Ext.homEquiv₀.symm.injective (by simpa using hx₂)
+    exact ⟨S.X₂, hP, f', S.g, hfa⟩
+  tfae_finish
 
 /-- A module is `I`-projective when multiplication by every element of `I`
 factors through a projective module.  This notation is nonstandard. -/
@@ -222,7 +304,23 @@ theorem isIdealProjective_dual
     (I : Ideal R) (M : ModuleCat.{u} R) [Module.Finite R M]
     (hM : IsIdealProjective I M) :
     IsIdealProjective I (ModuleCat.of R (Module.Dual R M)) := by
-  sorry
+  intro a ha
+  obtain ⟨Q, hQf, hQp, f, g, hfg⟩ :=
+    factorsThroughFiniteProjective_of_factorsThroughProjective (hM a ha)
+  let _ : Module.Finite R (Q : Type u) := hQf
+  let _ : Module.Projective R (Q : Type u) := hQp
+  refine ⟨ModuleCat.of R (Module.Dual R (Q : Type u)), inferInstance,
+    ModuleCat.ofHom g.hom.dualMap, ModuleCat.ofHom f.hom.dualMap, ?_⟩
+  apply ModuleCat.hom_ext
+  change f.hom.dualMap.comp g.hom.dualMap =
+    (a • 𝟙 (ModuleCat.of R (Module.Dual R M))).hom
+  rw [LinearMap.dualMap_comp_dualMap]
+  have hfg' : g.hom.comp f.hom = (a • 𝟙 M).hom :=
+    ModuleCat.hom_ext_iff.mp hfg
+  rw [hfg']
+  ext ψ x
+  change ψ (a • x) = a • ψ x
+  rw [map_smul]
 
 end NearProjective
 

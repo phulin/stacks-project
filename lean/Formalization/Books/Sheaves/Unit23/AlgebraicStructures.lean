@@ -404,7 +404,7 @@ theorem algebraicSheafPullback_underlying_formula
       (algebraicUnderlyingSheaf U ((algebraicSheafPullback C f).obj G) ≅
         (TopCat.Sheaf.pullback (Type v) f).obj (algebraicUnderlyingSheaf U G)) := by
   let J := Opens.grothendieckTopology X
-  letI : J.PreservesSheafification U :=
+  let : J.PreservesSheafification U :=
     CategoryTheory.GrothendieckTopology.instPreservesSheafification J U
   let P := (Formalization.Books.Sheaves.Unit22.algebraicPresheafPullback C f).obj G.presheaf
   let eC := (TopCat.Sheaf.pullbackIso C f).app G

@@ -521,7 +521,89 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     Nonempty
       (iAdicPolynomialCompletion A I r ≃+*
         iAdicRestrictedPowerSeries A I r) := by
-  sorry
+  classical
+  let P := MvPolynomial (Fin r) A
+  let J := polynomialExtensionIdeal A I r
+  have hpow : ∀ n : ℕ, J ^ n =
+      Ideal.map (MvPolynomial.C : A →+* P) (I ^ n) := by
+    intro n
+    simp [J, polynomialExtensionIdeal, Ideal.map_pow]
+  let q : ∀ n : ℕ, (P ⧸ J ^ n) ≃+*
+      MvPolynomial (Fin r) (A ⧸ I ^ n) := fun n =>
+    (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).toRingEquiv.trans
+      (Ideal.quotientEquivAlgOfEq P (hpow n).symm).toRingEquiv
+  let e : ∀ n : ℕ, (P ⧸ J ^ n) ≃+*
+      MvPolynomial (Fin r) (A ⧸ I ^ n) := fun n => (q n).symm
+  have heC : ∀ (n : ℕ) (a : A),
+      e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a)) =
+        MvPolynomial.C (Ideal.Quotient.mk (I ^ n) a) := by
+    intro n a
+    apply (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).injective
+    change (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n))
+        ((q n).symm (Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a))) = _
+    simp [q, MvPolynomial.quotientEquivQuotientMvPolynomial]
+  have heX : ∀ (n : ℕ) (i : Fin r),
+      e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i)) =
+        MvPolynomial.X i := by
+    intro n i
+    apply (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).injective
+    change (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n))
+        ((q n).symm (Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i))) = _
+    simp [q, MvPolynomial.quotientEquivQuotientMvPolynomial]
+  have hcompat : ∀ {m n : ℕ} (hmn : m ≤ n),
+      (MvPolynomial.map (Ideal.Quotient.factor (Ideal.pow_le_pow_right hmn))).comp
+          (e n).toRingHom =
+        (e m).toRingHom.comp (Ideal.Quotient.factorPow J hmn) := by
+    intro m n hmn
+    apply RingHom.ext
+    intro x
+    obtain ⟨y, rfl⟩ := (e n).symm.surjective x
+    apply MvPolynomial.induction_on y
+    · intro a
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective a
+      have h_invC :
+          (e n).symm (MvPolynomial.C (Ideal.Quotient.mk (I ^ n) a)) =
+            Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a) := by
+        rw [← heC n a]
+        exact (e n).symm_apply_apply _
+      rw [h_invC]
+      simp [heC]
+    · intro p q hp hq
+      simpa only [map_add] using congrArg₂ (· + ·) hp hq
+    · intro p i hp
+      have hxi :
+          ((MvPolynomial.map (Ideal.Quotient.factor (Ideal.pow_le_pow_right hmn))).comp
+            (e n).toRingHom) ((e n).symm (MvPolynomial.X i)) =
+          ((e m).toRingHom.comp
+            (Ideal.Quotient.factorPow J hmn)) ((e n).symm (MvPolynomial.X i)) := by
+        have h_invX :
+            (e n).symm (MvPolynomial.X i) =
+              Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i) := by
+          rw [← heX n i]
+          exact (e n).symm_apply_apply _
+        rw [h_invX]
+        simp [heX]
+      simpa only [map_mul] using congrArg₂ (· * ·) hp hxi
+  have heval : ∀ {m n : ℕ} (hmn : m ≤ n)
+      (x : AdicCompletion J P),
+      Ideal.Quotient.factorPow J hmn (AdicCompletion.evalₐ J n x) =
+        AdicCompletion.evalₐ J m x := by
+    intro m n hmn x
+    let hn : (J ^ n • ⊤ : Submodule P P) ≤ J ^ n :=
+      le_of_eq (Ideal.mul_top _)
+    let hm : (J ^ m • ⊤ : Submodule P P) ≤ J ^ m :=
+      le_of_eq (Ideal.mul_top _)
+    have hfac : ∀ (y : P ⧸ (J ^ n • ⊤ : Submodule P P)),
+        Ideal.Quotient.factorPow J hmn (Submodule.factor hn y) =
+          Submodule.factor hm (AdicCompletion.transitionMap J P hmn y) := by
+      intro y
+      induction y using Quotient.inductionOn' with
+      | _ p => rfl
+    rw [← AdicCompletion.factor_eval_eq_evalₐ J x hn]
+    rw [← AdicCompletion.factor_eval_eq_evalₐ J x hm]
+    rw [hfac]
+    exact congrArg (fun z => Submodule.factor hm z)
+      (AdicCompletion.transitionMap_comp_eval_apply J P hmn x)
 
 /-- The limit topology on the restricted power series side is always complete. -/
 theorem iAdicRestrictedPowerSeries_complete_for_limit_topology

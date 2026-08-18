@@ -3,6 +3,7 @@ import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Ideal.Over
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
+import Formalization.Books.Algebra.Unit159
 
 /-!
 # Exercises, Chapter 5: Flat ring maps
@@ -49,7 +50,9 @@ theorem exists_flat_local_residueField_extension
     ∃ (B : Type (max u v)) (_ : CommRing B) (_ : IsLocalRing B)
       (_ : Algebra A B),
       IsFlatLocalResidueFieldExtension (A := A) (B := B) (K := K) := by
-  sorry
+  obtain ⟨B, hB, hlocal, hAlg, h⟩ :=
+    Formalization.Books.Algebra.Unit159.exists_flat_local_residueField_extension A K
+  exact ⟨B, hB, hlocal, hAlg, h⟩
 
 /-- The same construction exists without a finiteness hypothesis on the field
 extension. -/
@@ -60,6 +63,8 @@ theorem exists_flat_local_residueField_extension_of_arbitrary
     ∃ (B : Type (max u v)) (_ : CommRing B) (_ : IsLocalRing B)
       (_ : Algebra A B),
       IsFlatLocalResidueFieldExtension (A := A) (B := B) (K := K) := by
-  sorry
+  obtain ⟨B, hB, hlocal, hAlg, h⟩ :=
+    Formalization.Books.Algebra.Unit159.exists_flat_local_residueField_extension A K
+  exact ⟨B, hB, hlocal, hAlg, h⟩
 
 end Formalization.Books.Exercises.Unit05

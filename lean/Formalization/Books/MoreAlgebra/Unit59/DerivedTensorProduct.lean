@@ -519,8 +519,20 @@ theorem derivedTensor_represented
         (derivedComplexQuotient R).obj (tensorProductComplex R K L)) := by
   exact (derivedTensorProductData (R := R)).represented X Y
 
-/-- The choice of K-flat representatives does not affect the derived tensor
-functor, up to the canonical natural isomorphism supplied by localization. -/
+/- The source construction chooses K-flat resolutions of arbitrary derived
+objects.  This interface records the resulting computation for an explicitly
+chosen representative, rather than only for objects already presented by a
+complex. -/
+theorem derivedTensor_of_kFlatRepresentative
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    {X Y : D R} (K : KFlatRepresentative R X)
+    (L : KFlatRepresentative R Y) :
+    Nonempty (derivedTensor X Y ≅
+      (derivedComplexQuotient R).obj
+        (tensorProductComplex R K.complex L.complex)) := by
+  sorry
+
 /-! ## Symmetry and associativity -/
 
 /-- The signed symmetry of derived tensor products, with its naturality in

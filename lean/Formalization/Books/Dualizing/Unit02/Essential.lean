@@ -48,8 +48,8 @@ theorem essentialExtension_trans {𝒜 : Type u} [Category.{v} 𝒜] [Abelian �
   unfold EssentialExtension
   rcases hf with ⟨hf, hfe⟩
   rcases hg with ⟨hg, hge⟩
-  letI := hf
-  letI := hg
+  let := hf
+  let := hg
   refine ⟨inferInstance, ?_⟩
   intro P hP
   have hpull :
@@ -105,7 +105,7 @@ theorem essentialExtension_intersection
     {A B D : 𝒜} (f : A ⟶ B) [Mono f] (g : D ⟶ B) [Mono g]
     (hf : EssentialExtension f) :
     EssentialExtension (essentialIntersectionArrow f g) := by
-  letI : Mono (essentialIntersectionArrow f g) := by
+  let : Mono (essentialIntersectionArrow f g) := by
     dsimp [essentialIntersectionArrow]
     infer_instance
   have hle :
@@ -148,7 +148,7 @@ theorem essentialExtension_intersection
     le_antisymm hle hrev
   unfold EssentialExtension at hf ⊢
   rcases hf with ⟨hf, hfe⟩
-  letI := hf
+  let := hf
   refine ⟨inferInstance, ?_⟩
   intro P hP
   have hmapg : (Subobject.map g).obj P ≤ Subobject.mk g := by
@@ -293,15 +293,15 @@ theorem essentialSurjection_quotient
   rcases hf with ⟨hf, hfess⟩
   let e := essentialQuotientMap f g
   let q := quotientByImageOfKernelProjection f g
-  letI : Epi q := by
+  let : Epi q := by
     dsimp [q, quotientByImageOfKernelProjection]
     infer_instance
   have heq : g ≫ e = f ≫ q := by
     dsimp [e, essentialQuotientMap, q]
     exact Abelian.comp_epiDesc g (f ≫ cokernel.π (kernel.ι g ≫ f)) _
-  haveI : Epi e := by
-    haveI : Epi (f ≫ q) := by infer_instance
-    haveI : Epi (g ≫ e) := by rw [heq]; infer_instance
+  have : Epi e := by
+    have : Epi (f ≫ q) := by infer_instance
+    have : Epi (g ≫ e) := by rw [heq]; infer_instance
     exact epi_of_epi g e
   constructor
   · infer_instance
@@ -311,20 +311,20 @@ theorem essentialSurjection_quotient
     have hcond : a ≫ P.arrow = Q.arrow ≫ g := by
       dsimp [a, Q]
       exact (Subobject.isPullback g P).w
-    haveI : Epi a := by
+    have : Epi a := by
       dsimp [a]
       exact Abelian.epi_fst_of_isLimit P.arrow g (Subobject.isPullback g P).isLimit
     have hQ : Q ≠ (⊤ : Subobject A) := by
       intro hQ
       apply hP
-      letI : IsIso Q.arrow := (Subobject.isIso_arrow_iff_eq_top Q).2 hQ
-      haveI : Epi (Q.arrow ≫ g) := inferInstance
-      haveI : Epi (a ≫ P.arrow) := by
+      let : IsIso Q.arrow := (Subobject.isIso_arrow_iff_eq_top Q).2 hQ
+      have : Epi (Q.arrow ≫ g) := inferInstance
+      have : Epi (a ≫ P.arrow) := by
         rw [hcond]
         infer_instance
-      haveI : Epi P.arrow :=
+      have : Epi P.arrow :=
         epi_of_epi_fac (f := a) (g := P.arrow) (h := a ≫ P.arrow) rfl
-      haveI : IsIso P.arrow := isIso_of_mono_of_epi _
+      have : IsIso P.arrow := isIso_of_mono_of_epi _
       exact (Subobject.isIso_arrow_iff_eq_top P).mp inferInstance
     intro hzero
     have hpe : Epi (P.arrow ≫ e) := by
@@ -340,8 +340,8 @@ theorem essentialSurjection_quotient
           rw [Category.id_comp]
           exact hmx.symm
         rw [hmk, Subobject.mk_arrow, hzero]
-      haveI : IsIso Fx.F.m := (Subobject.isIso_iff_mk_eq_top _).2 htop
-      haveI : Epi Fx.F.e := by
+      have : IsIso Fx.F.m := (Subobject.isIso_iff_mk_eq_top _).2 htop
+      have : Epi Fx.F.e := by
         have h := IsImage.e_isoExt_hom
           (Abelian.imageStrongEpiMonoFactorisation (P.arrow ≫ e)).toMonoIsImage
           Fx.isImage
@@ -352,7 +352,7 @@ theorem essentialSurjection_quotient
     have hrel : Q.arrow ≫ f ≫ q = a ≫ (P.arrow ≫ e) := by
       rw [← heq, ← Category.assoc Q.arrow g e, ← hcond]
       exact Category.assoc _ _ _
-    haveI : Epi (Q.arrow ≫ f ≫ q) := by
+    have : Epi (Q.arrow ≫ f ≫ q) := by
       rw [hrel]
       infer_instance
     have hQf : Epi (Q.arrow ≫ f) := by
@@ -385,11 +385,11 @@ theorem essentialSurjection_quotient
       rw [← hld, hlzero, comp_zero]
     have htop : (Subobject.«exists» f).obj Q = (⊤ : Subobject B) := by
       let Fq := Subobject.imageFactorisation f Q
-      haveI : Epi (Fq.F.e ≫ Fq.F.m) := by
+      have : Epi (Fq.F.e ≫ Fq.F.m) := by
         rw [Fq.F.fac]
         infer_instance
-      haveI : Epi Fq.F.m := epi_of_epi Fq.F.e Fq.F.m
-      haveI : IsIso Fq.F.m := isIso_of_mono_of_epi _
+      have : Epi Fq.F.m := epi_of_epi Fq.F.e Fq.F.m
+      have : IsIso Fq.F.m := isIso_of_mono_of_epi _
       have hm : Subobject.mk Fq.F.m = (⊤ : Subobject B) :=
         (Subobject.isIso_iff_mk_eq_top _).mp inferInstance
       have hmf : Fq.F.m = ((Subobject.«exists» f).obj Q).arrow := by
@@ -471,7 +471,7 @@ theorem essentialSubmodule_iff_essentialExtension
     (S : Submodule R N) :
     EssentialSubmodule S ↔
       EssentialExtension (ModuleCat.ofHom S.subtype) := by
-  haveI : Mono (ModuleCat.ofHom S.subtype) :=
+  have : Mono (ModuleCat.ofHom S.subtype) :=
     ConcreteCategory.mono_of_injective _ Subtype.val_injective
   let e := ModuleCat.subobjectModule (ModuleCat.of R N)
   have hS : e (Subobject.mk (ModuleCat.ofHom S.subtype)) = S := by
@@ -493,7 +493,7 @@ theorem essentialSubmodule_iff_essentialExtension
   · intro h
     unfold EssentialExtension at h
     obtain ⟨hf, hess⟩ := h
-    haveI := hf
+    have := hf
     unfold EssentialSubmodule
     intro T hT
     have hT' : e.symm T ≠ (⊥ : Subobject (ModuleCat.of R N)) := by

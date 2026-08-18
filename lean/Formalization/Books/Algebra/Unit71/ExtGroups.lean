@@ -35,8 +35,8 @@ abbrev ModuleChainComplex (R : Type u) [Ring R] :=
 abbrev ModuleCochainComplex (R : Type u) [Ring R] :=
   CochainComplex (ModuleCat.{u} R) ℕ
 
-/-- A resolution is an exact nonnegative chain complex together with its
-augmentation to the module in degree zero. -/
+/-- A resolution is an exact nonnegative chain complex together with an
+epimorphic augmentation to the module in degree zero. -/
 structure Resolution (R : Type u) [Ring R] (M : ModuleCat.{u} R) where
   complex : ModuleChainComplex R
   augmentation : complex.X 0 ⟶ M
@@ -46,6 +46,7 @@ structure Resolution (R : Type u) [Ring R] (M : ModuleCat.{u} R) where
   exact_succ : ∀ n,
     (ShortComplex.mk (complex.d (n + 2) (n + 1))
       (complex.d (n + 1) n) (complex.d_comp_d (n + 2) (n + 1) n)).Exact
+  augmentation_epi : Epi augmentation
 
 /-- A resolution whose terms are free modules. -/
 structure FreeResolution (R : Type u) [Ring R] (M : ModuleCat.{u} R) where
@@ -77,6 +78,8 @@ noncomputable def projectiveResolutionToResolution {R : Type u} [Ring R]
   augmentation_condition := P.complex_d_comp_π_f_zero
   exact_zero := by simpa using P.exact₀
   exact_succ := fun n => by simpa using P.exact_succ n
+  augmentation_epi := by
+    exact Limits.epi_of_isColimit_cofork P.isColimitCokernelCofork
 
 /-- The complex underlying a free resolution. -/
 abbrev FreeResolution.complex {R : Type u} [Ring R] {M : ModuleCat.{u} R}
@@ -143,7 +146,7 @@ theorem exists_free_resolution {R : Type u} [Ring R] (M : ModuleCat.{u} R) :
   have hzero : K.d 1 0 ≫ aug = 0 := by
     rw [hdK]
     simp [aug, Category.assoc]
-  refine ⟨⟨⟨K, aug, ?_, ?_, ?_⟩, ?_⟩⟩
+  refine ⟨⟨⟨K, aug, ?_, ?_, ?_, ?_⟩, ?_⟩⟩
   · change K.d 1 0 ≫ aug = 0
     exact hzero
   · let f := Λ.π.app M
@@ -164,6 +167,7 @@ theorem exists_free_resolution {R : Type u} [Ring R] (M : ModuleCat.{u} R) :
       (i := n + 2) (k := n) (by simp) (by simp)).mp
     simpa [K, C, CategoryTheory.Abelian.LeftResolution.chainComplexFunctor] using
       Λ.exactAt_map_chainComplex_succ M n
+  · infer_instance
   · intro n
     have free_F : ∀ X : ModuleCat.{u} R,
         Module.Free R (ι.obj (Λ.F.obj X)) := by
@@ -213,7 +217,7 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
       dsimp [over, presentation]
       rw [dif_pos hX]
     let e : over X ≅ (finitePresentation X hX).p := eqToIso heq
-    letI : IsNoetherian R ((finitePresentation X hX).p : Type u) :=
+    let _ : IsNoetherian R ((finitePresentation X hX).p : Type u) :=
       isNoetherian_of_isNoetherianRing_of_finite R _
     apply Module.Finite.of_injective (R := R) (S := R)
       (M := (over X : Type u)) (N := ((finitePresentation X hX).p : Type u))
@@ -234,7 +238,7 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
     (presentation X).epi
   have kernel_finite {X Y : ModuleCat.{u} R} (f : X ⟶ Y)
       [Module.Finite R X] : Module.Finite R ↑(kernel f) := by
-    letI : IsNoetherian R (X : Type u) :=
+    let _ : IsNoetherian R (X : Type u) :=
       isNoetherian_of_isNoetherianRing_of_finite R (X : Type u)
     apply Module.Finite.of_injective (R := R) (S := R)
       (M := ((kernel f : ModuleCat.{u} R) : Type u)) (N := (X : Type u))
@@ -242,7 +246,7 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
     exact (ModuleCat.mono_iff_injective _).mp inferInstance
   have exact_d_f' {X Y : ModuleCat.{u} R} (f : X ⟶ Y) :
       (ShortComplex.mk (pi (kernel f) ≫ kernel.ι f) f (by simp)).Exact := by
-    letI : Epi (pi (kernel f)) := epi_pi (kernel f)
+    let _ : Epi (pi (kernel f)) := epi_pi (kernel f)
     let α : ShortComplex.mk (pi (kernel f) ≫ kernel.ι f) f (by simp) ⟶
         ShortComplex.mk (kernel.ι f) f (by simp) :=
       { τ₁ := pi (kernel f), τ₂ := 𝟙 _, τ₃ := 𝟙 _ }
@@ -262,12 +266,12 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
         exact finite_over M inferInstance
       · change Module.Finite R ↑(over (kernel (pi M)))
         apply finite_over
-        letI : Module.Finite R ↑(over M) := finite_over M inferInstance
+        let _ : Module.Finite R ↑(over M) := finite_over M inferInstance
         exact kernel_finite (pi M)
       · let f := C.d (n + 1) n
-        letI : Module.Finite R (C.X (n + 1)) :=
+        let _ : Module.Finite R (C.X (n + 1)) :=
           ih (n + 1) (Nat.lt_succ_self (n + 1))
-        letI : Module.Finite R ↑(over (kernel f)) :=
+        let _ : Module.Finite R ↑(over (kernel f)) :=
           finite_over _ (kernel_finite f)
         let e : C.X (n + 2) ≅ over (kernel f) := by
           simpa [C, f] using
@@ -275,7 +279,7 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
               (pi (kernel (pi M)) ≫ kernel.ι (pi M))
               (fun {X₀ X₁} g =>
                 ⟨over (kernel g), pi (kernel g) ≫ kernel.ι g, by simp⟩) n)
-        letI : IsNoetherian R (over (kernel f) : Type u) :=
+        let _ : IsNoetherian R (over (kernel f) : Type u) :=
           isNoetherian_of_isNoetherianRing_of_finite R _
         apply Module.Finite.of_injective (R := R) (S := R)
           (M := (C.X (n + 2) : Type u)) (N := (over (kernel f) : Type u))
@@ -288,10 +292,10 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
       exact free_over M inferInstance
     · change Module.Free R ↑(over (kernel (pi M)))
       apply free_over
-      letI : Module.Finite R ↑(over M) := finite_over M inferInstance
+      let _ : Module.Finite R ↑(over M) := finite_over M inferInstance
       exact kernel_finite (pi M)
     · let f := C.d (n + 1) n
-      letI : Module.Finite R (C.X (n + 1)) := finite_C (n + 1)
+      let _ : Module.Finite R (C.X (n + 1)) := finite_C (n + 1)
       have hfree : Module.Free R ↑(over (kernel f)) :=
         free_over _ (kernel_finite f)
       let e : C.X (n + 2) ≅ over (kernel f) := by
@@ -332,7 +336,8 @@ theorem exists_finite_free_resolution {R : Type u} [Ring R]
     exact (ShortComplex.exact_iff_of_iso i).2 hS₂
   let H : Resolution R M :=
     { complex := C, augmentation := pi M, augmentation_condition := hzero,
-      exact_zero := hexact_zero, exact_succ := hexact_succ }
+      exact_zero := hexact_zero, exact_succ := hexact_succ,
+      augmentation_epi := epi_pi M }
   let FF : FreeResolution R M := { resolution := H, free := free_C }
   exact ⟨{ resolution := FF, finite := finite_C }⟩
 
@@ -450,9 +455,9 @@ theorem free_augmented_complex_maps_homotopic {R : Type u} [Ring R]
       (hfg : f ≫ g = 0)
       (hex : (ShortComplex.mk f g hfg).Exact) (u : X ⟶ B) (hu : u ≫ g = 0)
       (hfree : Module.Free R X) : ∃ v : X ⟶ A, v ≫ f = u := by
-    letI : Projective X :=
+    let _ : Projective X :=
       ModuleCat.projective_of_free (Module.Free.chooseBasis R (X : Type u))
-    letI : Epi (kernel.lift g f hfg) :=
+    let _ : Epi (kernel.lift g f hfg) :=
       (ShortComplex.exact_iff_epi_kernel_lift (ShortComplex.mk f g hfg)).mp hex
     let v := Projective.factorThru (kernel.lift g u hu) (kernel.lift g f hfg)
     refine ⟨v, ?_⟩
@@ -499,7 +504,7 @@ theorem free_augmented_complex_maps_homotopic {R : Type u} [Ring R]
             G.complex.d (n + 2) (n + 1) = 0 := by
       rw [Preadditive.sub_comp, e.comm' (n + 2) (n + 1) (by simp), Category.assoc,
         hp]
-      simp [Category.assoc]
+      simp
     have h_exists := lift_of_exact (G.complex.d (n + 3) (n + 2))
       (G.complex.d (n + 2) (n + 1))
       (G.complex.d_comp_d (n + 3) (n + 2) (n + 1)) (G.exact_succ (n + 1))

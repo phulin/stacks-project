@@ -1424,7 +1424,109 @@ theorem tor_one_ideal_quotient_kernel {R : Type u} [CommRing R]
     (M : ModuleCat.{u} R) (I : Ideal R) :
     Nonempty (Tor M (ModuleCat.of R (R ⧸ I)) 1 ≅
       idealTensorActionKernel I M) := by
-  sorry
+  let F : FreeResolution R M :=
+    Classical.choice (exists_free_resolution M)
+  let K := tensorComplex F.complex (ModuleCat.of R R)
+  let e : K ≅ F.complex :=
+    HomologicalComplex.Hom.isoOfComponents
+      (fun n => (TensorProduct.rid R (F.complex.X n)).toModuleIso)
+      (by
+        intro n j hnj
+        have hnj' : j + 1 = n := by
+          simpa only [ComplexShape.down_Rel] using hnj
+        subst n
+        apply ModuleCat.hom_ext
+        dsimp [K, tensorComplex]
+        rw [if_pos rfl]
+        ext x
+        simp [TensorProduct.rid_tmul])
+  have hF : F.complex.ExactAt 1 := by
+    apply (HomologicalComplex.exactAt_iff' (K := F.complex)
+      (j := 1) (i := 2) (k := 0) (by simp) (by simp)).2
+    dsimp [HomologicalComplex.sc']
+    have hex : Function.Exact (F.complex.d 2 1).hom
+        (F.complex.d 1 0).hom := by
+      exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+        (ShortComplex.mk (F.complex.d 2 1) (F.complex.d 1 0)
+          (F.complex.d_comp_d 2 1 0))).mp
+        (F.resolution.exact_succ 0)
+    exact ModuleCat.shortComplex_exact _ hex
+  have hzeroR : IsZero (Tor M (ModuleCat.of R R) 1) := by
+    change IsZero ((tensorComplex F.complex (ModuleCat.of R R)).homology 1)
+    exact IsZero.of_iso hF.isZero_homology
+      (HomologicalComplex.homologyMapIso e 1)
+  let S : ShortComplex (ModuleCat.{u} R) :=
+    ShortComplex.mk (ModuleCat.ofHom I.subtype)
+      (ModuleCat.ofHom (Submodule.mkQ I)) (by
+        apply ModuleCat.hom_ext
+        ext x
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr x.property)
+  have hS : S.ShortExact := by
+    apply ModuleCat.shortComplex_shortExact
+    · simpa [S] using (LinearMap.exact_subtype_mkQ I)
+    · exact Subtype.val_injective
+    · exact Submodule.mkQ_surjective I
+  let hseq := Classical.choice (exists_tor_long_exact_sequence M S hS)
+  have hzeroR' : IsZero (Tor M S.X₂ 1) := by
+    simpa [S] using hzeroR
+  have hmap₂_zero : hseq.map₂ = 0 := by
+    have hc : ModuleCat.ofHom hseq.map₂ = 0 := hzeroR'.eq_of_src _ _
+    exact congrArg (fun f => f.hom) hc
+  have hconn : Function.Injective hseq.connecting := by
+    apply (LinearMap.exact_zero_iff_injective (Tor M S.X₂ 1)
+      hseq.connecting).mp
+    simpa [hmap₂_zero] using hseq.exact₂
+  let u : TensorProduct R (M : Type u) (I : Type u) →ₗ[R] M :=
+    (TensorProduct.rid R (M : Type u)).toLinearMap.comp
+      (tensorByMap M S.f)
+  have hu : Function.Exact hseq.connecting u := by
+    have hu' := (LinearEquiv.postcomp_exact_iff_exact
+      (f := hseq.connecting) (g := tensorByMap M S.f)
+      (e := TensorProduct.rid R (M : Type u))).2 hseq.exact₃
+    simpa [u] using hu'
+  let eI : TensorProduct R (M : Type u) (I : Type u) ≃ₗ[R]
+      TensorProduct R (I : Type u) (M : Type u) :=
+    TensorProduct.comm R (M : Type u) (I : Type u)
+  have haction :
+      idealTensorActionMap I M =
+        u.comp (eI.symm : TensorProduct R (I : Type u) (M : Type u) →ₗ[R]
+          TensorProduct R (M : Type u) (I : Type u)) := by
+    apply TensorProduct.ext'
+    intro x m
+    simp [idealTensorActionMap, u, eI, tensorByMap, S]
+  have hexact :
+      Function.Exact (eI.toLinearMap.comp hseq.connecting)
+        (idealTensorActionMap I M) := by
+    rw [haction]
+    exact (LinearEquiv.conj_exact_iff_exact hseq.connecting u eI).2 hu
+  let c : (Tor M (ModuleCat.of R (R ⧸ I)) 1 : Type u) →ₗ[R]
+      LinearMap.ker (idealTensorActionMap I M) :=
+    (eI.toLinearMap.comp hseq.connecting).codRestrict
+      (LinearMap.ker (idealTensorActionMap I M))
+      (fun x => LinearMap.mem_ker.mpr (hexact.apply_apply_eq_zero x))
+  have hc_inj : Function.Injective c := by
+    intro x y hxy
+    apply hconn
+    apply eI.injective
+    simpa [c] using congrArg Subtype.val hxy
+  have hc_surj : Function.Surjective c := by
+    intro y
+    have hy : idealTensorActionMap I M
+        (y : TensorProduct R (I : Type u) (M : Type u)) = 0 :=
+      LinearMap.mem_ker.mp y.property
+    obtain ⟨x, hx⟩ :=
+      (hexact (y : TensorProduct R (I : Type u) (M : Type u))).mp hy
+    refine ⟨x, ?_⟩
+    apply Subtype.ext
+    simpa [c] using hx
+  let ec := LinearEquiv.ofBijective c (And.intro hc_inj hc_surj)
+  let ecIso : (forget₂ (ModuleCat R) Ab).obj (Tor M (ModuleCat.of R (R ⧸ I)) 1) ≅
+      (forget₂ (ModuleCat R) Ab).obj (idealTensorActionKernel I M) :=
+    AddEquiv.toAddCommGrpIso ec.toAddEquiv
+  exact Nonempty.intro (ModuleCat.isoMk ecIso (by
+    intro r
+    ext x
+    exact (ec.map_smul r x).symm))
 
 /- The switch map in the proof of symmetry can genuinely be nontrivial. -/
 def tensorSwitch {k V : Type u} [CommRing k]

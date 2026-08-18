@@ -299,7 +299,100 @@ instance filteredHasZeroObject {C : Type u} [Category.{v} C]
     additive-category interface is used rather than a parallel definition. -/
 theorem filteredCategory_additive_exists {C : Type u} [Category.{v} C] [Abelian C] :
     Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory (FilteredObject C)) := by
-  sorry
+  letI : HasFiniteProducts (FilteredObject C) := by
+      refine { out := ?_ }
+      intro n
+      refine ⟨fun F => ?_⟩
+      let q : Fin n → C := fun j => (F.obj (Discrete.mk j)).carrier
+      let p : C := ∏ᶜ q
+      let π : ∀ j : Fin n, p ⟶ q j := fun j => Limits.Pi.π q j
+      let Pfil : ℤ → Subobject p := fun i =>
+        Finset.univ.inf fun j =>
+          (Subobject.pullback (π j)).obj ((F.obj (Discrete.mk j)).filtration.obj i)
+      let P : FilteredObject C :=
+        { carrier := p
+          filtration :=
+            { obj := Pfil
+              antitone := by
+                intro i j hij
+                apply Finset.le_inf
+                intro k hk
+                exact (Finset.inf_le hk).trans
+                  ((Subobject.pullback (π k)).monotone
+                    ((F.obj (Discrete.mk k)).filtration.antitone hij)) } }
+      let t : Fan (fun j : Fin n => F.obj (Discrete.mk j)) :=
+        Fan.mk P (fun j => by
+          refine ⟨π j, ?_⟩
+          intro i
+          let X := (Subobject.pullback (π j)).obj
+            ((F.obj (Discrete.mk j)).filtration.obj i)
+          let hX := Subobject.finset_inf_arrow_factors Finset.univ
+            (fun k => (Subobject.pullback (π k)).obj
+              ((F.obj (Discrete.mk k)).filtration.obj i)) j (Finset.mem_univ j)
+          let v := X.factorThru (Pfil i).arrow hX
+          have hv := X.factorThru_arrow (Pfil i).arrow hX
+          let hpb := Subobject.isPullback (π j)
+            ((F.obj (Discrete.mk j)).filtration.obj i)
+          have hfj : ((F.obj (Discrete.mk j)).filtration.obj i).Factors
+              (X.arrow ≫ π j) := by
+            apply (Subobject.factors_iff _ _).mpr
+            exact ⟨Subobject.pullbackπ (π j)
+              ((F.obj (Discrete.mk j)).filtration.obj i), hpb.w⟩
+          have hfac := Subobject.factors_of_factors_right v hfj
+          rw [← Category.assoc, hv] at hfac
+          simpa [X, P, Pfil] using hfac)
+      let ht : IsLimit t :=
+        Fan.IsLimit.mk t
+          (fun s => by
+            let l : s.pt ⟶ P := by
+              let h : s.pt.carrier ⟶ p := Limits.Pi.lift
+                (fun j => (s.proj j).hom)
+              refine ⟨h, ?_⟩
+              intro i
+              apply (Subobject.factors_iff _ _).mpr
+              have hP : (Pfil i).Factors
+                  ((s.pt.filtration.obj i).arrow ≫ h) := by
+                dsimp [Pfil]
+                apply (Subobject.finset_inf_factors _).mpr
+                intro j hj
+                let u := ((F.obj (Discrete.mk j)).filtration.obj i).factorThru
+                  ((s.pt.filtration.obj i).arrow ≫ (s.proj j).hom)
+                  ((s.proj j).map_filtration i)
+                let hpb := Subobject.isPullback (π j)
+                  ((F.obj (Discrete.mk j)).filtration.obj i)
+                apply (Subobject.factors_iff _ _).mpr
+                refine ⟨hpb.lift u
+                  ((s.pt.filtration.obj i).arrow ≫ h) ?_,
+                  hpb.lift_snd _ _ _⟩
+                rw [Subobject.factorThru_arrow]
+                have hp := Limits.Pi.lift_π (fun k => (s.proj k).hom) j
+                simpa [h, π, p, q, Category.assoc] using
+                  congrArg (fun z => (s.pt.filtration.obj i).arrow ≫ z) hp
+              simpa [P] using (Subobject.factors_iff _ _).mp hP
+            simpa [t] using l)
+          (fun s j => by
+            apply FilteredHom.ext _ _
+            change (Limits.Pi.lift (fun k => (s.proj k).hom) ≫ π j) =
+              (s.proj j).hom
+            simpa [π, p, q] using
+              (Limits.Pi.lift_π (fun k => (s.proj k).hom) j))
+          (fun s m hm => by
+            apply FilteredHom.ext _ _
+            apply Limits.Pi.hom_ext _ _
+            intro j
+            have hm' : FilteredHom.hom m ≫ π j = (s.proj j).hom := by
+              have h := congrArg FilteredHom.hom (hm j)
+              simpa [t, π] using h
+            change FilteredHom.hom m ≫ π j =
+              Limits.Pi.lift (fun k => (s.proj k).hom) ≫ π j
+            rw [Limits.Pi.lift_π]
+            exact hm')
+      let e := (Discrete.natIsoFunctor (F := F)).symm
+      let coneF : Cone F := (Cone.postcompose e.hom).obj t
+      let htF : IsLimit coneF :=
+        (IsLimit.postcomposeHomEquiv e t).symm ht
+      exact ⟨⟨coneF, htF⟩⟩
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 noncomputable instance filteredCategory_additive {C : Type u} [Category.{v} C]
     [Abelian C] :
@@ -321,7 +414,10 @@ def filteredKernelι {C : Type u} [Category.{v} C] [Abelian C]
 theorem filteredKernelι_comp {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
     filteredKernelι f ≫ f = 0 := by
-  sorry
+  apply FilteredHom.ext _ _
+  change (Subobject.mk (kernel.ι f.hom)).arrow ≫ f.hom = 0
+  rw [← Subobject.underlyingIso_hom_comp_eq_mk, Category.assoc, kernel.condition]
+  simp
 
 def filteredKernelFork {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) : KernelFork f :=
@@ -330,7 +426,53 @@ def filteredKernelFork {C : Type u} [Category.{v} C] [Abelian C]
 theorem filteredKernelFork_isLimit_exists {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
     Nonempty (IsLimit (filteredKernelFork f)) := by
-  sorry
+  have underlying_zero : ∀ {W : FilteredObject C} (g : W ⟶ A),
+      g ≫ f = 0 → g.hom ≫ f.hom = 0 := by
+    intro W g hg
+    have h := congrArg FilteredHom.hom hg
+    change g.hom ≫ f.hom = (0 : filteredHomAddSubgroup W B).1 at h
+    exact h
+  let lift : ∀ {W : FilteredObject C} (g : W ⟶ A),
+      g ≫ f = 0 → (W ⟶ filteredKernel f) := by
+    intro W g hg
+    have hg' : g.hom ≫ f.hom = 0 := underlying_zero g hg
+    let k := kernel.lift f.hom g.hom hg' ≫
+      (Subobject.underlyingIso (kernel.ι f.hom)).inv
+    refine ⟨k, ?_⟩
+    intro i
+    apply (Subobject.factors_iff _ _).mpr
+    let u := (A.filtration.obj i).factorThru
+      ((W.filtration.obj i).arrow ≫ g.hom) (g.map_filtration i)
+    let hpb := Subobject.isPullback
+      (Subobject.mk (kernel.ι f.hom)).arrow (A.filtration.obj i)
+    refine ⟨hpb.lift u ((W.filtration.obj i).arrow ≫ k) ?_,
+      hpb.lift_snd _ _ _⟩
+    rw [Subobject.factorThru_arrow]
+    simp [k, hpb, Category.assoc]
+  refine ⟨KernelFork.IsLimit.ofι (filteredKernelι f) (filteredKernelι_comp f)
+    lift ?_ ?_⟩
+  · intro W g hg
+    apply FilteredHom.ext _ _
+    have hg' : g.hom ≫ f.hom = 0 := underlying_zero g hg
+    change (kernel.lift f.hom g.hom hg' ≫
+      (Subobject.underlyingIso (kernel.ι f.hom)).inv) ≫
+        (Subobject.mk (kernel.ι f.hom)).arrow = g.hom
+    simp [Category.assoc]
+  · intro W g hg m hm
+    apply FilteredHom.ext _ _
+    letI : Mono (filteredKernelι f).hom := by
+      change Mono (Subobject.mk (kernel.ι f.hom)).arrow
+      infer_instance
+    apply (cancel_mono (filteredKernelι f).hom).mp
+    have hm' : m.hom ≫ (filteredKernelι f).hom = g.hom := by
+      have h := congrArg FilteredHom.hom hm
+      simpa only [filteredHom_comp_hom] using h
+    rw [hm']
+    have hg' : g.hom ≫ f.hom = 0 := underlying_zero g hg
+    change g.hom = (kernel.lift f.hom g.hom hg' ≫
+      (Subobject.underlyingIso (kernel.ι f.hom)).inv) ≫
+        (Subobject.mk (kernel.ι f.hom)).arrow
+    simp [Category.assoc]
 
 noncomputable def filteredKernelFork_isLimit {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
@@ -353,7 +495,9 @@ def filteredCokernelπ {C : Type u} [Category.{v} C] [Abelian C]
 theorem filteredCokernel_comp {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
     f ≫ filteredCokernelπ f = 0 := by
-  sorry
+  apply FilteredHom.ext _ _
+  change f.hom ≫ cokernel.π f.hom = 0
+  exact cokernel.condition f.hom
 
 def filteredCokernelCofork {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) : CokernelCofork f :=

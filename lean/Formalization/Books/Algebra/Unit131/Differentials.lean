@@ -473,7 +473,35 @@ theorem conormal_differential_split
     ∃ e : ModuleOfDifferentials R B →ₗ[B]
         B ⊗[A] ModuleOfDifferentials R A,
       (KaehlerDifferential.mapBaseChange R A B).comp e = LinearMap.id := by
-  sorry
+  letI : Algebra B A := sectionMap.toAlgebra
+  letI : IsScalarTower R B A :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext r
+      exact (sectionMap.commutes r).symm)
+  let f : ModuleOfDifferentials R B →ₗ[B] ModuleOfDifferentials R A :=
+    KaehlerDifferential.map R R B A
+  let e₀ : ModuleOfDifferentials R A →ₗ[A]
+      B ⊗[A] ModuleOfDifferentials R A :=
+    (TensorProduct.AlgebraTensorModule.mk A B B (ModuleOfDifferentials R A)) 1
+  let e : ModuleOfDifferentials R B →ₗ[B]
+      B ⊗[A] ModuleOfDifferentials R A :=
+    { toFun := fun x => e₀ (f x)
+      map_add' := by
+        intro x y
+        rw [f.map_add, e₀.map_add]
+      map_smul' := by
+        intro b x
+        change e₀ (f (b • x)) = b • e₀ (f x)
+        rw [f.map_smul]
+        change e₀ (sectionMap b • f x) = b • e₀ (f x)
+        rw [e₀.map_smul]
+        rw [← IsScalarTower.algebraMap_smul B (sectionMap b)]
+        rw [sectionMap_right_inverse] }
+  refine ⟨e, ?_⟩
+  ext x
+  simp [e, e₀, f]
+  rw [show algebraMap B A x = sectionMap x from rfl]
+  rw [sectionMap_right_inverse]
 
 noncomputable def differentialModPowerMap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -526,6 +554,99 @@ noncomputable def differentialModPowerMap
         (ModuleOfDifferentials R S')).toLinearMap
   exact m₂.comp (e₀.symm.toLinearMap.comp m₁)
 
+private lemma differential_mem_power_smul
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (I : Ideal S) :
+    ∀ m (x : S), x ∈ I ^ (m + 1) →
+      universalDifferential R S x ∈ I ^ m • (⊤ : Submodule S (ModuleOfDifferentials R S)) := by
+  intro m
+  induction m with
+  | zero =>
+      intro x hx
+      simpa only [pow_zero, Ideal.one_eq_top, Submodule.top_smul] using
+        (show universalDifferential R S x ∈
+            (⊤ : Submodule S (ModuleOfDifferentials R S)) from Submodule.mem_top)
+  | succ m ih =>
+      intro x hx
+      rw [pow_succ] at hx
+      refine Submodule.mul_induction_on hx ?_
+        (fun x y hx hy => by simpa only [map_add] using add_mem hx hy)
+      intro a ha b hb
+      rw [Derivation.leibniz]
+      apply add_mem
+      · rw [pow_succ] at ha
+        exact Submodule.smul_mem_smul ha Submodule.mem_top
+      · rw [pow_succ, mul_comm]
+        rw [← Ideal.smul_eq_mul, Submodule.smul_assoc]
+        exact Submodule.smul_mem_smul hb (ih a ha)
+
+private lemma differential_map_kernel_le_power_smul
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (I : Ideal S) {n : ℕ} :
+    LinearMap.ker (KaehlerDifferential.map R R S (S ⧸ I ^ (n + 1))) ≤
+      I ^ n • (⊤ : Submodule S (ModuleOfDifferentials R S)) := by
+  classical
+  rw [KaehlerDifferential.ker_map_of_surjective R S (S ⧸ I ^ (n + 1))
+    Ideal.Quotient.mk_surjective]
+  rintro y ⟨x, hx, rfl⟩
+  rw [← Finsupp.sum_single x, Finsupp.sum,
+    ← Finset.sum_fiberwise_of_maps_to
+      (fun _ ↦ Finset.mem_image_of_mem (algebraMap S (S ⧸ I ^ (n + 1))))]
+  simp only [map_sum (s := x.support.image (algebraMap S (S ⧸ I ^ (n + 1)))),
+    Finsupp.linearCombination_single]
+  apply sum_mem
+  intro c _
+  obtain ⟨a, ha⟩ :=
+    (Ideal.Quotient.mk_surjective :
+      Function.Surjective (algebraMap S (S ⧸ I ^ (n + 1)))) c
+  change algebraMap S (S ⧸ I ^ (n + 1)) a = c at ha
+  have hsumKer :
+      ∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c, x i ∈
+        RingHom.ker (algebraMap S (S ⧸ I ^ (n + 1))) := by
+    rw [RingHom.mem_ker, map_sum]
+    simpa [Finsupp.mapDomain, Finsupp.sum, Finsupp.finsetSum_apply,
+      Finsupp.single_apply, ← Finset.sum_filter] using DFunLike.congr_fun hx c
+  have hsum :
+      ∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c, x i ∈ I ^ (n + 1) := by
+    rw [← Ideal.Quotient.eq_zero_iff_mem]
+    exact RingHom.mem_ker.mp hsumKer
+  have hdiff (i : S) (hi : i ∈ x.support)
+      (hic : algebraMap S (S ⧸ I ^ (n + 1)) i = c) :
+      i - a ∈ I ^ (n + 1) := by
+    rw [← Ideal.Quotient.eq_zero_iff_mem]
+    change algebraMap S (S ⧸ I ^ (n + 1)) (i - a) = 0
+    rw [map_sub, ha, hic, sub_self]
+  simp only [map_sum, Finsupp.linearCombination_single]
+  rw [show
+      (∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c,
+          x i • KaehlerDifferential.D R S i) =
+        (∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c,
+          x i • KaehlerDifferential.D R S (i - a)) +
+        (∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c,
+          x i) • KaehlerDifferential.D R S a by
+    calc
+      (∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c,
+          x i • KaehlerDifferential.D R S i) =
+          ∑ i ∈ x.support with algebraMap S (S ⧸ I ^ (n + 1)) i = c,
+            (x i • KaehlerDifferential.D R S (i - a) +
+              x i • KaehlerDifferential.D R S a) := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [map_sub, smul_sub, sub_add_cancel]
+      _ = _ := by rw [Finset.sum_add_distrib, ← Finset.sum_smul]]
+  apply add_mem
+  · apply (I ^ n • (⊤ : Submodule S (ModuleOfDifferentials R S))).sum_mem
+    intro i hi
+    have hi' : i ∈ x.support ∧ algebraMap S (S ⧸ I ^ (n + 1)) i = c := by
+      simpa [Finset.mem_filter] using hi
+    exact (I ^ n • (⊤ : Submodule S (ModuleOfDifferentials R S))).smul_mem
+      (x i) (differential_mem_power_smul I n (i - a)
+        (hdiff i hi'.1 hi'.2))
+  · apply (show I ^ (n + 1) • (⊤ : Submodule S (ModuleOfDifferentials R S)) ≤
+      I ^ n • (⊤ : Submodule S (ModuleOfDifferentials R S)) from
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ n)))
+    exact Submodule.smul_mem_smul hsum Submodule.mem_top
+
 theorem differential_mod_power_ideal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal S) {n : ℕ} (hn : 1 ≤ n) :
@@ -535,7 +656,55 @@ theorem differential_mod_power_ideal
       (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
     Function.Bijective
       (differentialModPowerMap (R := R) (S := S) I (n := n)) := by
-  sorry
+  dsimp [differentialModPowerMap]
+  let S' := S ⧸ I ^ (n + 1)
+  let T := S ⧸ I ^ n
+  letI : Algebra S' T :=
+    (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
+  letI : Algebra S T := Algebra.compHom T (algebraMap S S')
+  letI : IsScalarTower S S' T := IsScalarTower.of_algebraMap_eq' rfl
+  letI : IsScalarTower S T T := by
+    constructor
+    intro r t x
+    change (algebraMap S T r * t) * x = algebraMap S T r * (t * x)
+    rw [mul_assoc]
+  let g : ModuleOfDifferentials R S →ₗ[S] ModuleOfDifferentials R S' :=
+    KaehlerDifferential.map R R S S'
+  let m₁ :=
+    TensorProduct.AlgebraTensorModule.map
+      (R := S) (A := T) (M := T) (N := ModuleOfDifferentials R S)
+      (P := T) (Q := ModuleOfDifferentials R S') (LinearMap.id) g
+  letI : IsScalarTower S' T T := by
+    constructor
+    intro r t x
+    change (algebraMap S' T r * t) * x = algebraMap S' T r * (t * x)
+    rw [mul_assoc]
+  let e₀ :=
+    TensorProduct.AlgebraTensorModule.cancelBaseChange
+      S S' T T (ModuleOfDifferentials R S')
+  letI : TensorProduct.CompatibleSMul S S' S' (ModuleOfDifferentials R S') :=
+    TensorProduct.CompatibleSMul.of_algebraMap_surjective
+      (M := S') (N := ModuleOfDifferentials R S')
+      (show Function.Surjective (algebraMap S S') from Ideal.Quotient.mk_surjective)
+  let m₂ :=
+    TensorProduct.AlgebraTensorModule.map
+      (R := S') (A := T) (M := T)
+      (N := S' ⊗[S] ModuleOfDifferentials R S') (P := T)
+      (Q := ModuleOfDifferentials R S')
+      (LinearMap.id) (TensorProduct.lidOfCompatibleSMul S S'
+        (ModuleOfDifferentials R S')).toLinearMap
+  change Function.Bijective (m₂.comp (e₀.symm.toLinearMap.comp m₁))
+  have hm₂ : Function.Bijective m₂ := by
+    change Function.Bijective
+      (TensorProduct.AlgebraTensorModule.congr
+        (LinearEquiv.refl T T)
+        (TensorProduct.lidOfCompatibleSMul S S'
+          (ModuleOfDifferentials R S')))
+    exact (TensorProduct.AlgebraTensorModule.congr
+      (LinearEquiv.refl T T)
+      (TensorProduct.lidOfCompatibleSMul S S'
+        (ModuleOfDifferentials R S'))).bijective
+  exact hm₂
 
 /-! ## Base change and the diagonal -/
 
@@ -581,7 +750,7 @@ theorem diagonalDifferentialsEquiv_formula
       a • (KaehlerDifferential.ideal R S).toCotangent
         ⟨1 ⊗ₜ[R] b - b ⊗ₜ[R] 1,
           KaehlerDifferential.one_smul_sub_smul_one_mem_ideal R b⟩ := by
-  sorry
+  rfl
 
 /-! ## Polynomial rings and finiteness -/
 

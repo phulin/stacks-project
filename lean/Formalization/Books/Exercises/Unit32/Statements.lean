@@ -131,6 +131,26 @@ theorem realOriginDirectImage_iso_skyscraper :
     Nonempty (realOriginDirectImage ≅ realOriginSkyscraper) := by
   sorry
 
+/-! The source names the target of the canonical map as the direct image
+`i_* O_Z`.  The earlier skyscraper API uses an isomorphic canonical
+representative, so we transport the map across a chosen representative
+isomorphism here. -/
+
+/-- The canonical constant-to-skyscraper map, presented with the source's
+direct-image target. -/
+noncomputable def realConstantToOriginDirectImage :
+    realConstantZModTwo ⟶ realOriginDirectImage :=
+  realConstantToOriginSkyscraper ≫
+    (Classical.choice realOriginDirectImage_iso_skyscraper).inv
+
+/-- The direct-image representative has the same surjective stalk map as the
+canonical skyscraper representative. -/
+theorem realConstantToOriginDirectImage_stalk_surjective :
+    ∀ x : realLine, Function.Surjective
+      ((TopCat.Presheaf.stalkFunctor (Type 0) x).map
+        realConstantToOriginDirectImage.hom) := by
+  sorry
+
 /-- The origin skyscraper is a skyscraper sheaf. -/
 theorem realOriginSkyscraper_is_skyscraper :
     IsSetSkyscraperSheaf realOriginSkyscraper := by

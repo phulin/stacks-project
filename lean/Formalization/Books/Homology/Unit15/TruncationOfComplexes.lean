@@ -1100,12 +1100,25 @@ theorem canonicalTruncLE_boundary (K : ChainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncLE_homology_below (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i ≤ n) :
     QuasiIsoAt (canonicalTruncLEπ K n) i := by
-  sorry
+  let k : ℕ := Int.toNat (n - i)
+  have hk : (chainLEEmbedding n).f k = i := by
+    dsimp [k, chainLEEmbedding, ComplexShape.Embedding.mk']
+    rw [Int.toNat_of_nonneg (by omega : 0 ≤ n - i)]
+    omega
+  simpa [canonicalTruncLE, canonicalTruncLEπ] using
+    (HomologicalComplex.quasiIsoAt_πTruncGE (j := k) K
+      (chainLEEmbedding n) hk)
 
 theorem canonicalTruncLE_homology_above (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : n < i) :
     IsZero ((canonicalTruncLE K n).homology i) := by
-  sorry
+  change IsZero ((HomologicalComplex.truncGE K (chainLEEmbedding n)).homology i)
+  exact (HomologicalComplex.exactAt_of_isSupported
+    (HomologicalComplex.truncGE K (chainLEEmbedding n))
+    (chainLEEmbedding n) i (by
+      intro k hk
+      dsimp [chainLEEmbedding, ComplexShape.Embedding.mk'] at hk
+      omega)).isZero_homology
 
 end ChainComplex
 
@@ -1126,13 +1139,125 @@ noncomputable def stupidTruncGE (K : CochainComplex C ℤ) (n : ℤ) :
     CochainComplex C ℤ :=
   HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntGE n)
 
+private noncomputable def stupidTruncι_f {ι ι' : Type*}
+    {c : ComplexShape ι} {c' : ComplexShape ι'}
+    {C : Type*} [Category C] [HasZeroMorphisms C] [HasZeroObject C]
+    (K : HomologicalComplex C c') (e : c.Embedding c') [e.IsRelIff] (i' : ι') :
+    (HomologicalComplex.stupidTrunc K e).X i' ⟶ K.X i' :=
+  by
+    classical
+    exact dite (∃ i, e.f i = i')
+      (fun hi => (K.stupidTruncXIso e hi.choose_spec).hom)
+      (fun _ => 0)
+
+private noncomputable def stupidTruncι {ι ι' : Type*}
+    {c : ComplexShape ι} {c' : ComplexShape ι'}
+    {C : Type*} [Category C] [HasZeroMorphisms C] [HasZeroObject C]
+    (K : HomologicalComplex C c') (e : c.Embedding c') [e.IsRelIff]
+    [e.IsTruncGE] :
+    HomologicalComplex.stupidTrunc K e ⟶ K :=
+  by
+    refine { f := stupidTruncι_f K e, comm' := ?_ }
+    intro i j hij
+    classical
+    change stupidTruncι_f K e i ≫ K.d i j =
+      (HomologicalComplex.stupidTrunc K e).d i j ≫ stupidTruncι_f K e j
+    by_cases hi : ∃ k, e.f k = i
+    · obtain ⟨k, rfl⟩ := hi
+      obtain ⟨l, rfl⟩ := e.mem_next hij
+      have hι (t : ι) :
+          stupidTruncι_f K e (e.f t) =
+            (K.stupidTruncXIso e (rfl : e.f t = e.f t)).hom := by
+        dsimp [stupidTruncι_f]
+        split
+        · rename_i h
+          have hp : e.f h.choose = e.f t := h.choose_spec
+          change
+            (K.stupidTruncXIso e hp).hom =
+              (K.stupidTruncXIso e (rfl : e.f t = e.f t)).hom
+          have hst : h.choose = t := by
+            exact e.injective_f hp
+          simp only [hst]
+        · rename_i h
+          exact (h ⟨t, rfl⟩).elim
+      rw [hι k, hι l]
+      have hd (a b : ι) :
+          (HomologicalComplex.stupidTrunc K e).d (e.f a) (e.f b) =
+            (K.stupidTruncXIso e (rfl : e.f a = e.f a)).hom ≫
+              K.d (e.f a) (e.f b) ≫
+              (K.stupidTruncXIso e (rfl : e.f b = e.f b)).inv := by
+        change ((K.restriction e).extend e).d (e.f a) (e.f b) = _
+        dsimp [HomologicalComplex.stupidTrunc] at *
+        rw [HomologicalComplex.extend_d_eq
+          (K.restriction e) e rfl rfl,
+          HomologicalComplex.restriction_d_eq K e rfl rfl]
+        have hstupid (t : ι) :
+            (K.stupidTruncXIso e (rfl : e.f t = e.f t)).hom =
+              ((K.restriction e).extendXIso e (rfl : e.f t = e.f t)).hom ≫
+                (K.restrictionXIso e (rfl : e.f t = e.f t)).hom := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        have hstupid_inv (t : ι) :
+            (K.stupidTruncXIso e (rfl : e.f t = e.f t)).inv =
+              (K.restrictionXIso e (rfl : e.f t = e.f t)).inv ≫
+                ((K.restriction e).extendXIso e
+                  (rfl : e.f t = e.f t)).inv := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        rw [hstupid a, hstupid_inv b]
+        simpa only [Category.assoc]
+      rw [hd k l]
+      simpa only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
+    · have hz := HomologicalComplex.isZero_stupidTrunc_X K e i (by
+        intro k hk
+        exact hi ⟨k, hk⟩)
+      dsimp [stupidTruncι_f]
+      simp only [dif_neg hi]
+      exact hz.eq_of_src _ _
+
 theorem stupidTruncGE_components (K : CochainComplex C ℤ) (n : ℤ) :
     IsStupidTruncationAtLeast K (stupidTruncGE K n) n := by
-  sorry
+  constructor
+  · intro i hi
+    obtain ⟨k, hk⟩ : ∃ k : ℕ, (ComplexShape.embeddingUpIntGE n).f k = i := by
+      refine ⟨Int.toNat (i - n), ?_⟩
+      dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk']
+      rw [Int.toNat_of_nonneg (by omega : 0 ≤ i - n)]
+      omega
+    exact ⟨HomologicalComplex.stupidTruncXIso K
+      (ComplexShape.embeddingUpIntGE n) hk⟩
+  · intro i hi
+    apply HomologicalComplex.isZero_stupidTrunc_X K
+      (ComplexShape.embeddingUpIntGE n) i
+    intro k hk
+    dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk'] at hk
+    omega
 
 theorem stupidTruncGE_is_subcomplex (K : CochainComplex C ℤ) (n : ℤ) :
     HasMonomorphismInto (stupidTruncGE K n) K := by
-  sorry
+  classical
+  change HasMonomorphismInto
+    (HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntGE n)) K
+  refine ⟨stupidTruncι K (ComplexShape.embeddingUpIntGE n), ?_⟩
+  apply HomologicalComplex.mono_of_mono_f
+  intro i
+  dsimp [stupidTruncι]
+  by_cases hi : ∃ k, (ComplexShape.embeddingUpIntGE n).f k = i
+  · change Mono (stupidTruncι_f K (ComplexShape.embeddingUpIntGE n) i)
+    dsimp [stupidTruncι_f]
+    rw [dif_pos hi]
+    infer_instance
+  · change Mono (stupidTruncι_f K (ComplexShape.embeddingUpIntGE n) i)
+    dsimp [stupidTruncι_f]
+    rw [dif_neg hi]
+    apply (HomologicalComplex.isZero_stupidTrunc_X K
+      (ComplexShape.embeddingUpIntGE n) i (by
+        intro k hk
+        exact hi ⟨k, hk⟩)).mono
 
 /-- The source's quotient identity for successive upper brutal truncations. -/
 theorem stupidTruncGE_quotient (K : CochainComplex C ℤ) (n : ℤ) :

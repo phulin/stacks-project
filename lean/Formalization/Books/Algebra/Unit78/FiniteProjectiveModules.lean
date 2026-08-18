@@ -87,8 +87,8 @@ theorem finitePresentation_of_finiteLocallyFree
   obtain ⟨s, hs, h⟩ := hM
   apply Module.FinitePresentation.of_localizationSpan s hs
   intro f
-  letI := h f f.property |>.1
-  letI := h f f.property |>.2
+  let := h f f.property |>.1
+  let := h f f.property |>.2
   exact Module.finitePresentation_of_free_of_surjective LinearMap.id
     (by exact Function.surjective_id) (by exact Submodule.fg_bot)
 
@@ -103,10 +103,10 @@ theorem finiteLocallyFree_rank_unique
   rcases hr with ⟨u, hu, hru⟩
   rcases hs with ⟨v, hv, hsv⟩
   obtain ⟨I, hI⟩ := Formalization.Books.Algebra.Unit03.exists_maximal_ideal R
-  letI : I.IsPrime := hI.isPrime
+  let : I.IsPrime := hI.isPrime
   have pick (w : Set R) (hw : Ideal.span w = ⊤) : ∃ a ∈ w, a ∉ I := by
     by_contra h
-    push_neg at h
+    push Not at h
     have hle : Ideal.span w ≤ I := Ideal.span_le.mpr h
     exact hI.ne_top (by
       apply top_unique
@@ -129,7 +129,7 @@ theorem finiteLocallyFree_rank_unique
     let : Algebra (Localization.Away a) Rₚ :=
       IsLocalization.localizationAlgebraOfSubmonoidLe _ _ (Submonoid.powers a)
         I.primeCompl hle
-    letI : Nontrivial (Localization.Away a) :=
+    let : Nontrivial (Localization.Away a) :=
       (IsLocalization.toLocalizationMap (Submonoid.powers a)
         (Localization.Away a)).nontrivial (by
           rintro ⟨k, hk⟩
@@ -167,7 +167,7 @@ theorem finiteLocallyFree_rank_unique
     have : IsLocalizedModule (Algebra.algebraMapSubmonoid (Localization.Away a)
         I.primeCompl) l := IsLocalizedModule.of_restrictScalars I.primeCompl ..
     obtain ⟨e⟩ := he
-    letI : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
+    let : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
       Module.Free.of_equiv e.symm
     have hloc : Module.finrank Rₚ Mₚ =
         Module.finrank (Localization.Away a)
@@ -203,9 +203,9 @@ def FiniteProjective
 private theorem finiteLocallyFree_of_finiteProjective
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (hM : FiniteProjective R M) : FiniteLocallyFree R M := by
-  letI : Module.Finite R M := hM.1
-  letI : Module.Projective R M := hM.2
-  letI : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
+  let : Module.Finite R M := hM.1
+  let : Module.Projective R M := hM.2
+  let : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
   let s : Set R :=
     {f | Module.Free (Localization.Away f) (LocalizedModule.Away f M)}
   have hs : Ideal.span s = ⊤ := by
@@ -234,7 +234,7 @@ private theorem free_at_prime_of_locallyFree
   rcases hM with ⟨s, hs, hfree⟩
   have pick : ∃ a ∈ s, a ∉ p.asIdeal := by
     by_contra h
-    push_neg at h
+    push Not at h
     have hle : Ideal.span s ≤ p.asIdeal := Ideal.span_le.mpr h
     exact p.isPrime.ne_top (by
       apply top_unique
@@ -279,7 +279,7 @@ private theorem free_at_prime_of_locallyFree
         (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M)))
   have : IsLocalizedModule p' l :=
     IsLocalizedModule.of_restrictScalars p.asIdeal.primeCompl ..
-  letI : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
+  let : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
     hfree a ha
   exact Module.free_of_isLocalizedModule p' l
 
@@ -318,12 +318,12 @@ private theorem reduced_bijective_of_surjective_of_minimal_rank
     Function.Bijective φ := by
   classical
   rcases subsingleton_or_nontrivial R with hR | hR
-  · letI := hR
+  · let := hR
     have hFsub : Subsingleton F := Module.subsingleton R F
     exact ⟨by
       intro x y _
       exact Subsingleton.elim _ _, hφ⟩
-  · letI := hR
+  · let := hR
     have hφ_inj : Function.Injective φ := by
       let b := Module.finBasis R F
       intro x y hxy
@@ -333,19 +333,19 @@ private theorem reduced_bijective_of_surjective_of_minimal_rank
         rw [map_sub, hxy, sub_self]
       have hmem (p : Ideal R) (hp : p ∈ minimalPrimes R) :
           b.repr (x - y) i ∈ p := by
-        letI : p.IsPrime := hp.1.1
-        letI : Ring.KrullDimLE 0 (Localization.AtPrime p) :=
+        let : p.IsPrime := hp.1.1
+        let : Ring.KrullDimLE 0 (Localization.AtPrime p) :=
           Ring.KrullDimLE.of_isLocalization p hp (Localization.AtPrime p)
         let hfield : IsField (Localization.AtPrime p) :=
           Ring.KrullDimLE.isField_of_isReduced
-        letI : IsField (Localization.AtPrime p) := hfield
-        letI : Field (Localization.AtPrime p) :=
+        let : IsField (Localization.AtPrime p) := hfield
+        let : Field (Localization.AtPrime p) :=
           hfield.toField
-        letI : Module.Free (Localization.AtPrime p)
+        let : Module.Free (Localization.AtPrime p)
             (LocalizedModule p.primeCompl F) :=
           Module.free_of_isLocalizedModule p.primeCompl
             (LocalizedModule.mkLinearMap p.primeCompl F)
-        letI : Module.Free (Localization.AtPrime p)
+        let : Module.Free (Localization.AtPrime p)
             (LocalizedModule p.primeCompl N) :=
           Module.Free.of_equiv'
             (inferInstance : Module.Free (Localization.AtPrime p)
@@ -367,7 +367,7 @@ private theorem reduced_bijective_of_surjective_of_minimal_rank
           rfl
         have hzero : LocalizedModule.mkLinearMap p.primeCompl F (x - y) = 0 := by
           apply hbij.1
-          simpa [hφxy]
+          simp [hφxy]
         obtain ⟨s, hs⟩ :=
           (IsLocalizedModule.eq_zero_iff p.primeCompl
             (LocalizedModule.mkLinearMap p.primeCompl F)).mp hzero
@@ -399,16 +399,16 @@ private theorem rankAtStalk_eq_fiber_finrank_of_minimal
     (p : PrimeSpectrum R) (hp : p.asIdeal ∈ minimalPrimes R) :
     Module.rankAtStalk M p =
       Module.finrank p.asIdeal.ResidueField (p.asIdeal.Fiber M) := by
-  letI : p.asIdeal.IsPrime := p.isPrime
+  let : p.asIdeal.IsPrime := p.isPrime
   let S := Localization.AtPrime p.asIdeal
   let N := LocalizedModule.AtPrime p.asIdeal M
-  letI : Ring.KrullDimLE 0 S :=
+  let : Ring.KrullDimLE 0 S :=
     Ring.KrullDimLE.of_isLocalization p.asIdeal hp S
   have hfield : IsField S := Ring.KrullDimLE.isField_of_isReduced
-  letI : Field S := hfield.toField
+  let : Field S := hfield.toField
   let K := p.asIdeal.ResidueField
   have hK : IsField K := Field.toIsField K
-  letI : Field K := hK.toField
+  let : Field K := hK.toField
   have hdim : Module.finrank K (K ⊗[S] N) =
       Module.finrank K (K ⊗[R] M) := by
     let e₁ := (LinearEquiv.lTensor K
@@ -487,18 +487,18 @@ theorem finite_projective_characterization
   tfae_have 1 ↔ 2 := by
     constructor
     · rintro ⟨hfp, hflat⟩
-      letI := hfp
-      letI := hflat
+      let := hfp
+      let := hflat
       exact ⟨inferInstance, Module.Flat.projective_of_finitePresentation⟩
     · rintro ⟨hfin, hproj⟩
-      letI := hfin
-      letI := hproj
+      let := hfin
+      let := hproj
       exact ⟨Module.finitePresentation_of_projective R M, inferInstance⟩
   tfae_have 2 ↔ 3 := by
     constructor
     · rintro ⟨hfin, hproj⟩
-      letI := hfin
-      letI := hproj
+      let := hfin
+      let := hproj
       obtain ⟨n, f, g, hsurj, _, hfg⟩ :=
         Module.Finite.exists_comp_eq_id_of_projective R M
       let e := Finsupp.linearEquivFunOnFinite R R (Fin n)
@@ -507,7 +507,7 @@ theorem finite_projective_characterization
       intro x
       simpa [LinearMap.comp_apply] using LinearMap.congr_fun hfg x
     · rintro ⟨n, i, p, hpi⟩
-      letI : Module.Finite R (Fin n →₀ R) := inferInstance
+      let : Module.Finite R (Fin n →₀ R) := inferInstance
       have hpsurj : Function.Surjective p := by
         intro x
         refine ⟨i x, ?_⟩
@@ -516,14 +516,14 @@ theorem finite_projective_characterization
   tfae_have 2 ↔ 4 := by
     constructor
     · rintro ⟨hfin, hproj⟩
-      letI := hfin
-      letI := hproj
-      letI : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
+      let := hfin
+      let := hproj
+      let : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
       refine ⟨inferInstance, ?_⟩
       rw [← Set.eq_univ_iff_forall]
       exact Module.freeLocus_eq_univ_iff.mpr hproj
     · rintro ⟨hfp, hall⟩
-      letI := hfp
+      let := hfp
       have hproj : Module.Projective R M := by
         apply Module.freeLocus_eq_univ_iff.mp
         rw [Set.eq_univ_iff_forall]
@@ -532,26 +532,26 @@ theorem finite_projective_characterization
   tfae_have 2 ↔ 5 := by
     constructor
     · rintro ⟨hfin, hproj⟩
-      letI := hfin
-      letI := hproj
-      letI : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
+      let := hfin
+      let := hproj
+      let : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
       refine ⟨inferInstance, ?_⟩
       intro m
       exact Module.mem_freeLocus.mp <|
         (Module.freeLocus_eq_univ_iff.mpr hproj) ▸ Set.mem_univ
           (⟨m.asIdeal, m.isMaximal.isPrime⟩ : PrimeSpectrum R)
     · rintro ⟨hfp, hall⟩
-      letI := hfp
+      let := hfp
       have hproj : Module.Projective R M :=
         Module.projective_of_localization_maximal (fun I hI ↦ by
           let m : MaximalSpectrum R := ⟨I, hI⟩
-          letI := hall m
+          let := hall m
           exact Module.Projective.of_free)
       exact ⟨inferInstance, hproj⟩
   tfae_have 6 ↔ 7 := by
     constructor
     · rintro ⟨hfin, ⟨s, hs, hfree⟩⟩
-      letI := hfin
+      let := hfin
       refine ⟨s, hs, ?_⟩
       intro f hf
       exact ⟨inferInstance, hfree f hf⟩
@@ -566,20 +566,20 @@ theorem finite_projective_characterization
     · exact finiteLocallyFree_of_finiteProjective
     · intro h
       have hfp := finitePresentation_of_finiteLocallyFree h
-      letI := hfp
+      let := hfp
       obtain ⟨s, hs, hfree⟩ := h
       let hloc : LocallyFree R M := ⟨s, hs, fun f hf ↦ (hfree f hf).2⟩
       have hproj : Module.Projective R M :=
         Module.projective_of_localization_maximal (fun I hI ↦ by
           let p : PrimeSpectrum R := ⟨I, hI.isPrime⟩
-          letI := free_at_prime_of_locallyFree hloc p
+          let := free_at_prime_of_locallyFree hloc p
           exact Module.Projective.of_free)
       exact ⟨inferInstance, hproj⟩
   tfae_have 2 → 8 := by
     rintro ⟨hfin, hproj⟩
-    letI := hfin
-    letI := hproj
-    letI : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
+    let := hfin
+    let := hproj
+    let : Module.FinitePresentation R M := Module.finitePresentation_of_projective R M
     obtain ⟨s, hs, hfree⟩ := finiteLocallyFree_of_finiteProjective ⟨hfin, hproj⟩
     let hloc : LocallyFree R M := ⟨s, hs, fun f hf ↦ (hfree f hf).2⟩
     have hfree : ∀ p : PrimeSpectrum R, p ∈ Module.freeLocus R M := by
@@ -600,13 +600,13 @@ theorem finite_projective_characterization
     exact ⟨hfin, hfree, hlocRank⟩
   tfae_have 8 → 2 := by
     rintro ⟨hfin, hfree, hloc⟩
-    letI := hfin
+    let := hfin
     have hflat : Module.Flat R M := Module.flat_of_localized_maximal M (fun I hI ↦ by
       let p : PrimeSpectrum R := ⟨I, hI.isPrime⟩
-      letI := Module.mem_freeLocus.mp (hfree p)
+      let := Module.mem_freeLocus.mp (hfree p)
       rw [← Module.flat_iff_of_isLocalization (Localization.AtPrime I) I.primeCompl]
       exact Module.Flat.of_free)
-    letI := hflat
+    let := hflat
     have hflf : FiniteLocallyFree R M := by
       let s : Set R :=
         {f | Module.Free (Localization.Away f) (LocalizedModule.Away f M)}
@@ -623,7 +623,7 @@ theorem finite_projective_characterization
           Finsupp.mapRange.linearMap (Algebra.linearMap R (Localization.AtPrime I))
         let g : M →ₗ[R] LocalizedModule.AtPrime I M :=
           LocalizedModule.mkLinearMap I.primeCompl M
-        letI : Module.Free (Localization.AtPrime I)
+        let : Module.Free (Localization.AtPrime I)
             (LocalizedModule.AtPrime I M) := Module.mem_freeLocus.mp (hfree p)
         obtain ⟨φ, -, -, hφps⟩ :=
           Module.exists_localizedMap_surjective_of_surjective I.primeCompl f g
@@ -654,9 +654,9 @@ theorem finite_projective_characterization
               (Module.rankAtStalk M p : ℤ) := by
             simpa [rankFunction, Ideal.finrank_fiber_eq_rankAtStalk] using heq
           exact_mod_cast heq'
-        letI : Module.Flat (Localization.Away c)
+        let : Module.Flat (Localization.Away c)
             (LocalizedModule.Away c M) := inferInstance
-        letI : Module.Free (Localization.Away c)
+        let : Module.Free (Localization.Away c)
             (LocalizedModule.Away c (Fin n →₀ R)) :=
           Module.free_of_isLocalizedModule (R := R) (M := Fin n →₀ R)
             (Rₛ := Localization.Away c)
@@ -685,15 +685,15 @@ theorem finite_projective_characterization
             have hRnontrivial : Nontrivial R := by
               rw [← not_subsingleton_iff_nontrivial]
               intro hsub
-              letI := hsub
+              let := hsub
               exact hI.ne_top (Subsingleton.elim I ⊤)
-            letI := hRnontrivial
+            let := hRnontrivial
             have hnontrivial : Nontrivial (Localization.Away c) := by
               rw [← not_subsingleton_iff_nontrivial]
               intro hsub
-              letI := hsub
+              let := hsub
               exact hJ.ne_top (Subsingleton.elim J ⊤)
-            letI := hnontrivial
+            let := hnontrivial
             calc
               Module.rankAtStalk (LocalizedModule.Away c (Fin n →₀ R))
                   (⟨J, hJ.isPrime⟩ : PrimeSpectrum (Localization.Away c)) =
@@ -776,9 +776,9 @@ theorem finite_projective_reduced_characterization
   tfae_have 2 ↔ 9 := by
     constructor
     · rintro ⟨hfin, hproj⟩
-      letI := hfin
-      letI := hproj
-      letI : Module.FinitePresentation R M :=
+      let := hfin
+      let := hproj
+      let : Module.FinitePresentation R M :=
         Module.finitePresentation_of_projective R M
       have hstalk : IsLocallyConstant (fun p : PrimeSpectrum R =>
           (Module.rankAtStalk M p : ℤ)) := by
@@ -791,7 +791,7 @@ theorem finite_projective_reduced_characterization
         simp [rankFunction, Ideal.finrank_fiber_eq_rankAtStalk]
       exact ⟨hfin, by rw [heq]; exact hstalk⟩
     · rintro ⟨hfin, hloc⟩
-      letI := hfin
+      let := hfin
       have hflf : FiniteLocallyFree R M := by
         let s : Set R :=
           {f | Module.Free (Localization.Away f)
@@ -808,7 +808,7 @@ theorem finite_projective_reduced_characterization
           let N := LocalizedModule.AtPrime I M
           let K := IsLocalRing.ResidueField S
           have hK : IsField K := Field.toIsField K
-          letI : Field K := hK.toField
+          let : Field K := hK.toField
           have hdim : Module.finrank K (K ⊗[S] N) =
               Module.finrank K (K ⊗[R] M) := by
             let e₁ := (LinearEquiv.lTensor K
@@ -867,7 +867,7 @@ theorem finite_projective_reduced_characterization
             have heq : rankFunction R M q = rankFunction R M p :=
               hconst q (hta hqa)
             simpa [rankFunction, hprank] using heq.trans hprank
-          letI : Module.Free (Localization.Away c)
+          let : Module.Free (Localization.Away c)
               (LocalizedModule.Away c (Fin r →₀ R)) :=
             Module.free_of_isLocalizedModule (R := R) (M := Fin r →₀ R)
               (Rₛ := Localization.Away c)
@@ -879,10 +879,10 @@ theorem finite_projective_reduced_characterization
             have hRnontrivial : Nontrivial R := by
               rw [← not_subsingleton_iff_nontrivial]
               intro hsub
-              letI := hsub
+              let := hsub
               exact hI.ne_top (Subsingleton.elim I ⊤)
-            letI := hRnontrivial
-            letI : Nontrivial (Localization.Away c) :=
+            let := hRnontrivial
+            let : Nontrivial (Localization.Away c) :=
               (IsLocalization.toLocalizationMap (Submonoid.powers c)
                 (Localization.Away c)).nontrivial (by
                 rintro ⟨k, hk⟩
@@ -927,14 +927,14 @@ theorem finite_projective_reduced_characterization
                 (LocalizedModule.Away c M)
                 (⟨J, hJ.isPrime⟩ : PrimeSpectrum (Localization.Away c)) =
                 Module.rankAtStalk M q := by
-              letI : J.IsPrime := hJ.1.1
+              let : J.IsPrime := hJ.1.1
               have hb := LocalizedModule.isBaseChange (Submonoid.powers c) M
               let qk := q.asIdeal.ResidueField
               let Jk := J.ResidueField
               let e : qk →ₐ[R] Jk :=
                 Ideal.ResidueField.mapₐ q.asIdeal J (Algebra.ofId R S') rfl
-              letI : Algebra qk Jk := e.toRingHom.toAlgebra
-              letI : IsScalarTower R qk Jk :=
+              let : Algebra qk Jk := e.toRingHom.toAlgebra
+              let : IsScalarTower R qk Jk :=
                 IsScalarTower.of_algebraMap_eq' e.comp_algebraMap.symm
               have hdim : Module.finrank Jk (Jk ⊗[qk] (qk ⊗[R] M)) =
                   Module.finrank qk (qk ⊗[R] M) := Module.finrank_baseChange
@@ -994,14 +994,14 @@ theorem finite_projective_reduced_characterization
         intro f hf
         exact ⟨by infer_instance, hf⟩
       have hfp := finitePresentation_of_finiteLocallyFree hflf
-      letI := hfp
+      let := hfp
       obtain ⟨s, hs, hfree⟩ := hflf
       let hloc : LocallyFree R M :=
         ⟨s, hs, fun f hf ↦ (hfree f hf).2⟩
       have hproj : Module.Projective R M :=
         Module.projective_of_localization_maximal (fun I hI ↦ by
           let p : PrimeSpectrum R := ⟨I, hI.isPrime⟩
-          letI := free_at_prime_of_locallyFree hloc p
+          let := free_at_prime_of_locallyFree hloc p
           exact Module.Projective.of_free)
       exact ⟨inferInstance, hproj⟩
   tfae_finish
@@ -1186,18 +1186,18 @@ theorem exists_finite_flat_not_projective :
     exact hflat₁
   have hfinite₁ : Module.Finite R M₀ :=
     Module.Finite.of_restrictScalars_finite R₀ R M₀
-  letI : Module.Finite R M₀ := hfinite₁
+  let : Module.Finite R M₀ := hfinite₁
   have hfinite : Module.Finite R M := inferInstance
   have hnot : ¬ Module.Projective R M := by
     intro hprojective
-    letI : Module.Projective R M := hprojective
-    letI : Module.Projective R M₀ :=
+    let : Module.Projective R M := hprojective
+    let : Module.Projective R M₀ :=
       Module.Projective.of_equiv' (ULift.moduleEquiv (R := R) (M := M₀))
     let σ : R →+* R₀ := ULift.ringEquiv.toRingHom
     let σ' : R₀ →+* R := ULift.ringEquiv.symm.toRingHom
-    letI : RingHomInvPair σ σ' :=
+    let : RingHomInvPair σ σ' :=
       RingHomInvPair.of_ringEquiv (ULift.ringEquiv : R ≃+* R₀)
-    letI : RingHomInvPair σ' σ :=
+    let : RingHomInvPair σ' σ :=
       RingHomInvPair.symm σ σ'
     let e : M₀ ≃ₛₗ[σ] M₀ :=
       { Equiv.refl M₀ with
@@ -1226,19 +1226,19 @@ theorem finite_projective_descends
     FiniteProjective R M ↔ FiniteProjective S (S ⊗[R] M) := by
   constructor
   · rintro ⟨hfin, hproj⟩
-    letI := hfin
-    letI := hproj
-    letI : Module.Free S (S ⊗[R] M) := Module.free_of_flat_of_isLocalRing
+    let := hfin
+    let := hproj
+    let : Module.Free S (S ⊗[R] M) := Module.free_of_flat_of_isLocalRing
     exact ⟨inferInstance, Module.Projective.of_free⟩
   · rintro ⟨hfin, hproj⟩
-    letI := hfin
-    letI := hproj
-    letI : Module.FaithfullyFlat R S :=
+    let := hfin
+    let := hproj
+    let : Module.FaithfullyFlat R S :=
       Module.FaithfullyFlat.of_flat_of_isLocalHom
     have hflat : Module.Flat R M :=
       (Module.Flat.iff_flat_tensorProduct R M S).mp inferInstance
-    letI := hflat
-    letI : Module.Free R M := Module.free_of_flat_of_isLocalRing
+    let := hflat
+    let : Module.Free R M := Module.free_of_flat_of_isLocalRing
     exact ⟨inferInstance, Module.Projective.of_free⟩
 
 /-! ## Semilocal freeness -/
@@ -1258,18 +1258,18 @@ theorem free_of_finiteLocallyFree_of_constantRank
   rcases hr with ⟨r, hr⟩
   have hfp : FiniteProjective R M :=
     ((finite_projective_characterization (R := R) (M := M)).out 6 1).mp hM
-  letI : Module.Finite R M := hfp.1
-  letI : Module.Projective R M := hfp.2
-  letI : Finite (MaximalSpectrum R) := hR
+  let : Module.Finite R M := hfp.1
+  let : Module.Projective R M := hfp.2
+  let : Finite (MaximalSpectrum R) := hR
   have hfiber (P : MaximalSpectrum R) :
     Module.finrank (R ⧸ P.1) ((R ⧸ P.1) ⊗[R] M) = r := by
-    letI : P.1.IsPrime := P.isMaximal.isPrime
+    let : P.1.IsPrime := P.isMaximal.isPrime
     let p : PrimeSpectrum R := ⟨P.1, P.isMaximal.isPrime⟩
-    letI : p.asIdeal.IsMaximal := P.isMaximal
+    let : p.asIdeal.IsMaximal := P.isMaximal
     obtain ⟨s, hs, hsr⟩ := hr
     have pick (w : Set R) (hw : Ideal.span w = ⊤) : ∃ a ∈ w, a ∉ P.1 := by
       by_contra h
-      push_neg at h
+      push Not at h
       have hle : Ideal.span w ≤ P.1 := Ideal.span_le.mpr h
       exact P.isMaximal.ne_top (by
         apply top_unique
@@ -1280,7 +1280,7 @@ theorem free_of_finiteLocallyFree_of_constantRank
         (algebraMap R (Localization.Away a))) := by
       rw [PrimeSpectrum.localization_away_comap_range (Localization.Away a) a]
       exact haP
-    letI : Nontrivial (Localization.Away a) :=
+    let : Nontrivial (Localization.Away a) :=
       (IsLocalization.toLocalizationMap (Submonoid.powers a)
         (Localization.Away a)).nontrivial (by
           rintro ⟨k, hk⟩
@@ -1289,7 +1289,7 @@ theorem free_of_finiteLocallyFree_of_constantRank
             rw [hk]
             exact p.asIdeal.zero_mem))
     obtain ⟨e⟩ := hsr a ha
-    letI : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
+    let : Module.Free (Localization.Away a) (LocalizedModule.Away a M) :=
       Module.Free.of_equiv e.symm
     have hAway : Module.rankAtStalk (LocalizedModule.Away a M) q = r := by
       rw [Module.rankAtStalk_eq_finrank_of_free]
@@ -1317,7 +1317,7 @@ theorem free_of_finiteLocallyFree_of_constantRank
     have hres : Module.finrank p.asIdeal.ResidueField (p.asIdeal.Fiber M) = r :=
       (Ideal.finrank_fiber_eq_rankAtStalk (M := M) p.asIdeal).trans hP
     change Module.finrank p.asIdeal.ResidueField (p.asIdeal.ResidueField ⊗[R] M) = r at hres
-    letI : Field (R ⧸ p.asIdeal) := Ideal.Quotient.field p.asIdeal
+    let : Field (R ⧸ p.asIdeal) := Ideal.Quotient.field p.asIdeal
     let e₂ := TensorProduct.AlgebraTensorModule.cancelBaseChange
       R (R ⧸ p.asIdeal) p.asIdeal.ResidueField p.asIdeal.ResidueField M
     calc
@@ -1344,17 +1344,17 @@ theorem free_of_finiteLocallyFree_of_connectedSpectrum
   classical
   have hfp : FiniteProjective R M :=
     ((finite_projective_characterization (R := R) (M := M)).out 6 1).mp hM
-  letI : Module.Finite R M := hfp.1
-  letI : Module.Projective R M := hfp.2
-  letI : Finite (MaximalSpectrum R) := hR
-  letI : Module.FinitePresentation R M :=
+  let : Module.Finite R M := hfp.1
+  let : Module.Projective R M := hfp.2
+  let : Finite (MaximalSpectrum R) := hR
+  let : Module.FinitePresentation R M :=
     Module.finitePresentation_of_projective R M
   rcases subsingleton_or_nontrivial R with hR0 | hR0
-  · letI := hR0
+  · let := hR0
     exact Module.Free.of_subsingleton' R M
-  · letI := hR0
+  · let := hR0
     obtain ⟨I, hI⟩ := Formalization.Books.Algebra.Unit03.exists_maximal_ideal R
-    letI : I.IsPrime := hI.isPrime
+    let : I.IsPrime := hI.isPrime
     let p₀ : PrimeSpectrum R := ⟨I, hI.isPrime⟩
     have hloc : IsLocallyConstant (Module.rankAtStalk (R := R) M) :=
       Module.isLocallyConstant_rankAtStalk
@@ -1365,15 +1365,15 @@ theorem free_of_finiteLocallyFree_of_connectedSpectrum
     apply Module.free_of_flat_of_finrank_eq R M r
     intro P
     let p : PrimeSpectrum R := ⟨P.1, P.isMaximal.isPrime⟩
-    letI : p.asIdeal.IsPrime := P.isMaximal.isPrime
-    letI : p.asIdeal.IsMaximal := P.isMaximal
+    let : p.asIdeal.IsPrime := P.isMaximal.isPrime
+    let : p.asIdeal.IsMaximal := P.isMaximal
     have hp : Module.rankAtStalk M p = r := by
       exact hconst p p₀
     have hres : Module.finrank p.asIdeal.ResidueField (p.asIdeal.Fiber M) = r :=
       (Ideal.finrank_fiber_eq_rankAtStalk (M := M) p.asIdeal).trans hp
     change Module.finrank p.asIdeal.ResidueField
       (p.asIdeal.ResidueField ⊗[R] M) = r at hres
-    letI : Field (R ⧸ p.asIdeal) := Ideal.Quotient.field p.asIdeal
+    let : Field (R ⧸ p.asIdeal) := Ideal.Quotient.field p.asIdeal
     let e₂ := TensorProduct.AlgebraTensorModule.cancelBaseChange
       R (R ⧸ p.asIdeal) p.asIdeal.ResidueField p.asIdeal.ResidueField M
     calc

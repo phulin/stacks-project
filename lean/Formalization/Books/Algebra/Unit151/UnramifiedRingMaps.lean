@@ -93,7 +93,7 @@ theorem formallyUnramified_and_finitePresentation_iff_gUnramified
     exact ⟨h.formallyUnramified, h.finitePresentation⟩
 
 /-- Every G-unramified map is unramified. -/
-theorem Algebra.GUnramified.toUnramified
+theorem gUnramified_toUnramified
     {R : Type v} {S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.GUnramified R S] : Algebra.Unramified R S := by
   exact { formallyUnramified := inferInstance
@@ -191,6 +191,27 @@ abbrev CotangentSpaceAt
     (R : Type v) (S : Type u) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) :=
   KaehlerDifferential R S ⊗[S] q.asIdeal.ResidueField
+
+/- The source's fibre criteria use the canonical base-change identity
+`Ω[κ(p) ⊗[R] S / κ(p)] ≅ (κ(p) ⊗[R] S) ⊗[S] Ω[S/R]`. -/
+theorem fiber_differentials_baseChange
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (p : PrimeSpectrum R) :
+    letI : Algebra p.asIdeal.ResidueField
+        (p.asIdeal.ResidueField ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+    letI : Algebra S (p.asIdeal.ResidueField ⊗[R] S) :=
+      Algebra.TensorProduct.rightAlgebra
+    Nonempty
+      ((p.asIdeal.ResidueField ⊗[R] S) ⊗[S] KaehlerDifferential R S ≃ₗ[
+        p.asIdeal.ResidueField ⊗[R] S]
+        KaehlerDifferential p.asIdeal.ResidueField
+          (p.asIdeal.ResidueField ⊗[R] S)) := by
+  let _ : Algebra p.asIdeal.ResidueField
+      (p.asIdeal.ResidueField ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+  let _ : Algebra S (p.asIdeal.ResidueField ⊗[R] S) :=
+    Algebra.TensorProduct.rightAlgebra
+  exact ⟨KaehlerDifferential.tensorKaehlerEquiv
+    R p.asIdeal.ResidueField S (p.asIdeal.ResidueField ⊗[R] S)⟩
 
 theorem unramifiedAt_of_cotangentSpace_subsingleton
     {R : Type v} {S : Type u} [CommRing R] [CommRing S] [Algebra R S]

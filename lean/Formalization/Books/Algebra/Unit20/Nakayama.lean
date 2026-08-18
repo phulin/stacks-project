@@ -446,10 +446,6 @@ theorem nakayama_localization
     LocalizedModule.mkLinearMap T (M ⧸ (I • (⊤ : Submodule R M)))
   let N : Submodule (R ⧸ I) (M ⧸ (I • (⊤ : Submodule R M))) :=
     Submodule.span (R ⧸ I) (Set.range v)
-  haveI instFinite : Module.Finite (R ⧸ I)
-      (M ⧸ (I • (⊤ : Submodule R M))) :=
-    Module.Finite.of_restrictScalars_finite R (R ⧸ I)
-      (M ⧸ (I • (⊤ : Submodule R M)))
   let hfin :
       ∃ m : ℕ, ∃ y : Fin m → (M ⧸ (I • (⊤ : Submodule R M))),
         Submodule.span (R ⧸ I) (Set.range y) = ⊤ :=
@@ -907,10 +903,10 @@ theorem nakayama_localization_at_prime
           exact hz
         exact hz' (Ideal.Quotient.eq_zero_iff_mem.mpr hrp)
       exact ⟨r, hr, rfl⟩
-  haveI instLocalization : IsLocalization T p.ResidueField :=
-    hT ▸ (inferInstance : IsLocalization (nonZeroDivisors A) p.ResidueField)
   let Q := M ⧸ (p • (⊤ : Submodule R M))
-  haveI : TensorProduct.CompatibleSMul R A p.ResidueField Q :=
+  have instLocalization : IsLocalization T p.ResidueField :=
+    hT ▸ (inferInstance : IsLocalization (nonZeroDivisors A) p.ResidueField)
+  have : TensorProduct.CompatibleSMul R A p.ResidueField Q :=
     TensorProduct.CompatibleSMul.of_algebraMap_surjective
       (M := p.ResidueField) (N := Q) (by
         change Function.Surjective (Ideal.Quotient.mk p)
@@ -1000,8 +996,6 @@ theorem nakayama_localization_at_prime
     change (((u : A) * (t : A)) • y) ∈ N
     rw [← smul_smul, hu']
     exact N.smul_mem _ hz
-  haveI instFiniteQ : Module.Finite A Q :=
-    Module.Finite.of_restrictScalars_finite R A Q
   let hfinQ : ∃ m : ℕ, ∃ y : Fin m → Q,
       Submodule.span A (Set.range y) = (⊤ : Submodule A Q) :=
     Module.Finite.exists_fin

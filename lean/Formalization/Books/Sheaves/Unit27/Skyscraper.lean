@@ -1081,12 +1081,19 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
   have hk_id (A : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
       k A A (𝟙 A) = 𝟙 (AddCommGrpCat.of (↑A)) := by
-    sorry
+    simp only [k]
+    rw [(forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
+      AddCommGrpCat).map_id]
+    change (q A).inv ≫ (pF A).hom ≫
+      (𝟙 (AddCommGrpCat.of ↑A)) ≫ (pF A).inv ≫ (q A).hom = _
+    simp only [← Category.assoc, Category.comp_id,
+      Iso.hom_inv_id, Iso.inv_hom_id]
   have hk_comp (A B C : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
       (f : A ⟶ B) (g : B ⟶ C) :
       k A C (f ≫ g) = k A B f ≫ k B C g := by
-    sorry
+    simp only [k, Functor.map_comp, Category.assoc,
+      Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc]
   have hα_id (A : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
       alpha A A (𝟙 A) = 𝟙 _ := by

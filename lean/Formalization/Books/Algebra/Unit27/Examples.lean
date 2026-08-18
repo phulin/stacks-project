@@ -4022,16 +4022,20 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     change ((affineA : Polynomial ℚ) - Polynomial.C r) *
         ((affineA : Polynomial ℚ) ^ 2 + Polynomial.C alpha * affineA +
           Polynomial.C (4 * r)) =
-      ↑(Polynomial.eval₂ (algebraMap ℚ affineBaseSubalgebra) affineA P)
-    simp only [P, qP, d, c, r, alpha, map_add, map_sub, map_mul, map_pow, map_neg,
-      map_ofNat, Polynomial.eval₂_at_apply, Polynomial.eval₂_X, Polynomial.eval₂_C]
+      (Polynomial.aeval affineA P : Polynomial ℚ)
+    rw [Polynomial.aeval_subalgebra_coe]
+    simp only [P, qP, d, c, r, alpha, Polynomial.aeval_def, Polynomial.eval₂_add,
+      Polynomial.eval₂_sub, Polynomial.eval₂_neg, Polynomial.eval₂_mul, Polynomial.eval₂_pow,
+      Polynomial.eval₂_X, Polynomial.eval₂_C, Polynomial.eval₂_ofNat, map_add, map_sub,
+      map_mul, map_pow, map_ofNat, map_one]
+    simp only [← Polynomial.C_eq_algebraMap]
     ring
   have hxI : x * h ∈ I := by
     rw [hfactor]
     exact hPmem
   have hpdeg : P.degree = (3 : WithBot ℕ) := by
     dsimp [P]
-    have hqdeg' : qP.degree < (Polynomial.X ^ 3).degree := by
+    have hqdeg' : qP.degree < ((Polynomial.X : Polynomial ℚ) ^ 3).degree := by
       simpa using hqdeg
     rw [Polynomial.degree_add_eq_left_of_degree_lt hqdeg']
     simp
@@ -4041,16 +4045,15 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     have hGdegree : (affineG a : Polynomial ℚ).degree = (3 : WithBot ℕ) := by
       change (affinePolynomialG a).degree = (3 : WithBot ℕ)
       rw [affinePolynomialG, Polynomial.degree_mul]
-      · have hquad : (affineQuadratic a).degree = (2 : WithBot ℕ) := by
-          rw [affineQuadratic, ← add_assoc]
-          rw [Polynomial.degree_add_eq_left_of_degree_lt]
-          · simp
-          · rw [Polynomial.degree_X_add_C]
-            norm_num
-        rw [hquad]
-        simp
-      · simp [affineQuadratic]
-      · simp
+      have hquad : (affineQuadratic a).degree = (2 : WithBot ℕ) := by
+        rw [affineQuadratic, add_assoc]
+        rw [Polynomial.degree_add_eq_left_of_degree_lt]
+        · norm_num
+        · rw [Polynomial.degree_X_add_C]
+          norm_num
+      rw [hquad]
+      rw [Polynomial.degree_X_sub_C]
+      norm_num
     have hGne : (affineG a : Polynomial ℚ) ≠ 0 := by
       intro hzero
       rw [hzero] at hGdegree
@@ -4061,20 +4064,38 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
       calc
         _ ≤ max (affineA : Polynomial ℚ).degree (Polynomial.C r).degree :=
           Polynomial.degree_sub_le _ _
-        _ ≤ max (max Polynomial.X.degree Polynomial.X.degree) (Polynomial.C r).degree := by
-          gcongr
-          exact Polynomial.degree_sub_le _ _
         _ ≤ max (2 : WithBot ℕ) 0 := by
-          gcongr <;> simp
+          apply max_le_max
+          · calc
+              (affineA : Polynomial ℚ).degree ≤
+                  max ((Polynomial.X : Polynomial ℚ) ^ 2).degree Polynomial.X.degree :=
+                Polynomial.degree_sub_le _ _
+              _ ≤ max (2 : WithBot ℕ) 1 := by
+                apply max_le_max
+                · rw [Polynomial.degree_X_pow]
+                  exact le_rfl
+                · rw [Polynomial.degree_X]
+              _ ≤ 2 := by
+                change (2 : WithBot ℕ) ≤ 2
+                exact le_rfl
+          · exact Polynomial.degree_C_le
         _ = 2 := by norm_num
         _ < 3 := by norm_num
     by_cases hk0 : k = 0
     · subst k
       have hxzero : (x : Polynomial ℚ) = 0 := by
-        simpa using hk
+        simpa using hk.symm
       have hxcoeff := congrArg (fun p : Polynomial ℚ => p.coeff 2) hxzero
-      simpa [x, affineA, affineBaseElement] using hxcoeff
-    · rw [← hk, Polynomial.degree_mul hk0 hGne] at hxdegree
+      change (((Polynomial.X : Polynomial ℚ) ^ 2 - Polynomial.X) - Polynomial.C r).coeff 2 =
+        (0 : Polynomial ℚ).coeff 2 at hxcoeff
+      rw [Polynomial.coeff_sub, Polynomial.coeff_sub] at hxcoeff
+      have hcoeff : (Polynomial.X : Polynomial ℚ).coeff 2 = 0 := by
+        simpa using (Polynomial.coeff_X_pow (R := ℚ) 1 2)
+      rw [hcoeff] at hxcoeff
+      norm_num at hxcoeff
+    · rw [← hk] at hxdegree
+      change ((k : Polynomial ℚ) * (affineG a : Polynomial ℚ)).degree < _ at hxdegree
+      rw [Polynomial.degree_mul] at hxdegree
       exact hxdegree.not_le (by
         exact le_add_left (zero_le_degree_iff.mpr hk0))
   let K : Ideal affineBaseSubalgebra := I ⊔ Ideal.span {h}

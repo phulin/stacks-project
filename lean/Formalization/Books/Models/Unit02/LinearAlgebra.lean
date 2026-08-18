@@ -318,8 +318,6 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
             intro hij
             apply hj
             simpa [hij] using hi
-          have hcoef : 0 ≤ A i j * m j :=
-            mul_nonneg (hoffdiag hji) (le_of_lt (hm j))
           have hne : w j ≠ w r := by
             intro h
             apply hj
@@ -352,23 +350,6 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
                   ∑ t, if t ≠ i then A i t * y t else 0 := by
                 rw [Finset.sum_add_distrib]
                 simp only [Finset.sum_ite_eq', Finset.mem_univ, if_true]
-          have hsumle :
-              (∑ t, if t ≠ i then A i t * m t * w t else 0) ≤
-                w i * ∑ t, if t ≠ i then A i t * m t else 0 := by
-            calc
-              (∑ t, if t ≠ i then A i t * m t * w t else 0) ≤
-                  ∑ t, if t ≠ i then w i * (A i t * m t) else 0 := by
-                apply Finset.sum_le_sum
-                intro t ht
-                by_cases hti : t = i
-                · simp [hti]
-                · have hcoef' : 0 ≤ A i t * m t :=
-                    mul_nonneg (hoffdiag (Ne.symm hti)) (le_of_lt (hm t))
-                  have htmax : w t ≤ w i := by rw [hi_eq]; exact hmax t
-                  simp [hti]
-                  nlinarith
-              _ = w i * ∑ t, if t ≠ i then A i t * m t else 0 := by
-                simp [Finset.mul_sum, mul_ite]
           have hkeq :
               -A i i * (w i * m i) =
                 ∑ t, if t ≠ i then A i t * m t * w t else 0 := by
@@ -387,9 +368,6 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
                   ring
           have hrowi := hrow i hi
           have hi_eq : w i = w r := hi
-          have hwposi : 0 < w i := by rw [hi_eq]; exact hwpos
-          have hnonneg : 0 ≤ A i j * m j * (w i - w j) := by
-            exact mul_nonneg hcoef (le_of_lt (sub_pos.mpr hstrict))
           have hsumzero :
               (∑ t, if t ≠ i then A i t * m t * (w i - w t) else 0) = 0 := by
             have hid :
@@ -450,8 +428,9 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
               exact le_antisymm htermle hnonnegj
             have hjneq : j ≠ i := Ne.symm hji
             simpa [f, hjneq] using hfj
-          have : A i j * m j = 0 := by
-            nlinarith
+          have hdiff : w i - w j ≠ 0 := ne_of_gt (sub_pos.mpr hstrict)
+          have : A i j * m j = 0 :=
+            (mul_eq_zero.mp htermzero).resolve_right hdiff
           exact (mul_eq_zero.mp this).resolve_right (ne_of_gt (hm j))
         have hcond : kernelIndicatorCondition A m I := by
           unfold kernelIndicatorCondition

@@ -687,7 +687,51 @@ theorem maximal_residueField_isMaximal_of_algebraic
         residueFieldAlgebraOfMap m.asIdeal q.asIdeal φ h
       Algebra.IsAlgebraic m.asIdeal.ResidueField q.asIdeal.ResidueField) :
     q.asIdeal.IsMaximal := by
-  sorry
+  letI : Algebra m.asIdeal.ResidueField q.asIdeal.ResidueField :=
+    residueFieldAlgebraOfMap m.asIdeal q.asIdeal φ h
+  let A : Subalgebra m.asIdeal.ResidueField q.asIdeal.ResidueField :=
+    { carrier := Set.range (algebraMap S q.asIdeal.ResidueField)
+      zero_mem' := ⟨0, map_zero _⟩
+      one_mem' := ⟨1, map_one _⟩
+      add_mem' := by
+        rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩
+        exact ⟨x + y, by simp⟩
+      mul_mem' := by
+        rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩
+        exact ⟨x * y, by simp⟩
+      algebraMap_mem' := by
+        intro a
+        obtain ⟨r, rfl⟩ := m.asIdeal.algebraMap_residueField_surjective a
+        refine ⟨φ r, ?_⟩
+        change algebraMap S q.asIdeal.ResidueField (φ r) =
+          Ideal.ResidueField.map m.asIdeal q.asIdeal φ h
+            (algebraMap R m.asIdeal.ResidueField r)
+        exact (Ideal.ResidueField.map_algebraMap m.asIdeal q.asIdeal φ h r).symm }
+  have hA : IsField A :=
+    @Subalgebra.isField_of_algebraic
+      m.asIdeal.ResidueField q.asIdeal.ResidueField _ _ _ A halg
+  apply Ideal.Quotient.maximal_of_isField q.asIdeal
+  have hnontriv : Nontrivial (S ⧸ q.asIdeal) :=
+    Ideal.Quotient.nontrivial_iff.mpr q.2.ne_top
+  refine ⟨hnontriv.exists_pair_ne, mul_comm, ?_⟩
+  intro a ha
+  obtain ⟨s, rfl⟩ := Ideal.Quotient.mk_surjective a
+  let z : A := ⟨algebraMap S q.asIdeal.ResidueField s, ⟨s, rfl⟩⟩
+  have hz : (z : q.asIdeal.ResidueField) ≠ 0 := by
+    intro hz
+    apply ha
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.algebraMap_residueField_eq_zero.mp
+      (by simpa [z, Ideal.algebraMap_quotient_residueField_mk] using hz)
+  have hzA : z ≠ 0 := by
+    intro hzero
+    apply hz
+    exact congrArg Subtype.val hzero
+  obtain ⟨b, hb⟩ := hA.mul_inv_cancel hzA
+  obtain ⟨t, ht⟩ := b.property
+  refine ⟨Ideal.Quotient.mk q.asIdeal t, ?_⟩
+  apply Ideal.injective_algebraMap_quotient_residueField
+  exact congrArg Subtype.val hb
 
 theorem linear_operator_has_noninvertible_monic_polynomial
     {k V : Type u} [Field k] [AddCommGroup V] [Module k V] [Nontrivial V]

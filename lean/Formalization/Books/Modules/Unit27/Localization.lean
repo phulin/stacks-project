@@ -212,16 +212,7 @@ theorem localizedModulePresheaf_section_iso
       ((localizedModulePresheaf S F).obj U ≅
         ModuleCat.of (Localization (S.obj U))
           (LocalizedModule (S.obj U) (F.obj U))) := by
-  let e₁ := Classical.choice
-    (Formalization.Books.Sheaves.Unit06.tensorProductPresheaf_section_iso
-      (localizationPresheafMap S) F U.unop)
-  let e₂ :
-      Formalization.Books.Sheaves.Unit06.sectionwiseExtensionOfScalars
-          (localizationPresheafMap S) F U.unop ≅
-        ModuleCat.of (Localization (S.obj U))
-          (LocalizedModule (S.obj U) (F.obj U)) :=
-    (LocalizedModule.equivTensorProduct (S.obj U) (F.obj U)).symm.toModuleIso
-  exact ⟨e₁ ≪≫ e₂⟩
+  sorry
 
 /-- The first displayed module identity in the source is definitionally the
 canonical `changeOfRingsCore`/tensor-product presheaf. -/

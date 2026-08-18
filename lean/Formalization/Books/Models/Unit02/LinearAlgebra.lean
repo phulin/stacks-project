@@ -3079,6 +3079,393 @@ def CoprimeToMatrixAndVector {n : ℕ} (ell : ℕ)
   (∀ i j, A i j ≠ 0 → Nat.Coprime ell (Int.natAbs (A i j))) ∧
     ∀ i, m i ≠ 0 → Nat.Coprime ell (Int.natAbs (m i))
 
+private theorem torsionBy_finrank_eq_of_injective
+    {G H : Type*} [AddCommGroup G] [AddCommGroup H]
+    [Module.Finite ℤ G] [Module.Finite ℤ H]
+    (f : G →ₗ[ℤ] H) (hf : Function.Injective f)
+    (ell : ℕ) (hell : Nat.Prime ell)
+    (hcoker : ∀ x : moduleCokernel f, (ell : ℤ) • x = 0 → x = 0) :
+    letI : Fact (Nat.Prime ell) := ⟨hell⟩
+    letI : NeZero ell := ⟨hell.ne_zero⟩
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) =
+      Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
+  let : IsNoetherian ℤ G := inferInstance
+  let : IsNoetherian ℤ H := inferInstance
+  let P := AddSubgroup.torsionBy G (ell : ℤ)
+  let Q := AddSubgroup.torsionBy H (ell : ℤ)
+  let : Module.Finite ℤ P.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  let : Module.Finite ℤ Q.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  let eP : P.toIntSubmodule ≃ₗ[ℤ] P :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro c x; rfl }
+  let eQ : Q.toIntSubmodule ≃ₗ[ℤ] Q :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro c x; rfl }
+  let : Module.Finite ℤ P := Module.Finite.equiv eP
+  let : Module.Finite ℤ Q := Module.Finite.equiv eQ
+  let _ : Fact (Nat.Prime ell) := ⟨hell⟩
+  let _ : NeZero ell := ⟨hell.ne_zero⟩
+  let _ : Module (ZMod ell) P := AddSubgroup.torsionBy.zmodModule
+  let _ : Module (ZMod ell) Q := AddSubgroup.torsionBy.zmodModule
+  let : Module.Finite (ZMod ell) P :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) P
+  let : Module.Finite (ZMod ell) Q :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) Q
+  let F0 : P →+ Q :=
+    { toFun := fun x => ⟨f x.1, by
+        change (ell : ℤ) • f (x : G) = 0
+        have hx := congrArg f x.2
+        change f ((ell : ℤ) • (x : G)) = f 0 at hx
+        calc
+          (ell : ℤ) • f (x : G) = f ((ell : ℤ) • (x : G)) :=
+            (map_smul f (ell : ℤ) (x : G)).symm
+          _ = f 0 := hx
+          _ = 0 := map_zero f⟩
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp }
+  let F : P →ₗ[ZMod ell] Q :=
+    { toFun := F0
+      map_add' := F0.map_add
+      map_smul' := by
+        intro c x
+        exact ZMod.map_smul F0 c x }
+  have hF : Function.Injective F := by
+    intro x y hxy
+    apply Subtype.ext
+    apply hf
+    exact congrArg Subtype.val hxy
+  have hFsurj : Function.Surjective F := by
+    intro y
+    have hy : (ell : ℤ) • (y : H) = 0 := by exact y.property
+    have hqell : (ell : ℤ) • ((LinearMap.range f).mkQ (y : H)) = 0 := by
+      change (LinearMap.range f).mkQ ((ell : ℤ) • (y : H)) = 0
+      rw [hy, map_zero]
+    have hqzero := hcoker ((LinearMap.range f).mkQ (y : H)) hqell
+    obtain ⟨x, hxf⟩ := (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mp hqzero
+    have hfx : f x = (y : H) := hxf
+    have hxell : (ell : ℤ) • x = 0 := by
+      apply hf
+      rw [map_smul, hfx, hy]
+      exact (map_zero f).symm
+    refine ⟨⟨x, hxell⟩, ?_⟩
+    apply Subtype.ext
+    exact hfx
+  apply le_antisymm
+  · exact LinearMap.finrank_le_finrank_of_injective hF
+  · exact LinearMap.finrank_le_finrank_of_surjective hFsurj
+
+private theorem torsionBy_finrank_eq_of_equiv
+    {G H : Type*} [AddCommGroup G] [AddCommGroup H]
+    [Module.Finite ℤ G] [Module.Finite ℤ H]
+    (e : G ≃ₗ[ℤ] H) (ell : ℕ) (hell : Nat.Prime ell) :
+    letI : Fact (Nat.Prime ell) := ⟨hell⟩
+    letI : NeZero ell := ⟨hell.ne_zero⟩
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) =
+      Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
+  letI : Fact (Nat.Prime ell) := ⟨hell⟩
+  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let f : G →ₗ[ℤ] H := e.toLinearMap
+  let hzero : ∀ x : moduleCokernel f, (ell : ℤ) • x = 0 → x = 0 := by
+    intro x _
+    obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective (LinearMap.range f) x
+    apply (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr
+    exact ⟨e.symm y, e.apply_symm_apply y⟩
+  exact torsionBy_finrank_eq_of_injective (G := G) (H := H)
+    f e.injective ell hell hzero
+
+private theorem torsionBy_finrank_eq_of_comp_smul
+    {G H : Type*} [AddCommGroup G] [AddCommGroup H]
+    [Module.Finite ℤ G] [Module.Finite ℤ H]
+    (f : G →ₗ[ℤ] H) (g : H →ₗ[ℤ] G) (c : ℤ)
+    (hgf : g.comp f = c • LinearMap.id)
+    (hfg : f.comp g = c • LinearMap.id)
+    (ell : ℕ) (hell : Nat.Prime ell) (hc : IsUnit (c : ZMod ell)) :
+    letI : Fact (Nat.Prime ell) := ⟨hell⟩
+    letI : NeZero ell := ⟨hell.ne_zero⟩
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) =
+      Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
+  letI : Fact (Nat.Prime ell) := ⟨hell⟩
+  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let P := AddSubgroup.torsionBy G (ell : ℤ)
+  let Q := AddSubgroup.torsionBy H (ell : ℤ)
+  let : IsNoetherian ℤ G := inferInstance
+  let : IsNoetherian ℤ H := inferInstance
+  let : Module.Finite ℤ P.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  let : Module.Finite ℤ Q.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  let eP : P.toIntSubmodule ≃ₗ[ℤ] P :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  let eQ : Q.toIntSubmodule ≃ₗ[ℤ] Q :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  let : Module.Finite ℤ P := Module.Finite.equiv eP
+  let : Module.Finite ℤ Q := Module.Finite.equiv eQ
+  let F0 : P →+ Q :=
+    { toFun := fun x => ⟨f x.1, by
+        change (ell : ℤ) • f (x : G) = 0
+        have hx := congrArg f x.2
+        change f ((ell : ℤ) • (x : G)) = f 0 at hx
+        calc
+          (ell : ℤ) • f (x : G) = f ((ell : ℤ) • (x : G)) :=
+            (map_smul f (ell : ℤ) (x : G)).symm
+          _ = f 0 := hx
+          _ = 0 := map_zero f⟩
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp }
+  let G0 : Q →+ P :=
+    { toFun := fun x => ⟨g x.1, by
+        change (ell : ℤ) • g (x : H) = 0
+        have hx := congrArg g x.2
+        change g ((ell : ℤ) • (x : H)) = g 0 at hx
+        calc
+          (ell : ℤ) • g (x : H) = g ((ell : ℤ) • (x : H)) :=
+            (map_smul g (ell : ℤ) (x : H)).symm
+          _ = g 0 := hx
+          _ = 0 := map_zero g⟩
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp }
+  let _ : Module (ZMod ell) P := AddSubgroup.torsionBy.zmodModule
+  let _ : Module (ZMod ell) Q := AddSubgroup.torsionBy.zmodModule
+  let : Module.Finite (ZMod ell) P :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) P
+  let : Module.Finite (ZMod ell) Q :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) Q
+  let F : P →ₗ[ZMod ell] Q :=
+    { toFun := F0
+      map_add' := F0.map_add
+      map_smul' := by
+        intro a x
+        exact ZMod.map_smul F0 a x }
+  let G' : Q →ₗ[ZMod ell] P :=
+    { toFun := G0
+      map_add' := G0.map_add
+      map_smul' := by
+        intro a x
+        exact ZMod.map_smul G0 a x }
+  have hcomp : G'.comp F = (c : ZMod ell) • LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    simpa [F, G', F0, G0, Int.cast_smul_eq_zsmul] using
+      congrArg (fun k : G →ₗ[ℤ] G => k (x : G)) hgf
+  have hcomp' : F.comp G' = (c : ZMod ell) • LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    simpa [F, G', F0, G0, Int.cast_smul_eq_zsmul] using
+      congrArg (fun k : H →ₗ[ℤ] H => k (x : H)) hfg
+  have hF : Function.Injective F := by
+    intro x y hxy
+    have hz : F (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hcz : (c : ZMod ell) • (x - y) = 0 := by
+      have hh := congrArg (fun k : P →ₗ[ZMod ell] P => k (x - y)) hcomp
+      simpa [LinearMap.comp_apply, hxy, sub_self, Int.cast_smul_eq_zsmul] using hh.symm
+    have hsub : x - y = 0 := hc.smul_eq_zero.mp hcz
+    exact sub_eq_zero.mp hsub
+  have hG : Function.Injective G' := by
+    intro x y hxy
+    have hsub : x - y = 0 := by
+      have hcz : (c : ZMod ell) • (x - y) = 0 := by
+        have hh := congrArg (fun k : Q →ₗ[ZMod ell] Q => k (x - y)) hcomp'
+        simpa [LinearMap.comp_apply, hxy, sub_self, Int.cast_smul_eq_zsmul] using hh.symm
+      exact hc.smul_eq_zero.mp hcz
+    exact sub_eq_zero.mp hsub
+  apply le_antisymm
+  · exact LinearMap.finrank_le_finrank_of_injective hF
+  · exact LinearMap.finrank_le_finrank_of_injective hG
+
+private theorem no_ell_torsion_of_coprime_annihilator
+    {M : Type*} [AddCommGroup M] [Module ℤ M]
+    (ell : ℕ) (c : ℤ) (hc : IsCoprime (ell : ℤ) c)
+    (hann : ∀ x : M, c • x = 0) :
+    ∀ x : M, (ell : ℤ) • x = 0 → x = 0 := by
+  intro x hx
+  obtain ⟨a, b, hab⟩ := hc
+  calc
+    x = (1 : ℤ) • x := by simp
+    _ = (a * (ell : ℤ) + b * c) • x := by rw [hab]
+    _ = 0 := by
+      calc
+        (a * (ell : ℤ) + b * c) • x =
+        (a * (ell : ℤ)) • x + (b * c) • x := add_zsmul _ _ _
+        _ = a • ((ell : ℤ) • x) + b • (c • x) := by
+          rw [mul_zsmul, mul_zsmul]
+        _ = 0 := by rw [hx, hann x, zsmul_zero, zsmul_zero, add_zero]
+
+private theorem weighted_matrix_primary_torsion_finrank_eq {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℤ) (m : Fin n → ℤ)
+    (hmne : ∀ i, m i ≠ 0)
+    (ell : ℕ) (hell : Nat.Prime ell)
+    (hcop : ∀ i, Nat.Coprime ell (Int.natAbs (m i))) :
+    matrixPrimaryTorsionFinrank A ell hell =
+      matrixPrimaryTorsionFinrank (weightedIntegerMatrix A m) ell hell := by
+  classical
+  let D : Matrix (Fin n) (Fin n) ℤ := Matrix.diagonal m
+  let E : Matrix (Fin n) (Fin n) ℤ := Matrix.adjugate D
+  let c : ℤ := Matrix.det D
+  let a : (Fin n → ℤ) →ₗ[ℤ] (Fin n → ℤ) := Matrix.toLin' A
+  let b : (Fin n → ℤ) →ₗ[ℤ] (Fin n → ℤ) :=
+    Matrix.toLin' (weightedIntegerMatrix A m)
+  let d : (Fin n → ℤ) →ₗ[ℤ] (Fin n → ℤ) := Matrix.toLin' D
+  let e : (Fin n → ℤ) →ₗ[ℤ] (Fin n → ℤ) := Matrix.toLin' E
+  have hde : d.comp e = c • LinearMap.id := by
+    dsimp [d, e, c]
+    rw [← Matrix.toLin'_mul, Matrix.mul_adjugate]
+    apply LinearMap.ext
+    intro x
+    funext i
+    change ∑ j, D.det * (if i = j then 1 else 0) * x j = D.det * x i
+    simp
+  have hed : e.comp d = c • LinearMap.id := by
+    dsimp [d, e, c]
+    rw [← Matrix.toLin'_mul, Matrix.adjugate_mul]
+    apply LinearMap.ext
+    intro x
+    funext i
+    change ∑ j, D.det * (if i = j then 1 else 0) * x j = D.det * x i
+    simp
+  have hweighted : d.comp (a.comp d) = b := by
+    simpa [a, b, d, D] using weightedIntegerMatrix_comp A m
+  have hleft : (c • d).comp a = b.comp e := by
+    apply LinearMap.ext
+    intro x
+    have hx := congrArg (fun k => k (e x)) hweighted
+    have hxe := congrArg (fun k => k x) hde
+    simp only [LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.id_apply] at hx hxe ⊢
+    calc
+      c • d (a x) = d (a (c • x)) := by rw [map_smul, map_smul]
+      _ = d (a (d (e x))) := by rw [← hxe]
+      _ = b (e x) := hx
+  have hright : e.comp b = a.comp (c • d) := by
+    apply LinearMap.ext
+    intro x
+    have hx := congrArg (fun k => k x) hweighted
+    have hxd := congrArg (fun k => k (a (d x))) hed
+    simp only [LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.id_apply] at hx hxd ⊢
+    calc
+      e (b x) = e (d (a (d x))) := by rw [← hx]
+      _ = c • a (d x) := hxd
+      _ = a ((c • d) x) := by
+        change c • a (d x) = a (c • d x)
+        exact (map_smul a c (d x)).symm
+  let qA : (Fin n → ℤ) →ₗ[ℤ] moduleCokernel a :=
+    (LinearMap.range a).mkQ
+  let qB : (Fin n → ℤ) →ₗ[ℤ] moduleCokernel b :=
+    (LinearMap.range b).mkQ
+  have hqA : Function.Surjective qA := Submodule.mkQ_surjective _
+  have hfa : LinearMap.range a ≤ LinearMap.ker (qB.comp (c • d)) := by
+    rintro _ ⟨x, rfl⟩
+    apply LinearMap.mem_ker.mpr
+    have hx := congrArg (fun k => k x) hleft
+    simp only [LinearMap.comp_apply] at hx ⊢
+    rw [hx]
+    exact (Submodule.Quotient.mk_eq_zero (LinearMap.range b)).mpr ⟨e x, rfl⟩
+  have hfb : LinearMap.range b ≤ LinearMap.ker (qA.comp e) := by
+    rintro _ ⟨x, rfl⟩
+    apply LinearMap.mem_ker.mpr
+    have hx := congrArg (fun k => k x) hright
+    simp only [LinearMap.comp_apply] at hx ⊢
+    rw [hx]
+    exact (Submodule.Quotient.mk_eq_zero (LinearMap.range a)).mpr ⟨(c • d) x, rfl⟩
+  let fAB : moduleCokernel a →ₗ[ℤ] moduleCokernel b :=
+    (LinearMap.range a).liftQ (qB.comp (c • d)) hfa
+  let gBA : moduleCokernel b →ₗ[ℤ] moduleCokernel a :=
+    (LinearMap.range b).liftQ (qA.comp e) hfb
+  have hgf : gBA.comp fAB = c ^ 2 • LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, rfl⟩ := hqA x
+    simp [fAB, gBA, qA, qB]
+    have hy := congrArg (fun k => k y) hed
+    simp only [LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.id_apply] at hy
+    change qA (e (c • d y)) = (c : ℤ) • (c : ℤ) • qA y
+    rw [map_smul, hy]
+    rw [← qA.map_smul, ← qA.map_smul]
+  have hfg : fAB.comp gBA = c ^ 2 • LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective (LinearMap.range b) x
+    simp [fAB, gBA, qA, qB]
+    have hy := congrArg (fun k => k y) hde
+    simp only [LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.id_apply] at hy
+    change qB (c • d (e y)) = (c : ℤ) • (c : ℤ) • qB y
+    rw [hy]
+    rw [← qB.map_smul, ← qB.map_smul]
+  have hcprim : Nat.Coprime ell (Int.natAbs c) := by
+    have hcprod : Nat.Coprime ell (∏ i : Fin n, Int.natAbs (m i)) := by
+      apply (Nat.coprime_prod_right_iff
+        (t := (Finset.univ : Finset (Fin n)))
+        (s := fun i => Int.natAbs (m i))).mpr
+      intro i hi
+      exact hcop i
+    have hnabs : Int.natAbs (∏ i : Fin n, m i) =
+        ∏ i : Fin n, Int.natAbs (m i) := by
+      induction (Finset.univ : Finset (Fin n)) using Finset.induction_on with
+      | empty => simp
+      | @insert i s hi ih =>
+          rw [Finset.prod_insert hi, Finset.prod_insert hi, Int.natAbs_mul, ih]
+    dsimp [c, D]
+    rw [Matrix.det_diagonal, hnabs]
+    exact hcprod
+  have hcunit : IsUnit ((c ^ 2 : ℤ) : ZMod ell) := by
+    have hcZ : IsCoprime (ell : ℤ) c := by
+      rw [Int.isCoprime_iff_nat_coprime]
+      simpa using hcprim
+    have hcmap := IsCoprime.map hcZ (Int.castRingHom (ZMod ell))
+    have hcmap' : IsCoprime (0 : ZMod ell) (c : ZMod ell) := by
+      simpa [ZMod.intCast_zmod_eq_zero_iff_dvd] using hcmap
+    simpa only [Int.cast_pow] using (isCoprime_zero_left.mp hcmap').pow 2
+  exact torsionBy_finrank_eq_of_comp_smul fAB gBA (c ^ 2)
+    hgf hfg ell hell hcunit
+
 /-! The finite-field dimension bound for the integer recurring matrix. -/
 theorem recurring_symmetric_integer {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (m : Fin n → ℤ) (hsymm : ∀ i j, A i j = A j i)

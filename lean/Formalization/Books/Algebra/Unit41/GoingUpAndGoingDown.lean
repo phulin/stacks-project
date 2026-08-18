@@ -283,7 +283,21 @@ theorem map_into_tensor_algebra_isOpenMap
     [Algebra k R] [Algebra k S] :
     IsOpenMap (PrimeSpectrum.comap
       (tensorRightRingHom (k := k) (A := S) (R := R))) := by
-  sorry
+  let e : R ⊗[k] S ≃+* S ⊗[k] R :=
+    (Algebra.TensorProduct.comm k R S).toRingEquiv
+  have he : IsOpenMap (PrimeSpectrum.comap (e : R ⊗[k] S →+* S ⊗[k] R)) :=
+    (PrimeSpectrum.homeomorphOfRingEquiv e).symm.isOpenMap
+  have hleft : IsOpenMap (PrimeSpectrum.comap
+      (algebraMap R (R ⊗[k] S))) :=
+    PrimeSpectrum.isOpenMap_comap_algebraMap_tensorProduct_of_field
+  have hcomp := hleft.comp he
+  have hring : (e : R ⊗[k] S →+* S ⊗[k] R).comp
+      (algebraMap R (R ⊗[k] S)) =
+      tensorRightRingHom (k := k) (A := S) (R := R) := by
+    ext r
+    simp [e, tensorRightRingHom]
+  rw [← hring, PrimeSpectrum.comap_comp]
+  exact hcomp
 
 /-! ## Localizing below a unique prime -/
 
@@ -306,7 +320,48 @@ theorem unique_prime_over_localize_below
             q₁.LiesOver p' → q₂.LiesOver p' → q₁ = q₂)) :
     Nonempty
       (localizedAtBasePrime (R := R) (S := S) p ≃+* Localization.AtPrime q) := by
-  sorry
+  let M : Submonoid S := p.primeCompl.map (algebraMap R S)
+  have hM : M ≤ q.primeCompl := by
+    rintro x ⟨r, hr, rfl⟩
+    rw [Ideal.mem_primeCompl_iff]
+    exact fun hq => (Ideal.mem_primeCompl_iff.mp hr)
+      ((Ideal.mem_of_liesOver q p r).mpr hq)
+  have hdiv : ∀ x : S, x ∈ q.primeCompl → ∃ m : M, x ∣ (m : S) := by
+    intro x hx
+    by_contra h
+    have hdisj : Disjoint (Ideal.span ({x} : Set S) : Set S) (M : Set S) := by
+      rw [Set.disjoint_iff_forall_ne]
+      intro y hyI hyM
+      obtain ⟨r, hr, rfl⟩ := (Submonoid.mem_map).mp hyM
+      exact h ⟨⟨r, hr⟩, Ideal.mem_span_singleton.mp hyI⟩
+    obtain ⟨Q, hQprime, hspan, hQdisj⟩ :=
+      (Ideal.span ({x} : Set S)).exists_le_prime_disjoint M hdisj
+    letI : Q.IsPrime := hQprime
+    have hQunder : Q.under R ≤ p := by
+      intro r hr
+      by_contra hrp
+      apply Set.disjoint_left.mp hQdisj hr
+      exact ⟨r, hrp, rfl⟩
+    rcases hcase with hgu | ⟨hgd, huniq⟩
+    · obtain ⟨Q', hQQ', hQ'prime, hQ'over⟩ :=
+        letI : Algebra.HasGoingUp R S := hgu
+        Q.exists_ideal_ge_liesOver_of_le (p := Q.under R) (q := p) hQunder
+      have hQ'eq : Q' = q := hunique Q' hQ'prime hQ'over
+      apply hx
+      rw [← hQ'eq]
+      exact hQQ' (hspan (Ideal.mem_span_singleton_self x))
+    · obtain ⟨Q', hQ'Q, hQ'prime, hQ'over⟩ :=
+        letI : Algebra.HasGoingDown R S := hgd
+        q.exists_ideal_le_liesOver_of_le (p := Q.under R) (q := p) hQunder
+      have hQeq : Q' = Q := huniq (Q.under R) (Ideal.IsPrime.under R Q)
+        Q' Q hQ'prime hQprime hQ'over (by infer_instance)
+      apply hx
+      rw [← hQeq]
+      exact hQ'Q (hspan (Ideal.mem_span_singleton_self x))
+  letI : IsLocalization q.primeCompl (Localization M) :=
+    IsLocalization.of_le_of_exists_dvd M q.primeCompl hM hdiv
+  exact ⟨(IsLocalization.algEquiv q.primeCompl (Localization M)
+    (Localization.AtPrime q)).toRingEquiv⟩
 
 /-! ## Generalizations in the support of a finite flat module -/
 

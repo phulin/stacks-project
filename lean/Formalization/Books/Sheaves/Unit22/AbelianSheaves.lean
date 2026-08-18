@@ -339,7 +339,7 @@ theorem abelianFMapComp_stalkMap {X Y Z : TopCat.{v}}
               convert congrArg (fun k => k ≫
                 TopCat.Presheaf.stalkPushforward AddCommGrpCat g
                 ((abelianPresheafPushforward f).obj F.presheaf) (f x)) hmap' using 1 <;>
-                simp only [Category.assoc, abelianSheafPushforward_obj_presheaf] <;>
+                simp only [Category.assoc, abelianSheafPushforward_obj_presheaf] ;
                 rfl
         _ = ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
             ((abelianPresheafPushforward f).obj F.presheaf).germ
@@ -359,7 +359,7 @@ theorem abelianFMapComp_stalkMap {X Y Z : TopCat.{v}}
       rw [hpushG']
       simpa only [abelianPresheafPushforward, abelianPresheafPushforward_obj_obj] using hφmap''
     exact hleft.trans hright.symm
-  simp only [Category.assoc]
+  simp only
   change (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫
       ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
           ((abelianSheafPushforward g).map φ).hom ≫
@@ -368,11 +368,11 @@ theorem abelianFMapComp_stalkMap {X Y Z : TopCat.{v}}
         TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x) = _
   have hφ_assoc := congrArg (fun k => k ≫
       TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x) hφ
-  simp only [Category.assoc] at hφ_assoc
+  simp only at hφ_assoc
   have hφ_assoc' := congrArg
       (fun k => (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫ k)
       hφ_assoc
-  simp only [Category.assoc] at hφ_assoc'
+  simp only at hφ_assoc'
   change (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫
       ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
           ((abelianSheafPushforward g).map φ).hom ≫

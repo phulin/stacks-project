@@ -136,9 +136,9 @@ theorem finite_generation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.Finite R (M : Type w),
-      ∀ (A : Type v) (Q : A → ModuleCat.{w} R),
+      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
         Function.Surjective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{w} R) (A : Type v),
+      ∀ (Q : ModuleCat.{z} R) (A : Type v),
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
       ∀ (A : Type v), Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
@@ -149,9 +149,9 @@ theorem finite_presentation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.FinitePresentation R (M : Type w),
-      ∀ (A : Type v) (Q : A → ModuleCat.{w} R),
+      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
         Function.Bijective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{w} R) (A : Type v),
+      ∀ (Q : ModuleCat.{z} R) (A : Type v),
         Function.Bijective (productTensorMap M (fun _ : A => Q)),
       ∀ (A : Type v), Function.Bijective (tensorModulePowerMap M (A := A))
     ] := by
@@ -178,7 +178,7 @@ theorem mittagLeffler_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       IsMittagLefflerModule M,
-      ∀ (A : Type v) (Q : A → ModuleCat.{w} R),
+      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
         Function.Injective (productTensorMap M Q)
     ] := by
   sorry

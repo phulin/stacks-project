@@ -1,4 +1,7 @@
 import Mathlib.Algebra.Category.Grp.AB
+import Mathlib.Algebra.Homology.ShortComplex.Abelian
+import Mathlib.Algebra.Homology.ShortComplex.FunctorEquivalence
+import Mathlib.Algebra.Homology.ShortComplex.PreservesHomology
 import Mathlib.Algebra.Homology.ShortComplex.Limits
 
 /-!
@@ -42,6 +45,39 @@ noncomputable def productHomology {I : Type u}
 theorem product_abelian_groups_exact {I : Type u}
     (S : I → ShortComplex (AddCommGrpCat.{u})) :
     Nonempty ((productComplex S).homology ≅ productHomology S) := by
-  sorry
+  let J := Discrete I
+  let T : ShortComplex (J ⥤ AddCommGrpCat.{u}) :=
+    (ShortComplex.functorEquivalence J (AddCommGrpCat.{u})).inverse.obj
+      (Discrete.functor S)
+  let F := lim (J := J) (C := AddCommGrpCat.{u})
+  let e : T.homology ≅ Discrete.functor (fun i => (S i).homology) :=
+    Discrete.natIso (fun i =>
+      (T.mapHomologyIso ((evaluation J (AddCommGrpCat.{u})).obj i)).symm ≪≫
+        ShortComplex.homologyMapIso
+          (show T.map ((evaluation J (AddCommGrpCat.{u})).obj i) ≅ S i.as from
+            by simpa [T] using
+              ((ShortComplex.FunctorEquivalence.counitIso J (AddCommGrpCat.{u})).app
+                (Discrete.functor S)).app i))
+  let q : productComplex S ≅ (ShortComplex.limitCone (Discrete.functor S)).pt :=
+    (limit.isLimit (Discrete.functor S)).conePointUniqueUpToIso
+      (ShortComplex.isLimitLimitCone (Discrete.functor S))
+  let r : (ShortComplex.limitCone (Discrete.functor S)).pt ≅ T.map F := by
+    exact ShortComplex.isoMk
+      (show (ShortComplex.limitCone (Discrete.functor S)).pt.X₁ ≅ (T.map F).X₁ from
+        Iso.refl _)
+      (show (ShortComplex.limitCone (Discrete.functor S)).pt.X₂ ≅ (T.map F).X₂ from
+        Iso.refl _)
+      (show (ShortComplex.limitCone (Discrete.functor S)).pt.X₃ ≅ (T.map F).X₃ from
+        Iso.refl _)
+      (by
+        change 𝟙 _ ≫ limMap ((Discrete.functor S).whiskerLeft ShortComplex.π₁Toπ₂) =
+          limMap ((Discrete.functor S).whiskerLeft ShortComplex.π₁Toπ₂) ≫ 𝟙 _
+        simp)
+      (by
+        change 𝟙 _ ≫ limMap ((Discrete.functor S).whiskerLeft ShortComplex.π₂Toπ₃) =
+          limMap ((Discrete.functor S).whiskerLeft ShortComplex.π₂Toπ₃) ≫ 𝟙 _
+        simp)
+  let p : productComplex S ≅ T.map F := q ≪≫ r
+  exact ⟨ShortComplex.homologyMapIso p ≪≫ T.mapHomologyIso F ≪≫ F.mapIso e⟩
 
 end Formalization.Books.Homology.Unit32

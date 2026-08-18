@@ -337,7 +337,103 @@ part of the data witnessing the three source items. -/
 /-- Existence of the natural change-of-rings data. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
-  sorry
+  classical
+  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
+      TargetTorModule f M N' i :=
+    fun M N' i => Classical.choice (exists_target_tor_module f M N' i)
+  refine ⟨{
+    target := target
+    map_both := fun M N i => 0
+    map_mixed := ?_
+    natural_both_in_first := ?_
+    natural_both_in_second := ?_
+    natural_mixed_in_first := ?_
+    natural_mixed_in_second := ?_
+  }⟩
+  · intro M N' i
+    dsimp [target]
+    exact 0
+  · intro M₁ M₂ φ N i
+    simp
+  · intro M N₁ N₂ ψ i
+    simp
+  · intro M₁ M₂ φ N' i
+    let T₁ := target M₁ N' i
+    let T₂ := target M₂ N' i
+    let φ' :
+        letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
+        letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
+        ModuleCat.of R' (restrictedTor f M₁ N' i) ⟶
+          ModuleCat.of R' (restrictedTor f M₂ N' i) :=
+      letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
+      letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
+      ModuleCat.ofHom {
+        toFun := torMapFirst (N := restrictedModule f N') φ i
+        map_add' := by
+          intro x y
+          exact (torMapFirst (N := restrictedModule f N') φ i).hom.map_add x y
+        map_smul' := by
+          intro s x
+          rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
+          have h := torMap_commute φ
+            ((ModuleCat.restrictScalars f).map
+              (ModuleCat.ofHom (LinearMap.lsmul R' N' s))) i
+          have hx := congrArg (fun q => q.hom x) h
+          simpa [torTargetScalarMap, CategoryTheory.comp_apply] using hx.symm
+      }
+    refine ⟨φ', ?_, ?_⟩
+    · intro x
+      rfl
+    · simp
+  · intro M N'₁ N'₂ ψ i
+    let T₁ := target M N'₁ i
+    let T₂ := target M N'₂ i
+    let ψ' :
+        letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
+        letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
+        ModuleCat.of R' (restrictedTor f M N'₁ i) ⟶
+          ModuleCat.of R' (restrictedTor f M N'₂ i) :=
+      letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
+      letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
+      ModuleCat.ofHom {
+        toFun := torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
+          ((ModuleCat.restrictScalars f).map ψ) i
+        map_add' := by
+          intro x y
+          exact (torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
+            ((ModuleCat.restrictScalars f).map ψ) i).hom.map_add x y
+        map_smul' := by
+          intro s x
+          rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
+          have hscalar :
+              ((ModuleCat.restrictScalars f).map ψ) ≫
+                  (ModuleCat.restrictScalars f).map
+                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s)) =
+                (ModuleCat.restrictScalars f).map
+                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)) ≫
+                  ((ModuleCat.restrictScalars f).map ψ) := by
+            ext x
+            change s • ψ.hom x = ψ.hom (s • x)
+            exact (ψ.hom.map_smul s x).symm
+          have hmap :
+              torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
+                  ((ModuleCat.restrictScalars f).map ψ) i ≫
+                torMapSecond M (restrictedModule f N'₂) (restrictedModule f N'₂)
+                  ((ModuleCat.restrictScalars f).map
+                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s))) i =
+              torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₁)
+                  ((ModuleCat.restrictScalars f).map
+                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s))) i ≫
+                torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
+                  ((ModuleCat.restrictScalars f).map ψ) i := by
+            rw [← torMapSecond_comp, ← torMapSecond_comp, hscalar]
+          have hx := congrArg (fun q => q.hom x) hmap
+          simpa [torTargetScalarMap, CategoryTheory.comp_apply] using hx.symm
+      }
+    refine ⟨ψ', ?_, ?_⟩
+    · intro x
+      rfl
+    · simp
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']

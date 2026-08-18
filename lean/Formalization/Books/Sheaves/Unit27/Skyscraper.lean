@@ -939,7 +939,7 @@ theorem moduleSkyscraperStalkAtSupport
     (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
     Nonempty ((moduleStalkFunctor O x).obj
       (moduleSkyscraperSheaf O x A) ≅ A) := by
-  sorry
+  exact (Classical.choice (exists_moduleSkyscraperSheaf O x A)).stalk_at_support
 
 /-- At a specialization of the support, the module stalk is the prescribed
 module with scalars restricted along the canonical stalk specialization map.
@@ -952,7 +952,228 @@ theorem moduleSkyscraperStalkAtSpecialization
       (moduleSkyscraperSheaf O x A) ≅
       (ModuleCat.restrictScalars
         (TopCat.Presheaf.stalkSpecializes O.obj h).hom).obj A) := by
-  sorry
+  let D := Classical.choice (exists_moduleSkyscraperSheaf O x A)
+  let fR := (TopCat.Presheaf.stalkSpecializes O.obj h).hom
+  let φAdd := TopCat.Presheaf.stalkSpecializes D.sheaf.val.presheaf h
+  let φAdd' :
+      (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x'))
+        AddCommGrpCat).obj ((moduleStalkFunctor O x').obj D.sheaf) ⟶
+      (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x'))
+        AddCommGrpCat).obj
+        ((ModuleCat.restrictScalars fR).obj ((moduleStalkFunctor O x).obj D.sheaf)) :=
+    φAdd
+  let φ : (moduleStalkFunctor O x').obj D.sheaf ⟶
+      (ModuleCat.restrictScalars fR).obj ((moduleStalkFunctor O x).obj D.sheaf) :=
+    ModuleCat.homMk φAdd' (by
+      intro r
+      apply ConcreteCategory.hom_ext
+      intro m
+      dsimp [φAdd', moduleStalkFunctor]
+      change (ConcreteCategory.hom
+          (((ModuleCat.restrictScalars fR).obj ((moduleStalkFunctor O x).obj D.sheaf)).smul r))
+          (φAdd m) =
+        φAdd (ConcreteCategory.hom (((moduleStalkFunctor O x').obj D.sheaf).smul r) m)
+      obtain ⟨U, hyU, rU, hrU⟩ :=
+        TopCat.Presheaf.exists_germ_eq O.obj r
+      obtain ⟨V, hyV, mV, hmV⟩ :=
+        TopCat.Presheaf.exists_germ_eq D.sheaf.val.presheaf m
+      let W : Opens X := U ⊓ V
+      let hyW : x' ∈ W := ⟨hyU, hyV⟩
+      let hxW : x ∈ W := ⟨h.mem_open U.isOpen hyU, h.mem_open V.isOpen hyV⟩
+      let rW : O.obj.obj (Opposite.op W) :=
+        O.obj.map (homOfLE (show W ≤ U from inf_le_left)).op rU
+      let mW : D.sheaf.val.obj (Opposite.op W) :=
+        D.sheaf.val.map (homOfLE (show W ≤ V from inf_le_right)).op mV
+      let mW0 : D.sheaf.val.presheaf.obj (Opposite.op W) :=
+        D.sheaf.val.presheaf.map
+          (homOfLE (show W ≤ V from inf_le_right)).op mV
+      have hmW0 : mW0 = mW := by
+        dsimp [mW0, mW]
+        rfl
+      have hrW :
+          TopCat.Presheaf.germ O.obj W x' hyW rW = r := by
+        dsimp [rW]
+        rw [TopCat.Presheaf.germ_res_apply]
+        simpa using hrU
+      have hmW :
+          TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW mW0 = m := by
+        rw [TopCat.Presheaf.germ_res_apply]
+        simpa using hmV
+      rw [← hrW, ← hmW]
+      have hφm :
+          (ConcreteCategory.hom φAdd)
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW)) mW0) =
+            (ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x hxW)) mW0 := by
+        have hh := congrArg (fun k => (ConcreteCategory.hom k) mW0)
+          (TopCat.Presheaf.germ_stalkSpecializes
+            D.sheaf.val.presheaf hyW h)
+        simpa only [φAdd, ConcreteCategory.comp_apply] using hh
+      have hfr :
+          fR ((ConcreteCategory.hom
+            (TopCat.Presheaf.germ O.obj W x' hyW)) rW) =
+            (ConcreteCategory.hom
+              (TopCat.Presheaf.germ O.obj W x hxW)) rW := by
+        have hh := congrArg (fun k => (ConcreteCategory.hom k) rW)
+          (TopCat.Presheaf.germ_stalkSpecializes O.obj hyW h)
+        simpa only [fR, ConcreteCategory.comp_apply] using hh
+      have hsmul' :
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x').obj D.sheaf).smul
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ O.obj W x' hyW)) rW)))
+            ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW)) mW0) =
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW))
+            (rW • mW) := by
+        rw [hmW0]
+        change
+          (ConcreteCategory.hom
+              (((moduleStalkFunctor O x').obj D.sheaf).smul
+                ((ConcreteCategory.hom
+                  (TopCat.Presheaf.germ O.obj W x' hyW)) rW)))
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW)) mW) =
+            (ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW))
+              (rW • mW)
+        exact (PresheafOfModules.germ_ringCat_smul D.sheaf.val x' W hyW rW mW).symm
+      rw [hφm]
+      dsimp [moduleStalkFunctor]
+      change
+        (ConcreteCategory.hom
+          (((moduleStalkFunctor O x).obj D.sheaf).smul
+            (fR ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ O.obj W x' hyW)) rW))))
+          ((ConcreteCategory.hom
+            (TopCat.Presheaf.germ D.sheaf.val.presheaf W x hxW)) mW0) =
+        (ConcreteCategory.hom φAdd)
+          ((ConcreteCategory.hom
+            (((moduleStalkFunctor O x').obj D.sheaf).smul
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ O.obj W x' hyW)) rW)))
+            ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW)) mW0))
+      rw [hfr, hsmul']
+      have hφaction :
+          (ConcreteCategory.hom φAdd)
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW))
+                (rW • mW)) =
+            (ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x hxW))
+              (rW • mW) := by
+        have hh := congrArg (fun k => (ConcreteCategory.hom k) (rW • mW))
+          (TopCat.Presheaf.germ_stalkSpecializes
+            D.sheaf.val.presheaf hyW h)
+        change (ConcreteCategory.hom
+          (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW ≫ φAdd))
+            (rW • mW) =
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ D.sheaf.val.presheaf W x hxW))
+            (rW • mW) at hh
+        exact hh
+      rw [hφaction]
+      exact (PresheafOfModules.germ_ringCat_smul D.sheaf.val x W hxW rW mW).symm
+    )
+  letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+  let cY := skyscraperPresheafStalkOfSpecializes
+    (p₀ := x) (A := AddCommGrpCat.of (↑A)) h
+  let cX := skyscraperPresheafStalkOfSpecializes
+    (p₀ := x) (A := AddCommGrpCat.of (↑A)) (specializes_refl x)
+  have hSpec :
+      TopCat.Presheaf.stalkSpecializes
+          (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) h =
+        (cY.hom ≫ cX.inv) := by
+    apply TopCat.Presheaf.stalk_hom_ext
+    intro U hyU
+    apply (cancel_mono cX.hom).1
+    simp only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
+    rw [← Category.assoc]
+    rw [TopCat.Presheaf.germ_stalkSpecializes]
+    rw [show (TopCat.Presheaf.germ
+        (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x' hyU) ≫ cY.hom =
+        eqToHom (if_pos (h.mem_open U.isOpen hyU)) by
+          dsimp [cY]
+          exact germ_skyscraperPresheafStalkOfSpecializes_hom
+            (p₀ := x) (A := AddCommGrpCat.of (↑A)) h U hyU]
+    rw [show (TopCat.Presheaf.germ
+        (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x (h.mem_open U.isOpen hyU)) ≫
+          cX.hom =
+        eqToHom (if_pos ((specializes_refl x).mem_open U.isOpen
+          (h.mem_open U.isOpen hyU))) by
+          dsimp [cX]
+          exact germ_skyscraperPresheafStalkOfSpecializes_hom
+            (p₀ := x) (A := AddCommGrpCat.of (↑A)) (specializes_refl x) U _]
+  haveI : IsIso (TopCat.Presheaf.stalkSpecializes
+      (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) h) := by
+    rw [hSpec]
+    infer_instance
+  let e : D.sheaf.val.presheaf ≅
+      (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf := by
+    simpa [abelianSkyscraperSheaf] using
+      (Classical.choice D.underlying_iso)
+  let eX :
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) D.sheaf.val.presheaf x ≅
+        TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+          (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf x :=
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso e
+  let eY :
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) D.sheaf.val.presheaf x' ≅
+        TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+          (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf x' :=
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat x').mapIso e
+  let cXF :
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+          (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf x ≅
+        AddCommGrpCat.of (↑A) := cX
+  let cYF :
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+          (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf x' ≅
+        AddCommGrpCat.of (↑A) := cY
+  have hnat :
+      φAdd ≫ (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map e.hom =
+        (TopCat.Presheaf.stalkFunctor AddCommGrpCat x').map e.hom ≫
+          (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf.stalkSpecializes h := by
+    simpa [φAdd] using
+      (TopCat.Presheaf.stalkSpecializes_stalkFunctor_map
+        (C := AddCommGrpCat.{v}) e.hom h)
+  have hSpecF :
+      (skyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf.stalkSpecializes h =
+        cYF.hom ≫ cXF.inv := by
+    simpa [skyscraperSheaf, cYF, cXF] using hSpec
+  set_option backward.isDefEq.respectTransparency false in
+  have hφIso : IsIso φAdd := by
+    let q := eY ≪≫ cYF ≪≫ cXF.symm ≪≫ eX.symm
+    have hq : φAdd = q.hom := by
+      apply (cancel_mono eX.hom).1
+      simpa [q, eX, eY, hSpecF, Iso.trans_hom, Iso.symm_hom, Category.assoc] using hnat
+    haveI : IsIso φAdd := by
+      rw [hq]
+      dsimp [q]
+      infer_instance
+    exact inferInstance
+  letI := hφIso
+  let φIso : (moduleStalkFunctor O x').obj D.sheaf ≅
+      (ModuleCat.restrictScalars fR).obj ((moduleStalkFunctor O x).obj D.sheaf) :=
+    ModuleCat.isoMk (asIso φAdd) (by
+      intro r
+      apply ConcreteCategory.hom_ext
+      intro m
+      exact (φ.hom'.map_smul' r m).symm)
+  have hφIso' : φIso.hom = φ := by
+    apply (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x'))
+      AddCommGrpCat).map_injective
+    rfl
+  haveI : IsIso φ := by
+    rw [← hφIso']
+    infer_instance
+  let p : (moduleStalkFunctor O x).obj D.sheaf ≅ A := by
+    simpa [moduleStalkFunctor] using (Classical.choice D.stalk_at_support)
+  let p' := (ModuleCat.restrictScalars fR).mapIso p
+  refine ⟨asIso φ ≪≫ p'⟩
 
 /-- Closure-form version of the module stalk calculation at the support. -/
 theorem moduleSkyscraperStalkOfMemClosure
@@ -975,7 +1196,9 @@ theorem moduleSkyscraperStalkAwayFromClosure
     {x' : X} (h : x' ∉ closure ({x} : Set X)) :
     Nonempty ((moduleStalkFunctor O x').obj
       (moduleSkyscraperSheaf O x A) ≅ 0) := by
-  sorry
+  apply (Classical.choice (exists_moduleSkyscraperSheaf O x A)).stalk_away
+  intro hs
+  exact h ((skyscraper_specializes_iff_mem_closure x x').1 hs)
 
 /-! ## The stalk/skyscraper adjunctions -/
 

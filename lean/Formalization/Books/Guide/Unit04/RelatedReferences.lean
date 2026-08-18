@@ -323,12 +323,13 @@ structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
     torsor.action U a (pair U p q) = pair U (P.action U a p) q
   pair_action_right : ∀ (U : (Over C X)ᵒᵖ)
     (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
-    torsor.action U a (pair U p q) = pair U p (Q.action U a q)
+    torsor.action U a (pair U p q) = pair U p (Q.action U (-a) q)
 
 /-- Existence of the sheafified quotient defining the contracted product. -/
 theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    [HasWeakSheafify (J.over X) (Type w)]
     (P Q : SiteTorsor J G X) :
     Nonempty (SiteTorsorContractedProductData.{t, w, v, u} P Q) := by
   sorry
@@ -337,6 +338,7 @@ theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
 noncomputable def siteTorsorContractedProduct {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    [HasWeakSheafify (J.over X) (Type w)]
     (P Q : SiteTorsor.{t, w, v, u} J G X) : SiteTorsor.{t, w, v, u} J G X :=
   (Classical.choice (siteTorsorContractedProductData_exists P Q)).torsor
 
@@ -345,6 +347,7 @@ theorem siteTorsorContractedProduct_respects_equivalence
     {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    [HasWeakSheafify (J.over X) (Type w)]
     {P P' Q Q' : SiteTorsor.{t, w, v, u} J G X}
     (eP : Nonempty (SiteTorsorEquivalence P P'))
     (eQ : Nonempty (SiteTorsorEquivalence Q Q')) :
@@ -357,6 +360,7 @@ theorem siteTorsorContractedProduct_respects_equivalence
 noncomputable def siteTorsorClassContractedProduct {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P Q : SiteTorsorClass J G X) : SiteTorsorClass J G X := by
   refine Quotient.lift (fun P => Quotient.lift
     (fun Q => Quotient.mk _ (siteTorsorContractedProduct P Q)) ?_ ) ?_ P Q
@@ -388,18 +392,21 @@ noncomputable def siteTorsorClassInverse {C : Type u} [Category.{v} C]
 
 theorem siteTorsorClassContractedProduct_zero_left {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X (siteTorsorClassZero J G X) P = P := by
   sorry
 
 theorem siteTorsorClassContractedProduct_zero_right {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X P (siteTorsorClassZero J G X) = P := by
   sorry
 
 theorem siteTorsorClassContractedProduct_inverse_left {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X (siteTorsorClassInverse J G X P) P =
       siteTorsorClassZero J G X := by
@@ -407,6 +414,7 @@ theorem siteTorsorClassContractedProduct_inverse_left {C : Type u} [Category.{v}
 
 theorem siteTorsorClassContractedProduct_inverse_right {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X P (siteTorsorClassInverse J G X P) =
       siteTorsorClassZero J G X := by
@@ -414,6 +422,7 @@ theorem siteTorsorClassContractedProduct_inverse_right {C : Type u} [Category.{v
 
 theorem siteTorsorClassContractedProduct_assoc {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P Q R : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X
         (siteTorsorClassContractedProduct G X P Q) R =
@@ -423,6 +432,7 @@ theorem siteTorsorClassContractedProduct_assoc {C : Type u} [Category.{v} C]
 
 theorem siteTorsorClassContractedProduct_comm {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) (Type w)]
     (P Q : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X P Q =
       siteTorsorClassContractedProduct G X Q P := by

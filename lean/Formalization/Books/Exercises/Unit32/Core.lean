@@ -1,12 +1,17 @@
 import Formalization.Books.Categories.Unit23.ExactFunctors
-import Formalization.Books.Modules.Unit08.LocallyGenerated
 import Formalization.Books.Sheaves.Unit07.Sheaves
+import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit11.Stalks
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
-import Formalization.Books.Sheaves.Unit27.Skyscraper
-import Formalization.Books.Sheaves.Unit31.OpenImmersions
 import Mathlib.Data.ZMod.Basic
+import Mathlib.Algebra.Category.Grp.Zero
+import Mathlib.CategoryTheory.Sites.ConstantSheaf
+import Mathlib.Topology.Sheaves.AddCommGrpCat
+import Mathlib.Topology.Sheaves.Limits
+import Mathlib.Topology.Sheaves.Functors
+import Mathlib.Topology.Sheaves.SheafCondition.Sites
+import Mathlib.Topology.Sheaves.Skyscraper
 import Mathlib.CategoryTheory.Sites.Limits
 
 /-!
@@ -29,12 +34,128 @@ open Formalization.Books.Sheaves.Unit08
 open Formalization.Books.Sheaves.Unit11
 open Formalization.Books.Sheaves.Unit15
 open Formalization.Books.Sheaves.Unit16
-open Formalization.Books.Sheaves.Unit27
-open Formalization.Books.Sheaves.Unit31
 
 universe u v w
 
 noncomputable section
+
+/-! ## Open subspaces and extension by an initial object
+
+The open-immersion chapter has a transitive dependency on a currently
+unfinished module-presheaf file.  The constructions below are the same
+sectionwise initial-object construction, expressed directly with the stable
+topological-sheaf API needed by this chapter. -/
+
+abbrev openSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
+  (Opens.toTopCat X).obj U
+
+abbrev openInclusion {X : TopCat.{v}} (U : Opens X) : openSubspace U ⟶ X :=
+  Opens.inclusion' U
+
+noncomputable abbrev openPresheafRestriction (C : Type u) [Category.{v} C]
+    [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
+    TopCat.Presheaf C X ⥤ TopCat.Presheaf C (openSubspace U) :=
+  TopCat.Presheaf.pullback C (openInclusion U)
+
+abbrev openSheafRestriction (C : Type u) [Category.{v} C]
+    {X : TopCat.{v}} (U : Opens X) :
+    TopCat.Sheaf C X ⥤ TopCat.Sheaf C (openSubspace U) :=
+  TopologicalSpace.Opens.sheafRestrict U
+
+noncomputable def openPresheafExtensionByInitial (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X) :
+    TopCat.Presheaf C (openSubspace U) ⥤ TopCat.Presheaf C X := by
+  classical
+  let j := Opens.map (openInclusion U)
+  exact {
+    obj := fun F => {
+      obj := fun V => if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
+      map := by
+        intro V W i
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+          exact eqToHom (by simp [hV]) ≫ F.map (j.op.map i) ≫
+            eqToHom (by simp [hW])
+        · exact eqToHom (by simp [hV]) ≫ initial.to _
+      map_id := by
+        intro V
+        by_cases hV : V.unop ≤ U
+        · simp [hV]
+        · simp only [if_neg hV]
+          apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+      map_comp := by
+        intro V W T i k
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+          have hT : T.unop ≤ U := by
+            exact (show T.unop ≤ W.unop from leOfHom k.unop).trans hW
+          simp [hV, hW, hT, Functor.map_comp]
+        · simp [hV]
+    }
+    map := fun {F G} φ => {
+      app := fun V => if hV : V.unop ≤ U then
+          eqToHom (by simp [hV]) ≫ φ.app (j.op.obj V) ≫
+            eqToHom (by simp [hV])
+        else eqToHom (by simp [hV]) ≫ initial.to _
+      naturality := by
+        intro V W i
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+          simp [hV, hW]
+        · simp [hV]
+      }
+    map_id := by
+      intro F
+      ext V
+      dsimp
+      split_ifs with hV
+      · simp
+      · apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+    map_comp := by
+      intro F G H φ ψ
+      ext V
+      dsimp
+      split_ifs with hV
+      · simp
+      · apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+  }
+
+noncomputable def openSheafExtensionByInitial (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    TopCat.Sheaf C (openSubspace U) ⥤ TopCat.Sheaf C X :=
+  TopCat.Sheaf.forget C (openSubspace U) ⋙
+    openPresheafExtensionByInitial C U ⋙
+    CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) C
+
+noncomputable abbrev openSetSheafExtensionByEmpty
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
+    Sh.{v, v} (openSubspace U) ⥤ Sh.{v, v} X :=
+  openSheafExtensionByInitial (Type v) U
+
+noncomputable abbrev openAbelianSheafExtensionByZero
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} (openSubspace U) ⥤
+      Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
+  openSheafExtensionByInitial AddCommGrpCat U
+
+noncomputable def openSheafExtensionAdjunction (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    openSheafExtensionByInitial C U ⊣ openSheafRestriction C U := by
+  sorry
+
+noncomputable abbrev openAbelianSheafExtensionAdjunction
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
+    openAbelianSheafExtensionByZero U ⊣
+      openSheafRestriction AddCommGrpCat U :=
+  openSheafExtensionAdjunction AddCommGrpCat U
 
 /-! ## Pushforward, pullback, and open immersions -/
 
@@ -73,7 +194,7 @@ noncomputable def extensionByEmptyAdjunction {X : TopCat.{v}} (U : Opens X) :
 noncomputable abbrev extensionByZero {X : TopCat.{v}} (U : Opens X) :
     Formalization.Books.Sheaves.Unit08.Ab.{v, v} (openSubspace U) ⥤
       Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
-  openAbelianSheafExtensionFunctor U
+  openAbelianSheafExtensionByZero U
 
 /-- Restriction of abelian sheaves to an open subspace. -/
 noncomputable abbrev abelianRestrictionToOpen {X : TopCat.{v}} (U : Opens X) :
@@ -86,10 +207,47 @@ noncomputable def extensionByZeroAdjunction {X : TopCat.{v}} (U : Opens X) :
     extensionByZero U ⊣ abelianRestrictionToOpen U :=
   openAbelianSheafExtensionAdjunction U
 
+/-! ## Integral generators and local generation -/
+
+noncomputable def integralConstantSheaf {X : TopCat.{v}} :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
+  (CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat).obj (AddCommGrpCat.of (ULift.{v} ℤ))
+
+noncomputable def integralDirectSum {X : TopCat.{v}} (I : Type v) :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
+  letI : HasColimitsOfShape (Discrete I)
+      (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfShape
+      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
+  ∐ fun _ : I => integralConstantSheaf (X := X)
+
+noncomputable def additiveGlobalGenerationMap
+    {X : TopCat.{v}}
+    {F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X}
+    {I : Type v}
+    (s : I → (integralConstantSheaf (X := X) ⟶ F)) :
+    integralDirectSum I ⟶ F :=
+  letI : HasColimitsOfShape (Discrete I)
+      (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfShape
+      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
+  Cofan.IsColimit.desc (coproductIsCoproduct _) s
+
+def additiveGloballyGenerated {X : TopCat.{v}}
+    (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) : Prop :=
+  ∃ (I : Type v) (s : I → (integralConstantSheaf (X := X) ⟶ F)),
+    Epi (additiveGlobalGenerationMap s)
+
+def additiveLocallyGenerated {X : TopCat.{v}}
+    (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) : Prop :=
+  ∀ x : X, ∃ U : Opens X, x ∈ U ∧
+    additiveGloballyGenerated ((openSheafRestriction AddCommGrpCat U).obj F)
+
 /-- The integral constant sheaf used in the generation exercise. -/
 noncomputable abbrev integerConstantSheaf {X : TopCat.{v}} :
     Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
-  Formalization.Books.Modules.Unit08.integralConstantSheaf
+  integralConstantSheaf (X := X)
 
 /-- Extension by zero of the integral constant sheaf on an open. -/
 noncomputable def integerExtensionByZero {X : TopCat.{v}} (U : Opens X) :
@@ -99,8 +257,13 @@ noncomputable def integerExtensionByZero {X : TopCat.{v}} (U : Opens X) :
 
 /-! ## The real-line skyscraper example -/
 
+def IsSetSkyscraperSheaf {X : TopCat.{v}} (F : Sh.{v, v} X) : Prop :=
+  by
+    classical
+    exact ∃ x : X, ∃ A : Type v, Nonempty (F ≅ skyscraperSheaf x A)
+
 /-- The real line as a topological category. -/
-abbrev realLine : TopCat := Formalization.Books.Modules.Unit08.realLine
+abbrev realLine : TopCat := TopCat.of ℝ
 
 /-- The origin of the real line. -/
 abbrev realOrigin : realLine := (0 : ℝ)
@@ -119,7 +282,7 @@ noncomputable def realRingConstantZModTwo : TopCat.Sheaf CommRingCat realLine :=
 
 /-- The skyscraper sheaf at the origin with value `ZMod 2`. -/
 noncomputable def realOriginSkyscraper : Sh.{0, 0} realLine :=
-  Formalization.Books.Sheaves.Unit27.setSkyscraperSheaf realOrigin (ZMod 2)
+  by classical exact skyscraperSheaf realOrigin (ZMod 2)
 
 /-! The source writes this skyscraper as the direct image from the closed
 singleton `{0}`.  We keep the concrete direct-image presentation alongside
@@ -153,16 +316,18 @@ noncomputable def realConstantZModTwoStalkMap :
 /-- The canonical map from the constant sheaf to the origin skyscraper. -/
 noncomputable def realConstantToOriginSkyscraper :
     realConstantZModTwo ⟶ realOriginSkyscraper :=
-  (Formalization.Books.Sheaves.Unit27.setStalkSkyscraperHomEquiv
-    realOrigin realConstantZModTwo (ZMod 2))
-    (TypeCat.ofHom realConstantZModTwoStalkMap)
+  by
+    classical
+    exact (stalkSkyscraperSheafAdjunction realOrigin).homEquiv
+      realConstantZModTwo (ZMod 2) (TypeCat.ofHom realConstantZModTwoStalkMap)
 
 /-- The zero map with the same source and target as the canonical map. -/
 noncomputable def realConstantToOriginSkyscraperZero :
     realConstantZModTwo ⟶ realOriginSkyscraper :=
-  (Formalization.Books.Sheaves.Unit27.setStalkSkyscraperHomEquiv
-    realOrigin realConstantZModTwo (ZMod 2))
-    (TypeCat.ofHom (fun _ => 0))
+  by
+    classical
+    exact (stalkSkyscraperSheafAdjunction realOrigin).homEquiv
+      realConstantZModTwo (ZMod 2) (TypeCat.ofHom (fun _ => 0))
 
 /-- The kernel subsheaf of the canonical constant-to-skyscraper map. -/
 noncomputable def realKernelSheaf : Sh.{0, 0} realLine :=
@@ -185,14 +350,14 @@ noncomputable def realAbelianConstantZModTwo :
 /-- The additive skyscraper sheaf at the origin with value `ZMod 2`. -/
 noncomputable def realAbelianOriginSkyscraper :
     Formalization.Books.Sheaves.Unit08.Ab.{0, 0} realLine :=
-  Formalization.Books.Sheaves.Unit27.abelianSkyscraperSheaf realOrigin
-    (AddCommGrpCat.of (ZMod 2))
+  by classical exact skyscraperSheaf realOrigin (AddCommGrpCat.of (ZMod 2))
 
 /-- The sections on the top open of the origin skyscraper are its value. -/
 noncomputable def realOriginSkyscraperTopSectionsIso :
     realAbelianOriginSkyscraper.presheaf.obj (op (⊤ : Opens realLine)) ≅
       AddCommGrpCat.of (ZMod 2) := by
   classical
+  dsimp [realAbelianOriginSkyscraper]
   change (if realOrigin ∈ (⊤ : Opens realLine) then AddCommGrpCat.of (ZMod 2)
   else terminal AddCommGrpCat) ≅ AddCommGrpCat.of (ZMod 2)
   have h : realOrigin ∈ (⊤ : Opens realLine) := by simp
@@ -202,6 +367,7 @@ noncomputable def realOriginSkyscraperTopSectionsIso :
 constant-sheaf adjunction and the top-open section of the skyscraper. -/
 noncomputable def realAbelianConstantToOriginSkyscraper :
   realAbelianConstantZModTwo ⟶ realAbelianOriginSkyscraper :=
+  letI : ∀ U : Opens realLine, Decidable (realOrigin ∈ U) := fun _ => Classical.dec _
   let hTop : IsTerminal (⊤ : Opens realLine) :=
     isTerminalTop
   ((CategoryTheory.constantSheafAdj

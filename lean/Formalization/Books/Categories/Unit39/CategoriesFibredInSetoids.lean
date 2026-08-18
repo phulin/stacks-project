@@ -418,19 +418,62 @@ theorem fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf
     (fibredSetoid_object_presheaf_exists p hp)).1
 
 /- The objectwise equivalences above do not by themselves preserve pullback
-   along arrows of `C`.  The coherent form of the quotient construction is
-   the representability statement below: the chosen object-class presheaf is
-   representable exactly when the original fibred category is equivalent over
-   `C` to a slice.  This is the interface used by Unit 40 in place of making
-   arbitrary objectwise equivalence choices.
- -/
+   along arrows of `C`.  The following two implications isolate the coherent
+   work needed by Unit 40.
+
+   Forward roadmap:
+
+   1. Unpack a representation of `fibredSetoidObjectPresheaf p hp` by `X` as
+      a natural isomorphism from `representablePresheaf X`.
+   2. Turn that natural isomorphism into an equivalence over `C` between the
+      two Grothendieck constructions.  This is the missing reusable
+      `setPresheafProjection`-respects-natural-isomorphisms lemma.
+   3. Compose its inverse with
+      `representable_presheaf_slice_equivalence X` and with
+      `fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp`.
+
+   Reverse roadmap:
+
+   1. Compose the supplied equivalence to `Over.forget X` with
+      `representable_presheaf_slice_equivalence X`.
+   2. Compare that composite with the chosen equivalence from `p` to the
+      object-class Grothendieck construction.
+   3. Use full faithfulness and essential surjectivity on fibres to construct
+      a natural isomorphism
+      `representablePresheaf X ≅ fibredSetoidObjectPresheaf p hp`; package
+      it with `Functor.IsRepresentable.mk'`.
+
+   The two reusable categorical lemmas exposed by these proofs should be:
+   (a) natural-isomorphic set-valued presheaves have fibred-equivalent
+   Grothendieck constructions, and (b) `IsFibredEquivalenceOver` is symmetric.
+   They belong next to the corresponding constructions in Units 38 and 36;
+   keeping the implications separate prevents Unit 40 from depending on the
+   implementation details. -/
+theorem fibredSetoidObjectPresheaf_isRepresentable_of_exists_slice
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p)
+    (h : ∃ X : C, IsFibredEquivalenceOver p (Over.forget X)) :
+    Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp) := by
+  sorry
+
+theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p)
+    (h : Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp)) :
+    ∃ X : C, IsFibredEquivalenceOver p (Over.forget X) := by
+  sorry
+
 theorem fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
     Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp) ↔
       ∃ X : C, IsFibredEquivalenceOver p (Over.forget X) := by
-  sorry
+  constructor
+  · exact fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable p hp
+  · exact fibredSetoidObjectPresheaf_isRepresentable_of_exists_slice p hp
 
 abbrev setoidificationCategory
     {S : Type uS} [Category.{vS} S]

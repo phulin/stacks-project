@@ -42,12 +42,12 @@ theorem injective_iff_characterizations
         (∀ B : C, ∀ e : Ext B I, e = 0) := by
   constructor
   · intro hI
-    letI : Injective I := hI
+    let : Injective I := hI
     refine ⟨?_, ?_⟩
     · let hP : (preadditiveYoneda.obj I).PreservesEpimorphisms :=
         (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj I).mp hI
-      letI : (preadditiveYoneda.obj I).PreservesEpimorphisms := hP
-      letI : (preadditiveYoneda.obj I).PreservesHomology := by
+      let : (preadditiveYoneda.obj I).PreservesEpimorphisms := hP
+      let : (preadditiveYoneda.obj I).PreservesHomology := by
         apply Functor.preservesHomology_of_preservesEpis_and_kernels
       change PreservesFiniteLimits (preadditiveYoneda.obj I) ∧
         PreservesFiniteColimits (preadditiveYoneda.obj I)
@@ -76,7 +76,7 @@ theorem injective_iff_characterizations
                 simp [E.zero]
             comm_right := by
               dsimp [splitExtension]
-              simp [i, s, Extension.toShortComplex] }
+              simp [i, s] }
         let g : ExtensionHom (splitExtension I B) E :=
           { middle := by simpa [splitExtension] using i.inv
             comm_left := by
@@ -104,7 +104,7 @@ theorem injective_iff_characterizations
     rcases h with ⟨hExact, _, _⟩
     change PreservesFiniteLimits (preadditiveYoneda.obj I) ∧
       PreservesFiniteColimits (preadditiveYoneda.obj I) at hExact
-    letI : PreservesFiniteColimits (preadditiveYoneda.obj I) := hExact.2
+    let : PreservesFiniteColimits (preadditiveYoneda.obj I) := hExact.2
     apply (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj I).mpr
     infer_instance
 

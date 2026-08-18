@@ -305,6 +305,7 @@ noncomputable def productTotalDifferential
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
+  /- Prior attempt:
   unfold productTotalDifferential productTotalTerm
   apply Pi.hom_ext
   intro p
@@ -364,17 +365,15 @@ theorem productTotalDifferential_comp_zero
           eqToHom (by congr 1 <;> ring) ≫
         A.d1 (p - 1) (n + 1 - (p - 1)) ≫
           eqToHom (by congr 1 <;> ring) := by
-    rw [← eqToHom_naturality_assoc
-      (fun x : ℤ × ℤ => A.d2 x.1 x.2)
-      (show (p, n - (p - 1) + 1) = (p, n + 1 - p) by
-        congr 1 <;> ring)
-      (eqToHom (by congr 1 <;> ring))]
-    rw [← eqToHom_naturality_assoc
-      (fun x : ℤ × ℤ => A.d1 x.1 x.2)
-      (show (p - 1, n - (p - 1) + 1) =
-          (p - 1, n + 1 - (p - 1)) by
-        congr 1 <;> ring)
-      (eqToHom (by congr 1 <;> ring))]
+    simp only [Category.assoc]
+    simp_rw [← eqToHom_naturality_assoc
+      (fun q : ℤ => A.d2 p q)
+      (show n - (p - 1) = n + 1 - p by ring)
+      ]
+    erw [← eqToHom_naturality_assoc
+      (fun q : ℤ => A.d1 (p - 1) q)
+      (show n - (p - 1) + 1 = n + 1 - (p - 1) by
+        congr 1 <;> ring)]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.comm (p - 1) (n - (p - 1))).symm
@@ -393,9 +392,9 @@ theorem productTotalDifferential_comp_zero
           eqToHom (by congr 1 <;> ring) ≫
           A.d2 p (n + 1 - p) ≫
           eqToHom (by congr 1 <;> ring) = 0 := by
-    simpa [totalD2Component, Category.assoc] using
-      congrArg (fun f =>
-        Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫ f) h22
+    change Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
+        (totalD2Component A n p ≫ totalD2Component A (n + 1) p) = 0
+    rw [h22, comp_zero]
   have hcomm' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
           A.d1 (p - 1) (n - (p - 1)) ≫
@@ -411,6 +410,8 @@ theorem productTotalDifferential_comp_zero
       congrArg (fun f =>
         Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫ f) hcomm
   rw [h11', hcomm', h22']
+  -/
+  sorry
 
 /-- The product total cochain complex associated to a double complex. -/
 noncomputable def productTotalComplex

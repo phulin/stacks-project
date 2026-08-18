@@ -1785,7 +1785,52 @@ theorem padic_quadratic_inverse_not_polynomial
     (p : ℕ) [Fact p.Prime] :
     ¬ IsPolynomialRestriction (Set.univ : Set (Fin 1 → ℚ_[p]))
       (padicQuadraticInverse p) := by
-  sorry
+  rintro ⟨q, hq⟩
+  let r : MvPolynomial (Fin 1) ℚ_[p] := q * padicQuadratic p - 1
+  have hden : ∀ x : Fin 1 → ℚ_[p], x 0 ^ 2 - (p : ℚ_[p]) ≠ 0 := by
+    intro x hx
+    have hEq : x 0 ^ 2 = (p : ℚ_[p]) := sub_eq_zero.mp hx
+    have hval := congrArg Padic.valuation hEq
+    simp only [Padic.valuation_pow, Padic.valuation_p] at hval
+    exact Int.not_even_one ⟨(x 0).valuation, by
+      calc
+        (1 : ℤ) = (2 : ℤ) * (x 0).valuation := hval.symm
+        _ = (x 0).valuation + (x 0).valuation := by ring⟩
+  have hr_x : ∀ x : Fin 1 → ℚ_[p], MvPolynomial.aeval x r = 0 := by
+    intro x
+    have hqval := hq ⟨x, Set.mem_univ _⟩
+    dsimp [padicQuadraticInverse] at hqval
+    dsimp [r]
+    rw [map_sub, map_mul, map_one]
+    rw [← hqval]
+    simp [padicQuadratic]
+    field_simp [hden x]
+    ring
+  have hr : r = 0 := by
+    apply MvPolynomial.funext
+    intro x
+    simpa [MvPolynomial.aeval_def] using hr_x x
+  have hprod : q * padicQuadratic p = 1 := by
+    dsimp [r] at hr
+    exact sub_eq_zero.mp hr
+  have hunit : IsUnit (padicQuadratic p) := by
+    apply IsUnit.of_mul_eq_one q
+    simpa [mul_comm] using hprod
+  obtain ⟨s, hs, hC⟩ :=
+    (MvPolynomial.isUnit_iff_eq_C_of_isReduced.mp hunit)
+  have h0 := congrArg
+    (fun t : MvPolynomial (Fin 1) ℚ_[p] =>
+      MvPolynomial.aeval (fun _ : Fin 1 => (0 : ℚ_[p])) t) hC
+  have h1 := congrArg
+    (fun t : MvPolynomial (Fin 1) ℚ_[p] =>
+      MvPolynomial.aeval (fun _ : Fin 1 => (1 : ℚ_[p])) t) hC
+  simp [padicQuadratic] at h0 h1
+  have hone : (1 : ℚ_[p]) = 0 := by
+    calc
+      (1 : ℚ_[p]) = (1 - (p : ℚ_[p])) - (-p) := by ring
+      _ = s - s := by rw [h1, h0]
+      _ = 0 := sub_self s
+  exact one_ne_zero hone
 
 /-- A regular function on the p-adic affine line which is not a polynomial. -/
 theorem exists_padic_regular_function_not_polynomial

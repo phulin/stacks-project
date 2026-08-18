@@ -874,15 +874,14 @@ theorem deRhamGamma_balanced
         (PiTensorProduct.tprod A (Function.update ω j (f • ω j))) := by
   sorry
 
-/-- The natural tensor-to-exterior-power quotient map. -/
+/-- The natural tensor-to-exterior-power map on pure tensors. -/
 theorem deRhamExteriorPowerTensorMap_exists
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ) :
     Nonempty
       {q : PiTensorProduct A (fun _ : Fin p => deRhamTerm A B 1) →ₗ[A]
           deRhamTerm A B p //
-        Function.Surjective q ∧
-          ∀ ω, q (PiTensorProduct.tprod A ω) =
-            deRhamPureWedgeTerms (A := A) (B := B) p ω} := by
+        ∀ ω, q (PiTensorProduct.tprod A ω) =
+          deRhamPureWedgeTerms (A := A) (B := B) p ω} := by
   sorry
 
 noncomputable def deRhamExteriorPowerTensorMap
@@ -893,10 +892,10 @@ noncomputable def deRhamExteriorPowerTensorMap
     (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) p)).1
 
 theorem deRhamExteriorPowerTensorMap_surjective
-    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ) :
+    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)
+    (hp : 1 ≤ p) :
     Function.Surjective (deRhamExteriorPowerTensorMap (A := A) (B := B) p) := by
-  exact (Classical.choice
-    (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) p)).2.1
+  sorry
 
 theorem deRhamExteriorPowerTensorMap_on_pure_tensor
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)
@@ -905,7 +904,7 @@ theorem deRhamExteriorPowerTensorMap_on_pure_tensor
         (PiTensorProduct.tprod A ω) =
       deRhamPureWedgeTerms (A := A) (B := B) p ω := by
   exact (Classical.choice
-    (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) p)).2.2 ω
+    (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) p)).2 ω
 
 theorem deRhamExteriorPowerTensorMap_kernel_span
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)

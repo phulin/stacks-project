@@ -2,6 +2,7 @@ import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Algebra.Module.Projective
 import Mathlib.LinearAlgebra.Quotient.Basic
+import Mathlib.LinearAlgebra.Projection
 import Mathlib.SetTheory.Ordinal.Basic
 
 /-!
@@ -171,9 +172,11 @@ theorem isDirectSumOfCountablyGeneratedModules_iff_hasKaplanskyDevissage
 /-- A direct summand of a direct sum of countably generated modules is again a
 direct sum of countably generated modules. -/
 theorem isDirectSumOfCountablyGeneratedModules_of_isComplemented
-    {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
+    {R : Type u} {M P : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup P] [Module R P]
     (hM : IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M))
-    (P : Submodule R M) (hP : IsComplemented P) :
+    (hP : ∃ Q : Submodule R M,
+      IsComplemented Q ∧ Nonempty (P ≃ₗ[R] Q)) :
     IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R P) := by
   sorry
 

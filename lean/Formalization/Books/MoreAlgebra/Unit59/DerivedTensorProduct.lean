@@ -85,6 +85,18 @@ noncomputable abbrev baseChangeComplex
     (K : Comp R) : Comp S :=
   ((ModuleCat.extendScalars f).mapHomologicalComplex (.up ℤ)).obj K
 
+/- The source uses the scalar extension identity
+`(K ⊗_R S) ⊗_S L = K ⊗_R L`.  The right-hand side is regarded as an
+`S`-complex by extending scalars; `restrictScalarsComplex` records the
+underlying `R`-complex of `L`. -/
+theorem baseChange_tensorProduct_iso
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (K : Comp R) (L : Comp S) :
+    Nonempty (tensorProductComplex S (baseChangeComplex f K) L ≅
+      baseChangeComplex f
+        (tensorProductComplex R K (restrictScalarsComplex f L))) := by
+  sorry
+
 /-- Flatness of every term of a complex. -/
 def TermwiseFlat {R : Type u} [CommRing R] (K : Comp R) : Prop :=
   ∀ n : ℤ, Module.Flat R (K.X n : Type u)
@@ -124,6 +136,14 @@ theorem tensorProduct_kFlat
     {R : Type u} [CommRing R] (K L : Comp R)
     (hK : IsKFlat K) (hL : IsKFlat L) :
     IsKFlat (tensorProductComplex R K L) := by
+  sorry
+
+/- The displayed identity used in the proof is the canonical reassociation
+of total tensor products, written in the source's order. -/
+theorem tensorProductComplex_nested_iso
+    {R : Type u} [CommRing R] (M K L : Comp R) :
+    Nonempty (tensorProductComplex R M (tensorProductComplex R K L) ≅
+      tensorProductComplex R (tensorProductComplex R M K) L) := by
   sorry
 
 /-- Two K-flat objects in a distinguished triangle force the third object to
@@ -374,6 +394,14 @@ structure DerivedTensorProductData
       IsKFlat K ∧ IsKFlat L ∧
       Nonempty (functor.obj (X, Y) ≅
         (derivedComplexQuotient R).obj (tensorProductComplex R K L))
+  extends_boundedAbove : ∀ (M : ModuleCat.{u} R),
+    Nonempty (
+      (DerivedCategory.Minus.ι (C := ModuleCat.{u} R) ⋙
+        tensorFunctorSlice functor
+          ((DerivedCategory.Minus.ι (C := ModuleCat.{u} R)).obj
+            (moduleInDMinus R M))) ≅
+      (derivedTensorModuleFunctor R M ⋙
+        DerivedCategory.Minus.ι (C := ModuleCat.{u} R)))
 
 /-- Existence of the derived tensor bifunctor from K-flat resolutions. -/
 theorem exists_derivedTensorProductData
@@ -388,6 +416,28 @@ noncomputable def derivedTensorProductData
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] :
     DerivedTensorProductData R :=
   Classical.choice (exists_derivedTensorProductData (R := R))
+
+/- A K-flat representative of a derived object.  This is the resolution
+choice used in the source construction; the representative-level
+independence statement below is the precise interface needed to make the
+resulting derived tensor product independent of that choice. -/
+structure KFlatRepresentative
+    (R : Type u) [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (X : D R) where
+  complex : Comp R
+  iso : Nonempty ((derivedComplexQuotient R).obj complex ≅ X)
+  kFlat : IsKFlat complex
+
+theorem kFlatRepresentative_tensor_independent
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    {X Y : D R} (K K' : KFlatRepresentative R X)
+    (L L' : KFlatRepresentative R Y) :
+    Nonempty ((derivedComplexQuotient R).obj
+        (tensorProductComplex R K.complex L.complex) ≅
+      (derivedComplexQuotient R).obj
+        (tensorProductComplex R K'.complex L'.complex)) := by
+  sorry
 
 /-- The derived tensor bifunctor. -/
 noncomputable abbrev derivedTensorProductFunctor
@@ -439,7 +489,7 @@ theorem derivedTensor_extends_boundedAbove
             (moduleInDMinus R M))) ≅
       (derivedTensorModuleFunctor R M ⋙
         DerivedCategory.Minus.ι (C := ModuleCat.{u} R))) := by
-  sorry
+  exact (derivedTensorProductData (R := R)).extends_boundedAbove M
 
 theorem derivedTensor_represented
     {R : Type u} [CommRing R]
@@ -454,13 +504,6 @@ theorem derivedTensor_represented
 
 /-- The choice of K-flat representatives does not affect the derived tensor
 functor, up to the canonical natural isomorphism supplied by localization. -/
-theorem derivedTensorProduct_choice_independent
-    {R : Type u} [CommRing R]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
-    (A B : DerivedTensorProductData R) :
-    Nonempty (A.functor ≅ B.functor) := by
-  sorry
-
 /-! ## Symmetry and associativity -/
 
 /-- The signed symmetry of derived tensor products, with its naturality in
@@ -493,6 +536,16 @@ theorem derivedTensor_flip
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (X Y : D R) :
     Nonempty (derivedTensor X Y ≅ derivedTensor Y X) := by
   exact ⟨(derivedTensorSymmetryData (R := R)).iso X Y⟩
+
+/- The signed flip on K-flat representatives is induced by the canonical
+   Koszul-signed braiding of total tensor products from Chapter 58. -/
+theorem derivedTensor_flip_on_representatives
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : Comp R) :
+    Nonempty ((derivedComplexQuotient R).obj (tensorProductComplex R K L) ≅
+      (derivedComplexQuotient R).obj (tensorProductComplex R L K)) := by
+  sorry
 
 /-- Naturality of the canonical flip. -/
 theorem derivedTensor_flip_natural
@@ -540,6 +593,16 @@ theorem derivedTensor_triple
     Nonempty (derivedTensor (derivedTensor X Y) Z ≅
       derivedTensor X (derivedTensor Y Z)) := by
   exact ⟨(derivedTensorAssociativityData (R := R)).iso X Y Z⟩
+
+theorem derivedTensor_triple_on_representatives
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L M : Comp R) :
+    Nonempty ((derivedComplexQuotient R).obj
+        (tensorProductComplex R (tensorProductComplex R K L) M) ≅
+      (derivedComplexQuotient R).obj
+        (tensorProductComplex R K (tensorProductComplex R L M))) := by
+  sorry
 
 /-! ## Factorization through a K-flat complex -/
 

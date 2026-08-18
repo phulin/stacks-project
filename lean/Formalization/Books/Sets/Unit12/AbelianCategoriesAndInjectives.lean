@@ -1,4 +1,5 @@
 import Mathlib.CategoryTheory.Abelian.Injective.Basic
+import Mathlib.CategoryTheory.Limits.ExactFunctor
 import Mathlib.CategoryTheory.ObjectProperty.Small
 
 /-!
@@ -38,8 +39,7 @@ structure AbelianInjectiveSubcategory
   /-- The selected full subcategory is abelian. -/
   abelian : Abelian property.FullSubcategory
   /-- The inclusion of the selected full subcategory is exact. -/
-  exact_inclusion :
-    PreservesFiniteLimits property.ι ∧ PreservesFiniteColimits property.ι
+  exact_inclusion : exactFunctor property.FullSubcategory A property.ι
   /-- The selected objects form a set at the ambient small universe. -/
   small : ObjectProperty.Small.{u} property
   /-- Every prescribed object belongs to the selected subcategory. -/

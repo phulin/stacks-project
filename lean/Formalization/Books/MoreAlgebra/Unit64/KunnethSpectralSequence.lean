@@ -1,7 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
 import Formalization.Books.Homology.Unit24.FilteredComplexes
 import Mathlib.Algebra.Category.ModuleCat.Abelian
-import Mathlib.Algebra.Module.Flat.Basic
 
 /-!
 # More on Algebra, Chapter 64: Künneth spectral sequence

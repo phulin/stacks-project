@@ -298,6 +298,11 @@ private theorem universallyExact_factor_finiteFree
         rw [show (∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1) =
             A (Finsupp.single j 1) by
               simp [A, Finsupp.linearCombination_single]]
+        have hq : q (A (Finsupp.single j 1)) = 0 := by
+          apply (Submodule.Quotient.mk_eq_zero (LinearMap.range A)).2
+          exact ⟨Finsupp.single j 1, rfl⟩
+        simpa [q, Submodule.mkQ_apply] using
+          congrArg (fun z => v (Finsupp.single j 1) ⊗ₜ[R] z) hq
   have htx0 : tx = 0 := (h Q) htx
   let t0 : M₁ ⊗[R] (Fin n →₀ R) :=
     ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] Finsupp.single i 1
@@ -315,8 +320,9 @@ private theorem universallyExact_factor_finiteFree
     (b : (Fin m →₀ R) →ₗ[R] R) :
       TensorProduct.rid R M₁ (LinearMap.lTensor M₁ b z) =
         ∑ j, b (Finsupp.single j 1) •
-          TensorProduct.rid R M₁
-            (LinearMap.lTensor M₁ (Finsupp.lapply j) z) := by
+            TensorProduct.rid R M₁
+            (LinearMap.lTensor M₁
+              (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) z) := by
     induction z using TensorProduct.induction_on with
     | zero => simp
     | tmul x y =>
@@ -329,16 +335,16 @@ private theorem universallyExact_factor_finiteFree
             ∑ j, y j • b (Finsupp.single j 1) := by
           simp only [map_sum, map_smul]
         have hl (j : Fin m) :
-            (Finsupp.lapply j) (∑ k, y k • Finsupp.single k 1) = y j := by
+            (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R)
+              (∑ k, y k • Finsupp.single k 1) = y j := by
           change (∑ k, y k • Finsupp.single k 1) j = y j
           simp
         rw [hb]
         simp_rw [hl]
-        simp only [smul_smul]
-        apply congrArg (fun r : R => r • x)
+        rw [Finset.sum_smul]
         apply Finset.sum_congr rfl
         intro j hj
-        rw [mul_comm]
+        simpa [smul_smul, mul_comm]
     | add x y hx hy =>
         simp only [map_add, LinearMap.lTensor_add, hx, hy,
           Finset.sum_add_distrib, smul_add]

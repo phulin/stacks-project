@@ -344,7 +344,7 @@ theorem isom_as_two_fibre_product
               inv :=
                 { hom := A.alpha.hom
                   alpha_comm := by simp
-                  beta_comm := by simp [Category.assoc] }
+                  beta_comm := by simp }
               hom_inv_id := by
                 apply TwoFiberProductHom.ext
                 change A.alpha.inv ≫ A.alpha.hom = 𝟙 _
@@ -406,7 +406,6 @@ theorem equivalent_fibred_categories_preserve_morphism_presheaf
           (by
             intro f
             apply hff.map_injective
-            simp only [hff.map_preimage]
             rw [presheaf_mor_map_fibred_categories_is_induced η x y T f]
             simp)
           (by

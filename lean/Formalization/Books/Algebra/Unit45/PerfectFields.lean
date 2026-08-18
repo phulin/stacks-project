@@ -109,14 +109,14 @@ theorem perfectField_iff_charZero_or_prime_root
       let _ : ExpChar k p := ExpChar.prime hp.out
       intro x
       rcases (surjective_frobenius k p) x with ⟨y, hy⟩
-      exact ⟨y, by change y ^ p = x; exact hy⟩
+      exact ⟨y, hy⟩
   · rintro (hzero | ⟨p, hp, hpk, hroot⟩)
     · let _ : CharZero k := hzero
       exact inferInstance
     · let _ : Fact p.Prime := ⟨hp⟩
       let _ : CharP k p := hpk
       let _ : ExpChar k p := ExpChar.prime hp
-      letI : PerfectRing k p :=
+      let : PerfectRing k p :=
         PerfectRing.ofSurjective k p (by
           intro x
           rcases hroot x with ⟨y, hy⟩
@@ -216,18 +216,18 @@ theorem exists_make_separable_base_change
       IsSeparableBaseChange b ∧
         IsCompositumBaseChange b ∧ IsReducedTensorProductBaseChange b := by
   obtain ⟨b₀⟩ := exists_purely_inseparable_base_change (k := k) (K := K)
-  letI := b₀.baseField
-  letI := b₀.topField
-  letI := b₀.baseAlgebra
-  letI := b₀.topAlgebra
-  letI := b₀.topOverK
-  letI := b₀.topOverBase
-  letI := b₀.baseTower
-  letI := b₀.topTower
-  letI := b₀.baseFinite
-  letI := b₀.basePurelyInseparable
-  letI := b₀.topFinite
-  letI := b₀.topPurelyInseparable
+  let _ := b₀.baseField
+  let _ := b₀.topField
+  let _ := b₀.baseAlgebra
+  let _ := b₀.topAlgebra
+  let _ := b₀.topOverK
+  let _ := b₀.topOverBase
+  let _ := b₀.baseTower
+  let _ := b₀.topTower
+  let _ := b₀.baseFinite
+  let _ := b₀.basePurelyInseparable
+  let _ := b₀.topFinite
+  let _ := b₀.topPurelyInseparable
   let C : IntermediateField K b₀.top :=
     IntermediateField.adjoin K (range (algebraMap b₀.base b₀.top))
   have hbase_mem (x : b₀.base) :
@@ -240,13 +240,13 @@ theorem exists_make_separable_base_change
     exact hbase_mem _
   let kToC : k →+* C :=
     RingHom.codRestrict (algebraMap k b₀.top) C hk_mem
-  letI : Algebra b₀.base C := RingHom.toAlgebra baseToC
-  letI : Algebra k C := RingHom.toAlgebra kToC
-  letI : IsScalarTower k b₀.base C := by
+  let : Algebra b₀.base C := RingHom.toAlgebra baseToC
+  let : Algebra k C := RingHom.toAlgebra kToC
+  let : IsScalarTower k b₀.base C := by
     apply IsScalarTower.of_algebraMap_eq'
     ext x
     exact IsScalarTower.algebraMap_apply k b₀.base b₀.top x
-  letI : IsScalarTower k K C := by
+  let : IsScalarTower k K C := by
     apply IsScalarTower.of_algebraMap_eq'
     ext x
     exact IsScalarTower.algebraMap_apply k K b₀.top x
@@ -359,7 +359,7 @@ theorem exists_make_separable_base_change
     { base := b₀.base
       top := C
       topSeparablyGenerated := hC }
-  letI : IsPurelyInseparable K C :=
+  let : IsPurelyInseparable K C :=
     IntermediateField.isPurelyInseparable_tower_bot K b₀.top C
   have hcomp :
       IntermediateField.adjoin b₀.base (range (algebraMap K C)) = ⊤ := by
@@ -408,11 +408,11 @@ theorem exists_make_separable_base_change
     exact hcomp
   · simp only [IsReducedTensorProductBaseChange]
     change Nonempty (((b₀.base ⊗[k] K) ⧸ (nilradical (b₀.base ⊗[k] K))) ≃ₐ[k] C)
-    letI : IsScalarTower k k b₀.base := by
+    let : IsScalarTower k k b₀.base := by
       apply IsScalarTower.of_algebraMap_eq'
       ext x
       simp
-    letI : IsScalarTower k k C := by
+    let : IsScalarTower k k C := by
       apply IsScalarTower.of_algebraMap_eq'
       ext x
       rfl
@@ -421,7 +421,7 @@ theorem exists_make_separable_base_change
         (IsScalarTower.toAlgHom k b₀.base C)
         (IsScalarTower.toAlgHom k K C)
         (fun _ _ => Commute.all _ _)
-    letI : Algebra K (b₀.base ⊗[k] K) :=
+    let : Algebra K (b₀.base ⊗[k] K) :=
       Algebra.TensorProduct.rightAlgebra
     let fK : (b₀.base ⊗[k] K) →ₐ[K] C :=
       { f.toRingHom with
@@ -430,7 +430,7 @@ theorem exists_make_separable_base_change
           change f (1 ⊗ₜ[k] x) = algebraMap K C x
           simp [f] }
     let S : Subalgebra K C := fK.range
-    letI : Algebra.IsAlgebraic K C :=
+    let : Algebra.IsAlgebraic K C :=
       IsPurelyInseparable.isAlgebraic K C
     have hf : Function.Surjective f := by
       intro x
@@ -476,7 +476,7 @@ theorem exists_make_separable_base_change
         change f x = 0 at hx
         change IsNilpotent x
         let comm := Algebra.TensorProduct.comm k b₀.base K
-        letI : Algebra K (K ⊗[k] b₀.base) :=
+        let : Algebra K (K ⊗[k] b₀.base) :=
           Algebra.TensorProduct.leftAlgebra
         obtain ⟨n, hn, r, hr⟩ :=
           IsPurelyInseparable.exists_pow_mem_range_tensorProduct

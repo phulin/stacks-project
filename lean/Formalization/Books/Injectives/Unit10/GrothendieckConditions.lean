@@ -40,7 +40,52 @@ theorem isSeparator_iff_source_generator [Abelian C] (U : C) :
     IsSeparator U ↔
       ∀ (M : C) (N : Subobject M), N ≠ ⊤ →
         ∃ f : U ⟶ M, ¬ N.Factors f := by
-  sorry
+  constructor
+  · intro h M N hN
+    by_contra h'
+    have hfac : ∀ f : U ⟶ M, N.Factors f := by
+      intro f
+      by_contra hf
+      exact h' ⟨f, hf⟩
+    apply hN
+    letI : Epi N.arrow := by
+      constructor
+      intro Z g k e
+      apply h.def g k
+      intro f
+      calc
+        f ≫ g = (N.factorThru f (hfac f) ≫ N.arrow) ≫ g := by
+          rw [Subobject.factorThru_arrow]
+        _ = N.factorThru f (hfac f) ≫ (N.arrow ≫ g) := by simp only [Category.assoc]
+        _ = N.factorThru f (hfac f) ≫ (N.arrow ≫ k) := by rw [e]
+        _ = (N.factorThru f (hfac f) ≫ N.arrow) ≫ k := by simp only [Category.assoc]
+        _ = f ≫ k := by rw [Subobject.factorThru_arrow]
+    letI : Mono N.arrow := inferInstance
+    letI : IsIso N.arrow := isIso_of_mono_of_epi _
+    exact Subobject.eq_top_of_isIso_arrow N
+  · intro h
+    apply (isSeparator_def U).2
+    intro X Y f g hfg
+    by_contra hne
+    let K := kernelSubobject (f - g)
+    have hK : K ≠ ⊤ := by
+      intro hK
+      letI : IsIso K.arrow := (Subobject.isIso_arrow_iff_eq_top K).2 hK
+      letI : IsIso (kernelSubobjectIso (f - g)).hom :=
+        (kernelSubobjectIso (f - g)).isIso_hom
+      letI : IsIso ((kernelSubobjectIso (f - g)).hom ≫ kernel.ι (f - g)) := by
+        rw [kernelSubobject_arrow]
+        infer_instance
+      letI : IsIso (kernel.ι (f - g)) :=
+        IsIso.of_isIso_comp_left (kernelSubobjectIso (f - g)).hom (kernel.ι (f - g))
+      apply hne
+      apply sub_eq_zero.mp
+      rw [← cancel_epi (kernel.ι (f - g))]
+      simpa using (kernel.condition (f - g))
+    obtain ⟨t, ht⟩ := h X K hK
+    apply ht
+    apply (kernelSubobject_factors_iff (f - g) t).2
+    rw [Preadditive.comp_sub, hfg, sub_self]
 
 /-! ### AB3 and AB3* imply all (co)limits -/
 
@@ -63,7 +108,7 @@ short exact.  A short complex in `Discrete I ⥤ C` is precisely such a family.
 theorem ab4_directSum_shortExact [Abelian C] [HasCoproducts.{v} C] [AB4 C]
     {I : Type v} (S : ShortComplex (Discrete I ⥤ C)) (hS : S.ShortExact) :
     (S.map (colim : (Discrete I ⥤ C) ⥤ C)).ShortExact := by
-  sorry
+  exact hS.map_of_exact _
 
 /- The colimit functor is right exact whenever the relevant coproduct exists;
    this is the source's warning that AB4 is only needed for left exactness. -/
@@ -78,7 +123,7 @@ theorem ab5_filteredColimit_shortExact [Abelian C] [HasFilteredColimits C]
     [AB5 C] {J : Type v} [Category.{v} J] [IsFiltered J]
     (S : ShortComplex (J ⥤ C)) (hS : S.ShortExact) :
     (S.map (colim : (J ⥤ C) ⥤ C)).ShortExact := by
-  sorry
+  exact hS.map_of_exact _
 
 /- Filtered colimits are right exact as soon as they exist, without AB5. -/
 theorem filteredColimit_rightExact {J : Type v} [Category.{v} J] [IsFiltered J]
@@ -90,7 +135,7 @@ theorem filteredColimit_rightExact {J : Type v} [Category.{v} J] [IsFiltered J]
 theorem ab4Star_product_shortExact [Abelian C] [HasProducts.{v} C] [AB4Star C]
     {I : Type v} (S : ShortComplex (Discrete I ⥤ C)) (hS : S.ShortExact) :
     (S.map (lim : (Discrete I ⥤ C) ⥤ C)).ShortExact := by
-  sorry
+  exact hS.map_of_exact _
 
 /- Products are left exact as soon as they exist, without AB4*. -/
 theorem product_leftExact [HasProducts.{v} C] {I : Type v} :

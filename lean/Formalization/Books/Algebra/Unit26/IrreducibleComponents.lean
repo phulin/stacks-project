@@ -209,7 +209,97 @@ theorem exists_basicOpen_disjoint_of_minimalPrime
     (hpW : p ∉ W) :
     ∃ f : R, f ∉ p.asIdeal ∧
       (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∩ W = ∅ := by
-  sorry
+  classical
+  let ι := {f : R // (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆ W}
+  let U : ι → Set (PrimeSpectrum R) := fun f =>
+    PrimeSpectrum.basicOpen f.1
+  have hUopen : ∀ i, IsOpen (U i) := by
+    intro i
+    exact PrimeSpectrum.isOpen_basicOpen
+  have hcover : W ⊆ ⋃ i, U i := by
+    intro x hx
+    obtain ⟨V, hV, hxV, hVW⟩ :=
+      PrimeSpectrum.isTopologicalBasis_basic_opens.exists_subset_of_mem_open hx hWopen
+    rcases hV with ⟨f, rfl⟩
+    exact Set.mem_iUnion.mpr ⟨⟨f, hVW⟩, hxV⟩
+  obtain ⟨t, ht⟩ := hWcompact.elim_finite_subcover U hUopen hcover
+  have hlocal (i : ι) (hi : i ∈ t) :
+      ∃ n : ℕ, 0 < n ∧ ∃ a : R, a ∉ p.asIdeal ∧ a * i.1 ^ n = 0 := by
+    have hfi : i.1 ∈ p.asIdeal := by
+      by_contra hfi
+      apply hpW
+      exact i.2 ((PrimeSpectrum.mem_basicOpen i.1 p).2 hfi)
+    have hrad :
+        (⊥ : Ideal (Localization.AtPrime p.asIdeal)).radical =
+          p.asIdeal.map (algebraMap R (Localization.AtPrime p.asIdeal)) := by
+      simpa only [Ideal.map_bot] using
+        (IsLocalization.AtPrime.radical_map_of_mem_minimalPrimes
+          (A := Localization.AtPrime p.asIdeal) (q := p.asIdeal)
+          (I := (⊥ : Ideal R)) hp)
+    have hmem :
+        algebraMap R (Localization.AtPrime p.asIdeal) i.1 ∈
+          (⊥ : Ideal (Localization.AtPrime p.asIdeal)).radical := by
+      rw [hrad]
+      exact Ideal.mem_map_of_mem _ hfi
+    obtain ⟨n, hn⟩ := Ideal.mem_radical_iff.mp hmem
+    refine ⟨n + 1, Nat.zero_lt_succ n, ?_⟩
+    have hzero :
+        algebraMap R (Localization.AtPrime p.asIdeal) (i.1 ^ (n + 1)) = 0 := by
+      rw [map_pow, pow_succ, hn, zero_mul]
+    obtain ⟨a, ha⟩ :=
+      (IsLocalization.mk'_eq_zero_iff
+        (S := Localization.AtPrime p.asIdeal) (i.1 ^ (n + 1))
+        (1 : p.asIdeal.primeCompl)).mp (by
+          rw [IsLocalization.mk'_one]
+          exact hzero)
+    exact ⟨a, a.2, ha⟩
+  have hprod :
+      ∀ s : Finset ι,
+        (∀ i ∈ s, ∃ n : ℕ, 0 < n ∧ ∃ a : R, a ∉ p.asIdeal ∧
+          a * i.1 ^ n = 0) →
+        ∃ f : R, f ∉ p.asIdeal ∧
+          ∀ i ∈ s, ∃ n : ℕ, 0 < n ∧ f * i.1 ^ n = 0 := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        intro hs
+        refine ⟨1, ?_, ?_⟩
+        · intro h
+          exact p.2.ne_top ((p.asIdeal.eq_top_iff_one).mpr h)
+        · simp
+    | @insert i s hi ih =>
+        intro hs
+        obtain ⟨ni, hni, ai, hai, hia⟩ := hs i (by simp)
+        obtain ⟨f, hf, hfs⟩ := ih (fun j hj => hs j (by simp [hj]))
+        refine ⟨ai * f, ?_, ?_⟩
+        · intro h
+          rcases p.2.mul_mem_iff_mem_or_mem.mp h with h_ai | h_f
+          · exact hai h_ai
+          · exact hf h_f
+        · intro j hj'
+          rcases Finset.mem_insert.mp hj' with hji | hj'
+          · subst j
+            refine ⟨ni, hni, ?_⟩
+            calc
+              (ai * f) * i.1 ^ ni = f * (ai * i.1 ^ ni) := by
+                ac_rfl
+              _ = 0 := by rw [hia, mul_zero]
+          · obtain ⟨nj, hnj, hjzero⟩ := hfs j hj'
+            refine ⟨nj, hnj, ?_⟩
+            rw [mul_assoc, hjzero, mul_zero]
+  obtain ⟨f, hf, hfi⟩ := hprod t (fun i hi => hlocal i hi)
+  refine ⟨f, hf, ?_⟩
+  apply Set.eq_empty_iff_forall_notMem.2
+  intro x hx
+  obtain ⟨i, hi, hxi⟩ := Set.mem_iUnion₂.mp (ht hx.2)
+  obtain ⟨n, hn, hzero⟩ := hfi i hi
+  have hmem : f * i.1 ^ n ∈ x.asIdeal := by
+    rw [hzero]
+    exact Ideal.zero_mem x.asIdeal
+  rcases x.2.mul_mem_iff_mem_or_mem.mp hmem with hfx | hix
+  · exact (PrimeSpectrum.mem_basicOpen f x).mp hx.1 hfx
+  · exact (PrimeSpectrum.mem_basicOpen i.1 x).mp hxi
+      ((x.2.pow_mem_iff_mem n hn).mp hix)
 
 /-! ### Rings with no nontrivial prime inclusions -/
 
@@ -225,7 +315,161 @@ theorem isProfinite_TFAE_primeSpectrum_separation_conditions :
         (∀ p : Ideal R, p.IsPrime → p.IsMaximal),
         (∀ p : Ideal R, p.IsPrime → p ∈ minimalPrimes R),
         (∀ f : R, IsClosed (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)))] := by
-  sorry
+  tfae_have 1 → 2 := by
+    intro h
+    exact
+      ((Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected
+        (X := PrimeSpectrum R)).mp h).1
+  tfae_have 2 → 6 := by
+    intro h I hI
+    let _ : T2Space (PrimeSpectrum R) := h
+    let p : PrimeSpectrum R := ⟨I, hI⟩
+    simpa [p] using
+      ((PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mp isClosed_singleton)
+  tfae_have 6 → 5 := by
+    intro h p q hp hq hpq
+    exact (h p hp).eq_of_le hq.ne_top hpq
+  tfae_have 5 → 7 := by
+    intro h p hp
+    let _ : p.IsPrime := hp
+    obtain ⟨q, hq, hqp⟩ :=
+      Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal R)) (J := p) bot_le
+    have heq : q = p := h q p hq.isPrime hp hqp
+    exact heq ▸ hq
+  tfae_have 7 → 4 := by
+    intro h U hUopen hUcompact
+    apply isOpen_compl_iff.mp
+    apply isOpen_iff_mem_nhds.mpr
+    intro p hpU
+    obtain ⟨f, hf, hdisj⟩ :=
+      exists_basicOpen_disjoint_of_minimalPrime p (h p p.2) hUopen hUcompact hpU
+    refine Filter.mem_of_superset
+      (PrimeSpectrum.isOpen_basicOpen.mem_nhds
+        ((PrimeSpectrum.mem_basicOpen f p).2 hf)) ?_
+    intro x hx
+    intro hxU
+    have hxint : x ∈
+        (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∩ U :=
+      ⟨hx, hxU⟩
+    rw [hdisj] at hxint
+    exact hxint
+  tfae_have 4 → 2 := by
+    intro h
+    refine ⟨fun p q hpq => ?_⟩
+    have hne : p.asIdeal ≠ q.asIdeal := by
+      intro heq
+      apply hpq
+      exact PrimeSpectrum.ext heq
+    by_cases hpqle : p.asIdeal ≤ q.asIdeal
+    · have hnle : ¬ q.asIdeal ≤ p.asIdeal := by
+        intro hle
+        exact hne (le_antisymm hpqle hle)
+      obtain ⟨f, hfq, hfp⟩ := not_subset.mp hnle
+      let V := (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+      have hVclosed : IsClosed V :=
+        h V PrimeSpectrum.isOpen_basicOpen (PrimeSpectrum.isCompact_basicOpen f)
+      refine ⟨V, Vᶜ, PrimeSpectrum.isOpen_basicOpen, hVclosed.isOpen_compl,
+        (PrimeSpectrum.mem_basicOpen f p).2 hfp, ?_, disjoint_compl_right⟩
+      exact fun hqV => (PrimeSpectrum.mem_basicOpen f q).mp hqV hfq
+    · obtain ⟨f, hfp, hfq⟩ := not_subset.mp hpqle
+      let V := (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+      have hVclosed : IsClosed V :=
+        h V PrimeSpectrum.isOpen_basicOpen (PrimeSpectrum.isCompact_basicOpen f)
+      refine ⟨Vᶜ, V, hVclosed.isOpen_compl, PrimeSpectrum.isOpen_basicOpen,
+        ?_, (PrimeSpectrum.mem_basicOpen f q).2 hfq, disjoint_compl_left⟩
+      exact fun hpV => (PrimeSpectrum.mem_basicOpen f p).mp hpV hfp
+  tfae_have 4 → 3 := by
+    intro h
+    rw [totallyDisconnectedSpace_iff_connectedComponent_singleton]
+    intro p
+    apply Set.Subset.antisymm
+    · intro q hq
+      by_contra hpq
+      have hne : p.asIdeal ≠ q.asIdeal := by
+        intro heq
+        apply hpq
+        exact PrimeSpectrum.ext heq.symm
+      by_cases hpqle : p.asIdeal ≤ q.asIdeal
+      · have hnle : ¬ q.asIdeal ≤ p.asIdeal := by
+          intro hle
+          exact hne (le_antisymm hpqle hle)
+        obtain ⟨f, hfq, hfp⟩ := not_subset.mp hnle
+        let V := (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+        have hVclopen : IsClopen V := ⟨
+          h V PrimeSpectrum.isOpen_basicOpen (PrimeSpectrum.isCompact_basicOpen f),
+          PrimeSpectrum.isOpen_basicOpen⟩
+        have hpV : p ∈ V := (PrimeSpectrum.mem_basicOpen f p).2 hfp
+        have hqV : q ∈ V := by
+          apply (PrimeSpectrum.mem_basicOpen f q).mp
+          exact
+            (Set.mem_iInter.mp
+              ((connectedComponent_subset_iInter_isClopen (x := p)) hq))
+              ⟨V, hVclopen, hpV⟩
+        exact (PrimeSpectrum.mem_basicOpen f q).mp hqV hfq
+      · obtain ⟨f, hfp, hfq⟩ := not_subset.mp hpqle
+        let V := (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+        have hVclopen : IsClopen V := ⟨
+          h V PrimeSpectrum.isOpen_basicOpen (PrimeSpectrum.isCompact_basicOpen f),
+          PrimeSpectrum.isOpen_basicOpen⟩
+        have hpVc : p ∈ Vᶜ := fun hpV =>
+          (PrimeSpectrum.mem_basicOpen f p).mp hpV hfp
+        have hqV : q ∈ V := (PrimeSpectrum.mem_basicOpen f q).2 hfq
+        have hqVc : q ∈ Vᶜ :=
+          (Set.mem_iInter.mp
+            ((connectedComponent_subset_iInter_isClopen (x := p)) hq))
+            ⟨Vᶜ, hVclopen.compl, hpVc⟩
+        exact hqVc hqV
+    · exact singleton_subset_iff.mpr mem_connectedComponent
+  tfae_have 3 → 5 := by
+    intro h p q hp hq hpq
+    let _ : TotallyDisconnectedSpace (PrimeSpectrum R) := h
+    let p' : PrimeSpectrum R := ⟨p, hp⟩
+    let q' : PrimeSpectrum R := ⟨q, hq⟩
+    have hqcl : q' ∈ closure ({p'} : Set (PrimeSpectrum R)) := by
+      rw [PrimeSpectrum.closure_singleton]
+      exact (PrimeSpectrum.mem_zeroLocus q' _).2 hpq
+    have hcomp : q' ∈ connectedComponent p' := by
+      have hsub : closure ({p'} : Set (PrimeSpectrum R)) ⊆
+          connectedComponent p' :=
+        isConnected_singleton.closure.subset_connectedComponent
+          (subset_closure (mem_singleton p'))
+      exact hsub hqcl
+    rw [totallyDisconnectedSpace_iff_connectedComponent_singleton.mp h p'] at hcomp
+    have heq : q' = p' := Set.mem_singleton_iff.mp hcomp
+    exact (congrArg PrimeSpectrum.asIdeal heq).symm
+  tfae_have 8 → 4 := by
+    intro h U hUopen hUcompact
+    classical
+    let ι := {f : R // (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆ U}
+    let B : ι → Set (PrimeSpectrum R) := fun f => PrimeSpectrum.basicOpen f.1
+    have hBo : ∀ i, IsOpen (B i) := by
+      intro i
+      exact PrimeSpectrum.isOpen_basicOpen
+    have hBU : U ⊆ ⋃ i, B i := by
+      intro x hx
+      obtain ⟨V, hV, hxV, hVU⟩ :=
+        PrimeSpectrum.isTopologicalBasis_basic_opens.exists_subset_of_mem_open hx hUopen
+      rcases hV with ⟨f, rfl⟩
+      exact Set.mem_iUnion.mpr ⟨⟨f, hVU⟩, hxV⟩
+    obtain ⟨t, ht⟩ := hUcompact.elim_finite_subcover B hBo hBU
+    have heq : U = ⋃ i ∈ t, B i := by
+      apply Set.Subset.antisymm ht
+      exact Set.iUnion_subset fun i => Set.iUnion_subset fun _ => i.2
+    rw [heq]
+    exact isClosed_biUnion_finset (fun i hi => h i.1)
+  tfae_have 4 → 8 := by
+    intro h f
+    let V := (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+    exact h V PrimeSpectrum.isOpen_basicOpen (PrimeSpectrum.isCompact_basicOpen f)
+  tfae_have 4 → 1 := by
+    intro h
+    let _ : T2Space (PrimeSpectrum R) := tfae_4_to_2 h
+    let _ : TotallyDisconnectedSpace (PrimeSpectrum R) := tfae_4_to_3 h
+    exact
+      (Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected
+        (X := PrimeSpectrum R)).mpr
+        ⟨inferInstance, inferInstance, inferInstance⟩
+  tfae_finish
 
 end Irreducible
 

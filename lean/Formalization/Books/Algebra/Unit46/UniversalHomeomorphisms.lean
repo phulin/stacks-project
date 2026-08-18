@@ -4,6 +4,7 @@ import Formalization.Books.Algebra.Unit36.FiniteIntegralRingExtensions
 import Mathlib.Algebra.Algebra.ZMod
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
 import Mathlib.RingTheory.Adjoin.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
 import Mathlib.RingTheory.Spectrum.Prime.Homeomorph
@@ -359,7 +360,71 @@ theorem pPowerFieldGenerated_iff
     pPowerFieldGenerated (k := k) (k' := k') p ↔
       Function.Surjective (algebraMap k k') ∨
         ∃ hk : CharP k p, ∃ hk' : CharP k' p, IsPurelyInseparable k k' := by
-  sorry
+  classical
+  let T : Set k' := {x : k' | ∃ n : ℕ, 0 < n ∧
+    x ^ (p ^ n) ∈ (algebraMap k k').range ∧
+      (p ^ n : k') * x ∈ (algebraMap k k').range}
+  change IntermediateField.adjoin k T = ⊤ ↔ _
+  constructor
+  · intro hgen
+    by_cases hsurj : Function.Surjective (algebraMap k k')
+    · exact Or.inl hsurj
+    · have hchar' : CharP k' p := by
+        apply (CharP.charP_iff_prime_eq_zero hp).2
+        by_contra hp0
+        have hT : T ⊆ (⊥ : IntermediateField k k') := by
+          intro x hx
+          obtain ⟨n, hn, _hxpow, ⟨y, hy⟩⟩ := hx
+          change ∃ z : k, algebraMap k k' z = x
+          refine ⟨(p ^ n : k)⁻¹ * y, ?_⟩
+          rw [map_mul, map_inv₀, map_pow, map_natCast, hy]
+          field_simp
+        have hle : IntermediateField.adjoin k T ≤ (⊥ : IntermediateField k k') :=
+          IntermediateField.adjoin_le_iff.mpr hT
+        have htop : (⊤ : IntermediateField k k') ≤ (⊥ : IntermediateField k k') := by
+          rw [← hgen]
+          exact hle
+        apply hsurj
+        intro x
+        have hx : x ∈ (⊥ : IntermediateField k k') := htop trivial
+        exact hx
+      have hchar : CharP k p := (Algebra.charP_iff k k' p).mpr hchar'
+      letI : CharP k p := hchar
+      letI : ExpChar k p := ExpChar.prime hp
+      have hpureAdjoin : IsPurelyInseparable k (IntermediateField.adjoin k T) :=
+        (IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem k k' p).2
+          (fun x hx ↦ by
+            obtain ⟨n, hn, ⟨y, hy⟩, _hxmul⟩ := hx
+            exact ⟨n, y, hy⟩)
+      have hpureTop : IsPurelyInseparable k (⊤ : IntermediateField k k') := by
+        rw [← hgen]
+        exact hpureAdjoin
+      letI : IsPurelyInseparable k (⊤ : IntermediateField k k') := hpureTop
+      exact Or.inr ⟨hchar, hchar', IntermediateField.topEquiv.isPurelyInseparable⟩
+  · rintro (hsurj | ⟨hk, hk', hpure⟩)
+    · apply top_unique
+      intro x _
+      obtain ⟨y, hy⟩ := hsurj (x ^ p)
+      obtain ⟨z, hz⟩ := hsurj ((p : k') * x)
+      exact IntermediateField.subset_adjoin k _ ⟨1, by simp, ⟨y, by simpa using hy⟩,
+        ⟨z, by simpa using hz⟩⟩
+    · letI : CharP k p := hk
+      letI : CharP k' p := hk'
+      letI : ExpChar k p := ExpChar.prime hp
+      letI : IsPurelyInseparable k k' := hpure
+      apply top_unique
+      intro x _
+      obtain ⟨n, y, hy⟩ := IsPurelyInseparable.pow_mem k p x
+      by_cases hn : 0 < n
+      · have hp0 : (p : k') = 0 := CharP.cast_eq_zero k' p
+        have hpn : (p : k') ^ n = 0 := by rw [hp0, zero_pow hn.ne']
+        exact IntermediateField.subset_adjoin k _ ⟨n, hn, ⟨y, hy⟩,
+          ⟨0, by rw [hpn, zero_mul]; simp⟩⟩
+      · have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
+        subst n
+        exact IntermediateField.subset_adjoin k _ ⟨1, by simp, ⟨y ^ p, by
+          rw [map_pow, hy]
+          simp⟩, ⟨0, by simp [CharP.cast_eq_zero k' p]⟩⟩
 
 /-- The `p`-power ring-map criterion, including its residue-field statement
     and stability under arbitrary base change. -/

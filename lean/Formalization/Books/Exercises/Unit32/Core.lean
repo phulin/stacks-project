@@ -121,6 +121,29 @@ noncomputable def realRingConstantZModTwo : TopCat.Sheaf CommRingCat realLine :=
 noncomputable def realOriginSkyscraper : Sh.{0, 0} realLine :=
   Formalization.Books.Sheaves.Unit27.setSkyscraperSheaf realOrigin (ZMod 2)
 
+/-! The source writes this skyscraper as the direct image from the closed
+singleton `{0}`.  We keep the concrete direct-image presentation alongside
+Mathlib's canonical skyscraper presentation. -/
+
+/-- The singleton subspace `{0} ⊂ ℝ` used in the textbook's direct image. -/
+abbrev realOriginSubspace : TopCat := TopCat.of {x : ℝ // x = 0}
+
+/-- The inclusion of the singleton origin subspace into the real line. -/
+noncomputable def realOriginSubspaceInclusion :
+    realOriginSubspace ⟶ realLine :=
+  TopCat.ofHom
+    { toFun := fun x : {x : ℝ // x = 0} => (x : ℝ)
+      continuous_toFun := continuous_subtype_val }
+
+/-- The constant `ZMod 2` sheaf on the singleton origin subspace. -/
+def realOriginSubspaceConstantZModTwo : Sh.{0, 0} realOriginSubspace :=
+  Formalization.Books.Sheaves.Unit07.constantSheaf realOriginSubspace (ZMod 2)
+
+/-- The direct image `i_* O_Z` from the singleton origin subspace. -/
+noncomputable def realOriginDirectImage : Sh.{0, 0} realLine :=
+  (sheafPushforward realOriginSubspaceInclusion).obj
+    realOriginSubspaceConstantZModTwo
+
 /-- The stalk map from the constant sheaf to its value at the origin. -/
 noncomputable def realConstantZModTwoStalkMap :
     realConstantZModTwo.presheaf.stalk realOrigin → ZMod 2 :=

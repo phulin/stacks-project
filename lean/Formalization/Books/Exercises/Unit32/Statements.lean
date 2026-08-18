@@ -120,6 +120,17 @@ theorem extensionByEmpty_and_zero_are_distinct_constructions
 
 /-! ## Exercise `not-locally-generated-by-sections` -/
 
+/-- The direct image `i_* O_Z` in the source is a skyscraper sheaf. -/
+theorem realOriginDirectImage_is_skyscraper :
+    IsSetSkyscraperSheaf realOriginDirectImage := by
+  sorry
+
+/-- The direct-image presentation is isomorphic to Mathlib's canonical
+skyscraper representative used for the canonical stalk map below. -/
+theorem realOriginDirectImage_iso_skyscraper :
+    Nonempty (realOriginDirectImage ≅ realOriginSkyscraper) := by
+  sorry
+
 /-- The origin skyscraper is a skyscraper sheaf. -/
 theorem realOriginSkyscraper_is_skyscraper :
     IsSetSkyscraperSheaf realOriginSkyscraper := by

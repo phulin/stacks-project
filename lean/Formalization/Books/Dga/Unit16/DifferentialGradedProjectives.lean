@@ -3,9 +3,13 @@ import Formalization.Books.Dga.Unit14.DifferentialGradedProjectives
 /-!
 # Differential Graded Algebra, Chapter 16: Projective modules and differential graded algebras
 
-This file records the source section's graded-projectivity convention and its
-two Hom computations.  The DGA, graded-module, shift, admissibility, cycle,
-cohomology, and homotopy-category interfaces are reused from Unit14.
+This file records the source section's graded-projectivity convention, its
+admissible-epimorphism lemma, and its two Hom computations.  The DGA,
+graded-module, shift, admissibility, cycle, cohomology, and homotopy-category
+interfaces are reused from Unit14.  In particular, the source's “surjective”
+map is represented degreewise, the first displayed Hom equality by an
+equivalence with `dgCycles`, and the second by an equivalence with
+`dgCohomology`.
 -/
 
 namespace Formalization.Books.Dga.Unit16
@@ -29,7 +33,12 @@ abbrev IsGradedProjective
     (P : DifferentialGradedModuleData D) : Prop :=
   Formalization.Books.Dga.Unit14.IsGradedProjective P
 
-/-! ## The target lemma -/
+/-! ## The target lemma
+
+The source's admissible-epimorphism assertion is covered by the canonical
+Unit14 predicate, which records both degreewise surjectivity and a splitting
+of the underlying graded map.
+-/
 
 /-- A degreewise-surjective DG map onto a graded-projective target is an
 admissible epimorphism. -/

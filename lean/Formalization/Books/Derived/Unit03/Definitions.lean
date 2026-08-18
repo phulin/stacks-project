@@ -273,7 +273,16 @@ theorem homologyLongExactWindow_exact
     (H : C ⥤ A) [H.ShiftSequence ℤ] [H.IsHomological]
     (T : BookTriangle C) (hT : T ∈ distinguishedTriangleSet C) :
     (homologyLongExactWindow H T).Exact := by
-  sorry
+  change (ComposableArrows.mk₄
+    (H.homologySequenceδ T (-1) 0 (by simp))
+    ((H.shift 0).map T.mor₁)
+    ((H.shift 0).map T.mor₂)
+    (H.homologySequenceδ T 0 1 (by simp))).Exact
+  exact ComposableArrows.exact_of_δ₀
+    (H.homologySequence_exact₁ T hT (-1) 0 (by simp)).exact_toComposableArrows
+    (ComposableArrows.exact_of_δ₀
+      (H.homologySequence_exact₂ T hT 0).exact_toComposableArrows
+      (H.homologySequence_exact₃ T hT 0 1 (by simp)).exact_toComposableArrows)
 
 end HomologicalFunctors
 

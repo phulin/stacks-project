@@ -2818,6 +2818,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
           rw [hinner (S.index 0), hinner (S.index 1), hinner (S.index 2)]
       _ = _ := by
         simp [Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+        ring
   have hstrict : ∀ x : Fin 3 → ℝ, x ≠ 0 →
       ∑ i : Fin 3, x i * Matrix.mulVec
         (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i < 0 := by
@@ -3129,7 +3130,8 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         simp [scalarMatrix, pathLastMatrix,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] ; ring
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2]
+      all_goals ring
   have hnonneg : ∀ i j : Fin 3, i ≠ j → 0 ≤ D.a i j := by
     intro i j hij
     change 0 ≤ T.a (S.index i) (S.index j)

@@ -38,7 +38,11 @@ theorem integralClosure_isNormalDomain
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (hS : IsNormalDomain S) :
     IsNormalDomain (integralClosure R S) := by
-  sorry
+  have hdomain : IsDomain S := hS.1
+  have hclosed : IsIntegrallyClosed S := hS.2
+  exact ⟨inferInstance,
+    IsIntegrallyClosed.of_isIntegrallyClosed_of_isIntegrallyClosedIn
+      (integralClosure R S) S⟩
 
 /- `IsAlmostIntegral R x` is Mathlib's canonical formulation of “almost
    integral over `R`; its witness is a non-zero-divisor scalar and its range
@@ -58,7 +62,8 @@ theorem isAlmostIntegral_add_mul
     [Algebra R K] [IsFractionRing R K]
     {u v : K} (hu : IsAlmostIntegral R u) (hv : IsAlmostIntegral R v) :
     IsAlmostIntegral R (u + v) ∧ IsAlmostIntegral R (u * v) := by
-  sorry
+  exact ⟨(completeIntegralClosure R K).add_mem hu hv,
+    (completeIntegralClosure R K).mul_mem hu hv⟩
 
 /-- An element integral over a domain is almost integral in its fraction
 field. -/
@@ -67,7 +72,7 @@ theorem isIntegral_isAlmostIntegral
     [Algebra R K] [IsFractionRing R K]
     {g : K} (hg : IsIntegral R g) :
     IsAlmostIntegral R g := by
-  sorry
+  exact hg.isAlmostIntegral
 
 /-- Over a Noetherian domain, almost integral and integral elements of a
 fraction field coincide. -/
@@ -76,7 +81,9 @@ theorem isAlmostIntegral_iff_isIntegral_of_noetherian
     [Algebra R K] [IsFractionRing R K] [IsNoetherianRing R]
     {g : K} :
     IsAlmostIntegral R g ↔ IsIntegral R g := by
-  sorry
+  constructor
+  · exact IsAlmostIntegral.isIntegral
+  · exact IsIntegral.isAlmostIntegral
 
 /-- A Noetherian domain is normal exactly when it is completely normal. -/
 theorem normalDomain_iff_completelyNormal

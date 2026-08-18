@@ -640,6 +640,22 @@ theorem tor_localization_identity
     Nonempty (LocalizedTorIdentity S) := by
   sorry
 
+/- The source's third criterion uses the Tor groups over the corresponding
+   local rings.  Choose the comparison data once so that this formulation is
+   available without making an auxiliary identity witness an argument of
+   every client theorem. -/
+noncomputable def localizedTorIdentity
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    LocalizedTorIdentity S :=
+  Classical.choice (tor_localization_identity S)
+
+noncomputable def localizedLocalTorAtPrime
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
+    ModuleCat (Localization.AtPrime S.s.asIdeal) :=
+  localizedLocalTor S (localizedTorIdentity S).localTensor i
+
 /-- The localized comparison isomorphism supplied by the prime-localization
 identity. -/
 theorem localizedTor_comparison
@@ -676,22 +692,33 @@ theorem torIndependent_iff_localizedTor_vanishing
         0 < i → IsZero (localizedTor S i) := by
   sorry
 
+/- The source's third criterion is the vanishing of the Tor groups over the
+   corresponding local rings, after localization at the prime of the tensor
+   product. -/
+theorem torIndependent_iff_localizedLocalTor_vanishing
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] :
+    TorIndependent R A B ↔
+      ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
+        0 < i → IsZero (localizedLocalTorAtPrime S i) := by
+  sorry
+
 /-- The second and third localization formulations in the source are
-equivalent; the comparison identity is supplied by
-`tor_localization_identity`. -/
-theorem localPrimePairs_iff_localizedTor_vanishing
+   equivalent; the comparison identity is supplied by
+   `tor_localization_identity`. -/
+theorem localPrimePairs_iff_localizedLocalTor_vanishing
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
     (∀ P : LocalPrimePair R A B, P.TorIndependent) ↔
       ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
-        0 < i → IsZero (localizedTor S i) := by
+        0 < i → IsZero (localizedLocalTorAtPrime S i) := by
   constructor
   · intro h
-    exact torIndependent_iff_localizedTor_vanishing.mp
+    exact torIndependent_iff_localizedLocalTor_vanishing.mp
       (torIndependent_iff_localPrimePairs.mpr h)
   · intro h
     exact torIndependent_iff_localPrimePairs.mp
-      (torIndependent_iff_localizedTor_vanishing.mpr h)
+      (torIndependent_iff_localizedLocalTor_vanishing.mpr h)
 
 /-- The two local formulations, together with the global definition, are
 equivalent.  The comparison identity in `tor_localization_identity` records
@@ -703,11 +730,11 @@ theorem torIndependent_iff_localization_criteria
     TorIndependent R A B ↔
       (∀ P : LocalPrimePair R A B, P.TorIndependent) ∧
         (∀ S : TensorPrimePair R A B, ∀ i : ℕ,
-          0 < i → IsZero (localizedTor S i)) := by
+          0 < i → IsZero (localizedLocalTorAtPrime S i)) := by
   constructor
   · intro h
     exact ⟨torIndependent_iff_localPrimePairs.mp h,
-      torIndependent_iff_localizedTor_vanishing.mp h⟩
+      torIndependent_iff_localizedLocalTor_vanishing.mp h⟩
   · rintro ⟨hLocal, hLocalized⟩
     exact torIndependent_iff_localPrimePairs.mpr hLocal
 

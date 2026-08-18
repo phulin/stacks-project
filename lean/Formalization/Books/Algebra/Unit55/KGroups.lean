@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit52.Length
 import Formalization.Books.Algebra.Unit53.ArtinianRings
 import Mathlib.Algebra.Colimit.Module
+import Mathlib.Algebra.Module.PID
 import Mathlib.Algebra.Module.Projective
 import Mathlib.Algebra.Polynomial.Eval.Algebra
 import Mathlib.GroupTheory.Congruence.Hom
@@ -816,7 +817,14 @@ theorem finite_projective_is_free_pid
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     [Module.Projective R M] :
     Module.Free R M := by
-  sorry
+  obtain ⟨F, _, _, _, i, s, his⟩ :=
+    Module.Projective.iff_split.mp (inferInstance : Module.Projective R M)
+  let bF := Module.Free.chooseBasis R F
+  let _ : Module.IsTorsionFree R F := bF.isTorsionFree
+  let _ : Module.IsTorsionFree R M :=
+    (LinearMap.injective_of_comp_eq_id i s his).moduleIsTorsionFree i
+      (fun r x => i.map_smul r x)
+  exact Module.free_of_finite_type_torsion_free'
 
 /- A short exact sequence of finite free modules splits, so its middle term
 is the direct sum of its outer terms.  A binary product is the additive
@@ -831,7 +839,11 @@ theorem finite_free_short_exact_splits_pid
     (hf : Function.Injective f) (hg : Function.Surjective g)
     (hfg : Function.Exact f g) :
     Nonempty (M ≃ₗ[R] M' × M'') := by
-  sorry
+  obtain ⟨l, hl⟩ :=
+    (Module.Projective.iff_split_of_projective g hg).mp
+      (inferInstance : Module.Projective R M'')
+  let hs : { l : M'' →ₗ[R] M // g ∘ₗ l = LinearMap.id } := ⟨l, hl⟩
+  exact ⟨(hfg.splitSurjectiveEquiv hf hs).1⟩
 
 theorem finite_free_rank_add_of_short_exact_pid
     {R M' M M'' : Type u} [CommRing R] [IsDomain R]
@@ -845,7 +857,27 @@ theorem finite_free_rank_add_of_short_exact_pid
     finiteFreeRank (R := R) (M := M) =
       finiteFreeRank (R := R) (M := M') +
         finiteFreeRank (R := R) (M := M'') := by
-  sorry
+  have hrank (N : Type u) [AddCommGroup N] [Module R N]
+      [Module.Finite R N] [Module.Free R N] :
+      finiteFreeRank (R := R) (M := N) = Module.finrank R N := by
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := R) (M := N)))
+    have he := e.finrank_eq
+    simpa [finiteFreeRank, Module.finrank_pi] using he.symm
+  obtain ⟨e⟩ := finite_free_short_exact_splits_pid f g hf hg hfg
+  have hdim : Module.finrank R M = Module.finrank R (M' × M'') :=
+    e.finrank_eq
+  have hprod :
+      Module.finrank R (M' × M'') =
+        Module.finrank R M' + Module.finrank R M'' :=
+    Module.finrank_prod
+  calc
+    finiteFreeRank (R := R) (M := M) = Module.finrank R M := hrank M
+    _ = Module.finrank R M' + Module.finrank R M'' := hdim.trans hprod
+    _ = finiteFreeRank (R := R) (M := M') +
+        finiteFreeRank (R := R) (M := M'') := by
+      rw [hrank M', hrank M'']
 
 /- The structure theorem for finitely generated modules over a PID.  The
 finite direct sum is represented by DirectSum. -/
@@ -858,7 +890,15 @@ theorem finite_module_structure_pid
     ∃ r k : ℕ, ∃ d : Fin k → R,
       Nonempty (M ≃ₗ[R]
         (Fin r → R) × DirectSum (Fin k) (fun i => pidTorsionSummand R (d i))) := by
-  sorry
+  obtain ⟨r, ι, _, p, _hp, e, ⟨h⟩⟩ :=
+    Module.equiv_free_prod_directSum (R := R) (M := M)
+  let eι := Fintype.equivFin ι
+  let d : Fin (Fintype.card ι) → R :=
+    fun j => p (eι.symm j) ^ e (eι.symm j)
+  refine ⟨r, Fintype.card ι, d, ?_⟩
+  exact ⟨h.trans
+    ((Finsupp.linearEquivFunOnFinite R R (Fin r)).prodCongr
+      (DirectSum.lequivCongrLeft R eι))⟩
 
 /-- For a field, both K-groups are identified with ℤ by dimension. -/
 theorem kGroups_field

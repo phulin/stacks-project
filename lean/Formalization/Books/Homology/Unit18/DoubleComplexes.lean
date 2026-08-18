@@ -1142,7 +1142,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 (p + 1) qr.1 qr.2)
       (show (s - p, n - s) =
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
-        congr 1; ring)]
+        congr 1 <;> ring)]
     rw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d1 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
@@ -1261,7 +1261,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       tripleTotalSign₁ (p + 1) ((s + 1) - (p + 1)) =
         -tripleTotalSign₁ p (s - p) := by
     dsimp [tripleTotalSign₁]
-    simp [Int.negOnePow_succ]
+    simp
   have hs1q :
       tripleTotalSign₁ p ((s + 1) - p) = tripleTotalSign₁ p (s - p) := by
     dsimp [tripleTotalSign₁]
@@ -1270,22 +1270,22 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       tripleTotalSign₂ (p + 1) ((s + 1) - (p + 1)) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
-    simp [Int.negOnePow_succ]
+    simp
   have hs2q :
       tripleTotalSign₂ p ((s + 1) - p) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
-    simp [Int.negOnePow_succ]
+    simp
   have hs1q_raw :
       (p + ((s + 1) - p)).negOnePow = (p + (s - p)).negOnePow := by
     congr 1 <;> ring
   have hs2p_raw :
       ((p + 1) + ((s + 1) - (p + 1))).negOnePow =
         -(p + (s - p)).negOnePow := by
-    simp [Int.negOnePow_succ]
+    simp
   have hs2q_raw :
       (p + ((s + 1) - p)).negOnePow = -(p + (s - p)).negOnePow := by
-    simp [Int.negOnePow_succ]
+    simp
   have hzero : g p ≫ tripleOrder12Differential A (n + 1) =
       (0 : A.obj p (s - p) (n - s) ⟶
         ∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
@@ -1469,7 +1469,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 (p + 1) qr.1 qr.2)
       (show (s - p, n - s) =
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
-        congr 1; ring)]
+        congr 1 <;> ring)]
     rw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d1 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
@@ -1602,10 +1602,10 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       tripleTotalSign₂ p ((s + 1) - p) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
-    simp
+    simp [Int.negOnePow_succ]
   have hs_succ : (p + 1 + (s - p)).negOnePow = -s.negOnePow := by
     rw [show p + 1 + (s - p) = s + 1 by ring]
-    simp
+    simp [Int.negOnePow_succ]
   have hzero : g p ≫ tripleOrder12Differential A (n + 1) =
       (0 : A.obj p (s - p) (n - s) ⟶
         ∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)
@@ -1647,7 +1647,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     simp only [Linear.units_smul_comp, Category.assoc]
     rw [hnext' (s + 1) (p + 1), hnext' (s + 1) p, hnext' s p]
     simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
-      h11', h22', h33', h12', h13', h23', Linear.comp_units_smul]
+      h11', h22', h33', h12', h13', h23']
     rw [hs_succ]
     simp only [Units.neg_smul, smul_smul, mul_comm]
     rw [← smul_smul]

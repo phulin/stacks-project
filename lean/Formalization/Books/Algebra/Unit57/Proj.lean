@@ -163,14 +163,21 @@ private lemma zgraded_comap_map (H : ZGradedRingData A)
     exact DirectSum.decompose_of_mem_same H.component z.2
   have hterm (a : A) (z : zDegreeZeroSubring H) (hz : z ∈ q) :
       (⟨π (a * (z : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H) ∈ q := by
-    rw [hπ_mul]
+    have hsub :
+        (⟨π (a * (z : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H) =
+          ⟨π a * (z : A), SetLike.coe_mem _⟩ := by
+      apply Subtype.ext
+      exact hπ_mul
+    rw [hsub]
     change (⟨π a, SetLike.coe_mem _⟩ : zDegreeZeroSubring H) * z ∈ q
     exact Ideal.mul_mem_left q _ hz
   apply le_antisymm
   · intro x hx
     change e x ∈ Ideal.map e q at hx
     rw [← Ideal.span_eq q, Ideal.map_span] at hx
-    obtain ⟨l, hl⟩ := (Finsupp.mem_span_iff_linearCombination _ _).mp hx
+    obtain ⟨l, hl⟩ :=
+      (Finsupp.mem_span_iff_linearCombination A
+        (e '' (↑q : Set (zDegreeZeroSubring H))) (e x)).mp hx
     simp only [Finsupp.linearCombination, Finsupp.coe_lsum, Finsupp.sum,
       LinearMap.coe_smulRight, LinearMap.id_coe, id_eq, smul_eq_mul] at hl
     have hsum :
@@ -311,13 +318,25 @@ private lemma zgraded_radical_map_isPrime (H : ZGradedRingData A) (u : Aˣ) {d :
       have hmem : a ^ d.toNat * gi ∈ I := Ideal.mem_map_of_mem e hqa
       have hmem' := Ideal.mul_mem_left I (↑(u ^ i) : A) hmem
       have hpow : a ^ d.toNat ∈ I := by
-        simpa [mul_assoc, mul_left_comm, mul_comm, hgi_unit] using hmem'
+        have heq : (↑(u ^ i) : A) * (a ^ d.toNat * gi) = a ^ d.toNat := by
+          calc
+            (↑(u ^ i) : A) * (a ^ d.toNat * gi) =
+                a ^ d.toNat * ((↑(u ^ i) : A) * gi) := by ac_rfl
+            _ = a ^ d.toNat := by rw [hgi_unit, mul_one]
+        rw [← heq]
+        exact hmem'
       exact Ideal.mem_radical_iff.mpr ⟨d.toNat, hpow⟩
     · right
       have hmem : b ^ d.toNat * gj ∈ I := Ideal.mem_map_of_mem e hqb
       have hmem' := Ideal.mul_mem_left I (↑(u ^ j) : A) hmem
       have hpow : b ^ d.toNat ∈ I := by
-        simpa [mul_assoc, mul_left_comm, mul_comm, hgj_unit] using hmem'
+        have heq : (↑(u ^ j) : A) * (b ^ d.toNat * gj) = b ^ d.toNat := by
+          calc
+            (↑(u ^ j) : A) * (b ^ d.toNat * gj) =
+                b ^ d.toNat * ((↑(u ^ j) : A) * gj) := by ac_rfl
+            _ = b ^ d.toNat := by rw [hgj_unit, mul_one]
+        rw [← heq]
+        exact hmem'
       exact Ideal.mem_radical_iff.mpr ⟨d.toNat, hpow⟩
   apply hIhom.radical.isPrime_of_homogeneous_mem_or_mem
   · intro htop
@@ -379,8 +398,10 @@ theorem zGradedPrime_homeomorph_degree_zero
         have hD : (d.toNat : ℤ) = d := Int.toNat_of_nonneg (le_of_lt hd)
         ring
       have hdeg : (GradedRing.proj H.component k x) ^ d.toNat * g ∈ H.component 0 := by
+        have hproj : GradedRing.proj H.component k x ∈ H.component k :=
+          p.2.mem_iff.mp hx k
         have hmem := SetLike.mul_mem_graded
-          (SetLike.pow_mem_graded d.toNat (p.2.mem_iff.mp hx k)) hg
+          (SetLike.pow_mem_graded d.toNat hproj) hg
         rw [nsmul_eq_mul, Int.toNat_of_nonneg (le_of_lt hd)] at hmem
         simpa [hidx] using hmem
       have hpow : (GradedRing.proj H.component k x) ^ d.toNat ∈ p.1.asIdeal :=
@@ -396,7 +417,17 @@ theorem zGradedPrime_homeomorph_degree_zero
         (↑(u ^ k) : A) hmap
       have hpow' : (GradedRing.proj H.component k x) ^ d.toNat ∈
           Ideal.map e (Ideal.comap e p.1.asIdeal) := by
-        simpa [mul_assoc, mul_left_comm, mul_comm, hgu] using hmap'
+        have heq : (↑(u ^ k) : A) *
+            ((GradedRing.proj H.component k x) ^ d.toNat * g) =
+              (GradedRing.proj H.component k x) ^ d.toNat := by
+          calc
+            (↑(u ^ k) : A) *
+                ((GradedRing.proj H.component k x) ^ d.toNat * g) =
+                (GradedRing.proj H.component k x) ^ d.toNat *
+                  ((↑(u ^ k) : A) * g) := by ac_rfl
+            _ = (GradedRing.proj H.component k x) ^ d.toNat := by rw [hgu, mul_one]
+        rw [← heq]
+        exact hmap'
       exact Ideal.mem_radical_iff.mpr ⟨d.toNat, hpow'⟩
     apply Subtype.ext
     apply PrimeSpectrum.ext
@@ -465,7 +496,17 @@ theorem zGradedPrime_homeomorph_degree_zero
         (↑(u ^ i) : A) hrad
       have hpow : (GradedRing.proj H.component i a) ^ d.toNat ∈
           (Ideal.map e q.asIdeal).radical := by
-        simpa [b, mul_assoc, mul_left_comm, mul_comm, hgu i] using hmul
+        have heq : (↑(u ^ i) : A) *
+            ((GradedRing.proj H.component i a) ^ d.toNat * g i) =
+              (GradedRing.proj H.component i a) ^ d.toNat := by
+          calc
+            (↑(u ^ i) : A) *
+                ((GradedRing.proj H.component i a) ^ d.toNat * g i) =
+                (GradedRing.proj H.component i a) ^ d.toNat *
+                  ((↑(u ^ i) : A) * g i) := by ac_rfl
+            _ = (GradedRing.proj H.component i a) ^ d.toNat := by rw [hgu i, mul_one]
+        rw [← heq]
+        exact hmul
       exact hradprime.mem_of_pow_mem d.toNat hpow
   have hnot (q : PrimeSpectrum B) :
       a ∉ (inv q).1.asIdeal ↔ ∃ i : ℤ, b i ∉ q.asIdeal := by
@@ -507,6 +548,10 @@ theorem zGradedPrime_homeomorph_degree_zero
       refine ⟨i, ?_⟩
       change b i ∉ q.asIdeal at hi
       exact hi
+  change IsOpen
+    (zGradedPrimeToDegreeZero H ''
+      ((fun p : zGradedPrimeSpectrum H => p.1) ⁻¹'
+        (PrimeSpectrum.basicOpen a : Set (PrimeSpectrum A))))
   rw [himage]
   exact isOpen_iUnion fun i => PrimeSpectrum.isOpen_basicOpen
 
@@ -612,10 +657,12 @@ instance homogeneousAwayPrimeIdeal_isPrime (G : GradedRingData S)
     (p : projectiveSpectrum G) {f : S} (hf : f ∉ p.asHomogeneousIdeal.toIdeal) :
     (homogeneousAwayPrimeIdeal G p hf).IsPrime := by
   unfold homogeneousAwayPrimeIdeal
-  apply Ideal.IsPrime.comap
-  apply IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers f)
-    (Localization (Submonoid.powers f)) p.asHomogeneousIdeal.toIdeal
-  exact Ideal.disjoint_powers_iff_notMem_of_isPrime f |>.2 hf
+  letI : (Ideal.map (algebraMap S (Localization (Submonoid.powers f)))
+      p.asHomogeneousIdeal.toIdeal).IsPrime :=
+    IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers f)
+      (Localization (Submonoid.powers f)) _ p.isPrime
+      (Ideal.disjoint_powers_iff_notMem_of_isPrime f |>.2 hf)
+  exact Ideal.IsPrime.comap _
 
 noncomputable def homogeneousAwayPrime (G : GradedRingData S)
     (p : projectiveSpectrum G) {f : S} (hf : f ∉ p.asHomogeneousIdeal.toIdeal) :

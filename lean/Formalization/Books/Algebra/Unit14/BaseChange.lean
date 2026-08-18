@@ -323,7 +323,171 @@ theorem homFromTensorProductEquiv_exists {R S M N P : Type u} [CommRing R] [Comm
       (((ModuleCat.restrictScalars f).obj
         (ModuleCat.of S (TensorProduct S M N)) ⟶ ModuleCat.of R P) ≃
         (ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P))) := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Module R N := Module.compHom N f
+  let : IsScalarTower R S N := SMul.comp.isScalarTower f
+  let : Module S (N →ₗ[R] P) := homOfScalarsModule f
+  let X : ModuleCat R :=
+    (ModuleCat.restrictScalars f).obj (ModuleCat.of S (TensorProduct S M N))
+  have hadd :
+      (inferInstance : AddCommMonoid (TensorProduct S M N)) =
+        X.isAddCommGroup.toAddCommMonoid := by
+    apply AddCommMonoid.ext
+    rfl
+  cases hadd
+  let tmulX (m : M) (n : N) : (X : Type _) := m ⊗ₜ[S] n
+  let forward :
+      (X ⟶ ModuleCat.of R P) →
+        (ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) :=
+    fun φ =>
+      ModuleCat.ofHom
+        { toFun := fun m =>
+            { toFun := fun n => φ.hom (tmulX m n)
+              map_add' := by
+                intro n n'
+                calc
+                  φ.hom (tmulX m (n + n')) =
+                      φ.hom (tmulX m n + tmulX m n') := by
+                        congr 1
+                        exact TensorProduct.tmul_add m n n'
+                  _ = φ.hom (tmulX m n) + φ.hom (tmulX m n') :=
+                    φ.hom.map_add _ _
+              map_smul' := by
+                intro r n
+                have htmul : tmulX m (r • n) = f r • tmulX m n := by
+                  change m ⊗ₜ[S] (f r • n) = f r • (m ⊗ₜ[S] n)
+                  exact TensorProduct.tmul_smul (f r) m n
+                calc
+                  φ.hom (tmulX m (r • n)) =
+                      φ.hom (f r • tmulX m n) := by rw [htmul]
+                  _ = r • φ.hom (tmulX m n) := by
+                    have h := φ.hom.map_smul r (tmulX m n)
+                    rw [ModuleCat.restrictScalars.smul_def' (M := ModuleCat.of S
+                      (TensorProduct S M N)) f r (m ⊗ₜ[S] n)] at h
+                    exact h }
+          map_add' := by
+            intro m m'
+            apply LinearMap.ext
+            intro n
+            calc
+              φ.hom (tmulX (m + m') n) =
+                  φ.hom (tmulX m n + tmulX m' n) := by
+                    congr 1
+                    exact TensorProduct.add_tmul m m' n
+              _ = φ.hom (tmulX m n) + φ.hom (tmulX m' n) :=
+                φ.hom.map_add _ _
+          map_smul' := by
+            intro s m
+            apply LinearMap.ext
+            intro n
+            change φ.hom (tmulX (s • m) n) = φ.hom (tmulX m (s • n))
+            rw [show tmulX (s • m) n = tmulX m (s • n) by
+              exact TensorProduct.smul_tmul s m n] }
+  let : Module R (TensorProduct S M N) := Module.compHom (TensorProduct S M N) f
+  let b (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) : M →+ N →+ P :=
+    { toFun := fun m =>
+        { toFun := fun n => ψ.hom m n
+          map_zero' := by simp
+          map_add' := by intro n n'; exact (ψ.hom m).map_add _ _ }
+      map_zero' := by ext n; simp
+      map_add' := by
+        intro m m'
+        ext n
+        dsimp
+        rw [ψ.hom.map_add]
+        rfl }
+  have hb (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) :
+      ∀ s : S, ∀ m : M, ∀ n : N, b ψ (s • m) n = b ψ m (s • n) := by
+    intro s m n
+    dsimp [b]
+    rw [ψ.hom.map_smul]
+    rfl
+  let l (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) :
+      TensorProduct S M N →+ P := TensorProduct.liftAddHom (b ψ) (hb ψ)
+  have hl (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) (m : M) (n : N) :
+      l ψ (m ⊗ₜ[S] n) = ψ.hom m n := by
+    exact TensorProduct.liftAddHom_tmul (b ψ) (hb ψ) m n
+  let g (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) :
+      TensorProduct S M N →ₗ[R] P :=
+    { toFun := l ψ
+      map_add' := fun x y => (l ψ).map_add _ _
+      map_smul' := by
+        intro r x
+        induction x using TensorProduct.induction_on with
+        | zero => simp
+        | @tmul m n =>
+          change l ψ (f r • (m ⊗ₜ[S] n)) = r • l ψ (m ⊗ₜ[S] n)
+          rw [TensorProduct.smul_tmul']
+          rw [TensorProduct.liftAddHom_tmul, TensorProduct.liftAddHom_tmul]
+          change ψ.hom (f r • m) n = r • ψ.hom m n
+          rw [ψ.hom.map_smul]
+          change ψ.hom m (r • n) = r • ψ.hom m n
+          exact (ψ.hom m).map_smul r n
+        | @add x y hx hy =>
+          calc
+            l ψ (r • (x + y)) = l ψ (r • x + r • y) := by rw [smul_add]
+            _ = l ψ (r • x) + l ψ (r • y) := (l ψ).map_add _ _
+            _ = (RingHom.id R) r • l ψ x + (RingHom.id R) r • l ψ y := by
+              exact congrArg₂ (fun a b => a + b) hx hy
+            _ = (RingHom.id R) r • l ψ (x + y) := by
+              rw [(l ψ).map_add]
+              exact (smul_add _ _ _).symm }
+  let backward :
+      ((ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) →
+        ((ModuleCat.restrictScalars f).obj
+          (ModuleCat.of S (TensorProduct S M N)) ⟶ ModuleCat.of R P)) :=
+    fun ψ =>
+      (ModuleCat.homEquiv (M := ModuleCat.of R (TensorProduct S M N))
+        (N := ModuleCat.of R P)).symm (g ψ)
+  have hbackward (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) :
+      (backward ψ).hom = g ψ := by
+    change (ModuleCat.homEquiv (M := ModuleCat.of R (TensorProduct S M N))
+      (N := ModuleCat.of R P)) (backward ψ) = g ψ
+    exact (ModuleCat.homEquiv (M := ModuleCat.of R (TensorProduct S M N))
+      (N := ModuleCat.of R P)).apply_symm_apply _
+  have hg (ψ : ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P)) (m : M) (n : N) :
+      g ψ (m ⊗ₜ[S] n) = ψ.hom m n := by
+    change l ψ (m ⊗ₜ[S] n) = ψ.hom m n
+    exact hl ψ m n
+  have hforward (φ : X ⟶ ModuleCat.of R P) (m : M) (n : N) :
+      (forward φ).hom m n = φ.hom (tmulX m n) := by
+    rfl
+  exact ⟨
+    { toFun := forward
+      invFun := backward
+      left_inv := by
+        intro φ
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · exact (backward (forward φ)).hom.map_zero.trans φ.hom.map_zero.symm
+        · intro m n
+          change (backward (forward φ)).hom (tmulX m n) = φ.hom (tmulX m n)
+          rw [hbackward]
+          change g (forward φ) (m ⊗ₜ[S] n) = φ.hom (m ⊗ₜ[S] n)
+          exact (hg (forward φ) m n).trans (hforward φ m n)
+        · intro x y hx hy
+          change (backward (forward φ)).hom ((x : X) + (y : X)) =
+            φ.hom ((x : X) + (y : X))
+          calc
+            (backward (forward φ)).hom ((x : X) + (y : X)) =
+                (backward (forward φ)).hom (x : X) +
+                  (backward (forward φ)).hom (y : X) :=
+              (backward (forward φ)).hom.map_add _ _
+            _ = φ.hom (x : X) + φ.hom (y : X) := by rw [hx, hy]
+            _ = φ.hom ((x : X) + (y : X)) := (φ.hom.map_add _ _).symm
+      right_inv := by
+        intro ψ
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro m
+        apply LinearMap.ext
+        intro n
+        change (backward ψ).hom (tmulX m n) = ψ.hom m n
+        rw [hbackward]
+        change g ψ (m ⊗ₜ[S] n) = ψ.hom m n
+        exact hg ψ m n }⟩
 
 /- The source identifies these Hom spaces, so expose the equivalence itself in
    addition to the existence form used to package its proof. -/

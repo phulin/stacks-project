@@ -321,7 +321,7 @@ private theorem splittingTensorSimilarityInverseRight (k : Type*) [Field k]
     (splittingTensorSimilarityInverseLeft k A)
 
 private theorem splittingTensorSplitOppositeSimilarity (k : Type*) [Field k]
-    [Field k'] [Algebra k k'] (A B : CSA k) (d : ℕ) (hd : d ≠ 0)
+    (A B : CSA k) (d : ℕ) (hd : d ≠ 0)
     (e : Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k]
       Matrix (Fin d) (Fin d) k)) :
     IsBrauerEquivalent A (oppositeCSA k B) := by
@@ -525,7 +525,108 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
       rw [Algebra.TensorProduct.tmul_mul_tmul,
         Algebra.TensorProduct.tmul_mul_tmul]
       simp [mul_comm]
-    sorry
+    let : FaithfulSMul k' V := inferInstance
+    have hscalar : Function.Injective scalar := by
+      intro x y hxy
+      apply FaithfulSMul.eq_of_smul_eq_smul (α := V)
+      intro v
+      exact congrArg (fun f : Module.End k V => f v) hxy
+    let scalarC : k' →ₐ[k] C := scalar.codRestrict C hscalar_mem
+    have hscalarC : Function.Injective scalarC := by
+      intro x y hxy
+      apply hscalar
+      exact congrArg Subtype.val hxy
+    let : IsSimpleRing C := by
+      simpa [C] using hdec.1
+    let : Algebra.IsCentral k C := by
+      simpa [C] using hdec.2.1
+    let Bc : CSA k := { AlgCat.of k C with }
+    let B : CSA k := oppositeCSA k Bc
+    have hcommScalar : ∀ x y : k', Commute (scalarC x) (scalarC y) := by
+      intro x y
+      apply Subtype.ext
+      apply LinearMap.ext
+      intro v
+      change x • (y • v) = y • (x • v)
+      rw [← mul_smul, ← mul_smul, mul_comm]
+    let f : k' →ₐ[k] B.carrier := scalarC.toOpposite hcommScalar
+    have hf : Function.Injective f := by
+      intro x y hxy
+      apply hscalarC
+      apply Subtype.ext
+      have hxy' : scalarC.toOpposite hcommScalar x =
+          scalarC.toOpposite hcommScalar y := by
+        simpa [f, B, Bc] using hxy
+      have hxy'' := congrArg MulOpposite.unop hxy'
+      exact congrArg Subtype.val hxy''
+    obtain ⟨eSC⟩ := hdec.2.2
+    let : Module.Free k C := Module.Free.of_divisionRing k C
+    let m := Fintype.card (Module.Free.ChooseBasisIndex k V)
+    let eR : R ≃ₐ[k] Matrix (Fin m) (Fin m) k :=
+      (algEquivMatrix b).trans
+        (Matrix.reindexAlgEquiv k k
+          (Fintype.equivFin (Module.Free.ChooseBasisIndex k V)))
+    let eTensor : A.carrier ⊗[k] C ≃ₐ[k] S ⊗[k] C :=
+      Algebra.TensorProduct.congr eS (AlgEquiv.refl : C ≃ₐ[k] C)
+    have hm0 : m ≠ 0 := Fintype.card_ne_zero
+    have hAB : IsBrauerEquivalent A B := by
+      change IsBrauerEquivalent A (oppositeCSA k Bc)
+      apply splittingTensorSplitOppositeSimilarity k A Bc m hm0
+      change Nonempty
+        ((A.carrier ⊗[k] Bc.carrier) ≃ₐ[k]
+          Matrix (Fin m) (Fin m) k)
+      exact ⟨eTensor.trans (eSC.trans eR)⟩
+    have hbase_finrank : Module.finrank k' (A.carrier ⊗[k] k') =
+        Module.finrank k A.carrier := by
+      calc
+        Module.finrank k' (A.carrier ⊗[k] k') =
+            Module.finrank k' (k' ⊗[k] A.carrier) :=
+          (Algebra.TensorProduct.commRight k k' A.carrier).toLinearEquiv.finrank_eq.symm
+        _ = Module.finrank k A.carrier := by rw [Module.finrank_baseChange]
+    have hAdim : Module.finrank k A.carrier = d ^ 2 := by
+      calc
+        Module.finrank k A.carrier =
+            Module.finrank k' (A.carrier ⊗[k] k') := hbase_finrank.symm
+        _ = Module.finrank k' (Matrix (Fin d) (Fin d) k') :=
+          e.toLinearEquiv.finrank_eq
+        _ = d ^ 2 := by simp [Module.finrank_matrix, pow_two]
+    have hVdim : Module.finrank k V = d * Module.finrank k k' := by
+      change Module.finrank k (Fin d → k') = _
+      rw [Module.finrank_pi_fintype]
+      simp
+    have hRdim : Module.finrank k R = Module.finrank k V ^ 2 := by
+      change Module.finrank k (V →ₗ[k] V) = _
+      rw [Module.finrank_linearMap]
+      simp [pow_two]
+    have hSdim : Module.finrank k S = Module.finrank k A.carrier :=
+      eS.toLinearEquiv.finrank_eq.symm
+    have hdimRC : Module.finrank k R =
+        Module.finrank k S * Module.finrank k C := by
+      let : Module.Free k S := Module.Free.of_divisionRing k S
+      calc
+        Module.finrank k R = Module.finrank k (S ⊗[k] C) :=
+          eSC.toLinearEquiv.finrank_eq.symm
+        _ = Module.finrank k S * Module.finrank k C :=
+          Module.finrank_tensorProduct
+    have hCdim : Module.finrank k C = Module.finrank k k' ^ 2 := by
+      apply Nat.mul_right_cancel (pow_pos (Nat.pos_of_ne_zero hd0) 2)
+      calc
+        Module.finrank k C * d ^ 2 = d ^ 2 * Module.finrank k C :=
+          Nat.mul_comm _ _
+        _ = Module.finrank k A.carrier * Module.finrank k C := by rw [hAdim]
+        _ = Module.finrank k S * Module.finrank k C := by rw [hSdim]
+        _ = Module.finrank k R := hdimRC.symm
+        _ = Module.finrank k V ^ 2 := hRdim
+        _ = (d * Module.finrank k k') ^ 2 := by rw [hVdim]
+        _ = Module.finrank k k' ^ 2 * d ^ 2 := by
+          simp [pow_two, Nat.mul_assoc, Nat.mul_comm, Nat.mul_left_comm]
+    have hBdim : Module.finrank k B.carrier = Module.finrank k k' ^ 2 := by
+      change Module.finrank k Cᵐᵒᵖ = _
+      calc
+        Module.finrank k Cᵐᵒᵖ = Module.finrank k C :=
+          (MulOpposite.opLinearEquiv k (M := C)).finrank_eq.symm
+        _ = _ := hCdim
+    exact ⟨B, hAB, f, hf, hBdim⟩
   · sorry
 
 theorem maximal_subfield_splits (k K k' : Type*) [Field k]

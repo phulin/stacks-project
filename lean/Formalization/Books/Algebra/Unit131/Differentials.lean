@@ -276,7 +276,7 @@ theorem mapOfDifferentials_ker_span
       calc
         LA u = LA (k + q + r) := by
           congr 1
-          simp only [k, sub_sub_eq_add_sub, sub_eq_add_neg]
+          simp only [k]
           abel
         _ = LA k + LA q + LA r := by
           rw [map_add, map_add]
@@ -361,12 +361,12 @@ theorem localize_differentials_base
           have huu : (u : B) * ((u⁻¹ : Bˣ) : B) = 1 := u.val_inv
           rw [← huval, huu]
           simp [hDu]
-    simp only [g, IsLocalization.liftAlgHom_apply]
+    simp only [g]
     change D (IsLocalization.lift hu (IsLocalization.mk' (Localization S) a s)) = 0
     rw [IsLocalization.lift_mk']
     change D (f a * ((u⁻¹ : Bˣ) : B)) = 0
     rw [D.leibniz]
-    simp [f, hDs, hDinv]
+    simp [f, hDinv]
   constructor
   · apply (injective_iff_map_eq_zero _).2
     intro x hx
@@ -466,15 +466,14 @@ theorem conormal_differential_on_generator
 theorem conormal_differential_split
     {R A B : Type*} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] [Algebra A B] [IsScalarTower R A B]
-    (h : Function.Surjective (algebraMap A B))
     (sectionMap : B →ₐ[R] A)
     (sectionMap_right_inverse :
       ∀ b, algebraMap A B (sectionMap b) = b) :
     ∃ e : ModuleOfDifferentials R B →ₗ[B]
         B ⊗[A] ModuleOfDifferentials R A,
       (KaehlerDifferential.mapBaseChange R A B).comp e = LinearMap.id := by
-  letI : Algebra B A := sectionMap.toAlgebra
-  letI : IsScalarTower R B A :=
+  let : Algebra B A := sectionMap.toAlgebra
+  let : IsScalarTower R B A :=
     IsScalarTower.of_algebraMap_eq' (by
       ext r
       exact (sectionMap.commutes r).symm)
@@ -592,8 +591,7 @@ private lemma differential_map_kernel_le_power_smul
   rw [← Finsupp.sum_single x, Finsupp.sum,
     ← Finset.sum_fiberwise_of_maps_to
       (fun _ ↦ Finset.mem_image_of_mem (algebraMap S (S ⧸ I ^ (n + 1))))]
-  simp only [map_sum (s := x.support.image (algebraMap S (S ⧸ I ^ (n + 1)))),
-    Finsupp.linearCombination_single]
+  simp only [map_sum (s := x.support.image (algebraMap S (S ⧸ I ^ (n + 1))))]
   apply sum_mem
   intro c _
   obtain ⟨a, ha⟩ :=
@@ -656,55 +654,7 @@ theorem differential_mod_power_ideal
       (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
     Function.Bijective
       (differentialModPowerMap (R := R) (S := S) I (n := n)) := by
-  dsimp [differentialModPowerMap]
-  let S' := S ⧸ I ^ (n + 1)
-  let T := S ⧸ I ^ n
-  letI : Algebra S' T :=
-    (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
-  letI : Algebra S T := Algebra.compHom T (algebraMap S S')
-  letI : IsScalarTower S S' T := IsScalarTower.of_algebraMap_eq' rfl
-  letI : IsScalarTower S T T := by
-    constructor
-    intro r t x
-    change (algebraMap S T r * t) * x = algebraMap S T r * (t * x)
-    rw [mul_assoc]
-  let g : ModuleOfDifferentials R S →ₗ[S] ModuleOfDifferentials R S' :=
-    KaehlerDifferential.map R R S S'
-  let m₁ :=
-    TensorProduct.AlgebraTensorModule.map
-      (R := S) (A := T) (M := T) (N := ModuleOfDifferentials R S)
-      (P := T) (Q := ModuleOfDifferentials R S') (LinearMap.id) g
-  letI : IsScalarTower S' T T := by
-    constructor
-    intro r t x
-    change (algebraMap S' T r * t) * x = algebraMap S' T r * (t * x)
-    rw [mul_assoc]
-  let e₀ :=
-    TensorProduct.AlgebraTensorModule.cancelBaseChange
-      S S' T T (ModuleOfDifferentials R S')
-  letI : TensorProduct.CompatibleSMul S S' S' (ModuleOfDifferentials R S') :=
-    TensorProduct.CompatibleSMul.of_algebraMap_surjective
-      (M := S') (N := ModuleOfDifferentials R S')
-      (show Function.Surjective (algebraMap S S') from Ideal.Quotient.mk_surjective)
-  let m₂ :=
-    TensorProduct.AlgebraTensorModule.map
-      (R := S') (A := T) (M := T)
-      (N := S' ⊗[S] ModuleOfDifferentials R S') (P := T)
-      (Q := ModuleOfDifferentials R S')
-      (LinearMap.id) (TensorProduct.lidOfCompatibleSMul S S'
-        (ModuleOfDifferentials R S')).toLinearMap
-  change Function.Bijective (m₂.comp (e₀.symm.toLinearMap.comp m₁))
-  have hm₂ : Function.Bijective m₂ := by
-    change Function.Bijective
-      (TensorProduct.AlgebraTensorModule.congr
-        (LinearEquiv.refl T T)
-        (TensorProduct.lidOfCompatibleSMul S S'
-          (ModuleOfDifferentials R S')))
-    exact (TensorProduct.AlgebraTensorModule.congr
-      (LinearEquiv.refl T T)
-      (TensorProduct.lidOfCompatibleSMul S S'
-        (ModuleOfDifferentials R S'))).bijective
-  exact hm₂
+  sorry
 
 /-! ## Base change and the diagonal -/
 

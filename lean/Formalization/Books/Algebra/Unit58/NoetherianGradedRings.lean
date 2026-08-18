@@ -447,7 +447,108 @@ theorem isNumericalPolynomial_of_sub
     {A : Type v} [AddCommGroup A] (f : ℤ → A)
     (hf : IsNumericalPolynomial (fun n => f n - f (n - 1))) :
     IsNumericalPolynomial f := by
-  sorry
+  rcases hf with ⟨r, a, ha⟩
+  let g : ℤ → A := fun n =>
+    ∑ i ∈ Finset.range (r + 1), integerBinomial (n + 1) (i + 1) • a i
+  let d : ℤ → A := fun n => f n - g n
+  have hg : ∀ᶠ n : ℤ in Filter.atTop,
+      g n - g (n - 1) = ∑ i ∈ Finset.range (r + 1), integerBinomial n i • a i := by
+    filter_upwards [Filter.Ici_mem_atTop (0 : ℤ)] with n hn
+    dsimp [g]
+    have hnm : (n - 1) + 1 = n := by ring
+    rw [hnm, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [← sub_smul, integerBinomial_sub_shift n hn i]
+  have hd : ∀ᶠ n : ℤ in Filter.atTop, d n = d (n - 1) := by
+    filter_upwards [ha, hg] with n hn hgn
+    dsimp [d]
+    calc
+      f n - g n = (f n - f (n - 1)) - (g n - g (n - 1)) +
+          (f (n - 1) - g (n - 1)) := by abel
+      _ = f (n - 1) - g (n - 1) := by rw [hn, hgn]; abel
+  obtain ⟨N, hN⟩ := Filter.eventually_atTop.1
+    (hd.and (Filter.Ici_mem_atTop (0 : ℤ)))
+  have hconst_nat : ∀ k : ℕ, d (N + k) = d N := by
+    intro k
+    induction k with
+    | zero => simp
+    | succ k ih =>
+        have h := (hN (N + (k + 1)) (by omega)).1
+        calc
+          d (N + (k + 1)) = d ((N + (k + 1)) - 1) := h
+          _ = d (N + k) := by
+            congr 1
+            norm_num
+            ring
+          _ = d N := ih
+  have hconst : ∀ n : ℤ, N ≤ n → d n = d N := by
+    intro n hn
+    have hrepr : n = N + (n - N).toNat := by omega
+    rw [hrepr]
+    exact hconst_nat _
+  let b : ℕ → A := fun j =>
+    if j = 0 then d N + a 0
+    else a (j - 1) + if j ≤ r then a j else 0
+  have hsum (n : ℤ) (hn : 0 ≤ n) :
+      (∑ j ∈ Finset.range (r + 2), integerBinomial n j • b j) =
+        d N + ∑ i ∈ Finset.range (r + 1),
+          integerBinomial (n + 1) (i + 1) • a i := by
+    have hnp : 0 ≤ n + 1 := by omega
+    have hpascal (i : ℕ) :
+        integerBinomial (n + 1) (i + 1) =
+          integerBinomial n i + integerBinomial n (i + 1) := by
+      simp only [integerBinomial, if_pos hn, if_pos hnp]
+      rw [Int.toNat_add hn (by norm_num), Int.toNat_one,
+        Nat.choose_succ_succ']
+      norm_num
+    have hcond :
+        (∑ j ∈ Finset.range (r + 1),
+            integerBinomial n (j + 1) •
+              (if j + 1 ≤ r then a (j + 1) else 0)) =
+          ∑ j ∈ Finset.range r, integerBinomial n (j + 1) • a (j + 1) := by
+      rw [Finset.sum_range_succ]
+      congr 1
+      · apply Finset.sum_congr rfl
+        intro j hj
+        have hj' : j + 1 ≤ r := by omega
+        simp [hj']
+      · simp
+    have hshift :
+        (∑ j ∈ Finset.range (r + 1),
+            integerBinomial n (j + 1) • b (j + 1)) =
+          (∑ j ∈ Finset.range (r + 1),
+              integerBinomial n (j + 1) • a j) +
+            ∑ j ∈ Finset.range r, integerBinomial n (j + 1) • a (j + 1) := by
+      change (∑ j ∈ Finset.range (r + 1),
+          integerBinomial n (j + 1) •
+            (a j + if j + 1 ≤ r then a (j + 1) else 0)) = _
+      rw [Finset.sum_add_distrib, hcond]
+    have hdecomp :
+        (∑ j ∈ Finset.range (r + 2), integerBinomial n j • b j) =
+          integerBinomial n 0 • b 0 +
+            ∑ j ∈ Finset.range (r + 1),
+              integerBinomial n (j + 1) • b (j + 1) := by
+      rw [show r + 2 = (r + 1) + 1 by omega, Finset.sum_range_succ']
+    have hz : integerBinomial n 0 • b 0 = d N + a 0 := by
+      simp [b, integerBinomial, hn]
+    rw [hdecomp, hz, hshift]
+    simp_rw [hpascal, add_smul, Finset.sum_add_distrib]
+    rw [Finset.sum_range_succ']
+    simp [integerBinomial, hn]
+    abel
+  refine ⟨r + 1, b, ?_⟩
+  filter_upwards [Filter.Ici_mem_atTop N] with n hn
+  have hn0 : 0 ≤ n := le_trans (hN.2) hn
+  have hdn : d n = d N := hconst n hn
+  have hgn : g n = f n - d N := by
+    dsimp [d] at hdn
+    rw [sub_eq_iff_eq_add] at hdn
+    exact hdn.symm
+  rw [hsum n hn0]
+  dsimp [d, g] at hgn ⊢
+  rw [hgn]
+  abel
 
 /- The elementary integer-valued-polynomial fact recalled in the source. -/
 theorem integer_valued_polynomial_is_numerical
@@ -456,11 +557,131 @@ theorem integer_valued_polynomial_is_numerical
     ∃ f : ℤ → ℤ,
       (∀ n : ℤ, (f n : ℚ) = P.eval (n : ℚ)) ∧
         IsNumericalPolynomial f := by
-  sorry
+  classical
+  have aux : ∀ d : ℕ, ∀ P : Polynomial ℚ, P.natDegree = d →
+      (∀ n : ℤ, ∃ z : ℤ, P.eval (n : ℚ) = (z : ℚ)) →
+        ∃ f : ℤ → ℤ,
+          (∀ n : ℤ, (f n : ℚ) = P.eval (n : ℚ)) ∧
+            IsNumericalPolynomial f := by
+    intro d
+    induction d using Nat.strong_induction_on with
+    | h d ih =>
+        intro P hdeg hInt
+        by_cases hzero : d = 0
+        · let f : ℤ → ℤ := fun n => Classical.choose (hInt n)
+          have hf_eval : ∀ n : ℤ, (f n : ℚ) = P.eval (n : ℚ) := by
+            intro n
+            exact (Classical.choose_spec (hInt n)).symm
+          have hPconst : P = Polynomial.C (P.coeff 0) := by
+            exact Polynomial.eq_C_of_natDegree_eq_zero (hzero ▸ hdeg)
+          refine ⟨f, hf_eval, 0, (fun _ => f 0), ?_⟩
+          filter_upwards [Filter.Ici_mem_atTop (0 : ℤ)] with n hn
+          have hn0 : 0 ≤ n := hn
+          have hfn : f n = f 0 := by
+            apply Int.cast_injective (α := ℚ)
+            rw [hf_eval n, hf_eval 0, hPconst]
+            simp
+          simp [hfn, integerBinomial, hn0]
+        · have hpos : 0 < P.natDegree := by omega
+          have hP0 : P ≠ 0 := by
+            intro h
+            simp [h] at hpos
+          let q : Polynomial ℚ := Polynomial.X - Polynomial.C 1
+          let Q : Polynomial ℚ := P - P.comp q
+          have hqdegree : q.natDegree = 1 := by
+            dsimp [q]
+            rw [Polynomial.natDegree_X_sub_C]
+          have hqdeg : q.natDegree ≠ 0 := by omega
+          have hcomp0 : P.comp q ≠ 0 := by
+            intro h
+            have hh := congrArg Polynomial.natDegree h
+            rw [Polynomial.natDegree_comp, hqdegree,
+              Nat.mul_one, Polynomial.natDegree_zero] at hh
+            exact (Nat.ne_of_gt hpos) hh
+          have hdegcomp : (P.comp q).degree = P.degree := by
+            rw [Polynomial.degree_eq_natDegree hcomp0,
+              Polynomial.degree_eq_natDegree hP0, Polynomial.natDegree_comp,
+              hqdegree, Nat.mul_one]
+          have hlc : P.leadingCoeff = (P.comp q).leadingCoeff := by
+            rw [Polynomial.leadingCoeff_comp hqdeg]
+            simp
+          have hQdeg : Q.natDegree < P.natDegree := by
+            by_cases hQ0 : Q = 0
+            · simp [hQ0, hpos]
+            · apply Polynomial.natDegree_lt_natDegree hQ0
+              dsimp [Q]
+              exact Polynomial.degree_sub_lt hdegcomp.symm hP0 hlc
+          have hQint : ∀ n : ℤ, ∃ z : ℤ, Q.eval (n : ℚ) = (z : ℚ) := by
+            intro n
+            rcases hInt n with ⟨z₁, hz₁⟩
+            rcases hInt (n - 1) with ⟨z₂, hz₂⟩
+            refine ⟨z₁ - z₂, ?_⟩
+            dsimp [Q, q]
+            rw [Polynomial.eval_sub, Polynomial.eval_comp,
+              Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C]
+            have hcast : (n : ℚ) - 1 = ((n - 1 : ℤ) : ℚ) := by norm_num
+            rw [hcast, hz₁, hz₂]
+            exact (Int.cast_sub z₁ z₂).symm
+          have hQdeg' : Q.natDegree < d := hdeg ▸ hQdeg
+          obtain ⟨g, hg_eval, hg_num⟩ :=
+            ih Q.natDegree hQdeg' Q rfl hQint
+          let f : ℤ → ℤ := fun n => Classical.choose (hInt n)
+          have hf_eval : ∀ n : ℤ, (f n : ℚ) = P.eval (n : ℚ) := by
+            intro n
+            exact (Classical.choose_spec (hInt n)).symm
+          have hdiff_eval : ∀ n : ℤ,
+              ((f n - f (n - 1) : ℤ) : ℚ) = Q.eval (n : ℚ) := by
+            intro n
+            dsimp [Q, q]
+            rw [Polynomial.eval_sub, Polynomial.eval_comp,
+              Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
+              Int.cast_sub]
+            have hcast : (n : ℚ) - 1 = ((n - 1 : ℤ) : ℚ) := by norm_num
+            rw [hcast, hf_eval n, hf_eval (n - 1)]
+          have hdiff : ∀ n : ℤ, f n - f (n - 1) = g n := by
+            intro n
+            apply Int.cast_injective (α := ℚ)
+            exact (hdiff_eval n).trans (hg_eval n).symm
+          refine ⟨f, hf_eval, isNumericalPolynomial_of_sub f ?_⟩
+          simpa [hdiff] using hg_num
+  exact aux P.natDegree P rfl hP
 
 theorem shifted_integerBinomial_is_numerical (i : ℕ) :
     IsNumericalPolynomial (fun n : ℤ => integerBinomial (n + 1) (i + 1)) := by
-  sorry
+  refine ⟨i + 1,
+    (fun j => if j = i then (1 : ℤ) else if j = i + 1 then 1 else 0), ?_⟩
+  filter_upwards [Filter.Ici_mem_atTop (0 : ℤ)] with n hn
+  have hn0 : 0 ≤ n := hn
+  have hnp : 0 ≤ n + 1 := by omega
+  simp only [integerBinomial, if_pos hn0, if_pos hnp]
+  rw [Int.toNat_add hn0 (by norm_num), Int.toNat_one, Nat.choose_succ_succ']
+  let s := Finset.range (i + 1 + 1)
+  have hi : i ∈ s := by simp [s]
+  have hi1 : i + 1 ∈ s := by simp [s]
+  have hne : i ≠ i + 1 := by omega
+  have hsum :
+      (∑ x ∈ s, if x = i then (n.toNat.choose x : ℤ)
+        else if x = i + 1 then (n.toNat.choose x : ℤ) else 0) =
+        (n.toNat.choose i : ℤ) + (n.toNat.choose (i + 1) : ℤ) := by
+    calc
+      (∑ x ∈ s, if x = i then (n.toNat.choose x : ℤ)
+          else if x = i + 1 then (n.toNat.choose x : ℤ) else 0) =
+          (∑ x ∈ s, if x = i then (n.toNat.choose x : ℤ) else 0) +
+            ∑ x ∈ s, if x = i + 1 then (n.toNat.choose x : ℤ) else 0 := by
+              rw [← Finset.sum_add_distrib]
+              apply Finset.sum_congr rfl
+              intro x hx
+              by_cases hxi : x = i <;> by_cases hxi1 : x = i + 1 <;>
+                simp [hxi, hxi1]
+      _ = (n.toNat.choose i : ℤ) + (n.toNat.choose (i + 1) : ℤ) := by
+        rw [Finset.sum_eq_single_of_mem i hi,
+          Finset.sum_eq_single_of_mem (i + 1) hi1]
+        · simp
+        · intro x hx hxi
+          simp [hxi]
+        · intro x hx hxi
+          simp [hxi]
+  simpa [s] using hsum.symm
 
 /-! ## Finitely generated graded modules and Hilbert functions -/
 

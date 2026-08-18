@@ -291,8 +291,9 @@ theorem iAdicRestrictedPowerSeries_complete_for_limit_topology
 /-- The I-adic topology on the polynomial completion need not be complete. -/
 theorem iAdicPolynomialCompletion_not_always_iAdically_complete :
     ¬ ∀ (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ),
-      IsAdicComplete (polynomialExtensionIdeal A I r)
-        (iAdicPolynomialCompletion A I r) := by
+      IsAdicComplete I A →
+        IsAdicComplete (polynomialExtensionIdeal A I r)
+          (iAdicPolynomialCompletion A I r) := by
   sorry
 
 /-- If the defining ideal is finitely generated, the ring identification is

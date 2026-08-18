@@ -225,7 +225,7 @@ theorem real_radical_compositum_degree :
   have hiQ : Irreducible (f.map (Int.castRingHom ℚ)) :=
     (Polynomial.IsPrimitive.Int.irreducible_iff_irreducible_map_cast hm.isPrimitive).1 hi
   have hip : Irreducible (Polynomial.X ^ 24 - Polynomial.C (2 : ℚ)) := by
-    convert hiQ using 1 <;> norm_num [f]
+    convert hiQ using 1; norm_num [f]
     rw [Polynomial.C_ofNat]
   have hpmonic : (Polynomial.X ^ 24 - Polynomial.C (2 : ℚ)).Monic :=
     Polynomial.monic_X_pow_sub_C (2 : ℚ) (by norm_num)

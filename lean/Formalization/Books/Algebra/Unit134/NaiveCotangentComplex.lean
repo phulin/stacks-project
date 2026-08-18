@@ -432,6 +432,38 @@ theorem jacobi_zariski_h1_base_change_of_flat
       (Algebra.H1Cotangent.map R S T T) := by
   sorry
 
+/- The Tor hypotheses in the full Jacobi--Zariski statement are used on the
+   two-term presentation complex.  This is the tensor-exactness bridge for
+   the presentation-level maps; unlike the flatness lemma above, it only
+   assumes the two stated Tor vanishings. -/
+theorem exact_lTensor_h1Cotangentι_cotangentComplex_of_tor_vanishing
+    {R S T ι : Type u} [CommRing R] [CommRing S] [CommRing T]
+    [Algebra R S] [Algebra R T] [Algebra S T] [IsScalarTower R S T]
+    (P : Algebra.Generators R S ι)
+    (h₁ : IsZero (Formalization.Books.Algebra.Unit75.Tor
+      (ModuleCat.of S P.toExtension.toKaehler) (ModuleCat.of S T) 1))
+    (h₂ : IsZero (Formalization.Books.Algebra.Unit75.Tor
+      (ModuleCat.of S P.toExtension.toKaehler) (ModuleCat.of S T) 2)) :
+    Function.Exact
+      (LinearMap.lTensor T P.toExtension.h1Cotangentι)
+      (LinearMap.lTensor T P.toExtension.cotangentComplex) := by
+  sorry
+
+/- The presentation-level exactness is the input needed by the canonical
+   H¹ comparison.  Keeping this step separate makes the Tor bridge reusable
+   for other presentations of `S` over `R`. -/
+theorem jacobi_zariski_h1_base_change_of_tensor_exact
+    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    [Algebra R S] [Algebra R T] [Algebra S T] [IsScalarTower R S T]
+    (hP : Function.Exact
+      (LinearMap.lTensor T
+        (Algebra.Generators.self R S).toExtension.h1Cotangentι)
+      (LinearMap.lTensor T
+        (Algebra.Generators.self R S).toExtension.cotangentComplex)) :
+    Function.Exact ((Algebra.H1Cotangent.map R R S T).liftBaseChange T)
+      (Algebra.H1Cotangent.map R S T T) := by
+  sorry
+
 /- The full source hypothesis is the vanishing of `Tor₁` and `Tor₂`.  The
    Mathlib theorem above is its currently available flat-base-change
    specialization; the source-faithful Tor formulation records the same
@@ -447,7 +479,9 @@ theorem jacobi_zariski_h1_base_change_of_tor_vanishing
       (ModuleCat.of S T) 2)) :
     Function.Exact ((Algebra.H1Cotangent.map R R S T).liftBaseChange T)
       (Algebra.H1Cotangent.map R S T T) := by
-  sorry
+  exact jacobi_zariski_h1_base_change_of_tensor_exact
+    (exact_lTensor_h1Cotangentι_cotangentComplex_of_tor_vanishing
+      (Algebra.Generators.self R S) h₁ h₂)
 
 theorem presentation_homotopy_on_differential_generator
     {R R' S S' ι ι' : Type*} [CommRing R] [CommRing R'] [CommRing S] [CommRing S']

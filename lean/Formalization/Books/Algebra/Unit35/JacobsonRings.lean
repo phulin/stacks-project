@@ -4,9 +4,11 @@ import Formalization.Books.Algebra.Unit34.HilbertNullstellensatz
 import Formalization.Books.Topology.Unit18.JacobsonSpaces
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.FieldTheory.Finite.Basic
+import Mathlib.LinearAlgebra.FreeAlgebra
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
+import Mathlib.RingTheory.Extension.Generators
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.Ideal.NatInt
@@ -28,7 +30,7 @@ namespace Formalization.Books.Algebra.Unit35
 
 open Set
 open _root_.Topology
-open scoped Polynomial TensorProduct
+open scoped BigOperators Polynomial TensorProduct
 
 universe u v w
 
@@ -739,29 +741,357 @@ theorem linear_operator_has_noninvertible_monic_polynomial
     (hcard : Module.rank k V < Cardinal.mk k) :
     ∀ T : Module.End k V,
       ∃ P : Polynomial k, P.Monic ∧ ¬ IsUnit (Polynomial.aeval T P) := by
-  sorry
+  classical
+  intro T
+  by_contra h
+  have hunit : ∀ P : Polynomial k, P.Monic → IsUnit (Polynomial.aeval T P) := by
+    intro P hP
+    by_contra hP'
+    exact h ⟨P, hP, hP'⟩
+  obtain ⟨v, hv⟩ := exists_ne (0 : V)
+  let A : k → Module.End k V := fun a =>
+    Polynomial.aeval T (Polynomial.X - Polynomial.C a)
+  let U : k → Module.End k V := fun a =>
+    (hunit (Polynomial.X - Polynomial.C a) (Polynomial.monic_X_sub_C a)).unit.inv
+  have hAU (a : k) : A a * U a = 1 := by
+    dsimp [A, U]
+    exact (hunit (Polynomial.X - Polynomial.C a) (Polynomial.monic_X_sub_C a)).mul_val_inv
+  have hunit_of_ne_zero (p : Polynomial k) (hp : p ≠ 0) :
+      IsUnit (Polynomial.aeval T p) := by
+    have hlc : p.leadingCoeff ≠ 0 := Polynomial.leadingCoeff_ne_zero.mpr hp
+    have hmonic : (p * Polynomial.C p.leadingCoeff⁻¹).Monic :=
+      Polynomial.monic_mul_leadingCoeff_inv hp
+    have hC : IsUnit (Polynomial.aeval T (Polynomial.C p.leadingCoeff)) :=
+      (Polynomial.isUnit_C.mpr (isUnit_iff_ne_zero.mpr hlc)).map (Polynomial.aeval T)
+    have heq : p = (p * Polynomial.C p.leadingCoeff⁻¹) * Polynomial.C p.leadingCoeff := by
+      rw [mul_assoc, ← map_mul, inv_mul_cancel₀ hlc, Polynomial.C_1, mul_one]
+    rw [heq, map_mul]
+    exact (hunit _ hmonic).mul hC
+  have hli : LinearIndependent k (fun a : k => U a v) := by
+    rw [linearIndependent_iff']
+    intro s m hm i hi
+    by_contra hmi
+    let p : Polynomial k :=
+      s.sum fun j => Polynomial.C (m j) *
+        (s.erase j).prod fun l => (Polynomial.X - Polynomial.C l)
+    have hprod (j : k) (hj : j ∈ s) :
+        (Polynomial.aeval T (s.prod fun l => (Polynomial.X - Polynomial.C l))) * U j =
+          Polynomial.aeval T ((s.erase j).prod fun l => (Polynomial.X - Polynomial.C l)) := by
+      rw [← s.prod_erase_mul _ hj, map_mul, mul_assoc, hAU, mul_one]
+    have hpv : (Polynomial.aeval T p) v = 0 := by
+      have hm' := congrArg (Polynomial.aeval T (s.prod fun l =>
+        (Polynomial.X - Polynomial.C l))) hm
+      simp only [map_sum, map_smul, Module.End.mul_apply, map_zero] at hm'
+      have hm'' :
+          (s.sum (fun j => m j •
+            (Polynomial.aeval T ((s.erase j).prod fun l =>
+              (Polynomial.X - Polynomial.C l))) v)) = 0 := by
+        calc
+          (s.sum (fun j => m j •
+              (Polynomial.aeval T ((s.erase j).prod fun l =>
+                (Polynomial.X - Polynomial.C l))) v)) =
+              (s.sum (fun j => m j •
+                ((Polynomial.aeval T (s.prod fun l =>
+                  (Polynomial.X - Polynomial.C l)) * U j) v))) := by
+            apply Finset.sum_congr rfl
+            intro j hj
+            rw [hprod j hj]
+          _ = 0 := by
+            simpa only [Module.End.mul_apply] using hm'
+      calc
+        (Polynomial.aeval T p) v =
+            s.sum fun j => m j •
+              (Polynomial.aeval T ((s.erase j).prod fun l =>
+                (Polynomial.X - Polynomial.C l))) v := by
+          simp [p, map_sum, map_mul, Algebra.smul_def, Module.End.mul_apply]
+        _ = 0 := hm''
+    have h2 : ∀ j ∈ s.erase i,
+        m j * ((s.erase j).prod fun l : k => i - l) = 0 := by
+      intro j hj
+      have hij : i ∈ s.erase j :=
+        Finset.mem_erase_of_ne_of_mem (Finset.ne_of_mem_erase hj).symm hi
+      rw [← (s.erase j).prod_erase_mul _ hij]
+      rw [sub_self]
+      simp only [mul_zero]
+    have hpeval : Polynomial.eval i p =
+        m i * (s.erase i).prod fun j => (i - j) := by
+      simp only [p, Polynomial.eval_finsetSum, Polynomial.eval_mul,
+        Polynomial.eval_C, Polynomial.eval_prod, Polynomial.eval_sub,
+        Polynomial.eval_X]
+      rw [← s.sum_erase_add _ hi]
+      simp_rw [Finset.sum_eq_zero h2]
+      rw [zero_add]
+    have hprod_ne : ((s.erase i).prod fun j => (i - j)) ≠ 0 := by
+      apply Finset.prod_ne_zero_iff.mpr
+      intro j hj
+      exact sub_ne_zero.mpr (Finset.ne_of_mem_erase hj).symm
+    have hp : p ≠ 0 := by
+      intro hp
+      have := congrArg (Polynomial.eval i) hp
+      rw [hpeval] at this
+      have this' : m i * (s.erase i).prod (fun j => i - j) = 0 := by
+        simpa using this
+      exact hmi
+        ((eq_zero_or_eq_zero_of_mul_eq_zero this').resolve_right hprod_ne)
+    have hpu := hunit_of_ne_zero p hp
+    have hp_inj : Function.Injective (Polynomial.aeval T p) :=
+      (Module.End.isUnit_iff _).mp hpu |>.1
+    apply hv
+    apply hp_inj
+    simpa [hpv]
+  exact (not_lt_of_ge hli.cardinal_le_rank) hcard
+
+private theorem algebraic_of_small_generators
+    {k L J : Type u} [Field k] [Field L] [Algebra k L]
+    (P : Algebra.Generators k L J) (hcard : Cardinal.mk J < Cardinal.mk k) :
+    Algebra.IsAlgebraic k L := by
+  have hgen : Algebra.adjoin k (Set.range P.val) = ⊤ := by
+    rw [Algebra.adjoin_range_eq_range_aeval]
+    exact (AlgHom.range_eq_top _).mpr P.aeval_val_surjective
+  by_cases hJ : Finite J
+  · letI := hJ
+    letI : Algebra.FiniteType k L := P.finiteType
+    letI : Module.Finite k L := finite_of_finite_type_of_isJacobsonRing k L
+    exact Algebra.IsAlgebraic.of_finite k L
+  · have hJ' : Infinite J := not_finite_iff_infinite.mp hJ
+    letI := hJ'
+    have h0 : Cardinal.aleph0 < Cardinal.mk k :=
+      lt_of_le_of_lt (Cardinal.aleph0_le_mk J) hcard
+    have hrank : Module.rank k L < Cardinal.mk k := by
+      calc
+        Module.rank k L = Module.rank k (⊤ : Subalgebra k L) :=
+          Subalgebra.rank_top.symm
+        _ = Module.rank k (Algebra.adjoin k (Set.range P.val)) := by rw [hgen]
+        _ ≤ max (Cardinal.mk (Set.range P.val)) Cardinal.aleph0 :=
+          Algebra.rank_adjoin_le _
+        _ < Cardinal.mk k :=
+          max_lt (Cardinal.mk_range_le.trans_lt hcard) h0
+    rw [Algebra.isAlgebraic_def]
+    intro T
+    by_contra hT
+    obtain ⟨Q, hQ, hQunit⟩ :=
+      linear_operator_has_noninvertible_monic_polynomial hrank (Algebra.lmul k L T)
+    apply hQunit
+    rw [Polynomial.aeval_algHom_apply, Algebra.lmul_isUnit_iff]
+    apply isUnit_iff_ne_zero.mpr
+    intro hzero
+    apply hT
+    rw [isAlgebraic_iff_not_injective]
+    intro hinj
+    apply hQ.ne_zero
+    apply hinj
+    simpa [hzero]
+
+private theorem residueField_algebraic_of_small_generators
+    {k S I : Type u} [Field k] [CommRing S] [Algebra k S]
+    (x : I → S) (hgen : Algebra.adjoin k (Set.range x) = ⊤)
+    (hcard : Cardinal.mk I < Cardinal.mk k) :
+    ∀ m : MaximalSpectrum S,
+      letI : Algebra k m.asIdeal.ResidueField :=
+        residueFieldAlgebraOfBaseAlgebra (k := k) m.asIdeal
+      Algebra.IsAlgebraic k m.asIdeal.ResidueField := by
+  let P : Algebra.Generators k S I := Algebra.Generators.ofSurjective x (by
+    apply (AlgHom.range_eq_top _).mp
+    rw [← Algebra.adjoin_range_eq_range_aeval, hgen])
+  intro m
+  letI : Algebra k m.asIdeal.ResidueField :=
+    residueFieldAlgebraOfBaseAlgebra (k := k) m.asIdeal
+  letI : IsScalarTower k S m.asIdeal.ResidueField :=
+    IsScalarTower.of_algebraMap_eq' (by ext; rfl)
+  let y : I → m.asIdeal.ResidueField :=
+    fun i => algebraMap S m.asIdeal.ResidueField (x i)
+  let Q : Algebra.Generators k m.asIdeal.ResidueField I :=
+    Algebra.Generators.ofSurjective y (by
+      intro z
+      obtain ⟨s, hs⟩ := m.asIdeal.algebraMap_residueField_surjective z
+      obtain ⟨p, hp⟩ := P.aeval_val_surjective s
+      refine ⟨p, ?_⟩
+      rw [← hs, ← hp]
+      simpa [y, P, Function.comp_def] using
+        (MvPolynomial.comp_aeval_apply (f := P.val)
+          (IsScalarTower.toAlgHom k S m.asIdeal.ResidueField) p).symm)
+  exact algebraic_of_small_generators Q hcard
+
+private theorem algebraic_of_fraction_ring
+    {k A K : Type u} [Field k] [CommRing A] [Field K] [Algebra k A]
+    [Algebra k K] [Algebra A K] [IsScalarTower k A K] [IsDomain A]
+    [IsFractionRing A K] [Algebra.IsAlgebraic k A] :
+    Algebra.IsAlgebraic k K := by
+  rw [Algebra.isAlgebraic_def]
+  intro z
+  obtain ⟨a, b, hb, rfl⟩ := IsFractionRing.div_surjective A z
+  have hinj : Function.Injective (algebraMap A K) := IsFractionRing.injective A K
+  have ha : IsAlgebraic k (algebraMap A K a) :=
+    (isAlgebraic_algebraMap_iff hinj).2 (Algebra.IsAlgebraic.isAlgebraic a)
+  have hb' : IsAlgebraic k (algebraMap A K b) :=
+    (isAlgebraic_algebraMap_iff hinj).2 (Algebra.IsAlgebraic.isAlgebraic b)
+  simpa [div_eq_mul_inv] using ha.mul hb'.inv
+
+private theorem localization_residueField_algebraic_of_small_generators
+    {k S I : Type u} [Field k] [CommRing S] [Algebra k S]
+    (P : Algebra.Generators k S I) (p : PrimeSpectrum S) (f : S)
+    (hpf : f ∉ p.asIdeal) (hfield : IsField
+      (Localization.Away (Ideal.Quotient.mk p.asIdeal f)))
+    (hcard : Cardinal.mk I < Cardinal.mk k) (hI : Infinite I) :
+    letI : Algebra k p.asIdeal.ResidueField :=
+      residueFieldAlgebraOfBaseAlgebra (k := k) p.asIdeal
+    Algebra.IsAlgebraic k p.asIdeal.ResidueField ∧ p.asIdeal.IsMaximal := by
+  let R := S ⧸ p.asIdeal
+  let fR : R := Ideal.Quotient.mk p.asIdeal f
+  let A := Localization.Away fR
+  letI : Field A := hfield.toField
+  letI : Algebra k R := inferInstance
+  let Q : Algebra.Generators k R I :=
+    Algebra.Generators.ofSurjective (fun i => Ideal.Quotient.mk p.asIdeal (P.val i)) (by
+      intro z
+      obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective z
+      obtain ⟨q, hq⟩ := P.aeval_val_surjective s
+      refine ⟨q, ?_⟩
+      rw [← hs, ← hq]
+      simpa [Ideal.Quotient.mkₐ_eq_mk] using
+        (MvPolynomial.comp_aeval_apply (f := P.val)
+          (Ideal.Quotient.mkₐ k p.asIdeal) q).symm)
+  let G : Algebra.Generators k A (Unit ⊕ I) :=
+    (Algebra.Generators.localizationAway (R := R) (S := A) fR).comp Q
+  have hcardG : Cardinal.mk (Unit ⊕ I) < Cardinal.mk k := by
+    calc
+      Cardinal.mk (Unit ⊕ I) = 1 + Cardinal.mk I := by
+        simp [Cardinal.mk_sum]
+      _ = Cardinal.mk I := by
+        rw [add_comm, Cardinal.add_eq_left (Cardinal.aleph0_le_mk I)]
+        exact Cardinal.one_le_aleph0.trans (Cardinal.aleph0_le_mk I)
+      _ < Cardinal.mk k := hcard
+  have hAalg : Algebra.IsAlgebraic k A :=
+    algebraic_of_small_generators G hcardG
+  letI : Algebra.IsAlgebraic k A := hAalg
+  letI : Algebra k p.asIdeal.ResidueField :=
+    residueFieldAlgebraOfBaseAlgebra (k := k) p.asIdeal
+  letI : IsScalarTower k R p.asIdeal.ResidueField :=
+    IsScalarTower.of_algebraMap_eq' (by ext; rfl)
+  have hfκ : algebraMap R p.asIdeal.ResidueField fR ≠ 0 := by
+    intro hfκ
+    apply hpf
+    apply Ideal.algebraMap_residueField_eq_zero.mp
+    have hfzero : algebraMap S p.asIdeal.ResidueField f = 0 := by
+      rw [← Ideal.algebraMap_quotient_residueField_mk]
+      change algebraMap R p.asIdeal.ResidueField fR = 0
+      exact hfκ
+    exact hfzero
+  let e : A →ₐ[R] p.asIdeal.ResidueField :=
+    IsLocalization.Away.liftAlgHom (R := R) (S := A)
+      (P := p.asIdeal.ResidueField) (f := Algebra.ofId R p.asIdeal.ResidueField)
+      fR (isUnit_iff_ne_zero.mpr hfκ)
+  letI : Algebra A p.asIdeal.ResidueField := e.toAlgebra
+  letI : IsScalarTower k A p.asIdeal.ResidueField :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext a
+      change algebraMap R p.asIdeal.ResidueField (algebraMap k R a) =
+        e (algebraMap k A a)
+      rw [IsScalarTower.algebraMap_apply k R A, e.commutes])
+  letI : IsFractionRing A p.asIdeal.ResidueField :=
+    IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+      (Submonoid.powers fR) A p.asIdeal.ResidueField
+  have hκalg : Algebra.IsAlgebraic k p.asIdeal.ResidueField :=
+    algebraic_of_fraction_ring (k := k) (A := A)
+      (K := p.asIdeal.ResidueField)
+  let B : Subalgebra k A :=
+    { carrier := Set.range (algebraMap R A)
+      zero_mem' := ⟨0, map_zero _⟩
+      one_mem' := ⟨1, map_one _⟩
+      add_mem' := by
+        rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩
+        exact ⟨x + y, by simp⟩
+      mul_mem' := by
+        rintro _ _ ⟨x, rfl⟩ ⟨y, rfl⟩
+        exact ⟨x * y, by simp⟩
+      algebraMap_mem' := by
+        intro a
+        refine ⟨algebraMap k R a, ?_⟩
+        exact (IsScalarTower.algebraMap_apply k R A a).symm }
+  have hB : IsField B :=
+    @Subalgebra.isField_of_algebraic k A _ _ _ B hAalg
+  have hfR : fR ≠ 0 := by
+    intro hfR
+    apply hpf
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    simpa [fR] using hfR
+  have hmap : Function.Injective (algebraMap R A) :=
+    IsLocalization.injective A
+      (powers_le_nonZeroDivisors_of_noZeroDivisors hfR)
+  have hpmax : p.asIdeal.IsMaximal := by
+    apply Ideal.Quotient.maximal_of_isField p.asIdeal
+    have hnontriv : Nontrivial R :=
+      Ideal.Quotient.nontrivial_iff.mpr p.2.ne_top
+    refine ⟨hnontriv.exists_pair_ne, mul_comm, ?_⟩
+    intro a ha
+    let z : B := ⟨algebraMap R A a, ⟨a, rfl⟩⟩
+    have hzA : (z : A) ≠ 0 := by
+      intro hz
+      apply ha
+      apply hmap
+      simpa [z] using hz
+    have hzB : z ≠ 0 := by
+      intro hz0
+      apply hzA
+      simpa using congrArg Subtype.val hz0
+    obtain ⟨b, hb⟩ := hB.mul_inv_cancel hzB
+    obtain ⟨t, ht⟩ := b.property
+    refine ⟨t, ?_⟩
+    apply hmap
+    rw [map_mul, map_one, ht]
+    simpa [z] using congrArg Subtype.val hb
+  exact ⟨hκalg, hpmax⟩
 
 theorem uncountable_nullstellensatz
     {k S I : Type u} [Field k] [CommRing S] [Algebra k S]
     (x : I → S) (hgen : Algebra.adjoin k (Set.range x) = ⊤)
     (hcard : Cardinal.mk I < Cardinal.mk k) :
     (∀ m : MaximalSpectrum S,
-        letI : Algebra k m.asIdeal.ResidueField :=
+      letI : Algebra k m.asIdeal.ResidueField :=
           residueFieldAlgebraOfBaseAlgebra (k := k) m.asIdeal
-        Algebra.IsAlgebraic k m.asIdeal.ResidueField) ∧
+      Algebra.IsAlgebraic k m.asIdeal.ResidueField) ∧
       IsJacobsonRing S := by
-  sorry
+  let P : Algebra.Generators k S I := Algebra.Generators.ofSurjective x (by
+    apply (AlgHom.range_eq_top _).mp
+    rw [← Algebra.adjoin_range_eq_range_aeval, hgen])
+  refine ⟨residueField_algebraic_of_small_generators x hgen hcard, ?_⟩
+  by_cases hI : Finite I
+  · letI := hI
+    letI : Algebra.FiniteType k S := P.finiteType
+    exact finiteType_algebra_over_field_isJacobson (k := k) (A := S)
+  · have hI' : Infinite I := not_finite_iff_infinite.mp hI
+    by_contra hS
+    obtain ⟨p, f, hp, hpf, hloc, hfield⟩ := characterize_nonJacobson_ring hS
+    have hpmax := localization_residueField_algebraic_of_small_generators
+      P p f hpf hfield hcard hI'
+    exact hp hpmax.2
 
 theorem baseChange_uncountable_nullstellensatz
     {k S K : Type u} [Field k] [CommRing S] [Algebra k S]
     [Field K] [Algebra k K]
     (hcard : Cardinal.mk S < Cardinal.mk K) :
     (∀ m : MaximalSpectrum (K ⊗[k] S),
-        letI : Algebra K m.asIdeal.ResidueField :=
+      letI : Algebra K m.asIdeal.ResidueField :=
           residueFieldAlgebraOfBaseAlgebra (k := K) m.asIdeal
-        Algebra.IsAlgebraic K m.asIdeal.ResidueField) ∧
+      Algebra.IsAlgebraic K m.asIdeal.ResidueField) ∧
       IsJacobsonRing (K ⊗[k] S) := by
-  sorry
+  let P : Algebra.Generators K (K ⊗[k] S) S :=
+    (Algebra.Generators.self k S).baseChange K
+  have hgen : Algebra.adjoin K (Set.range P.val) = ⊤ := by
+    rw [Algebra.adjoin_range_eq_range_aeval]
+    exact (AlgHom.range_eq_top _).mpr P.aeval_val_surjective
+  refine ⟨residueField_algebraic_of_small_generators P.val hgen hcard, ?_⟩
+  by_cases hS : Finite S
+  · letI := hS
+    letI : Algebra.FiniteType K (K ⊗[k] S) := P.finiteType
+    exact finiteType_algebra_over_field_isJacobson (k := K)
+      (A := K ⊗[k] S)
+  · have hS' : Infinite S := not_finite_iff_infinite.mp hS
+    by_contra hT
+    obtain ⟨p, f, hp, hpf, hloc, hfield⟩ := characterize_nonJacobson_ring hT
+    have hpmax := localization_residueField_algebraic_of_small_generators
+      P p f hpf hfield hcard hS'
+    exact hp hpmax.2
 
 /-! ## The countable-field counterexample -/
 
@@ -780,7 +1110,29 @@ def countableTrickIdeal {k : Type u} [Field k] : Ideal (CountableTrickRing k) :=
 
 theorem countableTrickIdeal_isProper {k : Type u} [Field k] :
     countableTrickIdeal (k := k) ≠ ⊤ := by
-  sorry
+  let F := FractionRing (Polynomial k)
+  let φ : CountableTrickRing k →+* F :=
+    MvPolynomial.eval₂Hom (algebraMap (Polynomial k) F)
+      (fun i => (algebraMap (Polynomial k) F i.1)⁻¹)
+  have hmap : Function.Injective (algebraMap (Polynomial k) F) :=
+    IsFractionRing.injective (Polynomial k) F
+  have hrel (i : CountableTrickIndex k) :
+      φ (countableTrickRelation i) = 0 := by
+    have hi : algebraMap (Polynomial k) F i.1 ≠ 0 :=
+      fun h => i.2 (hmap (by simpa using h))
+    simpa [φ, countableTrickRelation, mul_inv_cancel₀ hi]
+  intro htop
+  have hle : countableTrickIdeal (k := k) ≤ RingHom.ker φ := by
+    rw [countableTrickIdeal]
+    apply Ideal.span_le.2
+    rintro _ ⟨i, rfl⟩
+    change φ (countableTrickRelation i) = 0
+    exact hrel i
+  have hone : (1 : CountableTrickRing k) ∈ countableTrickIdeal (k := k) := by
+    rw [htop]
+    simp
+  have hzero : φ 1 = 0 := hle hone
+  simpa [φ] using hzero
 
 theorem countableTrick_exists_maximalIdeal {k : Type u} [Field k] :
     ∃ m : MaximalSpectrum (CountableTrickRing k),

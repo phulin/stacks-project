@@ -135,7 +135,6 @@ theorem openPresheafRestriction_directImage_iso (C : Type u) [Category.{v} C]
     Nonempty ((openPresheafRestriction C U).obj
       ((openPresheafDirectImage C U).obj F) ≅ F) := by
   refine ⟨?_⟩
-  let f := openInclusion U
   let hf := U.isOpenEmbedding
   have hfun : hf.functor ⋙ Opens.map f = 𝟭 _ := by
     refine CategoryTheory.Functor.ext ?_ ?_
@@ -176,7 +175,28 @@ theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
 theorem openSheafDirectImage_fullFaithful (C : Type u) [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X) :
     Nonempty (openSheafDirectImage C U).FullyFaithful := by
-  sorry
+  let hf := U.isOpenEmbedding
+  letI : hf.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X) := hf.functor_isContinuous
+  let adj₀ := hf.isOpenMap.adjunction
+  let adj := adj₀.sheafPushforwardContinuous C
+    (Opens.grothendieckTopology (openSubspace U))
+    (Opens.grothendieckTopology X)
+  letI : IsIso adj.counit := by
+    letI : ∀ F, IsIso (adj.counit.app F) := by
+      intro F
+      apply (ObjectProperty.FullSubcategory.isIso_hom_iff
+        (adj.counit.app F)).mp
+      change IsIso ((adj₀.op.whiskerLeft _).counit.app F.presheaf)
+      letI : ∀ V, IsIso (((adj₀.op.whiskerLeft _).counit.app F.presheaf).app V) := by
+        intro V
+        dsimp [CategoryTheory.Adjunction.whiskerLeft]
+        rw [show adj₀.unit.app V.unop =
+          eqToHom (by simp) from Subsingleton.elim _ _]
+        infer_instance
+      exact NatIso.isIso_of_isIso_app _
+    exact NatIso.isIso_of_isIso_app _
+  exact ⟨adj.fullyFaithfulROfIsIsoCounit⟩
 
 /-! ## Extension by the initial object -/
 

@@ -532,14 +532,6 @@ def IsStalkFunctor {X : TopCat.{v}}
     (F ≅ TopCat.Sheaf.forget (Type v) X ⋙
       TopCat.Presheaf.stalkFunctor (Type v) x)
 
-/-- The empty topological space. -/
-abbrev emptySpace : TopCat := TopCat.of Empty
-
-/-- The constant `PUnit` functor on sheaves over the empty space. -/
-noncomputable def emptySpaceFunctor :
-    Sh.{0, 0} emptySpace ⥤ Type 0 :=
-  (Functor.const _).obj (PUnit : Type 0)
-
 end
 
 end Formalization.Books.Exercises.Unit32

@@ -277,17 +277,13 @@ theorem modifiedProduct_sections_need_not_equal_basis_subgroup :
 
 /-! ## Exercise `exact-but-not-a-stalk-functor` -/
 
-/-- The constant functor on `PUnit` is exact on sheaves over the empty space. -/
-theorem emptySpaceFunctor_is_exact :
-    IsExact emptySpaceFunctor := by
+/-- The source exercise asks for an exact functor on sheaves which is not a
+stalk functor.  Its witness is left existential here because the source does
+not specify a particular topological space or construction. -/
+theorem exists_exact_functor_not_a_stalk_functor :
+    ∃ (X : TopCat.{v}) (F : Sh.{v, v} X ⥤ Type v),
+      IsExact F ∧ ¬ IsStalkFunctor F := by
   sorry
-
-/-- No stalk functor exists on the empty space, so the exact functor above is
-not isomorphic to a stalk functor. -/
-theorem emptySpaceFunctor_is_not_a_stalk_functor :
-    ¬ IsStalkFunctor emptySpaceFunctor := by
-  rintro ⟨x, -⟩
-  exact Empty.elim x
 
 end
 

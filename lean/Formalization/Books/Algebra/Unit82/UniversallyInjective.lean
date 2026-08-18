@@ -656,7 +656,7 @@ theorem splitSequence_universallyExact
       rfl
   · intro y
     exact ⟨(0, y), rfl⟩
-  · intro Q _ _ x y hxy
+  · intros Q _ _ x y hxy
     have hcomp : (LinearMap.fst R M M).comp
         (splitSequenceInjection (R := R) (M := M)) = LinearMap.id := by
       ext z
@@ -672,13 +672,10 @@ theorem splitSequence_nonflat
     ¬ Module.Flat R M ∧ ¬ Module.Flat R (M × M) ∧ ¬ Module.Flat R M := by
   refine ⟨hM, ?_, hM⟩
   intro hprod
-  let : Module.Flat R (M × M) := hprod
-  let i : M →ₗ[R] M × M := LinearMap.inl R M M
-  let r : M × M →ₗ[R] M := LinearMap.fst R M M
-  have hri : r.comp i = LinearMap.id := by
-    ext x
-    rfl
-  exact hM (Module.Flat.of_retract i r hri)
+  exact hM (Module.Flat.of_retract (f := hprod)
+    (LinearMap.inl R M M) (LinearMap.fst R M M) (by
+      ext x
+      rfl))
 
 /-- A nonzero torsion module over the integers gives the non-flat split
 sequence from the source's second example. -/
@@ -689,12 +686,11 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
   have hM' : ¬ Module.Flat ℤ M := by
     intro hflat
     let : Module.Flat ℤ M := hflat
-    have htor : Submodule.torsion ℤ M = ⊥ := Module.Flat.torsion_eq_bot
     obtain ⟨x, hx⟩ := exists_ne (0 : M)
     have hxT : x ∈ Submodule.torsion ℤ M := by
       rw [hM]
       exact Submodule.mem_top
-    rw [htor] at hxT
+    rw [Module.Flat.torsion_eq_bot] at hxT
     exact hx (by simpa using hxT)
   refine ⟨hM', ?_, hM'⟩
   intro hprod
@@ -703,13 +699,10 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
   have hprod' : @Module.Flat ℤ (M × M) _ _ Prod.instModule :=
     hmod.symm ▸ hprod
   let : Module ℤ (M × M) := Prod.instModule
-  let : Module.Flat ℤ (M × M) := hprod'
-  let i : M →ₗ[ℤ] M × M := LinearMap.inl ℤ M M
-  let r : M × M →ₗ[ℤ] M := LinearMap.fst ℤ M M
-  have hri : r.comp i = LinearMap.id := by
-    ext x
-    rfl
-  exact hM' (Module.Flat.of_retract i r hri)
+  exact hM' (Module.Flat.of_retract (f := hprod')
+    (LinearMap.inl ℤ M M) (LinearMap.fst ℤ M M) (by
+      ext x
+      rfl))
 
 /-! ## Permanence properties -/
 

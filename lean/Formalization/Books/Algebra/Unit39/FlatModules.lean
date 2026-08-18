@@ -820,14 +820,14 @@ section Localization
 theorem localization_flat
     {R : Type*} [CommRing R] (S : Submonoid R) :
     RingHom.Flat (algebraMap R (Localization S)) := by
-  sorry
+  exact (RingHom.flat_algebraMap_iff).2 (inferInstance : Module.Flat R (Localization S))
 
 theorem flat_localization_iff
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (S : Submonoid R) [Module (Localization S) M]
     [IsScalarTower R (Localization S) M] :
     Module.Flat R M ↔ Module.Flat (Localization S) M := by
-  sorry
+  exact (Module.flat_iff_of_isLocalization (Localization S) S M).symm
 
 theorem flat_iff_localized_at_primes
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] :
@@ -835,7 +835,16 @@ theorem flat_iff_localized_at_primes
       ∀ p : PrimeSpectrum R,
         Module.Flat (Localization.AtPrime p.asIdeal)
           (LocalizedModule p.asIdeal.primeCompl M) := by
-  sorry
+  constructor
+  · intro h p
+    letI : Module.Flat R M := h
+    infer_instance
+  · intro h
+    apply Module.flat_of_localized_maximal M
+    intro m hm
+    letI : m.IsMaximal := hm
+    exact (Module.flat_iff_of_isLocalization (Localization.AtPrime m)
+      m.primeCompl (LocalizedModule m.primeCompl M)).1 (h ⟨m, hm.isPrime⟩)
 
 theorem flat_iff_localized_at_maximals
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] :
@@ -843,7 +852,16 @@ theorem flat_iff_localized_at_maximals
       ∀ (m : Ideal R) [m.IsMaximal],
         Module.Flat (Localization.AtPrime m)
           (LocalizedModule m.primeCompl M) := by
-  sorry
+  constructor
+  · intro h m
+    letI : Module.Flat R M := h
+    infer_instance
+  · intro h
+    apply Module.flat_of_localized_maximal M
+    intro m hm
+    letI : m.IsMaximal := hm
+    exact (Module.flat_iff_of_isLocalization (Localization.AtPrime m)
+      m.primeCompl (LocalizedModule m.primeCompl M)).1 (h m)
 
 theorem flat_iff_localized_on_generators
     {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]

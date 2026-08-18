@@ -474,7 +474,8 @@ theorem completionTensorCoordinate_naturality
         rw [← hcompat]
         congr 1
       have hmap_apply := congrArg (fun q => q m) hmap
-      rw [LinearMap.comp_apply] at hmap_apply
+      change (F.system.map f).hom ((φ.map i.unop) m) =
+        (φ.map j.unop) m at hmap_apply
       rw [hmap_apply]
       have ha := (a.property (leOfHom f.unop)).symm
       have hmem : a.val i.unop - a.val j.unop ∈

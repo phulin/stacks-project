@@ -45,22 +45,6 @@ theorem algebraPullback_exact
       (fun x : A × C => f x.1 - g x.2) := by
   sorry
 
-/-- A finite-type fibre product of algebras in the hypotheses of the source
-lemma.  `AlgHom.pullback` is Mathlib's canonical fibre-product algebra, and
-`RingHom.Finite` is the established finite-module condition for `C → B`. -/
-theorem finiteType_algHom_pullback
-    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
-    [Algebra R A] [Algebra R B] [Algebra R C]
-    (f : A →ₐ[R] B) (g : C →ₐ[R] B)
-    (hR : IsNoetherianRing R)
-    (hA : Algebra.FiniteType R A)
-    (hB : Algebra.FiniteType R B)
-    (hC : Algebra.FiniteType R C)
-    (hf : Function.Surjective f)
-    (hg : RingHom.Finite g.toRingHom) :
-    Algebra.FiniteType R (AlgHom.pullback f g) := by
-  sorry
-
 /- The proof's two exact rows use the kernel `I = ker(A → B)` and the
 canonical projections of the algebra pullback. -/
 
@@ -133,6 +117,25 @@ theorem algebraPullback_exact_rows
       Function.Exact (algebraPullbackKernelToPullback f g)
         (AlgHom.pullbackSnd f g) ∧
       Function.Surjective (AlgHom.pullbackSnd f g) := by
+  sorry
+
+/-! The source-facing finite-type lemma follows the proof-support interfaces
+above, which makes the Artin--Tate route available when its body is filled. -/
+
+/-- A finite-type fibre product of algebras in the hypotheses of the source
+lemma.  `AlgHom.pullback` is Mathlib's canonical fibre-product algebra, and
+`RingHom.Finite` is the established finite-module condition for `C → B`. -/
+theorem finiteType_algHom_pullback
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B)
+    (hR : IsNoetherianRing R)
+    (hA : Algebra.FiniteType R A)
+    (hB : Algebra.FiniteType R B)
+    (hC : Algebra.FiniteType R C)
+    (hf : Function.Surjective f)
+    (hg : RingHom.Finite g.toRingHom) :
+    Algebra.FiniteType R (AlgHom.pullback f g) := by
   sorry
 
 /-- The product of a family of algebra maps with varying codomains.  Mathlib

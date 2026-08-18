@@ -3431,8 +3431,8 @@ noncomputable def covariantBoundary
         let F₂ := pullbackExtension E p₂
         let G := directSumExtensionVarying F₁ F₂
         let P := pushoutExtension G (biprodCodiagonal S.X₁)
-        letI instP : HasPullback P.projection (biprodDiagonal N) :=
-          pullbackExtension._proof_1 P (biprodDiagonal N)
+        let instP : HasPullback P.projection (biprodDiagonal N) := by
+          infer_instance
         let F := pullbackExtension P (biprodDiagonal N)
         let q₁ := pullbackExtensionMorphism E p₁
         let q₂ := pullbackExtensionMorphism E p₂
@@ -3475,21 +3475,21 @@ noncomputable def covariantBoundary
           · calc
               biprod.inl ≫ G.inclusion ≫ mD =
                   F₁.inclusion ≫ q₁.middle := by
-                    simp [G, mD, directSumExtensionVarying, Category.assoc]
+                    simp [G, mD, directSumExtensionVarying]
               _ = E.inclusion := by
                     simpa [F₁, q₁, pullbackExtensionMorphism, pullbackExtension]
                       using q₁.comm_left
               _ = biprod.inl ≫ biprodCodiagonal S.X₁ ≫ E.inclusion := by
-                    simp [biprodCodiagonal, Category.assoc]
+                    simp [biprodCodiagonal]
           · calc
               biprod.inr ≫ G.inclusion ≫ mD =
                   F₂.inclusion ≫ q₂.middle := by
-                    simp [G, mD, directSumExtensionVarying, Category.assoc]
+                    simp [G, mD, directSumExtensionVarying]
               _ = E.inclusion := by
                     simpa [F₂, q₂, pullbackExtensionMorphism, pullbackExtension]
                       using q₂.comm_left
               _ = biprod.inr ≫ biprodCodiagonal S.X₁ ≫ E.inclusion := by
-                    simp [biprodCodiagonal, Category.assoc]
+                    simp [biprodCodiagonal]
         let pMap : P.middle ⟶ E.middle :=
           pushout.desc E.inclusion mD hleft.symm
         have hpMap :
@@ -3502,8 +3502,8 @@ noncomputable def covariantBoundary
           · rw [← Category.assoc, pushout.inr_desc, ← Category.assoc,
               pushout.inr_desc]
             exact hDproj
-        letI instH : HasPullback E.projection (p₁ + p₂) :=
-          pullbackExtension._proof_1 E (p₁ + p₂)
+        let instH : HasPullback E.projection (p₁ + p₂) := by
+          infer_instance
         let mMiddle :
             pullback P.projection (biprodDiagonal N) ⟶
               pullback E.projection (p₁ + p₂) := by
@@ -3512,7 +3512,7 @@ noncomputable def covariantBoundary
             (pullback.snd P.projection (biprodDiagonal N)) (by
               rw [Category.assoc, hpMap, ← Category.assoc,
                 pullback.condition]
-              simp [biprodDiagonal, biprod.desc_eq, add_comp, comp_add])
+              simp [biprodDiagonal, biprod.desc_eq, comp_add])
         have hmMiddle_fst :
             mMiddle ≫ pullback.fst E.projection (p₁ + p₂) =
               pullback.fst P.projection (biprodDiagonal N) ≫ pMap := by
@@ -3597,7 +3597,7 @@ private theorem pullback_ext_lift_of_zero
     (hE : extensionClass (pullbackExtension E S.f) = zeroExtClass) :
     ∃ F : Extension C N S.X₃,
       extensionClass (pullbackExtension F S.g) = extensionClass E := by sorry
-/-
+/- Prior attempt (retained for reference):
   change extensionClass (pullbackExtension E S.f) =
     extensionClass (splitExtension N S.X₁) at hE
   rcases Quotient.exact hE with ⟨e⟩
@@ -3617,17 +3617,17 @@ private theorem pullback_ext_lift_of_zero
   have hj : j ≫ E.projection = S.f := by
     dsimp [j]
     calc
-      i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle ≫
+      (i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle) ≫
           E.projection =
           i ≫ e.inv.middle ≫
             ((pullbackExtension E S.f).projection ≫ S.f) := by
               rw [(pullbackExtensionMorphism E S.f).comm_right]
       _ = i ≫ (e.inv.middle ≫ (pullbackExtension E S.f).projection) ≫
           S.f := by simp [Category.assoc]
-      _ = i ≫ ((splitExtension N S.X₁).projection ≫ e.inv.right) ≫
+      _ = i ≫ (splitExtension N S.X₁).projection ≫
           S.f := by rw [e.inv.comm_right]
-      _ = S.f := by simp [Category.assoc, hi_proj]
-  letI : Mono S.f := hS.mono_f
+      _ = S.f := by simp [Category.assoc]
+  let _ : Mono S.f := hS.mono_f
   have hj_mono : Mono j := by
     constructor
     intro Z a b hab
@@ -3752,7 +3752,7 @@ theorem contravariant_ext_six_term_exact
     apply ShortComplex.Exact.exact_toComposableArrows
     apply (ShortComplex.exact_iff_mono _ (by simp)).2
     rw [AddCommGrpCat.mono_iff_injective]
-    letI : Epi S.g := hS.epi_g
+    let _ : Epi S.g := hS.epi_g
     intro x y hxy
     apply ULift.ext
     apply (cancel_epi S.g).1
@@ -3779,7 +3779,6 @@ theorem contravariant_ext_six_term_exact
         · change (ShortComplex.mk S.g (0 : S.X₃ ⟶ (0 : C))
             (by simp)).toComposableArrows.Exact
           apply ShortComplex.Exact.exact_toComposableArrows
-          change (ShortComplex.mk S.g (0 : S.X₃ ⟶ (0 : C)) (by simp)).Exact
           exact (ShortComplex.exact_iff_epi _ (by rfl)).2 hS.epi_g
       have h :=
         (Formalization.Books.Homology.Unit05.contravariant_hom_exact_iff
@@ -3890,7 +3889,6 @@ theorem contravariant_ext_six_term_exact
               rfl
             let s : S.X₂ ⟶ Q.middle :=
               pullback.lift r (𝟙 S.X₂) (by
-                change r ≫ P.projection = (𝟙 S.X₂) ≫ S.g
                 rw [hr, Category.id_comp])
             have hs : s ≫ Q.projection = 𝟙 S.X₂ := by
               dsimp [s, Q, pullbackExtension]
@@ -3908,7 +3906,7 @@ theorem contravariant_ext_six_term_exact
                   rw [Category.id_comp]
                 comm_right := by
                   dsimp [splitExtension]
-                  simp only [Category.id_comp, Category.comp_id]
+                  simp only [Category.comp_id]
                   change biprod.desc Q.inclusion s ≫ Q.projection = biprod.snd
                   rw [biprod.desc_eq, add_comp, Category.assoc, Q.zero,
                     comp_zero, Category.assoc, hs, Category.comp_id, zero_add] }
@@ -3935,12 +3933,12 @@ theorem contravariant_ext_six_term_exact
                 right := 𝟙 S.X₁
                 comm_left := by
                   dsimp [splitExtension, pullbackExtension]
-                  simp only [Category.comp_id, Category.id_comp]
+                  simp only [Category.id_comp]
                   apply pullback.hom_ext
                   · rw [Category.assoc, pullback.lift_fst, pullback.lift_fst]
-                    simp [Category.assoc]
+                    simp
                   · rw [Category.assoc, pullback.lift_snd, pullback.lift_snd]
-                    simp [Category.assoc]
+                    simp
                 comm_right := by
                   dsimp [splitExtension, pullbackExtension]
                   rw [pullback.lift_snd, Category.comp_id] }
@@ -3973,7 +3971,6 @@ theorem contravariant_ext_six_term_exact
                   rfl
                 let s : S.X₂ ⟶ Q.middle :=
                   pullback.lift r (𝟙 S.X₂) (by
-                    change r ≫ P.projection = (𝟙 S.X₂) ≫ S.g
                     rw [hr, Category.id_comp])
                 have hs : s ≫ Q.projection = 𝟙 S.X₂ := by
                   dsimp [s, Q, pullbackExtension]
@@ -3990,7 +3987,7 @@ theorem contravariant_ext_six_term_exact
                       rw [biprod.inl_desc, Category.id_comp]
                     comm_right := by
                       dsimp [splitExtension]
-                      simp only [Category.id_comp, Category.comp_id]
+                      simp only [Category.comp_id]
                       change biprod.desc Q.inclusion s ≫ Q.projection = biprod.snd
                       rw [biprod.desc_eq, add_comp, Category.assoc, Q.zero,
                         comp_zero, Category.assoc, hs, Category.comp_id,
@@ -4010,7 +4007,6 @@ theorem contravariant_ext_six_term_exact
             rcases Quotient.exact hx with ⟨e⟩
             let i : S.X₂ ⟶ (splitExtension N S.X₂).middle := by
               let hi : (N ⊞ S.X₂) = (splitExtension N S.X₂).middle := by
-                change (N ⊞ S.X₂) = (splitExtension N S.X₂).middle
                 unfold splitExtension
                 rfl
               let ei : (N ⊞ S.X₂) ⟶ (splitExtension N S.X₂).middle :=
@@ -4037,13 +4033,13 @@ theorem contravariant_ext_six_term_exact
             let h : S.X₁ ⟶ N :=
               E.shortExact.fIsKernel.lift
                 (KernelFork.ofι (S.f ≫ t) (by
-                  simpa [Category.assoc, ht, S.zero]))
+                  simp [Category.assoc, ht, S.zero]))
             have hh : h ≫ E.inclusion = S.f ≫ t := by
               dsimp [h]
               simpa using
                 (E.shortExact.fIsKernel.fac
                   (KernelFork.ofι (S.f ≫ t) (by
-                    simpa [Category.assoc, ht, S.zero]))
+                    simp [Category.assoc, ht, S.zero]))
                   WalkingParallelPair.zero)
             refine ⟨ULift.up h, ?_⟩
             change extensionClass
@@ -4083,14 +4079,14 @@ theorem contravariant_ext_six_term_exact
                     right := 𝟙 S.X₁
                     comm_left := by
                       dsimp [splitExtension, pullbackExtension]
-                      simp only [Category.comp_id, Category.id_comp]
+                      simp only [Category.id_comp]
                       apply pullback.hom_ext
                       · rw [Category.assoc, pullback.lift_fst,
                           pullback.lift_fst]
-                        simp [Category.assoc]
+                        simp
                       · rw [Category.assoc, pullback.lift_snd,
                           pullback.lift_snd]
-                        simp [Category.assoc]
+                        simp
                     comm_right := by
                       dsimp [splitExtension, pullbackExtension]
                       rw [pullback.lift_snd, Category.comp_id] }
@@ -4116,7 +4112,7 @@ theorem covariant_ext_six_term_exact
     apply ShortComplex.Exact.exact_toComposableArrows
     apply (ShortComplex.exact_iff_mono _ (by simp)).2
     rw [AddCommGrpCat.mono_iff_injective]
-    letI : Mono S.f := hS.mono_f
+    let _ : Mono S.f := hS.mono_f
     intro x y hxy
     apply ULift.ext
     apply (cancel_mono S.f).1

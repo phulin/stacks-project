@@ -504,9 +504,13 @@ theorem prime_of_maximal_not_generatedByAtMost {R : Type u} [CommRing R]
 
 abbrev okaCounterexampleVariables (T : Type u) := Sum ℕ (T × ℕ)
 
+/- The source indexes the x-family by n ≥ 1.  The left summand is kept as ℕ
+   for a zero-based Lean parameter, so its dummy 0-variable is killed below. -/
 def okaCounterexampleRelationSet (k T : Type u) [Field k] :
     Set (MvPolynomial (okaCounterexampleVariables T) k) :=
-  Set.range (fun n : ℕ =>
+  {(MvPolynomial.X (Sum.inl 0) :
+      MvPolynomial (okaCounterexampleVariables T) k)} ∪
+    Set.range (fun n : ℕ =>
       (MvPolynomial.X (Sum.inl (n + 1)) :
         MvPolynomial (okaCounterexampleVariables T) k) ^ 2) ∪
     Set.range (fun p : T × ℕ =>
@@ -548,7 +552,7 @@ def okaCounterexampleZIdeal (k T : Type u) [Field k] :
 
 Proof roadmap:
 
-1. Descend the three families of defining relations to the quotient, obtaining
+1. Descend the three source families of defining relations to the quotient, obtaining
    `x n ^ 2 = 0`, `z t n ^ 2 = 0`, and
    `x (n + 1) * z t (n + 1) = z t n`.
 2. Put quotient representatives into a finite-support normal form.  Use it to

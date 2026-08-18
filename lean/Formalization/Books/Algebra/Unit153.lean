@@ -108,7 +108,7 @@ def MonicDegreeFactorizationLift
       residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
         ∃ g h : Polynomial R,
           f = g * h ∧ residuePolynomial R g = g₀ ∧
-            residuePolynomial R h = h₀ ∧ g.natDegree = g₀.natDegree
+            residuePolynomial R h = h₀ ∧ g.degree = g₀.degree
 
 /-- The unrestricted factorization statement. -/
 def FactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
@@ -127,7 +127,7 @@ def DegreeFactorizationLift
       residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
         ∃ g h : Polynomial R,
           f = g * h ∧ residuePolynomial R g = g₀ ∧
-            residuePolynomial R h = h₀ ∧ g.natDegree = g₀.natDegree
+            residuePolynomial R h = h₀ ∧ g.degree = g₀.degree
 
 /-- The residue-field identification required at an étale point over the
 closed point. -/

@@ -1,4 +1,3 @@
-import Formalization.Books.Algebra.Unit31.NoetherianRings
 import Mathlib.Algebra.Ring.Prod
 import Mathlib.GroupTheory.Finiteness
 import Mathlib.RingTheory.Localization.Basic

@@ -5,7 +5,13 @@ import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.LocalRing.Basic
+import Mathlib.RingTheory.LocalRing.Module
+import Mathlib.RingTheory.PrincipalIdealDomain
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.Algebra.Polynomial.Monic
+import Mathlib.Algebra.Polynomial.FieldDivision
+import Mathlib.CategoryTheory.Subobject.Limits
+import Mathlib.LinearAlgebra.Finsupp.Pi
 
 /-!
 # Dualizing Complexes, Chapter 4: Projective covers
@@ -19,7 +25,10 @@ modules.
 namespace Formalization.Books.Dualizing.Unit04
 
 open CategoryTheory
+open CategoryTheory.Limits
+open Module
 open Formalization.Books.Dualizing.Unit02
+open scoped Pointwise
 
 universe u v
 
@@ -69,13 +78,156 @@ theorem polynomial_residue_principal_multiple_surjective
     principalMultipleSubmodule P (Polynomial.X - 1) ≠ ⊤ ∧
       Function.Surjective
         (principalMultipleMap f (Polynomial.X - 1)).hom := by
-  sorry
+  constructor
+  · intro htop
+    let r : Polynomial k := Polynomial.X - 1
+    let q : Polynomial k →ₗ[Polynomial k] (polynomialResidueModule k) :=
+      Submodule.mkQ (Ideal.span
+        ({(Polynomial.X : Polynomial k)} : Set (Polynomial k)))
+    obtain ⟨l, hl⟩ := Module.projective_lifting_property q f.hom
+      (Submodule.mkQ_surjective _)
+    let I : Submodule (Polynomial k) (Polynomial k) := LinearMap.range l
+    have hI : I = r • I := by
+      apply le_antisymm
+      · rintro y ⟨p, rfl⟩
+        have hp : p ∈ r • (⊤ : Submodule (Polynomial k) P) := by
+          have htop' : r • (⊤ : Submodule (Polynomial k) P) = ⊤ := by
+            simpa [r, principalMultipleSubmodule,
+              Submodule.ideal_span_singleton_smul] using htop
+          rw [htop']
+          exact Submodule.mem_top
+        obtain ⟨p', hp', hpp'⟩ :=
+          (Submodule.mem_smul_pointwise_iff_exists p r
+            (⊤ : Submodule (Polynomial k) P)).mp hp
+        refine ⟨l p', ⟨p', rfl⟩, ?_⟩
+        rw [← hpp']
+        simpa using (map_smul l r p').symm
+      · rintro y hy
+        obtain ⟨z, hz, hyz⟩ :=
+          (Submodule.mem_smul_pointwise_iff_exists y r I).mp hy
+        obtain ⟨p, hp⟩ := hz
+        refine ⟨r • p, ?_⟩
+        rw [map_smul, hp, hyz]
+    have hI_ne : I ≠ ⊥ := by
+      intro hI0
+      have hl0 : l = 0 := by
+        apply LinearMap.ext
+        intro p
+        have hp : l p ∈ (⊥ : Submodule (Polynomial k) (Polynomial k)) :=
+          hI0 ▸ (show l p ∈ I from ⟨p, rfl⟩)
+        change l p = 0 at hp
+        exact hp
+      have hf0 : f.hom = 0 := by
+        rw [← hl, hl0, LinearMap.comp_zero]
+      obtain ⟨y, hy⟩ := hf (Ideal.Quotient.mk
+        (Ideal.span ({(Polynomial.X : Polynomial k)} : Set (Polynomial k))) 1)
+      rw [hf0, LinearMap.zero_apply] at hy
+      have hy0 : (Ideal.Quotient.mk
+          (Ideal.span ({(Polynomial.X : Polynomial k)} : Set (Polynomial k))) 1) ≠ 0 := by
+        intro hzero
+        have hmem : (1 : Polynomial k) ∈ Ideal.span
+            ({(Polynomial.X : Polynomial k)} : Set (Polynomial k)) :=
+          Ideal.Quotient.eq_zero_iff_mem.mp hzero
+        have hunit : IsUnit (Polynomial.X : Polynomial k) :=
+          Ideal.span_singleton_eq_top.mp ((Ideal.eq_top_iff_one _).mpr hmem)
+        exact (Polynomial.not_isUnit_X_add_C (R := k) 0) (by simpa using hunit)
+      exact hy0 hy.symm
+    letI : I.IsPrincipal := IsPrincipalIdealRing.principal I
+    let g : Polynomial k := Submodule.IsPrincipal.generator I
+    have hg0 : g ≠ 0 := by
+      intro hg
+      apply hI_ne
+      exact (Submodule.IsPrincipal.eq_bot_iff_generator_eq_zero I).mpr hg
+    have hgI : g ∈ r • I := hI ▸ Submodule.IsPrincipal.generator_mem I
+    obtain ⟨a, ha, hga⟩ :=
+      (Submodule.mem_smul_pointwise_iff_exists g r I).mp hgI
+    obtain ⟨c, hc⟩ := (Submodule.IsPrincipal.mem_iff_generator_dvd I).mp ha
+    have hrc : r * c = 1 := by
+      apply mul_left_cancel₀ hg0
+      calc
+        g * (r * c) = r * (g * c) := by ac_rfl
+        _ = r • a := by rw [hc, smul_eq_mul]
+        _ = g := hga
+        _ = g * 1 := by simp
+    have hrunit : IsUnit r := IsUnit.of_mul_eq_one c hrc
+    exact (Polynomial.not_isUnit_X_add_C (R := k) (-1)) (by
+      simpa [r, sub_eq_add_neg] using hrunit)
+  · intro y
+    obtain ⟨p, rfl⟩ := hf y
+    let r : Polynomial k := Polynomial.X - 1
+    have hx : (Polynomial.X : Polynomial k) • f.hom p = 0 := by
+      obtain ⟨z, hz⟩ := Ideal.Quotient.mk_surjective (f.hom p)
+      rw [← hz]
+      change (Ideal.Quotient.mk (Ideal.span
+        ({(Polynomial.X : Polynomial k)} : Set (Polynomial k))) (Polynomial.X * z) :
+          Polynomial k ⧸ Ideal.span ({(Polynomial.X : Polynomial k)} : Set (Polynomial k))) =
+        (0 : Polynomial k ⧸ Ideal.span ({(Polynomial.X : Polynomial k)} : Set (Polynomial k)))
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact (Ideal.span ({(Polynomial.X : Polynomial k)} : Set (Polynomial k))).mul_mem_right
+        z (Ideal.subset_span (by simp))
+    refine ⟨⟨-(r • p), ?_⟩, ?_⟩
+    · rw [principalMultipleSubmodule, Submodule.ideal_span_singleton_smul]
+      simpa [smul_neg] using (Submodule.smul_mem_pointwise_smul (-p) r
+        (⊤ : Submodule (Polynomial k) P) (by simp))
+    · change f.hom (-(r • p)) = f.hom p
+      rw [map_neg, map_smul]
+      change -((Polynomial.X - (1 : Polynomial k)) • f.hom p) = f.hom p
+      rw [sub_smul, hx, zero_sub, one_smul, neg_neg]
 
 /-- The module `k[x]/(x)` has no projective cover. -/
 theorem polynomial_residue_no_projective_cover (k : Type u) [Field k] :
     ¬ ∃ (P : ModuleCat.{u} (Polynomial k))
         (f : P ⟶ polynomialResidueModule k), ProjectiveCover f := by
-  sorry
+  rintro ⟨P, f, hf⟩
+  letI : Module.Projective (Polynomial k) P := hf.1
+  obtain ⟨hproper, hsurj⟩ :=
+    polynomial_residue_principal_multiple_surjective k P f hf.surjective
+  let S := principalMultipleSubmodule P (Polynomial.X - 1)
+  let q : ModuleCat.of (Polynomial k) S ⟶ P := ModuleCat.ofHom S.subtype
+  let Q : Subobject P := Subobject.mk q
+  have hQ : Q ≠ ⊤ := by
+    intro hQ
+    apply hproper
+    have hQ' : Subobject.mk (ModuleCat.ofHom S.subtype) = (⊤ : Subobject P) := by
+      simpa [Q, q] using hQ
+    have h' := congrArg (ModuleCat.subobjectModule P) hQ'
+    have hS : (ModuleCat.subobjectModule P)
+        (Subobject.mk (ModuleCat.ofHom S.subtype)) = S := by
+      exact (ModuleCat.subobjectModule P).apply_symm_apply S
+    rw [hS, (ModuleCat.subobjectModule P).map_top] at h'
+    exact h'
+  have hqf : Epi (q ≫ f) := by
+    rw [ModuleCat.epi_iff_surjective]
+    intro y
+    obtain ⟨x, hx⟩ := hsurj y
+    exact ⟨x, hx⟩
+  have hQf : Epi (Q.arrow ≫ f) := by
+    rw [← Subobject.underlyingIso_hom_comp_eq_mk q]
+    haveI : Epi (q ≫ f) := hqf
+    change Epi ((Subobject.underlyingIso q).hom ≫ (q ≫ f))
+    infer_instance
+  let F := Subobject.imageFactorisation f Q
+  have hFepi : Epi F.F.m := by
+    apply epi_of_epi_fac (f := F.F.e) (g := F.F.m)
+      (h := Q.arrow ≫ f)
+    rw [F.F.fac]
+  have hFtop : Subobject.mk F.F.m = (⊤ : Subobject (polynomialResidueModule k)) := by
+    have : IsIso F.F.m := isIso_of_mono_of_epi _
+    exact (Subobject.isIso_iff_mk_eq_top _).mp inferInstance
+  have himage : (Subobject.«exists» f).obj Q =
+      (⊤ : Subobject (polynomialResidueModule k)) := by
+    have hFm : F.F.m = ((Subobject.«exists» f).obj Q).arrow :=
+      Subobject.imageFactorisation_F_m f Q
+    have hmk : Subobject.mk F.F.m =
+        Subobject.mk ((Subobject.«exists» f).obj Q).arrow := by
+      apply Subobject.mk_eq_mk_of_comm F.F.m
+        ((Subobject.«exists» f).obj Q).arrow (Iso.refl _)
+      change (𝟙 _ ≫ ((Subobject.«exists» f).obj Q).arrow) = F.F.m
+      rw [Category.id_comp]
+      exact hFm.symm
+    rw [hmk, Subobject.mk_arrow] at hFtop
+    exact hFtop
+  exact hf.2.2 Q hQ himage
 
 /-! Uniqueness and existence results. -/
 
@@ -86,14 +238,309 @@ theorem projective_cover_unique
     {f : P ⟶ M} {g : P' ⟶ M}
     (hf : ProjectiveCover f) (hg : ProjectiveCover g) :
     ∃ e : P ≅ P', e.hom ≫ g = f := by
-  sorry
+  letI : Module.Projective R P := hf.1
+  obtain ⟨α, hα⟩ := Module.projective_lifting_property g.hom f.hom hg.surjective
+  let a : P ⟶ P' := ModuleCat.ofHom α
+  have hα' : a ≫ g = f := by
+    apply ModuleCat.hom_ext
+    exact hα
+  haveI : Epi f := hf.2.1
+  let Qα : Subobject P' := imageSubobject a
+  have hQαg : Epi (Qα.arrow ≫ g) := by
+    apply epi_of_epi_fac (f := factorThruImageSubobject a)
+      (g := Qα.arrow ≫ g) (h := f)
+    calc
+      factorThruImageSubobject a ≫ (Qα.arrow ≫ g) = a ≫ g := by
+        simp [Qα, Category.assoc]
+      _ = f := hα'
+  have himageg : (Subobject.«exists» g).obj Qα =
+      (⊤ : Subobject M) := by
+    let F := Subobject.imageFactorisation g Qα
+    haveI : Epi (Qα.arrow ≫ g) := hQαg
+    have hFepi : Epi F.F.m := by
+      apply epi_of_epi_fac (f := F.F.e) (g := F.F.m)
+        (h := Qα.arrow ≫ g)
+      rw [F.F.fac]
+    have hFtop : Subobject.mk F.F.m = (⊤ : Subobject M) := by
+      have : IsIso F.F.m := isIso_of_mono_of_epi _
+      exact (Subobject.isIso_iff_mk_eq_top _).mp inferInstance
+    have hFm : F.F.m = ((Subobject.«exists» g).obj Qα).arrow :=
+      Subobject.imageFactorisation_F_m g Qα
+    have hmk : Subobject.mk F.F.m =
+        Subobject.mk ((Subobject.«exists» g).obj Qα).arrow := by
+      apply Subobject.mk_eq_mk_of_comm F.F.m
+        ((Subobject.«exists» g).obj Qα).arrow (Iso.refl _)
+      change (𝟙 _ ≫ ((Subobject.«exists» g).obj Qα).arrow) = F.F.m
+      rw [Category.id_comp]
+      exact hFm.symm
+    rw [hmk, Subobject.mk_arrow] at hFtop
+    exact hFtop
+  have hQαtop : Qα = (⊤ : Subobject P') := by
+    by_contra hQα
+    exact (hg.2.2 Qα hQα) himageg
+  have hαepi : Epi a := by
+    have hQαiso : IsIso Qα.arrow := by
+      apply (Subobject.isIso_iff_mk_eq_top Qα.arrow).mpr
+      simpa only [Subobject.mk_arrow] using hQαtop
+    letI : IsIso Qα.arrow := hQαiso
+    have hfac : factorThruImageSubobject a ≫ Qα.arrow = a := by
+      simpa [Qα] using imageSubobject_arrow_comp a
+    rw [← hfac]
+    infer_instance
+  letI : Epi a := hαepi
+  letI : Module.Projective R P' := hg.1
+  let idP' : P' →ₗ[R] P' := LinearMap.id
+  obtain ⟨β, hβ⟩ := Module.projective_lifting_property a.hom idP'
+    ((ModuleCat.epi_iff_surjective a).mp inferInstance)
+  let b : P' ⟶ P := ModuleCat.ofHom β
+  have hβ' : b ≫ a = 𝟙 P' := by
+    apply ModuleCat.hom_ext
+    exact hβ
+  let hβsplit : SplitMono b := ⟨a, hβ'⟩
+  letI : Mono b := hβsplit.mono
+  have hβf : Epi (b ≫ f) := by
+    haveI : Epi g := hg.2.1
+    have hbf : b ≫ f = g := by
+      calc
+        b ≫ f = b ≫ (a ≫ g) := by rw [hα']
+        _ = (b ≫ a) ≫ g := (Category.assoc _ _ _).symm
+        _ = g := by rw [hβ', Category.id_comp]
+    rw [hbf]
+    infer_instance
+  let Q : Subobject P := Subobject.mk b
+  have himage : (Subobject.«exists» f).obj Q =
+      (⊤ : Subobject M) := by
+    let F := Subobject.imageFactorisation f Q
+    have hQf : Epi (Q.arrow ≫ f) := by
+      rw [← Subobject.underlyingIso_hom_comp_eq_mk b]
+      haveI : Epi (b ≫ f) := hβf
+      change Epi ((Subobject.underlyingIso b).hom ≫ (b ≫ f))
+      infer_instance
+    haveI : Epi (Q.arrow ≫ f) := hQf
+    have hFepi : Epi F.F.m := by
+      apply epi_of_epi_fac (f := F.F.e) (g := F.F.m)
+        (h := Q.arrow ≫ f)
+      rw [F.F.fac]
+    have hFtop : Subobject.mk F.F.m = (⊤ : Subobject M) := by
+      have : IsIso F.F.m := isIso_of_mono_of_epi _
+      exact (Subobject.isIso_iff_mk_eq_top _).mp inferInstance
+    have hFm : F.F.m = ((Subobject.«exists» f).obj Q).arrow :=
+      Subobject.imageFactorisation_F_m f Q
+    have hmk : Subobject.mk F.F.m =
+        Subobject.mk ((Subobject.«exists» f).obj Q).arrow := by
+      apply Subobject.mk_eq_mk_of_comm F.F.m
+        ((Subobject.«exists» f).obj Q).arrow (Iso.refl _)
+      change (𝟙 _ ≫ ((Subobject.«exists» f).obj Q).arrow) = F.F.m
+      rw [Category.id_comp]
+      exact hFm.symm
+    rw [hmk, Subobject.mk_arrow] at hFtop
+    exact hFtop
+  have hQtop : Q = (⊤ : Subobject P) := by
+    by_contra hQ
+    exact (hf.2.2 Q hQ) himage
+  have hβiso : IsIso b := by
+    apply (Subobject.isIso_iff_mk_eq_top b).mpr
+    exact hQtop
+  letI : IsIso b := hβiso
+  have hαβ : a ≫ b = 𝟙 P := by
+    apply (cancel_epi b).1
+    rw [← Category.assoc, hβ', Category.id_comp, Category.comp_id]
+  let e : P ≅ P' :=
+    { hom := a
+      inv := b
+      hom_inv_id := hαβ
+      inv_hom_id := hβ' }
+  exact ⟨e, hα'⟩
 
 /-- Every finite module over a commutative local ring has a projective cover. -/
 theorem exists_projective_cover_of_finite
     {R : Type u} [CommRing R] [IsLocalRing R]
     (M : ModuleCat.{u} R) [Module.Finite R M] :
     ∃ P : ModuleCat.{u} R, ∃ f : P ⟶ M, ProjectiveCover f := by
-  sorry
+  classical
+  let K := IsLocalRing.ResidueField R
+  let MT : Type u := M
+  let ι := Module.Free.ChooseBasisIndex K (TensorProduct R K MT)
+  let w : Basis ι K (TensorProduct R K MT) :=
+    Module.Free.chooseBasis K (TensorProduct R K MT)
+  have hmk : Function.Surjective
+      (TensorProduct.mk R K MT 1) :=
+    TensorProduct.mk_surjective R MT K Quotient.mk_surjective
+  have hv0 : ∀ i : ι, ∃ x : MT,
+      TensorProduct.mk R K MT 1 x = w i := by
+    intro i
+    exact hmk (w i)
+  choose v hv using hv0
+  let l : (ι →₀ R) →ₗ[R] MT := Finsupp.linearCombination R v
+  have hl : Function.Surjective l := by
+    rw [← LinearMap.range_eq_top, Finsupp.range_linearCombination]
+    exact IsLocalRing.span_eq_top_of_tmul_eq_basis v w (fun i => by
+      simpa using hv i)
+  have hwbij : Function.Bijective (Finsupp.linearCombination K w) := by
+    constructor
+    · intro x y hxy
+      simpa only [Basis.repr_linearCombination] using congrArg w.repr hxy
+    · intro x
+      exact ⟨w.repr x, by simp⟩
+  have hkbij : Function.Bijective
+      (Finsupp.linearCombination K
+        (TensorProduct.mk R K MT 1 ∘ v)) := by
+    simpa [Function.comp_def, hv] using hwbij
+  let e :=
+    TensorProduct.finsuppScalarRight R R K ι
+  have hcomp : (fun x => l.baseChange K (e.symm x)) =
+      Finsupp.linearCombination K
+        (TensorProduct.mk R K MT 1 ∘ v) := by
+    funext x
+    refine Finsupp.induction_linear x (by simp) (by simp +contextual) (fun i c => ?_)
+    simp [e, l, LinearMap.baseChange_tmul, Finsupp.linearCombination_apply]
+    congr 1 <;> simp
+  have hcompbij : Function.Bijective
+      (fun x => l.baseChange K (e.symm x)) := by
+    rw [hcomp]
+    exact hkbij
+  have hbasebij : Function.Bijective (l.baseChange K) :=
+    (Function.Bijective.of_comp_iff (l.baseChange K) e.symm.bijective).mp
+      hcompbij
+  let q : (ι →₀ R) →ₗ[R] (ι →₀ K) :=
+    Finsupp.mapRange.linearMap (Algebra.linearMap R K)
+  have hcoeff : LinearMap.ker (Algebra.linearMap R K) =
+      IsLocalRing.maximalIdeal R := by
+    ext r
+    change algebraMap R K r = 0 ↔ r ∈ IsLocalRing.maximalIdeal R
+    rw [IsLocalRing.ResidueField.algebraMap_eq,
+      IsLocalRing.residue_eq_zero_iff]
+  have hsmul : IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)) =
+      Finsupp.submodule (fun _ : ι => IsLocalRing.maximalIdeal R) := by
+    apply le_antisymm
+    · apply Submodule.smul_le.mpr
+      intro r hr x hx
+      rw [Finsupp.mem_submodule_iff]
+      intro i
+      change r * x i ∈ IsLocalRing.maximalIdeal R
+      rw [mul_comm]
+      exact Submodule.smul_mem (IsLocalRing.maximalIdeal R) (x i) hr
+    · intro x hx
+      rw [← Finsupp.sum_single x]
+      refine Submodule.sum_mem _ (fun i _ => ?_)
+      rw [← Finsupp.smul_single_one]
+      exact Submodule.smul_mem_smul (hx i)
+        (Submodule.mem_top : Finsupp.single i (1 : R) ∈ (⊤ : Submodule R (ι →₀ R)))
+  have hqker : LinearMap.ker q =
+      IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)) := by
+    dsimp [q]
+    rw [Finsupp.ker_mapRange, hcoeff, hsmul]
+  have hq_mk : q = (e.comp (TensorProduct.mk R K (ι →₀ R) 1)) := by
+    dsimp [q]
+    apply LinearMap.ext
+    intro x
+    ext i
+    simp [q, e, Algebra.smul_def]
+  have hmkker : LinearMap.ker (TensorProduct.mk R K (ι →₀ R) 1) =
+      IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)) := by
+    apply le_antisymm
+    · intro x hx
+      rw [← hqker]
+      rw [LinearMap.mem_ker]
+      rw [LinearMap.mem_ker] at hx
+      rw [hq_mk]
+      simpa using congrArg e hx
+    · intro x hx
+      have hqx : q x = 0 := by
+        rw [← LinearMap.mem_ker, hqker]
+        exact hx
+      apply e.injective
+      rw [hq_mk] at hqx
+      simpa using hqx
+  have hker : LinearMap.ker l ≤
+      IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)) := by
+    intro x hx
+    rw [← hmkker]
+    change l x = 0 at hx
+    apply hbasebij.1
+    change (l.baseChange K) (1 ⊗ₜ[R] x) = (l.baseChange K) 0
+    rw [LinearMap.baseChange_tmul, hx, map_zero]
+    simp
+  let P : ModuleCat.{u} R := ModuleCat.of R (ι →₀ R)
+  let f : P ⟶ M := ModuleCat.ofHom l
+  have hsub (Q : Subobject P) :
+      (ModuleCat.subobjectModule P) Q = LinearMap.range Q.arrow.hom := by
+    induction Q using Subobject.ind with
+    | _ q =>
+      simp [ModuleCat.subobjectModule]
+  refine ⟨P, f, ?_⟩
+  constructor
+  · infer_instance
+  · constructor
+    · rw [ModuleCat.epi_iff_surjective]
+      exact hl
+    · intro Q hQ
+      let N : Submodule R (ι →₀ R) := (ModuleCat.subobjectModule P) Q
+      have hNne : N ≠ (⊤ : Submodule R (ι →₀ R)) := by
+        intro hN
+        apply hQ
+        apply (ModuleCat.subobjectModule P).injective
+        change (ModuleCat.subobjectModule P) Q =
+          (ModuleCat.subobjectModule P) (⊤ : Subobject P)
+        rw [show (ModuleCat.subobjectModule P) Q = N from rfl, hN,
+          (ModuleCat.subobjectModule P).map_top]
+      intro himage
+      let F := Subobject.imageFactorisation f Q
+      have hFm : F.F.m = ((Subobject.«exists» f).obj Q).arrow :=
+        Subobject.imageFactorisation_F_m f Q
+      have hFtop : Subobject.mk F.F.m = (⊤ : Subobject M) := by
+        have hmk' : Subobject.mk F.F.m =
+            Subobject.mk ((Subobject.«exists» f).obj Q).arrow := by
+          apply Subobject.mk_eq_mk_of_comm F.F.m
+            ((Subobject.«exists» f).obj Q).arrow (Iso.refl _)
+          change (𝟙 _ ≫ ((Subobject.«exists» f).obj Q).arrow) = F.F.m
+          rw [Category.id_comp]
+          exact hFm.symm
+        rw [hmk', Subobject.mk_arrow]
+        exact himage
+      have hQf : Epi (Q.arrow ≫ f) := by
+        haveI : IsIso F.F.m :=
+          (Subobject.isIso_iff_mk_eq_top _).mpr hFtop
+        let G := Image.imageFactorisation (Q.arrow ≫ f)
+        have hGepi : Epi G.F.e := by
+          change Epi (factorThruImage (Q.arrow ≫ f))
+          infer_instance
+        let i := F.isImage.isoExt G.isImage
+        have hcomp : Epi (F.F.e ≫ i.hom) := by
+          rw [F.isImage.e_isoExt_hom G.isImage]
+          exact hGepi
+        have hE : Epi F.F.e :=
+          (epi_comp_iff_of_isIso F.F.e i.hom).mp hcomp
+        letI : Epi F.F.e := hE
+        rw [← F.F.fac]
+        infer_instance
+      have hsurj : Function.Surjective (l.comp Q.arrow.hom) := by
+        have h := (ModuleCat.epi_iff_surjective (Q.arrow ≫ f)).mp hQf
+        simpa [f, LinearMap.comp_apply] using h
+      have hmap : Submodule.map l N = (⊤ : Submodule R M) := by
+        rw [show N = LinearMap.range Q.arrow.hom from (hsub Q).symm]
+        rw [← LinearMap.range_comp]
+        exact LinearMap.range_eq_top.mpr hsurj
+      have hsum : N ⊔
+          (IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R))) = ⊤ := by
+        rw [eq_top_iff]
+        intro x hx
+        have hxmap : l x ∈ Submodule.map l N := by
+          rw [hmap]
+          exact Submodule.mem_top
+        obtain ⟨n, hn, hnx⟩ := hxmap
+        have hdiff : x - n ∈
+            IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)) := by
+          apply hker
+          rw [LinearMap.mem_ker, map_sub, hnx, sub_self]
+        rw [← sub_add_cancel x n]
+        exact add_mem (Submodule.mem_sup_right hdiff) (Submodule.mem_sup_left hn)
+      have hNm : N.map (Submodule.mkQ
+          (IsLocalRing.maximalIdeal R • (⊤ : Submodule R (ι →₀ R)))) = ⊤ := by
+        rw [Submodule.map_mkQ_eq_top]
+        simpa [sup_comm] using hsum
+      exact hNne ((IsLocalRing.map_mkQ_eq_top (R := R)
+        (M := (ι →₀ R))).mp hNm)
 
 end
 

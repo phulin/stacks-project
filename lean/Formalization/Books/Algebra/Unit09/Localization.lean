@@ -258,74 +258,7 @@ abbrev localizationModuleCategory {R : Type u} [CommRing R] (S : Submonoid R) :=
 theorem localization_module_category_equivalence {R : Type u} [CommRing R]
     (S : Submonoid R) :
     Nonempty (ModuleCat.{u} (localization S) ≌ localizationModuleCategory S) := by
-  classical
-  let F : ModuleCat.{u} (localization S) ⥤ localizationModuleCategory S :=
-    { obj := fun N =>
-        ⟨(ModuleCat.restrictScalars (algebraMap R (localization S))).obj N, by
-          intro s
-          have hs : IsUnit (algebraMap R (localization S) s) :=
-            IsLocalization.map_units (localization S) s
-          have hs' : IsUnit
-              (algebraMap (localization S)
-                (Module.End (localization S) (N : Type u))
-                (algebraMap R (localization S) s)) :=
-            hs.map (algebraMap (localization S)
-              (Module.End (localization S) (N : Type u)))
-          have hbij := (Module.End.isUnit_iff _).mp hs'
-          change Function.Bijective
-            (fun n : (N : Type u) => (algebraMap R (localization S) s) • n)
-          simpa only [Module.algebraMap_end_apply] using hbij⟩
-      map := fun f => (ModuleCat.restrictScalars (algebraMap R (localization S))).map f
-      map_id := by intros; rfl
-      map_comp := by intros; rfl }
-  let G : localizationModuleCategory S ⥤ ModuleCat.{u} (localization S) :=
-    (localizationModuleProperty S).ι ⋙ ModuleCat.localizedModuleFunctor S
-  let hLoc (Y : localizationModuleCategory S) :
-      ∀ s : S, Function.Bijective
-        (fun n : localizedModule S (Y.obj : Type u) => (s : R) • n) := by
-    intro s
-    have h := (Module.End.isUnit_iff _).mp
-      (IsLocalizedModule.map_units
-        (LocalizedModule.mkLinearMap S (Y.obj : Type u)) s)
-    simpa only [Module.algebraMap_end_apply] using h
-  let lLoc (Y : localizationModuleCategory S) :
-      localizedModule S (Y.obj : Type u) →ₗ[R] (Y.obj : Type u) :=
-    (localizedModuleHomEquiv S (M := (Y.obj : Type u)) (N := (Y.obj : Type u))
-      Y.property).symm LinearMap.id
-  have lLoc_comp (Y : localizationModuleCategory S) :
-      (lLoc Y).comp (localizedModuleMap S (Y.obj : Type u)) = LinearMap.id := by
-    change localizedModuleHomRestriction S (lLoc Y) = LinearMap.id
-    dsimp [lLoc]
-    exact (localizedModuleHomEquiv S (M := (Y.obj : Type u)) (N := (Y.obj : Type u))
-      Y.property).apply_symm_apply _
-  have comp_lLoc (Y : localizationModuleCategory S) :
-      (localizedModuleMap S (Y.obj : Type u)).comp (lLoc Y) = LinearMap.id := by
-    apply (localizedModuleHomRestriction_bijective S (hLoc Y)).1
-    change ((localizedModuleMap S (Y.obj : Type u)).comp (lLoc Y)).comp
-        (localizedModuleMap S (Y.obj : Type u)) =
-      (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)).comp
-        (localizedModuleMap S (Y.obj : Type u))
-    rw [LinearMap.comp_assoc, lLoc_comp]
-    simp
-  let eLoc (Y : localizationModuleCategory S) :
-      localizedModule S (Y.obj : Type u) ≃ₗ[R] (Y.obj : Type u) :=
-    LinearEquiv.ofLinear (lLoc Y) (localizedModuleMap S (Y.obj : Type u))
-      (comp_lLoc Y) (lLoc_comp Y)
-  let eLocShrink (Y : localizationModuleCategory S) :
-      (G.obj Y : Type u) ≃ₗ[R] (Y.obj : Type u) :=
-    (Shrink.linearEquiv R (localizedModule S (Y.obj : Type u))).trans (eLoc Y)
-  let unitApp (X : ModuleCat.{u} (localization S)) :
-      X ≅ (F ⋙ G).obj X := by
-    letI : Module R (X : Type u) :=
-      (ModuleCat.restrictScalars (algebraMap R (localization S))).obj X |>.isModule
-    letI : IsScalarTower R (localization S) (X : Type u) :=
-      IsScalarTower.of_algebraMap_eq' rfl
-    let e : LocalizedModule S (X : Type u) ≃ₗ[R] (X : Type u) :=
-      IsLocalizedModule.iso S (LinearMap.id)
-    let e' : (X : Type u) ≃ₗ[R] ((F ⋙ G).obj X : Type u) :=
-      e.symm.trans (Shrink.linearEquiv R (localizedModule S (X : Type u))).symm
-    exact LinearEquiv.toModuleIso (e'.extendScalarsOfIsLocalization S (localization S))
-  exact ⟨CategoryTheory.Equivalence.refl⟩
+  sorry
 
 /-! ## Standard examples -/
 
@@ -670,15 +603,15 @@ theorem localization_iterated_ring_equiv {R : Type u} [CommRing R]
     RingHom.toAlgebra
       ((algebraMap (localization S') (localization (localizationImage S S'))).comp
         (algebraMap R (localization S')))
-  letI : Algebra R (localization (localizationImage S S')) := algA
-  letI : SMul R (localization (localizationImage S S')) := algA.toSMul
-  letI : IsScalarTower R (localization S') (localization (localizationImage S S')) :=
+  let : Algebra R (localization (localizationImage S S')) := algA
+  let : SMul R (localization (localizationImage S S')) := algA.toSMul
+  let : IsScalarTower R (localization S') (localization (localizationImage S S')) :=
     IsScalarTower.of_algebraMap_eq' rfl
-  letI : Algebra (localization S') (localization (localizationProduct S S')) :=
+  let : Algebra (localization S') (localization (localizationProduct S S')) :=
     IsLocalization.localizationAlgebraOfSubmonoidLe
       (localization S') (localization (localizationProduct S S')) S'
         (localizationProduct S S') le_sup_right
-  letI : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
+  let : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
     IsLocalization.localization_isScalarTower_of_submonoid_le
       (localization S') (localization (localizationProduct S S')) S'
         (localizationProduct S S') le_sup_right
@@ -737,11 +670,11 @@ theorem localization_iterated_ring_equiv_formula {R : Type u} [CommRing R]
             (localizationProductElement S S' s s')) =
           localizationFraction (localizationImage S S')
             (localizationFraction S' x s') (localizationImageElement S S' s)) := by
-  letI : Algebra (localization S') (localization (localizationProduct S S')) :=
+  let : Algebra (localization S') (localization (localizationProduct S S')) :=
     IsLocalization.localizationAlgebraOfSubmonoidLe
       (localization S') (localization (localizationProduct S S')) S'
         (localizationProduct S S') le_sup_right
-  letI : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
+  let : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
     IsLocalization.localization_isScalarTower_of_submonoid_le
       (localization S') (localization (localizationProduct S S')) S'
         (localizationProduct S S') le_sup_right
@@ -945,7 +878,7 @@ theorem localizedModule_iterated_equiv {R : Type u} [CommRing R]
       refine ⟨localizationProductElement S S' s s', ?_⟩
       simpa [localizationProductElement, Submonoid.smul_def, smul_smul,
         mul_comm, mul_left_comm, mul_assoc] using hs'
-  letI : IsLocalizedModule P f := hSource
+  let : IsLocalizedModule P f := hSource
   exact ⟨IsLocalizedModule.linearEquiv P f (LocalizedModule.mkLinearMap P M)⟩
 
 private theorem localizedModule_iterated_isLocalized {R : Type u} [CommRing R]
@@ -1075,7 +1008,7 @@ theorem localizedModule_iterated_equiv_formula {R : Type u} [CommRing R]
     (localizedModuleMap S (localizedModule S' M)).comp
       (localizedModuleMap S' M)
   let g : M →ₗ[R] localizedModule P M := LocalizedModule.mkLinearMap P M
-  letI : IsLocalizedModule P f := localizedModule_iterated_isLocalized S S'
+  let : IsLocalizedModule P f := localizedModule_iterated_isLocalized S S'
   let e : localizedModule S (localizedModule S' M) ≃ₗ[R]
       localizedModule P M := IsLocalizedModule.linearEquiv P f g
   have he_mk : ∀ (m : M) (p : P),
@@ -1253,9 +1186,9 @@ theorem localized_quotient_ring_equiv {A : Type u} [CommRing A]
     (I : Ideal A) (S : Submonoid A) :
     Nonempty (localization (quotientLocalizationSubmonoid I S) ≃+*
       localization S ⧸ localizedIdeal S I) := by
-  letI : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
+  let : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
     Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
-  letI : IsLocalization (quotientLocalizationSubmonoid I S)
+  let : IsLocalization (quotientLocalizationSubmonoid I S)
       (localization S ⧸ localizedIdeal S I) := by
     change IsLocalization (Algebra.algebraMapSubmonoid (A ⧸ I) S)
       (localization S ⧸ localizedIdeal S I)
@@ -1282,9 +1215,9 @@ theorem localized_quotient_ring_equiv_formula {A : Type u} [CommRing A]
             (localizationFraction S x s)) =
           localizationFraction (quotientLocalizationSubmonoid I S)
             (Ideal.Quotient.mk I x) (quotientLocalizationElement I S s)) := by
-  letI : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
+  let : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
     Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
-  letI : IsLocalization (quotientLocalizationSubmonoid I S)
+  let : IsLocalization (quotientLocalizationSubmonoid I S)
       (localization S ⧸ localizedIdeal S I) := by
     change IsLocalization (Algebra.algebraMapSubmonoid (A ⧸ I) S)
       (localization S ⧸ localizedIdeal S I)

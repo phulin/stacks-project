@@ -123,7 +123,43 @@ theorem essFinitePresentation_comp
 
 theorem essFinitePresentation_isStableUnderBaseChange :
     RingHom.IsStableUnderBaseChange @RingHom.EssFinitePresentation := by
-  sorry
+  apply RingHom.IsStableUnderBaseChange.mk essFinitePresentation_respectsIso
+  intros R S T _ _ _ _ _ h
+  change essFinitePresentation R T at h
+  rcases h with ⟨A, hA, g, M, q, hq, hcomp, hloc⟩
+  let : CommRing A := hA
+  letI : Algebra R A := g.toAlgebra
+  letI : Algebra A T := q.toAlgebra
+  let : IsScalarTower R A T := IsScalarTower.of_algebraMap_eq' (by
+    rw [← hcomp]
+    rfl)
+  let qₐ : A →ₐ[R] T := IsScalarTower.toAlgHom R A T
+  let q' : (S ⊗[R] A) →+* (S ⊗[R] T) :=
+    (Algebra.TensorProduct.map (AlgHom.id S S) qₐ).toRingHom
+  letI : Algebra A (S ⊗[R] A) := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra A (S ⊗[R] T) :=
+    (Algebra.TensorProduct.includeRight.comp qₐ).toRingHom.toAlgebra
+  letI : Algebra (S ⊗[R] A) (S ⊗[R] T) := q'.toAlgebra
+  let : IsScalarTower A (S ⊗[R] A) (S ⊗[R] T) := by
+    apply IsScalarTower.of_algebraMap_eq'
+    exact congrArg AlgHom.toRingHom
+      (Algebra.TensorProduct.map_restrictScalars_comp_includeRight
+        (AlgHom.id S S) qₐ)
+  let : Algebra.FinitePresentation R A := hq
+  have hloc' : IsLocalization (M.map (Algebra.TensorProduct.includeRight (R := R) (A := S)))
+      (S ⊗[R] T) := by
+    apply IsLocalization.tensorProduct_tensorProduct_right R S M T
+    exact congrArg AlgHom.toRingHom
+      (Algebra.TensorProduct.map_restrictScalars_comp_includeRight
+        (AlgHom.id S S) qₐ)
+  have hq' : RingHom.FinitePresentation (algebraMap S (S ⊗[R] A)) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  refine ⟨S ⊗[R] A, inferInstance, algebraMap S (S ⊗[R] A),
+    M.map (Algebra.TensorProduct.includeRight (R := R) (A := S)), q', hq', ?_, hloc'⟩
+  simpa [q', RingHom.algebraMap_toAlgebra] using
+    congrArg AlgHom.toRingHom
+      (Algebra.TensorProduct.map_comp_includeLeft (AlgHom.id S S) qₐ)
 
 /-! ## Essentially finite type maps into Artinian local rings -/
 

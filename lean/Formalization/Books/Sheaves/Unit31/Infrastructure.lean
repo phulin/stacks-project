@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.Bases
+import Formalization.Books.Sheaves.Unit30.Infrastructure
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Mathlib.CategoryTheory.Sites.Sheafification
@@ -8,7 +8,7 @@ import Mathlib.Topology.Sheaves.SheafCondition.Sites
 import Mathlib.Topology.Sheaves.Stalks
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 10: Open immersions
+# Shared infrastructure for Chapter 31: Open immersions
 
 The restriction functors use Mathlib's pullback and open-subspace sheaf
 restriction APIs.  Extension by the initial object is kept as a named
@@ -17,6 +17,8 @@ category; its sheaf version is obtained by sheafification.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open _root_.Topology

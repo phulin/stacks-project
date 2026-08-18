@@ -1,6 +1,6 @@
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
+import Formalization.Books.Sheaves.Unit25.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 import Mathlib.CategoryTheory.Monoidal.Ring
 import Mathlib.CategoryTheory.Monoidal.Cartesian.Mod

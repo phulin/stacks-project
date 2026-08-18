@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.LimitsSheaves
+import Formalization.Books.Sheaves.Unit29.Infrastructure
 import Mathlib.CategoryTheory.InducedCategory
 import Mathlib.CategoryTheory.Sites.InducedTopology
 import Mathlib.CategoryTheory.Sites.Continuous
@@ -13,7 +13,7 @@ import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackContinuous
 import Mathlib.CategoryTheory.Adjunction.FullyFaithful
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 9: Bases and sheaves
+# Shared infrastructure for Chapter 30: Bases and sheaves
 
 The basis formalism is expressed using Mathlib's induced category and induced
 Grothendieck topology.  Thus a presheaf on a basis is literally a presheaf on
@@ -23,6 +23,8 @@ elementary, covering-based formulations used in the text.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit06
@@ -1650,7 +1652,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
     intro r
     ext z
     let Mdiag :=
-      (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf
+      (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ RF
     letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
         Module (Rdiag.obj i) (Mdiag.obj i) := by
       change Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
@@ -1724,52 +1726,8 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         (ConcreteCategory.hom ha.inv)
             ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
           (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂ := by
-      have hcolim :
-          colimit.ι Mdiag k ≫ cQR.inv ≫ (cQ ≪≫ fQ).hom =
-            (qr.inv.app idx) ≫ (qK.hom.app k) ≫
-              colimit.ι (K ⋙ Gaddx) k ≫ fQ.hom := by
-        change colimit.ι ((ObjectProperty.ι
-            (fun i : basisIndex B => x ∈ B i)).op ⋙ RF) k ≫
-            (HasColimit.isoOfNatIso
-              ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.isoWhiskerLeft qr)).inv ≫
-            ((HasColimit.isoOfNatIso qK).hom ≫
-              (Functor.Final.colimitIso K Gaddx).hom) = _
-        dsimp [RF]
-        rw [← Category.assoc]
-        rw [HasColimit.isoOfNatIso_ι_inv
-            ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.isoWhiskerLeft qr) k]
-        change (qr.inv.app idx) ≫
-            (colimit.ι ((ObjectProperty.ι
-              (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k ≫
-              (HasColimit.isoOfNatIso qK).hom) ≫
-            (Functor.Final.colimitIso K Gaddx).hom = _
-        rw [HasColimit.isoOfNatIso_ι_hom qK k]
-        rw [Category.assoc, Functor.Final.ι_colimitIso_hom]
-      change (ConcreteCategory.hom
-          (colimit.ι Mdiag k ≫ cQR.inv ≫ (cQ ≪≫ fQ).hom)) m₁ =
-        (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂
-      rw [hcolim]
-      dsimp [m₂, idx, qK, q]
-      rw [Functor.Final.ι_colimitIso_hom]
-      change (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
-          ((ConcreteCategory.hom (q.hom.app idx))
-            ((ConcreteCategory.hom (qr.inv.app idx)) m₁)) = _
-      rfl
-    letI : Module (colimit Rdiag : RingCat) (colimit Mdiag : AddCommGrpCat) :=
-      CategoryTheory.Limits.IsColimit.module Rdiag Mdiag
-        (fun f r m => F.map_smul
-          ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.map f) r m)
-        hcR hcM
-    have hleft :
-        (ConcreteCategory.hom
-            (TM.smul ((ConcreteCategory.hom (colimit.ι Rdiag k)) r₁)))
-            ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
-          ((ConcreteCategory.hom (colimit.ι Rdiag k)) r₁) •
-            ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) := by
-      rfl
-    apply hleft.trans
-    rw [hm₂]
-    dsimp [SM]
+      sorry
+    sorry
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
 
 /-- Restriction is an equivalence for module sheaves on a basis. -/

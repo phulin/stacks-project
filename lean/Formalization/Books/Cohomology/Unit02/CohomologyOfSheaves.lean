@@ -3,7 +3,7 @@ import Formalization.Books.Derived.Unit20.HigherDerivedFunctors
 import Formalization.Books.Injectives.Unit04
 import Formalization.Books.Injectives.Unit05
 import Formalization.Books.Modules.Unit03.AbelianCategory
-import Formalization.Books.Sheaves.Unit22.RingedSpaceModules
+import Formalization.Books.Sheaves.Unit26.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Topology.Sheaves.AddCommGrpCat
 import Mathlib.Topology.Sheaves.Functors

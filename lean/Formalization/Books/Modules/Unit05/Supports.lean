@@ -1,6 +1,6 @@
 import Formalization.Books.Modules.Unit04.Sections
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
-import Formalization.Books.Sheaves.Unit22.Skyscraper
+import Formalization.Books.Sheaves.Unit31.Infrastructure
+import Formalization.Books.Sheaves.Unit27.Infrastructure
 import Mathlib.CategoryTheory.Sites.ConstantSheaf
 import Mathlib.Data.Real.Basic
 

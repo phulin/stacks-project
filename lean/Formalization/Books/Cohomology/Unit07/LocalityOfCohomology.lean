@@ -1,5 +1,5 @@
 import Formalization.Books.Cohomology.Unit03.DerivedFunctors
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Formalization.Books.Topology.Unit02.BasicNotions
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
 

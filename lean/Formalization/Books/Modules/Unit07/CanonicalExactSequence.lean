@@ -1,5 +1,5 @@
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
-import Formalization.Books.Sheaves.Unit22.ClosedImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
+import Formalization.Books.Sheaves.Unit32.Infrastructure
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 
 /-!

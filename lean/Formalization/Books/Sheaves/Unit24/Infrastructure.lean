@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit23.Infrastructure
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Formalization.Books.Sheaves.Unit10.SheavesOfModules
 import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
@@ -7,7 +7,7 @@ import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackContinuous
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PushforwardContinuous
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 3: Continuous maps and sheaves of modules
+# Shared infrastructure for Chapter 24: Continuous maps and sheaves of modules
 
 The module constructions are expressed with Mathlib's canonical presheaves and
 sheaves of modules.  In particular, the ring maps used by pushforward and
@@ -16,6 +16,8 @@ source statements visible in Lean.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit06

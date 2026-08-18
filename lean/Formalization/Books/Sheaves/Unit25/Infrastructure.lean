@@ -1,10 +1,10 @@
-import Formalization.Books.Sheaves.Unit22.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit23.Infrastructure
 import Formalization.Books.Sheaves.Unit09.SheavesOfAlgebraicStructures
 import Formalization.Books.Sheaves.Unit10.SheavesOfModules
 import Mathlib.Topology.Sheaves.Functors
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 4: Ringed spaces
+# Shared infrastructure for Chapter 25: Ringed spaces
 
 Ringed spaces are the source-facing pair of a topological space and a sheaf of
 rings.  Their morphisms retain the continuous map and the contravariant
@@ -12,6 +12,8 @@ rings.  Their morphisms retain the continuous map and the contravariant
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit09

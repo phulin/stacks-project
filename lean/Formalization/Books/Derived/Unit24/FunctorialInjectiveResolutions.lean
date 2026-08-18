@@ -8,7 +8,7 @@ import Formalization.Books.Derived.Unit20.InjectiveResolutions
 import Formalization.Books.Homology.Unit25.DoubleComplexes
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.Sheaves.Unit10.SheavesOfModules
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
+import Formalization.Books.Sheaves.Unit25.Infrastructure
 
 /-!
 # Derived Categories, Chapter 24: functorial injective embeddings

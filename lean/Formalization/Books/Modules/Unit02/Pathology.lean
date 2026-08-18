@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
+import Formalization.Books.Sheaves.Unit25.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Category.Ring.Limits
 import Mathlib.Geometry.RingedSpace.LocallyRingedSpace

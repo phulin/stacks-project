@@ -1,7 +1,7 @@
 import Formalization.Books.Modules.Unit02.Pathology
 import Formalization.Books.Categories.Unit23.ExactFunctors
 import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Colimits
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits

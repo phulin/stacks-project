@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.LimitsPresheaves
+import Formalization.Books.Sheaves.Unit28.Infrastructure
 import Mathlib.CategoryTheory.Sites.Limits
 import Mathlib.CategoryTheory.Sites.LeftExact
 import Mathlib.CategoryTheory.Sites.ConstantSheaf
@@ -9,7 +9,7 @@ import Mathlib.Topology.Spectral.Basic
 import Mathlib.Topology.Spectral.Hom
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 8: Limits and colimits of sheaves
+# Shared infrastructure for Chapter 29: Limits and colimits of sheaves
 
 This file records the canonical limit/colimit constructions for sheaves, their
 section and stalk comparisons, the directed-colimit lemma, its counterexample,
@@ -17,6 +17,8 @@ and the two inverse-limit statements for spectral spaces.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open scoped ZeroObject

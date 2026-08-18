@@ -1,9 +1,9 @@
-import Formalization.Books.Sheaves.Unit22.Skyscraper
+import Formalization.Books.Sheaves.Unit27.Infrastructure
 import Mathlib.Topology.Sheaves.Limits
 import Mathlib.CategoryTheory.Limits.FunctorCategory.Basic
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 7: Limits and colimits of presheaves
+# Shared infrastructure for Chapter 28: Limits and colimits of presheaves
 
 Presheaf limits and colimits are Mathlib's pointwise limits and colimits in a
 functor category.  The displayed section and stalk comparisons are exposed
@@ -11,6 +11,8 @@ with the canonical evaluation isomorphisms and source-facing theorem names.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 

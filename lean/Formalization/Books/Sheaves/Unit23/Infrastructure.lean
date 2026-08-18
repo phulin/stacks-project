@@ -8,7 +8,7 @@ import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Stalks
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 2: Continuous maps and sheaves of
+# Shared infrastructure for Chapter 23: Continuous maps and sheaves of
 algebraic structures
 
 Category-valued presheaves use Mathlib's canonical functors.  The source's
@@ -17,6 +17,8 @@ functor and the source's `AlgebraicStructureType` interface.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit05

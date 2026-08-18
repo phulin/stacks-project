@@ -1,11 +1,9 @@
 import Formalization.Books.Sheaves.Unit22.AbelianSheaves
-import Formalization.Books.Sheaves.Unit22.AlgebraicStructures
-import Formalization.Books.Sheaves.Unit22.Modules
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
-import Formalization.Books.Sheaves.Unit22.RingedSpaceModules
-import Formalization.Books.Sheaves.Unit22.Skyscraper
-import Formalization.Books.Sheaves.Unit22.LimitsPresheaves
-import Formalization.Books.Sheaves.Unit22.LimitsSheaves
-import Formalization.Books.Sheaves.Unit22.Bases
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
-import Formalization.Books.Sheaves.Unit22.ClosedImmersions
+
+/-!
+# Sheaves on Spaces, Chapter 22: Continuous maps and abelian sheaves
+
+This chapter contains only the abelian-presheaf and abelian-sheaf constructions
+from `books/sheaves.tex:2400-2544`. Infrastructure for later source chapters
+lives with Units 23--32.
+-/

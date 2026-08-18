@@ -1,11 +1,11 @@
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Category.Grp.Zero
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Stalks
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 11: Closed immersions
+# Shared infrastructure for Chapter 32: Closed immersions
 
 The direct image along a closed inclusion is represented by Mathlib's
 pushforward functor.  The stalk and essential-image descriptions from the
@@ -14,6 +14,8 @@ the canonical presheaf and sheaf APIs.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit10

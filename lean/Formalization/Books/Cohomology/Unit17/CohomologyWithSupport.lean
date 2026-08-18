@@ -1,7 +1,7 @@
 import Formalization.Books.Cohomology.Unit03.DerivedFunctors
 import Formalization.Books.Derived.Unit22.CompositionRightDerivedFunctors
 import Formalization.Books.Modules.Unit06.ClosedImmersions
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 
 /-!
 # Cohomology of Sheaves, Chapter 17: cohomology with support in a closed subset

@@ -1,5 +1,5 @@
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
-import Formalization.Books.Sheaves.Unit22.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit23.Infrastructure
 import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Stalks

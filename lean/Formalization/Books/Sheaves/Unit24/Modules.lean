@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.Modules
+import Formalization.Books.Sheaves.Unit24.Infrastructure
 
 /-!
 # Sheaves on Spaces, Chapter 24: Continuous maps and sheaves of modules

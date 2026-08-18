@@ -1,5 +1,5 @@
 import Formalization.Books.Modules.Unit04.Sections
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Mathlib.CategoryTheory.Sites.ConstantSheaf
 
 /-!

@@ -1,4 +1,4 @@
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
+import Formalization.Books.Sheaves.Unit25.Infrastructure
 
 /-!
 # Sheaves on Spaces, Chapter 25: Ringed spaces

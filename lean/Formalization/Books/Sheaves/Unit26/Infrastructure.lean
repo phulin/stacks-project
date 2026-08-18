@@ -1,10 +1,10 @@
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
-import Formalization.Books.Sheaves.Unit22.Modules
+import Formalization.Books.Sheaves.Unit25.Infrastructure
+import Formalization.Books.Sheaves.Unit24.Infrastructure
 import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 5: Morphisms of ringed spaces and modules
+# Shared infrastructure for Chapter 26: Morphisms of ringed spaces and modules
 
 The scalar map on a ringed-space morphism is converted by the sheaf
 pullback/pushforward adjunction.  Pushforward is the canonical module
@@ -13,6 +13,8 @@ followed by extension of scalars.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit10
@@ -214,6 +216,41 @@ noncomputable def ringedSpaceModuleFMapStalkMap
           G.val.presheaf (f.continuous x))) ⟶
       moduleSheafFMapStalkTarget f.sharp F x :=
   moduleSheafFMapStalkMap f.sharp φ x
+
+/-! ## Stalks of sheaves of modules -/
+
+/-- The additive map on stalks induced by a morphism of sheaves of modules. -/
+noncomputable def moduleStalkAddMap {X : TopCat.{v}} {O : RingSheaf X}
+    {F G : Mod O} (φ : F ⟶ G) (x : X) :
+    TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x ⟶
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x :=
+  (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+    ((PresheafOfModules.toPresheaf O.obj).map φ.val)
+
+theorem moduleStalkAddMap_smul {X : TopCat.{v}} {O : RingSheaf X}
+    {F G : Mod O} (φ : F ⟶ G) (x : X)
+    (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :
+    moduleStalkAddMap φ x ≫
+        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x))).smul r =
+      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
+        moduleStalkAddMap φ x := by
+  sorry
+
+/-- The stalk functor on sheaves of `O`-modules, with its canonical stalk
+module structure. -/
+noncomputable def moduleStalkFunctor {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) :
+    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) where
+  obj F :=
+    ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
+  map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
 
 end
 

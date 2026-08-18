@@ -2,7 +2,7 @@ import Mathlib.Algebra.Homology.DerivedCategory.Basic
 import Mathlib.Algebra.Homology.HomotopyCategory.SingleFunctors
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Formalization.Books.MoreAlgebra.Unit02.AdviceForReader
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
+import Formalization.Books.Sheaves.Unit25.Infrastructure
 
 /-!
 # Derived Categories of Schemes, Chapter 2: Conventions

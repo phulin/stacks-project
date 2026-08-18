@@ -1,6 +1,6 @@
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
-import Formalization.Books.Sheaves.Unit22.ClosedImmersions
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit32.Infrastructure
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Formalization.Books.Topology.Unit23.SpectralSpaces
 import Mathlib.CategoryTheory.Filtered.Basic
 

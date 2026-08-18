@@ -5,7 +5,7 @@ import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit11.Stalks
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
+import Formalization.Books.Sheaves.Unit31.Infrastructure
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Algebra.Category.Grp.Zero
 import Mathlib.CategoryTheory.Sites.ConstantSheaf

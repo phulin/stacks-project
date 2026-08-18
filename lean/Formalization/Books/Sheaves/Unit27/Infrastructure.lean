@@ -1,8 +1,8 @@
-import Formalization.Books.Sheaves.Unit22.RingedSpaceModules
+import Formalization.Books.Sheaves.Unit26.Infrastructure
 import Mathlib.Topology.Sheaves.Skyscraper
 
 /-!
-# Sheaves on Spaces, Chapter 22, Section 6: Skyscraper sheaves and stalks
+# Shared infrastructure for Chapter 27: Skyscraper sheaves and stalks
 
 The generic skyscraper presheaf and sheaf in Mathlib is used for sets,
 abelian groups, and arbitrary algebraic structures.  The module case is kept
@@ -11,6 +11,8 @@ and is not the ordinary skyscraper construction in a fixed module category.
 -/
 
 namespace Formalization.Books.Sheaves.Unit22
+
+-- The historical namespace is retained for API compatibility.
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open scoped ZeroObject
@@ -153,38 +155,6 @@ noncomputable def moduleSkyscraperSheaf {X : TopCat.{v}}
     (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
     Mod O := by
   exact (Classical.choice (exists_moduleSkyscraperSheaf O x A)).sheaf
-
-/-- The stalk functor on sheaves of `O`-modules, with its canonical stalk
-module structure. -/
-noncomputable def moduleStalkAddMap {X : TopCat.{v}} {O : RingSheaf X}
-    {F G : Mod O} (φ : F ⟶ G) (x : X) :
-    TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x ⟶
-      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x :=
-  (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
-    ((PresheafOfModules.toPresheaf O.obj).map φ.val)
-
-theorem moduleStalkAddMap_smul {X : TopCat.{v}} {O : RingSheaf X}
-    {F G : Mod O} (φ : F ⟶ G) (x : X)
-    (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :
-    moduleStalkAddMap φ x ≫
-        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x))).smul r =
-      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
-        moduleStalkAddMap φ x := by
-  sorry
-
-noncomputable def moduleStalkFunctor {X : TopCat.{v}}
-    (O : RingSheaf X) (x : X) :
-    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) where
-  obj F :=
-    ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
-  map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
-  map_id := by
-    sorry
-  map_comp := by
-    sorry
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/

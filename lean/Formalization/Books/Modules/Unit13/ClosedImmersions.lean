@@ -2,8 +2,8 @@ import Formalization.Books.Modules.Unit06.ClosedImmersions
 import Formalization.Books.Modules.Unit09.FiniteType
 import Formalization.Books.Modules.Unit10.QuasiCoherent
 import Formalization.Books.Categories.Unit23.ExactFunctors
-import Formalization.Books.Sheaves.Unit22.ClosedImmersions
-import Formalization.Books.Sheaves.Unit22.RingedSpaceModules
+import Formalization.Books.Sheaves.Unit32.Infrastructure
+import Formalization.Books.Sheaves.Unit26.Infrastructure
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackFree
 import Mathlib.CategoryTheory.Subobject.Limits
 

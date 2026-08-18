@@ -1,6 +1,6 @@
 import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
-import Formalization.Books.Sheaves.Unit22.Modules
-import Formalization.Books.Sheaves.Unit22.Skyscraper
+import Formalization.Books.Sheaves.Unit24.Infrastructure
+import Formalization.Books.Sheaves.Unit26.Infrastructure
 import Formalization.Books.Sheaves.Unit24.Modules
 import Formalization.Books.Sheaves.Unit25.RingedSpaces
 import Mathlib.Algebra.Category.ModuleCat.Stalk

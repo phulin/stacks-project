@@ -487,9 +487,7 @@ theorem compositionSeries_localized_multiplicity
         ∑ i : Fin s.length, a i := by
     rw [Nat.card_eq_fintype_card, Fintype.card_subtype]
     symm
-    simpa [a] using
-      (Finset.sum_boole (R := ℕ∞) (fun i : Fin s.length => m i = m₀)
-        Finset.univ)
+    simp [a]
   rw [hcard, ← hlast]
 
 /-! ## Restriction along local maps -/

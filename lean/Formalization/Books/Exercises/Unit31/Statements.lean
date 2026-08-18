@@ -1268,13 +1268,91 @@ theorem isRegularFunction_mul
     {φ ψ : Z → k} (hφ : IsRegularFunction Z φ)
     (hψ : IsRegularFunction Z ψ) :
     IsRegularFunction Z (φ * ψ) := by
-  sorry
+  classical
+  intro z
+  rcases hφ z with ⟨U, hzU, hU, hOpenU, f₁, g₁, hg₁, hfg₁⟩
+  rcases hψ z with ⟨V, hzV, hV, hOpenV, f₂, g₂, hg₂, hfg₂⟩
+  rcases hOpenU with ⟨J, hUJ⟩
+  rcases hOpenV with ⟨K, hVK⟩
+  let W := Z \ MvPolynomial.zeroLocus k (J * K)
+  have hWU : W ⊆ U := by
+    intro x hx
+    change x ∈ Z \ MvPolynomial.zeroLocus k (J * K) at hx
+    rw [hUJ]
+    refine ⟨hx.1, ?_⟩
+    intro hxJ
+    apply hx.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro p hp
+    have hker : J * K ≤ RingHom.ker (MvPolynomial.aeval x).toRingHom := by
+      refine Ideal.mul_le.2 ?_
+      intro j hj k hk
+      have hj0 := (MvPolynomial.mem_zeroLocus_iff.mp hxJ) j hj
+      change MvPolynomial.aeval x (j * k) = 0
+      rw [map_mul, hj0, zero_mul]
+    exact hker hp
+  have hWV : W ⊆ V := by
+    intro x hx
+    change x ∈ Z \ MvPolynomial.zeroLocus k (J * K) at hx
+    rw [hVK]
+    refine ⟨hx.1, ?_⟩
+    intro hxK
+    apply hx.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro p hp
+    have hker : J * K ≤ RingHom.ker (MvPolynomial.aeval x).toRingHom := by
+      refine Ideal.mul_le.2 ?_
+      intro j hj k hk
+      have hk0 := (MvPolynomial.mem_zeroLocus_iff.mp hxK) k hk
+      change MvPolynomial.aeval x (j * k) = 0
+      rw [map_mul, hk0, mul_zero]
+    exact hker hp
+  have hzW : z.1 ∈ W := by
+    change z.1 ∈ Z \ MvPolynomial.zeroLocus k (J * K)
+    have hzU' := hzU
+    rw [hUJ] at hzU'
+    have hzV' := hzV
+    rw [hVK] at hzV'
+    refine ⟨hU hzU, ?_⟩
+    intro hzprod
+    have hzJ := hzU'.2
+    rw [MvPolynomial.mem_zeroLocus_iff] at hzJ
+    push Not at hzJ
+    rcases hzJ with ⟨j, hj, hj0⟩
+    apply hzV'.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro k hk
+    have hprod := (MvPolynomial.mem_zeroLocus_iff.mp hzprod) (j * k)
+      (Ideal.mul_mem_mul hj hk)
+    rw [map_mul] at hprod
+    exact (mul_eq_zero.mp hprod).resolve_left hj0
+  refine ⟨W, hzW, ?_, ?_, f₁ * f₂, g₁ * g₂, ?_, ?_⟩
+  · exact hWU.trans hU
+  · exact ⟨J * K, rfl⟩
+  · intro x hx
+    rw [map_mul]
+    exact mul_ne_zero (hg₁ x (hWU hx)) (hg₂ x (hWV hx))
+  · intro x hx
+    have h₁ := hfg₁ x (hWU hx)
+    have h₂ := hfg₂ x (hWV hx)
+    change φ ⟨x, hU (hWU hx)⟩ * ψ ⟨x, hV (hWV hx)⟩ = _
+    rw [h₁, h₂]
+    simp only [map_mul]
+    field_simp
 
 /-- Constant functions are regular. -/
 theorem isRegularFunction_algebraMap
     {k : Type u} [Field k] {n : ℕ} (Z : Set (Fin n → k)) (c : k) :
     IsRegularFunction Z (algebraMap k (Z → k) c) := by
-  sorry
+  intro z
+  refine ⟨Z, z.2, subset_rfl, ?_, MvPolynomial.C c, 1, ?_, ?_⟩
+  · refine ⟨⊤, ?_⟩
+    ext x
+    simp
+  · intro u hu
+    simp
+  · intro u hu
+    simp
 
 /-- The ring of regular functions, with its canonical `k`-algebra structure. -/
 def regularFunctionAlgebra {k : Type u} [Field k] {n : ℕ}
@@ -1297,7 +1375,209 @@ theorem regular_function_on_affine_space_is_polynomial
     (φ : ↥(Set.univ : Set (Fin n → k)) → k)
     (hφ : IsRegularFunction (Set.univ : Set (Fin n → k)) φ) :
     IsPolynomialRestriction (Set.univ : Set (Fin n → k)) φ := by
-  sorry
+  classical
+  unfold IsPolynomialRestriction
+  let z0 : ↥(Set.univ : Set (Fin n → k)) :=
+    ⟨fun _ => 0, Set.mem_univ _⟩
+  rcases hφ z0 with
+    ⟨U0, hz0U, hU0, hOpen0, f0, g0, hg0, hfg0⟩
+  rcases hOpen0 with ⟨J0, hU0eq⟩
+  have hg0ne : g0 ≠ 0 := by
+    intro hg
+    subst g0
+    have hg0' := hg0 z0 hz0U
+    simp at hg0'
+  have eq_zero_of_aeval_eq_zero_on_basic_open :
+      ∀ {p q : MvPolynomial (Fin n) k}, q ≠ 0 →
+        (∀ x : Fin n → k, MvPolynomial.aeval x q ≠ 0 →
+          MvPolynomial.aeval x p = 0) → p = 0 := by
+    intro p q hq hp
+    have hmul : q * p = 0 := by
+      apply MvPolynomial.funext (R := k)
+      intro x
+      by_cases hqx : MvPolynomial.aeval x q = 0
+      · have hqx' : MvPolynomial.eval x q = 0 := by
+          simpa [MvPolynomial.aeval_def] using hqx
+        rw [MvPolynomial.eval_mul, hqx', zero_mul]
+        simp
+      · have hp' : MvPolynomial.eval x p = 0 := by
+          simpa [MvPolynomial.aeval_def] using hp x hqx
+        rw [MvPolynomial.eval_mul, hp', mul_zero]
+        simp
+    exact (mul_eq_zero.mp hmul).resolve_left hq
+  have isUnit_of_aeval_ne_zero :
+      ∀ {p : MvPolynomial (Fin n) k},
+        (∀ x : Fin n → k, MvPolynomial.aeval x p ≠ 0) → IsUnit p := by
+    intro p hp
+    by_contra hunit
+    have hp0 : p ≠ 0 := by
+      intro hpzero
+      subst p
+      simpa using hp (fun _ => 0)
+    obtain ⟨M, hM, hMmax⟩ :=
+      Ideal.exists_le_maximal (Ideal.span {p})
+        (Ideal.span_singleton_ne_top hunit)
+    obtain ⟨x, hx⟩ :=
+      MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k hM
+    have hpx : p ∈ MvPolynomial.vanishingIdeal k ({x} : Set (Fin n → k)) := by
+      rw [← hx]
+      exact hMmax (Ideal.subset_span (by simp))
+    exact hp x ((MvPolynomial.mem_vanishingIdeal_singleton_iff x p).mp hpx)
+  have hcross_of_local :
+      ∀ (U : Set (Fin n → k)) (hU : U ⊆ Set.univ)
+        (hOpen : IsZariskiOpenIn k n Set.univ U)
+        (hUnonempty : U.Nonempty) (f g : MvPolynomial (Fin n) k),
+        (∀ u, u ∈ U → MvPolynomial.aeval u g ≠ 0) →
+        (∀ u (hu : u ∈ U),
+          φ ⟨u, hU hu⟩ = MvPolynomial.aeval u f /
+            MvPolynomial.aeval u g) → f0 * g - f * g0 = 0 := by
+    intro U hU hOpen hUnonempty f g hg hfg
+    rcases hOpen with ⟨J, hUeq⟩
+    have hp0data : ∃ p, p ∈ J0 ∧ MvPolynomial.aeval z0.1 p ≠ 0 := by
+      have hz0' := hz0U
+      rw [hU0eq] at hz0'
+      have hz0J := hz0'.2
+      rw [MvPolynomial.mem_zeroLocus_iff] at hz0J
+      push Not at hz0J
+      exact hz0J
+    obtain ⟨p0, hp0J, hp0val⟩ := hp0data
+    have hp0ne : p0 ≠ 0 := by
+      intro hp0
+      subst p0
+      simp at hp0val
+    obtain ⟨u, hu⟩ := hUnonempty
+    have hu' := hu
+    rw [hUeq] at hu'
+    have hpdata : ∃ p, p ∈ J ∧ MvPolynomial.aeval u p ≠ 0 := by
+      have huJ := hu'.2
+      rw [MvPolynomial.mem_zeroLocus_iff] at huJ
+      push Not at huJ
+      exact huJ
+    obtain ⟨p, hpJ, hpval⟩ := hpdata
+    have hpne : p ≠ 0 := by
+      intro hp
+      subst p
+      simp at hpval
+    have hprodne : p0 * p ≠ 0 := mul_ne_zero hp0ne hpne
+    apply eq_zero_of_aeval_eq_zero_on_basic_open hprodne
+    intro y hyprod
+    have hyp0 : MvPolynomial.aeval y p0 ≠ 0 := by
+      intro hyp0
+      apply hyprod
+      rw [map_mul, hyp0, zero_mul]
+    have hyp : MvPolynomial.aeval y p ≠ 0 := by
+      intro hyp
+      apply hyprod
+      rw [map_mul, hyp, mul_zero]
+    have hyJ0 : y ∉ MvPolynomial.zeroLocus k J0 := by
+      intro hyJ0
+      exact hyp0 ((MvPolynomial.mem_zeroLocus_iff.mp hyJ0) p0 hp0J)
+    have hyJ : y ∉ MvPolynomial.zeroLocus k J := by
+      intro hyJ
+      exact hyp ((MvPolynomial.mem_zeroLocus_iff.mp hyJ) p hpJ)
+    have hyU0 : y ∈ U0 := hU0eq ▸ ⟨Set.mem_univ _, hyJ0⟩
+    have hyU : y ∈ U := hUeq ▸ ⟨Set.mem_univ _, hyJ⟩
+    have hratio :
+        MvPolynomial.aeval y f0 / MvPolynomial.aeval y g0 =
+          MvPolynomial.aeval y f / MvPolynomial.aeval y g := by
+      calc
+        MvPolynomial.aeval y f0 / MvPolynomial.aeval y g0 =
+            φ ⟨y, hU0 hyU0⟩ := (hfg0 y hyU0).symm
+        _ = φ ⟨y, hU hyU⟩ := by rfl
+        _ = MvPolynomial.aeval y f / MvPolynomial.aeval y g :=
+          hfg y hyU
+    have hratio' :=
+      (div_eq_div_iff (hg0 y hyU0) (hg y hyU)).mp hratio
+    rw [map_sub, map_mul, map_mul]
+    exact sub_eq_zero.mpr hratio'
+  by_cases hf0 : f0 = 0
+  · refine ⟨0, ?_⟩
+    intro z
+    rcases hφ z with
+      ⟨U, hzU, hU, hOpen, f, g, hg, hfg⟩
+    have hc := hcross_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+    have hfg0 : f * g0 = 0 := by
+      simpa [hf0] using hc
+    have hf : f = 0 := (mul_eq_zero.mp hfg0).resolve_right hg0ne
+    rw [hfg z.1 hzU, hf]
+    simp
+  · obtain ⟨a, b, c, hab, hca, hcb⟩ :=
+      UniqueFactorizationMonoid.exists_reduced_factors f0 hf0 g0
+    have hcne : c ≠ 0 := by
+      intro hc
+      subst c
+      simp at hca
+      exact hf0 hca.symm
+    have hbne : b ≠ 0 := by
+      intro hb
+      subst b
+      simp at hcb
+      exact hg0ne hcb.symm
+    have hno_factors : ∀ {d}, d ∣ b → d ∣ a → ¬Prime d := by
+      intro d hdb hda hd
+      exact hd.not_isUnit (hab.symm hdb hda)
+    have hb_dvd_of_local :
+        ∀ (U : Set (Fin n → k)) (hU : U ⊆ Set.univ)
+          (hOpen : IsZariskiOpenIn k n Set.univ U)
+          (hUnonempty : U.Nonempty) (f g : MvPolynomial (Fin n) k),
+          (∀ u, u ∈ U → MvPolynomial.aeval u g ≠ 0) →
+          (∀ u (hu : u ∈ U),
+            φ ⟨u, hU hu⟩ = MvPolynomial.aeval u f /
+              MvPolynomial.aeval u g) → b ∣ g := by
+      intro U hU hOpen hUnonempty f g hg hfg
+      have hcros := hcross_of_local U hU hOpen hUnonempty f g hg hfg
+      have hcros' : a * g = f * b := by
+        have htmp : c * (a * g - f * b) = 0 := by
+          calc
+            c * (a * g - f * b) = (c * a) * g - f * (c * b) := by ring
+            _ = f0 * g - f * g0 := by rw [hca, hcb]
+            _ = 0 := hcros
+        exact sub_eq_zero.mp ((mul_eq_zero.mp htmp).resolve_left hcne)
+      have hdiv : b ∣ a * g := by
+        refine ⟨f, ?_⟩
+        simpa [mul_comm] using hcros'
+      exact UniqueFactorizationMonoid.dvd_of_dvd_mul_right_of_no_prime_factors
+        hbne hno_factors hdiv
+    have hbunit : IsUnit b := isUnit_of_aeval_ne_zero (fun x => by
+      obtain ⟨U, hxU, hU, hOpen, f, g, hg, hfg⟩ :=
+        hφ ⟨x, Set.mem_univ _⟩
+      obtain ⟨t, ht⟩ :=
+        hb_dvd_of_local U hU hOpen ⟨x, hxU⟩ f g hg hfg
+      intro hbx
+      apply hg x hxU
+      rw [ht, map_mul, hbx, zero_mul])
+    obtain ⟨d, hd, hdb⟩ :=
+      (MvPolynomial.isUnit_iff_eq_C_of_isReduced (P := b)).mp hbunit
+    refine ⟨(d⁻¹ : k) • a, ?_⟩
+    intro z
+    rcases hφ z with
+      ⟨U, hzU, hU, hOpen, f, g, hg, hfg⟩
+    have hcros := hcross_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+    have hcros' : a * g = f * b := by
+      have htmp : c * (a * g - f * b) = 0 := by
+        calc
+          c * (a * g - f * b) = (c * a) * g - f * (c * b) := by ring
+          _ = f0 * g - f * g0 := by rw [hca, hcb]
+          _ = 0 := hcros
+      exact sub_eq_zero.mp ((mul_eq_zero.mp htmp).resolve_left hcne)
+    obtain ⟨t, ht⟩ := hb_dvd_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+    have hbval : MvPolynomial.aeval z.1 b ≠ 0 := by
+      intro hbz
+      apply hg z.1 hzU
+      rw [ht, map_mul, hbz, zero_mul]
+    have hratio :
+        MvPolynomial.aeval z.1 f / MvPolynomial.aeval z.1 g =
+          MvPolynomial.aeval z.1 a / MvPolynomial.aeval z.1 b := by
+      apply (div_eq_div_iff (hg z.1 hzU) hbval).2
+      simpa [map_mul, mul_comm] using
+        congrArg (fun q => MvPolynomial.aeval z.1 q) hcros'.symm
+    calc
+      φ z = MvPolynomial.aeval z.1 f / MvPolynomial.aeval z.1 g :=
+        hfg z.1 hzU
+      _ = MvPolynomial.aeval z.1 a / MvPolynomial.aeval z.1 b := hratio
+      _ = MvPolynomial.aeval z.1 ((d⁻¹ : k) • a) := by
+        rw [hdb]
+        simp [div_eq_mul_inv, Algebra.smul_def, mul_comm]
 
 /-! ### Finite fields -/
 
@@ -1308,7 +1588,75 @@ theorem finite_field_every_function_is_regular
     (Z : Set (Fin n → k)) (hZ : IsZariskiLocallyClosed k n Z)
     (φ : Z → k) :
     IsRegularFunction Z φ := by
-  sorry
+  classical
+  clear hZ
+  let _ : Fintype k := Fintype.ofFinite k
+  let _ : Fintype Z := Fintype.ofFinite Z
+  let δ : (Fin n → k) → MvPolynomial (Fin n) k :=
+    fun a => ∏ i : Fin n,
+      Finset.prod (Finset.univ.erase (a i))
+        (fun b => MvPolynomial.X i - MvPolynomial.C b)
+  have hδ_self (a : Fin n → k) :
+      MvPolynomial.aeval a (δ a) ≠ 0 := by
+    dsimp [δ]
+    simp only [map_prod]
+    apply Finset.prod_ne_zero_iff.mpr
+    intro i hi
+    apply Finset.prod_ne_zero_iff.mpr
+    intro b hb
+    rw [MvPolynomial.eval_sub, MvPolynomial.eval_X,
+      MvPolynomial.eval_C]
+    exact sub_ne_zero.mpr (Ne.symm (Finset.mem_erase.mp hb).1)
+  have hδ_zero {a x : Fin n → k} (hax : x ≠ a) :
+      MvPolynomial.aeval x (δ a) = 0 := by
+    have hex : ∃ i, x i ≠ a i := by
+      by_contra h
+      push Not at h
+      apply hax
+      funext i
+      exact h i
+    obtain ⟨i, hi⟩ := hex
+    have hmem : x i ∈ Finset.univ.erase (a i) :=
+      Finset.mem_erase.mpr ⟨hi, Finset.mem_univ _⟩
+    dsimp [δ]
+    simp only [map_prod]
+    apply Finset.prod_eq_zero (Finset.mem_univ i)
+    apply Finset.prod_eq_zero hmem
+    rw [MvPolynomial.eval_sub, MvPolynomial.eval_X,
+      MvPolynomial.eval_C, sub_self]
+  let p : MvPolynomial (Fin n) k :=
+    ∑ a : Z,
+      MvPolynomial.C (φ a / MvPolynomial.aeval a.1 (δ a.1)) * δ a.1
+  have hp (x : Z) : MvPolynomial.aeval x.1 p = φ x := by
+    dsimp [p]
+    rw [map_sum]
+    rw [Finset.sum_eq_single x]
+    · rw [map_mul]
+      rw [MvPolynomial.eval_C]
+      have hden : MvPolynomial.eval x.1 (δ x.1) ≠ 0 := by
+        simpa [MvPolynomial.aeval_def] using hδ_self x.1
+      field_simp [hden]
+    · intro a ha hax
+      have hcoord : x.1 ≠ a.1 := by
+        intro h
+        apply hax
+        exact Subtype.ext h.symm
+      rw [map_mul]
+      have hz : MvPolynomial.eval x.1 (δ a.1) = 0 := by
+        simpa [MvPolynomial.aeval_def] using hδ_zero hcoord
+      rw [hz, mul_zero]
+    · intro hx
+      exact (hx (Finset.mem_univ x)).elim
+  intro z
+  refine ⟨Z, z.2, subset_rfl, ?_, p, 1, ?_, ?_⟩
+  · refine ⟨⊤, ?_⟩
+    ext x
+    simp
+  · intro u hu
+    simp
+  · intro u hu
+    rw [hp ⟨u, hu⟩]
+    simp
 
 /-- The ring of regular functions on a locally closed finite affine set is
 finite-dimensional over its finite ground field. -/

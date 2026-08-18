@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.Adjunctions
+import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Ring.Prod
 import Mathlib.CategoryTheory.Linear.LinearFunctor
 import Mathlib.CategoryTheory.Monoidal.Linear
@@ -98,7 +100,406 @@ theorem exists_tensorProductFunctor_iso
     (hRight : PreservesFiniteColimits F)
     (hSums : CommutesWithDirectSums F) :
     ∃ N : ModuleCat.{u} R, Nonempty (F ≅ tensorProductFunctor N) := by
-  sorry
+  have hF_add : F.Additive := hF.1
+  have hF_linear : Functor.Linear R F := hF.2
+  let N : ModuleCat.{u} R := F.obj (ModuleCat.of R R)
+  let span (M : ModuleCat.{u} R) (m : M) : ModuleCat.of R R ⟶ M :=
+    ModuleCat.ofHom (LinearMap.toSpanSingleton R M m)
+  let alpha (M : ModuleCat.{u} R) :
+      (tensorProductFunctor N).obj M ⟶ F.obj M :=
+    ModuleCat.MonoidalCategory.tensorLift
+      (fun m n => F.map (span M m) n)
+      (by
+        intro m₁ m₂ n
+        have hspan : span M (m₁ + m₂) = span M m₁ + span M m₂ := by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro x
+          simp [span]
+        rw [hspan, @Functor.map_add _ _ _ _ _ _ F hF_add]
+        rfl)
+      (by
+        intro r m n
+        have hspan : span M (r • m) = r • span M m := by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro x
+          simp [span]
+          rw [smul_smul, smul_smul, mul_comm]
+        rw [hspan, @Functor.map_smul R _ _ _ _ _ _ _ _ _ F hF_linear]
+        rfl)
+      (by
+        intro m n₁ n₂
+        simp)
+      (by
+        intro r m n
+        simp)
+  have alpha_unit : alpha (ModuleCat.of R R) =
+      (MonoidalCategory.leftUnitor N).hom := by
+    apply ModuleCat.MonoidalCategory.tensor_ext
+    intro m n
+    dsimp [alpha]
+    change F.map (span (ModuleCat.of R R) m) n = m • n
+    have hspan : span (ModuleCat.of R R) m = m • 𝟙 _ := by
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      simp [span]
+      rw [mul_comm]
+    rw [hspan, Functor.map_smul]
+    simp
+  have hunit : IsIso (alpha (ModuleCat.of R R)) := by
+    rw [alpha_unit]
+    exact (MonoidalCategory.leftUnitor N).isIso_hom
+  let alphaNat : tensorProductFunctor N ⟶ F := {
+    app := alpha
+    naturality := by
+      intro M M' f
+      apply ModuleCat.MonoidalCategory.tensor_ext
+      intro m n
+      dsimp [alpha, tensorProductFunctor]
+      change F.map (span M' (f.hom m)) n = F.map f (F.map (span M m) n)
+      have hspan : span M' (f.hom m) = span M m ≫ f := by
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro x
+        simp [span]
+      rw [hspan, F.map_comp]
+      rfl
+    }
+  have hfree : ∀ X : Type u,
+      IsIso (alphaNat.app (∐ (fun _ : X => ModuleCat.of R R))) := by
+    intro X
+    have hF_sigma : IsIso (sigmaComparison F (fun _ : X => ModuleCat.of R R)) := hSums X _
+    have hF_pres : PreservesColimit
+        (Discrete.functor (fun _ : X => ModuleCat.of R R)) F :=
+      PreservesCoproduct.of_iso_comparison F (fun _ : X => ModuleCat.of R R)
+        (i := hF_sigma)
+    have hG_sigma : IsIso (sigmaComparison (tensorProductFunctor N)
+        (fun _ : X => ModuleCat.of R R)) :=
+      tensorProductFunctor_commutes_with_direct_sums N X _
+    have hG_pres : PreservesColimit
+        (Discrete.functor (fun _ : X => ModuleCat.of R R))
+        (tensorProductFunctor N) :=
+      PreservesCoproduct.of_iso_comparison (tensorProductFunctor N)
+        (fun _ : X => ModuleCat.of R R) (i := hG_sigma)
+    let eG : (tensorProductFunctor N).obj
+        (∐ (fun _ : X => ModuleCat.of R R)) ≅
+        (∐ (fun _ : X => (tensorProductFunctor N).obj (ModuleCat.of R R))) :=
+      @PreservesCoproduct.iso _ _ _ _ (tensorProductFunctor N) _
+        (fun _ : X => ModuleCat.of R R) _ _ hG_pres
+    let eF : F.obj (∐ (fun _ : X => ModuleCat.of R R)) ≅
+        (∐ (fun _ : X => F.obj (ModuleCat.of R R))) :=
+      @PreservesCoproduct.iso _ _ _ _ F _ (fun _ : X => ModuleCat.of R R)
+        _ _ hF_pres
+    let eU := asIso (alphaNat.app (ModuleCat.of R R))
+    let t :
+        (∐ (fun _ : X => (tensorProductFunctor N).obj (ModuleCat.of R R))) ≅
+          (∐ (fun _ : X => F.obj (ModuleCat.of R R))) :=
+      Sigma.mapIso (fun _ : X ↦ eU)
+    have hcomp :
+        t.hom = eG.inv ≫
+          alphaNat.app (∐ (fun _ : X => ModuleCat.of R R)) ≫ eF.hom := by
+      apply Sigma.hom_ext
+        (f := fun _ : X => (tensorProductFunctor N).obj (ModuleCat.of R R))
+      intro x
+      dsimp [eG, eF, t]
+      rw [Sigma.ι_mapIso_hom]
+      rw [ι_comp_sigmaComparison_assoc]
+      rw [← Category.assoc]
+      rw [alphaNat.naturality]
+      change alphaNat.app (ModuleCat.of R R) ≫
+          Sigma.ι (fun _ : X => F.obj (ModuleCat.of R R)) x = _
+      change alphaNat.app (ModuleCat.of R R) ≫
+          Sigma.ι (fun _ : X => F.obj (ModuleCat.of R R)) x =
+        alphaNat.app (ModuleCat.of R R) ≫
+          (F.map (Sigma.ι (fun _ : X => ModuleCat.of R R) x) ≫
+            (PreservesCoproduct.iso F (fun _ : X => ModuleCat.of R R)).hom)
+      exact (cancel_epi (alphaNat.app (ModuleCat.of R R))).2 (by
+        have heF : (PreservesCoproduct.iso F
+            (fun _ : X => ModuleCat.of R R)).hom =
+            inv (sigmaComparison F (fun _ : X => ModuleCat.of R R)) := by
+          calc
+            (PreservesCoproduct.iso F
+              (fun _ : X => ModuleCat.of R R)).hom =
+                inv (PreservesCoproduct.iso F
+                  (fun _ : X => ModuleCat.of R R)).inv :=
+              (IsIso.Iso.inv_inv _).symm
+            _ = inv (sigmaComparison F (fun _ : X => ModuleCat.of R R)) := by
+              simp only [PreservesCoproduct.inv_hom]
+        calc
+          Sigma.ι (fun _ : X => F.obj (ModuleCat.of R R)) x =
+              F.map (Sigma.ι (fun _ : X => ModuleCat.of R R) x) ≫
+                inv (sigmaComparison F (fun _ : X => ModuleCat.of R R)) :=
+            (map_ι_comp_inv_sigmaComparison F
+              (fun _ : X => ModuleCat.of R R) x).symm
+          _ = F.map (Sigma.ι (fun _ : X => ModuleCat.of R R) x) ≫
+              (PreservesCoproduct.iso F
+                (fun _ : X => ModuleCat.of R R)).hom := by rw [heF])
+    have hα : alphaNat.app (∐ (fun _ : X => ModuleCat.of R R)) =
+        eG.hom ≫ t.hom ≫ eF.inv := by
+      rw [hcomp]
+      simp
+    rw [hα]
+    infer_instance
+  have halpha : ∀ Q : ModuleCat.{u} R, IsIso (alphaNat.app Q) := by
+    intro Q
+    let P : ModuleCat.{u} R := (ModuleCat.free R).obj (Q : Type u)
+    let q : P ⟶ Q := ModuleCat.freeDesc (↾fun m => m)
+    have hq : ∀ m : Q, ∃ p : P, q p = m := by
+      intro m
+      refine ⟨ModuleCat.freeMk m, ?_⟩
+      exact ModuleCat.freeDesc_apply (↾fun x : Q => x) m
+    let K : ModuleCat.{u} R := kernel q
+    let r : (ModuleCat.free R).obj (K : Type u) ⟶ P :=
+      ModuleCat.freeDesc (↾fun k : K => kernel.ι q k)
+    let S : ShortComplex (ModuleCat.{u} R) :=
+      ShortComplex.mk r q (by
+        apply ModuleCat.free_hom_ext
+        intro k
+        simp [r]
+        )
+    have hSexact : S.Exact := by
+      apply (ShortComplex.moduleCat_exact_iff S).2
+      intro x hx
+      let sx : ModuleCat.of R R ⟶ P :=
+        ModuleCat.ofHom (LinearMap.toSpanSingleton R P x)
+      have hsx : sx ≫ q = 0 := by
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro y
+        change q (y • x) = 0
+        rw [map_smul, hx, smul_zero]
+      let k : K := (kernel.lift q sx hsx) (1 : R)
+      refine ⟨ModuleCat.freeMk k, ?_⟩
+      have hk : kernel.ι q k = x := by
+        change (kernel.ι q) ((kernel.lift q sx hsx) (1 : R)) = x
+        have hsx_one : sx (1 : R) = x := by
+          change (1 : R) • x = x
+          simp
+        have hk' := congrArg (fun f : ModuleCat.of R R ⟶ P => f (1 : R))
+          (kernel.lift_ι q sx hsx)
+        rw [hsx_one] at hk'
+        exact hk'
+      simp [S, r, k, hk]
+    have hqEpi : Epi q := (ModuleCat.epi_iff_surjective q).2 (by
+      intro m
+      exact hq m)
+    have hqCokernel :
+        IsColimit (CokernelCofork.ofπ q S.zero) := by
+      exact ((S.exact_and_epi_g_iff_g_is_cokernel).1
+        ⟨hSexact, hqEpi⟩).some
+    have hF_presShape : PreservesColimitsOfShape WalkingParallelPair F :=
+      @PreservesFiniteColimits.preservesFiniteColimits _ _ _ _ F hRight
+        WalkingParallelPair _ _
+    have hF_pres : PreservesColimit (parallelPair r 0) F :=
+      @PreservesColimitsOfShape.preservesColimit _ _ _ _ _ _ _ hF_presShape _
+    have hG_right : PreservesFiniteColimits (tensorProductFunctor N) :=
+      tensorProductFunctor_is_right_exact N
+    have hG_presShape :
+        PreservesColimitsOfShape WalkingParallelPair (tensorProductFunctor N) :=
+      @PreservesFiniteColimits.preservesFiniteColimits _ _ _ _
+        (tensorProductFunctor N) hG_right WalkingParallelPair _ _
+    have hG_pres : PreservesColimit (parallelPair r 0) (tensorProductFunctor N) :=
+      @PreservesColimitsOfShape.preservesColimit _ _ _ _ _ _ _ hG_presShape _
+    have hFmap :=
+      @isColimitOfPreserves _ _ _ _ _ _ _ F _ hqCokernel hF_pres
+    have hFdesc : ∀ {Z' : ModuleCat.{u} R} (k : F.obj P ⟶ Z'),
+        F.map r ≫ k = 0 →
+          {l : F.obj Q ⟶ Z' // F.map q ≫ l = k} := by
+      intro Z' k hk
+      let s : Cocone (parallelPair r 0 ⋙ F) :=
+        { pt := Z'
+          ι :=
+            { app := fun j =>
+                WalkingParallelPair.casesOn j (F.map r ≫ k) k
+              naturality := by
+                intro i j f
+                cases i <;> cases j <;> cases f <;> simp [hk] } }
+      refine ⟨hFmap.desc s, ?_⟩
+      simpa [s] using hFmap.fac s WalkingParallelPair.one
+    have hFq : IsColimit (CokernelCofork.ofπ (F.map q) (by
+        rw [← F.map_comp, S.zero, F.map_zero])) := by
+      refine CokernelCofork.IsColimit.ofπ (F.map q) (by
+        rw [← F.map_comp, S.zero, F.map_zero]) ?_ ?_ ?_
+      · intro Z' k hk
+        exact (hFdesc k hk).1
+      · intro Z' k hk
+        exact (hFdesc k hk).2
+      · intro Z' k hk m hm
+        have hm' : F.map q ≫ m = F.map q ≫ hFdesc k hk :=
+          hm.trans (hFdesc k hk).property.symm
+        apply IsColimit.hom_ext hFmap
+        intro j
+        cases j with
+        | zero =>
+            simpa [Category.assoc] using congrArg (fun z => F.map r ≫ z) hm'
+        | one => simpa using hm'
+    have hGmap :=
+      @isColimitOfPreserves _ _ _ _ _ _ _ (tensorProductFunctor N) _
+        hqCokernel hG_pres
+    have hGdesc : ∀ {Z' : ModuleCat.{u} R}
+        (k : (tensorProductFunctor N).obj P ⟶ Z'),
+        (tensorProductFunctor N).map r ≫ k = 0 →
+          {l : (tensorProductFunctor N).obj Q ⟶ Z' //
+            (tensorProductFunctor N).map q ≫ l = k} := by
+      intro Z' k hk
+      let s : Cocone (parallelPair r 0 ⋙ tensorProductFunctor N) :=
+        { pt := Z'
+          ι :=
+            { app := fun j =>
+                WalkingParallelPair.casesOn j
+                  ((tensorProductFunctor N).map r ≫ k) k
+              naturality := by
+                intro i j f
+                cases i <;> cases j <;> cases f <;> simp [hk] } }
+      refine ⟨hGmap.desc s, ?_⟩
+      simpa [s] using hGmap.fac s WalkingParallelPair.one
+    have hGq : IsColimit
+        (CokernelCofork.ofπ ((tensorProductFunctor N).map q) (by
+          rw [← (tensorProductFunctor N).map_comp, S.zero,
+            (tensorProductFunctor N).map_zero])) := by
+      refine CokernelCofork.IsColimit.ofπ
+        ((tensorProductFunctor N).map q) (by
+          rw [← (tensorProductFunctor N).map_comp, S.zero,
+            (tensorProductFunctor N).map_zero]) ?_ ?_ ?_
+      · intro Z' k hk
+        exact (hGdesc k hk).1
+      · intro Z' k hk
+        exact (hGdesc k hk).2
+      · intro Z' k hk m hm
+        have hm' : (tensorProductFunctor N).map q ≫ m =
+            (tensorProductFunctor N).map q ≫ hGdesc k hk :=
+          hm.trans (hGdesc k hk).property.symm
+        apply IsColimit.hom_ext hGmap
+        intro j
+        cases j with
+        | zero =>
+            simpa [Category.assoc] using
+              congrArg (fun z => (tensorProductFunctor N).map r ≫ z) hm'
+        | one => simpa using hm'
+    have hP : IsIso (alphaNat.app P) := by
+      let eQ : P ≅ ∐ (fun _ : (Q : Type u) => ModuleCat.of R R) :=
+        IsColimit.coconePointUniqueUpToIso
+          (ModuleCat.finsuppCoconeIsColimit R R (Q : Type u))
+          (colimit.isColimit (Discrete.functor
+            (fun _ : (Q : Type u) => ModuleCat.of R R)))
+      have hQiso : IsIso
+          ((tensorProductFunctor N).map eQ.hom ≫
+            alphaNat.app (∐ (fun _ : (Q : Type u) => ModuleCat.of R R)) ≫
+            F.map eQ.inv) :=
+        have hQtail : IsIso
+            (alphaNat.app (∐ (fun _ : (Q : Type u) => ModuleCat.of R R)) ≫
+              F.map eQ.inv) :=
+          IsIso.comp_isIso' (hfree (Q : Type u))
+            (inferInstance : IsIso (F.map eQ.inv))
+        IsIso.comp_isIso'
+          (inferInstance : IsIso ((tensorProductFunctor N).map eQ.hom)) hQtail
+      have heq : alphaNat.app P =
+          (tensorProductFunctor N).map eQ.hom ≫
+            alphaNat.app (∐ (fun _ : (Q : Type u) => ModuleCat.of R R)) ≫
+              F.map eQ.inv := by
+        apply (cancel_mono (F.map eQ.hom)).1
+        simp only [Category.assoc, ← Functor.map_comp, Iso.inv_hom_id,
+          F.map_id, Category.comp_id]
+        exact (alphaNat.naturality eQ.hom).symm
+      rw [heq]
+      exact hQiso
+    have hK : IsIso
+        (alphaNat.app ((ModuleCat.free R).obj (K : Type u))) := by
+      let eK : (ModuleCat.free R).obj (K : Type u) ≅
+          ∐ (fun _ : (K : Type u) => ModuleCat.of R R) :=
+        IsColimit.coconePointUniqueUpToIso
+          (ModuleCat.finsuppCoconeIsColimit R R (K : Type u))
+          (colimit.isColimit (Discrete.functor
+            (fun _ : (K : Type u) => ModuleCat.of R R)))
+      have hKiso : IsIso
+          ((tensorProductFunctor N).map eK.hom ≫
+            alphaNat.app (∐ (fun _ : (K : Type u) => ModuleCat.of R R)) ≫
+            F.map eK.inv) :=
+        have hKtail : IsIso
+            (alphaNat.app (∐ (fun _ : (K : Type u) => ModuleCat.of R R)) ≫
+              F.map eK.inv) :=
+          IsIso.comp_isIso' (hfree (K : Type u))
+            (inferInstance : IsIso (F.map eK.inv))
+        IsIso.comp_isIso'
+          (inferInstance : IsIso ((tensorProductFunctor N).map eK.hom)) hKtail
+      have heq :
+          alphaNat.app ((ModuleCat.free R).obj (K : Type u)) =
+            (tensorProductFunctor N).map eK.hom ≫
+              alphaNat.app (∐ (fun _ : (K : Type u) => ModuleCat.of R R)) ≫
+                F.map eK.inv := by
+        apply (cancel_mono (F.map eK.hom)).1
+        simp only [Category.assoc, ← Functor.map_comp, Iso.inv_hom_id,
+          F.map_id, Category.comp_id]
+        exact (alphaNat.naturality eK.hom).symm
+      rw [heq]
+      exact hKiso
+    let alphaP : (tensorProductFunctor N).obj P ≅ F.obj P :=
+      @asIso _ _ _ _ (alphaNat.app P) hP
+    let alphaK :
+      (tensorProductFunctor N).obj ((ModuleCat.free R).obj (K : Type u)) ≅
+        F.obj ((ModuleCat.free R).obj (K : Type u)) :=
+      @asIso _ _ _ _
+        (alphaNat.app ((ModuleCat.free R).obj (K : Type u))) hK
+    have hfac : F.map r ≫ alphaP.inv =
+        alphaK.inv ≫ (tensorProductFunctor N).map r := by
+      apply (cancel_mono alphaP.hom).1
+      dsimp [alphaP, alphaK]
+      simp only [Category.assoc]
+      rw [← Category.assoc]
+      rw [alphaNat.naturality]
+      simp
+    let fF : F.obj P ⟶ (tensorProductFunctor N).obj Q :=
+      alphaP.inv ≫ (tensorProductFunctor N).map q
+    have hfF : F.map r ≫ fF = 0 := by
+      dsimp [fF]
+      rw [← Category.assoc, hfac, Category.assoc,
+        ← (tensorProductFunctor N).map_comp, S.zero,
+        (tensorProductFunctor N).map_zero, comp_zero]
+    let betaData := CokernelCofork.IsColimit.desc' hFq fF hfF
+    let beta : F.obj Q ⟶ (tensorProductFunctor N).obj Q := betaData.1
+    have hbeta : F.map q ≫ beta = fF := betaData.2
+    let fG : (tensorProductFunctor N).obj P ⟶ F.obj Q :=
+      alphaP.hom ≫ F.map q
+    have hfG : (tensorProductFunctor N).map r ≫ fG = 0 := by
+      dsimp [fG, alphaP]
+      rw [← Category.assoc, alphaNat.naturality, Category.assoc,
+        ← F.map_comp, S.zero, F.map_zero, comp_zero]
+    let gammaData := CokernelCofork.IsColimit.desc' hGq fG hfG
+    let gamma : (tensorProductFunctor N).obj Q ⟶ F.obj Q := gammaData.1
+    have hgamma : (tensorProductFunctor N).map q ≫ gamma = fG := gammaData.2
+    have hnq : (tensorProductFunctor N).map q ≫ alphaNat.app Q = fG := by
+      simp [fG, alphaP]
+    have halpha_gamma : alphaNat.app Q = gamma := by
+      apply Cofork.IsColimit.hom_ext hGq
+      change (tensorProductFunctor N).map q ≫ alphaNat.app Q =
+        (tensorProductFunctor N).map q ≫ gamma
+      rw [hnq, hgamma]
+    have hbeta_gamma : beta ≫ gamma = 𝟙 _ := by
+      apply Cofork.IsColimit.hom_ext hFq
+      change F.map q ≫ (beta ≫ gamma) = F.map q ≫ 𝟙 _
+      rw [← Category.assoc, hbeta]
+      dsimp [fF]
+      rw [Category.assoc, hgamma]
+      simp [alphaP, fG]
+    have hgamma_beta : gamma ≫ beta = 𝟙 _ := by
+      apply Cofork.IsColimit.hom_ext hGq
+      change (tensorProductFunctor N).map q ≫ (gamma ≫ beta) =
+        (tensorProductFunctor N).map q ≫ 𝟙 _
+      rw [← Category.assoc, hgamma]
+      dsimp [fG]
+      rw [Category.assoc, hbeta]
+      simp [alphaP, fF]
+    rw [halpha_gamma]
+    exact ⟨⟨beta, hgamma_beta, hbeta_gamma⟩⟩
+  refine ⟨N, Nonempty.intro ?_⟩
+  exact (NatIso.ofComponents
+    (fun Q => @asIso _ _ _ _ (alphaNat.app Q) (halpha Q)) (by
+    intro X Y f
+    change (tensorProductFunctor N).map f ≫ alphaNat.app Y =
+      alphaNat.app X ≫ F.map f
+    exact alphaNat.naturality f)).symm
 
 /-! ## (4) Why direct sums cannot be omitted -/
 

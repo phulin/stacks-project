@@ -179,7 +179,11 @@ theorem integralClosure_localization
     [IsLocalization (Algebra.algebraMapSubmonoid S M) Sf]
     [Algebra (integralClosure R S) (integralClosure Rf Sf)]
     [IsScalarTower (integralClosure R S) (integralClosure Rf Sf) Sf]
-    [IsScalarTower R (integralClosure R S) (integralClosure Rf Sf)] :
+    [IsScalarTower R (integralClosure R S) (integralClosure Rf Sf)]
+    (hcompat : ∀ x : integralClosure R S,
+      algebraMap (integralClosure Rf Sf) Sf
+          ((algebraMap (integralClosure R S) (integralClosure Rf Sf)) x) =
+        algebraMap S Sf x.1) :
     IsLocalization
       (Algebra.algebraMapSubmonoid (integralClosure R S) M)
       (integralClosure Rf Sf) := by
@@ -227,7 +231,7 @@ theorem finite_base_change
   sorry
 
 /-- Integrality and finiteness can be checked on a finite principal-open cover. -/
-theorem integral_finite_local_iff
+theorem integral_finite_local
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (s : Finset R) (hs : Ideal.span (s : Set R) = ⊤) :
     ((∀ r : s, (Localization.awayMap f r).IsIntegral) → f.IsIntegral) ∧
@@ -252,6 +256,7 @@ theorem integralClosure_transitive
     [Algebra A B] [Algebra B C] [Algebra A C] [IsScalarTower A B C]
     [Algebra A B'] [Algebra B' B] [IsScalarTower A B' B]
     [Algebra B' C] [Algebra C' C] [IsScalarTower A B' C]
+    [IsScalarTower B' B C]
     [IsIntegralClosure B' A B] [IsIntegralClosure C' B' C] :
     IsIntegralClosure C' A C := by
   sorry

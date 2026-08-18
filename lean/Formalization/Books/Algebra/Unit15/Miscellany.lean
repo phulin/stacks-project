@@ -35,7 +35,62 @@ theorem prime_avoidance
     (hprime : ∃ s : Finset (Fin r), s.card ≤ 2 ∧
       ∀ i, i ∉ s → (I i).IsPrime) :
     ∃ x : R, x ∈ J ∧ ∀ i, x ∉ I i := by
-  sorry
+  classical
+  rcases hprime with ⟨s, hs, hsp⟩
+  by_cases hr : r = 0
+  · subst r
+    refine ⟨0, J.zero_mem, ?_⟩
+    intro i
+    exact Fin.elim0 i
+  · obtain ⟨a₀⟩ : Nonempty (Fin r) := Fin.pos_iff_nonempty.mp (Nat.pos_of_ne_zero hr)
+    have hex : ∃ a b : Fin r, s ⊆ {a, b} := by
+      by_cases hse : s = ∅
+      · exact ⟨a₀, a₀, by simp [hse]⟩
+      · obtain ⟨a, ha⟩ := s.nonempty_iff_ne_empty.mpr hse
+        have hcard : (s.erase a).card ≤ 1 := by
+          rw [Finset.card_erase_of_mem ha]
+          omega
+        by_cases he : s.erase a = ∅
+        · refine ⟨a, a, ?_⟩
+          intro z hz
+          by_cases hza : z = a
+          · exact Finset.mem_insert.mpr (Or.inl hza)
+          · have hz' : z ∈ s.erase a := Finset.mem_erase.mpr ⟨hza, hz⟩
+            rw [he] at hz'
+            exact False.elim (by simpa using hz')
+        · obtain ⟨b, hb⟩ := s.erase a |>.nonempty_iff_ne_empty.mpr he
+          refine ⟨a, b, ?_⟩
+          intro z hz
+          by_cases hza : z = a
+          · exact Finset.mem_insert.mpr (Or.inl hza)
+          · have hz' : z ∈ s.erase a := Finset.mem_erase.mpr ⟨hza, hz⟩
+            have hzb : z = b := (Finset.card_le_one.mp hcard) z hz' b hb
+            exact Finset.mem_insert.mpr (Or.inr (by simpa using hzb))
+    obtain ⟨a, b, hab⟩ := hex
+    by_contra h
+    push_neg at h
+    have hsub : (J : Set R) ⊆ ⋃ i : Fin r, (I i : Set R) := by
+      intro y hy
+      obtain ⟨i, hi⟩ := h y hy
+      exact Set.mem_iUnion.mpr ⟨i, hi⟩
+    have hsub' : (J : Set R) ⊆
+        ⋃ i ∈ ((Finset.univ : Finset (Fin r)) : Set (Fin r)), (I i : Set R) := by
+      have heq : (⋃ i ∈ ((Finset.univ : Finset (Fin r)) : Set (Fin r)),
+          (I i : Set R)) = ⋃ i : Fin r, (I i : Set R) := by
+        ext y
+        simp
+      rw [heq]
+      exact hsub
+    have hprime' : ∀ i ∈ (Finset.univ : Finset (Fin r)), i ≠ a → i ≠ b →
+        (I i).IsPrime := by
+      intro i hi hia hib
+      apply hsp i
+      intro his
+      have hiab : i = a ∨ i = b := by
+        simpa only [Finset.mem_insert, Finset.mem_singleton] using hab his
+      exact hiab.elim hia hib
+    rcases (Ideal.subset_union_prime a b hprime').mp hsub' with ⟨i, hi, hJi⟩
+    exact hJ i hJi
 
 theorem prime_coset_avoidance
     {R : Type u} [CommRing R] {r : ℕ} (x : R) (I : Ideal R)
@@ -43,7 +98,100 @@ theorem prime_coset_avoidance
     (hp : ∀ i, (p i).IsPrime)
     (h : ∀ i, ¬ (Set.image (fun y : R => x + y) (I : Set R) ⊆ (p i : Set R))) :
     ∃ y : R, y ∈ I ∧ ∀ i, x + y ∉ p i := by
-  sorry
+  classical
+  let vals : Finset (Ideal R) := Finset.univ.image p
+  let maxs : Finset (Ideal R) := vals.filter (fun q => Maximal (· ∈ vals) q)
+  have hmax_prime : ∀ q ∈ maxs, q.IsPrime := by
+    intro q hq
+    obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp (Finset.mem_filter.mp hq).1
+    exact hp i
+  have hmax_coset : ∀ q ∈ maxs,
+      ¬ (Set.image (fun y : R => x + y) (I : Set R) ⊆ (q : Set R)) := by
+    intro q hq
+    obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp (Finset.mem_filter.mp hq).1
+    exact h i
+  have hmax_antichain : ∀ q₁ ∈ maxs, ∀ q₂ ∈ maxs, q₁ ≠ q₂ → ¬ q₁ ≤ q₂ := by
+    intro q₁ hq₁ q₂ hq₂ hne hle
+    exact hne ((Finset.mem_filter.mp hq₁).2.eq_of_le
+      (Finset.mem_filter.mp hq₂).1 hle)
+  have hind : ∀ t : Finset (Ideal R), t ⊆ maxs →
+      ∃ y : R, y ∈ I ∧ ∀ q ∈ t, x + y ∉ q := by
+    intro t ht
+    induction t using Finset.induction_on with
+    | empty =>
+        exact ⟨0, I.zero_mem, by simp⟩
+    | @insert q t hqt ih =>
+        obtain ⟨w, hwI, hw⟩ := ih (fun q' hq' => ht (Finset.mem_insert_of_mem hq'))
+        have hq : q ∈ maxs := ht (Finset.mem_insert_self q t)
+        by_cases hwi : x + w ∈ q
+        · rcases Set.not_subset.mp (hmax_coset q hq) with ⟨u, hu, huq⟩
+          rcases hu with ⟨z, hzI, rfl⟩
+          have hnot : ∀ q' ∈ t, ¬ q' ≤ q := by
+            intro q' hq't
+            apply hmax_antichain q' (ht (Finset.mem_insert_of_mem hq't)) q hq
+            intro heq
+            exact hqt (heq ▸ hq't)
+          have hex : ∀ q', ∃ c : R,
+              q' ∈ t → c ∈ q' ∧ c ∉ q := by
+            intro q'
+            by_cases hq't : q' ∈ t
+            · obtain ⟨c, hc, hcn⟩ := Set.not_subset.mp (hnot q' hq't)
+              exact ⟨c, fun _ => ⟨hc, hcn⟩⟩
+            · exact ⟨1, fun hq't' => (hq't hq't').elim⟩
+          choose c hc using hex
+          let f : R := ∏ q' ∈ t, c q'
+          have hfmem : ∀ q' ∈ t, f ∈ q' := by
+            intro q' hq'
+            exact Ideal.prod_mem q' hq' (hc q' hq' |>.1)
+          letI : q.IsPrime := hmax_prime q hq
+          have hfnot : f ∉ q := by
+            rw [Ideal.IsPrime.prod_mem_iff]
+            push_neg
+            intro q' hq'
+            exact (hc q' hq' |>.2)
+          have hdiff : z - w ∉ q := by
+            intro hdiff
+            apply huq
+            have hsum : x + w + (z - w) ∈ q := q.add_mem hwi hdiff
+            simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hsum
+          have hfdnot : f * (z - w) ∉ q := by
+            intro hfd
+            exact (‹q.IsPrime›.mul_mem_iff_mem_or_mem.mp hfd).elim hfnot hdiff
+          let w' : R := w + f * (z - w)
+          refine ⟨w', I.add_mem hwI (I.mul_mem_left f (I.sub_mem hzI hwI)), ?_⟩
+          intro q' hq'
+          rcases Finset.mem_insert.mp hq' with hqeq | hq't
+          · intro hnew
+            subst q'
+            apply hfdnot
+            have hsum : x + w + f * (z - w) ∈ q := by
+              simpa [w', add_assoc] using hnew
+            have hmem := q.sub_mem hsum hwi
+            have heq : x + w + f * (z - w) - (x + w) = f * (z - w) := by
+              abel
+            rw [heq] at hmem
+            exact hmem
+          · intro hnew
+            apply hw q' hq't
+            have hfd : f * (z - w) ∈ q' := by
+              simpa [mul_comm] using q'.mul_mem_left (z - w) (hfmem q' hq't)
+            have hsum : x + w + f * (z - w) ∈ q' := by
+              simpa [w', add_assoc] using hnew
+            simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+              q'.sub_mem hsum hfd
+        · refine ⟨w, hwI, ?_⟩
+          intro q' hq'
+          rcases Finset.mem_insert.mp hq' with hqeq | hq't
+          · subst q'
+            exact hwi
+          · exact hw q' hq't
+  obtain ⟨y, hyI, hy⟩ := hind maxs (by intro q hq; exact hq)
+  refine ⟨y, hyI, ?_⟩
+  intro i hi
+  obtain ⟨q, hle, hqmax⟩ := vals.exists_le_maximal
+    (Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩)
+  have hq : q ∈ maxs := Finset.mem_filter.mpr ⟨hqmax.1, hqmax⟩
+  exact hy q hq (hle hi)
 
 /-! ## Chinese remainder -/
 
@@ -158,11 +306,160 @@ theorem matrix_right_inverse_block_form
               (Fin.cast (Nat.add_sub_of_le hmn) (Fin.natAdd m i))
               ((Finset.univ.image (fun k : Fin m => k.castLE hmn)).erase
                 (j.castLE hmn)) ∧
-          ∃ ε : R, (ε = 1 ∨ ε = -1) ∧
+            ∃ ε : R, (ε = 1 ∨ ε = -1) ∧
             (A * B)
                 (Fin.cast (Nat.add_sub_of_le hmn) (Fin.natAdd m i)) j =
               ε * Unit03.rowMinor A S) := by
-  sorry
+  dsimp
+  constructor
+  · intro i j
+    have hsub := Matrix.submatrix_mul A
+      (A.submatrix (fun k : Fin m => k.castLE hmn) id).adjugate
+      (fun k : Fin m => k.castLE hmn) (Equiv.refl (Fin m)) id
+      (Equiv.refl (Fin m)).bijective
+    calc
+      (A * (A.submatrix (fun k : Fin m => k.castLE hmn) id).adjugate)
+          (i.castLE hmn) j =
+          ((A * (A.submatrix (fun k : Fin m => k.castLE hmn) id).adjugate).submatrix
+            (fun k : Fin m => k.castLE hmn) id) i j := rfl
+      _ = ((A.submatrix (fun k : Fin m => k.castLE hmn) id) *
+          (A.submatrix (fun k : Fin m => k.castLE hmn) id).adjugate) i j := by
+        rw [hsub]
+        rfl
+      _ = ((A.submatrix (fun k : Fin m => k.castLE hmn) id).det •
+          (1 : Matrix (Fin m) (Fin m) R)) i j := by
+        rw [Matrix.mul_adjugate]
+  · classical
+    intro i j
+    let u : Fin m → Fin n := fun k => k.castLE hmn
+    let l : Fin n := Fin.cast (Nat.add_sub_of_le hmn) (Fin.natAdd m i)
+    let T : Finset (Fin n) := (Finset.univ.image u).erase (u j)
+    have huinj : Function.Injective u := by
+      exact Fin.castLE_injective hmn
+    have hu_mem : u j ∈ Finset.univ.image u := by
+      exact Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩
+    have hl_not : l ∉ Finset.univ.image u := by
+      intro hl
+      obtain ⟨k, -, hk⟩ := Finset.mem_image.mp hl
+      have hval := congrArg Fin.val hk
+      simp [l, u] at hval
+      omega
+    have hTcard : T.card = m - 1 := by
+      dsimp [T]
+      rw [Finset.card_erase_of_mem hu_mem,
+        Finset.card_image_of_injective _ huinj]
+      simp
+    have hScard : (insert l T).card = m := by
+      rw [Finset.card_insert_of_notMem (fun hlT =>
+          hl_not ((Finset.erase_subset (u j) (Finset.univ.image u)) hlT)),
+        hTcard]
+      have hj := j.isLt
+      omega
+    let S : {s : Finset (Fin n) // s.card = m} := ⟨insert l T, hScard⟩
+    refine ⟨S, ?_, ?_⟩
+    · simp [S, T, u, l]
+    · let C : Matrix (Fin m) (Fin m) R :=
+        (A.submatrix u id).updateRow j (A l)
+      have hrow : C.det = ∑ k : Fin m, A l k *
+          (A.submatrix u id).adjugate k j := by
+        calc
+          C.det = ∑ k : Fin m, C j k * C.adjugate k j :=
+            Matrix.det_eq_sum_mul_adjugate_row C j
+          _ = ∑ k : Fin m, A l k *
+              (A.submatrix u id).adjugate k j := by
+            apply Finset.sum_congr rfl
+            intro k hk
+            have hcjk : C j k = A l k := by simp [C]
+            have hadj : C.adjugate k j =
+                (A.submatrix u id).adjugate k j := by
+              rw [Matrix.adjugate_apply, Matrix.adjugate_apply]
+              congr 1
+              ext r' s'
+              by_cases hr' : r' = j
+              · subst r'
+                simp [C]
+              · simp [C, hr']
+            rw [hcjk, hadj]
+      let eS : Fin m → Fin n := fun k => (S.1.orderIsoOfFin S.2 k : Fin n)
+      let D : Matrix (Fin m) (Fin m) R := A.submatrix eS id
+      let eC : Fin m → Fin n := fun k => if k = j then l else u k
+      have heC_mem : ∀ k : Fin m, eC k ∈ S.1 := by
+        intro k
+        by_cases hkj : k = j
+        · simp [eC, hkj, S]
+        · have hku : u k ∈ T := by
+            apply Finset.mem_erase.mpr
+            refine ⟨?_, Finset.mem_image.mpr ⟨k, Finset.mem_univ _, rfl⟩⟩
+            intro hku
+            exact hkj (huinj hku)
+          simpa [S, eC, hkj] using Finset.mem_insert_of_mem hku
+      have heC_inj : Function.Injective eC := by
+        intro k k' hkk'
+        by_cases hkj : k = j <;> by_cases hk'j : k' = j
+        · exact hkj.trans hk'j.symm
+        · subst k
+          have : l ∈ Finset.univ.image u := by
+            have heq : l = u k' := by simpa [eC, hk'j] using hkk'
+            exact Finset.mem_image.mpr ⟨k', Finset.mem_univ _, heq.symm⟩
+          exact (hl_not this).elim
+        · subst k'
+          have : l ∈ Finset.univ.image u := by
+            exact Finset.mem_image.mpr ⟨k, Finset.mem_univ _,
+              by simpa [eC, hkj] using hkk'⟩
+          exact (hl_not this).elim
+        · exact huinj (by simpa [eC, hkj, hk'j] using hkk')
+      let eC' : Fin m → S.1 := fun k => ⟨eC k, heC_mem k⟩
+      have heC_surj : Function.Surjective eC' := by
+        intro z
+        by_cases hzl : (z : Fin n) = l
+        · refine ⟨j, ?_⟩
+          apply Subtype.ext
+          change eC j = (z : Fin n)
+          simp [eC, hzl]
+        · have hzT : (z : Fin n) ∈ T := by
+            exact (Finset.mem_insert.mp z.property).resolve_left hzl
+          obtain ⟨k, hk⟩ := Finset.mem_image.mp (Finset.mem_erase.mp hzT).2
+          have hkj : k ≠ j := by
+            intro hkj
+            subst k
+            apply (Finset.mem_erase.mp hzT).1
+            exact hk.2.symm
+          refine ⟨k, ?_⟩
+          apply Subtype.ext
+          change eC k = (z : Fin n)
+          simpa [eC, hkj] using hk
+      have heC'_inj : Function.Injective eC' := by
+        intro k k' hkk'
+        apply heC_inj
+        exact congrArg (fun z : S.1 => (z : Fin n)) hkk'
+      let eCeq : Fin m ≃ S.1 := Equiv.ofBijective eC' ⟨heC'_inj, heC_surj⟩
+      let eSeq : Fin m ≃ S.1 := S.1.orderIsoOfFin S.2
+      let σ : Equiv.Perm (Fin m) := eCeq.trans eSeq.symm
+      have hCD : C = D.submatrix σ id := by
+        ext k c
+        change (A.submatrix u id).updateRow j (A l) k c =
+          A (eS (eSeq.symm (eCeq k))) c
+        have hindex : eS (eSeq.symm (eCeq k)) = eC k := by
+          change (eSeq (eSeq.symm (eCeq k)) : Fin n) = eC k
+          exact congrArg (fun z : S.1 => (z : Fin n))
+            (eSeq.apply_symm_apply (eCeq k))
+        rw [hindex]
+        by_cases hkj : k = j <;> simp [C, eC, hkj]
+      have hrowminor : Unit03.rowMinor A S = D.det := by
+        rfl
+      have hdet : C.det = Equiv.Perm.sign σ * D.det := by
+        rw [hCD, Matrix.det_permute]
+      have hprod :
+          (A * (A.submatrix u id).adjugate) l j = C.det := by
+        rw [Matrix.mul_apply]
+        simpa [hrow] using hrow.symm
+      rcases Int.units_eq_one_or (Equiv.Perm.sign σ) with hsign | hsign
+      · refine ⟨1, Or.inl rfl, ?_⟩
+        rw [hprod, hdet, hsign, hrowminor]
+        simp
+      · refine ⟨-1, Or.inr rfl, ?_⟩
+        rw [hprod, hdet, hsign, hrowminor]
+        simp
 
 /-! ## Finite free rank -/
 

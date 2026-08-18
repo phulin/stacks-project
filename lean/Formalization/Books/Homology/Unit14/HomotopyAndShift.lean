@@ -963,8 +963,9 @@ theorem termwiseSplitConnectingMap_induces_connecting
           convert (s i).s_g using 1 <;> rfl
         simp only [Category.assoc, hsg, Category.comp_id])
       c (by
-        dsimp [c, b, a]
-        exact hxc)
+        change c ≫ S.f.f (i - 1) =
+          (a ≫ (s i).s) ≫ S.X₂.d i (i - 1)
+        simpa only [Category.assoc] using hxc)
       (i - 1 - 1) (by simp only [ChainComplex.next])
   have hla :
       S.X₃.liftCycles a (i - 1) (by simp only [ChainComplex.next])
@@ -998,7 +999,9 @@ theorem termwiseSplitConnectingMap_induces_connecting
     rw [δ.hom_f i]
     dsimp [T, chainShiftShortComplexFunctorIso,
       termwiseSplitConnectingFamily, shiftFunctorObjXIso, shiftFunctor]
-    simpa [c, a, sub_eq_add_neg]
+    simp only [Category.comp_id]
+    dsimp [c]
+    rfl
   have hnat := HomologicalComplex.homologyπ_naturality δ.hom i
   calc
     S.X₃.homologyπ i ≫ HomologicalComplex.homologyMap δ.hom i ≫
@@ -1033,12 +1036,14 @@ theorem termwiseSplitConnectingMap_induces_connecting
                 simpa [HomologicalComplex.shortComplexFunctor'] using hcond) ≫
             S.X₁.homologyπ (i + (-1 : ℤ)) ≫
               (E.app S.X₁).hom ≫ (E.app S.X₁).inv := by
-          simpa only [Category.assoc] using hs'
+          simpa [E, Category.assoc] using hs'
         _ = S.X₁.liftCycles c (i - 1 - 1) _ _ ≫
               S.X₁.homologyπ (i - 1) := by
-          rw [hft]
-          simp only [sub_eq_add_neg]
-          simp only [Category.assoc, Iso.hom_inv_id, Category.comp_id]
+          simp only [hft, Category.assoc, Iso.hom_inv_id, Category.comp_id,
+            sub_eq_add_neg]
+          have hi : i - 1 = i + (-1 : ℤ) := by omega
+          cases hi
+          rfl
         _ = S.X₃.homologyπ i ≫ hS.δ i (i - 1)
               (by simp [ComplexShape.down, ComplexShape.down']) := hδ'.symm
 

@@ -4010,8 +4010,224 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
   have htcard_le : t.card ≤ 3 := by
     rw [htcard]
     exact hcardQ.trans hfinrankQ
-  -- Prior attempt: trivial
-  sorry
+  let r : ℚ := a ^ 2 - a
+  let alpha : ℚ := r - (d ^ 2 + d)
+  let x : affineBaseSubalgebra :=
+    affineA - algebraMap ℚ affineBaseSubalgebra r
+  let h : affineBaseSubalgebra :=
+    affineA ^ 2 + algebraMap ℚ affineBaseSubalgebra alpha * affineA +
+      algebraMap ℚ affineBaseSubalgebra (4 * r)
+  have hfactor : x * h = Polynomial.aeval affineA P := by
+    apply Subtype.ext
+    change ((affineA : Polynomial ℚ) - Polynomial.C r) *
+        ((affineA : Polynomial ℚ) ^ 2 + Polynomial.C alpha * affineA +
+          Polynomial.C (4 * r)) =
+      ↑(Polynomial.eval₂ (algebraMap ℚ affineBaseSubalgebra) affineA P)
+    simp only [P, qP, d, c, r, alpha, map_add, map_sub, map_mul, map_pow, map_neg,
+      map_ofNat, Polynomial.eval₂_at_apply, Polynomial.eval₂_X, Polynomial.eval₂_C]
+    ring
+  have hxI : x * h ∈ I := by
+    rw [hfactor]
+    exact hPmem
+  have hpdeg : P.degree = (3 : WithBot ℕ) := by
+    dsimp [P]
+    have hqdeg' : qP.degree < (Polynomial.X ^ 3).degree := by
+      simpa using hqdeg
+    rw [Polynomial.degree_add_eq_left_of_degree_lt hqdeg']
+    simp
+  have hxnot : x ∉ I := by
+    intro hx
+    rcases Ideal.mem_span_singleton'.mp hx with ⟨k, hk⟩
+    have hGdegree : (affineG a : Polynomial ℚ).degree = (3 : WithBot ℕ) := by
+      change (affinePolynomialG a).degree = (3 : WithBot ℕ)
+      rw [affinePolynomialG, Polynomial.degree_mul]
+      · have hquad : (affineQuadratic a).degree = (2 : WithBot ℕ) := by
+          rw [affineQuadratic, ← add_assoc]
+          rw [Polynomial.degree_add_eq_left_of_degree_lt]
+          · simp
+          · rw [Polynomial.degree_X_add_C]
+            norm_num
+        rw [hquad]
+        simp
+      · simp [affineQuadratic]
+      · simp
+    have hGne : (affineG a : Polynomial ℚ) ≠ 0 := by
+      intro hzero
+      rw [hzero] at hGdegree
+      simp at hGdegree
+    have hxdegree : (x : Polynomial ℚ).degree < (affineG a : Polynomial ℚ).degree := by
+      change ((affineA : Polynomial ℚ) - Polynomial.C r).degree < _
+      rw [hGdegree]
+      calc
+        _ ≤ max (affineA : Polynomial ℚ).degree (Polynomial.C r).degree :=
+          Polynomial.degree_sub_le _ _
+        _ ≤ max (max Polynomial.X.degree Polynomial.X.degree) (Polynomial.C r).degree := by
+          gcongr
+          exact Polynomial.degree_sub_le _ _
+        _ ≤ max (2 : WithBot ℕ) 0 := by
+          gcongr <;> simp
+        _ = 2 := by norm_num
+        _ < 3 := by norm_num
+    by_cases hk0 : k = 0
+    · subst k
+      have hxzero : (x : Polynomial ℚ) = 0 := by
+        simpa using hk
+      have hxcoeff := congrArg (fun p : Polynomial ℚ => p.coeff 2) hxzero
+      simpa [x, affineA, affineBaseElement] using hxcoeff
+    · rw [← hk, Polynomial.degree_mul hk0 hGne] at hxdegree
+      exact hxdegree.not_le (by
+        exact le_add_left (zero_le_degree_iff.mpr hk0))
+  let K : Ideal affineBaseSubalgebra := I ⊔ Ideal.span {h}
+  have hKproper : K ≠ ⊤ := by
+    intro hK
+    have hone : (1 : affineBaseSubalgebra) ∈ K := by
+      rw [hK]
+      exact Submodule.mem_top
+    rcases Submodule.mem_sup.mp hone with ⟨i, hi, j, hj, hij⟩
+    rcases Ideal.mem_span_singleton'.mp hj with ⟨k, hkj⟩
+    apply hxnot
+    calc
+      x = x * 1 := by simp
+      _ = x * (i + j) := by rw [hij]
+      _ = x * i + x * j := by rw [mul_add]
+      _ = x * i + x * (k * h) := by rw [hkj]
+      _ = x * i + k * (x * h) := by ring
+    exact I.add_mem (I.mul_mem_right x hi) (I.mul_mem_left k hxI)
+  obtain ⟨M, hM, hKM⟩ := Ideal.exists_le_maximal K hKproper
+  let pM : PrimeSpectrum affineBaseSubalgebra := ⟨M, hM.isPrime⟩
+  have hpMT : pM ∈ T := by
+    apply (PrimeSpectrum.mem_zeroLocus _ _).2
+    intro y hy
+    exact hKM ((show I ≤ K from le_sup_left) hy)
+  have hpMh : h ∈ pM.asIdeal := by
+    exact hKM ((show Ideal.span {h} ≤ K from le_sup_right)
+      (Ideal.subset_span (by simp)))
+  have hpMt : pM ∈ t := (htmem _).2 hpMT
+  have hsecond : ∃ p : PrimeSpectrum affineBaseSubalgebra,
+      p ∈ t ∧ p ≠ affinePoint a := by
+    by_cases hh0 : affineEvaluation a h = 0
+    · have hr0 : r ≠ 0 := by
+        dsimp [r]
+        exact sub_ne_zero.mpr (by
+          intro hae
+          apply ha0
+          nlinarith)
+      have hquad : a ^ 2 + 3 * a - 2 = 0 := by
+        have hh' : r * (a ^ 2 + 3 * a - 2) = 0 := by
+          simpa [h, r, alpha, affineEvaluation, affineA, affineBaseElement] using hh0
+        exact (mul_eq_zero.mp hh').resolve_left hr0
+      let p₁ : PrimeSpectrum affineBaseSubalgebra := affinePoint (-1 - a)
+      have hp₁T : p₁ ∈ T := by
+        apply (PrimeSpectrum.mem_zeroLocus _ _).2
+        intro y hy
+        have hIle : I ≤ p₁.asIdeal := by
+          apply Ideal.span_le.mpr
+          intro z hz
+          rw [Set.mem_singleton_iff.mp hz]
+          apply RingHom.mem_ker.mpr
+          change affineEvaluation (-1 - a) (affineG a) = 0
+          simp [affineG, affinePolynomialG, affineQuadratic, affineEvaluation,
+            affineBaseElement]
+          nlinarith [hquad]
+        exact hIle hy
+      have hp₁t : p₁ ∈ t := (htmem _).2 hp₁T
+      have hp₁ne : p₁ ≠ affinePoint a := by
+        intro heq
+        have hA₁ : affineA ∉ p₁.asIdeal := by
+          intro hA
+          have hv := RingHom.mem_ker.mp hA
+          change affineEvaluation (-1 - a) affineA = 0 at hv
+          simp [affineEvaluation, affineA, affineBaseElement] at hv
+          nlinarith [hquad]
+        have hA₀ : affineA ∉ (affinePoint a).asIdeal := by
+          intro hA
+          have hv := RingHom.mem_ker.mp hA
+          change affineEvaluation a affineA = 0 at hv
+          simp [affineEvaluation, affineA, affineBaseElement] at hv
+          apply ha0
+          nlinarith [hv]
+        apply hA₁
+        rw [heq]
+        exact hA₀
+      exact ⟨p₁, hp₁t, hp₁ne⟩
+    · have hpMne : pM ≠ affinePoint a := by
+        intro heq
+        apply hh0
+        have hmem : h ∈ (affinePoint a).asIdeal := by
+          rw [← heq]
+          exact hpMh
+        exact RingHom.mem_ker.mp hmem
+      exact ⟨pM, hpMt, hpMne⟩
+  have htcard_ge : 2 ≤ t.card := by
+    obtain ⟨p₁, hp₁t, hp₁ne⟩ := hsecond
+    have hcardtwo : ({affinePoint a, p₁} : Finset (PrimeSpectrum affineBaseSubalgebra)).card = 2 := by
+      simp [hp₁ne]
+    have hsub : ({affinePoint a, p₁} : Finset (PrimeSpectrum affineBaseSubalgebra)) ⊆ t := by
+      intro p hp
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hp
+      rcases hp with rfl | rfl
+      · exact hp0t
+      · exact hp₁t
+    calc
+      2 = ({affinePoint a, p₁} : Finset (PrimeSpectrum affineBaseSubalgebra)).card := hcardtwo.symm
+      _ ≤ t.card := Finset.card_le_card hsub
+  let s : Finset (PrimeSpectrum affineBaseSubalgebra) := t.erase (affinePoint a)
+  have hs_card : s.card + 1 = t.card := by
+    dsimp [s]
+    rw [Finset.card_erase_of_mem hp0t]
+  have hspos : 0 < s.card := by omega
+  have hscard : s.card ≤ 2 := by omega
+  have hmax (p : PrimeSpectrum affineBaseSubalgebra) (hpT : p ∈ T) :
+      p.asIdeal.IsMaximal := by
+    let q : PrimeSpectrum Q := eZero.symm ⟨p, hpT⟩
+    letI : q.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime q.asIdeal
+    have hqmax : (q.asIdeal.comap (Ideal.Quotient.mk I)).IsMaximal :=
+      Ideal.comap_isMaximal_of_surjective Ideal.Quotient.mk_surjective
+    have hqeq : p.asIdeal = q.asIdeal.comap (Ideal.Quotient.mk I) := by
+      have heq := eZero.apply_symm_apply ⟨p, hpT⟩
+      change (eZero q).1 = p at heq
+      rw [heq]
+      rfl
+    rw [hqeq]
+    exact hqmax
+  have hs_prop : ∀ p ∈ s,
+      p.asIdeal.IsMaximal ∧ p ≠ affinePoint a ∧ affineG a ∈ p.asIdeal := by
+    intro p hp
+    have hpt : p ∈ t := Finset.mem_of_mem_erase hp
+    have hpT : p ∈ T := (htmem _).1 hpt
+    refine ⟨hmax p hpT, ?_, ?_⟩
+    · exact (Finset.mem_erase.mp hp).1
+    · exact (PrimeSpectrum.mem_zeroLocus _ _).1 hpT
+      exact Ideal.subset_span (by simp)
+  have hcomp :
+      (PrimeSpectrum.basicOpen (affineG a) : Set (PrimeSpectrum affineBaseSubalgebra))ᶜ =
+        {affinePoint a} ∪ (s : Set (PrimeSpectrum affineBaseSubalgebra)) := by
+    ext p
+    constructor
+    · intro hp
+      have hpG : affineG a ∈ p.asIdeal := by
+        simpa [PrimeSpectrum.basicOpen] using hp
+      have hpT : p ∈ T := by
+        apply (PrimeSpectrum.mem_zeroLocus _ _).2
+        intro y hy
+        have hIp : I ≤ p.asIdeal := by
+          apply Ideal.span_le.mpr
+          intro z hz
+          simpa [Set.mem_singleton_iff.mp hz] using hpG
+        exact hIp hy
+      have hpt : p ∈ t := (htmem _).2 hpT
+      by_cases hpa : p = affinePoint a
+      · exact Set.mem_union_left _ hpa
+      · exact Set.mem_union_right _ (Finset.mem_coe.mpr (Finset.mem_erase.mpr ⟨hpa, hpt⟩))
+    · intro hp
+      have hpG : affineG a ∈ p.asIdeal := by
+        rcases hp with hp | hp
+        · subst p
+          exact (PrimeSpectrum.mem_zeroLocus _ _).1 hp0T (Ideal.subset_span (by simp))
+        · have hpt : p ∈ s := Finset.mem_coe.mp hp
+          exact (hs_prop p hpt).2.2
+      simpa [PrimeSpectrum.basicOpen] using hpG
+  exact ⟨s, hspos, hscard, hs_prop, hcomp⟩
 
 theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
@@ -4020,7 +4236,7 @@ theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
         p.asIdeal.IsMaximal ∧ p ≠ affinePoint a ∧ affineG a ∈ p.asIdeal) ∧
       (PrimeSpectrum.basicOpen (affineG a) : Set (PrimeSpectrum affineBaseSubalgebra))ᶜ =
         {affinePoint a} ∪ (s : Set (PrimeSpectrum affineBaseSubalgebra)) := by
-  sorry
+  exact affine_second_basic_open_complement_proof a ha0 ha1 haHalf
 
 theorem affine_second_basic_open_homeomorph (a : ℚ) (_ha0 : a ≠ 0) (_ha1 : a ≠ 1)
     (_haHalf : a ≠ 1 / 2) :
@@ -4628,7 +4844,15 @@ def UnitsAreRationalScalars {A : Type*} [CommRing A] [Algebra ℚ A] : Prop :=
 
 theorem affine_base_units_are_rational_scalars :
     UnitsAreRationalScalars (A := affineBaseSubalgebra) := by
-  sorry
+  intro u
+  have hval : IsUnit (u : Polynomial ℚ) :=
+    u.isUnit.map affineBaseSubalgebra.val.toRingHom
+  obtain ⟨q, hq, hqeq⟩ := Polynomial.isUnit_iff.mp hval
+  let q' : ℚˣ := Units.mk0 q (isUnit_iff_ne_zero.mp hq)
+  refine ⟨q', ?_⟩
+  apply Units.ext
+  apply Subtype.ext
+  exact hqeq.symm
 
 theorem affine_open_units_are_rational_scalars (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :

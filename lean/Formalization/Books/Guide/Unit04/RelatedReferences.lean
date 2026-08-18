@@ -692,11 +692,22 @@ def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]
     Type _ :=
   Quotient (abelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
-/-- Giraud's degree-one identification, stated as a bijection of types. -/
-/- TODO(proof agents): first define contracted product/Baer sum for
-`SiteTorsor`, show it respects `siteTorsorSetoid`, and construct the two
-classification maps `siteH1 G X -> SiteTorsorClass J G X` and back.  Prove the
-maps inverse on representatives before packaging the resulting `Equiv`. -/
+/-- Giraud's degree-one identification, stated as a bijection of types.
+
+Proof roadmap:
+
+1. Define the contracted product of two `SiteTorsor`s, descend it through
+   `siteTorsorSetoid`, and identify the trivial torsor and inverse torsor.
+2. Relate this Picard-style group of torsor classes to extensions of the unit
+   sheaf by `G.over X`, the model used by `CategoryTheory.Sheaf.H` in degree
+   one.
+3. Construct maps in both directions by taking fibres of an extension and by
+   forming the extension associated to a torsor action.
+4. Prove the composites equivalent on representatives, descend through both
+   quotients, and package the inverse maps as an `Equiv`.
+
+The contracted-product and extension/torsor comparison APIs are not yet
+available, so the classification theorem remains admitted. -/
 theorem siteH1_equiv_siteTorsorClass
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
@@ -705,9 +716,24 @@ theorem siteH1_equiv_siteTorsorClass
     Nonempty (siteH1 G X ≃ SiteTorsorClass J G X) := by
   sorry
 
-/-- Giraud's degree-two identification for an abelian band. -/
-/- TODO(proof agents): construct the cocycle-to-gerbe and gerbe-to-cocycle maps
-and prove them inverse on `AbelianBandedGerbeClass` representatives. -/
+/-- Giraud's degree-two identification for an abelian band.
+
+Proof roadmap:
+
+1. Choose local objects and local arrows in an `AbelianBandedGerbe`; use the
+   band compatibility fields to extract a degree-two Čech cocycle valued in
+   `G.over X`, and prove refinements change it only by a coboundary.
+2. Starting from a degree-two cocycle, build the corresponding locally
+   nonempty and locally connected fibred category, equip its automorphism
+   sheaves with the prescribed band, and verify the gerbe axioms.
+3. Show equivalent banded gerbes determine the same cohomology class, while
+   cohomologous cocycles give `AbelianBandedGerbeEquivalence`s, so both maps
+   descend to the existing quotient types.
+4. Compare the two constructions locally, glue the local comparisons, prove
+   both composites equal, and package them as an `Equiv`.
+
+This awaits cocycle/refinement machinery and the cocycle-to-gerbe gluing
+construction. -/
 theorem siteH2_equiv_abelianBandedGerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)

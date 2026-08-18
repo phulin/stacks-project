@@ -91,6 +91,7 @@ structure EtaleSeparatedUnramifiedData
   p' : PrimeSpectrum R'
   p'_over : PrimeSpectrum.comap (algebraMap R R') p' = p
   n : ℕ
+  n_pos : 0 < n
   A : Fin n → Type max u v
   [commRingA : ∀ i, CommRing (A i)]
   [algebraR'A : ∀ i, Algebra R' (A i)]

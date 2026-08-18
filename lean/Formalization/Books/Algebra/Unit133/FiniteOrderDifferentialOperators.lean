@@ -1119,19 +1119,328 @@ theorem differentialOperator_order_one_derivation_decomposition
     ∃ σ : Derivation R S N,
       (∀ g, σ g = differentialOperatorDerivationFormula (R := R) (S := S) D g) ∧
       (∀ g, D.1 g = σ g + scalarValueLinearMap (S := S) (N := N) (D.1 1) g) := by
-  sorry
+  let σ : Derivation R S N :=
+    { toLinearMap := D.1 -
+        (scalarValueLinearMap (S := S) (N := N) (D.1 1)).restrictScalars R
+      map_one_eq_zero' := by
+        change D.1 1 - (scalarValueLinearMap (S := S) (N := N) (D.1 1)) 1 = 0
+        simp [scalarValueLinearMap]
+      leibniz' := by
+        intro g h
+        have hc := D.2 g
+        have hc' := hc h 1
+        have hc'' : D.1 (g * h) - g • D.1 h =
+            h • (D.1 g - g • D.1 1) := by
+          simpa [differentialOperatorCommutator] using hc'
+        change D.1 (g * h) - (g * h) • D.1 1 =
+            g • (D.1 h - h • D.1 1) + h • (D.1 g - g • D.1 1)
+        rw [← hc'']
+        simp [smul_sub, smul_smul, mul_assoc, mul_comm, mul_left_comm,
+          sub_eq_add_neg, add_assoc, add_comm, add_left_comm] }
+  refine ⟨σ, ?_⟩
+  constructor
+  · intro g
+    rfl
+  · intro g
+    change D.1 g = (D.1 g - g • D.1 1) + g • D.1 1
+    rw [sub_add_cancel]
 
 theorem differentialOperator_order_one_ring_equiv_exists :
     Nonempty
       (differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1 ≃ₗ[S]
         (Derivation R S N × N)) := by
-  sorry
+  classical
+  let sigmaOf :
+      differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1 →
+        Derivation R S N :=
+    fun D => Classical.choose
+      (differentialOperator_order_one_derivation_decomposition (R := R) (S := S) D)
+  have sigmaOf_spec :
+      ∀ (D : differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1)
+        (g : S), sigmaOf D g =
+          differentialOperatorDerivationFormula (R := R) (S := S) D g := by
+    intro D g
+    exact (Classical.choose_spec
+      (differentialOperator_order_one_derivation_decomposition (R := R) (S := S) D)).1 g
+  let forward :
+      differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1 →ₗ[S]
+        (Derivation R S N × N) :=
+    { toFun := fun D => (sigmaOf D, D.1 1)
+      map_add' := by
+        intro D E
+        apply Prod.ext
+        · change sigmaOf (D + E) = sigmaOf D + sigmaOf E
+          apply Derivation.ext
+          intro g
+          change sigmaOf (D + E) g = sigmaOf D g + sigmaOf E g
+          rw [sigmaOf_spec (D + E) g, sigmaOf_spec D g, sigmaOf_spec E g]
+          simp [differentialOperatorDerivationFormula, sub_eq_add_neg,
+            smul_add, add_assoc, add_comm, add_left_comm]
+        · simp
+      map_smul' := by
+        intro c D
+        apply Prod.ext
+        · change sigmaOf (c • D) = c • sigmaOf D
+          apply Derivation.ext
+          intro g
+          change sigmaOf (c • D) g = c • sigmaOf D g
+          rw [sigmaOf_spec (c • D) g, sigmaOf_spec D g]
+          simp [differentialOperatorDerivationFormula, sub_eq_add_neg,
+            smul_sub, smul_smul, mul_assoc, mul_comm, mul_left_comm]
+        · simp }
+  let op : (Derivation R S N × N) → (S →ₗ[R] N) :=
+    fun p => p.1.toLinearMap.restrictScalars R +
+      (scalarValueLinearMap (S := S) (N := N) p.2).restrictScalars R
+  have hop :
+      ∀ p : Derivation R S N × N,
+        IsDifferentialOperator (R := R) (S := S) 1 (op p) := by
+    intro p
+    intro g
+    have hcomm :
+        differentialOperatorCommutator (op p) g =
+          scalarValueLinearMap (S := S) (N := N) (p.1 g) := by
+      ext m
+      change ((p.1 : S → N) (g * m) + (g * m) • p.2) -
+          g • ((p.1 : S → N) m + m • p.2) = m • p.1 g
+      rw [p.1.leibniz, smul_add, mul_smul, sub_eq_add_neg, neg_add_rev]
+      simp [add_assoc, add_comm, add_left_comm]
+    rw [hcomm]
+    intro s m
+    exact mul_smul s m (p.1 g)
+  let backward :
+      (Derivation R S N × N) →ₗ[S]
+        differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1 :=
+    { toFun := fun p => ⟨op p, hop p⟩
+      map_add' := by
+        intro p q
+        apply Subtype.ext
+        ext g
+        simp [op, scalarValueLinearMap, add_smul, add_assoc, add_comm, add_left_comm]
+      map_smul' := by
+        intro c p
+        apply Subtype.ext
+        ext g
+        simp [op, scalarValueLinearMap, smul_smul, mul_assoc, mul_comm, mul_left_comm] }
+  have hback :
+      ∀ D : differentialOperatorSubmodule (R := R) (S := S) (M := S) (N := N) 1,
+        backward (forward D) = D := by
+    intro D
+    apply Subtype.ext
+    ext g
+    have h := (Classical.choose_spec
+      (differentialOperator_order_one_derivation_decomposition (R := R) (S := S) D)).2 g
+    change sigmaOf D g + g • D.1 1 = D.1 g
+    simpa [sigmaOf, scalarValueLinearMap] using h.symm
+  have hforward :
+      ∀ p : Derivation R S N × N, forward (backward p) = p := by
+    intro p
+    apply Prod.ext
+    · apply Derivation.ext
+      intro g
+      change sigmaOf (backward p) g = p.1 g
+      have h := sigmaOf_spec (backward p) g
+      rw [h]
+      change op p g - g • op p 1 = p.1 g
+      simp [op, differentialOperatorDerivationFormula, scalarValueLinearMap,
+        Derivation.map_one_eq_zero, sub_eq_add_neg, smul_add, smul_sub,
+        smul_smul, add_assoc, add_comm, add_left_comm, mul_assoc, mul_comm,
+        mul_left_comm]
+    · change op p 1 = p.2
+      simp [op, scalarValueLinearMap, Derivation.map_one_eq_zero]
+  have hbij : Function.Bijective backward := ⟨
+    fun p q h => by
+      have h' := congrArg forward h
+      rw [hforward p, hforward q] at h'
+      exact h',
+    fun D => ⟨forward D, hback D⟩⟩
+  exact ⟨(LinearEquiv.ofBijective backward hbij).symm⟩
 
 theorem principalParts_one_equiv_differentials_prod :
     Nonempty
       (PrincipalParts (R := R) (S := S) 1 (M := S) ≃ₗ[S]
         (ModuleOfDifferentials R S × S)) := by
-  sorry
+  classical
+  let dprod : S →ₗ[R] (ModuleOfDifferentials R S × S) :=
+    { toFun := fun g => (universalDifferential R S g, g)
+      map_add' := by
+        intro g h
+        apply Prod.ext
+        · exact (universalDifferential R S).map_add g h
+        · rfl
+      map_smul' := by
+        intro r g
+        simp [universalDifferential] }
+  have hdprod :
+      IsDifferentialOperator (R := R) (S := S) 1 dprod := by
+    intro g
+    let commRight : S →ₗ[R] (ModuleOfDifferentials R S × S) :=
+      { toFun := fun m => (m • universalDifferential R S g, 0)
+        map_add' := by
+          intro m n
+          apply Prod.ext
+          · change (m + n) • universalDifferential R S g =
+              m • universalDifferential R S g + n • universalDifferential R S g
+            rw [add_smul]
+          · simp
+        map_smul' := by
+          intro r m
+          simp [smul_smul, mul_smul] }
+    have hcomm :
+        differentialOperatorCommutator dprod g = commRight := by
+      apply LinearMap.ext
+      intro m
+      change
+        ((universalDifferential R S (g * m), g * m) -
+            g • (universalDifferential R S m, m)) =
+          (m • universalDifferential R S g, 0)
+      apply Prod.ext
+      · simp [Derivation.leibniz, smul_sub, smul_add, smul_smul, mul_smul,
+          add_assoc, add_comm, add_left_comm, sub_eq_add_neg]
+      · simp
+    rw [hcomm]
+    intro s m
+    change ((s • m) • universalDifferential R S g, 0) =
+      s • (m • universalDifferential R S g, 0)
+    apply Prod.ext
+    · exact smul_assoc s m (universalDifferential R S g)
+    · simp
+  let Dprod :
+      differentialOperatorSubmodule (R := R) (S := S) (M := S)
+        (N := ModuleOfDifferentials R S × S) 1 :=
+    ⟨dprod, hdprod⟩
+  let α : PrincipalParts (R := R) (S := S) (M := S) 1 →ₗ[S]
+      (ModuleOfDifferentials R S × S) :=
+    principalPartsHomEquiv (R := R) (S := S) (M := S) 1
+      (ModuleOfDifferentials R S × S) Dprod
+  have hα :
+      (α.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := S) 1) =
+        dprod :=
+    principalPartsHomEquiv_factorization (R := R) (S := S) (M := S) 1
+      (ModuleOfDifferentials R S × S) Dprod
+  let Ulinear :
+      S →ₗ[R] PrincipalParts (R := R) (S := S) (M := S) 1 :=
+    principalPartsUniversalLinearMap (R := R) (S := S) (M := S) 1
+  let U : differentialOperatorSubmodule (R := R) (S := S) (M := S)
+      (N := PrincipalParts (R := R) (S := S) (M := S) 1) 1 :=
+    principalPartsUniversal (R := R) (S := S) (M := S) 1
+  let sigmaU : Derivation R S (PrincipalParts (R := R) (S := S) (M := S) 1) :=
+    Classical.choose
+      (differentialOperator_order_one_derivation_decomposition (R := R) (S := S) U)
+  have sigmaU_spec (g : S) :
+      sigmaU g = differentialOperatorDerivationFormula (R := R) (S := S) U g :=
+    (Classical.choose_spec
+      (differentialOperator_order_one_derivation_decomposition (R := R) (S := S) U)).1 g
+  let l : ModuleOfDifferentials R S →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := S) 1 :=
+    (derivationsEquivLinearMaps (R := R) (S := S)
+      (M := PrincipalParts (R := R) (S := S) (M := S) 1)).symm sigmaU
+  have hl (g : S) :
+      l (universalDifferential R S g) = sigmaU g := by
+    exact congrArg (fun d : Derivation R S
+      (PrincipalParts (R := R) (S := S) (M := S) 1) => d g)
+      ((derivationsEquivLinearMaps (R := R) (S := S)
+        (M := PrincipalParts (R := R) (S := S) (M := S) 1)).apply_symm_apply sigmaU)
+  let beta :
+      (ModuleOfDifferentials R S × S) →ₗ[S]
+        PrincipalParts (R := R) (S := S) (M := S) 1 :=
+    { toFun := fun p => l p.1 + p.2 • Ulinear 1
+      map_add' := by
+        intro p q
+        change l (p.1 + q.1) + (p.2 + q.2) • Ulinear 1 =
+          (l p.1 + p.2 • Ulinear 1) + (l q.1 + q.2 • Ulinear 1)
+        rw [map_add, add_smul]
+        ac_rfl
+      map_smul' := by
+        intro c p
+        simp [smul_smul, smul_assoc, mul_assoc, mul_comm, mul_left_comm] }
+  have hbeta :
+      (beta.restrictScalars R).comp dprod = Ulinear := by
+    apply LinearMap.ext
+    intro g
+    change beta (dprod g) = Ulinear g
+    change l (universalDifferential R S g) + g • Ulinear 1 = Ulinear g
+    rw [hl g]
+    have hs := sigmaU_spec g
+    change sigmaU g = Ulinear g - g • Ulinear 1 at hs
+    rw [hs]
+    exact sub_add_cancel _ _
+  have hba :
+      beta.comp α = LinearMap.id := by
+    rcases principalParts_factorization_unique (R := R) (S := S)
+      (M := S) 1 (PrincipalParts (R := R) (S := S) (M := S) 1) U
+      with ⟨f, hf, huniq⟩
+    have hid :
+        ((LinearMap.id :
+          PrincipalParts (R := R) (S := S) (M := S) 1 →ₗ[S]
+            PrincipalParts (R := R) (S := S) (M := S) 1).restrictScalars R).comp
+          Ulinear = Ulinear := by
+      rfl
+    have hcomp :
+        ((beta.comp α).restrictScalars R).comp Ulinear = Ulinear := by
+      apply LinearMap.ext
+      intro g
+      change beta (α (Ulinear g)) = Ulinear g
+      have ha := congrArg (fun F : S →ₗ[R]
+          (ModuleOfDifferentials R S × S) => F g) hα
+      change α (Ulinear g) = dprod g at ha
+      have hb := congrArg (fun F : S →ₗ[R]
+          PrincipalParts (R := R) (S := S) (M := S) 1 => F g) hbeta
+      change beta (dprod g) = Ulinear g at hb
+      rw [ha]
+      exact hb
+    apply (huniq (beta.comp α) hcomp).trans
+      (huniq (LinearMap.id) hid).symm
+  let inj : ModuleOfDifferentials R S →ₗ[S]
+      (ModuleOfDifferentials R S × S) :=
+    { toFun := fun ω => (ω, 0)
+      map_add' := by intro x y; simp
+      map_smul' := by intro c x; simp }
+  have hal : α.comp l = inj := by
+    apply Derivation.liftKaehlerDifferential_unique
+    apply Derivation.ext
+    intro g
+    change α (l (universalDifferential R S g)) = inj (universalDifferential R S g)
+    rw [hl g]
+    have hs := sigmaU_spec g
+    change sigmaU g = Ulinear g - g • Ulinear 1 at hs
+    rw [hs, map_sub]
+    have ha := congrArg (fun F : S →ₗ[R]
+        (ModuleOfDifferentials R S × S) => F g) hα
+    change α (Ulinear g) = dprod g at ha
+    rw [ha]
+    have ha1 := congrArg (fun F : S →ₗ[R]
+        (ModuleOfDifferentials R S × S) => F 1) hα
+    change α (Ulinear 1) = dprod 1 at ha1
+    rw [map_smul, ha1]
+    simp [inj, dprod, universalDifferential]
+  have hab :
+      α.comp beta = LinearMap.id := by
+    apply LinearMap.ext
+    intro p
+    change α (l p.1 + p.2 • Ulinear 1) = p
+    rw [map_add, map_smul]
+    have hlp := congrArg (fun F : ModuleOfDifferentials R S →ₗ[S]
+        (ModuleOfDifferentials R S × S) => F p.1) hal
+    have ha1 := congrArg (fun F : S →ₗ[R]
+        (ModuleOfDifferentials R S × S) => F 1) hα
+    change α (l p.1) = inj p.1 at hlp
+    change α (Ulinear 1) = dprod 1 at ha1
+    rw [hlp, ha1]
+    simp [inj, dprod, universalDifferential]
+  have hinj : Function.Injective α := by
+    intro x y h
+    have h' := congrArg beta h
+    change (beta.comp α) x = (beta.comp α) y at h'
+    rw [hba] at h'
+    exact h'
+  have hsurj : Function.Surjective α := by
+    intro y
+    refine ⟨beta y, ?_⟩
+    change (α.comp beta) y = y
+    rw [hab]
+    rfl
+  exact ⟨LinearEquiv.ofBijective α ⟨hinj, hsurj⟩⟩
 
 end OrderOneExample
 
@@ -1142,13 +1451,563 @@ section PrincipalPartsSequence
 variable {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
   [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
 
+private theorem principalPartsHigherRelation_one_explicit
+    {S M : Type*} [CommRing S] [AddCommGroup M] [Module S M]
+    (g : Fin 2 → S) (m : M) :
+    principalPartsHigherRelation 1 g m =
+      (g 0 * g 1) • Finsupp.single m (1 : S) -
+        g 1 • Finsupp.single (g 0 • m) (1 : S) -
+        g 0 • Finsupp.single (g 1 • m) (1 : S) +
+        Finsupp.single ((g 0 * g 1) • m) (1 : S) := by
+  classical
+  have huniv : (Finset.univ : Finset (Finset (Fin 2))) =
+      {∅, {0}, {1}, {0, 1}} := by decide
+  have hd0 : (Finset.univ : Finset (Fin 2)) \ ∅ = {0, 1} := by decide
+  have hd1 : (Finset.univ : Finset (Fin 2)) \ {0} = {1} := by decide
+  have hd2 : (Finset.univ : Finset (Fin 2)) \ {1} = {0} := by decide
+  have hd3 : (Finset.univ : Finset (Fin 2)) \ {0, 1} = ∅ := by decide
+  rw [principalPartsHigherRelation, huniv]
+  rw [Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+    Finset.sum_insert (by decide), Finset.sum_singleton]
+  rw [hd0, hd1, hd2, hd3]
+  simp only [Finset.card_empty, Finset.card_singleton, Finset.card_pair,
+    Finset.prod_empty, Finset.prod_singleton, Finset.prod_insert,
+    pow_zero, pow_one, one_smul, neg_one_smul, Finsupp.smul_single',
+    sub_eq_add_neg]
+  simp [Finset.prod_pair, Finset.card_pair, pow_two, mul_one, one_mul,
+    mul_assoc]
+  abel
+
+private theorem principalParts_sequence_K_higher
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (hK_single : ∀ m s, K (Finsupp.single m s) =
+      -(universalDifferential R S s ⊗ₜ[S] m))
+    (hK_single_smul : ∀ c m, K (c • Finsupp.single m (1 : S)) =
+      -(universalDifferential R S c ⊗ₜ[S] m))
+    (g : Fin 2 → S) (m : M) :
+    K (principalPartsHigherRelation 1 g m) = 0 := by
+  let a : S := g 0
+  let b : S := g 1
+  have hrel : principalPartsHigherRelation 1 g m =
+      (a * b) • Finsupp.single m 1 -
+        b • Finsupp.single (a • m) 1 -
+        a • Finsupp.single (b • m) 1 +
+        Finsupp.single ((a * b) • m) 1 := by
+    simpa [a, b] using principalPartsHigherRelation_one_explicit g m
+  let f₀ : M →₀ S := Finsupp.single m (1 : S)
+  let f₁ : M →₀ S := Finsupp.single ((a : S) • m) (1 : S)
+  let f₂ : M →₀ S := Finsupp.single ((b : S) • m) (1 : S)
+  let f₃ : M →₀ S := Finsupp.single (((a * b : S)) • m) (1 : S)
+  let F₀ : M →₀ S := (a * b) • f₀ - b • f₁ - a • f₂ + f₃
+  have hrelK : K (principalPartsHigherRelation 1 g m) = K F₀ := by
+    apply congrArg (fun F : M →₀ S => K F)
+    simpa [F₀, f₀, f₁, f₂, f₃] using hrel
+  calc
+    K (principalPartsHigherRelation 1 g m) = K F₀ := hrelK
+    _ = 0 := by
+      dsimp [F₀, f₀, f₁, f₂, f₃]
+      rw [map_add, map_sub, map_sub]
+      have hk0 := hK_single_smul (a * b) m
+      have hk1 := hK_single_smul b (a • m)
+      have hk2 := hK_single_smul a (b • m)
+      simp only [hk0, hk1, hk2, hK_single ((a * b) • m) 1]
+      simp [Derivation.map_one_eq_zero]
+      rw [TensorProduct.add_tmul, neg_add]
+      simp only [TensorProduct.smul_tmul', TensorProduct.tmul_smul,
+        smul_neg, sub_eq_add_neg]
+      abel
+
+private theorem principalParts_sequence_formula
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1)
+    (u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) 1)
+    (eval : (M →₀ S) →ₗ[S] M)
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (hugen : ∀ m, Submodule.mkQ
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+          (Finsupp.single m (1 : S)) = u m)
+    (hsingle : ∀ m s, K (Finsupp.single m s) =
+      -(universalDifferential R S s ⊗ₜ[S] m))
+    (heval_single : ∀ m s, eval (Finsupp.single m s) = s • m)
+    (hi : ∀ g m, i (universalDifferential R S g ⊗ₜ[S] m) =
+      u (g • m) - g • u m) :
+    ∀ F, Submodule.mkQ
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) F =
+      u (eval F) + i (K F) := by
+  let q : (M →₀ S) →ₗ[S]
+      (M →₀ S) ⧸ principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1 :=
+    Submodule.mkQ
+      (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+  intro F
+  induction F using Finsupp.induction_linear with
+  | zero => simp
+  | add F G hF hG =>
+      rw [map_add, map_add, map_add, map_add, hF, hG]
+      rw [map_add]
+      abel
+  | single m s =>
+      have hqsmul : q (Finsupp.single m s) = s • q (Finsupp.single m (1 : S)) := by
+        rw [← Finsupp.smul_single_one m s, q.map_smul]
+      rw [hqsmul, hugen m, heval_single m s, hsingle m s, map_neg, hi]
+      rw [sub_eq_add_neg]
+      abel
+
+private theorem principalParts_sequence_exact_of_data
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1)
+    (u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) 1)
+    (eval : (M →₀ S) →ₗ[S] M)
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (hformula : ∀ F, Submodule.mkQ
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) F =
+      u (eval F) + i (K F))
+    (hKrel : ∀ F, F ∈ principalPartsRelationSubmodule
+        (R := R) (S := S) (M := M) 1 → K F = 0)
+    (hproj : ∀ F, principalPartsProjection (R := R) (S := S) (M := M) 1
+        (Submodule.mkQ
+          (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) F) =
+      eval F)
+    (hrep : ∀ z, ∃ F, Submodule.mkQ
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) F =
+          i z ∧ K F = z ∧ eval F = 0)
+    (hsurj : Function.Surjective
+      (principalPartsProjection (R := R) (S := S) (M := M) 1)) :
+    Function.Exact i (principalPartsProjection (R := R) (S := S) (M := M) 1) ∧
+      Function.Injective i ∧
+      Function.Surjective (principalPartsProjection (R := R) (S := S) (M := M) 1) := by
+  let q := Submodule.mkQ
+    (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+  have hpi : ∀ z, principalPartsProjection (R := R) (S := S) (M := M) 1 (i z) = 0 := by
+    intro z
+    obtain ⟨F, hq, hK, heval⟩ := hrep z
+    rw [← hq]
+    rw [hproj]
+    exact heval
+  have hex : Function.Exact i
+      (principalPartsProjection (R := R) (S := S) (M := M) 1) := by
+    intro x
+    constructor
+    · intro hx
+      obtain ⟨F, rfl⟩ := Submodule.mkQ_surjective
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) x
+      have heval : eval F = 0 := by
+        exact (hproj F).symm.trans hx
+      refine ⟨K F, ?_⟩
+      rw [hformula F, heval, map_zero, zero_add]
+    · rintro ⟨z, rfl⟩
+      exact hpi z
+  have hinj : Function.Injective i := by
+    intro z z' hzz'
+    obtain ⟨F, hq, hK, heval⟩ := hrep (z - z')
+    have hq0 : q F = 0 := by
+      rw [hq, map_sub, hzz', sub_self]
+    have hrel : F ∈ principalPartsRelationSubmodule
+        (R := R) (S := S) (M := M) 1 := by
+      exact (Submodule.Quotient.mk_eq_zero _).mp hq0
+    exact sub_eq_zero.mp (hK.symm.trans (hKrel F hrel))
+  exact ⟨hex, hinj, hsurj⟩
+
+private theorem moduleOfDifferentials_zero_tmul_neg
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (m : M) :
+    -((0 : ModuleOfDifferentials R S) ⊗ₜ[S] m) = 0 := by
+  rw [TensorProduct.zero_tmul, neg_zero]
+
+private theorem moduleOfDifferentials_zero_tmul_sub_neg
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (m : M) (x : (ModuleOfDifferentials R S) ⊗[S] M) :
+    -((0 : ModuleOfDifferentials R S) ⊗ₜ[S] m) - -x = x := by
+  have hzero : -((0 : ModuleOfDifferentials R S) ⊗ₜ[S] m) = 0 :=
+    moduleOfDifferentials_zero_tmul_neg (R := R) (S := S) (M := M) m
+  calc
+    -((0 : ModuleOfDifferentials R S) ⊗ₜ[S] m) - -x = 0 - -x :=
+      congrArg (fun z : (ModuleOfDifferentials R S) ⊗[S] M => z - -x) hzero
+    _ = x := (zero_sub (-x)).trans (neg_neg x)
+
+private theorem principalParts_eval_sub_smul
+    {S M : Type*} [CommRing S] [AddCommGroup M] [Module S M]
+    (eval : (M →₀ S) →ₗ[S] M)
+    (heval_single : ∀ m s, eval (Finsupp.single m s) = s • m)
+    (g : S) (m : M) :
+    eval (Finsupp.single (g • m) (1 : S) -
+      g • Finsupp.single m (1 : S)) = 0 := by
+  rw [eval.map_sub, heval_single (g • m) 1, eval.map_smul,
+    heval_single m 1]
+  change (1 : S) • (g • m) - g • ((1 : S) • m) = 0
+  rw [one_smul, one_smul, sub_self]
+
+private theorem principalParts_sequence_span
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1)
+    (u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) 1)
+    (eval : (M →₀ S) →ₗ[S] M)
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (q : (M →₀ S) →ₗ[S]
+      (M →₀ S) ⧸ principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+    (hformula : ∀ F, q F = u (eval F) + i (K F))
+    (hsingle : ∀ m s, K (Finsupp.single m s) =
+      -(universalDifferential R S s ⊗ₜ[S] m))
+    (hK_single_smul : ∀ c m,
+      K (c • Finsupp.single m (1 : S)) =
+        -(universalDifferential R S c ⊗ₜ[S] m))
+    (hK_smul : ∀ c F, K (c • F) = c • K F -
+      universalDifferential R S c ⊗ₜ[S] eval F)
+    (heval_single : ∀ m s, eval (Finsupp.single m s) = s • m) :
+    ∀ (ω : ModuleOfDifferentials R S) (m : M),
+      ∃ F, q F = i (ω ⊗ₜ[S] m) ∧ K F = ω ⊗ₜ[S] m ∧ eval F = 0 := by
+  intro ω m
+  have hmem : ω ∈ Submodule.span S (Set.range (universalDifferential R S)) := by
+    change ω ∈ Submodule.span S (Set.range (KaehlerDifferential.D R S))
+    rw [KaehlerDifferential.span_range_derivation]
+    trivial
+  refine Submodule.span_induction (p := fun ω _ =>
+    ∃ F, q F = i (ω ⊗ₜ[S] m) ∧ K F = ω ⊗ₜ[S] m ∧ eval F = 0) ?_ ?_ ?_ ?_ hmem
+  · rintro _ ⟨g, rfl⟩
+    have hKF : K (Finsupp.single (g • m) (1 : S) -
+        g • Finsupp.single m (1 : S)) =
+        universalDifferential R S g ⊗ₜ[S] m := by
+      rw [map_sub, hsingle (g • m) 1, hK_single_smul g m]
+      have hd1 : universalDifferential R S 1 = 0 :=
+        (universalDifferential R S).map_one_eq_zero
+      rw [hd1]
+      exact moduleOfDifferentials_zero_tmul_sub_neg (R := R) (S := S) (M := M)
+        (g • m) (universalDifferential R S g ⊗ₜ[S] m)
+    have hEvalF := principalParts_eval_sub_smul eval heval_single g m
+    refine ⟨Finsupp.single (g • m) (1 : S) -
+      g • Finsupp.single m (1 : S), ?_, hKF, hEvalF⟩
+    calc
+      q (Finsupp.single (g • m) (1 : S) -
+          g • Finsupp.single m (1 : S)) =
+          u (eval (Finsupp.single (g • m) (1 : S) -
+            g • Finsupp.single m (1 : S))) +
+            i (K (Finsupp.single (g • m) (1 : S) -
+              g • Finsupp.single m (1 : S))) :=
+        hformula _
+      _ = i (universalDifferential R S g ⊗ₜ[S] m) := by
+        rw [hEvalF, map_zero, zero_add, hKF]
+  · refine ⟨0, ?_, ?_, ?_⟩
+    · simp only [map_zero, TensorProduct.zero_tmul]
+    · simpa only [TensorProduct.zero_tmul] using map_zero K
+    · exact map_zero eval
+  · intro x y hx hy ⟨F, hFq, hFK, hFe⟩ ⟨G, hGq, hGK, hGe⟩
+    refine ⟨F + G, ?_, ?_, ?_⟩
+    · calc
+        q (F + G) = q F + q G := q.map_add _ _
+        _ = i (x ⊗ₜ[S] m) + i (y ⊗ₜ[S] m) := by rw [hFq, hGq]
+        _ = i ((x + y) ⊗ₜ[S] m) := by
+          have ht :
+              (x ⊗ₜ[S] m) + (y ⊗ₜ[S] m) =
+                (x + y) ⊗ₜ[S] m :=
+            (TensorProduct.add_tmul x y m).symm
+          calc
+            i (x ⊗ₜ[S] m) + i (y ⊗ₜ[S] m) =
+                i ((x ⊗ₜ[S] m) + (y ⊗ₜ[S] m)) := (i.map_add _ _).symm
+            _ = i ((x + y) ⊗ₜ[S] m) :=
+              congrArg (fun z : (ModuleOfDifferentials R S) ⊗[S] M => i z) ht
+    · calc
+        K (F + G) = K F + K G := K.map_add _ _
+        _ = (x ⊗ₜ[S] m) + (y ⊗ₜ[S] m) := by rw [hFK, hGK]
+        _ = (x + y) ⊗ₜ[S] m := (TensorProduct.add_tmul x y m).symm
+    · rw [eval.map_add, hFe, hGe, add_zero]
+  · intro c x _ ⟨F, hFq, hFK, hFe⟩
+    refine ⟨c • F, ?_, ?_, ?_⟩
+    · calc
+        q (c • F) = c • q F := q.map_smul _ _
+        _ = c • i (x ⊗ₜ[S] m) := by rw [hFq]
+        _ = i ((c • x) ⊗ₜ[S] m) := by
+          rw [← i.map_smul, TensorProduct.smul_tmul']
+    · rw [hK_smul, hFK, hFe, TensorProduct.tmul_zero, sub_zero]
+      rw [TensorProduct.smul_tmul']
+    · rw [eval.map_smul, hFe, smul_zero]
+
+private theorem principalParts_sequence_surjective
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    :
+    Function.Surjective (principalPartsProjection (R := R) (S := S) (M := M) 1) := by
+  intro m
+  refine ⟨principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 1 m, ?_⟩
+  change principalPartsProjection (R := R) (S := S) (M := M) 1
+    (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 1 m) = m
+  rw [principalPartsUniversalLinearMap_apply,
+    principalPartsProjection_on_generator]
+
+private theorem principalParts_sequence_tensor_representation
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
+    (i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1)
+    (q : (M →₀ S) →ₗ[S]
+      (M →₀ S) ⧸ principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+    (K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M)
+    (eval : (M →₀ S) →ₗ[S] M)
+    (hspan : ∀ (ω : ModuleOfDifferentials R S) (m : M),
+      ∃ F, q F = i (ω ⊗ₜ[S] m) ∧ K F = ω ⊗ₜ[S] m ∧ eval F = 0) :
+    ∀ z : (ModuleOfDifferentials R S) ⊗[S] M,
+      ∃ F, q F = i z ∧ K F = z ∧ eval F = 0 := by
+  intro z
+  refine TensorProduct.induction_on z ?_ (fun ω m => hspan ω m) ?_
+  · refine ⟨0, ?_, ?_, ?_⟩
+    · simp only [map_zero, TensorProduct.zero_tmul]
+    · simpa only [TensorProduct.zero_tmul] using map_zero K
+    · exact map_zero eval
+  · intro x y ⟨F, hFq, hFK, hFe⟩ ⟨G, hGq, hGK, hGe⟩
+    refine ⟨F + G, ?_, ?_, ?_⟩
+    · rw [q.map_add, hFq, hGq, i.map_add]
+    · rw [K.map_add, hFK, hGK]
+    · rw [eval.map_add, hFe, hGe, add_zero]
+
 theorem principalParts_sequence_left_exists :
     ∃ i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
           PrincipalParts (R := R) (S := S) (M := M) 1,
       Function.Exact i (principalPartsProjection (R := R) (S := S) (M := M) 1) ∧
         Function.Injective i ∧
         Function.Surjective (principalPartsProjection (R := R) (S := S) (M := M) 1) := by
-  sorry
+  classical
+  let u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) 1 :=
+    principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 1
+  let deltaLinear (m : M) : S →ₗ[R]
+      PrincipalParts (R := R) (S := S) (M := M) 1 :=
+    { toFun := fun g => u (g • m) - g • u m
+      map_add' := by
+        intro g h
+        rw [add_smul, map_add, sub_eq_add_neg]
+        rw [show (g + h) • u m = g • u m + h • u m by
+          exact add_smul g h (u m)]
+        abel
+      map_smul' := by
+        intro r g
+        change u ((r • g) • m) - (r • g) • u m =
+          r • (u (g • m) - g • u m)
+        rw [smul_assoc, map_smul, smul_assoc, smul_sub] }
+  let delta (m : M) : Derivation R S
+      (PrincipalParts (R := R) (S := S) (M := M) 1) :=
+    { toLinearMap := deltaLinear m
+      map_one_eq_zero' := by dsimp [deltaLinear]; simp
+      leibniz' := by
+        intro g h
+        have hc := (principalPartsUniversal (R := R) (S := S) (M := M) 1).2 g h m
+        change u (g • (h • m)) - g • u (h • m) =
+          h • (u (g • m) - g • u m) at hc
+        change u ((g * h) • m) - (g * h) • u m =
+          g • (u (h • m) - h • u m) + h • (u (g • m) - g • u m)
+        rw [mul_smul, ← hc, smul_sub, smul_smul]
+        rw [show (g * h) • u m = g • h • u m by exact mul_smul g h (u m)]
+        simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] }
+  have hdelta_add (m n : M) : delta (m + n) = delta m + delta n := by
+    apply Derivation.ext
+    intro g
+    change u (g • (m + n)) - g • u (m + n) =
+      (u (g • m) - g • u m) + (u (g • n) - g • u n)
+    rw [smul_add, u.map_add (g • m) (g • n), u.map_add m n]
+    simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+  have hdelta_smul (c : S) (m : M) : delta (c • m) = c • delta m := by
+    apply Derivation.ext
+    intro g
+    have hc := (principalPartsUniversal (R := R) (S := S) (M := M) 1).2 g c m
+    change u (g • (c • m)) - g • u (c • m) =
+      c • (u (g • m) - g • u m) at hc
+    exact hc
+  let lOf (m : M) : ModuleOfDifferentials R S →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1 :=
+    (derivationsEquivLinearMaps (R := R) (S := S)
+      (M := PrincipalParts (R := R) (S := S) (M := M) 1)).symm (delta m)
+  have hlOf (m : M) (g : S) :
+      lOf m (universalDifferential R S g) = delta m g := by
+    exact congrArg (fun d : Derivation R S
+        (PrincipalParts (R := R) (S := S) (M := M) 1) => d g)
+      ((derivationsEquivLinearMaps (R := R) (S := S)
+        (M := PrincipalParts (R := R) (S := S) (M := M) 1)).apply_symm_apply
+          (delta m))
+  have hlOf_add (m n : M) : lOf (m + n) = lOf m + lOf n := by
+    simpa [lOf] using congrArg
+      (fun d : Derivation R S
+          (PrincipalParts (R := R) (S := S) (M := M) 1) =>
+        (derivationsEquivLinearMaps (R := R) (S := S)
+          (M := PrincipalParts (R := R) (S := S) (M := M) 1)).symm d)
+      (hdelta_add m n)
+  have hlOf_smul (c : S) (m : M) : lOf (c • m) = c • lOf m := by
+    simpa [lOf] using congrArg
+      (fun d : Derivation R S
+          (PrincipalParts (R := R) (S := S) (M := M) 1) =>
+        (derivationsEquivLinearMaps (R := R) (S := S)
+          (M := PrincipalParts (R := R) (S := S) (M := M) 1)).symm d)
+      (hdelta_smul c m)
+  let phi : ModuleOfDifferentials R S →ₗ[S]
+      (M →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) 1) :=
+    { toFun := fun ω =>
+        { toFun := fun m => lOf m ω
+          map_add' := by
+            intro m n
+            rw [hlOf_add]
+            simp
+          map_smul' := by
+            intro c m
+            rw [hlOf_smul]
+            simp }
+      map_add' := by
+        intro ω η
+        ext m
+        change lOf m (ω + η) = lOf m ω + lOf m η
+        rw [map_add]
+      map_smul' := by
+        intro c ω
+        ext m
+        change lOf m (c • ω) = c • lOf m ω
+        rw [map_smul] }
+  let i : (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) 1 :=
+    TensorProduct.AlgebraTensorModule.lift phi
+  have hi (g : S) (m : M) :
+      i (universalDifferential R S g ⊗ₜ[S] m) =
+        u (g • m) - g • u m := by
+    rw [TensorProduct.AlgebraTensorModule.lift_tmul]
+    change lOf m (universalDifferential R S g) = _
+    rw [hlOf]
+    rfl
+  let coeff (m : M) : S →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M :=
+    { toFun := fun s => -(universalDifferential R S s ⊗ₜ[S] m)
+      map_add' := by
+        intro s t
+        rw [map_add, TensorProduct.add_tmul, neg_add]
+      map_smul' := by
+        intro r s
+        change -(universalDifferential R S (r • s) ⊗ₜ[S] m) =
+          r • -(universalDifferential R S s ⊗ₜ[S] m)
+        have hds : universalDifferential R S (r • s) =
+            r • universalDifferential R S s :=
+          (universalDifferential R S).toLinearMap.map_smul r s
+        rw [hds]
+        simp [TensorProduct.smul_tmul', smul_neg] }
+  let K : (M →₀ S) →ₗ[R] (ModuleOfDifferentials R S) ⊗[S] M :=
+    Finsupp.lsum R coeff
+  have hK_single (m : M) (s : S) : K (Finsupp.single m s) = coeff m s := by
+    simp [K]
+  let eval : (M →₀ S) →ₗ[S] M :=
+    principalPartsFreeEvaluation (S := S) (M := M)
+  have hK_smul (c : S) (F : M →₀ S) :
+      K (c • F) = c • K F -
+        universalDifferential R S c ⊗ₜ[S] eval F := by
+    induction F using Finsupp.induction_linear with
+    | zero => simp
+    | add F G hF hG =>
+        rw [smul_add, map_add, hF, hG, map_add]
+        rw [eval.map_add, TensorProduct.tmul_add, smul_add]
+        rw [sub_eq_add_neg]
+        abel
+    | single m s =>
+        rw [show c • Finsupp.single m s = Finsupp.single m (c * s) by
+          ext x
+          by_cases hx : x = m <;> simp [hx]]
+        rw [hK_single m (c * s), hK_single m s]
+        change -(universalDifferential R S (c * s) ⊗ₜ[S] m) = _
+        rw [(universalDifferential R S).leibniz]
+        rw [TensorProduct.add_tmul, neg_add]
+        simp only [eval, principalPartsFreeEvaluation, Finsupp.lsum_single,
+          LinearMap.smulRight_apply, LinearMap.id_apply, one_smul,
+          TensorProduct.tmul_smul]
+        change -(c • universalDifferential R S s) ⊗ₜ[S] m +
+            -(s • universalDifferential R S c) ⊗ₜ[S] m =
+          c • (-(universalDifferential R S s ⊗ₜ[S] m)) -
+            (s • universalDifferential R S c) ⊗ₜ[S] m
+        have hct : -(c • universalDifferential R S s) ⊗ₜ[S] m =
+            c • (-(universalDifferential R S s ⊗ₜ[S] m)) := by
+          simp only [TensorProduct.smul_tmul', smul_neg]
+        rw [hct, sub_eq_add_neg]
+  have hevalrel (F : M →₀ S)
+      (hF : F ∈ principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) :
+      eval F = 0 := by
+    apply LinearMap.mem_ker.mp
+    simpa [eval] using
+      (principalParts_relation_le_ker_evaluation (R := R) (S := S) (M := M) 1 hF)
+  have hK_single_smul (c : S) (m : M) :
+      K (c • Finsupp.single m (1 : S)) =
+        -(universalDifferential R S c ⊗ₜ[S] m) := by
+    rw [show c • Finsupp.single m (1 : S) = Finsupp.single m c by
+      ext x
+      by_cases hx : x = m <;> simp [hx]]
+    rw [hK_single]
+    simp [coeff, Derivation.map_one_eq_zero]
+  have hK_relation_set (F : M →₀ S)
+      (hF : F ∈ principalPartsRelationSet (R := R) (S := S) (M := M) 1) :
+      K F = 0 := by
+    rcases hF with hF | ⟨⟨g, m⟩, rfl⟩
+    · rcases hF with ⟨⟨m, n⟩, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
+      · change K (principalPartsAddRelation m n) = 0
+        rw [principalPartsAddRelation, map_sub, map_sub,
+          hK_single, hK_single, hK_single]
+        simp [principalPartsAddRelation, coeff]
+      · change K (principalPartsScalarRelation r m) = 0
+        have hs : (algebraMap R S r) • (Finsupp.single m (1 : S)) =
+            (r • (Finsupp.single m (1 : S)) : M →₀ S) := by
+          ext x
+          by_cases hx : x = m <;> simp [hx, IsScalarTower.algebraMap_smul S r]
+        rw [principalPartsScalarRelation, hs, map_sub, map_smul,
+          hK_single, hK_single]
+        simp [coeff]
+    · exact principalParts_sequence_K_higher K hK_single hK_single_smul g m
+  have hugen (m : M) :
+      Submodule.mkQ (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+          (Finsupp.single m (1 : S)) = u m := by
+    change principalPartsGenerator (R := R) (S := S) (M := M) 1 m = u m
+    rw [← principalPartsUniversalLinearMap_apply]
+  have hsingle (m : M) (s : S) :
+      K (Finsupp.single m s) =
+        -(universalDifferential R S s ⊗ₜ[S] m) := by
+    rw [hK_single]
+    rfl
+  have heval_single (m : M) (s : S) : eval (Finsupp.single m s) = s • m := by
+    change principalPartsFreeEvaluation (S := S) (M := M)
+      (Finsupp.single m s) = s • m
+    simp [principalPartsFreeEvaluation]
+  let q : (M →₀ S) →ₗ[S]
+      (M →₀ S) ⧸ principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1 :=
+    Submodule.mkQ
+      (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1)
+  have hformula (F : M →₀ S) : q F = u (eval F) + i (K F) := by
+    change Submodule.mkQ
+        (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 1) F = _
+    exact principalParts_sequence_formula i u eval K hugen hsingle
+      heval_single hi F
+  have hspan : ∀ (ω : ModuleOfDifferentials R S) (m : M),
+      ∃ F, q F = i (ω ⊗ₜ[S] m) ∧ K F = ω ⊗ₜ[S] m ∧ eval F = 0 :=
+    principalParts_sequence_span i u eval K q hformula hsingle
+      hK_single_smul hK_smul heval_single
+  have hrep : ∀ z : (ModuleOfDifferentials R S) ⊗[S] M,
+      ∃ F, q F = i z ∧ K F = z ∧ eval F = 0 :=
+    principalParts_sequence_tensor_representation i q K eval hspan
+  have hKrel : ∀ F, F ∈ principalPartsRelationSubmodule
+      (R := R) (S := S) (M := M) 1 → K F = 0 := by
+    intro F hF
+    change F ∈ Submodule.span S (principalPartsRelationSet
+      (R := R) (S := S) (M := M) 1) at hF
+    refine Submodule.span_induction (p := fun F _ => K F = 0) ?_ ?_ ?_ ?_ hF
+    · intro F hF
+      exact hK_relation_set F hF
+    · exact map_zero K
+    · intro F G hF hG ihF ihG
+      rw [K.map_add, ihF, ihG, add_zero]
+    · intro c F hF ihF
+      have hevalF : eval F = 0 := hevalrel F (by exact hF)
+      rw [hK_smul, ihF, hevalF, smul_zero, TensorProduct.tmul_zero, sub_zero]
+  have hproj (F : M →₀ S) :
+      principalPartsProjection (R := R) (S := S) (M := M) 1 (q F) = eval F := by
+    rfl
+  have hsurj : Function.Surjective
+      (principalPartsProjection (R := R) (S := S) (M := M) 1) :=
+    principalParts_sequence_surjective
+  exact ⟨i, principalParts_sequence_exact_of_data i u eval K hformula
+    hKrel hproj hrep hsurj⟩
 
 noncomputable def principalPartsSequenceLeft :
     (ModuleOfDifferentials R S) ⊗[S] M →ₗ[S]

@@ -394,6 +394,10 @@ structure DerivedTensorProductData
       IsKFlat K ∧ IsKFlat L ∧
       Nonempty (functor.obj (X, Y) ≅
         (derivedComplexQuotient R).obj (tensorProductComplex R K L))
+  computed_on_kFlat : ∀ (K L : Comp R), IsKFlat K → IsKFlat L →
+    Nonempty (functor.obj
+        ((derivedComplexQuotient R).obj K, (derivedComplexQuotient R).obj L) ≅
+      (derivedComplexQuotient R).obj (tensorProductComplex R K L))
   extends_boundedAbove : ∀ (M : ModuleCat.{u} R),
     Nonempty (
       (DerivedCategory.Minus.ι (C := ModuleCat.{u} R) ⋙
@@ -473,6 +477,19 @@ theorem derivedTensorFunctor_exact
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (M : D R) :
     Nonempty (ExactTriangulatedFunctorData (derivedTensorFunctor M)) :=
   (derivedTensorProductData (R := R)).exact_in_first M
+
+/- The defining computation in the source is stated for chosen K-flat
+   representatives.  The existential representative field above is useful
+   for arbitrary derived objects, while this interface exposes the more
+   precise supplied-representative case. -/
+theorem derivedTensor_of_kFlat
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : Comp R) (hK : IsKFlat K) (hL : IsKFlat L) :
+    Nonempty (derivedTensor ((derivedComplexQuotient R).obj K)
+        ((derivedComplexQuotient R).obj L) ≅
+      (derivedComplexQuotient R).obj (tensorProductComplex R K L)) := by
+  exact (derivedTensorProductData (R := R)).computed_on_kFlat K L hK hL
 
 /- The unbounded construction extends the bounded-above derived tensor
    functor from the preceding chapter.  The inclusion of the bounded-above
@@ -618,4 +635,3 @@ theorem factor_through_kFlat
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit59
-

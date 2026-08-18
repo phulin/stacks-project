@@ -901,7 +901,9 @@ theorem pullbackFibreObject_phi_isIso
     (F : FibredMorphism p q) (U : C)
     (G : FibredMorphism (Over.forget U) q) (f : Over U)
     (A : PullbackFibreCategory F U G f) : IsIso A.phi := by
-  sorry
+  let hgroup : IsGroupoid (Functor.Fiber q f.left) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1 f.left
+  exact hgroup.all_isIso A.phi
 
 theorem identify_pullback_fibre
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]

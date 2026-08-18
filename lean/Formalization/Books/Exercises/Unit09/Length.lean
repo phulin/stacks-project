@@ -141,7 +141,7 @@ theorem complex_polynomial_quotient_length :
 
 /-- The length of `ℝ[x]/(x^4 + 2x^2 + 1)` over `ℝ[x]`. -/
 theorem real_polynomial_quotient_length :
-    Module.length (Polynomial ℝ) realLengthExample = 4 := by
+    Module.length (Polynomial ℝ) realLengthExample = 2 := by
   sorry
 
 /-! ## The local plane calculation -/

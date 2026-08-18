@@ -730,7 +730,17 @@ theorem integral_base_change
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).IsIntegral := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra.IsIntegral R S := ⟨hf⟩
+  let : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+  let : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
+  have hsource : Algebra.IsIntegral R' (R' ⊗[R] S) :=
+    Algebra.IsIntegral.tensorProduct R R' S
+  have htarget : Algebra.IsIntegral R' (S ⊗[R] R') :=
+    (AlgEquiv.isIntegral_iff (Algebra.TensorProduct.commRight R R' S)).mp hsource
+  change (algebraMap R' (S ⊗[R] R')).IsIntegral
+  exact htarget.isIntegral
 
 /-- Finiteness is preserved by the tensor-product base change map. -/
 theorem finite_base_change
@@ -739,7 +749,18 @@ theorem finite_base_change
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).Finite := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  change Module.Finite R S at hf
+  let : Module.Finite R S := hf
+  let : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+  have hsource : Module.Finite R' (R' ⊗[R] S) := by infer_instance
+  let : Module.Finite R' (R' ⊗[R] S) := hsource
+  let : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
+  have htarget : Module.Finite R' (S ⊗[R] R') :=
+    Module.Finite.equiv (Algebra.TensorProduct.commRight R R' S).toLinearEquiv
+  change Module.Finite R' (S ⊗[R] R')
+  exact htarget
 
 /-- Integrality and finiteness can be checked on a finite principal-open cover. -/
 theorem integral_finite_local
@@ -747,7 +768,75 @@ theorem integral_finite_local
     (s : Finset R) (hs : Ideal.span (s : Set R) = ⊤) :
     ((∀ r : s, (Localization.awayMap f r).IsIntegral) → f.IsIntegral) ∧
       ((∀ r : s, (Localization.awayMap f r).Finite) → f.Finite) := by
-  sorry
+  constructor
+  · intro h r
+    let : Algebra R S := f.toAlgebra
+    change r ∈ (integralClosure R S).toSubmodule
+    apply Submodule.mem_of_span_eq_top_of_smul_pow_mem _ (s : Set R) hs
+    rintro ⟨t, ht⟩
+    let : Algebra (Localization.Away t) (Localization.Away (f t)) :=
+      (Localization.awayMap f t).toAlgebra
+    have htower : IsScalarTower R (Localization.Away t) (Localization.Away (f t)) :=
+      .of_algebraMap_eq' (IsLocalization.lift_comp _).symm
+    have hlocal : IsIntegral (Localization.Away t)
+        (algebraMap S (Localization.Away (f t)) r) :=
+      h ⟨t, ht⟩ (algebraMap _ _ r)
+    obtain ⟨⟨_, n, rfl⟩, p, hp, hp'⟩ :=
+      hlocal.exists_multiple_integral_of_isLocalization (.powers t)
+    rw [IsScalarTower.algebraMap_eq R S, Submonoid.smul_def, Algebra.smul_def,
+      IsScalarTower.algebraMap_apply R S, ← map_mul, ← Polynomial.hom_eval₂,
+      IsLocalization.map_eq_zero_iff (.powers (f t))] at hp'
+    obtain ⟨⟨x, m, (rfl : algebraMap R S t ^ m = x)⟩, e⟩ := hp'
+    by_cases hdeg : 1 ≤ p.natDegree
+    · refine ⟨m + n, p.scaleRoots (t ^ m),
+        (Polynomial.monic_scaleRoots_iff _).mpr hp, ?_⟩
+      have hscale := p.scaleRoots_eval₂_mul (algebraMap R S) (t ^ n • r) (t ^ m)
+      simp only [pow_add, ← Algebra.smul_def, mul_smul, ← map_pow] at e hscale ⊢
+      rw [hscale, ← tsub_add_cancel_of_le hdeg, pow_succ, mul_smul, e, smul_zero]
+    · have hzero : p.natDegree = 0 := Nat.eq_zero_of_not_pos (by
+        intro hpos
+        exact hdeg (Nat.succ_le_iff.mpr hpos))
+      obtain rfl : p = 1 :=
+        Polynomial.eq_one_of_monic_natDegree_zero hp hzero
+      exact ⟨m, by simp [Algebra.smul_def,
+        show algebraMap R S t ^ m = 0 by simpa using e]⟩
+  · intro h
+    classical
+    let := f.toAlgebra
+    let := fun r : s => (Localization.awayMap f r).toAlgebra
+    have (r : s) : IsLocalization
+        ((Submonoid.powers (r : R)).map (algebraMap R S))
+        (Localization.Away (f r)) := by
+      rw [Submonoid.map_powers]
+      exact Localization.isLocalization
+    have : ∀ r : s,
+        IsScalarTower R (Localization.Away (r : R)) (Localization.Away (f r)) :=
+      fun r => IsScalarTower.of_algebraMap_eq'
+        (IsLocalization.map_comp (Submonoid.powers (r : R)).le_comap_map).symm
+    constructor
+    replace h := fun r => (h r).1
+    choose s₁ s₂ using h
+    let sf := fun x : s =>
+      IsLocalization.finsetIntegerMultiple (Submonoid.powers (f x)) (s₁ x)
+    use s.attach.biUnion sf
+    rw [Submodule.span_attach_biUnion, eq_top_iff]
+    rintro x -
+    apply Submodule.mem_of_span_eq_top_of_smul_pow_mem _ (s : Set R) hs _ _
+    intro r
+    obtain ⟨⟨_, n₁, rfl⟩, hn₁⟩ :=
+      multiple_mem_span_of_mem_localization_span (Submonoid.powers (r : R))
+        (Localization.Away (r : R)) (s₁ r : Set (Localization.Away (f r)))
+        (algebraMap S _ x) (by rw [s₂ r]; trivial)
+    dsimp only at hn₁
+    rw [Submonoid.smul_def, Algebra.smul_def, IsScalarTower.algebraMap_apply R S,
+      ← map_mul] at hn₁
+    obtain ⟨⟨_, n₂, rfl⟩, hn₂⟩ :=
+      IsLocalization.smul_mem_finsetIntegerMultiple_span (Submonoid.powers (r : R))
+        (Localization.Away (f r)) _ (s₁ r) hn₁
+    rw [Submonoid.smul_def, ← Algebra.smul_def, smul_smul, ← pow_add] at hn₂
+    simp_rw [Submonoid.map_powers] at hn₂
+    use n₂ + n₁
+    exact le_iSup (fun x : s => Submodule.span R (sf x : Set S)) r hn₂
 
 /-- If a composite is integral, then its second map is integral; the finite
 analogue holds as well. -/
@@ -756,7 +845,7 @@ theorem integral_finite_permanence
     (f : A →+* B) (g : B →+* C)
     : ((g.comp f).IsIntegral → g.IsIntegral) ∧
       ((g.comp f).Finite → g.Finite) := by
-  sorry
+  exact ⟨fun h => h.tower_top, RingHom.Finite.of_comp_finite⟩
 
 /- The canonical `IsIntegralClosure.tower_top` is the source-facing
 transitivity principle for successive integral closures. -/

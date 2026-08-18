@@ -837,12 +837,12 @@ theorem flat_iff_localized_at_primes
           (LocalizedModule p.asIdeal.primeCompl M) := by
   constructor
   · intro h p
-    letI : Module.Flat R M := h
+    let : Module.Flat R M := h
     infer_instance
   · intro h
     apply Module.flat_of_localized_maximal M
     intro m hm
-    letI : m.IsMaximal := hm
+    let : m.IsMaximal := hm
     exact (Module.flat_iff_of_isLocalization (Localization.AtPrime m)
       m.primeCompl (LocalizedModule m.primeCompl M)).1 (h ⟨m, hm.isPrime⟩)
 
@@ -854,12 +854,12 @@ theorem flat_iff_localized_at_maximals
           (LocalizedModule m.primeCompl M) := by
   constructor
   · intro h m
-    letI : Module.Flat R M := h
+    let : Module.Flat R M := h
     infer_instance
   · intro h
     apply Module.flat_of_localized_maximal M
     intro m hm
-    letI : m.IsMaximal := hm
+    let : m.IsMaximal := hm
     exact (Module.flat_iff_of_isLocalization (Localization.AtPrime m)
       m.primeCompl (LocalizedModule m.primeCompl M)).1 (h m)
 

@@ -7,6 +7,7 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.FreeModule.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Tower
+import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.Module
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
@@ -85,13 +86,12 @@ theorem finiteDimensional_V [Module.FinitePresentation R M]
 
 /-! ## The direct-summand criterion -/
 
-/- Base change to `R_f` gives a canonical realization of the source's
-   localized map. -/
+/- The source's map after inverting `f` is represented by the canonical
+   localized-module map from the localized finite free module. -/
 noncomputable def localizedSectionMap {r : ℕ} (f : R) (s : Fin r → M) :
-    (Fin r →₀ Localization.Away f) →ₗ[Localization.Away f]
-      Localization.Away f ⊗[R] M :=
-  Finsupp.linearCombination (Localization.Away f)
-    (fun i => (1 : Localization.Away f) ⊗ₜ[R] s i)
+    LocalizedModule.Away f (Fin r →₀ R) →ₗ[Localization.Away f]
+      LocalizedModule.Away f M :=
+  LocalizedModule.map (Submonoid.powers f) (Finsupp.linearCombination R s)
 
 def IsLocalizedDirectSummand {r : ℕ} (f : R) (s : Fin r → M) : Prop :=
   Function.Injective (localizedSectionMap f s) ∧
@@ -176,7 +176,7 @@ theorem splitting_off_free
     (hdim : topologicalKrullDim (MaximalSpectrum R) = d)
     (hfree : ∀ m : MaximalSpectrum R,
       HasFreeDirectSummandAbove (Localization.AtPrime m.asIdeal)
-        (LocalizedModule m.asIdeal.primeCompl M) d) :
+        (LocalizedModule.AtPrime m.asIdeal M) d) :
     ∃ (M' : Type u) (_ : AddCommGroup M') (_ : Module R M'),
       Nonempty (M ≃ₗ[R] R × M') := by
   sorry

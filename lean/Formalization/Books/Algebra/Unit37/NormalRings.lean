@@ -162,13 +162,13 @@ private theorem powerSeries_isNormalDomain_of_isDomain_of_isIntegrallyClosed
     {R : Type*} [CommRing R] [IsDomain R] [IsIntegrallyClosed R]
     [IsNoetherianRing R] :
     IsNormalDomain (PowerSeries R) := by
-  letI : Field (FractionRing R) := IsFractionRing.toField R
+  let : Field (FractionRing R) := IsFractionRing.toField R
   let K := FractionRing R
   let P := PowerSeries R
   let L := LaurentSeries K
   let φ : P →+* L :=
     (HahnSeries.ofPowerSeries ℤ K).comp (PowerSeries.map (algebraMap R K))
-  letI : Algebra P L := φ.toAlgebra
+  let : Algebra P L := φ.toAlgebra
   have hφ : Function.Injective φ := by
     intro x y h
     apply (PowerSeries.map_injective (algebraMap R K) (IsFractionRing.injective R K))
@@ -200,7 +200,7 @@ private theorem powerSeries_isNormalDomain_of_isDomain_of_isIntegrallyClosed
         have hz : PowerSeries.coeff i.natAbs a = 0 := by
           apply PowerSeries.coeff_of_lt_order_toNat
           omega
-        simpa [hz]
+        simp [hz]
   have hlead : ∀ f : L, IsAlmostIntegral P f → f ≠ 0 →
       0 ≤ f.order ∧ IsAlmostIntegral R (f.coeff f.order) := by
     intro f hf hf0
@@ -289,7 +289,7 @@ private theorem powerSeries_isNormalDomain_of_isDomain_of_isIntegrallyClosed
       _ = algebraMap R K (a.coeff a.order.toNat) * (f.coeff f.order) ^ n := hcoeffprod
       _ = (a.coeff a.order.toNat) • (f.coeff f.order) ^ n := by
         rw [Algebra.smul_def]
-  letI : Field (FractionRing P) := IsFractionRing.toField P
+  let : Field (FractionRing P) := IsFractionRing.toField P
   let ψ : FractionRing P →ₐ[P] L :=
     IsFractionRing.liftAlgHom (R := P) (A := P) (K := FractionRing P) (L := L)
       (g := Algebra.ofId P L) hφ
@@ -783,7 +783,7 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
   tfae_have 2 → 3 := by
     intro h
     let P := Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R
-    letI : Fintype {p : Ideal R // p ∈ minimalPrimes R} := hfinite.fintype
+    let : Fintype {p : Ideal R // p ∈ minimalPrimes R} := hfinite.fintype
     let _ : Finite P := Finite.of_injective
       (fun p : P => (⟨p.1.asIdeal, p.2⟩ : {p : Ideal R // p ∈ minimalPrimes R}))
       (by
@@ -791,7 +791,7 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
         apply Subtype.ext
         apply PrimeSpectrum.ext
         exact congrArg Subtype.val hpq)
-    letI : Fintype P := Fintype.ofFinite P
+    let : Fintype P := Fintype.ofFinite P
     let n := Fintype.card P
     let e : Fin n ≃ P := (Fintype.equivFin P).symm
     let q : Fin n → PrimeSpectrum R := fun i => (e i).1
@@ -804,8 +804,7 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
       · intro hI
         let p : P := ⟨⟨I, hI.isPrime⟩, hI⟩
         refine ⟨e.symm p, ?_⟩
-        simpa [q, p] using congrArg (fun z : P => z.1.asIdeal)
-          (e.apply_symm_apply p)
+        simp [q, p]
     have hqi : Function.Injective q := by
       intro i j hij
       apply e.injective
@@ -844,9 +843,9 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
       let hfield : IsField (Localization.AtPrime (q i).asIdeal) :=
         Formalization.Books.Algebra.Unit25.isField_localizationAt_minimalPrime_of_isReduced
           ⟨q i, hmin⟩
-      letI : IsField (Localization.AtPrime (q i).asIdeal) := hfield
-      letI : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
-      letI : Nontrivial (g i).range := by
+      let : IsField (Localization.AtPrime (q i).asIdeal) := hfield
+      let : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
+      let : Nontrivial (g i).range := by
         refine ⟨⟨1, 0, ?_⟩⟩
         intro hzero
         have hzero' : (1 : Localization.AtPrime (q i).asIdeal) = 0 :=
@@ -977,25 +976,25 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
       exact congrArg Subtype.val (congr_fun hxy i)
     let EG : R ≃+* (∀ i : Fin n, (g i).range) := RingEquiv.ofBijective G
       ⟨hGinj, hGsurj⟩
-    letI : ∀ i : Fin n, SMul R (Localization.AtPrime (q i).asIdeal) :=
+    let : ∀ i : Fin n, SMul R (Localization.AtPrime (q i).asIdeal) :=
       fun i => (g i).toAlgebra.toSMul
-    letI : ∀ i : Fin n, Algebra R (Localization.AtPrime (q i).asIdeal) :=
+    let : ∀ i : Fin n, Algebra R (Localization.AtPrime (q i).asIdeal) :=
       fun i => (g i).toAlgebra
-    letI : SMul R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+    let : SMul R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
       Pi.instSMul
-    letI : Algebra R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+    let : Algebra R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
       Pi.algebra (ι := Fin n)
         (A := fun i : Fin n => Localization.AtPrime (q i).asIdeal)
-    letI : Algebra R (∀ i : Fin n, (g i).range) := G.toAlgebra
-    letI : ∀ i : Fin n, SMul (g i).range
+    let : Algebra R (∀ i : Fin n, (g i).range) := G.toAlgebra
+    let : ∀ i : Fin n, SMul (g i).range
         (Localization.AtPrime (q i).asIdeal) :=
       fun i => (g i).range.subtype.toAlgebra.toSMul
-    letI : ∀ i : Fin n, Algebra (g i).range
+    let : ∀ i : Fin n, Algebra (g i).range
         (Localization.AtPrime (q i).asIdeal) :=
       fun i => (g i).range.subtype.toAlgebra
-    letI : SMul (∀ i : Fin n, (g i).range)
+    let : SMul (∀ i : Fin n, (g i).range)
         (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) := Pi.smul'
-    letI : Algebra (∀ i : Fin n, (g i).range)
+    let : Algebra (∀ i : Fin n, (g i).range)
         (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
       Pi.instAlgebraForall
         (fun i : Fin n => Localization.AtPrime (q i).asIdeal)
@@ -1014,7 +1013,7 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
     let Ealg : Formalization.Books.Algebra.Unit09.totalQuotientRing R ≃ₐ[R]
         (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
       { E with commutes' := hEalg }
-    letI : IsScalarTower R (∀ i : Fin n, (g i).range)
+    let : IsScalarTower R (∀ i : Fin n, (g i).range)
         (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
       ⟨by
         intro r s x
@@ -1037,7 +1036,7 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
         rw [hgr]
         exact mul_assoc _ _ _
       ⟩
-    letI : Algebra.IsIntegral R (∀ i : Fin n, (g i).range) :=
+    let : Algebra.IsIntegral R (∀ i : Fin n, (g i).range) :=
       Algebra.isIntegral_of_surjective (by
         change Function.Surjective G
         exact hGsurj)
@@ -1077,9 +1076,9 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
       let hfield : IsField (Localization.AtPrime (q i).asIdeal) :=
         Formalization.Books.Algebra.Unit25.isField_localizationAt_minimalPrime_of_isReduced
           ⟨q i, by rw [← hq]; exact Set.mem_range_self i⟩
-      letI : IsField (Localization.AtPrime (q i).asIdeal) := hfield
-      letI : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
-      letI : IsFractionRing (g i).range (Localization.AtPrime (q i).asIdeal) := hfrac i
+      let : IsField (Localization.AtPrime (q i).asIdeal) := hfield
+      let : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
+      let : IsFractionRing (g i).range (Localization.AtPrime (q i).asIdeal) := hfrac i
       have hclosed_i :=
         (Formalization.Books.Algebra.Unit36.product_isIntegrallyClosedIn_iff.mp hclosed) i
       exact ⟨inferInstance,
@@ -1098,11 +1097,11 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
   tfae_have 3 → 1 := by
     intro h
     rcases h with ⟨ι, hι, S, hS, hE⟩
-    letI : Fintype ι := hι
+    let : Fintype ι := hι
     obtain ⟨E⟩ := hE
     have hfactor : ∀ i, IsNormalRing (S i : Type u) := by
       intro i p
-      letI : IsDomain (S i : Type u) := (hS i).1
+      let : IsDomain (S i : Type u) := (hS i).1
       exact localization_isNormalDomain (hS i) p.asIdeal.primeCompl
         p.asIdeal.primeCompl_le_nonZeroDivisors
     have hprod : IsNormalRing (∀ i, (S i : Type u)) :=

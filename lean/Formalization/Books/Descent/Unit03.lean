@@ -128,6 +128,47 @@ theorem relativeTensorDegeneracy_zero_pure (R A : Type u) [CommRing R] [CommRing
       PiTensorProduct.tprod R (fun _ : Fin 1 => x 0 * x 1) := by
   sorry
 
+/- The general `relativeTensorMap_pure` statement above is the
+source-faithful formulation for arbitrary simplex maps.  These named
+specializations record the remaining low-degree maps displayed in the
+source, so the first part of the Amitsur diagram is available without
+unfolding the simplex maps. -/
+
+theorem relativeTensorFace_two_zero_pure (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (x : Fin 2 → A) :
+    relativeTensorFace R A 1 0 (PiTensorProduct.tprod R x) =
+      PiTensorProduct.tprod R (fun j : Fin 3 ↦
+        if j = 0 then 1 else if j = 1 then x 0 else x 1) := by
+  sorry
+
+theorem relativeTensorFace_two_one_pure (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (x : Fin 2 → A) :
+    relativeTensorFace R A 1 1 (PiTensorProduct.tprod R x) =
+      PiTensorProduct.tprod R (fun j : Fin 3 ↦
+        if j = 0 then x 0 else if j = 1 then 1 else x 1) := by
+  sorry
+
+theorem relativeTensorFace_two_two_pure (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (x : Fin 2 → A) :
+    relativeTensorFace R A 1 2 (PiTensorProduct.tprod R x) =
+      PiTensorProduct.tprod R (fun j : Fin 3 ↦
+        if j = 0 then x 0 else if j = 1 then x 1 else 1) := by
+  sorry
+
+theorem relativeTensorDegeneracy_one_zero_pure (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (x : Fin 3 → A) :
+    relativeTensorDegeneracy R A 1 0 (PiTensorProduct.tprod R x) =
+      PiTensorProduct.tprod R (fun j : Fin 2 ↦
+        if j = 0 then x 0 * x 1 else x 2) := by
+  sorry
+
+theorem relativeTensorDegeneracy_one_one_pure (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (x : Fin 3 → A) :
+    relativeTensorDegeneracy R A 1 1 (PiTensorProduct.tprod R x) =
+      PiTensorProduct.tprod R (fun j : Fin 2 ↦
+        if j = 0 then x 0 else x 1 * x 2) := by
+  sorry
+
 /-! ## Modules over the Amitsur terms -/
 
 /-- The degree-`n` module obtained by tensoring an `R`-module with the
@@ -236,6 +277,18 @@ section DescentData
 variable {R A N N' : Type*} [CommRing R] [CommRing A] [Algebra R A]
   [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
   [AddCommGroup N'] [Module R N'] [Module A N'] [IsScalarTower R A N']
+
+/- The source's `τ` maps are the canonical simplex maps supplied by
+Mathlib.  Naming them here keeps the tensor-position notation visible in
+the chapter interface. -/
+
+def descentVertexSimplexMap (n : ℕ) (i : Fin (n + 1)) :
+    SimplexCategory.mk 0 ⟶ SimplexCategory.mk n :=
+  SimplexCategory.const _ _ i
+
+def descentEdgeSimplexMap {n : ℕ} (i j : Fin (n + 1)) (h : i ≤ j) :
+    SimplexCategory.mk 1 ⟶ SimplexCategory.mk n :=
+  SimplexCategory.mkOfLe i j h
 
 /-- The two tensor-factor actions on `N ⊗[R] A`, and the corresponding actions
 on `A ⊗[R] N`, written without introducing an ambiguous global bimodule instance. -/
@@ -435,6 +488,78 @@ noncomputable def descentCosimplicialModuleMap {n m : ℕ}
   (descentTransportMap D (Fin.le_last _)).toLinearMap.comp
     (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩)
 
+/- The first displayed module maps in the source, in the recursive tensor
+presentation of `descentTerm`, are made explicit here.  The general
+construction above is the usable interface for arbitrary simplex maps. -/
+
+theorem descentCosimplicialModuleMap_face_zero (D : DescentDatum (R := R) (A := A) (N := N))
+    (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.δ 0 : SimplexCategory.mk 0 ⟶ SimplexCategory.mk 1) n =
+      TensorProduct.mk R A N 1 n := by
+  sorry
+
+theorem descentCosimplicialModuleMap_face_one (D : DescentDatum (R := R) (A := A) (N := N))
+    (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.δ 1 : SimplexCategory.mk 0 ⟶ SimplexCategory.mk 1) n =
+      D.comparison (TensorProduct.mk R N A n 1) := by
+  sorry
+
+theorem descentCosimplicialModuleMap_degeneracy_zero
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.σ 0 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 0)
+        (TensorProduct.mk R A N a n) = a • n := by
+  sorry
+
+theorem descentCosimplicialModuleMap_face_two_zero
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.δ 0 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 2)
+        (TensorProduct.mk R A N a n) =
+      TensorProduct.mk R A (TensorProduct R A N) 1
+        (TensorProduct.mk R A N a n) := by
+  sorry
+
+theorem descentCosimplicialModuleMap_face_two_one
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.δ 1 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 2)
+        (TensorProduct.mk R A N a n) =
+      TensorProduct.mk R A (TensorProduct R A N) a
+        (TensorProduct.mk R A N 1 n) := by
+  sorry
+
+theorem descentCosimplicialModuleMap_face_two_two
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.δ 2 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 2)
+        (TensorProduct.mk R A N a n) =
+      TensorProduct.map (LinearMap.id : A →ₗ[R] A)
+        D.comparison.toLinearMap
+        (TensorProduct.mk R A (TensorProduct R N A) a
+          (TensorProduct.mk R N A n 1)) := by
+  sorry
+
+theorem descentCosimplicialModuleMap_degeneracy_one_zero
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a₀ a₁ : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.σ 0 : SimplexCategory.mk 2 ⟶ SimplexCategory.mk 1)
+        (TensorProduct.mk R A (TensorProduct R A N) a₀
+          (TensorProduct.mk R A N a₁ n)) =
+      TensorProduct.mk R A N (a₀ * a₁) n := by
+  sorry
+
+theorem descentCosimplicialModuleMap_degeneracy_one_one
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a₀ a₁ : A) (n : N) :
+    descentCosimplicialModuleMap D
+        (SimplexCategory.σ 1 : SimplexCategory.mk 2 ⟶ SimplexCategory.mk 1)
+        (TensorProduct.mk R A (TensorProduct R A N) a₀
+          (TensorProduct.mk R A N a₁ n)) =
+      TensorProduct.mk R A N a₀ (a₁ • n) := by
+  sorry
+
 theorem descentCosimplicialModuleMap_semilinear_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
@@ -529,19 +654,21 @@ theorem canonicalDescentComparison_tmul (a₀ a₁ : A) (m : M) :
       a₀ ⊗ₜ[R] (a₁ ⊗ₜ[R] m) := by
   rfl
 
+noncomputable def canonicalDescentDatum :
+    DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
+  { comparison := canonicalDescentComparison (R := R) (A := A) (M := M)
+    comparison_compatible := by sorry
+    cocycle := by sorry }
+
 theorem canonicalDescentDatum_exists :
     ∃ D : DescentDatum (R := R) (A := A) (N := TensorProduct R A M),
       D.comparison = canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  by sorry
-
-noncomputable def canonicalDescentDatum :
-  DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
-  Classical.choose (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
+  ⟨canonicalDescentDatum (R := R) (A := A) (M := M), rfl⟩
 
 theorem canonicalDescentDatum_comparison :
     (canonicalDescentDatum (R := R) (A := A) (M := M)).comparison =
       canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  Classical.choose_spec (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
+  rfl
 
 def DescentDatumIsoCompatibility {N N' : Type*} [AddCommGroup N] [Module R N]
     [Module A N] [IsScalarTower R A N]

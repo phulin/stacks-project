@@ -1,5 +1,4 @@
 import Formalization.Books.Injectives.Unit12.KInjectivesInGrothendieckCategories
-import Formalization.Books.Homology.Unit15.TruncationOfComplexes
 import Formalization.Books.Homology.Unit20.FilteredComplexes
 import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian

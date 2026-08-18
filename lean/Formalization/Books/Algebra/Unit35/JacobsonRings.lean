@@ -1151,7 +1151,84 @@ theorem countableTrick_quotient_is_rational_function_field
     (hm : countableTrickIdeal (k := k) ≤ m.asIdeal) :
     Nonempty ((CountableTrickRing k ⧸ m.asIdeal) ≃+* FractionRing (Polynomial k)) ∧
       ¬ Algebra.IsAlgebraic k (CountableTrickRing k ⧸ m.asIdeal) := by
-  sorry
+  let _ : Field (CountableTrickRing k ⧸ m.asIdeal) := Ideal.Quotient.field m.asIdeal
+  let F := FractionRing (Polynomial k)
+  let ψ : CountableTrickRing k →+* F :=
+    MvPolynomial.eval₂Hom (algebraMap (Polynomial k) F)
+      (fun i => (algebraMap (Polynomial k) F i.1)⁻¹)
+  have hmap : Function.Injective (algebraMap (Polynomial k) F) :=
+    IsFractionRing.injective (Polynomial k) F
+  let φ : Polynomial k →+* (CountableTrickRing k ⧸ m.asIdeal) :=
+    (Ideal.Quotient.mk m.asIdeal).comp
+      (MvPolynomial.C : Polynomial k →+* CountableTrickRing k)
+  have hunit (f : Polynomial k) (hf : f ≠ 0) : IsUnit (φ f) := by
+    let i : CountableTrickIndex k := ⟨f, hf⟩
+    have hmem : countableTrickRelation i ∈ m.asIdeal :=
+      hm (Ideal.subset_span ⟨i, rfl⟩)
+    have hzero :
+        Ideal.Quotient.mk m.asIdeal (countableTrickRelation i) = 0 :=
+      (Ideal.Quotient.eq_zero_iff_mem).2 hmem
+    have heq : φ f * Ideal.Quotient.mk m.asIdeal (MvPolynomial.X i) = 1 := by
+      have hzero' := hzero
+      simp only [countableTrickRelation, map_sub, map_mul, map_one,
+        MvPolynomial.C_apply] at hzero'
+      exact sub_eq_zero.mp hzero'
+    exact IsUnit.of_mul_eq_one _ heq
+  let qFromF : F →+* (CountableTrickRing k ⧸ m.asIdeal) :=
+    IsLocalization.lift (S := F) (P := (CountableTrickRing k ⧸ m.asIdeal))
+      (g := φ)
+      (fun y : nonZeroDivisors (Polynomial k) => hunit y.1
+        (mem_nonZeroDivisors_iff_ne_zero.mp y.2))
+  have hcomp :
+      qFromF.comp ψ = Ideal.Quotient.mk m.asIdeal := by
+    apply MvPolynomial.ringHom_ext'
+    · apply RingHom.ext
+      intro f
+      simp [qFromF, ψ, φ]
+    · intro i
+      have hmem : countableTrickRelation i ∈ m.asIdeal :=
+        hm (Ideal.subset_span ⟨i, rfl⟩)
+      have hzero :
+          Ideal.Quotient.mk m.asIdeal (countableTrickRelation i) = 0 :=
+        (Ideal.Quotient.eq_zero_iff_mem).2 hmem
+      have heq : φ i.1 * Ideal.Quotient.mk m.asIdeal (MvPolynomial.X i) = 1 := by
+        have hzero' := hzero
+        simp only [countableTrickRelation, map_sub, map_mul, map_one,
+          MvPolynomial.C_apply] at hzero'
+        exact sub_eq_zero.mp hzero'
+      have hi' : (φ i.1)⁻¹ = Ideal.Quotient.mk m.asIdeal (MvPolynomial.X i) :=
+        inv_eq_of_mul_eq_one_right heq
+      simp [qFromF, ψ, hi']
+  have hsurj : Function.Surjective qFromF := by
+    intro z
+    obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective z
+    refine ⟨ψ r, ?_⟩
+    exact congrArg
+      (fun f : CountableTrickRing k →+* (CountableTrickRing k ⧸ m.asIdeal) => f r)
+      hcomp
+  let e : F ≃+* (CountableTrickRing k ⧸ m.asIdeal) :=
+    RingEquiv.ofBijective qFromF ⟨RingHom.injective qFromF, hsurj⟩
+  constructor
+  · exact ⟨e.symm⟩
+  · intro hQ
+    let _ : Algebra.IsAlgebraic k (CountableTrickRing k ⧸ m.asIdeal) := hQ
+    have hcompk :
+        (algebraMap k (CountableTrickRing k ⧸ m.asIdeal)).comp (RingHom.id k) =
+          qFromF.comp (algebraMap k F) := by
+      apply RingHom.ext
+      intro c
+      change algebraMap k (CountableTrickRing k ⧸ m.asIdeal) c =
+        qFromF (algebraMap k F c)
+      rw [IsScalarTower.algebraMap_apply k (Polynomial k) F]
+      simp [qFromF, φ]
+      exact (Ideal.Quotient.mk_algebraMap k m.asIdeal c).symm
+    have hF : Algebra.IsAlgebraic k F :=
+      Algebra.IsAlgebraic.of_ringHom_of_comp_eq
+        (f := RingHom.id k) (g := qFromF) Function.surjective_id
+        (RingHom.injective qFromF) hcompk
+    have hpoly : Algebra.IsAlgebraic k (Polynomial k) :=
+      Algebra.IsAlgebraic.tower_bot_of_injective hmap
+    exact (Polynomial.transcendental_X k) (hpoly.isAlgebraic Polynomial.X)
 
 /-! ## Localizing, quotienting, and finite-type permanence -/
 
@@ -1188,7 +1265,73 @@ abbrev ZLocalizedAtTwoAtTwo :=
 
 theorem zLocalizedAtTwo_is_rational
     : Nonempty (ZLocalizedAtTwoAtTwo ≃+* ℚ) := by
-  sorry
+  let _ : IsDiscreteValuationRing ZLocalizedAtTwo :=
+    (inferInstance : IsDedekindDomainDvr ℤ).is_dvr_at_nonzero_prime
+      integerTwoIdeal
+      (by
+        change Ideal.span ({(2 : ℤ)} : Set ℤ) ≠ (⊥ : Ideal ℤ)
+        exact Ideal.span_singleton_eq_bot.not.mpr (by norm_num))
+      (inferInstance : integerTwoIdeal.IsPrime)
+  have hmax :
+      IsLocalRing.maximalIdeal ZLocalizedAtTwo =
+        Ideal.span {(algebraMap ℤ ZLocalizedAtTwo) (2 : ℤ)} := by
+    rw [← Localization.AtPrime.map_eq_maximalIdeal
+      (R := ℤ) (I := integerTwoIdeal)]
+    change Ideal.map (algebraMap ℤ ZLocalizedAtTwo)
+      (Ideal.span ({(2 : ℤ)} : Set ℤ)) =
+      Ideal.span {(algebraMap ℤ ZLocalizedAtTwo) (2 : ℤ)}
+    rw [Ideal.map_span]
+    simp
+  have h2irr : Irreducible (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)) :=
+    (IsDiscreteValuationRing.irreducible_iff_uniformizer _).2 hmax
+  have hN :
+      IsLocalization
+        (Submonoid.map (algebraMap ℤ ZLocalizedAtTwo) (nonZeroDivisors ℤ))
+        (FractionRing ℤ) :=
+    IsLocalization.isLocalization_of_submonoid_le
+      ZLocalizedAtTwo (FractionRing ℤ) integerTwoIdeal.primeCompl
+        (nonZeroDivisors ℤ) integerTwoIdeal.primeCompl_le_nonZeroDivisors
+  have hloc :
+      IsLocalization
+        (Submonoid.powers (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)))
+        (FractionRing ℤ) := by
+    have hi :=
+      IsLocalization.iff_of_le_of_exists_dvd
+        (M := Submonoid.powers (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)))
+        (S := FractionRing ℤ)
+        (N := Submonoid.map (algebraMap ℤ ZLocalizedAtTwo) (nonZeroDivisors ℤ))
+        (by
+          rintro _ ⟨n, rfl⟩
+          refine ⟨(2 : ℤ) ^ n, ?_, ?_⟩
+          · exact mem_nonZeroDivisors_of_ne_zero (by norm_num)
+          · simp)
+        (by
+          rintro x ⟨z, hz, rfl⟩
+          have hzinj : Function.Injective (algebraMap ℤ ZLocalizedAtTwo) :=
+            IsLocalization.injective ZLocalizedAtTwo
+              integerTwoIdeal.primeCompl_le_nonZeroDivisors
+          have hzS : algebraMap ℤ ZLocalizedAtTwo z ≠ 0 := by
+            intro hzS
+            apply mem_nonZeroDivisors_iff_ne_zero.mp hz
+            apply hzinj
+            simpa using hzS
+          obtain ⟨r, u, hu⟩ :=
+            IsDiscreteValuationRing.eq_unit_mul_pow_irreducible hzS h2irr
+          refine ⟨(algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)) ^ r, ⟨r, rfl⟩, ?_⟩
+          refine ⟨↑u⁻¹, ?_⟩
+          rw [hu]
+          simp [mul_comm])
+    exact hi.mpr hN
+  let _ :
+      IsLocalization
+        (Submonoid.powers (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)))
+        (FractionRing ℤ) := hloc
+  let e₀ :
+      ZLocalizedAtTwoAtTwo ≃ₐ[ZLocalizedAtTwo] FractionRing ℤ :=
+    IsLocalization.algEquiv
+      (Submonoid.powers (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)))
+      ZLocalizedAtTwoAtTwo (FractionRing ℤ)
+  exact ⟨e₀.toRingEquiv.trans (FractionRing.algEquiv ℤ ℚ).toRingEquiv⟩
 
 theorem zLocalizedAtTwo_closedPoint_maps_to_generic_point
     : ∃ e : ZLocalizedAtTwoAtTwo ≃+* ℚ,
@@ -1203,7 +1346,7 @@ abbrev RationalLocalizationOfIntegers :=
 
 theorem rationalLocalizationOfIntegers_is_rational
     : Nonempty (RationalLocalizationOfIntegers ≃+* ℚ) := by
-  sorry
+  exact ⟨(FractionRing.algEquiv ℤ ℚ).toRingEquiv⟩
 
 theorem rationalLocalization_closedPoint_maps_to_generic_point
     : ∃ e : RationalLocalizationOfIntegers ≃+* ℚ,

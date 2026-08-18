@@ -2,7 +2,7 @@ import Formalization.Books.Algebra.Unit40.SupportsAndAnnihilators
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.LinearAlgebra.BilinearMap
+import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
 import Mathlib.RingTheory.Finiteness.Cardinality
 import Mathlib.RingTheory.Finiteness.Prod
@@ -265,17 +265,20 @@ theorem fittingIdeal_finiteLocallyFreeOfRank
 
 /-! ## Principal Fitting ideals and the projective-dimension statement -/
 
+/- The source-facing names below retain the interfaces consumed by later
+   chapters, while their implementations use Mathlib's canonical torsion
+   submodules. -/
 /-- The submodule annihilated by multiplication by a scalar. -/
-def scalarTorsionSubmodule
+abbrev scalarTorsionSubmodule
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) : Submodule R M :=
-  LinearMap.ker (LinearMap.lsmul R M f)
+  Submodule.torsionBy R M f
 
 /-- The submodule of elements killed by some power of a scalar. -/
-def scalarPowerTorsionSubmodule
+abbrev scalarPowerTorsionSubmodule
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (f : R) : Submodule R M :=
-  ⨆ n : ℕ, LinearMap.ker (LinearMap.lsmul R M (f ^ n))
+  Submodule.torsion' R M (Submonoid.powers f)
 
 theorem quotient_by_principal_fitting_torsion_generated
     {R M : Type*} [CommRing R] [IsLocalRing R]

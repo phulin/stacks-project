@@ -934,6 +934,34 @@ private theorem closedSubsetPushforward_unit_stalk_comp
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
     (closedSubsetPullbackStalkIso G z).hom := by
+  /-
+  TODO(Unit32, closed pushforward unit on stalks): the proof below reached the
+  final comparison between two presentations of the unit of the composite
+  adjunction, but stopped elaborating after an upstream API/definitional-
+  equality change.  A robust replacement should:
+
+  1. express both sides through `TopCat.Presheaf.stalkPullbackIso` and
+     `TopCat.Presheaf.stalkPushforward`;
+  2. use naturality of `germ` to reduce equality of stalk maps to equality on
+     every neighbourhood;
+  3. identify the sheaf pullback adjunction unit with the unit of
+     `lanAdjunction.comp sheafificationAdjunction`, preferably through a
+     library lemma rather than unfolding `restrictFullyFaithful`; and
+  4. finish with `Adjunction.comp_unit_app` and the fact that stalks invert the
+     sheafification unit.
+
+  The blocked point is step 3: the old argument's `convert` around `hWg'` and
+  `hcompunitUg` now sees propositionally equal proof arguments (`hU`/`hU'`)
+  and differently simplified identity natural transformations.  The
+  essential-image theorem below only needs this compatibility statement to
+  show that the adjunction unit is an isomorphism on stalks inside `Z`.
+
+  The previous detailed attempt is retained below for future API work.
+  -/
+  sorry
+
+/- Previous elaborating attempt (kept as a roadmap and source of intermediate
+lemmas; see the TODO above).
   let f := closedSubsetInclusion Z
   let eP := closedSubsetPullbackStalkIso G z
   let F := (TopCat.Sheaf.pullback C f).obj G
@@ -1200,6 +1228,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
               _ = _ := by simp
   change m ≫ eS.hom = eP.hom
   exact hcomp
+-/
 
 private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     {C : Type u} [Category.{w} C]

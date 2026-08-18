@@ -330,13 +330,20 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
           ψ' x = torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
             ((ModuleCat.restrictScalars f).map ψ) i x) ∧
           ψ' ≫ map_mixed M N'₂ i =
-          map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
-/-! The flat-base-change assertion is a separate theorem below; it is not
-part of the data witnessing the three source items. -/
+        map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
+  flat_base_change :
+    ∀ (_hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
+      IsIso ((ModuleCat.extendScalars f).map (map_both M N i) ≫
+        (ModuleCat.extendRestrictScalarsAdj f).counit.app
+          (extendedTor f M N i))
+/-! The flat-base-change assertion is retained as a field of the complete
+datum so that the chosen maps cannot be replaced by arbitrary natural maps. -/
 
 /-- Existence of the natural change-of-rings data. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
+  /-
+  Prior attempt (before `flat_base_change` was added to the datum):
   classical
   let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
       TargetTorModule f M N' i :=
@@ -434,6 +441,8 @@ theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R
     · intro x
       rfl
     · simp
+  -/
+  sorry
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -475,12 +484,8 @@ noncomputable def torFlatBaseChangeMap {R R' : Type u} [CommRing R] [CommRing R'
 theorem flat_base_change_tor {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (torFlatBaseChangeMap f M N i) := by
-  /-
-  Prior attempt:
   unfold torFlatBaseChangeMap canonicalTorChangeOfRingsMap
   exact (canonicalTorChangeOfRingsData f).flat_base_change hf M N i
-  -/
-  sorry
 
 /-! ## Filtered colimits -/
 

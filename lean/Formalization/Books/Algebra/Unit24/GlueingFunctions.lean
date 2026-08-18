@@ -734,7 +734,29 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
       · intro s
         rw [← (Algebra.lsmul R (A := Localization.Away (f i)) R (F.carrier i)).commutes]
         exact (IsLocalization.map_units (Localization.Away (f i)) s).map _
-      · sorry
+      · intro y
+        have hunit (j : Fin n) (s : Submonoid.powers (f j)) :
+            IsUnit (algebraMap R (Module.End R (F.carrier j)) s) := by
+          rw [← (Algebra.lsmul R (A := Localization.Away (f j)) R
+            (F.carrier j)).commutes]
+          exact (IsLocalization.map_units (Localization.Away (f j)) s).map _
+        have hrepr (j : Fin n) :
+            ∃ m : F.carrier j, ∃ s : standardCoverJointSubmonoid f j i,
+              LocalizedModule.mk m s =
+                D.ψ j i (LocalizedModule.mk y 1) := by
+          let z := D.ψ j i (LocalizedModule.mk y 1)
+          induction z using LocalizedModule.induction_on with
+          | _ m s => exact ⟨m, s, rfl⟩
+        choose num den hnum using hrepr
+        choose denLeft denRight hden using fun j =>
+          (Formalization.Books.Algebra.Unit09.localizationProduct_mem_iff
+            (Submonoid.powers (f j)) (Submonoid.powers (f i)) (den j : R)).mp
+            (den j).property
+        choose a ha using fun j =>
+          (Submonoid.mem_powers_iff _ _).mp (denLeft j).property
+        choose b hb using fun j =>
+          (Submonoid.mem_powers_iff _ _).mp (denRight j).property
+        sorry
       · intro x y hxy
         let z : gluedModule F D := x - y
         have hz_i : gluedModuleProjection F D i z = 0 := by
@@ -768,11 +790,13 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
           obtain ⟨b, hb⟩ := (Submonoid.mem_powers_iff _ _).mp si.property
           letI : IsLocalizedModule (Submonoid.powers (f j))
               (LinearMap.id : F.carrier j →ₗ[R] F.carrier j) :=
-            isLocalizedModule_id (F.carrier j) (Localization.Away (f j))
+            isLocalizedModule_id (Submonoid.powers (f j)) (F.carrier j)
+              (Localization.Away (f j))
           refine ⟨b, ?_⟩
           apply (IsLocalizedModule.smul_injective
             (f := (LinearMap.id : F.carrier j →ₗ[R] F.carrier j)) sj)
-          simpa [hsi, ha, hb, Submonoid.smul_def, mul_smul] using hsz
+          rw [← hsi] at hsz
+          simpa [ha, hb, Submonoid.smul_def, mul_smul] using hsz
         choose b hb using hkill
         let N : ℕ := ∑ j, b j
         let c : Submonoid.powers (f i) :=
@@ -782,8 +806,13 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
         funext j
         change (f i) ^ N • x.1 j = (f i) ^ N • y.1 j
         rw [← sub_eq_zero]
+        rw [← smul_sub]
+        dsimp [N]
         rw [← Nat.sub_add_cancel (Finset.single_le_sum (fun _ _ => Nat.zero_le _)
-          (Finset.mem_univ j)), pow_add, mul_smul, hb j, smul_zero]
+          (Finset.mem_univ j)), pow_add, mul_smul]
+        change (f i) ^ (∑ x, b x - b j) •
+          ((f i) ^ b j • gluedModuleProjection F D j z) = 0
+        rw [hb j, smul_zero]
     let e :=
       (IsLocalizedModule.iso (Submonoid.powers (f i)) g).extendScalarsOfIsLocalization
         (Submonoid.powers (f i)) (Localization.Away (f i))

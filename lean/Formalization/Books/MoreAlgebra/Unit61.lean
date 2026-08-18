@@ -2,6 +2,7 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit75.TorGroups
+import Formalization.Books.MoreAlgebra.Unit60
 import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
 
 /-!
@@ -10,10 +11,10 @@ import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
 This file records the comparison-map, flat base-change, derived-cohomology,
 and localization interfaces used in the source section.  The preceding
 formalization provides the canonical resolution-based `Tor` construction and
-the derived tensor product over a fixed ring.  Cross-ring derived base change
-and the canonical `A ⊗ R B`-action on `Tor` are kept as explicit interfaces:
-those constructions are the subject of the intervening change-of-rings
-material, which is not yet present in the earlier chapter files.
+the same-ring and cross-ring derived tensor functors.  The comparison
+transformation and the canonical `A ⊗ R B`-action on `Tor` are kept as explicit
+interfaces because the preceding APIs do not package those two constructions
+in the source's form.
 -/
 
 noncomputable section
@@ -22,6 +23,7 @@ open CategoryTheory
 open CategoryTheory.Limits
 open Formalization.Books.Algebra.Unit75
 open Formalization.Books.MoreAlgebra.Unit56
+open Formalization.Books.MoreAlgebra.Unit60
 open scoped TensorProduct
 
 universe u w
@@ -71,19 +73,38 @@ noncomputable def baseChangeRingSquare
 
 The natural transformation is the source's functorial comparison map
 `K ⊗ᴸ_R R' ⟶ K ⊗ᴸ_A A'`, with both sides regarded as objects of `D(R')`.
-This is an explicit interface because the earlier files do not yet expose
-the cross-ring derived scalar-change functors. -/
+The cross-ring derived scalar-change functors are the canonical functors from
+Chapter 60; the comparison transformation is the remaining source-facing
+interface. -/
 structure DerivedRingSquare
     {R A R' A' : Type u} [CommRing R] [CommRing A] [CommRing R'] [CommRing A']
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')] (S : RingSquare R A R' A') where
-  restrictToR : Derived A ⥤ Derived R
-  changeR : Derived R ⥤ Derived R'
-  changeA : Derived A ⥤ Derived A'
-  restrictToR' : Derived A' ⥤ Derived R'
-  comparison : (restrictToR ⋙ changeR) ⟶ (changeA ⋙ restrictToR')
+  comparison :
+    (derivedRestrictionFunctor S.rToA ⋙ derivedBaseChangeFunctor S.rToR') ⟶
+      (derivedBaseChangeFunctor S.aToA' ⋙ derivedRestrictionFunctor S.r'ToA')
+
+/-- The functorial comparison transformation exists for every ring square. -/
+theorem existsDerivedRingSquare
+    {R A R' A' : Type u} [CommRing R] [CommRing A] [CommRing R'] [CommRing A']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    (S : RingSquare R A R' A') : Nonempty (DerivedRingSquare S) := by
+  sorry
+
+/-- A chosen source-facing comparison transformation for a ring square. -/
+noncomputable def derivedRingSquare
+    {R A R' A' : Type u} [CommRing R] [CommRing A] [CommRing R'] [CommRing A']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    (S : RingSquare R A R' A') : DerivedRingSquare S :=
+  Classical.choice (existsDerivedRingSquare S)
 
 /-- The comparison morphism at a derived object. -/
 noncomputable def comparisonMap
@@ -93,8 +114,8 @@ noncomputable def comparisonMap
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     {S : RingSquare R A R' A'} (D : DerivedRingSquare S) (K : Derived A) :
-    ((D.restrictToR ⋙ D.changeR).obj K ⟶
-      (D.changeA ⋙ D.restrictToR').obj K) :=
+    ((derivedRestrictionFunctor S.rToA ⋙ derivedBaseChangeFunctor S.rToR').obj K ⟶
+      (derivedBaseChangeFunctor S.aToA' ⋙ derivedRestrictionFunctor S.r'ToA').obj K) :=
   D.comparison.app K
 
 /-- In the base-change case, ordinary tensoring over `R` and over `A` are
@@ -261,8 +282,26 @@ structure LocalPrimePair
   r : PrimeSpectrum R
   pOver : PrimeSpectrum.comap (algebraMap R A) p = r
   qOver : PrimeSpectrum.comap (algebraMap R B) q = r
-  rToAp : Localization.AtPrime r.asIdeal →+* Localization.AtPrime p.asIdeal
-  rToBq : Localization.AtPrime r.asIdeal →+* Localization.AtPrime q.asIdeal
+
+namespace LocalPrimePair
+
+/-- The canonical local-ring map induced by `R → A` at a pair of primes over one another. -/
+noncomputable def rToAp
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) :
+    Localization.AtPrime P.r.asIdeal →+* Localization.AtPrime P.p.asIdeal :=
+  Localization.localRingHom P.r.asIdeal P.p.asIdeal (algebraMap R A)
+    (congrArg PrimeSpectrum.asIdeal P.pOver).symm
+
+/-- The canonical local-ring map induced by `R → B` at a pair of primes over one another. -/
+noncomputable def rToBq
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) :
+    Localization.AtPrime P.r.asIdeal →+* Localization.AtPrime P.q.asIdeal :=
+  Localization.localRingHom P.r.asIdeal P.q.asIdeal (algebraMap R B)
+    (congrArg PrimeSpectrum.asIdeal P.qOver).symm
+
+end LocalPrimePair
 
 /-- The localized Tor-independence predicate for a local prime pair. -/
 def LocalPrimePair.TorIndependent
@@ -276,10 +315,30 @@ structure TensorPrimePair
     (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] extends LocalPrimePair R A B where
   s : PrimeSpectrum (A ⊗[R] B)
-  aToTensor : A →+* (A ⊗[R] B)
-  bToTensor : B →+* (A ⊗[R] B)
-  pContraction : PrimeSpectrum.comap aToTensor s = toLocalPrimePair.p
-  qContraction : PrimeSpectrum.comap bToTensor s = toLocalPrimePair.q
+  pContraction :
+    PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeLeftRingHom : A →+* (A ⊗[R] B)) s =
+      toLocalPrimePair.p
+  qContraction :
+    PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeRight.toRingHom : B →+* (A ⊗[R] B)) s =
+      toLocalPrimePair.q
+
+namespace TensorPrimePair
+
+noncomputable abbrev aToTensor
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    A →+* (A ⊗[R] B) :=
+  Algebra.TensorProduct.includeLeftRingHom
+
+noncomputable abbrev bToTensor
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    B →+* (A ⊗[R] B) :=
+  Algebra.TensorProduct.includeRight.toRingHom
+
+end TensorPrimePair
 
 /-- The localized form of the source's comparison identity.  The `global`
 and `local` families denote respectively `Tor_i^R(A, B)_𝔰` and
@@ -316,14 +375,14 @@ noncomputable def localizedTor
     ModuleCat (Localization.AtPrime S.s.asIdeal) :=
   (Classical.choice (tor_localization_identity S)).global i
 
-/-- Vanishing of all prime-localized Tor modules is equivalent to Tor
-independence. -/
+/-- Vanishing of all positive-degree prime-localized Tor modules is equivalent
+to Tor independence. -/
 theorem torIndependent_iff_localizedTor_vanishing
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
     TorIndependent R A B ↔
       ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
-        IsZero (localizedTor S i) := by
+        0 < i → IsZero (localizedTor S i) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit61

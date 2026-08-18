@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.Ring.Parity
 import Mathlib.Data.Set.Function
 import Mathlib.RingTheory.Finiteness.Ideal
 import Mathlib.RingTheory.Idempotents
@@ -22,7 +23,7 @@ namespace Formalization.Books.Algebra.Unit32
 
 open Set
 
-universe u
+universe u v
 
 noncomputable section
 
@@ -66,7 +67,7 @@ theorem locallyNilpotent_not_nilpotent_example (k : Type u) [Field k] :
 /-! ## Basic consequences -/
 
 theorem locallyNilpotentIdeal_map
-    {R S : Type u} [CommRing R] [CommRing S] (φ : R →+* S) (I : Ideal R)
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S] (φ : R →+* S) (I : Ideal R)
     (hI : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I) :
     Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal (I.map φ) := by
   sorry

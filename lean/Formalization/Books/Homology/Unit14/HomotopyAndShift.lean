@@ -1,5 +1,4 @@
 import Formalization.Books.Homology.Unit13.Complexes
-import Mathlib.Algebra.Homology.CochainComplexOpposite
 import Mathlib.Algebra.Homology.HomotopyCategory.ShiftSequence
 
 /-!
@@ -303,7 +302,7 @@ theorem termwiseSplitConnectingMap_homotopy_components
     (s s' : TermwiseSplitting S)
     (δ : TermwiseSplitConnectingMap s)
     (δ' : TermwiseSplitConnectingMap s') :
-    ∃ h : Homotopy δ'.hom δ.hom,
+    ∃ h : Homotopy δ.hom δ'.hom,
       ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by
   sorry
 
@@ -522,7 +521,7 @@ theorem termwiseSplitConnectingMap_homotopic
           (s' n).r = (s n).r +
             (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
               (-(h n))) ∧
-        Nonempty (Homotopy δ.hom δ'.hom) := by
+        Nonempty (Homotopy δ'.hom δ.hom) := by
   sorry
 
 /-- In the orientation matching the displayed formula in the source, the

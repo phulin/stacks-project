@@ -1223,7 +1223,49 @@ theorem same_up_to_isomorphisms_of_termwise_split
     {A B D : BookComplex C} (S : TermwiseSplitExactSequence A B D) :
     ∃ e : coneTriangleh S.f ≅ termwiseSplitTriangleh S,
       e.hom.hom₁ = 𝟙 _ ∧ e.hom.hom₂ = 𝟙 _ := by
-  sorry
+  have hcone :
+      coneTriangleh S.f ∈ distTriang (BookHomotopyCategory C) :=
+    HomotopyCategory.mappingCone_triangleh_distinguished S.f
+  have hsplit :
+      termwiseSplitTriangleh S ∈ distTriang (BookHomotopyCategory C) := by
+    rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+    exact ⟨termwiseSplitShortComplex S, S.splitting, ⟨Iso.refl _⟩⟩
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  have hcomm₁ :
+      (coneTriangleh S.f).mor₁ ≫ q.map (𝟙 B) =
+        q.map (𝟙 A) ≫ (termwiseSplitTriangleh S).mor₁ := by
+    change q.map S.f ≫ q.map (𝟙 B) = q.map (𝟙 A) ≫ q.map S.f
+    simp
+  letI : IsIso (q.map (𝟙 A)) := by
+    have hqA : q.map (𝟙 A) = 𝟙 (q.obj A) := q.map_id A
+    rw [hqA]
+    infer_instance
+  letI : IsIso (q.map (𝟙 B)) := by
+    have hqB : q.map (𝟙 B) = 𝟙 (q.obj B) := q.map_id B
+    rw [hqB]
+    infer_instance
+  obtain ⟨c, hc₂, hc₃⟩ :=
+    HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
+      (coneTriangleh S.f) (termwiseSplitTriangleh S) hcone hsplit
+      (q.map (𝟙 A)) (q.map (𝟙 B)) hcomm₁
+  letI : IsIso c := by
+    apply isIso₃_of_isIso₁₂
+      (Triangle.homMk (coneTriangleh S.f) (termwiseSplitTriangleh S)
+        (q.map (𝟙 A)) (q.map (𝟙 B)) c hcomm₁ hc₂ hc₃)
+      hcone hsplit
+    · change IsIso (q.map (𝟙 A))
+      infer_instance
+    · change IsIso (q.map (𝟙 B))
+      infer_instance
+  let e : coneTriangleh S.f ≅ termwiseSplitTriangleh S :=
+    Triangle.isoMk _ _ (Iso.refl (q.obj A)) (Iso.refl (q.obj B)) (asIso c)
+      (by
+        change q.map S.f ≫ 𝟙 (q.obj B) =
+          𝟙 (q.obj A) ≫ q.map S.f
+        simp) hc₂ hc₃
+  exact ⟨e, by change q.map (𝟙 A) = 𝟙 (q.obj A); simp [e, q],
+    by change q.map (𝟙 B) = 𝟙 (q.obj B); simp [e, q]⟩
 
 theorem same_up_to_isomorphisms_of_map
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1231,7 +1273,196 @@ theorem same_up_to_isomorphisms_of_map
     ∃ (M N : BookComplex C) (S : TermwiseSplitExactSequence K M N),
       ∃ e : termwiseSplitTriangleh S ≅ coneTriangleh f,
         e.hom.hom₁ = 𝟙 _ := by
-  sorry
+  let M : BookComplex C := CochainComplex.mappingCone (𝟙 K) ⊞ L
+  let i : K ⟶ M :=
+    biprod.lift (CochainComplex.mappingCone.inr (𝟙 K)) f
+  let π : M ⟶ L := biprod.snd
+  let u : CochainComplex.mappingCone (𝟙 K) ⟶ Cone f :=
+    CochainComplex.mappingCone.map (𝟙 K) f (𝟙 K) f (by simp)
+  let g : M ⟶ Cone f :=
+    biprod.desc (-u) (coneInclusion f)
+  let r : ∀ n : ℤ, M.X n ⟶ K.X n := fun n =>
+    (biprod.fst : M ⟶ CochainComplex.mappingCone (𝟙 K)).f n ≫
+      (CochainComplex.mappingCone.snd (𝟙 K)).v n n (add_zero n)
+  let s : ∀ n : ℤ, (Cone f).X n ⟶
+      (CochainComplex.mappingCone (𝟙 K) ⊞ L).X n := fun n =>
+    (biprod.lift
+      (-((CochainComplex.mappingCone.fst f).1.v n (n + 1) (by omega) ≫
+        (CochainComplex.mappingCone.inl (𝟙 K)).v (n + 1) n (by omega)))
+      ((CochainComplex.mappingCone.snd f).v n n (add_zero n))) ≫
+        (HomologicalComplex.biprodXIso
+          (CochainComplex.mappingCone (𝟙 K)) L n).inv
+  have hiπ : i ≫ π = f := by
+    simp [i, π, M]
+  have hig : i ≫ g = 0 := by
+    dsimp [i, g, u, M]
+    simp [CochainComplex.mappingCone.map, coneInclusion]
+  have hs_fst (n : ℤ) :
+      s n ≫ (biprod.fst : M ⟶ CochainComplex.mappingCone (𝟙 K)).f n =
+        -((CochainComplex.mappingCone.fst f).1.v n (n + 1) (by omega) ≫
+          (CochainComplex.mappingCone.inl (𝟙 K)).v (n + 1) n (by omega)) := by
+    dsimp [s, M]
+    rw [← HomologicalComplex.biprodXIso_hom_fst]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc,
+      HomologicalComplex.biprod_lift_fst_f, biprod.lift_fst]
+  have hs_snd (n : ℤ) :
+      s n ≫ (biprod.snd : M ⟶ L).f n =
+        (CochainComplex.mappingCone.snd f).v n n (add_zero n) := by
+    dsimp [s, M]
+    rw [← HomologicalComplex.biprodXIso_hom_snd]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc,
+      HomologicalComplex.biprod_lift_snd_f, biprod.lift_snd]
+  have hginv (n : ℤ) :
+      ((HomologicalComplex.eval C (ComplexShape.up ℤ) n).mapBiprod
+          (CochainComplex.mappingCone (𝟙 K)) L).inv ≫
+        (HomologicalComplex.eval C (ComplexShape.up ℤ) n).map
+          (biprod.desc (-u) (coneInclusion f)) =
+      biprod.desc
+        ((HomologicalComplex.eval C (ComplexShape.up ℤ) n).map (-u))
+        ((HomologicalComplex.eval C (ComplexShape.up ℤ) n).map (coneInclusion f)) :=
+    biprod.mapBiprod_inv_map_desc
+      (HomologicalComplex.eval C (ComplexShape.up ℤ) n)
+      (CochainComplex.mappingCone (𝟙 K)) L (-u) (coneInclusion f)
+  have hsg (n : ℤ) :
+      s n ≫ g.f n =
+        (biprod.lift
+          (-((CochainComplex.mappingCone.fst f).1.v n (n + 1) (by omega) ≫
+            (CochainComplex.mappingCone.inl (𝟙 K)).v (n + 1) n (by omega)))
+          ((CochainComplex.mappingCone.snd f).v n n (add_zero n))) ≫
+          biprod.desc (-u.f n) ((coneInclusion f).f n) := by
+    have hinner :
+        (HomologicalComplex.biprodXIso
+            (CochainComplex.mappingCone (𝟙 K)) L n).inv ≫
+          (biprod.desc (-u) (coneInclusion f)).f n =
+        biprod.desc (-u.f n) ((coneInclusion f).f n) := by
+      simpa [HomologicalComplex.biprodXIso, HomologicalComplex.eval] using hginv n
+    dsimp [s, g, M]
+    rw [Category.assoc, hinner]
+  have hsplit :
+      ∀ n : ℤ,
+        ((ShortComplex.mk i g hig).map
+          (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).Splitting := by
+    intro n
+    refine { r := r n, s := s n, f_r := ?_, s_g := ?_, id := ?_ }
+    · dsimp [r, i, M]
+      change i.f n ≫ r n = 𝟙 _
+      dsimp [i, r, M]
+      rw [← Category.assoc, HomologicalComplex.biprod_lift_fst_f]
+      simp
+    · change s n ≫ g.f n = 𝟙 _
+      apply (CochainComplex.mappingCone.ext_from_iff f (n + 1) n (by omega) _ _).2
+      constructor
+      · rw [hsg n]
+        dsimp [coneInclusion]
+        simp [u, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X,
+          CochainComplex.mappingCone.inl_v_fst_v,
+          CochainComplex.mappingCone.inl_v_snd_v,
+          CochainComplex.mappingCone.inr_f_fst_v,
+          CochainComplex.mappingCone.inr_f_snd_v,
+          CochainComplex.mappingCone.inr_f_fst_v_assoc,
+          CochainComplex.mappingCone.inr_f_snd_v_assoc,
+          coneInclusion, biprod.lift_desc, Category.assoc]
+      · rw [hsg n]
+        dsimp [coneInclusion]
+        simp [u, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X,
+          CochainComplex.mappingCone.inl_v_fst_v,
+          CochainComplex.mappingCone.inl_v_snd_v,
+          CochainComplex.mappingCone.inr_f_fst_v,
+          CochainComplex.mappingCone.inr_f_snd_v,
+          CochainComplex.mappingCone.inr_f_fst_v_assoc,
+          CochainComplex.mappingCone.inr_f_snd_v_assoc,
+          coneInclusion, biprod.lift_desc, Category.assoc]
+    · dsimp [r, s, i, g, u, M]
+      change r n ≫ i.f n + g.f n ≫ s n = 𝟙 _
+      ext
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_fst, hs_snd, coneInclusion]
+        simpa [add_comm] using
+          (CochainComplex.mappingCone.id_X (𝟙 K) n (n + 1) (by omega))
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_fst, hs_snd, coneInclusion]
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_fst, hs_snd, coneInclusion]
+      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_fst, hs_snd, coneInclusion]
+  let S : TermwiseSplitExactSequence K M (Cone f) := {
+    f := i
+    g := g
+    zero := hig
+    splitting := hsplit }
+  refine ⟨M, Cone f, S, ?_⟩
+  have hcone :
+      coneTriangleh f ∈ distTriang (BookHomotopyCategory C) :=
+    HomotopyCategory.mappingCone_triangleh_distinguished f
+  have hterm :
+      termwiseSplitTriangleh S ∈ distTriang (BookHomotopyCategory C) := by
+    rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+    exact ⟨termwiseSplitShortComplex S, S.splitting, ⟨Iso.refl _⟩⟩
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  have hπs : Nonempty (Homotopy (π ≫ (biprod.inr : L ⟶ M)) (𝟙 M)) := by
+    have hzero : Homotopy
+        ((biprod.fst : M ⟶ CochainComplex.mappingCone (𝟙 K)) ≫
+          (biprod.inl : CochainComplex.mappingCone (𝟙 K) ⟶ M)) 0 := by
+      simpa using
+        ((CochainComplex.mappingCone.homotopyToZeroOfId K).compRight
+          (biprod.inl : CochainComplex.mappingCone (𝟙 K) ⟶ M)).compLeft
+          (biprod.fst : M ⟶ CochainComplex.mappingCone (𝟙 K))
+    have hsub : Homotopy
+        (𝟙 M - π ≫ (biprod.inr : L ⟶ M)) 0 := by
+      apply (Homotopy.ofEq ?_).trans hzero
+      dsimp [π, M]
+      rw [← biprod.total]
+      abel
+    exact ⟨((Homotopy.equivSubZero).symm hsub).symm⟩
+  let hπ : HomotopyEquiv M L := {
+    hom := π
+    inv := biprod.inr
+    homotopyHomInvId := hπs.some
+    homotopyInvHomId := Homotopy.ofEq (by simp [π, M]) }
+  letI : IsIso (q.map π) := by
+    change IsIso (HomotopyCategory.isoOfHomotopyEquiv hπ).hom
+    infer_instance
+  have hcomm₁ :
+      (termwiseSplitTriangleh S).mor₁ ≫ q.map π =
+        q.map (𝟙 K) ≫ (coneTriangleh f).mor₁ := by
+    change q.map i ≫ q.map π = q.map (𝟙 K) ≫ q.map f
+    have hqK : q.map (𝟙 K) = 𝟙 (q.obj K) := q.map_id K
+    rw [hqK, Category.id_comp, ← q.map_comp]
+    simpa using congrArg q.map hiπ
+  obtain ⟨c, hc₂, hc₃⟩ :=
+    HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
+      (termwiseSplitTriangleh S) (coneTriangleh f) hterm hcone
+      (q.map (𝟙 K)) (q.map π) hcomm₁
+  let e : termwiseSplitTriangleh S ≅ coneTriangleh f := by
+    letI : IsIso (q.map (𝟙 K)) := by
+      have hqK : q.map (𝟙 K) = 𝟙 (q.obj K) := q.map_id K
+      rw [hqK]
+      infer_instance
+    letI : IsIso c := by
+      apply isIso₃_of_isIso₁₂
+        (Triangle.homMk (termwiseSplitTriangleh S) (coneTriangleh f)
+          (q.map (𝟙 K)) (q.map π) c hcomm₁ hc₂ hc₃)
+        hterm hcone
+      · change IsIso (q.map (𝟙 K))
+        infer_instance
+      · change IsIso (q.map π)
+        infer_instance
+    exact Triangle.isoMk _ _ (Iso.refl (q.obj K))
+      (HomotopyCategory.isoOfHomotopyEquiv hπ) (asIso c)
+      (by
+        change q.map i ≫ q.map π = 𝟙 (q.obj K) ≫ q.map f
+        rw [Category.id_comp, ← q.map_comp]
+        simpa using congrArg q.map hiπ) hc₂ hc₃
+  refine ⟨e, ?_⟩
+  change (Iso.refl (q.obj K)).hom = 𝟙 _
+  simp
 
 /-! ## Simultaneous termwise split replacements -/
 
@@ -1246,6 +1477,26 @@ def adjacentMap
     (⟨i.val, Nat.lt_succ_of_lt i.isLt⟩ : Fin (n + 1)) ≤
       ⟨Nat.succ i.val, Nat.succ_lt_succ i.isLt⟩ by simp))
 
+private theorem splitMono_iso_conjugate
+    {C : Type u} [Category.{v, u} C]
+    {X X' Y Y' : C} (e : X' ≅ X) (f : X ⟶ Y) (d : Y' ≅ Y)
+    (hf : IsSplitMono f) :
+    IsSplitMono (e.hom ≫ f ≫ d.inv) := by
+  exact IsSplitMono.mk'
+    (({ retraction := e.inv, id := e.hom_inv_id } : SplitMono e.hom).comp
+      ((hf.exists_splitMono.some).comp
+        ({ retraction := d.hom, id := d.inv_hom_id } : SplitMono d.inv)))
+
+private def componentIso
+    {C : Type u} [Category.{v, u} C] [AdditiveCategory C]
+    {K L : BookComplex C} (e : K ≅ L) (n : ℤ) : K.X n ≅ L.X n :=
+  { hom := e.hom.f n
+    inv := e.inv.f n
+    hom_inv_id := by
+      exact congrArg (fun f => f.f n) e.hom_inv_id
+    inv_hom_id := by
+      exact congrArg (fun f => f.f n) e.inv_hom_id }
+
 theorem sequence_maps_split
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {n : ℕ} (hn : 0 < n) (A : ComposableArrows (BookComplex C) (n - 1)) :
@@ -1259,7 +1510,345 @@ theorem sequence_maps_split
         ∀ i : Fin ((n - 1) + 1), IsBoundedAbove (B.obj i)) ∧
       ((∀ i : Fin ((n - 1) + 1), IsBounded (A.obj i)) →
         ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by
-  sorry
+  have aux : ∀ (m : ℕ) (A : ComposableArrows (BookComplex C) m),
+      ∃ (B : ComposableArrows (BookComplex C) m) (φ : B ⟶ A),
+        (∀ i : Fin m, termwiseSplitInjection (adjacentMap B i)) ∧
+        (∀ i : Fin (m + 1),
+          HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ) (φ.app i)) ∧
+        ((∀ i : Fin (m + 1), IsBoundedBelow (A.obj i)) →
+          ∀ i : Fin (m + 1), IsBoundedBelow (B.obj i)) ∧
+        ((∀ i : Fin (m + 1), IsBoundedAbove (A.obj i)) →
+          ∀ i : Fin (m + 1), IsBoundedAbove (B.obj i)) ∧
+        ((∀ i : Fin (m + 1), IsBounded (A.obj i)) →
+          ∀ i : Fin (m + 1), IsBounded (B.obj i)) := by
+    intro m
+    induction m with
+    | zero =>
+      intro A
+      refine ⟨A, 𝟙 A, ?_, ?_, ?_, ?_, ?_⟩
+      · intro i
+        exact Fin.elim0 i
+      · intro i
+        dsimp
+        exact HomologicalComplex.homotopyEquivalences.of_isIso _
+      · intro h i
+        exact h i
+      · intro h i
+        exact h i
+      · intro h i
+        exact h i
+    | succ m ih =>
+      intro A
+      let P : ComposableArrows (BookComplex C) m := A.δlast
+      obtain ⟨B₀, φ₀, hsplit₀, heq₀, hbelow₀, habove₀, hbounded₀⟩ := ih P
+      let u : B₀.right ⟶ A.obj (Fin.last (m + 1)) :=
+        φ₀.app (Fin.last m) ≫ A.map' m (m + 1)
+      obtain ⟨L', i, π, hiπ, hi, s, hsπ, hπs, hbelow, habove, hbounded⟩ :=
+        make_injective u
+      let hπ : HomotopyEquiv L' (A.obj (Fin.last (m + 1))) := {
+        hom := π
+        inv := s
+        homotopyHomInvId := hπs.some
+        homotopyInvHomId := Homotopy.ofEq hsπ }
+      let obj : Fin (m + 2) → BookComplex C :=
+        Fin.lastCases L' B₀.obj
+      have hright : B₀.obj (Fin.last m) = B₀.right := by
+        have hidx : Fin.last m = (⟨m, by omega⟩ : Fin (m + 1)) := by
+          apply Fin.ext
+          rfl
+        simpa [ComposableArrows.right] using congrArg B₀.obj hidx
+      have hobj0 : obj (Fin.last m).castSucc = B₀.right := by
+        dsimp [obj]
+        simpa [ComposableArrows.right] using hright
+      have hobjLast : obj (Fin.last m).succ = L' := by
+        simp [obj]
+      let mapSucc : ∀ j : Fin (m + 1),
+          obj j.castSucc ⟶ obj j.succ := by
+        intro j
+        cases j using Fin.lastCases with
+        | last =>
+          exact eqToHom hobj0 ≫ i ≫ eqToHom hobjLast.symm
+        | cast j =>
+          have hobj0 : obj j.castSucc.castSucc = B₀.obj j.castSucc := by
+            change Fin.lastCases L' B₀.obj j.castSucc.castSucc = B₀.obj j.castSucc
+            rw [Fin.lastCases_castSucc]
+          have hidx : j.castSucc.succ =
+                (⟨j.val + 1, by omega⟩ : Fin (m + 1)).castSucc := by
+            apply Fin.ext
+            rfl
+          have hobj1 :
+              B₀.obj (⟨j.val + 1, by omega⟩ : Fin (m + 1)) = obj j.castSucc.succ := by
+            rw [hidx]
+            change B₀.obj ⟨j.val + 1, by omega⟩ =
+              Fin.lastCases L' B₀.obj
+                (⟨j.val + 1, by omega⟩ : Fin (m + 1)).castSucc
+            rw [Fin.lastCases_castSucc]
+          exact eqToHom hobj0 ≫ B₀.map' j.val (j.val + 1) ≫ eqToHom hobj1
+      obtain ⟨B, e, he⟩ :=
+        ComposableArrows.mkOfObjOfMapSucc_exists obj mapSucc
+      let a : ∀ j : Fin (m + 2), B.obj j ⟶ A.obj j := fun j =>
+        Fin.lastCases
+          (by
+            have hobj : obj (Fin.last (m + 1)) = L' := by
+              simpa only [Fin.succ_last] using hobjLast
+            exact (e (Fin.last (m + 1))).hom ≫ eqToHom hobj ≫ π)
+          (fun j => by
+            have hobj : obj j.castSucc = B₀.obj j := by simp [obj]
+            have hP : P.obj j = A.obj j.castSucc := by
+              change A.obj j.castSucc = A.obj j.castSucc
+              rfl
+            exact (e j.castSucc).hom ≫ eqToHom hobj ≫ φ₀.app j ≫ eqToHom hP)
+          j
+      have hB (j : ℕ) (hj : j < m + 1) :
+          B.map' j (j + 1) ≫ (e ⟨j + 1, by omega⟩).hom =
+            (e ⟨j, by omega⟩).hom ≫ mapSucc ⟨j, hj⟩ := by
+        rw [he j hj]
+        simp [Category.assoc]
+      have ha_cast (i : Fin (m + 1)) :
+          a i.castSucc =
+              (e i.castSucc).hom ≫ eqToHom (by simp [obj]) ≫ φ₀.app i ≫
+              eqToHom (by change A.obj i.castSucc = A.obj i.castSucc; rfl) := by
+        dsimp [a]
+        simp only [Fin.lastCases_castSucc]
+      have ha_cast_last :
+          a (Fin.last m).castSucc =
+            (e (Fin.last m).castSucc).hom ≫ eqToHom hobj0 ≫
+              φ₀.app (Fin.last m) ≫
+                eqToHom (by change A.obj _ = A.obj _; rfl) := by
+        convert ha_cast (Fin.last m) using 1 <;> congr 1
+      have ha_last :
+          a (Fin.last (m + 1)) =
+            (e (Fin.last (m + 1))).hom ≫
+              eqToHom (by simpa only [Fin.succ_last] using hobjLast) ≫ π := by
+        dsimp [a]
+        simp only [Fin.lastCases_last]
+      have hobj_succ (k : Fin m) :
+          obj k.succ.castSucc = B₀.obj k.succ := by
+        change Fin.lastCases L' B₀.obj k.succ.castSucc = B₀.obj k.succ
+        rw [Fin.lastCases_castSucc]
+      have ha_succ_cast (k : Fin m) :
+          a k.castSucc.succ =
+            (e k.succ.castSucc).hom ≫ eqToHom (hobj_succ k) ≫ φ₀.app k.succ ≫
+              eqToHom (by change A.obj k.succ.castSucc = A.obj k.succ.castSucc; rfl) := by
+        simpa only [Fin.succ_castSucc] using ha_cast k.succ
+      have ha_succ_last :
+          a (Fin.last m).succ =
+            (e (Fin.last (m + 1))).hom ≫
+              eqToHom hobjLast ≫ π := by
+        simpa only [Fin.succ_last] using ha_last
+      have hB_last :
+          B.map' m (m + 1) ≫ (e (Fin.last (m + 1))).hom =
+            (e (Fin.last m).castSucc).hom ≫ mapSucc (Fin.last m) := by
+        convert hB m (by omega) using 1 <;> congr 1
+      have hmap_last :
+          mapSucc (Fin.last m) =
+            eqToHom hobj0 ≫ i ≫ eqToHom hobjLast.symm := by
+        dsimp [mapSucc]
+        simp only [Fin.lastCases_last]
+      have hmap_last' :
+          mapSucc (Fin.last m) ≫ eqToHom hobjLast =
+            eqToHom hobj0 ≫ i := by
+        rw [hmap_last]
+        simp [Category.assoc]
+      have hnat : ∀ i : Fin (m + 1),
+          B.map' i.val (i.val + 1) ≫ a i.succ =
+            a i.castSucc ≫ A.map' i.val (i.val + 1) := by
+        intro i
+        by_cases hlast : i = Fin.last m
+        · subst i
+          rw [ha_succ_last, ha_cast_last]
+          change B.map' m (m + 1) ≫ (e (Fin.last (m + 1))).hom ≫ _ = _
+          rw [← Category.assoc, hB_last]
+          have hpre := congrArg
+            (fun f => (e (Fin.last m).castSucc).hom ≫ eqToHom hobj0 ≫ f) hiπ
+          simp only [Category.assoc]
+          rw [← Category.assoc (mapSucc (Fin.last m)) (eqToHom hobjLast) π]
+          rw [hmap_last']
+          simpa [u] using hpre
+        · obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hlast
+          subst i
+          rw [ha_succ_cast k, ha_cast k.castSucc]
+          have hBk :
+              B.map' k.castSucc.val (k.castSucc.val + 1) ≫ (e k.succ.castSucc).hom =
+                (e k.castSucc.castSucc).hom ≫ mapSucc k.castSucc := by
+            convert hB k.castSucc.val (by omega) using 1 <;> congr 1
+          simp only [Category.assoc]
+          rw [← Category.assoc (B.map' k.castSucc.val (k.castSucc.val + 1))
+            (e k.succ.castSucc).hom (eqToHom (hobj_succ k))]
+          rw [hBk]
+          simp [mapSucc, P, Category.assoc]
+          simpa using ComposableArrows.naturality' φ₀ k.val (k.val + 1)
+      have hmap : ∀ j : Fin (m + 1), ∀ z : ℤ,
+          IsSplitMono ((mapSucc j).f z) := by
+        intro j z
+        by_cases hlast : j = Fin.last m
+        · subst j
+          let el := componentIso (eqToIso hobj0) z
+          let er := componentIso (eqToIso hobjLast) z
+          have hsplit := splitMono_iso_conjugate el (i.f z) er (hi z)
+          simpa [mapSucc, el, er, componentIso, Category.assoc] using hsplit
+        · obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hlast
+          subst j
+          have hobj0' : obj k.castSucc.castSucc = B₀.obj k.castSucc := by
+            change Fin.lastCases L' B₀.obj k.castSucc.castSucc = B₀.obj k.castSucc
+            rw [Fin.lastCases_castSucc]
+          have hidx : k.castSucc.succ =
+                (⟨k.val + 1, by omega⟩ : Fin (m + 1)).castSucc := by
+            apply Fin.ext
+            rfl
+          have hobj1' :
+              B₀.obj (⟨k.val + 1, by omega⟩ : Fin (m + 1)) =
+                obj k.castSucc.succ := by
+            rw [hidx]
+            change B₀.obj ⟨k.val + 1, by omega⟩ =
+              Fin.lastCases L' B₀.obj
+                (⟨k.val + 1, by omega⟩ : Fin (m + 1)).castSucc
+            rw [Fin.lastCases_castSucc]
+          let el := componentIso (eqToIso hobj0') z
+          let er := componentIso (eqToIso hobj1').symm z
+          have hsplit := splitMono_iso_conjugate el
+            ((adjacentMap B₀ k).f z) er (hsplit₀ k z)
+          simpa [mapSucc, el, er, componentIso, adjacentMap, obj, Category.assoc]
+            using hsplit
+      have boundedBelow_of_iso : ∀ {K L : BookComplex C}, (K ≅ L) →
+          IsBoundedBelow L → IsBoundedBelow K := by
+        intro K L e hL
+        obtain ⟨n, hn⟩ := hL
+        refine ⟨n, ?_⟩
+        rw [CochainComplex.isStrictlyGE_iff] at hn ⊢
+        intro z hz
+        exact IsZero.of_iso (hn z hz) (componentIso e z)
+      have boundedAbove_of_iso : ∀ {K L : BookComplex C}, (K ≅ L) →
+          IsBoundedAbove L → IsBoundedAbove K := by
+        intro K L e hL
+        obtain ⟨n, hn⟩ := hL
+        refine ⟨n, ?_⟩
+        rw [CochainComplex.isStrictlyLE_iff] at hn ⊢
+        intro z hz
+        exact IsZero.of_iso (hn z hz) (componentIso e z)
+      have bounded_of_iso : ∀ {K L : BookComplex C}, (K ≅ L) →
+          IsBounded L → IsBounded K := by
+        intro K L e hL
+        obtain ⟨p, q, hp, hq⟩ := hL
+        refine ⟨p, q, ?_, ?_⟩
+        · exact (boundedBelow_of_iso e ⟨p, hp⟩).choose_spec
+        · exact (boundedAbove_of_iso e ⟨q, hq⟩).choose_spec
+      let φ : B ⟶ A := ComposableArrows.homMk a (by
+        intro j hj
+        simpa using hnat ⟨j, hj⟩)
+      refine ⟨B, φ, ?_, ?_, ?_, ?_, ?_⟩
+      · intro j
+        intro z
+        let el := componentIso (e j.castSucc) z
+        let er := componentIso (e j.succ) z
+        have hsplit := splitMono_iso_conjugate el ((mapSucc j).f z) er (hmap j z)
+        have hcomp := congrArg (fun f => f.f z) (hB j.val (by omega))
+        have hcomp' :
+            (B.map' j.val (j.val + 1)).f z ≫ (e j.succ).hom.f z =
+              (e j.castSucc).hom.f z ≫ (mapSucc j).f z := by
+          convert hcomp using 1 <;> congr 1
+        have heq :
+            (B.map' j.val (j.val + 1)).f z =
+              el.hom ≫ (mapSucc j).f z ≫ er.inv := by
+          apply (cancel_mono er.hom).1
+          calc
+            (B.map' j.val (j.val + 1)).f z ≫ er.hom =
+                (e j.castSucc).hom.f z ≫ (mapSucc j).f z := by
+              simpa [el, er, componentIso] using hcomp'
+            _ = (el.hom ≫ (mapSucc j).f z ≫ er.inv) ≫ er.hom := by
+              simp [el, er, componentIso, Category.assoc]
+        change IsSplitMono ((B.map' j.val (j.val + 1)).f z)
+        rw [heq]
+        exact hsplit
+      · intro j
+        by_cases hlast : j.val = m + 1
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+          rw [hj]
+          dsimp [φ, a]
+          apply HomologicalComplex.homotopyEquivalences.comp_mem
+          · apply HomologicalComplex.homotopyEquivalences.comp_mem
+            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
+            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
+          · exact hπ.homotopyEquivalences_hom
+        · obtain ⟨k, hk⟩ :=
+            (Fin.exists_castSucc_eq).2 (by
+              intro h
+              apply hlast
+              exact Fin.ext (by simpa [h] using congrArg Fin.val h))
+          rw [← hk]
+          dsimp [φ, a]
+          apply HomologicalComplex.homotopyEquivalences.comp_mem
+          · apply HomologicalComplex.homotopyEquivalences.comp_mem
+            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
+            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
+          · exact heq₀ k
+      · intro h j
+        by_cases hlast : j.val = m + 1
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+          rw [hj]
+          have hP : ∀ i : Fin (m + 1), IsBoundedBelow (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          have hB₀ : IsBoundedBelow B₀.right := by
+            simpa [ComposableArrows.right] using hbelow₀ hP (Fin.last m)
+          apply boundedBelow_of_iso (e (Fin.last (m + 1)))
+          simpa [obj, Fin.succ_last] using hbelow ⟨hB₀, h (Fin.last (m + 1))⟩
+        · have hjne : j ≠ Fin.last (m + 1) := by
+            intro hj
+            apply hlast
+            exact congrArg Fin.val hj
+          obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
+          rw [← hk]
+          have hP : ∀ i : Fin (m + 1), IsBoundedBelow (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          apply boundedBelow_of_iso (e k.castSucc)
+          simpa [obj] using hbelow₀ hP k
+      · intro h j
+        by_cases hlast : j.val = m + 1
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+          rw [hj]
+          have hP : ∀ i : Fin (m + 1), IsBoundedAbove (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          have hB₀ : IsBoundedAbove B₀.right := by
+            simpa [ComposableArrows.right] using habove₀ hP (Fin.last m)
+          apply boundedAbove_of_iso (e (Fin.last (m + 1)))
+          simpa [obj, Fin.succ_last] using habove ⟨hB₀, h (Fin.last (m + 1))⟩
+        · have hjne : j ≠ Fin.last (m + 1) := by
+            intro hj
+            apply hlast
+            exact congrArg Fin.val hj
+          obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
+          rw [← hk]
+          have hP : ∀ i : Fin (m + 1), IsBoundedAbove (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          apply boundedAbove_of_iso (e k.castSucc)
+          simpa [obj] using habove₀ hP k
+      · intro h j
+        by_cases hlast : j.val = m + 1
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+          rw [hj]
+          have hP : ∀ i : Fin (m + 1), IsBounded (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          have hB₀ : IsBounded B₀.right := by
+            simpa [ComposableArrows.right] using hbounded₀ hP (Fin.last m)
+          apply bounded_of_iso (e (Fin.last (m + 1)))
+          simpa [obj, Fin.succ_last] using hbounded ⟨hB₀, h (Fin.last (m + 1))⟩
+        · have hjne : j ≠ Fin.last (m + 1) := by
+            intro hj
+            apply hlast
+            exact congrArg Fin.val hj
+          obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
+          rw [← hk]
+          have hP : ∀ i : Fin (m + 1), IsBounded (P.obj i) := by
+            intro i
+            simpa [P] using h i.castSucc
+          apply bounded_of_iso (e k.castSucc)
+          simpa [obj] using hbounded₀ hP k
+  simpa using aux (n - 1) A
 
 /-! ## Rotation -/
 

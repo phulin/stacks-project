@@ -3,6 +3,8 @@ import Mathlib.FieldTheory.Galois.Basic
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.FieldTheory.JacobsonNoether
+import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
 import Mathlib.LinearAlgebra.Matrix.Unique
 import Mathlib.LinearAlgebra.Matrix.ToLin
 
@@ -18,6 +20,10 @@ ambiguous.
 namespace Formalization.Books.Brauer
 
 open scoped TensorProduct
+open scoped IsMulCommutative
+
+#check IntermediateField.val
+#check IntermediateField.adjoin
 
 universe u_k u_A u_K
 
@@ -1198,12 +1204,467 @@ structure SeparableMaximalSubfield (k : Type u_k) (K : Type u_K)
   maximal : IsMaximalCommutativeSubalgebra k K (AlgHom.range embedding)
   [separable : Algebra.IsSeparable k carrier]
 
+private structure CentralizerDivisionPackage (k : Type u_k) (L : Type u_K) (K : Type u_A)
+    [Field k] [Field L]
+    [DivisionRing K] [Algebra k L] [Algebra k K] [FiniteDimensional k K]
+    [Algebra.IsCentral k K] (f : L →ₐ[k] K) where
+  carrier : Type u_A
+  [divisionRing : DivisionRing carrier]
+  [baseAlgebra : Algebra k carrier]
+  [algebra : Algebra L carrier]
+  [tower : IsScalarTower k L carrier]
+  [finite : FiniteDimensional L carrier]
+  [central : Algebra.IsCentral L carrier]
+  embedding : carrier →ₐ[k] K
+  injective : Function.Injective embedding
+  embedding_as : ∀ x : L, embedding (algebraMap L carrier x) = f x
+  dimension : Module.finrank k K = Module.finrank k L * Module.finrank k carrier
+
+private theorem centralizer_division_package (k : Type u_k) (L : Type u_K) (K : Type u_A)
+    [Field k] [Field L]
+    [DivisionRing K] [Algebra k L] [Algebra k K] [FiniteDimensional k K]
+    [Algebra.IsCentral k K] [FiniteDimensional k L]
+    (f : L →ₐ[k] K) (hf : Function.Injective f) :
+    Nonempty (CentralizerDivisionPackage k L K f) := by
+  classical
+  let S : Subalgebra k K := AlgHom.range f
+  let eS : L ≃ₐ[k] S := AlgEquiv.ofInjective f hf
+  letI : IsSimpleRing S := IsSimpleRing.of_ringEquiv eS.toRingEquiv inferInstance
+  let C : Subalgebra k K := Subalgebra.centralizer k (S : Set K)
+  have hct := centralizer_theorem k K S
+  dsimp [C] at hct ⊢
+  have hdouble : Subalgebra.centralizer k (C : Set K) = S := hct.2.2
+  have hfC : ∀ x : L, f x ∈ C := by
+    intro x
+    rw [Subalgebra.mem_centralizer_iff]
+    intro y hy
+    obtain ⟨y, rfl⟩ := hy
+    calc
+      f y * f x = f (y * x) := (map_mul f y x).symm
+      _ = f (x * y) := congrArg f (mul_comm y x)
+      _ = f x * f y := map_mul f x y
+  let i : L →ₐ[k] C := f.codRestrict C hfC
+  letI : Algebra L C := i.toRingHom.toAlgebra' (by
+    intro x y
+    have hy := y.property
+    rw [Subalgebra.mem_centralizer_iff] at hy
+    apply Subtype.ext
+    change f x * (y : K) = (y : K) * f x
+    exact hy (f x) ⟨x, rfl⟩)
+  letI : IsScalarTower k L C := IsScalarTower.of_algebraMap_eq (by
+    intro x
+    apply Subtype.ext
+    change algebraMap k K x = f (algebraMap k L x)
+    exact (f.commutes x).symm)
+  letI : DivisionRing C := DivisionRing.ofIsUnitOrEqZero (by
+    intro x
+    by_cases hx : (x : K) = 0
+    · exact Or.inr (Subtype.ext hx)
+    · left
+      have hinv : (x : K)⁻¹ ∈ C := by
+        rw [Subalgebra.mem_centralizer_iff]
+        intro y hy
+        have hxy : (x : K) * y = y * (x : K) :=
+          ((Subalgebra.mem_centralizer_iff k).mp x.property y hy).symm
+        apply (mul_left_cancel₀ hx)
+        calc
+          (x : K) * (y * (x : K)⁻¹) = ((x : K) * y) * (x : K)⁻¹ := by
+            rw [mul_assoc]
+          _ = (y * (x : K)) * (x : K)⁻¹ := by rw [hxy]
+          _ = y * ((x : K) * (x : K)⁻¹) := by rw [mul_assoc]
+          _ = y := by rw [mul_inv_cancel₀ hx, mul_one]
+          _ = (x : K) * ((x : K)⁻¹ * y) := by
+            rw [← mul_assoc, mul_inv_cancel₀ hx, one_mul]
+      let u : Cˣ :=
+        { val := x
+          inv := ⟨(x : K)⁻¹, hinv⟩
+          val_inv := by
+            apply Subtype.ext
+            exact mul_inv_cancel₀ hx
+          inv_val := by
+            apply Subtype.ext
+            exact inv_mul_cancel₀ hx }
+      exact ⟨u, rfl⟩)
+  letI : FiniteDimensional k C := inferInstance
+  letI : Module.Finite L C := Module.Finite.of_restrictScalars_finite k L C
+  letI : FiniteDimensional L C := inferInstance
+  have hcentral : Algebra.IsCentral L C := by
+    constructor
+    intro x hx
+    have hxCcentral : (x : K) ∈ Subalgebra.centralizer k (C : Set K) := by
+      rw [Subalgebra.mem_centralizer_iff]
+      intro y hy
+      have hxy := Subalgebra.mem_center_iff.mp hx (⟨y, hy⟩ : C)
+      exact congrArg Subtype.val hxy
+    have hxS : (x : K) ∈ S := by
+      rw [← hdouble]
+      exact hxCcentral
+    obtain ⟨r, hr⟩ := hxS
+    refine ⟨r, ?_⟩
+    apply Subtype.ext
+    change f r = (x : K)
+    exact hr
+  have result : CentralizerDivisionPackage k L K f := by
+    refine ⟨C, ?_, ?_, ?_, ?_⟩
+    · exact C.val
+    · exact Subtype.val_injective
+    · intro x
+      rfl
+    · calc
+        Module.finrank k K = Module.finrank k S * Module.finrank k C := hct.2.1
+        _ = Module.finrank k L * Module.finrank k C := by
+          rw [eS.toLinearEquiv.finrank_eq]
+  exact ⟨result⟩
+
+private theorem exists_separable_maximal_subfield_same_universe (k K : Type u_K)
+    [Field k] [DivisionRing K] [Algebra k K] [FiniteDimensional k K]
+    [Algebra.IsCentral k K] :
+    Nonempty (SeparableMaximalSubfield k K) := by
+  classical
+  let f : K →ₐ[k] K := AlgHom.id k K
+  by_cases htrivial : (⊥ : Subalgebra k K) = ⊤
+  · letI : IsMulCommutative K := ⟨⟨fun x y => by
+      have hxbot : x ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      have hybot : y ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      obtain ⟨a, ha⟩ := Algebra.mem_bot.mp hxbot
+      obtain ⟨b, hb⟩ := Algebra.mem_bot.mp hybot
+      calc
+        x * y = algebraMap k K a * algebraMap k K b := by rw [ha, hb]
+        _ = algebraMap k K (a * b) := (map_mul (algebraMap k K) a b).symm
+        _ = algebraMap k K (b * a) := congrArg (algebraMap k K) (mul_comm a b)
+        _ = algebraMap k K b * algebraMap k K a := map_mul (algebraMap k K) b a
+        _ = y * x := by rw [← hb, ← ha]⟩⟩
+    letI : CommRing K := inferInstance
+    letI : Field K := Field.ofIsUnitOrEqZero (by
+      intro x
+      by_cases hx : x = 0
+      · exact Or.inr hx
+      · exact Or.inl (isUnit_iff_ne_zero.mpr hx))
+    letI : Algebra.IsSeparable k K := by
+      constructor
+      intro x
+      have hxbot : x ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      obtain ⟨r, hr⟩ := Algebra.mem_bot.mp hxbot
+      rw [← hr]
+      exact isSeparable_algebraMap r
+    have hf : Function.Injective f := by
+      intro x y hxy
+      exact hxy
+    have hrange : AlgHom.range f = ⊤ := by
+      apply le_antisymm le_top
+      rw [← htrivial]
+      exact bot_le
+    have hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range f) := by
+      rw [hrange]
+      constructor
+      · intro x y
+        have hxbot : (x : K) ∈ (⊥ : Subalgebra k K) := by
+          rw [htrivial]
+          exact x.property
+        have hybot : (y : K) ∈ (⊥ : Subalgebra k K) := by
+          rw [htrivial]
+          exact y.property
+        obtain ⟨a, ha⟩ := Algebra.mem_bot.mp hxbot
+        obtain ⟨b, hb⟩ := Algebra.mem_bot.mp hybot
+        change (x : K) * (y : K) = (y : K) * (x : K)
+        calc
+          (x : K) * (y : K) = algebraMap k K a * algebraMap k K b := by
+            rw [ha, hb]
+          _ = algebraMap k K (a * b) := (map_mul (algebraMap k K) a b).symm
+          _ = algebraMap k K (b * a) := congrArg (algebraMap k K) (mul_comm a b)
+          _ = algebraMap k K b * algebraMap k K a := map_mul (algebraMap k K) b a
+          _ = (y : K) * (x : K) := by rw [← hb, ← ha]
+      · intro T _ hle
+        exact le_antisymm le_top hle
+    let result : SeparableMaximalSubfield k K := ⟨K, f, hf, hmax⟩
+    exact ⟨result⟩
+  · obtain ⟨x, hx, hxsep⟩ :=
+      JacobsonNoether.exists_separable_and_not_isCentral' (L := k) (D := K) htrivial
+    let L : Subalgebra k K := Algebra.adjoin k ({x} : Set K)
+    letI : IsMulCommutative L := by
+      dsimp [L]
+      infer_instance
+    let hring : Ring L := inferInstance
+    letI : Ring L := hring
+    let hcomm : CommRing L := { hring with
+      mul_comm := fun a b => mul_comm a b }
+    letI : CommRing L := hcomm
+    letI : IsDomain L := by infer_instance
+    let hfield : IsField L := IsField.of_isDomain_of_finite k L
+    letI : Field L := Field.ofIsUnitOrEqZero (by
+      intro a
+      by_cases ha : a = 0
+      · exact Or.inr ha
+      · obtain ⟨b, hb⟩ := hfield.mul_inv_cancel ha
+        exact Or.inl ((isUnit_iff_exists_inv).2 ⟨b, hb⟩))
+    let fL : L →ₐ[k] K := L.val
+    letI : Algebra.IsSeparable k L := by
+      constructor
+      intro y
+      have hsepK : ∀ z : K, ∀ hz : z ∈ L,
+          IsSeparable k (⟨z, hz⟩ : L) := by
+        intro z hz
+        change z ∈ Algebra.adjoin k ({x} : Set K) at hz
+        induction hz using Algebra.adjoin_induction with
+        | mem z hz =>
+            rcases Set.mem_singleton_iff.mp hz with rfl
+            apply (isSeparable_map_iff L.val Subtype.val_injective).mp
+            change IsSeparable k z
+            exact hxsep
+        | algebraMap r =>
+            exact isSeparable_algebraMap r
+        | add z w hz hw hz' hw' =>
+            convert Field.isSeparable_add (F := k) (E := L) hz' hw' using 1 <;> rfl
+        | mul z w hz hw hz' hw' =>
+            convert Field.isSeparable_mul (F := k) (E := L) hz' hw' using 1 <;> rfl
+      exact hsepK (y : K) y.property
+    have hfL : Function.Injective fL := Subtype.val_injective
+    obtain ⟨pkg⟩ := centralizer_division_package k L K fL hfL
+    let C := pkg.carrier
+    letI : DivisionRing C := pkg.divisionRing
+    letI : Algebra k C := pkg.baseAlgebra
+    letI : Algebra L C := pkg.algebra
+    letI : IsScalarTower k L C := pkg.tower
+    letI : FiniteDimensional L C := pkg.finite
+    letI : Algebra.IsCentral L C := pkg.central
+    have hLne : L ≠ (⊥ : Subalgebra k K) := by
+      intro hLbot
+      apply hx
+      have hxL : x ∈ L := Algebra.subset_adjoin (Set.mem_singleton x)
+      rw [hLbot] at hxL
+      exact hxL
+    have hLdim_ne : Module.finrank k L ≠ 1 := by
+      intro hLdim
+      apply hLne
+      exact Subalgebra.eq_bot_of_finrank_one hLdim
+    have hLpos : 0 < Module.finrank k L := Module.finrank_pos
+    have hLgt : 1 < Module.finrank k L := by omega
+    have hCpos : 0 < Module.finrank L C := Module.finrank_pos
+    have hfirst : Module.finrank L C < Module.finrank k L * Module.finrank L C := by
+      simpa using Nat.mul_lt_mul_of_pos_right hLgt hCpos
+    have hsecond : Module.finrank k L * Module.finrank L C <
+        Module.finrank k L * (Module.finrank k L * Module.finrank L C) := by
+      exact Nat.mul_lt_mul_of_pos_left hfirst hLpos
+    have hlt : Module.finrank L C < Module.finrank k K := by
+      calc
+        Module.finrank L C < Module.finrank k L * Module.finrank L C := hfirst
+        _ < Module.finrank k L * (Module.finrank k L * Module.finrank L C) := hsecond
+        _ = Module.finrank k L * Module.finrank k C := by
+          rw [Module.finrank_mul_finrank k L C]
+        _ = Module.finrank k K := by simpa [C] using pkg.dimension.symm
+    obtain ⟨q⟩ := exists_separable_maximal_subfield_same_universe (k := L) (K := C)
+    let M := q.carrier
+    letI : Field M := q.field
+    letI : Algebra L M := q.algebra
+    letI : FiniteDimensional L M := q.finite
+    letI : Algebra.IsSeparable L M := q.separable
+    letI : Algebra k M :=
+      RingHom.toAlgebra ((algebraMap L M).comp (algebraMap k L))
+    letI : IsScalarTower k L M := IsScalarTower.of_algebraMap_eq' rfl
+    letI : FiniteDimensional k M := FiniteDimensional.trans k L M
+    letI : Algebra.IsSeparable k M := Algebra.IsSeparable.trans k L M
+    let g : M →ₐ[k] K := pkg.embedding.comp (q.embedding.restrictScalars k)
+    have hg : Function.Injective g := pkg.injective.comp q.injective
+    have hdimC : Module.finrank L C = Module.finrank L M ^ 2 :=
+      maximal_subfield_dimension_square L C M q.embedding q.injective q.maximal
+    have hdimM : Module.finrank k M = Module.finrank k L * Module.finrank L M :=
+      Module.finrank_mul_finrank k L M |>.symm
+    have hdimK : Module.finrank k K = Module.finrank k M ^ 2 := by
+      calc
+        Module.finrank k K = Module.finrank k L * Module.finrank k C := pkg.dimension
+        _ = Module.finrank k L * (Module.finrank k L * Module.finrank L C) := by
+          rw [Module.finrank_mul_finrank k L C]
+        _ = Module.finrank k L * (Module.finrank k L * (Module.finrank L M ^ 2)) := by
+          rw [hdimC]
+        _ = (Module.finrank k L * Module.finrank L M) ^ 2 := by
+          simp [pow_two, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+        _ = Module.finrank k M ^ 2 := by rw [hdimM]
+    have hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range g) :=
+      ((self_centralizing_subfield_tfae k K M g hg).out 0 2).mp hdimK
+    let result : SeparableMaximalSubfield k K := ⟨M, g, hg, hmax⟩
+    exact ⟨result⟩
+  termination_by Module.finrank k K
+  decreasing_by exact hlt
+
 theorem exists_separable_maximal_subfield (k K : Type*) [Field k]
     [DivisionRing K] [Algebra k K] [FiniteDimensional k K]
     [Algebra.IsCentral k K] :
     Nonempty (SeparableMaximalSubfield k K) := by
-  sorry
-
+  classical
+  let f : K →ₐ[k] K := AlgHom.id k K
+  by_cases htrivial : (⊥ : Subalgebra k K) = ⊤
+  · letI : IsMulCommutative K := ⟨⟨fun x y => by
+      have hxbot : x ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      have hybot : y ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      obtain ⟨a, ha⟩ := Algebra.mem_bot.mp hxbot
+      obtain ⟨b, hb⟩ := Algebra.mem_bot.mp hybot
+      calc
+        x * y = algebraMap k K a * algebraMap k K b := by rw [ha, hb]
+        _ = algebraMap k K (a * b) := (map_mul (algebraMap k K) a b).symm
+        _ = algebraMap k K (b * a) := congrArg (algebraMap k K) (mul_comm a b)
+        _ = algebraMap k K b * algebraMap k K a := map_mul (algebraMap k K) b a
+        _ = y * x := by rw [← hb, ← ha]⟩⟩
+    letI : CommRing K := inferInstance
+    letI : Field K := Field.ofIsUnitOrEqZero (by
+      intro x
+      by_cases hx : x = 0
+      · exact Or.inr hx
+      · exact Or.inl (isUnit_iff_ne_zero.mpr hx))
+    letI : Algebra.IsSeparable k K := by
+      constructor
+      intro x
+      have hxbot : x ∈ (⊥ : Subalgebra k K) := by
+        rw [htrivial]
+        exact trivial
+      obtain ⟨r, hr⟩ := Algebra.mem_bot.mp hxbot
+      rw [← hr]
+      exact isSeparable_algebraMap r
+    have hf : Function.Injective f := by
+      intro x y hxy
+      exact hxy
+    have hrange : AlgHom.range f = ⊤ := by
+      apply le_antisymm le_top
+      rw [← htrivial]
+      exact bot_le
+    have hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range f) := by
+      rw [hrange]
+      constructor
+      · intro x y
+        have hxbot : (x : K) ∈ (⊥ : Subalgebra k K) := by
+          rw [htrivial]
+          exact x.property
+        have hybot : (y : K) ∈ (⊥ : Subalgebra k K) := by
+          rw [htrivial]
+          exact y.property
+        obtain ⟨a, ha⟩ := Algebra.mem_bot.mp hxbot
+        obtain ⟨b, hb⟩ := Algebra.mem_bot.mp hybot
+        change (x : K) * (y : K) = (y : K) * (x : K)
+        calc
+          (x : K) * (y : K) = algebraMap k K a * algebraMap k K b := by
+            rw [ha, hb]
+          _ = algebraMap k K (a * b) := (map_mul (algebraMap k K) a b).symm
+          _ = algebraMap k K (b * a) := congrArg (algebraMap k K) (mul_comm a b)
+          _ = algebraMap k K b * algebraMap k K a := map_mul (algebraMap k K) b a
+          _ = (y : K) * (x : K) := by rw [← hb, ← ha]
+      · intro T _ hle
+        exact le_antisymm le_top hle
+    let result : SeparableMaximalSubfield k K := ⟨K, f, hf, hmax⟩
+    exact ⟨result⟩
+  · obtain ⟨x, hx, hxsep⟩ :=
+      JacobsonNoether.exists_separable_and_not_isCentral' (L := k) (D := K) htrivial
+    let L : Subalgebra k K := Algebra.adjoin k ({x} : Set K)
+    letI : IsMulCommutative L := by
+      dsimp [L]
+      infer_instance
+    let hring : Ring L := inferInstance
+    letI : Ring L := hring
+    let hcomm : CommRing L := { hring with
+      mul_comm := fun a b => mul_comm a b }
+    letI : CommRing L := hcomm
+    letI : IsDomain L := by infer_instance
+    let hfield : IsField L := IsField.of_isDomain_of_finite k L
+    letI : Field L := Field.ofIsUnitOrEqZero (by
+      intro a
+      by_cases ha : a = 0
+      · exact Or.inr ha
+      · obtain ⟨b, hb⟩ := hfield.mul_inv_cancel ha
+        exact Or.inl ((isUnit_iff_exists_inv).2 ⟨b, hb⟩))
+    let fL : L →ₐ[k] K := L.val
+    letI : Algebra.IsSeparable k L := by
+      constructor
+      intro y
+      have hsepK : ∀ z : K, ∀ hz : z ∈ L,
+          IsSeparable k (⟨z, hz⟩ : L) := by
+        intro z hz
+        change z ∈ Algebra.adjoin k ({x} : Set K) at hz
+        induction hz using Algebra.adjoin_induction with
+        | mem z hz =>
+            rcases Set.mem_singleton_iff.mp hz with rfl
+            apply (isSeparable_map_iff L.val Subtype.val_injective).mp
+            change IsSeparable k z
+            exact hxsep
+        | algebraMap r =>
+            exact isSeparable_algebraMap r
+        | add z w hz hw hz' hw' =>
+            convert Field.isSeparable_add (F := k) (E := L) hz' hw' using 1 <;> rfl
+        | mul z w hz hw hz' hw' =>
+            convert Field.isSeparable_mul (F := k) (E := L) hz' hw' using 1 <;> rfl
+      exact hsepK (y : K) y.property
+    have hfL : Function.Injective fL := Subtype.val_injective
+    obtain ⟨pkg⟩ := centralizer_division_package k L K fL hfL
+    let C := pkg.carrier
+    letI : DivisionRing C := pkg.divisionRing
+    letI : Algebra k C := pkg.baseAlgebra
+    letI : Algebra L C := pkg.algebra
+    letI : IsScalarTower k L C := pkg.tower
+    letI : FiniteDimensional L C := pkg.finite
+    letI : Algebra.IsCentral L C := pkg.central
+    have hLne : L ≠ (⊥ : Subalgebra k K) := by
+      intro hLbot
+      apply hx
+      have hxL : x ∈ L := Algebra.subset_adjoin (Set.mem_singleton x)
+      rw [hLbot] at hxL
+      exact hxL
+    have hLdim_ne : Module.finrank k L ≠ 1 := by
+      intro hLdim
+      apply hLne
+      exact Subalgebra.eq_bot_of_finrank_one hLdim
+    have hLpos : 0 < Module.finrank k L := Module.finrank_pos
+    have hLgt : 1 < Module.finrank k L := by omega
+    have hCpos : 0 < Module.finrank L C := Module.finrank_pos
+    have hfirst : Module.finrank L C < Module.finrank k L * Module.finrank L C := by
+      simpa using Nat.mul_lt_mul_of_pos_right hLgt hCpos
+    have hsecond : Module.finrank k L * Module.finrank L C <
+        Module.finrank k L * (Module.finrank k L * Module.finrank L C) := by
+      exact Nat.mul_lt_mul_of_pos_left hfirst hLpos
+    have hlt : Module.finrank L C < Module.finrank k K := by
+      calc
+        Module.finrank L C < Module.finrank k L * Module.finrank L C := hfirst
+        _ < Module.finrank k L * (Module.finrank k L * Module.finrank L C) := hsecond
+        _ = Module.finrank k L * Module.finrank k C := by
+          rw [Module.finrank_mul_finrank k L C]
+        _ = Module.finrank k K := by simpa [C] using pkg.dimension.symm
+    obtain ⟨q⟩ := exists_separable_maximal_subfield_same_universe (k := L) (K := C)
+    let M := q.carrier
+    letI : Field M := q.field
+    letI : Algebra L M := q.algebra
+    letI : FiniteDimensional L M := q.finite
+    letI : Algebra.IsSeparable L M := q.separable
+    letI : Algebra k M :=
+      RingHom.toAlgebra ((algebraMap L M).comp (algebraMap k L))
+    letI : IsScalarTower k L M := IsScalarTower.of_algebraMap_eq' rfl
+    letI : FiniteDimensional k M := FiniteDimensional.trans k L M
+    letI : Algebra.IsSeparable k M := Algebra.IsSeparable.trans k L M
+    let g : M →ₐ[k] K := pkg.embedding.comp (q.embedding.restrictScalars k)
+    have hg : Function.Injective g := pkg.injective.comp q.injective
+    have hdimC : Module.finrank L C = Module.finrank L M ^ 2 :=
+      maximal_subfield_dimension_square L C M q.embedding q.injective q.maximal
+    have hdimM : Module.finrank k M = Module.finrank k L * Module.finrank L M :=
+      Module.finrank_mul_finrank k L M |>.symm
+    have hdimK : Module.finrank k K = Module.finrank k M ^ 2 := by
+      calc
+        Module.finrank k K = Module.finrank k L * Module.finrank k C := pkg.dimension
+        _ = Module.finrank k L * (Module.finrank k L * Module.finrank L C) := by
+          rw [Module.finrank_mul_finrank k L C]
+        _ = Module.finrank k L * (Module.finrank k L * (Module.finrank L M ^ 2)) := by
+          rw [hdimC]
+        _ = (Module.finrank k L * Module.finrank L M) ^ 2 := by
+          simp [pow_two, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+        _ = Module.finrank k M ^ 2 := by rw [hdimM]
+    have hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range g) :=
+      ((self_centralizing_subfield_tfae k K M g hg).out 0 2).mp hdimK
+    let result : SeparableMaximalSubfield k K := ⟨M, g, hg, hmax⟩
+    exact ⟨result⟩
 /-- A finite separable extension which splits a given algebra. -/
 structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where
@@ -1219,7 +1680,48 @@ structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] 
 theorem brauer_class_has_finite_separable_splitting_field (k : Type*)
     [Field k] :
     ∀ A : CSA k, Nonempty (FiniteSeparableSplittingField k A.carrier) := by
-  sorry
+  intro A
+  obtain ⟨rep⟩ := wedderburn_artin_finite_central_division_representative k A
+  letI : DivisionRing rep.division.carrier := rep.division.divisionRing
+  letI : Algebra k rep.division.carrier := rep.division.algebra
+  letI : FiniteDimensional k rep.division.carrier := rep.division.finite
+  letI : Algebra.IsCentral k rep.division.carrier := rep.division.central
+  obtain ⟨smf⟩ := exists_separable_maximal_subfield k rep.division.carrier
+  letI : Field smf.carrier := smf.field
+  letI : Algebra k smf.carrier := smf.algebra
+  letI : FiniteDimensional k smf.carrier := smf.finite
+  letI : Algebra.IsSeparable k smf.carrier := smf.separable
+  let B : CSA k := rep.division.toCSA k
+  have hsim : IsBrauerEquivalent A B := by
+    refine ⟨1, rep.degree, one_ne_zero, Nat.ne_of_gt rep.degree_pos, ?_⟩
+    change Nonempty
+      (Matrix (Fin 1) (Fin 1) A.carrier ≃ₐ[k]
+        Matrix (Fin rep.degree) (Fin rep.degree) rep.division.carrier)
+    obtain ⟨e⟩ := rep.equivalence
+    exact ⟨(splittingMatrixOneAlgEquiv k A.carrier).trans e⟩
+  have hsplit : Splits k A.carrier smf.carrier := by
+    apply (splitting_iff_similar_embedded_subfield k smf.carrier A).2
+    refine ⟨B, hsim, smf.embedding, smf.injective, ?_⟩
+    exact maximal_subfield_dimension_square k rep.division.carrier smf.carrier
+      smf.embedding smf.injective smf.maximal
+  obtain ⟨d, hd⟩ := hsplit
+  have hdpos : 0 < d := by
+    let _ : Algebra smf.carrier (A.carrier ⊗[k] smf.carrier) :=
+      Algebra.TensorProduct.rightAlgebra
+    dsimp [SplitsInDegree] at hd
+    obtain ⟨e⟩ := hd
+    have hdne : d ≠ 0 := by
+      intro hd0
+      subst d
+      have hzero : (0 : A.carrier ⊗[k] smf.carrier) = 1 := by
+        exact e.injective (Subsingleton.elim _ _)
+      exact zero_ne_one hzero
+    exact Nat.pos_of_ne_zero hdne
+  refine ⟨{
+    carrier := smf.carrier
+    degree := d
+    degree_pos := hdpos
+    splitting := hd }⟩
 
 /-- A finite Galois splitting field, packaged with its typeclass data. -/
 structure FiniteGaloisSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]

@@ -213,7 +213,7 @@ def DirectedSectionTransitionsInjective {X : TopCat.{v}} {I : Type v}
     Function.Injective ((F.map (homOfLE hij)).1.app (op U))
 
 /-- A finite open cover with quasi-compact pairwise intersections, cofinal
-among all open covers of `U`. -/
+ among all open covers of `U`. -/
 def HasCofinalFiniteQuasiCompactOpenCover {X : TopCat.{v}} (U : Opens X) : Prop :=
   ∀ (K : Type v) (V : K → Opens X),
     (⨆ k, V k) = U →

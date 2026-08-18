@@ -830,7 +830,50 @@ theorem exact_cokernel_sequence
       (inducedCokernelMap f k α β h₁)
       (inducedCokernelMap g l β γ h₂)
       (induced_cokernel_maps_comp_zero hkl h₁ h₂)).Exact := by
-  sorry
+  rw [exact_iff_epi_refinement]
+  intro S c hc
+  obtain ⟨T, d, hd, e, hde⟩ :=
+    surjective_up_to_refinements_of_epi (cokernel.π β) c
+  have hcl : (e ≫ l) ≫ cokernel.π γ = 0 := by
+    calc
+      (e ≫ l) ≫ cokernel.π γ = e ≫ (l ≫ cokernel.π γ) := by simp [Category.assoc]
+      _ = e ≫ cokernel.π β ≫
+          inducedCokernelMap g l β γ h₂ := by
+            simp [inducedCokernelMap]
+      _ = d ≫ c ≫ inducedCokernelMap g l β γ h₂ := by
+        simpa [Category.assoc] using
+          (congrArg (fun q => q ≫ inducedCokernelMap g l β γ h₂) hde).symm
+      _ = 0 := by simpa [Category.assoc] using congrArg (fun q => d ≫ q) hc
+  obtain ⟨T₁, d₁, z, hd₁, hze⟩ :=
+    (exact_iff_epi_refinement γ (cokernel.π γ) (cokernel.condition γ)).1
+      (ShortComplex.cokernelSequence_exact γ) (e ≫ l) hcl
+  obtain ⟨T₂, d₂, hd₂, y, hdy⟩ :=
+    surjective_up_to_refinements_of_epi g z
+  have hzero : ((d₂ ≫ (d₁ ≫ e)) - (y ≫ β)) ≫ l = 0 := by
+    rw [sub_comp]
+    calc
+      (d₂ ≫ (d₁ ≫ e)) ≫ l - (y ≫ β) ≫ l =
+          d₂ ≫ (d₁ ≫ (e ≫ l)) - y ≫ (β ≫ l) := by simp [Category.assoc]
+      _ = d₂ ≫ (z ≫ γ) - y ≫ (g ≫ γ) := by rw [hze, ← h₂]
+      _ = (d₂ ≫ z) ≫ γ - (y ≫ g) ≫ γ := by simp [Category.assoc]
+      _ = 0 := by rw [hdy]; simp
+  obtain ⟨T₃, d₃, x, hd₃, hx⟩ :=
+    (exact_iff_epi_refinement k l hkl).1 hrow
+      ((d₂ ≫ (d₁ ≫ e)) - (y ≫ β)) hzero
+  refine ⟨T₃, d₃ ≫ d₂ ≫ d₁ ≫ d, x ≫ cokernel.π α, ?_, ?_⟩
+  · infer_instance
+  · have hx' : d₃ ≫ (d₂ ≫ d₁ ≫ e) =
+        x ≫ k + d₃ ≫ (y ≫ β) := by
+      have h := congrArg (fun q => q + d₃ ≫ (y ≫ β)) hx
+      simpa only [comp_sub, sub_add_cancel] using h
+    calc
+      d₃ ≫ (d₂ ≫ d₁ ≫ d) ≫ c =
+          d₃ ≫ (d₂ ≫ d₁ ≫ e) ≫ cokernel.π β := by
+            simp [Category.assoc, hde]
+      _ = (x ≫ k + d₃ ≫ (y ≫ β)) ≫ cokernel.π β := by rw [hx']
+      _ = (x ≫ k) ≫ cokernel.π β := by simp [Category.assoc]
+      _ = (x ≫ cokernel.π α) ≫ inducedCokernelMap f k α β h₁ := by
+        simp [inducedCokernelMap, Category.assoc]
 
 /-! ## The snake lemma and its naturality -/
 

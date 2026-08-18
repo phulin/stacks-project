@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit03.BasicNotions
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Ideal.Maps
@@ -43,8 +44,8 @@ theorem exists_maximal_mem_support {R M : Type*} [CommRing R] [AddCommGroup M] [
    the source-facing theorem is stated using Mathlib's universe-polymorphic form. -/
 theorem annihilator_element_mem_iff {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (m : M) (r : R) :
-    r ∈ (Submodule.span R ({m} : Set M)).annihilator ↔ r • m = 0 :=
-  Submodule.mem_annihilator_span_singleton m r
+    r ∈ Formalization.Books.Algebra.Unit03.annihilatorOf m ↔ r • m = 0 :=
+  Formalization.Books.Algebra.Unit03.annihilatorOf_mem_iff m r
 
 /- `Module.annihilator R M` is Mathlib's canonical ideal of scalars annihilating every
    element of `M`. -/
@@ -58,8 +59,8 @@ theorem annihilator_module_mem_iff {R M : Type*} [CommRing R] [AddCommGroup M] [
 theorem annihilator_element_flat_base_change
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module R M] [Module.Flat R S] (m : M) :
-    (Submodule.span R ({m} : Set M)).annihilator.map (algebraMap R S) =
-      (Submodule.span S ({(1 ⊗ₜ[R] m)} : Set (S ⊗[R] M))).annihilator := by
+    (Formalization.Books.Algebra.Unit03.annihilatorOf m).map (algebraMap R S) =
+      Formalization.Books.Algebra.Unit03.annihilatorOf ((1 : S) ⊗ₜ[R] m) := by
   sorry
 
 theorem annihilator_module_flat_base_change
@@ -93,7 +94,7 @@ theorem support_element_iff
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (p : PrimeSpectrum R) (m : M) :
     p ∈ PrimeSpectrum.zeroLocus
-      ((Submodule.span R ({m} : Set M)).annihilator : Set R) ↔
+      ((Formalization.Books.Algebra.Unit03.annihilatorOf m : Ideal R) : Set R) ↔
       (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m ≠ 0 := by
   sorry
 

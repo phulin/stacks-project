@@ -7,9 +7,12 @@ import Mathlib.Algebra.Polynomial.Eval.Algebra
 import Mathlib.GroupTheory.Congruence.Hom
 import Mathlib.GroupTheory.FreeAbelianGroup
 import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
+import Mathlib.LinearAlgebra.DirectSum.Finite
+import Mathlib.LinearAlgebra.Dimension.Torsion.Finite
 import Mathlib.RingTheory.EuclideanDomain
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Finiteness.Cardinality
+import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.RingTheory.LocalRing.Module
 
 /-!
@@ -898,14 +901,460 @@ theorem finite_module_structure_pid
     ((Finsupp.linearEquivFunOnFinite R R (Fin r)).prodCongr
       (DirectSum.lequivCongrLeft R eι))⟩
 
+private theorem kZeroClassOfPresentation_eq_of_linearEquiv
+    {R : Type u} [CommRing R]
+    (P Q : FiniteProjectivePresentation R)
+    (ePQ : P.presentation.module ≃ₗ[R] Q.presentation.module) :
+    kZeroClassOfPresentation P =
+      kZeroClassOfPresentation Q := by
+  let Z : FiniteProjectivePresentation R :=
+    { presentation := ⟨0, ⊥⟩
+      projective := by infer_instance }
+  let S : FiniteProjectiveShortExact R :=
+    { left := P
+      middle := Q
+      right := Z
+      leftToMiddle := ePQ.toLinearMap
+      middleToRight := 0
+      left_injective := ePQ.injective
+      middle_surjective := by
+        intro z
+        exact ⟨0, Subsingleton.elim _ _⟩
+      exact :=
+        (LinearMap.exact_zero_iff_surjective Z.presentation.module
+          ePQ.toLinearMap).2 ePQ.surjective }
+  have hrel : kZeroCon R
+      (kZeroGenerator Q)
+      (kZeroGenerator P + kZeroGenerator Z) := by
+    change AddConGen.Rel
+      (fun x y : KZeroFree R =>
+        ∃ S : FiniteProjectiveShortExact R, kZeroRelation S x y)
+      (kZeroGenerator Q)
+      (kZeroGenerator P + kZeroGenerator Z)
+    exact AddConGen.Rel.of _ _ ⟨S, rfl, rfl⟩
+  have hq :
+      kZeroClassOfPresentation Q =
+        kZeroClassOfPresentation P + kZeroClassOfPresentation Z := by
+    change (kZeroGenerator Q : KZero R) =
+      (kZeroGenerator P + kZeroGenerator Z : KZero R)
+    exact (kZeroCon R).eq.mpr hrel
+  let T : FiniteProjectiveShortExact R :=
+    { left := Z
+      middle := Z
+      right := Z
+      leftToMiddle := 0
+      middleToRight := 0
+      left_injective := by
+        intro z₁ z₂ _
+        exact Subsingleton.elim _ _
+      middle_surjective := by
+        intro z
+        exact ⟨0, Subsingleton.elim _ _⟩
+      exact :=
+        (LinearMap.exact_zero_iff_surjective Z.presentation.module
+          (0 : Z.presentation.module →ₗ[R] Z.presentation.module)).2 (by
+            intro z
+            exact ⟨0, Subsingleton.elim _ _⟩) }
+  have hrelZ : kZeroCon R
+      (kZeroGenerator Z)
+      (kZeroGenerator Z + kZeroGenerator Z) := by
+    change AddConGen.Rel
+      (fun x y : KZeroFree R =>
+        ∃ S : FiniteProjectiveShortExact R, kZeroRelation S x y)
+      (kZeroGenerator Z)
+      (kZeroGenerator Z + kZeroGenerator Z)
+    exact AddConGen.Rel.of _ _ ⟨T, rfl, rfl⟩
+  have hqZ :
+      kZeroClassOfPresentation Z =
+        kZeroClassOfPresentation Z + kZeroClassOfPresentation Z := by
+    change (kZeroGenerator Z : KZero R) =
+      (kZeroGenerator Z + kZeroGenerator Z : KZero R)
+    exact (kZeroCon R).eq.mpr hrelZ
+  have hzero : kZeroClassOfPresentation Z = 0 := by
+    have hqZ' :
+        kZeroClassOfPresentation Z + kZeroClassOfPresentation Z =
+          kZeroClassOfPresentation Z := hqZ.symm
+    calc
+      kZeroClassOfPresentation Z =
+          kZeroClassOfPresentation Z + 0 := (add_zero _).symm
+      _ = kZeroClassOfPresentation Z +
+            (kZeroClassOfPresentation Z - kZeroClassOfPresentation Z) := by
+            rw [sub_self, add_zero]
+      _ = (kZeroClassOfPresentation Z +
+            kZeroClassOfPresentation Z) -
+            kZeroClassOfPresentation Z := by abel
+      _ = kZeroClassOfPresentation Z -
+            kZeroClassOfPresentation Z := by rw [hqZ']
+      _ = 0 := sub_self _
+  rw [hq, hzero, add_zero]
+
+private theorem kZeroClass_eq_of_linearEquiv
+    {R : Type u} [CommRing R] {M N : Type v}
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.Projective R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    [Module.Projective R N]
+    (e : M ≃ₗ[R] N) :
+    kZeroClass (R := R) (M := M) =
+      kZeroClass (R := R) (M := N) := by
+  let P := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := M))
+  let Q := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := N))
+  let eP := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := M)))
+  let eQ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := N)))
+  let ePQ : P.presentation.module ≃ₗ[R] Q.presentation.module :=
+    eP.trans (e.trans eQ.symm)
+  change kZeroClassOfPresentation P = kZeroClassOfPresentation Q
+  exact kZeroClassOfPresentation_eq_of_linearEquiv P Q ePQ
+
+private theorem kZeroClass_eq_of_presentation
+    {R : Type u} [CommRing R] (P : FiniteProjectivePresentation R) :
+    kZeroClass (R := R) (M := P.presentation.module) =
+      kZeroClassOfPresentation P := by
+  let Q := Classical.choose
+    (exists_finite_projective_presentation
+      (R := R) (M := P.presentation.module))
+  let eQ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation
+        (R := R) (M := P.presentation.module)))
+  change kZeroClassOfPresentation Q = kZeroClassOfPresentation P
+  exact kZeroClassOfPresentation_eq_of_linearEquiv Q P
+    (eQ.trans (LinearEquiv.refl R P.presentation.module))
+
+private theorem kPrimeZeroClass_prod
+    {R : Type u} [CommRing R]
+    {M N : Type u} [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N] :
+    kPrimeZeroClass (R := R) (M := M × N) =
+      kPrimeZeroClass (R := R) (M := M) +
+        kPrimeZeroClass (R := R) (M := N) := by
+  exact kPrimeZeroClass_exact (LinearMap.inl R M N) (LinearMap.snd R M N)
+    LinearMap.inl_injective LinearMap.snd_surjective (by exact .inl_snd)
+
 /-- For a field, both K-groups are identified with ℤ by dimension. -/
+private theorem kZeroClass_prod
+    {R : Type u} [CommRing R]
+    {M N : Type u} [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.Projective R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    [Module.Projective R N] :
+    kZeroClass (R := R) (M := M × N) =
+      kZeroClass (R := R) (M := M) +
+        kZeroClass (R := R) (M := N) := by
+  exact kZeroClass_exact (LinearMap.inl R M N) (LinearMap.snd R M N)
+    LinearMap.inl_injective LinearMap.snd_surjective (by exact .inl_snd)
+
+private theorem kPrimeZeroClass_subsingleton
+    {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Subsingleton M] :
+    kPrimeZeroClass (R := R) (M := M) = 0 := by
+  have hs : Function.Surjective (0 : M →ₗ[R] M) := by
+    intro x
+    exact ⟨0, Subsingleton.elim _ _⟩
+  have hi : Function.Injective (0 : M →ₗ[R] M) := by
+    intro x y _
+    exact Subsingleton.elim _ _
+  have h := kPrimeZeroClass_exact (0 : M →ₗ[R] M) (0 : M →ₗ[R] M)
+    hi hs ((LinearMap.exact_zero_iff_surjective M (0 : M →ₗ[R] M)).2 hs)
+  have h' : kPrimeZeroClass (R := R) (M := M) +
+      kPrimeZeroClass (R := R) (M := M) =
+      kPrimeZeroClass (R := R) (M := M) := h.symm
+  calc
+    kPrimeZeroClass (R := R) (M := M) =
+        kPrimeZeroClass (R := R) (M := M) + 0 := (add_zero _).symm
+    _ = kPrimeZeroClass (R := R) (M := M) +
+        (kPrimeZeroClass (R := R) (M := M) -
+          kPrimeZeroClass (R := R) (M := M)) := by rw [sub_self, add_zero]
+    _ = (kPrimeZeroClass (R := R) (M := M) +
+          kPrimeZeroClass (R := R) (M := M)) -
+        kPrimeZeroClass (R := R) (M := M) := by abel
+    _ = kPrimeZeroClass (R := R) (M := M) -
+        kPrimeZeroClass (R := R) (M := M) := by rw [h']
+    _ = 0 := sub_self _
+
+private theorem kZeroClass_subsingleton
+    {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.Projective R M] [Subsingleton M] :
+    kZeroClass (R := R) (M := M) = 0 := by
+  have hs : Function.Surjective (0 : M →ₗ[R] M) := by
+    intro x
+    exact ⟨0, Subsingleton.elim _ _⟩
+  have hi : Function.Injective (0 : M →ₗ[R] M) := by
+    intro x y _
+    exact Subsingleton.elim _ _
+  have h := kZeroClass_exact (0 : M →ₗ[R] M) (0 : M →ₗ[R] M)
+    hi hs ((LinearMap.exact_zero_iff_surjective M (0 : M →ₗ[R] M)).2 hs)
+  have h' : kZeroClass (R := R) (M := M) + kZeroClass (R := R) (M := M) =
+      kZeroClass (R := R) (M := M) := h.symm
+  calc
+    kZeroClass (R := R) (M := M) = kZeroClass (R := R) (M := M) + 0 :=
+      (add_zero _).symm
+    _ = kZeroClass (R := R) (M := M) +
+        (kZeroClass (R := R) (M := M) - kZeroClass (R := R) (M := M)) := by
+      rw [sub_self, add_zero]
+    _ = (kZeroClass (R := R) (M := M) + kZeroClass (R := R) (M := M)) -
+        kZeroClass (R := R) (M := M) := by abel
+    _ = kZeroClass (R := R) (M := M) - kZeroClass (R := R) (M := M) := by rw [h']
+    _ = 0 := sub_self _
+
 theorem kGroups_field
     (k : Type u) [Field k] :
     ∃ e₀ : KZero k ≃+ ℤ, ∃ e₀' : KPrimeZero k ≃+ ℤ,
       (∀ x, e₀ x = kZeroRank x) ∧
       (∀ x, e₀' x = kPrimeZeroLength x) ∧
       (∀ x, e₀' (kZeroToKPrime x) = e₀ x) := by
-  sorry
+  have hfiniteProjectiveRank (P : FiniteProjectivePresentation k) :
+      finiteProjectiveRank P = Module.finrank k P.presentation.module := by
+    let e := Classical.choice
+      (Classical.choose_spec
+        (finite_projective_is_finite_free_over_local
+          (R := k) (M := P.presentation.module)))
+    have he := e.finrank_eq
+    simpa [finiteProjectiveRank, Module.finrank_pi] using he.symm
+  have hfreeZero (n : ℕ) :
+      kZeroClass (R := k) (M := Fin n → k) =
+        (n : ℤ) • kZeroClass (R := k) (M := k) := by
+    induction n with
+    | zero =>
+        simpa using
+          (kZeroClass_subsingleton (R := k) (M := Fin 0 → k))
+    | succ n ih =>
+        let e :=
+          LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
+            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
+        rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
+        simp [add_smul, add_comm, add_left_comm, add_assoc]
+  have hfreePrime (n : ℕ) :
+      kPrimeZeroClass (R := k) (M := Fin n → k) =
+        (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := by
+    induction n with
+    | zero =>
+        simpa using
+          (kPrimeZeroClass_subsingleton (R := k) (M := Fin 0 → k))
+    | succ n ih =>
+        let e :=
+          LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
+            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
+        rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
+        simp [add_smul, add_comm, add_left_comm, add_assoc]
+  have hclassZero (P : FiniteProjectivePresentation k) :
+      kZeroClassOfPresentation P =
+        (finiteProjectiveRank P : ℤ) •
+          kZeroClass (R := k) (M := k) := by
+    let _ : Module.Free k P.presentation.module :=
+      finite_projective_is_free_pid
+    let n := Classical.choose
+      (exists_finite_free_equiv (R := k) (M := P.presentation.module))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := k) (M := P.presentation.module)))
+    have hn : finiteProjectiveRank P = n := by
+      rw [hfiniteProjectiveRank]
+      have he := e.finrank_eq
+      simpa [Module.finrank_pi] using he
+    calc
+      kZeroClassOfPresentation P =
+          kZeroClass (R := k) (M := P.presentation.module) :=
+        (kZeroClass_eq_of_presentation P).symm
+      _ = kZeroClass (R := k) (M := Fin n → k) :=
+        kZeroClass_eq_of_linearEquiv e
+      _ = (n : ℤ) • kZeroClass (R := k) (M := k) := hfreeZero n
+      _ = (finiteProjectiveRank P : ℤ) •
+          kZeroClass (R := k) (M := k) := by rw [hn]
+  have hclassPrime (P : FiniteModulePresentation k) :
+      kPrimeZeroClassOfPresentation P =
+        (Classical.choose
+          (exists_finite_free_equiv (R := k) (M := P.module)) : ℕ) •
+          kPrimeZeroClass (R := k) (M := k) := by
+    let _ : Module.Free k P.module := inferInstance
+    let n := Classical.choose
+      (exists_finite_free_equiv (R := k) (M := P.module))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := k) (M := P.module)))
+    calc
+      kPrimeZeroClassOfPresentation P =
+          kPrimeZeroClass (R := k) (M := P.module) :=
+        (kPrimeZeroClass_eq_of_presentation P).symm
+      _ = kPrimeZeroClass (R := k) (M := Fin n → k) :=
+        kPrimeZeroClass_eq_of_linearEquiv e
+      _ = (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := hfreePrime n
+  let P₀ := Classical.choose
+    (exists_finite_projective_presentation (R := k) (M := k))
+  let eP₀ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := k) (M := k)))
+  let c : KZero k := kZeroClassOfPresentation P₀
+  have hc : kZeroRank (R := k) c = 1 := by
+    rw [kZeroRank_apply_class, hfiniteProjectiveRank]
+    simpa using eP₀.finrank_eq
+  let P₀' := Classical.choose
+    (exists_finite_module_presentation (R := k) (M := k))
+  let eP₀' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := k) (M := k)))
+  let c' : KPrimeZero k := kPrimeZeroClassOfPresentation P₀'
+  have hc' : kPrimeZeroLength (R := k) c' = 1 := by
+    change kPrimeZeroLength (R := k)
+      (kPrimeZeroClassOfPresentation P₀') = 1
+    rw [← kPrimeZeroClass_eq_of_presentation P₀',
+      kPrimeZeroLength_field_eq_finrank]
+    simpa using eP₀'.finrank_eq
+  have hcZero : kZeroClass (R := k) (M := k) = c := by
+    calc
+      kZeroClass (R := k) (M := k) =
+          kZeroClass (R := k) (M := P₀.presentation.module) :=
+        kZeroClass_eq_of_linearEquiv eP₀.symm
+      _ = c := kZeroClass_eq_of_presentation (R := k) P₀
+  have hcPrime : kPrimeZeroClass (R := k) (M := k) = c' := by
+    calc
+      kPrimeZeroClass (R := k) (M := k) =
+          kPrimeZeroClass (R := k) (M := P₀'.module) :=
+        kPrimeZeroClass_eq_of_linearEquiv eP₀'.symm
+      _ = c' := kPrimeZeroClass_eq_of_presentation (R := k) P₀'
+  have hclassZero' (P : FiniteProjectivePresentation k) :
+      kZeroClassOfPresentation P =
+        (finiteProjectiveRank P : ℤ) • c := by
+    rw [hclassZero, hcZero]
+  have hclassPrime' (P : FiniteModulePresentation k) :
+      kPrimeZeroClassOfPresentation P =
+        (Classical.choose
+          (exists_finite_free_equiv (R := k) (M := P.module)) : ℕ) • c' := by
+    rw [hclassPrime, hcPrime]
+  have hreprZero (x : KZero k) :
+      x = (kZeroRank (R := k) x) • c := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    have hrank : kZeroRank (R := k) x =
+        ∑ i, z i * (finiteProjectiveRank (P i) : ℤ) := by
+      rw [hx]
+      simp only [map_sum, map_zsmul, kZeroRank_apply_class, smul_eq_mul]
+    calc
+      x = ∑ i, z i • kZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i • ((finiteProjectiveRank (P i) : ℤ) • c) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hclassZero' (P i)]
+      _ = (∑ i, z i * (finiteProjectiveRank (P i) : ℤ)) • c := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (kZeroRank (R := k) x) • c := by rw [hrank]
+  have hreprPrime (x : KPrimeZero k) :
+      x = (kPrimeZeroLength (R := k) x) • c' := by
+    rcases kPrimeZero_generated x with ⟨n, P, z, hx⟩
+    let q (i : Fin n) := Classical.choose
+      (exists_finite_free_equiv (R := k) (M := (P i).module))
+    have hlength : kPrimeZeroLength (R := k) x =
+        ∑ i, z i * (q i : ℤ) := by
+      rw [hx]
+      simp only [map_sum, map_zsmul]
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [kPrimeZeroLength_apply_class]
+      let e := Classical.choice
+        (Classical.choose_spec
+          (exists_finite_free_equiv (R := k) (M := (P i).module)))
+      have he := e.finrank_eq
+      have hlen : Module.finrank k (P i).module = q i := by
+        simpa [Module.finrank_pi] using he
+      have hfield := kPrimeZeroLength_field_eq_finrank
+        (k := k) (M := (P i).module)
+      rw [kPrimeZeroClass_eq_of_presentation (P i),
+        kPrimeZeroLength_apply_class] at hfield
+      rw [hfield, hlen]
+      simp [smul_eq_mul]
+    calc
+      x = ∑ i, z i • kPrimeZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i • ((q i : ℤ) • c') := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        simpa [q] using congrArg (fun y => z i • y) (hclassPrime' (P i))
+      _ = (∑ i, z i * (q i : ℤ)) • c' := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (kPrimeZeroLength (R := k) x) • c' := by rw [hlength]
+  have hinjZero : Function.Injective (kZeroRank (R := k)) := by
+    intro x y hxy
+    rw [hreprZero x, hreprZero y, hxy]
+  have hsurjZero : Function.Surjective (kZeroRank (R := k)) := by
+    intro z
+    refine ⟨z • c, ?_⟩
+    simp [hc]
+  have hinjPrime : Function.Injective (kPrimeZeroLength (R := k)) := by
+    intro x y hxy
+    rw [hreprPrime x, hreprPrime y, hxy]
+  have hsurjPrime : Function.Surjective (kPrimeZeroLength (R := k)) := by
+    intro z
+    refine ⟨z • c', ?_⟩
+    simp [hc']
+  let e₀ : KZero k ≃+ ℤ :=
+    AddEquiv.ofBijective (kZeroRank (R := k)) ⟨hinjZero, hsurjZero⟩
+  let e₀' : KPrimeZero k ≃+ ℤ :=
+    AddEquiv.ofBijective (kPrimeZeroLength (R := k))
+      ⟨hinjPrime, hsurjPrime⟩
+  have hcompatClass (P : FiniteProjectivePresentation k) :
+      kPrimeZeroLength (R := k)
+          (kZeroToKPrime (R := k) (kZeroClassOfPresentation P)) =
+        kZeroRank (R := k) (kZeroClassOfPresentation P) := by
+    rw [kZeroToKPrime_apply_class, kPrimeZeroLength_apply_class,
+      kZeroRank_apply_class]
+    rw [hfiniteProjectiveRank]
+    have hfield := kPrimeZeroLength_field_eq_finrank
+      (k := k) (M := P.presentation.module)
+    rw [kPrimeZeroClass_eq_of_presentation P.presentation,
+      kPrimeZeroLength_apply_class] at hfield
+    simpa using hfield
+  have hcompat (x : KZero k) :
+      kPrimeZeroLength (R := k) (kZeroToKPrime (R := k) x) =
+        kZeroRank (R := k) x := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    rw [hx]
+    simp only [map_sum, map_zsmul]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [hcompatClass]
+  refine ⟨e₀, e₀', ?_, ?_, ?_⟩
+  · intro x
+    rfl
+  · intro x
+    rfl
+  · intro x
+    exact hcompat x
+
+/-- Finite modules over a domain have additive finrank on products. -/
+private theorem finite_module_finrank_prod_pid
+    {R A B : Type u} [CommRing R] [IsDomain R]
+    [AddCommGroup A] [Module R A] [Module.Finite R A]
+    [AddCommGroup B] [Module R B] [Module.Finite R B] :
+    Module.finrank R (A × B) = Module.finrank R A + Module.finrank R B := by
+  have hfg : Function.Exact (LinearMap.inl R A B) (LinearMap.snd R A B) := by
+    exact .inl_snd
+  have hrank : Module.rank R (A × B) =
+      Module.rank R A + Module.rank R B := by
+    calc
+      Module.rank R (A × B) =
+          Module.rank R (LinearMap.range (LinearMap.snd R A B)) +
+            Module.rank R (LinearMap.ker (LinearMap.snd R A B)) :=
+        (LinearMap.rank_range_add_rank_ker (LinearMap.snd R A B)).symm
+      _ = Module.rank R B +
+          Module.rank R (LinearMap.range (LinearMap.inl R A B)) := by
+        rw [rank_range_of_surjective (LinearMap.snd R A B)
+          LinearMap.snd_surjective, hfg.linearMap_ker_eq]
+      _ = Module.rank R (LinearMap.range (LinearMap.inl R A B)) +
+          Module.rank R B := add_comm _ _
+      _ = Module.rank R A + Module.rank R B := by
+        rw [rank_range_of_injective (LinearMap.inl R A B)
+          LinearMap.inl_injective]
+  rw [← Nat.cast_inj (R := Cardinal), Module.finrank_eq_rank,
+    Nat.cast_add, Module.finrank_eq_rank, Module.finrank_eq_rank]
+  exact hrank
 
 /-- Torsion finite modules over a PID have zero K′₀ class. -/
 theorem kPrimeZeroClass_torsion_pid
@@ -913,14 +1362,445 @@ theorem kPrimeZeroClass_torsion_pid
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     (hM : Module.IsTorsion R M) :
     kPrimeZeroClass (R := R) (M := M) = 0 := by
-  sorry
+  have hsummand (d : R) (hd : d ≠ 0) :
+      kPrimeZeroClass (R := R)
+          (M := pidTorsionSummand R d) = 0 := by
+    let I : Ideal R := Ideal.span ({d} : Set R)
+    let f : R →ₗ[R] I :=
+      { toFun := fun r =>
+          ⟨r * d, I.mul_mem_left r (Ideal.mem_span_singleton_self d)⟩
+        map_add' := by
+          intro x y
+          ext
+          simp [add_mul]
+        map_smul' := by
+          intro r x
+          ext
+          change (r * x) * d = r * (x * d)
+          ring }
+    have hf : Function.Surjective f := by
+      intro x
+      obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton' (x := (x : R)) (y := d)).mp x.property
+      exact ⟨r, Subtype.ext hr⟩
+    let _ : Module.Finite R I := Module.Finite.of_surjective f hf
+    have hi : Function.Injective f := by
+      intro x y hxy
+      apply mul_right_cancel₀ hd
+      exact congrArg Subtype.val hxy
+    let eI : R ≃ₗ[R] I := LinearEquiv.ofBijective f ⟨hi, hf⟩
+    have hI : kPrimeZeroClass (R := R) (M := R) =
+        kPrimeZeroClass (R := R) (M := I) :=
+      kPrimeZeroClass_eq_of_linearEquiv eI
+    have hseq := kPrimeZeroClass_exact I.subtype I.mkQ
+      I.subtype_injective I.mkQ_surjective
+      (LinearMap.exact_subtype_mkQ I)
+    change kPrimeZeroClass (R := R)
+      (M := R ⧸ I) = 0
+    rw [hI] at hseq
+    have hq : kPrimeZeroClass (R := R) (M := R ⧸ I) = 0 := by
+      calc
+        kPrimeZeroClass (R := R) (M := R ⧸ I) =
+            (kPrimeZeroClass (R := R) (M := I) +
+              kPrimeZeroClass (R := R) (M := R ⧸ I)) -
+              kPrimeZeroClass (R := R) (M := I) := by abel
+        _ = kPrimeZeroClass (R := R) (M := I) -
+            kPrimeZeroClass (R := R) (M := I) := by rw [hseq.symm]
+        _ = 0 := sub_self _
+    exact hq
+  have hdirect (n : ℕ) (d : Fin n → R)
+      (hd : ∀ i, d i ≠ 0) :
+      kPrimeZeroClass (R := R)
+          (M := DirectSum (Fin n) (fun i => pidTorsionSummand R (d i))) = 0 := by
+    induction n with
+    | zero =>
+        simpa using
+          (kPrimeZeroClass_subsingleton (R := R)
+            (M := DirectSum (Fin 0) (fun i => pidTorsionSummand R (d i))))
+    | succ n ih =>
+        let e :
+            DirectSum (Fin (n + 1)) (fun i => pidTorsionSummand R (d i)) ≃ₗ[R]
+              (pidTorsionSummand R (d 0) ×
+                DirectSum (Fin n) (fun i => pidTorsionSummand R (d i.succ))) :=
+          (DirectSum.lequivCongrLeft R (finSuccEquiv n)).trans
+            (DirectSum.lequivProdDirectSum R)
+        rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod]
+        rw [hsummand (d 0) (hd 0)]
+        have hi := ih (fun i => d i.succ) (fun i => hd i.succ)
+        simpa using hi
+  obtain ⟨r, ι, _, p, hp, exp, ⟨h⟩⟩ :=
+    Module.equiv_free_prod_directSum (R := R) (M := M)
+  let eι := Fintype.equivFin ι
+  let d : Fin (Fintype.card ι) → R :=
+    fun j => p (eι.symm j) ^ exp (eι.symm j)
+  let eM := h.trans
+    ((Finsupp.linearEquivFunOnFinite R R (Fin r)).prodCongr
+      (DirectSum.lequivCongrLeft R eι))
+  have hfin : Module.finrank R M = 0 := Module.IsTorsion.finrank_eq_zero hM
+  rw [eM.finrank_eq, finite_module_finrank_prod_pid, Module.finrank_pi] at hfin
+  have hr : r + Module.finrank R
+      (DirectSum (Fin (Fintype.card ι))
+        (fun i => pidTorsionSummand R (d i))) = 0 := by
+    simpa [pidTorsionSummand, d, Module.finrank_pi] using hfin
+  have hr0 : r = 0 := by omega
+  subst r
+  have hd (i : Fin (Fintype.card ι)) : d i ≠ 0 := by
+    dsimp [d]
+    exact pow_ne_zero _ (hp (eι.symm i)).ne_zero
+  rw [kPrimeZeroClass_eq_of_linearEquiv eM, kPrimeZeroClass_prod,
+    kPrimeZeroClass_subsingleton]
+  exact hdirect _ d hd
 
 /-- For a PID, both K-groups are identified with ℤ by rank. -/
+private theorem pidTorsionSummand_isTorsion
+    {R : Type u} [CommRing R] [IsDomain R]
+    (d : R) (hd : d ≠ 0) :
+    Module.IsTorsion R (pidTorsionSummand R d) := by
+  intro x
+  refine ⟨⟨d, mem_nonZeroDivisors_of_ne_zero hd⟩, ?_⟩
+  obtain ⟨y, rfl⟩ := (Ideal.span ({d} : Set R)).mkQ_surjective x
+  change (Ideal.span ({d} : Set R)).mkQ (d * y) = 0
+  apply (Submodule.Quotient.mk_eq_zero (Ideal.span ({d} : Set R))).2
+  exact (Ideal.mem_span_singleton' (x := d * y) (y := d)).2
+    ⟨y, mul_comm y d⟩
+
+private theorem finite_directSum_isTorsion
+    {R : Type u} [CommRing R] [IsDomain R]
+    (n : ℕ) (M : Fin n → Type u)
+    [∀ i, AddCommGroup (M i)] [∀ i, Module R (M i)]
+    (hM : ∀ i, Module.IsTorsion R (M i)) :
+    Module.IsTorsion R (DirectSum (Fin n) M) := by
+  induction n with
+  | zero =>
+      intro x
+      refine ⟨⟨(1 : R), mem_nonZeroDivisors_of_ne_zero one_ne_zero⟩, ?_⟩
+      exact Subsingleton.elim _ _
+  | succ n ih =>
+      let e : DirectSum (Fin (n + 1)) M ≃ₗ[R]
+          (M 0 × DirectSum (Fin n) (fun i => M i.succ)) :=
+        (DirectSum.lequivCongrLeft R (finSuccEquiv n)).trans
+          (DirectSum.lequivProdDirectSum R)
+      have hprod : Module.IsTorsion R
+          (M 0 × DirectSum (Fin n) (fun i => M i.succ)) := by
+        rintro ⟨x, y⟩
+        obtain ⟨a, ha⟩ := hM 0 (x := x)
+        obtain ⟨b, hb⟩ :=
+          ih (M := fun i => M i.succ) (fun i => hM i.succ) (x := y)
+        have ha' : (a : R) • x = 0 := by
+          simpa only [Submonoid.smul_def] using ha
+        have hb' : (b : R) • y = 0 := by
+          simpa only [Submonoid.smul_def] using hb
+        refine ⟨⟨(a : R) * (b : R),
+          mul_mem_nonZeroDivisors.2 ⟨a.2, b.2⟩⟩, ?_⟩
+        apply Prod.ext
+        · change ((a : R) * (b : R)) • x = 0
+          calc
+            ((a : R) * (b : R)) • x = ((b : R) * (a : R)) • x := by
+              rw [mul_comm]
+            _ = (b : R) • ((a : R) • x) := by rw [mul_smul]
+            _ = 0 := by rw [ha', smul_zero]
+        · change ((a : R) * (b : R)) • y = 0
+          calc
+            ((a : R) * (b : R)) • y = (a : R) • ((b : R) • y) := by
+              rw [mul_smul]
+            _ = 0 := by rw [hb', smul_zero]
+      intro x
+      obtain ⟨a, ha⟩ := hprod (x := e x)
+      refine ⟨a, ?_⟩
+      apply e.injective
+      calc
+        e (a • x) = a • e x := e.map_smul a x
+        _ = 0 := ha
+        _ = e 0 := (e.map_zero).symm
+
+private theorem kPrimeZeroClass_free_pid
+    {R : Type u} [CommRing R] [IsDomain R]
+    (n : ℕ) :
+    kPrimeZeroClass (R := R) (M := Fin n → R) =
+      (n : ℤ) • kPrimeZeroClass (R := R) (M := R) := by
+  induction n with
+  | zero =>
+      simpa using
+        (kPrimeZeroClass_subsingleton (R := R) (M := Fin 0 → R))
+  | succ n ih =>
+      let e : (Fin (n + 1) → R) ≃ₗ[R] R × (Fin n → R) :=
+        LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
+          (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
+      rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
+      simp [add_smul, add_comm, add_left_comm, add_assoc]
+
+private theorem kZeroClass_free_pid
+    {R : Type u} [CommRing R] [IsDomain R]
+    (n : ℕ) :
+    kZeroClass (R := R) (M := Fin n → R) =
+      (n : ℤ) • kZeroClass (R := R) (M := R) := by
+  induction n with
+  | zero =>
+      simpa using
+        (kZeroClass_subsingleton (R := R) (M := Fin 0 → R))
+  | succ n ih =>
+      let e : (Fin (n + 1) → R) ≃ₗ[R] R × (Fin n → R) :=
+        LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
+          (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
+      rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
+      simp [add_smul, add_comm, add_left_comm, add_assoc]
+
+private theorem kPrimeZeroClass_eq_free_rank_pid
+    {R M : Type u} [CommRing R] [IsDomain R] [IsPrincipalIdealRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] :
+    kPrimeZeroClass (R := R) (M := M) =
+      (Module.finrank R M : ℤ) • kPrimeZeroClass (R := R) (M := R) := by
+  obtain ⟨r, ι, _, p, hp, exp, ⟨h⟩⟩ :=
+    Module.equiv_free_prod_directSum (R := R) (M := M)
+  let eι := Fintype.equivFin ι
+  let d : Fin (Fintype.card ι) → R :=
+    fun j => p (eι.symm j) ^ exp (eι.symm j)
+  let eM := h.trans
+    ((Finsupp.linearEquivFunOnFinite R R (Fin r)).prodCongr
+      (DirectSum.lequivCongrLeft R eι))
+  have hd (i : Fin (Fintype.card ι)) : d i ≠ 0 := by
+    dsimp [d]
+    exact pow_ne_zero _ (hp (eι.symm i)).ne_zero
+  have hT : Module.IsTorsion R
+      (DirectSum (Fin (Fintype.card ι))
+        (fun i => pidTorsionSummand R (d i))) :=
+    finite_directSum_isTorsion _ _ fun i =>
+      pidTorsionSummand_isTorsion (d i) (hd i)
+  have hzeroT : kPrimeZeroClass (R := R)
+      (M := DirectSum (Fin (Fintype.card ι))
+        (fun i => pidTorsionSummand R (d i))) = 0 :=
+    kPrimeZeroClass_torsion_pid hT
+  have hfin : Module.finrank R M = r := by
+    rw [eM.finrank_eq, finite_module_finrank_prod_pid, Module.finrank_pi,
+      Module.IsTorsion.finrank_eq_zero hT, add_zero]
+    simp
+  calc
+    kPrimeZeroClass (R := R) (M := M) =
+        kPrimeZeroClass (R := R) (M := (Fin r → R)) +
+          kPrimeZeroClass (R := R)
+            (M := DirectSum (Fin (Fintype.card ι))
+              (fun i => pidTorsionSummand R (d i))) := by
+      rw [kPrimeZeroClass_eq_of_linearEquiv eM, kPrimeZeroClass_prod]
+    _ = kPrimeZeroClass (R := R) (M := Fin r → R) := by rw [hzeroT, add_zero]
+    _ = (r : ℤ) • kPrimeZeroClass (R := R) (M := R) :=
+      kPrimeZeroClass_free_pid r
+    _ = (Module.finrank R M : ℤ) • kPrimeZeroClass (R := R) (M := R) := by
+      rw [hfin]
+
+private theorem finite_module_rank_add_of_short_exact_pid
+    {R M' M M'' : Type u} [CommRing R] [IsDomain R]
+    [AddCommGroup M'] [Module R M'] [Module.Finite R M']
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup M''] [Module R M''] [Module.Finite R M'']
+    (f : M' →ₗ[R] M) (g : M →ₗ[R] M'')
+    (hf : Function.Injective f) (hg : Function.Surjective g)
+    (hfg : Function.Exact f g) :
+    Module.finrank R M =
+      Module.finrank R M' + Module.finrank R M'' := by
+  have hrank : Module.rank R M =
+      Module.rank R M' + Module.rank R M'' := by
+    calc
+      Module.rank R M = Module.rank R (LinearMap.range g) +
+          Module.rank R (LinearMap.ker g) :=
+        (LinearMap.rank_range_add_rank_ker g).symm
+      _ = Module.rank R M'' + Module.rank R (LinearMap.range f) := by
+        rw [rank_range_of_surjective g hg, hfg.linearMap_ker_eq]
+      _ = Module.rank R (LinearMap.range f) + Module.rank R M'' := add_comm _ _
+      _ = Module.rank R M' + Module.rank R M'' := by
+        rw [rank_range_of_injective f hf]
+  rw [← Nat.cast_inj (R := Cardinal), Module.finrank_eq_rank,
+    Nat.cast_add, Module.finrank_eq_rank, Module.finrank_eq_rank]
+  exact hrank
+
 theorem kGroups_pid
     (R : Type u) [CommRing R] [IsDomain R] [IsPrincipalIdealRing R] :
     ∃ e₀ : KZero R ≃+ ℤ, ∃ e₀' : KPrimeZero R ≃+ ℤ,
       (∀ x, e₀' (kZeroToKPrime x) = e₀ x) := by
-  sorry
+  let projectiveRank (P : FiniteProjectivePresentation R) : ℕ :=
+    let _ : Module.Free R P.presentation.module := finite_projective_is_free_pid
+    finiteFreeRank (R := R) (M := P.presentation.module)
+  have hprojectiveRank (P : FiniteProjectivePresentation R) :
+      projectiveRank P = Module.finrank R P.presentation.module := by
+    dsimp [projectiveRank]
+    let _ : Module.Free R P.presentation.module := finite_projective_is_free_pid
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := R) (M := P.presentation.module)))
+    have he := e.finrank_eq
+    simpa [finiteFreeRank, Module.finrank_pi] using he.symm
+  let rankFree : KZeroFree R →+ ℤ :=
+    FreeAbelianGroup.lift (fun P => (projectiveRank P : ℤ))
+  have rankFree_rel : kZeroCon R ≤ AddCon.ker rankFree := by
+    refine AddCon.addConGen_le.2 ?_
+    rintro x y ⟨S, rfl, rfl⟩
+    simp only [rankFree]
+    change (projectiveRank S.middle : ℤ) =
+      (projectiveRank S.left : ℤ) + (projectiveRank S.right : ℤ)
+    have hrank := finite_module_rank_add_of_short_exact_pid
+      S.leftToMiddle S.middleToRight S.left_injective
+      S.middle_surjective S.exact
+    rw [hprojectiveRank S.middle, hprojectiveRank S.left,
+      hprojectiveRank S.right]
+    exact_mod_cast hrank
+  let rankPid : KZero R →+ ℤ :=
+    (kZeroCon R).lift rankFree rankFree_rel
+  have rankPid_apply (P : FiniteProjectivePresentation R) :
+      rankPid (kZeroClassOfPresentation P) = projectiveRank P := by
+    rfl
+  let primeFree : KPrimeZeroFree R →+ ℤ :=
+    FreeAbelianGroup.lift
+      (fun P => (Module.finrank R P.module : ℤ))
+  have primeFree_rel : kPrimeZeroCon R ≤ AddCon.ker primeFree := by
+    refine AddCon.addConGen_le.2 ?_
+    rintro x y ⟨S, rfl, rfl⟩
+    simp only [primeFree]
+    change (Module.finrank R S.middle.module : ℤ) =
+      (Module.finrank R S.left.module : ℤ) +
+        (Module.finrank R S.right.module : ℤ)
+    exact_mod_cast finite_module_rank_add_of_short_exact_pid
+      S.leftToMiddle S.middleToRight S.left_injective
+      S.middle_surjective S.exact
+  let primeRank : KPrimeZero R →+ ℤ :=
+    (kPrimeZeroCon R).lift primeFree primeFree_rel
+  have primeRank_apply (P : FiniteModulePresentation R) :
+      primeRank (kPrimeZeroClassOfPresentation P) = Module.finrank R P.module := by
+    rfl
+  have hfreeZero (n : ℕ) :
+      kZeroClass (R := R) (M := Fin n → R) =
+        (n : ℤ) • kZeroClass (R := R) (M := R) :=
+    kZeroClass_free_pid n
+  let P₀ := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := R))
+  let eP₀ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := R)))
+  let c : KZero R := kZeroClassOfPresentation P₀
+  have hc : rankPid c = 1 := by
+    rw [rankPid_apply, hprojectiveRank]
+    simpa using eP₀.finrank_eq
+  have hcZero : kZeroClass (R := R) (M := R) = c := by
+    calc
+      kZeroClass (R := R) (M := R) =
+          kZeroClass (R := R) (M := P₀.presentation.module) :=
+        kZeroClass_eq_of_linearEquiv eP₀.symm
+      _ = c := kZeroClass_eq_of_presentation (R := R) P₀
+  have hclassZero (P : FiniteProjectivePresentation R) :
+      kZeroClassOfPresentation P = (projectiveRank P : ℤ) • c := by
+    let _ : Module.Free R P.presentation.module := finite_projective_is_free_pid
+    let n := Classical.choose
+      (exists_finite_free_equiv (R := R) (M := P.presentation.module))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := R) (M := P.presentation.module)))
+    have hn : projectiveRank P = n := by
+      rw [hprojectiveRank]
+      simpa [Module.finrank_pi] using e.finrank_eq
+    calc
+      kZeroClassOfPresentation P =
+          kZeroClass (R := R) (M := P.presentation.module) :=
+        (kZeroClass_eq_of_presentation P).symm
+      _ = kZeroClass (R := R) (M := Fin n → R) :=
+        kZeroClass_eq_of_linearEquiv e
+      _ = (n : ℤ) • kZeroClass (R := R) (M := R) := hfreeZero n
+      _ = (projectiveRank P : ℤ) • c := by rw [hn, hcZero]
+  have hclassPrime (P : FiniteModulePresentation R) :
+      kPrimeZeroClassOfPresentation P =
+        (Module.finrank R P.module : ℤ) •
+          kPrimeZeroClass (R := R) (M := R) := by
+    calc
+      kPrimeZeroClassOfPresentation P =
+          kPrimeZeroClass (R := R) (M := P.module) :=
+        (kPrimeZeroClass_eq_of_presentation P).symm
+      _ = (Module.finrank R P.module : ℤ) •
+          kPrimeZeroClass (R := R) (M := R) :=
+        kPrimeZeroClass_eq_free_rank_pid
+  let P₀' := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := R))
+  let eP₀' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := R)))
+  let c' : KPrimeZero R := kPrimeZeroClassOfPresentation P₀'
+  have hcPrime : kPrimeZeroClass (R := R) (M := R) = c' := by
+    calc
+      kPrimeZeroClass (R := R) (M := R) =
+          kPrimeZeroClass (R := R) (M := P₀'.module) :=
+        kPrimeZeroClass_eq_of_linearEquiv eP₀'.symm
+      _ = c' := kPrimeZeroClass_eq_of_presentation (R := R) P₀'
+  have hclassPrime' (P : FiniteModulePresentation R) :
+      kPrimeZeroClassOfPresentation P =
+        (Module.finrank R P.module : ℤ) • c' := by
+    rw [hclassPrime, hcPrime]
+  have hreprZero (x : KZero R) :
+      x = (rankPid x) • c := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    have hrank : rankPid x =
+        ∑ i, z i * (projectiveRank (P i) : ℤ) := by
+      rw [hx]
+      simp only [map_sum, map_zsmul, rankPid_apply, smul_eq_mul]
+    calc
+      x = ∑ i, z i • kZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i • ((projectiveRank (P i) : ℤ) • c) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hclassZero (P i)]
+      _ = (∑ i, z i * (projectiveRank (P i) : ℤ)) • c := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (rankPid x) • c := by rw [hrank]
+  have hreprPrime (x : KPrimeZero R) :
+      x = (primeRank x) • c' := by
+    rcases kPrimeZero_generated x with ⟨n, P, z, hx⟩
+    have hrank : primeRank x =
+        ∑ i, z i * (Module.finrank R (P i).module : ℤ) := by
+      rw [hx]
+      simp only [map_sum, map_zsmul, primeRank_apply, smul_eq_mul]
+    calc
+      x = ∑ i, z i • kPrimeZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i • ((Module.finrank R (P i).module : ℤ) • c') := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hclassPrime' (P i)]
+      _ = (∑ i, z i * (Module.finrank R (P i).module : ℤ)) • c' := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (primeRank x) • c' := by rw [hrank]
+  have hinjZero : Function.Injective rankPid := by
+    intro x y hxy
+    rw [hreprZero x, hreprZero y, hxy]
+  have hsurjZero : Function.Surjective rankPid := by
+    intro z
+    refine ⟨z • c, ?_⟩
+    simp [hc]
+  have hinjPrime : Function.Injective primeRank := by
+    intro x y hxy
+    rw [hreprPrime x, hreprPrime y, hxy]
+  have hc' : primeRank c' = 1 := by
+    change primeRank (kPrimeZeroClassOfPresentation P₀') = 1
+    rw [primeRank_apply]
+    simpa using eP₀'.finrank_eq
+  have hsurjPrime : Function.Surjective primeRank := by
+    intro z
+    refine ⟨z • c', ?_⟩
+    simp [hc']
+  let e₀ : KZero R ≃+ ℤ :=
+    AddEquiv.ofBijective rankPid ⟨hinjZero, hsurjZero⟩
+  let e₀' : KPrimeZero R ≃+ ℤ :=
+    AddEquiv.ofBijective primeRank ⟨hinjPrime, hsurjPrime⟩
+  have hcompatClass (P : FiniteProjectivePresentation R) :
+      primeRank (kZeroToKPrime (R := R) (kZeroClassOfPresentation P)) =
+        rankPid (kZeroClassOfPresentation P) := by
+    rw [kZeroToKPrime_apply_class, primeRank_apply,
+      rankPid_apply, hprojectiveRank]
+  have hcompat (x : KZero R) :
+      primeRank (kZeroToKPrime (R := R) x) = rankPid x := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    rw [hx]
+    simp only [map_sum, map_zsmul]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [hcompatClass]
+  refine ⟨e₀, e₀', ?_⟩
+  intro x
+  exact hcompat x
 
 /-- The polynomial-ring example, obtained by applying the PID example to
 the polynomial ring. -/
@@ -929,7 +1809,7 @@ theorem kGroups_polynomial
     ∃ e₀ : KZero (Polynomial k) ≃+ ℤ,
       ∃ e₀' : KPrimeZero (Polynomial k) ≃+ ℤ,
         ∀ x, e₀' (kZeroToKPrime x) = e₀ x := by
-  sorry
+  simpa using kGroups_pid (Polynomial k)
 
 /-- The coordinate ring of the node in the source's example. -/
 def nodeRing (k : Type u) [Field k] : Subalgebra k (Polynomial k) :=

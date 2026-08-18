@@ -334,8 +334,10 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
               Nonempty (x ≅ y) := by
   sorry
 
-/- The source's quotient construction is exposed through the canonical
-   set-valued presheaf associated to the object classes in each fibre. -/
+/- The objectwise part of the source's quotient construction is exposed
+   through a set-valued presheaf whose values are the object classes in
+   each fibre.  Compatibility with the fibred category is asserted by the
+   existential theorem below, rather than by this arbitrary choice. -/
 theorem fibredSetoid_object_presheaf_exists
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
@@ -386,7 +388,8 @@ theorem fibredSetoids_equivalent_to_fibredInSets
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
-    IsFibredEquivalenceOver p (setoidificationProjection p hp) := by
+    ∃ F : Cᵒᵖ ⥤ Type uS,
+      IsFibredEquivalenceOver p (setPresheafProjection F) := by
   sorry
 
 /- The source packages the preceding construction as a functor from the
@@ -505,6 +508,7 @@ noncomputable def objectIsoClassMap
 theorem fibredSetoid_twoFibreProduct_object_classes_equiv
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
+    (hS : IsSetoidFibredCategoryOver S)
     (P : FibredInSetoidsTwoFibreProduct F G) (U : C) :
     Nonempty
       (SetoidObjectClasses (Functor.Fiber P.product.diagram.base U) ≃

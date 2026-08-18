@@ -77,9 +77,8 @@ def dominates
     [AddCommGroup N] [Module R N]
     [AddCommGroup N'] [Module R N']
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
-  ∀ Q : ModuleCat.{w} R,
-    LinearMap.ker (f.rTensor (Q : Type w)) ≤
-      LinearMap.ker (g.rTensor (Q : Type w))
+  ∀ (Q : Type (max u w)) [AddCommGroup Q] [Module R Q],
+    LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q)
 
 /-- Two maps dominate each other. -/
 def mutuallyDominates
@@ -99,9 +98,9 @@ theorem dominates_iff_finitelyPresented
     [AddCommGroup N'] [Module R N']
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) :
     dominates g f ↔
-      ∀ (Q : ModuleCat.{w} R), Module.FinitePresentation R Q →
-        LinearMap.ker (f.rTensor (Q : Type w)) ≤
-          LinearMap.ker (g.rTensor (Q : Type w)) := by
+      ∀ (Q : Type (max u w)) [AddCommGroup Q] [Module R Q],
+        Module.FinitePresentation R Q →
+          LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q) := by
   sorry
 
 /-- Domination is equivalent to universal injectivity of the map from the
@@ -156,7 +155,7 @@ theorem mittagLeffler_characterization
         ∀ (k : I) (hik : i ≤ k),
           ∃ h : (P.diag.obj k : Type w) →ₗ[R] (P.diag.obj j : Type w),
             directedMap P.diag hij = h.comp (directedMap P.diag hik),
-      ∀ N : ModuleCat.{w} R, (homInverseSystem P.diag N).IsMittagLeffler,
+      ∀ N : ModuleCat.{z} R, (homInverseSystem P.diag N).IsMittagLeffler,
       (homInverseSystem P.diag
         (ModuleCat.of R (∀ s : I, (P.diag.obj s : Type w)))).IsMittagLeffler
     ] := by

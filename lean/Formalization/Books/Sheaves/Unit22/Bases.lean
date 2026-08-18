@@ -1650,7 +1650,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
     intro r
     ext z
     let Mdiag :=
-      (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ RF
+      (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf
     letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
         Module (Rdiag.obj i) (Mdiag.obj i) := by
       change Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
@@ -1724,8 +1724,52 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         (ConcreteCategory.hom ha.inv)
             ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
           (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂ := by
-      sorry
-    sorry
+      have hcolim :
+          colimit.ι Mdiag k ≫ cQR.inv ≫ (cQ ≪≫ fQ).hom =
+            (qr.inv.app idx) ≫ (qK.hom.app k) ≫
+              colimit.ι (K ⋙ Gaddx) k ≫ fQ.hom := by
+        change colimit.ι ((ObjectProperty.ι
+            (fun i : basisIndex B => x ∈ B i)).op ⋙ RF) k ≫
+            (HasColimit.isoOfNatIso
+              ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.isoWhiskerLeft qr)).inv ≫
+            ((HasColimit.isoOfNatIso qK).hom ≫
+              (Functor.Final.colimitIso K Gaddx).hom) = _
+        dsimp [RF]
+        rw [← Category.assoc]
+        rw [HasColimit.isoOfNatIso_ι_inv
+            ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.isoWhiskerLeft qr) k]
+        change (qr.inv.app idx) ≫
+            (colimit.ι ((ObjectProperty.ι
+              (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k ≫
+              (HasColimit.isoOfNatIso qK).hom) ≫
+            (Functor.Final.colimitIso K Gaddx).hom = _
+        rw [HasColimit.isoOfNatIso_ι_hom qK k]
+        rw [Category.assoc, Functor.Final.ι_colimitIso_hom]
+      change (ConcreteCategory.hom
+          (colimit.ι Mdiag k ≫ cQR.inv ≫ (cQ ≪≫ fQ).hom)) m₁ =
+        (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂
+      rw [hcolim]
+      dsimp [m₂, idx, qK, q]
+      rw [Functor.Final.ι_colimitIso_hom]
+      change (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
+          ((ConcreteCategory.hom (q.hom.app idx))
+            ((ConcreteCategory.hom (qr.inv.app idx)) m₁)) = _
+      rfl
+    letI : Module (colimit Rdiag : RingCat) (colimit Mdiag : AddCommGrpCat) :=
+      CategoryTheory.Limits.IsColimit.module Rdiag Mdiag
+        (fun f r m => F.map_smul
+          ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.map f) r m)
+        hcR hcM
+    have hleft :
+        (ConcreteCategory.hom
+            (TM.smul ((ConcreteCategory.hom (colimit.ι Rdiag k)) r₁)))
+            ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
+          ((ConcreteCategory.hom (colimit.ι Rdiag k)) r₁) •
+            ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) := by
+      rfl
+    apply hleft.trans
+    rw [hm₂]
+    dsimp [SM]
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
 
 /-- Restriction is an equivalence for module sheaves on a basis. -/

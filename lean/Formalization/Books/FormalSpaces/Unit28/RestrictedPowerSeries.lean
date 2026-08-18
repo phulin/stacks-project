@@ -257,9 +257,9 @@ theorem restrictedPowerSeries_exists_unique_coefficients
         (fun i : B.Index => (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E})).neBot_iff.mpr
       intro s hs
       exact hfinite E s hs
-    letI : UniformSpace A := IsTopologicalAddGroup.rightUniformSpace A
-    letI : IsUniformAddGroup A := isUniformAddGroup_of_addCommGroup
-    letI : CompleteSpace A := hA.2.1
+    let : UniformSpace A := IsTopologicalAddGroup.rightUniformSpace A
+    let : IsUniformAddGroup A := isUniformAddGroup_of_addCommGroup
+    let : CompleteSpace A := hA.2.1
     have hC : Cauchy F := by
       refine (IsUniformAddGroup.cauchy_iff_tendsto F).2 ⟨hF, ?_⟩
       refine (B.fundamental.tendsto_right_iff).2 ?_
@@ -277,7 +277,7 @@ theorem restrictedPowerSeries_exists_unique_coefficients
       rcases hp with ⟨hp₁, hp₂⟩
       apply Ideal.Quotient.eq_zero_iff_mem.mp
       rw [map_sub, hp₂, hp₁, sub_self]
-    letI : NeBot F := hF
+    let : NeBot F := hF
     obtain ⟨a, ha⟩ := (cauchy_iff_exists_le_nhds (l := F)).mp hC
     refine ⟨a, ?_⟩
     intro i
@@ -289,7 +289,7 @@ theorem restrictedPowerSeries_exists_unique_coefficients
     have hclosed : IsClosed ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}) := by
       have hIclosed : IsClosed (B.I i : Set A) :=
         AddSubgroup.isClosed_of_isOpen (B.I i).toAddSubgroup (B.isOpen i)
-      letI : IsClosed ((B.I i).toAddSubgroup : Set A) := hIclosed
+      let : IsClosed ((B.I i).toAddSubgroup : Set A) := hIclosed
       exact isClosed_singleton.preimage QuotientAddGroup.continuous_mk
     have ha' : a ∈ (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} :=
       hclosed.mem_of_tendsto (f := id) (b := F) ha hmem
@@ -313,7 +313,7 @@ theorem restrictedPowerSeries_exists_unique_coefficients
     simpa [restrictedPowerSeriesCoefficient, p] using hzero
   refine ⟨a, ⟨hrestricted, hcoef⟩, ?_⟩
   intro b hb
-  letI : T2Space A := hA.2.2
+  let : T2Space A := hA.2.2
   have hzero : ∀ z : A, (∀ i : B.Index, z ∈ B.I i) → z = 0 := by
     intro z hz
     by_contra hne
@@ -349,12 +349,12 @@ theorem restrictedPowerSeries_complete_for_limit_topology
         intro x y
         ext i
         exact map_add _ _ _ }
-  letI : ∀ i : B.Indexᵒᵖ, TopologicalSpace (Q i) := fun _ => ⊥
-  letI : ∀ i : B.Indexᵒᵖ, UniformSpace (Q i) := fun _ => ⊥
-  letI : ∀ i : B.Indexᵒᵖ, DiscreteTopology (Q i) :=
+  let : ∀ i : B.Indexᵒᵖ, TopologicalSpace (Q i) := fun _ => ⊥
+  let : ∀ i : B.Indexᵒᵖ, UniformSpace (Q i) := fun _ => ⊥
+  let : ∀ i : B.Indexᵒᵖ, DiscreteTopology (Q i) :=
     fun _ => discreteTopology_bot _
   let u : UniformSpace M := UniformSpace.comap g (inferInstance : UniformSpace (∀ i, Q i))
-  letI : UniformSpace M := u
+  let : UniformSpace M := u
   have hu : IsUniformAddGroup M := by
     refine ⟨?_⟩
     apply uniformContinuous_comap' (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))
@@ -365,8 +365,8 @@ theorem restrictedPowerSeries_complete_for_limit_topology
           ((uniformContinuous_comap (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))).comp
             uniformContinuous_snd))) using 1
     ext p
-    simp [Function.comp_def]
-  letI : IsUniformAddGroup M := hu
+    simp
+  let : IsUniformAddGroup M := hu
   have htop : u.toTopologicalSpace = restrictedPowerSeriesLimitTopology A B r := by
     change TopologicalSpace.induced g Pi.topologicalSpace = _
     rw [induced_to_pi]
@@ -411,7 +411,7 @@ theorem restrictedPowerSeries_complete_for_limit_topology
     intro j
     apply isClosed_iInter
     intro f
-    letI : ∀ i : B.Indexᵒᵖ, T2Space (D.obj i) := fun _ => by
+    let : ∀ i : B.Indexᵒᵖ, T2Space (D.obj i) := fun _ => by
       infer_instance
     apply isClosed_eq
     · exact (continuous_of_discreteTopology :
@@ -419,13 +419,13 @@ theorem restrictedPowerSeries_complete_for_limit_topology
     · exact continuous_apply j
   have hprod : CompleteSpace (∀ i : B.Indexᵒᵖ, Q i) := by
     infer_instance
-  letI : CompleteSpace (∀ i : B.Indexᵒᵖ, Q i) := hprod
+  let : CompleteSpace (∀ i : B.Indexᵒᵖ, Q i) := hprod
   have hrange : IsComplete (Set.range g) := by
     rw [hgrange]
     exact hSclosed.isComplete
   have hcomplete : @CompleteSpace M u :=
     (completeSpace_iff_isComplete_range ⟨rfl⟩).2 hrange
-  letI : TopologicalSpace M := u.toTopologicalSpace
+  let : TopologicalSpace M := u.toTopologicalSpace
   have hT2 : @T2Space M (restrictedPowerSeriesLimitTopology A B r) := by
     rw [← htop]
     exact T2Space.of_injective_continuous hinj
@@ -470,7 +470,7 @@ def iAdicPolynomialCompletionTopology (A : Type u) [CommRing A]
 /-- The chosen I-adic open-ideal basis on `A`. -/
 def iAdicOpenIdealBasis (A : Type u) [CommRing A] (I : Ideal A) :
     @OpenIdealBasis A _ I.adicTopology :=
-  letI : TopologicalSpace A := I.adicTopology
+  let : TopologicalSpace A := I.adicTopology
   { Index := ULift.{u} ℕ
     I := fun n => I ^ n.down
     directed := fun m n =>
@@ -606,7 +606,7 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     rw [hfac]
     exact congrArg (fun z => Submodule.factor hm z)
       (AdicCompletion.transitionMap_comp_eval_apply J P hmn x)
-  letI : TopologicalSpace A := I.adicTopology
+  let : TopologicalSpace A := I.adicTopology
   let B := iAdicOpenIdealBasis A I
   let D := restrictedPowerSeriesDiagram A B r
   let c : Cone D :=

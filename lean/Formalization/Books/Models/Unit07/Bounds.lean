@@ -100,7 +100,211 @@ theorem bound_heart (T : NumericalType) (genusValue : ℤ)
           T.m j * |T.a j j| ≤ 6 * genusValue - 6) ∧
           (∀ j, j ∈ nonMinusTwoIndices T →
             ∀ i, T.m i * T.a i j ≤ 6 * genusValue - 6) := by
-  sorry
+  classical
+  have hnonneg : ∀ i, 0 ≤ genusContribution T i := by
+    intro i
+    by_contra h
+    have hneg : genusContribution T i < 0 := lt_of_not_ge h
+    exact hminimal ⟨i, minus_one_contribution T genusValue hgenus hn hneg⟩
+  have hzero : ∀ i, i ∉ nonMinusTwoIndices T →
+      genusContribution T i = 0 := by
+    intro i hi
+    have htwo : IsMinusTwoIndex T i := by
+      by_contra h
+      apply hi
+      simp [nonMinusTwoIndices, h]
+    exact (minus_two_index_iff_zero_contribution T hminimal hn i).1 htwo
+  have hsum_nonminus :
+      (nonMinusTwoIndices T).sum (fun i => genusContribution T i) =
+        (Finset.univ : Finset (Fin T.n)).sum (fun i => genusContribution T i) := by
+    apply Finset.sum_subset
+    · intro i hi
+      simp
+    · intro i hi hnot
+      exact hzero i hnot
+  have hgenusQ : (genusValue : ℚ) =
+      1 + ∑ i : Fin T.n, genusContribution T i := by
+    rw [← hgenus]
+    exact genus_formula T
+  have hsum : (∑ i : Fin T.n, genusContribution T i) =
+      (genusValue : ℚ) - 1 := by
+    linarith
+  have hcle : ∀ j, genusContribution T j ≤ (genusValue : ℚ) - 1 := by
+    intro j
+    have h := Finset.single_le_sum (fun i _ => hnonneg i) (by simp :
+        j ∈ (Finset.univ : Finset (Fin T.n)))
+    rw [hsum] at h
+    exact h
+  have hhalf : ∀ j, j ∈ nonMinusTwoIndices T →
+      (1 : ℚ) / 2 ≤ genusContribution T j := by
+    intro j hj
+    have hnot : ¬ IsMinusTwoIndex T j := by
+      intro htwo
+      exact (Finset.mem_filter.mp hj).2 htwo
+    have hpos : 0 < genusContribution T j := by
+      by_contra h
+      exact hnot ((minus_two_index_iff_not_positive_contribution T hminimal hn j).2 h)
+    have hnumpos : 0 <
+        2 * T.m j * T.w j * (T.g j - 1) - T.m j * T.a j j := by
+      have hq := hpos
+      unfold genusContribution at hq
+      have hq' : (0 : ℚ) <
+          ((2 * T.m j * T.w j * (T.g j - 1) - T.m j * T.a j j : ℤ) : ℚ) := by
+        push_cast
+        linarith
+      exact_mod_cast hq'
+    have hnumge : 1 ≤
+        2 * T.m j * T.w j * (T.g j - 1) - T.m j * T.a j j := by
+      omega
+    have hnumgeQ : (1 : ℚ) ≤
+        ((2 * T.m j * T.w j * (T.g j - 1) - T.m j * T.a j j : ℤ) : ℚ) := by
+      exact_mod_cast hnumge
+    unfold genusContribution
+    push_cast at hnumgeQ ⊢
+    linarith
+  have hcardQ : ((nonMinusTwoIndices T).card : ℚ) ≤
+      2 * (genusValue : ℚ) - 2 := by
+    have hsumlower : ((nonMinusTwoIndices T).card : ℚ) / 2 ≤
+        (nonMinusTwoIndices T).sum (fun i => genusContribution T i) := by
+      calc
+        ((nonMinusTwoIndices T).card : ℚ) / 2 =
+            (nonMinusTwoIndices T).sum (fun _ => (1 : ℚ) / 2) := by
+              simp [div_eq_mul_inv]
+        _ ≤ (nonMinusTwoIndices T).sum (fun i => genusContribution T i) := by
+          apply Finset.sum_le_sum
+          intro i hi
+          exact hhalf i hi
+    rw [hsum_nonminus, hsum] at hsumlower
+    linarith
+  have hcard : ((nonMinusTwoIndices T).card : ℤ) ≤
+      2 * genusValue - 2 := by
+    exact_mod_cast hcardQ
+  have hgj : ∀ j, j ∈ nonMinusTwoIndices T → T.g j < genusValue := by
+    intro j hj
+    have hdiag : T.a j j < 0 :=
+      diagonal_negative T genusValue hgenus hn j
+    have hstrict :
+        (T.m j : ℚ) * (T.w j : ℚ) * ((T.g j : ℚ) - 1) <
+          genusContribution T j := by
+      have hmQ : (0 : ℚ) < T.m j := by exact_mod_cast T.m_pos j
+      have hdiagQ : (T.a j j : ℚ) < 0 := by exact_mod_cast hdiag
+      unfold genusContribution
+      push_cast
+      nlinarith
+    by_contra h
+    have hgj_ge : genusValue ≤ T.g j := le_of_not_gt h
+    have hgj_geQ : (genusValue : ℚ) ≤ T.g j := by exact_mod_cast hgj_ge
+    have hmpos := T.m_pos j
+    have hm1 : (1 : ℚ) ≤ T.m j := by
+      exact_mod_cast (show (1 : ℤ) ≤ T.m j by omega)
+    have hwpos := T.w_pos j
+    have hw1 : (1 : ℚ) ≤ T.w j := by
+      exact_mod_cast (show (1 : ℤ) ≤ T.w j by omega)
+    have hmw : (1 : ℚ) ≤ (T.m j : ℚ) * T.w j := by
+      have hprod : 0 ≤ ((T.m j : ℚ) - 1) * (T.w j - 1) :=
+        mul_nonneg (by linarith) (by linarith)
+      nlinarith
+    have hxZ : (0 : ℤ) ≤ genusValue - 1 := by
+      omega
+    have hx : (0 : ℚ) ≤ (genusValue : ℚ) - 1 := by
+      exact_mod_cast hxZ
+    have hbase : (genusValue : ℚ) - 1 ≤ (T.g j : ℚ) - 1 := by
+      linarith
+    have hmul1 :
+        (genusValue : ℚ) - 1 ≤
+          ((T.m j : ℚ) * T.w j) * ((genusValue : ℚ) - 1) := by
+      have hprod : 0 ≤
+          ((T.m j : ℚ) * T.w j - 1) * ((genusValue : ℚ) - 1) :=
+        mul_nonneg (by linarith) hx
+      nlinarith
+    have hmul2 :
+        ((T.m j : ℚ) * T.w j) * ((genusValue : ℚ) - 1) ≤
+          ((T.m j : ℚ) * T.w j) * ((T.g j : ℚ) - 1) :=
+      mul_le_mul_of_nonneg_left hbase (by positivity)
+    have hmul :
+        (genusValue : ℚ) - 1 ≤
+          (T.m j : ℚ) * (T.w j : ℚ) * ((T.g j : ℚ) - 1) :=
+      hmul1.trans hmul2
+    have hle := hcle j
+    linarith
+  have hjbound : ∀ j, j ∈ nonMinusTwoIndices T →
+      T.m j * |T.a j j| ≤ 6 * genusValue - 6 := by
+    intro j hj
+    have hdiag : T.a j j < 0 :=
+      diagonal_negative T genusValue hgenus hn j
+    have hle := hcle j
+    by_cases hgzero : T.g j = 0
+    · rcases T.w_dvd j j with ⟨k, hk⟩
+      have hkneg : k < 0 := by
+        have hw := T.w_pos j
+        nlinarith [hdiag, hk]
+      have hkne1 : k ≠ -1 := by
+        intro hk1
+        apply hminimal
+        refine ⟨j, hgzero, ?_⟩
+        rw [hk, hk1]
+        ring
+      have hkne2 : k ≠ -2 := by
+        intro hk2
+        apply (Finset.mem_filter.mp hj).2
+        refine ⟨hgzero, ?_⟩
+        rw [hk, hk2]
+        ring
+      have hk_le : k ≤ -3 := by omega
+      have hkmQ : (3 : ℚ) ≤ -(k : ℚ) := by
+        exact_mod_cast (show (3 : ℤ) ≤ -k by omega)
+      have hmQ : (0 : ℚ) < T.m j := by exact_mod_cast T.m_pos j
+      have hwQ : (0 : ℚ) < T.w j := by exact_mod_cast T.w_pos j
+      have hmwQ : (0 : ℚ) < (T.m j : ℚ) * T.w j := mul_pos hmQ hwQ
+      unfold genusContribution at hle
+      rw [hgzero, hk] at hle
+      push_cast at hle
+      have hfactor : 0 ≤
+          3 * (-(k : ℚ) - 2) - (-(k : ℚ)) := by
+        linarith
+      have hmul : 0 ≤
+          ((T.m j : ℚ) * T.w j) *
+            (3 * (-(k : ℚ) - 2) - (-(k : ℚ))) :=
+        mul_nonneg (le_of_lt hmwQ) hfactor
+      have hboundQ :
+          (T.m j : ℚ) * T.w j * (-(k : ℚ)) ≤
+            6 * (genusValue : ℚ) - 6 := by
+        nlinarith
+      rw [abs_of_neg hdiag, hk]
+      have hboundQ' :
+          (T.m j : ℚ) * (-(T.w j * k : ℤ) : ℚ) ≤
+            6 * (genusValue : ℚ) - 6 := by
+        push_cast
+        nlinarith [hboundQ]
+      exact_mod_cast hboundQ'
+    · have hgpos : 0 < T.g j := by
+        have hgnonneg := T.g_nonneg j
+        omega
+      have hmQ : (0 : ℚ) < T.m j := by exact_mod_cast T.m_pos j
+      have hwQ : (0 : ℚ) < T.w j := by exact_mod_cast T.w_pos j
+      have hdiagQ : (T.a j j : ℚ) < 0 := by exact_mod_cast hdiag
+      have hgQ : (1 : ℚ) ≤ T.g j := by
+        exact_mod_cast (show (1 : ℤ) ≤ T.g j by omega)
+      rw [abs_of_neg hdiag]
+      have hboundQ : (T.m j : ℚ) * (-(T.a j j : ℚ)) ≤
+          6 * (genusValue : ℚ) - 6 := by
+        unfold genusContribution at hle
+        push_cast at hle
+        have hnonneg :
+            0 ≤ (T.w j : ℚ) * ((T.g j : ℚ) - 1) :=
+          mul_nonneg (le_of_lt hwQ) (by linarith)
+        nlinarith [hle, hgenus_ge_two]
+      exact_mod_cast hboundQ
+  have hlast : ∀ j, j ∈ nonMinusTwoIndices T →
+      ∀ i, T.m i * T.a i j ≤ 6 * genusValue - 6 := by
+    intro j hj i
+    have hR : 0 ≤ 6 * genusValue - 6 := by omega
+    by_cases hpos : 0 < T.a i j
+    · exact (bound_neighbours T genusValue hgenus hpos).1 |>.trans (hjbound j hj)
+    · have hnonpos : T.a i j ≤ 0 := le_of_not_gt hpos
+      have hmpos := T.m_pos i
+      nlinarith
+  exact ⟨hcard, hgj, hjbound, hlast⟩
 
 /-!
 The uniform bound on all weighted intersection entries in a minimal type.

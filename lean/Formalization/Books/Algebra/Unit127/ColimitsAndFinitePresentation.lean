@@ -1473,16 +1473,16 @@ def DirectedRingMapColimit.transitionBaseChange
 /-! ## Properties of the transition maps -/
 
 /-- Essential finite presentation, expressed as a finitely presented algebra
-followed by localization at a prime. -/
+followed by localization.  The local approximation theorem below supplies
+prime localizations for its transitions separately. -/
 def _root_.RingHom.EssFinitePresentation
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
   ∃ (T : Type u) (hT : CommRing T),
     letI : CommRing T := hT
-    ∃ (g : R →+* T) (p : Ideal T) (hp : p.IsPrime) (q : T →+* S),
+    ∃ (g : R →+* T) (U : Submonoid T) (q : T →+* S),
       g.FinitePresentation ∧ q.comp g = f ∧
         letI : Algebra T S := q.toAlgebra
-        letI : p.IsPrime := hp
-        IsLocalization.AtPrime S p
+        IsLocalization U S
 
 /-- The target-ring transition map in a directed ring-map colimit. -/
 def DirectedRingMapColimit.targetTransition
@@ -1556,6 +1556,15 @@ def IsLocalizationAtPrimeOfQuotient
       letI : p.IsPrime := hp
       IsLocalization.AtPrime S p
 
+/-- A ring map whose target is localization at a prime of its source.  The
+source's finite-presentation approximation uses this exact transition shape. -/
+def IsLocalizationAtPrime
+    {R S : Type u} [CommRing R] [CommRing S] (g : R →+* S) : Prop :=
+  ∃ (p : Ideal R) (hp : p.IsPrime),
+    letI : Algebra R S := g.toAlgebra
+    letI : p.IsPrime := hp
+    IsLocalization.AtPrime S p
+
 /-- A ring map whose target is the localization of its source at a submonoid. -/
 def IsLocalizationMap
     {R S : Type u} [CommRing R] [CommRing S] (g : R →+* S) : Prop :=
@@ -1572,13 +1581,14 @@ def DirectedRingMapColimit.transitionsAreLocalizationsOfQuotients
   exact ∀ {i j : D.index} (hij : D.indexPreorder.le i j),
     IsLocalizationOfQuotient (D.transitionBaseChange hij)
 
-/-- All transition base-change maps are localizations at primes of quotients. -/
+/-- All transition base-change maps are localizations at primes of their
+source tensor products. -/
 def DirectedRingMapColimit.transitionsAreLocalizationsAtPrime
     {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
     (D : DirectedRingMapColimit f) : Prop := by
   letI : Preorder D.index := D.indexPreorder
   exact ∀ {i j : D.index} (hij : D.indexPreorder.le i j),
-    IsLocalizationAtPrimeOfQuotient (D.transitionBaseChange hij)
+    IsLocalizationAtPrime (D.transitionBaseChange hij)
 
 /-- Every transition base-change map is surjective. -/
 def DirectedRingMapColimit.transitionsAreSurjective

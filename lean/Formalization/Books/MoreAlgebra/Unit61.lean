@@ -77,6 +77,23 @@ noncomputable abbrev baseChangeTensor
   letI : Algebra R R' := g.toAlgebra
   A ⊗[R] R'
 
+/- The two ordinary base-change functors in the source's assertion that
+   `- ⊗_R R'` and `- ⊗_A (A ⊗_R R')` agree as functors.  The `R`-based
+   functor restricts an `A`-module to `R`, extends scalars to `R'`, and then
+   uses the canonical `R'`-algebra structure on the tensor-product ring. -/
+noncomputable abbrev ordinaryTensorOverA
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R') :
+    ModuleCat.{u} A ⥤ ModuleCat.{u} (baseChangeTensor f g) :=
+  ModuleCat.extendScalars (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g)
+
+noncomputable abbrev ordinaryTensorOverR
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R') :
+    ModuleCat.{u} A ⥤ ModuleCat.{u} (baseChangeTensor f g) :=
+  ModuleCat.restrictScalars f ⋙ ModuleCat.extendScalars g ⋙
+    ModuleCat.extendScalars (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g)
+
 /-- The derived base-change data attached to a ring square.
 
 The natural transformation is the source's functorial comparison map
@@ -138,8 +155,18 @@ theorem ordinaryTensor_baseChange
           (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g)).obj M) ≅
         (ModuleCat.extendScalars
           (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g)).obj
-          ((ModuleCat.extendScalars g).obj
+            ((ModuleCat.extendScalars g).obj
             ((ModuleCat.restrictScalars f).obj M))) := by
+  sorry
+
+/-- The pointwise base-change identifications assemble to the functor-level
+isomorphism asserted in the source. -/
+theorem ordinaryTensor_baseChange_functor_iso
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R') :
+    letI : Algebra R A := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    Nonempty (ordinaryTensorOverA f g ≅ ordinaryTensorOverR f g) := by
   sorry
 
 /-! ## Tor independence -/

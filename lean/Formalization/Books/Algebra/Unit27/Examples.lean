@@ -5,6 +5,7 @@ import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.EuclideanDomain
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Polynomial.Ideal
+import Mathlib.RingTheory.Polynomial.GaussLemma
 import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
 
 /-!
@@ -58,11 +59,12 @@ def intQuadraticPrimeIdeal (q : ℕ) (r : ℤ) : Ideal IntQuadraticRing :=
 theorem int_quadratic_factorization :
     Polynomial.X ^ 2 - Polynomial.C (4 : ℤ) =
       (Polynomial.X - Polynomial.C 2) * (Polynomial.X + Polynomial.C 2) := by
-  sorry
+  simp [sub_eq_add_neg]
+  ring
 
 theorem int_quadratic_prime_contraction_isPrime (p : PrimeSpectrum IntQuadraticRing) :
     (p.asIdeal.comap intQuadraticStructureMap).IsPrime := by
-  sorry
+  exact Ideal.comap_isPrime intQuadraticStructureMap p.asIdeal
 
 theorem int_quadratic_reduction_mod_prime (q : ℕ) (hq : Nat.Prime q) :
     Nonempty
@@ -153,17 +155,19 @@ theorem int_polynomial_isNoetherian : IsNoetherianRing IntPolynomial := by
 theorem int_polynomial_irreducible_maps_to_ratios
     (f : IntPolynomial) (hfdeg : 0 < f.natDegree) (hf : Irreducible f) :
     Irreducible (Polynomial.map (Int.castRingHom ℚ) f) := by
-  sorry
+  exact (Polynomial.IsPrimitive.Int.irreducible_iff_irreducible_map_cast
+    (hf.isPrimitive (Nat.ne_of_gt hfdeg))).mp hf
 
 theorem int_polynomial_prime_contraction_isPrime (P : Ideal IntPolynomial)
     (hP : P.IsPrime) :
     (P.comap Polynomial.C).IsPrime := by
-  sorry
+  exact Ideal.comap_isPrime Polynomial.C P
 
 theorem int_polynomial_irreducible_span_isPrime (f : IntPolynomial)
     (hf : Irreducible f) :
     (Ideal.span {f}).IsPrime := by
-  sorry
+  exact (Ideal.span_singleton_prime hf.ne_zero).mpr
+    (UniqueFactorizationMonoid.irreducible_iff_prime.mp hf)
 
 theorem int_polynomial_prime_ideal_candidates_isPrime (q : ℕ) (hq : Nat.Prime q) :
     (intPolynomialPrimeIdeal q).IsPrime ∧
@@ -238,12 +242,14 @@ theorem bivariate_isUFD (k : Type*) [Field k] :
 theorem bivariate_irreducible_span_isPrime (k : Type*) [Field k]
     (f : BivariatePolynomial k) (hf : Irreducible f) :
     (Ideal.span {f}).IsPrime := by
-  sorry
+  exact (Ideal.span_singleton_prime hf.ne_zero).mpr
+    (UniqueFactorizationMonoid.irreducible_iff_prime.mp hf)
 
 theorem bivariate_univariate_span_isPrime (k : Type*) [Field k]
     (p : Polynomial k) (hp : Irreducible p) :
     (bivariateUnivariateIdeal p).IsPrime := by
-  sorry
+  apply (Ideal.span_singleton_prime (by simp [hp.ne_zero])).mpr
+  exact Polynomial.prime_C_iff.mpr (UniqueFactorizationMonoid.irreducible_iff_prime.mp hp)
 
 theorem bivariate_prime_has_finite_irreducible_generators
     (k : Type*) [Field k] (P : Ideal (BivariatePolynomial k)) (hP : P.IsPrime)
@@ -310,11 +316,13 @@ theorem affine_base_is_generated_by_A_and_B :
   sorry
 
 theorem affine_base_isFiniteType : Algebra.FiniteType ℚ affineBaseSubalgebra := by
-  sorry
+  rw [affine_base_is_generated_by_A_and_B]
+  exact Algebra.FiniteType.adjoin_of_finite (by simp)
 
 theorem affine_base_z_mul_A_eq_B :
     Polynomial.X * (affineA : Polynomial ℚ) = (affineB : Polynomial ℚ) := by
-  sorry
+  simp [affineA, affineB, affineBaseElement]
+  ring
 
 def affinePolynomialF1 (a : ℚ) : Polynomial ℚ :=
   (Polynomial.X - Polynomial.C (1 - a)) * (Polynomial.X - Polynomial.C a)
@@ -334,22 +342,26 @@ def affinePolynomialG (a : ℚ) : Polynomial ℚ :=
 theorem affinePolynomialF1_mem_equalizer (a : ℚ) :
     Polynomial.aeval (0 : ℚ) (affinePolynomialF1 a) =
       Polynomial.aeval (1 : ℚ) (affinePolynomialF1 a) := by
-  sorry
+  simp [affinePolynomialF1, Polynomial.aeval_def]
+  ring
 
 theorem affinePolynomialF2AtA_mem_equalizer (a : ℚ) :
     Polynomial.aeval (0 : ℚ) (affinePolynomialF2AtA a) =
       Polynomial.aeval (1 : ℚ) (affinePolynomialF2AtA a) := by
-  sorry
+  simp [affinePolynomialF2AtA, Polynomial.aeval_def]
+  ring
 
 theorem affinePolynomialF2AtOneMinusA_mem_equalizer (a : ℚ) :
     Polynomial.aeval (0 : ℚ) (affinePolynomialF2AtOneMinusA a) =
       Polynomial.aeval (1 : ℚ) (affinePolynomialF2AtOneMinusA a) := by
-  sorry
+  simp [affinePolynomialF2AtOneMinusA, Polynomial.aeval_def]
+  ring
 
 theorem affinePolynomialG_mem_equalizer (a : ℚ) :
     Polynomial.aeval (0 : ℚ) (affinePolynomialG a) =
       Polynomial.aeval (1 : ℚ) (affinePolynomialG a) := by
-  sorry
+  simp [affinePolynomialG, affineQuadratic, Polynomial.aeval_def]
+  ring
 
 def affineF1 (a : ℚ) : affineBaseSubalgebra :=
   affineBaseElement (affinePolynomialF1 a) (affinePolynomialF1_mem_equalizer a)
@@ -383,7 +395,12 @@ def affinePresentationMap : AffinePresentation →ₐ[ℚ] affineBaseSubalgebra 
 
 theorem affine_presentation_relation_mem_kernel :
     affinePresentationRelation ∈ RingHom.ker affinePresentationMap.toRingHom := by
-  sorry
+  change affinePresentationMap affinePresentationRelation = 0
+  simp [affinePresentationRelation, affinePresentationMap, affinePresentationValues,
+    affinePresentationA, affinePresentationB]
+  apply Subtype.ext
+  simp [affineA, affineB, affineBaseElement]
+  ring
 
 theorem affine_presentation_surjective : Function.Surjective affinePresentationMap := by
   sorry
@@ -459,11 +476,18 @@ def affineBaseToOpen (a : ℚ) : affineBaseSubalgebra →+* AffineOpenRing a :=
 
 theorem affine_localization_map_injective (a : ℚ) :
     Function.Injective (affineLocalizationMap a) := by
-  sorry
+  simpa [affineLocalizationMap] using
+    (IsLocalization.injective (R := Polynomial ℚ)
+      (Localization.Away (Polynomial.X - Polynomial.C a))
+      (powers_le_nonZeroDivisors_of_noZeroDivisors
+        (x := Polynomial.X - Polynomial.C a) (Polynomial.X_sub_C_ne_zero a)))
 
 theorem affine_base_to_open_injective (a : ℚ) :
     Function.Injective (affineBaseToOpen a) := by
-  sorry
+  intro x y h
+  apply Subtype.ext
+  apply affine_localization_map_injective a
+  exact congrArg (fun z : AffineOpenRing a => (z : AffineAmbient a)) h
 
 def affineOpenThird (a : ℚ) : AffineOpenRing a :=
   ⟨affineOpenThirdGenerator a,
@@ -499,7 +523,15 @@ theorem affine_open_isFiniteType (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
 theorem affine_localization_evaluation_exists (a r : ℚ) (har : r ≠ a) :
     ∃ e : AffineAmbient a →+* ℚ,
       e.comp (affineLocalizationMap a) = Polynomial.evalRingHom r := by
-  sorry
+  let e : AffineAmbient a →+* ℚ :=
+    IsLocalization.Away.lift (g := Polynomial.evalRingHom r)
+      (x := Polynomial.X - Polynomial.C a) (by
+        rw [isUnit_iff_ne_zero]
+        simpa using sub_ne_zero.mpr har)
+  refine ⟨e, ?_⟩
+  simpa [e, affineLocalizationMap] using
+    (IsLocalization.Away.lift_comp (S := AffineAmbient a)
+      (x := Polynomial.X - Polynomial.C a) (g := Polynomial.evalRingHom r) _)
 
 def affineEvaluation (r : ℚ) : affineBaseSubalgebra →+* ℚ :=
   (Polynomial.evalRingHom r).comp affineBaseSubalgebra.val.toRingHom
@@ -509,7 +541,10 @@ def affineMaximalIdeal (r : ℚ) : Ideal affineBaseSubalgebra :=
 
 theorem affineMaximalIdeal_isMaximal (r : ℚ) :
     (affineMaximalIdeal r).IsMaximal := by
-  sorry
+  apply RingHom.ker_isMaximal_of_surjective (affineEvaluation r)
+  intro q
+  refine ⟨algebraMap ℚ affineBaseSubalgebra q, ?_⟩
+  simp [affineEvaluation]
 
 def affinePoint (r : ℚ) : PrimeSpectrum affineBaseSubalgebra :=
   ⟨affineMaximalIdeal r, (affineMaximalIdeal_isMaximal r).isPrime⟩
@@ -562,7 +597,36 @@ theorem affine_obstruction_identity (a : ℚ) :
         affineLocalizationMap a
           ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
             (Polynomial.X - Polynomial.C a) * Polynomial.X) := by
-  sorry
+  have hu : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+      affineDenominatorInverse a = 1 := by
+    change
+      (↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+        (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit) : AffineAmbient a) *
+        ↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+          (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit⁻¹) = 1
+    simp
+  rw [affineOpenThirdGenerator]
+  calc
+    affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+        (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+            affineDenominatorInverse a + affineLocalizationMap a Polynomial.X) =
+      (affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a))) *
+          (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            affineDenominatorInverse a) +
+        affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            affineLocalizationMap a Polynomial.X := by ring
+    _ = affineLocalizationMap a
+          ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) +
+        affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            affineLocalizationMap a Polynomial.X := by
+      rw [hu, mul_one, map_mul]
+    _ = _ := by
+      congr 1
+      rw [map_mul, map_mul]
 
 theorem affine_m_a_obstruction (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
@@ -599,7 +663,26 @@ theorem affine_first_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
 
 theorem affine_quadratic_at_one_minus_a (a : ℚ) :
     (affineQuadratic a).eval (1 - a) = 0 ↔ a = 0 ∨ a = 1 := by
-  sorry
+  norm_num [affineQuadratic, Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_pow,
+    Polynomial.eval_X, Polynomial.eval_C]
+  constructor
+  case mp =>
+    intro h
+    have h' : a * (a - 1) = 0 := by nlinarith [h]
+    rcases mul_eq_zero.mp h' with h0 | h1
+    · left
+      exact h0
+    · right
+      linarith
+  case mpr =>
+    intro h
+    rcases h with h0 | h1
+    · subst a
+      norm_num [affineQuadratic, Polynomial.eval_add, Polynomial.eval_sub,
+        Polynomial.eval_pow, Polynomial.eval_X, Polynomial.eval_C]
+    · subst a
+      norm_num [affineQuadratic, Polynomial.eval_add, Polynomial.eval_sub,
+        Polynomial.eval_pow, Polynomial.eval_X, Polynomial.eval_C]
 
 theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
@@ -687,7 +770,36 @@ theorem affine_open_is_not_a_localization (a : ℚ)
 theorem affine_half_denominator_power_mem_base (n : ℕ) :
     (Polynomial.X - Polynomial.C (1 / 2 : ℚ)) ^ n ∈ affineBaseSubalgebra ↔
       Even n := by
-  sorry
+  change Polynomial.eval (0 : ℚ)
+      ((Polynomial.X - Polynomial.C (1 / 2 : ℚ)) ^ n) =
+        Polynomial.eval (1 : ℚ) ((Polynomial.X - Polynomial.C (1 / 2 : ℚ)) ^ n) ↔ _
+  simp [Polynomial.eval_pow, Polynomial.eval_sub]
+  constructor
+  case mp =>
+    intro h
+    have hh : (-1 : ℚ) ^ n * (2⁻¹ : ℚ) ^ n = (2⁻¹ : ℚ) ^ n := by
+      calc
+        (-1 : ℚ) ^ n * (2⁻¹ : ℚ) ^ n = (-2⁻¹ : ℚ) ^ n := by
+          rw [← mul_pow]
+          congr 1
+          ring
+        _ = (1 - 2⁻¹ : ℚ) ^ n := h
+        _ = (2⁻¹ : ℚ) ^ n := by norm_num
+    have h' : (-1 : ℚ) ^ n = 1 := by
+      apply (mul_right_cancel₀ (pow_ne_zero n (by norm_num : (2⁻¹ : ℚ) ≠ 0)))
+      simpa using hh
+    exact (neg_one_pow_eq_one_iff_even (by norm_num : (-1 : ℚ) ≠ 1)).mp h'
+  case mpr =>
+    intro h
+    have hh : (-1 : ℚ) ^ n = 1 :=
+      (neg_one_pow_eq_one_iff_even (by norm_num : (-1 : ℚ) ≠ 1)).mpr h
+    calc
+      (-2⁻¹ : ℚ) ^ n = ((-1 : ℚ) * 2⁻¹) ^ n := by
+        congr 1
+        ring
+      _ = (-1 : ℚ) ^ n * (2⁻¹ : ℚ) ^ n := by rw [mul_pow]
+      _ = (2⁻¹ : ℚ) ^ n := by rw [hh, one_mul]
+      _ = (1 - 2⁻¹ : ℚ) ^ n := by norm_num
 
 end
 

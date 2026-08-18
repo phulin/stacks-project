@@ -1,4 +1,3 @@
-import Formalization.Books.Homology.Unit09.JordanHolder
 import Mathlib.Algebra.Homology.ExactSequence
 import Mathlib.CategoryTheory.Abelian.SerreClass.Localization
 import Mathlib.CategoryTheory.Abelian.Subcategory
@@ -119,8 +118,8 @@ theorem exact_functor_kernel_is_serre_subcategory
 canonical object property `Functor.kernel F`. -/
 abbrev kernelCategory
     {D : Type u'} [Category.{v'} D]
-    (F : C ⥤ D) : Type u :=
-  (Functor.kernel F).FullSubcategory
+    [Abelian D] (F : C ⥤ₑ D) : Type u :=
+  (Functor.kernel F.obj).FullSubcategory
 
 /-! ## The Serre quotient -/
 

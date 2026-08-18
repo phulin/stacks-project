@@ -653,7 +653,457 @@ def localExampleLocalizedY (k : Type u) [Field k] :
 theorem local_example_regular_sequence (k : Type u) [Field k] :
     RingTheory.Sequence.IsRegular (localExampleRing k)
       [localExampleXbar k, localExampleYbar k] := by
-  sorry
+  have hregx : IsSMulRegular (localExampleRing k) (localExampleXbar k) := by
+    apply (isSMulRegular_quotient_iff_mem_of_smul_mem
+      (localExampleIdeal k) (localExampleX k)).mpr
+    intro p hp
+    classical
+    let v : Sum ℕ ℕ → MvPolynomial localExampleVariable k
+      | Sum.inl n => localExampleY k * localExampleW k n
+      | Sum.inr n => localExampleW k n - localExampleX k * localExampleW k (n + 1)
+    have hv :
+        Ideal.span (Set.range v) = localExampleIdeal k := by
+      rw [localExampleIdeal]
+      congr 1
+      ext z
+      constructor
+      · rintro ⟨i, rfl⟩
+        rcases i with i | i
+        · exact Or.inl ⟨i, rfl⟩
+        · exact Or.inr ⟨i, rfl⟩
+      · intro hz
+        rcases hz with ⟨i, rfl⟩ | ⟨i, rfl⟩
+        · exact ⟨Sum.inl i, rfl⟩
+        · exact ⟨Sum.inr i, rfl⟩
+    have hp' : localExampleX k * p ∈ Ideal.span (Set.range v) := by
+      rw [hv]
+      simpa only [smul_eq_mul] using hp
+    obtain ⟨c, hc⟩ :=
+      Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp hp'
+    let phi : Sum ℕ ℕ → ℕ := fun i =>
+      match i with | Sum.inl n => n | Sum.inr n => n + 1
+    let T : Finset ℕ := c.support.image phi
+    obtain ⟨N, hN⟩ := T.exists_nat_subset_range
+    have hcN (i : Sum ℕ ℕ) (hi : i ∈ c.support) :
+        phi i < N := by
+      simpa [T] using hN (Finset.mem_image.mpr ⟨i, hi, rfl⟩)
+    let B := MvPolynomial (Option ℕ) k
+    let J : Ideal B := Ideal.span {MvPolynomial.X none * MvPolynomial.X (some 0)}
+    let Bq := B ⧸ J
+    let q : B →+* Bq := Ideal.Quotient.mk J
+    have hqYW : q (MvPolynomial.X none) * q (MvPolynomial.X (some 0)) = 0 := by
+      change Ideal.Quotient.mk J (MvPolynomial.X none * MvPolynomial.X (some 0)) = 0
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp))
+    let q0 : k →+* Bq := q.comp (MvPolynomial.C : k →+* B)
+    let wmap : localExampleVariable → Polynomial Bq := fun i =>
+      match i with
+      | localExampleVariable.x => Polynomial.X
+      | localExampleVariable.y => Polynomial.C (q (MvPolynomial.X none))
+      | localExampleVariable.w n =>
+          if h : n < N then
+            Polynomial.C (q (MvPolynomial.X (some 0))) * Polynomial.X ^ (N - n)
+          else Polynomial.C (q (MvPolynomial.X (some (n - N))))
+    let f : MvPolynomial localExampleVariable k →+* Polynomial Bq :=
+      MvPolynomial.eval₂Hom (Polynomial.C.comp q0) wmap
+    have hfx : f (localExampleX k) = Polynomial.X := by
+      dsimp [f, localExampleX, wmap]
+      rw [MvPolynomial.eval₂_X]
+    have hfy : f (localExampleY k) = Polynomial.C (q (MvPolynomial.X none)) := by
+      dsimp [f, localExampleY, wmap]
+      rw [MvPolynomial.eval₂_X]
+    have hfw (n : ℕ) : f (localExampleW k n) =
+        if h : n < N then
+          Polynomial.C (q (MvPolynomial.X (some 0))) * Polynomial.X ^ (N - n)
+        else Polynomial.C (q (MvPolynomial.X (some (n - N)))) := by
+      dsimp [f, localExampleW, wmap]
+      rw [MvPolynomial.eval₂_X]
+    have hfyw (n : ℕ) (hn : n < N) :
+        f (localExampleY k * localExampleW k n) = 0 := by
+      rw [map_mul, hfy, hfw n, dif_pos hn]
+      rw [← mul_assoc, ← Polynomial.C_mul, hqYW]
+      simp
+    have hfwrel (n : ℕ) (hn : n < N) :
+        f (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0 := by
+      rw [map_sub, map_mul, hfw n, hfx, hfw (n + 1)]
+      by_cases hn1 : n + 1 < N
+      · rw [dif_pos hn, dif_pos hn1]
+        have hp' : N - n = (N - (n + 1)) + 1 := by omega
+        rw [hp', pow_succ]
+        ring
+      · rw [dif_pos hn, dif_neg hn1]
+        have heq : n + 1 = N := by omega
+        rw [← heq]
+        simp
+    have hf_sum : f (c.sum (fun i a => a * v i)) = 0 := by
+      change f (Finset.sum c.support (fun i => c i * v i)) = 0
+      rw [map_sum]
+      apply Finset.sum_eq_zero
+      intro i hi
+      rw [map_mul]
+      rcases i with n | n
+      · rw [hfyw n (hcN (Sum.inl n) hi)]
+        exact mul_zero _
+      · have hn' : n + 1 < N := by simpa [phi] using hcN (Sum.inr n) hi
+        have hn0 : n < N := by omega
+        rw [hfwrel n hn0]
+        exact mul_zero _
+    have hprod : Polynomial.X * f p = 0 := by
+      calc
+        Polynomial.X * f p = f (localExampleX k * p) := by rw [map_mul, hfx]
+        _ = f (c.sum (fun i a => a * v i)) := by rw [hc]
+        _ = 0 := hf_sum
+    have hfp : f p = 0 := by
+      apply Polynomial.isRegular_X.left
+      simpa using hprod
+    let I : Ideal (MvPolynomial localExampleVariable k) := localExampleIdeal k
+    let R := localExampleRing k
+    let mkI : MvPolynomial localExampleVariable k →+* R := Ideal.Quotient.mk I
+    let bmap : Option ℕ → R := fun i =>
+      match i with
+      | none => localExampleYbar k
+      | some m => localExampleWbar k (N + m)
+    let qP : B →+* R :=
+      MvPolynomial.eval₂Hom
+        (mkI.comp (MvPolynomial.C : k →+* MvPolynomial localExampleVariable k)) bmap
+    have hqPnone : qP (MvPolynomial.X none) = localExampleYbar k := by
+      dsimp [qP, bmap]
+      rw [MvPolynomial.eval₂Hom_X']
+    have hqPsome (m : ℕ) :
+        qP (MvPolynomial.X (some m)) = localExampleWbar k (N + m) := by
+      dsimp [qP, bmap]
+      rw [MvPolynomial.eval₂Hom_X']
+    have hYWN : localExampleYbar k * localExampleWbar k N = 0 := by
+      change Ideal.Quotient.mk I (localExampleY k * localExampleW k N) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      change localExampleY k * localExampleW k N ∈ localExampleIdeal k
+      exact Ideal.subset_span (by
+        rw [localExampleRelations]
+        exact Or.inl ⟨N, rfl⟩)
+    have hqPgen : qP (MvPolynomial.X none * MvPolynomial.X (some 0)) = 0 := by
+      rw [map_mul, hqPnone, hqPsome]
+      simpa using hYWN
+    have hle : J ≤ RingHom.ker qP := by
+      apply Ideal.span_le.mpr
+      intro b hb
+      rcases Set.mem_singleton_iff.mp hb with rfl
+      exact hqPgen
+    have hqPJ : ∀ a : B, a ∈ J → qP a = 0 := fun a ha => hle ha
+    let qB : Bq →+* R := Ideal.Quotient.lift J qP hqPJ
+    let g : Polynomial Bq →+* R :=
+      Polynomial.eval₂RingHom qB (localExampleXbar k)
+    have hgC (b : Bq) : g (Polynomial.C b) = qB b := by
+      dsimp [g]
+      simp
+    have hgX : g Polynomial.X = localExampleXbar k := by
+      dsimp [g]
+      simp
+    have hqB (a : B) : qB (q a) = qP a := by
+      rfl
+    have hqBnone : qB (q (MvPolynomial.X none)) = localExampleYbar k := by
+      rw [hqB, hqPnone]
+    have hqBsome (m : ℕ) : qB (q (MvPolynomial.X (some m))) =
+        localExampleWbar k (N + m) := by
+      rw [hqB, hqPsome]
+    have hfC (c : k) : f (MvPolynomial.C c) = Polynomial.C (q (MvPolynomial.C c)) := by
+      dsimp [f]
+      rw [MvPolynomial.eval₂_C]
+      dsimp [q0]
+    have hrel (n : ℕ) : localExampleWbar k n =
+        localExampleXbar k * localExampleWbar k (n + 1) := by
+      apply sub_eq_zero.mp
+      change Ideal.Quotient.mk I
+        (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      change localExampleW k n - localExampleX k * localExampleW k (n + 1) ∈
+        localExampleIdeal k
+      exact Ideal.subset_span (by
+        rw [localExampleRelations]
+        exact Or.inr ⟨n, rfl⟩)
+    have hshift (n m : ℕ) : localExampleWbar k n =
+        localExampleXbar k ^ m * localExampleWbar k (n + m) := by
+      induction m generalizing n with
+      | zero => simp
+      | succ m ih =>
+        rw [hrel n, ih (n + 1), pow_succ]
+        have harith : n + 1 + m = n + (m + 1) := by omega
+        rw [harith]
+        ring
+    have hgf : g.comp f = mkI := by
+      apply MvPolynomial.ringHom_ext'
+      · ext c
+        simp only [RingHom.comp_apply]
+        change g (f (MvPolynomial.C c)) = mkI (MvPolynomial.C c)
+        rw [hfC, hgC, hqB]
+        dsimp [qP]
+        rw [MvPolynomial.eval₂Hom_C]
+        rfl
+      · intro i
+        rcases i with _ | _ | n
+        · calc
+            g (f (localExampleX k)) = g Polynomial.X := by rw [hfx]
+            _ = localExampleXbar k := hgX
+            _ = mkI (localExampleX k) := rfl
+        · calc
+            g (f (localExampleY k)) =
+                g (Polynomial.C (q (MvPolynomial.X none))) := by rw [hfy]
+            _ = qB (q (MvPolynomial.X none)) := hgC _
+            _ = localExampleYbar k := hqBnone
+            _ = mkI (localExampleY k) := rfl
+        · by_cases hn : n < N
+          · have hnle : n ≤ N := Nat.le_of_lt hn
+            have hadd : n + (N - n) = N := Nat.add_sub_of_le hnle
+            calc
+              g (f (localExampleW k n)) =
+                  g (Polynomial.C (q (MvPolynomial.X (some 0))) *
+                    Polynomial.X ^ (N - n)) := by rw [hfw n, dif_pos hn]
+              _ = localExampleWbar k N * localExampleXbar k ^ (N - n) := by
+                simp only [map_mul, hgC, map_pow, hgX, hqBsome]
+                simp only [Nat.add_zero]
+              _ = localExampleXbar k ^ (N - n) * localExampleWbar k N := by ring
+              _ = localExampleWbar k n := by
+                have hW : localExampleWbar k N =
+                    localExampleWbar k (n + (N - n)) := by rw [hadd]
+                calc
+                  localExampleXbar k ^ (N - n) * localExampleWbar k N =
+                      localExampleXbar k ^ (N - n) *
+                        localExampleWbar k (n + (N - n)) := by rw [hW]
+                  _ = localExampleWbar k n := by
+                    exact (hshift n (N - n)).symm
+          · have hNn : N ≤ n := Nat.le_of_not_gt hn
+            have hadd : N + (n - N) = n := Nat.add_sub_of_le hNn
+            calc
+              g (f (localExampleW k n)) =
+                  g (Polynomial.C (q (MvPolynomial.X (some (n - N))))) := by
+                    rw [hfw n, dif_neg hn]
+              _ = localExampleWbar k (N + (n - N)) := by
+                rw [hgC, hqBsome]
+              _ = localExampleWbar k n := by rw [hadd]
+    have hmk : mkI p = 0 := by
+      rw [← hgf]
+      change g (f p) = 0
+      rw [hfp, map_zero]
+    exact Ideal.Quotient.eq_zero_iff_mem.mp hmk
+  let P := MvPolynomial localExampleVariable k
+  let I : Ideal P := localExampleIdeal k
+  let R := localExampleRing k
+  let mkI : P →+* R := Ideal.Quotient.mk I
+  let K : Ideal R := Ideal.span {localExampleXbar k}
+  let qx : R →+* (R ⧸ K) := Ideal.Quotient.mk K
+  let f2 : P →+* Polynomial k :=
+    MvPolynomial.eval₂Hom (Polynomial.C : k →+* Polynomial k) (fun i =>
+      match i with
+      | localExampleVariable.x => 0
+      | localExampleVariable.y => Polynomial.X
+      | localExampleVariable.w _ => 0)
+  have h2x : f2 (localExampleX k) = 0 := by
+    dsimp [f2, localExampleX]
+    rw [MvPolynomial.eval₂Hom_X']
+  have h2y : f2 (localExampleY k) = Polynomial.X := by
+    dsimp [f2, localExampleY]
+    rw [MvPolynomial.eval₂Hom_X']
+  have h2w (n : ℕ) : f2 (localExampleW k n) = 0 := by
+    dsimp [f2, localExampleW]
+    rw [MvPolynomial.eval₂Hom_X']
+  have h2C (c : k) : f2 (MvPolynomial.C c) = Polynomial.C c := by
+    dsimp [f2]
+    rw [MvPolynomial.eval₂Hom_C]
+  have hf2I : I ≤ RingHom.ker f2 := by
+    rw [show I = localExampleIdeal k by rfl, localExampleIdeal, localExampleRelations]
+    apply Ideal.span_le.mpr
+    intro z hz
+    rcases hz with ⟨n, rfl⟩ | ⟨n, rfl⟩
+    · change f2 (localExampleY k * localExampleW k n) = 0
+      rw [map_mul, h2y, h2w]
+      simp
+    · change f2 (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0
+      rw [map_sub, map_mul, h2w, h2x]
+      simp
+  have hf2I' : ∀ a : P, a ∈ I → f2 a = 0 := fun a ha => hf2I ha
+  let fI : R →+* Polynomial k := Ideal.Quotient.lift I f2 hf2I'
+  have hfIx : fI (localExampleXbar k) = 0 := by
+    change fI (Ideal.Quotient.mk I (localExampleX k)) = 0
+    dsimp [fI]
+    exact h2x
+  have hfIy : fI (localExampleYbar k) = Polynomial.X := by
+    change fI (Ideal.Quotient.mk I (localExampleY k)) = Polynomial.X
+    dsimp [fI]
+    exact h2y
+  have hrelR (n : ℕ) : localExampleWbar k n =
+      localExampleXbar k * localExampleWbar k (n + 1) := by
+    apply sub_eq_zero.mp
+    change Ideal.Quotient.mk I
+      (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    change localExampleW k n - localExampleX k * localExampleW k (n + 1) ∈
+      localExampleIdeal k
+    exact Ideal.subset_span (by
+      rw [localExampleRelations]
+      exact Or.inr ⟨n, rfl⟩)
+  have hqxX : qx (localExampleXbar k) = 0 := by
+    change Ideal.Quotient.mk K (localExampleXbar k) = 0
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp))
+  have hqxW (n : ℕ) : qx (localExampleWbar k n) = 0 := by
+    rw [hrelR n, map_mul, hqxX]
+    exact zero_mul (qx (localExampleWbar k (n + 1)))
+  let cR : k →+* R := mkI.comp (MvPolynomial.C : k →+* P)
+  let cQ : k →+* (R ⧸ K) := qx.comp cR
+  let g2 : Polynomial k →+* (R ⧸ K) :=
+    Polynomial.eval₂RingHom cQ (qx (localExampleYbar k))
+  have hcompP : (g2.comp fI).comp mkI = qx.comp mkI := by
+    apply MvPolynomial.ringHom_ext'
+    · ext c
+      simp only [RingHom.comp_apply]
+      change g2 (fI (mkI (MvPolynomial.C c))) = qx (mkI (MvPolynomial.C c))
+      change g2 (f2 (MvPolynomial.C c)) = qx (mkI (MvPolynomial.C c))
+      rw [h2C]
+      simp [g2, cQ, cR]
+    · intro i
+      rcases i with _ | _ | n
+      · change g2 (fI (mkI (localExampleX k))) = qx (mkI (localExampleX k))
+        change g2 (f2 (localExampleX k)) = qx (localExampleXbar k)
+        rw [h2x, map_zero, hqxX]
+      · change g2 (fI (mkI (localExampleY k))) = qx (mkI (localExampleY k))
+        change g2 (f2 (localExampleY k)) = qx (localExampleYbar k)
+        rw [h2y]
+        simp [g2]
+      · change g2 (fI (mkI (localExampleW k n))) = qx (mkI (localExampleW k n))
+        change g2 (f2 (localExampleW k n)) = qx (localExampleWbar k n)
+        rw [h2w, map_zero, hqxW]
+  have hcomp : g2.comp fI = qx := by
+    apply RingHom.ext
+    intro a
+    obtain ⟨b, rfl⟩ := Ideal.Quotient.mk_surjective a
+    exact RingHom.congr_fun hcompP b
+  have hregyQ : IsSMulRegular (R ⧸ K) (localExampleYbar k) := by
+    apply (isSMulRegular_quotient_iff_mem_of_smul_mem K
+      (localExampleYbar k)).mpr
+    intro a ha
+    have hK : K ≤ RingHom.ker fI := by
+      apply Ideal.span_le.mpr
+      intro z hz
+      rcases Set.mem_singleton_iff.mp hz with rfl
+      exact hfIx
+    have hzero : fI (localExampleYbar k * a) = 0 := hK ha
+    have hprod : Polynomial.X * fI a = 0 := by
+      calc
+        Polynomial.X * fI a = fI (localExampleYbar k * a) := by
+          rw [map_mul, hfIy]
+        _ = 0 := hzero
+    have hfa : fI a = 0 := by
+      apply Polynomial.isRegular_X.left
+      simpa using hprod
+    have hqa : qx a = 0 := by
+      rw [← hcomp]
+      change g2 (fI a) = 0
+      rw [hfa, map_zero]
+    exact Ideal.Quotient.eq_zero_iff_mem.mp hqa
+  have hq : QuotSMulTop (localExampleXbar k) R ≃ₗ[R]
+      R ⧸ K := by
+    apply Submodule.quotEquivOfEq
+    dsimp [K]
+    rw [← Submodule.ideal_span_singleton_smul]
+    change (Ideal.span {localExampleXbar k} : Ideal R) * (⊤ : Ideal R) =
+      Ideal.span {localExampleXbar k}
+    exact Ideal.mul_top _
+  have hregy : IsSMulRegular (QuotSMulTop (localExampleXbar k) R)
+      (localExampleYbar k) := by
+    exact (hq.isSMulRegular_congr _).mpr hregyQ
+  apply (RingTheory.Sequence.isRegular_cons_iff R (localExampleXbar k)
+    [localExampleYbar k]).mpr
+  refine ⟨hregx, ?_⟩
+  apply (RingTheory.Sequence.isRegular_cons_iff
+    (QuotSMulTop (localExampleXbar k) R) (localExampleYbar k) []).mpr
+  refine ⟨hregy, ?_⟩
+  let fK : R →+* k := (Polynomial.evalRingHom (0 : k)).comp fI
+  have hfKx : fK (localExampleXbar k) = 0 := by
+    dsimp [fK]
+    rw [hfIx]
+    simp
+  have hfKy : fK (localExampleYbar k) = 0 := by
+    dsimp [fK]
+    rw [hfIy]
+    simp
+  let ell0 : R →ₛₗ[fK] k :=
+    { toFun := fK
+      map_add' := by intro a b; exact fK.map_add a b
+      map_smul' := by
+        intro a b
+        change fK (a • b) = fK a • fK b
+        simpa only [smul_eq_mul] using fK.map_mul a b }
+  let Sx : Submodule R R :=
+    (Ideal.span {localExampleXbar k} : Ideal R) • (⊤ : Submodule R R)
+  have hSx : Sx ≤ LinearMap.ker ell0 := by
+    apply Submodule.smul_le.2
+    intro a ha b hb
+    rw [LinearMap.mem_ker]
+    change ell0 (a • b) = 0
+    rw [map_smulₛₗ]
+    have hspanx : Ideal.span {localExampleXbar k} ≤ RingHom.ker fK := by
+      apply Ideal.span_le.mpr
+      intro c hc
+      rcases Set.mem_singleton_iff.mp hc with rfl
+      exact hfKx
+    have ha0 : fK a = 0 := by
+      exact hspanx ha
+    rw [ha0, zero_smul]
+  let eSx : QuotSMulTop (localExampleXbar k) R ≃ₗ[R] R ⧸ Sx := by
+    apply Submodule.quotEquivOfEq
+    dsimp [Sx]
+    exact (Submodule.ideal_span_singleton_smul
+      (localExampleXbar k) (⊤ : Submodule R R)).symm
+  let ell1 : QuotSMulTop (localExampleXbar k) R →ₛₗ[fK] k :=
+    (Sx.liftQ ell0 hSx).comp eSx.toLinearMap
+  have hell1y : ell1 (Submodule.Quotient.mk (localExampleYbar k)) = 0 := by
+    change (Sx.liftQ ell0 hSx)
+      (eSx (Submodule.Quotient.mk (localExampleYbar k))) = 0
+    change ell0 (localExampleYbar k) = 0
+    dsimp [ell0]
+    exact hfKy
+  let Sy : Submodule R (QuotSMulTop (localExampleXbar k) R) :=
+    (Ideal.span {localExampleYbar k} : Ideal R) •
+      (⊤ : Submodule R (QuotSMulTop (localExampleXbar k) R))
+  have hSy : Sy ≤ LinearMap.ker ell1 := by
+    apply Submodule.smul_le.2
+    intro a ha b hb
+    rw [LinearMap.mem_ker]
+    change ell1 (a • b) = 0
+    rw [map_smulₛₗ]
+    have hspany : Ideal.span {localExampleYbar k} ≤ RingHom.ker fK := by
+      apply Ideal.span_le.mpr
+      intro c hc
+      rcases Set.mem_singleton_iff.mp hc with rfl
+      exact hfKy
+    have ha0 : fK a = 0 := by
+      exact hspany ha
+    rw [ha0, zero_smul]
+  let eSy : QuotSMulTop (localExampleYbar k)
+      (QuotSMulTop (localExampleXbar k) R) ≃ₗ[R]
+      (QuotSMulTop (localExampleXbar k) R) ⧸ Sy := by
+    apply Submodule.quotEquivOfEq
+    dsimp [Sy]
+    exact (Submodule.ideal_span_singleton_smul
+      (localExampleYbar k)
+      (⊤ : Submodule R (QuotSMulTop (localExampleXbar k) R))).symm
+  let ell2 : QuotSMulTop (localExampleYbar k)
+      (QuotSMulTop (localExampleXbar k) R) →ₛₗ[fK] k :=
+    (Sy.liftQ ell1 hSy).comp eSy.toLinearMap
+  have hell2_one : ell2 (Submodule.Quotient.mk (1 : QuotSMulTop (localExampleXbar k) R)) = 1 := by
+    change (Sy.liftQ ell1 hSy)
+      (eSy (Submodule.Quotient.mk (1 : QuotSMulTop (localExampleXbar k) R))) = 1
+    change ell1 (1 : QuotSMulTop (localExampleXbar k) R) = 1
+    change ell0 (1 : R) = 1
+    dsimp [ell0]
+    exact fK.map_one
+  have hnontrivial : Nontrivial (QuotSMulTop (localExampleYbar k)
+      (QuotSMulTop (localExampleXbar k) R)) := by
+    refine ⟨⟨0, Submodule.Quotient.mk (1 : QuotSMulTop (localExampleXbar k) R), ?_⟩⟩
+    intro h
+    have hh := congrArg ell2 h
+    rw [map_zero, hell2_one] at hh
+    exact zero_ne_one hh
+  exact @RingTheory.Sequence.IsRegular.nil R
+    (QuotSMulTop (localExampleYbar k)
+      (QuotSMulTop (localExampleXbar k) R)) _ _ _ hnontrivial
 
 theorem local_example_y_is_zero_divisor (k : Type u) [Field k] :
     ¬ IsSMulRegular (localExampleRing k) (localExampleYbar k) := by

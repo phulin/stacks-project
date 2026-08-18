@@ -132,7 +132,7 @@ def IsFiniteProductOfNilpotentMaximalLocalRings
 def IsFiniteDiscretePrimeSpectrum
     (R : Type u) [CommRing R] : Prop :=
   Finite (PrimeSpectrum R) ∧
-    ∀ U : Set (PrimeSpectrum R), IsOpen U
+    DiscreteTopology (PrimeSpectrum R)
 
 def HasFinitelyManyMaximalIdealsAndNilpotentJacobsonRadical
     (R : Type u) [CommRing R] : Prop :=

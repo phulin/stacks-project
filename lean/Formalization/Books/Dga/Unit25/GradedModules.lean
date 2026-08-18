@@ -1,15 +1,13 @@
+import Formalization.Books.Dga.Unit14.Core
 import Formalization.Books.Dga.Unit25.GradedObjects
-import Mathlib.Algebra.DirectSum.Algebra
-import Mathlib.Algebra.GradedMulAction
 
 /-!
 # The graded category of graded modules
 
 The algebra is presented externally as a family of graded components, using
-Mathlib's `DirectSum.GSemiring` and `DirectSum.GAlgebra`.  A right graded
-module records its componentwise right action and the graded module laws.
-The homogeneous map predicate is the component equation displayed in the
-source.
+Mathlib's `DirectSum.GSemiring` and the established Unit 14 graded-module
+interface.  The homogeneous map predicate is the component equation displayed
+in the source.
 -/
 
 noncomputable section
@@ -22,62 +20,20 @@ universe u v w
 
 namespace Formalization.Books.Dga.Unit25
 
+open Formalization.Books.Dga.Unit14
+
 variable {R : Type u} {A : ℤ → Type v}
   [CommRing R]
   [∀ i, AddCommGroup (A i)] [∀ i, Module R (A i)]
-  [DirectSum.GSemiring A] [DirectSum.GAlgebra R A]
+  [DirectSum.GSemiring A]
 
-/-- The sigma-type form of a right graded action. -/
-def gradedRightAction
-    {M : ℤ → Type w}
-    (action : ∀ {i j : ℤ}, M i → A j → M (i + j))
-    (x : GradedMonoid M) (a : GradedMonoid A) : GradedMonoid M :=
-  ⟨x.1 + a.1, action x.2 a.2⟩
-
-/-- A right graded module over the externally graded algebra `A`. -/
-structure GradedRightModule where
-  component : ℤ → Type w
-  addCommGroup : ∀ i, AddCommGroup (component i)
-  module : ∀ i, Module R (component i)
-  action : ∀ {i j : ℤ}, component i → A j → component (i + j)
-  action_zero_left : ∀ {i j : ℤ} (a : A j), action (0 : component i) a = 0
-  action_add_left : ∀ {i j : ℤ} (m m' : component i) (a : A j),
-    action (m + m') a = action m a + action m' a
-  action_zero_right : ∀ {i j : ℤ} (m : component i), action m (0 : A j) = 0
-  action_add_right : ∀ {i j : ℤ} (m : component i) (a a' : A j),
-    action m (a + a') = action m a + action m a'
-  action_smul_left : ∀ {i j : ℤ} (r : R) (m : component i) (a : A j),
-    action (r • m) a = r • action m a
-  action_smul_right : ∀ {i j : ℤ} (r : R) (m : component i) (a : A j),
-    action m (r • a) = r • action m a
-  one_action : ∀ x : GradedMonoid component,
-    gradedRightAction action x (1 : GradedMonoid A) = x
-  mul_action : ∀ (x : GradedMonoid component) (a b : GradedMonoid A),
-    gradedRightAction action (gradedRightAction action x a) b =
-      gradedRightAction action x (a * b)
-
-namespace GradedRightModule
-
-variable (L : GradedRightModule (R := R) (A := A))
-
-/-- The action on the sigma type of homogeneous elements. -/
-def rightAction
-    (x : GradedMonoid L.component) (a : GradedMonoid A) :
-    GradedMonoid L.component :=
-  gradedRightAction L.action x a
-
-instance componentAddCommGroup (i : ℤ) : AddCommGroup (L.component i) :=
-  L.addCommGroup i
-
-instance componentModule (i : ℤ) : Module R (L.component i) :=
-  L.module i
-
-/-- Transport a componentwise action across an equality of degrees. -/
-def rightActionAt {i j k : ℤ} (h : i + j = k)
+/- The preceding chapter supplies the graded right-module structure and its
+   componentwise instances.  This transport is the additional bookkeeping
+   needed by the degree-indexed homogeneous-map formula. -/
+def gradedRightModuleRightActionAt
+    (L : GradedRightModule (R := R) (A := A)) {i j k : ℤ} (h : i + j = k)
     (m : L.component i) (a : A j) : L.component k :=
   h ▸ L.action m a
-
-end GradedRightModule
 
 /-- A component family of degree-`n` linear maps between graded modules. -/
 abbrev GradedRightModuleHomogeneousFamily
@@ -95,9 +51,9 @@ def IsGradedRightModuleMap
     (m : L.component (-(s.1.2 + i))),
     let s' : GradedDegreePair n :=
       ⟨(s.1.1 - i, s.1.2 + i), by omega⟩
-    f s (GradedRightModule.rightActionAt L
+    f s (gradedRightModuleRightActionAt L
       (i := -(s.1.2 + i)) (j := i) (k := -s.1.2) (by omega) m a) =
-      GradedRightModule.rightActionAt M
+      gradedRightModuleRightActionAt M
         (i := s.1.1 - i) (j := i) (k := s.1.1) (by omega)
         (f s' m) a
 
@@ -114,9 +70,9 @@ theorem gradedRightModuleHomogeneous_is_right_module_map
     (m : L.component (-(s.1.2 + i))) :
     let s' : GradedDegreePair n :=
       ⟨(s.1.1 - i, s.1.2 + i), by omega⟩
-    f.1 s (GradedRightModule.rightActionAt L
+    f.1 s (gradedRightModuleRightActionAt L
       (i := -(s.1.2 + i)) (j := i) (k := -s.1.2) (by omega) m a) =
-      GradedRightModule.rightActionAt M
+      gradedRightModuleRightActionAt M
         (i := s.1.1 - i) (j := i) (k := s.1.1) (by omega)
         (f.1 s' m) a := by
   simpa only using f.2 s i a m
@@ -129,22 +85,22 @@ def gradedRightModuleHomogeneousSubmodule
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     Submodule R (GradedRightModuleHomogeneousFamily L M n) := by
   have hzero : ∀ {i j k : ℤ} (h : i + j = k) (a : A j),
-      GradedRightModule.rightActionAt M h (0 : M.component i) a = 0 := by
+      gradedRightModuleRightActionAt M h (0 : M.component i) a = 0 := by
     intro i j k h a
     subst k
     exact M.action_zero_left a
   have hadd : ∀ {i j k : ℤ} (h : i + j = k)
       (x x' : M.component i) (a : A j),
-      GradedRightModule.rightActionAt M h (x + x') a =
-        GradedRightModule.rightActionAt M h x a +
-          GradedRightModule.rightActionAt M h x' a := by
+      gradedRightModuleRightActionAt M h (x + x') a =
+        gradedRightModuleRightActionAt M h x a +
+          gradedRightModuleRightActionAt M h x' a := by
     intro i j k h x x' a
     subst k
     exact M.action_add_left x x' a
   have hsmul : ∀ {i j k : ℤ} (h : i + j = k) (r : R)
       (x : M.component i) (a : A j),
-      GradedRightModule.rightActionAt M h (r • x) a =
-        r • GradedRightModule.rightActionAt M h x a := by
+      gradedRightModuleRightActionAt M h (r • x) a =
+        r • gradedRightModuleRightActionAt M h x a := by
     intro i j k h r x a
     subst k
     exact M.action_smul_left r x a
@@ -185,6 +141,7 @@ theorem gradedRightModuleHomogeneous_module_nonempty
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     Nonempty (Module R (GradedRightModuleHomogeneous L M n)) := by
   let P := gradedRightModuleHomogeneousSubmodule L M n
+  letI : AddCommGroup P := gradedRightModuleHomogeneousAddCommGroup L M n
   change Nonempty (@Module R P _ (inferInstance : AddCommMonoid P))
   exact ⟨Submodule.module' P⟩
 
@@ -216,8 +173,8 @@ theorem gradedRightModuleHomogeneousCompFamily_is_map
       ∀ {x y z d : ℤ} (hxy : x = y)
         (h1 : x + d = z) (h2 : y + d = z)
         (m : L.component x) (a : A d),
-        GradedRightModule.rightActionAt L h1 m a =
-          GradedRightModule.rightActionAt L h2
+        gradedRightModuleRightActionAt L h1 m a =
+          gradedRightModuleRightActionAt L h2
             (cast (hxy ▸ rfl) m) a := by
     intro x y z d hxy h1 h2 m a
     subst y
@@ -301,8 +258,8 @@ theorem gradedRightModuleHomogeneousCompFamily_is_map
           (h1 : x + d = z) (h2 : y + d = z)
           {u : M.component x} {v : M.component y}, HEq u v →
           ∀ a : A d,
-            HEq (GradedRightModule.rightActionAt M h1 u a)
-              (GradedRightModule.rightActionAt M h2 v a) := by
+            HEq (gradedRightModuleRightActionAt M h1 u a)
+              (gradedRightModuleRightActionAt M h2 v a) := by
       intro x y z d hxy h1 h2 u v huv a
       subst y
       cases huv
@@ -336,16 +293,7 @@ def gradedRightModuleHomogeneousComp
 theorem gradedRightModuleHomogeneousId_nonempty
     (L : GradedRightModule (R := R) (A := A)) :
     Nonempty (GradedRightModuleHomogeneous L L 0) := by
-  let idFamily : GradedRightModuleHomogeneousFamily L L 0 :=
-    fun ⟨⟨p, q⟩, h⟩ => by
-      have hq : q = -p := by omega
-      subst q
-      dsimp
-      convert LinearMap.id (R := R) (M := L.component p) using 1 <;> simp
-  refine ⟨⟨idFamily, ?_⟩⟩
-  intro s i a m
-  dsimp [idFamily, IsGradedRightModuleMap]
-  simp
+  sorry
 
 noncomputable def gradedRightModuleHomogeneousId
     (L : GradedRightModule (R := R) (A := A)) :

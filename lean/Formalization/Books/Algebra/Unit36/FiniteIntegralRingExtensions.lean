@@ -1136,7 +1136,7 @@ theorem silly_normal_short_exact
     Function.Injective (sillyNormalLeft x y) ∧
       Function.Exact (sillyNormalLeft x y) (sillyNormalRight x y) ∧
       Function.Surjective (sillyNormalRight x y) := by
-  /-
+  
   classical
   let hxunit : IsUnit (algebraMap R (ratioLocalization R x y) x) :=
     IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_right x y)
@@ -1316,8 +1316,7 @@ theorem silly_normal_short_exact
     apply hinjR
     have hsecond := congrArg (fun p => (p.2 : ratioLocalization R x y)) hrs
     simpa [sillyNormalLeft] using hsecond
-  -/
-  sorry
+  refine ⟨hinjLeft, ?_, hsurj⟩
 
 end
 

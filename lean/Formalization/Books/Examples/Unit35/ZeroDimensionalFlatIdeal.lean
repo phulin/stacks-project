@@ -1936,7 +1936,25 @@ theorem zeroDimensionalFlatIdeal_moduleGenerator_annihilator
         ({zeroDimensionalFlatIdealModuleGenerator k i} :
           Set (zeroDimensionalFlatIdealModule k))).annihilator =
       zeroDimensionalFlatIdealXAnnihilatorCandidate k i := by
-  sorry
+  apply le_antisymm
+  · intro a ha
+    rw [← zeroDimensionalFlatIdeal_x_annihilator k i]
+    rw [Submodule.mem_annihilator_span_singleton]
+    rw [Submodule.mem_annihilator_span_singleton] at ha
+    have hzero :
+        zeroDimensionalFlatIdealModuleToIdeal k
+            (a • zeroDimensionalFlatIdealModuleGenerator k i) = 0 := by
+      rw [ha, map_zero]
+    rw [map_smul, zeroDimensionalFlatIdealModuleToIdeal_generator] at hzero
+    exact congrArg Subtype.val hzero
+  · intro a ha
+    rw [← zeroDimensionalFlatIdeal_x_annihilator k i] at ha
+    rw [Submodule.mem_annihilator_span_singleton] at ha
+    rw [Submodule.mem_annihilator_span_singleton]
+    apply (zeroDimensionalFlatIdealModuleToIdealEquiv k).injective
+    rw [map_smul, zeroDimensionalFlatIdealModuleToIdealEquiv_generator, map_zero]
+    apply Subtype.ext
+    exact ha
 
 /-- The source's final existence statement. -/
 theorem exists_local_ring_unique_prime_nonzero_flat_ideal :

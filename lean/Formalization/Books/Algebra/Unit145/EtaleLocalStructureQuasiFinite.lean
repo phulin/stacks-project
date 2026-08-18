@@ -1,8 +1,7 @@
-import Formalization.Books.Algebra.Unit122.QuasiFinite
-import Formalization.Books.Algebra.Unit123.ZariskiMain
-import Formalization.Books.Algebra.Unit143.EtaleRingMaps
 import Mathlib.RingTheory.Etale.QuasiFinite
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.RingHom.Etale
+import Mathlib.RingTheory.RingHom.QuasiFinite
 
 /-!
 # Commutative Algebra, Chapter 145: Étale local structure of quasi-finite ring maps
@@ -20,9 +19,13 @@ open scoped TensorProduct
 
 noncomputable section
 
-universe u v
+universe u
 
 /-! ## 145.1 Étale local structure of quasi-finite ring maps -/
+
+/- The introductory remarks recall the openness and base-change properties of
+quasi-finite loci from the preceding quasi-finite chapter; they are not
+duplicated here. -/
 
 /-- The source localization map `S'_g → S_g` is represented by the canonical
 map between localizations away from an element. -/
@@ -31,6 +34,17 @@ abbrev localizedMap
     (g : S' →+* S) (s : S') :
     Localization.Away s →+* Localization.Away (g s) :=
   Localization.awayMap g s
+
+/-- The canonical map between residue fields at primes related by a ring map. -/
+noncomputable def residueFieldMapAt
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p) :
+    p.asIdeal.ResidueField →+* q.asIdeal.ResidueField := by
+  let hcomap : p.asIdeal = q.asIdeal.comap f := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq).symm
+  exact Ideal.ResidueField.map p.asIdeal q.asIdeal f hcomap
 
 /-- A binary product presentation of an algebra over `R`, with its factor
 maps retained for transporting primes from the original algebra. -/
@@ -70,8 +84,8 @@ theorem produce_finite
   sorry
 
 /-- Data for the étale neighborhood and product decomposition around one
-quasi-finite prime.  A nonempty algebra equivalence records the source's
-notation `κ(p) = κ(p')`. -/
+quasi-finite prime.  Bijectivity of the canonical residue-field map records
+the source's notation `κ(p) = κ(p')`. -/
 structure EtaleFiniteAtPrimeData
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
@@ -82,13 +96,8 @@ structure EtaleFiniteAtPrimeData
   etale : RingHom.Etale (algebraMap R R')
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
-  residueEquiv :
-    letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
-      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
-        (algebraMap R R') p p' liesOver).toAlgebra
-    Nonempty
-      (p.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField]
-        p'.asIdeal.ResidueField)
+  residueFieldMapBijective :
+    Function.Bijective (residueFieldMapAt (algebraMap R R') p p' liesOver)
   decomposition : BinaryAlgebraProduct R' (R' ⊗[R] S)
   finiteA : letI : Algebra R' decomposition.A := decomposition.algebraA
     RingHom.Finite (algebraMap R' decomposition.A)
@@ -161,13 +170,8 @@ structure EtaleFiniteOverPrimeData
   etale : RingHom.Etale (algebraMap R R')
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
-  residueEquiv :
-    letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
-      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
-        (algebraMap R R') p p' liesOver).toAlgebra
-    Nonempty
-      (p.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField]
-        p'.asIdeal.ResidueField)
+  residueFieldMapBijective :
+    Function.Bijective (residueFieldMapAt (algebraMap R R') p p' liesOver)
   decomposition : FiniteAlgebraProduct R' (R' ⊗[R] S)
   finiteFactors : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     RingHom.Finite (algebraMap R' (decomposition.A i))
@@ -209,8 +213,7 @@ structure EtaleFinitePurelyInseparableData
     letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     ∀ hr : PrimeSpectrum.comap (algebraMap R' (decomposition.A i)) r = p',
       letI : Algebra p'.asIdeal.ResidueField r.asIdeal.ResidueField :=
-        (Formalization.Books.Algebra.Unit113.residueFieldMapAt
-          (algebraMap R' (decomposition.A i)) p' r hr).toAlgebra
+        (residueFieldMapAt (algebraMap R' (decomposition.A i)) p' r hr).toAlgebra
       Module.Finite p'.asIdeal.ResidueField r.asIdeal.ResidueField ∧
         IsPurelyInseparable p'.asIdeal.ResidueField r.asIdeal.ResidueField
   noQuasiFiniteB : letI : Algebra R' decomposition.B := decomposition.algebraB

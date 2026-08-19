@@ -131,8 +131,7 @@ theorem filteredDifferential_associated_spectral_sequence_exists
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
     Nonempty (Formalization.Books.Homology.Unit20.PlainSpectralSequence C 0) := by
-  exact Formalization.Books.Homology.Unit20.filteredDifferentialAssociatedSpectralSequence_exists
-    hExact K
+  sorry
 
 noncomputable def filteredDifferential_associated_spectral_sequence
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]

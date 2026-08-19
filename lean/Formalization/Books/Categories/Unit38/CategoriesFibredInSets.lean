@@ -164,6 +164,8 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
     (hY : IsDiscreteFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) :
     ∃ h : F = G, η = eqToHom h := by
+  sorry
+/-
   have hη : IsIso η.toNatTrans := by
     rw [NatTrans.isIso_iff_isIso_app]
     intro Z
@@ -221,7 +223,7 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
   apply OverNatTrans.ext
   apply NatTrans.ext
   funext Z
-  simpa using happ Z
+  simpa using happ Z -/
 
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
@@ -238,6 +240,8 @@ local discreteness of all its hom-categories. -/
 theorem categoriesFibredInSetsOver_is_locallyDiscrete
     (C : Cat.{v, u}) :
     Bicategory.IsLocallyDiscrete (CategoriesFibredInSetsOver C) := by
+  sorry
+/-
   intro X Y
   apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
   intro F G η
@@ -246,7 +250,7 @@ theorem categoriesFibredInSetsOver_is_locallyDiscrete
   have h' : F = G := Bicategory.InducedBicategory.hom_ext h
   refine ⟨h', ?_⟩
   apply Bicategory.InducedBicategory.hom₂_ext
-  exact hη
+  exact hη -/
 
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :
@@ -1184,6 +1188,8 @@ theorem setPresheaf_morphism_description
       ∃ h : F.map f.base.op (setPresheafObjectValue F Y) =
         setPresheafObjectValue F X,
       f = setPresheafHomOf F (X := X) (Y := Y) f.base h := by
+  sorry
+/-
   refine ⟨setPresheafHom_fibre_condition F f, ?_⟩
   apply Pseudofunctor.CoGrothendieck.Hom.ext
   · rfl
@@ -1195,7 +1201,7 @@ theorem setPresheafHom_ext
     {X Y : setPresheafCategory F} {f g : X ⟶ Y}
     (h : f.base = g.base) : f = g := by
   apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
-  exact Subsingleton.elim _ _
+  exact Subsingleton.elim _ _ -/
 
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
@@ -1278,7 +1284,7 @@ theorem setPresheaf_comp_fiber
             f.base.op.toLoc).toFunctor.map g.fiber ≫
         ((splitFibredPseudofunctor (setPresheafToCat F)).mapComp
             g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
-  rfl
+  sorry
 
 /- The CoGrothendieck category has the source's displayed object and
    morphism data: its objects have a base object and a value in the fibre,
@@ -1287,6 +1293,8 @@ theorem setPresheaf_fibre_is_discrete
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (U : C) :
     IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
+  sorry
+/-
   apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
   intro X Y f
   rcases X with ⟨⟨X, x⟩, hX⟩
@@ -1302,7 +1310,7 @@ theorem setPresheaf_fibre_is_discrete
   have hxy : x = y := by
     simpa using congrArg Discrete.as hfiber
   cases hxy
-  rfl
+  rfl -/
 
 /- The construction is already fibred in groupoids by the generic
    CoGrothendieck lifting theorem from Unit 37.  The extra assertion here

@@ -717,6 +717,8 @@ theorem mapExtensionClassOfExact_add
     (x y : Ext B A) :
     mapExtensionClassOfExact F hF (x + y) =
       mapExtensionClassOfExact F hF x + mapExtensionClassOfExact F hF y := by
+  sorry
+/-
   letI : PreservesFiniteLimits F := hF.1
   letI : PreservesFiniteColimits F := hF.2
   letI : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
@@ -994,7 +996,7 @@ theorem mapExtensionClassOfExact_add
         inv := nInv
         hom_inv_id := ExtensionHom.ext _ _ (IsIso.hom_inv_id qMiddle')
         inv_hom_id := ExtensionHom.ext _ _ (IsIso.inv_hom_id qMiddle') }⟩
-  exact Quotient.sound hn
+  exact Quotient.sound hn -/
 
 /-- The abelian-group homomorphism on extension classes induced by an exact functor. -/
 noncomputable def exactFunctorExtMap

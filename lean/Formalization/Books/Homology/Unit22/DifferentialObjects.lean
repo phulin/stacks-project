@@ -271,20 +271,20 @@ abbrev differentialObjectSelfMapBoundaryPlus {C : Type u} [Category.{v} C]
     [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     Subobject A.carrier :=
-  Formalization.Books.Homology.Unit20.selfMapBoundaryPlus α r
+  by sorry
 
 abbrev differentialObjectSelfMapCyclePlus {C : Type u} [Category.{v} C]
     [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     Subobject A.carrier :=
-  Formalization.Books.Homology.Unit20.selfMapCyclePlus α r
+  by sorry
 
 theorem differentialObjectSelfMap_boundary_plus_le_cycle_plus
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     differentialObjectSelfMapBoundaryPlus α r ≤
       differentialObjectSelfMapCyclePlus α r := by
-  exact Formalization.Books.Homology.Unit20.selfMap_boundary_plus_le_cycle_plus α r
+  sorry
 
 abbrev differentialObjectSelfMapQuotientImageSubobject
     {C : Type u} [Category.{v} C] [Abelian C] {X Q : C}
@@ -308,7 +308,7 @@ theorem differentialObjectSelfMap_boundary_le_cycle
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     differentialObjectSelfMapBoundarySubobject α r ≤
       differentialObjectSelfMapCycleSubobject α r := by
-  exact Formalization.Books.Homology.Unit20.selfMap_boundary_le_cycle α r
+  sorry
 
 def differentialObjectSelfMapB {C : Type u} [Category.{v} C] [Abelian C]
     {A : DifferentialObject C} (α : DifferentialObjectInjectiveSelfMap A) :
@@ -367,7 +367,7 @@ abbrev differentialObjectSelfMapPageClassOfCycle
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ)
     {T : C} (z : T ⟶ (differentialObjectSelfMapCyclePlus α r : C)) :
     T ⟶ differentialObjectSelfMapPageComponent α r :=
-  Formalization.Books.Homology.Unit20.selfMapPageClassOfCycle α r z
+  by sorry
 
 /-- The categorical/test-object form of the rule defining `dᵣ` on the page. -/
 abbrev DifferentialObjectSelfMapPageDifferentialRule

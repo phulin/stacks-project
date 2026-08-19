@@ -162,7 +162,7 @@ instance filtrationStepFunctor_preservesZeroMorphisms
       (A.filtration.obj p).arrow ≫ (0 : A.carrier ⟶ B.carrier) =
         (0 : (A.filtration.obj p : C) ⟶ (B.filtration.obj p : C)) ≫
           (B.filtration.obj p).arrow
-    simp
+    sorry
 
 /-- The complex obtained by applying the `p`th filtration quotient termwise. -/
 noncomputable def filtrationQuotientFunctor

@@ -626,6 +626,68 @@ theorem minimal_genus_one_classification (T : NumericalType)
     (hminimal : IsMinimal T) (hgenus : IsOfGenus T 1) :
     ∃ T' : NumericalType, EquivalentNumericalType T T' ∧
       IsGenusOneNormalForm T' := by
+  /-
+  Proof roadmap (the statement needs no extra hypothesis).
+
+  `NumericalType` in `Unit03/NumericalTypes.lean` contains all the data used by
+  the classification: positive `m` and `w`, nonnegative `g`, a symmetric
+  off-diagonal-nonnegative connected matrix, the kernel equation `row_sum`,
+  and `w_dvd`.  In particular, the reducible case is exactly the input of
+  `Unit05.all_minus_two_classification`; no realizability assumption is
+  missing here.
+
+  Split on `hn : T.n = 1`.
+
+  * If `hn` holds, apply `Unit03.irreducible_numerical_type T 1 hn hgenus`.
+    Its first and fifth conclusions give `T.a i i = 0` and
+    `T.g (firstIndex T) = 1`.  Since every `i : Fin T.n` is `firstIndex T`,
+    these facts give `IsGenusOneItemOne T`: in `realizesTypePattern`, use the
+    scalars `T.m (firstIndex T)` and `T.w (firstIndex T)`, whose positivity is
+    `T.m_pos _` and `T.w_pos _`.  For the four transported coordinate
+    equalities, copy the `Fin.cast` transport pattern of `htransport` and
+    `hgenus_transport` below (in `realize_item_one`), with analogous helpers
+    for `m` and `w`; each helper is proved by `cases S; cases hs; rfl`.
+    Take `T' := T`.  Unfold `EquivalentNumericalType` and use
+    `Equiv.refl (Fin T.n)` with four pointwise reflexivity proofs, then select
+    the first disjunct of `IsGenusOneNormalForm`.
+
+  * Otherwise obtain `hn' : 1 < T.n` from `T.hn`.  First prove
+
+        hnonneg : ∀ i : Fin T.n, (0 : ℚ) ≤ genusContribution T i
+
+    by contradiction: a negative contribution and
+    `Unit03.minus_one_contribution T 1 hgenus hn'` produce an
+    `IsMinusOneIndex`, contradicting `hminimal`.  Next use
+    `Unit03.genus_formula T`, rewrite by `hgenus`, and unfold
+    `genusExpression` and `genusContribution` to get the rational equality
+
+        hsum : (∑ i : Fin T.n, genusContribution T i) = 0.
+
+    Instantiate `Finset.sum_eq_zero_iff_of_nonneg` with
+    `s := Finset.univ` and `f := genusContribution T` (the codomain is
+    `ℚ`) to deduce `hzero i : genusContribution T i = 0` for every `i`.
+    Then
+
+        Unit03.minus_two_contribution T 1 hgenus hn' (hzero i)
+
+    gives `hall : ∀ i : Fin T.n, IsMinusTwoIndex T i`.
+
+  Apply `Unit05.all_minus_two_classification T hall` from
+  `Unit05/Classification.lean`.  Reuse its `T'` and
+  `EquivalentNumericalType T T'`.  To assemble the last conjunct, unfold
+  `Unit05.AllMinusTwoConfiguration.IsNormalForm`, `IsFinite`, `IsUnbounded`,
+  and `IsCompleted`.  Its 33 leaves are definitionally equal, in the same
+  order, to the tail of this file's `IsGenusOneNormalForm` (from
+  `IsGenusOneTwoCycle` through `IsGenusOneE8Completed`).  After changing the
+  target leaves to the corresponding `Unit05.AllMinusTwoConfiguration`
+  predicates, `simpa only [or_assoc]` reassociates the four grouped Unit 5
+  families into the flat Unit 6 disjunction.
+
+  Do not try to obtain `hall` from `minimal_genus_at_least_one`: that theorem
+  proves only the genus inequality.  Also do not duplicate the determinant
+  and graph case analysis here; that is precisely the (currently upstream)
+  content of `Unit05.all_minus_two_classification`.
+  -/
   sorry
 
 /-! Every displayed normal form is intended as a minimal numerical type of

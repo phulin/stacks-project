@@ -1,4 +1,5 @@
 import Mathlib.Algebra.CharP.Frobenius
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Module.LinearMap.Basic
 import Mathlib.LinearAlgebra.Basis.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
@@ -20,13 +21,14 @@ proofs are intentionally deferred; the definitions use Mathlib's canonical
 Frobenius, cotangent-module, tensor-product, length, and flatness APIs.
 -/
 
-/-- Frobenius base change of a module, with the scalar action on the second
-factor restricted along the Frobenius endomorphism. -/
+/-- Frobenius base change of a module.  `ModuleCat.extendScalars` is used here
+so that the resulting module has the *target* `A`-action; the balancing action
+is restriction along Frobenius. -/
 def frobeniusBaseChange
     {A M : Type*} [CommRing A] [AddCommGroup M] [Module A M]
     (p : ℕ) [ExpChar A p] : Prop :=
-  letI : Module A A := Module.compHom A (frobenius A p)
-  Nonempty ((M ⊗[A] A) ≃ₗ[A] M)
+  Nonempty
+    (((ModuleCat.extendScalars (frobenius A p)).obj (ModuleCat.of A M)) ≃ₗ[A] M)
 
 /-- A finite Frobenius-stable module over a Noetherian local ring is free. -/
 theorem finite_frobenius_base_change_is_free
@@ -35,6 +37,53 @@ theorem finite_frobenius_base_change_is_free
     (p : ℕ) [Fact p.Prime] [CharP A p]
     (hM : frobeniusBaseChange (A := A) (M := M) p) :
     Module.Free A M := by
+  /-
+  Proof roadmap (minimal presentations and Krull intersection).
+
+  * Put `k := IsLocalRing.ResidueField A`.  Choose a finite basis of
+    `k ⊗[A] M`, reindex it by `Fin n`, and lift its vectors to
+    `v : Fin n → M` using `TensorProduct.mk_surjective`.  The resulting map
+    `q₀ : (Fin n → A) →ₗ[A] M` is surjective by
+    `IsLocalRing.span_eq_top_of_tmul_eq_basis`; this declaration is in
+    `Mathlib/RingTheory/LocalRing/Module.lean`.  Its reduction modulo the
+    maximal ideal is the chosen basis, so a coordinate calculation gives
+    `LinearMap.ker q₀ ≤ IsLocalRing.maximalIdeal A • ⊤`.
+
+  * Prove the following induction step for a surjective
+    `q : (Fin n → A) →ₗ[A] M` satisfying
+    `LinearMap.ker q ≤ (IsLocalRing.maximalIdeal A) ^ s • ⊤`.  Tensor the
+    presentation along `frobenius A p`.  Use `LinearMap.lTensor_exact` from
+    `Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean` for exactness,
+    and `TensorProduct.piScalarRight` from
+    `Mathlib/LinearAlgebra/TensorProduct/Pi.lean` to identify the base change
+    of `A ^ Fin n` with `A ^ Fin n`.  Under that identification the
+    coefficients in the kernel are sent to their `p`-th powers, hence the
+    new kernel is contained in `maximalIdeal ^ (s * p) • ⊤`.  Compose its
+    codomain with the equivalence extracted from `hM`.  It is important here
+    to retain the target `A`-action supplied by `ModuleCat.extendScalars` in
+    `frobeniusBaseChange`; replacing it by the raw tensor product carrying
+    the source-factor action does not state Frobenius base change.
+
+  * Iterate the step to obtain minimal surjections `qₑ : A ^ Fin n → M`
+    whose kernels lie in `maximalIdeal ^ (p ^ e) • ⊤`.  Compare `qₑ` with
+    `q₀`: lift `q₀` through the surjective `qₑ` to an endomorphism `Tₑ` of
+    `A ^ Fin n`.  Both reductions are bases, so the reduction of `Tₑ` is
+    bijective.  Apply `IsLocalRing.span_eq_top_of_tmul_eq_basis` for
+    surjectivity and
+    `IsLocalRing.split_injective_iff_lTensor_residueField_injective` (also in
+    `LocalRing/Module.lean`) for injectivity.  Thus `Tₑ` is an equivalence and
+    transports `ker q₀` into `ker qₑ`, proving
+    `ker q₀ ≤ maximalIdeal ^ (p ^ e) • ⊤` for every `e`.
+
+  * The powers `p ^ e` are cofinal because `Fact p.Prime` implies `1 < p`.
+    Finish with `Ideal.iInf_pow_smul_eq_bot_of_isLocalRing` from
+    `Mathlib/RingTheory/Filtration.lean`, obtaining `ker q₀ = ⊥`.
+    `LinearEquiv.ofBijective` turns `q₀` into an equivalence; transport the
+    standard basis and conclude with `Module.Free.of_basis`.
+
+  This route deliberately avoids Fitting ideals: the Mathlib version used by
+  this project has no reusable Fitting-ideal API for the textbook argument.
+  -/
   sorry
 
 /-- The conormal class represented by an entry of a list of generators. -/
@@ -172,13 +221,12 @@ theorem independent_iff_cotangent_has_basis
   constructor
   · intro hi
     let b : Module.Basis (Fin xs.length) (A ⧸ I) I.Cotangent :=
-      Module.Basis.mk (hli.mpr hi) (by simpa [hspan])
+      Module.Basis.mk (hli.mpr hi) (by simp [hspan])
     refine ⟨b, ?_⟩
     intro i
     exact Module.Basis.mk_apply _ _ i
   · rintro ⟨b, hb⟩
     apply hli.mp
-    change LinearIndependent (A ⧸ I) v
     change LinearIndependent (A ⧸ Ideal.ofList xs)
       (fun i => conormalGenerator xs i)
     have heq : (fun i => conormalGenerator xs i) = b :=
@@ -668,7 +716,7 @@ theorem independent_multiplication_exact
 theorem independent_length_mul
     {A : Type*} [CommRing A] (xs : List A) (f g : A)
     (h : independent (xs ++ [f * g]))
-    (hfinite : IsFiniteLength A
+    (_hfinite : IsFiniteLength A
       (A ⧸ Ideal.ofList (xs ++ [f * g]))) :
     Module.length A (A ⧸ Ideal.ofList (xs ++ [f * g])) =
       Module.length A (A ⧸ Ideal.ofList (xs ++ [f])) +
@@ -690,6 +738,45 @@ theorem length_quotient_of_independent_powers
     (h : independent (powerList xs e)) :
     Module.length A (A ⧸ Ideal.ofList (powerList xs e)) =
       (↑(∏ i : Fin xs.length, e i) : ℕ∞) := by
+  /-
+  Proof roadmap (induction on the total excess of the exponents).
+
+  * First prove a small permutation lemma for `σ : Equiv.Perm (Fin n)`:
+    `independent (List.ofFn v) ↔ independent (List.ofFn (v ∘ σ))`.
+    Use `Equiv.sum_comp` to reindex relations and identify the two
+    `Ideal.ofList`s from equality of their ranges.  The same ideal equality
+    identifies the corresponding quotient lengths.  This permits moving any
+    selected coordinate to `Fin.last _` using `Equiv.swap`.
+
+  * Strongly induct on
+    `μ(e) := ∑ i : Fin xs.length, (e i - 1)`.  If `μ(e) = 0`, positivity in
+    `he` makes every exponent one.  Rewrite `powerList xs e` to `xs` using
+    `List.ofFn_get` and `pow_one`; then `hmax` identifies the quotient with
+    the residue field, whose length is one by `Module.length_eq_one` from
+    `Mathlib/RingTheory/Length.lean`.  The product of the exponents is also
+    one.  The empty-list case is included in this branch.
+
+  * Otherwise choose `i` with `1 < e i`, move it to the last coordinate, and
+    use `List.ofFn_succ'` from `Mathlib/Data/List/OfFn.lean` to expose the
+    list as a prefix followed by `x ^ e`.  Rewrite
+    `x ^ e = x * x ^ (e - 1)`.  Apply
+    `independent_multiplication_exact` above to obtain the exact sequence for
+    replacing the last element by `x` and by `x ^ (e - 1)`, and apply
+    `Module.length_eq_add_of_exact` directly.  Do not use
+    `independent_length_mul`: its `IsFiniteLength` argument is unnecessary
+    for length additivity and would create a separate finiteness obligation.
+    Derive independence of both replacement lists with
+    `independent_append_mul_factor` (commuting the two factors for the second
+    child), and invoke the induction hypothesis since both total excesses
+    decrease.
+
+  * Reindex the two conclusions back through the permutation and assemble
+    the arithmetic with `Finset.prod_update`: if `P` is the product away
+    from `i`, the two lengths are `P` and `P * (e i - 1)`, whose sum is
+    `P * e i`.  Normalize the casts into `ℕ∞` only at this final step.
+  All index types in the auxiliary lemmas should be instantiated explicitly
+  as `Fin xs.length`; this avoids dependent-length transports after `ofFn`.
+  -/
   sorry
 
 /-- Flat extension preserves the chapter's independence condition. -/
@@ -697,6 +784,35 @@ theorem independent_map_of_flat
     {A B : Type*} [CommRing A] [CommRing B] (φ : A →+* B)
     (hφ : RingHom.Flat φ) (xs : List A) (h : independent xs) :
     independent (xs.map φ) := by
+  /-
+  Proof roadmap (the equational criterion for flatness).
+
+  * Add the focused import
+    `Mathlib/RingTheory/Flat/EquationalCriterion.lean`.  Use
+    `algebraize [φ]` so that `algebraMap A B = φ`; `hφ` then supplies the
+    instance `Module.Flat A B` used by the criterion.
+
+  * Given `a : Fin xs.length → B` with
+    `∑ i, a i * φ (xs.get i) = 0`, commute the factors and normalize this as
+    `∑ i, xs.get i • a i = 0`.  Invoke the exact declaration
+    `Module.Flat.isTrivialRelation_of_sum_smul_eq_zero` with
+    `f := xs.get` and `x := a`.  It yields a finite family
+    `c : Fin xs.length → Fin k → A` and `y : Fin k → B` such that
+    `a i = ∑ j, c i j • y j` and, for every `j`,
+    `∑ i, xs.get i * c i j = 0`.
+
+  * Commute the factors in the latter relations and apply `h`; hence every
+    `c i j` belongs to `I := Ideal.ofList xs`.  Map these memberships along
+    `φ`.  Use `Ideal.map_ofList` from
+    `Mathlib/RingTheory/Regular/RegularSequence.lean` to rewrite
+    `I.map φ` as `Ideal.ofList (xs.map φ)`.  Finally expand the displayed
+    expression for `a i` with `Algebra.smul_def` and close under multiplication
+    and finite sums using `Ideal.mul_mem_left`/`Ideal.mul_mem_right` and
+    `Ideal.sum_mem`.
+
+  No locality, Noetherian, finiteness, or characteristic hypothesis is needed;
+  the present statement has precisely the hypotheses used by this argument.
+  -/
   sorry
 
 /-- Kunz's characterization of regular Noetherian rings by flat Frobenius. -/
@@ -704,6 +820,80 @@ theorem kunz_frobenius_flat_iff_regular
     {A : Type*} [CommRing A] [IsNoetherianRing A] (p : ℕ)
     [Fact p.Prime] [CharP A p] :
     IsRegularRing A ↔ RingHom.Flat (frobenius A p) := by
+  /-
+  Proof roadmap (local Kunz followed by localization).
+
+  Focused project prerequisites are
+  `Formalization.Books.Algebra.Unit59.NoetherianLocalRings`,
+  `Unit60.Dimension`, `Unit106.RegularLocalRings`, and
+  `Unit128.MoreFlatnessCriteria`; these are earlier-book modules.  Also import
+  `Mathlib/RingTheory/LocalRing/Length` for base-change of length.
+
+  Local forward implication.
+  * For a Noetherian local ring `R`, construct a minimal generating list `xs`
+    of its maximal ideal by the same `Submodule.FG.exists_span_finset_card_eq_spanFinrank`
+    construction used in Unit106.  (The packaged helper there is private.)
+    From regularity, `Unit106.regular_ring_CM xs hxs` supplies the
+    Cohen--Macaulay hypothesis required by `Unit128.miracle_flatness`.
+  * For `F := frobenius R p` and `m := IsLocalRing.maximalIdeal R`, put
+    `J := Ideal.map F m`.  Frobenius is local (`isUnit_pow_iff p.ne_zero`),
+    and `radical J = m`: one inclusion follows from locality, while for
+    `x ∈ m`, `x ^ p = F x ∈ J`.  Since `m` is finitely generated,
+    `Ideal.exists_pow_le_of_le_radical_of_fg` gives `m ^ N ≤ J`.
+    Therefore `R ⧸ J` has finite length (use the ideal-of-definition lemma in
+    Unit59) and Krull dimension zero.  Substitute this and the equality of
+    source/target dimensions into `Unit128.miracle_flatness F hreg hCM` to
+    obtain `RingHom.Flat F`.
+
+  Local reverse implication.
+  * Let `xs` be a minimal list of generators of `m`, of length
+    `r := m.spanFinrank`.  Its cotangent classes are a residue-field basis, so
+    `independent_iff_cotangent_has_basis` gives `independent xs`.  Flatness and
+    `independent_map_of_flat` make `xs.map F`, definitionally the list of
+    `p`-th powers, independent.  Apply
+    `length_quotient_of_independent_powers` with every exponent equal to `p`:
+    `length R (R ⧸ J) = p ^ r`.
+  * Write `χ(n) := length R (R ⧸ m ^ n)`.  For every `n`, combine
+    `IsLocalRing.length_baseChange` from
+    `Mathlib/RingTheory/LocalRing/Length.lean` with
+    `Algebra.TensorProduct.quotIdealMapEquivTensorQuot` from
+    `Mathlib/RingTheory/TensorProduct/Quotient.lean`; this gives
+    `length R (R ⧸ Ideal.map F (m ^ n)) = p ^ r * χ(n)`.
+  * Prove the monomial-ideal bounds
+    `m ^ (p * n + p * r) ≤ Ideal.map F (m ^ n) ≤ m ^ (p * n)`.
+    Expand powers using the chosen `r` generators; the reverse containment is
+    immediate, and the forward containment is the pigeonhole assertion that
+    a monomial of the displayed degree has at least `n` full blocks of size
+    `p`.  Quotient maps and `Module.length_le_of_surjective` then yield
+    `χ(p*n) ≤ p^r * χ(n) ≤ χ(p*n+p*r)`.
+  * Use `Unit59.hilbertPolynomial_spec` to replace `χ(n)` eventually by its
+    Hilbert polynomial.  A local polynomial comparison lemma over `ℚ` says
+    that, for `1 < p`, these two eventual inequalities force the degree to be
+    `r`: compare the leading coefficients of
+    `p^r * P(X) - P(pX)` and `P(pX+p*r) - p^r * P(X)` (the eventual sign can
+    be discharged after mapping to `ℝ` with the polynomial order lemmas in
+    `Mathlib/Analysis/Polynomial/Order.lean`).  Identify that degree with
+    `ringKrullDim R` using `Unit60.local_dimension_characterization`, then
+    close with `IsRegularLocalRing.of_spanFinrank_maximalIdeal_le`.
+
+  Global assembly.
+  * For every prime `P`, prove `P.comap (frobenius A p) = P` using
+    `P.IsPrime.pow_mem_iff`.  Form
+    `Localization.localRingHom P P (frobenius A p)`.  By
+    `IsLocalization.ringHom_ext` and `Localization.localRingHom_to_map`, this
+    localized map equals `frobenius (Localization.AtPrime P) p`; use
+    `RingHom.map_frobenius` on the localization map.  Obtain the localized
+    characteristic with `charP_of_injective_algebraMap`.
+  * In the regular-to-flat direction apply the local result at every `P` and
+    assemble with `RingHom.Flat.ofLocalizationPrime`.  Conversely localize a
+    flat Frobenius using `RingHom.Flat.localRingHom`, apply the local reverse
+    implication, and finish with `isRegularRing_iff` together with
+    `IsRegularRing.isRegularLocalRing_localization`.
+
+  `Fact p.Prime` supplies both `1 < p` and the nonzero exponent needed by the
+  local-map and polynomial arguments.  No global locality hypothesis belongs
+  in the theorem: `IsRegularRing` and flatness are both checked at primes.
+  -/
   sorry
 
 end

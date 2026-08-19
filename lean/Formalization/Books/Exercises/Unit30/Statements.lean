@@ -31,12 +31,33 @@ open Formalization.Books.Homology.Unit13
 /-- A filtered injective object splits as the finite direct sum of its graded
 pieces, with the filtration transported to the degreewise direct-sum
 filtration. -/
+/- Proof roadmap.
+1. From `hfinite`, choose a top step `a` and a bottom step `b`.  If the
+   carrier is nonzero, antitonicity gives `a < b`; put `n := a` and
+   `m := b - 1`.  Treat the zero carrier separately with `n = m = 0`.
+2. Descend from `m` to `n`.  At `p`, use the short complex with
+   `Subobject.ofLE (I.filtration.obj (p + 1)) (I.filtration.obj p) _` and
+   `gradedPieceπ I p`.  `ShortComplex.exact_cokernel` and
+   `ShortComplex.ShortExact.splittingOfInjective` apply because the induction
+   hypothesis makes the `(p+1)`-step a finite biproduct of injectives
+   (`Injective` is closed under finite biproducts in
+   `Mathlib/CategoryTheory/Preadditive/Injective/Basic.lean`).  Use
+   `ShortComplex.Splitting.isoBinaryBiproduct` for the next splitting.
+3. Compose these splittings and the finite-biproduct associativity/reindexing
+   isomorphisms to obtain `e`.  For each `p`, split into `p <= n`,
+   `n < p <= m`, and `m < p`; antitonicity handles the outer cases and the
+   recursive splitting identifies the middle step with exactly the summands
+   whose indices are at least `p`.  Prove the subobject equality after
+   composing both arrows with `e.inv`; `Subobject.exists_iso_map` and
+   `Subobject.underlyingIso` are the normalization lemmas used here.
+-/
 theorem split_filtered_injective
     {C : Type u} [Category.{v} C] [Abelian C]
     (I : FilteredObject C) (hfinite : I.IsFinite)
     (hgraded : ∀ p : ℤ, Injective (gradedPiece I p)) :
     ∃ n m : ℤ,
-      I.filtration.obj n = ⊤ ∧ I.filtration.obj m = ⊥ ∧
+      n ≤ m ∧ I.filtration.obj n = ⊤ ∧
+        I.filtration.obj (m + 1) = ⊥ ∧
         ∃ e : I.carrier ≅ finiteGradedSum I n m,
           IsGradedDirectSumFiltration I n m e := by
   sorry
@@ -57,6 +78,32 @@ def StrictMonomorphism
   Mono α ∧ Strict α
 
 /-- The lifting criterion for filtered injectivity. -/
+/- Proof roadmap.
+Forward: first prove locally that a graded monomorphism between finite
+filtered objects is a strict monomorphism.  The ingredients are
+`graded_piece_kernel_exact`, `graded_piece_cokernel_exact`, and
+`filtered_acyclic` in `Formalization/Books/Homology/Unit19/Filtrations.lean`;
+this is the reusable core of `graded_injective_iff_strict_monomorphism`
+below, which cannot be referenced here because of source order.  Split `I`
+with `split_filtered_injective`.  The `q`th coordinate of a filtered map to
+the split object factors through `filtrationQuotient A (q + 1)`, and the
+corresponding quotient map for `α` is mono.  Extend that coordinate with
+`Injective.factorThru`, assemble the finite biproduct map, and transport it
+back along the splitting; `Injective.comp_factorThru` proves the equation.
+
+Reverse: fix a mono `u : X ⟶ Y` and `g : X ⟶ gradedPiece I p`.  Pull back the
+extension `F^(p+1)I ⟶ F^p I ⟶ gr^p I` along `g`, push it out along `u`, and
+insert the resulting extension as the `p`th step of two finite filtered
+objects `A ⟶ B`.  Their graded map is the identity away from `p` and `u` at
+`p`.  Apply the assumed lift to the canonical `A ⟶ I` and pass to the `p`th
+graded piece.  This gives the required extension `Y ⟶ gradedPiece I p`.
+Use `filtered_pullback_exists`, `filtered_pushout_exists`,
+`filtered_pushout_preserves_strict`, and
+`graded_piece_subobject_short_exact` from Homology Unit 19; finiteness follows
+from the unchanged top and bottom steps.  Finish with the defining
+`Injective.factorThru` criterion from
+`Mathlib/CategoryTheory/Preadditive/Injective/Basic.lean`.
+-/
 theorem filtered_injective_iff_lifting
     {C : Type u} [Category.{v} C] [Abelian C]
     (I : FilteredObject C) (hfinite : I.IsFinite) :
@@ -222,6 +269,26 @@ abbrev FiniteFilteredObject
 /-- Every finite filtered object admits a strict monomorphism into a filtered
 injective finite filtered object when the underlying category has enough
 injectives. -/
+/- Proof roadmap.
+Choose ordered support bounds `a <= b` for `A.obj` as in the roadmap for
+`split_filtered_injective`.  For every `n : finiteGradedIndex a b`, choose
+`P n : InjectivePresentation (filtrationQuotient A.obj (n.1 + 1))`; the
+presentation fields and their instances are in
+`Mathlib/CategoryTheory/Preadditive/Injective/Basic.lean`.  Form the finite
+biproduct of the `P n |>.J`, filtered by the summands with index at least
+`p` (the same `biproduct.fromSubtype`/`biproduct.toSubtype` construction as
+`finiteGradedSumStep` in `Unit30/Core.lean`).  The component of `α` at `n` is
+the quotient projection followed by `P n |>.f`.
+
+Check filteredness by observing that `F^p A` maps to zero in the `n`th
+quotient whenever `n < p`.  The target is finite (top below `a`, bottom above
+`b`) and its `n`th graded piece is isomorphic to `P n |>.J`; transport
+injectivity with `Injective.of_iso`.  The diagonal component of
+`gradedPieceMap α n` is the mono `P n |>.f`, so every graded map is mono.
+Apply `graded_injective_iff_strict_monomorphism α A.property hI` for the
+strict-monomorphism conclusion and package the target with its finiteness
+proof as a `FiniteFilteredObject C`.
+-/
 theorem exists_strict_mono_into_filtered_injective
     {C : Type u} [Category.{v} C] [Abelian C] [EnoughInjectives C]
     (A : FiniteFilteredObject C) :
@@ -426,24 +493,77 @@ def UnderlyingQuasiIso
     {K L : FilteredComplex C} (α : K ⟶ L) : Prop :=
   QuasiIso (underlyingComplexMap α)
 
+/- Shared roadmap for Exercise 30.4.
+Establish three local comparison lemmas once.
+
+* An additive functor commutes with cones via
+  `CochainComplex.mappingCone.mapHomologicalComplexIso` in
+  `Mathlib/Algebra/Homology/HomotopyCategory/MappingCone.lean`.  Specialize
+  this to `gradedPieceFunctor`, `filtrationStepFunctor`,
+  `filtrationQuotientFunctor`, and `forgetFilteredFunctor`.
+* For finite filtered terms, graded exactness of the three-term differential
+  at every cochain degree implies step, quotient, and underlying exactness by
+  `filtered_acyclic` in Homology Unit 19 and
+  `HomologicalComplex.acyclic_iff` in
+  `Mathlib/Algebra/Homology/ShortComplex/HomologicalComplex.lean`.
+* Build the termwise short exact complexes
+  `F^(p+1)K ⟶ F^p K ⟶ gr^p K` and
+  `gr^p K ⟶ K/F^(p+1)K ⟶ K/F^p K`.
+  `HomologicalComplex.shortExact_iff_degreewise_shortExact` and
+  `ShortComplex.exact_cokernel` prove short exactness.  For a morphism of
+  these sequences,
+  `HomologicalComplex.HomologySequence.quasiIso_τ₃` in
+  `Mathlib/Algebra/Homology/HomologySequenceLemmas.lean` transfers two
+  quasi-isomorphisms to the third; use the opposite sequence for `τ₁`.
+
+Also record locally the standard cone criterion
+`QuasiIso f ↔ (CochainComplex.mappingCone f).Acyclic`.  Prove it degreewise
+from the mapping-cone homology sequence using `quasiIso_iff` and
+`HomologicalComplex.exactAt_iff_isZero_homology`; do not replace it by a
+one-way cone lemma.
+-/
+
 /-! ## Exercise 30.4 -/
 
 /-- The four equivalent descriptions of a filtered quasi-isomorphism for
 bounded-below finite filtered complexes. -/
+/- Proof roadmap.
+Use the four shared comparison lemmas above.  The cone comparison turns
+`FilteredQuasiIso α` into graded acyclicity of `filteredMappingCone α`;
+finite filtration of each cone term follows by taking the min/max of the
+bounds for its two biproduct summands.  Applying `filtered_acyclic` at every
+cochain degree gives the step and quotient implications.  Conversely, the
+two termwise short exact sequences transfer the step family, respectively
+the quotient family, back to the graded family.  The cone condition returns
+the graded family directly by the cone criterion.  Prove all three iff
+components separately; proving only the reverse implication from their
+conjunction would not establish the advertised four-way equivalence.
+-/
 theorem filtered_quasiIso_iff
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L : FilteredComplex C} (α : K ⟶ L)
     (hKfinite : FiniteFilteredComplex K)
     (hLfinite : FiniteFilteredComplex L)
     (hKbelow : BoundedBelow K) (hLbelow : BoundedBelow L) :
-    FilteredQuasiIso α ↔
-      (∀ p : ℤ, QuasiIso (filteredStepComplexMap α p)) ∧
-      (∀ p : ℤ, QuasiIso (filteredQuotientComplexMap α p)) ∧
-      FilteredAcyclic (filteredMappingCone α) := by
+    (FilteredQuasiIso α ↔
+      ∀ p : ℤ, QuasiIso (filteredStepComplexMap α p)) ∧
+    (FilteredQuasiIso α ↔
+      ∀ p : ℤ, QuasiIso (filteredQuotientComplexMap α p)) ∧
+    (FilteredQuasiIso α ↔ FilteredAcyclic (filteredMappingCone α)) := by
   sorry
 
 /-- A filtered quasi-isomorphism between bounded-below finite filtered
 complexes is a usual quasi-isomorphism. -/
+/- Proof roadmap.
+Take the cone-acyclic component of `filtered_quasiIso_iff α ...` and unfold
+`FilteredAcyclic`.  At every degree, apply the underlying-exactness component
+of Homology Unit 19's `filtered_acyclic` to the three consecutive cone terms;
+this proves `(underlyingComplex (filteredMappingCone α)).Acyclic`.  Transport
+it across `CochainComplex.mappingCone.mapHomologicalComplexIso α
+(forgetFilteredFunctor (C := C))`, then use the shared cone criterion in the
+reverse direction to obtain `QuasiIso (underlyingComplexMap α)`.  The two
+bounded-below hypotheses are used only to invoke `filtered_quasiIso_iff`.
+-/
 theorem filtered_quasiIso_is_quasiIso
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L : FilteredComplex C} (α : K ⟶ L)
@@ -464,6 +584,30 @@ noncomputable def filteredObjectSingle
 
 /-- A finite filtered object admits a nonnegative filtered injective
 resolution. -/
+/- Proof roadmap.
+Construct successors recursively.  Start with the strict mono
+`u 0 : A.obj ⟶ J 0` supplied by
+`exists_strict_mono_into_filtered_injective`; set
+`Q 0 := filteredCokernel (u 0)`.  Given `Q n`, choose a strict mono
+`u (n+1) : Q n ⟶ J (n+1)` and put
+`Q (n+1) := filteredCokernel (u (n+1))`.  The quotient-filtration formula
+shows every `Q n` is finite using the bounds of `J n`.
+
+Define the complex to be zero in negative degrees and `J n` in degree
+`n : ℕ`; its differential is `filteredCokernelπ (u n) ≫ u (n+1)`.
+`filteredCokernel_comp` gives `d ≫ d = 0`.  The augmentation is `u 0` in
+degree zero and zero elsewhere; construct it with the fields of
+`HomologicalComplex.Hom` (the single-complex component simplifications are
+in `Mathlib/Algebra/Homology/Single.lean`).
+
+For every filtration index `p`,
+`graded_piece_cokernel_exact` and strictness of `u n` identify the graded
+complex as the ordinary exact injective resolution built from these
+cokernels.  Use `HomologicalComplex.acyclic_iff`/`quasiIso_iff` to prove the
+graded augmentation is a quasi-isomorphism.  Finiteness, strict support at
+zero, and termwise `IsFilteredInjective` follow directly from the recursive
+choices (the negative zero terms use `Injective.zero_injective`).
+-/
 theorem exists_filtered_injective_resolution
     {C : Type u} [Category.{v} C] [Abelian C] [EnoughInjectives C]
     (A : FiniteFilteredObject C) :
@@ -479,6 +623,38 @@ theorem exists_filtered_injective_resolution
 /-- A bounded-below finite filtered complex admits a bounded-below complex
 with filtered injective terms, connected to it by a filtered
 quasi-isomorphism; the comparison can be chosen degreewise strict. -/
+/- Proof roadmap.
+Choose `a` with `K.IsStrictlyGE a` and shift indices so the construction is
+first-quadrant.  For every degree `r`, use the canonical finite filtered
+objects `filteredKernel (K.d r (r+1))` and
+`filteredCoimage (K.d r (r+1))`; their graded short sequence is short exact
+by `graded_piece_kernel_coimage_short_exact` in Homology Unit 19.  Resolve
+both objects with `exists_filtered_injective_resolution`.  Prove, as local
+shared claims, (i) the comparison theorem for a map of objects by successive
+uses of `filtered_injective_iff_lifting`, and (ii) the horseshoe construction
+for that short exact sequence, with middle row the termwise filtered
+biproduct.  These give a row resolution `R r` and maps `R r ⟶ R (r+1)` whose
+composites vanish.
+
+Package the rows as `DoubleComplex (FilteredObject C)` and totalize it with
+`TotalComplexPresentation` and
+`totalComplexPresentation_exists_of_finite_support` from
+`Formalization/Books/Homology/Unit18/DoubleComplexes.lean`; finite support
+comes from `a` and the nonnegative row resolutions.  For each `p`, map this
+double complex by `gradedPieceFunctor (C := C) p`.  Its columns satisfy
+`DoubleComplexResolutionHypotheses`, so
+`doubleComplex_gives_resolution` from
+`Formalization/Books/Homology/Unit25/DoubleComplexes.lean` proves the
+totalized graded map is a quasi-isomorphism.  Use
+`CochainComplex.mappingCone.mapHomologicalComplexIso`-style component
+comparisons to identify this map with `filteredGradedComplexMap α p`.
+
+Each total term is a finite biproduct of filtered-injective entries, hence is
+finite and has injective graded pieces.  The horseshoe augmentations are
+strict monos; finite biproducts preserve that property, giving
+`StrictMonomorphism (α.f n)`.  The same diagonal-support estimate gives the
+claimed lower bound.
+-/
 theorem exists_filtered_injective_resolution_of_complex
     {C : Type u} [Category.{v} C] [Abelian C] [EnoughInjectives C]
     {K : FilteredComplex C}
@@ -492,9 +668,56 @@ theorem exists_filtered_injective_resolution_of_complex
 
 /-! ## Exercise 30.7 -/
 
+/- Shared roadmap for Exercises 30.7--30.9.
+First isolate the relative extension operation.  If `u : A ⟶ B` is a strict
+mono between finite filtered objects and `J` is filtered injective, obtain
+`GradedInjectiveMorphism u` from
+`graded_injective_iff_strict_monomorphism`, then apply the forward direction
+of `filtered_injective_iff_lifting J hJ.1` to `hJ.2`.  This is the filtered
+analogue of `Injective.factorThru` and should be a small private helper.
+
+The second shared helper is the relative Hom-complex boundary lemma: if `M`
+is finite filtered acyclic and `J` is bounded below and termwise filtered
+injective, every `z : Cocycle M J r` is `δ (r-1) r w` for some
+`w : Cochain M J (r-1)`.  Choose a lower bound for `J` and construct the
+components of `w` by induction on `n - bound`.  At each successor,
+`HomologicalComplex.acyclic_iff` and Homology Unit 19's `filtered_acyclic`
+make the relevant image inclusion a finite strict mono; extend the residual
+component with the private relative extension operation.  Below the bound,
+use `IsZero.eq_of_tgt`.  The factorization through image/coimage uses
+`ShortComplex.Exact.desc`/`g_desc` from
+`Mathlib/Algebra/Homology/ShortComplex/Exact.lean`; strictness transports it
+to `filteredImage`.  Assemble the chosen components as a `Cochain` and prove
+the boundary equation with `Cochain.ext`.  This one lemma supplies the
+existence proof below and its degree-zero specialization supplies Exercise
+30.8; promote it to a private declaration when implementing so the induction
+is not duplicated.
+-/
+
 /-- A filtered quasi-isomorphism admits a lift into a bounded-below complex
 with filtered injective terms, commuting with a prescribed map up to
 cochain homotopy. -/
+/- Proof roadmap.
+Let `M := filteredMappingCone α`.  The cone component of
+`filtered_quasiIso_iff α ...` makes `M` filtered acyclic; the cone terms and
+lower bound are obtained from the two finite, bounded-below inputs by the
+binary-biproduct formulas.  In the Hom complex, form the degree-one cocycle
+from `CochainComplex.mappingCone.fst α` by postcomposing with `γ`
+(`Cocycle.postcomp` in
+`Mathlib/Algebra/Homology/HomotopyCategory/HomComplex.lean`).  Apply the
+shared boundary lemma to write it as `δ 0 1 w` for a degree-zero cochain
+`w : Cochain M I 0`.
+
+Restrict `w` along `CochainComplex.mappingCone.inr α`; the boundary equation
+says this restriction is a zero-cocycle, so `Cocycle.homOf` gives
+`β : L ⟶ I`.  Restrict along `mappingCone.inl α` to get a degree `-1`
+cochain from `K` to `I`.  The same equation, simplified with
+`mappingCone.inl_v_fst_v`, `mappingCone.inr_f_fst_v`, and
+`Cochain.δ_comp`, is exactly
+`Cochain.ofHom (α ≫ β) = δ (-1) 0 h + Cochain.ofHom γ`.
+Apply `(Cochain.equivHomotopy (α ≫ β) γ).symm` to obtain the required
+homotopy.
+-/
 theorem filtered_lift_up_to_homotopy
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L I : FilteredComplex C}
@@ -512,6 +735,23 @@ theorem filtered_lift_up_to_homotopy
 
 /-- Under degreewise strict monomorphy, the lift in the preceding statement
 can be chosen to commute exactly. -/
+/- Proof roadmap.
+Obtain `β₀` and a homotopy from `filtered_lift_up_to_homotopy`.  Convert the
+homotopy to `h : Cochain K I (-1)` with `Cochain.equivHomotopy`.  For every
+allowed pair `i + (-1) = j`, extend `h.v i j` along the finite strict mono
+`α.f i` using the private relative extension helper and
+`hIinjective j`; use zero for disallowed pairs.  These components define
+`H : Cochain L I (-1)` and satisfy
+`(Cochain.ofHom α).comp H (zero_add _) = h` by `Cochain.ext` and the helper's
+factorization equation.
+
+The coboundary `δ (-1) 0 H` is a zero-cocycle, hence corresponds via
+`Cocycle.homOf` to a complex map `c : L ⟶ I`.  Set `β := β₀ - c` (or the
+opposite sign, according to the normalized equation returned by
+`equivHomotopy`).  Naturality of `δ` under precomposition (`δ_ofHom_comp` in
+`HomComplex.lean`) and `Cochain.ofHom_injective` reduce
+`α ≫ β = γ` to the homotopy equation and the defining extension equality.
+-/
 theorem filtered_lift_exact_of_strict
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L I : FilteredComplex C}
@@ -533,6 +773,17 @@ theorem filtered_lift_exact_of_strict
 /-- A map from a bounded-below filtered acyclic complex to a bounded-below
 complex with filtered injective terms is homotopic to zero.  The second
 complex is named `I`, correcting the repeated `K` in the source statement. -/
+/- Proof roadmap.
+Apply the shared relative Hom-complex boundary lemma at degree zero to
+`Cocycle.ofHom f`.  It yields `w : Cochain K I (-1)` with
+`Cochain.ofHom f = δ (-1) 0 w + Cochain.ofHom 0`.  This is precisely the
+subtype expected by `(Cochain.equivHomotopy f 0).symm`.  Here
+`hKacyclic.1` supplies the termwise finiteness needed by the induction and
+`hKacyclic.2` supplies graded acyclicity; `hKfinite`, `hIfinite`, and
+`hKbelow` are intentionally harmless source-level redundancies.  Do not try
+to instantiate Mathlib's ordinary `IsKInjective`: `FilteredObject C` is not
+abelian and the lifting property here is only for finite strict monos.
+-/
 theorem filtered_acyclic_map_homotopic_zero
     {C : Type u} [Category.{v} C] [Abelian C]
     {K I : FilteredComplex C}
@@ -551,6 +802,24 @@ theorem filtered_acyclic_map_homotopic_zero
 /-- Two lifts into a bounded-below filtered-injective complex which agree
 up to homotopy after precomposition with a filtered quasi-isomorphism are
 homotopic. -/
+/- Proof roadmap.
+Choose the two homotopies and compose the first with the symmetry of the
+second using `Homotopy.trans`/`Homotopy.symm`; after
+`Homotopy.equivSubZero`, this is a null-homotopy of
+`α ≫ (β₁ - β₂)`.  Convert it with `Cochain.equivHomotopy` to a degree `-1`
+cochain `h` satisfying the equation required by
+`CochainComplex.mappingCone.desc α h (β₁ - β₂)`.  Call the resulting map
+`q : filteredMappingCone α ⟶ I`; `mappingCone.inr_desc` identifies its
+restriction to `L` with `β₁ - β₂`.
+
+The cone is finite and bounded below by the biproduct bounds, and it is
+filtered acyclic by the cone component of
+`filtered_quasiIso_iff α ...`.  Apply
+`filtered_acyclic_map_homotopic_zero` to `q`, then precompose the resulting
+homotopy with `mappingCone.inr α` via `Homotopy.compLeft`.  Simplification by
+`mappingCone.inr_desc` gives a homotopy from `β₁ - β₂` to zero; finally use
+`Homotopy.equivSubZero.symm` to obtain `cochainHomotopic β₁ β₂`.
+-/
 theorem filtered_lifts_homotopic
     {C : Type u} [Category.{v} C] [Abelian C]
     {K L I : FilteredComplex C}

@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.PicardGroup
 import Mathlib.RingTheory.Polynomial.Basic
+import Formalization.Books.Examples.Unit31.NonfiniteModule
 
 /-!
 # Examples, Chapter 32: A noninvertible ideal invertible in stalks
@@ -21,27 +22,14 @@ noncomputable section
 
 namespace Formalization.Books.Examples.Unit32
 
-/-! ## The fractional module over `ℚ[x]` -/
+open Formalization.Books.Examples.Unit31
 
-/-- The polynomial ring `R = ℚ[x]` used in the example. -/
-abbrev exampleBaseRing := Polynomial ℚ
+/-! ## The fractional module over `ℚ[x]`
 
-/-- The fraction ring containing the displayed fractional generators. -/
-abbrev exampleFractionRing := FractionRing exampleBaseRing
-
-/-- The denominator `x - n` in `ℚ[x]`. -/
-def exampleDenominator (n : ℕ) : exampleBaseRing :=
-  Polynomial.X - Polynomial.C (n : ℚ)
-
-/-- The element `1 / (x - n)` in the fraction ring of `ℚ[x]`. -/
-def exampleFractionalGenerator (n : ℕ) : exampleFractionRing :=
-  (algebraMap exampleBaseRing exampleFractionRing (exampleDenominator n))⁻¹
-
-/-- The `ℚ[x]`-submodule `M = ∑ₙ (1 / (x - n)) R` in the fraction ring. -/
-def exampleModule : Submodule exampleBaseRing exampleFractionRing :=
-  Submodule.span exampleBaseRing (Set.range exampleFractionalGenerator)
-
-abbrev ExampleModule := (exampleModule : Type)
+The ring, fractional module, and its prime-local equivalence are defined in
+the immediately preceding chapter and reused here, as in the source's
+reference to the construction of Section `section-nonfree`.
+-/
 
 /-- The module `M` is not finitely generated over `ℚ[x]`. -/
 theorem exampleModule_not_finite :
@@ -441,18 +429,10 @@ theorem exampleIdeal_not_finitely_generated : ¬ exampleIdeal.FG := by
 theorem exampleIdeal_not_invertible :
     ¬ Module.Invertible exampleAlgebra exampleIdeal := by
   intro h
-  letI : Module.Invertible exampleAlgebra exampleIdeal := h
+  let _ : Module.Invertible exampleAlgebra exampleIdeal := h
   exact exampleIdeal_not_finitely_generated (Module.Finite.iff_fg.mp inferInstance)
 
 /-! ## The local computations -/
-
-/-- The localization of `R` at a prime `p`. -/
-abbrev exampleBaseRingAtPrime (p : Ideal exampleBaseRing) [p.IsPrime] :=
-  Localization p.primeCompl
-
-/-- The localization of `M` at the same prime. -/
-abbrev exampleModuleAtPrime (p : Ideal exampleBaseRing) [p.IsPrime] :=
-  LocalizedModule p.primeCompl ExampleModule
 
 /-- The localization `Aₚ` obtained by inverting the image of `R \ p` in `A`. -/
 abbrev exampleAlgebraAtBasePrime (p : Ideal exampleBaseRing) [p.IsPrime] :=
@@ -588,7 +568,7 @@ theorem exampleAlgebraAtBasePrime_equiv_symmetricAlgebra
     apply IsLocalizedModule.ext p.primeCompl
       (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) hEndSym
     ext m
-    simp [f, hRp, hR, gA, fA]
+    simp [f, hRp, hR, gA]
     change f0 (hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)) =
       (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
         (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)
@@ -917,14 +897,14 @@ theorem exampleIdealAtBasePrime_isPrincipal_regular
     apply IsLocalizedModule.ext p.primeCompl
       (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) hEndSym
     ext m
-    simp [f, hRp, hR, gA, fA]
+    simp [f, hRp, hR, gA]
     change f0 (hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)) =
       (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
         (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)
     rw [IsLocalizedModule.lift_apply]
     have hfAm := congrArg
       (fun k => k (SymmetricAlgebra.ι exampleBaseRing ExampleModule m)) hfA
-    simpa [gA, f, f0, fA] using hfAm
+    convert hfAm using 1 <;> simp [gA, f, f0, fA]
   have hT : f T =
       (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
         (eM.symm 1) := by

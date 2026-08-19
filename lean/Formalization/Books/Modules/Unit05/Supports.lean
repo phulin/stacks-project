@@ -74,7 +74,35 @@ def localSectionSupport {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
 theorem sectionSupport_isClosed {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
     {F : Mod O} (U : Opens X) (s : F.val.obj (op U)) :
     IsClosed (sectionSupport U s) := by
-  sorry
+  apply isOpen_compl_iff.mp
+  apply isOpen_iff_mem_nhds.mpr
+  intro x hx
+  simp only [sectionSupport, Set.mem_compl_iff, Set.mem_ofPred_eq, not_ne_iff] at hx
+  change (ConcreteCategory.hom
+      (TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf U x.1 x.2)) s =
+        (0 : ↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) F.val.presheaf x.1)) at hx
+  have hx'' : (ConcreteCategory.hom
+      (TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf U x.1 x.2)) s =
+        (ConcreteCategory.hom
+          (TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf U x.1 x.2)) 0 := by
+    rw [map_zero]
+    exact hx
+  obtain ⟨W, hxW, iU, iV, hres⟩ :=
+    TopCat.Presheaf.germ_eq (C := AddCommGrpCat) F.val.presheaf x.1 x.2 x.2 s 0 hx''
+  let V : Set U := (Subtype.val : U → X) ⁻¹' (W : Set X)
+  have hVopen : IsOpen V := by
+    dsimp [V]
+    exact W.isOpen.preimage continuous_subtype_val
+  refine Filter.mem_of_superset (hVopen.mem_nhds ?_) ?_
+  · exact hxW
+  · intro y hy
+    simp only [sectionSupport, Set.mem_compl_iff, Set.mem_ofPred_eq, not_ne_iff]
+    have hyW : y.1 ∈ W := hy
+    have hgy := TopCat.Presheaf.germ_ext (C := AddCommGrpCat)
+      F.val.presheaf (x := y.1) (hxU := y.2) (hxV := y.2)
+        W hyW iU iV hres
+    rw [map_zero] at hgy
+    exact hgy
 
 /-- The support of a scalar multiple is contained in the intersection of the
 supports of the scalar and the section. -/
@@ -82,20 +110,93 @@ theorem smul_sectionSupport_subset {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
     {F : Mod O} (U : Opens X) (f : O.obj.obj (op U))
     (s : F.val.obj (op U)) :
     sectionSupport U (f • s) ⊆ ringSectionSupport O U f ∩ sectionSupport U s := by
-  sorry
+  intro x hx
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    F.val.presheaf U x.1 x.2)) (f • s) ≠ 0 at hx
+  have hsmul := PresheafOfModules.germ_ringCat_smul F.val x.1 U x.2 f s
+  refine ⟨?_, ?_⟩
+  · change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := RingCat)
+        O.obj U x.1 x.2)) f ≠ 0
+    intro hrf
+    apply hx
+    rw [hsmul, hrf, zero_smul]
+  · change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+        F.val.presheaf U x.1 x.2)) s ≠ 0
+    intro hrs
+    apply hx
+    rw [hsmul, hrs, smul_zero]
 
 /-- The support of a sum is contained in the union of the two supports. -/
 theorem add_sectionSupport_subset {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
     {F : Mod O} (U : Opens X) (s s' : F.val.obj (op U)) :
     sectionSupport U (s + s') ⊆ sectionSupport U s ∪ sectionSupport U s' := by
-  sorry
+  intro x hx
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    F.val.presheaf U x.1 x.2)) (s + s') ≠ 0 at hx
+  change sectionGerm U s x ≠ 0 ∨ sectionGerm U s' x ≠ 0
+  by_cases hs : sectionGerm U s x ≠ 0
+  · exact Or.inl hs
+  by_cases hs' : sectionGerm U s' x ≠ 0
+  · exact Or.inr hs'
+  exfalso
+  apply hx
+  have hs0 : sectionGerm U s x = 0 := not_ne_iff.mp hs
+  have hs'0 : sectionGerm U s' x = 0 := not_ne_iff.mp hs'
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    F.val.presheaf U x.1 x.2)) s = 0 at hs0
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    F.val.presheaf U x.1 x.2)) s' = 0 at hs'0
+  have hadd :
+      (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+        F.val.presheaf U x.1 x.2)) (s + s') =
+        (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+          F.val.presheaf U x.1 x.2)) s +
+          (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+            F.val.presheaf U x.1 x.2)) s' := by
+    exact map_add _ s s'
+  rw [hadd, hs0, hs'0, add_zero]
 
 /-- The support of a sheaf is the union of the supports of all its local
 sections. -/
 theorem moduleSupport_eq_iUnion_localSectionSupport
     {X : TopCat.{v}} {O : RingSheaf.{v, v} X} (F : Mod O) :
     moduleSupport F = ⋃ t : LocalSection O F, localSectionSupport t := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    change Nontrivial ((sheafModuleStalkFunctor O x).obj F) at hx
+    simp only [Set.mem_iUnion]
+    have hx' : Nontrivial (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat)
+        F.val.presheaf x)) := by
+      simpa only [sheafModuleStalkFunctor,
+        Formalization.Books.Sheaves.Unit22.moduleStalkFunctor] using hx
+    obtain ⟨a, ha⟩ := @exists_ne
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) F.val.presheaf x))
+      hx' 0
+    obtain ⟨U, hxU, s, hs⟩ :=
+      TopCat.Presheaf.exists_germ_eq (C := AddCommGrpCat)
+        F.val.presheaf a
+    refine ⟨⟨U, s⟩, ⟨hxU, ?_⟩⟩
+    change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+      F.val.presheaf U x hxU)) s ≠ 0
+    rw [hs]
+    exact ha
+  · intro hx
+    simp only [Set.mem_iUnion] at hx
+    rcases hx with ⟨t, ht⟩
+    change ∃ hx : t.isDefinedAt x, localSectionGerm t x hx ≠ 0 at ht
+    rcases ht with ⟨hxdef, hg⟩
+    have hg' : (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+        F.val.presheaf t.U x hxdef)) t.s ≠ 0 := by
+      exact hg
+    change Nontrivial ((sheafModuleStalkFunctor O x).obj F)
+    have hnon : Nontrivial (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat)
+        F.val.presheaf x)) := by
+      rw [← not_subsingleton_iff_nontrivial]
+      intro hsub
+      exact hg' (hsub.elim _ _)
+    simpa only [sheafModuleStalkFunctor,
+      Formalization.Books.Sheaves.Unit22.moduleStalkFunctor] using hnon
 
 /-- A morphism of sheaves of modules cannot enlarge the support of a local
 section. -/

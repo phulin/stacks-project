@@ -491,10 +491,9 @@ theorem injective_hull_extend
     {f : M ⟶ E} {g : N ⟶ E'}
     (hf : InjectiveHull f) (hg : InjectiveHull g) (φ : M ⟶ N) :
     ∃ ψ : E ⟶ E', f ≫ ψ = φ ≫ g := by
-  rcases hf.1 with ⟨hfmono, _⟩
-  let := hfmono
-  let := hg.2
-  exact ⟨Injective.factorThru (φ ≫ g) f, Injective.comp_factorThru (φ ≫ g) f⟩
+  let : Mono f := hf.1.1
+  let : CategoryTheory.Injective E' := hg.2
+  exact Injective.factors (φ ≫ g) f
 
 /-- The extension of a monomorphism is a monomorphism. -/
 theorem injective_hull_extend_mono
@@ -563,8 +562,8 @@ theorem injective_hull_extend_isIso_of_essential
     (hψ : f ≫ ψ = φ ≫ g) : IsIso ψ := by
   have range_essential :
       ∀ (A B : ModuleCat.{v} R) (u : A ⟶ B), EssentialExtension u →
-        EssentialSubmodule (LinearMap.range u.hom) := by
-    intro A B u hu
+        EssentialSubmodule (LinearMap.range u.hom) :=
+    fun A B u hu => by
     let : Mono u := hu.1
     let : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
       ConcreteCategory.mono_of_injective _ Subtype.val_injective
@@ -634,7 +633,7 @@ theorem injective_hull_extend_isIso_of_essential
         _ = b • (a • y) := by rw [hn]
         _ = (b * a) • y := by rw [mul_smul]
         _ = 0 := hzero
-    exact ⟨b * a, hmem, hnonzero⟩
+    exact not_subset.mp fun a_1 => hnonzero (a_1 hmem)
   let : Mono ψ := hψmono
   let : CategoryTheory.Injective E := hf.2
   let ρ : E' ⟶ E := Injective.factorThru (𝟙 E) ψ

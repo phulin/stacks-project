@@ -1,4 +1,7 @@
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit75.TorGroups
@@ -28,10 +31,6 @@ open scoped TensorProduct
 universe u w
 
 namespace Formalization.Books.MoreAlgebra.Unit61
-
-abbrev Derived (R : Type u) [CommRing R]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)] :=
-  Formalization.Books.MoreAlgebra.Unit56.D R
 
 /-! ## Ring squares and the comparison map -/
 
@@ -138,26 +137,11 @@ noncomputable def comparisonMap
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
-    {S : RingSquare R A R' A'} (D : DerivedRingSquare S) (K : Derived A) :
+    {S : RingSquare R A R' A'} (D : DerivedRingSquare S)
+    (K : Formalization.Books.MoreAlgebra.Unit60.D A) :
     ((derivedRestrictionFunctor S.rToA ⋙ derivedBaseChangeFunctor S.rToR').obj K ⟶
       (derivedBaseChangeFunctor S.aToA' ⋙ derivedRestrictionFunctor S.r'ToA').obj K) :=
   D.comparison.app K
-
-/-- In the base-change case, ordinary tensoring over `R` and over `A` are
-the same extension-of-scalars functor, up to the canonical isomorphism. -/
-theorem ordinaryTensor_baseChange
-    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
-    (f : R →+* A) (g : R →+* R') (M : ModuleCat A) :
-    letI : Algebra R A := f.toAlgebra
-    letI : Algebra R R' := g.toAlgebra
-    Nonempty
-      (((ModuleCat.extendScalars
-          (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g)).obj M) ≅
-        (ModuleCat.extendScalars
-          (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g)).obj
-            ((ModuleCat.extendScalars g).obj
-            ((ModuleCat.restrictScalars f).obj M))) := by
-  sorry
 
 /-- The pointwise base-change identifications assemble to the functor-level
 isomorphism asserted in the source. -/
@@ -184,15 +168,6 @@ def TorIndependentVia {R A B : Type u}
   letI : Algebra R A := f.toAlgebra
   letI : Algebra R B := g.toAlgebra
   TorIndependent R A B
-
-/-- The vanishing condition in the definition, exposed for clients that
-want to work directly with the canonical resolution-based Tor objects. -/
-theorem torIndependent_iff
-    (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] :
-    TorIndependent R A B ↔
-      ∀ p : ℕ, 0 < p → IsZero (Tor (ModuleCat.of R A) (ModuleCat.of R B) p) := by
-  rfl
 
 /-- The polynomial quotient example from the source. -/
 noncomputable abbrev polynomialAtZero (k : Type u) [Field k] : Type u :=
@@ -221,7 +196,7 @@ theorem torIndependent_of_comparisonMap_isIso
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} (baseChangeTensor f g))]
-    (hComparison : ∀ K : Derived A,
+    (hComparison : ∀ K : Formalization.Books.MoreAlgebra.Unit60.D A,
       IsIso (comparisonMap (derivedRingSquare (baseChangeRingSquare f g)) K)) :
     TorIndependentVia f g := by
   sorry
@@ -236,7 +211,7 @@ theorem comparisonMap_isIso_of_torIndependent
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} (baseChangeTensor f g))]
     (hTor : TorIndependentVia f g)
-    (K : Derived A) :
+    (K : Formalization.Books.MoreAlgebra.Unit60.D A) :
     IsIso (comparisonMap (derivedRingSquare (baseChangeRingSquare f g)) K) := by
   sorry
 
@@ -358,7 +333,7 @@ theorem torIndependent_flat_baseChange
 noncomputable abbrev derivedCohomologyFunctor
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (i : ℤ) :
-    Derived R ⥤ ModuleCat.{u} R :=
+    Formalization.Books.MoreAlgebra.Unit60.D R ⥤ ModuleCat.{u} R :=
   DerivedCategory.homologyFunctor (ModuleCat.{u} R) i
 
 /-- The left derived tensor object in the source's flat-base-change formula. -/
@@ -375,7 +350,8 @@ noncomputable abbrev derivedCohomologyLeftObject
     [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
-    (M : Derived A) : Derived B' :=
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
+    Formalization.Books.MoreAlgebra.Unit60.D B' :=
   (derivedBaseChangeFunctor S.r'ToB').obj
     ((derivedRestrictionFunctor S.r'ToA').obj
       ((derivedBaseChangeFunctor S.aToA').obj M))
@@ -386,7 +362,9 @@ noncomputable abbrev derivedCohomologySourceObject
     [Algebra R A] [Algebra R B]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
-    [HasDerivedCategory.{w} (ModuleCat.{u} B)] (M : Derived A) : Derived B :=
+    [HasDerivedCategory.{w} (ModuleCat.{u} B)]
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
+    Formalization.Books.MoreAlgebra.Unit60.D B :=
   (derivedBaseChangeFunctor (algebraMap R B)).obj
     ((derivedRestrictionFunctor (algebraMap R A)).obj M)
 
@@ -409,23 +387,29 @@ structure DerivedCohomologyBaseChange
     [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B')) where
-  left : ℤ → Derived A ⥤ ModuleCat.{u} (A' ⊗[R'] B')
-  source : ℤ → Derived A ⥤ ModuleCat.{u} (A ⊗[R] B)
-  right : ℤ → Derived A ⥤ ModuleCat.{u} (A' ⊗[R'] B')
-  left_underlying : ∀ (i : ℤ) (M : Derived A),
+  left : ℤ → Formalization.Books.MoreAlgebra.Unit60.D A ⥤
+    ModuleCat.{u} (A' ⊗[R'] B')
+  source : ℤ → Formalization.Books.MoreAlgebra.Unit60.D A ⥤
+    ModuleCat.{u} (A ⊗[R] B)
+  right : ℤ → Formalization.Books.MoreAlgebra.Unit60.D A ⥤
+    ModuleCat.{u} (A' ⊗[R'] B')
+  left_underlying : ∀ (i : ℤ)
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A),
     Nonempty ((ModuleCat.restrictScalars
         (Algebra.TensorProduct.includeRight.toRingHom : B' →+* (A' ⊗[R'] B'))).obj
       ((left i).obj M) ≅
       (derivedCohomologyFunctor (R := B') i).obj
         (derivedCohomologyLeftObject (R := R) (A := A) (B := B)
           (R' := R') (A' := A') (B' := B') S M))
-  source_underlying : ∀ (i : ℤ) (M : Derived A),
+  source_underlying : ∀ (i : ℤ)
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A),
     Nonempty ((ModuleCat.restrictScalars
         (Algebra.TensorProduct.includeRight.toRingHom : B →+* (A ⊗[R] B))).obj
       ((source i).obj M) ≅
       (derivedCohomologyFunctor (R := B) i).obj
         (derivedCohomologySourceObject (R := R) (A := A) (B := B) M))
-  right_baseChange : ∀ (i : ℤ) (M : Derived A),
+  right_baseChange : ∀ (i : ℤ)
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A),
     Nonempty ((ModuleCat.extendScalars S.baseMap).obj ((source i).obj M) ≅
       (right i).obj M)
 
@@ -447,7 +431,8 @@ theorem derivedCohomology_flat_baseChange
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))
     (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
-    (C : DerivedCohomologyBaseChange S) (i : ℤ) (M : Derived A) :
+    (C : DerivedCohomologyBaseChange S) (i : ℤ)
+    (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
     Nonempty ((C.left i).obj M ≅ (C.right i).obj M) := by
   sorry
 
@@ -514,7 +499,7 @@ theorem derivedCohomology_flat_baseChange_canonical
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))
     (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
-    (i : ℤ) (M : Derived A) :
+    (i : ℤ) (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
     Nonempty (((derivedCohomologyBaseChange S hR hA hB).left i).obj M ≅
       ((derivedCohomologyBaseChange S hR hA hB).right i).obj M) := by
   sorry

@@ -70,24 +70,98 @@ theorem relativeTensorCosimplicialAlgebra_degree (R A : Type u)
       CommRingCat.of (relativeTensorProduct R A n)) := by
   sorry
 
+noncomputable def relativeTensorAlgebraIso (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) :
+    (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk n) ≅
+      CommRingCat.of (relativeTensorProduct R A n) :=
+  Classical.choice (relativeTensorCosimplicialAlgebra_degree R A n)
+
 /-- The tensor-power map attached to a simplex map, in the source's pure-tensor
-presentation.  The empty products in the formula are the units of `A`. -/
+presentation.  It is defined by transporting the canonical Čech-conerve map
+along the degreewise tensor-power identifications, so these maps compose
+strictly.  The empty products in the formula are the units of `A`. -/
+noncomputable def relativeTensorMap (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    relativeTensorProduct R A n →+* relativeTensorProduct R A m :=
+  ((relativeTensorAlgebraIso R A n).inv ≫
+      relativeTensorCosimplicialAlgebraMap R A φ ≫
+        (relativeTensorAlgebraIso R A m).hom).hom
+
+theorem relativeTensorMap_id (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) :
+      relativeTensorMap R A (𝟙 (SimplexCategory.mk n)) =
+      RingHom.id (relativeTensorProduct R A n) := by
+  unfold relativeTensorMap relativeTensorAlgebraIso relativeTensorCosimplicialAlgebraMap
+  have hmap := (relativeTensorCosimplicialAlgebra R A : SimplexCategory ⥤ CommRingCat).map_id
+    (SimplexCategory.mk n)
+  rw [hmap]
+  simp [Category.assoc]
+
+theorem relativeTensorMap_comp (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m k : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k) :
+    relativeTensorMap R A (φ ≫ ψ) =
+      (relativeTensorMap R A ψ).comp (relativeTensorMap R A φ) := by
+  unfold relativeTensorMap relativeTensorAlgebraIso relativeTensorCosimplicialAlgebraMap
+  have hmap := (relativeTensorCosimplicialAlgebra R A : SimplexCategory ⥤ CommRingCat).map_comp φ ψ
+  rw [hmap]
+  ext x
+  simp [RingHom.comp_apply, Category.assoc]
+
+theorem relativeTensorMap_commutes (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (r : R) :
+    relativeTensorMap R A φ (algebraMap R (relativeTensorProduct R A n) r) =
+      algebraMap R (relativeTensorProduct R A m) r := by
+  sorry
+
+noncomputable def relativeTensorAlgMap (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    relativeTensorProduct R A n →ₐ[R] relativeTensorProduct R A m :=
+  { toRingHom := relativeTensorMap R A φ
+    commutes' := relativeTensorMap_commutes R A φ }
+
 theorem relativeTensorMap_exists (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] {n m : ℕ}
     (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
     ∃ g : relativeTensorProduct R A n →ₐ[R] relativeTensorProduct R A m,
       ∀ x : Fin (n + 1) → A,
         g (PiTensorProduct.tprod R x) =
-          PiTensorProduct.tprod R (fun j : Fin (m + 1) ↦
-            Finset.prod (Finset.filter (fun i : Fin (n + 1) ↦ φ.toOrderHom i = j)
-              Finset.univ) x) := by
+      PiTensorProduct.tprod R (fun j : Fin (m + 1) ↦
+        Finset.prod (Finset.filter (fun i : Fin (n + 1) ↦ φ.toOrderHom i = j)
+          Finset.univ) x) := by
   sorry
 
-noncomputable def relativeTensorMap (R A : Type u) [CommRing R] [CommRing A]
+noncomputable def relativeTensorMapLinear (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] {n m : ℕ}
     (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
-    relativeTensorProduct R A n →ₐ[R] relativeTensorProduct R A m :=
-  Classical.choose (relativeTensorMap_exists R A φ)
+    relativeTensorProduct R A n →ₗ[R] relativeTensorProduct R A m :=
+  { toFun := relativeTensorMap R A φ
+    map_add' := by intros; simp
+    map_smul' := by
+      intro r x
+      rw [Algebra.smul_def, Algebra.smul_def, map_mul,
+        relativeTensorMap_commutes]
+      rfl }
+
+theorem relativeTensorMapLinear_id (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) :
+    relativeTensorMapLinear R A (𝟙 (SimplexCategory.mk n)) =
+      LinearMap.id := by
+  ext x
+  simp [relativeTensorMapLinear, relativeTensorMap_id]
+
+theorem relativeTensorMapLinear_comp (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m k : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k) :
+    relativeTensorMapLinear R A (φ ≫ ψ) =
+      (relativeTensorMapLinear R A ψ).comp (relativeTensorMapLinear R A φ) := by
+  ext x
+  simp [relativeTensorMapLinear, relativeTensorMap_comp]
 
 /-- The coface maps in the Amitsur cosimplicial algebra. -/
 noncomputable def relativeTensorFace (R A : Type u) [CommRing R] [CommRing A]
@@ -108,7 +182,7 @@ theorem relativeTensorMap_pure (R A : Type u) [CommRing R] [CommRing A]
       PiTensorProduct.tprod R (fun j : Fin (m + 1) ↦
         Finset.prod (Finset.filter (fun i : Fin (n + 1) ↦ φ.toOrderHom i = j)
           Finset.univ) x) := by
-  exact Classical.choose_spec (relativeTensorMap_exists R A φ) x
+  sorry
 
 theorem relativeTensorFace_zero_pure (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] (x : Fin 1 → A) :
@@ -199,7 +273,7 @@ def relativeTensorModuleMap (R A M : Type u) [CommRing R] [CommRing A]
     {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
     relativeTensorModule R A M n →ₗ[R] relativeTensorModule R A M m :=
   TensorProduct.map (σ₁₂ := RingHom.id R)
-    (relativeTensorMap R A φ).toLinearMap
+    (relativeTensorMapLinear R A φ)
     (LinearMap.id : M →ₗ[R] M)
 
 theorem relativeTensorModuleMap_smul (R A M : Type u) [CommRing R] [CommRing A]
@@ -210,13 +284,29 @@ theorem relativeTensorModuleMap_smul (R A M : Type u) [CommRing R] [CommRing A]
       relativeTensorMap R A φ a • relativeTensorModuleMap R A M φ x := by
   sorry
 
+theorem relativeTensorModuleMap_id (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) :
+    relativeTensorModuleMap R A M (𝟙 (SimplexCategory.mk n)) = LinearMap.id := by
+  simp [relativeTensorModuleMap, relativeTensorMapLinear_id]
+
+theorem relativeTensorModuleMap_comp (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m k : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k) :
+    relativeTensorModuleMap R A M (φ ≫ ψ) =
+      (relativeTensorModuleMap R A M ψ).comp
+        (relativeTensorModuleMap R A M φ) := by
+  simp only [relativeTensorModuleMap, relativeTensorMapLinear_comp]
+  rw [← TensorProduct.map_comp]
+  simp
+
 /- The degreewise module map is semilinear for the corresponding Amitsur
 ring map.  Its additive function is the canonical tensor-product map; the
 scalar-compatibility field is the usual module-over-the-degree-ring fact. -/
 noncomputable def relativeTensorModuleMapSemilinear (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
     {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
-    relativeTensorModule R A M n →ₛₗ[(relativeTensorMap R A φ).toRingHom]
+    relativeTensorModule R A M n →ₛₗ[relativeTensorMap R A φ]
       relativeTensorModule R A M m :=
   { toFun := relativeTensorModuleMap R A M φ
     map_add' := by intros; simp
@@ -228,7 +318,7 @@ theorem relativeTensorModuleMap_tmul (R A M : Type u) [CommRing R] [CommRing A]
     (a : relativeTensorProduct R A n) (m' : M) :
     relativeTensorModuleMap R A M φ (a ⊗ₜ[R] m') =
       relativeTensorMap R A φ a ⊗ₜ[R] m' := by
-  rfl
+  simp [relativeTensorModuleMap, relativeTensorMapLinear]
 
 theorem relativeTensorModuleMapSemilinear_tmul (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
@@ -236,7 +326,7 @@ theorem relativeTensorModuleMapSemilinear_tmul (R A M : Type u)
     (a : relativeTensorProduct R A n) (m' : M) :
     relativeTensorModuleMapSemilinear R A M φ (a ⊗ₜ[R] m') =
       relativeTensorMap R A φ a ⊗ₜ[R] m' := by
-  rfl
+  simp [relativeTensorModuleMapSemilinear, relativeTensorModuleMap_tmul]
 
 def relativeTensorModuleFace (R A M : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) (i : Fin (n + 2)) :
@@ -253,8 +343,14 @@ noncomputable def relativeTensorCosimplicialModule (R A M : Type u)
     CosimplicialObject (ModuleCat R) where
   obj n := ModuleCat.of R (relativeTensorModule R A M n.len)
   map φ := ModuleCat.ofHom (relativeTensorModuleMap R A M φ)
-  map_id := by sorry
-  map_comp := by sorry
+  map_id := by
+    intro n
+    simpa using congrArg (ModuleCat.ofHom (R := R))
+      (relativeTensorModuleMap_id R A M n.len)
+  map_comp := by
+    intro n m k φ ψ
+    simpa using congrArg (ModuleCat.ofHom (R := R))
+      (relativeTensorModuleMap_comp R A M φ ψ)
 
 theorem relativeTensorCosimplicialModule_exists (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
@@ -515,7 +611,7 @@ structure DescentReindexMapData {n m : ℕ}
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) where
   linear : descentTerm R A N n i →ₗ[R]
     descentTerm R A N m (β.toOrderHom i)
-  semilinear : descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
+  semilinear : descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
     descentTerm R A N m (β.toOrderHom i)
   semilinear_eq_linear : ∀ x, semilinear x = linear x
   map_unit : ∀ x : N,
@@ -551,27 +647,49 @@ theorem descentReindexMap_exists {n m : ℕ}
 noncomputable def descentReindexMapSemilinear {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
-    descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
+    descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
       descentTerm R A N m (β.toOrderHom i) :=
   (descentReindexMapData D β i).semilinear
 
 theorem descentReindexMap_semilinear_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
-    Nonempty (descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
+    Nonempty (descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
       descentTerm R A N m (β.toOrderHom i)) :=
   ⟨descentReindexMapSemilinear D β i⟩
 
 /- The transition map on the normal form `N_{n,n}` is obtained by first
 reindexing the distinguished factor and then transporting it to the last
-position. -/
+position.  The coherence proofs are part of the chosen cosimplicial datum;
+this prevents independent classical choices for different simplex maps from
+being mistaken for a functor. -/
+structure DescentCosimplicialModuleData
+    (D : DescentDatum (R := R) (A := A) (N := N)) where
+  map : ∀ {n m : ℕ} (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
+    descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₗ[R]
+      descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩
+  map_id : ∀ n, map (𝟙 (SimplexCategory.mk n)) = LinearMap.id
+  map_comp : ∀ {n m k : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k),
+    map (φ ≫ ψ) = (map ψ).comp (map φ)
+
+theorem descentCosimplicialModuleData_exists
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    Nonempty (DescentCosimplicialModuleData D) := by
+  sorry
+
+noncomputable def descentCosimplicialModuleData
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    DescentCosimplicialModuleData D :=
+  Classical.choice (descentCosimplicialModuleData_exists D)
+
 noncomputable def descentCosimplicialModuleMap {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
     descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₗ[R]
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩ :=
-  (descentTransportMap D (Fin.le_last _)).toLinearMap.comp
-    (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩)
+  (descentCosimplicialModuleData D).map β
 
 /- The first displayed module maps in the source, in the recursive tensor
 presentation of `descentTerm`, are made explicit here.  The general
@@ -648,7 +766,7 @@ theorem descentCosimplicialModuleMap_degeneracy_one_one
 theorem descentCosimplicialModuleMap_semilinear_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
-    Nonempty (descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[(relativeTensorMap R A β).toRingHom]
+    Nonempty (descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[relativeTensorMap R A β]
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩) := by
   sorry
 
@@ -657,7 +775,7 @@ underlying `R`-linear map is the presentation used by the categorical object. -/
 noncomputable def descentCosimplicialModuleMapSemilinear {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
-    descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[(relativeTensorMap R A β).toRingHom]
+    descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[relativeTensorMap R A β]
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩ :=
   Classical.choice (descentCosimplicialModuleMap_semilinear_exists D β)
 
@@ -697,8 +815,14 @@ noncomputable def descentCosimplicialModule
   obj n := ModuleCat.of R (descentTerm R A N n.len
     ⟨n.len, Nat.lt_succ_self n.len⟩)
   map β := ModuleCat.ofHom (descentCosimplicialModuleMap D β)
-  map_id := by sorry
-  map_comp := by sorry
+  map_id := by
+    intro n
+    simpa [descentCosimplicialModuleMap] using congrArg (ModuleCat.ofHom (R := R))
+      ((descentCosimplicialModuleData D).map_id n.len)
+  map_comp := by
+    intro n m k φ ψ
+    simpa [descentCosimplicialModuleMap] using congrArg (ModuleCat.ofHom (R := R))
+      ((descentCosimplicialModuleData D).map_comp φ ψ)
 
 theorem descentCosimplicialModule_exists
     (D : DescentDatum (R := R) (A := A) (N := N)) :

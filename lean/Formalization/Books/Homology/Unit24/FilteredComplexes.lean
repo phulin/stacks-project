@@ -276,7 +276,7 @@ theorem filteredComplex_page_subobjects_exists
           (filteredComplexBoundaryPlus K r p q)
           ((K.X (p + q)).filtration.obj p)
           le_sup_right hB0)⟩
-  letI : Mono bMap := hbMap_mono
+  let : Mono bMap := hbMap_mono
   let zMap : zObj ⟶ filteredComplexE₀ K p q :=
     cokernel.map
       (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
@@ -303,7 +303,7 @@ theorem filteredComplex_page_subobjects_exists
           (filteredComplexCyclePlus K r p q)
           ((K.X (p + q)).filtration.obj p)
           le_sup_right hZ0)⟩
-  letI : Mono zMap := hzMap_mono
+  let : Mono zMap := hzMap_mono
   let bzMap : bObj ⟶ zObj :=
     cokernel.map
       (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))

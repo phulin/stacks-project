@@ -189,7 +189,53 @@ def commonDenominatorSequences {A : Type v} : Set (A → ℚ) :=
 theorem rationalIntegerProductTensorMap_range :
     Set.range rationalIntegerProductTensorMap =
       commonDenominatorSequences (A := ℕ+) := by
-  sorry
+  have hmap (q : ℚ) (z : ∀ _ : ℕ+, ℤ) :
+      rationalIntegerProductTensorMap (q ⊗ₜ[ℤ] z) =
+        fun a => (z a : ℚ) • q := by
+    ext a
+    change (TensorProduct.rid ℤ ℚ) (q ⊗ₜ[ℤ] z a) = _
+    simp [smul_eq_mul]
+  ext x
+  constructor
+  · rintro ⟨y, rfl⟩
+    induction y using TensorProduct.induction_on with
+    | zero =>
+        refine ⟨1, one_ne_zero, ?_⟩
+        intro a
+        refine ⟨0, ?_⟩
+        simp [rationalIntegerProductTensorMap]
+    | tmul q z =>
+        have hq : q = (q.num : ℚ) / (q.den : ℚ) := by
+          simpa using q.num_div_den.symm
+        refine ⟨(q.den : ℤ), Int.natCast_ne_zero.mpr q.den_nz, ?_⟩
+        intro a
+        refine ⟨z a * q.num, ?_⟩
+        rw [hmap]
+        change (z a : ℚ) * q = _
+        conv_lhs => rw [hq]
+        simp [smul_eq_mul, div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm]
+    | add x y hx hy =>
+        rcases hx with ⟨m, hm, hx⟩
+        rcases hy with ⟨n, hn, hy⟩
+        rw [map_add]
+        refine ⟨m * n, mul_ne_zero hm hn, ?_⟩
+        intro a
+        obtain ⟨zx, hzx⟩ := hx a
+        obtain ⟨zy, hzy⟩ := hy a
+        refine ⟨zx * n + zy * m, ?_⟩
+        change rationalIntegerProductTensorMap x a + rationalIntegerProductTensorMap y a = _
+        rw [hzx, hzy]
+        have hm' : (m : ℚ) ≠ 0 := by exact_mod_cast hm
+        have hn' : (n : ℚ) ≠ 0 := by exact_mod_cast hn
+        field_simp [hm', hn']
+        simp only [Int.cast_add, Int.cast_mul]
+        ring
+  · rintro ⟨m, hm, hx⟩
+    choose z hz using hx
+    refine ⟨(1 / (m : ℚ)) ⊗ₜ[ℤ] z, ?_⟩
+    ext a
+    rw [hmap, hz a]
+    simp [smul_eq_mul, div_eq_mul_inv]
 /-
   have hmap (q : ℚ) (z : ∀ _ : ℕ+, ℤ) :
       rationalIntegerProductTensorMap (q ⊗ₜ[ℤ] z) =
@@ -236,7 +282,33 @@ theorem rationalIntegerProductTensorMap_range :
 
 theorem rationalIntegerProductTensorMap_not_surjective :
     ¬Function.Surjective rationalIntegerProductTensorMap := by
-  sorry
+  intro h
+  let x : ℕ+ → ℚ := fun n => 1 / (n : ℚ)
+  have hx : x ∈ commonDenominatorSequences (A := ℕ+) := by
+    rw [← rationalIntegerProductTensorMap_range]
+    rcases h x with ⟨y, hy⟩
+    exact ⟨y, hy⟩
+  rcases hx with ⟨m, hm, hx⟩
+  let N : ℕ := m.natAbs + 1
+  let n : ℕ+ := ⟨N, Nat.succ_pos _⟩
+  obtain ⟨z, hz⟩ := hx n
+  have hn0 : (N : ℚ) ≠ 0 := by
+    exact_mod_cast n.property.ne'
+  have hz' : (1 : ℚ) / (N : ℚ) = (z : ℚ) / (m : ℚ) := by
+    simpa [x, n, N] using hz
+  have hcross : (m : ℚ) = (z : ℚ) * (N : ℚ) := by
+    have hm0 : (m : ℚ) ≠ 0 := by exact_mod_cast hm
+    field_simp [hm0, hn0] at hz'
+    simpa [mul_comm] using hz'
+  have hcrossZ : m = z * (N : ℤ) := by
+    exact_mod_cast hcross
+  have hdvd : (N : ℤ) ∣ m := by
+    refine ⟨z, ?_⟩
+    rw [hcrossZ, mul_comm]
+  have hle : N ≤ m.natAbs := by
+    exact Nat.le_of_dvd (by omega) (Int.natCast_dvd.mp hdvd)
+  dsimp [N] at hle
+  omega
 /-
   intro h
   let x : ℕ+ → ℚ := fun n => 1 / (n : ℚ)

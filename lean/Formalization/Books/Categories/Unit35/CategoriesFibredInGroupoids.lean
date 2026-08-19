@@ -1591,9 +1591,141 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
       exact (fibredInGroupoids_equivalence_iff_fibrewise
         pX pT D rfl (groupoidFibredCategoryOver_isFibredInGroupoids X hX)
           hpT).mp hD U
-    /- Prior attempt: the diagonal fibrewise equivalences above do not provide
-       a `(overFunctor F.underlying).Full` instance for this constructor. -/
-    sorry
+    apply (fibredInGroupoids_fullyFaithful_iff_fibrewise
+      pX pY (overFunctor F.underlying) (overFunctor_comm F.underlying)
+      (groupoidFibredCategoryOver_isFibredInGroupoids X hX)
+      (groupoidFibredCategoryOver_isFibredInGroupoids Y hY)).mpr
+    intro U
+    let G := fibreFunctor pX pY (overFunctor F.underlying)
+      (overFunctor_comm F.underlying) U
+    let dU := fibreFunctor pX pT D rfl U
+    let _ : dU.IsEquivalence := hDfibre U
+    let hDff : dU.FullyFaithful :=
+      Functor.FullyFaithful.ofFullyFaithful dU
+    let hDfull : dU.Full := hDff.full
+    let hDess : dU.EssSurj := inferInstance
+    have hGfull : G.Full := by
+      constructor
+      intro x y f
+      let _ : IsIso f.1 := by
+        change IsIso (Functor.Fiber.fiberInclusion.map f)
+        let _ : IsIso f := (hY U).all_isIso f
+        exact (Functor.Fiber.fiberInclusion.mapIso (asIso f)).isIso_hom
+      let zobj : TwoFibreProductOverCategory F.underlying F.underlying :=
+        { obj :=
+            { obj := { left := x.1, right := y.1, hom := f.1 }
+              property := by
+                change IsIso f.1
+                infer_instance }
+          property := ⟨U, x.2, y.2, f.2⟩ }
+      let z : Functor.Fiber pT U := ⟨zobj, by
+        change pX.obj x.1 = U
+        exact x.2⟩
+      obtain ⟨w, ⟨e⟩⟩ := hDess.mem_essImage z
+      let a : x.1 ⟶ w.1 := e.inv.1.hom.hom.left
+      let b : y.1 ⟶ w.1 := e.inv.1.hom.hom.right
+      have ha : pX.IsHomLift (𝟙 U) a := by
+        apply CategoryTheory.IsHomLift.of_fac' pX (𝟙 U) a x.2 w.2
+        let _ : pT.IsHomLift (𝟙 U) e.inv.1 := e.inv.2
+        have hefac := CategoryTheory.IsHomLift.fac' pT (𝟙 U) e.inv.1
+        dsimp [pT, twoFibreProductOverBaseFunctor,
+          twoFibreProductOverLeft, TwoFibreProductOverProperty,
+          isoCommaLeft] at hefac
+        exact hefac
+      have hb : pX.IsHomLift (𝟙 U) b := by
+        apply CategoryTheory.IsHomLift.of_fac' pX (𝟙 U) b y.2 w.2
+        let _ : pX.IsHomLift (𝟙 U) a := ha
+        have hfacA := CategoryTheory.IsHomLift.fac' pX (𝟙 U) a
+        obtain ⟨U', U'', hx, hy, hx', hy', hbase⟩ :=
+          twoFibreProductOver_morphism_base_description e.inv.1
+        change eqToHom hx.symm ≫ pX.map a ≫ eqToHom hx' =
+          eqToHom hy.symm ≫ pX.map b ≫ eqToHom hy' at hbase
+        have hU' : U' = U := hx.symm.trans x.2
+        have hU'' : U'' = U := hx'.symm.trans w.2
+        cases hU'
+        cases hU''
+        dsimp [z, zobj] at hx hy
+        dsimp [dU, fibreFunctor, D, fibredCategoryDiagonalFunctor,
+          isoCommaDiagonal] at hx' hy' hbase
+        change pX.obj x.1 = U at hx
+        change pX.obj y.1 = U at hy
+        change pX.obj w.1 = U at hx'
+        change pX.obj w.1 = U at hy'
+        have hx0 : hx = x.2 := Subsingleton.elim _ _
+        have hy0 : hy = y.2 := Subsingleton.elim _ _
+        have hx'0 : hx' = w.2 := Subsingleton.elim _ _
+        have hy'0 : hy' = w.2 := Subsingleton.elim _ _
+        rw [hx0, hy0, hx'0, hy'0, hfacA] at hbase
+        have hbase' := congrArg
+          (fun q => eqToHom y.2 ≫ q ≫ eqToHom w.2.symm) hbase
+        simpa [a, b, Category.assoc, eqToHom_trans] using hbase'.symm
+      let a₀ : x ⟶ w := ⟨a, ha⟩
+      let b₀ : y ⟶ w := ⟨b, hb⟩
+      let _ : IsIso b₀ := (hX U).all_isIso b₀
+      let _ : IsIso (G.map b₀) := by infer_instance
+      let _ : IsIso b := by
+        change IsIso (Functor.Fiber.fiberInclusion.map b₀)
+        exact (Functor.Fiber.fiberInclusion.mapIso (asIso b₀)).isIso_hom
+      let hcomm : (overFunctor F.underlying).map a =
+          f.1 ≫ (overFunctor F.underlying).map b := by
+        have hw := e.inv.1.hom.hom.w
+        dsimp [z, zobj, dU, fibreFunctor, D,
+          fibredCategoryDiagonalFunctor, isoCommaDiagonal] at hw
+        rw [Category.comp_id] at hw
+        change (overFunctor F.underlying).map a =
+          f.1 ≫ (overFunctor F.underlying).map b at hw
+        exact hw
+      have hcommG : G.map a₀ = f ≫ G.map b₀ := by
+        apply Functor.Fiber.hom_ext
+        change (overFunctor F.underlying).map a =
+          f.1 ≫ (overFunctor F.underlying).map b
+        exact hcomm
+      refine ⟨a₀ ≫ inv b₀, ?_⟩
+      rw [Functor.map_comp, hcommG]
+      simp
+    have hGfaithful : G.Faithful := by
+      constructor
+      intro x y f g hfg
+      have hfg' : (overFunctor F.underlying).map f.1 =
+          (overFunctor F.underlying).map g.1 := by
+        exact congrArg (fun k => k.1) hfg
+      let η₀ : (dU.obj x).1 ⟶ (dU.obj y).1 := by
+        apply ObjectProperty.homMk
+        apply ObjectProperty.homMk
+        refine { left := f.1, right := g.1, w := ?_ }
+        change (overFunctor F.underlying).map f.1 ≫ 𝟙 _ =
+          𝟙 _ ≫ (overFunctor F.underlying).map g.1
+        simp [hfg']
+      let η : dU.obj x ⟶ dU.obj y := by
+        refine ⟨η₀, ?_⟩
+        let _ : pX.IsHomLift (𝟙 U) f.1 := f.2
+        apply CategoryTheory.IsHomLift.of_fac' pT (𝟙 U) η₀
+          (dU.obj x).2 (dU.obj y).2
+        have hfac := CategoryTheory.IsHomLift.fac' pX (𝟙 U) f.1
+        change pX.map f.1 =
+          eqToHom ((dU.obj x).2) ≫ 𝟙 U ≫
+            eqToHom ((dU.obj y).2).symm
+        have hxproof : (dU.obj x).2 = x.2 := Subsingleton.elim _ _
+        have hyproof : (dU.obj y).2 = y.2 := Subsingleton.elim _ _
+        rw [hxproof, hyproof]
+        exact hfac
+      obtain ⟨h, hh⟩ := hDfull.map_surjective η
+      have hleft := congrArg (fun k => k.1.hom.hom.left) hh
+      have hright := congrArg (fun k => k.1.hom.hom.right) hh
+      apply Functor.Fiber.hom_ext
+      change f.1 = g.1
+      have hleft' : h.1 = f.1 := by
+        simpa [η, η₀, dU, fibreFunctor, D, fibredCategoryDiagonalFunctor,
+          isoCommaDiagonal] using hleft
+      have hright' : h.1 = g.1 := by
+        simpa [η, η₀, dU, fibreFunctor, D, fibredCategoryDiagonalFunctor,
+          isoCommaDiagonal] using hright
+      exact hleft'.symm.trans hright'
+    exact ⟨Functor.FullyFaithful.mk
+      (fun {x y} f => Classical.choose (hGfull.map_surjective f))
+      (by intro x y f; exact Classical.choose_spec (hGfull.map_surjective f))
+      (by intro x y f; apply hGfaithful.map_injective
+          exact Classical.choose_spec (hGfull.map_surjective _))⟩
 
 /-! ## Equivalences and functor categories -/
 

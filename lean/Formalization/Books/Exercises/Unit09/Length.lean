@@ -167,12 +167,12 @@ instance planeOriginIdeal_isPrime (k : Type u) [Field k] :
   constructor
   · intro h
     have hmem : (1 : MvPolynomial (Fin 2) k) ∈ MvPolynomial.idealOfVars (Fin 2) k := by
-      simpa [h]
+      simp [h]
     have hmem' : (1 : MvPolynomial (Fin 2) k) ∈
         MvPolynomial.idealOfVars (Fin 2) k ^ 1 := by simpa using hmem
     rw [MvPolynomial.mem_pow_idealOfVars_iff' 1] at hmem'
     have hz := hmem' 0 (by simp)
-    simpa using hz
+    simp at hz
   · intro p q hpq
     have hmem_iff (r : MvPolynomial (Fin 2) k) :
         r ∈ MvPolynomial.idealOfVars (Fin 2) k ↔

@@ -52,7 +52,7 @@ theorem symbolicPower_eq_pow_not_general :
   let F0 : Polynomial (ZMod 4) →+* Polynomial (ZMod 2) :=
     Polynomial.mapRingHom c0
   let F : A →+* ULift.{u} (Polynomial (ZMod 2)) := F0.ulift
-  letI instDomain : IsDomain (ULift.{u} (Polynomial (ZMod 2))) :=
+  let instDomain : IsDomain (ULift.{u} (Polynomial (ZMod 2))) :=
     (ULift.ringEquiv : ULift.{u} (Polynomial (ZMod 2)) ≃+*
       Polynomial (ZMod 2)).isDomain
   let K : Ideal A := RingHom.ker F
@@ -100,7 +100,7 @@ theorem symbolicPower_eq_pow_not_general :
       simpa [sub_sub] using hh
     exact hXK hax
   let p : Ideal (A ⧸ I) := K.map q
-  haveI instp : p.IsPrime := hp
+  have instp : p.IsPrime := hp
   have hx : q (ULift.up (2 : Polynomial (ZMod 4))) ∈ symbolicPower p 2 := by
     change q (ULift.up (2 : Polynomial (ZMod 4))) ∈ RingHom.ker _
     rw [RingHom.mem_ker, RingHom.comp_apply, Ideal.Quotient.eq_zero_iff_mem]

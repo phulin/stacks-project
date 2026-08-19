@@ -3314,18 +3314,31 @@ theorem matrixTrace_separates_idempotent_ranks
 
 theorem characteristic_three_trace_does_not_separate_zero_and_full_rank
     {k : Type u} [Field k] [CharP k 3] :
-    matrixTrace (k := k) (Matrix.diagonal (fun i : Fin 3 => (1 : k))) =
-      matrixTrace (k := k) (Matrix.diagonal (fun i : Fin 3 => (0 : k))) := by
-  sorry
+    matrixTrace (k := k) (Matrix.diagonal (fun _i : Fin 3 => (1 : k))) =
+      matrixTrace (k := k) (Matrix.diagonal (fun _i : Fin 3 => (0 : k))) := by
+  simpa [matrixTrace, Matrix.diagonal] using (CharP.cast_eq_zero k 3)
 
 theorem characteristic_three_third_exterior_power_trace_separates_full_rank
     {k : Type u} [Field k] [CharP k 3] :
     thirdExteriorPowerTrace (k := k)
-          (Matrix.diagonal (fun i : Fin 3 => (1 : k))) = 1 ∧
+          (Matrix.diagonal (fun _i : Fin 3 => (1 : k))) = 1 ∧
       ∀ r : ℕ, r < 3 →
         thirdExteriorPowerTrace (k := k)
           (Matrix.diagonal (fun i : Fin 3 => if i.1 < r then (1 : k) else 0)) = 0 := by
-  sorry
+  constructor
+  · simp [thirdExteriorPowerTrace]
+  · intro r hr
+    have : r = 0 ∨ r = 1 ∨ r = 2 := by omega
+    rcases this with rfl | rfl | rfl
+    · simp [thirdExteriorPowerTrace]
+    · simp only [thirdExteriorPowerTrace, Matrix.det_diagonal]
+      refine Finset.prod_eq_zero (i := (⟨1, by decide⟩ : Fin 3)) ?_ ?_
+      · simp
+      · simp
+    · simp only [thirdExteriorPowerTrace, Matrix.det_diagonal]
+      refine Finset.prod_eq_zero (i := (⟨2, by decide⟩ : Fin 3)) ?_ ?_
+      · simp
+      · simp
 
 end
 

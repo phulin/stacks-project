@@ -1022,6 +1022,21 @@ def d
       numericalPolynomialDegree (cumulativeHilbertFunctionInteger R M)
     else ⊥
 
+/- The degree of the cumulative Hilbert function may be computed using any
+   ideal of definition.  This is the public bridge used when parameters are
+   presented as generators of an ideal of definition rather than as powers of
+   the maximal ideal. -/
+theorem d_eq_idealCumulativeHilbertFunction_degree
+    (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] (hM : Nontrivial M) (I : Ideal R)
+    (hI : IsIdealOfDefinition R I) :
+    d R M = numericalPolynomialDegree (idealCumulativeHilbertFunctionInteger I M) := by
+  letI : Nontrivial M := hM
+  simp only [d, if_pos hM]
+  exact (ideal_hilbert_function_degree_independent I
+    (IsLocalRing.maximalIdeal R) hI (maximalIdeal_isIdealOfDefinition R)).2.symm
+
 theorem d_eq_hilbertPolynomial_degree_add_one
     (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
@@ -1030,6 +1045,20 @@ theorem d_eq_hilbertPolynomial_degree_add_one
       (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R M) ≠ ⊥) :
     d R M = (hilbertPolynomial R M).degree + 1 := by
   sorry
+
+/- Combining the preceding bridge with the Hilbert-polynomial degree formula
+   gives the same formula for every ideal of definition. -/
+theorem idealCumulativeHilbertFunction_degree_eq_hilbertPolynomial_degree_add_one
+    (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] (hM : Nontrivial M)
+    (hpow : ∀ n : ℕ,
+      (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R M) ≠ ⊥)
+    (I : Ideal R) (hI : IsIdealOfDefinition R I) :
+    numericalPolynomialDegree (idealCumulativeHilbertFunctionInteger I M) =
+      (hilbertPolynomial R M).degree + 1 := by
+  rw [← d_eq_idealCumulativeHilbertFunction_degree R M hM I hI]
+  exact d_eq_hilbertPolynomial_degree_add_one R M hpow
 
 /-! ## Finite-colength differences -/
 

@@ -470,9 +470,19 @@ noncomputable def simplexHomProduct
   obj Y := simplexHomProductObjectAt X k hX Y.unop
   map := fun {Y Z} f => simplexHomProductMapAt X k hX f.unop
   map_id := by
-    sorry
+    intro Y
+    dsimp [simplexHomProductMapAt, simplexHomProductObjectAt]
+    let _ : Finite (SimplexCategory.mk k ⟶ Y.unop) := inferInstance
+    ext α
+    simp [Pi.map'_comp_π]
   map_comp := by
-    sorry
+    intro Y Z W f g
+    dsimp [simplexHomProductMapAt, simplexHomProductObjectAt]
+    let _ : Finite (SimplexCategory.mk k ⟶ Y.unop) := inferInstance
+    let _ : Finite (SimplexCategory.mk k ⟶ Z.unop) := inferInstance
+    let _ : Finite (SimplexCategory.mk k ⟶ W.unop) := inferInstance
+    ext α
+    simp [Pi.map'_comp_π, Category.assoc]
 
 theorem simplexHomProduct_obj
     {C : Type w} [Category.{v} C] (X : C) (k n : ℕ)
@@ -507,7 +517,14 @@ theorem simplexHomProduct_map_projection
     simplexHomProductMapAt X k hX φ ≫
         simplexHomProductProjection X k m hX α =
       simplexHomProductProjection X k n hX (α ≫ φ) ≫ 𝟙 X := by
-  sorry
+  let _ : Finite (SimplexCategory.mk k ⟶ SimplexCategory.mk m) := inferInstance
+  let _ : Finite (SimplexCategory.mk k ⟶ SimplexCategory.mk n) := inferInstance
+  change
+    Pi.map' (fun β => β ≫ φ) (fun _ => 𝟙 X) ≫
+        Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk m) => X) α =
+      Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk n) => X) (α ≫ φ) ≫
+        𝟙 X
+  rw [Pi.map'_comp_π]
 
 /-- Maps into the special product are determined by the identity coordinate. -/
 noncomputable def simplexHomProduct_hom_equiv

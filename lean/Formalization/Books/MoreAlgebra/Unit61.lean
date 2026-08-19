@@ -245,19 +245,19 @@ theorem polynomialComparisonMap_not_isIso
    objects rather than to the auxiliary tensor-module package below. -/
 noncomputable def canonicalTorFlatBaseChangeMap
     {R R' A B : Type u} [CommRing R] [CommRing R'] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (g : R →+* R') (i : ℕ) :
+    [Algebra R A] [Algebra R B] (g : R →+* R') (hflat : RingHom.Flat g) (i : ℕ) :
     (ModuleCat.extendScalars g).obj
         (Tor (ModuleCat.of R A) (ModuleCat.of R B) i) ⟶
       Tor ((ModuleCat.extendScalars g).obj (ModuleCat.of R A))
         ((ModuleCat.extendScalars g).obj (ModuleCat.of R B)) i :=
   Formalization.Books.Algebra.Unit76.torFlatBaseChangeMap g
-    (ModuleCat.of R A) (ModuleCat.of R B) i
+    hflat (ModuleCat.of R A) (ModuleCat.of R B) i
 
 theorem canonicalTorFlatBaseChangeMap_isIso
     {R R' A B : Type u} [CommRing R] [CommRing R'] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (g : R →+* R') (hflat : RingHom.Flat g)
     (i : ℕ) :
-    IsIso (canonicalTorFlatBaseChangeMap (A := A) (B := B) g i) := by
+    IsIso (canonicalTorFlatBaseChangeMap (A := A) (B := B) g hflat i) := by
   exact Formalization.Books.Algebra.Unit76.flat_base_change_tor g hflat
     (ModuleCat.of R A) (ModuleCat.of R B) i
 
@@ -520,7 +520,7 @@ theorem derivedCohomology_flat_baseChange_canonical
     (i : ℤ) (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
     Nonempty (((derivedCohomologyBaseChange S hR hA hB).left i).obj M ≅
       (ModuleCat.extendScalars S.baseMap).obj
-        ((derivedCohomologyBaseChange S hR hA hB).source i).obj M) := by
+        (((derivedCohomologyBaseChange S hR hA hB).source i).obj M)) := by
   sorry
 
 /-! ## Localization criterion -/

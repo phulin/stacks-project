@@ -124,7 +124,9 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
     · intro K _ _
       exact isReduced_tensorProduct_of_isGeometricallyIntegral h
   · rintro ⟨hirr, hred⟩ K _ _
-    letI : IsReduced (K ⊗[k] S) := by sorry
+    letI : IsReduced (K ⊗[k] S) :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := k) (R := K) (S := S) inferInstance hred
     have hp : (nilradical (K ⊗[k] S)).IsPrime :=
       (PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical).mp
         (irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible

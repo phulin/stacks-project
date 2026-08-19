@@ -1029,7 +1029,7 @@ model for the source's `M ⊗[R] R'`. -/
 theorem relativelyFinitelyPresented_baseChange
     {R A R' M : Type*} [CommRing R] [CommRing A] [CommRing R']
     [AddCommGroup M] [Module A M] (f : R →+* A) (g : R →+* R')
-    (hf : RingHom.FiniteType f)
+    (_hf : RingHom.FiniteType f)
     (hM : RelativelyFinitelyPresented f M) :
     letI : Algebra R A := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
@@ -1046,15 +1046,15 @@ theorem relativelyFinitelyPresented_baseChange
   let rα : P →+* A := α.toRingHom
   let fP : R →+* P := algebraMap R P
   have hcomm (r : R) : α (fP r) = algebraMap R A r := by
-    simpa [fP, P] using α.commutes r
-  letI : Algebra R P := fP.toAlgebra
+    simp [fP, P]
+  let : Algebra R P := fP.toAlgebra
   let α₀ : @AlgHom R P A _ _ _ fP.toAlgebra f.toAlgebra :=
     { toRingHom := rα
       commutes' := by
         intro r
         change α (fP r) = algebraMap R A r
         exact hcomm r }
-  letI : Algebra P A := α₀.toAlgebra
+  let : Algebra P A := α₀.toAlgebra
   let modP₀ : Module P M := Module.compHom M α₀.toRingHom
   let modP : Module P M := Module.compHom M rα
   have hmodP : modP₀ = modP := by
@@ -1068,16 +1068,16 @@ theorem relativelyFinitelyPresented_baseChange
     rw [hmodP]
     change @Module.FinitePresentation P M _ _ (Module.compHom M rα)
     simpa [P] using hPM
-  letI : Module.FinitePresentation P M := hPM₀
+  let : Module.FinitePresentation P M := hPM₀
   have hX' :=
     Formalization.Books.Algebra.Unit14.baseChange_finite_presentation_module
       (M := M) fP g
-  letI : Module R P := Algebra.toModule
+  let : Module R P := Algebra.toModule
   let P₀ := P ⊗[R] R'
   let T := A ⊗[R] R'
-  letI : Semiring P₀ :=
+  let : Semiring P₀ :=
     Algebra.TensorProduct.instSemiring (R := R) (A := P) (B := R')
-  letI : Ring P₀ :=
+  let : Ring P₀ :=
     Algebra.TensorProduct.instRing (R := R) (A := P) (B := R')
   let : Algebra R R := Algebra.id R
   let : IsScalarTower R R P :=
@@ -1114,8 +1114,8 @@ theorem relativelyFinitelyPresented_baseChange
   let : Module P₀ T := Algebra.toModule
   have hX : Module.FinitePresentation P₀ X := by
     exact hX'
-  letI : Semiring (P₀ ⊗[P] A) := Algebra.TensorProduct.instSemiring
-  letI : Ring (P₀ ⊗[P] A) := Algebra.TensorProduct.instRing
+  let : Semiring (P₀ ⊗[P] A) := Algebra.TensorProduct.instSemiring
+  let : Ring (P₀ ⊗[P] A) := Algebra.TensorProduct.instRing
   let : Algebra P₀ (P₀ ⊗[P] A) := Algebra.TensorProduct.leftAlgebra
   let : Module P₀ (P₀ ⊗[P] A) := Algebra.toModule
   let ePA₀ : P₀ ⊗[P] A ≃ₐ[R] T :=
@@ -1203,8 +1203,8 @@ theorem relativelyFinitelyPresented_baseChange
   let e2 : P₀ ⊗[P] (A ⊗[P] M) ≃ₗ[P₀] (P₀ ⊗[P] A) ⊗[P] M :=
     (TensorProduct.AlgebraTensorModule.assoc P P P₀ P₀ A M).symm
   let : Algebra P T := Algebra.TensorProduct.leftAlgebra
-  letI : Module P T := Algebra.toModule
-  letI : SMul P T := (inferInstance : Module P T).toSMul
+  let : Module P T := Algebra.toModule
+  let : SMul P T := (inferInstance : Module P T).toSMul
   let : IsScalarTower P P₀ T :=
     IsScalarTower.of_algebraMap_eq'
       (show (algebraMap P T) =
@@ -1253,7 +1253,7 @@ theorem relativelyFinitelyPresented_baseChange
     eY₀.restrictScalars P₀
   let e : X ≃ₗ[P₀] Y :=
     e1.trans (e2.trans (e3.trans (e4'.trans eY')))
-  letI : Module.FinitePresentation P₀ X := hX
+  let : Module.FinitePresentation P₀ X := hX
   have hY : Module.FinitePresentation P₀ Y := by
     exact Module.FinitePresentation.of_equiv e
   let α' : MvPolynomial (Fin n) R' →ₐ[R'] T := by
@@ -1281,7 +1281,7 @@ theorem relativelyFinitelyPresented_baseChange
     | add p q hp hq =>
       simp [hp, hq]
     | mul_X p i hp =>
-      simp [hp, mul_assoc]
+      simp [hp]
   let Q := MvPolynomial (Fin n) R'
   let : Algebra R Q := ((algebraMap R' Q).comp g).toAlgebra
   let : IsScalarTower R R' Q :=
@@ -1330,7 +1330,7 @@ theorem relativelyFinitelyPresented_baseChange
             (MvPolynomial.X i ⊗ₜ[R] 1)) = p * MvPolynomial.X i
       rw [Algebra.TensorProduct.commRight_symm_tmul,
         Algebra.TensorProduct.lift_tmul]
-      simp [ψ, φ, Q, MvPolynomial.map_X]
+      simp [ψ, φ, Q]
       rw [MvPolynomial.map_X]
   have hαcomp :
       α'.toRingHom.comp qMap.toRingHom = q₀ := by
@@ -1353,8 +1353,7 @@ theorem relativelyFinitelyPresented_baseChange
       dsimp [φ, ψ]
       rw [MvPolynomial.eval₂_map, heval]
       rw [MvPolynomial.algebraMap_eq, MvPolynomial.eval₂_C]
-      simp [tA, Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap,
-        Formalization.Books.Algebra.Unit14.baseChangeRingMap]
+      simp [tA, Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap]
       dsimp [α₀]
       change (Algebra.TensorProduct.includeRight
           (R := R) (A := A) (B := R')).toRingHom r *
@@ -1390,7 +1389,7 @@ theorem relativelyFinitelyPresented_baseChange
       obtain ⟨p, hp⟩ := hx
       obtain ⟨q, hq⟩ := hy
       exact ⟨p + q, by simp [hp, hq]⟩
-  letI : Module Q Y := Module.compHom Y α'.toRingHom
+  let : Module Q Y := Module.compHom Y α'.toRingHom
   have hYQ : Module.FinitePresentation Q Y := by
     let modP : Module P₀ Y := Module.compHom Y qMap.toRingHom
     have hmod : modP = Module.compHom Y q₀ := by
@@ -1402,7 +1401,7 @@ theorem relativelyFinitelyPresented_baseChange
     have hY' : @Module.FinitePresentation P₀ Y _ _ modP := by
       rw [hmod]
       exact hY
-    letI : Module P₀ Y := modP
+    let : Module P₀ Y := modP
     exact moduleFinitePresentation_of_surjective
       (M := Y) qMap.toRingHom hqMap hY'
   refine ⟨n, α', hα', ?_⟩
@@ -1425,7 +1424,7 @@ map. -/
 theorem relativelyFinitelyPresented_comp
     {R A B M : Type*} [CommRing R] [CommRing A] [CommRing B]
     [AddCommGroup M] [Module B M] (f : R →+* A) (g : A →+* B)
-    (hf : RingHom.FiniteType f) (hg : RingHom.FiniteType g)
+    (_hf : RingHom.FiniteType f) (_hg : RingHom.FiniteType g)
     (hfp : RingHom.FinitePresentation f)
     (hM : RelativelyFinitelyPresented g M) :
     RelativelyFinitelyPresented (g.comp f) M := by
@@ -1465,8 +1464,8 @@ theorem relativelyFinitelyPresented_comp
         rfl }
   have hγ : Function.Surjective γ := by
     exact hα.comp hβ
-  letI : Module Q M := Module.compHom M α.toRingHom
-  letI : Module P M := Module.compHom M γ.toRingHom
+  let : Module Q M := Module.compHom M α.toRingHom
+  let : Module P M := Module.compHom M γ.toRingHom
   have hP : Module.FinitePresentation P M := by
     exact moduleFinitePresentation_of_surjective_of_fg_ker
       β.toRingHom hβ hker hPM
@@ -1545,9 +1544,9 @@ theorem relativelyFinitelyPresented_middle_of_shortExact
       exact ⟨x, Subtype.ext hx⟩
   let e : M' ≃ₗ[P] LinearMap.ker pP := LinearEquiv.ofBijective j hj
   have hkerP : Module.FinitePresentation P (LinearMap.ker pP) := by
-    letI : Module.FinitePresentation P M' := hM'P
+    let : Module.FinitePresentation P M' := hM'P
     exact Module.FinitePresentation.of_equiv e
-  letI : Module.FinitePresentation P M'' := hM''P
+  let : Module.FinitePresentation P M'' := hM''P
   refine ⟨n, α, hα, ?_⟩
   exact Module.finitePresentation_of_ker pP hpP
 

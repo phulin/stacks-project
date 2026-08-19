@@ -394,10 +394,6 @@ noncomputable abbrev derivedCohomologySourceObject
 identity.  The fields identify the models with the actual derived-category
 cohomology objects and record that the right-hand model is scalar extension
 of the original `A ⊗[R] B`-module. -/
-noncomputable local instance moduleCatHasDerivedCategoryForBaseChange
-    (T : Type u) [Ring T] : HasDerivedCategory.{w} (ModuleCat.{u} T) := by
-  sorry
-
 structure DerivedCohomologyBaseChange
     {R A B R' A' B' : Type u}
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
@@ -409,6 +405,8 @@ structure DerivedCohomologyBaseChange
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B')) where
   left : ℤ → Derived A ⥤ ModuleCat.{u} (A' ⊗[R'] B')
@@ -489,12 +487,14 @@ noncomputable def derivedCohomologyBaseChange
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))
     (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase) :
     DerivedCohomologyBaseChange S := by
-  sorry
+  exact Classical.choice (existsDerivedCohomologyBaseChange S hR hA hB)
 
 /-- The comparison isomorphism for the chosen cohomology models. -/
 theorem derivedCohomology_flat_baseChange_canonical
@@ -508,6 +508,8 @@ theorem derivedCohomology_flat_baseChange_canonical
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))

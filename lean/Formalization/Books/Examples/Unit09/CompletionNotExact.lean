@@ -1035,7 +1035,7 @@ theorem completion_not_exact :
             (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R), I.FG →
               CompletionPreservesRightExactnessOnFinitelyPresentedModules R I) := by
   classical
-  letI uliftRatField : Field (ULift.{u} ℚ) := Field.ofIsUnitOrEqZero (by
+  let uliftRatField : Field (ULift.{u} ℚ) := Field.ofIsUnitOrEqZero (by
     intro q
     cases q with
     | up q =>
@@ -1123,7 +1123,7 @@ theorem completion_not_exact :
       exact (noncompleteQuotientCompletionXIdeal_isPrincipal (ULift.{u} ℚ)).fg
     have hspanFG : (Ideal.span {tA}).FG := by
       exact Submodule.fg_span_singleton tA
-    letI quotientFP : Module.FinitePresentation A (A ⧸ Ideal.span {tA}) := by
+    let quotientFP : Module.FinitePresentation A (A ⧸ Ideal.span {tA}) := by
       apply Module.finitePresentation_of_surjective (Ideal.span {tA}).mkQ
         (Submodule.mkQ_surjective (Ideal.span {tA}))
       rw [Submodule.ker_mkQ]

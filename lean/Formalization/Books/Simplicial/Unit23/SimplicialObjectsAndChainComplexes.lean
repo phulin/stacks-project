@@ -1,5 +1,6 @@
 import Formalization.Books.Simplicial.Unit22.SimplicialObjectsInAbelianCategories
 import Formalization.Books.Homology.Unit13.Complexes
+import Mathlib.AlgebraicTopology.AlternatingFaceMapComplex
 import Mathlib.CategoryTheory.Limits.ExactFunctor
 
 /-!
@@ -46,7 +47,8 @@ theorem associatedBoundary_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :
     associatedBoundary U (n + 1) ≫ associatedBoundary U n = 0 := by
-  sorry
+  simpa [associatedBoundary, AlgebraicTopology.AlternatingFaceMapComplex.objD] using
+    (AlgebraicTopology.AlternatingFaceMapComplex.d_squared U n)
 
 /-- The associated nonnegative chain complex `s(U)` (the Moore complex). -/
 noncomputable def associatedChainComplex
@@ -76,7 +78,12 @@ theorem associatedBoundary_naturality
     {U V : SimplicialObject C} (f : U ⟶ V) (n : ℕ) :
     f.app (op ⦋n + 1⦌) ≫ associatedBoundary V n =
       associatedBoundary U n ≫ f.app (op ⦋n⦌) := by
-  sorry
+  simp only [associatedBoundary, Preadditive.comp_sum, Preadditive.sum_comp,
+    Preadditive.comp_zsmul, Preadditive.zsmul_comp]
+  refine Finset.sum_congr rfl (fun i hi => ?_)
+  congr 1
+  symm
+  exact SimplicialObject.δ_naturality f i
 
 theorem associatedChainComplexMap_comm
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -84,7 +91,11 @@ theorem associatedChainComplexMap_comm
     ∀ i j : ℕ, (ComplexShape.down ℕ).Rel i j →
       f.app (op ⦋i⦌) ≫ (associatedChainComplex V).d i j =
         (associatedChainComplex U).d i j ≫ f.app (op ⦋j⦌) := by
-  sorry
+  intro i j hij
+  simp only [ComplexShape.down_Rel] at hij
+  subst i
+  simpa only [associatedChainComplex_X, associatedChainComplex_d] using
+    associatedBoundary_naturality f j
 
 /-- The chain map induced by a morphism of simplicial objects. -/
 def associatedChainComplexMap
@@ -118,7 +129,22 @@ theorem associatedChainComplexFunctor_exact
     {C : Type u} [Category.{v} C] [Abelian C] :
     exactFunctor (SimplicialObject C) (ChainComplex C ℕ)
       (associatedChainComplexFunctor C) := by
-  sorry
+  rw [exactFunctor_iff]
+  constructor
+  · refine ⟨?_⟩
+    intro J _ _
+    apply HomologicalComplex.preservesLimitsOfShape_of_eval
+    intro n
+    change PreservesLimitsOfShape J
+      ((evaluation (SimplexCategoryᵒᵖ) C).obj (op ⦋n⦌))
+    infer_instance
+  · refine ⟨?_⟩
+    intro J _ _
+    apply HomologicalComplex.preservesColimitsOfShape_of_eval
+    intro n
+    change PreservesColimitsOfShape J
+      ((evaluation (SimplexCategoryᵒᵖ) C).obj (op ⦋n⦌))
+    infer_instance
 
 /-! ## The extension and Eilenberg--Mac Lane homology statements -/
 

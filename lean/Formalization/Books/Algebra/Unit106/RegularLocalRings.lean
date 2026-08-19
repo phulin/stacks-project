@@ -19,7 +19,6 @@ namespace Formalization.Books.Algebra.Unit106
 open Formalization.Books.Algebra.Unit103
 open Formalization.Books.Algebra.Unit72
 open IsLocalRing
-open scoped Pointwise
 
 universe u v
 
@@ -458,8 +457,6 @@ theorem regular_mcm_free
   · letI : Nontrivial M := not_subsingleton_iff_nontrivial.mp hsub
     obtain ⟨xs, hxs, hxslen⟩ :=
       exists_minimalIdealGeneratingList (R := R)
-    have hRcm : Formalization.Books.Algebra.Unit103.IsCohenMacaulay R R :=
-      (regular_ring_CM xs hxs).2.2
     have hMcm : IsCohenMacaulay R M :=
       (isMaximalCohenMacaulay_iff.mp hM).1
     let N := M ⧸ (maximalIdeal R • (⊤ : Submodule R M))
@@ -541,6 +538,7 @@ theorem regular_local_of_regular_element
   exact IsRegularLocalRing.of_spanFinrank_maximalIdeal_le (R := R)
     (spanFinrank_maximalIdeal_le_of_regular_quotient x hx hreg hquot)
 
+open scoped Pointwise in
 /-- The preceding lifting statement for a regular sequence and its quotient. -/
 theorem regular_local_of_regular_sequence
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]

@@ -284,12 +284,12 @@ noncomputable def simplicialSetProduct_hom_equiv
       funext X
       apply Sigma.hom_ext
       intro u
-      simp [simplicialSetProductOf, Category.assoc]
+      simp [simplicialSetProductOf]
     right_inv := by
       intro f
       apply Subtype.ext
       funext n u
-      simp [simplicialSetProductOf, Category.assoc] }
+      simp }
 
 theorem exists_simplicialSetProduct_hom_equiv
     {C : Type u} [Category.{v} C]

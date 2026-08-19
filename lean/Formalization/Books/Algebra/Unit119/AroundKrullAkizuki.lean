@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit50.ValuationRings
 import Formalization.Books.Algebra.Unit54.EssentiallyFiniteType
 import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
 import Formalization.Books.Algebra.Unit103.CohenMacaulayModules
+import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Mathlib.Algebra.CharP.Algebra
 import Mathlib.Algebra.Field.Subfield.Basic
 import Mathlib.FieldTheory.PurelyInseparable.Basic
@@ -93,8 +94,7 @@ theorem exists_finite_local_modification_of_nonregular_dimension_one
       IsFiniteLocalModification f.hom ∧
         (letI : Algebra R (S : Type u) := f.hom.toAlgebra
          ¬ IsLocalRing.maximalIdeal R ∈
-            _root_.associatedPrimes R (S : Type u)) ∧
-        Nontrivial (S : Type u) := by
+            _root_.associatedPrimes R (S : Type u)) := by
   sorry
 
 /-! ## The two examples and the resolution remark -/
@@ -286,7 +286,8 @@ def badDvrCoefficientCondition (k : Type u) (p : ℕ) [Field k]
 
 /- The structure records the concrete set defining `A`, its DVR property, its
    completion, and the infinite purely inseparable fraction-field extension.
-   The map field makes “induced extension” explicit. -/
+   The fraction-field assertions use the canonical map induced by the inclusion
+   `A.subtype`, as in Chapter 113. -/
 structure BadDvrExampleData (k : Type u) (p : ℕ) [Field k] [Fact p.Prime]
     [CharP k p] where
   A : Subring (PowerSeries k)
@@ -298,22 +299,17 @@ structure BadDvrExampleData (k : Type u) (p : ℕ) [Field k] [Fact p.Prime]
   maximalIdeal_isMaximal : maximalIdeal.IsMaximal
   completion_equiv : Nonempty
     (AdicCompletion maximalIdeal (A : Type u) ≃+* PowerSeries k)
-  fractionFieldMap :
-    (letI : IsDomain (A : Type u) := isDomain
-     FractionRing (A : Type u) →+* FractionRing (PowerSeries k))
-  fractionFieldMap_commutes :
-    (letI : IsDomain (A : Type u) := isDomain
-     fractionFieldMap.comp (algebraMap (A : Type u) (FractionRing (A : Type u))) =
-       (algebraMap (PowerSeries k) (FractionRing (PowerSeries k))).comp A.subtype)
   fractionField_infinite :
     (letI : IsDomain (A : Type u) := isDomain
      letI : Algebra (FractionRing (A : Type u)) (FractionRing (PowerSeries k)) :=
-       fractionFieldMap.toAlgebra
+       (Formalization.Books.Algebra.Unit113.fractionFieldMap
+          A.subtype A.subtype_injective).toAlgebra
      ¬ Module.Finite (FractionRing (A : Type u)) (FractionRing (PowerSeries k)))
   fractionField_purelyInseparable :
     (letI : IsDomain (A : Type u) := isDomain
      letI : Algebra (FractionRing (A : Type u)) (FractionRing (PowerSeries k)) :=
-       fractionFieldMap.toAlgebra
+       (Formalization.Books.Algebra.Unit113.fractionFieldMap
+          A.subtype A.subtype_injective).toAlgebra
      IsPurelyInseparable (FractionRing (A : Type u))
        (FractionRing (PowerSeries k)))
 

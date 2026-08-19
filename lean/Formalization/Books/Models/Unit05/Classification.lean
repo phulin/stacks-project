@@ -5023,10 +5023,9 @@ private lemma determinant_branch_formula_five
   have h43 : D.a 4 3 = 0 := (hDsym 4 3).trans hz34
   simp [Matrix.det_succ_row_zero (n := 4),
     Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three,
-    Fin.succAbove, Fin.sum_univ_succ, hDdiag, hDsym, hzero02,
+    Fin.succAbove, Fin.sum_univ_succ, hDdiag, hDsym,
     hzero03, hzero04, hz13, hz14, hz34, ha12r, ha23r, ha24r,
-    hw12, hw23, hw34, hw24, h10, h20, h30, h40, h21, h31,
-    h41, h32, h42, h43]
+    hw12, hw23, hw34, hw24, h10, h20, h21]
   ring
 
 private lemma ratio_lt_four_five

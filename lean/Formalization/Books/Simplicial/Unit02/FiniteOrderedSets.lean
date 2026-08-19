@@ -823,4 +823,179 @@ theorem toSimplexCategory_is_equivalence :
     refine ⟨SimplexCategoryGenRel.mk Y.len, ?_⟩
     exact ⟨eqToIso (by simp)⟩
 
+/-!
+The presentation is also useful in the opposite direction: a family of
+objects and face and degeneracy maps satisfying the six generators-and-
+relations identities determines a functor out of the presentation.  Keeping
+this data separate from the canonical functor above lets later chapters
+instantiate it with maps in an arbitrary target category.
+-/
+
+structure SimplexCategoryGeneratorData {C : Type u} [Category.{v} C] where
+  obj : ℕ → C
+  δ : ∀ {n : ℕ}, Fin (n + 2) → (obj n ⟶ obj (n + 1))
+  σ : ∀ {n : ℕ}, Fin (n + 1) → (obj (n + 1) ⟶ obj n)
+  δ_comp_δ : ∀ {n : ℕ} {i j : Fin (n + 2)}, i ≤ j →
+    δ i ≫ δ j.succ = δ j ≫ δ (Fin.castSucc i)
+  δ_comp_σ_of_le : ∀ {n : ℕ} {i : Fin (n + 2)} {j : Fin (n + 1)},
+    i ≤ Fin.castSucc j →
+      δ (Fin.castSucc i) ≫ σ j.succ = σ j ≫ δ i
+  δ_comp_σ_self : ∀ {n : ℕ} {i : Fin (n + 1)},
+    δ (Fin.castSucc i) ≫ σ i = 𝟙 _
+  δ_comp_σ_succ : ∀ {n : ℕ} {i : Fin (n + 1)},
+    δ i.succ ≫ σ i = 𝟙 _
+  δ_comp_σ_of_gt : ∀ {n : ℕ} {i : Fin (n + 2)} {j : Fin (n + 1)},
+    Fin.castSucc j < i →
+      δ i.succ ≫ σ (Fin.castSucc j) = σ j ≫ δ i
+  σ_comp_σ : ∀ {n : ℕ} {i j : Fin (n + 1)}, i ≤ j →
+    σ (Fin.castSucc i) ≫ σ j = σ j.succ ≫ σ i
+
+noncomputable def simplexCategoryGeneratorFunctor
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := C)) :
+    SimplexCategoryGenRel ⥤ C := by
+  let φ : FreeSimplexQuiver ⥤q C :=
+    { obj := D.obj
+      map {X} {Y} f := match f with
+        | FreeSimplexQuiver.Hom.δ i => by
+            simpa [FreeSimplexQuiver.mk] using D.δ i
+        | FreeSimplexQuiver.Hom.σ i => by
+            simpa [FreeSimplexQuiver.mk] using D.σ i }
+  exact CategoryTheory.Quotient.lift FreeSimplexQuiver.homRel
+    (Paths.lift φ)
+    (by
+      intro x y f g h
+      have hmap {X Y : FreeSimplexQuiver} (q : X ⟶ Y) :
+          (Paths.lift φ).map ((Paths.of FreeSimplexQuiver).map q) = φ.map q := by
+        exact Paths.lift_toPath φ q
+      cases h with
+      | δ_comp_δ H =>
+          rw [Functor.map_comp, Functor.map_comp, hmap, hmap, hmap, hmap]
+          exact D.δ_comp_δ H
+      | δ_comp_σ_of_le H =>
+          rw [Functor.map_comp, Functor.map_comp, hmap, hmap, hmap, hmap]
+          exact D.δ_comp_σ_of_le H
+      | δ_comp_σ_self =>
+          rw [Functor.map_comp, hmap, hmap]
+          change φ.map _ ≫ φ.map _ = 𝟙 (φ.obj _)
+          simpa [φ, FreeSimplexQuiver.mk] using D.δ_comp_σ_self
+      | δ_comp_σ_succ =>
+          rw [Functor.map_comp, hmap, hmap]
+          change φ.map _ ≫ φ.map _ = 𝟙 (φ.obj _)
+          simpa [φ, FreeSimplexQuiver.mk] using D.δ_comp_σ_succ
+      | δ_comp_σ_of_gt H =>
+          rw [Functor.map_comp, Functor.map_comp, hmap, hmap, hmap, hmap]
+          exact D.δ_comp_σ_of_gt H
+      | σ_comp_σ H =>
+          rw [Functor.map_comp, Functor.map_comp, hmap, hmap, hmap, hmap]
+          exact D.σ_comp_σ H)
+
+noncomputable def simplexCategoryGeneratorLift
+    {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    SimplexCategoryGenRel.mk n ⟶ SimplexCategoryGenRel.mk m :=
+  Classical.choose (every_simplex_morphism_is_generated f)
+
+theorem simplexCategoryGeneratorLift_map
+    {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    SimplexCategoryGenRel.toSimplexCategory.map
+        (simplexCategoryGeneratorLift f) = f :=
+  (Classical.choose_spec (every_simplex_morphism_is_generated f)).1
+
+noncomputable def simplexCategoryFunctorOfGeneratorData
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := C)) :
+    SimplexCategory ⥤ C := by
+  have hFaithful : Functor.Faithful SimplexCategoryGenRel.toSimplexCategory :=
+    toSimplexCategory_is_equivalence.faithful
+  let F := simplexCategoryGeneratorFunctor D
+  refine
+    { obj := fun X => D.obj X.len
+      map := fun {X Y} f => F.map (simplexCategoryGeneratorLift
+        (by simpa only [SimplexCategory.mk_len] using f))
+      map_id := ?_
+      map_comp := ?_ }
+  · intro X
+    let f : SimplexCategory.mk X.len ⟶ SimplexCategory.mk X.len :=
+      by simpa only [SimplexCategory.mk_len] using (𝟙 X)
+    let g := simplexCategoryGeneratorLift f
+    have hg : g = 𝟙 _ := by
+      apply hFaithful.map_injective
+      dsimp [g]
+      simp [simplexCategoryGeneratorLift_map,
+        SimplexCategoryGenRel.toSimplexCategory_obj_mk, f]
+    change F.map g = 𝟙 (F.obj (SimplexCategoryGenRel.mk X.len))
+    rw [hg, F.map_id]
+  · intro X Y Z f g
+    let f' : SimplexCategory.mk X.len ⟶ SimplexCategory.mk Y.len :=
+      by simpa only [SimplexCategory.mk_len] using f
+    let g' : SimplexCategory.mk Y.len ⟶ SimplexCategory.mk Z.len :=
+      by simpa only [SimplexCategory.mk_len] using g
+    let h' : SimplexCategory.mk X.len ⟶ SimplexCategory.mk Z.len :=
+      f' ≫ g'
+    let lf := simplexCategoryGeneratorLift f'
+    let lg := simplexCategoryGeneratorLift g'
+    let lh := simplexCategoryGeneratorLift h'
+    have hlh : lh = lf ≫ lg := by
+      apply hFaithful.map_injective
+      rw [simplexCategoryGeneratorLift_map, Functor.map_comp,
+        simplexCategoryGeneratorLift_map, simplexCategoryGeneratorLift_map]
+      rfl
+    change F.map lh = F.map lf ≫ F.map lg
+    rw [hlh, F.map_comp]
+
+theorem simplexCategoryFunctorOfGeneratorData_map_δ
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := C))
+    {n : ℕ} (i : Fin (n + 2)) :
+    (simplexCategoryFunctorOfGeneratorData D).map (SimplexCategory.δ i) =
+      D.δ i := by
+  have hFaithful : Functor.Faithful SimplexCategoryGenRel.toSimplexCategory :=
+    toSimplexCategory_is_equivalence.faithful
+  let g := simplexCategoryGeneratorLift (SimplexCategory.δ i)
+  have hg : g = SimplexCategoryGenRel.δ i := by
+    apply hFaithful.map_injective
+    dsimp [g]
+    simp only [simplexCategoryGeneratorLift_map]
+  change (simplexCategoryGeneratorFunctor D).map g = D.δ i
+  rw [hg]
+  simp [simplexCategoryGeneratorFunctor, SimplexCategoryGenRel.δ,
+    CategoryTheory.Quotient.lift, CategoryTheory.Quotient.functor,
+    Paths.lift, Paths.of, FreeSimplexQuiver.mk, Quiver.Hom.toPath,
+    Quot.liftOn]
+  exact Category.id_comp _
+
+theorem simplexCategoryFunctorOfGeneratorData_map_σ
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := C))
+    {n : ℕ} (i : Fin (n + 1)) :
+    (simplexCategoryFunctorOfGeneratorData D).map (SimplexCategory.σ i) =
+      D.σ i := by
+  have hFaithful : Functor.Faithful SimplexCategoryGenRel.toSimplexCategory :=
+    toSimplexCategory_is_equivalence.faithful
+  let g := simplexCategoryGeneratorLift (SimplexCategory.σ i)
+  have hg : g = SimplexCategoryGenRel.σ i := by
+    apply hFaithful.map_injective
+    dsimp [g]
+    simp only [simplexCategoryGeneratorLift_map]
+  change (simplexCategoryGeneratorFunctor D).map g = D.σ i
+  rw [hg]
+  simp [simplexCategoryGeneratorFunctor, SimplexCategoryGenRel.σ,
+    CategoryTheory.Quotient.lift, CategoryTheory.Quotient.functor,
+    Paths.lift, Paths.of, FreeSimplexQuiver.mk, Quiver.Hom.toPath,
+    Quot.liftOn]
+  exact Category.id_comp _
+
+noncomputable def simplicialObjectOfGeneratorData
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := Cᵒᵖ)) :
+    SimplexCategoryᵒᵖ ⥤ C :=
+  (simplexCategoryFunctorOfGeneratorData D).op ⋙ CategoryTheory.unopUnop C
+
+theorem simplicialObjectOfGeneratorData_obj
+    {C : Type u} [Category.{v} C]
+    (D : SimplexCategoryGeneratorData (C := Cᵒᵖ)) (n : ℕ) :
+    (simplicialObjectOfGeneratorData D).obj
+    (Opposite.op (SimplexCategory.mk n)) = (D.obj n).unop := by
+  rfl
+
 end Formalization.Books.Simplicial.Unit02

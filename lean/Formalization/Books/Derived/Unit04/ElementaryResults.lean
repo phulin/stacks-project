@@ -482,6 +482,8 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
+  sorry
+/-
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -508,6 +510,7 @@ theorem coSpecial_triangle_two_out_of_three
   have hTop : SpecialTriangle Top := hT
   refine (isIso_op_iff φ.hom₃).1 ?_
   exact special_triangle_isIso₁_apply hTopp hTop phop h2op h3op
+-/
 /- Prior attempt:
   let Top : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T')

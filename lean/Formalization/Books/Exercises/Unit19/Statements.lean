@@ -66,8 +66,8 @@ private lemma monic_quadratic_eq {p : Polynomial ℚ} (hm : p.Monic)
     exact_mod_cast hn3
   rw [Polynomial.coeff_add, Polynomial.coeff_add, Polynomial.coeff_X_pow,
     Polynomial.coeff_C_mul_X, Polynomial.coeff_C]
-  simpa [if_neg h2, if_neg h1, if_neg h0] using
-    (Polynomial.coeff_eq_zero_of_degree_lt hlt)
+  rw [if_neg h2, if_neg h1, if_neg h0]
+  simpa using (Polynomial.coeff_eq_zero_of_degree_lt hlt)
 
 private lemma quartic_plus_144_irreducible :
     Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by
@@ -251,8 +251,7 @@ private lemma sourceSPolynomial_isEisenstein :
     simp only [Polynomial.neg_comp] at h''
     have heq : sourceBaseRelation.comp (Polynomial.X + Polynomial.C (1 : ℚ)) =
         Polynomial.X ^ 3 - 3 * Polynomial.X ^ 2 + 2 * Polynomial.X := by
-      simp [sourceBaseRelation]
-      simp only [Polynomial.C_ofNat]
+      simp [sourceBaseRelation, Polynomial.C_ofNat]
       ring
     rw [heq] at h''
     norm_num at h''
@@ -380,11 +379,12 @@ private lemma monic_span_isPrime_of_map_isPrime
         exact hmod
       have hmodzero : p %ₘ g = 0 := by
         apply Polynomial.map_injective f hf
-        simpa using hmapmod
+        rw [Polynomial.map_zero]
+        exact hmapmod
       rw [← Polynomial.modByMonic_add_div p g, hmodzero, zero_add]
-      simpa [mul_comm] using
-        (Ideal.span {g}).mul_mem_left (p /ₘ g)
-          (Ideal.subset_span (Set.mem_singleton g))
+      rw [mul_comm]
+      exact (Ideal.span {g}).mul_mem_left (p /ₘ g)
+        (Ideal.subset_span (Set.mem_singleton g))
     · apply Ideal.span_le.2
       intro p hp
       have hp' : p = g := Set.mem_singleton_iff.mp hp
@@ -475,7 +475,7 @@ private lemma planeReindex_relation :
   rw [hrename]
   simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_C,
     Polynomial.map_mul, Polynomial.map_X]
-  simp [f, MvPolynomial.uniqueAlgEquiv, planeYPolynomial,
+  simp [f, planeYPolynomial,
     planeFirstPolynomial, planeSecondPolynomial]
 
 private lemma planeYPolynomial_span_isPrime :
@@ -628,7 +628,7 @@ private lemma sourceFullReindex_tRelation :
   have hfin2' := hfin2
   have hC2' := hC2
   have hC3' := hC3
-  dsimp [f] at hfin2' hC2' hC3'
+  simp only [f] at hfin2' hC2' hC3'
   simp only [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_C,
     RingHom.comp_apply, hfin2', hC2', hC3']
   simp [map_mul, map_sub, map_pow, Polynomial.map_mul, Polynomial.map_sub, Polynomial.map_C,

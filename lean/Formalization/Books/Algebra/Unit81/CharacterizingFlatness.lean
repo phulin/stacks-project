@@ -1053,9 +1053,7 @@ theorem lazard
             have hn := congrArg ModuleCat.Hom.hom (c₀.ι.naturality f)
             change (c₀.ι.app i).hom x =
               (c₀.ι.app k).hom ((K.map f).hom x)
-            simpa [ModuleCat.hom_comp, LinearMap.comp_apply,
-              Functor.const_obj_map] using
-              (congrArg (fun q => q x) hn).symm
+            exact (congrArg (fun q => q x) hn).symm
           _ = (c₀.ι.app k).hom ((K.map g).hom y) := by
             have hfg' : (K.map f).hom x = (K.map g).hom y := by
               change (ConcreteCategory.hom ((K ⋙ forget (ModuleCat R)).map f)) x =
@@ -1066,9 +1064,7 @@ theorem lazard
             have hn := congrArg ModuleCat.Hom.hom (c₀.ι.naturality g)
             change (c₀.ι.app k).hom ((K.map g).hom y) =
               (c₀.ι.app j).hom y
-            simpa [ModuleCat.hom_comp, LinearMap.comp_apply,
-              Functor.const_obj_map] using
-              congrArg (fun q => q y) hn
+            exact congrArg (fun q => q y) hn
       · intro y
         let A : J := {
           rank := 1
@@ -1111,7 +1107,7 @@ theorem lazard
       constructor
       · intro i x
         change (G.map (homOfLE (le_refl i))).hom x = x
-        simp [G, map]
+        simp [G]
       · intro i j k hij hjk x
         change (G.map (homOfLE hjk)).hom ((G.map (homOfLE hij)).hom x) =
           (G.map (homOfLE (hij.trans hjk))).hom x
@@ -1131,8 +1127,7 @@ theorem lazard
       intro i j hij x
       have hn := congrArg ModuleCat.Hom.hom (c.ι.naturality (homOfLE hij))
       change (c.ι.app j).hom ((G.map (homOfLE hij)).hom x) = (c.ι.app i).hom x
-      simpa [ModuleCat.hom_comp, Functor.const_obj_map] using
-        congrArg (fun q => q x) hn
+      exact congrArg (fun q => q x) hn
     let desc : DirectLimit stage map →ₗ[R] (c₀.pt : Type (max u v)) :=
       DirectLimit.Module.lift R α stage map g hg
     let d : Cocone G := {
@@ -1148,9 +1143,8 @@ theorem lazard
           rw [hh]
           change DirectLimit.Module.of R α stage map j ((map i j hij.le) x) =
             DirectLimit.Module.of R α stage map i x
-          simpa using
-            (DirectLimit.Module.of_f (R := R) (ι := α) (G := stage) (f := map)
-              (hij := hij.le) (x := x))
+          exact DirectLimit.Module.of_f (R := R) (ι := α) (G := stage) (f := map)
+            (hij := hij.le) (x := x)
         } }
     let inv : (c₀.pt : Type (max u v)) →ₗ[R] DirectLimit stage map := (hc.desc d).hom
     have hleft : desc.comp inv = LinearMap.id := by

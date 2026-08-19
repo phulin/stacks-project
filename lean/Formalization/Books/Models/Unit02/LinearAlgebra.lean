@@ -1137,8 +1137,8 @@ private theorem orthogonal_domRestrict_ker
 private theorem orthogonal_projection_data
     (L : Type*) [AddCommGroup L] [Module ℤ L] [Module.Free ℤ L]
     [Module.Finite ℤ L] (B : LinearMap.BilinForm ℤ L)
-    (hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
-    (hquotient : Module.IsTorsionFree ℤ (L ⧸ A))
+    (_hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
+    (_hquotient : Module.IsTorsionFree ℤ (L ⧸ A))
     (hker : A = LinearMap.ker (B.domRestrict₂ (B.orthogonal A))) :
     ∃ p : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A),
       ∃ q : latticeDiscriminantQuotient B →ₗ[ℤ] moduleCokernel p,
@@ -1156,11 +1156,11 @@ private theorem orthogonal_projection_data
   have hWtf : Module.IsTorsionFree ℤ (L ⧸ W) := by
     simpa [W] using orthogonal_quotient_isTorsionFree L B A
   letI : Module.IsTorsionFree ℤ (L ⧸ W) := hWtf
-  letI : Module.Finite ℤ (L ⧸ W) :=
+  let : Module.Finite ℤ (L ⧸ W) :=
     Module.Finite.of_surjective (W.mkQ : L →ₗ[ℤ] (L ⧸ W)) W.mkQ_surjective
   have hWfree : Module.Free ℤ (L ⧸ W) := by infer_instance
   have hWproj : Module.Projective ℤ (L ⧸ W) := inferInstance
-  letI : Module ℤ W := AddCommGroup.toIntModule W
+  let : Module ℤ W := AddCommGroup.toIntModule W
   let pOut : L →ₗ[ℤ] Module.Dual ℤ W :=
     { toFun := fun x =>
         { toFun := fun y => B x (y : L)
@@ -1834,7 +1834,7 @@ theorem coker
         latticeDualQuotient B₁ (LinearMap.range d)) := by
   classical
   let f := dstar.comp d
-  letI : Module ℤ (L₀ ⧸ LinearMap.range f) :=
+  let : Module ℤ (L₀ ⧸ LinearMap.range f) :=
     Submodule.Quotient.module (LinearMap.range f)
   have hkerf : LinearMap.ker f = LinearMap.ker d := by
     apply le_antisymm
@@ -1867,10 +1867,10 @@ theorem coker
     intro z
     rw [he, he]
     exact DFunLike.congr_fun hxy z
-  letI : Module ℤ (LinearMap.range d) := (LinearMap.range d).module
-  letI : Module ℤ (L₀ ⧸ LinearMap.ker d) :=
+  let : Module ℤ (LinearMap.range d) := (LinearMap.range d).module
+  let : Module ℤ (L₀ ⧸ LinearMap.ker d) :=
     Submodule.Quotient.module (LinearMap.ker d)
-  letI : Module ℤ K := K.module
+  let : Module ℤ K := K.module
   let eD : (L₀ ⧸ LinearMap.ker d) ≃ₗ[ℤ] LinearMap.range d :=
     d.quotKerEquivRange
   let bK : K →ₗ[ℤ] (LinearMap.ker d).dualAnnihilator :=
@@ -2038,7 +2038,7 @@ theorem coker
     change (LinearMap.range f).mkQ (f z) = 0
     exact (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr
       (LinearMap.mem_range_self f z)
-  letI : Module ℤ (K ⧸ LinearMap.range fK) :=
+  let : Module ℤ (K ⧸ LinearMap.range fK) :=
     Submodule.Quotient.module (LinearMap.range fK)
   have hker_g : LinearMap.ker ((LinearMap.range f).mkQ.comp K.subtype) ≤
       LinearMap.range fK := by
@@ -2115,7 +2115,7 @@ theorem coker
       intro k hk
       have hka := LinearMap.BilinForm.mem_orthogonal_iff.mp haxK k hk
       rw [(B₀ k).map_smul] at hka
-      exact (smul_eq_zero.mp hka).resolve_left (by simpa using a.property)
+      exact (smul_eq_zero.mp hka).resolve_left (nonZeroDivisors.ne_zero a.property)
     refine ⟨Submodule.Quotient.mk ⟨x, hxK⟩, ?_⟩
     apply Subtype.ext
     change (LinearMap.range f).mkQ x = (s : moduleCokernel f)
@@ -2534,14 +2534,6 @@ theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
             edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) =
           ∑ e ∈ s, edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) := by
       dsimp [s]
-      change
-        (∑ e ∈ (Finset.univ : Finset (positiveEdge A)),
-          if edgeSource e = i then
-            edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) =
-          ∑ e ∈
-            (Finset.univ : Finset (positiveEdge A)).filter
-              (fun e => edgeSource e = i),
-            edgeWeight e * (x (edgeSource e) - x (edgeTarget e))
       rw [← Finset.sum_filter]
     rw [hs]
     rw [← Finset.sum_filter]
@@ -2594,14 +2586,6 @@ theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
             -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
           ∑ e ∈ s, -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) := by
       dsimp [s]
-      change
-        (∑ e ∈ (Finset.univ : Finset (positiveEdge A)),
-          if edgeTarget e = i then
-            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
-          ∑ e ∈
-            (Finset.univ : Finset (positiveEdge A)).filter
-              (fun e => edgeTarget e = i),
-            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e)))
       rw [← Finset.sum_filter]
     rw [hs]
     rw [← Finset.sum_filter]
@@ -2669,7 +2653,7 @@ theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
       by_cases hpos : 0 < A i j
       · simp [hij, hpos]
       · have hz : A i j = 0 := le_antisymm (not_lt.mp hpos) hnonneg
-        simp [hij, hpos, hz]
+        simp [hij, hz]
     · simp [hij]
   have htarget' (i : Fin n) :
       (∑ j : Fin n, if j < i ∧ 0 < A j i then
@@ -2686,7 +2670,7 @@ theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
         ring
       · have hz : A j i = 0 := le_antisymm (not_lt.mp hpos) hnonneg
         have hz' : A i j = 0 := by simpa [hsymm j i] using hz
-        simp [hji, hpos, hz, hz']
+        simp [hji, hz, hz']
     · simp [hji]
   have hjoin :
       (∑ j : Fin n, if i < j then A i j * (x i - x j) else 0) +
@@ -3037,7 +3021,7 @@ theorem graph_coboundary_kernel_finrank {n : ℕ}
       (graph_coboundary_ker_eq_orthogonal A).symm
   rw [hdimP, hdual] at hdimKp
   rw [horthfin, hkerfinp] at hdimKp
-  simp [edgeLattice, positiveOffDiagonalEdgeCount] at hdimKp
+  simp [edgeLattice] at hdimKp
   let b : ℕ := Module.finrank ℤ ↥(LinearMap.ker (graphCoboundary A))
   let c : ℕ := Module.finrank ℤ ↥(LinearMap.range (graphBoundary A))
   let d : ℕ := Fintype.card (positiveEdge A)
@@ -3164,8 +3148,8 @@ private theorem torsionBy_finrank_eq_of_equiv
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) =
       Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let : Fact (Nat.Prime ell) := ⟨hell⟩
+  let : NeZero ell := ⟨hell.ne_zero⟩
   let f : G →ₗ[ℤ] H := e.toLinearMap
   let hzero : ∀ x : moduleCokernel f, (ell : ℤ) • x = 0 → x = 0 := by
     intro x _
@@ -3190,8 +3174,8 @@ private theorem torsionBy_finrank_eq_of_comp_smul
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) =
       Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let : Fact (Nat.Prime ell) := ⟨hell⟩
+  let : NeZero ell := ⟨hell.ne_zero⟩
   let P := AddSubgroup.torsionBy G (ell : ℤ)
   let Q := AddSubgroup.torsionBy H (ell : ℤ)
   let : IsNoetherian ℤ G := inferInstance
@@ -3321,7 +3305,7 @@ private theorem no_ell_torsion_of_coprime_annihilator
 
 private theorem weighted_matrix_primary_torsion_finrank_eq {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) (m : Fin n → ℤ)
-    (hmne : ∀ i, m i ≠ 0)
+    (_hmne : ∀ i, m i ≠ 0)
     (ell : ℕ) (hell : Nat.Prime ell)
     (hcop : ∀ i, Nat.Coprime ell (Int.natAbs (m i))) :
     matrixPrimaryTorsionFinrank A ell hell =
@@ -3457,17 +3441,17 @@ private theorem torsion_coker_finrank_le_of_injective
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy (moduleCokernel f) (ell : ℤ)) ≤
       Module.finrank ℤ M := by
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
-  letI : Module.IsTorsionFree ℤ N := hN
-  letI : Module ℤ (moduleCokernel f) :=
+  let : Fact (Nat.Prime ell) := ⟨hell⟩
+  let : NeZero ell := ⟨hell.ne_zero⟩
+  let : Module.IsTorsionFree ℤ N := hN
+  let : Module ℤ (moduleCokernel f) :=
     Submodule.Quotient.module (LinearMap.range f)
   let q : N →ₗ[ℤ] moduleCokernel f := (LinearMap.range f).mkQ
   let : Module.Finite ℤ (moduleCokernel f) :=
     Module.Finite.of_surjective q (Submodule.mkQ_surjective _)
   let P' := Submodule.torsionBy ℤ (moduleCokernel f) (ell : ℤ)
   let P := AddSubgroup.torsionBy (moduleCokernel f) (ell : ℤ)
-  letI : Module ℤ P' := P'.module
+  let : Module ℤ P' := P'.module
   let : IsNoetherian ℤ (moduleCokernel f) := inferInstance
   let : Module.Finite ℤ P' :=
     Module.Finite.of_fg (IsNoetherian.noetherian P')
@@ -3500,7 +3484,7 @@ private theorem torsion_coker_finrank_le_of_injective
     Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) P
   let I := Module.Free.ChooseBasisIndex ℤ M
   let b := Module.Free.chooseBasis ℤ M
-  letI : Fintype I := Fintype.ofFinite I
+  let : Fintype I := Fintype.ofFinite I
   let r0 : (I → ℤ) →ₗ[ℤ] (I → ZMod ell) :=
     { toFun := fun x i => (x i : ZMod ell)
       map_add' := by intro x y; funext i; simp
@@ -3532,7 +3516,7 @@ private theorem torsion_coker_finrank_le_of_injective
         convert hsmul.symm using 1 <;>
           simp [Nat.cast_smul_eq_nsmul, Pi.smul_apply]
   let S : Submodule ℤ N := P'.comap q
-  letI : Module ℤ S := S.module
+  let : Module ℤ S := S.module
   let qS : S →ₗ[ℤ] P' :=
     (q.domRestrict S).codRestrict P' (fun x => x.property)
   have hqS : Function.Surjective qS := by
@@ -3546,7 +3530,7 @@ private theorem torsion_coker_finrank_le_of_injective
     apply Subtype.ext
     change q y = (x : moduleCokernel f)
     simpa [q] using hy
-  letI : Module ℤ (LinearMap.range f) := (LinearMap.range f).module
+  let : Module ℤ (LinearMap.range f) := (LinearMap.range f).module
   let fR : M ≃ₗ[ℤ] LinearMap.range f := LinearEquiv.ofInjective f hf
   have hu_mem (x : S) :
       @SMul.smul ℤ N (DistribMulAction.toDistribSMul.toSMul) (ell : ℤ) (x : N) ∈
@@ -3560,7 +3544,6 @@ private theorem torsion_coker_finrank_le_of_injective
         @SMul.smul ℤ (moduleCokernel f) (DistribMulAction.toDistribSMul.toSMul)
           (ell : ℤ) (q (x : N)) by exact hqsmul]
     have hxP : q (x : N) ∈ P' := by
-      change q (x : N) ∈ P'
       exact x.property
     change @SMul.smul ℤ (moduleCokernel f) (DistribMulAction.toDistribSMul.toSMul)
       (ell : ℤ) (q (x : N)) = 0
@@ -3622,7 +3605,8 @@ private theorem torsion_coker_finrank_le_of_injective
       f (u x) = @SMul.smul ℤ N (DistribMulAction.toDistribSMul.toSMul)
         (ell : ℤ) (x : N) := by
     have h := fR.apply_symm_apply (uR x)
-    simpa [u, uR, v, fR] using congrArg Subtype.val h
+    dsimp [u, uR, v]
+    exact congrArg Subtype.val h
   let gS : S →ₗ[ℤ] (I → ZMod ell) := r.comp u
   have hgker : LinearMap.ker qS ≤ LinearMap.ker gS := by
     intro x hx
@@ -3648,13 +3632,13 @@ private theorem torsion_coker_finrank_le_of_injective
     have hrr : r ((ell : ℤ) • z) = 0 := by
       calc
         r ((ell : ℤ) • z) = (ell : ℤ) • r z := by
-          convert r.map_smul (ell : ℤ) z using 1 <;>
+          convert r.map_smul (ell : ℤ) z using 1;
             simp [Nat.cast_smul_eq_nsmul]
         _ = 0 := by
           funext i
           simp
     simpa only [Int.cast_smul_eq_zsmul ℤ] using hrr
-  letI : Module ℤ (S ⧸ LinearMap.ker qS) :=
+  let : Module ℤ (S ⧸ LinearMap.ker qS) :=
     Submodule.Quotient.module (LinearMap.ker qS)
   let gQ : (S ⧸ LinearMap.ker qS) →ₗ[ℤ] (I → ZMod ell) :=
     (LinearMap.ker qS).liftQ gS hgker
@@ -3711,8 +3695,8 @@ private theorem torsion_coker_finrank_le_of_injective
         apply Subtype.ext
         change q (z : N) = 0
         rw [← hfw]
-        simpa [q] using
-          (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr ⟨w, rfl⟩)
+        change (LinearMap.range f).mkQ (f w) = 0
+        exact (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr ⟨w, rfl⟩)
       _ = eQ.symm 0 := by simp
   have hgP : Function.Injective gP := by
     intro x y hxy
@@ -3760,8 +3744,8 @@ private theorem torsionBy_finrank_le_of_exact_injections
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy X (ell : ℤ)) ≤
       Module.finrank (ZMod ell) (AddSubgroup.torsionBy Y (ell : ℤ)) := by
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let : Fact (Nat.Prime ell) := ⟨hell⟩
+  let : NeZero ell := ⟨hell.ne_zero⟩
   let PX := AddSubgroup.torsionBy X (ell : ℤ)
   let PY := AddSubgroup.torsionBy Y (ell : ℤ)
   let : IsNoetherian ℤ X := inferInstance
@@ -3792,7 +3776,7 @@ private theorem torsionBy_finrank_le_of_exact_injections
     Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) PX
   let : Module.Finite (ZMod ell) PY :=
     Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) PY
-  letI : Module ℤ (LinearMap.range f) := (LinearMap.range f).module
+  let : Module ℤ (LinearMap.range f) := (LinearMap.range f).module
   let fR : D ≃ₗ[ℤ] LinearMap.range f := LinearEquiv.ofInjective f hf
   have hrange : LinearMap.range f = LinearMap.ker q :=
     (LinearMap.exact_iff.mp hex).symm
@@ -3837,7 +3821,6 @@ private theorem torsionBy_finrank_le_of_exact_injections
       simpa [jX, vX] using congrArg Subtype.val hxy
     have hi : iX x = iX y := fR.symm.injective huv
     apply Subtype.ext
-    change (x : X) = (y : X)
     exact congrArg (fun z : LinearMap.range f => (z : X)) hi
   let j0 : PX →+ PY :=
     { toFun := fun x => ⟨jX (ePX.symm x), (jX (ePX.symm x)).property⟩
@@ -3870,8 +3853,8 @@ private theorem torsionBy_finrank_le_of_torsion_equiv
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy C (ell : ℤ)) ≤
       Module.finrank (ZMod ell) (AddSubgroup.torsionBy L (ell : ℤ)) := by
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
+  let : Fact (Nat.Prime ell) := ⟨hell⟩
+  let : NeZero ell := ⟨hell.ne_zero⟩
   let PC := AddSubgroup.torsionBy C (ell : ℤ)
   let PL := AddSubgroup.torsionBy L (ell : ℤ)
   let : IsNoetherian ℤ C := inferInstance
@@ -3936,7 +3919,6 @@ private theorem torsionBy_finrank_le_of_torsion_equiv
       congrArg Subtype.val hxy
     have hteq := e.injective heq
     apply Subtype.ext
-    change (x : C) = (y : C)
     exact congrArg (fun z : Submodule.torsion ℤ C => (z : C)) hteq
   exact LinearMap.finrank_le_finrank_of_injective hj
 
@@ -3947,7 +3929,7 @@ private theorem graph_vertex_pairing_unimodular {n : ℕ} :
         { toFun := fun y => ∑ i : Fin n, x i * y i
           map_add' := by
             intro y z
-            simp [Finset.mul_sum, Finset.sum_add_distrib, mul_add]
+            simp [Finset.sum_add_distrib, mul_add]
           map_smul' := by
             intro a y
             change (∑ i : Fin n, x i * (a * y i)) =
@@ -3965,7 +3947,7 @@ private theorem graph_vertex_pairing_unimodular {n : ℕ} :
         rw [Finset.sum_eq_single i]
         · simp
         · intro j hj hji
-          simp [Pi.single_apply, hji]
+          simp [hji]
         · simp
       right_inv := by
         intro φ
@@ -3980,7 +3962,7 @@ private theorem graph_vertex_pairing_unimodular {n : ℕ} :
             apply Finset.sum_congr rfl
             intro i hi
             rw [map_smul]
-            simp [smul_eq_mul, mul_comm]
+            simp [mul_comm]
           _ = φ (∑ i : Fin n, y i • Pi.single i 1) := by
             symm
             exact map_sum φ (fun i => y i • Pi.single i 1)
@@ -4020,7 +4002,7 @@ theorem recurring_symmetric_integer {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
   classical
   cases n with
   | zero =>
-      letI : Subsingleton (matrixCokernel A) := by
+      let : Subsingleton (matrixCokernel A) := by
         constructor
         intro x y
         obtain ⟨x, rfl⟩ := (LinearMap.range (Matrix.toLin' A)).mkQ_surjective x
@@ -4181,7 +4163,7 @@ theorem recurring_symmetric_integer {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
         rw [← graph_coboundary_ker_eq_orthogonal B]
         exact graph_coboundary_kernel_finrank B hBsymm hBoff
           (Nat.zero_lt_succ n) hBconnected
-      letI : Module ℤ K := K.module
+      let : Module ℤ K := K.module
       let fK : K →ₗ[ℤ] Module.Dual ℤ K :=
         latticeDualEmbedding (graphEdgePairing B) K
       have hfK : Function.Injective fK := by

@@ -416,7 +416,7 @@ theorem isLocallyConstant_sub_of_isDimensionFunction
     Set.diff (irreducibleComponents V) {Z | xV ∈ Z}
   let C0 : Set V := ⋃₀ I
   have hcomponents : (irreducibleComponents V).Finite :=
-    Formalization.Books.Topology.Unit09.noetherianSpace_finite_irreducibleComponents
+    Formalization.Books.Topology.Unit11.noetherianSpace_finite_irreducibleComponents
   have hxC0 : xV ∈ C0 := by
     apply Set.mem_sUnion.mpr
     refine ⟨irreducibleComponent xV, ?_, mem_irreducibleComponent⟩
@@ -553,7 +553,7 @@ theorem exists_open_isDimensionFunction_nhds
     rw [ENat.toNat_add (hcodim_ne_top hAB) (hcodim_ne_top hBC)] at h
     exact h
   have hcomponents : (irreducibleComponents V).Finite :=
-    Formalization.Books.Topology.Unit09.noetherianSpace_finite_irreducibleComponents
+    Formalization.Books.Topology.Unit11.noetherianSpace_finite_irreducibleComponents
   let P : Set (Set V) :=
     Set.image2 (fun Z Z' : Set V => Z ∩ Z')
       (irreducibleComponents V) (irreducibleComponents V)

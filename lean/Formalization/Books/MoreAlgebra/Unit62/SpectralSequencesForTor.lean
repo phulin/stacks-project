@@ -127,7 +127,7 @@ structure TensorDoubleComplexData
   doubleComplex : TensorDoubleComplex K resolution
 
 theorem tensor_double_complex_exists
-    {R : Type u} [CommRing R] [HasDerivedCategory.{w} (Mod R)]
+    {R : Type u} [CommRing R]
     (K : ModuleChainComplexZ R) (M : Mod R) :
     Nonempty (TensorDoubleComplexData K M) := by
   sorry
@@ -229,10 +229,10 @@ theorem second_chain_tor_e₁_page
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)]
     (K : ModuleChainComplexZ R) (M : Mod R)
-    (hK : IsBoundedBelowChainComplex K) (i j : ℕ) :
-    Nonempty ((secondChainTorSpectralSequenceData K M hK).page 1 i j ≅
-      torModuleZ (K.X i) M j) := by
-  exact (secondChainTorSpectralSequenceData K M hK).e₁_page i j
+    (hK : IsBoundedBelowChainComplex K) (i : ℤ) (j : ℕ) :
+    Nonempty ((secondChainTorSpectralSequenceData K M hK).page 1 i (j : ℤ) ≅
+      torModuleZ (K.X i) M (j : ℤ)) := by
+  exact (secondChainTorSpectralSequenceData K M hK).e₁_page i (j : ℤ)
 
 /-! ## The change-of-rings example -/
 
@@ -596,5 +596,17 @@ theorem exists_bounded_above_projective_representative
     [HasDerivedCategory.{w} (Mod R)] (K : DerivedDMinus R) :
     IsRepresentedByBoundedAboveProjective K := by
   sorry
+
+/- The source makes the replacement simultaneously for both input objects.
+   The per-object predicate above is useful on its own, while this conjunction
+   records the two-object form without introducing a noncanonical product of
+   chosen representatives. -/
+theorem exists_bounded_above_projective_representatives
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) :
+    IsRepresentedByBoundedAboveProjective K ∧
+      IsRepresentedByBoundedAboveProjective L := by
+  exact ⟨exists_bounded_above_projective_representative K,
+    exists_bounded_above_projective_representative L⟩
 
 end Formalization.Books.MoreAlgebra.Unit62

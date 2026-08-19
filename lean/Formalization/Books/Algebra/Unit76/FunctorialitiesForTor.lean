@@ -310,7 +310,7 @@ private noncomputable def extendFreeResolution
     change ((ShortComplex.mk (F.complex.d (n + 2) (n + 1))
       (F.complex.d (n + 1) n) (F.complex.d_comp_d (n + 2) (n + 1) n)).map E).Exact
     exact (F.resolution.exact_succ n).map E
-  · haveI : Epi F.resolution.augmentation := F.resolution.augmentation_epi
+  · have : Epi F.resolution.augmentation := F.resolution.augmentation_epi
     exact Functor.map_epi E F.resolution.augmentation
   · intro n
     exact Module.Free.of_basis

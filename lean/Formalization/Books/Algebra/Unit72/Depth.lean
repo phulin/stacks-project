@@ -4,9 +4,12 @@ import Formalization.Books.Algebra.Unit68
 import Formalization.Books.Algebra.Unit71
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Jacobson.Ideal
+import Mathlib.RingTheory.Depth.Rees
 import Mathlib.RingTheory.KrullDimension.Module
+import Mathlib.RingTheory.KrullDimension.Regular
 import Mathlib.RingTheory.Localization.Finiteness
 import Mathlib.RingTheory.Regular.RegularSequence
+import Mathlib.RingTheory.Regular.Flat
 import Mathlib.RingTheory.Spectrum.Maximal.Basic
 
 /-!
@@ -171,7 +174,83 @@ theorem depth_eq_sSup_weaklyRegular
       sSup {n : ℕ∞ | ∃ rs : List R,
         n = (rs.length : ℕ∞) ∧
           (∀ r ∈ rs, r ∈ I) ∧ RingTheory.Sequence.IsWeaklyRegular M rs} := by
-  sorry
+  classical
+  by_cases htop : I • (⊤ : Submodule R M) = ⊤
+  · simp only [depth, dif_pos htop]
+    symm
+    apply (sSup_eq_top ..).mpr
+    intro n hn
+    cases n with
+    | top => exact (lt_irrefl _ hn).elim
+    | coe n =>
+        obtain ⟨f, hf, hfm⟩ :=
+          Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul I
+            (⊤ : Submodule R M) Module.Finite.fg_top htop.symm.le
+        have ha : 1 - f ∈ I := by
+          simpa only [neg_sub] using I.neg_mem hf
+        have hreg : IsSMulRegular M (1 - f) := by
+          intro x y hxy
+          simpa [sub_smul, hfm] using hxy
+        have htop_a : (1 - f) • (⊤ : Submodule R M) = ⊤ := by
+          apply le_antisymm le_top
+          intro x hx
+          exact (Submodule.mem_smul_pointwise_iff_exists x (1 - f)
+            (⊤ : Submodule R M)).mpr ⟨x, Submodule.mem_top, by
+              simpa [sub_smul, hfm]⟩
+        have hsub : Subsingleton (QuotSMulTop (1 - f) M) := by
+          apply not_nontrivial_iff_subsingleton.mp
+          intro hnon
+          exact (Submodule.Quotient.nontrivial_iff.mp hnon) htop_a
+        have hweak_subsingleton : ∀ {N : Type v} [AddCommGroup N]
+            [Module R N] [Subsingleton N] (rs : List R),
+            RingTheory.Sequence.IsWeaklyRegular N rs := by
+          intro N _ _ _ rs
+          induction rs generalizing N with
+          | nil => exact RingTheory.Sequence.IsWeaklyRegular.nil R N
+          | cons r rs ih =>
+              apply (RingTheory.Sequence.isWeaklyRegular_cons_iff N r rs).mpr
+              refine ⟨?_, ?_⟩
+              · intro x y _
+                exact Subsingleton.elim _ _
+              · letI : Subsingleton (QuotSMulTop r N) := by
+                  constructor
+                  intro x y
+                  exact Subsingleton.elim _ _
+                exact ih
+        have hweak : ∀ k : ℕ,
+            RingTheory.Sequence.IsWeaklyRegular M
+              ((1 - f) :: List.replicate k 0) := by
+          intro k
+          rw [RingTheory.Sequence.isWeaklyRegular_cons_iff]
+          exact ⟨hreg, by simpa using hweak_subsingleton (List.replicate k 0)⟩
+        refine ⟨((n + 1 : ℕ) : ℕ∞), ?_, by
+          exact_mod_cast Nat.lt_succ_self n⟩
+        refine ⟨(1 - f) :: List.replicate n 0, by
+          simp [List.length_replicate], ?_, hweak n⟩
+        intro r hr
+        simp only [List.mem_cons, List.mem_replicate] at hr
+        rcases hr with rfl | ⟨_, rfl⟩
+        · exact ha
+        · exact I.zero_mem
+  · simp only [depth, dif_neg htop]
+    congr 1
+    ext n
+    constructor
+    · rintro ⟨rs, hlen, hmem, hreg⟩
+      exact ⟨rs, hlen, hmem, hreg.toIsWeaklyRegular⟩
+    · rintro ⟨rs, hlen, hmem, hweak⟩
+      have hspan : Ideal.ofList rs ≤ I := Ideal.span_le.mpr hmem
+      have hsmul : Ideal.ofList rs • (⊤ : Submodule R M) ≤
+          I • (⊤ : Submodule R M) := Submodule.smul_mono_left hspan
+      have hne : (⊤ : Submodule R M) ≠
+          Ideal.ofList rs • (⊤ : Submodule R M) := by
+        intro heq
+        apply htop
+        apply top_unique
+        calc
+          (⊤ : Submodule R M) = Ideal.ofList rs • (⊤ : Submodule R M) := heq
+          _ ≤ I • (⊤ : Submodule R M) := hsmul
+      exact ⟨rs, hlen, hmem, ⟨hweak, hne⟩⟩
 
 /-- Over a Noetherian local ring, support dimension bounds depth. -/
 theorem supportDim_ge_localDepth
@@ -179,7 +258,44 @@ theorem supportDim_ge_localDepth
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Nontrivial M] :
     ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ Module.supportDim R M := by
-  sorry
+  have htop : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) ≠ ⊤ :=
+    smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+      (by exact IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+  unfold localDepth depth
+  rw [dif_neg htop]
+  cases hdim : Module.supportDim R M with
+  | bot =>
+      exact (Module.supportDim_ne_bot_of_nontrivial R M hdim).elim
+  | coe d =>
+      apply WithBot.coe_le_coe.mpr
+      apply sSup_le
+      intro n hn
+      rcases hn with ⟨rs, hlen, hmem, hreg⟩
+      have hlebot : (n : WithBot ℕ∞) ≤ (d : WithBot ℕ∞) := by
+        rw [hlen]
+        calc
+          ((rs.length : ℕ∞) : WithBot ℕ∞) =
+              (0 : WithBot ℕ∞) + ((rs.length : ℕ∞) : WithBot ℕ∞) := by simp
+          _ ≤ Module.supportDim R
+                (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) +
+                ((rs.length : ℕ∞) : WithBot ℕ∞) := by
+            letI : Nontrivial (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) :=
+              hreg.quot_ofList_smul_nontrivial ⊤
+            have hqne : Module.supportDim R
+                (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) ≠ ⊥ :=
+              Module.supportDim_ne_bot_of_nontrivial R _
+            have hqzero : (0 : WithBot ℕ∞) ≤ Module.supportDim R
+                (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) := by
+              cases hq : Module.supportDim R
+                  (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) with
+              | bot => exact (hqne hq).elim
+              | coe q => simp [hq]
+            exact add_le_add_left hqzero
+              ((rs.length : ℕ∞) : WithBot ℕ∞)
+          _ = Module.supportDim R M :=
+            Module.supportDim_add_length_eq_supportDim_of_isRegular rs hreg
+          _ = (d : WithBot ℕ∞) := hdim
+      exact WithBot.coe_le_coe.mp hlebot
 
 /-- A nonzero finite module over a Noetherian ring has finite `I`-depth when
 `I` does not generate the whole module. -/
@@ -189,7 +305,82 @@ theorem depth_lt_top_of_noetherian
     [Module.Finite R M] [Nontrivial M]
     (hIM : I • (⊤ : Submodule R M) ≠ ⊤) :
     depth I M < ⊤ := by
-  sorry
+  unfold depth
+  rw [dif_neg hIM]
+  let Q := M ⧸ (I • (⊤ : Submodule R M))
+  letI : Nontrivial Q := Submodule.Quotient.nontrivial_iff.mpr hIM
+  obtain ⟨p, hp⟩ := Module.nonempty_support_of_nontrivial (R := R) (M := Q)
+  change p ∈ Module.support R (M ⧸ (I • (⊤ : Submodule R M))) at hp
+  rw [Module.support_quotient] at hp
+  have hpM : p ∈ Module.support R M := hp.1
+  have hpI : I ≤ p.asIdeal := by
+    exact hp.2
+  let S := Localization.AtPrime p.asIdeal
+  let N := LocalizedModule.AtPrime p.asIdeal M
+  letI : Nontrivial N := Module.mem_support_iff.mp hpM
+  cases hdimS : ringKrullDim S with
+  | bot =>
+      have hle : Module.supportDim S N ≤ (⊥ : WithBot ℕ∞) := by
+        rw [← hdimS]
+        exact Module.supportDim_le_ringKrullDim S N
+      exact (Module.supportDim_ne_bot_of_nontrivial S N
+        (bot_unique hle)).elim
+  | coe d =>
+      have hdlt : d < (⊤ : ℕ∞) := by
+        rw [lt_top_iff_ne_top]
+        intro hd
+        have hdimtop : ringKrullDim S = ⊤ := by
+          rw [hdimS, hd]
+          simp
+        exact (ne_of_lt (ringKrullDim_lt_top (R := S))) hdimtop
+      apply lt_of_le_of_lt (sSup_le ?_) hdlt
+      intro n hn
+      rcases hn with ⟨rs, hlen, hmem, hreg⟩
+      have hregp : RingTheory.Sequence.IsRegular N
+          (rs.map (algebraMap R S)) :=
+        hreg.toIsWeaklyRegular.isRegular_of_isLocalizedModule_of_mem
+          (S := S) (p := p.asIdeal)
+          (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M)
+          (by
+            intro r hr
+            exact hpI (hmem r hr))
+      have hdimreg := Module.supportDim_add_length_eq_supportDim_of_isRegular
+        (rs.map (algebraMap R S)) hregp
+      have hqnon : Nontrivial
+          (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
+            (⊤ : Submodule S N))) := hregp.quot_ofList_smul_nontrivial ⊤
+      have hqne : Module.supportDim S
+          (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
+            (⊤ : Submodule S N))) ≠ ⊥ := by
+        letI := hqnon
+        exact Module.supportDim_ne_bot_of_nontrivial S _
+      have hqzero : (0 : WithBot ℕ∞) ≤ Module.supportDim S
+          (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
+            (⊤ : Submodule S N))) := by
+        cases hq : Module.supportDim S
+            (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
+              (⊤ : Submodule S N))) with
+        | bot => exact (hqne hq).elim
+        | coe q => simp [hq]
+      have hlenbot : ((rs.length : ℕ∞) : WithBot ℕ∞) ≤
+          Module.supportDim S N := by
+        calc
+          ((rs.length : ℕ∞) : WithBot ℕ∞) =
+              (0 : WithBot ℕ∞) + ((rs.length : ℕ∞) : WithBot ℕ∞) := by simp
+          _ ≤ Module.supportDim S
+                (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
+                  (⊤ : Submodule S N))) +
+                ((rs.length : ℕ∞) : WithBot ℕ∞) := by
+            exact add_le_add_left hqzero _
+          _ = Module.supportDim S N := by
+            simpa [List.length_map] using hdimreg
+      have hlenle : (rs.length : ℕ∞) ≤ d := by
+        apply WithBot.coe_le_coe.mp
+        calc
+          ((rs.length : ℕ∞) : WithBot ℕ∞) ≤ Module.supportDim S N := hlenbot
+          _ ≤ ringKrullDim S := Module.supportDim_le_ringKrullDim S N
+          _ = (d : WithBot ℕ∞) := hdimS
+      simpa [hlen] using hlenle
 
 /-! ## Ext characterization -/
 
@@ -212,7 +403,77 @@ theorem localDepth_eq_min_ext
             (Formalization.Books.Algebra.Unit71.ExtGroup
               (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
               (ModuleCat.of R M) j) := by
-  sorry
+  classical
+  have hmax : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) ≠ ⊤ :=
+    smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+      (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+  have hsmul : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) < ⊤ :=
+    lt_of_le_of_ne le_top hmax
+  have hdepthtop : localDepth R M < ⊤ :=
+    depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) M hmax
+  have hdepth_mem : localDepth R M ∈ {n : ℕ∞ | ∃ rs : List R,
+      n = (rs.length : ℕ∞) ∧
+        (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
+          RingTheory.Sequence.IsRegular M rs} := by
+    letI : Nonempty {n : ℕ∞ | ∃ rs : List R,
+        n = (rs.length : ℕ∞) ∧
+          (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
+            RingTheory.Sequence.IsRegular M rs} :=
+      ⟨⟨0, ⟨[], by simp, by simp,
+        RingTheory.Sequence.IsRegular.nil R M⟩⟩⟩
+    unfold localDepth depth
+    rw [dif_neg hmax]
+    apply ENat.sSup_mem_of_nonempty_of_lt_top
+    simpa [localDepth, depth, hmax] using hdepthtop
+  rcases hdepth_mem with ⟨rs, hlen, hmem, hreg⟩
+  have hK_support : Module.support R (R ⧸ IsLocalRing.maximalIdeal R) =
+      PrimeSpectrum.zeroLocus (IsLocalRing.maximalIdeal R) := by
+    rw [Module.support_eq_zeroLocus, Ideal.annihilator_quotient]
+  have hvanish : ∀ j : ℕ, j < rs.length →
+      Subsingleton
+        (Formalization.Books.Algebra.Unit71.ExtGroup
+          (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+          (ModuleCat.of R M) j) :=
+    fun j hj => ModuleCat.subsingleton_ext_of_exists_isRegular
+      (IsLocalRing.maximalIdeal R)
+      (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+      (by rw [hK_support])
+      (ModuleCat.of R M) hsmul rs hmem hreg j hj
+  have hnot : ¬ Subsingleton
+      (Formalization.Books.Algebra.Unit71.ExtGroup
+        (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+        (ModuleCat.of R M) rs.length) := by
+    intro hsub
+    have h_ext : ∀ j < rs.length + 1, Subsingleton
+        (Formalization.Books.Algebra.Unit71.ExtGroup
+          (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+          (ModuleCat.of R M) j) := by
+      intro j hj
+      have hjle : j ≤ rs.length := Nat.le_of_lt_succ hj
+      rcases Nat.lt_or_eq_of_le hjle with hjlt | hjeq
+      · exact hvanish j hjlt
+      · subst j
+        exact hsub
+    obtain ⟨ys, hyslen, hysmem, hysreg⟩ :=
+      ModuleCat.exists_isRegular_of_exists_subsingleton_ext
+        (IsLocalRing.maximalIdeal R) (rs.length + 1)
+        (ModuleCat.of R M) hsmul
+        (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+        hK_support h_ext
+    have hle : (ys.length : ℕ∞) ≤ localDepth R M := by
+      unfold localDepth depth
+      rw [dif_neg hmax]
+      exact le_sSup ⟨ys, rfl, hysmem, hysreg⟩
+    have hle' : (ys.length : ℕ∞) ≤ (rs.length : ℕ∞) := by
+      simpa [hlen] using hle
+    have hleNat : ys.length ≤ rs.length := by
+      exact_mod_cast hle'
+    have hcontra : rs.length + 1 ≤ rs.length := by
+      simpa [hyslen] using hleNat
+    exact (Nat.not_succ_le_self rs.length) hcontra
+  refine ⟨rs.length, hlen, not_subsingleton_iff_nontrivial.mp hnot, ?_⟩
+  intro j hj
+  exact not_nontrivial_iff_subsingleton.mpr (hvanish j hj)
 
 /-! ## Depth in a short exact sequence -/
 

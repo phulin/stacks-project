@@ -899,8 +899,7 @@ private def naturalLocalizationComponent (G : GradedRingData S)
           ring
         exact hdegZ'.trans hka
       · rw [Localization.add_mk]
-        simp [pow_add, mul_add, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm,
-          mul_assoc]
+        simp [pow_add, add_comm, mul_comm]
     · simpa using (Set.mem_union_left {0}
         ⟨n, k, a, ha, hka, rfl⟩ :
           Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩ ∈
@@ -913,7 +912,7 @@ private def naturalLocalizationComponent (G : GradedRingData S)
             {x | ∃ (n k : ℕ) (a : S), a ∈ G.component k ∧
               (k : ℤ) - (n : ℤ) * d = z ∧
               x = Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩} ∪ {0})
-    · simpa using (Set.mem_union_right _ (Set.mem_singleton (0 : Localization (Submonoid.powers f))))
+    · simp
   neg_mem' := by
     rintro x (⟨n, k, a, ha, hka, rfl⟩ | rfl)
     · apply Set.mem_union_left {0}
@@ -937,7 +936,7 @@ private lemma naturalLocalizationComponent_graded (G : GradedRingData S)
         · push_cast
           linarith
         · rw [Localization.mk_mul]
-          simp [pow_add, mul_comm]
+          simp [pow_add]
       · simp
     · simp
 
@@ -979,7 +978,6 @@ private lemma naturalLocalizationComponent_exists_fraction (G : GradedRingData S
         let k : ℕ := n * (d - 1)
         refine ⟨n, k, 0, (G.component k).zero_mem, ?_, ?_⟩
         · dsimp [n, k]
-          push_cast
           have hd' : 1 ≤ d := hd
           rw [Nat.cast_sub hd']
           ring_nf
@@ -1029,7 +1027,6 @@ private lemma naturalLocalizationComponent_disjoint (G : GradedRingData S)
         (hleft.symm ▸ hright_mem) hzero
     apply False.elim
     apply hzw
-    push_cast at hdegree
     omega
 
 private lemma naturalLocalizationComponent_iSupIndep (G : GradedRingData S)
@@ -1051,7 +1048,7 @@ private lemma naturalLocalizationComponent_iSupIndep (G : GradedRingData S)
           ⟨f ^ N, (Submonoid.mem_powers_iff _ _).mpr ⟨N, rfl⟩⟩ = v j := by
     rw [hval j, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
     refine ⟨1, ?_⟩
-    simp only [Submonoid.coe_one, one_mul, Subtype.coe_mk]
+    simp only [Submonoid.coe_one, one_mul]
     change f ^ n j * (a j * f ^ (N - n j)) = f ^ N * a j
     calc
       f ^ n j * (a j * f ^ (N - n j)) =
@@ -1103,13 +1100,11 @@ private lemma naturalLocalizationComponent_iSupIndep (G : GradedRingData S)
       simpa [add_assoc, add_left_comm, add_comm] using hcast
     have hj := hdeg j
     have hi' := hdeg i₀
-    push_cast at hj hi'
     have hcancel (j : s) :
         (k j : ℤ) + ((N - n j : ℕ) : ℤ) * (d : ℤ) =
           (j : ℤ) + (N : ℤ) * (d : ℤ) := by
       rw [Nat.cast_sub (hnle j)]
       have hj' := hdeg j
-      push_cast at hj'
       ring_nf at hj' ⊢
       linarith
     have hcj := hcancel j
@@ -1174,7 +1169,7 @@ theorem exists_natural_localization_z_grading (G : GradedRingData S)
         decompose' := D.decompose'
         left_inv := D.left_inv
         right_inv := D.right_inv } }
-  letI : GradedRing H.component := H.graded
+  let : GradedRing H.component := H.graded
   refine ⟨H, ?_, ?_⟩
   · refine ⟨(d : ℤ), algebraMap S (Localization (Submonoid.powers f)) f,
       by exact_mod_cast hd, ?_, IsLocalization.Away.algebraMap_isUnit f⟩
@@ -1198,7 +1193,7 @@ theorem exists_natural_localization_z_grading (G : GradedRingData S)
             apply Set.mem_union_left
             refine ⟨n, n * d, a, ha, ?_, by rfl⟩
             push_cast
-            simp [smul_eq_mul]
+            simp
           ⟩
         map_zero' := by apply Subtype.ext; simp
         map_add' := by intro x y; apply Subtype.ext; simp

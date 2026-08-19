@@ -746,7 +746,7 @@ theorem finite_flat_module_finiteLocallyFree_characterization
       [ ∀ Z : Set (PrimeSpectrum R),
           IsClosed Z → StableUnderGeneralization Z → IsOpen Z,
         ∀ (M : Type v) [AddCommGroup M] [Module R M],
-          Module.Finite R M → Module.Flat R M →
+        Module.Finite R M → Module.Flat R M →
             Formalization.Books.Algebra.Unit78.FiniteLocallyFree R M ] := by
   sorry
 

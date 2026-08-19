@@ -81,18 +81,29 @@ theorem mem_vPlus_iff
     x ∈ vPlus 𝒜 I ↔ (I : Set R) ⊆ x.asHomogeneousIdeal := by rfl
 theorem isOpen_dPlus
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (f : R) :
-    IsOpen (dPlus 𝒜 f) := by sorry
+    IsOpen (dPlus 𝒜 f) := by
+  exact ProjectiveSpectrum.isOpen_basicOpen (𝒜 := 𝒜)
 theorem isOpen_dPlus_of_positive_homogeneous
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     {m : ℕ} {f : R} (_hf : f ∈ 𝒜 m) (_hm : 0 < m) :
-    IsOpen (dPlus 𝒜 f) := by sorry
+    IsOpen (dPlus 𝒜 f) := by
+  exact ProjectiveSpectrum.isOpen_basicOpen (𝒜 := 𝒜)
 theorem dPlus_mul
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (f f' : R) :
-    dPlus 𝒜 (f * f') = dPlus 𝒜 f ∩ dPlus 𝒜 f' := by sorry
+    dPlus 𝒜 (f * f') = dPlus 𝒜 f ∩ dPlus 𝒜 f' := by
+  change (ProjectiveSpectrum.basicOpen 𝒜 (f * f') : Set (ProjectiveSpectrum 𝒜)) =
+    (ProjectiveSpectrum.basicOpen 𝒜 f : Set (ProjectiveSpectrum 𝒜)) ∩
+      (ProjectiveSpectrum.basicOpen 𝒜 f' : Set (ProjectiveSpectrum 𝒜))
+  rw [ProjectiveSpectrum.basicOpen_mul, TopologicalSpace.Opens.coe_inf]
 theorem dOnProj_eq_iUnion_projections
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (g : R) :
     dOnProj 𝒜 g =
-      ⋃ n : ℕ, dPlus 𝒜 (GradedRing.proj 𝒜 n g) := by sorry
+      ⋃ n : ℕ, dPlus 𝒜 (GradedRing.proj 𝒜 n g) := by
+  change (ProjectiveSpectrum.basicOpen 𝒜 g : Set (ProjectiveSpectrum 𝒜)) =
+    ⋃ n : ℕ, (ProjectiveSpectrum.basicOpen 𝒜 (GradedRing.proj 𝒜 n g) :
+      Set (ProjectiveSpectrum 𝒜))
+  rw [ProjectiveSpectrum.basicOpen_eq_union_of_projection,
+    TopologicalSpace.Opens.coe_iSup]
 theorem dOnProj_eq_zero_component_union_positive
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (g : R) :
     dOnProj 𝒜 g =

@@ -94,6 +94,59 @@ theorem closedPresheafDirectImage_obj (C : Type u) [Category.{v} C]
 
 /-! ## Stalks and restriction identities -/
 
+set_option backward.isDefEq.respectTransparency false in
+/-- Sheafification preserves stalks, naturally in the presheaf. -/
+noncomputable def sheafificationStalkIso (C : Type u) [Category.{v} C]
+    [HasColimits C] [HasTerminal C] {X : TopCat.{v}}
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] (x : X) :
+    TopCat.Presheaf.stalkFunctor C x ≅
+      presheafToSheaf (Opens.grothendieckTopology X) C ⋙
+        sheafToPresheaf (Opens.grothendieckTopology X) C ⋙
+          TopCat.Presheaf.stalkFunctor C x :=
+  NatIso.ofComponents
+    (fun P ↦ by
+      letI : IsIso ((TopCat.Presheaf.stalkFunctor C x).map
+          (toSheafify (Opens.grothendieckTopology X) P)) :=
+        TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+          (X := X) (p₀ := x) (C := C) P
+      exact asIso ((TopCat.Presheaf.stalkFunctor C x).map
+        (toSheafify (Opens.grothendieckTopology X) P)))
+    (fun {P Q} g ↦ by
+      have h := congrArg (fun q ↦ (TopCat.Presheaf.stalkFunctor C x).map q)
+        ((sheafificationAdjunction (Opens.grothendieckTopology X) C).unit.naturality g)
+      change (TopCat.Presheaf.stalkFunctor C x).map g ≫
+          (TopCat.Presheaf.stalkFunctor C x).map
+            (toSheafify (Opens.grothendieckTopology X) Q) =
+        (TopCat.Presheaf.stalkFunctor C x).map
+            (toSheafify (Opens.grothendieckTopology X) P) ≫
+          (TopCat.Presheaf.stalkFunctor C x).map
+            ((sheafToPresheaf (Opens.grothendieckTopology X) C).map
+              ((presheafToSheaf (Opens.grothendieckTopology X) C).map g))
+      simpa only [Functor.id_map, Functor.comp_map, Functor.map_comp] using h)
+
+/-- Sheaf pullback preserves stalks, naturally in the sheaf. -/
+noncomputable def sheafPullbackStalkIso (C : Type u) [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ A B, FunLike (FC A B) (CC A) (CC B)]
+    [ConcreteCategory.{v} C FC] [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}}
+    [HasWeakSheafify (Opens.grothendieckTopology X) C]
+    (f : X ⟶ Y) (x : X) :
+    TopCat.Sheaf.forget C Y ⋙ TopCat.Presheaf.stalkFunctor C (f x) ≅
+      TopCat.Sheaf.pullback C f ⋙ TopCat.Sheaf.forget C X ⋙
+        TopCat.Presheaf.stalkFunctor C x :=
+  Functor.isoWhiskerLeft (TopCat.Sheaf.forget C Y)
+      (pullbackStalkIso C f x).symm ≪≫
+    Functor.isoWhiskerLeft
+      (TopCat.Sheaf.forget C Y ⋙ TopCat.Presheaf.pullback C f)
+      (sheafificationStalkIso C x) ≪≫
+    (Functor.isoWhiskerRight (TopCat.Sheaf.pullbackIso C f)
+      (TopCat.Sheaf.forget C X ⋙
+        TopCat.Presheaf.stalkFunctor C x)).symm
+
 private theorem closedSheafDirectImage_stalkIso_terminal_of_not_mem
     {C : Type u} [Category.{v} C] [HasColimits C] [HasTerminal C]
     {X : TopCat.{v}} {Z : Set X} (hZ : IsClosed Z)
@@ -479,6 +532,79 @@ theorem closedAbelianSheafRestriction_directImage_iso {X : TopCat.{v}} (Z : Set 
     closedSheafRestriction_directImage_counit_isIso hZ
   exact ⟨asIso ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
     (closedInclusion Z)).counit.app F)⟩
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The unit of closed restriction and direct image is an isomorphism on
+stalks over the closed subset. -/
+theorem closedAbelianSheafRestriction_unit_stalk_map_isIso
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z)
+    (G : TopCat.Sheaf (AddCommGrpCat.{v}) X) (x : X) (hx : x ∈ Z) :
+    IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+        (closedInclusion Z)).unit.app G).hom) := by
+  let f := closedInclusion Z
+  let L := TopCat.Sheaf.pullback (AddCommGrpCat.{v}) f
+  let R := TopCat.Sheaf.pushforward (AddCommGrpCat.{v}) f
+  let adj := TopCat.Sheaf.pullbackPushforwardAdjunction (AddCommGrpCat.{v}) f
+  letI : IsIso adj.counit := closedSheafRestriction_directImage_counit_isIso hZ
+  let hff := adj.fullyFaithfulROfIsIsoCounit
+  letI : R.Full := hff.full
+  letI : R.Faithful := hff.faithful
+  let g := adj.unit.app G
+  haveI : IsIso (L.map g) := inferInstance
+  haveI : IsIso ((L.map g).hom) := by
+    change IsIso ((TopCat.Sheaf.forget AddCommGrpCat (closedSubspace Z)).map
+      (L.map g))
+    infer_instance
+  haveI : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+      (⟨x, hx⟩ : (closedSubspace Z : Type v))).map (L.map g).hom) := by
+    infer_instance
+  let e := sheafPullbackStalkIso (AddCommGrpCat.{v}) f
+    (⟨x, hx⟩ : (closedSubspace Z : Type v))
+  have h := e.hom.naturality g
+  have hright : IsIso
+      (e.hom.app ((Functor.id (TopCat.Sheaf (AddCommGrpCat.{v}) X)).obj G) ≫
+        (TopCat.Sheaf.pullback (AddCommGrpCat.{v}) f ⋙
+          TopCat.Sheaf.forget AddCommGrpCat (closedSubspace Z) ⋙
+          TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+            (⟨x, hx⟩ : (closedSubspace Z : Type v))).map g) := by
+    apply IsIso.comp_isIso'
+    · infer_instance
+    · change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+        (⟨x, hx⟩ : (closedSubspace Z : Type v))).map (L.map g).hom)
+      infer_instance
+  letI := hright
+  have hmap : IsIso ((TopCat.Sheaf.forget AddCommGrpCat X ⋙
+      TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map g) :=
+    IsIso.of_isIso_fac_right h
+  change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map g.hom) at hmap
+  exact hmap
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The closed-unit stalk map factors through the canonical pullback-stalk
+identification over the closed subset. -/
+theorem closedAbelianSheafRestriction_unit_stalk_map_compatibility
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z)
+    (G : TopCat.Sheaf (AddCommGrpCat.{v}) X) (x : X) (hx : x ∈ Z) :
+    ∃ e₁ : G.presheaf.stalk x ≅
+        ((closedAbelianSheafRestriction Z hZ).obj G).presheaf.stalk ⟨x, hx⟩,
+      ∃ e₂ : ((closedAbelianSheafRestriction Z hZ).obj G).presheaf.stalk
+          ⟨x, hx⟩ ≅
+        ((closedSheafDirectImage AddCommGrpCat Z hZ).obj
+          ((closedAbelianSheafRestriction Z hZ).obj G)).presheaf.stalk x,
+        e₁.hom ≫ e₂.hom =
+          (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+              (closedInclusion Z)).unit.app G).hom := by
+  let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+    ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+      (closedInclusion Z)).unit.app G).hom
+  letI : IsIso m :=
+    closedAbelianSheafRestriction_unit_stalk_map_isIso Z hZ G x hx
+  let e₁ := (sheafPullbackStalkIso (AddCommGrpCat.{v}) (closedInclusion Z)
+    (⟨x, hx⟩ : (closedSubspace Z : Type v))).app G
+  refine ⟨e₁, e₁.symm ≪≫ asIso m, ?_⟩
+  simp [m]
 
 theorem closedAlgebraicSheafRestriction_directImage_iso
     (C : Type u) [Category.{v} C] [HasColimits C] [HasLimits C]

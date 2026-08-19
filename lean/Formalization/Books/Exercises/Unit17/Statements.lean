@@ -35,9 +35,9 @@ theorem exists_ring_with_finitely_many_prime_ideals_and_dimension_gt_one :
   ∃ (R : Type u) (inst : CommRing R),
       @HasFinitePrimeSpectrumAndDimensionAboveOne R inst := by
   let Γ := ℤ ×ₗ ℤ
-  refine (letI : LE Γ := Prod.Lex.instLE ℤ ℤ; ?_)
-  refine (letI : LT Γ := Prod.Lex.instLT ℤ ℤ; ?_)
-  refine (letI : LinearOrder Γ := inferInstanceAs (LinearOrder (ℤ ×ₗ ℤ)); ?_)
+  refine (let : LE Γ := Prod.Lex.instLE ℤ ℤ; ?_)
+  refine (let : LT Γ := Prod.Lex.instLT ℤ ℤ; ?_)
+  refine (let : LinearOrder Γ := inferInstanceAs (LinearOrder (ℤ ×ₗ ℤ)); ?_)
   let k := ULift.{u} ℚ
   let K := HahnSeries Γ k
   let V : ValuationSubring K :=
@@ -231,8 +231,6 @@ theorem exists_ring_with_finitely_many_prime_ideals_and_dimension_gt_one :
             have hz' : z ∈ U := by simpa [z] using hz
             have hq : 0 ≤ HahnSeries.addVal Γ k (a / z) := by
               apply (hquot_single ((0, -1) : Γ) ((0, j) : Γ)).2
-              change @LE.le (Lex (ℤ × ℤ)) (Prod.Lex.instLE ℤ ℤ)
-                (toLex ((0 : ℤ), j)) (toLex ((0 : ℤ), -1))
               exact Prod.Lex.toLex_le_toLex.mpr (Or.inr ⟨rfl, by omega⟩)
             apply hfactor hVU (HahnSeries.single_ne_zero one_ne_zero) hz'
             simpa [a, z] using hq
@@ -466,10 +464,10 @@ theorem complex_bivariate_hypersurface_has_dimension_one
         let e := MvPolynomial.finSuccEquiv ℂ k
         let er := e.toRingEquiv
         let P : Ideal (Polynomial (MvPolynomial (Fin k) ℂ)) := q.map er
-        refine (letI : q.IsMaximal := (by
+        refine (let : q.IsMaximal := (by
           dsimp [q]
           infer_instance); ?_)
-        refine (letI : P.IsMaximal := (by
+        refine (let : P.IsMaximal := (by
           dsimp [P]
           infer_instance); ?_)
         have heval :
@@ -514,7 +512,7 @@ theorem complex_bivariate_hypersurface_has_dimension_one
               MvPolynomial.aeval (R := ℂ) yt a := by
             simpa [RingHom.comp_apply] using congrArg (fun f => f a) heval
           rw [haeval]
-        refine (letI : P.LiesOver p := ⟨hunder.symm⟩; ?_)
+        refine (let : P.LiesOver p := ⟨hunder.symm⟩; ?_)
         have hstep : q.height = p.height + 1 := by
           rw [← er.height_map q]
           exact Polynomial.height_eq_height_add_one p P
@@ -526,7 +524,7 @@ theorem complex_bivariate_hypersurface_has_dimension_one
   have hQ : Q.IsMaximal := by
     dsimp [Q]
     infer_instance
-  refine (letI : Q.IsMaximal := hQ; ?_)
+  refine (let : Q.IsMaximal := hQ; ?_)
   have hQmem : f ∈ Q := by
     dsimp [Q]
     rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
@@ -550,9 +548,11 @@ theorem complex_bivariate_hypersurface_has_dimension_one
       simp at hlow
   | coe d =>
       have hlow'' : (↑(2 : ℕ∞) : WithBot ℕ∞) ≤ ↑(d + 1) := by
-        convert hlow using 1 <;> norm_num [WithBot.coe_add, WithBot.coe_one]
+        convert hlow using 1
+        all_goals norm_num [WithBot.coe_add, WithBot.coe_one]
       have hupper'' : (↑(d + 1) : WithBot ℕ∞) ≤ ↑(2 : ℕ∞) := by
-        convert hupper using 1 <;> norm_num [WithBot.coe_add, WithBot.coe_one]
+        convert hupper using 1
+        all_goals norm_num [WithBot.coe_add, WithBot.coe_one]
       have hlow' : (2 : ℕ∞) ≤ d + 1 := WithBot.coe_le_coe.mp hlow''
       have hupper' : d + 1 ≤ (2 : ℕ∞) := WithBot.coe_le_coe.mp hupper''
       norm_cast at ⊢
@@ -574,9 +574,9 @@ theorem polynomialMaximalIdeal_isMaximal
     (R : Type u) [CommRing R] [IsLocalRing R] (n : ℕ) :
     (polynomialMaximalIdeal R n).IsMaximal := by
   let m : Ideal R := IsLocalRing.maximalIdeal R
-  refine (letI : m.IsMaximal := (by
+  refine (let : m.IsMaximal := (by
     exact IsLocalRing.maximalIdeal.isMaximal R); ?_)
-  refine (letI : Field (R ⧸ m) := Ideal.Quotient.field m; ?_)
+  refine (let : Field (R ⧸ m) := Ideal.Quotient.field m; ?_)
   let φ : polynomialRing R n →+* R ⧸ m :=
     MvPolynomial.eval₂Hom (Ideal.Quotient.mk m) (fun _ => 0)
   have hsurj : Function.Surjective φ := by
@@ -641,9 +641,9 @@ private theorem polynomialMaximalIdeal_eq_ker_eval₂Hom
         (MvPolynomial.eval₂Hom (Ideal.Quotient.mk (IsLocalRing.maximalIdeal R))
           (fun _ : Fin n => 0)) = polynomialMaximalIdeal R n := by
   let m : Ideal R := IsLocalRing.maximalIdeal R
-  refine (letI : m.IsMaximal := (by
+  refine (let : m.IsMaximal := (by
     exact IsLocalRing.maximalIdeal.isMaximal R); ?_)
-  refine (letI : Field (R ⧸ m) := Ideal.Quotient.field m; ?_)
+  refine (let : Field (R ⧸ m) := Ideal.Quotient.field m; ?_)
   let φ : polynomialRing R n →+* R ⧸ m :=
     MvPolynomial.eval₂Hom (Ideal.Quotient.mk m) (fun _ => 0)
   have hdiff : ∀ p : polynomialRing R n,
@@ -702,7 +702,7 @@ theorem polynomial_localization_dimension_formula
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     (n : ℕ) (hn : 1 ≤ n) :
     ringKrullDim (polynomialLocalRing R n) = ringKrullDim R + n := by
-  refine (letI : (polynomialMaximalIdeal R n).IsPrime :=
+  refine (let : (polynomialMaximalIdeal R n).IsPrime :=
     polynomialMaximalIdeal_isPrime R n; ?_)
   rw [IsLocalization.AtPrime.ringKrullDim_eq_height (polynomialMaximalIdeal R n)
     (polynomialLocalRing R n)]
@@ -740,10 +740,10 @@ theorem polynomial_localization_dimension_formula
         let p := polynomialMaximalIdeal R k
         let q := polynomialMaximalIdeal R (k + 1)
         let P : Ideal (Polynomial (polynomialRing R k)) := q.map er
-        refine (letI : q.IsMaximal := (by
+        refine (let : q.IsMaximal := (by
           dsimp [q]
           exact polynomialMaximalIdeal_isMaximal R (k + 1)); ?_)
-        refine (letI : P.IsMaximal := (by
+        refine (let : P.IsMaximal := (by
           dsimp [P]
           infer_instance); ?_)
         have hkerₖ :
@@ -806,7 +806,7 @@ theorem polynomial_localization_dimension_formula
             simpa [RingHom.comp_apply] using congrArg (fun f => f a) heval
           simp only [RingHom.mem_ker]
           rw [haeval]
-        refine (letI : P.LiesOver p := ⟨hunder.symm⟩; ?_)
+        refine (let : P.LiesOver p := ⟨hunder.symm⟩; ?_)
         have hstep : q.height = p.height + 1 := by
           rw [← er.height_map q]
           exact Polynomial.height_eq_height_add_one p P

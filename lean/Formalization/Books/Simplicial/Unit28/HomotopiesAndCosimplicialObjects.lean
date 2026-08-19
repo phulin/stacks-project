@@ -3,6 +3,9 @@ import Formalization.Books.Simplicial.Unit25.DoldKanForCosimplicialObjects
 import Formalization.Books.Simplicial.Unit26.Homotopies
 import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
 import Mathlib.Algebra.Homology.Homotopy
+import Mathlib.Algebra.Homology.Opposite
+import Mathlib.AlgebraicTopology.SimplicialObject.ChainHomotopy
+import Mathlib.CategoryTheory.Limits.Shapes.BinaryBiproducts
 import Mathlib.CategoryTheory.Limits.Shapes.WidePullbacks
 import Mathlib.Logic.Relation
 
@@ -1152,6 +1155,116 @@ def associatedCochainMapAdditive
   { f := fun n => f.app ⦋n⦌
     comm' := associatedCochainMapAdditive_comm f }
 
+private theorem unop_alt_complex_d
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    (U : CosimplicialObject C) (n : ℕ) :
+    ((HomologicalComplex.unopFunctor C (ComplexShape.down ℕ)).obj
+      (op ((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).obj
+        (oppositeCosimplicialObject U)))).d n (n + 1) =
+      associatedCochainBoundaryAdditive U n := by
+  change (((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).obj
+    (oppositeCosimplicialObject U)).d (n + 1) n).unop = _
+  simp only [AlgebraicTopology.alternatingFaceMapComplex_obj_d,
+    AlgebraicTopology.AlternatingFaceMapComplex.objD, unop_sum, unop_zsmul,
+    associatedCochainBoundaryAdditive]
+  apply Finset.sum_congr rfl
+  intro i hi
+  congr 1
+
+@[simp]
+private theorem associatedCochainComplexAdditive_d
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    (U : CosimplicialObject C) (n : ℕ) :
+    (associatedCochainComplexAdditive U).d n (n + 1) =
+      associatedCochainBoundaryAdditive U n := by
+  exact CochainComplex.of_d (fun n => U.obj ⦋n⦌)
+    (associatedCochainBoundaryAdditive U) n
+
+private theorem associatedCochainMap_oneStep
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    {U V : CosimplicialObject C} {a b : U ⟶ V}
+    (K : DegreewiseHomotopy a b) :
+    Nonempty (_root_.Homotopy
+      (associatedCochainMapAdditive a)
+      (associatedCochainMapAdditive b)) := by
+  rcases (compareHomotopies (a := a) (b := b)).1 ⟨K⟩ with ⟨Kop⟩
+  let H := degreewiseHomotopyToHomotopy Kop
+  let hc := CategoryTheory.SimplicialObject.Homotopy.toChainHomotopy H
+  let hu := _root_.Homotopy.unop hc
+  let AU := (HomologicalComplex.unopFunctor C (ComplexShape.down ℕ)).obj
+    (op ((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).obj
+      (oppositeCosimplicialObject U)))
+  let AV := (HomologicalComplex.unopFunctor C (ComplexShape.down ℕ)).obj
+    (op ((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).obj
+      (oppositeCosimplicialObject V)))
+  let au : AU ⟶ AV := (HomologicalComplex.unopFunctor C (ComplexShape.down ℕ)).map
+    (((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).map
+      (oppositeCosimplicialMap a)).op)
+  let bu : AU ⟶ AV := (HomologicalComplex.unopFunctor C (ComplexShape.down ℕ)).map
+    (((AlgebraicTopology.alternatingFaceMapComplex Cᵒᵖ).map
+      (oppositeCosimplicialMap b)).op)
+  let hu' : _root_.Homotopy au bu := hu
+  let hh : ∀ i j, (associatedCochainComplexAdditive U).X i ⟶
+      (associatedCochainComplexAdditive V).X j := fun i j ↦ hu'.hom i j
+  refine ⟨{
+    hom := hh
+    zero := fun i j hij ↦ by
+      dsimp [hh]
+      exact hu'.zero i j hij
+    comm := fun n ↦ ?_
+  }⟩
+  have hcomm := hu'.comm n
+  cases n with
+  | zero =>
+      have hd := dNext_eq (c := (ComplexShape.down ℕ).symm)
+        (C := AU) (D := AV) hu'.hom (i' := 1) (by rfl)
+      have hp := prevD_eq_zero (c := (ComplexShape.down ℕ).symm)
+        (C := AU) (D := AV) hu'.hom 0 (by
+          simp [ComplexShape.prev])
+      rw [hd, hp] at hcomm
+      simp only [add_zero] at hcomm
+      rw [unop_alt_complex_d] at hcomm
+      have hd' := _root_.Homotopy.dNext_cochainComplex
+        (P := associatedCochainComplexAdditive U)
+        (Q := associatedCochainComplexAdditive V) hh 0
+      have hp' := _root_.Homotopy.prevD_zero_cochainComplex
+        (P := associatedCochainComplexAdditive U)
+        (Q := associatedCochainComplexAdditive V) hh
+      rw [hd', hp']
+      simp only [add_zero]
+      rw [associatedCochainComplexAdditive_d]
+      convert hcomm using 1 <;> simp [hh, hu', hu, hc, H, au, bu, AU, AV,
+        associatedCochainMapAdditive, associatedCochainComplexAdditive,
+        HomologicalComplex.unopFunctor, HomologicalComplex.unop,
+        oppositeCosimplicialMap, oppositeCosimplicialObject,
+        Quiver.Hom.unop_op] <;> rfl
+  | succ n =>
+      have hd := dNext_eq (c := (ComplexShape.down ℕ).symm)
+        (C := AU) (D := AV) hu'.hom (i' := n + 2) (by
+          change n + 1 + 1 = n + 2
+          omega)
+      have hp := prevD_eq (c := (ComplexShape.down ℕ).symm)
+        (C := AU) (D := AV) hu'.hom (j' := n) (by
+          change n + 1 = n + 1
+          rfl)
+      rw [hd, hp] at hcomm
+      rw [unop_alt_complex_d, unop_alt_complex_d] at hcomm
+      have hd' := _root_.Homotopy.dNext_cochainComplex
+        (P := associatedCochainComplexAdditive U)
+        (Q := associatedCochainComplexAdditive V) hh (n + 1)
+      have hp' := _root_.Homotopy.prevD_succ_cochainComplex
+        (P := associatedCochainComplexAdditive U)
+        (Q := associatedCochainComplexAdditive V) hh n
+      rw [hd', hp']
+      rw [show n + 1 + 1 = n + 2 by omega]
+      rw [associatedCochainComplexAdditive_d,
+        associatedCochainComplexAdditive_d]
+      convert hcomm using 1 <;> simp [hh, hu', hu, hc, H, au, bu, AU, AV,
+        associatedCochainMapAdditive, associatedCochainComplexAdditive,
+        HomologicalComplex.unopFunctor, HomologicalComplex.unop,
+        oppositeCosimplicialMap, oppositeCosimplicialObject,
+        Quiver.Hom.unop_op] <;> rfl
+
 theorem associatedCochainMap_homotopic
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {U V : CosimplicialObject C} {a b : U ⟶ V}
@@ -1159,7 +1272,19 @@ theorem associatedCochainMap_homotopic
     Nonempty (_root_.Homotopy
       (associatedCochainMapAdditive a)
       (associatedCochainMapAdditive b)) := by
-  sorry
+  refine Relation.EqvGen.recOn H ?_ ?_ ?_ ?_
+  · intro x y h
+    rcases h with ⟨K⟩
+    exact associatedCochainMap_oneStep K
+  · intro x
+    exact ⟨_root_.Homotopy.ofEq rfl⟩
+  · intro x y h ih
+    rcases ih with ⟨K⟩
+    exact ⟨K.symm⟩
+  · intro x y z hxy hyz ihxy ihyz
+    rcases ihxy with ⟨Kxy⟩
+    rcases ihyz with ⟨Kyz⟩
+    exact ⟨Kxy.trans Kyz⟩
 
 theorem normalizedCochainMap_homotopic
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -1167,7 +1292,53 @@ theorem normalizedCochainMap_homotopic
     (H : Homotopic a b) :
     Nonempty (_root_.Homotopy
       (normalizedCochainMap a) (normalizedCochainMap b)) := by
-  sorry
+  letI : AdditiveCategory C :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  rcases associatedCochainMap_homotopic H with ⟨K⟩
+  rcases normalizedCochain_decomposition_exists (C := C) with ⟨D⟩
+  rcases D.decomposition with ⟨e⟩
+  let A := Formalization.Books.Simplicial.Unit24.cosimplicialAssociatedCochainFunctor C
+  let Q := Formalization.Books.Simplicial.Unit24.normalizedCochainFunctor C
+  let B := Formalization.Books.Simplicial.Unit24.cochainFunctorBiproduct D.degenerate Q
+  let K0 : _root_.Homotopy (A.map a) (A.map b) := K
+  let jU : Q.obj U ⟶ B.obj U := biprod.inr
+  let qV : B.obj V ⟶ Q.obj V := biprod.snd
+  let iU : Q.obj U ⟶ A.obj U := jU ≫ (e.app U).inv
+  let pV : A.obj V ⟶ Q.obj V := (e.app V).hom ≫ qV
+  let K' := (K0.compLeft iU).compRight pV
+  have eq_map (f : U ⟶ V) :
+      (iU ≫ A.map f) ≫ pV = normalizedCochainMap f := by
+    calc
+      _ = iU ≫ (A.map f ≫ (e.app V).hom) ≫ qV := by
+        simp [pV, Category.assoc]
+      _ = iU ≫ ((e.app U).hom ≫ B.map f) ≫ qV := by
+        have hn : A.map f ≫ (e.app V).hom =
+            (e.app U).hom ≫ B.map f := e.hom.naturality f
+        rw [hn]
+      _ = _ := by
+        simp [iU, jU, qV, A, B, Q,
+          Formalization.Books.Simplicial.Unit24.cochainFunctorBiproduct,
+          Formalization.Books.Simplicial.Unit24.normalizedCochainFunctor,
+          Category.assoc]
+  exact ⟨(_root_.Homotopy.ofEq (eq_map a).symm).trans
+    (K'.trans (_root_.Homotopy.ofEq (eq_map b)))⟩
+
+private theorem associatedCochainMapAdditive_id
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    (U : CosimplicialObject C) :
+    associatedCochainMapAdditive (𝟙 U) =
+      𝟙 (associatedCochainComplexAdditive U) := by
+  ext n
+  rfl
+
+private theorem associatedCochainMapAdditive_comp
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    {U V W : CosimplicialObject C} (f : U ⟶ V) (g : V ⟶ W) :
+    associatedCochainMapAdditive (f ≫ g) =
+      associatedCochainMapAdditive f ≫ associatedCochainMapAdditive g := by
+  ext n
+  rfl
 
 theorem associatedCochainMap_homotopy_equivalence
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1175,7 +1346,20 @@ theorem associatedCochainMap_homotopy_equivalence
     (H : IsHomotopyEquivalence a) :
     HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℕ)
       (associatedCochainMapAdditive a) := by
-  sorry
+  rcases H with ⟨b, hba, hab⟩
+  rcases associatedCochainMap_homotopic hba with ⟨Kba⟩
+  rcases associatedCochainMap_homotopic hab with ⟨Kab⟩
+  let e : HomotopyEquiv (associatedCochainComplexAdditive U)
+      (associatedCochainComplexAdditive V) :=
+    { hom := associatedCochainMapAdditive a
+      inv := associatedCochainMapAdditive b
+      homotopyHomInvId := by
+        simpa only [associatedCochainMapAdditive_comp,
+          associatedCochainMapAdditive_id] using Kab
+      homotopyInvHomId := by
+        simpa only [associatedCochainMapAdditive_comp,
+          associatedCochainMapAdditive_id] using Kba }
+  exact e.homotopyEquivalences_hom
 
 theorem normalizedCochainMap_homotopy_equivalence
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -1183,6 +1367,19 @@ theorem normalizedCochainMap_homotopy_equivalence
     (H : IsHomotopyEquivalence a) :
     HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℕ)
       (normalizedCochainMap a) := by
-  sorry
+  rcases H with ⟨b, hba, hab⟩
+  rcases normalizedCochainMap_homotopic hba with ⟨Kba⟩
+  rcases normalizedCochainMap_homotopic hab with ⟨Kab⟩
+  let e : HomotopyEquiv (normalizedCochainComplex U)
+      (normalizedCochainComplex V) :=
+    { hom := normalizedCochainMap a
+      inv := normalizedCochainMap b
+      homotopyHomInvId := by
+        simpa only [normalizedCochainMap_comp,
+          normalizedCochainMap_id] using Kab
+      homotopyInvHomId := by
+        simpa only [normalizedCochainMap_comp,
+          normalizedCochainMap_id] using Kba }
+  exact e.homotopyEquivalences_hom
 
 end Formalization.Books.Simplicial.Unit28

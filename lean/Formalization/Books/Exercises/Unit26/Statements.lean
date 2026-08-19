@@ -2424,6 +2424,72 @@ private theorem euler_value_eq_finrank
       ring
 
 
+private theorem section_smul_eq_of_annihilated
+    {A B V : Type u} [CommRing A] [CommRing B]
+    [AddCommGroup V] [Module A V]
+    (a : A) (s : B →+* A) (q : A →+* B)
+    (hker : RingHom.ker q = Ideal.span {a})
+    (hqs : q.comp s = RingHom.id B)
+    (b : A) (z : V) (hz : a • z = 0) : s (q b) • z = b • z := by
+  have hdiff : b - s (q b) ∈ Ideal.span {a} := by
+    rw [← hker, RingHom.mem_ker, map_sub]
+    have hs : q (s (q b)) = q b := by
+      simpa only [RingHom.comp_apply, RingHom.id_apply] using
+        RingHom.congr_fun hqs (q b)
+    rw [hs]
+    simp
+  rcases Ideal.mem_span_singleton'.mp hdiff with ⟨c, hc⟩
+  have hzero : (b - s (q b)) • z = 0 := by
+    rw [← hc, ← smul_smul, hz]
+    exact (LinearMap.lsmul A V c).map_zero
+  exact (sub_eq_zero.mp (by simpa only [sub_smul] using hzero)).symm
+
+private theorem range_smul_eq_zero_of_mul_eq_zero
+    {A V : Type u} [CommRing A] [AddCommGroup V] [Module A V]
+    (x y : A) (hyx : y * x = 0) (m : V →ₗ[A] V)
+    (hm : ∀ z : V, m z = x • z) (z : LinearMap.range m) :
+    y • (z : V) = 0 := by
+  obtain ⟨w, hw⟩ := z.property
+  rw [← hw, hm]
+  calc
+    y • (x • w) = (y * x) • w := smul_smul y x w
+    _ = 0 := by rw [hyx]; exact zero_smul A w
+
+private theorem euler_value_quotient_eq_of_surjective
+    {A B : Type u} [CommRing A] [IsNoetherianRing A] [CommRing B]
+    (q : A →+* B) (hq : Function.Surjective q) (I : Ideal A)
+    (hker : RingHom.ker q = I) :
+    letI : Module A B := Module.compHom B q
+    let qLin : A →ₗ[A] B :=
+      { toFun := q
+        map_add' := by intro a b; simp
+        map_smul' := by
+          intro a b
+          change q (a * b) = q a • q b
+          simp [smul_eq_mul] }
+    letI : Module.Finite A B := Module.Finite.of_surjective qLin hq
+    ∀ θ : EulerPoincareFunction A,
+      θ (FGModuleCat.of A (A ⧸ I)) = θ (FGModuleCat.of A B) := by
+  let : Module A B := Module.compHom B q
+  let qLin : A →ₗ[A] B :=
+    { toFun := q
+      map_add' := by intro a b; simp
+      map_smul' := by
+        intro a b
+        change q (a * b) = q a • q b
+        simp [smul_eq_mul] }
+  let : Module.Finite A B := Module.Finite.of_surjective qLin hq
+  dsimp only
+  intro θ
+  have hkerLin : LinearMap.ker qLin = I := by
+    ext a
+    change q a = 0 ↔ a ∈ I
+    rw [← RingHom.mem_ker, hker]
+  let e : (A ⧸ I) ≃ₗ[A] B := by
+    rw [← hkerLin]
+    exact qLin.quotKerEquivOfSurjective hq
+  exact euler_value_linearEquiv θ e
+
 private theorem eulerPoincareFunction_node_injective
     (k : Type u) [Field k] [IsAlgClosed k] :
     Function.Injective (nodeEulerParameters (k := k)) := by
@@ -2458,53 +2524,6 @@ private theorem eulerPoincareFunction_node_injective
   have hkerX_span : RingHom.ker qX = Ideal.span {y} := by
     change RingHom.ker d.qX = Ideal.span {d.y}
     exact d.hkerX_span
-  have hspan_smul :
-      ∀ {V : Type u} [AddCommGroup V] [Module A V]
-        {r a : A} {z : V}, r ∈ Ideal.span {a} → a • z = 0 → r • z = 0 := by
-    intro V _ _ r a z hr hz
-    rcases Ideal.mem_span_singleton'.mp hr with ⟨c, hc⟩
-    rw [← hc, ← smul_smul, hz]
-    change (LinearMap.lsmul A V c) (0 : V) = 0
-    exact (LinearMap.lsmul A V c).map_zero
-  have hcompat_of_annihilated :
-      ∀ {V : Type u} [AddCommGroup V] [Module A V]
-        (a : A) (s : B →+* A) (q : A →+* B)
-        (hker : RingHom.ker q = Ideal.span {a})
-        (hqs : q.comp s = RingHom.id B)
-        (b : A) (z : V), a • z = 0 → s (q b) • z = b • z := by
-    intro V _ _ a s q hker hqs b z hz
-    have hdiff : b - s (q b) ∈ Ideal.span {a} := by
-      rw [← hker, RingHom.mem_ker]
-      have h := RingHom.congr_fun hqs (q b)
-      rw [map_sub]
-      have hs : q (s (q b)) = q b := by
-        simpa only [RingHom.comp_apply, RingHom.id_apply] using h
-      rw [hs]
-      simp
-    have hz' := hspan_smul hdiff hz
-    exact (sub_eq_zero.mp (by simpa only [sub_smul] using hz')).symm
-  have hcompatY_of_annihilated :
-      ∀ {V : Type u} [AddCommGroup V] [Module A V]
-        (a : A) (z : V), x • z = 0 → sY (qY a) • z = a • z := by
-    intro V _ _ a z hz
-    exact hcompat_of_annihilated (V := V) x sY qY hkerY_span hqYsY a z hz
-  have hcompatX_of_annihilated :
-      ∀ {V : Type u} [AddCommGroup V] [Module A V]
-        (a : A) (z : V), y • z = 0 → sX (qX a) • z = a • z := by
-    intro V _ _ a z hz
-    exact hcompat_of_annihilated (V := V) y sX qX hkerX_span hqXsX a z hz
-  have hrange_annihilated :
-      ∀ {V : Type u} [AddCommGroup V] [Module A V]
-        (m : V →ₗ[A] V) (hm : ∀ z : V, m z = x • z)
-        (z : LinearMap.range m), y • (z : V) = 0 := by
-    intro V _ _ m hm z
-    obtain ⟨w, hw⟩ := z.property
-    rw [← hw, hm]
-    calc
-      y • (x • w) = (y * x) • w := smul_smul y x w
-      _ = 0 := by
-        rw [hyx]
-        exact zero_smul A w
   intro φ ψ h
   ·
     let : Module A B := Module.compHom B qY
@@ -2524,16 +2543,8 @@ private theorem eulerPoincareFunction_node_injective
     have hbaseY : ∀ (θ : EulerPoincareFunction A),
         θ (FGModuleCat.of A (nodeXComponent k)) =
           θ (FGModuleCat.of A B) := by
-      intro θ
-      let fY : A →ₗ[A] B := qLinY
-      have hkerfY : LinearMap.ker fY = nodeXIdeal k := by
-        ext a
-        change qY a = 0 ↔ a ∈ nodeXIdeal k
-        rw [← RingHom.mem_ker, hkerY]
-      have eY : (A ⧸ nodeXIdeal k) ≃ₗ[A] B := by
-        rw [← hkerfY]
-        exact fY.quotKerEquivOfSurjective hsurjY
-      exact euler_value_linearEquiv θ eY
+      exact euler_value_quotient_eq_of_surjective
+        qY hsurjY (nodeXIdeal k) hkerY
     let : Module A B := Module.compHom B qX
     have hsurjX : Function.Surjective qX := by
       intro b
@@ -2551,16 +2562,8 @@ private theorem eulerPoincareFunction_node_injective
     have hbaseX : ∀ (θ : EulerPoincareFunction A),
         θ (FGModuleCat.of A (nodeYComponent k)) =
           θ (FGModuleCat.of A B) := by
-      intro θ
-      let fX : A →ₗ[A] B := qLinX
-      have hkerfX : LinearMap.ker fX = nodeYIdeal k := by
-        ext a
-        change qX a = 0 ↔ a ∈ nodeYIdeal k
-        rw [← RingHom.mem_ker, hkerX]
-      have eX : (A ⧸ nodeYIdeal k) ≃ₗ[A] B := by
-        rw [← hkerfX]
-        exact fX.quotKerEquivOfSurjective hsurjX
-      exact euler_value_linearEquiv θ eX
+      exact euler_value_quotient_eq_of_surjective
+        qX hsurjX (nodeYIdeal k) hkerX
     have hbranch := euler_value_eq_finrank (A := A) (B := B)
     have hbranchY :
         ∀ (θ : EulerPoincareFunction A)
@@ -2614,11 +2617,13 @@ private theorem eulerPoincareFunction_node_injective
             have hzK : m (z : V) = 0 := z.property
             rw [hm] at hzK
             exact hzK
-          exact hcompatY_of_annihilated (V := V) a (z : V) hz0)
+          exact section_smul_eq_of_annihilated
+            x sY qY hkerY_span hqYsY a (z : V) hz0)
         (by
           intro a z
-          have hyz := hrange_annihilated m hm z
-          exact hcompatX_of_annihilated (V := V) a (z : V) hyz)
+          have hyz := range_smul_eq_zero_of_mul_eq_zero x y hyx m hm z
+          exact section_smul_eq_of_annihilated
+            y sX qX hkerX_span hqXsX a (z : V) hyz)
     have hparamX :
         φ (FGModuleCat.of A (nodeXComponent k)) =
           ψ (FGModuleCat.of A (nodeXComponent k)) := by

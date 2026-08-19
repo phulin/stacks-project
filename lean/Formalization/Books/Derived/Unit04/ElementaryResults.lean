@@ -853,7 +853,8 @@ def HomIsZero (X Y : C) : Prop :=
 /-- Under any one of the five source vanishing hypotheses, the middle map of a
 triangle morphism is determined by its first and third maps. -/
 theorem triangle_middle_map_unique
-    {T T' : Triangle C} (φ ψ : T ⟶ T')
+    {T T' : Triangle C} (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
+    (φ ψ : T ⟶ T')
     (h₁ : φ.hom₁ = ψ.hom₁) (h₃ : φ.hom₃ = ψ.hom₃)
     (hzero :
       HomIsZero T.obj₂ T'.obj₁ ∨
@@ -923,7 +924,7 @@ theorem direct_sum_triangle_distinguished_iff
 
 /-- A right inverse of a morphism, in the categorical composition convention. -/
 def TriangleRightInverse {Y Z : C} (g : Y ⟶ Z) (s : Z ⟶ Y) : Prop :=
-  g ≫ s = 𝟙 Y
+  s ≫ g = 𝟙 Z
 
 /-- If the third map of a distinguished triangle is zero, its second map has a
 right inverse. -/
@@ -935,7 +936,7 @@ theorem distinguished_triangle_second_right_inverse
 /-- A right inverse of the second map makes the biproduct comparison map an
 isomorphism. -/
 theorem split_triangle_biproduct_iso
-    {T : Triangle C} (s : T.obj₃ ⟶ T.obj₂)
+    {T : Triangle C} (hT : T ∈ distTriang C) (s : T.obj₃ ⟶ T.obj₂)
     (hs : TriangleRightInverse T.mor₂ s) :
     IsIso (biprod.desc T.mor₁ s) := by
   sorry

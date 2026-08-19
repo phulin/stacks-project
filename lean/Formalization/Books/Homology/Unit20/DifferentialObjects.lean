@@ -334,15 +334,14 @@ theorem plainDifferentialShortExact_homology_long_exact
           have hn0 : (n + 1) % 3 ≠ 0 := by omega
           have hn1 : (n + 1) % 3 ≠ 1 := by omega
           simp only [differential, dif_neg h0, dif_pos h1, dif_neg hn0, dif_neg hn1,
-            dif_pos h2, if_neg h0, if_pos h1, if_neg hn0, if_neg hn1, if_pos h2]
+            dif_pos h2]
           simp [f, g]
           have hfg : hf ≫ hg = 0 := by sorry
           rw [← Category.assoc, ← Category.assoc, hfg]
           simp
         · have h2 : n % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 = 0 := by omega
-          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0,
-            if_neg h0, if_neg h1, if_pos hn0]
+          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0]
           simp [g, b]
           have hgd : hg ≫ δ = 0 := by
             dsimp [hg, δ]
@@ -354,22 +353,19 @@ theorem plainDifferentialShortExact_homology_long_exact
       by_cases h0 : n % 3 = 0
       · have h1 : (n + 1) % 3 = 1 := by omega
         simp only [differential, dif_pos h0, dif_neg (by omega : (n + 1) % 3 ≠ 0),
-          dif_pos h1, if_pos h0, if_neg (by omega : (n + 1) % 3 ≠ 0), if_pos h1]
+          dif_pos h1, if_neg (by omega : (n + 1) % 3 ≠ 0), if_pos h1]
         simp [b, f]
         exact sorry
       · by_cases h1 : n % 3 = 1
         · have h2 : (n + 1) % 3 = 2 := by omega
           simp only [differential, dif_neg h0, dif_pos h1,
             dif_neg (by omega : (n + 1) % 3 ≠ 0),
-            dif_neg (by omega : (n + 1) % 3 ≠ 1), dif_pos h2,
-            if_neg h0, if_pos h1, if_neg (by omega : (n + 1) % 3 ≠ 0),
-            if_neg (by omega : (n + 1) % 3 ≠ 1), if_pos h2]
+            dif_neg (by omega : (n + 1) % 3 ≠ 1)]
           simp [f, g]
           exact sorry
         · have h2 : n % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 = 0 := by omega
-          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0,
-            if_neg h0, if_neg h1, if_pos hn0]
+          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0]
           simp [g, b]
           exact sorry
   exact sorry

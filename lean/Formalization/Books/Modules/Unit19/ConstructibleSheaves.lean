@@ -694,16 +694,13 @@ theorem lemma_surjection {X : TopCat.{u}} (B : Set (Opens X))
       exact colimit.desc _ c
     refine ⟨φ, ?_⟩
     rw [sheaf_surjective_iff_stalk_surjective]
-    intro x
-    intro y
+    intro x y
     let i : I := ⟨x, y⟩
     let E := (openSetSheafExtensionByEmpty (U i)).obj
       (constantSheaf (openSubspace (U i)) PUnit)
     let a : E ⟶ F := c.ι.app (Discrete.mk i)
     have ha : (openSetSheafExtensionHomEquiv (U i)
         (constantSheaf (openSubspace (U i)) PUnit) F) a = q i := by
-      change (openSetSheafExtensionHomEquiv (U i)
-        (constantSheaf (openSubspace (U i)) PUnit) F) a = q i
       exact Equiv.apply_symm_apply _ _
     let adj := openSheafExtensionAdjunction (Type u) (U i)
     have hunit := adj.homEquiv_unit (f := a)

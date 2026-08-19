@@ -1,5 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit36.TopologicalGroups
 import Formalization.Books.Topology.Unit29.TopologicalRings
+import Formalization.Books.Algebra.Unit96.Completion
 import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.AdicCompletion.Topology
@@ -512,7 +513,8 @@ theorem adicCompletion_not_always_iAdically_complete :
     ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R)
       (M : Type v) [AddCommGroup M] [Module R M],
       IsAdicComplete I (AdicCompletion I M) := by
-  sorry
+  simpa only [Formalization.Books.Algebra.Unit96.completion] using
+    Formalization.Books.Algebra.Unit96.completion_not_complete_in_general
 
 theorem adicCompletion_isAdicComplete_of_fg
     (R : Type u) [CommRing R] (I : Ideal R) (hI : I.FG)
@@ -525,7 +527,61 @@ theorem adicCompletion_iAdicTopology_eq_limitTopology_of_fg
     (M : Type v) [AddCommGroup M] [Module R M] :
     I.adicModuleTopology (AdicCompletion I M) =
       AdicCompletionLimitTopology R I M := by
-  sorry
+  let C := AdicCompletion I M
+  let _ : TopologicalSpace R := I.adicTopology
+  let _ : ∀ i : ℕ, TopologicalSpace (M ⧸ (I ^ i • (⊤ : Submodule R M))) := fun _ => ⊥
+  let _ : ∀ i : ℕ, DiscreteTopology (M ⧸ (I ^ i • (⊤ : Submodule R M))) :=
+    fun _ => discreteTopology_bot _
+  let t₁ : TopologicalSpace C := I.adicModuleTopology C
+  let t₂ : TopologicalSpace C := AdicCompletionLimitTopology R I M
+  change t₁ = t₂
+  apply TopologicalSpace.ext_nhds
+  intro x
+  change @nhds C t₁ x =
+    @nhds C (⨅ i : ℕ, TopologicalSpace.induced (fun x : C => x.val i)
+      (⊥ : TopologicalSpace (M ⧸ (I ^ i • (⊤ : Submodule R M))))) x
+  rw [nhds_iInf]
+  simp only [nhds_induced]
+  change @nhds C t₁ x =
+    ⨅ i, Filter.comap (fun x : C => x.val i)
+      (@nhds (M ⧸ (I ^ i • (⊤ : Submodule R M))) ⊥ (x.val i))
+  simp only [nhds_discrete]
+  let B := (I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis C)).toAddGroupFilterBasis
+  have hadd : @IsTopologicalAddGroup C t₁ (inferInstance : AddGroup C) := by
+    change @IsTopologicalAddGroup C B.topology (inferInstance : AddGroup C)
+    exact B.isTopologicalAddGroup
+  let _ : TopologicalSpace C := t₁
+  let _ : IsTopologicalAddGroup C := hadd
+  have hleft := (iAdicModuleTopology_hasBasis R I C).map (fun y : C => x + y)
+  rw [map_add_left_nhds_zero x] at hleft
+  rw [hleft.eq_biInf]
+  simp only [iInf_true, Filter.comap_pure]
+  have hset (n : ℕ) :
+      (fun y : C => x + y) ''
+          (((I ^ n • (⊤ : Submodule R C) : Submodule R C) : Set C)) =
+        (fun y : C => y.val n) ⁻¹' {x.val n} := by
+    ext y
+    constructor
+    · rintro ⟨z, hz, rfl⟩
+      have hzker : z ∈ (AdicCompletion.eval I M n).ker := by
+        rw [← AdicCompletion.pow_smul_top_eq_ker_eval hI]
+        exact hz
+      have hz0 : z.val n = 0 := by
+        rw [← AdicCompletion.eval_apply]
+        exact LinearMap.mem_ker.mp hzker
+      change (x + z).val n = x.val n
+      rw [AdicCompletion.val_add_apply, hz0, add_zero]
+    · intro hy
+      have hyeq : y.val n = x.val n := by simpa using hy
+      have hdiff : y - x ∈ ((I ^ n • (⊤ : Submodule R C) : Submodule R C)) := by
+        rw [AdicCompletion.pow_smul_top_eq_ker_eval hI]
+        apply LinearMap.mem_ker.mpr
+        rw [AdicCompletion.eval_apply]
+        change y.val n - x.val n = 0
+        exact sub_eq_zero.mpr hyeq
+      refine ⟨y - x, hdiff, ?_⟩
+      simp [sub_eq_add_neg]
+  simp_rw [hset]
 
 theorem zero_adic_iff_discrete
     (R : Type u) [CommRing R] [TopologicalSpace R] [IsTopologicalRing R] :
@@ -541,7 +597,53 @@ theorem discrete_ring_is_adicTopologicalRing (R : Type u) [CommRing R] :
         continuous_neg := continuous_of_discreteTopology }
     let _ : IsLinearTopology R R := by infer_instance
     IsAdicTopologicalRing R := by
-  sorry
+  dsimp
+  let _ : TopologicalSpace R := ⊥
+  let _ : DiscreteTopology R := discreteTopology_bot R
+  let _ : IsTopologicalRing R :=
+    { continuous_add := continuous_of_discreteTopology
+      continuous_mul := continuous_of_discreteTopology
+      continuous_neg := continuous_of_discreteTopology }
+  let _ : IsLinearTopology R R := by infer_instance
+  have htop : (⊥ : Ideal R).adicTopology = (⊥ : TopologicalSpace R) := by
+    apply TopologicalSpace.ext_nhds
+    intro x
+    rw [(Ideal.hasBasis_nhds_adic (⊥ : Ideal R) x).eq_biInf, nhds_discrete]
+    simp only [iInf_true]
+    apply le_antisymm
+    · refine iInf_le_of_le 1 ?_
+      simp
+    · refine le_iInf fun i => ?_
+      rw [le_principal_iff]
+      cases i with
+      | zero => simp
+      | succ i => simp
+  have hfor :=
+    (isAdicComplete_iff_complete_for_iAdicRingTopology R (⊥ : Ideal R)).mp
+      (inferInstance : IsAdicComplete (⊥ : Ideal R) R)
+  rcases hfor with ⟨u, hu, huadd, hcomplete, ht2⟩
+  have hu' : u.toTopologicalSpace = (⊥ : TopologicalSpace R) := hu.trans htop
+  have hU : u = IsTopologicalAddGroup.rightUniformSpace R := by
+    apply IsUniformAddGroup.ext huadd (isUniformAddGroup_of_addCommGroup)
+    rw [hu']
+  have ht2' : @T2Space R (⊥ : TopologicalSpace R) := by
+    rw [← htop]
+    exact ht2
+  have hc : IsCompleteTopologicalAddGroup R := by
+    refine ⟨?_, ht2'⟩
+    rw [← hU]
+    exact hcomplete
+  refine (isAdicTopologicalRing_iff_ideal_powers_open R).mpr ⟨⊥, ?_, ?_, hc⟩
+  · constructor
+    · exact isOpen_discrete _
+    · intro U hU
+      refine ⟨1, ?_⟩
+      intro x hx
+      have hx0 : x = 0 := by simpa using hx
+      rw [hx0]
+      exact mem_of_mem_nhds hU
+  · intro n hn
+    exact isOpen_discrete _
 
 /-- Continuity of a ring map between adic topologies is measured by one power. -/
 theorem continuous_ringHom_iff_iAdic_power_map
@@ -549,7 +651,35 @@ theorem continuous_ringHom_iff_iAdic_power_map
     (I : Ideal R) (J : Ideal S) (φ : R →+* S) :
     @Continuous R S I.adicTopology J.adicTopology φ ↔
       ∃ n : ℕ, 1 ≤ n ∧ Ideal.map φ (I ^ n) ≤ J := by
-  sorry
+  let _ : TopologicalSpace R := I.adicTopology
+  let _ : TopologicalSpace S := J.adicTopology
+  constructor
+  · intro h
+    have hJ : (J : Set S) ∈ nhds (0 : S) := by
+      exact (J.hasBasis_nhds_zero_adic).mem_iff.mpr
+        ⟨1, trivial, by
+          change (J ^ 1 : Ideal S) ≤ J
+          exact Ideal.pow_le_self one_ne_zero⟩
+    have h0 : ContinuousAt φ 0 := h.continuousAt
+    have hJ' : (J : Set S) ∈ nhds (φ 0) := by
+      rw [map_zero]
+      exact hJ
+    have hpre : φ ⁻¹' (J : Set S) ∈ nhds (0 : R) :=
+      h0.preimage_mem_nhds hJ'
+    obtain ⟨n, -, hn⟩ := (I.hasBasis_nhds_zero_adic).mem_iff.mp hpre
+    refine ⟨n + 1, by omega, ?_⟩
+    rw [Ideal.map_le_iff_le_comap]
+    exact (Ideal.pow_le_pow_right (Nat.le_succ n)).trans hn
+  · rintro ⟨n, hn, hmap⟩
+    apply continuous_of_continuousAt_zero φ
+    rw [ContinuousAt]
+    simpa only [map_zero] using
+      ((I.hasBasis_nhds_zero_adic).tendsto_iff (J.hasBasis_nhds_zero_adic)).2 (by
+        intro m hm
+        refine ⟨n * m, trivial, ?_⟩
+        have hpow : Ideal.map φ (I ^ (n * m)) ≤ J ^ m := by
+          simpa [Ideal.map_pow, ← pow_mul] using Ideal.pow_right_mono hmap m
+        exact Ideal.map_le_iff_le_comap.mp hpow)
 
 end
 

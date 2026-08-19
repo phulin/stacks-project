@@ -656,7 +656,7 @@ theorem splitSequence_universallyExact
       rfl
   · intro y
     exact ⟨(0, y), rfl⟩
-  · intros Q _ _ x y hxy
+  · intro Q _ _ x y hxy
     have hcomp : (LinearMap.fst R M M).comp
         (splitSequenceInjection (R := R) (M := M)) = LinearMap.id := by
       ext z
@@ -673,9 +673,7 @@ theorem splitSequence_nonflat
   refine ⟨hM, ?_, hM⟩
   intro hprod
   exact hM (Module.Flat.of_retract (f := hprod)
-    (LinearMap.inl R M M) (LinearMap.fst R M M) (by
-      ext x
-      rfl))
+    (LinearMap.inl R M M) (LinearMap.fst R M M) rfl)
 
 /-- A nonzero torsion module over the integers gives the non-flat split
 sequence from the source's second example. -/
@@ -689,7 +687,7 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
     obtain ⟨x, hx⟩ := exists_ne (0 : M)
     have hxT : x ∈ Submodule.torsion ℤ M := by
       rw [hM]
-      exact Submodule.mem_top
+      simp
     rw [Module.Flat.torsion_eq_bot] at hxT
     exact hx (by simpa using hxT)
   refine ⟨hM', ?_, hM'⟩
@@ -700,9 +698,7 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
     hmod.symm ▸ hprod
   let : Module ℤ (M × M) := Prod.instModule
   exact hM' (Module.Flat.of_retract (f := hprod')
-    (LinearMap.inl ℤ M M) (LinearMap.fst ℤ M M) (by
-      ext x
-      rfl))
+    (LinearMap.inl ℤ M M) (LinearMap.fst ℤ M M) rfl)
 
 /-! ## Permanence properties -/
 

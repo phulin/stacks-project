@@ -627,6 +627,22 @@ def QuasiCompactOpen {X : TopCat.{v}} (U : Opens X) : Prop :=
 
 /- The canonical map from the colimit of sections to sections of the sheaf
 colimit. -/
+noncomputable def directedColimitSectionsMapCore {X : TopCat.{v}} {I : Type v}
+    [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
+    [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
+    colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
+      (sheafColimit F).presheaf.obj (op U) :=
+  colimit.desc
+    (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
+    (Functor.mapCocone
+      (TopCat.Sheaf.forget (Type v) X ⋙
+        (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
+      (colimit.cocone F))
+
 theorem exists_directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     [Preorder I] [Nonempty I] [IsDirectedOrder I]
     (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
@@ -635,13 +651,7 @@ theorem exists_directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     Nonempty (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
       (sheafColimit F).presheaf.obj (op U)) := by
-  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
-  let e := Classical.choice (exists_sheafColimitSheafificationIso F)
-  let u := (CategoryTheory.sheafificationAdjunction
-    (Opens.grothendieckTopology X) (Type v)).unit.app (colimit G)
-  let p := colimitObjIsoColimitCompEvaluation G (op U)
-  exact Nonempty.intro (fun s =>
-    (e.inv.app (op U)) (u.app (op U) (p.inv s)))
+  exact ⟨directedColimitSectionsMapCore F U⟩
 
 /- The canonical map from the colimit of sections to sections of the sheaf
 colimit. -/
@@ -650,10 +660,10 @@ noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
-      colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+    colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
       (sheafColimit F).presheaf.obj (op U) :=
-  Classical.choice (exists_directedColimitSectionsMap F U)
+  directedColimitSectionsMapCore F U
 
 /-- All transition maps in a directed system are injective on sections over
 an open. -/

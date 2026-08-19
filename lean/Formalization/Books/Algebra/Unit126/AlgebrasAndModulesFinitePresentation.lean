@@ -10,6 +10,7 @@ import Mathlib.RingTheory.Localization.Algebra
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.BaseChange
+import Mathlib.RingTheory.Noetherian.Nilpotent
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit14.BaseChange
 
@@ -931,7 +932,124 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
       ((Ideal.Quotient.mk (I.map (algebraMap R S'))).comp f.toRingHom))
     (hfinite : RingHom.FiniteType (algebraMap R S')) :
     Function.Surjective f := by
-  sorry
+  classical
+  let J : Ideal S' := I.map (algebraMap R S')
+  let B : Subalgebra R S' := f.range
+  have hfinite' : Algebra.FiniteType R S' :=
+    (RingHom.finiteType_algebraMap).mp hfinite
+  letI : Algebra.FiniteType R S' := hfinite'
+  obtain ⟨s, hs⟩ := (inferInstance : Algebra.FiniteType R S').out
+  choose y hy using fun x : s => hquot (Ideal.Quotient.mk J x.1)
+  let d : s → S' := fun x => x.1 - f (y x)
+  have hd (x : s) : d x ∈ J := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    change Ideal.Quotient.mk J (x.1 - f (y x)) = 0
+    rw [map_sub]
+    exact sub_eq_zero.mpr (hy x).symm
+  let t : Finset S' := s.attach.image d
+  have ht : (t : Set S') ⊆ Ideal.span ((algebraMap R S') '' (I : Set R)) := by
+    intro z hz
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp hz
+    simpa [J, Ideal.map] using hd x
+  obtain ⟨u, hu, htu⟩ :=
+    Submodule.subset_span_finite_of_subset_span (t := t) ht
+  choose r hrI hr using fun z : u => hu z.property
+  let K : Ideal R := Ideal.span (Set.range r)
+  have hKle : K ≤ I := by
+    apply Ideal.span_le.2
+    rintro x ⟨z, rfl⟩
+    exact hrI z
+  have hKfg : K.FG := Submodule.fg_span (Set.toFinite (Set.range r))
+  have hKnil : IsNilpotent K := by
+    apply hKfg.isNilpotent_iff_le_nilradical.mpr
+    intro x hx
+    rw [mem_nilradical]
+    exact hI x (hKle hx)
+  have huK : (u : Set S') ⊆ K.map (algebraMap R S') := by
+    intro z hz
+    have hz' : algebraMap R S' (r ⟨z, hz⟩) ∈ K.map (algebraMap R S') :=
+      Ideal.mem_map_of_mem (algebraMap R S')
+        (Ideal.subset_span (s := Set.range r) (Set.mem_range_self _))
+    rw [hr] at hz'
+    exact hz'
+  have hspan : Ideal.span (u : Set S') ≤ K.map (algebraMap R S') :=
+    Ideal.span_le.2 huK
+  have hdK (x : s) : d x ∈ K.map (algebraMap R S') :=
+    hspan (htu (Finset.mem_image.mpr ⟨x, Finset.mem_attach _ _, rfl⟩))
+  have hgen (x : S') : ∃ b : B, x - b.1 ∈ K.map (algebraMap R S') := by
+    have hx : x ∈ Algebra.adjoin R (s : Set S') := by simpa [hs]
+    induction hx using Algebra.adjoin_induction with
+    | mem x hx =>
+        exact ⟨⟨f (y ⟨x, hx⟩), ⟨y ⟨x, hx⟩, rfl⟩⟩, hdK ⟨x, hx⟩⟩
+    | algebraMap r =>
+        exact ⟨⟨algebraMap R S' r, ⟨algebraMap R S r, by simp⟩⟩, by simp⟩
+    | add x y hx hy ihx ihy =>
+        obtain ⟨bx, hbx⟩ := ihx
+        obtain ⟨b_y, hby⟩ := ihy
+        refine ⟨bx + b_y, ?_⟩
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using add_mem hbx hby
+    | mul x y hx hy ihx ihy =>
+        obtain ⟨bx, hbx⟩ := ihx
+        obtain ⟨b_y, hby⟩ := ihy
+        refine ⟨bx * b_y, ?_⟩
+        have h₁ : bx.1 * (y - b_y.1) ∈ K.map (algebraMap R S') :=
+          Ideal.mul_mem_left _ _ hby
+        have h₂ : b_y.1 * (x - bx.1) ∈ K.map (algebraMap R S') :=
+          Ideal.mul_mem_left _ _ hbx
+        have h₃ : (x - bx.1) * (y - b_y.1) ∈ K.map (algebraMap R S') :=
+          Ideal.mul_mem_left _ _ hby
+        have hsum := add_mem (add_mem h₁ h₂) h₃
+        change x * y - bx.1 * b_y.1 ∈ K.map (algebraMap R S')
+        convert hsum using 1 <;> ring
+  let Kmap : Ideal S' := K.map (algebraMap R S')
+  have hstep (L : Ideal R) (x : S') (hx : x ∈ L.map (algebraMap R S')) :
+      ∃ b : B, b.1 ∈ L.map (algebraMap R S') ∧
+        x - b.1 ∈ (L.map (algebraMap R S')) * Kmap := by
+    rw [Ideal.map] at hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · rintro z ⟨r, hrL, rfl⟩
+      refine ⟨⟨algebraMap R S' r, ⟨algebraMap R S r, by simp⟩⟩, ?_, ?_⟩
+      · exact Ideal.mem_map_of_mem _ hrL
+      · simp
+    · exact ⟨0, by simp, by simp⟩
+    · rintro x y _ _ ⟨bx, hbx, hxr⟩ ⟨b_y, hby, hyr⟩
+      refine ⟨bx + b_y, add_mem hbx hby, ?_⟩
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using add_mem hxr hyr
+    · rintro c x _ ⟨bx, hbx, hxr⟩
+      obtain ⟨bc, hbc⟩ := hgen c
+      refine ⟨bc * bx, Ideal.mul_mem_left _ _ hbx, ?_⟩
+      change c - bc.1 ∈ Kmap at hbc
+      have h₁ : c * (x - bx.1) ∈ (L.map (algebraMap R S')) * Kmap :=
+        Ideal.mul_mem_left _ _ hxr
+      have h₂ : (c - bc.1) * bx.1 ∈ (L.map (algebraMap R S')) * Kmap := by
+        have h₂' : (c - bc.1) * bx.1 ∈ Kmap * (L.map (algebraMap R S')) :=
+          Ideal.mul_mem_mul hbc hbx
+        rw [Ideal.mul_comm] at h₂'
+        exact h₂'
+      have hsum := add_mem h₁ h₂
+      convert hsum using 1 <;> simp [Algebra.smul_def, Subalgebra.coe_mul] <;> ring
+  have hpow (n : ℕ) : Kmap ^ n = (K ^ n).map (algebraMap R S') := by
+    rw [← Ideal.map_pow]
+  obtain ⟨n, hn⟩ := hKnil
+  have happ : ∀ n : ℕ, ∀ x : S', ∃ b : B, x - b.1 ∈ Kmap ^ n := by
+    intro n
+    induction n with
+    | zero =>
+        intro x
+        exact ⟨0, by simp⟩
+    | succ n ih =>
+        intro x
+        obtain ⟨b, hb⟩ := ih x
+        obtain ⟨c, hc, hxc⟩ := hstep (K ^ n) (x - b.1) (by simpa [hpow n] using hb)
+        refine ⟨b + c, ?_⟩
+        have : (x - b.1) - c.1 ∈ Kmap ^ n * Kmap := by
+          simpa [hpow n] using hxc
+        simpa [pow_succ, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using this
+  intro x
+  obtain ⟨b, hb⟩ := happ n x
+  have hzero : x - b.1 = 0 := by simpa [hn, hpow n] using hb
+  obtain ⟨y, hy⟩ := b.property
+  exact ⟨y, hy.trans (sub_eq_zero.mp hzero).symm⟩
 
 /-! ### Isomorphisms modulo an ideal -/
 

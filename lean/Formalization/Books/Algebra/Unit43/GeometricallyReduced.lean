@@ -1324,8 +1324,8 @@ private theorem test_finitePurelyInseparable_baseChanges
   let _ : Algebra.FiniteType k R' := hR'
   let _ : Algebra.FiniteType k S' := hS'
   let _ : IsReduced R' := isReduced_of_injective R'.val Subtype.val_injective
-  letI : CommRing R' := Subalgebra.toCommRing R'
-  letI : IsDomain R' := by
+  let : CommRing R' := Subalgebra.toCommRing R'
+  let : IsDomain R' := by
     have hK : IsDomain K := inferInstance
     have hinj : Function.Injective (R'.val.toRingHom : R' →+* K) :=
       Subtype.val_injective

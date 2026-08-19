@@ -890,7 +890,57 @@ theorem universallyExact_prod
     (g₁ : N₁ →ₗ[R] N₂) (g₂ : N₂ →ₗ[R] N₃)
     (hf : universallyExact f₁ f₂) (hg : universallyExact g₁ g₂) :
     universallyExact (f₁.prodMap g₁) (f₂.prodMap g₂) := by
-  sorry
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y hxy
+    apply Prod.ext
+    · apply hf.1
+      simpa using congrArg Prod.fst hxy
+    · apply hg.1
+      simpa using congrArg Prod.snd hxy
+  · intro y
+    constructor
+    · intro hy
+      have hy₁ : f₂ y.1 = 0 := by
+        simpa using congrArg Prod.fst hy
+      have hy₂ : g₂ y.2 = 0 := by
+        simpa using congrArg Prod.snd hy
+      obtain ⟨x, hx⟩ := (hf.2.1 y.1).mp hy₁
+      obtain ⟨z, hz⟩ := (hg.2.1 y.2).mp hy₂
+      exact ⟨(x, z), by simpa [hx, hz]⟩
+    · rintro ⟨p, hp⟩
+      rcases p with ⟨x, z⟩
+      have hx : f₂ (f₁ x) = 0 := (hf.2.1 (f₁ x)).mpr ⟨x, rfl⟩
+      have hz : g₂ (g₁ z) = 0 := (hg.2.1 (g₁ z)).mpr ⟨z, rfl⟩
+      rw [← hp]
+      simpa [hx, hz]
+  · intro y
+    obtain ⟨x, hx⟩ := hf.2.2.1 y.1
+    obtain ⟨z, hz⟩ := hg.2.2.1 y.2
+    exact ⟨(x, z), Prod.ext hx hz⟩
+  · intro Q _ _ x y hxy
+    let e₁ := TensorProduct.prodLeft R R M₁ N₁ Q
+    let e₂ := TensorProduct.prodLeft R R M₂ N₂ Q
+    have hcomm : e₂.toLinearMap.comp ((f₁.prodMap g₁).rTensor Q) =
+        ((f₁.rTensor Q).prodMap (g₁.rTensor Q)).comp e₁.toLinearMap := by
+      apply LinearMap.ext
+      intro t
+      induction t using TensorProduct.induction_on with
+      | zero =>
+        change (0, 0) = (0, 0)
+        rfl
+      | add x y hx hy => simp only [map_add, hx, hy]
+      | tmul x q => rfl
+    apply e₁.injective
+    have hxy' := congrArg (fun z => e₂ z) hxy
+    have hx := congrArg (fun k => k x) hcomm
+    have hy := congrArg (fun k => k y) hcomm
+    simp only [LinearMap.comp_apply] at hx hy
+    have hxy'' := hx.symm.trans (hxy'.trans hy)
+    apply Prod.ext
+    · apply hf.2.2.2 Q
+      simpa using congrArg Prod.fst hxy''
+    · apply hg.2.2.2 Q
+      simpa using congrArg Prod.snd hxy''
 
 /-! ## The integer example and direct sums -/
 
@@ -927,19 +977,105 @@ def integerPowerClass : integerCokernel :=
 /-- The direct-sum/direct-product sequence is universally exact. -/
 theorem integerDirectSumToProduct_universallyExact :
     universallyExact integerDirectSumToProduct integerProductToCokernel := by
-  sorry
+  have hshort :
+      Function.Injective integerDirectSumToProduct ∧
+        Function.Exact integerDirectSumToProduct integerProductToCokernel ∧
+          Function.Surjective integerProductToCokernel := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro x y hxy
+      ext n
+      exact congrFun hxy n
+    · dsimp [integerProductToCokernel]
+      rw [LinearMap.exact_iff, Submodule.ker_mkQ]
+    · exact Submodule.mkQ_surjective _
+  have htf : Module.IsTorsionFree ℤ integerCokernel := by
+    rw [Module.isTorsionFree_iff_smul_eq_zero]
+    intro a x hax
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective
+      (LinearMap.range integerDirectSumToProduct) x
+    by_cases ha : a = 0
+    · exact Or.inl ha
+    · right
+      have hq : integerProductToCokernel (a • y) = 0 := by
+        change a • integerProductToCokernel y = 0
+        exact hax
+      obtain ⟨z, hz⟩ := (Submodule.Quotient.mk_eq_zero
+        (LinearMap.range integerDirectSumToProduct)).mp hq
+      let z' : integerDirectSum := Finsupp.onFinset z.support y (by
+        intro n hn
+        by_contra hn'
+        have hzn : z n = 0 := by
+          by_contra hzn
+          exact hn' (Finsupp.mem_support_iff.mpr hzn)
+        have hcoord := congrFun hz n
+        have hacoord : a * y n = 0 := by
+          simpa [integerDirectSumToProduct, Pi.smul_apply, hzn] using hcoord
+        exact hn (by exact (mul_eq_zero.mp hacoord).resolve_left ha)
+        )
+      have hy : integerDirectSumToProduct z' = y := by
+        funext n
+        simp [integerDirectSumToProduct, z']
+      rw [← hy]
+      exact (Submodule.Quotient.mk_eq_zero _).mpr ⟨z', rfl⟩
+  have hflat₃ : Module.Flat ℤ integerCokernel := by
+    let _ : Module.IsTorsionFree ℤ integerCokernel := htf
+    infer_instance
+  refine ⟨hshort.1, hshort.2.1, hshort.2.2, ?_⟩
+  intro Q _ _
+  let _ : Module.Flat ℤ integerCokernel := hflat₃
+  have h := Formalization.Books.Algebra.Unit39.flat_tensor_short_exact
+    (N := Q) integerDirectSumToProduct integerProductToCokernel hshort.2.1 hshort.1
+      hshort.2.2
+  rw [LinearMap.lTensor_inj_iff_rTensor_inj] at h
+  exact h.1
 
 /-- All three terms in the integer example are flat. -/
 theorem integerDirectSumToProduct_flat_terms :
     Module.Flat ℤ integerDirectSum ∧
       Module.Flat ℤ integerDirectProduct ∧
         Module.Flat ℤ integerCokernel := by
-  sorry
+  have hflat₁ : Module.Flat ℤ integerDirectSum := by
+    infer_instance
+  have hflat₂ : Module.Flat ℤ integerDirectProduct := by
+    infer_instance
+  have hends := flat_ends_of_universallyExact integerDirectSumToProduct
+    integerProductToCokernel integerDirectSumToProduct_universallyExact hflat₂
+  exact ⟨hflat₁, hflat₂, hends.2⟩
 
 /-- The power class is divisible by every positive power of two. -/
 theorem integerPowerClass_divisible (n : ℕ) (hn : 1 ≤ n) :
     ∃ y : integerCokernel, (2 : ℤ) ^ n • y = integerPowerClass := by
-  sorry
+  let y : integerDirectProduct := fun k => (2 : ℤ) ^ (k + 1 - n)
+  let d : integerDirectProduct :=
+    integerPowerSequence - (2 : ℤ) ^ n • y
+  let z : integerDirectSum := Finsupp.onFinset (Finset.range n) d (by
+    intro k hk
+    by_contra hk'
+    have hkn : n ≤ k := Nat.le_of_not_gt (by simpa using hk')
+    have hk1 : n ≤ k + 1 := le_trans hkn (Nat.le_succ k)
+    have hdecomp : n + (k + 1 - n) = k + 1 := Nat.add_sub_of_le hk1
+    have hd : d k = 0 := by
+      simp [d, integerPowerSequence, y, Pi.smul_apply, ← pow_add, hdecomp]
+    exact hk hd
+  )
+  have hz : integerDirectSumToProduct z = d := by
+    funext k
+    simp [z, integerDirectSumToProduct]
+  have hzero : integerProductToCokernel d = 0 := by
+    apply (Submodule.Quotient.mk_eq_zero _).2
+    exact ⟨z, hz⟩
+  refine ⟨integerProductToCokernel y, ?_⟩
+  have hzero' := hzero
+  change (2 : ℤ) ^ n • integerProductToCokernel y =
+    integerProductToCokernel integerPowerSequence
+  change integerProductToCokernel
+      (integerPowerSequence - (2 : ℤ) ^ n • y) = 0 at hzero'
+  rw [map_sub] at hzero'
+  calc
+    (2 : ℤ) ^ n • integerProductToCokernel y =
+        integerProductToCokernel ((2 : ℤ) ^ n • y) := by rw [map_smul]
+    _ = integerProductToCokernel integerPowerSequence :=
+      (sub_eq_zero.mp hzero').symm
 
 /-- Every section of the quotient map kills the power class. -/
 theorem integerPowerClass_killed_by_section

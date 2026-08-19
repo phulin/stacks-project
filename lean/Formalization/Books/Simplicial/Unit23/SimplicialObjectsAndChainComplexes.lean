@@ -148,6 +148,102 @@ theorem associatedChainComplexFunctor_exact
 
 /-! ## The extension and Eilenberg--Mac Lane homology statements -/
 
+private theorem simplex_epi_of_comp_epi
+    {X Y Z : SimplexCategory} (f : X ⟶ Y) (g : Y ⟶ Z)
+    (hcomp : Epi (f ≫ g)) : Epi g := by
+  apply (SimplexCategory.epi_iff_surjective).2
+  intro z
+  obtain ⟨x, hx⟩ :=
+    (SimplexCategory.epi_iff_surjective).1 hcomp z
+  refine ⟨f.toOrderHom x, ?_⟩
+  simpa only [SimplexCategory.comp_toOrderHom, OrderHom.comp_coe,
+    Function.comp_apply] using hx
+
+private theorem simplex_last_factorization
+    {X Y : SimplexCategory} {m k : ℕ}
+    (f : X ⟶ Y) (q : Y ⟶ ⦋m⦌) (e : X ⟶ ⦋k⦌) (hepi : Epi e)
+    (hm : m = k + 1)
+    (h : HEq (f ≫ q) (e ≫ SimplexCategory.δ (Fin.last (k + 1)))) :
+    Epi q ∨ ∃ (q' : Y ⟶ ⦋k⦌), Epi q' ∧
+      HEq q (q' ≫ SimplexCategory.δ (Fin.last (k + 1))) ∧ f ≫ q' = e := by
+  classical
+  subst m
+  have h' : f ≫ q = e ≫ SimplexCategory.δ (Fin.last (k + 1)) :=
+    eq_of_heq h
+  by_cases hq : Epi q
+  · exact Or.inl hq
+  · right
+    have hqns : ¬Function.Surjective q.toOrderHom := by
+      intro hsurj
+      exact hq ((SimplexCategory.epi_iff_surjective).2 hsurj)
+    have hfactor := SimplexCategory.eq_comp_δ_of_not_surjective q hqns
+    let i : Fin (k + 2) := hfactor.choose
+    let hfactor_i := hfactor.choose_spec
+    let q' : Y ⟶ ⦋k⦌ := hfactor_i.choose
+    have hfactor_q := hfactor_i.choose_spec
+    have hqfac : q = q' ≫ SimplexCategory.δ i := hfactor_q
+    have he : Function.Surjective e.toOrderHom :=
+      (SimplexCategory.epi_iff_surjective).1 hepi
+    have hi : i = Fin.last (k + 1) := by
+      apply Fin.eq_last_of_not_lt
+      intro hilast
+      let j : Fin (k + 1) := ⟨i.1, hilast⟩
+      obtain ⟨x, hx⟩ := he j
+      have hqx : q.toOrderHom (f.toOrderHom x) =
+          (SimplexCategory.δ (Fin.last (k + 1))).toOrderHom j := by
+        have h'' := congrArg (fun t : X ⟶ ⦋k + 1⦌ => t.toOrderHom x) h'
+        rw [SimplexCategory.comp_toOrderHom,
+          SimplexCategory.comp_toOrderHom] at h''
+        simpa [Function.comp_apply, j, hx] using h''
+      have hqfac' := congrArg
+        (fun t : Y ⟶ ⦋k + 1⦌ => t.toOrderHom (f.toOrderHom x)) hqfac
+      rw [SimplexCategory.comp_toOrderHom] at hqfac'
+      have hδlast :
+          (SimplexCategory.δ (Fin.last (k + 1))).toOrderHom j = i := by
+        change (Fin.last (k + 1)).succAbove j = i
+        rw [Fin.succAbove_of_castSucc_lt]
+        · apply Fin.ext
+          rfl
+        · dsimp [j]
+          exact hilast
+      have hi' : (SimplexCategory.δ i).toOrderHom
+          (q'.toOrderHom (f.toOrderHom x)) = i :=
+        hqfac'.symm.trans (hqx.trans hδlast)
+      have hi'' : i.succAbove
+          (q'.toOrderHom (f.toOrderHom x)) = i := by
+        change (SimplexCategory.δ i).toOrderHom
+            (q'.toOrderHom (f.toOrderHom x)) = i
+        exact hi'
+      exact Fin.succAbove_ne i _ hi''
+    rw [hi] at hqfac
+    have hq' : Function.Surjective q'.toOrderHom := by
+      intro y
+      obtain ⟨x, hx⟩ := he y
+      refine ⟨f.toOrderHom x, ?_⟩
+      have h'' := congrArg (fun t : X ⟶ ⦋k + 1⦌ => t.toOrderHom x) h'
+      rw [SimplexCategory.comp_toOrderHom,
+        SimplexCategory.comp_toOrderHom] at h''
+      rw [hqfac] at h''
+      rw [SimplexCategory.comp_toOrderHom] at h''
+      simp only [OrderHom.comp_coe, Function.comp_apply] at h''
+      rw [hx] at h''
+      exact ((SimplexCategory.mono_iff_injective).1
+        (inferInstance : Mono (SimplexCategory.δ (Fin.last (k + 1))))) h''
+    refine ⟨q', (SimplexCategory.epi_iff_surjective).2 hq',
+      heq_of_eq hqfac, ?_⟩
+    apply (cancel_mono (SimplexCategory.δ (Fin.last (k + 1)))).1
+    rw [Category.assoc, ← hqfac, h']
+
+private theorem extensionImageProperty_of_comp
+    {k m n : ℕ} (f : ⦋m⦌ ⟶ ⦋n⦌) (q : ⦋n⦌ ⟶ ⦋k + 1⦌)
+    (h : extensionImageProperty (f ≫ q)) : extensionImageProperty q := by
+  rcases h with h | ⟨e, hepi, he⟩
+  · exact Or.inl (simplex_epi_of_comp_epi f q h)
+  · rcases simplex_last_factorization f q e hepi rfl (heq_of_eq he.symm) with hq | hq
+    · exact Or.inl hq
+    · exact Or.inr ⟨hq.choose, hq.choose_spec.1,
+        (eq_of_heq hq.choose_spec.2.1).symm⟩
+
 /- The source's extension is not the biproduct of two Eilenberg--Mac Lane
    objects: precomposition can send a `[k + 1]` summand to a `[k]` summand.
    The Chapter 22 degreewise carrier and map already encode this cross-term,
@@ -162,10 +258,126 @@ noncomputable def eilenbergMacLaneExtension
       extensionDirectSumMap A k Y.unop.len X.unop.len φ
     map_id := by
       intro X
-      sorry
+      classical
+      let e := biproduct.isoCoproduct
+        (fun _ : ExtensionSimplexIndex (unop X).len k => A)
+      let M : (⨁ fun _ : ExtensionSimplexIndex (unop X).len k => A) ⟶
+          (⨁ fun _ : ExtensionSimplexIndex (unop X).len k => A) :=
+        biproduct.matrix (fun α α' =>
+          if h : extensionImageProperty ((𝟙 (unop X)) ≫ α.1) then
+            if α' = (⟨(𝟙 (unop X)) ≫ α.1, h⟩ :
+                ExtensionSimplexIndex (unop X).len k)
+            then 𝟙 A else 0
+          else 0)
+      change e.inv ≫ M ≫ e.hom = _
+      rw [← e.inv_hom_id, ← Category.assoc, cancel_mono e.hom]
+      suffices hM : M = 𝟙 _ by simp [hM]
+      apply (biproduct.matrixEquiv
+        (f := fun _ : ExtensionSimplexIndex (unop X).len k => A)
+        (g := fun _ : ExtensionSimplexIndex (unop X).len k => A)).injective
+      funext α α'
+      simp [M, biproduct.matrixEquiv, biproduct.components]
+      rw [if_pos α.property]
+      by_cases h : α' = α
+      · subst α'
+        rw [biproduct.ι_π]
+        simp
+      · have h'' : ¬ α = α' := by
+          intro hh
+          exact h hh.symm
+        rw [biproduct.ι_π, if_neg h, dif_neg h'']
     map_comp := by
       intro X Y Z f g
-      sorry }
+      classical
+      let eX := biproduct.isoCoproduct
+        (fun _ : ExtensionSimplexIndex (unop X).len k => A)
+      let eY := biproduct.isoCoproduct
+        (fun _ : ExtensionSimplexIndex (unop Y).len k => A)
+      let eZ := biproduct.isoCoproduct
+        (fun _ : ExtensionSimplexIndex (unop Z).len k => A)
+      let Mf : (⨁ fun _ : ExtensionSimplexIndex (unop X).len k => A) ⟶
+          (⨁ fun _ : ExtensionSimplexIndex (unop Y).len k => A) :=
+        biproduct.matrix (fun α α' =>
+          if h : extensionImageProperty (f.unop ≫ α.1) then
+            if α' = (⟨f.unop ≫ α.1, h⟩ :
+                ExtensionSimplexIndex (unop Y).len k)
+            then 𝟙 A else 0
+          else 0)
+      let Mg : (⨁ fun _ : ExtensionSimplexIndex (unop Y).len k => A) ⟶
+          (⨁ fun _ : ExtensionSimplexIndex (unop Z).len k => A) :=
+        biproduct.matrix (fun α α' =>
+          if h : extensionImageProperty (g.unop ≫ α.1) then
+            if α' = (⟨g.unop ≫ α.1, h⟩ :
+                ExtensionSimplexIndex (unop Z).len k)
+            then 𝟙 A else 0
+          else 0)
+      let Mfg : (⨁ fun _ : ExtensionSimplexIndex (unop X).len k => A) ⟶
+          (⨁ fun _ : ExtensionSimplexIndex (unop Z).len k => A) :=
+        biproduct.matrix (fun α α' =>
+          if h : extensionImageProperty (g.unop ≫ f.unop ≫ α.1) then
+            if α' = (⟨g.unop ≫ f.unop ≫ α.1, h⟩ :
+                ExtensionSimplexIndex (unop Z).len k)
+            then 𝟙 A else 0
+          else 0)
+      change eX.inv ≫ Mfg ≫ eZ.hom =
+        (eX.inv ≫ Mf ≫ eY.hom) ≫ (eY.inv ≫ Mg ≫ eZ.hom)
+      simp only [Category.assoc, Iso.hom_inv_id_assoc]
+      rw [cancel_epi eX.inv, ← Category.assoc, cancel_mono eZ.hom]
+      apply (biproduct.matrixEquiv
+        (f := fun _ : ExtensionSimplexIndex (unop X).len k => A)
+        (g := fun _ : ExtensionSimplexIndex (unop Z).len k => A)).injective
+      funext α α'
+      simp [Mfg, Mf, Mg, biproduct.matrixEquiv, biproduct.components,
+        biproduct.matrix]
+      rw [biproduct.lift_desc_assoc]
+      rw [Preadditive.sum_comp]
+      by_cases hcomp : extensionImageProperty
+          (g.unop ≫ (f.unop ≫ α.1))
+      · have hcomp' : extensionImageProperty
+            (g.unop ≫ f.unop ≫ α.1) := by
+          simpa only [Category.assoc] using hcomp
+        have hfa : extensionImageProperty (f.unop ≫ α.1) :=
+          extensionImageProperty_of_comp g.unop (f.unop ≫ α.1) hcomp
+        let β : ExtensionSimplexIndex (unop Y).len k :=
+          ⟨f.unop ≫ α.1, hfa⟩
+        have hgb : extensionImageProperty (g.unop ≫ β.1) := by
+          simpa only [β, Category.assoc] using hcomp
+        rw [Fintype.sum_eq_single β]
+        · simp [β, hfa, hgb, hcomp', hcomp, Category.assoc]
+        · intro x hx
+          simp only [dif_pos hfa]
+          by_cases hxe : x = β
+          · exact (hx hxe).elim
+          · have hxe' : ¬x =
+                (⟨f.unop ≫ α.1, hfa⟩ : ExtensionSimplexIndex (unop Y).len k) := by
+              intro h'
+              apply hx
+              simpa [β] using h'
+            simp [hxe']
+      · have hcomp' : ¬extensionImageProperty
+            (g.unop ≫ f.unop ≫ α.1) := by
+          simpa only [Category.assoc] using hcomp
+        by_cases hfa : extensionImageProperty (f.unop ≫ α.1)
+        · let β : ExtensionSimplexIndex (unop Y).len k :=
+            ⟨f.unop ≫ α.1, hfa⟩
+          have hgb : ¬extensionImageProperty (g.unop ≫ β.1) := by
+            intro hgb
+            apply hcomp'
+            simpa only [β, Category.assoc] using hgb
+          rw [Fintype.sum_eq_single β]
+          · simp [β, hfa, hgb, hcomp', hcomp, Category.assoc]
+          · intro x hx
+            simp only [dif_pos hfa]
+            by_cases hxe : x = β
+            · exact (hx hxe).elim
+            · have hxe' : ¬x =
+                  (⟨f.unop ≫ α.1, hfa⟩ : ExtensionSimplexIndex (unop Y).len k) := by
+                intro h'
+                apply hx
+                simpa [β] using h'
+              simp [hxe']
+        · simp [hfa, hcomp', hcomp]
+  }
 
 theorem eilenbergMacLaneExtension_acyclic
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -275,7 +487,11 @@ theorem normalizedChainComplexMap_comm
     ∀ i j : ℕ, (ComplexShape.down ℕ).Rel i j →
       normalizedSubobjectMap f i ≫ (normalizedChainComplex V).d i j =
         (normalizedChainComplex U).d i j ≫ normalizedSubobjectMap f j := by
-  sorry
+  intro i j hij
+  simp only [ComplexShape.down_Rel] at hij
+  subst i
+  simpa only [normalizedChainComplex_X, normalizedChainComplex_d] using
+    normalizedBoundary_naturality f j
 
 /-- The chain map induced on normalized complexes. -/
 def normalizedChainComplexMap

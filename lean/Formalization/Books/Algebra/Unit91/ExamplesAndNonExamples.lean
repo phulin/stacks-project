@@ -743,7 +743,7 @@ private theorem modulePower_is_flat_of_isNoetherianRing
     rw [Module.Flat.iff_rTensor_injective]
     intro I hI
     let P : ModuleCat.{u} R := ModuleCat.of R (I : Type u)
-    letI : Module.Finite R (I : Type u) := Module.Finite.of_fg hI
+    let : Module.Finite R (I : Type u) := Module.Finite.of_fg hI
     have hP : Module.FinitePresentation R (P : Type u) :=
       Module.finitePresentation_of_finite R (I : Type u)
     have hcrit :
@@ -778,7 +778,7 @@ private theorem modulePower_is_flat_of_isNoetherianRing
     have hcoord := congrFun hxy' a
     rw [hnat x a, hnat y a] at hcoord
     exact hcoord
-  letI : Module.Flat R (modulePower R A') := hflat'
+  let : Module.Flat R (modulePower R A') := hflat'
   exact Module.Flat.of_linearEquiv
     (LinearEquiv.piCongrLeft (R := R) (φ := fun _ : A => R)
       (Equiv.ulift : A' ≃ A)).symm
@@ -814,9 +814,9 @@ private theorem modulePower_is_mittagLeffler_sameUniverse
     modulePower_is_flat_of_isNoetherianRing R A
   apply (flat_isMittagLeffler_iff_minimal_tensor_submodule hflat).mpr
   intro F _ _ hfree hfinite x
-  letI : Module.Free R F := hfree
-  letI : Module.Finite R F := hfinite
-  letI : Module.Projective R F := Module.Projective.of_free
+  let : Module.Free R F := hfree
+  let : Module.Finite R F := hfinite
+  let : Module.Projective R F := Module.Projective.of_free
   have hFfp : Module.FinitePresentation R F :=
     Module.finitePresentation_of_projective R F
   have hcritF :
@@ -854,13 +854,13 @@ private theorem modulePower_is_mittagLeffler_sameUniverse
       exact (tensorModulePowerMap (ModuleCat.of R G) (A := A) y a).property
     · intro hG
       have hGfinite : Module.Finite R (G : Type u) := by
-        letI : Module.Finite R F := hfinite
+        let : Module.Finite R F := hfinite
         have hFnoeth : IsNoetherian R F :=
           isNoetherian_of_isNoetherianRing_of_finite R F
         have hGnoeth : IsNoetherian R (G : Type u) :=
           isNoetherian_of_submodule_of_noetherian R F G hFnoeth
         exact ⟨hGnoeth.noetherian ⊤⟩
-      letI : Module.Finite R (G : Type u) := hGfinite
+      let : Module.Finite R (G : Type u) := hGfinite
       have hGfp : Module.FinitePresentation R (G : Type u) :=
         Module.finitePresentation_of_finite R (G : Type u)
       have hcritG :
@@ -907,12 +907,12 @@ theorem modulePower_is_flat_and_mittagLeffler
   let S : Type (max u v) := ULift.{v} R
   let A' : Type (max u v) := ULift.{u} A
   let f : R →+* S := (ULift.ringEquiv : S ≃+* R).symm.toRingHom
-  letI : Module R S := Module.compHom S f
-  letI : IsNoetherianRing S :=
+  let : Module R S := Module.compHom S f
+  let : IsNoetherianRing S :=
     isNoetherianRing_of_ringEquiv R (ULift.ringEquiv : S ≃+* R).symm
   let eRS : R ≃ₗ[R] S :=
     (ULift.moduleEquiv (R := R) (M := R)).symm
-  letI : Module.Free R S :=
+  let : Module.Free R S :=
     Module.Free.of_equiv' (R := R) (P := R) (N := S)
       inferInstance eRS
   have hS : IsMittagLefflerModule (ModuleCat.of R S) := by
@@ -938,7 +938,7 @@ theorem modulePower_is_flat_and_mittagLeffler
 Mittag-Leffler as modules over the coefficient ring. -/
 theorem mvPowerSeries_is_flat_and_mittagLeffler
     (R : Type u) [CommRing R] [IsNoetherianRing R]
-    (n : ℕ) (hn : 0 < n) :
+    (n : ℕ) (_hn : 0 < n) :
     Module.Flat R (MvPowerSeries (Fin n) R) ∧
       IsMittagLefflerModule
         (ModuleCat.of R (MvPowerSeries (Fin n) R)) := by

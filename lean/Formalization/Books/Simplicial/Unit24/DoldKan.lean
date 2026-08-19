@@ -1153,7 +1153,111 @@ theorem doldKan_identity_degenerate_decomposition
     (A : ChainComplex C ℕ) (n : ℕ) :
     Nonempty (doldKanDegree A ⦋n⦌ ≅
       A.X n ⊞ doldKanDegenerateDegree A n) := by
-  sorry
+  classical
+  change Nonempty ((∐ fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) ≅
+    A.X n ⊞ (∐ fun a : DoldKanDegenerateIndex n => A.X a.1.1.1))
+  let degIndex : ∀ a : DoldKanIndex ⦋n⦌, a ≠ doldKanIdentityIndex n →
+      DoldKanDegenerateIndex n :=
+    fun a h => ⟨a, by
+      have ha := a.1.isLt
+      simp only [SimplexCategory.len_mk] at ha
+      have hnot : ¬n ≤ a.1.1 := by
+        intro han
+        exact h ((doldKanIndex_degree_ge_iff_identity a).1 han)
+      omega⟩
+  have hdeg : (doldKanIdentityIndex n).1.1 = n := by
+    rfl
+  let idInclusion : A.X n ⟶ (∐ fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) :=
+    eqToHom (congrArg A.X hdeg.symm) ≫
+      Sigma.ι (fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1)
+        (doldKanIdentityIndex n)
+  let hom : (∐ fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) ⟶
+      A.X n ⊞ (∐ fun a : DoldKanDegenerateIndex n => A.X a.1.1.1) :=
+    Sigma.desc (fun a =>
+      if h : a = doldKanIdentityIndex n then
+        eqToHom (congrArg A.X
+          ((congrArg (fun z : DoldKanIndex ⦋n⦌ => z.1.1) h).trans hdeg)) ≫
+          biprod.inl
+      else
+        Sigma.ι (fun b : DoldKanDegenerateIndex n => A.X b.1.1.1)
+          (degIndex a h) ≫ biprod.inr)
+  let inv : A.X n ⊞ (∐ fun a : DoldKanDegenerateIndex n => A.X a.1.1.1) ⟶
+      (∐ fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) :=
+    biprod.desc idInclusion
+      (Sigma.desc (fun b : DoldKanDegenerateIndex n =>
+        Sigma.ι (fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) b.1))
+  have hinl : biprod.inl ≫ inv = idInclusion := by
+    dsimp [inv]
+    exact biprod.inl_desc _ _
+  have hinr : biprod.inr ≫ inv =
+      Sigma.desc (fun b : DoldKanDegenerateIndex n =>
+        Sigma.ι (fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1) b.1) := by
+    dsimp [inv]
+    exact biprod.inr_desc _ _
+  refine ⟨{ hom := hom, inv := inv, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
+  · apply Sigma.hom_ext
+    intro a
+    by_cases h : a = doldKanIdentityIndex n
+    · subst a
+      simp only [hom, inv, idInclusion]
+      rw [← Category.assoc, Sigma.ι_desc, dif_pos rfl, Category.assoc,
+        biprod.inl_desc]
+      simp [hdeg]
+    · simp only [hom, inv, idInclusion]
+      rw [← Category.assoc, Sigma.ι_desc, dif_neg h, Category.assoc,
+        biprod.inr_desc, Sigma.ι_desc]
+      simp [degIndex, h]
+  · apply biprod.hom_ext
+    · rw [Category.id_comp]
+      apply biprod.hom_ext'
+      · simp only [Category.assoc]
+        rw [← Category.assoc biprod.inl inv (hom ≫ biprod.fst), hinl]
+        dsimp [idInclusion]
+        simp only [hom, dif_pos, Category.assoc, Sigma.ι_desc,
+          biprod.inl_fst, Category.comp_id, Category.id_comp]
+        simp [hdeg]
+      · simp only [Category.assoc]
+        rw [← Category.assoc biprod.inr inv (hom ≫ biprod.fst), hinr]
+        apply Sigma.hom_ext
+        intro a
+        have ha : (a.1 : DoldKanIndex ⦋n⦌) ≠ doldKanIdentityIndex n := by
+          intro ha
+          have hadeg : a.1.1 = n := by
+            rw [ha]
+            rfl
+          have halt := a.2
+          change a.1.1 < n at halt
+          omega
+        rw [← Category.assoc, Sigma.ι_desc]
+        simp only [hom]
+        rw [← Category.assoc, Sigma.ι_desc, dif_neg ha, Category.assoc,
+          biprod.inr_fst, comp_zero]
+    · rw [Category.id_comp]
+      apply biprod.hom_ext'
+      · simp only [Category.assoc]
+        rw [← Category.assoc biprod.inl inv (hom ≫ biprod.snd), hinl]
+        dsimp [idInclusion]
+        simp only [hom]
+        rw [Category.assoc]
+        nth_rewrite 2 [← Category.assoc]
+        rw [Sigma.ι_desc, dif_pos rfl, Category.assoc, biprod.inl_snd,
+          comp_zero, comp_zero]
+      · simp only [Category.assoc]
+        rw [← Category.assoc biprod.inr inv (hom ≫ biprod.snd), hinr]
+        apply Sigma.hom_ext
+        intro a
+        have ha : (a.1 : DoldKanIndex ⦋n⦌) ≠ doldKanIdentityIndex n := by
+          intro ha
+          have hadeg : a.1.1 = n := by
+            rw [ha]
+            rfl
+          have halt := a.2
+          change a.1.1 < n at halt
+          omega
+        rw [← Category.assoc, Sigma.ι_desc]
+        simp only [hom]
+        rw [← Category.assoc, Sigma.ι_desc, dif_neg ha, Category.assoc,
+          biprod.inr_snd, Category.comp_id]
 
 /-- The differential on the identity summand described in the source. -/
 def doldKanIdentityDifferential
@@ -1168,7 +1272,42 @@ theorem doldKanIdentitySummand_face_zero
     (hi : i ≠ Fin.last (n + 1)) :
     doldKanIdentitySummand A (n + 1) ≫
         doldKanMap A (SimplexCategory.δ i) = 0 := by
-  sorry
+  classical
+  change (Sigma.ι (fun a : DoldKanIndex ⦋n + 1⦌ => A.X a.1.1)
+    (doldKanIdentityIndex (n + 1)) :
+      A.X (n + 1) ⟶ doldKanDegree A ⦋n + 1⦌) ≫
+      doldKanMap A (SimplexCategory.δ i) = 0
+  rw [doldKanMap_summand]
+  refine Fintype.sum_eq_zero _ ?_
+  intro b
+  change doldKanComponentMap A (SimplexCategory.δ i)
+      (doldKanIdentityIndex (n + 1)) b ≫
+        (Sigma.ι (fun b : DoldKanIndex ⦋n⦌ => A.X b.1.1) b :
+          A.X b.1.1 ⟶ doldKanDegree A ⦋n⦌) = 0
+  have hbdeg_lt := b.1.isLt
+  simp only [SimplexCategory.len_mk] at hbdeg_lt
+  have hbdeg : b.1.1 ≤ n := by omega
+  have hdegree : n + 1 ≠ b.1.1 := by omega
+  by_cases hdrop : n + 1 = b.1.1 + 1
+  · have hbdeg_eq : b.1.1 = n := by omega
+    have hb_id : b = doldKanIdentityIndex n :=
+      doldKanIndex_eq_identity_of_degree_ge b (by omega)
+    subst b
+    have hcomp : ¬HEq (SimplexCategory.δ i ≫
+        (doldKanIdentityIndex (n + 1)).2.1)
+        ((doldKanIdentityIndex n).2.1 ≫
+          SimplexCategory.δ (Fin.last (n + 1))) := by
+      intro hcomp
+      have hcomp' : HEq (SimplexCategory.δ i)
+          (SimplexCategory.δ (Fin.last (n + 1))) := by
+        simpa [doldKanIdentityIndex] using hcomp
+      exact hi (SimplexCategory.δ_injective (eq_of_heq hcomp'))
+    have hz := doldKanComponentMap_drop_zero A (SimplexCategory.δ i)
+      (doldKanIdentityIndex (n + 1)) (doldKanIdentityIndex n) hdrop hcomp
+    rw [hz, zero_comp]
+  · have hz := doldKanComponentMap_zero_of_other_case A (SimplexCategory.δ i)
+      (doldKanIdentityIndex (n + 1)) b hdegree hdrop
+    rw [hz, zero_comp]
 
 theorem doldKanIdentitySummand_last_face
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -1176,7 +1315,48 @@ theorem doldKanIdentitySummand_last_face
     doldKanIdentitySummand A (n + 1) ≫
         doldKanMap A (SimplexCategory.δ (Fin.last (n + 1))) =
       doldKanIdentityDifferential A n ≫ doldKanIdentitySummand A n := by
-  sorry
+  classical
+  change (Sigma.ι (fun a : DoldKanIndex ⦋n + 1⦌ => A.X a.1.1)
+    (doldKanIdentityIndex (n + 1)) :
+      A.X (n + 1) ⟶ doldKanDegree A ⦋n + 1⦌) ≫
+      doldKanMap A (SimplexCategory.δ (Fin.last (n + 1))) =
+    doldKanIdentityDifferential A n ≫
+      (Sigma.ι (fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1)
+        (doldKanIdentityIndex n) :
+        A.X n ⟶ doldKanDegree A ⦋n⦌)
+  rw [doldKanMap_summand]
+  change (∑ b : DoldKanIndex ⦋n⦌,
+      doldKanComponentMap A (SimplexCategory.δ (Fin.last (n + 1)))
+        (doldKanIdentityIndex (n + 1)) b ≫
+        (Sigma.ι (fun b : DoldKanIndex ⦋n⦌ => A.X b.1.1) b :
+          A.X b.1.1 ⟶ doldKanDegree A ⦋n⦌)) =
+    doldKanIdentityDifferential A n ≫
+      (Sigma.ι (fun a : DoldKanIndex ⦋n⦌ => A.X a.1.1)
+        (doldKanIdentityIndex n) :
+        A.X n ⟶ doldKanDegree A ⦋n⦌)
+  rw [Fintype.sum_eq_single (doldKanIdentityIndex n)]
+  · have hcomp : HEq (SimplexCategory.δ (Fin.last (n + 1)) ≫
+        (doldKanIdentityIndex (n + 1)).2.1)
+        ((doldKanIdentityIndex n).2.1 ≫
+          SimplexCategory.δ (Fin.last (n + 1))) := by
+      simp [doldKanIdentityIndex]
+    rw [doldKanComponentMap_drop_degree A
+      (SimplexCategory.δ (Fin.last (n + 1)))
+      (doldKanIdentityIndex (n + 1)) (doldKanIdentityIndex n) rfl hcomp]
+    rw [Preadditive.zsmul_comp]
+    simp [doldKanIdentityIndex, doldKanIdentityDifferential] <;> rfl
+  · intro b hb
+    have hbdeg_lt := b.1.isLt
+    simp only [SimplexCategory.len_mk] at hbdeg_lt
+    have hbdeg : b.1.1 ≤ n := by omega
+    have hdegree : n + 1 ≠ b.1.1 := by omega
+    by_cases hdrop : n + 1 = b.1.1 + 1
+    · have hb_id : b = doldKanIdentityIndex n :=
+        doldKanIndex_eq_identity_of_degree_ge b (by omega)
+      exact (hb hb_id).elim
+    · rw [doldKanComponentMap_zero_of_other_case
+        A (SimplexCategory.δ (Fin.last (n + 1)))
+        (doldKanIdentityIndex (n + 1)) b hdegree hdrop, zero_comp]
 
 theorem doldKan_normalized_degree_formula
     {C : Type u} [Category.{v} C] [Abelian C]

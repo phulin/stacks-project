@@ -1435,10 +1435,10 @@ theorem jacobson_subring_of_finiteType_field
     [IsJacobsonRing R] [Algebra.FiniteType R K]
     (hRK : Function.Injective (algebraMap R K)) :
     IsField R ∧ Module.Finite R K := by
-  letI : IsDomain R := hRK.isDomain
+  let : IsDomain R := hRK.isDomain
   obtain ⟨f, hf, hfield, _, _⟩ :=
     Formalization.Books.Algebra.Unit34.field_finite_type_over_domain hRK
-  letI : Field (Localization.Away f) := hfield.toField
+  let : Field (Localization.Away f) := hfield.toField
   have halg_inj : Function.Injective (algebraMap R (Localization.Away f)) :=
     IsLocalization.injective (M := Submonoid.powers f) (Localization.Away f)
       (powers_le_nonZeroDivisors_of_noZeroDivisors hf)

@@ -1,10 +1,12 @@
 import Mathlib.Algebra.Category.Ring.Basic
+import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf
 import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Limits.Shapes.Kernels
 import Mathlib.CategoryTheory.Sites.LocallySurjective
 import Mathlib.CategoryTheory.Sites.Sheaf
+import Mathlib.CategoryTheory.Sites.Abelian
 
 /-!
 # Deformation Theory, Chapter 9: Thickenings of ringed topoi
@@ -31,6 +33,8 @@ noncomputable section
 structure RingedTopos (C : Type u) [Category.{u} C] where
   topology : GrothendieckTopology C
   structureSheaf : Sheaf topology RingCat.{u}
+  /-- The standard sheafification support for the underlying additive sheaves. -/
+  hasAdditiveSheafify : HasSheafify topology AddCommGrpCat.{u}
 
 /-- The category of sheaves of sets on the site underlying a ringed topos. -/
 abbrev Sheaves {C : Type u} [Category.{u} C] (X : RingedTopos C) :=
@@ -183,8 +187,7 @@ noncomputable abbrev underlyingSharp
   (sheafCompose Y.topology (forget₂ RingCat AddCommGrpCat)).map i.hom.sharp
 
 /- The zero composite is part of the canonical sequence rather than an
-   existential side condition.  Its proof uses the kernel interface and is
-   intentionally left open at this statement-review stage. -/
+   existential side condition; it is supplied by the kernel interface. -/
 noncomputable def thickeningKernelShortComplex
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
@@ -206,7 +209,29 @@ theorem shortExactSequence
     {X : RingedTopos C} {Y : RingedTopos D}
     (i : Thickening X Y) :
     (thickeningKernelShortComplex i).ShortExact := by
-  sorry
+  let hSheafify : HasSheafify Y.topology AddCommGrpCat.{u} := Y.hasAdditiveSheafify
+  letI : Abelian (Sheaf Y.topology AddCommGrpCat.{u}) := by
+    exact @CategoryTheory.sheafIsAbelian _ _ _ _ _ _ hSheafify
+  let hLocal : Sheaf.IsLocallySurjective (underlyingSharp i) := by
+    change Presheaf.IsLocallySurjective Y.topology (underlyingSharp i).hom
+    rw [Presheaf.isLocallySurjective_iff_whisker_forget]
+    refine ⟨?_⟩
+    intro U s
+    have h := i.sharp_is_locally_surjective.imageSieve_mem (U := U) s
+    change Presheaf.imageSieve (underlyingSharp i).hom s ∈ Y.topology U
+    convert h using 1
+    ext V f
+    constructor
+    · rintro ⟨t, ht⟩
+      exact ⟨t, ht⟩
+    · rintro ⟨t, ht⟩
+      exact ⟨t, ht⟩
+  apply ShortComplex.ShortExact.mk'
+  · apply ShortComplex.exact_of_f_is_kernel
+    exact i.hom.kernel_is_kernel
+  · exact i.hom.kernel.inclusion_mono
+  · exact @Sheaf.epi_of_isLocallySurjective _ _ _ _ _ _ _ _ _ _ _
+      (underlyingSharp i) _ hLocal
 
 /-- A thickening is first order when the square of its kernel ideal is zero. -/
 def FirstOrderThickening {C D : Type u} [Category.{u} C] [Category.{u} D]

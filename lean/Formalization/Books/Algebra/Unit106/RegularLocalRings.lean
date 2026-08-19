@@ -110,6 +110,85 @@ theorem regular_graded
       (MvPolynomial (Fin d) (R ⧸ maximalIdeal R) ≃ₗ[R ⧸ maximalIdeal R]
         Formalization.Books.Algebra.Unit69.quasiRegularTarget R R
           (maximalIdeal R)) := by
+  /-
+  Proof roadmap (the regular-sequence shortcut is deliberately not used here).
+
+  Write `J := Ideal.ofList xs`, `k := R ⧸ J`, and
+  `P := MvPolynomial (Fin xs.length) k`.  The missing construction is the
+  injectivity of
+
+      Unit69.quasiRegularCanonicalMap R R xs.
+
+  Its surjectivity is already
+  `Unit69.quasiRegularCanonicalMap_surjective` in
+  `Unit69/QuasiRegularSequences.lean`.  Package the ring-case source as `P`
+  exactly as `Unit69.quasiRegular_graded_ring_identification` does: prove
+  `J • (⊤ : Submodule R R) = (J : Submodule R R)`, form the induced
+  `eQ : (R ⧸ (J • ⊤)) ≃ₗ[k] k`, and set
+
+      eSource := eQ.rTensor P ≪≫ₗ TensorProduct.lid k P,
+      phi := (Unit69.quasiRegularCanonicalMap R R xs).comp eSource.symm.
+
+  Establish the following local kernel package.  This is the exact bridge
+  absent from the imported Chapter 69 interface:
+
+  * give `LinearMap.ker phi` the ideal structure `K : Ideal P`; closure under
+    multiplication follows by expanding into monomials and using the public
+    lemmas `Unit69.quasiRegularCanonicalMap_monomial` and
+    `Unit69.quasiRegularMonomialMapQuotient_mk`;
+  * prove `Unit58.IsPolynomialGradedIdeal k xs.length K`, by applying
+    `DirectSum.component` to the canonical map and using
+    `MvPolynomial.homogeneousComponent`; and
+  * for every `n : ℕ`, use the restriction of `phi` to
+    `MvPolynomial.homogeneousSubmodule (Fin xs.length) k n` and the first
+    isomorphism theorem to construct
+
+      Unit58.polynomialQuotientComponent k xs.length K n ≃ₗ[k]
+        Unit69.quasiRegularPiece R R J n.
+
+  The last map is onto degreewise: start with
+  `Unit69.quasiRegularCanonicalMap_surjective`, retain the degree-`n`
+  homogeneous component of a preimage, and use the graded calculation from
+  the preceding bullet.  Convert its finrank to the `R`-module length of the
+  target with `Unit52.dimension_is_length`; this identifies
+  `Unit58.polynomialQuotientHilbertFunction k xs.length K` with
+  `Unit59.idealHilbertFunctionInteger J R` on nonnegative inputs.
+
+  The numerical declarations in the preceding two bullets are in
+  `Unit58/NoetherianGradedRings.lean`, `Unit59/NoetherianLocalRings.lean`, and
+  `Unit52/Length.lean`; they are already available through the current
+  `Unit103` import, so this proof needs no new import.
+
+  Now prove `K = ⊥` by contradiction.  The case `xs.length = 0` is also
+  available directly from `RingTheory.Sequence.IsRegular.nil` and
+  `Unit69.isQuasiRegular_of_isRegular`.  In the positive case apply
+  `Unit58.polynomial_quotient_hilbert_function_degree_lt` to a hypothetical
+  `K ≠ ⊥`.  Sum the resulting eventual binomial formula using
+  `Unit59.idealCumulativeHilbertFunction_eq_sum`: its cumulative degree is
+  strictly below `xs.length` (and is eventually constant in the theorem's
+  one-variable alternative).  On the other hand
+  `(Unit60.local_dimension_characterization R inferInstance d).out 0 1`,
+  together with `hd`, says `Unit59.d R R = d`; rewrite `J` to
+  `maximalIdeal R` with `hxs.1` and `xs.length` to `d` with `hxd`.  This is the
+  required degree contradiction.  Hence `phi`, and therefore the canonical
+  map, is injective.
+
+  `Unit60.local_dimension_characterization` is in `Unit60/Dimension.lean`.
+  Every `UnitN.foo` name in this roadmap abbreviates the fully qualified
+  `Formalization.Books.Algebra.UnitN.foo`.
+
+  Finally set `hq : Unit69.IsQuasiRegular R xs` to the injectivity just proved
+  paired with `Unit69.quasiRegularCanonicalMap_surjective`.  After `subst d`
+  and `rw [← hxs.1]`, the requested equivalence is exactly
+  `Unit69.quasiRegular_graded_ring_identification xs hq` wrapped in
+  `Nonempty`.
+
+  Dead end: `Unit69.isQuasiRegular_of_isRegular` asks for
+  `RingTheory.Sequence.IsRegular R xs`.  That fact is a conjunct of the later
+  theorem `regular_ring_CM`, whose intended proof uses `regular_graded` via
+  `regular_domain`; adding it as a hypothesis here or moving that theorem
+  earlier would make this chapter's dependency circular.
+  -/
   sorry
 
 /-! ## Basic properties -/

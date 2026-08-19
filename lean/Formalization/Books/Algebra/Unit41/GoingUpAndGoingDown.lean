@@ -869,174 +869,146 @@ noncomputable def supportSpectrumMap
     {p : PrimeSpectrum S // p ∈ Module.support S N} → PrimeSpectrum R :=
   fun p => PrimeSpectrum.comap (algebraMap R S) p.1
 
-theorem support_generalizingMap_of_finite_flat
-    {R S N : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    [AddCommGroup N] [Module R N] [Module S N] [IsScalarTower R S N]
-    [Module.Finite S N] [Module.Flat R N] :
-    GeneralizingMap (supportSpectrumMap (R := R) (S := S) (N := N)) := by
-  sorry
-/-
-  intro x y hxy
-  rcases x with ⟨q', hq'⟩
-  let p' : Ideal R := q'.asIdeal.comap (algebraMap R S)
-  have hp'prime : p'.IsPrime := by
-    dsimp [p']
-    infer_instance
-  have hq'over : q'.asIdeal.LiesOver p' := ⟨rfl⟩
-  let A := Localization.AtPrime p'
-  let B := Localization.AtPrime q'.asIdeal
-  let M := LocalizedModule q'.asIdeal.primeCompl N
-  let hAlgebraAB : Algebra A B := Localization.AtPrime.algebraOfLiesOver p' q'.asIdeal
-  let hModuleAM : Module A M := Module.compHom _ (algebraMap A B)
-  let hTowerRAM : IsScalarTower R A M := IsScalarTower.of_algebraMap_smul fun r x => by
-    change algebraMap A B (algebraMap R A r) • x = r • x
-    rw [← IsScalarTower.algebraMap_apply R A B]
-    exact algebraMap_smul B r x
-  let hTowerABM : IsScalarTower A B M := IsScalarTower.of_algebraMap_smul fun a m => by
-    change algebraMap A B a • m = a • m
-    rfl
-  have hflat : Formalization.Books.Algebra.Unit39.flat_at_prime_over
-      (R := R) (A := S) (M := N) q'.asIdeal :=
-    (Formalization.Books.Algebra.Unit39.flat_iff_localized_over_primes
-      (R := R) (A := S) (M := N)).mp
-      (inferInstance : Module.Flat R N) q'.asIdeal
-  have hflatA : Module.Flat A M := by
-    simpa [Formalization.Books.Algebra.Unit39.flat_at_prime_over, A, B, M] using hflat
-  have hM : Nontrivial M := by
-    change Nontrivial (LocalizedModule q'.asIdeal.primeCompl N)
-    exact hq'
-  have hM' : Nontrivial M := hM
-  have hmaxA : IsLocalRing.maximalIdeal A • (⊤ : Submodule A M) ≠ ⊤ := by
-    intro htop
-    have hmaptop :
-        Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
-            (⊤ : Submodule B M) = ⊤ := by
-      apply top_unique
-      intro m hm
-      have hmA : m ∈ IsLocalRing.maximalIdeal A • (⊤ : Submodule A M) := by
-        rw [htop]
-        exact hm
-      have hmR :
-          m ∈ Submodule.restrictScalars A
-            (Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
-              (⊤ : Submodule B M)) := by
-        rw [Ideal.smul_restrictScalars]
-        exact hmA
-      exact hmR
-    have hmaple :
-        Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A)
-          ≤ IsLocalRing.maximalIdeal B := by
-      rw [Ideal.map_le_iff_le_comap, IsLocalRing.maximalIdeal_comap]
-    have htopB :
-        IsLocalRing.maximalIdeal B • (⊤ : Submodule B M) = ⊤ := by
-      apply top_unique
+private lemma maximalIdeal_smul_ne_top_of_localized_module
+    {A B M : Type*} [CommRing A] [CommRing B] [AddCommGroup M]
+    [Algebra A B] [Module A M] [Module B M] [IsScalarTower A B M]
+    [Module.Finite B M] [IsLocalRing A] [IsLocalRing B]
+    [IsLocalHom (algebraMap A B)]
+    (hM : Nontrivial M) :
+    IsLocalRing.maximalIdeal A • (⊤ : Submodule A M) ≠ ⊤ := by
+  intro htop
+  have hmaptop :
+      Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
+          (⊤ : Submodule B M) = ⊤ := by
+    apply top_unique
+    intro m hm
+    have hmA : m ∈ IsLocalRing.maximalIdeal A • (⊤ : Submodule A M) := by
+      rw [htop]
+      exact hm
+    have hmR :
+        m ∈ Submodule.restrictScalars A
+          (Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
+            (⊤ : Submodule B M)) := by
+      rw [Ideal.smul_restrictScalars]
+      exact hmA
+    exact hmR
+  have hmaple :
+      Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A)
+        ≤ IsLocalRing.maximalIdeal B := by
+    rw [Ideal.map_le_iff_le_comap, IsLocalRing.maximalIdeal_comap]
+  have htopB :
+      IsLocalRing.maximalIdeal B • (⊤ : Submodule B M) = ⊤ := by
+    apply top_unique
+    calc
+      (⊤ : Submodule B M) =
+          Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
+            (⊤ : Submodule B M) := hmaptop.symm
+      _ ≤ IsLocalRing.maximalIdeal B • (⊤ : Submodule B M) :=
+        Submodule.smul_mono hmaple le_rfl
+  have hquot : Subsingleton
+      (M ⧸ IsLocalRing.maximalIdeal B • (⊤ : Submodule B M)) := by
+    rw [Submodule.Quotient.subsingleton_iff]
+    exact htopB
+  have hfiberBsub : Subsingleton
+      ((B ⧸ IsLocalRing.maximalIdeal B) ⊗[B] M) :=
+    (TensorProduct.quotTensorEquivQuotSMul M
+      (IsLocalRing.maximalIdeal B)).toEquiv.subsingleton
+  have hfiberB : Nontrivial
+      ((B ⧸ IsLocalRing.maximalIdeal B) ⊗[B] M) := by
+    change Nontrivial (IsLocalRing.ResidueField B ⊗[B] M)
+    rw [← not_subsingleton_iff_nontrivial,
+      IsLocalRing.subsingleton_tensorProduct,
+      not_subsingleton_iff_nontrivial]
+    exact hM
+  exact not_subsingleton_iff_nontrivial.mpr hfiberB hfiberBsub
+
+private lemma faithfullyFlat_of_localized_module
+    {A B M : Type*} [CommRing A] [CommRing B] [AddCommGroup M]
+    [Algebra A B] [Module A M] [Module B M] [IsScalarTower A B M]
+    [Module.Finite B M] [IsLocalRing A] [IsLocalRing B]
+    [IsLocalHom (algebraMap A B)]
+    (hflat : Module.Flat A M) (hM : Nontrivial M) :
+    Module.FaithfullyFlat A M := by
+  exact (Module.FaithfullyFlat.iff_flat_and_proper_ideal A M).2
+    ⟨hflat, by
+      intro I hI htop
+      apply maximalIdeal_smul_ne_top_of_localized_module (A := A) (B := B) hM
+      apply le_antisymm le_top
       calc
-        (⊤ : Submodule B M) =
-            Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) •
-              (⊤ : Submodule B M) := hmaptop.symm
-        _ ≤ IsLocalRing.maximalIdeal B • (⊤ : Submodule B M) :=
-          Submodule.smul_mono hmaple le_rfl
-    have hquot : Subsingleton
-        (M ⧸ IsLocalRing.maximalIdeal B • (⊤ : Submodule B M)) := by
-      rw [Submodule.Quotient.subsingleton_iff]
-      exact htopB
-    have hquot' : Subsingleton
-        (M ⧸ IsLocalRing.maximalIdeal B • (⊤ : Submodule B M)) := hquot
-    have hfiberBsub : Subsingleton
-        ((B ⧸ IsLocalRing.maximalIdeal B) ⊗[B] M) :=
-      (TensorProduct.quotTensorEquivQuotSMul M
-        (IsLocalRing.maximalIdeal B)).toEquiv.subsingleton
-    have hfiberB : Nontrivial
-        ((B ⧸ IsLocalRing.maximalIdeal B) ⊗[B] M) := by
-      change Nontrivial (IsLocalRing.ResidueField B ⊗[B] M)
-      rw [← not_subsingleton_iff_nontrivial,
-        IsLocalRing.subsingleton_tensorProduct,
-        not_subsingleton_iff_nontrivial]
-      exact hM
-    exact not_subsingleton_iff_nontrivial.mpr hfiberB hfiberBsub
-  have hffA : Module.FaithfullyFlat A M :=
-    (Module.FaithfullyFlat.iff_flat_and_proper_ideal A M).2
-      ⟨hflatA, by
-        intro I hI htop
-        apply hmaxA
-        apply le_antisymm le_top
-        calc
-          (⊤ : Submodule A M) = I • ⊤ := htop.symm
-          _ ≤ IsLocalRing.maximalIdeal A • ⊤ :=
-            Submodule.smul_mono (IsLocalRing.le_maximalIdeal hI) le_rfl⟩
-  have hpy : y.asIdeal ≤ p' := by
-    have h := (primeSpectrum_specializes_iff_ideal_inclusion
-      (PrimeSpectrum.comap (algebraMap R S) q') y).mp hxy
-    simpa [p'] using h
-  let K := y.asIdeal.ResidueField
-  let fAK : A →ₐ[R] K :=
-    IsLocalization.liftAlgHom (M := p'.primeCompl) (S := A)
-      (f := (Algebra.ofId R K)) (fun z => by
-      change IsUnit (algebraMap R K (z : R))
-      rw [isUnit_iff_ne_zero, ne_eq, not_congr Ideal.algebraMap_residueField_eq_zero]
-      intro hz
-      exact (show (z : R) ∉ p' from Ideal.mem_primeCompl_iff.mp z.2) (hpy hz))
-  let hAlgebraAK : Algebra A K := fAK.toRingHom.toAlgebra
-  let hModuleAK : Module A K := Module.compHom _ fAK.toRingHom
-  let hTowerRAK : IsScalarTower R A K :=
-    IsScalarTower.of_algebraMap_eq' (by
-      ext r
-      exact (fAK.commutes r).symm)
-  have hKfiber' : Nontrivial (M ⊗[A] K) :=
-    (Module.FaithfullyFlat.nontrivial_tensorProduct_iff_right
-      (R := A) (M := M) (N := K)).2 (by infer_instance)
-  have hKfiber : Nontrivial (K ⊗[A] M) :=
-    (TensorProduct.comm A M K).nontrivial_congr.mp hKfiber'
-  /- Prior attempt: the preceding tensor-fiber construction left the required
-     generalization witness as an unsolved existential. -/
-  have hpure : ∃ k : K, ∃ m : M, k ⊗ₜ[A] m ≠ 0 := by
-    by_contra h
-    have hsub : Subsingleton (K ⊗[A] M) := by
-      refine ⟨fun x y => ?_⟩
-      have hz : ∀ z : K ⊗[A] M, z = 0 := by
-        intro z
-        induction z using TensorProduct.induction_on with
-        | zero => rfl
-        | tmul k m =>
-            have hk : k ⊗ₜ[A] m = 0 := by
-              by_contra hkm
-              exact h ⟨k, m, hkm⟩
-            exact hk
-        | add x y hx hy => rw [hx, hy, add_zero]
-      exact (hz x).trans (hz y).symm
-    exact (not_subsingleton_iff_nontrivial.mpr hKfiber) hsub
-  obtain ⟨k, m, hkm⟩ := hpure
+        (⊤ : Submodule A M) = I • ⊤ := htop.symm
+        _ ≤ IsLocalRing.maximalIdeal A • ⊤ :=
+          Submodule.smul_mono (IsLocalRing.le_maximalIdeal hI) le_rfl⟩
+
+private def tensorPairIdeal
+    {A B K M : Type*} [CommRing A] [CommRing B] [Field K]
+    [AddCommGroup M] [Algebra A B] [Module A M] [Module B M]
+    [IsScalarTower A B M] [Algebra A K]
+    (k : K) (m : M) : Ideal B :=
+  { carrier := {b | k ⊗ₜ[A] (b • m) = 0}
+    zero_mem' := by simp
+    add_mem' := by
+      intro b c hb hc
+      change k ⊗ₜ[A] ((b + c) • m) = 0
+      rw [add_smul, TensorProduct.tmul_add, hb, hc, add_zero]
+    smul_mem' := by
+      intro b c hc
+      change k ⊗ₜ[A] ((b * c) • m) = 0
+      change k ⊗ₜ[A] (c • m) = 0 at hc
+      let fb : M →ₗ[A] M :=
+        { toFun := fun n => b • n
+          map_add' := by intro n n'; exact smul_add b n n'
+          map_smul' := by intro a n; exact smul_comm b a n }
+      have hmap := congrArg
+        (TensorProduct.map (LinearMap.id : K →ₗ[A] K) fb) hc
+      rw [mul_smul]
+      rw [TensorProduct.map_tmul, LinearMap.id_apply, map_zero] at hmap
+      dsimp [fb] at hmap
+      change k ⊗ₜ[A] (b • (c • m)) = 0 at hmap
+      exact hmap }
+
+private lemma exists_prime_comap_eq_of_disjoint
+    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
+    (P : Ideal A) [hP : P.IsPrime] (I : Ideal B)
+    (hdisj : Disjoint (P.map (algebraMap A B) + I : Set B)
+      (Submonoid.map (algebraMap A B).toMonoidHom P.primeCompl : Set B)) :
+    ∃ Q : Ideal B, Q.IsPrime ∧ Q.comap (algebraMap A B) = P ∧ I ≤ Q := by
+  let L : Ideal B := P.map (algebraMap A B) + I
+  have hdisjL : Disjoint (L : Set B)
+      (Submonoid.map (algebraMap A B).toMonoidHom P.primeCompl : Set B) := by
+    simpa [L] using hdisj
+  obtain ⟨Q, hQprime, hIle, hQdisj⟩ :=
+    L.exists_le_prime_disjoint
+      (Submonoid.map (algebraMap A B).toMonoidHom P.primeCompl) hdisjL
+  have hQunder : Q.comap (algebraMap A B) ≤ P := by
+    intro a haQ
+    by_contra haP
+    apply Set.disjoint_left.mp hQdisj
+    · exact haQ
+    · exact ⟨a, haP, rfl⟩
+  have hmapQ : P.map (algebraMap A B) ≤ Q :=
+    le_trans (by simpa [L] using (le_add_left le_rfl : P.map (algebraMap A B) ≤ L)) hIle
+  have hPunder : P ≤ Q.comap (algebraMap A B) := by
+    exact (Ideal.map_le_iff_le_comap).mp hmapQ
+  exact ⟨Q, hQprime, le_antisymm hQunder hPunder,
+    le_trans (by simpa [L] using (le_add_right le_rfl : I ≤ L)) hIle⟩
+
+private lemma prime_of_tensor_pair
+    {A B K M : Type*} [CommRing A] [CommRing B] [Field K]
+    [AddCommGroup M] [Algebra A B] [Module A M] [Module B M]
+    [IsScalarTower A B M] [Algebra A K]
+    (k : K) (m : M) (hkm : k ⊗ₜ[A] m ≠ 0) :
+    ∃ Q : Ideal B,
+      Q.IsPrime ∧ Q.comap (algebraMap A B) = Ideal.comap (algebraMap A K) ⊥ ∧
+        (Submodule.span B {m}).annihilator ≤ Q := by
   let P : Ideal A := Ideal.comap (algebraMap A K) ⊥
-  let J : Ideal B :=
-    { carrier := {b | k ⊗ₜ[A] (b • m) = 0}
-      zero_mem' := by simp
-      add_mem' := by
-        intro b c hb hc
-        change k ⊗ₜ[A] ((b + c) • m) = 0
-        rw [add_smul, TensorProduct.tmul_add, hb, hc, add_zero]
-      smul_mem' := by
-        intro b c hc
-        change k ⊗ₜ[A] ((b * c) • m) = 0
-        change k ⊗ₜ[A] (c • m) = 0 at hc
-        let fb : M →ₗ[A] M :=
-          { toFun := fun n => b • n
-            map_add' := by intro n n'; exact smul_add b n n'
-            map_smul' := by intro a n; exact smul_comm b a n }
-        have hmap := congrArg
-          (TensorProduct.map (LinearMap.id : K →ₗ[A] K) fb) hc
-        rw [mul_smul]
-        rw [TensorProduct.map_tmul, LinearMap.id_apply, map_zero] at hmap
-        dsimp [fb] at hmap
-        change k ⊗ₜ[A] (b • (c • m)) = 0 at hmap
-        exact hmap }
+  let J : Ideal B := tensorPairIdeal (A := A) (B := B) (K := K) (M := M) k m
   have hPmap : P.map (algebraMap A B) ≤ J := by
     rw [Ideal.map_le_iff_le_comap]
     intro a ha
     change k ⊗ₜ[A] ((algebraMap A B a) • m) = 0
     rw [IsScalarTower.algebraMap_smul B a m, TensorProduct.tmul_smul]
-    have ha' : fAK a = 0 := ha
-    change fAK a • (k ⊗ₜ[A] m) = 0
-    rw [ha', zero_smul]
+    have ha' : algebraMap A K a = 0 := ha
+    rw [← IsScalarTower.algebraMap_smul K a (k ⊗ₜ[A] m), ha', zero_smul]
   have hAnn : (Submodule.span B {m}).annihilator ≤ J := by
     intro b hb
     change k ⊗ₜ[A] (b • m) = 0
@@ -1060,48 +1032,132 @@ theorem support_generalizingMap_of_finite_flat
     have hka : algebraMap A K a ≠ 0 := by
       intro hka
       exact ha hka
-    have hz0' : algebraMap A K a • (k ⊗ₜ[A] m) = 0 := by
-      simpa [fAK] using hz0
+    rw [← IsScalarTower.algebraMap_smul K a (k ⊗ₜ[A] m)] at hz0
+    have hz0' : algebraMap A K a • (k ⊗ₜ[A] m) = 0 := hz0
     exact hkm ((smul_eq_zero.mp hz0').resolve_left hka)
-  obtain ⟨Q, hQprime, hIle, hQdisj⟩ :=
-    (P.map (algebraMap A B) + (Submodule.span B {m}).annihilator).exists_le_prime_disjoint
-      T hdisj
+  have hP : P.IsPrime := by
+    dsimp [P]
+    infer_instance
+  letI : P.IsPrime := hP
+  obtain ⟨Q, hQprime, hQeq, hQann⟩ :=
+    exists_prime_comap_eq_of_disjoint P (Submodule.span B {m}).annihilator hdisj
+  exact ⟨Q, hQprime, hQeq, hQann⟩
+
+private lemma exists_prime_of_faithfullyFlat_tensor
+    {A B K M : Type*} [CommRing A] [CommRing B] [Field K]
+    [AddCommGroup M] [Algebra A B] [Module A M] [Module B M]
+    [IsScalarTower A B M] [Algebra A K]
+    [Module.FaithfullyFlat A M]
+    (hKfiber : Nontrivial (K ⊗[A] M)) :
+    ∃ k : K, ∃ m : M, ∃ Q : Ideal B,
+      k ⊗ₜ[A] m ≠ 0 ∧ Q.IsPrime ∧
+        Q.comap (algebraMap A B) = Ideal.comap (algebraMap A K) ⊥ ∧
+          (Submodule.span B {m}).annihilator ≤ Q := by
+  have hpure : ∃ k : K, ∃ m : M, k ⊗ₜ[A] m ≠ 0 := by
+    by_contra h
+    have hsub : Subsingleton (K ⊗[A] M) := by
+      refine ⟨fun x y => ?_⟩
+      have hz : ∀ z : K ⊗[A] M, z = 0 := by
+        intro z
+        induction z using TensorProduct.induction_on with
+        | zero => rfl
+        | tmul k m =>
+            have hkm : k ⊗ₜ[A] m = 0 := by
+              by_contra hkm
+              exact h ⟨k, m, hkm⟩
+            exact hkm
+        | add x y hx hy => rw [hx, hy, add_zero]
+      exact (hz x).trans (hz y).symm
+    exact (not_subsingleton_iff_nontrivial.mpr hKfiber) hsub
+  obtain ⟨k, m, hkm⟩ := hpure
+  obtain ⟨Q, hQprime, hQeq, hQann⟩ :=
+    prime_of_tensor_pair (A := A) (B := B) (K := K) k m hkm
+  exact ⟨k, m, Q, hkm, hQprime, hQeq, hQann⟩
+
+theorem support_generalizingMap_of_finite_flat
+    {R S N : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module R N] [Module S N] [IsScalarTower R S N]
+    [Module.Finite S N] [Module.Flat R N] :
+    GeneralizingMap (supportSpectrumMap (R := R) (S := S) (N := N)) := by
+  intro x y hxy
+  rcases x with ⟨q', hq'⟩
+  let p' : Ideal R := q'.asIdeal.comap (algebraMap R S)
+  have hp'prime : p'.IsPrime := by
+    dsimp [p']
+    infer_instance
+  let A := Localization.AtPrime p'
+  let B := Localization.AtPrime q'.asIdeal
+  let M := LocalizedModule q'.asIdeal.primeCompl N
+  letI : Algebra A B := Localization.AtPrime.algebraOfLiesOver p' q'.asIdeal
+  letI : Module A M := Module.compHom _ (algebraMap A B)
+  letI : IsScalarTower A B M := IsScalarTower.of_algebraMap_smul fun a m => by
+    change algebraMap A B a • m = a • m
+    rfl
+  letI : IsLocalHom (algebraMap A B) := by
+    rw [RingHom.algebraMap_toAlgebra]
+    exact Localization.isLocalHom_localRingHom p' q'.asIdeal
+      (algebraMap R S) (by rfl)
+  have hflat : Formalization.Books.Algebra.Unit39.flat_at_prime_over
+      (R := R) (A := S) (M := N) q'.asIdeal :=
+    (Formalization.Books.Algebra.Unit39.flat_iff_localized_over_primes
+      (R := R) (A := S) (M := N)).mp
+      (inferInstance : Module.Flat R N) q'.asIdeal
+  have hflatA : Module.Flat A M := by
+    simpa [Formalization.Books.Algebra.Unit39.flat_at_prime_over, A, B, M] using hflat
+  have hM : Nontrivial M := by
+    change Nontrivial (LocalizedModule q'.asIdeal.primeCompl N)
+    exact hq'
+  letI : Module.FaithfullyFlat A M :=
+    faithfullyFlat_of_localized_module (A := A) (B := B) (M := M) hflatA hM
+  have hpy : y.asIdeal ≤ p' := by
+    have h := (primeSpectrum_specializes_iff_ideal_inclusion
+      (PrimeSpectrum.comap (algebraMap R S) q') y).mp hxy
+    simpa [p'] using h
+  let K := y.asIdeal.ResidueField
+  let fAK : A →ₐ[R] K :=
+    IsLocalization.liftAlgHom (M := p'.primeCompl) (S := A)
+      (f := (Algebra.ofId R K)) (fun z => by
+      change IsUnit (algebraMap R K (z : R))
+      rw [isUnit_iff_ne_zero, ne_eq, not_congr Ideal.algebraMap_residueField_eq_zero]
+      intro hz
+      exact (show (z : R) ∉ p' from Ideal.mem_primeCompl_iff.mp z.2) (hpy hz))
+  letI : Algebra A K := fAK.toRingHom.toAlgebra
+  letI : Module A K := Module.compHom _ fAK.toRingHom
+  have hKfiber' : Nontrivial (M ⊗[A] K) :=
+    (Module.FaithfullyFlat.nontrivial_tensorProduct_iff_right
+      (R := A) (M := M) (N := K)).2 (by infer_instance)
+  have hKfiber : Nontrivial (K ⊗[A] M) :=
+    (TensorProduct.comm A M K).nontrivial_congr.mp hKfiber'
+  obtain ⟨k, m, Q, hkm, hQprime, hQeq, hQann⟩ :=
+    exists_prime_of_faithfullyFlat_tensor (A := A) (B := B) (K := K) (M := M) hKfiber
+  let P : Ideal A := Ideal.comap (algebraMap A K) ⊥
   let qB : PrimeSpectrum B := ⟨Q, hQprime⟩
-  have hQunder : Q.comap (algebraMap A B) ≤ P := by
-    intro a haQ
-    by_contra haP
-    apply Set.disjoint_left.mp hQdisj
-    · exact haQ
-    · exact ⟨a, haP, rfl⟩
-  have hmapQ : P.map (algebraMap A B) ≤ Q :=
-    le_trans (le_add_left le_rfl) hIle
-  have hPunder : P ≤ Q.comap (algebraMap A B) := by
-    rw [Ideal.le_comap_iff_map_le]
-    exact hmapQ
-  have hQeq : Q.comap (algebraMap A B) = P := le_antisymm hQunder hPunder
   have hqBsupport : qB ∈ Module.support B M := by
     rw [Module.mem_support_iff_exists_annihilator]
-    exact ⟨m, le_trans le_add_right hIle⟩
+    exact ⟨m, hQann⟩
   let qS : PrimeSpectrum S := PrimeSpectrum.comap (algebraMap S B) qB
   have hqSsupport : qS ∈ Module.support S N := by
     rw [Module.mem_support_iff']
     obtain ⟨n, hn⟩ := localizedModule_support_witness
-      q'.asIdeal.primeCompl Q m (by simpa [B] using le_trans le_add_right hIle)
+      q'.asIdeal.primeCompl Q m (by simpa [B] using hQann)
     refine ⟨n, ?_⟩
     intro r hr hrn
     apply hn r
     · intro hrQ
       apply hr
-      exact hrQ
+      simpa [qS] using hrQ
     · exact hrn
   have hqSle : qS.asIdeal ≤ q'.asIdeal := by
     have hdisj : Disjoint (q'.asIdeal.primeCompl : Set S) qS.asIdeal := by
-      rw [← PrimeSpectrum.localization_comap_range B q'.asIdeal.primeCompl]
-      exact ⟨qB, rfl⟩
+      have hrange : qS ∈ Set.range (PrimeSpectrum.comap (algebraMap S B)) :=
+        ⟨qB, rfl⟩
+      rw [PrimeSpectrum.localization_comap_range B q'.asIdeal.primeCompl] at hrange
+      exact hrange
     exact disjoint_compl_left_iff.mp hdisj
   have hspec : qS ⤳ q' :=
     (primeSpectrum_specializes_iff_ideal_inclusion q' qS).2 hqSle
-  refine ⟨⟨qS, hqSsupport⟩, hspec, ?_⟩
+  refine ⟨⟨qS, hqSsupport⟩, ?_, ?_⟩
+  · exact (subtype_specializes_iff _ _).2 hspec
   apply PrimeSpectrum.ext
   ext r
   change algebraMap R B r ∈ Q ↔ r ∈ y.asIdeal
@@ -1116,6 +1172,6 @@ theorem support_generalizingMap_of_finite_flat
     _ ↔ algebraMap R K r = 0 := by rw [fAK.commutes]
     _ ↔ r ∈ y.asIdeal := Ideal.algebraMap_residueField_eq_zero
 
--/
+
 
 end

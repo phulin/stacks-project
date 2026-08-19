@@ -146,7 +146,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       convert Submodule.smul_mem _ (a : ℝ) hcx using 1
       · ext j
         simp
-    · simpa [pQ] using hx
+    · simp [pQ] using hx
   have hcast_u (x : Fin m → ℚ) (hx : x ∈ pQ) :
       (fun j => (x j : ℝ)) ∈
         Submodule.span ℝ

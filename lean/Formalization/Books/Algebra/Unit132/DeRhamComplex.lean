@@ -1313,8 +1313,8 @@ theorem deRhamMapData_exists
     Nonempty (DeRhamMapData (A := A) (A' := A') (B := B) (B' := B')) := by
   classical
   let targetModule : Module B (ModuleOfDifferentials A' B') := inferInstance
-  letI : Module B (ModuleOfDifferentials A' B') := targetModule
-  letI : IsScalarTower B B' (ModuleOfDifferentials A' B') :=
+  let : Module B (ModuleOfDifferentials A' B') := targetModule
+  let : IsScalarTower B B' (ModuleOfDifferentials A' B') :=
     KaehlerDifferential.isScalarTower_of_tower
       (R := A') (S := B') (R₁ := B) (R₂ := B')
   let f : ModuleOfDifferentials A B →ₗ[B] ModuleOfDifferentials A' B' :=
@@ -1381,7 +1381,7 @@ theorem deRhamMapData_exists
                     (Function.update m i ((algebraMap B B' c) • x)) := by
                 congr 1
                 funext j
-                by_cases h : j = i <;> simp [h, IsScalarTower.algebraMap_smul]
+                by_cases h : j = i <;> simp [h]
               _ = (algebraMap B B' c) •
                     exteriorPower.ιMulti B' p (Function.update m i x) := by
                 exact (exteriorPower.ιMulti B' p).toMultilinearMap.map_update_smul
@@ -1403,7 +1403,7 @@ theorem deRhamMapData_exists
               (IsScalarTower.algebraMap_smul B a x).symm
             calc
               C (a • x) = C ((algebraMap A B a) • x) := by
-                simpa only [hx]
+                simp only [hx]
               _ = (algebraMap A B a) • C x := C.map_smul _ _
               _ = ((algebraMap B B').comp (algebraMap A B)) a • C x :=
                 (IsScalarTower.algebraMap_smul (R := B) (A := B')
@@ -1419,7 +1419,7 @@ theorem deRhamMapData_exists
       rw [LinearMap.map_smul C]
       dsimp [C]
       rw [exteriorPower.alternatingMapLinearEquiv_apply_ιMulti]
-      simp only [AlternatingMap.compLinearMap_apply, Function.comp_apply]
+      simp only [AlternatingMap.compLinearMap_apply]
       have h : (fun i => f (universalDifferentialLinearMap A B (b i))) =
           (fun i => universalDifferentialLinearMap A' B' ((algebraMap B B') (b i))) := by
         funext i

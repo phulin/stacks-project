@@ -519,7 +519,69 @@ theorem approximate_complex_graded_intersection_le
     LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N) ≤
       I ^ (n + 1) • (⊤ : Submodule A N) ⊔
         (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) := by
-  sorry
+  have hdiff (x : M) : g' x - g x ∈ I ^ (c + 1) • (⊤ : Submodule A N) := by
+    have h := congrArg (fun k : M →ₗ[A] N ⧸ (I ^ (c + 1) • (⊤ : Submodule A N)) => k x)
+      (show (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g' =
+        (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g from hg)
+    exact (Submodule.Quotient.eq _).mp h
+  have hdiff_pow (r : ℕ) (a : M) (ha : a ∈ I ^ r • (⊤ : Submodule A M)) :
+      g' a - g a ∈ I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+    refine Submodule.smul_induction_on ha ?_ ?_
+    · intro s hs x hx
+      rw [map_smul, map_smul, ← smul_sub]
+      have hmem : s • (g' x - g x) ∈ I ^ r • (I ^ (c + 1) • (⊤ : Submodule A N)) :=
+        Submodule.smul_mem_smul hs (hdiff x)
+      have hpow : I ^ r • (I ^ (c + 1) • (⊤ : Submodule A N)) =
+          I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+        rw [← Submodule.smul_assoc]
+        have hprod : I ^ r • I ^ (c + 1) = I ^ (r + c + 1) := by
+          change I ^ r * I ^ (c + 1) = I ^ (r + c + 1)
+          exact (I.pow_add (m := r) (n := c + 1) (by omega)).symm
+        rw [hprod]
+      exact hpow ▸ hmem
+    · intro x y hx hy
+      rw [map_add, map_add]
+      convert add_mem hx hy using 1; abel
+  intro x hx
+  rcases hx.1 with ⟨a, rfl⟩
+  by_cases hcn : c ≤ n
+  · have hgm : g a ∈ LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N) :=
+      ⟨⟨a, rfl⟩, hx.2⟩
+    rcases hc n hcn hgm with ⟨a', ha', hga'⟩
+    have hd := hdiff_pow (n - c) a' ha'
+    have he : n - c + c + 1 = n + 1 := by omega
+    have hd' : g' a' - g a' ∈ I ^ (n + 1) • (⊤ : Submodule A N) := by
+      simpa [he] using hd
+    have hd'n : g' a' - g a' ∈ I ^ n • (⊤ : Submodule A N) := by
+      exact (Submodule.smul_mono
+        (Ideal.pow_le_pow_right (by omega)) le_rfl) hd'
+    have hga'n : g a' ∈ I ^ n • (⊤ : Submodule A N) := by
+      simpa [hga'] using hx.2
+    have hg'a'n : g' a' ∈ I ^ n • (⊤ : Submodule A N) := by
+      have heq : g' a' = g a' + (g' a' - g a') := by abel
+      rw [heq]
+      exact add_mem hga'n hd'n
+    have hy : g a - g' a' ∈ I ^ (n + 1) • (⊤ : Submodule A N) := by
+      rw [← hga']
+      simpa only [neg_sub] using (neg_mem hd')
+    refine Submodule.mem_sup.mpr ⟨g a - g' a', hy, g' a',
+      ⟨⟨a', rfl⟩, hg'a'n⟩, ?_⟩
+    abel
+  · have hd : g' a - g a ∈ I ^ (n + 1) • (⊤ : Submodule A N) := by
+      exact (Submodule.smul_mono
+        (Ideal.pow_le_pow_right (by omega)) le_rfl) (hdiff a)
+    have hdn : g' a - g a ∈ I ^ n • (⊤ : Submodule A N) := by
+      exact (Submodule.smul_mono
+        (Ideal.pow_le_pow_right (by omega)) le_rfl) hd
+    have hg'an : g' a ∈ I ^ n • (⊤ : Submodule A N) := by
+      have heq : g' a = g a + (g' a - g a) := by abel
+      rw [heq]
+      exact add_mem hx.2 hdn
+    have hy : g a - g' a ∈ I ^ (n + 1) • (⊤ : Submodule A N) := by
+      simpa only [neg_sub] using (neg_mem hd)
+    refine Submodule.mem_sup.mpr ⟨g a - g' a, hy, g' a,
+      ⟨⟨a, rfl⟩, hg'an⟩, ?_⟩
+    abel
 
 /-- The equality of the two degreewise denominator submodules obtained by
 applying the preceding inclusion in both directions. -/
@@ -536,7 +598,27 @@ theorem approximate_complex_graded_denominator_eq
         (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) =
       I ^ (n + 1) • (⊤ : Submodule A N) ⊔
         (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) := by
-  sorry
+  have hg' : (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g =
+      (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g' := hg.symm
+  have hgg' : LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N) ≤
+      I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+        (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) :=
+    approximate_complex_graded_intersection_le I c g g' hc hg n
+  have hg'g : LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N) ≤
+      I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+        (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) :=
+    approximate_complex_graded_intersection_le I c g' g hc' hg' n
+  have hleft : I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+      (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) ≤
+      I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+        (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) :=
+    sup_mono le_rfl hgg'
+  have hright : I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+      (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) ≤
+      I ^ (n + 1) • (⊤ : Submodule A N) ⊔
+        (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) :=
+    sup_mono le_rfl hg'g
+  exact le_antisymm hleft hright
 
 /-- Congruent exact complexes have isomorphic associated graded cokernels as
 graded `Gr_I(A)`-modules. -/

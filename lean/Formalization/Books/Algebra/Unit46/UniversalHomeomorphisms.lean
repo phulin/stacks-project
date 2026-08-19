@@ -359,7 +359,7 @@ theorem pPowerFieldGenerated_iff
     (p : ℕ) (hp : p.Prime) :
     pPowerFieldGenerated (k := k) (k' := k') p ↔
       Function.Surjective (algebraMap k k') ∨
-        ∃ _hk : CharP k p, ∃ _hk' : CharP k' p, IsPurelyInseparable k k' := by
+        ∃ _ : CharP k p, ∃ _ : CharP k' p, IsPurelyInseparable k k' := by
   classical
   let T : Set k' := {x : k' | ∃ n : ℕ, 0 < n ∧
     x ^ (p ^ n) ∈ (algebraMap k k').range ∧

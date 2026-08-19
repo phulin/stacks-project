@@ -247,8 +247,8 @@ theorem isAdicComplete_iff_complete_for_iAdicRingTopology
       IsCompleteSeparatedTopologicalAddGroupFor R I.adicTopology := by
   let _ : TopologicalSpace R := I.adicTopology
   let _ : NonarchimedeanRing R := I.nonarchimedean
-  letI : UniformSpace R := IsTopologicalAddGroup.rightUniformSpace R
-  letI : IsUniformAddGroup R := isUniformAddGroup_of_addCommGroup
+  let _ : UniformSpace R := IsTopologicalAddGroup.rightUniformSpace R
+  let _ : IsUniformAddGroup R := isUniformAddGroup_of_addCommGroup
   have hI : IsAdic I := rfl
   constructor
   · intro h
@@ -256,9 +256,9 @@ theorem isAdicComplete_iff_complete_for_iAdicRingTopology
     exact ⟨IsTopologicalAddGroup.rightUniformSpace R, rfl, inferInstance,
       hcomplete.1, hcomplete.2⟩
   · rintro ⟨u, hu, hu_uniform, hcomplete, ht2⟩
-    letI : UniformSpace R := u
-    letI : TopologicalSpace R := u.toTopologicalSpace
-    letI : IsUniformAddGroup R := hu_uniform
+    let _ : UniformSpace R := u
+    let _ : TopologicalSpace R := u.toTopologicalSpace
+    let _ : IsUniformAddGroup R := hu_uniform
     have hI' : IsAdic I := hu
     apply (IsAdic.isAdicComplete_iff (R := R) (I := I) hI').mpr
     refine ⟨hcomplete, ?_⟩

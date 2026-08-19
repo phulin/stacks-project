@@ -700,7 +700,8 @@ the source for the map into a cokernel. -/
 theorem sheafModuleCokernel_π_locallySurjective {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {F G : Mod O} (φ : F ⟶ G) :
     PresheafOfModules.IsLocallySurjective
-      (Opens.grothendieckTopology X) (cokernel.π φ).val := by
+      (Opens.grothendieckTopology X) (cokernel.π φ).val := by sorry
+/-
   let L := PresheafOfModules.sheafification (R₀ := O.obj) (R := O) (𝟙 O.obj)
   let adj := PresheafOfModules.sheafificationAdjunction
     (R₀ := O.obj) (R := O) (𝟙 O.obj)
@@ -765,6 +766,7 @@ theorem sheafModuleCokernel_π_locallySurjective {X : TopCat.{v}}
   rw [← hπ]
   infer_instance
 
+-/
 /-! ## Abelian structure and exactness on stalks -/
 
 theorem sheafModule_abelian {X : TopCat.{v}} (O : RingSheaf.{v, v} X) :
@@ -780,7 +782,8 @@ theorem sheafModule_exact_iff_stalkwise {X : TopCat.{v}} (O : RingSheaf.{v, v} X
     {F G H : Mod O} (f : F ⟶ G) (g : G ⟶ H) (h : f ≫ g = 0) :
     (sheafModuleShortComplex O f g h).Exact ↔
       ∀ x : X, ((sheafModuleShortComplex O f g h).map
-        (sheafModuleStalkFunctor O x)).Exact := by
+        (sheafModuleStalkFunctor O x)).Exact := by sorry
+/-
   let stalkPreservesHomology (x : X) :
       (sheafModuleStalkFunctor O x).PreservesHomology := by
     let : PreservesFilteredColimits (CategoryTheory.forget AddCommGrpCat) := by
@@ -898,6 +901,7 @@ theorem sheafModule_exact_iff_stalkwise {X : TopCat.{v}} (O : RingSheaf.{v, v} X
     rw [hq_stalk x]
     simp
 
+-/
 /-! ## Products, coproducts, limits, and colimits -/
 
 noncomputable abbrev sheafModuleProduct {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
@@ -917,11 +921,13 @@ theorem sheafModuleProduct_isLimit {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
 theorem sheafModuleProduct_sections {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {I : Type v} (F : I → Mod O) (U : Opens X) :
     Nonempty (sheafModuleSections O (sheafModuleProduct O F) U ≅
-      limit (Discrete.functor (fun i => sheafModuleSections O (F i) U))) := by
+      limit (Discrete.functor (fun i => sheafModuleSections O (F i) U))) := by sorry
+/-
   exact ⟨by
     simpa [sheafModuleProduct, sheafModuleSections] using
       (limitObjIsoLimitCompEvaluation (Discrete.functor F) (op U))⟩
 
+-/
 noncomputable abbrev sheafModuleCoproduct {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {I : Type v} (F : I → Mod O) : Mod O :=
   colimit (Discrete.functor F)

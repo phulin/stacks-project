@@ -1951,7 +1951,14 @@ theorem shifted_d2_sq (A : DoubleComplex C) (a b p q : ℤ) :
 theorem shifted_comm (A : DoubleComplex C) (a b p q : ℤ) :
     shiftedD2Component A a b p q ≫ shiftedD1Component A a b p (q + 1) =
       shiftedD1Component A a b p q ≫ shiftedD2Component A a b (p + 1) q := by
-  sorry
+  dsimp [shiftedD1Component, shiftedD2Component]
+  simp only [Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+  rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d1 (p + a) r)
+    (show q + b + 1 = q + 1 + b by lia)]
+  rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d2 r (q + b))
+    (show p + a + 1 = p + 1 + a by lia)]
+  simpa [Category.assoc, smul_smul, mul_comm] using
+    congrArg (fun f => f ≫ eqToHom (by lia)) (A.comm (p + a) (q + b))
 
 /-- The shifted double complex from the source. -/
 def doubleComplexShift (A : DoubleComplex C) (a b : ℤ) : DoubleComplex C where
@@ -1969,12 +1976,13 @@ def totalizationShiftSign (p _q _a b : ℤ) : ℤˣ := (p * b).negOnePow
 theorem totalizationShiftSign_first (p _q _a b : ℤ) :
     totalizationShiftSign (p + 1) q a b =
       b.negOnePow * totalizationShiftSign p q a b := by
-  sorry
+  dsimp [totalizationShiftSign]
+  rw [show (p + 1) * b = p * b + b by ring, Int.negOnePow_add, mul_comm]
 
 theorem totalizationShiftSign_second (p _q _a _b : ℤ) :
     totalizationShiftSign p (q + 1) a b =
       totalizationShiftSign p q a b := by
-  sorry
+  rfl
 
 structure TotalComplexShiftData [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) where
@@ -1994,7 +2002,326 @@ structure TotalComplexShiftData [HasCountableCoproducts C]
 theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) :
     Nonempty (TotalComplexShiftData A a b) := by
-  sorry
+  classical
+  have e_hom_obj (n p : ℤ) :
+      A.obj p (n + (a + b) - p) =
+        (doubleComplexShift A a b).obj (p - a) (n - (p - a)) := by
+    dsimp [doubleComplexShift]
+    congr 1 <;> ring
+  have e_inv_obj (n r : ℤ) :
+      (doubleComplexShift A a b).obj r (n - r) =
+        A.obj (r + a) (n + (a + b) - (r + a)) := by
+    dsimp [doubleComplexShift]
+    congr 1 <;> ring
+  let e : ∀ n : ℤ,
+      (∐ fun p : ℤ => A.obj p (n + (a + b) - p)) ≅
+        (∐ fun r : ℤ => (doubleComplexShift A a b).obj r (n - r)) :=
+    fun n =>
+      { hom := Sigma.desc (fun p =>
+          totalizationShiftSign p (n + (a + b) - p) a b •
+            (eqToHom (e_hom_obj n p) ≫
+              Sigma.ι (fun r : ℤ =>
+                (doubleComplexShift A a b).obj r (n - r)) (p - a)))
+        inv := Sigma.desc (fun r =>
+            totalizationShiftSign (r + a) (n + (a + b) - (r + a)) a b •
+            (eqToHom (e_inv_obj n r) ≫
+              Sigma.ι (fun p : ℤ => A.obj p (n + (a + b) - p)) (r + a)))
+        hom_inv_id := by
+          apply Sigma.hom_ext
+          intro p
+          rw [← Category.assoc, Sigma.ι_desc]
+          rw [Linear.units_smul_comp]
+          rw [Category.assoc, Sigma.ι_desc]
+          rw [Linear.comp_units_smul]
+          simp only [smul_smul, Int.units_mul_self, one_smul]
+          rw [← Category.assoc, eqToHom_trans]
+          have hsign :
+              totalizationShiftSign p (n + (a + b) - p) a b *
+                  totalizationShiftSign (p - a + a)
+                    (n + (a + b) - (p - a + a)) a b = 1 := by
+            dsimp [totalizationShiftSign]
+            rw [show (p - a + a) * b = p * b by ring]
+            exact Int.units_mul_self _
+          rw [hsign, one_smul]
+          rw [← eqToHom_naturality
+            (fun t : ℤ => Sigma.ι (fun p : ℤ => A.obj p (n + (a + b) - p)) t)
+            (show p = p - a + a by ring)]
+          simp
+        inv_hom_id := by
+          apply Sigma.hom_ext
+          intro r
+          rw [← Category.assoc, Sigma.ι_desc]
+          rw [Linear.units_smul_comp]
+          rw [Category.assoc, Sigma.ι_desc]
+          rw [Linear.comp_units_smul]
+          simp only [smul_smul, Int.units_mul_self, one_smul]
+          rw [← Category.assoc, eqToHom_trans]
+          rw [← eqToHom_naturality
+            (fun t : ℤ => Sigma.ι
+              (fun r : ℤ => (doubleComplexShift A a b).obj r (n - r)) t)
+            (show r = r + a - a by ring)]
+          simp }
+  have e_component_shift (k r : ℤ) :
+      Sigma.ι (fun p : ℤ => A.obj p (k + (a + b) + 1 - p)) r ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          (e (k + 1)).hom =
+        totalizationShiftSign r (k + 1 + (a + b) - r) a b •
+          (eqToHom (by congr 1 <;> ring) ≫
+            eqToHom (e_hom_obj (k + 1) r) ≫
+            Sigma.ι (fun p : ℤ =>
+              (doubleComplexShift A a b).obj p (k + 1 - p)) (r - a)) := by
+    ring_nf
+    dsimp [e]
+    rw [eqToHom_naturality_assoc
+      (fun d : ℤ => Sigma.ι (fun p : ℤ => A.obj p (d - p)) r)
+      (show k + (a + b) + 1 = k + 1 + (a + b) by ring)]
+    rw [Sigma.ι_desc]
+    rw [Linear.comp_units_smul]
+    simp [Category.assoc, totalizationShiftSign, smul_smul]
+  have e_component_shift_expanded (k r : ℤ) :
+      Sigma.ι (fun p : ℤ => A.obj p (k + (a + b) + 1 - p)) r ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          Sigma.desc (fun p : ℤ =>
+            totalizationShiftSign p (1 + k + a + b - p) a b •
+              (eqToHom (e_hom_obj (k + 1) p) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (k + 1 - r)) (p - a))) =
+        totalizationShiftSign r (1 + k + a + b - r) a b •
+          (eqToHom (by congr 1 <;> ring) ≫
+            eqToHom (e_hom_obj (k + 1) r) ≫
+            Sigma.ι (fun p : ℤ =>
+              (doubleComplexShift A a b).obj p (k + 1 - p)) (r - a)) := by
+    convert e_component_shift k r using 1 <;> simp [e] <;> ring
+
+  let iso :
+      (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (a + b)).obj
+          (totalComplex A) ≅
+        totalComplex (doubleComplexShift A a b) :=
+    HomologicalComplex.Hom.isoOfComponents e (by
+      intro n m hnm
+      have hnm' : n + 1 = m := by
+        simpa only [ComplexShape.up_Rel] using hnm
+      subst m
+      apply Sigma.hom_ext
+      intro p
+      have htransport_total {i j : ℤ} (h : i + 1 = j) :
+          ((h ▸ (totalDifferential A i :
+              (∐ fun p : ℤ => A.obj p (i - p)) ⟶
+                ∐ fun p : ℤ => A.obj p (i + 1 - p))) :
+            (∐ fun p : ℤ => A.obj p (i - p)) ⟶
+              ∐ fun p : ℤ => A.obj p (j - p)) =
+            totalDifferential A i ≫
+              eqToHom (by
+                congr 1 <;> simp [h]) := by
+        subst j <;> simp
+      dsimp [e, totalComplex, CochainComplex.shiftFunctor]
+      ring_nf
+      simp only [if_pos, dif_pos]
+      simp only [htransport_total]
+      dsimp [totalDifferential]
+      rw [← Category.assoc, Sigma.ι_desc]
+      rw [Linear.units_smul_comp]
+      rw [Category.assoc, Sigma.ι_desc]
+      conv_rhs =>
+        rw [← Category.assoc]
+        congr
+        rw [← Linear.comp_units_smul]
+      simp only [Category.assoc, Linear.comp_units_smul, Sigma.ι_desc]
+      conv_rhs =>
+        rw [← Linear.units_smul_comp]
+      conv_rhs =>
+        rw [Linear.units_smul_comp]
+        rw [← Category.assoc]
+        rw [Sigma.ι_desc]
+      simp only [Category.assoc, Linear.units_smul_comp, Preadditive.add_comp]
+      conv_rhs =>
+        rw [e_component_shift_expanded n (p + 1), e_component_shift_expanded n p]
+      simp only [Category.assoc, totalD1Component, totalD2Component,
+        shiftedD1Component, shiftedD2Component, totalizationShiftSign_first,
+        totalizationShiftSign_second]
+      simp [Category.assoc, totalizationShiftSign, Int.negOnePow_add, smul_smul,
+        mul_comm]
+      ring_nf
+      have h1 :
+          (b * p).negOnePow •
+              ((eqToHom (by
+                  dsimp [doubleComplexShift, shiftedD1Component]
+                  congr 1 <;> ring) ≫
+                (doubleComplexShift A a b).d1 (p - a)
+                    (n + 1 - (p - a + 1))) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p - a + 1)) =
+            (a.negOnePow * b.negOnePow * (b * (p + 1)).negOnePow) •
+              ((A.d1 p (n + (a + b) - p) ≫
+                eqToHom (by
+                  dsimp [doubleComplexShift]
+                  congr 1 <;> ring)) ≫
+                Sigma.ι (fun p : ℤ =>
+                  (doubleComplexShift A a b).obj p (n + 1 - p))
+                  (p + 1 - a)) := by
+        change
+          (b * p).negOnePow •
+              ((eqToHom _ ≫
+                shiftedD1Component A a b (p - a)
+                    (n + 1 - (p - a + 1))) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p - a + 1)) = _
+        unfold shiftedD1Component
+        ring_nf
+        simp only [Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+        rw [← Linear.units_smul_comp]
+        simp only [smul_smul]
+        have hsign1 :
+            (b * p).negOnePow * a.negOnePow =
+              a.negOnePow * b.negOnePow * (b * (p + 1)).negOnePow := by
+          rw [show b * (p + 1) = b * p + b by ring, Int.negOnePow_add]
+          have hb : b.negOnePow * b.negOnePow = (1 : ℤˣ) :=
+            Int.units_mul_self b.negOnePow
+          calc
+            (b * p).negOnePow * a.negOnePow =
+                a.negOnePow * (b * p).negOnePow := by ac_rfl
+            _ = a.negOnePow * (b * p).negOnePow * 1 := by rw [mul_one]
+            _ = a.negOnePow * (b * p).negOnePow *
+                (b.negOnePow * b.negOnePow) := by rw [hb]
+            _ = a.negOnePow * b.negOnePow *
+                ((b * p).negOnePow * b.negOnePow) := by ac_rfl
+        have hsign1' :
+            (b * p).negOnePow * a.negOnePow =
+              a.negOnePow * b.negOnePow * (b + b * p).negOnePow := by
+          rw [show b + b * p = b * (p + 1) by ring]
+          exact hsign1
+        rw [hsign1']
+        have hnat :=
+          eqToHom_naturality_assoc
+            (fun t : ℤ × ℤ => A.d1 t.1 t.2)
+            (show (p, n + (a + b) - p) =
+                (p - a + a, n + 1 - (p - a + 1) + b) by
+              congr 1 <;> ring)
+            (eqToHom (by
+              dsimp [doubleComplexShift]
+              congr 1 <;> ring) ≫
+              Sigma.ι (fun r : ℤ =>
+                (doubleComplexShift A a b).obj r (n + 1 - r))
+                (p - a + 1))
+        have hι :=
+          eqToHom_naturality
+            (fun r : ℤ =>
+              Sigma.ι (fun s : ℤ =>
+                (doubleComplexShift A a b).obj s (n + 1 - s)) r)
+            (show p + 1 - a = p - a + 1 by ring)
+        have hq :
+            eqToHom (show A.obj (p + 1) (n + (a + b) - p) =
+                (doubleComplexShift A a b).obj (p + 1 - a)
+                  (n + 1 - (p + 1 - a)) by
+              dsimp [doubleComplexShift]
+              congr 1 <;> ring) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p + 1 - a) =
+              eqToHom (show A.obj (p + 1) (n + (a + b) - p) =
+                (doubleComplexShift A a b).obj (p - a + 1)
+                  (n + 1 - (p - a + 1)) by
+              dsimp [doubleComplexShift]
+              congr 1 <;> ring) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p - a + 1) := by
+          have e1 : A.obj (p + 1) (n + (a + b) - p) =
+              (doubleComplexShift A a b).obj (p + 1 - a)
+                (n + 1 - (p + 1 - a)) := by
+            dsimp [doubleComplexShift]
+            congr 1 <;> ring
+          simpa [Category.assoc, eqToHom_trans] using
+            (congrArg
+              (fun f =>
+                eqToHom e1 ≫ f)
+              hι)
+        apply congrArg (fun f =>
+          (a.negOnePow * b.negOnePow * (b + b * p).negOnePow) • f)
+        convert hnat.symm using 1
+        all_goals
+          try simp
+          simpa only [Category.assoc] using
+            congrArg (fun f => A.d1 p (n + (a + b) - p) ≫ f) hq
+      have h2 :
+          ((b * p).negOnePow * (p - a).negOnePow) •
+              ((eqToHom (by
+                  dsimp [doubleComplexShift, shiftedD2Component]
+                  congr 1 <;> ring) ≫
+                (doubleComplexShift A a b).d2 (p - a)
+                    (n - (p - a))) ≫
+                eqToHom (by
+                  dsimp [doubleComplexShift]
+                  congr 1 <;> ring) ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p - a)) =
+            (a.negOnePow * b.negOnePow *
+                (p.negOnePow * (b * p).negOnePow)) •
+              ((A.d2 p (n + (a + b) - p) ≫
+                eqToHom (by
+                  dsimp [doubleComplexShift]
+                  congr 1 <;> ring)) ≫
+                Sigma.ι (fun p : ℤ =>
+                  (doubleComplexShift A a b).obj p (n + 1 - p))
+                  (p - a)) := by
+        change
+          ((b * p).negOnePow * (p - a).negOnePow) •
+              ((eqToHom _ ≫
+                shiftedD2Component A a b (p - a)
+                    (n - (p - a))) ≫
+                eqToHom _ ≫
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r))
+                  (p - a)) = _
+        unfold shiftedD2Component
+        simp only [Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+        rw [← Linear.units_smul_comp]
+        simp only [smul_smul]
+        have hpa :
+            (p - a).negOnePow = p.negOnePow * a.negOnePow := by
+          rw [show p - a = p + (-a) by ring, Int.negOnePow_add]
+          simp
+        have hsign2 :
+            (b * p).negOnePow * (p - a).negOnePow * b.negOnePow =
+              a.negOnePow * b.negOnePow *
+                (p.negOnePow * (b * p).negOnePow) := by
+          rw [hpa]
+          calc
+            (b * p).negOnePow *
+                (p.negOnePow * a.negOnePow) * b.negOnePow =
+                (b * p + (p + a) + b).negOnePow := by
+              simp only [Int.negOnePow_add, mul_assoc]
+            _ = (a + b + (p + b * p)).negOnePow := by
+              congr 1 <;> ring
+            _ = a.negOnePow * b.negOnePow *
+                (p.negOnePow * (b * p).negOnePow) := by
+              simp only [Int.negOnePow_add, mul_assoc]
+        rw [hsign2]
+        apply congrArg (fun f =>
+          (a.negOnePow * b.negOnePow *
+            (p.negOnePow * (b * p).negOnePow)) • f)
+        have hnat :=
+          eqToHom_naturality_assoc
+            (fun t : ℤ × ℤ => A.d2 t.1 t.2)
+            (show (p, n + (a + b) - p) =
+                (p - a + a, n - (p - a) + b) by
+              congr 1 <;> ring)
+            (eqToHom (by
+              dsimp [doubleComplexShift]
+              congr 1 <;> ring) ≫
+              Sigma.ι (fun r : ℤ =>
+                (doubleComplexShift A a b).obj r (n + 1 - r))
+                (p - a))
+        simpa [Category.assoc, eqToHom_trans] using hnat.symm
+      rw [h1, h2]
+      )
+  refine ⟨{ iso := iso, component_formula := ?_ }⟩
+  intro n p
+  dsimp [iso, e]
+  rfl
 
 noncomputable def totalComplexShiftData [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) : TotalComplexShiftData A a b :=

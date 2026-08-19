@@ -625,6 +625,28 @@ noncomputable def sheafRestrictionSectionsIso (C : Type u) [Category.{v} C]
     F.presheaf.obj (op (hf.functor.obj ⊤))
   rw [htop]
 
+/-- The section comparison is compatible with two successive restrictions to
+smaller opens. -/
+theorem sheafRestrictionSectionsIso_nested_naturality (C : Type u) [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ A B, FunLike (FC A B) (CC A) (CC B)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{v}} {U V W : Opens X} (hVU : V ≤ U) (hWV : W ≤ V)
+    (F : TopCat.Sheaf C (openSubspace U)) :
+    (sheafRestrictionSectionsIso C hVU F).hom ≫
+        ((sheafMapRestriction C hVU).obj F).presheaf.map
+          (homOfLE (show Opens.comap (openInclusion V).hom W ≤ ⊤ from le_top)).op ≫
+        (sheafRestrictionSectionsIso C hWV
+          ((sheafMapRestriction C hVU).obj F)).hom ≫
+        (sheafNestedRestrictionIso C hVU hWV F).hom.hom.app (op ⊤) =
+      F.presheaf.map
+          (homOfLE (Opens.comap_mono (openInclusion U).hom hWV)).op ≫
+        (sheafRestrictionSectionsIso C (hWV.trans hVU) F).hom := by
+  sorry
+
 /-! ## Maps and the internal Hom sheaf -/
 
 /-- The compatibility condition for a family of local sheaf maps. -/

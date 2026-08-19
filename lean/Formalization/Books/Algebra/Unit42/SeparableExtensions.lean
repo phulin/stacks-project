@@ -1,5 +1,6 @@
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
+import Mathlib.FieldTheory.PurelyInseparable.Tower
 import Mathlib.FieldTheory.Separable
 import Mathlib.FieldTheory.SeparableClosure
 import Mathlib.FieldTheory.PrimitiveElement
@@ -346,17 +347,38 @@ theorem finitePthRootTop_isPurelyInseparable
     rw [pthRootInAlgebraicClosure_pow K p hp (b : K)]
     exact ⟨b, rfl⟩
 
-/- The paired towers used by the textbook diagram.  `map_mem` is the
-   compatibility condition saying that the chosen base tower maps into the
-   chosen top tower; it is the only extra datum needed to package the final
-   levels as an algebra. -/
+/- The paired towers used by the textbook diagram.  Besides the compatible
+   map of final levels, the structure records a cartesian comparison field.
+   In the descent argument these are respectively `k(x)` and
+   `k'(x^(1/p))`.  The rank equality says that passage to the comparison
+   square does not change the residual degree, while `reflectsSeparableClosure`
+   is the intersection statement used to make the decrease strict. -/
 structure FinitePthRootBaseChangeTower
     (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
     (p : ℕ) (hp : 0 < p) where
   base : FinitePthRootTower k p hp
   top : FinitePthRootTower K p hp
-  map_mem : ∀ x : finitePthRootFieldAtLevel base,
-    pthRootClosureMap k K x ∈ finitePthRootFieldAtLevel top
+  baseToTop : finitePthRootFieldAtLevel base →+*
+    finitePthRootFieldAtLevel top
+  baseToTop_apply : ∀ x : finitePthRootFieldAtLevel base,
+    (baseToTop x : AlgebraicClosure K) = pthRootClosureMap k K x
+  comparisonLower : IntermediateField k K
+  comparisonUpper : @IntermediateField
+    (finitePthRootFieldAtLevel base) (finitePthRootFieldAtLevel top)
+    inferInstance inferInstance (RingHom.toAlgebra baseToTop)
+  comparisonMap : comparisonLower →+* comparisonUpper
+  comparisonMap_commutes : ∀ x : comparisonLower,
+    ((comparisonMap x : comparisonUpper) : AlgebraicClosure K) =
+      algebraMap K (AlgebraicClosure K) (x : K)
+  comparison_rank :
+    Module.finrank comparisonUpper (finitePthRootFieldAtLevel top) =
+      Module.finrank comparisonLower K
+  reflectsSeparableClosure : ∀ y : K,
+    algebraMap K (finitePthRootFieldAtLevel top) y ∈
+        IntermediateField.adjoin comparisonUpper
+          (algebraMap K (finitePthRootFieldAtLevel top) ''
+            (separableClosure comparisonLower K : Set K)) →
+      y ∈ separableClosure comparisonLower K
 
 /- The final level of the top tower. -/
 noncomputable def finitePthRootTopAtLevel
@@ -451,7 +473,9 @@ theorem finitePthRootFieldAtLevel_map_mem_top
     (tower : FinitePthRootBaseChangeTower k K p hp)
     (x : finitePthRootFieldAtLevel tower.base) :
     pthRootClosureMap k K x ∈ finitePthRootTopAtLevel tower :=
-  tower.map_mem x
+  by
+    rw [← tower.baseToTop_apply]
+    exact (tower.baseToTop x).property
 
 noncomputable def finitePthRootBaseToTopAtLevel
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
@@ -459,10 +483,7 @@ noncomputable def finitePthRootBaseToTopAtLevel
     (tower : FinitePthRootBaseChangeTower k K p hp) :
     finitePthRootFieldAtLevel tower.base →+*
       finitePthRootTopAtLevel tower :=
-  RingHom.codRestrict (pthRootClosureMap k K |>.comp
-    (finitePthRootFieldAtLevel tower.base).val)
-    (finitePthRootTopAtLevel tower)
-    (fun x => finitePthRootFieldAtLevel_map_mem_top tower x)
+  tower.baseToTop
 
 noncomputable instance finitePthRootBaseAlgebraAtLevel
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
@@ -480,8 +501,8 @@ noncomputable instance finitePthRootBaseTowerAtLevel
       (finitePthRootTopAtLevel tower) := by
   apply IsScalarTower.of_algebraMap_eq'
   ext a
-  change algebraMap k (AlgebraicClosure K) a =
-    pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) a)
+  change algebraMap k (AlgebraicClosure K) a = (tower.baseToTop _ : AlgebraicClosure K)
+  rw [tower.baseToTop_apply]
   exact ((pthRootClosureMap k K).commutes a).symm
 
 noncomputable def finitePthRootBaseChangeAtLevel
@@ -883,31 +904,52 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
   let roots : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift ∪ t
   obtain ⟨top, htop⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp roots
+  let T := finitePthRootFieldAtLevel top
+  let baseToTop : B →+* T :=
+    RingHom.codRestrict (pthRootClosureMap k K |>.comp B.val) T (by
+      intro x
+      have hx : x ∈ IntermediateField.adjoin k (s : Set B) := by
+        rw [hs]
+        trivial
+      apply IntermediateField.adjoin_induction (F := k) (s := (s : Set B))
+        (p := fun y _ => pthRootClosureMap k K (y : AlgebraicClosure k) ∈ T)
+      · intro y hy
+        exact htop (lift y) (Finset.mem_union_left _ <|
+          Finset.mem_image.mpr ⟨y, hy, rfl⟩)
+      · intro y
+        change pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y) ∈ _
+        rw [(pthRootClosureMap k K).commutes]
+        exact T.algebraMap_mem (algebraMap k K y)
+      · intro x y hx hy hmx hmy
+        simpa using T.add_mem hmx hmy
+      · intro x hx hmx
+        simpa using T.inv_mem hmx
+      · intro x y hx hy hmx hmy
+        simpa using T.mul_mem hmx hmy
+      · exact hx)
+  letI : Algebra B T := RingHom.toAlgebra baseToTop
   let tower : FinitePthRootBaseChangeTower k K p hp :=
     { base := base
       top := top
-      map_mem := by
-        intro x
-        have hx : x ∈ IntermediateField.adjoin k (s : Set B) := by
-          rw [hs]
-          trivial
-        apply IntermediateField.adjoin_induction (F := k) (s := (s : Set B))
-          (p := fun y _ => pthRootClosureMap k K (y : AlgebraicClosure k) ∈
-            finitePthRootFieldAtLevel top)
-        · intro y hy
-          exact htop (lift y) (Finset.mem_union_left _ <|
-            Finset.mem_image.mpr ⟨y, hy, rfl⟩)
-        · intro y
-          change pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y) ∈ _
-          rw [(pthRootClosureMap k K).commutes]
-          exact (finitePthRootFieldAtLevel top).algebraMap_mem (algebraMap k K y)
-        · intro x y hx hy hmx hmy
-          simpa using (finitePthRootFieldAtLevel top).add_mem hmx hmy
-        · intro x hx hmx
-          simpa using (finitePthRootFieldAtLevel top).inv_mem hmx
-        · intro x y hx hy hmx hmy
-          simpa using (finitePthRootFieldAtLevel top).mul_mem hmx hmy
-        · exact hx }
+      baseToTop := baseToTop
+      baseToTop_apply := fun _ ↦ rfl
+      comparisonLower := ⊤
+      comparisonUpper := ⊤
+      comparisonMap := RingHom.codRestrict
+        ((algebraMap K T).comp (⊤ : IntermediateField k K).val) ⊤ (fun _ ↦ trivial)
+      comparisonMap_commutes := fun _ ↦ rfl
+      comparison_rank := by
+        rw [IntermediateField.finrank_eq_one_iff_eq_top.mpr rfl,
+          IntermediateField.finrank_eq_one_iff_eq_top.mpr rfl]
+      reflectsSeparableClosure := by
+        intro y _
+        apply mem_separableClosure_iff.mpr
+        have hy : IsSeparable (⊤ : IntermediateField k K)
+            (algebraMap (⊤ : IntermediateField k K) K
+              (⟨y, trivial⟩ : (⊤ : IntermediateField k K))) :=
+          isSeparable_algebraMap (⟨y, trivial⟩ : (⊤ : IntermediateField k K))
+        rw [show algebraMap (⊤ : IntermediateField k K) K ⟨y, trivial⟩ = y by rfl] at hy
+        exact hy }
   refine ⟨tower, rfl, ?_⟩
   intro z hz
   exact htop z (Finset.mem_union_right _ hz)
@@ -969,8 +1011,9 @@ theorem exists_tower_pth_roots_adjoin_finset
     intro a ha
     simp only [r, dif_pos ha]
     apply Subtype.ext
-    change (pthRootClosureMap k K (pthRootInAlgebraicClosure k p hp a)) ^ p =
+    change (tower.baseToTop _ : AlgebraicClosure K) ^ p =
       algebraMap k (AlgebraicClosure K) a
+    rw [tower.baseToTop_apply]
     rw [← map_pow, pthRootInAlgebraicClosure_pow]
     exact (pthRootClosureMap k K).commutes a
   let z (i : ι) : T := ⟨topRoot i, htop (topRoot i)

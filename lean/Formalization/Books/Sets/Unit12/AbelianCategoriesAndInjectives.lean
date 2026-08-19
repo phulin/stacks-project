@@ -62,13 +62,13 @@ theorem exists_abelian_injective_subcategory
     [EnoughInjectives A] (S : Type u) (A₀ : S → A) :
     Nonempty (AbelianInjectiveSubcategory A S A₀) := by
   let P := Formalization.CategoryTheory.SmallAbelianClosure.generatedProperty S A₀
-  letI : Abelian P.FullSubcategory :=
+  let : Abelian P.FullSubcategory :=
     Formalization.CategoryTheory.SmallAbelianClosure.generatedAbelian S A₀
-  letI : EnoughInjectives P.FullSubcategory :=
+  let : EnoughInjectives P.FullSubcategory :=
     Formalization.CategoryTheory.SmallAbelianClosure.generatedEnoughInjectives S A₀
-  letI : PreservesFiniteLimits P.ι :=
+  let : PreservesFiniteLimits P.ι :=
     Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteLimits S A₀
-  letI : PreservesFiniteColimits P.ι :=
+  let : PreservesFiniteColimits P.ι :=
     Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteColimits S A₀
   exact ⟨{
     property := P

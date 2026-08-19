@@ -63,7 +63,7 @@ theorem finite_global_dimension_iff_localizations
     apply ((finite_global_dimension_criterion (R := R) n).out 0 1).mpr
     intro M hM
     have hM' : Module.Finite R M := hM
-    letI := hM'
+    let := hM'
     apply (ModuleCat.hasProjectiveDimensionLE_iff_forall_maximalSpectrum n M).mpr
     intro m
     exact h m (M.localizedModule m.1.primeCompl)

@@ -119,10 +119,9 @@ theorem exactCouple_image_formula {C : Type u} [Category.{v} C]
 /-! ## The `Bᵣ` and `Zᵣ` filtration -/
 
 /-- The iterated endomorphisms `alpha^n`. -/
-def exactCoupleAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
+abbrev exactCoupleAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) : ℕ → (A ⟶ A)
-  | 0 => 𝟙 A
-  | n + 1 => exactCoupleAlphaPow D n ≫ D.alpha
+  := Formalization.Books.Homology.Unit20.exactCoupleAlphaPow D
 
 /-- The boundary subobject `B_(n+1) = g(Ker(alpha^n))`. -/
 def exactCoupleBoundarySubobject {C : Type u} [Category.{v} C]
@@ -207,7 +206,9 @@ theorem exactCouple_filtration {C : Type u} [Category.{v} C] [Abelian C]
         exactCoupleAlphaPow D n ≫ D.alpha := by
     intro n
     induction n with
-    | zero => simp [exactCoupleAlphaPow]
+    | zero =>
+        simp [exactCoupleAlphaPow,
+          Formalization.Books.Homology.Unit20.exactCoupleAlphaPow]
     | succ n ih =>
         rw [show exactCoupleAlphaPow D (n + 1) =
             exactCoupleAlphaPow D n ≫ D.alpha by rfl]
@@ -305,6 +306,18 @@ theorem exactCouple_associatedSpectralSequence_exists
     Formalization.Books.Homology.Unit20.exactCouple_associatedSpectralSequence_exists D
   exact ⟨S⟩
 
+private theorem exactCouplePageComponent_eq_unit20
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) (n : ℕ) :
+    exactCouplePageComponent D n =
+      Formalization.Books.Homology.Unit20.exactCouplePageComponent D n := by
+  simp [exactCouplePageComponent,
+    Formalization.Books.Homology.Unit20.exactCouplePageComponent,
+    exactCoupleBoundarySubobject,
+    Formalization.Books.Homology.Unit20.exactCoupleBoundarySubobject,
+    exactCoupleCycleSubobject,
+    Formalization.Books.Homology.Unit20.exactCoupleCycleSubobject]
+
 /-- The chosen sequence and its page identifications must come from one
     witness, since an arbitrary choice of a merely nonempty sequence need not
     be the sequence carrying these identifications. -/
@@ -315,7 +328,12 @@ theorem exactCouple_associatedSpectralSequence_witness_exists
       Nonempty (plainPageObject S 1 ≅ E) ∧
       ∀ n : ℕ,
         Nonempty (plainPageObject S (n + 1 : ℤ) ≅ exactCouplePageComponent D n) := by
-  sorry
+  obtain ⟨S, hE, hpage⟩ :=
+    Formalization.Books.Homology.Unit20.exactCouple_associatedSpectralSequence_transport D
+      (fun n => exactCouplePageComponent D n) (by
+        intro n
+        exact ⟨eqToIso (exactCouplePageComponent_eq_unit20 D n).symm⟩)
+  exact ⟨S, hE, hpage⟩
 
 /-- The spectral sequence obtained by iterating the derived exact couple. -/
 noncomputable def exactCoupleAssociatedSpectralSequence

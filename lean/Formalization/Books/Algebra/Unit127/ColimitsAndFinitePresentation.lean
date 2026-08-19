@@ -1689,52 +1689,50 @@ structure DirectedFinitePresentationApproximation
 
 private def finiteSubsetSubringDiagram {T : Type u} [CommRing T] :
     Finset T ⥤ CommRingCat := by
-  sorry
-/-
-  obj E := CommRingCat.of (Subring.closure (E : Set T))
-  map := fun {E F} hEF => CommRingCat.ofHom {
-    toFun := fun x => ⟨x.1, Subring.closure_mono (leOfHom hEF) x.2⟩
-    map_one' := rfl
-    map_mul' := by intro x y; rfl
-    map_zero' := rfl
-    map_add' := by intro x y; rfl }
-  map_id := by
-    intro E
-    apply CommRingCat.hom_ext
-    ext x
-    rfl
-  map_comp := by
-    intro E F G hEF hFG
-    apply CommRingCat.hom_ext
-    ext x
-    rfl
--/
+  classical
+  refine
+    { obj := fun E => CommRingCat.of (Subring.closure (E : Set T))
+      map := fun {E F} hEF => CommRingCat.ofHom
+        (Subring.inclusion (Subring.closure_mono (leOfHom hEF)))
+      map_id := by
+        intro E
+        apply CommRingCat.hom_ext
+        apply RingHom.ext
+        intro x
+        apply Subtype.ext
+        simp only [CommRingCat.hom_ofHom, CommRingCat.hom_id, RingHom.id_apply,
+          Subring.coe_inclusion]
+      map_comp := by
+        intro E F G hEF hFG
+        apply CommRingCat.hom_ext
+        apply RingHom.ext
+        intro x
+        apply Subtype.ext
+        simp only [CommRingCat.hom_comp, CommRingCat.hom_ofHom,
+          RingHom.coe_comp, Function.comp_apply, Subring.coe_inclusion] }
 
 private def finiteSubsetSubringCocone {T : Type u} [CommRing T] :
     Cocone (finiteSubsetSubringDiagram (T := T)) := by
-  sorry
-/-
-  pt := CommRingCat.of T
-  ι := {
-    app := fun E => CommRingCat.ofHom {
-      toFun := fun x => x.1
-      map_one' := rfl
-      map_mul' := by intro x y; rfl
-      map_zero' := rfl
-      map_add' := by intro x y; rfl }
-    naturality := by
-      intro E F hEF
-      apply CommRingCat.hom_ext
-      ext x
-      rfl }
--/
+  classical
+  refine
+    { pt := CommRingCat.of T
+      ι := {
+        app := fun E => CommRingCat.ofHom
+          (Subring.closure (E : Set T)).subtype
+        naturality := by
+          intro E F hEF
+          apply CommRingCat.hom_ext
+          apply RingHom.ext
+          intro x
+          rfl } }
 
 private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
     IsColimit (finiteSubsetSubringCocone (T := T)) := by
-  sorry
-/-
   classical
-  refine { desc := fun s => (CommRingCat.ofHom {
+  let desc : ∀ s : Cocone (finiteSubsetSubringDiagram (T := T)),
+      finiteSubsetSubringCocone (T := T).pt ⟶ s.pt := by
+    intro s
+    exact CommRingCat.ofHom {
       toFun := fun x => (s.ι.app {x}).hom
         ⟨x, Subring.subset_closure (s := (↑({x} : Finset T) : Set T)) (by simp)⟩
       map_one' := by
@@ -1818,10 +1816,11 @@ private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
             ⟨x * y, Subring.subset_closure
               (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩ = _
         have hmul : (⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ :
-            (finiteSubsetSubringDiagram (T := T)).obj E) =
+            Subring.closure (E : Set T)) =
             (⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
-              (finiteSubsetSubringDiagram (T := T)).obj E) *
-              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ := by
+              Subring.closure (E : Set T)) *
+              (⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :
+                Subring.closure (E : Set T)) := by
           rfl
         calc
           (s.ι.app {x * y}).hom
@@ -1831,8 +1830,9 @@ private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
                 ⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ := hxy'.symm
           _ = (s.ι.app E).hom
                 ((⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
-                  (finiteSubsetSubringDiagram (T := T)).obj E) *
-                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩) := by rw [hmul]
+                  Subring.closure (E : Set T)) *
+                  (⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :
+                    Subring.closure (E : Set T))) := by rw [hmul]
           _ = (s.ι.app E).hom
                 ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ *
                 (s.ι.app E).hom
@@ -1921,10 +1921,11 @@ private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
             ⟨x + y, Subring.subset_closure
               (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩ = _
         have hadd : (⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ :
-            (finiteSubsetSubringDiagram (T := T)).obj E) =
+            Subring.closure (E : Set T)) =
             (⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
-              (finiteSubsetSubringDiagram (T := T)).obj E) +
-              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ := by
+              Subring.closure (E : Set T)) +
+              (⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :
+                Subring.closure (E : Set T)) := by
           rfl
         calc
           (s.ι.app {x + y}).hom
@@ -1934,28 +1935,149 @@ private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
                 ⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ := hxy'.symm
           _ = (s.ι.app E).hom
                 ((⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
-                  (finiteSubsetSubringDiagram (T := T)).obj E) +
-                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩) := by rw [hadd]
+                  Subring.closure (E : Set T)) +
+                  (⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :
+                    Subring.closure (E : Set T))) := by rw [hadd]
           _ = (s.ι.app E).hom
                 ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ +
                 (s.ι.app E).hom
                   ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :=
               (s.ι.app E).hom.map_add _ _
           _ = _ := by rw [hx', hy']
-        }),
-    fac := by
-      intro s E
-      apply CommRingCat.hom_ext
-      ext x
-      have h := s.ι.naturality (homOfLE (show ({x} : Finset T) ≤ E by simp))
-      exact congrArg (fun k => k.hom ⟨x, Subring.subset_closure (by simp)⟩) h
-    uniq := by
-      intro s m hm
-      apply CommRingCat.hom_ext
-      ext x
-      simpa using congrArg (fun k => k.hom
-        ⟨x, Subring.subset_closure (by simp)⟩) (hm {x}) }
--/
+        }
+  refine { desc := desc, fac := ?_, uniq := ?_ }
+  · intro s E
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    change Subring.closure (E : Set T) at x
+    let toPt : T → (finiteSubsetSubringCocone (T := T)).pt := fun z => by
+      change T
+      exact z
+    let p : ∀ z : T, z ∈ Subring.closure (E : Set T) → Prop := fun z hz =>
+      (desc s).hom (toPt z) = (s.ι.app E).hom ⟨z, hz⟩
+    change p x.1 x.2
+    refine Subring.closure_induction (s := (E : Set T)) (p := p) ?_ ?_ ?_ ?_ ?_ ?_ x.2
+    · intro z hz
+      change z ∈ E at hz
+      have hE : ({z} : Finset T) ≤ E := by
+        intro y hy
+        simpa only [Finset.mem_singleton.mp hy] using hz
+      have h := s.ι.naturality (homOfLE hE)
+      change (s.ι.app {z}).hom
+          (⟨z, Subring.subset_closure (by simp)⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj {z}) =
+        (s.ι.app E).hom
+          (⟨z, Subring.subset_closure hz⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E)
+      have h' := congrArg (fun k => k.hom
+        (⟨z, Subring.subset_closure (by simp)⟩ :
+          (finiteSubsetSubringDiagram (T := T)).obj {z})) h
+      change (s.ι.app E).hom
+          (⟨z, Subring.subset_closure hz⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E) =
+        (s.ι.app {z}).hom
+          (⟨z, Subring.subset_closure (by simp)⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj {z}) at h'
+      exact h'.symm
+    · change (desc s).hom (toPt 0) =
+          (s.ι.app E).hom
+            (0 : (finiteSubsetSubringDiagram (T := T)).obj E)
+      rw [show toPt 0 = 0 by rfl]
+      exact (desc s).hom.map_zero.trans ((s.ι.app E).hom.map_zero).symm
+    · change (desc s).hom (toPt 1) =
+          (s.ι.app E).hom
+            (1 : (finiteSubsetSubringDiagram (T := T)).obj E)
+      rw [show toPt 1 = 1 by rfl]
+      exact (desc s).hom.map_one.trans ((s.ι.app E).hom.map_one).symm
+    · intro z w hz hw hz' hw'
+      change (desc s).hom (toPt (z + w)) =
+        (s.ι.app E).hom
+          (⟨z + w, add_mem hz hw⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E)
+      have hadd : (⟨z + w, add_mem hz hw⟩ :
+          (finiteSubsetSubringDiagram (T := T)).obj E) =
+          (⟨z, hz⟩ : (finiteSubsetSubringDiagram (T := T)).obj E) + ⟨w, hw⟩ := by
+        rfl
+      have haddPt : toPt (z + w) = toPt z + toPt w := by rfl
+      calc
+        (desc s).hom (toPt (z + w)) =
+            (desc s).hom (toPt z + toPt w) := by rw [haddPt]
+        _ = (desc s).hom (toPt z) + (desc s).hom (toPt w) :=
+          (desc s).hom.map_add _ _
+        _ = (s.ι.app E).hom (⟨z, hz⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) +
+            (s.ι.app E).hom (⟨w, hw⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hz', hw']
+        _ = (s.ι.app E).hom
+              ((⟨z, hz⟩ : (finiteSubsetSubringDiagram (T := T)).obj E) +
+                (⟨w, hw⟩ : (finiteSubsetSubringDiagram (T := T)).obj E)) :=
+          ((s.ι.app E).hom.map_add _ _).symm
+        _ = (s.ι.app E).hom
+              (⟨z + w, add_mem hz hw⟩ :
+                (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hadd]
+    · intro z hz hz'
+      change (desc s).hom (toPt (-z)) =
+        (s.ι.app E).hom
+          (⟨-z, neg_mem hz⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E)
+      have hneg : (⟨-z, neg_mem hz⟩ :
+          (finiteSubsetSubringDiagram (T := T)).obj E) =
+          -(⟨z, hz⟩ : (finiteSubsetSubringDiagram (T := T)).obj E) := by
+        rfl
+      have hnegPt : toPt (-z) = -toPt z := by rfl
+      calc
+        (desc s).hom (toPt (-z)) = (desc s).hom (-toPt z) := by rw [hnegPt]
+        _ = -(desc s).hom (toPt z) := (desc s).hom.map_neg _
+        _ = -(s.ι.app E).hom (⟨z, hz⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hz']
+        _ = (s.ι.app E).hom (-(⟨z, hz⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E)) :=
+          ((s.ι.app E).hom.map_neg _).symm
+        _ = (s.ι.app E).hom
+              (⟨-z, neg_mem hz⟩ :
+                (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hneg]
+    · intro z w hz hw hz' hw'
+      change (desc s).hom (toPt (z * w)) =
+        (s.ι.app E).hom
+          (⟨z * w, mul_mem hz hw⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E)
+      have hmul : (⟨z * w, mul_mem hz hw⟩ :
+          (finiteSubsetSubringDiagram (T := T)).obj E) =
+          (⟨z, hz⟩ : (finiteSubsetSubringDiagram (T := T)).obj E) * ⟨w, hw⟩ := by
+        rfl
+      have hmulPt : toPt (z * w) = toPt z * toPt w := by rfl
+      calc
+        (desc s).hom (toPt (z * w)) =
+            (desc s).hom (toPt z * toPt w) := by rw [hmulPt]
+        _ = (desc s).hom (toPt z) * (desc s).hom (toPt w) :=
+          (desc s).hom.map_mul _ _
+        _ = (s.ι.app E).hom (⟨z, hz⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) *
+            (s.ι.app E).hom (⟨w, hw⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hz', hw']
+        _ = (s.ι.app E).hom
+              ((⟨z, hz⟩ : (finiteSubsetSubringDiagram (T := T)).obj E) *
+                (⟨w, hw⟩ : (finiteSubsetSubringDiagram (T := T)).obj E)) :=
+          ((s.ι.app E).hom.map_mul _ _).symm
+        _ = (s.ι.app E).hom
+              (⟨z * w, mul_mem hz hw⟩ :
+                (finiteSubsetSubringDiagram (T := T)).obj E) := by rw [hmul]
+  · intro s m hm
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    change T at x
+    have h := congrArg (fun k => k.hom
+      (⟨x, Subring.subset_closure (by simp)⟩ :
+        (finiteSubsetSubringDiagram (T := T)).obj {x})) (hm {x})
+    change (m.hom x) = (s.ι.app {x}).hom
+      (⟨x, Subring.subset_closure (by simp)⟩ :
+        (finiteSubsetSubringDiagram (T := T)).obj {x}) at h
+    change (m.hom x) = (s.ι.app {x}).hom
+      (⟨x, Subring.subset_closure (by simp)⟩ :
+        (finiteSubsetSubringDiagram (T := T)).obj {x})
+    exact h
 
 /-- Every local homomorphism of local rings is a filtered colimit of local
 maps whose stages are essentially of finite type over the integers. -/

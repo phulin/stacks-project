@@ -1599,26 +1599,151 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
           (ConcreteCategory.hom
             (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG := by
       exact hscalar
-    have hsmulG :
+    rw [hscalar']
+    have hsmul0 (z : ↑((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj M)) :
         (ConcreteCategory.hom
           (((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj M).smul
             ((ConcreteCategory.hom
-              (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG)))
-          ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂) =
-        (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) (rG • m₂) := by
-      have hsmul (z : ↑((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj M)) :
-          (ConcreteCategory.hom
-            (((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj M).smul
+              (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG))) z =
+          ((ConcreteCategory.hom
+            (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG) • z := by
+      rfl
+    have hsmul' := hsmul0
+      ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂)
+    have hsmulG' := congrArg (ConcreteCategory.hom ha.hom)
+      (hsmul'.trans hGlobal.symm)
+    have hmap (m : Mdiag.obj k) :
+        (ConcreteCategory.hom ha.hom)
+            ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
+              ((ConcreteCategory.hom (q.hom.app idx))
+                ((ConcreteCategory.hom (qr.inv.app idx)) m))) =
+          (ConcreteCategory.hom (colimit.ι Mdiag k)) m := by
+      change (ConcreteCategory.hom aIso.hom)
+          ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
+            ((ConcreteCategory.hom (q.hom.app idx))
+              ((ConcreteCategory.hom (qr.inv.app idx)) m))) =
+        (ConcreteCategory.hom (colimit.ι Mdiag k)) m
+      have hf_inv :
+          colimit.ι Gaddx (K.obj k) ≫ fQ.inv =
+            colimit.ι (K ⋙ Gaddx) k := by
+        apply (cancel_mono fQ.hom).1
+        rw [Category.assoc, fQ.inv_hom_id, Category.comp_id]
+        exact (Functor.Final.ι_colimitIso_hom K Gaddx k).symm
+      have hcQ_inv :
+          colimit.ι (K ⋙ Gaddx) k ≫ cQ.inv =
+            qK.inv.app k ≫
+              colimit.ι
+                ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k := by
+        apply (cancel_mono cQ.hom).1
+        rw [Category.assoc, cQ.inv_hom_id, Category.comp_id]
+        rw [Category.assoc, HasColimit.isoOfNatIso_ι_hom qK]
+        simp
+      have hcomp_map :
+          colimit.ι Gaddx (K.obj k) ≫
+              ((cQ ≪≫ fQ).symm ≪≫ cQR).hom =
+            qK.inv.app k ≫
+              colimit.ι
+                ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k ≫
+                cQR.hom := by
+        change colimit.ι Gaddx (K.obj k) ≫ (fQ.inv ≫ cQ.inv) ≫ cQR.hom = _
+        calc
+          _ = (colimit.ι Gaddx (K.obj k) ≫ fQ.inv) ≫ cQ.inv ≫ cQR.hom := by
+            simp only [Category.assoc]
+          _ = colimit.ι (K ⋙ Gaddx) k ≫ cQ.inv ≫ cQR.hom := by rw [hf_inv]
+          _ = (colimit.ι (K ⋙ Gaddx) k ≫ cQ.inv) ≫ cQR.hom := by
+            simp only [Category.assoc]
+          _ = _ := by rw [hcQ_inv]; simp only [Category.assoc]
+      let m₂m : Gaddx.obj (K.obj k) :=
+        (ConcreteCategory.hom (q.hom.app idx))
+          ((ConcreteCategory.hom (qr.inv.app idx)) m)
+      have hcomp_map' := congrArg
+        (fun t => (ConcreteCategory.hom t)
+          m₂m) hcomp_map
+      have hcomp_map'' :
+          (ConcreteCategory.hom aIso.hom)
+              ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
+                m₂m) =
+            (ConcreteCategory.hom
+              (qK.inv.app k ≫
+                colimit.ι
+                ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k ≫
+                cQR.hom))
+              m₂m := by
+        change (ConcreteCategory.hom ((cQ ≪≫ fQ).symm ≪≫ cQR).hom)
+            ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
+              m₂m) = _
+        convert hcomp_map' using 1 <;>
+          simp only [Iso.trans_hom, Iso.symm_hom, Category.assoc,
+            ConcreteCategory.comp_apply, m₂m]
+      have hcQR_map :=
+        HasColimit.isoOfNatIso_ι_hom
+          (Functor.isoWhiskerLeft
+            (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op qr) k
+      have hcQR_map' := congrArg
+        (fun t => (ConcreteCategory.hom t)
+          ((ConcreteCategory.hom (qK.inv.app k))
+            m₂m)) hcQR_map
+      have hcQR_map'' :
+          (ConcreteCategory.hom cQR.hom)
               ((ConcreteCategory.hom
-                (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG))) z =
+                (colimit.ι
+                  ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k))
+                ((ConcreteCategory.hom (qK.inv.app k))
+                  m₂m)) =
+            (ConcreteCategory.hom (colimit.ι Mdiag k)) m := by
+        calc
+          _ = (ConcreteCategory.hom
+              (colimit.ι
+                ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ RF) k))
+                ((ConcreteCategory.hom
+                  ((Functor.isoWhiskerLeft
+                    (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op qr).hom.app k))
+                  ((ConcreteCategory.hom (qK.inv.app k)) m₂m)) := by
+            dsimp [cQR]
+            exact hcQR_map'
+          _ = _ := by
+            dsimp [m₂m]
+            change (ConcreteCategory.hom (colimit.ι Mdiag k))
+                ((ConcreteCategory.hom (qr.hom.app idx))
+                  ((ConcreteCategory.hom (qr.inv.app idx)) m)) =
+              (ConcreteCategory.hom (colimit.ι Mdiag k)) m
+            have hqr := congrArg (fun q =>
+              (ConcreteCategory.hom (colimit.ι Mdiag k))
+                ((ConcreteCategory.hom q) m)) (congr_app qr.inv_hom_id idx)
+            convert hqr using 1 <;> rfl
+      calc
+        _ = (ConcreteCategory.hom
+              (qK.inv.app k ≫
+                colimit.ι
+                  ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k ≫
+                cQR.hom))
+              ((ConcreteCategory.hom (q.hom.app idx))
+                ((ConcreteCategory.hom (qr.inv.app idx)) m)) := hcomp_map''
+        _ = (ConcreteCategory.hom cQR.hom)
+              ((ConcreteCategory.hom
+                (colimit.ι
+                  ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) k))
+                ((ConcreteCategory.hom (qK.inv.app k))
+                  m₂m)) := by
+          rfl
+        _ = _ := hcQR_map''.symm
+    have hbase :
+        (ConcreteCategory.hom (colimit.ι Mdiag k)) (r₁ • m₁) =
+          (ConcreteCategory.hom ha.hom)
             ((ConcreteCategory.hom
-              (TopCat.Presheaf.germ O.obj (B k.unop.1) x k.unop.2)) rG) • z := by
-        rfl
-      rw [hsmul]
-      exact PresheafOfModules.germ_ringCat_smul M.val x
-        (B k.unop.1) k.unop.2 rG m₂
-    rw [hscalar', hsmulG, hGlobal]
-    rfl
+              ((colimit.cocone Gaddx).ι.app (K.obj k))) (rG • m₂)) := by
+      have hqrs :
+          (ConcreteCategory.hom
+              ((colimit.cocone Gaddx).ι.app (K.obj k))) (rG • m₂) =
+            (ConcreteCategory.hom (q.hom.app idx))
+              ((ConcreteCategory.hom (qr.inv.app idx)) (r₁ • m₁)) := by
+        dsimp [m₂, rG, q, qr, rA]
+        have hqrsmul := (qr.inv.app idx).hom.map_smul r₁ m₁
+        simpa [Gaddx, Gadd] using congrArg
+          (fun z => (ConcreteCategory.hom (q.hom.app idx)) z) hqrsmul
+      rw [hqrs]
+      exact (hmap (r₁ • m₁)).symm
+    exact hbase.trans hsmulG'.symm
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
 
 /-- The category of sheaves of basis modules. -/
@@ -2140,17 +2265,13 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
         intro U r s
         dsimp [T, ringedSpaceModulePushforward, φAdd]
         change d.map U.unop (r • s) =
-          (ConcreteCategory.hom
-            ((F.val.obj (op ((Opens.map f.continuous).obj (Bᵧ U.unop)))).smul
-              ((f.sharp.hom.app (op (Bᵧ U.unop))).hom r)))
-            (d.map U.unop s)
+          ((f.sharp.hom.app (op (Bᵧ U.unop))).hom r) • d.map U.unop s
         have h_id :
-            (𝟙 ((Opens.map f.continuous).obj (Bᵧ U.unop))).op =
-              𝟙 (op ((Opens.map f.continuous).obj (Bᵧ U.unop))) := by
+            X.structureSheaf.1.map
+                (homOfLE (le_refl ((Opens.map f.continuous).obj (Bᵧ U.unop)))).op =
+              𝟙 _ := by
           subsingleton
-        simpa only [ringedSpaceBasisScalarMap, h_id,
-          CategoryTheory.Functor.map_id, Category.comp_id,
-          ModuleCat.smul] using
+        simpa only [ringedSpaceBasisScalarMap, h_id, Category.comp_id] using
           d.linear U.unop r s)
   obtain ⟨ψ, hψ, huniq⟩ := basisFMapModule_below_unique f F G Bᵧ hBᵧ φ
   refine ⟨ψ, ?_, ?_⟩
@@ -2233,18 +2354,18 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     have hq : Sieve.ofArrows A q ∈ Opens.grothendieckTopology X V := by
       intro x hx
       obtain ⟨W, ⟨i, rfl⟩, hxW, hiW⟩ := (Opens.isBasis_iff_nbhd.mp hBₓ) hx
-      refine ⟨Bₓ i, hiW, ?_, hxW⟩
+      refine ⟨Bₓ i, homOfLE hiW, ?_, hxW⟩
       exact Sieve.ofArrows_mk A q ⟨i, hiW⟩
     let b : ∀ i : I, E ⟶ F.presheaf.obj (op (A i)) := fun i =>
       a i.1 i.2
-    exact F.isSheaf.amalgamateOfArrows q hq b (by
+    exact F.property.amalgamateOfArrows q hq b (by
       intro W i i' u v huv
-      apply F.isSheaf.hom_ext_ofArrows
+      apply F.property.hom_ext_ofArrows
         (fun k : {k : ι // Bₓ k ≤ W} => homOfLE k.2) (by
           intro x hx
           obtain ⟨Z, ⟨k, rfl⟩, hxZ, hkZ⟩ :=
             (Opens.isBasis_iff_nbhd.mp hBₓ) hx
-          refine ⟨Bₓ k, hkZ, ?_, hxZ⟩
+          refine ⟨Bₓ k, homOfLE hkZ, ?_, hxZ⟩
           exact Sieve.ofArrows_mk _ _ ⟨k, hkZ⟩)
         (by
           intro k
@@ -2276,13 +2397,13 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
       map := map
       compatible := by
         intro j j' h
-        apply F.isSheaf.hom_ext_ofArrows
+        apply F.property.hom_ext_ofArrows
           (fun i : {i : ι // Bₓ i ≤ (Opens.map f).obj (Bᵧ j')} =>
             homOfLE i.2) (by
               intro x hx
               obtain ⟨W, ⟨i, rfl⟩, hxW, hiW⟩ :=
                 (Opens.isBasis_iff_nbhd.mp hBₓ) hx
-              refine ⟨Bₓ i, hiW, ?_, hxW⟩
+              refine ⟨Bₓ i, homOfLE hiW, ?_, hxW⟩
               exact Sieve.ofArrows_mk _ _ ⟨i, hiW⟩)
           (by
             intro i
@@ -2306,22 +2427,22 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
   refine ⟨ψ, ?_, ?_⟩
   · intro i j h
     have hj := congr_app hψ (op (show basisIndex Bᵧ from j))
-    have hglue := F.isSheaf.amalgamateOfArrows_map
+    have hglue := F.property.amalgamateOfArrows_map
       (fun k : {k : ι // Bₓ k ≤ (Opens.map f).obj (Bᵧ j)} => homOfLE k.2)
       (by
         intro x hx
         obtain ⟨W, ⟨k, rfl⟩, hxW, hkW⟩ :=
           (Opens.isBasis_iff_nbhd.mp hBₓ) hx
-        refine ⟨Bₓ k, hkW, ?_, hxW⟩
+        refine ⟨Bₓ k, homOfLE hkW, ?_, hxW⟩
         exact Sieve.ofArrows_mk _ _ ⟨k, hkW⟩)
       (fun k => d.app k.1 j k.2) (by
         intro k k' u v huv
-        apply F.isSheaf.hom_ext_ofArrows
+        apply F.property.hom_ext_ofArrows
           (fun l : {l : ι // Bₓ l ≤ k.1} => homOfLE l.2) (by
             intro x hx
             obtain ⟨W, ⟨l, rfl⟩, hxW, hlW⟩ :=
               (Opens.isBasis_iff_nbhd.mp hBₓ) hx
-            refine ⟨Bₓ l, hlW, ?_, hxW⟩
+            refine ⟨Bₓ l, homOfLE hlW, ?_, hxW⟩
             exact Sieve.ofArrows_mk _ _ ⟨l, hlW⟩)
           (by
             intro l
@@ -2374,7 +2495,7 @@ theorem basisFMap_above_below_stalk_colimit_holds
       (C := C) (Bᵧ j) (f x) hy ψ.hom
     have hpush := TopCat.Presheaf.stalkPushforward_germ
       (C := C) f F.presheaf (Bᵧ j) x hy
-    rw [Category.assoc, hmap, hpush]
+    rw [← Category.assoc, hmap, hpush]
     rw [hψ i j hij]
     exact F.presheaf.germ_res' (homOfLE hij).op x hx
   · intro ξ' hξ'
@@ -2419,7 +2540,7 @@ theorem basisFMap_above_below_stalk_colimit_holds
         (C := C) (Bᵧ j) (f x) hy ψ.hom
       have hpush := TopCat.Presheaf.stalkPushforward_germ
         (C := C) f F.presheaf (Bᵧ j) x hy
-      rw [Category.assoc, hmap, hpush]
+      rw [← Category.assoc, hmap, hpush]
       rw [hψ i j hij]
       exact F.presheaf.germ_res' (homOfLE hij).op x hxW
     exact hξ'local.trans hξlocal.symm

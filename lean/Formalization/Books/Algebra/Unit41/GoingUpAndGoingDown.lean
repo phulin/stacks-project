@@ -492,7 +492,7 @@ private noncomputable def tensorProductRingHom
     [Semiring D] [Algebra T D]
     (e : A ≃ₐ[T] C) (e' : B ≃ₐ[T] D) :
     A ⊗[T] B →+* C ⊗[T] D :=
-  (tensorProductRingEquiv e e').toRingHom
+  (Algebra.TensorProduct.congr e e').toRingEquiv.toRingHom
 
 private lemma tensorProductRingHom_injective
     {T A B C D : Type*} [CommSemiring T] [Semiring A] [Algebra T A]
@@ -619,16 +619,18 @@ theorem same_image
           (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f)) ∘
       (PrimeSpectrum.comap
           (tensorLocalizationMap (k := k) (R := R) S' f)) := by
-  let _ : Algebra R (S' ⊗[k] R) := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra R (S' ⊗[k] R) :=
+    Algebra.TensorProduct.rightAlgebra (R := k) (A := S') (B := R)
   let _ : Algebra R (Localization.Away f) :=
     ((algebraMap (S' ⊗[k] R) (Localization.Away f)).comp
-      (algebraMap R (S' ⊗[k] R))).toAlgebra
-  let _ : Algebra R (S ⊗[k] R) := Algebra.TensorProduct.rightAlgebra
+      (Algebra.TensorProduct.includeRight : R →ₐ[k] S' ⊗[k] R).toRingHom).toAlgebra
+  let _ : Algebra R (S ⊗[k] R) :=
+    Algebra.TensorProduct.rightAlgebra (R := k) (A := S) (B := R)
   let _ : Algebra R (Localization.Away
       (tensorSubalgebraMap (k := k) (R := R) S' f)) :=
     ((algebraMap (S ⊗[k] R)
       (Localization.Away (tensorSubalgebraMap (k := k) (R := R) S' f))).comp
-        (algebraMap R (S ⊗[k] R))).toAlgebra
+        (Algebra.TensorProduct.includeRight : R →ₐ[k] S ⊗[k] R).toRingHom).toAlgebra
   have hright_small :
       algebraMap R (S' ⊗[k] R) =
         tensorRightRingHom (k := k) (A := S') (R := R) := by
@@ -735,8 +737,7 @@ theorem same_image
           ψ
             (tensorProductRingHom csmallEquiv (AlgEquiv.refl : κ ≃ₐ[R] κ)
             (f ⊗ₜ[R] (1 : κ))) := by
-      simp [tensorProductRingHom, tensorProductRingEquiv,
-        Algebra.TensorProduct.congr, AlgEquiv.ofAlgHom,
+      simp [tensorProductRingHom, Algebra.TensorProduct.congr, AlgEquiv.ofAlgHom,
         Algebra.TensorProduct.map_tmul, ψ, residueFiberAlgHom]
       change cbigEquiv (g f) ⊗ₜ[R] (1 : κ) =
         (Algebra.TensorProduct.map (AlgHom.id R R) S'.val)

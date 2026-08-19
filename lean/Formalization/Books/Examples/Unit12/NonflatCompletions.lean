@@ -2,6 +2,7 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.Flat.Tensor
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.RingHom.Flat
@@ -16,6 +17,10 @@ import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.Data.Finsupp.Encodable
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Valuation.ValuationRing
+import Mathlib.Algebra.Field.ULift
+import Mathlib.Algebra.GCDMonoid.IntegrallyClosed
+import Mathlib.Data.Countable.Defs
+import Mathlib.Data.Rat.Encodable
 import Mathlib.LinearAlgebra.TensorProduct.Pi
 import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 
@@ -1169,24 +1174,93 @@ theorem completion_polynomial_ring_not_flat :
       IsPowerSeriesCompletion R ∧
         ¬ Module.Flat R (PowerSeries R) ∧
         ¬ Module.Flat (Polynomial R) (PowerSeries R) := by
-  sorry
+  let A := noncoherentExampleRing (ULift.{u} ℚ)
+  refine ⟨A, inferInstance, ?_, ?_, ?_⟩
+  · exact powerSeries_is_completion A
+  · simpa [A] using noncoherentExample_powerSeries_not_flat (ULift.{u} ℚ)
+  · intro hflat
+    apply (show ¬ Module.Flat A (PowerSeries A) by
+      simpa [A] using noncoherentExample_powerSeries_not_flat (ULift.{u} ℚ))
+    rw [← RingHom.flat_algebraMap_iff]
+    convert RingHom.Flat.comp
+      (f := algebraMap A (Polynomial A))
+      (g := algebraMap (Polynomial A) (PowerSeries A))
+      (by
+        rw [RingHom.flat_algebraMap_iff]
+        exact Module.Flat.of_free)
+      (RingHom.flat_algebraMap_iff.mpr hflat) using 1
+    apply RingHom.ext
+    intro r
+    simp [PowerSeries.algebraMap_apply']
 
 /-! ## Valuation rings and almost integral elements -/
 
 theorem valuationRing_is_coherent (R : Type u) [CommRing R] [IsDomain R]
     [ValuationRing R] :
     IsCoherent R := by
-  sorry
+  intro I hI
+  obtain ⟨a, ha⟩ := IsBezout.isPrincipal_of_FG I hI
+  let l : R →ₗ[R] I :=
+    { toFun := fun r => ⟨r * a, by
+        rw [ha]
+        simpa [smul_eq_mul] using
+          (Submodule.smul_mem (R := R) (M := R) (R ∙ a) r
+            (Submodule.mem_span_singleton_self a))⟩
+      map_add' := by
+        intro r s
+        apply Subtype.ext
+        exact add_mul r s a
+      map_smul' := by
+        intro r s
+        apply Subtype.ext
+        simp [smul_eq_mul, mul_assoc] }
+  have hl : Function.Surjective l := by
+    intro x
+    have hx : (x : R) ∈ (R ∙ a) := by
+      exact ha ▸ x.property
+    obtain ⟨r, hr⟩ := (Submodule.mem_span_singleton).mp hx
+    refine ⟨r, ?_⟩
+    apply Subtype.ext
+    simpa [l, smul_eq_mul] using hr
+  have hker : (LinearMap.ker l).FG := by
+    by_cases ha0 : a = 0
+    · have htop : LinearMap.ker l = ⊤ := by
+        apply top_unique
+        intro r hr
+        rw [LinearMap.mem_ker]
+        apply Subtype.ext
+        simp [l, ha0]
+      rw [htop]
+      exact Module.Finite.fg_top
+    · have hinj : Function.Injective l := by
+        intro r s hrs
+        have hv := congrArg Subtype.val hrs
+        change r * a = s * a at hv
+        exact mul_right_cancel₀ ha0 hv
+      rw [LinearMap.ker_eq_bot.mpr hinj]
+      exact Submodule.fg_bot
+  exact Module.finitePresentation_of_free_of_surjective l hl hker
 
 theorem valuationRing_is_normal (R : Type u) [CommRing R] [IsDomain R]
     [ValuationRing R] :
     IsIntegrallyClosed R := by
-  sorry
+  infer_instance
 
 theorem valuationRing_powerSeries_flat (R : Type u) [CommRing R] [IsDomain R]
     [ValuationRing R] :
     Module.Flat R (PowerSeries R) := by
-  sorry
+  rw [Module.Flat.flat_iff_torsion_eq_bot_of_isBezout]
+  rw [← Submodule.isTorsionFree_iff_torsion_eq_bot]
+  exact Module.IsTorsionFree.of_smul_eq_zero (fun r f h => by
+    by_cases hr : r = 0
+    · exact Or.inl hr
+    · right
+      apply PowerSeries.ext
+      intro n
+      have hn : r * PowerSeries.coeff n f = 0 := by
+        simpa [PowerSeries.coeff_smul, smul_eq_mul] using
+          congrArg (PowerSeries.coeff n) h
+      exact (mul_eq_zero.mp hn).resolve_left hr)
 
 theorem exists_valuationRing_dimension_gt_one_not_flat_over_polynomial :
     ∃ (R : Type u) (_ : CommRing R) (_ : IsDomain R) (_ : ValuationRing R),

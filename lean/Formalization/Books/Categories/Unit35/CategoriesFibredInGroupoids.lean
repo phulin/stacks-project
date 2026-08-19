@@ -3716,16 +3716,9 @@ theorem categoryPresheafStrictification_exists_equivalence
     · refine CategoryTheory.Functor.hext
         (fun A => (categoryPresheafStrictificationPullback A).2) ?_
       intro A B f
-      simpa [G, categoryPresheafStrictificationInverse,
+      simp [G, categoryPresheafStrictificationInverse,
         categoryPresheafStrictificationProjection,
-        categoryPresheafStrictificationHomBase] using
-        (CategoryTheory.conj_eqToHom_iff_heq'
-          (p.map f.hom)
-          ((categoryPresheafStrictificationProjection P).map f)
-          (categoryPresheafStrictificationPullback A).2
-          (categoryPresheafStrictificationPullback B).2.symm).mp (by
-            simp [categoryPresheafStrictificationProjection,
-              categoryPresheafStrictificationHomBase, Category.assoc])
+        categoryPresheafStrictificationHomBase]
     · let comp := E ⋙ G
       let component : ∀ X : S, comp.obj X ≅ X := by
         intro X
@@ -3916,10 +3909,8 @@ theorem categoryPresheafStrictification_exists_equivalence
         let eB' := CategoryTheory.IsHomLift.domain_eq p
           (𝟙 (p.obj ((categoryPresheafStrictificationPullback B).1))) wB
         let eA0 : p.obj ((categoryPresheafStrictificationPullback A).1) = A.V := by
-          change p.obj ((categoryPresheafStrictificationPullback A).1) = A.V
           exact (categoryPresheafStrictificationPullback A).2
         let eB0 : p.obj ((categoryPresheafStrictificationPullback B).1) = B.V := by
-          change p.obj ((categoryPresheafStrictificationPullback B).1) = B.V
           exact (categoryPresheafStrictificationPullback B).2
         let : p.IsStronglyCartesian
             (𝟙 (p.obj ((categoryPresheafStrictificationPullback A).1))) wA :=
@@ -3930,11 +3921,11 @@ theorem categoryPresheafStrictification_exists_equivalence
         have hwA : p.map wA = eqToHom eA' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((categoryPresheafStrictificationPullback A).1))) wA
-          convert h using 1 <;> simp
+          convert h using 1; simp
         have hwB : p.map wB = eqToHom eB' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((categoryPresheafStrictificationPullback B).1))) wB
-          convert h using 1 <;> simp
+          convert h using 1; simp
         have hfac :
             (categoryPresheafStrictificationFunctorHom P f.hom).hom ≫ wB =
               wA ≫ f.hom := by
@@ -4005,7 +3996,6 @@ theorem categoryPresheafStrictification_exists_equivalence
         let eA' := CategoryTheory.IsHomLift.domain_eq p
           (𝟙 (p.obj ((categoryPresheafStrictificationPullback A).1))) wA
         let eA0 : p.obj ((categoryPresheafStrictificationPullback A).1) = A.V := by
-          change p.obj ((categoryPresheafStrictificationPullback A).1) = A.V
           exact (categoryPresheafStrictificationPullback A).2
         let : p.IsStronglyCartesian
             (𝟙 (p.obj ((categoryPresheafStrictificationPullback A).1))) wA :=
@@ -4013,7 +4003,7 @@ theorem categoryPresheafStrictification_exists_equivalence
         have hwA : p.map wA = eqToHom eA' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((categoryPresheafStrictificationPullback A).1))) wA
-          convert h using 1 <;> simp
+          convert h using 1; simp
         dsimp [e, NatIso.ofComponents, component, comp, G, E,
           categoryPresheafStrictificationFunctor,
           categoryPresheafStrictificationInverse,

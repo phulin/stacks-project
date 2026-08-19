@@ -397,7 +397,6 @@ private noncomputable instance standardFiniteFreeFactorizationCategory
     SmallCategory (StandardFiniteFreeFactorization (R := R) (M := M)) where
   Hom A B := StandardFiniteFreeFactorization.Hom (R := R) (M := M) A B
   id A := by
-    change StandardFiniteFreeFactorization.Hom (R := R) (M := M) A A
     refine ⟨LinearMap.id, ?_, ⟨0⟩⟩
     apply LinearMap.ext
     intro x
@@ -456,8 +455,7 @@ private noncomputable def standardFiniteFreeFactorizationDiagram
       apply ModuleCat.hom_ext
       apply LinearMap.ext
       intro x
-      simp [standardFiniteFreeLiftMap, standardFiniteFreeFactorizationCategory,
-        LinearMap.comp_apply]
+      simp [standardFiniteFreeLiftMap, LinearMap.comp_apply]
       change g.hom (f.hom x.down) = g.hom (f.hom x.down)
       rfl }
 
@@ -725,7 +723,7 @@ private def finiteFreeFactorizationDescLinear
           map_smul' := by
             intro s a
             rw [← eR.symm.map_smul, smul_eq_mul]
-            simp [mul_assoc, mul_comm, mul_left_comm] }
+            simp [mul_left_comm] }
       let k : point (r • x) ⟶ point x := CostructuredArrow.homMk
         (P.homMk (ModuleCat.ofHom m)) (by
           apply ModuleCat.hom_ext

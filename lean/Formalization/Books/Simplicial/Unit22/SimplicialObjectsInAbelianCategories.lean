@@ -3,6 +3,7 @@ import Mathlib.Algebra.Homology.ShortComplex.Exact
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Abelian.FunctorCategory
 import Mathlib.CategoryTheory.Functor.OfSequence
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Exact
 import Mathlib.CategoryTheory.Limits.FunctorCategory.EpiMono
 
 /-!
@@ -87,13 +88,29 @@ theorem simplicial_exact_iff_componentwise
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex (SimplicialObject C)) :
     S.Exact ↔ ∀ n, (simplicialEvaluationShortComplex (S := S) n).Exact := by
-  sorry
+  let F : ∀ n : SimplexCategoryᵒᵖ, SimplicialObject C ⥤ C :=
+    fun n => (evaluation (SimplexCategoryᵒᵖ) C).obj n
+  have hF : JointlyReflectIsomorphisms F := by
+    constructor
+    intro X Y f
+    dsimp [F] at *
+    exact NatIso.isIso_of_isIso_app f
+  simpa only [F, simplicialEvaluationShortComplex, Functor.mapShortComplex_obj] using
+    hF.exact_iff S
 
 theorem cosimplicial_exact_iff_componentwise
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex (SimplexCategory ⥤ C)) :
     S.Exact ↔ ∀ n, (cosimplicialEvaluationShortComplex (S := S) n).Exact := by
-  sorry
+  let F : ∀ n : SimplexCategory, (SimplexCategory ⥤ C) ⥤ C :=
+    fun n => (evaluation SimplexCategory C).obj n
+  have hF : JointlyReflectIsomorphisms F := by
+    constructor
+    intro X Y f
+    dsimp [F] at *
+    exact NatIso.isIso_of_isIso_app f
+  simpa only [F, cosimplicialEvaluationShortComplex, Functor.mapShortComplex_obj] using
+    hF.exact_iff S
 
 /-! ## The concentrated truncated object -/
 
@@ -126,7 +143,29 @@ theorem concentratedTruncatedMap_id
     {C : Type u} [Category.{v} C] [HasZeroMorphisms C] [HasZeroObject C]
     (A : C) (k : ℕ) (X : (SimplexCategory.Truncated k)ᵒᵖ) :
     concentratedTruncatedMap A k (𝟙 X) = 𝟙 _ := by
-  sorry
+  classical
+  have hcast_id : ∀ {B : C} (h : B = A) (p : (A ⟶ A) = (B ⟶ B)),
+      cast p (𝟙 A) = 𝟙 B := by
+    intro B h p
+    subst B
+    cases p
+    rfl
+  have hcast_zero : ∀ {B : C} (h : B = 0)
+      (p : ((0 : C) ⟶ (0 : C)) = (B ⟶ B)),
+      cast p (0 : (0 : C) ⟶ (0 : C)) = 𝟙 B := by
+    intro B h p
+    subst B
+    cases p
+    exact (isZero_zero C).eq_of_src _ _
+  simp only [concentratedTruncatedMap]
+  split
+  · simp_all
+    split
+    · apply hcast_id
+      simp_all [concentratedTruncatedValue]
+    · apply hcast_zero
+      simp_all [concentratedTruncatedValue]
+  · simp_all
 
 theorem concentratedTruncatedMap_comp
     {C : Type u} [Category.{v} C] [HasZeroMorphisms C] [HasZeroObject C]
@@ -134,7 +173,166 @@ theorem concentratedTruncatedMap_comp
     (f : X ⟶ Y) (g : Y ⟶ Z) :
     concentratedTruncatedMap A k (f ≫ g) =
       concentratedTruncatedMap A k f ≫ concentratedTruncatedMap A k g := by
-  sorry
+  classical
+  have obj_eq_of_len_eq {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (h : P.unop.obj.len = Q.unop.obj.len) : P = Q := by
+    apply Opposite.unop_injective
+    apply ObjectProperty.FullSubcategory.ext
+    exact SimplexCategory.ext h
+  have value_isZero_of_ne_top {P : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hP : P.unop.obj.len ≠ k) :
+      IsZero (concentratedTruncatedValue A k P.unop) := by
+    simpa [concentratedTruncatedValue, hP] using (isZero_zero C)
+  have map_eq_zero_of_source_not_top {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u : P ⟶ Q) (hP : P.unop.obj.len ≠ k) :
+      concentratedTruncatedMap A k u = 0 :=
+    (value_isZero_of_ne_top hP).eq_of_src _ _
+  have map_eq_zero_of_target_not_top {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u : P ⟶ Q) (hQ : Q.unop.obj.len ≠ k) :
+      concentratedTruncatedMap A k u = 0 :=
+    (value_isZero_of_ne_top hQ).eq_of_tgt _ _
+  have hcast_zero_id : ∀ {B : C} (h : B = A) (p : (A ⟶ A) = (B ⟶ B)),
+      cast p (0 : A ⟶ A) = 0 := by
+    intro B h p
+    subst B
+    cases p
+    rfl
+  have map_eq_zero_of_ne_id {P : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u : P ⟶ P) (hu : u ≠ 𝟙 P) (hP : P.unop.obj.len = k) :
+      concentratedTruncatedMap A k u = 0 := by
+    simp only [concentratedTruncatedMap]
+    split
+    · simp_all
+      apply hcast_zero_id
+      simp_all [concentratedTruncatedValue]
+    · simp_all
+  have hcomp_top_obj {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u : P ⟶ Q) (v : Q ⟶ P) (h : u ≫ v = 𝟙 P)
+      (hP : P.unop.obj.len = k) : P = Q := by
+    have h' : v.unop.hom ≫ u.unop.hom = 𝟙 P.unop.obj := by
+      simpa using congrArg (fun w => w.hom) (congrArg Quiver.Hom.unop h)
+    letI : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
+    have hlen : P.unop.obj.len ≤ Q.unop.obj.len :=
+      SimplexCategory.len_le_of_mono v.unop.hom
+    have hQ : Q.unop.obj.len = k :=
+      le_antisymm Q.unop.property (by simpa [hP] using hlen)
+    have hPQ : P = Q := obj_eq_of_len_eq (hP.trans hQ.symm)
+    exact hPQ
+  have hcomp_top_end {P : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u v : P ⟶ P) (h : u ≫ v = 𝟙 P) (hP : P.unop.obj.len = k) :
+      u = 𝟙 P ∧ v = 𝟙 P := by
+    have h' : v.unop.hom ≫ u.unop.hom = 𝟙 P.unop.obj := by
+      simpa using congrArg (fun w => w.hom) (congrArg Quiver.Hom.unop h)
+    letI : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
+    have hv' : v.unop.hom = 𝟙 _ := SimplexCategory.eq_id_of_mono _
+    have hv'' : v.unop = 𝟙 P.unop := by
+      apply ObjectProperty.hom_ext _
+      exact hv'
+    have hv : v = 𝟙 P := by
+      apply Quiver.Hom.unop_inj
+      simpa using hv''
+    refine ⟨?_, hv⟩
+    rw [hv, Category.comp_id] at h
+    exact h
+  have map_eq_zero_of_ne_top {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (u : P ⟶ Q) (h : P.unop.obj.len ≠ k ∨ Q.unop.obj.len ≠ k) :
+      concentratedTruncatedMap A k u = 0 := by
+    rcases h with h | h
+    · exact map_eq_zero_of_source_not_top u h
+    · exact map_eq_zero_of_target_not_top u h
+  by_cases hXY : X = Y
+  · subst Y
+    by_cases hXZ : X = Z
+    · subst Z
+      by_cases hXtop : X.unop.obj.len = k
+      · by_cases hf : f = 𝟙 X
+        · by_cases hg : g = 𝟙 X
+          · subst f
+            subst g
+            simp only [Category.id_comp, concentratedTruncatedMap_id]
+          · have hcomp : f ≫ g ≠ 𝟙 X := by
+              intro h
+              exact hg (hcomp_top_end f g h hXtop).2
+            rw [map_eq_zero_of_ne_id (f ≫ g) hcomp hXtop,
+              hf, concentratedTruncatedMap_id,
+              map_eq_zero_of_ne_id g hg hXtop,
+              comp_zero]
+        · have hcomp : f ≫ g ≠ 𝟙 X := by
+            intro h
+            exact hf (hcomp_top_end f g h hXtop).1
+          rw [map_eq_zero_of_ne_id (f ≫ g) hcomp hXtop,
+            map_eq_zero_of_ne_id f hf hXtop, zero_comp]
+      · rw [map_eq_zero_of_source_not_top (f ≫ g) hXtop,
+          map_eq_zero_of_source_not_top f hXtop,
+          map_eq_zero_of_source_not_top g hXtop, zero_comp]
+    · have hcompzero : concentratedTruncatedMap A k (f ≫ g) = 0 := by
+        by_cases hXtop : X.unop.obj.len = k
+        · have hZnot : Z.unop.obj.len ≠ k := by
+            intro hZtop
+            exact hXZ (obj_eq_of_len_eq (hXtop.trans hZtop.symm))
+          exact map_eq_zero_of_target_not_top (f ≫ g) hZnot
+        · exact map_eq_zero_of_source_not_top (f ≫ g) hXtop
+      have hgzero : concentratedTruncatedMap A k g = 0 := by
+        apply map_eq_zero_of_ne_top
+        by_cases hXtop : X.unop.obj.len = k
+        · right
+          intro hZtop
+          exact hXZ (obj_eq_of_len_eq (hXtop.trans hZtop.symm))
+        · left
+          exact hXtop
+      rw [hcompzero, hgzero, comp_zero]
+  · by_cases hYZ : Y = Z
+    · subst Z
+      have hfzero : concentratedTruncatedMap A k f = 0 := by
+        apply map_eq_zero_of_ne_top
+        by_cases hXtop : X.unop.obj.len = k
+        · right
+          intro hYtop
+          exact hXY (obj_eq_of_len_eq (hXtop.trans hYtop.symm))
+        · left
+          exact hXtop
+      have hcompzero : concentratedTruncatedMap A k (f ≫ g) = 0 := by
+        apply map_eq_zero_of_ne_top
+        by_cases hXtop : X.unop.obj.len = k
+        · right
+          intro hYtop
+          exact hXY (obj_eq_of_len_eq (hXtop.trans hYtop.symm))
+        · left
+          exact hXtop
+      rw [hcompzero, hfzero, zero_comp]
+    · have hfzero : concentratedTruncatedMap A k f = 0 := by
+        apply map_eq_zero_of_ne_top
+        by_cases hXtop : X.unop.obj.len = k
+        · right
+          intro hYtop
+          exact hXY (obj_eq_of_len_eq (hXtop.trans hYtop.symm))
+        · left
+          exact hXtop
+      have hgzero : concentratedTruncatedMap A k g = 0 := by
+        apply map_eq_zero_of_ne_top
+        by_cases hYtop : Y.unop.obj.len = k
+        · right
+          intro hZtop
+          exact hYZ (obj_eq_of_len_eq (hYtop.trans hZtop.symm))
+        · left
+          exact hYtop
+      have hcompzero : concentratedTruncatedMap A k (f ≫ g) = 0 := by
+        by_cases hXZ : X = Z
+        · subst Z
+          by_cases hXtop : X.unop.obj.len = k
+          · apply map_eq_zero_of_ne_id
+            intro h
+            exact hXY (hcomp_top_obj f g h hXtop)
+            exact hXtop
+          · exact map_eq_zero_of_source_not_top (f ≫ g) hXtop
+        · apply map_eq_zero_of_ne_top
+          by_cases hXtop : X.unop.obj.len = k
+          · right
+            intro hZtop
+            exact hXZ (obj_eq_of_len_eq (hXtop.trans hZtop.symm))
+          · left
+            exact hXtop
+      rw [hcompzero, hfzero, hgzero, zero_comp]
 
 noncomputable def concentratedTruncatedObject
     {C : Type u} [Category.{v} C] [HasZeroMorphisms C] [HasZeroObject C]

@@ -508,6 +508,25 @@ noncomputable def finitePthRootBaseChangeAtLevel
    contained in a finite succession of p-th-root layers.  The uniform exponent
    in this helper is what lets the paired tower use the corrected level-wise
    interface instead of pretending that one root layer suffices. -/
+theorem exists_uniform_pow_mem_of_finset
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E]
+    (p : ℕ) [Fact p.Prime] [CharP F p] [IsPurelyInseparable F E]
+    (s : Finset E) :
+    ∃ n : ℕ, ∀ z ∈ s,
+      z ^ (p ^ n) ∈ (algebraMap F E).range := by
+  classical
+  choose n b hb using fun z : E =>
+    IsPurelyInseparable.pow_mem (F := F) (E := E) (q := p) (x := z)
+  let N := s.sup n
+  refine ⟨N, ?_⟩
+  intro z hz
+  have hn : n z ≤ N := Finset.le_sup hz
+  refine ⟨b z ^ (p ^ (N - n z)), ?_⟩
+  rw [map_pow, hb]
+  rw [← pow_mul, ← pow_add]
+  congr 2
+  omega
+
 private theorem exists_finite_pth_root_tower_of_uniform
     {F : Type u} [Field F] (n : ℕ) (s : Finset (AlgebraicClosure F))
     [Fact p.Prime] [CharP F p]

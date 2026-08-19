@@ -1481,7 +1481,7 @@ private lemma graded_finite_homogeneous_generators
     apply Submodule.span_le.2
     rintro y ⟨i, rfl⟩
     rw [← DirectSum.sum_support_decompose 𝓜.component (s i)]
-    apply (Algebra.adjoin (degreeZeroSubring G) (s : Set S)).sum_mem
+    apply (Submodule.span S (Set.range x)).sum_mem
     intro j hj
     apply Submodule.subset_span
     refine ⟨e ⟨i, ⟨j, hj⟩⟩, ?_⟩
@@ -3009,6 +3009,393 @@ theorem veronese_generated_in_degree_one
     exact hcompT k y
   · intro x y hx hy
     exact T.add_mem hx hy
+
+private theorem exists_finite_homogeneous_ring_generators
+    (G : GradedRingData S)
+    [Algebra.FiniteType (degreeZeroSubring G) S] :
+    ∃ (n : ℕ) (d : Fin n → ℕ) (x : Fin n → S),
+      (∀ i, x i ∈ G.component (d i)) ∧
+        Algebra.adjoin (degreeZeroSubring G) (Set.range x) = ⊤ := by
+  classical
+  obtain ⟨F, hF⟩ := (inferInstance : Algebra.FiniteType (degreeZeroSubring G) S).out
+  let ι := Σ (z : F), (DirectSum.decompose G.component (z : S)).support
+  let _ : Fintype ι := Fintype.ofFinite ι
+  let e : ι ≃ Fin (Fintype.card ι) := Fintype.equivFin ι
+  let d : Fin (Fintype.card ι) → ℕ := fun k => (e.symm k).2
+  let x : Fin (Fintype.card ι) → S := fun k =>
+    (DirectSum.decompose G.component (e.symm k).1 (e.symm k).2 : S)
+  refine ⟨Fintype.card ι, d, x, ?_, ?_⟩
+  · intro k
+    exact (DirectSum.decompose G.component (e.symm k).1 (e.symm k).2).property
+  · apply top_unique
+    rw [← hF]
+    apply Algebra.adjoin_le
+    intro z hz
+    rw [← DirectSum.sum_support_decompose G.component (z : S)]
+    apply (Algebra.adjoin (degreeZeroSubring G) (Set.range x)).sum_mem
+    intro k hk
+    by_cases hk0 : k = 0
+    · subst k
+      exact (Algebra.adjoin (degreeZeroSubring G) (Set.range x)).algebraMap_mem
+        ⟨_, (DirectSum.decompose G.component (z : S) 0).property⟩
+    · apply Algebra.subset_adjoin
+      refine ⟨e ⟨⟨z, hz⟩, ⟨k, hk⟩⟩, ?_⟩
+      dsimp [x]
+      rw [e.symm_apply_apply]
+
+private theorem graded_component_finite_of_homogeneous_generators
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (r : ℕ) (q : Fin r → ℕ) (a : Fin r → S)
+    (ha : ∀ i, a i ∈ G.component (q i))
+    (hagen : Algebra.adjoin (degreeZeroSubring G) (Set.range a) = ⊤)
+    (m : ℕ) (d : Fin m → ℤ) (x : Fin m → M)
+    (hx : ∀ i, x i ∈ 𝓜.component (d i))
+    (hxspan : Submodule.span S (Set.range x) = ⊤)
+    (n : ℤ) [Module (degreeZeroSubring G) (𝓜.component n)]
+    (hsmul : ∀ (c : degreeZeroSubring G) (y : 𝓜.component n),
+      ((c • y : 𝓜.component n) : M) = (c : S) • (y : M)) :
+    Module.Finite (degreeZeroSubring G) (𝓜.component n) := by
+  classical
+  let ι := {i : Fin r // 0 < q i}
+  let _ : Fintype ι := Fintype.ofFinite ι
+  let sp : ι → S := fun i => a i.1
+  let qp : ι → ℕ := fun i => q i.1
+  have hsp : ∀ i, sp i ∈ G.component (qp i) := by
+    intro i
+    exact ha i.1
+  have hspgen : Algebra.adjoin (degreeZeroSubring G) (Set.range sp) = ⊤ := by
+    apply top_unique
+    rw [← hagen]
+    apply Algebra.adjoin_le
+    rintro z ⟨i, rfl⟩
+    by_cases hi : 0 < q i
+    · exact Algebra.subset_adjoin ⟨⟨i, hi⟩, rfl⟩
+    · have hi0 : q i = 0 := Nat.eq_zero_of_not_pos hi
+      have hzi : a i ∈ degreeZeroSubring G := by
+        change a i ∈ G.component 0
+        simpa [hi0] using ha i
+      exact (Algebra.adjoin (degreeZeroSubring G) (Set.range sp)).algebraMap_mem
+        ⟨a i, hzi⟩
+  let monomial : (ι → ℕ) → S := fun e => ∏ i : ι, (sp i) ^ e i
+  let deg : (ι → ℕ) → ℕ := fun e => ∑ i : ι, qp i * e i
+  have hmono (e : ι → ℕ) : monomial e ∈ G.component (deg e) := by
+    dsimp [monomial, deg]
+    simpa [mul_comm] using
+      (SetLike.prod_pow_mem_graded G.component qp (fun i : ι => sp i) e
+        (F := Finset.univ) (by
+          intro i hi
+          exact hsp i))
+  have hmonmul (e f : ι → ℕ) :
+      monomial e * monomial f = monomial (fun i => e i + f i) := by
+    dsimp [monomial]
+    rw [← Finset.prod_mul_distrib]
+    congr 1
+    funext i
+    exact (pow_add (sp i) (e i) (f i)).symm
+  let Q : Submodule (degreeZeroSubring G) S :=
+    Submodule.span (degreeZeroSubring G) (Set.range monomial)
+  have hQmul : ∀ {u v : S}, u ∈ Q → v ∈ Q → u * v ∈ Q := by
+    intro u v hu hv
+    refine Submodule.span_induction
+      (p := fun u _ => ∀ v : S, v ∈ Q → u * v ∈ Q) ?_ ?_ ?_ ?_ hu v hv
+    · intro u hu v hv
+      rcases hu with ⟨e, rfl⟩
+      refine Submodule.span_induction
+        (p := fun v _ => monomial e * v ∈ Q) ?_ ?_ ?_ ?_ hv
+      · intro v hv
+        rcases hv with ⟨f, rfl⟩
+        rw [hmonmul]
+        exact Submodule.subset_span ⟨fun i => e i + f i, rfl⟩
+      · simp
+      · intro v w _ _ hv hw
+        rw [mul_add]
+        exact Q.add_mem hv hw
+      · intro c v _ hv
+        change monomial e * ((c : degreeZeroSubring G) * v) ∈ Q
+        have h := Q.smul_mem c hv
+        change (c : S) * (monomial e * v) ∈ Q at h
+        convert h using 1 <;> ring
+    · simp
+    · intro u v _ _ hu hv w hw
+      rw [add_mul]
+      exact Q.add_mem (hu w hw) (hv w hw)
+    · intro c u _ hu v hv
+      change ((c : degreeZeroSubring G) * u) * v ∈ Q
+      have h := Q.smul_mem c (hu v hv)
+      change (c : S) * (u * v) ∈ Q at h
+      convert h using 1 <;> ring
+  have hQtop : Q = (⊤ : Submodule (degreeZeroSubring G) S) := by
+    apply top_unique
+    intro z hz
+    have hz' : z ∈ Algebra.adjoin (degreeZeroSubring G) (Set.range sp) := by
+      rw [hspgen]
+      trivial
+    refine Algebra.adjoin_induction (s := Set.range sp)
+      (p := fun z _ => z ∈ Q) ?_ ?_ ?_ ?_ hz'
+    · intro z hz
+      rcases hz with ⟨i, rfl⟩
+      let e : ι → ℕ := fun j => if j = i then 1 else 0
+      have he : monomial e = sp i := by
+        dsimp [monomial, e]
+        rw [Finset.prod_eq_single_of_mem i (by simp) (by
+          intro j hj hji
+          simp [hji])]
+        simp
+      rw [← he]
+      exact Submodule.subset_span ⟨e, rfl⟩
+    · intro c
+      change (c : S) ∈ Q
+      have h1 : (1 : S) ∈ Q := by
+        apply Submodule.subset_span
+        exact ⟨fun _ => 0, by simp [monomial]⟩
+      have h := Q.smul_mem c h1
+      change (c : S) * 1 ∈ Q at h
+      simpa using h
+    · intro u v _ _ hu hv
+      exact Q.add_mem hu hv
+    · intro u v _ _ hu hv
+      exact hQmul hu hv
+  let gen : (ι → ℕ) × Fin m → M := fun z => monomial z.1 • x z.2
+  let P : Submodule (degreeZeroSubring G) M :=
+    Submodule.span (degreeZeroSubring G) (Set.range gen)
+  have hP_smul (u : S) (z : M) (hz : z ∈ P) : u • z ∈ P := by
+    refine Submodule.span_induction
+      (p := fun z _ => u • z ∈ P) ?_ ?_ ?_ ?_ hz
+    · rintro z ⟨⟨e, i⟩, rfl⟩
+      have hu : u * monomial e ∈ Q := by
+        rw [hQtop]
+        trivial
+      have hmulgen : ∀ v : S, v ∈ Q → v • x i ∈ P := by
+        intro v hv
+        refine Submodule.span_induction
+          (p := fun v _ => v • x i ∈ P) ?_ ?_ ?_ ?_ hv
+        · intro v hv
+          rcases hv with ⟨f, rfl⟩
+          exact Submodule.subset_span ⟨(f, i), rfl⟩
+        · simp
+        · intro v w _ _ hv hw
+          rw [add_smul]
+          exact P.add_mem hv hw
+        · intro c v _ hv
+          have h := P.smul_mem c hv
+          convert h using 1
+          change ((c : S) * v) • x i = (c : S) • (v • x i)
+          rw [smul_smul]
+      have h := hmulgen (u * monomial e) hu
+      change (u * monomial e) • x i ∈ P at h
+      change u • (monomial e • x i) ∈ P
+      simpa [smul_smul, smul_eq_mul, mul_assoc] using h
+    · simp
+    · intro z w _ _ hz hw
+      rw [smul_add]
+      exact P.add_mem hz hw
+    · intro c z _ hz
+      have h := P.smul_mem c hz
+      convert h using 1
+      exact smul_comm u (c : S) z
+  let N : Submodule S M :=
+    { carrier := P
+      zero_mem' := P.zero_mem
+      add_mem' := P.add_mem
+      smul_mem' := by
+        intro u z hz
+        exact hP_smul u z hz }
+  have hNtop : N = (⊤ : Submodule S M) := by
+    apply top_unique
+    rw [← hxspan]
+    apply Submodule.span_le.2
+    rintro z ⟨i, rfl⟩
+    exact Submodule.subset_span ⟨((fun _ : ι => 0), i), by simp [gen, monomial]⟩
+  let p : Fin m → ℕ := fun i => Int.toNat (n - d i)
+  let D := Σ i : Fin m, {e : ι → Fin (p i + 1) //
+    ((deg (fun j => (e j : ℕ)) : ℕ) : ℤ) + d i = n}
+  let _ : Fintype D := Fintype.ofFinite D
+  let cand : D → 𝓜.component n := fun z =>
+    ⟨monomial (fun j => (z.2.1 j : ℕ)) • x z.1, by
+      have hm := 𝓜.gradedSMul.smul_mem
+        (hmono (fun j => (z.2.1 j : ℕ))) (hx z.1)
+      change monomial (fun j => (z.2.1 j : ℕ)) • x z.1 ∈
+        𝓜.component (((deg (fun j => (z.2.1 j : ℕ)) : ℕ) : ℤ) + d z.1) at hm
+      rw [z.2.2] at hm
+      exact hm⟩
+  have hproj (c : degreeZeroSubring G) (z : M) :
+      (DirectSum.decompose 𝓜.component ((c : S) • z) n : M) =
+        (c : S) • (DirectSum.decompose 𝓜.component z n : M) := by
+    have hdecomp_add (u v : M) :
+        DirectSum.decompose 𝓜.component (u + v) =
+          DirectSum.decompose 𝓜.component u + DirectSum.decompose 𝓜.component v :=
+      (DirectSum.decomposeAddEquiv 𝓜.component).map_add u v
+    induction z using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓜.component) with
+    | zero => simp
+    | add z w hz hw =>
+        rw [smul_add, hdecomp_add ((c : S) • z) ((c : S) • w), hdecomp_add z w]
+        change
+          (DirectSum.decompose 𝓜.component ((c : S) • z) n : M) +
+              (DirectSum.decompose 𝓜.component ((c : S) • w) n : M) =
+            (c : S) •
+              ((DirectSum.decompose 𝓜.component z n : M) +
+                (DirectSum.decompose 𝓜.component w n : M))
+        rw [hz, hw, smul_add]
+    | @homogeneous j z =>
+        have h := 𝓜.gradedSMul.smul_mem c.property z.property
+        have h' : (c : S) • (z : M) ∈ 𝓜.component j := by
+          change (c : S) • (z : M) ∈ 𝓜.component ((0 : ℤ) + j) at h
+          simpa using h
+        by_cases hj : j = n
+        · subst j
+          rw [DirectSum.decompose_of_mem_same 𝓜.component h',
+            DirectSum.decompose_of_mem_same 𝓜.component z.property]
+        · rw [DirectSum.decompose_of_mem_ne 𝓜.component h' hj,
+            DirectSum.decompose_of_mem_ne 𝓜.component z.property hj]
+          simp
+  let hfinite := Set.finite_range cand
+  refine Module.Finite.of_fg_top ⟨hfinite.toFinset, ?_⟩
+  rw [hfinite.coe_toFinset]
+  apply top_unique
+  intro y hy
+  have hyP : (y : M) ∈ P := by
+    have : (y : M) ∈ N := by
+      rw [hNtop]
+      trivial
+    exact this
+  have hresult :
+      (⟨(DirectSum.decompose 𝓜.component (y : M) n : M),
+        (DirectSum.decompose 𝓜.component (y : M) n).property⟩ : 𝓜.component n) ∈
+        Submodule.span (degreeZeroSubring G) (Set.range cand) := by
+    refine Submodule.span_induction
+      (p := fun z _ =>
+        (⟨(DirectSum.decompose 𝓜.component z n : M),
+          (DirectSum.decompose 𝓜.component z n).property⟩ : 𝓜.component n) ∈
+          Submodule.span (degreeZeroSubring G) (Set.range cand)) ?_ ?_ ?_ ?_ hyP
+    · rintro z ⟨⟨e, i⟩, rfl⟩
+      change
+        (⟨(DirectSum.decompose 𝓜.component (monomial e • x i) n : M),
+          (DirectSum.decompose 𝓜.component (monomial e • x i) n).property⟩ :
+            𝓜.component n) ∈ Submodule.span (degreeZeroSubring G) (Set.range cand)
+      have hm := 𝓜.gradedSMul.smul_mem (hmono e) (hx i)
+      change monomial e • x i ∈ 𝓜.component ((deg e : ℤ) + d i) at hm
+      by_cases hdeg : (deg e : ℤ) + d i = n
+      · have hp : n - d i ≥ 0 := by omega
+        have hdegn : deg e = Int.toNat (n - d i) := by
+          apply Int.ofNat_inj.mp
+          calc
+            ((deg e : ℕ) : ℤ) = n - d i := by omega
+            _ = (Int.toNat (n - d i) : ℤ) := (Int.toNat_of_nonneg hp).symm
+        have hebound : ∀ j : ι, e j ≤ p i := by
+          intro j
+          have hq : 1 ≤ qp j := by
+            dsimp [qp]
+            omega
+          have hle : qp j * e j ≤ deg e := by
+            change qp j * e j ≤ ∑ i : ι, qp i * e i
+            exact Finset.single_le_sum (s := (Finset.univ : Finset ι))
+              (f := fun i : ι => qp i * e i)
+              (fun _ _ => Nat.zero_le _) (Finset.mem_univ j)
+          have hpi : p i = deg e := by
+            dsimp [p]
+            simpa using hdegn.symm
+          have hej : e j ≤ qp j * e j := by
+            simpa using Nat.mul_le_mul_right (e j) hq
+          have hejdeg : e j ≤ deg e := hej.trans hle
+          rw [hpi]
+          exact hejdeg
+        let eb : ι → Fin (p i + 1) := fun j =>
+          ⟨e j, Nat.lt_succ_of_le (hebound j)⟩
+        let zD : D := ⟨i, ⟨eb, by
+          dsimp [eb]
+          simpa [hdegn, p] using hdeg⟩⟩
+        have hcan : cand zD =
+            (⟨monomial e • x i, by simpa [hdeg] using hm⟩ : 𝓜.component n) := by
+          apply Subtype.ext
+          dsimp [cand, zD, eb]
+        have hspan : cand zD ∈
+            Submodule.span (degreeZeroSubring G) (Set.range cand) :=
+          Submodule.subset_span ⟨zD, rfl⟩
+        have hdec :
+            (DirectSum.decompose 𝓜.component (monomial e • x i) n : M) =
+              monomial e • x i :=
+          DirectSum.decompose_of_mem_same 𝓜.component (by simpa [hdeg] using hm)
+        have htarget :
+            (⟨(DirectSum.decompose 𝓜.component (monomial e • x i) n : M),
+              (DirectSum.decompose 𝓜.component (monomial e • x i) n).property⟩ :
+                𝓜.component n) = cand zD := by
+          calc
+            _ = (⟨monomial e • x i, by simpa [hdeg] using hm⟩ : 𝓜.component n) := by
+              apply Subtype.ext
+              exact hdec
+            _ = cand zD := hcan.symm
+        rw [htarget]
+        exact hspan
+      · have hzero :
+            (DirectSum.decompose 𝓜.component (monomial e • x i) n : M) = 0 :=
+          DirectSum.decompose_of_mem_ne 𝓜.component hm hdeg
+        have hsub :
+            (⟨(DirectSum.decompose 𝓜.component (monomial e • x i) n : M),
+              (DirectSum.decompose 𝓜.component (monomial e • x i) n).property⟩ :
+                𝓜.component n) = 0 := by
+          apply Subtype.ext
+          exact hzero
+        rw [hsub]
+        exact Submodule.zero_mem _
+    · have hzero :
+          (⟨(DirectSum.decompose 𝓜.component (0 : M) n : M),
+            (DirectSum.decompose 𝓜.component (0 : M) n).property⟩ :
+              𝓜.component n) = 0 := by
+        apply Subtype.ext
+        simp
+      rw [hzero]
+      exact Submodule.zero_mem _
+    · intro z w _ _ hz hw
+      rw [DirectSum.decompose_add, DirectSum.add_apply]
+      change
+        (⟨(DirectSum.decompose 𝓜.component z n : M),
+          (DirectSum.decompose 𝓜.component z n).property⟩ : 𝓜.component n) +
+            ⟨(DirectSum.decompose 𝓜.component w n : M),
+              (DirectSum.decompose 𝓜.component w n).property⟩ ∈
+          Submodule.span (degreeZeroSubring G) (Set.range cand)
+      exact Submodule.add_mem _ hz hw
+    · intro c z _ hz
+      change
+        (⟨(DirectSum.decompose 𝓜.component ((c : S) • z) n : M),
+          (DirectSum.decompose 𝓜.component ((c : S) • z) n).property⟩ :
+            𝓜.component n) ∈ Submodule.span (degreeZeroSubring G) (Set.range cand)
+      have h := Submodule.smul_mem
+        (Submodule.span (degreeZeroSubring G) (Set.range cand)) c hz
+      have heq :
+          (⟨(DirectSum.decompose 𝓜.component ((c : S) • z) n : M),
+            (DirectSum.decompose 𝓜.component ((c : S) • z) n).property⟩ :
+              𝓜.component n) =
+            c •
+              (⟨(DirectSum.decompose 𝓜.component z n : M),
+                (DirectSum.decompose 𝓜.component z n).property⟩ :
+                  𝓜.component n) := by
+        apply Subtype.ext
+        rw [hproj]
+        exact (hsmul c _).symm
+      rw [heq]
+      exact h
+  have hydec :
+      (⟨(DirectSum.decompose 𝓜.component (y : M) n : M),
+        (DirectSum.decompose 𝓜.component (y : M) n).property⟩ : 𝓜.component n) = y := by
+    apply Subtype.ext
+    exact DirectSum.decompose_of_mem_same 𝓜.component y.property
+  rw [hydec] at hresult
+  exact hresult
+
+theorem graded_module_component_finite
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    [Algebra.FiniteType (degreeZeroSubring G) S] [Module.Finite S M]
+    (n : ℤ) [Module (degreeZeroSubring G) (𝓜.component n)]
+    (hsmul : ∀ (c : degreeZeroSubring G) (y : 𝓜.component n),
+      ((c • y : 𝓜.component n) : M) = (c : S) • (y : M)) :
+    Module.Finite (degreeZeroSubring G) (𝓜.component n) := by
+  obtain ⟨r, q, a, ha, hagen⟩ :=
+    exists_finite_homogeneous_ring_generators G
+  obtain ⟨m, d, x, hx, hxspan⟩ :=
+    graded_finite_homogeneous_generators G 𝓜
+  exact graded_component_finite_of_homogeneous_generators
+    G 𝓜 r q a ha hagen m d x hx hxspan n hsmul
 
 /-! ## Integral closure -/
 

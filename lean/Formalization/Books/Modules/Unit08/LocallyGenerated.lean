@@ -146,7 +146,10 @@ theorem positiveHalfLineExtension_stalk_zero :
     Nonempty
       (positiveHalfLineExtension.presheaf.stalk (0 : realLine) ≅
         (⊥_ AddCommGrpCat)) := by
-  sorry
+  simpa [positiveHalfLineExtension] using
+    (Formalization.Books.Sheaves.Unit22.openAlgebraicSheafExtension_stalk_initial
+      AddCommGrpCat positiveHalfLine positiveHalfLineIntegers (0 : realLine) (by
+        simp [positiveHalfLine]))
 
 /-- Sections of the extension by zero on an open interval containing `0` are
 the zero additive group. -/

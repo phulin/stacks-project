@@ -381,13 +381,13 @@ noncomputable def productWithSimplicialSetMap
         degreewiseCoproductInstance U.obj V U.property
       let hU'V' : HasDegreewiseCoproducts U'.obj V' :=
         degreewiseCoproductInstance U'.obj V' U'.property
-      letI : HasCoproduct (fun _ : U.obj.obj X => V.obj X) :=
+      let : HasCoproduct (fun _ : U.obj.obj X => V.obj X) :=
         degreewiseCoproductInstanceAt hUV X
-      letI : HasCoproduct (fun _ : U.obj.obj Y => V.obj Y) :=
+      let : HasCoproduct (fun _ : U.obj.obj Y => V.obj Y) :=
         degreewiseCoproductInstanceAt hUV Y
-      letI : HasCoproduct (fun _ : U'.obj.obj X => V'.obj X) :=
+      let : HasCoproduct (fun _ : U'.obj.obj X => V'.obj X) :=
         degreewiseCoproductInstanceAt hU'V' X
-      letI : HasCoproduct (fun _ : U'.obj.obj Y => V'.obj Y) :=
+      let : HasCoproduct (fun _ : U'.obj.obj Y => V'.obj Y) :=
         degreewiseCoproductInstanceAt hU'V' Y
       change
         (Sigma.desc (fun u =>
@@ -404,7 +404,7 @@ noncomputable def productWithSimplicialSetMap
               (U'.obj.map φ u))
       apply Sigma.hom_ext
       intro u
-      simp [Category.assoc, f.hom.naturality, g.naturality] }
+      simp [Category.assoc] }
 
 /-! The source's rule `(U, V) ↦ U × V` is now given as an actual functor.
 The two functor laws are proposition-valued interfaces for the proof stage. -/
@@ -420,14 +420,14 @@ noncomputable def productWithSimplicialSetBifunctor
         degreewiseCoproductInstance X.1.obj X.2 X.1.property
       apply NatTrans.ext
       funext Y
-      letI : HasCoproduct (fun _ : X.1.obj.obj Y => X.2.obj Y) :=
+      let : HasCoproduct (fun _ : X.1.obj.obj Y => X.2.obj Y) :=
         degreewiseCoproductInstanceAt hX Y
       change
         Sigma.desc (fun u =>
           𝟙 (X.2.obj Y) ≫ Sigma.ι (fun _ : X.1.obj.obj Y => X.2.obj Y) u) = 𝟙 _
       apply Sigma.hom_ext
       intro u
-      simp [productWithSimplicialSetMap, Category.assoc]
+      simp
     map_comp := by
       intro X Y Z f g
       apply NatTrans.ext
@@ -438,11 +438,11 @@ noncomputable def productWithSimplicialSetBifunctor
         degreewiseCoproductInstance Y.1.obj Y.2 Y.1.property
       let hZ : HasDegreewiseCoproducts Z.1.obj Z.2 :=
         degreewiseCoproductInstance Z.1.obj Z.2 Z.1.property
-      letI : HasCoproduct (fun _ : X.1.obj.obj T => X.2.obj T) :=
+      let : HasCoproduct (fun _ : X.1.obj.obj T => X.2.obj T) :=
         degreewiseCoproductInstanceAt hX T
-      letI : HasCoproduct (fun _ : Y.1.obj.obj T => Y.2.obj T) :=
+      let : HasCoproduct (fun _ : Y.1.obj.obj T => Y.2.obj T) :=
         degreewiseCoproductInstanceAt hY T
-      letI : HasCoproduct (fun _ : Z.1.obj.obj T => Z.2.obj T) :=
+      let : HasCoproduct (fun _ : Z.1.obj.obj T => Z.2.obj T) :=
         degreewiseCoproductInstanceAt hZ T
       simp [productWithSimplicialSetMap]
       have hdesc :

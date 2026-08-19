@@ -107,8 +107,12 @@ theorem has_left_skeleton_functor_of_has_finite_colimits
 noncomputable def leftAdjoint
     {C : Type u} [Category.{v} C] [HasFiniteColimits C] (m : ℕ) :
     SimplicialObject.Truncated C m ⥤ SimplicialObject C :=
-  letI : HasLeftSkeletonFunctor C m :=
+  let hsk : HasLeftSkeletonFunctor C m :=
     has_left_skeleton_functor_of_has_finite_colimits m
+  letI : HasLeftSkeletonFunctor C m := hsk
+  letI : (leftSkeletonInclusion m).HasLeftKanExtension U := hsk U
+  letI : (leftSkeletonInclusion m).HasLeftKanExtension U :=
+    has_left_skeleton_functor_of_has_finite_colimits m U
   SimplicialObject.Truncated.sk m
 
 /-- The adjunction `iₘ! ⊣ skₘ`, using the canonical Kan-extension adjunction. -/
@@ -813,7 +817,7 @@ theorem finite_simplicial_set_filtration
         g 0 = e₀.hom ≫ i ∧
         g ⟨r, Nat.lt_succ_self r⟩ = eᵣ.hom ∧
         (∀ j, f j ≫ g j.succ = g j.castSucc) ∧
-        (∀ j, Mono (f j)) ∧
+    (∀ j, Mono (f j)) ∧
         (∀ j, ∃ (n : ℕ) (x : (W j.succ) _⦋n⦌),
           SimplexAttachment (f j) n x) := by
   sorry
@@ -831,7 +835,112 @@ theorem leftAdjoint_normalizedObject_eq_zero
     {C : Type u} [Category.{v} C] [Abelian C]
     (m : ℕ) (U : SimplicialObject.Truncated C m) (n : ℕ) (h : m < n) :
     IsZero (Unit18.normalizedObject ((leftAdjoint (C := C) m).obj U) n) := by
-  sorry
+  classical
+  letI : HasLeftSkeletonFunctor C m :=
+    has_left_skeleton_functor_of_has_finite_colimits m
+  letI : (leftSkeletonInclusion m).HasLeftKanExtension U :=
+    has_left_skeleton_functor_of_has_finite_colimits m U
+  let X : SimplicialObject C := (leftSkeletonInclusion m).leftKanExtension U
+  obtain ⟨s, hs⟩ := Unit18.abelian_category_has_normalized_splitting X
+  obtain ⟨eN, heN⟩ := hs.1 n
+  have hN : IsZero (s.N n) := by
+    let F : ∀ A : SimplicialObject.Splitting.IndexSet (op ⦋n⦌),
+        s.N A.1.unop.len ⟶ s.N n := fun A =>
+        dite A.EqId (fun hA =>
+          eqToHom (by
+            rw [(SimplicialObject.Splitting.IndexSet.eqId_iff_len_eq A).mp hA]))
+          (fun _ => 0)
+    let q : X.obj (op ⦋n⦌) ⟶ s.N n := s.desc (op ⦋n⦌) F
+    have hdeg : ∀ {Δ : SimplexCategoryᵒᵖ}
+        (p : Δ ⟶ op ⦋n⦌), Δ.unop.len < n →
+        X.map p ≫ q = 0 := by
+      intro Δ p hp
+      let e : SimplexCategory := image p.unop
+      let ep : ⦋n⦌ ⟶ e := factorThruImage p.unop
+      let im : e ⟶ Δ.unop := image.ι p.unop
+      letI : Epi ep := by
+        dsimp [ep]
+        infer_instance
+      letI : Mono im := by
+        dsimp [im]
+        infer_instance
+      have hfac : p = im.op ≫ ep.op := by
+        apply Quiver.Hom.unop_inj
+        simpa [ep, im] using (image.fac p.unop)
+      have helt : e.len < n := by
+        have hle : e.len ≤ Δ.unop.len :=
+          SimplexCategory.len_le_of_mono im
+        exact lt_of_le_of_lt hle hp
+      have hq : X.map ep.op ≫ q = 0 := by
+        apply (s.isColimit (op e)).hom_ext
+        intro ⟨B⟩
+        have hnat := s.cofan_inj_epi_naturality B ep.op
+        have hnat' := congrArg (fun z => z ≫ q) hnat
+        simp only [Cofan.inj] at hnat'
+        rw [← Category.assoc]
+        simp only [comp_zero]
+        rw [hnat']
+        let B' := B.epiComp ep.op
+        have hB : ¬ B'.EqId := by
+          intro hB
+          have hlen :=
+            (SimplicialObject.Splitting.IndexSet.eqId_iff_len_eq B').mp hB
+          have hle : B.1.unop.len ≤ e.len :=
+            SimplexCategory.len_le_of_epi B.e
+          dsimp [B', SimplicialObject.Splitting.IndexSet.epiComp] at hlen
+          omega
+        have hF : F B' = 0 := by
+          change (if h : B'.EqId then _ else 0) = 0
+          exact dif_neg hB
+        have hd := s.ι_desc (op ⦋n⦌) F B'
+        rw [hF] at hd
+        dsimp [B', SimplicialObject.Splitting.IndexSet.epiComp, Cofan.inj] at hd ⊢
+        change (s.cofan (op ⦋n⦌)).ι.app (Discrete.mk
+          ⟨B.fst, ⟨ep ≫ B.e, epi_comp _ _⟩⟩) ≫ s.desc (op ⦋n⦌) F = 0
+        exact hd
+      rw [hfac, X.map_comp, Category.assoc, hq, comp_zero]
+    have hcol : HasColimit
+        (CostructuredArrow.proj (leftSkeletonInclusion m) (op ⦋n⦌) ⋙ U) := by
+      simpa [leftSkeletonDiagram] using
+        (has_left_skeleton_colimit_of_has_finite_colimits m n U)
+    letI := hcol
+    let e : X.obj (op ⦋n⦌) ≅
+        colimit (CostructuredArrow.proj (leftSkeletonInclusion m) (op ⦋n⦌) ⋙ U) :=
+      Functor.leftKanExtensionObjIsoColimit (leftSkeletonInclusion m) U
+        (op ⦋n⦌)
+    have hq : e.inv ≫ q = 0 := by
+      apply (colimit.isColimit
+        (CostructuredArrow.proj (leftSkeletonInclusion m) (op ⦋n⦌) ⋙ U)).hom_ext
+      intro A
+      dsimp [e, X]
+      rw [← Category.assoc]
+      rw [Functor.ι_leftKanExtensionObjIsoColimit_inv]
+      have hp : A.left.unop.obj.len < n := by
+        exact lt_of_le_of_lt A.left.unop.property h
+      simp only [comp_zero]
+      change (((leftSkeletonInclusion m).leftKanExtensionUnit U).app A.left ≫
+        X.map A.hom) ≫ q = 0
+      rw [Category.assoc, hdeg A.hom hp, comp_zero]
+    have hq' : q = 0 := by
+      rw [← e.hom_inv_id_assoc q, hq, comp_zero]
+    have hid : s.ι n ≫ q = 𝟙 (s.N n) := by
+      rw [← s.cofan_inj_id n]
+      have hFid : F (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌)) =
+          𝟙 (s.N n) := by
+        have hi : (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌)).EqId :=
+          (SimplicialObject.Splitting.IndexSet.eqId_iff_eq _).2 rfl
+        simp only [F, dif_pos hi]
+        exact eqToHom_refl _ _
+      have hd := s.ι_desc (op ⦋n⦌) F
+        (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
+      rw [hFid] at hd
+      simpa only [q, SimplicialObject.Splitting.summand,
+        SimplicialObject.Splitting.IndexSet.id] using hd
+    rw [hq'] at hid
+    rw [IsZero.iff_id_eq_zero]
+    simpa using hid.symm
+  change IsZero (Unit18.normalizedObject X n)
+  exact hN.of_iso eN.symm
 
 /-- The abelian `n`-skeleton is the earlier normalized-subobject skeleton. -/
 theorem leftAdjoint_identifies_abelian_skeleton

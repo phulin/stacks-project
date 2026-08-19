@@ -383,7 +383,7 @@ theorem firstXi_exists :
         have hpowfactor : (Polynomial.X : polynomialRing k) ^ l =
             Polynomial.X ^ (n + 1) * Polynomial.X ^ 2 := by
           dsimp [l]
-          rw [show n + 3 = (n + 1) + 2 by omega]
+          rw [show n + 3 = (n + 1) + 2 by simp [Nat.add_assoc]]
           exact pow_add Polynomial.X (n + 1) 2
         have hcancel : Polynomial.X ^ 2 ∣
             DirectSum.component (polynomialRing k) ℕ

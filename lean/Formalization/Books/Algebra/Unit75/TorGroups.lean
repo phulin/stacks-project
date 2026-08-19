@@ -1491,6 +1491,44 @@ def ColumnsAreResolutions {R : Type u} [CommRing R]
   ∀ i, IsResolution (columnComplex A i) (upTerm A i)
     (cokernel.π (A.delta i 0))
 
+set_option backward.isDefEq.respectTransparency false in
+theorem RowsAreResolutions.lift_zero {R : Type u} [CommRing R]
+    {A : DoubleComplex R} (h : RowsAreResolutions A) (j : ℕ)
+    (x : A.obj 0 j) (hx : ConcreteCategory.hom (cokernel.π (A.d 0 j)) x = 0) :
+    ∃ y : A.obj 1 j, ConcreteCategory.hom (A.d 0 j) y = x := by
+  have hex := (h j).exact_zero
+  rw [ShortComplex.moduleCat_exact_iff] at hex
+  simpa [rowComplex] using hex x hx
+
+set_option backward.isDefEq.respectTransparency false in
+theorem RowsAreResolutions.lift_succ {R : Type u} [CommRing R]
+    {A : DoubleComplex R} (h : RowsAreResolutions A) (j p : ℕ)
+    (x : A.obj (p + 1) j) (hx : ConcreteCategory.hom (A.d p j) x = 0) :
+    ∃ y : A.obj (p + 2) j, ConcreteCategory.hom (A.d (p + 1) j) y = x := by
+  have hex := (h j).exact_succ p
+  rw [ShortComplex.moduleCat_exact_iff] at hex
+  rcases hex x (by simpa [rowComplex] using hx) with ⟨y, hy⟩
+  exact ⟨y, by simpa [rowComplex] using hy⟩
+
+set_option backward.isDefEq.respectTransparency false in
+theorem ColumnsAreResolutions.lift_zero {R : Type u} [CommRing R]
+    {A : DoubleComplex R} (h : ColumnsAreResolutions A) (i : ℕ)
+    (x : A.obj i 0) (hx : ConcreteCategory.hom (cokernel.π (A.delta i 0)) x = 0) :
+    ∃ y : A.obj i 1, ConcreteCategory.hom (A.delta i 0) y = x := by
+  have hex := (h i).exact_zero
+  rw [ShortComplex.moduleCat_exact_iff] at hex
+  simpa [columnComplex] using hex x hx
+
+set_option backward.isDefEq.respectTransparency false in
+theorem ColumnsAreResolutions.lift_succ {R : Type u} [CommRing R]
+    {A : DoubleComplex R} (h : ColumnsAreResolutions A) (i p : ℕ)
+    (x : A.obj i (p + 1)) (hx : ConcreteCategory.hom (A.delta i p) x = 0) :
+    ∃ y : A.obj i (p + 2), ConcreteCategory.hom (A.delta i (p + 1)) y = x := by
+  have hex := (h i).exact_succ p
+  rw [ShortComplex.moduleCat_exact_iff] at hex
+  rcases hex x (by simpa [columnComplex] using hx) with ⟨y, hy⟩
+  exact ⟨y, by simpa [columnComplex] using hy⟩
+
 /-- The map induced on the right quotient terms by a double-complex map. -/
 noncomputable def rightTermMap {R : Type u} [CommRing R]
     {A B : DoubleComplex R} (Φ : DoubleComplexMap A B) (j : ℕ) :

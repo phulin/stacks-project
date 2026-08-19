@@ -1972,7 +1972,19 @@ theorem minimal_prime_is_homogeneous (G : GradedRingData S) (p : Ideal S)
 theorem minimal_prime_over_homogeneous_is_homogeneous (G : GradedRingData S)
     (I p : Ideal S) (hI : I.IsHomogeneous G.component)
     (hp : p ∈ I.minimalPrimes) : p.IsHomogeneous G.component := by
-  sorry
+  let P : HomogeneousIdeal G.component := p.homogeneousCore G.component
+  have hPprime : P.toIdeal.IsPrime := hp.1.1.homogeneousCore
+  have hPp : P.toIdeal ≤ p := Ideal.toIdeal_homogeneousCore_le G.component p
+  have hIP : I ≤ P.toIdeal := by
+    have hIeq : (I.homogeneousCore G.component).toIdeal = I :=
+      hI.toIdeal_homogeneousCore_eq_self
+    intro x hx
+    rw [← hIeq] at hx
+    exact (Ideal.homogeneousCore_mono G.component hp.le) hx
+  have hpP : p ≤ P.toIdeal := hp.2 ⟨hPprime, hIP⟩ hPp
+  have heq : p = P.toIdeal := le_antisymm hpP hPp
+  rw [heq]
+  exact P.isHomogeneous
 
 /-! ## Finite type and homogenization -/
 

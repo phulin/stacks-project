@@ -1,10 +1,16 @@
 import Mathlib.Data.PNat.Notation
+import Mathlib.Data.PNat.Interval
 import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.Algebra.MvPolynomial.Rename
+import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.LocalizationLocalization
+import Mathlib.RingTheory.MvPolynomial.Localization
+import Mathlib.RingTheory.RegularLocalRing.Polynomial
+import Mathlib.RingTheory.Localization.Finiteness
+import Mathlib.RingTheory.LocalProperties.Semilocal
 
 /-!
 # Examples, Chapter 16: A Noetherian ring of infinite dimension
@@ -20,6 +26,296 @@ noncomputable section
 universe u
 
 open scoped BigOperators
+
+private theorem mvPolynomial_idealOfVars_isPrime
+    (R : Type u) [CommRing R] [IsDomain R] (σ : Type*) :
+    (MvPolynomial.idealOfVars σ R).IsPrime := by
+  classical
+  let f : MvPolynomial σ R →+* R := MvPolynomial.constantCoeff
+  have hker : RingHom.ker f = MvPolynomial.idealOfVars σ R := by
+    apply le_antisymm
+    · intro p hp
+      rw [MvPolynomial.idealOfVars, ← Set.image_univ]
+      rw [MvPolynomial.mem_ideal_span_X_image]
+      intro m hm
+      by_contra hzero
+      have hm0 : m = 0 := by
+        ext n
+        by_contra hn
+        exact hzero ⟨n, Set.mem_univ _, hn⟩
+      subst m
+      have hp' : MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 := by
+        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0
+        change f p = 0 at hp
+        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 at hp
+        exact hp
+      exact (Finsupp.mem_support_iff.mp hm) hp'
+    · rw [MvPolynomial.idealOfVars, Ideal.span_le]
+      rintro _ ⟨n, rfl⟩
+      simp [f]
+  rw [← hker]
+  exact RingHom.ker_isPrime f
+
+private theorem mvPolynomial_idealOfVars_isMaximal
+    (K : Type u) [Field K] (σ : Type*) :
+    (MvPolynomial.idealOfVars σ K).IsMaximal := by
+  classical
+  let f : MvPolynomial σ K →+* K := MvPolynomial.constantCoeff
+  have hf : Function.Surjective f := by
+    intro x
+    exact ⟨MvPolynomial.C x, by simp [f]⟩
+  have hfield : IsField (MvPolynomial σ K ⧸ RingHom.ker f) :=
+    (RingHom.quotientKerEquivOfSurjective hf).toMulEquiv.isField
+      (Field.toIsField K)
+  have hker : RingHom.ker f = MvPolynomial.idealOfVars σ K := by
+    apply le_antisymm
+    · intro p hp
+      rw [MvPolynomial.idealOfVars, ← Set.image_univ]
+      rw [MvPolynomial.mem_ideal_span_X_image]
+      intro m hm
+      by_contra hzero
+      have hm0 : m = 0 := by
+        ext n
+        by_contra hn
+        exact hzero ⟨n, Set.mem_univ _, hn⟩
+      subst m
+      have hp' : MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 := by
+        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0
+        change f p = 0 at hp
+        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 at hp
+        exact hp
+      exact (Finsupp.mem_support_iff.mp hm) hp'
+    · rw [MvPolynomial.idealOfVars, Ideal.span_le]
+      rintro _ ⟨n, rfl⟩
+      simp [f]
+  rw [← hker]
+  exact Ideal.Quotient.maximal_of_isField _ hfield
+
+private theorem mvPolynomial_idealOfVars_height
+    (K : Type u) [Field K] :
+    ∀ n : ℕ, (MvPolynomial.idealOfVars (Fin n) K).height = n := by
+  intro n
+  induction n with
+  | zero => simp [MvPolynomial.idealOfVars]
+  | succ n ih =>
+      let e := MvPolynomial.finSuccEquiv K n
+      let b : Ideal (MvPolynomial (Fin n) K) :=
+        MvPolynomial.idealOfVars (Fin n) K
+      let p : Ideal (Polynomial (MvPolynomial (Fin n) K)) :=
+        Ideal.map (e : MvPolynomial (Fin (n + 1)) K →+*
+          Polynomial (MvPolynomial (Fin n) K))
+          (MvPolynomial.idealOfVars (Fin (n + 1)) K)
+      have hbmax : b.IsMaximal := by
+        exact mvPolynomial_idealOfVars_isMaximal K (Fin n)
+      have hpmax : p.IsMaximal := by
+        letI : (MvPolynomial.idealOfVars (Fin (n + 1)) K).IsMaximal :=
+          mvPolynomial_idealOfVars_isMaximal K (Fin (n + 1))
+        change (Ideal.map (e : MvPolynomial (Fin (n + 1)) K →+*
+          Polynomial (MvPolynomial (Fin n) K))
+          (MvPolynomial.idealOfVars (Fin (n + 1)) K)).IsMaximal
+        exact Ideal.map_isMaximal_of_equiv e
+      have himage :
+          (e : MvPolynomial (Fin (n + 1)) K →+*
+            Polynomial (MvPolynomial (Fin n) K)) ''
+              (Set.range (MvPolynomial.X : Fin (n + 1) → _)) =
+            (Polynomial.C '' (Set.range (MvPolynomial.X : Fin n → _))) ∪
+              {Polynomial.X} := by
+        ext y
+        constructor
+        · rintro ⟨x, ⟨j, rfl⟩, rfl⟩
+          refine Fin.cases ?_ (fun j ↦ ?_) j
+          · exact Or.inr (Set.mem_singleton_iff.mpr (by
+              simpa [e] using (MvPolynomial.finSuccEquiv_X_zero (R := K) (n := n))))
+          · exact Or.inl ⟨MvPolynomial.X j, ⟨j, rfl⟩,
+              (MvPolynomial.finSuccEquiv_X_succ (R := K) (n := n)).symm⟩
+        · intro hy
+          rcases hy with ⟨⟨x, ⟨j, rfl⟩, rfl⟩⟩ | rfl
+          · exact ⟨MvPolynomial.X j.succ,
+              ⟨j.succ, rfl⟩,
+              (MvPolynomial.finSuccEquiv_X_succ (R := K) (n := n))⟩
+          · exact ⟨MvPolynomial.X 0, ⟨0, rfl⟩,
+              (MvPolynomial.finSuccEquiv_X_zero (R := K) (n := n))⟩
+      have hp_eq :
+          p = b.map Polynomial.C ⊔ Ideal.span {Polynomial.X} := by
+        dsimp [p]
+        rw [MvPolynomial.idealOfVars, Ideal.map_span, himage,
+          Ideal.span_union]
+        dsimp [b]
+        rw [MvPolynomial.idealOfVars, Ideal.map_span]
+      have hlies : p.LiesOver b := by
+        refine ⟨?_⟩
+        rw [hp_eq]
+        apply le_antisymm
+        ·
+          exact Ideal.le_comap_map.trans (Ideal.comap_mono le_sup_left)
+        · intro r hr
+          change Polynomial.C r ∈ b.map Polynomial.C ⊔ Ideal.span {Polynomial.X} at hr
+          rcases Submodule.mem_sup.mp hr with ⟨y, hy, z, hz, heq⟩
+          have hy0 : y.coeff 0 ∈ b := (Ideal.mem_map_C_iff.mp hy) 0
+          have hz0 : z.coeff 0 = 0 := by
+            rw [Ideal.mem_span_singleton] at hz
+            obtain ⟨w, rfl⟩ := hz
+            simp
+          have hcoeff : y.coeff 0 = r := by
+            have hcoeff' := congrArg (fun q => q.coeff 0) heq
+            simpa [hz0] using hcoeff'
+          rw [← hcoeff]
+          exact hy0
+      letI : p.IsMaximal := hpmax
+      letI : p.LiesOver b := hlies
+      have hheight : p.height = b.height + 1 :=
+        Polynomial.height_eq_height_add_one b p
+      have heheight : p.height =
+          (MvPolynomial.idealOfVars (Fin (n + 1)) K).height := by
+        exact e.height_map _
+      rw [← heheight, hheight, ih]
+      norm_num
+
+private instance mvPolynomial_idealOfVars_isPrime_inst
+    (K : Type u) [Field K] (σ : Type*) :
+    (MvPolynomial.idealOfVars σ K).IsPrime :=
+  mvPolynomial_idealOfVars_isPrime K σ
+
+private noncomputable def localization_atPrime_ringEquiv_of_map_eq
+    {R S : Type*} [CommRing R] [CommRing S]
+    (e : R ≃+* S) (P : Ideal R) (Q : Ideal S)
+    [P.IsPrime] [Q.IsPrime] (h : Ideal.map e P = Q) :
+    Localization.AtPrime P ≃+* Localization.AtPrime Q := by
+  classical
+  have hcomap : Q.comap e = P := by
+    ext x
+    rw [Ideal.mem_comap, ← h, Ideal.apply_mem_of_equiv_iff]
+  have hM : P.primeCompl.map e = Q.primeCompl := by
+    ext x
+    constructor
+    · intro hx
+      rcases (Submonoid.mem_map.mp hx) with ⟨y, hy, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hy ⊢
+      intro hey
+      apply hy
+      have hy' : y ∈ Q.comap e := hey
+      rw [hcomap] at hy'
+      exact hy'
+    · intro hx
+      obtain ⟨y, rfl⟩ := e.surjective x
+      apply Submonoid.mem_map.mpr
+      refine ⟨y, ?_, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hx ⊢
+      intro hy
+      apply hx
+      have hy' : e y ∈ Ideal.map e P := Ideal.mem_map_of_mem e hy
+      rw [h] at hy'
+      exact hy'
+  exact IsLocalization.ringEquivOfRingEquiv
+    (Localization.AtPrime P) (Localization.AtPrime Q) e hM
+
+private noncomputable def localization_atPrime_algEquiv_of_comap_eq
+    {R : Type*} [CommSemiring R] (M : Submonoid R)
+    (Q : Ideal (Localization M)) [Q.IsPrime]
+    (P : Ideal R) [P.IsPrime]
+    (h : Q.comap (algebraMap R (Localization M)) = P) :
+    Localization.AtPrime P ≃ₐ[R] Localization.AtPrime Q := by
+  let F : {p : Ideal R // p.IsPrime} → Type _ := fun p =>
+    Localization (@Ideal.primeCompl R _ p.1 p.2)
+  let pP : {p : Ideal R // p.IsPrime} := ⟨P, inferInstance⟩
+  let pC : {p : Ideal R // p.IsPrime} :=
+    ⟨Q.comap (algebraMap R (Localization M)), inferInstance⟩
+  have hp : pP = pC := by
+    apply Subtype.ext
+    exact h.symm
+  let c : F pP ≃ₐ[R] F pC := AlgEquiv.cast hp
+  let e := IsLocalization.localizationLocalizationAtPrimeIsoLocalization M Q
+  change F pP ≃ₐ[R] Localization.AtPrime Q
+  exact c.trans e
+
+private theorem finiteMvPolynomial_idealOfVars_localization_properties
+    (K : Type u) [Field K] (n : ℕ) :
+    IsNoetherianRing
+        (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) ∧
+      IsLocalRing (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) ∧
+      ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) =
+        (↑n : WithBot ℕ∞) := by
+  letI : (MvPolynomial.idealOfVars (Fin n) K).IsPrime :=
+    mvPolynomial_idealOfVars_isPrime K (Fin n)
+  have hdim :
+      ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) =
+        (↑n : WithBot ℕ∞) := by
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height
+      (MvPolynomial.idealOfVars (Fin n) K)]
+    exact_mod_cast mvPolynomial_idealOfVars_height K n
+  exact ⟨inferInstance, inferInstance, hdim⟩
+
+private theorem finiteMvPolynomial_idealOfVars_localization_properties_finite
+    (K : Type u) [Field K] (σ : Type*) [Finite σ] :
+    IsNoetherianRing
+        (Localization.AtPrime (MvPolynomial.idealOfVars σ K)) ∧
+      IsLocalRing (Localization.AtPrime (MvPolynomial.idealOfVars σ K)) ∧
+      ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars σ K)) =
+        (↑(Nat.card σ) : WithBot ℕ∞) := by
+  classical
+  letI := Fintype.ofFinite σ
+  let e := MvPolynomial.renameEquiv K (Fintype.equivFin σ)
+  let q := MvPolynomial.idealOfVars (Fin (Fintype.card σ)) K
+  letI : q.IsPrime := mvPolynomial_idealOfVars_isPrime K _
+  have hmap :
+      Ideal.map e.toRingEquiv
+          (MvPolynomial.idealOfVars σ K) = q := by
+    rw [MvPolynomial.idealOfVars, Ideal.map_span]
+    dsimp [q]
+    congr 1
+    ext y
+    constructor
+    · rintro ⟨x, ⟨a, rfl⟩, rfl⟩
+      exact ⟨Fintype.equivFin σ a, by simp [e]
+      ⟩
+    · rintro ⟨a, rfl⟩
+      obtain ⟨a', rfl⟩ := (Fintype.equivFin σ).surjective a
+      exact ⟨MvPolynomial.X a', ⟨a', rfl⟩, by simp [e]
+      ⟩
+  have hcomap :
+      q.comap e.toRingEquiv =
+        MvPolynomial.idealOfVars σ K := by
+    ext x
+    rw [Ideal.mem_comap, ← hmap, Ideal.apply_mem_of_equiv_iff]
+  have hM :
+      (MvPolynomial.idealOfVars σ K).primeCompl.map
+          (e.toRingEquiv : MvPolynomial σ K ≃* MvPolynomial (Fin (Fintype.card σ)) K) =
+        q.primeCompl := by
+    ext x
+    constructor
+    · intro hx
+      rcases (Submonoid.mem_map.mp hx) with ⟨y, hy, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hy ⊢
+      intro hey
+      apply hy
+      have hy' : y ∈ q.comap e.toRingEquiv := hey
+      rw [hcomap] at hy'
+      exact hy'
+    · intro hx
+      obtain ⟨y, rfl⟩ := e.toRingEquiv.surjective x
+      apply Submonoid.mem_map.mpr
+      refine ⟨y, ?_, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hx ⊢
+      intro hy
+      apply hx
+      have hy' : e y ∈ Ideal.map e.toRingEquiv (MvPolynomial.idealOfVars σ K) :=
+        Ideal.mem_map_of_mem e.toRingEquiv hy
+      rw [hmap] at hy'
+      exact hy'
+  let eloc :
+      Localization.AtPrime (MvPolynomial.idealOfVars σ K) ≃+*
+        Localization.AtPrime q :=
+    IsLocalization.ringEquivOfRingEquiv
+      (Localization.AtPrime (MvPolynomial.idealOfVars σ K))
+      (Localization.AtPrime q) e.toRingEquiv hM
+  have hq := finiteMvPolynomial_idealOfVars_localization_properties
+    K (Fintype.card σ)
+  letI := hq.1
+  letI := hq.2.1
+  refine ⟨isNoetherianRing_of_ringEquiv _ eloc.symm, ?_, ?_⟩
+  · exact eloc.symm.isLocalRing
+  · rw [ringKrullDim_eq_of_ringEquiv eloc]
+    simpa [Nat.card_eq_fintype_card] using hq.2.2
 
 namespace Formalization.Books.Examples.Unit16
 
@@ -631,19 +927,440 @@ theorem noetherianInfiniteDimension_block_localization_properties
       ringKrullDim
           (Localization.AtPrime (noetherianInfiniteDimensionBlockIdeal k i)) =
         (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) := by
-  sorry
+  classical
+  let s : Set ℕ+ := noetherianInfiniteDimensionBlock i
+  let e0 : MvPolynomial ℕ+ k ≃ₐ[k]
+      MvPolynomial s (MvPolynomial {n : ℕ+ // n ∉ s} k) :=
+    (MvPolynomial.renameEquiv k (Equiv.Set.sumCompl s).symm).trans
+      (MvPolynomial.sumAlgEquiv k s {n : ℕ+ // n ∉ s})
+  have hPmap :
+      Ideal.map e0.toRingEquiv (noetherianInfiniteDimensionBlockIdeal k i) =
+        MvPolynomial.idealOfVars s (MvPolynomial {n : ℕ+ // n ∉ s} k) := by
+    rw [noetherianInfiniteDimensionBlockIdeal, MvPolynomial.idealOfVars,
+      Ideal.map_span]
+    congr 1
+    ext y
+    constructor
+    · rintro ⟨x, ⟨n, hn, rfl⟩, rfl⟩
+      have hn' : n ∈ s := hn
+      refine ⟨⟨n, hn'⟩, ?_⟩
+      simp [e0, noetherianInfiniteDimensionVariable,
+        Equiv.Set.sumCompl_symm_apply_of_mem hn', MvPolynomial.sumAlgEquiv_X_inl]
+    · rintro ⟨a, rfl⟩
+      refine ⟨MvPolynomial.X (Equiv.Set.sumCompl s (Sum.inl a)), ?_, ?_⟩
+      · exact ⟨Equiv.Set.sumCompl s (Sum.inl a), by
+          exact a.property, rfl⟩
+      · simp [e0, MvPolynomial.sumAlgEquiv_X_inl]
+  let B := MvPolynomial {n : ℕ+ // n ∉ s} k
+  let K := FractionRing B
+  let R' := MvPolynomial s B
+  let S' := MvPolynomial s K
+  let qB := MvPolynomial.idealOfVars s B
+  let qK := MvPolynomial.idealOfVars s K
+  let N := (nonZeroDivisors B).map (MvPolynomial.C : B →+* R')
+  letI : Algebra R' S' := MvPolynomial.algebraMvPolynomial
+  haveI : qB.IsPrime := mvPolynomial_idealOfVars_isPrime B s
+  haveI : qK.IsPrime := mvPolynomial_idealOfVars_isPrime K s
+  have hqmap :
+      Ideal.map (algebraMap R' S') qB = qK := by
+    change Ideal.map (algebraMap (MvPolynomial s B) (MvPolynomial s K))
+        (MvPolynomial.idealOfVars s B) = MvPolynomial.idealOfVars s K
+    rw [MvPolynomial.idealOfVars, Ideal.map_span]
+    congr 1
+    ext y
+    constructor
+    · rintro ⟨x, ⟨a, rfl⟩, rfl⟩
+      exact ⟨a, by simp⟩
+    · rintro ⟨a, rfl⟩
+      exact ⟨MvPolynomial.X a, ⟨a, rfl⟩, by simp⟩
+  have hdisj : Disjoint (N : Set R') (qB : Set R') := by
+    rw [Set.disjoint_left]
+    rintro _ ⟨m, hm, rfl⟩ hmq
+    change MvPolynomial.C m ∈ MvPolynomial.idealOfVars s B at hmq
+    have hmq' : MvPolynomial.C m ∈ Ideal.span
+        (MvPolynomial.X '' (Set.univ : Set s)) := by
+      simpa only [MvPolynomial.idealOfVars, Set.image_univ] using hmq
+    rw [MvPolynomial.mem_ideal_span_X_image] at hmq'
+    have hm0 : m ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hm
+    have hzero : (0 : s →₀ ℕ) ∈ (MvPolynomial.C m : MvPolynomial s B).support := by
+      rw [MvPolynomial.mem_support_iff]
+      simp [hm0]
+    obtain ⟨a, ha, hna⟩ := hmq' 0 hzero
+    simpa using hna
+  have hunder :
+      (Ideal.map (algebraMap R' S') qB).under R' = qB :=
+    IsLocalization.under_map_of_isPrime_disjoint N S' inferInstance hdisj
+  have hqcomap : qK.comap (algebraMap R' S') = qB := by
+    change qK.under R' = qB
+    rw [← hqmap]
+    exact hunder
+  let eS : S' ≃ₐ[R'] Localization N :=
+    IsLocalization.algEquiv N S' (Localization N)
+  let qL : Ideal (Localization N) := Ideal.map eS.toRingEquiv qK
+  haveI : qL.IsPrime := by
+    dsimp [qL]
+    infer_instance
+  have hqmapL :
+      Ideal.map (algebraMap R' (Localization N)) qB = qL := by
+    calc
+      Ideal.map (algebraMap R' (Localization N)) qB =
+          Ideal.map eS.toRingEquiv (Ideal.map (algebraMap R' S') qB) := by
+        change Ideal.map (algebraMap R' (Localization N)) qB =
+          Ideal.map eS.toRingEquiv.toRingHom
+            (Ideal.map (algebraMap R' S') qB)
+        rw [Ideal.map_map]
+        have hcomp : eS.toRingEquiv.toRingHom.comp (algebraMap R' S') =
+            algebraMap R' (Localization N) := by
+          apply RingHom.ext
+          intro x
+          exact eS.commutes x
+        rw [hcomp]
+      _ = qL := by rw [hqmap]
+  have hqcomapL : qL.comap (algebraMap R' (Localization N)) = qB := by
+    change qL.under R' = qB
+    rw [← hqmapL]
+    exact IsLocalization.under_map_of_isPrime_disjoint N (Localization N)
+      inferInstance hdisj
+  have hsfin : s.Finite := by
+    dsimp [s, noetherianInfiniteDimensionBlock]
+    exact Set.finite_Ico _ _
+  haveI := hsfin.fintype
+  have hfinite := finiteMvPolynomial_idealOfVars_localization_properties_finite K s
+  have hqmapKL : Ideal.map eS.toRingEquiv qK = qL := rfl
+  have hM : qK.primeCompl.map eS.toRingEquiv = qL.primeCompl := by
+    ext x
+    constructor
+    · intro hx
+      rcases (Submonoid.mem_map.mp hx) with ⟨y, hy, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hy ⊢
+      intro hey
+      apply hy
+      have hy' : y ∈ qL.comap eS.toRingEquiv := hey
+      have hcomapKL : qL.comap eS.toRingEquiv = qK := by
+        ext z
+        rw [Ideal.mem_comap, ← hqmapKL, Ideal.apply_mem_of_equiv_iff]
+      rw [hcomapKL] at hy'
+      exact hy'
+    · intro hx
+      obtain ⟨y, rfl⟩ := eS.toRingEquiv.surjective x
+      apply Submonoid.mem_map.mpr
+      refine ⟨y, ?_, rfl⟩
+      rw [Ideal.mem_primeCompl_iff] at hx ⊢
+      intro hy
+      apply hx
+      have hy' : eS y ∈ Ideal.map eS.toRingEquiv qK :=
+        Ideal.mem_map_of_mem eS.toRingEquiv hy
+      rw [hqmapKL] at hy'
+      exact hy'
+  let eKtoL : Localization.AtPrime qK ≃+* Localization.AtPrime qL :=
+    IsLocalization.ringEquivOfRingEquiv
+      (Localization.AtPrime qK) (Localization.AtPrime qL) eS.toRingEquiv hM
+  let eBloc : Localization.AtPrime qB ≃ₐ[R'] Localization.AtPrime qL :=
+    localization_atPrime_algEquiv_of_comap_eq
+      (R := R') N qL (P := qB) hqcomapL
+  have hPmap' : Ideal.map e0.toRingEquiv (noetherianInfiniteDimensionBlockIdeal k i) = qB := by
+    simpa [qB, B] using hPmap
+  let eP :
+      Localization.AtPrime (noetherianInfiniteDimensionBlockIdeal k i) ≃+*
+        Localization.AtPrime qB :=
+    localization_atPrime_ringEquiv_of_map_eq
+      (R := MvPolynomial ℕ+ k) (S := R')
+      (P := noetherianInfiniteDimensionBlockIdeal k i) (Q := qB)
+      e0.toRingEquiv hPmap'
+  let eAll :
+      Localization.AtPrime (noetherianInfiniteDimensionBlockIdeal k i) ≃+*
+        Localization.AtPrime qK :=
+    eP.trans (eBloc.toRingEquiv.trans eKtoL.symm)
+  have hcard : Nat.card s = 2 ^ ((i : ℕ) - 1) := by
+    let a : ℕ+ := ⟨2 ^ ((i : ℕ) - 1), by positivity⟩
+    let b : ℕ+ := ⟨2 ^ (i : ℕ), by positivity⟩
+    have hs_eq : s = Set.Ico a b := by
+      rfl
+    rw [hs_eq, Nat.card_eq_fintype_card, PNat.card_fintype_Ico]
+    norm_num [a, b]
+  haveI := hfinite.1
+  haveI := hfinite.2.1
+  refine ⟨isNoetherianRing_of_ringEquiv _ eAll.symm, ?_, ?_⟩
+  · exact eAll.symm.isLocalRing
+  · rw [ringKrullDim_eq_of_ringEquiv eAll]
+    change ringKrullDim (Localization.AtPrime
+        (MvPolynomial.idealOfVars s K)) =
+      (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞)
+    calc
+      _ = (↑(Nat.card s) : WithBot ℕ∞) := hfinite.2.2
+      _ = _ := by rw [hcard]
 
 /-- The Nagata localization `A` is Noetherian. -/
+private theorem finite_noetherianInfiniteDimensionBlockIdeal_mem
+    {k : Type u} [Field k] (p : NoetherianInfiniteDimensionPolynomialRing k)
+    (hp : p ≠ 0) :
+    {i : ℕ+ | p ∈ noetherianInfiniteDimensionBlockIdeal k i}.Finite := by
+  let vars : Finset ℕ+ := p.support.biUnion (fun m => m.support)
+  let bound : ℕ+ := ⟨1 + (vars.sum (fun n => (n : ℕ))), by positivity⟩
+  have hpowpred : ∀ n : ℕ, 0 < n → n ≤ 2 ^ (n - 1) := by
+    intro n
+    induction n with
+    | zero => omega
+    | succ n ih =>
+        cases n with
+        | zero => simp
+        | succ n =>
+            intro hn
+            have h := ih (by omega)
+            rw [show Nat.succ (Nat.succ n) - 1 = n + 1 by omega, pow_succ]
+            have hpowpos : 0 < 2 ^ n := by positivity
+            have h' : n + 1 ≤ 2 ^ n := by simpa using h
+            nlinarith
+  have hvar_bound : ∀ (x : ℕ+), x ∈ vars → (x : ℕ) ≤ bound := by
+    intro x hx
+    have hxsum : (x : ℕ) ≤ vars.sum (fun n => (n : ℕ)) := by
+      exact Finset.single_le_sum (fun _ _ => Nat.zero_le _) hx
+    change (x : ℕ) ≤ 1 + vars.sum (fun n => (n : ℕ))
+    omega
+  apply (Set.finite_Iic bound).subset
+  intro j hj
+  change j ≤ bound
+  have hblock : p ∈ Ideal.span (MvPolynomial.X ''
+      noetherianInfiniteDimensionBlock j) := by
+    change p ∈ Ideal.span (MvPolynomial.X '' noetherianInfiniteDimensionBlock j) at hj
+    exact hj
+  rw [MvPolynomial.mem_ideal_span_X_image] at hblock
+  obtain ⟨m, hm⟩ := MvPolynomial.support_nonempty.mpr hp
+  obtain ⟨x, hx, hxm⟩ := hblock m hm
+  have hxvars : x ∈ vars := by
+    exact Finset.mem_biUnion.mpr ⟨m, hm, Finsupp.mem_support_iff.mpr hxm⟩
+  have hxbound : (x : ℕ) ≤ bound := hvar_bound x hxvars
+  change 2 ^ ((j : ℕ) - 1) ≤ (x : ℕ) ∧
+    (x : ℕ) < 2 ^ (j : ℕ) at hx
+  exact (hpowpred (j : ℕ) j.2).trans (hx.1.trans hxbound)
+
+private theorem localized_ideal_fg_generators
+    {A : Type*} [CommRing A] (I : Ideal A) (P : Ideal A) [P.IsMaximal]
+    (hI : (I.map (algebraMap A (Localization.AtPrime P))).FG) :
+    ∃ T : Set A, T.Finite ∧ T ⊆ I ∧
+      I.map (algebraMap A (Localization.AtPrime P)) =
+        (Ideal.span T).map (algebraMap A (Localization.AtPrime P)) := by
+  classical
+  let S := Localization.AtPrime P
+  let f := algebraMap A S
+  rcases Submodule.fg_def.mp hI with ⟨G, hGfin, hGspan⟩
+  haveI := hGfin.fintype
+  have hmem : ∀ z : G, z.1 ∈ I.map f := by
+    intro z
+    rw [← hGspan]
+    exact Submodule.subset_span z.2
+  have hz : ∀ z : G, ∃ xt : I × P.primeCompl,
+      z.1 * f xt.2 = f xt.1 := by
+    intro z
+    exact (IsLocalization.mem_map_algebraMap_iff P.primeCompl S).mp (hmem z)
+  choose xt hxt using hz
+  let x : ∀ z : G, I := fun z => (xt z).1
+  let t : ∀ z : G, P.primeCompl := fun z => (xt z).2
+  let T : Set A := (fun z : G => (x z : A)) '' Set.univ
+  have hTfin : T.Finite := by
+    dsimp [T]
+    exact (Set.toFinite (Set.univ : Set G)).image _
+  have hTsub : T ⊆ I := by
+    rintro y ⟨z, -, rfl⟩
+    exact (x z).2
+  refine ⟨T, hTfin, hTsub, ?_⟩
+  apply le_antisymm
+  · rw [← hGspan]
+    apply Ideal.span_le.2
+    intro z hzG
+    apply (Ideal.unit_mul_mem_iff_mem _ (IsLocalization.map_units S (t ⟨z, hzG⟩))).mp
+    have hxin : (x ⟨z, hzG⟩ : A) ∈ T := by
+      exact ⟨⟨z, hzG⟩, Set.mem_univ _, rfl⟩
+    have heq : (algebraMap A S) (t ⟨z, hzG⟩ : A) * z =
+        f (x ⟨z, hzG⟩) := by
+      rw [mul_comm]
+      exact hxt ⟨z, hzG⟩
+    rw [heq]
+    exact Ideal.mem_map_of_mem f (Ideal.subset_span hxin)
+  · apply Ideal.map_mono
+    exact Ideal.span_le.2 hTsub
+
+private theorem finite_noetherianInfiniteDimension_maximals_containing
+    {k : Type u} [Field k]
+    (f : NoetherianInfiniteDimensionLocalization k) (hf : f ≠ 0) :
+    {Q : Ideal (NoetherianInfiniteDimensionLocalization k) |
+      Q.IsMaximal ∧ f ∈ Q}.Finite := by
+  let R := NoetherianInfiniteDimensionPolynomialRing k
+  let A := NoetherianInfiniteDimensionLocalization k
+  let M : Submonoid R := noetherianInfiniteDimensionMultiplicativeSet k
+  obtain ⟨p, m, hpm⟩ := IsLocalization.exists_mk'_eq M f
+  have hp : p ≠ 0 := by
+    intro hp
+    apply hf
+    simpa [hp] using hpm.symm
+  have hblocks : {i : ℕ+ | p ∈ noetherianInfiniteDimensionBlockIdeal k i}.Finite :=
+    finite_noetherianInfiniteDimensionBlockIdeal_mem p hp
+  have hsub :
+      {Q : Ideal A | Q.IsMaximal ∧ f ∈ Q} ⊆
+        (fun i : ℕ+ => noetherianInfiniteDimensionLocalizedBlockIdeal k i) ''
+          {i : ℕ+ | p ∈ noetherianInfiniteDimensionBlockIdeal k i} := by
+    intro Q hQ
+    obtain ⟨i, hi⟩ := (noetherianInfiniteDimension_isMaximal_iff k Q).mp hQ.1
+    refine ⟨i, ?_, hi.symm⟩
+    have hfi : f ∈ noetherianInfiniteDimensionLocalizedBlockIdeal k i := by
+      simpa [hi] using hQ.2
+    have hpi : algebraMap R A p ∈
+        noetherianInfiniteDimensionLocalizedBlockIdeal k i := by
+      apply (IsLocalization.mk'_mem_iff (M := M) (S := A)).mp
+      rw [hpm]
+      exact hfi
+    have hunder :
+        (noetherianInfiniteDimensionLocalizedBlockIdeal k i).under R =
+          noetherianInfiniteDimensionBlockIdeal k i := by
+      apply IsLocalization.under_map_of_isPrime_disjoint M A
+        (inferInstance :
+          (noetherianInfiniteDimensionBlockIdeal k i).IsPrime)
+      rw [Set.disjoint_left]
+      intro s hs hsP
+      rw [noetherianInfiniteDimensionMultiplicativeSet_coe] at hs
+      exact (Set.mem_iInter.mp hs i) hsP
+    change p ∈ (noetherianInfiniteDimensionLocalizedBlockIdeal k i).under R at hpi
+    rw [hunder] at hpi
+    exact hpi
+  exact (hblocks.image (fun i : ℕ+ =>
+    noetherianInfiniteDimensionLocalizedBlockIdeal k i)).subset hsub
+
 instance noetherianInfiniteDimensionLocalization_isNoetherian
     (k : Type u) [Field k] :
     IsNoetherianRing (NoetherianInfiniteDimensionLocalization k) := by
-  sorry
+  classical
+  let R := NoetherianInfiniteDimensionPolynomialRing k
+  let A := NoetherianInfiniteDimensionLocalization k
+  let M : Submonoid R := noetherianInfiniteDimensionMultiplicativeSet k
+  rw [isNoetherianRing_iff_ideal_fg]
+  intro I
+  by_cases hI : I = ⊥
+  · rw [hI]
+    exact Submodule.fg_bot
+  obtain ⟨f, hfI, hf0⟩ : ∃ f : A, f ∈ I ∧ f ≠ 0 := by
+    by_contra h
+    push Not at h
+    apply hI
+    apply le_antisymm
+    · intro x hx
+      by_contra hx0
+      exact hx0 (h x hx)
+    · exact bot_le
+  let maxs : Set (Ideal A) := {Q | Q.IsMaximal ∧ f ∈ Q}
+  have hmaxs : maxs.Finite := by
+    exact finite_noetherianInfiniteDimension_maximals_containing f hf0
+  have hlocalNoeth : ∀ (P : Ideal A) (_ : P.IsMaximal),
+      IsNoetherianRing (Localization.AtPrime P) := by
+    intro P hP
+    obtain ⟨i, hi⟩ := (noetherianInfiniteDimension_isMaximal_iff k P).mp hP
+    subst P
+    haveI : IsNoetherianRing
+        (Localization.AtPrime (noetherianInfiniteDimensionBlockIdeal k i)) :=
+      (noetherianInfiniteDimension_block_localization_properties k i).1
+    rcases noetherianInfiniteDimension_localization_at_maximal_equiv k i with ⟨e⟩
+    exact isNoetherianRing_of_ringEquiv _ e.symm.toRingEquiv
+  haveI : ∀ Q : maxs, Q.1.IsMaximal := fun Q => Q.2.1
+  haveI : ∀ Q : maxs, Q.1.IsPrime := fun Q => Q.2.1.isPrime'
+  have hlocalfg : ∀ Q : maxs,
+      (I.map (algebraMap A (Localization.AtPrime Q.1))).FG := by
+    intro Q
+    haveI : IsNoetherianRing (Localization.AtPrime Q.1) :=
+      hlocalNoeth Q.1 Q.2.1
+    exact IsNoetherian.noetherian _
+  have hgen : ∀ Q : maxs, ∃ T : Set A, T.Finite ∧ T ⊆ I ∧
+      I.map (algebraMap A (Localization.AtPrime Q.1)) =
+        (Ideal.span T).map (algebraMap A (Localization.AtPrime Q.1)) := by
+    intro Q
+    exact localized_ideal_fg_generators I Q.1 (hlocalfg Q)
+  choose T hTfin hTsub hTmap using hgen
+  haveI := hmaxs.fintype
+  let U : Set A := {f} ∪ ⋃ Q : maxs, T Q
+  have hUfin : U.Finite := by
+    dsimp [U]
+    exact (Set.finite_singleton f).union (Set.finite_iUnion fun Q => hTfin Q)
+  have hUsub : U ⊆ I := by
+    intro x hx
+    simp only [U, Set.mem_union, Set.mem_singleton_iff, Set.mem_iUnion] at hx
+    rcases hx with rfl | ⟨Q, hQ⟩
+    · exact hfI
+    · exact hTsub Q hQ
+  let J : Ideal A := Ideal.span U
+  have hJfg : J.FG := by
+    exact Submodule.fg_def.mpr ⟨U, hUfin, rfl⟩
+  have hlocal_eq : ∀ (P : Ideal A) (_ : P.IsMaximal),
+      I.map (algebraMap A (Localization.AtPrime P)) =
+        J.map (algebraMap A (Localization.AtPrime P)) := by
+    intro P hP
+    by_cases hfp : f ∈ P
+    · let Q : maxs := ⟨P, hP, hfp⟩
+      have hTQU : T Q ⊆ U := by
+        intro x hx
+        exact Set.mem_union_right _ (Set.mem_iUnion.mpr ⟨Q, hx⟩)
+      have hleft : I.map (algebraMap A (Localization.AtPrime P)) ≤
+          J.map (algebraMap A (Localization.AtPrime P)) := by
+        rw [hTmap Q]
+        apply Ideal.map_mono
+        exact Ideal.span_mono hTQU
+      have hright : J.map (algebraMap A (Localization.AtPrime P)) ≤
+          I.map (algebraMap A (Localization.AtPrime P)) := by
+        apply Ideal.map_mono
+        dsimp [J]
+        exact Ideal.span_le.2 hUsub
+      exact le_antisymm hleft hright
+    · have hunit : IsUnit
+          (algebraMap A (Localization.AtPrime P) f) :=
+        IsLocalization.map_units (Localization.AtPrime P)
+          (⟨f, hfp⟩ : P.primeCompl)
+      have htopI : I.map (algebraMap A (Localization.AtPrime P)) = ⊤ :=
+        (I.map (algebraMap A (Localization.AtPrime P))).eq_top_of_isUnit_mem
+          (Ideal.mem_map_of_mem _ hfI) hunit
+      have hfU : f ∈ U := Set.mem_union_left _ (Set.mem_singleton f)
+      have htopJ : J.map (algebraMap A (Localization.AtPrime P)) = ⊤ :=
+        (J.map (algebraMap A (Localization.AtPrime P))).eq_top_of_isUnit_mem
+          (Ideal.mem_map_of_mem _ (Ideal.subset_span hfU)) hunit
+      rw [htopI, htopJ]
+  rw [Ideal.eq_of_localization_maximal hlocal_eq]
+  exact hJfg
 
 /-- The Nagata localization has infinite Krull dimension. -/
 theorem noetherianInfiniteDimensionLocalization_has_infinite_dimension
     (k : Type u) [Field k] :
     ringKrullDim (NoetherianInfiniteDimensionLocalization k) = ⊤ := by
-  sorry
+  classical
+  let A := NoetherianInfiniteDimensionLocalization k
+  rw [ENat.WithBot.eq_top_iff_forall_ge]
+  intro n
+  have hpow : n ≤ 2 ^ n := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        rw [pow_succ]
+        have hpowpos : 0 < 2 ^ n := by positivity
+        nlinarith
+  let i : ℕ+ := ⟨n + 1, by omega⟩
+  let Q : Ideal A := noetherianInfiniteDimensionLocalizedBlockIdeal k i
+  haveI : Q.IsMaximal := by
+    dsimp [Q]
+    infer_instance
+  haveI : Q.IsPrime := inferInstance
+  have hlocaldim : ringKrullDim (Localization.AtPrime Q) =
+      (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) := by
+    rcases noetherianInfiniteDimension_localization_at_maximal_equiv k i with ⟨e⟩
+    rw [ringKrullDim_eq_of_ringEquiv e.toRingEquiv]
+    exact (noetherianInfiniteDimension_block_localization_properties k i).2.2
+  have hheight : Q.height =
+      (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) := by
+    rw [← IsLocalization.AtPrime.ringKrullDim_eq_height Q
+      (Localization.AtPrime Q)]
+    exact hlocaldim
+  have hglobal :
+      (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) ≤ ringKrullDim A := by
+    rw [← hheight]
+    exact Ideal.height_le_ringKrullDim_of_isPrime
+  apply (show (n : WithBot ℕ∞) ≤
+      (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) from ?_).trans hglobal
+  change (n : WithBot ℕ∞) ≤ (↑(2 ^ n : ℕ) : WithBot ℕ∞)
+  exact_mod_cast hpow
 
 /-- The construction is a Noetherian ring of infinite dimension. -/
 theorem noetherianInfiniteDimension_example

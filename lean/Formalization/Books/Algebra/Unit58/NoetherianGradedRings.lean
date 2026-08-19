@@ -839,6 +839,7 @@ private theorem associatedGradedRingPiece_mk_heq
   apply Subtype.ext
   exact hab
 
+set_option linter.style.haveILetI false in
 /-- The canonical ring operations on the associated graded ring. -/
 theorem associatedGradedRing_gcommRing_exists
     {R : Type u} [CommRing R] (I : Ideal R) :
@@ -867,7 +868,7 @@ theorem associatedGradedRing_gcommRing_exists
         (α := associatedGradedRingPiece I n)
         (β := associatedGradedRingPiece I (0 + n))
         (a := Submodule.Quotient.mk a)
-        (b := Submodule.Quotient.mk ⟨(a : R), by simp [a.property]⟩)
+        (b := Submodule.Quotient.mk ⟨(a : R), by rw [zero_add]; exact a.property⟩)
         (congrArg (fun k => associatedGradedRingPiece I k) h.symm)
         (associatedGradedRingPiece_cast_mk I h.symm a)).symm
     mul_one := by

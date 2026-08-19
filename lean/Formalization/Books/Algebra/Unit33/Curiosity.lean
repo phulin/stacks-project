@@ -107,7 +107,7 @@ theorem localization_closed_image_product
     have hp : ∀ n : ℕ, e ^ (n + 1) = e := by
       intro n
       induction n with
-      | zero => simpa using he.eq
+      | zero => simp
       | succ n ih =>
           rw [pow_succ, ih, he.eq]
     cases n with

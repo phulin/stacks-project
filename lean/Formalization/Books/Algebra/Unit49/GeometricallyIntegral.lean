@@ -5,6 +5,8 @@ import Mathlib.Algebra.Field.ULift
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.TensorProduct.Basic
 
+set_option linter.style.haveILetI false
+
 /-!
 # Commutative Algebra, Chapter 49: Geometrically integral algebras
 
@@ -55,7 +57,7 @@ private theorem irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible
     constructor
     intro A B
     apply e.injective
-    letI := hsubX
+    let _ := hsubX
     exact Subsingleton.elim (e A) (e B)
   have hC : C.1 = (Set.univ : Set Y) := by
     apply Set.Subset.antisymm
@@ -66,7 +68,7 @@ private theorem irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible
         exact Set.mem_univ y
       rcases Set.mem_sUnion.mp hy' with ⟨D, hD, hyD⟩
       have hCD : (⟨D, hD⟩ : irreducibleComponents Y) = C := by
-        letI := hsubY
+        let _ := hsubY
         exact Subsingleton.elim _ _
       rw [← congrArg Subtype.val hCD]
       exact hyD

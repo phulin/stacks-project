@@ -41,7 +41,7 @@ private def IsGlobalMaximalChainBetween {α : Type*} [Preorder α]
         Set.range c ⊆ Set.range d → Set.range d ⊆ Set.range c
 
 private def IsGlobalCatenary (α : Type*) [Preorder α] : Prop :=
-  ∀ ⦃p q : α⦄ (hpq : p < q),
+    ∀ ⦃p q : α⦄ (_hpq : p < q),
     ∃ n : ℕ,
       (∀ c : LTSeries α,
         IsGlobalChainBetween p q c → c.length ≤ n) ∧
@@ -59,7 +59,7 @@ private def forgetChain {α : Type*} [Preorder α]
         omega) }
 
 private def liftChain {α : Type*} [Preorder α]
-    {p q : α} (c : LTSeries α) (hhead : c.head = p) (hlast : c.last = q) :
+    {p q : α} (c : LTSeries α) (_hhead : c.head = p) (hlast : c.last = q) :
     LTSeries (Set.Iic q) :=
   { length := c.length
     toFun := fun i => ⟨c i, by
@@ -246,7 +246,7 @@ private lemma exists_maximal_interval_chain
           have hne' : c.last ≠ z := by
             intro heq
             apply hle
-            simpa [heq]
+            simp [heq]
           have hlt : c.last < z := lt_of_le_of_ne c.last.property hne'
           let d := c.snoc z hlt
           have hle := Order.length_le_coheight_head (p := d)
@@ -291,7 +291,7 @@ private lemma isGlobalCatenary_iff_isIntervalCatenary
         exact_mod_cast hlen
       · have hlt : c.last < z := lt_of_le_of_ne c.last.property hc_last
         let d := c.snoc z hlt
-        have hd_head : d.head = x := by simpa [d, hc_head, x]
+        have hd_head : d.head = x := by simp [d, hc_head, x]
         have hd_last : d.last = z := by simp [d]
         have hhead' : (forgetChain d).head = p := by
           change (d.head : α) = p
@@ -302,7 +302,6 @@ private lemma isGlobalCatenary_iff_isIntervalCatenary
         have hg : IsGlobalChainBetween p q (forgetChain d) := ⟨hhead', hlast'⟩
         have hlen := hn (forgetChain d) hg
         have hlen' : c.length + 1 ≤ n := by
-          change c.length + 1 ≤ n
           simpa [d, forgetChain] using hlen
         have hlen'' : c.length ≤ n := by omega
         exact_mod_cast hlen''
@@ -346,7 +345,7 @@ private lemma isGlobalCatenary_iff_isIntervalCatenary
 
 private lemma globalMax_map_forward
     {α β : Type*} [Preorder α] [Preorder β] (e : α ≃o β)
-    {p q : α} (c : LTSeries α) (hpq : p < q) :
+    {p q : α} (c : LTSeries α) (_hpq : p < q) :
     IsGlobalMaximalChainBetween p q c →
       IsGlobalMaximalChainBetween (e p) (e q) (c.map e e.strictMono) := by
   rintro ⟨hc_head, hc_last, hcmax⟩
@@ -399,7 +398,6 @@ private lemma globalMax_map_iff
     obtain ⟨j, hj⟩ := hdc' ⟨i, rfl⟩
     refine ⟨j, ?_⟩
     apply e.injective
-    change e (c j) = e (d i)
     change e (c j) = e (d i) at hj
     exact hj
 
@@ -478,7 +476,7 @@ private lemma antiPushChain_last {α β : Type*} [Preorder α] [Preorder β]
 
 private lemma globalMax_anti_pull_iff
     {α β : Type*} [Preorder α] [Preorder β] (e : α ≃o βᵒᵈ)
-    {p q : β} (c : LTSeries β) (hpq : p < q) :
+    {p q : β} (c : LTSeries β) (_hpq : p < q) :
     IsGlobalMaximalChainBetween p q c ↔
       IsGlobalMaximalChainBetween (e.symm q) (e.symm p) (antiPullChain e c) := by
   constructor
@@ -509,7 +507,6 @@ private lemma globalMax_anti_pull_iff
         · refine ⟨j.rev, ?_⟩
           change e (d (Fin.rev j.rev)) = c i
           rw [Fin.rev_rev]
-          change (e (d j) : βᵒᵈ) = (c i : βᵒᵈ)
           unfold antiPullChain at hj
           change d j = e.symm (c (Fin.rev i.rev)) at hj
           rw [Fin.rev_rev] at hj
@@ -538,11 +535,11 @@ private lemma globalMax_anti_pull_iff
       let d' := antiPullChain e d
       have hd'_head : d'.head = e.symm q := by
         calc
-          d'.head = e.symm d.last := by simpa [d', antiPullChain_head]
+          d'.head = e.symm d.last := by simp [d', antiPullChain_head]
           _ = e.symm q := congrArg e.symm hd_last
       have hd'_last : d'.last = e.symm p := by
         calc
-          d'.last = e.symm d.head := by simpa [d', antiPullChain_last]
+          d'.last = e.symm d.head := by simp [d', antiPullChain_last]
           _ = e.symm p := congrArg e.symm hd_head
       have hcd' : Set.range (antiPullChain e c) ⊆ Set.range d' := by
         intro x hx
@@ -630,7 +627,7 @@ private def forgetSubtype {α : Type*} [Preorder α] {P : Set α}
 private def liftChain_lower {α : Type*} [Preorder α] {P : Set α}
     (hP : ∀ ⦃p q : α⦄, q ∈ P → p ≤ q → p ∈ P)
     {p q : α} (hq : q ∈ P) (c : LTSeries α)
-    (hhead : c.head = p) (hlast : c.last = q) : LTSeries P :=
+    (_hhead : c.head = p) (hlast : c.last = q) : LTSeries P :=
   { length := c.length
     toFun := fun i => ⟨c i, by
       apply hP hq

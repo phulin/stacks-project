@@ -1749,11 +1749,11 @@ theorem one_variable_polynomial_prime_description
 /-! ## Prime avoidance and homogeneous minimal primes -/
 
 private lemma exists_homogeneous_component_not_mem (G : GradedRingData S)
-    (q : Ideal S) (hq : q.IsHomogeneous G.component) (x : S) (hx : x ∉ q) :
+    (q : Ideal S) (x : S) (hx : x ∉ q) :
     ∃ d : ℕ, GradedRing.proj G.component d x ∉ q := by
   classical
   by_contra h
-  push_neg at h
+  push Not at h
   apply hx
   rw [← DirectSum.sum_support_decompose G.component x]
   exact q.sum_mem fun j hj => by
@@ -1761,11 +1761,11 @@ private lemma exists_homogeneous_component_not_mem (G : GradedRingData S)
 
 private lemma exists_positive_homogeneous_component_not_mem (G : GradedRingData S)
     (J q : Ideal S) (hJ : J.IsHomogeneous G.component)
-    (hq : q.IsHomogeneous G.component) (hJplus : J ≤ projIrrelevantIdeal G)
+    (hJplus : J ≤ projIrrelevantIdeal G)
     (x : S) (hxJ : x ∈ J) (hxq : x ∉ q) :
     ∃ d : ℕ, 0 < d ∧ GradedRing.proj G.component d x ∈ J ∧
       GradedRing.proj G.component d x ∉ q := by
-  obtain ⟨d, hd⟩ := exists_homogeneous_component_not_mem G q hq x hxq
+  obtain ⟨d, hd⟩ := exists_homogeneous_component_not_mem G q x hxq
   have hdJ : GradedRing.proj G.component d x ∈ J := by
     simpa only [GradedRing.proj_apply] using hJ.mem_iff.mp hxJ d
   by_cases hd0 : d = 0
@@ -1798,7 +1798,7 @@ private lemma homogeneous_prime_avoidance_finset (G : GradedRingData S)
       x ∈ G.component d ∧ x ∈ I ∧ ∀ q ∈ t, x ∉ q := by
   classical
   induction t using Finset.cons_induction with
-  | empty => exact False.elim (by simpa using ht)
+  | empty => exact False.elim (by simp at ht)
   | @cons q t hqt ih =>
       by_cases ht' : t.Nonempty
       · obtain ⟨d, hd, x, hxcomp, hxI, hxavoid⟩ := ih ht'
@@ -1840,7 +1840,7 @@ private lemma homogeneous_prime_avoidance_finset (G : GradedRingData S)
           obtain ⟨y, hyK, hyq⟩ := hy_mem
           obtain ⟨e, he, hye, hyeq⟩ :=
             exists_positive_homogeneous_component_not_mem G K q hKhom
-              (hp q (by simp)).1 hKplus y hyK hyq
+              hKplus y hyK hyq
           have hyecomp : GradedRing.proj G.component e y ∈ G.component e := by
             simpa only [GradedRing.proj_apply] using SetLike.coe_mem _
           have hyeI : GradedRing.proj G.component e y ∈ I := hKI hye
@@ -1892,8 +1892,7 @@ private lemma homogeneous_prime_avoidance_finset (G : GradedRingData S)
           exact h ⟨x, hx, hxq⟩
         obtain ⟨y, hyI, hyq⟩ := hmem
         obtain ⟨d, hd, hycomp, hy_not⟩ :=
-          exists_positive_homogeneous_component_not_mem G I q hI
-            (hp q (by simp)).1 hIplus y hyI hyq
+          exists_positive_homogeneous_component_not_mem G I q hI hIplus y hyI hyq
         refine ⟨d, hd, GradedRing.proj G.component d y, ?_, hycomp, ?_⟩
         · simpa only [GradedRing.proj_apply] using SetLike.coe_mem _
         · intro r hr

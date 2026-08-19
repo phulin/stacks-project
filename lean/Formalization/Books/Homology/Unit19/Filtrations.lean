@@ -2186,14 +2186,14 @@ theorem exists_filtered_category_not_abelian :
       ¬ Nonempty (CategoryTheory.Abelian (FilteredObject C)) := by
   obtain ⟨C, hcat, hAbC, hC⟩ := exists_strict_composition_failure
   refine ⟨C, hcat, hAbC, ?_⟩
-  letI : Category.{v} C := hcat
-  letI : Abelian C := hAbC
+  let : Category.{v} C := hcat
+  let : Abelian C := hAbC
   rintro ⟨hAb⟩
-  letI : Abelian (FilteredObject C) := hAb
-  letI : Preadditive (FilteredObject C) := hAb.toPreadditive
-  letI : HasFiniteBiproducts (FilteredObject C) :=
+  let : Abelian (FilteredObject C) := hAb
+  let : Preadditive (FilteredObject C) := hAb.toPreadditive
+  let : HasFiniteBiproducts (FilteredObject C) :=
     CategoryTheory.Abelian.hasFiniteBiproducts
-  letI : HasBinaryProducts (FilteredObject C) :=
+  let : HasBinaryProducts (FilteredObject C) :=
     CategoryTheory.Limits.hasBinaryProducts_of_hasLimit_pair _
   have hpre : hAb.toPreadditive =
       Formalization.Books.Homology.Unit19.filteredPreadditive (C := C) :=
@@ -2205,7 +2205,7 @@ theorem exists_filtered_category_not_abelian :
       has_finite_products := hAb.has_finite_products
       has_kernels := hpre ▸ hAb.has_kernels
       has_cokernels := hpre ▸ hAb.has_cokernels }
-  letI : Abelian (FilteredObject C) := hAb'
+  let : Abelian (FilteredObject C) := hAb'
   obtain ⟨S⟩ := hC
   let k : S.A ⟶ S.D := S.f ≫ S.g
   apply S.composite_not_strict
@@ -2484,9 +2484,9 @@ theorem filteredSubquotientComparison_exists {C : Type u} [Category.{v} C]
     calc
       (inv (⊤ : Subobject (Y : C)).arrow ≫ I.F.e ≫ eI.hom) ≫ κ =
           inv (⊤ : Subobject (Y : C)).arrow ≫ I.F.e ≫
-          (eI.hom ≫ κ) := by simp [w, Category.assoc]
+          (eI.hom ≫ κ) := by simp [Category.assoc]
       _ = inv (⊤ : Subobject (Y : C)).arrow ≫ I.F.e ≫ I.F.m := by
-        simp [eI, Category.assoc]
+        simp [eI]
       _ = inv (⊤ : Subobject (Y : C)).arrow ≫
           ((⊤ : Subobject (Y : C)).arrow ≫ (Y.arrow ≫ qX)) := by
         rw [I.F.fac]

@@ -51,9 +51,9 @@ def IsGeometricallyReduced (k : Type u) (S : Type v) [Field k] [CommRing S]
   ∀ (K : Type u) [Field K] [Algebra k K],
     IsReduced (K ⊗[k] S)
 
-/- The introductory reduction to an algebraic closure and to finite purely
-   inseparable extensions is recorded here as its two source-facing
-   sufficiency statements. -/
+/- The introductory reduction to an algebraic closure is recorded here. The
+   finite purely inseparable sufficiency statement follows the reusable
+   separable-extension reducedness result below. -/
 
 /-- Reducedness after tensoring with an algebraic closure is enough to imply
 geometric reducedness. -/
@@ -66,16 +66,6 @@ theorem isGeometricallyReduced_of_isReduced_algebraicClosure
     IsGeometricallyReduced k S := by
   sorry
 
-/-- It is enough to test reducedness after every finite purely inseparable
-field extension of the base. -/
-theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
-    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsReduced S)
-    (h : ∀ (k' : Type u) [Field k'] [Algebra k k']
-      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
-      IsReduced (k' ⊗[k] S)) :
-    IsGeometricallyReduced k S := by
-  sorry
 /-! ## Elementary permanence properties -/
 
 /-- Geometric reducedness descends to every `k`-subalgebra. -/
@@ -771,6 +761,17 @@ theorem isReduced_tensorProduct_of_separable_extension
       isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
         (k := k) (R := S) (S := K) hS hgeomK
     exact isReduced_of_injective e.symm e.symm.injective
+
+/-- It is enough to test reducedness after every finite purely inseparable
+field extension of the base. -/
+theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsReduced S)
+    (h : ∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) :
+    IsGeometricallyReduced k S := by
+  sorry
 
 /-- The minimal-prime criterion for geometric reducedness. -/
 theorem isGeometricallyReduced_of_minimalPrime_localizations

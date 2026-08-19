@@ -523,7 +523,14 @@ theorem inducedTensorLimitMap_projection
     (limit.π F.system (Opposite.op n)).hom.comp
         (inducedTensorLimitMap G I F hF 𝓜 φ) =
       completionTensorCoordinate I (n : ℕ) (hF n) (φ.map n) := by
-  sorry
+  change (limit.π F.system (Opposite.op n)).hom.comp
+      (limit.lift F.system _).hom = _
+  apply LinearMap.ext
+  intro x
+  change (limit.π F.system (Opposite.op n)).hom
+      ((limit.lift F.system _).hom x) = _
+  rw [← ConcreteCategory.comp_apply, limit.lift_π]
+  rfl
 
 /-- The Daniel--Litt lemma: an isomorphism after completion is detected degreewise. -/
 theorem daniel_litt {A : Type u} [CommRing A]

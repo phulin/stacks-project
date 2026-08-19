@@ -6,6 +6,7 @@ import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
+import Mathlib.RingTheory.LocalProperties.FinitePresentation
 import Mathlib.RingTheory.Localization.Away.AdjoinRoot
 import Mathlib.RingTheory.Localization.BaseChange
 import Formalization.Books.Algebra.Unit06.FiniteType
@@ -532,6 +533,7 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     (hf : RingHom.FinitePresentation f) :
     RelativelyFinitelyPresented f M ↔ Module.FinitePresentation A M := by
   let : Algebra R A := f.toAlgebra
+  letI : Algebra.FiniteType R A := hf
   constructor
   · intro hM
     exact relativelyFinitelyPresented.finitePresentation f hM
@@ -1860,7 +1862,269 @@ theorem relativelyFinitelyPresented_glue_iff
         ((algebraMap A (Localization.Away (x : A))).comp f)
         (LocalizedModule.Away (x : A) M)) ↔
       RelativelyFinitelyPresented f M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  constructor
+  · intro hloc
+    classical
+    apply (relativelyFinitelyPresented_iff_all_presentations f hf).mpr
+    intro n' β hβ
+    let Q := MvPolynomial (Fin n') R
+    letI : Algebra Q A := β.toAlgebra
+    letI : Module Q M := Module.compHom M β.toRingHom
+    obtain ⟨l, hl⟩ :=
+      (Finsupp.mem_span_iff_linearCombination A (s : Set A) 1).mp
+        (show (1 : A) ∈ Ideal.span (s : Set A) by rw [hs]; trivial)
+    choose g' hg' using (fun g : s ↦ hβ g)
+    choose h' hh' using (fun g : s ↦ hβ (l g))
+    let I : Ideal Q := Ideal.span {∑ g : s, g' g * h' g - 1}
+    let B := Q ⧸ I
+    have hI : ∀ a ∈ I, β a = 0 := by
+      intro p hp
+      simp only [Finset.univ_eq_attach, I, Q, Ideal.mem_span_singleton] at hp
+      obtain ⟨q, rfl⟩ := hp
+      simp only [map_mul, map_sub, map_sum, map_one, hg', hh']
+      rw [Finsupp.linearCombination_apply_of_mem_supported
+        (α := (s : Set A)) A (s := s.attach)] at hl
+      · rw [← hl]
+        simp only [Finset.coe_sort_coe, smul_eq_mul, mul_comm, sub_self, zero_mul]
+      · rintro a -
+        simp
+    let q : B →ₐ[R] A := Ideal.Quotient.liftₐ I β hI
+    have hq : Function.Surjective q :=
+      Ideal.Quotient.lift_surjective_of_surjective I hI hβ
+    let t : Finset B :=
+      Finset.image (fun g ↦ Ideal.Quotient.mk I (g' g)) Finset.univ
+    have ht : Ideal.span (t : Set B) = ⊤ := by
+      rw [Ideal.eq_top_iff_one]
+      have hsum : ∑ g : s, Ideal.Quotient.mk I (g' g) *
+          Ideal.Quotient.mk I (h' g) = (1 : B) := by
+        apply eq_of_sub_eq_zero
+        simp_rw [← map_mul]
+        rw [← map_sum, ← map_one (Ideal.Quotient.mk I), ← map_sub,
+          Ideal.Quotient.eq_zero_iff_mem]
+        apply Ideal.subset_span
+        simp [I]
+      rw [← hsum]
+      simp only [Finset.univ_eq_attach, map_sum, map_mul]
+      refine Ideal.sum_mem _ (fun g _ ↦
+        Ideal.mul_mem_right _ _ <| Ideal.subset_span ?_)
+      exact Finset.mem_image.mpr ⟨g, Finset.mem_univ _, rfl⟩
+    letI : Algebra B A := q.toAlgebra
+    letI : Module B M := Module.compHom M (algebraMap B A)
+    letI : IsScalarTower B A M :=
+      IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+    letI : ∀ b : t, Module A (LocalizedModule.Away (q b.val) M) :=
+      fun b => inferInstance
+    letI : ∀ b : t, Module B (LocalizedModule.Away (q b.val) M) :=
+      fun b => inferInstance
+    letI : ∀ b : t, IsScalarTower B A (LocalizedModule.Away (q b.val) M) :=
+      fun b => IsScalarTower.of_algebraMap_smul (by
+        intro c y
+        refine y.induction_on ?_
+        intro m s
+        rw [LocalizedModule.smul'_mk, LocalizedModule.smul'_mk]
+        congr 1)
+    let ϕ : ∀ b : t, M →ₗ[B] LocalizedModule.Away (q b.val) M := fun b => by
+      let f0 : M →ₗ[A] LocalizedModule.Away (q b.val) M :=
+        LocalizedModule.mkLinearMap (Submonoid.powers (q b.val)) M
+      let f1 : M →ₗ[B] LocalizedModule.Away (q b.val) M :=
+        f0.restrictScalars B
+      exact f1
+    letI : ∀ b : t, IsLocalizedModule (Submonoid.powers b.val) (ϕ b) :=
+      fun b => by
+        let f0 : M →ₗ[A] LocalizedModule.Away (q b.val) M :=
+          LocalizedModule.mkLinearMap (Submonoid.powers (q b.val)) M
+        letI : IsLocalizedModule (Submonoid.powers (q b.val)) f0 := inferInstance
+        simpa [ϕ, f0] using
+          (IsLocalizedModule.restrictScalars_powers
+            (R := B) (A := A) (M := M)
+            (N := LocalizedModule.Away (q b.val) M) b.val f0)
+    letI : ∀ b : t, Module (Localization.Away b.val)
+        (LocalizedModule.Away (q b.val) M) :=
+      fun b => Module.compHom _
+        (Localization.awayMapₐ q b.val).toRingHom
+    letI : ∀ b : t, IsScalarTower B (Localization.Away b.val)
+        (LocalizedModule.Away (q b.val) M) :=
+      fun b => by
+        apply @IsScalarTower.of_algebraMap_smul B (Localization.Away b.val)
+          (LocalizedModule.Away (q b.val) M) _ _ _ _ _
+        intro c y
+        refine y.induction_on ?_
+        intro m s
+        have hcomp : (Localization.awayMapₐ q b.val).toRingHom.comp
+            (algebraMap B (Localization.Away b.val)) =
+            algebraMap B (Localization.Away (q b.val)) := by
+          apply RingHom.ext
+          intro z
+          simp [Localization.awayMapₐ, Localization.awayMap,
+            IsLocalization.Away.map, IsLocalization.map_mk']
+          rfl
+        have hBAway : algebraMap B (Localization.Away (q b.val)) c =
+            algebraMap A (Localization.Away (q b.val)) (algebraMap B A c) := by
+          rw [IsScalarTower.algebraMap_apply B A
+            (Localization.Away (q b.val))]
+        have haway : (Localization.awayMapₐ q b.val).toRingHom
+            (algebraMap B (Localization.Away b.val) c) •
+            LocalizedModule.mk m s = c • LocalizedModule.mk m s := by
+          rw [show (Localization.awayMapₐ q b.val).toRingHom
+              (algebraMap B (Localization.Away b.val) c) =
+              algebraMap B (Localization.Away (q b.val)) c by
+                exact congrArg (fun k => k c) hcomp, hBAway]
+          rw [IsScalarTower.algebraMap_smul (R := A)
+            (A := Localization.Away (q b.val))]
+          exact IsScalarTower.algebraMap_smul (R := B) (A := A) c _
+        change (Localization.awayMapₐ q b.val).toRingHom
+            (algebraMap B (Localization.Away b.val) c) •
+            LocalizedModule.mk m s = c • LocalizedModule.mk m s
+        exact haway
+    have hBQ : @Module.FinitePresentation B M _ _
+        (Module.compHom M (algebraMap B A)) := by
+      apply Module.FinitePresentation.of_localizationSpan'
+        (R := B) (M := M) (s := t)
+        (Mₚ := fun b => LocalizedModule.Away (q b.val) M)
+        (Rₚ := fun b => Localization.Away b.val) ht ϕ
+      intro b
+      have hb : ∃ x : s,
+          Ideal.Quotient.mk I (g' x) = b.val := by
+        obtain ⟨u, hu⟩ := b
+        convert! hu
+        simp [t]
+      obtain ⟨x, hx⟩ := hb
+      have hqb : q b.val = (x : A) := by
+        rw [← hx]
+        change β (g' x) = (x : A)
+        exact hg' x
+      let qloc0 : Localization.Away b.val →ₐ[R]
+          Localization.Away (q b.val) :=
+        Localization.awayMapₐ q b.val
+      let qlocRing : Localization.Away b.val →+*
+          Localization.Away (q b.val) := qloc0.toRingHom
+      letI : Module (Localization.Away b.val)
+          (LocalizedModule.Away (q b.val) M) :=
+        Module.compHom _ qloc0.toRingHom
+      letI : IsScalarTower B (Localization.Away b.val)
+          (LocalizedModule.Away (q b.val) M) := by
+        apply @IsScalarTower.of_algebraMap_smul B (Localization.Away b.val)
+          (LocalizedModule.Away (q b.val) M) _ _ _ _ _
+        intro c y
+        refine y.induction_on ?_
+        intro m s
+        simp [LocalizedModule.smul'_mk]
+      have hqloc0 : Function.Surjective qloc0 := by
+        exact IsLocalization.Away.mapₐ_surjective_of_surjective _ hq
+      have hfpqloc : RingHom.FinitePresentation
+          (algebraMap R (Localization.Away b.val)) := by
+        rw [RingHom.finitePresentation_algebraMap]
+        letI : Algebra.FinitePresentation R B := by
+          apply Algebra.FinitePresentation.quotient
+          simp only [Finset.univ_eq_attach, I]
+          exact ⟨{∑ g : s, g' g * h' g - 1}, by simp⟩
+        letI : Algebra.FinitePresentation B (Localization.Away b.val) :=
+          IsLocalization.Away.finitePresentation b.val
+        exact Algebra.FinitePresentation.trans R B (Localization.Away b.val)
+      have hloc' : RelativelyFinitelyPresented
+          ((algebraMap A (Localization.Away (q b.val))).comp f)
+          (LocalizedModule.Away (q b.val) M) := by
+        rw [hqb]
+        exact hloc x
+      letI : Algebra B (Localization.Away (q b.val)) :=
+        Algebra.compHom _ q.toRingHom
+      have hbase : algebraMap R (Localization.Away (q b.val)) =
+          (algebraMap A (Localization.Away (q b.val))).comp f := by
+        ext r
+        rw [IsScalarTower.algebraMap_apply R A
+          (Localization.Away (q b.val))]
+        rfl
+      let fbase : R →+* Localization.Away (q b.val) :=
+        algebraMap R (Localization.Away (q b.val))
+      letI : Algebra R (Localization.Away (q b.val)) := fbase.toAlgebra
+      let qloc : Localization.Away b.val →ₐ[R]
+          Localization.Away (q b.val) :=
+        { toRingHom := qlocRing
+          commutes' := by
+            intro r
+            change qlocRing (algebraMap R (Localization.Away b.val) r) =
+              algebraMap R (Localization.Away (q b.val)) r
+            simp [qlocRing, qloc0, Localization.awayMapₐ,
+              Localization.awayMap, IsLocalization.Away.map]
+            rfl }
+      have hqloc : Function.Surjective qloc := by
+        intro z
+        obtain ⟨x, hx⟩ := hqloc0 z
+        exact ⟨x, by simpa [qloc, qlocRing] using hx⟩
+      have hbase' : fbase =
+          (algebraMap A (Localization.Away (q b.val))).comp f := by
+        simpa [fbase] using hbase
+      have hlocbase : RelativelyFinitelyPresented
+          fbase
+          (LocalizedModule.Away (q b.val) M) := by
+        rw [hbase']
+        exact hloc'
+      have hfbase : RingHom.FiniteType
+          fbase := by
+        rw [hbase']
+        exact RingHom.FiniteType.comp
+          (RingHom.finiteType_algebraMap.mpr inferInstance) hf
+      exact
+        (relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
+          fbase hfbase).mp
+          hlocbase (A' := Localization.Away b.val) (q := qloc) hqloc hfpqloc
+    letI : Module B M := Module.compHom M (algebraMap B A)
+    letI : Algebra.FinitePresentation R B := by
+      apply Algebra.FinitePresentation.quotient
+      simp only [Finset.univ_eq_attach, I]
+      exact ⟨{∑ g : s, g' g * h' g - 1}, by simp⟩
+    have hQB : Module.FinitePresentation Q M := by
+      have hmk : Function.Surjective (Ideal.Quotient.mk I) :=
+        Ideal.Quotient.mk_surjective
+      letI : Algebra Q B := (Ideal.Quotient.mk I).toAlgebra
+      letI : Module Q B := Algebra.toModule
+      letI : Module.Finite Q B := Module.Finite.of_surjective
+        (Algebra.linearMap Q B) hmk
+      letI : Algebra.FinitePresentation Q B := by
+        apply Algebra.FinitePresentation.quotient
+        simp only [Finset.univ_eq_attach, I]
+        exact ⟨{∑ g : s, g' g * h' g - 1}, by simp⟩
+      letI : Module.FinitePresentation Q B :=
+        Module.FinitePresentation.of_finite_of_finitePresentation Q B
+      letI : Module Q M := Module.compHom M β.toRingHom
+      have hQBtower : IsScalarTower Q B M := by
+        constructor
+        intro p b m
+        change (algebraMap B A (Ideal.Quotient.mk I p * b)) • m =
+          β p • (algebraMap B A b • m)
+        rw [map_mul, mul_smul]
+        rw [show algebraMap B A (Ideal.Quotient.mk I p) = β p by
+          change q (Ideal.Quotient.mk I p) = β p
+          rfl]
+      letI : IsScalarTower Q B M := hQBtower
+      letI : Module.FinitePresentation B M := hBQ
+      exact @Module.FinitePresentation.trans Q M
+        (inferInstance : CommRing Q) (inferInstance : AddCommGroup M)
+        (inferInstance : Module Q M) B (inferInstance : CommRing B)
+        (inferInstance : Algebra Q B) (inferInstance : Module B M)
+        hQBtower (inferInstance : Module.FinitePresentation Q B) hBQ
+    exact hQB
+  · intro hM
+    intro x
+    let g : A →+* Localization.Away (x : A) :=
+      algebraMap A (Localization.Away (x : A))
+    have hg : RingHom.FinitePresentation g := by
+      rw [RingHom.finitePresentation_algebraMap]
+      exact IsLocalization.Away.finitePresentation (x : A)
+    have hpull := relativelyFinitelyPresented_pull f hf g hg hM
+    dsimp [g] at hpull
+    dsimp [RelativelyFinitelyPresented] at hpull ⊢
+    obtain ⟨n, α, hα, hP⟩ := hpull
+    let X := ↑((ModuleCat.extendScalars
+      (algebraMap A (Localization.Away (x : A)))).obj (ModuleCat.of A M))
+    let L := LocalizedModule.Away (x : A) M
+    let e : X ≃ₗ[Localization.Away (x : A)] L :=
+      by
+        simpa [X, L, ModuleCat.extendScalars, ModuleCat.ExtendScalars.obj'] using
+          (LocalizedModule.equivTensorProduct
+            (Submonoid.powers (x : A)) M).symm
+    sorry
 
 /-- The middle term of a short exact sequence is relatively finitely
 presented when the ends are. -/

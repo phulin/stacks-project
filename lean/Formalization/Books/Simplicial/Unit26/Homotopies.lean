@@ -1317,7 +1317,14 @@ theorem precompose_homotopic
     {U V X : SimplicialObject C} {a b : U ⟶ V}
     (H : Homotopic a b) (p : X ⟶ U) :
     Homotopic (p ≫ a) (p ≫ b) := by
-  sorry
+  induction H with
+  | rel a b h =>
+      rcases h with ⟨K⟩
+      exact Relation.EqvGen.rel _ _ ⟨K.precomp p⟩
+  | refl a => exact Relation.EqvGen.refl _
+  | symm a b h ih => exact Relation.EqvGen.symm _ _ ih
+  | trans a b c h₁ h₂ ih₁ ih₂ =>
+      exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 def IsHomotopyEquivalence
     {C : Type u} [Category.{v} C]
@@ -1355,17 +1362,314 @@ theorem simplexMaxHomotopy_exists (m : ℕ) :
         (α : (Δ[1] : SSet.{u}) _⦋n⦌) (k : Fin (n + 1)),
         H.h.app (op (SimplexCategory.mk n)) (φ, α) k =
           if α k = 0 then φ k else Fin.last m := by
-  sorry
+  let g : ∀ {n : ℕ}, (Δ[m] : SSet.{u}) _⦋n⦌ →
+      (Δ[1] : SSet.{u}) _⦋n⦌ →
+        (SimplexCategory.mk n ⟶ SimplexCategory.mk m) :=
+    fun {n} φ α => SimplexCategory.Hom.mk {
+      toFun := fun k => if α k = 0 then φ k else Fin.last m
+      monotone' := by
+        intro i j hij
+        by_cases hi : α i = 0
+        · by_cases hj : α j = 0
+          · simp only [if_pos hi, if_pos hj]
+            exact (SSet.stdSimplex.monotone_apply φ) hij
+          · have hj1 : α j = 1 := Fin.eq_one_of_ne_zero (α j) hj
+            simp only [if_pos hi, if_neg hj]
+            exact Fin.le_last _
+        · have hi1 : α i = 1 := Fin.eq_one_of_ne_zero (α i) hi
+          have hα := (SSet.stdSimplex.monotone_apply α) hij
+          have hj1 : α j = 1 := by
+            apply Fin.eq_one_of_ne_zero (α j)
+            intro hj
+            apply hi
+            apply Fin.ext
+            have hα' : (α i).val ≤ (α j).val :=
+              Fin.le_iff_val_le_val.mp hα
+            have hi' : (α i).val = 1 :=
+              congrArg (fun z : Fin 2 => z.val) hi1
+            have hj' : (α j).val = 0 :=
+              congrArg (fun z : Fin 2 => z.val) hj
+            omega
+          simp [hi1, hj1]
+    }
+  let h : (Δ[m] : SSet.{u}) ⊗ (Δ[1] : SSet.{u}) ⟶
+      (Δ[m] : SSet.{u}) := {
+    app := fun X => TypeCat.ofHom (fun x =>
+      SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
+    naturality := by
+      intro X Y f
+      ext x
+      change SSet.stdSimplex.objEquiv.symm
+          (g ((Δ[m] : SSet.{u}).map f x.1)
+            ((Δ[1] : SSet.{u}).map f x.2)) =
+        (Δ[m] : SSet.{u}).map f
+          (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
+      apply SSet.stdSimplex.objEquiv.injective
+      ext k
+      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+    }
+  let H : SSet.Homotopy (𝟙 (Δ[m] : SSet.{u}))
+      (simplexToPoint m ≫ pointToSimplexLast m) := by
+    unfold SSet.Homotopy
+    refine { h := h, h₀ := ?_, h₁ := ?_, rel := ?_ }
+    · change SSet.ι₀ ≫ h = 𝟙 (Δ[m] : SSet.{u})
+      apply SimplicialObject.hom_ext
+      intro X
+      induction X using Opposite.rec with
+      | _ X =>
+        induction X using SimplexCategory.rec with
+        | _ n =>
+          apply ConcreteCategory.hom_ext
+          intro x
+          change SSet.stdSimplex.objEquiv.symm
+              (g ((SSet.ι₀.app (op (SimplexCategory.mk n))) x).1
+                ((SSet.ι₀.app (op (SimplexCategory.mk n))) x).2) = x
+          have hfst := SSet.ι₀_app_fst (X := (Δ[m] : SSet.{u})) x
+          have hsnd := SSet.ι₀_app_snd_apply (X := (Δ[m] : SSet.{u})) x
+          apply SSet.stdSimplex.objEquiv.injective
+          ext k
+          simp [g, hfst, hsnd, SSet.stdSimplex.const]
+    · change SSet.ι₁ ≫ h = simplexToPoint m ≫ pointToSimplexLast m
+      apply SimplicialObject.hom_ext
+      intro X
+      induction X using Opposite.rec with
+      | _ X =>
+        induction X using SimplexCategory.rec with
+        | _ n =>
+          apply ConcreteCategory.hom_ext
+          intro x
+          change SSet.stdSimplex.objEquiv.symm
+              (g ((SSet.ι₁.app (op (SimplexCategory.mk n))) x).1
+                ((SSet.ι₁.app (op (SimplexCategory.mk n))) x).2) =
+            (simplexToPoint m ≫ pointToSimplexLast m).app
+              (op (SimplexCategory.mk n)) x
+          have hfst := SSet.ι₁_app_fst (X := (Δ[m] : SSet.{u})) x
+          have hsnd := SSet.ι₁_app_snd_apply (X := (Δ[m] : SSet.{u})) x
+          apply SSet.stdSimplex.objEquiv.injective
+          ext k
+          simp [g, hfst, hsnd, simplexToPoint, pointToSimplexLast,
+            SSet.stdSimplex.const, SSet.stdSimplex.map_apply]
+    · ext m x
+      exact x.1.property.elim
+  refine ⟨H, ?_⟩
+  intro n φ α k
+  dsimp [H, h]
+  change ((SSet.stdSimplex.objEquiv.symm (g φ α) :
+    (Δ[m] : SSet.{u}) _⦋n⦌) k) = _
+  rfl
 
 theorem simplexFirstHomotopy_exists (m : ℕ) :
     Nonempty
       (SSet.Homotopy (simplexToPoint m ≫ pointToSimplexFirst m)
         (𝟙 (Δ[m] : SSet.{u}))) := by
-  sorry
+  let g : ∀ {n : ℕ}, (Δ[m] : SSet.{u}) _⦋n⦌ →
+      (Δ[1] : SSet.{u}) _⦋n⦌ →
+        (SimplexCategory.mk n ⟶ SimplexCategory.mk m) :=
+    fun {n} φ α => SimplexCategory.Hom.mk {
+      toFun := fun k => if α k = 0 then 0 else φ k
+      monotone' := by
+        intro i j hij
+        by_cases hi : α i = 0
+        · by_cases hj : α j = 0
+          · simp only [if_pos hi, if_pos hj]
+            exact le_rfl
+          · simp only [if_pos hi, if_neg hj]
+            exact Fin.zero_le _
+        · have hj : ¬ α j = 0 := by
+            intro hj
+            apply hi
+            apply Fin.ext
+            have hα := (SSet.stdSimplex.monotone_apply α) hij
+            have hα' : (α i).val ≤ (α j).val :=
+              Fin.le_iff_val_le_val.mp hα
+            have hi' : (α i).val = 1 :=
+              congrArg (fun z : Fin 2 => z.val)
+                (Fin.eq_one_of_ne_zero (α i) hi)
+            have hj' : (α j).val = 0 :=
+              congrArg (fun z : Fin 2 => z.val) hj
+            omega
+          simp only [if_neg hi, if_neg hj]
+          exact (SSet.stdSimplex.monotone_apply φ) hij
+    }
+  let h : (Δ[m] : SSet.{u}) ⊗ (Δ[1] : SSet.{u}) ⟶
+      (Δ[m] : SSet.{u}) := {
+    app := fun X => TypeCat.ofHom (fun x =>
+      SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
+    naturality := by
+      intro X Y f
+      ext x
+      change SSet.stdSimplex.objEquiv.symm
+          (g ((Δ[m] : SSet.{u}).map f x.1)
+            ((Δ[1] : SSet.{u}).map f x.2)) =
+        (Δ[m] : SSet.{u}).map f
+          (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
+      apply SSet.stdSimplex.objEquiv.injective
+      ext k
+      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+    }
+  refine ⟨?_⟩
+  unfold SSet.Homotopy
+  refine { h := h, h₀ := ?_, h₁ := ?_, rel := ?_ }
+  · change SSet.ι₀ ≫ h = simplexToPoint m ≫ pointToSimplexFirst m
+    apply SimplicialObject.hom_ext
+    intro X
+    induction X using Opposite.rec with
+    | _ X =>
+      induction X using SimplexCategory.rec with
+      | _ n =>
+        apply ConcreteCategory.hom_ext
+        intro x
+        change SSet.stdSimplex.objEquiv.symm
+            (g ((SSet.ι₀.app (op (SimplexCategory.mk n))) x).1
+              ((SSet.ι₀.app (op (SimplexCategory.mk n))) x).2) =
+          (simplexToPoint m ≫ pointToSimplexFirst m).app
+            (op (SimplexCategory.mk n)) x
+        have hfst := SSet.ι₀_app_fst (X := (Δ[m] : SSet.{u})) x
+        have hsnd := SSet.ι₀_app_snd_apply (X := (Δ[m] : SSet.{u})) x
+        apply SSet.stdSimplex.objEquiv.injective
+        ext k
+        simp [g, hfst, hsnd, simplexToPoint, pointToSimplexFirst,
+          SSet.stdSimplex.const, SSet.stdSimplex.map_apply]
+  · change SSet.ι₁ ≫ h = 𝟙 (Δ[m] : SSet.{u})
+    apply SimplicialObject.hom_ext
+    intro X
+    induction X using Opposite.rec with
+    | _ X =>
+      induction X using SimplexCategory.rec with
+      | _ n =>
+        apply ConcreteCategory.hom_ext
+        intro x
+        change SSet.stdSimplex.objEquiv.symm
+            (g ((SSet.ι₁.app (op (SimplexCategory.mk n))) x).1
+              ((SSet.ι₁.app (op (SimplexCategory.mk n))) x).2) = x
+        have hfst := SSet.ι₁_app_fst (X := (Δ[m] : SSet.{u})) x
+        have hsnd := SSet.ι₁_app_snd_apply (X := (Δ[m] : SSet.{u})) x
+        apply SSet.stdSimplex.objEquiv.injective
+        ext k
+        simp [g, hfst, hsnd, SSet.stdSimplex.const]
+  · ext m x
+    exact x.1.property.elim
 
 theorem simplex_homotopy_equivalent_point (m : ℕ) :
     HomotopyEquivalent (Δ[m] : SSet.{u}) (Δ[0] : SSet.{u}) := by
-  sorry
+  refine ⟨simplexToPoint m, ?_⟩
+  refine ⟨pointToSimplexLast m,
+    homotopicOfEq (pointToSimplexLast_comp_simplexToPoint m), ?_⟩
+  obtain ⟨H, hH⟩ := simplexMaxHomotopy_exists m
+  let hh (n : ℕ) (i : Fin (n + 2)) :
+      (Δ[m] : SSet.{u}) _⦋n⦌ ⟶ (Δ[m] : SSet.{u}) _⦋n⦌ :=
+    TypeCat.ofHom (fun φ =>
+      H.h.app (op (SimplexCategory.mk n)) (φ, intervalSimplex n i))
+  have component_naturality :
+      ∀ {r s : ℕ} (f : SimplexCategory.mk r ⟶ SimplexCategory.mk s)
+        (i : Fin (s + 2)) (k : Fin (r + 2)),
+        (Δ[1] : SSet.{u}).map f.op (intervalSimplex s i) =
+          intervalSimplex r k →
+        (Δ[m] : SSet.{u}).map f.op ≫ hh r k =
+          hh s i ≫ (Δ[m] : SSet.{u}).map f.op := by
+    intro r s f i k hk
+    apply ConcreteCategory.hom_ext
+    intro φ
+    have hn := congrArg
+      (fun q => q (φ, intervalSimplex s i)) (H.h.naturality f.op)
+    change H.h.app (op (SimplexCategory.mk r))
+          ((Δ[m] : SSet.{u}).map f.op φ,
+            (Δ[1] : SSet.{u}).map f.op (intervalSimplex s i)) =
+        (Δ[m] : SSet.{u}).map f.op
+          (H.h.app (op (SimplexCategory.mk s))
+            (φ, intervalSimplex s i)) at hn
+    rw [hk] at hn
+    simpa [hh] using hn
+  have face_gt_map :
+      ∀ {n : ℕ} (i : Fin (n + 3)) (j : Fin (n + 2))
+        (hji : j.castSucc < i),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.δ j).op
+            (intervalSimplex (n + 1) i) =
+          intervalSimplex n (i.pred (Fin.ne_zero_of_lt hji)) := by
+    intro n i j hji
+    simpa only [intervalSimplex, SimplicialObject.δ] using
+      SSet.stdSimplex.δ_objMk₁_of_lt i j hji
+  have face_le_map :
+      ∀ {n : ℕ} (i : Fin (n + 3)) (j : Fin (n + 2))
+        (hij : i ≤ j.castSucc),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.δ j).op
+            (intervalSimplex (n + 1) i) =
+          intervalSimplex n (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ))) := by
+    intro n i j hij
+    simpa only [intervalSimplex, SimplicialObject.δ] using
+      SSet.stdSimplex.δ_objMk₁_of_le i j hij
+  have degeneracy_gt_map :
+      ∀ {n : ℕ} (i : Fin (n + 2)) (j : Fin (n + 1))
+        (hji : j.castSucc < i),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.σ j).op
+            (intervalSimplex n i) =
+          intervalSimplex (n + 1) i.succ := by
+    intro n i j hji
+    simpa only [intervalSimplex, SimplicialObject.σ] using
+      SSet.stdSimplex.σ_objMk₁_of_lt i j hji
+  have degeneracy_le_map :
+      ∀ {n : ℕ} (i : Fin (n + 2)) (j : Fin (n + 1))
+        (hij : i ≤ j.castSucc),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.σ j).op
+            (intervalSimplex n i) =
+          intervalSimplex (n + 1) i.castSucc := by
+    intro n i j hij
+    simpa only [intervalSimplex, SimplicialObject.σ] using
+      SSet.stdSimplex.σ_objMk₁_of_le i j hij
+  let K : DegreewiseHomotopy (𝟙 (Δ[m] : SSet.{u}))
+      (simplexToPoint m ≫ pointToSimplexLast m) := {
+    h := hh
+    h_zero := by
+      intro n
+      apply ConcreteCategory.hom_ext
+      intro φ
+      change H.h.app (op (SimplexCategory.mk n))
+          (φ, intervalSimplex n 0) =
+        (simplexToPoint m ≫ pointToSimplexLast m).app
+          (op (SimplexCategory.mk n)) φ
+      apply SSet.stdSimplex.objEquiv.injective
+      ext k
+      simp only [SSet.stdSimplex.objEquiv_toOrderHom_apply]
+      rw [hH]
+      simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply,
+        simplexToPoint, pointToSimplexLast, SSet.stdSimplex.const,
+        SSet.stdSimplex.map_apply] <;> rfl
+    h_last := by
+      intro n
+      apply ConcreteCategory.hom_ext
+      intro φ
+      change H.h.app (op (SimplexCategory.mk n))
+          (φ, intervalSimplex n (Fin.last (n + 1))) = φ
+      apply SSet.stdSimplex.objEquiv.injective
+      ext k
+      simp only [SSet.stdSimplex.objEquiv_toOrderHom_apply]
+      rw [hH]
+      simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply]
+    face_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.pred (Fin.ne_zero_of_lt hji)) (face_gt_map i j hji)).symm
+    face_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ)))
+          (face_le_map i j hij)).symm
+    degeneracy_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.succ
+          (degeneracy_gt_map i j hji)).symm
+    degeneracy_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.castSucc
+          (degeneracy_le_map i j hij)).symm }
+  exact Relation.EqvGen.symm _ _
+    (Relation.EqvGen.rel _ _ ⟨degreewiseHomotopy_to_homotopy K⟩)
 
 /-! ## The cylinder is homotopy equivalent to its base -/
 

@@ -4,6 +4,7 @@ import Formalization.Books.Algebra.Unit85.ProjectiveModulesLocalRing
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Module.Projective
+import Mathlib.RingTheory.LocalProperties.ProjectiveDimension
 
 /-!
 # Commutative Algebra, Chapter 109: Rings of finite global dimension
@@ -1097,7 +1098,141 @@ theorem finite_global_dimension_criterion {R : Type u} [CommRing R] (n : ℕ) :
           CategoryTheory.HasProjectiveDimensionLE M n,
         ∀ I : Ideal R,
           CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (R ⧸ I)) n ] := by
-  sorry
+  have hcyclic :
+      (∀ I : Ideal R,
+        CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (R ⧸ I)) n) →
+      HasGlobalDimensionLE R n := by
+    intro h M
+    exact (by
+        let M₀ : Type u := M
+        let hWO := exists_wellFoundedLT M₀
+        letI : AddCommGroup M₀ := inferInstance
+        letI : Module R M₀ := inferInstance
+        letI : LinearOrder M₀ := hWO.choose
+        letI : WellFoundedLT M₀ := hWO.choose_spec
+        let stage : M₀ → Submodule R M₀ :=
+          fun e => Submodule.span R (Set.Iic e)
+        let F : WellOrderedSubmoduleFiltration R M₀ M₀ :=
+          { stage := stage
+            monotone := by
+              intro e₁ e₂ he
+              apply Submodule.span_mono
+              intro x hx
+              exact Set.mem_Iic.mpr (hx.trans he)
+            exhaustive := by
+              rw [eq_top_iff]
+              intro x hx
+              exact (le_iSup (fun e => stage e) x)
+                (Submodule.subset_span (Set.mem_Iic.mpr le_rfl)) }
+        apply colimit_projective_dimension F n
+        intro e
+        let x : F.stage e :=
+          ⟨e, by exact Submodule.subset_span (Set.mem_Iic.mpr le_rfl)⟩
+        let g : R →ₗ[R] ((F.stage e : Type u) ⧸ F.predecessor e) :=
+          (F.predecessor e).mkQ.comp (LinearMap.toSpanSingleton R (F.stage e) x)
+        have hg : Function.Surjective g := by
+          intro y
+          obtain ⟨z, rfl⟩ := (F.predecessor e).mkQ_surjective y
+          have hs : ∀ (a : M₀) (ha : a ∈ F.stage e),
+              ∃ r : R, g r = (F.predecessor e).mkQ ⟨a, ha⟩ := by
+            intro a ha
+            induction ha using Submodule.span_induction with
+          | mem a ha =>
+              by_cases hae : a = e
+              · subst a
+                exact ⟨1, by simp [g, x]
+                  ⟩
+              · have hae' : a < e := lt_of_le_of_ne ha (by
+                  intro h; exact hae h)
+                have hpred : a ∈ (⨆ e' : {e' : M₀ // e' < e},
+                    F.stage e'.1) := by
+                  exact (le_iSup (fun e' : {e' : M₀ // e' < e} =>
+                    F.stage e'.1) ⟨a, hae'⟩)
+                    (Submodule.subset_span (Set.mem_Iic.mpr le_rfl))
+                have hprede : (⟨a, Submodule.subset_span ha⟩ : F.stage e) ∈
+                    F.predecessor e := by
+                  change a ∈ (⨆ e' : {e' : M₀ // e' < e}, F.stage e'.1)
+                  exact hpred
+                exact ⟨0, by
+                  change g 0 = (F.predecessor e).mkQ
+                    ⟨a, Submodule.subset_span ha⟩
+                  rw [show g 0 = 0 by simp [g]]
+                  exact (Submodule.Quotient.mk_eq_zero
+                    (p := F.predecessor e)).mpr hprede |>.symm⟩
+          | zero => exact ⟨0, by
+              change g 0 = (F.predecessor e).mkQ ⟨0, _⟩
+              rw [show g 0 = 0 by simp [g]]
+              exact (Submodule.Quotient.mk_eq_zero
+                (p := F.predecessor e)).mpr
+                (F.predecessor e).zero_mem |>.symm
+              ⟩
+          | add a b ha hb hpa hpb =>
+              obtain ⟨ra, hra⟩ := hpa
+              obtain ⟨rb, hrb⟩ := hpb
+              refine ⟨ra + rb, ?_⟩
+              change g (ra + rb) = (F.predecessor e).mkQ ⟨a + b, _⟩
+              calc
+                g (ra + rb) = g ra + g rb := map_add g ra rb
+                _ = (F.predecessor e).mkQ ⟨a, ha⟩ +
+                    (F.predecessor e).mkQ ⟨b, hb⟩ := by rw [hra, hrb]
+                _ = (F.predecessor e).mkQ ⟨a + b, _⟩ := by
+                  simpa using ((F.predecessor e).mkQ.map_add
+                    ⟨a, ha⟩ ⟨b, hb⟩).symm
+          | smul r a ha hpa =>
+              obtain ⟨ra, hra⟩ := hpa
+              refine ⟨r * ra, ?_⟩
+              change g (r • ra) = (F.predecessor e).mkQ ⟨r • a, _⟩
+              calc
+                g (r • ra) = r • g ra := map_smul g r ra
+                _ = r • (F.predecessor e).mkQ ⟨a, ha⟩ := by rw [hra]
+                _ = (F.predecessor e).mkQ ⟨r • a, _⟩ := by
+                  simpa using ((F.predecessor e).mkQ.map_smul r
+                    ⟨a, ha⟩).symm
+          obtain ⟨r, hr⟩ := hs z.1 z.2
+          exact ⟨r, hr⟩
+        letI : CategoryTheory.HasProjectiveDimensionLE
+            (ModuleCat.of R (R ⧸ LinearMap.ker g)) n := h (LinearMap.ker g)
+        let eQ := LinearMap.quotKerEquivOfSurjective g hg
+        let eQ' : (ModuleCat.of R (R ⧸ LinearMap.ker g) : Type u) ≃ₗ[R]
+            (F.successiveQuotient e : Type u) := eQ
+        exact ModuleCat.hasProjectiveDimensionLE_of_linearEquiv eQ' n)
+  have hAB : HasGlobalDimensionLE R n ↔
+      (∀ M : ModuleCat.{u} R, Module.Finite R M →
+        CategoryTheory.HasProjectiveDimensionLE M n) := by
+    constructor
+    · intro h M hM
+      exact h M
+    · intro h M
+      exact hcyclic (fun I => h (ModuleCat.of R (R ⧸ I)) (by infer_instance)) M
+  have hBC :
+      (∀ M : ModuleCat.{u} R, Module.Finite R M →
+        CategoryTheory.HasProjectiveDimensionLE M n) ↔
+      (∀ I : Ideal R,
+        CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (R ⧸ I)) n) := by
+    constructor
+    · intro h I
+      exact h (ModuleCat.of R (R ⧸ I))
+        (by infer_instance)
+    · intro h M hM
+      exact hcyclic h M
+  have hAC : HasGlobalDimensionLE R n ↔
+      (∀ I : Ideal R,
+        CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (R ⧸ I)) n) :=
+    hAB.trans hBC
+  change List.TFAE [
+    HasGlobalDimensionLE R n,
+    ∀ M : ModuleCat.{u} R, Module.Finite R M →
+      CategoryTheory.HasProjectiveDimensionLE M n,
+    ∀ I : Ideal R,
+      CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R (R ⧸ I)) n]
+  apply List.tfae_of_forall (HasGlobalDimensionLE R n)
+  intro a ha
+  simp only [List.mem_cons, List.not_mem_nil] at ha
+  rcases ha with rfl | rfl | rfl | h
+  · exact Iff.rfl
+  · exact hAB.symm
+  · exact hAC.symm
+  · exact False.elim h
 
 /-! ## Localization -/
 
@@ -1106,11 +1241,44 @@ finite global-dimension bound for a ring. -/
 theorem localize_projective_dimension {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M]
     (S : Submonoid R) (n : ℕ) :
-    (CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n →
+      (CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n →
       CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.of (Localization S) (localizedModule S M)) n) ∧
       (HasGlobalDimensionLE R n → HasGlobalDimensionLE (Localization S) n) := by
-  sorry
+  constructor
+  · intro h
+    letI : CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := h
+    letI : CategoryTheory.HasProjectiveDimensionLE
+        (ModuleCat.localizedModule (ModuleCat.of R M) S) n :=
+      ModuleCat.localizedModule_hasProjectiveDimensionLE n S (ModuleCat.of R M)
+    let e : (ModuleCat.localizedModule (ModuleCat.of R M) S : Type u) ≃ₗ[Localization S]
+        (ModuleCat.of (Localization S) (localizedModule S M) : Type u) :=
+      Shrink.linearEquiv (Localization S) (LocalizedModule S M)
+    exact ModuleCat.hasProjectiveDimensionLE_of_linearEquiv e n
+  · intro h M'
+    letI : Module R (M' : Type u) :=
+      Module.compHom (M' : Type u) (algebraMap R (Localization S))
+    letI : IsScalarTower R (Localization S) (M' : Type u) :=
+      IsScalarTower.of_compHom R (Localization S) (M' : Type u)
+    letI : CategoryTheory.HasProjectiveDimensionLE
+        (ModuleCat.of R (M' : Type u)) n := h (ModuleCat.of R (M' : Type u))
+    letI : IsLocalizedModule S
+        (LinearMap.id : (M' : Type u) →ₗ[R] (M' : Type u)) :=
+      isLocalizedModule_id S (M' : Type u) (Localization S)
+    let e₀ : LocalizedModule S (M' : Type u) ≃ₗ[R] (M' : Type u) :=
+      IsLocalizedModule.linearEquiv S
+        (LocalizedModule.mkLinearMap S (M' : Type u))
+        (LinearMap.id : (M' : Type u) →ₗ[R] (M' : Type u))
+    let e₁ : (ModuleCat.localizedModule (ModuleCat.of R (M' : Type u)) S : Type u) ≃ₗ[R]
+        (M' : Type u) :=
+      (Shrink.linearEquiv R (LocalizedModule S (M' : Type u))).trans e₀
+    let e : (ModuleCat.localizedModule (ModuleCat.of R (M' : Type u)) S : Type u) ≃ₗ[Localization S]
+        (M' : Type u) := e₁.extendScalarsOfIsLocalization S (Localization S)
+    letI : CategoryTheory.HasProjectiveDimensionLE
+        (ModuleCat.localizedModule (ModuleCat.of R (M' : Type u)) S) n :=
+      ModuleCat.localizedModule_hasProjectiveDimensionLE n S
+        (ModuleCat.of R (M' : Type u))
+    exact ModuleCat.hasProjectiveDimensionLE_of_linearEquiv e n
 
 end
 

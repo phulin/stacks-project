@@ -611,22 +611,22 @@ theorem homologicalFunctorMorphismProperty_saturated
       dsimp [ψ]
       infer_instance)
       (by
-      letI := ha (i + 1)
+      let := ha (i + 1)
       dsimp [ψ]
       infer_instance)
       (by
-      letI := hb (i + 1)
+      let := hb (i + 1)
       dsimp [ψ]
       infer_instance)
     have hcomp : IsIso
         (eqToHom h₁₂ ≫ (H.shift i).map c ≫ eqToHom h₂₂.symm) := by
       simpa only [ψ, ComposableArrows.homMk₅_app_two] using hψ
-    letI := hcomp
+    let := hcomp
     have hmid : IsIso
         ((H.shift i).map c ≫ eqToHom h₂₂.symm) :=
       IsIso.of_isIso_comp_left (eqToHom h₁₂)
         ((H.shift i).map c ≫ eqToHom h₂₂.symm)
-    letI := hmid
+    let := hmid
     exact IsIso.of_isIso_comp_right ((H.shift i).map c) (eqToHom h₂₂.symm)
   exact ⟨by simpa [W] using hsat, by simpa [W] using hcompat⟩
 end HomologicalFunctorLocalization
@@ -873,7 +873,7 @@ theorem kernel_localization_characterization (Z : C) :
     (IsZeroAfterLocalization S Z ↔ KernelLocalizationOutgoingZero S Z) ∧
     (KernelLocalizationOutgoingZero S Z ↔ KernelLocalizationIncomingZero S Z) ∧
     (KernelLocalizationIncomingZero S Z ↔ KernelLocalizationBiproductTriangle S Z) ∧
-    ∀ hS : SaturatedMultiplicativeSystem S,
+    ∀ _hS : SaturatedMultiplicativeSystem S,
       (IsZeroAfterLocalization S Z ↔ KernelLocalizationZeroToObject S Z) ∧
       (KernelLocalizationZeroToObject S Z ↔ KernelLocalizationObjectToZero S Z) ∧
         (KernelLocalizationObjectToZero S Z ↔ KernelLocalizationTriangle S Z) := by
@@ -954,7 +954,7 @@ theorem kernel_localization_characterization (Z : C) :
           rw [hSat]
           exact h0
         change IsIso (S.Q.map (0 : (0 : C) ⟶ Z)) at hInv
-        letI : IsIso (S.Q.map (0 : (0 : C) ⟶ Z)) := hInv
+        let : IsIso (S.Q.map (0 : (0 : C) ⟶ Z)) := hInv
         exact IsZero.of_iso (Functor.map_isZero S.Q (isZero_zero C))
           (asIso (S.Q.map (0 : (0 : C) ⟶ Z))).symm
     have hObjTo : KernelLocalizationZeroToObject S Z ↔
@@ -974,7 +974,7 @@ theorem kernel_localization_characterization (Z : C) :
           rw [hSat]
           exact h0
         change IsIso (S.Q.map (0 : Z ⟶ (0 : C))) at hInv
-        letI : IsIso (S.Q.map (0 : Z ⟶ (0 : C))) := hInv
+        let : IsIso (S.Q.map (0 : Z ⟶ (0 : C))) := hInv
         have hZ : IsZero (S.Q.obj Z) :=
           IsZero.of_iso (Functor.map_isZero S.Q (isZero_zero C))
             (asIso (S.Q.map (0 : Z ⟶ (0 : C))))

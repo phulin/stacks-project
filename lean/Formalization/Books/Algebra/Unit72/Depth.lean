@@ -990,6 +990,25 @@ theorem localDepth_drops_by_one
   · exact ENat.le_sub_of_add_le_right ENat.one_ne_top hupper
   · exact hlower
 
+/-!
+Proof roadmap for the consumer
+`Unit103/CohenMacaulayModules.lean:isCohenMacaulay_iff_of_isSMulRegular`:
+
+* For each implication, derive `Nontrivial` for the module known to be
+  Cohen--Macaulay using `Module.supportDim_ne_bot_iff_nontrivial`; after
+  unfolding `IsCohenMacaulay`, its support dimension is a coerced `ℕ∞` and
+  hence is not `⊥`.  In the reverse implication, pull nontriviality back from
+  `QuotSMulTop x M` along `Submodule.mkQ_surjective`.
+* Instantiate `localDepth_drops_by_one` with `R : Type u` and `M : Type v`.
+  Combine that equality with
+  `Module.supportDim_quotSMulTop_succ_eq_supportDim hreg hx` from
+  `Mathlib/RingTheory/KrullDimension/Regular.lean`.
+* Rewrite the Cohen--Macaulay equality on the known side.  The two successor
+  equalities identify the other depth and support dimension: eliminate the
+  impossible `⊥` case using nontriviality, then cancel `+ 1` after reducing
+  the remaining values to coerced `ℕ∞` terms.
+-/
+
 private theorem exists_regular_extension_to_localDepth
     {R M : Type u} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
@@ -1100,7 +1119,7 @@ private lemma associated_subset_of_injective
   rw [← g.map_smul, map_eq_zero_iff g hg]
 
 theorem associatedPrime_inherit_minimal_prime
-    {R M : Type u} [CommRing R] [IsLocalRing R]
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (x : R) (hx : x ∈ IsLocalRing.maximalIdeal R)
     (p q : PrimeSpectrum R)
@@ -1228,10 +1247,46 @@ theorem associatedPrime_inherit_minimal_prime
     associated_subset_of_injective B.subtype B.subtype_injective hqassB
   exact ⟨n, hn, hqassQ⟩
 
+/-- The dimension of the quotient by a point of the support is bounded by
+the support dimension. -/
+theorem dim_quotient_le_supportDim_of_mem_support
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (p : PrimeSpectrum R) (hp : p ∈ Module.support R M) :
+    ringKrullDim (R ⧸ p.asIdeal) ≤ Module.supportDim R M := by
+  have hann : Module.annihilator R M ≤ p.asIdeal :=
+    Module.annihilator_le_of_mem_support hp
+  let f : (R ⧸ Module.annihilator R M) →+* (R ⧸ p.asIdeal) :=
+    Ideal.Quotient.lift (Module.annihilator R M)
+      (Ideal.Quotient.mk p.asIdeal) (by
+        intro r hr
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr (hann hr))
+  have hf : Function.Surjective f := by
+    intro z
+    obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective z
+    exact ⟨Ideal.Quotient.mk (Module.annihilator R M) r, by simp [f]⟩
+  calc
+    ringKrullDim (R ⧸ p.asIdeal) ≤
+        ringKrullDim (R ⧸ Module.annihilator R M) :=
+      ringKrullDim_le_of_surjective f hf
+    _ = Module.supportDim R M :=
+      (Module.supportDim_eq_ringKrullDim_quotient_annihilator R M).symm
+
+/-- The dimension of the quotient by an associated prime is bounded by the
+support dimension. -/
+theorem dim_of_associatedPrime_le_supportDim
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    (p : PrimeSpectrum R)
+    (hp : p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M) :
+    ringKrullDim (R ⧸ p.asIdeal) ≤ Module.supportDim R M :=
+  dim_quotient_le_supportDim_of_mem_support p
+    (Formalization.Books.Algebra.Unit63.ass_subset_support hp)
+
 /-- Every associated prime gives a quotient whose dimension bounds local
 depth. -/
 theorem localDepth_le_dim_of_associatedPrime
-    {R M : Type u} [CommRing R] [IsLocalRing R]
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M]
     (p : PrimeSpectrum R)
@@ -1239,7 +1294,7 @@ theorem localDepth_le_dim_of_associatedPrime
       ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
       ringKrullDim (R ⧸ p.asIdeal) := by
   classical
-  have aux : ∀ n : ℕ, ∀ (M : Type u) [AddCommGroup M] [Module R M]
+  have aux : ∀ n : ℕ, ∀ (M : Type v) [AddCommGroup M] [Module R M]
       [Module.Finite R M] (p : PrimeSpectrum R),
       localDepth R M = (n : ℕ∞) →
       p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M →
@@ -1433,8 +1488,60 @@ theorem localDepth_le_dim_of_associatedPrime
         exact Subsingleton.elim (r • m : M) (0 : M)
     exact p.isPrime.ne_top hptop
   letI : Nontrivial M := hMnontr
-  obtain ⟨n, hdepth, _⟩ := localDepth_eq_min_ext_universe (R := R) (M := M)
-  exact aux n M p hdepth hp
+  have hmax : IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) ≠ ⊤ :=
+    smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+      (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+  have hlt : localDepth R M < ⊤ :=
+    depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) M hmax
+  cases hdepth : localDepth R M with
+  | top =>
+      rw [hdepth] at hlt
+      exact (lt_irrefl _ hlt).elim
+  | coe n => simpa [hdepth] using aux n M p hdepth hp
+
+/-!
+Proof roadmaps for the other two unresolved consumers in
+`Unit103/CohenMacaulayModules.lean`:
+
+* `isCohenMacaulay_quotient_by_element`: first obtain `Nontrivial M` from
+  `hM`.  If `g` is not regular, use
+  `Unit63.iUnion_associatedPrimes_eq_module_zeroDivisors` from
+  `Unit63/AssociatedPrimes.lean` to choose `p` with
+  `p ∈ Unit63.associatedPrimes R M` and `g ∈ p.asIdeal`.  At universe
+  instantiations `R : Type u`, `M : Type v`, the theorem immediately above
+  and `dim_of_associatedPrime_le_supportDim` sandwich
+  `ringKrullDim (R ⧸ p.asIdeal)` between the coerced local depth and
+  `Module.supportDim R M`; `hM` makes the endpoints equal.  Furthermore,
+  `Unit63.ass_subset_support hp` and `Module.support_quotSMulTop` put `p` in
+  the support of `QuotSMulTop g M`, so
+  `dim_quotient_le_supportDim_of_mem_support` bounds the same quotient-ring
+  dimension by the cut support dimension.  Rewrite `supportCutDim R M [g]`
+  with Unit103's local
+  `supportDim_quotSMulTop_eq_supportCutDim_singleton`; `hcut` now contradicts
+  the two dimension bounds (split `⊥`/`⊤`/coerced-finite cases before
+  cancelling `+ 1`).  With regularity established, apply
+  `localDepth_drops_by_one`; combine it with
+  `Module.supportDim_quotSMulTop_succ_eq_supportDim` and `hM` to prove the
+  quotient Cohen--Macaulay equality, then return the depth-drop equality.
+
+* `regularSequence_of_supportDim_quotient_eq`: induct on `c`, writing a
+  successor tuple as `Fin.cons (g 0) (Fin.tail g)` and rewriting its list via
+  `List.ofFn_cons`.  Iterate
+  `Module.supportDim_le_supportDim_quotSMulTop_succ` over the tail and use
+  quotient surjectivity for the opposite inequalities.  Together with
+  `hMdim`, `hquot`, and `c ≤ d`, these force the first cut to have support
+  dimension `((d - 1 : ℕ) : ℕ∞)` coerced to `WithBot`; normalize to this
+  common value type before cancelling successors.  Apply
+  `isCohenMacaulay_quotient_by_element` to `g 0`, then the induction
+  hypothesis to `Fin.tail g` on `QuotSMulTop (g 0) M`.  Transport the final
+  quotient dimension through
+  `Submodule.quotOfListConsSMulTopEquivQuotSMulTopInner`; Unit103's local
+  `supportCutDim_quotSMulTop_eq_cons` packages the same transport.  Assemble
+  regularity with `RingTheory.Sequence.IsRegular.cons`, prepend `g 0` to the
+  induction hypothesis's extension, and use the depth-drop equality to show
+  that the resulting concatenation has length `localDepth R M`, as required
+  by `IsMaximalRegularSequence`.
+-/
 
 /-- Localizing at a prime cannot reduce the sum of local depth and quotient
 dimension below the original local depth. -/

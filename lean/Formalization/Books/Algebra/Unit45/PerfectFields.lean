@@ -886,7 +886,10 @@ theorem isGeometricallyReduced_of_perfectField
     {k : Type u} {S : Type v} [Field k] [CommRing S]
     [Algebra k S] [PerfectField k] (hS : IsReduced S) :
     IsGeometricallyReduced k S := by
-  sorry
+  exact isGeometricallyReduced_of_isReduced_algebraicClosure hS
+    (isReduced_tensorProduct_of_separable_extension hS
+      (Or.inl ((perfectField_iff_all_field_extensions_separable.mp inferInstance)
+        (AlgebraicClosure k))))
 
 /-- The tensor product of two reduced algebras over a perfect field is
     reduced. -/
@@ -895,7 +898,8 @@ theorem isReduced_tensorProduct_of_perfectField
     [Algebra k R] [Algebra k S] [PerfectField k]
     (hR : IsReduced R) (hS : IsReduced S) :
     IsReduced (R ⊗[k] S) := by
-  sorry
+  exact isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced hR
+    (isGeometricallyReduced_of_perfectField hS)
 
 end
 

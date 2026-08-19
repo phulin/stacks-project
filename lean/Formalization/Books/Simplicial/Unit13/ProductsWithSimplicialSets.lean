@@ -547,11 +547,69 @@ noncomputable def constantObjectProductWithSimplexOf_hom_equiv
     (simplicialSetProduct_hom_equiv h V).symm
       ⟨fun n α =>
         f ≫ V.map (SSet.stdSimplex.objEquiv α).op, by
-        sorry⟩
+        intro m n φ u
+        simp [SSet.stdSimplex.map_apply, Category.assoc]⟩
   left_inv := by
-    sorry
+    intro f
+    apply NatTrans.ext
+    funext Y
+    letI : HasCoproduct
+        (fun _ : (Δ[k] : SSet.{w}).obj Y =>
+          ((SimplicialObject.const C).obj X).obj Y) :=
+      degreewiseCoproductInstanceAt h Y
+    letI : HasCoproduct
+        (fun _ : (Δ[k] : SSet.{w}).obj (op (SimplexCategory.mk k)) =>
+          ((SimplicialObject.const C).obj X).obj (op (SimplexCategory.mk k))) :=
+      degreewiseCoproductInstanceAt h (op (SimplexCategory.mk k))
+    apply Sigma.hom_ext
+    intro u
+    change Sigma.ι _ u ≫ Sigma.desc _ = _
+    simp only [Sigma.ι_desc]
+    change
+      (Sigma.ι (fun _ : (Δ[k] : SSet.{w}).obj (op (SimplexCategory.mk k)) =>
+          ((SimplicialObject.const C).obj X).obj (op (SimplexCategory.mk k)))
+          (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+        f.app (op (SimplexCategory.mk k))) ≫
+          V.map (SSet.stdSimplex.objEquiv u).op = _
+    calc
+      (Sigma.ι (fun _ : (Δ[k] : SSet.{w}).obj (op (SimplexCategory.mk k)) =>
+          ((SimplicialObject.const C).obj X).obj (op (SimplexCategory.mk k)))
+          (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+        f.app (op (SimplexCategory.mk k))) ≫
+          V.map (SSet.stdSimplex.objEquiv u).op =
+        Sigma.ι _ (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+          (f.app (op (SimplexCategory.mk k)) ≫
+          V.map (SSet.stdSimplex.objEquiv u).op) := by
+              exact Category.assoc _ _ _
+      _ = Sigma.ι _ (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+          ((constantObjectProductWithSimplexOf X k h).map
+              (SSet.stdSimplex.objEquiv u).op ≫ f.app Y) := by
+            congr 1
+            exact (f.naturality (SSet.stdSimplex.objEquiv u).op).symm
+      _ = Sigma.ι _ u ≫ f.app Y := by
+        simp [constantObjectProductWithSimplexOf, simplicialSetProductOf,
+          Category.assoc]
+        have hu :
+            (Δ[k] : SSet.{w}).map (SSet.stdSimplex.objEquiv u).op
+                (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) = u := by
+          apply SSet.stdSimplex.objEquiv.injective
+          rw [SSet.stdSimplex.map_objEquiv_symm]
+          simp
+        rw [hu]
   right_inv := by
-    sorry
+    intro f
+    have hg :=
+      (simplicialSetProduct_hom_equiv h V).apply_symm_apply
+        (⟨fun n α => f ≫ V.map (SSet.stdSimplex.objEquiv α).op, by
+          intro m n φ u
+          simp [SSet.stdSimplex.map_apply, Category.assoc]⟩ :
+          CompatibleFamily (Δ[k] : SSet.{w})
+            ((SimplicialObject.const C).obj X) V)
+    have hk := congrArg
+      (fun q : CompatibleFamily (Δ[k] : SSet.{w})
+          ((SimplicialObject.const C).obj X) V =>
+        q.1 k (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k)))) hg
+    simpa using hk
 
 theorem exists_constantObjectProductWithSimplexOf_hom_equiv
     {C : Type u} [Category.{v} C]
@@ -572,7 +630,79 @@ theorem exists_constantObjectProductWithSimplexOf_truncated_hom_equiv
         (constantObjectProductWithSimplexOf X k h) ⟶ W) ≃
       (X ⟶ W.obj (op (⟨SimplexCategory.mk k, hkn⟩ :
         SimplexCategory.Truncated n)))) := by
-  sorry
+  refine ⟨{
+    toFun := fun γ =>
+      let _ := degreewiseCoproductInstanceAt h (op (SimplexCategory.mk k))
+      Sigma.ι (fun _ : (Δ[k] : SSet.{w}).obj
+          (op (SimplexCategory.mk k)) =>
+        ((SimplicialObject.const C).obj X).obj
+          (op (SimplexCategory.mk k)))
+        (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+        γ.app (op (⟨SimplexCategory.mk k, hkn⟩ :
+          SimplexCategory.Truncated n))
+    invFun := fun f =>
+      { app := fun Y =>
+          let _ := degreewiseCoproductInstanceAt h (op Y.unop.obj)
+          Sigma.desc (fun α =>
+            f ≫ W.map (SimplexCategory.Truncated.Hom.tr
+              (SSet.stdSimplex.objEquiv α) Y.unop.property hkn).op)
+        naturality := by
+          intro Y Z g
+          let _ := degreewiseCoproductInstanceAt h (op Y.unop.obj)
+          let _ := degreewiseCoproductInstanceAt h (op Z.unop.obj)
+          apply Sigma.hom_ext
+          intro α
+          simp [SimplicialObject.truncation, constantObjectProductWithSimplexOf,
+            simplicialSetProductOf, SimplexCategory.Truncated.Hom.tr_comp,
+            Category.assoc]
+          rw [← W.map_comp]
+          congr 1 }
+    left_inv := by
+      intro γ
+      apply NatTrans.ext
+      funext Y
+      let _ := degreewiseCoproductInstanceAt h (op Y.unop.obj)
+      let _ := degreewiseCoproductInstanceAt h (op (SimplexCategory.mk k))
+      apply Sigma.hom_ext
+      intro α
+      change Sigma.ι _ α ≫ Sigma.desc _ = _
+      simp only [Sigma.ι_desc]
+      let q := SimplexCategory.Truncated.Hom.tr
+        (SSet.stdSimplex.objEquiv α) Y.unop.property hkn
+      change
+        (Sigma.ι (fun _ : (Δ[k] : SSet.{w}).obj
+            (op (SimplexCategory.mk k)) =>
+          ((SimplicialObject.const C).obj X).obj
+            (op (SimplexCategory.mk k)))
+            (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) ≫
+          γ.app (op (⟨SimplexCategory.mk k, hkn⟩ :
+            SimplexCategory.Truncated n))) ≫ W.map q.op = _
+      calc
+        _ = Sigma.ι _ (SSet.stdSimplex.objEquiv.symm
+              (𝟙 (SimplexCategory.mk k))) ≫
+            (γ.app (op (⟨SimplexCategory.mk k, hkn⟩ :
+              SimplexCategory.Truncated n)) ≫ W.map q.op) := by
+              exact Category.assoc _ _ _
+        _ = Sigma.ι _ (SSet.stdSimplex.objEquiv.symm
+              (𝟙 (SimplexCategory.mk k))) ≫
+            (((SimplicialObject.truncation (C := C) n).obj
+              (constantObjectProductWithSimplexOf X k h)).map q.op ≫
+              γ.app Y) := by
+              congr 1
+              exact (γ.naturality q.op).symm
+        _ = Sigma.ι _ α ≫ γ.app Y := by
+          simp [SimplicialObject.truncation, constantObjectProductWithSimplexOf,
+            simplicialSetProductOf, Category.assoc]
+          have hu :
+              (Δ[k] : SSet.{w}).map q.hom.op
+                  (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) = α := by
+            apply SSet.stdSimplex.objEquiv.injective
+            rw [SSet.stdSimplex.map_objEquiv_symm]
+            simp [q]
+          rw [hu]
+    right_inv := by
+      intro f
+      simp }⟩
 
 noncomputable def constantObjectProductWithSimplexOf_truncated_hom_equiv
     {C : Type u} [Category.{v} C]

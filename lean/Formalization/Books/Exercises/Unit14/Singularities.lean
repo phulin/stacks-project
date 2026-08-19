@@ -129,7 +129,91 @@ theorem tangentToIdentitySubstitution_exists_inverse
     {k : Type u} [Field k] (s : TangentToIdentitySubstitution k) :
     ∃ t : TangentToIdentitySubstitution k,
       (∀ f, t.toAlgHom (s.toAlgHom f) = f) ∧
-        (∀ f, s.toAlgHom (t.toAlgHom f) = f) := by
+        (∀ f, s.toAlgHom (t.toAlgHom f) = f) ∧
+          ∀ n : ℕ,
+            (∀ i : Fin 2,
+              s.coordinates i - MvPowerSeries.X i ∈
+                twoVariableMaximalIdeal k ^ n) →
+            ∀ i : Fin 2,
+              t.coordinates i - MvPowerSeries.X i ∈
+                twoVariableMaximalIdeal k ^ n := by
+  /-
+  Proof roadmap (the substitution library has composition, but no formal inverse theorem).
+
+  * Work throughout with `σ = Fin 2` and `R = S = k`.  Put
+    `h i := s.coordinates i - MvPowerSeries.X i`; the structure fields say that
+    `h i ∈ twoVariableMaximalIdeal k ^ 2` and that every coordinate has zero
+    constant coefficient.  First prove the reusable coefficient description
+
+      `mem_twoVariableMaximalIdeal_pow_iff_coeff`:
+        `f ∈ twoVariableMaximalIdeal k ^ r ↔
+          ∀ d : Fin 2 →₀ ℕ, d.degree < r → MvPowerSeries.coeff d f = 0`.
+
+    Define `twoVariableDegreeFiltration k r` first as the ideal whose elements
+    have those vanishing coefficients; its multiplication lemma
+    `twoVariableDegreeFiltration_mul` follows from
+    `MvPowerSeries.coeff_mul`.  For the forward implication, use
+    `Ideal.span_le` on the two generators and induction on `r` with
+    `Ideal.mul_le`.  For the converse, split each monomial of
+    degree at least `r` according to its exponent of `(0 : Fin 2)` (there are
+    only the cases `0, ..., r`), factor the corresponding degree-`r` monomial,
+    and express the whole series as the resulting finite sum of multiples of
+    `X 0 ^ a * X 1 ^ (r - a)`.  Put these monomials in the ideal power with
+    `Ideal.pow_mem_pow`, `Ideal.mul_mem_mul`, and `← pow_add`.  Keep this lemma
+    in this file, immediately before the inversion theorem: the one-step and
+    limiting arguments below need both directions as well.
+
+    At the same point prove
+    `tangentSubstitution_preserves_maximalIdeal_pow`: a zero-constant-coordinate
+    substitution sends `twoVariableMaximalIdeal k ^ r` into itself.  This is
+    immediate from the coefficient characterization and
+    `MvPowerSeries.truncTotal_subst_eq_truncTotal_sum_subst`; it is used both by
+    the inverse-order clause here and by composition in `formalMorse_node`.
+
+  * Factor the construction as a helper
+    `tangentToIdentitySubstitution_exists_leftInverse`, whose conclusion also
+    says that identity modulo `m ^ r` for the input coordinates implies identity
+    modulo `m ^ r` for the constructed inverse coordinates.  Define its inverse
+    approximations `b : ℕ → Fin 2 → twoVariablePowerSeries k` by
+    `b 0 i = MvPowerSeries.X i` and
+    `b (m + 1) i = MvPowerSeries.X i - MvPowerSeries.subst (b m) (h i)`.
+    Prove simultaneously that all `b m i` have constant coefficient zero and
+    that `b (m + 1)` and `b m` have the same coefficients in total degree at
+    most `m`.  The finite-dependence statement to use is
+    `MvPowerSeries.truncTotal_subst` from
+    `Mathlib/RingTheory/MvPowerSeries/Substitution.lean`; expand truncations with
+    `MvPowerSeries.truncTotal_eq_sum` and remove the degree-zero and degree-one
+    components of `h i` using `MvPowerSeries.coeff_homogeneousComponent` plus
+    `mem_twoVariableMaximalIdeal_pow_iff_coeff`.  This is the contraction step;
+    merely applying `MvPowerSeries.le_order_subst` does not compare two varying
+    substitutions.
+
+  * The preceding stabilization makes each sequence `fun m => b m i`
+    `coefficientwiseCauchy`.  Let `t.coordinates i` be its
+    `coefficientwiseLimit`, and obtain its coefficient formula from
+    `coefficientwiseLimit_spec`.  Degree zero gives `t.constantCoeff_zero` and
+    degrees zero and one give `t.tangent_to_identity`, via the coefficient
+    description of the square of the maximal ideal.
+
+  * Pass the recursive identity to each coefficient of the limit, again with
+    `MvPowerSeries.truncTotal_subst`, to get
+    `MvPowerSeries.subst t.coordinates (s.coordinates i) = MvPowerSeries.X i`.
+    Then `MvPowerSeries.subst_comp_subst_apply` and
+    `MvPowerSeries.subst_self` give
+    `t.toAlgHom (s.toAlgHom f) = f` for every `f`.
+
+  * The same recursion starts at `X` and uses only `h`, so if `h i ∈ m ^ r`,
+    every `b m i - X i`, and hence the limit, lies in `m ^ r`.  This is the last
+    conjunct of the theorem; it is essential later because the inverse of the
+    stage-`r` correction must have the same growing correction order.
+
+  * For the other composite, apply the left-inverse helper to `t`,
+    obtaining `r` with `r ∘ t = 1`.  Associativity supplied by repeated
+    `MvPowerSeries.subst_comp_subst_apply` gives
+    `s = (r ∘ t) ∘ s = r ∘ (t ∘ s) = r`, hence `s ∘ t = 1`.  This avoids the
+    known dead end of trying to deduce a right inverse from a left inverse
+    without separately proving surjectivity.
+  -/
   sorry
 
 /-- Package the formal inverse of a tangent-to-the-identity substitution as an
@@ -137,7 +221,7 @@ automorphism of the power-series ring. -/
 theorem tangentToIdentitySubstitution_toAutomorphism
     {k : Type u} [Field k] (s : TangentToIdentitySubstitution k) :
     Nonempty (TangentToIdentityAutomorphism k) := by
-  obtain ⟨t, hleft, hright⟩ := tangentToIdentitySubstitution_exists_inverse s
+  obtain ⟨t, hleft, hright, _⟩ := tangentToIdentitySubstitution_exists_inverse s
   exact ⟨{ forward := s,
             inverse := t,
             left_inverse := hleft,
@@ -422,6 +506,54 @@ theorem oneStep_filtration_improvement
     (n : ℕ) (hn : 3 ≤ n) (f : twoVariablePowerSeries k)
     (hf : congruentModuloTwoVariableMaximalIdeal n f (nodeEquation k)) :
     Nonempty (OneStepFiltrationImprovement k n f) := by
+  /-
+  Proof roadmap (all filtration indices below are total degrees).
+
+  * Set `e := f - nodeEquation k`.  Use
+    `mem_twoVariableMaximalIdeal_pow_iff_coeff` from the inversion roadmap to
+    read `hf` as vanishing of the coefficients of `e` below `n`.  Put
+    `eₙ := MvPowerSeries.homogeneousComponent n e`.  Apply
+    `homogeneousError_decomposition (n - 1) eₙ`; its degree is `(n - 1) + 1 = n`
+    by `MvPowerSeries.isHomogeneous_homogeneousComponent` and
+    `Nat.sub_add_cancel (le_trans (by omega : 1 ≤ 3) hn)`.  Obtain homogeneous
+    `A B` of degree `n - 1` with
+    `eₙ = X (0 : Fin 2) * A + X (1 : Fin 2) * B`.
+
+  * Define the correction coordinates by
+    `c 0 = X 0 - B` and `c 1 = X 1 - A` (use `fin_cases` for the two indices).
+    Homogeneity and `n - 1 ≥ 2` show that `A` and `B` lie in
+    `twoVariableMaximalIdeal k ^ (n - 1)`, using the coefficient
+    characterization.  This supplies `correction_order`, tangency follows from
+    `Ideal.pow_le_pow_right (by omega : 2 ≤ n - 1)`, and degree zero supplies
+    `constantCoeff_zero`.
+
+  * Prove one reusable substitution estimate before assembling the structure:
+
+      `subst_sub_self_mem_pow_succ`:
+        if `e ∈ m ^ n`, `3 ≤ n`, and every `c i - X i ∈ m ^ (n - 1)`, then
+        `MvPowerSeries.subst c e - e ∈ m ^ (n + 1)`.
+
+    Prove it coefficientwise.  For a monomial of `e` of degree at least `n`,
+    replacing one of its factors by `c i - X i` has degree at least
+    `(n - 1) + (n - 1) ≥ n + 1`; equivalently use
+    `MvPowerSeries.truncTotal_subst`,
+    `MvPowerSeries.truncTotal_subst_eq_truncTotal_sum_subst`, and
+    `MvPowerSeries.truncTotal_eq_sum`.  Convert back to ideal membership with
+    `mem_twoVariableMaximalIdeal_pow_iff_coeff`.
+
+  * Expand with `map_sub`, `TangentToIdentitySubstitution.toAlgHom_X`, and the
+    definition of `nodeEquation`:
+
+      `c.toAlgHom f - nodeEquation k
+         = (c.toAlgHom e - e) + (e - eₙ) + A * B`.
+
+    The first term is in `m ^ (n + 1)` by the substitution estimate; the second
+    is there by `MvPowerSeries.coeff_homogeneousComponent` and the coefficient
+    characterization; and `A * B` is in `m ^ (2 * (n - 1))`, hence in
+    `m ^ (n + 1)` by `Ideal.mul_mem_mul`, `← pow_add`,
+    `Ideal.pow_le_pow_right`, and `2 * (n - 1) ≥ n + 1` from `hn`.  Add the three
+    memberships and package `c` as `OneStepFiltrationImprovement k n f`.
+  -/
   sorry
 
 /-- A sequence of already-inverted corrections whose coefficients stabilize at
@@ -439,15 +571,65 @@ structure CompatibleTangentToIdentityCorrections
       coefficientwiseCauchy
         (fun n => (approximation n).inverse.coordinates i)
 
-/-- Compatible formal corrections have a limiting tangent-to-the-identity
-power-series automorphism. The proof uses coefficientwise limits (equivalently,
-the `MvPowerSeries.WithPiTopology` pi-topology) for the two coordinate maps
-and their inverses. -/
-theorem compatibleCorrections_toPowerSeriesAutomorphism
+/-- The coefficientwise limit of the forward coordinates in a compatible
+correction sequence. -/
+noncomputable def CompatibleTangentToIdentityCorrections.forwardLimitCoordinates
     {k : Type u} [Field k]
-    (C : CompatibleTangentToIdentityCorrections k) :
-    Nonempty (TangentToIdentityAutomorphism k) := by
-  exact ⟨C.approximation 0⟩
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2) :
+    twoVariablePowerSeries k :=
+  coefficientwiseLimit
+    (fun n => (C.approximation n).forward.coordinates i) (C.forward_cauchy i)
+
+/-- The coefficientwise limit of the inverse coordinates in a compatible
+correction sequence. -/
+noncomputable def CompatibleTangentToIdentityCorrections.inverseLimitCoordinates
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2) :
+    twoVariablePowerSeries k :=
+  coefficientwiseLimit
+    (fun n => (C.approximation n).inverse.coordinates i) (C.inverse_cauchy i)
+
+/-- Every forward coordinate coefficient is eventually its coefficient in the
+selected limit. -/
+theorem CompatibleTangentToIdentityCorrections.forwardLimit_spec
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2)
+    (d : Fin 2 →₀ ℕ) :
+    ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
+      MvPowerSeries.coeff d ((C.approximation n).forward.coordinates i) =
+        MvPowerSeries.coeff d (C.forwardLimitCoordinates i) := by
+  exact coefficientwiseLimit_spec _ (C.forward_cauchy i) d
+
+/-- Every inverse coordinate coefficient is eventually its coefficient in the
+selected limit. -/
+theorem CompatibleTangentToIdentityCorrections.inverseLimit_spec
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2)
+    (d : Fin 2 →₀ ℕ) :
+    ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
+      MvPowerSeries.coeff d ((C.approximation n).inverse.coordinates i) =
+        MvPowerSeries.coeff d (C.inverseLimitCoordinates i) := by
+  exact coefficientwiseLimit_spec _ (C.inverse_cauchy i) d
+
+/-- Forward limit coordinates still have zero constant coefficient. -/
+theorem CompatibleTangentToIdentityCorrections.forwardLimit_constantCoeff_zero
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2) :
+    MvPowerSeries.constantCoeff (C.forwardLimitCoordinates i) = 0 := by
+  rw [← MvPowerSeries.coeff_zero_eq_constantCoeff_apply]
+  obtain ⟨N, hN⟩ := C.forwardLimit_spec i 0
+  rw [← hN N le_rfl, MvPowerSeries.coeff_zero_eq_constantCoeff_apply]
+  exact (C.approximation N).forward.constantCoeff_zero i
+
+/-- Inverse limit coordinates still have zero constant coefficient. -/
+theorem CompatibleTangentToIdentityCorrections.inverseLimit_constantCoeff_zero
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) (i : Fin 2) :
+    MvPowerSeries.constantCoeff (C.inverseLimitCoordinates i) = 0 := by
+  rw [← MvPowerSeries.coeff_zero_eq_constantCoeff_apply]
+  obtain ⟨N, hN⟩ := C.inverseLimit_spec i 0
+  rw [← hN N le_rfl, MvPowerSeries.coeff_zero_eq_constantCoeff_apply]
+  exact (C.approximation N).inverse.constantCoeff_zero i
 
 /-- The convergent two-variable formal Morse lemma for the node.
 
@@ -465,6 +647,66 @@ theorem formalMorse_node
     {k : Type u} [Field k] (δ : twoVariablePowerSeries k)
     (hδ : δ ∈ twoVariableMaximalIdeal k ^ 3) :
     Nonempty (FormalMorseData k (nodeEquation k) (perturbedNodeEquation k δ)) := by
+  /-
+  Proof roadmap (iterate the preceding one-step result and expose the actual
+  coefficientwise limit; do not use the former `approximation 0` shortcut).
+
+  * Let `f 0 := perturbedNodeEquation k δ`.  The initial congruence modulo
+    `m ^ 3` is exactly `hδ` after unfolding `perturbedNodeEquation`,
+    `congruentModuloTwoVariableMaximalIdeal`, and `nodeEquation` and simplifying.
+    Recursively, at stage `r`, apply
+    `oneStep_filtration_improvement (r + 3) (by omega) (f r)` and choose its
+    correction `c r`; set `f (r + 1) := (c r).toAlgHom (f r)`.  Its
+    `improved_error` is the induction invariant
+    `f r - nodeEquation k ∈ m ^ (r + 3)`.
+
+  * Apply `tangentToIdentitySubstitution_exists_inverse` directly to every
+    `c r` and retain its last conjunct: the inverse correction is also the
+    identity modulo `m ^ (r + 2)`.  Package the two substitutions as `cAut r`,
+    then define cumulative automorphisms `E 0 = 1`, `E (r + 1) = cAut r`
+    composed with `E r`.  Add a local reusable composition constructor for
+    `TangentToIdentityAutomorphism`: its forward coordinates are obtained by
+    applying the outer forward `toAlgHom` to the inner coordinates, and its
+    inverse uses the reverse order.  Prove the inverse laws with
+    `MvPowerSeries.subst_comp_subst_apply`; prove tangency with the coefficient
+    characterization of `m ^ 2`.  The orientation must maintain
+    `(E r).forward.toAlgHom (perturbedNodeEquation k δ) = f r`.
+
+  * From `correction_order` at stage `r + 3`, prove that successive forward
+    cumulative coordinates agree below degree `r + 2`; the inverse coordinates
+    have the same property by the inverse-construction estimates from
+    `tangentToIdentitySubstitution_exists_inverse`.  Thus package `E` as
+    `C : CompatibleTangentToIdentityCorrections k`.  Use the explicit
+    `C.forwardLimitCoordinates`, `C.inverseLimitCoordinates`,
+    `C.forwardLimit_spec`, and `C.inverseLimit_spec` defined just above.  These
+    replace the old, invalid limiting route that simply selected
+    `C.approximation 0`.
+
+  * Make tangent-to-identity substitutions `F` and `G` from the forward and
+    inverse limit coordinates.  Degree zero/one stabilization supplies their
+    structure fields.  For a fixed output monomial `d`, choose one stage at
+    which every coordinate coefficient of degree at most `d.degree` has
+    stabilized (finite because the index is `Fin 2` and truncation is finite).
+    Apply `MvPowerSeries.truncTotal_subst` twice and the inverse laws for that
+    `E r`; then `MvPowerSeries.ext` proves
+    `G.toAlgHom (F.toAlgHom p) = p` and
+    `F.toAlgHom (G.toAlgHom p) = p`.  Package these as a
+    `TangentToIdentityAutomorphism` and use `.toAlgEquiv`.
+
+  * The invariant on `f r` says every coefficient of
+    `f r - nodeEquation k` is eventually zero.  The same finite-truncation
+    argument identifies the coefficientwise limit of `f r` with
+    `F.toAlgHom (perturbedNodeEquation k δ)`, so
+    `F.toAlgHom (perturbedNodeEquation k δ) = nodeEquation k` by
+    `MvPowerSeries.ext`.  Take the inverse algebra equivalence as
+    `coordinateChange`; it maps `nodeEquation k` to
+    `perturbedNodeEquation k δ`.  Set `unit := 1`; the equation field is the
+    preceding equality rewritten with the two inverse laws, and
+    `tangent_to_identity` follows from the inverse limit's degree-zero/one
+    stabilization.  This yields
+    `FormalMorseData k (nodeEquation k) (perturbedNodeEquation k δ)` with the
+    implicit extension specialized to `K := k` and its standard `Algebra k k`.
+  -/
   sorry
 
 /-- The quotient ring `k[[x,y]]/(xy)`. -/

@@ -41,7 +41,7 @@ private def IsGlobalMaximalChainBetween {α : Type*} [Preorder α]
         Set.range c ⊆ Set.range d → Set.range d ⊆ Set.range c
 
 private def IsGlobalCatenary (α : Type*) [Preorder α] : Prop :=
-    ∀ ⦃p q : α⦄ (_hpq : p < q),
+    ∀ ⦃p q : α⦄ (_ : p < q),
     ∃ n : ℕ,
       (∀ c : LTSeries α,
         IsGlobalChainBetween p q c → c.length ≤ n) ∧
@@ -59,7 +59,7 @@ private def forgetChain {α : Type*} [Preorder α]
         omega) }
 
 private def liftChain {α : Type*} [Preorder α]
-    {p q : α} (c : LTSeries α) (_hhead : c.head = p) (hlast : c.last = q) :
+    {p q : α} (c : LTSeries α) (_ : c.head = p) (hlast : c.last = q) :
     LTSeries (Set.Iic q) :=
   { length := c.length
     toFun := fun i => ⟨c i, by
@@ -345,7 +345,7 @@ private lemma isGlobalCatenary_iff_isIntervalCatenary
 
 private lemma globalMax_map_forward
     {α β : Type*} [Preorder α] [Preorder β] (e : α ≃o β)
-    {p q : α} (c : LTSeries α) (_hpq : p < q) :
+    {p q : α} (c : LTSeries α) (_ : p < q) :
     IsGlobalMaximalChainBetween p q c →
       IsGlobalMaximalChainBetween (e p) (e q) (c.map e e.strictMono) := by
   rintro ⟨hc_head, hc_last, hcmax⟩
@@ -398,7 +398,6 @@ private lemma globalMax_map_iff
     obtain ⟨j, hj⟩ := hdc' ⟨i, rfl⟩
     refine ⟨j, ?_⟩
     apply e.injective
-    change e (c j) = e (d i) at hj
     exact hj
 
 private lemma isGlobalCatenary_of_orderIso
@@ -476,7 +475,7 @@ private lemma antiPushChain_last {α β : Type*} [Preorder α] [Preorder β]
 
 private lemma globalMax_anti_pull_iff
     {α β : Type*} [Preorder α] [Preorder β] (e : α ≃o βᵒᵈ)
-    {p q : β} (c : LTSeries β) (_hpq : p < q) :
+    {p q : β} (c : LTSeries β) (_ : p < q) :
     IsGlobalMaximalChainBetween p q c ↔
       IsGlobalMaximalChainBetween (e.symm q) (e.symm p) (antiPullChain e c) := by
   constructor
@@ -511,7 +510,6 @@ private lemma globalMax_anti_pull_iff
           change d j = e.symm (c (Fin.rev i.rev)) at hj
           rw [Fin.rev_rev] at hj
           have hj' := congrArg e hj
-          change (e (d j) : βᵒᵈ) = e (e.symm (c i : βᵒᵈ)) at hj'
           have hcancel : e (e.symm (c i : βᵒᵈ)) = (c i : βᵒᵈ) :=
             e.apply_symm_apply _
           exact hj'.trans hcancel
@@ -546,7 +544,9 @@ private lemma globalMax_anti_pull_iff
         obtain ⟨i, rfl⟩ := hx
         obtain ⟨j, hj⟩ := hcd ⟨i.rev, rfl⟩
         · refine ⟨j.rev, ?_⟩
-          simpa [d', antiPullChain, Fin.rev_rev] using congrArg e.symm hj
+          change e.symm (d (Fin.rev j.rev)) = e.symm (c i.rev)
+          rw [Fin.rev_rev]
+          exact congrArg e.symm hj
       have hdc' := hcmax d' hd'_head hd'_last hcd'
       intro y hy
       obtain ⟨i, rfl⟩ := hy
@@ -627,7 +627,7 @@ private def forgetSubtype {α : Type*} [Preorder α] {P : Set α}
 private def liftChain_lower {α : Type*} [Preorder α] {P : Set α}
     (hP : ∀ ⦃p q : α⦄, q ∈ P → p ≤ q → p ∈ P)
     {p q : α} (hq : q ∈ P) (c : LTSeries α)
-    (_hhead : c.head = p) (hlast : c.last = q) : LTSeries P :=
+    (_ : c.head = p) (hlast : c.last = q) : LTSeries P :=
   { length := c.length
     toFun := fun i => ⟨c i, by
       apply hP hq

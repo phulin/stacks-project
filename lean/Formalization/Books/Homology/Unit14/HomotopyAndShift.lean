@@ -1702,10 +1702,10 @@ theorem termwiseSplitConnectingMap_exists
               S.X₂.d (n + 1) (n + 1 + 1)) ≫ (s (n + 1 + 1)).r) := by
         simp only [Category.id_comp]
       exact hcomm.trans (hunit.trans hid)
-    try erw [← Category.assoc]
-    try erw [← Category.assoc]
-    try erw [← Category.assoc]
-    try erw [← Category.assoc]
+    erw [← Category.assoc]
+    erw [← Category.assoc]
+    erw [← Category.assoc]
+    erw [← Category.assoc]
     erw [hmid]
     have hzero :
         ((s n).s ≫ S.X₂.d n (n + 1)) ≫

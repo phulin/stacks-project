@@ -42,7 +42,7 @@ def exactCoupleDifferential {C : Type u} [Category.{v} C] [Abelian C]
 theorem exactCoupleDifferential_sq {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
     exactCoupleDifferential D ≫ exactCoupleDifferential D = 0 := by
-  sorry
+  exact Formalization.Books.Homology.Unit20.exactCoupleDifferential_sq D
 
 /-- The next `E`-object, `Ker(d) / Im(d)`. -/
 noncomputable abbrev exactCoupleDerivedE {C : Type u} [Category.{v} C]
@@ -58,7 +58,8 @@ abbrev exactCoupleDerivedA {C : Type u} [Category.{v} C] [Abelian C]
 theorem exactCoupleDerived_exists {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) :
     Nonempty (ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D)) := by
-  sorry
+  exact ⟨(Classical.choice
+    (Formalization.Books.Homology.Unit20.exactCoupleDerived_exists D)).couple⟩
 
 /-- A chosen derived exact couple. -/
 noncomputable def exactCoupleDerived {C : Type u} [Category.{v} C]
@@ -102,9 +103,9 @@ theorem exactCouple_kernel_formula {C : Type u} [Category.{v} C]
     Subobject.mk (kernel.ι (exactCoupleDifferential D)) =
         (Subobject.pullback D.f).obj (Subobject.mk (kernel.ι D.g)) ∧
       (Subobject.pullback D.f).obj (Subobject.mk (kernel.ι D.g)) =
-        (Subobject.pullback D.f).obj
+      (Subobject.pullback D.f).obj
           ((Subobject.«exists» D.alpha).obj ⊤) := by
-  sorry
+  exact Formalization.Books.Homology.Unit20.exactCouple_kernel_formula D
 
 /-- `Im(d) = g(Im(f)) = g(Ker(alpha))`. -/
 theorem exactCouple_image_formula {C : Type u} [Category.{v} C]
@@ -113,7 +114,7 @@ theorem exactCouple_image_formula {C : Type u} [Category.{v} C]
         (Subobject.«exists» D.g).obj ((Subobject.«exists» D.f).obj ⊤) ∧
       (Subobject.«exists» D.g).obj ((Subobject.«exists» D.f).obj ⊤) =
         (Subobject.«exists» D.g).obj (Subobject.mk (kernel.ι D.alpha)) := by
-  sorry
+  exact Formalization.Books.Homology.Unit20.exactCouple_image_formula D
 
 /-! ## The associated spectral sequence -/
 

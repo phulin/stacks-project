@@ -82,6 +82,42 @@ private theorem coherent_submodule_of_finite_aux
   have hPmap_fp := hM.2 (P.map N.subtype) hPmap
   exact ((Submodule.equivSubtypeMap N P).symm.finitePresentation_iff).mp hPmap_fp
 
+private theorem coherent_of_linearEquiv
+    {R : Type u} [CommRing R] {M N : Type v}
+    [AddCommGroup M] [AddCommGroup N] [Module R M] [Module R N]
+    (e : M ≃ₗ[R] N) (hM : IsCoherentModule R (ModuleCat.of R M)) :
+    IsCoherentModule R (ModuleCat.of R N) := by
+  let : Module.Finite R M := hM.1
+  refine ⟨Module.Finite.equiv e, ?_⟩
+  intro P hP
+  let : Module.Finite R P := hP
+  let eP : (P.comap e.toLinearMap) ≃ₗ[R] P :=
+    Submodule.comap_equiv_self_of_inj_of_le e.injective (by
+      intro x hx
+      exact ⟨e.symm x, by simp⟩)
+  have hP' : Module.Finite R (P.comap e.toLinearMap) :=
+    Module.Finite.equiv eP.symm
+  have hPfp := hM.2 (P.comap e.toLinearMap) hP'
+  let : Module.FinitePresentation R (P.comap e.toLinearMap) := hPfp
+  exact Module.FinitePresentation.of_equiv eP
+
+private theorem finite_kernel_of_finite_to_coherent_aux
+    {R : Type u} [CommRing R] {N : Type w} {M : Type v}
+    [AddCommGroup N] [AddCommGroup M] [Module R N] [Module R M]
+    (φ : N →ₗ[R] M) (hN : Module.Finite R N)
+    (hM : IsCoherentModule R (ModuleCat.of R M)) :
+    Module.Finite R (LinearMap.ker φ) := by
+  letI : Module.Finite R N := hN
+  letI : Module.Finite R M := hM.1
+  let Q : Submodule R M := LinearMap.range φ
+  have hQfp : Module.FinitePresentation R (Q : Type v) := hM.2 Q inferInstance
+  letI : Module.FinitePresentation R (Q : Type v) := hQfp
+  have hkerfg : (LinearMap.ker φ.rangeRestrict).FG :=
+    Module.FinitePresentation.fg_ker φ.rangeRestrict
+      (LinearMap.surjective_rangeRestrict φ)
+  rw [← LinearMap.ker_rangeRestrict]
+  exact Module.Finite.of_fg hkerfg
+
 private theorem coherent_kernel_image_cokernel_of_finite_aux
     {R : Type u} [CommRing R] {N M : ModuleCat.{v} R}
     (φ : N ⟶ M) (hN : Module.Finite R (N : Type v))
@@ -252,6 +288,30 @@ private theorem coherent_product_aux
   exact Module.finitePresentation_of_ker fP.rangeRestrict
     (LinearMap.surjective_rangeRestrict fP)
 
+private theorem coherent_fin_fun_aux
+    {R : Type u} [CommRing R] (n : ℕ)
+    (hR : IsCoherentModule R (ModuleCat.of R R)) :
+    IsCoherentModule R (ModuleCat.of R (Fin n → R)) := by
+  apply Module.pi_induction' R
+    (motive := fun (N : Type u) [AddCommGroup N] [Module R N] =>
+      IsCoherentModule R (ModuleCat.of R N))
+    (motive' := fun (N : Type u) [AddCommGroup N] [Module R N] =>
+      IsCoherentModule R (ModuleCat.of R N))
+    (equiv := by
+      intro N N' _ _ _ _ e hN
+      exact coherent_of_linearEquiv e hN)
+    (equiv' := by
+      intro N N' _ _ _ _ e hN
+      exact coherent_of_linearEquiv e hN)
+    (unit := by
+      refine ⟨inferInstance, ?_⟩
+      intro P _
+      exact inferInstance)
+    (prod := by
+      intro N N' _ _ _ _ hN hN'
+      exact coherent_product_aux (R := R) hN hN')
+    (fun _ : Fin n => R) (by intro i; exact hR)
+
 /-- The category of coherent modules is abelian. -/
 instance coherentModuleCat_abelian
     (R : Type u) [CommRing R] : Abelian (CoherentModuleCat.{u, v} R) := by
@@ -346,7 +406,8 @@ theorem coherent_kernel_cokernel_of_coherent
     IsCoherentModule R (ModuleCat.of R (LinearMap.ker φ.hom)) ∧
       IsCoherentModule R
         (ModuleCat.of R ((M : Type v) ⧸ LinearMap.range φ.hom)) := by
-  sorry
+  have h := coherent_kernel_image_cokernel_of_finite φ hN.1 hM
+  exact ⟨coherent_submodule_of_finite hN _ h.1, h.2.2⟩
 
 /-- In a short exact sequence, any two coherent modules imply coherence of the
 third. -/
@@ -359,7 +420,144 @@ theorem coherent_of_shortExact
         IsCoherentModule R S.X₂) ∧
         (IsCoherentModule R S.X₂ ∧ IsCoherentModule R S.X₃ →
           IsCoherentModule R S.X₁) := by
-  sorry
+  have hex : Function.Exact S.f.hom S.g.hom :=
+    (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS.exact
+  have hfg : LinearMap.range S.f.hom = LinearMap.ker S.g.hom :=
+    hS.exact.moduleCat_range_eq_ker
+  refine ⟨?_, ?_, ?_⟩
+  · rintro ⟨h₁, h₂⟩
+    have hC := coherent_kernel_image_cokernel_of_finite_aux S.f h₁.1 h₂
+    let qg : ((S.X₂ : Type v) ⧸ LinearMap.range S.f.hom) →ₗ[R]
+        (S.X₃ : Type v) :=
+      (LinearMap.range S.f.hom).liftQ S.g.hom (by rw [hfg])
+    have hqker : LinearMap.ker qg = (⊥ : Submodule R
+        ((S.X₂ : Type v) ⧸ LinearMap.range S.f.hom)) := by
+      dsimp [qg]
+      exact Submodule.ker_liftQ_eq_bot (LinearMap.range S.f.hom) S.g.hom
+        (by rw [hfg]) hfg.ge
+    have hqsurj : Function.Surjective qg := by
+      intro y
+      obtain ⟨x, hx⟩ := hS.moduleCat_surjective_g y
+      refine ⟨(LinearMap.range S.f.hom).mkQ x, ?_⟩
+      simpa [qg] using hx
+    let eq : ((S.X₂ : Type v) ⧸ LinearMap.range S.f.hom) ≃ₗ[R]
+        (S.X₃ : Type v) :=
+      LinearEquiv.ofBijective qg ⟨LinearMap.ker_eq_bot.mp hqker, hqsurj⟩
+    exact coherent_of_linearEquiv eq hC.2.2
+  · rintro ⟨h₁, h₃⟩
+    letI : Module.Finite R (S.X₁ : Type v) := h₁.1
+    letI : Module.Finite R (S.X₃ : Type v) := h₃.1
+    have hX₂ : Module.Finite R (S.X₂ : Type v) :=
+      Module.Finite.of_exact hex hS.moduleCat_surjective_g
+    refine ⟨hX₂, ?_⟩
+    intro N₂ hN₂
+    letI : Module.Finite R (N₂ : Type v) := hN₂
+    let N₃ : Submodule R (S.X₃ : Type v) := N₂.map S.g.hom
+    let gN : (N₂ : Type v) →ₗ[R] (N₃ : Type v) :=
+      (S.g.hom.domRestrict N₂).codRestrict N₃ (by
+        intro x
+        exact ⟨x, x.property, rfl⟩)
+    have hgN : Function.Surjective gN := by
+      intro y
+      obtain ⟨x, hx, hxy⟩ := y.property
+      refine ⟨⟨x, hx⟩, ?_⟩
+      apply Subtype.ext
+      exact hxy
+    have hN₃ : Module.Finite R (N₃ : Type v) :=
+      Module.Finite.of_surjective gN hgN
+    have hN₃fp : Module.FinitePresentation R (N₃ : Type v) :=
+      h₃.2 N₃ hN₃
+    letI : Module.FinitePresentation R (N₃ : Type v) := hN₃fp
+    have hkerfg : (LinearMap.ker gN).FG :=
+      Module.FinitePresentation.fg_ker gN hgN
+    have hkerfin : Module.Finite R (LinearMap.ker gN) :=
+      Module.Finite.of_fg hkerfg
+    letI : Module.Finite R (LinearMap.ker gN) := hkerfin
+    let N₁ : Submodule R (S.X₁ : Type v) := N₂.comap S.f.hom
+    let fN₂ : (N₁ : Type v) →ₗ[R] (N₂ : Type v) :=
+      (S.f.hom.domRestrict N₁).codRestrict N₂ (by
+        intro x
+        exact x.property)
+    let fN : (N₁ : Type v) →ₗ[R] (LinearMap.ker gN : Type v) :=
+      fN₂.codRestrict (LinearMap.ker gN) (by
+        intro x
+        apply (LinearMap.mem_ker).1
+        apply Subtype.ext
+        change S.g.hom (S.f.hom (x : (S.X₁ : Type v))) = 0
+        apply (LinearMap.mem_ker).1
+        rw [← hfg]
+        exact LinearMap.mem_range_self S.f.hom (x : (S.X₁ : Type v)))
+    have hfNinj : Function.Injective fN := by
+      intro x y hxy
+      apply Subtype.ext
+      apply hS.moduleCat_injective_f
+      change S.f.hom (x : (S.X₁ : Type v)) = S.f.hom (y : (S.X₁ : Type v))
+      have hxy' : fN₂ x = fN₂ y := by
+        have hz : (fN x : (N₂ : Type v)) = (fN y : (N₂ : Type v)) :=
+          congrArg (fun z : (LinearMap.ker gN : Type v) =>
+            (z : (N₂ : Type v))) hxy
+        apply Subtype.ext
+        calc
+          (fN₂ x : (S.X₂ : Type v)) =
+              ((fN x : (N₂ : Type v)) : (S.X₂ : Type v)) := by rfl
+          _ = ((fN y : (N₂ : Type v)) : (S.X₂ : Type v)) :=
+            congrArg (fun z : (N₂ : Type v) => (z : (S.X₂ : Type v))) hz
+          _ = (fN₂ y : (S.X₂ : Type v)) := by rfl
+      change (fN₂ x : (S.X₂ : Type v)) = (fN₂ y : (S.X₂ : Type v))
+      exact congrArg Subtype.val hxy'
+    have hfNsurj : Function.Surjective fN := by
+      intro y
+      have hyker : ((y : (N₂ : Type v)) : (S.X₂ : Type v)) ∈
+          LinearMap.ker S.g.hom := by
+        apply (LinearMap.mem_ker).2
+        change S.g.hom ((y : (N₂ : Type v)) : (S.X₂ : Type v)) = 0
+        exact congrArg (fun z : (N₃ : Type v) => (z : (S.X₃ : Type v))) y.property
+      have hyrange : ((y : (N₂ : Type v)) : (S.X₂ : Type v)) ∈
+          LinearMap.range S.f.hom := by
+        rw [hfg]
+        exact hyker
+      obtain ⟨x, hx⟩ := hyrange
+      refine ⟨⟨x, ?_⟩, ?_⟩
+      · change S.f.hom x ∈ N₂
+        rw [hx]
+        exact (y : (N₂ : Type v)).property
+      · apply Subtype.ext
+        apply Subtype.ext
+        exact hx
+    let eN : (N₁ : Type v) ≃ₗ[R] (LinearMap.ker gN : Type v) :=
+      LinearEquiv.ofBijective fN ⟨hfNinj, hfNsurj⟩
+    have hN₁ : Module.Finite R (N₁ : Type v) :=
+      Module.Finite.equiv eN.symm
+    have hN₁fp : Module.FinitePresentation R (N₁ : Type v) :=
+      h₁.2 N₁ hN₁
+    letI : Module.FinitePresentation R (N₁ : Type v) := hN₁fp
+    letI : Module.FinitePresentation R (LinearMap.ker gN : Type v) :=
+      Module.FinitePresentation.of_equiv eN
+    exact Module.finitePresentation_of_ker gN hgN
+  · rintro ⟨h₂, h₃⟩
+    have hker := coherent_kernel_cokernel_of_coherent S.g h₂ h₃
+    let fker : (S.X₁ : Type v) →ₗ[R] (LinearMap.ker S.g.hom : Type v) :=
+      S.f.hom.codRestrict (LinearMap.ker S.g.hom) (by
+        intro x
+        apply (LinearMap.mem_ker).1
+        rw [← hfg]
+        exact LinearMap.mem_range_self S.f.hom x)
+    have hfkerinj : Function.Injective fker := by
+      intro x y hxy
+      apply hS.moduleCat_injective_f
+      exact congrArg Subtype.val hxy
+    have hfkersurj : Function.Surjective fker := by
+      intro y
+      have hyrange : (y : (S.X₂ : Type v)) ∈ LinearMap.range S.f.hom := by
+        rw [hfg]
+        exact y.property
+      obtain ⟨x, hx⟩ := hyrange
+      refine ⟨x, ?_⟩
+      apply Subtype.ext
+      exact hx
+    let efker : (S.X₁ : Type v) ≃ₗ[R] (LinearMap.ker S.g.hom : Type v) :=
+      LinearEquiv.ofBijective fker ⟨hfkerinj, hfkersurj⟩
+    exact coherent_of_linearEquiv efker.symm hker.1
 
 /-! ## Coherent rings -/
 
@@ -367,7 +565,31 @@ theorem coherent_of_shortExact
 theorem valuationRing_isCoherent
     {R : Type u} [CommRing R] [IsDomain R] [ValuationRing R] :
     IsCoherentRing R := by
-  sorry
+  rw [coherentRing_iff_finitelyPresented_ideals]
+  intro I hI
+  letI : IsBezout R :=
+    (ValuationRing.iff_local_bezout_domain.mp
+      (inferInstance : ValuationRing R)).2
+  letI : I.IsPrincipal := IsBezout.isPrincipal_of_FG I hI
+  by_cases hI0 : I = ⊥
+  · let f : R →ₗ[R] (I : Type u) := 0
+    apply Module.finitePresentation_of_surjective f
+    · intro x
+      refine ⟨0, ?_⟩
+      apply Subtype.ext
+      have hx : (x : R) ∈ (⊥ : Ideal R) := by
+        rw [← hI0]
+        exact x.property
+      have hx0 : (x : R) = 0 := by simpa using hx
+      simpa [hx0]
+    · have hfker : LinearMap.ker f = (⊤ : Submodule R R) := by
+        apply top_unique
+        intro x _
+        change f x = 0
+        simp [f]
+      rw [hfker]
+      exact Module.Finite.fg_top
+  · exact Module.FinitePresentation.of_equiv (Ideal.isoBaseOfIsPrincipal hI0)
 
 /-- Over a coherent ring, coherence of a module is equivalent to finite
 presentation. -/
@@ -375,7 +597,71 @@ theorem coherentModule_iff_finitePresentation
     {R : Type u} [CommRing R] (hR : IsCoherentRing R)
     (M : ModuleCat.{v} R) :
     IsCoherentModule R M ↔ Module.FinitePresentation R (M : Type v) := by
-  sorry
+  constructor
+  · intro hM
+    letI : Module.Finite R (M : Type v) := hM.1
+    obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R (M : Type v)
+    have hker := finite_kernel_of_finite_to_coherent_aux f inferInstance hM
+    exact Module.finitePresentation_of_free_of_surjective f hf
+      (Module.Finite.iff_fg.mp hker)
+  · intro hM
+    letI : Module.FinitePresentation R (M : Type v) := hM
+    refine ⟨inferInstance, ?_⟩
+    intro N hN
+    letI : Module.Finite R (N : Type v) := hN
+    obtain ⟨n, m, f, g, hf, hgf⟩ :=
+      Module.FinitePresentation.exists_fin' R (M : Type v)
+    have hF := coherent_fin_fun_aux (R := R) n (show
+      IsCoherentModule R (ModuleCat.of R R) from hR)
+    have hKfg : (LinearMap.ker f).FG :=
+      Module.FinitePresentation.fg_ker f hf
+    have hKfin : Module.Finite R (LinearMap.ker f) :=
+      Module.Finite.of_fg hKfg
+    let P : Submodule R (Fin n → R) := N.comap f
+    let fP : (P : Type u) →ₗ[R] (N : Type v) :=
+      (f.domRestrict P).codRestrict N (by
+        intro x
+        exact x.property)
+    let fK : (LinearMap.ker f : Type u) →ₗ[R] (P : Type u) :=
+      (LinearMap.ker f).subtype.codRestrict P (by
+        intro x
+        change f (x : (Fin n → R)) ∈ N
+        rw [x.property]
+        exact N.zero_mem)
+    have hExactP : Function.Exact fK fP := by
+      rw [LinearMap.exact_iff]
+      ext x
+      constructor
+      · intro hx
+        change fP x = 0 at hx
+        have hx0 : f (x : (Fin n → R)) = 0 := congrArg Subtype.val hx
+        exact ⟨⟨(x : (Fin n → R)), (LinearMap.mem_ker).2 hx0⟩, by
+          apply Subtype.ext
+          rfl⟩
+      · rintro ⟨y, rfl⟩
+        apply Subtype.ext
+        exact y.property
+    have hSurjP : Function.Surjective fP := by
+      intro y
+      obtain ⟨x, hx⟩ := hf y
+      refine ⟨⟨x, ?_⟩, ?_⟩
+      · change f x ∈ N
+        rw [hx]
+        exact y.property
+      · apply Subtype.ext
+        exact hx
+    have hPfin : Module.Finite R (P : Type u) :=
+      Module.Finite.of_exact hExactP hSurjP
+    have hPfp : Module.FinitePresentation R (P : Type u) :=
+      hF.2 P hPfin
+    letI : Module.FinitePresentation R (P : Type u) := hPfp
+    have hkerP : Module.Finite R (LinearMap.ker fP) := by
+      have hrange : LinearMap.range fK = LinearMap.ker fP :=
+        (LinearMap.exact_iff.mp hExactP).symm
+      rw [← hrange]
+      infer_instance
+    exact Module.finitePresentation_of_surjective fP hSurjP
+      (Module.Finite.iff_fg.mp hkerP)
 
 /-- A Noetherian ring is coherent. -/
 theorem isCoherentRing_of_isNoetherianRing

@@ -415,7 +415,89 @@ theorem quotientMorphismProperty_isSaturated_iff
     [P.IsTriangulated] :
     SaturatedMultiplicativeSystem (quotientMorphismProperty P) ↔
       IsSaturated P := by
-  sorry
+  let W : MorphismProperty C := quotientMorphismProperty P
+  have hZero_to_iso : ∀ {R : C}, W (0 : (0 : C) ⟶ R) → P.isoClosure R := by
+    intro R hR
+    change P.isoClosure.trW (0 : (0 : C) ⟶ R) at hR
+    obtain ⟨K, f, g, hT, hK⟩ := hR
+    obtain ⟨e, _⟩ := exists_iso_of_arrow_iso
+      (Triangle.mk (0 : (0 : C) ⟶ R) f g)
+      (Triangle.mk (0 : (0 : C) ⟶ R) (𝟙 R) 0) hT
+      (contractible_distinguished₁ R)
+      (Arrow.isoMk
+        (f := Arrow.mk (0 : (0 : C) ⟶ R))
+        (g := Arrow.mk (0 : (0 : C) ⟶ R))
+        (Iso.refl _) (Iso.refl _) (by simp))
+    let e3 : K ≅ R :=
+      { hom := e.hom.hom₃
+        inv := e.inv.hom₃
+        hom_inv_id := by exact e.hom_inv_id_triangle_hom₃
+        inv_hom_id := by exact e.inv_hom_id_triangle_hom₃ }
+    exact P.isoClosure.prop_of_iso e3 hK
+  have hZero (R : C) (hR : P.isoClosure R) : IsZero (W.Q.obj R) := by
+    have hf : W (0 : (0 : C) ⟶ R) := by
+      change P.isoClosure.trW (0 : (0 : C) ⟶ R)
+      exact ⟨R, 𝟙 R, 0, contractible_distinguished₁ R, hR⟩
+    letI : IsIso (W.Q.map (0 : (0 : C) ⟶ R)) :=
+      MorphismProperty.Q_inverts W _ hf
+    exact (W.Q.map_isZero (isZero_zero C)).of_iso
+      ((asIso (W.Q.map (0 : (0 : C) ⟶ R))).symm)
+  constructor
+  · intro hW X Y hXY
+    have hQsum : IsZero (W.Q.obj (X ⊞ Y)) := hZero _ hXY
+    let hPres : PreservesBinaryBiproducts W.Q :=
+      ⟨fun {X Y} => preservesBinaryBiproduct_of_preservesBiproduct W.Q X Y⟩
+    have hB : IsZero (W.Q.obj X ⊞ W.Q.obj Y) :=
+      hQsum.of_iso
+        (@Functor.mapBiprod _ _ _ _ _ _ W.Q X Y _ _ hPres.preserves).symm
+    obtain ⟨hQX, hQY⟩ := (biprod_isZero_iff _ _).1 hB
+    have hCharX := kernel_localization_characterization (S := W) X
+    have hCharY := kernel_localization_characterization (S := W) Y
+    have h0X : W (0 : (0 : C) ⟶ X) :=
+      ((hCharX.2.2.2 hW).1).mp hQX
+    have h0Y : W (0 : (0 : C) ⟶ Y) :=
+      ((hCharY.2.2.2 hW).1).mp hQY
+    exact ⟨hZero_to_iso h0X, hZero_to_iso h0Y⟩
+  · intro hSat
+    refine ⟨(quotientMorphismProperty_isMultiplicative P).1, ?_⟩
+    intro X Y Z T f g h hfg hgh
+    letI : IsIso (W.Q.map f ≫ W.Q.map g) := by
+      rw [← W.Q.map_comp]
+      exact MorphismProperty.Q_inverts W _ hfg
+    letI : IsIso (W.Q.map g ≫ W.Q.map h) := by
+      rw [← W.Q.map_comp]
+      exact MorphismProperty.Q_inverts W _ hgh
+    letI : IsIso (W.Q.map g) := by
+      apply isIso_of_adjacent_composites (W.Q.map f) (W.Q.map g) (W.Q.map h)
+    obtain ⟨K, u, v, hT⟩ := distinguished_cocone_triangle g
+    have hTQ : W.Q.mapTriangle.obj (Triangle.mk g u v) ∈ distTriang _ :=
+      W.Q.map_distinguished _ hT
+    have hKzero : IsZero (W.Q.obj K) := by
+      apply Triangle.isZero₃_of_isIso₁ _ hTQ
+      change IsIso (W.Q.map g)
+      infer_instance
+    have hB' : KernelLocalizationBiproductTriangle W K :=
+      (kernel_localization_characterization (S := W) K).2.2.1.mp
+        (((kernel_localization_characterization (S := W) K).2.1).mp
+          ((kernel_localization_characterization (S := W) K).1.mp hKzero))
+    obtain ⟨K', X', Y', f', g', h', hT', hf'⟩ := hB'
+    change P.isoClosure.trW f' at hf'
+    obtain ⟨W', g'', h'', hT'', hW'⟩ := hf'
+    obtain ⟨e, _⟩ := exists_iso_of_arrow_iso
+      (Triangle.mk f' g' h') (Triangle.mk f' g'' h'') hT' hT''
+      (Arrow.isoMk (Iso.refl _) (Iso.refl _) (by
+        change 𝟙 _ ≫ f' = f' ≫ 𝟙 _
+        simp))
+    let e3 : K ⊞ K' ≅ W' :=
+      { hom := e.hom.hom₃
+        inv := e.inv.hom₃
+        hom_inv_id := by exact e.hom_inv_id_triangle_hom₃
+        inv_hom_id := by exact e.inv_hom_id_triangle_hom₃ }
+    have hsum : P.isoClosure (K ⊞ K') :=
+      P.isoClosure.prop_of_iso e3.symm hW'
+    have hK : P.isoClosure K := (hSat hsum).1
+    change P.isoClosure.trW g
+    exact ⟨K, u, v, hT, hK⟩
 /-
   let W : MorphismProperty C := quotientMorphismProperty P
   have hZero (R : C) (hR : P.isoClosure R) : IsZero (W.Q.obj R) := by
@@ -625,7 +707,38 @@ theorem quotientFunctor_kernel_iff (P : ObjectProperty C)
     [CategoryTheory.IsTriangulated C] [P.IsTriangulated]
     (Z : C) :
     exactFunctorKernel (quotientFunctor P) Z ↔ quotientKernel P Z := by
-  sorry
+  change IsZero ((quotientMorphismProperty P).Q.obj Z) ↔ quotientKernel P Z
+  let hK := kernel_localization_characterization
+    (S := quotientMorphismProperty P) Z
+  constructor
+  · intro hZ
+    have hB : KernelLocalizationBiproductTriangle
+        (quotientMorphismProperty P) Z :=
+      hK.2.2.1.mp ((hK.2.1).mp ((hK.1).mp hZ))
+    obtain ⟨Z', X, Y, f, g, h, hT, hf⟩ := hB
+    change P.isoClosure.trW f at hf
+    obtain ⟨W, g', h', hT', hW⟩ := hf
+    obtain ⟨e, _⟩ := exists_iso_of_arrow_iso
+      (Triangle.mk f g h) (Triangle.mk f g' h') hT hT'
+      (Arrow.isoMk (Iso.refl _) (Iso.refl _) (by
+        change 𝟙 _ ≫ f = f ≫ 𝟙 _
+        simp))
+    let e3 : Z ⊞ Z' ≅ W :=
+      { hom := e.hom.hom₃
+        inv := e.inv.hom₃
+        hom_inv_id := by exact e.hom_inv_id_triangle_hom₃
+        inv_hom_id := by exact e.inv_hom_id_triangle_hom₃ }
+    exact ⟨Z', P.isoClosure.prop_of_iso e3.symm hW⟩
+  · rintro ⟨Z', hZZ'⟩
+    apply hK.1.mpr
+    apply hK.2.1.mpr
+    apply hK.2.2.1.mpr
+    let K := Z ⊞ Z'
+    refine ⟨Z', (0 : C), K, (0 : (0 : C) ⟶ K),
+      𝟙 K, (0 : K ⟶ (0 : C)⟦(1 : ℤ)⟧), ?_, ?_⟩
+    · exact contractible_distinguished₁ K
+    · change P.isoClosure.trW (0 : (0 : C) ⟶ K)
+      exact ⟨K, 𝟙 K, 0, contractible_distinguished₁ K, hZZ'⟩
 /-
   change IsZero ((quotientMorphismProperty P).Q.obj Z) ↔ quotientKernel P Z
   let hK := kernel_localization_characterization

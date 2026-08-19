@@ -226,7 +226,8 @@ theorem trivial_coskeleton_limit_iso {C : Type u} [Category.{v} C]
     (limitOfDiagramInitial hY (coskeletonIndexDiagram m n U))⟩
 
 theorem recover_coskeleton {C : Type u} [Category.{v} C] (n : ℕ)
-    (U : SimplicialObject.Truncated C n) [HasCoskeleton n U] :
+    (U : SimplicialObject.Truncated C n) [HasCoskeleton n U]
+    [ (truncInclusion n).HasPointwiseRightKanExtension U] :
     IsIso (coskeletonCounit n U) := by
   sorry
 
@@ -687,7 +688,6 @@ theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
           omega
         have hleD : c ≤ a := by
           simp only [Fin.le_iff_val_le_val]
-          change c.val ≤ a.val
           dsimp [a, c]
           omega
         have hd' : d.castSucc = a.succ := by
@@ -703,7 +703,7 @@ theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
         simp only [Category.assoc]
         rw [← h3]
     · by_cases hkj0 : k.val = j.val
-      · simp [degeneracyTuple, hi, hk, hkj0, extensionFace, extensionDegeneracy, truncatedFace]
+      · simp [degeneracyTuple, hi, hkj0, extensionFace, extensionDegeneracy, truncatedFace]
         repeat' rw [← U.map_comp]
         congr 1
         apply Opposite.unop_injective
@@ -717,7 +717,7 @@ theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
         simpa only [Category.assoc, Category.id_comp] using
           congrArg (fun f => f ≫ SimplexCategory.δ (⟨i.val, by omega⟩ : Fin (n + 2))) hunit
       · by_cases hkj1 : k.val = j.val + 1
-        · simp [degeneracyTuple, hi, hk, hkj0, hkj1, extensionFace, extensionDegeneracy, truncatedFace]
+        · simp [degeneracyTuple, hi, hkj1, extensionFace, extensionDegeneracy, truncatedFace]
           repeat' rw [← U.map_comp]
           congr 1
           apply Opposite.unop_injective
@@ -772,7 +772,6 @@ theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
               omega
             have h3le : c ≤ a := by
               simp only [Fin.le_iff_val_le_val]
-              change c.val ≤ a.val
               dsimp [a, c]
               omega
             have hgt' := SimplexCategory.δ_comp_σ_of_gt (n := n) (i := a) (j := b) hgt
@@ -867,7 +866,6 @@ theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
             omega
           have h3le : c ≤ a := by
             simp only [Fin.le_iff_val_le_val]
-            change c.val ≤ a.val
             dsimp [a, c]
             omega
           have h1 := SimplexCategory.δ_comp_σ_of_gt (n := n) (i := a) (j := b) hgtA

@@ -1167,10 +1167,68 @@ theorem ass_localize_eq_over_localization
     (S : Submonoid R) :
     (letI : Module R (LocalizedModule S M) :=
         Module.compHom (LocalizedModule S M) (algebraMap R (Localization S));
-      PrimeSpectrum.comap (algebraMap R (Localization S)) ''
+        PrimeSpectrum.comap (algebraMap R (Localization S)) ''
           associatedPrimes (Localization S) (LocalizedModule S M) =
         associatedPrimes R (LocalizedModule S M)) := by
-  sorry
+  let : Module R (LocalizedModule S M) :=
+    Module.compHom (LocalizedModule S M) (algebraMap R (Localization S))
+  change PrimeSpectrum.comap (algebraMap R (Localization S)) ''
+      associatedPrimes (Localization S) (LocalizedModule S M) =
+    associatedPrimes R (LocalizedModule S M)
+  apply Set.Subset.antisymm
+  · exact ass_functorial (algebraMap R (Localization S))
+  · intro p hp
+    change ∃ q, q ∈ associatedPrimes (Localization S) (LocalizedModule S M) ∧
+      PrimeSpectrum.comap (algebraMap R (Localization S)) q = p
+    change ∃ m, (⊥ : Submodule R (LocalizedModule S M)).colon ({m} : Set _) = p.asIdeal
+      at hp
+    obtain ⟨m, hm⟩ := hp
+    have hmne : m ≠ 0 := by
+      intro hm0
+      apply p.isPrime.ne_top
+      rw [← hm, hm0, Submodule.colon_singleton_zero]
+    have hdisj : Disjoint (S : Set R) p.asIdeal := by
+      rw [Set.disjoint_left]
+      intro s hs hsp
+      have hsp' : s ∈
+          (⊥ : Submodule R (LocalizedModule S M)).colon ({m} : Set _) := by
+        rw [hm]
+        exact hsp
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot] at hsp'
+      change (algebraMap R (Localization S) s) • m = 0 at hsp'
+      exact hmne ((IsLocalization.map_units (M := S) (S := Localization S)
+        ⟨s, hs⟩).smul_eq_zero.mp hsp')
+    let q : PrimeSpectrum (Localization S) :=
+      ⟨p.asIdeal.map (algebraMap R (Localization S)),
+        IsLocalization.isPrime_of_isPrime_disjoint S (Localization S)
+          p.asIdeal p.isPrime hdisj⟩
+    refine ⟨q, ?_, ?_⟩
+    · change ∃ x, (⊥ : Submodule (Localization S) (LocalizedModule S M)).colon
+        ({x} : Set _) = q.asIdeal
+      refine ⟨m, ?_⟩
+      have hJcomap :
+          ((⊥ : Submodule (Localization S) (LocalizedModule S M)).colon
+            ({m} : Set _)).under R = p.asIdeal := by
+        ext r
+        simp only [Ideal.mem_under, Submodule.mem_colon_singleton, Submodule.mem_bot]
+        rw [← hm]
+        simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+        change (algebraMap R (Localization S) r) • m = 0 ↔
+          (algebraMap R (Localization S) r) • m = 0
+        rfl
+      change (⊥ : Submodule (Localization S) (LocalizedModule S M)).colon
+        ({m} : Set _) = Ideal.map (algebraMap R (Localization S)) p.asIdeal
+      calc
+        _ = Ideal.map (algebraMap R (Localization S))
+            (((⊥ : Submodule (Localization S) (LocalizedModule S M)).colon
+              ({m} : Set _)).under R) :=
+          (IsLocalization.map_under S (Localization S) _).symm
+        _ = _ := congrArg (Ideal.map (algebraMap R (Localization S))) hJcomap
+    · apply PrimeSpectrum.ext
+      change (Ideal.map (algebraMap R (Localization S)) p.asIdeal).comap
+        (algebraMap R (Localization S)) = p.asIdeal
+      exact IsLocalization.under_map_of_isPrime_disjoint S (Localization S)
+        p.isPrime hdisj
 
 /-- Associated primes of a module that survive in the localization remain
 associated after localization. -/
@@ -1182,7 +1240,49 @@ theorem ass_localize_subset
       associatedPrimes R M ∩
           Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) ⊆
         associatedPrimes R (LocalizedModule S M)) := by
-  sorry
+  let : Module R (LocalizedModule S M) :=
+    Module.compHom (LocalizedModule S M) (algebraMap R (Localization S))
+  change associatedPrimes R M ∩
+      Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) ⊆
+    associatedPrimes R (LocalizedModule S M)
+  intro p hp
+  rcases hp with ⟨hpM, ⟨q, hq⟩⟩
+  have hrange : p ∈ Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) :=
+    ⟨q, hq⟩
+  have hdisj : Disjoint (S : Set R) p.asIdeal := by
+    rw [PrimeSpectrum.localization_comap_range (Localization S) S] at hrange
+    exact hrange
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set _) = p.asIdeal at hpM
+  obtain ⟨m, hm⟩ := hpM
+  change ∃ m, (⊥ : Submodule R (LocalizedModule S M)).colon ({m} : Set _) = p.asIdeal
+  refine ⟨LocalizedModule.mkLinearMap S M m, ?_⟩
+  ext r
+  rw [Submodule.mem_colon_singleton]
+  change (algebraMap R (Localization S) r) •
+      LocalizedModule.mkLinearMap S M m = 0 ↔ r ∈ p.asIdeal
+  rw [LocalizedModule.mkLinearMap_apply]
+  change (algebraMap R (Localization S) r) •
+      LocalizedModule.mk m 1 = 0 ↔ r ∈ p.asIdeal
+  rw [← IsLocalization.mk'_one (M := S) (S := Localization S) r,
+    ← Localization.mk_eq_mk', LocalizedModule.mk_smul_mk, one_mul]
+  constructor
+  · intro hzero
+    have hzero' := hzero
+    rw [← LocalizedModule.zero_mk (S := S) (M := M) 1] at hzero'
+    obtain ⟨s, hs⟩ :=
+      (LocalizedModule.mk_eq (S := S) (M := M)).mp hzero'
+    have hsr : (s : R) * r ∈ p.asIdeal := by
+      rw [← hm, Submodule.mem_colon_singleton]
+      simpa [Submonoid.smul_def, smul_smul, mul_comm] using hs
+    exact (p.isPrime.mem_or_mem hsr).resolve_left
+      (Set.disjoint_left.mp hdisj s.2)
+  · intro hr
+    have hrzero : r • m = 0 := by
+      have hrmem : r ∈ (⊥ : Submodule R M).colon ({m} : Set _) := by
+        rw [hm]
+        exact hr
+      simpa only [Submodule.mem_colon_singleton, Submodule.mem_bot] using hrmem
+    simp [hrzero]
 
 /-- For a Noetherian ring, the preceding localization inclusion is an
 equality. -/
@@ -1194,7 +1294,45 @@ theorem ass_localize_eq_of_noetherian
       associatedPrimes R M ∩
           Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) =
         associatedPrimes R (LocalizedModule S M)) := by
-  sorry
+  let : Module R (LocalizedModule S M) :=
+    Module.compHom (LocalizedModule S M) (algebraMap R (Localization S))
+  change associatedPrimes R M ∩
+      Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) =
+    associatedPrimes R (LocalizedModule S M)
+  apply Set.Subset.antisymm
+  · exact ass_localize_subset S
+  · intro p hp
+    have heq := ass_localize_eq_over_localization (R := R) (M := M) S
+    rw [← heq] at hp
+    rcases hp with ⟨q, hq, hqp⟩
+    have hcomap : q.asIdeal.comap (algebraMap R (Localization S)) = p.asIdeal := by
+      simpa only [PrimeSpectrum.comap_asIdeal] using
+        congrArg PrimeSpectrum.asIdeal hqp
+    have hfg : (q.asIdeal.comap (algebraMap R (Localization S))).FG := by
+      rw [hcomap]
+      exact (isNoetherianRing_iff_ideal_fg R).mp inferInstance p.asIdeal
+    have hrootq : q.asIdeal ∈
+        _root_.associatedPrimes (Localization S) (LocalizedModule S M) := by
+      change _root_.IsAssociatedPrime q.asIdeal (LocalizedModule S M)
+      refine ⟨q.isPrime, ?_⟩
+      obtain ⟨m, hm⟩ := hq
+      refine ⟨m, ?_⟩
+      rw [hm]
+      exact q.isPrime.radical.symm
+    let : Module R (LocalizedModule S M) :=
+      OreLocalization.instModuleOfIsScalarTower (R₀ := R) (R := R) (X := M) (S := S)
+    have hrootp0 : q.asIdeal.comap (algebraMap R (Localization S)) ∈
+        _root_.associatedPrimes R M :=
+      Module.associatedPrimes.comap_mem_associatedPrimes_of_mem_associatedPrimes_of_isLocalizedModule_of_fg
+        S (LocalizedModule.mkLinearMap S M) q.asIdeal hrootq hfg
+    have hrootp : p.asIdeal ∈ _root_.associatedPrimes R M := by
+      simpa [hcomap] using hrootp0
+    refine ⟨?_, ⟨q, hqp⟩⟩
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set _) = p.asIdeal
+    change (⊥ : Submodule R M).IsAssociatedPrime p.asIdeal at hrootp
+    rw [Submodule.isAssociatedPrime_iff] at hrootp
+    obtain ⟨_, m, hm⟩ := hrootp
+    exact ⟨m, hm.symm⟩
 
 /-- If every element of the multiplicative set is regular on `M`, localization
 does not change the associated-prime set over `R`. -/
@@ -1205,7 +1343,58 @@ theorem ass_localize_eq_of_regular
     (letI : Module R (LocalizedModule S M) :=
         Module.compHom (LocalizedModule S M) (algebraMap R (Localization S));
       associatedPrimes R M = associatedPrimes R (LocalizedModule S M)) := by
-  sorry
+  let : Module R (LocalizedModule S M) :=
+    Module.compHom (LocalizedModule S M) (algebraMap R (Localization S))
+  change associatedPrimes R M = associatedPrimes R (LocalizedModule S M)
+  apply Set.Subset.antisymm
+  · intro p hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set _) = p.asIdeal at hp
+    obtain ⟨m, hm⟩ := hp
+    have hmne : m ≠ 0 := by
+      intro hm0
+      apply p.isPrime.ne_top
+      rw [← hm, hm0, Submodule.colon_singleton_zero]
+    have hdisj : Disjoint (S : Set R) p.asIdeal := by
+      rw [Set.disjoint_left]
+      intro s hs hsp
+      have hsp' : s ∈
+          (⊥ : Submodule R M).colon ({m} : Set _) := by
+        rw [hm]
+        exact hsp
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot] at hsp'
+      exact hmne ((hS ⟨s, hs⟩).right_eq_zero_of_smul hsp')
+    have hrange : p ∈ Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) := by
+      rw [PrimeSpectrum.localization_comap_range (Localization S) S]
+      exact hdisj
+    exact ass_localize_subset S ⟨⟨m, hm⟩, hrange⟩
+  · intro p hp
+    change ∃ x, (⊥ : Submodule R (LocalizedModule S M)).colon ({x} : Set _) = p.asIdeal at hp
+    obtain ⟨x, hx⟩ := hp
+    induction x using LocalizedModule.induction_on with
+    | h m s =>
+      refine ⟨m, ?_⟩
+      ext r
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      have hxr : r ∈ (⊥ : Submodule R (LocalizedModule S M)).colon
+          ({LocalizedModule.mk m s} : Set _) ↔ r ∈ p.asIdeal := by
+        simp only [hx]
+      rw [Submodule.mem_colon_singleton] at hxr
+      change (algebraMap R (Localization S) r) • LocalizedModule.mk m s = 0 ↔
+        r ∈ p.asIdeal at hxr
+      rw [IsScalarTower.algebraMap_smul, LocalizedModule.smul'_mk] at hxr
+      constructor
+      · intro hrzero
+        apply hxr.mp
+        simp [hrzero]
+      · intro hrp
+        have hAzero := hxr.mpr hrp
+        rw [← LocalizedModule.zero_mk (S := S) (M := M) s] at hAzero
+        obtain ⟨u, hu⟩ :=
+          (LocalizedModule.mk_eq (S := S) (M := M)).mp hAzero
+        have hurs : (u : R) • ((s : R) • (r • m)) = 0 := by
+          simpa [Submonoid.smul_def, smul_smul] using hu
+        have hsr := (hS u).right_eq_zero_of_smul hurs
+        exact (hS s).right_eq_zero_of_smul hsr
 
 /-! ## Regular elements and detection at associated primes -/
 

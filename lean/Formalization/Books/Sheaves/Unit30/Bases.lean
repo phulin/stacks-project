@@ -2494,7 +2494,8 @@ theorem basisFMap_above_below_stalk_colimit_holds
 /- Prior attempt (retained for context; replaced by `sorry` above).
   obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
   let ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x :=
-    (TopCat.Presheaf.stalkFunctor C (f x)).map ψ.hom ≫
+    (TopCat.Presheaf.stalkFunctor C (f x)).map
+        (show G.presheaf ⟶ ((TopCat.Sheaf.pushforward C f).obj F).presheaf from ψ.hom) ≫
       F.presheaf.stalkPushforward C f x
   refine ⟨ξ, ?_, ?_⟩
   · intro i j hij hx hy
@@ -2520,7 +2521,7 @@ theorem basisFMap_above_below_stalk_colimit_holds
     have hK : K.Final := by
       apply Functor.final_of_exists_of_isFiltered
       · intro U
-        obtain ⟨V, ⟨j, hj, rfl⟩, hxV, hVU⟩ :=
+        obtain ⟨V, ⟨j, _, rfl⟩, hxV, hVU⟩ :=
           (Opens.isBasis_iff_nbhd.mp _hBᵧ) U.unop.2
         refine ⟨op ⟨j, hxV⟩, ?_⟩
         exact ⟨(homOfLE hVU).op⟩
@@ -2532,7 +2533,10 @@ theorem basisFMap_above_below_stalk_colimit_holds
     apply (cancel_epi e.hom).1
     apply colimit.hom_ext
     intro k
-    dsimp [e]
+    change colimit.ι (K ⋙ Gdiag) k ≫
+        (Functor.Final.colimitIso K Gdiag).hom ≫ ξ' =
+      colimit.ι (K ⋙ Gdiag) k ≫
+        (Functor.Final.colimitIso K Gdiag).hom ≫ ξ
     rw [Functor.Final.ι_colimitIso_hom]
     let j : κ := k.unop.1
     let hy : f x ∈ Bᵧ j := k.unop.2

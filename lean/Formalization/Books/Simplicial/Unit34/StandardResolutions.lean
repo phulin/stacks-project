@@ -275,9 +275,10 @@ theorem standardResolution_homotopy_equivalences
 
 /-! ## The module and polynomial-algebra examples -/
 
-/-- The free/forgetful adjunction used by the module example.  Here `M` and
-`SetLike` are the chosen presentations of `Mod_R` and `Sets`; the actual
-free-module implementation is supplied by the established algebraic API. -/
+/-- The free/forgetful adjunction used by the module example.  `M` and
+`SetLike` are chosen presentations of `Mod_R` and `Sets`; this interface is
+kept abstract because the Chapter 33 Godement API requires its category and
+hom universes to coincide, whereas Mathlib's bundled `ModuleCat` does not. -/
 structure ModuleStandardResolutionExample
     (R M SetLike : Type u) [Ring R] [Category.{u} M] [Category.{u} SetLike]
     where
@@ -315,8 +316,7 @@ def moduleResolutionDegeneracy
 
 /- The source's displayed sums in Example 34.4 are the elementwise normal
 forms of `moduleResolutionFace` and `moduleResolutionDegeneracy` after the
-chosen free-module presentation is expanded. They introduce no maps beyond
-these canonical degree-one components. -/
+chosen free-module presentation is expanded. -/
 
 theorem moduleResolution_augmentation_homotopy_equivalence
     {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
@@ -328,8 +328,7 @@ theorem moduleResolution_augmentation_homotopy_equivalence
     (moduleStandardResolutionSituation E)).1
 
 /-- The free/forgetful adjunction used by the polynomial-algebra example;
-`Alg` is the chosen category of commutative `A`-algebras and `SetLike` the
-chosen category of sets. -/
+`Alg` and `SetLike` are chosen presentations of `Alg_A` and `Sets`. -/
 structure PolynomialAlgebraStandardResolutionExample
     (A Alg SetLike : Type u) [Category.{u} Alg] [Category.{u} SetLike] where
   free : SetLike ⥤ Alg

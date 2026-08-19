@@ -1918,7 +1918,7 @@ private instance prodComponent₁.module {R₁ R₂ M : Type u} [CommRing R₁] 
         change ((r, (0 : R₂)) : R₁ × R₂) • ((x : M) + (y : M)) =
           ((r, (0 : R₂)) : R₁ × R₂) • (x : M) +
             ((r, (0 : R₂)) : R₁ × R₂) • (y : M)
-        simp [add_smul] }
+        simp }
   exact { hact with
     add_smul := by
       intro r s x
@@ -1974,7 +1974,7 @@ private instance prodComponent₂.module {R₁ R₂ M : Type u} [CommRing R₁] 
         change (((0 : R₁), r) : R₁ × R₂) • ((x : M) + (y : M)) =
           (((0 : R₁), r) : R₁ × R₂) • (x : M) +
             (((0 : R₁), r) : R₁ × R₂) • (y : M)
-        simp [add_smul] }
+        simp }
   exact { hact with
     add_smul := by
       intro r s x
@@ -2118,7 +2118,7 @@ private def prodModuleDecomp {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R�
 private theorem prodComponent₁.finite {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
     [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M] :
     Module.Finite R₁ (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
-  letI : Module.Finite (R₁ × R₂)
+  let : Module.Finite (R₁ × R₂)
       (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) := inferInstance
   rcases Module.Finite.exists_fin (R := R₁ × R₂)
       (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) with ⟨n, s, hs⟩
@@ -2157,7 +2157,7 @@ private theorem prodComponent₁.finite {R₁ R₂ M : Type u} [CommRing R₁] [
 private theorem prodComponent₂.finite {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
     [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M] :
     Module.Finite R₂ (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
-  letI : Module.Finite (R₁ × R₂)
+  let : Module.Finite (R₁ × R₂)
       (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) := inferInstance
   rcases Module.Finite.exists_fin (R := R₁ × R₂)
       (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) with ⟨n, s, hs⟩

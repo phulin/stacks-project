@@ -2,6 +2,7 @@ import Formalization.Books.Homology.Unit20.DifferentialObjects
 import Formalization.Books.Homology.Unit21.ExactCouples
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Subobject.Lattice
+import Mathlib.CategoryTheory.Subobject.Limits
 
 /-!
 # Homological Algebra, Chapter 22: Spectral sequences: differential objects
@@ -407,7 +408,135 @@ theorem differentialObjectSelfMap_boundary_le_cycle
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     differentialObjectSelfMapBoundarySubobject α r ≤
       differentialObjectSelfMapCycleSubobject α r := by
-  sorry
+  exact Formalization.Books.Homology.Unit20.selfMap_boundary_le_cycle α r
+
+private theorem differentialObjectSelfMap_exists_image_eq
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Y : C} (f : X ⟶ Y) :
+    (Subobject.«exists» f).obj (⊤ : Subobject X) =
+      imageSubobject f := by
+  let J := imageSubobject f
+  let I := (Subobject.«exists» f).obj (⊤ : Subobject X)
+  have hJ : J.Factors f := by
+    simpa [J] using (imageSubobject_factors_comp_self (f := f) (𝟙 X))
+  have hJtop : J.Factors ((⊤ : Subobject X).arrow ≫ f) :=
+    Subobject.factors_of_factors_right (⊤ : Subobject X).arrow hJ
+  have htop : (⊤ : Subobject X) ≤ (Subobject.pullback f).obj J := by
+    let hpb := Subobject.isPullback f J
+    refine Subobject.le_of_comm
+      (hpb.lift (J.factorThru ((⊤ : Subobject X).arrow ≫ f) hJtop)
+        (⊤ : Subobject X).arrow ?_) ?_
+    · exact J.factorThru_arrow _ _
+    · simp
+  have hIJ : I ≤ J := by
+    exact leOfHom (((Subobject.existsPullbackAdj f).homEquiv (⊤ : Subobject X) J).symm
+      (homOfLE htop))
+  let hunit : (⊤ : Subobject X) ⟶ (Subobject.pullback f).obj I :=
+    (Subobject.existsPullbackAdj f).unit.app (⊤ : Subobject X)
+  let hX : X ⟶ I :=
+    (Subobject.underlyingIso (𝟙 X)).inv ≫
+      Subobject.underlying.map hunit ≫ Subobject.pullbackπ f I
+  have hJI : J ≤ I := by
+    apply imageSubobject_le f hX
+    dsimp [hX, I]
+    rw [Category.assoc, Category.assoc, (Subobject.isPullback f I).w]
+    rw [← Category.assoc (Subobject.underlying.map hunit)
+      ((Subobject.pullback f).obj I).arrow f]
+    rw [Subobject.underlying_arrow]
+    rw [← Category.assoc (Subobject.underlyingIso (𝟙 X)).inv
+      (⊤ : Subobject X).arrow f]
+    rw [Subobject.underlyingIso_inv_top_arrow, Category.id_comp]
+  apply le_antisymm
+  · exact hIJ
+  · exact hJI
+
+private theorem differentialObjectSelfMap_image_d_map
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : DifferentialObject C} (α : DifferentialObjectInjectiveSelfMap A) :
+    ∃ h : ((Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier) : C) ⟶
+        (Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier),
+      h ≫ ((Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier)).arrow =
+        ((Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier)).arrow ≫ α.hom.hom := by
+  rw [differentialObjectSelfMap_exists_image_eq A.d]
+  let sq : Arrow.mk A.d ⟶ Arrow.mk A.d :=
+    Arrow.homMk α.hom.hom α.hom.hom α.hom.comm.symm
+  exact ⟨imageSubobjectMap sq, imageSubobjectMap_arrow sq⟩
+
+private theorem differentialObjectSelfMap_boundary_preimage_monotone
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : DifferentialObject C} (α : DifferentialObjectInjectiveSelfMap A) (n : ℕ) :
+    differentialObjectSelfMapBoundaryPreimage α (n + 1) ≤
+      differentialObjectSelfMapBoundaryPreimage α (n + 2) := by
+  let I := (Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier)
+  let p := differentialObjectSelfMapAlphaPow α n
+  let p' := differentialObjectSelfMapAlphaPow α (n + 1)
+  obtain ⟨hI, hIarrow⟩ := differentialObjectSelfMap_image_d_map α
+  have hcond :
+      (Subobject.pullbackπ p I ≫ hI) ≫ I.arrow =
+        ((Subobject.pullback p).obj I).arrow ≫ p' := by
+    rw [Category.assoc, hIarrow]
+    rw [← Category.assoc (Subobject.pullbackπ p I) I.arrow α.hom.hom]
+    rw [(Subobject.isPullback p I).w]
+    change (((Subobject.pullback p).obj I).arrow ≫ p) ≫ α.hom.hom =
+      ((Subobject.pullback p).obj I).arrow ≫ (p ≫ α.hom.hom)
+    simp only [Category.assoc]
+  let l := (Subobject.isPullback p' I).lift
+    (Subobject.pullbackπ p I ≫ hI) ((Subobject.pullback p).obj I).arrow hcond
+  apply Subobject.le_of_comm l
+  simp [l, p, p', differentialObjectSelfMapAlphaPow,
+    Formalization.Books.Homology.Unit20.selfMapAlphaPow,
+    differentialObjectSelfMapBoundaryPreimage]
+
+private theorem differentialObjectSelfMap_cycle_preimage_antitone
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : DifferentialObject C} (α : DifferentialObjectInjectiveSelfMap A) (n : ℕ) :
+    differentialObjectSelfMapCyclePreimage α (n + 2) ≤
+      differentialObjectSelfMapCyclePreimage α (n + 1) := by
+  let p := differentialObjectSelfMapAlphaPow α (n + 1)
+  let p' := differentialObjectSelfMapAlphaPow α (n + 2)
+  have hcomm : α.hom.hom ≫ p = p ≫ α.hom.hom := by
+    dsimp [p]
+    induction n + 1 with
+    | zero => simp [differentialObjectSelfMapAlphaPow,
+        Formalization.Books.Homology.Unit20.selfMapAlphaPow]
+    | succ k ih =>
+        rw [differentialObjectSelfMapAlphaPow,
+          Formalization.Books.Homology.Unit20.selfMapAlphaPow]
+        rw [← Category.assoc, ih]
+  have hpow :
+      (Subobject.«exists» p').obj (⊤ : Subobject A.carrier) ≤
+        (Subobject.«exists» p).obj (⊤ : Subobject A.carrier) := by
+    rw [differentialObjectSelfMap_exists_image_eq p',
+      differentialObjectSelfMap_exists_image_eq p]
+    change imageSubobject (p ≫ α.hom.hom) ≤ imageSubobject p
+    rw [← hcomm]
+    exact imageSubobject_comp_le α.hom.hom p
+  have hpull := (Subobject.pullback A.d).monotone hpow
+  simpa [p, p', differentialObjectSelfMapCyclePreimage,
+    Formalization.Books.Homology.Unit20.selfMapCyclePreimage,
+    differentialObjectSelfMapAlphaPow,
+    Formalization.Books.Homology.Unit20.selfMapAlphaPow] using hpull
+
+private theorem differentialObjectSelfMap_quotient_image_mono
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Q : C} (q : X ⟶ Q) {P R : Subobject X} (h : P ≤ R) :
+    Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject q P ≤
+      Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject q R := by
+  let sq : Arrow.mk (P.arrow ≫ q) ⟶ Arrow.mk (R.arrow ≫ q) :=
+    Arrow.homMk' (Subobject.ofLE P R h) (𝟙 Q) (by
+      simp [Category.assoc, Subobject.ofLE_arrow])
+  letI : Mono (Abelian.image.ι (P.arrow ≫ q)) := by
+    dsimp [Abelian.image]
+    infer_instance
+  letI : Mono (Abelian.image.ι (R.arrow ≫ q)) := by
+    dsimp [Abelian.image]
+    infer_instance
+  let g := (Subobject.underlyingIso (Abelian.image.ι (P.arrow ≫ q))).hom ≫
+    Abelian.im.map sq ≫
+      (Subobject.underlyingIso (Abelian.image.ι (R.arrow ≫ q))).inv
+  apply Subobject.le_of_comm g
+  dsimp [g, sq]
+  simp [Abelian.im]
 
 def differentialObjectSelfMapB {C : Type u} [Category.{v} C] [Abelian C]
     {A : DifferentialObject C} (α : DifferentialObjectInjectiveSelfMap A) :
@@ -439,7 +568,33 @@ theorem differentialObjectSelfMap_filtration
       (∀ r, differentialObjectSelfMapB α r ≤ differentialObjectSelfMapB α (r + 1)) ∧
       (∀ r, differentialObjectSelfMapZ α (r + 1) ≤ differentialObjectSelfMapZ α r) ∧
       (∀ r, differentialObjectSelfMapB α r ≤ differentialObjectSelfMapZ α r) := by
-  sorry
+  refine ⟨rfl, rfl, ?_, ?_, differentialObjectSelfMap_B_le_Z α⟩
+  · intro r
+    cases r with
+    | zero => exact bot_le
+    | succ n =>
+        change Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject
+            (cokernel.π α.hom.hom)
+            (differentialObjectSelfMapBoundaryPreimage α (n + 1)) ≤
+          Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject
+            (cokernel.π α.hom.hom)
+            (differentialObjectSelfMapBoundaryPreimage α (n + 2))
+        exact differentialObjectSelfMap_quotient_image_mono
+          (cokernel.π α.hom.hom)
+          (differentialObjectSelfMap_boundary_preimage_monotone α n)
+  · intro r
+    cases r with
+    | zero => exact le_top
+    | succ n =>
+        change Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject
+            (cokernel.π α.hom.hom)
+            (differentialObjectSelfMapCyclePreimage α (n + 2)) ≤
+          Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject
+            (cokernel.π α.hom.hom)
+            (differentialObjectSelfMapCyclePreimage α (n + 1))
+        exact differentialObjectSelfMap_quotient_image_mono
+          (cokernel.π α.hom.hom)
+          (differentialObjectSelfMap_cycle_preimage_antitone α n)
 
 noncomputable def differentialObjectSelfMapPageComponent
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
@@ -459,14 +614,82 @@ theorem differentialObjectSelfMap_page_quotient_description
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     Nonempty (differentialObjectSelfMapPageComponent α (r + 1) ≅
       differentialObjectSelfMapPageAsQuotient α r) := by
-  sorry
+  exact ⟨Iso.refl _⟩
+
+private theorem differentialObjectSelfMap_cycle_plus_factors
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : DifferentialObject C}
+    (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
+    (differentialObjectSelfMapCycleSubobject α r).Factors
+      ((differentialObjectSelfMapCyclePlus α r).arrow ≫ cokernel.π α.hom.hom) := by
+  let P := differentialObjectSelfMapCyclePreimage α r
+  let R := differentialObjectSelfMapCycleSubobject α r
+  let S := Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
+  let Q := differentialObjectSelfMapCyclePlus α r
+  let q : A.carrier ⟶ differentialObjectSelfMapE₀ α := cokernel.π α.hom.hom
+  letI : Mono α.hom.hom := α.injective
+  have hP : R.Factors (P.arrow ≫ q) := by
+    apply (Subobject.factors_iff R (P.arrow ≫ q)).mpr
+    refine ⟨Abelian.factorThruImage (P.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι
+        (P.arrow ≫ q))).inv, ?_⟩
+    dsimp [R, differentialObjectSelfMapCycleSubobject,
+      Formalization.Books.Homology.Unit20.selfMapCycleSubobject,
+      Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject]
+    change (Abelian.factorThruImage (P.arrow ≫ q) ≫
+      (Subobject.underlyingIso (Abelian.image.ι (P.arrow ≫ q))).inv) ≫
+      (Subobject.mk (Abelian.image.ι (P.arrow ≫ q))).arrow = P.arrow ≫ q
+    rw [← Subobject.underlyingIso_hom_comp_eq_mk
+      (Abelian.image.ι (P.arrow ≫ q))]
+    simp [Category.assoc]
+  have hSzero : S.arrow ≫ q = 0 := by
+    dsimp [S, q, Formalization.Books.Homology.Unit20.selfMapAlphaSubobject]
+    change (Subobject.mk α.hom.hom).arrow ≫ cokernel.π α.hom.hom = 0
+    rw [← Subobject.underlyingIso_hom_comp_eq_mk α.hom.hom]
+    rw [Category.assoc, cokernel.condition, comp_zero]
+  have hS : R.Factors (S.arrow ≫ q) := by
+    change R.Factors (S.arrow ≫ cokernel.π α.hom.hom)
+    rw [hSzero]
+    exact Subobject.factors_zero
+  have hPpull : P ≤
+      (Subobject.pullback q).obj R := by
+    let hpb := Subobject.isPullback q R
+    refine Subobject.le_of_comm
+      (hpb.lift (R.factorThru (P.arrow ≫ q) hP) P.arrow ?_) ?_
+    · exact R.factorThru_arrow _ _
+    · simp
+  have hSpull : S ≤
+      (Subobject.pullback q).obj R := by
+    let hpb := Subobject.isPullback q R
+    refine Subobject.le_of_comm
+      (hpb.lift 0 S.arrow (by rw [zero_comp, hSzero])) ?_
+    · simp
+  have hQpull : Q ≤
+      (Subobject.pullback q).obj R := sup_le hPpull hSpull
+  apply (Subobject.factors_iff R (Q.arrow ≫ q)).mpr
+  refine ⟨(Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+      Subobject.pullbackπ q R) ≫
+      eqToHom (Subobject.representative_coe R).symm, ?_⟩
+  simp [Subobject.representative_coe, Subobject.representative_arrow]
+  calc
+    Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+        Subobject.pullbackπ q R ≫ R.arrow =
+      Subobject.ofLE Q ((Subobject.pullback q).obj R) hQpull ≫
+        ((Subobject.pullback q).obj R).arrow ≫ q := by
+          rw [(Subobject.isPullback q R).w]
+    _ = Q.arrow ≫ q := by
+      rw [← Category.assoc, Subobject.ofLE_arrow]
 
 abbrev differentialObjectSelfMapPageClassOfCycle
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ)
     {T : C} (z : T ⟶ (differentialObjectSelfMapCyclePlus α r : C)) :
     T ⟶ differentialObjectSelfMapPageComponent α r :=
-  by sorry
+  by
+    let hfac := differentialObjectSelfMap_cycle_plus_factors α r
+    exact Formalization.Books.Homology.Unit20.selfMapPageClassOfCycle α r
+      (z ≫ (differentialObjectSelfMapCycleSubobject α r).factorThru
+        ((differentialObjectSelfMapCyclePlus α r).arrow ≫ cokernel.π α.hom.hom) hfac)
 
 /-- The categorical/test-object form of the rule defining `dᵣ` on the page. -/
 abbrev DifferentialObjectSelfMapPageDifferentialRule

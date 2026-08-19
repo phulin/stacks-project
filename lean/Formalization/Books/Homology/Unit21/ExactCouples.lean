@@ -34,7 +34,7 @@ abbrev ExactCoupleHom {C : Type u} [Category.{v} C] [Abelian C]
     {A E A' E' : C} (D : ExactCouple C A E) (D' : ExactCouple C A' E') :=
   Formalization.Books.Homology.Unit20.ExactCoupleHom D D'
 
-/-- The differential `d = g ≫ f` of an exact couple. -/
+/-- The differential `d = f ≫ g` (that is, `g ∘ f`) of an exact couple. -/
 def exactCoupleDifferential {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) : E ⟶ E :=
   D.f ≫ D.g
@@ -115,43 +115,6 @@ theorem exactCouple_image_formula {C : Type u} [Category.{v} C]
       (Subobject.«exists» D.g).obj ((Subobject.«exists» D.f).obj ⊤) =
         (Subobject.«exists» D.g).obj (Subobject.mk (kernel.ι D.alpha)) := by
   exact Formalization.Books.Homology.Unit20.exactCouple_image_formula D
-
-/-! ## The associated spectral sequence -/
-
-abbrev PlainSpectralSequence (C : Type u) [Category.{v} C] [Abelian C]
-    (r₀ : ℤ := 1) :=
-  Formalization.Books.Homology.Unit20.PlainSpectralSequence C r₀
-
-abbrev plainPageObject {C : Type u} [Category.{v} C] [Abelian C]
-    {r₀ : ℤ} (E : PlainSpectralSequence C r₀) (r : ℤ)
-    (hr : r₀ ≤ r := by lia) : C :=
-  Formalization.Books.Homology.Unit20.plainPageObject E r hr
-
-abbrev plainPageDifferential {C : Type u} [Category.{v} C] [Abelian C]
-    {r₀ : ℤ} (E : PlainSpectralSequence C r₀) (r : ℤ)
-    (hr : r₀ ≤ r := by lia) :
-    plainPageObject E r hr ⟶ plainPageObject E r hr :=
-  Formalization.Books.Homology.Unit20.plainPageDifferential E r hr
-
-theorem exactCouple_associatedSpectralSequence_exists
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (PlainSpectralSequence C 1) := by
-  obtain ⟨S, _, _⟩ :=
-    Formalization.Books.Homology.Unit20.exactCouple_associatedSpectralSequence_exists D
-  exact ⟨S⟩
-
-/-- The spectral sequence obtained by iterating the derived exact couple. -/
-noncomputable def exactCoupleAssociatedSpectralSequence
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) : PlainSpectralSequence C 1 :=
-  Classical.choice (exactCouple_associatedSpectralSequence_exists D)
-
-theorem exactCouple_associated_page_one
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D) 1 ≅ E) := by
-  sorry
 
 /-! ## The `Bᵣ` and `Zᵣ` filtration -/
 
@@ -317,6 +280,56 @@ noncomputable def exactCouplePageComponent {C : Type u} [Category.{v} C]
     (exactCoupleBoundarySubobject D n)
     (exactCoupleCycleSubobject D n) (exactCouple_boundary_le_cycle D n)
 
+/-! ## The associated spectral sequence -/
+
+abbrev PlainSpectralSequence (C : Type u) [Category.{v} C] [Abelian C]
+    (r₀ : ℤ := 1) :=
+  Formalization.Books.Homology.Unit20.PlainSpectralSequence C r₀
+
+abbrev plainPageObject {C : Type u} [Category.{v} C] [Abelian C]
+    {r₀ : ℤ} (E : PlainSpectralSequence C r₀) (r : ℤ)
+    (hr : r₀ ≤ r := by lia) : C :=
+  Formalization.Books.Homology.Unit20.plainPageObject E r hr
+
+abbrev plainPageDifferential {C : Type u} [Category.{v} C] [Abelian C]
+    {r₀ : ℤ} (E : PlainSpectralSequence C r₀) (r : ℤ)
+    (hr : r₀ ≤ r := by lia) :
+    plainPageObject E r hr ⟶ plainPageObject E r hr :=
+  Formalization.Books.Homology.Unit20.plainPageDifferential E r hr
+
+theorem exactCouple_associatedSpectralSequence_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    Nonempty (PlainSpectralSequence C 1) := by
+  obtain ⟨S, _, _⟩ :=
+    Formalization.Books.Homology.Unit20.exactCouple_associatedSpectralSequence_exists D
+  exact ⟨S⟩
+
+/-- The chosen sequence and its page identifications must come from one
+    witness, since an arbitrary choice of a merely nonempty sequence need not
+    be the sequence carrying these identifications. -/
+theorem exactCouple_associatedSpectralSequence_witness_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    ∃ S : PlainSpectralSequence C 1,
+      Nonempty (plainPageObject S 1 ≅ E) ∧
+      ∀ n : ℕ,
+        Nonempty (plainPageObject S (n + 1 : ℤ) ≅ exactCouplePageComponent D n) := by
+  sorry
+
+/-- The spectral sequence obtained by iterating the derived exact couple. -/
+noncomputable def exactCoupleAssociatedSpectralSequence
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) : PlainSpectralSequence C 1 :=
+  Classical.choose (exactCouple_associatedSpectralSequence_witness_exists D)
+
+theorem exactCouple_associated_page_one
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D) 1 ≅ E) := by
+  exact (Classical.choose_spec
+    (exactCouple_associatedSpectralSequence_witness_exists D)).1
+
 /-- The class of a cycle in the page quotient. -/
 noncomputable def exactCouplePageClassOfCycle {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ)
@@ -332,7 +345,8 @@ theorem exactCouple_associated_page_quotient
     ∀ n : ℕ,
       Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D)
         (n + 1 : ℤ) ≅ exactCouplePageComponent D n) := by
-  sorry
+  exact (Classical.choose_spec
+    (exactCouple_associatedSpectralSequence_witness_exists D)).2
 
 /-- A test-object formulation of the rule for `d_(n+1)`. -/
 structure ExactCoupleDifferentialRule {C : Type u} [Category.{v} C]

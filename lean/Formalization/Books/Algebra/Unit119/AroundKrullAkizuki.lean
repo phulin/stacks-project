@@ -1,7 +1,7 @@
 import Formalization.Books.Algebra.Unit50.ValuationRings
 import Formalization.Books.Algebra.Unit54.EssentiallyFiniteType
 import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
-import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
+import Formalization.Books.Algebra.Unit103.CohenMacaulayModules
 import Mathlib.Algebra.CharP.Algebra
 import Mathlib.Algebra.Field.Subfield.Basic
 import Mathlib.FieldTheory.PurelyInseparable.Basic

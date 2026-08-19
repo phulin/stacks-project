@@ -709,7 +709,7 @@ private lemma isGlobalCatenary_of_lowerSet
 /- An algebra of finite type is represented by the canonical algebra class. -/
 def IsUniversallyCatenary (R : Type u) [CommRing R] : Prop :=
   IsNoetherianRing R ∧
-    ∀ (S : Type v) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
+    ∀ (S : Type u) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
       IsCatenaryRing S
 
 /- The source warns that catenarity is not preserved by arbitrary finite-type

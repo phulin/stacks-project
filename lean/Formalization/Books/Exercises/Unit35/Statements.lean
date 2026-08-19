@@ -169,7 +169,7 @@ theorem map_on_tangent_spaces
 theorem map_on_tangent_spaces_agrees_with_local_ring_map
     {X Y S : Scheme.{u}} (pX : X ⟶ S) (pY : Y ⟶ S)
     (f : X ⟶ Y) (hbase : f ≫ pY = pX) (x : X)
-    (hκ : X.residueField x = S.residueField (pX x))
+    (_hκ : X.residueField x = S.residueField (pX x))
     (hκf : Function.Bijective (f.residueFieldMap x).hom) :
     Nonempty (TangentMapLocalRingAgreement pX pY f x) := by
   obtain ⟨d, hd⟩ := map_on_tangent_spaces pX pY f hbase x hκf

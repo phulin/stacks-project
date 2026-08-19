@@ -982,8 +982,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
         (asIso u).hom ≫
           (TopCat.Presheaf.stalkFunctor C z).map e'.symm.hom) ≫
         (TopCat.Presheaf.stalkFunctor C z).map e'.hom
-  simp only [Functor.map_comp, Iso.symm_hom, Iso.hom_inv_id,
-    Functor.map_id, Category.comp_id, Category.assoc]
+  simp only [Iso.symm_hom, Category.assoc]
   let f₀ : Opens X ⥤ Opens (TopCat.of Z) := Opens.map f
   let : f₀.IsContinuous (Opens.grothendieckTopology X)
       (Opens.grothendieckTopology (TopCat.of Z)) := by
@@ -1060,7 +1059,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
       simp [TopCat.Presheaf.stalkPullbackIso,
         TopCat.Presheaf.stalkPullbackHom,
       TopCat.Presheaf.pullbackPushforwardAdjunction,
-      TopCat.Presheaf.pullback, f₀]
+      TopCat.Presheaf.pullback]
     have hleft := congrArg (fun q =>
       (TopCat.Presheaf.stalkFunctor C (f z)).map
           ((Opens.map f).op.lanUnit.app G₀.obj) ≫ q) hnat₂
@@ -1091,8 +1090,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
           (Opens.grothendieckTopology X) C).map
             (adj₂.unit.app G₀) = adj₀.unit.app G₀.obj := by
       rw [hmapunit]
-      simp only [Iso.refl_hom, NatTrans.id_app, Functor.comp_map,
-        Functor.map_id, Category.comp_id]
+      simp only [Iso.refl_hom, NatTrans.id_app]
       change _ ≫ 𝟙 _ ≫ 𝟙 _ = _
       simp only [Category.comp_id]
       rfl
@@ -1228,8 +1226,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                   G.presheaf)) := by
         rfl
       cases hP
-      simp [e₂, u, f, f₀, G₀, P₂, P, K, Category.assoc,
-        Category.comp_id]
+      simp [e₂, u, f, f₀, G₀, P₂, P, K]
       have hP'' :
           (TopCat.Presheaf.stalkFunctor C z).map
               (CategoryTheory.toSheafify

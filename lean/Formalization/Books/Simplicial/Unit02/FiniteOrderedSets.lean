@@ -342,7 +342,7 @@ private lemma standardδ_map_of_lt_all
     have hia : Fin.ofNat (n + 2) a.val =
         (⟨a.val, by omega⟩ : Fin (n + 2)) := by
       apply Fin.ext
-      simp [Fin.ofNat]
+      simp
     have hbfin : Fin.ofNat (n + 2) b =
         (⟨b, hb'⟩ : Fin (n + 2)) := by
       apply Fin.ext
@@ -444,7 +444,7 @@ private lemma standardδ_range_iff
             tail.toOrderHom (⟨b, by omega⟩ : Fin (n + 2)) := by
           rw [← hcomp i, hi, hjb']
           apply Fin.ext
-          simpa [tail] using htailb'.symm
+          exact htailb'.symm
         have heq' := hinj heq
         have heq'' : (Fin.ofNat (n + 2) b).succAbove i =
             Fin.ofNat (n + 2) b := heq'.trans hbfin.symm

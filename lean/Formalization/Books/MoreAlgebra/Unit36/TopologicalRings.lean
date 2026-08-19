@@ -203,7 +203,15 @@ theorem iAdicModuleTopology_hasBasis
     (@nhds M (I.adicModuleTopology M) (0 : M)).HasBasis
       (fun _ : ℕ => True)
       (fun n => ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M)) := by
-  sorry
+  let _ : TopologicalSpace R := I.adicTopology
+  refine ⟨by
+    intro U
+    rw [(I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis M)).toAddGroupFilterBasis.nhds_zero_hasBasis.mem_iff]
+    constructor
+    · rintro ⟨-, ⟨n, rfl⟩, h⟩
+      exact ⟨n, trivial, h⟩
+    · rintro ⟨n, -, h⟩
+      exact ⟨(I ^ n • (⊤ : Submodule R M) : Submodule R M), ⟨n, rfl⟩, h⟩⟩
 
 theorem iAdicModuleTopology_is_topological_module
     (R : Type u) [CommRing R] (I : Ideal R)
@@ -212,20 +220,50 @@ theorem iAdicModuleTopology_is_topological_module
     let _ : TopologicalSpace M := I.adicModuleTopology M
     let _ : NonarchimedeanRing R := I.nonarchimedean
     IsTopologicalModule R M := by
-  sorry
+  dsimp
+  let _ : TopologicalSpace R := I.adicTopology
+  let _ : TopologicalSpace M := I.adicModuleTopology M
+  let _ : NonarchimedeanRing R := I.nonarchimedean
+  exact ⟨(I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis M)).isTopologicalAddGroup.toContinuousAdd,
+    (I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis M)).continuousSMul⟩
 
 theorem iAdicTopology_is_preAdic (R : Type u) [CommRing R] (I : Ideal R) :
     let _ : TopologicalSpace R := I.adicTopology
     let _ : NonarchimedeanRing R := I.nonarchimedean
     let _ : IsLinearTopology R R := I.isLinearTopology
     IsPreAdicTopologicalRing R := by
-  sorry
+  dsimp
+  refine ⟨I, ?_, ?_⟩
+  · constructor
+    · simpa using iAdicRingTopology_powers_open R I 1 (by omega)
+    · intro U hU
+      obtain ⟨n, -, hnU⟩ := (iAdicRingTopology_hasBasis R I).mem_iff.mp hU
+      exact ⟨n, hnU⟩
+  · exact iAdicRingTopology_hasBasis R I
 
 theorem isAdicComplete_iff_complete_for_iAdicRingTopology
     (R : Type u) [CommRing R] (I : Ideal R) :
     IsAdicComplete I R ↔
       IsCompleteSeparatedTopologicalAddGroupFor R I.adicTopology := by
-  sorry
+  let _ : TopologicalSpace R := I.adicTopology
+  let _ : NonarchimedeanRing R := I.nonarchimedean
+  letI : UniformSpace R := IsTopologicalAddGroup.rightUniformSpace R
+  letI : IsUniformAddGroup R := isUniformAddGroup_of_addCommGroup
+  have hI : IsAdic I := rfl
+  constructor
+  · intro h
+    have hcomplete := (IsAdic.isAdicComplete_iff (R := R) (I := I) hI).mp h
+    exact ⟨IsTopologicalAddGroup.rightUniformSpace R, rfl, inferInstance,
+      hcomplete.1, hcomplete.2⟩
+  · rintro ⟨u, hu, hu_uniform, hcomplete, ht2⟩
+    letI : UniformSpace R := u
+    letI : TopologicalSpace R := u.toTopologicalSpace
+    letI : IsUniformAddGroup R := hu_uniform
+    have hI' : IsAdic I := hu
+    apply (IsAdic.isAdicComplete_iff (R := R) (I := I) hI').mpr
+    refine ⟨hcomplete, ?_⟩
+    rw [← hu] at ht2
+    exact ht2
 
 theorem isAdicComplete_iff_complete_for_iAdicModuleTopology
     (R : Type u) [CommRing R] (I : Ideal R)

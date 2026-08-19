@@ -1022,6 +1022,27 @@ theorem exists_tower_pth_roots_adjoin_finset
   symm
   simpa [mapFT] using (eq_div_iff hden0).2 hmul
 
+/-- The coefficients of the minimal polynomial of an element over a finite
+rational-function field simultaneously acquire p-th roots in a finite paired
+purely inseparable tower. -/
+theorem exists_tower_pth_roots_minpoly_coefficients
+    {k : Type u} {K : Type v} {ι : Type*}
+    [Field k] [Field K] [Algebra k K] [Fintype ι]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (x : ι → K) (hx : AlgebraicIndependent k x) (a : K) :
+    ∃ tower : FinitePthRootBaseChangeTower k K p hp,
+      ∀ i : ℕ, ∃ q : finitePthRootTopAtLevel tower,
+        q ^ p = algebraMap K (finitePthRootTopAtLevel tower)
+          ((minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i : K) := by
+  obtain ⟨tower, hcoeff⟩ := exists_tower_pth_roots_adjoin_finset p hp x hx
+    (minpoly (IntermediateField.adjoin k (Set.range x)) a).coeffs
+  refine ⟨tower, ?_⟩
+  intro i
+  by_cases hi : (minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i = 0
+  · refine ⟨0, ?_⟩
+    simp [hi, hp.ne']
+  · exact hcoeff _ (Polynomial.coeff_mem_coeffs hi)
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

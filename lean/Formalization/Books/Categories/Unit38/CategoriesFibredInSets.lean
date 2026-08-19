@@ -1188,19 +1188,18 @@ theorem setPresheaf_morphism_description
       ∃ h : F.map f.base.op (setPresheafObjectValue F Y) =
         setPresheafObjectValue F X,
       f = setPresheafHomOf F (X := X) (Y := Y) f.base h := by
-  sorry
-/-
   refine ⟨setPresheafHom_fibre_condition F f, ?_⟩
-  apply Pseudofunctor.CoGrothendieck.Hom.ext
-  · rfl
-  · exact Subsingleton.elim _ _ -/
+  apply Pseudofunctor.CoGrothendieck.Hom.ext f
+    (setPresheafHomOf F f.base _) rfl
+  exact @Subsingleton.elim _ (Discrete.instSubsingletonDiscreteHom _ _) _ _
 
 theorem setPresheafHom_ext
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS)
     {X Y : setPresheafCategory F} {f g : X ⟶ Y}
     (h : f.base = g.base) : f = g := by
-  sorry
+  apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
+  exact @Subsingleton.elim _ (Discrete.instSubsingletonDiscreteHom _ _) _ _
 
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
@@ -1256,6 +1255,93 @@ theorem setPresheafProjection_map
     (setPresheafProjection F).map f = f.base :=
   rfl
 
+/-- A natural transformation of set-valued presheaves induces a functor of
+their CoGrothendieck constructions, strictly over the base. -/
+def setPresheafCategoryMap
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (α : NatTrans F G) :
+    Functor (setPresheafCategory F) (setPresheafCategory G) where
+  obj X := ⟨X.base, Discrete.mk (α.app (Opposite.op X.base)
+    (setPresheafObjectValue F X))⟩
+  map {X Y} f := setPresheafHomOf G f.base (by
+    have hn := congrFun
+      (congrArg (fun k => k.hom) (α.naturality f.base.op))
+        (setPresheafObjectValue F Y)
+    change G.map f.base.op
+        (α.app (Opposite.op Y.base) (setPresheafObjectValue F Y)) =
+      α.app (Opposite.op X.base) (setPresheafObjectValue F X)
+    exact hn.symm.trans (congrArg
+      (α.app (Opposite.op X.base)) (setPresheafHom_fibre_condition F f)))
+  map_id X := setPresheafHom_ext G rfl
+  map_comp f g := setPresheafHom_ext G rfl
+
+@[simp]
+theorem setPresheafCategoryMap_obj_base
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (α : NatTrans F G)
+    (X : setPresheafCategory F) :
+    ((setPresheafCategoryMap α).obj X).base = X.base :=
+  rfl
+
+@[simp]
+theorem setPresheafCategoryMap_map_base
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (α : NatTrans F G)
+    {X Y : setPresheafCategory F} (f : X ⟶ Y) :
+    ((setPresheafCategoryMap α).map f).base = f.base :=
+  rfl
+
+/-- The functors on CoGrothendieck constructions induced by the two halves
+of a presheaf isomorphism are mutually inverse up to vertical natural
+isomorphism. -/
+def setPresheafCategoryMapCompIso
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (e : F ≅ G) :
+    setPresheafCategoryMap e.hom ⋙ setPresheafCategoryMap e.inv ≅
+      Functor.id (setPresheafCategory F) :=
+  NatIso.ofComponents (fun X => by
+    let x := setPresheafObjectValue F X
+    have h : e.inv.app (Opposite.op X.base)
+        (e.hom.app (Opposite.op X.base) x) = x := by
+      change (e.app (Opposite.op X.base)).inv
+        ((e.app (Opposite.op X.base)).hom x) = x
+      simp
+    let hom : (setPresheafCategoryMap e.hom ⋙
+        setPresheafCategoryMap e.inv).obj X ⟶ X :=
+      setPresheafHomOf F (𝟙 X.base) (by
+        change F.map (𝟙 X.base).op x =
+          e.inv.app (Opposite.op X.base)
+            (e.hom.app (Opposite.op X.base) x)
+        simpa using h.symm)
+    let inv : X ⟶ (setPresheafCategoryMap e.hom ⋙
+        setPresheafCategoryMap e.inv).obj X :=
+      setPresheafHomOf F (𝟙 X.base) (by
+        change F.map (𝟙 X.base).op
+            (e.inv.app (Opposite.op X.base)
+              (e.hom.app (Opposite.op X.base) x)) = x
+        simpa using h)
+    exact
+      { hom := hom
+        inv := inv
+        hom_inv_id := setPresheafHom_ext F (by
+          change (𝟙 X.base) ≫ (𝟙 X.base) = 𝟙 X.base
+          simp)
+        inv_hom_id := setPresheafHom_ext F (by
+          change (𝟙 X.base) ≫ (𝟙 X.base) = 𝟙 X.base
+          simp) })
+    (fun f => setPresheafHom_ext F (by
+      change f.base ≫ 𝟙 _ = 𝟙 _ ≫ f.base
+      simp))
+
+/-- The other composite of the functors induced by a presheaf isomorphism
+is vertically naturally isomorphic to the identity. -/
+def setPresheafCategoryMapInvCompIso
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (e : F ≅ G) :
+    setPresheafCategoryMap e.inv ⋙ setPresheafCategoryMap e.hom ≅
+      Functor.id (setPresheafCategory G) :=
+  setPresheafCategoryMapCompIso e.symm
+
 /-- A natural isomorphism of set-valued presheaves induces a fibred
 equivalence between their CoGrothendieck projections.  The direction of the
 equivalence follows the direction of the presheaf isomorphism; callers can
@@ -1266,7 +1352,31 @@ theorem setPresheafProjection_isFibredEquivalenceOver_of_iso
     {F G : Cᵒᵖ ⥤ Type uS} (e : F ≅ G) :
     IsFibredEquivalenceOver (setPresheafProjection F)
       (setPresheafProjection G) := by
-  sorry
+  let FG := setPresheafCategoryMap e.hom
+  let GF := setPresheafCategoryMap e.inv
+  have hFG : FG ⋙ setPresheafProjection G = setPresheafProjection F := rfl
+  have hGF : GF ⋙ setPresheafProjection F = setPresheafProjection G := rfl
+  have hpF : (setPresheafProjection F).IsFibredInGroupoids := by
+    apply groupoidPresheafProjection_isFibredInGroupoids
+    intro U
+    change IsGroupoid (Discrete (F.obj (Opposite.op U)))
+    infer_instance
+  have hpG : (setPresheafProjection G).IsFibredInGroupoids := by
+    apply groupoidPresheafProjection_isFibredInGroupoids
+    intro U
+    change IsGroupoid (Discrete (G.obj (Opposite.op U)))
+    infer_instance
+  refine ⟨FG, GF, hFG, hGF, ?_, ?_, ?_, ?_⟩
+  · intro X Y f _
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian _ hpG _
+  · intro X Y f _
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian _ hpF _
+  · refine ⟨setPresheafCategoryMapCompIso e, rfl, ?_⟩
+    intro X
+    rfl
+  · refine ⟨setPresheafCategoryMapInvCompIso e, rfl, ?_⟩
+    intro X
+    rfl
 
 @[simp]
 theorem setPresheaf_id_base

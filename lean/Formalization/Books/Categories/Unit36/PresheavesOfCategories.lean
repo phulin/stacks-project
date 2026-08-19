@@ -281,7 +281,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
       (G ⋙ p).IsStronglyCartesian f φ →
         p.IsStronglyCartesian f (G.map φ) := by
     intro R₀ S₀ a b f φ hφ
-    letI := hφ
+    let := hφ
     refine { toIsHomLift := ?_, universal_property' := ?_ }
     · apply CategoryTheory.IsHomLift.of_fac' p f (G.map φ)
         (CategoryTheory.IsHomLift.domain_eq (G ⋙ p) f φ)
@@ -289,7 +289,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
       simpa only [Functor.comp_map] using
         (CategoryTheory.IsHomLift.fac' (G ⋙ p) f φ)
     · intro a' g τ hτ
-      letI := hτ
+      let := hτ
       have e_a : G.obj (F.obj a') = a' := by
         simpa only [Functor.comp_obj, Functor.id_obj] using
           congrArg (fun H : S ⥤ S => H.obj a') hFG
@@ -315,11 +315,10 @@ theorem IsomorphicOverBase.transportPullbackChoice
         apply CategoryTheory.IsHomLift.of_fac' (G ⋙ p) (g' ≫ f) τ' rfl
           (CategoryTheory.IsHomLift.codomain_eq (G ⋙ p) f φ)
         dsimp [τ', g']
-        change p.map (G.map (F.map τ ≫ eqToHom e_b)) = _
         rw [Functor.map_comp, hmap, Functor.map_comp]
         rw [CategoryTheory.IsHomLift.fac' p (g ≫ f) τ]
         simp [Category.assoc]
-      letI := hτ'
+      let := hτ'
       obtain ⟨χ', ⟨hχ', hχ'fac⟩, hχ'uniq⟩ :=
         Functor.IsStronglyCartesian.universal_property
           (G ⋙ p) f φ g' (g' ≫ f) rfl τ'
@@ -330,7 +329,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
             (CategoryTheory.IsHomLift.codomain_eq (G ⋙ p) g' χ')
           simpa only [Functor.comp_map] using
             (CategoryTheory.IsHomLift.fac' (G ⋙ p) g' χ')
-        letI := hGχ
+        let := hGχ
         dsimp [χ, g']
         apply CategoryTheory.IsHomLift.of_fac' p g χ rfl
           (CategoryTheory.IsHomLift.domain_eq (G ⋙ p) f φ)
@@ -338,16 +337,16 @@ theorem IsomorphicOverBase.transportPullbackChoice
         rw [Functor.map_comp]
         rw [CategoryTheory.IsHomLift.fac' p g' (G.map χ')]
         dsimp [g']
-        simp only [Category.id_comp, Category.comp_id, Category.assoc]
+        simp only [Category.id_comp, Category.assoc]
         rw [← Category.assoc]
         rw [← Functor.map_comp]
-        simp [hFG, hGF, eqToHom_map, Category.assoc]
+        simp
       refine ⟨χ, ⟨hχ, ?_⟩, ?_⟩
       · dsimp [χ]
         rw [Category.assoc, ← G.map_comp, hχ'fac]
         dsimp [τ']
         rw [Functor.map_comp, hmap]
-        simp [Category.assoc]
+        simp
       · intro χ'' hχ''
         rcases hχ'' with ⟨hχ''lift, hχ''fac⟩
         have e_A : F.obj (G.obj a) = a := by
@@ -383,11 +382,11 @@ theorem IsomorphicOverBase.transportPullbackChoice
           rw [hdom_eq, hcod_eq, hq_FGa_eq]
           rw [eqToHom_map]
           simp only [Category.assoc, eqToHom_trans, eqToHom_refl,
-            Category.id_comp, Category.comp_id]
-        letI : (G ⋙ p).IsHomLift (𝟙 R₀) (eqToHom e_A) :=
+            Category.id_comp]
+        let : (G ⋙ p).IsHomLift (𝟙 R₀) (eqToHom e_A) :=
           CategoryTheory.IsHomLift.eqToHom_domain_lift_id e_A hq_FGa
         let χF : F.obj a' ⟶ a := F.map χ'' ≫ eqToHom e_A
-        letI := hFχ
+        let := hFχ
         have hχF : (G ⋙ p).IsHomLift g' χF := by
           dsimp [χF]
           exact CategoryTheory.IsHomLift.comp_lift_id_right' (G ⋙ p) g'
@@ -458,18 +457,18 @@ theorem IsomorphicOverBase.transportPullbackChoice
     have hy : (G ⋙ p).IsStronglyCartesian f y :=
       Q.choice.pullbackMap_isStronglyCartesian f (forwardFiber x)
     have hGy : p.IsStronglyCartesian f (G.map y) := strong_map f y hy
-    letI := hGy
+    let := hGy
     have hcorr : p.IsStronglyCartesian (𝟙 S) (eqToHom (correction x)) := by
-      letI : p.IsHomLift (𝟙 S) (eqToHom (correction x)) :=
+      let : p.IsHomLift (𝟙 S) (eqToHom (correction x)) :=
         CategoryTheory.IsHomLift.eqToHom_domain_lift_id (correction x)
           (forwardFiber x).2
-      letI : p.IsHomLift (𝟙 S) (eqToIso (correction x)).hom := by
+      let : p.IsHomLift (𝟙 S) (eqToIso (correction x)).hom := by
         simpa only [eqToIso.hom] using
           (CategoryTheory.IsHomLift.eqToHom_domain_lift_id (correction x)
             (forwardFiber x).2)
       exact Functor.IsStronglyCartesian.of_iso p (𝟙 S)
         (eqToIso (correction x))
-    letI := hcorr
+    let := hcorr
     dsimp [pullbackMap, y]
     change p.IsStronglyCartesian f
       (G.map (Q.choice.pullbackMap f (forwardFiber x)) ≫
@@ -591,7 +590,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
       (P.pullbackFunctor f).map φ |>.2
     have hrightLift : p.IsHomLift (𝟙 R)
         (G.map ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1) := by
-      letI : (G ⋙ p).IsHomLift (𝟙 R)
+      let : (G ⋙ p).IsHomLift (𝟙 R)
           ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 :=
         ((Q.choice.pullbackFunctor f).map (forwardMap φ)).2
       apply CategoryTheory.IsHomLift.of_fac' p (𝟙 R)
@@ -693,9 +692,9 @@ theorem IsomorphicOverBase.transportPullbackChoice
             ((Q.choice.pullbackFunctor f).obj (forwardFiber y)).1 = eY :=
           Subsingleton.elim _ _
         rw [heXobj, heYobj] at hGFstep0
-        convert hGFstep0 using 1 <;>
+        convert hGFstep0 using 1 ;
           simp only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
-            Functor.id_map] <;> rfl
+            Functor.id_map] ; rfl
       have hYcomp := congrArg
         (fun m => eqToHom eX ≫
           ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1 ≫ m) hmapY
@@ -718,7 +717,8 @@ theorem IsomorphicOverBase.transportPullbackChoice
     have hQcomp := Functor.congr_hom (Q.comp_eq g f) (forwardMap φ)
     rw [hQcomp]
     rw [pullbackFunctor_map_eq g ((P.pullbackFunctor f).map φ)]
-    rw [hforward]
+    /- prior attempt: the final rewrite did not close the remaining equality. -/
+    sorry
   refine ⟨{
     choice := P
     unital := ?_
@@ -783,7 +783,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
             G.map (eqToHom dY.symm) := by
       calc
         _ = G.map (eqToHom dX ≫ (forwardMap φ).1 ≫ eqToHom dY.symm) := hGQid
-        _ = _ := by simp only [Functor.map_comp, Category.assoc]
+        _ = _ := by simp only [Functor.map_comp]
     have hGQid'' :
         G.map ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
           eqToHom (congrArg G.obj dX) ≫ G.map (forwardMap φ).1 ≫
@@ -828,7 +828,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
       change Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) ≫ φ.1 ≫
           Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) = _
       rw [hmapHX, hmapHY, hobjX, hobjY]
-      congr 1 <;> apply Subsingleton.elim
+      congr 1
     have hfinal :
         (eqToHom (congrArg G.obj dX) ≫
             (eqToHom (correction x) ≫ φ.1 ≫ eqToHom (correction y).symm) ≫

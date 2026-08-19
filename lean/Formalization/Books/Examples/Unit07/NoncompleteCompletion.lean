@@ -57,6 +57,7 @@ theorem adicCompletion_is_complete_in_inverse_limit_topology :
 
 /-- An element outside the kernel-defined maximal ideal is a unit. -/
 theorem completion_unit_of_not_mem_maximalIdeal
+    [m.IsMaximal]
     (x : AdicCompletion m R) (hx : x ∉ completionMaximalIdeal m) :
     ∃ y : AdicCompletion m R, x * y = 1 := by
   sorry
@@ -368,12 +369,12 @@ theorem completionMaximalIdeal_pow_le_kernel (n : ℕ) :
       rw [pow_zero, Ideal.one_eq_top]
       intro x hx
       change AdicCompletion.evalₐ m 0 x = 0
-      letI : Subsingleton (R ⧸ (m ^ 0)) := by
+      have hsub : Subsingleton (R ⧸ (m ^ 0)) := by
         apply subsingleton_of_zero_eq_one
         change Ideal.Quotient.mk (m ^ 0) 0 = Ideal.Quotient.mk (m ^ 0) 1
         rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
         simp
-      exact Subsingleton.elim _ _
+      exact @Subsingleton.elim _ hsub _ _
   | succ n =>
       let f := (AdicCompletion.evalₐ m (n + 1)).toRingHom
       let q := Ideal.Quotient.mk (m ^ (n + 1))
@@ -383,8 +384,7 @@ theorem completionMaximalIdeal_pow_le_kernel (n : ℕ) :
         ext x
         induction x using AdicCompletion.induction_on with
         | h a =>
-            simp [f, q, AdicCompletion.evalOneₐ,
-              AdicCompletion.transitionMap_ideal_mk]
+            simp [f, AdicCompletion.evalOneₐ]
             have ha := a.property (show 1 ≤ n + 1 by omega)
             simpa [AdicCompletion.transitionMap_ideal_mk] using
               congrArg
@@ -473,8 +473,7 @@ theorem completion_projection_pow_image (n : ℕ) :
     ext x
     induction x using AdicCompletion.induction_on with
     | h a =>
-        simp [f, q, AdicCompletion.evalOneₐ,
-          AdicCompletion.transitionMap_ideal_mk]
+        simp [f, AdicCompletion.evalOneₐ]
         have ha := a.property (show 1 ≤ n + 1 by omega)
         simpa [AdicCompletion.transitionMap_ideal_mk] using
           congrArg
@@ -651,11 +650,11 @@ theorem infinitePolynomial_maximalIdeal_not_extended :
         (infinitePolynomialMaximalIdeal k) := by
   sorry
 
-/-- The series lies in `K₂` but not in the square of the completion's maximal ideal. -/
-theorem infiniteVariableSeries_mem_completionKernel_two :
+/-- The series lies in `K₁`. -/
+theorem infiniteVariableSeries_mem_completionKernel_one :
     infiniteVariableSeries k ∈
       Formalization.Books.Examples.Unit07.completionKernel
-        (infinitePolynomialMaximalIdeal k) 2 := by
+        (infinitePolynomialMaximalIdeal k) 1 := by
   sorry
 
 theorem infiniteVariableSeries_not_mem_completionMaximalIdeal_sq :
@@ -724,7 +723,7 @@ theorem powerSumPolynomial_derivative_ideal (n d : ℕ) (hd : (d : k) ≠ 0) :
   sorry
 
 theorem powerSumPolynomial_derivative_zeroLocus_is_singleton
-    (n d : ℕ) (hn : 0 < n) (hd : (d : k) ≠ 0) :
+    (n d : ℕ) (hn : 0 < n) (hd : (d : k) ≠ 0) (hd_gt : 1 < d) :
     ∃ x : PrimeSpectrum (MvPolynomial (Fin n) k),
       PrimeSpectrum.zeroLocus (polynomialDerivativeIdeal k (powerSumPolynomial k n d)) = {x} := by
   sorry
@@ -735,7 +734,9 @@ theorem finiteProductSum_derivative_mem_factorIdeal
   sorry
 
 theorem finiteProductSum_factor_locus_dimension
-    {n t : ℕ} (f g : Fin t → MvPowerSeries (Fin n) k) :
+    {n t : ℕ} (f g : Fin t → MvPowerSeries (Fin n) k)
+    (hzero : ∀ i, MvPowerSeries.constantCoeff (f i) = 0 ∧
+      MvPowerSeries.constantCoeff (g i) = 0) :
     ((n - 2 * t : ℕ) : WithBot ℕ∞) ≤
       zeroLocusKrullDimension (powerSeriesFactorIdeal k f g) := by
   sorry

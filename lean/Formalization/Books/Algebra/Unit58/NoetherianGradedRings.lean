@@ -712,6 +712,91 @@ theorem shifted_integerBinomial_is_numerical (i : ℕ) :
           simp [hxi]
   simpa [s] using hsum.symm
 
+/-! ## Associated graded modules and Hilbert functions -/
+
+/- The quotient is written with the denominator pulled back to the subtype
+   in the numerator.  This keeps the degreewise pieces definitionally equal
+   to the usual quotients `I^n/I^(n+1)` and `I^n M/I^(n+1) M`. -/
+abbrev associatedGradedSubquotient
+    {R M : Type*} [Ring R] [AddCommGroup M] [Module R M]
+    (P Q : Submodule R M) : Type _ :=
+  HasQuotient.Quotient (P : Type _) (Q.comap P.subtype)
+
+/-- The degree-`n` component `I^n/I^(n+1)` of the associated graded ring. -/
+abbrev associatedGradedRingPiece
+    {R : Type u} [CommRing R] (I : Ideal R) (n : ℕ) : Type u :=
+  associatedGradedSubquotient (I ^ n : Submodule R R) (I ^ (n + 1) : Submodule R R)
+
+/-- The degree-`n` component `I^n M/I^(n+1) M` of the associated graded
+module. -/
+abbrev associatedGradedModulePiece
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) (n : ℕ) : Type _ :=
+  associatedGradedSubquotient (I ^ n • (⊤ : Submodule R M))
+    (I ^ (n + 1) • (⊤ : Submodule R M))
+
+/-- The associated graded ring `Gr_I(R)`, with its direct-sum carrier. -/
+abbrev associatedGradedRing
+    {R : Type u} [CommRing R] (I : Ideal R) : Type u :=
+  DirectSum ℕ (associatedGradedRingPiece I)
+
+/-- The associated graded module `Gr_I(M)`, with its direct-sum carrier. -/
+abbrev associatedGradedModule
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) : Type _ :=
+  DirectSum ℕ (fun n => associatedGradedModulePiece (M := M) I n)
+
+/-- The canonical ring operations on the associated graded ring. -/
+theorem associatedGradedRing_gcommRing_exists
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
+  sorry
+
+noncomputable instance associatedGradedRing_gcommRing
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    DirectSum.GCommRing (associatedGradedRingPiece I) :=
+  Classical.choice (associatedGradedRing_gcommRing_exists I)
+
+/-- The canonical graded-module action of `Gr_I(R)` on `Gr_I(M)`. -/
+theorem associatedGradedModule_gmodule_exists
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n)) := by
+  sorry
+
+noncomputable instance associatedGradedModule_gmodule
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) :=
+  Classical.choice (associatedGradedModule_gmodule_exists I)
+
+/-- The associated graded module is finite over the associated graded ring. -/
+theorem associatedGradedModule_finite
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    [IsNoetherianRing R] [Module.Finite R M] (I : Ideal R) :
+    Module.Finite (associatedGradedRing I) (associatedGradedModule (M := M) I) := by
+  sorry
+
+/- The degreewise length function used by the ideal Hilbert function. -/
+abbrev idealPowerPiece
+    {R : Type u} [CommRing R] (I : Ideal R) (M : Type v)
+    [AddCommGroup M] [Module R M] (n : ℕ) : Type v :=
+  associatedGradedModulePiece (M := M) I n
+
+def idealHilbertFunction
+    {R : Type u} [CommRing R] (I : Ideal R) (M : Type v)
+    [AddCommGroup M] [Module R M] (n : ℕ) : ℕ :=
+  (Module.length R (associatedGradedModulePiece (M := M) I n)).toNat
+
+theorem associatedGradedModulePiece_length_eq_idealHilbertFunction
+    {R : Type u} [CommRing R] (I : Ideal R) (M : Type v)
+    [AddCommGroup M] [Module R M] (n : ℕ) :
+    (Module.length R (associatedGradedModulePiece (M := M) I n)).toNat =
+      idealHilbertFunction I M n := by
+  rfl
+
 /-! ## Finitely generated graded modules and Hilbert functions -/
 
 /- A degree-zero scalar preserves each graded component.  Chapter 56 records
@@ -757,7 +842,7 @@ theorem graded_module_component_finite
     [Algebra.FiniteType (degreeZeroSubring G) S] [Module.Finite S M] :
     ∀ n : ℤ, Module.Finite (degreeZeroSubring G) (𝓜.component n) := by
   intro n
-  letI : Module (degreeZeroSubring G) (𝓜.component n) :=
+  let _ : Module (degreeZeroSubring G) (𝓜.component n) :=
     gradedComponentDegreeZeroModule G 𝓜 n
   exact Formalization.Books.Algebra.Unit56.graded_module_component_finite
     G 𝓜 n (by intro c y; rfl)

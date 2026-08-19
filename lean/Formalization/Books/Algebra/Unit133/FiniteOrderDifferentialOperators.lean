@@ -3259,12 +3259,107 @@ theorem differentialOperator_tensor_product_base_change
     [IsScalarTower R (A ⊗[R] B) (M' ⊗[R] N)]
     (hM : ∀ (a : A) (b : B) (m : M) (n : N),
       (a ⊗ₜ[R] b) • (m ⊗ₜ[R] n) = (a • m) ⊗ₜ[R] (b • n))
-    (hM' : ∀ (a : A) (b : B) (m : M') (n : N),
+      (hM' : ∀ (a : A) (b : B) (m : M') (n : N),
       (a ⊗ₜ[R] b) • (m ⊗ₜ[R] n) = (a • m) ⊗ₜ[R] (b • n)) :
     IsDifferentialOperator (R := R) (S := A ⊗[R] B) k
       (tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
         (N := N) D.1) := by
-  sorry
+  induction k with
+  | zero =>
+      intro s x
+      induction s using TensorProduct.induction_on with
+      | zero => simp
+      | tmul a b =>
+          induction x using TensorProduct.induction_on with
+          | zero => simp
+          | tmul m n =>
+              rw [hM a b m n]
+              simp [tensorProductDifferentialOperator, D.2 a m, hM' a b]
+          | add x y hx hy =>
+              simp [add_smul, map_add, hx, hy]
+      | add s t hs ht =>
+          simp [add_smul, map_add, hs, ht]
+  | succ k ih =>
+      intro s
+      induction s using TensorProduct.induction_on with
+      | zero =>
+          have hz :
+              differentialOperatorCommutator (R := R) (S := A ⊗[R] B)
+                  (tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
+                    (N := N) D.1) 0 = 0 := by
+            apply LinearMap.ext
+            intro x
+            simp [differentialOperatorCommutator]
+          rw [hz]
+          exact isDifferentialOperator_zero (R := R) (S := A ⊗[R] B) k
+      | tmul a b =>
+          let Da : M →ₗ[R] M' :=
+            differentialOperatorCommutator (R := R) (S := A) D.1 a
+          let E : M ⊗[R] N →ₗ[R] M' ⊗[R] N :=
+            tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
+              (N := N) Da
+          let c : A ⊗[R] B := 1 ⊗ₜ[R] b
+          let L : M' ⊗[R] N →ₗ[R] M' ⊗[R] N :=
+            DistribSMul.toLinearMap R (M' ⊗[R] N) c
+          have hDa : IsDifferentialOperator (R := R) (S := A) k Da := by
+            exact D.2 a
+          have hE : IsDifferentialOperator (R := R) (S := A ⊗[R] B) k E := by
+            exact ih ⟨Da, hDa⟩
+          have hL : IsDifferentialOperator (R := R) (S := A ⊗[R] B) 0 L := by
+            intro t z
+            simp [L, smul_smul, mul_comm]
+          have hcomp : IsDifferentialOperator (R := R) (S := A ⊗[R] B) (k + 0)
+              (L.comp E) :=
+            differentialOperator_comp_isDifferentialOperator
+              (R := R) (S := A ⊗[R] B) k 0 E L hE hL
+          have hEq :
+              differentialOperatorCommutator (R := R) (S := A ⊗[R] B)
+                  (tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
+                    (N := N) D.1) (a ⊗ₜ[R] b) =
+                L.comp E := by
+            apply LinearMap.ext
+            intro x
+            induction x using TensorProduct.induction_on with
+            | zero => simp [differentialOperatorCommutator, L, E,
+                tensorProductDifferentialOperator]
+            | tmul m n =>
+                simp only [differentialOperatorCommutator, LinearMap.sub_apply,
+                  LinearMap.comp_apply]
+                change (tensorProductDifferentialOperator (R := R) (M := M)
+                    (M' := M') (N := N) D.1)
+                      ((a ⊗ₜ[R] b) • (m ⊗ₜ[R] n)) -
+                    (a ⊗ₜ[R] b) •
+                      (tensorProductDifferentialOperator (R := R) (M := M)
+                        (M' := M') (N := N) D.1) (m ⊗ₜ[R] n) =
+                  c • E (m ⊗ₜ[R] n)
+                rw [hM a b m n]
+                simp only [E, tensorProductDifferentialOperator,
+                  TensorProduct.map_tmul, LinearMap.id_apply]
+                rw [hM' a b (D.1 m) n]
+                rw [hM' 1 b (Da m) n]
+                simp only [one_smul]
+                rw [← TensorProduct.sub_tmul]
+                rfl
+            | add x y hx hy =>
+                simpa only [map_add, LinearMap.comp_apply] using
+                  congrArg₂ (· + ·) hx hy
+          rw [hEq]
+          simpa using hcomp
+      | add s t hs ht =>
+          have hcomm :
+              differentialOperatorCommutator (R := R) (S := A ⊗[R] B)
+                  (tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
+                    (N := N) D.1) (s + t) =
+                differentialOperatorCommutator (R := R) (S := A ⊗[R] B)
+                    (tensorProductDifferentialOperator (R := R) (M := M) (M' := M') (N := N) D.1) s +
+                  differentialOperatorCommutator (R := R) (S := A ⊗[R] B)
+                    (tensorProductDifferentialOperator (R := R) (M := M) (M' := M') (N := N) D.1) t := by
+            apply LinearMap.ext
+            intro x
+            simp [differentialOperatorCommutator, add_smul, map_add,
+              sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+          rw [hcomm]
+          exact isDifferentialOperator_add (R := R) (S := A ⊗[R] B) k _ _ hs ht
 
 end DifferentialOperatorTensorProduct
 

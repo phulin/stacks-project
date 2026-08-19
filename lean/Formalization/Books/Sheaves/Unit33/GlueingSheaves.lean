@@ -898,7 +898,7 @@ instance : Category (SheafGlueingData C U) where
     simp
   assoc f g h := by
     ext i
-    simp [Category.assoc]
+    simp [Category.assoc, eqToHom_map, openSubsetInclusion_comp_openInclusion]
 
 end SheafGlueingData
 
@@ -1408,7 +1408,66 @@ theorem canonicalSheafGlueingHom_comm
       (canonicalSheafGlueingTransition (U := U) F i j).hom ≫
         (sheafMapRestriction C (show U i ⊓ U j ≤ U j from inf_le_right)).map
           ((sheafRestriction C (U j)).map f) := by
-  sorry
+  have hi :
+      (sheafMapRestriction C (show U i ⊓ U j ≤ U i from inf_le_left)).map
+          ((sheafRestriction C (U i)).map f) ≫
+        (sheafRestrictionRestrictionIso C
+          (show U i ⊓ U j ≤ U i from inf_le_left) G).hom =
+      (sheafRestrictionRestrictionIso C
+          (show U i ⊓ U j ≤ U i from inf_le_left) F).hom ≫
+        (sheafRestriction C (U i ⊓ U j)).map f := by
+    dsimp [sheafRestrictionRestrictionIso]
+    change
+      (sheafPullback C (openInclusion (U i)) ⋙ sheafPullback C
+        (openSubsetInclusion (show U i ⊓ U j ≤ U i from inf_le_left))).map f ≫ _ = _
+    rw [(sheafPullbackCompIso C
+      (openSubsetInclusion (show U i ⊓ U j ≤ U i from inf_le_left))
+      (openInclusion (U i))).inv.naturality_assoc f]
+    have heq := eqToHom_naturality
+      (fun q : openSubspace (U i ⊓ U j) ⟶ X =>
+        (sheafPullback C q).map f)
+      (openSubsetInclusion_comp_openInclusion
+        (show U i ⊓ U j ≤ U i from inf_le_left))
+    simpa only [Category.assoc] using
+      congrArg
+        (fun k =>
+          (sheafPullbackCompIso C
+            (openSubsetInclusion (show U i ⊓ U j ≤ U i from inf_le_left))
+            (openInclusion (U i))).inv.app F ≫ k) heq
+  have hj :
+      (sheafRestrictionRestrictionIso C
+          (show U i ⊓ U j ≤ U j from inf_le_right) F).inv ≫
+        (sheafMapRestriction C (show U i ⊓ U j ≤ U j from inf_le_right)).map
+          ((sheafRestriction C (U j)).map f) =
+      (sheafRestriction C (U i ⊓ U j)).map f ≫
+        (sheafRestrictionRestrictionIso C
+          (show U i ⊓ U j ≤ U j from inf_le_right) G).inv := by
+    dsimp [sheafRestrictionRestrictionIso]
+    have hjmap :
+        (sheafMapRestriction C (show U i ⊓ U j ≤ U j from inf_le_right)).map
+            ((sheafRestriction C (U j)).map f) =
+          (sheafPullback C (openInclusion (U j)) ⋙ sheafPullback C
+            (openSubsetInclusion (show U i ⊓ U j ≤ U j from inf_le_right))).map f := rfl
+    rw [hjmap]
+    simp only [Category.assoc]
+    rw [← (sheafPullbackCompIso C
+      (openSubsetInclusion (show U i ⊓ U j ≤ U j from inf_le_right))
+      (openInclusion (U j))).hom.naturality f]
+    have heq := eqToHom_naturality
+      (fun q : openSubspace (U i ⊓ U j) ⟶ X =>
+        (sheafPullback C q).map f)
+      (openSubsetInclusion_comp_openInclusion
+        (show U i ⊓ U j ≤ U j from inf_le_right)).symm
+    simpa only [Category.assoc] using
+      congrArg
+        (fun k => k ≫
+          (sheafPullbackCompIso C
+            (openSubsetInclusion (show U i ⊓ U j ≤ U j from inf_le_right))
+            (openInclusion (U j))).hom.app G) heq.symm
+  dsimp [canonicalSheafGlueingData, canonicalSheafGlueingTransition]
+  rw [← Category.assoc, hi]
+  simp only [Category.assoc]
+  rw [hj]
 
 /-- The functor sending a sheaf to its local restrictions and transition maps. -/
 noncomputable def sheafToGlueingData :
@@ -1436,7 +1495,116 @@ an equivalence between ambient sheaves and glueing data. -/
 theorem sheafToGlueingData_isEquivalence
     (hU : TopologicalSpace.IsOpenCover U) :
     (sheafToGlueingData (C := C) (U := U)).IsEquivalence := by
-  sorry
+  refine
+    { full := by
+        refine { map_surjective := ?_ }
+        intro F G H
+        change SheafGlueingData.Hom _ _ at H
+        let φ : ∀ i, (sheafRestriction C (U i)).obj F ⟶
+            (sheafRestriction C (U i)).obj G := fun i => H.app i
+        have hφ : SheafMapGlueingCondition C U φ := by
+          intro i j
+          have hh := congrArg
+            (fun k =>
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U i from inf_le_left) F).inv ≫ k ≫
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U j from inf_le_right) G).hom) (H.comm i j)
+          simpa [φ, SheafMapGlueingCondition, sheafMap_restrictToOpen,
+            sheafToGlueingData,
+            canonicalSheafGlueingData, canonicalSheafGlueingTransition,
+            Category.assoc] using hh
+        obtain ⟨ψ, hψ, _⟩ :=
+          glue_maps_of_concrete_category C U hU φ hφ
+        refine ⟨ψ, ?_⟩
+        apply SheafGlueingData.Hom.ext
+        funext i
+        change (sheafRestriction C (U i)).map ψ = H.app i
+        exact hψ i
+      faithful := by
+        refine { map_injective := ?_ }
+        intro F G f g h
+        let φ : ∀ i, (sheafRestriction C (U i)).obj F ⟶
+            (sheafRestriction C (U i)).obj G := fun i =>
+              (sheafRestriction C (U i)).map f
+        have hφ : SheafMapGlueingCondition C U φ := by
+          intro i j
+          have hh := congrArg
+            (fun k =>
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U i from inf_le_left) F).inv ≫ k ≫
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U j from inf_le_right) G).hom)
+            (canonicalSheafGlueingHom_comm (C := C) (U := U) f i j)
+          simpa [φ, SheafMapGlueingCondition, sheafMap_restrictToOpen,
+            sheafToGlueingData,
+            canonicalSheafGlueingData, canonicalSheafGlueingTransition,
+            Category.assoc] using hh
+        obtain ⟨ψ, hψ, hψ_unique⟩ :=
+          glue_maps_of_concrete_category C U hU φ hφ
+        have hf : ∀ i, (sheafRestriction C (U i)).map f = φ i := by
+          intro i
+          rfl
+        have hg : ∀ i, (sheafRestriction C (U i)).map g = φ i := by
+          intro i
+          change (sheafRestriction C (U i)).map g =
+            (sheafRestriction C (U i)).map f
+          have hh := congrArg (fun q => q.app i) h
+          change (sheafRestriction C (U i)).map f =
+            (sheafRestriction C (U i)).map g at hh
+          exact hh.symm
+        exact (hψ_unique f hf).trans (hψ_unique g hg).symm
+      essSurj := by
+        refine { mem_essImage := ?_ }
+        intro D
+        rcases exists_sheafGlueingSolution hU D with ⟨S⟩
+        let αhom : SheafGlueingData.Hom
+            (canonicalSheafGlueingData (U := U) S.sheaf) D := by
+          dsimp [canonicalSheafGlueingData]
+          refine { app := fun i => (S.iso i).hom, comm := ?_ }
+          intro i j
+          have hS := congrArg
+            (fun k =>
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U i from inf_le_left) S.sheaf).hom ≫ k)
+            (S.comm i j)
+          simpa [sheafToGlueingData, canonicalSheafGlueingData,
+            canonicalSheafGlueingTransition,
+            Category.assoc] using hS
+        let αinv : SheafGlueingData.Hom D
+            (canonicalSheafGlueingData (U := U) S.sheaf) := by
+          dsimp [canonicalSheafGlueingData]
+          refine { app := fun i => (S.iso i).inv, comm := ?_ }
+          intro i j
+          have hhom := congrArg
+            (fun k =>
+              (sheafRestrictionRestrictionIso C
+                (show U i ⊓ U j ≤ U i from inf_le_left) S.sheaf).hom ≫ k)
+            (S.comm i j)
+          have hinv := congrArg
+            (fun k =>
+              (sheafMapRestriction C
+                (show U i ⊓ U j ≤ U i from inf_le_left)).map (S.iso i).inv ≫
+                k ≫
+              (sheafMapRestriction C
+                (show U i ⊓ U j ≤ U j from inf_le_right)).map (S.iso j).inv)
+            hhom
+          simpa [sheafToGlueingData, canonicalSheafGlueingData,
+            canonicalSheafGlueingTransition,
+            Category.assoc] using hinv.symm
+        let α : (sheafToGlueingData (C := C) (U := U)).obj S.sheaf ≅ D := by
+          change canonicalSheafGlueingData (U := U) S.sheaf ≅ D
+          refine Iso.mk αhom αinv ?_ ?_
+          · apply SheafGlueingData.Hom.ext
+            funext i
+            change (S.iso i).hom ≫ (S.iso i).inv = 𝟙 _
+            simp
+          · apply SheafGlueingData.Hom.ext
+            funext i
+            change (S.iso i).inv ≫ (S.iso i).hom = 𝟙 _
+            simp
+        exact ⟨S.sheaf, ⟨α⟩⟩
+    }
 
 /-- A categorical equivalence realizing the mapping-property lemma. -/
 noncomputable def sheafGlueingEquivalence

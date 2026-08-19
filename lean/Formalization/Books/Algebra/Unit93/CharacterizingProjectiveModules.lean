@@ -304,7 +304,6 @@ theorem integerPowerSeriesModP_countablyGenerated
       apply Subtype.ext
       dsimp [u]
       rw [Submodule.coe_sum]
-      simp only [Submodule.coe_smul]
       calc
         g = ∑ i ∈ Finset.range k,
             PowerSeries.monomial i (PowerSeries.coeff i (x : PowerSeries ℤ)) := hpoly
@@ -816,8 +815,8 @@ theorem projectivity_characterization
           IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M) := by
   constructor
   · intro hP
-    letI : Module.Projective R M := hP
-    have hflat : Module.Flat R M := Module.Flat.of_projective
+    have hflat : Module.Flat R M :=
+      @Module.Flat.of_projective R M _ _ _ hP
     have hML : IsMittagLefflerModule (ModuleCat.of R M) :=
       Formalization.Books.Algebra.Unit91.isMittagLefflerModule_of_projective
         (ModuleCat.of R M) hP
@@ -831,9 +830,8 @@ theorem projectivity_characterization
   · rintro ⟨hflat, hML, ⟨ι, N, hN, ⟨e⟩⟩⟩
     classical
     have hflatDS : Module.Flat R (⨁ i, (N i : Type v)) := by
-      letI : Module.Flat R M := hflat
-      exact Module.Flat.of_linearEquiv e.symm
-    letI : Module.Flat R (⨁ i, (N i : Type v)) := hflatDS
+      exact @Module.Flat.of_linearEquiv R M (⨁ i, (N i : Type v))
+        _ _ _ _ _ hflat e.symm
     have hMLDS : IsMittagLefflerModule
         (ModuleCat.of R (⨁ i, (N i : Type v))) :=
       isMittagLefflerModule_of_linearEquiv_unit93 e hML
@@ -847,19 +845,18 @@ theorem projectivity_characterization
         ext x
         simp [inc, proj]
       have hflat_i : Module.Flat R (N i : Type v) :=
-        Module.Flat.of_retract inc proj hproj
+        Module.Flat.of_retract (f := hflatDS) inc proj hproj
       have hML_i : IsMittagLefflerModule (N i) := by
         change IsMittagLefflerModule (ModuleCat.of R (N i : Type v))
         exact isMittagLefflerModule_of_split_unit93 inc proj hproj hMLDS
       exact projective_of_flat_of_mittagLeffler_of_countablyGenerated
         hflat_i hML_i (hN i)
-    letI (i : ι) : Module.Projective R (N i : Type v) := hprojN i
     have hprojDS : Module.Projective R (⨁ i, (N i : Type v)) := by
       apply Module.Projective.directSum_iff.mpr
       intro i
       exact hprojN i
-    letI : Module.Projective R (⨁ i, (N i : Type v)) := hprojDS
-    exact Module.Projective.of_equiv' e.symm
+    exact @Module.Projective.of_equiv' R _ M _ _ (⨁ i, (N i : Type v)) _ _
+      hprojDS e.symm
 
 /-! ## Universally injective descent -/
 
@@ -880,8 +877,8 @@ private theorem flat_of_universallyInjective_into_flat_unit93
   apply hflat_iff.2
   intro P Q _ _ _ _ i hi
   have hiN : Function.Injective (i.lTensor N) := by
-    letI : Module.Flat R N := hNflat
-    exact Module.Flat.lTensor_preserves_injective_linearMap i hi
+    exact @Module.Flat.lTensor_preserves_injective_linearMap R N P Q _ _ _ _ _ _ _
+      hNflat i hi
   have hfP : Function.Injective (f.rTensor P) := hf P
   have hcomm : (i.lTensor N).comp (f.rTensor P) =
       (f.rTensor Q).comp (i.lTensor M) := by

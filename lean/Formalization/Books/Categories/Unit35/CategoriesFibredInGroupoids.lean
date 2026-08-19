@@ -2787,8 +2787,208 @@ theorem amelioration_unique
       (conj_eqToHom_iff_heq
         ((structureFunctor X'.underlying).map (i z))
         (𝟙 ((structureFunctor X'.underlying).obj (K.obj z))) rfl hbase_eq.symm).2
-        hbase_heq
-  sorry
+         hbase_heq
+  let _ : H.IsEquivalence :=
+    Functor.IsEquivalence.mk' K0 unit0'.symm counit0'
+  have hKeq : K.IsEquivalence :=
+    Functor.isEquivalence_of_iso η.symm
+  let _ : K.IsEquivalence := hKeq
+  let eK := K.asEquivalence
+  let Lobj (b : X'.underlying.left) := eK.inverse.obj b
+  let eps (b : X'.underlying.left) : K.obj (Lobj b) ≅ b :=
+    eK.counitIso.app b
+  have hKobj (a : X''.underlying.left) :
+      q.obj a = p.obj (K.obj a) :=
+    (congrArg (fun R : X''.underlying.left ⥤ Y.underlying.left => R.obj a) hKp).symm
+  have hKobj' (a : X''.underlying.left) :
+      p.obj (K.obj a) = q.obj a := (hKobj a).symm
+  let z (b : X'.underlying.left) :=
+    Classical.choose
+      (hp2.exists_lift (p.map (eps b).inv) (hKobj (Lobj b)))
+  let j (b : X'.underlying.left) : z b ⟶ Lobj b :=
+    Classical.choose
+      (Classical.choose_spec
+        (hp2.exists_lift (p.map (eps b).inv) (hKobj (Lobj b))))
+  have hj (b : X'.underlying.left) :
+      q.IsHomLift (p.map (eps b).inv) (j b) :=
+    Classical.choose_spec
+      (Classical.choose_spec
+        (hp2.exists_lift (p.map (eps b).inv) (hKobj (Lobj b))))
+  let hz (b : X'.underlying.left) : q.obj (z b) = p.obj b := by
+    let _ : q.IsHomLift (p.map (eps b).inv) (j b) := hj b
+    exact CategoryTheory.IsHomLift.domain_eq q (p.map (eps b).inv) (j b)
+  let vhom (b : X'.underlying.left) : K.obj (z b) ⟶ b :=
+    K.map (j b) ≫ (eps b).hom
+  have hvmap (b : X'.underlying.left) :
+      p.map (vhom b) =
+        eqToHom ((hKobj (z b)).symm.trans (hz b)) := by
+    let _ : q.IsHomLift (p.map (eps b).inv) (j b) := hj b
+    have hjfac := CategoryTheory.IsHomLift.fac' q (p.map (eps b).inv) (j b)
+    have hKj := Functor.congr_hom hKp (j b)
+    have hKj' :
+        p.map (K.map (j b)) =
+          eqToHom (hKobj' (z b)) ≫ q.map (j b) ≫
+            eqToHom (hKobj' (Lobj b)).symm := by
+      simpa only [Functor.comp_map] using hKj
+    rw [Functor.map_comp, hKj']
+    simpa [vhom, hjfac, Category.assoc] using
+      (Iso.inv_hom_id_assoc (eps b) (eqToHom (hz b)).symm)
+  have hj_iso (b : X'.underlying.left) : IsIso (j b) := by
+    let _ : q.IsHomLift (p.map (eps b).inv) (j b) := hj b
+    let _ : q.IsStronglyCartesian (q.map (j b)) (j b) :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian q hp2 (j b)
+    let _ : IsIso (q.map (j b)) := by
+      rw [CategoryTheory.IsHomLift.fac' q (p.map (eps b).inv) (j b)]
+      infer_instance
+    exact stronglyCartesian_of_base_isIso q (q.map (j b)) (j b)
+  let v (b : X'.underlying.left) : K.obj (z b) ≅ b := by
+    let _ : IsIso (j b) := hj_iso b
+    let _ : IsIso (K.map (j b)) := Functor.map_isIso K (j b)
+    let _ : IsIso (vhom b) := inferInstance
+    exact asIso (vhom b)
+  have hv (b : X'.underlying.left) :
+      p.map (v b).hom =
+        eqToHom ((hKobj (z b)).symm.trans (hz b)) := by
+    simpa [v] using hvmap b
+  have hv_inv (b : X'.underlying.left) :
+      p.map (v b).inv =
+        eqToHom ((hKobj (z b)).symm.trans (hz b)).symm := by
+    apply (cancel_mono (p.map (v b).hom)).1
+    rw [← p.map_comp, hv]
+    simp
+  let raw {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      K.obj (z b₁) ⟶ K.obj (z b₂) :=
+    (v b₁).hom ≫ f ≫ (v b₂).inv
+  let lm {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      z b₁ ⟶ z b₂ := K.preimage (raw f)
+  have hlm {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      K.map (lm f) = raw f := K.map_preimage _
+  let Ls : X'.underlying.left ⥤ X''.underlying.left := {
+    obj := z
+    map := lm
+    map_id := by
+      intro b
+      apply hKeq.faithful.map_injective
+      rw [hlm]
+      simp [raw]
+    map_comp := by
+      intro b₁ b₂ b₃ f g
+      apply hKeq.faithful.map_injective
+      rw [Functor.map_comp, hlm, hlm, hlm]
+      simp [raw, Category.assoc]
+  }
+  have hLsmap {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      Ls.map f = lm f := rfl
+  have hKlm {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      p.map (K.map (lm f)) =
+        eqToHom (hKobj' (z b₁)) ≫ q.map (lm f) ≫
+          eqToHom (hKobj' (z b₂)).symm := by
+    simpa only [Functor.comp_map] using Functor.congr_hom hKp (lm f)
+  have hLsmap_base {b₁ b₂ : X'.underlying.left} (f : b₁ ⟶ b₂) :
+      q.map (Ls.map f) =
+        eqToHom (hz b₁) ≫ p.map f ≫ eqToHom (hz b₂).symm := by
+    calc
+      q.map (Ls.map f) =
+          eqToHom ((hKobj' (z b₁)).symm) ≫
+            p.map (K.map (lm f)) ≫ eqToHom (hKobj' (z b₂)) := by
+        rw [hLsmap, hKlm]
+        simp
+      _ = eqToHom (hz b₁) ≫ p.map f ≫ eqToHom (hz b₂).symm := by
+        simp only [hlm, raw, Functor.map_comp, Category.assoc]
+        rw [hv, hv_inv]
+        simp [Category.assoc, eqToHom_trans]
+  have hLsq : Ls ⋙ q = p := by
+    refine CategoryTheory.Functor.ext (fun b => hz b) (fun b₁ b₂ f => ?_)
+    exact hLsmap_base f
+  let counit : Ls ⋙ K ≅ 𝟭 X'.underlying.left :=
+    NatIso.ofComponents v (by
+      intro b₁ b₂ f
+      change K.map (Ls.map f) ≫ (v b₂).hom = (v b₁).hom ≫ f
+      rw [hLsmap, hlm]
+      simp [raw, Category.assoc])
+  let uHom (a : X''.underlying.left) :
+      a ⟶ z (K.obj a) :=
+    K.preimage ((v (K.obj a)).inv)
+  let uInv (a : X''.underlying.left) :
+      z (K.obj a) ⟶ a :=
+    K.preimage ((v (K.obj a)).hom)
+  have huHom (a : X''.underlying.left) :
+      K.map (uHom a) = (v (K.obj a)).inv := K.map_preimage _
+  have huInv (a : X''.underlying.left) :
+      K.map (uInv a) = (v (K.obj a)).hom := K.map_preimage _
+  let uIso (a : X''.underlying.left) : a ≅ z (K.obj a) := {
+    hom := uHom a
+    inv := uInv a
+    hom_inv_id := by
+      apply hKeq.faithful.map_injective
+      rw [Functor.map_comp, huHom, huInv]
+      simp
+    inv_hom_id := by
+      apply hKeq.faithful.map_injective
+      rw [Functor.map_comp, huInv, huHom]
+      simp
+  }
+  let unitForward : 𝟭 X''.underlying.left ≅ K ⋙ Ls :=
+    NatIso.ofComponents uIso (by
+      intro a₁ a₂ f
+      apply hKeq.faithful.map_injective
+      change K.map (f ≫ uHom a₂) =
+        K.map (uHom a₁ ≫ Ls.map (K.map f))
+      simp only [Functor.map_comp, huHom, hLsmap, hlm]
+      simp [raw, Category.assoc])
+  let unit := unitForward.symm
+  have hqu (a : X''.underlying.left) :
+      q.map (uHom a) =
+        eqToHom ((hKobj a).trans (hz (K.obj a)).symm) := by
+    have hKuh := Functor.congr_hom hKp (uHom a)
+    have hKuh' :
+        p.map (K.map (uHom a)) =
+          eqToHom (hKobj' a) ≫ q.map (uHom a) ≫
+            eqToHom (hKobj' (z (K.obj a))).symm := by
+      simpa only [Functor.comp_map] using hKuh
+    rw [huHom, hv_inv] at hKuh'
+    apply (cancel_epi (eqToHom (hKobj' a))).1
+    apply (cancel_mono (eqToHom ((hKobj' (z (K.obj a))).symm))).1
+    simpa only [Category.assoc, eqToHom_trans] using hKuh'.symm
+  have hqu_inv (a : X''.underlying.left) :
+      q.map (uInv a) =
+        eqToHom ((hKobj a).trans (hz (K.obj a)).symm).symm := by
+    let _ : IsIso (uHom a) :=
+      ⟨⟨uInv a, (uIso a).hom_inv_id, (uIso a).inv_hom_id⟩⟩
+    let _ : IsIso (q.map (uHom a)) := Functor.map_isIso q (uHom a)
+    apply (cancel_mono (q.map (uHom a))).1
+    rw [← q.map_comp, hqu, (uIso a).inv_hom_id, q.map_id]
+    simp [Category.assoc, eqToHom_trans]
+  let overUnit : (K ⋙ Ls) ⋙ q = (𝟭 X''.underlying.left) ⋙ q := by
+    simp only [Functor.assoc]
+    rw [hLsq, hKp]
+    simpa only [Functor.id_comp]
+  let overCounit : (Ls ⋙ K) ⋙ p = (𝟭 X'.underlying.left) ⋙ p := by
+    simp only [Functor.assoc]
+    rw [hKp, hLsq]
+    simpa only [Functor.id_comp]
+  have hunitOver : IsNatIsoOver q unit overUnit := by
+    intro a
+    change q.map (unit.hom.app a) = _
+    change q.map (uInv a) = _
+    rw [hqu_inv]
+  have hcounitOver : IsNatIsoOver p counit overCounit := by
+    intro b
+    change p.map (counit.hom.app b) = _
+    change p.map ((v b).hom) = _
+    rw [hv]
+  let eKH : Kover ≅ h0.underlying :=
+    overNatIsoOfUnderlying η hηover
+  let eFib : Kfib ≅ h0 :=
+    fibredHomIsoOfUnderlying eKH
+  let eFibLeft : D.b.comp Kfib ≅ D.b.comp h0 :=
+    Bicategory.whiskerLeftIso (B := FibredCategoryOver C) D.b eFib
+  let comparison : D.b.comp Kfib ≅ D.a :=
+    eFibLeft ≪≫ eba
+  refine ⟨Kfib, ?_, ⟨comparison⟩⟩
+  change IsEquivalenceOverFunctor q p K
+  exact ⟨Ls, hKp, hLsq, ⟨unit, overUnit, hunitOver⟩,
+    ⟨counit, overCounit, hcounitOver⟩⟩
 
 /- Proof roadmap: apply `amelioration_unique`, retain its comparison functor
 and fibred-hom isomorphism, then map that isomorphism to underlying functors.

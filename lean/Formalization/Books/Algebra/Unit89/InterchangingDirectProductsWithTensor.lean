@@ -345,11 +345,11 @@ theorem finite_generation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.Finite R (M : Type w),
-      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u z} R),
+      ∀ (A : Type (max v w)) (Q : A → ModuleCat.{max u z} R),
         Function.Surjective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{max u z} R) (A : Type (max u v w)),
+      ∀ (Q : ModuleCat.{max u z} R) (A : Type (max v w)),
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
-      ∀ (A : Type (max u v w)),
+      ∀ (A : Type (max v w)),
         Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
   classical
@@ -442,7 +442,7 @@ theorem finite_generation_tensor_iff
   tfae_have 4 → 1 := by
     intro h
     ·
-      have hrepr {A : Type (max u v w)}
+      have hrepr {A : Type (max v w)}
           (x : TensorProduct R (M : Type w) (A → R)) :
           ∃ k, ∃ (m : Fin k → (M : Type w)),
             ∃ (q : Fin k → (A → R)),
@@ -463,7 +463,7 @@ theorem finite_generation_tensor_iff
             rw [map_add, hx, hy]
             ext y
             simp [Fin.sum_univ_add]
-      let A := ULift.{max u v} (M : Type w)
+      let A := ULift.{max v} (M : Type w)
       obtain ⟨x, hx⟩ := h A (fun y : A => y.down)
       obtain ⟨k, m, q, hq⟩ := hrepr x
       refine Module.Finite.of_surjective (Fintype.linearCombination R m) ?_
@@ -555,14 +555,15 @@ theorem finite_presentation_tensor_iff
   classical
   tfae_have 1 → 2 := by
     intro h A Q
-    letI : Module.FinitePresentation R (M : Type w) := h
     obtain ⟨n, m, p, g, hp, hgp⟩ :=
-      Module.FinitePresentation.exists_fin' R (M : Type w)
-    have hfinite : Module.Finite R (M : Type w) := inferInstance
+      Module.FinitePresentation.exists_fin' (fp := h) R (M : Type w)
+    obtain ⟨s, hs, _⟩ := h.out
+    have hfinite : Module.Finite R (M : Type w) :=
+      ⟨hs ▸ Submodule.fg_span s.finite_toSet⟩
     have hfinite_criterion : Module.Finite R (M : Type w) ↔
         ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u z} R),
           Function.Surjective (productTensorMap M Q) :=
-      (finite_generation_tensor_iff.{u, v, w, z} M).out 0 1
+      (finite_generation_tensor_iff.{u, max u v, w, z} M).out 0 1
     have hsurj : Function.Surjective (productTensorMap M Q) :=
       hfinite_criterion.mp hfinite A Q
     refine ⟨?_, hsurj⟩
@@ -681,17 +682,17 @@ theorem finite_presentation_tensor_iff
     have hfinite_criterion : Module.Finite R (M : Type w) ↔
         ∀ (A : Type (max u v w)),
           Function.Surjective (tensorModulePowerMap M (A := A)) :=
-      (finite_generation_tensor_iff.{u, v, w, z} M).out 0 3
+      (finite_generation_tensor_iff.{u, max u v, w, z} M).out 0 3
     have hMfinite : Module.Finite R (M : Type w) :=
       hfinite_criterion.mpr fun A => (h A).2
-    letI : Module.Finite R (M : Type w) := hMfinite
-    obtain ⟨n, p, hp⟩ := Module.Finite.exists_fin' R (M : Type w)
+    obtain ⟨n, p, hp⟩ :=
+      @Module.Finite.exists_fin' R (M : Type w) _ _ _ hMfinite
     let F : ModuleCat.{u} R := ModuleCat.of R (Fin n → R)
     let K : ModuleCat.{u} R := ModuleCat.of R p.ker
     have hexact : Function.Exact p.ker.subtype p := by
       apply LinearMap.exact_iff.mpr
       ext x
-      simp [K]
+      simp
     let A := ULift.{max v w} p.ker
     have hFfinite : Module.Finite R (F : Type u) := inferInstance
     have hFcriterion : Module.Finite R (F : Type u) ↔

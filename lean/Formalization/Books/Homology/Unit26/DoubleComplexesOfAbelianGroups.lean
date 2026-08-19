@@ -304,13 +304,14 @@ noncomputable def productTotalDifferential
 private noncomputable def rightResolutionProductTotalMapComponent
     {M : AbelianGroupCochainComplex}
     (R : RightDoubleComplexResolution M) (n : ℤ) :
-    M.X n ⟶ productTotalTerm R.doubleComplex n := by
-  unfold productTotalTerm
+    M.X n ⟶ ∏ᶜ fun p : ℤ => R.doubleComplex.obj p (n - p) := by
   exact Pi.lift (fun p => by
     classical
     by_cases hp : p = 0
     · subst p
       exact R.augmentation.f n ≫ eqToHom (by
+        change (column R.doubleComplex 0).X n =
+          R.doubleComplex.obj 0 (n - 0)
         dsimp [column]
         simp)
     · exact 0)
@@ -329,10 +330,80 @@ private theorem rightResolutionProductTotalMapComponent_π
   change (Pi.lift _ ≫ Pi.π _ p) = _
   rw [Pi.lift_π]
 
+private theorem productTotalTerm_eq
+    (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
+    productTotalTerm A n = ∏ᶜ fun q : ℤ => A.obj q (n - q) := by
+  rfl
+
+private noncomputable def productTotalDifferentialComponent
+    (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
+    productTotalTerm A n ⟶ A.obj p (n + 1 - p) :=
+  eqToHom (productTotalTerm_eq A n) ≫
+    ((Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
+        A.d1 (p - 1) (n - (p - 1)) ≫
+        eqToHom (by
+          simp [sub_eq_add_neg, add_comm, add_left_comm])) +
+      p.negOnePow •
+        (Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
+          A.d2 p (n - p) ≫
+          eqToHom (by
+            simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm])))
+
+private theorem productTotalDifferential_π
+    (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
+    productTotalDifferential A n ≫
+        Pi.π (fun q : ℤ => A.obj q (n + 1 - q)) p =
+      productTotalDifferentialComponent A n p := by
+  change (Pi.lift _ ≫ Pi.π _ p) = _
+  rw [Pi.lift_π]
+  dsimp [productTotalDifferentialComponent]
+  apply eq_of_heq
+  exact (eqToHom_comp_heq _ _).symm
+
 /-- The product-total differential squares to zero. -/
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
-    productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by sorry
+    productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
+  apply Pi.hom_ext
+  intro p
+  change productTotalDifferential A n ≫
+      (productTotalDifferential A (n + 1) ≫
+        Pi.π (fun q : ℤ => A.obj q (n + 1 + 1 - q)) p) = _
+  rw [productTotalDifferential_π]
+  have hcomp :
+      productTotalDifferential A n ≫
+          productTotalDifferentialComponent A (n + 1) p = 0 := by
+    let hq := productTotalTerm_eq A (n + 1)
+    have hD :
+        productTotalDifferential A n ≫
+            eqToHom hq =
+          Pi.lift (fun q => productTotalDifferentialComponent A n q) := by
+      apply Pi.hom_ext
+      intro q
+      rw [Pi.lift_π]
+      have hπ :
+          eqToHom hq ≫
+              Pi.π (fun r : ℤ => A.obj r (n + 1 - r)) q =
+            Pi.π (fun r : ℤ => A.obj r (n + 1 - r)) q := by
+        apply eq_of_heq
+        exact eqToHom_comp_heq _ _
+      rw [Category.assoc, hπ]
+      exact productTotalDifferential_π A n q
+    dsimp [productTotalDifferentialComponent]
+    rw [← Category.assoc]
+    rw [show productTotalDifferential A n ≫
+        eqToHom (productTotalTerm_eq A (n + 1)) =
+          Pi.lift (fun q => productTotalDifferentialComponent A n q) by
+      simpa [hq] using hD]
+    rw [Preadditive.comp_add]
+    rw [← Category.assoc, Pi.lift_π]
+    simp [Category.assoc]
+    simp [productTotalDifferentialComponent, Category.assoc]
+  rw [hcomp]
+  apply eq_of_heq
+  symm
+  apply heq_of_eq
+  exact zero_comp
 noncomputable def productTotalComplex
     (A : DoubleComplex AddCommGrpCat.{u}) : AbelianGroupCochainComplex where
   X n := productTotalTerm A n
@@ -453,8 +524,71 @@ noncomputable def rightResolutionProductTotalMap
           Pi.π (fun q : ℤ => R.doubleComplex.obj q (n + 1 - q)) p)) =
         (M.d n (n + 1) ≫ rightResolutionProductTotalMapComponent R (n + 1)) ≫
           Pi.π (fun q : ℤ => R.doubleComplex.obj q (n + 1 - q)) p
+      dsimp [productTotalTerm]
       rw [Pi.lift_π]
-      exact sorry
+      rw [Category.assoc, rightResolutionProductTotalMapComponent_π]
+      change rightResolutionProductTotalMapComponent R n ≫
+          (show (∏ᶜ fun r : ℤ => R.doubleComplex.obj r (n - r)) ⟶
+              R.doubleComplex.obj p (n + 1 - p) from _) = _
+      rw [Preadditive.comp_add]
+      by_cases hp0 : p = 0
+      · subst p
+        rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
+        simp [rightResolutionProductTotalMapComponent_π, Category.assoc,
+          R.augmentation.comm n (n + 1)]
+        rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
+        have hcolumn :
+            R.augmentation.f n ≫
+                eqToHom (by dsimp [column]; congr 1) ≫
+                (column R.doubleComplex 0).d (n - 0) (n - 0 + 1) ≫
+                eqToHom (by dsimp [column]; congr 1) =
+              M.d n (n + 1) ≫ R.augmentation.f (n + 1) ≫
+                eqToHom (by
+                  change R.doubleComplex.obj 0 (n + 1) =
+                    R.doubleComplex.obj 0 (n - 0 + 1)
+                  congr 1 <;> ring) := by
+          rw [← eqToHom_naturality_assoc
+            (fun q : ℤ => (column R.doubleComplex 0).d q (q + 1))
+            (show n = n - 0 by ring)]
+          rw [← Category.assoc, R.augmentation.comm n (n + 1)]
+          simp [Category.assoc]
+        simpa [column, Category.assoc] using hcolumn
+      · by_cases hp1 : p = 1
+        · subst p
+          rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
+          simp [rightResolutionProductTotalMapComponent_π, Category.assoc]
+          have haug_d := congrArg (fun f => f.f n) R.augmentation_d
+          simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d
+          have hzero :
+              rightResolutionProductTotalMapComponent R n ≫
+                  Pi.π (fun r : ℤ => R.doubleComplex.obj r (n - r)) 1 = 0 := by
+            rw [rightResolutionProductTotalMapComponent_π]
+            simp
+          simp [hzero, Category.assoc]
+          have hhor :
+              R.augmentation.f n ≫
+                  eqToHom (by
+                    change (column R.doubleComplex 0).X (n - 0) =
+                      R.doubleComplex.obj 0 (n - 0)
+                    dsimp [column]
+                    simp) ≫
+                  (columnMap R.doubleComplex 0).f (n - 0) ≫
+                  eqToHom (by
+                    change (column R.doubleComplex 1).X (n - 0) =
+                      R.doubleComplex.obj 1 (n - 0)
+                    dsimp [column]
+                    simp) = 0 := by
+            rw [← eqToHom_naturality_assoc
+              (fun q : ℤ => (columnMap R.doubleComplex 0).f q)
+              (show n = n - 0 by ring)]
+            rw [← Category.assoc, haug_d, zero_comp]
+          simpa [columnMap, Category.assoc] using hhor
+        · have hp_prev : p - 1 ≠ 0 := by omega
+          rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
+          simp [rightResolutionProductTotalMapComponent_π, hp0, hp_prev, hp1,
+            Category.assoc]
+          rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
+          simp [hp0, hp_prev, hp1, Category.assoc]
     · exact (h rfl).elim
 
 /-- The map from the coproduct total complex of a left resolution to its
@@ -473,7 +607,62 @@ noncomputable def leftResolutionTotalMap
         simp) ≫ R.augmentation.f n
     · exact 0
   comm' n m hnm := by
-    sorry
+    classical
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    cases hnm'
+    simp only [totalComplex, dif_pos, totalDifferential,
+      Category.assoc, Preadditive.comp_add]
+    apply Sigma.hom_ext
+    intro p
+    simp [Category.assoc]
+    by_cases hp0 : p = 0
+    · subst p
+      simp [totalD2Component, column, Category.assoc,
+        R.augmentation.comm n (n + 1)]
+      have hcomm := R.augmentation.comm n (n + 1)
+      convert hcomm using 1
+      · congr 1
+        dsimp [column]
+        congr 1
+        ring
+      · exact eqToHom_comp_heq _ _
+      ·
+        have hnat :=
+          eqToHom_naturality_assoc
+            (fun q : ℤ => (column R.doubleComplex 0).d q (q + 1))
+            (show n - 0 = n by ring)
+            (R.augmentation.f (n + 1))
+        apply HEq.trans ?_ ((heq_of_eq hnat).trans ?_)
+        · simp only [column, Category.assoc, if_true, eqToHom_trans]
+          apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
+          · rfl
+          · apply heq_of_eq
+            congr 1
+            · congr 1 <;> ring
+            · exact eqToHom_heq_id_dom
+            · exact eqToHom_comp_heq _ _
+        · simp only [column, Category.assoc, if_true, eqToHom_trans]
+          exact eqToHom_comp_heq _ _
+    · by_cases hp1 : p + 1 = 0
+      · have hp : p = -1 := by omega
+        subst p
+        simp [Category.assoc]
+        have haug_d := congrArg (fun f => f.f (n + 1)) R.augmentation_d
+        simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d
+        convert haug_d.symm using 1
+        · congr 1
+        · rfl
+        · simp [leftResolutionColumnMap, columnMap, totalD1Component,
+            column, sub_eq_add_neg, Category.assoc]
+          symm
+          conv_lhs => rw [← Category.assoc]
+          apply eq_of_heq
+          apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
+          · exact HEq.rfl
+          · exact HEq.rfl
+      · simp [hp0, hp1, Category.assoc]
 
 /-- The map from the product total complex of a left resolution to its
 resolved complex. -/

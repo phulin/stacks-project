@@ -1592,7 +1592,8 @@ theorem termwiseSplitConnectingMap_exists
     rw [neg_eq_iff_add_eq_zero]
     have hrf₁ : (s (n + 1)).r ≫ S.f.f (n + 1) =
         𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s := by
-      convert (s (n + 1)).r_f using 1 <;> rfl
+      convert (s (n + 1)).r_f using 1
+      all_goals rfl
     have hfr₂ : S.f.f (n + 1 + 1) ≫ (s (n + 1 + 1)).r = 𝟙 _ := by
       convert (s (n + 1 + 1)).f_r using 1; rfl
     have hR :

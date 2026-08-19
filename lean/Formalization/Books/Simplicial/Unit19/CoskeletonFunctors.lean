@@ -248,6 +248,150 @@ noncomputable def finiteSelfProduct {C : Type u} [Category.{v} C]
   letI := h X n
   limit (Discrete.functor (fun _ : Fin (n + 1) => X))
 
+private theorem has_nonempty_product_of_has_binary_products {C : Type u}
+    [Category.{v} C] [HasBinaryProducts C] :
+    ∀ (n : ℕ) (f : Fin (n + 1) → C),
+      HasLimit (Discrete.functor f)
+  | 0, f =>
+      HasLimit.mk ⟨Fan.mk (f 0)
+          (fun j => eqToHom (congrArg f (Fin.eq_zero j).symm)),
+        Fan.IsLimit.mk _ (fun s => s.proj 0)
+          (fun s j => by
+            have hj : j = 0 := Fin.eq_zero j
+            subst hj
+            simp)
+          (fun s m hm => by simpa using hm 0)⟩
+  | n + 1, f =>
+      let _ := has_nonempty_product_of_has_binary_products n
+        (fun i : Fin (n + 1) => f i.succ)
+      HasLimit.mk ⟨_, extendFanIsLimit f (limit.isLimit _) (limit.isLimit _)⟩
+
+private theorem zero_truncated_object_eq
+    (j : (SimplexCategory.Truncated 0)ᵒᵖ) :
+    j = op ⟨SimplexCategory.mk 0, by simp⟩ := by
+  apply Opposite.unop_injective
+  apply ObjectProperty.FullSubcategory.ext
+  apply SimplexCategory.ext
+  simpa only [SimplexCategory.len_mk] using (unop j).property.antisymm (by simp)
+
+private theorem zero_truncated_hom_eq
+    {a b : (SimplexCategory.Truncated 0)ᵒᵖ} (f : a ⟶ b) :
+    f = eqToHom ((zero_truncated_object_eq a).trans
+      (zero_truncated_object_eq b).symm) := by
+  have ha := zero_truncated_object_eq a
+  have hb := zero_truncated_object_eq b
+  cases ha
+  cases hb
+  exact Subsingleton.elim _ _
+
+private def zeroCoskeletonIndexToDiscrete (n : ℕ) :
+    coskeletonIndex 0 n ⥤ Discrete (Fin (n + 1)) where
+  obj j := ⟨j.hom.unop.toOrderHom 0⟩
+  map {j k} f := Discrete.eqToHom (by
+    apply Fin.ext
+    have hobj : j.right = k.right :=
+      (zero_truncated_object_eq j.right).trans (zero_truncated_object_eq k.right).symm
+    have hr : f.right = eqToHom hobj := Subsingleton.elim _ _
+    have hw := f.w
+    rw [hr] at hw
+    simp at hw
+    exact congrArg (fun g => g.unop.toOrderHom 0) hw)
+  map_id _ := by simp
+  map_comp _ _ := by simp
+
+private def zeroCoskeletonIndexFromDiscrete (n : ℕ) :
+    Discrete (Fin (n + 1)) ⥤ coskeletonIndex 0 n where
+  obj i := StructuredArrow.mk (SimplexCategory.const _ _ i.as).op
+  map := by
+    intro i j f
+    cases i with
+    | mk i =>
+      cases j with
+      | mk j =>
+        have h := Discrete.eq_of_hom f
+        cases h
+        exact 𝟙 _
+  map_id _ := by simp
+  map_comp _ _ := by simp
+
+private theorem zero_index_from_to_obj_eq (n : ℕ) (j : coskeletonIndex 0 n) :
+    (zeroCoskeletonIndexFromDiscrete n).obj
+        ((zeroCoskeletonIndexToDiscrete n).obj j) = j := by
+  rw [StructuredArrow.eq_mk j]
+  dsimp [zeroCoskeletonIndexFromDiscrete, zeroCoskeletonIndexToDiscrete]
+  congr 1
+  apply Opposite.unop_injective
+  apply SimplexCategory.Hom.ext_zero_left
+  exact (SimplexCategory.eq_const_of_zero j.hom.unop).symm
+
+private theorem zero_index_to_from_obj_eq (n : ℕ) (i : Discrete (Fin (n + 1))) :
+    (zeroCoskeletonIndexToDiscrete n).obj
+        ((zeroCoskeletonIndexFromDiscrete n).obj i) = i := by
+  cases i with
+  | mk i => rfl
+
+private noncomputable def zeroCoskeletonIndexEquivalence (n : ℕ) :
+    coskeletonIndex 0 n ≌ Discrete (Fin (n + 1)) := by
+  let F := zeroCoskeletonIndexToDiscrete n
+  let G := zeroCoskeletonIndexFromDiscrete n
+  refine Equivalence.mk F G ?_ ?_
+  · exact NatIso.ofComponents
+      (fun j => eqToIso (zero_index_from_to_obj_eq n j).symm)
+      (fun f => by
+        apply StructuredArrow.hom_ext
+        apply Subsingleton.elim)
+  · exact NatIso.ofComponents
+      (fun i => eqToIso (zero_index_to_from_obj_eq n i))
+      (fun f => by apply Subsingleton.elim)
+
+private theorem has_limit_zero_coskeleton_index {C : Type u}
+    [Category.{v} C]
+    (U : SimplicialObject.Truncated C 0)
+    (hP : HasFiniteNonemptySelfProducts C) (n : ℕ) :
+    HasLimit (coskeletonIndexDiagram 0 n U) := by
+  let e := zeroCoskeletonIndexEquivalence n
+  let X := U.obj (op ⟨SimplexCategory.mk 0, by simp⟩)
+  letI : HasLimit (Discrete.functor (fun _ : Fin (n + 1) => X)) := hP X n
+  letI : HasLimit
+      (e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X)) :=
+    hasLimit_equivalence_comp e
+  let α : e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X) ≅
+      coskeletonIndexDiagram 0 n U :=
+    NatIso.ofComponents
+      (fun j => U.mapIso (eqToIso (zero_truncated_object_eq j.right).symm))
+      (fun f => by
+        dsimp
+        rw [id_comp, ← U.map_comp]
+        congr 1
+        rw [zero_truncated_hom_eq f.right]
+        simp)
+  exact hasLimit_of_iso α
+
+private noncomputable def zero_coskeleton_limit_iso {C : Type u}
+    [Category.{v} C]
+    (U : SimplicialObject.Truncated C 0)
+    (hP : HasFiniteNonemptySelfProducts C) (n : ℕ) :
+    limit (coskeletonIndexDiagram 0 n U) ≅
+      finiteSelfProduct (U.obj (op ⟨SimplexCategory.mk 0, by simp⟩)) n hP := by
+  let e := zeroCoskeletonIndexEquivalence n
+  let X := U.obj (op ⟨SimplexCategory.mk 0, by simp⟩)
+  letI : HasLimit (Discrete.functor (fun _ : Fin (n + 1) => X)) := hP X n
+  letI : HasLimit
+      (e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X)) :=
+    hasLimit_equivalence_comp e
+  let α : e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X) ≅
+      coskeletonIndexDiagram 0 n U :=
+    NatIso.ofComponents
+      (fun j => U.mapIso (eqToIso (zero_truncated_object_eq j.right).symm))
+      (fun f => by
+        dsimp
+        rw [id_comp, ← U.map_comp]
+        congr 1
+        rw [zero_truncated_hom_eq f.right]
+        simp)
+  letI : HasLimit (coskeletonIndexDiagram 0 n U) := hasLimit_of_iso α
+  exact HasLimit.isoOfEquivalence e α
+
 /-- The source's proposed degree formula for `cosk₀ X`. -/
 noncomputable def coskZero {C : Type u} [Category.{v} C] (X : C)
     [HasCoskeleton 0 (zeroTruncatedObject X)] : SimplicialObject C :=
@@ -265,17 +409,43 @@ theorem cosk_zero_degree_formula {C : Type u} [Category.{v} C]
     [HasCoskeleton 0 (zeroTruncatedObject X)] (n : ℕ) :
     Nonempty ((coskZero X).obj (op (SimplexCategory.mk n)) ≅
       finiteSelfProduct X n h) := by
-  sorry
+  let U := zeroTruncatedObject X
+  letI : (truncInclusion 0).HasPointwiseRightKanExtension U := by
+    rintro ⟨⟨k⟩⟩
+    exact has_limit_zero_coskeleton_index U h k
+  letI : HasLimit (coskeletonIndexDiagram 0 n U) :=
+    has_limit_zero_coskeleton_index U h n
+  let e : coskZero X ≅
+      Functor.pointwiseRightKanExtension (truncInclusion 0) U :=
+    Functor.rightKanExtensionUnique (coskZero X) (coskeletonCounit 0 U)
+      (Functor.pointwiseRightKanExtension (truncInclusion 0) U)
+      (Functor.pointwiseRightKanExtensionCounit (truncInclusion 0) U)
+  let q : (Functor.pointwiseRightKanExtension (truncInclusion 0) U).obj
+      (op (SimplexCategory.mk n)) ≅ limit (coskeletonIndexDiagram 0 n U) :=
+    RightExtension.IsPointwiseRightKanExtensionAt.isoLimit
+      ((Functor.pointwiseRightKanExtensionIsPointwiseRightKanExtension
+        (truncInclusion 0) U) (op (SimplexCategory.mk n)))
+  exact ⟨e.hom.app (op (SimplexCategory.mk n)) ≪≫ q ≪≫
+    zero_coskeleton_limit_iso U h n⟩
 
 theorem has_coskeleton_zero_of_has_binary_products {C : Type u}
     [Category.{v} C] [HasBinaryProducts C] (X : C) :
     HasCoskeleton 0 (zeroTruncatedObject X) := by
-  sorry
+  letI : (truncInclusion 0).HasPointwiseRightKanExtension
+      (zeroTruncatedObject X) := by
+    rintro ⟨⟨n⟩⟩
+    exact has_limit_zero_coskeleton_index (zeroTruncatedObject X)
+      (fun Y k => has_nonempty_product_of_has_binary_products k (fun _ => Y)) n
+  exact
+    (Functor.pointwiseRightKanExtensionIsPointwiseRightKanExtension
+      (truncInclusion 0) (zeroTruncatedObject X)).hasRightKanExtension
 
 theorem has_coskeleton_functor_zero_of_has_binary_products {C : Type u}
     [Category.{v} C] [HasBinaryProducts C] :
     HasCoskeletonFunctor (C := C) 0 := by
-  sorry
+  intro U
+  exact has_coskeleton_zero_of_has_binary_products
+    (U.obj (op ⟨SimplexCategory.mk 0, by simp⟩))
 
 /-! ## The compatible tuple used to add one level -/
 

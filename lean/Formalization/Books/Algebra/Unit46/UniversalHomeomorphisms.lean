@@ -1892,7 +1892,8 @@ private theorem universallyBijective_residueField
   let V : Set L := {z : L | ∃ x ∈ U, algebraMap S L x = z}
   let A : IntermediateField K L := IntermediateField.adjoin K V
   have hleft (s : S) : algebraMap S L s ∈ A := by
-    have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+    have hs : s ∈ Algebra.adjoin R U := by
+      simp only [Algebra.mem_top, hgen']
     refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ A)
       ?_ ?_ ?_ ?_ hs
     · intro x hx
@@ -2005,11 +2006,11 @@ private theorem universallyBijective_integral
     apply top_unique
     intro s hs
     have hs' : s ∈ Algebra.adjoin R U := by
-      rw [hgen']; trivial
+      simp only [Algebra.mem_top, hgen']
     refine Algebra.adjoin_induction (p := fun x _ => x ∈ A)
       ?_ ?_ ?_ ?_ hs'
     · intro x hx
-      exact Algebra.subset_adjoin hx
+      exact Algebra.mem_adjoin_of_mem hx
     · intro r
       simpa [A, I, k, f₀, RingHom.algebraMap_toAlgebra] using
         A.algebraMap_mem (k r)
@@ -2072,7 +2073,7 @@ private theorem universallyBijective_comap_injective
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
-    simpa only [universallyBijectiveGenerated, generatedBy] using hgen
+    exact hgen
   intro q q' hqq'
   have hI : q.asIdeal.comap f = q'.asIdeal.comap f := by
     simpa using congrArg PrimeSpectrum.asIdeal hqq'
@@ -2107,10 +2108,10 @@ private theorem universallyBijective_comap_injective
     ((m.comp (algebraMap K T)).comp (algebraMap R K)).toAlgebra
   have hscalar (r : R) :
       hq (algebraMap R K r) = algebraMap S L (f r) := by
-    simp [K, L, hq]
+    exact Ideal.ResidueField.map_algebraMap I q.asIdeal f rfl r
   have hscalar' (r : R) :
       hq' (algebraMap R K r) = algebraMap S L' (f r) := by
-    simp [K, L', hq']
+    exact Ideal.ResidueField.map_algebraMap I q'.asIdeal f hI r
   let φ : S →+* Q := jL.comp (algebraMap S L)
   let ψ : S →+* Q := jL'.comp (algebraMap S L')
   have hφ (r : R) : φ (f r) = algebraMap R Q r := by
@@ -2127,17 +2128,17 @@ private theorem universallyBijective_comap_injective
           hq (algebraMap R K r) ⊗ₜ[K] (1 : L') := by
       change (1 : L) ⊗ₜ[K] algebraMap K L' (algebraMap R K r) =
         algebraMap K L (algebraMap R K r) ⊗ₜ[K] (1 : L')
-      exact (Algebra.TensorProduct.tmul_one_eq_one_tmul _).symm
+      exact Eq.symm (Algebra.TensorProduct.tmul_one_eq_one_tmul ((algebraMap R K) r))
     rw [htmul]
     change m (algebraMap K T (algebraMap R K r)) = algebraMap R Q r
     rfl
   have hbase : φ.comp f = ψ.comp f := by
     ext r
     change φ (f r) = ψ (f r)
-    rw [hφ, hψ]
+    simp only [hφ, hψ]
   have hmap (s : S) : φ s = ψ s := by
     have hs : s ∈ Algebra.adjoin R U := by
-      rw [hgen']; trivial
+      simp only [Algebra.mem_top, hgen']
     refine Algebra.adjoin_induction (p := fun x _ => φ x = ψ x)
       ?_ ?_ ?_ ?_ hs
     · intro x hx
@@ -2153,9 +2154,9 @@ private theorem universallyBijective_comap_injective
       change φ (f r) = ψ (f r)
       exact congrArg (fun h : R →+* Q => h r) hbase
     · intro x y hx hy hxp hyp
-      simpa only [map_add] using congrArg₂ (· + ·) hxp hyp
+      simp only [map_add, hxp, hyp]
     · intro x y hx hy hxp hyp
-      simpa only [map_mul] using congrArg₂ (· * ·) hxp hyp
+      simp only [map_mul, hxp, hyp]
   have hqeq : q.asIdeal = q'.asIdeal := by
     ext x
     constructor
@@ -2232,8 +2233,7 @@ theorem universallyBijective
   let e : (R' ⊗[R] S) ≃+* (S ⊗[R] R') :=
     (Algebra.TensorProduct.comm R R' S).toRingEquiv
   have heq : e.toRingHom.comp (algebraMap R' (R' ⊗[R] S)) = bc := by
-    ext r'
-    simp [e, bc, baseChangeRingMap]
+    rfl
   have hsurj : Function.Surjective (PrimeSpectrum.comap bc) := by
     rw [← heq, PrimeSpectrum.comap_comp]
     exact hsurj0.comp

@@ -1,5 +1,9 @@
 import Formalization.Books.Simplicial.Unit33.Godement
 import Mathlib.CategoryTheory.Adjunction.Basic
+import Mathlib.Algebra.Category.ModuleCat.Adjunctions
+import Mathlib.Algebra.Category.CommAlgCat.Basic
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MvPolynomial.Rename
 
 /-!
 # Simplicial Methods, Chapter 34: Standard resolutions
@@ -21,41 +25,41 @@ open CategoryTheory.SimplicialObject
 open Opposite
 open Formalization.Books.Simplicial.Unit33
 
-universe u
+universe uA vA uS vS u
 
 /-! ## The adjunction and the comonad-like endofunctor -/
 
 /-- The data in Situation 34.1: `U` is left adjoint to `V`. -/
-structure StandardResolutionSituation (A : Type u) (S : Type u)
-    [Category.{u} A] [Category.{u} S] where
+structure StandardResolutionSituation (A : Type uA) (S : Type uS)
+    [Category.{vA} A] [Category.{vS} S] where
   U : S ⥤ A
   V : A ⥤ S
   adjunction : U ⊣ V
 
 /-- The endofunctor `U ∘ V` on `A` used in the standard resolution. -/
-def standardResolutionBase {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionBase {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) : A ⥤ A :=
   T.V ⋙ T.U
 
 /-- The source's counit `d : U ∘ V ⟶ id_A`. -/
-abbrev standardResolutionCounit {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+abbrev standardResolutionCounit {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     standardResolutionBase T ⟶ 𝟭 A :=
   T.adjunction.counit
 
 /-- The source's unit `η : id_S ⟶ V ∘ U`. -/
-abbrev standardResolutionUnit {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+abbrev standardResolutionUnit {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     𝟭 S ⟶ T.U ⋙ T.V :=
   T.adjunction.unit
 
 /-- The unit-insertion map `U V ⟶ U V U V`, with associators and unitors
 made explicit so that it is a morphism between the chosen functors. -/
-def standardResolutionComultiplication {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionComultiplication {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     standardResolutionBase T ⟶ standardResolutionBase T ⋙
       standardResolutionBase T := by
@@ -82,8 +86,8 @@ def standardResolutionIndexAdd : StandardResolutionIndex →
   | some i, some j => some (i + j + 1)
 
 /-- The functor `X_n`; `none` denotes the source's `X_{-1} = id_A`. -/
-def standardResolutionDegree {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionDegree {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     StandardResolutionIndex → A ⥤ A
   | none => 𝟭 A
@@ -92,8 +96,8 @@ def standardResolutionDegree {A : Type u} {S : Type u}
 /-- The composition formula `X_{n+m+1} = X_n ∘ X_m`, including the cases in
 which one of the indices is `-1`. The equalities use canonical functor
 identity and associativity normalizations. -/
-theorem standardResolutionDegree_comp {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+theorem standardResolutionDegree_comp {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S)
     (i j : StandardResolutionIndex) :
     standardResolutionDegree T (standardResolutionIndexAdd i j) =
@@ -101,8 +105,8 @@ theorem standardResolutionDegree_comp {A : Type u} {S : Type u}
   sorry
 
 /-- The degreewise boundary maps, including the degree-zero counit. -/
-def standardResolutionBoundary {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionBoundary {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) (j : Fin (n + 1)) :
     standardResolutionDegree T (some n) ⟶
       match n with
@@ -121,8 +125,8 @@ def standardResolutionBoundary {A : Type u} {S : Type u}
           (standardResolutionCounit T) (n := n + 1) j)
 
 /-- The source's face maps in positive simplicial degrees. -/
-def standardResolutionFace {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionFace {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) (j : Fin (n + 2)) :
     standardResolutionDegree T (some (n + 1)) ⟶
       standardResolutionDegree T (some n) := by
@@ -132,8 +136,8 @@ def standardResolutionFace {A : Type u} {S : Type u}
       (standardResolutionCounit T) (n := n + 1) j)
 
 /-- The source's degeneracy maps. -/
-def standardResolutionDegeneracy {A : Type u} {S : Type u}
-    [Category.{u} A] [Category.{u} S]
+def standardResolutionDegeneracy {A : Type uA} {S : Type uS}
+    [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) (j : Fin (n + 1)) :
     standardResolutionDegree T (some n) ⟶
       standardResolutionDegree T (some (n + 1)) := by
@@ -144,7 +148,7 @@ def standardResolutionDegeneracy {A : Type u} {S : Type u}
 
 /-- The adjunction triangle identities imply the Godement equations. -/
 theorem standardResolution_godementEquations
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     GodementEquations (standardResolutionBase T)
       (standardResolutionCounit T) (standardResolutionComultiplication T) := by
@@ -153,7 +157,7 @@ theorem standardResolution_godementEquations
 /-- The chosen simplicial object supplied by the standard-resolution
 construction. -/
 noncomputable def standardResolutionData
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     GodementSimplicialData (standardResolutionBase T)
       (standardResolutionCounit T) (standardResolutionComultiplication T) :=
@@ -163,7 +167,7 @@ noncomputable def standardResolutionData
 
 /-- The augmentation data for the standard resolution. -/
 noncomputable def standardResolutionAugmentationData
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     GodementAugmentationData (standardResolutionBase T)
       (standardResolutionCounit T) (standardResolutionComultiplication T) :=
@@ -174,25 +178,25 @@ noncomputable def standardResolutionAugmentationData
 /-! ## The actual simplicial object and its formulas -/
 
 abbrev standardResolutionObject
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) : SimplicialObject (A ⥤ A) :=
   (standardResolutionAugmentationData T).simplicial.object
 
 abbrev standardResolutionAugmentation
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     standardResolutionObject T ⟶ (SimplicialObject.const (A ⥤ A)).obj (𝟭 A) :=
   (standardResolutionAugmentationData T).augmentation
 
 theorem standardResolution_object_degree
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) :
     (standardResolutionObject T).obj (op (SimplexCategory.mk n)) =
       standardResolutionDegree T (some n) := by
   exact (standardResolutionAugmentationData T).simplicial.object_obj n
 
 theorem standardResolution_face_formula
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) (j : Fin (n + 2)) :
     eqToHom (standardResolution_object_degree T (n + 1)).symm ≫
         (standardResolutionObject T).δ j ≫
@@ -203,7 +207,7 @@ theorem standardResolution_face_formula
   exact (standardResolutionAugmentationData T).simplicial.face_def n j
 
 theorem standardResolution_degeneracy_formula
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) (j : Fin (n + 1)) :
     eqToHom (standardResolution_object_degree T n).symm ≫
         (standardResolutionObject T).σ j ≫
@@ -212,7 +216,7 @@ theorem standardResolution_degeneracy_formula
   exact (standardResolutionAugmentationData T).simplicial.degeneracy_def n j
 
 theorem standardResolution_augmentation_formula
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) (n : ℕ) :
     eqToHom (standardResolution_object_degree T n).symm ≫
         (standardResolutionAugmentation T).app (op (SimplexCategory.mk n)) =
@@ -222,64 +226,100 @@ theorem standardResolution_augmentation_formula
 /-- The standard resolution is a simplicial object with the counit
 augmentation. -/
 theorem standardResolution_is_simplicial_and_augmented
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     Nonempty (GodementAugmentationData (standardResolutionBase T)
       (standardResolutionCounit T) (standardResolutionComultiplication T)) := by
   exact ⟨standardResolutionAugmentationData T⟩
 /-! ## The two homotopy equivalences -/
 
-/-- The outer resolution, obtained by applying `V` to the standard
-resolution. Its chosen augmentation is the source's `1_V ⋆ ε`. -/
-noncomputable def standardResolutionOuterData
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
-    (T : StandardResolutionSituation A S) :
-    GodementWhiskeredAugmentationData (𝟭 A) (standardResolutionBase T) T.V
-      (standardResolutionCounit T) (standardResolutionComultiplication T) :=
-  (godement_whiskered_augmentation_condition (𝟭 A)
-    (standardResolutionBase T) T.V (standardResolutionCounit T)
-    (standardResolutionComultiplication T)
-    (standardResolution_godementEquations T)).some
+/- Chapter 33 also packages these maps in
+`GodementWhiskeredAugmentationData`. Its universe parameters identify some
+object and morphism universes, which is narrower than Situation 34.1. The
+explicit whiskering below retains the source's maps for arbitrary category
+universes without weakening their source or target. -/
 
-/-- The inner resolution, obtained by applying `U` to the standard
-resolution. Its chosen augmentation is the source's `ε ⋆ 1_U`. -/
-noncomputable def standardResolutionInnerData
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
-    (T : StandardResolutionSituation A S) :
-    GodementWhiskeredAugmentationData T.U (standardResolutionBase T) (𝟭 A)
-      (standardResolutionCounit T) (standardResolutionComultiplication T) :=
-  (godement_whiskered_augmentation_condition T.U
-    (standardResolutionBase T) (𝟭 A) (standardResolutionCounit T)
-    (standardResolutionComultiplication T)
-    (standardResolution_godementEquations T)).some
+/-- The simplicial object obtained by postcomposing the standard resolution
+with `V`. -/
+abbrev standardResolutionOuterObject
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) : SimplicialObject (A ⥤ S) :=
+  ((SimplicialObject.whiskering (A ⥤ A) (A ⥤ S)).obj
+    ((Functor.whiskeringRight A A S).obj T.V)).obj (standardResolutionObject T)
 
-abbrev standardResolutionOuterRawAugmentation
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
-    (T : StandardResolutionSituation A S) :=
-  (standardResolutionOuterData T).augmentation
+/-- The source's outer augmentation `1_V ⋆ ε`, with its canonical functor
+unitor transport made explicit. -/
+noncomputable def standardResolutionOuterRawAugmentation
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionOuterObject T ⟶
+      (SimplicialObject.const (A ⥤ S)).obj (𝟭 A ⋙ T.V) := by
+  sorry
 
 abbrev standardResolutionOuterAugmentation
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :=
   standardResolutionOuterRawAugmentation T ≫
     (SimplicialObject.const (A ⥤ S)).map (Functor.leftUnitor T.V).hom
 
-abbrev standardResolutionInnerRawAugmentation
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
-    (T : StandardResolutionSituation A S) :=
-  (standardResolutionInnerData T).augmentation
+/-! The inner object uses precomposition by `U`, represented by the standard
+functor-category whiskering API. -/
+abbrev standardResolutionInnerObject
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) : SimplicialObject (S ⥤ A) :=
+  ((SimplicialObject.whiskering (A ⥤ A) (S ⥤ A)).obj
+    ((Functor.whiskeringLeft S A A).obj T.U)).obj (standardResolutionObject T)
+
+noncomputable def standardResolutionInnerRawAugmentation
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionInnerObject T ⟶
+      (SimplicialObject.const (S ⥤ A)).obj (T.U ⋙ 𝟭 A) := by
+  sorry
 
 abbrev standardResolutionInnerAugmentation
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :=
   standardResolutionInnerRawAugmentation T ≫
     (SimplicialObject.const (S ⥤ A)).map (Functor.rightUnitor T.U).hom
+
+/-- The degreewise-unit section used as the inverse in the source's two
+homotopy-equivalence constructions. -/
+noncomputable def standardResolutionOuterHomotopyInverse
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    (SimplicialObject.const (A ⥤ S)).obj T.V ⟶
+      standardResolutionOuterObject T := by
+  sorry
+
+noncomputable def standardResolutionInnerHomotopyInverse
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    (SimplicialObject.const (S ⥤ A)).obj T.U ⟶
+      standardResolutionInnerObject T := by
+  sorry
+
+theorem standardResolution_outer_inverse_section
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionOuterHomotopyInverse T ≫
+        standardResolutionOuterAugmentation T =
+      𝟙 ((SimplicialObject.const (A ⥤ S)).obj T.V) := by
+  sorry
+
+theorem standardResolution_inner_inverse_section
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
+    (T : StandardResolutionSituation A S) :
+    standardResolutionInnerHomotopyInverse T ≫
+        standardResolutionInnerAugmentation T =
+      𝟙 ((SimplicialObject.const (S ⥤ A)).obj T.U) := by
+  sorry
 
 /-- Both augmented whiskered resolutions are homotopy equivalences. The
 proof route is the section from Chapter 33, followed by its two-map homotopy
 and the definition of `Unit26.IsHomotopyEquivalence`. -/
 theorem standardResolution_homotopy_equivalences
-    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     Unit26.IsHomotopyEquivalence (standardResolutionOuterAugmentation T) ∧
       Unit26.IsHomotopyEquivalence (standardResolutionInnerAugmentation T) := by
@@ -287,115 +327,104 @@ theorem standardResolution_homotopy_equivalences
 
 /-! ## The module and polynomial-algebra examples -/
 
-/-- A universe-compatible presentation of the free/forgetful adjunction in
-Example 34.4.  The concrete `ModuleCat`/`Type` adjunction in Mathlib has
-different category universes from the Chapter 33 whiskered Godement API, so
-the example keeps the two categories abstract while retaining the exact
-adjunction data used by the construction. -/
-structure ModuleStandardResolutionExample
-    (R M SetLike : Type u) [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    where
-  free : SetLike ⥤ M
-  forget : M ⥤ SetLike
-  adjunction : free ⊣ forget
+/-- The free/forgetful adjunction used in Example 34.4. -/
+def moduleStandardResolutionSituation {R : Type u} [Ring R] :
+    StandardResolutionSituation (ModuleCat.{u} R) (Type u) :=
+  ⟨ModuleCat.free R, CategoryTheory.forget (ModuleCat.{u} R), ModuleCat.adj R⟩
 
-def moduleStandardResolutionSituation
-    {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    (E : ModuleStandardResolutionExample R M SetLike) :
-    StandardResolutionSituation M SetLike :=
-  ⟨E.free, E.forget, E.adjunction⟩
+/-- The degree `n` of the module example on a module `M₀`. -/
+def moduleResolutionDegree {R : Type u} [Ring R]
+    (M₀ : ModuleCat.{u} R) (n : ℕ) : ModuleCat.{u} R :=
+  (standardResolutionDegree (moduleStandardResolutionSituation (R := R))
+    (some n)).obj M₀
 
-/-- The degree `n` of the module example on an object `M₀`. -/
-def moduleResolutionDegree
-    {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    (E : ModuleStandardResolutionExample R M SetLike)
-    (M₀ : M) (n : ℕ) : M :=
-  (standardResolutionDegree (moduleStandardResolutionSituation E) (some n)).obj M₀
+/-- The module example's degree-one face maps (the source's `d₀,d₁`). -/
+def moduleResolutionFace {R : Type u} [Ring R]
+    (M₀ : ModuleCat.{u} R) (j : Fin 2) :
+    moduleResolutionDegree M₀ 1 ⟶ moduleResolutionDegree M₀ 0 :=
+  (standardResolutionFace (moduleStandardResolutionSituation (R := R)) 0 j).app M₀
 
-/-- The module example's degree-one face maps (the source's `d_0,d_1`). -/
-def moduleResolutionFace
-    {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    (E : ModuleStandardResolutionExample R M SetLike) (M₀ : M)
-    (j : Fin 2) : moduleResolutionDegree E M₀ 1 ⟶ moduleResolutionDegree E M₀ 0 :=
-  (standardResolutionFace (moduleStandardResolutionSituation E) 0 j).app M₀
+/-- The module example's degree-one degeneracy maps (the source's `s₀,s₁`). -/
+def moduleResolutionDegeneracy {R : Type u} [Ring R]
+    (M₀ : ModuleCat.{u} R) (j : Fin 2) :
+    moduleResolutionDegree M₀ 1 ⟶ moduleResolutionDegree M₀ 2 :=
+  (standardResolutionDegeneracy (moduleStandardResolutionSituation (R := R)) 1 j).app M₀
 
-/-- The module example's degree-one degeneracy maps (the source's `s_0,s_1`). -/
-def moduleResolutionDegeneracy
-    {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    (E : ModuleStandardResolutionExample R M SetLike) (M₀ : M)
-    (j : Fin 2) : moduleResolutionDegree E M₀ 1 ⟶ moduleResolutionDegree E M₀ 2 :=
-  (standardResolutionDegeneracy (moduleStandardResolutionSituation E) 1 j).app M₀
-
-/- The displayed sums in Example 34.4 depend on choosing the concrete
-free-module presentation.  This universe-compatible categorical interface
-records their degree-one maps without asserting presentation-specific
-elementwise normal forms. -/
+/-- The augmentation component in the module example. -/
+def moduleResolutionAugmentation {R : Type u} [Ring R]
+    (M₀ : ModuleCat.{u} R) (n : ℕ) : moduleResolutionDegree M₀ n ⟶ M₀ :=
+  (standardResolutionAugmentationData
+    (moduleStandardResolutionSituation (R := R))).component n |>.app M₀
 
 theorem moduleResolution_augmentation_homotopy_equivalence
-    {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
-    (E : ModuleStandardResolutionExample R M SetLike) :
+    {R : Type u} [Ring R] :
     Unit26.IsHomotopyEquivalence
       (standardResolutionOuterAugmentation
-        (moduleStandardResolutionSituation E)) := by
+        (moduleStandardResolutionSituation (R := R))) := by
   exact (standardResolution_homotopy_equivalences
-    (moduleStandardResolutionSituation E)).1
+    (moduleStandardResolutionSituation (R := R))).1
 
-/-- A universe-compatible presentation of the free/forgetful adjunction in
-Example 34.5. -/
-structure PolynomialAlgebraStandardResolutionExample
-    (A Alg SetLike : Type u) [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike] where
-  free : SetLike ⥤ Alg
-  forget : Alg ⥤ SetLike
-  adjunction : free ⊣ forget
+/-- The free commutative polynomial-algebra functor on a type. -/
+def commutativePolynomialFree {A : Type u} [CommRing A] :
+    Type u ⥤ CommAlgCat.{u} A where
+  obj X := CommAlgCat.of A (MvPolynomial X A)
+  map f := CommAlgCat.ofHom (MvPolynomial.rename f)
+  map_id X := by
+    apply CommAlgCat.hom_ext
+    change MvPolynomial.rename (id : X → X) = AlgHom.id A (MvPolynomial X A)
+    exact MvPolynomial.rename_id
+  map_comp f g := by
+    apply CommAlgCat.hom_ext
+    change MvPolynomial.rename (ConcreteCategory.hom g ∘ ConcreteCategory.hom f) =
+      (MvPolynomial.rename (ConcreteCategory.hom g)).comp
+        (MvPolynomial.rename (ConcreteCategory.hom f))
+    exact (MvPolynomial.rename_comp_rename (R := A)
+      (ConcreteCategory.hom f) (ConcreteCategory.hom g)).symm
 
-def polynomialAlgebraStandardResolutionSituation
-    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike]
-    (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike) :
-    StandardResolutionSituation Alg SetLike :=
-  ⟨E.free, E.forget, E.adjunction⟩
+/-- The free/forgetful adjunction for commutative `A`-algebras. -/
+noncomputable def commutativePolynomialAdjunction {A : Type u} [CommRing A] :
+    commutativePolynomialFree (A := A) ⊣ CategoryTheory.forget (CommAlgCat.{u} A) := by
+  sorry
+
+/-- The free/forgetful adjunction used in Example 34.5. -/
+def polynomialAlgebraStandardResolutionSituation {A : Type u} [CommRing A] :
+  StandardResolutionSituation (CommAlgCat.{u} A) (Type u) :=
+  ⟨commutativePolynomialFree (A := A), CategoryTheory.forget (CommAlgCat.{u} A),
+    commutativePolynomialAdjunction (A := A)⟩
 
 /-- The degree `n` of the polynomial-algebra example on an algebra `B`. -/
-def polynomialAlgebraResolutionDegree
-    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike]
-    (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
-    (B : Alg) (n : ℕ) : Alg :=
+def polynomialAlgebraResolutionDegree {A : Type u} [CommRing A]
+    (B : CommAlgCat.{u} A) (n : ℕ) : CommAlgCat.{u} A :=
   (standardResolutionDegree
-    (polynomialAlgebraStandardResolutionSituation E) (some n)).obj B
+    (polynomialAlgebraStandardResolutionSituation (A := A)) (some n)).obj B
 
 /-- The polynomial-algebra example's degree-one face maps. -/
-def polynomialAlgebraResolutionFace
-    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike]
-    (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
-    (B : Alg) (j : Fin 2) : polynomialAlgebraResolutionDegree E B 1 ⟶
-      polynomialAlgebraResolutionDegree E B 0 :=
-  (standardResolutionFace (polynomialAlgebraStandardResolutionSituation E) 0 j).app B
+def polynomialAlgebraResolutionFace {A : Type u} [CommRing A]
+    (B : CommAlgCat.{u} A) (j : Fin 2) :
+    polynomialAlgebraResolutionDegree B 1 ⟶ polynomialAlgebraResolutionDegree B 0 :=
+  (standardResolutionFace
+    (polynomialAlgebraStandardResolutionSituation (A := A)) 0 j).app B
 
 /-- The polynomial-algebra example's degree-one degeneracy maps. -/
-def polynomialAlgebraResolutionDegeneracy
-    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike]
-    (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
-    (B : Alg) (j : Fin 2) : polynomialAlgebraResolutionDegree E B 1 ⟶
-      polynomialAlgebraResolutionDegree E B 2 :=
+def polynomialAlgebraResolutionDegeneracy {A : Type u} [CommRing A]
+    (B : CommAlgCat.{u} A) (j : Fin 2) :
+    polynomialAlgebraResolutionDegree B 1 ⟶ polynomialAlgebraResolutionDegree B 2 :=
   (standardResolutionDegeneracy
-    (polynomialAlgebraStandardResolutionSituation E) 1 j).app B
+    (polynomialAlgebraStandardResolutionSituation (A := A)) 1 j).app B
+
+/-- The augmentation component in the polynomial-algebra example. -/
+def polynomialAlgebraResolutionAugmentation {A : Type u} [CommRing A]
+    (B : CommAlgCat.{u} A) (n : ℕ) :
+    polynomialAlgebraResolutionDegree B n ⟶ B :=
+  (standardResolutionAugmentationData
+    (polynomialAlgebraStandardResolutionSituation (A := A))).component n |>.app B
 
 theorem polynomialAlgebraResolution_augmentation_homotopy_equivalence
-    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
-    [Category.{u} SetLike]
-    (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike) :
+    {A : Type u} [CommRing A] :
     Unit26.IsHomotopyEquivalence
       (standardResolutionOuterAugmentation
-        (polynomialAlgebraStandardResolutionSituation E)) := by
+        (polynomialAlgebraStandardResolutionSituation (A := A))) := by
   exact (standardResolution_homotopy_equivalences
-    (polynomialAlgebraStandardResolutionSituation E)).1
-
-/- The nested-bracket formulas in Examples 34.5 and 34.6 likewise depend on
-the concrete polynomial-algebra presentation; the chapter-level maps above
-retain the presentation-independent categorical types. -/
+    (polynomialAlgebraStandardResolutionSituation (A := A))).1
 
 end Formalization.Books.Simplicial.Unit34

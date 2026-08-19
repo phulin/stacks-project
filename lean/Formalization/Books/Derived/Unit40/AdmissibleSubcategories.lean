@@ -1359,7 +1359,11 @@ def AdmissiblePairConditionTwo
 
 def AdmissiblePairConditionThree
     (A B : ObjectProperty C) : Prop :=
-  (∀ (X Y : C), A X → B Y → HomIsZero X Y) ∧
+  A.IsClosedUnderIsomorphisms ∧
+    A.IsTriangulated ∧
+    B.IsClosedUnderIsomorphisms ∧
+    B.IsTriangulated ∧
+    (∀ (X Y : C), A X → B Y → HomIsZero X Y) ∧
     (∀ X : C, HasTriangleDecomposition A B X)
 
 /-- The quotient equivalences and adjoint factorizations in the summary. -/

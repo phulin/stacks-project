@@ -10,10 +10,12 @@ import Mathlib.AlgebraicTopology.SimplicialSet.KanComplex
 
 The horn `Λ[n, k]` is Mathlib's canonical `SSet.horn n k`, and the category
 with fibrations on simplicial sets is Mathlib's canonical Quillen structure.
-Consequently the source's Kan-fibration and Kan-complex definitions are
-recorded by the corresponding canonical properties rather than by parallel
-lifting predicates.  The remaining declarations give the closure results and
-the simplicial-group and simplicial-abelian-group applications from the source.
+The standard simplex, its unique top simplex, and its face inclusions are
+likewise provided by Mathlib's `SSet.stdSimplex` API.  Consequently the
+source's Kan-fibration and Kan-complex definitions are recorded by the
+corresponding canonical properties rather than by parallel lifting predicates.
+The remaining declarations give the closure results and the
+simplicial-group and simplicial-abelian-group applications from the source.
 -/
 
 noncomputable section
@@ -28,7 +30,13 @@ open SSet.modelCategoryQuillen
 
 universe u v w
 
-/-! ## Horns and the Kan lifting property -/
+/-! ## Horns and the Kan lifting property
+
+The source assumes `1 ≤ n` whenever it discusses an `n`-horn.  The canonical
+`SSet.horn` supplies the generated subcomplex and its inclusion; the
+`horn_obj_zero` lemma supplies the nonemptiness assertion in the positive
+dimensions used below.
+-/
 
 /-- The source's Kan-fibration property, using Mathlib's canonical fibration
 class for simplicial sets (whose generating lifting maps are the horn
@@ -41,8 +49,8 @@ objects in simplicial sets. -/
 abbrev KanComplex (X : SSet.{u}) : Prop :=
   SSet.KanComplex X
 
-/-- Every horn has a vertex. -/
-theorem horn_nonempty (n : ℕ) (k : Fin (n + 1)) :
+/-- Every positive-dimensional horn has a vertex. -/
+theorem horn_nonempty (n : ℕ) (hn : 1 ≤ n) (k : Fin (n + 1)) :
     Nonempty ((SSet.horn n k : SSet.{u}) _⦋0⦌) := by
   sorry
 

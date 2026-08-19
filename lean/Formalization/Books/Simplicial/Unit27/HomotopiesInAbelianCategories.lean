@@ -421,7 +421,16 @@ theorem additiveAssociatedChainMap_homotopic
     Nonempty (_root_.Homotopy
       (additiveAssociatedChainComplexMap a)
       (additiveAssociatedChainComplexMap b)) := by
-  sorry
+  induction H with
+  | rel a b h =>
+      rcases h with ⟨h⟩
+      exact ⟨CategoryTheory.SimplicialObject.Homotopy.toChainHomotopy h⟩
+  | refl a =>
+      exact ⟨_root_.Homotopy.ofEq rfl⟩
+  | symm a b h ih =>
+      exact ⟨ih.some.symm⟩
+  | trans a b c h₁ h₂ ih₁ ih₂ =>
+      exact ⟨ih₁.some.trans ih₂.some⟩
 
 theorem normalizedChainMap_homotopic
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -430,7 +439,75 @@ theorem normalizedChainMap_homotopic
     Nonempty (_root_.Homotopy
       (normalizedChainComplexMap a)
       (normalizedChainComplexMap b)) := by
-  sorry
+  induction H with
+  | rel a b h =>
+      rcases h with ⟨h⟩
+      obtain ⟨sV⟩ := (normalizedToAssociated_split V).exists_splitMono
+      let rV : associatedChainComplex V ⟶ normalizedChainComplex V := sV.retraction
+      let L := CategoryTheory.SimplicialObject.Homotopy.toChainHomotopy h
+      let hhom : ∀ i j, (associatedChainComplex U).X i ⟶
+          (associatedChainComplex V).X j := fun i j => by
+        change U.obj (op ⦋i⦌) ⟶ V.obj (op ⦋j⦌)
+        exact L.hom i j
+      have hK : _root_.Homotopy
+          (associatedChainComplexMap a) (associatedChainComplexMap b) := {
+        hom := hhom
+        zero := fun i j hij => by
+          change L.hom i j = 0
+          exact L.zero i j hij
+        comm := fun i => by
+          cases i with
+          | zero =>
+              rw [Homotopy.dNext_zero_chainComplex,
+                Homotopy.prevD_chainComplex, zero_add]
+              rw [associatedChainComplex_d]
+              have hL := L.comm 0
+              rw [Homotopy.dNext_zero_chainComplex,
+                Homotopy.prevD_chainComplex, zero_add] at hL
+              rw [AlgebraicTopology.alternatingFaceMapComplex_obj_d] at hL
+              convert hL using 1
+              all_goals simp [hhom, associatedBoundary,
+                AlgebraicTopology.AlternatingFaceMapComplex.objD]
+              all_goals rfl
+          | succ n =>
+              rw [Homotopy.dNext_succ_chainComplex,
+                Homotopy.prevD_chainComplex]
+              rw [associatedChainComplex_d, associatedChainComplex_d]
+              have hL := L.comm (n + 1)
+              rw [Homotopy.dNext_succ_chainComplex,
+                Homotopy.prevD_chainComplex] at hL
+              rw [AlgebraicTopology.alternatingFaceMapComplex_obj_d,
+                AlgebraicTopology.alternatingFaceMapComplex_obj_d] at hL
+              convert hL using 1
+              all_goals simp [hhom, associatedBoundary,
+                AlgebraicTopology.AlternatingFaceMapComplex.objD]
+              all_goals rfl
+      }
+      have hnat (f : U ⟶ V) :
+          normalizedToAssociated U ≫ associatedChainComplexMap f =
+            normalizedChainComplexMap f ≫ normalizedToAssociated V := by
+        apply HomologicalComplex.Hom.ext
+        funext n
+        change
+          (Formalization.Books.Simplicial.Unit18.normalizedSubobject U n).arrow ≫
+              f.app (op ⦋n⦌) =
+            Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap f n ≫
+              (Formalization.Books.Simplicial.Unit18.normalizedSubobject V n).arrow
+        exact
+          (Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap_arrow f n).symm
+      have hcomp := (hK.compRight rV).compLeft (normalizedToAssociated U)
+      rw [← Category.assoc] at hcomp
+      rw [← Category.assoc] at hcomp
+      rw [hnat a, hnat b] at hcomp
+      dsimp [rV] at hcomp
+      refine ⟨?_⟩
+      simpa only [Category.assoc, sV.id, Category.comp_id] using hcomp
+  | refl a =>
+      exact ⟨_root_.Homotopy.ofEq rfl⟩
+  | symm a b h ih =>
+      exact ⟨ih.some.symm⟩
+  | trans a b c h₁ h₂ ih₁ ih₂ =>
+      exact ⟨ih₁.some.trans ih₂.some⟩
 
 theorem additiveAssociatedChainMap_homotopyEquivalence
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -438,7 +515,53 @@ theorem additiveAssociatedChainMap_homotopyEquivalence
     (H : Formalization.Books.Simplicial.Unit26.IsHomotopyEquivalence a) :
     HomologicalComplex.homotopyEquivalences C (ComplexShape.down ℕ)
       (additiveAssociatedChainComplexMap a) := by
-  sorry
+  rcases H with ⟨b, hba, hab⟩
+  have hba' := (additiveAssociatedChainMap_homotopic hba).some
+  have hab' := (additiveAssociatedChainMap_homotopic hab).some
+  have hcomp_ba :
+      additiveAssociatedChainComplexMap b ≫ additiveAssociatedChainComplexMap a =
+        additiveAssociatedChainComplexMap (b ≫ a) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    rfl
+  have hcomp_ab :
+      additiveAssociatedChainComplexMap a ≫ additiveAssociatedChainComplexMap b =
+        additiveAssociatedChainComplexMap (a ≫ b) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    rfl
+  have hid_V :
+      additiveAssociatedChainComplexMap (𝟙 V) =
+        𝟙 (additiveAssociatedChainComplex V) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    rfl
+  have hid_U :
+      additiveAssociatedChainComplexMap (𝟙 U) =
+        𝟙 (additiveAssociatedChainComplex U) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    rfl
+  have hbaK : _root_.Homotopy
+      (additiveAssociatedChainComplexMap b ≫ additiveAssociatedChainComplexMap a)
+      (𝟙 (additiveAssociatedChainComplex V)) := by
+    rw [hcomp_ba, ← hid_V]
+    exact hba'
+  have habK : _root_.Homotopy
+      (additiveAssociatedChainComplexMap a ≫ additiveAssociatedChainComplexMap b)
+      (𝟙 (additiveAssociatedChainComplex U)) := by
+    rw [hcomp_ab, ← hid_U]
+    exact hab'
+  change ∃ e : HomotopyEquiv (additiveAssociatedChainComplex U)
+      (additiveAssociatedChainComplex V),
+    e.hom = additiveAssociatedChainComplexMap a
+  let e : HomotopyEquiv (additiveAssociatedChainComplex U)
+      (additiveAssociatedChainComplex V) :=
+    { hom := additiveAssociatedChainComplexMap a
+      inv := additiveAssociatedChainComplexMap b
+      homotopyHomInvId := habK
+      homotopyInvHomId := hbaK }
+  exact ⟨e, rfl⟩
 
 theorem normalizedChainMap_homotopyEquivalence
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -446,6 +569,54 @@ theorem normalizedChainMap_homotopyEquivalence
     (H : Formalization.Books.Simplicial.Unit26.IsHomotopyEquivalence a) :
     HomologicalComplex.homotopyEquivalences C (ComplexShape.down ℕ)
       (normalizedChainComplexMap a) := by
-  sorry
+  rcases H with ⟨b, hba, hab⟩
+  have hba' := (normalizedChainMap_homotopic hba).some
+  have hab' := (normalizedChainMap_homotopic hab).some
+  have hcomp_ba :
+      normalizedChainComplexMap b ≫ normalizedChainComplexMap a =
+        normalizedChainComplexMap (b ≫ a) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    exact
+      (Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap_comp b a n).symm
+  have hcomp_ab :
+      normalizedChainComplexMap a ≫ normalizedChainComplexMap b =
+        normalizedChainComplexMap (a ≫ b) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    exact
+      (Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap_comp a b n).symm
+  have hid_V :
+      normalizedChainComplexMap (𝟙 V) =
+        𝟙 (normalizedChainComplex V) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    exact Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap_id V n
+  have hid_U :
+      normalizedChainComplexMap (𝟙 U) =
+        𝟙 (normalizedChainComplex U) := by
+    apply HomologicalComplex.Hom.ext
+    funext n
+    exact Formalization.Books.Simplicial.Unit18.normalizedSubobjectMap_id U n
+  have hbaK : _root_.Homotopy
+      (normalizedChainComplexMap b ≫ normalizedChainComplexMap a)
+      (𝟙 (normalizedChainComplex V)) := by
+    rw [hcomp_ba, ← hid_V]
+    exact hba'
+  have habK : _root_.Homotopy
+      (normalizedChainComplexMap a ≫ normalizedChainComplexMap b)
+      (𝟙 (normalizedChainComplex U)) := by
+    rw [hcomp_ab, ← hid_U]
+    exact hab'
+  change ∃ e : HomotopyEquiv (normalizedChainComplex U)
+      (normalizedChainComplex V),
+    e.hom = normalizedChainComplexMap a
+  let e : HomotopyEquiv (normalizedChainComplex U)
+      (normalizedChainComplex V) :=
+    { hom := normalizedChainComplexMap a
+      inv := normalizedChainComplexMap b
+      homotopyHomInvId := habK
+      homotopyInvHomId := hbaK }
+  exact ⟨e, rfl⟩
 
 end Formalization.Books.Simplicial.Unit27

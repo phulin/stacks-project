@@ -97,8 +97,8 @@ def mutuallyDominates
 the colimit also witnessed after forgetting to types. -/
 structure FinitelyPresentedFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) where
-  index : Type (max u w)
-  [indexCategory : Category.{max u w} index]
+  index : Type v
+  [indexCategory : Category.{v} index]
   [indexFiltered : IsFiltered index]
   diag : index ⥤ ModuleCat.{max u w} R
   ι : diag ⟶ (Functor.const index).obj N
@@ -109,7 +109,7 @@ structure FinitelyPresentedFilteredColimit
 
 instance finitelyPresentedFilteredColimitIndexCategory
     {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
-    (C : FinitelyPresentedFilteredColimit N) : Category.{max u w} C.index :=
+    (C : FinitelyPresentedFilteredColimit N) : Category.{v} C.index :=
   C.indexCategory
 
 instance finitelyPresentedFilteredColimitIndexFiltered
@@ -121,7 +121,7 @@ instance finitelyPresentedFilteredColimitIndexFiltered
 universe containing both the ring and the module. -/
 theorem exists_finitelyPresentedFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) :
-    Nonempty (FinitelyPresentedFilteredColimit N) := by
+    Nonempty (FinitelyPresentedFilteredColimit.{u, max u w, w} N) := by
   classical
   let M := (N : Type (max u w))
   let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
@@ -349,7 +349,7 @@ theorem exists_finitelyPresentedFilteredColimit
 /-- Every tensor with the colimit module is represented at one stage of a
 finitely presented filtered-colimit presentation. -/
 lemma finitelyPresentedFilteredColimit_tensor_rep
-    {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
+    {R : Type u} [CommRing R] {P : Type z} [AddCommGroup P] [Module R P]
     {Q : ModuleCat.{max u w} R} (C : FinitelyPresentedFilteredColimit Q) :
     ∀ x : TensorProduct R P (Q : Type (max u w)),
         ∃ (i : C.index) (y : TensorProduct R P
@@ -416,6 +416,210 @@ lemma finitelyPresentedFilteredColimit_eventually_zero
     (Types.FilteredColimit.isColimit_eq_iff' C.underlyingIsColimit x 0).1
       (hx.trans (by simp))
   exact ⟨j, h, by simpa using hh⟩
+
+/-- A map from a finite module which is zero in the colimit becomes zero at a
+later stage. -/
+lemma finitelyPresentedFilteredColimit_eventually_zero_map
+    {R : Type u} [CommRing R]
+    {P : Type z} [AddCommGroup P] [Module R P]
+    {Q : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit Q) {i : C.index}
+    (hP : Module.Finite R P)
+    (f : P →ₗ[R] (C.diag.obj i : Type (max u w)))
+    (hf : (C.ι.app i).hom.comp f = 0) :
+    ∃ (j : C.index) (h : i ⟶ j),
+      (C.diag.map h).hom.comp f = 0 := by
+  classical
+  let _ : Module.Finite R P := hP
+  obtain ⟨n, p, hp⟩ := Module.Finite.exists_fin' R P
+  choose l z hz using fun b : Fin n =>
+    finitelyPresentedFilteredColimit_eventually_zero C
+      (f (p (Pi.single b 1))) (by
+        have h := congrArg (fun t => t (p (Pi.single b 1))) hf
+        simpa [LinearMap.comp_apply] using h)
+  let O : Finset C.index := insert i (Finset.univ.image l)
+  let H : Finset (Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y) :=
+    Finset.univ.image (fun b : Fin n =>
+      (⟨i, l b, Finset.mem_insert_self i _,
+        Finset.mem_insert_of_mem (Finset.mem_image.mpr
+          ⟨b, Finset.mem_univ _, rfl⟩), z b⟩ :
+        Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y))
+  obtain ⟨j, t, ht⟩ := IsFiltered.sup_exists O H
+  refine ⟨j, t (Finset.mem_insert_self i _), ?_⟩
+  have hzero (b : Fin n) :
+      (C.diag.map (t (Finset.mem_insert_self i _))).hom
+        (f (p (Pi.single b 1))) = 0 := by
+    have hcomm := ht
+      (Finset.mem_insert_self i _)
+      (Finset.mem_insert_of_mem (Finset.mem_image.mpr
+        ⟨b, Finset.mem_univ _, rfl⟩))
+      (Finset.mem_image.mpr ⟨b, Finset.mem_univ _, rfl⟩)
+    have hmap := congrArg ModuleCat.Hom.hom
+      (congrArg C.diag.map hcomm)
+    have hz' := congrArg (fun s => s (f (p (Pi.single b 1)))) hmap
+    rw [← hz']
+    simp only [Functor.map_comp, ModuleCat.hom_comp, LinearMap.comp_apply,
+      hz b, map_zero]
+  apply LinearMap.ext
+  intro x
+  obtain ⟨y, hy⟩ := hp x
+  rw [← hy]
+  have hy' : y = ∑ b, y b • Pi.single b 1 := by
+    ext b
+    simp [Pi.single_apply]
+  rw [hy']
+  simp only [map_sum, map_smul, LinearMap.comp_apply]
+  have hrhs : (∑ b, y b •
+      (0 : P →ₗ[R] (C.diag.obj j : Type (max u w)))
+        (p (Pi.single b 1))) = 0 := by
+    apply Finset.sum_eq_zero
+    intro b hb
+    rw [LinearMap.zero_apply, smul_zero]
+  have hleft : (∑ b, y b •
+      (C.diag.map (t (Finset.mem_insert_self i _))).hom
+        (f (p (Pi.single b 1)))) = 0 := by
+    apply Finset.sum_eq_zero
+    intro b hb
+    rw [hzero b, smul_zero]
+  exact hleft.trans hrhs.symm
+
+/-! The following three lemmas are the public interface used when a finite
+presentation is tested against this filtered colimit. -/
+
+/-- Every element of the presented module comes from one stage. -/
+lemma finitelyPresentedFilteredColimit_element_rep
+    {R : Type u} [CommRing R] {Q : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit Q) (x : (Q : Type (max u w))) :
+    ∃ (i : C.index) (y : (C.diag.obj i : Type (max u w))),
+      (C.ι.app i).hom y = x := by
+  exact Types.jointly_surjective_of_isColimit C.underlyingIsColimit x
+
+/-- A map from a finitely presented module into the colimit factors through
+one stage.  The source and the stages are allowed to live in different
+universes. -/
+lemma finitelyPresentedFilteredColimit_map_factor
+    {R : Type u} [CommRing R]
+    {P : Type z} [AddCommGroup P] [Module R P]
+    {Q : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit Q)
+    (hP : Module.FinitePresentation R P)
+    (f : P →ₗ[R] (Q : Type (max u w))) :
+    ∃ (i : C.index) (g : P →ₗ[R] (C.diag.obj i : Type (max u w))),
+      (C.ι.app i).hom.comp g = f := by
+  classical
+  let _ : Module.FinitePresentation R P := hP
+  obtain ⟨n, m, p, q, hp, hpq⟩ :=
+    Module.FinitePresentation.exists_fin' R P
+  choose i yi hyi using fun a : Fin n =>
+    finitelyPresentedFilteredColimit_element_rep C (f (p (Pi.single a 1)))
+  let S : Finset C.index := Finset.univ.image i
+  obtain ⟨k, hk⟩ := IsFiltered.sup_objs_exists S
+  let y : Fin n → (C.diag.obj k : Type (max u w)) := fun a =>
+    (C.diag.map (hk (Finset.mem_image.mpr ⟨a, Finset.mem_univ _, rfl⟩)).some).hom
+      (yi a)
+  let g₀ : (Fin n → R) →ₗ[R] (C.diag.obj k : Type (max u w)) :=
+    Fintype.linearCombination R y
+  have hy (a : Fin n) : (C.ι.app k).hom (y a) = f (p (Pi.single a 1)) := by
+    have hn := congrArg ModuleCat.Hom.hom
+      (C.ι.naturality (hk (Finset.mem_image.mpr ⟨a, Finset.mem_univ _, rfl⟩)).some)
+    have hn' := congrArg (fun h => h (yi a)) hn
+    simpa [y, ModuleCat.hom_comp, LinearMap.comp_apply] using hn'.trans (hyi a)
+  have hgp : (C.ι.app k).hom.comp g₀ = f.comp p := by
+    apply LinearMap.ext
+    intro x
+    have hx : x = ∑ a, x a • Pi.single a 1 := by
+      ext a
+      simp [Pi.single_apply]
+    rw [hx]
+    simp only [map_sum, map_smul, LinearMap.comp_apply]
+    apply Finset.sum_congr rfl
+    intro a ha
+    simpa [g₀] using congrArg (fun t => x a • t) (hy a)
+  have hgqzero : (C.ι.app k).hom.comp (g₀.comp q) = 0 := by
+    calc
+      (C.ι.app k).hom.comp (g₀.comp q) = (f.comp p).comp q := by
+        rw [← LinearMap.comp_assoc, hgp]
+      _ = f.comp (p.comp q) := by rw [LinearMap.comp_assoc]
+      _ = 0 := by
+        have hpq0 : p.comp q = 0 := by
+          apply LinearMap.ext
+          intro x
+          have h := congrArg (fun h => h x) hpq.comp_eq_zero
+          simpa [LinearMap.comp_apply] using h
+        have hzero := congrArg
+          (fun h : (Fin m → R) →ₗ[R] P => f.comp h) hpq0
+        simpa using hzero
+  choose l z hz using fun b : Fin m =>
+    finitelyPresentedFilteredColimit_eventually_zero C
+      (g₀ (q (Pi.single b 1))) (by
+        have h := congrArg (fun t => t (Pi.single b 1)) hgqzero
+        simpa [LinearMap.comp_apply] using h)
+  let O : Finset C.index := insert k (Finset.univ.image l)
+  let H : Finset (Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y) :=
+    Finset.univ.image (fun b : Fin m =>
+      (⟨k, l b, Finset.mem_insert_self k _,
+        Finset.mem_insert_of_mem (Finset.mem_image.mpr
+          ⟨b, Finset.mem_univ _, rfl⟩), z b⟩ :
+        Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y))
+  obtain ⟨r, t, ht⟩ := IsFiltered.sup_exists O H
+  let g₁ : (Fin n → R) →ₗ[R] (C.diag.obj r : Type (max u w)) :=
+    (C.diag.map (t (Finset.mem_insert_self k _))).hom.comp g₀
+  have hg₁q (b : Fin m) : g₁ (q (Pi.single b 1)) = 0 := by
+    have hcomm := ht
+      (Finset.mem_insert_self k _)
+      (Finset.mem_insert_of_mem (Finset.mem_image.mpr
+        ⟨b, Finset.mem_univ _, rfl⟩))
+      (Finset.mem_image.mpr ⟨b, Finset.mem_univ _, rfl⟩)
+    have hmap := congrArg ModuleCat.Hom.hom
+      (congrArg C.diag.map hcomm)
+    have hz' := congrArg (fun s => s (g₀ (q (Pi.single b 1)))) hmap
+    dsimp [g₁]
+    rw [← hz']
+    simp only [Functor.map_comp, ModuleCat.hom_comp, LinearMap.comp_apply,
+      hz b, map_zero]
+  have hg₁qzero : g₁.comp q = 0 := by
+    apply LinearMap.ext
+    intro x
+    have hx : x = ∑ b, x b • Pi.single b 1 := by
+      ext b
+      simp [Pi.single_apply]
+    rw [hx]
+    simp only [map_sum, map_smul, LinearMap.comp_apply]
+    simp_rw [hg₁q]
+    simp
+  have hker : LinearMap.ker p ≤ LinearMap.ker g₁ := by
+    rw [LinearMap.exact_iff.mp hpq]
+    intro x hx
+    obtain ⟨y, rfl⟩ := hx
+    apply LinearMap.mem_ker.mpr
+    simpa using congrArg (fun h => h y) hg₁qzero
+  let e := p.quotKerEquivOfSurjective hp
+  let g : P →ₗ[R] (C.diag.obj r : Type (max u w)) :=
+    (LinearMap.ker p).liftQ g₁ hker |>.comp e.symm.toLinearMap
+  refine ⟨r, g, ?_⟩
+  have hgp' : g.comp p = g₁ := by
+    apply LinearMap.ext
+    intro x
+    simp [g, e]
+  have hιg₁ : (C.ι.app r).hom.comp g₁ = f.comp p := by
+    apply LinearMap.ext
+    intro x
+    have hmap := congrArg ModuleCat.Hom.hom
+      (C.ι.naturality (t (Finset.mem_insert_self k _)))
+    have hmap' := congrArg (fun h => h (g₀ x)) hmap
+    have hgp' := congrArg (fun h => h x) hgp
+    calc
+      (C.ι.app r).hom (g₁ x) = (C.ι.app k).hom (g₀ x) := by
+        exact hmap'
+      _ = (f.comp p) x := by simpa using hgp'
+  apply LinearMap.ext
+  intro x
+  obtain ⟨y, hy⟩ := hp x
+  rw [← hy]
+  have hgp'y := congrArg (fun h => h y) hgp'
+  have hιg₁y := congrArg (fun h => h y) hιg₁
+  simpa [LinearMap.comp_apply] using
+    (congrArg (C.ι.app r).hom hgp'y).trans hιg₁y
 
 theorem dominates_iff_finitelyPresented
     {R : Type u} [CommRing R] {M N N' : Type w}

@@ -2138,12 +2138,19 @@ theorem canonicalTruncGE_boundary (K : CochainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncGE_homology_above (K : CochainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : n ≤ i) :
     QuasiIsoAt (canonicalTruncGEπ K n) i := by
-  sorry
+  exact CochainComplex.quasiIsoAt_πTruncGE K n i h
 
 theorem canonicalTruncGE_homology_below (K : CochainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i < n) :
     IsZero ((canonicalTruncGE K n).homology i) := by
-  sorry
+  change IsZero ((HomologicalComplex.truncGE K
+    (ComplexShape.embeddingUpIntGE n)).homology i)
+  exact (HomologicalComplex.exactAt_of_isSupported
+    (HomologicalComplex.truncGE K (ComplexShape.embeddingUpIntGE n))
+    (ComplexShape.embeddingUpIntGE n) i (by
+      intro k hk
+      dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk'] at hk
+      omega)).isZero_homology
 
 end CochainComplex
 

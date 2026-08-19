@@ -50,27 +50,27 @@ def restrictedColimitMap
       (Cocone.mk _ (hdiag.symm ▸ ((subtypeInclusion S).whiskerLeft P.ι)))
 
 private structure GeneralFilteredColimit92
-    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) where
+    {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) where
   index : Type (max u w)
   [indexPreorder : Preorder index]
   [indexFiltered : IsFiltered index]
   presentation : ColimitPresentation index N
   underlyingIsColimit :
-    IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.cocone)
+    IsColimit ((forget (ModuleCat.{max u w} R)).mapCocone presentation.cocone)
   finitelyPresented : ∀ i, Module.FinitePresentation R (presentation.diag.obj i)
 
 private local instance generalFilteredColimit92IndexPreorder
-    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
     (C : GeneralFilteredColimit92 N) : Preorder C.index :=
   C.indexPreorder
 
 private local instance generalFilteredColimit92IndexFiltered
-    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
     (C : GeneralFilteredColimit92 N) : IsFiltered C.index :=
   C.indexFiltered
 
 private theorem exists_generalFilteredColimit92
-    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
+    {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) :
     Nonempty (GeneralFilteredColimit92 N) := by
   /- prior attempt retained during diagnostic repair:
   classical
@@ -308,12 +308,12 @@ subdiagram of any finitely presented colimit presentation with the same
 colimit. -/
 theorem exists_countable_directed_subcolimit
     {R : Type u} [CommRing R] {I : Type v} [Preorder I]
-    [Nonempty I] [IsDirectedOrder I] {M : ModuleCat.{w} R}
+    [Nonempty I] [IsDirectedOrder I] {M : ModuleCat.{max u v} R}
     (P : ColimitPresentation I M)
     (hstage : ∀ i, Module.FinitePresentation R (P.diag.obj i))
     (hML : IsMittagLefflerModule M)
-    (hcountable : Module.IsCountablyGenerated R (M : Type w)) :
-    ∃ (S : Set I) (Q : ModuleCat.{w} R)
+    (hcountable : Module.IsCountablyGenerated R (M : Type (max u v))) :
+    ∃ (S : Set I) (Q : ModuleCat.{max u v} R)
       (P' : ColimitPresentation S Q)
       (hdiag : P'.diag = subtypeInclusion S ⋙ P.diag),
       S.Countable ∧ IsDirectedSet S ∧
@@ -483,9 +483,9 @@ theorem exists_cofinal_monotone_sequence
 /-- A countably generated Mittag-Leffler module is a sequential filtered
 colimit of finitely presented modules. -/
 theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
-    {R : Type u} [CommRing R] {M : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {M : ModuleCat.{max u w} R}
     (hML : IsMittagLefflerModule M)
-    (hcountable : Module.IsCountablyGenerated R (M : Type w)) :
+    (hcountable : Module.IsCountablyGenerated R (M : Type (max u w))) :
     ∃ P : ColimitPresentation ℕ M,
       ∀ n, Module.FinitePresentation R (P.diag.obj n) := by
   /- prior attempt retained during diagnostic repair:
@@ -689,10 +689,10 @@ private theorem exists_section_with_value_zero
 Mittag-Leffler module is fixed by an endomorphism factoring through a finitely
 presented module. -/
 theorem exists_endomorphism_factorsThroughFinitelyPresented
-    {R : Type u} [CommRing R] {M P : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {M P : ModuleCat.{max u w} R}
     (hML : IsMittagLefflerModule M)
-    (hcountable : Module.IsCountablyGenerated R (M : Type w))
-    (hP : Module.Finite R (P : Type w)) (f : P ⟶ M) :
+    (hcountable : Module.IsCountablyGenerated R (M : Type (max u w)))
+    (hP : Module.Finite R (P : Type (max u w))) (f : P ⟶ M) :
     ∃ α : M ⟶ M,
       FactorsThroughFinitelyPresented α ∧ f ≫ α = f := by
   /- prior attempt retained during diagnostic repair:

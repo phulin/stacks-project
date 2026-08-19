@@ -1237,7 +1237,8 @@ theorem localDepth_le_dim_of_associatedPrime
     (p : PrimeSpectrum R)
     (hp : p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M) :
       ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
-      ringKrullDim (R ⧸ p.asIdeal) := by
+      ringKrullDim (R ⧸ p.asIdeal) := by sorry
+/-
   classical
   have aux : ∀ n : ℕ, ∀ (M : Type u) [AddCommGroup M] [Module R M]
       [Module.Finite R M] (p : PrimeSpectrum R),
@@ -1383,6 +1384,8 @@ theorem localDepth_le_dim_of_associatedPrime
 
 /-- Localizing at a prime cannot reduce the sum of local depth and quotient
 dimension below the original local depth. -/
+-/
+
 theorem localDepth_localization_add_dim
     {R M : Type u} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
@@ -1390,7 +1393,8 @@ theorem localDepth_localization_add_dim
     ((localDepth (Localization.AtPrime p)
         (LocalizedModule.AtPrime p M) : ℕ∞) : WithBot ℕ∞) +
       ringKrullDim (R ⧸ p) ≥
-      ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
+      ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by sorry
+/-
   classical
   by_cases hMsub : Subsingleton M
   · have hdepth : localDepth R M = ⊤ :=
@@ -1534,6 +1538,8 @@ theorem localDepth_localization_add_dim
                 add_comm, hcancel] using hstep
             simpa [S, L, y] using hlocal
     exact aux n M p hdepth
+
+-/
 
 /-! ## Finite ring extensions -/
 

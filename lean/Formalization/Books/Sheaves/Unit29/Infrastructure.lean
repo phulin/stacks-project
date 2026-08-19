@@ -2680,8 +2680,6 @@ theorem exists_spectralSystemSectionsDiagram
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
     Nonempty (SpectralSystemSectionsDiagramData S i Ui) := by
-  sorry
-  /- Original proof attempt:
   let D : spectralPullbackSectionsIndex i ⥤ Type v := {
     obj := fun a => spectralSystemSectionsAt S i Ui a
     map := fun h => TypeCat.ofHom (spectralSystemSectionsTransition S i Ui h)
@@ -2701,13 +2699,73 @@ theorem exists_spectralSystemSectionsDiagram
       intro a b c f g
       apply ConcreteCategory.hom_ext
       intro s
-      dsimp [spectralSystemSectionsTransition] }
+      dsimp [spectralSystemSectionsTransition]
+      apply eq_cast_iff_heq.mpr
+      let V := (Opens.map (X.map (unop a).hom)).obj Ui
+      have fMapAt_heq_of_eq {A B : TopCat.{v}} {f₁ f₂ : A ⟶ B}
+          {G : TopCat.Sheaf (Type v) B} {F : TopCat.Sheaf (Type v) A}
+          (hfg : f₁ = f₂) {ξ : FMap f₁ G F} {η : FMap f₂ G F}
+          (hξ : HEq ξ η) (V : Opens B) (s : G.presheaf.obj (op V)) :
+          HEq (fMapAt ξ V s) (fMapAt η V s) := by
+        cases hfg
+        cases hξ
+        rfl
+      have fMapAt_open {A B : TopCat.{v}} {f₁ : A ⟶ B}
+          {G : TopCat.Sheaf (Type v) B} {F : TopCat.Sheaf (Type v) A}
+          (ξ : FMap f₁ G F) {V W : Opens B} (h : V = W)
+          (x : G.presheaf.obj (op V)) :
+          HEq (fMapAt ξ V x)
+            (fMapAt ξ W (cast (congrArg (fun U => G.presheaf.obj (op U)) h) x)) := by
+        cases h
+        rfl
+      have fMapAt_output {A B : TopCat.{v}} {f₁ : A ⟶ B}
+          {G : TopCat.Sheaf (Type v) B} {F : TopCat.Sheaf (Type v) A}
+          (ξ : FMap f₁ G F) {V : Opens B} {W : Opens A}
+          (h : (Opens.map f₁).obj V = W) (x : G.presheaf.obj (op V)) :
+          HEq (fMapAt ξ V x)
+            (cast (congrArg (fun U => F.presheaf.obj (op U)) h)
+              (fMapAt ξ V x)) := by
+        cases h
+        rfl
+      have fMapAt_comp {A B C : TopCat.{v}} {f₁ : A ⟶ B} {g₁ : B ⟶ C}
+          {F : TopCat.Sheaf (Type v) A} {G : TopCat.Sheaf (Type v) B}
+          {H : TopCat.Sheaf (Type v) C} (φ : FMap f₁ G F) (ψ : FMap g₁ H G)
+          (V : Opens C) (x : H.presheaf.obj (op V)) :
+          HEq (fMapAt (fMapComp φ ψ) V x)
+            (fMapAt φ ((Opens.map g₁).obj V) (fMapAt ψ V x)) := by
+        apply heq_of_eq
+        simp only [fMapComp, fMapAt, pushforwardSheafCompIso, Iso.refl_hom]
+        rfl
+      have hopen : (Opens.map (X.map f.unop.left)).obj V =
+          (Opens.map (X.map (unop b).hom)).obj Ui := by
+        dsimp [V]
+        rw [← Opens.map_comp_obj]
+        rw [← X.map_comp]
+        exact congrArg (fun q => (Opens.map q).obj Ui)
+          (congrArg X.map (CostructuredArrow.w f.unop))
+      have houter :
+          (Opens.map (X.map (g.unop.left ≫ f.unop.left))).obj V =
+            (Opens.map (X.map (unop c).hom)).obj Ui := by
+        dsimp [V]
+        rw [← Opens.map_comp_obj]
+        rw [← X.map_comp]
+        exact congrArg (fun q => (Opens.map q).obj Ui)
+          (congrArg X.map (CostructuredArrow.w (g.unop ≫ f.unop)))
+      have hmapat :
+          HEq (fMapAt (S.map (g.unop.left ≫ f.unop.left)) V s)
+            (fMapAt (fMapComp (S.map g.unop.left) (S.map f.unop.left)) V s) :=
+        fMapAt_heq_of_eq (X.map_comp _ _) (S.map_comp _ _) V s
+      have hcomp := fMapAt_comp (S.map g.unop.left) (S.map f.unop.left) V s
+      have hout := fMapAt_output (S.map (g.unop.left ≫ f.unop.left)) houter s
+      have hin := fMapAt_open (S.map g.unop.left) hopen
+        (fMapAt (S.map f.unop.left) V s)
+      exact hout.symm.trans (hmapat.trans (hcomp.trans hin))
+  }
   refine ⟨{ diagram := D, obj_eq := ?_, map_eq := ?_ }⟩
   · intro a
     rfl
   · intro a b h
     simp [D]
-  -/
 
 /-- The source-facing colimit of the sections
 `F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/

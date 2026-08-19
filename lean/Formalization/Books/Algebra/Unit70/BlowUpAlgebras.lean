@@ -1146,7 +1146,196 @@ expected power-torsion kernel. -/
 theorem affineBlowup_add_principal
     {R : Type u} [CommRing R] (f : R) (I : Ideal R) {a : R} (ha : a ∈ I) :
     Nonempty (AddPrincipalBlowupPresentation f I a) := by
-  sorry
+  let A := affineBlowup I a
+  let L := Localization.Away a
+  let C := addPrincipalBlowup f I a
+  let T := Localization.Away (f * a)
+  let q : R →+* T := algebraMap R T
+  have hfa : IsUnit (q (f * a)) := by
+    change IsUnit (algebraMap R T (f * a))
+    exact IsLocalization.Away.algebraMap_isUnit (f * a)
+  have hq : IsUnit (q a) := by
+    obtain ⟨u, hu⟩ := hfa.exists_right_inv
+    apply IsUnit.of_mul_eq_one (q f * u)
+    calc
+      q a * (q f * u) = q (f * a) * u := by
+        rw [map_mul]
+        ring
+      _ = 1 := hu
+  have hfq : IsUnit (q f) := by
+    obtain ⟨u, hu⟩ := hfa.exists_right_inv
+    apply IsUnit.of_mul_eq_one (q a * u)
+    calc
+      q f * (q a * u) = q (f * a) * u := by
+        rw [map_mul]
+        ring
+      _ = 1 := hu
+  let gL : L →+* T :=
+    IsLocalization.Away.lift (x := a) (S := L) (P := T) (g := q) hq
+  have hinv : gL (IsLocalization.Away.invSelf a) =
+      q f * IsLocalization.Away.invSelf (f * a) := by
+    apply hq.mul_left_cancel
+    calc
+      q a * gL (IsLocalization.Away.invSelf a) =
+          gL (algebraMap R L a) * gL (IsLocalization.Away.invSelf a) := by
+            rw [IsLocalization.Away.lift_eq a hq a]
+      _ = gL (algebraMap R L a * IsLocalization.Away.invSelf a) := by
+        rw [map_mul]
+      _ = 1 := by rw [IsLocalization.Away.mul_invSelf, map_one]
+      _ = q a * (q f * IsLocalization.Away.invSelf (f * a)) := by
+        rw [show q a * (q f * IsLocalization.Away.invSelf (f * a)) =
+            q (f * a) * IsLocalization.Away.invSelf (f * a) by
+              rw [map_mul]
+              ring]
+        rw [show q (f * a) = algebraMap R T (f * a) by rfl,
+          IsLocalization.Away.mul_invSelf]
+  let jAlg : L →ₐ[R] T :=
+    { toRingHom := gL
+      commutes' := by
+        intro r
+        exact IsLocalization.Away.lift_eq a hq r }
+  let hA : A →ₐ[R] L :=
+    { toFun := fun x => x.1
+      map_one' := rfl
+      map_mul' := by intro x y; rfl
+      map_zero' := rfl
+      map_add' := by intro x y; rfl
+      commutes' := by intro r; rfl }
+  let kA : A →ₐ[R] T := jAlg.comp hA
+  have hkA_mem (x : A) : kA x ∈ C := by
+    have hclosure : ∀ z : L, z ∈ A → jAlg z ∈ C := by
+      intro z hz
+      induction hz using Algebra.adjoin_induction with
+      | mem z hz =>
+          rcases hz with ⟨y, hy, rfl⟩
+          change jAlg (algebraMap R L y * IsLocalization.Away.invSelf a) ∈ C
+          rw [map_mul, jAlg.commutes]
+          have hjinv : jAlg (IsLocalization.Away.invSelf a) =
+              q f * IsLocalization.Away.invSelf (f * a) := by
+            change gL (IsLocalization.Away.invSelf a) = _
+            exact hinv
+          rw [hjinv]
+          have hgen :=
+            (affineBlowupGenerator (principalMultiplyIdeal f I) (f * a)
+              ⟨f * y, Ideal.mul_mem_mul
+                (Ideal.subset_span (Set.mem_singleton f)) hy⟩).property
+          change q (f * y) * IsLocalization.Away.invSelf (f * a) ∈ C at hgen
+          change q y * (q f * IsLocalization.Away.invSelf (f * a)) ∈ C
+          convert hgen using 1
+          rw [map_mul]
+          ring
+      | algebraMap r =>
+          change jAlg (algebraMap R L r) ∈ C
+          rw [jAlg.commutes]
+          exact C.algebraMap_mem r
+      | add x y hx hy ihx ihy =>
+          simpa only [map_add] using C.add_mem ihx ihy
+      | mul x y hx hy ihx ihy =>
+          simpa only [map_mul] using C.mul_mem ihx ihy
+    exact hclosure (x : L) x.property
+  let gA : A →ₐ[R] C :=
+    { toFun := fun x => ⟨kA x, hkA_mem x⟩
+      map_one' := by apply Subtype.ext; exact kA.map_one
+      map_mul' := by intro x y; apply Subtype.ext; exact kA.map_mul _ _
+      map_zero' := by apply Subtype.ext; exact kA.map_zero
+      map_add' := by intro x y; apply Subtype.ext; exact kA.map_add _ _
+      commutes' := by
+        intro r
+        apply Subtype.ext
+        exact kA.commutes r }
+  have hg_surj : Function.Surjective gA := by
+    intro z
+    rcases z with ⟨z, hz⟩
+    induction hz using Algebra.adjoin_induction with
+    | mem y hy =>
+        rcases hy with ⟨r, hr, rfl⟩
+        obtain ⟨x, hx, hxr⟩ := (Ideal.mem_span_singleton_mul).mp hr
+        refine ⟨affineBlowupGenerator I a ⟨x, hx⟩, ?_⟩
+        apply Subtype.ext
+        change jAlg (algebraMap R L x * IsLocalization.Away.invSelf a) =
+          algebraMap R T r * IsLocalization.Away.invSelf (f * a)
+        rw [map_mul, jAlg.commutes]
+        have hjinv : jAlg (IsLocalization.Away.invSelf a) =
+            q f * IsLocalization.Away.invSelf (f * a) := by
+          change gL (IsLocalization.Away.invSelf a) = _
+          exact hinv
+        rw [hjinv]
+        have hxr' : x * f = r := by simpa [mul_comm] using hxr
+        rw [← hxr']
+        rw [show q f = algebraMap R T f by rfl]
+        rw [map_mul]
+        ring
+    | algebraMap r =>
+        refine ⟨algebraMap R A r, ?_⟩
+        apply Subtype.ext
+        change jAlg (algebraMap R L r) = algebraMap R T r
+        rw [jAlg.commutes]
+    | add x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u + v, ?_⟩
+        apply Subtype.ext
+        change (gA (u + v) : T) = x + y
+        rw [map_add, hu, hv]
+        rfl
+    | mul x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u * v, ?_⟩
+        apply Subtype.ext
+        change (gA (u * v) : T) = x * y
+        rw [map_mul, hu, hv]
+        rfl
+  have hker : RingHom.ker gA.toRingHom =
+      powerTorsionIdeal _ (algebraMap R A f) := by
+    ext x
+    constructor
+    · intro hx
+      rw [mem_powerTorsionIdeal_iff]
+      have hx0 : jAlg (x : L) = 0 := by
+        have hx' := RingHom.mem_ker.mp hx
+        exact congrArg Subtype.val hx'
+      obtain ⟨m, r, hr⟩ := IsLocalization.Away.surj a (x : L)
+      have hrj := congrArg (fun z : L => jAlg z) hr
+      have hr0 : q r = 0 := by
+        rw [map_mul, hx0, zero_mul, jAlg.commutes] at hrj
+        exact hrj.symm
+      have hrT : r ∈ powerTorsionIdeal R (f * a) := by
+        rw [powerTorsionIdeal, RingHom.mem_ker]
+        exact hr0
+      obtain ⟨k, hkr⟩ := (mem_powerTorsionIdeal_iff (f * a) r).mp hrT
+      refine ⟨k, ?_⟩
+      apply Subtype.ext
+      change (algebraMap R L f) ^ k * (x : L) = 0
+      have hz : (algebraMap R L a) ^ (k + m) *
+          ((algebraMap R L f) ^ k * (x : L)) = 0 := by
+        calc
+          (algebraMap R L a) ^ (k + m) *
+              ((algebraMap R L f) ^ k * (x : L)) =
+              (algebraMap R L (f * a)) ^ k *
+                ((x : L) * (algebraMap R L a) ^ m) := by
+                  rw [map_mul, mul_pow]
+                  ring
+          _ = (algebraMap R L (f * a)) ^ k * algebraMap R L r := by
+                rw [hr]
+          _ = algebraMap R L ((f * a) ^ k * r) := by
+                simp only [map_mul, map_pow]
+          _ = 0 := by rw [hkr, map_zero]
+      apply (IsLocalization.Away.algebraMap_isUnit a).pow (k + m) |>.mul_left_cancel
+      simpa using hz
+    · intro hx
+      rw [mem_powerTorsionIdeal_iff] at hx
+      apply RingHom.mem_ker.mpr
+      apply Subtype.ext
+      change gL (x : L) = 0
+      have hnL : (algebraMap R L f) ^ hx.choose * (x : L) = 0 := by
+        exact congrArg Subtype.val hx.choose_spec
+      have htarget := congrArg gL hnL
+      rw [map_mul, map_pow, map_zero,
+        IsLocalization.Away.lift_eq a hq f] at htarget
+      apply hfq.pow hx.choose |>.mul_left_cancel
+      simpa using htarget
+  exact ⟨{ hom := gA, surjective := hg_surj, kernel_eq_power_torsion := hker }⟩
 
 /-- The two affine charts at `a` and `b` map into the chart at `ab` for the
 product ideal.  This is the algebra-map form of the inclusions
@@ -1156,26 +1345,102 @@ structure AffineBlowupProductComparison
   left : affineBlowup I a →ₐ[R] affineBlowup (I * J) (a * b)
   right : affineBlowup J b →ₐ[R] affineBlowup (I * J) (a * b)
 
+private def affineBlowup_mono
+    {R : Type u} [CommRing R] {K L : Ideal R} (d : R) (hKL : K ≤ L) :
+    affineBlowup K d →ₐ[R] affineBlowup L d := by
+  let hmem : ∀ x : affineBlowup K d, (x : Localization.Away d) ∈ affineBlowup L d := by
+    have hclosure : ∀ z : Localization.Away d, z ∈ affineBlowup K d →
+        z ∈ affineBlowup L d := by
+      intro z hz
+      induction hz using Algebra.adjoin_induction with
+      | mem z hz =>
+          rcases hz with ⟨y, hy, rfl⟩
+          exact (affineBlowupGenerator L d ⟨y, hKL hy⟩).property
+      | algebraMap r =>
+          exact (affineBlowup L d).algebraMap_mem r
+      | add x y hx hy ihx ihy =>
+          exact (affineBlowup L d).add_mem ihx ihy
+      | mul x y hx hy ihx ihy =>
+          exact (affineBlowup L d).mul_mem ihx ihy
+    intro x
+    exact hclosure x x.property
+  exact
+    { toFun := fun x => ⟨x.1, hmem x⟩
+      map_one' := by apply Subtype.ext; rfl
+      map_mul' := by intro x y; apply Subtype.ext; rfl
+      map_zero' := by apply Subtype.ext; rfl
+      map_add' := by intro x y; apply Subtype.ext; rfl
+      commutes' := by intro r; apply Subtype.ext; rfl }
+
 /-- The product-ideal affine chart receives both of the original charts. -/
 theorem affineBlowup_product_comparison
     {R : Type u} [CommRing R] (I J : Ideal R) (a b : R)
     (_ha : a ∈ I) (_hb : b ∈ J) :
     Nonempty (AffineBlowupProductComparison I J a b) := by
-  sorry
+  have hspanb : Ideal.span ({b} : Set R) ≤ J := by
+    apply Ideal.span_le.2
+    intro x hx
+    have hxb : x = b := by simpa using hx
+    simpa [hxb] using _hb
+  have hleft : principalMultiplyIdeal b I ≤ I * J := by
+    dsimp [principalMultiplyIdeal]
+    simpa [mul_comm] using Ideal.mul_mono hspanb (le_refl I)
+  have hspana : Ideal.span ({a} : Set R) ≤ I := by
+    apply Ideal.span_le.2
+    intro x hx
+    have hxa : x = a := by simpa using hx
+    simpa [hxa] using _ha
+  have hright : principalMultiplyIdeal a J ≤ I * J := by
+    dsimp [principalMultiplyIdeal]
+    exact Ideal.mul_mono hspana (le_refl J)
+  rcases affineBlowup_add_principal b I _ha with ⟨hl⟩
+  rcases affineBlowup_add_principal a J _hb with ⟨hr⟩
+  have hl' : affineBlowup I a →ₐ[R]
+      affineBlowup (principalMultiplyIdeal b I) (a * b) := by
+    rw [show a * b = b * a by ring]
+    exact hl.hom
+  let il : affineBlowup (principalMultiplyIdeal b I) (a * b) →ₐ[R]
+      affineBlowup (I * J) (a * b) := affineBlowup_mono (a * b) hleft
+  let ir : affineBlowup (principalMultiplyIdeal a J) (a * b) →ₐ[R]
+      affineBlowup (I * J) (a * b) := affineBlowup_mono (a * b) hright
+  refine ⟨{ left := ?_, right := ?_ }⟩
+  · exact il.comp hl'
+  · exact ir.comp hr.hom
 
 /-- Reducedness is preserved by every affine blowup. -/
 theorem affineBlowup_isReduced
     {R : Type u} [CommRing R] [IsReduced R]
     (I : Ideal R) (a : R) (_ha : a ∈ I) :
     IsReduced (affineBlowup I a) := by
-  sorry
+  refine ⟨?_⟩
+  intro x hx
+  apply Subtype.ext
+  apply IsReduced.eq_zero (x : Localization.Away a)
+  exact ⟨hx.choose, congrArg Subtype.val hx.choose_spec⟩
 
 /-- A blowup chart at a nonzero element of an ideal in a domain is a domain. -/
 theorem affineBlowup_isDomain
     {R : Type u} [CommRing R] [IsDomain R]
     (I : Ideal R) {a : R} (ha : a ∈ I) (ha0 : a ≠ 0) :
     IsDomain (affineBlowup I a) := by
-  sorry
+  have hSdom : IsDomain (Localization.Away a) :=
+    @Localization.Away.isDomain R _ inferInstance a ha0
+  letI : IsDomain (Localization.Away a) := hSdom
+  rw [isDomain_iff_noZeroDivisors_and_nontrivial]
+  constructor
+  · refine ⟨?_⟩
+    intro x y hxy
+    have hxy' : (x : Localization.Away a) * (y : Localization.Away a) = 0 :=
+      congrArg Subtype.val hxy
+    have hND : NoZeroDivisors (Localization.Away a) := inferInstance
+    rcases hND.eq_zero_or_eq_zero_of_mul_eq_zero hxy' with hx | hy
+    · left
+      exact Subtype.ext hx
+    · right
+      exact Subtype.ext hy
+  · refine ⟨⟨0, 1, ?_⟩⟩
+    intro h
+    exact zero_ne_one (congrArg Subtype.val h)
 
 /-- The blowup map is dominant when the chosen denominator avoids every
 minimal prime. -/

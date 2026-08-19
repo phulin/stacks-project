@@ -392,12 +392,7 @@ theorem left_dual_biproduct
         ((Y₂ : C) ◁ biprod.snd) ≫ ε_ X₂ Y₂
   refine ⟨ExactPairing.mk η ε ?_ ?_⟩
   ·
-    /- prior attempt: the left-duality component proof below no longer compiles
-       after the diagnostic repair; it is retained verbatim for follow-up. -/
-    sorry
-  /- prior attempt body retained below -/
-  /-
-  · apply (cancel_mono (λ_ (Y₁ ⊞ Y₂)).hom).1
+    apply (cancel_mono (λ_ (Y₁ ⊞ Y₂)).hom).1
     apply biprod.hom_ext (X := Y₁) (Y := Y₂)
     · have h11 := hleft (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
@@ -443,14 +438,44 @@ theorem left_dual_biproduct
                   ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
                     (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst = 0 := by
         rw [← Category.assoc, hzero, zero_comp]
-      rw [hzero_assoc]
       have hsnd := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂))
         (r := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
       have hsnd' := congrArg
         (fun k => k ≫ ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
           (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) hsnd
       simp only [Category.assoc] at hsnd'
-      rw [← hsnd']
+      have hmove_y :
+          (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₁).inv ≫
+              biprod.snd ▷ (X₁ ⊞ X₂) ▷ Y₁ ≫
+                (Y₂ ⊗ (X₁ ⊞ X₂)) ◁ (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂) =
+            (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂) ≫
+              (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                biprod.snd ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) := by
+        calc
+          _ = (biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₁)) ≫
+                (α_ Y₂ (X₁ ⊞ X₂) Y₁).inv ≫
+                  (Y₂ ⊗ (X₁ ⊞ X₂)) ◁
+                    (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂) := by
+            simpa only [Category.assoc] using
+              congrArg (fun k => k ≫
+                (Y₂ ⊗ (X₁ ⊞ X₂)) ◁
+                  (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂))
+                (MonoidalCategory.associator_inv_naturality_left
+                  (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂) (X₁ ⊞ X₂) Y₁).symm
+          _ = (biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₁)) ≫
+                ((Y₂ ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂)) ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv) := by
+            rw [MonoidalCategory.associator_inv_naturality_right]
+          _ = ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂)) ≫
+                biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ (Y₁ ⊞ Y₂)) ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv := by
+            rw [← MonoidalCategory.whisker_exchange_assoc]
+          _ = _ := by
+            rw [MonoidalCategory.associator_inv_naturality_left]
+      skip
       have hzero₂ :
           (Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
               (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁ ≫
@@ -482,18 +507,299 @@ theorem left_dual_biproduct
                 biprod.snd ▷ X₂ ▷ (Y₁ ⊞ Y₂) ≫
                   ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
                     (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) hzero₂
-      rw [hzero₂_assoc]
+      have hterm1 :
+          (Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+              (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁ ≫
+                (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₁).inv ≫
+                  biprod.snd ▷ (X₁ ⊞ X₂) ▷ Y₁ ≫
+                    (Y₂ ⊗ (X₁ ⊞ X₂)) ◁ biprod.inl ≫
+                      (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                        Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                          (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                            ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                              (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst = 0 := by
+        calc
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁) ≫
+              ((α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₁).inv ≫
+                biprod.snd ▷ (X₁ ⊞ X₂) ▷ Y₁ ≫
+                  (Y₂ ⊗ (X₁ ⊞ X₂)) ◁ biprod.inl ≫
+                    (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                      Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                        (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                          ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                            (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) := by
+            simp only [Category.assoc]
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁) ≫
+              ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inl ≫
+                (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                  biprod.snd ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) ≫
+                    (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                      Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                        (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                          ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                            (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) := by
+            simpa only [Category.assoc] using
+              congrArg
+                (fun k =>
+                  ((Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+                    (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁) ≫
+                    k ≫
+                      (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                        Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                          (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                            ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                              (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst)
+                hmove_y
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁) ≫
+              ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inl ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                  (α_ (Y₁ ⊞ Y₂) X₂ (Y₁ ⊞ Y₂)).inv ≫
+                    biprod.snd ▷ X₂ ▷ (Y₁ ⊞ Y₂) ≫
+                      ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                        (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) := by
+            simpa only [Category.assoc] using
+              congrArg
+                (fun k =>
+                  ((Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+                    (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁) ≫
+                    (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inl ≫
+                      k ≫
+                        ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                          (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst)
+                hsnd.symm
+          _ = 0 := by
+            simpa only [Category.assoc] using hzero₂_assoc
+      rw [hterm1]
       simp
-      have hcross := hleft_zero (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
+      have hslide_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                  (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                    (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q =
+            (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+        calc
+          _ = (A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom) ≫
+              Yi ◁ (pX ▷ Yi) ≫ (α_ Yi Xi Yi).inv ≫
+                ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+                  simp [Category.assoc]
+          _ = ((pY ▷ (𝟙_ C)) ≫ Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+              (α_ Yi B Yi).inv ≫ (α_ Yi B Yi).hom) ≫
+              Yi ◁ (pX ▷ Yi) ≫ (α_ Yi Xi Yi).inv ≫
+                ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+                  rw [houter (iX := iX) (iY := iY) (pY := pY)]
+          _ = _ := by simp [Category.assoc]
+      have htransport_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
+              (pY ▷ B) ▷ A ≫ (α_ Yi B A).hom ≫
+                Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                  ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q := by
+        rw [MonoidalCategory.tensorHom_def]
+        simp only [MonoidalCategory.whiskerLeft_comp]
+        simp [Category.assoc]
+        rw [MonoidalCategory.associator_inv_naturality_right_assoc]
+        rw [MonoidalCategory.whisker_exchange_assoc]
+        rw [MonoidalCategory.associator_naturality_right_assoc]
+      have hmove_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  Yi ◁ (pX ▷ Yi ≫ Xi ◁ iY) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by
+        calc
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  (Yi ◁ (B ◁ iY) ≫ Yi ◁ (pX ▷ A)) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by simp [Category.assoc]
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  Yi ◁ (B ◁ iY ≫ pX ▷ A) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by
+                rw [← MonoidalCategory.whiskerLeft_comp]
+          _ = _ := by rw [MonoidalCategory.whisker_exchange]
+      have heval_assoc_mixed {Yi Xi A T : C} [ExactPairing Xi Yi]
+          (iY : Yi ⟶ A) (q : A ⟶ T) :
+          (α_ Yi Xi Yi).inv ≫ (Yi ⊗ Xi) ◁ iY ≫
+              ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+              (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+        calc
+          _ = (α_ Yi Xi Yi).inv ≫
+              ((Yi ⊗ Xi) ◁ iY ≫ ε_ Xi Yi ▷ A) ≫
+                (λ_ A).hom ≫ q := by simp [Category.assoc]
+          _ = (α_ Yi Xi Yi).inv ≫
+              (ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY) ≫
+                (λ_ A).hom ≫ q := by rw [heval iY]
+          _ = _ := by simp [Category.assoc]
+      have hleft_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T)
+          (hi : iX ≫ pX = 𝟙 Xi) (hz : iY ≫ q = 0) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
+              (pY ▷ B) ▷ A ≫ (α_ Yi B A).hom ≫
+                Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                  ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q = 0 := by
+        calc
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q := by
+              exact htransport_mixed iX pX iY pY q
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi ≫ Xi ◁ iY) ≫
+                  (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                    (λ_ A).hom ≫ q := by
+              exact hmove_mixed iX pX iY pY q
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                  (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                    (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+              rw [MonoidalCategory.whiskerLeft_comp]
+              simp only [Category.assoc]
+              rw [MonoidalCategory.associator_inv_naturality_right_assoc Yi Xi iY]
+              rw [heval_assoc_mixed iY q]
+          _ = (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+              exact hslide_mixed iX pX iY pY q
+          _ = (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ⊗ₘ (𝟙 Yi)) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+                simp [MonoidalCategory.tensorHom_def, Category.assoc]
+          _ = (pY ▷ (𝟙_ C)) ≫ (ρ_ Yi).hom ≫ iY ≫ q := by
+              rw [hinner iX pX hi]
+          _ = 0 := by simp [hz]
+      have hcross := hleft_mixed (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
-          (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
+          (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂))
+          (q := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
         MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
         ← MonoidalCategory.whisker_exchange_assoc] at hcross
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hcross
-      simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
-        Category.assoc] using congrArg (fun k => k ≫ biprod.fst) hcross
+      have hmove_y₂ :
+          (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₂).inv ≫
+              biprod.snd ▷ (X₁ ⊞ X₂) ▷ Y₂ ≫
+                (α_ Y₂ (X₁ ⊞ X₂) Y₂).hom ≫
+                  Y₂ ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) =
+            (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+              (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                biprod.snd ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+        calc
+          _ = (biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                (α_ Y₂ (X₁ ⊞ X₂) Y₂).inv ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) Y₂).hom ≫
+                    Y₂ ◁ (X₁ ⊞ X₂) ◁
+                      (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) := by
+            simpa only [Category.assoc] using
+              congrArg (fun k => k ≫
+                (α_ Y₂ (X₁ ⊞ X₂) Y₂).hom ≫
+                  Y₂ ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
+                (MonoidalCategory.associator_inv_naturality_left
+                  (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂) (X₁ ⊞ X₂) Y₂).symm
+          _ = (biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                (α_ Y₂ (X₁ ⊞ X₂) Y₂).inv ≫
+                  (Y₂ ⊗ (X₁ ⊞ X₂)) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+                      (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            rw [← MonoidalCategory.associator_naturality_right]
+          _ = (biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                Y₂ ◁ (X₁ ⊞ X₂) ◁
+                  (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+                    (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                      (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            simpa only [Category.assoc] using
+              congrArg (fun k =>
+                biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ Y₂) ≫ k ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom)
+                (MonoidalCategory.associator_inv_naturality_right
+                  Y₂ (X₁ ⊞ X₂)
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂)).symm
+          _ = ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂)) ≫
+              biprod.snd ▷ ((X₁ ⊞ X₂) ⊗ (Y₁ ⊞ Y₂)) ≫
+                (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            rw [← MonoidalCategory.whisker_exchange_assoc]
+          _ = _ := by
+            simpa only [Category.assoc] using
+              congrArg (fun k =>
+                (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫ k ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom)
+                (MonoidalCategory.associator_inv_naturality_left
+                  (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)
+                    (X₁ ⊞ X₂) (Y₁ ⊞ Y₂))
+      calc
+        _ = ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+              (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+            ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inr ≫
+              (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                biprod.snd ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) ≫
+                  (α_ Y₂ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                    Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                      (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                        ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                          (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) := by
+              simpa only [Category.assoc] using
+                congrArg
+                  (fun k =>
+                    ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                      (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+                      k ≫
+                        Y₂ ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                          (α_ Y₂ X₂ (Y₁ ⊞ Y₂)).inv ≫
+                            ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                              (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst)
+                  hmove_y₂
+        _ = 0 := by
+          simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
+            Category.assoc] using hcross
     · have h22 := hleft (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
@@ -538,17 +844,32 @@ theorem left_dual_biproduct
               (Y₁ ⊞ Y₂) ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
                 (α_ (Y₁ ⊞ Y₂) X₂ (Y₁ ⊞ Y₂)).inv ≫
                   biprod.snd ▷ X₂ ▷ (Y₁ ⊞ Y₂) ≫
-                  ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
-                    (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
+                    ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                      (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
         rw [← Category.assoc, hzero, zero_comp]
-      rw [hzero_assoc]
+      have hterm0 :
+          (Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
+              (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁ ≫
+                (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inl ≫
+                  (Y₁ ⊞ Y₂) ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                    (α_ (Y₁ ⊞ Y₂) X₂ (Y₁ ⊞ Y₂)).inv ≫
+                      biprod.snd ▷ X₂ ▷ (Y₁ ⊞ Y₂) ≫
+                        ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                          (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
+        calc
+          _ = (Y₁ ⊞ Y₂) ◁
+                ((η_ X₁ Y₁ ≫ biprod.inl ▷ Y₁) ≫
+                  (X₁ ⊞ X₂) ◁ biprod.inl) ≫
+              (Y₁ ⊞ Y₂) ◁ biprod.snd ▷ (Y₁ ⊞ Y₂) ≫
+                (α_ (Y₁ ⊞ Y₂) X₂ (Y₁ ⊞ Y₂)).inv ≫
+                  biprod.snd ▷ X₂ ▷ (Y₁ ⊞ Y₂) ≫
+                    ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
+                      (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd := by
+                simp [MonoidalCategory.whiskerLeft_comp, Category.assoc]
+          _ = 0 := hzero_assoc
+      rw [hterm0]
       have hfst := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁))
         (r := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
-      have hfst' := congrArg
-        (fun k => k ≫ ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
-          (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) hfst
-      simp only [Category.assoc] at hfst'
-      rw [← hfst']
       have hzero₂ :
           (Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
               (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂ ≫
@@ -572,27 +893,281 @@ theorem left_dual_biproduct
                     (α_ (Y₁ ⊞ Y₂) X₁ (Y₁ ⊞ Y₂)).inv ≫
                       biprod.fst ▷ X₁ ▷ (Y₁ ⊞ Y₂) ≫
                         ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
-                          (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
+                        (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
         simpa only [Category.assoc, zero_comp] using
           congrArg
             (fun k => k ≫
               (α_ (Y₁ ⊞ Y₂) X₁ (Y₁ ⊞ Y₂)).inv ≫
                 biprod.fst ▷ X₁ ▷ (Y₁ ⊞ Y₂) ≫
-                  ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
-                    (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) hzero₂
-      rw [hzero₂_assoc]
+                    ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                      (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) hzero₂
+      have hmove_cross :
+          (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₂).inv ≫
+              biprod.fst ▷ (X₁ ⊞ X₂) ▷ Y₂ ≫
+                (α_ Y₁ (X₁ ⊞ X₂) Y₂).hom ≫
+                  Y₁ ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) =
+            (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+              (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                biprod.fst ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) ≫
+                  (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+        calc
+          _ = (biprod.fst ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                (α_ Y₁ (X₁ ⊞ X₂) Y₂).inv ≫
+                  (α_ Y₁ (X₁ ⊞ X₂) Y₂).hom ≫
+                    Y₁ ◁ (X₁ ⊞ X₂) ◁
+                      (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) := by
+            simpa only [Category.assoc] using
+              congrArg (fun k => k ≫
+                (α_ Y₁ (X₁ ⊞ X₂) Y₂).hom ≫
+                  Y₁ ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
+                (MonoidalCategory.associator_inv_naturality_left
+                  (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁) (X₁ ⊞ X₂) Y₂).symm
+          _ = (biprod.fst ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                (α_ Y₁ (X₁ ⊞ X₂) Y₂).inv ≫
+                  (Y₁ ⊗ (X₁ ⊞ X₂)) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+                      (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            rw [← MonoidalCategory.associator_naturality_right]
+          _ = (biprod.fst ▷ ((X₁ ⊞ X₂) ⊗ Y₂)) ≫
+                Y₁ ◁ (X₁ ⊞ X₂) ◁
+                  (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫
+                    (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                      (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            simpa only [Category.assoc] using
+              congrArg (fun k =>
+                biprod.fst ▷ ((X₁ ⊞ X₂) ⊗ Y₂) ≫ k ≫
+                  (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom)
+                (MonoidalCategory.associator_inv_naturality_right
+                  Y₁ (X₁ ⊞ X₂)
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂)).symm
+          _ = ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂)) ≫
+              biprod.fst ▷ ((X₁ ⊞ X₂) ⊗ (Y₁ ⊞ Y₂)) ≫
+                (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                  (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom := by
+            rw [← MonoidalCategory.whisker_exchange_assoc]
+          _ = _ := by
+            simpa only [Category.assoc] using
+              congrArg (fun k =>
+                (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁
+                    (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂) ≫ k ≫
+                  (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom)
+                (MonoidalCategory.associator_inv_naturality_left
+                  (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)
+                    (X₁ ⊞ X₂) (Y₁ ⊞ Y₂))
+      have hterm2 :
+          (Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+              (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂ ≫
+                (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₂).inv ≫
+                  biprod.fst ▷ (X₁ ⊞ X₂) ▷ Y₂ ≫
+                    (Y₁ ⊗ (X₁ ⊞ X₂)) ◁ biprod.inr ≫
+                      (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                        Y₁ ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) ≫
+                          (α_ Y₁ X₁ (Y₁ ⊞ Y₂)).inv ≫
+                            ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                              (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd = 0 := by
+        calc
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+              ((α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) Y₂).inv ≫
+                biprod.fst ▷ (X₁ ⊞ X₂) ▷ Y₂ ≫
+                  (Y₁ ⊗ (X₁ ⊞ X₂)) ◁ biprod.inr ≫
+                    (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                      Y₁ ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) ≫
+                        (α_ Y₁ X₁ (Y₁ ⊞ Y₂)).inv ≫
+                          ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                            (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) := by
+            simp only [Category.assoc]
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+              ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inr ≫
+                (α_ (Y₁ ⊞ Y₂) (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).inv ≫
+                  biprod.fst ▷ (X₁ ⊞ X₂) ▷ (Y₁ ⊞ Y₂) ≫
+                    (α_ Y₁ (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)).hom ≫
+                      Y₁ ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) ≫
+                        (α_ Y₁ X₁ (Y₁ ⊞ Y₂)).inv ≫
+                          ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                            (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) := by
+            simpa only [Category.assoc] using
+              congrArg
+                (fun k =>
+                  ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                    (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫ k ≫
+                      Y₁ ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) ≫
+                        (α_ Y₁ X₁ (Y₁ ⊞ Y₂)).inv ≫
+                          ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                            (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd)
+                hmove_cross
+          _ = ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+              ((Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inr ≫
+                (Y₁ ⊞ Y₂) ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) ≫
+                  (α_ (Y₁ ⊞ Y₂) X₁ (Y₁ ⊞ Y₂)).inv ≫
+                    biprod.fst ▷ X₁ ▷ (Y₁ ⊞ Y₂) ≫
+                      ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                        (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd) := by
+            simpa only [Category.assoc] using
+              congrArg
+                (fun k =>
+                  ((Y₁ ⊞ Y₂) ◁ η_ X₂ Y₂ ≫
+                    (Y₁ ⊞ Y₂) ◁ biprod.inr ▷ Y₂) ≫
+                    (Y₁ ⊞ Y₂) ◁ (X₁ ⊞ X₂) ◁ biprod.inr ≫ k ≫
+                      ε_ X₁ Y₁ ▷ (Y₁ ⊞ Y₂) ≫
+                        (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.snd)
+                hfst.symm
+          _ = 0 := by
+            simpa only [Category.assoc] using hzero₂_assoc
+      rw [hterm2]
       simp
-      have hcross := hleft_zero (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))
+      have hslide_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                  (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                    (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q =
+            (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+        calc
+          _ = (A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom) ≫
+              Yi ◁ (pX ▷ Yi) ≫ (α_ Yi Xi Yi).inv ≫
+                ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+                  simp [Category.assoc]
+          _ = ((pY ▷ (𝟙_ C)) ≫ Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+              (α_ Yi B Yi).inv ≫ (α_ Yi B Yi).hom) ≫
+              Yi ◁ (pX ▷ Yi) ≫ (α_ Yi Xi Yi).inv ≫
+                ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+                  rw [houter (iX := iX) (iY := iY) (pY := pY)]
+          _ = _ := by simp [Category.assoc]
+      have htransport_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
+              (pY ▷ B) ▷ A ≫ (α_ Yi B A).hom ≫
+                Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                  ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q := by
+        rw [MonoidalCategory.tensorHom_def]
+        simp only [MonoidalCategory.whiskerLeft_comp]
+        simp [Category.assoc]
+        rw [MonoidalCategory.associator_inv_naturality_right_assoc]
+        rw [MonoidalCategory.whisker_exchange_assoc]
+        rw [MonoidalCategory.associator_naturality_right_assoc]
+      have hmove_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  Yi ◁ (pX ▷ Yi ≫ Xi ◁ iY) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by
+        calc
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  (Yi ◁ (B ◁ iY) ≫ Yi ◁ (pX ▷ A)) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by simp [Category.assoc]
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫
+                  Yi ◁ (B ◁ iY ≫ pX ▷ A) ≫
+                    (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                      (λ_ A).hom ≫ q := by
+                rw [← MonoidalCategory.whiskerLeft_comp]
+          _ = _ := by rw [MonoidalCategory.whisker_exchange]
+      have heval_assoc_mixed {Yi Xi A T : C} [ExactPairing Xi Yi]
+          (iY : Yi ⟶ A) (q : A ⟶ T) :
+          (α_ Yi Xi Yi).inv ≫ (Yi ⊗ Xi) ◁ iY ≫
+              ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q =
+            (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+              (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+        calc
+          _ = (α_ Yi Xi Yi).inv ≫
+              ((Yi ⊗ Xi) ◁ iY ≫ ε_ Xi Yi ▷ A) ≫
+                (λ_ A).hom ≫ q := by simp [Category.assoc]
+          _ = (α_ Yi Xi Yi).inv ≫
+              (ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY) ≫
+                (λ_ A).hom ≫ q := by rw [heval iY]
+          _ = _ := by simp [Category.assoc]
+      have hleft_mixed {Xi Yi B A T : C} [ExactPairing Xi Yi]
+          (iX : Xi ⟶ B) (pX : B ⟶ Xi)
+          (iY : Yi ⟶ A) (pY : A ⟶ Yi) (q : A ⟶ T)
+          (hi : iX ≫ pX = 𝟙 Xi) (hz : iY ≫ q = 0) :
+          A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
+              (pY ▷ B) ▷ A ≫ (α_ Yi B A).hom ≫
+                Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                  ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q = 0 := by
+        calc
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (B ◁ iY) ≫
+                  Yi ◁ (pX ▷ A) ≫ (α_ Yi Xi A).inv ≫
+                    ε_ Xi Yi ▷ A ≫ (λ_ A).hom ≫ q := by
+              exact htransport_mixed iX pX iY pY q
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi ≫ Xi ◁ iY) ≫
+                  (α_ Yi Xi A).inv ≫ ε_ Xi Yi ▷ A ≫
+                    (λ_ A).hom ≫ q := by
+              exact hmove_mixed iX pX iY pY q
+          _ = A ◁ η_ Xi Yi ≫ A ◁ (iX ▷ Yi) ≫
+              (α_ A B Yi).inv ≫ (pY ▷ B) ▷ Yi ≫
+                (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                  (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                    (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ q := by
+              rw [MonoidalCategory.whiskerLeft_comp]
+              simp only [Category.assoc]
+              rw [MonoidalCategory.associator_inv_naturality_right_assoc Yi Xi iY]
+              rw [heval_assoc_mixed iY q]
+          _ = (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ▷ Yi) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+              exact hslide_mixed iX pX iY pY q
+          _ = (pY ▷ (𝟙_ C)) ≫
+              (Yi ◁ η_ Xi Yi ≫ Yi ◁ (iX ⊗ₘ (𝟙 Yi)) ≫
+                (α_ Yi B Yi).inv ≫ ((𝟙 Yi ▷ B) ▷ Yi) ≫
+                  (α_ Yi B Yi).hom ≫ Yi ◁ (pX ▷ Yi) ≫
+                    (α_ Yi Xi Yi).inv ≫ ε_ Xi Yi ▷ Yi ≫
+                      (λ_ Yi).hom) ≫ iY ≫ q := by
+                simp [MonoidalCategory.tensorHom_def, Category.assoc]
+          _ = (pY ▷ (𝟙_ C)) ≫ (ρ_ Yi).hom ≫ iY ≫ q := by
+              rw [hinner iX pX hi]
+          _ = 0 := by simp [hz]
+      have hcross := hleft_mixed (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
           (iY := (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂))
-          (pY := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)) (by simp) (by simp)
+          (pY := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁))
+          (q := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
         MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
         ← MonoidalCategory.whisker_exchange_assoc] at hcross
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hcross
       simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
-        Category.assoc] using congrArg (fun k => k ≫ biprod.snd) hcross
-  -/
+        Category.assoc] using hcross
   · apply (cancel_mono (ρ_ (X₁ ⊞ X₂)).hom).1
     apply biprod.hom_ext (X := X₁) (Y := X₂)
     · have hr11 := hright (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))

@@ -1192,13 +1192,36 @@ noncomputable abbrev sheafModuleColimitSheafification {X : TopCat.{v}}
 theorem sheafModule_colimit_sheafification_iso {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {J : Type v} [Category.{v} J] (D : J ⥤ Mod O) :
     Nonempty (colimit D ≅ sheafModuleColimitSheafification O D) := by
-  sorry
+  let L := PresheafOfModules.sheafification (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let adj := PresheafOfModules.sheafificationAdjunction
+    (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let G := D ⋙ SheafOfModules.forget O
+  let e : G ⋙ L ≅ D :=
+    NatIso.ofComponents
+      (fun j => by
+        let h : IsIso (adj.counit.app (D.obj j)) := by
+          change IsIso ((PresheafOfModules.sheafificationAdjunction
+            (R₀ := O.obj) (R := O) (𝟙 O.obj)).counit.app (D.obj j))
+          infer_instance
+        exact @asIso _ _ _ _ (adj.counit.app (D.obj j)) h)
+      (by
+        intro j k f
+        exact adj.counit.naturality (D.map f))
+  let cL := L.mapCocone (colimit.cocone G)
+  have hcL : IsColimit cL := isColimitOfPreserves L (colimit.isColimit G)
+  let cD := (Cocone.precompose e.symm.hom).obj cL
+  have hcD : IsColimit cD :=
+    (IsColimit.precomposeHomEquiv e.symm cL).symm hcL
+  refine ⟨(IsColimit.coconePointUniqueUpToIso hcD (colimit.isColimit D)).symm⟩
 
 theorem sheafModule_colimit_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {J : Type v} [Category.{v} J] (D : J ⥤ Mod O) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (colimit D) ≅
       colimit (D ⋙ sheafModuleStalkFunctor O x)) := by
-  sorry
+  let adj := Classical.choice (exists_moduleStalkSkyscraperAdjunction O x)
+  let : PreservesColimits (sheafModuleStalkFunctor O x) :=
+    adj.leftAdjoint_preservesColimits
+  exact ⟨preservesColimitIso (sheafModuleStalkFunctor O x) D⟩
 
 theorem sheafModule_hasLimits {X : TopCat.{v}} (O : RingSheaf.{v, v} X) :
     HasLimitsOfSize.{v, v} (Mod O) := by
@@ -1221,14 +1244,86 @@ theorem sheafModule_hasColimits {X : TopCat.{v}} (O : RingSheaf.{v, v} X) :
 theorem sheafModule_hasExactFilteredColimits {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {J : Type v} [Category.{v} J] [IsFiltered J] :
     HasExactColimitsOfShape J (Mod O) := by
-  sorry
+  let : HasExactColimitsOfShape J (TopCat.Presheaf AddCommGrpCat X) :=
+    { preservesFiniteLimits := by
+        apply preservesFiniteLimits_of_evaluation
+        intro U
+        infer_instance }
+  let : HasExactColimitsOfShape J (PresheafOfModules O.obj) :=
+    HasExactColimitsOfShape.domain_of_functor J
+      (PresheafOfModules.toPresheaf O.obj)
+  let L := PresheafOfModules.sheafification (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let : PreservesFiniteLimits L := by infer_instance
+  let : PreservesColimits L := by
+    exact (PresheafOfModules.sheafificationAdjunction
+      (R₀ := O.obj) (R := O) (𝟙 O.obj)).leftAdjoint_preservesColimits
+  let adj := PresheafOfModules.sheafificationAdjunction
+    (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let Rfun := SheafOfModules.forget O ⋙
+    PresheafOfModules.restrictScalars (𝟙 O.obj)
+  let : PreservesLimits Rfun := adj.rightAdjoint_preservesLimits
+  refine ⟨?_⟩
+  let K := (Functor.whiskeringRight J (Mod O)
+    (PresheafOfModules O.obj)).obj Rfun
+  let Q := (Functor.whiskeringRight J (PresheafOfModules O.obj) (Mod O)).obj L
+  let colimP : (J ⥤ PresheafOfModules O.obj) ⥤ PresheafOfModules O.obj :=
+    CategoryTheory.Limits.colim (J := J) (C := PresheafOfModules O.obj)
+  let colimM : (J ⥤ Mod O) ⥤ Mod O :=
+    CategoryTheory.Limits.colim (J := J) (C := Mod O)
+  have hNat : colimP ⋙ L ≅ Q ⋙ colimM := by
+    exact preservesColimitNatIso L
+  let eD (D : J ⥤ Mod O) : (D ⋙ Rfun) ⋙ L ≅ D :=
+    NatIso.ofComponents
+      (fun j => by
+        let h : IsIso (adj.counit.app (D.obj j)) := by infer_instance
+        exact @asIso _ _ _ _ (adj.counit.app (D.obj j)) h)
+      (by
+        intro j k f
+        exact adj.counit.naturality (D.map f))
+  let e : K ⋙ Q ≅ 𝟭 (J ⥤ Mod O) :=
+    NatIso.ofComponents
+      (fun D => eD D)
+      (by
+        intro D E f
+        apply NatTrans.ext
+        funext j
+        dsimp [K, Q, eD]
+        exact adj.counit.naturality (f.app j))
+  let : PreservesFiniteLimits K := by infer_instance
+  let : PreservesFiniteLimits (K ⋙ colimP) := by
+    exact comp_preservesFiniteLimits K colimP
+  let : PreservesFiniteLimits ((K ⋙ colimP) ⋙ L) := by
+    exact comp_preservesFiniteLimits (K ⋙ colimP) L
+  have hIso : colimM ≅ (K ⋙ colimP) ⋙ L :=
+    (Functor.leftUnitor colimM).symm ≪≫
+      (Functor.isoWhiskerRight e colimM).symm ≪≫
+      Functor.associator K Q colimM ≪≫
+      Functor.isoWhiskerLeft K hNat.symm ≪≫
+      (Functor.associator K colimP L).symm
+  exact preservesFiniteLimits_of_natIso hIso.symm
 
 theorem sheafModule_finite_direct_sums_are_presheaf_direct_sums
     {X : TopCat.{v}} (O : RingSheaf.{v, v} X) {I : Type v} [Finite I]
     (F : I → Mod O) :
     Nonempty ((sheafModuleCoproduct O F).val ≅
       colimit (Discrete.functor (fun i => (F i).val))) := by
-  sorry
+  let : PreservesColimitsOfShape (Discrete I) (SheafOfModules.forget O) := by
+    infer_instance
+  let e : (Discrete.functor F ⋙ SheafOfModules.forget O) ≅
+      Discrete.functor (fun i => (F i).val) :=
+    Discrete.natIso (fun ⟨j⟩ => by
+      dsimp
+      exact Iso.refl _)
+  refine ⟨?_⟩
+  let c₁ := colimit.cocone (Discrete.functor F ⋙ SheafOfModules.forget O)
+  let c₂ := colimit.cocone (Discrete.functor (fun i => (F i).val))
+  have hc₁ : IsColimit c₁ := colimit.isColimit _
+  have hc₂ : IsColimit c₂ := colimit.isColimit _
+  let c₁' := (Cocone.precompose e.hom).obj c₂
+  have hc₁' : IsColimit c₁' :=
+    (IsColimit.precomposeHomEquiv e c₂).symm hc₂
+  exact (preservesColimitIso (SheafOfModules.forget O) (Discrete.functor F)) ≪≫
+    (IsColimit.coconePointUniqueUpToIso hc₁' hc₁).symm
 
 /-! The module functors attached to a ringed-space morphism use the canonical
 constructions from the earlier sheaves chapter, with the source's names

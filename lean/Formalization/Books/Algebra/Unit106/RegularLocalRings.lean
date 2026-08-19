@@ -538,7 +538,6 @@ theorem regular_local_of_regular_element
   exact IsRegularLocalRing.of_spanFinrank_maximalIdeal_le (R := R)
     (spanFinrank_maximalIdeal_le_of_regular_quotient x hx hreg hquot)
 
-open scoped Pointwise in
 /-- The preceding lifting statement for a regular sequence and its quotient. -/
 theorem regular_local_of_regular_sequence
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
@@ -602,7 +601,7 @@ theorem regular_local_of_regular_sequence
               obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective a
               rw [Module.IsTorsionBy.mk_smul
                 (Module.isTorsionBy_quotient_element_smul (R := R) R x)]
-              refine Submodule.Quotient.induction_on (x • (⊤ : Submodule R R)) z ?_
+              refine Submodule.Quotient.induction_on _ z ?_
               intro m
               rfl }
         simpa using (ea.isRegular_congr' (rs.map f)).mp htail

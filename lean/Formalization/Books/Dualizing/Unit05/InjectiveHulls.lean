@@ -734,7 +734,7 @@ theorem injective_hull_unique_up_to_iso
     (hf : InjectiveHull f) (hg : InjectiveHull g) :
     Nonempty (E ≅ E') := by
   obtain ⟨ψ, hψ⟩ := injective_hull_extend hf hg (𝟙 M)
-  letI : IsIso ψ :=
+  let : IsIso ψ :=
     injective_hull_extend_isIso_of_isIso hf hg (𝟙 M) ψ hψ
   exact ⟨asIso ψ⟩
 
@@ -818,8 +818,8 @@ theorem fractionField_is_injective_hull
     apply (ModuleCat.mono_iff_injective _).mpr
     change Function.Injective (Algebra.linearMap R K)
     exact IsFractionRing.injective R K
-  letI : Mono (fractionFieldModuleMap (R := R) (K := K)) := hmono
-  letI : Mono (ModuleCat.ofHom S.subtype) :=
+  let : Mono (fractionFieldModuleMap (R := R) (K := K)) := hmono
+  let : Mono (ModuleCat.ofHom S.subtype) :=
     ConcreteCategory.mono_of_injective _ Subtype.val_injective
   let e : R ≃ₗ[R] S :=
     LinearEquiv.ofBijective (Algebra.linearMap R K).rangeRestrict
@@ -843,7 +843,7 @@ theorem fractionField_is_injective_hull
     exact fun P hP => by
       rw [hmk]
       exact hsub.2 P hP
-  letI : Module.Injective R K := hKinj
+  let : Module.Injective R K := hKinj
   exact ⟨hEss, Module.injective_object_of_injective_module R K⟩
 
 /-! ## Indecomposable injectives -/
@@ -852,7 +852,7 @@ private theorem exists_injective_hull_in_injective
     (hI : CategoryTheory.Injective I₀)
     (M : ModuleCat.{v} R) (j₀ : M ⟶ I₀) (hj₀ : Mono j₀) :
     ∃ (E : ModuleCat.{v} R) (f : M ⟶ E), InjectiveHull f := by
-  letI : CategoryTheory.Injective I₀ := hI
+  let : CategoryTheory.Injective I₀ := hI
   let I : Type v := (I₀ : Type v)
   let : Module.Injective R I :=
     Module.injective_module_of_injective_object R (I₀ : Type v)
@@ -1369,7 +1369,7 @@ private theorem indecomposable_injective_end_isUnit_of_ker_eq_bot
     simpa [a, Category.assoc] using he
   have hφeq : ModuleCat.ofHom φ = a.inv := by
     apply (cancel_mono a.hom).1
-    simpa [hcomp, Category.assoc]
+    simp [hcomp]
   apply (Module.End.isUnit_iff φ).2
   constructor
   · exact LinearMap.ker_eq_bot.mp hφ
@@ -1378,8 +1378,8 @@ private theorem indecomposable_injective_end_isUnit_of_ker_eq_bot
     have h := congrArg (fun q : E ⟶ E => q.hom (a.hom.hom y)) hφeq
     have ha := congrArg (fun q : E ⟶ E => q.hom y) a.hom_inv_id
     calc
-      φ (a.hom.hom y) = a.inv.hom (a.hom.hom y) := by simpa using h
-      _ = y := by simpa using ha
+      φ (a.hom.hom y) = a.inv.hom (a.hom.hom y) := by exact h
+      _ = y := by exact ha
 
 /-- The endomorphism ring of an indecomposable injective is local, with its
 maximal ideal detected by nonzero kernels. -/
@@ -1397,7 +1397,7 @@ theorem indecomposable_injective_end_is_local
   have hEsub : ¬ Subsingleton (E : Type v) := by
     intro h
     exact hEne (ModuleCat.isZero_of_subsingleton E)
-  letI : Nontrivial (E : Type v) :=
+  let : Nontrivial (E : Type v) :=
     not_subsingleton_iff_nontrivial.mp hEsub
   have hunit_iff (φ : A) : IsUnit φ ↔ LinearMap.ker φ = ⊥ := by
     constructor
@@ -1408,7 +1408,7 @@ theorem indecomposable_injective_end_is_local
   let I : Ideal A :=
     { carrier := {φ | LinearMap.ker φ ≠ ⊥}
       zero_mem' := by
-        simp [LinearMap.ker_zero, bot_ne_top]
+        simp [LinearMap.ker_zero]
       add_mem' := by
         intro φ ψ hφ hψ
         obtain ⟨x, hx, hx0⟩ :=
@@ -1494,8 +1494,8 @@ private theorem injective_of_localization_action
     Module.Injective S M := by
   refine ⟨?_⟩
   intro X Y _ _ _ _ f hf g
-  letI : Module R X := Module.compHom X (algebraMap R S)
-  letI : Module R Y := Module.compHom Y (algebraMap R S)
+  let : Module R X := Module.compHom X (algebraMap R S)
+  let : Module R Y := Module.compHom Y (algebraMap R S)
   let fR : X →ₗ[R] Y :=
     { toFun := f
       map_add' := f.map_add
@@ -1548,13 +1548,13 @@ theorem indecomposable_injective_zero_divisors
   let A := Module.End R (E : Type v)
   obtain ⟨hlocal, I, hI, hmax, hmem⟩ :=
     indecomposable_injective_end_is_local E hE hInd
-  letI : IsLocalRing A := hlocal
-  letI : I.IsMaximal := hmax
+  let : IsLocalRing A := hlocal
+  let : I.IsMaximal := hmax
   let p : Ideal R := I.comap (algebraMap R A)
   have hp : p.IsPrime := by
     constructor
     · intro htop
-      have h1 : (1 : R) ∈ p := by simpa [htop]
+      have h1 : (1 : R) ∈ p := by simp [htop]
       have h1I : (1 : A) ∈ I := by simpa [p] using h1
       have hker : LinearMap.ker (1 : A) ≠ ⊥ := (hmem _).mp h1I
       exact hker (LinearMap.ker_eq_bot.mpr (by
@@ -1588,7 +1588,7 @@ theorem indecomposable_injective_zero_divisors
       apply (LinearMap.ker (algebraMap R A r)).ne_bot_iff.mpr
       exact ⟨x, LinearMap.mem_ker.mpr (by
         simpa [A, Module.algebraMap_end_apply] using hx0), hx⟩
-  · letI : p.IsPrime := hp
+  · let : p.IsPrime := hp
     let L := Localization.AtPrime p
     let g0 : R →+* A := algebraMap R A
     have hsunit : ∀ s : p.primeCompl, IsUnit (g0 (s : R)) := by
@@ -1615,7 +1615,7 @@ theorem indecomposable_injective_zero_divisors
           a * ((↑(u⁻¹ : Aˣ)) : A) =
               ((↑(u⁻¹ : Aˣ)) : A) * (u : A) *
                 (a * ((↑(u⁻¹ : Aˣ)) : A)) := by
-            simp [mul_assoc]
+            simp
           _ = ((↑(u⁻¹ : Aˣ)) : A) * ((u : A) * a) *
                 ((↑(u⁻¹ : Aˣ)) : A) := by
             simp only [mul_assoc]
@@ -1661,20 +1661,20 @@ theorem indecomposable_injective_zero_divisors
       change Z.val ((IsLocalization.lift hsunitZ) (algebraMap R L r)) = g0 r
       rw [IsLocalization.lift_eq]
       rfl
-    letI : Module L (E : Type v) := Module.compHom (E : Type v) gL
-    letI : IsScalarTower R L (E : Type v) :=
+    let : Module L (E : Type v) := Module.compHom (E : Type v) gL
+    let : IsScalarTower R L (E : Type v) :=
       { smul_assoc := by
           intro r l x
           change (gL (r • l)) x = r • ((gL l) x)
           have hgr : gL (algebraMap R L r) = g0 r := DFunLike.congr_fun hgL r
           rw [Algebra.smul_def, map_mul, hgr]
-          simpa [g0, A, Module.End.mul_apply, Module.algebraMap_end_apply] }
-    letI : CategoryTheory.Injective (ModuleCat.of R (E : Type v)) := hE
+          simp [g0, A, Module.End.mul_apply, Module.algebraMap_end_apply] }
+    let : CategoryTheory.Injective (ModuleCat.of R (E : Type v)) := hE
     have hEM : Module.Injective R (E : Type v) :=
       Module.injective_module_of_injective_object R (E : Type v)
     have hEL : Module.Injective L (E : Type v) :=
       injective_of_localization_action p.primeCompl (E : Type v) hEM
-    letI : Module.Injective L (E : Type v) := hEL
+    let : Module.Injective L (E : Type v) := hEL
     have hEcat : CategoryTheory.Injective (ModuleCat.of L (E : Type v)) :=
       Module.injective_object_of_injective_module L (E : Type v)
     refine ⟨ModuleCat.of L (E : Type v), ?_, hEcat⟩
@@ -1700,7 +1700,7 @@ theorem indecomposable_injective_zero_divisors
               ((ModuleCat.restrictScalars.smul_def'
                   (M := ModuleCat.of L (E : Type v)) (algebraMap R L) r (x : E)).trans
                 (algebraMap_smul (M := (E : Type v)) L r x))
-            convert congrArg (fun y => (y : E)) hsmul using 1 <;> rfl }
+            convert congrArg (fun y => (y : E)) hsmul using 1; rfl }
     exact ⟨⟨f, fInv, by
       ext x
       change x = x
@@ -2392,7 +2392,7 @@ def IsDirectSumOfIndecomposableInjectives
 /-- Structure theorem for injectives over a Noetherian ring. -/
 theorem structure_of_injectives_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R] :
-    (∀ I : ModuleCat.{v} R, CategoryTheory.Injective I →
+    (∀ [Small.{v} R] (I : ModuleCat.{v} R), CategoryTheory.Injective I →
       IsDirectSumOfIndecomposableInjectives I) ∧
       (∀ E : ModuleCat.{u} R, CategoryTheory.Injective E →
         CategoryTheory.Indecomposable E →

@@ -818,11 +818,17 @@ theorem finite_simplicial_set_filtration
 
 /-! ## The abelian-category consequence -/
 
-/-- The normalized object of `iₘ!U` vanishes above the truncation degree. -/
+/-- The normalized object of `iₘ!U` is a zero object above the truncation degree.
+
+The source writes this as equality with `0`; here `normalizedObject` is the
+chosen underlying object of a `Subobject`, so the categorical `IsZero`
+interface avoids requiring a literal equality between that representative and
+the chosen zero object.
+-/
 theorem leftAdjoint_normalizedObject_eq_zero
     {C : Type u} [Category.{v} C] [Abelian C]
     (m : ℕ) (U : SimplicialObject.Truncated C m) (n : ℕ) (h : m < n) :
-    Unit18.normalizedObject ((leftAdjoint (C := C) m).obj U) n = 0 := by
+    IsZero (Unit18.normalizedObject ((leftAdjoint (C := C) m).obj U) n) := by
   sorry
 
 /-- The abelian `n`-skeleton is the earlier normalized-subobject skeleton. -/

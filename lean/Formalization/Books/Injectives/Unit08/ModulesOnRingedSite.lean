@@ -431,7 +431,7 @@ theorem evaluationMap_mono
     {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
     (F : SheafOfModules.{u} R) :
     Mono (evaluationMap D F) := by
-  sorry
+  exact D.evaluation_mono F
 
 /-- The source's injective object `𝓙(F) = (𝓕(F^∨))^∨`. -/
 noncomputable abbrev injectiveModule
@@ -461,7 +461,8 @@ theorem dualFlatResolutionMap_mono
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
     (D : SheafDualData R) (F : SheafOfModules.{u} R) :
     Mono (dualFlatResolutionMap R D F) := by
-  sorry
+  exact D.dual_map_mono_of_epi (flatResolutionCounitApp R (sheafDual D F))
+    (flatResolutionCounitApp_epi R (sheafDual D F))
 
 /-- The canonical monomorphism `F ⟶ 𝓙(F)`. -/
 noncomputable def injectiveModuleEmbeddingApp
@@ -508,7 +509,15 @@ theorem injectiveModuleEmbeddingApp_mono
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
     (D : SheafDualData R) (F : SheafOfModules.{u} R) :
     Mono (injectiveModuleEmbeddingApp R D F) := by
-  sorry
+  let h₁ : Mono (evaluationMap D F) := evaluationMap_mono D F
+  let h₂ : Mono (dualFlatResolutionMap R D F) :=
+    dualFlatResolutionMap_mono R D F
+  change Mono (evaluationMap D F ≫ dualFlatResolutionMap R D F)
+  constructor
+  intro Z g h w
+  exact h₁.right_cancellation g h
+    (h₂.right_cancellation (g ≫ evaluationMap D F)
+      (h ≫ evaluationMap D F) (by simpa only [Category.assoc] using w))
 
 theorem injectiveModuleEmbeddingApp_natural
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}

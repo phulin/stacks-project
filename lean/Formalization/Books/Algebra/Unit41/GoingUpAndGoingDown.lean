@@ -486,6 +486,7 @@ private noncomputable def tensorProductRingEquiv
     A ⊗[T] B ≃+* C ⊗[T] D :=
   (Algebra.TensorProduct.congr e e').toRingEquiv
 
+set_option maxHeartbeats 1000000 in
 private noncomputable def tensorProductRingHom
     {T A B C D : Type*} [CommSemiring T] [Semiring A] [Algebra T A]
     [Semiring B] [Algebra T B] [Semiring C] [Algebra T C]
@@ -603,7 +604,7 @@ private lemma tensorLocalizationBaseMap_comap_comp
   rw [tensorLocalizationBaseMap_comp (k := k) (R := R) (S := S) S' f]
   exact PrimeSpectrum.comap_comp _ _
 
-set_option maxHeartbeats 210000 in
+set_option maxHeartbeats 1000000 in
 theorem same_image
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] (S' : Subalgebra k S)

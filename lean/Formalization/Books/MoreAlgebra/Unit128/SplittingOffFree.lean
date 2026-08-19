@@ -411,7 +411,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
           (d * if i = j then 1 else 0)) =
           algebraMap R (residueField x) d * c i := by
       rw [Finset.sum_eq_single i]
-      · simp [mul_comm]
+      · simp
       · intro j hj hji
         simp
       · intro hi
@@ -464,7 +464,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       (Submodule K (Fin r → K))
       (compactElement_of_fg (Module.Finite.fg_top (R := K) (M := Fin r → K)))
       (fun φ : M →ₗ[R] R => Submodule.span K {flip a φ}) htop
-    rcases hfin with ⟨T, hT⟩
+    obtain ⟨T, hT⟩ := hfin
     let T₀ := {φ : M →ₗ[R] R // φ ∈ T}
     letI : Fintype T₀ := Fintype.ofFinite T₀
     let mat : (T₀ → K) →ₗ[K] (Fin r → K) :=
@@ -493,7 +493,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       ext i
       simp only [mat, LinearMap.coe_mk, AddHom.coe_mk]
       rw [Finset.sum_eq_single φ]
-      · simp [flip]
+      · simp
       · intro ψ hψ hψφ
         simp
       · intro hnot
@@ -522,16 +522,16 @@ theorem which_elements_split [Module.FinitePresentation R M]
       have hq'' :
           ∑ φ : T₀, (algebraMap R K) (c i φ) * a j (φ : M →ₗ[R] R) =
             e i j := by
-        simpa [A, ψ, a, mat, e, hc, map_sum, map_smul, mul_comm] using hq'
+        simpa [a, mat, e, hc, map_sum, map_smul, mul_comm] using hq'
       have hsingle : e i j = if i = j then 1 else 0 := by
         by_cases hij : i = j
         · subst j
-          simp [e]
+          simp
         · simp [e]
       calc
         algebraMap R K (A i j) =
             ∑ φ : T₀, (algebraMap R K) (c i φ) * a j (φ : M →ₗ[R] R) := by
-              simp [A, ψ, a]
+              simp [A, ψ]
         _ = e i j := hq''
         _ = if i = j then 1 else 0 := hsingle
     have hdet : algebraMap R K A.det = 1 := by
@@ -557,7 +557,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
         map_add' := by
           intro m n
           ext i
-          simp [mul_add, Finset.sum_add_distrib]
+          simp
         map_smul' := by
           intro r₀ m
           ext i
@@ -583,7 +583,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       rw [eF.apply_symm_apply]
       ext i
       rw [finsupp_linearCombination_eq_sum]
-      simp [gFun, eF, map_sum, map_smul, smul_eq_mul]
+      simp [gFun, eF, smul_eq_mul]
       have hψA (k j : Fin r) : ψ k (s j) = A k j := by rfl
       simp_rw [hψA]
       calc
@@ -594,7 +594,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
           rw [hadj i j]
         _ = A.det * z i := by
           rw [Finset.sum_eq_single i]
-          · simp [mul_comm]
+          · simp
           · intro j hj hji
             simp
           · intro hi

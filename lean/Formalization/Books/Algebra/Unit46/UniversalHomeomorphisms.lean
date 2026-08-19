@@ -1892,7 +1892,7 @@ private theorem universallyBijective_residueField
   let V : Set L := {z : L | ∃ x ∈ U, algebraMap S L x = z}
   let A : IntermediateField K L := IntermediateField.adjoin K V
   have hleft (s : S) : algebraMap S L s ∈ A := by
-    have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+    have hs : s ∈ Algebra.adjoin R U := by simp [hgen']
     refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ A)
       ?_ ?_ ?_ ?_ hs
     · intro x hx
@@ -2005,8 +2005,7 @@ private theorem universallyBijective_integral
     apply top_unique
     intro s hs
     have hs' : s ∈ Algebra.adjoin R U := by
-      rw [hgen']
-      trivial
+      simp [hgen']
     refine Algebra.adjoin_induction (p := fun x _ => x ∈ A)
       ?_ ?_ ?_ ?_ hs'
     · intro x hx
@@ -2047,8 +2046,7 @@ private theorem universallyBijective_integral
   have hf₀ : f₀.IsIntegral := by
     intro x
     have hx : x ∈ A := by
-      rw [hgen₀]
-      trivial
+      simp [hgen₀]
     have hi := hsub.isIntegral (⟨x, hx⟩ : A)
     change IsIntegral (R ⧸ I) x
     exact hi.algebraMap
@@ -2074,7 +2072,7 @@ private theorem universallyBijective_comap_injective
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
-    simpa [U, universallyBijectiveGenerated, generatedBy] using hgen
+    simpa [universallyBijectiveGenerated, generatedBy] using hgen
   intro q q' hqq'
   have hI : q.asIdeal.comap f = q'.asIdeal.comap f := by
     simpa using congrArg PrimeSpectrum.asIdeal hqq'
@@ -2140,8 +2138,7 @@ private theorem universallyBijective_comap_injective
     rw [hφ, hψ]
   have hmap (s : S) : φ s = ψ s := by
     have hs : s ∈ Algebra.adjoin R U := by
-      rw [hgen']
-      trivial
+      simp [hgen']
     refine Algebra.adjoin_induction (p := fun x _ => φ x = ψ x)
       ?_ ?_ ?_ ?_ hs
     · intro x hx

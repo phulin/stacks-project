@@ -59,23 +59,48 @@ def OneVariableFiniteDegree (f : PowerSeries k) : Prop :=
 
 theorem oneVariableFiniteDegree_zero :
     OneVariableFiniteDegree k p 0 := by
-  sorry
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  simp
 
 theorem oneVariableFiniteDegree_one :
     OneVariableFiniteDegree k p 1 := by
-  sorry
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  by_cases hi : i = 0 <;> simp [hi]
 
 theorem oneVariableFiniteDegree_add {f g : PowerSeries k}
     (hf : OneVariableFiniteDegree k p f)
     (hg : OneVariableFiniteDegree k p g) :
     OneVariableFiniteDegree k p (f + g) := by
-  sorry
+  unfold OneVariableFiniteDegree at *
+  rcases hf with ⟨F, hF, hFfin⟩
+  rcases hg with ⟨G, hG, hGfin⟩
+  refine ⟨F ⊔ G, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  have hfi : PowerSeries.coeff i f ∈ (F ⊔ G : IntermediateField (pPowerSubfield k p) k) :=
+    (le_sup_left : F ≤ F ⊔ G) (hF ⟨i, rfl⟩)
+  have hgi : PowerSeries.coeff i g ∈ (F ⊔ G : IntermediateField (pPowerSubfield k p) k) :=
+    (le_sup_right : G ≤ F ⊔ G) (hG ⟨i, rfl⟩)
+  change PowerSeries.coeff i f + PowerSeries.coeff i g ∈ F ⊔ G
+  simpa only [map_add] using add_mem hfi hgi
 
 theorem oneVariableFiniteDegree_mul {f g : PowerSeries k}
     (hf : OneVariableFiniteDegree k p f)
     (hg : OneVariableFiniteDegree k p g) :
     OneVariableFiniteDegree k p (f * g) := by
-  sorry
+  unfold OneVariableFiniteDegree at *
+  rcases hf with ⟨F, hF, hFfin⟩
+  rcases hg with ⟨G, hG, hGfin⟩
+  refine ⟨F ⊔ G, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  change PowerSeries.coeff i (f * g) ∈ F ⊔ G
+  rw [PowerSeries.coeff_mul]
+  apply (F ⊔ G).sum_mem
+  intro q hq
+  exact mul_mem
+    ((le_sup_left : F ≤ F ⊔ G) (hF ⟨q.1, rfl⟩))
+    ((le_sup_right : G ≤ F ⊔ G) (hG ⟨q.2, rfl⟩))
 
 theorem oneVariableFiniteDegree_neg {f : PowerSeries k}
     (hf : OneVariableFiniteDegree k p f) :

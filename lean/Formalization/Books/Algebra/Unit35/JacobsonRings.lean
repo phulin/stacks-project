@@ -1868,13 +1868,181 @@ theorem productZero_minimalPrimes_are_the_two_axes
     (k : Type u) [Field k] :
     (productZeroRelationIdeal k).minimalPrimes =
       {productZeroXAxisIdeal k, productZeroYAxisIdeal k} := by
-  sorry
+  ext p
+  constructor
+  · intro hp
+    rw [Set.mem_insert_iff, Set.mem_singleton_iff]
+    have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ p := by
+      apply hp.le
+      exact Ideal.subset_span (by simp [productZeroRelationIdeal])
+    rcases hp.isPrime.mem_or_mem hprod with h₀ | h₁
+    · left
+      apply le_antisymm
+      · apply hp.2
+        · refine ⟨Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime, ?_⟩
+          apply Ideal.span_le.mpr
+          intro x hx
+          rw [Set.mem_singleton_iff] at hx
+          subst x
+          simpa [productZeroXAxisIdeal, mul_comm] using
+            (productZeroXAxisIdeal k).mul_mem_left
+              (MvPolynomial.X (R := k) 1) (Ideal.mem_span_singleton_self _)
+        · apply Ideal.span_le.mpr
+          intro x hx
+          rw [Set.mem_singleton_iff] at hx
+          subst x
+          exact h₀
+      · apply Ideal.span_le.mpr
+        intro x hx
+        rw [Set.mem_singleton_iff] at hx
+        subst x
+        exact h₀
+    · right
+      apply le_antisymm
+      · apply hp.2
+        · refine ⟨Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime, ?_⟩
+          apply Ideal.span_le.mpr
+          intro x hx
+          rw [Set.mem_singleton_iff] at hx
+          subst x
+          simpa [productZeroYAxisIdeal, mul_comm] using
+            (productZeroYAxisIdeal k).mul_mem_left
+              (MvPolynomial.X (R := k) 0) (Ideal.mem_span_singleton_self _)
+        · apply Ideal.span_le.mpr
+          intro x hx
+          rw [Set.mem_singleton_iff] at hx
+          subst x
+          exact h₁
+      · apply Ideal.span_le.mpr
+        intro x hx
+        rw [Set.mem_singleton_iff] at hx
+        subst x
+        exact h₁
+  · intro hp
+    rw [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl
+    · refine ⟨?_, ?_⟩
+      · refine ⟨Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime, ?_⟩
+        apply Ideal.span_le.mpr
+        intro x hx
+        rw [Set.mem_singleton_iff] at hx
+        subst x
+        simpa [productZeroXAxisIdeal, mul_comm] using
+          (productZeroXAxisIdeal k).mul_mem_left
+            (MvPolynomial.X (R := k) 1) (Ideal.mem_span_singleton_self _)
+      · intro q hq hqle
+        have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ q := by
+          exact hq.2 (Ideal.subset_span (by simp [productZeroRelationIdeal]))
+        rcases hq.1.mem_or_mem hprod with h₀ | h₁
+        · exact q.span_singleton_le_iff_mem.mpr h₀
+        · have hnot : MvPolynomial.X (R := k) 1 ∉ productZeroXAxisIdeal k := by
+            intro h
+            rw [productZeroXAxisIdeal, Ideal.mem_span_singleton'] at h
+            obtain ⟨a, ha⟩ := h
+            have he := congrArg (MvPolynomial.aeval (R := k) (![0, 1] : Fin 2 → k)) ha
+            simpa using he
+          exact False.elim (hnot (hqle h₁))
+    · refine ⟨?_, ?_⟩
+      · refine ⟨Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime, ?_⟩
+        apply Ideal.span_le.mpr
+        intro x hx
+        rw [Set.mem_singleton_iff] at hx
+        subst x
+        simpa [productZeroYAxisIdeal, mul_comm] using
+          (productZeroYAxisIdeal k).mul_mem_left
+            (MvPolynomial.X (R := k) 0) (Ideal.mem_span_singleton_self _)
+      · intro q hq hqle
+        have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ q := by
+          exact hq.2 (Ideal.subset_span (by simp [productZeroRelationIdeal]))
+        rcases hq.1.mem_or_mem hprod with h₀ | h₁
+        · have hnot : MvPolynomial.X (R := k) 0 ∉ productZeroYAxisIdeal k := by
+            intro h
+            rw [productZeroYAxisIdeal, Ideal.mem_span_singleton'] at h
+            obtain ⟨a, ha⟩ := h
+            have he := congrArg (MvPolynomial.aeval (R := k) (![1, 0] : Fin 2 → k)) ha
+            simpa using he
+          exact False.elim (hnot (hqle h₀))
+        · exact q.span_singleton_le_iff_mem.mpr h₁
 
 theorem productZero_spectrum_has_two_irreducible_components
     (k : Type u) [Field k] :
     Nonempty
       (Fin 2 ≃ irreducibleComponents (PrimeSpectrum (ProductZeroRing k))) := by
-  sorry
+  classical
+  let I := productZeroRelationIdeal k
+  have hmin : I.minimalPrimes =
+      {productZeroXAxisIdeal k, productZeroYAxisIdeal k} :=
+    productZero_minimalPrimes_are_the_two_axes k
+  let f : minimalPrimes (ProductZeroRing k) → I.minimalPrimes := fun p =>
+    ⟨Ideal.comap (Ideal.Quotient.mk I) p.1, by
+      rw [Ideal.minimalPrimes_eq_comap]
+      exact ⟨p.1, p.2, rfl⟩⟩
+  have hf_inj : Function.Injective f := by
+    intro p q hpq
+    apply Subtype.ext
+    apply Ideal.comap_injective_of_surjective (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective
+    exact congrArg Subtype.val hpq
+  have hf_surj : Function.Surjective f := by
+    intro p
+    have hp : (p : Ideal (ProductZeroPolynomialRing k)) ∈ I.minimalPrimes := p.2
+    have hpimage : (p : Ideal (ProductZeroPolynomialRing k)) ∈
+        Ideal.comap (Ideal.Quotient.mk I) '' minimalPrimes (ProductZeroRing k) := by
+      exact (congrArg (fun s : Set (Ideal (ProductZeroPolynomialRing k)) =>
+        (p : Ideal (ProductZeroPolynomialRing k)) ∈ s)
+        (Ideal.minimalPrimes_eq_comap (I := I))).mp hp
+    obtain ⟨q, hq, hqp⟩ := hpimage
+    refine ⟨⟨q, hq⟩, ?_⟩
+    apply Subtype.ext
+    exact hqp
+  let eMin : minimalPrimes (ProductZeroRing k) ≃ I.minimalPrimes :=
+    Equiv.ofBijective f ⟨hf_inj, hf_surj⟩
+  have hax : productZeroXAxisIdeal k ∈ I.minimalPrimes := by
+    rw [hmin]
+    simp
+  have hay : productZeroYAxisIdeal k ∈ I.minimalPrimes := by
+    rw [hmin]
+    simp
+  let ax : I.minimalPrimes := ⟨productZeroXAxisIdeal k, hax⟩
+  let ay : I.minimalPrimes := ⟨productZeroYAxisIdeal k, hay⟩
+  have hnotXAxis : MvPolynomial.X (R := k) 1 ∉ productZeroXAxisIdeal k := by
+    intro h
+    rw [productZeroXAxisIdeal, Ideal.mem_span_singleton'] at h
+    obtain ⟨a, ha⟩ := h
+    have he := congrArg (MvPolynomial.aeval (R := k) (![0, 1] : Fin 2 → k)) ha
+    simpa using he
+  have hne : ax ≠ ay := by
+    intro h
+    apply hnotXAxis
+    have hideal : productZeroXAxisIdeal k = productZeroYAxisIdeal k :=
+      congrArg Subtype.val h
+    rw [hideal]
+    exact Ideal.mem_span_singleton_self _
+  let g : Fin 2 → I.minimalPrimes := Fin.cases ax (fun _ => ay)
+  have hg_inj : Function.Injective g := by
+    intro i j hij
+    fin_cases i <;> fin_cases j <;> simp_all [g, hne]
+  have hg_surj : Function.Surjective g := by
+    intro p
+    have hp : p.1 = productZeroXAxisIdeal k ∨
+        p.1 = productZeroYAxisIdeal k := by
+      have hp' : (p : Ideal (ProductZeroPolynomialRing k)) ∈ I.minimalPrimes := p.2
+      have hp'' : (p : Ideal (ProductZeroPolynomialRing k)) ∈
+          ({productZeroXAxisIdeal k, productZeroYAxisIdeal k} : Set _ ) := by
+        exact (congrArg (fun s : Set (Ideal (ProductZeroPolynomialRing k)) =>
+          (p : Ideal (ProductZeroPolynomialRing k)) ∈ s) hmin).mp hp'
+      simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hp''
+    rcases hp with hax' | hay'
+    · refine ⟨0, ?_⟩
+      apply Subtype.ext
+      simpa [g, ax] using hax'.symm
+    · refine ⟨1, ?_⟩
+      apply Subtype.ext
+      simpa [g, ay] using hay'.symm
+  let eAxes : Fin 2 ≃ I.minimalPrimes := Equiv.ofBijective g ⟨hg_inj, hg_surj⟩
+  let eComponents :=
+    (minimalPrimes.equivIrreducibleComponents (ProductZeroRing k)).toEquiv
+  exact ⟨eAxes.trans eMin.symm |>.trans (eComponents.trans OrderDual.ofDual)⟩
 
 abbrev ProductZeroSolution (k : Type u) [Field k] :=
   {p : k × k // p.1 * p.2 = 0}

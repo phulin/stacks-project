@@ -3,6 +3,7 @@ import Formalization.Books.MoreAlgebra.Unit55.InjectiveModules
 import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Ring.ULift
 import Mathlib.CategoryTheory.Abelian.FunctorCategory
+import Mathlib.CategoryTheory.Adjunction.Additive
 import Mathlib.CategoryTheory.Comma.Arrow
 import Mathlib.CategoryTheory.Functor.KanExtension.Adjunction
 import Mathlib.CategoryTheory.Limits.Preserves.FunctorCategory
@@ -537,7 +538,7 @@ theorem presheafRightKanExtension_preservesInjectiveObjects
 instance presheafRightKanExtension_additive
     {C : Type u} [Category.{v} C] :
     (presheafRightKanExtension (C := C)).Additive := by
-  sorry
+  exact (presheafRestrictionAdjunction (C := C)).right_adjoint_additive
 
 /-- The unit followed by the image of the objectwise injective embedding. -/
 noncomputable def presheafInjectiveEmbedding
@@ -553,14 +554,37 @@ noncomputable def presheafInjectiveEmbedding
 theorem presheafInjectiveEmbedding_mono
     {C : Type u} [Category.{v} C] (B : AbelianPresheaf C) :
     Mono (presheafInjectiveEmbedding B) := by
-  sorry
+  have hRight : PreservesMonomorphisms (presheafRightKanExtension (C := C)) :=
+    Functor.preservesMonomorphisms_of_adjunction
+      (presheafRestrictionAdjunction (C := C))
+  have hJ : Mono ((objectPresheafInjectiveUnit (C := C)).app
+      ((presheafRestriction (C := C)).obj B)) :=
+    objectPresheafInjectiveEmbedding_mono ((presheafRestriction (C := C)).obj B)
+  have hMap : Mono ((presheafRightKanExtension (C := C)).map
+      ((objectPresheafInjectiveUnit (C := C)).app
+        ((presheafRestriction (C := C)).obj B))) :=
+    @Functor.PreservesMonomorphisms.preserves _ _ _ _ _
+      hRight _ _ _ hJ
+  have hUnit : Mono (presheafCanonicalUnit B) := presheafCanonicalUnit_mono B
+  constructor
+  intro Z f g hfg
+  apply hUnit.right_cancellation
+  apply hMap.right_cancellation
+  simpa only [presheafInjectiveEmbedding, Category.assoc] using hfg
 
 theorem presheafInjectiveEmbedding_target_injective
     {C : Type u} [Category.{v} C] (B : AbelianPresheaf C) :
     Injective ((presheafRightKanExtension (C := C)).obj
       ((objectPresheafInjectiveFunctor (C := C)).obj
         ((presheafRestriction (C := C)).obj B)) : AbelianPresheaf C) := by
-  sorry
+  have hU : Functor.PreservesInjectiveObjects
+      (presheafRightKanExtension (C := C)) :=
+    presheafRightKanExtension_preservesInjectiveObjects (C := C)
+  exact hU.injective_obj
+    (X := (objectPresheafInjectiveFunctor (C := C)).obj
+      ((presheafRestriction (C := C)).obj B))
+    (objectPresheafInjectiveEmbedding_injective
+      ((presheafRestriction (C := C)).obj B))
 
 /-! ## Functorial injective embeddings -/
 
@@ -572,7 +596,17 @@ theorem abelianPresheaves_have_functorial_injective_embeddings
     (presheafRestrictionAdjunction (C := C))
     (presheafRestriction_preservesMonomorphisms (C := C))
     (objectPresheaves_have_enough_injectives (C := C))
-    (fun B hB => by sorry)
+    (fun B hB => by
+      have hFaithful : Functor.Faithful (presheafRestriction (C := C)) := by
+        constructor
+        intro X Y f g hfg
+        apply NatTrans.ext
+        funext U
+        exact congr_app hfg (Opposite.op (Discrete.mk U.unop))
+      apply (IsZero.iff_id_eq_zero B).2
+      apply hFaithful.map_injective
+      simpa only [Functor.map_id, Functor.map_zero] using
+        (IsZero.iff_id_eq_zero ((presheafRestriction (C := C)).obj B)).1 hB)
     (objectPresheaves_have_functorial_injective_embeddings (C := C))
 
 end Formalization.Books.Injectives.Unit06

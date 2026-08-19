@@ -1916,7 +1916,6 @@ theorem weaklyAssociatedPrimes_localize
       Module.compHom (LocalizedModule S M) (algebraMap R (Localization S)) = moduleR := by
     exact Module.ext' _ _ fun r z =>
       IsScalarTower.algebraMap_smul (Localization S) r z
-  letI : Module R (LocalizedModule S M) := moduleR
   let f := LocalizedModule.mkLinearMap S M
   have hweak_iff (p : PrimeSpectrum R)
       (hpdisj : Disjoint (S : Set R) p.asIdeal) :
@@ -2121,8 +2120,6 @@ theorem weaklyAssociatedPrimes_localize_of_regular
         Module.compHom (LocalizedModule S M) (algebraMap R (Localization S));
       weaklyAssociatedPrimes R M =
         weaklyAssociatedPrimes R (LocalizedModule S M)) := by
-  letI : Module R (LocalizedModule S M) :=
-    Module.compHom (LocalizedModule S M) (algebraMap R (Localization S))
   have hloc := weaklyAssociatedPrimes_localize (R := R) (M := M) S
   apply le_antisymm
   · intro p hp
@@ -2195,15 +2192,16 @@ theorem localizationAtWeaklyAssociatedPrimesMap_injective
   obtain ⟨q, hq⟩ := Ideal.nonempty_minimalPrimes hItop
   let p : {p : PrimeSpectrum R // p ∈ weaklyAssociatedPrimes R M} :=
     ⟨⟨q, hq.isPrime⟩, ⟨z, hq⟩⟩
-  letI : p.1.asIdeal.IsPrime := p.1.2
   have hzero :
       localizationAtWeaklyAssociatedPrimesMap (R := R) (M := M) z = 0 := by
     dsimp [z]
     rw [map_sub, hxy, sub_self]
   have hcoord := congrFun hzero p
-  change LocalizedModule.mkLinearMap p.1.asIdeal.primeCompl M z = 0 at hcoord
+  change LocalizedModule.mkLinearMap
+      (@Ideal.primeCompl R _ p.1.asIdeal p.1.2) M z = 0 at hcoord
   obtain ⟨s, hsS, hsz⟩ :=
-    (LocalizedModule.mem_ker_mkLinearMap_iff (S := p.1.asIdeal.primeCompl)
+    (LocalizedModule.mem_ker_mkLinearMap_iff
+      (S := @Ideal.primeCompl R _ p.1.asIdeal p.1.2)
       (M := M) (m := z)).mp hcoord
   have hsq : (s : R) ∈ q := by
     apply hq.le

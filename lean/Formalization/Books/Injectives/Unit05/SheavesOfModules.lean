@@ -491,9 +491,12 @@ theorem sheafOfModules_has_enough_injectives (X : RingedSpace.{v}) :
         Injective I ∧ IsCoseparator I := by
       intro x
       let R := TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x
-      letI : EnoughInjectives (ModuleCat R) := ModuleCat.enoughInjectives R
-      exact Abelian.has_injective_coseparator (ModuleCat.of R (Shrink R))
-        (ModuleCat.isSeparator R)
+      let hEnough : ∀ [h : EnoughInjectives (ModuleCat R)], ∃ I : ModuleCat R,
+          Injective I ∧ IsCoseparator I := by
+        intro h
+        exact Abelian.has_injective_coseparator (ModuleCat.of R (Shrink R))
+          (ModuleCat.isSeparator R)
+      exact @hEnough (ModuleCat.enoughInjectives R)
     let I : ∀ x : X, ModuleCat
         (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
       fun x => Classical.choose (hI x)
@@ -509,8 +512,10 @@ theorem sheafOfModules_has_enough_injectives (X : RingedSpace.{v}) :
     have hK_injective : ∀ (F : Mod X.structureSheaf) (x : X),
         Injective (K F x) := by
       intro F x
-      letI : Injective (I x) := hI_injective x
-      exact inferInstance
+      let hProduct : ∀ [h : Injective (I x)], Injective (K F x) := by
+        intro h
+        exact inferInstance
+      exact @hProduct (hI_injective x)
     have hK_mono : ∀ (F : Mod X.structureSheaf) (x : X), Mono
         (Pi.lift fun h : stalkModule X F x ⟶ I x => h) := by
       intro F x
@@ -540,9 +545,11 @@ theorem sheafOfModules_has_enough_injectives (X : RingedSpace.{v}) :
       fun F => ∏ᶜ fun x : X => (S x).obj (K F x)
     have hT_injective : ∀ F : Mod X.structureSheaf, Injective (T F) := by
       intro F
-      letI : ∀ x : X, Injective ((S x).obj (K F x)) :=
-        fun x => hS_injective x (K F x) (hK_injective F x)
-      exact inferInstance
+      let hProduct : ∀ [h : ∀ x : X, Injective ((S x).obj (K F x))],
+          Injective (T F) := by
+        intro h
+        exact inferInstance
+      exact @hProduct (fun x => hS_injective x (K F x) (hK_injective F x))
     let j' {F : Mod X.structureSheaf} (x : X) :
         (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
           X.structureSheaf x).obj F ⟶ K F x := by

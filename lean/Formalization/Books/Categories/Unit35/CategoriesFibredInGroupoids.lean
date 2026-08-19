@@ -2129,6 +2129,20 @@ def IsEquivalenceOverFunctor
         ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
           IsNatIsoOver q e over)
 
+/-- An equivalence over a common base transports the fibred-in-groupoids
+structure, and induces an equivalence on every fibre.  In particular, the
+last conjunct packages the fibre functor's full-faithfulness and essential
+surjectivity needed when comparing fibre objects. -/
+theorem fibredInGroupoids_of_isEquivalenceOverFunctor
+    {S S' C : Type*} [Category* S] [Category* S'] [Category* C]
+    (p : S ⥤ C) (p' : S' ⥤ C) (G : S ⥤ S')
+    (over : G ⋙ p' = p)
+    (hG : IsEquivalenceOverFunctor p p' G)
+    (hp' : p'.IsFibredInGroupoids) :
+    p.IsFibredInGroupoids ∧
+      ∀ U : C, (fibreFunctor p p' G over U).IsEquivalence := by
+  sorry
+
 /-! ## The amelioration factorization -/
 
 /-- The strengthened package for the explicit comma-category factorization

@@ -1,5 +1,6 @@
 import Formalization.Books.Derived.Unit06.Quotients
 import Mathlib.CategoryTheory.Adjunction.Additive
+import Mathlib.CategoryTheory.Localization.CalculusOfFractions.OfAdjunction
 import Mathlib.CategoryTheory.Triangulated.Orthogonal
 
 /-!
@@ -1385,7 +1386,331 @@ theorem summarize_admissible
       (AdmissiblePairConditionTwo A B ↔
         AdmissiblePairConditionThree A B) ∧
       (AdmissiblePairConditionOne A B → AdmissiblePairConclusion A B) := by
-  sorry
+  dsimp [AdmissiblePairConditionOne, AdmissiblePairConditionTwo]
+  constructor
+  · constructor
+    · rintro ⟨⟨hAc, hAt, hAdj⟩, hBA⟩
+      haveI : A.IsTriangulated := hAt
+      have horth := orthogonal_triangulated A (by infer_instance)
+      have hdecA : ∀ X : C, HasRightDecomposition A X :=
+        (right_adjoint_iff_decomposition A).1 hAdj
+      have hdecB : ∀ X : C, HasLeftDecomposition B X := by
+        intro X
+        obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdecA X
+        have hB' : B B' := by
+          rw [hBA]
+          exact hB'
+        refine ⟨A', B', f, g, h, hT, ?_, hB'⟩
+        rw [hBA, ← right_adjoint_eq_left_orthogonal A hAdj hAc]
+        simpa [hBA] using hA'
+      have hBstrict : B.IsClosedUnderIsomorphisms := by
+        rw [hBA]
+        exact horth.1.1
+      have hBtri : B.IsTriangulated := by
+        rw [hBA]
+        exact horth.1.2.2
+      haveI : B.IsTriangulated := hBtri
+      refine ⟨⟨hBstrict, hBtri, (left_adjoint_iff_decomposition B).2 hdecB⟩, ?_⟩
+      simpa [hBA] using (right_adjoint_eq_left_orthogonal A hAdj hAc)
+    · rintro ⟨⟨hBc, hBt, hBAdj⟩, hAB⟩
+      haveI : B.IsTriangulated := hBt
+      have horth := orthogonal_triangulated B (by infer_instance)
+      have hdecB : ∀ X : C, HasLeftDecomposition B X :=
+        (left_adjoint_iff_decomposition B).1 hBAdj
+      have hdecA : ∀ X : C, HasRightDecomposition A X := by
+        intro X
+        obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdecB X
+        have hBorth : rightOrthogonal A B' := by
+          intro X₀ hX₀
+          rw [hAB] at hX₀
+          exact hX₀ B' hB'
+        refine ⟨A', B', f, g, h, hT, ?_, hBorth⟩
+        rw [hAB]
+        exact hA'
+      have hAstrict : A.IsClosedUnderIsomorphisms := by
+        rw [hAB]
+        exact horth.2.1
+      have hAtri : A.IsTriangulated := by
+        rw [hAB]
+        exact horth.2.2.2
+      haveI : A.IsTriangulated := hAtri
+      refine ⟨⟨hAstrict, hAtri, (right_adjoint_iff_decomposition A).2 hdecA⟩, ?_⟩
+      simpa [hAB] using (left_adjoint_eq_right_orthogonal B hBAdj hBc)
+  · constructor
+    · dsimp [AdmissiblePairConditionThree]
+      constructor
+      · rintro ⟨⟨hBc, hBt, hBAdj⟩, hAB⟩
+        haveI : B.IsTriangulated := hBt
+        have horth := orthogonal_triangulated B (by infer_instance)
+        have hAstrict : A.IsClosedUnderIsomorphisms := by
+          rw [hAB]
+          exact horth.2.1
+        have hAtri : A.IsTriangulated := by
+          rw [hAB]
+          exact horth.2.2.2
+        haveI : A.IsTriangulated := hAtri
+        have hdecB : ∀ X : C, HasLeftDecomposition B X :=
+          (left_adjoint_iff_decomposition B).1 hBAdj
+        refine ⟨hAstrict, hAtri, hBc, hBt, ?_, ?_⟩
+        · intro X Y hX hY
+          rw [hAB] at hX
+          exact hX Y hY
+        · intro X
+          obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdecB X
+          refine ⟨A', B', f, g, h, hT, ?_, hB'⟩
+          rw [hAB]
+          exact hA'
+      · rintro ⟨hAc, hAt, hBc, hBt, hHom, hdec⟩
+        haveI : B.IsTriangulated := hBt
+        have hBAdj : HasLeftAdjoint B := by
+          apply (left_adjoint_iff_decomposition B).2
+          intro X
+          obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdec X
+          refine ⟨A', B', f, g, h, hT, ?_, hB'⟩
+          intro Y hY
+          exact hHom _ _ hA' hY
+        refine ⟨⟨hBc, hBt, hBAdj⟩, ?_⟩
+        apply le_antisymm
+        · intro X hX Y hY f
+          exact hHom _ _ hX hY f
+        · intro X hX
+          obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdec X
+          have hg : g = 0 := hX B' hB' g
+          have hBorth : rightOrthogonal A B' := by
+            intro A₀ hA₀
+            exact hHom _ _ hA₀ hB'
+          have hzero : g ≫ 𝟙 B' = 0 := by
+            rw [hg, zero_comp]
+          obtain ⟨q, hq⟩ := Triangle.yoneda_exact₃ (Triangle.mk f g h) hT
+            (𝟙 B') hzero
+          let q' : A'⟦(1 : ℤ)⟧ ⟶ B' := by
+            simpa only [Triangle.mk] using q
+          have hq0 : q' = 0 :=
+            hBorth (A'⟦(1 : ℤ)⟧)
+              ((hAt.isStableUnderShiftBy (1 : ℤ)).le_shift _ hA') q'
+          have hBid : 𝟙 B' = 0 := by
+            calc
+              𝟙 B' = h ≫ q' := by simpa [Triangle.mk, q'] using hq
+              _ = 0 := by rw [hq0]; exact comp_zero
+          have hfiso : IsIso f := (third_object_zero_characterization f).2.2 (by
+            intro Z g' h' hT'
+            obtain ⟨e, _, _⟩ := distinguished_cone_unique hT hT'
+            let eB : Z ≅ B' :=
+              { hom := e.inv.hom₃
+                inv := e.hom.hom₃
+                hom_inv_id := by exact e.inv_hom_id_triangle_hom₃
+                inv_hom_id := by exact e.hom_inv_id_triangle_hom₃ }
+            apply (IsZero.iff_id_eq_zero Z).mpr
+            calc
+              𝟙 Z = eB.hom ≫ eB.inv := eB.hom_inv_id.symm
+              _ = eB.hom ≫ 𝟙 B' ≫ eB.inv := by simp
+              _ = 0 := by simp [hBid])
+          have hX' : A.isoClosure X :=
+            ⟨A', hA', ⟨(@asIso _ _ _ _ f hfiso).symm⟩⟩
+          obtain ⟨Z, hZ, ⟨e⟩⟩ := hX'
+          exact @ObjectProperty.prop_of_iso _ _ A hAc _ _ e.symm hZ
+    · intro h
+      rcases h with ⟨hRA, hBA⟩
+      rcases hRA with ⟨hAc, hAt, hAdj⟩
+      subst B
+      haveI : A.IsTriangulated := hAt
+      have horth := orthogonal_triangulated A (by infer_instance)
+      have hBstrict := horth.1.1
+      haveI : (rightOrthogonal A).IsClosedUnderIsomorphisms := hBstrict
+      haveI : (rightOrthogonal A).IsTriangulated := horth.1.2.2
+      have hBsat : IsSaturated (rightOrthogonal A) := horth.1.2.1
+      have hS :=
+        (quotientMorphismProperty_isSaturated_iff (rightOrthogonal A)).2 hBsat
+      rcases hAdj with ⟨v, ⟨adj⟩⟩
+      letI : v.CommShift ℤ := adj.rightAdjointCommShift ℤ
+      haveI : adj.CommShift ℤ := adj.commShift_of_leftAdjoint ℤ
+      haveI : v.IsTriangulated := adj.isTriangulated_rightAdjoint
+      have hvzero : ∀ Z : C, rightOrthogonal A Z → IsZero (v.obj Z) := by
+        intro Z hZ
+        apply (IsZero.iff_id_eq_zero _).2
+        have hc : adj.counit.app Z = 0 :=
+          hZ (v.obj Z).obj (v.obj Z).property (adj.counit.app Z)
+        have hi : (adj.homEquiv (v.obj Z) Z) (adj.counit.app Z) =
+            𝟙 (v.obj Z) := by
+          apply (adj.homEquiv (v.obj Z) Z).symm.injective
+          rw [Equiv.symm_apply_apply, Adjunction.homEquiv_counit]
+          simp
+        calc
+          𝟙 (v.obj Z) = (adj.homEquiv (v.obj Z) Z) (adj.counit.app Z) := hi.symm
+          _ = (adj.homEquiv (v.obj Z) Z) 0 := by rw [hc]
+          _ = 0 := adj.homAddEquiv_zero _ _
+      have hInv :
+          (quotientMorphismProperty (rightOrthogonal A)).IsInvertedBy v := by
+        intro X Y f hf
+        change (rightOrthogonal A).isoClosure.trW f at hf
+        obtain ⟨Z, g, h, hT, hZ⟩ := hf
+        obtain ⟨Z', hZ', ⟨e⟩⟩ := hZ
+        have hZ'' : rightOrthogonal A Z :=
+          @ObjectProperty.prop_of_iso _ _ (rightOrthogonal A)
+            hBstrict _ _ e.symm hZ'
+        have hT' := v.map_distinguished (Triangle.mk f g h) hT
+        exact (Triangle.isZero₃_iff_isIso₁ _ hT').1 (hvzero Z hZ'')
+      let vbar := quotientFactor (rightOrthogonal A) v hInv
+      have hfac : quotientFunctor (rightOrthogonal A) ⋙ vbar = v :=
+        quotientFactor_fac (rightOrthogonal A) v hInv
+      have hadjbar : Nonempty
+          (A.ι ⊣ quotientFunctor (rightOrthogonal A) ⋙ vbar) := by
+        exact ⟨adj.ofNatIsoRight (eqToIso hfac).symm⟩
+      have hdecA : ∀ X : C, HasRightDecomposition A X :=
+        (right_adjoint_iff_decomposition A).1 ⟨v, ⟨adj⟩⟩
+      have hcov : ∀ X : C, ∃ (X' : A.FullSubcategory)
+          (s : A.ι.obj X' ⟶ X), quotientMorphismProperty (rightOrthogonal A) s := by
+        intro X
+        obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdecA X
+        refine ⟨⟨A', hA'⟩, f, ?_⟩
+        apply (quotientMorphismProperty_iff (rightOrthogonal A) f).2
+        exact ⟨B', g, h, hT, ⟨B', hB', ⟨Iso.refl _⟩⟩⟩
+      let F₀ := Formalization.Books.Derived.Unit05.fullSubcategoryLocalizationFunctor
+        (quotientMorphismProperty (rightOrthogonal A)) A
+      have hF₀ : F₀.IsEquivalence := by
+        dsimp [F₀]
+        exact Formalization.Books.Derived.Unit05.fullSubcategoryLocalization_isEquivalence
+          hS A hcov
+      let R := Formalization.Books.Derived.Unit05.restrictedMorphismProperty
+        (quotientMorphismProperty (rightOrthogonal A)) A
+      have hRiso : R ≤ MorphismProperty.isomorphisms A.FullSubcategory := by
+        intro X Y f hf
+        change quotientMorphismProperty (rightOrthogonal A) (A.ι.map f) at hf
+        have hvf : IsIso (v.map (A.ι.map f)) := hInv (A.ι.map f) hf
+        haveI : IsIso (v.map (A.ι.map f)) := hvf
+        haveI : IsIso adj.unit := by infer_instance
+        haveI : IsIso ((A.ι ⋙ v).map f) := by
+          change IsIso (v.map (A.ι.map f))
+          infer_instance
+        haveI : IsIso (f ≫ adj.unit.app Y) := by
+          change IsIso ((𝟭 A.FullSubcategory).map f ≫ adj.unit.app Y)
+          rw [adj.unit.naturality]
+          infer_instance
+        exact IsIso.of_isIso_comp_right f (adj.unit.app Y)
+      haveI : (𝟭 A.FullSubcategory).IsLocalization R :=
+        Functor.IsLocalization.for_id R hRiso
+      let eA : R.Localization ≌ A.FullSubcategory :=
+        Localization.uniq R.Q (𝟭 A.FullSubcategory) R
+      haveI : F₀.IsEquivalence := hF₀
+      have hfac₀ : R.Q ⋙ F₀ = A.ι ⋙ quotientFunctor (rightOrthogonal A) := by
+        dsimp [R, F₀,
+          Formalization.Books.Derived.Unit05.fullSubcategoryLocalizationFunctor]
+        exact Localization.Construction.fac _ _
+      have hcomp : eA.inverse ⋙ F₀ ≅ A.ι ⋙ quotientFunctor (rightOrthogonal A) := by
+        calc
+          eA.inverse ⋙ F₀ ≅ (𝟭 A.FullSubcategory ⋙ eA.inverse) ⋙ F₀ :=
+            Functor.isoWhiskerRight (Functor.leftUnitor eA.inverse).symm F₀
+          _ ≅ R.Q ⋙ F₀ :=
+            Functor.isoWhiskerRight (Localization.compUniqInverse
+              R.Q (𝟭 A.FullSubcategory) R) F₀
+          _ ≅ A.ι ⋙ quotientFunctor (rightOrthogonal A) := eqToIso hfac₀
+      have hFeq : Functor.IsEquivalence
+          (A.ι ⋙ quotientFunctor (rightOrthogonal A)) :=
+        Functor.isEquivalence_of_iso hcomp
+      have hAdj' : HasRightAdjoint A := ⟨v, ⟨adj⟩⟩
+      have hEqA : A = leftOrthogonal (rightOrthogonal A) :=
+        right_adjoint_eq_left_orthogonal A hAdj' hAc
+      have hdecB : ∀ X : C, HasLeftDecomposition (rightOrthogonal A) X := by
+        intro X
+        obtain ⟨A', B', f, g, h, hT, hA', hB'⟩ := hdecA X
+        refine ⟨A', B', f, g, h, hT, ?_, hB'⟩
+        rw [← hEqA]
+        exact hA'
+      have hBleft : HasLeftAdjoint (rightOrthogonal A) :=
+        (left_adjoint_iff_decomposition (rightOrthogonal A)).2 hdecB
+      rcases hBleft with ⟨u, ⟨ladj⟩⟩
+      letI : u.CommShift ℤ := ladj.leftAdjointCommShift ℤ
+      haveI : ladj.CommShift ℤ := ladj.commShift_of_rightAdjoint ℤ
+      haveI : u.IsTriangulated := ladj.isTriangulated_leftAdjoint
+      have huzero : ∀ Z : C, A Z → IsZero (u.obj Z) := by
+        intro Z hZ
+        apply (IsZero.iff_id_eq_zero _).2
+        have hZ' : leftOrthogonal (rightOrthogonal A) Z := by
+          exact hEqA ▸ hZ
+        have hu : ladj.unit.app Z = 0 := by
+          exact hZ' (u.obj Z).obj (u.obj Z).property (ladj.unit.app Z)
+        have hi : (ladj.homEquiv Z (u.obj Z)).symm (ladj.unit.app Z) =
+            𝟙 (u.obj Z) := by
+          apply (ladj.homEquiv Z (u.obj Z)).injective
+          rw [Equiv.apply_symm_apply, ladj.homEquiv_unit]
+          simp
+        calc
+          𝟙 (u.obj Z) = (ladj.homEquiv Z (u.obj Z)).symm
+              (ladj.unit.app Z) := hi.symm
+          _ = (ladj.homEquiv Z (u.obj Z)).symm 0 := by rw [hu]
+          _ = 0 := ladj.homAddEquiv_symm_zero _ _
+      have hInvA : (quotientMorphismProperty A).IsInvertedBy u := by
+        intro X Y f hf
+        change A.isoClosure.trW f at hf
+        obtain ⟨Z, g, h, hT, hZ⟩ := hf
+        obtain ⟨Z', hZ', ⟨e⟩⟩ := hZ
+        have hZ'' : A Z :=
+          @ObjectProperty.prop_of_iso _ _ A hAc _ _ e.symm hZ'
+        have hT' := u.map_distinguished (Triangle.mk f g h) hT
+        exact (Triangle.isZero₃_iff_isIso₁ _ hT').1 (huzero Z hZ'')
+      have hSiff : ∀ (X Y : C) (f : X ⟶ Y),
+          quotientMorphismProperty A f ↔ IsIso (u.map f) := by
+        intro X Y f
+        constructor
+        · intro hf
+          exact hInvA f hf
+        · intro hf
+          haveI : IsIso (u.map f) := hf
+          obtain ⟨Z, g, h, hT⟩ := distinguished_cone_exists f
+          have hT' := u.map_distinguished (Triangle.mk f g h) hT
+          have hUZ : IsZero (u.obj Z) :=
+            (Triangle.isZero₃_iff_isIso₁ _ hT').2 hf
+          have hZA' : leftOrthogonal (rightOrthogonal A) Z := by
+            intro X' hX'
+            intro k
+            have hk : (ladj.homEquiv Z ⟨X', hX'⟩).symm k = 0 := by
+              calc
+                (ladj.homEquiv Z ⟨X', hX'⟩).symm k =
+                    𝟙 (u.obj Z) ≫
+                      (ladj.homEquiv Z ⟨X', hX'⟩).symm k := by simp
+                _ = 0 := by rw [(IsZero.iff_id_eq_zero _).1 hUZ, zero_comp]
+            calc
+              k = (ladj.homEquiv Z ⟨X', hX'⟩)
+                  ((ladj.homEquiv Z ⟨X', hX'⟩).symm k) :=
+                (Equiv.apply_symm_apply _ k).symm
+              _ = (ladj.homEquiv Z ⟨X', hX'⟩) 0 := by rw [hk]
+              _ = 0 := ladj.homAddEquiv_zero _ _
+          have hZA : A Z := hEqA.symm ▸ hZA'
+          apply (quotientMorphismProperty_iff A f).2
+          exact ⟨Z, g, h, hT, ⟨Z, hZA, ⟨Iso.refl _⟩⟩⟩
+      let ubar := quotientFactor A u hInvA
+      have hfacA : quotientFunctor A ⋙ ubar = u :=
+        quotientFactor_fac A u hInvA
+      have hleftAdj : Nonempty (quotientFunctor A ⋙ ubar ⊣ (rightOrthogonal A).ι) := by
+        exact ⟨ladj.ofNatIsoLeft (eqToIso hfacA).symm⟩
+      let W := (MorphismProperty.isomorphisms (rightOrthogonal A).FullSubcategory).inverseImage u
+      have hW : W = quotientMorphismProperty A := by
+        ext X Y f
+        change IsIso (u.map f) ↔ quotientMorphismProperty A f
+        exact (hSiff X Y f).symm
+      haveI : u.IsLocalization (quotientMorphismProperty A) := by
+        rw [← hW]
+        exact ladj.isLocalization_leftAdjoint'
+      let eB : quotientCategory A ≌ (rightOrthogonal A).FullSubcategory :=
+        Localization.uniq (quotientFunctor A) u (quotientMorphismProperty A)
+      have hcompB : u ⋙ eB.inverse ≅ quotientFunctor A :=
+        Localization.compUniqInverse (quotientFunctor A) u
+          (quotientMorphismProperty A)
+      haveI : IsIso ladj.counit := by infer_instance
+      have hjeq : (rightOrthogonal A).ι ⋙ quotientFunctor A ≅ eB.inverse := by
+        calc
+          (rightOrthogonal A).ι ⋙ quotientFunctor A ≅
+              (rightOrthogonal A).ι ⋙ (u ⋙ eB.inverse) :=
+            Functor.isoWhiskerLeft (rightOrthogonal A).ι hcompB.symm
+          _ ≅ ((rightOrthogonal A).ι ⋙ u) ⋙ eB.inverse :=
+            (Functor.associator _ _ _).symm
+          _ ≅ (𝟭 (rightOrthogonal A).FullSubcategory) ⋙ eB.inverse :=
+            Functor.isoWhiskerRight (asIso ladj.counit) eB.inverse
+          _ ≅ eB.inverse := Functor.leftUnitor _
+      have hBeq : Functor.IsEquivalence
+          ((rightOrthogonal A).ι ⋙ quotientFunctor A) :=
+        Functor.isEquivalence_of_iso hjeq.symm
+      exact ⟨hFeq, hBeq, ⟨vbar, hadjbar⟩, ⟨ubar, hleftAdj⟩⟩
 
 end AdmissibleSubcategories
 

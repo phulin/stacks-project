@@ -876,7 +876,20 @@ theorem third_object_zero_characterization
     (IsIso f ↔
       ∀ {Z : C} (g : Y ⟶ Z) (h : Z ⟶ X⟦(1 : ℤ)⟧),
         Triangle.mk f g h ∈ distTriang C → IsZero Z) := by
-  sorry
+  constructor
+  · constructor
+    · intro hf
+      exact (Triangle.distinguished_iff_of_isZero₃ _
+        (isZero_zero C)).2 hf
+    · intro hT
+      exact (Triangle.distinguished_iff_of_isZero₃ _
+        (isZero_zero C)).1 hT
+  · constructor
+    · intro hf Z g h hT
+      exact (Triangle.isZero₃_iff_isIso₁ _ hT).2 hf
+    · intro hP
+      obtain ⟨Z, g, h, hT⟩ := distinguished_cone_exists f
+      exact (Triangle.isZero₃_iff_isIso₁ _ hT).1 (hP g h hT)
 
 /-- The direct sum of two triangles, using the canonical biproduct and the
 shift comparison isomorphism for the third map. -/

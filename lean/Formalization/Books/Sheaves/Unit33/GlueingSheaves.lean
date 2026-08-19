@@ -925,7 +925,7 @@ instance : Category (SheafGlueingData C U) where
     simp
   assoc f g h := by
     ext i
-    simp [Category.assoc, eqToHom_map, openSubsetInclusion_comp_openInclusion]
+    simp [Category.assoc]
 
 end SheafGlueingData
 

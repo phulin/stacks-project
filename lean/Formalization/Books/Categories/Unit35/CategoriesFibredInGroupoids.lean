@@ -4101,6 +4101,23 @@ theorem categoryPresheafStrictification_exists_equivalence
   · intro x
     rfl
 
+/- The explicit strictification is not itself a `CategoryPresheaf`: its
+   objects remember both the source and target of the chosen base arrow.
+   The source proof next presents its fibres over the first base object by a
+   strict contravariant functor.  Keep that presentation as a separate
+   interface so the final equivalence theorem does not have to identify the
+   custom strictification category with a CoGrothendieck category inline. -/
+theorem categoryPresheafStrictification_exists_presheaf_equivalence
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
+    ∃ F : CategoryPresheaf C,
+      ∃ e : CategoryPresheafStrictificationCategory p P ⥤
+          categoryPresheafCategory F,
+        IsEquivalenceOverFunctor
+          (categoryPresheafStrictificationProjection P)
+          (categoryPresheafProjection F) e := by
+  sorry
+
 theorem fibredCategory_isEquivalentTo_split
     {S C : Type*} [Category* S] [Category* C]
     (p : S ⥤ C) [p.IsFibered] :
@@ -4127,6 +4144,22 @@ abbrev groupoidPresheafProjection
     (F : GroupoidPresheaf C) :
     groupoidPresheafCategory F ⥤ C :=
   categoryPresheafProjection F.value
+
+/- The groupoid-valued version must retain the fibre-groupoid property in the
+   strict presentation.  This is stronger than applying the Cat-valued
+   presentation and forgetting that property, so expose it separately for
+   the final groupoid strictification theorem. -/
+theorem categoryPresheafStrictification_exists_groupoidPresheaf_equivalence
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered]
+    (hp : p.IsFibredInGroupoids) (P : PullbackChoice p) :
+    ∃ F : GroupoidPresheaf C,
+      ∃ e : CategoryPresheafStrictificationCategory p P ⥤
+          groupoidPresheafCategory F,
+        IsEquivalenceOverFunctor
+          (categoryPresheafStrictificationProjection P)
+          (groupoidPresheafProjection F) e := by
+  sorry
 
 abbrev groupoidPresheafRestriction
     {C : Type u'} [Category.{v'} C]

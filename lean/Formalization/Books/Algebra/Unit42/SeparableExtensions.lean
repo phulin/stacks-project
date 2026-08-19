@@ -1036,8 +1036,10 @@ theorem exists_tower_pth_roots_adjoin_finset
     (x : ι → K) (hx : AlgebraicIndependent k x)
     (c : Finset (IntermediateField.adjoin k (Set.range x))) :
     ∃ tower : FinitePthRootBaseChangeTower k K p hp,
-      ∀ a ∈ c, ∃ q : finitePthRootTopAtLevel tower,
-        q ^ p = (algebraMap K (finitePthRootTopAtLevel tower)) a := by
+      @Algebra.IsAlgebraic tower.comparisonLower tower.comparisonUpper _ _
+          (RingHom.toAlgebra tower.comparisonMap) ∧
+        ∀ a ∈ c, ∃ q : finitePthRootTopAtLevel tower,
+          q ^ p = (algebraMap K (finitePthRootTopAtLevel tower)) a := by
   classical
   obtain ⟨num, den, s, hrep⟩ := exists_finite_coefficients_reprField x hx c
   letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
@@ -1110,6 +1112,38 @@ theorem exists_tower_pth_roots_adjoin_finset
         · intro a b _ _ ha hb
           simpa using E.mul_mem ha hb
         · exact ha)
+  have hAlgE : @Algebra.IsAlgebraic
+      (IntermediateField.adjoin k (Set.range x)) E _ _
+      (RingHom.toAlgebra mapF) := by
+    letI : IsPurelyInseparable k B :=
+      finitePthRootFieldAtLevel_isPurelyInseparable tower.base
+    apply isAlgebraic_adjoin_of_isAlgebraic_generators
+      (s := Set.range z) (E := E) rfl mapF
+    · intro a
+      rfl
+    · intro b
+      obtain ⟨n, a, ha⟩ := IsPurelyInseparable.pow_mem
+        (F := k) (E := B) (q := p) (x := b)
+      apply IsAlgebraic.of_pow (Nat.pow_pos hp)
+      rw [← map_pow, ← ha]
+      convert isAlgebraic_algebraMap
+        (R := IntermediateField.adjoin k (Set.range x)) (A := T)
+        (algebraMap k (IntermediateField.adjoin k (Set.range x)) a) using 1
+      apply Subtype.ext
+      change (tower.baseToTop (algebraMap k B a) : AlgebraicClosure K) =
+        algebraMap K (AlgebraicClosure K) (algebraMap k K a)
+      rw [tower.baseToTop_apply]
+      change pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) a) = _
+      rw [(pthRootClosureMap k K).commutes]
+      exact (IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) a).symm
+    · intro q hq
+      obtain ⟨i, rfl⟩ := hq
+      apply IsAlgebraic.of_pow hp
+      rw [hz]
+      change IsAlgebraic (IntermediateField.adjoin k (Set.range x))
+        (algebraMap (IntermediateField.adjoin k (Set.range x)) T
+          ⟨x i, IntermediateField.subset_adjoin k _ ⟨i, rfl⟩⟩)
+      exact isAlgebraic_algebraMap _
   let A : IntermediateField E T :=
     IntermediateField.adjoin E (Set.range (algebraMap K T))
   let roots : Set (AlgebraicClosure K) :=
@@ -1154,7 +1188,7 @@ theorem exists_tower_pth_roots_adjoin_finset
       comparisonMap := mapF
       comparisonMap_commutes := fun _ ↦ rfl
       comparison_generates_top := hgenerate }
-  refine ⟨tower', ?_⟩
+  refine ⟨tower', hAlgE, ?_⟩
   intro a ha
   change ∃ q : T, q ^ p = algebraMap K T (a : K)
   obtain ⟨hfrac, hden, hnumcoeff, hdencoeff⟩ := hrep a ha
@@ -1209,7 +1243,7 @@ theorem exists_tower_pth_roots_minpoly_coefficients
       ∀ i : ℕ, ∃ q : finitePthRootTopAtLevel tower,
         q ^ p = algebraMap K (finitePthRootTopAtLevel tower)
           ((minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i : K) := by
-  obtain ⟨tower, hcoeff⟩ := exists_tower_pth_roots_adjoin_finset p hp x hx
+  obtain ⟨tower, _, hcoeff⟩ := exists_tower_pth_roots_adjoin_finset p hp x hx
     (minpoly (IntermediateField.adjoin k (Set.range x)) a).coeffs
   refine ⟨tower, ?_⟩
   intro i

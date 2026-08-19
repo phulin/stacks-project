@@ -1,4 +1,5 @@
 import Formalization.Books.Dga.Unit05.HomotopyCategory
+import Formalization.Books.Dga.Unit10.Triangulated
 import Mathlib.Algebra.Homology.BifunctorShift
 import Mathlib.Algebra.Ring.NegOnePow
 import Mathlib.CategoryTheory.EqToHom
@@ -20,6 +21,7 @@ open CategoryTheory.MonoidalCategory
 open Formalization.Books.Dga.Unit03
 open Formalization.Books.Dga.Unit04
 open Formalization.Books.Dga.Unit05
+open Formalization.Books.Dga.Unit10
 
 universe u v w
 
@@ -377,16 +379,29 @@ def leftGradedModuleShiftAction
 
 /-! ## Homotopies -/
 
+/-! A homotopy map is only required to be a graded module map.  It is not a
+chain map in general: the homotopy equation says precisely that it becomes a
+map to the shifted complex when `f = g`. -/
+structure LeftGradedModuleHom
+    {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
+    (M N : LeftDifferentialGradedModule A) where
+  component : ∀ n : ℤ,
+    M.complex.X n →ₗ[R] (leftDgmShift N (-1 : ℤ)).complex.X n
+  map_action : ∀ (p q : ℤ) (a : A.complex.X p) (x : M.complex.X q),
+    component (p + q) (M.actionOnHomogeneous p q a x) =
+      (leftDgmShift N (-1 : ℤ)).actionOnHomogeneous p q a
+        (component q x)
+
 /-- A left-module homotopy consists of a degree `-1` graded module map and an
 underlying chain homotopy.  The component equation identifies the two maps. -/
 structure LeftDifferentialGradedModuleHomotopy
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
     {M N : LeftDifferentialGradedModule A}
     (f g : LeftDifferentialGradedModuleHom M N) where
-  shiftedMap : LeftDifferentialGradedModuleHom M (leftDgmShift N (-1 : ℤ))
+  shiftedMap : LeftGradedModuleHom M N
   homotopy : Homotopy f.underlying g.underlying
   component_eq : ∀ n : ℤ,
-    HEq (shiftedMap.underlying.f n) (homotopy.hom n (n - 1)).hom
+    HEq (shiftedMap.component n) (homotopy.hom n (n - 1)).hom
 
 def LeftDifferentialGradedModuleHomotopic
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
@@ -407,13 +422,22 @@ theorem leftDifferentialGradedModuleHomotopy_formula
           ((M.complex.d n (n + 1)).hom x) := by
   sorry
 
-def leftDifferentialGradedModuleHomotopy_self_shiftedMap
+theorem leftDifferentialGradedModuleHomotopy_self_shiftedMap_exists
+    {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
+    {M N : LeftDifferentialGradedModule A}
+    {f : LeftDifferentialGradedModuleHom M N}
+    (H : LeftDifferentialGradedModuleHomotopy f f) :
+    Nonempty (LeftDifferentialGradedModuleHom M (leftDgmShift N (-1 : ℤ))) := by
+  sorry
+
+/-- A self-homotopy gives the corresponding morphism to the shifted module. -/
+noncomputable def leftDifferentialGradedModuleHomotopy_self_shiftedMap
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
     {M N : LeftDifferentialGradedModule A}
     {f : LeftDifferentialGradedModuleHom M N}
     (H : LeftDifferentialGradedModuleHomotopy f f) :
     LeftDifferentialGradedModuleHom M (leftDgmShift N (-1 : ℤ)) :=
-  H.shiftedMap
+  Classical.choice (leftDifferentialGradedModuleHomotopy_self_shiftedMap_exists H)
 
 /-- Opposite-module translation preserves and reflects homotopies. -/
 theorem leftDifferentialGradedModuleHomotopic_iff_opposite
@@ -425,10 +449,22 @@ theorem leftDifferentialGradedModuleHomotopic_iff_opposite
         (leftModuleOppositeHom f) (leftModuleOppositeHom g) := by
   sorry
 
-/-! The source's final paragraph says that homotopy categories, cones,
-admissible short exact sequences, and distinguished triangles are transported
-through this equivalence.  The right-module constructions are already the
-canonical interfaces for those notions; the equivalence and the shift
-compatibility above are the two structure maps needed for that transport. -/
+/-! ## The left-module triangulated conclusion -/
+
+/-- The right-module triangulated data over the opposite DGA is the
+source-prescribed construction of the homotopy category, cones, admissible
+short exact sequences, and distinguished triangles for left modules. -/
+abbrev LeftDgmTriangulatedData
+    {R : Type u} [CommRing R]
+    (A : DifferentialGradedAlgebra R) : Type _ :=
+  DgmTriangulatedData (oppositeDifferentialGradedAlgebra A)
+
+/-- The homotopy category of left differential graded `A`-modules is
+triangulated, by transport through the opposite-module equivalence. -/
+theorem leftModule_homotopy_category_triangulated
+    {R : Type u} [CommRing R] (A : DifferentialGradedAlgebra R) :
+    Nonempty (LeftDgmTriangulatedData A) := by
+  exact dgm_homotopy_category_triangulated
+    (oppositeDifferentialGradedAlgebra A)
 
 end Formalization.Books.Dga.Unit11

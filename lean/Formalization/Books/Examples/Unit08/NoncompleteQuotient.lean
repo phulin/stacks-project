@@ -110,13 +110,15 @@ theorem zElement_mul_zElement_mul_tElement (k : Type u) [Field k] (i j : ℕ+) :
 
 The last condition records the relation forced by multiplying
 `zᵢt = xⁱwᵢ` by `wⱼ` and using `zᵢwⱼ = 0`, together with the
-nonzerodivisor property of `x`. -/
+nonzerodivisor property of `x`: the w-part is either absent or is a
+single variable to the first power. -/
 def IsReducedNoncompleteQuotientMonomial
     (m : NoncompleteQuotientVariable →₀ ℕ) : Prop :=
   m .x = 0 ∧
     (m .t = 0 ∨ ∀ i, m (.z i) = 0) ∧
     (∀ i, m (.z i) = 0 ∨ ∀ j, m (.w j) = 0) ∧
-      ∀ i, m (.w i) = 0 ∨ ∀ j, m (.w j) = 0
+      ∀ i, m (.w i) = 0 ∨
+        (m (.w i) = 1 ∧ ∀ j, i ≠ j → m (.w j) = 0)
 
 /-- A coefficient polynomial in the source's canonical normal form. -/
 def IsReducedNoncompleteQuotientCoefficient

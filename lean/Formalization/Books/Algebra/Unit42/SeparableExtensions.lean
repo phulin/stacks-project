@@ -887,8 +887,12 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
     (base : FinitePthRootTower k p hp)
     (t : Finset (perfectClosure K (AlgebraicClosure K))) :
     ∃ tower : FinitePthRootBaseChangeTower k K p hp,
-      tower.base = base ∧ ∀ z ∈ t, (z : AlgebraicClosure K) ∈
-        finitePthRootTopAtLevel tower := by
+      tower.base = base ∧
+      (∀ z ∈ t, (z : AlgebraicClosure K) ∈ finitePthRootTopAtLevel tower) ∧
+      finitePthRootTopAtLevel tower ≤ IntermediateField.adjoin K
+        ((pthRootClosureMap k K ''
+            (finitePthRootFieldAtLevel base : Set (AlgebraicClosure k))) ∪
+          ((↑) '' (t : Set (perfectClosure K (AlgebraicClosure K))))) := by
   classical
   let B := finitePthRootFieldAtLevel base
   let : FiniteDimensional k B := base.finite_dimensional
@@ -909,7 +913,7 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
     rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
     exact ((pthRootClosureMap k K).commutes b).symm
   let roots : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift ∪ t
-  obtain ⟨top, htop, _⟩ :=
+  obtain ⟨top, htop, htop_le⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp roots
   let T := finitePthRootFieldAtLevel top
   let baseToTop : B →+* T :=
@@ -973,9 +977,18 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
           isSeparable_algebraMap (⟨y, trivial⟩ : (⊤ : IntermediateField k K))
         rw [show algebraMap (⊤ : IntermediateField k K) K ⟨y, trivial⟩ = y by rfl] at hy
         exact hy }
-  refine ⟨tower, rfl, ?_⟩
-  intro z hz
-  exact htop z (Finset.mem_union_right _ hz)
+  refine ⟨tower, rfl, ?_, ?_⟩
+  · intro z hz
+    exact htop z (Finset.mem_union_right _ hz)
+  · refine htop_le.trans ?_
+    apply IntermediateField.adjoin_le_iff.mpr
+    rintro z ⟨w, hw, rfl⟩
+    rcases Finset.mem_union.mp hw with hw | hw
+    · obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hw
+      apply IntermediateField.subset_adjoin K _
+      exact Or.inl ⟨a, a.property, rfl⟩
+    · apply IntermediateField.subset_adjoin K _
+      exact Or.inr ⟨w, hw, rfl⟩
 
 /-- Any finite base root tower can be completed to a compatible paired tower
 over a field extension. -/
@@ -984,7 +997,7 @@ theorem FinitePthRootTower.exists_baseChangeTower
     (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
     (base : FinitePthRootTower k p hp) :
     ∃ tower : FinitePthRootBaseChangeTower k K p hp, tower.base = base := by
-  obtain ⟨tower, hbase, _⟩ := base.exists_baseChangeTower_containing
+  obtain ⟨tower, hbase, _, _⟩ := base.exists_baseChangeTower_containing
     (K := K) p hp ∅
   exact ⟨tower, hbase⟩
 
@@ -1017,7 +1030,7 @@ theorem exists_tower_pth_roots_adjoin_finset
       refine ⟨1, x i, ?_⟩
       simp⟩
   let topRoots := Finset.univ.image topRoot
-  obtain ⟨tower, htower, htop⟩ :=
+  obtain ⟨tower, htower, htop, htop_le⟩ :=
     base.exists_baseChangeTower_containing (K := K) p hp topRoots
   subst base
   let B := finitePthRootFieldAtLevel tower.base

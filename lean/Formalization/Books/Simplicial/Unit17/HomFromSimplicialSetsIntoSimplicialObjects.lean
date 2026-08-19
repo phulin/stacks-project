@@ -62,7 +62,7 @@ theorem homFunctor_obj
     (W : SimplicialObject C) :
     (homFunctor U V hU).obj (op W) =
     (Unit13.simplicialSetProduct U W hU ⟶ V) := by
-  sorry
+  rfl
 
 /-! ## Degree-zero representability -/
 
@@ -135,10 +135,10 @@ private theorem simplicialSetProduct_injection_map
        (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map f) =
       (let h := Unit13.degreewiseCoproductInstance U
         ((SimplicialObject.const C).obj X) hU
-       let _ := Unit13.degreewiseCoproductInstanceAt h Z'
-       Sigma.ι (fun _ : U.obj Z' => ((SimplicialObject.const C).obj X).obj Z')
+     let _ := Unit13.degreewiseCoproductInstanceAt h Z'
+     Sigma.ι (fun _ : U.obj Z' => ((SimplicialObject.const C).obj X).obj Z')
          (U.map f u)) := by
-  sorry
+  simp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
 
 private noncomputable def homToElementsCone
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -388,7 +388,58 @@ theorem homZero_isRepresentable_countable
     (U : SSet.{w}) (V : SimplicialObject C)
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     (homZeroFunctor U V hU).IsRepresentable := by
-  sorry
+  letI : HasLimit (simplicialSetElementsDiagram U V) :=
+    hasLimit_simplicialSetElementsDiagram U V hU
+  let D := simplicialSetElementsDiagram U V
+  let L := limit D
+  let coneEquiv {X : C} :
+      (X ⟶ L) ≃ ((Functor.const U.Elements).obj X ⟶ D) :=
+    { toFun := fun f =>
+        { app := fun e => f ≫ limit.π D e
+          naturality := by
+            intro e e' g
+            simp }
+      invFun := fun α => limit.lift D { pt := X, π := α }
+      left_inv := by
+        intro f
+        apply limit.hom_ext
+        intro e
+        simp
+      right_inv := by
+        intro α
+        ext e
+        simp }
+  let q {X : C} := elementsConeHomEquiv U V hU (X := X)
+  let h {X : C} := (coneEquiv (X := X)).trans (q (X := X))
+  let R : (homZeroFunctor U V hU).RepresentableBy L :=
+    { homEquiv := fun {X} => h (X := X)
+      homEquiv_comp := by
+        intro X X' f g
+        have hcomp :
+            h (X := X) (f ≫ g) =
+              (productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f) ≫
+                h (X := X') g := by
+          apply (q (X := X)).symm.injective
+          dsimp only [h]
+          rw [Equiv.trans_apply, Equiv.trans_apply, Equiv.symm_apply_apply]
+          change coneEquiv (X := X) (f ≫ g) =
+            homToElementsCone U V hU
+              ((productWithSimplicialSetBy U hU).map
+                  ((SimplicialObject.const C).map f) ≫
+                q (X := X') (coneEquiv (X := X') g))
+          rw [homToElementsCone_map]
+          have hq : homToElementsCone U V hU
+                (q (X := X') (coneEquiv (X := X') g)) =
+              coneEquiv (X := X') g := by
+            exact (q (X := X')).symm_apply_apply _
+          rw [hq]
+          ext e
+          simp [coneEquiv, Category.assoc]
+        change h (X := X) (f ≫ g) =
+          (homZeroFunctor U V hU).map f.op (h (X := X') g)
+        rw [homZero_map_apply]
+        exact hcomp }
+  exact ⟨L, ⟨R⟩⟩
 
 theorem homZero_isRepresentable_finite
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

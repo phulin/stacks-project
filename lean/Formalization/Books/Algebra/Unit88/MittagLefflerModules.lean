@@ -452,7 +452,6 @@ theorem dominates_iff_pushout_inr_universallyInjective
       rw [biprod.lift_desc]
       rw [CategoryTheory.Preadditive.neg_comp]
       rw [← pushout.condition (f := ModuleCat.ofHom f) (g := ModuleCat.ofHom g)]
-      rw [pushout.inr_desc]
       simp)
     have hp := IsPushout.of_isColimit
       (pushoutIsPushout (ModuleCat.ofHom f) (ModuleCat.ofHom g))

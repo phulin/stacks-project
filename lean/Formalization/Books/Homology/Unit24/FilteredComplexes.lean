@@ -276,7 +276,7 @@ theorem filteredComplex_page_subobjects_exists
           (filteredComplexBoundaryPlus K r p q)
           ((K.X (p + q)).filtration.obj p)
           le_sup_right hB0)⟩
-  letI : Mono bMap := hbMap_mono
+  let : Mono bMap := hbMap_mono
   let zMap : zObj ⟶ filteredComplexE₀ K p q :=
     cokernel.map
       (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
@@ -303,7 +303,7 @@ theorem filteredComplex_page_subobjects_exists
           (filteredComplexCyclePlus K r p q)
           ((K.X (p + q)).filtration.obj p)
           le_sup_right hZ0)⟩
-  letI : Mono zMap := hzMap_mono
+  let : Mono zMap := hzMap_mono
   let bzMap : bObj ⟶ zObj :=
     cokernel.map
       (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
@@ -358,7 +358,7 @@ theorem filteredComplex_page_subobjects_exists
       dsimp [bObj, filteredComplexE₀, bMap]
       exact cokernel.π_desc _ _ _
     rw [← Category.assoc, hbzπ, Category.assoc, hzπ, hbπ]
-    simpa [filteredComplexE₀,
+    simpa only [filteredComplexE₀,
       Formalization.Books.Homology.Unit20.filteredComplexE₀,
       Formalization.Books.Homology.Unit19.gradedPiece, Category.assoc] using
       congrArg (fun f => f ≫ cokernel.π (Subobject.ofLE
@@ -625,8 +625,9 @@ def filteredComplexKernelSubobject {C : Type u} [Category.{v} C]
 
 def filteredComplexImageSubobject {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (n : ℤ) :
-    Subobject (K.X n).carrier :=
-  (Subobject.«exists» ((filteredComplexUnderlying K).d (n - 1) n)).obj ⊤
+  Subobject (K.X n).carrier :=
+  @imageSubobject C _ _ _ ((filteredComplexUnderlying K).d (n - 1) n)
+    (HasImages.has_image _)
 
 def filteredComplexCohomologyNumerator {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (n p : ℤ) :
@@ -649,7 +650,17 @@ noncomputable def filteredComplexCohomologyGradedFormulaObject {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (n p : ℤ) : C :=
   subquotientObject (filteredComplexCohomologyGradedDenominator K n p)
     (filteredComplexKernelSubobject K n ⊓ (K.X n).filtration.obj p)
-    (by sorry)
+    (by
+      apply sup_le
+      · exact inf_le_inf_left _ ((K.X n).filtration.antitone (by omega))
+      · let hImage : HasImage ((filteredComplexUnderlying K).d (n - 1) n) :=
+          HasImages.has_image _
+        exact inf_le_inf
+          (image_le_kernel
+            ((filteredComplexUnderlying K).d (n - 1) n)
+            ((filteredComplexUnderlying K).d n (n + 1))
+            ((filteredComplexUnderlying K).d_comp_d (n - 1) n (n + 1))) le_rfl
+    )
 
 theorem filteredComplex_cohomology_filtration_formula
     {C : Type u} [Category.{v} C] [Abelian C]

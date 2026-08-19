@@ -399,7 +399,6 @@ theorem fibreProduct_spectrum_isPushout
         change fibreProductToA' D z ∈ y.asIdeal
         simpa [z] using hwy
       have hz' : z ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal := by
-        change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal
         change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal at hz
         have hmem := congrArg
           (fun P : PrimeSpectrum (fibreProductRing D) => z ∈ P.asIdeal) hxy'
@@ -420,7 +419,6 @@ theorem fibreProduct_spectrum_isPushout
         change fibreProductToA' D z ∈ x.asIdeal
         simpa [z] using x.asIdeal.mul_mem_left w ha'
       have hz' : z ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal := by
-        change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal
         change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal at hz
         have hmem := congrArg
           (fun P : PrimeSpectrum (fibreProductRing D) => z ∈ P.asIdeal) hxy'
@@ -446,7 +444,6 @@ theorem fibreProduct_spectrum_isPushout
           change fibreProductToA' D z ∈ x.asIdeal
           simpa [z] using hwx
         have hz' : z ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal := by
-          change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal
           change z ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal at hz
           have hmem := congrArg
             (fun P : PrimeSpectrum (fibreProductRing D) => z ∈ P.asIdeal) hxy'
@@ -462,7 +459,6 @@ theorem fibreProduct_spectrum_isPushout
         change fibreProductToA' D z' ∈ y.asIdeal
         simpa [z'] using y.asIdeal.mul_mem_left w ha'
       have hz' : z' ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal := by
-        change z' ∈ (PrimeSpectrum.comap (fibreProductToA' D) x).asIdeal
         change z' ∈ (PrimeSpectrum.comap (fibreProductToA' D) y).asIdeal at hz
         have hmem := congrArg
           (fun P : PrimeSpectrum (fibreProductRing D) => z' ∈ P.asIdeal) hxy'
@@ -470,7 +466,7 @@ theorem fibreProduct_spectrum_isPushout
       change fibreProductToA' D z' ∈ x.asIdeal at hz'
       have hmul : w * a' ∈ x.asIdeal := by simpa [z'] using hz'
       exact (x.2.mem_or_mem hmul).resolve_left hwx
-  letI : Mono (↾PrimeSpectrum.comap (fibreProductToB D)) :=
+  have monoToB : Mono (↾PrimeSpectrum.comap (fibreProductToB D)) :=
     (mono_iff_injective _).2
     (PrimeSpectrum.comap_injective_of_surjective (fibreProductToB D)
         (fibreProduct_toB_surjective D))
@@ -482,9 +478,8 @@ theorem fibreProduct_spectrum_isPushout
         (↾PrimeSpectrum.comap D.fromA')
         (↾PrimeSpectrum.comap (fibreProductToB D))
         (↾PrimeSpectrum.comap (fibreProductToA' D)) := by
-    apply CategoryTheory.Limits.Types.isPushout_of_isPullback_of_mono' hpull
-    · exact hjoint
-    · exact hoff
+    exact @CategoryTheory.Limits.Types.isPushout_of_isPullback_of_mono'
+      _ _ _ _ _ _ _ _ hpull monoToB hjoint hoff
   have hcomm :
       Spec.topMap (CommRingCat.ofHom D.toA) ≫
           Spec.topMap (CommRingCat.ofHom (fibreProductToB D)) =
@@ -561,7 +556,6 @@ theorem fibreProduct_spectrum_isPushout
       exact isOpen_coinduced.mp (hU WalkingSpan.right)
     by_cases hker : RingHom.ker (fibreProductToB D) ≤ p.asIdeal
     · have hpB : p ∈ Set.range (PrimeSpectrum.comap (fibreProductToB D)) := by
-        change p ∈ Set.range (PrimeSpectrum.comap (fibreProductToB D))
         rw [range_comap_of_surjective B (fibreProductToB D)
           (fibreProduct_toB_surjective D)]
         exact hker
@@ -670,8 +664,6 @@ theorem fibreProduct_spectrum_isPushout
         hpbasic⟩
       intro z hz
       change (z : PrimeSpectrum (fibreProductRing D)) ∈
-        (U : Set (PrimeSpectrum (fibreProductRing D)))
-      change (z : PrimeSpectrum (fibreProductRing D)) ∈
         (PrimeSpectrum.basicOpen h : Set (PrimeSpectrum (fibreProductRing D))) at hz
       have hz' : (z : PrimeSpectrum (fibreProductRing D)) ∈
           (Set.range (PrimeSpectrum.comap (fibreProductToB D)) ⊔
@@ -762,8 +754,6 @@ theorem fibreProduct_spectrum_isPushout
         PrimeSpectrum.isOpen_basicOpen,
         hpbasic⟩
       intro z hz
-      change (z : PrimeSpectrum (fibreProductRing D)) ∈
-        (U : Set (PrimeSpectrum (fibreProductRing D)))
       change (z : PrimeSpectrum (fibreProductRing D)) ∈
         (PrimeSpectrum.basicOpen h : Set (PrimeSpectrum (fibreProductRing D))) at hz
       have hz' : (z : PrimeSpectrum (fibreProductRing D)) ∈
@@ -879,7 +869,7 @@ theorem fibreProduct_integral
       simp at hcoeff
     have hqpos : 0 < q.natDegree := by
       dsimp [q]
-      rw [Polynomial.natDegree_mul' (by simp [hp, hBzero])]
+      rw [Polynomial.natDegree_mul' (by simp [hp])]
       simp
     have hp'0 : p' ≠ 0 := by
       intro hp'0

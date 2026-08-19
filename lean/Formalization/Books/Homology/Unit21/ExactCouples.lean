@@ -206,8 +206,7 @@ theorem exactCouple_boundary_le_cycle {C : Type u} [Category.{v} C]
   exact Subobject.le_of_comm
     (hpb.lift 0 B.arrow hpbcond)
     (by
-      simpa [P, exactCoupleCycleSubobject, B] using
-        hpb.lift_snd 0 B.arrow hpbcond)
+      simp [P, exactCoupleCycleSubobject, B])
 
 theorem exactCouple_B_le_Z {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) (r : ℕ) :

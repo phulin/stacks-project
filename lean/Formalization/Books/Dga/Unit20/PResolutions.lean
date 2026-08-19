@@ -47,6 +47,13 @@ def IsAdmissibleMonomorphism
   ∃ r : GradedMap N.graded M.graded,
     GradedRightModuleHom.comp f.underlying r = GradedRightModuleHom.id M.graded
 
+/-- A graded right inverse for a homomorphism of differential graded modules. -/
+def IsAdmissibleEpimorphism
+    {D : DifferentialGradedAlgebraData (R := R) (A := A)}
+    {M N : DGModule.{u, v, w} D} (f : DGMap M N) : Prop :=
+  ∃ s : GradedMap N.graded M.graded,
+    GradedRightModuleHom.comp s f.underlying = GradedRightModuleHom.id N.graded
+
 /-- A degreewise exact pair of maps of differential graded modules.
 
 Exactness is stated componentwise, which is the underlying exactness notion
@@ -118,23 +125,23 @@ def dgZeroModule
         cases x with
         | mk i x =>
           cases x
-          simp [gradedRightAction] <;> rfl
+          simp [gradedRightAction]
+          rfl
       mul_action := by
-        intro x a
-        intro b
+        intro x a b
         cases x with
         | mk i x =>
           cases a with
           | mk j a =>
             cases b with
             | mk k b =>
-              simp [gradedRightAction, GradedMonoid.fst_mul, add_assoc] <;> rfl }
+              simp [gradedRightAction, add_assoc]
+              rfl }
   exact
     { graded := G
       differential := fun _ => 0
       differential_square := by intros; simp
       differential_leibniz := by
-        intros
         simp [G, DifferentialGradedModuleLeibniz, gradedTransport] }
 
 /-! A filtration before adding the admissibility consequence. -/

@@ -2,6 +2,8 @@ import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.HomologySequence
 import Mathlib.Algebra.Homology.TotalComplex
 import Mathlib.Algebra.Homology.QuasiIso
+import Mathlib.Algebra.Category.ModuleCat.Products
+import Mathlib.Algebra.DirectSum.Module
 import Mathlib.RingTheory.Flat.CategoryTheory
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.LinearAlgebra.Semisimple
@@ -1097,6 +1099,108 @@ noncomputable def doubleTotalComplexMap {R : Type u} [CommRing R]
     {A B : DoubleComplex R} (f : DoubleComplexMap A B) :
     doubleTotalComplex A ⟶ doubleTotalComplex B :=
   HomologicalComplex₂.total.map f.bicomplexMap (ComplexShape.down ℕ)
+
+/-- The finite antidiagonal indexing the `n`th term of the total complex. -/
+abbrev TotalIndex (n : ℕ) :=
+  {ij : ℕ × ℕ //
+    ComplexShape.π (ComplexShape.down ℕ) (ComplexShape.down ℕ)
+      (ComplexShape.down ℕ) ij = n}
+
+def totalIndexEquivFin (n : ℕ) : TotalIndex n ≃ Fin (n + 1) where
+  toFun ij := ⟨ij.1.1, by have h := ij.2; change ij.1.1 + ij.1.2 = n at h; omega⟩
+  invFun p := ⟨(p, n - p), by change p + (n - p) = n; omega⟩
+  left_inv ij := by
+    apply Subtype.ext
+    apply Prod.ext
+    · rfl
+    · dsimp
+      have h := ij.2
+      change ij.1.1 + ij.1.2 = n at h
+      omega
+  right_inv p := by
+    apply Fin.ext
+    rfl
+
+noncomputable instance (n : ℕ) : Fintype (TotalIndex n) :=
+  Fintype.ofEquiv (Fin (n + 1)) (totalIndexEquivFin n).symm
+
+set_option backward.isDefEq.respectTransparency false in
+theorem TotalIndex.sum_eq {n : ℕ} (ij : TotalIndex n) : ij.1.1 + ij.1.2 = n := by
+  exact ij.2
+
+abbrev totalSummand {R : Type u} [CommRing R] (A : DoubleComplex R) (n : ℕ)
+    (ij : TotalIndex n) : ModuleCat.{u} R := A.obj ij.1.1 ij.1.2
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Coordinates on a total term, indexed by its finite antidiagonal. -/
+noncomputable def totalCoordinatesIso {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n : ℕ) :
+    (doubleTotalComplex A).X n ≅ ModuleCat.of R (∀ ij : TotalIndex n, totalSummand A n ij) :=
+  ModuleCat.coprodIsoDirectSum
+      (A.bicomplex.toGradedObject.mapObjFun
+        (ComplexShape.π (ComplexShape.down ℕ) (ComplexShape.down ℕ)
+          (ComplexShape.down ℕ)) n) ≪≫
+    (DirectSum.linearEquivFunOnFintype R (TotalIndex n)
+      (fun ij => (totalSummand A n ij : Type u))).toModuleIso
+
+set_option backward.isDefEq.respectTransparency false in
+@[simp]
+theorem totalCoordinatesIso_hom_ιTotal_apply {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) (x : A.obj i j) :
+    (totalCoordinatesIso A n).hom
+        (A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij x) =
+      Pi.single (⟨(i, j), hij⟩ : TotalIndex n) x := by
+  classical
+  let Z := A.bicomplex.toGradedObject.mapObjFun
+    (ComplexShape.π (ComplexShape.down ℕ) (ComplexShape.down ℕ)
+      (ComplexShape.down ℕ)) n
+  let idx : TotalIndex n := ⟨(i, j), hij⟩
+  have hι : A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij ≫
+      (ModuleCat.coprodIsoDirectSum Z).hom =
+      ModuleCat.ofHom (DirectSum.lof R (TotalIndex n)
+        (fun ij => (totalSummand A n ij : Type u)) idx) := by
+    exact ModuleCat.ι_coprodIsoDirectSum_hom Z idx
+  have hιx := congrArg (fun q => q x) hι
+  change (ModuleCat.coprodIsoDirectSum Z).hom
+      (A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij x) =
+    DirectSum.lof R (TotalIndex n) (fun ij => (totalSummand A n ij : Type u)) idx x at hιx
+  change ((DirectSum.linearEquivFunOnFintype R (TotalIndex n)
+      (fun ij => (totalSummand A n ij : Type u)))
+    ((ModuleCat.coprodIsoDirectSum
+      (A.bicomplex.toGradedObject.mapObjFun
+        (ComplexShape.π (ComplexShape.down ℕ) (ComplexShape.down ℕ)
+          (ComplexShape.down ℕ)) n)).hom
+      (A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij x))) = _
+  rw [show (ModuleCat.coprodIsoDirectSum Z).hom
+      (A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij x) =
+      DirectSum.lof R (TotalIndex n) (fun ij => (totalSummand A n ij : Type u)) idx x by
+    simpa [Z, idx, Category.assoc] using hιx]
+  exact DirectSum.linearEquivFunOnFintype_lof (R := R)
+    (M := fun ij => (totalSummand A n ij : Type u)) idx x
+
+def TotalIndex.horizontalSource {n : ℕ} (ij : TotalIndex n) : TotalIndex (n + 1) :=
+  ⟨(ij.1.1 + 1, ij.1.2), by
+    have h := ij.sum_eq
+    change (ij.1.1 + 1) + ij.1.2 = n + 1
+    omega⟩
+
+def TotalIndex.verticalSource {n : ℕ} (ij : TotalIndex n) : TotalIndex (n + 1) :=
+  ⟨(ij.1.1, ij.1.2 + 1), by
+    have h := ij.sum_eq
+    change ij.1.1 + (ij.1.2 + 1) = n + 1
+    omega⟩
+
+/-- The total differential in finite-antidiagonal coordinates. -/
+noncomputable def totalCoordinateDifferential {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n : ℕ) :
+    (∀ ij : TotalIndex (n + 1), totalSummand A (n + 1) ij) →ₗ[R]
+      (∀ ij : TotalIndex n, totalSummand A n ij) :=
+  LinearMap.pi (fun ij =>
+    (A.d ij.1.1 ij.1.2).hom.comp
+        (LinearMap.proj ij.horizontalSource) +
+      ((-1 : R) ^ ij.1.1) •
+        (A.delta ij.1.1 ij.1.2).hom.comp
+          (LinearMap.proj ij.verticalSource))
 
 noncomputable def rightEdgeComponent {R : Type u} [CommRing R]
     (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) :

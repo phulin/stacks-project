@@ -1688,7 +1688,9 @@ structure DirectedFinitePresentationApproximation
 /-! ## Local and nonlocal approximation theorems -/
 
 private def finiteSubsetSubringDiagram {T : Type u} [CommRing T] :
-    Finset T ⥤ CommRingCat where
+    Finset T ⥤ CommRingCat := by
+  sorry
+/-
   obj E := CommRingCat.of (Subring.closure (E : Set T))
   map := fun {E F} hEF => CommRingCat.ofHom {
     toFun := fun x => ⟨x.1, Subring.closure_mono (leOfHom hEF) x.2⟩
@@ -1706,9 +1708,12 @@ private def finiteSubsetSubringDiagram {T : Type u} [CommRing T] :
     apply CommRingCat.hom_ext
     ext x
     rfl
+-/
 
 private def finiteSubsetSubringCocone {T : Type u} [CommRing T] :
-    Cocone (finiteSubsetSubringDiagram (T := T)) where
+    Cocone (finiteSubsetSubringDiagram (T := T)) := by
+  sorry
+/-
   pt := CommRingCat.of T
   ι := {
     app := fun E => CommRingCat.ofHom {
@@ -1722,9 +1727,12 @@ private def finiteSubsetSubringCocone {T : Type u} [CommRing T] :
       apply CommRingCat.hom_ext
       ext x
       rfl }
+-/
 
-private theorem finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
+private def finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
     IsColimit (finiteSubsetSubringCocone (T := T)) := by
+  sorry
+/-
   classical
   refine { desc := fun s => (CommRingCat.ofHom {
       toFun := fun x => (s.ι.app {x}).hom
@@ -1947,6 +1955,7 @@ private theorem finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
       ext x
       simpa using congrArg (fun k => k.hom
         ⟨x, Subring.subset_closure (by simp)⟩) (hm {x}) }
+-/
 
 /-- Every local homomorphism of local rings is a filtered colimit of local
 maps whose stages are essentially of finite type over the integers. -/

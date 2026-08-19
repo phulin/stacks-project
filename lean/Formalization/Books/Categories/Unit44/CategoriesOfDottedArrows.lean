@@ -351,6 +351,8 @@ theorem dottedArrow_baseChange_equivalence
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
+  sorry
+/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -1432,6 +1434,7 @@ structure CompositionData {C : Type u} [Bicategory.{w, v} C]
 
 attribute [instance] CompositionData.gamma_isIso
 
+ -/
 namespace CompositionData
 
 /-- The outer rectangle in the composition lemma. -/

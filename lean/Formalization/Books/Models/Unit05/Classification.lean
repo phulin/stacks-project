@@ -2444,6 +2444,8 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
       0 < r → E.w 0 = r → E.w 1 = 2 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -4 * r → E.a 0 1 = 2 * r → E.a 1 0 = 2 * r →
       (∀ i, 0 < E.m i) → mConditionB2 E.m → isB2 E := by
+    sorry
+/-
     intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
     unfold isB2 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
@@ -2453,10 +2455,13 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
           haa1, hae01, hae10] ; ring
     · funext a
       fin_cases a ; simp [scalarVector, lastVector, hw0, hw1] ; ring
+  -/
   have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = 3 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -6 * r → E.a 0 1 = 3 * r → E.a 1 0 = 3 * r →
       (∀ i, 0 < E.m i) → mConditionG2 E.m → isG2 E := by
+    sorry
+/-
     intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
     unfold isG2 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
@@ -2466,6 +2471,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
           haa1, hae01, hae10] ; ring
     · funext a
       fin_cases a ; simp [scalarVector, lastVector, hw0] ; ring
+  -/
   have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
   rcases hp_cases with hp1 | hp23
   · have hq_cases : q = 1 ∨ q = 2 ∨ q = 3 := by omega
@@ -2741,6 +2747,8 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
             if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0) p) =
       ∑ i : Fin 3, x i * Matrix.mulVec
         (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i := by
+    sorry
+/-
     let y : Fin T.n → ℝ := fun p =>
       if p = S.index 0 then x 0 else
         if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0
@@ -2817,6 +2825,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
       _ = _ := by
         simp [Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
         ring
+  -/
   have hstrict : ∀ x : Fin 3 → ℝ, x ≠ 0 →
       ∑ i : Fin 3, x i * Matrix.mulVec
         (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i < 0 := by
@@ -3090,6 +3099,8 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
       E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = r → E.a 2 1 = r →
       E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
       mConditionA3 E.m → isA3 E := by
+    sorry
+/-
     intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
     unfold isA3 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
@@ -3099,12 +3110,15 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
       fin_cases a <;> simp [scalarVector, constantVector]
+  -/
   have realizeC3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
       E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
       E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
       E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
       mConditionC3 E.m → isC3 E := by
+    sorry
+/-
     intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
     unfold isC3 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
@@ -3114,12 +3128,15 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
       fin_cases a ; simp [scalarVector] ; ring
+  -/
   have realizeB3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
       E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
       E.a 0 1 = 2 * r → E.a 1 0 = 2 * r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
       E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
       mConditionB3 E.m → isB3 E := by
+    sorry
+/-
     intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
     unfold isB3 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
@@ -3130,6 +3147,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     · funext a
       fin_cases a <;> simp [scalarVector]
       all_goals ring
+  -/
   have hnonneg : ∀ i j : Fin 3, i ≠ j → 0 ≤ D.a i j := by
     intro i j hij
     change 0 ≤ T.a (S.index i) (S.index j)

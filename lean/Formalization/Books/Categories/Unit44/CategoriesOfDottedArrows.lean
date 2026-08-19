@@ -351,8 +351,6 @@ theorem dottedArrow_baseChange_equivalence
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
-  sorry
-/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -1240,39 +1238,60 @@ theorem dottedArrow_baseChange_equivalence
         (H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ≫
           (𝟙 B.objT ◁ δ'.vertex) at hτv
       have htransport :
-          (H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ≫
-              (𝟙 B.objT ◁ δ'.vertex) ≫
+          ((H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ≫
+              (𝟙 B.objT ◁ δ'.vertex)) ≫
               (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom =
             H.hom ≫ δ'.vertex := by
+        have hnat :
+            (𝟙 B.objT ◁ δ'.vertex) ≫
+                (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom =
+              (Bicategory.leftUnitor A'.a).hom ≫ δ'.vertex :=
+          Bicategory.leftUnitor_naturality δ'.vertex
         calc
           _ = H.hom ≫
               ((Bicategory.leftUnitor A'.a).inv ≫
-                (𝟙 B.objT ◁ δ'.vertex) ≫
-                (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom) := by
-            simp [Category.assoc]
+                ((𝟙 B.objT ◁ δ'.vertex) ≫
+                  (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom)) := by
+            exact (Category.assoc
+                (H.hom ≫ (Bicategory.leftUnitor A'.a).inv)
+                (𝟙 B.objT ◁ δ'.vertex)
+                (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom).trans
+              (Category.assoc H.hom (Bicategory.leftUnitor A'.a).inv
+                ((𝟙 B.objT ◁ δ'.vertex) ≫
+                  (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom))
           _ = H.hom ≫
               ((Bicategory.leftUnitor A'.a).inv ≫
-                (Bicategory.leftUnitor A'.a).hom ≫ δ'.vertex) := by
-            rw [Bicategory.leftUnitor_naturality]
-          _ = _ := by simp [Category.assoc]
-      calc
-        H.hom ≫ δ'.vertex =
-            (H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ≫
-              (𝟙 B.objT ◁ δ'.vertex) ≫
-              (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom :=
-          htransport.symm
-        _ = (δ.vertex ≫ (liftMapHom (forward.map H)).vertex) ≫
+                ((Bicategory.leftUnitor A'.a).hom ≫ δ'.vertex)) := by
+            exact congrArg
+              (fun t => H.hom ≫ (Bicategory.leftUnitor A'.a).inv ≫ t) hnat
+          _ = _ := by
+            exact congrArg (fun t => H.hom ≫ t)
+              ((Bicategory.leftUnitor A'.a).inv_hom_id_assoc δ'.vertex)
+      have hτv' :
+          ((H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ≫
+              (𝟙 B.objT ◁ δ'.vertex)) ≫
+              (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom =
+            (δ.vertex ≫ (liftMapHom (forward.map H)).vertex) ≫
               (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom := by
-          rw [← hτv]
-        _ = δ.vertex ≫
+        exact (congrArg
+          (fun t => t ≫
+            (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom)
+          hτv).symm
+      have hlast :
+          (δ.vertex ≫ (liftMapHom (forward.map H)).vertex) ≫
+              (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom =
+            δ.vertex ≫
               ((liftMapHom (forward.map H)).vertex ≫
                 (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom) := by
-          simp [Category.assoc])
+        exact Category.assoc δ.vertex (liftMapHom (forward.map H)).vertex
+          (Bicategory.leftUnitor (liftHom (forward.obj A')).vertex).hom
+      exact htransport.symm.trans (hτv'.trans hlast)
+    )
   let counitHom : ∀ A : DottedArrowCategory (BaseChangeData.outerSquare B),
       forward.obj (inverse.obj A) ⟶ A := by
     intro A
     let h := liftHom A
-    let : IsGroupoid (A.a ⟶ h.vertex ≫ B.q) := hC A.a (h.vertex ≫ B.q)
+    let : IsGroupoid (B.objT ⟶ B.objX) := hC B.objT B.objX
     let r := inv h.right
     exact {
       hom := r
@@ -1284,8 +1303,41 @@ theorem dottedArrow_baseChange_equivalence
         have hη := (comparisonHom A).right
         dsimp [liftToSource, sourceToOuter, canonical, P, outerDiagram,
           TwoCommutativeDiagram.Hom.comp] at hη
-        have hη' := congrArg (fun t => ((B.j ◁ r) ≫ A.alpha) ≫ t) hη
-        simpa [r, Category.assoc, ← Bicategory.whiskerLeft_comp] using hη'.symm
+        have hprefix :
+            ((B.j ◁ r) ≫ A.alpha) ≫
+                (inv A.alpha ≫ B.j ◁ (liftHom A).right) =
+              𝟙 (B.j ≫ (liftHom A).vertex ≫ B.q) := by
+          simp only [Category.assoc]
+          rw [IsIso.hom_inv_id_assoc]
+          rw [← Bicategory.whiskerLeft_comp]
+          dsimp [P]
+          simp [h, r]
+        have hη0 :
+            (inv A.alpha ≫ B.j ◁ (liftHom A).right ≫
+              TwoCommutativeDiagram.strictAssocInv B.j
+                (liftHom A).vertex B.q) ≫
+              (comparisonHom A).vertex ▷ B.q = 𝟙 _ := by
+          exact hη
+        calc
+          (B.j ◁ r) ≫ A.alpha =
+              ((B.j ◁ r) ≫ A.alpha) ≫
+                ((inv A.alpha ≫ B.j ◁ (liftHom A).right ≫
+                  TwoCommutativeDiagram.strictAssocInv
+                    B.j (liftHom A).vertex B.q) ≫
+                  (comparisonHom A).vertex ▷ B.q) := by
+            rw [hη0]
+            simp
+          _ = (((B.j ◁ r) ≫ A.alpha) ≫
+                (inv A.alpha ≫ B.j ◁ (liftHom A).right)) ≫
+              TwoCommutativeDiagram.strictAssocInv B.j (liftHom A).vertex B.q ≫
+              (comparisonHom A).vertex ▷ B.q := by
+            simp [liftToSource, TwoCommutativeDiagram.Hom.comp,
+              sourceToOuter, TwoCommutativeDiagram.strictAssocInv,
+              Bicategory.Strict.associator_eqToIso, Category.assoc,
+              Category.id_comp]
+          _ = _ := by
+            rw [hprefix]
+            rw [Category.id_comp]
       beta_naturality := by
         change
           ((liftHom A).left ▷ B.g ≫
@@ -1299,8 +1351,20 @@ theorem dottedArrow_baseChange_equivalence
         dsimp [outerDiagram, P] at hcomm
         apply (cancel_mono ((liftHom A).right ▷ B.f)).1
         simp only [Category.assoc]
-        rw [hcomm]
-        simp [r]
+        have htail := congrArg
+          (fun t => t ≫ (r ▷ B.f) ≫ (liftHom A).right ▷ B.f) hcomm
+        have hright :
+            (liftHom A).right ≫ r ≫ (liftHom A).right =
+              (liftHom A).right := by
+          simp [h, r, Category.assoc]
+        have hrightf :
+            ((liftHom A).right ▷ B.f) ≫ (r ▷ B.f) ≫
+                ((liftHom A).right ▷ B.f) =
+              (liftHom A).right ▷ B.f := by
+          rw [← Bicategory.comp_whiskerRight,
+            ← Bicategory.comp_whiskerRight, hright]
+        simpa [hrightf, Category.assoc] using htail
+    }
   let : IsGroupoid (DottedArrowCategory (BaseChangeData.outerSquare B)) :=
     dottedArrowCategory_isGroupoid hC _
   let counitIso : inverse ⋙ forward ≅
@@ -1353,7 +1417,7 @@ theorem dottedArrow_baseChange_equivalence
           _ = _ := by
             dsimp [outerHom, outerDiagram]
             change
-              (H.hom ≫ eqToHom (Bicategory.Strict.id_comp A'.a).symm ≫
+              ((H.hom ≫ eqToHom (Bicategory.Strict.id_comp A'.a).symm) ≫
                 (𝟙 B.objT ◁ (liftHom A').right) ≫
                 TwoCommutativeDiagram.strictAssocInv (𝟙 B.objT)
                   (liftHom A').vertex B.q) ≫
@@ -1395,29 +1459,55 @@ theorem dottedArrow_baseChange_equivalence
   exact ⟨Equivalence.mk'' forward inverse unitIso counitIso (by
     intro A
     apply DottedArrow.Hom.ext
-    let : IsGroupoid
-        (A.a ⟶ (liftHom (forward.obj A)).vertex) :=
-      hC A.a (liftHom (forward.obj A)).vertex
-    let : IsGroupoid
-        (A.a ⟶ (liftHom (forward.obj A)).vertex ≫ B.q) :=
-      hC A.a ((liftHom (forward.obj A)).vertex ≫ B.q)
+    let : IsGroupoid (B.objT ⟶ B.objXp) := hC B.objT B.objXp
     let δ := Classical.choose ((hP (outerDiagram (forward.obj A))).2
       (leftToP A) (liftHom (forward.obj A)))
+    let : IsIso δ.vertex := by infer_instance
     have hδ : δ.vertex ▷ B.q = (liftHom (forward.obj A)).right := by
-      simpa [leftToP, P] using δ.right
+      have hδ' := δ.right
+      dsimp [leftToP] at hδ'
+      dsimp [P] at hδ'
+      exact (Category.id_comp (δ.vertex ▷ B.q)).symm.trans hδ'
+    dsimp [forward] at hδ
+    have hδunit : (unitHom A).hom = δ.vertex := by
+      dsimp [unitHom]
+    let : IsIso (unitHom A).hom := by
+      rw [hδunit]
+      exact ‹IsIso δ.vertex›
+    have hunitinv : (CategoryTheory.inv (unitHom A)).hom =
+        inv (unitHom A).hom := by
+      apply CategoryTheory.IsIso.eq_inv_of_hom_inv_id
+      exact congrArg DottedArrow.Hom.hom
+        (CategoryTheory.IsIso.hom_inv_id (unitHom A))
+    have hδinv : inv (unitHom A).hom = inv δ.vertex := by
+      apply CategoryTheory.IsIso.eq_inv_of_hom_inv_id
+      rw [← hδunit]
+      exact CategoryTheory.IsIso.hom_inv_id (unitHom A).hom
     have hmap : forward.map (unitIso.inv.app A) =
         counitIso.hom.app (forward.obj A) := by
       apply DottedArrow.Hom.ext
-      change (inv δ.vertex) ▷ B.q =
-        inv (liftHom (forward.obj A)).right
+      have hforward :
+          (forward.map (unitIso.inv.app A)).hom =
+            (CategoryTheory.inv (unitHom A)).hom ▷ B.q := by
+        dsimp [forward, unitIso]
+        rfl
+      have hcounit :
+          (counitIso.hom.app (forward.obj A)).hom =
+            inv (liftHom (forward.obj A)).right := by
+        dsimp [counitIso, counitHom]
+      rw [hforward, hcounit]
+      rw [hunitinv, hδinv]
       rw [← hδ]
       rw [Bicategory.inv_whiskerRight]
+      rfl
+    change (counitIso.inv.app (forward.obj A)).hom ≫
+      (forward.map (unitIso.inv.app A)).hom = 𝟙 _
     rw [hmap]
-    exact Iso.inv_hom_id_app counitIso (forward.obj A))⟩
+    exact congrArg DottedArrow.Hom.hom
+      (Iso.inv_hom_id_app counitIso (forward.obj A)))⟩
 /-! ## Composition -/
 
 /-- The data of the composable solid diagram in the composition lemma. -/
- -/
 structure CompositionData {C : Type u} [Bicategory.{w, v} C]
     [Bicategory.Strict C] where
   objS : C

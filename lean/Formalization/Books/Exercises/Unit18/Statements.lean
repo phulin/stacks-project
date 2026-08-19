@@ -4,6 +4,7 @@ import Formalization.Books.Topology.Unit20.DimensionFunctions
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Noetherian.Basic
+import Mathlib.RingTheory.Localization.Ideal
 
 /-!
 # Exercises, Chapter 18: Catenary rings
@@ -41,7 +42,48 @@ theorem relativeHeight_eq_displayed_dimensions
         (Localization.AtPrime p.asIdeal ⧸
           q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal))) =
         ringKrullDim (Localization.AtPrime (quotientPrime p q hpq).asIdeal) := by
-  sorry
+  let P : Ideal (A ⧸ q.asIdeal) := p.asIdeal.map (Ideal.Quotient.mk q.asIdeal)
+  have hP : P.IsPrime :=
+    Ideal.isPrime_map_quotientMk_of_isPrime
+      ((PrimeSpectrum.asIdeal_le_asIdeal q p).mpr hpq)
+  letI : P.IsPrime := hP
+  have hPover : P.LiesOver p.asIdeal := by
+    refine ⟨?_⟩
+    change p.asIdeal = (p.asIdeal.map (Ideal.Quotient.mk q.asIdeal)).comap
+      (Ideal.Quotient.mk q.asIdeal)
+    rw [Ideal.comap_map_quotientMk]
+    exact (sup_eq_right.mpr ((PrimeSpectrum.asIdeal_le_asIdeal q p).mpr hpq)).symm
+  have hsub :
+      Algebra.algebraMapSubmonoid (A ⧸ q.asIdeal) p.asIdeal.primeCompl = P.primeCompl := by
+    exact Ideal.algebraMapSubmonoid_primeCompl_of_liesOver_surjective
+      (p := p.asIdeal) (P := P) Ideal.Quotient.mk_surjective
+  have hloc : IsLocalization P.primeCompl
+      (Localization.AtPrime p.asIdeal ⧸
+        q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal))) := by
+    rw [← hsub]
+    infer_instance
+  letI : IsLocalization.AtPrime
+      (Localization.AtPrime p.asIdeal ⧸
+        q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal))) P := hloc
+  have hdimC :
+      ringKrullDim (Localization.AtPrime p.asIdeal ⧸
+        q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal))) =
+        (P.height : WithBot ℕ∞) := by
+    exact IsLocalization.AtPrime.ringKrullDim_eq_height P
+      (Localization.AtPrime p.asIdeal ⧸
+        q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal)))
+  constructor
+  · change (P.height : WithBot ℕ∞) = _
+    exact hdimC.symm
+  · have hdim := ringKrullDim_eq_of_ringEquiv
+      (IsLocalization.algEquiv P.primeCompl
+        (Localization.AtPrime p.asIdeal ⧸
+          q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal)))
+        (Localization.AtPrime P)).toRingEquiv
+    change ringKrullDim (Localization.AtPrime p.asIdeal ⧸
+        q.asIdeal.map (algebraMap A (Localization.AtPrime p.asIdeal))) =
+      ringKrullDim (Localization.AtPrime P)
+    exact hdim
 
 /-! ## Exercise `catenary-the-same` -/
 

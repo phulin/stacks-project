@@ -830,10 +830,10 @@ theorem operations_monotone_localization
     (hS : MultiplicativeSystem S) (hT : MultiplicativeSystem T)
     (hST : S ≤ T) :
     localizationKernel S ≤ localizationKernel T := by
-  letI : LeftMultiplicativeSystem S := hS.1
-  letI : RightMultiplicativeSystem S := hS.2
-  letI : LeftMultiplicativeSystem T := hT.1
-  letI : RightMultiplicativeSystem T := hT.2
+  let _ : LeftMultiplicativeSystem S := hS.1
+  let _ : RightMultiplicativeSystem S := hS.2
+  let _ : LeftMultiplicativeSystem T := hT.1
+  let _ : RightMultiplicativeSystem T := hT.2
   intro Z hZ
   let hInv : S.IsInvertedBy T.Q := by
     intro X Y f hf
@@ -847,7 +847,7 @@ theorem operations_monotone_localization
     IsZero.iso (S.Q.map_isZero (isZero_zero C)) (isZero_zero _)
   have eT : T.Q.obj (0 : C) ≅ (0 : T.Localization) :=
     IsZero.iso (T.Q.map_isZero (isZero_zero C)) (isZero_zero _)
-  letI : F.PreservesZeroMorphisms :=
+  let _ : F.PreservesZeroMorphisms :=
     Functor.preservesZeroMorphisms_of_map_zero_object
       (F.mapIso eS.symm ≪≫ eqToIso hobj ≪≫ eT)
   change IsZero (T.Q.obj Z)
@@ -859,8 +859,8 @@ theorem operations_morphismProperty_saturation
     {S : MorphismProperty C} [CategoryTheory.IsTriangulated C]
     [CompatibleWithTriangulation S] (hS : MultiplicativeSystem S) :
     subcategoryOperation (localizationKernel S) = saturationClosure S := by
-  letI : LeftMultiplicativeSystem S := hS.1
-  letI : RightMultiplicativeSystem S := hS.2
+  let _ : LeftMultiplicativeSystem S := hS.1
+  let _ : RightMultiplicativeSystem S := hS.2
   calc
     subcategoryOperation (localizationKernel S) = invertedByLocalization S := by
       ext X Y f

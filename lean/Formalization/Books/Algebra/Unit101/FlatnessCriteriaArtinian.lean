@@ -821,6 +821,56 @@ theorem prepare_lift_flatness
     exact (Module.Flat.equiv_iff eS).2 ((Module.Flat.equiv_iff eS').mp hbaseS)
   exact prepare_lift_flatness_tail φ I J rfl φbar hφbar eM hflat hbaseS'
 
+private def preparedIdeal {R R' : Type u} [CommRing R] [CommRing R']
+    (φ : R →+* R') (I : Ideal R) : ℕ → Ideal R
+  | 0 => I
+  | Nat.succ n => prepareIdeal φ (preparedIdeal φ I n)
+
+private theorem prepared_flatness
+    {R R' M : Type u} [CommRing R] [CommRing R'] [AddCommGroup M]
+    [Module R M] (φ : R →+* R') (I : Ideal R)
+    (hflat : Module.Flat (R ⧸ I)
+      (M ⧸ (I • (⊤ : Submodule R M))))
+    (hbase :
+      letI : Algebra R R' := φ.toAlgebra
+      Module.Flat R' (R' ⊗[R] M)) :
+    ∀ n : ℕ,
+      Module.Flat (R ⧸ preparedIdeal φ I n)
+        (M ⧸ (preparedIdeal φ I n • (⊤ : Submodule R M))) := by
+  intro n
+  induction n with
+  | zero =>
+      change Module.Flat (R ⧸ I) (M ⧸ (I • (⊤ : Submodule R M)))
+      exact hflat
+  | succ n ih =>
+      change Module.Flat (R ⧸ prepareIdeal φ (preparedIdeal φ I n))
+        (M ⧸ (prepareIdeal φ (preparedIdeal φ I n) •
+          (⊤ : Submodule R M)))
+      exact prepare_lift_flatness (R := R) (R' := R') (M := M) φ
+        (preparedIdeal φ I n) ih hbase
+
+private theorem prepared_map_le
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (φ : R →+* R') (I : Ideal R) :
+    ∀ n : ℕ,
+      Ideal.map φ (preparedIdeal φ I n) ≤ (Ideal.map φ I) ^ (2 ^ n) := by
+  intro n
+  induction n with
+  | zero => simp [preparedIdeal]
+  | succ n ih =>
+      change Ideal.map φ (prepareIdeal φ (preparedIdeal φ I n)) ≤
+        (Ideal.map φ I) ^ (2 ^ (n + 1))
+      calc
+        Ideal.map φ (prepareIdeal φ (preparedIdeal φ I n)) ≤
+            Ideal.map φ ((preparedIdeal φ I n) ^ 2) := by
+          exact Ideal.map_comap_le
+        _ = (Ideal.map φ (preparedIdeal φ I n)) ^ 2 := by
+          rw [Ideal.map_pow]
+        _ ≤ ((Ideal.map φ I) ^ (2 ^ n)) ^ 2 :=
+          Ideal.pow_right_mono ih 2
+        _ = (Ideal.map φ I) ^ (2 ^ (n + 1)) := by
+          rw [← pow_mul, pow_succ]
+
 theorem lift_flatness
     {R R' M : Type u} [CommRing R] [CommRing R'] [AddCommGroup M]
     [Module R M] (φ : R →+* R') (I : Ideal R)
@@ -888,7 +938,31 @@ theorem lift_flatness
   exact square_zero_flatness_of_base_change φ hφ (J n) hJn_sq
     (hflatJ n) hbase
   -/
-  sorry
+  have hflatJ := prepared_flatness φ I hflat hbase
+  have hmapJ := prepared_map_le φ I
+  have hpow : ∀ n : ℕ, n ≤ 2 ^ n := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        calc
+          n + 1 ≤ 2 ^ n + 1 := Nat.succ_le_succ ih
+          _ ≤ 2 ^ n + 2 ^ n := by
+            exact Nat.add_le_add_left (Nat.one_le_pow n 2 (by omega)) _
+          _ = 2 ^ (n + 1) := by simp [pow_succ, mul_two]
+  obtain ⟨n, hn⟩ := hI
+  have hmapI : (Ideal.map φ I) ^ n = ⊥ := by
+    rw [← Ideal.map_pow, hn]
+    simp
+  have hmapJn : Ideal.map φ (preparedIdeal φ I n) = ⊥ := by
+    apply le_antisymm
+    · exact (hmapJ n).trans ((Ideal.pow_le_pow_right (hpow n)).trans_eq hmapI)
+    · exact bot_le
+  have hJn : preparedIdeal φ I n = ⊥ :=
+    (Ideal.map_eq_bot_iff_of_injective hφ).mp hmapJn
+  have hJn_sq : (preparedIdeal φ I n) ^ 2 = ⊥ := by simp [hJn]
+  exact square_zero_flatness_of_base_change φ hφ (preparedIdeal φ I n) hJn_sq
+    (hflatJ n) hbase
 /-
   let J : ℕ → Ideal R := fun n =>
     Nat.rec I (fun _ Jn => prepareIdeal φ Jn) n

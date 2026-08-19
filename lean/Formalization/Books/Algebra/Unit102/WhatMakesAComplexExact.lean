@@ -220,7 +220,44 @@ theorem maximalIdeal_mem_associatedPrimes_iff_localDepth_eq_zero
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
     IsLocalRing.maximalIdeal R ∈ _root_.associatedPrimes R R ↔
       Formalization.Books.Algebra.Unit72.localDepth R R = 0 := by
-  sorry
+  rw [Formalization.Books.Algebra.Unit72.depth_eq_zero_iff]
+  constructor
+  · intro hm
+    rcases subsingleton_or_nontrivial R with hsub | hnontr
+    · exfalso
+      have hprime : (IsLocalRing.maximalIdeal R).IsPrime :=
+        (AssociatedPrimes.mem_iff.mp hm).isPrime
+      apply hprime.ne_top
+      ext x
+      have hx : x = 0 := @Subsingleton.elim R hsub _ _
+      simp [hx]
+    · refine ⟨hnontr, ?_⟩
+      intro hreg
+      rcases hreg with ⟨x, hx, hxr⟩
+      have hx' : x ∈ ((⋃ p ∈ _root_.associatedPrimes R R, (p : Set R)) : Set R) := by
+        exact Set.mem_iUnion_of_mem (IsLocalRing.maximalIdeal R)
+          (Set.mem_iUnion_of_mem hm hx)
+      rw [biUnion_associatedPrimes_eq_compl_regular R R] at hx'
+      exact hx' hxr
+  · rintro ⟨hnontr, hno⟩
+    have hmem_union :
+        ((IsLocalRing.maximalIdeal R : Set R) ⊆
+          ⋃ p ∈ _root_.associatedPrimes R R, (p : Set R)) ↔
+          IsLocalRing.maximalIdeal R ∈ _root_.associatedPrimes R R := by
+      apply (Ideal.subset_iUnion_iff_mem_of_isMaximal_of_finite
+        (M := IsLocalRing.maximalIdeal R)
+        (S := _root_.associatedPrimes R R)
+        (_root_.associatedPrimes.finite R R) (⊥ : Ideal R) (⊥ : Ideal R)
+        ?_ bot_ne_top bot_ne_top)
+      intro I hI _ _
+      exact (AssociatedPrimes.mem_iff.mp hI).isPrime
+    apply hmem_union.mp
+    rw [biUnion_associatedPrimes_eq_compl_regular R R]
+    intro x hx
+    have hxr : ¬ IsSMulRegular R x := by
+      intro hxr
+      exact hno ⟨x, hx, hxr⟩
+    exact hxr
 
 /-- An exact finite free complex over a local Noetherian ring of depth zero
 is a direct sum of trivial complexes. -/

@@ -40,13 +40,27 @@ private theorem mittagLeffler_of_universallyInjective
     IsMittagLefflerModule (ModuleCat.of R M) := by sorry
 /- Prior attempt (retained for reference; the declaration above uses `sorry`):
   let q : N →ₗ[R] (N ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    have ht : (f.rTensor (ULift.{v} R))
+          (TensorProduct.tmul R x (ULift.up 1)) =
+        (f.rTensor (ULift.{v} R))
+          (TensorProduct.tmul R y (ULift.up 1)) := by
+      simp [hxy]
+    have ht' := hf (ULift.{v} R) ht
+    have ht'' := congrArg
+      (TensorProduct.congr (LinearEquiv.refl R M)
+        (ULift.moduleEquiv : ULift.{v} R ≃ₗ[R] R)) ht'
+    simpa using congrArg (TensorProduct.rid R M) ht''
   have hshort : Function.Injective f ∧ Function.Exact f q ∧
       Function.Surjective q := by
-    exact ⟨(LinearMap.range f).injective_subtype, f.exact_map_mkQ_range,
+    exact ⟨hinj, f.exact_map_mkQ_range,
       Submodule.mkQ_surjective _⟩
   have hseq : universallyExact f q := by
     refine ⟨hshort.1, hshort.2.1, hshort.2.2, hf⟩
-  exact (pure_submodule_mittagLeffler f q hseq).1 hN
+  exact (Formalization.Books.Algebra.Unit89.pure_submodule_mittagLeffler
+    (M₁ := ModuleCat.of R M) (M₂ := ModuleCat.of R N)
+    (M₃ := ModuleCat.of R (N ⧸ LinearMap.range f)) f q hseq).1 hN
 
 -/
 
@@ -62,7 +76,9 @@ private theorem mittagLeffler_of_split
   have hinj : Function.Injective f := by
     intro x y hxy
     have := congrArg (fun z => s z) hxy
-    simpa [LinearMap.comp_apply, hs] using this
+    change (s.comp f) x = (s.comp f) y at this
+    rw [hs] at this
+    exact this
   have hshort : Function.Injective f ∧ Function.Exact f q ∧
       Function.Surjective q := by
     exact ⟨hinj, f.exact_map_mkQ_range, Submodule.mkQ_surjective _⟩
@@ -71,7 +87,9 @@ private theorem mittagLeffler_of_split
     intro Q _ _ x y hxy
     have h := congrArg (fun z => (s.rTensor Q) z) hxy
     simpa [LinearMap.rTensor, TensorProduct.map_map, hs] using h
-  exact (pure_submodule_mittagLeffler f q hseq).1 hN
+  exact (Formalization.Books.Algebra.Unit89.pure_submodule_mittagLeffler
+    (M₁ := ModuleCat.of R M) (M₂ := ModuleCat.of R N)
+    (M₃ := ModuleCat.of R (N ⧸ LinearMap.range f)) f q hseq).1 hN
 
 -/
 
@@ -90,11 +108,11 @@ private theorem range_rTensor_smul_top
     | tmul x q =>
         refine Submodule.smul_induction_on x.property ?_ ?_
         · intro r hr n hn
-          simpa [smul_tmul] using
+          simpa [TensorProduct.smul_tmul] using
             Submodule.smul_mem_smul hr
               (show n ⊗ₜ[R] q ∈ (⊤ : Submodule R (N ⊗[R] Q)) by simp)
         · intro x y hx hy
-          simpa [add_tmul] using add_mem hx hy
+          simpa [TensorProduct.add_tmul] using add_mem hx hy
   · intro z hz
     refine Submodule.smul_induction_on hz ?_ ?_
     · intro r hr x hx
@@ -102,10 +120,10 @@ private theorem range_rTensor_smul_top
       | zero => simp
       | add x y hx hy => simpa [smul_add] using add_mem hx hy
       | tmul n q =>
-          let n' : J • (⊤ : Submodule R N) :=
+          let n' : (J • (⊤ : Submodule R N)) :=
             ⟨r • n, Submodule.smul_mem_smul hr (by simp)⟩
           refine ⟨n' ⊗ₜ[R] q, ?_⟩
-          simp [n', smul_tmul]
+          simp [n', TensorProduct.smul_tmul]
     · intro x y hx hy
       simpa using Submodule.add_mem _ hx hy
 
@@ -134,7 +152,9 @@ private theorem hausdorff_of_associatedPrimes
       rcases Set.mem_iUnion.mp hmem with ⟨hq, hmem⟩
       apply hJ q hq
       rw [Ideal.eq_top_iff_one]
-      simpa using Ideal.add_mem _ r.property hmem
+      simpa [sub_eq_add_neg, add_assoc] using
+        Ideal.add_mem (J + q) (Ideal.mem_sup_left r.property)
+          (Ideal.mem_sup_right hmem)
     have hnot' : (1 - (r : S)) ∉
         {s : S | IsSMulRegular M s}ᶜ := by
       rw [← biUnion_associatedPrimes_eq_compl_regular S M]
@@ -182,13 +202,14 @@ private theorem finite_tensorProduct_left
           exact Finset.mem_image.mpr ⟨(n, q), Finset.mem_product.mpr ⟨hn, hq⟩, rfl⟩
         · simp
         · intro q₁ q₂ _ _ hq₁ hq₂
-          simpa [tmul_add] using Submodule.add_mem _ hq₁ hq₂
+          simpa [TensorProduct.tmul_add] using Submodule.add_mem _ hq₁ hq₂
         · intro r q _ hq
-          simpa [tmul_smul, ← IsScalarTower.algebraMap_smul S r n] using
+          simpa [TensorProduct.tmul_smul,
+            ← IsScalarTower.algebraMap_smul S r n] using
             Submodule.smul_mem _ (algebraMap R S r) hq
       · simp
       · intro n₁ n₂ _ _ hn₁ hn₂
-        simpa [add_tmul] using Submodule.add_mem _ hn₁ hn₂
+        simpa [TensorProduct.add_tmul] using Submodule.add_mem _ hn₁ hn₂
       · intro a n _ hn
         simpa [TensorProduct.smul_tmul'] using Submodule.smul_mem _ a hn
 
@@ -231,7 +252,9 @@ theorem completion_flat_and_mittagLeffler_of_flat_of_projective_mod
   have hg : Function.Surjective g := by
     dsimp [g, F]
     simpa using (Finsupp.linearCombination_id_surjective R M)
-  have hsplit := completion_split_exact I (LinearMap.ker g).subtype g
+  have hsplit := completion_split_exact (R := R) (I := I)
+    (K := (LinearMap.ker g : Type _)) (P := F) (M := M)
+    (LinearMap.ker g).subtype g
     (LinearMap.ker g).injective_subtype
     (LinearMap.exact_subtype_ker_map g) hg
   obtain ⟨_, _, _, ⟨s, hs⟩⟩ := hsplit
@@ -277,10 +300,10 @@ theorem universallyInjective_to_completion
   letI : IsScalarTower R S N := SMul.comp.isScalarTower f
   intro h
   letI : Module S (N ⊗[R] R) := TensorProduct.leftModule
-  letI : Module.Finite S (N ⊗[R] R) :=
+  letI : Module.Finite S (N ⊗[R] (ULift.{z} R)) :=
     finite_tensorProduct_left (R := R) (S := S) (N := N) (Q := R)
   letI : IsHausdorff (I.map f) (N ⊗[R] R) :=
-    hausdorff_of_associatedPrimes (I.map f) (h R)
+    hausdorff_of_associatedPrimes (I.map f) (h (ULift.{z} R))
   have hHausR : IsHausdorff I (N ⊗[R] R) :=
     IsHausdorff.of_map (I := I) (J := I.map f) (by rfl)
   letI : IsHausdorff I (N ⊗[R] R) := hHausR
@@ -288,24 +311,26 @@ theorem universallyInjective_to_completion
     AdicCompletion.of_injective_iff.mpr hHausR
   have hinj : Function.Injective (AdicCompletion.of I N) := by
     intro x y hxy
-    apply (TensorProduct.rid R N).injective
-    apply hNQR
-    apply (IsHausdorff.eq_iff_smodEq (I := I)).mpr
-    intro n
-    rw [SModEq.sub_mem]
-    have hcoord := congrArg (AdicCompletion.eval I N n) hxy
-    have hcoord' :
-        ((I ^ n • (⊤ : Submodule R N)).mkQ) x =
-          ((I ^ n • (⊤ : Submodule R N)).mkQ) y := by
-      simpa [AdicCompletion.eval_of] using hcoord
-    have hzero :
-        ((I ^ n • (⊤ : Submodule R N)).mkQ) (x - y) = 0 := by
-      simpa [map_sub] using sub_eq_zero.mpr hcoord'
-    have hmem : x - y ∈ I ^ n • (⊤ : Submodule R N) :=
-      (Submodule.Quotient.mk_eq_zero _).mp hzero
-    rw [← range_rTensor_smul_top]
-    refine ⟨⟨x - y, hmem⟩ ⊗ₜ[R] (1 : R), ?_⟩
-    simp
+    have hxy' :
+        (x ⊗ₜ[R] (1 : R)) = (y ⊗ₜ[R] (1 : R)) := by
+      apply hNQR
+      apply (IsHausdorff.eq_iff_smodEq (I := I)).mpr
+      intro n
+      rw [SModEq.sub_mem]
+      have hcoord := congrArg (AdicCompletion.eval I N n) hxy
+      have hcoord' :
+          ((I ^ n • (⊤ : Submodule R N)).mkQ) x =
+            ((I ^ n • (⊤ : Submodule R N)).mkQ) y := by
+        simpa [AdicCompletion.eval_of] using hcoord
+      have hzero :
+          ((I ^ n • (⊤ : Submodule R N)).mkQ) (x - y) = 0 := by
+        simpa [map_sub] using sub_eq_zero.mpr hcoord'
+      have hmem : x - y ∈ I ^ n • (⊤ : Submodule R N) :=
+        (Submodule.Quotient.mk_eq_zero _).mp hzero
+      rw [← range_rTensor_smul_top]
+      refine ⟨⟨x - y, hmem⟩ ⊗ₜ[R] (1 : R), ?_⟩
+      simp
+    simpa using congrArg (TensorProduct.rid R N) hxy'
   let q : completion I N →ₗ[R]
       (completion I N ⧸ LinearMap.range (AdicCompletion.of I N)) :=
     (LinearMap.range (AdicCompletion.of I N)).mkQ

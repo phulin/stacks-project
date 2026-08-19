@@ -54,7 +54,27 @@ theorem finiteType_image
     {X : RingedSpace.{v}} {F G : Mod X.structureSheaf}
     (φ : F ⟶ G) (hF : finiteType F) :
     finiteType (image φ) := by
-  sorry
+  change SheafOfModules.IsFiniteType (image φ)
+  let p : F ⟶ image φ := factorThruImage φ
+  letI : Epi p := inferInstance
+  obtain ⟨σ, hσ⟩ := hF.exists_localGeneratorsData
+  haveI (i : σ.I) :
+      Functor.IsLeftAdjoint
+        (SheafOfModules.overFunctor X.structureSheaf (σ.X i)) :=
+    ⟨_, ⟨SheafOfModules.overPushforwardOverAdj (R := X.structureSheaf) (σ.X i)⟩⟩
+  let τ : (image φ).LocalGeneratorsData := {
+    I := σ.I
+    X := σ.X
+    coversTop := σ.coversTop
+    generators := fun i => (σ.generators i).ofEpi
+      ((SheafOfModules.overFunctor X.structureSheaf (σ.X i)).map p) }
+  refine { exists_localGeneratorsData := ⟨τ, ?_⟩ }
+  refine { isFiniteType := ?_ }
+  intro i
+  dsimp [τ]
+  refine { finite := ?_ }
+  rcases hσ.isFiniteType i with ⟨hfinite⟩
+  exact hfinite
 
 /-- In a short exact sequence, finite type of the ends implies finite type of
 the middle term. -/

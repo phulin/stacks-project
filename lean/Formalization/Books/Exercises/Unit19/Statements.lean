@@ -304,18 +304,103 @@ private lemma monic_span_isPrime_of_map_isPrime
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Function.Injective f) (g : Polynomial R) (hg : g.Monic)
     (hprime : (Ideal.span {g.map f} : Ideal (Polynomial S)).IsPrime) :
-    (Ideal.span {g} : Ideal (Polynomial R)).IsPrime := by sorry
+    (Ideal.span {g} : Ideal (Polynomial R)).IsPrime := by
+  have hcomap :
+      (Ideal.span {g.map f} : Ideal (Polynomial S)).comap
+          (Polynomial.mapRingHom f) =
+        (Ideal.span {g} : Ideal (Polynomial R)) := by
+    ext z
+    rw [Ideal.mem_comap, Ideal.mem_span_singleton, Ideal.mem_span_singleton]
+    exact Polynomial.map_dvd_map f hf hg
+  have hprime' :
+      ((Ideal.span {g.map f} : Ideal (Polynomial S)).comap
+        (Polynomial.mapRingHom f)).IsPrime :=
+    Ideal.comap_isPrime (Polynomial.mapRingHom f) (Ideal.span {g.map f})
+  rw [hcomap] at hprime'
+  exact hprime'
 private def planeReindex : planePolynomialRing ≃+* Polynomial (Polynomial ℚ) :=
   ((MvPolynomial.renameEquiv ℚ (Equiv.swap (0 : Fin 2) 1)).toRingEquiv.trans
     (MvPolynomial.finSuccEquiv ℚ 1).toRingEquiv).trans
       (Polynomial.mapEquiv (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingEquiv)
 
 private lemma planeReindex_relation :
-    planeReindex planeRelation = planeYPolynomial := by sorry
+    planeReindex planeRelation = planeYPolynomial := by
+  have hfin :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 1) ℚ))
+        (fun k : Fin 1 => Polynomial.C (MvPolynomial.X k)) (1 : Fin 2)) =
+        Polynomial.C (MvPolynomial.X 0) := by
+    rfl
+  have hx :
+      planeReindex (MvPolynomial.X (0 : Fin 2)) = Polynomial.C Polynomial.X := by
+    simp [planeReindex, RingEquiv.trans_apply, Polynomial.mapEquiv_apply,
+      MvPolynomial.renameEquiv_apply, Equiv.swap_apply_left,
+      MvPolynomial.finSuccEquiv_apply, hfin]
+  have hy :
+      planeReindex (MvPolynomial.X (1 : Fin 2)) = Polynomial.X := by
+    simp [planeReindex, RingEquiv.trans_apply, Polynomial.mapEquiv_apply,
+      MvPolynomial.renameEquiv_apply, Equiv.swap_apply_right,
+      MvPolynomial.finSuccEquiv_apply]
+  have hC (q : ℚ) :
+      planeReindex (MvPolynomial.C q) = Polynomial.C (Polynomial.C q) := by
+    simp [planeReindex, MvPolynomial.finSuccEquiv_apply]
+  have hfirst :
+      planeReindex planeFirstCubic = Polynomial.C planeFirstPolynomial := by
+    simp only [planeFirstCubic, map_mul, map_sub, hx, hC]
+    rw [← Polynomial.C_sub, ← Polynomial.C_sub, ← Polynomial.C_sub,
+      ← Polynomial.C_mul, ← Polynomial.C_mul]
+    simp [planeFirstPolynomial]
+  have hsecond :
+      planeReindex planeSecondCubic = Polynomial.C planeSecondPolynomial := by
+    simp only [planeSecondCubic, map_mul, map_add, hx, hC]
+    rw [← Polynomial.C_add, ← Polynomial.C_add, ← Polynomial.C_add,
+      ← Polynomial.C_mul, ← Polynomial.C_mul]
+    simp [planeSecondPolynomial]
+  have hfour :
+      planeReindex (4 : planePolynomialRing) =
+        Polynomial.C (Polynomial.C (4 : ℚ)) := by
+    rw [← map_ofNat (MvPolynomial.C : ℚ →+* planePolynomialRing) 4]
+    exact hC 4
+  rw [planeRelation, planeYPolynomial]
+  simp only [map_sub, map_pow, map_mul]
+  rw [hy, hfirst, hsecond, hfour]
 private lemma planeYPolynomial_span_isPrime :
-    (Ideal.span {planeYPolynomial} : Ideal (Polynomial (Polynomial ℚ))).IsPrime := by sorry
+    (Ideal.span {planeYPolynomial} : Ideal (Polynomial (Polynomial ℚ))).IsPrime := by
+  exact Ideal.isPrime_span_singleton_of_prime
+    (UniqueFactorizationMonoid.irreducible_iff_prime.mp planeYPolynomial_irreducible)
 private lemma planeIdeal_isPrime :
-    (Ideal.span {planeRelation} : Ideal planePolynomialRing).IsPrime := by sorry
+    (Ideal.span {planeRelation} : Ideal planePolynomialRing).IsPrime := by
+  have hcomap :
+      (Ideal.span {planeYPolynomial} : Ideal (Polynomial (Polynomial ℚ))).comap
+          (planeReindex : planePolynomialRing →+* Polynomial (Polynomial ℚ)) =
+        (Ideal.span {planeRelation} : Ideal planePolynomialRing) := by
+    ext z
+    rw [Ideal.mem_comap, Ideal.mem_span_singleton, Ideal.mem_span_singleton]
+    constructor
+    · rintro ⟨q, hq⟩
+      refine ⟨planeReindex.symm q, ?_⟩
+      calc
+        z = planeReindex.symm (planeReindex z) := by simp
+        _ = planeReindex.symm (planeYPolynomial * q) :=
+          congrArg (fun p => planeReindex.symm p) hq
+        _ = planeReindex.symm planeYPolynomial * planeReindex.symm q := by
+          rw [map_mul]
+        _ = planeRelation * planeReindex.symm q := by
+          rw [← planeReindex_relation]
+          simp
+    · rintro ⟨q, hq⟩
+      refine ⟨planeReindex q, ?_⟩
+      calc
+        planeReindex z = planeReindex (planeRelation * q) := by rw [hq]
+        _ = planeReindex planeRelation * planeReindex q := by rw [map_mul]
+        _ = planeYPolynomial * planeReindex q := by rw [planeReindex_relation]
+  have hprime :
+      ((Ideal.span {planeYPolynomial} : Ideal (Polynomial (Polynomial ℚ))).comap
+        (planeReindex : planePolynomialRing →+* Polynomial (Polynomial ℚ))).IsPrime :=
+    Ideal.comap_isPrime
+      (f := (planeReindex : planePolynomialRing →+* Polynomial (Polynomial ℚ)))
+      (K := Ideal.span {planeYPolynomial}) (H := planeYPolynomial_span_isPrime)
+  rw [hcomap] at hprime
+  exact hprime
 private def sourceFullReindexAux : MvPolynomial (Fin 2) ℚ →+*
     Polynomial (Polynomial ℚ) :=
   (Polynomial.mapRingHom

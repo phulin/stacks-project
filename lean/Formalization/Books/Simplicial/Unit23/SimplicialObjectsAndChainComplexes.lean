@@ -189,7 +189,31 @@ theorem normalizedBoundary_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :
     normalizedBoundary U (n + 1) ≫ normalizedBoundary U n = 0 := by
-  sorry
+  have h : normalizedLastFace U (n + 1) ≫ normalizedLastFace U n = 0 := by
+    apply (cancel_mono (normalizedSubobject U n).arrow).1
+    rw [Category.assoc, normalizedLastFace_arrow U n, ← Category.assoc,
+      normalizedLastFace_arrow U (n + 1)]
+    simp only [Category.assoc, zero_comp]
+    have hδ :
+        U.δ (Fin.last (n + 1 + 1)) ≫ U.δ (Fin.last (n + 1)) =
+          U.δ (Fin.castSucc (Fin.last (n + 1))) ≫ U.δ (Fin.last (n + 1)) := by
+      simpa using (U.δ_comp_δ_self (i := Fin.last (n + 1))).symm
+    rw [hδ]
+    change
+      (Finset.univ.inf (fun i : Fin (n + 2) => kernelSubobject (U.δ i.castSucc))).arrow ≫
+        U.δ (Fin.castSucc (Fin.last (n + 1))) ≫ U.δ (Fin.last (n + 1)) = 0
+    let hfac := Subobject.finset_inf_arrow_factors (s := Finset.univ)
+      (P := fun i : Fin (n + 2) => kernelSubobject (U.δ i.castSucc))
+      (Fin.last (n + 1)) (by simp)
+    rw [← Subobject.factorThru_arrow _ _ hfac]
+    let f :=
+      Subobject.factorThru
+        (kernelSubobject (U.δ (Fin.castSucc (Fin.last (n + 1)))))
+        (Finset.univ.inf (fun i : Fin (n + 2) => kernelSubobject (U.δ i.castSucc))).arrow hfac
+    have hk := kernelSubobject_arrow_comp (f := U.δ (Fin.castSucc (Fin.last (n + 1))))
+    simpa only [Category.assoc, comp_zero, zero_comp] using
+      congrArg (fun q => f ≫ q ≫ U.δ (Fin.last (n + 1))) hk
+  simp [normalizedBoundary, h]
 
 /-- The normalized chain complex `N(U)`. -/
 noncomputable def normalizedChainComplex

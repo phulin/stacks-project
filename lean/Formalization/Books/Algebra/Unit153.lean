@@ -83,6 +83,13 @@ def HenselianRootLifting (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
     IsSimpleResidueRoot R f a₀ →
       ∃ a : R, f.IsRoot a ∧ IsLocalRing.residue R a = a₀
 
+/-- The unrestricted root-lifting characterization in item (2). -/
+def UnrestrictedRootLifting
+    (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, ∀ a₀ : IsLocalRing.ResidueField R,
+    IsSimpleResidueRoot R f a₀ →
+      ∃ a : R, f.IsRoot a ∧ IsLocalRing.residue R a = a₀
+
 theorem henselian_iff_root_lifting
     (R : Type u) [CommRing R] [IsLocalRing R] :
     List.TFAE [IsHenselian R, HenselianRootLifting R] := by
@@ -138,15 +145,28 @@ def DegreeFactorizationLift
           f = g * h ∧ residuePolynomial R g = g₀ ∧
             residuePolynomial R h = h₀ ∧ g.degree = g₀.degree
 
-/-- The residue-field identification required at an étale point over the
-closed point. -/
+/-- The canonical map on residue fields induced by a prime over the closed
+point. -/
+noncomputable def residueFieldMap
+    {R A : Type u} [CommRing R] [CommRing A]
+    [Algebra R A] [IsLocalRing R] (q : PrimeSpectrum A)
+    (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R) :
+    IsLocalRing.ResidueField R →+* q.asIdeal.ResidueField :=
+  (Ideal.ResidueField.map (IsLocalRing.maximalIdeal R) q.asIdeal
+      (algebraMap R A) hq.symm).comp
+    (Ideal.Quotient.lift (IsLocalRing.maximalIdeal R)
+      (algebraMap R (IsLocalRing.maximalIdeal R).ResidueField)
+      (fun _ hx => Ideal.algebraMap_residueField_eq_zero.mpr hx))
+
+/-- A residue-field identification over the base residue field. -/
 structure ResidueFieldIdentification
     {R A : Type u} [CommRing R] [CommRing A]
     [Algebra R A] [IsLocalRing R]
     (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R) where
-  residueEquiv : Nonempty
-    (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)
+  residueEquiv : q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R
+  residueEquiv_over_base : ∀ x : IsLocalRing.ResidueField R,
+    residueEquiv (residueFieldMap q hq x) = x
 
 /- An explicitly chosen residue-field map for the map-into-Henselian lemma. -/
 structure ResidueFieldCompatibility
@@ -283,7 +303,7 @@ theorem characterize_henselian
     (R : Type u) [CommRing R] [IsLocalRing R] :
     List.TFAE
       [ IsHenselian R,
-        HenselianRootLifting R,
+        UnrestrictedRootLifting R,
         MonicFactorizationLift R,
         MonicDegreeFactorizationLift R,
         FactorizationLift R,

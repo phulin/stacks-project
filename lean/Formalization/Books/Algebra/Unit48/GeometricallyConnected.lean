@@ -46,7 +46,7 @@ theorem separablyClosed_tensorProduct_connected
 change has connected spectrum. -/
 def IsGeometricallyConnected (k : Type u) (S : Type v) [Field k]
     [CommRing S] [Algebra k S] : Prop :=
-  ∀ (K : Type u) [Field K] [Algebra k K],
+  ∀ (K : Type w) [Field K] [Algebra k K],
     ConnectedSpace (PrimeSpectrum (K ⊗[k] S))
 
 /-- Geometric connectedness can be tested after finite separable extensions of
@@ -414,9 +414,9 @@ def tensorLeftIdempotentMap
 /-- Tensoring with a nonzero geometrically connected algebra preserves the
 idempotents and connected components of the other algebra. -/
 theorem geometricallyConnected_baseChange_idempotents_and_components
-    {k R S : Type*} [Field k] [CommRing R] [CommRing S]
+    {k : Type u} {R : Type w} {S : Type v} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] [Nontrivial S]
-    (hS : IsGeometricallyConnected k S) :
+    (hS : IsGeometricallyConnected.{u, v, w} k S) :
     Function.Bijective
         (tensorLeftIdempotentMap (k := k) (R := R) (S := S)) ∧
       Function.Bijective

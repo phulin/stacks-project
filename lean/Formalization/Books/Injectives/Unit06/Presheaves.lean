@@ -392,7 +392,15 @@ theorem presheafCanonicalCounit_epi
 theorem presheafCanonicalUnit_mono
     {C : Type u} [Category.{v} C] (B : AbelianPresheaf C) :
     Mono (presheafCanonicalUnit B) := by
-  sorry
+  let hAdj := presheafRestrictionAdjunction (C := C)
+  let _ : Functor.Faithful (presheafRestriction (C := C)) := by
+    constructor
+    intro X Y f g hfg
+    apply NatTrans.ext
+    funext U
+    exact congr_app hfg (Opposite.op (Discrete.mk U.unop))
+  change Mono (hAdj.unit.app B)
+  infer_instance
 
 /-! ## The adjunction hom equivalence -/
 
@@ -458,12 +466,40 @@ theorem objectPresheafInjectiveEmbedding_left
 theorem objectPresheafInjectiveEmbedding_mono
     {C : Type u} [Category.{v} C] (A : ObjectAbelianPresheaf C) :
     Mono ((objectPresheafInjectiveEmbedding (C := C)).obj A).hom := by
-  sorry
+  rw [NatTrans.mono_iff_mono_app]
+  intro k
+  change Mono ((moduleInjectiveUnit (R := abelianScalar C)).app (A.obj k))
+  rw [ModuleCat.mono_iff_injective]
+  exact injectiveEnvelopeMap_injective (R := abelianScalar C) (M := (A.obj k : Type _))
 
 theorem objectPresheafInjectiveEmbedding_injective
     {C : Type u} [Category.{v} C] (A : ObjectAbelianPresheaf C) :
     Injective ((objectPresheafInjectiveEmbedding (C := C)).obj A).right := by
-  sorry
+  change Injective ((objectPresheafInjectiveFunctor (C := C)).obj A)
+  let J := (objectPresheafInjectiveFunctor (C := C)).obj A
+  have hJ (k : (objectCategory C)ᵒᵖ) : Injective (J.obj k) := by
+    dsimp [J, objectPresheafInjectiveFunctor]
+    exact injectiveEnvelope_injective (R := abelianScalar C) (M := (A.obj k : Type _))
+  refine ⟨?_⟩
+  intro X Y g f hf
+  let q : Y ⟶ J :=
+    { app := fun k => by
+        letI := hJ k
+        exact Injective.factorThru (g.app k) (f.app k)
+      naturality := by
+        intro k l α
+        have hkl : k = l := by
+          apply Opposite.unop_injective
+          apply Discrete.ext
+          exact (Discrete.eq_of_hom α.unop).symm
+        subst l
+        have hα : α = 𝟙 _ := Subsingleton.elim _ _
+        rw [hα]
+        simp }
+  refine ⟨q, ?_⟩
+  apply NatTrans.ext
+  funext k
+  exact Injective.comp_factorThru (g.app k) (f.app k)
 
 theorem objectPresheaves_have_functorial_injective_embeddings
     {C : Type u} [Category.{v} C] :
@@ -476,7 +512,16 @@ theorem objectPresheaves_have_functorial_injective_embeddings
 theorem objectPresheaves_have_enough_injectives
     {C : Type u} [Category.{v} C] :
     EnoughInjectives (ObjectAbelianPresheaf C) := by
-  sorry
+  obtain ⟨J, hJleft, hJmono, hJinjective⟩ :=
+    objectPresheaves_have_functorial_injective_embeddings (C := C)
+  refine ⟨?_⟩
+  intro A
+  have hleft : (J.obj A).left = A :=
+    congrArg (fun F => F.obj A) hJleft
+  refine ⟨{ J := (J.obj A).right
+            injective := hJinjective A
+            f := eqToHom hleft.symm ≫ (J.obj A).hom
+            mono := inferInstance }⟩
 
 /-! ## The construction `B ↦ u J(v B)` -/
 

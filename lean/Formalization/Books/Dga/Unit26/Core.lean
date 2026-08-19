@@ -1,7 +1,6 @@
 import Formalization.Books.Dga.Unit05.HomotopyCategory
 import Formalization.Books.Dga.Unit25.Core
 import Formalization.Books.Dga.Unit25.GradedObjects
-import Formalization.Books.Dga.Unit25.GradedModules
 import Mathlib.Algebra.Homology.HomotopyCategory.HomComplexCohomology
 
 /-!
@@ -497,11 +496,12 @@ structure DifferentialGradedModuleHomComplex
   commutator : ∀ n, homogeneous n → homogeneous (n + 1)
   differential_formula : ∀ n f, differential n f = commutator n f
 
-def differentialGradedModuleHomDifferentialFormula
+theorem differentialGradedModuleHomDifferentialFormula
     {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     {L M : DifferentialGradedModule A}
-    (H : DifferentialGradedModuleHomComplex A L M) :=
+    (H : DifferentialGradedModuleHomComplex A L M) :
+    ∀ n f, H.differential n f = H.commutator n f :=
   H.differential_formula
 
 theorem differentialGradedModuleHom_differential_squared

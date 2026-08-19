@@ -519,6 +519,30 @@ theorem exists_finite_stablyFree_lift
 
 /-! ## Lifting finite projectivity -/
 
+private theorem subsingleton_away_mul
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {a b : R} (h : Subsingleton (LocalizedModule.Away a M)) :
+    Subsingleton (LocalizedModule.Away (a * b) M) := by
+  rw [subsingleton_iff_forall_eq 0]
+  intro x
+  obtain ⟨⟨m, s⟩, rfl⟩ :=
+    IsLocalizedModule.mk'_surjective (Submonoid.powers (a * b))
+      (LocalizedModule.mkLinearMap (Submonoid.powers (a * b)) M) x
+  have hzero : IsLocalizedModule.mk' (LocalizedModule.mkLinearMap
+      (Submonoid.powers a) M) m (1 : Submonoid.powers a) = 0 :=
+    Subsingleton.elim _ _
+  obtain ⟨k, hk⟩ :=
+    (IsLocalizedModule.mk'_eq_zero' (LocalizedModule.mkLinearMap
+      (Submonoid.powers a) M) (1 : Submonoid.powers a)).mp hzero
+  rcases k with ⟨k, ⟨n, rfl⟩⟩
+  apply (IsLocalizedModule.mk'_eq_zero' (LocalizedModule.mkLinearMap
+    (Submonoid.powers (a * b)) M) s).mpr
+  let t : Submonoid.powers (a * b) := ⟨(a * b) ^ n, ⟨n, rfl⟩⟩
+  refine ⟨t, ?_⟩
+  change (a * b) ^ n • m = 0
+  change a ^ n • m = 0 at hk
+  rw [mul_pow, mul_comm (a ^ n) (b ^ n), mul_smul, hk, smul_zero]
+
 /-- A finite flat module whose reduction modulo a Jacobson-radical ideal is
 projective is projective. -/
 theorem finiteProjective_of_finiteFlat_of_projective_quotient
@@ -548,7 +572,191 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
     exact Ideal.comap_map_mk hIm
   have hQloc : IsLocallyConstant (Module.rankAtStalk (R := R ⧸ I) Q) :=
     Module.isLocallyConstant_rankAtStalk
-  sorry
+  have hMloc : IsLocallyConstant (Module.rankAtStalk (R := R) (M : Type u)) := by
+    apply (IsLocallyConstant.iff_exists_open _).2
+    intro p
+    obtain ⟨m, hm, hpm⟩ := p.asIdeal.exists_le_maximal p.isPrime.ne_top
+    letI : m.IsMaximal := hm
+    have hIm : I ≤ m := hI.trans (Ring.jacobson_le_of_isMaximal m)
+    let qm : PrimeSpectrum (R ⧸ I) :=
+      ⟨m.map (Ideal.Quotient.mk I),
+        Ideal.isPrime_map_quotientMk_of_isPrime hIm⟩
+    obtain ⟨U, hU, hqmU, hconst⟩ := hQloc.exists_open qm
+    have hclosed := PrimeSpectrum.isClosedEmbedding_comap_of_surjective
+      (R := R) (S := R ⧸ I) (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
+    obtain ⟨O, hO, hpre⟩ := hclosed.toIsInducing.isOpen_iff.mp hU
+    have hmO : (⟨m, hm.isPrime⟩ : PrimeSpectrum R) ∈ O := by
+      have hpre' : qm ∈ PrimeSpectrum.comap (Ideal.Quotient.mk I) ⁻¹' O := by
+        rw [hpre]
+        exact hqmU
+      change PrimeSpectrum.comap (Ideal.Quotient.mk I) qm ∈ O at hpre'
+      simpa only [show PrimeSpectrum.comap (Ideal.Quotient.mk I) qm =
+          (⟨m, hm.isPrime⟩ : PrimeSpectrum R) by
+        apply PrimeSpectrum.ext
+        exact Ideal.comap_map_mk hIm] using hpre'
+    refine ⟨O, hO, ?_, ?_⟩
+    · exact hO.stableUnderGeneralization
+        ((PrimeSpectrum.le_iff_specializes p ⟨m, hm.isPrime⟩).mp hpm) hmO
+    · intro q hqO
+      obtain ⟨n, hn, hqn⟩ := q.asIdeal.exists_le_maximal q.isPrime.ne_top
+      letI : n.IsMaximal := hn
+      have hIn : I ≤ n := hI.trans (Ring.jacobson_le_of_isMaximal n)
+      let qn : PrimeSpectrum (R ⧸ I) :=
+        ⟨n.map (Ideal.Quotient.mk I),
+          Ideal.isPrime_map_quotientMk_of_isPrime hIn⟩
+      have hnO : (⟨n, hn.isPrime⟩ : PrimeSpectrum R) ∈ O := by
+        sorry
+      have hqnO : PrimeSpectrum.comap (Ideal.Quotient.mk I) qn ∈ O := by
+        simpa only [show PrimeSpectrum.comap (Ideal.Quotient.mk I) qn =
+            (⟨n, hn.isPrime⟩ : PrimeSpectrum R) by
+          apply PrimeSpectrum.ext
+          exact Ideal.comap_map_mk hIn] using hnO
+      have hqnU : qn ∈ U := by
+        rw [← hpre]
+        exact hqnO
+      have hqrank : Module.rankAtStalk (R := R) (M : Type u) q =
+          Module.rankAtStalk (R := R) (M : Type u) p := by
+        calc
+          Module.rankAtStalk (R := R) (M : Type u) q =
+              Module.rankAtStalk (R := R) (M : Type u) ⟨n, hn.isPrime⟩ :=
+            Module.rankAtStalk_eq_of_le_of_finite_of_flat' (M := (M : Type u)) hqn
+          _ = Module.rankAtStalk (R := R ⧸ I) Q qn :=
+            (hQrank n hn.isPrime hIn).symm
+          _ = Module.rankAtStalk (R := R ⧸ I) Q qm :=
+            hconst qn hqnU
+          _ = Module.rankAtStalk (R := R) (M : Type u) ⟨m, hm.isPrime⟩ :=
+            hQrank m hm.isPrime hIm
+          _ = Module.rankAtStalk (R := R) (M : Type u) p :=
+            (Module.rankAtStalk_eq_of_le_of_finite_of_flat' (M := (M : Type u)) hpm).symm
+      exact hqrank
+  let s : Set R := {a | Module.Free (Localization.Away a)
+      (LocalizedModule.Away a (M : Type u))}
+  have hs : Ideal.span s = ⊤ := by
+    by_contra hst
+    obtain ⟨J, hJ, hJs⟩ := Ideal.ne_top_iff_exists_maximal.mp hst
+    let p : PrimeSpectrum R := ⟨J, hJ.isPrime⟩
+    obtain ⟨U, hU, hpU, hconst⟩ := hMloc.exists_open p
+    obtain ⟨t, ⟨a, rfl⟩, hpa, hta⟩ :=
+      PrimeSpectrum.isTopologicalBasis_basic_opens.isOpen_iff.mp hU p hpU
+    have haJ : a ∉ J := hpa
+    let n := Module.rankAtStalk (M : Type u) p
+    let f : (Fin n →₀ R) →ₗ[R] Fin n →₀ Localization.AtPrime J :=
+      Finsupp.mapRange.linearMap (Algebra.linearMap R (Localization.AtPrime J))
+    let g : (M : Type u) →ₗ[R] LocalizedModule.AtPrime J (M : Type u) :=
+      LocalizedModule.mkLinearMap J.primeCompl (M : Type u)
+    let : Module.Free (Localization.AtPrime J)
+        (LocalizedModule.AtPrime J (M : Type u)) :=
+      Module.free_of_flat_of_isLocalRing
+    obtain ⟨φ, -, -, hφps⟩ :=
+      Module.exists_localizedMap_surjective_of_surjective J.primeCompl f g
+        ((Module.finBasis (Localization.AtPrime J)
+          (LocalizedModule.AtPrime J (M : Type u))).repr.restrictScalars R).symm.surjective
+    obtain ⟨b, hbJ, hφbs⟩ :=
+      Module.exists_localizedMap_away_surjective_of_localizedMap_atPrime_surjective
+        J φ (by simpa [LocalizedModule.coe_map_eq f g])
+    let c := a * b
+    have hφcs : Function.Surjective (LocalizedModule.map
+        (Submonoid.powers c) φ) := by
+      apply (LinearMap.localizedMap_surjective_iff_subsingleton_localized_coker
+        (Submonoid.powers c) φ).mpr
+      simpa [mul_comm] using subsingleton_away_mul (a := b) (b := a)
+        ((LinearMap.localizedMap_surjective_iff_subsingleton_localized_coker
+          (Submonoid.powers b) φ).mp hφbs)
+    have hcr : c ∉ J := by
+      intro hc
+      exact hJ.isPrime.mul_notMem haJ hbJ hc
+    have hrank : ∀ q : PrimeSpectrum R, q ∈ PrimeSpectrum.basicOpen c →
+        Module.rankAtStalk (M : Type u) q = n := by
+      intro q hq
+      have hqa : q ∈ PrimeSpectrum.basicOpen a :=
+        PrimeSpectrum.basicOpen_mul_le_left a b hq
+      simpa [n] using hconst q (hta hqa)
+    let : Module.Flat (Localization.Away c)
+        (LocalizedModule.Away c (M : Type u)) := inferInstance
+    let : Module.Free (Localization.Away c)
+        (LocalizedModule.Away c (Fin n →₀ R)) :=
+      Module.free_of_isLocalizedModule (R := R) (M := Fin n →₀ R)
+        (Rₛ := Localization.Away c)
+        (Mₛ := LocalizedModule.Away c (Fin n →₀ R))
+        (Submonoid.powers c)
+        (LocalizedModule.mkLinearMap (Submonoid.powers c) (Fin n →₀ R))
+    let φc : LocalizedModule.Away c (Fin n →₀ R) →ₗ[Localization.Away c]
+        LocalizedModule.Away c (M : Type u) :=
+      LocalizedModule.map (Submonoid.powers c) φ
+    have hφcb : Function.Bijective φc := by
+      apply Module.bijective_of_surjective_of_rankAtStalk_eq hφcs
+      intro K hK
+      let S := Localization.Away c
+      let q : PrimeSpectrum R :=
+        PrimeSpectrum.comap (algebraMap R S) ⟨K, hK.isPrime⟩
+      have hqc : q ∈ PrimeSpectrum.basicOpen c := by
+        rw [PrimeSpectrum.mem_basicOpen]
+        intro hc
+        apply hK.ne_top
+        change algebraMap R S c ∈ K at hc
+        exact Ideal.eq_top_of_isUnit_mem K hc
+          (IsLocalization.map_units S ⟨c, Submonoid.mem_powers c⟩)
+      have hsource : Module.rankAtStalk
+          (LocalizedModule.Away c (Fin n →₀ R))
+          (⟨K, hK.isPrime⟩ : PrimeSpectrum (Localization.Away c)) = n := by
+        have hRnontrivial : Nontrivial R := by
+          rw [← not_subsingleton_iff_nontrivial]
+          intro hsub
+          let := hsub
+          exact hJ.ne_top (Subsingleton.elim J ⊤)
+        let := hRnontrivial
+        have hnontrivial : Nontrivial (Localization.Away c) := by
+          rw [← not_subsingleton_iff_nontrivial]
+          intro hsub
+          let := hsub
+          exact hK.ne_top (Subsingleton.elim K ⊤)
+        let := hnontrivial
+        calc
+          Module.rankAtStalk (LocalizedModule.Away c (Fin n →₀ R))
+              (⟨K, hK.isPrime⟩ : PrimeSpectrum (Localization.Away c)) =
+              Module.finrank (Localization.Away c)
+                (LocalizedModule.Away c (Fin n →₀ R)) := by
+            exact congrFun (Module.rankAtStalk_eq_finrank_of_free
+              (R := Localization.Away c)
+              (M := LocalizedModule.Away c (Fin n →₀ R)))
+              (⟨K, hK.isPrime⟩ : PrimeSpectrum (Localization.Away c))
+          _ = Module.finrank R (Fin n →₀ R) :=
+            Module.finrank_of_isLocalizedModule_of_free
+              (M := Fin n →₀ R) (Mₛ := LocalizedModule.Away c (Fin n →₀ R))
+              (Localization.Away c) (Submonoid.powers c)
+              (LocalizedModule.mkLinearMap (Submonoid.powers c) (Fin n →₀ R))
+          _ = n := by
+            rw [Module.finrank_finsupp_self, Fintype.card_fin]
+      have htarget : Module.rankAtStalk
+          (LocalizedModule.Away c (M : Type u))
+          (⟨K, hK.isPrime⟩ : PrimeSpectrum (Localization.Away c)) =
+          Module.rankAtStalk (M : Type u) q := by
+        have h := Module.rankAtStalk_isBaseChange
+          (R := R) (M := (M : Type u)) (S := Localization.Away c)
+          (Mₛ := LocalizedModule.Away c (M : Type u))
+          (f := LocalizedModule.mkLinearMap (Submonoid.powers c) (M : Type u))
+          (LocalizedModule.isBaseChange (Submonoid.powers c) (M : Type u))
+          (⟨K, hK.isPrime⟩ : PrimeSpectrum (Localization.Away c))
+        simpa [q, S] using h
+      calc
+        Module.rankAtStalk (LocalizedModule.Away c (Fin n →₀ R))
+            ⟨K, hK.isPrime⟩ = n := hsource
+        _ = Module.rankAtStalk (M : Type u) q := (hrank q hqc).symm
+        _ = Module.rankAtStalk (LocalizedModule.Away c (M : Type u))
+            ⟨K, hK.isPrime⟩ := htarget.symm
+    have hfreec : Module.Free (Localization.Away c)
+        (LocalizedModule.Away c (M : Type u)) := Module.Free.of_equiv
+          (LinearEquiv.ofBijective φc hφcb)
+    exact hcr (hJs (Ideal.subset_span hfreec))
+  have hfp : Module.FinitePresentation R (M : Type u) :=
+    Module.FinitePresentation.of_localizationSpan s hs (fun g => by
+      letI : Module.Free (Localization.Away g.1)
+          (LocalizedModule.Away g.1 (M : Type u)) := g.2
+      letI : Module.Projective (Localization.Away g.1)
+          (LocalizedModule.Away g.1 (M : Type u)) := Module.Projective.of_free
+      exact Module.finitePresentation_of_projective _ _)
+  letI : Module.FinitePresentation R (M : Type u) := hfp
+  exact Module.Flat.projective_of_finitePresentation
 
 /-! ## Uniqueness of finite-projective lifts -/
 

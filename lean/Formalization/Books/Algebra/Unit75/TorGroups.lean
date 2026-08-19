@@ -1,5 +1,7 @@
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.HomologySequence
+import Mathlib.Algebra.Homology.TotalComplex
+import Mathlib.Algebra.Homology.QuasiIso
 import Mathlib.RingTheory.Flat.CategoryTheory
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.LinearAlgebra.Semisimple
@@ -1028,6 +1030,234 @@ noncomputable def columnComplex {R : Type u} [CommRing R]
     subst k
     exact A.delta_sq i l
 
+/-- The Mathlib bicomplex associated to a first-quadrant double complex. -/
+noncomputable abbrev DoubleComplex.bicomplex {R : Type u} [CommRing R]
+    (A : DoubleComplex R) :
+    HomologicalComplex₂ (ModuleCat.{u} R) (ComplexShape.down ℕ) (ComplexShape.down ℕ) where
+  X i :=
+    { X j := A.obj i j
+      d j j' := if h : j' + 1 = j then h ▸ A.delta i j' else 0
+      shape j j' h := dif_neg h
+      d_comp_d' j j' j'' _ _ := by
+        by_cases h₁ : j' + 1 = j
+        · by_cases h₂ : j'' + 1 = j'
+          · subst j
+            subst j'
+            simpa using A.delta_sq i j''
+          · simp [h₁, h₂]
+        · simp [h₁] }
+  d i i' := if h : i' + 1 = i then
+    { f j := h ▸ A.d i' j
+      comm' j j' hjj' := by
+        have hjj'' : j' + 1 = j := by
+          simpa only [ComplexShape.down_Rel] using hjj'
+        subst i
+        subst j
+        dsimp
+        simpa using A.comm i' j' }
+    else 0
+  shape i i' h := dif_neg h
+  d_comp_d' i i' i'' _ _ := by
+    ext j : 1
+    by_cases h₁ : i' + 1 = i
+    · by_cases h₂ : i'' + 1 = i'
+      · subst i
+        subst i'
+        simpa using A.d_sq i'' j
+      · simp [h₁, h₂]
+    · simp [h₁]
+
+noncomputable def DoubleComplexMap.bicomplexMap {R : Type u} [CommRing R]
+    {A B : DoubleComplex R} (f : DoubleComplexMap A B) :
+    A.bicomplex ⟶ B.bicomplex :=
+  HomologicalComplex₂.homMk
+    (fun ij => f.f ij.1 ij.2)
+    (by
+      intro i i' j h
+      have h' : i' + 1 = i := by simpa only [ComplexShape.down_Rel] using h
+      subst i
+      unfold DoubleComplex.bicomplex
+      dsimp
+      simp only [dif_pos rfl]
+      exact (f.d_comm i' j).symm)
+    (by
+      intro i j j' h
+      have h' : j' + 1 = j := by simpa only [ComplexShape.down_Rel] using h
+      subst j
+      unfold DoubleComplex.bicomplex
+      dsimp
+      simp only [dif_pos rfl]
+      exact (f.delta_comm i j').symm)
+
+noncomputable abbrev doubleTotalComplex {R : Type u} [CommRing R]
+    (A : DoubleComplex R) : ModuleChainComplex R :=
+  A.bicomplex.total (ComplexShape.down ℕ)
+
+noncomputable def doubleTotalComplexMap {R : Type u} [CommRing R]
+    {A B : DoubleComplex R} (f : DoubleComplexMap A B) :
+    doubleTotalComplex A ⟶ doubleTotalComplex B :=
+  HomologicalComplex₂.total.map f.bicomplexMap (ComplexShape.down ℕ)
+
+noncomputable def rightEdgeComponent {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) :
+    A.obj i j ⟶ (rightComplex A).X n := by
+  classical
+  by_cases hi : i = 0
+  · subst i
+    simp only [zero_add] at hij
+    subst n
+    exact cokernel.π (A.d 0 j)
+  · exact 0
+
+noncomputable def upEdgeComponent {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) :
+    A.obj i j ⟶ (upComplex A).X n := by
+  classical
+  by_cases hj : j = 0
+  · subst j
+    simp only [add_zero] at hij
+    subst n
+    exact cokernel.π (A.delta i 0)
+  · exact 0
+
+noncomputable def rightEdgeGraded {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n : ℕ) :
+    (doubleTotalComplex A).X n ⟶ (rightComplex A).X n :=
+  A.bicomplex.totalDesc (fun i j hij => rightEdgeComponent A n i j hij)
+
+noncomputable def upEdgeGraded {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n : ℕ) :
+    (doubleTotalComplex A).X n ⟶ (upComplex A).X n :=
+  A.bicomplex.totalDesc (fun i j hij => upEdgeComponent A n i j hij)
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def rightEdge {R : Type u} [CommRing R]
+    (A : DoubleComplex R) : doubleTotalComplex A ⟶ rightComplex A where
+  f := rightEdgeGraded A
+  comm' n m hnm := by
+    have hnm' : m + 1 = n := by simpa only [ComplexShape.down_Rel] using hnm
+    subst n
+    apply HomologicalComplex₂.total.hom_ext
+    intro i j hij
+    unfold rightEdgeGraded doubleTotalComplex
+    rw [HomologicalComplex₂.ι_totalDesc_assoc]
+    rw [← Category.assoc, HomologicalComplex₂.total_d, Preadditive.comp_add,
+      HomologicalComplex₂.ι_D₁, HomologicalComplex₂.ι_D₂, Preadditive.add_comp]
+    change i + j = m + 1 at hij
+    rcases i with _ | i
+    · simp only [zero_add] at hij
+      subst j
+      rw [A.bicomplex.d₁_eq_zero (ComplexShape.down ℕ) 0 (m + 1) m (by simp)]
+      rw [zero_comp, zero_add]
+      rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 0 (show
+        (ComplexShape.down ℕ).Rel (m + 1) m by simp) m (by simp)]
+      simp only [Linear.units_smul_comp, Category.assoc,
+        HomologicalComplex₂.ι_totalDesc]
+      simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+      change cokernel.π (A.d 0 (m + 1)) ≫
+        cokernel.map (A.d 0 (m + 1)) (A.d 0 m) (A.delta 1 m) (A.delta 0 m)
+          (A.comm 0 m) = _
+      rw [cokernel.π_desc]
+    · rcases i with _ | i
+      · have hj : j = m := by omega
+        subst j
+        rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+          (show (ComplexShape.down ℕ).Rel 1 0 by simp) m m (by simp)]
+        simp only [Linear.units_smul_comp, Category.assoc,
+          HomologicalComplex₂.ι_totalDesc]
+        rcases m with _ | m
+        · rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) 1 0 0 (by simp)]
+          simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+        · rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 1
+            (show (ComplexShape.down ℕ).Rel (m + 1) m by simp) (m + 1)
+            (by change 1 + m = m + 1; omega)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+      · rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+          (show (ComplexShape.down ℕ).Rel (i + 1 + 1) (i + 1) by simp) j m
+          (by change (i + 1) + j = m; omega)]
+        simp only [Linear.units_smul_comp, Category.assoc,
+          HomologicalComplex₂.ι_totalDesc]
+        rcases j with _ | j
+        · rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) (i + 1 + 1) 0 m (by simp)]
+          simp [rightEdgeComponent, rightComplex]
+        · rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) (i + 1 + 1)
+            (show (ComplexShape.down ℕ).Rel (j + 1) j by simp) m
+            (by change (i + 1 + 1) + j = m; omega)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [rightEdgeComponent, rightComplex]
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def upEdge {R : Type u} [CommRing R]
+    (A : DoubleComplex R) : doubleTotalComplex A ⟶ upComplex A where
+  f := upEdgeGraded A
+  comm' n m hnm := by
+    have hnm' : m + 1 = n := by simpa only [ComplexShape.down_Rel] using hnm
+    subst n
+    apply HomologicalComplex₂.total.hom_ext
+    intro i j hij
+    unfold upEdgeGraded doubleTotalComplex
+    rw [HomologicalComplex₂.ι_totalDesc_assoc]
+    rw [← Category.assoc, HomologicalComplex₂.total_d, Preadditive.comp_add,
+      HomologicalComplex₂.ι_D₁, HomologicalComplex₂.ι_D₂, Preadditive.add_comp]
+    change i + j = m + 1 at hij
+    rcases j with _ | j
+    · have hi : i = m + 1 := by omega
+      subst i
+      rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+        (show (ComplexShape.down ℕ).Rel (m + 1) m by simp) 0 m (by simp)]
+      simp only [Linear.units_smul_comp, Category.assoc,
+        HomologicalComplex₂.ι_totalDesc]
+      rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) (m + 1) 0 m (by simp)]
+      simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+      change cokernel.π (A.delta (m + 1) 0) ≫
+        cokernel.map (A.delta (m + 1) 0) (A.delta m 0) (A.d m 1) (A.d m 0)
+          (A.comm m 0).symm = _
+      rw [cokernel.π_desc]
+    · rcases j with _ | j
+      · have hi : i = m := by omega
+        subst i
+        rcases m with _ | m
+        · rw [A.bicomplex.d₁_eq_zero (ComplexShape.down ℕ) 0 (0 + 1) 0 (by simp)]
+          rw [zero_comp]
+          rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 0
+            (show (ComplexShape.down ℕ).Rel (0 + 1) 0 by simp) 0 (by simp)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+        · rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+            (show (ComplexShape.down ℕ).Rel (m + 1) m by simp) 1 (m + 1)
+            (by change m + 1 = m + 1; rfl)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) (m + 1)
+            (show (ComplexShape.down ℕ).Rel 1 0 by simp) (m + 1) (by simp)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+      · rcases i with _ | i
+        · rw [A.bicomplex.d₁_eq_zero (ComplexShape.down ℕ) 0 (j + 1 + 1) m (by simp)]
+          rw [zero_comp, zero_add]
+          rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 0
+            (show (ComplexShape.down ℕ).Rel (j + 1 + 1) (j + 1) by simp) m
+            (by change 0 + (j + 1) = m; omega)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [upEdgeComponent, upComplex]
+        · rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+            (show (ComplexShape.down ℕ).Rel (i + 1) i by simp) (j + 1 + 1) m
+            (by change i + (j + 1 + 1) = m; omega)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) (i + 1)
+            (show (ComplexShape.down ℕ).Rel (j + 1 + 1) (j + 1) by simp) m
+            (by change (i + 1) + (j + 1) = m; omega)]
+          simp only [Linear.units_smul_comp, Category.assoc,
+            HomologicalComplex₂.ι_totalDesc]
+          simp [upEdgeComponent, upComplex]
+
 /-- A fixed chain complex and augmentation are a resolution in the sense of
 the preceding chapter's `Resolution` interface. -/
 def IsResolution {R : Type u} [CommRing R]
@@ -1130,6 +1360,52 @@ noncomputable def upComplexMap {R : Type u} [CommRing R]
     simp only [dif_pos hij']
     subst i
     exact (upTermMap_comm Φ j).symm
+
+set_option backward.isDefEq.respectTransparency false in
+theorem rightEdge_natural {R : Type u} [CommRing R]
+    {A B : DoubleComplex R} (f : DoubleComplexMap A B) :
+    doubleTotalComplexMap f ≫ rightEdge B = rightEdge A ≫ rightComplexMap f := by
+  ext n : 1
+  apply HomologicalComplex₂.total.hom_ext
+  intro i j hij
+  change A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij ≫
+      ((HomologicalComplex₂.total.map f.bicomplexMap (ComplexShape.down ℕ)).f n ≫
+        rightEdgeGraded B n) =
+    A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij ≫
+      (rightEdgeGraded A n ≫ (rightComplexMap f).f n)
+  rw [← Category.assoc, HomologicalComplex₂.ιTotal_map, Category.assoc]
+  simp only [rightEdgeGraded, HomologicalComplex₂.ι_totalDesc_assoc]
+  change i + j = n at hij
+  by_cases hi : i = 0
+  · subst i
+    have hj : j = n := by simpa only [zero_add] using hij
+    subst j
+    simp [DoubleComplexMap.bicomplexMap, rightEdgeComponent, rightComplexMap,
+      rightTermMap]
+  · simp [DoubleComplexMap.bicomplexMap, rightEdgeComponent, rightComplexMap, hi]
+
+set_option backward.isDefEq.respectTransparency false in
+theorem upEdge_natural {R : Type u} [CommRing R]
+    {A B : DoubleComplex R} (f : DoubleComplexMap A B) :
+    doubleTotalComplexMap f ≫ upEdge B = upEdge A ≫ upComplexMap f := by
+  ext n : 1
+  apply HomologicalComplex₂.total.hom_ext
+  intro i j hij
+  change A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij ≫
+      ((HomologicalComplex₂.total.map f.bicomplexMap (ComplexShape.down ℕ)).f n ≫
+        upEdgeGraded B n) =
+    A.bicomplex.ιTotal (ComplexShape.down ℕ) i j n hij ≫
+      (upEdgeGraded A n ≫ (upComplexMap f).f n)
+  rw [← Category.assoc, HomologicalComplex₂.ιTotal_map, Category.assoc]
+  simp only [upEdgeGraded, HomologicalComplex₂.ι_totalDesc_assoc]
+  change i + j = n at hij
+  by_cases hj : j = 0
+  · subst j
+    have hi : i = n := by simpa only [add_zero] using hij
+    subst i
+    simp [DoubleComplexMap.bicomplexMap, upEdgeComponent, upComplexMap,
+      upTermMap]
+  · simp [DoubleComplexMap.bicomplexMap, upEdgeComponent, upComplexMap, hj]
 
 /-! The source calls the comparison canonical and requires functoriality.  A
 chosen isomorphism for each double complex would not provide that property,

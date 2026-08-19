@@ -202,11 +202,9 @@ theorem noRationalSection_has_no_open_section :
         _ = (Scheme.ΓSpecIso (CommRingCat.of noRationalSectionBaseRing)).inv ≫
               @Scheme.germToFunctionField noRationalSectionBase inferInstance
                 (⊤ : Opens noRationalSectionBase) htop := by
-                  simp [τ, Scheme.restrictFunctorΓ] <;>
-                    erw [← Functor.map_comp] <;>
-                    simpa using (noRationalSectionBase.presheaf.germ_res
-                      (homOfLE (x := U) (show U ≤ ⊤ from le_top))
-                      (genericPoint noRationalSectionBase) hxU).symm
+                  simp [τ]
+                  erw [← Functor.map_comp]
+                  simp only [Functor.map_comp, Category.assoc, TopCat.Presheaf.germ_res']
     simpa only using congrArg CommRingCat.Hom.hom hcat
   have hmap : f.comp (polynomialBaseMap (K := ℂ) (n := 2) 1) = b := by
     simpa [f, noRationalSectionBaseToSource, RingHom.comp_assoc] using hbase
@@ -236,7 +234,7 @@ theorem noRationalSection_has_no_open_section :
       (A := CommRingCat.of noRationalSectionBaseRing)
       (K := noRationalSectionBase.functionField)
       (L := FractionRing (Polynomial ℂ)) (g := eg) heg (MvPolynomial.X 0)
-    simpa [ℓ, eg, e, e0, MvPolynomial.finSuccEquiv_X_zero] using h
+    simp [ℓ, eg, e, e0, MvPolynomial.finSuccEquiv_X_zero] at h ⊢
   have heq : (ℓ (f (MvPolynomial.X 0))) ^ 2 +
       algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X = 0 := by
     have h := congrArg ℓ hrel

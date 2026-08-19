@@ -16,6 +16,7 @@ existing additive skyscraper and open-immersion extension interfaces.
 namespace Formalization.Books.Modules.Unit05
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open scoped ZeroObject
 open Formalization.Books.Modules.Unit03
 open Formalization.Books.Modules.Unit04
 open Formalization.Books.Sheaves.Unit08
@@ -203,7 +204,30 @@ section. -/
 theorem map_sectionSupport_subset {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) (s : F.val.obj (op U)) :
     sectionSupport U (φ.val.app (op U) s) ⊆ sectionSupport U s := by
-  sorry
+  intro x hx
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    G.val.presheaf U x.1 x.2)) (φ.val.app (op U) s) ≠ 0 at hx
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+    F.val.presheaf U x.1 x.2)) s ≠ 0
+  intro hs
+  apply hx
+  let s' : ((PresheafOfModules.toPresheaf O.obj).obj F.val).obj (op U) := s
+  have hs' : (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+      ((PresheafOfModules.toPresheaf O.obj).obj F.val) U x.1 x.2)) s' = 0 := by
+    exact hs
+  have h := TopCat.Presheaf.stalkFunctor_map_germ_apply U x.1 x.2
+    ((PresheafOfModules.toPresheaf O.obj).map φ.val) s'
+  rw [hs'] at h
+  have hz : (ConcreteCategory.hom
+      ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x.1).map
+        ((PresheafOfModules.toPresheaf O.obj).map φ.val)))
+      (0 : ↑(TopCat.Presheaf.stalk (C := AddCommGrpCat)
+        ((PresheafOfModules.toPresheaf O.obj).obj F.val) x.1)) = 0 := by
+    exact map_zero _
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ (C := AddCommGrpCat)
+      ((PresheafOfModules.toPresheaf O.obj).obj G.val) U x.1 x.2))
+      (((PresheafOfModules.toPresheaf O.obj).map φ.val).app (op U) s') = 0
+  exact h.symm.trans hz
 
 /-! ## Non-closed-support examples -/
 
@@ -230,19 +254,275 @@ def IsNonClosedSkyscraperDirectSum {X : TopCat.{v}}
           additiveSheafSupport F = Set.range p ∧
             ¬ IsClosed (Set.range p)
 
+private theorem additiveSkyscraperColimit_support_eq_range
+    {X : TopCat.{v}} [T1Space X] (I : Type v) (p : I → X)
+    (hp : Function.Injective p) (A : AddCommGrpCat.{v})
+    (hA : Nontrivial (A : Type v)) :
+    additiveSheafSupport
+        (colimit (Discrete.functor (fun i => abelianSkyscraperSheaf (p i) A))) =
+      Set.range p := by
+  classical
+  let D : Discrete I ⥤ TopCat.Sheaf (AddCommGrpCat.{v}) X :=
+    Discrete.functor (fun i => abelianSkyscraperSheaf (p i) A)
+  apply Set.ext
+  intro x
+  by_cases hx : x ∈ Set.range p
+  · rcases hx with ⟨i, rfl⟩
+    constructor
+    · intro _
+      exact ⟨i, rfl⟩
+    · intro _
+      change Nontrivial
+        (((TopCat.Sheaf.forget AddCommGrpCat X ⋙
+          TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} (p i)).obj (colimit D)))
+      let H := TopCat.Sheaf.forget AddCommGrpCat X ⋙
+        TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} (p i)
+      let e := preservesColimitIso H D
+      have hAi : Nontrivial (↑((D ⋙ H).obj ⟨i⟩)) := by
+        change Nontrivial
+          ((abelianSkyscraperSheaf (p i) A).presheaf.stalk (p i))
+        let eA := algebraicSkyscraperStalkOfSpecializes
+          (C := AddCommGrpCat.{v}) (p i) A (specializes_refl (p i))
+        rw [← not_subsingleton_iff_nontrivial]
+        intro hs
+        apply not_subsingleton_iff_nontrivial.mpr hA
+        refine ⟨?_⟩
+        intro a b
+        have h := congrArg (fun z => (ConcreteCategory.hom eA.hom) z)
+          (hs.elim (ConcreteCategory.hom eA.inv a) (ConcreteCategory.hom eA.inv b))
+        simpa using h
+      have hcol : Nontrivial (↑(colimit (D ⋙ H))) := by
+        let K := D ⋙ H
+        let c : Cocone K :=
+          { pt := K.obj ⟨i⟩
+            ι :=
+              { app := fun j => if h : j = ⟨i⟩ then h ▸ 𝟙 _ else 0
+                naturality := by
+                  intro j k f
+                  cases f
+                  rename_i h
+                  have hjk : j = k := Discrete.ext h.down
+                  subst k
+                  simp } }
+        let t : colimit K ⟶ K.obj ⟨i⟩ := colimit.desc K c
+        have hct : colimit.ι K ⟨i⟩ ≫ t = 𝟙 _ := by
+          dsimp [t]
+          simp [c]
+        have htc : t ≫ colimit.ι K ⟨i⟩ = 𝟙 _ := by
+          apply (colimit.isColimit K).hom_ext
+          intro j
+          by_cases hji : j = ⟨i⟩
+          · subst j
+            simp [t, c, hct]
+          · have hzero : IsZero (K.obj j) := by
+              change IsZero ((abelianSkyscraperSheaf (p j.as) A).presheaf.stalk (p i))
+              have hspec : ¬p j.as ⤳ p i := by
+                intro h
+                apply hji
+                exact Discrete.ext (hp (specializes_iff_eq.mp h))
+              let eA := algebraicSkyscraperStalkOfNotSpecializes
+                (C := AddCommGrpCat.{v}) (p j.as) A hspec
+              exact (isZero_zero AddCommGrpCat.{v}).of_iso
+                (eA ≪≫ HasZeroObject.zeroIsoTerminal.symm)
+            exact hzero.eq_of_src _ _
+        let eK : K.obj ⟨i⟩ ≅ colimit K :=
+          { hom := colimit.ι K ⟨i⟩
+            inv := t
+            hom_inv_id := hct
+            inv_hom_id := htc }
+        rw [← not_subsingleton_iff_nontrivial]
+        intro hs
+        apply not_subsingleton_iff_nontrivial.mpr hAi
+        refine ⟨?_⟩
+        intro a b
+        have h := congrArg (fun z => (ConcreteCategory.hom eK.inv) z)
+          (hs.elim (ConcreteCategory.hom eK.hom a) (ConcreteCategory.hom eK.hom b))
+        simpa using h
+      rw [← not_subsingleton_iff_nontrivial]
+      intro hs
+      apply not_subsingleton_iff_nontrivial.mpr hcol
+      refine ⟨?_⟩
+      intro a b
+      have h := congrArg (fun z => (ConcreteCategory.hom e.hom) z)
+        (hs.elim (ConcreteCategory.hom e.inv a) (ConcreteCategory.hom e.inv b))
+      simpa using h
+  · constructor
+    · intro hs
+      change Nontrivial
+        (((TopCat.Sheaf.forget AddCommGrpCat X ⋙
+          TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).obj (colimit D))) at hs
+      let H := TopCat.Sheaf.forget AddCommGrpCat X ⋙
+        TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x
+      change Nontrivial (↑(H.obj (colimit D))) at hs
+      let e := preservesColimitIso H D
+      have hD : ∀ i : I, IsZero ((D ⋙ H).obj ⟨i⟩) := by
+        intro i
+        change IsZero ((abelianSkyscraperSheaf (p i) A).presheaf.stalk x)
+        have hspec : ¬p i ⤳ x := by
+          intro h
+          apply hx
+          exact ⟨i, specializes_iff_eq.mp h⟩
+        let eA := algebraicSkyscraperStalkOfNotSpecializes
+          (C := AddCommGrpCat.{v}) (p i) A hspec
+        exact (isZero_zero AddCommGrpCat.{v}).of_iso
+          (eA ≪≫ HasZeroObject.zeroIsoTerminal.symm)
+      have hcol : IsZero (colimit (D ⋙ H)) := by
+        have hid : (𝟙 (colimit (D ⋙ H))) = 0 := by
+          apply (colimit.isColimit (D ⋙ H)).hom_ext
+          intro j
+          simp only [Category.comp_id, comp_zero]
+          exact (hD j.as).eq_of_src _ _
+        refine ⟨?_, ?_⟩
+        · intro Y
+          refine ⟨⟨⟨0⟩, ?_⟩⟩
+          intro f
+          change f = 0
+          rw [← Category.id_comp f, hid, zero_comp]
+        · intro Y
+          refine ⟨⟨⟨0⟩, ?_⟩⟩
+          intro f
+          change f = 0
+          rw [← Category.comp_id f, hid, comp_zero]
+      have hsub : Subsingleton (↑(colimit (D ⋙ H))) :=
+        AddCommGrpCat.subsingleton_of_isZero hcol
+      rw [← not_subsingleton_iff_nontrivial] at hs
+      exfalso
+      apply hs
+      refine ⟨?_⟩
+      intro a b
+      have h := congrArg (fun z => (ConcreteCategory.hom e.inv) z)
+        (hsub.elim (ConcreteCategory.hom e.hom a) (ConcreteCategory.hom e.hom b))
+      simpa using h
+    · intro hx'
+      exact False.elim (hx hx')
+
 /-- There is an additive sheaf with nonclosed support of the kind described by
 the skyscraper/direct-sum example. -/
 theorem exists_nonclosed_skyscraper_direct_sum :
     ∃ (X : TopCat.{v}) (F : TopCat.Sheaf (AddCommGrpCat.{v}) X),
       IsNonClosedSkyscraperDirectSum F := by
-  sorry
+  let X : TopCat.{v} := TopCat.of (ULift.{v} ℝ)
+  let I : Type v := ULift.{v} ℕ
+  let q : ℕ → ℝ := fun n => 1 / ((n : ℝ) + 1)
+  let p : I → X := fun n => ULift.up (q n.down)
+  let A : AddCommGrpCat.{v} := AddCommGrpCat.of (ULift.{v} ℤ)
+  let G : I → TopCat.Sheaf (AddCommGrpCat.{v}) X :=
+    fun n => abelianSkyscraperSheaf (p n) A
+  let F : TopCat.Sheaf (AddCommGrpCat.{v}) X :=
+    colimit (Discrete.functor G)
+  have hp : Function.Injective p := by
+    intro m n h
+    have hreal : q m.down = q n.down := ULift.up_injective h
+    dsimp [q] at hreal
+    field_simp at hreal
+    have hmn : (m.down : ℝ) = n.down := by linarith
+    cases m with
+    | up m =>
+      cases n with
+      | up n =>
+        have hmn' : m = n := by exact_mod_cast hmn
+        exact congrArg (fun z : ℕ => (ULift.up z : I)) hmn'
+  have hA : Nontrivial (A : Type v) := by
+    dsimp [A]
+    infer_instance
+  have hsupport : additiveSheafSupport F = Set.range p := by
+    dsimp [F, G]
+    exact additiveSkyscraperColimit_support_eq_range (X := X) I p hp A hA
+  have hnotclosed : ¬ IsClosed (Set.range p) := by
+    intro hclosed
+    have hclosed' : IsClosed (ULift.up ⁻¹' (Set.range p)) :=
+      ULift.isClosed_iff.mp hclosed
+    have hpre : ULift.up ⁻¹' (Set.range p) = Set.range q := by
+      ext y
+      constructor
+      · rintro ⟨n, hn⟩
+        refine ⟨n.down, ?_⟩
+        exact ULift.up_injective hn
+      · rintro ⟨n, hn⟩
+        refine ⟨⟨n⟩, ?_⟩
+        change ULift.up (q n) = ULift.up y
+        rw [hn]
+    rw [hpre] at hclosed'
+    have hzero : (0 : ℝ) ∈ Set.range q :=
+      hclosed'.mem_of_tendsto tendsto_one_div_add_atTop_nhds_zero_nat
+        (Filter.Eventually.of_forall fun n => ⟨n, rfl⟩)
+    rcases hzero with ⟨n, hn⟩
+    have hnpos : 0 < q n := by
+      dsimp [q]
+      exact Nat.one_div_pos_of_nat
+    rw [hn] at hnpos
+    exact (lt_irrefl 0) hnpos
+  refine ⟨X, F, ?_⟩
+  refine ⟨I, inferInstance, p, G, ?_, ?_, hsupport, hnotclosed⟩
+  · intro i
+    refine ⟨A, hA, ?_⟩
+    exact ⟨Iso.refl _⟩
+  · exact ⟨Iso.refl _⟩
 
 /-- The source's first warning can be realized on the real line with its
 usual topology. -/
 theorem exists_nonclosed_skyscraper_direct_sum_on_real_line :
     ∃ F : TopCat.Sheaf (AddCommGrpCat.{0}) (TopCat.of ℝ),
       IsNonClosedSkyscraperDirectSum F := by
-  sorry
+  let X : TopCat.{0} := TopCat.of ℝ
+  let I : Type 0 := ULift.{0} ℕ
+  let q : ℕ → ℝ := fun n => 1 / ((n : ℝ) + 1)
+  let p : I → X := fun n => q n.down
+  let A : AddCommGrpCat.{0} := AddCommGrpCat.of ℤ
+  let G : I → TopCat.Sheaf (AddCommGrpCat.{0}) X :=
+    fun n => abelianSkyscraperSheaf (p n) A
+  letI : HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat.{0} := by
+    infer_instance
+  letI : HasColimitsOfShape (Discrete I) AddCommGrpCat.{0} := by
+    infer_instance
+  letI : HasColimitsOfShape (Discrete I)
+      (TopCat.Sheaf (AddCommGrpCat.{0}) X) := by
+    exact CategoryTheory.Sheaf.instHasColimitsOfShape
+  let F : TopCat.Sheaf (AddCommGrpCat.{0}) X :=
+    colimit (Discrete.functor G)
+  have hp : Function.Injective p := by
+    intro m n h
+    have hreal : q m.down = q n.down := h
+    dsimp [q] at hreal
+    field_simp at hreal
+    have hmn : (m.down : ℝ) = n.down := by linarith
+    cases m with
+    | up m =>
+      cases n with
+      | up n =>
+        have hmn' : m = n := by exact_mod_cast hmn
+        exact congrArg (fun z : ℕ => (ULift.up z : I)) hmn'
+  have hA : Nontrivial (A : Type 0) := by
+    dsimp [A]
+    infer_instance
+  have hsupport : additiveSheafSupport F = Set.range p := by
+    dsimp [F, G]
+    exact additiveSkyscraperColimit_support_eq_range (X := X) I p hp A hA
+  have hnotclosed : ¬ IsClosed (Set.range p) := by
+    intro hclosed
+    have hrange : Set.range p = Set.range q := by
+      ext y
+      constructor
+      · rintro ⟨n, hn⟩
+        exact ⟨n.down, hn⟩
+      · rintro ⟨n, hn⟩
+        exact ⟨⟨n⟩, hn⟩
+    rw [hrange] at hclosed
+    have hzero : (0 : ℝ) ∈ Set.range q := by
+      exact hclosed.mem_of_tendsto tendsto_one_div_add_atTop_nhds_zero_nat
+        (Filter.Eventually.of_forall fun n => ⟨n, rfl⟩)
+    rcases hzero with ⟨n, hn⟩
+    have hnpos : 0 < q n := by
+      dsimp [q]
+      exact Nat.one_div_pos_of_nat
+    rw [hn] at hnpos
+    exact (lt_irrefl 0) hnpos
+  refine ⟨F, ?_⟩
+  refine ⟨I, inferInstance, p, G, ?_, ?_, hsupport, hnotclosed⟩
+  · intro i
+    refine ⟨A, hA, ?_⟩
+    exact ⟨Iso.refl _⟩
+  · exact ⟨Iso.refl _⟩
 
 /-- Extension by zero along an open immersion has support equal to the open
 when the original additive sheaf has a nontrivial stalk at every point. -/
@@ -251,7 +531,47 @@ theorem openAbelianExtension_support_eq_open {X : TopCat.{v}} (U : Opens X)
     (hF : ∀ x : openSubspace U, Nontrivial (F.presheaf.stalk x)) :
     additiveSheafSupport ((openAbelianSheafExtensionFunctor U).obj F) =
       (U : Set X) := by
-  sorry
+  apply Set.ext
+  intro x
+  by_cases hx : x ∈ U
+  · constructor
+    · intro _
+      exact hx
+    · intro _
+      change Nontrivial (((openAbelianSheafExtensionFunctor U).obj F).presheaf.stalk x)
+      rw [← not_subsingleton_iff_nontrivial]
+      intro hsub
+      apply (not_subsingleton_iff_nontrivial.mpr (hF ⟨x, hx⟩))
+      let e := Classical.choice (openAlgebraicSheafExtension_stalk_iso
+        AddCommGrpCat U F x hx)
+      refine ⟨?_⟩
+      intro a b
+      have h := congrArg (fun z => (ConcreteCategory.hom e.hom) z)
+        (hsub.elim (ConcreteCategory.hom e.inv a) (ConcreteCategory.hom e.inv b))
+      simpa using h
+  · constructor
+    · intro hs
+      exfalso
+      change Nontrivial (((openAbelianSheafExtensionFunctor U).obj F).presheaf.stalk x) at hs
+      let e := Classical.choice (openAlgebraicSheafExtension_stalk_initial
+        AddCommGrpCat U F x hx)
+      have hzero : Subsingleton (↑(⊥_ AddCommGrpCat.{v})) := by
+        exact AddCommGrpCat.subsingleton_of_isZero
+          ((isZero_zero AddCommGrpCat.{v}).of_iso
+            (HasZeroObject.zeroIsoInitial :
+              (0 : AddCommGrpCat.{v}) ≅ (⊥_ AddCommGrpCat.{v})).symm)
+      letI := hzero
+      rw [← not_subsingleton_iff_nontrivial] at hs
+      apply hs
+      refine ⟨?_⟩
+      intro a b
+      have hab : (ConcreteCategory.hom e.hom) a =
+          (ConcreteCategory.hom e.hom) b :=
+        @Subsingleton.elim (↑(⊥_ AddCommGrpCat.{v})) hzero _ _
+      have h := congrArg (fun z => (ConcreteCategory.hom e.inv) z) hab
+      simpa using h
+    · intro hx'
+      exact False.elim (hx hx')
 
 /-- The concrete `j_! \underline{ℤ}_U` example on the real line, with
 `U = (0, ∞)`, has support exactly `U`. -/

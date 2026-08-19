@@ -138,7 +138,37 @@ private def planeYPolynomial : Polynomial (Polynomial ℚ) :=
     Polynomial.C (Polynomial.C (4 : ℚ)) * Polynomial.C planeFirstPolynomial *
       Polynomial.C planeSecondPolynomial
 
-private lemma planeYPolynomial_irreducible : Irreducible planeYPolynomial := by sorry
+private lemma planeYPolynomial_irreducible : Irreducible planeYPolynomial := by
+  have hm : planeYPolynomial.Monic := by
+    have hdeg :
+        (Polynomial.C planeSecondPolynomial : Polynomial (Polynomial ℚ)).degree <
+          (Polynomial.X ^ 2 - Polynomial.C planeFirstPolynomial).degree := by
+      rw [Polynomial.degree_X_pow_sub_C (by norm_num)]
+      exact Polynomial.degree_C_lt.trans (by norm_num)
+    have hinner :
+        (Polynomial.X ^ 2 - Polynomial.C planeFirstPolynomial -
+          Polynomial.C planeSecondPolynomial : Polynomial (Polynomial ℚ)).Monic := by
+      exact (Polynomial.monic_X_pow_sub_C planeFirstPolynomial (by norm_num)).sub_of_left hdeg
+    have hinnerdeg :
+      (Polynomial.X ^ 2 - Polynomial.C planeFirstPolynomial -
+          Polynomial.C planeSecondPolynomial : Polynomial (Polynomial ℚ)).degree = 2 := by
+      rw [Polynomial.degree_sub_eq_left_of_degree_lt hdeg,
+        Polynomial.degree_X_pow_sub_C (by norm_num)]
+      norm_num
+    have hsqdeg :
+        ((Polynomial.X ^ 2 - Polynomial.C planeFirstPolynomial -
+          Polynomial.C planeSecondPolynomial : Polynomial (Polynomial ℚ)) ^ 2).degree = 4 := by
+      rw [Polynomial.degree_pow, hinnerdeg]
+      norm_num
+    apply (hinner.pow 2).sub_of_left
+    rw [hsqdeg, ← Polynomial.C_mul, ← Polynomial.C_mul]
+    exact Polynomial.degree_C_lt.trans (by norm_num)
+  apply hm.irreducible_of_irreducible_map (Polynomial.evalRingHom (0 : ℚ))
+  convert quartic_plus_144_irreducible using 1
+  simp [planeYPolynomial, planeFirstPolynomial, planeSecondPolynomial,
+    Polynomial.coe_evalRingHom, pow_two]
+  ring_nf
+  norm_num [← map_pow, ← Polynomial.C_mul]
 private def sourceBaseRelation : Polynomial ℚ :=
   (Polynomial.X - Polynomial.C (1 : ℚ)) *
     (Polynomial.X - Polynomial.C (2 : ℚ)) *
@@ -149,7 +179,51 @@ private def sourceSPolynomial : Polynomial (Polynomial ℚ) :=
 
 private lemma sourceSPolynomial_isEisenstein :
     sourceSPolynomial.IsEisensteinAt
-      (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))) := by sorry
+      (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [sourceSPolynomial]
+    intro h
+    rw [Ideal.mem_span_singleton] at h
+    exact (Polynomial.monic_X_sub_C (1 : ℚ)).not_dvd_of_natDegree_lt one_ne_zero
+      (by
+        rw [Polynomial.natDegree_X_sub_C]
+        norm_num) h
+  · intro n hn
+    have hn' : n ≤ 1 := by
+      simpa [sourceSPolynomial] using hn
+    replace hn := hn'
+    interval_cases n
+    · simp [sourceSPolynomial, sourceBaseRelation, Ideal.mem_span_singleton]
+      exact ⟨(Polynomial.X - Polynomial.C (2 : ℚ)) *
+          (Polynomial.X - Polynomial.C (3 : ℚ)), by ring⟩
+    · simp [sourceSPolynomial]
+  · intro h
+    have h' : sourceBaseRelation ∈
+        Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ)) ^ 2 := by
+      simpa [sourceSPolynomial] using h
+    rw [Ideal.span_singleton_pow, Ideal.mem_span_singleton] at h'
+    obtain ⟨q, hq⟩ := h'
+    have hcancel :
+        (Polynomial.X - Polynomial.C (2 : ℚ)) *
+            (Polynomial.X - Polynomial.C (3 : ℚ)) =
+          (Polynomial.X - Polynomial.C (1 : ℚ)) * q := by
+      apply mul_left_cancel₀ (Polynomial.X_sub_C_ne_zero (1 : ℚ))
+      calc
+        (Polynomial.X - Polynomial.C (1 : ℚ)) *
+              ((Polynomial.X - Polynomial.C (2 : ℚ)) *
+                (Polynomial.X - Polynomial.C (3 : ℚ))) = sourceBaseRelation := by
+          simp [sourceBaseRelation]
+          ring
+        _ = (Polynomial.X - Polynomial.C (1 : ℚ)) ^ 2 * q := hq
+        _ = (Polynomial.X - Polynomial.C (1 : ℚ)) *
+              ((Polynomial.X - Polynomial.C (1 : ℚ)) * q) := by ring
+    have hroot :
+        Polynomial.IsRoot
+          ((Polynomial.X - Polynomial.C (2 : ℚ)) *
+            (Polynomial.X - Polynomial.C (3 : ℚ))) 1 := by
+      rw [← Polynomial.dvd_iff_isRoot]
+      exact ⟨q, hcancel⟩
+    norm_num [Polynomial.IsRoot] at hroot
 private def sourceBaseRelationMv : MvPolynomial (Fin 2) ℚ :=
   (MvPolynomial.X (1 : Fin 2)) ^ 2 -
     (MvPolynomial.X (0 : Fin 2) - MvPolynomial.C (1 : ℚ)) *
@@ -162,11 +236,70 @@ private def sourceBaseReindex : MvPolynomial (Fin 2) ℚ ≃+* Polynomial (Polyn
       (Polynomial.mapEquiv (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingEquiv)
 
 private lemma sourceBaseReindex_relation :
-    sourceBaseReindex sourceBaseRelationMv = sourceSPolynomial := by sorry
+    sourceBaseReindex sourceBaseRelationMv = sourceSPolynomial := by
+  have hfin :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 1) ℚ))
+        (fun k : Fin 1 => Polynomial.C (MvPolynomial.X k)) (1 : Fin 2)) =
+        Polynomial.C (MvPolynomial.X 0) := by
+    rfl
+  simp [sourceBaseReindex, sourceBaseRelationMv, sourceSPolynomial,
+    RingEquiv.trans_apply, Polynomial.mapEquiv_apply, MvPolynomial.renameEquiv_apply,
+    Equiv.swap_apply_left, Equiv.swap_apply_right, MvPolynomial.finSuccEquiv_apply,
+    hfin, Polynomial.map_C, Polynomial.map_X]
+  rw [← Polynomial.C_1, ← Polynomial.C_sub, ← Polynomial.C_sub, ← Polynomial.C_sub]
+  rw [← Polynomial.C_mul, ← Polynomial.C_mul]
+  simp [sourceBaseRelation]
 private def sourceBaseIdeal : Ideal (MvPolynomial (Fin 2) ℚ) :=
   Ideal.span {sourceBaseRelationMv}
 
-private lemma sourceBaseIdeal_isPrime : sourceBaseIdeal.IsPrime := by sorry
+private lemma sourceBaseIdeal_isPrime : sourceBaseIdeal.IsPrime := by
+  have hspan :
+      (Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))).IsPrime := by
+    have hbase :
+        (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))).IsPrime :=
+      Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (1 : ℚ))
+    have hmonic : sourceSPolynomial.Monic := by
+      simpa [sourceSPolynomial] using
+        (Polynomial.monic_X_pow_sub_C sourceBaseRelation (by norm_num))
+    have hirr : Irreducible sourceSPolynomial :=
+      sourceSPolynomial_isEisenstein.irreducible hbase hmonic.isPrimitive (by
+        simp [sourceSPolynomial])
+    exact Ideal.isPrime_span_singleton_of_prime
+      (UniqueFactorizationMonoid.irreducible_iff_prime.mp hirr)
+  have hcomap :
+      (Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))).comap
+          (sourceBaseReindex : MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ)) =
+        sourceBaseIdeal := by
+    have heinv : sourceBaseReindex.symm sourceSPolynomial = sourceBaseRelationMv := by
+      rw [← sourceBaseReindex_relation]
+      simp
+    ext z
+    rw [Ideal.mem_comap, Ideal.mem_span_singleton, sourceBaseIdeal,
+      Ideal.mem_span_singleton]
+    constructor
+    · rintro ⟨q, hq⟩
+      refine ⟨sourceBaseReindex.symm q, ?_⟩
+      calc
+        z = sourceBaseReindex.symm (sourceBaseReindex z) := by simp
+        _ = sourceBaseReindex.symm (sourceSPolynomial * q) :=
+          congrArg (fun p => sourceBaseReindex.symm p) hq
+        _ = sourceBaseReindex.symm sourceSPolynomial * sourceBaseReindex.symm q := by
+          rw [map_mul]
+        _ = sourceBaseRelationMv * sourceBaseReindex.symm q := by rw [heinv]
+    · rintro ⟨q, hq⟩
+      refine ⟨sourceBaseReindex q, ?_⟩
+      calc
+        sourceBaseReindex z = sourceBaseReindex (sourceBaseRelationMv * q) := by rw [hq]
+        _ = sourceBaseReindex sourceBaseRelationMv * sourceBaseReindex q := by rw [map_mul]
+        _ = sourceSPolynomial * sourceBaseReindex q := by rw [sourceBaseReindex_relation]
+  have hprime :
+      ((Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))).comap
+        (sourceBaseReindex : MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ))).IsPrime :=
+    Ideal.comap_isPrime
+      (f := (sourceBaseReindex : MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ)))
+      (K := Ideal.span {sourceSPolynomial}) (H := hspan)
+  rw [hcomap] at hprime
+  exact hprime
 private lemma monic_span_isPrime_of_map_isPrime
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Function.Injective f) (g : Polynomial R) (hg : g.Monic)

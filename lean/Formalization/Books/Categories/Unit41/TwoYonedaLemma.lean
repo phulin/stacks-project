@@ -1424,7 +1424,191 @@ theorem twoYonedaAssociatedFunctorMap_map_comp
     twoYonedaAssociatedFunctorMap p (f ≫ g) =
       twoYonedaAssociatedFunctorMap p f ≫
         twoYonedaAssociatedFunctorMap p g := by
-  sorry
+  let uX : Over X.base := Over.mk (𝟙 X.base)
+  let kf : (Over.map f.base).obj uX ⟶ Over.mk (𝟙 Y.base) :=
+    Over.homMk (X := Y.base)
+      (U := (Over.map f.base).obj uX)
+      (V := Over.mk (𝟙 Y.base)) f.base (by simp [uX])
+  let kg : (Over.map g.base).obj (Over.mk (𝟙 Y.base)) ⟶ Over.mk (𝟙 Z.base) :=
+    Over.homMk (X := Z.base)
+      (U := (Over.map g.base).obj (Over.mk (𝟙 Y.base)))
+      (V := Over.mk (𝟙 Z.base)) g.base (by simp)
+  let kfg : (Over.map (f.base ≫ g.base)).obj uX ⟶ Over.mk (𝟙 Z.base) :=
+    Over.homMk (X := Z.base)
+      (U := (Over.map (f.base ≫ g.base)).obj uX)
+      (V := Over.mk (𝟙 Z.base)) (f.base ≫ g.base) (by simp [uX])
+  let hOver : Over.map (f.base ≫ g.base) =
+      Over.map f.base ⋙ Over.map g.base :=
+    Over.mapComp_eq f.base g.base
+  let hAB :
+      (Over.map f.base ⋙ Over.map g.base).obj uX =
+        (Over.map (f.base ≫ g.base)).obj uX :=
+    congrArg (fun F => F.obj uX) hOver.symm
+  let kcomp :
+      (Over.map f.base ⋙ Over.map g.base).obj uX ⟶ Over.mk (𝟙 Z.base) :=
+    (Over.map g.base).map kf ≫ kg
+  have hkcomp : kcomp = eqToHom hAB ≫ kfg := by
+    ext
+    simp [kcomp, kfg, hAB, hOver, kf, kg, uX]
+  have hmapcomp :
+      (Z.fiber.1).map (eqToHom hAB) ≫ (Z.fiber.1).map kfg =
+        (Z.fiber.1).map (eqToHom hAB ≫ kfg) :=
+    (Z.fiber.1).map_comp _ _ |>.symm
+  let Q := groupoidPresheafToCat (twoYonedaHomPresheaf p)
+  let e : Q.map (f.base ≫ g.base).op =
+      Q.map g.base.op ≫ Q.map f.base.op :=
+    Q.map_comp g.base.op f.base.op
+  let zf : Q.obj (Opposite.op Z.base) := Z.fiber
+  let h := congrArg (fun F => F.toFunctor.obj zf) e.symm
+  have hEqHomQ : ∀ {A B : Q.obj (Opposite.op X.base)} (h' : A = B),
+      (eqToHom h').1.app uX =
+        eqToHom (congrArg (fun T => T.1.obj uX) h') := by
+    intro A B h'
+    cases h'
+    rfl
+  have hmap_eqToHom : ∀ {A B : Over Z.base} (h' : A = B),
+      (Z.fiber.1).map (eqToHom h') =
+        eqToHom (congrArg (fun T => Z.fiber.1.obj T) h') := by
+    intro A B h'
+    cases h'
+    simp
+  have heq :
+      (eqToIso e).inv.toNatTrans.app zf =
+        eqToHom h := by
+    change (eqToHom e.symm).toNatTrans.app zf = _
+    exact CategoryTheory.Cat.eqToHom_app _ _ _ _
+  have hc :
+      (((splitFibredPseudofunctor
+        (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapComp
+          g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber).1.app uX =
+        (Z.fiber.1).map (eqToHom hAB) := by
+    have heq' := heq
+    dsimp [Q, zf] at heq'
+    rw [CategoryTheory.Functor.toPseudofunctor'_mapComp]
+    change ((eqToHom e.symm).toNatTrans.app Z.fiber).1.app uX =
+      (Z.fiber.1).map (eqToHom hAB)
+    rw [heq']
+    rw [hEqHomQ]
+    rw [hmap_eqToHom]
+    congr 1
+  dsimp [twoYonedaAssociatedFunctorMap,
+    twoYonedaEvaluationCore,
+    twoYonedaEvaluationCoreMap,
+    Functor.Fiber.fiberInclusion]
+  rw [groupoidPresheaf_comp_fiber]
+  dsimp
+  change
+    (f.fiber.1.app (Over.mk (𝟙 X.base)) ≫
+        (((splitFibredPseudofunctor
+          (groupoidPresheafToCat (twoYonedaHomPresheaf p))).map
+            f.base.op.toLoc).toFunctor.map g.fiber).1.app
+          (Over.mk (𝟙 X.base)) ≫
+        (((splitFibredPseudofunctor
+          (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapComp
+            g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber).1.app
+          (Over.mk (𝟙 X.base))) ≫
+      (Z.fiber.1).map kfg = _
+  have hrestr :
+      (((splitFibredPseudofunctor
+        (groupoidPresheafToCat (twoYonedaHomPresheaf p))).map
+          f.base.op.toLoc).toFunctor.map g.fiber).1.app
+        (Over.mk (𝟙 X.base)) =
+      g.fiber.1.app ((Over.map f.base).obj (Over.mk (𝟙 X.base))) := by
+    rfl
+  rw [hrestr]
+  have hnat :
+      (Y.fiber.1).map kf ≫ g.fiber.1.app (Over.mk (𝟙 Y.base)) =
+        g.fiber.1.app ((Over.map f.base).obj uX) ≫
+          (Z.fiber.1).map ((Over.map g.base).map kf) := by
+    change (Y.fiber.1).map kf ≫ g.fiber.1.app (Over.mk (𝟙 Y.base)) =
+      g.fiber.1.app ((Over.map f.base).obj uX) ≫
+        (((twoYonedaGroupoidRestriction p g.base).obj Z.fiber).1).map kf
+    exact g.fiber.1.naturality kf
+  calc
+    _ = ((f.fiber.1.app uX ≫
+        g.fiber.1.app ((Over.map f.base).obj uX)) ≫
+          ((Z.fiber.1).map (eqToHom hAB) ≫
+            (Z.fiber.1).map kfg)) := by
+      have hcu :
+          (((splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapComp
+              g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber).1.app
+            (Over.mk (𝟙 X.base)) =
+          (Z.fiber.1).map (eqToHom hAB) := by
+        simpa [uX] using hc
+      rw [hcu]
+      exact Eq.trans
+        (congrArg
+          (fun t => t ≫ (Z.fiber.1).map kfg)
+          (Category.assoc
+            (f.fiber.1.app uX)
+            (g.fiber.1.app ((Over.map f.base).obj uX))
+            ((Z.fiber.1).map (eqToHom hAB))).symm)
+        (Category.assoc
+          (f.fiber.1.app uX ≫
+            g.fiber.1.app ((Over.map f.base).obj uX))
+          ((Z.fiber.1).map (eqToHom hAB))
+          ((Z.fiber.1).map kfg))
+    _ = (f.fiber.1.app uX ≫
+        g.fiber.1.app ((Over.map f.base).obj uX)) ≫
+          (Z.fiber.1).map kcomp := by
+      have hh := congrArg
+        (fun t => (f.fiber.1.app uX ≫
+          g.fiber.1.app ((Over.map f.base).obj uX)) ≫ t) hmapcomp
+      rw [← hkcomp] at hh
+      exact hh
+    _ = ((f.fiber.1.app uX ≫ (Y.fiber.1).map kf) ≫
+        g.fiber.1.app (Over.mk (𝟙 Y.base))) ≫
+          (Z.fiber.1).map kg := by
+      dsimp [kcomp]
+      rw [Functor.map_comp]
+      calc
+        _ = f.fiber.1.app uX ≫
+            (g.fiber.1.app ((Over.map f.base).obj uX) ≫
+              ((Z.fiber.1).map ((Over.map g.base).map kf) ≫
+                (Z.fiber.1).map kg)) :=
+          Category.assoc _ _ _
+        _ = f.fiber.1.app uX ≫
+            ((g.fiber.1.app ((Over.map f.base).obj uX) ≫
+              (Z.fiber.1).map ((Over.map g.base).map kf)) ≫
+                (Z.fiber.1).map kg) := by
+          exact congrArg (fun t => f.fiber.1.app uX ≫ t)
+            (Category.assoc _ _ _).symm
+        _ = f.fiber.1.app uX ≫
+            (((Y.fiber.1).map kf ≫
+              g.fiber.1.app (Over.mk (𝟙 Y.base))) ≫
+                (Z.fiber.1).map kg) := by
+          exact congrArg
+            (fun t => f.fiber.1.app uX ≫ (t ≫ (Z.fiber.1).map kg))
+            hnat.symm
+        _ = f.fiber.1.app uX ≫
+            ((Y.fiber.1).map kf ≫
+              (g.fiber.1.app (Over.mk (𝟙 Y.base)) ≫
+                (Z.fiber.1).map kg)) := by
+          exact congrArg (fun t => f.fiber.1.app uX ≫ t)
+            (Category.assoc _ _ _)
+        _ = ((f.fiber.1.app uX ≫ (Y.fiber.1).map kf) ≫
+            g.fiber.1.app (Over.mk (𝟙 Y.base))) ≫
+              (Z.fiber.1).map kg := by
+          exact Eq.trans
+            (Category.assoc
+              (f.fiber.1.app uX)
+              ((Y.fiber.1).map kf)
+              (g.fiber.1.app (Over.mk (𝟙 Y.base)) ≫
+                (Z.fiber.1).map kg)).symm
+            (Category.assoc
+              (f.fiber.1.app uX ≫ (Y.fiber.1).map kf)
+              (g.fiber.1.app (Over.mk (𝟙 Y.base)))
+              ((Z.fiber.1).map kg)).symm
+    _ = _ := by
+      change
+        (((f.fiber.1.app uX ≫ (Y.fiber.1).map kf) ≫
+          g.fiber.1.app (Over.mk (𝟙 Y.base))) ≫
+            (Z.fiber.1).map kg) =
+          (f.fiber.1.app uX ≫ (Y.fiber.1).map kf) ≫
+            (g.fiber.1.app (Over.mk (𝟙 Y.base)) ≫
+              (Z.fiber.1).map kg)
+      exact Category.assoc _ _ _
 
 def twoYonedaAssociatedFunctor
     {C : Type uC} [Category.{vC} C]
@@ -1446,7 +1630,29 @@ private theorem twoYonedaAssociatedFunctorMap_isHomLift
     (p : S ⥤ C) [p.IsFibredInGroupoids]
     {X Y : twoYonedaAssociatedCategory p} (f : X ⟶ Y) :
     p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) := by
-  sorry
+  let k : (Over.map f.base).obj (Over.mk (𝟙 X.base)) ⟶ Over.mk (𝟙 Y.base) :=
+    Over.homMk f.base (by simp)
+  have hkdom : p.obj (Y.fiber.1.obj ((Over.map f.base).obj (Over.mk (𝟙 X.base)))) = X.base := by
+    simpa using congrArg
+      (fun F => F.obj ((Over.map f.base).obj (Over.mk (𝟙 X.base)))) Y.fiber.2
+  have hkcod : p.obj (Y.fiber.1.obj (Over.mk (𝟙 Y.base))) = Y.base := by
+    simpa using congrArg (fun F => F.obj (Over.mk (𝟙 Y.base))) Y.fiber.2
+  have hmap := Functor.congr_hom Y.fiber.2 k
+  have hψ : p.IsHomLift f.base (Y.fiber.1.map k) := by
+    apply IsHomLift.of_fac' p f.base (Y.fiber.1.map k) hkdom hkcod
+    simpa [k, Functor.comp_map] using hmap
+  have hφ : p.IsHomLift (𝟙 X.base)
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaEvaluationCore p X.base).map f.fiber)) :=
+    ((twoYonedaEvaluationCore p X.base).map f.fiber).2
+  have hcomp := @CategoryTheory.IsHomLift.comp _ _ _ _ p _ _ _ _ _ _
+    (𝟙 X.base) f.base
+    (Functor.Fiber.fiberInclusion.map
+      ((twoYonedaEvaluationCore p X.base).map f.fiber))
+    (Y.fiber.1.map k) hφ hψ
+  change p.IsHomLift (𝟙 X.base ≫ f.base)
+    (twoYonedaAssociatedFunctorMap p f) at hcomp
+  simpa only [Category.id_comp] using hcomp
 
 /-- The associated evaluation functor is over the base. -/
 theorem twoYonedaAssociatedFunctor_over
@@ -1455,7 +1661,16 @@ theorem twoYonedaAssociatedFunctor_over
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     twoYonedaAssociatedFunctor p ⋙ p =
       twoYonedaAssociatedProjection p := by
-  sorry
+  apply Functor.hext
+  · intro X
+    exact twoYonedaEvaluationCore_obj_isFiber p X.base X.fiber
+  · intros X Y f
+    let hx := twoYonedaEvaluationCore_obj_isFiber p X.base X.fiber
+    let hy := twoYonedaEvaluationCore_obj_isFiber p Y.base Y.fiber
+    let _ : p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) :=
+      twoYonedaAssociatedFunctorMap_isHomLift p f
+    exact (conj_eqToHom_iff_heq _ _ hx hy).1
+      (CategoryTheory.IsHomLift.fac' p f.base (twoYonedaAssociatedFunctorMap p f))
 
 /- The source identifies the fiber of the associated construction with the
    chosen value of the presheaf.  In the CoGrothendieck construction this is
@@ -1481,7 +1696,145 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedFunctor p).IsEquivalence := by
-  sorry
+  let hOver := twoYonedaAssociatedFunctor_over p
+  apply (fibredInGroupoids_equivalence_iff_fibrewise
+    (twoYonedaAssociatedProjection p) p (twoYonedaAssociatedFunctor p)
+    hOver
+    (twoYonedaAssociatedProjection_isFibredInGroupoids p)
+    (inferInstance : p.IsFibredInGroupoids)).2
+  intro U
+  let j := Functor.Fiber.inducedFunctor
+    (Pseudofunctor.CoGrothendieck.comp_const
+      (splitFibredPseudofunctor
+        (groupoidPresheafToCat (twoYonedaHomPresheaf p))) U)
+  let F := fibreFunctor
+    (twoYonedaAssociatedProjection p) p (twoYonedaAssociatedFunctor p)
+    hOver U
+  have hcomp : j ⋙ F = twoYonedaAssociatedFiberFunctor p U := by
+    let e' :
+        (splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).map
+            (𝟙 { as := op U }) =
+          𝟙 ((splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).obj
+            { as := op U }) := by
+      change (groupoidPresheafToCat (twoYonedaHomPresheaf p)).map
+          (𝟙 (op U)) = _
+      exact (groupoidPresheafToCat (twoYonedaHomPresheaf p)).map_id _
+    let hmapId :
+        (splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
+            { as := op U } = eqToIso e' := by
+      rw [CategoryTheory.Functor.toPseudofunctor'_mapId]
+      congr 1
+    apply Functor.hext
+    · intro G
+      rfl
+    · intros G H φ
+      apply heq_of_eq
+      apply Functor.Fiber.hom_ext
+      let A : Over U :=
+        (Over.map (𝟙 U)).obj (Over.mk (𝟙 U))
+      let B : Over U := Over.mk (𝟙 U)
+      let k : A ⟶ B := Over.homMk (𝟙 U) (by simp [A, B])
+      have hA : A = B := by
+        dsimp [A, B]
+        exact congrArg (fun F => F.obj (Over.mk (𝟙 U)))
+          (Over.mapId_eq U)
+      have hk : k = eqToHom hA := by
+        dsimp [k]
+        ext
+        simp [A, B]
+      let hobj : H =
+          (twoYonedaGroupoidRestriction p (𝟙 U)).obj H :=
+        congrArg (fun z => z.toFunctor.obj H) e'.symm
+      have hmap_eqToHom : ∀ {A B : Over U} (h : A = B),
+          H.1.map (eqToHom h) =
+            eqToHom (congrArg (fun T => H.1.obj T) h) := by
+        intro A B h
+        cases h
+        simp
+      have hm := CategoryTheory.eqToHom_map
+        (Functor.Fiber.fiberInclusion :
+          twoYonedaGroupoidMorphismCategory p U ⥤ (Over U ⥤ S)) hobj
+      have hfirst :
+          ((eqToHom e'.symm).toNatTrans.app H).1.app
+              (Over.mk (𝟙 U)) =
+            (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+              (Over.mk (𝟙 U)) := by
+        rw [CategoryTheory.Cat.eqToHom_app]
+        dsimp [Functor.Fiber.fiberInclusion]
+        change
+          (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+              (Over.mk (𝟙 U)) =
+            (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+              (Over.mk (𝟙 U))
+        rfl
+      have hcorr :
+          ((splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
+              { as := op U }).inv.toNatTrans.app H |>.1.app
+                (Over.mk (𝟙 U)) =
+            ((eqToHom e'.symm).toNatTrans.app H).1.app
+              (Over.mk (𝟙 U)) := by
+        simpa only [hmapId, CategoryTheory.eqToIso.inv]
+      have hcancel :
+          ((splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
+              { as := op U }).inv.toNatTrans.app H |>.1.app
+                (Over.mk (𝟙 U)) ≫ H.1.map k =
+            𝟙 (H.1.obj (Over.mk (𝟙 U))) := by
+        rw [hcorr, hfirst, hm]
+        rw [CategoryTheory.eqToHom_app]
+        rw [hk, hmap_eqToHom]
+        have h1 : H.1.obj (Over.mk (𝟙 U)) =
+            ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1.obj
+              (Over.mk (𝟙 U)) := by
+          exact congrArg (fun G => G.1.obj (Over.mk (𝟙 U))) hobj
+        have h2 : ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1.obj
+              (Over.mk (𝟙 U)) = H.1.obj (Over.mk (𝟙 U)) := by
+          exact congrArg (fun T => H.1.obj T) hA
+        change eqToHom h1 ≫ eqToHom h2 = 𝟙 _
+        rw [CategoryTheory.eqToHom_trans]
+        have hproof : h1.trans h2 = (rfl : _) :=
+          Subsingleton.elim _ _
+        rw [hproof]
+        simp
+      simp [j, F, fibreFunctor, twoYonedaAssociatedFiberFunctor,
+        twoYonedaAssociatedFunctor, twoYonedaAssociatedFunctorMap,
+        Functor.Fiber.fiberInclusion,
+        twoYonedaEvaluationCore, twoYonedaEvaluationCoreMap,
+        e']
+      simp [Functor.Fiber.inducedFunctor]
+      have hcomp_app : ∀ {G H K :
+          (splitFibredPseudofunctor
+            (groupoidPresheafToCat (twoYonedaHomPresheaf p))).obj
+            { as := op U }}
+          (α : G ⟶ H) (β : H ⟶ K),
+          (α ≫ β).1.app (Over.mk (𝟙 U)) =
+            α.1.app (Over.mk (𝟙 U)) ≫ β.1.app (Over.mk (𝟙 U)) := by
+        intro G H K α β
+        rfl
+      simp [Pseudofunctor.CoGrothendieck.ι, e', hcomp_app]
+      have hcancel' := congrArg
+        (fun t => φ.1.app (Over.mk (𝟙 U)) ≫ t) hcancel
+      have hcancel'' :
+          φ.1.app (Over.mk (𝟙 U)) ≫
+              (((splitFibredPseudofunctor
+                (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
+                  { as := op U }).inv.toNatTrans.app H |>.1.app
+                (Over.mk (𝟙 U))) ≫ H.1.map k =
+            φ.1.app (Over.mk (𝟙 U)) := by
+        simpa only [Category.assoc, Category.comp_id] using hcancel'
+      apply Eq.trans ?_ hcancel''
+      simp [k]
+      exact Category.assoc _ _ _
+  have hF : (j ⋙ F).IsEquivalence := by
+    rw [hcomp]
+    exact twoYonedaAssociatedFiberFunctor_isEquivalence p U
+  let _ : j.IsEquivalence := inferInstance
+  let _ : (j ⋙ F).IsEquivalence := hF
+  exact Functor.isEquivalence_of_comp_left j F
 
 /- The source's final appeal to the equivalence lemma is an equivalence in
    the 2-category of categories fibred in groupoids, not only an equivalence

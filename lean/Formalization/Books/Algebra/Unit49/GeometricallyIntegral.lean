@@ -83,9 +83,9 @@ def IsGeometricallyIntegral (k : Type u) (S : Type v) [Field k] [CommRing S]
 private theorem isDomain_tensorProduct_of_isGeometricallyIntegral
     {k : Type u} {S : Type v} {K : Type z}
     [Field k] [CommRing S] [Field K] [Algebra k S] [Algebra k K]
-    (h : IsGeometricallyIntegral.{u, v, w} k S) :
+    (h : IsGeometricallyIntegral.{u, v, z} k S) :
     IsDomain (K ⊗[k] S) := by
-  let K' := ULift.{w, z} K
+  let K' := ULift.{z} K
   let : Field K' := inferInstance
   let : Algebra k K' := inferInstance
   let : IsDomain (K' ⊗[k] S) := by sorry
@@ -97,9 +97,9 @@ private theorem isDomain_tensorProduct_of_isGeometricallyIntegral
 private theorem isReduced_tensorProduct_of_isGeometricallyIntegral
     {k : Type u} {S : Type v} {K : Type z}
     [Field k] [CommRing S] [Field K] [Algebra k S] [Algebra k K]
-    (h : IsGeometricallyIntegral.{u, v, w} k S) :
+    (h : IsGeometricallyIntegral.{u, v, z} k S) :
     IsReduced (K ⊗[k] S) := by
-  let K' := ULift.{w, z} K
+  let K' := ULift.{z} K
   let : Field K' := inferInstance
   let : Algebra k K' := inferInstance
   let : IsDomain (K' ⊗[k] S) := by sorry
@@ -112,8 +112,8 @@ private theorem isReduced_tensorProduct_of_isGeometricallyIntegral
 with geometric reducedness. -/
 theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyReduced
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
-    IsGeometricallyIntegral k S ↔
-      IsGeometricallyIrreducible k S ∧ IsGeometricallyReduced k S := by
+    IsGeometricallyIntegral.{u, v, u} k S ↔
+      IsGeometricallyIrreducible.{u, v, u} k S ∧ IsGeometricallyReduced k S := by
   constructor
   · intro h
     constructor
@@ -139,7 +139,7 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
 after passage to an algebraic closure. -/
 theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
-    (IsGeometricallyIntegral k S ↔
+    (IsGeometricallyIntegral.{u, v, u} k S ↔
       ∀ (k' : Type u) [Field k'] [Algebra k k']
         [FiniteDimensional k k'],
         IsDomain (k' ⊗[k] S)) ∧
@@ -154,7 +154,7 @@ theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
 theorem isGeometricallyIntegral_any_integral_base_change
     {k : Type u} {S : Type v} {R : Type w}
     [Field k] [CommRing S] [CommRing R] [Algebra k S] [Algebra k R]
-    [IsDomain R] (hS : IsGeometricallyIntegral k S) :
+    [IsDomain R] (hS : IsGeometricallyIntegral.{u, v, u} k S) :
     IsDomain (R ⊗[k] S) := by
   sorry
 

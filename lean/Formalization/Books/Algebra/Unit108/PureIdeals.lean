@@ -753,19 +753,19 @@ theorem finite_flat_module_finiteLocallyFree_characterization
     have hZI : PrimeSpectrum.zeroLocus (I : Set R) = Z := by
       exact congrArg Subtype.val hIZ
     let M₀ := R ⧸ I
-    letI : Module.Finite R M₀ :=
+    let : Module.Finite R M₀ :=
       Module.Finite.of_surjective (Submodule.mkQ I) (Submodule.mkQ_surjective I)
-    letI : Module.Flat R M₀ := hIpure
-    letI : Module.Finite R (ULift.{v} M₀) :=
+    let : Module.Flat R M₀ := hIpure
+    let : Module.Finite R (ULift.{v} M₀) :=
       Module.Finite.equiv (ULift.moduleEquiv (R := R) (M := M₀)).symm
-    letI : Module.Flat R (ULift.{v} M₀) :=
+    let : Module.Flat R (ULift.{v} M₀) :=
       Module.Flat.of_linearEquiv (ULift.moduleEquiv (R := R) (M := M₀))
     have hflf :
         Formalization.Books.Algebra.Unit78.FiniteLocallyFree R (ULift.{v} M₀) :=
       hM (ULift.{v} M₀) inferInstance inferInstance
-    letI : Module.FinitePresentation R (ULift.{v} M₀) :=
+    let : Module.FinitePresentation R (ULift.{v} M₀) :=
       Formalization.Books.Algebra.Unit78.finitePresentation_of_finiteLocallyFree hflf
-    letI : Module.FinitePresentation R M₀ :=
+    let : Module.FinitePresentation R M₀ :=
       Module.FinitePresentation.of_equiv
         (ULift.moduleEquiv (R := R) (M := M₀))
     have hFGker : (LinearMap.ker (Submodule.mkQ I)).FG :=

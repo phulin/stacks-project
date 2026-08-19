@@ -106,7 +106,146 @@ theorem adicCompletion_is_powerQuotientLimit {A : Type u} [CommRing A]
     Nonempty
       (adicCompletionRing A I ≃+*
         ((limit (adicQuotientSystem A I) : CommRingCat.{u}) : Type u)) := by
-  sorry
+  let F := adicQuotientSystem A I
+  have heval : ∀ {m n : ℕ} (hmn : m ≤ n)
+      (x : AdicCompletion I A),
+      Ideal.Quotient.factorPow I hmn (AdicCompletion.evalₐ I n x) =
+        AdicCompletion.evalₐ I m x := by
+    intro m n hmn x
+    let hn : (I ^ n • ⊤ : Submodule A A) ≤ I ^ n :=
+      le_of_eq (Ideal.mul_top _)
+    let hm : (I ^ m • ⊤ : Submodule A A) ≤ I ^ m :=
+      le_of_eq (Ideal.mul_top _)
+    have hfac : ∀ (y : A ⧸ (I ^ n • ⊤ : Submodule A A)),
+        Ideal.Quotient.factorPow I hmn (Submodule.factor hn y) =
+          Submodule.factor hm (AdicCompletion.transitionMap I A hmn y) := by
+      intro y
+      induction y using Quotient.inductionOn' with
+      | _ a => rfl
+    rw [← AdicCompletion.factor_eval_eq_evalₐ I x hn]
+    rw [← AdicCompletion.factor_eval_eq_evalₐ I x hm]
+    rw [hfac]
+    exact congrArg (fun z => Submodule.factor hm z)
+      (AdicCompletion.transitionMap_comp_eval_apply I A hmn x)
+  let c : Cone F :=
+    { pt := CommRingCat.of (AdicCompletion I A)
+      π :=
+        { app := fun i =>
+            CommRingCat.ofHom
+              (AdicCompletion.evalₐ I (i.unop : ℕ)).toRingHom
+          naturality := by
+            intro i j f
+            apply CommRingCat.hom_ext
+            apply RingHom.ext
+            intro x
+            have hmn : (j.unop : ℕ) ≤ (i.unop : ℕ) := by
+              exact (PNat.coe_le_coe _ _).mpr (CategoryTheory.le_of_op_hom f)
+            change AdicCompletion.evalₐ I (j.unop : ℕ) x =
+              powerQuotientTransition I (CategoryTheory.le_of_op_hom f)
+                (AdicCompletion.evalₐ I (i.unop : ℕ) x)
+            simpa [powerQuotientTransition] using (heval hmn x).symm }
+      }
+  let φ : AdicCompletion I A →+*
+      ((limit F : CommRingCat) : Type u) :=
+    (limit.lift F c).hom
+  let pos : ℕ → ℕ+ := fun n => ⟨n + 1, Nat.succ_pos n⟩
+  let g : ∀ n : ℕ,
+      ((limit F : CommRingCat) : Type u) →+* A ⧸ I ^ n := fun n =>
+    (Ideal.Quotient.factorPow I (Nat.le_succ n)).comp
+      (limit.π F (Opposite.op (pos n))).hom
+  have hg : ∀ {m n : ℕ} (hmn : m ≤ n),
+      (Ideal.Quotient.factorPow I hmn).comp (g n) = g m := by
+    intro m n hmn
+    apply RingHom.ext
+    intro x
+    have hpos : pos m ≤ pos n := by
+      change m + 1 ≤ n + 1
+      exact Nat.succ_le_succ hmn
+    have hlim := limit.w F (CategoryTheory.homOfLE hpos).op
+    have hlim' := congrArg (fun q => q.hom x) hlim
+    change
+      Ideal.Quotient.factorPow I hmn
+          (Ideal.Quotient.factorPow I (Nat.le_succ n)
+            ((limit.π F (Opposite.op (pos n))).hom x)) =
+        Ideal.Quotient.factorPow I (Nat.le_succ m)
+          ((limit.π F (Opposite.op (pos m))).hom x)
+    change powerQuotientTransition I hpos
+        ((limit.π F (Opposite.op (pos n))).hom x) =
+      (limit.π F (Opposite.op (pos m))).hom x at hlim'
+    rw [← hlim']
+    obtain ⟨a, ha⟩ :=
+      Ideal.Quotient.mk_surjective
+        ((limit.π F (Opposite.op (pos n))).hom x)
+    rw [← ha]
+    rfl
+  let ψ : ((limit F : CommRingCat) : Type u) →+* AdicCompletion I A :=
+    AdicCompletion.liftRingHom I g hg
+  have hφ : ∀ (n : ℕ) (x : AdicCompletion I A),
+      (limit.π F (Opposite.op (pos n))).hom (φ x) =
+        AdicCompletion.evalₐ I (n + 1) x := by
+    intro n x
+    have hπ := limit.lift_π c (Opposite.op (pos n))
+    have hπ' := congrArg (fun q => q.hom x) hπ
+    change (limit.π F (Opposite.op (pos n))).hom (φ x) =
+      AdicCompletion.evalₐ I (n + 1) x
+    exact hπ'
+  have hψφ : ψ.comp φ = RingHom.id _ := by
+    apply RingHom.ext
+    intro x
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    change AdicCompletion.evalₐ I n (ψ (φ x)) =
+      AdicCompletion.evalₐ I n x
+    rw [AdicCompletion.evalₐ_liftRingHom]
+    change Ideal.Quotient.factorPow I (Nat.le_succ n)
+        ((limit.π F (Opposite.op (pos n))).hom (φ x)) =
+      AdicCompletion.evalₐ I n x
+    rw [hφ n x]
+    exact heval (Nat.le_succ n) x
+  have hφψ : φ.comp ψ = RingHom.id _ := by
+    have hD : IsLimit ((forget CommRingCat).mapCone (limit.cone F)) :=
+      isLimitOfPreserves (forget CommRingCat) (limit.isLimit F)
+    apply RingHom.ext
+    intro x
+    apply (Types.isLimitEquivSections hD).injective
+    ext i
+    cases i with
+    | op i =>
+      have hstep : i ≤ pos (i : ℕ) := by
+        change (i : ℕ) ≤ (i : ℕ) + 1
+        exact Nat.le_succ _
+      have hπ := congrArg (fun q => q.hom (ψ x))
+        (limit.lift_π c (Opposite.op i))
+      have hlim := limit.w F (CategoryTheory.homOfLE hstep).op
+      have hlim' := congrArg (fun q => q.hom x) hlim
+      change
+        (limit.π F (Opposite.op i)).hom (φ (ψ x)) =
+          AdicCompletion.evalₐ I (i : ℕ) (ψ x) at hπ
+      change
+        (limit.π F (Opposite.op i)).hom (φ (ψ x)) =
+          (limit.π F (Opposite.op i)).hom x
+      rw [hπ]
+      rw [AdicCompletion.evalₐ_liftRingHom]
+      change
+        Ideal.Quotient.factorPow I (Nat.le_succ (i : ℕ))
+            ((limit.π F (Opposite.op (pos (i : ℕ)))).hom x) =
+          (limit.π F (Opposite.op i)).hom x
+      change
+        powerQuotientTransition I hstep
+            ((limit.π F (Opposite.op (pos (i : ℕ)))).hom x) =
+          (limit.π F (Opposite.op i)).hom x
+      exact hlim'
+  refine ⟨RingEquiv.ofBijective φ ?_⟩
+  refine ⟨?_, ?_⟩
+  · intro x y hxy
+    calc
+      x = (ψ.comp φ) x := by rw [hψφ]; rfl
+      _ = (ψ.comp φ) y := congrArg ψ hxy
+      _ = y := by rw [hψφ]; rfl
+  · intro y
+    exact ⟨ψ y, by
+      simpa only [RingHom.comp_apply, RingHom.id_apply] using
+        congrArg (fun q => q y) hφψ⟩
 
 /-- The image of `I^n` in `A_{n+1}`. -/
 def adicStagePowerIdeal {A : Type u} [CommRing A] (I : Ideal A) (n : ℕ+) :
@@ -178,7 +317,25 @@ theorem adicSystemTransition_is_algebraMap {A : Type u} [CommRing A]
     (adicSystemTransition I X (PNat.lt_add_right n 1).le).comp
         (X.hom.app (Opposite.op (n + 1))).hom =
       adicSystemLowerStageScalarMap I X n := by
-  sorry
+  apply RingHom.ext
+  intro x
+  have h := congrArg
+    (fun q : ((adicQuotientSystem A I).obj (Opposite.op (n + 1)) ⟶
+      X.right.obj (Opposite.op n)) => q.hom x)
+    (X.hom.naturality (CategoryTheory.homOfLE (PNat.lt_add_right n 1).le).op)
+  change
+    (X.hom.app (Opposite.op n)).hom
+        (powerQuotientTransition I
+          (m := n + 1) (n := n) (PNat.lt_add_right n 1).le x) =
+      (X.right.map (CategoryTheory.homOfLE (PNat.lt_add_right n 1).le).op).hom
+        ((X.hom.app (Opposite.op (n + 1))).hom x) at h
+  change
+    (X.right.map (CategoryTheory.homOfLE (PNat.lt_add_right n 1).le).op).hom
+        ((X.hom.app (Opposite.op (n + 1))).hom x) =
+      (X.hom.app (Opposite.op n)).hom
+        (powerQuotientTransition I
+          (m := n + 1) (n := n) (PNat.lt_add_right n 1).le x)
+  exact h.symm
 
 /-! ## The category `𝓒'` of complete algebras -/
 
@@ -237,7 +394,8 @@ theorem cprimeBaseIdeal_le {A : Type u} [CommRing A] (I : Ideal A)
     (B : CommAlgCat A) (n : ℕ+) :
     I ^ (n : ℕ) ≤
       ((cprimeIdeal I B) ^ (n : ℕ)).comap (algebraMap A B) := by
-  sorry
+  rw [cprimeIdeal, ← Ideal.map_pow]
+  exact Ideal.le_comap_map
 
 /-- The stagewise quotient map from `A_n` to `B/(IB)^n`. -/
 def cprimeBaseComponent {A : Type u} [CommRing A] (I : Ideal A)
@@ -247,11 +405,264 @@ def cprimeBaseComponent {A : Type u} [CommRing A] (I : Ideal A)
     ((cprimeIdeal I B) ^ (n : ℕ)) (algebraMap A B)
     (cprimeBaseIdeal_le I B n)
 
+private theorem finiteType_of_finiteType_quotient
+    {R S : Type*} [CommRing R] [CommRing S]
+    (f : R →+* S) (K : Ideal R) (hK : IsNilpotent K) :
+    RingHom.FiniteType
+        (Ideal.quotientMap (K.map f) f Ideal.le_comap_map) →
+      RingHom.FiniteType f := by
+  let : Algebra R S := f.toAlgebra
+  let J : Ideal S := K.map f
+  let π : S →ₐ[R] (S ⧸ J) := Ideal.Quotient.mkₐ R J
+  let : Algebra (R ⧸ K) (S ⧸ J) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  intro h
+  have h' : RingHom.FiniteType
+      (algebraMap (R ⧸ K) (S ⧸ J)) := by
+    have he : algebraMap (R ⧸ K) (S ⧸ J) =
+        Ideal.quotientMap J f Ideal.le_comap_map := by
+      apply RingHom.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+      rfl
+    exact he ▸ h
+  change Algebra.FiniteType R S
+  let q : R →+* (S ⧸ J) := (Ideal.Quotient.mk J).comp f
+  have hq : RingHom.FiniteType q := by
+    have hmk : RingHom.FiniteType (Ideal.Quotient.mk K) :=
+      RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective
+    have hcomp : RingHom.FiniteType
+        ((algebraMap (R ⧸ K) (S ⧸ J)).comp (Ideal.Quotient.mk K)) :=
+      h'.comp hmk
+    convert hcomp using 1
+    ext r
+    rfl
+  let : Algebra R (S ⧸ J) := q.toAlgebra
+  have hq' : Algebra.FiniteType R (S ⧸ J) := hq
+  obtain ⟨s, hs⟩ := hq'.out
+  classical
+  let lift : (S ⧸ J) → S := fun x => (Ideal.Quotient.mk_surjective x).choose
+  have hlift (x : S ⧸ J) : Ideal.Quotient.mk J (lift x) = x :=
+    (Ideal.Quotient.mk_surjective x).choose_spec
+  let T : Set S := lift '' (s : Set (S ⧸ J))
+  let C : Subalgebra R S := Algebra.adjoin R T
+  have hT : T.Finite := s.finite_toSet.image lift
+  have hπ : Function.Surjective (π.comp C.val) := by
+    apply (AlgHom.range_eq_top _).mp
+    apply Algebra.eq_top_iff.mpr
+    intro x
+    have hle : Algebra.adjoin R (s : Set (S ⧸ J)) ≤ (π.comp C.val).range := by
+      apply Algebra.adjoin_le
+      intro y hy
+      exact ⟨⟨lift y, Algebra.subset_adjoin ⟨y, hy, rfl⟩⟩, by
+        simpa [π] using hlift y⟩
+    exact hle (by rw [hs]; trivial)
+  have hbase : ∀ x : S, ∃ a : C, x - a.1 ∈ J := by
+    intro x
+    obtain ⟨a, ha⟩ := hπ (π x)
+    refine ⟨a, ?_⟩
+    have hz : π (x - a.1) = 0 := by
+      simpa [map_sub, Function.comp_apply] using sub_eq_zero.mpr ha.symm
+    simpa [π] using Ideal.Quotient.eq_zero_iff_mem.mp hz
+  obtain ⟨N, hKN⟩ := hK
+  have hN : J ^ N = ⊥ := by
+    change (Ideal.map f K) ^ N = ⊥
+    rw [← Ideal.map_pow, hKN]
+    simp
+  have hdecomp (n : ℕ) (x : S) (hx : x ∈ J ^ n) :
+      ∃ a : C, a.1 ∈ J ^ n ∧ x - a.1 ∈ J ^ (n + 1) := by
+    have hx' : x ∈ Ideal.map f (K ^ n) := by
+      simpa [J, Ideal.map_pow] using hx
+    rw [Ideal.map] at hx'
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx'
+    · rintro y ⟨r, hr, rfl⟩
+      let a : C := ⟨f r, C.algebraMap_mem r⟩
+      refine ⟨a, ?_, ?_⟩
+      · rw [← Ideal.map_pow]
+        exact Ideal.mem_map_of_mem _ hr
+      · simp [a]
+    · exact ⟨0, Ideal.zero_mem _, by simp⟩
+    · rintro x y _ _ ⟨a, ha, hxa⟩ ⟨b, hb, hyb⟩
+      refine ⟨a + b, add_mem ha hb, ?_⟩
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using add_mem hxa hyb
+    · rintro c x _ ⟨a, ha, hxa⟩
+      obtain ⟨b, hb⟩ := hbase c
+      refine ⟨b * a, ?_, ?_⟩
+      · exact Ideal.mul_mem_left _ _ ha
+      · have h₁ : c * (x - a.1) ∈ J ^ (n + 1) :=
+          Ideal.mul_mem_left _ _ hxa
+        have h₂ : (c - b.1) * a.1 ∈ J ^ (n + 1) := by
+          have hmul := Ideal.mul_mem_mul hb ha
+          simpa [pow_succ', mul_comm] using hmul
+        have hres := add_mem h₁ h₂
+        change c * x - b.1 * a.1 ∈ J ^ (n + 1)
+        convert hres using 1
+        ring
+  have hgen : ∀ n : ℕ, ∀ x : S, ∃ a : C, x - a.1 ∈ J ^ n := by
+    intro n
+    induction n with
+    | zero => intro x; exact ⟨0, by simp⟩
+    | succ n ih =>
+      intro x
+      obtain ⟨a, ha⟩ := ih x
+      obtain ⟨b, hb, hxb⟩ := hdecomp n (x - a.1) ha
+      refine ⟨a + b, ?_⟩
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hxb
+  have hCtop : C = ⊤ := by
+    apply top_unique
+    intro x hx
+    obtain ⟨a, ha⟩ := hgen N x
+    have hzero : x - a.1 = 0 := by simpa [hN] using ha
+    have hxa : x = a.1 := sub_eq_zero.mp hzero
+    rw [hxa]
+    exact a.property
+  have hCfinite : Algebra.FiniteType R C := Algebra.FiniteType.adjoin_of_finite hT
+  apply hCfinite.of_surjective C.val
+  intro x
+  have hx : x ∈ C := by rw [hCtop]; trivial
+  exact ⟨⟨x, hx⟩, rfl⟩
+
+private theorem finiteType_cprime_stage_quotient {A : Type u} [CommRing A]
+    (I : Ideal A) (B : CommAlgCat A) (n : ℕ+)
+    (hres : RingHom.FiniteType
+      (Ideal.quotientMap (cprimeIdeal I B) (algebraMap A B)
+        Ideal.le_comap_map)) :
+    RingHom.FiniteType
+      (Ideal.quotientMap
+        ((Ideal.map (Ideal.Quotient.mk (I ^ (n : ℕ))) I).map
+          (cprimeBaseComponent I B n))
+        (cprimeBaseComponent I B n) Ideal.le_comap_map) := by
+  let p : Ideal A := I ^ (n : ℕ)
+  let J : Ideal B := (cprimeIdeal I B) ^ (n : ℕ)
+  let K : Ideal (A ⧸ p) := Ideal.map (Ideal.Quotient.mk p) I
+  let f := cprimeBaseComponent I B n
+  let : Algebra (A ⧸ p) (B ⧸ J) := f.toAlgebra
+  let L : Ideal (B ⧸ J) := (cprimeIdeal I B).map (Ideal.Quotient.mk J)
+  have hL : K.map (algebraMap (A ⧸ p) (B ⧸ J)) = L := by
+    dsimp [L, K]
+    rw [Ideal.map_map]
+    change Ideal.map ((Ideal.Quotient.mk J).comp (algebraMap A B)) I = _
+    rw [cprimeIdeal, ← Ideal.map_map]
+  let : Algebra (A ⧸ I) (B ⧸ cprimeIdeal I B) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  have hres' : RingHom.FiniteType
+      (algebraMap (A ⧸ I) (B ⧸ cprimeIdeal I B)) := by
+    have he : algebraMap (A ⧸ I) (B ⧸ cprimeIdeal I B) =
+        Ideal.quotientMap (cprimeIdeal I B) (algebraMap A B)
+          Ideal.le_comap_map := by
+      apply RingHom.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+      rfl
+    exact he ▸ hres
+  let : Algebra A (B ⧸ J) :=
+    ((Ideal.Quotient.mk J).comp (algebraMap A B)).toAlgebra
+  let q : (A ⧸ p) →+* ((B ⧸ J) ⧸ L) :=
+    (Ideal.Quotient.mk L).comp f
+  let : Algebra (A ⧸ p) ((B ⧸ J) ⧸ L) :=
+    q.toAlgebra
+  have hIL : I ≤ L.comap (algebraMap A (B ⧸ J)) := by
+    intro x hx
+    change algebraMap A (B ⧸ J) x ∈ L
+    exact Ideal.mem_map_of_mem _ (Ideal.mem_map_of_mem _ hx)
+  let : Algebra (A ⧸ I) ((B ⧸ J) ⧸ L) :=
+    Ideal.Quotient.algebraQuotientOfLEComap hIL
+  have hKq : ∀ x : A ⧸ p, x ∈ K → q x = 0 := by
+    intro x hx
+    change (Ideal.Quotient.mk L) (f x) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    rw [← hL]
+    exact Ideal.mem_map_of_mem _ hx
+  let q' : ((A ⧸ p) ⧸ K) →+* ((B ⧸ J) ⧸ L) :=
+    Ideal.Quotient.lift K q hKq
+  let : Algebra ((A ⧸ p) ⧸ K) ((B ⧸ J) ⧸ L) := q'.toAlgebra
+  have hJ : J ≤ cprimeIdeal I B := by
+    dsimp [J]
+    exact Ideal.pow_le_self (by exact_mod_cast n.ne_zero)
+  let e : ((B ⧸ J) ⧸ L) ≃+* (B ⧸ cprimeIdeal I B) :=
+    DoubleQuot.quotQuotEquivQuotOfLE hJ
+  have hAIT' : RingHom.FiniteType
+      (e.symm.toRingHom.comp
+        (algebraMap (A ⧸ I) (B ⧸ cprimeIdeal I B))) :=
+    hres'.comp_surjective e.symm.surjective
+  have hAIT : RingHom.FiniteType
+      (algebraMap (A ⧸ I) ((B ⧸ J) ⧸ L)) := by
+    convert hAIT' using 1
+    apply RingHom.ext
+    intro x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    rfl
+  let hq : A ⧸ I →+* (A ⧸ p) ⧸ K :=
+    Ideal.quotientMap K (Ideal.Quotient.mk p) Ideal.le_comap_map
+  have hcomp : RingHom.FiniteType
+      (algebraMap (A ⧸ I) ((B ⧸ J) ⧸ L)) := hAIT
+  have heq :
+      (algebraMap ((A ⧸ p) ⧸ K) ((B ⧸ J) ⧸ L)).comp hq =
+        algebraMap (A ⧸ I) ((B ⧸ J) ⧸ L) := by
+    apply RingHom.ext
+    intro x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    change q' (Ideal.Quotient.mk K (Ideal.Quotient.mk p x)) =
+      Ideal.Quotient.mk L (algebraMap A (B ⧸ J) x)
+    rw [Ideal.Quotient.lift_mk]
+    change q (Ideal.Quotient.mk p x) =
+      Ideal.Quotient.mk L (algebraMap A (B ⧸ J) x)
+    dsimp [q, f, cprimeBaseComponent]
+    rw [Ideal.quotientMap_mk]
+    change Ideal.Quotient.mk L
+        (Ideal.Quotient.mk J (algebraMap A B x)) =
+      Ideal.Quotient.mk L (Ideal.Quotient.mk J (algebraMap A B x))
+    rfl
+  have hq' : RingHom.FiniteType
+      (algebraMap ((A ⧸ p) ⧸ K) ((B ⧸ J) ⧸ L)) :=
+    RingHom.FiniteType.of_comp_finiteType (heq ▸ hcomp)
+  have hLf : K.map f = L := by
+    change K.map (algebraMap (A ⧸ p) (B ⧸ J)) = L
+    exact hL
+  let eLf : ((B ⧸ J) ⧸ L) ≃+*
+      ((B ⧸ J) ⧸ K.map f) := Ideal.quotEquivOfEq hLf.symm
+  have hq'' : RingHom.FiniteType
+      (eLf.toRingHom.comp
+        (algebraMap ((A ⧸ p) ⧸ K) ((B ⧸ J) ⧸ L))) :=
+    hq'.comp_surjective eLf.surjective
+  have heq' :
+      eLf.toRingHom.comp
+          (algebraMap ((A ⧸ p) ⧸ K) ((B ⧸ J) ⧸ L)) =
+        Ideal.quotientMap (K.map f) f Ideal.le_comap_map := by
+    apply RingHom.ext
+    intro x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    change eLf (q' (Ideal.Quotient.mk K x)) =
+      Ideal.Quotient.mk (K.map f) (f x)
+    rw [Ideal.Quotient.lift_mk]
+    change eLf (q x) = Ideal.Quotient.mk (K.map f) (f x)
+    dsimp [eLf, q]
+  exact heq' ▸ hq''
+
 /-- The finite-type assertion used to show that the quotient functor lands in `𝓒`. -/
 theorem cprimeBaseComponent_finiteType {A : Type u} [CommRing A]
     (I : Ideal A) (B : CompleteAlgebraCategory A I) (n : ℕ+) :
     RingHom.FiniteType (cprimeBaseComponent I B.obj n) := by
-  sorry
+  let p : Ideal A := I ^ (n : ℕ)
+  let K : Ideal (A ⧸ p) := Ideal.map (Ideal.Quotient.mk p) I
+  let f := cprimeBaseComponent I B.obj n
+  have hK : IsNilpotent K := by
+    refine ⟨n, ?_⟩
+    dsimp [K]
+    rw [← Ideal.map_pow]
+    simp [p]
+  change RingHom.FiniteType f
+  apply finiteType_of_finiteType_quotient f K hK
+  let : Algebra (A ⧸ I) (B.obj ⧸ cprimeIdeal I B.obj) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  have hres : RingHom.FiniteType
+      (Ideal.quotientMap (cprimeIdeal I B.obj) (algebraMap A B.obj)
+        Ideal.le_comap_map) := by
+    change RingHom.FiniteType (algebraMap (A ⧸ I)
+      (B.obj ⧸ cprimeIdeal I B.obj))
+    rw [RingHom.finiteType_algebraMap]
+    exact B.property.2
+  simpa [p, K, f] using finiteType_cprime_stage_quotient I B.obj n hres
 
 theorem cprimeBaseMap_naturality {A : Type u} [CommRing A] (I : Ideal A)
     (B : CommAlgCat A) {i j : ℕ+ᵒᵖ} (f : i ⟶ j) :

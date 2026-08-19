@@ -125,7 +125,8 @@ private lemma finite_localized_submodule {R : Type u} [CommRing R]
   let P : Submodule R M := Submodule.span R (sm : Set M)
   have hmP (y : s) : m y ∈ P := by
     apply Submodule.subset_span
-    simp [sm]
+    change m y ∈ s.attach.image m
+    exact Finset.mem_image_of_mem m (Finset.mem_attach s y)
   have hsurj : Function.Surjective (LocalizedModule.map S P.subtype) := by
     apply LinearMap.range_eq_top.mp
     apply le_antisymm
@@ -250,7 +251,7 @@ private lemma quotient_span_sup_ker {R : Type u} [CommRing R]
     (t : Finset (Fin n → (R ⧸ I)))
     (ht : Submodule.span (R ⧸ I) (t : Set (Fin n → (R ⧸ I))) = K)
     (q : (Fin n → R) →ₗ[R] (Fin n → (R ⧸ I)))
-    (hqker : LinearMap.ker q = I • (⊤ : Submodule R (Fin n → R)))
+    {hqker : LinearMap.ker q = I • (⊤ : Submodule R (Fin n → R))}
     (r : t → (Fin n → R)) (hr : ∀ x : t, q (r x) = x.1) :
     Submodule.span R (Set.range r) ⊔ I • (⊤ : Submodule R (Fin n → R)) =
       LinearMap.ker ((K.mkQ.restrictScalars R).comp q) := by
@@ -362,7 +363,7 @@ private lemma finite_presentation_quotient_lift {R : Type u} [CommRing R]
     simp [f₀, g, hx, hz]
   have hsup : L ⊔ T = LinearMap.ker f₀ := by
     simpa [L, T, f₀, g] using
-      quotient_span_sup_ker I K t ht q (by
+      quotient_span_sup_ker I K t ht q (hqker := by
         apply le_antisymm
         · intro x hx
           have hxq : q x = 0 := LinearMap.mem_ker.mp hx

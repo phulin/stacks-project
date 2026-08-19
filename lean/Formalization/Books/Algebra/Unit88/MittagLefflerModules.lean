@@ -1129,8 +1129,7 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
   symm
   constructor
   · rintro ⟨h', rfl⟩
-    intro Q _ _
-    intro x hx
+    intro Q _ _ x hx
     apply LinearMap.mem_ker.mpr
     have hx0 := LinearMap.mem_ker.mp hx
     rw [LinearMap.rTensor_comp, LinearMap.comp_apply, hx0]
@@ -1322,7 +1321,7 @@ Mittag-Lefflerness is enough to check on the duals with target `R`. -/
 theorem isMittagLefflerModule_of_flat_of_dualSystem
     {R : Type u} [CommRing R] {I : Type v} [Preorder I]
     [Nonempty I] [IsDirectedOrder I] {M : ModuleCat.{w} R}
-    (P : ColimitPresentation I M) (hflat : Module.Flat R M)
+    (P : ColimitPresentation I M) (_hflat : Module.Flat R M)
     (hfree : ∀ i, Module.Free R (P.diag.obj i))
     (hfinite : ∀ i, Module.Finite R (P.diag.obj i))
     (hdual : (homInverseSystem P.diag (ModuleCat.of R R)).IsMittagLeffler) :
@@ -1370,8 +1369,8 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
       refine ⟨μ, ?_⟩
       rw [hmap'] at hμ'
       simpa [vl, u, directedMap] using hμ'
-    letI : Module.Free R (P.diag.obj jop.unop : Type w) := hfree jop.unop
-    letI : Module.Finite R (P.diag.obj jop.unop : Type w) := hfinite jop.unop
+    let : Module.Free R (P.diag.obj jop.unop : Type w) := hfree jop.unop
+    let : Module.Finite R (P.diag.obj jop.unop : Type w) := hfinite jop.unop
     let ι := Module.Free.ChooseBasisIndex R (P.diag.obj jop.unop : Type w)
     let b : Module.Basis ι R (P.diag.obj jop.unop : Type w) :=
       Module.Free.chooseBasis R (P.diag.obj jop.unop : Type w)
@@ -1409,9 +1408,9 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
     simpa [h', u, vl, LinearMap.comp_apply] using hc
   have hfp : ∀ i, Module.FinitePresentation R (P.diag.obj i) := by
     intro i
-    letI : Module.Free R (P.diag.obj i : Type w) := hfree i
-    letI : Module.Finite R (P.diag.obj i : Type w) := hfinite i
-    letI : Module.Projective R (P.diag.obj i : Type w) := Module.Projective.of_free
+    let : Module.Free R (P.diag.obj i : Type w) := hfree i
+    let : Module.Finite R (P.diag.obj i : Type w) := hfinite i
+    let : Module.Projective R (P.diag.obj i : Type w) := Module.Projective.of_free
     exact Module.finitePresentation_of_projective R (P.diag.obj i : Type w)
   have h13 := (mittagLeffler_characterization.{u, v, w, u} P hfp).out 0 2
   change MLModuleCondition M

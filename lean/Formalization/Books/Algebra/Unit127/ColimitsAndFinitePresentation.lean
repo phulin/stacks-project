@@ -2106,10 +2106,178 @@ theorem limitEssentiallyFinitePresentation
   sorry
 
 /-- The nonlocal absolute finite-type approximation. -/
+private theorem finiteTypeSubringClosure {T : Type u} [CommRing T] (E : Finset T) :
+    (Int.castRingHom (Subring.closure (E : Set T))).FiniteType := by
+  rw [← algebraMap_int_eq, RingHom.finiteType_algebraMap]
+  let A := Algebra.adjoin ℤ (E : Set T)
+  have hA : Algebra.FiniteType ℤ A :=
+    (Subalgebra.fg_iff_finiteType A).mp (Subalgebra.fg_adjoin_finset E)
+  exact hA.equiv (Subring.closureEquivAdjoinInt (E : Set T)).symm
+
+private theorem finiteTypeStageMap
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (E : Finset R) (F : Finset S)
+    (h : Subring.closure (E : Set R) ≤
+      (Subring.closure (F : Set S)).comap f) :
+    (RingHom.codRestrict (f.comp (Subring.subtype _))
+      (Subring.closure (F : Set S)) (fun x => h x.property)).FiniteType := by
+  have hcomp :
+      (RingHom.codRestrict (f.comp (Subring.subtype _))
+          (Subring.closure (F : Set S)) (fun x => h x.property)).comp
+        (Int.castRingHom (Subring.closure (E : Set R))) =
+      Int.castRingHom (Subring.closure (F : Set S)) := by
+    ext z
+    simp
+  exact RingHom.FiniteType.of_comp_finiteType
+    (f := Int.castRingHom (Subring.closure (E : Set R)))
+    (g := RingHom.codRestrict (f.comp (Subring.subtype _))
+      (Subring.closure (F : Set S)) (fun x => h x.property))
+    (hcomp ▸ finiteTypeSubringClosure F)
+
+private def finiteTypeStageMapData
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (E : Finset R) (F : Finset S)
+    (h : Subring.closure (E : Set R) ≤
+      (Subring.closure (F : Set S)).comap f) :
+    Subring.closure (E : Set R) →+* Subring.closure (F : Set S) :=
+  by
+    classical
+    exact RingHom.codRestrict (f.comp (Subring.subtype _))
+      (Subring.closure (F : Set S)) (fun x => h x.property)
+
+private instance finiteSetProductCategory {R S : Type u} [CommRing R] [CommRing S] :
+    Category (Finset R × Finset S) := Preorder.smallCategory _
+
+private def finiteTypeRingMapColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    DirectedRingMapColimit f := by
+  classical
+  let I := Finset R × Finset S
+  let p : I ⥤ Finset R := {
+    obj := Prod.fst
+    map := fun {X Y} h => homOfLE h.down.down.1
+    map_id := by intro X; rfl
+    map_comp := by intro X Y Z hXY hYZ; rfl }
+  let q : I ⥤ Finset S := {
+    obj := fun X => X.2 ∪ X.1.image f
+    map := fun {X Y} h => homOfLE (by
+      intro z hz
+      rcases Finset.mem_union.mp hz with hz | hz
+      · exact Finset.mem_union_left _ (h.down.down.2 hz)
+      · rcases Finset.mem_image.mp hz with ⟨x, hx, rfl⟩
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨x, h.down.down.1 hx, rfl⟩))
+    map_id := by intro X; rfl
+    map_comp := by intro X Y Z hXY hYZ; rfl }
+  have hI : IsDirectedSet I := by
+    refine ⟨⟨∅, ∅⟩, ⟨fun X Y => ?_⟩⟩
+    refine ⟨(X.1 ∪ Y.1, X.2 ∪ Y.2), ?_, ?_⟩
+    · exact ⟨Finset.subset_union_left, Finset.subset_union_left⟩
+    · exact ⟨Finset.subset_union_right, Finset.subset_union_right⟩
+  let _ : Nonempty I := hI.1
+  let _ : IsDirectedOrder I := hI.2
+  let _ : IsFiltered I := inferInstance
+  have hp : Functor.Final p := by
+    apply Functor.final_of_exists_of_isFiltered
+    · intro X
+      exact ⟨(X, ∅), ⟨homOfLE le_rfl⟩⟩
+    · intro X Y s s'
+      refine ⟨Y, homOfLE le_rfl, ?_⟩
+      apply Subsingleton.elim
+  have hq : Functor.Final q := by
+    apply Functor.final_of_exists_of_isFiltered
+    · intro X
+      refine ⟨(∅, X), ⟨homOfLE ?_⟩⟩
+      exact Finset.subset_union_left
+    · intro X Y s s'
+      refine ⟨Y, homOfLE le_rfl, ?_⟩
+      apply Subsingleton.elim
+  let sourceDiagram : RingSystem I := p ⋙ finiteSubsetSubringDiagram
+  let targetDiagram : RingSystem I := q ⋙ finiteSubsetSubringDiagram
+  let sourceCocone : Cocone sourceDiagram :=
+    (finiteSubsetSubringCocone (T := R)).whisker p
+  let targetCocone : Cocone targetDiagram :=
+    (finiteSubsetSubringCocone (T := S)).whisker q
+  have sourceIsColimit : IsColimit sourceCocone := by
+    let _ : Functor.Final p := hp
+    exact (Functor.Final.isColimitWhiskerEquiv p
+      (finiteSubsetSubringCocone (T := R))).symm
+      (finiteSubsetSubringCocone_isColimit (T := R))
+  let _ : Functor.Final q := hq
+  have targetIsColimit : IsColimit targetCocone :=
+    (Functor.Final.isColimitWhiskerEquiv q
+      (finiteSubsetSubringCocone (T := S))).symm
+      (finiteSubsetSubringCocone_isColimit (T := S))
+  let map : sourceDiagram ⟶ targetDiagram := {
+    app := fun X => CommRingCat.ofHom (finiteTypeStageMapData f X.1 (q.obj X) (by
+      apply (Subring.closure_le).2
+      intro y hy
+      exact Subring.subset_closure (by
+        simpa [q] using
+          (Set.mem_union_right (X.2 : Set S)
+            (Finset.mem_image.mpr ⟨y, hy, rfl⟩)))))
+    naturality := by
+      intro X Y h
+      apply CommRingCat.hom_ext
+      apply RingHom.ext
+      intro x
+      rfl }
+  have map_fac : ∀ X, sourceCocone.ι.app X ≫ CommRingCat.ofHom f =
+      map.app X ≫ targetCocone.ι.app X := by
+    intro X
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    rfl
+  let D : DirectedRingMapColimit f := {
+    index := I
+    directed := hI
+    sourceDiagram := sourceDiagram
+    targetDiagram := targetDiagram
+    map := map
+    sourceCocone := sourceCocone
+    sourceIsColimit := sourceIsColimit
+    targetCocone := targetCocone
+    targetIsColimit := targetIsColimit
+    colimitMap := CommRingCat.ofHom f
+    map_fac := map_fac
+    sourceIso := Iso.refl _
+    targetIso := Iso.refl _
+    colimitMap_comm := by
+      apply CommRingCat.hom_ext
+      ext x
+      rfl }
+  exact D
+
+private theorem finiteTypeStageMapData_finite
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (E : Finset R) (F : Finset S)
+    (h : Subring.closure (E : Set R) ≤
+      (Subring.closure (F : Set S)).comap f) :
+    (finiteTypeStageMapData f E F h).FiniteType := by
+  exact finiteTypeStageMap f E F h
+
+private def finiteTypeApproximationConstruction
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    DirectedFiniteTypeApproximation f := by
+  classical
+  let D := finiteTypeRingMapColimit f
+  exact {
+    colimit := D
+    sourceFiniteType := by
+      intro X
+      exact finiteTypeSubringClosure X.1
+    targetFiniteType := by
+      intro X
+      exact finiteTypeStageMapData_finite f X.1 (X.2 ∪ X.1.image f) (by
+        apply (Subring.closure_le).2
+        intro y hy
+        exact Subring.subset_closure
+          (Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨y, hy, rfl⟩)))) }
+
 theorem limitNoCondition
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
     Nonempty (DirectedFiniteTypeApproximation f) := by
-  sorry
+  exact ⟨finiteTypeApproximationConstruction f⟩
 
 /-- The nonlocal approximation for an integral ring map. -/
 theorem limitIntegral

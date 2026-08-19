@@ -724,11 +724,11 @@ abbrev differentialObjectSelfMapWarningCycleInclusion
 theorem differentialObjectSelfMap_page_formula
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
-    differentialObjectSelfMapPageComponent α r =
+    Nonempty (differentialObjectSelfMapPageComponent α r ≅
       Formalization.Books.Homology.Unit20.subquotientObject
         (differentialObjectSelfMapBoundaryPlus α r)
         (differentialObjectSelfMapCyclePlus α r)
-        (differentialObjectSelfMap_boundary_plus_le_cycle_plus α r) := by
+        (differentialObjectSelfMap_boundary_plus_le_cycle_plus α r)) := by
   sorry
 
 /-! ### Shifted differential objects -/

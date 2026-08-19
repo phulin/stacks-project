@@ -306,7 +306,7 @@ theorem prepare_adjoint_two_out_of_three
       (HasRightDecomposition P T.obj₁ ∧
         HasRightDecomposition P T.obj₃ →
           HasRightDecomposition P T.obj₂) ∧
-      (HasRightDecomposition P T.obj₂ ∧
+        (HasRightDecomposition P T.obj₂ ∧
         HasRightDecomposition P T.obj₃ →
           HasRightDecomposition P T.obj₁) := by
   sorry

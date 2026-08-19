@@ -200,22 +200,22 @@ theorem moduleLocalizationFunctor_isLocalization (A : Type u) [CommRing A]
             rfl)
       homEquiv_naturality_left_symm := by
         intros X' X Y f g
-        letI : Module A (X'.localizedModule S : Type u) :=
+        let : Module A (X'.localizedModule S : Type u) :=
           by infer_instance
-        letI : Module A (Y : Type u) :=
+        let : Module A (Y : Type u) :=
           Module.compHom _ (algebraMap A (Localization S))
-        letI : IsScalarTower A (Localization S) (X'.localizedModule S : Type u) :=
+        let : IsScalarTower A (Localization S) (X'.localizedModule S : Type u) :=
           by infer_instance
-        letI : IsScalarTower A (Localization S) (Y : Type u) :=
+        let : IsScalarTower A (Localization S) (Y : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
-        letI : IsLocalizedModule S (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u)) :=
+        let : IsLocalizedModule S (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u)) :=
           isLocalizedModule_id S (Y : Type u) (Localization S)
-        letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+        let : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
           ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y).isModule
-        letI : IsScalarTower A (Localization S)
+        let : IsScalarTower A (Localization S)
             ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
-        letI : IsLocalizedModule S
+        let : IsLocalizedModule S
             (LinearMap.id :
               ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) →ₗ[A]
                 ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u)) :=
@@ -233,8 +233,7 @@ theorem moduleLocalizationFunctor_isLocalization (A : Type u) [CommRing A]
                   (IsLocalizedModule.mapExtendScalars S (X.localizedModuleMkLinearMap S)
                     LinearMap.id (Localization S) (ModuleCat.Hom.hom g)))) x
         simp [ModuleCat.localizedModuleMap, IsLocalizedModule.mapExtendScalars,
-          LinearMap.extendScalarsOfIsLocalizationEquiv, IsLocalizedModule.map_comp',
-          ModuleCat.localizedModuleFunctor]
+          LinearMap.extendScalarsOfIsLocalizationEquiv]
         rw [IsLocalizedModule.map_comp' S (X'.localizedModuleMkLinearMap S)
           (X.localizedModuleMkLinearMap S)
           (LinearMap.id :
@@ -247,23 +246,23 @@ theorem moduleLocalizationFunctor_isLocalization (A : Type u) [CommRing A]
         rfl
       homEquiv_naturality_right := by
         intros X Y Y' f g
-        letI : Module A ((moduleLocalizationFunctor A S).obj X : Type u) :=
+        let : Module A ((moduleLocalizationFunctor A S).obj X : Type u) :=
           Module.compHom _ (algebraMap A (Localization S))
-        letI : IsScalarTower A (Localization S)
+        let : IsScalarTower A (Localization S)
             ((moduleLocalizationFunctor A S).obj X : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
-        letI : Module A ((ModuleCat.localizedModuleFunctor S).obj X : Type u) :=
+        let : Module A ((ModuleCat.localizedModuleFunctor S).obj X : Type u) :=
           Module.compHom _ (algebraMap A (Localization S))
-        letI : Module A (Y : Type u) :=
+        let : Module A (Y : Type u) :=
           Module.compHom _ (algebraMap A (Localization S))
-        letI : Module A (Y' : Type u) :=
+        let : Module A (Y' : Type u) :=
           Module.compHom _ (algebraMap A (Localization S))
-        letI : IsScalarTower A (Localization S)
+        let : IsScalarTower A (Localization S)
             ((ModuleCat.localizedModuleFunctor S).obj X : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
-        letI : IsScalarTower A (Localization S) (Y : Type u) :=
+        let : IsScalarTower A (Localization S) (Y : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
-        letI : IsScalarTower A (Localization S) (Y' : Type u) :=
+        let : IsScalarTower A (Localization S) (Y' : Type u) :=
           IsScalarTower.of_compHom A (Localization S) _
         dsimp only [Equiv.symm, Equiv.mk, id]
         dsimp [moduleLocalizationFunctor, ModuleCat.localizedModuleFunctor]
@@ -279,14 +278,14 @@ theorem moduleLocalizationFunctor_isLocalization (A : Type u) [CommRing A]
     }
   let _ : (ModuleCat.restrictScalars (algebraMap A (Localization S))).Full := ⟨by
     intro X Y f
-    letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u) :=
+    let : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u) :=
       ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X).isModule
-    letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+    let : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
       ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y).isModule
-    letI : IsScalarTower A (Localization S)
+    let : IsScalarTower A (Localization S)
         ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u) :=
       IsScalarTower.of_compHom A (Localization S) _
-    letI : IsScalarTower A (Localization S)
+    let : IsScalarTower A (Localization S)
         ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
       IsScalarTower.of_compHom A (Localization S) _
     refine ⟨ModuleCat.ofHom

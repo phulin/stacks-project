@@ -868,6 +868,29 @@ theorem exists_finite_pth_root_tower_of_perfectClosure_finset
     obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hz
     exact IntermediateField.subset_adjoin F _ ⟨a, ha, rfl⟩
 
+/-- Transport an element of the final level of a finite root tower into the
+relative perfect closure over an extension field. -/
+noncomputable def FinitePthRootTower.mapToPerfectClosure
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (base : FinitePthRootTower k p hp)
+    (a : finitePthRootFieldAtLevel base) :
+    perfectClosure K (AlgebraicClosure K) := by
+  letI : IsPurelyInseparable k (finitePthRootFieldAtLevel base) :=
+    base.purely_inseparable
+  letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  refine ⟨pthRootClosureMap k K (a : AlgebraicClosure k), ?_⟩
+  obtain ⟨n, b, hb⟩ := IsPurelyInseparable.pow_mem
+    (F := k) (E := finitePthRootFieldAtLevel base) (q := p) (x := a)
+  apply (mem_perfectClosure_iff_pow_mem p).2
+  refine ⟨n, algebraMap k K b, ?_⟩
+  have hb' : algebraMap k (AlgebraicClosure k) b =
+      (a : AlgebraicClosure k) ^ (p ^ n) := congrArg Subtype.val hb
+  rw [← map_pow, ← hb']
+  rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
+  exact ((pthRootClosureMap k K).commutes b).symm
+
 /-- Any finite base root tower can be completed to a compatible paired tower
 over a field extension which also contains a prescribed finite subset of the
 relative perfect closure of the top field. -/
@@ -889,19 +912,8 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
   let : IsPurelyInseparable k B := base.purely_inseparable
   let : Algebra.EssFiniteType k B := inferInstance
   obtain ⟨s, hs⟩ := IntermediateField.fg_top k B
-  let lift (a : B) : perfectClosure K (AlgebraicClosure K) := by
-    refine ⟨pthRootClosureMap k K (a : AlgebraicClosure k), ?_⟩
-    let : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
-    let : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
-    obtain ⟨n, b, hb⟩ := IsPurelyInseparable.pow_mem
-      (F := k) (E := B) (q := p) (x := a)
-    apply (mem_perfectClosure_iff_pow_mem p).2
-    refine ⟨n, algebraMap k K b, ?_⟩
-    have hb' : algebraMap k (AlgebraicClosure k) b =
-        (a : AlgebraicClosure k) ^ (p ^ n) := congrArg Subtype.val hb
-    rw [← map_pow, ← hb']
-    rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
-    exact ((pthRootClosureMap k K).commutes b).symm
+  let lift (a : B) : perfectClosure K (AlgebraicClosure K) :=
+    base.mapToPerfectClosure p hp a
   let roots : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift ∪ t
   obtain ⟨top, htop, htop_le⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp roots

@@ -255,7 +255,10 @@ private noncomputable def cechNerveMapOfZero {C : Type u} [Category.{v} C]
       simpa only [Category.assoc] using d.2)
   have hε0 : ε.app (op (SimplexCategory.mk 0)) = d.1 ≫ f := by
     simp [ε, augmentationOfZero]
-  let A : SimplicialObject.Augmented C := augmentationAsAugmented ε
+  let A : SimplicialObject.Augmented C :=
+    { left := V
+      right := X
+      hom := ε }
   let F : Arrow C := Arrow.mk f
   letI : ∀ n : ℕ,
       HasWidePullback F.right
@@ -263,34 +266,43 @@ private noncomputable def cechNerveMapOfZero {C : Type u} [Category.{v} C]
     intro n
     change HasWidePullback X (fun _ : Fin (n + 1) => Y) (fun _ => f)
     exact h n
-  let G₀ : Arrow.mk (ε.app (op (SimplexCategory.mk 0))) ⟶ F :=
-    { left := d.1
-      right := 𝟙 X
-      w := by
-        simp [F, hε0] }
-  let G : SimplicialObject.Augmented.toArrow.obj A ⟶ F :=
-    { left := d.1
-      right := G₀.right
-      w := by
-        simpa [SimplicialObject.Augmented.toArrow, A,
-          augmentationAsAugmented, F, G₀, Category.assoc] using G₀.w }
+  have h₀ : d.1 ≫ F.hom = A.hom.app (op (SimplexCategory.mk 0)) := by
+    simpa [A, augmentationAsAugmented, F] using hε0.symm
   let η : A ⟶ F.augmentedCechNerve :=
     { left :=
         { app := fun x =>
-            WidePullback.lift (A.hom.app _ ≫ G.right)
+            WidePullback.lift (A.hom.app _)
             (fun i =>
                 A.left.map (SimplexCategory.const _ x.unop i).op ≫
-                  G.left)
+                  d.1)
               (by
                 intro i
+                dsimp [A, augmentationAsAugmented] at ⊢
                 let q : SimplexCategory.mk 0 ⟶ x.unop :=
                   SimplexCategory.const (SimplexCategory.mk 0) x.unop i
-                exact sorry)
+                change (V.map (SimplexCategory.const
+                  (SimplexCategory.mk 0) x.unop i).op ≫ d.1) ≫ f =
+                  ε.app x
+                rw [Category.assoc, hε0.symm]
+                simpa [q] using
+                  ε.naturality q.op)
           naturality := by
             intro x y q
             dsimp
-            sorry }
-      right := G.right }
+            dsimp [F, Arrow.augmentedCechNerve, Arrow.cechNerve]
+            refine WidePullback.hom_ext _ _ _ (fun j => ?_) ?_
+            · simp only [Category.assoc, WidePullback.lift_π]
+              rw [← A.left.map_comp_assoc, ← Quiver.Hom.op_unop q, ← op_comp,
+                SimplexCategory.const_comp]
+              simp only [Quiver.Hom.unop_op]
+            · simp only [Category.assoc, WidePullback.lift_base]
+              simpa using A.hom.naturality q }
+      right := 𝟙 X
+      w := by
+        ext x
+        dsimp
+        simp [F, Arrow.augmentedCechNerve]
+        rw [WidePullback.lift_base, Category.comp_id] }
   change V ⟶ F.cechNerve
   exact eqToHom (by rfl) ≫ η.left
 
@@ -307,11 +319,65 @@ private noncomputable def cechNerveZeroOfMap {C : Type u} [Category.{v} C]
     exact h n
   let A : SimplicialObject.Augmented C := F.augmentedCechNerve
   let ε : Augmentation V X := g ≫ A.hom
-  let d := (augmentation_hom_equiv V X).some.toFun ε
+  let p₀ : (cechNerve f h).obj (op (SimplexCategory.mk 0)) ⟶ Y := by
+    rw [cechNerve_obj_formula f h 0]
+    exact WidePullback.π (fun _ : Fin (0 + 1) => f) 0
+  let r₀ : (cechNerve f h).obj (op (SimplexCategory.mk 1)) ⟶ Y :=
+    (cechNerve f h).map (SimplexCategory.δ (1 : Fin 2)).op ≫ p₀
+  let r₁ : (cechNerve f h).obj (op (SimplexCategory.mk 1)) ⟶ Y :=
+    (cechNerve f h).map (SimplexCategory.δ (0 : Fin 2)).op ≫ p₀
   refine ⟨g.app (op (SimplexCategory.mk 0)) ≫
-      WidePullback.π (fun _ : Fin (0 + 1) => f) 0, ?_⟩
-  have hd := d.2
-  exact sorry
+      p₀, ?_⟩
+  have hp₀ : p₀ ≫ f = A.hom.app (op (SimplexCategory.mk 0)) := by
+    change (WidePullback.π (fun _ : Fin (0 + 1) => f) 0) ≫ f =
+      WidePullback.base (fun _ : Fin (0 + 1) => f)
+    simp only [WidePullback.π_arrow]
+  have hπ : r₁ ≫ f = r₀ ≫ f := by
+    have h₀A := A.hom.naturality (SimplexCategory.δ (0 : Fin 2)).op
+    have h₁A := A.hom.naturality (SimplexCategory.δ (1 : Fin 2)).op
+    have h₀A' :
+        (cechNerve f h).map (SimplexCategory.δ (0 : Fin 2)).op ≫
+            A.hom.app (op (SimplexCategory.mk 0)) =
+          A.hom.app (op (SimplexCategory.mk 1)) := by
+      change A.left.map (SimplexCategory.δ (0 : Fin 2)).op ≫
+          A.hom.app (op (SimplexCategory.mk 0)) =
+        A.hom.app (op (SimplexCategory.mk 1))
+      simpa using h₀A
+    have h₁A' :
+        (cechNerve f h).map (SimplexCategory.δ (1 : Fin 2)).op ≫
+            A.hom.app (op (SimplexCategory.mk 0)) =
+          A.hom.app (op (SimplexCategory.mk 1)) := by
+      change A.left.map (SimplexCategory.δ (1 : Fin 2)).op ≫
+          A.hom.app (op (SimplexCategory.mk 0)) =
+        A.hom.app (op (SimplexCategory.mk 1))
+      simpa using h₁A
+    dsimp [r₁, r₀]
+    rw [Category.assoc, hp₀, Category.assoc, hp₀]
+    exact h₀A'.trans h₁A'.symm
+  have hπ' := congrArg
+    (fun k => g.app (op (SimplexCategory.mk 1)) ≫ k) hπ
+  have h0 := g.naturality (SimplexCategory.δ (0 : Fin 2)).op
+  have h1 := g.naturality (SimplexCategory.δ (1 : Fin 2)).op
+  have h0' := congrArg
+    (fun k : V.obj (op (SimplexCategory.mk 1)) ⟶
+        (cechNerve f h).obj (op (SimplexCategory.mk 0)) =>
+      k ≫ p₀ ≫ f) h0
+  have h1' := congrArg
+    (fun k : V.obj (op (SimplexCategory.mk 1)) ⟶
+        (cechNerve f h).obj (op (SimplexCategory.mk 0)) =>
+      k ≫ p₀ ≫ f) h1
+  have h0'' :
+      (V.map (SimplexCategory.δ (0 : Fin 2)).op ≫
+        g.app (op (SimplexCategory.mk 0))) ≫ p₀ ≫ f =
+      g.app (op (SimplexCategory.mk 1)) ≫ r₁ ≫ f := by
+    simpa [r₁, Category.assoc] using h0'
+  have h1'' :
+      (V.map (SimplexCategory.δ (1 : Fin 2)).op ≫
+        g.app (op (SimplexCategory.mk 0))) ≫ p₀ ≫ f =
+      g.app (op (SimplexCategory.mk 1)) ≫ r₀ ≫ f := by
+    simpa [r₀, Category.assoc] using h1'
+  simpa only [SimplicialObject.δ, Category.assoc] using
+    h0''.trans (hπ'.trans h1''.symm)
 
 /-! ## The hom-set and coskeleton statements -/
 

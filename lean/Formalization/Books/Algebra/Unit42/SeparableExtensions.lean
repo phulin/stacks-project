@@ -968,6 +968,7 @@ theorem FinitePthRootTower.exists_baseChangeTower
     (K := K) p hp ∅
   exact ⟨tower, hbase⟩
 
+set_option maxHeartbeats 0 in
 /-- A finite family in a rational-function field acquires p-th roots in one
 finite paired purely inseparable tower. -/
 theorem exists_tower_pth_roots_adjoin_finset
@@ -989,7 +990,7 @@ theorem exists_tower_pth_roots_adjoin_finset
       refine ⟨1, a, ?_⟩
       simp⟩
   let baseRoots := s.image baseRoot
-  obtain ⟨base, hbase, _⟩ :=
+  obtain ⟨base, hbase, hbase_le⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp baseRoots
   let topRoot (i : ι) : perfectClosure K (AlgebraicClosure K) :=
     ⟨pthRootInAlgebraicClosure K p hp (x i), by
@@ -1026,8 +1027,84 @@ theorem exists_tower_pth_roots_adjoin_finset
     intro i
     apply Subtype.ext
     exact pthRootInAlgebraicClosure_pow K p hp (x i)
-  refine ⟨tower, ?_⟩
+  let E : IntermediateField B T := IntermediateField.adjoin B (Set.range z)
+  let mapF : IntermediateField.adjoin k (Set.range x) →+* E :=
+    RingHom.codRestrict
+      ((algebraMap K T).comp (IntermediateField.adjoin k (Set.range x)).val) E (by
+        intro a
+        have ha : (a : K) ∈ IntermediateField.adjoin k (Set.range x) := a.property
+        apply IntermediateField.adjoin_induction (F := k) (s := Set.range x)
+          (p := fun q _ ↦ algebraMap K T q ∈ E)
+        · intro q hq
+          obtain ⟨i, rfl⟩ := hq
+          change y i ∈ E
+          rw [← hz i]
+          exact E.toSubalgebra.pow_mem
+            (IntermediateField.subset_adjoin B (Set.range z) ⟨i, rfl⟩) p
+        · intro q
+          change algebraMap k T q ∈ E
+          simpa only [IsScalarTower.algebraMap_apply k B T] using
+            E.algebraMap_mem (algebraMap k B q)
+        · intro a b _ _ ha hb
+          simpa using E.add_mem ha hb
+        · intro a _ ha
+          simpa using E.inv_mem ha
+        · intro a b _ _ ha hb
+          simpa using E.mul_mem ha hb
+        · exact ha)
+  let A : IntermediateField E T :=
+    IntermediateField.adjoin E (Set.range (algebraMap K T))
+  let H : IntermediateField K (AlgebraicClosure K) := IntermediateField.adjoin K
+    ((pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
+      ((↑) '' (topRoots : Set (perfectClosure K (AlgebraicClosure K)))))
+  have hHle : H ≤ T := by
+    apply IntermediateField.adjoin_le_iff.mpr
+    rintro a (ha | ha)
+    · obtain ⟨b, hb, rfl⟩ := ha
+      let b' : B := ⟨b, hb⟩
+      rw [← tower.baseToTop_apply b']
+      exact (tower.baseToTop b').property
+    · obtain ⟨w, hw, rfl⟩ := ha
+      exact htop w hw
+  have hHT : H = T := le_antisymm hHle htop_le
+  have hgenerate : A = ⊤ := by
+    apply top_unique
+    intro q _
+    have hq : (q : AlgebraicClosure K) ∈ H := hHT.symm ▸ q.property
+    apply IntermediateField.adjoin_induction (F := K)
+      (s := (pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
+        ((↑) '' (topRoots : Set (perfectClosure K (AlgebraicClosure K)))))
+      (p := fun a ha ↦ (⟨a, hHle ha⟩ : T) ∈ A)
+    · intro a ha
+      rcases ha with ⟨b, hb, rfl⟩ | ⟨w, hw, rfl⟩
+      · let b' : B := ⟨b, hb⟩
+        have hbT : tower.baseToTop b' ∈ E := E.algebraMap_mem b'
+        exact A.algebraMap_mem ⟨tower.baseToTop b', hbT⟩
+      · obtain ⟨i, _, hi⟩ := Finset.mem_image.mp hw
+        have hzi : z i ∈ E := IntermediateField.subset_adjoin B _ ⟨i, rfl⟩
+        apply hi ▸ A.algebraMap_mem ⟨z i, hzi⟩
+    · intro a
+      exact IntermediateField.subset_adjoin E _ ⟨a, rfl⟩
+    · intro a b _ _ ha hb
+      exact A.add_mem ha hb
+    · intro a _ ha
+      exact A.inv_mem ha
+    · intro a b _ _ ha hb
+      exact A.mul_mem ha hb
+    · exact hq
+  let tower' : FinitePthRootBaseChangeTower k K p hp :=
+    { base := tower.base
+      top := tower.top
+      baseToTop := tower.baseToTop
+      baseToTop_apply := tower.baseToTop_apply
+      comparisonLower := IntermediateField.adjoin k (Set.range x)
+      comparisonUpper := E
+      comparisonMap := mapF
+      comparisonMap_commutes := fun _ ↦ rfl
+      comparison_generates_top := hgenerate }
+  refine ⟨tower', ?_⟩
   intro a ha
+  change ∃ q : T, q ^ p = algebraMap K T (a : K)
   obtain ⟨hfrac, hden, hnumcoeff, hdencoeff⟩ := hrep a ha
   obtain ⟨qn, hqn⟩ := exists_pth_root_eval₂ p (algebraMap k T) y z r s
     (num a) hnumcoeff hr hz

@@ -217,11 +217,107 @@ structure DifferentialObjectSelfMapSpectralSequenceData
   pageOneIso : Nonempty (pageObject sequence 1 ≅
     differentialObjectHomology (differentialObjectQuotient α))
 
+private noncomputable def differentialObjectSelfMapPageZeroHomologyIso
+    {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
+    (α : DifferentialObjectInjectiveSelfMap A) :
+    (Formalization.Books.Homology.Unit20.plainSpectralSequencePage
+      (differentialObjectQuotient α).carrier
+      (differentialObjectQuotient α).d
+      (differentialObjectQuotient α).d_squared).homology PUnit.unit ≅
+      differentialObjectHomology (differentialObjectQuotient α) :=
+  by
+    let d := (differentialObjectQuotient α).d
+    have hd : d ≫ d = 0 := (differentialObjectQuotient α).d_squared
+    let P₀ : HomologicalComplex C (ComplexShape.refl PUnit.{1}) :=
+      Formalization.Books.Homology.Unit20.plainSpectralSequencePage
+      (differentialObjectQuotient α).carrier d hd
+    let S : ShortComplex C := P₀.sc' PUnit.unit PUnit.unit PUnit.unit
+    let k₀ : (differentialObjectQuotient α).carrier ⟶ kernel d :=
+      kernel.lift d d hd
+    let k : Abelian.image d ⟶ kernel d :=
+      kernel.lift d (Abelian.image.ι d) (by
+        apply (cancel_epi (Abelian.factorThruImage d)).1
+        simp only [← Category.assoc, Abelian.image.fac, hd, comp_zero])
+    have hk : k₀ = Abelian.factorThruImage d ≫ k := by
+      apply (cancel_mono (kernel.ι d)).1
+      simp [k, k₀, Category.assoc]
+    let π : kernel d ⟶ cokernel k :=
+      cokernel.π k
+    have wπ : k₀ ≫ π = 0 := by
+      rw [hk]
+      rw [Category.assoc, cokernel.condition, comp_zero]
+    have hπ : IsColimit (CokernelCofork.ofπ π wπ) :=
+      CokernelCofork.IsColimit.ofπ _ _
+        (fun x hx => cokernel.desc k x (by
+          apply (cancel_epi (Abelian.factorThruImage d)).1
+          simp only [← Category.assoc, ← hk, hx, comp_zero]))
+        (fun x hx => by exact cokernel.π_desc _ _ _)
+        (fun x hx b hb => by
+          apply (cancel_epi π).1
+          rw [hb, cokernel.π_desc])
+    let hData : S.LeftHomologyData :=
+      { K := kernel d
+        H := differentialObjectHomology (differentialObjectQuotient α)
+        i := kernel.ι d
+        π := π
+        wi := by
+          change kernel.ι d ≫ d = 0
+          exact kernel.condition d
+        hi := kernelIsKernel d
+        wπ := wπ
+        hπ := hπ }
+    exact
+      (HomologicalComplex.homologyIsoSc'
+        (Formalization.Books.Homology.Unit20.plainSpectralSequencePage
+          (differentialObjectQuotient α).carrier d hd)
+        PUnit.unit PUnit.unit PUnit.unit rfl rfl) ≪≫ hData.homologyIso
+
 theorem differentialObjectSelfMapSpectralSequenceData_exists
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) :
     Nonempty (DifferentialObjectSelfMapSpectralSequenceData α) := by
-  sorry
+  let Q := differentialObjectQuotient α
+  let E := differentialObjectSelfMapAssociatedSpectralSequence α
+  let P₀ := Formalization.Books.Homology.Unit20.plainSpectralSequencePage
+    Q.carrier Q.d Q.d_squared
+  have hE₁ : Nonempty (pageObject E 1 ≅ differentialObjectHomology Q) :=
+    differentialObjectSelfMap_E1 α
+  let S : PlainSpectralSequence C 0 := by
+    refine { page := ?_, iso := ?_ }
+    · intro r hr
+      exact if h : r = 0 then P₀ else E.page r (by omega)
+    · intro r r' pq hrr' hr
+      by_cases h : r = 0
+      · subst r
+        have hr' : r' = 1 := by omega
+        subst r'
+        cases pq
+        simpa [P₀] using
+          (differentialObjectSelfMapPageZeroHomologyIso α ≪≫
+            (Classical.choice hE₁).symm)
+      · have hr₁ : (1 : ℤ) ≤ r := by omega
+        have hr'₀ : r' ≠ 0 := by omega
+        split
+        · rename_i hzero
+          exact (h hzero).elim
+        · convert E.iso r r' pq hrr' hr₁ using 1
+  refine ⟨{
+    sequence := S
+    pageZeroIso := Iso.refl _
+    pageZeroDifferential_compatibility := ?_
+    pageOneIso := ?_
+  }⟩
+  · change P₀.d PUnit.unit PUnit.unit ≫ 𝟙 _ = 𝟙 _ ≫ Q.d
+    simp only [Category.comp_id, Category.id_comp]
+    change Q.d = Q.d
+    rfl
+  · rcases hE₁ with ⟨e⟩
+    refine ⟨?_⟩
+    change (if h : (1 : ℤ) = 0 then P₀ else E.page 1 (by omega)).X PUnit.unit ≅ _
+    split
+    · rename_i hzero
+      omega
+    · convert e using 1
 
 noncomputable def differentialObjectSelfMapSpectralSequenceData
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
@@ -271,20 +367,23 @@ abbrev differentialObjectSelfMapBoundaryPlus {C : Type u} [Category.{v} C]
     [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     Subobject A.carrier :=
-  by sorry
+  differentialObjectSelfMapBoundaryPreimage α r ⊔
+    Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
 
 abbrev differentialObjectSelfMapCyclePlus {C : Type u} [Category.{v} C]
     [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     Subobject A.carrier :=
-  by sorry
+  differentialObjectSelfMapCyclePreimage α r ⊔
+    Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
 
 theorem differentialObjectSelfMap_boundary_plus_le_cycle_plus
     {C : Type u} [Category.{v} C] [Abelian C] {A : DifferentialObject C}
     (α : DifferentialObjectInjectiveSelfMap A) (r : ℕ) :
     differentialObjectSelfMapBoundaryPlus α r ≤
       differentialObjectSelfMapCyclePlus α r := by
-  sorry
+  exact sup_le_sup
+    (differentialObjectSelfMap_boundary_preimage_le_cycle_preimage α r) le_rfl
 
 abbrev differentialObjectSelfMapQuotientImageSubobject
     {C : Type u} [Category.{v} C] [Abelian C] {X Q : C}

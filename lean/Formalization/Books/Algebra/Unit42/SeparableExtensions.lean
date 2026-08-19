@@ -554,6 +554,30 @@ theorem exists_pth_root_eval₂
   intro i hi
   rw [← pow_mul, mul_comm, pow_mul, hz]
 
+/-- The p-th-root construction for polynomial values passes to a rational
+function value when the chosen denominator does not vanish. -/
+theorem exists_pth_root_eval₂_div
+    {k : Type u} {L : Type v} {ι : Type*}
+    [Field k] [Field L] (p : ℕ) [Fact p.Prime]
+    [CharP k p] [CharP L p]
+    (f : k →+* L) (y z : ι → L) (r : k → L)
+    (s : Finset k) (P Q : MvPolynomial ι k)
+    (hP : ∀ m ∈ P.support, MvPolynomial.coeff m P ∈ s)
+    (hQ : ∀ m ∈ Q.support, MvPolynomial.coeff m Q ∈ s)
+    (hr : ∀ a ∈ s, r a ^ p = f a)
+    (hz : ∀ i, z i ^ p = y i)
+    (hQ0 : MvPolynomial.eval₂ f y Q ≠ 0) :
+    ∃ q : L, q ^ p = MvPolynomial.eval₂ f y P /
+      MvPolynomial.eval₂ f y Q := by
+  obtain ⟨a, ha⟩ := exists_pth_root_eval₂ p f y z r s P hP hr hz
+  obtain ⟨b, hb⟩ := exists_pth_root_eval₂ p f y z r s Q hQ hr hz
+  have hb0 : b ≠ 0 := by
+    intro h
+    apply hQ0
+    rw [← hb, h, zero_pow (Fact.out : Nat.Prime p).pos.ne']
+  refine ⟨a / b, ?_⟩
+  rw [div_pow, ha, hb]
+
 /-- Finitely many elements of a rational function field can be represented
 with numerators and denominators involving only finitely many coefficients of
 the ground field. -/

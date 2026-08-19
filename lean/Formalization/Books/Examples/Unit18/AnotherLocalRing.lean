@@ -772,7 +772,69 @@ theorem diagonalExpansion_diagonalBlocks (f : TwoVariablePowerSeries k) :
 theorem aCondition_iff_diagonalBlocks (f : TwoVariablePowerSeries k) :
     ACondition k p f ↔
       ∀ n : ℕ, FiniteDegreeOverPowers k p (diagonalBlockCoefficients k f n) := by
-  sorry
+  have hcoeff (n : ℕ) :
+      diagonalBlockCoefficients k f n = diagonalCoefficients k f n := by
+    ext a
+    constructor
+    · intro ha
+      rcases ha with ha | ha
+      · rcases ha with ⟨i, rfl⟩
+        refine ⟨Finsupp.single (0 : Fin 2) (n + i) +
+            Finsupp.single (1 : Fin 2) n, ?_, ?_⟩
+        · right
+          constructor <;> simp
+        · change MvPowerSeries.coeff
+              (Finsupp.single (0 : Fin 2) (n + i) +
+                Finsupp.single (1 : Fin 2) n) f =
+            PowerSeries.coeff i (diagonalBlock k f n).1
+          rw [diagonalBlock_spec_left]
+          rfl
+      · rcases ha with ⟨j, rfl⟩
+        refine ⟨Finsupp.single (0 : Fin 2) n +
+            Finsupp.single (1 : Fin 2) (n + j), ?_, ?_⟩
+        · left
+          constructor <;> simp
+        · change MvPowerSeries.coeff
+              (Finsupp.single (0 : Fin 2) n +
+                Finsupp.single (1 : Fin 2) (n + j)) f =
+            PowerSeries.coeff j (diagonalBlock k f n).2
+          rw [diagonalBlock_spec_right]
+          rfl
+    · intro ha
+      rcases ha with ⟨d, hd, rfl⟩
+      rcases hd with ⟨hd0, hdn⟩ | ⟨hd1, hdn⟩
+      · right
+        refine ⟨d 1 - n, ?_⟩
+        change PowerSeries.coeff (d 1 - n) (diagonalBlock k f n).2 =
+            MvPowerSeries.coeff d f
+        rw [diagonalBlock_spec_right]
+        unfold coefficientXY
+        have hdeq :
+            Finsupp.single (0 : Fin 2) n +
+                Finsupp.single (1 : Fin 2) (n + (d 1 - n)) = d := by
+          ext i
+          fin_cases i <;> simp [hd0, Nat.add_sub_of_le hdn]
+        rw [hdeq]
+      · left
+        refine ⟨d 0 - n, ?_⟩
+        change PowerSeries.coeff (d 0 - n) (diagonalBlock k f n).1 =
+            MvPowerSeries.coeff d f
+        rw [diagonalBlock_spec_left]
+        unfold coefficientXY
+        have hdeq :
+            Finsupp.single (0 : Fin 2) (n + (d 0 - n)) +
+                Finsupp.single (1 : Fin 2) n = d := by
+          ext i
+          fin_cases i <;> simp [hd1, Nat.add_sub_of_le hdn]
+        rw [hdeq]
+  unfold ACondition
+  constructor
+  · intro h n
+    rw [hcoeff n]
+    exact h n
+  · intro h n
+    rw [← hcoeff n]
+    exact h n
 
 end TwoVariableSeries
 
@@ -790,11 +852,33 @@ noncomputable instance aRingAlgebraAmbient :
 
 theorem x_mem_aSubring :
     (MvPowerSeries.X 0 : TwoVariablePowerSeries k) ∈ aSubring k p := by
-  sorry
+  change ACondition k p (MvPowerSeries.X 0)
+  unfold ACondition
+  intro n
+  unfold FiniteDegreeOverPowers
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (MvPowerSeries.X 0) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  rw [MvPowerSeries.coeff_X]
+  by_cases h : d = Finsupp.single (0 : Fin 2) 1
+  · simp [h]
+  · simp [h]
 
 theorem y_mem_aSubring :
     (MvPowerSeries.X 1 : TwoVariablePowerSeries k) ∈ aSubring k p := by
-  sorry
+  change ACondition k p (MvPowerSeries.X 1)
+  unfold ACondition
+  intro n
+  unfold FiniteDegreeOverPowers
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (MvPowerSeries.X 1) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  rw [MvPowerSeries.coeff_X]
+  by_cases h : d = Finsupp.single (1 : Fin 2) 1
+  · simp [h]
+  · simp [h]
 
 abbrev aX : aRing k p :=
   ⟨MvPowerSeries.X 0, x_mem_aSubring k p⟩
@@ -812,7 +896,291 @@ abbrev aCompletion : Type u := AdicCompletion (aXYIdeal k p) (aRing k p)
 
 theorem a_is_complete :
     IsAdicComplete (aXYIdeal k p) (aRing k p) := by
-  sorry
+  have hzeroX (n : ℕ) {z : aRing k p}
+      (hz : z ∈ (aXYIdeal k p) ^ n • (⊤ : Submodule (aRing k p) (aRing k p)))
+      (d : Fin 2 →₀ ℕ) (hd : d 0 < n) :
+      MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0 := by
+    have hz' : z ∈ (aXYIdeal k p) ^ n := by
+      refine Submodule.smul_induction_on hz ?_ ?_
+      · intro r hr x hx
+        simpa [smul_eq_mul, mul_comm] using
+          (aXYIdeal k p ^ n).mul_mem_left x hr
+      · intro x y hx hy
+        exact (aXYIdeal k p ^ n).add_mem hx hy
+    change z ∈ (Ideal.span {aX k p * aY k p}) ^ n at hz'
+    rw [Ideal.span_singleton_pow] at hz'
+    obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hz'
+    have hdiv : (MvPowerSeries.X 0 : TwoVariablePowerSeries k) ^ n ∣
+        (z : TwoVariablePowerSeries k) := by
+      refine ⟨((c : aRing k p) : TwoVariablePowerSeries k) *
+          (MvPowerSeries.X 1 : TwoVariablePowerSeries k) ^ n, ?_⟩
+      rw [← hc]
+      simp [aX, aY, mul_pow, mul_left_comm]
+    exact (MvPowerSeries.X_pow_dvd_iff.mp hdiv d hd)
+  have hzeroY (n : ℕ) {z : aRing k p}
+      (hz : z ∈ (aXYIdeal k p) ^ n • (⊤ : Submodule (aRing k p) (aRing k p)))
+      (d : Fin 2 →₀ ℕ) (hd : d 1 < n) :
+      MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0 := by
+    have hz' : z ∈ (aXYIdeal k p) ^ n := by
+      refine Submodule.smul_induction_on hz ?_ ?_
+      · intro r hr x hx
+        simpa [smul_eq_mul, mul_comm] using
+          (aXYIdeal k p ^ n).mul_mem_left x hr
+      · intro x y hx hy
+        exact (aXYIdeal k p ^ n).add_mem hx hy
+    change z ∈ (Ideal.span {aX k p * aY k p}) ^ n at hz'
+    rw [Ideal.span_singleton_pow] at hz'
+    obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hz'
+    have hdiv : (MvPowerSeries.X 1 : TwoVariablePowerSeries k) ^ n ∣
+        (z : TwoVariablePowerSeries k) := by
+      refine ⟨((c : aRing k p) : TwoVariablePowerSeries k) *
+          (MvPowerSeries.X 0 : TwoVariablePowerSeries k) ^ n, ?_⟩
+      rw [← hc]
+      simp [aX, aY, mul_pow, mul_assoc, mul_comm]
+    exact (MvPowerSeries.X_pow_dvd_iff.mp hdiv d hd)
+  have hhaus : IsHausdorff (aXYIdeal k p) (aRing k p) := by
+    refine ⟨fun z hz => ?_⟩
+    apply Subtype.ext
+    ext d
+    have hzero :=
+      hzeroX (d 0 + 1) (SModEq.sub_mem.mp (hz (d 0 + 1))) d
+        (Nat.lt_succ_self _)
+    simpa using hzero
+  have hlimit_condition (fseq : ℕ → aRing k p) :
+      ACondition k p (fun d : Fin 2 →₀ ℕ =>
+        MvPowerSeries.coeff d
+          (fseq (min (d 0) (d 1) + 1) : TwoVariablePowerSeries k)) := by
+    let g : TwoVariablePowerSeries k := fun d =>
+      MvPowerSeries.coeff d
+        (fseq (min (d 0) (d 1) + 1) : TwoVariablePowerSeries k)
+    change ACondition k p g
+    apply (aCondition_iff_diagonalBlocks k p _).2
+    intro q
+    have hFq := (aCondition_iff_diagonalBlocks k p
+      (fseq (q + 1))).1 (fseq (q + 1)).property q
+    rcases hFq with ⟨F, hF, hFfin⟩
+    refine ⟨F, ?_, hFfin⟩
+    intro a ha
+    rcases ha with ha | ha
+    · rcases ha with ⟨i, rfl⟩
+      apply hF
+      left
+      refine ⟨i, ?_⟩
+      change PowerSeries.coeff i
+          (diagonalBlock k (fseq (q + 1) : TwoVariablePowerSeries k) q).1 =
+        PowerSeries.coeff i (diagonalBlock k g q).1
+      rw [diagonalBlock_spec_left, diagonalBlock_spec_left]
+      unfold coefficientXY
+      let e : Fin 2 →₀ ℕ :=
+        Finsupp.single (0 : Fin 2) q + Finsupp.single (0 : Fin 2) i +
+          Finsupp.single (1 : Fin 2) q
+      have heq :
+          Finsupp.single (0 : Fin 2) (q + i) +
+              Finsupp.single (1 : Fin 2) q = e := by
+        ext t
+        fin_cases t <;> simp [e]
+      rw [heq]
+      have hmin : min (e 0) (e 1) = q := by simp [e]
+      change MvPowerSeries.coeff e
+          (fseq (q + 1) : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff e
+          (fseq (min (e 0) (e 1) + 1) : TwoVariablePowerSeries k)
+      rw [hmin]
+    · rcases ha with ⟨j, rfl⟩
+      apply hF
+      right
+      refine ⟨j, ?_⟩
+      change PowerSeries.coeff j
+          (diagonalBlock k (fseq (q + 1) : TwoVariablePowerSeries k) q).2 =
+        PowerSeries.coeff j (diagonalBlock k g q).2
+      rw [diagonalBlock_spec_right, diagonalBlock_spec_right]
+      unfold coefficientXY
+      let e : Fin 2 →₀ ℕ :=
+        Finsupp.single (0 : Fin 2) q +
+          (Finsupp.single (1 : Fin 2) q + Finsupp.single (1 : Fin 2) j)
+      have heq :
+          Finsupp.single (0 : Fin 2) q +
+              Finsupp.single (1 : Fin 2) (q + j) = e := by
+        ext t
+        fin_cases t <;> simp [e]
+      rw [heq]
+      have hmin : min (e 0) (e 1) = q := by simp [e]
+      change MvPowerSeries.coeff e
+          (fseq (q + 1) : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff e
+          (fseq (min (e 0) (e 1) + 1) : TwoVariablePowerSeries k)
+      rw [hmin]
+  have hquotient (z : aRing k p) (n : ℕ)
+      (hz0 : ∀ d : Fin 2 →₀ ℕ, d 0 < n →
+        MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0)
+      (hz1 : ∀ d : Fin 2 →₀ ℕ, d 1 < n →
+        MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) = 0) :
+      ∃ q : aRing k p, z = (aX k p * aY k p) ^ n * q := by
+    let shift : Fin 2 →₀ ℕ :=
+      Finsupp.single (0 : Fin 2) n + Finsupp.single (1 : Fin 2) n
+    let q0 : TwoVariablePowerSeries k := fun d =>
+      MvPowerSeries.coeff (d + shift) (z : TwoVariablePowerSeries k)
+    have hqcond : ACondition k p q0 := by
+      apply (aCondition_iff_diagonalBlocks k p q0).2
+      intro r
+      have hF := (aCondition_iff_diagonalBlocks k p (z : TwoVariablePowerSeries k)).1
+        z.property (r + n)
+      rcases hF with ⟨F, hF, hFfin⟩
+      refine ⟨F, ?_, hFfin⟩
+      intro a ha
+      rcases ha with ha | ha
+      · rcases ha with ⟨i, rfl⟩
+        apply hF
+        left
+        refine ⟨i, ?_⟩
+        change PowerSeries.coeff i
+            (diagonalBlock k (z : TwoVariablePowerSeries k) (r + n)).1 =
+          PowerSeries.coeff i (diagonalBlock k q0 r).1
+        rw [diagonalBlock_spec_left, diagonalBlock_spec_left]
+        unfold coefficientXY
+        have heq :
+            Finsupp.single (0 : Fin 2) (r + n + i) +
+                Finsupp.single (1 : Fin 2) (r + n) =
+              (Finsupp.single (0 : Fin 2) (r + i) +
+                Finsupp.single (1 : Fin 2) r) + shift := by
+          ext t
+          fin_cases t <;> simp [shift, Nat.add_left_comm, Nat.add_comm]
+        rw [heq]
+        rfl
+      · rcases ha with ⟨j, rfl⟩
+        apply hF
+        right
+        refine ⟨j, ?_⟩
+        change PowerSeries.coeff j
+            (diagonalBlock k (z : TwoVariablePowerSeries k) (r + n)).2 =
+          PowerSeries.coeff j (diagonalBlock k q0 r).2
+        rw [diagonalBlock_spec_right, diagonalBlock_spec_right]
+        unfold coefficientXY
+        have heq :
+            Finsupp.single (0 : Fin 2) (r + n) +
+                Finsupp.single (1 : Fin 2) (r + n + j) =
+              (Finsupp.single (0 : Fin 2) r +
+                Finsupp.single (1 : Fin 2) (r + j)) + shift := by
+          ext t
+          fin_cases t <;> simp [shift, Nat.add_left_comm, Nat.add_comm]
+        rw [heq]
+        rfl
+    refine ⟨⟨q0, hqcond⟩, ?_⟩
+    apply Subtype.ext
+    ext d
+    change MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) =
+      MvPowerSeries.coeff d
+        (((MvPowerSeries.X 0 * MvPowerSeries.X 1 :
+          TwoVariablePowerSeries k) ^ n) * q0)
+    rw [show (MvPowerSeries.X 0 * MvPowerSeries.X 1 :
+        TwoVariablePowerSeries k) ^ n =
+          MvPowerSeries.monomial shift 1 by
+      simp [shift, mul_pow, MvPowerSeries.X_pow_eq,
+        MvPowerSeries.monomial_mul_monomial]]
+    rw [MvPowerSeries.coeff_monomial_mul]
+    split_ifs with h
+    · dsimp [q0]
+      simp only [one_mul]
+      change MvPowerSeries.coeff d (z : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff (d - shift + shift) (z : TwoVariablePowerSeries k)
+      rw [tsub_add_cancel_of_le h]
+    · by_cases h0 : d 0 < n
+      · exact hz0 d h0
+      · by_cases h1 : d 1 < n
+        · exact hz1 d h1
+        · have hle : shift ≤ d := by
+            intro i
+            fin_cases i <;> simp [shift, Nat.le_of_not_gt h0,
+              Nat.le_of_not_gt h1]
+          exact (h hle).elim
+  rw [← AdicCompletion.of_bijective_iff]
+  refine ⟨AdicCompletion.of_injective_iff.mpr hhaus, ?_⟩
+  apply AdicCompletion.of_surjective_iff.mpr
+  constructor
+  intro fseq hf
+  let g : TwoVariablePowerSeries k := fun d =>
+    MvPowerSeries.coeff d
+      (fseq (min (d 0) (d 1) + 1) : TwoVariablePowerSeries k)
+  have hgcond : ACondition k p g := by
+    simpa [g] using hlimit_condition fseq
+  let L : aRing k p := ⟨g, hgcond⟩
+  refine ⟨L, ?_⟩
+  intro n
+  apply SModEq.sub_mem.mpr
+  have hcoeff (d : Fin 2 →₀ ℕ)
+      (hn : min (d 0) (d 1) + 1 ≤ n) :
+      MvPowerSeries.coeff d (fseq n : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff d (L : TwoVariablePowerSeries k) := by
+    by_cases h01 : d 0 ≤ d 1
+    · have hm : min (d 0) (d 1) + 1 = d 0 + 1 := by
+        rw [min_eq_left h01]
+      have hmn : d 0 + 1 ≤ n := by simpa [hm] using hn
+      have hdiff := SModEq.sub_mem.mp (hf hmn)
+      have hzero := hzeroX (d 0 + 1) hdiff d (by omega)
+      have hzero' :
+          MvPowerSeries.coeff d (fseq (d 0 + 1) : TwoVariablePowerSeries k) -
+            MvPowerSeries.coeff d (fseq n : TwoVariablePowerSeries k) = 0 := by
+        change MvPowerSeries.coeff d
+            ((fseq (d 0 + 1) : TwoVariablePowerSeries k) -
+              (fseq n : TwoVariablePowerSeries k)) = 0 at hzero
+        simpa only [map_sub] using hzero
+      change MvPowerSeries.coeff d (fseq n : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff d
+          (fseq (min (d 0) (d 1) + 1) : TwoVariablePowerSeries k)
+      rw [hm]
+      exact (sub_eq_zero.mp hzero').symm
+    · have hlt : d 1 < d 0 := Nat.lt_of_not_ge h01
+      have hm : min (d 0) (d 1) + 1 = d 1 + 1 := by
+        rw [min_eq_right (Nat.le_of_lt hlt)]
+      have hmn : d 1 + 1 ≤ n := by simpa [hm] using hn
+      have hdiff := SModEq.sub_mem.mp (hf hmn)
+      have hzero := hzeroY (d 1 + 1) hdiff d (by omega)
+      have hzero' :
+          MvPowerSeries.coeff d (fseq (d 1 + 1) : TwoVariablePowerSeries k) -
+            MvPowerSeries.coeff d (fseq n : TwoVariablePowerSeries k) = 0 := by
+        change MvPowerSeries.coeff d
+            ((fseq (d 1 + 1) : TwoVariablePowerSeries k) -
+              (fseq n : TwoVariablePowerSeries k)) = 0 at hzero
+        simpa only [map_sub] using hzero
+      change MvPowerSeries.coeff d (fseq n : TwoVariablePowerSeries k) =
+        MvPowerSeries.coeff d
+          (fseq (min (d 0) (d 1) + 1) : TwoVariablePowerSeries k)
+      rw [hm]
+      exact (sub_eq_zero.mp hzero').symm
+  have hz0 : ∀ d : Fin 2 →₀ ℕ, d 0 < n →
+      MvPowerSeries.coeff d ((fseq n - L : aRing k p) : TwoVariablePowerSeries k) = 0 := by
+    intro d hd
+    have hmn : min (d 0) (d 1) + 1 ≤ n := by
+      by_cases h01 : d 0 ≤ d 1
+      · simpa [min_eq_left h01] using (Nat.succ_le_of_lt hd)
+      · have hlt : d 1 < d 0 := Nat.lt_of_not_ge h01
+        rw [min_eq_right (Nat.le_of_lt hlt)]
+        exact le_trans (Nat.succ_le_of_lt hlt) (Nat.le_of_lt hd)
+    have hc := hcoeff d hmn
+    change MvPowerSeries.coeff d
+      ((fseq n : TwoVariablePowerSeries k) - (L : TwoVariablePowerSeries k)) = 0
+    rw [map_sub, hc]
+    exact sub_self _
+  have hz1 : ∀ d : Fin 2 →₀ ℕ, d 1 < n →
+      MvPowerSeries.coeff d ((fseq n - L : aRing k p) : TwoVariablePowerSeries k) = 0 := by
+    intro d hd
+    have hmn : min (d 0) (d 1) + 1 ≤ n := by
+      by_cases h01 : d 0 ≤ d 1
+      · rw [min_eq_left h01]
+        exact Nat.succ_le_of_lt (lt_of_le_of_lt h01 hd)
+      · simpa [min_eq_right (Nat.le_of_not_ge h01)] using (Nat.succ_le_of_lt hd)
+    have hc := hcoeff d hmn
+    change MvPowerSeries.coeff d
+      ((fseq n : TwoVariablePowerSeries k) - (L : TwoVariablePowerSeries k)) = 0
+    rw [map_sub, hc]
+    exact sub_self _
+  obtain ⟨q, hq⟩ := hquotient (fseq n - L) n hz0 hz1
+  rw [hq]
+  have hgen : aX k p * aY k p ∈ aXYIdeal k p := by
+    exact Ideal.subset_span (by simp)
+  simpa [smul_eq_mul] using
+    (Submodule.smul_mem_smul (Ideal.pow_mem_pow hgen n)
+      (show q ∈ (⊤ : Submodule (aRing k p) (aRing k p)) by trivial))
 
 theorem a_quotient_is_fiberProduct :
     Nonempty ((aRing k p ⧸ aXYIdeal k p) ≃+*

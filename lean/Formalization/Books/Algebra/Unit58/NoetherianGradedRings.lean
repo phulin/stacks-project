@@ -839,7 +839,6 @@ private theorem associatedGradedRingPiece_mk_heq
   apply Subtype.ext
   exact hab
 
-set_option linter.style.haveILetI false in
 /-- The canonical ring operations on the associated graded ring. -/
 theorem associatedGradedRing_gcommRing_exists
     {R : Type u} [CommRing R] (I : Ideal R) :
@@ -847,8 +846,8 @@ theorem associatedGradedRing_gcommRing_exists
   let one : associatedGradedRingPiece I 0 :=
     Submodule.Quotient.mk ⟨1, by simp⟩
   refine ⟨?_⟩
-  letI : GradedMonoid.GOne (associatedGradedRingPiece I) := ⟨one⟩
-  letI : GradedMonoid.GMul (associatedGradedRingPiece I) :=
+  let : GradedMonoid.GOne (associatedGradedRingPiece I) := ⟨one⟩
+  let : GradedMonoid.GMul (associatedGradedRingPiece I) :=
     ⟨@associatedGradedRingPieceMul R _ I⟩
   exact {
     mul := @associatedGradedRingPieceMul R _ I
@@ -903,9 +902,7 @@ theorem associatedGradedRing_gcommRing_exists
           (Submodule.Quotient.mk a)
           (associatedGradedRingPieceMul I j k
             (Submodule.Quotient.mk b) (Submodule.Quotient.mk c)))
-      simpa [associatedGradedRingPieceMul, Submodule.Quotient.mk,
-        associatedGradedRingPieceMulAux, add_assoc] using
-        (associatedGradedRingPiece_mk_heq I (add_assoc i j k)
+      exact (associatedGradedRingPiece_mk_heq I (add_assoc i j k)
           (⟨((a : R) * (b : R)) * (c : R), by
             rw [Ideal.IsTwoSided.pow_add, Ideal.IsTwoSided.pow_add]
             exact Ideal.mul_mem_mul

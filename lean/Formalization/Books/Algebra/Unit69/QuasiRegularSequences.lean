@@ -8,8 +8,11 @@ import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Map
 import Mathlib.LinearAlgebra.TensorProduct.Associator
 import Mathlib.RingTheory.Ideal.Operations
+import Mathlib.RingTheory.Ideal.Colon
+import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
 
 /-!
 # Commutative Algebra, Chapter 69: Quasi-regular sequences
@@ -73,6 +76,120 @@ abbrev quasiRegularTarget
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :=
   ⨁ n, quasiRegularPiece R M I n
+
+/- The filtration operation commutes with extension of scalars.  Keeping this
+   identity explicit is useful below: it is the bridge between the nested
+   quotient presentation of `quasiRegularPiece` and the usual base-changed
+   ideal-power filtration. -/
+theorem quasiRegular_filtration_baseChange_smul
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (I : Ideal R) (P : Submodule R M) :
+    (I • P).baseChange S =
+      (I.map (algebraMap R S)) • P.baseChange S := by
+  let B : Submodule S (S ⊗[R] M) := (I • P).baseChange S
+  let C : Submodule S (S ⊗[R] M) := P.baseChange S
+  apply le_antisymm
+  · rw [Submodule.baseChange]
+    rintro _ ⟨x, rfl⟩
+    induction x with
+    | zero => simp
+    | add x y hx hy => exact Submodule.add_mem _ hx hy
+    | tmul s p =>
+      rcases p with ⟨p, hp⟩
+      refine Submodule.smul_induction_on hp ?_ ?_
+      · intro r hr m hm
+        change s ⊗ₜ[R] (r • m) ∈ (I.map (algebraMap R S)) • C
+        rw [← tmul_smul]
+        exact Submodule.smul_mem_smul (Ideal.mem_map_of_mem _ hr)
+          (Submodule.tmul_mem_baseChange_of_mem S hm)
+      · intro x y hx hy
+        simpa [add_tmul] using (add_mem hx hy)
+  · apply Submodule.smul_le.mpr
+    intro a ha z hz
+    let K : Ideal S := B.colon (C : Set (S ⊗[R] M))
+    have hK : I.map (algebraMap R S) ≤ K := by
+      refine Ideal.map_le_iff_le_comap.mpr ?_
+      intro r hr
+      change algebraMap R S r ∈ K
+      rw [Submodule.mem_colon]
+      intro z hz
+      rcases hz with ⟨y, rfl⟩
+      let g : P →ₗ[R] ↥(I • P) :=
+        { toFun := fun p => ⟨r • p, Submodule.smul_mem_smul hr p.property⟩
+          map_add' := by intro x y; ext; simp
+          map_smul' := by intro c x; ext; simp [smul_comm] }
+      refine ⟨(g.baseChange S) y, ?_⟩
+      induction y with
+      | zero => simp
+      | add y₁ y₂ hy₁ hy₂ =>
+        simp only [map_add, hy₁, hy₂]
+      | tmul s p =>
+        simp [g, LinearMap.baseChange_tmul, TensorProduct.tmul_smul,
+          TensorProduct.smul_tmul]
+    exact (Submodule.mem_colon.mp (hK ha)) z hz
+
+theorem quasiRegular_filtration_baseChange
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (I : Ideal R) (n : ℕ) :
+    (I ^ n • (⊤ : Submodule R M)).baseChange S =
+      (I.map (algebraMap R S) ^ n) • (⊤ : Submodule S (S ⊗[R] M)) := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    simpa [pow_succ', Submodule.mul_smul, mul_comm, ih,
+      Ideal.map_pow] using
+      (quasiRegular_filtration_baseChange_smul (S := S) (M := M) (I ^ n)
+        (⊤ : Submodule R M))
+
+noncomputable def quasiRegular_filtrationBaseChangeEquiv
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (hflat : RingHom.Flat (algebraMap R S))
+    (I : Ideal R) (n : ℕ) :
+    S ⊗[R] (I ^ n • (⊤ : Submodule R M)) ≃ₗ[S]
+      (I.map (algebraMap R S) ^ n) • (⊤ : Submodule S (S ⊗[R] M)) := by
+  letI : Module.Flat R S := RingHom.flat_algebraMap_iff.mp hflat
+  exact (Submodule.toBaseChange.toLinearEquiv S (I ^ n • (⊤ : Submodule R M))).trans
+    (LinearEquiv.ofEq _ _ (quasiRegular_filtration_baseChange I n))
+
+noncomputable def quasiRegularPiece_baseChangeEquiv
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (hflat : RingHom.Flat (algebraMap R S))
+    (I : Ideal R) (n : ℕ) :
+    S ⊗[R] quasiRegularPiece R M I n ≃ₗ[S]
+      quasiRegularPiece S (S ⊗[R] M) (I.map (algebraMap R S)) n := by
+  let J : Ideal S := I.map (algebraMap R S)
+  let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
+  let P' : Submodule S (S ⊗[R] M) := J ^ n • (⊤ : Submodule S (S ⊗[R] M))
+  let eP : S ⊗[R] P ≃ₗ[S] P' :=
+    quasiRegular_filtrationBaseChangeEquiv hflat I n
+  let hden :
+      (J • (⊤ : Submodule S (S ⊗[R] P))).map (eP : (S ⊗[R] P) →ₗ[S] P') =
+        J • (⊤ : Submodule S P') := by
+    apply le_antisymm
+    · rw [Submodule.map_le_iff_le_comap]
+      apply Submodule.smul_le.mpr
+      intro a ha z hz
+      simpa only [map_smul, LinearEquiv.coe_coe] using
+        (Submodule.smul_mem_smul ha (show eP z ∈ (⊤ : Submodule S P') from trivial))
+    · apply Submodule.smul_le.mpr
+      intro a ha z hz
+      obtain ⟨w, rfl⟩ := eP.surjective z
+      refine ⟨a • w, ?_⟩
+      simp only [LinearEquiv.coe_coe, map_smul]
+      exact Submodule.smul_mem_smul ha trivial
+  exact (TensorProduct.tensorQuotMapSMulEquivTensorQuot P S I).symm.trans
+    (Submodule.Quotient.equiv _ _ eP hden)
+
+theorem quasiRegularPiece_baseChangeEquiv_tmul_mk
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (hflat : RingHom.Flat (algebraMap R S))
+    (I : Ideal R) (n : ℕ) (s : S)
+    (p : I ^ n • (⊤ : Submodule R M)) :
+    quasiRegularPiece_baseChangeEquiv hflat I n
+        (s ⊗ₜ[R] Submodule.Quotient.mk p) =
+      Submodule.Quotient.mk
+        (quasiRegular_filtrationBaseChangeEquiv hflat I n (s ⊗ₜ[R] p)) := by
+  rfl
 
 /-- The source of the canonical graded map in the textbook. -/
 abbrev quasiRegularSource
@@ -174,6 +291,40 @@ def quasiRegularMonomialMapQuotient
     (quasiRegularMonomialMapRaw_ker R M f d)
   exact quotientSemilinearMapToLinear I hN gq
 
+/-- Coefficients from the arbitrary module act on every associated-graded piece
+    through the quotient ring. -/
+theorem quasiRegularMonomialMapQuotient_coeff_smul
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (d : Fin f.length →₀ ℕ) (r : R) (m : M) :
+    quasiRegularMonomialMapQuotient R M f d
+        (Submodule.Quotient.mk (r • m)) =
+      Ideal.Quotient.mk (Ideal.ofList f) r •
+        quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m) := by
+  rw [Submodule.Quotient.mk_smul]
+  exact (quasiRegularMonomialMapQuotient R M f d).map_smul _ _
+
+theorem quasiRegularPiece_baseChangeEquiv_monomial_naturality
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (hflat : RingHom.Flat (algebraMap R S))
+    (f : List R) (d : Fin f.length →₀ ℕ) (m : M) :
+    quasiRegularPiece_baseChangeEquiv hflat (Ideal.ofList f)
+        (quasiRegularDegree d)
+        (1 ⊗ₜ[R] quasiRegularMonomialMapQuotient R M f d
+          (Submodule.Quotient.mk m)) =
+      quasiRegularMonomialMapQuotient S (S ⊗[R] M) (f.map (algebraMap R S)) d
+        (Submodule.Quotient.mk (1 ⊗ₜ[R] m)) := by
+  let I := Ideal.ofList f
+  let a := quasiRegularMonomialCoefficient f d
+  have ha : a ∈ I ^ quasiRegularDegree d := by
+    simpa [I, a] using quasiRegularMonomialCoefficient_mem f d
+  let p : I ^ quasiRegularDegree d • (⊤ : Submodule R M) :=
+    ⟨a • m, Submodule.smul_mem_smul ha Submodule.mem_top⟩
+  have hp := quasiRegularPiece_baseChangeEquiv_tmul_mk hflat I
+    (quasiRegularDegree d) 1 p
+  simpa [I, a, p, quasiRegularMonomialMapQuotient,
+    quotientSemilinearMapToLinear, quasiRegularMonomialMapRaw,
+    Ideal.map_ofList] using hp
+
 /-- The polynomial-linear map obtained by summing the monomial components. -/
 def quasiRegularPolynomialMap
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
@@ -251,6 +402,36 @@ theorem quasiRegularCanonicalMap_monomial
         (quasiRegularDegree d)
         (quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m)) := by
   simp [quasiRegularCanonicalMap, quasiRegularBilinearMap, quasiRegularPolynomialMap]
+
+theorem quasiRegularCanonicalMap_baseChange_monomial_naturality
+    {R S M : Type*} [CommRing R] [CommRing S] [AddCommGroup M]
+    [Module R M] [Algebra R S] (hflat : RingHom.Flat (algebraMap R S))
+    (f : List R) (m : M) (d : Fin f.length →₀ ℕ) :
+    quasiRegularCanonicalMap S (S ⊗[R] M) (f.map (algebraMap R S))
+        (Submodule.Quotient.mk (1 ⊗ₜ[R] m) ⊗ₜ[S ⧸ Ideal.ofList (f.map (algebraMap R S))]
+          MvPolynomial.monomial d 1) =
+      DirectSum.lof (S ⧸ Ideal.ofList (f.map (algebraMap R S))) ℕ
+        (fun n => quasiRegularPiece S (S ⊗[R] M)
+          (Ideal.ofList (f.map (algebraMap R S))) n)
+        (quasiRegularDegree d)
+        (quasiRegularPiece_baseChangeEquiv hflat (Ideal.ofList f)
+          (quasiRegularDegree d)
+          (1 ⊗ₜ[R] quasiRegularMonomialMapQuotient R M f d
+            (Submodule.Quotient.mk m))) := by
+  rw [quasiRegularCanonicalMap_monomial,
+    quasiRegularPiece_baseChangeEquiv_monomial_naturality hflat f d m]
+
+theorem quasiRegularCanonicalMap_coeff_smul
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (r : R) (m : M) (d : Fin f.length →₀ ℕ) :
+    quasiRegularCanonicalMap R M f
+        (Submodule.Quotient.mk (r • m) ⊗ₜ[R ⧸ Ideal.ofList f]
+          MvPolynomial.monomial d 1) =
+      Ideal.Quotient.mk (Ideal.ofList f) r •
+        quasiRegularCanonicalMap R M f
+          (Submodule.Quotient.mk m ⊗ₜ[R ⧸ Ideal.ofList f]
+            MvPolynomial.monomial d 1) := by
+  rw [Submodule.Quotient.mk_smul, smul_tmul, map_smul]
 
 /-- The canonical graded map is always surjective. -/
 theorem quasiRegularCanonicalMap_surjective

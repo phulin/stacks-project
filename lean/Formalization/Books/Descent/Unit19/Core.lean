@@ -1,5 +1,3 @@
-import Mathlib.AlgebraicGeometry.Morphisms.Flat
-import Mathlib.AlgebraicGeometry.Properties
 import Formalization.Books.SpacesCohomology.Unit02.Core
 
 /-!
@@ -11,10 +9,7 @@ topological algebraic-space interface is reused, with a chapter-local
 regularity predicate because that interface does not yet provide one.
 -/
 
-universe u v
-
-open CategoryTheory CategoryTheory.Limits
-open AlgebraicGeometry
+universe u
 
 namespace Formalization.Books.Descent.Unit19
 

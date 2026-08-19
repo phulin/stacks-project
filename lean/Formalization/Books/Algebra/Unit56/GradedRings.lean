@@ -1480,7 +1480,7 @@ private lemma graded_finite_homogeneous_generators
     apply Submodule.span_le.2
     rintro y ⟨i, rfl⟩
     rw [← DirectSum.sum_support_decompose 𝓜.component (s i)]
-    apply (Submodule.span S (Set.range x)).sum_mem
+    apply Submodule.sum_mem (Submodule.span S (Set.range x))
     intro j hj
     apply Submodule.subset_span
     refine ⟨e ⟨i, ⟨j, hj⟩⟩, ?_⟩
@@ -2484,7 +2484,7 @@ theorem veronese_generated_in_degree_one
   have hdeg_add (E F : s → ℕ) :
       deg (fun i => E i + F i) = deg E + deg F := by
     dsimp [deg]
-    simp [Nat.mul_add, Finset.sum_add_distrib, add_assoc]
+    simp [Nat.mul_add, Finset.sum_add_distrib]
   have hsplit (E : s → ℕ) (hE : r * m ≤ deg E) :
       ∃ A B : s → ℕ,
         (∀ i, A i + B i = E i) ∧ deg A = m ∧ deg B = deg E - m := by
@@ -2664,7 +2664,7 @@ theorem veronese_generated_in_degree_one
         change monomial e * ((t : S) * b) ∈ Q
         have h := Q.smul_mem t hb
         change (t : S) * (monomial e * b) ∈ Q at h
-        convert h using 1 <;> ring
+        (convert h using 1; ring)
     · simp
     · intro a b _ _ ha hb c hc
       rw [add_mul]
@@ -2673,7 +2673,7 @@ theorem veronese_generated_in_degree_one
       change ((t : S) * a) * b ∈ Q
       have h := Q.smul_mem t (ha b hb)
       change (t : S) * (a * b) ∈ Q at h
-      convert h using 1 <;> ring
+      (convert h using 1; ring)
   have hsQ : ∀ z : S, z ∈ s → z ∈ Q := by
     intro z hz
     let i : s := ⟨z, hz⟩
@@ -2894,7 +2894,6 @@ theorem veronese_generated_in_degree_one
       (smul := by
         intro c a _ ha k
         have hc0 : (c : S) ∈ G.component 0 := by
-          change (c : S) ∈ G.component 0
           exact c.property
         have hc : (c : S) ∈ G.component (0 * d) := by
           simpa only [zero_mul] using hc0
@@ -2997,7 +2996,7 @@ theorem veronese_generated_in_degree_one
           G.component (k * d)) = y := by
       apply Subtype.ext
       change (DirectSum.decompose G.component (y : S) (k * d) : S) = (y : S)
-      simpa using hdecomp
+      exact hdecomp
     rw [hsub] at h
     exact h
   apply top_unique
@@ -3113,7 +3112,7 @@ private theorem graded_component_finite_of_homogeneous_generators
         change monomial e * ((c : degreeZeroSubring G) * v) ∈ Q
         have h := Q.smul_mem c hv
         change (c : S) * (monomial e * v) ∈ Q at h
-        convert h using 1 <;> ring
+        (convert h using 1; ring)
     · simp
     · intro u v _ _ hu hv w hw
       rw [add_mul]
@@ -3122,7 +3121,7 @@ private theorem graded_component_finite_of_homogeneous_generators
       change ((c : degreeZeroSubring G) * u) * v ∈ Q
       have h := Q.smul_mem c (hu v hv)
       change (c : S) * (u * v) ∈ Q at h
-      convert h using 1 <;> ring
+      (convert h using 1; ring)
   have hQtop : Q = (⊤ : Submodule (degreeZeroSubring G) S) := by
     apply top_unique
     intro z hz

@@ -855,7 +855,6 @@ theorem noetherian_ring_isJacobson_of_prime_maximal_or_infinite_over
       have hzRf : f ∉ zR.asIdeal := by
         intro hfz
         apply hzf
-        change fA ∈ z.asIdeal
         exact hfz
       have hzloc : zR ∈
           Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet p f := by

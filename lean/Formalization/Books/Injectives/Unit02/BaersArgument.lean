@@ -728,14 +728,18 @@ theorem baerIteration_one {R : Type u} [Ring R]
             (Set.Iic (1 : Ordinal.{u}))) (baerStepFunctor R) ≪≫
         Functor.leftUnitor (baerStepFunctor R))⟩
 
-/-- Successor stages are obtained by applying the huge-pushout functor. -/
+/-- Successor stages are obtained by applying the huge-pushout functor.
+
+The lower stage is taken from the same ambient iteration over `Set.Iic (α + 1)`;
+using `baerIteration R α` here would introduce an independently chosen
+`SuccStruct` iteration and would require an unavailable initial-segment
+invariance interface. -/
 theorem baerIteration_succ {R : Type u} [Ring R] (α : Ordinal.{u})
-    [HasIterationOfShape (Set.Iic α)
-      (ModuleCat.{u} R ⥤ ModuleCat.{u} R)]
     [HasIterationOfShape (Set.Iic (α + 1))
       (ModuleCat.{u} R ⥤ ModuleCat.{u} R)] :
     Nonempty (baerIteration R (α + 1) ≅
-      baerIteration R α ⋙ baerStepFunctor R) := by
+      (baerIterationFunctor R (α + 1)).obj
+          ⟨α, by simp⟩ ⋙ baerStepFunctor R) := by
   sorry
 
 /-- At a limit stage, the iteration is the colimit of its earlier stages. -/

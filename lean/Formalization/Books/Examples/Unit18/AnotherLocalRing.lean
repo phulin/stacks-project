@@ -105,7 +105,13 @@ theorem oneVariableFiniteDegree_mul {f g : PowerSeries k}
 theorem oneVariableFiniteDegree_neg {f : PowerSeries k}
     (hf : OneVariableFiniteDegree k p f) :
     OneVariableFiniteDegree k p (-f) := by
-  sorry
+  unfold OneVariableFiniteDegree at *
+  rcases hf with ⟨F, hF, hFfin⟩
+  refine ⟨F, ?_, hFfin⟩
+  rintro x ⟨i, rfl⟩
+  change PowerSeries.coeff i (-f) ∈ F
+  rw [map_neg]
+  exact F.neg_mem (hF ⟨i, rfl⟩)
 
 /-- The subring of one-variable series whose coefficients lie in a finite
 extension of `k ^ p`. -/
@@ -134,22 +140,159 @@ def badDvrConstantCoeff : badDvrRing k p →+* k :=
 
 theorem oneVariableFiniteDegree_X :
     OneVariableFiniteDegree k p PowerSeries.X := by
-  sorry
+  unfold OneVariableFiniteDegree
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  by_cases hi : i = 1
+  · simp [PowerSeries.coeff_X, hi]
+  · simp [PowerSeries.coeff_X, hi]
 
 /-- The image of the variable in the bad one-variable subring. -/
 def badDvrVariable : badDvrRing k p :=
   ⟨PowerSeries.X, oneVariableFiniteDegree_X k p⟩
 
+private theorem oneVariableFiniteDegree_isUnit_of_constantCoeff_ne_zero
+    {f : PowerSeries k} (hf : OneVariableFiniteDegree k p f)
+    (hc : PowerSeries.constantCoeff f ≠ 0) :
+    IsUnit (⟨f, hf⟩ : badDvrRing k p) := by
+  unfold OneVariableFiniteDegree at hf
+  rcases hf with ⟨F, hF, hFfin⟩
+  let fF : PowerSeries F :=
+    PowerSeries.mk (fun i => ⟨PowerSeries.coeff i f, hF ⟨i, rfl⟩⟩)
+  have hmap : PowerSeries.map F.val.toRingHom fF = f := by
+    ext i
+    simp [fF]
+  have hconstF : PowerSeries.constantCoeff fF ≠ 0 := by
+    intro hzero
+    apply hc
+    rw [← PowerSeries.coeff_zero_eq_constantCoeff_apply] at hzero ⊢
+    rw [← hmap, PowerSeries.coeff_map]
+    exact congrArg (fun a : F => (a : k)) hzero
+  let g : PowerSeries k := PowerSeries.map F.val.toRingHom (fF⁻¹)
+  have hg : OneVariableFiniteDegree k p g := by
+    unfold OneVariableFiniteDegree
+    refine ⟨F, ?_, hFfin⟩
+    rintro x ⟨i, rfl⟩
+    change PowerSeries.coeff i (PowerSeries.map F.val.toRingHom (fF⁻¹)) ∈ F
+    rw [PowerSeries.coeff_map]
+    exact (PowerSeries.coeff i (fF⁻¹)).property
+  have hfg : f * g = 1 := by
+    have hprod := congrArg (PowerSeries.map F.val.toRingHom)
+      (PowerSeries.mul_inv_cancel fF hconstF)
+    simp only [map_mul] at hprod
+    rw [hmap] at hprod
+    simpa only [g, map_one] using hprod
+  let u : (badDvrRing k p)ˣ :=
+    { val := ⟨f, ⟨F, hF, hFfin⟩⟩
+      inv := ⟨g, hg⟩
+      val_inv := by
+        apply Subtype.ext
+        exact hfg
+      inv_val := by
+        apply Subtype.ext
+        simpa [mul_comm] using hfg }
+  exact ⟨u, rfl⟩
+
+private theorem oneVariableFiniteDegree_shift {f : PowerSeries k}
+    (hf : OneVariableFiniteDegree k p f) :
+    OneVariableFiniteDegree k p (PowerSeries.mk fun n => PowerSeries.coeff (n + 1) f) := by
+  unfold OneVariableFiniteDegree at *
+  rcases hf with ⟨F, hF, hFfin⟩
+  refine ⟨F, ?_, hFfin⟩
+  rintro x ⟨i, rfl⟩
+  change PowerSeries.coeff i (PowerSeries.mk fun n => PowerSeries.coeff (n + 1) f) ∈ F
+  simp only [PowerSeries.coeff_mk]
+  exact hF ⟨i + 1, rfl⟩
+
+private theorem oneVariableFiniteDegree_divXPowOrder {f : PowerSeries k}
+    (hf : OneVariableFiniteDegree k p f) :
+    OneVariableFiniteDegree k p (PowerSeries.divXPowOrder f) := by
+  unfold OneVariableFiniteDegree at *
+  rcases hf with ⟨F, hF, hFfin⟩
+  refine ⟨F, ?_, hFfin⟩
+  rintro x ⟨i, rfl⟩
+  change PowerSeries.coeff i (PowerSeries.divXPowOrder f) ∈ F
+  rw [PowerSeries.coeff_divXPowOrder]
+  exact hF ⟨i + f.order.toNat, rfl⟩
+
 theorem badDvrRing_isDiscreteValuationRing :
     IsDiscreteValuationRing (badDvrRing k p) := by
-  sorry
+  have hprime : Prime (badDvrVariable k p) := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro hzero
+      apply (PowerSeries.X_ne_zero (R := k))
+      simpa [badDvrVariable] using congrArg Subtype.val hzero
+    · intro hu
+      apply (PowerSeries.X_irreducible (R := k)).not_isUnit
+      simpa [badDvrVariable] using hu.map (badDvrSubring k p).subtype
+    · intro a b hab
+      have hab' : (PowerSeries.X : PowerSeries k) ∣ (a : PowerSeries k) * (b : PowerSeries k) := by
+        rcases hab with ⟨c, hc⟩
+        refine ⟨(c : PowerSeries k), ?_⟩
+        exact congrArg Subtype.val hc
+      rcases PowerSeries.X_prime.dvd_or_dvd hab' with ha | hb
+      · left
+        rw [PowerSeries.X_dvd_iff] at ha
+        let s : PowerSeries k := PowerSeries.mk fun n => PowerSeries.coeff (n + 1) (a : PowerSeries k)
+        have hs : OneVariableFiniteDegree k p s := by
+          dsimp [s]
+          exact oneVariableFiniteDegree_shift k p a.property
+        have hs' : s ∈ badDvrSubring k p := by
+          change OneVariableFiniteDegree k p s
+          exact hs
+        refine ⟨⟨s, hs'⟩, ?_⟩
+        apply Subtype.ext
+        rw [PowerSeries.eq_shift_mul_X_add_const (a : PowerSeries k), ha]
+        simp [s, badDvrVariable, mul_comm]
+      · right
+        rw [PowerSeries.X_dvd_iff] at hb
+        let s : PowerSeries k := PowerSeries.mk fun n => PowerSeries.coeff (n + 1) (b : PowerSeries k)
+        have hs : OneVariableFiniteDegree k p s := by
+          dsimp [s]
+          exact oneVariableFiniteDegree_shift k p b.property
+        have hs' : s ∈ badDvrSubring k p := by
+          change OneVariableFiniteDegree k p s
+          exact hs
+        refine ⟨⟨s, hs'⟩, ?_⟩
+        apply Subtype.ext
+        rw [PowerSeries.eq_shift_mul_X_add_const (b : PowerSeries k), hb]
+        simp [s, badDvrVariable, mul_comm]
+  apply IsDiscreteValuationRing.ofHasUnitMulPowIrreducibleFactorization
+  refine ⟨badDvrVariable k p, hprime.irreducible, ?_⟩
+  intro x hx
+  have hfx : (x : PowerSeries k) ≠ 0 := by
+    intro hzero
+    apply hx
+    exact Subtype.ext hzero
+  have hdiv : OneVariableFiniteDegree k p
+      (PowerSeries.divXPowOrder (x : PowerSeries k)) :=
+    oneVariableFiniteDegree_divXPowOrder k p x.property
+  have hconst : PowerSeries.constantCoeff (PowerSeries.divXPowOrder (x : PowerSeries k)) ≠ 0 :=
+    (PowerSeries.constantCoeff_divXPowOrder_eq_zero_iff).not.mpr hfx
+  obtain ⟨u, hu⟩ := oneVariableFiniteDegree_isUnit_of_constantCoeff_ne_zero k p hdiv hconst
+  refine ⟨(x : PowerSeries k).order.toNat, ?_⟩
+  refine ⟨u, ?_⟩
+  apply Subtype.ext
+  have hu' := congrArg Subtype.val hu
+  change PowerSeries.X ^ (x : PowerSeries k).order.toNat * (u : PowerSeries k) = (x : PowerSeries k)
+  rw [hu']
+  exact PowerSeries.X_pow_order_mul_divXPowOrder
 
 def pPowerSeriesSubring1 : Subring (PowerSeries k) :=
   (PowerSeries.map (pPowerSubfield k p).subtype).range
 
 theorem pPowerSeriesSubring1_le_badDvrSubring :
     pPowerSeriesSubring1 k p ≤ badDvrSubring k p := by
-  sorry
+  intro f hf
+  rcases hf with ⟨g, rfl⟩
+  unfold badDvrSubring OneVariableFiniteDegree
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro x ⟨i, rfl⟩
+  change PowerSeries.coeff i (PowerSeries.map (pPowerSubfield k p).subtype g) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  rw [PowerSeries.coeff_map]
+  apply IntermediateField.mem_bot.mpr
+  exact ⟨PowerSeries.coeff i g, rfl⟩
 
 theorem badDvrSubring_le_ambient :
     badDvrSubring k p ≤ ⊤ := by

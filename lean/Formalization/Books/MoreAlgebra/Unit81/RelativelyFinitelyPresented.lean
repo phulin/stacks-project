@@ -826,7 +826,7 @@ theorem relativelyFinitelyPresented_localize
     simpa only [hg'] using
       (inferInstance : IsLocalizedModule (.powers g) f0)
   letI : IsLocalizedModule (.powers g') f1 := by
-    simpa [f1] using
+    simpa only [f1] using
       (@IsLocalizedModule.restrictScalars_powers
         (MvPolynomial (Fin n) Rf) _ M _ A _ _ _ _ L _ hPL hAL hPAM hPAL g' f0 hlocA)
   letI : Module (Localization.Away g') L := Module.compHom L q

@@ -1996,7 +1996,8 @@ theorem dehomogenization_finite_type (G : GradedRingData S)
 
 theorem dehomogenization_finite_module (G : GradedRingData S)
     (𝓜 : GradedModuleData G M) {f : S} {d : ℕ}
-    (hf : f ∈ G.component d) (hd : 0 < d) [Module.Finite S M] :
+    (hf : f ∈ G.component d) (hd : 0 < d)
+    [Algebra.FiniteType (G.component 0) S] [Module.Finite S M] :
     Module.Finite (homogeneousLocalizationAway G f)
       (homogeneousModuleAway G 𝓜 f d hf hd) := by
   sorry

@@ -599,8 +599,13 @@ theorem lemma_add_trivial_complex
       rw [hgi, hgj]
       exact htransport
     · by_cases h2 : j + 1 = i - 1
-      · have hj : j = i - 2 := by omega
+      · have hi2 : 2 ≤ i := by omega
+        have hj : j = i - 2 := by omega
         subst j
+        /- Prior attempt: the dependent transport from
+        `C.differential_comp (i - 2)` through `previousDifferential`
+        did not typecheck, and the resulting coordinate-complex goal
+        remained unsolved.
         have hpos : 0 < i - 1 := by omega
         have hleft :
             (C.previousDifferential (i - 1) hpos).comp f = 0 := by
@@ -609,15 +614,18 @@ theorem lemma_add_trivial_complex
           have hC : i - 2 + 1 + 1 = i := by omega
           have hC' : C.termRank (i - 2 + 1 + 1) = C.termRank i :=
             congrArg C.termRank hC
+          have hsub : i - 1 - 1 = i - 2 := by omega
           have hx := congrArg
             (fun q => q (fun z => x (Fin.cast hC' z)))
             (C.differential_comp (i - 2))
           simpa [f, FiniteFreeComplex.previousDifferential,
-            LinearMap.comp_apply] using hx
+            LinearMap.comp_apply, hsub] using hx
         apply LinearMap.ext
         intro x
         simp [g, h1, h2, f, FiniteFreeComplex.previousDifferential,
           LinearMap.comp_apply, hleft]
+        -/
+        sorry
       · apply LinearMap.ext
         intro x
         have hzero := congrArg
@@ -734,19 +742,29 @@ theorem lemma_add_trivial_complex
           ((g (i - 1)).comp (LinearMap.inr R (Fin (dRank (i - 1 + 1)) → R)
             (Fin (tRank (i - 1 + 1)) → R))) =
         hplus0.symm ▸ tDiff (i - 1) := by
+    /- Prior attempt: rewriting the dependent rank-one source and target
+    indices caused a motive error, and the subsequent finite-index
+    elimination remained dependent on those transports.
     ext x
     have hti : tRank (i - 1 + 1) = 1 := by
       rw [Nat.sub_add_cancel hi]
       simp [tRank]
     have htm : tRank (i - 1) = 1 := by simp [tRank, hprev_ne_i]
-    rw [hti, htm] at x ⊢
-    fin_cases x
+    simp only [Nat.sub_add_cancel hi] at x ⊢
+    have hx0 : x = Fin.cast (by simp [tRank]) (0 : Fin 1) := by
+      apply Fin.ext
+      have hxlt := x.isLt
+      simp [tRank] at hxlt ⊢
+      omega
+    rw [hx0]
     simp [g, coord, coordI, coordIm1, srcPre, tgtPre, ss, ts,
       sourceShear, targetShear, sp, tp, f0, f01, f10, dRank, tRank,
       hi_ne_prev, hprev_ne_i, Nat.sub_add_cancel hi, hc, hcv, hvc, c, v,
       pivotLinearEquiv,
       Fin.insertNth, Fin.removeNth, LinearEquiv.piCongrLeft,
       LinearEquiv.piCongrLeft', Equiv.piCongrLeft', Pi.single_apply] <;> ring
+    -/
+    sorry
   let D : FiniteFreeComplex R length :=
     { termRank := dRank
       termRank_zero := by
@@ -757,7 +775,8 @@ theorem lemma_add_trivial_complex
       differential := dDiff
       differential_zero := by
         intro j hj
-        simp [dDiff, g, C.differential_zero j hj]
+        have hne : j ≠ i - 1 := by omega
+        simp [dDiff, g, hne, C.differential_zero j hj]
       differential_comp := by
         intro j
         sorry }

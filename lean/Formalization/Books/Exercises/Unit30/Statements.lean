@@ -78,7 +78,7 @@ theorem graded_injective_iff_strict_monomorphism
       ∀ {X Y : FilteredObject C} (f : X ⟶ Y),
         Mono f → Strict f → ∀ p : ℤ, Mono (gradedPieceMap f p) := by
     intro X Y f hmono hs p
-    letI : Mono f := hmono
+    let : Mono f := hmono
     have hS := graded_piece_kernel_exact f p hs
     have hK : IsZero (filteredKernel f) :=
       KernelFork.IsLimit.isZero_of_mono (filteredKernelFork_isLimit f)
@@ -100,7 +100,7 @@ theorem graded_injective_iff_strict_monomorphism
     have hpiece : IsZero (gradedPiece (filteredKernel f) p) := by
       let j := (filteredKernel f).filtration.obj (p + 1)
       let k := (filteredKernel f).filtration.obj p
-      letI : Epi (Subobject.ofLE j k
+      let : Epi (Subobject.ofLE j k
           ((filteredKernel f).filtration.antitone (by omega))) := hstep.epi _
       exact isZero_cokernel_of_epi _
     have hfzero : gradedPieceMap (filteredKernelι f) p = 0 :=
@@ -142,9 +142,8 @@ theorem graded_injective_iff_strict_monomorphism
       have hzero : gradedPieceMap (filteredKernelι α) p = 0 := by
         apply (cancel_mono (gradedPieceMap α p)).1
         rw [zero_comp]
-        change gradedPieceMap (filteredKernelι α) p ≫ gradedPieceMap α p = 0
         exact (filteredKernelGradedShortComplex α p).zero
-      letI : Mono (gradedPieceMap (filteredKernelι α) p) := hKιgraded p
+      let : Mono (gradedPieceMap (filteredKernelι α) p) := hKιgraded p
       exact IsZero.of_mono_eq_zero _ hzero
     let Z := zeroFilteredObject (C := C)
     let f : Z ⟶ filteredKernel α := 0
@@ -161,7 +160,7 @@ theorem graded_injective_iff_strict_monomorphism
         (gradedPieceComplex f g hfg p).Exact := by
       intro p
       have hmapf : gradedPieceMap f p = 0 := by
-        letI : (gradedPieceFunctor (C := C) p).Additive :=
+        let : (gradedPieceFunctor (C := C) p).Additive :=
           gradedPieceFunctor_is_additive p
         change (gradedPieceFunctor (C := C) p).map f = 0
         exact (gradedPieceFunctor (C := C) p).map_zero Z (filteredKernel α)
@@ -192,7 +191,6 @@ theorem graded_injective_iff_strict_monomorphism
       have hzero : gradedPieceMap (filteredKernelι α) p = 0 := by
         apply (cancel_mono (gradedPieceMap α p)).1
         rw [zero_comp]
-        change gradedPieceMap (filteredKernelι α) p ≫ gradedPieceMap α p = 0
         exact (filteredKernelGradedShortComplex α p).zero
       exact (ShortComplex.exact_iff_mono _ hzero).2 (h p)
     have hstrict_exact :=

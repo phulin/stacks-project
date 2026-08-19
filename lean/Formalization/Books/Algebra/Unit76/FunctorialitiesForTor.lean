@@ -310,11 +310,12 @@ private noncomputable def extendFreeResolution
     change ((ShortComplex.mk (F.complex.d (n + 2) (n + 1))
       (F.complex.d (n + 1) n) (F.complex.d_comp_d (n + 2) (n + 1) n)).map E).Exact
     exact (F.resolution.exact_succ n).map E
-  · have : Epi F.resolution.augmentation := F.resolution.augmentation_epi
+  · let : Epi F.resolution.augmentation := F.resolution.augmentation_epi
     exact Functor.map_epi E F.resolution.augmentation
   · intro n
+    let : Module.Free R (F.complex.X n) := F.free n
     exact Module.Free.of_basis
-      ((@Module.Free.chooseBasis R (F.complex.X n) _ _ _ (F.free n)).baseChange R')
+      ((Module.Free.chooseBasis R (F.complex.X n)).baseChange R')
 
 private noncomputable def tensorComplexBaseChangeIso
     {R R' : Type u} [CommRing R] [CommRing R']

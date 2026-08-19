@@ -569,7 +569,7 @@ private lemma homotopyDegreewiseComponent_succ
       | succ n =>
           rw [show i.castSucc.succ = i.succ.castSucc by ext; rfl,
             homotopyDegreewiseComponent_castSucc]
-          simpa using H.h_succ_comp_δ_castSucc_succ i
+          exact H.h_succ_comp_δ_castSucc_succ i
 
 /-- Convert Mathlib's degree-raising simplicial homotopy to the source's
 degree-preserving convention. -/

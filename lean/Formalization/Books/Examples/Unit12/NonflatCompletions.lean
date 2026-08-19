@@ -2,6 +2,7 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.Tensor
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
@@ -14,6 +15,7 @@ import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Valuation.ValuationRing
 import Mathlib.LinearAlgebra.TensorProduct.Pi
+import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 
 /-!
 # Examples, Chapter 12: Nonflat completions
@@ -49,16 +51,262 @@ theorem countableTensorToPi_tmul (R : Type u) (M : Type v)
 theorem countable_finite_iff_tensor_surjective
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     [Countable M] :
-    Module.Finite R M ↔
+      Module.Finite R M ↔
       Function.Surjective (TensorProduct.piScalarRightHom R R M ℕ) := by
-  sorry
+  constructor
+  · intro h
+    obtain ⟨n, s, hs⟩ := @Module.Finite.exists_fin R M _ _ _ h
+    let l : (Fin n → R) →ₗ[R] M := Fintype.linearCombination R s
+    have hl : Function.Surjective l := by
+      rw [← LinearMap.range_eq_top, Fintype.range_linearCombination]
+      exact hs
+    intro f
+    choose c hc using fun i : ℕ => hl (f i)
+    refine ⟨∑ j : Fin n, s j ⊗ₜ[R] fun i => c i j, ?_⟩
+    ext i
+    simp only [map_sum, countableTensorToPi_tmul, Finset.sum_apply]
+    rw [← hc i]
+    simp [l, Fintype.linearCombination_apply]
+  · intro h
+    obtain ⟨e, he⟩ := exists_surjective_nat M
+    obtain ⟨x, hx⟩ := h e
+    obtain ⟨M', hM', hMx⟩ :=
+      TensorProduct.exists_finite_submodule_left_of_setFinite ({x} : Set _) (by simp)
+    obtain ⟨y, hy⟩ :=
+      hMx (show x ∈ ({x} : Set (M ⊗[R] (ℕ → R))) by simp)
+    have hcoord (y : M' ⊗[R] (ℕ → R)) (n : ℕ) :
+        (TensorProduct.piScalarRightHom R R M ℕ
+          (M'.subtype.rTensor (ℕ → R) y)) n ∈ M' := by
+      induction y using TensorProduct.induction_on with
+      | zero => simp
+      | tmul y f =>
+          simpa using M'.smul_mem (f n) y.property
+      | add y z ihy ihz =>
+          simpa [map_add] using M'.add_mem ihy ihz
+    have htop : (⊤ : Submodule R M) ≤ M' := by
+      intro m hm
+      obtain ⟨n, rfl⟩ := he m
+      rw [← hx, ← hy]
+      exact hcoord y n
+    apply Module.Finite.of_fg_top
+    rw [← top_unique htop]
+    exact (Submodule.fg_top M').mp hM'.fg_top
+
+private lemma finite_piScalarRightHom_injective
+    (R : Type u) (n : ℕ) [CommRing R] :
+    Function.Injective (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ) := by
+  classical
+  let inv : (ℕ → (Fin n → R)) → (Fin n → R) ⊗[R] (ℕ → R) :=
+    fun f => ∑ i : Fin n, Pi.single i 1 ⊗ₜ[R] fun j => f j i
+  have hinv : Function.LeftInverse inv
+      (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ) := by
+    intro x
+    induction x using TensorProduct.induction_on with
+    | zero =>
+        have hzero :
+            TensorProduct.piScalarRightHom R R (Fin n → R) ℕ (0) =
+              (0 : ℕ → Fin n → R) := map_zero _
+        simp only [hzero]
+        change (∑ i : Fin n, Pi.single i 1 ⊗ₜ[R]
+          (0 : ℕ → R)) = 0
+        apply Finset.sum_eq_zero
+        intro i hi
+        exact TensorProduct.tmul_zero _ _
+    | tmul x y =>
+        change (∑ i : Fin n, Pi.single i 1 ⊗ₜ[R] fun j => y j • x i) = x ⊗ₜ[R] y
+        have hsmul (i : Fin n) : (fun j => y j • x i) = x i • y := by
+          funext j
+          simpa only [Pi.smul_apply, smul_eq_mul] using mul_comm (y j) (x i)
+        calc
+          _ = ∑ i : Fin n, Pi.single i 1 ⊗ₜ[R] (x i • y) := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [hsmul i]
+          _ = ∑ i : Fin n, (x i • Pi.single i 1) ⊗ₜ[R] y := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [TensorProduct.tmul_smul, TensorProduct.smul_tmul']
+          _ = (∑ i : Fin n, x i • Pi.single i 1) ⊗ₜ[R] y := by
+            rw [TensorProduct.sum_tmul]
+          _ = x ⊗ₜ[R] y := by
+            apply congrArg (fun q : Fin n → R => q ⊗ₜ[R] y)
+            funext i
+            change (∑ j : Fin n, x j • Pi.single j 1) i = x i
+            simp only [Finset.sum_apply, Pi.smul_apply, Pi.single_apply, smul_eq_mul,
+              mul_ite, mul_one, mul_zero]
+            rw [Finset.sum_eq_single i]
+            · simp
+            · intro j hj hji
+              simp [Ne.symm hji]
+            · simp
+    | add x y hx hy =>
+        have hmap :
+            TensorProduct.piScalarRightHom R R (Fin n → R) ℕ (x + y) =
+              TensorProduct.piScalarRightHom R R (Fin n → R) ℕ x +
+                TensorProduct.piScalarRightHom R R (Fin n → R) ℕ y :=
+          map_add _ x y
+        rw [hmap]
+        simp only [inv]
+        let p := TensorProduct.piScalarRightHom R R (Fin n → R) ℕ x
+        let q := TensorProduct.piScalarRightHom R R (Fin n → R) ℕ y
+        change (∑ i : Fin n, (Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+          (fun j : ℕ => p j i + q j i)) = x + y
+        have hfun (i : Fin n) :
+            (fun j => p j i + q j i) = (fun j => p j i) + (fun j => q j i) := by
+          funext j
+          simp
+        have hadd :
+            (∑ i : Fin n, (Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+                (fun j : ℕ => p j i + q j i)) =
+              (∑ i : Fin n, ((Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+                (fun j : ℕ => p j i))) +
+                (∑ i : Fin n, ((Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+                (fun j : ℕ => q j i))) := by
+          calc
+            _ = (∑ i : Fin n, (
+                ((Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+                  (fun j : ℕ => p j i)) +
+                  ((Pi.single i (1 : R) : Fin n → R) ⊗ₜ[R]
+                    (fun j : ℕ => q j i)))) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              rw [hfun i, TensorProduct.tmul_add]
+            _ = _ := by rw [Finset.sum_add_distrib]
+        rw [hadd]
+        simpa [p, q, inv] using congrArg₂ (· + ·) hx hy
+  exact hinv.injective
+
+private lemma piScalarRightHom_rTensor_naturality
+    (R : Type u) (M : Type v) (P : Type*) [CommRing R] [AddCommGroup M]
+    [Module R M] [AddCommGroup P] [Module R P] (f : M →ₗ[R] P)
+    (x : M ⊗[R] (ℕ → R)) (n : ℕ) :
+    (TensorProduct.piScalarRightHom R R P ℕ (f.rTensor (ℕ → R) x)) n =
+      f (TensorProduct.piScalarRightHom R R M ℕ x n) := by
+  induction x using TensorProduct.induction_on with
+  | zero => simp
+  | tmul x y => simp [LinearMap.rTensor_tmul]
+  | add x y hx hy => simp [map_add, hx, hy]
+
+private lemma piScalarRightHom_R_eq_lid
+    (R : Type u) [CommRing R] (x : R ⊗[R] (ℕ → R)) :
+    TensorProduct.piScalarRightHom R R R ℕ x = TensorProduct.lid R (ℕ → R) x := by
+  induction x using TensorProduct.induction_on with
+  | zero => simp
+  | tmul r a =>
+      funext n
+      simp [TensorProduct.piScalarRightHom_tmul, TensorProduct.lid_tmul,
+        smul_eq_mul, mul_comm]
+  | add x y hx hy =>
+      rw [map_add, map_add, hx, hy]
+
+private lemma piScalarRightHom_R_injective
+    (R : Type u) [CommRing R] :
+    Function.Injective (TensorProduct.piScalarRightHom R R R ℕ) := by
+  intro x y hxy
+  apply (TensorProduct.lid R (ℕ → R)).injective
+  rw [← piScalarRightHom_R_eq_lid R x, ← piScalarRightHom_R_eq_lid R y]
+  exact hxy
 
 theorem countable_finitePresentation_iff_tensor_bijective
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     [Countable R] [Countable M] :
     Module.FinitePresentation R M ↔
-      Function.Bijective (TensorProduct.piScalarRightHom R R M ℕ) := by
-  sorry
+    Function.Bijective (TensorProduct.piScalarRightHom R R M ℕ) := by
+  constructor
+  · intro h
+    have hfin : Module.Finite R M := by
+      obtain ⟨s, hs, _⟩ := h.out
+      exact ⟨s, hs⟩
+    have hsurj : Function.Surjective (TensorProduct.piScalarRightHom R R M ℕ) :=
+      (countable_finite_iff_tensor_surjective R M).mp hfin
+    refine ⟨?_, hsurj⟩
+    intro x y hxy
+    obtain ⟨n, m, f, g, hf, hgf⟩ :=
+      @Module.FinitePresentation.exists_fin' R M _ _ _ h
+    let K := LinearMap.ker f
+    have hKfin : Module.Finite R K := by
+      apply Module.Finite.of_fg
+      change (LinearMap.ker f).FG
+      rw [LinearMap.exact_iff.mp hgf]
+      exact Submodule.fg_range g
+    have hKsurj :
+        Function.Surjective (TensorProduct.piScalarRightHom R R K ℕ) :=
+      (countable_finite_iff_tensor_surjective R K).mp hKfin
+    have hz : TensorProduct.piScalarRightHom R R M ℕ (x - y) = 0 := by
+      simpa [map_sub] using sub_eq_zero.mpr hxy
+    obtain ⟨w, hw⟩ := LinearMap.rTensor_surjective (ℕ → R) hf (x - y)
+    have hmem (i : ℕ) :
+        TensorProduct.piScalarRightHom R R (Fin n → R) ℕ w i ∈ K := by
+      change f (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ w i) = 0
+      rw [← piScalarRightHom_rTensor_naturality R (Fin n → R) M f w i]
+      rw [hw]
+      exact congrFun hz i
+    let a : ℕ → K := fun i ↦
+      ⟨TensorProduct.piScalarRightHom R R (Fin n → R) ℕ w i, hmem i⟩
+    obtain ⟨z, hz⟩ := hKsurj a
+    have hwz : w = K.subtype.rTensor (ℕ → R) z := by
+      apply finite_piScalarRightHom_injective R n
+      funext i
+      rw [piScalarRightHom_rTensor_naturality R K (Fin n → R) K.subtype z i, hz]
+      rfl
+    apply sub_eq_zero.mp
+    rw [← hw, hwz]
+    rw [← LinearMap.rTensor_comp_apply]
+    have : f.comp K.subtype = 0 := by
+      ext z
+      exact z.property
+    rw [this]
+    simp
+  · intro h
+    have hfin : Module.Finite R M :=
+      (countable_finite_iff_tensor_surjective R M).mpr h.2
+    obtain ⟨n, s, hs⟩ := @Module.Finite.exists_fin R M _ _ _ hfin
+    let l : (Fin n → R) →ₗ[R] M := Fintype.linearCombination R s
+    have hl : Function.Surjective l := by
+      rw [← LinearMap.range_eq_top, Fintype.range_linearCombination]
+      exact hs
+    have hKsurj : Function.Surjective (TensorProduct.piScalarRightHom R R
+        (LinearMap.ker l) ℕ) := by
+      have hFsurj : Function.Surjective
+          (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ) :=
+        (countable_finite_iff_tensor_surjective R (Fin n → R)).mp inferInstance
+      intro a
+      let b : ℕ → (Fin n → R) := fun i ↦ a i
+      obtain ⟨w, hw⟩ := hFsurj b
+      have hwzero : l.rTensor (ℕ → R) w = 0 := by
+        apply h.1
+        funext i
+        rw [piScalarRightHom_rTensor_naturality R (Fin n → R) M l w i, hw]
+        rw [map_zero]
+        change l (a i) = 0
+        exact (a i).property
+      have hker : LinearMap.ker (l.rTensor (ℕ → R)) =
+          LinearMap.range ((LinearMap.ker l).subtype.rTensor (ℕ → R)) :=
+        (rTensor_exact (ℕ → R) (LinearMap.exact_subtype_ker_map l) hl).linearMap_ker_eq
+      have hwker : w ∈ LinearMap.ker (l.rTensor (ℕ → R)) := hwzero
+      rw [hker] at hwker
+      obtain ⟨z, hz⟩ := hwker
+      refine ⟨z, ?_⟩
+      funext i
+      apply Subtype.ext
+      change (LinearMap.ker l).subtype
+          (TensorProduct.piScalarRightHom R R (LinearMap.ker l) ℕ z i) =
+        (a i : Fin n → R)
+      rw [← piScalarRightHom_rTensor_naturality R (LinearMap.ker l)
+        (Fin n → R) (LinearMap.ker l).subtype z i]
+      have hzw := congrArg
+        (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ) hz
+      calc
+        (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ
+            ((LinearMap.ker l).subtype.rTensor (ℕ → R) z)) i =
+            (TensorProduct.piScalarRightHom R R (Fin n → R) ℕ w) i :=
+          congrFun hzw i
+        _ = b i := congrFun hw i
+        _ = (a i : Fin n → R) := rfl
+    have hK : (LinearMap.ker l).FG :=
+      Module.Finite.iff_fg.mp
+        ((countable_finite_iff_tensor_surjective R (LinearMap.ker l)).mpr hKsurj)
+    exact Module.finitePresentation_of_free_of_surjective l hl hK
 
 /-! ## Coherence and power series -/
 
@@ -73,7 +321,41 @@ def IsCoherent (R : Type u) [CommRing R] : Prop :=
 
 theorem coherent_iff_pi_flat (R : Type u) [CommRing R] [Countable R] :
     IsCoherent R ↔ Module.Flat R (ℕ → R) := by
-  sorry
+  constructor
+  · intro h
+    rw [Module.Flat.iff_rTensor_injective]
+    intro I hI
+    have hbij :=
+      (countable_finitePresentation_iff_tensor_bijective R I).mp (h I hI)
+    intro x y hxy
+    apply hbij.1
+    funext n
+    apply Subtype.ext
+    have hpi :=
+      congrArg (TensorProduct.piScalarRightHom R R R ℕ) hxy
+    change I.subtype ((TensorProduct.piScalarRightHom R R I ℕ) x n) =
+      I.subtype ((TensorProduct.piScalarRightHom R R I ℕ) y n)
+    rw [← piScalarRightHom_rTensor_naturality R I R I.subtype x n,
+      ← piScalarRightHom_rTensor_naturality R I R I.subtype y n]
+    exact congrFun hpi n
+  · intro h I hI
+    have hfin : Module.Finite R I := Module.Finite.iff_fg.mpr hI
+    have hsurj :
+        Function.Surjective (TensorProduct.piScalarRightHom R R I ℕ) :=
+      (countable_finite_iff_tensor_surjective R I).mp hfin
+    have hinj :
+        Function.Injective (TensorProduct.piScalarRightHom R R I ℕ) := by
+      have ht : Function.Injective (I.subtype.rTensor (ℕ → R)) :=
+        (Module.Flat.iff_rTensor_injective.mp h) hI
+      intro x y hxy
+      apply ht
+      apply piScalarRightHom_R_injective R
+      funext n
+      rw [piScalarRightHom_rTensor_naturality R I R I.subtype x n,
+        piScalarRightHom_rTensor_naturality R I R I.subtype y n]
+      exact congrArg (fun z : I => (z : R)) (congrFun hxy n)
+    exact (countable_finitePresentation_iff_tensor_bijective R I).mpr
+      ⟨hinj, hsurj⟩
 
 /-
 The coefficient map is the module isomorphism used in the observation that
@@ -105,7 +387,8 @@ theorem powerSeriesCoeffEquiv_apply (R : Type u) [Semiring R]
 theorem powerSeries_flat_iff_isCoherent
     (R : Type u) [CommRing R] [Countable R] :
     Module.Flat R (PowerSeries R) ↔ IsCoherent R := by
-  sorry
+  exact (Module.Flat.equiv_iff (powerSeriesCoeffEquiv R)).trans
+    (coherent_iff_pi_flat R).symm
 
 theorem powerSeries_algebraMap_flat_iff_isCoherent
     (R : Type u) [CommRing R] [Countable R] :

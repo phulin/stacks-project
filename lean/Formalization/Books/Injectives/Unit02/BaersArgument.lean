@@ -619,7 +619,17 @@ theorem baerStep_ideal_extension
 theorem baerStepEmbedding_mono
     {R : Type u} [Ring R] (M : ModuleCat.{u} R) :
     Mono ((baerStepEmbedding R).app M) := by
-  sorry
+  change Mono (pushout.inl _ _)
+  have hleft : Mono (SmallObject.functorObjLeft idealInclusionFamily
+      ((toZeroArrowFunctor R).obj M).hom) := by
+    exact @Sigma.map_mono _ _ _ _ _ _ _
+      (fun x => SmallObject.functorObjLeftFamily idealInclusionFamily
+        ((toZeroArrowFunctor R).obj M).hom x) (by
+          intro x
+          dsimp [SmallObject.functorObjLeftFamily, idealInclusionFamily]
+          rw [ModuleCat.mono_iff_injective]
+          exact Subtype.val_injective)
+  exact @CategoryTheory.Abelian.mono_pushout_of_mono_g _ _ _ _ _ _ _ _ _ _ hleft
 
 /-- The successor structure used by the transfinite construction. -/
 noncomputable def baerSuccStruct (R : Type u) [Ring R] :
@@ -665,14 +675,35 @@ theorem baerIteration_zero {R : Type u} [Ring R]
       (ModuleCat.{u} R ⥤ ModuleCat.{u} R)] :
     Nonempty (baerIteration R 0 ≅
       𝟭 (ModuleCat.{u} R)) := by
-  sorry
+  exact ⟨(baerSuccStruct R).iterationFunctorObjBotIso
+    (Set.Iic (0 : Ordinal.{u}))⟩
 
 /-- The first stage is the huge-pushout functor. -/
 theorem baerIteration_one {R : Type u} [Ring R]
     [HasIterationOfShape (Set.Iic (1 : Ordinal.{u}))
       (ModuleCat.{u} R ⥤ ModuleCat.{u} R)] :
     Nonempty (baerIteration R 1 ≅ baerStepFunctor R) := by
-  sorry
+  let j : Set.Iic (1 : Ordinal.{u}) := ⊥
+  have hj : ¬ IsMax j := by
+    apply not_isMax_iff.mpr
+    refine ⟨(⊤ : Set.Iic (1 : Ordinal.{u})), ?_⟩
+    change (0 : Ordinal.{u}) < 1
+    exact zero_lt_one
+  have hsucc : Order.succ j =
+      (⟨1, by simp⟩ : Set.Iic (1 : Ordinal.{u})) := by
+    apply Subtype.ext
+    rw [Set.Iic.coe_succ_of_not_isMax hj]
+    exact zero_add 1
+  exact ⟨by
+    simpa only [baerIteration, baerIterationFunctor] using
+      (eqToIso (congrArg
+          ((baerSuccStruct R).iterationFunctor (Set.Iic (1 : Ordinal.{u}))).obj
+          hsucc).symm ≪≫
+        (baerSuccStruct R).iterationFunctorObjSuccIso j hj ≪≫
+        Functor.isoWhiskerRight
+          ((baerSuccStruct R).iterationFunctorObjBotIso
+            (Set.Iic (1 : Ordinal.{u}))) (baerStepFunctor R) ≪≫
+        Functor.leftUnitor (baerStepFunctor R))⟩
 
 /-- Successor stages are obtained by applying the huge-pushout functor. -/
 theorem baerIteration_succ {R : Type u} [Ring R] (α : Ordinal.{u})

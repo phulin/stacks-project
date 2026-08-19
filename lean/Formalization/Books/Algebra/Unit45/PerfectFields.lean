@@ -691,7 +691,7 @@ theorem pthRootLevel_unique_up_to_unique_algEquiv
       map_zero' := by
         apply FaithfulSMul.algebraMap_injective k L
         rw [← Classical.choose_spec (hbase 0)]
-        simp [hp0]
+        rw [zero_pow (pow_ne_zero n hp0), map_zero]
       map_add' := by
         intro y z
         apply FaithfulSMul.algebraMap_injective k L
@@ -730,7 +730,7 @@ theorem pthRootLevel_unique_up_to_unique_algEquiv
         change (PerfectClosure.mk k p (n, 0)) ^ (p ^ n) =
           (0 : PerfectClosure k p) ^ (p ^ n)
         rw [hmk, map_zero]
-        simp [hp0]
+        rw [zero_pow (pow_ne_zero n hp0)]
       map_add' := by
         intro x y
         apply Subtype.ext

@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Algebra.Epi
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.LocalizedModule.Away
 import Mathlib.RingTheory.FinitePresentation
@@ -1037,7 +1038,375 @@ theorem relativelyFinitelyPresented_baseChange
     RelativelyFinitelyPresented
       (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g)
       (Formalization.Books.Algebra.Unit14.baseChangeModule (M := M) f g) := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  dsimp [RelativelyFinitelyPresented] at hM ⊢
+  obtain ⟨n, α, hα, hPM⟩ := hM
+  let P := MvPolynomial (Fin n) R
+  let rα : P →+* A := α.toRingHom
+  let fP : R →+* P := algebraMap R P
+  have hcomm (r : R) : α (fP r) = algebraMap R A r := by
+    simpa [fP, P] using α.commutes r
+  letI : Algebra R P := fP.toAlgebra
+  let α₀ : @AlgHom R P A _ _ _ fP.toAlgebra f.toAlgebra :=
+    { toRingHom := rα
+      commutes' := by
+        intro r
+        change α (fP r) = algebraMap R A r
+        exact hcomm r }
+  letI : Algebra P A := α₀.toAlgebra
+  let modP₀ : Module P M := Module.compHom M α₀.toRingHom
+  let modP : Module P M := Module.compHom M rα
+  have hmodP : modP₀ = modP := by
+    apply Module.ext'
+    intro x m
+    rfl
+  let : Module P M := modP₀
+  let : IsScalarTower P A M :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  have hPM₀ : @Module.FinitePresentation P M _ _ modP₀ := by
+    rw [hmodP]
+    change @Module.FinitePresentation P M _ _ (Module.compHom M rα)
+    simpa [P] using hPM
+  letI : Module.FinitePresentation P M := hPM₀
+  have hX' :=
+    Formalization.Books.Algebra.Unit14.baseChange_finite_presentation_module
+      (M := M) fP g
+  letI : Module R P := Algebra.toModule
+  let P₀ := P ⊗[R] R'
+  let T := A ⊗[R] R'
+  letI : Semiring P₀ :=
+    Algebra.TensorProduct.instSemiring (R := R) (A := P) (B := R')
+  letI : Ring P₀ :=
+    Algebra.TensorProduct.instRing (R := R) (A := P) (B := R')
+  let : Algebra R R := Algebra.id R
+  let : IsScalarTower R R P :=
+    IsScalarTower.of_algebraMap_eq' (by rfl)
+  let p₀ : P →+* P₀ :=
+    (Algebra.TensorProduct.includeLeft (S := R) (A := P) (R := R) (B := R')).toRingHom
+  let tA : A →+* T := Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g
+  let : Algebra R' T :=
+    (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).toAlgebra
+  let q₀ : P₀ →+* T :=
+    (Algebra.TensorProduct.map α₀
+      (AlgHom.restrictScalars R (AlgHom.id R' R'))).toRingHom
+  let : Algebra P P₀ := Algebra.TensorProduct.leftAlgebra
+  let : Module P P₀ := Algebra.toModule
+  let : Algebra A T := Algebra.TensorProduct.leftAlgebra
+  let : Module A T := Algebra.toModule
+  let X := Formalization.Books.Algebra.Unit14.baseChangeModule
+    (M := M) fP g
+  let Y := Formalization.Books.Algebra.Unit14.baseChangeModule (M := M) f g
+  let Xobj :=
+    (ModuleCat.extendScalars
+      (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap fP g)).obj
+      (ModuleCat.of P M)
+  let : AddCommMonoid (Xobj : Type _) := Xobj.isAddCommGroup.toAddCommMonoid
+  let : Module P₀ (Xobj : Type _) := Xobj.isModule
+  let Yobj :=
+    (ModuleCat.extendScalars
+      (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g)).obj
+      (ModuleCat.of A M)
+  let : AddCommMonoid (Yobj : Type _) := Yobj.isAddCommGroup.toAddCommMonoid
+  let : Module T (Yobj : Type _) := Yobj.isModule
+  let : Module P₀ Y := Module.compHom Y q₀
+  let : Algebra P₀ T := q₀.toAlgebra
+  let : Module P₀ T := Algebra.toModule
+  have hX : Module.FinitePresentation P₀ X := by
+    exact hX'
+  letI : Semiring (P₀ ⊗[P] A) := Algebra.TensorProduct.instSemiring
+  letI : Ring (P₀ ⊗[P] A) := Algebra.TensorProduct.instRing
+  let : Algebra P₀ (P₀ ⊗[P] A) := Algebra.TensorProduct.leftAlgebra
+  let : Module P₀ (P₀ ⊗[P] A) := Algebra.toModule
+  let ePA₀ : P₀ ⊗[P] A ≃ₐ[R] T :=
+    { toRingEquiv :=
+        (Algebra.TensorProduct.comm P P₀ A).toRingEquiv.trans
+          (Algebra.TensorProduct.cancelBaseChange R P A A R').toRingEquiv
+      commutes' := by
+        intro r
+        have hr : algebraMap R P₀ r =
+            (1 : P) ⊗ₜ[R] algebraMap R R' r := by
+          rw [Algebra.TensorProduct.algebraMap_apply']
+        change (Algebra.TensorProduct.cancelBaseChange R P A A R')
+            ((Algebra.TensorProduct.comm P P₀ A)
+              ((algebraMap R (P₀ ⊗[P] A)) r)) = (algebraMap R T) r
+        rw [Algebra.TensorProduct.algebraMap_apply (R := P) (S := R)
+          (A := P₀) (B := A)]
+        simp only [Algebra.TensorProduct.comm_tmul]
+        rw [hr]
+        change (Algebra.TensorProduct.cancelBaseChange R P A A R')
+            ((1 : A) ⊗ₜ[P] ((1 : P) ⊗ₜ[R] algebraMap R R' r)) =
+          (algebraMap R T) r
+        rw [Algebra.TensorProduct.cancelBaseChange_tmul]
+        rw [Algebra.TensorProduct.algebraMap_apply']
+        simp }
+  have hinclude :
+      ePA₀.toRingEquiv.toRingHom.comp
+          (Algebra.TensorProduct.includeLeft (S := P) (A := P₀)
+            (R := P) (B := A)).toRingHom = q₀ := by
+    apply RingHom.ext
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul p r =>
+        simp [ePA₀, Algebra.TensorProduct.comm_tmul]
+        rw [Algebra.TensorProduct.cancelBaseChange_tmul]
+        change (p • (1 : A)) ⊗ₜ[R] r =
+          (Algebra.TensorProduct.map α₀
+            (AlgHom.restrictScalars R (AlgHom.id R' R'))) (p ⊗ₜ[R] r)
+        rw [Algebra.TensorProduct.map_tmul, Algebra.smul_def, mul_one]
+        change α₀ p ⊗ₜ[R] r = α₀ p ⊗ₜ[R] r
+        rfl
+    | add x y hx hy =>
+        simpa only [map_add] using congrArg₂ (· + ·) hx hy
+  let ePA : P₀ ⊗[P] A ≃ₗ[P₀] T :=
+    { toFun := ePA₀
+      invFun := ePA₀.symm
+      left_inv := ePA₀.left_inv
+      right_inv := ePA₀.right_inv
+      map_add' := ePA₀.map_add
+      map_smul' := by
+        intro c x
+        rw [Algebra.smul_def, Algebra.smul_def]
+        change ePA₀ ((Algebra.TensorProduct.includeLeft
+          (S := P) (A := P₀) (R := P) (B := A)) c * x) =
+          q₀ c * ePA₀ x
+        have hc : ePA₀ ((Algebra.TensorProduct.includeLeft
+            (S := P) (A := P₀) (R := P) (B := A)) c) = q₀ c := by
+          simpa using congrArg (fun k : P₀ →+* T => k c) hinclude
+        calc
+          ePA₀ (Algebra.TensorProduct.includeLeft c * x) =
+              ePA₀ (Algebra.TensorProduct.includeLeft c) * ePA₀ x :=
+            ePA₀.map_mul _ _
+          _ = q₀ c * ePA₀ x := by rw [hc] }
+  let : Algebra.IsEpi P A := Algebra.isEpi_of_surjective_algebraMap _ _ hα
+  let eAM : A ⊗[P] M ≃ₗ[P] M :=
+    (TensorProduct.lid' P A M).restrictScalars P
+  let U :=
+    (ModuleCat.restrictScalars
+      (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap fP g)).obj
+      (ModuleCat.of P₀ P₀)
+  let : IsScalarTower P P₀ (U : Type _) := IsScalarTower.of_compHom P P₀ U
+  let eU : P₀ ≃ₗ[P₀] (U : Type _) :=
+    { toFun := fun x => x
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro x y; rfl }
+  let e0 : (P₀ ⊗[P] M) ≃ₗ[P₀] X :=
+    TensorProduct.AlgebraTensorModule.congr eU (LinearEquiv.refl P M)
+  let e1 : X ≃ₗ[P₀] P₀ ⊗[P] (A ⊗[P] M) :=
+    e0.symm.trans
+      (TensorProduct.AlgebraTensorModule.congr
+        (LinearEquiv.refl P₀ P₀) eAM.symm)
+  let e2 : P₀ ⊗[P] (A ⊗[P] M) ≃ₗ[P₀] (P₀ ⊗[P] A) ⊗[P] M :=
+    (TensorProduct.AlgebraTensorModule.assoc P P P₀ P₀ A M).symm
+  let : Algebra P T := Algebra.TensorProduct.leftAlgebra
+  letI : Module P T := Algebra.toModule
+  letI : SMul P T := (inferInstance : Module P T).toSMul
+  let : IsScalarTower P P₀ T :=
+    IsScalarTower.of_algebraMap_eq'
+      (show (algebraMap P T) =
+        (algebraMap P₀ T).comp (algebraMap P P₀) by
+      apply RingHom.ext
+      intro p
+      change (α₀ p) ⊗ₜ[R] (1 : R') =
+        (Algebra.TensorProduct.map α₀
+          (AlgHom.restrictScalars R (AlgHom.id R' R'))) (p ⊗ₜ[R] (1 : R'))
+      rw [Algebra.TensorProduct.map_tmul]
+      rfl)
+  let : IsScalarTower P A T :=
+    IsScalarTower.of_algebraMap_eq'
+      (show (algebraMap P T) =
+        (algebraMap A T).comp (algebraMap P A) by
+      apply RingHom.ext
+      intro p
+      change (α₀ p) ⊗ₜ[R] (1 : R') = (α₀ p) ⊗ₜ[R] (1 : R')
+      rfl)
+  let e3 : (P₀ ⊗[P] A) ⊗[P] M ≃ₗ[P₀] T ⊗[P] M :=
+    TensorProduct.AlgebraTensorModule.congr ePA (LinearEquiv.refl P M)
+  let e4 : T ⊗[P] M ≃ₗ[T] T ⊗[A] M := by
+    let c := TensorProduct.AlgebraTensorModule.cancelBaseChange P A T T M
+    let e : T ⊗[A] M ≃ₗ[T] T ⊗[A] (A ⊗[P] M) :=
+      TensorProduct.AlgebraTensorModule.congr
+        (LinearEquiv.refl T T) (TensorProduct.lid' P A M).symm
+    exact c.symm.trans e.symm
+  let V :=
+    (ModuleCat.restrictScalars
+      (Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g)).obj
+      (ModuleCat.of T T)
+  let : IsScalarTower A T (V : Type _) := IsScalarTower.of_compHom A T V
+  let eV : T ≃ₗ[T] (V : Type _) :=
+    { toFun := fun x => x
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro x y; rfl }
+  let eY₀ : (T ⊗[A] M) ≃ₗ[T] Y :=
+    TensorProduct.AlgebraTensorModule.congr eV (LinearEquiv.refl A M)
+  let : IsScalarTower P₀ T Y := IsScalarTower.of_compHom P₀ T Y
+  let e4' : (T ⊗[P] M) ≃ₗ[P₀] (T ⊗[A] M) :=
+    e4.restrictScalars P₀
+  let eY' : (T ⊗[A] M) ≃ₗ[P₀] Y :=
+    eY₀.restrictScalars P₀
+  let e : X ≃ₗ[P₀] Y :=
+    e1.trans (e2.trans (e3.trans (e4'.trans eY')))
+  letI : Module.FinitePresentation P₀ X := hX
+  have hY : Module.FinitePresentation P₀ Y := by
+    exact Module.FinitePresentation.of_equiv e
+  let α' : MvPolynomial (Fin n) R' →ₐ[R'] T := by
+    exact MvPolynomial.aeval (fun i => tA (α (MvPolynomial.X i)))
+  have hbase (x : R) :
+      (algebraMap R' T) (g x) = tA (algebraMap R A x) := by
+    change (Algebra.TensorProduct.includeRight (R := R) (A := A) (B := R')).toRingHom
+          (g x) =
+        Algebra.TensorProduct.includeLeftRingHom (R := R) (A := A) (B := R')
+          (algebraMap R A x)
+    change (Algebra.TensorProduct.includeRight (R := R) (A := A) (B := R')).toRingHom
+          (algebraMap R R' x) =
+        Algebra.TensorProduct.includeLeftRingHom (R := R) (A := A) (B := R')
+          (algebraMap R A x)
+    simpa only [RingHom.comp_apply] using
+      congrArg (fun h : R →+* T => h x)
+        (Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+          (R := R) (A := A) (B := R')).symm
+  have heval (q : MvPolynomial (Fin n) R) :
+      MvPolynomial.eval₂ ((algebraMap R' T).comp g)
+        (fun i => tA (α (MvPolynomial.X i))) q = tA (α q) := by
+    induction q using MvPolynomial.induction_on with
+    | C x =>
+      simpa using hbase x
+    | add p q hp hq =>
+      simp [hp, hq]
+    | mul_X p i hp =>
+      simp [hp, mul_assoc]
+  let Q := MvPolynomial (Fin n) R'
+  let : Algebra R Q := ((algebraMap R' Q).comp g).toAlgebra
+  let : IsScalarTower R R' Q :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  let φ : P →ₐ[R] Q :=
+    { toRingHom := MvPolynomial.map g
+      commutes' := by
+        intro r
+        change MvPolynomial.map g (MvPolynomial.C r) = MvPolynomial.C (g r)
+        simp }
+  let ψ : R' →ₐ[R'] Q := Algebra.ofId R' Q
+  have hfg : ∀ x y, Commute (ψ x) (φ y) := fun _ _ => Commute.all _ _
+  let : Algebra R' P₀ := Algebra.TensorProduct.rightAlgebra
+  let qMap : P₀ →ₐ[R'] Q :=
+    (Algebra.TensorProduct.lift ψ φ hfg).comp
+      (Algebra.TensorProduct.commRight R R' P).symm
+  have hqMap : Function.Surjective qMap := by
+    intro z
+    induction z using MvPolynomial.induction_on with
+    | C r =>
+      refine ⟨(Algebra.TensorProduct.includeRight
+        (R := R) (A := P) (B := R')).toRingHom r, ?_⟩
+      change (Algebra.TensorProduct.lift ψ φ hfg)
+          ((Algebra.TensorProduct.commRight R R' P).symm
+            (1 ⊗ₜ[R] r)) = MvPolynomial.C r
+      rw [Algebra.TensorProduct.commRight_symm_tmul,
+        Algebra.TensorProduct.lift_tmul]
+      simp [ψ, φ, Q, MvPolynomial.algebraMap_eq]
+    | add p q hp hq =>
+      obtain ⟨x, hx⟩ := hp
+      obtain ⟨y, hy⟩ := hq
+      exact ⟨x + y, by simp [hx, hy]⟩
+    | mul_X p i hp =>
+      obtain ⟨x, hx⟩ := hp
+      refine ⟨x * Algebra.TensorProduct.includeLeftRingHom
+        (R := R) (A := P) (B := R') (MvPolynomial.X i), ?_⟩
+      change qMap (x * Algebra.TensorProduct.includeLeftRingHom
+        (R := R) (A := P) (B := R') (MvPolynomial.X i)) =
+          p * MvPolynomial.X i
+      rw [map_mul, hx]
+      change p * (Algebra.TensorProduct.lift ψ φ hfg)
+          ((Algebra.TensorProduct.commRight R R' P).symm
+            (MvPolynomial.X i ⊗ₜ[R] 1)) = p * MvPolynomial.X i
+      rw [Algebra.TensorProduct.commRight_symm_tmul,
+        Algebra.TensorProduct.lift_tmul]
+      simp [ψ, φ, Q, MvPolynomial.map_X]
+      rw [MvPolynomial.map_X]
+  have hαcomp :
+      α'.toRingHom.comp qMap.toRingHom = q₀ := by
+    apply RingHom.ext
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul p r =>
+      change MvPolynomial.eval₂ (algebraMap R' T)
+          (fun i => tA (α (MvPolynomial.X i)))
+          ((Algebra.TensorProduct.lift ψ φ hfg)
+            ((Algebra.TensorProduct.commRight R R' P).symm
+              (p ⊗ₜ[R] r))) =
+        (Algebra.TensorProduct.map α₀
+          (AlgHom.restrictScalars R (AlgHom.id R' R')))
+          (p ⊗ₜ[R] r)
+      rw [Algebra.TensorProduct.commRight_symm_tmul,
+        Algebra.TensorProduct.lift_tmul]
+      rw [MvPolynomial.eval₂_mul]
+      dsimp [φ, ψ]
+      rw [MvPolynomial.eval₂_map, heval]
+      rw [MvPolynomial.algebraMap_eq, MvPolynomial.eval₂_C]
+      simp [tA, Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap,
+        Formalization.Books.Algebra.Unit14.baseChangeRingMap]
+      dsimp [α₀]
+      change (Algebra.TensorProduct.includeRight
+          (R := R) (A := A) (B := R')).toRingHom r *
+          (Algebra.TensorProduct.includeLeftRingHom
+            (R := R) (A := A) (B := R')) (α p) =
+        (α p) ⊗ₜ[R] r
+      rw [mul_comm]
+      change (α p ⊗ₜ[R] (1 : R')) * ((1 : A) ⊗ₜ[R] r) =
+        α p ⊗ₜ[R] r
+      simp
+    | add x y hx hy =>
+      simpa only [map_add] using congrArg₂ (· + ·) hx hy
+  have hα' : Function.Surjective α' := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => exact ⟨0, by simp⟩
+    | tmul a r =>
+      obtain ⟨p, hp⟩ := hα a
+      refine ⟨MvPolynomial.map g p * MvPolynomial.C r, ?_⟩
+      dsimp [α']
+      rw [MvPolynomial.aeval_def]
+      rw [MvPolynomial.eval₂_mul, MvPolynomial.eval₂_map, heval]
+      rw [hp]
+      rw [MvPolynomial.eval₂_C]
+      dsimp [tA, Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap,
+        Formalization.Books.Algebra.Unit14.baseChangeRingMap]
+      change (Algebra.TensorProduct.includeLeftRingHom (R := R) (A := A) (B := R')) a *
+          (Algebra.TensorProduct.includeRight (R := R) (A := A) (B := R')).toRingHom r =
+        a ⊗ₜ[R] r
+      change (a ⊗ₜ[R] (1 : R')) * ((1 : A) ⊗ₜ[R] r) = a ⊗ₜ[R] r
+      simp
+    | add x y hx hy =>
+      obtain ⟨p, hp⟩ := hx
+      obtain ⟨q, hq⟩ := hy
+      exact ⟨p + q, by simp [hp, hq]⟩
+  letI : Module Q Y := Module.compHom Y α'.toRingHom
+  have hYQ : Module.FinitePresentation Q Y := by
+    let modP : Module P₀ Y := Module.compHom Y qMap.toRingHom
+    have hmod : modP = Module.compHom Y q₀ := by
+      apply Module.ext'
+      intro c y
+      change α' (qMap c) • y = q₀ c • y
+      change (α'.toRingHom.comp qMap.toRingHom) c • y = q₀ c • y
+      rw [hαcomp]
+    have hY' : @Module.FinitePresentation P₀ Y _ _ modP := by
+      rw [hmod]
+      exact hY
+    letI : Module P₀ Y := modP
+    exact moduleFinitePresentation_of_surjective
+      (M := Y) qMap.toRingHom hqMap hY'
+  refine ⟨n, α', hα', ?_⟩
+  simpa [Y, α', Q] using hYQ
 
 /-- Pulling an `A`-module along a finitely presented map `A → A'` preserves
 relative finite presentation. -/
@@ -1131,7 +1500,56 @@ theorem relativelyFinitelyPresented_middle_of_shortExact
     (hM' : RelativelyFinitelyPresented f M')
     (hM'' : RelativelyFinitelyPresented f M'') :
     RelativelyFinitelyPresented f M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  obtain ⟨n, α, hα⟩ :=
+    (Algebra.FiniteType.iff_quotient_mvPolynomial'').mp hf
+  let P := MvPolynomial (Fin n) R
+  let : Algebra P A := α.toAlgebra
+  let : IsScalarTower R P A :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      exact (α.commutes r).symm)
+  let : Module P M' := Module.compHom M' α.toRingHom
+  let : Module P M := Module.compHom M α.toRingHom
+  let : Module P M'' := Module.compHom M'' α.toRingHom
+  let : IsScalarTower P A M' :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let : IsScalarTower P A M :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let : IsScalarTower P A M'' :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  have hM'P : Module.FinitePresentation P M' :=
+    (relativelyFinitelyPresented_iff_all_presentations f hf).mp hM' n α hα
+  have hM''P : Module.FinitePresentation P M'' :=
+    (relativelyFinitelyPresented_iff_all_presentations f hf).mp hM'' n α hα
+  let iP : M' →ₗ[P] M := i.restrictScalars P
+  let pP : M →ₗ[P] M'' := p.restrictScalars P
+  have hiP : Function.Injective iP := by
+    simpa [iP] using hi
+  have hexP : Function.Exact iP pP := by
+    simpa [iP, pP] using hex
+  have hpP : Function.Surjective pP := by
+    simpa [pP] using hp
+  let j : M' →ₗ[P] LinearMap.ker pP :=
+    iP.codRestrict _ (fun x => by
+      rw [LinearMap.mem_ker]
+      exact (hexP (iP x)).mpr ⟨x, rfl⟩)
+  have hj : Function.Bijective j := by
+    constructor
+    · intro x y hxy
+      apply hiP
+      exact congrArg Subtype.val hxy
+    · intro y
+      obtain ⟨x, hx⟩ := (hexP y).mp y.property
+      exact ⟨x, Subtype.ext hx⟩
+  let e : M' ≃ₗ[P] LinearMap.ker pP := LinearEquiv.ofBijective j hj
+  have hkerP : Module.FinitePresentation P (LinearMap.ker pP) := by
+    letI : Module.FinitePresentation P M' := hM'P
+    exact Module.FinitePresentation.of_equiv e
+  letI : Module.FinitePresentation P M'' := hM''P
+  refine ⟨n, α, hα, ?_⟩
+  exact Module.finitePresentation_of_ker pP hpP
 
 /-- In a short exact sequence, a relatively finitely presented middle term
 and a finite left term give a relatively finitely presented quotient. -/

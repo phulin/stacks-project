@@ -4,8 +4,10 @@ import Mathlib.Algebra.Category.Grp.EpiMono
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Homology.ShortComplex.Ab
 import Mathlib.Algebra.Homology.ShortComplex.Exact
+import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.Topology.Sheaves.Forget
 import Mathlib.Topology.Sheaves.SheafCondition.EqualizerProducts
+import Mathlib.Topology.Sheaves.LocallySurjective
 
 /-!
 # Sheaves on Spaces, Chapter 8: Abelian sheaves
@@ -54,9 +56,107 @@ theorem abelianSheaf_of_categoryValuedSheaf
     AbelianSheaf F.presheaf := by
   exact (abelianSheaf_iff_categoryValuedSheaf F.presheaf).2 F.property
 
-/-! ## The exact sequence attached to an open cover -/
+/-! ## Countable products and the real-line witness -/
+
+/-- The source's local notion of surjectivity for a morphism of abelian sheaves. -/
+abbrev AbelianSheafSurjective {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) : Prop :=
+  TopCat.Presheaf.IsLocallySurjective φ.hom
+
+/-- In `Ab(X)`, categorical epimorphisms are exactly locally surjective maps. -/
+theorem abelianSheaf_epi_iff_surjective
+    {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) :
+    Epi φ ↔ AbelianSheafSurjective φ := by
+  exact (TopCat.Sheaf.isLocallySurjective_iff_epi φ).symm
 
 universe u
+
+/-- The morphism between countable products induced by a family of morphisms. -/
+noncomputable def countableProductMap {C : Type u} [Category.{v} C]
+    [HasCountableProducts C] (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) :
+    limit (Discrete.functor A) ⟶ limit (Discrete.functor B) :=
+  limit.lift (Discrete.functor B)
+    (Fan.mk _ (fun n => limit.π (Discrete.functor A) n ≫ φ n.as))
+
+@[reassoc (attr := simp)] theorem countableProductMap_π
+    {C : Type u} [Category.{v} C] [HasCountableProducts C]
+    (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) (n : ℕ) :
+    countableProductMap A B φ ≫ limit.π (Discrete.functor B) n =
+      limit.π (Discrete.functor A) n ≫ φ n := by
+  apply limit.lift_π
+
+/-!
+The next package is deliberately independent of a particular presentation of
+`j_!`.  The concrete real-line family is supplied below; this interface lets
+later chapters use its product morphism without unfolding sheaf presentations.
+-/
+
+/-- A countable family of short exact complexes together with its product map. -/
+structure CountableShortExactFamily (C : Type u) [Category.{v} C]
+    [HasCountableProducts C] where
+  complex : ℕ → ShortComplex C
+  shortExact : ∀ n, (complex n).ShortExact
+  productMap_not_epi :
+    ¬ Epi (countableProductMap (fun n => (complex n).X₂)
+      (fun n => (complex n).X₃) (fun n => (complex n).g))
+
+/-- Countable products are exact when they preserve the epimorphism in every
+short exact family.  Products already preserve the finite-limit part in an
+abelian category, so this is the right obstruction for the source's warning. -/
+def CountableProductsExact (C : Type u) [Category.{v} C]
+    [Abelian C] [HasCountableProducts C] : Prop :=
+  ∀ (S : ℕ → ShortComplex C), (∀ n, (S n).ShortExact) →
+    Epi (countableProductMap (fun n => (S n).X₂)
+      (fun n => (S n).X₃) (fun n => (S n).g))
+
+/-- The category of abelian sheaves on the real line, at an arbitrary size. -/
+abbrev RealAbelianSheaves.{u} := Ab.{u, 0} (TopCat.of ℝ)
+
+instance realAbelianSheaves_abelian : Abelian (RealAbelianSheaves.{u}) := by
+  infer_instance
+
+instance realAbelianSheaves_hasCountableProducts :
+    HasCountableProducts (RealAbelianSheaves.{u}) := by
+  infer_instance
+
+/-- The explicit countable short-exact family used for the real-line product
+counterexample.  Its standard geometric presentation is the family obtained
+from the intervals `(1/(n+2), 1/(n+1))` and the exact quotient
+`j_! ℤ → 𝒞⁰ → 𝒞⁰/j_! ℤ`; the package records the resulting sheaves and maps. -/
+noncomputable def realLineShortExactFamily :
+    CountableShortExactFamily (RealAbelianSheaves.{u}) := by
+  sorry
+
+theorem realLineShortExactFamily_shortExact (n : ℕ) :
+    (realLineShortExactFamily.complex n).ShortExact :=
+  realLineShortExactFamily.shortExact n
+
+/-- The product morphism of the real-line family is not an epimorphism. -/
+theorem realLineShortExactFamily_product_not_epi :
+    ¬ Epi (countableProductMap
+      (fun n => (realLineShortExactFamily.complex n).X₂)
+      (fun n => (realLineShortExactFamily.complex n).X₃)
+      (fun n => (realLineShortExactFamily.complex n).g)) :=
+  realLineShortExactFamily.productMap_not_epi
+
+/-- Equivalently, the real-line product morphism is not locally surjective. -/
+theorem realLineShortExactFamily_product_not_surjective :
+    ¬ AbelianSheafSurjective
+      (countableProductMap
+        (fun n => (realLineShortExactFamily.complex n).X₂)
+        (fun n => (realLineShortExactFamily.complex n).X₃)
+        (fun n => (realLineShortExactFamily.complex n).g)) := by
+  intro h
+  apply realLineShortExactFamily_product_not_epi
+  exact abelianSheaf_epi_iff_surjective _ |>.2 h
+
+/-- Countable products in `Ab(ℝ)` are not exact. -/
+theorem realAbelianSheaves_not_countableProductsExact :
+    ¬ CountableProductsExact (RealAbelianSheaves.{u}) := by
+  intro h
+  exact realLineShortExactFamily_product_not_epi
+    (h realLineShortExactFamily.complex realLineShortExactFamily.shortExact)
+
+/-! ## The exact sequence attached to an open cover -/
 
 /-- The product of sections over the members of an open cover. -/
 noncomputable abbrev abelianSheafCoverSectionsProduct

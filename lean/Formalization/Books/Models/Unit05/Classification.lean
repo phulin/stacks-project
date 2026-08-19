@@ -3756,6 +3756,72 @@ private theorem realize_pattern5 (D : LocalNumericalData 5)
     (hmp : ∀ i, 0 < D.m i) (hmc : mc D.m) :
     realizesPattern D C v mc := ⟨r, hr, hmat, hvec, hmp, hmc⟩
 
+private theorem five_path_last_matrix_eq (D : LocalNumericalData 5) (r d ld e le : ℤ)
+    (haa0 : D.a 0 0 = r * d) (haa1 : D.a 1 1 = r * d)
+    (haa2 : D.a 2 2 = r * d) (haa3 : D.a 3 3 = r * d)
+    (haa4 : D.a 4 4 = r * ld)
+    (ha01 : D.a 0 1 = r * e) (ha10 : D.a 1 0 = r * e)
+    (ha12 : D.a 1 2 = r * e) (ha21 : D.a 2 1 = r * e)
+    (ha23 : D.a 2 3 = r * e) (ha32 : D.a 3 2 = r * e)
+    (ha34 : D.a 3 4 = r * le) (ha43 : D.a 4 3 = r * le)
+    (hz02 : D.a 0 2 = 0) (hz20 : D.a 2 0 = 0)
+    (hz03 : D.a 0 3 = 0) (hz30 : D.a 3 0 = 0)
+    (hz04 : D.a 0 4 = 0) (hz40 : D.a 4 0 = 0)
+    (hz13 : D.a 1 3 = 0) (hz31 : D.a 3 1 = 0)
+    (hz14 : D.a 1 4 = 0) (hz41 : D.a 4 1 = 0)
+    (hz24 : D.a 2 4 = 0) (hz42 : D.a 4 2 = 0) :
+    D.a = scalarMatrix (pathLastMatrix 5 d ld e le) r := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [scalarMatrix, pathLastMatrix, haa0, haa1, haa2, haa3, haa4,
+      ha01, ha10, ha12, ha21, ha23, ha32, ha34, ha43, hz02, hz20, hz03,
+      hz30, hz04, hz40, hz13, hz31, hz14, hz41, hz24, hz42]
+
+private theorem five_row_bound0 (T : NumericalType) (S : MinusTwoSubgraph T 5) :
+    (localData S).a 0 0 * (localData S).m 0 +
+        (localData S).a 0 1 * (localData S).m 1 +
+        (localData S).a 0 2 * (localData S).m 2 +
+        (localData S).a 0 3 * (localData S).m 3 +
+        (localData S).a 0 4 * (localData S).m 4 ≤ 0 := by
+  exact five_row_bound T S 0 1 2 3 4 (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
+private theorem five_row_bound1 (T : NumericalType) (S : MinusTwoSubgraph T 5) :
+    (localData S).a 1 1 * (localData S).m 1 +
+        (localData S).a 1 0 * (localData S).m 0 +
+        (localData S).a 1 2 * (localData S).m 2 +
+        (localData S).a 1 3 * (localData S).m 3 +
+        (localData S).a 1 4 * (localData S).m 4 ≤ 0 := by
+  exact five_row_bound T S 1 0 2 3 4 (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
+private theorem five_row_bound2 (T : NumericalType) (S : MinusTwoSubgraph T 5) :
+    (localData S).a 2 2 * (localData S).m 2 +
+        (localData S).a 2 0 * (localData S).m 0 +
+        (localData S).a 2 1 * (localData S).m 1 +
+        (localData S).a 2 3 * (localData S).m 3 +
+        (localData S).a 2 4 * (localData S).m 4 ≤ 0 := by
+  exact five_row_bound T S 2 0 1 3 4 (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
+private theorem five_row_bound3 (T : NumericalType) (S : MinusTwoSubgraph T 5) :
+    (localData S).a 3 3 * (localData S).m 3 +
+        (localData S).a 3 0 * (localData S).m 0 +
+        (localData S).a 3 1 * (localData S).m 1 +
+        (localData S).a 3 2 * (localData S).m 2 +
+        (localData S).a 3 4 * (localData S).m 4 ≤ 0 := by
+  exact five_row_bound T S 3 0 1 2 4 (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
+private theorem five_row_bound4 (T : NumericalType) (S : MinusTwoSubgraph T 5) :
+    (localData S).a 4 4 * (localData S).m 4 +
+        (localData S).a 4 0 * (localData S).m 0 +
+        (localData S).a 4 1 * (localData S).m 1 +
+        (localData S).a 4 2 * (localData S).m 2 +
+        (localData S).a 4 3 * (localData S).m 3 ≤ 0 := by
+  exact five_row_bound T S 4 0 1 2 3 (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
 /-! The four-index three-arm classification (`D₄`). -/
 theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     (hn : 4 < T.n)
@@ -4664,15 +4730,13 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
     have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
     have hm0 : 2 * D.m 0 ≥ D.m 1 := by
-      have hrow := five_row_bound T S 0 1 2 3 4 (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      have hrow := five_row_bound0 T S
       change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
         D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
       rw [hDdiag 0, ha01, hzero02, hzero03, hzero04] at hrow
       exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
     have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
-      have hrow := five_row_bound T S 1 0 2 3 4 (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      have hrow := five_row_bound1 T S
       change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
         D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
       rw [hDdiag 1, ha10, ha12, hzero13, hzero14] at hrow
@@ -4680,8 +4744,7 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
         rw [← hw01] at hrow
         nlinarith only [hrow])
     have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
-      have hrow := five_row_bound T S 2 0 1 3 4 (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      have hrow := five_row_bound2 T S
       change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
         D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
       rw [hDdiag 2, hz20, ha21, ha23, hzero24] at hrow
@@ -4689,8 +4752,7 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
         rw [← hw12, ← hw01] at hrow
         nlinarith only [hrow])
     have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
-      have hrow := five_row_bound T S 3 0 1 2 4 (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      have hrow := five_row_bound3 T S
       change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
         D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
       rw [hDdiag 3, hz30, hz31, ha32, ha34] at hrow
@@ -4698,8 +4760,7 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
         rw [← hw23, ← hw12, ← hw01] at hrow
         nlinarith only [hrow])
     have hm4 : 2 * D.m 4 ≥ D.m 3 := by
-      have hrow := five_row_bound T S 4 0 1 2 3 (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      have hrow := five_row_bound4 T S
       change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
         D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
       rw [hDdiag 4, hz40, hz41, hz42, ha43] at hrow
@@ -4721,7 +4782,468 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     exact Or.inl (realize_pattern5 D (pathMatrix 5 (constantVector (-2)) 1)
       (constantVector 1) mConditionA5 (D.w 0) (hDpos 0) hmat hvec
       (local_m_pos S) ⟨hm0, hm1, hm2, hm3, hm4⟩)
-  all_goals sorry
+  · obtain ⟨hp01', hq01'⟩ := positive_product_one p01 q01 hp01 hq01 hC.1
+    obtain ⟨hp12', hq12'⟩ := positive_product_one p12 q12 hp12 hq12 hC.2.1
+    obtain ⟨hp23', hq23'⟩ := positive_product_one p23 q23 hp23 hq23 hC.2.2.1
+    rcases positive_product_two p34 q34 hp34 hq34 hC.2.2.2 with ⟨hp34', hq34'⟩ | ⟨hp34', hq34'⟩
+    · have hw01 : D.w 0 = D.w 1 := by
+        simpa [hp01', hq01'] using hpa01.symm.trans hqa01
+      have hw12 : D.w 1 = D.w 2 := by
+        simpa [hp12', hq12'] using hpa12.symm.trans hqa12
+      have hw23 : D.w 2 = D.w 3 := by
+        simpa [hp23', hq23'] using hpa23.symm.trans hqa23
+      have hw34 : D.w 3 = 2 * D.w 4 := by
+        simpa [hp34', hq34'] using hpa34.symm.trans hqa34
+      have ha01 : D.a 0 1 = 2 * D.w 4 := by
+        simpa [hp01', hw01, hw12, hw23, hw34] using hpa01
+      have ha12 : D.a 1 2 = 2 * D.w 4 := by
+        simpa [hp12', hw12, hw23, hw34] using hpa12
+      have ha23 : D.a 2 3 = 2 * D.w 4 := by
+        simpa [hp23', hw23, hw34] using hpa23
+      have ha34 : D.a 3 4 = 2 * D.w 4 := by
+        simpa [hp34', hq34'] using hqa34
+      have ha10 : D.a 1 0 = 2 * D.w 4 := by rw [hDsym 1 0, ha01]
+      have ha21 : D.a 2 1 = 2 * D.w 4 := by rw [hDsym 2 1, ha12]
+      have ha32 : D.a 3 2 = 2 * D.w 4 := by rw [hDsym 3 2, ha23]
+      have ha43 : D.a 4 3 = 2 * D.w 4 := by rw [hDsym 4 3, ha34]
+      have hz20 : D.a 2 0 = 0 := by rw [hDsym 2 0, hzero02]
+      have hz30 : D.a 3 0 = 0 := by rw [hDsym 3 0, hzero03]
+      have hz40 : D.a 4 0 = 0 := by rw [hDsym 4 0, hzero04]
+      have hz31 : D.a 3 1 = 0 := by rw [hDsym 3 1, hzero13]
+      have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
+      have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
+      have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+        have hrow := five_row_bound0 T S
+        change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
+          D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 0, ha01, hzero02, hzero03, hzero04, hw01, hw12, hw23, hw34] at hrow
+        exact cancel_pos_int (D.w 4) (hDpos 4) _ _ (by nlinarith only [hrow])
+      have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+        have hrow := five_row_bound1 T S
+        change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
+          D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 1, ha10, ha12, hzero13, hzero14, hw12, hw23, hw34] at hrow
+        exact cancel_pos_int (D.w 4) (hDpos 4) _ _ (by nlinarith only [hrow])
+      have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
+        have hrow := five_row_bound2 T S
+        change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
+          D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 2, hz20, ha21, ha23, hzero24, hw23, hw34] at hrow
+        exact cancel_pos_int (D.w 4) (hDpos 4) _ _ (by nlinarith only [hrow])
+      have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
+        have hrow := five_row_bound3 T S
+        change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
+          D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 3, hz30, hz31, ha32, ha34, hw34] at hrow
+        exact cancel_pos_int (D.w 4) (hDpos 4) _ _ (by nlinarith only [hrow])
+      have hm4 : D.m 4 ≥ D.m 3 := by
+        have hrow := five_row_bound4 T S
+        change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
+          D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
+        rw [hDdiag 4, hz40, hz41, hz42, ha43] at hrow
+        exact cancel_pos_int (D.w 4) (hDpos 4) _ _ (by nlinarith only [hrow])
+      have hmat : D.a = scalarMatrix (pathLastMatrix 5 (-4) (-2) 2 2) (D.w 4) := by
+        apply five_path_last_matrix_eq D (D.w 4) (-4) (-2) 2 2
+        · rw [hDdiag 0, hw01, hw12, hw23, hw34]
+          ring
+        · rw [hDdiag 1, hw12, hw23, hw34]
+          ring
+        · rw [hDdiag 2, hw23, hw34]
+          ring
+        · rw [hDdiag 3, hw34]
+          ring
+        · rw [hDdiag 4]
+          ring
+        · rw [ha01]
+          ring
+        · rw [ha10]
+          ring
+        · rw [ha12]
+          ring
+        · rw [ha21]
+          ring
+        · rw [ha23]
+          ring
+        · rw [ha32]
+          ring
+        · rw [ha34]
+          ring
+        · rw [ha43]
+          ring
+        · exact hzero02
+        · exact hz20
+        · exact hzero03
+        · exact hz30
+        · exact hzero04
+        · exact hz40
+        · exact hzero13
+        · exact hz31
+        · exact hzero14
+        · exact hz41
+        · exact hzero24
+        · exact hz42
+      have hvec : D.w = scalarVector (lastVector 5 2 1) (D.w 4) := by
+        funext i
+        fin_cases i <;>
+          simp [scalarVector, lastVector, hw01, hw12, hw23, hw34] <;> ring
+      refine ⟨Equiv.refl _, ?_⟩
+      refine Or.inr (Or.inr (realize_pattern5 D (pathLastMatrix 5 (-4) (-2) 2 2)
+        (lastVector 5 2 1) mConditionB5 (D.w 4) (hDpos 4) hmat hvec
+        (local_m_pos S) ?_))
+      change 2 * D.m 0 ≥ D.m 1 ∧ 2 * D.m 1 ≥ D.m 0 + D.m 2 ∧
+        2 * D.m 2 ≥ D.m 1 + D.m 3 ∧ 2 * D.m 3 ≥ D.m 2 + D.m 4 ∧
+        D.m 4 ≥ D.m 3
+      exact ⟨hm0, hm1, hm2, hm3, hm4⟩
+    · have hw01 : D.w 0 = D.w 1 := by
+        simpa [hp01', hq01'] using hpa01.symm.trans hqa01
+      have hw12 : D.w 1 = D.w 2 := by
+        simpa [hp12', hq12'] using hpa12.symm.trans hqa12
+      have hw23 : D.w 2 = D.w 3 := by
+        simpa [hp23', hq23'] using hpa23.symm.trans hqa23
+      have hw34 : D.w 4 = 2 * D.w 3 := by
+        simpa [hp34', hq34'] using (hpa34.symm.trans hqa34).symm
+      have hw4 : D.w 4 = 2 * D.w 0 := by rw [hw34, ← hw23, ← hw12, ← hw01]
+      have ha01 : D.a 0 1 = D.w 0 := by simpa [hp01'] using hpa01
+      have ha12 : D.a 1 2 = D.w 0 := by simpa [hp12', hw01] using hpa12
+      have ha23 : D.a 2 3 = D.w 0 := by simpa [hp23', hw01, hw12] using hpa23
+      have ha34 : D.a 3 4 = 2 * D.w 0 := by simpa [hp34', hw01, hw12, hw23] using hpa34
+      have ha10 : D.a 1 0 = D.w 0 := by rw [hDsym 1 0, ha01]
+      have ha21 : D.a 2 1 = D.w 0 := by rw [hDsym 2 1, ha12]
+      have ha32 : D.a 3 2 = D.w 0 := by rw [hDsym 3 2, ha23]
+      have ha43 : D.a 4 3 = 2 * D.w 0 := by rw [hDsym 4 3, ha34]
+      have ha43' : D.a 4 3 = D.w 4 := by rw [ha43, hw4]
+      have hz20 : D.a 2 0 = 0 := by rw [hDsym 2 0, hzero02]
+      have hz30 : D.a 3 0 = 0 := by rw [hDsym 3 0, hzero03]
+      have hz40 : D.a 4 0 = 0 := by rw [hDsym 4 0, hzero04]
+      have hz31 : D.a 3 1 = 0 := by rw [hDsym 3 1, hzero13]
+      have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
+      have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
+      have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+        have hrow := five_row_bound0 T S
+        change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
+          D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 0, ha01, hzero02, hzero03, hzero04] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+        have hrow := five_row_bound1 T S
+        change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
+          D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 1, ha10, ha12, hzero13, hzero14, ← hw01] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
+        have hrow := five_row_bound2 T S
+        change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
+          D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 2, hz20, ha21, ha23, hzero24, ← hw12, ← hw01] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm3' : 2 * D.m 3 ≥ D.m 2 + 2 * D.m 4 := by
+        have hrow := five_row_bound3 T S
+        change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
+          D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 3, hz30, hz31, ha32, ha34, ← hw23, ← hw12, ← hw01] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
+        have hm4pos : 0 < D.m 4 := local_m_pos S 4
+        omega
+      have hm4 : 2 * D.m 4 ≥ D.m 3 := by
+        have hrow := five_row_bound4 T S
+        change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
+          D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
+        rw [hDdiag 4, hz40, hz41, hz42, ha43'] at hrow
+        have hrewrite : -2 * D.w 4 * D.m 4 + 0 * D.m 0 + 0 * D.m 1 +
+            0 * D.m 2 + D.w 4 * D.m 3 =
+            D.w 4 * D.m 3 - D.w 4 * (2 * D.m 4) := by ring
+        rw [hrewrite] at hrow
+        have hfac : D.w 4 * D.m 3 ≤ D.w 4 * (2 * D.m 4) := sub_nonpos.mp hrow
+        apply cancel_pos_int (D.w 4) (hDpos 4) (2 * D.m 4) (D.m 3)
+        exact hfac
+      have haa0 : D.a 0 0 = -2 * D.w 0 := hDdiag 0
+      have haa1 : D.a 1 1 = -2 * D.w 0 := by rw [hDdiag 1, ← hw01]
+      have haa2 : D.a 2 2 = -2 * D.w 0 := by rw [hDdiag 2, ← hw12, ← hw01]
+      have haa3 : D.a 3 3 = -2 * D.w 0 := by rw [hDdiag 3, ← hw23, ← hw12, ← hw01]
+      have haa4 : D.a 4 4 = -4 * D.w 0 := by rw [hDdiag 4, hw4]; ring
+      have hmat : D.a = scalarMatrix (pathLastMatrix 5 (-2) (-4) 1 2) (D.w 0) := by
+        exact five_path_last_matrix_eq D (D.w 0) (-2) (-4) 1 2
+          (by rw [hDdiag 0]; ring)
+          (by rw [hDdiag 1, ← hw01]; ring)
+          (by rw [hDdiag 2, ← hw12, ← hw01]; ring)
+          (by rw [hDdiag 3, ← hw23, ← hw12, ← hw01]; ring)
+          (by rw [hDdiag 4, hw4]; ring)
+          (by rw [ha01]; ring) (by rw [ha10]; ring)
+          (by rw [ha12]; ring) (by rw [ha21]; ring)
+          (by rw [ha23]; ring) (by rw [ha32]; ring)
+          (by rw [ha34]; ring) (by rw [ha43]; ring)
+          hzero02 hz20 hzero03 hz30 hzero04 hz40 hzero13 hz31 hzero14 hz41
+          hzero24 hz42
+      have hvec : D.w = scalarVector (lastVector 5 1 2) (D.w 0) := by
+        funext i
+        fin_cases i <;>
+          simp [scalarVector, lastVector, hw01, hw12, hw23, hw4] ; ring
+      refine ⟨Equiv.refl _, ?_⟩
+      refine Or.inr (Or.inl (realize_pattern5 D (pathLastMatrix 5 (-2) (-4) 1 2)
+        (lastVector 5 1 2) mConditionC5 (D.w 0) (hDpos 0) hmat hvec
+        (local_m_pos S) ?_))
+      change 2 * D.m 0 ≥ D.m 1 ∧ 2 * D.m 1 ≥ D.m 0 + D.m 2 ∧
+        2 * D.m 2 ≥ D.m 1 + D.m 3 ∧ 2 * D.m 3 ≥ D.m 2 + D.m 4 ∧
+        2 * D.m 4 ≥ D.m 3
+      exact ⟨hm0, hm1, hm2, hm3, hm4⟩
+  · obtain ⟨hp12', hq12'⟩ := positive_product_one p12 q12 hp12 hq12 hB.2.1
+    obtain ⟨hp23', hq23'⟩ := positive_product_one p23 q23 hp23 hq23 hB.2.2.1
+    obtain ⟨hp34', hq34'⟩ := positive_product_one p34 q34 hp34 hq34 hB.2.2.2
+    rcases positive_product_two p01 q01 hp01 hq01 hB.1 with ⟨hp01', hq01'⟩ | ⟨hp01', hq01'⟩
+    · have hw01 : D.w 0 = 2 * D.w 1 := by
+        simpa [hp01', hq01'] using hpa01.symm.trans hqa01
+      have hw12 : D.w 1 = D.w 2 := by
+        simpa [hp12', hq12'] using hpa12.symm.trans hqa12
+      have hw23 : D.w 2 = D.w 3 := by
+        simpa [hp23', hq23'] using hpa23.symm.trans hqa23
+      have hw34 : D.w 3 = D.w 4 := by
+        simpa [hp34', hq34'] using hpa34.symm.trans hqa34
+      have hw2 : D.w 2 = D.w 1 := hw12.symm
+      have hw3 : D.w 3 = D.w 1 := by rw [hw23.symm, hw2]
+      have hw4 : D.w 4 = D.w 1 := by rw [hw34.symm, hw3]
+      have ha01 : D.a 0 1 = 2 * D.w 1 := by simpa [hp01', hq01'] using hqa01
+      have ha12 : D.a 1 2 = D.w 1 := by simpa [hp12'] using hpa12
+      have ha23 : D.a 2 3 = D.w 1 := by simpa [hp23', hw2] using hpa23
+      have ha34 : D.a 3 4 = D.w 1 := by simpa [hp34', hw3] using hpa34
+      have ha10 : D.a 1 0 = 2 * D.w 1 := by rw [hDsym 1 0, ha01]
+      have ha21 : D.a 2 1 = D.w 1 := by rw [hDsym 2 1, ha12]
+      have ha32 : D.a 3 2 = D.w 1 := by rw [hDsym 3 2, ha23]
+      have ha43 : D.a 4 3 = D.w 1 := by rw [hDsym 4 3, ha34]
+      have hz20 : D.a 2 0 = 0 := by rw [hDsym 2 0, hzero02]
+      have hz30 : D.a 3 0 = 0 := by rw [hDsym 3 0, hzero03]
+      have hz40 : D.a 4 0 = 0 := by rw [hDsym 4 0, hzero04]
+      have hz31 : D.a 3 1 = 0 := by rw [hDsym 3 1, hzero13]
+      have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
+      have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
+      have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+        have hrow := five_row_bound0 T S
+        change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
+          D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 0, ha01, hzero02, hzero03, hzero04, hw01] at hrow
+        exact cancel_pos_int (D.w 1) (hDpos 1) _ _ (by nlinarith only [hrow])
+      have hm1' : 2 * D.m 1 ≥ 2 * D.m 0 + D.m 2 := by
+        have hrow := five_row_bound1 T S
+        change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
+          D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 1, ha10, ha12, hzero13, hzero14] at hrow
+        exact cancel_pos_int (D.w 1) (hDpos 1) _ _ (by nlinarith only [hrow])
+      have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+        have hm0pos : 0 < D.m 0 := local_m_pos S 0
+        omega
+      have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
+        have hrow := five_row_bound2 T S
+        change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
+          D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 2, hz20, ha21, ha23, hzero24, hw2] at hrow
+        exact cancel_pos_int (D.w 1) (hDpos 1) _ _ (by nlinarith only [hrow])
+      have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
+        have hrow := five_row_bound3 T S
+        change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
+          D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 3, hz30, hz31, ha32, ha34, hw3] at hrow
+        exact cancel_pos_int (D.w 1) (hDpos 1) _ _ (by nlinarith only [hrow])
+      have hm4 : 2 * D.m 4 ≥ D.m 3 := by
+        have hrow := five_row_bound4 T S
+        change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
+          D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
+        rw [hDdiag 4, hz40, hz41, hz42, ha43, hw4] at hrow
+        exact cancel_pos_int (D.w 1) (hDpos 1) _ _ (by nlinarith only [hrow])
+      let rev : Fin 5 ≃ Fin 5 :=
+        { toFun := fun i => ⟨4 - i.val, by omega⟩
+          invFun := fun i => ⟨4 - i.val, by omega⟩
+          left_inv := by intro i; apply Fin.ext; dsimp; omega
+          right_inv := by intro i; apply Fin.ext; dsimp; omega }
+      let E := reindexLocalData D rev
+      have hmat : E.a = scalarMatrix (pathLastMatrix 5 (-2) (-4) 1 2) (D.w 1) := by
+        ext i j
+        fin_cases i <;> fin_cases j <;>
+          simp [E, reindexLocalData, rev, scalarMatrix, pathLastMatrix, hDdiag,
+            ha01, ha12, ha23, ha34, ha10, ha21, ha32, ha43, hzero02, hzero03,
+            hzero04, hzero13, hzero14, hzero24, hz20, hz30, hz40, hz31, hz41,
+            hz42, hw01, hw2, hw3, hw4] <;> ring
+      have hvec : E.w = scalarVector (lastVector 5 1 2) (D.w 1) := by
+        funext i
+        fin_cases i <;>
+          simp [E, reindexLocalData, rev, scalarVector, lastVector, hw01, hw2, hw3, hw4] ;
+            ring
+      have hmp : ∀ i, 0 < E.m i := by
+        intro i
+        change 0 < D.m (rev i)
+        exact local_m_pos S (rev i)
+      have hmc : mConditionC5 E.m := by
+        change 2 * E.m 0 ≥ E.m 1 ∧ 2 * E.m 1 ≥ E.m 0 + E.m 2 ∧
+          2 * E.m 2 ≥ E.m 1 + E.m 3 ∧ 2 * E.m 3 ≥ E.m 2 + E.m 4 ∧
+          2 * E.m 4 ≥ E.m 3
+        refine ⟨?_, ?_, ?_, ?_, ?_⟩
+        · change 2 * D.m 4 ≥ D.m 3
+          exact hm4
+        · change 2 * D.m 3 ≥ D.m 4 + D.m 2
+          nlinarith only [hm3]
+        · change 2 * D.m 2 ≥ D.m 3 + D.m 1
+          nlinarith only [hm2]
+        · change 2 * D.m 1 ≥ D.m 2 + D.m 0
+          nlinarith only [hm1]
+        · simpa [E, reindexLocalData, rev] using hm0
+      refine ⟨rev, ?_⟩
+      exact Or.inr (Or.inl (realize_pattern5 E (pathLastMatrix 5 (-2) (-4) 1 2)
+        (lastVector 5 1 2) mConditionC5 (D.w 1) (hDpos 1) hmat hvec hmp hmc))
+    · have hw01 : D.w 1 = 2 * D.w 0 := by
+        simpa [hp01', hq01'] using (hpa01.symm.trans hqa01).symm
+      have hw12 : D.w 1 = D.w 2 := by
+        simpa [hp12', hq12'] using hpa12.symm.trans hqa12
+      have hw23 : D.w 2 = D.w 3 := by
+        simpa [hp23', hq23'] using hpa23.symm.trans hqa23
+      have hw34 : D.w 3 = D.w 4 := by
+        simpa [hp34', hq34'] using hpa34.symm.trans hqa34
+      have hw2 : D.w 2 = 2 * D.w 0 := by rw [← hw12, hw01]
+      have hw3 : D.w 3 = 2 * D.w 0 := by rw [← hw23, hw2]
+      have hw4 : D.w 4 = 2 * D.w 0 := by rw [← hw34, hw3]
+      have ha01 : D.a 0 1 = 2 * D.w 0 := by simpa [hp01'] using hpa01
+      have ha12 : D.a 1 2 = 2 * D.w 0 := by simpa [hp12', hw01] using hpa12
+      have ha23 : D.a 2 3 = 2 * D.w 0 := by simpa [hp23', hw2] using hpa23
+      have ha34 : D.a 3 4 = 2 * D.w 0 := by simpa [hp34', hw3] using hpa34
+      have ha10 : D.a 1 0 = 2 * D.w 0 := by rw [hDsym 1 0, ha01]
+      have ha21 : D.a 2 1 = 2 * D.w 0 := by rw [hDsym 2 1, ha12]
+      have ha32 : D.a 3 2 = 2 * D.w 0 := by rw [hDsym 3 2, ha23]
+      have ha43 : D.a 4 3 = 2 * D.w 0 := by rw [hDsym 4 3, ha34]
+      have hz20 : D.a 2 0 = 0 := by rw [hDsym 2 0, hzero02]
+      have hz30 : D.a 3 0 = 0 := by rw [hDsym 3 0, hzero03]
+      have hz40 : D.a 4 0 = 0 := by rw [hDsym 4 0, hzero04]
+      have hz31 : D.a 3 1 = 0 := by rw [hDsym 3 1, hzero13]
+      have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
+      have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
+      have hm0 : D.m 0 ≥ D.m 1 := by
+        have hrow := five_row_bound0 T S
+        change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
+          D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 0, ha01, hzero02, hzero03, hzero04] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+        have hrow := five_row_bound1 T S
+        change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
+          D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 1, ha10, ha12, hzero13, hzero14, hw01] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
+        have hrow := five_row_bound2 T S
+        change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
+          D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 2, hz20, ha21, ha23, hzero24, hw2] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
+        have hrow := five_row_bound3 T S
+        change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
+          D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
+        rw [hDdiag 3, hz30, hz31, ha32, ha34, hw3] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      have hm4 : 2 * D.m 4 ≥ D.m 3 := by
+        have hrow := five_row_bound4 T S
+        change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
+          D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
+        rw [hDdiag 4, hz40, hz41, hz42, ha43, hw4] at hrow
+        exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+      let rev : Fin 5 ≃ Fin 5 :=
+        { toFun := fun i => ⟨4 - i.val, by omega⟩
+          invFun := fun i => ⟨4 - i.val, by omega⟩
+          left_inv := by intro i; apply Fin.ext; dsimp; omega
+          right_inv := by intro i; apply Fin.ext; dsimp; omega }
+      let E := reindexLocalData D rev
+      have hmat : E.a = scalarMatrix (pathLastMatrix 5 (-4) (-2) 2 2) (D.w 0) := by
+        apply five_path_last_matrix_eq E (D.w 0) (-4) (-2) 2 2
+        · change D.a 4 4 = D.w 0 * (-4)
+          rw [hDdiag 4, hw4]
+          ring
+        · change D.a 3 3 = D.w 0 * (-4)
+          rw [hDdiag 3, hw3]
+          ring
+        · change D.a 2 2 = D.w 0 * (-4)
+          rw [hDdiag 2, hw2]
+          ring
+        · change D.a 1 1 = D.w 0 * (-4)
+          rw [hDdiag 1, hw01]
+          ring
+        · change D.a 0 0 = D.w 0 * (-2)
+          rw [hDdiag 0]
+          ring
+        · change D.a 4 3 = D.w 0 * 2
+          rw [ha43]
+          ring
+        · change D.a 3 4 = D.w 0 * 2
+          rw [ha34]
+          ring
+        · change D.a 3 2 = D.w 0 * 2
+          rw [ha32]
+          ring
+        · change D.a 2 3 = D.w 0 * 2
+          rw [ha23]
+          ring
+        · change D.a 2 1 = D.w 0 * 2
+          rw [ha21]
+          ring
+        · change D.a 1 2 = D.w 0 * 2
+          rw [ha12]
+          ring
+        · change D.a 1 0 = D.w 0 * 2
+          rw [ha10]
+          ring
+        · change D.a 0 1 = D.w 0 * 2
+          rw [ha01]
+          ring
+        · change D.a 4 2 = 0
+          exact hz42
+        · change D.a 2 4 = 0
+          exact hzero24
+        · change D.a 4 1 = 0
+          exact hz41
+        · change D.a 1 4 = 0
+          exact hzero14
+        · change D.a 4 0 = 0
+          exact hz40
+        · change D.a 0 4 = 0
+          exact hzero04
+        · change D.a 3 1 = 0
+          exact hz31
+        · change D.a 1 3 = 0
+          exact hzero13
+        · change D.a 3 0 = 0
+          exact hz30
+        · change D.a 0 3 = 0
+          exact hzero03
+        · change D.a 2 0 = 0
+          exact hz20
+        · change D.a 0 2 = 0
+          exact hzero02
+      have hvec : E.w = scalarVector (lastVector 5 2 1) (D.w 0) := by
+        funext i
+        fin_cases i
+        · change D.w 4 = D.w 0 * 2
+          nlinarith only [hw4]
+        · change D.w 3 = D.w 0 * 2
+          nlinarith only [hw3]
+        · change D.w 2 = D.w 0 * 2
+          nlinarith only [hw2]
+        · change D.w 1 = D.w 0 * 2
+          nlinarith only [hw01]
+        · simp [E, reindexLocalData, rev, scalarVector, lastVector]
+      have hmp : ∀ i, 0 < E.m i := by
+        intro i
+        change 0 < D.m (rev i)
+        exact local_m_pos S (rev i)
+      have hmc : mConditionB5 E.m := by
+        change 2 * E.m 0 ≥ E.m 1 ∧ 2 * E.m 1 ≥ E.m 0 + E.m 2 ∧
+          2 * E.m 2 ≥ E.m 1 + E.m 3 ∧ 2 * E.m 3 ≥ E.m 2 + E.m 4 ∧
+          E.m 4 ≥ E.m 3
+        refine ⟨?_, ?_, ?_, ?_, ?_⟩
+        · simpa [E, reindexLocalData, rev] using hm4
+        · simpa [E, reindexLocalData, rev, add_comm] using hm3
+        · simpa [E, reindexLocalData, rev, add_comm] using hm2
+        · simpa [E, reindexLocalData, rev, add_comm] using hm1
+        · change D.m 0 ≥ D.m 1
+          exact hm0
+      refine ⟨rev, ?_⟩
+      exact Or.inr (Or.inr (realize_pattern5 E (pathLastMatrix 5 (-4) (-2) 2 2)
+        (lastVector 5 2 1) mConditionB5 (D.w 0) (hDpos 0) hmat hvec hmp hmc))
 
 /-! A proper subgraph cannot contain the fourfold star. -/
 theorem lemma_fourfold (T : NumericalType) (S : MinusTwoSubgraph T 5)

@@ -467,7 +467,7 @@ private theorem terminalSheaf_stalk_subsingleton (X : TopCat.{v}) (x : X) :
   let W := unop U ⊓ unop V
   let iU : W ⟶ unop U := OpenNhds.infLELeft _ _
   let iV : W ⟶ unop V := OpenNhds.infLERight _ _
-  letI : Subsingleton ((terminalSheaf X).presheaf.obj (op W.1)) := hsec W.1
+  let : Subsingleton ((terminalSheaf X).presheaf.obj (op W.1)) := hsec W.1
   apply Types.colimit_sound' iU.op iV.op
   exact Subsingleton.elim _ _
 
@@ -561,17 +561,17 @@ theorem sheafificationDoesNotPreserveAllLimits :
   intro h
   let L := CategoryTheory.presheafToSheaf
     (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)
-  letI : HasLimits (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
+  let : HasLimits (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
     sheaf_has_limits
-  letI : PreservesLimits L := h
+  let : PreservesLimits L := h
   let J := Discrete (ULift.{v} ℕ)
-  letI : HasLimitsOfShape J (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
+  let : HasLimitsOfShape J (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
     HasLimits.has_limits_of_shape J
   let F : J ⥤ TopCat.Presheaf (Type v) cofiniteCounterexampleSpace :=
     Discrete.functor (fun n =>
       coverPresheaf (cofiniteCounterexampleOpenA n.down)
         (cofiniteCounterexampleOpenB n.down))
-  letI : HasLimit (F ⋙ L) :=
+  let : HasLimit (F ⋙ L) :=
     (inferInstance : HasLimitsOfShape J
       (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace)).has_limit (F ⋙ L)
   let Q := limit F
@@ -610,10 +610,10 @@ theorem sheafificationDoesNotPreserveAllLimits :
     (CategoryTheory.toSheafify
       (Opens.grothendieckTopology cofiniteCounterexampleSpace) Q)
   let m := (TopCat.Presheaf.stalkFunctor (Type v) x₀).map eLim.hom.1
-  haveI : IsIso u := by infer_instance
-  haveI : IsIso m := by infer_instance
+  have : IsIso u := by infer_instance
+  have : IsIso m := by infer_instance
   let um := u ≫ m
-  haveI : IsIso um := by infer_instance
+  have : IsIso um := by infer_instance
   rcases htarget with ⟨y⟩
   exact hQempty.false (inv um y)
 

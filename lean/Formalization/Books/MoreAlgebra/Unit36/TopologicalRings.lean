@@ -322,12 +322,11 @@ theorem isAdicComplete_iff_complete_for_iAdicModuleTopology
       have hxpow : ∀ n, x ∈ I ^ n • (⊤ : Submodule R M) := by
         intro n
         apply hx
-        change ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M) ∈ B.sets
         change ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M) ∈ B.toFilterBasis.sets
         unfold B
         exact ⟨n, rfl⟩
       have hxzero : x = 0 := h.haus x (fun n => SModEq.zero.2 (hxpow n))
-      simpa [hxzero]
+      simp [hxzero]
   · rintro ⟨u, hu, hu_uniform, hcomplete, ht2⟩
     let _ : UniformSpace M := u
     let _ : TopologicalSpace M := u.toTopologicalSpace
@@ -361,7 +360,7 @@ theorem isAdicComplete_iff_complete_for_iAdicModuleTopology
             have hmem := Submodule.sub_mem _ (SModEq.sub_mem.mp (hf hm))
               (SModEq.sub_mem.mp (hf hn))
             change f n - f m ∈ I ^ i • (⊤ : Submodule R M)
-            convert hmem using 1 <;> abel⟩)
+            convert hmem using 1 ; abel⟩)
       refine ⟨L, ?_⟩
       have hnb := hbasis.map (fun y : M => L + y)
       rw [map_add_left_nhds_zero L] at hnb

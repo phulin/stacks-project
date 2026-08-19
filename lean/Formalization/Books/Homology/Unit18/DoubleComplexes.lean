@@ -1163,7 +1163,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (show (s - p, n - s) =
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
         congr 1 <;> ring)]
-    rw [← eqToHom_naturality_assoc
+    rw [eqToHom_naturality_assoc
       (fun r : ℤ => A.d1 p (s - p) r)
       (show n - s + 1 = n + 1 - s by ring)]
     simpa [Category.assoc] using
@@ -1715,14 +1715,14 @@ def tripleTotalizationOrder12TermIso [HasCountableCoproducts C]
           Sigma.ι (fun r : ℤ => A.obj r ((p + q) - r) (n - (p + q))) p ≫
           Sigma.ι (fun s : ℤ => ∐ fun r : ℤ => A.obj r (s - r) (n - s)) (p + q)))
   refine { hom := hom, inv := inv, hom_inv_id := ?_, inv_hom_id := ?_ }
-  · /- Prior attempt:
+  ·
     apply Sigma.hom_ext
     intro s
     apply Sigma.hom_ext
     intro p
     dsimp [hom, inv, tripleTotalizationOrder12Term, tripleTotalTerm]
     simp [Cofan.mk_ι_app, Category.assoc]
-    rw [← eqToHom_naturality
+    rw [← eqToHom_naturality_assoc
       (fun t : ℤ => Sigma.ι (fun r : ℤ => A.obj r (t - r) (n - t)) p)
       (show s = p + (s - p) by ring)]
     rw [← eqToHom_naturality
@@ -1730,8 +1730,6 @@ def tripleTotalizationOrder12TermIso [HasCountableCoproducts C]
         Sigma.ι (fun s : ℤ => ∐ fun r : ℤ => A.obj r (s - r) (n - s)) t)
       (show s = p + (s - p) by ring)]
     simp
-    -/
-    sorry
   · apply Sigma.hom_ext
     intro p
     apply Sigma.hom_ext
@@ -1787,26 +1785,67 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
               (n + 1 - (p + 1) - q)) (s + 1 - (p + 1)) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) (p + 1) := by
-    /- Prior attempt:
     dsimp [tripleD1Component, tripleOrder12D1Component]
     simp only [Category.assoc]
-    rw [← eqToHom_naturality_assoc
+    convert (eqToHom_naturality_assoc
       (fun r : ℤ => A.d1 p (s - p) r)
-      (show n - s = n - p - (s - p) by ring)]
-    convert (eqToHom_naturality
-      (fun qr : ℤ × ℤ =>
-        A.d1 p qr.1 qr.2 ≫
+      (show n - s = n - p - (s - p) by ring)
+      (eqToHom (by congr 1; ring) ≫
+        Sigma.ι (fun q : ℤ => A.obj (p + 1) q
+          (n + 1 - (p + 1) - q)) (s - p) ≫
+      Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+          (n + 1 - r - q)) (p + 1))).symm using 1 <;>
+      simp [Category.assoc, show s + 1 - (p + 1) = s - p by ring]
+    have hq :
+        eqToHom (show A.obj (p + 1) (s - p) (n - s) =
+          A.obj (p + 1) (s + 1 - (p + 1))
+            (n + 1 - (p + 1) - (s + 1 - (p + 1))) by
+          congr 1 <;> ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj (p + 1) q
+              (n + 1 - (p + 1) - q)) (s + 1 - (p + 1)) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+              (n + 1 - r - q)) (p + 1) =
+          eqToHom (show A.obj (p + 1) (s - p) (n - s) =
+            A.obj (p + 1) (s - p)
+              (n + 1 - (p + 1) - (s - p)) by
+            congr 1 <;> ring) ≫
+          Sigma.ι (fun q : ℤ => A.obj (p + 1) q
+            (n + 1 - (p + 1) - q)) (s - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+              (n + 1 - r - q)) (p + 1) := by
+      have hnat :=
+        eqToHom_naturality_assoc
+          (fun q : ℤ => Sigma.ι (fun q : ℤ => A.obj (p + 1) q
+            (n + 1 - (p + 1) - q)) q)
+          (show s - p = s + 1 - (p + 1) by ring)
+          (Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+            (n + 1 - r - q)) (p + 1))
+      convert (congrArg
+        (fun f =>
+          eqToHom (show A.obj (p + 1) (s - p) (n - s) =
+            A.obj (p + 1) (s - p)
+              (n + 1 - (p + 1) - (s - p)) by
+            congr 1 <;> ring) ≫ f) hnat).symm using 1 <;>
+        simp [Category.assoc] <;> ring
+    calc
+      _ = A.d1 p (s - p) (n - s) ≫
           eqToHom (by congr 1 <;> ring) ≫
           Sigma.ι (fun q : ℤ => A.obj (p + 1) q
-            (n + 1 - (p + 1) - q)) qr.1 ≫
-          Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
-            (n + 1 - r - q)) (p + 1))
-      (show (s + 1 - (p + 1), n - s) =
-        (s - p, n + 1 - (p + 1) - (s - p)) by
-        congr 1 <;> ring)).symm using 1 <;>
-      simp [Category.assoc]
-    -/
-    sorry
+            (n + 1 - (p + 1) - q)) (s - p) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+            (n + 1 - r - q)) (p + 1) := by
+        simpa [Category.assoc] using
+          congrArg (fun f => A.d1 p (s - p) (n - s) ≫ f) hq
+      _ = _ := by
+        convert (eqToHom_naturality_assoc
+          (fun r : ℤ => A.d1 p (s - p) r)
+          (show n - s = n - p - (s - p) by ring)
+          (eqToHom (by congr 1; ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj (p + 1) q
+              (n + 1 - (p + 1) - q)) (s - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+              (n + 1 - r - q)) (p + 1))) using 1 <;>
+          simp [Category.assoc]
   have h2 :
       eqToHom (by congr 1; ring) ≫
           tripleD2Component A n p (s - p) ≫
@@ -1820,26 +1859,44 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
               (n + 1 - p - q)) ((s + 1) - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) p := by
-    /- Prior attempt:
     dsimp [tripleD2Component, tripleOrder12D2Component]
     simp only [Category.assoc]
     rw [← eqToHom_naturality_assoc
       (fun r : ℤ => A.d2 p (s - p) r)
       (show n - s = n - p - (s - p) by ring)]
-    convert (eqToHom_naturality
-      (fun qr : ℤ × ℤ =>
-        A.d2 p qr.1 qr.2 ≫
-          eqToHom (by congr 1 <;> ring) ≫
-          Sigma.ι (fun q : ℤ => A.obj p q
-            (n + 1 - p - q)) qr.1 ≫
-          Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+    have hq :
+        eqToHom (show A.obj p ((s - p) + 1) (n - s) =
+          A.obj p ((s + 1) - p)
+            (n + 1 - p - ((s + 1) - p)) by
+          congr 1 <;> ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) ((s + 1) - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+              (n + 1 - r - q)) p =
+          eqToHom (show A.obj p ((s - p) + 1) (n - s) =
+            A.obj p ((s - p) + 1)
+              (n + 1 - p - ((s - p) + 1)) by
+            congr 1 <;> ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) ((s - p) + 1) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+              (n + 1 - r - q)) p := by
+      have hnat :=
+        eqToHom_naturality_assoc
+          (fun q : ℤ => Sigma.ι (fun q : ℤ => A.obj p q
+            (n + 1 - p - q)) q)
+          (show (s - p) + 1 = (s + 1) - p by ring)
+          (Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
             (n + 1 - r - q)) p)
-      (show ((s + 1) - p, n - s) =
-        (s - p, n + 1 - p - (s - p)) by
-        congr 1 <;> ring)).symm using 1 <;>
-      simp [Category.assoc]
-    -/
-    sorry
+      convert (congrArg
+        (fun f =>
+          eqToHom (show A.obj p ((s - p) + 1) (n - s) =
+            A.obj p ((s - p) + 1)
+              (n + 1 - p - ((s - p) + 1)) by
+            congr 1 <;> ring) ≫ f) hnat.symm) using 1 <;>
+        simp [Category.assoc]
+    simpa [Category.assoc] using
+      (congrArg (fun f => A.d2 p (s - p) (n - s) ≫ f) hq).symm
   have h3 :
       eqToHom (by congr 1; ring) ≫
           tripleD3Component A n p (s - p) ≫
@@ -1853,24 +1910,12 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
               (n + 1 - p - q)) (s - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) p := by
-    /- Prior attempt:
     dsimp [tripleD3Component, tripleOrder12D3Component]
     simp only [Category.assoc]
     rw [← eqToHom_naturality_assoc
       (fun r : ℤ => A.d3 p (s - p) r)
       (show n - s = n - p - (s - p) by ring)]
-    convert (eqToHom_naturality
-      (fun r : ℤ =>
-        A.d3 p (s - p) r ≫
-          eqToHom (by congr 1 <;> ring) ≫
-          Sigma.ι (fun q : ℤ => A.obj p q
-            (n + 1 - p - q)) (s - p) ≫
-          Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
-            (n + 1 - r - q)) p)
-      (show n - s = n - p - (s - p) by ring)).symm using 1 <;>
-      simp [Category.assoc]
-    -/
-    sorry
+    simp [Category.assoc]
   rw [h1, h2, h3]
 /-! ## Shifts -/
 

@@ -3,6 +3,7 @@ import Mathlib.Algebra.Ring.Ext
 import Mathlib.RingTheory.Artinian.Ring
 import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.Finiteness.NilpotentKer
+import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Localization.Ideal
@@ -13,6 +14,7 @@ import Mathlib.RingTheory.RingHom.FinitePresentation
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Defs
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Basic
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
+import Mathlib.RingTheory.Valuation.LocalSubring
 
 /-!
 # Commutative Algebra, Chapter 54: Homomorphisms essentially of finite type
@@ -656,6 +658,69 @@ private theorem isLocalizationOfQuotient_of_localization
   have hqcomp : q'.comp mkI' = h := hq'
   exact ⟨I', M.map a, q', hqcomp, hloc'⟩
 
+private theorem isLocalizationOfQuotient_of_fraction_representatives
+    {P P' S : Type*} [CommRing P] [CommRing P'] [CommRing S]
+    (p : P →+* S) (p' : P' →+* S)
+    (hp : RingHom.IsLocalizationOfQuotient p)
+    (hrep : ∀ x : P, ∃ y z : P', IsUnit (p' z) ∧ p x * p' z = p' y) :
+    RingHom.IsLocalizationOfQuotient p' := by
+  rcases hp with ⟨J, M, q, hq, hloc⟩
+  let I' : Ideal P' := RingHom.ker p'
+  let q' : (P' ⧸ I') →+* S := RingHom.kerLift p'
+  let M' : Submonoid (P' ⧸ I') := (IsUnit.submonoid S).comap q'
+  have hq' : q'.comp (Ideal.Quotient.mk I') = p' := by
+    apply RingHom.ext
+    intro x
+    exact RingHom.kerLift_mk p' x
+  let : Algebra (P ⧸ J) S := q.toAlgebra
+  let : IsLocalization M S := hloc
+  let : Algebra (P' ⧸ I') S := q'.toAlgebra
+  have hloc' : IsLocalization M' S := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro x
+      exact x.2
+    · intro s
+      obtain ⟨⟨x, u⟩, hs⟩ := IsLocalization.surj M s
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+      obtain ⟨u', hu'⟩ := Ideal.Quotient.mk_surjective (u : P ⧸ J)
+      obtain ⟨yx, zx, hzx, hx⟩ := hrep x
+      obtain ⟨yu, zu, hzu, hu⟩ := hrep u'
+      have hpu : IsUnit (p u') := by
+        have hpu' := IsLocalization.map_units S u
+        change IsUnit (q (u : P ⧸ J)) at hpu'
+        rw [← hu', show q (Ideal.Quotient.mk J u') = p u' from
+          DFunLike.congr_fun hq u'] at hpu'
+        exact hpu'
+      have hyu : IsUnit (p' yu) := by
+        rw [← hu]
+        exact hpu.mul hzu
+      have hs' : s * p u' = p x := by
+        change s * q (u : P ⧸ J) = q (Ideal.Quotient.mk J x) at hs
+        rw [← hu', show q (Ideal.Quotient.mk J u') = p u' from
+          DFunLike.congr_fun hq u',
+          show q (Ideal.Quotient.mk J x) = p x from DFunLike.congr_fun hq x] at hs
+        exact hs
+      refine ⟨⟨Ideal.Quotient.mk I' (yx * zu),
+        ⟨Ideal.Quotient.mk I' (yu * zx), ?_⟩⟩, ?_⟩
+      · change IsUnit (q' (Ideal.Quotient.mk I' (yu * zx)))
+        rw [RingHom.kerLift_mk, map_mul]
+        exact hyu.mul hzx
+      · change s * q' (Ideal.Quotient.mk I' (yu * zx)) =
+          q' (Ideal.Quotient.mk I' (yx * zu))
+        rw [RingHom.kerLift_mk, RingHom.kerLift_mk]
+        calc
+          s * p' (yu * zx) = s * (p' yu * p' zx) := by rw [map_mul]
+          _ = (s * p u') * p' zx * p' zu := by rw [← hu]; ring
+          _ = p x * p' zx * p' zu := by rw [hs']
+          _ = p' yx * p' zu := by rw [hx]
+          _ = p' (yx * zu) := by rw [map_mul]
+    · intro x y hxy
+      refine ⟨1, ?_⟩
+      change q' x = q' y at hxy
+      simpa only [Submonoid.coe_one, one_mul] using
+        ((RingHom.kerLift_injective p') hxy)
+  exact ⟨I', M', q', hq', hloc'⟩
+
 theorem essFiniteType_iff_essFiniteType_residue
     {R S : Type*} [CommRing R] [CommRing S]
     [IsArtinianRing S] [IsLocalRing S]
@@ -852,6 +917,256 @@ theorem exists_localization_at_closed_point_special_fibre
               (algebraMap R P)) = p.comp (algebraMap R P) := by
                 rw [← RingHom.comp_assoc, hcomp]
         _ = f := hpcomp
-  · sorry
+  · classical
+    have hJtop : J = ⊤ := not_ne_iff.mp hJ
+    have hpcomp' : p.comp (algebraMap R P) = f := by
+      ext r
+      change algebraMap A S (a (algebraMap R P r)) = algebraMap R S r
+      rw [a.commutes]
+      exact (IsScalarTower.algebraMap_apply R A S r).symm
+    let k := IsLocalRing.ResidueField S
+    let ρ : S →+* k := IsLocalRing.residue S
+    let g : R →+* k := ρ.comp f
+    obtain ⟨V, hV, hVlocal⟩ := IsLocalRing.exists_factor_valuationRing g
+    let gV : R →+* V := g.codRestrict V.toSubring hV
+    let : IsLocalHom gV := hVlocal
+    let lam : Fin n → k := fun j => ρ (p (MvPolynomial.X j))
+    have hnotall : ¬ ∀ j, lam j ∈ V := by
+      intro hall
+      let c : Fin n → V := fun j => ⟨lam j, hall j⟩
+      let t : P →+* V := MvPolynomial.eval₂Hom gV c
+      have ht : V.toSubring.subtype.comp t = ρ.comp p := by
+        apply MvPolynomial.ringHom_ext
+        · intro r
+          change ((MvPolynomial.eval₂Hom gV c (MvPolynomial.C r) : V) : k) =
+            ρ (p (MvPolynomial.C r))
+          rw [MvPolynomial.eval₂Hom_C]
+          change g r = ρ (p (MvPolynomial.C r))
+          rw [show p (MvPolynomial.C r) = f r from
+            DFunLike.congr_fun hpcomp' r]
+          rfl
+        · intro j
+          simp [t, c, lam]
+      have hqle : q ≤ (IsLocalRing.maximalIdeal V).comap t := by
+        intro x hx
+        change t x ∈ IsLocalRing.maximalIdeal V
+        change p x ∈ IsLocalRing.maximalIdeal S at hx
+        have hxρ : ρ (p x) = 0 := (IsLocalRing.residue_eq_zero_iff _).mpr hx
+        have htx : (t x : k) = 0 := by
+          have htx' := DFunLike.congr_fun ht x
+          change (t x : k) = ρ (p x) at htx'
+          exact htx'.trans hxρ
+        have htx0 : t x = 0 := Subtype.ext htx
+        rw [htx0]
+        exact (IsLocalRing.maximalIdeal V).zero_mem
+      have hbasele :
+          (IsLocalRing.maximalIdeal R).map (algebraMap R P) ≤
+            (IsLocalRing.maximalIdeal V).comap t := by
+        rw [Ideal.map_le_iff_le_comap]
+        intro r hr
+        change t (algebraMap R P r) ∈ IsLocalRing.maximalIdeal V
+        have htC : t (algebraMap R P r) = gV r := by
+          change MvPolynomial.eval₂Hom gV c (MvPolynomial.C r) = gV r
+          exact MvPolynomial.eval₂Hom_C gV c r
+        rw [htC]
+        exact _root_.map_nonunit gV r hr
+      have hJle : J ≤ (IsLocalRing.maximalIdeal V).comap t :=
+        sup_le hqle hbasele
+      have htop : (IsLocalRing.maximalIdeal V).comap t = ⊤ := by
+        apply top_unique
+        rw [← hJtop]
+        exact hJle
+      exact (Ideal.comap_ne_top t
+        (IsLocalRing.maximalIdeal.isMaximal V).ne_top) htop
+    obtain ⟨i₀, hi₀⟩ := not_forall.mp hnotall
+    obtain ⟨i, -, himax⟩ := Finset.exists_max_image Finset.univ
+      (fun j => V.valuation (lam j)) ⟨i₀, Finset.mem_univ i₀⟩
+    have himax' (j : Fin n) : V.valuation (lam j) ≤ V.valuation (lam i) :=
+      himax j (Finset.mem_univ j)
+    have hli : lam i ∉ V := by
+      intro hi
+      apply hi₀
+      rw [← V.valuation_le_one_iff]
+      exact (himax' i₀).trans ((V.valuation_le_one_iff _).mpr hi)
+    have hli0 : lam i ≠ 0 := by
+      intro hi
+      apply hli
+      rw [hi]
+      exact V.zero_mem
+    have hlinv : (lam i)⁻¹ ∈ V :=
+      (V.mem_or_inv_mem (lam i)).resolve_left hli
+    have hldiv (j : Fin n) : lam j / lam i ∈ V := by
+      obtain ⟨z, hz⟩ := (V.valuation_le_iff (lam j) (lam i)).mp (himax' j)
+      have hz' : (z : k) = lam j / lam i := (eq_div_iff hli0).mpr hz
+      rw [← hz']
+      exact z.2
+    have hpxiNotMem : p (MvPolynomial.X i) ∉ IsLocalRing.maximalIdeal S := by
+      intro hi
+      apply hli0
+      change ρ (p (MvPolynomial.X i)) = 0
+      exact (IsLocalRing.residue_eq_zero_iff _).mpr hi
+    have hpxiUnit : IsUnit (p (MvPolynomial.X i)) :=
+      IsLocalRing.notMem_maximalIdeal.mp hpxiNotMem
+    let u : Sˣ := hpxiUnit.unit
+    let b : Fin n → S := fun j =>
+      if j = i then (u⁻¹ : Sˣ) else p (MvPolynomial.X j) * (u⁻¹ : Sˣ)
+    let p' : P →+* S := MvPolynomial.eval₂Hom f b
+    let c : Fin n → V := fun j =>
+      if j = i then ⟨(lam i)⁻¹, hlinv⟩ else ⟨lam j / lam i, hldiv j⟩
+    let t : P →+* V := MvPolynomial.eval₂Hom gV c
+    have hp'Xi : p' (MvPolynomial.X i) = (u⁻¹ : Sˣ) := by
+      change MvPolynomial.eval₂Hom f b (MvPolynomial.X i) = (u⁻¹ : Sˣ)
+      rw [MvPolynomial.eval₂Hom_X']
+      simp [b]
+    have hp'XiUnit : IsUnit (p' (MvPolynomial.X i)) := by
+      rw [hp'Xi]
+      exact Units.isUnit _
+    have hcoordi : p (MvPolynomial.X i) * p' (MvPolynomial.X i) = 1 := by
+      rw [hp'Xi, ← hpxiUnit.unit_spec]
+      exact Units.mul_inv u
+    have hcoord (j : Fin n) (hj : j ≠ i) :
+        p' (MvPolynomial.X j) = p (MvPolynomial.X j) * p' (MvPolynomial.X i) := by
+      rw [hp'Xi]
+      change MvPolynomial.eval₂Hom f b (MvPolynomial.X j) =
+        p (MvPolynomial.X j) * (u⁻¹ : Sˣ)
+      rw [MvPolynomial.eval₂Hom_X']
+      simp [b, hj]
+    have hrep : ∀ x : P, ∃ y z : P, IsUnit (p' z) ∧ p x * p' z = p' y := by
+      intro x
+      induction x using MvPolynomial.induction_on with
+      | C r =>
+          refine ⟨MvPolynomial.C r, 1, ?_, ?_⟩
+          · simp [p']
+          · rw [show p (MvPolynomial.C r) = f r from
+                DFunLike.congr_fun hpcomp' r]
+            rw [map_one, mul_one]
+            change f r = MvPolynomial.eval₂Hom f b (MvPolynomial.C r)
+            rw [MvPolynomial.eval₂Hom_C]
+      | add x y hx hy =>
+          obtain ⟨yx, zx, hzx, hx⟩ := hx
+          obtain ⟨yy, zy, hzy, hy⟩ := hy
+          refine ⟨yx * zy + yy * zx, zx * zy, ?_, ?_⟩
+          · rw [map_mul]
+            exact hzx.mul hzy
+          · simp only [map_add, map_mul]
+            rw [← hx, ← hy]
+            ring
+      | mul_X x j hx =>
+          obtain ⟨y, z, hz, hx⟩ := hx
+          by_cases hj : j = i
+          · subst j
+            refine ⟨y, z * MvPolynomial.X i, ?_, ?_⟩
+            · rw [map_mul]
+              exact hz.mul hp'XiUnit
+            · calc
+                p (x * MvPolynomial.X i) * p' (z * MvPolynomial.X i) =
+                    (p x * p' z) *
+                      (p (MvPolynomial.X i) * p' (MvPolynomial.X i)) := by
+                        simp only [map_mul]
+                        ring
+                _ = p' y * 1 := by rw [hx, hcoordi]
+                _ = p' y := mul_one _
+          · refine ⟨y * MvPolynomial.X j, z * MvPolynomial.X i, ?_, ?_⟩
+            · rw [map_mul]
+              exact hz.mul hp'XiUnit
+            · calc
+                p (x * MvPolynomial.X j) * p' (z * MvPolynomial.X i) =
+                    (p x * p' z) *
+                      (p (MvPolynomial.X j) * p' (MvPolynomial.X i)) := by
+                        simp only [map_mul]
+                        ring
+                _ = p' y * p' (MvPolynomial.X j) := by rw [hx, ← hcoord j hj]
+                _ = p' (y * MvPolynomial.X j) := (map_mul p' _ _).symm
+    have hp' : RingHom.IsLocalizationOfQuotient p' :=
+      isLocalizationOfQuotient_of_fraction_representatives p p' hp hrep
+    have ht : V.toSubring.subtype.comp t = ρ.comp p' := by
+      apply MvPolynomial.ringHom_ext
+      · intro r
+        simp [t, p', gV, g]
+      · intro j
+        by_cases hj : j = i
+        · subst j
+          simp [t, p', c, b, lam, u]
+        · simp [t, p', c, b, lam, u, hj, div_eq_mul_inv]
+    let q' : Ideal P := (IsLocalRing.maximalIdeal S).comap p'
+    let J' : Ideal P := q' ⊔ (IsLocalRing.maximalIdeal R).map (algebraMap R P)
+    have hq'le : q' ≤ (IsLocalRing.maximalIdeal V).comap t := by
+      intro x hx
+      change t x ∈ IsLocalRing.maximalIdeal V
+      change p' x ∈ IsLocalRing.maximalIdeal S at hx
+      have hxρ : ρ (p' x) = 0 := (IsLocalRing.residue_eq_zero_iff _).mpr hx
+      have htx : (t x : k) = 0 := by
+        have htx' := DFunLike.congr_fun ht x
+        change (t x : k) = ρ (p' x) at htx'
+        exact htx'.trans hxρ
+      have htx0 : t x = 0 := Subtype.ext htx
+      rw [htx0]
+      exact (IsLocalRing.maximalIdeal V).zero_mem
+    have hbasele :
+        (IsLocalRing.maximalIdeal R).map (algebraMap R P) ≤
+          (IsLocalRing.maximalIdeal V).comap t := by
+      rw [Ideal.map_le_iff_le_comap]
+      intro r hr
+      change t (algebraMap R P r) ∈ IsLocalRing.maximalIdeal V
+      have htC : t (algebraMap R P r) = gV r := by
+        change MvPolynomial.eval₂Hom gV c (MvPolynomial.C r) = gV r
+        exact MvPolynomial.eval₂Hom_C gV c r
+      rw [htC]
+      exact _root_.map_nonunit gV r hr
+    have hJ' : J' ≠ ⊤ := by
+      intro htop
+      have hle : J' ≤ (IsLocalRing.maximalIdeal V).comap t :=
+        sup_le hq'le hbasele
+      apply Ideal.comap_ne_top t (IsLocalRing.maximalIdeal.isMaximal V).ne_top
+      apply top_unique
+      rw [← htop]
+      exact hle
+    obtain ⟨m, hm, hJm⟩ := Ideal.exists_le_maximal J' hJ'
+    let m' : MaximalSpectrum P := ⟨m, hm⟩
+    let : m.IsMaximal := hm
+    let : m.IsPrime := hm.isPrime
+    have hmap : (IsLocalRing.maximalIdeal R).map (algebraMap R P) ≤ m :=
+      le_trans le_sup_right hJm
+    have hcomap : (m.comap (algebraMap R P)) = IsLocalRing.maximalIdeal R := by
+      apply (Ideal.IsMaximal.eq_of_le
+        (@IsLocalRing.maximalIdeal.isMaximal R _ _)
+        (Ideal.comap_ne_top (algebraMap R P) hm.ne_top) ?_).symm
+      exact (Ideal.map_le_iff_le_comap).mp hmap
+    have hpunit (x : m.primeCompl) : IsUnit (p' x) := by
+      apply IsLocalRing.notMem_maximalIdeal.mp
+      intro hx
+      apply x.2
+      exact hJm ((le_sup_left : q' ≤ J') (show (x : P) ∈ q' from hx))
+    let h : Localization.AtPrime m →+* S :=
+      IsLocalization.lift (M := m.primeCompl) (g := p') hpunit
+    have hcomp : h.comp (algebraMap P (Localization.AtPrime m)) = p' :=
+      IsLocalization.lift_comp hpunit
+    have hpcomp : p'.comp (algebraMap R P) = f := by
+      ext r
+      change MvPolynomial.eval₂Hom f b (MvPolynomial.C r) = f r
+      exact MvPolynomial.eval₂Hom_C f b r
+    have hlocH : RingHom.IsLocalizationOfQuotient h :=
+      isLocalizationOfQuotient_of_localization p'
+        (algebraMap P (Localization.AtPrime m)) h m.primeCompl
+        (by
+          let : Algebra P (Localization.AtPrime m) :=
+            (algebraMap P (Localization.AtPrime m)).toAlgebra
+          have hcan : @IsLocalization P AddMonoidAlgebra.commSemiring m.primeCompl
+              (Localization.AtPrime m) _ OreLocalization.instAlgebra :=
+            @Localization.isLocalization P AddMonoidAlgebra.commSemiring m.primeCompl
+          convert hcan using 1
+          · apply CommSemiring.ext <;> rfl
+          · apply CommSemiring.ext <;> rfl
+          · apply Algebra.algebra_ext
+            intro r
+            rfl) hp' hcomp
+    refine ⟨n, m', ?_, h, ?_, hlocH⟩
+    · exact hcomap
+    · calc
+        h.comp
+            ((algebraMap P (Localization.AtPrime m)).comp
+              (algebraMap R P)) = p'.comp (algebraMap R P) := by
+                rw [← RingHom.comp_assoc, hcomp]
+        _ = f := hpcomp
 
 end Formalization.Books.Algebra.Unit54

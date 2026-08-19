@@ -704,6 +704,103 @@ private lemma isGlobalCatenary_of_lowerSet
       exact congrArg Subtype.val hj
     exact hmax _ _ hc_global hd_global
 
+private def liftChain_upper {α : Type*} [Preorder α] {P : Set α}
+    (hP : ∀ ⦃p q : α⦄, p ∈ P → p ≤ q → q ∈ P)
+    {p q : α} (hp : p ∈ P) (c : LTSeries α)
+    (_hhead : c.head = p) (hlast : c.last = q) : LTSeries P :=
+  { length := c.length
+    toFun := fun i => ⟨c i, by
+      apply hP hp
+      rw [← _hhead]
+      exact c.monotone (Fin.zero_le i)⟩
+    step := fun i => by
+      apply c.strictMono
+      change i.val < i.val + 1
+      omega }
+
+private lemma isGlobalCatenary_of_upperSet
+    {α : Type*} [PartialOrder α] (P : Set α)
+    (hP : ∀ ⦃p q : α⦄, p ∈ P → p ≤ q → q ∈ P)
+    (h : IsGlobalCatenary α) : IsGlobalCatenary P := by
+  intro p q hpq
+  obtain ⟨n, hn, hmax⟩ := h (show (p : α) < q from hpq)
+  refine ⟨n, ?_, ?_⟩
+  · intro c hc
+    have hc' : IsGlobalChainBetween (p : α) q (forgetSubtype c) :=
+      ⟨congrArg Subtype.val hc.1, congrArg Subtype.val hc.2⟩
+    exact hn _ hc'
+  · intro c d hc hd
+    have hc_global : IsGlobalMaximalChainBetween (p : α) q (forgetSubtype c) := by
+      refine ⟨congrArg Subtype.val hc.1, congrArg Subtype.val hc.2.1, ?_⟩
+      intro e he_head he_last hce
+      let e' := liftChain_upper hP (show (p : α) ∈ P from p.property)
+        e he_head he_last
+      have he'_head : e'.head = p := by
+        change ⟨e.head, ?_⟩ = p
+        apply Subtype.ext
+        exact he_head
+      have he'_last : e'.last = q := by
+        change ⟨e.last, ?_⟩ = q
+        apply Subtype.ext
+        exact he_last
+      have hce' : Set.range c ⊆ Set.range e' := by
+        intro x hx
+        obtain ⟨i, rfl⟩ := hx
+        obtain ⟨j, hj⟩ := hce ⟨i, rfl⟩
+        refine ⟨j, ?_⟩
+        apply Subtype.ext
+        exact hj
+      have hsub := hc.2.2 e' he'_head he'_last hce'
+      intro x hx
+      obtain ⟨i, rfl⟩ := hx
+      obtain ⟨j, hj⟩ := hsub ⟨i, rfl⟩
+      refine ⟨j, ?_⟩
+      exact congrArg Subtype.val hj
+    have hd_global : IsGlobalMaximalChainBetween (p : α) q (forgetSubtype d) := by
+      refine ⟨congrArg Subtype.val hd.1, congrArg Subtype.val hd.2.1, ?_⟩
+      intro e he_head he_last hde
+      let e' := liftChain_upper hP (show (p : α) ∈ P from p.property)
+        e he_head he_last
+      have he'_head : e'.head = p := by
+        change ⟨e.head, ?_⟩ = p
+        apply Subtype.ext
+        exact he_head
+      have he'_last : e'.last = q := by
+        change ⟨e.last, ?_⟩ = q
+        apply Subtype.ext
+        exact he_last
+      have hde' : Set.range d ⊆ Set.range e' := by
+        intro x hx
+        obtain ⟨i, rfl⟩ := hx
+        obtain ⟨j, hj⟩ := hde ⟨i, rfl⟩
+        refine ⟨j, ?_⟩
+        apply Subtype.ext
+        exact hj
+      have hsub := hd.2.2 e' he'_head he'_last hde'
+      intro x hx
+      obtain ⟨i, rfl⟩ := hx
+      obtain ⟨j, hj⟩ := hsub ⟨i, rfl⟩
+      refine ⟨j, ?_⟩
+      exact congrArg Subtype.val hj
+    exact hmax _ _ hc_global hd_global
+
+private lemma isCatenaryRing_of_surjective
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
+    (f : R →+* S) (hf : Function.Surjective f)
+    (hR : IsCatenaryRing R) : IsCatenaryRing S := by
+  let e := Ideal.primeSpectrumOrderIsoZeroLocusOfSurj f hf
+    (I := RingHom.ker f) rfl
+  have hglobalR : IsGlobalCatenary (PrimeSpectrum R) :=
+    (isGlobalCatenary_iff_isCatenaryRing R).mpr hR
+  have hglobalZ : IsGlobalCatenary (PrimeSpectrum.zeroLocus (R := R) (RingHom.ker f)) :=
+    isGlobalCatenary_of_upperSet (PrimeSpectrum.zeroLocus (R := R) (RingHom.ker f))
+      (fun {p q} hp hpq => by
+        rw [PrimeSpectrum.mem_zeroLocus] at hp ⊢
+        exact hp.trans hpq) hglobalR
+  have hglobalS : IsGlobalCatenary (PrimeSpectrum S) :=
+    isGlobalCatenary_of_orderIso e.symm hglobalZ
+  exact (isGlobalCatenary_iff_isCatenaryRing S).mp hglobalS
+
 /-! ## Universal catenarity -/
 
 /- An algebra of finite type is represented by the canonical algebra class. -/
@@ -724,6 +821,145 @@ theorem isUniversallyCatenary_iff_mPolynomial
         IsNoetherianRing R ∧
         ∀ n : ℕ, IsCatenaryRing (MvPolynomial (Fin n) R) := by
   sorry
+
+private lemma isCatenaryRing_of_finiteType
+    {A : Type u} {T : Type v} [CommRing A] [CommRing T]
+    [Algebra A T] [Algebra.FiniteType A T]
+    (hA : IsUniversallyCatenary A) : IsCatenaryRing T := by
+  obtain ⟨n, f, hf⟩ :=
+    (Algebra.FiniteType.iff_quotient_mvPolynomial'').mp
+      (inferInstance : Algebra.FiniteType A T)
+  have hpoly : IsCatenaryRing (MvPolynomial (Fin n) A) :=
+    ((isUniversallyCatenary_iff_mPolynomial A).mp hA).2 n
+  exact isCatenaryRing_of_surjective f.toRingHom hf hpoly
+
+private def liftChain_iic {α : Type*} [Preorder α] {q m : α}
+    (hqm : q ≤ m) (c : LTSeries (Set.Iic q)) : LTSeries (Set.Iic m) :=
+  { length := c.length
+    toFun := fun i => ⟨(c i : α), (c i).property.trans hqm⟩
+    step := fun i => by
+      apply c.strictMono
+      change i.val < i.val + 1
+      omega }
+
+private def restrictChain_iic {α : Type*} [Preorder α] {q m : α}
+    (hqm : q ≤ m) (c : LTSeries (Set.Iic m)) (hlast : c.last = ⟨q, hqm⟩) :
+    LTSeries (Set.Iic q) :=
+  { length := c.length
+    toFun := fun i => ⟨(c i : α), by
+      change (c i : α) ≤ q
+      have hi : (c i : α) ≤ (c.last : α) := c.monotone (Fin.le_last i)
+      have hlast' := congrArg Subtype.val hlast
+      rw [hlast'] at hi
+      exact hi⟩
+    step := fun i => by
+      apply c.strictMono
+      change i.val < i.val + 1
+      omega }
+
+private lemma isCatenaryRing_of_globalCatenary_iic
+    {R : Type u} [CommRing R] {p q m : PrimeSpectrum R}
+    (h : IsGlobalCatenary (Set.Iic m)) (hpq : p < q) (hqm : q ≤ m) :
+    ∃ n : ℕ,
+      (∀ c : LTSeries (Set.Iic q),
+        IsPrimeChainBetween p q (le_of_lt hpq) c → c.length ≤ n) ∧
+        ∀ c d : LTSeries (Set.Iic q),
+          Formalization.Books.Topology.Unit11.IsMaximalChainBetween
+            p q (le_of_lt hpq) c →
+          Formalization.Books.Topology.Unit11.IsMaximalChainBetween
+            p q (le_of_lt hpq) d → c.length = d.length := by
+  let p' : Set.Iic m := ⟨p, (le_of_lt hpq).trans hqm⟩
+  let q' : Set.Iic m := ⟨q, hqm⟩
+  have hpq' : p' < q' := hpq
+  obtain ⟨n, hn, hmax⟩ := h hpq'
+  refine ⟨n, ?_, ?_⟩
+  · intro c hc
+    let c' := liftChain_iic hqm c
+    have hc_head : c'.head = p' := by
+      apply Subtype.ext
+      change (c.head : PrimeSpectrum R) = p
+      exact congrArg Subtype.val hc.1
+    have hc_last : c'.last = q' := by
+      apply Subtype.ext
+      change (c.last : PrimeSpectrum R) = q
+      exact congrArg Subtype.val hc.2
+    exact hn c' ⟨hc_head, hc_last⟩
+  · intro c d hc hd
+    let c' := liftChain_iic hqm c
+    let d' := liftChain_iic hqm d
+    have hc'_head : c'.head = p' := by
+      apply Subtype.ext
+      change (c.head : PrimeSpectrum R) = p
+      exact congrArg Subtype.val hc.1
+    have hc'_last : c'.last = q' := by
+      apply Subtype.ext
+      change (c.last : PrimeSpectrum R) = q
+      exact congrArg Subtype.val hc.2.1
+    have hd'_head : d'.head = p' := by
+      apply Subtype.ext
+      change (d.head : PrimeSpectrum R) = p
+      exact congrArg Subtype.val hd.1
+    have hd'_last : d'.last = q' := by
+      apply Subtype.ext
+      change (d.last : PrimeSpectrum R) = q
+      exact congrArg Subtype.val hd.2.1
+    have hc'_max : IsGlobalMaximalChainBetween p' q' c' := by
+      refine ⟨hc'_head, hc'_last, ?_⟩
+      intro e he_head he_last hce
+      let e' := restrictChain_iic hqm e he_last
+      have he'_head : e'.head = (⟨p, le_of_lt hpq⟩ : Set.Iic q) := by
+        apply Subtype.ext
+        change (e.head : PrimeSpectrum R) = p
+        exact congrArg Subtype.val he_head
+      have he'_last : e'.last = (⟨q, Set.mem_Iic.mpr le_rfl⟩ : Set.Iic q) := by
+        apply Subtype.ext
+        change (e.last : PrimeSpectrum R) = q
+        exact congrArg Subtype.val he_last
+      have hce' : Set.range c ⊆ Set.range e' := by
+        intro x hx
+        obtain ⟨i, rfl⟩ := hx
+        obtain ⟨j, hj⟩ := hce ⟨i, rfl⟩
+        refine ⟨j, ?_⟩
+        apply Subtype.ext
+        simpa [e', restrictChain_iic, c', liftChain_iic] using
+          congrArg Subtype.val hj
+      have hsub := hc.2.2 e' he'_head he'_last hce'
+      intro x hx
+      obtain ⟨i, rfl⟩ := hx
+      obtain ⟨j, hj⟩ := hsub ⟨i, rfl⟩
+      refine ⟨j, ?_⟩
+      apply Subtype.ext
+      simpa [e', restrictChain_iic, c', liftChain_iic] using
+        congrArg Subtype.val hj
+    have hd'_max : IsGlobalMaximalChainBetween p' q' d' := by
+      refine ⟨hd'_head, hd'_last, ?_⟩
+      intro e he_head he_last hde
+      let e' := restrictChain_iic hqm e he_last
+      have he'_head : e'.head = (⟨p, le_of_lt hpq⟩ : Set.Iic q) := by
+        apply Subtype.ext
+        change (e.head : PrimeSpectrum R) = p
+        exact congrArg Subtype.val he_head
+      have he'_last : e'.last = (⟨q, Set.mem_Iic.mpr le_rfl⟩ : Set.Iic q) := by
+        apply Subtype.ext
+        change (e.last : PrimeSpectrum R) = q
+        exact congrArg Subtype.val he_last
+      have hde' : Set.range d ⊆ Set.range e' := by
+        intro x hx
+        obtain ⟨i, rfl⟩ := hx
+        obtain ⟨j, hj⟩ := hde ⟨i, rfl⟩
+        refine ⟨j, ?_⟩
+        apply Subtype.ext
+        simpa [e', restrictChain_iic, d', liftChain_iic] using
+          congrArg Subtype.val hj
+      have hsub := hd.2.2 e' he'_head he'_last hde'
+      intro x hx
+      obtain ⟨i, rfl⟩ := hx
+      obtain ⟨j, hj⟩ := hsub ⟨i, rfl⟩
+      refine ⟨j, ?_⟩
+      apply Subtype.ext
+      simpa [e', restrictChain_iic, d', liftChain_iic] using
+        congrArg Subtype.val hj
+    exact hmax c' d' hc'_max hd'_max
 
 /-! ## Localization, essential finite type, and local checking -/
 
@@ -788,7 +1024,42 @@ theorem isUniversallyCatenary_of_essFiniteType
     [Algebra A B] (hA : IsUniversallyCatenary A)
     (hB : Algebra.EssFiniteType A B) :
     IsUniversallyCatenary B := by
-  sorry
+  rw [IsUniversallyCatenary]
+  let _ : IsNoetherianRing A := hA.1
+  have hB' := hB
+  rw [Algebra.essFiniteType_iff_exists_subalgebra] at hB'
+  obtain ⟨B₀, M, hB₀, hloc⟩ := hB'
+  let _ : Algebra.FiniteType A B₀ := hB₀
+  have hnoeth : IsNoetherianRing B₀ := Algebra.FiniteType.isNoetherianRing A B₀
+  let _ : IsNoetherianRing B₀ := hnoeth
+  let _ : IsLocalization M B := hloc
+  refine ⟨IsLocalization.isNoetherianRing M B hnoeth, ?_⟩
+  intro T _ _ _
+  let _ : Algebra A T :=
+    ((algebraMap B T).comp (algebraMap A B)).toAlgebra
+  have hTower : IsScalarTower A B T :=
+    IsScalarTower.of_algebraMap_eq' (by
+      change ((algebraMap B T).comp (algebraMap A B)) =
+        ((algebraMap B T).comp (algebraMap A B))
+      rfl)
+  have hEssT : Algebra.EssFiniteType B T :=
+    Algebra.EssFiniteType.of_finiteType (R := B) (S := T)
+  have hEss : Algebra.EssFiniteType A T :=
+    @Algebra.EssFiniteType.comp A B T _ _ _ _ _ _ hTower hB hEssT
+  rw [Algebra.essFiniteType_iff_exists_subalgebra] at hEss
+  obtain ⟨T₀, N, hT₀, hlocT⟩ := hEss
+  let _ : Algebra.FiniteType A T₀ := hT₀
+  have hcat₀ : IsCatenaryRing T₀ := isCatenaryRing_of_finiteType hA
+  have hcatloc : IsCatenaryRing (Localization N) :=
+    isCatenaryRing_localization T₀ N hcat₀
+  let _ : IsLocalization N T := hlocT
+  let e : Localization N ≃+* T :=
+    (IsLocalization.algEquiv N (Localization N) T).toRingEquiv
+  have hglobalLoc : IsGlobalCatenary (PrimeSpectrum (Localization N)) :=
+    (isGlobalCatenary_iff_isCatenaryRing _).mpr hcatloc
+  have hglobalT : IsGlobalCatenary (PrimeSpectrum T) :=
+    isGlobalCatenary_of_orderIso (PrimeSpectrum.comapEquiv e) hglobalLoc
+  exact (isGlobalCatenary_iff_isCatenaryRing _).mp hglobalT
 
 theorem isCatenaryRing_localization_iff
     (R : Type u) [CommRing R] :
@@ -798,7 +1069,24 @@ theorem isCatenaryRing_localization_iff
           IsCatenaryRing (Localization.AtPrime p.asIdeal)
       , ∀ m : MaximalSpectrum R,
           IsCatenaryRing (Localization.AtPrime m.asIdeal) ] := by
-  sorry
+  tfae_have 1 → 2 := fun h p => by
+    exact isCatenaryRing_localization R p.asIdeal.primeCompl h
+  tfae_have 2 → 3 := fun h m => by
+    exact h (MaximalSpectrum.toPrimeSpectrum m)
+  tfae_have 3 → 1 := fun h => by
+    intro p q hpq
+    obtain ⟨J, hJ, hqJ⟩ := Ideal.exists_le_maximal q.asIdeal q.2.ne_top
+    let m : MaximalSpectrum R := ⟨J, hJ⟩
+    have hglobalLoc :
+        IsGlobalCatenary (PrimeSpectrum (Localization.AtPrime m.asIdeal)) :=
+      (isGlobalCatenary_iff_isCatenaryRing _).mpr (h m)
+    let e := IsLocalization.AtPrime.primeSpectrumOrderIso
+      (Localization.AtPrime m.asIdeal) m.asIdeal
+    have hglobalIic : IsGlobalCatenary
+        (Set.Iic (MaximalSpectrum.toPrimeSpectrum m)) :=
+      isGlobalCatenary_of_orderIso e hglobalLoc
+    exact isCatenaryRing_of_globalCatenary_iic hglobalIic hpq hqJ
+  tfae_finish
 
 theorem isUniversallyCatenary_localization_iff
     (R : Type u) [CommRing R] [IsNoetherianRing R] :
@@ -808,7 +1096,71 @@ theorem isUniversallyCatenary_localization_iff
           IsUniversallyCatenary (Localization.AtPrime p.asIdeal)
       , ∀ m : MaximalSpectrum R,
           IsUniversallyCatenary (Localization.AtPrime m.asIdeal) ] := by
-  sorry
+  tfae_have 1 → 2 := fun h p => by
+    exact isUniversallyCatenary_localization R p.asIdeal.primeCompl h
+  tfae_have 2 → 3 := fun h m => by
+    exact h (MaximalSpectrum.toPrimeSpectrum m)
+  tfae_have 3 → 1 := fun h => by
+    rw [IsUniversallyCatenary]
+    refine ⟨inferInstance, ?_⟩
+    intro S _ _ _
+    have hiff := (isCatenaryRing_localization_iff S).out 0 2
+      (a := IsCatenaryRing S)
+      (b := ∀ m : MaximalSpectrum S,
+        IsCatenaryRing (Localization.AtPrime m.asIdeal))
+      (h₁ := rfl) (h₂ := rfl)
+    apply hiff.mpr
+    intro n
+    let p : Ideal R := n.asIdeal.comap (algebraMap R S)
+    let pSpec : PrimeSpectrum R := ⟨p, inferInstance⟩
+    obtain ⟨J, hJ, hpJ⟩ := Ideal.exists_le_maximal p pSpec.2.ne_top
+    let m : MaximalSpectrum R := ⟨J, hJ⟩
+    have hmp : p ≤ m.asIdeal := hpJ
+    have hMN : m.asIdeal.primeCompl ≤ p.primeCompl := by
+      intro x hx hxp
+      exact hx (hmp hxp)
+    let _ : Algebra (Localization.AtPrime m.asIdeal)
+        (Localization.AtPrime p) :=
+      IsLocalization.localizationAlgebraOfSubmonoidLe
+        (Localization.AtPrime m.asIdeal) (Localization.AtPrime p)
+        m.asIdeal.primeCompl p.primeCompl hMN
+    let _ : IsScalarTower R (Localization.AtPrime m.asIdeal)
+        (Localization.AtPrime p) :=
+      IsLocalization.localization_isScalarTower_of_submonoid_le
+        (Localization.AtPrime m.asIdeal) (Localization.AtPrime p)
+        m.asIdeal.primeCompl p.primeCompl hMN
+    have hlocP : IsLocalization
+        (p.primeCompl.map (algebraMap R (Localization.AtPrime m.asIdeal)))
+        (Localization.AtPrime p) :=
+      IsLocalization.isLocalization_of_submonoid_le
+        (Localization.AtPrime m.asIdeal) (Localization.AtPrime p)
+        m.asIdeal.primeCompl p.primeCompl hMN
+    let _ : IsLocalization
+        (p.primeCompl.map (algebraMap R (Localization.AtPrime m.asIdeal)))
+        (Localization.AtPrime p) := hlocP
+    have hEssP : Algebra.EssFiniteType (Localization.AtPrime m.asIdeal)
+        (Localization.AtPrime p) :=
+      Algebra.EssFiniteType.of_isLocalization
+        (R := Localization.AtPrime m.asIdeal) (S := Localization.AtPrime p)
+        (p.primeCompl.map (algebraMap R (Localization.AtPrime m.asIdeal)))
+    have hUCp : IsUniversallyCatenary (Localization.AtPrime p) :=
+      isUniversallyCatenary_of_essFiniteType _ _ (h m) hEssP
+    let _ : n.asIdeal.LiesOver p := ⟨rfl⟩
+    let _ : Algebra (Localization.AtPrime p)
+        (Localization.AtPrime n.asIdeal) :=
+      Localization.AtPrime.algebraOfLiesOver p n.asIdeal
+    have hEssSnR : Algebra.EssFiniteType R
+        (Localization.AtPrime n.asIdeal) := inferInstance
+    let _ : Algebra.EssFiniteType R
+        (Localization.AtPrime n.asIdeal) := hEssSnR
+    have hEssSnP : Algebra.EssFiniteType (Localization.AtPrime p)
+        (Localization.AtPrime n.asIdeal) :=
+      Algebra.EssFiniteType.of_comp R (Localization.AtPrime p)
+        (Localization.AtPrime n.asIdeal)
+    have hUCn : IsUniversallyCatenary (Localization.AtPrime n.asIdeal) :=
+      isUniversallyCatenary_of_essFiniteType _ _ hUCp hEssSnP
+    exact hUCn.2 (Localization.AtPrime n.asIdeal)
+  tfae_finish
 
 /-! ## Quotients and minimal components -/
 
@@ -816,7 +1168,7 @@ theorem isCatenaryRing_quotient
     (R : Type u) [CommRing R] (I : Ideal R)
     (hR : IsCatenaryRing R) :
     IsCatenaryRing (R ⧸ I) := by
-  sorry
+  exact isCatenaryRing_of_surjective (Ideal.Quotient.mk I) Quotient.mk_surjective hR
 
 theorem isUniversallyCatenary_quotient
     (R : Type u) [CommRing R] (I : Ideal R)

@@ -3,8 +3,15 @@
 -/
 
 import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.Algebra.Category.ModuleCat.Colimits
+import Mathlib.Algebra.Category.ModuleCat.EpiMono
+import Mathlib.Algebra.Category.ModuleCat.Limits
+import Mathlib.Algebra.Category.ModuleCat.Products
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.CategoryTheory.Abelian.Basic
+import Mathlib.CategoryTheory.Abelian.Subcategory
+import Mathlib.CategoryTheory.Action.Limits
+import Mathlib.CategoryTheory.ConcreteCategory.EpiMono
 import Mathlib.CategoryTheory.Noetherian
 import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.LinearAlgebra.Charpoly.ToMatrix
@@ -26,6 +33,7 @@ namespace Formalization.Books.MoreAlgebra.Unit121
 noncomputable section
 
 open CategoryTheory
+open CategoryTheory.Limits
 open scoped BigOperators Polynomial
 
 universe u v
@@ -79,6 +87,205 @@ instance : Category (FiniteLengthEndomorphism.{u, v} R) where
 
 /-- The pair category is abelian; kernels and cokernels are inherited from modules and
 preserve finite length. -/
+private def pairAction (X : FiniteLengthEndomorphism.{u, v} R) :
+    Action (ModuleCat.{v} R) (Multiplicative ℕ) where
+  V := X.carrier
+  ρ :=
+    { toFun := fun n => (CategoryTheory.End.of X.endomorphism) ^ n.toAdd
+      map_one' := by simp
+      map_mul' := by
+        intro m n
+        change (CategoryTheory.End.of X.endomorphism) ^ (m.toAdd + n.toAdd) = _
+        rw [pow_add] }
+
+private def pairActionHom {X Y : FiniteLengthEndomorphism.{u, v} R}
+    (f : X ⟶ Y) : pairAction X ⟶ pairAction Y where
+  hom := f.hom
+  comm := by
+    change ∀ n : ℕ,
+      CategoryTheory.End.asHom ((CategoryTheory.End.of X.endomorphism) ^ n) ≫ f.hom =
+        f.hom ≫ CategoryTheory.End.asHom ((CategoryTheory.End.of Y.endomorphism) ^ n)
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+      rw [pow_succ, pow_succ]
+      simp only [CategoryTheory.End.mul_def]
+      change
+        (X.endomorphism ≫ CategoryTheory.End.asHom
+          ((CategoryTheory.End.of X.endomorphism) ^ n)) ≫ f.hom =
+          (f.hom ≫ Y.endomorphism) ≫ CategoryTheory.End.asHom
+            ((CategoryTheory.End.of Y.endomorphism) ^ n)
+      rw [Category.assoc, ih, ← Category.assoc, f.comm]
+
+private def finiteLengthActionProperty :
+    ObjectProperty (Action (ModuleCat.{v} R) (Multiplicative ℕ)) :=
+  fun X => IsFiniteLength R X.V
+
+private abbrev finiteLengthActionPropertyV :
+    ObjectProperty (Action (ModuleCat.{v} R) (Multiplicative ℕ)) :=
+  finiteLengthActionProperty.{u, v}
+
+private instance finiteLengthAction_containsZero :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).ContainsZero where
+  exists_zero := by
+    let Z : ModuleCat.{v} R := ModuleCat.of R PUnit
+    let hZ : IsZero Z := ModuleCat.isZero_of_subsingleton Z
+    let A : Action (ModuleCat.{v} R) (Multiplicative ℕ) :=
+      Action.trivial (Multiplicative ℕ) Z
+    refine ⟨A, ?_, ?_⟩
+    · refine { unique_to := fun X => ?_, unique_from := fun X => ?_ }
+      · refine ⟨?_⟩
+        let d : A ⟶ X := { hom := hZ.to_ X.V, comm := fun _ => hZ.eq_of_src _ _ }
+        exact ⟨⟨d⟩, by
+          intro f
+          apply Action.Hom.ext
+          exact hZ.eq_of_src _ _⟩
+      · refine ⟨?_⟩
+        let d : X ⟶ A := { hom := hZ.from_ X.V, comm := fun _ => hZ.eq_of_tgt _ _ }
+        exact ⟨⟨d⟩, by
+          intro f
+          apply Action.Hom.ext
+          exact hZ.eq_of_tgt _ _⟩
+    · change IsFiniteLength R Z
+      exact IsFiniteLength.of_subsingleton
+
+private instance finiteLengthAction_closedKernels :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderKernels where
+  kernels_le := by
+    letI : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
+    letI : Small.{v} WalkingCospan := small_lift.{0, v} _
+    letI : PreservesLimitsOfShape WalkingCospan
+        (forget (Action (ModuleCat.{v} R) (Multiplicative ℕ))) := by
+      constructor
+      intro F
+      letI : HasLimit (F ⋙ forget (Action (ModuleCat.{v} R) (Multiplicative ℕ))) := by
+        infer_instance
+      have hcomp : PreservesLimit F
+          ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) ⋙
+            forget (ModuleCat.{v} R)) := by
+        infer_instance
+      have hforget :
+          (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) ⋙
+              forget (ModuleCat.{v} R) =
+            forget (Action (ModuleCat.{v} R) (Multiplicative ℕ)) :=
+        HasForget₂.forget_comp (C := Action (ModuleCat.{v} R) (Multiplicative ℕ))
+          (D := ModuleCat.{v} R)
+      simpa only [hforget] using hcomp
+    rintro _ ⟨f, k, hk, ⟨hX, _⟩⟩
+    letI : Mono k.ι := Fork.IsLimit.mono hk
+    change IsFiniteLength R k.pt.V
+    apply hX.of_injective
+    change Function.Injective (k.ι.hom.hom)
+    exact CategoryTheory.ConcreteCategory.injective_of_mono_of_preservesPullback k.ι
+
+private instance finiteLengthAction_closedCokernels :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderCokernels where
+  cokernels_le := by
+    letI : HasColimits (ModuleCat.{v} R) := inferInstance
+    letI : Small.{v} WalkingSpan := small_lift.{0, v} _
+    rintro _ ⟨f, k, hk, ⟨_, hY⟩⟩
+    letI : Epi k.π := Cofork.IsColimit.epi hk
+    have hk0 : IsColimit (CokernelCofork.ofπ k.π k.condition) := by
+      exact hk.ofIsoColimit (isoOfπ k)
+    have hk' : IsColimit
+        (CokernelCofork.ofπ
+          ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map k.π)
+          (by
+            simpa only [Functor.map_comp, Functor.map_zero] using
+              congrArg (fun q =>
+                (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map q) k.condition)) :=
+      isColimitCoforkMapOfIsColimit'
+        (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) k.condition
+        hk0
+    letI : Epi ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map k.π) :=
+      Cofork.IsColimit.epi hk'
+    change IsFiniteLength R k.pt.V
+    apply hY.of_surjective
+    change Function.Surjective (k.π.hom.hom)
+    have : Epi ((forget (ModuleCat.{v} R)).map
+        ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map k.π)) := by
+      infer_instance
+    exact (epi_iff_surjective _).mp this
+
+private instance finiteLengthAction_closedBinaryProducts :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderBinaryProducts where
+  limitsOfShape_le := by
+    letI : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
+    rintro X ⟨p⟩
+    let Z : WalkingPair → ModuleCat.{v} R :=
+      fun j => (p.diag.obj ⟨j⟩).V
+    let c := (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).mapCone
+      p.toLimitPresentation.cone
+    have hc : IsLimit c := isLimitOfPreserves
+      (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) p.isLimit
+    let α := diagramIsoPair
+      (p.diag ⋙ Action.forget (ModuleCat.{v} R) (Multiplicative ℕ))
+    let β :
+        (pair ((p.diag ⋙ Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).obj
+            ⟨WalkingPair.left⟩)
+          ((p.diag ⋙ Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).obj
+            ⟨WalkingPair.right⟩)) ≅
+          Discrete.functor Z :=
+      NatIso.ofComponents (fun j =>
+        match j with
+        | ⟨WalkingPair.left⟩ => Iso.refl _
+        | ⟨WalkingPair.right⟩ => Iso.refl _) (by
+          rintro ⟨j⟩ ⟨j'⟩ ⟨h⟩
+          cases j <;> cases j'
+          · simp
+          · cases h.down
+          · cases h.down
+          · simp)
+    let e : X.V ≅ ModuleCat.of R (∀ j, Z j) :=
+      IsLimit.conePointsIsoOfNatIso hc (ModuleCat.productConeIsLimit Z) (α ≪≫ β)
+    have hleft : IsFiniteLength R (Z WalkingPair.left) := by
+      change IsFiniteLength R ((p.diag.obj ⟨WalkingPair.left⟩).V)
+      exact p.prop_diag_obj ⟨WalkingPair.left⟩
+    have hright : IsFiniteLength R (Z WalkingPair.right) := by
+      change IsFiniteLength R ((p.diag.obj ⟨WalkingPair.right⟩).V)
+      exact p.prop_diag_obj ⟨WalkingPair.right⟩
+    letI : IsNoetherian R (Z WalkingPair.left) :=
+      (isFiniteLength_iff_isNoetherian_isArtinian.mp hleft).1
+    letI : IsArtinian R (Z WalkingPair.left) :=
+      (isFiniteLength_iff_isNoetherian_isArtinian.mp hleft).2
+    letI : IsNoetherian R (Z WalkingPair.right) :=
+      (isFiniteLength_iff_isNoetherian_isArtinian.mp hright).1
+    letI : IsArtinian R (Z WalkingPair.right) :=
+      (isFiniteLength_iff_isNoetherian_isArtinian.mp hright).2
+    let eMap : (∀ j, Z j) →ₗ[R] Z WalkingPair.left × Z WalkingPair.right :=
+      { toFun := fun x => (x WalkingPair.left, x WalkingPair.right)
+        map_add' := by intro x y; rfl
+        map_smul' := by intro a x; rfl }
+    let ePair : (∀ j, Z j) ≃ₗ[R] Z WalkingPair.left × Z WalkingPair.right :=
+      LinearEquiv.ofBijective eMap (by
+        refine ⟨?_, ?_⟩
+        · intro x y h
+          funext j
+          cases j with
+          | left => exact congrArg Prod.fst h
+          | right => exact congrArg Prod.snd h
+        · intro p
+          refine ⟨fun j => WalkingPair.casesOn j p.1 p.2, ?_⟩
+          exact Prod.ext (by rfl) (by rfl))
+    have hprod : IsFiniteLength R (∀ j, Z j) := by
+      exact ePair.symm.isFiniteLength (isFiniteLength_iff_isNoetherian_isArtinian.mpr
+        ⟨inferInstance, inferInstance⟩)
+    change IsFiniteLength R X.V
+    exact e.toLinearEquiv.symm.isFiniteLength hprod
+
+private instance finiteLengthAction_closedIsomorphisms :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderIsomorphisms where
+  of_iso e hX :=
+    (((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).mapIso e).toLinearEquiv).isFiniteLength hX
+
+private instance finiteLengthAction_closedFiniteProducts :
+    (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderFiniteProducts := by
+  letI : (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderLimitsOfShape
+      (Discrete.{0} PEmpty) := by
+    infer_instance
+  exact ObjectProperty.IsClosedUnderFiniteProducts.mk'
+
 noncomputable instance : Abelian (FiniteLengthEndomorphism.{u, v} R) := by
   sorry
 

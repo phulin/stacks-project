@@ -81,7 +81,7 @@ noncomputable def chainToCochain {R : Type u} [CommRing R]
    integer-indexed, as they are in the source's bigraded notation. -/
 noncomputable def torModuleZ {R : Type u} [CommRing R]
     (M N : Mod R) (j : ℤ) : Mod R :=
-  if h : 0 ≤ j then Tor M N j.toNat else ModuleCat.of R (Fin 0 → R)
+  if _h : 0 ≤ j then Tor M N j.toNat else ModuleCat.of R (Fin 0 → R)
 
 noncomputable def chainDerivedTensorHomology {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)]
@@ -156,7 +156,7 @@ structure FirstChainTorSpectralSequenceData
       ∃ e₁ : page 2 (i + 1) (j - 2) ≅
           torModuleZ (chainComplexHomology K (i + 1)) M (j - 2),
         e₀.hom ≫ φ = differential 2 i j ≫
-          eqToHom (by congr 1 <;> omega) ≫ e₁.hom
+          eqToHom (by congr 1; omega) ≫ e₁.hom
   abutment : ℤ → Mod R
   convergence : ∀ n : ℤ,
     Nonempty (abutment n ≅ chainDerivedTensorHomology K M n)
@@ -491,6 +491,12 @@ noncomputable abbrev derivedTensorMinusModule
   derivedTensor ((derivedMinusToDerived (R := R)).obj K)
     ((derivedMinusToDerived (R := R)).obj (moduleInDMinus R M))
 
+noncomputable abbrev derivedTensorMinusModuleLeft
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (M : Mod R) (K : DerivedDMinus R) : DerivedD R :=
+  derivedTensor ((derivedMinusToDerived (R := R)).obj (moduleInDMinus R M))
+    ((derivedMinusToDerived (R := R)).obj K)
+
 noncomputable abbrev derivedTensorMinusMinus
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) : DerivedD R :=
@@ -524,7 +530,7 @@ structure SecondDerivedTorSpectralSequenceData
   e₂_page : ∀ p q : ℤ,
     Nonempty ((spectralSequence.page 2).X (p, q) ≅
       (derivedCohomologyFunctor (Mod R) p).obj
-        (derivedTensorMinusModule L (derivedCohomologyMinus K q)))
+        (derivedTensorMinusModuleLeft (derivedCohomologyMinus K q) L))
   abutment : ℤ → Mod R
   convergence : ∀ n : ℤ,
     Nonempty (abutment n ≅
@@ -570,7 +576,7 @@ theorem second_derived_tor_e₂_page
     Nonempty (((secondDerivedTorSpectralSequenceData K L).spectralSequence.page 2).X
       (p, q) ≅
       (derivedCohomologyFunctor (Mod R) p).obj
-        (derivedTensorMinusModule L (derivedCohomologyMinus K q))) := by
+        (derivedTensorMinusModuleLeft (derivedCohomologyMinus K q) L)) := by
   exact (secondDerivedTorSpectralSequenceData K L).e₂_page p q
 
 /- The project already has the canonical bounded-above/projective

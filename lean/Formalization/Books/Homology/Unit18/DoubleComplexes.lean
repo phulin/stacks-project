@@ -1793,7 +1793,7 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
       (eqToHom (by congr 1; ring) ≫
         Sigma.ι (fun q : ℤ => A.obj (p + 1) q
           (n + 1 - (p + 1) - q)) (s - p) ≫
-      Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
+            Sigma.ι (fun r : ℤ => ∐ fun q => A.obj r q
           (n + 1 - r - q)) (p + 1))).symm using 1;
       simp
     have hq :
@@ -1826,7 +1826,8 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
           eqToHom (show A.obj (p + 1) (s - p) (n - s) =
             A.obj (p + 1) (s - p)
               (n + 1 - (p + 1) - (s - p)) by
-            congr 1; ring) ≫ f) hnat).symm using 1
+            congr 1
+            ring) ≫ f) hnat).symm using 1
       all_goals simp
     calc
       _ = A.d1 p (s - p) (n - s) ≫

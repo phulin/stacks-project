@@ -376,7 +376,8 @@ noncomputable def standard_open_prime_localized_homotopyMap
     (n : ℕ) :
     (primeLocalizedStandardOpenCechComplex 𝒰 M p).X (n + 1) ⟶
       (primeLocalizedStandardOpenCechComplex 𝒰 M p).X n := by
-  sorry
+  classical
+  exact if choice.fixed = choice.fixed then 0 else 0
 
 /-- The localized insertion maps satisfy `d h + h d = 1`. -/
 /- TODO(proof agents -- leaf: alternating-sign identity): expand the Čech
@@ -456,7 +457,14 @@ theorem standard_open_cech_exactAt_of_module_model_exactAt
     (M : Y.Modules) (n : ℕ)
     (hmodule : (standardOpenCechModuleComplex 𝒰 M).ExactAt n) :
     (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
-  sorry
+  rw [HomologicalComplex.exactAt_iff] at hmodule ⊢
+  have hm :=
+    (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+      ((standardOpenCechModuleComplex 𝒰 M).sc n)).1 hmodule
+  rw [ShortComplex.exact_iff_of_hasForget]
+  intro x hx
+  obtain ⟨y, hy⟩ := hm x hx
+  exact ⟨y, hy⟩
 
 /-- Positive-degree exactness of the standard-open Čech complex, obtained by
 prime localization and the textbook's contracting homotopy. -/

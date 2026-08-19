@@ -1038,9 +1038,493 @@ theorem weaklyAssociated_nonFunctoriality_example
       f ∈ weaklyAssociatedExampleP k
     rw [hQcomap, hPcomap]
     simp only [Ideal.mem_comap]
+  letI : Module (weaklyAssociatedExampleBaseRing k)
+      (weaklyAssociatedExampleRing k) :=
+    Module.compHom (weaklyAssociatedExampleRing k)
+      (weaklyAssociatedExampleMap k)
+  have hfinite_ann : ∀ s : weaklyAssociatedExampleRing k, s ≠ 0 →
+      ((⊥ : Submodule (weaklyAssociatedExampleBaseRing k)
+          (weaklyAssociatedExampleRing k)).colon ({s} : Set _)).FG := by
+    intro s hs
+    have hvar_prime : ∀ (t : Finset ℕ),
+        (Ideal.span (MvPolynomial.X '' (t : Set ℕ)) :
+          Ideal (MvPolynomial ℕ k)).IsPrime := by
+      intro t
+      let f : MvPolynomial ℕ k →+* MvPolynomial {i : ℕ // i ∉ t} k :=
+        (MvPolynomial.killCompl
+          (Subtype.val_injective : Function.Injective
+            (fun i : {i : ℕ // i ∉ t} => i.1))).toRingHom
+      have hker : RingHom.ker f =
+          Ideal.span (MvPolynomial.X '' (t : Set ℕ)) := by
+        apply le_antisymm
+        · intro p hp
+          rw [MvPolynomial.mem_ideal_span_X_image]
+          intro m hm
+          by_contra hno
+          have hsub : (m.support : Set ℕ) ⊆
+              Set.range (fun i : {i : ℕ // i ∉ t} => i.1) := by
+            intro i hi
+            by_cases hit : i ∈ t
+            · exact False.elim (hno ⟨i, hit,
+                Finsupp.mem_support_iff.mp hi⟩)
+            · exact ⟨⟨i, hit⟩, rfl⟩
+          let n : {i : ℕ // i ∉ t} →₀ ℕ :=
+            Finsupp.comapDomain (fun i : {i : ℕ // i ∉ t} => i.1) m
+              (Subtype.val_injective.injOn)
+          have hmap : Finsupp.mapDomain
+                (fun i : {i : ℕ // i ∉ t} => i.1) n = m := by
+            exact Finsupp.mapDomain_comapDomain _ Subtype.val_injective m hsub
+          have hp0 : f p = 0 := hp
+          have hp' : (f p).coeff n = 0 := by rw [hp0]; simp
+          have hcoeff : p.coeff m = 0 := by
+            simpa [f, n, MvPolynomial.coeff_killCompl, hmap] using hp'
+          exact (Finsupp.mem_support_iff.mp hm) hcoeff
+        · rw [Ideal.span_le]
+          rintro _ ⟨i, hit, rfl⟩
+          have hirange : i ∉ Set.range
+              (fun j : {j : ℕ // j ∉ t} => j.1) := by
+            rintro ⟨j, hj⟩
+            exact j.2 (by simpa [hj] using hit)
+          change f (MvPolynomial.X i) = 0
+          change (MvPolynomial.killCompl
+            (Subtype.val_injective : Function.Injective
+              (fun j : {j : ℕ // j ∉ t} => j.1))) (MvPolynomial.X i) = 0
+          rw [MvPolynomial.killCompl, MvPolynomial.aeval_X]
+          exact dif_neg hirange
+      rw [← hker]
+      exact RingHom.ker_isPrime f
+    let e : A ≃ₐ[k] MvPolynomial ℕ (MvPolynomial ℕ k) :=
+      (MvPolynomial.renameEquiv k (Equiv.sumComm ℕ ℕ)).trans
+        (MvPolynomial.sumAlgEquiv k ℕ ℕ)
+    let L' : Ideal (MvPolynomial ℕ (MvPolynomial ℕ k)) :=
+      Ideal.span (Set.range fun i : ℕ =>
+        MvPolynomial.X i * MvPolynomial.C (MvPolynomial.X i))
+    have heL : Ideal.map e.toRingEquiv L = L' := by
+      change Ideal.map e.toRingEquiv
+          (Ideal.span (Set.range fun i : ℕ =>
+            weaklyAssociatedExampleX k i * weaklyAssociatedExampleY k i)) = L'
+      rw [Ideal.map_span]
+      congr 1
+      ext z
+      constructor
+      · rintro ⟨a, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, by simp [e, L', weaklyAssociatedExampleX,
+          weaklyAssociatedExampleY, mul_comm]⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨weaklyAssociatedExampleX k i * weaklyAssociatedExampleY k i,
+          ⟨i, rfl⟩, by simp [e, L', weaklyAssociatedExampleX,
+            weaklyAssociatedExampleY, mul_comm]⟩
+    let I : (ℕ →₀ ℕ) → Ideal (MvPolynomial ℕ k) := fun d =>
+      Ideal.span (MvPolynomial.X '' (d.support : Set ℕ))
+    have hLcoeff : ∀ p : MvPolynomial ℕ (MvPolynomial ℕ k),
+        p ∈ L' ↔ ∀ d : ℕ →₀ ℕ, p.coeff d ∈ I d := by
+      intro p
+      constructor
+      · intro hp
+        induction hp using Submodule.span_induction with
+        | mem p hp =>
+            rcases hp with ⟨i, rfl⟩
+            intro d
+            change MvPolynomial.coeff d
+              (MvPolynomial.X i * MvPolynomial.C (MvPolynomial.X i)) ∈ I d
+            by_cases hi : i ∈ d.support
+            · rw [mul_comm, MvPolynomial.C_mul_X_eq_monomial]
+              rw [MvPolynomial.coeff_monomial]
+              split_ifs with hd
+              · subst d
+                exact Ideal.subset_span ⟨i, by simp⟩
+              · simp
+            · rw [mul_comm, MvPolynomial.C_mul_X_eq_monomial]
+              rw [MvPolynomial.coeff_monomial]
+              split_ifs with hd
+              · subst d
+                exact (hi (by simp)).elim
+              · simp
+        | zero =>
+            intro d
+            simp [I]
+        | add p q hp hq ihp ihq =>
+            intro d
+            simpa only [MvPolynomial.coeff_add] using (I d).add_mem (ihp d) (ihq d)
+        | smul r p hp ihp =>
+            intro d
+            rw [smul_eq_mul, MvPolynomial.coeff_mul]
+            apply (I d).sum_mem
+            intro x hx
+            have hsum : x.1 + x.2 = d := Finset.mem_antidiagonal.mp hx
+            have hx2le : x.2 ≤ d := by
+              rw [← hsum]
+              exact le_add_left le_rfl
+            have hsub : (x.2.support : Set ℕ) ⊆ (d.support : Set ℕ) := by
+              intro i hi
+              by_contra hdi
+              have hdi' : d i = 0 := by
+                simpa [Finsupp.mem_support_iff] using hdi
+              have hxi : x.2 i = 0 := by
+                exact Nat.eq_zero_of_le_zero (by simpa [hdi'] using hx2le i)
+              exact (Finsupp.mem_support_iff.mp hi) hxi
+            have hI : I x.2 ≤ I d := by
+              exact Ideal.span_mono (Set.image_mono hsub)
+            exact (I d).mul_mem_left _ (hI (ihp x.2))
+      · intro hp
+        rw [show p = ∑ d ∈ p.support, MvPolynomial.monomial d (p.coeff d) by
+          simpa using MvPolynomial.as_sum p]
+        apply Submodule.sum_mem
+        intro d hd
+        have hd' : p.coeff d ∈ I d := hp d
+        have hmon : ∀ a : MvPolynomial ℕ k, a ∈ I d →
+            MvPolynomial.monomial d a ∈ L' := by
+          intro a ha
+          induction ha using Submodule.span_induction with
+          | mem a ha =>
+              rcases ha with ⟨i, hi, rfl⟩
+              have hle : Finsupp.single i 1 ≤ d := by
+                rw [Finsupp.single_le_iff]
+                exact Nat.one_le_iff_ne_zero.mpr
+                  (Finsupp.mem_support_iff.mp hi)
+              rw [← tsub_add_cancel_of_le hle, add_comm,
+                MvPolynomial.monomial_single_add]
+              simpa [pow_one, MvPolynomial.C_mul_monomial, mul_assoc,
+                mul_comm, mul_left_comm] using
+                L'.mul_mem_left
+                  (MvPolynomial.monomial (d - Finsupp.single i 1) 1)
+                  (Ideal.subset_span ⟨i, rfl⟩)
+          | zero => simp
+          | add a b ha hb iha ihb => simpa using L'.add_mem iha ihb
+          | smul r a ha iha =>
+              simpa [MvPolynomial.C_mul_monomial, mul_assoc] using
+                L'.mul_mem_left (MvPolynomial.C r) iha
+        exact hmon _ hd'
+    obtain ⟨f, rfl⟩ := Ideal.Quotient.mk_surjective s
+    have hfL : f ∉ L := by
+      intro h
+      apply hs
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr h
+    let g := e f
+    have heψ : ∀ r : MvPolynomial ℕ k, e (ψ r) =
+        MvPolynomial.C r := by
+      intro r
+      induction r using MvPolynomial.induction_on with
+      | C c =>
+          have hC :
+              (MvPolynomial.renameEquiv k (Equiv.sumComm ℕ ℕ))
+                  (MvPolynomial.C c) = MvPolynomial.C c := by
+            change MvPolynomial.rename (Equiv.sumComm ℕ ℕ)
+                (MvPolynomial.C c) = MvPolynomial.C c
+            rw [MvPolynomial.rename_C]
+          change (MvPolynomial.sumAlgEquiv k ℕ ℕ)
+              ((MvPolynomial.renameEquiv k (Equiv.sumComm ℕ ℕ))
+                ((MvPolynomial.rename Sum.inl) (MvPolynomial.C c))) = _
+          rw [MvPolynomial.rename_C, hC]
+          exact (MvPolynomial.sumAlgEquiv k ℕ ℕ).commutes c
+      | add p q hp hq => simpa [map_add] using congrArg₂ (· + ·) hp hq
+      | mul_X p i hp =>
+          have hmul : ψ (p * MvPolynomial.X i) =
+              ψ p * ψ (MvPolynomial.X i) := map_mul ψ p (MvPolynomial.X i)
+          rw [hmul, map_mul, hp]
+          have hX : e (ψ (MvPolynomial.X i)) =
+              MvPolynomial.C (MvPolynomial.X i) := by
+            have hrename :
+                (MvPolynomial.renameEquiv k (Equiv.sumComm ℕ ℕ))
+                    (MvPolynomial.X (Sum.inl i)) =
+                  MvPolynomial.X (Sum.inr i) := by
+              change MvPolynomial.rename (Equiv.sumComm ℕ ℕ)
+                  (MvPolynomial.X (Sum.inl i)) = MvPolynomial.X (Sum.inr i)
+              rw [MvPolynomial.rename_X]
+              rfl
+            change (MvPolynomial.sumAlgEquiv k ℕ ℕ)
+                ((MvPolynomial.renameEquiv k (Equiv.sumComm ℕ ℕ))
+                  ((MvPolynomial.rename Sum.inl) (MvPolynomial.X i))) = _
+            rw [MvPolynomial.rename_X, hrename]
+            exact MvPolynomial.sumAlgEquiv_X_inr k ℕ ℕ i
+          rw [hX]
+          simp [MvPolynomial.C_mul]
+    have hann : ∀ r : MvPolynomial ℕ k,
+        r ∈ (⊥ : Submodule (MvPolynomial ℕ k)
+          (weaklyAssociatedExampleRing k)).colon
+            ({Ideal.Quotient.mk L f} : Set _) ↔
+          ∀ d : ℕ →₀ ℕ, r * (g.coeff d) ∈ I d := by
+      intro r
+      simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      change (weaklyAssociatedExampleMap k r) •
+          (Ideal.Quotient.mk L f) = 0 ↔ _
+      rw [hψmap]
+      change (Ideal.Quotient.mk L) (ψ r) * (Ideal.Quotient.mk L) f = 0 ↔ _
+      rw [← map_mul]
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      have hmem : ψ r * f ∈ L ↔ e (ψ r * f) ∈ L' := by
+        have hcomap : Ideal.comap e.toRingEquiv L' = L := by
+          rw [← heL, Ideal.comap_map_of_surjective e.toRingEquiv
+            e.toRingEquiv.surjective]
+          have hker : Ideal.comap e.toRingEquiv (⊥ : Ideal _) = ⊥ := by
+            ext a
+            simp [Ideal.mem_comap, e.toRingEquiv.injective.eq_iff]
+          rw [hker, sup_bot_eq]
+        constructor
+        · intro h
+          rw [← heL]
+          exact Ideal.mem_map_of_mem e.toRingEquiv h
+        · intro h
+          have h' : ψ r * f ∈ Ideal.comap e.toRingEquiv L' := h
+          rw [hcomap] at h'
+          exact h'
+      rw [hmem]
+      rw [show e (ψ r * f) = MvPolynomial.C r * g by
+        simp [g, heψ]]
+      rw [hLcoeff]
+      simp [g, MvPolynomial.coeff_C_mul]
+    let D : Finset (ℕ →₀ ℕ) :=
+      g.support.filter (fun d => g.coeff d ∉ I d)
+    let U : Finset ℕ := D.biUnion (fun d => d.support)
+    let T : Finset (Finset ℕ) :=
+      U.powerset.filter (fun t => ∀ d ∈ D, (t ∩ d.support).Nonempty)
+    let gens : Finset (ℕ →₀ ℕ) :=
+      T.image (fun t => Finsupp.indicator t (fun _ _ => 1))
+    let J : Ideal (MvPolynomial ℕ k) :=
+      Ideal.span ((fun m : ℕ →₀ ℕ => MvPolynomial.monomial m 1) ''
+        (gens : Set (ℕ →₀ ℕ)))
+    have hJfg : J.FG := by
+      apply Submodule.fg_span
+      exact gens.finite_toSet.image _
+    have hAnn :
+        (⊥ : Submodule (MvPolynomial ℕ k)
+          (weaklyAssociatedExampleRing k)).colon
+            ({Ideal.Quotient.mk L f} : Set _) = J := by
+      apply le_antisymm
+      · intro r hr
+        rw [MvPolynomial.mem_ideal_span_monomial_image]
+        intro m hm
+        have hrall := (hann r).mp hr
+        have hId : ∀ d ∈ D, r ∈ I d := by
+          intro d hd
+          have hprod : r * g.coeff d ∈ I d := hrall d
+          have hnot : g.coeff d ∉ I d := (Finset.mem_filter.mp hd).2
+          have hprime : (I d).IsPrime := by
+            simpa [I] using hvar_prime d.support
+          rcases hprime.mem_or_mem hprod with h | h
+          · exact h
+          · exact (hnot h).elim
+        let t := m.support ∩ U
+        have htU : t ∈ U.powerset := by
+          exact Finset.mem_powerset.mpr Finset.inter_subset_right
+        have htD : ∀ d ∈ D, (t ∩ d.support).Nonempty := by
+          intro d hd
+          have hmem := (MvPolynomial.mem_ideal_span_X_image.mp
+            (hId d hd)) m hm
+          rcases hmem with ⟨i, hiD, him⟩
+          refine ⟨i, ?_⟩
+          change i ∈ t ∩ d.support
+          apply Finset.mem_inter.mpr
+          exact ⟨Finset.mem_inter.mpr ⟨Finsupp.mem_support_iff.mpr him,
+            Finset.mem_biUnion.mpr ⟨d, hd, hiD⟩⟩, hiD⟩
+        have ht : t ∈ T := Finset.mem_filter.mpr ⟨htU, htD⟩
+        let mt := Finsupp.indicator t (fun _ _ => 1)
+        have hle : mt ≤ m := by
+          intro i
+          by_cases hi : i ∈ t
+          · have him : i ∈ m.support :=
+              (Finset.mem_inter.mp hi).1
+            have hmi : m i ≠ 0 := Finsupp.mem_support_iff.mp him
+            simpa [mt, hi] using
+              (Nat.one_le_iff_ne_zero.mpr hmi)
+          · simp [mt, hi]
+        refine ⟨mt, ?_, hle⟩
+        exact Finset.mem_image.mpr ⟨t, ht, rfl⟩
+      · rw [Ideal.span_le]
+        rintro _ ⟨m, hm, rfl⟩
+        change m ∈ gens at hm
+        rcases Finset.mem_image.mp hm with ⟨t, ht, rfl⟩
+        let m : ℕ →₀ ℕ := Finsupp.indicator t (fun _ _ => 1)
+        change MvPolynomial.monomial m 1 ∈
+          (⊥ : Submodule (MvPolynomial ℕ k)
+            (weaklyAssociatedExampleRing k)).colon
+              ({Ideal.Quotient.mk L f} : Set _)
+        apply (hann _).mpr
+        intro d
+        by_cases hd : d ∈ D
+        · have htd := (Finset.mem_filter.mp ht).2 d hd
+          rcases htd with ⟨i, hi⟩
+          have hiD : i ∈ d.support := (Finset.mem_inter.mp hi).2
+          have hle : Finsupp.single i 1 ≤ m := by
+            rw [Finsupp.single_le_iff]
+            exact Nat.one_le_iff_ne_zero.mpr (by
+              simpa [m, Finsupp.indicator, (Finset.mem_inter.mp hi).1])
+          have hgen :
+              MvPolynomial.monomial m 1 ∈ I d := by
+            rw [← tsub_add_cancel_of_le hle, add_comm,
+              MvPolynomial.monomial_single_add]
+            simpa [pow_one, MvPolynomial.C_mul_monomial, mul_assoc,
+              mul_comm, mul_left_comm] using
+              (I d).mul_mem_left
+                (MvPolynomial.monomial (m - Finsupp.single i 1) 1)
+                (Ideal.subset_span ⟨i, hiD, rfl⟩)
+          simpa [mul_comm] using (I d).mul_mem_left (g.coeff d) hgen
+        · by_cases hdg : d ∈ g.support
+          · have hcoeff : g.coeff d ∈ I d := by
+              by_contra hnot
+              exact hd (Finset.mem_filter.mpr ⟨hdg, hnot⟩)
+            exact (I d).mul_mem_left _ hcoeff
+          · have hzero : g.coeff d = 0 := by
+              by_contra h
+              exact hdg (Finsupp.mem_support_iff.mpr h)
+            rw [hzero, mul_zero]
+            exact (I d).zero_mem
+    rw [hAnn]
+    exact hJfg
+
   refine ⟨?_, ?_, hcomap⟩
-  · sorry
-  · sorry
+  · intro hp
+    change ∃ s : weaklyAssociatedExampleRing k,
+      (weaklyAssociatedExampleQ k).comap (weaklyAssociatedExampleMap k) ∈
+        ((⊥ : Submodule (weaklyAssociatedExampleBaseRing k)
+            (weaklyAssociatedExampleRing k)).colon ({s} : Set _)).minimalPrimes at hp
+    rw [hcomap] at hp
+    rcases hp with ⟨s, hsm⟩
+    have hs0 : s ≠ 0 := by
+      intro hs
+      subst s
+      have hone : (1 : MvPolynomial ℕ k) ∈
+          weaklyAssociatedExampleP k := by
+        have htop : (⊤ : Ideal (MvPolynomial ℕ k)) ≤
+            weaklyAssociatedExampleP k := by
+          have htop0 :
+              (⊥ : Submodule (weaklyAssociatedExampleBaseRing k)
+                (weaklyAssociatedExampleRing k)).colon
+                  ({0} : Set _) = ⊤ := by
+            ext r
+            simp [Submodule.mem_colon_singleton]
+          rw [← htop0]
+          exact hsm.1.2
+        exact htop (by simp)
+      rw [weaklyAssociatedExampleP] at hone
+      rw [show Set.range (fun i : ℕ => MvPolynomial.X i) =
+          MvPolynomial.X '' (Set.univ : Set ℕ) by
+            ext z
+            simp] at hone
+      rw [MvPolynomial.mem_ideal_span_X_image] at hone
+      simpa using hone
+    let ann : Ideal (MvPolynomial ℕ k) :=
+      (⊥ : Submodule (weaklyAssociatedExampleBaseRing k)
+        (weaklyAssociatedExampleRing k)).colon ({s} : Set _)
+    have hann_fg : ann.FG := by
+      exact hfinite_ann s hs0
+    rcases hann_fg with ⟨G, hG⟩
+    let U : Finset ℕ := G.biUnion (fun a => a.vars)
+    obtain ⟨j, hj⟩ := U.exists_notMem
+    let qjMap : MvPolynomial ℕ k →+* MvPolynomial {i : ℕ // i = j} k :=
+      (MvPolynomial.killCompl
+        (Subtype.val_injective : Function.Injective
+          (fun i : {i : ℕ // i = j} => i.1))).toRingHom
+    let Qj : Ideal (MvPolynomial ℕ k) :=
+      Ideal.span (MvPolynomial.X '' {i : ℕ | i ≠ j})
+    have hker : RingHom.ker qjMap = Qj := by
+      apply le_antisymm
+      · intro p hp
+        rw [MvPolynomial.mem_ideal_span_X_image]
+        intro m hm
+        by_contra hno
+        have hsub : (m.support : Set ℕ) ⊆
+            Set.range (fun i : {i : ℕ // i = j} => i.1) := by
+          intro i hi
+          by_cases hij : i = j
+          · exact ⟨⟨i, hij⟩, rfl⟩
+          · exact False.elim (hno ⟨i, hij,
+              Finsupp.mem_support_iff.mp hi⟩)
+        let n : {i : ℕ // i = j} →₀ ℕ :=
+          Finsupp.comapDomain (fun i : {i : ℕ // i = j} => i.1) m
+            (Subtype.val_injective.injOn)
+        have hmap : Finsupp.mapDomain
+              (fun i : {i : ℕ // i = j} => i.1) n = m := by
+          exact Finsupp.mapDomain_comapDomain _ Subtype.val_injective m hsub
+        have hp0 : qjMap p = 0 := hp
+        have hp' : (qjMap p).coeff n = 0 := by rw [hp0]; simp
+        have hcoeff : p.coeff m = 0 := by
+          simpa [qjMap, n, MvPolynomial.coeff_killCompl, hmap] using hp'
+        exact (Finsupp.mem_support_iff.mp hm) hcoeff
+      · rw [Ideal.span_le]
+        rintro _ ⟨i, hi, rfl⟩
+        have hirange : i ∉ Set.range
+            (fun l : {l : ℕ // l = j} => l.1) := by
+          rintro ⟨l, hl⟩
+          exact hi (hl.symm.trans l.2)
+        change qjMap (MvPolynomial.X i) = 0
+        change (MvPolynomial.killCompl
+          (Subtype.val_injective : Function.Injective
+            (fun l : {l : ℕ // l = j} => l.1))) (MvPolynomial.X i) = 0
+        rw [MvPolynomial.killCompl, MvPolynomial.aeval_X]
+        exact dif_neg hirange
+    have hQjprime : Qj.IsPrime := by
+      rw [← hker]
+      exact RingHom.ker_isPrime qjMap
+    have hAnnQj : ann ≤ Qj := by
+      rw [← hG]
+      rw [Ideal.span_le]
+      intro a ha
+      have haP : a ∈ weaklyAssociatedExampleP k := by
+        have haann : a ∈ ann := by
+          rw [← hG]
+          exact Ideal.subset_span ha
+        exact hsm.1.2 haann
+      have haP' : a ∈
+          Ideal.span (MvPolynomial.X '' (Set.univ : Set ℕ)) := by
+        simpa [weaklyAssociatedExampleP, Set.image_univ] using haP
+      rw [MvPolynomial.mem_ideal_span_X_image] at haP'
+      change a ∈ Ideal.span (MvPolynomial.X '' {i : ℕ | i ≠ j})
+      rw [MvPolynomial.mem_ideal_span_X_image]
+      intro m hm
+      rcases haP' m hm with ⟨i, hi, him⟩
+      have hvars : i ∈ a.vars := by
+        rw [MvPolynomial.mem_vars_iff_mem_support]
+        exact ⟨m, hm, Finsupp.mem_support_iff.mpr him⟩
+      have hne : i ≠ j := by
+        intro hij
+        apply hj
+        subst j
+        exact Finset.mem_biUnion.mpr ⟨a, ha, hvars⟩
+      exact ⟨i, hne, him⟩
+    have hQj_le_P : Qj ≤ weaklyAssociatedExampleP k := by
+      change Ideal.span (MvPolynomial.X '' {i : ℕ | i ≠ j}) ≤
+        Ideal.span (Set.range (fun i : ℕ => MvPolynomial.X i))
+      rw [Ideal.span_le]
+      rintro _ ⟨i, hi, rfl⟩
+      exact Ideal.subset_span ⟨i, rfl⟩
+    have hxjP : MvPolynomial.X j ∈ weaklyAssociatedExampleP k := by
+      rw [weaklyAssociatedExampleP]
+      exact Ideal.subset_span ⟨j, rfl⟩
+    have hxjQ : MvPolynomial.X j ∈ Qj :=
+      (hsm.2 ⟨hQjprime, hAnnQj⟩ hQj_le_P) hxjP
+    have hxjnot : MvPolynomial.X j ∉ Qj := by
+      intro hx
+      have hzero : qjMap (MvPolynomial.X j) = 0 := by
+        have hxker : MvPolynomial.X j ∈ RingHom.ker qjMap := by
+          rw [hker]
+          exact hx
+        exact hxker
+      have hmapj : qjMap (MvPolynomial.X j) =
+          MvPolynomial.X ⟨j, rfl⟩ := by
+        change (MvPolynomial.killCompl
+          (Subtype.val_injective : Function.Injective
+            (fun l : {l : ℕ // l = j} => l.1))) (MvPolynomial.X j) = _
+        rw [MvPolynomial.killCompl, MvPolynomial.aeval_X]
+        have hmem : j ∈ Set.range
+            (fun l : {l : ℕ // l = j} => l.1) :=
+          ⟨⟨j, rfl⟩, rfl⟩
+        rw [dif_pos hmem]
+        congr 1
+        apply Subtype.ext
+        have hh := congrArg
+          (fun z : Set.range (fun l : {l : ℕ // l = j} => l.1) => z.1)
+          ((Equiv.ofInjective Subtype.val
+              (Subtype.val_injective : Function.Injective
+                (fun l : {l : ℕ // l = j} => l.1))).apply_symm_apply
+            (⟨j, hmem⟩ : Set.range
+              (fun l : {l : ℕ // l = j} => l.1)))
+        exact hh
+      rw [hmapj] at hzero
+      exact (MvPolynomial.X_ne_zero (⟨j, rfl⟩ : {i : ℕ // i = j})) hzero
+    exact hxjnot hxjQ
+  · intro s hs
+    exact hfinite_ann s hs
 
 /-- Weakly associated primes pull back along every ring map. -/
 theorem weaklyAssociatedPrimes_reverse_functorial

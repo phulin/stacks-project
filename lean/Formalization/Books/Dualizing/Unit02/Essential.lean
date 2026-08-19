@@ -445,6 +445,64 @@ theorem filteredColimitMap_eq
     _ = u j ≫ (F.map fj ≫ t.ι.app k) := by simp only [Category.assoc]
     _ = u j ≫ t.ι.app j := by rw [t.w fj]
 
+private theorem subobjectModule_mk_eq_range
+    {R : Type u} [Ring R] {A B : ModuleCat.{u} R} (f : A ⟶ B) [Mono f] :
+    ModuleCat.subobjectModule B (Subobject.mk f) = LinearMap.range f.hom := by
+  apply (ModuleCat.subobjectModule B).symm.injective
+  rw [(ModuleCat.subobjectModule B).symm_apply_apply]
+  change Subobject.mk f =
+    Subobject.mk (ModuleCat.ofHom (LinearMap.range f.hom).subtype)
+  apply Subobject.mk_eq_mk_of_comm f
+    (ModuleCat.ofHom (LinearMap.range f.hom).subtype)
+    (LinearEquiv.toModuleIso
+      (LinearEquiv.ofBijective f.hom.rangeRestrict
+        ⟨by
+            intro x y h
+            exact (ModuleCat.mono_iff_injective f).mp inferInstance
+              (congrArg Subtype.val h),
+          LinearMap.surjective_rangeRestrict f.hom⟩))
+  ext x
+  rfl
+
+private theorem essentialExtension_smul
+    {R : Type u} [Ring R] {A B : ModuleCat.{u} R} (f : A ⟶ B)
+    (hf : EssentialExtension f) (x : B) (hx : x ≠ 0) :
+    ∃ (r : R) (a : A), r • x = f.hom a ∧ r • x ≠ 0 := by
+  rcases hf with ⟨hf, hess⟩
+  let := hf
+  let S : Submodule R B := Submodule.span R ({x} : Set B)
+  let e := ModuleCat.subobjectModule B
+  have hS : e (Subobject.mk (ModuleCat.ofHom S.subtype)) = S := by
+    change e (e.symm S) = S
+    exact e.apply_symm_apply S
+  have hP : Subobject.mk (ModuleCat.ofHom S.subtype) ≠ (⊥ : Subobject B) := by
+    intro hP
+    have hSbot : S = (⊥ : Submodule R B) := by
+      rw [← hS, hP, e.map_bot]
+    have hxm : x ∈ (⊥ : Submodule R B) := by
+      rw [← hSbot]
+      exact Submodule.subset_span (by simp)
+    exact hx (by simpa using hxm)
+  have hI : e (Subobject.mk f ⊓ Subobject.mk (ModuleCat.ofHom S.subtype)) ≠
+      (⊥ : Submodule R B) := by
+    intro hI
+    apply hess _ hP
+    apply e.injective
+    rw [hI, e.map_bot]
+  obtain ⟨z, hz, hz0⟩ :=
+    (e (Subobject.mk f ⊓ Subobject.mk (ModuleCat.ofHom S.subtype))).ne_bot_iff.mp hI
+  rw [e.map_inf, subobjectModule_mk_eq_range f, hS] at hz
+  have hz' : z ∈ LinearMap.range f.hom ∧ z ∈ S := Submodule.mem_inf.mp hz
+  have hzS : z ∈ Submodule.span R ({x} : Set B) := hz'.2
+  rw [Submodule.mem_span_singleton] at hzS
+  rcases hz'.1 with ⟨a, ha⟩
+  rcases hzS with ⟨r, hr⟩
+  have hr0 : r • x ≠ 0 := by
+    intro h
+    apply hz0
+    rw [← hr, h]
+  exact ⟨r, a, hr.trans ha.symm, hr0⟩
+
 /-- A filtered colimit of a compatible system of essential extensions is an
 essential extension. -/
 theorem essentialExtension_filteredColimit
@@ -454,7 +512,82 @@ theorem essentialExtension_filteredColimit
     (t : Cocone F) (ht : IsColimit t) (u : ∀ i : I, M ⟶ F.obj i)
     (hu : CompatibleEssentialSystem M F u) :
     EssentialExtension (filteredColimitMap M F t u) := by
-  sorry
+  let : PreservesFilteredColimitsOfSize.{v, v} (forget (ModuleCat.{u} R)) :=
+    preservesFilteredColimitsOfSize_of_univLE (forget (ModuleCat.{u} R))
+  let : PreservesColimit F (forget (ModuleCat.{u} R)) := inferInstance
+  let : Mono (filteredColimitMap M F t u) := by
+    refine ConcreteCategory.mono_of_injective _ ?_
+    intro x y hxy
+    let i : I := IsFiltered.nonempty.some
+    dsimp [filteredColimitMap] at hxy
+    change (t.ι.app i).hom ((u i).hom x) = (t.ι.app i).hom ((u i).hom y) at hxy
+    obtain ⟨k, f, g, hfg⟩ :=
+      (CategoryTheory.Limits.Concrete.isColimit_exists_of_rep_eq F ht
+        ((u i).hom x) ((u i).hom y) hxy)
+    have hxf : (F.map f).hom ((u i).hom x) = (u k).hom x := by
+      simpa only [ModuleCat.comp_apply] using ConcreteCategory.congr_hom (hu.2 f) x
+    have hxg : (F.map g).hom ((u i).hom y) = (u k).hom y := by
+      simpa only [ModuleCat.comp_apply] using ConcreteCategory.congr_hom (hu.2 g) y
+    apply (ModuleCat.mono_iff_injective (u k)).mp (hu.1 k |>.choose)
+    exact hxf.symm.trans (hfg.trans hxg)
+  have hstage_nonzero : ∀ (i : I) (z : F.obj i),
+      z ∈ LinearMap.range (u i).hom → z ≠ 0 → (t.ι.app i).hom z ≠ 0 := by
+    intro i z hz hz0 hzero
+    obtain ⟨a, ha⟩ := hz
+    obtain ⟨k, f, g, hfg⟩ :=
+      (CategoryTheory.Limits.Concrete.isColimit_exists_of_rep_eq F ht z 0 (by
+        simpa using hzero))
+    apply hz0
+    have ha0 : a = 0 := by
+      apply (ModuleCat.mono_iff_injective (u k)).mp (hu.1 k |>.choose)
+      calc
+        (u k).hom a = (F.map f).hom ((u i).hom a) := by
+          simpa only [ModuleCat.comp_apply] using
+            (ConcreteCategory.congr_hom (hu.2 f) a).symm
+        _ = (F.map f).hom z := by rw [ha]
+        _ = (F.map g).hom 0 := hfg
+        _ = (u k).hom 0 := by simp
+    rw [← ha, ha0, map_zero]
+  unfold EssentialExtension
+  refine ⟨inferInstance, ?_⟩
+  intro P hP
+  let e := ModuleCat.subobjectModule (t.pt)
+  have hP' : e P ≠ (⊥ : Submodule R (t.pt : Type u)) := by
+    intro hP'
+    apply hP
+    apply e.injective
+    rw [hP', e.map_bot]
+  obtain ⟨x, hxP, hx0⟩ := (e P).ne_bot_iff.mp hP'
+  obtain ⟨i, y, hy⟩ := CategoryTheory.Limits.Concrete.isColimit_exists_rep F ht x
+  have hy0 : y ≠ 0 := by
+    intro hy0
+    apply hx0
+    rw [← hy, hy0, map_zero]
+  obtain ⟨r, a, hra, hra0⟩ := essentialExtension_smul (u i) (hu.1 i) y hy0
+  have hzrange : r • x ∈ LinearMap.range (filteredColimitMap M F t u).hom := by
+    refine ⟨a, ?_⟩
+    calc
+      (filteredColimitMap M F t u).hom a = (t.ι.app i).hom ((u i).hom a) := by
+        simpa only [ModuleCat.comp_apply] using
+          (ConcreteCategory.congr_hom (filteredColimitMap_eq M F t u hu i) a).symm
+      _ = (t.ι.app i).hom (r • y) := by rw [hra]
+      _ = r • (t.ι.app i).hom y := by rw [map_smul]
+      _ = r • x := by rw [hy]
+  have hzx0 : r • x ≠ 0 := by
+    intro hzx
+    apply hstage_nonzero i (r • y) ⟨a, hra.symm⟩ hra0
+    simpa only [map_smul, hy] using hzx
+  have hI : e (Subobject.mk (filteredColimitMap M F t u) ⊓ P) ≠
+      (⊥ : Submodule R (t.pt : Type u)) := by
+    intro hI
+    apply hzx0
+    have hz : r • x ∈ (⊥ : Submodule R (t.pt : Type u)) := by
+      rw [← hI, e.map_inf, subobjectModule_mk_eq_range]
+      exact ⟨hzrange, (e P).smul_mem r hxP⟩
+    simpa using hz
+  intro hzero
+  apply hI
+  rw [hzero, e.map_bot]
 
 /-! ## The module criterion -/
 

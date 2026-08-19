@@ -1170,6 +1170,16 @@ theorem separableClosure_eq_adjoin_map_of_pure_baseChange
   rw [separableClosure_map_eq_of_isPurelyInseparable]
   exact separableClosure.adjoin_eq_of_isAlgebraic (F := F) (E := E) (K := L)
 
+/-- Strictly enlarging an intermediate field inside the separable closure
+strictly lowers the residual finite rank. -/
+theorem finrank_separableClosure_lt_of_lt
+    {F : Type u} {L : Type v} [Field F] [Field L] [Algebra F L]
+    [FiniteDimensional F L] (S : IntermediateField F L)
+    (hS : S < separableClosure F L) :
+    Field.finInsepDegree F L < Module.finrank S L := by
+  change Module.finrank (separableClosure F L) L < Module.finrank S L
+  exact IntermediateField.finrank_lt_of_gt hS
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

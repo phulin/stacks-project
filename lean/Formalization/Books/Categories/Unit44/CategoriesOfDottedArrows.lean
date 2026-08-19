@@ -1331,9 +1331,7 @@ theorem dottedArrow_baseChange_equivalence
                 (inv A.alpha ≫ B.j ◁ (liftHom A).right)) ≫
               TwoCommutativeDiagram.strictAssocInv B.j (liftHom A).vertex B.q ≫
               (comparisonHom A).vertex ▷ B.q := by
-            simp [liftToSource, TwoCommutativeDiagram.Hom.comp,
-              sourceToOuter, TwoCommutativeDiagram.strictAssocInv,
-              Category.assoc]
+            simp [liftToSource, TwoCommutativeDiagram.Hom.comp]
           _ = _ := by
             rw [hprefix]
             rw [Category.id_comp]

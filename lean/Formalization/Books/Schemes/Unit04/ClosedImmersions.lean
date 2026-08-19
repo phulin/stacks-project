@@ -1,5 +1,7 @@
 import Formalization.Books.Schemes.Unit03.OpenImmersions
 import Mathlib.Algebra.Category.ModuleCat.Sheaf
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackFree
 import Mathlib.CategoryTheory.Subobject.Limits
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
 import Mathlib.Geometry.RingedSpace.LocallyRingedSpace
@@ -71,7 +73,173 @@ proof is deferred with the other proposition proofs in this statements stage.
 -/
 theorem exists_closedImmersionIdeal {X Y : LocallyRingedSpace.{u}} (f : X ⟶ Y) :
     ∃ I : IdealSheaf Y, IsKernelIdeal f I := by
-  sorry
+  let b : X.toTopCat ⟶ Y.toTopCat := f.toHom.base
+  let φ : structureSheafOfRings Y ⟶
+      ((Opens.map b).sheafPushforwardContinuous RingCat
+        (Opens.grothendieckTopology Y.toTopCat)
+        (Opens.grothendieckTopology X.toTopCat)).obj
+        (structureSheafOfRings X) := by
+    apply (TopCat.Sheaf.forget RingCat Y.toTopCat).preimage
+    exact Functor.whiskerRight f.toHom.c (forget₂ CommRingCat RingCat)
+  let p : SheafOfModules.unit (structureSheafOfRings Y) ⟶
+      (SheafOfModules.pushforward φ).obj
+        (SheafOfModules.unit (structureSheafOfRings X)) :=
+    SheafOfModules.unitToPushforwardObjUnit φ
+  let I : IdealSheaf Y :=
+    { module := kernel p
+      inclusion := kernel.ι p
+      inclusion_mono := inferInstance }
+  let g : (TopCat.Sheaf.forget RingCat Y.toTopCat).obj (structureSheafOfRings Y) ⟶
+      (TopCat.Sheaf.forget RingCat Y.toTopCat).obj
+        (((Opens.map b).sheafPushforwardContinuous RingCat
+          (Opens.grothendieckTopology Y.toTopCat)
+          (Opens.grothendieckTopology X.toTopCat)).obj
+          (structureSheafOfRings X)) := by
+    exact Functor.whiskerRight f.toHom.c (forget₂ CommRingCat RingCat)
+  have hφ : (TopCat.Sheaf.forget RingCat Y.toTopCat).map φ =
+      g := by
+    change (TopCat.Sheaf.forget RingCat Y.toTopCat).map
+      ((TopCat.Sheaf.forget RingCat Y.toTopCat).preimage g) = g
+    exact (TopCat.Sheaf.forget RingCat Y.toTopCat).map_preimage g
+  refine ⟨I, ?_⟩
+  intro U s
+  constructor
+  · intro hs
+    let E := SheafOfModules.evaluation (structureSheafOfRings Y) (op U)
+    let toComm : E.obj (SheafOfModules.unit (structureSheafOfRings Y)) →
+        Y.presheaf.obj (op U) := fun r => r
+    let fromComm : Y.presheaf.obj (op U) →
+        (structureSheafOfRings Y).obj.obj (op U) := fun r => r
+    let fromRing : E.obj (SheafOfModules.unit (structureSheafOfRings Y)) →
+        (structureSheafOfRings Y).obj.obj (op U) := fun r => r
+    let sR : (structureSheafOfRings Y).obj.obj (op U) := s
+    let sM : E.obj (SheafOfModules.unit (structureSheafOfRings Y)) := s
+    let k : E.obj (SheafOfModules.unit (structureSheafOfRings Y)) ⟶
+        E.obj (SheafOfModules.unit (structureSheafOfRings Y)) :=
+      ModuleCat.ofHom ((LinearMap.ringLmapEquivSelf
+          ((structureSheafOfRings Y).obj.obj (op U)) ℤ
+          (E.obj (SheafOfModules.unit (structureSheafOfRings Y)))).symm sM)
+    let hk : k ≫ E.map p = 0 := by
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro r
+      have hkval : k r = fromRing r * sR := by
+        change ((LinearMap.ringLmapEquivSelf
+          ((structureSheafOfRings Y).obj.obj (op U)) ℤ
+          (E.obj (SheafOfModules.unit (structureSheafOfRings Y)))).symm sM) r =
+          fromRing r * sR
+        rw [LinearMap.ringLmapEquivSelf_symm_apply,
+          ]
+        change (LinearMap.smulRight (1 :
+          (structureSheafOfRings Y).obj.obj (op U) →ₗ[
+            (structureSheafOfRings Y).obj.obj (op U)]
+            (structureSheafOfRings Y).obj.obj (op U)) sM) (fromRing r) =
+          fromRing r * sR
+        rw [LinearMap.smulRight_apply]
+        change (fromRing r) • (sR : E.obj
+          (SheafOfModules.unit (structureSheafOfRings Y))) =
+          fromRing r * sR
+        rw [smul_eq_mul]
+      have hφU := congrArg (fun t => t.app (op U)) hφ
+      have hmap : (φ.hom.app (op U)).hom (fromRing r * sR) =
+          (g.app (op U)).hom (fromRing r * sR) := by
+        have h := congrArg (fun t => t.hom (fromRing r * sR)) hφU
+        convert h using 1; rfl
+      have hprod : (g.app (op U)).hom (fromRing r * sR) = 0 := by
+        change f.toHom.c.app (op U) (toComm r * s) = 0
+        rw [map_mul, hs]
+        simp
+      change (φ.hom.app (op U)).hom (k r) = 0
+      rw [hkval, hmap]
+      exact hprod
+    let hzero : E.map (0 : SheafOfModules.unit (structureSheafOfRings Y) ⟶
+        (SheafOfModules.pushforward φ).obj
+          (SheafOfModules.unit (structureSheafOfRings X))) = 0 := by rfl
+    let l : Cone (parallelPair p 0 ⋙ E) := Cone.ofFork (Fork.ofι k (by
+      change k ≫ E.map p = k ≫ E.map 0
+      rw [hzero]
+      exact hk))
+    let q : E.obj (SheafOfModules.unit (structureSheafOfRings Y)) ⟶
+        E.obj (kernel p) :=
+      (isLimitOfPreserves E (kernelIsKernel p)).lift l ≫ eqToHom (by rfl)
+    exact ⟨q (1 : (structureSheafOfRings Y).obj.obj (op U)), by
+      change (E.map (kernel.ι p))
+        (q (1 : (structureSheafOfRings Y).obj.obj (op U))) = s
+      dsimp [q]
+      change (E.map (kernel.ι p))
+        ((isLimitOfPreserves E (kernelIsKernel p)).lift l
+          (1 : (structureSheafOfRings Y).obj.obj (op U))) = s
+      have hq := (isLimitOfPreserves E (kernelIsKernel p)).fac
+        l WalkingParallelPair.zero
+      have hq' := congrArg (fun t => t
+        (1 : (structureSheafOfRings Y).obj.obj (op U))) hq
+      change (E.map (kernel.ι p))
+          ((isLimitOfPreserves E (kernelIsKernel p)).lift l
+            (1 : (structureSheafOfRings Y).obj.obj (op U))) =
+        (l.π.app WalkingParallelPair.zero)
+          (1 : (structureSheafOfRings Y).obj.obj (op U)) at hq'
+      have hl : (l.π.app WalkingParallelPair.zero)
+          (1 : (structureSheafOfRings Y).obj.obj (op U)) = s := by
+        change k (1 : (structureSheafOfRings Y).obj.obj (op U)) = s
+        change ((LinearMap.ringLmapEquivSelf
+          ((structureSheafOfRings Y).obj.obj (op U)) ℤ
+          (E.obj (SheafOfModules.unit (structureSheafOfRings Y)))).symm sM) 1 = s
+        rw [LinearMap.ringLmapEquivSelf_symm_apply]
+        change (LinearMap.smulRight (1 :
+          (structureSheafOfRings Y).obj.obj (op U) →ₗ[
+            (structureSheafOfRings Y).obj.obj (op U)]
+            (structureSheafOfRings Y).obj.obj (op U)) sM) 1 = s
+        rw [LinearMap.smulRight_apply]
+        change (1 : (structureSheafOfRings Y).obj.obj (op U)) • sM = s
+        rw [one_smul]
+      exact hq'.trans hl
+      ⟩
+  · rintro ⟨i, hi⟩
+    rw [← hi]
+    have hp : p.val.app (op U) ((kernel.ι p).val.app (op U) i) = 0 := by
+      have hc := congrArg (fun t => t.val.app (op U) i) (kernel.condition p)
+      exact hc
+    dsimp [I]
+    have hφU := congrArg (fun t => t.app (op U)) hφ
+    have hφUi := congrArg (fun t => t.hom
+      ((kernel.ι p).val.app (op U) i)) hφU
+    let jR : (structureSheafOfRings Y).obj.obj (op U) :=
+      (kernel.ι p).val.app (op U) i
+    let jC : Y.presheaf.obj (op U) :=
+      (kernel.ι p).val.app (op U) i
+    let out :
+        ((SheafOfModules.pushforward φ).obj
+          (SheafOfModules.unit (structureSheafOfRings X))).val.obj (op U) →
+        (((Opens.map b).sheafPushforwardContinuous RingCat
+          (Opens.grothendieckTopology Y.toTopCat)
+          (Opens.grothendieckTopology X.toTopCat)).obj
+          (structureSheafOfRings X)).obj.obj (op U) := fun x => x
+    have hpR := congrArg out hp
+    have hpP : p.val.app (op U) jR = 0 := by
+      change out (p.val.app (op U) jR) = 0
+      exact hpR
+    have hunit : p.val.app (op U) jR = (φ.hom.app (op U)).hom jR := by
+      dsimp [p]
+      exact SheafOfModules.unitToPushforwardObjUnit_val_app_apply φ jR
+    have hp' : (φ.hom.app (op U)).hom jR = 0 := by
+      rw [← hunit]
+      exact hpP
+    have hmapR : (φ.hom.app (op U)).hom jR =
+        (g.app (op U)).hom jR := by
+      have h := congrArg (fun t => t.hom jR) hφU
+      convert h using 1; rfl
+    have hzeroG : (g.app (op U)).hom jR = 0 := by
+      rw [← hmapR]
+      exact hp'
+    let outX :
+        (((Opens.map b).sheafPushforwardContinuous RingCat
+          (Opens.grothendieckTopology Y.toTopCat)
+          (Opens.grothendieckTopology X.toTopCat)).obj
+          (structureSheafOfRings X)).obj.obj (op U) →
+        X.presheaf.obj (op ((Opens.map f.base).obj U)) := fun x => x
+    have hzeroGX := congrArg outX hzeroG
+    change f.toHom.c.app (op U) jC = 0 at hzeroGX
+    exact hzeroGX
 
 /-- The ideal sheaf cut out by a morphism of locally ringed spaces. -/
 noncomputable def closedImmersionIdeal {X Y : LocallyRingedSpace.{u}}

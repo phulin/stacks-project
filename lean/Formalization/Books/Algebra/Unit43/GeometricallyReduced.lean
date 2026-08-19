@@ -779,7 +779,50 @@ theorem isGeometricallyReduced_of_minimalPrime_localizations
     (hmin : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
       IsGeometricallyReduced k (Localization.AtPrime p.1.asIdeal)) :
     IsGeometricallyReduced k S := by
-  sorry
+  classical
+  intro K _ _
+  let f : S →ₐ[k]
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        Localization.AtPrime p.1.asIdeal) :=
+    { toRingHom := Unit25.mapToMinimalPrimeLocalizations
+      commutes' := by
+        intro c
+        ext p
+        rfl }
+  have hf : Function.Injective f := by
+    simpa [f] using (Unit25.mapToMinimalPrimeLocalizations_injective (R := S))
+  let _ : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+      IsReduced (K ⊗[k] Localization.AtPrime p.1.asIdeal) :=
+    fun p => hmin p K
+  let m : (K ⊗[k] S) →ₐ[k]
+      (K ⊗[k] (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        Localization.AtPrime p.1.asIdeal)) :=
+    Algebra.TensorProduct.map (AlgHom.id k K) f
+  have hm : Function.Injective m :=
+    TensorProduct.map_injective_of_flat_flat (LinearMap.id) f.toLinearMap
+      Function.injective_id hf
+  let g : (K ⊗[k] S) →+*
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        K ⊗[k] Localization.AtPrime p.1.asIdeal) :=
+    (Algebra.TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal)).toRingHom.comp m.toRingHom
+  have hpi : Function.Injective (TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal)) :=
+    tensorProduct_piRightHom_injective
+  have hg : Function.Injective g := by
+    intro x y hxy
+    apply hm
+    apply hpi
+    change (TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal) (m x)) =
+      TensorProduct.piRightHom k K K
+        (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+          Localization.AtPrime p.1.asIdeal) (m y) at hxy
+    exact hxy
+  exact isReduced_of_injective g hg
 /-
   classical
   intro K _ _

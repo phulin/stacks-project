@@ -45,14 +45,33 @@ theorem associatedPrimes_toIdeal_eq_mathlib
     [AddCommGroup M] [Module R M] [IsNoetherianRing R] :
     (fun p : PrimeSpectrum R => p.asIdeal) '' associatedPrimes R M =
       _root_.associatedPrimes R M := by
-  sorry
+  ext I
+  constructor
+  · rintro ⟨p, hp, rfl⟩
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff]
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+    rcases hp with ⟨m, hm⟩
+    exact ⟨p.isPrime, m, hm.symm⟩
+  · intro hI
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hI
+    obtain ⟨hprime, m, hm⟩ := hI
+    refine ⟨⟨I, hprime⟩, ?_, rfl⟩
+    exact ⟨m, hm.symm⟩
 
 /-- Associated primes lie in the support. -/
 theorem ass_subset_support
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     associatedPrimes R M ⊆ Module.support R M := by
-  sorry
+  intro p hp
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  rw [Module.mem_support_iff']
+  refine ⟨m, ?_⟩
+  intro r hr hzero
+  apply hr
+  rw [← hm, Submodule.mem_colon_singleton]
+  simp [hzero]
 
 /-! ## Filtrations and finiteness -/
 
@@ -74,6 +93,91 @@ structure PrimeFiltration
       (stage (Fin.castSucc i)).comap (stage (Fin.succ i)).subtype) ≃ₗ[R]
         (R ⧸ prime i))
 
+private lemma exact_ann_le_primeFiltration_factor
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (F : PrimeFiltration R M) (i : Fin F.length) (m : M)
+    (hm : m ∈ F.stage (Fin.succ i))
+    (hmnot : m ∉ F.stage (Fin.castSucc i))
+    (p : PrimeSpectrum R)
+    (hp : (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal) :
+    p.asIdeal ≤ F.prime i := by
+  let N : Submodule R (F.stage (Fin.succ i)) :=
+    (F.stage (Fin.castSucc i)).comap (F.stage (Fin.succ i)).subtype
+  let x : F.stage (Fin.succ i) := ⟨m, hm⟩
+  let q : (F.stage (Fin.succ i) ⧸ N) := N.mkQ x
+  have hqne : q ≠ 0 := by
+    intro hq
+    apply hmnot
+    have hxN : x ∈ N := (Submodule.Quotient.mk_eq_zero N).mp hq
+    exact hxN
+  obtain ⟨e⟩ := F.quotient i
+  obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective (e q)
+  have hsnot : s ∉ F.prime i := by
+    intro hs'
+    apply hqne
+    apply e.injective
+    rw [← hs, Ideal.Quotient.eq_zero_iff_mem.mpr hs', e.map_zero]
+  intro r hr
+  have hrzero : r • m = 0 := by
+    rw [← hp, Submodule.mem_colon_singleton] at hr
+    simpa using hr
+  have hqx : r • q = 0 := by
+    change r • (N.mkQ x) = 0
+    rw [← N.mkQ.map_smul]
+    have hrx : r • x = 0 := by
+      ext
+      exact hrzero
+    rw [hrx, map_zero]
+  have hzeroQ : (r : R ⧸ F.prime i) • e q = 0 := by
+    exact (e.map_smul r q).symm.trans (by rw [hqx, e.map_zero])
+  have hmulQ : Ideal.Quotient.mk (F.prime i) (r * s) = 0 := by
+    rw [map_mul]
+    rw [← hs] at hzeroQ
+    simpa [Algebra.smul_def, Ideal.Quotient.algebraMap_eq] using hzeroQ
+  exact (F.prime_isPrime i).mem_or_mem
+    (Ideal.Quotient.eq_zero_iff_mem.mp hmulQ) |>.resolve_right hsnot
+
+private lemma exact_ann_smul_of_mem_primeFiltration_factor
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (F : PrimeFiltration R M) (i : Fin F.length) (m : M)
+    (hm : m ∈ F.stage (Fin.succ i))
+    (p : PrimeSpectrum R)
+    (hp : (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal)
+    (f : R) (hf : f ∈ F.prime i) (hfp : f ∉ p.asIdeal) :
+    f • m ∈ F.stage (Fin.castSucc i) ∧
+      (⊥ : Submodule R M).colon ({f • m} : Set M) = p.asIdeal := by
+  let N : Submodule R (F.stage (Fin.succ i)) :=
+    (F.stage (Fin.castSucc i)).comap (F.stage (Fin.succ i)).subtype
+  let x : F.stage (Fin.succ i) := ⟨m, hm⟩
+  let q : (F.stage (Fin.succ i) ⧸ N) := N.mkQ x
+  obtain ⟨e⟩ := F.quotient i
+  have hqf : f • q = 0 := by
+    apply e.injective
+    rw [e.map_smul, Algebra.smul_def, Ideal.Quotient.algebraMap_eq,
+      Ideal.Quotient.eq_zero_iff_mem.mpr hf, zero_mul, e.map_zero]
+  have hxN : f • x ∈ N := by
+    apply (Submodule.Quotient.mk_eq_zero N).mp
+    change N.mkQ (f • x) = 0
+    rw [N.mkQ.map_smul, hqf]
+  have hfm : f • m ∈ F.stage (Fin.castSucc i) := hxN
+  refine ⟨hfm, ?_⟩
+  ext r
+  rw [Submodule.mem_colon_singleton, ← hp, Submodule.mem_colon_singleton]
+  change r • (f • m) = 0 ↔ r • m = 0
+  constructor
+  · intro h
+    have hrf : r * f ∈ p.asIdeal := by
+      rw [← hp, Submodule.mem_colon_singleton]
+      simpa [smul_smul, mul_comm] using h
+    have hrp : r ∈ p.asIdeal :=
+      (p.isPrime.mem_or_mem hrf).resolve_right hfp
+    rw [← hp, Submodule.mem_colon_singleton] at hrp
+    simpa using hrp
+  · intro h
+    simpa [smul_smul, mul_comm] using congrArg (fun z : M => f • z) h
+
 /-- A prime filtration bounds the associated-prime set by its factors. -/
 theorem ass_subset_primeFiltration
     {R : Type u} {M : Type v} [CommRing R]
@@ -81,7 +185,50 @@ theorem ass_subset_primeFiltration
     (F : PrimeFiltration R M) :
     associatedPrimes R M ⊆
       {p : PrimeSpectrum R | p.asIdeal ∈ Set.range F.prime} := by
-  sorry
+  intro p hp
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  have hdesc : ∀ (j : ℕ) (hj : j ≤ F.length) (m : M),
+      m ∈ F.stage ⟨j, Nat.lt_succ_of_le hj⟩ →
+      (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal →
+      p.asIdeal ∈ Set.range F.prime := by
+    intro j
+    induction j using Nat.strong_induction_on with
+    | h j ih =>
+        intro hj m hmj hmann
+        by_cases hjzero : j = 0
+        · subst j
+          have hmzero : m = 0 := by
+            simpa [F.zero] using hmj
+          have htop : p.asIdeal = ⊤ := by
+            rw [← hmann]
+            simp [hmzero]
+          exact (p.isPrime.ne_top htop).elim
+        · obtain ⟨j, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hjzero
+          let i : Fin F.length :=
+            ⟨j, Nat.lt_of_lt_of_le (Nat.lt_succ_self j) hj⟩
+          have hmj' : m ∈ F.stage (Fin.succ i) := hmj
+          by_cases hm_prev : m ∈ F.stage (Fin.castSucc i)
+          · exact ih j (Nat.lt_succ_self j)
+              (Nat.le_trans (Nat.le_succ j) hj) m hm_prev hmann
+          · have hle : p.asIdeal ≤ F.prime i :=
+              exact_ann_le_primeFiltration_factor F i m hmj' hm_prev p hmann
+            by_cases heq : p.asIdeal = F.prime i
+            · exact ⟨i, heq.symm⟩
+            · have hnot : ¬ F.prime i ≤ p.asIdeal := by
+                intro hle'
+                exact heq (le_antisymm hle hle')
+              obtain ⟨f, hf, hfp⟩ := SetLike.not_le_iff_exists.mp hnot
+              obtain ⟨hfm, hmannfm⟩ :=
+                exact_ann_smul_of_mem_primeFiltration_factor
+                  F i m hmj' p hmann f hf hfp
+              exact ih j (Nat.lt_succ_self j)
+                (Nat.le_trans (Nat.le_succ j) hj) (f • m) hfm hmannfm
+  apply hdesc F.length le_rfl m
+  · change m ∈ F.stage (Fin.last F.length)
+    rw [F.top]
+    trivial
+  · exact hm
 
 /-- The minimal points of a subset of the spectrum. -/
 def minimalPoints {R : Type u} [CommRing R]
@@ -95,7 +242,11 @@ theorem finite_ass
     [AddCommGroup M] [Module R M]
     [IsNoetherianRing R] [Module.Finite R M] :
     (associatedPrimes R M).Finite := by
-  sorry
+  apply Set.Finite.of_finite_image (f := fun p : PrimeSpectrum R => p.asIdeal)
+  · rw [associatedPrimes_toIdeal_eq_mathlib]
+    exact _root_.associatedPrimes.finite R M
+  · intro p hp q hq heq
+    exact PrimeSpectrum.ext heq
 
 /-- The minimal primes in the support, in the associated-prime set, and among
 the factors of any prime filtration coincide. -/

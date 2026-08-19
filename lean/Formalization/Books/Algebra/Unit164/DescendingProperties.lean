@@ -14,6 +14,7 @@ import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.RingHom.FiniteType
+import Mathlib.RingTheory.Finiteness.Descent
 import Mathlib.RingTheory.RingHom.Smooth
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Basic
@@ -131,19 +132,135 @@ theorem noetherian_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f)
     (hS : IsNoetherianRing S) : IsNoetherianRing R := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let _ : Module.FaithfullyFlat R S := by
+    simpa [RingHom.FaithfullyFlat] using hff
+  rw [isNoetherianRing_iff_ideal_fg]
+  intro I
+  apply Ideal.FG.of_FG_map_of_faithfullyFlat (S := S)
+  exact hS.noetherian _
 
 theorem reduced_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f)
     (hS : IsReduced S) : IsReduced R := by
-  sorry
+  let : IsReduced S := hS
+  exact isReduced_of_injective f hff.injective
 
 theorem normal_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f)
     (hS : IsNormalRing S) : IsNormalRing R := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let _ : Module.FaithfullyFlat R S := by
+    simpa [RingHom.FaithfullyFlat] using hff
+  have hred : IsReduced R :=
+    reduced_descends_of_faithfullyFlat f hff (normalRing_isReduced hS)
+  let : IsReduced R := hred
+  intro p
+  obtain ⟨q, hq⟩ :=
+    PrimeSpectrum.comap_surjective_of_faithfullyFlat (A := R) (B := S) p
+  have hpq : p.asIdeal = q.asIdeal.comap f := by
+    have hpq' : q.asIdeal.comap (algebraMap R S) = p.asIdeal :=
+      congrArg PrimeSpectrum.asIdeal hq
+    change p.asIdeal = q.asIdeal.comap (algebraMap R S)
+    exact hpq'.symm
+  let hloc := Localization.localRingHom p.asIdeal q.asIdeal f hpq
+  letI : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
+    hloc.toAlgebra
+  have hflat : RingHom.Flat hloc :=
+    RingHom.Flat.localRingHom hff.flat q.asIdeal p.asIdeal hpq
+  let _ : Module.Flat (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) := by
+    simpa [RingHom.Flat] using hflat
+  let _ : IsLocalHom
+      (algebraMap (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal)) := by
+    change IsLocalHom hloc
+    infer_instance
+  let _ : Module.FaithfullyFlat (Localization.AtPrime p.asIdeal)
+      (Localization.AtPrime q.asIdeal) :=
+    Module.FaithfullyFlat.of_flat_of_isLocalHom
+  let : IsDomain (Localization.AtPrime q.asIdeal) := (hS q).1
+  let : IsDomain (Localization.AtPrime p.asIdeal) :=
+    (FaithfulSMul.algebraMap_injective
+      (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal)).isDomain _
+  have hclosed : IsIntegrallyClosed (Localization.AtPrime p.asIdeal) := by
+    rw [isIntegrallyClosed_iff (FractionRing (Localization.AtPrime p.asIdeal))]
+    intro x hx
+    let g : Localization.AtPrime p.asIdeal →+* FractionRing (Localization.AtPrime q.asIdeal) :=
+      (algebraMap (Localization.AtPrime q.asIdeal) _).comp hloc
+    have hg : Function.Injective g :=
+      (IsFractionRing.injective (Localization.AtPrime q.asIdeal)
+        (FractionRing (Localization.AtPrime q.asIdeal))).comp
+        (FaithfulSMul.algebraMap_injective
+          (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal))
+    let φ : FractionRing (Localization.AtPrime p.asIdeal) →+*
+        FractionRing (Localization.AtPrime q.asIdeal) :=
+      IsFractionRing.lift (A := Localization.AtPrime p.asIdeal)
+        (K := FractionRing (Localization.AtPrime p.asIdeal))
+        (L := FractionRing (Localization.AtPrime q.asIdeal)) hg
+    have hφ (z : Localization.AtPrime p.asIdeal) :
+        φ (algebraMap _ _ z) = algebraMap _ _ (hloc z) := by
+      exact IsFractionRing.lift_algebraMap hg z
+    obtain ⟨a, b, hb, rfl⟩ :=
+      IsFractionRing.div_surjective (Localization.AtPrime p.asIdeal) x
+    have hfx : IsIntegral (Localization.AtPrime q.asIdeal) (φ
+        (algebraMap _ _ a / algebraMap _ _ b)) := by
+      apply IsIntegral.map_of_comp_eq (R := Localization.AtPrime p.asIdeal)
+        (S := FractionRing (Localization.AtPrime p.asIdeal))
+        (T := Localization.AtPrime q.asIdeal)
+        (U := FractionRing (Localization.AtPrime q.asIdeal))
+        (algebraMap _ _) φ
+      · ext z
+        exact (hφ z).symm
+      · exact hx
+    obtain ⟨c, hc⟩ :=
+      (isIntegrallyClosed_iff (FractionRing (Localization.AtPrime q.asIdeal))).mp
+        (hS q).2 hfx
+    have hbA : (b : Localization.AtPrime p.asIdeal) ≠ 0 :=
+      mem_nonZeroDivisors_iff_ne_zero.mp hb
+    have hbB : hloc b ≠ 0 := by
+      intro h
+      apply hbA
+      apply (FaithfulSMul.algebraMap_injective
+        (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal))
+      change hloc b = hloc 0
+      simpa using h
+    have hbF : algebraMap (Localization.AtPrime q.asIdeal)
+        (FractionRing (Localization.AtPrime q.asIdeal)) (hloc b) ≠ 0 :=
+      IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
+        (mem_nonZeroDivisors_iff_ne_zero.mpr hbB)
+    have hcross : hloc b * c = hloc a := by
+      apply IsFractionRing.injective (Localization.AtPrime q.asIdeal)
+        (FractionRing (Localization.AtPrime q.asIdeal))
+      calc
+        algebraMap _ _ (hloc b * c) =
+            algebraMap _ _ (hloc b) * algebraMap _ _ c := map_mul _ _ _
+        _ = φ (algebraMap _ _ b) *
+            φ (algebraMap _ _ a / algebraMap _ _ b) := by rw [hc, hφ]
+        _ = φ (algebraMap _ _ b) *
+            (φ (algebraMap _ _ a) / φ (algebraMap _ _ b)) := by rw [map_div₀]
+        _ = φ (algebraMap _ _ a) := by
+          rw [mul_comm, div_mul_cancel₀ _ (by simpa [hφ] using hbF)]
+        _ = algebraMap _ _ (hloc a) := hφ a
+    have hmem_map :
+        hloc a ∈ Ideal.map hloc (Ideal.span ({b} : Set _)) := by
+      rw [← hcross]
+      exact (Ideal.map hloc (Ideal.span ({b} : Set _))).mul_mem_right c
+        (Ideal.mem_map_of_mem hloc (Ideal.mem_span_singleton_self b))
+    have hmem : a ∈ Ideal.span ({b} : Set _) := by
+      have hmem' : a ∈
+          (Ideal.map (algebraMap (Localization.AtPrime p.asIdeal)
+            (Localization.AtPrime q.asIdeal)) (Ideal.span ({b} : Set _))).comap
+              (algebraMap (Localization.AtPrime p.asIdeal)
+                (Localization.AtPrime q.asIdeal)) :=
+        Ideal.mem_comap.mpr hmem_map
+      rw [Ideal.comap_map_eq_self_of_faithfullyFlat] at hmem'
+      exact hmem'
+    obtain ⟨d, hd⟩ := Ideal.mem_span_singleton'.mp hmem
+    refine ⟨d, ?_⟩
+    rw [← hd, map_mul,
+      mul_div_cancel_right₀ _ (IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors hb)]
+  exact ⟨inferInstance, hclosed⟩
 
 theorem regular_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]

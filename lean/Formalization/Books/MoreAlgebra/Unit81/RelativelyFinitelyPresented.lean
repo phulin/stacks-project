@@ -1060,7 +1060,48 @@ theorem relativelyFinitelyPresented_comp
     (hfp : RingHom.FinitePresentation f)
     (hM : RelativelyFinitelyPresented g M) :
     RelativelyFinitelyPresented (g.comp f) M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  let : Algebra A B := g.toAlgebra
+  let : Algebra R B := (g.comp f).toAlgebra
+  let : IsScalarTower R A B :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  dsimp [RelativelyFinitelyPresented] at hM
+  obtain ⟨n, α, hα, hPM⟩ := hM
+  let Q := MvPolynomial (Fin n) A
+  let : Algebra R Q :=
+    ((algebraMap A Q).comp (algebraMap R A)).toAlgebra
+  let : IsScalarTower R A Q :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  let : Algebra.FinitePresentation R A := hfp
+  let : Algebra.FinitePresentation A Q := inferInstance
+  let : Algebra.FinitePresentation R Q :=
+    Algebra.FinitePresentation.trans R A Q
+  obtain ⟨m, β, hβ, hker⟩ :=
+    (inferInstance : Algebra.FinitePresentation R Q).out
+  let P := MvPolynomial (Fin m) R
+  let γ : P →ₐ[R] B :=
+    { toRingHom := α.toRingHom.comp β.toRingHom
+      commutes' := by
+        intro r
+        change α (β (algebraMap R P r)) = algebraMap R B r
+        rw [β.commutes]
+        rw [IsScalarTower.algebraMap_apply R A Q]
+        rw [α.commutes]
+        rfl }
+  have hγ : Function.Surjective γ := by
+    exact hα.comp hβ
+  letI : Module Q M := Module.compHom M α.toRingHom
+  letI : Module P M := Module.compHom M γ.toRingHom
+  have hP : Module.FinitePresentation P M := by
+    exact moduleFinitePresentation_of_surjective_of_fg_ker
+      β.toRingHom hβ hker hPM
+  exact ⟨m, γ, hγ, hP⟩
 
 /-! ## Gluing and exact sequences -/
 

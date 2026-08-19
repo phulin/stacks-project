@@ -1,6 +1,6 @@
 import Formalization.Books.Algebra.Unit37.NormalRings
-import Formalization.Books.Algebra.Unit72.Depth
-import Formalization.Books.Topology.Unit11.CodimensionAndCatenary
+import Formalization.Books.Algebra.Unit105.CatenaryRings
+import Formalization.Books.Algebra.Unit157.SerresCriterion
 import Mathlib.Algebra.GroupWithZero.Basic
 import Mathlib.RingTheory.Ideal.Height
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
@@ -32,9 +32,6 @@ interfaces already exist.
 namespace Formalization.Books.Algebra.Unit164
 
 open Formalization.Books.Algebra.Unit37
-open Formalization.Books.Algebra.Unit60
-open Formalization.Books.Algebra.Unit72
-open Formalization.Books.Topology.Unit11
 open Set
 open scoped TensorProduct
 
@@ -55,31 +52,21 @@ least the minimum of `k` and local dimension.  `ringKrullDim` has codomain
 `WithBot ℕ∞`, so the depth and the integer are cast to that same canonical
 dimension type.
 -/
-def HasPropertySk (R : Type u) [CommRing R] (k : ℕ) : Prop :=
-  ∀ p : PrimeSpectrum R,
-    min ((k : ℕ∞) : WithBot ℕ∞)
-        (ringKrullDim (Localization.AtPrime p.asIdeal)) ≤
-      ((localDepth (Localization.AtPrime p.asIdeal)
-          (Localization.AtPrime p.asIdeal) : ℕ∞) : WithBot ℕ∞)
-
 /- The source's `(R_k)` condition says that every prime of height at most `k`
   has regular localization.  The Noetherian hypothesis is kept on the
   theorem statements, as in the source, rather than duplicated in this
   predicate. -/
-def HasPropertyRk (R : Type u) [CommRing R] (k : ℕ) : Prop :=
-  ∀ p : PrimeSpectrum R,
-    p.asIdeal.height ≤ (k : ℕ∞) →
-      IsRegularLocalRing (Localization.AtPrime p.asIdeal)
-
 /-! ## Japanese and Nagata properties -/
 
 /- N-2 for a domain: the integral closure in every finite extension of its
   fraction field is finite as a module. -/
 def IsJapaneseDomain (R : Type u) [CommRing R] [IsDomain R] : Prop :=
-  ∀ (K : Type u) [Field K] [Algebra R K] [IsFractionRing R K],
-    ∀ (L : Type u) [Field L] [Algebra K L] [Algebra R L]
-      [IsScalarTower R K L] [Module.Finite K L],
-      Module.Finite R (integralClosure R L)
+  ∀ (L : Type u) [Field L] [Algebra (FractionRing R) L]
+    [Module.Finite (FractionRing R) L],
+    letI : Algebra R L :=
+      ((algebraMap (FractionRing R) L).comp
+        (algebraMap R (FractionRing R))).toAlgebra
+    Module.Finite R (integralClosure R L)
 
 /- A universally Japanese ring is one for which every finite-type algebra that
   is a domain is Japanese.  The domain assumption is explicit because the
@@ -92,26 +79,15 @@ def IsUniversallyJapanese (R : Type u) [CommRing R] : Prop :=
 /- A Nagata ring is Noetherian and has N-2 quotients at all prime ideals. -/
 def IsNagataRing (R : Type u) [CommRing R] : Prop :=
   IsNoetherianRing R ∧
-    ∀ (p : Ideal R) [p.IsPrime], IsJapaneseDomain (R ⧸ p)
+    ∀ (p : Ideal R), ∀ hp : p.IsPrime,
+      letI : p.IsPrime := hp
+      IsJapaneseDomain (R ⧸ p)
 
 /- The characterization invoked in the proof of Nagata descent. -/
 theorem nagata_iff_noetherian_universallyJapanese
     {R : Type u} [CommRing R] :
     IsNagataRing R ↔ IsNoetherianRing R ∧ IsUniversallyJapanese R := by
   sorry
-
-/-! ## Catenarity interfaces used by the final counterexample -/
-
-/- Mathlib's topological catenary predicate is the canonical chain condition
-  used here for the prime spectrum. -/
-def IsCatenaryRing (R : Type u) [CommRing R] : Prop :=
-  Formalization.Books.Topology.Unit11.IsCatenary (PrimeSpectrum R)
-
-/- Universal catenarity is catenarity after every finite-type base change. -/
-def IsUniversallyCatenary (R : Type u) [CommRing R] : Prop :=
-  IsNoetherianRing R ∧
-    ∀ (S : Type u) [CommRing S] (f : R →+* S),
-      RingHom.FiniteType f → IsCatenaryRing S
 
 /- The map from a ring to the localization of a target ring at one of its
   prime ideals, used to state that the maximal ideal of `A` generates the
@@ -271,15 +247,19 @@ theorem regular_descends_of_faithfullyFlat
 theorem propertySk_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f) (k : ℕ)
-    (hS : IsNoetherianRing S) (hSk : HasPropertySk S k) :
-    IsNoetherianRing R ∧ HasPropertySk R k := by
+    (hS : IsNoetherianRing S)
+    (hSk : Formalization.Books.Algebra.Unit157.HasPropertySk S k) :
+    IsNoetherianRing R ∧
+      Formalization.Books.Algebra.Unit157.HasPropertySk R k := by
   sorry
 
 theorem propertyRk_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f) (k : ℕ)
-    (hS : IsNoetherianRing S) (hRk : HasPropertyRk S k) :
-    IsNoetherianRing R ∧ HasPropertyRk R k := by
+    (hS : IsNoetherianRing S)
+    (hRk : Formalization.Books.Algebra.Unit157.HasPropertyRk S k) :
+    IsNoetherianRing R ∧
+      Formalization.Books.Algebra.Unit157.HasPropertyRk R k := by
   sorry
 
 /- Smoothness and surjectivity on spectra are the exact hypotheses in the
@@ -317,7 +297,8 @@ structure UniversallyCatenaryDescentCounterexample where
   finite : RingHom.Finite f
   formallyUnramified : RingHom.FormallyUnramified f
   noetherianA : IsNoetherianRing A
-  notUniversallyCatenaryA : ¬ IsUniversallyCatenary A
+  notUniversallyCatenaryA :
+    ¬ Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u, u} A
   m : PrimeSpectrum B
   n : PrimeSpectrum B
   m_maximal : m.asIdeal.IsMaximal
@@ -374,7 +355,8 @@ structure UniversallyCatenaryDescentCounterexample where
     letI : q₂.IsPrime := q₂_minimal.isPrime
     ∃ e : (A' ⧸ q₂) ≃+* B₂,
       e.toRingHom.comp (Ideal.Quotient.mk q₂) = factorMap₂
-  universallyCatenaryA' : IsUniversallyCatenary A'
+  universallyCatenaryA' :
+    Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u, u} A'
 
 attribute [instance] UniversallyCatenaryDescentCounterexample.commRingA
   UniversallyCatenaryDescentCounterexample.commRingB

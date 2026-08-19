@@ -1566,7 +1566,509 @@ theorem valuationRing_directedColimit_affineBlowups
     (A : ValuationSubring K)
     (hA : DominatesValuationSubring (R := R) (K := K) A) :
     Nonempty (ValuationBlowupColimitData (R := R) (K := K) A) := by
-  sorry
+  classical
+  rcases hA with ⟨f, hf, hflocal⟩
+  have hmne : IsLocalRing.maximalIdeal R ≠ (⊥ : Ideal R) := by
+    intro h
+    apply hR
+    exact IsLocalRing.isField_iff_maximalIdeal_eq.mpr h
+  obtain ⟨t, ht, ht0⟩ :=
+    Submodule.exists_mem_ne_zero_of_ne_bot hmne
+  choose n d hd hnd using fun x : A =>
+    IsFractionRing.div_surjective R (x : K)
+  let num : A → R := fun x => t * n x
+  let den : A → R := fun x => t * d x
+  have ht_nd : t ∈ nonZeroDivisors R := by
+    rw [mem_nonZeroDivisors_iff]
+    simp [ht0]
+  have hden0 (x : A) : den x ≠ 0 := by
+    dsimp [den]
+    exact mul_ne_zero ht0 (nonZeroDivisors.ne_zero (hd x))
+  have hden_prod0 (E : Finset A) : (∏ x ∈ E, den x) ≠ 0 := by
+    induction E using Finset.induction_on with
+    | empty => simp
+    | @insert x E hx ih =>
+        simp only [Finset.prod_insert hx]
+        exact mul_ne_zero (hden0 x) ih
+  have hratio (x : A) :
+      algebraMap R K (num x) / algebraMap R K (den x) = (x : K) := by
+    dsimp [num, den]
+    rw [map_mul, map_mul, mul_div_mul_left]
+    · exact hnd x
+    · exact map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+        (IsFractionRing.injective R K) ht_nd
+  let J : A → Ideal R := fun x =>
+    Ideal.span ({den x, num x} : Set R)
+  let I : Finset A → Ideal R := fun E =>
+    Ideal.span ({t} : Set R) * (∏ x ∈ E, J x)
+  let a : Finset A → R := fun E =>
+    t * (∏ x ∈ E, den x)
+  let Q : R → Ideal R := fun b =>
+    { carrier := {r | algebraMap R K r / algebraMap R K b ∈ A}
+      zero_mem' := by simp
+      add_mem' := by
+        intro x y hx hy
+        change algebraMap R K x / algebraMap R K b ∈ A at hx
+        change algebraMap R K y / algebraMap R K b ∈ A at hy
+        change algebraMap R K (x + y) / algebraMap R K b ∈ A
+        simpa [map_add, add_div] using A.add_mem _ _ hx hy
+      smul_mem' := by
+        intro c r hr
+        have hc : algebraMap R K c ∈ A := by
+          rw [← hf c]
+          exact (f c).property
+        change algebraMap R K r / algebraMap R K b ∈ A at hr
+        change algebraMap R K (c * r) / algebraMap R K b ∈ A
+        simpa [map_mul, mul_div_assoc] using A.mul_mem _ _ hc hr }
+  have hJ_le (x : A) : J x ≤ IsLocalRing.maximalIdeal R := by
+    apply Ideal.span_le.2
+    intro r hr
+    rcases hr with (rfl | rfl)
+    · dsimp [den]
+      simpa [mul_comm] using (IsLocalRing.maximalIdeal R).mul_mem_left (d x) ht
+    · dsimp [num]
+      simpa [mul_comm] using (IsLocalRing.maximalIdeal R).mul_mem_left (n x) ht
+  have hJQ (x : A) : J x ≤ Q (den x) := by
+    apply Ideal.span_le.2
+    intro r hr
+    rcases hr with (rfl | rfl)
+    · change algebraMap R K (den x) / algebraMap R K (den x) ∈ A
+      rw [div_self (map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+        (IsFractionRing.injective R K) (mem_nonZeroDivisors_of_ne_zero (hden0 x)))]
+      exact A.one_mem
+    · change algebraMap R K (num x) / algebraMap R K (den x) ∈ A
+      rw [hratio x]
+      exact x.property
+  have hprodQ : ∀ E : Finset A,
+      (∏ x ∈ E, J x) ≤ Q (∏ x ∈ E, den x) := by
+    intro E
+    induction E using Finset.induction_on with
+    | empty =>
+        intro r hr
+        simpa [Q] using (show algebraMap R K r ∈ A by
+          rw [← hf r]
+          exact (f r).property)
+    | @insert x E hx ih =>
+        simp only [Finset.prod_insert hx]
+        apply Ideal.mul_le.2
+        intro r hr s hs
+        have hr' := hJQ x hr
+        have hs' := ih hs
+        dsimp [Q] at hr' hs' ⊢
+        have hdenK : algebraMap R K (den x) ≠ 0 :=
+          map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+            (IsFractionRing.injective R K)
+            (mem_nonZeroDivisors_of_ne_zero (hden0 x))
+        have hprodK : algebraMap R K (∏ y ∈ E, den y) ≠ 0 :=
+          map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+            (IsFractionRing.injective R K)
+            (mem_nonZeroDivisors_of_ne_zero (hden_prod0 E))
+        have hfrac :
+            algebraMap R K (r * s) /
+                algebraMap R K (den x * (∏ y ∈ E, den y)) =
+              (algebraMap R K r / algebraMap R K (den x)) *
+                (algebraMap R K s / algebraMap R K (∏ y ∈ E, den y)) := by
+          simp only [map_mul]
+          field_simp [hdenK, hprodK]
+        change algebraMap R K (r * s) /
+          algebraMap R K (den x * (∏ y ∈ E, den y)) ∈ A
+        rw [hfrac]
+        exact A.mul_mem _ _ hr' hs'
+  have hcenter_mem (E : Finset A) :
+      (∏ x ∈ E, den x) ∈ (∏ x ∈ E, J x) := by
+    induction E using Finset.induction_on with
+    | empty => simp
+    | @insert x E hx ih =>
+        simp only [Finset.prod_insert hx]
+        exact Ideal.mul_mem_mul (Ideal.subset_span (by simp)) ih
+  have hI_mem (E : Finset A) : a E ∈ I E := by
+    dsimp [I, a]
+    exact Ideal.mul_mem_mul (Ideal.mem_span_singleton_self t) (hcenter_mem E)
+  have hI_le (E : Finset A) : I E ≤ IsLocalRing.maximalIdeal R := by
+    dsimp [I]
+    apply le_trans (Ideal.mul_le.2 (by
+      intro r hr s hs
+      exact (Ideal.span ({t} : Set R)).mul_mem_right s hr))
+    exact Ideal.span_le.2 (by simpa using ht)
+  have hIQ (E : Finset A) : I E ≤ Q (a E) := by
+    dsimp [I, a]
+    apply Ideal.mul_le.2
+    intro r hr s hs
+    obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hr
+    have hs' := hprodQ E hs
+    have hcA : algebraMap R K c ∈ A := by
+      rw [← hf c]
+      exact (f c).property
+    dsimp [Q] at hs' ⊢
+    have htK : algebraMap R K t ≠ 0 :=
+      map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+        (IsFractionRing.injective R K) ht_nd
+    have hprodK : algebraMap R K (∏ x ∈ E, den x) ≠ 0 :=
+      map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+        (IsFractionRing.injective R K)
+        (mem_nonZeroDivisors_of_ne_zero (hden_prod0 E))
+    have hfrac :
+        algebraMap R K (r * s) /
+            algebraMap R K (t * (∏ x ∈ E, den x)) =
+          algebraMap R K c *
+            (algebraMap R K s / algebraMap R K (∏ x ∈ E, den x)) := by
+      rw [← hc]
+      simp only [map_mul]
+      field_simp [htK, hprodK]
+    change algebraMap R K (r * s) /
+      algebraMap R K (t * (∏ x ∈ E, den x)) ∈ A
+    rw [hfrac]
+    exact A.mul_mem _ _ hcA hs'
+  have hI_finite (E : Finset A) : Module.Finite R (I E) := by
+    have hJ_finite (x : A) : (J x).FG := by
+      dsimp [J]
+      exact Submodule.fg_span (Set.toFinite _)
+    have hprod_finite : (∏ x ∈ E, J x).FG := by
+      induction E using Finset.induction_on with
+      | empty =>
+          simpa only [Finset.prod_empty, Ideal.one_eq_top] using (Ideal.fg_top R)
+      | @insert x E hx ih =>
+          rw [Finset.prod_insert hx]
+          exact Ideal.FG.mul (hJ_finite x) ih
+    apply Module.Finite.iff_fg.mpr
+    dsimp [I]
+    exact Ideal.FG.mul (Submodule.fg_span (Set.toFinite _)) hprod_finite
+  have ha0 (E : Finset A) : a E ≠ 0 := by
+    dsimp [a]
+    exact mul_ne_zero ht0 (hden_prod0 E)
+  have hq (E : Finset A) : IsUnit (algebraMap R K (a E)) := by
+    rw [isUnit_iff_ne_zero]
+    exact (map_ne_zero_iff (algebraMap R K) (IsFractionRing.injective R K)).2
+      (ha0 E)
+  let g : ∀ E : Finset A, Localization.Away (a E) →+* K := fun E =>
+    IsLocalization.Away.lift (x := a E) (S := Localization.Away (a E))
+      (P := K) (g := algebraMap R K) (hq E)
+  have hg_eq (E : Finset A) (r : R) :
+      g E (algebraMap R (Localization.Away (a E)) r) = algebraMap R K r := by
+    exact IsLocalization.Away.lift_eq (a E) (hq E) r
+  have hg_injective (E : Finset A) : Function.Injective (g E) := by
+    apply (IsLocalization.injective_iff_map_algebraMap_eq
+      (Submonoid.powers (a E)) (g E)).2
+    intro x y
+    constructor
+    · intro h
+      simpa only [hg_eq] using congrArg (g E) h
+    · intro h
+      have hK : (algebraMap R K) x = (algebraMap R K) y := by
+        simpa only [hg_eq] using h
+      have hxy : x = y := (IsFractionRing.injective R K).eq_iff.mp hK
+      exact (IsLocalization.injective (Localization.Away (a E))
+        (powers_le_nonZeroDivisors_of_noZeroDivisors (ha0 E))).eq_iff.mpr hxy
+  have hg_inv (E : Finset A) :
+      g E (IsLocalization.Away.invSelf (a E)) =
+        (algebraMap R K (a E))⁻¹ := by
+    apply (hq E).mul_left_cancel
+    calc
+      algebraMap R K (a E) * g E (IsLocalization.Away.invSelf (a E)) =
+          g E (algebraMap R (Localization.Away (a E)) (a E)) *
+            g E (IsLocalization.Away.invSelf (a E)) := by
+              rw [hg_eq]
+      _ = g E (algebraMap R (Localization.Away (a E)) (a E) *
+            IsLocalization.Away.invSelf (a E)) := by
+              exact ((g E).map_mul _ _).symm
+      _ = 1 := by rw [IsLocalization.Away.mul_invSelf, map_one]
+      _ = algebraMap R K (a E) * (algebraMap R K (a E))⁻¹ := by
+        rw [mul_inv_cancel₀ (map_ne_zero_of_mem_nonZeroDivisors
+          (algebraMap R K) (IsFractionRing.injective R K)
+          (mem_nonZeroDivisors_of_ne_zero (ha0 E)))]
+  have hmem (E : Finset A) (z : affineBlowup (I E) (a E)) :
+      g E (z : Localization.Away (a E)) ∈ A := by
+    have hgen (w : Localization.Away (a E))
+        (hw : w ∈ affineBlowup (I E) (a E)) : g E w ∈ A := by
+      induction hw using Algebra.adjoin_induction with
+      | mem w hw =>
+        rcases hw with ⟨r, hr, rfl⟩
+        rw [map_mul, hg_eq, hg_inv]
+        have hr' := hIQ E hr
+        change algebraMap R K r / algebraMap R K (a E) ∈ A at hr'
+        simpa [div_eq_mul_inv] using hr'
+      | algebraMap r =>
+        rw [hg_eq]
+        rw [← hf r]
+        exact (f r).property
+      | add x y hx hy ihx ihy =>
+        simpa only [map_add] using A.add_mem _ _ ihx ihy
+      | mul x y hx hy ihx ihy =>
+        simpa only [map_mul] using A.mul_mem _ _ ihx ihy
+    exact hgen (z : Localization.Away (a E)) z.property
+  let k : ∀ E : Finset A,
+      affineBlowup (I E) (a E) →+* K := fun E =>
+    { toFun := fun z => g E (z : Localization.Away (a E))
+      map_one' := by exact (g E).map_one
+      map_mul' := by intro x y; exact (g E).map_mul _ _
+      map_zero' := by exact (g E).map_zero
+      map_add' := by intro x y; exact (g E).map_add _ _ }
+  have hk_injective (E : Finset A) : Function.Injective (k E) := by
+    intro x y hxy
+    apply Subtype.ext
+    exact hg_injective E hxy
+  let mapToA : ∀ E : Finset A,
+      affineBlowup (I E) (a E) →+* A := fun E =>
+    { toFun := fun z => ⟨k E z, hmem E z⟩
+      map_one' := by apply Subtype.ext; simp [k]
+      map_mul' := by intro x y; apply Subtype.ext; simp [k]
+      map_zero' := by apply Subtype.ext; simp [k]
+      map_add' := by intro x y; apply Subtype.ext; simp [k] }
+  have hmap_alg (E : Finset A) (r : R) :
+      mapToA E (algebraMap R (affineBlowup (I E) (a E)) r) = f r := by
+    apply Subtype.ext
+    change g E (algebraMap R (Localization.Away (a E)) r) = (f r : K)
+    rw [hg_eq, hf]
+  have hprod (E F : Finset A) (hEF : E ⊆ F) :
+      I E * (∏ x ∈ F \ E, J x) ≤ I F := by
+    dsimp [I]
+    have heq :
+      (Ideal.span ({t} : Set R) * (∏ x ∈ E, J x)) *
+          (∏ x ∈ F \ E, J x) =
+          Ideal.span ({t} : Set R) *
+            ((∏ x ∈ E, J x) * (∏ x ∈ F \ E, J x)) := by
+      ac_rfl
+    rw [heq, ← Finset.prod_union
+      (Finset.disjoint_sdiff : Disjoint E (F \ E))]
+    rw [Finset.union_sdiff_of_subset hEF]
+  have ha_mul (E F : Finset A) (hEF : E ⊆ F) :
+      a E * (∏ x ∈ F \ E, den x) = a F := by
+    dsimp [a]
+    calc
+      (t * (∏ x ∈ E, den x)) * (∏ x ∈ F \ E, den x) =
+          t * ((∏ x ∈ E, den x) * (∏ x ∈ F \ E, den x)) := by ring
+      _ = t * (∏ x ∈ F, den x) := by
+        rw [← Finset.prod_union
+          (Finset.disjoint_sdiff : Disjoint E (F \ E))]
+        rw [Finset.union_sdiff_of_subset hEF]
+  have hunit (E F : Finset A) (hEF : E ⊆ F) :
+      IsUnit (algebraMap R (Localization.Away (a F)) (a E)) := by
+    obtain ⟨u, hu⟩ :
+        ∃ u : Localization.Away (a F),
+          algebraMap R (Localization.Away (a F)) (a F) * u = 1 :=
+      (IsLocalization.Away.algebraMap_isUnit (a F)).exists_right_inv
+    apply IsUnit.of_mul_eq_one
+      (algebraMap R (Localization.Away (a F)) (∏ x ∈ F \ E, den x) * u)
+    calc
+      algebraMap R (Localization.Away (a F)) (a E) *
+          (algebraMap R (Localization.Away (a F)) (∏ x ∈ F \ E, den x) * u) =
+            algebraMap R (Localization.Away (a F))
+            (a E * (∏ x ∈ F \ E, den x)) * u := by
+            simp only [map_mul, mul_assoc]
+      _ = 1 := by rw [ha_mul E F hEF, hu]
+  let liftTo : ∀ {E F : Finset A}, E ⊆ F →
+      Localization.Away (a E) →+* Localization.Away (a F) := by
+    intro E F hEF
+    exact IsLocalization.Away.lift (x := a E)
+      (S := Localization.Away (a E)) (P := Localization.Away (a F))
+      (g := algebraMap R (Localization.Away (a F))) (hunit E F hEF)
+  have liftTo_eq {E F : Finset A} (hEF : E ⊆ F) (r : R) :
+      liftTo hEF (algebraMap R (Localization.Away (a E)) r) =
+        algebraMap R (Localization.Away (a F)) r := by
+    exact IsLocalization.Away.lift_eq (a E) (hunit E F hEF) r
+  have liftTo_inv {E F : Finset A} (hEF : E ⊆ F) :
+      liftTo hEF (IsLocalization.Away.invSelf (a E)) =
+        algebraMap R (Localization.Away (a F)) (∏ x ∈ F \ E, den x) *
+          IsLocalization.Away.invSelf (a F) := by
+    apply (hunit E F hEF).mul_left_cancel
+    calc
+      algebraMap R (Localization.Away (a F)) (a E) *
+          liftTo hEF (IsLocalization.Away.invSelf (a E)) =
+          liftTo hEF (algebraMap R (Localization.Away (a E)) (a E)) *
+            liftTo hEF (IsLocalization.Away.invSelf (a E)) := by
+              rw [liftTo_eq hEF (a E)]
+      _ = 1 := by
+            rw [← map_mul, IsLocalization.Away.mul_invSelf, map_one]
+      _ = algebraMap R (Localization.Away (a F)) (a E) *
+          (algebraMap R (Localization.Away (a F)) (∏ x ∈ F \ E, den x) *
+            IsLocalization.Away.invSelf (a F)) := by
+              rw [← mul_assoc, ← map_mul, ha_mul E F hEF,
+                IsLocalization.Away.mul_invSelf]
+  have liftTo_mem {E F : Finset A} (hEF : E ⊆ F)
+      (z : affineBlowup (I E) (a E)) :
+      liftTo hEF (z : Localization.Away (a E)) ∈ affineBlowup (I F) (a F) := by
+    have hgen (w : Localization.Away (a E))
+        (hw : w ∈ affineBlowup (I E) (a E)) :
+        liftTo hEF w ∈ affineBlowup (I F) (a F) := by
+      refine Algebra.adjoin_induction
+        (p := fun w _ => liftTo hEF w ∈ affineBlowup (I F) (a F)) ?_ ?_ ?_ ?_ hw
+      · intro w hw
+        rcases hw with ⟨r, hr, rfl⟩
+        rw [map_mul, liftTo_eq hEF, liftTo_inv hEF]
+        have hra : r * (∏ x ∈ F \ E, den x) ∈ I F := by
+          apply hprod E F hEF
+          exact Ideal.mul_mem_mul hr (hcenter_mem (F \ E))
+        simpa only [affineBlowupGenerator, map_mul, mul_assoc] using
+          (affineBlowupGenerator (I F) (a F)
+            ⟨r * (∏ x ∈ F \ E, den x), hra⟩).property
+      · intro r
+        rw [liftTo_eq hEF]
+        exact (affineBlowup (I F) (a F)).algebraMap_mem r
+      · intro x y hx hy ihx ihy
+        simpa only [map_add] using (affineBlowup (I F) (a F)).add_mem ihx ihy
+      · intro x y hx hy ihx ihy
+        simpa only [map_mul] using (affineBlowup (I F) (a F)).mul_mem ihx ihy
+    exact hgen (z : Localization.Away (a E)) z.property
+  let transition : ∀ {E F : Finset A}, E ⊆ F →
+      affineBlowup (I E) (a E) →+* affineBlowup (I F) (a F) := by
+    intro E F hEF
+    exact
+      { toFun := fun z => ⟨liftTo hEF (z : Localization.Away (a E)), liftTo_mem hEF z⟩
+        map_one' := by apply Subtype.ext; simp
+        map_mul' := by intro x y; apply Subtype.ext; simp
+        map_zero' := by apply Subtype.ext; simp
+        map_add' := by intro x y; apply Subtype.ext; simp }
+  have htrans_k {E F : Finset A} (hEF : E ⊆ F)
+      (z : affineBlowup (I E) (a E)) :
+      k F (transition hEF z) = k E z := by
+    change g F (liftTo hEF (z : Localization.Away (a E))) =
+      g E (z : Localization.Away (a E))
+    have hmaps : (g F).comp (liftTo hEF) = g E := by
+      apply IsLocalization.ringHom_ext (Submonoid.powers (a E))
+      ext r
+      change g F (liftTo hEF (algebraMap R (Localization.Away (a E)) r)) =
+        g E (algebraMap R (Localization.Away (a E)) r)
+      rw [liftTo_eq hEF, hg_eq, hg_eq]
+    exact congrArg (fun q => q (z : Localization.Away (a E))) hmaps
+  have htrans_map {E F : Finset A} (hEF : E ⊆ F)
+      (z : affineBlowup (I E) (a E)) :
+      mapToA F (transition hEF z) = mapToA E z := by
+    apply Subtype.ext
+    exact htrans_k hEF z
+  letI : DirectedSystem
+      (fun E : Finset A => affineBlowup (I E) (a E))
+      (fun {E F} hEF => transition hEF) :=
+    { map_self := by
+        intro E z
+        apply hk_injective E
+        exact htrans_k (fun _ h => h) z
+      map_map := by
+        intro E F G hEF hFG z
+        apply hk_injective E
+        calc
+          k E (transition hFG (transition hEF z)) = k F (transition hEF z) :=
+            htrans_k hFG _
+          _ = k G z := htrans_k hEF z
+          _ = k E (transition (hEF.trans hFG) z) :=
+            (htrans_k (hEF.trans hFG) z).symm }
+  have hgen_val (E : Finset A) (r : R) (hr : r ∈ I E) :
+      k E (affineBlowupGenerator (I E) (a E) ⟨r, hr⟩) =
+        algebraMap R K r / algebraMap R K (a E) := by
+    change g E (algebraMap R (Localization.Away (a E)) r *
+      IsLocalization.Away.invSelf (a E)) = _
+    rw [map_mul, hg_eq, hg_inv]
+    simp [div_eq_mul_inv]
+  have hmap_alg_K (E : Finset A) (r : R) :
+      (mapToA E (algebraMap R (affineBlowup (I E) (a E)) r) : K) =
+        algebraMap R K r := by
+    rw [hmap_alg, hf]
+  have htransition_injective {E F : Finset A} (hEF : E ⊆ F) :
+      Function.Injective (transition hEF) := by
+    intro x y hxy
+    apply hk_injective E
+    calc
+      k E x = k F (transition hEF x) := (htrans_k hEF x).symm
+      _ = k F (transition hEF y) := congrArg (k F) hxy
+      _ = k E y := htrans_k hEF y
+  have hfibre (E : Finset A) :
+      (0 : fibreRingAtIdeal R (affineBlowup (I E) (a E))
+        (IsLocalRing.maximalIdeal R)) ≠
+      (1 : fibreRingAtIdeal R (affineBlowup (I E) (a E))
+        (IsLocalRing.maximalIdeal R)) := by
+    apply Ideal.Quotient.zero_ne_one_iff.mpr
+    intro htop
+    have hle : Ideal.map (algebraMap R (affineBlowup (I E) (a E)))
+        (IsLocalRing.maximalIdeal R) ≤
+        (IsLocalRing.maximalIdeal A).comap (mapToA E) := by
+      apply Ideal.map_le_of_le_comap
+      intro r hr
+      change mapToA E (algebraMap R (affineBlowup (I E) (a E)) r) ∈
+        IsLocalRing.maximalIdeal A
+      rw [hmap_alg]
+      exact (IsLocalRing.map_maximalIdeal_le f) (Ideal.mem_map_of_mem f hr)
+    have hmem : (1 : affineBlowup (I E) (a E)) ∈
+        Ideal.map (algebraMap R (affineBlowup (I E) (a E)))
+          (IsLocalRing.maximalIdeal R) := by
+      rw [htop]
+      simp
+    have hbad : (1 : A) ∈ IsLocalRing.maximalIdeal A := by
+      simpa using hle hmem
+    exact (IsLocalRing.notMem_maximalIdeal).2 isUnit_one hbad
+  let colimMap :
+      DirectLimit
+          (fun E : Finset A => affineBlowup (I E) (a E))
+          (fun _E _F hEF => transition hEF) →+* A :=
+    DirectLimit.Ring.lift
+      (fun E : Finset A => affineBlowup (I E) (a E))
+      (fun _E _F hEF => transition hEF)
+      A
+      (g := mapToA)
+      (Hg := by
+        intro E F hEF z
+        exact htrans_map hEF z)
+  have colimMap_surjective : Function.Surjective colimMap := by
+    intro z
+    let E : Finset A := {z}
+    have hnum : t * num z ∈ I E := by
+      dsimp [E, I, J]
+      rw [Finset.prod_singleton]
+      exact Ideal.mul_mem_mul
+        (Ideal.mem_span_singleton_self t)
+        (Ideal.subset_span (by simp))
+    let y : affineBlowup (I E) (a E) :=
+      affineBlowupGenerator (I E) (a E) ⟨t * num z, hnum⟩
+    refine ⟨DirectLimit.Ring.of _ _ E y, ?_⟩
+    change mapToA E y = z
+    apply Subtype.ext
+    change k E (affineBlowupGenerator (I E) (a E) ⟨t * num z, hnum⟩) = (z : K)
+    rw [hgen_val E (t * num z) hnum]
+    dsimp [E, a]
+    rw [map_mul, map_mul]
+    rw [Finset.prod_singleton]
+    rw [map_mul]
+    have htz : algebraMap R K t ≠ 0 :=
+      map_ne_zero_of_mem_nonZeroDivisors (algebraMap R K)
+        (IsFractionRing.injective R K) (mem_nonZeroDivisors_of_ne_zero ht0)
+    rw [mul_div_mul_left _ _ htz]
+    simpa only [num, map_mul] using hratio z
+  have colimMap_injective : Function.Injective colimMap := by
+    intro x y hxy
+    obtain ⟨E, u, v, rfl, rfl⟩ :=
+      DirectLimit.exists_eq_mk₂ (fun _E _F hEF => transition hEF) x y
+    apply congrArg (fun z =>
+      DirectLimit.Ring.of (fun E : Finset A => affineBlowup (I E) (a E))
+        (fun _E _F hEF => transition hEF) E z)
+    apply hk_injective E
+    have hxy' : mapToA E u = mapToA E v := by
+      simpa [colimMap] using hxy
+    change (mapToA E u : K) = (mapToA E v : K)
+    exact congrArg (fun q : A => (q : K)) hxy'
+  have colimEquiv :
+      DirectLimit
+          (fun E : Finset A => affineBlowup (I E) (a E))
+          (fun _E _F hEF => transition hEF) ≃+* A :=
+    RingEquiv.ofBijective colimMap ⟨colimMap_injective, colimMap_surjective⟩
+  have hmapToA_injective (E : Finset A) :
+      Function.Injective (mapToA E) := by
+    intro x y hxy
+    apply hk_injective E
+    change (mapToA E x : K) = (mapToA E y : K)
+    exact congrArg (fun q : A => (q : K)) hxy
+  refine ⟨{
+    ideal := I
+    center := a
+    center_mem := hI_mem
+    ideal_below_maximal := hI_le
+    ideal_finite := hI_finite
+    fibre_nontrivial := hfibre
+    transition := transition
+    transition_injective := htransition_injective
+    directedSystem := inferInstance
+    mapToA := mapToA
+    mapToA_injective := hmapToA_injective
+    mapToA_comp_algebraMap := hmap_alg_K
+    map_compat := htrans_map
+    colimitEquiv := colimEquiv }⟩
 
 end
 end Formalization.Books.Algebra.Unit70

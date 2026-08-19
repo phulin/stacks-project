@@ -127,7 +127,7 @@ private theorem goodElement_length_one
       (((1 : ℕ∞) : WithBot ℕ∞)) := by
     unfold IsCohenMacaulay at hM
     exact hM.trans hdim
-  letI : Nontrivial M := by
+  let : Nontrivial M := by
     rw [← Module.supportDim_ne_bot_iff_nontrivial R, hdim]
     simp
   have hfreg : IsSMulRegular M f :=
@@ -147,7 +147,7 @@ private theorem goodElement_length_one
       apply hab
       have hk' : (a - b : M) = 0 := congrArg Subtype.val hk
       exact sub_eq_zero.mp hk'
-    letI : Nontrivial K := ⟨⟨k, 0, hk_ne⟩⟩
+    let : Nontrivial K := ⟨⟨k, 0, hk_ne⟩⟩
     have hgK : g ∈ Module.annihilator R K := by
       rw [Module.mem_annihilator]
       intro z
@@ -191,9 +191,9 @@ private theorem goodElement_length_one
     have hfinite : IsFiniteLength R K :=
       Formalization.Books.Algebra.Unit62.support_eq_singleton_closedPoint_iff_finiteLength.mp
         hKsupport
-    letI : IsNoetherian R K :=
+    let : IsNoetherian R K :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hfinite).1
-    letI : IsArtinian R K :=
+    let : IsArtinian R K :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hfinite).2
     let φ : K →ₗ[R] K :=
       (LinearMap.lsmul R M f).domRestrict K |>.codRestrict K (by
@@ -243,7 +243,7 @@ private theorem goodElement_length_one
       (inferInstance : Nontrivial K)
   have hdepth : localDepth R M = 1 := by
     exact WithBot.coe_injective hMdim
-  letI : Nontrivial (QuotSMulTop g M) := by
+  let : Nontrivial (QuotSMulTop g M) := by
     rw [← Module.supportDim_ne_bot_iff_nontrivial R, hcut]
     simp
   have hno : ¬ ∃ q : R, q ∈ IsLocalRing.maximalIdeal R ∧
@@ -318,7 +318,7 @@ private theorem supportDim_eq_cast_of_add_one_eq
       have h''' : x + 1 = d + 1 := by exact_mod_cast h''
       have h'''' : x = d := Nat.succ.inj (by
         simpa [Nat.succ_eq_add_one] using h''')
-      simp [hxt, h'''']
+      simp [h'''']
 
 private theorem isCohenMacaulay_of_isRegular_of_supportDim_eq
     {R : Type u} {N : Type v} [CommRing R] [IsLocalRing R]
@@ -329,7 +329,7 @@ private theorem isCohenMacaulay_of_isRegular_of_supportDim_eq
     (hdim : Module.supportDim R N =
       (((d : ℕ∞) : WithBot ℕ∞))) :
     IsCohenMacaulay R N := by
-  letI : Nontrivial N := hreg.nontrivial
+  let : Nontrivial N := hreg.nontrivial
   have hdepthge : (d : ℕ∞) ≤ localDepth R N := by
     rw [localDepth, depth_eq_sSup_weaklyRegular]
     apply le_sSup
@@ -405,7 +405,7 @@ theorem goodElement_isSMulRegular_and_quotient_isCohenMacaulay
           cases fs with
           | nil => rfl
           | cons a fs => simp at hzero
-        letI : Nontrivial (QuotSMulTop f M) := hrest.nontrivial
+        let : Nontrivial (QuotSMulTop f M) := hrest.nontrivial
         have hdimdrop : Module.supportDim R (QuotSMulTop f M) + 1 =
             Module.supportDim R M :=
           Module.supportDim_quotSMulTop_succ_eq_supportDim hfreg hfmax
@@ -423,7 +423,7 @@ theorem goodElement_isSMulRegular_and_quotient_isCohenMacaulay
           refine ⟨hg, ?_⟩
           intro i
           have hi : i.1 + 1 < (f :: fs).length := by
-            simpa [List.length_cons] using Nat.succ_lt_succ i.isLt
+            simp [List.length_cons]
           have hiNat : i.1 < fs.length := i.isLt
           calc
             supportCutDim R (QuotSMulTop f M) (g :: fs.take i.1) =
@@ -441,7 +441,7 @@ theorem goodElement_isSMulRegular_and_quotient_isCohenMacaulay
               omega
         obtain ⟨hgTail, hCMquot, hmaxquot⟩ := ih hCMtail hrest
           hdimtail hgoodtail htailpos
-        letI : Nontrivial (QuotSMulTop g (QuotSMulTop f M)) :=
+        let : Nontrivial (QuotSMulTop g (QuotSMulTop f M)) :=
           hmaxquot.1.nontrivial
         have hregTailG : RingTheory.Sequence.IsRegular
             (QuotSMulTop f M) [g] :=
@@ -506,12 +506,10 @@ theorem goodElement_isSMulRegular_and_quotient_isCohenMacaulay
 theorem isCohenMacaulay_quotient_by_element
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
-    [Module.Finite R M] (d : ℕ) (hM : IsCohenMacaulay R M) (g : R)
+    [Module.Finite R M] (hM : IsCohenMacaulay R M) (g : R)
     (hg : g ∈ IsLocalRing.maximalIdeal R)
-    (hdim : Module.supportDim R M =
-      (((d + 1 : ℕ) : ℕ∞) : WithBot ℕ∞))
-    (hcut : supportCutDim R M [g] =
-      (((d : ℕ∞) : WithBot ℕ∞))) :
+    (hcut : supportCutDim R M [g] +
+      (((1 : ℕ∞) : WithBot ℕ∞)) = Module.supportDim R M) :
       IsSMulRegular M g ∧
       IsCohenMacaulay R (QuotSMulTop g M) ∧
       localDepth R (QuotSMulTop g M) = localDepth R M - 1 := by
@@ -684,8 +682,10 @@ theorem isCohenMacaulayModule_polynomialModuleExtension
     {R : Type u} {M : Type v} [CommRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (hM : IsCohenMacaulayModule R M) (n : ℕ) :
-    IsCohenMacaulayModule (MvPolynomial (Fin n) R)
-      (polynomialModuleExtension R M n) := by
+    (letI : Module (MvPolynomial (Fin n) R)
+        (polynomialModuleExtension R M n) := TensorProduct.leftModule
+     IsCohenMacaulayModule (MvPolynomial (Fin n) R)
+      (polynomialModuleExtension R M n)) := by
   sorry
 
 end

@@ -12,6 +12,7 @@ import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.RingTheory.MvPolynomial.Basic
 import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RingHom.FinitePresentation
 
 /-!
@@ -1389,7 +1390,136 @@ theorem finite_module_annihilator_eventually_principal
         elementAnnihilatorModuloIdeal
             ((powerSeriesXIdeal k) ^ l) ξ' =
           Ideal.span {((PowerSeries.X : PowerSeries k) ^ (l - a))}) := by
-  sorry
+  classical
+  letI : Module.Finite (PowerSeries k) (Q : Type u) := hQ
+  let N : Submodule (PowerSeries k) (Q : Type u) :=
+    Submodule.span (PowerSeries k) ({ξ'} : Set (Q : Type u))
+  have hmem : ∀ (l : ℕ) (r : PowerSeries k),
+      r ∈ elementAnnihilatorModuloIdeal ((powerSeriesXIdeal k) ^ l) ξ' ↔
+        r • ξ' ∈ (powerSeriesXIdeal k) ^ l •
+          (⊤ : Submodule (PowerSeries k) (Q : Type u)) := by
+    intro l r
+    rw [elementAnnihilatorModuloIdeal,
+      Submodule.mem_annihilator_span_singleton]
+    unfold moduleQuotientElement
+    rw [← map_smul, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+  obtain ⟨c, hc⟩ := Ideal.exists_pow_inf_eq_pow_smul (powerSeriesXIdeal k) N
+  have hpow (n : ℕ) : (powerSeriesXIdeal k) ^ n =
+      Ideal.span {((PowerSeries.X : PowerSeries k) ^ n)} := by
+    simp [powerSeriesXIdeal, Ideal.span_singleton_pow]
+  have hsmul (m n : ℕ) :
+      (powerSeriesXIdeal k) ^ m • Ideal.span
+          {((PowerSeries.X : PowerSeries k) ^ n)} =
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ (m + n))} := by
+    rw [hpow m, Submodule.ideal_span_singleton_smul, Submodule.smul_span]
+    simp [smul_eq_mul, ← pow_add]
+  let g : PowerSeries k →ₗ[PowerSeries k] (Q : Type u) :=
+    LinearMap.toSpanSingleton (PowerSeries k) (Q : Type u) ξ'
+  have hg : LinearMap.range g = N := by
+    exact LinearMap.range_toSpanSingleton ξ'
+  let K : Submodule (PowerSeries k) (Q : Type u) :=
+    (powerSeriesXIdeal k) ^ c • (⊤ : Submodule (PowerSeries k) (Q : Type u)) ⊓ N
+  let A : Ideal (PowerSeries k) := Submodule.comap g K
+  have hK : Submodule.map g A = K := by
+    apply Submodule.map_comap_eq_of_le
+    rw [hg]
+    exact inf_le_right
+  have hformula (t : ℕ) :
+      Submodule.comap g ((powerSeriesXIdeal k) ^ t • K) =
+        (powerSeriesXIdeal k) ^ t • A ⊔ LinearMap.ker g := by
+    rw [← hK, ← Submodule.map_smul'']
+    exact Submodule.comap_map_eq g _
+  have hE (l : ℕ) :
+      elementAnnihilatorModuloIdeal ((powerSeriesXIdeal k) ^ l) ξ' =
+        Submodule.comap g
+          ((powerSeriesXIdeal k) ^ l • (⊤ : Submodule (PowerSeries k) (Q : Type u)) ⊓ N) := by
+    ext r
+    rw [hmem, Submodule.mem_comap]
+    constructor
+    · intro hr
+      exact ⟨hr, by rw [← hg]; exact LinearMap.mem_range_self g r⟩
+    · intro hr
+      exact hr.1
+  have hEl (l : ℕ) (hl : c ≤ l) :
+      elementAnnihilatorModuloIdeal ((powerSeriesXIdeal k) ^ l) ξ' =
+        (powerSeriesXIdeal k) ^ (l - c) • A ⊔ LinearMap.ker g := by
+    rw [hE l, hc l hl]
+    exact hformula (l - c)
+  have hKA : LinearMap.ker g ≤ A := by
+    intro r hr
+    change g r ∈ K
+    rw [LinearMap.mem_ker.mp hr]
+    exact K.zero_mem
+  have hIcA : (powerSeriesXIdeal k) ^ c ≤ A := by
+    intro r hr
+    change g r ∈ K
+    refine ⟨?_, ?_⟩
+    · change r • ξ' ∈ (powerSeriesXIdeal k) ^ c •
+        (⊤ : Submodule (PowerSeries k) (Q : Type u))
+      exact Submodule.smul_mem_smul hr Submodule.mem_top
+    · rw [← hg]
+      exact LinearMap.mem_range_self g r
+  have hXpow_nezero (n : ℕ) :
+      ((PowerSeries.X : PowerSeries k) ^ n) ≠ 0 := by
+    intro hz
+    have := congrArg (PowerSeries.coeff n) hz
+    simpa using this
+  have hpow_le (m n : ℕ) (hmn : n ≤ m) :
+      Ideal.span {((PowerSeries.X : PowerSeries k) ^ m)} ≤
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ n)} := by
+    rw [Ideal.span_singleton_le_span_singleton]
+    exact pow_dvd_pow _ hmn
+  have hpow_exp_le (m n : ℕ) (h :
+      Ideal.span {((PowerSeries.X : PowerSeries k) ^ m)} ≤
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^ n)}) : n ≤ m := by
+    have hdvd : (PowerSeries.X : PowerSeries k) ^ n ∣
+        (PowerSeries.X : PowerSeries k) ^ m :=
+      Ideal.span_singleton_le_span_singleton.mp h
+    by_contra hnm
+    have hlt : m < n := Nat.lt_of_not_ge hnm
+    have hz := (PowerSeries.X_pow_dvd_iff.mp hdvd) m hlt
+    simpa using hz
+  have hAnonbot : A ≠ (⊥ : Ideal (PowerSeries k)) := by
+    intro hA
+    have : (powerSeriesXIdeal k) ^ c = (⊥ : Ideal (PowerSeries k)) :=
+      le_antisymm (hA ▸ hIcA) bot_le
+    rw [hpow c] at this
+    exact hXpow_nezero c (by
+      rw [← Ideal.span_singleton_eq_bot]
+      exact this)
+  have hX : Irreducible (PowerSeries.X : PowerSeries k) :=
+    PowerSeries.X_irreducible
+  by_cases hker : LinearMap.ker g = (⊥ : Ideal (PowerSeries k))
+  · obtain ⟨b, hb⟩ := IsDiscreteValuationRing.ideal_eq_span_pow_irreducible
+      hAnonbot hX
+    have hbc : b ≤ c := by
+      have hIcA' := hIcA
+      rw [hpow c, hb] at hIcA'
+      exact hpow_exp_le c b hIcA'
+    refine ⟨c - b, Or.inr ⟨c, ?_⟩⟩
+    intro l hl
+    rw [hEl l hl, hker, sup_bot_eq, hb, hsmul]
+    congr 1
+    rw [show l - (c - b) = l - c + b by omega]
+  · obtain ⟨d, hd⟩ := IsDiscreteValuationRing.ideal_eq_span_pow_irreducible
+      (show LinearMap.ker g ≠ (⊥ : Ideal (PowerSeries k)) from hker) hX
+    obtain ⟨b, hb⟩ := IsDiscreteValuationRing.ideal_eq_span_pow_irreducible
+      hAnonbot hX
+    have hbd : b ≤ d := by
+      apply hpow_exp_le d b
+      have hKA' := hKA
+      rw [hd, hb] at hKA'
+      exact hKA'
+    let l₀ := c + (d - b)
+    refine ⟨d, Or.inl ⟨l₀, ?_⟩⟩
+    intro l hl
+    have hlc : c ≤ l := by dsimp [l₀] at hl; omega
+    rw [hEl l hlc, hd, hb, hsmul]
+    apply sup_eq_right.mpr
+    apply hpow_le
+    dsimp [l₀] at hl
+    have hcb : c ≤ l := by omega
+    omega
 
 /-- The product `∏ₙ k[[x]]/(x^n)` is not Mittag-Leffler. -/
 theorem powerSeriesTorsionProduct_not_mittagLeffler

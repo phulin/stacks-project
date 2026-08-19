@@ -2662,12 +2662,50 @@ structure SpectralSystemSectionsDiagramData
     eqToHom (obj_eq a).symm ≫ diagram.map h ≫ eqToHom (obj_eq b) =
       spectralSystemSectionsTransition S i Ui h
 
+private theorem fMapAt_identity_of_eq
+    {Y : TopCat.{v}} (F : TopCat.Sheaf (Type v) Y)
+    {f : Y ⟶ Y} (hf : f = 𝟙 Y) (ξ : FMap f F F)
+    (hξ : HEq ξ (spectralSystemIdentityFMap F)) (V : Opens Y)
+    (s : F.presheaf.obj (op V)) :
+    HEq (fMapAt ξ V s) s := by
+  cases hf
+  cases V
+  have hξ' : ξ = spectralSystemIdentityFMap F := eq_of_heq hξ
+  rw [hξ']
+  apply heq_of_eq
+  change restriction (F := F.presheaf) _ s = s
+  convert restriction_self (F := F.presheaf) s using 1 <;> apply Subsingleton.elim
+
 theorem exists_spectralSystemSectionsDiagram
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
     Nonempty (SpectralSystemSectionsDiagramData S i Ui) := by
-  sorry
+  let D : spectralPullbackSectionsIndex i ⥤ Type v := {
+    obj := fun a => spectralSystemSectionsAt S i Ui a
+    map := fun h => TypeCat.ofHom (spectralSystemSectionsTransition S i Ui h)
+    map_id := by
+      intro a
+      apply ConcreteCategory.hom_ext
+      intro s
+      dsimp [spectralSystemSectionsTransition]
+      let F := S.sheaf (unop a).left
+      let hfa : X.map (𝟙 (unop a).left) = 𝟙 (X.obj (unop a).left) :=
+        X.map_id _
+      symm
+      apply eq_cast_iff_heq.mpr
+      exact (fMapAt_identity_of_eq F hfa (S.map (𝟙 (unop a).left))
+        (S.map_id _) _ s).symm
+    map_comp := by
+      intro a b c f g
+      apply ConcreteCategory.hom_ext
+      intro s
+      dsimp [spectralSystemSectionsTransition] }
+  refine ⟨{ diagram := D, obj_eq := ?_, map_eq := ?_ }⟩
+  · intro a
+    rfl
+  · intro a b h
+    simp [D]
 
 /-- The source-facing colimit of the sections
 `F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/

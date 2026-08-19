@@ -91,10 +91,79 @@ instance coherentModuleProperty_isWeakSerreClass
   /- Prior attempt: the intended characterization theorem is commented out in
      the imported Homology chapter, and its local reverse-direction proof also
      requires unavailable exactness elaboration support in this API.
-     exact (Formalization.Books.Homology.Unit10.weak_serre_subcategory_characterization P).2
+  exact (Formalization.Books.Homology.Unit10.weak_serre_subcategory_characterization P).2
        ⟨hzero, hIso, ⟨hK, hC⟩, hExt⟩
   -/
-  sorry
+  refine @CategoryTheory.ObjectProperty.IsWeakSerreClass.mk _ _ _ P ?_ ?_
+  · exact ⟨ModuleCat.of R (Fin 0 → R), hzero⟩
+  · intro S hS h₀ h₁ h₃ h₄
+    let f₀ := CategoryTheory.ComposableArrows.map' S 0 1
+    let f₁ := CategoryTheory.ComposableArrows.map' S 1 2
+    let f₂ := CategoryTheory.ComposableArrows.map' S 2 3
+    let f₃ := CategoryTheory.ComposableArrows.map' S 3 4
+    let Q := cokernel f₀
+    let K := kernel f₃
+    let u := cokernel.desc f₀ f₁ (hS.toIsComplex.zero 0)
+    let v := kernel.lift f₃ f₂ (hS.toIsComplex.zero 2)
+    letI : P.IsClosedUnderKernels := hK
+    letI : P.IsClosedUnderCokernels := hC
+    have hQ : P Q := by
+      exact P.prop_cokernel f₀ h₀ h₁
+    have hK' : P K := by
+      exact P.prop_kernel f₃ h₃ h₄
+    letI : Epi (cokernel.π f₀) := by infer_instance
+    letI : Mono (kernel.ι f₃) := by infer_instance
+    let T₁ : ShortComplex (moduleCategory R) := ShortComplex.mk u f₂ (by
+      apply (cancel_epi (cokernel.π f₀)).1
+      dsimp [u]
+      rw [← Category.assoc, cokernel.π_desc, hS.toIsComplex.zero 1]
+      simp)
+    have hT₁ : T₁.Exact := by
+      let φ : S.sc hS.toIsComplex 1 ⟶ T₁ := ShortComplex.homMk
+        (cokernel.π f₀) (𝟙 _) (𝟙 _)
+        (by dsimp [T₁, u]; simp [f₁])
+        (by dsimp [T₁]; simp [f₂])
+      letI : Epi φ.τ₁ := by
+        change Epi (cokernel.π f₀)
+        infer_instance
+      letI : IsIso φ.τ₂ := by
+        change IsIso (𝟙 _)
+        infer_instance
+      letI : Mono φ.τ₃ := by
+        change Mono (𝟙 _)
+        infer_instance
+      exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).1 (hS.exact 1)
+    let T : ShortComplex (moduleCategory R) := ShortComplex.mk u v (by
+      apply (cancel_mono (kernel.ι f₃)).1
+      dsimp [v]
+      rw [Category.assoc, kernel.lift_ι]
+      apply (cancel_epi (cokernel.π f₀)).1
+      dsimp [u]
+      rw [← Category.assoc, cokernel.π_desc, hS.toIsComplex.zero 1]
+      simp)
+    have hT : T.Exact := by
+      let φ : T ⟶ T₁ := ShortComplex.homMk
+        (𝟙 _) (𝟙 _) (kernel.ι f₃)
+        (by dsimp [T, T₁]; simp)
+        (by dsimp [T, T₁, v]; simp)
+      letI : Epi φ.τ₁ := by
+        change Epi (𝟙 _)
+        infer_instance
+      letI : IsIso φ.τ₂ := by
+        change IsIso (𝟙 _)
+        infer_instance
+      letI : Mono φ.τ₃ := by
+        change Mono (kernel.ι f₃)
+        infer_instance
+      exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).2 hT₁
+    letI : Mono u := by
+      dsimp [u]
+      exact (hS.exact 0).mono_cokernelDesc
+    letI : Epi v := by
+      dsimp [v]
+      exact (hS.exact 2).epi_kernelLift
+    exact hExt.prop_X₂_of_shortExact
+      (ShortComplex.ShortExact.mk' hT inferInstance inferInstance) hQ hK'
 
 theorem coherentModuleCategory_is_abelian
     (R : Type u) [CommRing R] :
@@ -262,7 +331,42 @@ theorem iPowerTorsionModuleCategory_is_abelian
     Nonempty (Abelian (iPowerTorsionModuleCategory R I)) := by
   let hSerre : (iPowerTorsionModuleProperty R I).IsSerreClass :=
     iPowerTorsionModuleProperty_isSerreClass R I hI
-  exact ⟨by sorry⟩
+  let P : ObjectProperty (moduleCategory R) := iPowerTorsionModuleProperty R I
+  letI : P.IsSerreClass := hSerre
+  letI : P.IsClosedUnderSubobjects := hSerre.toIsClosedUnderSubobjects
+  letI : P.IsClosedUnderQuotients := hSerre.toIsClosedUnderQuotients
+  letI : P.IsClosedUnderExtensions := hSerre.toIsClosedUnderExtensions
+  letI : P.IsClosedUnderKernels := by
+    refine ⟨?_⟩
+    intro Z hZ
+    rcases hZ with ⟨f, k, hk, hXY⟩
+    letI : Mono (ModuleCat.kernelCone f).ι := by
+      apply (ModuleCat.mono_iff_injective _).2
+      intro x y hxy
+      exact Subtype.ext hxy
+    exact P.prop_of_iso
+      (IsLimit.conePointUniqueUpToIso (ModuleCat.kernelIsLimit f) hk)
+      (P.prop_of_mono (ModuleCat.kernelCone f).ι hXY.1)
+  letI : P.IsClosedUnderCokernels := by
+    refine ⟨?_⟩
+    intro Z hZ
+    rcases hZ with ⟨f, k, hk, hXY⟩
+    letI : Epi (ModuleCat.cokernelCocone f).π := by
+      apply (ModuleCat.epi_iff_surjective _).2
+      change Function.Surjective (LinearMap.range f.hom).mkQ
+      exact (LinearMap.range f.hom).mkQ_surjective
+    exact P.prop_of_iso
+      (IsColimit.coconePointUniqueUpToIso (ModuleCat.cokernelIsColimit f) hk)
+      (P.prop_of_epi (ModuleCat.cokernelCocone f).π hXY.2)
+  letI : P.IsClosedUnderBinaryProducts := by
+    apply ObjectProperty.IsClosedUnderLimitsOfShape.mk'
+    rintro X ⟨F, hF⟩
+    exact P.prop_of_iso
+      (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+        (limit.isLimit F) (diagramIsoPair F).symm)
+      (P.prop_biprod (hF ⟨WalkingPair.left⟩) (hF ⟨WalkingPair.right⟩))
+  letI : P.IsClosedUnderFiniteProducts := ObjectProperty.IsClosedUnderFiniteProducts.mk'
+  exact ⟨inferInstance⟩
 
 /-! ## Torsion modules -/
 
@@ -278,7 +382,76 @@ abbrev torsionModuleCategory (R : Type u) [CommRing R] :=
 instance torsionModuleProperty_isSerreClass
     (R : Type u) [CommRing R] :
     (torsionModuleProperty R).IsSerreClass := by
-  sorry
+  classical
+  let P := torsionModuleProperty R
+  have hzero : P (ModuleCat.of R (Fin 0 → R)) := by
+    change Module.IsTorsion R (Fin 0 → R)
+    unfold Module.IsTorsion
+    intro x
+    refine ⟨1, ?_⟩
+    simp only [Submonoid.smul_def, one_smul]
+    exact Subsingleton.elim _ _
+  have hsub : P.IsClosedUnderSubobjects := by
+    refine ⟨?_⟩
+    intro X Y f _ hY
+    change Module.IsTorsion R (X : Type u)
+    change Module.IsTorsion R (Y : Type u) at hY
+    unfold Module.IsTorsion at hY
+    intro x
+    rcases hY (x := f.hom x) with ⟨a, hkill⟩
+    refine ⟨a, ?_⟩
+    apply (ModuleCat.mono_iff_injective f).mp inferInstance
+    rw [Submonoid.smul_def, map_smul, map_zero]
+    change (a : R) • f.hom x = 0 at hkill
+    exact hkill
+  have hquot : P.IsClosedUnderQuotients := by
+    refine ⟨?_⟩
+    intro X Y f _ hX
+    change Module.IsTorsion R (Y : Type u)
+    change Module.IsTorsion R (X : Type u) at hX
+    unfold Module.IsTorsion at hX
+    intro y
+    obtain ⟨x, rfl⟩ := (ModuleCat.epi_iff_surjective f).mp inferInstance y
+    rcases hX (x := x) with ⟨a, hkill⟩
+    refine ⟨a, ?_⟩
+    rw [Submonoid.smul_def, ← map_smul]
+    change (a : R) • x = 0 at hkill
+    rw [hkill, map_zero]
+  have hiso : P.IsClosedUnderIsomorphisms := by
+    refine { of_iso := ?_ }
+    intro X Y e hX
+    exact hsub.prop_of_mono e.inv hX
+  have hext : P.IsClosedUnderExtensions := by
+    refine ⟨?_⟩
+    intro S hS h₁ h₃
+    change Module.IsTorsion R (S.X₁ : Type u) at h₁
+    change Module.IsTorsion R (S.X₃ : Type u) at h₃
+    change Module.IsTorsion R (S.X₂ : Type u)
+    unfold Module.IsTorsion at h₁ h₃ ⊢
+    have hex : Function.Exact S.f.hom S.g.hom :=
+      (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS.exact
+    intro x
+    rcases h₃ (x := S.g.hom x) with ⟨b, hb⟩
+    have hgb : S.g.hom ((b : R) • x) = 0 := by
+      rw [map_smul]
+      change (b : R) • S.g.hom x = 0 at hb
+      exact hb
+    obtain ⟨y, hy⟩ := (hex ((b : R) • x)).mp hgb
+    rcases h₁ (x := y) with ⟨a, ha⟩
+    refine ⟨a * b, ?_⟩
+    rw [Submonoid.smul_def, Submonoid.coe_mul, mul_smul]
+    calc
+      (a : R) • ((b : R) • x) = (a : R) • S.f.hom y := by rw [← hy]
+      _ = S.f.hom ((a : R) • y) := by rw [map_smul]
+      _ = 0 := by
+        rw [show (a : R) • y = 0 by
+          change (a : R) • y = 0 at ha
+          exact ha, map_zero]
+  have hZ : IsZero (ModuleCat.of R (Fin 0 → R)) :=
+    ModuleCat.isZero_of_subsingleton _
+  exact (Formalization.Books.Homology.Unit10.serre_subcategory_characterization P).2
+    ⟨P.prop_of_iso (hZ.iso (isZero_zero (moduleCategory R))) hzero,
+      hiso, ⟨hsub, hquot⟩, hext⟩
 
 theorem torsionModuleCategory_is_abelian
     (R : Type u) [CommRing R] :

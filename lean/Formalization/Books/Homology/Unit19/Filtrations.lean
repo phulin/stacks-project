@@ -3200,7 +3200,7 @@ private theorem exists_top_eq_imageSubobject {C : Type u}
         (imageSubobject (F.F.e ≫ F.F.m))
         (imageSubobject F.F.m) hle) :=
       Limits.imageSubobject_comp_le_epi_of_epi F.F.e F.F.m
-    let hIso : IsIso (Subobject.ofLE
+    let : IsIso (Subobject.ofLE
         (imageSubobject (F.F.e ≫ F.F.m))
         (imageSubobject F.F.m) hle) :=
       isIso_of_mono_of_epi _
@@ -3314,9 +3314,8 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
     let sndE : (filteredBiproduct B D).carrier ⟶ D.carrier := by
       change B.carrier ⊞ D.carrier ⟶ D.carrier
       exact biprod.snd
-    let : Mono j := by
-      change Mono (biprod.inr : D.carrier ⟶ B.carrier ⊞ D.carrier)
-      infer_instance
+    let : Mono j :=
+      (inferInstance : Mono (biprod.inr : D.carrier ⟶ B.carrier ⊞ D.carrier))
     let J : Subobject (filteredBiproduct B D).carrier := Subobject.mk j
     let K : Subobject (filteredBiproduct B D).carrier :=
       Subobject.mk (kernel.ι (cokernel.π h.hom))
@@ -3328,7 +3327,7 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
         (Subobject.underlyingIso j).inv ≫ J.arrow = j := by
       dsimp [J]
       apply (cancel_epi (Subobject.underlyingIso j).hom).mp
-      simp [Subobject.underlyingIso_hom_comp_eq_mk]
+      simp
     have hJarrow' : J.arrow =
         (Subobject.underlyingIso j).hom ≫ j := by
       dsimp [J]
@@ -3415,7 +3414,7 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
             Category.assoc _ _ _
           _ = z ≫ (biprod.snd ≫ (biprod.inr ≫ biprod.fst)) := by
             rw [Category.assoc]
-          _ = 0 := by simp
+          _ = 0 := by rw [biprod.inr_fst, comp_zero, comp_zero]
           _ = z ≫ biprod.fst := hz.symm
       · change (z ≫ biprod.snd ≫ biprod.inr) ≫ biprod.snd =
           z ≫ biprod.snd
@@ -3707,16 +3706,12 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
       have hd_inr_hom := congrArg FilteredHom.hom hd_inr
       dsimp at hd_inr_hom
       change P.inr.hom ≫ d.hom = r.hom at hd_inr_hom
-      rw [← hinr_eq]
-      rw [hd_inr_hom]
+      rw [← hinr_eq, hd_inr_hom]
       change inrF.hom ≫ π.hom = inrF.hom ≫ π.hom
       simp
-  let : IsIso e := by
-    exact ⟨⟨d, hed, hde⟩⟩
-  let : IsIso e.hom := by
-    refine ⟨⟨d.hom, ?_, ?_⟩⟩
-    · exact congrArg FilteredHom.hom hed
-    · exact congrArg FilteredHom.hom hde
+  let : IsIso e := ⟨⟨d, hed, hde⟩⟩
+  let : IsIso e.hom :=
+    ⟨⟨d.hom, congrArg FilteredHom.hom hed, congrArg FilteredHom.hom hde⟩⟩
   have he_strict : Strict e := by
     apply (strict_iff_isIso_of_hom_iso e (by infer_instance)).2
     infer_instance
@@ -3771,7 +3766,16 @@ noncomputable def gradedPieceMap {C : Type u} [Category.{v} C] [Abelian C]
       ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p)
   change cokernel a ⟶ cokernel b
   refine cokernel.desc a (u ≫ cokernel.π b) ?_
-  sorry
+  let v : (A.filtration.obj (p + 1) : C) ⟶
+      (B.filtration.obj (p + 1) : C) :=
+    (B.filtration.obj (p + 1)).factorThru
+      ((A.filtration.obj (p + 1)).arrow ≫ f.hom)
+      (f.map_filtration (p + 1))
+  have huv : a ≫ u = v ≫ b := by
+    apply (cancel_mono (B.filtration.obj p).arrow).mp
+    dsimp [a, b, u, v]
+    simp [Category.assoc]
+  rw [← Category.assoc, huv, Category.assoc, cokernel.condition, comp_zero]
 
 theorem gradedPiece_map_id {C : Type u} [Category.{v} C] [Abelian C]
     (A : FilteredObject C) (p : ℤ) :

@@ -1,5 +1,5 @@
 import Formalization.Books.Algebra.Unit14.BaseChange
-import Formalization.Books.Algebra.Unit63
+import Formalization.Books.Algebra.Unit63.AssociatedPrimes
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.GoingUp

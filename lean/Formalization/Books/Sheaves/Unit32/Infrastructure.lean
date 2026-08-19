@@ -525,9 +525,9 @@ theorem closedSetSheafDirectImage_essentialImage {X : TopCat.{v}} (Z : Set X)
     (Z := Z) hZ G
   change (Formalization.Books.Sheaves.Unit32.closedSubsetSetPushforward Z).essImage G ↔ _
   constructor
-  · intro h x hx
-    rcases h'.mp h x hx with ⟨e⟩
-    exact ⟨e.trans (Equiv.punitEquivPUnit.{v + 1, v})⟩
+  · exact fun h x hx => by
+      rcases h'.mp h x hx with ⟨e⟩
+      exact ⟨e.trans (Equiv.punitEquivPUnit.{v + 1, v})⟩
   · intro h
     apply h'.mpr
     intro x hx

@@ -2735,7 +2735,219 @@ theorem deRham_differential_is_differentialOperator (i : ℕ) :
       (deRhamTerm.isScalarTower (A := A) (B := B) i)
       (deRhamTerm.isScalarTower (A := A) (B := B) (i + 1))
       1 (deRhamDifferential (A := A) (B := B) i) := by
-  sorry
+  intro s t x
+  change (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) - s •
+      (deRhamDifferential (A := A) (B := B) i) (t • x) =
+    t • ((deRhamDifferential (A := A) (B := B) i) (s • x) - s •
+      (deRhamDifferential (A := A) (B := B) i) x)
+  have hgen : ∀ (b₀ : B) (b : Fin i → B),
+      (deRhamDifferential (A := A) (B := B) i) (s • (t •
+          deRhamGenerator i b₀ b)) - s •
+          (deRhamDifferential (A := A) (B := B) i)
+            (t • deRhamGenerator i b₀ b) =
+        t • ((deRhamDifferential (A := A) (B := B) i) (s •
+          deRhamGenerator i b₀ b) - s •
+          (deRhamDifferential (A := A) (B := B) i)
+            (deRhamGenerator i b₀ b)) := by
+    intro b₀ b
+    by_cases hi : i = 0
+    · subst i
+      have hzero (c : B) (b : Fin 0 → B) :
+          (deRhamDegreeZeroEquivA A B).symm
+              (deRhamGenerator 0 c b) = c := by
+        apply (deRhamDegreeZeroEquivA A B).symm_apply_eq.mpr
+        simp [deRhamGenerator, deRhamDegreeZeroEquivA, deRhamDegreeZeroEquiv,
+          exteriorPower.zeroEquiv]
+        exact congrArg (fun v : Fin 0 → ModuleOfDifferentials A B =>
+          c • exteriorPower.ιMulti B 0 v) (Subsingleton.elim _ _)
+      rw [show s • (t • deRhamGenerator 0 b₀ b) =
+          deRhamGenerator 0 (s * t * b₀) b by
+        simp [deRhamGenerator, smul_smul, mul_assoc]]
+      rw [show t • deRhamGenerator 0 b₀ b =
+          deRhamGenerator 0 (t * b₀) b by
+        simp [deRhamGenerator, smul_smul]]
+      rw [show s • deRhamGenerator 0 b₀ b =
+          deRhamGenerator 0 (s * b₀) b by
+        simp [deRhamGenerator, smul_smul]]
+      simp_rw [deRhamDifferential_zero]
+      simp only [deRhamUniversalDifferential, LinearMap.comp_apply]
+      have hBsmul (c : B) (ω : ModuleOfDifferentials A B) :
+          deRhamDegreeOneEquivA A B (c • ω) =
+            c • deRhamDegreeOneEquivA A B ω := by
+        change deRhamDegreeOneEquiv A B (c • ω) =
+          c • deRhamDegreeOneEquiv A B ω
+        exact (deRhamDegreeOneEquiv A B).map_smul c ω
+      simp only [universalDifferentialLinearMap]
+      simp [hzero, hBsmul, Derivation.leibniz, smul_smul,
+        mul_assoc, mul_comm, mul_left_comm]
+    · have hi' : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr hi
+      rw [show s • (t • deRhamGenerator i b₀ b) =
+          deRhamGenerator i (s * t * b₀) b by
+        simp [deRhamGenerator, smul_smul, mul_assoc]]
+      rw [show t • deRhamGenerator i b₀ b =
+          deRhamGenerator i (t * b₀) b by
+        simp [deRhamGenerator, smul_smul]]
+      rw [show s • deRhamGenerator i b₀ b =
+          deRhamGenerator i (s * b₀) b by
+        simp [deRhamGenerator, smul_smul]]
+      rw [deRhamDifferential_on_generator i hi' (s * t * b₀) b,
+        deRhamDifferential_on_generator i hi' (t * b₀) b,
+        deRhamDifferential_on_generator i hi' (s * b₀) b,
+        deRhamDifferential_on_generator i hi' b₀ b]
+      let w : Fin i → ModuleOfDifferentials A B :=
+        fun j => universalDifferentialLinearMap A B (b j)
+      let W : ModuleOfDifferentials A B →ₗ[B]
+          deRhamTerm A B (i + 1) :=
+        { toFun := fun q => exteriorPower.ιMulti B (i + 1) (Fin.cons q w)
+          map_add' := by
+            intro q r
+            apply Subtype.ext
+            simp [exteriorPower.ιMulti, ExteriorAlgebra.ιMulti_succ_apply,
+              Matrix.vecTail, Fin.cons_succ, add_mul]
+          map_smul' := by
+            intro c q
+            apply Subtype.ext
+            simp [exteriorPower.ιMulti, ExteriorAlgebra.ιMulti_succ_apply,
+              Matrix.vecTail, Fin.cons_succ, Algebra.smul_def, mul_smul, mul_assoc] }
+      have hW (q : B) :
+          deRhamDifferentialGenerator i q b =
+            W (universalDifferentialLinearMap A B q) := by
+        rfl
+      rw [hW (s * t * b₀), hW (t * b₀), hW (s * b₀), hW b₀]
+      have hder (a c : B) :
+          universalDifferentialLinearMap A B (a * c) =
+            a • universalDifferentialLinearMap A B c +
+              c • universalDifferentialLinearMap A B a := by
+        exact (universalDifferential A B).leibniz a c
+      rw [hder (s * t) b₀, hder s t, hder t b₀, hder s b₀]
+      simp only [W.map_add, W.map_smul, smul_add, smul_smul]
+      simp [smul_smul, mul_assoc, mul_comm, mul_left_comm]
+  have hx : x ∈ Submodule.span A (deRhamGenerators (A := A) (B := B) i) := by
+    rw [deRhamGenerators_span (A := A) (B := B) i]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun x _ =>
+    (deRhamDifferential (A := A) (B := B) i) (s • t • x) - s •
+      (deRhamDifferential (A := A) (B := B) i) (t • x) =
+    t • ((deRhamDifferential (A := A) (B := B) i) (s • x) - s •
+      (deRhamDifferential (A := A) (B := B) i) x)) ?_ ?_ ?_ ?_ hx
+  · rintro _ ⟨z, rfl⟩
+    rcases z with ⟨b₀, b⟩
+    simpa [smul_smul, mul_assoc, mul_comm, mul_left_comm] using hgen b₀ b
+  · simp
+  · intro x y hx hy ihx ihy
+    calc
+      (deRhamDifferential (A := A) (B := B) i) (s • t • (x + y)) - s •
+          (deRhamDifferential (A := A) (B := B) i) (t • (x + y)) =
+        ((deRhamDifferential (A := A) (B := B) i) (s • t • x) - s •
+          (deRhamDifferential (A := A) (B := B) i) (t • x)) +
+          ((deRhamDifferential (A := A) (B := B) i) (s • t • y) - s •
+            (deRhamDifferential (A := A) (B := B) i) (t • y)) := by
+              simp [map_add, smul_add, sub_add_sub_comm]
+      _ = t • ((deRhamDifferential (A := A) (B := B) i) (s • x) - s •
+          (deRhamDifferential (A := A) (B := B) i) x) +
+          t • ((deRhamDifferential (A := A) (B := B) i) (s • y) - s •
+            (deRhamDifferential (A := A) (B := B) i) y) := by rw [ihx, ihy]
+      _ = t • (((deRhamDifferential (A := A) (B := B) i) (s • x) - s •
+          (deRhamDifferential (A := A) (B := B) i) x) +
+          ((deRhamDifferential (A := A) (B := B) i) (s • y) - s •
+            (deRhamDifferential (A := A) (B := B) i) y)) := by rw [smul_add]
+      _ = t • ((deRhamDifferential (A := A) (B := B) i) (s • (x + y)) - s •
+          (deRhamDifferential (A := A) (B := B) i) (x + y)) := by
+            simp [map_add, smul_add, sub_add_sub_comm]
+  · intro a x hx ih
+    have hcomm (c : B) (z : deRhamTerm A B i) :
+        c • (a • z) = a • (c • z) := by
+      calc
+        c • (a • z) = c • (algebraMap A B a • z) := by
+          rw [IsScalarTower.algebraMap_smul]
+        _ = algebraMap A B a • (c • z) := smul_comm _ _ _
+        _ = a • (c • z) := IsScalarTower.algebraMap_smul _ _ _
+    change (deRhamDifferential (A := A) (B := B) i) (s • (t • (a • x))) - s •
+        (deRhamDifferential (A := A) (B := B) i) (t • (a • x)) =
+      t • ((deRhamDifferential (A := A) (B := B) i) (s • (a • x)) - s •
+        (deRhamDifferential (A := A) (B := B) i) (a • x))
+    have hD_a (c : B) (z : deRhamTerm A B i) :
+        (deRhamDifferential (A := A) (B := B) i) (c • (a • z)) =
+          a • (deRhamDifferential (A := A) (B := B) i) (c • z) := by
+      calc
+        (deRhamDifferential (A := A) (B := B) i) (c • (a • z)) =
+            (deRhamDifferential (A := A) (B := B) i) (a • (c • z)) :=
+          congrArg (deRhamDifferential (A := A) (B := B) i) (hcomm c z)
+        _ = a • (deRhamDifferential (A := A) (B := B) i) (c • z) :=
+          (deRhamDifferential (A := A) (B := B) i).map_smul a (c • z)
+    have hleft :
+        (deRhamDifferential (A := A) (B := B) i) (s • (t • (a • x))) =
+          a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) := by
+      calc
+        (deRhamDifferential (A := A) (B := B) i) (s • (t • (a • x))) =
+            (deRhamDifferential (A := A) (B := B) i) (s • (a • (t • x))) :=
+          congrArg (deRhamDifferential (A := A) (B := B) i)
+            (congrArg (fun z => s • z) (hcomm t x))
+        _ = a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) :=
+          hD_a s (t • x)
+    have hright :
+        (deRhamDifferential (A := A) (B := B) i) (s • (a • x)) =
+          a • (deRhamDifferential (A := A) (B := B) i) (s • x) :=
+      hD_a s x
+    have ha :
+        (deRhamDifferential (A := A) (B := B) i) (a • x) =
+          a • (deRhamDifferential (A := A) (B := B) i) x :=
+      (deRhamDifferential (A := A) (B := B) i).map_smul a x
+    have hcomm_out (c : B) (z : deRhamTerm A B (i + 1)) :
+        c • (a • z) = a • (c • z) := by
+      calc
+        c • (a • z) = c • (algebraMap A B a • z) := by
+          rw [IsScalarTower.algebraMap_smul]
+        _ = algebraMap A B a • (c • z) := smul_comm _ _ _
+        _ = a • (c • z) := IsScalarTower.algebraMap_smul _ _ _
+    rw [hleft, hD_a t x, hright, ha]
+    calc
+      a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) -
+          s • (a • (deRhamDifferential (A := A) (B := B) i) (t • x)) =
+          a • ((deRhamDifferential (A := A) (B := B) i) (s • (t • x)) -
+            s • (deRhamDifferential (A := A) (B := B) i) (t • x)) := by
+        calc
+          a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) -
+              s • (a • (deRhamDifferential (A := A) (B := B) i) (t • x)) =
+              a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) -
+                a • (s • (deRhamDifferential (A := A) (B := B) i) (t • x)) := by
+            exact congrArg
+              (fun q => a • (deRhamDifferential (A := A) (B := B) i) (s • (t • x)) - q)
+              (hcomm_out s ((deRhamDifferential (A := A) (B := B) i) (t • x)))
+          _ = a • ((deRhamDifferential (A := A) (B := B) i) (s • (t • x)) -
+              s • (deRhamDifferential (A := A) (B := B) i) (t • x)) :=
+            (smul_sub a _ _).symm
+      _ = a • (t • ((deRhamDifferential (A := A) (B := B) i) (s • x) -
+          s • (deRhamDifferential (A := A) (B := B) i) x)) :=
+        congrArg (fun z => a • z) ih
+      _ = t • (a • (deRhamDifferential (A := A) (B := B) i) (s • x) -
+          s • (a • (deRhamDifferential (A := A) (B := B) i) x)) := by
+        calc
+          a • (t • ((deRhamDifferential (A := A) (B := B) i) (s • x) -
+              s • (deRhamDifferential (A := A) (B := B) i) x)) =
+              a • (t • (deRhamDifferential (A := A) (B := B) i) (s • x)) -
+                a • (t • (s • (deRhamDifferential (A := A) (B := B) i) x)) := by
+            calc
+              a • (t • ((deRhamDifferential (A := A) (B := B) i) (s • x) -
+                  s • (deRhamDifferential (A := A) (B := B) i) x)) =
+                  a • (t • (deRhamDifferential (A := A) (B := B) i) (s • x) -
+                    t • (s • (deRhamDifferential (A := A) (B := B) i) x)) :=
+                congrArg (fun q => a • q)
+                  (smul_sub t ((deRhamDifferential (A := A) (B := B) i) (s • x))
+                    (s • (deRhamDifferential (A := A) (B := B) i) x))
+              _ = a • (t • (deRhamDifferential (A := A) (B := B) i) (s • x)) -
+                  a • (t • (s • (deRhamDifferential (A := A) (B := B) i) x)) :=
+                smul_sub a _ _
+          _ = t • (a • (deRhamDifferential (A := A) (B := B) i) (s • x)) -
+                (t * s) • (a • (deRhamDifferential (A := A) (B := B) i) x) := by
+            simpa only [smul_smul] using congrArg₂ (fun u v => u - v)
+              (hcomm_out t ((deRhamDifferential (A := A) (B := B) i) (s • x))).symm
+              (hcomm_out (t * s) ((deRhamDifferential (A := A) (B := B) i) x)).symm
+          _ = t • (a • (deRhamDifferential (A := A) (B := B) i) (s • x) -
+              s • (a • (deRhamDifferential (A := A) (B := B) i) x)) := by
+            simpa only [smul_smul] using
+              (smul_sub t (a • (deRhamDifferential (A := A) (B := B) i) (s • x))
+                (s • (a • (deRhamDifferential (A := A) (B := B) i) x))).symm
 
 theorem differentialOperator_check_on_algebra_generators
     {I : Type*} (g : I → B)
@@ -2833,7 +3045,173 @@ theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
       ∀ m,
         E.1 (LocalizedModule.mkLinearMap T M m) =
           LocalizedModule.mkLinearMap T N (D.1 m) := by
-  sorry
+  revert D
+  induction k with
+  | zero =>
+      sorry
+  | succ k ih =>
+      intro D
+      classical
+      let Dcomm (b : B) :
+          differentialOperatorSubmodule (R := A) (S := B) k (M := M) (N := N) :=
+        ⟨differentialOperatorCommutator (R := A) (S := B) D.1 b, D.2 b⟩
+      let Ecomm (b : B) :
+          differentialOperatorSubmodule (R := A) (S := B) k
+            (M := LocalizedModule T M) (N := LocalizedModule T N) :=
+        Classical.choose (ih (Dcomm b))
+      have hEcomm (b : B) (m : M) :
+          (Ecomm b).1 (LocalizedModule.mkLinearMap T M m) =
+            LocalizedModule.mkLinearMap T N ((Dcomm b).1 m) := by
+        exact (Classical.choose_spec (ih (Dcomm b))).1 m
+      let mulM (b : B) : LocalizedModule T M →ₗ[A] LocalizedModule T M :=
+        DistribSMul.toLinearMap A (LocalizedModule T M) b
+      let mulN (b : B) : LocalizedModule T N →ₗ[A] LocalizedModule T N :=
+        DistribSMul.toLinearMap A (LocalizedModule T N) b
+      have hmulM (b : B) :
+          IsDifferentialOperator (R := A) (S := B) 0 (mulM b) := by
+        intro s m
+        simp [mulM, smul_smul, mul_comm]
+      have hmulN (b : B) :
+          IsDifferentialOperator (R := A) (S := B) 0 (mulN b) := by
+        intro s m
+        simp [mulN, smul_smul, mul_comm]
+      have hprod (b c : B) :
+          Ecomm (b * c) =
+            ⟨(Ecomm b).1.comp (mulM c) + (mulN b).comp (Ecomm c).1,
+              (by
+                apply isDifferentialOperator_add (R := A) (S := B) k
+                · simpa using differentialOperator_comp_isDifferentialOperator
+                    (R := A) (S := B) 0 k (mulM c) (Ecomm b).1
+                    (hmulM c) (Ecomm b).2
+                · simpa using differentialOperator_comp_isDifferentialOperator
+                    (R := A) (S := B) k 0 (Ecomm c).1 (mulN b)
+                    (Ecomm c).2 (hmulN b))⟩ := by
+        symm
+        apply (Classical.choose_spec (ih (Dcomm (b * c)))).2
+        intro m
+        simp only [Submodule.coe_mk, LinearMap.add_apply, LinearMap.comp_apply]
+        have hmulM_apply : mulM c (LocalizedModule.mkLinearMap T M m) =
+            LocalizedModule.mkLinearMap T M (c • m) := by
+          simp [mulM]
+        have hmulN_apply (z : N) : mulN b (LocalizedModule.mkLinearMap T N z) =
+            LocalizedModule.mkLinearMap T N (b • z) := by
+          simp [mulN]
+        have hmulN_apply' (z : N) :
+            mulN b (LocalizedModule.mk (S := T) z (1 : T)) =
+              LocalizedModule.mk (S := T) (b • z) (1 : T) := by
+          change (b : B) •
+              (LocalizedModule.mk (S := T) z (1 : T) : LocalizedModule T N) =
+            LocalizedModule.mk (S := T) (b • z) (1 : T)
+          exact LocalizedModule.smul'_mk (R := B) (S := T) b z 1
+        rw [hmulM_apply, hEcomm b (c • m), hEcomm c m]
+        simp only [LocalizedModule.mkLinearMap_apply]
+        rw [hmulN_apply', LocalizedModule.mk_add_mk]
+        simp only [one_smul, one_mul]
+        congr 1
+        change (Dcomm b).1 (c • m) + b • (Dcomm c).1 m = (Dcomm (b * c)).1 m
+        simp only [Dcomm, differentialOperatorCommutator, LinearMap.sub_apply,
+          LinearMap.comp_apply, DistribSMul.toLinearMap_apply]
+        simp only [smul_sub, smul_smul]
+        abel
+      let raw : M × T → LocalizedModule T N := fun p =>
+        LocalizedModule.divBy p.2
+          (LocalizedModule.mkLinearMap T N (D.1 p.1) -
+            (Ecomm (p.2 : B)).1 (LocalizedModule.mk p.1 p.2))
+      have hdiv (c s : T) (x : LocalizedModule T N) :
+          LocalizedModule.divBy (c * s) ((c : B) • x) =
+            LocalizedModule.divBy s x := by
+        induction x using LocalizedModule.induction_on with
+        | h n t =>
+            rw [LocalizedModule.smul'_mk (R := B) (S := T) (R₀ := B) (c : B) n t]
+            rw [LocalizedModule.divBy_apply, LocalizedModule.divBy_apply,
+              LocalizedModule.liftOn_mk,
+              LocalizedModule.liftOn_mk]
+            change LocalizedModule.mk ((c : B) • n) (t * (c * s)) =
+              LocalizedModule.mk n (t * s)
+            rw [show t * (c * s) = c * (s * t) by ac_rfl]
+            rw [show t * s = s * t by ac_rfl]
+            exact LocalizedModule.mk_cancel_common_left (S := T) c (s * t) n
+      have hraw_cancel (c s : T) (m : M) :
+          raw (m, s) = raw ((c : B) • m, c * s) := by
+        have hsmul : mulM (s : B) (LocalizedModule.mk m s) =
+            LocalizedModule.mkLinearMap T M m := by
+          change (s : B) • LocalizedModule.mk m s = LocalizedModule.mk m 1
+          rw [LocalizedModule.smul'_mk (R := B) (S := T) (R₀ := B) (s : B) m s]
+          exact LocalizedModule.mk_cancel (R := B) (S := T) s m
+        have hDcancel : D.1 ((c : B) • m) =
+            (c : B) • D.1 m + (Dcomm (c : B)).1 m := by
+          simp [Dcomm, differentialOperatorCommutator, LinearMap.sub_apply,
+            LinearMap.comp_apply, DistribSMul.toLinearMap_apply]
+        have hnum :
+            LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) -
+                (Ecomm ((c * s : T) : B)).1
+                  (LocalizedModule.mk ((c : B) • m) (c * s)) =
+              (c : B) •
+                (LocalizedModule.mkLinearMap T N (D.1 m) -
+                  (Ecomm (s : B)).1 (LocalizedModule.mk m s)) := by
+          have hfrac : LocalizedModule.mk ((c : B) • m) (c * s) =
+              LocalizedModule.mk m s := by
+            simpa only [Submonoid.smul_def] using
+              (LocalizedModule.mk_cancel_common_left (R := B) (S := T) c s m)
+          rw [hfrac]
+          rw [hprod (c : B) (s : B)]
+          simp only [Submodule.coe_mk, LinearMap.add_apply, LinearMap.comp_apply]
+          rw [hsmul, hEcomm c m]
+          have hmulN_c (z : LocalizedModule T N) :
+              mulN (c : B) z = (c : B) • z := by
+            rfl
+          rw [hmulN_c]
+          change LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) -
+              (LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) +
+                (c : B) • (Ecomm (s : B)).1 (LocalizedModule.mk m s)) =
+            (c : B) • (LocalizedModule.mkLinearMap T N (D.1 m) -
+              (Ecomm (s : B)).1 (LocalizedModule.mk m s))
+          have hDcancel_loc :
+              LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) =
+                (c : B) • LocalizedModule.mkLinearMap T N (D.1 m) +
+                  LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) := by
+            calc
+              LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) =
+                  LocalizedModule.mkLinearMap T N
+                    ((c : B) • D.1 m + (Dcomm (c : B)).1 m) :=
+                congrArg (LocalizedModule.mkLinearMap T N) hDcancel
+              _ = (c : B) • LocalizedModule.mkLinearMap T N (D.1 m) +
+                    LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) := by
+                change LocalizedModule.mk ((c : B) • D.1 m) 1 +
+                    LocalizedModule.mk ((Dcomm (c : B)).1 m) 1 =
+                  (c : B) • LocalizedModule.mk (D.1 m) 1 +
+                    LocalizedModule.mk ((Dcomm (c : B)).1 m) 1
+                rw [map_add]
+                rw [← LocalizedModule.smul'_mk (R := B) (S := T) (R₀ := B)
+                  (c : B) (D.1 m) 1]
+          calc
+            LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) -
+                (LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) +
+                  (c : B) • (Ecomm (s : B)).1 (LocalizedModule.mk m s)) =
+                ((c : B) • LocalizedModule.mkLinearMap T N (D.1 m) +
+                  LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m)) -
+                (LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) +
+                  (c : B) • (Ecomm (s : B)).1 (LocalizedModule.mk m s)) :=
+              congrArg (fun q => q -
+                (LocalizedModule.mkLinearMap T N ((Dcomm (c : B)).1 m) +
+                  (c : B) • (Ecomm (s : B)).1 (LocalizedModule.mk m s))) hDcancel_loc
+            _ = (c : B) • (LocalizedModule.mkLinearMap T N (D.1 m) -
+                (Ecomm (s : B)).1 (LocalizedModule.mk m s)) := by
+              simp only [smul_sub, smul_add]
+              abel
+        change LocalizedModule.divBy s
+              (LocalizedModule.mkLinearMap T N (D.1 m) -
+                (Ecomm (s : B)).1 (LocalizedModule.mk m s)) =
+          LocalizedModule.divBy (c * s)
+            (LocalizedModule.mkLinearMap T N (D.1 ((c : B) • m)) -
+              (Ecomm ((c * s : T) : B)).1
+                (LocalizedModule.mk ((c : B) • m) (c * s)))
+        rw [hnum, hdiv]
+      have hraw_wd : ∀ p p' : M × T, p ≈ p' → raw p = raw p' := by
+        sorry
+      let Efun : LocalizedModule T M → LocalizedModule T N := fun x =>
+        x.liftOn raw hraw_wd
+      sorry
 
 noncomputable def localizedDifferentialOperator (T : Submonoid B) (k : ℕ)
     (D : differentialOperatorSubmodule (R := A) (S := B) (M := M) (N := N) k) :

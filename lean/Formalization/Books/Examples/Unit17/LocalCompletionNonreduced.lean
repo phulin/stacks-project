@@ -61,6 +61,10 @@ structure ConvergentPowerSeriesRing where
   expansion_injective : Function.Injective expansion
   expansion_convergent : ∀ c, IsConvergentPowerSeries (expansion c)
   expansion_x : expansion x = PowerSeries.X
+  /-- Every convergent series is its constant term plus an `x`-multiple. -/
+  exists_eq_algebraMap_add_x_mul :
+    ∀ c, ∃ z : ℂ, ∃ g : carrier,
+      c = algebraMap ℂ carrier z + x * g
   localization_is_fraction_ring :
     IsFractionRing carrier (Localization.Away x)
   completion :
@@ -345,6 +349,20 @@ def localCompletionXPowF
     (n : PositiveNat) : localCompletionRing C Δ :=
   ⟨C.x ^ (n : ℕ) * Δ.f n, localCompletion_x_pow_f_mem C Δ n⟩
 
+/-! ## The preliminary differential-power calculation -/
+
+theorem differential_power_mem_formalPowerSeriesSubmodule
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    {f : C.carrier} (hf : f ∈ Ideal.span ({C.x} : Set C.carrier))
+    (hf0 : f ≠ 0) :
+      ∃ n : ℕ, ∃ h : FormalPowerSeries,
+      Δ.derivation f =
+        formalPowerSeriesToLaurent h / (convergentToLaurent C f) ^ n ∧
+      f ^ (n + 1) ∈ localCompletionSubalgebra C Δ ∧
+      f ^ (n + 2) ∈ localCompletionSubalgebra C Δ := by
+  sorry
+
 /-! ## The six assertions in the source -/
 
 /-- Every convergent power series is integral over `A`. -/
@@ -391,19 +409,7 @@ theorem localCompletion_isNoetherian
     IsNoetherianRing (localCompletionRing C Δ) := by
   sorry
 
-/-! ## The elementary calculation used to prove the ideal presentation -/
-
-theorem differential_power_mem_formalPowerSeriesSubmodule
-    (C : ConvergentPowerSeriesRing)
-    (Δ : FerrandRaynaudDifferentialData C)
-    {f : C.carrier} (hf : f ∈ Ideal.span ({C.x} : Set C.carrier))
-    (hf0 : f ≠ 0) :
-      ∃ n : ℕ, ∃ h : FormalPowerSeries,
-      Δ.derivation f =
-        formalPowerSeriesToLaurent h / (convergentToLaurent C f) ^ n ∧
-      f ^ (n + 1) ∈ localCompletionSubalgebra C Δ ∧
-      f ^ (n + 2) ∈ localCompletionSubalgebra C Δ := by
-  sorry
+/-! ## Further elementary calculations used to prove the ideal presentation -/
 
 theorem differential_power_derivative_identities
     (C : ConvergentPowerSeriesRing)

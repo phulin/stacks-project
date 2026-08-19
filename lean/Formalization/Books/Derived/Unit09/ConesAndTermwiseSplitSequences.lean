@@ -522,7 +522,7 @@ theorem make_surjective
         rw [show i + 1 + -1 = i by omega,
           show i - 1 + -1 = i + -2 by omega]
         convert hc using 1 <;>
-          simp [Int.negOnePow_neg, Int.negOnePow_one]
+          simp
         all_goals
           change
             ((CochainComplex.mappingCone (𝟙 L)).d (i + -1) i ≫ h.hom i (i + -1) +
@@ -868,8 +868,7 @@ theorem triangle_independent_splittings
       rw [← cancel_mono (CochainComplex.shiftFunctorObjXIso
         (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom]
       simp only [Preadditive.add_comp]
-      simp only [Category.assoc, Iso.inv_hom_id,
-        Category.comp_id]
+      simp only [Category.assoc, Iso.inv_hom_id]
       rw [hd]
       have hfrσ (i : ℤ) : S.f.f i ≫ rσ i = 𝟙 _ := by
         exact (σ i).f_r
@@ -954,8 +953,7 @@ theorem triangle_independent_splittings
                     congrArg (fun z => sσ p ≫ dB p ≫ z ≫ rσ (p + 1))
                       (hgsσB (p + 1))
           _ = 0 := by
-                  simp [Preadditive.sub_comp, Category.assoc,
-                    hfrσB (p + 1)]
+                  simp [hfrσB (p + 1)]
       have hA0 :
           sσ p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) = 0 := by
         calc
@@ -1094,10 +1092,12 @@ theorem triangle_independent_splittings
   have he₀ : e₀.hom.hom₁ = 𝟙 (q.obj A) ∧
       e₀.hom.hom₂ = 𝟙 (q.obj B) ∧
       e₀.hom.hom₃ = 𝟙 (q.obj D) := by
-    simp [e₀, Triangle.isoMk, Triangle.homMk]
+    simp [e₀]
     constructor
     · rfl
-    constructor <;> rfl
+    constructor
+    · rfl
+    · rfl
   simpa only [termwiseSplitTrianglehWith, termwiseSplitTriangleWith,
     termwiseSplitShortComplex, Functor.mapTriangle_obj,
     CochainComplex.triangleOfDegreewiseSplit,
@@ -1122,7 +1122,7 @@ theorem nilpotent
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.g = 0)
     (h₃ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.f ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' = 0)
-    (_h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
+    (_ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₃.g = 0) :
     (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map (b ≫ b') = 0 := by
   let q : BookComplex C ⥤ BookHomotopyCategory C :=
@@ -1237,33 +1237,29 @@ theorem same_up_to_isomorphisms_of_termwise_split
     simp
   let : IsIso (q.map (𝟙 A)) := by
     have hqA : q.map (𝟙 A) = 𝟙 (q.obj A) := q.map_id A
-    rw [hqA]
-    infer_instance
+    simpa only [hqA] using (inferInstance : IsIso (𝟙 (q.obj A)))
   let : IsIso (q.map (𝟙 B)) := by
     have hqB : q.map (𝟙 B) = 𝟙 (q.obj B) := q.map_id B
-    rw [hqB]
-    infer_instance
+    simpa only [hqB] using (inferInstance : IsIso (𝟙 (q.obj B)))
   obtain ⟨c, hc₂, hc₃⟩ :=
     HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
       (coneTriangleh S.f) (termwiseSplitTriangleh S) hcone hsplit
       (q.map (𝟙 A)) (q.map (𝟙 B)) hcomm₁
   let : IsIso c := by
-    apply isIso₃_of_isIso₁₂
+    exact isIso₃_of_isIso₁₂
       (Triangle.homMk (coneTriangleh S.f) (termwiseSplitTriangleh S)
         (q.map (𝟙 A)) (q.map (𝟙 B)) c hcomm₁ hc₂ hc₃)
       hcone hsplit
-    · change IsIso (q.map (𝟙 A))
-      infer_instance
-    · change IsIso (q.map (𝟙 B))
-      infer_instance
+      (by change IsIso (q.map (𝟙 A)); infer_instance)
+      (by change IsIso (q.map (𝟙 B)); infer_instance)
   let e : coneTriangleh S.f ≅ termwiseSplitTriangleh S :=
     Triangle.isoMk _ _ (Iso.refl (q.obj A)) (Iso.refl (q.obj B)) (asIso c)
       (by
         change q.map S.f ≫ 𝟙 (q.obj B) =
           𝟙 (q.obj A) ≫ q.map S.f
         simp) hc₂ hc₃
-  exact ⟨e, by change q.map (𝟙 A) = 𝟙 (q.obj A); simp [q],
-    by change q.map (𝟙 B) = 𝟙 (q.obj B); simp [q]⟩
+  exact ⟨e, by change q.map (𝟙 A) = 𝟙 (q.obj A); simp,
+    by change q.map (𝟙 B) = 𝟙 (q.obj B); simp⟩
 
 theorem same_up_to_isomorphisms_of_map
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1350,29 +1346,22 @@ theorem same_up_to_isomorphisms_of_map
       constructor
       · rw [hsg n]
         dsimp [coneInclusion]
-        simp [u, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X,
-          biprod.lift_desc, Category.assoc]
+        simp [u, CochainComplex.mappingCone.map]
       · rw [hsg n]
         dsimp [coneInclusion]
-        simp [u, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X,
-          biprod.lift_desc, Category.assoc]
+        simp [u, CochainComplex.mappingCone.map]
     · dsimp [r, s, i, g, u, M]
       change r n ≫ i.f n + g.f n ≫ s n = 𝟙 _
       ext
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_fst, coneInclusion]
+      · simp [r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.desc_f, hs_fst]
         simpa [add_comm] using
           (CochainComplex.mappingCone.id_X (𝟙 K) n (n + 1) (by omega))
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_snd, coneInclusion]
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          Category.assoc, hs_fst, coneInclusion]
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          Category.assoc, hs_snd, coneInclusion]
+      · simp [r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.desc_f, hs_snd]
+      · simp [r, i, g, u, M, CochainComplex.mappingCone.map, hs_fst, coneInclusion]
+      · simp [r, i, g, u, M, CochainComplex.mappingCone.map,
+          hs_snd, coneInclusion]
   let S : TermwiseSplitExactSequence K M (Cone f) := {
     f := i
     g := g
@@ -1425,8 +1414,7 @@ theorem same_up_to_isomorphisms_of_map
   let e : termwiseSplitTriangleh S ≅ coneTriangleh f := by
     letI : IsIso (q.map (𝟙 K)) := by
       have hqK : q.map (𝟙 K) = 𝟙 (q.obj K) := q.map_id K
-      rw [hqK]
-      infer_instance
+      simpa only [hqK] using (inferInstance : IsIso (𝟙 (q.obj K)))
     letI : IsIso c := by
       apply isIso₃_of_isIso₁₂
         (Triangle.homMk (termwiseSplitTriangleh S) (coneTriangleh f)

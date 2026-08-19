@@ -766,8 +766,8 @@ theorem module_standardOpen_restriction_compatibility {R M : Type u} [CommRing R
         (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom) :=
     AlgebraicGeometry.tilde.instAwayCarrierCarrierObjOppositeOpensCarrierCarrierCommRingCatSpecModuleCatPresheafModulesSheafModulesSpecToSheafOpBasicOpenHomToOpen
       (R := CommRingCat.of R) (ModuleCat.of R M) g
-  letI := hlocf
-  letI := hlocg
+  let := hlocf
+  let := hlocg
   let e_f : LocalizedModule.Away f M ≃ₗ[R] T_f :=
     IsLocalizedModule.linearEquiv (Submonoid.powers f)
       (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
@@ -894,22 +894,12 @@ theorem module_standardOpen_restriction_compatibility {R M : Type u} [CommRing R
   have hleftvalue' :
       (α.app (op U_f)).hom.hom (e_f x) =
         moduleLocalizationToStandardOpenSections R M f x := by
-    change (α.app (op U_f)).hom.hom (e_f x) =
-      (moduleLocalizationToStandardOpenSections R M f x :
-        (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
-          (op (PrimeSpectrum.basicOpen f)))
     exact hleftvalue
   have hrightvalue' :
       (α.app (op U_g)).hom.hom
           (e_g (standardOpenModuleLocalizationMap f g h x)) =
         moduleLocalizationToStandardOpenSections R M g
           (standardOpenModuleLocalizationMap f g h x) := by
-    change (α.app (op U_g)).hom.hom
-        (e_g (standardOpenModuleLocalizationMap f g h x)) =
-      (moduleLocalizationToStandardOpenSections R M g
-        (standardOpenModuleLocalizationMap f g h x) :
-        (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
-          (op (PrimeSpectrum.basicOpen g)))
     exact hrightvalue
   rw [hleftvalue', hrightvalue'] at heq'
   exact heq'
@@ -1260,6 +1250,9 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
     exact T.map_zero X Y
   let ST : ShortComplex _ :=
     @ShortComplex.map _ _ _ _ _ _ (S.map (associatedModuleFunctor R)) T' hTzero
+  /- Prior attempt: the explicit stalk-map construction timed out during
+     elaboration and then failed in the scalar-action rewrite. -/
+  /- Prior attempt body retained below for reference.
   have hST : ST.Exact := by
     rw [TopCat.Sheaf.exact_iff_stalkFunctor_map_exact]
     intro x
@@ -1269,7 +1262,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
     let x₀ : PrimeSpectrum.Top R := by
       change PrimeSpectrum R at x
       exact x
-    letI : x₀.asIdeal.IsPrime := x₀.2
+    let : x₀.asIdeal.IsPrime := x₀.2
     have hloc := IsLocalizedModule.map_exact x₀.asIdeal.primeCompl
       (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
       (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
@@ -1394,6 +1387,8 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
         IsLocalizedModule.map x₀.asIdeal.primeCompl
           (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
           (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀) S.f.hom := by
+      /- Prior attempt: the explicit linear-map extensionality proof timed out
+         while rewriting the stalk functor's map on germs.
       apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
         (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
         (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
@@ -1402,7 +1397,8 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
         AlgebraicGeometry.tilde.map,
         AlgebraicGeometry.tilde.modulesSpecToSheafIso]
       rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
-      rw [IsLocalizedModule.map_apply]
+      rw [IsLocalizedModule.map_apply] -/
+      sorry
     let pg := ((Sheaf.forget AddCommGrpCat
       (AlgebraicGeometry.Spec (CommRingCat.of R))).map
         ((SheafOfModules.toSheaf
@@ -1450,6 +1446,8 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
         IsLocalizedModule.map x₀.asIdeal.primeCompl
           (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
           (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀) S.g.hom := by
+      /- Prior attempt: the explicit linear-map extensionality proof reached a
+         type-mismatch while rewriting the induced map on module sections.
       apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
         (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
         (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀)
@@ -1458,8 +1456,11 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
         AlgebraicGeometry.tilde.map,
         AlgebraicGeometry.tilde.modulesSpecToSheafIso]
       rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
-      rw [IsLocalizedModule.map_apply]
-    simpa [ST, T', T, pf, lf, pg, lg, hlf, hlg] using hloc
+      rw [IsLocalizedModule.map_apply] -/
+      sorry
+    simpa [ST, T', T, pf, lf, pg, lg, hlf, hlg] using hloc -/
+  have hST : ST.Exact := by
+    sorry
   letI : T'.Faithful := by
     constructor
     intro X Y f g h

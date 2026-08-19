@@ -1017,13 +1017,204 @@ noncomputable instance associatedGradedRing_gcommRing
     DirectSum.GCommRing (associatedGradedRingPiece I) :=
   associatedGradedRing_gcommRing_canonical I
 
+private theorem associatedGradedModulePiece_cast_mk
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) {i j : ℕ} (h : i = j)
+    (a : ((I ^ i : Submodule R R) • (⊤ : Submodule R M) : Submodule R M)) :
+    cast (congrArg (fun n => associatedGradedModulePiece (M := M) I n) h)
+        (Submodule.Quotient.mk a) =
+      Submodule.Quotient.mk ⟨(a : M), by
+        rw [← h]
+        exact a.property⟩ := by
+  cases h
+  rfl
+
+private theorem associatedGradedModulePiece_mk_heq
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) {i j : ℕ} (h : i = j)
+    (a : ((I ^ i : Submodule R R) • (⊤ : Submodule R M) : Submodule R M))
+    (b : ((I ^ j : Submodule R R) • (⊤ : Submodule R M) : Submodule R M))
+    (hab : (a : M) = (b : M)) :
+    HEq (Submodule.Quotient.mk a : associatedGradedModulePiece (M := M) I i)
+      (Submodule.Quotient.mk b : associatedGradedModulePiece (M := M) I j) := by
+  apply heq_of_eqRec_eq
+    (congrArg (fun n => associatedGradedModulePiece (M := M) I n) h)
+  cases h
+  apply congrArg (fun z : ((I ^ i : Submodule R R) • (⊤ : Submodule R M) : Submodule R M) =>
+    (Submodule.Quotient.mk z : associatedGradedModulePiece (M := M) I i))
+  apply Subtype.ext
+  exact hab
+
 /-- The canonical graded-module action of `Gr_I(R)` on `Gr_I(M)`. -/
 theorem associatedGradedModule_gmodule_exists
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :
     Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => associatedGradedModulePiece (M := M) I n)) := by
-  sorry
+  let smul : {i j : ℕ} → associatedGradedRingPiece I i →
+      associatedGradedModulePiece (M := M) I j →
+        associatedGradedModulePiece (M := M) I (i + j) := by
+    intro i j a b
+    refine Quotient.liftOn₂' a b (fun x y =>
+      Submodule.Quotient.mk ⟨(x : R) • (y : M), ?_⟩) ?_
+    · have h := Submodule.smul_mem_smul x.property y.property
+      rw [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+        ← Ideal.IsTwoSided.pow_add] at h
+      simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h
+    · intro a₁ a₂ b₁ b₂ ha hb
+      apply (Submodule.Quotient.eq _).2
+      rw [Submodule.quotientRel_def] at ha hb
+      change (a₁ : R) - (b₁ : R) ∈ I ^ (i + 1) at ha
+      change (a₂ : M) - (b₂ : M) ∈ I ^ (j + 1) • (⊤ : Submodule R M) at hb
+      change (a₁ : R) • (a₂ : M) - (b₁ : R) • (b₂ : M) ∈
+        I ^ (i + j + 1) • (⊤ : Submodule R M)
+      have h₁ : ((a₁ : R) - (b₁ : R)) • (a₂ : M) ∈
+          I ^ (i + j + 1) • (⊤ : Submodule R M) := by
+        have h := Submodule.smul_mem_smul ha a₂.property
+        rw [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+          ← Ideal.IsTwoSided.pow_add] at h
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h
+      have h₂ : (b₁ : R) • ((a₂ : M) - (b₂ : M)) ∈
+          I ^ (i + j + 1) • (⊤ : Submodule R M) := by
+        have h := Submodule.smul_mem_smul b₁.property hb
+        rw [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+          ← Ideal.IsTwoSided.pow_add] at h
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h
+      rw [show (a₁ : R) • (a₂ : M) - (b₁ : R) • (b₂ : M) =
+          ((a₁ : R) - (b₁ : R)) • (a₂ : M) +
+            (b₁ : R) • ((a₂ : M) - (b₂ : M)) by
+          simp only [sub_smul, smul_sub]
+          abel]
+      exact Submodule.add_mem _ h₁ h₂
+  let one : associatedGradedRingPiece I 0 :=
+    Submodule.Quotient.mk ⟨1, by simp⟩
+  let gsmul : GradedMonoid.GSMul (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) :=
+    { smul := smul }
+  let gmulAction : GradedMonoid.GMulAction (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) :=
+    { gsmul with
+      one_smul := by
+        rintro ⟨j, b⟩
+        change GradedMonoid.mk 0 one • GradedMonoid.mk j b = _
+        apply Sigma.ext (zero_add j)
+        refine Submodule.Quotient.induction_on _ b ?_
+        intro y
+        change HEq (smul (i := 0) (j := j) one (Submodule.Quotient.mk y))
+          (Submodule.Quotient.mk y)
+        simp [one, smul, Submodule.Quotient.mk]
+        refine (heq_of_eqRec_eq
+          (α := associatedGradedModulePiece (M := M) I j)
+          (β := associatedGradedModulePiece (M := M) I (0 + j))
+          (a := Submodule.Quotient.mk y)
+          (b := Submodule.Quotient.mk ⟨(y : M), by rw [zero_add]; exact y.property⟩)
+          (congrArg (fun k => associatedGradedModulePiece (M := M) I k)
+            (zero_add j).symm)
+          (associatedGradedModulePiece_cast_mk I (zero_add j).symm y)).symm
+      mul_smul := by
+        rintro ⟨i, a⟩ ⟨j, a'⟩ ⟨k, b⟩
+        change (GradedMonoid.mk i a * GradedMonoid.mk j a') •
+            GradedMonoid.mk k b =
+          GradedMonoid.mk i a • (GradedMonoid.mk j a' • GradedMonoid.mk k b)
+        apply Sigma.ext (add_assoc i j k)
+        refine Submodule.Quotient.induction_on _ a ?_
+        intro a
+        refine Submodule.Quotient.induction_on _ a' ?_
+        intro a'
+        refine Submodule.Quotient.induction_on _ b ?_
+        intro b
+        change HEq
+          (smul (i := i + j) (j := k)
+            (associatedGradedRingPieceMul I i j
+              (Submodule.Quotient.mk a) (Submodule.Quotient.mk a'))
+            (Submodule.Quotient.mk b))
+          (smul (i := i) (j := j + k) (Submodule.Quotient.mk a)
+            (smul (i := j) (j := k) (Submodule.Quotient.mk a')
+              (Submodule.Quotient.mk b)))
+        simp [smul, associatedGradedRingPieceMul, Submodule.Quotient.mk,
+          associatedGradedRingPieceMulAux]
+        exact associatedGradedModulePiece_mk_heq I (add_assoc i j k)
+          (⟨((a : R) * (a' : R)) • (b : M), by
+            have h := Submodule.smul_mem_smul
+              (show (a : R) * (a' : R) ∈ (I ^ (i + j) : Submodule R R) by
+                rw [Ideal.IsTwoSided.pow_add]
+                exact Ideal.mul_mem_mul a.property a'.property) b.property
+            simpa [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+              ← Ideal.IsTwoSided.pow_add, Nat.add_assoc, Nat.add_comm,
+              Nat.add_left_comm] using h⟩)
+          (⟨(a : R) • ((a' : R) • (b : M)), by
+            have h := Submodule.smul_mem_smul
+              (show (a : R) * (a' : R) ∈ (I ^ (i + j) : Submodule R R) by
+                rw [Ideal.IsTwoSided.pow_add]
+                exact Ideal.mul_mem_mul a.property a'.property) b.property
+            simpa [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+              ← Ideal.IsTwoSided.pow_add, smul_smul, Nat.add_assoc,
+              Nat.add_comm, Nat.add_left_comm] using h⟩)
+          (by simp only [Subtype.coe_mk]; rw [smul_smul]) }
+  let gdistrib : DirectSum.GdistribMulAction (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) :=
+    { gmulAction with
+      smul_add := by
+        intro i j a b c
+        refine Submodule.Quotient.induction_on _ a ?_
+        intro a
+        refine Submodule.Quotient.induction_on _ b ?_
+        intro b
+        refine Submodule.Quotient.induction_on _ c ?_
+        intro c
+        rw [← Submodule.Quotient.mk_add]
+        apply (Submodule.Quotient.eq _).2
+        change (a : R) • ((b : M) + (c : M)) -
+            ((a : R) • (b : M) + (a : R) • (c : M)) ∈
+          I ^ (i + j + 1) • (⊤ : Submodule R M)
+        rw [show (a : R) • ((b : M) + (c : M)) -
+            ((a : R) • (b : M) + (a : R) • (c : M)) = 0 by
+          rw [smul_add, sub_self]]
+        exact Submodule.zero_mem _
+      smul_zero := by
+        intro i j a
+        rw [← Submodule.Quotient.mk_zero]
+        refine Submodule.Quotient.induction_on _ a ?_
+        intro a
+        simp only [gmulAction, gsmul]
+        change smul (i := i) (j := 0) (Submodule.Quotient.mk a)
+            (Submodule.Quotient.mk
+              (0 : ((I ^ 0 : Submodule R R) • (⊤ : Submodule R M) :
+                Submodule R M))) = 0
+        simp [smul, Submodule.Quotient.mk]
+        apply (Submodule.Quotient.mk_eq_zero _).2
+        simp
+      }
+  exact ⟨{ gdistrib with
+    add_smul := by
+      intro i j a a' b
+      refine Submodule.Quotient.induction_on _ a ?_
+      intro a
+      refine Submodule.Quotient.induction_on _ a' ?_
+      intro a'
+      refine Submodule.Quotient.induction_on _ b ?_
+      intro b
+      rw [← Submodule.Quotient.mk_add]
+      apply (Submodule.Quotient.eq _).2
+      change ((a : R) + (a' : R)) • (b : M) -
+          ((a : R) • (b : M) + (a' : R) • (b : M)) ∈
+        I ^ (i + j + 1) • (⊤ : Submodule R M)
+      rw [show ((a : R) + (a' : R)) • (b : M) -
+          ((a : R) • (b : M) + (a' : R) • (b : M)) = 0 by
+        rw [add_smul, sub_self]]
+      exact Submodule.zero_mem _
+    zero_smul := by
+      intro i j b
+      rw [← Submodule.Quotient.mk_zero]
+      refine Submodule.Quotient.induction_on _ b ?_
+      intro b
+      simp only [gmulAction, gsmul]
+      change smul (i := 0) (j := j)
+          (Submodule.Quotient.mk (0 : (I ^ 0 : Submodule R R)))
+          (Submodule.Quotient.mk b) = 0
+      simp [smul, Submodule.Quotient.mk]
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      simp }⟩
 
 noncomputable instance associatedGradedModule_gmodule
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

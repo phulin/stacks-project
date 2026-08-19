@@ -1443,6 +1443,235 @@ theorem exists_not_mem_and_pow_mem_of_lt_of_isPurelyInseparable
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/
+private theorem exists_finite_adjoin_coefficients
+    {F U E : Type*} [Field F] [Field U] [Field E]
+    [Algebra F E] [Algebra U E] {ι : Type*} (x : ι → E)
+    (c : Finset (IntermediateField.adjoin F (range x))) :
+    ∃ s : Finset F, ∀ a ∈ c,
+      (a : E) ∈ IntermediateField.adjoin U
+        (range x ∪ range fun b : s => algebraMap F E (b : F)) := by
+  classical
+  let T : Finset F → IntermediateField U E := fun s =>
+    IntermediateField.adjoin U
+      (range x ∪ range fun b : s => algebraMap F E (b : F))
+  have hmono (s t : Finset F) (hst : s ⊆ t) : T s ≤ T t := by
+    rw [IntermediateField.adjoin_le_iff]
+    intro z hz
+    rcases hz with hz | ⟨b, rfl⟩
+    · exact IntermediateField.subset_adjoin U _ (Or.inl hz)
+    · exact IntermediateField.subset_adjoin U _
+        (Or.inr ⟨⟨(b : F), hst b.property⟩, rfl⟩)
+  have ha (a : IntermediateField.adjoin F (range x)) :
+      ∃ s : Finset F, (a : E) ∈ T s := by
+    apply IntermediateField.adjoin_induction (F := F) (s := range x)
+      (p := fun z _ => ∃ s : Finset F, (z : E) ∈ T s)
+    · intro z hz
+      rcases hz with ⟨i, rfl⟩
+      refine ⟨∅, IntermediateField.subset_adjoin U _ (Or.inl ⟨i, rfl⟩)⟩
+    · intro z
+      refine ⟨{z}, IntermediateField.subset_adjoin U _ ?_⟩
+      exact Or.inr ⟨⟨z, Finset.mem_singleton_self z⟩, rfl⟩
+    · intro z w _ _ ⟨s, hz⟩ ⟨t, hw⟩
+      exact ⟨s ∪ t, (T (s ∪ t)).add_mem
+        (hmono s (s ∪ t) Finset.subset_union_left hz)
+        (hmono t (s ∪ t) Finset.subset_union_right hw)⟩
+    · intro z _ ⟨s, hz⟩
+      exact ⟨s, (T s).inv_mem hz⟩
+    · intro z w _ _ ⟨s, hz⟩ ⟨t, hw⟩
+      exact ⟨s ∪ t, (T (s ∪ t)).mul_mem
+        (hmono s (s ∪ t) Finset.subset_union_left hz)
+        (hmono t (s ∪ t) Finset.subset_union_right hw)⟩
+    · exact a.property
+  choose s hs using ha
+  let s' : Finset F := c.biUnion s
+  refine ⟨s', ?_⟩
+  intro a ha'
+  exact hmono (s a) s' (fun b hb =>
+    Finset.mem_biUnion.mpr ⟨a, ha', hb⟩) (hs a)
+
+private theorem isSeparable_of_finite_coefficients
+    {F U E : Type*} [Field F] [Field U] [Field E]
+    [Algebra F E] [Algebra U E] (z : E)
+    (hz : IsSeparable F z)
+    (hcoeff : ∀ n, ∃ b : U,
+      algebraMap U E b = algebraMap F E ((minpoly F z).coeff n)) :
+    IsSeparable U z := by
+  classical
+  let b : ℕ → U := fun n => Classical.choose (hcoeff n)
+  have hb (n : ℕ) : algebraMap U E (b n) =
+      algebraMap F E ((minpoly F z).coeff n) :=
+    Classical.choose_spec (hcoeff n)
+  let g : Polynomial U := (minpoly F z).support.sum fun n =>
+    Polynomial.C (b n) * Polynomial.X ^ n
+  have hmap : Polynomial.map (algebraMap U E) g =
+      Polynomial.map (algebraMap F E) (minpoly F z) := by
+    ext n
+    simp only [Polynomial.coeff_map]
+    by_cases hn : n ∈ (minpoly F z).support
+    · simp [g, Polynomial.coeff_sum, Polynomial.coeff_C_mul_X_pow,
+        Finset.sum_eq_single, hn, hb]
+    · have hzero : (minpoly F z).coeff n = 0 :=
+        Polynomial.notMem_support_iff.mp hn
+      simp [g, Polynomial.coeff_sum, Polynomial.coeff_C_mul_X_pow,
+        Finset.sum_eq_zero, hn, hzero]
+  have hg : g.Separable := by
+    apply (Polynomial.separable_map (algebraMap U E)).mp
+    rw [hmap]
+    exact (Polynomial.separable_map (algebraMap F E)).mpr hz
+  have hzero : Polynomial.aeval z g = 0 := by
+    change Polynomial.eval₂ (algebraMap U E) z g = 0
+    calc
+      _ = Polynomial.eval₂ (RingHom.id E) z
+          (Polynomial.map (algebraMap U E) g) := by
+        simp [Polynomial.eval₂, Polynomial.aeval_def]
+      _ = Polynomial.eval₂ (RingHom.id E) z
+          (Polynomial.map (algebraMap F E) (minpoly F z)) := by rw [hmap]
+      _ = 0 := by simpa [Polynomial.aeval_def] using (minpoly.aeval F z)
+  exact hg.of_dvd (minpoly.dvd U z hzero)
+
+private theorem isSeparable_of_finset_adjoin
+    {k K U E : Type*} [Field k] [Field K] [Field U] [Field E]
+    [Algebra k K] [Algebra K E] [Algebra U E]
+    (s : Finset K) (hs : IntermediateField.adjoin k (s : Set K) = ⊤)
+    (hgen : ∀ a ∈ s, IsSeparable U (algebraMap K E a))
+    (hbase : ∀ a : k, IsSeparable U (algebraMap K E (algebraMap k K a)))
+    (a : K) :
+    IsSeparable U (algebraMap K E a) := by
+  have ha : a ∈ IntermediateField.adjoin k (s : Set K) := by
+    rw [hs]
+    trivial
+  apply IntermediateField.adjoin_induction (F := k) (s := (s : Set K))
+    (p := fun y _ => IsSeparable U (algebraMap K E y))
+  · intro y hy
+    exact hgen y (Finset.mem_coe.mp hy)
+  · exact hbase
+  · intro x y _ _ hx hy
+    simpa using Field.isSeparable_add hx hy
+  · intro x _ hx
+    simpa using Field.isSeparable_inv hx
+  · intro x y _ _ hx hy
+    simpa using Field.isSeparable_mul hx hy
+  · exact ha
+
+private theorem adjoin_transport
+    {k M U E : Type*} [Field k] [Field M] [Field U] [Field E]
+    [Algebra k M] [Algebra U E] (f : M →+* E) (s : Set M)
+    (hs : ∀ y ∈ s, ∃ b : U, algebraMap U E b = f y)
+    (hbase : ∀ y : k, ∃ b : U, algebraMap U E b = f (algebraMap k M y))
+    {a : M} (ha : a ∈ IntermediateField.adjoin k s) :
+    ∃ b : U, algebraMap U E b = f a := by
+  apply IntermediateField.adjoin_induction (F := k) (s := s)
+    (p := fun y _ => ∃ b : U, algebraMap U E b = f y)
+  · exact hs
+  · exact hbase
+  · intro y z _ _ ⟨b_y, hb_y⟩ ⟨b_z, hb_z⟩
+    refine ⟨b_y + b_z, ?_⟩
+    simpa using congrArg₂ (fun r t : E => r + t) hb_y hb_z
+  · intro y _ ⟨b_y, hb_y⟩
+    refine ⟨b_y⁻¹, ?_⟩
+    simpa using congrArg Inv.inv hb_y
+  · intro y z _ _ ⟨b_y, hb_y⟩ ⟨b_z, hb_z⟩
+    refine ⟨b_y * b_z, ?_⟩
+    simpa using congrArg₂ (fun r t : E => r * t) hb_y hb_z
+  · exact ha
+
+private theorem adjoin_membership_transport
+    {F E L : Type*} [Field F] [Field E] [Field L]
+    [Algebra F E] [Algebra L E] (U : IntermediateField L E) (s : Set E)
+    (hs : ∀ z ∈ s, z ∈ U)
+    (hbase : ∀ z : F, algebraMap F E z ∈ U)
+    {z : E} (hz : z ∈ IntermediateField.adjoin F s) : z ∈ U := by
+  apply IntermediateField.adjoin_induction (F := F) (s := s)
+    (p := fun y _ => y ∈ U)
+  · exact hs
+  · exact hbase
+  · intro x y _ _ hx hy
+    exact U.add_mem hx hy
+  · intro x _ hx
+    exact U.inv_mem hx
+  · intro x y _ _ hx hy
+    exact U.mul_mem hx hy
+  · exact hz
+
+private structure PerfectClosureFiniteTypeSetup
+    (k K P Q : Type*) [Field k] [Field K] [Field P] [Field Q]
+    [Algebra k K] [Algebra P Q] [Algebra K Q] where
+  M : IntermediateField P Q
+  M_eq : M = IntermediateField.adjoin P (range (algebraMap K Q))
+  sK : Finset K
+  hsK : IntermediateField.adjoin k (sK : Set K) = ⊤
+  u : Finset M
+  hu : IsTranscendenceBasis P (fun z : u => (z : M))
+  hsep : Algebra.IsSeparable
+    (IntermediateField.adjoin P (range fun z : u => (z : M))) M
+
+private theorem perfectClosureFiniteTypeSetup
+    {k K P Q : Type*} [Field k] [Field K] [Field P] [Field Q]
+    [Algebra k K] [Algebra k P] [Algebra P Q] [Algebra K Q]
+    [Algebra.EssFiniteType k K] [PerfectField P]
+    (hcomm : ∀ y : k, algebraMap K Q (algebraMap k K y) =
+      algebraMap P Q (algebraMap k P y)) :
+    Nonempty (PerfectClosureFiniteTypeSetup k K P Q) := by
+  classical
+  let M : IntermediateField P Q :=
+    IntermediateField.adjoin P (range (algebraMap K Q))
+  obtain ⟨sK, hsK⟩ := IntermediateField.fg_top k K
+  let sQ : Finset Q := sK.image (algebraMap K Q)
+  let A : IntermediateField P Q := IntermediateField.adjoin P (sQ : Set Q)
+  have hlift : ∀ x : K, algebraMap K Q x ∈ A := by
+    intro x
+    have hx : x ∈ IntermediateField.adjoin k (sK : Set K) := by
+      rw [hsK]
+      trivial
+    apply IntermediateField.adjoin_induction (F := k) (s := (sK : Set K))
+      (p := fun y _ => algebraMap K Q y ∈ A)
+    · intro y hy
+      exact IntermediateField.subset_adjoin P _
+        (by
+          change algebraMap K Q y ∈ sK.image (algebraMap K Q)
+          exact Finset.mem_image.mpr ⟨y, Finset.mem_coe.mp hy, rfl⟩)
+    · intro y
+      rw [hcomm]
+      exact A.algebraMap_mem _
+    · intro y z _ _ hy hz
+      simpa using A.add_mem hy hz
+    · intro y _ hy
+      simpa using A.inv_mem hy
+    · intro y z _ _ hy hz
+      simpa using A.mul_mem hy hz
+    · exact hx
+  have hAM : A = M := by
+    apply le_antisymm
+    · rw [IntermediateField.adjoin_le_iff]
+      intro z hz
+      have hz' : z ∈ sK.image (algebraMap K Q) := by
+        simpa [sQ] using hz
+      rcases Finset.mem_image.mp hz' with ⟨x, _, rfl⟩
+      exact IntermediateField.subset_adjoin P _ ⟨x, rfl⟩
+    · intro z hz
+      apply IntermediateField.adjoin_induction (F := P)
+        (s := range (algebraMap K Q)) (p := fun y _ => y ∈ A)
+      · rintro y ⟨x, rfl⟩
+        exact hlift x
+      · exact A.algebraMap_mem
+      · intro x y _ _ hx hy
+        exact A.add_mem hx hy
+      · intro x _ hx
+        exact A.inv_mem hx
+      · intro x y _ _ hx hy
+        exact A.mul_mem hx hy
+      · exact hz
+  have hMfg : Algebra.EssFiniteType P M := by
+    apply (IntermediateField.essFiniteType_iff).2
+    exact ⟨sQ, hAM⟩
+  obtain ⟨u, hu, hsep⟩ :=
+    exists_isTranscendenceBasis_and_isSeparable_of_perfectField P M
+  refine ⟨⟨M, rfl, sK, hsK, u, hu, ?_⟩⟩
+  have hrange : range (fun z : u => (z : M)) = (u : Set M) := by
+    simpa using (Subtype.range_val (p := fun z : M => z ∈ u))
+  rw [hrange]
+  exact hsep
+
 theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] (p : ℕ) (hp : 0 < p) [Fact p.Prime]
@@ -1451,7 +1680,219 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
       IsSeparablyGenerated
         (finitePthRootFieldAtLevel tower.base)
         (finitePthRootTopAtLevel tower) := by
-  sorry
+  classical
+  let P := perfectClosure k (AlgebraicClosure k)
+  let Q := perfectClosure K (AlgebraicClosure K)
+  let pToQ : P →+* Q :=
+    RingHom.codRestrict
+      ((pthRootClosureMap k K).toRingHom.comp P.val) Q
+      (fun x => by
+        change pthRootClosureMap k K (x : AlgebraicClosure k) ∈ Q
+        letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+        letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+        obtain ⟨n, b, hb⟩ :=
+          (mem_perfectClosure_iff_pow_mem p).1 x.property
+        apply (mem_perfectClosure_iff_pow_mem p).2
+        refine ⟨n, algebraMap k K b, ?_⟩
+        have hb' : algebraMap k (AlgebraicClosure k) b =
+            (x : AlgebraicClosure k) ^ (p ^ n) := by simpa using hb
+        rw [← map_pow, ← hb']
+        rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
+        exact ((pthRootClosureMap k K).commutes b).symm)
+  letI : Algebra P Q := RingHom.toAlgebra pToQ
+  letI : PerfectField P := inferInstance
+  obtain ⟨⟨M, hM, sK, hsK, u, hu, hsep⟩⟩ :=
+    perfectClosureFiniteTypeSetup (k := k) (K := K) (P := P) (Q := Q) (by
+      intro y
+      apply Subtype.ext
+      change algebraMap K (AlgebraicClosure K) (algebraMap k K y) =
+        pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y)
+      rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K)]
+      exact ((pthRootClosureMap k K).commutes y).symm)
+  let xM : u → M := fun z => z
+  let F₀ : IntermediateField P M :=
+    IntermediateField.adjoin P (range xM)
+  letI : Algebra.IsSeparable F₀ M := hsep
+  let kToM : k →+* M := (algebraMap P M).comp (algebraMap k P)
+  letI : Algebra k M := RingHom.toAlgebra kToM
+  let zM : K → M := fun a =>
+    ⟨algebraMap K Q a, hM.symm ▸ IntermediateField.subset_adjoin P _ ⟨a, rfl⟩⟩
+  let c : Finset F₀ := sK.biUnion fun a =>
+    (minpoly F₀ (zM a)).support.image fun n =>
+      (minpoly F₀ (zM a)).coeff n
+  obtain ⟨sP, hsP⟩ := exists_finite_adjoin_coefficients
+    (F := P) (U := k) (E := M) xM c
+  obtain ⟨base, hbase, _⟩ :=
+    exists_finite_pth_root_tower_of_perfectClosure_finset
+      (F := k) p hp sP
+  let uQ : M → Q := fun z => (z : Q)
+  let q : Finset Q := u.image uQ
+  obtain ⟨tower, htower, htop, htop_le⟩ :=
+    base.exists_baseChangeTower_containing (K := K) p hp q
+  subst base
+  let B := finitePthRootFieldAtLevel tower.base
+  let T := finitePthRootTopAtLevel tower
+  letI : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
+  letI : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
+  let xT : u → T := fun z =>
+    ⟨(uQ (z : M) : Q), htop (uQ (z : M))
+      (Finset.mem_image.mpr ⟨z, z.property, rfl⟩)⟩
+  let U : IntermediateField B T :=
+    IntermediateField.adjoin B (range xT)
+  let D : IntermediateField k M :=
+    IntermediateField.adjoin k
+      (range xM ∪ range fun b : sP => algebraMap P M (b : P))
+  have htransport {a : F₀} (ha : (a : M) ∈ D) :
+      ∃ b : U, ((b : T) : AlgebraicClosure K) = (((a : M) : Q) : AlgebraicClosure K) := by
+    apply adjoin_transport (k := k) (M := M) (U := U)
+      (E := AlgebraicClosure K) (a := (a : M))
+      (f := Q.val.toRingHom.comp M.val.toRingHom)
+      (s := range xM ∪ range fun b : sP => algebraMap P M (b : P))
+    · rintro y (⟨z, rfl⟩ | ⟨b, rfl⟩)
+      · let zT : T := xT z
+        refine ⟨⟨zT, IntermediateField.subset_adjoin B _ ⟨z, rfl⟩⟩, rfl⟩
+      · let bB : B := ⟨(b : P), hbase (b : P) b.property⟩
+        let bT : T := algebraMap B T bB
+        refine ⟨⟨bT, U.algebraMap_mem bB⟩, ?_⟩
+        change (tower.baseToTop bB : AlgebraicClosure K) =
+          pthRootClosureMap k K (b : AlgebraicClosure k)
+        exact tower.baseToTop_apply bB
+    · intro y
+      let bB : B := algebraMap k B y
+      let bT : T := algebraMap B T bB
+      refine ⟨⟨bT, U.algebraMap_mem bB⟩, ?_⟩
+      change (tower.baseToTop bB : AlgebraicClosure K) =
+        pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y)
+      rw [tower.baseToTop_apply]
+      rfl
+    · simpa [D] using ha
+  let mToAC : M →+* AlgebraicClosure K :=
+    Q.val.toRingHom.comp M.val.toRingHom
+  let fToAC : F₀ →+* AlgebraicClosure K :=
+    mToAC.comp F₀.val.toRingHom
+  let uToAC : U →+* AlgebraicClosure K :=
+    (finitePthRootTopAtLevel tower).val.toRingHom.comp U.val.toRingHom
+  let pToAC : P →+* AlgebraicClosure K :=
+    mToAC.comp (algebraMap P M)
+  letI : Algebra P (AlgebraicClosure K) := RingHom.toAlgebra pToAC
+  letI : Algebra F₀ (AlgebraicClosure K) := RingHom.toAlgebra fToAC
+  letI : Algebra U (AlgebraicClosure K) := RingHom.toAlgebra uToAC
+  let mToACAlg : M →ₐ[F₀] AlgebraicClosure K :=
+    { toRingHom := mToAC
+      commutes' := fun r => rfl }
+  have hsepGen (a : K) (ha : a ∈ sK) :
+      IsSeparable U (algebraMap K (AlgebraicClosure K) a) := by
+    have hzM : IsSeparable F₀ (zM a) :=
+      Algebra.IsSeparable.isSeparable F₀ (zM a)
+    have hzAC : IsSeparable F₀ (mToAC (zM a)) :=
+      hzM.map mToACAlg mToACAlg.injective
+    have hcoeff (n : ℕ) : ∃ b : U,
+        algebraMap U (AlgebraicClosure K) b =
+          algebraMap F₀ (AlgebraicClosure K)
+            ((minpoly F₀ (mToACAlg (zM a))).coeff n) := by
+      rw [minpoly.algHom_eq mToACAlg mToACAlg.injective (zM a)]
+      by_cases hn : n ∈ (minpoly F₀ (zM a)).support
+      · have hmem := hsP ((minpoly F₀ (zM a)).coeff n)
+          (Finset.mem_biUnion.mpr ⟨a, ha,
+            Finset.mem_image.mpr ⟨n, hn, rfl⟩⟩)
+        exact htransport hmem
+      · refine ⟨0, ?_⟩
+        have hzero : (minpoly F₀ (zM a)).coeff n = 0 :=
+          Polynomial.notMem_support_iff.mp hn
+        simp [hzero]
+    have hz := isSeparable_of_finite_coefficients
+      (F := F₀) (U := U) (E := AlgebraicClosure K)
+      (mToACAlg (zM a)) hzAC hcoeff
+    convert hz using 1
+    rfl
+  have hKsep (a : K) : IsSeparable U (algebraMap K (AlgebraicClosure K) a) := by
+    apply isSeparable_of_finset_adjoin sK hsK hsepGen
+    intro y
+    have hy : algebraMap K (AlgebraicClosure K) (algebraMap k K y) =
+        algebraMap U (AlgebraicClosure K)
+          (algebraMap B U (algebraMap k B y)) := by
+      change algebraMap K (AlgebraicClosure K) (algebraMap k K y) =
+        (tower.baseToTop (algebraMap k B y) : AlgebraicClosure K)
+      rw [tower.baseToTop_apply]
+      change algebraMap K (AlgebraicClosure K) (algebraMap k K y) =
+        pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y)
+      rw [(pthRootClosureMap k K).commutes]
+      exact (IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) y).symm
+    rw [hy]
+    exact isSeparable_algebraMap _
+  let V : IntermediateField U (AlgebraicClosure K) :=
+    IntermediateField.adjoin U (range (algebraMap K (AlgebraicClosure K)))
+  letI : Algebra U V := V.algebra
+  letI : Algebra.IsSeparable U V :=
+    (IntermediateField.isSeparable_adjoin_iff_isSeparable
+      U (AlgebraicClosure K)).2 (by
+      rintro _ ⟨a, rfl⟩
+      exact hKsep a)
+  have hTV : ∀ t : T, (t : AlgebraicClosure K) ∈ V := by
+    intro t
+    apply adjoin_membership_transport (F := K) (L := U)
+      (E := AlgebraicClosure K) V
+      ((pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
+        ((↑) '' (q : Set Q)))
+    · rintro z (hz | hz)
+      · obtain ⟨b₀, hb₀, rfl⟩ := hz
+        let b : B := ⟨b₀, hb₀⟩
+        have hbV := V.algebraMap_mem ⟨algebraMap B T b, U.algebraMap_mem b⟩
+        change (tower.baseToTop b : AlgebraicClosure K) ∈ V at hbV
+        rw [tower.baseToTop_apply] at hbV
+        exact hbV
+      · obtain ⟨w, hw, rfl⟩ := hz
+        obtain ⟨z, hzu, hz⟩ := Finset.mem_image.mp hw
+        let z' : u := ⟨z, hzu⟩
+        have hzU : xT z' ∈ U := IntermediateField.subset_adjoin B _ ⟨z', rfl⟩
+        exact hz ▸ V.algebraMap_mem ⟨xT z', hzU⟩
+    · intro a
+      exact IntermediateField.subset_adjoin U _ ⟨a, rfl⟩
+    · exact htop_le t.property
+  let tToV : T →+* V := RingHom.codRestrict
+    (finitePthRootTopAtLevel tower).val V hTV
+  letI : Algebra T V := RingHom.toAlgebra tToV
+  let tToVAlg : T →ₐ[U] V :=
+    { toRingHom := tToV
+      commutes' := fun _ => rfl }
+  haveI : Algebra.IsSeparable U T :=
+    Algebra.IsSeparable.of_algHom U V tToVAlg
+  have hxAI : AlgebraicIndependent B xT := by
+    let mToACAlg : M →ₐ[P] AlgebraicClosure K :=
+      { toRingHom := mToAC
+        commutes' := fun r => rfl }
+    let bToP : B →+* P := RingHom.codRestrict B.val P (fun b => by
+      letI : IsPurelyInseparable k B := tower.base.purely_inseparable
+      exact le_perfectClosure k (AlgebraicClosure k) B b.property)
+    letI : Algebra B P := RingHom.toAlgebra bToP
+    let bToAC : B →+* AlgebraicClosure K := pToAC.comp bToP
+    letI : Algebra B (AlgebraicClosure K) := RingHom.toAlgebra bToAC
+    letI : IsScalarTower B P (AlgebraicClosure K) := by
+      apply IsScalarTower.of_algebraMap_eq'
+      ext b
+      rfl
+    have hP : AlgebraicIndependent P (mToACAlg ∘ xM) :=
+      hu.1.map' (f := mToACAlg) mToACAlg.injective
+    have hB : AlgebraicIndependent B (mToACAlg ∘ xM) :=
+      hP.restrictScalars (algebraMap B P).injective
+    let tToACAlg : T →ₐ[B] AlgebraicClosure K :=
+      { toRingHom := (finitePthRootTopAtLevel tower).val
+        commutes' := fun b => by
+          change (tower.baseToTop b : AlgebraicClosure K) = pToAC (bToP b)
+          rw [tower.baseToTop_apply]
+          rfl }
+    apply AlgebraicIndependent.of_comp tToACAlg
+    have hfun : tToACAlg ∘ xT = mToACAlg ∘ xM := by
+      funext i
+      rfl
+    rw [hfun]
+    exact hB
+  have hxTB : IsTranscendenceBasis B xT :=
+    hxAI.isTranscendenceBasis_iff_isAlgebraic.mpr
+      (by
+        rw [← IntermediateField.isAlgebraic_adjoin_iff_top]
+        simpa [U] using (Algebra.IsSeparable.isAlgebraic U T))
+  exact ⟨tower, u, xT, hxTB, inferInstance⟩
 
 /- The source's construction is the existence statement below; the structure
    above records its diagram rather than introducing unbundled typeclass

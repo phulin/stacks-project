@@ -9,9 +9,11 @@ import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basis
 import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
+import Mathlib.RingTheory.ReesAlgebra
 
 /-!
 # Commutative Algebra, Chapter 69: Quasi-regular sequences
@@ -59,6 +61,415 @@ abbrev quasiRegularTarget
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :=
   ⨁ n, quasiRegularPiece R M I n
+
+/-! ## The associated graded ring and adic lifting -/
+
+/-- The coefficientwise next-power ideal in the Rees algebra.  Its quotient is the
+associated graded ring: in degree `n` it kills precisely `I ^ (n + 1)`. -/
+def adicAssociatedGradedKernel
+    {R : Type u} [CommRing R] (I : Ideal R) : Ideal (reesAlgebra I) where
+  carrier := {p | ∀ n, p.1.coeff n ∈ I ^ (n + 1)}
+  zero_mem' n := by simp
+  add_mem' {p q} hp hq n := by
+    simpa using Ideal.add_mem (I ^ (n + 1)) (hp n) (hq n)
+  smul_mem' p q hq n := by
+    change (p.1 * q.1).coeff n ∈ I ^ (n + 1)
+    rw [Polynomial.coeff_mul]
+    apply Ideal.sum_mem
+    rintro ⟨i, j⟩ hij
+    have hp : p.1.coeff i ∈ I ^ i := p.2 i
+    have hmul : p.1.coeff i * q.1.coeff j ∈ I ^ i * I ^ (j + 1) :=
+      Ideal.mul_mem_mul hp (hq j)
+    rw [← Ideal.IsTwoSided.pow_add] at hmul
+    have hn : i + j = n := Finset.mem_antidiagonal.mp hij
+    rw [show i + (j + 1) = n + 1 by omega] at hmul
+    exact hmul
+
+/-- The associated graded ring `gr_I(R)`, presented as the Rees algebra modulo the
+coefficientwise next-power ideal. -/
+abbrev adicAssociatedGradedRing
+    {R : Type u} [CommRing R] (I : Ideal R) :=
+  reesAlgebra I ⧸ adicAssociatedGradedKernel I
+
+/-- The homogeneous form of `x ∈ I^n` in degree `n` of the associated graded ring. -/
+def adicAssociatedGradedForm
+    {R : Type u} [CommRing R] (I : Ideal R) (n : ℕ) (x : R) (hx : x ∈ I ^ n) :
+    adicAssociatedGradedRing I :=
+  Ideal.Quotient.mk (adicAssociatedGradedKernel I)
+    ⟨Polynomial.monomial n x, reesAlgebra.monomial_mem.mpr hx⟩
+
+@[simp]
+theorem adicAssociatedGradedForm_zero
+    {R : Type u} [CommRing R] (I : Ideal R) (n : ℕ) :
+    adicAssociatedGradedForm I n 0 (Ideal.zero_mem _) = 0 := by
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  intro k
+  simp
+
+private theorem adicAssociatedGraded_algebraMap_mem_kernel
+    {R : Type u} [CommRing R] (I : Ideal R) (x : R) (hx : x ∈ I) :
+    algebraMap R (reesAlgebra I) x ∈ adicAssociatedGradedKernel I := by
+  intro n
+  change (Polynomial.C x).coeff n ∈ I ^ (n + 1)
+  rw [Polynomial.coeff_C]
+  split_ifs with hn
+  · subst n
+    simpa using hx
+  · exact Ideal.zero_mem _
+
+/-- If `I` is finitely generated and `R / I` is Noetherian, then `gr_I(R)` is
+Noetherian.  In particular this applies to every ideal in a Noetherian ring. -/
+theorem adicAssociatedGradedRing_isNoetherian
+    {R : Type u} [CommRing R] (I : Ideal R) (hI : I.FG)
+    [IsNoetherianRing (R ⧸ I)] :
+    IsNoetherianRing (adicAssociatedGradedRing I) := by
+  let K := adicAssociatedGradedKernel I
+  let G := adicAssociatedGradedRing I
+  let : Algebra.FiniteType R (reesAlgebra I) :=
+    ⟨(reesAlgebra I).fg_top.mpr (reesAlgebra.fg hI)⟩
+  let q : R →+* G :=
+    (Ideal.Quotient.mk K).comp (algebraMap R (reesAlgebra I))
+  have hIq : I ≤ RingHom.ker q := by
+    intro x hx
+    rw [RingHom.mem_ker]
+    change Ideal.Quotient.mk K (algebraMap R (reesAlgebra I) x) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact adicAssociatedGraded_algebraMap_mem_kernel I x hx
+  let qI : R ⧸ I →+* G := Ideal.Quotient.lift I q hIq
+  let : Algebra (R ⧸ I) G := qI.toAlgebra' fun _ _ =>
+    @mul_comm G (Ideal.Quotient.commSemiring K).toCommMagma _ _
+  let : IsScalarTower R (R ⧸ I) G :=
+    IsScalarTower.of_algebraMap_eq fun x => by
+      change Ideal.Quotient.mk K (algebraMap R (reesAlgebra I) x) =
+        Ideal.Quotient.mk K (algebraMap R (reesAlgebra I) x)
+      rfl
+  have : Algebra.FiniteType R G := Algebra.FiniteType.quotient R K
+  have : Algebra.FiniteType (R ⧸ I) G :=
+    Algebra.FiniteType.of_restrictScalars_finiteType R (R ⧸ I) G
+  exact Algebra.FiniteType.isNoetherianRing (R ⧸ I) G
+
+/-- A finite family of elements of `J`, tagged by their adic degrees, generates all
+initial forms when every element of `J ∩ I^n` can be reduced modulo `I^(n+1)` by
+coefficients of the complementary degrees. -/
+def AdicHomogeneousGenerators
+    {R : Type u} [CommRing R] (I J : Ideal R) (s : Finset (ℕ × R)) : Prop :=
+  (∀ a ∈ s, a.2 ∈ J ∧ a.2 ∈ I ^ a.1) ∧
+    ∀ (n : ℕ) (y : R), y ∈ J → y ∈ I ^ n →
+      ∃ c : s → R,
+        (∀ a, c a ∈ I ^ (n - a.1.1)) ∧
+          y - ∑ a, c a * a.1.2 ∈ I ^ (n + 1)
+
+/-- Homogeneous generators lift to ordinary ideal generators in an adically complete
+ring.  This is the completeness step in the graded criterion for Noetherianity. -/
+theorem isNoetherianRing_of_isAdicComplete_of_homogeneous_generators
+    {R : Type u} [CommRing R] (I : Ideal R) [IsAdicComplete I R]
+    (hhom : ∀ J : Ideal R, ∃ s : Finset (ℕ × R),
+      AdicHomogeneousGenerators I J s) :
+    IsNoetherianRing R := by
+  classical
+  apply (isNoetherianRing_iff_ideal_fg R).mpr
+  intro J
+  obtain ⟨s, hs⟩ := hhom J
+  refine Submodule.fg_def.mpr
+    ⟨(↑(s.image Prod.snd) : Set R), Finset.finite_toSet _, ?_⟩
+  apply le_antisymm
+  · apply Submodule.span_le.mpr
+    intro x hx
+    obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hx
+    exact (hs.1 a ha).1
+  · intro y hy
+    let C : (n : ℕ) → {r : R // r ∈ J ∧ r ∈ I ^ n} → (s → R) :=
+      fun n r => Classical.choose (hs.2 n r r.2.1 r.2.2)
+    have C_mem (n : ℕ) (r : {r : R // r ∈ J ∧ r ∈ I ^ n}) (a : s) :
+        C n r a ∈ I ^ (n - a.1.1) :=
+      (Classical.choose_spec (hs.2 n r r.2.1 r.2.2)).1 a
+    have C_remainder (n : ℕ) (r : {r : R // r ∈ J ∧ r ∈ I ^ n}) :
+        r.1 - ∑ a : s, C n r a * a.1.2 ∈ I ^ (n + 1) :=
+      (Classical.choose_spec (hs.2 n r r.2.1 r.2.2)).2
+    let next (n : ℕ) (r : {r : R // r ∈ J ∧ r ∈ I ^ n}) :
+        {r : R // r ∈ J ∧ r ∈ I ^ (n + 1)} :=
+      ⟨r.1 - ∑ a : s, C n r a * a.1.2,
+        ⟨J.sub_mem r.2.1 (J.sum_mem fun a _ =>
+            J.mul_mem_left (C n r a) (hs.1 a a.2).1),
+          C_remainder n r⟩⟩
+    let z : (n : ℕ) → {r : R // r ∈ J ∧ r ∈ I ^ n} :=
+      fun n => Nat.rec (motive := fun n => {r : R // r ∈ J ∧ r ∈ I ^ n})
+        ⟨y, hy, by simp⟩ (fun n r => next n r) n
+    let c (n : ℕ) : s → R := C n (z n)
+    let psum (n : ℕ) (a : s) : R := ∑ k ∈ Finset.range n, c k a
+    have c_mem (n : ℕ) (a : s) : c n a ∈ I ^ (n - a.1.1) := by
+      exact C_mem n (z n) a
+    have z_zero : (z 0).1 = y := rfl
+    have z_succ (n : ℕ) :
+        (z (n + 1)).1 = (z n).1 - ∑ a : s, c n a * a.1.2 := by
+      rfl
+    have telescopes (n : ℕ) :
+        y - ∑ a : s, psum n a * a.1.2 = (z n).1 := by
+      induction n with
+      | zero => simp [psum, z_zero]
+      | succ n hn =>
+          calc
+            y - ∑ a : s, psum (n + 1) a * a.1.2 =
+                (y - ∑ a : s, psum n a * a.1.2) -
+                  ∑ a : s, c n a * a.1.2 := by
+                    simp only [psum, Finset.sum_range_succ, add_mul,
+                      Finset.sum_add_distrib]
+                    abel
+            _ = (z n).1 - ∑ a : s, c n a * a.1.2 := by rw [hn]
+            _ = (z (n + 1)).1 := (z_succ n).symm
+    have psum_add (m n : ℕ) (a : s) :
+        psum (m + n) a = psum m a + ∑ k ∈ Finset.range n, c (m + k) a := by
+      simp [psum, Finset.sum_range_add]
+    have psum_cauchy (a : s) :
+        ∀ {m n : ℕ}, m ≤ n →
+          psum (m + a.1.1) a ≡ psum (n + a.1.1) a
+            [SMOD (I ^ m • (⊤ : Submodule R R))] := by
+      intro m n hmn
+      rw [SModEq.sub_mem, Ideal.smul_eq_mul, Ideal.mul_top]
+      let l := n - m
+      have hn : n = m + l := (Nat.add_sub_of_le hmn).symm
+      rw [hn, show (m + l) + a.1.1 = (m + a.1.1) + l by omega,
+        psum_add (m + a.1.1) l a]
+      rw [sub_add_eq_sub_sub, sub_self, zero_sub]
+      apply neg_mem
+      apply Ideal.sum_mem
+      intro k hk
+      apply Ideal.pow_le_pow_right (show m ≤ (m + a.1.1 + k) - a.1.1 by omega)
+      exact c_mem (m + a.1.1 + k) a
+    choose b hb using fun a : s =>
+      IsPrecomplete.prec (inferInstance : IsPrecomplete I R) (psum_cauchy a)
+    have hy_eq : y = ∑ a : s, b a * a.1.2 := by
+      rw [← sub_eq_zero]
+      apply IsHausdorff.haus (inferInstance : IsHausdorff I R)
+      intro k
+      rw [SModEq.zero, Ideal.smul_eq_mul, Ideal.mul_top]
+      let D := s.sup fun a => a.1
+      let N := k + D
+      have hkN : k ≤ N := Nat.le_add_right k D
+      have hres : y - ∑ a : s, psum N a * a.1.2 ∈ I ^ N := by
+        rw [telescopes]
+        exact (z N).2.2
+      have hcoeff (a : s) : (psum N a - b a) * a.1.2 ∈ I ^ N := by
+        have haD : a.1.1 ≤ D := Finset.le_sup a.2
+        have haN : a.1.1 ≤ N := haD.trans (Nat.le_add_left D k)
+        have hab : psum N a - b a ∈ I ^ (N - a.1.1) := by
+          have h := hb a (N - a.1.1)
+          rw [SModEq.sub_mem, Ideal.smul_eq_mul, Ideal.mul_top] at h
+          simpa [Nat.sub_add_cancel haN] using h
+        have hmul : (psum N a - b a) * a.1.2 ∈
+            I ^ (N - a.1.1) * I ^ a.1.1 :=
+          Ideal.mul_mem_mul hab (hs.1 a.1 a.2).2
+        rw [← Ideal.IsTwoSided.pow_add, Nat.sub_add_cancel haN] at hmul
+        exact hmul
+      have hsum : ∑ a : s, (psum N a - b a) * a.1.2 ∈ I ^ N :=
+        Ideal.sum_mem _ fun a _ => hcoeff a
+      apply Ideal.pow_le_pow_right hkN
+      have hadd := Ideal.add_mem (I ^ N) hres hsum
+      convert hadd using 1
+      simp only [sub_mul, Finset.sum_sub_distrib]
+      abel
+    rw [hy_eq]
+    apply Submodule.sum_mem
+    intro a _
+    simpa only [smul_eq_mul] using
+      Submodule.smul_mem (Submodule.span R (↑(s.image Prod.snd) : Set R)) (b a)
+        (Submodule.subset_span (by
+          exact Finset.mem_image.mpr ⟨a.1, a.2, rfl⟩))
+
+/-- Homogeneous forms of elements of `J`, in all adic degrees. -/
+def adicAssociatedGradedInitialForms
+    {R : Type u} [CommRing R] (I J : Ideal R) :
+    Set (adicAssociatedGradedRing I) :=
+  {g | ∃ (n : ℕ) (x : R) (_hxJ : x ∈ J) (hxI : x ∈ I ^ n),
+    g = adicAssociatedGradedForm I n x hxI}
+
+private theorem exists_finset_subset_span_eq_of_fg
+    {A : Type*} [CommRing A] (S : Set A) (h : (Ideal.span S).FG) :
+    ∃ t : Finset A, (↑t : Set A) ⊆ S ∧
+      Submodule.span A (↑t : Set A) = (Ideal.span S : Submodule A A) := by
+  classical
+  obtain ⟨U, hUfin, hUspan⟩ := Submodule.fg_def.mp h
+  let u := hUfin.toFinset
+  have hu : (↑u : Set A) ⊆ Submodule.span A S := by
+    intro x hx
+    rw [hUfin.coe_toFinset] at hx
+    change x ∈ (Ideal.span S : Ideal A)
+    rw [← hUspan]
+    exact Submodule.subset_span hx
+  obtain ⟨t, htS, hut⟩ := Submodule.subset_span_finite_of_subset_span hu
+  refine ⟨t, htS, le_antisymm ?_ ?_⟩
+  · exact Submodule.span_le.mpr (htS.trans Submodule.subset_span)
+  · rw [← hUspan]
+    apply Submodule.span_le.mpr
+    intro x hx
+    apply hut
+    simpa [u, hUfin.coe_toFinset] using hx
+
+/-- Noetherianity of the associated graded ring supplies a finite homogeneous
+reduction family for every ideal. -/
+theorem exists_adicHomogeneousGenerators_of_isNoetherian_associatedGraded
+    {R : Type u} [CommRing R] (I J : Ideal R)
+    [IsNoetherianRing (adicAssociatedGradedRing I)] :
+    ∃ s : Finset (ℕ × R), AdicHomogeneousGenerators I J s := by
+  classical
+  let G := adicAssociatedGradedRing I
+  let K := adicAssociatedGradedKernel I
+  let S := adicAssociatedGradedInitialForms I J
+  have hfg : (Ideal.span S).FG := Ideal.fg_of_isNoetherianRing _
+  obtain ⟨t, htS, htspan⟩ := exists_finset_subset_span_eq_of_fg S hfg
+  choose d x hxJ hxI hform using fun a : t => htS a.2
+  let pair : t → ℕ × R := fun a => (d a, x a)
+  have pair_injective : Function.Injective pair := by
+    intro a b hab
+    apply Subtype.ext
+    have hd : d a = d b := congrArg Prod.fst hab
+    have hx : x a = x b := congrArg Prod.snd hab
+    rw [hform a, hform b]
+    apply congrArg (Ideal.Quotient.mk (adicAssociatedGradedKernel I))
+    apply Subtype.ext
+    dsimp only [adicAssociatedGradedForm]
+    rw [hd, hx]
+  let s : Finset (ℕ × R) := t.attach.image pair
+  let toData : t → s := fun a =>
+    ⟨pair a, Finset.mem_image.mpr ⟨a, Finset.mem_attach _ _, rfl⟩⟩
+  have toData_injective : Function.Injective toData := fun a b h =>
+    pair_injective (congrArg Subtype.val h)
+  have toData_surjective : Function.Surjective toData := by
+    intro a
+    obtain ⟨b, _, hb⟩ := Finset.mem_image.mp a.2
+    exact ⟨b, Subtype.ext hb⟩
+  let e : t ≃ s := Equiv.ofBijective toData ⟨toData_injective, toData_surjective⟩
+  refine ⟨s, ?_, ?_⟩
+  · intro a ha
+    let b := e.symm ⟨a, ha⟩
+    have hpair : pair b = a := congrArg Subtype.val (e.apply_symm_apply ⟨a, ha⟩)
+    exact ⟨hpair ▸ hxJ b, hpair ▸ hxI b⟩
+  · intro n y hyJ hyI
+    have hyS : adicAssociatedGradedForm I n y hyI ∈ S :=
+      ⟨n, y, hyJ, hyI, rfl⟩
+    have hyspan : adicAssociatedGradedForm I n y hyI ∈
+        Submodule.span G (↑t : Set G) := by
+      rw [htspan]
+      exact Ideal.subset_span hyS
+    obtain ⟨a, ha⟩ := Submodule.mem_span_finset'.mp hyspan
+    choose q hq using fun b : t =>
+      Ideal.Quotient.mk_surjective (a b)
+    let monomial (b : t) : reesAlgebra I :=
+      ⟨Polynomial.monomial (d b) (x b), reesAlgebra.monomial_mem.mpr (hxI b)⟩
+    have hquot :
+        Ideal.Quotient.mk K
+            ⟨Polynomial.monomial n y, reesAlgebra.monomial_mem.mpr hyI⟩ =
+          Ideal.Quotient.mk K (∑ b : t, q b * monomial b) := by
+      rw [map_sum]
+      change adicAssociatedGradedForm I n y hyI =
+        ∑ b : t, Ideal.Quotient.mk K (q b) * Ideal.Quotient.mk K (monomial b)
+      rw [← ha]
+      apply Finset.sum_congr rfl
+      intro b _
+      simp only [smul_eq_mul]
+      rw [← hq b, hform b]
+      rfl
+    have hker :
+        ⟨Polynomial.monomial n y, reesAlgebra.monomial_mem.mpr hyI⟩ -
+            ∑ b : t, q b * monomial b ∈ K :=
+      Ideal.Quotient.eq.mp hquot
+    have coeff_mul_monomial (b : t) :
+        ((q b).1 * (monomial b).1).coeff n =
+          if d b ≤ n then (q b).1.coeff (n - d b) * x b else 0 := by
+      split_ifs with hdn
+      · change ((q b).1 * Polynomial.monomial (d b) (x b)).coeff n = _
+        calc
+          ((q b).1 * Polynomial.monomial (d b) (x b)).coeff n =
+              ((q b).1 * Polynomial.monomial (d b) (x b)).coeff
+                ((n - d b) + d b) := by rw [Nat.sub_add_cancel hdn]
+          _ = (q b).1.coeff (n - d b) * x b :=
+            Polynomial.coeff_mul_monomial (q b).1 (d b) (n - d b) (x b)
+      · have hnlt : n < d b := Nat.lt_of_not_ge hdn
+        rw [show (monomial b).1 = Polynomial.monomial (d b) (x b) by rfl,
+          ← Polynomial.C_mul_X_pow_eq_monomial, ← mul_assoc,
+          Polynomial.coeff_mul_X_pow', if_neg hdn]
+    let ct (b : t) : R :=
+      if d b ≤ n then (q b).1.coeff (n - d b) else 0
+    have ct_mem (b : t) : ct b ∈ I ^ (n - d b) := by
+      dsimp [ct]
+      split_ifs with hdn
+      · exact (q b).2 (n - d b)
+      · exact Ideal.zero_mem _
+    have hremainder : y - ∑ b : t, ct b * x b ∈ I ^ (n + 1) := by
+      have h := hker n
+      simp only [Subalgebra.coe_sub] at h
+      rw [Polynomial.coeff_sub, Polynomial.coeff_monomial_same] at h
+      have hsum_coe :
+          (↑(∑ b : t, q b * monomial b) : Polynomial R) =
+            ∑ b : t, (Subalgebra.val (reesAlgebra I)) (q b) *
+              (Subalgebra.val (reesAlgebra I)) (monomial b) := by
+        change (Subalgebra.val (reesAlgebra I)) (∑ b : t, q b * monomial b) = _
+        exact
+          (map_sum (Subalgebra.val (reesAlgebra I))
+            (fun b : t => q b * monomial b) Finset.univ)
+      rw [hsum_coe] at h
+      have hcoeff_sum :
+          (∑ b : t, (Subalgebra.val (reesAlgebra I)) (q b) *
+              (Subalgebra.val (reesAlgebra I)) (monomial b)).coeff n =
+            ∑ b : t, ((Subalgebra.val (reesAlgebra I)) (q b) *
+              (Subalgebra.val (reesAlgebra I)) (monomial b)).coeff n := by
+        simpa only [Polynomial.lcoeff_apply] using
+          (map_sum (Polynomial.lcoeff R n)
+            (fun b : t => (Subalgebra.val (reesAlgebra I)) (q b) *
+              (Subalgebra.val (reesAlgebra I)) (monomial b)) Finset.univ)
+      rw [hcoeff_sum] at h
+      convert h using 1
+      apply congrArg (fun z : R => y - z)
+      apply Finset.sum_congr rfl
+      intro b _
+      dsimp [ct]
+      split_ifs with hdn
+      · simpa [hdn] using (coeff_mul_monomial b).symm
+      · simpa [hdn] using (coeff_mul_monomial b).symm
+    refine ⟨fun z => ct (e.symm z), ?_, ?_⟩
+    · intro z
+      have hp : pair (e.symm z) = z.1 :=
+        congrArg Subtype.val (e.apply_symm_apply z)
+      have hd : d (e.symm z) = z.1.1 := congrArg Prod.fst hp
+      simpa only [hd] using ct_mem (e.symm z)
+    · have hsum :
+          ∑ z : s, ct (e.symm z) * z.1.2 = ∑ b : t, ct b * x b := by
+        calc
+          ∑ z : s, ct (e.symm z) * z.1.2 =
+              ∑ b : t, ct (e.symm (e b)) * (e b).1.2 :=
+            (e.sum_comp (fun z : s => ct (e.symm z) * z.1.2)).symm
+          _ = ∑ b : t, ct b * x b := by
+            apply Finset.sum_congr rfl
+            intro b _
+            simp only [e.symm_apply_apply]
+            rfl
+      simpa only [hsum] using hremainder
+
+/-- If a ring is adically complete and its associated graded ring is Noetherian,
+then the ring itself is Noetherian. -/
+theorem isNoetherianRing_of_isAdicComplete_of_associatedGraded
+    {R : Type u} [CommRing R] (I : Ideal R) [IsAdicComplete I R]
+    [IsNoetherianRing (adicAssociatedGradedRing I)] :
+    IsNoetherianRing R := by
+  apply isNoetherianRing_of_isAdicComplete_of_homogeneous_generators I
+  intro J
+  exact exists_adicHomogeneousGenerators_of_isNoetherian_associatedGraded I J
+
+/-- A finitely generated ideal with Noetherian quotient in an adically complete ring
+has a Noetherian ambient ring. -/
+theorem isNoetherianRing_of_isAdicComplete_of_fg_quotient
+    {R : Type u} [CommRing R] (I : Ideal R) [IsNoetherianRing (R ⧸ I)]
+    [IsAdicComplete I R] (hI : I.FG) :
+    IsNoetherianRing R := by
+  let : IsNoetherianRing (adicAssociatedGradedRing I) :=
+    adicAssociatedGradedRing_isNoetherian I hI
+  exact isNoetherianRing_of_isAdicComplete_of_associatedGraded I
+
+/-- The associated graded ring of an ideal in a Noetherian ring is Noetherian. -/
+theorem adicAssociatedGradedRing_isNoetherian_of_isNoetherianRing
+    {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :
+    IsNoetherianRing (adicAssociatedGradedRing I) := by
+  exact adicAssociatedGradedRing_isNoetherian I I.fg_of_isNoetherianRing
 
 /-- The source of the canonical graded map in the textbook. -/
 abbrev quasiRegularSource

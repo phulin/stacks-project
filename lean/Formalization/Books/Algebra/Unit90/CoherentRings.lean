@@ -667,7 +667,10 @@ theorem coherentModule_iff_finitePresentation
 theorem isCoherentRing_of_isNoetherianRing
     (R : Type u) [CommRing R] [IsNoetherianRing R] :
     IsCoherentRing R := by
-  sorry
+  rw [coherentRing_iff_finitelyPresented_ideals]
+  intro I hI
+  let : Module.Finite R (I : Type u) := Module.Finite.of_fg hI
+  exact Module.finitePresentation_of_finite R (I : Type u)
 
 /-! ## Products of flat modules -/
 
@@ -680,8 +683,70 @@ theorem coherentRing_characterization
         (∀ a, Module.Flat R (Q a : Type w)) →
           Module.Flat R (∀ a, (Q a : Type w)),
       ∀ (A : Type v), Module.Flat R (modulePower R A)
-    ] := by
-  sorry
+  ] := by
+  tfae_have 1 → 2 := by
+    intro hR A Q hQ
+    rw [Module.Flat.iff_rTensor_injective]
+    intro I hI
+    let P : ModuleCat.{u} R := ModuleCat.of R (I : Type u)
+    have hP : Module.FinitePresentation R (P : Type u) := by
+      dsimp [P]
+      exact (coherentRing_iff_finitelyPresented_ideals R).mp hR I hI
+    have hbij : Function.Bijective (productTensorMap P Q) :=
+      ((finite_presentation_tensor_iff P).out 0 1).mp hP
+    have hnat
+        (z : TensorProduct R (I : Type u) (∀ a, (Q a : Type w))) (a : A) :
+        congrFun ((TensorProduct.rid R (∀ a, (Q a : Type w)))
+          ((I.subtype.rTensor (∀ a, (Q a : Type w))) z)) a =
+          (TensorProduct.rid R (Q a : Type w))
+            ((I.subtype.rTensor (Q a : Type w)) ((productTensorMap P Q z) a)) := by
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | tmul i q => simp [productTensorMap]
+      | add x y hx hy => simp [map_add, hx, hy]
+    intro x y hxy
+    apply hbij.1
+    funext a
+    letI : Module.Flat R (Q a : Type w) := hQ a
+    apply Module.Flat.rTensor_preserves_injective_linearMap
+      (M := Q a) I.subtype I.subtype_injective
+    apply (TensorProduct.rid R (Q a : Type w)).injective
+    have hxy' := congrArg (TensorProduct.rid R (∀ a, (Q a : Type w))) hxy
+    rw [← hnat x a, ← hnat y a]
+    exact congrFun hxy' a
+  tfae_have 2 → 3 := by
+    intro h A
+    exact h A (fun _ => ModuleCat.of R R) (by
+      intro a
+      exact Module.Flat.self)
+  tfae_have 3 → 1 := by
+    intro hR
+    rw [coherentRing_iff_finitelyPresented_ideals]
+    intro I hI
+    let P : ModuleCat.{u} R := ModuleCat.of R (I : Type u)
+    have hfinite : Module.Finite R (P : Type u) := Module.Finite.of_fg hI
+    have hbij : ∀ A : Type v,
+        Function.Bijective (tensorModulePowerMap P (A := A)) := by
+      intro A
+      have hnat
+          (z : TensorProduct R (I : Type u) (modulePower R A)) :
+          (TensorProduct.rid R (modulePower R A))
+              (I.subtype.rTensor (modulePower R A) z) =
+            fun a => I.subtype ((tensorModulePowerMap P (A := A) z) a) := by
+        induction z using TensorProduct.induction_on with
+        | zero => ext a; simp
+        | tmul i q => ext a; simp [tensorModulePowerMap, productTensorMap]
+        | add x y hx hy => ext a; simp [map_add, hx, hy]
+      have hinj : Function.Injective (tensorModulePowerMap P (A := A)) := by
+        intro x y hxy
+        apply (TensorProduct.rid R (modulePower R A)).injective
+        rw [hnat x, hnat y]
+        exact congrArg (fun f => fun a => I.subtype (f a)) hxy
+      have hsurj : Function.Surjective (tensorModulePowerMap P (A := A)) :=
+        ((finite_generation_tensor_iff P).out 0 3).mp hfinite A
+      exact ⟨hinj, hsurj⟩
+    exact ((finite_presentation_tensor_iff P).out 0 3).mpr hbij
+  tfae_finish
 
 end
 

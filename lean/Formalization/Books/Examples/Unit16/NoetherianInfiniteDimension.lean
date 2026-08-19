@@ -45,7 +45,6 @@ private theorem mvPolynomial_idealOfVars_isPrime
         exact hzero ⟨n, Set.mem_univ _, hn⟩
       subst m
       have hp' : MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 := by
-        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0
         change f p = 0 at hp
         change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 at hp
         exact hp
@@ -80,7 +79,6 @@ private theorem mvPolynomial_idealOfVars_isMaximal
         exact hzero ⟨n, Set.mem_univ _, hn⟩
       subst m
       have hp' : MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 := by
-        change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0
         change f p = 0 at hp
         change MvPolynomial.coeff (0 : σ →₀ ℕ) p = 0 at hp
         exact hp
@@ -108,7 +106,7 @@ private theorem mvPolynomial_idealOfVars_height
       have hbmax : b.IsMaximal := by
         exact mvPolynomial_idealOfVars_isMaximal K (Fin n)
       have hpmax : p.IsMaximal := by
-        letI : (MvPolynomial.idealOfVars (Fin (n + 1)) K).IsMaximal :=
+        have hmax : (MvPolynomial.idealOfVars (Fin (n + 1)) K).IsMaximal :=
           mvPolynomial_idealOfVars_isMaximal K (Fin (n + 1))
         change (Ideal.map (e : MvPolynomial (Fin (n + 1)) K →+*
           Polynomial (MvPolynomial (Fin n) K))
@@ -161,8 +159,8 @@ private theorem mvPolynomial_idealOfVars_height
             simpa [hz0] using hcoeff'
           rw [← hcoeff]
           exact hy0
-      letI : p.IsMaximal := hpmax
-      letI : p.LiesOver b := hlies
+      have hpmax' : p.IsMaximal := hpmax
+      have hlies' : p.LiesOver b := hlies
       have hheight : p.height = b.height + 1 :=
         Polynomial.height_eq_height_add_one b p
       have heheight : p.height =
@@ -235,7 +233,7 @@ private theorem finiteMvPolynomial_idealOfVars_localization_properties
       IsLocalRing (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) ∧
       ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) =
         (↑n : WithBot ℕ∞) := by
-  letI : (MvPolynomial.idealOfVars (Fin n) K).IsPrime :=
+  have hprime : (MvPolynomial.idealOfVars (Fin n) K).IsPrime :=
     mvPolynomial_idealOfVars_isPrime K (Fin n)
   have hdim :
       ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars (Fin n) K)) =
@@ -253,10 +251,10 @@ private theorem finiteMvPolynomial_idealOfVars_localization_properties_finite
       ringKrullDim (Localization.AtPrime (MvPolynomial.idealOfVars σ K)) =
         (↑(Nat.card σ) : WithBot ℕ∞) := by
   classical
-  letI := Fintype.ofFinite σ
+  let hFintype := Fintype.ofFinite σ
   let e := MvPolynomial.renameEquiv K (Fintype.equivFin σ)
   let q := MvPolynomial.idealOfVars (Fin (Fintype.card σ)) K
-  letI : q.IsPrime := mvPolynomial_idealOfVars_isPrime K _
+  have hqprime : q.IsPrime := mvPolynomial_idealOfVars_isPrime K _
   have hmap :
       Ideal.map e.toRingEquiv
           (MvPolynomial.idealOfVars σ K) = q := by
@@ -310,8 +308,8 @@ private theorem finiteMvPolynomial_idealOfVars_localization_properties_finite
       (Localization.AtPrime q) e.toRingEquiv hM
   have hq := finiteMvPolynomial_idealOfVars_localization_properties
     K (Fintype.card σ)
-  letI := hq.1
-  letI := hq.2.1
+  have hqNoeth := hq.1
+  have hqLocal := hq.2.1
   refine ⟨isNoetherianRing_of_ringEquiv _ eloc.symm, ?_, ?_⟩
   · exact eloc.symm.isLocalRing
   · rw [ringKrullDim_eq_of_ringEquiv eloc]
@@ -958,9 +956,9 @@ theorem noetherianInfiniteDimension_block_localization_properties
   let qB := MvPolynomial.idealOfVars s B
   let qK := MvPolynomial.idealOfVars s K
   let N := (nonZeroDivisors B).map (MvPolynomial.C : B →+* R')
-  letI : Algebra R' S' := MvPolynomial.algebraMvPolynomial
-  haveI : qB.IsPrime := mvPolynomial_idealOfVars_isPrime B s
-  haveI : qK.IsPrime := mvPolynomial_idealOfVars_isPrime K s
+  let hAlg : Algebra R' S' := MvPolynomial.algebraMvPolynomial
+  have hqBprime : qB.IsPrime := mvPolynomial_idealOfVars_isPrime B s
+  have hqKprime : qK.IsPrime := mvPolynomial_idealOfVars_isPrime K s
   have hqmap :
       Ideal.map (algebraMap R' S') qB = qK := by
     change Ideal.map (algebraMap (MvPolynomial s B) (MvPolynomial s K))
@@ -986,7 +984,7 @@ theorem noetherianInfiniteDimension_block_localization_properties
       rw [MvPolynomial.mem_support_iff]
       simp [hm0]
     obtain ⟨a, ha, hna⟩ := hmq' 0 hzero
-    simpa using hna
+    simp at hna
   have hunder :
       (Ideal.map (algebraMap R' S') qB).under R' = qB :=
     IsLocalization.under_map_of_isPrime_disjoint N S' inferInstance hdisj
@@ -997,7 +995,7 @@ theorem noetherianInfiniteDimension_block_localization_properties
   let eS : S' ≃ₐ[R'] Localization N :=
     IsLocalization.algEquiv N S' (Localization N)
   let qL : Ideal (Localization N) := Ideal.map eS.toRingEquiv qK
-  haveI : qL.IsPrime := by
+  have hqLprime : qL.IsPrime := by
     dsimp [qL]
     infer_instance
   have hqmapL :
@@ -1024,7 +1022,7 @@ theorem noetherianInfiniteDimension_block_localization_properties
   have hsfin : s.Finite := by
     dsimp [s, noetherianInfiniteDimensionBlock]
     exact Set.finite_Ico _ _
-  haveI := hsfin.fintype
+  let hsfinFintype := hsfin.fintype
   have hfinite := finiteMvPolynomial_idealOfVars_localization_properties_finite K s
   have hqmapKL : Ideal.map eS.toRingEquiv qK = qL := rfl
   have hM : qK.primeCompl.map eS.toRingEquiv = qL.primeCompl := by
@@ -1078,8 +1076,8 @@ theorem noetherianInfiniteDimension_block_localization_properties
       rfl
     rw [hs_eq, Nat.card_eq_fintype_card, PNat.card_fintype_Ico]
     norm_num [a, b]
-  haveI := hfinite.1
-  haveI := hfinite.2.1
+  have hfiniteNoeth := hfinite.1
+  have hfiniteLocal := hfinite.2.1
   refine ⟨isNoetherianRing_of_ringEquiv _ eAll.symm, ?_, ?_⟩
   · exact eAll.symm.isLocalRing
   · rw [ringKrullDim_eq_of_ringEquiv eAll]
@@ -1144,7 +1142,7 @@ private theorem localized_ideal_fg_generators
   let S := Localization.AtPrime P
   let f := algebraMap A S
   rcases Submodule.fg_def.mp hI with ⟨G, hGfin, hGspan⟩
-  haveI := hGfin.fintype
+  let hGfintype := hGfin.fintype
   have hmem : ∀ z : G, z.1 ∈ I.map f := by
     intro z
     rw [← hGspan]
@@ -1225,6 +1223,14 @@ private theorem finite_noetherianInfiniteDimension_maximals_containing
   exact (hblocks.image (fun i : ℕ+ =>
     noetherianInfiniteDimensionLocalizedBlockIdeal k i)).subset hsub
 
+private instance ideal_mem_maximal_isMaximal
+    {R : Type*} [CommRing R] (f : R)
+    (Q : {Q : Ideal R // Q.IsMaximal ∧ f ∈ Q}) : Q.1.IsMaximal := Q.2.1
+
+private instance ideal_mem_maximal_isPrime
+    {R : Type*} [CommRing R] (f : R)
+    (Q : {Q : Ideal R // Q.IsMaximal ∧ f ∈ Q}) : Q.1.IsPrime := Q.2.1.isPrime'
+
 instance noetherianInfiniteDimensionLocalization_isNoetherian
     (k : Type u) [Field k] :
     IsNoetherianRing (NoetherianInfiniteDimensionLocalization k) := by
@@ -1254,17 +1260,15 @@ instance noetherianInfiniteDimensionLocalization_isNoetherian
     intro P hP
     obtain ⟨i, hi⟩ := (noetherianInfiniteDimension_isMaximal_iff k P).mp hP
     subst P
-    haveI : IsNoetherianRing
+    have hlocalNoethI : IsNoetherianRing
         (Localization.AtPrime (noetherianInfiniteDimensionBlockIdeal k i)) :=
       (noetherianInfiniteDimension_block_localization_properties k i).1
     rcases noetherianInfiniteDimension_localization_at_maximal_equiv k i with ⟨e⟩
     exact isNoetherianRing_of_ringEquiv _ e.symm.toRingEquiv
-  haveI : ∀ Q : maxs, Q.1.IsMaximal := fun Q => Q.2.1
-  haveI : ∀ Q : maxs, Q.1.IsPrime := fun Q => Q.2.1.isPrime'
   have hlocalfg : ∀ Q : maxs,
       (I.map (algebraMap A (Localization.AtPrime Q.1))).FG := by
     intro Q
-    haveI : IsNoetherianRing (Localization.AtPrime Q.1) :=
+    have hlocalNoethI : IsNoetherianRing (Localization.AtPrime Q.1) :=
       hlocalNoeth Q.1 Q.2.1
     exact IsNoetherian.noetherian _
   have hgen : ∀ Q : maxs, ∃ T : Set A, T.Finite ∧ T ⊆ I ∧
@@ -1273,7 +1277,7 @@ instance noetherianInfiniteDimensionLocalization_isNoetherian
     intro Q
     exact localized_ideal_fg_generators I Q.1 (hlocalfg Q)
   choose T hTfin hTsub hTmap using hgen
-  haveI := hmaxs.fintype
+  let hmaxFintype := hmaxs.fintype
   let U : Set A := {f} ∪ ⋃ Q : maxs, T Q
   have hUfin : U.Finite := by
     dsimp [U]
@@ -1339,10 +1343,6 @@ theorem noetherianInfiniteDimensionLocalization_has_infinite_dimension
         nlinarith
   let i : ℕ+ := ⟨n + 1, by omega⟩
   let Q : Ideal A := noetherianInfiniteDimensionLocalizedBlockIdeal k i
-  haveI : Q.IsMaximal := by
-    dsimp [Q]
-    infer_instance
-  haveI : Q.IsPrime := inferInstance
   have hlocaldim : ringKrullDim (Localization.AtPrime Q) =
       (↑(2 ^ ((i : ℕ) - 1) : ℕ) : WithBot ℕ∞) := by
     rcases noetherianInfiniteDimension_localization_at_maximal_equiv k i with ⟨e⟩

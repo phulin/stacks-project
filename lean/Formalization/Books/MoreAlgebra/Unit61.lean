@@ -606,13 +606,13 @@ namespace TensorPrimePair
 
 noncomputable abbrev aToTensor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    [Algebra R A] [Algebra R B] (_S : TensorPrimePair R A B) :
     A →+* (A ⊗[R] B) :=
   Algebra.TensorProduct.includeLeftRingHom
 
 noncomputable abbrev bToTensor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    [Algebra R A] [Algebra R B] (_S : TensorPrimePair R A B) :
     B →+* (A ⊗[R] B) :=
   Algebra.TensorProduct.includeRight.toRingHom
 

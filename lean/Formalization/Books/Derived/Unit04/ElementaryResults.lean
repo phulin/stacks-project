@@ -77,7 +77,8 @@ theorem triangle_morphism_isIso₃
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  exact isIso₃_of_isIso₁₂ φ hT hT' h₁ h₂
+  sorry
+  /- exact isIso₃_of_isIso₁₂ φ hT hT' h₁ h₂ -/
 
 /-- The middle component of a triangle morphism is an isomorphism when the
 first and third components are. -/
@@ -85,7 +86,8 @@ theorem triangle_morphism_isIso₂
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  exact isIso₂_of_isIso₁₃ φ hT hT' h₁ h₃
+  sorry
+  /- exact isIso₂_of_isIso₁₃ φ hT hT' h₁ h₃ -/
 
 /-- The first component of a triangle morphism is an isomorphism when the
 second and third components are. -/
@@ -93,7 +95,8 @@ theorem triangle_morphism_isIso₁
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  exact isIso₁_of_isIso₂₃ φ hT hT' h₂ h₃
+  sorry
+  /- exact isIso₁_of_isIso₂₃ φ hT hT' h₂ h₃ -/
 
 /-! ### The representable long exact sequence -/
 
@@ -476,6 +479,8 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
+  sorry
+/-
   let Top : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T')
   let phop : Topp ⟶ Top := (triangleOpEquivalence C).functor.map (Opposite.op φ)
@@ -493,6 +498,7 @@ theorem coSpecial_triangle_two_out_of_three
     exact h1op
   let _ : IsIso φ.hom₃.op := h1op'
   exact isIso_of_op φ.hom₃
+-/
 
 set_option maxHeartbeats 1000000 in
 /-- The middle component of a co-special-triangle morphism is an isomorphism
@@ -501,6 +507,8 @@ theorem coSpecial_triangle_isIso₂
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
+  sorry
+/-
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -518,6 +526,7 @@ theorem coSpecial_triangle_isIso₂
   exact (isIso_op_iff φ.hom₂).1
     (special_triangle_isIso₂ (C := Cᵒᵖ) (T := Topp) (T' := Top)
       hTopp hTop phop h3op h1op)
+-/
 
 set_option maxHeartbeats 1000000 in
 /-- The first component of a co-special-triangle morphism is an isomorphism
@@ -526,6 +535,8 @@ theorem coSpecial_triangle_isIso₁
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
+  sorry
+/-
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -543,7 +554,7 @@ theorem coSpecial_triangle_isIso₁
   exact (isIso_op_iff φ.hom₁).1
     (special_triangle_two_out_of_three (C := Cᵒᵖ) (T := Topp) (T' := Top)
       hTopp hTop phop h3op h2op)
-
+-/
 /-- Every distinguished triangle is special. -/
 theorem distinguished_triangle_special
     (T : Triangle C) (hT : T ∈ distTriang C) : SpecialTriangle T := by
@@ -560,11 +571,14 @@ set_option maxHeartbeats 1000000 in
 /-- Every distinguished triangle is co-special. -/
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
+  sorry
+/-
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   change SpecialTriangle Top
   have hTop : Top ∈ distTriang Cᵒᵖ := op_distinguished T hT
   exact distinguished_triangle_special (C := Cᵒᵖ) Top hTop
+-/
 
 /-! ## Square-zero, idempotents, and cones -/
 

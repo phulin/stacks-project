@@ -1602,7 +1602,7 @@ abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}
 theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (O : RingSheaf.{v, v} X) :
-    Nonempty (Mod O ≌ BasisModuleSheafCategory B O) := by
+    Nonempty (Mod O ≌ BasisModuleSheafCategory.{v, v} B O) := by
   let R : Mod O ⥤ BasisModuleSheafCategory B O := {
     obj M := ⟨basisModuleRestriction B M.val, by
       change Presheaf.IsSheaf (basisTopology B)
@@ -1619,7 +1619,7 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     map φ := ⟨{
       app U := φ.val.app ((inducedFunctor B).op.obj U)
       naturality f := φ.val.naturality ((inducedFunctor B).op.map f) }⟩ }
-  letI : R.Faithful := by
+  let : R.Faithful := by
     constructor
     intro M N f g h
     apply SheafOfModules.hom_ext
@@ -1633,7 +1633,7 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
       (CategoryTheory.forget₂
         (ModuleCat (((inducedFunctor B).op ⋙ O.1).obj (op i))) AddCommGrpCat).map q) hi
     exact hi'
-  letI : R.Full := by
+  let : R.Full := by
     constructor
     intro M N h
     let hAdd : (inducedFunctor B).op ⋙ M.val.presheaf ⟶
@@ -1644,8 +1644,8 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
         M.val.presheaf ⟨N.val.presheaf, N.isSheaf⟩ hB hAdd
     refine ⟨⟨PresheafOfModules.homMk α ?_⟩, ?_⟩
     · intro U r m
-      letI : Module (O.1.obj U) (M.val.presheaf.obj U) := by infer_instance
-      letI : Module (O.1.obj U) (N.val.presheaf.obj U) := by infer_instance
+      let : Module (O.1.obj U) (M.val.presheaf.obj U) := by infer_instance
+      let : Module (O.1.obj U) (N.val.presheaf.obj U) := by infer_instance
       let P : TopCat.Presheaf (Type v) X :=
         { obj := fun U =>
             (O.1 ⋙ CategoryTheory.forget RingCat).obj U ×
@@ -1680,8 +1680,8 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
             intro V W f
             ext z
             dsimp [P]
-            letI : Module (O.1.obj V) (M.val.presheaf.obj V) := by infer_instance
-            letI : Module (O.1.obj V) (N.val.presheaf.obj V) := by infer_instance
+            let : Module (O.1.obj V) (M.val.presheaf.obj V) := by infer_instance
+            let : Module (O.1.obj V) (N.val.presheaf.obj V) := by infer_instance
             let rV : (O.1.obj V : Type v) := z.1
             let mV : (M.val.presheaf.obj V : Type v) := z.2
             change (ConcreteCategory.hom (α.app W))
@@ -1708,8 +1708,8 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
             intro V W f
             ext z
             dsimp [P]
-            letI : Module (O.1.obj V) (M.val.presheaf.obj V) := by infer_instance
-            letI : Module (O.1.obj V) (N.val.presheaf.obj V) := by infer_instance
+            let : Module (O.1.obj V) (M.val.presheaf.obj V) := by infer_instance
+            let : Module (O.1.obj V) (N.val.presheaf.obj V) := by infer_instance
             let rV : (O.1.obj V : Type v) := z.1
             let mV : (M.val.presheaf.obj V : Type v) := z.2
             change (ConcreteCategory.hom (O.1.map f)) rV •
@@ -1740,9 +1740,9 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
         apply (TopCat.Sheaf.restrictHomEquivHom P
           ⟨N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat, hN⟩ hB).symm.injective
         ext i z
-        letI : Module (O.1.obj (op (B i.unop)))
+        let : Module (O.1.obj (op (B i.unop)))
             (M.val.presheaf.obj (op (B i.unop))) := by infer_instance
-        letI : Module (O.1.obj (op (B i.unop)))
+        let : Module (O.1.obj (op (B i.unop)))
             (N.val.presheaf.obj (op (B i.unop))) := by infer_instance
         let m' : (M.val.obj (op (B i.unop)) : Type v) := z.2
         let n' : (N.val.obj (op (B i.unop)) : Type v) :=
@@ -1784,15 +1784,14 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
           ((h.hom.app U).hom) m'
         exact PresheafOfModules.toPresheaf_map_app_apply h.hom U m'
       exact hαUm'.trans hmap
-  letI : R.EssSurj := by
+  let : R.EssSurj := by
     constructor
     intro Q
     obtain ⟨r⟩ := basisModuleExtension_restriction_iso B hB O Q.obj Q.property
     refine ⟨basisModuleExtension B hB O Q.obj Q.property, ?_⟩
     exact ⟨ObjectProperty.isoMk _ r⟩
-  letI : R.IsEquivalence := ⟨inferInstance, inferInstance, inferInstance⟩
-  let e : Mod O ≌ BasisModuleSheafCategory B O := R.asEquivalence
-  exact ⟨e⟩
+  let : R.IsEquivalence := ⟨inferInstance, inferInstance, inferInstance⟩
+  exact ⟨R.asEquivalence⟩
 
 /-! ## `f`-maps checked on bases -/
 

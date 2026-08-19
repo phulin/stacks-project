@@ -313,7 +313,7 @@ private theorem additiveSkyscraperColimit_support_eq_range
           intro j
           by_cases hji : j = ⟨i⟩
           · subst j
-            simp [t, c, hct]
+            simp [t, c]
           · have hzero : IsZero (K.obj j) := by
               change IsZero ((abelianSkyscraperSheaf (p j.as) A).presheaf.stalk (p i))
               have hspec : ¬p j.as ⤳ p i := by
@@ -370,7 +370,7 @@ private theorem additiveSkyscraperColimit_support_eq_range
         have hid : (𝟙 (colimit (D ⋙ H))) = 0 := by
           apply (colimit.isColimit (D ⋙ H)).hom_ext
           intro j
-          simp only [Category.comp_id, comp_zero]
+          simp only [comp_zero]
           exact (hD j.as).eq_of_src _ _
         refine ⟨?_, ?_⟩
         · intro Y
@@ -471,11 +471,11 @@ theorem exists_nonclosed_skyscraper_direct_sum_on_real_line :
   let A : AddCommGrpCat.{0} := AddCommGrpCat.of ℤ
   let G : I → TopCat.Sheaf (AddCommGrpCat.{0}) X :=
     fun n => abelianSkyscraperSheaf (p n) A
-  letI : HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat.{0} := by
+  let : HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat.{0} := by
     infer_instance
-  letI : HasColimitsOfShape (Discrete I) AddCommGrpCat.{0} := by
+  let : HasColimitsOfShape (Discrete I) AddCommGrpCat.{0} := by
     infer_instance
-  letI : HasColimitsOfShape (Discrete I)
+  let : HasColimitsOfShape (Discrete I)
       (TopCat.Sheaf (AddCommGrpCat.{0}) X) := by
     exact CategoryTheory.Sheaf.instHasColimitsOfShape
   let F : TopCat.Sheaf (AddCommGrpCat.{0}) X :=
@@ -560,7 +560,6 @@ theorem openAbelianExtension_support_eq_open {X : TopCat.{v}} (U : Opens X)
           ((isZero_zero AddCommGrpCat.{v}).of_iso
             (HasZeroObject.zeroIsoInitial :
               (0 : AddCommGrpCat.{v}) ≅ (⊥_ AddCommGrpCat.{v})).symm)
-      letI := hzero
       rw [← not_subsingleton_iff_nontrivial] at hs
       apply hs
       refine ⟨?_⟩

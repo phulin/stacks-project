@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit12.TensorProducts
 import Formalization.Books.Algebra.Unit63
 import Mathlib.Algebra.Module.Torsion.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
@@ -575,7 +576,73 @@ theorem compare_relative_assassins
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) ⊆
         relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
-  sorry
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · sorry
+  · intro q hq
+    letI : Module R N := Module.compHom N (algebraMap R S)
+    letI : IsScalarTower R S N :=
+      inducedModule_isScalarTower (R := R) (S := S) (N := N)
+    change (∃ (M : Type u) (hMadd : AddCommGroup M) (hMmodule : Module R M)
+        (hMfinite : Module.Finite R M),
+      letI := hMadd
+      letI := hMmodule
+      letI := hMfinite
+      letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+        (N ⊗[R] M)) at hq
+    change (∃ (M : Type u) (hMadd : AddCommGroup M) (hMmodule : Module R M),
+      letI := hMadd
+      letI := hMmodule
+      letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+        (N ⊗[R] M))
+    rcases hq with ⟨M, hMadd, hMmodule, hMfinite, hq⟩
+    exact ⟨M, hMadd, hMmodule, hq⟩
+  · sorry
+  · intro q hq
+    letI : Module R N := Module.compHom N (algebraMap R S)
+    letI : IsScalarTower R S N :=
+      inducedModule_isScalarTower (R := R) (S := S) (N := N)
+    change ∃ p : PrimeSpectrum R,
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+        (N ⧸ (p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N))) at hq
+    rcases hq with ⟨p, hp⟩
+    let I : Submodule R N := p.asIdeal • (⊤ : Submodule R N)
+    let J : Submodule S N :=
+      p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
+    have hIJ : J.restrictScalars R = I := by
+      dsimp [I, J]
+      rw [Ideal.smul_restrictScalars]
+      rfl
+    let eQ : (N ⧸ I) ≃ₗ[R] (N ⧸ (J.restrictScalars R)) :=
+      Submodule.quotEquivOfEq I (J.restrictScalars R) hIJ.symm
+    let e : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[R] (N ⧸ J) :=
+      (TensorProduct.tensorQuotEquivQuotSMul N p.asIdeal).trans eQ |>.trans
+        (Submodule.Quotient.restrictScalarsEquiv R J).restrictScalars R
+    have he (s : S) (z : N ⊗[R] (R ⧸ p.asIdeal)) :
+        e (s • z) = s • e z := by
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp [e, eQ]
+      · intro n r
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+        simp only [e, LinearEquiv.trans_apply, TensorProduct.smul_tmul',
+          TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+        rw [← eQ.map_smul]
+        congr 1
+        simp [smul_smul, mul_comm]
+      · intro x y hx hy
+        simp only [TensorProduct.smul_add, map_add, smul_add, hx, hy]
+    refine ⟨R ⧸ p.asIdeal, inferInstance, inferInstance, inferInstance, ?_⟩
+    letI : Module S (N ⊗[R] (R ⧸ p.asIdeal)) := TensorProduct.leftModule
+    change q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+      (N ⊗[R] (R ⧸ p.asIdeal))
+    change ∃ y, (⊥ : Submodule S (N ⊗[R] (R ⧸ p.asIdeal))).colon
+      ({y} : Set _) = q.asIdeal
+    rcases hp with ⟨x, hx⟩
+    refine ⟨e.symm x, ?_⟩
+    sorry
+  · intro q hq
+    sorry
 
 theorem relative_assassins_eq_of_noetherian_target
     {R : Type u} {S : Type v} {N : Type w}

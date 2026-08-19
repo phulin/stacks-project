@@ -694,7 +694,16 @@ theorem triangle_middle_composite_zero
     (hφ₁ : φ.hom₁ = 0) (hφ₃ : φ.hom₃ = 0)
     (hψ₁ : ψ.hom₁ = 0) (hψ₃ : ψ.hom₃ = 0) :
     φ.hom₂ ≫ ψ.hom₂ = 0 := by
-  sorry
+  have hψ : T.mor₁ ≫ ψ.hom₂ = 0 := by
+    rw [ψ.comm₁, hψ₁, zero_comp]
+  obtain ⟨α, hα⟩ := T.yoneda_exact₂ hT ψ.hom₂ hψ
+  have hφ : φ.hom₂ ≫ T.mor₂ = 0 := by
+    rw [← φ.comm₂, hφ₃, comp_zero]
+  obtain ⟨β, hβ⟩ := T.coyoneda_exact₂ hT φ.hom₂ hφ
+  calc
+    φ.hom₂ ≫ ψ.hom₂ = (β ≫ T.mor₁) ≫ (T.mor₂ ≫ α) := by rw [hβ, hα]
+    _ = β ≫ (T.mor₁ ≫ T.mor₂) ≫ α := by simp only [Category.assoc]
+    _ = 0 := by rw [comp_distTriang_mor_zero₁₂ _ hT, zero_comp, comp_zero]
 
 /-- An idempotent pair on the ends of a distinguished triangle extends to an
 idempotent endomorphism of the triangle. -/
@@ -705,7 +714,108 @@ theorem exists_idempotent_triangle_endomorphism
     (hcomm : T.mor₃ ≫ a⟦(1 : ℤ)⟧' = c ≫ T.mor₃) :
     ∃ (b : T.obj₂ ⟶ T.obj₂), b ≫ b = b ∧
       ∃ φ : T ⟶ T, φ.hom₁ = a ∧ φ.hom₂ = b ∧ φ.hom₃ = c := by
-  sorry
+  obtain ⟨b', hb'₁, hb'₂⟩ :=
+    complete_distinguished_triangle_morphism₂ T T hT hT a c hcomm
+  let d : T.obj₂ ⟶ T.obj₂ := b' ≫ b' - b'
+  have hd₁ : T.mor₁ ≫ d = 0 := by
+    dsimp [d]
+    rw [comp_sub, ← Category.assoc, hb'₁, Category.assoc, hb'₁, ← Category.assoc, ha,
+      sub_self]
+  have hd₂ : d ≫ T.mor₂ = 0 := by
+    dsimp [d]
+    rw [sub_comp, Category.assoc, ← hb'₂, ← Category.assoc, ← hb'₂, Category.assoc, hc,
+      sub_self]
+  let δ : T ⟶ T := Triangle.homMk T T 0 d 0
+    (by simpa using hd₁) (by simpa using hd₂.symm) (by simp)
+  have hdd : d ≫ d = 0 := by
+    have h := triangle_middle_composite_zero hT δ δ (by rfl) (by rfl) (by rfl) (by rfl)
+    exact h
+  have hxd : b' ≫ d = d ≫ b' := by
+    simp only [d, comp_sub, sub_comp, Category.assoc]
+  let q : T.obj₂ ⟶ T.obj₂ := b' + b' - 𝟙 _
+  have hqd : q ≫ d = d ≫ q := by
+    dsimp [q]
+    simp only [comp_sub, sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id,
+      hxd]
+  have hqqd : (q ≫ d) ≫ (q ≫ d) = 0 := by
+    calc
+      (q ≫ d) ≫ (q ≫ d) = q ≫ ((d ≫ q) ≫ d) := by simp only [Category.assoc]
+      _ = q ≫ ((q ≫ d) ≫ d) := by rw [← hqd]
+      _ = 0 := by simp only [Category.assoc, hdd, comp_zero]
+  have hbase : b' ≫ b' = b' + d := by
+    dsimp [d]
+    abel
+  have hbq : b' ≫ q = q ≫ b' := by
+    dsimp [q]
+    simp only [comp_sub, sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id]
+  have hbq' : b' ≫ q = b' + d + d := by
+    dsimp [q]
+    simp only [comp_sub, add_comp, comp_add, Category.id_comp, Category.comp_id]
+    rw [hbase]
+    abel
+  have hxkd : b' ≫ (q ≫ d) = b' ≫ d := by
+    calc
+      b' ≫ (q ≫ d) = (b' ≫ q) ≫ d := by simp only [Category.assoc]
+      _ = (b' + d + d) ≫ d := by rw [hbq']
+      _ = b' ≫ d := by
+        simp only [add_comp, hdd, comp_zero, add_zero]
+  have hqdb : (q ≫ d) ≫ b' = b' ≫ d := by
+    calc
+      (q ≫ d) ≫ b' = q ≫ (d ≫ b') := by simp only [Category.assoc]
+      _ = q ≫ (b' ≫ d) := by rw [hxd]
+      _ = (q ≫ b') ≫ d := by simp only [Category.assoc]
+      _ = (b' ≫ q) ≫ d := by rw [← hbq]
+      _ = b' ≫ (q ≫ d) := by simp only [Category.assoc]
+      _ = b' ≫ d := hxkd
+  let k : T.obj₂ ⟶ T.obj₂ := q ≫ d
+  have hkk : k ≫ k = 0 := by
+    change (q ≫ d) ≫ (q ≫ d) = 0
+    exact hqqd
+  have hrel : d - b' ≫ k - k ≫ b' + k = 0 := by
+    rw [show b' ≫ k = b' ≫ (q ≫ d) by rfl, hxkd,
+      show k ≫ b' = (q ≫ d) ≫ b' by rfl, hqdb]
+    change d - b' ≫ d - b' ≫ d + q ≫ d = 0
+    dsimp [q]
+    simp only [sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id]
+    abel
+  let b : T.obj₂ ⟶ T.obj₂ := b' - k
+  have hb : b ≫ b = b := by
+    calc
+      b ≫ b = b' + d - b' ≫ k - k ≫ b' + k ≫ k := by
+        dsimp [b]
+        simp only [sub_comp, comp_sub]
+        rw [hbase]
+        abel
+      _ = b' + d - b' ≫ k - k ≫ b' := by
+        rw [hkk]
+        simp only [add_zero, zero_add]
+      _ = b' - k := by
+        calc
+          b' + d - b' ≫ k - k ≫ b' =
+              b' + (d - b' ≫ k - k ≫ b' + k) - k := by abel
+          _ = b' + 0 - k := by rw [hrel]
+          _ = b' - k := by simp
+      _ = b := by rfl
+  have hk₁ : T.mor₁ ≫ k = 0 := by
+    change T.mor₁ ≫ (q ≫ d) = 0
+    have hq₁ : T.mor₁ ≫ q = (a + a - 𝟙 _) ≫ T.mor₁ := by
+      dsimp [q]
+      simp only [comp_sub, sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id,
+        hb'₁]
+    rw [← Category.assoc, hq₁, Category.assoc, hd₁]
+    simp only [comp_zero, zero_add, add_zero, sub_self]
+  have hk₂ : k ≫ T.mor₂ = 0 := by
+    change (q ≫ d) ≫ T.mor₂ = 0
+    rw [Category.assoc, hd₂, comp_zero]
+  have hb₁ : T.mor₁ ≫ b = a ≫ T.mor₁ := by
+    dsimp [b]
+    rw [comp_sub, hb'₁, hk₁, sub_zero]
+  have hb₂ : T.mor₂ ≫ c = b ≫ T.mor₂ := by
+    dsimp [b]
+    rw [sub_comp, hk₂, sub_zero]
+    exact hb'₂
+  let φ : T ⟶ T := Triangle.homMk T T a b c hb₁ hb₂ hcomm
+  refine ⟨b, hb, φ, rfl, rfl, rfl⟩
 
 /-- Every morphism has a distinguished cone triangle. -/
 theorem distinguished_cone_exists {X Y : C} (f : X ⟶ Y) :
@@ -722,7 +832,16 @@ theorem distinguished_cone_unique
     (hT' : Triangle.mk f g' h' ∈ distTriang C) :
     ∃ e : Triangle.mk f g h ≅ Triangle.mk f g' h',
       e.hom.hom₁ = 𝟙 X ∧ e.hom.hom₂ = 𝟙 Y := by
-  sorry
+  let e := Pretriangulated.isoTriangleOfIso₁₂
+    (Triangle.mk f g h) (Triangle.mk f g' h') hT hT' (Iso.refl X) (Iso.refl Y)
+    (by
+      change f ≫ 𝟙 Y = 𝟙 X ≫ f
+      simp)
+  refine ⟨e, ?_, ?_⟩
+  · change (Iso.refl X).hom = 𝟙 X
+    rfl
+  · change (Iso.refl Y).hom = 𝟙 Y
+    rfl
 
 /- The source's five vanishing conditions are a useful reusable interface for
    its uniqueness-of-the-third-arrow lemma. -/

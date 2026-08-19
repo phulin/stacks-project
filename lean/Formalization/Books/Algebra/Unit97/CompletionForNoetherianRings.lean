@@ -4,6 +4,8 @@ import Mathlib.RingTheory.AdicCompletion.RingHom
 import Mathlib.RingTheory.Finiteness.Quotient
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
+import Mathlib.RingTheory.AdicCompletion.LocalRing
+import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.RingHom.Flat
 
@@ -65,14 +67,15 @@ theorem completion_tensor_bijective_source_order
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R)
     (M : Type u) [AddCommGroup M] [Module R M] [Module.Finite R M] :
     Function.Bijective (completionTensorMap I M) := by
-  sorry
+  exact (completion_tensor_bijective I M).comp
+    (TensorProduct.comm R M (ringCompletion I)).bijective
 
 /-! ## Flatness and faithful flatness -/
 
 theorem completion_flat
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :
     RingHom.Flat (algebraMap R (ringCompletion I)) := by
-  sorry
+  exact (RingHom.flat_algebraMap_iff).mpr inferInstance
 
 /- Exactness on finite modules is the source's functorial formulation of the
    short-exact statement above. -/
@@ -91,13 +94,36 @@ theorem completion_faithfully_flat
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R)
     (hI : I ≤ Ring.jacobson R) :
     RingHom.FaithfullyFlat (algebraMap R (ringCompletion I)) := by
-  sorry
+  rw [RingHom.faithfullyFlat_algebraMap_iff]
+  rw [Module.FaithfullyFlat.iff_flat_and_proper_ideal]
+  refine ⟨inferInstance, ?_⟩
+  intro J hJ h
+  have hmap : J.map (algebraMap R (ringCompletion I)) = (⊤ : Ideal (ringCompletion I)) := by
+    simpa [Ideal.smul_top_eq_map] using h
+  have hq : J.map (Ideal.Quotient.mk I) = (⊤ : Ideal (R ⧸ I)) := by
+    have h' := congrArg (Ideal.map (AdicCompletion.evalOneₐ I).toRingHom) hmap
+    rw [Ideal.map_map] at h'
+    rw [AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk] at h'
+    rw [Ideal.map_top] at h'
+    exact h'
+  have hsup : J ⊔ I = (⊤ : Ideal R) := by
+    have hc := congrArg (Ideal.comap (Ideal.Quotient.mk I)) hq
+    rw [Ideal.comap_top, Ideal.comap_map_of_surjective' _ Ideal.Quotient.mk_surjective,
+      Ideal.mk_ker] at hc
+    simpa [sup_comm] using hc
+  obtain ⟨m, hm, hJm⟩ := J.exists_le_maximal hJ
+  have hIm : I ≤ m := hI.trans (@Ring.jacobson_le_of_isMaximal R _ m hm)
+  apply hm.ne_top
+  apply top_unique
+  rw [← hsup]
+  exact sup_le hJm hIm
 
 theorem local_completion_faithfully_flat
     {R : Type u} [CommRing R] [IsNoetherianRing R] [IsLocalRing R] :
     RingHom.FaithfullyFlat
       (algebraMap R (ringCompletion (IsLocalRing.maximalIdeal R))) := by
-  sorry
+  rw [RingHom.faithfullyFlat_algebraMap_iff]
+  exact Module.FaithfullyFlat.of_flat_of_isLocalHom
 
 /-! ## Completeness and Noetherianity -/
 

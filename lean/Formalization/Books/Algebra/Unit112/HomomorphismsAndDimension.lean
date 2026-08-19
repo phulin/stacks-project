@@ -66,14 +66,14 @@ theorem isMaximal_comap_of_goingUp
       ∀ q : Ideal S, q.IsMaximal → (q.comap f).IsMaximal := by
   intro h q hq
   let _ : Algebra R S := f.toAlgebra
-  letI : Algebra.HasGoingUp R S := h
-  letI : q.IsMaximal := hq
-  letI : q.LiesOver (q.comap f) := ⟨rfl⟩
+  let _ : Algebra.HasGoingUp R S := h
+  let _ : q.IsMaximal := hq
+  let _ : q.LiesOver (q.comap f) := ⟨rfl⟩
   refine ⟨⟨Ideal.comap_ne_top (f := f) hq.ne_top, ?_⟩⟩
   intro J hJ
   apply Ideal.maximal_of_no_maximal ?_ J hJ
   intro m hm hmax
-  letI : m.IsMaximal := hmax
+  let _ : m.IsMaximal := hmax
   obtain ⟨Q, hqQ, hQ, hQover⟩ :=
     Ideal.exists_ideal_ge_liesOver_of_le (P := q)
       (p := q.comap f) (q := m) hm.le
@@ -308,7 +308,7 @@ theorem localRingOfFibre_equiv_tensor_fibre
     ext x
     simp only [Ideal.mem_primeCompl_iff]
     rw [hr]
-  letI : IsLocalization r.primeCompl (Localization.AtPrime q.asIdeal) := by
+  let _ : IsLocalization r.primeCompl (Localization.AtPrime q.asIdeal) := by
     rw [hM]
     infer_instance
   let eLoc : Localization.AtPrime r ≃ₐ[S] Localization.AtPrime q.asIdeal :=

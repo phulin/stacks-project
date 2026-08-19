@@ -788,8 +788,7 @@ private theorem exists_regularSequence_of_localRingHom_aux
       Ideal.radical (Ideal.map φ (IsLocalRing.maximalIdeal A)))
     (d : ℕ) (hdim : ringKrullDim B = (((d : ℕ∞) : WithBot ℕ∞))) :
     ∃ xs : List A,
-      xs.length = d ∧ RingTheory.Sequence.IsRegular B (xs.map φ) := by sorry
-/-
+      xs.length = d ∧ RingTheory.Sequence.IsRegular B (xs.map φ) := by
   induction d generalizing A B with
   | zero =>
       refine ⟨[], by simp, ?_⟩
@@ -839,7 +838,7 @@ private theorem exists_regularSequence_of_localRingHom_aux
         have hzeroE : (d : ℕ∞) + 1 = 0 := by
           apply WithBot.coe_injective
           simpa using hdimzero'
-        have hpos : (0 : ℕ∞) < (d : ℕ∞) + 1 := ENat.add_one_pos
+        have hpos : (0 : ℕ∞) < (d : ℕ∞) + 1 := by positivity
         rw [hzeroE] at hpos
         exact (lt_irrefl _ hpos).elim
       obtain ⟨a, ha, hamin⟩ := Set.not_subset.mp hnot
@@ -875,7 +874,7 @@ private theorem exists_regularSequence_of_localRingHom_aux
                 simpa [hX, Nat.cast_add] using hquotdim
               have hXd : X = (d : ℕ∞) :=
                 (WithTop.add_right_inj (by simp : (1 : ℕ∞) ≠ ⊤)).mp hXeq
-              simpa [hX, hXd]
+              simp [hXd]
         have hlist : List.ofFn g = [y] := by simp [g]
         rw [hlist]
         change Module.supportDim B
@@ -960,7 +959,7 @@ private theorem exists_regularSequence_of_localRingHom_aux
               simpa [hX, Nat.cast_add] using hdimq'.trans hdim
             have hXd : X = (d : ℕ∞) :=
               (WithTop.add_right_inj (by simp : (1 : ℕ∞) ≠ ⊤)).mp hXeq
-            simpa [hX, hXd]
+            simp [hXd]
       obtain ⟨xs, hxslen, hxsreg⟩ := ih A B' φ' hB' hmax' hdim'
       refine ⟨a :: xs, by simp [hxslen], ?_⟩
       let e : (QuotSMulTop y B) ≃ₐ[B] B' :=
@@ -995,12 +994,17 @@ private noncomputable def mcmPrefixResolution_of_kernel
     (hker : IsLimit (KernelFork.ofι ι hcomp)) :
     Formalization.Books.Algebra.Unit71.Resolution R (ModuleCat.of R M) := by
   let C := mcmPrefixComplex P n (by omega) K ι hι
+  have h₀ : C.X 0 = P.complex.X 0 := by
+    have hnpos : 0 < n := by omega
+    dsimp [C, mcmPrefixComplex]
+    simp [hnpos]
   let aug : C.X 0 ⟶ ModuleCat.of R M :=
-    by
-      have hnpos : 0 < n := by omega
-      dsimp [C, mcmPrefixComplex]
-      simp only [if_pos hnpos]
-      exact P.augmentation
+    eqToHom h₀ ≫ P.augmentation
+  have eqToHom_eq_id {X : ModuleCat.{u} R} (p : X = X) :
+      eqToHom p = 𝟙 X := by
+    have hp : p = rfl := Subsingleton.elim _ _
+    rw [hp]
+    simp
   refine {
     complex := C
     augmentation := aug
@@ -1015,12 +1019,76 @@ private noncomputable def mcmPrefixResolution_of_kernel
     have hnsublt : n - 1 < n := by omega
     have h1 : C.X 1 = P.complex.X 1 := by
       simp [C, mcmPrefixComplex, hn1lt, hn1]
+    have hd : C.d 1 0 ≫ eqToHom h₀ = eqToHom h1 ≫ P.complex.d 1 0 := by
+      dsimp [C, mcmPrefixComplex] at h₀ h1 ⊢
+      apply eq_of_heq
+      subst_vars
+      simp only [dif_neg hn1, dif_pos hn1lt, dif_pos hn0lt,
+        eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+        comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+      simp [eqToHom_eq_id, hn0lt, hn1lt, hn0, hn1,
+        Category.assoc, eqToHom_trans, eqToHom_refl,
+        Category.id_comp, Category.comp_id, proof_irrel_heq]
     have h : eqToHom h1 ≫ (P.complex.d 1 0 ≫ P.augmentation) = 0 := by
       rw [P.augmentation_condition]
       simp
-    simpa [C, aug, mcmPrefixComplex, hn0, hn1, hn0lt, hn1lt, hn2,
-      Category.assoc, eqToHom_trans] using h
-  · simpa [C, aug, mcmPrefixComplex, hn2] using P.exact_zero
+    dsimp [aug]
+    rw [← Category.assoc, hd]
+    exact h
+  · let S := ShortComplex.mk (C.d 1 0) aug (by
+        have hn1lt : 1 < n := by omega
+        have hn0lt : 0 < n := by omega
+        have hn1 : 1 ≠ n := by omega
+        have h1 : C.X 1 = P.complex.X 1 := by
+          simp [C, mcmPrefixComplex, hn1lt, hn1]
+        have hd : C.d 1 0 ≫ eqToHom h₀ = eqToHom h1 ≫ P.complex.d 1 0 := by
+          dsimp [C, mcmPrefixComplex] at h₀ h1 ⊢
+          apply eq_of_heq
+          subst_vars
+          simp only [dif_neg hn1, dif_pos hn1lt, dif_pos hn0lt,
+            eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+            comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+          simp [eqToHom_eq_id, hn0lt, hn1lt, hn1,
+            Category.assoc, eqToHom_trans, eqToHom_refl,
+            Category.id_comp, Category.comp_id, proof_irrel_heq]
+        have h : eqToHom h1 ≫ (P.complex.d 1 0 ≫ P.augmentation) = 0 := by
+          rw [P.augmentation_condition]
+          simp
+        dsimp [aug]
+        rw [← Category.assoc, hd]
+        exact h)
+    let T := ShortComplex.mk (P.complex.d 1 0) P.augmentation
+      P.augmentation_condition
+    let e₁ : S.X₁ ≅ T.X₁ := eqToIso (by
+      have hn1lt : 1 < n := by omega
+      have hn1 : 1 ≠ n := by omega
+      simp [S, T, C, mcmPrefixComplex, hn2, hn1lt, hn1])
+    let e₂ : S.X₂ ≅ T.X₂ := eqToIso (by
+      have hn0lt : 0 < n := by omega
+      have hn0 : 0 ≠ n := by omega
+      simp [S, T, C, mcmPrefixComplex, hn2, hn0lt, hn0])
+    let e₃ : S.X₃ ≅ T.X₃ := Iso.refl _
+    have hST : S ≅ T := ShortComplex.isoMk e₁ e₂ e₃ (by
+      dsimp [S, T, e₁, e₂]
+      apply eq_of_heq
+      subst_vars
+      simp only [eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+        comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+      dsimp [C, mcmPrefixComplex]
+      have hn1 : 1 ≠ n := by omega
+      have hn1lt : 1 < n := by omega
+      have hn0lt : 0 < n := by omega
+      simp only [dif_neg hn1, dif_pos hn1lt, dif_pos hn0lt,
+        eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+        comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+      simp) (by
+      dsimp [S, T, e₂, e₃]
+      apply eq_of_heq
+      subst_vars
+      simp only [eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+        comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+      simp [aug])
+    exact ShortComplex.exact_of_iso hST.symm (P.exact_zero)
   · intro i
     by_cases hi : i + 1 = n - 1
     · have hi' : i = n - 2 := by omega
@@ -1079,32 +1147,61 @@ private noncomputable def mcmPrefixResolution_of_kernel
             simp [C, mcmPrefixComplex, hne, hlt, hgt]
           rw [hX]
           apply ModuleCat.isZero_of_subsingleton
-        have hmono : Mono S.g := by
-          have hi0 : i = n - 1 := by omega
-          subst i
-          have hnsub : n - 1 + 1 = n := by omega
-          have hnlt : n - 1 < n := by omega
-          have hnn : n - 1 ≠ n := by omega
-          haveI : Mono ι := mono_of_isLimit_fork hker
-          let e₁ : S.X₂ ≅ K := eqToIso (by
-            simp [S, C, mcmPrefixComplex, hnsub, hn2])
-          let e₂ : P.complex.X (n - 1) ≅ S.X₃ := eqToIso (by
-            simp [S, C, mcmPrefixComplex, hnsub, hnlt, hnn, hn2])
-          have hmap : S.g = e₁.hom ≫ ι ≫ e₂.hom := by
-            dsimp [S, e₁, e₂]
-            try simp only [hnsub]
-            apply ModuleCat.hom_ext
-            ext x
-            apply eq_of_heq
-            simp only [ModuleCat.comp_apply]
-            dsimp [ModuleCat.Hom.hom, ConcreteCategory.hom]
-            simp [C, mcmPrefixComplex, hnsub, hnlt, hnn, hn2,
-              Category.assoc, eqToHom_trans, eqToHom_refl,
-              eq_mp_eq_cast, cast_eq, cast_heq_iff_heq, eqRec_heq_iff,
-              proof_irrel_heq]
-          rw [hmap]
-          infer_instance
-        exact (S.exact_iff_mono (hzero.eq_zero_of_src _)).2 hmono
+        have hi0 : i = n - 1 := by omega
+        subst i
+        have hnsub : n - 1 + 1 = n := by omega
+        have hnlt : n - 1 < n := by omega
+        have hnn : n - 1 ≠ n := by omega
+        have hnotlt : ¬ n - 1 + 1 < n := by omega
+        let Z : ModuleCat R := ModuleCat.of R (Fin 0 → R)
+        let T := ShortComplex.mk (0 : Z ⟶ K) ι (by simp)
+        let e₁ : S.X₁ ≅ T.X₁ := eqToIso (by
+          have hne : n - 1 + 2 ≠ n := by omega
+          have hlt : ¬ n - 1 + 2 < n := by omega
+          have hgt' : n < n - 1 + 2 := by omega
+          simp [S, T, Z, C, mcmPrefixComplex, hne, hlt, hgt', hn2])
+        let e₂ : S.X₂ ≅ T.X₂ := eqToIso (by
+          simp [S, T, C, mcmPrefixComplex, hnsub, hnlt, hnotlt, hn2])
+        let e₃ : S.X₃ ≅ T.X₃ := eqToIso (by
+          simp [S, T, C, mcmPrefixComplex, hnlt, hnn, hn2])
+        have hST : S ≅ T := ShortComplex.isoMk e₁ e₂ e₃ (by
+          dsimp [S, T, e₁, e₂]
+          apply eq_of_heq
+          subst_vars
+          simp only [eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+            comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+          dsimp [C, mcmPrefixComplex]
+          have hne : n - 1 + 2 ≠ n := by omega
+          have hlt : ¬ n - 1 + 2 < n := by omega
+          simp only [dif_neg hne, dif_neg hlt, if_neg hne, if_neg hlt]
+          have zero_heq {X X' Y Y' : ModuleCat R} (hX : X = X') (hY : Y = Y') :
+              (0 : X ⟶ Y) ≍ (0 : X' ⟶ Y') := by
+            subst hX
+            subst hY
+            rfl
+          apply zero_heq
+          · dsimp
+            simp [Z, hlt, hne]
+          · dsimp
+            simp [hnotlt, hnsub]) (by
+          dsimp [S, T, e₂, e₃]
+          apply eq_of_heq
+          subst_vars
+          simp only [eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+            comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+          dsimp [C, mcmPrefixComplex]
+          simp only [dif_pos hnsub, dif_pos rfl, dif_pos hnlt, dif_neg hnn,
+            eqToHom_comp_heq_iff, heq_eqToHom_comp_iff,
+            comp_eqToHom_heq_iff, heq_comp_eqToHom_iff]
+          simp [eqToHom_eq_id, hnlt, hnn,
+            Category.assoc, eqToHom_trans, eqToHom_refl,
+            Category.id_comp, Category.comp_id, proof_irrel_heq])
+        have hmonoι : Mono ι := mono_of_isLimit_fork hker
+        have hTZ : IsZero T.X₁ := by
+          dsimp [T, Z]
+          apply ModuleCat.isZero_of_subsingleton
+        have hTexact : T.Exact := (T.exact_iff_mono (hTZ.eq_zero_of_src _)).2 hmonoι
+        simpa [S] using ShortComplex.exact_of_iso hST.symm hTexact
       · by_cases hil : i + 1 < n - 1
         · have hi2 : i + 2 < n := by omega
           have hi1 : i + 1 < n := by omega
@@ -1153,12 +1250,18 @@ private noncomputable def mcmPrefixResolution_of_kernel
               simp [C, mcmPrefixComplex, hne, hlt, hgt]
             rw [hX]
             apply ModuleCat.isZero_of_subsingleton
-          exact ShortComplex.exact_of_isZero_X₂ _ hzero
-  · change Epi (eqToHom _ ≫ P.augmentation)
+          apply ShortComplex.exact_of_isZero_X₂
+          exact hzero
+  · let e₀ : C.X 0 ≅ P.complex.X 0 := eqToIso (by
+      have hnpos : 0 < n := by omega
+      dsimp [C, mcmPrefixComplex]
+      simp [hnpos])
+    have haug : aug = e₀.hom ≫ P.augmentation := by
+      dsimp [aug, e₀]
+    rw [haug]
     letI : Epi P.augmentation := P.augmentation_epi
     infer_instance
 
--/
 theorem exists_mcm_finite_free_resolution_prefix
     (R M : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M]
@@ -1166,7 +1269,535 @@ theorem exists_mcm_finite_free_resolution_prefix
     (hdim : ringKrullDim R = (((d : ℕ∞) : WithBot ℕ∞)))
     (hdepth : localDepth R M = (e : ℕ∞)) :
     ∃ n : ℕ, n + e = d ∧ HasMCMFiniteFreeResolutionPrefix R M n := by
-  sorry
+  classical
+  have hMnontr : Nontrivial M := by
+    apply not_subsingleton_iff_nontrivial.mp
+    intro hsub
+    have htop : localDepth R M = ⊤ := by
+      exact @depth_eq_top_of_subsingleton R _ (IsLocalRing.maximalIdeal R) M
+        _ _ _ hsub
+    rw [hdepth] at htop
+    exact (WithTop.coe_ne_top : (e : ℕ∞) ≠ ⊤) htop
+  have hdepth_le : localDepth R M ≤ (d : ℕ∞) := by
+    apply WithBot.coe_le_coe.mp
+    calc
+      ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ Module.supportDim R M :=
+        @supportDim_ge_localDepth R M _ _ _ _ _ _ hMnontr
+      _ ≤ ringKrullDim R := Module.supportDim_le_ringKrullDim R M
+      _ = (((d : ℕ∞) : WithBot ℕ∞)) := hdim
+  have he_le : e ≤ d := by
+    exact_mod_cast (show (e : ℕ∞) ≤ (d : ℕ∞) by simpa [hdepth] using hdepth_le)
+  let n : ℕ := d - e
+  have hne : n + e = d := by
+    dsimp [n]
+    exact Nat.sub_add_cancel he_le
+  refine ⟨n, hne, ?_⟩
+  by_cases hn : n = 0
+  · simp only [hn] at *
+    have hed : e = d := by omega
+    have hMCM : Formalization.Books.Algebra.Unit103.IsMaximalCohenMacaulay R M := by
+      unfold Formalization.Books.Algebra.Unit103.IsMaximalCohenMacaulay
+      rw [hdepth, hed, hdim]
+    let X : ℕ → ModuleCat R := fun i =>
+      match i with
+      | 0 => ModuleCat.of R M
+      | _ => ModuleCat.of R (Fin 0 → R)
+    let dz : ∀ i j, X i ⟶ X j := fun _ _ => 0
+    let C : Formalization.Books.Algebra.Unit71.ModuleChainComplex R :=
+      HomologicalComplex.mk X dz (by intros; simp [dz]) (by intros; simp [dz])
+    let F : Formalization.Books.Algebra.Unit71.Resolution R (ModuleCat.of R M) :=
+      { complex := C
+        augmentation := 𝟙 _
+        augmentation_condition := by simp [C, dz]
+        exact_zero := by
+          apply ModuleCat.shortComplex_exact
+          simp [C, dz]
+          intro y
+          constructor
+          · intro hy
+            refine ⟨0, ?_⟩
+            simpa using hy.symm
+          · rintro ⟨x, hx⟩
+            simpa using hx.symm
+        exact_succ := by
+          intro j
+          apply ShortComplex.exact_of_isZero_X₂
+          change IsZero (C.X (j + 1))
+          rw [show C.X (j + 1) = ModuleCat.of R (Fin 0 → R) by
+            simp [C, X]]
+          apply ModuleCat.isZero_of_subsingleton
+        augmentation_epi := by infer_instance }
+    refine ⟨F, ?_, ?_⟩
+    · intro i
+      exact Fin.elim0 i
+    · refine ⟨inferInstance, hMCM, ?_, ?_⟩
+      · intro _
+        exact Function.bijective_id
+      · intro h
+        omega
+  · let Pff := Classical.choice
+      (Formalization.Books.Algebra.Unit71.exists_finite_free_resolution
+        (ModuleCat.of R M))
+    let P := Pff.resolution.resolution
+    have hPfinite : ∀ j, Module.Finite R (P.complex.X j) := by
+      intro j
+      exact Pff.finite j
+    have hPfree : ∀ j, Module.Free R (P.complex.X j) := by
+      intro j
+      exact Pff.resolution.free j
+    have kernel_finite {X Y : ModuleCat.{u} R} (f : X ⟶ Y)
+        [Module.Finite R X] :
+          Module.Finite R ((CategoryTheory.Limits.kernel f : ModuleCat.{u} R) : Type u) := by
+      let _ : IsNoetherian R (X : Type u) :=
+        isNoetherian_of_isNoetherianRing_of_finite R _
+      apply Module.Finite.of_injective (R := R) (S := R)
+        (M := ((CategoryTheory.Limits.kernel f : ModuleCat.{u} R) : Type u))
+        (N := (X : Type u))
+        (kernel.ι f).hom
+      exact (ModuleCat.mono_iff_injective _).mp inferInstance
+    have hRdim :
+        ((localDepth R R : ℕ∞) : WithBot ℕ∞) = ringKrullDim R := by
+      exact hR.trans (Module.supportDim_self_eq_ringKrullDim R)
+    have hfree_fin : ∀ k : ℕ, localDepth R (Fin k.succ → R) = localDepth R R := by
+      intro k
+      induction k with
+      | zero =>
+          exact localDepth_eq_of_linearEquiv
+            (LinearEquiv.piUnique R (fun _ : Fin 1 => R))
+      | succ k ih =>
+          let e : (R × (Fin k.succ → R)) ≃ₗ[R] (Fin k.succ.succ → R) :=
+            Fin.consLinearEquiv R (fun _ : Fin k.succ.succ => R)
+          let f₀ := e.toLinearMap.comp (LinearMap.inl R R (Fin k.succ → R))
+          let g₀ := (LinearMap.snd R R (Fin k.succ → R)).comp e.symm.toLinearMap
+          have hf₀ : Function.Injective f₀ := by
+            have hinj : Function.Injective
+                (LinearMap.inl R R (Fin k.succ → R)) := LinearMap.inl_injective
+            exact e.injective.comp hinj
+          have hfg₀ : Function.Exact f₀ g₀ := by
+            exact (LinearEquiv.conj_exact_iff_exact
+              (LinearMap.inl R R (Fin k.succ → R))
+              (LinearMap.snd R R (Fin k.succ → R)) e).2
+              Function.Exact.inl_snd
+          have hg₀ : Function.Surjective g₀ := by
+            have hsurj : Function.Surjective
+                (LinearMap.snd R R (Fin k.succ → R)) := LinearMap.snd_surjective
+            exact hsurj.comp e.symm.surjective
+          have hseq := localDepth_shortExact f₀ g₀ hf₀ hfg₀ hg₀
+          have hge :
+              localDepth R (Fin k.succ.succ → R) ≥ localDepth R R := by
+            simpa [ih] using hseq.1
+          have hle :
+              ((localDepth R (Fin k.succ.succ → R) : ℕ∞) : WithBot ℕ∞) ≤
+                ((localDepth R R : ℕ∞) : WithBot ℕ∞) := by
+            calc
+              ((localDepth R (Fin k.succ.succ → R) : ℕ∞) : WithBot ℕ∞) ≤
+                  Module.supportDim R (Fin k.succ.succ → R) :=
+                supportDim_ge_localDepth
+              _ ≤ ringKrullDim R :=
+                Module.supportDim_le_ringKrullDim R (Fin k.succ.succ → R)
+              _ = ((localDepth R R : ℕ∞) : WithBot ℕ∞) := hRdim.symm
+          exact le_antisymm (WithBot.coe_le_coe.mp hle) hge
+    have hfree_depth {X : Type u} [AddCommGroup X] [Module R X]
+        [Module.Free R X] [Module.Finite R X] (hX : Nontrivial X) :
+        localDepth R X = localDepth R R := by
+      letI : Nontrivial X := hX
+      let ι := Module.Free.ChooseBasisIndex R X
+      letI : Fintype ι := Module.Free.ChooseBasisIndex.fintype R X
+      let b := Module.Free.chooseBasis R X
+      let e := b.equivFun.trans
+        (LinearEquiv.funCongrLeft R R (Fintype.equivFin ι).symm)
+      have hι : 0 < Fintype.card ι :=
+        Fintype.card_pos_iff.mpr inferInstance
+      have hcard : Fintype.card ι - 1 + 1 = Fintype.card ι := by omega
+      calc
+        localDepth R X = localDepth R (Fin (Fintype.card ι) → R) :=
+          localDepth_eq_of_linearEquiv e
+        _ = localDepth R R := by
+          have hf := hfree_fin (Fintype.card ι - 1)
+          rw [← hcard]
+          simpa only [Nat.succ_eq_add_one] using hf
+    let K : ℕ → ModuleCat R := fun j =>
+      if hj : j = 0 then ModuleCat.of R M
+      else if hj1 : j = 1 then kernel P.augmentation
+      else kernel (P.complex.d (j - 1) (j - 2))
+    have hK_one : K 1 = kernel P.augmentation := by simp [K]
+    have hK_generic (j : ℕ) (hj : j ≠ 0) (hj1 : j ≠ 1) :
+        K j = kernel (P.complex.d (j - 1) (j - 2)) := by
+      simp [K, hj, hj1]
+    have hK_next (j : ℕ) (hj : j ≠ 0) :
+        K (j + 1) = kernel (P.complex.d j (j - 1)) := by
+      have hj1 : j + 1 ≠ 1 := by omega
+      have hjsub : j + 1 - 2 = j - 1 := by omega
+      simp [K, hj, hj1]
+      rw [hjsub]
+    let κ : ∀ j, K (j + 1) ⟶ P.complex.X j := fun j => by
+      by_cases hj : j = 0
+      · subst j
+        exact eqToHom hK_one ≫ kernel.ι P.augmentation
+      · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+        have hK := hK_next j hj
+        exact eqToHom hK ≫ kernel.ι (P.complex.d j (j - 1))
+    let ell : ∀ j, P.complex.X j ⟶ K j := fun j => by
+      by_cases hj : j = 0
+      · subst j
+        simpa [K] using P.augmentation
+      · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+        by_cases hj1 : j = 1
+        · subst j
+          exact kernel.lift P.augmentation (P.complex.d 1 0)
+              (by simpa using P.augmentation_condition) ≫ eqToHom hK_one.symm
+        · have hK := hK_generic j hj hj1
+          exact kernel.lift (P.complex.d (j - 1) (j - 2))
+              (P.complex.d j (j - 1)) (by simp) ≫ eqToHom hK.symm
+    have hKfinite : ∀ j, Module.Finite R (K j) := by
+      intro j
+      by_cases hj : j = 0
+      · subst j
+        simpa [K] using (inferInstance : Module.Finite R M)
+      · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+        by_cases hj1 : j = 1
+        · subst j
+          apply kernel_finite
+        · have hK : K j = kernel (P.complex.d (j - 1) (j - 2)) := by
+            simp [K, hj, hjpos, hj1]
+          rw [hK]
+          apply kernel_finite
+    
+    have hRdepth : localDepth R R = (d : ℕ∞) := by
+      apply WithBot.coe_injective
+      calc
+        ((localDepth R R : ℕ∞) : WithBot ℕ∞) = ringKrullDim R :=
+          hR.trans (Module.supportDim_self_eq_ringKrullDim R)
+        _ = (((d : ℕ∞) : WithBot ℕ∞)) := hdim
+    have hKdepth_le : ∀ j, Nontrivial (K j) → localDepth R (K j) ≤ (d : ℕ∞) := by
+      intro j hNj
+      letI : Module.Finite R (K j) := hKfinite j
+      apply WithBot.coe_le_coe.mp
+      calc
+        ((localDepth R (K j) : ℕ∞) : WithBot ℕ∞) ≤
+            Module.supportDim R (K j) :=
+          @supportDim_ge_localDepth R (K j) _ _ _ _ _ _ hNj
+        _ ≤ ringKrullDim R := Module.supportDim_le_ringKrullDim R (K j)
+        _ = (((d : ℕ∞) : WithBot ℕ∞)) := hdim
+    have hκmono : ∀ j, Function.Injective (κ j).hom := by
+      intro j
+      by_cases hj : j = 0
+      · subst j
+        apply (ModuleCat.mono_iff_injective _).mp
+        simpa [κ, K] using
+          (inferInstance : Mono (kernel.ι P.augmentation))
+      · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+        have hK := hK_next j hj
+        apply (ModuleCat.mono_iff_injective _).mp
+        simpa [κ, hj, hK] using
+          (inferInstance : Mono
+            (eqToHom hK ≫ kernel.ι (P.complex.d j (j - 1))))
+    have hellexact : ∀ j, Function.Exact (κ j).hom (ell j).hom := by
+      intro j x
+      constructor
+      · intro hx
+        by_cases hj : j = 0
+        · subst j
+          have hx0 : P.augmentation.hom x = 0 := by simpa [ell, K] using hx
+          let z := (ModuleCat.kernelIsoKer P.augmentation).inv.hom ⟨x, hx0⟩
+          have hzι : (kernel.ι P.augmentation).hom z = x := by
+            dsimp [z]
+            change ((ModuleCat.kernelIsoKer P.augmentation).inv ≫
+              kernel.ι P.augmentation).hom ⟨x, hx0⟩ = x
+            rw [ModuleCat.kernelIsoKer_inv_kernel_ι]
+            rfl
+          have hK := hK_one
+          refine ⟨(eqToHom hK.symm).hom z, ?_⟩
+          simpa [κ, K, hzι]
+        · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+          by_cases hj1 : j = 1
+          · subst j
+            have hK := hK_one
+            have hK' := hK_next 1 (by omega)
+            have hx' := congrArg
+              (fun z => (kernel.ι P.augmentation).hom ((eqToHom hK).hom z)) hx
+            have hx0 : (P.complex.d 1 0).hom x = 0 := by
+              simpa [ell, hK] using hx'
+            let z := (ModuleCat.kernelIsoKer (P.complex.d 1 0)).inv.hom ⟨x, hx0⟩
+            have hzι : (kernel.ι (P.complex.d 1 0)).hom z = x := by
+              dsimp [z]
+              change ((ModuleCat.kernelIsoKer (P.complex.d 1 0)).inv ≫
+                kernel.ι (P.complex.d 1 0)).hom ⟨x, hx0⟩ = x
+              rw [ModuleCat.kernelIsoKer_inv_kernel_ι]
+              rfl
+            refine ⟨(eqToHom hK'.symm).hom z, ?_⟩
+            simp [κ, hK', hzι]
+          · have hK := hK_generic j hj hj1
+            have hK' := hK_next j hj
+            have hx' := congrArg
+              (fun z =>
+                (kernel.ι (P.complex.d (j - 1) (j - 2))).hom
+                  ((eqToHom hK).hom z)) hx
+            have hell :
+                (eqToHom hK).hom ((ell j).hom x) =
+                  (kernel.lift (P.complex.d (j - 1) (j - 2))
+                    (P.complex.d j (j - 1)) (by simp)).hom x := by
+              rw [← ConcreteCategory.comp_apply]
+              simp [ell, hK, hj, hj1, Category.assoc, eqToHom_trans,
+                eqToHom_refl, proof_irrel_heq]
+            have hx0 : (P.complex.d j (j - 1)).hom x = 0 := by
+              rw [hell] at hx'
+              simpa using hx'
+            let z := (ModuleCat.kernelIsoKer (P.complex.d j (j - 1))).inv.hom
+              ⟨x, hx0⟩
+            have hzι : (kernel.ι (P.complex.d j (j - 1))).hom z = x := by
+              dsimp [z]
+              change ((ModuleCat.kernelIsoKer (P.complex.d j (j - 1))).inv ≫
+                kernel.ι (P.complex.d j (j - 1))).hom ⟨x, hx0⟩ = x
+              rw [ModuleCat.kernelIsoKer_inv_kernel_ι]
+              rfl
+            refine ⟨(eqToHom hK'.symm).hom z, ?_⟩
+            subst_vars
+            have hκeq : κ j = eqToHom hK' ≫ kernel.ι (P.complex.d j (j - 1)) := by
+              dsimp [κ]
+              simp [hj, hK', proof_irrel_heq]
+            rw [hκeq]
+            change (eqToHom hK' ≫ kernel.ι (P.complex.d j (j - 1))).hom
+              ((eqToHom hK'.symm).hom z) = x
+            simp [hzι]
+      · rintro ⟨y, rfl⟩
+        have hcomp : κ j ≫ ell j = 0 := by
+          by_cases hj : j = 0
+          · subst j
+            simp [κ, ell, K]
+          · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+            by_cases hj1 : j = 1
+            · subst j
+              have hK := hK_one
+              have hK' := hK_next 1 (by omega)
+              rw [← cancel_mono (kernel.ι P.augmentation)]
+              simp [κ, ell, K, hK, hK', Category.assoc]
+            · have hK := hK_generic j hj hj1
+              have hK' := hK_next j hj
+              rw [← cancel_mono (eqToHom hK ≫
+                kernel.ι (P.complex.d (j - 1) (j - 2)))]
+              simp [κ, ell, hK, hK', hj, hj1, Category.assoc]
+        exact congrArg (fun f => f.hom y) hcomp
+    have hellsurj : ∀ j, Function.Surjective (ell j).hom := by
+      intro j
+      by_cases hj : j = 0
+      · subst j
+        exact (ModuleCat.epi_iff_surjective _).mp P.augmentation_epi
+      · have hjpos : 0 < j := Nat.pos_of_ne_zero hj
+        by_cases hj1 : j = 1
+        · subst j
+          have hK := hK_one
+          intro y
+          let y' := (eqToHom hK).hom y
+          let z := (kernel.ι P.augmentation).hom y'
+          have hz : P.augmentation.hom z = 0 := by simp [z]
+          have hex : Function.Exact (P.complex.d 1 0).hom P.augmentation.hom :=
+            (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).mp
+              P.exact_zero
+          obtain ⟨x, hx⟩ := (hex z).1 hz
+          refine ⟨x, ?_⟩
+          apply (ModuleCat.mono_iff_injective _).mp
+            (inferInstance : Mono (eqToHom hK ≫ kernel.ι P.augmentation))
+          simpa [ell, hK, y', z] using hx
+        · have hK := hK_generic j hj hj1
+          intro y
+          let y' := (eqToHom hK).hom y
+          let z := (kernel.ι (P.complex.d (j - 1) (j - 2))).hom y'
+          have hz : (P.complex.d (j - 1) (j - 2)).hom z = 0 := by
+            simp [z]
+          have hj2 : 2 ≤ j := by omega
+          have hh :=
+            (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).mp
+              (P.exact_succ (j - 2))
+          have hex : Function.Exact
+              (P.complex.d j (j - 1)).hom
+              (P.complex.d (j - 1) (j - 2)).hom := by
+            have h₁ : j - 2 + 2 = j := by omega
+            have h₂ : j - 2 + 1 = j - 1 := by omega
+            rw [h₁, h₂] at hh
+            exact hh
+          obtain ⟨x, hx⟩ := (hex z).1 hz
+          refine ⟨x, ?_⟩
+          apply (ModuleCat.mono_iff_injective _).mp
+            (inferInstance : Mono
+              (eqToHom hK ≫ kernel.ι (P.complex.d (j - 1) (j - 2))))
+          have hell :
+              (eqToHom hK).hom ((ell j).hom x) =
+                (kernel.lift (P.complex.d (j - 1) (j - 2))
+                  (P.complex.d j (j - 1)) (by simp)).hom x := by
+              rw [← ConcreteCategory.comp_apply]
+              subst_vars
+              simp [ell, hK, hj, hj1, Category.assoc, eqToHom_trans,
+              eqToHom_refl, proof_irrel_heq]
+          change (kernel.ι (P.complex.d (j - 1) (j - 2))).hom
+              ((eqToHom hK).hom ((ell j).hom x)) =
+            (kernel.ι (P.complex.d (j - 1) (j - 2))).hom
+              ((eqToHom hK).hom y)
+          rw [hell]
+          simpa [y', z] using hx
+    have hPnontr_of_K (j : ℕ) (hKj : Nontrivial (K j)) :
+        Nontrivial (P.complex.X j) := by
+      apply not_subsingleton_iff_nontrivial.mp
+      intro hsub
+      apply (not_subsingleton_iff_nontrivial.mpr hKj)
+      constructor
+      intro x y
+      obtain ⟨x', hx'⟩ := hellsurj j x
+      obtain ⟨y', hy'⟩ := hellsurj j y
+      calc
+        x = (ell j).hom x' := hx'.symm
+        _ = (ell j).hom y' := congrArg (ell j).hom (hsub.elim x' y')
+        _ = y := hy'
+    have hPdepth_of_K (j : ℕ) (hKj : Nontrivial (K j)) :
+        localDepth R (P.complex.X j) = (d : ℕ∞) := by
+      letI : Module.Finite R (P.complex.X j) := hPfinite j
+      exact (hfree_depth (hPnontr_of_K j hKj)).trans hRdepth
+    have hKnext_nontr (j : ℕ) (hNj : Nontrivial (K j))
+        (hlt : localDepth R (K j) < (d : ℕ∞)) :
+        Nontrivial (K (j + 1)) := by
+      by_contra hnsub
+      let hsub : Subsingleton (K (j + 1)) :=
+        not_nontrivial_iff_subsingleton.mp hnsub
+      letI : Subsingleton (K (j + 1)) := hsub
+      letI : Module.Finite R (K j) := hKfinite j
+      letI : Module.Finite R (K (j + 1)) := hKfinite (j + 1)
+      have hellinj : Function.Injective (ell j).hom := by
+        intro x y hxy
+        have hzero : (ell j).hom (x - y) = 0 := by
+          rw [map_sub, hxy]
+          simp
+        obtain ⟨z, hz⟩ := (hellexact j (x - y)).1 hzero
+        have hz0 : z = 0 := Subsingleton.elim _ _
+        have hxy0 : x - y = 0 := by
+          simpa [hz0] using hz.symm
+        exact sub_eq_zero.mp hxy0
+      have hellbij : Function.Bijective (ell j).hom :=
+        ⟨hellinj, hellsurj j⟩
+      let eK : P.complex.X j ≃ₗ[R] K j :=
+        LinearEquiv.ofBijective (ell j).hom hellbij
+      have hdeptheq : localDepth R (P.complex.X j) = localDepth R (K j) :=
+        localDepth_eq_of_linearEquiv eK
+      have hKd : localDepth R (K j) = (d : ℕ∞) := by
+        exact hdeptheq.symm.trans (hPdepth_of_K j hNj)
+      exact (not_lt_of_ge (le_of_eq hKd)) hlt
+    have hKdepth : ∀ j, j ≤ n →
+        Nontrivial (K j) ∧
+          localDepth R (K j) = min (e + j : ℕ∞) (d : ℕ∞) := by
+      intro j hj
+      induction j, hj using Nat.le_induction with
+      | base =>
+          refine ⟨hMnontr, ?_⟩
+          change localDepth R M = min (e : ℕ∞) (d : ℕ∞)
+          rw [hdepth]
+          exact min_eq_left (by exact_mod_cast he_le)
+      | succ j hj ih =>
+          have hjlt : j < n := by omega
+          have hej : e + j < d := by omega
+          have hej' : (e + j : ℕ∞) < (d : ℕ∞) := by exact_mod_cast hej
+          have hKjlt : localDepth R (K j) < (d : ℕ∞) := by
+            rw [ih.2, min_eq_left (le_of_lt hej')]
+            exact hej'
+          have hnext : Nontrivial (K (j + 1)) :=
+            hKnext_nontr j ih.1 hKjlt
+          letI : Module.Finite R (K j) := hKfinite j
+          letI : Module.Finite R (K (j + 1)) := hKfinite (j + 1)
+          letI : Nontrivial (K j) := ih.1
+          letI : Nontrivial (K (j + 1)) := hnext
+          letI : Module.Finite R (P.complex.X j) := hPfinite j
+          letI : Nontrivial (P.complex.X j) := hPnontr_of_K j ih.1
+          have hs := localDepth_shortExact (R := R)
+            (κ j).hom (ell j).hom (hκmono j) (hellexact j) (hellsurj j)
+          have hlow : (e + (j + 1) : ℕ∞) ≤ localDepth R (K (j + 1)) := by
+            have hmin : min (d : ℕ∞) (localDepth R (K j) + 1) =
+                (e + (j + 1) : ℕ∞) := by
+              rw [ih.2, min_eq_right]
+              · simp [Nat.cast_add]
+              · exact_mod_cast (show e + j + 1 ≤ d by omega)
+            rw [hPdepth_of_K j ih.1, hmin] at hs
+            exact hs.2.2
+          have hupp : localDepth R (K (j + 1)) ≤ (d : ℕ∞) :=
+            hKdepth_le (j + 1) hnext
+          refine ⟨hnext, ?_⟩
+          rw [min_eq_left]
+          · exact le_antisymm hupp hlow
+          · exact_mod_cast (show e + (j + 1) ≤ d by omega)
+    have hKn : Nontrivial (K n) := (hKdepth n le_rfl).1
+    have hKn_depth : localDepth R (K n) = (d : ℕ∞) := by
+      rw [(hKdepth n le_rfl).2, min_eq_right]
+      exact_mod_cast (show d ≤ e + n by omega)
+    let hnpos : 0 < n := Nat.pos_of_ne_zero hn
+    by_cases hn1 : n = 1
+    · subst n
+      let C := mcmPrefixComplex P 1 (by omega) (K 1) (κ 0) (by
+        intro j hj
+        simp only [ComplexShape.down_Rel] at hj
+        omega)
+      let F : Formalization.Books.Algebra.Unit71.Resolution
+          R (ModuleCat.of R M) :=
+        { complex := C
+          augmentation := P.augmentation
+          augmentation_condition := by
+            simpa [C, mcmPrefixComplex] using (hellexact 0).linearMap_comp_eq_zero
+          exact_zero := by
+            apply ModuleCat.shortComplex_exact
+            simpa [C, mcmPrefixComplex] using hellexact 0
+          exact_succ := by
+            intro j
+            apply ShortComplex.exact_of_isZero_X₂
+            have hX : C.X (j + 2) = ModuleCat.of R (Fin 0 → R) := by
+              simp [C, mcmPrefixComplex, hnpos]
+            rw [hX]
+            apply ModuleCat.isZero_of_subsingleton
+          augmentation_epi := P.augmentation_epi }
+      refine ⟨F, ?_, ?_⟩
+      · intro i
+        have hi : i.1 < 1 := i.isLt
+        have hi0 : i.1 = 0 := by omega
+        subst i
+        exact ⟨hPfree 0, hPfinite 0⟩
+      · letI : Module.Finite R (K 1) := hKfinite 1
+        refine ⟨hKfinite 1, ?_, ?_, ?_⟩
+        · simpa [Formalization.Books.Algebra.Unit103.IsMaximalCohenMacaulay,
+            hKn_depth]
+        · intro h
+          exact Function.bijective_id
+        · intro h
+          simpa [C, mcmPrefixComplex] using hκmono 0
+    · have hn2 : 1 < n := by omega
+      have hι : ∀ j, (ComplexShape.down ℕ).Rel (n - 1) j →
+          κ (n - 1) ≫ P.complex.d (n - 1) j = 0 := by
+        intro j hj
+        have hj' : j = n - 2 := by
+          simpa only [ComplexShape.down_Rel] using hj
+        subst j
+        simp [κ, K, hn2]
+      have hcomp : κ (n - 1) ≫ P.complex.d (n - 1) (n - 2) = 0 := by
+        simp [κ, K, hn2]
+      have hker : IsLimit (KernelFork.ofι (κ (n - 1)) hcomp) := by
+        have hK' : K n = kernel (P.complex.d (n - 1) (n - 2)) := by
+          simp [K, hn2]
+        simpa [κ, hK'] using
+          (kernelIsKernel (P.complex.d (n - 1) (n - 2)))
+      let F := mcmPrefixResolution_of_kernel P n hn2 (K n) (κ (n - 1)) hι hcomp hker
+      refine ⟨F, ?_, ?_⟩
+      · intro i
+        have hi : i.1 < n := i.isLt
+        have hfreei : Module.Free R (F.complex.X i) := by
+          simpa [F, mcmPrefixResolution_of_kernel, mcmPrefixComplex, hi]
+            using hPfree i
+        have hfinitei : Module.Finite R (F.complex.X i) := by
+          simpa [F, mcmPrefixResolution_of_kernel, mcmPrefixComplex, hi]
+            using hPfinite i
+        exact ⟨hfreei, hfinitei⟩
+      · letI : Module.Finite R (K n) := hKfinite n
+        refine ⟨hKfinite n, ?_, ?_, ?_⟩
+        · simpa [Formalization.Books.Algebra.Unit103.IsMaximalCohenMacaulay,
+            hKn_depth]
+        · intro h
+          omega
+        · intro h
+          simpa [F, mcmPrefixResolution_of_kernel, mcmPrefixComplex] using
+            hκmono (n - 1)
 
 /-! ## Regular sequences from a local map -/
 
@@ -1181,7 +1812,15 @@ theorem exists_regularSequence_of_localRingHom
     ∃ xs : List A,
       (((xs.length : ℕ∞) : WithBot ℕ∞)) = ringKrullDim B ∧
         RingTheory.Sequence.IsRegular B (xs.map φ) := by
-  sorry
+  let d : ℕ := (LTSeries.longestOf (PrimeSpectrum B)).length
+  have hdim : ringKrullDim B = (((d : ℕ∞) : WithBot ℕ∞)) := by
+    change Order.krullDim (PrimeSpectrum B) = _
+    rw [Order.krullDim_eq_length_of_finiteDimensionalOrder]
+    simp [d]
+  obtain ⟨xs, hxslen, hxsreg⟩ :=
+    exists_regularSequence_of_localRingHom_aux A B φ hB hmax d hdim
+  refine ⟨xs, ?_, hxsreg⟩
+  simpa [hxslen] using hdim.symm
 
 end
 

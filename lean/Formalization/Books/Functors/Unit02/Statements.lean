@@ -41,15 +41,15 @@ theorem functor_on_finitely_presented_modules
           Functor.isoWhiskerLeft
               (finitelyPresentedModuleProperty.{u, u} A).ι e ≪≫
               E'.restrictionIso = E.restrictionIso := by
-  letI : Fact Cardinal.aleph0.IsRegular := Cardinal.fact_isRegular_aleph0
+  let : Fact Cardinal.aleph0.IsRegular := Cardinal.fact_isRegular_aleph0
   let P := finitelyPresentedModuleProperty.{u, u} A
   have hsmall : ObjectProperty.EssentiallySmall.{u} P :=
     module_finitePresentation_essentiallySmall A
   have hfree (n : ℕ) : IsFinitelyPresentable (ModuleCat.of A (Fin n → A)) := by
-    haveI : IsFinitelyPresentable (ULift.{u} (Fin n)) := by
+    have : IsFinitelyPresentable (ULift.{u} (Fin n)) := by
       exact ((hasCardinalLT_of_finite (ULift.{u} (Fin n)) Cardinal.aleph0)
         (Cardinal.IsRegular.aleph0_le Fact.out)).isCardinalPresentable
-    haveI : (forget (ModuleCat.{u} A)).IsCardinalAccessible.{u} Cardinal.aleph0 :=
+    have : (forget (ModuleCat.{u} A)).IsCardinalAccessible.{u} Cardinal.aleph0 :=
       (Functor.IsFinitelyAccessible_iff_preservesFilteredColimitsOfSize
         (F := forget (ModuleCat.{u} A))).2 inferInstance
     have hfree' : IsFinitelyPresentable
@@ -95,12 +95,12 @@ private lemma module_finitely_presentable_of_finitePresentation
     (A : Type u) [Ring A] (X : ModuleCat.{u} A)
     (hX : Module.FinitePresentation A (X : Type u)) :
     IsFinitelyPresentable.{u} X := by
-  letI : Fact Cardinal.aleph0.IsRegular := Cardinal.fact_isRegular_aleph0
+  let : Fact Cardinal.aleph0.IsRegular := Cardinal.fact_isRegular_aleph0
   have hfree (n : ℕ) : IsFinitelyPresentable (ModuleCat.of A (Fin n → A)) := by
-    haveI : IsFinitelyPresentable (ULift.{u} (Fin n)) := by
+    have : IsFinitelyPresentable (ULift.{u} (Fin n)) := by
       exact ((hasCardinalLT_of_finite (ULift.{u} (Fin n)) Cardinal.aleph0)
         (Cardinal.IsRegular.aleph0_le Fact.out)).isCardinalPresentable
-    haveI : (forget (ModuleCat.{u} A)).IsCardinalAccessible.{u} Cardinal.aleph0 :=
+    have : (forget (ModuleCat.{u} A)).IsCardinalAccessible.{u} Cardinal.aleph0 :=
       (Functor.IsFinitelyAccessible_iff_preservesFilteredColimitsOfSize
         (F := forget (ModuleCat.{u} A))).2 inferInstance
     have hfree' : IsFinitelyPresentable
@@ -156,7 +156,7 @@ theorem additive_extension_of_finitely_presented_modules
   have hAdd : Functor.Additive E.functor := by
     constructor
     intro X Y f g
-    letI : PreservesFilteredColimitsOfSize E.functor := E.preservesFilteredColimits
+    let : PreservesFilteredColimitsOfSize E.functor := E.preservesFilteredColimits
     obtain ⟨J, _, _, pX, hpX⟩ := module_finitePresentation_ind X
     obtain ⟨K, _, _, pY, hpY⟩ := module_finitePresentation_ind Y
     have hcolim : IsColimit (E.functor.mapCocone pX.cocone) :=
@@ -165,7 +165,7 @@ theorem additive_extension_of_finitely_presented_modules
     intro i
     have hXi : Module.FinitePresentation A
         (pX.diag.obj i : Type u) := hpX i
-    letI : IsFinitelyPresentable.{u} (pX.diag.obj i) :=
+    let : IsFinitelyPresentable.{u} (pX.diag.obj i) :=
       module_finitely_presentable_of_finitePresentation A _ hXi
     obtain ⟨j, qf, hqf⟩ :=
       IsFinitelyPresentable.exists_hom_of_isColimit pY.isColimit
@@ -227,9 +227,9 @@ theorem additive_extension_of_finitely_presented_modules
           ← E.functor.map_comp, ← hqf', ← hqg']
   constructor
   · exact hAdd
-  · letI : Functor.Additive E.functor := hAdd
-    letI : PreservesFilteredColimitsOfSize E.functor := E.preservesFilteredColimits
-    letI : PreservesFiniteCoproducts E.functor :=
+  · let : Functor.Additive E.functor := hAdd
+    let : PreservesFilteredColimitsOfSize E.functor := E.preservesFilteredColimits
+    let : PreservesFiniteCoproducts E.functor :=
       Functor.preservesFiniteCoproductsOfAdditive E.functor
     intro J X
     let Xd : Discrete J ⥤ ModuleCat.{u} A := Discrete.functor X
@@ -246,7 +246,7 @@ theorem additive_extension_of_finitely_presented_modules
           intro S T U h k
           apply Cofan.IsColimit.hom_ext (colimit.isColimit _)
           intro x
-          simp [Cofan.inj, Category.assoc] }
+          simp [Cofan.inj] }
     let D' : Finset (Discrete J) ⥤ B :=
       { obj := fun S => ∐ fun x : S => E.functor.obj (Xd.obj x)
         map := fun {S T} h => Sigma.desc fun y =>
@@ -261,7 +261,7 @@ theorem additive_extension_of_finitely_presented_modules
           intro S T U h k
           apply Cofan.IsColimit.hom_ext (colimit.isColimit _)
           intro x
-          simp [Cofan.inj, Category.assoc] }
+          simp [Cofan.inj] }
     let e : D ⋙ E.functor ≅ D' :=
       NatIso.ofComponents (fun S =>
         PreservesCoproduct.iso E.functor (fun x : S => Xd.obj x)) (by
@@ -315,7 +315,7 @@ theorem additive_extension_of_finitely_presented_modules
                 dsimp [D]
                 apply Cofan.IsColimit.hom_ext (colimit.isColimit _)
                 intro x
-                simp [Cofan.inj, Category.assoc] } }
+                simp [Cofan.inj] } }
     have hc : IsColimit c := by
       cases hD
       change IsColimit
@@ -332,7 +332,7 @@ theorem additive_extension_of_finitely_presented_modules
                 dsimp [D']
                 apply Cofan.IsColimit.hom_ext (colimit.isColimit _)
                 intro x
-                simp [Cofan.inj, Category.assoc] } }
+                simp [Cofan.inj] } }
     let σ : c'.pt ⟶ E.functor.obj c.pt := by
       simpa [c', c] using (sigmaComparison E.functor X)
     let q : Cocone (D ⋙ E.functor) :=
@@ -366,7 +366,7 @@ theorem additive_extension_of_finitely_presented_modules
         simpa [← PreservesCoproduct.inv_hom] using
           (map_ι_comp_inv_sigmaComparison E.functor
             (fun x : S => Xd.obj x) x)
-      simp only [Cofan.inj, Cofan.mk_ι_app, Discrete.natTrans_app]
+      simp only [Cofan.inj, Cofan.mk_ι_app]
       rw [Category.assoc (e.hom.app S) (c'.ι.app S) σ]
       rw [← Category.assoc (E.functor.map (Sigma.ι (fun x : S => Xd.obj x) x))
         (e.hom.app S) (c'.ι.app S ≫ σ), hS]
@@ -401,10 +401,10 @@ theorem additive_extension_of_finitely_presented_modules
           Sigma.ι (fun j => E.functor.obj (X j)) j =
             Sigma.ι (fun x : S => E.functor.obj (Xd.obj x)) x ≫
               c'.ι.app S := by
-        simp [c', S, x, hj]
+        simp [c', S, x]
       have hcj : Sigma.ι X j =
           Sigma.ι (fun x : S => Xd.obj x) x ≫ c.ι.app S := by
-        simp [c, S, x, hj]
+        simp [c, S, x]
       rw [hc'j]
       rw [Category.assoc
         (Sigma.ι (fun x : S => E.functor.obj (Xd.obj x)) x)
@@ -436,10 +436,10 @@ theorem additive_extension_of_finitely_presented_modules
           Sigma.ι (fun j => E.functor.obj (X j)) j =
             Sigma.ι (fun x : S => E.functor.obj (Xd.obj x)) x ≫
               c'.ι.app S := by
-        simp [c', S, x, hj]
+        simp [c', S, x]
       have hcj : Sigma.ι X j =
           Sigma.ι (fun x : S => Xd.obj x) x ≫ c.ι.app S := by
-        simp [c, S, x, hj]
+        simp [c, S, x]
       have hfac : E.functor.map (c.ι.app S) ≫ hqcolim.desc q =
           q.ι.app S := by
         simpa using hqcolim.fac q S
@@ -463,7 +463,7 @@ theorem additive_extension_of_finitely_presented_modules
       rw [← Category.assoc
         (Sigma.ι (fun j => E.functor.obj (X j)) j) σ i, hσj, hιi]
       simp
-    letI : IsIso σ := ⟨⟨i, hσi, hiσ⟩⟩
+    let : IsIso σ := ⟨⟨i, hσi, hiσ⟩⟩
     simpa [σ, c', c] using (inferInstance : IsIso σ)
 
 theorem additiveCategory_has_arbitrary_colimits

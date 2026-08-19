@@ -433,7 +433,23 @@ theorem associatedPrimes_subset_weaklyAssociatedPrimes_subset_support
     Formalization.Books.Algebra.Unit63.associatedPrimes R M ⊆
         weaklyAssociatedPrimes R M ∧
       weaklyAssociatedPrimes R M ⊆ Module.support R M := by
-  sorry
+  constructor
+  · intro p hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+    rcases hp with ⟨m, hm⟩
+    refine ⟨m, ?_⟩
+    rw [hm]
+    exact ⟨⟨p.2, le_rfl⟩, fun q hq hqp => hq.2⟩
+  · intro p hp
+    change ∃ m, p.asIdeal ∈ ((⊥ : Submodule R M).colon ({m} : Set M)).minimalPrimes at hp
+    rcases hp with ⟨m, hm⟩
+    rw [Module.mem_support_iff']
+    refine ⟨m, ?_⟩
+    intro r hr hzero
+    apply hr
+    apply hm.1.2
+    rw [Submodule.mem_colon_singleton]
+    simpa [hzero]
 
 /-- The union of weakly associated primes is the set of module
 zerodivisors. -/
@@ -443,7 +459,36 @@ theorem iUnion_weaklyAssociatedPrimes_eq_module_zeroDivisors
     (⋃ p : {p : PrimeSpectrum R // p ∈ weaklyAssociatedPrimes R M},
         (p.1.asIdeal : Set R)) =
       {x : R | ∃ m : M, m ≠ 0 ∧ x • m = 0} := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    rcases Set.mem_iUnion.mp hx with ⟨p, hx⟩
+    have hp := p.2
+    change ∃ m, p.1.asIdeal ∈
+      ((⊥ : Submodule R M).colon ({m} : Set M)).minimalPrimes at hp
+    rcases hp with ⟨m, hm⟩
+    obtain ⟨y, hy, hxy⟩ := Ideal.exists_mul_mem_of_mem_minimalPrimes hm hx
+    refine ⟨y • m, ?_, ?_⟩
+    · intro hzero
+      apply hy
+      rw [Submodule.mem_colon_singleton]
+      simpa [hzero]
+    · rw [smul_smul]
+      rw [Submodule.mem_colon_singleton] at hxy
+      simpa [mul_comm] using hxy
+  · rintro ⟨m, hmne, hxm⟩
+    have hI : (⊥ : Submodule R M).colon ({m} : Set M) ≠ ⊤ := by
+      intro htop
+      have hmzero : m ∈ (⊥ : Submodule R M) :=
+        (Submodule.colon_eq_top_iff_subset ({m} : Set M)).mp htop (by simp)
+      exact hmne (by simpa using hmzero)
+    obtain ⟨q, hq⟩ := Ideal.nonempty_minimalPrimes hI
+    let p : PrimeSpectrum R := ⟨q, hq.isPrime⟩
+    have hp : p ∈ weaklyAssociatedPrimes R M := ⟨m, hq⟩
+    refine Set.mem_iUnion.mpr ⟨⟨p, hp⟩, ?_⟩
+    apply hq.le
+    rw [Submodule.mem_colon_singleton]
+    exact hxm
 
 /-- A minimal point of the support of a module is weakly associated. -/
 theorem weaklyAssociated_of_minimal_support
@@ -452,7 +497,57 @@ theorem weaklyAssociated_of_minimal_support
     (p : PrimeSpectrum R) (hp : p ∈ Module.support R M)
     (hminimal : Minimal (fun q : PrimeSpectrum R => q ∈ Module.support R M) p) :
     p ∈ weaklyAssociatedPrimes R M := by
-  sorry
+  let S := p.asIdeal.primeCompl
+  let A := Localization.AtPrime p.asIdeal
+  let f := LocalizedModule.mkLinearMap S M
+  let N := LocalizedModule.AtPrime p.asIdeal M
+  have hN : Nontrivial N := Module.mem_support_iff.mp hp
+  have hne : weaklyAssociatedPrimes A N ≠ ∅ := by
+    intro hzero
+    have hsub : Subsingleton N :=
+      (weaklyAssociatedPrimes_eq_empty_iff_subsingleton (R := A) (M := N)).mpr hzero
+    exact (not_subsingleton_iff_nontrivial.mpr hN) hsub
+  obtain ⟨q, hq⟩ := Set.nonempty_iff_ne_empty.mpr hne
+  have hq_support : q ∈ Module.support A N :=
+    (associatedPrimes_subset_weaklyAssociatedPrimes_subset_support
+      (R := A) (M := N)).2 hq
+  obtain ⟨z, hz⟩ := Module.mem_support_iff'.mp hq_support
+  rcases IsLocalizedModule.mk'_surjective S f z with ⟨⟨m, s⟩, rfl⟩
+  let q'ideal : Ideal R := q.asIdeal.under R
+  have hqprime : q'ideal.IsPrime ∧
+      Disjoint (S : Set R) q'ideal :=
+    (IsLocalization.isPrime_iff_isPrime_disjoint S A q.asIdeal).mp q.2
+  let q' : PrimeSpectrum R := ⟨q'ideal, hqprime.1⟩
+  have hq'_support : q' ∈ Module.support R M := by
+    rw [Module.mem_support_iff']
+    refine ⟨m, ?_⟩
+    intro r hr hrzero
+    apply hz (algebraMap R A r)
+    · intro hrq
+      apply hr
+      rw [Ideal.mem_under]
+      exact hrq
+    · change algebraMap R A r • IsLocalizedModule.mk' f m s = 0
+      rw [← IsLocalization.mk'_one (M := S) A r]
+      rw [IsLocalizedModule.mk'_smul_mk' A f r m (1 : S) s]
+      simp [hrzero]
+  have hqle : q.asIdeal.under R ≤ p.asIdeal := by
+    calc
+      q.asIdeal.under R ≤ (IsLocalRing.maximalIdeal A).under R :=
+        Ideal.comap_mono (IsLocalRing.le_maximalIdeal q.2.ne_top)
+      _ = p.asIdeal := Localization.AtPrime.under_maximalIdeal (I := p.asIdeal)
+  have hple : p.asIdeal ≤ q.asIdeal.under R := hminimal.2 hq'_support hqle
+  have hmaxle : IsLocalRing.maximalIdeal A ≤ q.asIdeal := by
+    rw [← Localization.AtPrime.map_eq_maximalIdeal (I := p.asIdeal)]
+    exact (Ideal.map_le_iff_le_comap).mpr hple
+  have hqeq : q.asIdeal = IsLocalRing.maximalIdeal A :=
+    le_antisymm (IsLocalRing.le_maximalIdeal q.2.ne_top) hmaxle
+  have hqpoint : q = IsLocalRing.closedPoint A := by
+    apply PrimeSpectrum.ext
+    simpa only [IsLocalRing.closedPoint] using hqeq
+  apply ((weaklyAssociated_local p).out 0 1).mpr
+  rw [← hqpoint]
+  exact hq
 
 /-! ## Finitely generated primes and functoriality -/
 
@@ -464,7 +559,112 @@ theorem associated_iff_weaklyAssociated_of_fg
     (p : PrimeSpectrum R) (hfg : p.asIdeal.FG) :
     p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M ↔
       p ∈ weaklyAssociatedPrimes R M := by
-  sorry
+  constructor
+  · intro hp
+    exact (associatedPrimes_subset_weaklyAssociatedPrimes_subset_support
+      (R := R) (M := M)).1 hp
+  · intro hp
+    classical
+    have hfg0 := hfg
+    let A := Localization.AtPrime p.asIdeal
+    let N := LocalizedModule.AtPrime p.asIdeal M
+    obtain ⟨m, hm⟩ := ((weaklyAssociated_local p).out 0 2).mp hp
+    have hmA :
+        ((⊥ : Submodule A N).colon ({m} : Set N)).radical =
+          IsLocalRing.maximalIdeal A := by
+      simpa [A, N, IsLocalRing.closedPoint] using hm
+    have hmne : m ≠ 0 := by
+      intro hmzero
+      have hJtop :
+          (⊥ : Submodule A N).colon ({m} : Set N) = ⊤ := by
+        simp [hmzero]
+      have hmaxtop : IsLocalRing.maximalIdeal A = ⊤ := by
+        rw [← hmA, hJtop, Ideal.radical_top]
+      exact ((IsLocalRing.maximalIdeal.isMaximal A).ne_top hmaxtop).elim
+    have hmaxfg : (IsLocalRing.maximalIdeal A).FG := by
+      rw [← Localization.AtPrime.map_eq_maximalIdeal (I := p.asIdeal)]
+      exact hfg.map (algebraMap R A)
+    obtain ⟨U, hU⟩ := hmaxfg
+    have hrad : ∀ a : A, a ∈ (U : Set A) → ∃ n : ℕ, a ^ n • m = 0 := by
+      intro a ha
+      have haMax : a ∈ IsLocalRing.maximalIdeal A := by
+        rw [← hU]
+        exact Ideal.subset_span ha
+      have haRad : a ∈
+          ((⊥ : Submodule A N).colon ({m} : Set N)).radical := by
+        rw [hmA]
+        exact haMax
+      obtain ⟨n, hn⟩ := Ideal.mem_radical_iff.mp haRad
+      refine ⟨n, ?_⟩
+      rw [Submodule.mem_colon_singleton] at hn
+      exact hn
+    have hprocess : ∀ V : Finset A, V ⊆ U →
+        ∃ z : N, z ≠ 0 ∧
+          (∀ a ∈ V, a • z = 0) ∧
+          (∀ a ∈ U, ∃ n : ℕ, a ^ n • z = 0) := by
+      intro V
+      induction V using Finset.induction_on with
+      | empty =>
+          intro hVU
+          refine ⟨m, hmne, ?_, ?_⟩
+          · simp
+          · exact hrad
+      | @insert a V ha ih =>
+          intro hVU
+          obtain ⟨z, hzne, hkill, hradz⟩ := ih (by
+            intro b hb
+            exact hVU (Finset.mem_insert_of_mem hb))
+          have haU : a ∈ U := hVU (Finset.mem_insert_self a V)
+          obtain ⟨n, hn⟩ := hradz a haU
+          let H : ∃ n : ℕ, a ^ n • z = 0 := ⟨n, hn⟩
+          have he : Nat.find H ≠ 0 := by
+            intro hezero
+            apply hzne
+            simpa [hezero] using Nat.find_spec H
+          let z' := a ^ (Nat.find H - 1) • z
+          have hz'ne : z' ≠ 0 := by
+            dsimp [z']
+            exact Nat.find_min H (Nat.sub_one_lt he)
+          have hazero : a • z' = 0 := by
+            dsimp [z']
+            rw [smul_smul, mul_comm, ← pow_succ, tsub_add_cancel_of_le
+              (Nat.one_le_iff_ne_zero.mpr he)]
+            exact Nat.find_spec H
+          refine ⟨z', hz'ne, ?_, ?_⟩
+          · intro b hb
+            rcases Finset.mem_insert.mp hb with rfl | hb
+            · exact hazero
+            · simpa [z', smul_smul, mul_comm] using
+                congrArg (fun w => a ^ (Nat.find H - 1) • w) (hkill b hb)
+          · intro b hb
+            obtain ⟨k, hk⟩ := hradz b hb
+            refine ⟨k, ?_⟩
+            simpa [z', smul_smul, mul_comm] using
+              congrArg (fun w => a ^ (Nat.find H - 1) • w) hk
+    obtain ⟨m', hm'ne, hm'kill, hm'rad⟩ := hprocess U (by intro a ha; exact ha)
+    have hle : IsLocalRing.maximalIdeal A ≤
+        (⊥ : Submodule A N).colon ({m'} : Set N) := by
+      rw [← hU, Ideal.span_le]
+      intro a ha
+      change a ∈ (⊥ : Submodule A N).colon ({m'} : Set N)
+      exact (Submodule.mem_colon_singleton).mpr (hm'kill a ha)
+    have hge : (⊥ : Submodule A N).colon ({m'} : Set N) ≤
+        IsLocalRing.maximalIdeal A := by
+      intro r hr
+      by_contra hrmax
+      have hunit : IsUnit r := IsLocalRing.notMem_maximalIdeal.mp hrmax
+      apply hm'ne
+      apply (IsUnit.smul_eq_zero hunit).mp
+      rw [Submodule.mem_colon_singleton] at hr
+      exact hr
+    have hasslocal :
+        IsLocalRing.closedPoint A ∈
+          Formalization.Books.Algebra.Unit63.associatedPrimes A N := by
+      refine ⟨m', ?_⟩
+      have hcolon := le_antisymm hge hle
+      simpa only [IsLocalRing.closedPoint] using hcolon
+    exact (Formalization.Books.Algebra.Unit63.associated_primes_localize_at_prime p).2
+      hfg0 (by simpa [A, N] using hasslocal)
 
 /-- Over a Noetherian ring, associated and weakly associated primes coincide. -/
 theorem associatedPrimes_eq_weaklyAssociatedPrimes_of_noetherian

@@ -1646,10 +1646,8 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     rw [Preadditive.add_comp, Preadditive.add_comp]
     simp only [Linear.units_smul_comp, Category.assoc]
     rw [hnext' (s + 1) (p + 1), hnext' (s + 1) p, hnext' s p]
-    simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
-      h11', h22', h33', h12', h13', h23']
-    rw [hs_succ]
-    simp only [Units.neg_smul, smul_smul, mul_comm]
+    simp_all [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ]
+    simp only [smul_smul, mul_comm]
     rw [← smul_smul]
     abel
   have hcomp := congrArg

@@ -39,7 +39,7 @@ def IsGeometricallyIrreducible (k : Type u) (S : Type v) [Field k]
 irreducibility. -/
 theorem isGeometricallyIrreducible_iff_unique_minimalPrime
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
-    IsGeometricallyIrreducible k S ↔
+    IsGeometricallyIrreducible.{u, v, w} k S ↔
       ∀ (K : Type w) [Field K] [Algebra k K],
         ∃! p : PrimeSpectrum (K ⊗[k] S),
           p.asIdeal ∈ minimalPrimes (K ⊗[k] S) := by

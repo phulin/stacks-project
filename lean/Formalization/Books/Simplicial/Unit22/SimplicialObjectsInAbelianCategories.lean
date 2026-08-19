@@ -1323,7 +1323,7 @@ noncomputable def canonicalEilenbergMacLaneMap
   let U := concentratedTruncatedObject A k
   letI : Unit19.HasCoskeleton k U :=
     Unit19.has_coskeleton_of_has_finite_limits k U
-  letI : (Unit19.truncInclusion k).HasPointwiseRightKanExtension U := by
+  let : (Unit19.truncInclusion k).HasPointwiseRightKanExtension U := by
     intro X
     have : Finite (SimplexCategory.Truncated k) :=
       Finite.of_injective

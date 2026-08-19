@@ -644,6 +644,101 @@ def tensorProductComponent
   (Submodule.span (degreeZeroSubring G)
     (tensorProductHomogeneousTensors G 𝓜 𝓝 d)).toAddSubgroup
 
+private lemma tensorProduct_smul_of_tmul
+    (G : GradedRingData S) {P : Type*} [AddCommGroup P]
+    [Module (degreeZeroSubring G) P]
+    (F : TensorProduct S M N →+ P) (c : degreeZeroSubring G)
+    (h : ∀ x : M, ∀ y : N,
+      F ((c : S) • (x ⊗ₜ[S] y)) = c • F (x ⊗ₜ[S] y))
+    (x : TensorProduct S M N) :
+    F ((c : S) • x) = c • F x := by
+  induction x using TensorProduct.induction_on with
+  | zero => rw [TensorProduct.smul_zero, F.map_zero, smul_zero]
+  | @tmul x y => exact h x y
+  | @add x y hx hy =>
+      have hmap : F (x + y) = F x + F y := F.map_add x y
+      have hscalar : c • F x + c • F y = c • F (x + y) :=
+        (smul_add c (F x) (F y)).symm.trans
+          (congrArg (fun z => c • z) hmap.symm)
+      calc
+        F ((c : S) • (x + y)) = F ((c : S) • x + (c : S) • y) :=
+          congrArg F (smul_add (c : S) x y)
+        _ = F ((c : S) • x) + F ((c : S) • y) := F.map_add _ _
+        _ = c • F x + c • F y := congrArg₂ (· + ·) hx hy
+        _ = c • F (x + y) := hscalar
+
+private lemma tensorProduct_addHom_pointwise
+    {P : Type*} [AddCommGroup P] (F : TensorProduct S M N →+ P)
+    (g : P →+ TensorProduct S M N)
+    (h : ∀ x : M, ∀ y : N,
+      g (F (x ⊗ₜ[S] y)) = x ⊗ₜ[S] y)
+    (x : TensorProduct S M N) : g (F x) = x := by
+  induction x using TensorProduct.induction_on with
+  | zero => rw [F.map_zero, g.map_zero]
+  | @tmul x y => exact h x y
+  | @add x y hx hy =>
+      rw [F.map_add, g.map_add]
+      exact congrArg₂ (· + ·) hx hy
+
+private lemma directSum_span_right_inverse
+    {A M I : Type*} [CommRing A] [AddCommGroup M] [Module A M] [DecidableEq I]
+    (CT : I → Submodule A M) (Gen : I → Set M)
+    (hCT : ∀ i, CT i = Submodule.span A (Gen i))
+    (F : M →+ (⨁ i, CT i))
+    (hgen : ∀ i z (hz : z ∈ Gen i),
+      F z = DirectSum.of (fun i => CT i) i
+        ⟨z, (hCT i).symm ▸ Submodule.subset_span hz⟩)
+    (hsmul : ∀ (c : A) (z : M), F (c • z) = c • F z) :
+    F.comp (DirectSum.coeAddMonoidHom CT) = AddMonoidHom.id _ := by
+  apply AddMonoidHom.ext
+  intro v
+  induction v using DirectSum.induction_on with
+  | zero =>
+      exact F.map_zero.trans ((AddMonoidHom.id _).map_zero).symm
+  | @of i x =>
+      rw [AddMonoidHom.comp_apply, AddMonoidHom.id_apply,
+        DirectSum.coeAddMonoidHom_of]
+      have hx : (x : M) ∈ Submodule.span A (Gen i) := by
+        rw [← hCT i]
+        exact x.property
+      refine Submodule.span_induction (p := fun z hz =>
+        F z = DirectSum.of (fun i => CT i) i
+          ⟨z, (hCT i).symm ▸ hz⟩) ?_ ?_ ?_ ?_ hx
+      · intro z hz
+        simpa only using hgen i z hz
+      · exact F.map_zero.trans ((DirectSum.of (fun i => CT i) i).map_zero).symm
+      · intro z z' hz hz' hz₁ hz₂
+        have hzCT : z ∈ CT i := (hCT i).symm ▸ hz
+        have hz'CT : z' ∈ CT i := (hCT i).symm ▸ hz'
+        have hzadd : z + z' ∈ CT i :=
+          (hCT i).symm ▸ (Submodule.add_mem _ hz hz')
+        rw [F.map_add]
+        calc
+          F z + F z' =
+              DirectSum.of (fun i => CT i) i ⟨z, hzCT⟩ +
+                DirectSum.of (fun i => CT i) i ⟨z', hz'CT⟩ :=
+            congrArg₂ (· + ·) hz₁ hz₂
+          _ = DirectSum.of (fun i => CT i) i
+              (⟨z, hzCT⟩ + ⟨z', hz'CT⟩) :=
+            ((DirectSum.of (fun i => CT i) i).map_add _ _).symm
+          _ = DirectSum.of (fun i => CT i) i
+              ⟨z + z', hzadd⟩ := by rfl
+      · intro c z hz hz₁
+        have hzCT : z ∈ CT i := (hCT i).symm ▸ hz
+        have hzsmul : c • z ∈ CT i :=
+          (hCT i).symm ▸ (Submodule.smul_mem _ c hz)
+        rw [hsmul c z]
+        calc
+          c • F z = c • DirectSum.of (fun i => CT i) i ⟨z, hzCT⟩ :=
+            congrArg (fun w => c • w) hz₁
+          _ = DirectSum.of (fun i => CT i) i (c • ⟨z, hzCT⟩) :=
+            (DirectSum.of_smul A (M := fun i => CT i) i c
+              (⟨z, hzCT⟩ : CT i)).symm
+          _ = DirectSum.of (fun i => CT i) i
+              ⟨c • z, hzsmul⟩ := by rfl
+  | add z z' hz hz' =>
+      simpa only [map_add] using congrArg₂ (· + ·) hz hz'
+
 theorem tensorProduct_decomposition_exists
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
     Nonempty (DirectSum.Decomposition (tensorProductComponent G 𝓜 𝓝)) := by
@@ -885,21 +980,65 @@ theorem tensorProduct_decomposition_exists
                     hF₀_hom i (k + j) m ⟨(s : S) • (n : N), hsn⟩]
                   /- Prior attempt: the dependent `DirectSum.of` terms require
                      transporting both the degree and its membership proof. -/
-                  sorry
+                  change DFinsupp.single (k + i + j) _ =
+                    DFinsupp.single (i + (k + j)) _
+                  rw [DFinsupp.single_eq_single_iff]
+                  left
+                  have hdeg : k + i + j = i + (k + j) := by omega
+                  constructor
+                  · exact hdeg
+                  · apply (Subtype.heq_iff_coe_eq (fun x => by
+                      simp [CT, hdeg])).2
+                    simp [TensorProduct.smul_tmul]
                 · have hs0 : (s : S) = 0 := by
                     simpa [ringModuleComponent, hk] using s.property
                   simp [hs0]
   let F : TensorProduct S M N →+ V := TensorProduct.liftAddHom f hbal
   let coe : V →+ TensorProduct S M N := DirectSum.coeAddMonoidHom CT
+  have hf (x : M) (y : N) :
+      f x y = F₀ (x ⊗ₜ[degreeZeroSubring G] y) := rfl
+  have hF_tmul (x : M) (y : N) : F (x ⊗ₜ[S] y) = f x y :=
+    TensorProduct.liftAddHom_tmul f hbal x y
   have hF₀_hom_recompose (x : M) (z : N) :
       coe (F₀ (x ⊗ₜ[degreeZeroSubring G] z)) = q (x ⊗ₜ[degreeZeroSubring G] z) := by
     /- Prior attempt: the direct-sum recomposition induction left dependent
        subtype proofs after rewriting the homogeneous cases. -/
-    sorry
+    induction x using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓜.component) with
+    | zero => simp [F₀, coe, q]
+    | add x y hx hy =>
+        simpa [F₀, coe, q, TensorProduct.add_tmul] using
+          congrArg₂ (· + ·) hx hy
+    | @homogeneous i x =>
+        induction z using DirectSum.Decomposition.inductionOn
+            (ℳ := 𝓝.component) with
+        | zero => simp [F₀, coe, q]
+        | add z z' hz hz' =>
+            simpa [F₀, coe, q, TensorProduct.tmul_add] using
+              congrArg₂ (· + ·) hz hz'
+        | @homogeneous j z =>
+            rw [hF₀_hom i j ⟨(x : M), by simpa [CM] using x.property⟩
+              ⟨(z : N), by simpa [CN] using z.property⟩]
+            change DirectSum.coeAddMonoidHom CT
+                ((of (fun d => CT d) (i + j))
+                  ⟨(x : M) ⊗ₜ[S] (z : N), _⟩) = _
+            rw [DirectSum.coeAddMonoidHom_of]
+            simp [q]
   have hleft : coe.comp F = AddMonoidHom.id _ := by
     /- Prior attempt: the tensor-product induction depended on the
        recomposition equality above. -/
-    sorry
+    have hpoint : ∀ x : TensorProduct S M N, coe (F x) = x := by
+      intro x
+      apply tensorProduct_addHom_pointwise F coe
+      intro x y
+      rw [hF_tmul x y, hf]
+      simpa only [q, TensorProduct.mapOfCompatibleSMul_tmul] using
+        hF₀_hom_recompose x y
+    apply AddMonoidHom.ext
+    intro x
+    have hcomp : (coe.comp F) x = coe (F x) := rfl
+    have hid : (AddMonoidHom.id _) x = x := rfl
+    exact hcomp.trans ((hpoint x).trans hid.symm)
   have hF_smul (c : degreeZeroSubring G) (x : TensorProduct S M N) :
       F ((c : S) • x) = c • F x := by
     /- Prior attempt: scalar compatibility required the same dependent
@@ -908,7 +1047,10 @@ theorem tensorProduct_decomposition_exists
   have hright : F.comp coe = AddMonoidHom.id _ := by
     /- Prior attempt: the span induction did not retain the component
        family through the dependent direct-sum coercion. -/
-    sorry
+    refine directSum_span_right_inverse
+      (A := degreeZeroSubring G) (M := TensorProduct S M N) (I := ℤ)
+      CT (fun d => tensorProductHomogeneousTensors G 𝓜 𝓝 d)
+      (fun d => by rfl) F hgen hF_smul
   /- Prior attempt: the constructed direct sum uses submodule subtypes,
      while the theorem's decomposition is indexed by add-subgroup subtypes. -/
   exact ⟨by sorry⟩

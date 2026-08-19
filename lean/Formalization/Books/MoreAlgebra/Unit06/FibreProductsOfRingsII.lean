@@ -954,7 +954,31 @@ theorem fibreProductModule_leftProjection_surjective
     (situation : FibreProductSituation A A' B)
     (X : fibreProductModuleGluingCategory situation) :
     Function.Surjective (fibreProductModule_leftProjection situation X) := by
-  sorry
+  intro x
+  let _ : Algebra B A := RingHom.toAlgebra situation.toA
+  let _ : Algebra A' A := RingHom.toAlgebra situation.fromA'
+  obtain ⟨y, hy⟩ :=
+    (TensorProduct.mk_surjective A' (X.obj.right : Type u) A
+      situation.fromA'_surjective)
+      (X.obj.hom (TensorProduct.tmul B (1 : A) x))
+  have hxy :
+      moduleFiberLeftMap (fibreProductRingSquare situation) X x =
+        moduleFiberRightMap (fibreProductRingSquare situation) X y := by
+    change X.obj.hom (TensorProduct.tmul B (1 : A) x) =
+      TensorProduct.tmul A' (1 : A) y
+    exact hy.symm
+  refine ⟨Concrete.pullbackMk
+      (moduleFiberLeftMap (fibreProductRingSquare situation) X)
+      (moduleFiberRightMap (fibreProductRingSquare situation) X) x y hxy, ?_⟩
+  change pullback.fst
+      (moduleFiberLeftMap (fibreProductRingSquare situation) X)
+      (moduleFiberRightMap (fibreProductRingSquare situation) X)
+      (Concrete.pullbackMk
+        (moduleFiberLeftMap (fibreProductRingSquare situation) X)
+        (moduleFiberRightMap (fibreProductRingSquare situation) X) x y hxy) = x
+  exact Concrete.pullbackMk_fst
+    (moduleFiberLeftMap (fibreProductRingSquare situation) X)
+    (moduleFiberRightMap (fibreProductRingSquare situation) X) x y hxy
 
 /-- The right adjoint given by the compatible-pair module pullback. -/
 noncomputable abbrev fibreProductModuleRightAdjoint
@@ -1000,7 +1024,41 @@ theorem fibreProductModule_recovery_exists
         ((ModuleCat.extendScalars (fibreProductToA' D)).obj
           ((fibreProductModuleRightAdjoint D).obj X) ≅
         moduleGluingRightObj (D := fibreProductRingSquare D) (X := X))) := by
-  sorry
+  let e := fibreProductModule_composition_iso D
+  let eX := e.app X
+  let leftIso :
+      (ModuleCat.extendScalars (fibreProductToB D)).obj
+          ((fibreProductModuleRightAdjoint D).obj X) ≅
+        moduleGluingLeftObj (D := fibreProductRingSquare D) (X := X) :=
+    { hom := eX.hom.hom.left
+      inv := eX.inv.hom.left
+      hom_inv_id := by
+        change eX.hom.hom.left ≫ eX.inv.hom.left = 𝟙 _
+        have h := congrArg (fun f => f.hom.left) eX.hom_inv_id
+        change eX.hom.hom.left ≫ eX.inv.hom.left = 𝟙 _ at h
+        exact h
+      inv_hom_id := by
+        change eX.inv.hom.left ≫ eX.hom.hom.left = 𝟙 _
+        have h := congrArg (fun f => f.hom.left) eX.inv_hom_id
+        change eX.inv.hom.left ≫ eX.hom.hom.left = 𝟙 _ at h
+        exact h }
+  let rightIso :
+      (ModuleCat.extendScalars (fibreProductToA' D)).obj
+          ((fibreProductModuleRightAdjoint D).obj X) ≅
+        moduleGluingRightObj (D := fibreProductRingSquare D) (X := X) :=
+    { hom := eX.hom.hom.right
+      inv := eX.inv.hom.right
+      hom_inv_id := by
+        change eX.hom.hom.right ≫ eX.inv.hom.right = 𝟙 _
+        have h := congrArg (fun f => f.hom.right) eX.hom_inv_id
+        change eX.hom.hom.right ≫ eX.inv.hom.right = 𝟙 _ at h
+        exact h
+      inv_hom_id := by
+        change eX.inv.hom.right ≫ eX.hom.hom.right = 𝟙 _
+        have h := congrArg (fun f => f.hom.right) eX.inv_hom_id
+        change eX.inv.hom.right ≫ eX.hom.hom.right = 𝟙 _ at h
+        exact h }
+  exact ⟨leftIso, rightIso⟩
 
 /-- A chosen pair of the source's componentwise recovery isomorphisms. -/
 noncomputable def fibreProductModule_recovery

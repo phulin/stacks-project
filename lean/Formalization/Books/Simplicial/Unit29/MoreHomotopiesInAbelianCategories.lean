@@ -1,7 +1,8 @@
 import Formalization.Books.Simplicial.Unit27.HomotopiesInAbelianCategories
-import Formalization.Books.Simplicial.Unit28.HomotopiesAndCosimplicialObjects
+import Formalization.Books.Homology.Unit14.HomotopyAndShift
 import Mathlib.Algebra.Homology.Homotopy
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.CategoryTheory.Yoneda
 import Mathlib.CategoryTheory.Limits.Shapes.BinaryBiproducts
 
 /-!
@@ -49,7 +50,7 @@ def diamondBoundary
           (A.d n (n - 1))))
       (biprod.lift (𝟙 _) 0))
     (biprod.desc 0
-      ((-A.d (n - 1) (n - 2)) ≫ eqToHom (by congr 1 <;> omega)))
+      ((-A.d (n - 1) (n - 2)) ≫ eqToHom (by congr 1; omega)))
 
 /-- The differential with the zero maps away from the immediate predecessor. -/
 def diamondDifferential
@@ -163,12 +164,32 @@ def tripleToDiamond
     intro i j hij
     sorry
 
+def chainHomotopyTripleMap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) {B D : ChainComplex C ℤ} (g : B ⟶ D) :
+    ChainHomotopyTriple A B → ChainHomotopyTriple A D := fun t =>
+  { a := t.a ≫ g
+    b := t.b ≫ g
+    h := _root_.Homotopy.compRight t.h g }
+
+def chainHomotopyTripleFunctor
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℤ) : ChainComplex C ℤ ⥤ Type v where
+  obj B := ChainHomotopyTriple A B
+  map g := TypeCat.homEquiv.symm (chainHomotopyTripleMap A g)
+  map_id := by
+    intro B
+    sorry
+  map_comp := by
+    intro B D E g h
+    sorry
+
 /-- The universal property of `◇ A`: maps out of it are exactly homotopy
 triples `(a,b,h)`. -/
 theorem diamond_represents_homotopy
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A B : ChainComplex C ℤ) :
-    Nonempty ((diamond A ⟶ B) ≃ ChainHomotopyTriple A B) := by
+    (A : ChainComplex C ℤ) :
+    Nonempty ((chainHomotopyTripleFunctor A).CorepresentableBy (diamond A)) := by
   sorry
 
 /-- The map on representing complexes induced by a chain map. -/
@@ -202,44 +223,15 @@ def diamondFunctor
     sorry
 /-! ## The split extension and its connecting morphism -/
 
-/-- The copy `A[-1]` used in the short exact sequence. -/
-def diamondShift
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) : ChainComplex C ℤ where
-  X n := A.X (n - 1)
-  d i j := if h : j = i - 1 then
-      (-A.d (i - 1) (i - 2)) ≫ eqToHom (by subst j; congr 1 <;> omega)
-    else 0
-  shape := by sorry
-  d_comp_d' := by
-    intro i j k hij hjk
-    sorry
-
-/-- The shifted copy is definitionally `A_(n-1)` in degree `n`. -/
-def diamondShiftComponent
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) (n : ℤ) :
-  A.X (n - 1) ≅ (diamondShift A).X n :=
-  by
-    dsimp [diamondShift]
-    exact Iso.refl _
-
-def diamondShiftMap
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A B : ChainComplex C ℤ} (f : A ⟶ B) :
-  diamondShift A ⟶ diamondShift B where
-  f n := by
-    dsimp [diamondShift]
-    exact f.f (n - 1)
-  comm' := by
-    intro i j hij
-    sorry
-
 /-- Projection `◇ A → A[-1]`. -/
 def diamondProjection
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) : diamond A ⟶ diamondShift A where
-  f n := biprod.snd ≫ (diamondShiftComponent A n).hom
+    (A : ChainComplex C ℤ) : diamond A ⟶
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj A where
+  f n :=
+    biprod.snd ≫
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctorObjXIso
+        A (-1 : ℤ) n (n - 1) (by omega)).inv
   comm' := by
     intro i j hij
     sorry
@@ -248,15 +240,19 @@ def diamondProjection
 def diamondSection
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) (n : ℤ) :
-    (diamondShift A).X n ⟶ (diamond A).X n :=
-  (diamondShiftComponent A n).inv ≫ biprod.inr
+    ((Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj A).X n ⟶
+      (diamond A).X n :=
+  (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctorObjXIso
+      A (-1 : ℤ) n (n - 1) (by omega)).hom ≫ biprod.inr
 
 /-- The map `(1,-1) : A[-1] → (A ⊕ A)[-1]`. -/
 def diamondConnecting
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) :
-    diamondShift A ⟶ diamondShift (A ⊞ A) :=
-  diamondShiftMap (biprod.lift (𝟙 A) (-𝟙 A))
+    (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj A ⟶
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj (A ⊞ A) :=
+  (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).map
+    (biprod.lift (𝟙 A) (-𝟙 A))
 
 /-- The inclusion of the first two summands. -/
 def diamondPairInclusion
@@ -277,61 +273,58 @@ def diamondShortComplex
     ext n
     sorry)
 
-/-- Degreewise splittings of a short complex of chain complexes. -/
-structure DegreewiseSplitting
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {S : ShortComplex (ChainComplex C ℤ)} where
-  section_ : ∀ n : ℤ, S.X₃.X n ⟶ S.X₂.X n
-  retraction : ∀ n : ℤ, S.g.f n ≫ section_ n = 𝟙 _
-
-def diamondDegreewiseSplitting
+/-- The canonical termwise splitting of the projection.  This uses the
+established splitting API for short complexes rather than a local wrapper. -/
+noncomputable def diamondTermwiseSplitting
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) :
-    DegreewiseSplitting (S := diamondShortComplex A) where
-  section_ := diamondSection A
-  retraction := by
-    intro n
-    sorry
+    Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitting
+      (diamondShortComplex A) := by
+  sorry
 
-structure DiamondExtensionData
+/-- The connecting map associated to the canonical termwise splitting. -/
+noncomputable def diamondTermwiseConnectingMap
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) where
-  splitting : DegreewiseSplitting (S := diamondShortComplex A)
-  connecting : diamondShift A ⟶ diamondShift (A ⊞ A)
-  connecting_eq : connecting = diamondConnecting A
+    (A : ChainComplex C ℤ) :
+    Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitConnectingMap
+      (diamondTermwiseSplitting A) :=
+  (Formalization.Books.Homology.Unit14.ChainComplex.termwiseSplitConnectingMap_exists
+    (diamondTermwiseSplitting A)).some
 
-def diamondExtensionData
+theorem diamondTermwiseSplitting_section
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) : DiamondExtensionData A where
-  splitting := diamondDegreewiseSplitting A
-  connecting := diamondConnecting A
-  connecting_eq := rfl
+    (A : ChainComplex C ℤ) (n : ℤ) :
+    (diamondTermwiseSplitting A n).s = diamondSection A n := by
+  sorry
 
 /-- The split short exact sequence and the source's connecting-map value. -/
 theorem diamond_short_exact_and_connecting
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℤ) :
     (diamondShortComplex A).ShortExact ∧
-      Nonempty (DiamondExtensionData A) := by
-  refine ⟨?_, ⟨diamondExtensionData A⟩⟩
+      (diamondTermwiseConnectingMap A).hom = diamondConnecting A := by
   sorry
 
-/-! ## Maps into `◇ A` -/
+/-! ## The termwise split extension and maps into `◇ A` -/
 
 /-- The compatibility condition for the unique map in the source's second
 lemma.  The field `δ` is the connecting morphism attached to the chosen
-degreewise splittings. -/
+termwise splittings. -/
 def DiamondLiftProperty
     {C : Type u} [Category.{v} C] [Abelian C]
     {A B D : ChainComplex C ℤ}
     (i : (A ⊞ A) ⟶ B) (p : B ⟶ D)
-    (s : ∀ n : ℤ, D.X n ⟶ B.X n)
-    (δ : D ⟶ diamondShift (A ⊞ A))
-    (φ : D ⟶ diamondShift A) (ψ : B ⟶ diamond A) : Prop :=
+    (hp : i ≫ p = 0)
+    (s : Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitting
+      (ShortComplex.mk i p hp))
+    (δ : Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitConnectingMap s)
+    (φ : D ⟶
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj A)
+    (ψ : B ⟶ diamond A) : Prop :=
   i ≫ ψ = diamondPairInclusion A ∧
     ψ ≫ diamondProjection A = p ≫ φ ∧
-    δ = φ ≫ diamondConnecting A ∧
-    ∀ n : ℤ, s n ≫ ψ.f n = φ.f n ≫ diamondSection A n
+    δ.hom = φ ≫ diamondConnecting A ∧
+    ∀ n : ℤ, (s n).s ≫ ψ.f n = φ.f n ≫ diamondSection A n
 
 /-- A connecting morphism factoring through `(1,-1)` gives a unique compatible
 map into `◇ A`. -/
@@ -340,16 +333,31 @@ theorem map_into_diamond
     {A B D : ChainComplex C ℤ}
     (i : (A ⊞ A) ⟶ B) (p : B ⟶ D) (hp : i ≫ p = 0)
     (hS : (ShortComplex.mk i p hp).ShortExact)
-    (s : ∀ n : ℤ, D.X n ⟶ B.X n)
-    (hs : ∀ n : ℤ, p.f n ≫ s n = 𝟙 _)
-    (δ : D ⟶ diamondShift (A ⊞ A))
-    (φ : D ⟶ diamondShift A)
-    (hδ : δ = φ ≫ diamondConnecting A) :
+    (s : Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitting
+      (ShortComplex.mk i p hp))
+    (δ : Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitConnectingMap s)
+    (φ : D ⟶
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor C (-1 : ℤ)).obj A)
+    (hδ : δ.hom = φ ≫ diamondConnecting A) :
     ∃! ψ : B ⟶ diamond A,
-      DiamondLiftProperty i p s δ φ ψ := by
+      DiamondLiftProperty i p hp s δ φ ψ := by
   sorry
 
 /-! ## The backwards homotopy theorem -/
+
+/-- The normalized chain homotopy canonically associated to a cylinder
+homotopy.  The construction is the normalized version of the chain homotopy
+attached to a simplicial homotopy in Chapter 27. -/
+noncomputable def normalizedChainHomotopyOfCylinder
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (h : CylinderHomotopy a b) :
+    _root_.Homotopy
+      (normalizedChainComplexMap a)
+      (normalizedChainComplexMap b) := by
+  exact (Formalization.Books.Simplicial.Unit27.normalizedChainMap_homotopic
+    (Relation.EqvGen.rel a b
+      (Formalization.Books.Simplicial.Unit26.homotopy_iff_degreewise.1 ⟨h⟩))).some
 
 /-- A normalized chain homotopy lifts to a simplicial cylinder homotopy, with
 the same degree-`n` homotopy components. -/
@@ -360,10 +368,8 @@ theorem backwards_homotopy
       (normalizedChainComplexMap a)
       (normalizedChainComplexMap b)) :
     ∃ h : CylinderHomotopy a b,
-      ∃ K : _root_.Homotopy
-        (normalizedChainComplexMap a)
-        (normalizedChainComplexMap b),
-        ∀ n : ℕ, K.hom n (n + 1) = H.hom n (n + 1) := by
+      ∀ n : ℕ,
+        (normalizedChainHomotopyOfCylinder h).hom n (n + 1) = H.hom n (n + 1) := by
   sorry
 
 end Formalization.Books.Simplicial.Unit29

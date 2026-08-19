@@ -616,7 +616,8 @@ private theorem exists_parameter_of_ringKrullDim_eq
   exact hdef
 
 private theorem ringKrullDim_eq_iff_parameter_minimal
-    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (R : Type u) [CommRing R] [IsLocalRing R]
+    (hR : IsNoetherianRing R)
     (n : ℕ) :
     ringKrullDim R = n ↔
       HasIdealOfDefinitionGeneratedBy R n ∧
@@ -624,7 +625,8 @@ private theorem ringKrullDim_eq_iff_parameter_minimal
   classical
   constructor
   · intro hdim
-    obtain ⟨x, hx, hdef⟩ := exists_parameter_of_ringKrullDim_eq R n hdim
+    obtain ⟨x, hx, hdef⟩ :=
+      @exists_parameter_of_ringKrullDim_eq R _ _ hR n hdim
     refine ⟨⟨x, hx, hdef⟩, ?_⟩
     intro m hm hparam
     rcases hparam with ⟨y, hy, hdefy⟩
@@ -637,7 +639,7 @@ private theorem ringKrullDim_eq_iff_parameter_minimal
     have hdefs : IsIdealOfDefinition R (Ideal.span (s : Set R)) := by
       simpa [hspan] using hdefy
     have hle : ringKrullDim R ≤ s.card :=
-      ringKrullDim_le_of_isIdealOfDefinition_span R hdefs
+      @ringKrullDim_le_of_isIdealOfDefinition_span R _ _ hR s hdefs
     have hle' : n ≤ m := by
       have hs_card : s.card ≤ m := by
         dsimp [s]
@@ -658,7 +660,7 @@ private theorem ringKrullDim_eq_iff_parameter_minimal
     have hdefs : IsIdealOfDefinition R (Ideal.span (s : Set R)) := by
       simpa [hspan] using hdef
     have hle : ringKrullDim R ≤ s.card :=
-      ringKrullDim_le_of_isIdealOfDefinition_span R hdefs
+      @ringKrullDim_le_of_isIdealOfDefinition_span R _ _ hR s hdefs
     have hle' : ringKrullDim R ≤ n := by
       have hs_card : s.card ≤ n := by
         dsimp [s]
@@ -679,7 +681,7 @@ private theorem ringKrullDim_eq_iff_parameter_minimal
               intro hkn
               apply hminimal k hkn
               obtain ⟨z, hz, hdefz⟩ :=
-                exists_parameter_of_ringKrullDim_eq R k (by rw [hq]; rfl)
+                @exists_parameter_of_ringKrullDim_eq R _ _ hR k (by rw [hq]; rfl)
               exact ⟨z, hz, hdefz⟩
             have : k = n := by omega
             subst k

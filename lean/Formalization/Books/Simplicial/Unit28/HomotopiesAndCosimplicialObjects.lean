@@ -460,7 +460,7 @@ theorem compareHomotopies
               Fin (n + 2) → (interval : SSet.{0}) _⦋n⦌)
             (intervalSimplex.{0} n i) = i := by
       intro n i
-      letI : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
+      let : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
         interval_degree_finite_nonempty n |>.2
       apply (intervalSimplex_bijective.{0} n).1
       rw [Function.leftInverse_invFun (intervalSimplex_bijective.{0} n).1]
@@ -470,7 +470,7 @@ theorem compareHomotopies
           hh n ((interval : SSet.{0}).map (SimplexCategory.δ j).op α) ≫
             V.map (SimplexCategory.δ j) := by
       intro n j α
-      letI : Nonempty ((interval : SSet.{0}) _⦋n + 1⦌) :=
+      let : Nonempty ((interval : SSet.{0}) _⦋n + 1⦌) :=
         interval_degree_finite_nonempty (n + 1) |>.2
       let i := Function.invFun (intervalSimplex (n + 1)) α
       have hi : intervalSimplex (n + 1) i = α := by
@@ -511,7 +511,7 @@ theorem compareHomotopies
           hh (n + 1) ((interval : SSet.{0}).map (SimplexCategory.σ j).op α) ≫
             V.map (SimplexCategory.σ j) := by
       intro n j α
-      letI : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
+      let : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
         interval_degree_finite_nonempty n |>.2
       let i := Function.invFun (intervalSimplex n) α
       have hi : intervalSimplex n i = α := by
@@ -567,8 +567,7 @@ theorem compareHomotopies
                 Category.id_comp, Category.comp_id]
               have hα :
                   (interval : SSet.{0}).map (𝟙 (op (SimplexCategory.mk n))) α = α := by
-                simpa using congrArg (fun g => g α)
-                  (interval.map_id (op (SimplexCategory.mk n)))
+                simp
               have hα' :
                   (interval : SSet.{0}).map (𝟙 (SimplexCategory.mk n)).op α = α := by
                 simpa only [op_id] using hα

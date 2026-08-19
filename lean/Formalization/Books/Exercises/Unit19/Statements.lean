@@ -421,18 +421,45 @@ private def sourceTPolynomial : Polynomial (Polynomial (Polynomial ℚ)) :=
       Polynomial.C (Polynomial.C Polynomial.X + Polynomial.C (Polynomial.C (3 : ℚ)))
 
 private lemma sourceFullReindex_tRelation :
-    sourceFullReindex sourceTRelation = sourceTPolynomial := by sorry
+    sourceFullReindex sourceTRelation = sourceTPolynomial := by
+  have hfin :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+        (fun k : Fin 2 => Polynomial.C (MvPolynomial.X k)) (2 : Fin 3)) =
+        Polynomial.C (MvPolynomial.X 1) := by
+    rfl
+  have hfin' :
+      (Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 1) ℚ))
+        (fun k : Fin 1 => Polynomial.C (MvPolynomial.X k)) (1 : Fin 2)) =
+        Polynomial.C (MvPolynomial.X 0) := by
+    rfl
+  simp [sourceFullReindex, sourceTRelation, sourceTPolynomial, sourceFullReindexAux,
+    RingEquiv.trans_apply, Polynomial.mapEquiv_apply, MvPolynomial.renameEquiv_apply,
+    Equiv.swap_apply_left, Equiv.swap_apply_right, MvPolynomial.finSuccEquiv_apply,
+    hfin, hfin', Polynomial.map_C, Polynomial.map_X]
 private lemma sourceSPolynomial_span_isPrime :
     (Ideal.span {sourceSPolynomial} :
-      Ideal (Polynomial (Polynomial ℚ))).IsPrime := by sorry
+      Ideal (Polynomial (Polynomial ℚ))).IsPrime := by
+  have hbase :
+      (Ideal.span ({Polynomial.X - Polynomial.C (1 : ℚ)} : Set (Polynomial ℚ))).IsPrime :=
+    Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (1 : ℚ))
+  have hmonic : sourceSPolynomial.Monic := by
+    simpa [sourceSPolynomial] using
+      (Polynomial.monic_X_pow_sub_C sourceBaseRelation (by norm_num))
+  have hirr : Irreducible sourceSPolynomial :=
+    sourceSPolynomial_isEisenstein.irreducible hbase hmonic.isPrimitive (by
+      simp [sourceSPolynomial])
+  exact Ideal.isPrime_span_singleton_of_prime
+    (UniqueFactorizationMonoid.irreducible_iff_prime.mp hirr)
 private abbrev sourceInnerPrime : Ideal (Polynomial ℚ) :=
   Ideal.span {Polynomial.X - Polynomial.C (-1 : ℚ)}
 
 private abbrev sourceCoefficientPrime : Ideal (Polynomial (Polynomial ℚ)) :=
   Ideal.map (Polynomial.C : Polynomial ℚ →+* Polynomial (Polynomial ℚ)) sourceInnerPrime
 
-private lemma sourceInnerPrime_isPrime : sourceInnerPrime.IsPrime := by sorry
-private lemma sourceCoefficientPrime_isPrime : sourceCoefficientPrime.IsPrime := by sorry
+private lemma sourceInnerPrime_isPrime : sourceInnerPrime.IsPrime := by
+  exact Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (-1 : ℚ))
+private lemma sourceCoefficientPrime_isPrime : sourceCoefficientPrime.IsPrime := by
+  exact (Ideal.isPrime_map_C_iff_isPrime sourceInnerPrime).mpr sourceInnerPrime_isPrime
 private noncomputable def sourceInnerQuotientEquiv :
     (Polynomial ℚ ⧸ sourceInnerPrime) ≃+* ℚ :=
   Polynomial.quotientSpanXSubCAlgEquiv (-1 : ℚ)

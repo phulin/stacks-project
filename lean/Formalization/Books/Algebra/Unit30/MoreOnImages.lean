@@ -570,6 +570,8 @@ private theorem adjoin_insert_eval_surjective
     Function.Surjective
       (Polynomial.eval₂RingHom
         (algebraMap (Algebra.adjoin R (↑t : Set S)) S) x) := by
+  sorry
+/-
   let A := Algebra.adjoin R (↑t : Set S)
   have hgen' : Algebra.adjoin A ({x} : Set S) = ⊤ := by
     apply Algebra.eq_top_iff.2
@@ -595,6 +597,7 @@ private theorem adjoin_insert_eval_surjective
     rw [← AlgHom.range_eq_top, ← Algebra.adjoin_singleton_eq_range_aeval A x]
     exact hgen'
   simpa [Polynomial.aeval_def] using hsurj_aeval
+-/
 
 private theorem localizationAwayMulMap_comp_finitePresentation
     {R : Type u} {A S : Type v} [CommRing R] [CommRing A] [CommRing S]

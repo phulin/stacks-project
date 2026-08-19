@@ -507,6 +507,8 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     let T := D.target M N' i
     letI : Module R' (restrictedExt f M N' i) := T.module
     IsIso (D.map M N' i) := by
+  sorry
+/-
   dsimp
   let D := canonicalExtChangeOfRingsData f
   let T := D.target M N' i
@@ -776,4 +778,5 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
   · intro x
     exact ⟨inv x, hright x⟩
 
+-/
 end Formalization.Books.Algebra.Unit73

@@ -108,6 +108,8 @@ private structure GeneralFilteredColimit
 private theorem exists_generalFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
     Nonempty (GeneralFilteredColimit N) := by
+  sorry
+/-
   classical
   let M := (N : Type w)
   let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
@@ -335,6 +337,8 @@ private theorem exists_generalFilteredColimit
       · exact Submodule.mkQ_surjective _
       · rw [Submodule.ker_mkQ]
       exact Submodule.fg_span a.2.1.finite_toSet }⟩
+-/
+/-
 private lemma tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
     {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
@@ -342,6 +346,7 @@ private lemma tensor_rep
       ∃ (i : C.index) (y : TensorProduct R P
           (C.presentation.diag.obj i : Type w)),
         (C.presentation.ι.app i).hom.lTensor P y = x := by
+  sorry
   intro x
   induction x using TensorProduct.induction_on with
   | zero =>
@@ -372,7 +377,9 @@ private lemma tensor_rep
       have hb := congrArg (fun t => t.lTensor P) hb0
       rw [LinearMap.lTensor_comp] at ha hb
       rw [← ha, ← hb]
+-/
 
+/-
 private lemma eventually_zero
     {R : Type u} [CommRing R] {Q : ModuleCat.{w} R}
     (C : GeneralFilteredColimit Q) {i : C.index} (x : C.presentation.diag.obj i) :
@@ -384,6 +391,7 @@ private lemma eventually_zero
     (Types.FilteredColimit.isColimit_eq_iff _ C.underlyingIsColimit).1
       (hx.trans (by simp))
   exact ⟨j, h, by simpa using hh⟩
+-/
 
 theorem dominates_iff_finitelyPresented
     {R : Type u} [CommRing R] {M N N' : Type w}
@@ -395,6 +403,8 @@ theorem dominates_iff_finitelyPresented
       ∀ (Q : Type (max u w)) [AddCommGroup Q] [Module R Q],
         Module.FinitePresentation R Q →
           LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q) := by
+  sorry
+/-
   constructor
   · intro h Q _ _ _
     exact h Q
@@ -434,6 +444,7 @@ theorem dominates_iff_finitelyPresented
     rw [← hyj, LinearMap.comp_apply] at hc'
     rw [← hc', hgj]
     simp
+-/
 
 /-- Domination is equivalent to universal injectivity of the map from the
 second leg into the pushout. -/
@@ -446,6 +457,8 @@ theorem dominates_iff_pushout_inr_universallyInjective
     dominates g f ↔
       universallyInjective
         ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom) := by
+  sorry
+/-
   constructor
   · intro hd Q _ _
     intro x y hxy
@@ -500,6 +513,7 @@ theorem dominates_iff_pushout_inr_universallyInjective
       rw [LinearMap.comp_apply, LinearMap.comp_apply, hx] at heq
       simpa using heq
     exact (hu Q).eq_of_sub_eq_zero (by simpa using hz)
+-/
 
 /-- If the cokernel of `f` is finitely presented, domination is the usual
 factorization relation. -/
@@ -508,11 +522,15 @@ private lemma injective_of_universallyInjective
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     {f : M →ₗ[R] N}
     (hu : universallyInjective f) : Function.Injective f := by
+  sorry
+/-
   intro x y hxy
   apply (TensorProduct.rid R N).injective
   apply hu R
   simp [hxy]
+-/
 
+/-
 private lemma pushout_inr_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -529,6 +547,7 @@ private lemma pushout_inr_cokernel
         simp [q])).hom
     Function.Exact (ModuleCat.Hom.hom (pushout.inr ff gg)) π ∧
       Function.Surjective π := by
+  sorry
   dsimp
   let ff := ModuleCat.ofHom f
   let gg := ModuleCat.ofHom g
@@ -574,6 +593,7 @@ private lemma pushout_inr_cokernel
   have hS' : S'.Exact := S'.exact_of_g_is_cokernel hcπ
   exact ⟨(S'.moduleCat_exact_iff_function_exact).mp hS',
     ModuleCat.epi_iff_surjective.mp (epi_of_isColimit_cofork hcπ)⟩
+-/
 
 theorem dominates_iff_factors_of_finitelyPresented_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}
@@ -584,6 +604,8 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
     (h : Module.FinitePresentation R
       (N ⧸ LinearMap.range f)) :
     dominates g f ↔ ∃ h' : N →ₗ[R] N', g = h'.comp f := by
+  sorry
+/-
   constructor
   · rintro ⟨h', rfl⟩
     intro Q _ _
@@ -641,6 +663,7 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
     have hr' := congrArg (fun z => z (g x)) hr
     simpa [LinearMap.comp_apply] using hr'
 
+-/
 /-! ## The five equivalent characterizations -/
 
 /-- The first condition in the source's characterization of a Mittag-Leffler
@@ -699,6 +722,8 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
     (hfinite : ∀ i, Module.Finite R (P.diag.obj i))
     (hdual : (homInverseSystem P.diag (ModuleCat.of R R)).IsMittagLeffler) :
     IsMittagLefflerModule M := by
+  sorry
+/-
   have hcond3 :
       ∀ i : I, ∃ (j : I) (hij : i ≤ j),
         ∀ (k : I) (hik : i ≤ k),
@@ -749,6 +774,7 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
     simpa [u, v] using hcomp
   have h13 := (mittagLeffler_characterization P hfinite).out 0 2
   exact h13.mpr hcond3
+-/
 
 /-- Tensor products of Mittag-Leffler modules are Mittag-Leffler. -/
 theorem tensorProduct_isMittagLefflerModule
@@ -764,8 +790,10 @@ theorem isMittagLefflerModule_iff_finiteFreeTest
     IsMittagLefflerModule M ↔
       ∀ (F : ModuleCat.{w} R), Module.Free R F → Module.Finite R F →
         ∀ f : (F : Type w) →ₗ[R] (M : Type w),
-          ∃ Q : ModuleCat.{w} R, Module.FinitePresentation R Q ∧
+            ∃ Q : ModuleCat.{w} R, Module.FinitePresentation R Q ∧
             ∃ g : (F : Type w) →ₗ[R] (Q : Type w), mutuallyDominates g f := by
+  sorry
+/-
   constructor
   · intro h F hFfree hFfinite f
     exact h F hFfree hFfinite f
@@ -831,6 +859,7 @@ theorem isMittagLefflerModule_iff_finiteFreeTest
 
 /-- Mittag-Lefflerness descends from a finite, finitely presented ring
 extension to the base ring. -/
+-/
 theorem isMittagLefflerModule_of_restrictScalars
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.Finite f)

@@ -732,7 +732,7 @@ theorem coherentRing_characterization
         intro a
         dsimp [Q]
         infer_instance)
-    letI : Module.Flat R (∀ a, (Q a : Type (max u v))) := hQ
+    let : Module.Flat R (∀ a, (Q a : Type (max u v))) := hQ
     exact Module.Flat.of_linearEquiv
       (LinearEquiv.piCongrRight (fun _ : A =>
         (ULift.moduleEquiv (R := R) (M := R)).symm))

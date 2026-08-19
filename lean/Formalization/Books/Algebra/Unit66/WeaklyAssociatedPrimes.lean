@@ -2224,11 +2224,235 @@ theorem weaklyAssociatedPrimes_post_bourbaki
     PrimeSpectrum.comap
           (Algebra.TensorProduct.includeLeftRingHom :
             S →+* S ⊗[R] K) ''
-        weaklyAssociatedPrimes (S ⊗[R] K)
+      weaklyAssociatedPrimes (S ⊗[R] K)
           (Formalization.Books.Algebra.Unit14.baseChangeModule
             (M := N) (algebraMap R S) (algebraMap R K)) =
       weaklyAssociatedPrimes S N := by
-  sorry
+  classical
+  let oldAlgS : Algebra R S := inferInstance
+  let oldAlgK : Algebra R K := inferInstance
+  let oldTower : IsScalarTower R S N := inferInstance
+  let oldFrac : @IsLocalization R _ (nonZeroDivisors R) K _ oldAlgK := inferInstance
+  have hAlgS : oldAlgS = (algebraMap R S).toAlgebra := by
+    exact Algebra.algebra_ext _ _ (fun r => rfl)
+  have hAlgK : oldAlgK = (algebraMap R K).toAlgebra := by
+    exact Algebra.algebra_ext _ _ (fun r => rfl)
+  have hsmulS :
+      (@Algebra.toSMul R S _ _ oldAlgS) =
+        (@Algebra.toSMul R S _ _ ((algebraMap R S).toAlgebra)) :=
+    congrArg (fun a : Algebra R S => @Algebra.toSMul R S _ _ a) hAlgS
+  let : Algebra R S := (algebraMap R S).toAlgebra
+  let : Algebra R K := (algebraMap R K).toAlgebra
+  let : IsScalarTower R S N := hsmulS ▸ oldTower
+  let : @IsLocalization R _ (nonZeroDivisors R) K _ ((algebraMap R K).toAlgebra) :=
+    hAlgK ▸ oldFrac
+  let U : Submonoid R := nonZeroDivisors R
+  let V : Submonoid S := Algebra.algebraMapSubmonoid S U
+  let : Algebra S (S ⊗[R] K) := Algebra.TensorProduct.leftAlgebra
+  let : IsLocalization V (S ⊗[R] K) := by
+    change @IsLocalization S _ (Algebra.algebraMapSubmonoid S (nonZeroDivisors R))
+      (S ⊗[R] K) _ Algebra.TensorProduct.leftAlgebra
+    infer_instance
+  let Pobj :=
+    (ModuleCat.extendScalars (Unit14.baseChangeAlgebraMap
+      (algebraMap R S) (algebraMap R K))).obj (ModuleCat.of S N)
+  let Bobj :=
+    (ModuleCat.restrictScalars (Unit14.baseChangeAlgebraMap
+      (algebraMap R S) (algebraMap R K))).obj
+      (ModuleCat.of (S ⊗[R] K) (S ⊗[R] K))
+  let : AddCommGroup (Pobj : Type _) := Pobj.isAddCommGroup
+  let : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
+  let : Module (S ⊗[R] K) (Pobj : Type _) := Pobj.isModule
+  let : Module S (Pobj : Type _) :=
+    Module.compHom _ (Algebra.TensorProduct.includeLeftRingHom : S →+* (S ⊗[R] K))
+  let : IsScalarTower S (S ⊗[R] K) (Pobj : Type _) :=
+    IsScalarTower.of_compHom S (S ⊗[R] K) (Pobj : Type _)
+  let Uobj := Bobj
+  let : IsScalarTower S (S ⊗[R] K) (Uobj : Type _) :=
+    IsScalarTower.of_compHom S (S ⊗[R] K) (Uobj : Type _)
+  let eU : (S ⊗[R] K) ≃ₗ[S ⊗[R] K] (Uobj : Type _) :=
+    { toFun := fun x => x
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  let eP : TensorProduct S (S ⊗[R] K) N ≃ₗ[S ⊗[R] K] (Pobj : Type _) :=
+    TensorProduct.AlgebraTensorModule.congr eU (LinearEquiv.refl S N)
+  let : Module (S ⊗[R] K) (TensorProduct S (S ⊗[R] K) N) :=
+    TensorProduct.leftModule
+  let fstd : N →ₗ[S] TensorProduct S (S ⊗[R] K) N :=
+    TensorProduct.mk S (S ⊗[R] K) N 1
+  have hfstd : IsLocalizedModule V fstd := by infer_instance
+  let ePS : TensorProduct S (S ⊗[R] K) N ≃ₗ[S] (Pobj : Type _) :=
+    eP.restrictScalars S
+  let fP : N →ₗ[S] (Pobj : Type _) := ePS.toLinearMap.comp fstd
+  have hfP : IsLocalizedModule V fP := by infer_instance
+  let : Module (S ⊗[R] K) (LocalizedModule V N) :=
+    IsLocalizedModule.module V (LocalizedModule.mkLinearMap V N)
+  let : IsScalarTower S (S ⊗[R] K) (LocalizedModule V N) :=
+    IsLocalizedModule.isScalarTower_module V (LocalizedModule.mkLinearMap V N)
+  let eS : LocalizedModule V N ≃ₗ[S] (Pobj : Type _) :=
+    IsLocalizedModule.iso V fP
+  let eB : LocalizedModule V N ≃ₗ[S ⊗[R] K] (Pobj : Type _) :=
+    eS.extendScalarsOfIsLocalization V (S ⊗[R] K)
+  have hWAeB :
+      weaklyAssociatedPrimes (S ⊗[R] K) (LocalizedModule V N) =
+        weaklyAssociatedPrimes (S ⊗[R] K) (Pobj : Type _) := by
+    ext p
+    constructor
+    · intro hp
+      change ∃ x : LocalizedModule V N,
+        p.asIdeal ∈
+          ((⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+            ({x} : Set (LocalizedModule V N))).minimalPrimes at hp
+      rcases hp with ⟨x, hx⟩
+      change ∃ y : (Pobj : Type _),
+        p.asIdeal ∈
+          ((⊥ : Submodule (S ⊗[R] K) (Pobj : Type _)).colon
+            ({y} : Set (Pobj : Type _))).minimalPrimes
+      refine ⟨eB x, ?_⟩
+      have hcolon :
+          ((⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+              ({x} : Set (LocalizedModule V N))) =
+            ((⊥ : Submodule (S ⊗[R] K) (Pobj : Type _)).colon
+              ({eB x} : Set (Pobj : Type _))) := by
+        ext b
+        simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+        constructor
+        · intro h
+          rw [← eB.map_smul, h, map_zero]
+        · intro h
+          apply eB.injective
+          rw [eB.map_smul, h, map_zero]
+      rw [← hcolon]
+      exact hx
+    · intro hp
+      change ∃ y : (Pobj : Type _),
+        p.asIdeal ∈
+          ((⊥ : Submodule (S ⊗[R] K) (Pobj : Type _)).colon
+            ({y} : Set (Pobj : Type _))).minimalPrimes at hp
+      rcases hp with ⟨y, hy⟩
+      change ∃ x : LocalizedModule V N,
+        p.asIdeal ∈
+          ((⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+            ({x} : Set (LocalizedModule V N))).minimalPrimes
+      refine ⟨eB.symm y, ?_⟩
+      have hcolon :
+          ((⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+              ({eB.symm y} : Set (LocalizedModule V N))) =
+            ((⊥ : Submodule (S ⊗[R] K) (Pobj : Type _)).colon
+              ({y} : Set (Pobj : Type _))) := by
+        ext b
+        simp only [Submodule.mem_colon_singleton, Submodule.mem_bot]
+        constructor
+        · intro h
+          apply eB.symm.injective
+          rw [eB.symm.map_smul, h, map_zero]
+        · intro h
+          rw [← eB.symm.map_smul, h, map_zero]
+      rw [hcolon]
+      exact hy
+  have hfirstB :
+      (letI : Module S (LocalizedModule V N) :=
+        Module.compHom (LocalizedModule V N) (algebraMap S (Localization V))
+       PrimeSpectrum.comap (Algebra.TensorProduct.includeLeftRingHom :
+          S →+* S ⊗[R] K) '' weaklyAssociatedPrimes (S ⊗[R] K)
+          (LocalizedModule V N) =
+        weaklyAssociatedPrimes S (LocalizedModule V N)) := by
+    let moduleS : Module S (LocalizedModule V N) := inferInstance
+    have hmodule :
+        Module.compHom (LocalizedModule V N) (algebraMap S (Localization V)) =
+          moduleS := by
+      exact Module.ext' _ _ fun s z =>
+        IsScalarTower.algebraMap_smul (Localization V) s z
+    rw [hmodule]
+    ext p
+    constructor
+    · rintro ⟨q, hq, rfl⟩
+      change ∃ m : LocalizedModule V N,
+        q.asIdeal.comap (algebraMap S (S ⊗[R] K)) ∈
+          ((⊥ : Submodule S (LocalizedModule V N)).colon
+            ({m} : Set (LocalizedModule V N))).minimalPrimes
+      change ∃ m : LocalizedModule V N,
+        q.asIdeal ∈
+          ((⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+            ({m} : Set (LocalizedModule V N))).minimalPrimes at hq
+      rcases hq with ⟨m, hm⟩
+      let I : Ideal S :=
+        (⊥ : Submodule S (LocalizedModule V N)).colon ({m} : Set _)
+      let J : Ideal (S ⊗[R] K) :=
+        (⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+          ({m} : Set _)
+      have hIJ : I = J.comap (algebraMap S (S ⊗[R] K)) := by
+        ext s
+        simp only [I, J, Ideal.mem_comap, Submodule.mem_colon_singleton,
+          Submodule.mem_bot]
+        constructor
+        · intro h
+          rw [IsScalarTower.algebraMap_smul (S ⊗[R] K) s m]
+          exact h
+        · intro h
+          rw [← IsScalarTower.algebraMap_smul (S ⊗[R] K) s m]
+          exact h
+      have hpmin : q.asIdeal.comap
+          (algebraMap S (S ⊗[R] K)) ∈
+            (J.comap (algebraMap S (S ⊗[R] K))).minimalPrimes := by
+        rw [IsLocalization.minimalPrimes_comap V (S ⊗[R] K) J]
+        exact ⟨q.asIdeal, hm, rfl⟩
+      exact ⟨m, by rw [← hIJ] at hpmin; exact hpmin⟩
+    · intro hp
+      change ∃ m : LocalizedModule V N,
+        p.asIdeal ∈
+          ((⊥ : Submodule S (LocalizedModule V N)).colon
+            ({m} : Set _)).minimalPrimes at hp
+      rcases hp with ⟨m, hm⟩
+      let I : Ideal S :=
+        (⊥ : Submodule S (LocalizedModule V N)).colon ({m} : Set _)
+      let J : Ideal (S ⊗[R] K) :=
+        (⊥ : Submodule (S ⊗[R] K) (LocalizedModule V N)).colon
+          ({m} : Set _)
+      have hIJ : I = J.comap (algebraMap S (S ⊗[R] K)) := by
+        ext s
+        simp only [I, J, Ideal.mem_comap, Submodule.mem_colon_singleton,
+          Submodule.mem_bot]
+        constructor
+        · intro h
+          rw [IsScalarTower.algebraMap_smul (S ⊗[R] K) s m]
+          exact h
+        · intro h
+          rw [← IsScalarTower.algebraMap_smul (S ⊗[R] K) s m]
+          exact h
+      have hpmin : p.asIdeal ∈
+          (J.comap (algebraMap S (S ⊗[R] K))).minimalPrimes := by
+        rw [← hIJ]
+        exact hm
+      rw [IsLocalization.minimalPrimes_comap V (S ⊗[R] K) J] at hpmin
+      rcases hpmin with ⟨q, hq, hqp⟩
+      let q' : PrimeSpectrum (S ⊗[R] K) := ⟨q, hq.isPrime⟩
+      refine ⟨q', ?_, ?_⟩
+      · exact ⟨m, hq⟩
+      · apply PrimeSpectrum.ext
+        exact hqp
+  have hreg : ∀ s : V, IsSMulRegular N (s : S) := by
+    rintro ⟨s, hs⟩
+    rcases hs with ⟨r, hr, rfl⟩
+    intro x y hxy
+    apply Module.Flat.isSMulRegular_of_nonZeroDivisors (M := N) hr
+    change (algebraMap R S r) • x = (algebraMap R S r) • y at hxy
+    rw [IsScalarTower.algebraMap_smul S r x,
+      IsScalarTower.algebraMap_smul S r y] at hxy
+    exact hxy
+  have hSN :
+      (letI : Module S (LocalizedModule V N) :=
+        Module.compHom (LocalizedModule V N) (algebraMap S (Localization V))
+       weaklyAssociatedPrimes S N =
+         weaklyAssociatedPrimes S (LocalizedModule V N)) :=
+    weaklyAssociatedPrimes_localize_of_regular V hreg
+  change PrimeSpectrum.comap (Algebra.TensorProduct.includeLeftRingHom :
+      S →+* S ⊗[R] K) '' weaklyAssociatedPrimes (S ⊗[R] K) (Pobj : Type _) =
+    weaklyAssociatedPrimes S N
+  rw [← hWAeB, hfirstB, ← hSN]
 
 /-! ## Change of fields -/
 

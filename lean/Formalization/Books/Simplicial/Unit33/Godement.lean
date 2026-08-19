@@ -106,7 +106,12 @@ theorem godementDegeneracy_codomain_decomposition
     (n : ℕ) (j : Fin (n + 1)) :
     iteratedEndofunctor Y (n + 2) =
       iteratedEndofunctor Y j ⋙ (Y ⋙ Y) ⋙ iteratedEndofunctor Y (n - j) := by
-  sorry
+  have h : n + 2 = (j : ℕ) + 2 + (n - (j : ℕ)) := by omega
+  conv_lhs =>
+    rw [h]
+  rw [iteratedEndofunctor_add Y ((j : ℕ) + 2) (n - (j : ℕ))]
+  rw [iteratedEndofunctor_add Y (j : ℕ) 2]
+  simp [iteratedEndofunctor, Functor.comp_id, Functor.assoc]
 
 /-- The source's `d^n_j`, expressed as a natural transformation in the
 category of endofunctors. -/
@@ -188,7 +193,8 @@ theorem godementUnitMap_zero {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
     (data : GodementSimplicialData Y d s) :
     godementUnitMap Y d s data 0 = 𝟙 (godementDegree Y 0) := by
-  sorry
+  dsimp [godementUnitMap]
+  simp [simplicialUnitMap]
 
 theorem godement_simplicial_data
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)

@@ -5,6 +5,7 @@ import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.AdicCompletion.Topology
 import Mathlib.Topology.Algebra.LinearTopology
 import Mathlib.Topology.Algebra.Nonarchimedean.AdicTopology
+import Mathlib.Topology.Algebra.UniformFilterBasis
 
 namespace Formalization.Books.MoreAlgebra.Unit36
 
@@ -270,7 +271,109 @@ theorem isAdicComplete_iff_complete_for_iAdicModuleTopology
     (M : Type v) [AddCommGroup M] [Module R M] :
     IsAdicComplete I M ↔
       IsCompleteSeparatedTopologicalAddGroupFor M (I.adicModuleTopology M) := by
-  sorry
+  let _ : TopologicalSpace R := I.adicTopology
+  let B := (I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis M)).toAddGroupFilterBasis
+  let u : UniformSpace M := B.uniformSpace
+  constructor
+  · intro h
+    have hu_top : u.toTopologicalSpace = I.adicModuleTopology M := by
+      change B.topology = _
+      rfl
+    let _ : TopologicalSpace M := I.adicModuleTopology M
+    let _ : UniformSpace M := u
+    let _ : IsUniformAddGroup M := B.isUniformAddGroup
+    have := (iAdicModuleTopology_hasBasis R I M).isCountablyGenerated
+    have : (uniformity M).IsCountablyGenerated :=
+      IsUniformAddGroup.uniformity_countably_generated
+    refine ⟨u, hu_top, B.isUniformAddGroup, ?_, ?_⟩
+    · refine UniformSpace.complete_of_cauchySeq_tendsto fun f hf ↦ ?_
+      have hc := (iAdicModuleTopology_hasBasis R I M).uniformity_of_nhds_zero.cauchySeq_iff.mp hf
+      have hdiff : ∀ i, ∃ N, ∀ m, N ≤ m → ∀ n, N ≤ n →
+          f n - f m ∈ I ^ i • (⊤ : Submodule R M) := by
+        simpa [SModEq.sub_mem] using hc
+      choose N hN using hdiff
+      let g : ℕ → M := fun i => f ((Finset.Iic i).sup N)
+      have hg : ∀ {m n}, m ≤ n → g m ≡ g n [SMOD (I ^ m • (⊤ : Submodule R M))] := by
+        intro m n hmn
+        apply SModEq.sub_mem.mpr
+        have hmN : N m ≤ (Finset.Iic m).sup N :=
+          Finset.le_sup (show m ∈ Finset.Iic m by simp)
+        have hnN : N m ≤ (Finset.Iic n).sup N :=
+          Finset.le_sup (show m ∈ Finset.Iic n by simpa using hmn)
+        simpa [g] using (Submodule.neg_mem _ (hN m _ hmN _ hnN))
+      obtain ⟨L, hL⟩ := h.toIsPrecomplete.prec' g hg
+      use L
+      have hnb := (iAdicModuleTopology_hasBasis R I M).map (fun y : M => L + y)
+      rw [map_add_left_nhds_zero L] at hnb
+      suffices ∀ i, ∃ N, ∀ n, N ≤ n →
+          f n - L ∈ I ^ i • (⊤ : Submodule R M) by
+        simpa [hnb.tendsto_right_iff, sub_eq_neg_add]
+      intro i
+      refine ⟨(Finset.Iic i).sup N, ?_⟩
+      intro n hn
+      have hiN : N i ≤ (Finset.Iic i).sup N :=
+        Finset.le_sup (show i ∈ Finset.Iic i by simp)
+      have h₁ := hN i ((Finset.Iic i).sup N) hiN n (hiN.trans hn)
+      have h₂ := SModEq.sub_mem.mp (hL i)
+      have h₃ := Submodule.add_mem (I ^ i • (⊤ : Submodule R M)) h₁ h₂
+      simpa [g] using h₃
+    · rw [B.t2Space_iff_sInter_subset rfl]
+      intro x hx
+      have hxpow : ∀ n, x ∈ I ^ n • (⊤ : Submodule R M) := by
+        intro n
+        apply hx
+        change ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M) ∈ B.sets
+        change ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M) ∈ B.toFilterBasis.sets
+        unfold B
+        exact ⟨n, rfl⟩
+      have hxzero : x = 0 := h.haus x (fun n => SModEq.zero.2 (hxpow n))
+      simpa [hxzero]
+  · rintro ⟨u, hu, hu_uniform, hcomplete, ht2⟩
+    let _ : UniformSpace M := u
+    let _ : TopologicalSpace M := u.toTopologicalSpace
+    let _ : IsUniformAddGroup M := hu_uniform
+    let _ : CompleteSpace M := hcomplete
+    have hbasis : (@nhds M u.toTopologicalSpace (0 : M)).HasBasis
+        (fun _ : ℕ => True)
+        (fun n => ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M)) := by
+      rw [hu]
+      exact iAdicModuleTopology_hasBasis R I M
+    have hBtop : B.topology = I.adicModuleTopology M := by
+      rfl
+    have ht2B : @T2Space M B.topology := by
+      rw [hBtop]
+      exact ht2
+    refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+    · refine ⟨?_⟩
+      have ht2B' : ⋂₀ B.sets ⊆ ({0} : Set M) :=
+        (B.t2Space_iff_sInter_subset (t := B.topology) rfl).mp ht2B
+      intro x hx
+      apply ht2B'
+      intro V hV
+      unfold B at hV
+      rcases hV with ⟨n, rfl⟩
+      exact SModEq.zero.mp (hx n)
+    · refine ⟨?_⟩
+      intro f hf
+      obtain ⟨L, hL⟩ := CompleteSpace.complete (f := Filter.atTop.map f)
+        (hbasis.uniformity_of_nhds_zero.cauchySeq_iff.mpr fun i _ ↦
+          ⟨i, fun m hm n hn ↦ by
+            have hmem := Submodule.sub_mem _ (SModEq.sub_mem.mp (hf hm))
+              (SModEq.sub_mem.mp (hf hn))
+            change f n - f m ∈ I ^ i • (⊤ : Submodule R M)
+            convert hmem using 1 <;> abel⟩)
+      refine ⟨L, ?_⟩
+      have hnb := hbasis.map (fun y : M => L + y)
+      rw [map_add_left_nhds_zero L] at hnb
+      intro i
+      apply SModEq.sub_mem.mpr
+      obtain ⟨N, hN⟩ : ∃ N, ∀ n, N ≤ n →
+          f n - L ∈ I ^ i • (⊤ : Submodule R M) := by
+        simpa [sub_eq_neg_add] using (hnb.tendsto_right_iff.mp hL i)
+      have h₁ := hN (max i N) le_sup_right
+      have h₂ := SModEq.sub_mem.mp (hf (le_max_left i N))
+      have h₃ := Submodule.add_mem (I ^ i • (⊤ : Submodule R M)) h₁ h₂
+      simpa [sub_add_sub_cancel] using h₃
 
 theorem iAdicTopology_is_adic_of_complete
     (R : Type u) [CommRing R] (I : Ideal R) (hI : IsAdicComplete I R) :
@@ -278,7 +381,12 @@ theorem iAdicTopology_is_adic_of_complete
     let _ : NonarchimedeanRing R := I.nonarchimedean
     let _ : IsLinearTopology R R := I.isLinearTopology
     IsAdicTopologicalRing R := by
-  sorry
+  dsimp
+  refine ⟨iAdicTopology_is_preAdic R I, ?_⟩
+  let _ : TopologicalSpace R := I.adicTopology
+  let _ : UniformSpace R := IsTopologicalAddGroup.rightUniformSpace R
+  let _ : IsUniformAddGroup R := isUniformAddGroup_of_addCommGroup
+  exact (IsAdic.isAdicComplete_iff (R := R) (I := I) (by rfl)).mp hI
 
 theorem iAdicTopology_is_adic_iff_isAdicComplete
     (R : Type u) [CommRing R] (I : Ideal R) :
@@ -287,7 +395,20 @@ theorem iAdicTopology_is_adic_iff_isAdicComplete
        let _ : NonarchimedeanRing R := I.nonarchimedean
        let _ : IsLinearTopology R R := I.isLinearTopology
        IsAdicTopologicalRing R) := by
-  sorry
+  constructor
+  · intro h
+    exact iAdicTopology_is_adic_of_complete R I h
+  · intro h
+    dsimp at h
+    let _ : TopologicalSpace R := I.adicTopology
+    let _ : NonarchimedeanRing R := I.nonarchimedean
+    let _ : IsLinearTopology R R := I.isLinearTopology
+    let _ : UniformSpace R := IsTopologicalAddGroup.rightUniformSpace R
+    let _ : IsUniformAddGroup R := isUniformAddGroup_of_addCommGroup
+    apply (isAdicComplete_iff_complete_for_iAdicRingTopology R I).mpr
+    refine ⟨IsTopologicalAddGroup.rightUniformSpace R, rfl, inferInstance, ?_, ?_⟩
+    · exact h.2.1
+    · exact h.2.2
 
 /-- The inverse-limit topology used for the completion warning in the text. -/
 @[instance_reducible]
@@ -303,7 +424,90 @@ theorem adicCompletion_complete_for_limit_topology
     (M : Type v) [AddCommGroup M] [Module R M] :
     IsCompleteSeparatedTopologicalAddGroupFor (AdicCompletion I M)
       (AdicCompletionLimitTopology R I M) := by
-  sorry
+  classical
+  let C := AdicCompletion I M
+  let Q : ℕ → Type v := fun n => M ⧸ (I ^ n • (⊤ : Submodule R M))
+  let g : C →+ ∀ n : ℕ, Q n :=
+    { toFun := fun x n => x.val n
+      map_zero' := by
+        ext n
+        simp
+      map_add' := by
+        intro x y
+        ext n
+        exact AdicCompletion.val_add_apply x y n }
+  let : ∀ n : ℕ, TopologicalSpace (Q n) := fun _ => ⊥
+  let : ∀ n : ℕ, UniformSpace (Q n) := fun _ => ⊥
+  let : ∀ n : ℕ, DiscreteTopology (Q n) :=
+    fun _ => discreteTopology_bot _
+  let u : UniformSpace C := UniformSpace.comap g
+    (inferInstance : UniformSpace (∀ n : ℕ, Q n))
+  let : UniformSpace C := u
+  have hu : IsUniformAddGroup C := by
+    refine ⟨?_⟩
+    apply uniformContinuous_comap' (f := (g : C → ∀ n : ℕ, Q n))
+    convert
+      (uniformContinuous_sub.comp
+        (((uniformContinuous_comap (f := (g : C → ∀ n : ℕ, Q n))).comp
+            uniformContinuous_fst).prodMk
+          ((uniformContinuous_comap (f := (g : C → ∀ n : ℕ, Q n))).comp
+            uniformContinuous_snd))) using 1
+    ext p
+    simp [map_sub]
+  let : IsUniformAddGroup C := hu
+  have htop : u.toTopologicalSpace = AdicCompletionLimitTopology R I M := by
+    change TopologicalSpace.induced g Pi.topologicalSpace = _
+    rw [induced_to_pi]
+    rfl
+  have hinj : Function.Injective g := by
+    intro x y hxy
+    apply AdicCompletion.ext
+    intro n
+    exact congrFun hxy n
+  let S : Set (∀ n : ℕ, Q n) :=
+    ⋂ (i : ℕ) (j : ℕ) (h : i ≤ j),
+      {z | AdicCompletion.transitionMap I M h (z j) = z i}
+  have hgrange : Set.range g = S := by
+    ext z
+    constructor
+    · rintro ⟨x, rfl⟩
+      simp only [S, Set.mem_iInter]
+      intro i j h
+      exact x.prop h
+    · intro hz
+      simp only [S, Set.mem_iInter] at hz
+      refine ⟨⟨z, ?_⟩, ?_⟩
+      · intro i j h
+        exact hz i j h
+      · rfl
+  have hSclosed : IsClosed S := by
+    apply isClosed_iInter
+    intro i
+    apply isClosed_iInter
+    intro j
+    apply isClosed_iInter
+    intro h
+    let : ∀ n : ℕ, T2Space (Q n) := fun _ => by
+      infer_instance
+    apply isClosed_eq
+    · exact (continuous_of_discreteTopology :
+        Continuous (AdicCompletion.transitionMap I M h : Q j → Q i)).comp
+          (continuous_apply j)
+    · exact continuous_apply i
+  have hprod : CompleteSpace (∀ n : ℕ, Q n) := by
+    infer_instance
+  let : CompleteSpace (∀ n : ℕ, Q n) := hprod
+  have hrange : IsComplete (Set.range g) := by
+    rw [hgrange]
+    exact hSclosed.isComplete
+  have hcomplete : @CompleteSpace C u :=
+    (completeSpace_iff_isComplete_range ⟨rfl⟩).2 hrange
+  let : TopologicalSpace C := u.toTopologicalSpace
+  have hT2 : @T2Space C (AdicCompletionLimitTopology R I M) := by
+    rw [← htop]
+    exact T2Space.of_injective_continuous hinj
+      (uniformContinuous_comap (f := (g : C → ∀ n : ℕ, Q n))).continuous
+  refine ⟨u, htop, hu, hcomplete, hT2⟩
 
 theorem adicCompletion_not_always_iAdically_complete :
     ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R)

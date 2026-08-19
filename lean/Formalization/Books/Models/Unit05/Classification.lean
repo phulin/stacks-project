@@ -242,7 +242,7 @@ def isTwoCycle (D : LocalNumericalData 2) : Prop :=
   realizesAW D (pathMatrix 2 (constantVector (-2)) 2) (constantVector 1)
 
 def isUp4 (D : LocalNumericalData 2) : Prop :=
-  realizesAW D (pathLastMatrix 2 (-2) (-4) 4 4) (lastVector 2 1 4)
+  realizesAW D (pathLastMatrix 2 (-2) (-8) 4 4) (lastVector 2 1 4)
 
 def isA3 (D : LocalNumericalData 3) : Prop :=
   realizesPattern D (pathMatrix 3 (constantVector (-2)) 1) (constantVector 1) mConditionA3

@@ -1198,9 +1198,112 @@ noncomputable def totalCoordinateDifferential {R : Type u} [CommRing R]
   LinearMap.pi (fun ij =>
     (A.d ij.1.1 ij.1.2).hom.comp
         (LinearMap.proj ij.horizontalSource) +
-      ((-1 : R) ^ ij.1.1) •
+      ((-1 : ℤ) ^ ij.1.1) •
         (A.delta ij.1.1 ij.1.2).hom.comp
           (LinearMap.proj ij.verticalSource))
+
+set_option backward.isDefEq.respectTransparency false in
+theorem totalCoordinates_differential {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (n : ℕ) :
+    (totalCoordinatesIso A (n + 1)).inv ≫ (doubleTotalComplex A).d (n + 1) n ≫
+        (totalCoordinatesIso A n).hom =
+      ModuleCat.ofHom (totalCoordinateDifferential A n) := by
+  rw [← cancel_epi (totalCoordinatesIso A (n + 1)).hom]
+  simp only [Category.assoc, Iso.hom_inv_id_assoc, Category.id_comp]
+  apply HomologicalComplex₂.total.hom_ext
+  intro i j hij
+  unfold doubleTotalComplex
+  rw [← Category.assoc, HomologicalComplex₂.total_d, Preadditive.comp_add,
+    HomologicalComplex₂.ι_D₁, HomologicalComplex₂.ι_D₂, Preadditive.add_comp]
+  apply ModuleCat.hom_ext
+  apply LinearMap.ext
+  intro x
+  apply funext
+  intro k
+  change (totalCoordinatesIso A n).hom
+        (A.bicomplex.d₁ (ComplexShape.down ℕ) i j n x) k +
+      (totalCoordinatesIso A n).hom
+        (A.bicomplex.d₂ (ComplexShape.down ℕ) i j n x) k =
+    totalCoordinateDifferential A n
+      ((totalCoordinatesIso A (n + 1)).hom
+        (A.bicomplex.ιTotal (ComplexShape.down ℕ) i j (n + 1) hij x)) k
+  rw [totalCoordinatesIso_hom_ιTotal_apply]
+  change i + j = n + 1 at hij
+  rcases i with _ | i
+  · rcases j with _ | j
+    · omega
+    · have hj : j = n := by omega
+      subst j
+      rw [A.bicomplex.d₁_eq_zero (ComplexShape.down ℕ) 0 (n + 1) n (by simp)]
+      rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 0
+        (show (ComplexShape.down ℕ).Rel (n + 1) n by simp) n (by simp)]
+      simp
+      change 0 + (totalCoordinatesIso A n).hom
+        (A.bicomplex.ιTotal (ComplexShape.down ℕ) 0 n n (by change 0 + n = n; omega)
+          (A.delta 0 n x)) k = _
+      rw [totalCoordinatesIso_hom_ιTotal_apply]
+      rcases k with ⟨⟨p, q⟩, hpq⟩
+      change p + q = n at hpq
+      rcases p with _ | p
+      · have hq : q = n := by omega
+        subst q
+        simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+          TotalIndex.horizontalSource]
+      · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+          TotalIndex.horizontalSource, Pi.single_apply]
+  · rcases j with _ | j
+    · have hi : i = n := by omega
+      subst i
+      rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+        (show (ComplexShape.down ℕ).Rel (n + 1) n by simp) 0 n (by simp)]
+      rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) (n + 1) 0 n (by simp)]
+      simp
+      change (totalCoordinatesIso A n).hom
+        (A.bicomplex.ιTotal (ComplexShape.down ℕ) n 0 n (by change n + 0 = n; omega)
+          (A.d n 0 x)) k + 0 = _
+      rw [totalCoordinatesIso_hom_ιTotal_apply]
+      rcases k with ⟨⟨p, q⟩, hpq⟩
+      change p + q = n at hpq
+      by_cases hp : p = n
+      · subst p
+        have hq : q = 0 := by omega
+        subst q
+        simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+          TotalIndex.horizontalSource]
+      · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+          TotalIndex.horizontalSource, Pi.single_apply, hp]
+    · have hn : i + j + 1 = n := by omega
+      rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
+        (show (ComplexShape.down ℕ).Rel (i + 1) i by simp) (j + 1) n
+        (by change i + (j + 1) = n; omega)]
+      rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) (i + 1)
+        (show (ComplexShape.down ℕ).Rel (j + 1) j by simp) n
+        (by change (i + 1) + j = n; omega)]
+      simp [DoubleComplex.bicomplex]
+      change (totalCoordinatesIso A n).hom
+          (A.bicomplex.ιTotal (ComplexShape.down ℕ) i (j + 1) n
+            (by change i + (j + 1) = n; omega) (A.d i (j + 1) x)) k +
+        ((-1 : ℤ) ^ (i + 1)) • (totalCoordinatesIso A n).hom
+          (A.bicomplex.ιTotal (ComplexShape.down ℕ) (i + 1) j n
+            (by change (i + 1) + j = n; omega) (A.delta (i + 1) j x)) k = _
+      rw [totalCoordinatesIso_hom_ιTotal_apply,
+        totalCoordinatesIso_hom_ιTotal_apply]
+      rcases k with ⟨⟨p, q⟩, hpq⟩
+      change p + q = n at hpq
+      by_cases hp : p = i
+      · subst p
+        have hq : q = j + 1 := by omega
+        subst q
+        simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+          TotalIndex.horizontalSource]
+      · by_cases hp' : p = i + 1
+        · subst p
+          have hq : q = j := by omega
+          subst q
+          simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+            TotalIndex.horizontalSource]
+        · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
+            TotalIndex.horizontalSource, Pi.single_apply, hp, hp']
 
 noncomputable def rightEdgeComponent {R : Type u} [CommRing R]
     (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) :

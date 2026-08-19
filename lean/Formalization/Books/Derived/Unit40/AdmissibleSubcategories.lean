@@ -943,9 +943,7 @@ private theorem right_adjoint_isoClosure_eq_left_orthogonal
       calc
         𝟙 B = h ≫ q := hq'
         _ = h ≫ 0 := by rw [hq0]; rfl
-        _ = 0 := by
-          change h ≫ (0 : (shiftFunctor C (1 : ℤ)).obj A ⟶ B) = (0 : B ⟶ B)
-          simp only [comp_zero]
+        _ = 0 := by simp only [comp_zero]
     have hBzero : IsZero B := (IsZero.iff_id_eq_zero B).mpr hBid
     have hfiso : IsIso f := (third_object_zero_characterization f).2.2 (by
       intro Z g' h' hT'
@@ -967,9 +965,8 @@ theorem right_adjoint_saturated
     (P : ObjectProperty C) [P.IsTriangulated]
     [CategoryTheory.IsTriangulated C]
     (hP : HasRightAdjoint P) :
-    IsSaturated P := by
+  IsSaturated P := by
   have hEq := right_adjoint_isoClosure_eq_left_orthogonal P hP
-  letI : P.IsStableUnderShift ℤ := inferInstance
   have hright : rightOrthogonal P = ObjectProperty.rightOrthogonal P := by
     ext X
     constructor
@@ -977,21 +974,22 @@ theorem right_adjoint_saturated
       exact h A hA f
     · intro h A hA f
       exact h f hA
-  letI : (rightOrthogonal P).IsStableUnderShift ℤ := by
+  have hrightStable : (rightOrthogonal P).IsStableUnderShift ℤ := by
     rw [hright]
     infer_instance
   have horth := orthogonal_triangulated (rightOrthogonal P)
-    (inferInstance : (rightOrthogonal P).IsStableUnderShift ℤ)
+    hrightStable
   intro X Y hXY
   rw [hEq] at hXY ⊢
   obtain ⟨hX, hY⟩ := horth.2.2.1
     (ObjectProperty.le_isoClosure (leftOrthogonal (rightOrthogonal P)) (X ⊞ Y) hXY)
-  letI : (leftOrthogonal (rightOrthogonal P)).IsClosedUnderIsomorphisms := horth.2.1
   constructor
   · obtain ⟨Z, hZ, ⟨e⟩⟩ := hX
-    exact ObjectProperty.prop_of_iso (leftOrthogonal (rightOrthogonal P)) e.symm hZ
+    exact @ObjectProperty.prop_of_iso _ _ (leftOrthogonal (rightOrthogonal P))
+      horth.2.1 _ _ e.symm hZ
   · obtain ⟨Z, hZ, ⟨e⟩⟩ := hY
-    exact ObjectProperty.prop_of_iso (leftOrthogonal (rightOrthogonal P)) e.symm hZ
+    exact @ObjectProperty.prop_of_iso _ _ (leftOrthogonal (rightOrthogonal P))
+      horth.2.1 _ _ e.symm hZ
 
 /-- Under strict fullness, a right-admissible subcategory is the left
 orthogonal of its right orthogonal. -/
@@ -1011,8 +1009,7 @@ theorem right_adjoint_eq_left_orthogonal
       rw [hEq]
       exact hX
     obtain ⟨Z, hZ, ⟨e⟩⟩ := hX'
-    letI : P.IsClosedUnderIsomorphisms := hstrict
-    exact P.prop_of_iso e.symm hZ
+    exact @ObjectProperty.prop_of_iso _ _ P hstrict _ _ e.symm hZ
 
 /-- A left adjoint of the inclusion is equivalent to left decompositions. -/
 theorem left_adjoint_iff_decomposition

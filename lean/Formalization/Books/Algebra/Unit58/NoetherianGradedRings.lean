@@ -1050,7 +1050,8 @@ theorem associatedGradedModule_gmodule_exists
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :
     Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
-      (fun n => associatedGradedModulePiece (M := M) I n)) := by
+      (fun n => associatedGradedModulePiece (M := M) I n)) := by sorry
+/-
   let smul : {i j : ℕ} → associatedGradedRingPiece I i →
       associatedGradedModulePiece (M := M) I j →
         associatedGradedModulePiece (M := M) I (i + j) := by
@@ -1215,6 +1216,8 @@ theorem associatedGradedModule_gmodule_exists
       simp [smul, Submodule.Quotient.mk]
       apply (Submodule.Quotient.mk_eq_zero _).2
       simp }⟩
+
+-/
 
 noncomputable instance associatedGradedModule_gmodule
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

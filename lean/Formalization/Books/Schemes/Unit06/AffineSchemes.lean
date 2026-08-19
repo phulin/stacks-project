@@ -149,7 +149,46 @@ sections. -/
 theorem morphismIntoAffine_globalSectionsMap_bijective
     (X : LocallyRingedSpace.{u}) (Y : Scheme.{u}) [IsAffine Y] :
     Function.Bijective (morphismIntoAffine_globalSectionsMap X Y) := by
-  sorry
+  let e := Scheme.forgetToLocallyRingedSpace.mapIso Y.isoSpec
+  let E : (Γ(Y, ⊤) ⟶ locallyRingedSpaceGlobalSections X) ≃
+      (X ⟶ Scheme.forgetToLocallyRingedSpace.obj (Spec (Γ(Y, ⊤)))) :=
+    (opEquiv (op (locallyRingedSpaceGlobalSections X))
+        (op (locallyRingedSpaceGlobalSections (Scheme.forgetToLocallyRingedSpace.obj Y)))).symm.trans
+      (ΓSpec.locallyRingedSpaceAdjunction.homEquiv X (op (Γ(Y, ⊤))))
+  let P : (X ⟶ Scheme.forgetToLocallyRingedSpace.obj (Spec (Γ(Y, ⊤)))) ≃
+      (X ⟶ Scheme.forgetToLocallyRingedSpace.obj Y) :=
+    { toFun := fun f => f ≫ e.inv
+      invFun := fun f => f ≫ e.hom
+      left_inv := by intro f; dsimp; rw [Category.assoc, e.inv_hom_id, Category.comp_id]
+      right_inv := by intro f; dsimp; rw [Category.assoc, e.hom_inv_id, Category.comp_id] }
+  have h : (morphismIntoAffine_globalSectionsMap X Y) =
+      E.symm ∘ P.symm := by
+    funext f
+    dsimp [morphismIntoAffine_globalSectionsMap, P, E]
+    change locallyRingedSpaceGlobalMap f =
+      (opEquiv _ _)
+        ((ΓSpec.locallyRingedSpaceAdjunction.homEquiv X (op (Γ(Y, ⊤)))).symm
+          (f ≫ e.hom))
+    have hu :
+        (ΓSpec.locallyRingedSpaceAdjunction.homEquiv X (op (Γ(Y, ⊤))))
+            ((opEquiv _ _).symm (locallyRingedSpaceGlobalMap f)) = f ≫ e.hom := by
+      rw [ΓSpec.locallyRingedSpaceAdjunction_homEquiv_apply]
+      change
+        ΓSpec.locallyRingedSpaceAdjunction.unit.app X ≫
+            Spec.locallyRingedSpaceMap (locallyRingedSpaceGlobalMap f) =
+          f ≫ ΓSpec.locallyRingedSpaceAdjunction.unit.app Y.toLocallyRingedSpace
+      exact (ΓSpec.locallyRingedSpaceAdjunction.unit.naturality f).symm
+    have hs :
+        (ΓSpec.locallyRingedSpaceAdjunction.homEquiv X (op (Γ(Y, ⊤)))).symm
+            (f ≫ e.hom) =
+          (opEquiv (LocallyRingedSpace.Γ.rightOp.obj X) (op (Γ(Y, ⊤)))).symm
+            (locallyRingedSpaceGlobalMap f) := by
+      rw [Equiv.symm_apply_eq]
+      exact hu.symm
+    rw [hs]
+    rfl
+  rw [h]
+  exact E.symm.bijective.comp P.symm.bijective
 
 /-! ## The category of affine schemes -/
 
@@ -215,7 +254,40 @@ theorem affineSchemeFibreProduct_is_pullback_in_locallyRingedSpace
     (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
     Nonempty (IsLimit (locallyRingedSpaceAffineFibreProductCone R A B)) := by
-  sorry
+  let c := (CommRingCat.pushoutCocone R A B).op
+  have hc : IsLimit c :=
+    PushoutCocone.isColimitEquivIsLimitOp
+      (CommRingCat.pushoutCocone R A B) (CommRingCat.pushoutCoconeIsColimit R A B)
+  let cL := PullbackCone.map c Spec.toLocallyRingedSpace
+  have hcL : IsLimit cL :=
+    isLimitPullbackConeMapOfIsLimit Spec.toLocallyRingedSpace c.condition
+      (hc.ofIsoLimit (PullbackCone.eta c))
+  let e : (locallyRingedSpaceAffineFibreProductCone R A B).pt ≅ cL.pt :=
+    Scheme.forgetToLocallyRingedSpace.mapIso (affineSchemeFibreProductIso R A B)
+  have hfst : (locallyRingedSpaceAffineFibreProductCone R A B).fst = e.hom ≫ cL.fst := by
+    change
+      (pullback.fst (Spec.map (CommRingCat.ofHom (algebraMap R A)))
+        (Spec.map (CommRingCat.ofHom (algebraMap R B)))).toLRSHom =
+        (AlgebraicGeometry.pullbackSpecIso R A B).hom.toLRSHom ≫
+          (Spec.map (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom))).toLRSHom
+    simpa only [Scheme.Hom.comp_toLRSHom] using congrArg Scheme.Hom.toLRSHom
+      (AlgebraicGeometry.pullbackSpecIso_hom_fst R A B).symm
+  have hsnd : (locallyRingedSpaceAffineFibreProductCone R A B).snd = e.hom ≫ cL.snd := by
+    change
+        (pullback.snd (Spec.map (CommRingCat.ofHom (algebraMap R A)))
+        (Spec.map (CommRingCat.ofHom (algebraMap R B)))).toLRSHom =
+        (AlgebraicGeometry.pullbackSpecIso R A B).hom.toLRSHom ≫
+          (Spec.map (CommRingCat.ofHom (R := B) (S := A ⊗[R] B)
+            (RingHomClass.toRingHom Algebra.TensorProduct.includeRight))).toLRSHom
+    simpa only [Scheme.Hom.comp_toLRSHom] using congrArg Scheme.Hom.toLRSHom
+      (AlgebraicGeometry.pullbackSpecIso_hom_snd R A B).symm
+  refine ⟨IsLimit.ofIsoLimit hcL (PullbackCone.ext e.symm ?_ ?_)⟩
+  · rw [← cancel_epi e.hom]
+    simpa [Iso.symm_hom, Category.assoc, Spec_toLocallyRingedSpace,
+      Spec.toLocallyRingedSpace] using hfst.symm
+  · rw [← cancel_epi e.hom]
+    simpa [Iso.symm_hom, Category.assoc, Spec_toLocallyRingedSpace,
+      Spec.toLocallyRingedSpace] using hsnd.symm
 
 /-- The product case is the preceding locally ringed space pullback over `Spec ℤ`. -/
 theorem affineSchemeProduct_is_pullback_in_locallyRingedSpace
@@ -246,6 +318,68 @@ theorem disjointUnion_of_affine_opens_is_affine
     (hU : IsAffineLocallyRingedSpaceOpen X U)
     (hV : IsAffineLocallyRingedSpaceOpen X V) :
     IsAffineLocallyRingedSpace X := by
-  sorry
+  change ∃ RU : CommRingCat.{u},
+    Nonempty (X.restrict (Opens.isOpenEmbedding U) ≅ (Spec RU).toLocallyRingedSpace) at hU
+  change ∃ RV : CommRingCat.{u},
+    Nonempty (X.restrict (Opens.isOpenEmbedding V) ≅ (Spec RV).toLocallyRingedSpace) at hV
+  obtain ⟨RU, hRU⟩ := hU
+  obtain ⟨RV, hRV⟩ := hV
+  let S : Scheme.{u} :=
+    { toLocallyRingedSpace := X
+      local_affine := by
+        intro x
+        have hx : x ∈ (U : Set X) ∨ x ∈ (V : Set X) := by
+          have : x ∈ (U : Set X) ∪ (V : Set X) := by rw [hcover]; trivial
+          rcases this with hx | hx
+          · exact Or.inl hx
+          · exact Or.inr hx
+        rcases hx with hx | hx
+        · exact ⟨⟨U, hx⟩, RU, hRU⟩
+        · exact ⟨⟨V, hx⟩, RV, hRV⟩ }
+  let US : S.Opens := U
+  let VS : S.Opens := V
+  let f : S.restrict (Opens.isOpenEmbedding US) ⟶ S := US.ι
+  let g : S.restrict (Opens.isOpenEmbedding VS) ⟶ S := VS.ι
+  have hIf : IsOpenImmersion f := by
+    change LocallyRingedSpace.IsOpenImmersion
+      (S.toLocallyRingedSpace.ofRestrict (Opens.isOpenEmbedding US))
+    infer_instance
+  have hIg : IsOpenImmersion g := by
+    change LocallyRingedSpace.IsOpenImmersion
+      (S.toLocallyRingedSpace.ofRestrict (Opens.isOpenEmbedding VS))
+    infer_instance
+  have hcomplUV : IsCompl US VS := by
+    refine ⟨?_, ?_⟩
+    · simpa [disjoint_iff, ← TopologicalSpace.Opens.coe_inj] using hdisjoint
+    · simpa [codisjoint_iff, ← TopologicalSpace.Opens.coe_inj] using hcover
+  have hcompl : IsCompl f.opensRange g.opensRange := by
+    change IsCompl (US.ι.opensRange) (VS.ι.opensRange)
+    rw [Scheme.Opens.opensRange_ι, Scheme.Opens.opensRange_ι]
+    exact hcomplUV
+  have hcolim : Nonempty (IsColimit (BinaryCofan.mk f g)) :=
+    @nonempty_isColimit_binaryCofanMk_of_isCompl _ _ _ f g hIf hIg hcompl
+  let eU : S.restrict (Opens.isOpenEmbedding US) ≅ Spec RU :=
+    Scheme.fullyFaithfulForgetToLocallyRingedSpace.preimageIso hRU.some
+  let eV : S.restrict (Opens.isOpenEmbedding VS) ≅ Spec RV :=
+    Scheme.fullyFaithfulForgetToLocallyRingedSpace.preimageIso hRV.some
+  let q : BinaryCofan (S.restrict (Opens.isOpenEmbedding US))
+      (S.restrict (Opens.isOpenEmbedding VS)) :=
+    BinaryCofan.mk coprod.inl coprod.inr
+  have hq : IsColimit q := by
+    dsimp [q]
+    exact coprodIsCoprod _ _
+  have i0 : (BinaryCofan.mk f g).pt ≅ q.pt :=
+    IsColimit.coconePointUniqueUpToIso hcolim.some hq
+  let i : S ≅ S.restrict (Opens.isOpenEmbedding US) ⨿
+      S.restrict (Opens.isOpenEmbedding VS) :=
+    by simpa [q] using i0
+  have hcoprod : IsAffine (S.restrict (Opens.isOpenEmbedding US) ⨿
+      S.restrict (Opens.isOpenEmbedding VS)) :=
+    IsAffine.of_isIso ((coprod.mapIso eU eV).hom ≫ coprodSpec _ _)
+  have hS : IsAffine S :=
+    @IsAffine.of_isIso S
+      (S.restrict (Opens.isOpenEmbedding US) ⨿ S.restrict (Opens.isOpenEmbedding VS))
+      i.hom i.isIso_hom hcoprod
+  exact ⟨Γ(S, ⊤), ⟨Scheme.forgetToLocallyRingedSpace.mapIso (@Scheme.isoSpec S hS)⟩⟩
 
 end Formalization.Books.Schemes.Unit06

@@ -253,7 +253,6 @@ instance localizationModuleProperty_isWeakSerreClass
         change (s : R) • f₃.hom y = (s : R) • 0
         simp only [smul_zero]
         rw [← map_smul, hy]
-        change f₃.hom (f₂.hom x) = 0
         exact congrArg (fun q => q x) (hT.toIsComplex.zero 2)
       obtain ⟨z, hz⟩ := (h₂' y).mp hf₃
       have hf₂ : f₂.hom ((s : R) • z - x) = 0 := by
@@ -584,7 +583,7 @@ theorem idealQuotientMap_has_no_kernel
     (R : Type u) [CommRing R] (I : Ideal R) (hI : ¬ I.FG) :
     ¬ HasKernel (idealQuotientMap R I) := by
   intro hK
-  letI := hK
+  let := hK
   let f := idealQuotientMap R I
   let k : kernel f ⟶ FGModuleCat.of R R := kernel.ι f
   have hrange : LinearMap.range k.hom.hom = I := by
@@ -627,7 +626,7 @@ theorem finitelyGeneratedModuleCategory_not_abelian_of_not_noetherian
   classical
   intro hA
   rcases hA with ⟨hA⟩
-  letI := hA
+  let := hA
   apply hR
   rw [isNoetherianRing_iff_ideal_fg]
   intro I

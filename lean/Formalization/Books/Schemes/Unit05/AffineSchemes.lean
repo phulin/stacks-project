@@ -1461,7 +1461,7 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
     simpa [ST, T', T, pf, lf, pg, lg, hlf, hlg] using hloc -/
   have hST : ST.Exact := by
     sorry
-  letI : T'.Faithful := by
+  let : T'.Faithful := by
     constructor
     intro X Y f g h
     exact T.map_injective (show T.map f = T.map g from h)

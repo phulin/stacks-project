@@ -688,6 +688,8 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
       (finitelyGeneratedTorsionSerreQuotient A ≌
         finiteDimensionalVectorSpaceCategory K) := by
   let r : FractionRing A ≃+* K := (FractionRing.algEquiv A K).toRingEquiv
+  let r' : Localization (nonZeroDivisors A) ≃+* K :=
+    (FractionRing.algEquiv A K).toRingEquiv
   let R : ModuleCat.{u} (FractionRing A) ≌ ModuleCat.{u} K :=
     (ModuleCat.restrictScalarsEquivalenceOfRingEquiv r).symm
   let e := moduleLocalizationSerreQuotientEquivalence A (nonZeroDivisors A)
@@ -758,18 +760,25 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
           map_add' := by intro x y; rfl
           map_smul' := by
             intro c x
-            change AddCommGrpCat.Hom.hom
-                ((e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
-                  (Lfg.obj M))).smul c) x =
-              AddCommGrpCat.Hom.hom (((ModuleCat.restrictScalars r.symm).obj
-                (e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
-                  (Lfg.obj M)))).smul (r c)) x
-            have hrc : r.symm (r c) = c := r.symm_apply_apply c
-            simpa only [hrc] using
-              (congrArg (fun h => AddCommGrpCat.Hom.hom h x)
-                (ModuleCat.smul_restrictScalars r.symm (r c)
+            change @Eq
+                ((ModuleCat.restrictScalars r'.symm.toRingHom).obj
                   (e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
-                    (Lfg.obj M))))).symm }
+                    (Lfg.obj M))) : Type u)
+                (AddCommGrpCat.Hom.hom
+                  ((e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
+                    (Lfg.obj M))).smul c) x)
+                (AddCommGrpCat.Hom.hom (((ModuleCat.restrictScalars r'.symm.toRingHom).obj
+                  (e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
+                    (Lfg.obj M)))).smul (r c)) x)
+            have hrr : r c = r' c := rfl
+            have hrc : r'.symm.toRingHom (r' c) = c :=
+              r'.symm_apply_apply c
+            convert (congrArg (fun h => AddCommGrpCat.Hom.hom h x)
+              (ModuleCat.smul_restrictScalars r'.symm.toRingHom (r' c)
+                (e.functor.obj ((finitelyGeneratedQuotientToModuleQuotient A).obj
+                  (Lfg.obj M))))).symm using 1 <;>
+              simp only [hrr, hrc] <;>
+              rfl }
       exact Module.Finite.equiv eV
     let _ : Module.Finite K (H.obj (Lfg.obj M) : Type u) :=
       Module.Finite.of_restrictScalars_finite (FractionRing A) K
@@ -833,7 +842,7 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
     have hF' : F'.map (f - g) = 0 := by
       apply (cancel_mono (η.hom.app Y)).1
       rw [η.hom.naturality]
-      simpa only [Functor.comp_map, hq, zero_comp]
+      simp only [Functor.comp_map, hq, comp_zero, zero_comp]
     have hQ : (torsionModuleProperty A).isoModSerre.Q.map
         ((finitelyGeneratedModuleInclusion A).map (f - g)) = 0 := by
       simpa [F'] using hF'
@@ -846,26 +855,23 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
       change (torsionModuleProperty A)
         ((finitelyGeneratedModuleInclusion A).obj (Abelian.image (f - g)))
       exact (torsionModuleProperty A).prop_of_iso
-        (PreservesImage.iso (finitelyGeneratedModuleInclusion A) (f - g)).symm ht
+        (Abelian.PreservesImage.iso (finitelyGeneratedModuleInclusion A) (f - g)).symm ht
     rw [← sub_eq_zero, ← L'.map_sub]
     exact (ObjectProperty.SerreClassLocalization.map_eq_zero_iff L'
       (finitelyGeneratedTorsionModuleProperty A) _).2 ht'
-  let _ : (finitelyGeneratedQuotientToModuleQuotient A).Faithful := hfaith
-  let _ : (finitelyGeneratedQuotientToModuleQuotient A).Full :=
+  haveI : (finitelyGeneratedQuotientToModuleQuotient A).Faithful := hfaith
+  haveI : (finitelyGeneratedQuotientToModuleQuotient A).Full :=
     finitelyGeneratedQuotientToModuleQuotient_full A
   let _ : (finitelyGeneratedQuotientToModuleQuotient A).FullyFaithful :=
     Functor.FullyFaithful.ofFullyFaithful _
-  let _ : H.FullyFaithful := by
-    dsimp [H]
-    infer_instance
-  let _ : F.FullyFaithful := by
-    dsimp [F]
-    infer_instance
-  let _ : F.EssSurj := by
+  let _ : H.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful H
+  haveI : F.EssSurj := by
     refine ⟨fun Y ↦ ?_⟩
     letI : Module A (Y : Type u) := Module.compHom _ (algebraMap A K)
     letI : IsScalarTower A K (Y : Type u) :=
-      IsScalarTower.of_algebraMap_eq' (by intro x; rfl)
+      ⟨fun a k y => by
+        change (algebraMap A K a * k) • y = _
+        rw [smul_smul]⟩
     obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' K (Y : Type u)
     let P : Submodule A (Y : Type u) :=
       Submodule.span A (Set.range f)
@@ -919,7 +925,8 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
       R.mapIso eW ≪≫ J
     refine ⟨L.obj M, ⟨?__⟩⟩
     exact (ModuleCat.isFG K).isoMk iY (by infer_instance)
-  let _ : F.IsEquivalence := by infer_instance
+  let _ : F.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful F
+  letI : F.IsEquivalence := by infer_instance
   exact ⟨F.asEquivalence⟩
 
 /- The source's canonical choice of the field of fractions is Mathlib's

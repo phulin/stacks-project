@@ -670,7 +670,11 @@ theorem cprimeBaseMap_naturality {A : Type u} [CommRing A] (I : Ideal A)
         CommRingCat.ofHom (cprimeBaseComponent I B j.unop) =
       CommRingCat.ofHom (cprimeBaseComponent I B i.unop) ≫
         (cprimeQuotientSystem I B).map f := by
-  sorry
+  apply CommRingCat.hom_ext
+  apply RingHom.ext
+  intro x
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  rfl
 
 /-- The natural transformation from `(A_n)` to the quotient system of `B`. -/
 def cprimeBaseMap {A : Type u} [CommRing A] (I : Ideal A)
@@ -690,7 +694,52 @@ def cprimeQuotientArrow {A : Type u} [CommRing A] (I : Ideal A)
 theorem cprimeQuotientArrow_property {A : Type u} [CommRing A] (I : Ideal A)
     (B : CompleteAlgebraCategory A I) :
     AdicSystemProperty I (cprimeQuotientArrow I B.obj) := by
-  sorry
+  change
+    (∀ n : ℕ+, RingHom.FiniteType (cprimeBaseComponent I B.obj n)) ∧
+      (∀ n : ℕ+, Nonempty (AdicSystemStep I (cprimeQuotientArrow I B.obj) n))
+  constructor
+  · intro n
+    exact cprimeBaseComponent_finiteType I B n
+  · intro n
+    refine ⟨{ equivalence := ?_, transition_eq := ?_ }⟩
+    · change
+        (B.obj ⧸ (cprimeIdeal I B.obj) ^ ((n + 1 : ℕ+) : ℕ)) ⧸
+            Ideal.map (cprimeBaseComponent I B.obj (n + 1))
+              (adicStagePowerIdeal I n) ≃+*
+          B.obj ⧸ (cprimeIdeal I B.obj) ^ (n : ℕ)
+      let p : Ideal A := I ^ ((n + 1 : ℕ+) : ℕ)
+      let J : Ideal B.obj :=
+        (cprimeIdeal I B.obj) ^ ((n + 1 : ℕ+) : ℕ)
+      let K : Ideal (A ⧸ p) :=
+        Ideal.map (Ideal.Quotient.mk p) (I ^ (n : ℕ))
+      let f := cprimeBaseComponent I B.obj (n + 1)
+      let L : Ideal (B.obj ⧸ J) :=
+        ((cprimeIdeal I B.obj) ^ (n : ℕ)).map (Ideal.Quotient.mk J)
+      have hL : K.map f = L := by
+        dsimp [K, L]
+        rw [Ideal.map_map]
+        change Ideal.map ((Ideal.Quotient.mk J).comp (algebraMap A B.obj))
+          (I ^ (n : ℕ)) = _
+        rw [cprimeIdeal, ← Ideal.map_pow, ← Ideal.map_map]
+      have hJ : J ≤ (cprimeIdeal I B.obj) ^ (n : ℕ) := by
+        dsimp [J]
+        exact Ideal.pow_le_pow_right (I := cprimeIdeal I B.obj) (Nat.le_succ (n : ℕ))
+      let e0 : ((B.obj ⧸ J) ⧸ L) ≃+*
+          (B.obj ⧸ (cprimeIdeal I B.obj) ^ (n : ℕ)) :=
+        DoubleQuot.quotQuotEquivQuotOfLE hJ
+      have e : (cprimeQuotientStage I B.obj (n + 1) ⧸ L) ≃+*
+          (B.obj ⧸ (cprimeIdeal I B.obj) ^ (n : ℕ)) := by
+        simpa [cprimeQuotientStage, J] using e0
+      let q : (cprimeQuotientStage I B.obj (n + 1) ⧸ K.map f) ≃+*
+          (cprimeQuotientStage I B.obj (n + 1) ⧸ L) :=
+        Ideal.quotEquivOfEq hL
+      change (B.obj ⧸ J) ⧸ K.map f ≃+*
+        B.obj ⧸ (cprimeIdeal I B.obj) ^ (n : ℕ)
+      exact q.trans e
+    · apply RingHom.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+      rfl
 
 /-- The object part of the canonical functor `𝓒' → 𝓒`. -/
 def completeAlgebraSystemObject {A : Type u} [CommRing A] (I : Ideal A)
@@ -702,7 +751,16 @@ theorem cprimeQuotientMapIdeal_le {A : Type u} [CommRing A] (I : Ideal A)
     {B C : CommAlgCat A} (f : B ⟶ C) (n : ℕ+) :
     (cprimeIdeal I B) ^ (n : ℕ) ≤
       ((cprimeIdeal I C) ^ (n : ℕ)).comap f.hom.toRingHom := by
-  sorry
+  have hf : f.hom.toRingHom.comp (algebraMap A B) = algebraMap A C := by
+    ext x
+    exact f.hom.commutes x
+  have hmap :
+      Ideal.map f.hom.toRingHom ((cprimeIdeal I B) ^ (n : ℕ)) =
+        (cprimeIdeal I C) ^ (n : ℕ) := by
+    simp only [cprimeIdeal]
+    rw [← Ideal.map_pow, ← Ideal.map_pow, Ideal.map_map, hf]
+  rw [← hmap]
+  exact Ideal.le_comap_map
 
 /-- The map on quotient stages induced by an `A`-algebra map. -/
 def cprimeQuotientMapComponent {A : Type u} [CommRing A] (I : Ideal A)
@@ -718,7 +776,11 @@ theorem cprimeQuotientMap_naturality {A : Type u} [CommRing A] (I : Ideal A)
         CommRingCat.ofHom (cprimeQuotientMapComponent I f j.unop) =
       CommRingCat.ofHom (cprimeQuotientMapComponent I f i.unop) ≫
         (cprimeQuotientSystem I C).map g := by
-  sorry
+  apply CommRingCat.hom_ext
+  apply RingHom.ext
+  intro x
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  rfl
 
 /-- The natural transformation induced on quotient systems by an algebra map. -/
 def cprimeQuotientMap {A : Type u} [CommRing A] (I : Ideal A)

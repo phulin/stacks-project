@@ -85,7 +85,11 @@ theorem perfectField_iff_all_field_extensions_separable
       simp
     rw [hrange]
     exact hsep
-  · sorry
+  · intro h
+    have hsep : Algebra.IsSeparable k (AlgebraicClosure k) :=
+      algebra_isSeparable_of_isSeparableExtension_of_isAlgebraic
+        (h (AlgebraicClosure k))
+    exact (perfectField_iff_isSeparable_algebraicClosure k (AlgebraicClosure k)).2 hsep
 
 /-- A field is perfect exactly in characteristic zero or in prime
     characteristic with surjective Frobenius on elements. -/
@@ -833,7 +837,8 @@ theorem perfectClosure_level_element_pow_mem_base
     (n : ℕ) (y : PerfectClosure k p)
     (hy : ∃ x : k, y = PerfectClosure.mk k p (n, x)) :
     ∃ x : k, y ^ (p ^ n) = PerfectClosure.of k p x := by
-  sorry
+  rcases hy with ⟨x, rfl⟩
+  exact ⟨x, perfectClosure_mk_pow p n x⟩
 
 /-- The absolute perfect closure is the union of its positive finite root
     levels. -/
@@ -842,7 +847,20 @@ theorem perfectClosure_is_union_of_finite_pth_root_levels
     ∀ y : PerfectClosure k p,
       ∃ n : ℕ, 0 < n ∧
         ∃ z : pthRootLevel k p n, (z : PerfectClosure k p) = y := by
-  sorry
+  intro y
+  obtain ⟨n, x, hy⟩ := perfectClosure_is_union_of_pth_root_levels p y
+  by_cases hn : 0 < n
+  · refine ⟨n, hn, ⟨PerfectClosure.mk k p (n, x),
+        IntermediateField.subset_adjoin k _ ⟨x, rfl⟩⟩, hy.symm⟩
+  · have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
+    subst n
+    refine ⟨1, Nat.zero_lt_succ 0, ?_⟩
+    let z₀ : pthRootLevel k p 0 :=
+      ⟨PerfectClosure.mk k p (0, x),
+        IntermediateField.subset_adjoin k _ ⟨x, rfl⟩⟩
+    refine ⟨⟨z₀.1, (pthRootLevel_mono p 0) z₀.2⟩, ?_⟩
+    change (z₀ : PerfectClosure k p) = y
+    exact hy.symm
 
 /- The source's subextension observation is stated with the necessary choice
    of an embedding into a fixed algebraic closure. -/
@@ -853,7 +871,13 @@ theorem algebraic_purelyInseparable_extension_embeds_in_perfectClosure
     [Algebra.IsAlgebraic k E] [IsPurelyInseparable k E] :
     ∃ i : E →ₐ[k] AlgebraicClosure k,
       ∀ x : E, i x ∈ perfectClosure k (AlgebraicClosure k) := by
-  sorry
+  let i : E →ₐ[k] AlgebraicClosure k := IsAlgClosed.lift
+  refine ⟨i, ?_⟩
+  intro x
+  have hx : x ∈ perfectClosure k E := by
+    rw [(isPurelyInseparable_iff_perfectClosure_eq_top).1 inferInstance]
+    trivial
+  exact (map_mem_perfectClosure_iff i).2 hx
 
 /-! ## Perfect fields and reduced algebras -/
 

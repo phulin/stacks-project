@@ -779,7 +779,7 @@ theorem termwiseSplitConnectingMap_exists
       (S.X₃.d n (n + (-1 : ℤ)) ≫
         ((s (n + (-1 : ℤ))).s ≫
           S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) - 0) = 0
-    simp
+    abel
   · intro n
     rfl
 
@@ -1601,8 +1601,131 @@ theorem termwiseSplitConnectingMap_exists
         (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
           (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫
             S.X₂.d (n + 1) (n + 1 + 1) ≫ (s (n + 1 + 1)).r := by
-      exact sorry
-    exact sorry
+      rw [← Category.comp_id
+        ((s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1))]
+      rw [← hfr₂]
+      have hcomm :
+          (((s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1)) ≫
+              S.f.f (n + 1 + 1)) ≫ (s (n + 1 + 1)).r =
+            (((s (n + 1)).r ≫ S.f.f (n + 1)) ≫
+              S.X₂.d (n + 1) (n + 1 + 1)) ≫ (s (n + 1 + 1)).r := by
+        exact
+          (congrArg
+              (fun z => z ≫ (s (n + 1 + 1)).r)
+              (Category.assoc ((s (n + 1)).r)
+                (S.X₁.d (n + 1) (n + 1 + 1)) (S.f.f (n + 1 + 1)))).trans
+            ((congrArg
+                (fun z => ((s (n + 1)).r ≫ z) ≫ (s (n + 1 + 1)).r)
+                (S.f.comm (n + 1) (n + 1 + 1)).symm).trans
+              (congrArg
+                (fun z => z ≫ (s (n + 1 + 1)).r)
+                (Category.assoc ((s (n + 1)).r) (S.f.f (n + 1))
+                  (S.X₂.d (n + 1) (n + 1 + 1))).symm))
+      have hleft := Category.assoc
+        ((s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1))
+        (S.f.f (n + 1 + 1)) (s (n + 1 + 1)).r
+      have hrfcomp :=
+        congrArg
+          (fun z => z ≫
+            (S.X₂.d (n + 1) (n + 1 + 1) ≫ (s (n + 1 + 1)).r)) hrf₁
+      have hcommR := hcomm.trans
+        (Category.assoc ((s (n + 1)).r ≫ S.f.f (n + 1))
+          (S.X₂.d (n + 1) (n + 1 + 1)) (s (n + 1 + 1)).r)
+      exact hleft.symm.trans (hcommR.trans hrfcomp)
+    erw [← Category.assoc]
+    erw [Category.assoc]
+    erw [hR]
+    erw [← Category.assoc]
+    erw [Preadditive.comp_sub]
+    erw [Preadditive.sub_comp]
+    simp only [Category.id_comp, Category.comp_id]
+    have hsg : (s n).s ≫ S.g.f n = 𝟙 _ := by
+      convert (s n).s_g using 1
+      rfl
+    have hsg' : (s n).s ≫ S.g.f n = 𝟙 (S.X₃.X n) := by
+      convert hsg using 1
+      rfl
+    have hmid :
+        (((((s n).s ≫ S.X₂.d n (n + 1)) ≫ S.g.f (n + 1)) ≫
+              (s (n + 1)).s) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
+            (s (n + 1 + 1)).r =
+          (((S.X₃.d n (n + 1) ≫ (s (n + 1)).s) ≫
+              S.X₂.d (n + 1) (n + 1 + 1)) ≫
+            (s (n + 1 + 1)).r) := by
+      have hcomm :
+          (((((s n).s ≫ S.X₂.d n (n + 1)) ≫ S.g.f (n + 1)) ≫
+                (s (n + 1)).s) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
+              (s (n + 1 + 1)).r =
+            (((((s n).s ≫ S.g.f n) ≫ S.X₃.d n (n + 1)) ≫
+                (s (n + 1)).s) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
+              (s (n + 1 + 1)).r := by
+        calc
+          _ = (((((s n).s ≫
+                (S.X₂.d n (n + 1) ≫ S.g.f (n + 1))) ≫
+                  (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+              (s (n + 1 + 1)).r) := by
+            exact congrArg
+              (fun z => (((z ≫ (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+                (s (n + 1 + 1)).r))
+              (Category.assoc (s n).s (S.X₂.d n (n + 1))
+                (S.g.f (n + 1)))
+          _ = (((((s n).s ≫
+                (S.g.f n ≫ S.X₃.d n (n + 1))) ≫
+                  (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+              (s (n + 1 + 1)).r) := by
+            exact congrArg
+              (fun z => (((((s n).s ≫ z) ≫ (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+                (s (n + 1 + 1)).r))
+              (S.g.comm n (n + 1)).symm
+          _ = (((((s n).s ≫ S.g.f n) ≫ S.X₃.d n (n + 1)) ≫
+                (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+              (s (n + 1 + 1)).r := by
+            exact congrArg
+              (fun z => (((z ≫ (s (n + 1)).s) ≫
+                S.X₂.d (n + 1) (n + 1 + 1)) ≫
+                (s (n + 1 + 1)).r))
+              (Category.assoc (s n).s (S.g.f n)
+                (S.X₃.d n (n + 1))).symm
+      have hunit := congrArg
+        (fun z => ((((z ≫ S.X₃.d n (n + 1)) ≫ (s (n + 1)).s) ≫
+          S.X₂.d (n + 1) (n + 1 + 1)) ≫ (s (n + 1 + 1)).r)) hsg'
+      have hid :
+          ((((𝟙 (S.X₃.X n) ≫ S.X₃.d n (n + 1)) ≫
+              (s (n + 1)).s) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
+            (s (n + 1 + 1)).r) =
+            (((S.X₃.d n (n + 1) ≫ (s (n + 1)).s) ≫
+              S.X₂.d (n + 1) (n + 1 + 1)) ≫ (s (n + 1 + 1)).r) := by
+        simp only [Category.id_comp]
+      exact hcomm.trans (hunit.trans hid)
+    try erw [← Category.assoc]
+    try erw [← Category.assoc]
+    try erw [← Category.assoc]
+    try erw [← Category.assoc]
+    erw [hmid]
+    have hzero :
+        ((s n).s ≫ S.X₂.d n (n + 1)) ≫
+            S.X₂.d (n + 1) (n + 1 + 1) = 0 := by
+      calc
+        ((s n).s ≫ S.X₂.d n (n + 1)) ≫
+              S.X₂.d (n + 1) (n + 1 + 1) =
+            (s n).s ≫
+              (S.X₂.d n (n + 1) ≫ S.X₂.d (n + 1) (n + 1 + 1)) :=
+          Category.assoc _ _ _
+        _ = (s n).s ≫ 0 := by
+          exact congrArg (fun z => (s n).s ≫ z)
+            (S.X₂.d_comp_d n (n + 1) (n + 1 + 1))
+        _ = 0 := comp_zero
+    erw [← Category.assoc
+      (S.X₃.d n (n + 1) ≫ (s (n + 1)).s)
+      (S.X₂.d (n + 1) (n + 1 + 1)) (s (n + 1 + 1)).r]
+    erw [hzero]
+    erw [zero_comp]
+    exact sub_add_cancel _ _
   · intro n
     rfl
 
@@ -1662,7 +1785,43 @@ theorem termwiseSplitting_projection_eq
     (s' n).r = (s n).r +
       (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
         (-(termwiseSplittingDifference s s' n)) := by
-  sorry
+  have hdecomp :
+      (s n).r =
+        (s' n).r +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s ≫ (s n).r := by
+    calc
+      (s n).r = 𝟙 _ ≫ (s n).r := by simp
+      _ = ((s' n).r ≫
+            (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s) ≫ (s n).r := by
+        rw [← (s' n).id]
+      _ = (s' n).r ≫
+            ((S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f ≫
+              (s n).r) +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s ≫ (s n).r := by
+        simp only [Preadditive.add_comp, Category.assoc]
+      _ = (s' n).r +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s ≫ (s n).r := by
+        rw [(s n).f_r]
+        simp
+  dsimp [termwiseSplittingDifference]
+  calc
+    (s' n).r =
+        ((s' n).r +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s ≫ (s n).r) -
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (s' n).s ≫ (s n).r := by abel
+    _ = (s n).r +
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+            (-( (s' n).s ≫ (s n).r)) := by
+      rw [← hdecomp]
+      simp only [Preadditive.comp_neg]
+      abel
 
 theorem termwiseSplitting_difference_unique
     {S : ShortComplex (CochainComplex C ℤ)}
@@ -1672,7 +1831,21 @@ theorem termwiseSplitting_difference_unique
     (hh : (s' n).s = (s n).s + h ≫
       (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f) :
     h = termwiseSplittingDifference s s' n := by
-  sorry
+  let _ : Mono (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f :=
+    (s n).mono_f
+  apply (cancel_mono (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f).1
+  calc
+    h ≫ (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f =
+        ((s n).s + h ≫
+          (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f) -
+          (s n).s := by abel
+    _ = (s' n).s - (s n).s := by rw [← hh]
+    _ = ((s n).s + termwiseSplittingDifference s s' n ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f) - (s n).s := by
+      exact congrArg (fun z => z - (s n).s)
+        (termwiseSplitting_section_eq s s' n)
+    _ = termwiseSplittingDifference s s' n ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f := by abel
 
 end CochainComplex
 

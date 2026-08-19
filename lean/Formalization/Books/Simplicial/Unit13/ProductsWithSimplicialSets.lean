@@ -740,7 +740,14 @@ theorem exists_constantObjectProductWithSimplex_truncated_hom_equiv
         (constantObjectProductWithSimplex X k) ⟶ W) ≃
       (X ⟶ W.obj (op (⟨SimplexCategory.mk k, hkn⟩ :
         SimplexCategory.Truncated n)))) := by
-  sorry
+  let h : HasDegreewiseCoproducts Δ[k]
+      ((SimplicialObject.const C).obj X) :=
+    degreewiseCoproductInstance Δ[k]
+      ((SimplicialObject.const C).obj X)
+      (standardSimplex_finite_nonempty k)
+  simpa [constantObjectProductWithSimplex, simplicialSetProduct,
+    constantObjectProductWithSimplexOf] using
+    (exists_constantObjectProductWithSimplexOf_truncated_hom_equiv X k n hkn h W)
 
 noncomputable def constantObjectProductWithSimplex_truncated_hom_equiv
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -764,11 +771,27 @@ noncomputable def constant_simplicial_object_hom_equiv
         f ≫ V.map (SimplexCategory.const Y.unop
           (SimplexCategory.mk 0) 0).op
       naturality := by
-        sorry }
+        intro Y Z g
+        dsimp
+        simp only [Category.id_comp, Category.assoc]
+        rw [← V.map_comp]
+        have hq :
+            (SimplexCategory.const Z.unop (SimplexCategory.mk 0) 0).op =
+              (SimplexCategory.const Y.unop (SimplexCategory.mk 0) 0).op ≫ g := by
+          apply Quiver.Hom.unop_inj
+          ext i
+          simp
+        rw [hq] }
   left_inv := by
-    sorry
+    intro γ
+    apply NatTrans.ext
+    funext Y
+    simpa using
+      (γ.naturality (SimplexCategory.const Y.unop
+        (SimplexCategory.mk 0) 0).op).symm
   right_inv := by
-    sorry
+    intro f
+    simp
 
 theorem exists_constant_simplicial_object_hom_equiv
     {C : Type u} [Category.{v} C]

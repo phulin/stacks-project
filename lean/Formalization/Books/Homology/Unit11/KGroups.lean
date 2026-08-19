@@ -976,7 +976,7 @@ private theorem shortComplex_biproduct_homology_isZero
     rw [Functor.isZero_iff]
     intro j
     exact (ShortComplex.exact_iff_isZero_homology (F j.as)).1 (hF j.as)
-  exact sorry
+  exact hsum
 
 /-- The source's characterization of the kernel of the inclusion map: its
 elements are differences of the two homology objects of a periodic complex

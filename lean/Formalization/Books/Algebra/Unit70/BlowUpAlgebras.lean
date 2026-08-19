@@ -7,6 +7,7 @@ import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.MvPolynomial.Basic
+import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.ReesAlgebra
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 
@@ -641,7 +642,27 @@ theorem polynomial_power_monomial_presentation
         (polynomialVariableIdeal R n) ^ e ∧
       LinearMap.ker (polynomialPowerMonomialMap R n e) =
         polynomialPowerRelationSubmodule R n e := by
-  sorry
+  constructor
+  · change LinearMap.range
+      (Finsupp.linearCombination (polynomialRing R n)
+        (fun E : degreeIndex n e => MvPolynomial.monomial E.1 1)) = _
+    rw [Finsupp.range_linearCombination]
+    rw [polynomialVariableIdeal, MvPolynomial.pow_idealOfVars_eq_span]
+    change Submodule.span (polynomialRing R n)
+        (Set.range (fun E : degreeIndex n e => MvPolynomial.monomial E.1 1)) =
+      Submodule.span (polynomialRing R n)
+        ((fun d => MvPolynomial.monomial d 1) ''
+          (Finsupp.degree ⁻¹' ({e} : Set ℕ)))
+    congr 1
+    ext p
+    constructor
+    · rintro ⟨E, rfl⟩
+      refine ⟨E.1, ?_, rfl⟩
+      simpa [multiIndexDegree, Finsupp.degree_apply] using E.2
+    · rintro ⟨d, hd, rfl⟩
+      refine ⟨⟨d, ?_⟩, rfl⟩
+      simpa [multiIndexDegree, Finsupp.degree_apply] using hd
+  · sorry
 
 /-! ## Polynomial affine chart and the general quotient presentation -/
 
@@ -716,7 +737,228 @@ structure AffineBlowupQuotientPresentation
 theorem affineBlowup_quotient_presentation
     {R : Type u} [CommRing R] (n : ℕ) (a : Fin (n + 1) → R) :
     Nonempty (AffineBlowupQuotientPresentation n a) := by
-  sorry
+  let I : Ideal R := finiteGeneratorIdeal n a
+  let J : Ideal (MvPolynomial (Fin n) R) := finiteGeneratorRelationIdeal n a
+  let q : MvPolynomial (Fin n) R →ₐ[R]
+      affineBlowup I (a 0) :=
+    MvPolynomial.aeval (fun i => affineBlowupGenerator I (a 0)
+      ⟨a i.succ, Ideal.subset_span ⟨i.succ, rfl⟩⟩)
+  have hrel : ∀ i : Fin n, q
+      (MvPolynomial.C (a 0) * MvPolynomial.X i - MvPolynomial.C (a i.succ)) = 0 := by
+    intro i
+    simp only [q, map_sub, map_mul, MvPolynomial.aeval_C, MvPolynomial.aeval_X]
+    change algebraMap R (affineBlowup I (a 0)) (a 0) *
+        affineBlowupGenerator I (a 0)
+          ⟨a i.succ, Ideal.subset_span ⟨i.succ, rfl⟩⟩ -
+        algebraMap R (affineBlowup I (a 0)) (a i.succ) = 0
+    apply Subtype.ext
+    change algebraMap R (Localization.Away (a 0)) (a 0) *
+        (algebraMap R (Localization.Away (a 0)) (a i.succ) *
+          IsLocalization.Away.invSelf (a 0)) -
+        algebraMap R (Localization.Away (a 0)) (a i.succ) = 0
+    calc
+      _ = algebraMap R (Localization.Away (a 0)) (a i.succ) *
+          (algebraMap R (Localization.Away (a 0)) (a 0) *
+            IsLocalization.Away.invSelf (a 0)) -
+          algebraMap R (Localization.Away (a 0)) (a i.succ) := by ring
+      _ = 0 := by rw [IsLocalization.Away.mul_invSelf, mul_one, sub_self]
+  have hJ : ∀ x : MvPolynomial (Fin n) R, x ∈ J → q x = 0 := by
+    intro x hx
+    change x ∈ finiteGeneratorRelationIdeal n a at hx
+    rcases (Ideal.mem_span_range_iff_exists_fun.mp hx) with ⟨c, hc⟩
+    rw [← hc]
+    simp only [map_sum, map_mul, hrel, mul_zero, Finset.sum_const_zero]
+  let qbar : (MvPolynomial (Fin n) R ⧸ J) →ₐ[R]
+      affineBlowup I (a 0) := Ideal.Quotient.liftₐ J q hJ
+  have hqbar (p : MvPolynomial (Fin n) R) :
+      qbar (Ideal.Quotient.mk J p) = q p := by
+    change ((Ideal.Quotient.liftₐ J q hJ).comp
+      (Ideal.Quotient.mkₐ R J)) p = q p
+    rw [Ideal.Quotient.liftₐ_comp]
+  have hqbar_C (r : R) :
+      qbar (Ideal.Quotient.mk J (MvPolynomial.C r)) = q (MvPolynomial.C r) :=
+    hqbar _
+  refine ⟨{ hom := qbar, surjective := ?_, kernel_eq_power_torsion := ?_ }⟩
+  · intro z
+    rcases z with ⟨z, hz⟩
+    induction hz using Algebra.adjoin_induction with
+    | mem z hz =>
+        rcases hz with ⟨x, hx, rfl⟩
+        rcases (Ideal.mem_span_range_iff_exists_fun.mp hx) with ⟨c, hc⟩
+        refine ⟨Ideal.Quotient.mk J
+          (MvPolynomial.C (c 0) +
+            ∑ i, MvPolynomial.C (c i.succ) * MvPolynomial.X i), ?_⟩
+        apply Subtype.ext
+        rw [map_add (Ideal.Quotient.mk J), map_add qbar, map_sum]
+        rw [hqbar_C (c 0)]
+        rw [map_sum qbar]
+        simp_rw [hqbar]
+        simp only [map_mul]
+        simp [q, affineBlowupGenerator]
+        rw [← hc]
+        simp [Fin.sum_univ_succ]
+        have ha0 :
+            algebraMap R (Localization.Away (a 0)) (a 0) *
+                IsLocalization.Away.invSelf (a 0) = 1 :=
+          IsLocalization.Away.mul_invSelf (a 0)
+        have hconst :
+            algebraMap R (Localization.Away (a 0)) (c 0) *
+                algebraMap R (Localization.Away (a 0)) (a 0) *
+                IsLocalization.Away.invSelf (a 0) =
+              algebraMap R (Localization.Away (a 0)) (c 0) := by
+          rw [mul_assoc, ha0, mul_one]
+        rw [add_mul, hconst]
+        simp_rw [← mul_assoc]
+        rw [← Finset.sum_mul]
+    | algebraMap r =>
+        refine ⟨Ideal.Quotient.mk J (MvPolynomial.C r), ?_⟩
+        rw [hqbar]
+        simp [q]
+        apply Subtype.ext
+        rfl
+    | add x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u + v, ?_⟩
+        rw [map_add, hu, hv]
+        rfl
+    | mul x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u * v, ?_⟩
+        rw [map_mul, hu, hv]
+        rfl
+  · ext x
+    rw [RingHom.mem_ker, mem_powerTorsionIdeal_iff]
+    constructor
+    · intro hx
+      have hxi (i : Fin n) :
+          (algebraMap R
+            (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a)) (a 0) *
+              Ideal.Quotient.mk J (MvPolynomial.X i) =
+            algebraMap R
+              (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a i.succ) := by
+        change (Ideal.Quotient.mk J (MvPolynomial.C (a 0))) *
+            Ideal.Quotient.mk J (MvPolynomial.X i) =
+          Ideal.Quotient.mk J (MvPolynomial.C (a i.succ))
+        rw [← map_mul]
+        rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+        exact Ideal.subset_span ⟨i, rfl⟩
+      have hnormal (p : MvPolynomial (Fin n) R) :
+          ∃ k : ℕ, ∃ r : R,
+            (algebraMap R
+              (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                Ideal.Quotient.mk J p =
+              algebraMap R
+                (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) r := by
+        induction p using MvPolynomial.induction_on with
+        | C r =>
+            refine ⟨0, r, ?_⟩
+            simp only [pow_zero, one_mul]
+            change (Ideal.Quotient.mkₐ R J)
+                (algebraMap R (MvPolynomial (Fin n) R) r) = _
+            exact (Ideal.Quotient.mkₐ R J).commutes r
+        | add p q hp hq =>
+            rcases hp with ⟨k, c, hc⟩
+            rcases hq with ⟨l, d, hd⟩
+            refine ⟨k + l, (a 0) ^ l * c + (a 0) ^ k * d, ?_⟩
+            calc
+              _ = ((algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ l *
+                    ((algebraMap R
+                      (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                      Ideal.Quotient.mk J p)) +
+                  ((algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                    ((algebraMap R
+                      (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ l *
+                      Ideal.Quotient.mk J q)) := by
+                    rw [map_add, pow_add]
+                    ring
+              _ = (algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ l *
+                    algebraMap R
+                      (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) c +
+                  (algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                    algebraMap R
+                      (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) d := by
+                    rw [hc, hd]
+              _ = algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a)
+                    ((a 0) ^ l * c + (a 0) ^ k * d) := by
+                    simp only [← map_pow, ← map_mul, map_add]
+        | mul_X p i hp =>
+            rcases hp with ⟨k, c, hc⟩
+            refine ⟨k + 1, c * a i.succ, ?_⟩
+            calc
+              _ = ((algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                    Ideal.Quotient.mk J p) *
+                  ((algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) *
+                    Ideal.Quotient.mk J (MvPolynomial.X i)) := by
+                      rw [pow_succ, map_mul]
+                      ring
+              _ = algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) c *
+                  algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a i.succ) := by
+                      rw [hc, hxi]
+              _ = algebraMap R
+                    (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a)
+                    (c * a i.succ) := by rw [← map_mul]
+      have hcomm (r : R) :
+          qbar (algebraMap R
+            (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) r) =
+            algebraMap R (affineBlowup I (a 0)) r := by
+        simp [J, qbar.commutes]
+      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+      change qbar (Ideal.Quotient.mk J p) = 0 at hx
+      rcases hnormal p with ⟨k, c, hc⟩
+      have hc' := congrArg qbar hc
+      simp only [map_mul, map_pow] at hc'
+      rw [hcomm, hx, hcomm] at hc'
+      have hcA : algebraMap R (affineBlowup I (a 0)) c = 0 := by
+        simpa using hc'.symm
+      have hcL : algebraMap R (Localization.Away (a 0)) c = 0 := by
+        simpa [Subalgebra.coe_algebraMap] using
+          congrArg (fun z : affineBlowup I (a 0) =>
+            (z : Localization.Away (a 0))) hcA
+      have hcT : c ∈ powerTorsionIdeal R (a 0) := by
+        rw [powerTorsionIdeal, RingHom.mem_ker]
+        exact hcL
+      rcases (mem_powerTorsionIdeal_iff (a 0) c).mp hcT with ⟨l, hl⟩
+      refine ⟨k + l, ?_⟩
+      calc
+        _ = (algebraMap R
+              (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ l *
+              ((algebraMap R
+                (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ k *
+                Ideal.Quotient.mk J p) := by rw [pow_add]; ring
+        _ = (algebraMap R
+              (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) ^ l *
+              algebraMap R
+                (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) c := by
+              rw [hc]
+        _ = algebraMap R
+              (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a)
+              ((a 0) ^ l * c) := by simp only [← map_pow, ← map_mul]
+        _ = 0 := by rw [hl]; simp
+    · rintro ⟨k, hk⟩
+      have hreg : IsRegular
+          (algebraMap R (affineBlowup I (a 0)) (a 0)) :=
+        affineBlowup_isRegular I (Ideal.subset_span ⟨0, rfl⟩)
+      apply (hreg.pow k).left
+      have hmap := congrArg qbar hk
+      simp only [map_mul, map_pow, map_zero] at hmap
+      have hcomm :
+          qbar (algebraMap R
+            (MvPolynomial (Fin n) R ⧸ finiteGeneratorRelationIdeal n a) (a 0)) =
+            algebraMap R (affineBlowup I (a 0)) (a 0) := by
+        simp [J, qbar.commutes]
+      rw [hcomm] at hmap
+      simpa using hmap
 
 /-! ## Principal comparisons and permanence properties -/
 

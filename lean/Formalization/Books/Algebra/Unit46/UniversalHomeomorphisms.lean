@@ -3,6 +3,7 @@ import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit36.FiniteIntegralRingExtensions
 import Mathlib.Algebra.Algebra.ZMod
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Data.Nat.Choose.Factorization
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
 import Mathlib.RingTheory.Adjoin.Basic
@@ -350,7 +351,156 @@ theorem exists_helpWithPowers_exponent
         (p ^ a : MvPolynomial (Fin 2) ℤ) *
             (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2)) ∈
           helpWithPowersSubalgebra p n m := by
-  sorry
+  refine ⟨n * p ^ n + m * p ^ m + n + m, ?_, ?_⟩
+  · let a : ℕ := n * p ^ n + m * p ^ m + n + m
+    let A := helpWithPowersSubalgebra p n m
+    change (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2)) ^ (p ^ a) ∈ A
+    rw [(Commute.all (MvPolynomial.X (0 : Fin 2)) (MvPolynomial.X (1 : Fin 2))).add_pow]
+    apply A.sum_mem
+    intro i hi
+    have hiN : i ≤ p ^ a := by
+      exact Nat.le_of_lt_succ (Finset.mem_range.1 hi)
+    let j : ℕ := p ^ a - i
+    let r : ℕ := i % p ^ n
+    let s : ℕ := j % p ^ m
+    have hp_pos : 0 < p := hp.pos
+    have hj : j + i = p ^ a := by
+      dsimp [j]
+      omega
+    have hrlt : r < p ^ n := by
+      exact Nat.mod_lt _ (by positivity)
+    have hslt : s < p ^ m := by
+      exact Nat.mod_lt _ (by positivity)
+    have hidecomp : i = p ^ n * (i / p ^ n) + r := by
+      have hmod := Nat.mod_add_div i (p ^ n)
+      dsimp [r]
+      omega
+    have hjdecomp : j = p ^ m * (j / p ^ m) + s := by
+      have hmod := Nat.mod_add_div j (p ^ m)
+      dsimp [s]
+      omega
+    have hchoose : p ^ (n * r + m * s) ∣ (p ^ a).choose i := by
+      by_cases hri : r = 0
+      · by_cases hsj : s = 0
+        · simp [hri, hsj]
+        · have hjpos : 0 < j := by
+            by_contra hj0
+            have hjz : j = 0 := Nat.eq_zero_of_not_pos hj0
+            apply hsj
+            simp [s, hjz]
+          have hfacj : j.factorization p < m := by
+            by_contra hfac
+            have hdvd : p ^ m ∣ j :=
+              (hp.pow_dvd_iff_le_factorization (Nat.ne_of_gt hjpos)).2
+                (Nat.le_of_not_gt hfac)
+            exact hsj (by simpa [s] using Nat.mod_eq_zero_of_dvd hdvd)
+          have hchoosefac :
+              ((p ^ a).choose j).factorization p = a - j.factorization p :=
+            Nat.factorization_choose_prime_pow hp (by omega) (Nat.ne_of_gt hjpos)
+          have hchooseeq : (p ^ a).choose i = (p ^ a).choose j := by
+            dsimp [j]
+            exact (Nat.choose_symm hiN).symm
+          apply (hp.pow_dvd_iff_le_factorization (Nat.choose_ne_zero hiN)).2
+          rw [hchooseeq, hchoosefac]
+          have hsle : s ≤ p ^ m - 1 := by omega
+          have hms : m * s ≤ m * (p ^ m - 1) := Nat.mul_le_mul_left _ hsle
+          have hmuln : n * (p ^ n - 1) = n * p ^ n - n := by
+            rw [Nat.mul_sub_left_distrib]
+            simp
+          have hmulm : m * (p ^ m - 1) = m * p ^ m - m := by
+            rw [Nat.mul_sub_left_distrib]
+            simp
+          dsimp [a]
+          simp [hri] at *
+          omega
+      · have hipos : 0 < i := by
+          by_contra hi0
+          have hiz : i = 0 := Nat.eq_zero_of_not_pos hi0
+          apply hri
+          simp [r, hiz]
+        have hfaci : i.factorization p < n := by
+          by_contra hfac
+          have hdvd : p ^ n ∣ i :=
+            (hp.pow_dvd_iff_le_factorization (Nat.ne_of_gt hipos)).2
+              (Nat.le_of_not_gt hfac)
+          exact hri (by simpa [r] using Nat.mod_eq_zero_of_dvd hdvd)
+        have hchoosefac :
+            ((p ^ a).choose i).factorization p = a - i.factorization p :=
+          Nat.factorization_choose_prime_pow hp hiN (Nat.ne_of_gt hipos)
+        apply (hp.pow_dvd_iff_le_factorization (Nat.choose_ne_zero hiN)).2
+        rw [hchoosefac]
+        have hrle : r ≤ p ^ n - 1 := by omega
+        have hsle : s ≤ p ^ m - 1 := by omega
+        have hnr : n * r ≤ n * (p ^ n - 1) := Nat.mul_le_mul_left _ hrle
+        have hms : m * s ≤ m * (p ^ m - 1) := Nat.mul_le_mul_left _ hsle
+        have hmuln : n * (p ^ n - 1) = n * p ^ n - n := by
+          rw [Nat.mul_sub_left_distrib]
+          simp
+        have hmulm : m * (p ^ m - 1) = m * p ^ m - m := by
+          rw [Nat.mul_sub_left_distrib]
+          simp
+        dsimp [a]
+        omega
+    have hxp : MvPolynomial.X (0 : Fin 2) ^ (p ^ n) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hyp : MvPolynomial.X (1 : Fin 2) ^ (p ^ m) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hxr : (p ^ n : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hyr : (p ^ m : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (1 : Fin 2) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hxterm : (p ^ (n * r) : MvPolynomial (Fin 2) ℤ) *
+        MvPolynomial.X (0 : Fin 2) ^ i ∈ A := by
+      have hpow : (MvPolynomial.X (0 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^ i =
+          (MvPolynomial.X (0 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^ r *
+            (MvPolynomial.X (0 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^
+              (p ^ n * (i / p ^ n)) := by
+        calc
+          _ = (MvPolynomial.X (0 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^
+              (p ^ n * (i / p ^ n) + r) := congrArg _ hidecomp
+          _ = _ := by rw [pow_add]; ac_rfl
+      have hmem := A.mul_mem (A.pow_mem hxr r) (A.pow_mem hxp (i / p ^ n))
+      convert hmem using 1
+      rw [hpow]
+      simp only [Nat.cast_pow, pow_mul]
+      ring
+    have hyterm : (p ^ (m * s) : MvPolynomial (Fin 2) ℤ) *
+        MvPolynomial.X (1 : Fin 2) ^ j ∈ A := by
+      have hpow : (MvPolynomial.X (1 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^ j =
+          (MvPolynomial.X (1 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^ s *
+            (MvPolynomial.X (1 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^
+              (p ^ m * (j / p ^ m)) := by
+        calc
+          _ = (MvPolynomial.X (1 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^
+              (p ^ m * (j / p ^ m) + s) := congrArg _ hjdecomp
+          _ = _ := by rw [pow_add]; ac_rfl
+      have hmem := A.mul_mem (A.pow_mem hyr s) (A.pow_mem hyp (j / p ^ m))
+      convert hmem using 1
+      rw [hpow]
+      simp only [Nat.cast_pow, pow_mul]
+      ring
+    obtain ⟨d, hd⟩ := hchoose
+    have hterm := A.mul_mem (A.algebraMap_mem d) (A.mul_mem hxterm hyterm)
+    simpa [hd, Nat.cast_mul, Nat.cast_pow, pow_add, mul_assoc, mul_comm, mul_left_comm] using hterm
+  · let A := helpWithPowersSubalgebra p n m
+    have hx : (p ^ n : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hy : (p ^ m : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (1 : Fin 2) ∈ A :=
+      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+    have hpn : (p ^ (n * p ^ n + m * p ^ m + n + m) :
+        MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A := by
+      have hna : n ≤ n * p ^ n + m * p ^ m + n + m := by omega
+      rw [← Nat.add_sub_of_le hna, pow_add]
+      simpa [mul_assoc, mul_comm, mul_left_comm] using
+        A.mul_mem hx (A.algebraMap_mem (p ^ (n * p ^ n + m * p ^ m + n + m - n)))
+    have hpm : (p ^ (n * p ^ n + m * p ^ m + n + m) :
+        MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (1 : Fin 2) ∈ A := by
+      have hma : m ≤ n * p ^ n + m * p ^ m + n + m := by omega
+      rw [← Nat.add_sub_of_le hma, pow_add]
+      simpa [mul_assoc, mul_comm, mul_left_comm] using
+        A.mul_mem hy (A.algebraMap_mem (p ^ (n * p ^ n + m * p ^ m + n + m - m)))
+    rw [mul_add]
+    exact A.add_mem hpn hpm
 
 /-- The corrected field-extension classification for the `p`-power
     generation condition. -/
@@ -435,7 +585,335 @@ theorem pPowerGenerated_locallyNilpotentKernel
       ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
         pPowerGenerated (baseChangeRingMap f g) p ∧
           locallyNilpotentKernel (baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let T : Set S := {x : S | ∃ n : ℕ, 0 < n ∧
+    x ^ (p ^ n) ∈ f.range ∧ (p ^ n : S) * x ∈ f.range}
+  have hgen' : Algebra.adjoin R T = ⊤ := by
+    simpa [T, pPowerGenerated, generatedBy] using hgen
+  let B : Subalgebra R S :=
+    { carrier := T
+      zero_mem' := by
+        refine ⟨1, by simp, ?_, ?_⟩
+        · exact ⟨0, by simp [hp.ne_zero]⟩
+        · exact ⟨0, by simp [hp.ne_zero]⟩
+      one_mem' := by
+        refine ⟨1, by simp, ?_, ?_⟩
+        · exact ⟨1, by simp⟩
+        · exact ⟨p, by simp⟩
+      add_mem' := by
+        rintro x y ⟨n, hn, hxn, hnx⟩ ⟨m, hm, hym, hmy⟩
+        obtain ⟨a, ha1, ha2⟩ := exists_helpWithPowers_exponent p n m hp hn hm
+        let C : Subalgebra ℤ S :=
+          { carrier := f.range
+            zero_mem' := ⟨0, by simp⟩
+            one_mem' := ⟨1, by simp⟩
+            add_mem' := by
+              rintro _ _ ⟨u, rfl⟩ ⟨v, rfl⟩
+              exact ⟨u + v, by simp⟩
+            mul_mem' := by
+              rintro _ _ ⟨u, rfl⟩ ⟨v, rfl⟩
+              exact ⟨u * v, by simp⟩
+            algebraMap_mem' := by
+              intro z
+              exact ⟨z, by simp⟩ }
+        let e : MvPolynomial (Fin 2) ℤ →ₐ[ℤ] S :=
+          { MvPolynomial.eval₂Hom (Int.castRingHom S)
+              (fun i : Fin 2 => if i = 0 then x else y) with
+            commutes' := by intro z; simp }
+        have he : ∀ z ∈ helpWithPowersSubalgebra p n m, e z ∈ C := by
+          intro z hz
+          have hle : helpWithPowersSubalgebra p n m ≤ C.comap e :=
+            Algebra.adjoin_le (by
+              rintro z (rfl | rfl | rfl | rfl)
+              · simpa [e, C] using hxn
+              · simpa [e, C] using hnx
+              · simpa [e, C] using hym
+              · simpa [e, C] using hmy)
+          exact hle hz
+        refine ⟨a + 1, by omega, ?_, ?_⟩
+        · have hz := C.pow_mem (he _ ha1) p
+          have hz' : ((x + y) ^ (p ^ a)) ^ p ∈ f.range := by
+            simpa [e, C] using hz
+          change (x + y) ^ (p ^ (a + 1)) ∈ f.range
+          simpa [pow_succ, pow_mul] using hz'
+        · have hz := C.mul_mem (C.algebraMap_mem p) (he _ ha2)
+          simpa [e, C, pow_succ, mul_comm, mul_left_comm, mul_assoc] using hz
+      mul_mem' := by
+        rintro x y ⟨n, hn, hxn, hnx⟩ ⟨m, hm, hym, hmy⟩
+        refine ⟨n + m, by omega, ?_, ?_⟩
+        · obtain ⟨u, hu⟩ := hxn
+          obtain ⟨v, hv⟩ := hym
+          refine ⟨u ^ (p ^ m) * v ^ (p ^ n), ?_⟩
+          simp only [map_mul, map_pow, hu, hv]
+          rw [← pow_mul, ← pow_mul, pow_add, mul_pow]
+          simp [Nat.mul_comm (p ^ m) (p ^ n)]
+        · obtain ⟨u, hu⟩ := hnx
+          obtain ⟨v, hv⟩ := hmy
+          refine ⟨u * v, ?_⟩
+          rw [map_mul, hu, hv]
+          simp [pow_add, mul_comm, mul_left_comm, mul_assoc]
+      algebraMap_mem' := by
+        intro r
+        refine ⟨1, by simp, ?_, ?_⟩
+        · exact ⟨r ^ (p ^ 1), by simp [RingHom.algebraMap_toAlgebra]⟩
+        · exact ⟨(p ^ 1 : R) * r, by simp [RingHom.algebraMap_toAlgebra]⟩ }
+  have hBT : B = ⊤ := by
+    apply top_unique
+    rw [← hgen']
+    exact Algebra.adjoin_le (by intro x hx; exact hx)
+  have hpower : ∀ x : S, ∃ n : ℕ, 0 < n ∧ x ^ (p ^ n) ∈ f.range ∧
+      (p ^ n : S) * x ∈ f.range := by
+    intro x
+    have hx : x ∈ B := by rw [hBT]; trivial
+    exact hx
+  have hpower' : powerSurjective f := by
+    intro x
+    obtain ⟨n, hn, ⟨r, hr⟩, _⟩ := hpower x
+    exact ⟨p ^ n, pow_pos hp.pos n, r, hr⟩
+  have hmain := powerSurjective_locallyNilpotentKernel f hpower' hker
+  refine ⟨hmain.1, ?_, ?_⟩
+  · intro q
+    let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
+    let L := q.asIdeal.ResidueField
+    letI : Algebra K L := (residueFieldMap f q).toAlgebra
+    have hgenq : pPowerFieldGenerated (k := K) (k' := L) p := by
+      change IntermediateField.adjoin K
+        {z : L | ∃ n : ℕ, 0 < n ∧ z ^ (p ^ n) ∈
+          (algebraMap K L).range ∧ (p ^ n : L) * z ∈ (algebraMap K L).range} = ⊤
+      apply top_unique
+      intro z hz
+      obtain ⟨aa, bb, hbb, hzdiv⟩ := IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
+      obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective aa
+      obtain ⟨w, hw⟩ := Ideal.Quotient.mk_surjective bb
+      obtain ⟨n, hn, ⟨r, hr⟩, ⟨r₁, hr₁⟩⟩ := hpower y
+      obtain ⟨m, hm, ⟨s, hs⟩, ⟨s₁, hs₁⟩⟩ := hpower w
+      have hY : residueFieldMap f q (algebraMap R K r) =
+          algebraMap S L y ^ (p ^ n) := by
+        calc
+          residueFieldMap f q (algebraMap R K r) =
+              algebraMap S L (f r) := by
+                simpa [K, L, residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+          _ = algebraMap S L (y ^ (p ^ n)) := by rw [hr]
+          _ = algebraMap S L y ^ (p ^ n) := by rw [map_pow]
+      have hW : residueFieldMap f q (algebraMap R K s) =
+          algebraMap S L w ^ (p ^ m) := by
+        calc
+          residueFieldMap f q (algebraMap R K s) =
+              algebraMap S L (f s) := by
+                simpa [K, L, residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl s)
+          _ = algebraMap S L (w ^ (p ^ m)) := by rw [hs]
+          _ = algebraMap S L w ^ (p ^ m) := by rw [map_pow]
+      have hYr : residueFieldMap f q (algebraMap R K r₁) =
+          (p ^ n : L) * algebraMap S L y := by
+        calc
+          residueFieldMap f q (algebraMap R K r₁) =
+              algebraMap S L (f r₁) := by
+                simpa [K, L, residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r₁)
+          _ = algebraMap S L ((p ^ n : S) * y) := by rw [hr₁]
+          _ = (p ^ n : L) * algebraMap S L y := by simp [map_mul, map_natCast]
+      have hWr : residueFieldMap f q (algebraMap R K s₁) =
+          (p ^ m : L) * algebraMap S L w := by
+        calc
+          residueFieldMap f q (algebraMap R K s₁) =
+              algebraMap S L (f s₁) := by
+                simpa [K, L, residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl s₁)
+          _ = algebraMap S L ((p ^ m : S) * w) := by rw [hs₁]
+          _ = (p ^ m : L) * algebraMap S L w := by simp [map_mul, map_natCast]
+      have hz' : algebraMap S L y / algebraMap S L w = z := by
+        simpa [K, L, Ideal.algebraMap_quotient_residueField_mk, ← hy, ← hw] using hzdiv
+      have hw0 : algebraMap S L w ≠ 0 := by
+        have hq0 : Ideal.Quotient.mk q.asIdeal w ≠ 0 := by
+          intro hzero
+          have hbb0 : bb ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hbb
+          apply hbb0
+          rw [← hw]
+          exact hzero
+        intro hzero
+        apply hq0
+        apply (Ideal.injective_algebraMap_quotient_residueField)
+        simpa only [Ideal.algebraMap_quotient_residueField_mk, map_zero] using hzero
+      refine IntermediateField.subset_adjoin K _ ⟨n + m, by omega, ?_, ?_⟩
+      · refine ⟨(algebraMap R K r) ^ (p ^ m) /
+          (algebraMap R K s) ^ (p ^ n), ?_⟩
+        calc
+          residueFieldMap f q
+              ((algebraMap R K r) ^ (p ^ m) /
+                (algebraMap R K s) ^ (p ^ n)) =
+              (algebraMap S L y ^ (p ^ n)) ^ (p ^ m) /
+                (algebraMap S L w ^ (p ^ m)) ^ (p ^ n) := by
+                  rw [map_div₀, map_pow, map_pow, hY, hW]
+          _ = (algebraMap S L y / algebraMap S L w) ^
+                (p ^ n * p ^ m) := by
+                  rw [← pow_mul, ← pow_mul, div_pow]
+                  rw [Nat.mul_comm (p ^ m) (p ^ n)]
+          _ = z ^ (p ^ (n + m)) := by rw [hz', pow_add]
+      · by_cases hpL : (p : L) = 0
+        · refine ⟨0, ?_⟩
+          have hnm : 0 < n + m := by omega
+          have hpow : (p : L) ^ (n + m) = 0 := by
+            rw [hpL, zero_pow hnm.ne']
+          rw [map_zero, hpow, zero_mul]
+        · refine ⟨(algebraMap R K r₁) * (p ^ m : K) ^ 2 /
+              algebraMap R K s₁, ?_⟩
+          change residueFieldMap f q
+              ((algebraMap R K r₁) * (p ^ m : K) ^ 2 /
+                algebraMap R K s₁) = (p ^ (n + m) : L) * z
+          rw [map_div₀, map_mul, map_pow, hYr, hWr, map_pow, map_natCast]
+          have hyz : algebraMap S L y = z * algebraMap S L w :=
+            (div_eq_iff hw0).mp hz'
+          field_simp [hpL, hw0]
+          rw [hyz]
+          rw [pow_add]
+          ring
+    exact ⟨hgenq, (pPowerFieldGenerated_iff p hp).mp hgenq⟩
+  · intro R' _ g
+    letI : Algebra R R' := g.toAlgebra
+    let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
+    letI : Algebra R' (S ⊗[R] R') := bc.toAlgebra
+    let T' : Set (S ⊗[R] R') := {x : S ⊗[R] R' | ∃ n : ℕ, 0 < n ∧
+      x ^ (p ^ n) ∈ bc.range ∧ (p ^ n : S ⊗[R] R') * x ∈ bc.range}
+    let D : Subalgebra R' (S ⊗[R] R') :=
+      { carrier := T'
+        zero_mem' := by
+          refine ⟨1, by simp, ?_, ?_⟩
+          · exact ⟨0, by simp [hp.ne_zero]⟩
+          · exact ⟨0, by simp [hp.ne_zero]⟩
+        one_mem' := by
+          refine ⟨1, by simp, ?_, ?_⟩
+          · exact ⟨1, by simp⟩
+          · exact ⟨p, by simp⟩
+        add_mem' := by
+          rintro x y ⟨n, hn, hxn, hnx⟩ ⟨m, hm, hym, hmy⟩
+          obtain ⟨a, ha1, ha2⟩ := exists_helpWithPowers_exponent p n m hp hn hm
+          let C : Subalgebra ℤ (S ⊗[R] R') :=
+            { carrier := bc.range
+              zero_mem' := ⟨0, by simp⟩
+              one_mem' := ⟨1, by simp⟩
+              add_mem' := by
+                rintro _ _ ⟨u, rfl⟩ ⟨v, rfl⟩
+                exact ⟨u + v, by simp⟩
+              mul_mem' := by
+                rintro _ _ ⟨u, rfl⟩ ⟨v, rfl⟩
+                exact ⟨u * v, by simp⟩
+              algebraMap_mem' := by
+                intro z
+                exact ⟨z, by simp⟩ }
+          let e : MvPolynomial (Fin 2) ℤ →ₐ[ℤ] (S ⊗[R] R') :=
+            { MvPolynomial.eval₂Hom (Int.castRingHom (S ⊗[R] R'))
+                (fun i : Fin 2 => if i = 0 then x else y) with
+              commutes' := by intro z; simp }
+          have he : ∀ z ∈ helpWithPowersSubalgebra p n m, e z ∈ C := by
+            intro z hz
+            have hle : helpWithPowersSubalgebra p n m ≤ C.comap e :=
+              Algebra.adjoin_le (by
+                rintro z (rfl | rfl | rfl | rfl)
+                · simpa [e, C] using hxn
+                · simpa [e, C] using hnx
+                · simpa [e, C] using hym
+                · simpa [e, C] using hmy)
+            exact hle hz
+          refine ⟨a + 1, by omega, ?_, ?_⟩
+          · have hz := C.pow_mem (he _ ha1) p
+            have hz' : ((x + y) ^ (p ^ a)) ^ p ∈ bc.range := by
+              simpa [e, C] using hz
+            change (x + y) ^ (p ^ (a + 1)) ∈ bc.range
+            simpa [pow_succ, pow_mul] using hz'
+          · have hz := C.mul_mem (C.algebraMap_mem p) (he _ ha2)
+            simpa [e, C, pow_succ, mul_comm, mul_left_comm, mul_assoc] using hz
+        mul_mem' := by
+          rintro x y ⟨n, hn, hxn, hnx⟩ ⟨m, hm, hym, hmy⟩
+          refine ⟨n + m, by omega, ?_, ?_⟩
+          · obtain ⟨u, hu⟩ := hxn
+            obtain ⟨v, hv⟩ := hym
+            refine ⟨u ^ (p ^ m) * v ^ (p ^ n), ?_⟩
+            simp only [map_mul, map_pow, hu, hv]
+            rw [← pow_mul, ← pow_mul, pow_add, mul_pow]
+            simp [Nat.mul_comm (p ^ m) (p ^ n)]
+          · obtain ⟨u, hu⟩ := hnx
+            obtain ⟨v, hv⟩ := hmy
+            refine ⟨u * v, ?_⟩
+            rw [map_mul, hu, hv]
+            simp [pow_add, mul_comm, mul_left_comm, mul_assoc]
+        algebraMap_mem' := by
+          intro r
+          refine ⟨1, by simp, ?_, ?_⟩
+          · exact ⟨r ^ (p ^ 1), by simp [RingHom.algebraMap_toAlgebra]⟩
+          · exact ⟨(p ^ 1 : R') * r, by simp [RingHom.algebraMap_toAlgebra]⟩ }
+    let a : S →+* S ⊗[R] R' := baseChangeAlgebraMap f g
+    have hcomp : a.comp f = bc.comp g := by
+      change Algebra.TensorProduct.includeLeftRingHom.comp f =
+        Algebra.TensorProduct.includeRight.toRingHom.comp g
+      exact Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+    have hleft : ∀ s : S, a s ∈ D := by
+      intro s
+      have hs : s ∈ Algebra.adjoin R T := by rw [hgen']; trivial
+      refine Algebra.adjoin_induction (p := fun x _ => a x ∈ D) ?_ ?_ ?_ ?_ hs
+      · intro x hx
+        rcases hx with ⟨n, hn, hxn, hnx⟩
+        refine ⟨n, hn, ?_, ?_⟩
+        · obtain ⟨r, hr⟩ := hxn
+          refine ⟨g r, ?_⟩
+          calc
+            bc (g r) = a (f r) := by
+              exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+            _ = a (x ^ (p ^ n)) := by rw [hr]
+            _ = a x ^ (p ^ n) := by rw [map_pow]
+        · obtain ⟨r, hr⟩ := hnx
+          refine ⟨g r, ?_⟩
+          calc
+            bc (g r) = a (f r) := by
+              exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+            _ = a ((p ^ n : S) * x) := by rw [hr]
+            _ = (p ^ n : S ⊗[R] R') * a x := by
+              simp [map_mul, map_natCast]
+      · intro r
+        refine ⟨1, by simp, ?_, ?_⟩
+        · exact ⟨(g r) ^ p, by
+            have hcr : bc (g r) = a (algebraMap R S r) := by
+              exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+            rw [map_pow, hcr]
+            simp⟩
+        · exact ⟨(p : R') * g r, by
+            have hcr : bc (g r) = a (algebraMap R S r) := by
+              exact congrArg (fun h : R →+* S ⊗[R] R' => h r) hcomp.symm
+            rw [map_mul, hcr]
+            simp⟩
+      · intro x y hx hy hxp hyp
+        simpa only [map_add] using D.add_mem hxp hyp
+      · intro x y hx hy hxp hyp
+        simpa only [map_mul] using D.mul_mem hxp hyp
+    have hD : D = ⊤ := by
+      apply top_unique
+      intro z _
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · exact D.zero_mem
+      · intro s r'
+        have hbc : bc r' = (1 : S) ⊗ₜ[R] r' := by
+          simp [bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra]
+        have hmul := D.mul_mem (hleft s) (D.algebraMap_mem r')
+        change a s * bc r' ∈ D at hmul
+        rw [hbc] at hmul
+        have ha : a s = s ⊗ₜ[R] (1 : R') := by
+          simp [a, baseChangeAlgebraMap]
+        rw [ha] at hmul
+        simpa [Algebra.TensorProduct.tmul_mul_tmul] using hmul
+      · intro x y hx hy
+        exact D.add_mem hx hy
+    have hpgen : pPowerGenerated bc p := by
+      change Algebra.adjoin R' T' = ⊤
+      apply top_unique
+      intro z hz
+      have hzD : z ∈ D := by rw [hD]; exact hz
+      exact Algebra.subset_adjoin hzD
+    exact ⟨hpgen, by sorry⟩
 
 /-- Injectivity on spectra and purely inseparable residue fields are stable
     under arbitrary base change. -/

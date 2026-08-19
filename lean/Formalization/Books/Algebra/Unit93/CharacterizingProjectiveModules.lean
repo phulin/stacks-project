@@ -768,7 +768,7 @@ theorem projective_of_universallyInjective_to_mvPowerSeries
     {R : Type u} {M : Type v} [CommRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M]
     (hM : IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M))
-    {n : ℕ} (hn : 0 < n) (f : M →ₗ[R] MvPowerSeries (Fin n) R)
+    {n : ℕ} (f : M →ₗ[R] MvPowerSeries (Fin n) R)
     (hf : universallyInjective f) :
     Module.Projective R M := by
   sorry

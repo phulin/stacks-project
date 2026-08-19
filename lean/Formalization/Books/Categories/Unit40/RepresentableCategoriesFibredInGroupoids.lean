@@ -125,7 +125,42 @@ theorem isRepresentable_invariant_under_fibredEquivalenceOver
     (h : IsFibredEquivalenceOver p q) :
     IsRepresentableCategoryFibredInGroupoids p ↔
       IsRepresentableCategoryFibredInGroupoids q := by
-  sorry
+  have hsymm : IsFibredEquivalenceOver q p := by
+    rcases h with ⟨F, G, hF, hG, hFcart, hGcart, hFG, hGF⟩
+    exact ⟨G, F, hG, hF, hGcart, hFcart, hGF, hFG⟩
+  constructor
+  · rintro ⟨_, ⟨P⟩⟩
+    have hP : IsFibredEquivalenceOver p
+        (Over.forget P.representingObject) :=
+      (isFibredEquivalenceOver_iff_exists_fibredMorphism
+        p (Over.forget P.representingObject)).mpr
+        ⟨P.equivalence, P.isEquivalence⟩
+    have hqSlice : IsFibredEquivalenceOver q
+        (Over.forget P.representingObject) :=
+      isFibredEquivalenceOver_trans hsymm hP
+    obtain ⟨F, hF⟩ :=
+      (isFibredEquivalenceOver_iff_exists_fibredMorphism
+        q (Over.forget P.representingObject)).mp hqSlice
+    exact ⟨hq, ⟨{
+      representingObject := P.representingObject
+      equivalence := F
+      isEquivalence := hF }⟩⟩
+  · rintro ⟨_, ⟨Q⟩⟩
+    have hQ : IsFibredEquivalenceOver q
+        (Over.forget Q.representingObject) :=
+      (isFibredEquivalenceOver_iff_exists_fibredMorphism
+        q (Over.forget Q.representingObject)).mpr
+        ⟨Q.equivalence, Q.isEquivalence⟩
+    have hpSlice : IsFibredEquivalenceOver p
+        (Over.forget Q.representingObject) :=
+      isFibredEquivalenceOver_trans h hQ
+    obtain ⟨F, hF⟩ :=
+      (isFibredEquivalenceOver_iff_exists_fibredMorphism
+        p (Over.forget Q.representingObject)).mp hpSlice
+    exact ⟨hp, ⟨{
+      representingObject := Q.representingObject
+      equivalence := F
+      isEquivalence := hF }⟩⟩
 
 theorem isRepresentableCategoryFibredInGroupoids_iff_exists_slice_equivalence
     {S : Type uS} [Category.{vS} S]
@@ -200,7 +235,11 @@ theorem isCategoryFibredInSetoids_of_fibredEquivalence_slice
     (p : S ⥤ C) (X : C)
     (h : IsFibredEquivalenceOver p (Over.forget X)) :
     IsCategoryFibredInSetoids p := by
-  sorry
+  rcases h with ⟨F, G, hF, hG, hFcart, hGcart,
+    ⟨eFG, overFG, hFG⟩, ⟨eGF, overGF, hGF⟩⟩
+  refine (equivalence_to_fibredInSets_gives_setoidFibres
+    p (Over.forget X) F F.over ?_ (sliceProjection_isFibredInSets X)).1
+  exact ⟨G, hF, hG, ⟨eFG, overFG, hFG⟩, ⟨eGF, overGF, hGF⟩⟩
 
 theorem isRepresentableCategoryFibredInGroupoids_iff_setoid_and_objectClassPresheaf
     {S : Type uS} [Category.{vS} S]
@@ -277,7 +316,24 @@ theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
     {p : S ⥤ C} {q : T ⥤ C} :
     Equivalence
       (FibredMorphismTwoIsomorphismRelation (p := p) (q := q)) := by
-  sorry
+  constructor
+  · intro F
+    refine ⟨𝟙 F.functor, ?_, inferInstance⟩
+    intro Z
+    simp [FibredMorphismNatTrans]
+  · intro F G hFG
+    rcases hFG with ⟨η, hη, hηiso⟩
+    refine ⟨inv η, ?_, inferInstance⟩
+    intro Z
+    rw [Functor.map_inv, hη]
+    simp [FibredMorphismNatTrans]
+  · intro F G K hFG hGK
+    rcases hFG with ⟨η, hη, hηiso⟩
+    rcases hGK with ⟨θ, hθ, hθiso⟩
+    refine ⟨η ≫ θ, ?_, inferInstance⟩
+    intro Z
+    rw [Functor.map_comp, hη, hθ]
+    simp [FibredMorphismNatTrans, Category.assoc]
 
 /- The source's displayed equality is represented by an equivalence of the
    quotient type with the hom type in the base. -/

@@ -334,7 +334,71 @@ theorem canonical_twoFibreProductOverBase_isCategoryFibredInSetoids
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     IsCategoryFibredInSetoids
       (twoFibreProductOverBaseFunctor F.underlying G.underlying) := by
-  sorry
+  apply (isCategoryFibredInSetoids_iff_isFibered_and_setoidFibres _).mpr
+  refine ⟨?_, ?_⟩
+  · exact (canonicalFibredTwoFibreProduct.{v, u, u, v} X Y S F G).apex_fibred
+  · intro U
+    obtain ⟨e⟩ := twoFibreProductOver_fibre_equivalent
+      F.underlying G.underlying U
+    let _ : IsGroupoid
+        (twoFibreProductOverFibreCategory F.underlying G.underlying U) := by
+      constructor
+      intro a b f
+      let _ : IsIso f.hom.left := (hX U).1.all_isIso _
+      let _ : IsIso f.hom.right := (hY U).1.all_isIso _
+      let g : b ⟶ a := by
+        refine { hom :=
+          { left := inv f.hom.left, right := inv f.hom.right, w := ?_ } }
+        calc
+          (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+              a.obj.hom =
+            (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+              (a.obj.hom ≫
+                (overMorphismFiberFunctor G.underlying U).map f.hom.right) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by simp [Category.assoc]
+          _ = (overMorphismFiberFunctor F.underlying U).map
+                (inv f.hom.left) ≫
+              ((overMorphismFiberFunctor F.underlying U).map f.hom.left ≫
+                b.obj.hom) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by rw [f.hom.w]
+          _ = b.obj.hom ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by simp [Category.assoc]
+      refine ⟨⟨g, ?_, ?_⟩⟩
+      · apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp [g]
+      · apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp [g]
+    let hcomma : ∀ A B :
+        twoFibreProductOverFibreCategory F.underlying G.underlying U,
+        Subsingleton (A ⟶ B) := by
+      intro A B
+      constructor
+      intro f g
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · exact ((isSetoid_iff_isGroupoid_and_hom_subsingleton.mp (hX U)).2
+          _ _).elim f.hom.left g.hom.left
+      · exact ((isSetoid_iff_isGroupoid_and_hom_subsingleton.mp (hY U)).2
+          _ _).elim f.hom.right g.hom.right
+    let _ : IsGroupoid
+        (Functor.Fiber (twoFibreProductOverBaseFunctor
+          F.underlying G.underlying) U) := by
+      refine { all_isIso := ?_ }
+      intro a b f
+      let _ : IsIso (e.functor.map f) :=
+        (inferInstance : IsGroupoid
+          (twoFibreProductOverFibreCategory F.underlying G.underlying U)).all_isIso _
+      exact e.fullyFaithfulFunctor.isIso_of_isIso_map f
+    exact isSetoid_of_groupoid_of_hom_subsingleton
+      inferInstance (by
+        intro A B
+        constructor
+        intro f g
+        apply e.fullyFaithfulFunctor.map_injective
+        exact (hcomma (e.functor.obj A) (e.functor.obj B)).elim _ _)
 
 theorem categoriesFibredInSetoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)

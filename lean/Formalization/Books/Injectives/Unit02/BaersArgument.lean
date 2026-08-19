@@ -103,13 +103,43 @@ theorem finiteSetChain_no_finite_factor :
       ∀ k : ℕ,
         colimit.ι finiteSetChain n (g k) =
           finiteSetChainColimitMap k := by
-  sorry
+  intro n
+  rintro ⟨g, hg⟩
+  have hiff := Types.FilteredColimit.colimit_eq_iff (F := finiteSetChain)
+    (i := n) (j := n + 1)
+    (xi := g (n + 1))
+    (xj := ⟨n + 1, Nat.lt_succ_self (n + 1)⟩)
+  have heq :
+      (colimit.ι finiteSetChain n) (g (n + 1)) =
+        (colimit.ι finiteSetChain (n + 1))
+          ⟨n + 1, Nat.lt_succ_self (n + 1)⟩ := by
+    simpa [finiteSetChainColimitMap] using hg (n + 1)
+  obtain ⟨k, f, g', hfg⟩ := hiff.mp heq
+  have hv := congrArg Fin.val hfg
+  change (g (n + 1)).val = n + 1 at hv
+  exact (Nat.ne_of_lt (g (n + 1)).isLt) hv
 
 /-- Consequently the comparison map in the first example is not surjective. -/
 theorem finiteSetChain_comparison_not_surjective :
     ¬ Function.Surjective
       (comparisonMap (A := ℕ) finiteSetChain) := by
-  sorry
+  intro hs
+  let target : ℕ ⟶ colimit finiteSetChain :=
+    TypeCat.ofHom finiteSetChainColimitMap
+  obtain ⟨x, hx⟩ := hs target
+  obtain ⟨n, g, hι⟩ :=
+    Types.jointly_surjective
+      (finiteSetChain ⋙ coyoneda.obj (Opposite.op ℕ))
+      (colimit.isColimit (finiteSetChain ⋙ coyoneda.obj (Opposite.op ℕ))) x
+  let gfun : ℕ → finiteSetChain.obj n := TypeCat.homEquiv g
+  rw [← hι] at hx
+  have hf : ∀ k : ℕ,
+      colimit.ι finiteSetChain n (gfun k) = finiteSetChainColimitMap k := by
+    intro k
+    have hk := congrArg (fun q : ℕ ⟶ colimit finiteSetChain => q k) hx
+    simp [comparisonMap, target] at hk
+    exact hk
+  exact finiteSetChain_no_finite_factor n ⟨gfun, hf⟩
 
 /-- The setoid which collapses the initial segment `{0, ..., n - 1}` of `ℕ`
 to one point. -/
@@ -173,7 +203,36 @@ def collapsedConstant (n : ℕ) : ℕ → collapsedQuotient n :=
 /-- The colimit of the collapsed-quotient chain is a one-point set. -/
 theorem collapsedNatChain_colimit_subsingleton :
     Subsingleton (colimit collapsedNatChain) := by
-  sorry
+  constructor
+  intro x y
+  have hstage :
+      ∀ (n m : ℕ) (a : collapsedQuotient n) (b : collapsedQuotient m),
+        ∃ (k : ℕ) (f : n ⟶ k) (g : m ⟶ k),
+          collapsedNatChain.map f a = collapsedNatChain.map g b := by
+    intro n m a b
+    refine Quotient.inductionOn a ?_
+    intro a
+    refine Quotient.inductionOn b ?_
+    intro b
+    let k := max (max n m) (max a b) + 1
+    let f : n ⟶ k := homOfLE (by
+      dsimp [k]
+      omega)
+    let g : m ⟶ k := homOfLE (by
+      dsimp [k]
+      omega)
+    refine ⟨k, f, g, ?_⟩
+    apply Quotient.sound
+    dsimp [k]
+    exact Or.inr ⟨by omega, by omega⟩
+  obtain ⟨n, a, hx⟩ :=
+    Types.jointly_surjective collapsedNatChain (colimit.isColimit collapsedNatChain) x
+  obtain ⟨m, b, hy⟩ :=
+    Types.jointly_surjective collapsedNatChain (colimit.isColimit collapsedNatChain) y
+  obtain ⟨k, f, g, hfg⟩ := hstage n m a b
+  rw [← hx, ← hy]
+  exact Types.colimit_sound' (F := collapsedNatChain)
+    (j := n) (j' := m) (x := a) (x' := b) (j'' := k) f g hfg
 
 /-- The two displayed families of maps in the second example are distinct at
 each finite stage. -/

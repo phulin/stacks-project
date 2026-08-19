@@ -1,6 +1,7 @@
 import Formalization.Books.Simplicial.Unit27.HomotopiesInAbelianCategories
 import Formalization.Books.Homology.Unit14.HomotopyAndShift
 import Mathlib.Algebra.Homology.Homotopy
+import Mathlib.Algebra.Homology.HomologicalComplexBiprod
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.CategoryTheory.Limits.Shapes.BinaryBiproducts
@@ -268,19 +269,30 @@ def diamondPairInclusion
 
 def diamondShortComplex
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) : ShortComplex (ChainComplex C ℤ) :=
+  (A : ChainComplex C ℤ) : ShortComplex (ChainComplex C ℤ) :=
   ShortComplex.mk (diamondPairInclusion A) (diamondProjection A) (by
-    ext n
+    /-
+    Prior attempt: `ext n; sorry`.  After exposing the established
+    homological-complex biproduct API, extensionality leaves an additional
+    component goal, so this proof is retained as a single placeholder until
+    the chain-map calculation is completed.
+    -/
     sorry)
 
 /-- The canonical termwise splitting of the projection.  This uses the
 established splitting API for short complexes rather than a local wrapper. -/
 noncomputable def diamondTermwiseSplitting
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : ChainComplex C ℤ) :
+  (A : ChainComplex C ℤ) :
     Formalization.Books.Homology.Unit14.ChainComplex.TermwiseSplitting
-      (diamondShortComplex A) := by
-  sorry
+    (diamondShortComplex A) := fun n =>
+  { r := by
+      change diamondObject A n ⟶ (A ⊞ A).X n
+      exact biprod.fst ≫ (HomologicalComplex.biprodXIso A A n).inv
+    s := diamondSection A n
+    f_r := by sorry
+    s_g := by sorry
+    id := by sorry }
 
 /-- The connecting map associated to the canonical termwise splitting. -/
 noncomputable def diamondTermwiseConnectingMap
@@ -346,8 +358,8 @@ theorem map_into_diamond
 /-! ## The backwards homotopy theorem -/
 
 /-- The normalized chain homotopy canonically associated to a cylinder
-homotopy.  The construction is the normalized version of the chain homotopy
-attached to a simplicial homotopy in Chapter 27. -/
+homotopy.  Its degree-`n` component is the normalized version of the chain
+homotopy attached directly to that cylinder map, as in Chapter 27. -/
 noncomputable def normalizedChainHomotopyOfCylinder
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} {a b : U ⟶ V}
@@ -355,9 +367,18 @@ noncomputable def normalizedChainHomotopyOfCylinder
     _root_.Homotopy
       (normalizedChainComplexMap a)
       (normalizedChainComplexMap b) := by
-  exact (Formalization.Books.Simplicial.Unit27.normalizedChainMap_homotopic
-    (Relation.EqvGen.rel a b
-      (Formalization.Books.Simplicial.Unit26.homotopy_iff_degreewise.1 ⟨h⟩))).some
+  /-
+  Prior attempt: choosing an arbitrary witness from
+  `normalizedChainMap_homotopic` proves only that the endpoint maps are
+  homotopic.  It does not identify the chosen witness with the componentwise
+  normalized homotopy attached to this particular cylinder map, which is the
+  datum required by the source theorem:
+
+    exact (Formalization.Books.Simplicial.Unit27.normalizedChainMap_homotopic
+      (Relation.EqvGen.rel a b
+        (Formalization.Books.Simplicial.Unit26.homotopy_iff_degreewise.1 ⟨h⟩))).some
+  -/
+  sorry
 
 /-- A normalized chain homotopy lifts to a simplicial cylinder homotopy, with
 the same degree-`n` homotopy components. -/

@@ -542,11 +542,72 @@ noncomputable def simplexHomProduct_hom_equiv
         letI := hX (SimplexCategory.mk k ⟶ Y.unop)
         exact Pi.lift (fun α => V.map α.op ≫ f)
       naturality := by
-        sorry }
+        intro Y Z φ
+        letI := hX (SimplexCategory.mk k ⟶ Y.unop)
+        letI := hX (SimplexCategory.mk k ⟶ Z.unop)
+        change
+          V.map φ ≫
+              Pi.lift (fun α : SimplexCategory.mk k ⟶ Z.unop =>
+                V.map α.op ≫ f) =
+            Pi.lift (fun α : SimplexCategory.mk k ⟶ Y.unop =>
+                V.map α.op ≫ f) ≫
+              Pi.map' (fun α => α ≫ φ.unop) (fun _ => 𝟙 X)
+        apply Pi.hom_ext
+        intro α
+        simp [Pi.map'_comp_π, Category.assoc] }
   left_inv := by
-    sorry
+    intro γ
+    apply NatTrans.ext
+    funext Y
+    dsimp
+    letI := hX (SimplexCategory.mk k ⟶ Y.unop)
+    letI := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    apply Pi.hom_ext
+    intro α
+    rw [Pi.lift_π]
+    change
+      V.map α.op ≫
+          (γ.app (op (SimplexCategory.mk k)) ≫
+            simplexHomProductProjection X k k hX
+              (𝟙 (SimplexCategory.mk k))) =
+        γ.app Y ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop) => X) α
+    have h := congrArg
+      (fun q => q ≫
+        simplexHomProductProjection X k k hX
+          (𝟙 (SimplexCategory.mk k)))
+      (γ.naturality α.op)
+    calc
+      _ = (γ.app Y ≫ (simplexHomProduct X k hX).map α.op) ≫
+          simplexHomProductProjection X k k hX
+            (𝟙 (SimplexCategory.mk k)) := by
+        simpa only [Opposite.op_unop, Category.assoc] using h
+      _ = γ.app Y ≫
+          ((simplexHomProduct X k hX).map α.op ≫
+            simplexHomProductProjection X k k hX
+              (𝟙 (SimplexCategory.mk k))) := by
+        simp only [Category.assoc]
+      _ = γ.app Y ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop) => X) α := by
+        congr 1
+        change
+          Pi.map' (fun β : SimplexCategory.mk k ⟶ SimplexCategory.mk k => β ≫ α)
+              (fun _ => 𝟙 X) ≫
+              Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk k) => X)
+                (𝟙 (SimplexCategory.mk k)) =
+            Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop) => X) α
+        rw [Pi.map'_comp_π]
+        simp
   right_inv := by
-    sorry
+    intro f
+    letI := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    change
+      (Pi.lift (fun α : SimplexCategory.mk k ⟶ SimplexCategory.mk k =>
+        V.map α.op ≫ f)) ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk k) => X)
+            (𝟙 (SimplexCategory.mk k)) = f
+    rw [Pi.lift_π]
+    simp
 
 /-- The truncated version of the identity-coordinate equivalence. -/
 noncomputable def simplexHomProduct_truncated_hom_equiv

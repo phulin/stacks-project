@@ -129,7 +129,7 @@ theorem trivialKanFibration_kanFibration
 theorem kanFibration_baseChange
     {X Y Y' : SSet.{u}} (f : X ⟶ Y) (hf : KanFibration f)
     (g : Y' ⟶ Y) :
-    KanFibration (pullback.fst f g) := by
+    KanFibration (pullback.snd f g) := by
   sorry
 
 /-- The composite of Kan fibrations is a Kan fibration. -/

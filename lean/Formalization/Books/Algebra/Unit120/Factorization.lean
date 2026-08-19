@@ -456,23 +456,23 @@ theorem ufd_has_acc_principal_ideals
     {R : Type u} [CommRing R] [IsDomain R]
     [UniqueFactorizationMonoid R] :
     WfDvdMonoid R := by
-  sorry
+  infer_instance
 
 theorem polynomial_has_acc_principal_ideals
     {R : Type u} [CommRing R] [IsDomain R] [WfDvdMonoid R] :
     WfDvdMonoid R[X] := by
-  sorry
+  infer_instance
 
 theorem polynomial_ring_over_ufd_is_ufd
     {R : Type u} [CommRing R] [IsDomain R]
     [UniqueFactorizationMonoid R] :
     UniqueFactorizationMonoid R[X] := by
-  sorry
+  infer_instance
 
 theorem multivariable_polynomial_ring_over_field_is_ufd
     (k : Type u) [Field k] (n : ℕ) :
     UniqueFactorizationMonoid (MvPolynomial (Fin n) k) := by
-  sorry
+  infer_instance
 
 theorem ufd_is_normal_domain
     {R : Type u} [CommRing R] [IsDomain R]

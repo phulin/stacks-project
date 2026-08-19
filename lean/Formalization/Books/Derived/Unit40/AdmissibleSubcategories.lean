@@ -800,7 +800,167 @@ theorem right_adjoint_iff_decomposition
     (P : ObjectProperty C) [P.IsTriangulated]
     [CategoryTheory.IsTriangulated C] :
     HasRightAdjoint P ↔ ∀ X : C, HasRightDecomposition P X := by
-  sorry
+  let hP : P.IsStableUnderShift ℤ := inferInstance
+  constructor
+  · rintro ⟨v, ⟨adj⟩⟩ X
+    let A := P.ι.obj (v.obj X)
+    let i := adj.counit.app X
+    obtain ⟨B, g, h, hD⟩ := distinguished_cone_exists i
+    refine ⟨A, B, i, g, h, hD, (v.obj X).property, ?_⟩
+    apply (pre_prepare_adjoint P hP hD).2
+    intro A' hA'
+    let A₀ : P.FullSubcategory := ⟨A', hA'⟩
+    have hbij' : Function.Bijective
+        (fun q : A₀ ⟶ v.obj X => P.ι.map q ≫ i) := by
+      constructor
+      · intro q r hqr
+        have hqr' := congrArg (adj.homEquiv A₀ X) hqr
+        rw [adj.homEquiv_naturality_left, adj.homEquiv_naturality_left] at hqr'
+        have hi : (adj.homEquiv (v.obj X) X) i = 𝟙 (v.obj X) := by
+          apply (adj.homEquiv (v.obj X) X).symm.injective
+          rw [Equiv.symm_apply_apply, Adjunction.homEquiv_counit]
+          simp [i]
+        rw [hi] at hqr'
+        simpa using hqr'
+      · intro f
+        refine ⟨adj.homEquiv A₀ X f, ?_⟩
+        have hf := adj.homEquiv_counit A₀ X (adj.homEquiv A₀ X f)
+        simpa using hf.symm
+    have hbij : Function.Bijective (fun q : A' ⟶ A => q ≫ i) := by
+      constructor
+      · intro q r hqr
+        have hqr' :
+            ({ hom := q } : A₀ ⟶ v.obj X) = { hom := r } := by
+          apply hbij'.1
+          simpa using hqr
+        exact congrArg (fun k => k.hom) hqr'
+      · intro f
+        obtain ⟨q, hq⟩ := hbij'.2 f
+        refine ⟨q.hom, ?_⟩
+        simpa using hq
+    exact hbij
+  · intro hdec
+    have hdata : ∀ X : C, ∃ (A B : C) (f : A ⟶ X) (g : X ⟶ B)
+        (h : B ⟶ A⟦(1 : ℤ)⟧),
+        Triangle.mk f g h ∈ distTriang C ∧ P A ∧ rightOrthogonal P B := hdec
+    choose A B f g h hD hA hB using hdata
+    have hbij (X : P.FullSubcategory) (Y : C) :
+        Function.Bijective (fun q : X.obj ⟶ A Y => q ≫ f Y) :=
+      (pre_prepare_adjoint P hP (hD Y)).1 (hB Y) X.obj X.property
+    let preimage (X : P.FullSubcategory) {Y : C} (φ : X.obj ⟶ Y) :
+        X.obj ⟶ A Y := Classical.choose ((hbij X Y).2 φ)
+    have preimage_spec (X : P.FullSubcategory) {Y : C} (φ : X.obj ⟶ Y) :
+        preimage X φ ≫ f Y = φ := Classical.choose_spec ((hbij X Y).2 φ)
+    let chosen (X : C) : P.FullSubcategory := ⟨A X, hA X⟩
+    let vmap {X Y : C} (φ : X ⟶ Y) : A X ⟶ A Y :=
+      preimage (chosen X) (f X ≫ φ)
+    have vmap_spec {X Y : C} (φ : X ⟶ Y) :
+        vmap φ ≫ f Y = f X ≫ φ := preimage_spec (chosen X) (f X ≫ φ)
+    let v : C ⥤ P.FullSubcategory :=
+      { obj := fun X => ⟨A X, hA X⟩
+        map := fun {X Y} φ => { hom := vmap φ }
+        map_id := by
+          intro X
+          ext
+          change vmap (𝟙 X) = 𝟙 (A X)
+          apply (hbij (chosen X) X).1
+          change vmap (𝟙 X) ≫ f X = 𝟙 (A X) ≫ f X
+          rw [vmap_spec]
+          simp
+        map_comp := by
+          intro X Y Z φ ψ
+          ext
+          apply (hbij (chosen X) Z).1
+          calc
+            vmap (φ ≫ ψ) ≫ f Z = f X ≫ (φ ≫ ψ) := vmap_spec (φ ≫ ψ)
+            _ = (f X ≫ φ) ≫ ψ := by simp only [Category.assoc]
+            _ = (vmap φ ≫ f Y) ≫ ψ := by rw [vmap_spec φ]
+            _ = vmap φ ≫ (vmap ψ ≫ f Z) := by
+              rw [vmap_spec ψ]
+              simp only [Category.assoc]
+            _ = (vmap φ ≫ vmap ψ) ≫ f Z := by simp only [Category.assoc] }
+    let homEquiv : ∀ (X : P.FullSubcategory) (Y : C),
+        (P.ι.obj X ⟶ Y) ≃ (X ⟶ v.obj Y) := fun X Y =>
+      { toFun := fun φ => { hom := preimage X φ }
+        invFun := fun ψ => by
+          change X.obj ⟶ Y
+          exact P.ι.map ψ ≫ f Y
+        left_inv := by
+          intro φ
+          simpa using preimage_spec X φ
+        right_inv := by
+          intro ψ
+          ext
+          apply (hbij X Y).1
+          change preimage X (ψ.hom ≫ f Y) ≫ f Y = ψ.hom ≫ f Y
+          exact preimage_spec X (ψ.hom ≫ f Y) }
+    refine ⟨v, ⟨Adjunction.mkOfHomEquiv {
+      homEquiv := homEquiv
+      homEquiv_naturality_left_symm := by
+        intro X X' Y φ ψ
+        change (φ.hom ≫ ψ.hom) ≫ f Y = φ.hom ≫ (ψ.hom ≫ f Y)
+        simp only [Category.assoc]
+      homEquiv_naturality_right := by
+        intro X Y Y' φ ψ
+        ext
+        apply (hbij X Y').1
+        change preimage X (φ ≫ ψ) ≫ f Y' =
+          (preimage X φ ≫ vmap ψ) ≫ f Y'
+        rw [preimage_spec]
+        simp only [Category.assoc]
+        rw [vmap_spec, ← Category.assoc, preimage_spec] }⟩⟩
+
+private theorem right_adjoint_isoClosure_eq_left_orthogonal
+    (P : ObjectProperty C) [P.IsTriangulated]
+    [CategoryTheory.IsTriangulated C]
+    (hP : HasRightAdjoint P) :
+    P.isoClosure = leftOrthogonal (rightOrthogonal P) := by
+  let hstable : P.IsStableUnderShift ℤ := inferInstance
+  have hdec : ∀ X : C, HasRightDecomposition P X :=
+    (right_adjoint_iff_decomposition P).1 hP
+  ext X
+  constructor
+  · rintro ⟨Z, hZ, ⟨e⟩⟩
+    intro B hB fX
+    have hf : e.inv ≫ fX = 0 := hB Z hZ (e.inv ≫ fX)
+    calc
+      fX = 𝟙 _ ≫ fX := by simp
+      _ = (e.hom ≫ e.inv) ≫ fX := by simp
+      _ = e.hom ≫ (e.inv ≫ fX) := by simp only [Category.assoc]
+      _ = 0 := by rw [hf, comp_zero]
+  · intro hX
+    obtain ⟨A, B, f, g, h, hD, hA, hB⟩ := hdec X
+    have hg : g = 0 := hX B hB g
+    obtain ⟨q, hq⟩ := Triangle.yoneda_exact₃ (Triangle.mk f g h) hD
+      (𝟙 B) (by
+        change g ≫ 𝟙 B = 0
+        rw [hg, zero_comp])
+    have hq0 : q = 0 :=
+      hB (A⟦(1 : ℤ)⟧)
+        ((hstable.isStableUnderShiftBy (1 : ℤ)).le_shift _ hA) q
+    have hq' : 𝟙 B = h ≫ q := by simpa [Triangle.mk] using hq
+    have hBid : 𝟙 B = 0 := by
+      calc
+        𝟙 B = h ≫ q := hq'
+        _ = h ≫ 0 := by rw [hq0]; rfl
+        _ = 0 := by
+          change h ≫ (0 : (shiftFunctor C (1 : ℤ)).obj A ⟶ B) = (0 : B ⟶ B)
+          simp only [comp_zero]
+    have hBzero : IsZero B := (IsZero.iff_id_eq_zero B).mpr hBid
+    have hfiso : IsIso f := (third_object_zero_characterization f).2.2 (by
+      intro Z g' h' hT'
+      obtain ⟨e, _, _⟩ := distinguished_cone_unique hD hT'
+      let eB : Z ≅ B :=
+        { hom := e.inv.hom₃
+          inv := e.hom.hom₃
+          hom_inv_id := by exact e.inv_hom_id_triangle_hom₃
+          inv_hom_id := by exact e.hom_inv_id_triangle_hom₃ }
+      apply (IsZero.iff_id_eq_zero Z).mpr
+      calc
+        𝟙 Z = eB.hom ≫ eB.inv := eB.hom_inv_id.symm
+        _ = eB.hom ≫ 𝟙 B ≫ eB.inv := by simp
+        _ = 0 := by simp [hBid])
+    exact ⟨A, hA, ⟨(@asIso _ _ _ _ f hfiso).symm⟩⟩
 
 /-- A right adjoint makes the subcategory saturated. -/
 theorem right_adjoint_saturated
@@ -808,7 +968,30 @@ theorem right_adjoint_saturated
     [CategoryTheory.IsTriangulated C]
     (hP : HasRightAdjoint P) :
     IsSaturated P := by
-  sorry
+  have hEq := right_adjoint_isoClosure_eq_left_orthogonal P hP
+  letI : P.IsStableUnderShift ℤ := inferInstance
+  have hright : rightOrthogonal P = ObjectProperty.rightOrthogonal P := by
+    ext X
+    constructor
+    · intro h A f hA
+      exact h A hA f
+    · intro h A hA f
+      exact h f hA
+  letI : (rightOrthogonal P).IsStableUnderShift ℤ := by
+    rw [hright]
+    infer_instance
+  have horth := orthogonal_triangulated (rightOrthogonal P)
+    (inferInstance : (rightOrthogonal P).IsStableUnderShift ℤ)
+  intro X Y hXY
+  rw [hEq] at hXY ⊢
+  obtain ⟨hX, hY⟩ := horth.2.2.1
+    (ObjectProperty.le_isoClosure (leftOrthogonal (rightOrthogonal P)) (X ⊞ Y) hXY)
+  letI : (leftOrthogonal (rightOrthogonal P)).IsClosedUnderIsomorphisms := horth.2.1
+  constructor
+  · obtain ⟨Z, hZ, ⟨e⟩⟩ := hX
+    exact ObjectProperty.prop_of_iso (leftOrthogonal (rightOrthogonal P)) e.symm hZ
+  · obtain ⟨Z, hZ, ⟨e⟩⟩ := hY
+    exact ObjectProperty.prop_of_iso (leftOrthogonal (rightOrthogonal P)) e.symm hZ
 
 /-- Under strict fullness, a right-admissible subcategory is the left
 orthogonal of its right orthogonal. -/
@@ -818,14 +1001,135 @@ theorem right_adjoint_eq_left_orthogonal
     (hP : HasRightAdjoint P)
     (hstrict : P.IsClosedUnderIsomorphisms) :
     P = leftOrthogonal (rightOrthogonal P) := by
-  sorry
+  have hEq := right_adjoint_isoClosure_eq_left_orthogonal P hP
+  apply le_antisymm
+  · intro X hX
+    rw [← hEq]
+    exact ObjectProperty.le_isoClosure P X hX
+  · intro X hX
+    have hX' : P.isoClosure X := by
+      rw [hEq]
+      exact hX
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := hX'
+    letI : P.IsClosedUnderIsomorphisms := hstrict
+    exact P.prop_of_iso e.symm hZ
 
 /-- A left adjoint of the inclusion is equivalent to left decompositions. -/
 theorem left_adjoint_iff_decomposition
     (P : ObjectProperty C) [P.IsTriangulated]
     [CategoryTheory.IsTriangulated C] :
     HasLeftAdjoint P ↔ ∀ X : C, HasLeftDecomposition P X := by
-  sorry
+  let hP : P.IsStableUnderShift ℤ := inferInstance
+  constructor
+  · rintro ⟨v, ⟨adj⟩⟩ X
+    let B := P.ι.obj (v.obj X)
+    let g := adj.unit.app X
+    obtain ⟨Z, f, h, hD⟩ := distinguished_cone_exists g
+    let T := Triangle.mk g f h
+    have hT : T.invRotate ∈ distTriang C := inv_rot_of_distTriang _ hD
+    refine ⟨T.invRotate.obj₁, T.invRotate.obj₃, T.invRotate.mor₁, T.invRotate.mor₂,
+      T.invRotate.mor₃, hT, ?_, (v.obj X).property⟩
+    apply (pre_prepare_adjoint_dual P hP hT).2
+    intro B' hB'
+    let B₀ : P.FullSubcategory := ⟨B', hB'⟩
+    have hbij' : Function.Bijective
+        (fun q : v.obj X ⟶ B₀ => g ≫ P.ι.map q) := by
+      constructor
+      · intro q r hqr
+        apply (adj.homEquiv X B₀).injective
+        rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
+        simpa [g] using hqr
+      · intro f'
+        refine ⟨(adj.homEquiv X B₀).symm f', ?_⟩
+        have hf := (adj.homEquiv X B₀).apply_symm_apply f'
+        rw [Adjunction.homEquiv_unit] at hf
+        simpa [g] using hf
+    have hbij : Function.Bijective (fun q : B ⟶ B' => g ≫ q) := by
+      constructor
+      · intro q r hqr
+        have hqr' :
+            ({ hom := q } : v.obj X ⟶ B₀) = { hom := r } := by
+          apply hbij'.1
+          simpa using hqr
+        exact congrArg (fun k => k.hom) hqr'
+      · intro f'
+        obtain ⟨q, hq⟩ := hbij'.2 f'
+        refine ⟨q.hom, ?_⟩
+        simpa using hq
+    exact hbij
+  · intro hdec
+    have hdata : ∀ X : C, ∃ (A B : C) (f : A ⟶ X) (g : X ⟶ B)
+        (h : B ⟶ A⟦(1 : ℤ)⟧),
+        Triangle.mk f g h ∈ distTriang C ∧ leftOrthogonal P A ∧ P B := hdec
+    choose A B f g h hD hA hB using hdata
+    have hbij (X : C) (Y : P.FullSubcategory) :
+        Function.Bijective (fun q : B X ⟶ Y.obj => g X ≫ q) :=
+      (pre_prepare_adjoint_dual P hP (hD X)).1 (hA X) Y.obj Y.property
+    let preimage (X : C) (Y : P.FullSubcategory) (φ : X ⟶ Y.obj) :
+        B X ⟶ Y.obj := Classical.choose ((hbij X Y).2 φ)
+    have preimage_spec (X : C) (Y : P.FullSubcategory) (φ : X ⟶ Y.obj) :
+        g X ≫ preimage X Y φ = φ := Classical.choose_spec ((hbij X Y).2 φ)
+    let chosen (X : C) : P.FullSubcategory := ⟨B X, hB X⟩
+    let vmap {X Y : C} (φ : X ⟶ Y) : B X ⟶ B Y :=
+      preimage X (chosen Y) (φ ≫ g Y)
+    have vmap_spec {X Y : C} (φ : X ⟶ Y) :
+        g X ≫ vmap φ = φ ≫ g Y := preimage_spec X (chosen Y) (φ ≫ g Y)
+    let v : C ⥤ P.FullSubcategory :=
+      { obj := fun X => ⟨B X, hB X⟩
+        map := fun {X Y} φ => { hom := vmap φ }
+        map_id := by
+          intro X
+          ext
+          change vmap (𝟙 X) = 𝟙 (B X)
+          apply (hbij X (chosen X)).1
+          change g X ≫ vmap (𝟙 X) = g X ≫ 𝟙 (B X)
+          rw [vmap_spec]
+          simp
+        map_comp := by
+          intro X Y Z φ ψ
+          ext
+          apply (hbij X (chosen Z)).1
+          calc
+            g X ≫ vmap (φ ≫ ψ) = (φ ≫ ψ) ≫ g Z := vmap_spec (φ ≫ ψ)
+            _ = φ ≫ (ψ ≫ g Z) := by simp only [Category.assoc]
+            _ = φ ≫ (g Y ≫ vmap ψ) := by rw [vmap_spec ψ]
+            _ = (φ ≫ g Y) ≫ vmap ψ := by simp only [Category.assoc]
+            _ = (g X ≫ vmap φ) ≫ vmap ψ := by rw [vmap_spec φ]
+            _ = g X ≫ (vmap φ ≫ vmap ψ) := by simp only [Category.assoc] }
+    let homEquiv : ∀ (X : C) (Y : P.FullSubcategory),
+        (v.obj X ⟶ Y) ≃ (X ⟶ P.ι.obj Y) := fun X Y =>
+      { toFun := fun ψ => g X ≫ P.ι.map ψ
+        invFun := fun φ => { hom := preimage X Y φ }
+        left_inv := by
+          intro ψ
+          ext
+          apply (hbij X Y).1
+          change g X ≫ preimage X Y (g X ≫ ψ.hom) = g X ≫ ψ.hom
+          exact preimage_spec X Y (g X ≫ ψ.hom)
+        right_inv := by
+          intro φ
+          simpa using preimage_spec X Y φ }
+    refine ⟨v, ⟨Adjunction.mkOfHomEquiv {
+      homEquiv := homEquiv
+      homEquiv_naturality_left_symm := by
+        intro X X' Y φ ψ
+        ext
+        apply (hbij X Y).1
+        change g X ≫ preimage X Y (φ ≫ ψ) =
+          g X ≫ (vmap φ ≫ preimage X' Y ψ)
+        calc
+          g X ≫ preimage X Y (φ ≫ ψ) = φ ≫ ψ :=
+            preimage_spec X Y (φ ≫ ψ)
+          _ = φ ≫ (g X' ≫ preimage X' Y ψ) := by
+            rw [preimage_spec]
+          _ = (φ ≫ g X') ≫ preimage X' Y ψ := by
+            simp only [Category.assoc]
+          _ = (g X ≫ vmap φ) ≫ preimage X' Y ψ := by rw [vmap_spec]
+          _ = g X ≫ (vmap φ ≫ preimage X' Y ψ) := by simp only [Category.assoc]
+      homEquiv_naturality_right := by
+        intro X Y Y' φ ψ
+        change g X ≫ (φ.hom ≫ ψ.hom) = (g X ≫ φ.hom) ≫ ψ.hom
+        simp only [Category.assoc] }⟩⟩
 
 /-- A left adjoint makes the subcategory saturated. -/
 theorem left_adjoint_saturated

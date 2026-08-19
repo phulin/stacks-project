@@ -842,7 +842,191 @@ theorem fullSubcategoryLocalization_isEquivalence
     (hP : ∀ X : C, ∃ (X' : P.FullSubcategory)
       (s : P.ι.obj X' ⟶ X), S s) :
     Functor.IsEquivalence (fullSubcategoryLocalizationFunctor S P) := by
-  sorry
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : RightMultiplicativeSystem S := hS.1.2
+  let : AdditiveCategory P.FullSubcategory := {}
+  let : AdditiveCategory S.Localization := {}
+  have hWsat : SaturatedMultiplicativeSystem (restrictedMorphismProperty S P) :=
+    restrictedMorphismProperty_saturated hS P
+  let : LeftMultiplicativeSystem (restrictedMorphismProperty S P) := hWsat.1.1
+  let : RightMultiplicativeSystem (restrictedMorphismProperty S P) := hWsat.1.2
+  let F := fullSubcategoryLocalizationFunctor S P
+  have map_right_fraction
+      {X Y : P.FullSubcategory}
+      (φ : (restrictedMorphismProperty S P).RightFraction X Y) :
+      F.map (φ.map (restrictedMorphismProperty S P).Q
+        (Localization.inverts (restrictedMorphismProperty S P).Q
+          (restrictedMorphismProperty S P))) =
+        (MorphismProperty.RightFraction.mk (P.ι.map φ.s) φ.hs
+          (P.ι.map φ.f)).map S.Q (Localization.inverts S.Q S) := by
+    have hmap_s :
+        F.map ((restrictedMorphismProperty S P).Q.map φ.s) =
+          S.Q.map (P.ι.map φ.s) := by
+      rfl
+    have hmap_f :
+        F.map ((restrictedMorphismProperty S P).Q.map φ.f) =
+          S.Q.map (P.ι.map φ.f) := by
+      rfl
+    let : IsIso (F.map ((restrictedMorphismProperty S P).Q.map φ.s)) := by
+      rw [hmap_s]
+      exact Localization.inverts S.Q S _ φ.hs
+    apply (cancel_epi (F.map ((restrictedMorphismProperty S P).Q.map φ.s))).1
+    rw [← F.map_comp, φ.map_s_comp_map, hmap_f, hmap_s]
+    exact (MorphismProperty.RightFraction.map_s_comp_map
+      (MorphismProperty.RightFraction.mk (P.ι.map φ.s) φ.hs
+        (P.ι.map φ.f)) S.Q (Localization.inverts S.Q S)).symm
+  have hfaithfulQ :
+      ∀ {X Y : P.FullSubcategory} (f g :
+        (restrictedMorphismProperty S P).Q.obj X ⟶
+          (restrictedMorphismProperty S P).Q.obj Y),
+        F.map f = F.map g → f = g := by
+    intro X Y f g h
+    obtain ⟨φ, hφ⟩ :=
+      Localization.exists_rightFraction (restrictedMorphismProperty S P).Q
+        (restrictedMorphismProperty S P) f
+    obtain ⟨ψ, hψ⟩ :=
+      Localization.exists_rightFraction (restrictedMorphismProperty S P).Q
+        (restrictedMorphismProperty S P) g
+    rw [hφ, hψ] at h ⊢
+    have hmapφ := map_right_fraction φ
+    have hmapψ := map_right_fraction ψ
+    rw [hmapφ, hmapψ] at h
+    obtain ⟨Z, t₁, t₂, hden, hnum, ht⟩ :=
+      (MorphismProperty.RightFraction.map_eq_iff S.Q S
+        (MorphismProperty.RightFraction.mk (P.ι.map φ.s) φ.hs
+          (P.ι.map φ.f))
+        (MorphismProperty.RightFraction.mk (P.ι.map ψ.s) ψ.hs
+          (P.ι.map ψ.f))).1 h
+    obtain ⟨Z', s, hs⟩ := hP Z
+    apply (MorphismProperty.RightFraction.map_eq_iff
+      (restrictedMorphismProperty S P).Q
+      (restrictedMorphismProperty S P) φ ψ).2
+    let u₁ := P.fullyFaithfulι.preimage (s ≫ t₁)
+    let u₂ := P.fullyFaithfulι.preimage (s ≫ t₂)
+    have hu₁ : P.ι.map u₁ = s ≫ t₁ := by
+      change P.ι.map (ObjectProperty.homMk (s ≫ t₁)) = s ≫ t₁
+      rfl
+    have hu₂ : P.ι.map u₂ = s ≫ t₂ := by
+      change P.ι.map (ObjectProperty.homMk (s ≫ t₂)) = s ≫ t₂
+      rfl
+    refine ⟨Z', u₁, u₂, ?_, ?_, ?_⟩
+    · apply P.ι.map_injective
+      change P.ι.map u₁ ≫ P.ι.map φ.s =
+        P.ι.map u₂ ≫ P.ι.map ψ.s
+      rw [hu₁, hu₂]
+      simpa only [Category.assoc] using congrArg (fun k => s ≫ k) hden
+    · apply P.ι.map_injective
+      change P.ι.map u₁ ≫ P.ι.map φ.f =
+        P.ι.map u₂ ≫ P.ι.map ψ.f
+      rw [hu₁, hu₂]
+      simpa only [Category.assoc] using congrArg (fun k => s ≫ k) hnum
+    · change S (P.ι.map (u₁ ≫ φ.s))
+      rw [Functor.map_comp, hu₁]
+      have hst : S (s ≫ t₁ ≫ P.ι.map φ.s) := by
+        simpa only [Category.assoc] using S.comp_mem _ _ hs ht
+      simpa only [Category.assoc] using hst
+  have hfullQ :
+      ∀ {X Y : P.FullSubcategory}
+        (f : F.obj ((restrictedMorphismProperty S P).Q.obj X) ⟶
+          F.obj ((restrictedMorphismProperty S P).Q.obj Y)),
+        ∃ g, F.map g = f := by
+    intro X Y f
+    change S.Q.obj (P.ι.obj X) ⟶ S.Q.obj (P.ι.obj Y) at f
+    obtain ⟨φ, hφ⟩ := Localization.exists_rightFraction S.Q S f
+    obtain ⟨Z', s, hs⟩ := hP φ.X'
+    let u := P.fullyFaithfulι.preimage (s ≫ φ.s)
+    let v := P.fullyFaithfulι.preimage (s ≫ φ.f)
+    have hu : restrictedMorphismProperty S P u := by
+      change S (P.ι.map u)
+      change S (P.ι.map (ObjectProperty.homMk (s ≫ φ.s)))
+      rw [show P.ι.map (ObjectProperty.homMk (s ≫ φ.s)) = s ≫ φ.s by rfl]
+      exact S.comp_mem _ _ hs φ.hs
+    let ψ : (restrictedMorphismProperty S P).RightFraction X Y :=
+      MorphismProperty.RightFraction.mk u hu v
+    have hψ :
+        (MorphismProperty.RightFraction.mk (P.ι.map ψ.s) ψ.hs
+          (P.ι.map ψ.f)).map S.Q (Localization.inverts S.Q S) =
+          φ.map S.Q (Localization.inverts S.Q S) := by
+      apply (MorphismProperty.RightFraction.map_eq_iff S.Q S
+        (MorphismProperty.RightFraction.mk (P.ι.map ψ.s) ψ.hs
+          (P.ι.map ψ.f)) φ).2
+      refine ⟨P.ι.obj Z', 𝟙 _, s, ?_, ?_, ?_⟩
+      · change 𝟙 _ ≫ P.ι.map ψ.s = s ≫ φ.s
+        simp only [Category.id_comp]
+        change P.ι.map (ObjectProperty.homMk (s ≫ φ.s)) = s ≫ φ.s
+        rfl
+      · change 𝟙 _ ≫ P.ι.map ψ.f = s ≫ φ.f
+        simp only [Category.id_comp]
+        change P.ι.map (ObjectProperty.homMk (s ≫ φ.f)) = s ≫ φ.f
+        rfl
+      · dsimp [ψ, u]
+        simp only [Category.id_comp]
+        exact S.comp_mem _ _ hs φ.hs
+    refine ⟨ψ.map (restrictedMorphismProperty S P).Q
+      (Localization.inverts (restrictedMorphismProperty S P).Q
+        (restrictedMorphismProperty S P)), ?_⟩
+    rw [map_right_fraction ψ, hψ, hφ]
+  have hfaithful : F.Faithful := {
+    map_injective := by
+      intro X Y f g h
+      let X₀ := (restrictedMorphismProperty S P).Q.objPreimage X
+      let Y₀ := (restrictedMorphismProperty S P).Q.objPreimage Y
+      let eX := (restrictedMorphismProperty S P).Q.objObjPreimageIso X
+      let eY := (restrictedMorphismProperty S P).Q.objObjPreimageIso Y
+      have h' :
+          F.map (eX.hom ≫ f ≫ eY.inv) =
+            F.map (eX.hom ≫ g ≫ eY.inv) := by
+        simp only [Functor.map_comp]
+        rw [h]
+      have h'' := hfaithfulQ
+        (X := X₀) (Y := Y₀) (eX.hom ≫ f ≫ eY.inv)
+        (eX.hom ≫ g ≫ eY.inv) h'
+      apply (cancel_epi eX.hom).1
+      apply (cancel_mono eY.inv).1
+      simpa only [Category.assoc] using h''
+    }
+  have hfull : F.Full := {
+    map_surjective := by
+      intro X Y f
+      let X₀ := (restrictedMorphismProperty S P).Q.objPreimage X
+      let Y₀ := (restrictedMorphismProperty S P).Q.objPreimage Y
+      let eX := (restrictedMorphismProperty S P).Q.objObjPreimageIso X
+      let eY := (restrictedMorphismProperty S P).Q.objObjPreimageIso Y
+      let f' := F.map eX.hom ≫ f ≫ F.map eY.inv
+      obtain ⟨g, hg⟩ := hfullQ f'
+      let g' := eX.inv ≫ g ≫ eY.hom
+      refine ⟨g', ?_⟩
+      calc
+        F.map g' = F.map eX.inv ≫ F.map g ≫ F.map eY.hom := by
+          dsimp [g']
+          simp only [Functor.map_comp, Category.assoc]
+        _ = F.map eX.inv ≫ f' ≫ F.map eY.hom := by rw [hg]
+        _ = f := by
+          dsimp [f']
+          have hX : F.map eX.inv ≫ F.map eX.hom = 𝟙 _ := by
+            rw [← F.map_comp, eX.inv_hom_id, F.map_id]
+          have hY : F.map eY.inv ≫ F.map eY.hom = 𝟙 _ := by
+            rw [← F.map_comp, eY.inv_hom_id, F.map_id]
+          calc
+            F.map eX.inv ≫ (F.map eX.hom ≫ f ≫ F.map eY.inv) ≫ F.map eY.hom =
+                (F.map eX.inv ≫ F.map eX.hom) ≫
+                  (f ≫ (F.map eY.inv ≫ F.map eY.hom)) := by
+              simp only [Category.assoc]
+            _ = f := by simp only [hX, hY, Category.id_comp, Category.comp_id]
+    }
+  have hess : F.EssSurj := {
+    mem_essImage := by
+      intro Y
+      obtain ⟨X, eX⟩ :
+          ∃ X : C, Nonempty (S.Q.obj X ≅ Y) :=
+        ⟨S.Q.objPreimage Y, ⟨S.Q.objObjPreimageIso Y⟩⟩
+      obtain ⟨X', s, hs⟩ := hP X
+      refine ⟨(restrictedMorphismProperty S P).Q.obj X', ⟨?_⟩⟩
+      change S.Q.obj (P.ι.obj X') ≅ Y
+      exact (Localization.isoOfHom S.Q S s hs) ≪≫ eX.some
+    }
+  change F.IsEquivalence
+  exact { faithful := hfaithful, full := hfull, essSurj := hess }
 
 theorem fullSubcategoryLocalization_isExact
     {S : MorphismProperty C} [LeftMultiplicativeSystem S]

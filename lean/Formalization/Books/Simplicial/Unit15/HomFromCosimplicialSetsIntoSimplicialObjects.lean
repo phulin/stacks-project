@@ -543,8 +543,8 @@ noncomputable def simplexHomProduct_hom_equiv
         exact Pi.lift (fun α => V.map α.op ≫ f)
       naturality := by
         intro Y Z φ
-        letI := hX (SimplexCategory.mk k ⟶ Y.unop)
-        letI := hX (SimplexCategory.mk k ⟶ Z.unop)
+        let := hX (SimplexCategory.mk k ⟶ Y.unop)
+        let := hX (SimplexCategory.mk k ⟶ Z.unop)
         change
           V.map φ ≫
               Pi.lift (fun α : SimplexCategory.mk k ⟶ Z.unop =>
@@ -560,8 +560,8 @@ noncomputable def simplexHomProduct_hom_equiv
     apply NatTrans.ext
     funext Y
     dsimp
-    letI := hX (SimplexCategory.mk k ⟶ Y.unop)
-    letI := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    let := hX (SimplexCategory.mk k ⟶ Y.unop)
+    let := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
     apply Pi.hom_ext
     intro α
     rw [Pi.lift_π]
@@ -600,7 +600,7 @@ noncomputable def simplexHomProduct_hom_equiv
         simp
   right_inv := by
     intro f
-    letI := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    let := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
     change
       (Pi.lift (fun α : SimplexCategory.mk k ⟶ SimplexCategory.mk k =>
         V.map α.op ≫ f)) ≫

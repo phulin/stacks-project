@@ -501,7 +501,8 @@ theorem injectiveModule_isInjective
     (hR : IsPointwiseCommutativeRingedSite R)
     (D : SheafDualData R) (F : SheafOfModules.{u} R) :
     Injective (injectiveModule R D F) := by
-  sorry
+  exact D.dual_of_sectionwiseFlat_isInjective _
+    (flatResolution_isSectionwiseFlatModule R hR (sheafDual D F))
 
 theorem injectiveModuleEmbeddingApp_mono
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
@@ -528,7 +529,41 @@ theorem injectiveModuleEmbeddingApp_natural
     (D : SheafDualData R) {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
     f ≫ injectiveModuleEmbeddingApp R D G =
       injectiveModuleEmbeddingApp R D F ≫ (injectiveModuleFunctor R D).map f := by
-  sorry
+  let q : D.dual.obj (op G) ⟶ D.dual.obj (op F) := D.dual.map f.op
+  let cF : (flatResolutionFunctor R).obj (D.dual.obj (op F)) ⟶
+      D.dual.obj (op F) := flatResolutionCounitApp R (D.dual.obj (op F))
+  let cG : (flatResolutionFunctor R).obj (D.dual.obj (op G)) ⟶
+      D.dual.obj (op G) := flatResolutionCounitApp R (D.dual.obj (op G))
+  let r : (flatResolutionFunctor R).obj (D.dual.obj (op G)) ⟶
+      (flatResolutionFunctor R).obj (D.dual.obj (op F)) :=
+    (flatResolutionFunctor R).map q
+  have hnat : r ≫ cF = cG ≫ q := by
+    dsimp [r, cF, cG, q]
+    exact flatResolutionCounitApp_natural R (D.dual.map f.op)
+  have hop : cF.op ≫ r.op = q.op ≫ cG.op := by
+    simpa only [CategoryTheory.op_comp] using congrArg (fun k => k.op) hnat
+  have hmap := congrArg D.dual.map hop.symm
+  rw [D.dual.map_comp, D.dual.map_comp] at hmap
+  have heval : f ≫ D.evaluation G = D.evaluation F ≫ D.dual.map q.op := by
+    dsimp [q]
+    exact D.evaluation_naturality f
+  have hcanonical :
+      f ≫ D.evaluation G ≫ D.dual.map cG.op =
+        D.evaluation F ≫ D.dual.map cF.op ≫ D.dual.map r.op := by
+    calc
+      f ≫ D.evaluation G ≫ D.dual.map cG.op =
+          (f ≫ D.evaluation G) ≫ D.dual.map cG.op := by rw [Category.assoc]
+      _ = (D.evaluation F ≫ D.dual.map q.op) ≫ D.dual.map cG.op := by
+        rw [heval]
+      _ = D.evaluation F ≫ D.dual.map cF.op ≫ D.dual.map r.op := by
+        rw [Category.assoc, hmap]
+  exact (by
+    change f ≫ D.evaluation G ≫
+        D.dual.map (op (flatResolutionCounitApp R (D.dual.obj (op G)))) =
+      (D.evaluation F ≫ D.dual.map
+        (op (flatResolutionCounitApp R (D.dual.obj (op F))))) ≫
+        D.dual.map ((flatResolutionFunctor R).map (D.dual.map f.op)).op
+    exact hcanonical)
 
 /-! ## Enough injectives and the presheaf corollary -/
 
@@ -550,7 +585,34 @@ theorem sheavesOfModules_have_functorial_injective_embeddings
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
     (hR : IsPointwiseCommutativeRingedSite R) :
     HasFunctorialInjectiveEmbeddings (C := SheafOfModules.{u} R) := by
-  sorry
+  classical
+  let D : SheafDualData R := Classical.choice (exists_sheafDualData R hR)
+  let K : SheafOfModules R ⥤ Arrow (SheafOfModules R) := {
+    obj := fun F => Arrow.mk (injectiveModuleEmbeddingApp R D F)
+    map := fun f => {
+      left := f
+      right := (injectiveModuleFunctor R D).map f
+      w := injectiveModuleEmbeddingApp_natural R D f
+    }
+    map_id := by
+      intro F
+      apply Arrow.hom_ext
+      · rfl
+      · exact (injectiveModuleFunctor R D).map_id F
+    map_comp := by
+      intro F G H f g
+      apply Arrow.hom_ext
+      · rfl
+      · change (injectiveModuleFunctor R D).map (f ≫ g) =
+          (injectiveModuleFunctor R D).map f ≫ (injectiveModuleFunctor R D).map g
+        exact (injectiveModuleFunctor R D).map_comp f g
+  }
+  refine ⟨K, ?_, ?_, ?_⟩
+  · rfl
+  · intro F
+    exact injectiveModuleEmbeddingApp_mono R D F
+  · intro F
+    exact injectiveModule_isInjective R hR D F
 
 /-- The trivial topology used to identify presheaves with sheaves. -/
 abbrev presheafTrivialTopology

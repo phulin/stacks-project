@@ -129,17 +129,17 @@ theorem essFinitePresentation_comp
   change essFinitePresentation S T at hg
   rcases hf with ⟨Aorig, hAorig, aorig, Morig, qorig, hqorig, hqaorig, hlocorig⟩
   rcases hg with ⟨B, hB, b, N, r, hb, hbr, hloc'⟩
-  letI : CommRing Aorig := hAorig
-  letI : CommRing B := hB
-  letI : Algebra Aorig S := qorig.toAlgebra
-  letI : IsLocalization Morig S := hlocorig
-  letI : Algebra R Aorig := aorig.toAlgebra
-  letI : Algebra.FinitePresentation R Aorig := hqorig
+  let : CommRing Aorig := hAorig
+  let : CommRing B := hB
+  let : Algebra Aorig S := qorig.toAlgebra
+  let : IsLocalization Morig S := hlocorig
+  let : Algebra R Aorig := aorig.toAlgebra
+  let : Algebra.FinitePresentation R Aorig := hqorig
   obtain ⟨k, e, he, hker⟩ := Algebra.FinitePresentation.out (R := R) (A := Aorig)
   let P0 := MvPolynomial (Fin k) R
   let I0 : Ideal P0 := RingHom.ker e.toRingHom
   let A := P0 ⧸ I0
-  letI : CommRing A := by
+  let : CommRing A := by
     dsimp [A]
     infer_instance
   let e0 : A ≃+* Aorig := RingHom.quotientKerEquivOfSurjective he
@@ -147,7 +147,7 @@ theorem essFinitePresentation_comp
   let a : R →+* A := mk0.comp (algebraMap R P0)
   let M : Submonoid A := Morig.map e0.symm
   let q : A →+* S := qorig.comp e0.toRingHom
-  letI : Algebra A S := q.toAlgebra
+  let : Algebra A S := q.toAlgebra
   have hmk0 : RingHom.FinitePresentation mk0 := by
     apply RingHom.FinitePresentation.of_surjective mk0 Ideal.Quotient.mk_surjective
     rw [show RingHom.ker mk0 = I0 by
@@ -172,20 +172,20 @@ theorem essFinitePresentation_comp
     apply Algebra.algebra_ext
     intro x
     rfl
-  letI : IsLocalization M S := hloc
-  letI : Algebra B T := r.toAlgebra
-  letI : Algebra S T := g.toAlgebra
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra S B := b.toAlgebra
-  letI : IsScalarTower S B T :=
+  let : IsLocalization M S := hloc
+  let : Algebra B T := r.toAlgebra
+  let : Algebra S T := g.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra S B := b.toAlgebra
+  let : IsScalarTower S B T :=
     IsScalarTower.of_algebraMap_eq' (by rw [← hbr]; rfl)
-  letI : Algebra.FinitePresentation S B := hb
+  let : Algebra.FinitePresentation S B := hb
   obtain ⟨n, p, hp, hK⟩ := Algebra.FinitePresentation.out (R := S) (A := B)
   let P := MvPolynomial (Fin n) A
   let Q := MvPolynomial (Fin n) S
   let F : P →+* Q := MvPolynomial.map q
-  letI : Algebra P Q := F.toAlgebra
-  letI : IsLocalization (M.map (MvPolynomial.C : A →+* P)) Q :=
+  let : Algebra P Q := F.toAlgebra
+  let : IsLocalization (M.map (MvPolynomial.C : A →+* P)) Q :=
     MvPolynomial.isLocalization M S
   let K : Ideal Q := RingHom.ker p.toRingHom
   obtain ⟨s, hs⟩ := hK
@@ -199,7 +199,7 @@ theorem essFinitePresentation_comp
   let I : Ideal P := Ideal.span (uf : Set P)
   have huI (x : s) : u x ∈ I := by
     apply Ideal.subset_span
-    simp [I, uf]
+    simp [uf]
   have hxK (x : s) : x.1 ∈ K := by
     change x.1 ∈ RingHom.ker p.toRingHom
     rw [← hs]
@@ -218,7 +218,7 @@ theorem essFinitePresentation_comp
     obtain ⟨x, rfl⟩ := hz
     exact hu x
   let C := P ⧸ I
-  letI : CommRing C := by
+  let : CommRing C := by
     dsimp [C]
     infer_instance
   let c : C →+* B := Ideal.Quotient.lift I L hI
@@ -226,7 +226,7 @@ theorem essFinitePresentation_comp
     apply RingHom.ext
     intro x
     exact Ideal.Quotient.lift_mk I L hI
-  letI : Algebra C B := c.toAlgebra
+  let : Algebra C B := c.toAlgebra
   have hH : p.toRingHom.comp (algebraMap P Q) =
       (algebraMap C B).comp (Ideal.Quotient.mk I) := by
     apply RingHom.ext
@@ -236,7 +236,6 @@ theorem essFinitePresentation_comp
   have hH' : RingHom.ker p.toRingHom ≤
       (RingHom.ker (Ideal.Quotient.mk I)).map (algebraMap P Q) := by
     rw [Ideal.mk_ker]
-    change RingHom.ker p.toRingHom ≤ I.map (algebraMap P Q)
     rw [← hs]
     refine Ideal.span_le.2 ?_
     intro z hz
@@ -288,10 +287,10 @@ theorem essFinitePresentation_comp
         exact (IsScalarTower.algebraMap_apply R S T x).symm
   let U : Submonoid C :=
     (M.map (MvPolynomial.C : A →+* P)).map (Ideal.Quotient.mk I)
-  letI : IsLocalization U B := hlocB
-  letI : IsLocalization N T := hloc'
-  letI : Algebra C T := (r.comp c).toAlgebra
-  letI : IsScalarTower C B T :=
+  let : IsLocalization U B := hlocB
+  let : IsLocalization N T := hloc'
+  let : Algebra C T := (r.comp c).toAlgebra
+  let : IsScalarTower C B T :=
     IsScalarTower.of_algebraMap_eq' (by rfl)
   have hlocT : IsLocalization
       (IsLocalization.localizationLocalizationSubmodule U N) T :=
@@ -300,7 +299,7 @@ theorem essFinitePresentation_comp
   let eLift : C' ≃+* C := ULift.ringEquiv
   let dLift : R →+* C' := eLift.symm.toRingHom.comp d
   let qLift : C' →+* T := (r.comp c).comp eLift.toRingHom
-  letI : Algebra C' T := qLift.toAlgebra
+  let : Algebra C' T := qLift.toAlgebra
   have hlocLift : IsLocalization
       ((IsLocalization.localizationLocalizationSubmodule U N).map eLift.symm.toRingHom) T := by
     convert IsLocalization.isLocalization_of_base_ringEquiv
@@ -511,7 +510,7 @@ private theorem isLocalizationOfQuotient_of_localization
     (hp : RingHom.IsLocalizationOfQuotient p)
     (hcomp : h.comp l = p) :
     RingHom.IsLocalizationOfQuotient h := by
-  letI : Algebra P T := l.toAlgebra
+  let : Algebra P T := l.toAlgebra
   rcases hp with ⟨J, M, q, hq, hloc⟩
   let I' : Ideal T := RingHom.ker h
   let : IsLocalization N T := hlocN

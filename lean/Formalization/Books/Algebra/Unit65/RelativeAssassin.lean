@@ -562,6 +562,164 @@ theorem relativeAssassinA_eq_A'
   · intro hq
     exact relativeAssassinA'_subset_A hq
 
+private noncomputable def quotientTensorEquiv
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N] [Module R N]
+    [IsScalarTower R S N] (p : PrimeSpectrum R) :
+    (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[S]
+      (N ⧸ (p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N))) := by
+  let I : Submodule R N := p.asIdeal • (⊤ : Submodule R N)
+  let J : Submodule S N :=
+    p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
+  have hIJ : J.restrictScalars R = I := by
+    dsimp [I, J]
+    rw [Ideal.smul_restrictScalars]
+    rfl
+  let eQ : (N ⧸ I) ≃ₗ[R] (N ⧸ (J.restrictScalars R)) :=
+    Submodule.quotEquivOfEq I (J.restrictScalars R) hIJ.symm
+  let e : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[R] (N ⧸ J) :=
+    ((TensorProduct.tensorQuotEquivQuotSMul N p.asIdeal).trans eQ).trans
+      ((Submodule.Quotient.restrictScalarsEquiv R J).restrictScalars R)
+  have he (s : S) (z : N ⊗[R] (R ⧸ p.asIdeal)) :
+      e (s • z) = s • e z := by
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · simp [e, eQ]
+    · intro n r
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+      simp only [e, LinearEquiv.trans_apply, TensorProduct.smul_tmul',
+        TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+      change (Submodule.Quotient.mk (r • (s • n)) : N ⧸ J) =
+        Submodule.Quotient.mk (s • (r • n))
+      simp [← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm]
+      rw [smul_comm]
+    · intro x y hx hy
+      simp only [TensorProduct.smul_add, map_add, smul_add, hx, hy]
+  exact { e with map_smul' := he }
+
+private theorem relativeAssassinAFin_subset_A
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N] :
+    relativeAssassinAFin (R := R) (S := S) (N := N) ⊆
+      relativeAssassinA (R := R) (S := S) (N := N) := by
+  intro q hq
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  let p : PrimeSpectrum R := PrimeSpectrum.comap (algebraMap R S) q
+  let A := R ⧸ p.asIdeal
+  let K := p.asIdeal.ResidueField
+  let M0 := A ⊗[R] N
+  letI : Module A M0 := TensorProduct.leftModule
+  let f : M0 →ₗ[A] K ⊗[A] M0 := TensorProduct.mk A K M0 1
+  letI : IsLocalizedModule (nonZeroDivisors A) f :=
+    IsLocalization.tensorProduct_isLocalizedModule (nonZeroDivisors A) K
+  let eT : (K ⊗[A] M0) ≃ₗ[R] (N ⊗[R] K) :=
+    (TensorProduct.AlgebraTensorModule.cancelBaseChange R A K K N).restrictScalars R |>.trans
+      (TensorProduct.comm R K N)
+  change ∃ m, (⊥ : Submodule S
+    (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+      ({m} : Set _) = q.asIdeal
+  change ∃ m, (⊥ : Submodule S
+    (N ⧸ ((PrimeSpectrum.comap (algebraMap R S) q).asIdeal.map
+      (algebraMap R S) • (⊤ : Submodule S N)))).colon
+      ({m} : Set _) = q.asIdeal at hq
+  obtain ⟨m, hm⟩ := hq
+  let J : Submodule S N :=
+    p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
+  let eS := quotientTensorEquiv (R := R) (S := S) (N := N) p
+  let comm : (N ⊗[R] A) ≃ₗ[R] M0 := TensorProduct.comm R N A
+  letI : Module A (N ⊗[R] A) :=
+    Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
+  have hcomm (a : A) (x : N ⊗[R] A) :
+      comm (a • x) = a • comm x := by
+    change comm (comm.symm (a • comm x)) = a • comm x
+    rw [comm.apply_symm_apply]
+  letI : IsScalarTower R A (N ⊗[R] A) :=
+    ⟨fun r a x => by
+      apply comm.injective
+      rw [hcomm, map_smul, hcomm]
+      exact smul_assoc r a (comm x)⟩
+  have hmapR (r : R) (x : N ⊗[R] A) :
+      eS (r • x) = (algebraMap R S r) • eS x := by
+    rw [← IsScalarTower.algebraMap_smul S r, eS.map_smul]
+  have heT (s : S) (x : N ⊗[R] A) :
+      eT (f (comm (s • x))) = s • eT (f (comm x)) := by
+    refine TensorProduct.induction_on x ?_ ?_ ?_
+    · simp [eT, f, comm]
+    · intro n a
+      rw [TensorProduct.smul_tmul']
+      rw [show comm ((s • n) ⊗ₜ[R] a) = a ⊗ₜ[R] (s • n) by
+        rfl, show comm (n ⊗ₜ[R] a) = a ⊗ₜ[R] n by rfl]
+      simp [eT, f, TensorProduct.mk_apply, TensorProduct.comm_tmul,
+        TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+        ← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm,
+        TensorProduct.smul_tmul', TensorProduct.tmul_smul]
+      rw [TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+        TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul]
+      rw [TensorProduct.comm_tmul, TensorProduct.comm_tmul,
+        TensorProduct.smul_tmul']
+    · intro x y hx hy
+      simp only [map_add, hx, hy, smul_add]
+  let x0 : N ⊗[R] A := eS.symm m
+  refine ⟨eT (f (comm x0)), ?_⟩
+  ext s
+  rw [Submodule.mem_colon_singleton]
+  have hx0 : eS x0 = m := by
+    simp [x0]
+  constructor
+  · intro hs
+    have hsource : f (comm (s • x0)) = 0 := by
+      apply eT.injective
+      rw [heT, hs, map_zero]
+    obtain ⟨a, ha⟩ :=
+      (IsLocalizedModule.eq_zero_iff (nonZeroDivisors A) (f := f)).mp hsource
+    rcases a with ⟨a, ha0⟩
+    obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective a
+    have har : (algebraMap R A r : A) ≠ 0 :=
+      mem_nonZeroDivisors_iff_ne_zero.mp ha0
+    have hrp : r ∉ p.asIdeal := by
+      intro hr
+      apply har
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+    have hxsA : (algebraMap R A r) • comm (s • x0) = 0 := ha
+    have hxs : (algebraMap R A r) • (s • x0) = 0 := by
+      apply comm.injective
+      rw [hcomm, hxsA, map_zero]
+    have hxsR : r • (s • x0) = 0 := by
+      rw [← IsScalarTower.algebraMap_smul A r]
+      simpa only [Ideal.Quotient.mk_algebraMap] using hxs
+    have hsm : (algebraMap R S r) • (s • m) = 0 := by
+      calc
+        (algebraMap R S r) • (s • m) =
+            (algebraMap R S r) • eS (s • x0) := by
+              rw [eS.map_smul, hx0]
+        _ = eS (r • (s • x0)) := by
+              rw [hmapR]
+        _ = 0 := by rw [hxsR, map_zero]
+    have hmem : (algebraMap R S r) * s ∈
+        (⊥ : Submodule S (N ⧸ J)).colon ({m} : Set _) := by
+      rw [Submodule.mem_colon_singleton, mul_smul]
+      exact hsm
+    rw [hm] at hmem
+    have hrq : algebraMap R S r ∉ q.asIdeal := by
+      intro hrq
+      apply hrp
+      exact hrq
+    exact (q.isPrime.mem_or_mem hmem).resolve_left hrq
+  · intro hs
+    have hsm : s • m = 0 := by
+      have hmem : s ∈ (⊥ : Submodule S (N ⧸ J)).colon ({m} : Set _) := by
+        rw [hm]
+        exact hs
+      exact Submodule.mem_colon_singleton.mp hmem
+    have hxs : s • x0 = 0 := by
+      apply eS.injective
+      rw [eS.map_smul, hx0, hsm, map_zero]
+    rw [← heT, hxs, map_zero]
+    exact Submodule.zero_mem _
+
 theorem compare_relative_assassins
     {R : Type u} {S : Type v} {N : Type w}
     [CommRing R] [CommRing S] [Algebra R S]
@@ -576,7 +734,241 @@ theorem compare_relative_assassins
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) ⊆
         relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
-  sorry
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · exact relativeAssassinAFin_subset_A
+  /-
+  · intro q hq
+    letI : Module R N := Module.compHom N (algebraMap R S)
+    letI : IsScalarTower R S N :=
+      inducedModule_isScalarTower (R := R) (S := S) (N := N)
+    let p : PrimeSpectrum R := PrimeSpectrum.comap (algebraMap R S) q
+    let A := R ⧸ p.asIdeal
+    let K := p.asIdeal.ResidueField
+    let M0 := A ⊗[R] N
+    letI : Module A M0 := TensorProduct.leftModule
+    let f : M0 →ₗ[A] K ⊗[A] M0 := TensorProduct.mk A K M0 1
+    letI : IsLocalizedModule (nonZeroDivisors A) f :=
+      IsLocalization.tensorProduct_isLocalizedModule (nonZeroDivisors A) K
+    let eT : (K ⊗[A] M0) ≃ₗ[R] (N ⊗[R] K) :=
+      (TensorProduct.AlgebraTensorModule.cancelBaseChange R A K K N).restrictScalars R |>.trans
+        (TensorProduct.comm R K N)
+    change ∃ m, (⊥ : Submodule S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+        ({m} : Set _) = q.asIdeal
+    change ∃ m, (⊥ : Submodule S
+      (N ⧸ ((PrimeSpectrum.comap (algebraMap R S) q).asIdeal.map
+        (algebraMap R S) • (⊤ : Submodule S N)))).colon
+        ({m} : Set _) = q.asIdeal at hq
+    obtain ⟨m, hm⟩ := hq
+    let I : Submodule R N := p.asIdeal • (⊤ : Submodule R N)
+    let J : Submodule S N :=
+      p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
+    have hIJ : J.restrictScalars R = I := by
+      dsimp [I, J]
+      rw [Ideal.smul_restrictScalars]
+      rfl
+    let eQ : (N ⧸ I) ≃ₗ[R] (N ⧸ (J.restrictScalars R)) :=
+      Submodule.quotEquivOfEq I (J.restrictScalars R) hIJ.symm
+    let e : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[R] (N ⧸ J) :=
+      ((TensorProduct.tensorQuotEquivQuotSMul N p.asIdeal).trans eQ).trans
+        ((Submodule.Quotient.restrictScalarsEquiv R J).restrictScalars R)
+    have he (s : S) (z : N ⊗[R] (R ⧸ p.asIdeal)) :
+        e (s • z) = s • e z := by
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp [e, eQ]
+      · intro n r
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+        simp only [e, LinearEquiv.trans_apply, TensorProduct.smul_tmul',
+          TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+        change (Submodule.Quotient.mk (r • (s • n)) : N ⧸ J) =
+          Submodule.Quotient.mk (s • (r • n))
+        simp [← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm]
+        rw [smul_comm]
+      · intro x y hx hy
+        simp only [TensorProduct.smul_add, map_add, smul_add, hx, hy]
+    let eS : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[S] (N ⧸ J) :=
+      { e with map_smul' := he }
+    let comm : (N ⊗[R] A) ≃ₗ[R] M0 := TensorProduct.comm R N A
+    letI : Module A (N ⊗[R] A) :=
+      Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
+    have hcomm (a : A) (x : N ⊗[R] A) :
+        comm (a • x) = a • comm x := by
+      change comm (comm.symm (a • comm x)) = a • comm x
+      rw [comm.apply_symm_apply]
+    letI : IsScalarTower R A (N ⊗[R] A) :=
+      ⟨fun r a x => by
+        apply comm.injective
+        rw [hcomm, map_smul, hcomm]
+        exact smul_assoc r a (comm x)⟩
+    have hmapR (r : R) (x : N ⊗[R] A) :
+        eS (r • x) = (algebraMap R S r) • eS x := by
+      rw [← IsScalarTower.algebraMap_smul S r, eS.map_smul]
+    have heT (s : S) (x : N ⊗[R] A) :
+        eT (f (comm (s • x))) = s • eT (f (comm x)) := by
+      refine TensorProduct.induction_on x ?_ ?_ ?_
+      · simp [eT, f, comm]
+      · intro n a
+        rw [TensorProduct.smul_tmul']
+        rw [show comm ((s • n) ⊗ₜ[R] a) = a ⊗ₜ[R] (s • n) by
+          rfl, show comm (n ⊗ₜ[R] a) = a ⊗ₜ[R] n by rfl]
+        simp [eT, f, TensorProduct.mk_apply, TensorProduct.comm_tmul,
+          TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+          ← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm,
+          TensorProduct.smul_tmul', TensorProduct.tmul_smul]
+        rw [TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
+          TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul]
+        rw [TensorProduct.comm_tmul, TensorProduct.comm_tmul,
+          TensorProduct.smul_tmul']
+      · intro x y hx hy
+        simp only [map_add, hx, hy, smul_add]
+    let x0 : N ⊗[R] A := eS.symm m
+    refine ⟨eT (f (comm x0)), ?_⟩
+    ext s
+    rw [Submodule.mem_colon_singleton]
+    have hx0 : eS x0 = m := by
+      simp [x0]
+    constructor
+    · intro hs
+      have hsource : f (comm (s • x0)) = 0 := by
+        apply eT.injective
+        rw [heT, hs, map_zero]
+      obtain ⟨a, ha⟩ :=
+        (IsLocalizedModule.eq_zero_iff (nonZeroDivisors A) (f := f)).mp hsource
+      rcases a with ⟨a, ha0⟩
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective a
+      have har : (algebraMap R A r : A) ≠ 0 :=
+        mem_nonZeroDivisors_iff_ne_zero.mp ha0
+      have hrp : r ∉ p.asIdeal := by
+        intro hr
+        apply har
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      have hxsA : (algebraMap R A r) • comm (s • x0) = 0 := ha
+      have hxs : (algebraMap R A r) • (s • x0) = 0 := by
+        apply comm.injective
+        rw [hcomm, hxsA, map_zero]
+      have hxsR : r • (s • x0) = 0 := by
+        rw [← IsScalarTower.algebraMap_smul A r]
+        simpa only [Ideal.Quotient.mk_algebraMap] using hxs
+      have hsm : (algebraMap R S r) • (s • m) = 0 := by
+        calc
+          (algebraMap R S r) • (s • m) =
+              (algebraMap R S r) • eS (s • x0) := by
+                rw [eS.map_smul, hx0]
+          _ = eS (r • (s • x0)) := by
+                rw [hmapR]
+          _ = 0 := by rw [hxsR, map_zero]
+      have hmem : (algebraMap R S r) * s ∈
+          (⊥ : Submodule S (N ⧸ J)).colon ({m} : Set _) := by
+        rw [Submodule.mem_colon_singleton, mul_smul]
+        exact hsm
+      rw [hm] at hmem
+      have hrq : algebraMap R S r ∉ q.asIdeal := by
+        intro hrq
+        apply hrp
+        exact hrq
+      exact (q.isPrime.mem_or_mem hmem).resolve_left hrq
+    · intro hs
+      have hsm : s • m = 0 := by
+        have hmem : s ∈ (⊥ : Submodule S (N ⧸ J)).colon ({m} : Set _) := by
+          rw [hm]
+          exact hs
+        exact Submodule.mem_colon_singleton.mp hmem
+      have hxs : s • x0 = 0 := by
+        apply eS.injective
+        rw [eS.map_smul, hx0, hsm, map_zero]
+      rw [← heT, hxs, map_zero]
+      exact Submodule.zero_mem _
+  -/
+  · intro q hq
+    change ∃ (M : Type u) (hMadd : AddCommGroup M) (hMmodule : Module R M), _
+    rcases hq with ⟨M, hMadd, hMmodule, hMfinite, hq⟩
+    exact ⟨M, hMadd, hMmodule, hq⟩
+  · intro q hq
+    change ∃ p : PrimeSpectrum R, _
+    exact ⟨PrimeSpectrum.comap (algebraMap R S) q, hq⟩
+  · intro q hq
+    letI : Module R N := Module.compHom N (algebraMap R S)
+    letI : IsScalarTower R S N :=
+      inducedModule_isScalarTower (R := R) (S := S) (N := N)
+    change ∃ p : PrimeSpectrum R,
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S
+        (N ⧸ (p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N))) at hq
+    rcases hq with ⟨p, hq⟩
+    let I : Submodule R N := p.asIdeal • (⊤ : Submodule R N)
+    let J : Submodule S N :=
+      p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
+    have hIJ : J.restrictScalars R = I := by
+      dsimp [I, J]
+      rw [Ideal.smul_restrictScalars]
+      rfl
+    let eQ : (N ⧸ I) ≃ₗ[R] (N ⧸ (J.restrictScalars R)) :=
+      Submodule.quotEquivOfEq I (J.restrictScalars R) hIJ.symm
+    let e : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[R] (N ⧸ J) :=
+      ((TensorProduct.tensorQuotEquivQuotSMul N p.asIdeal).trans eQ).trans
+        ((Submodule.Quotient.restrictScalarsEquiv R J).restrictScalars R)
+    have he (s : S) (z : N ⊗[R] (R ⧸ p.asIdeal)) :
+        e (s • z) = s • e z := by
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp [e, eQ]
+      · intro n r
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+        simp only [e, LinearEquiv.trans_apply, TensorProduct.smul_tmul',
+          TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+        change (Submodule.Quotient.mk (r • (s • n)) : N ⧸ J) =
+          Submodule.Quotient.mk (s • (r • n))
+        simp [← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm]
+        rw [smul_comm]
+      · intro x y hx hy
+        simp only [TensorProduct.smul_add, map_add, smul_add, hx, hy]
+    let eS : (N ⊗[R] (R ⧸ p.asIdeal)) ≃ₗ[S] (N ⧸ J) :=
+      { e with map_smul' := he }
+    change (∃ (M : Type u) (hMadd : AddCommGroup M) (hMmodule : Module R M)
+        (hMfinite : Module.Finite R M),
+      letI := hMadd
+      letI := hMmodule
+      letI := hMfinite
+      letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S (N ⊗[R] M))
+    refine ⟨R ⧸ p.asIdeal, inferInstance, inferInstance, inferInstance, ?_⟩
+    letI : Module S (N ⊗[R] (R ⧸ p.asIdeal)) := TensorProduct.leftModule
+    change ∃ y, (⊥ : Submodule S (N ⊗[R] (R ⧸ p.asIdeal))).colon
+      ({y} : Set _) = q.asIdeal
+    rcases hq with ⟨x, hx⟩
+    refine ⟨eS.symm x, ?_⟩
+    ext s
+    rw [Submodule.mem_colon_singleton]
+    constructor
+    · intro hs
+      have hsx : s • x = 0 := by
+        apply eS.symm.injective
+        rw [eS.symm.map_smul, hs, map_zero]
+      have hmem : s ∈ (⊥ : Submodule S (N ⧸ J)).colon ({x} : Set _) := by
+        rw [Submodule.mem_colon_singleton]
+        exact hsx
+      rw [hx] at hmem
+      exact hmem
+    · intro hs
+      have hmem : s ∈ (⊥ : Submodule S (N ⧸ J)).colon ({x} : Set _) := by
+        rw [hx]
+        exact hs
+      have hsx : s • x = 0 := Submodule.mem_colon_singleton.mp hmem
+      rw [← eS.symm.map_smul, hsx, map_zero]
+      exact Submodule.zero_mem _
+  · intro q hq
+    letI : Module R N := Module.compHom N (algebraMap R S)
+    letI : IsScalarTower R S N :=
+      inducedModule_isScalarTower (R := R) (S := S) (N := N)
+    change (∃ (M : Type u) (hMadd : AddCommGroup M) (hMmodule : Module R M),
+      letI := hMadd
+      letI := hMmodule
+      letI : Module S (N ⊗[R] M) := TensorProduct.leftModule
+      q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes S (N ⊗[R] M))
+    refine ⟨(PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField,
+      inferInstance, inferInstance, ?_⟩
+    change ∃ m, (⊥ : Submodule S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+        ({m} : Set _) = q.asIdeal at hq
+    exact hq
   /- Original proof attempt:
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · sorry

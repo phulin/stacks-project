@@ -621,12 +621,263 @@ def degeneracyTuple {C : Type u} [Category.{v} C] (n : ℕ)
       extensionFace n U ⟨i.val - 1, by omega⟩ ≫
         extensionDegeneracy n U ⟨j.val, by omega⟩
 
+private theorem simplex_delta_sigma_self_of_val_eq {n : ℕ}
+    {a : Fin (n + 2)} {b : Fin (n + 1)} (h : a.val = b.val) :
+    SimplexCategory.δ a ≫ SimplexCategory.σ b = 𝟙 _ := by
+  have h' := SimplexCategory.δ_comp_σ_self (n := n) (i := b)
+  rw [show a = b.castSucc by
+    apply Fin.ext
+    simpa using h]
+  exact h'
+
+private theorem simplex_delta_sigma_succ_of_val_eq {n : ℕ}
+    {a : Fin (n + 2)} {b : Fin (n + 1)} (h : a.val = b.val + 1) :
+    SimplexCategory.δ a ≫ SimplexCategory.σ b = 𝟙 _ := by
+  have h' := SimplexCategory.δ_comp_σ_succ (n := n) (i := b)
+  rw [show a = b.succ by
+    apply Fin.ext
+    simpa using h]
+  exact h'
+
 theorem degeneracyTuple_is_compatible {C : Type u} [Category.{v} C]
     (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (j : Fin (n + 2)) :
     ∀ (i k : Fin (n + 3)) (hik : i < k),
       degeneracyTuple n U j i ≫ truncatedFace n U ⟨k.val - 1, by omega⟩ =
         degeneracyTuple n U j k ≫ truncatedFace n U ⟨i.val, by omega⟩ := by
-  sorry
+  intro i k hik
+  by_cases hi : i.val < j.val
+  · by_cases hk : k.val < j.val
+    · simp [degeneracyTuple, hi, hk, extensionFace, extensionDegeneracy, truncatedFace]
+      repeat' rw [← U.map_comp]
+      congr 1
+      apply Opposite.unop_injective
+      apply ObjectProperty.hom_ext
+      change (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _) =
+        (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _)
+      cases n with
+      | zero => omega
+      | succ n =>
+        let a : Fin (n + 2) := ⟨k.val - 1, by omega⟩
+        let b : Fin (n + 1) := ⟨j.val - 2, by omega⟩
+        let c : Fin (n + 2) := ⟨i.val, by omega⟩
+        let d : Fin (n + 2) := ⟨k.val, by omega⟩
+        have ha : (⟨k.val - 1, by omega⟩ : Fin (n + 3)) = a.castSucc := by
+          apply Fin.ext
+          rfl
+        have hb : (⟨j.val - 1, by omega⟩ : Fin (n + 2)) = b.succ := by
+          apply Fin.ext
+          change j.val - 1 = (j.val - 2) + 1
+          omega
+        have hc : (⟨i.val, by omega⟩ : Fin (n + 3)) = c.castSucc := by
+          apply Fin.ext
+          rfl
+        have hd : (⟨k.val, by omega⟩ : Fin (n + 3)) = d.castSucc := by
+          apply Fin.ext
+          rfl
+        rw [ha, hb, hc, hd]
+        have hleA : a ≤ b.castSucc := by
+          simp only [Fin.le_iff_val_le_val]
+          change a.val ≤ b.val
+          dsimp [a, b]
+          omega
+        have hleC : c ≤ b.castSucc := by
+          simp only [Fin.le_iff_val_le_val]
+          change c.val ≤ b.val
+          dsimp [b, c]
+          omega
+        have hleD : c ≤ a := by
+          simp only [Fin.le_iff_val_le_val]
+          change c.val ≤ a.val
+          dsimp [a, c]
+          omega
+        have hd' : d.castSucc = a.succ := by
+          apply Fin.ext
+          change k.val = (k.val - 1) + 1
+          omega
+        have h1 := SimplexCategory.δ_comp_σ_of_le (n := n) (i := a) (j := b) hleA
+        have h2 := SimplexCategory.δ_comp_σ_of_le (n := n) (i := c) (j := b) hleC
+        have h3 := SimplexCategory.δ_comp_δ (n := n) (i := c) (j := a) hleD
+        rw [← Category.assoc]
+        rw [← Category.assoc]
+        rw [hd', h1, h2]
+        simp only [Category.assoc]
+        rw [← h3]
+    · by_cases hkj0 : k.val = j.val
+      · simp [degeneracyTuple, hi, hk, hkj0, extensionFace, extensionDegeneracy, truncatedFace]
+        repeat' rw [← U.map_comp]
+        congr 1
+        apply Opposite.unop_injective
+        apply ObjectProperty.hom_ext
+        change (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _) = SimplexCategory.δ _
+        have hunit :
+            SimplexCategory.δ (⟨j.val - 1, by omega⟩ : Fin (n + 2)) ≫
+                SimplexCategory.σ (⟨j.val - 1, by omega⟩ : Fin (n + 1)) = 𝟙 _ := by
+          apply simplex_delta_sigma_self_of_val_eq
+          rfl
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun f => f ≫ SimplexCategory.δ (⟨i.val, by omega⟩ : Fin (n + 2))) hunit
+      · by_cases hkj1 : k.val = j.val + 1
+        · simp [degeneracyTuple, hi, hk, hkj0, hkj1, extensionFace, extensionDegeneracy, truncatedFace]
+          repeat' rw [← U.map_comp]
+          congr 1
+          apply Opposite.unop_injective
+          apply ObjectProperty.hom_ext
+          change (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _) = SimplexCategory.δ _
+          have hunit :
+              SimplexCategory.δ (⟨j.val, by omega⟩ : Fin (n + 2)) ≫
+                  SimplexCategory.σ (⟨j.val - 1, by omega⟩ : Fin (n + 1)) = 𝟙 _ := by
+            apply simplex_delta_sigma_succ_of_val_eq
+            change j.val = (j.val - 1) + 1
+            omega
+          simpa only [Category.assoc, Category.id_comp] using
+            congrArg (fun f => f ≫ SimplexCategory.δ (⟨i.val, by omega⟩ : Fin (n + 2))) hunit
+        · have hkj : j.val + 1 < k.val := by omega
+          simp [degeneracyTuple, hi, hk, hkj0, hkj1, extensionFace, extensionDegeneracy, truncatedFace]
+          repeat' rw [← U.map_comp]
+          congr 1
+          apply Opposite.unop_injective
+          apply ObjectProperty.hom_ext
+          change (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _) =
+            (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _)
+          cases n with
+          | zero => omega
+          | succ n =>
+            let a : Fin (n + 2) := ⟨k.val - 2, by omega⟩
+            let b : Fin (n + 1) := ⟨j.val - 1, by omega⟩
+            let c : Fin (n + 2) := ⟨i.val, by omega⟩
+            have ha : (⟨k.val - 1, by omega⟩ : Fin (n + 3)) = a.succ := by
+              apply Fin.ext
+              change k.val - 1 = (k.val - 2) + 1
+              omega
+            have hb : (⟨j.val - 1, by omega⟩ : Fin (n + 2)) = b.castSucc := by
+              apply Fin.ext
+              rfl
+            have hc : (⟨i.val, by omega⟩ : Fin (n + 3)) = c.castSucc := by
+              apply Fin.ext
+              rfl
+            have hj : (⟨j.val, by omega⟩ : Fin (n + 2)) = b.succ := by
+              apply Fin.ext
+              change j.val = (j.val - 1) + 1
+              omega
+            rw [ha, hb, hc, hj]
+            have hgt : b.castSucc < a := by
+              simp only [Fin.lt_def]
+              change b.val < a.val
+              dsimp [a, b]
+              omega
+            have hle : c ≤ b.castSucc := by
+              simp only [Fin.le_iff_val_le_val]
+              change c.val ≤ b.val
+              dsimp [b, c]
+              omega
+            have h3le : c ≤ a := by
+              simp only [Fin.le_iff_val_le_val]
+              change c.val ≤ a.val
+              dsimp [a, c]
+              omega
+            have hgt' := SimplexCategory.δ_comp_σ_of_gt (n := n) (i := a) (j := b) hgt
+            have hle' := SimplexCategory.δ_comp_σ_of_le (n := n) (i := c) (j := b) hle
+            have h3 := SimplexCategory.δ_comp_δ (n := n) (i := c) (j := a) h3le
+            rw [← Category.assoc]
+            rw [← Category.assoc]
+            rw [hgt', hle']
+            simp only [Category.assoc]
+            rw [← h3]
+  · by_cases hij0 : i.val = j.val
+    · have hkj0 : k.val ≠ j.val := by omega
+      by_cases hkj1 : k.val = j.val + 1
+      · simp [degeneracyTuple, hij0, hkj1]
+      · have hkj : j.val + 1 < k.val := by omega
+        have hk : ¬ k.val < j.val := by omega
+        simp [degeneracyTuple, hij0, hk, hkj0, hkj1, extensionFace, extensionDegeneracy,
+          truncatedFace]
+        repeat' rw [← U.map_comp]
+        congr 1
+        have hunit :
+            SimplexCategory.Truncated.δ (n + 1) j (by simp) (by simp) ≫
+                SimplexCategory.Truncated.σ (n + 1)
+                  (⟨j.val, by omega⟩ : Fin (n + 1)) (by simp) (by simp) = 𝟙 _ := by
+          apply ObjectProperty.hom_ext
+          exact simplex_delta_sigma_self_of_val_eq (h := rfl)
+        rw [← CategoryTheory.op_comp, hunit]
+        simp
+    · by_cases hij1 : i.val = j.val + 1
+      · have hkj0 : k.val ≠ j.val := by omega
+        have hkj1 : k.val ≠ j.val + 1 := by omega
+        have hk : ¬ k.val < j.val := by omega
+        have hki : i.val < k.val := hik
+        have hklt : k.val < n + 3 := k.isLt
+        have hjlt : j.val < n + 2 := j.isLt
+        simp [degeneracyTuple, hij1, hkj0, hkj1, hk, extensionFace, extensionDegeneracy,
+          truncatedFace]
+        repeat' rw [← U.map_comp]
+        congr 1
+        have hunit :
+            SimplexCategory.Truncated.δ (n + 1)
+                (⟨j.val + 1, by omega⟩ : Fin (n + 2)) (by simp) (by simp) ≫
+                SimplexCategory.Truncated.σ (n + 1)
+                  (⟨j.val, by omega⟩ : Fin (n + 1)) (by simp) (by simp) = 𝟙 _ := by
+          apply ObjectProperty.hom_ext
+          exact simplex_delta_sigma_succ_of_val_eq (h := by rfl)
+        rw [← CategoryTheory.op_comp, hunit]
+        simp
+      · have hij : j.val + 1 < i.val := by omega
+        have hkj0 : k.val ≠ j.val := by omega
+        have hkj1 : k.val ≠ j.val + 1 := by omega
+        have hki : i.val < k.val := hik
+        have hk : ¬ k.val < j.val := by omega
+        simp [degeneracyTuple, hi, hij0, hij1, hkj0, hkj1, hk, extensionFace,
+          extensionDegeneracy, truncatedFace]
+        repeat' rw [← U.map_comp]
+        congr 1
+        apply Opposite.unop_injective
+        apply ObjectProperty.hom_ext
+        change (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _) =
+          (SimplexCategory.δ _ ≫ SimplexCategory.σ _ ≫ SimplexCategory.δ _)
+        cases n with
+        | zero => omega
+        | succ n =>
+          let a : Fin (n + 2) := ⟨k.val - 2, by omega⟩
+          let b : Fin (n + 1) := ⟨j.val, by omega⟩
+          let c : Fin (n + 2) := ⟨i.val - 1, by omega⟩
+          have ha : (⟨k.val - 1, by omega⟩ : Fin (n + 3)) = a.succ := by
+            apply Fin.ext
+            change k.val - 1 = (k.val - 2) + 1
+            omega
+          have hb : (⟨j.val, by omega⟩ : Fin (n + 2)) = b.castSucc := by
+            apply Fin.ext
+            rfl
+          have hc : (⟨i.val - 1, by omega⟩ : Fin (n + 3)) = c.castSucc := by
+            apply Fin.ext
+            rfl
+          have hi' : (⟨i.val, by omega⟩ : Fin (n + 3)) = c.succ := by
+            apply Fin.ext
+            change i.val = (i.val - 1) + 1
+            omega
+          rw [ha, hb, hc, hi']
+          have hgtA : b.castSucc < a := by
+            simp only [Fin.lt_def]
+            change b.val < a.val
+            dsimp [a, b]
+            omega
+          have hgtC : b.castSucc < c := by
+            simp only [Fin.lt_def]
+            change b.val < c.val
+            dsimp [b, c]
+            omega
+          have h3le : c ≤ a := by
+            simp only [Fin.le_iff_val_le_val]
+            change c.val ≤ a.val
+            dsimp [a, c]
+            omega
+          have h1 := SimplexCategory.δ_comp_σ_of_gt (n := n) (i := a) (j := b) hgtA
+          have h2 := SimplexCategory.δ_comp_σ_of_gt (n := n) (i := c) (j := b) hgtC
+          have h3 := SimplexCategory.δ_comp_δ (n := n) (i := c) (j := a) h3le
+          rw [← Category.assoc]
+          rw [← Category.assoc]
+          rw [h1, h2]
+          simp only [Category.assoc]
+          rw [← h3]
 
 noncomputable def representedDegeneracy {C : Type u} [Category.{v} C]
     (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)

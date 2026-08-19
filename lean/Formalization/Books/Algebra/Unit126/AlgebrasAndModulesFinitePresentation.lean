@@ -937,7 +937,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
   let B : Subalgebra R S' := f.range
   have hfinite' : Algebra.FiniteType R S' :=
     (RingHom.finiteType_algebraMap).mp hfinite
-  letI : Algebra.FiniteType R S' := hfinite'
+  let hfinite' : Algebra.FiniteType R S' := hfinite'
   obtain ⟨s, hs⟩ := (inferInstance : Algebra.FiniteType R S').out
   choose y hy using fun x : s => hquot (Ideal.Quotient.mk J x.1)
   let d : s → S' := fun x => x.1 - f (y x)
@@ -977,7 +977,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
   have hdK (x : s) : d x ∈ K.map (algebraMap R S') :=
     hspan (htu (Finset.mem_image.mpr ⟨x, Finset.mem_attach _ _, rfl⟩))
   have hgen (x : S') : ∃ b : B, x - b.1 ∈ K.map (algebraMap R S') := by
-    have hx : x ∈ Algebra.adjoin R (s : Set S') := by simpa [hs]
+    have hx : x ∈ Algebra.adjoin R (s : Set S') := by simp [hs]
     induction hx using Algebra.adjoin_induction with
     | mem x hx =>
         exact ⟨⟨f (y ⟨x, hx⟩), ⟨y ⟨x, hx⟩, rfl⟩⟩, hdK ⟨x, hx⟩⟩
@@ -1000,7 +1000,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
           Ideal.mul_mem_left _ _ hby
         have hsum := add_mem (add_mem h₁ h₂) h₃
         change x * y - bx.1 * b_y.1 ∈ K.map (algebraMap R S')
-        convert hsum using 1 <;> ring
+        convert hsum using 1 ; ring
   let Kmap : Ideal S' := K.map (algebraMap R S')
   have hstep (L : Ideal R) (x : S') (hx : x ∈ L.map (algebraMap R S')) :
       ∃ b : B, b.1 ∈ L.map (algebraMap R S') ∧
@@ -1027,7 +1027,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
         rw [Ideal.mul_comm] at h₂'
         exact h₂'
       have hsum := add_mem h₁ h₂
-      convert hsum using 1 <;> simp [Algebra.smul_def, Subalgebra.coe_mul] <;> ring
+      convert hsum using 1 ; simp [Subalgebra.coe_mul] ; ring
   have hpow (n : ℕ) : Kmap ^ n = (K ^ n).map (algebraMap R S') := by
     rw [← Ideal.map_pow]
   obtain ⟨n, hn⟩ := hKnil

@@ -2444,34 +2444,38 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
       0 < r → E.w 0 = r → E.w 1 = 2 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -4 * r → E.a 0 1 = 2 * r → E.a 1 0 = 2 * r →
       (∀ i, 0 < E.m i) → mConditionB2 E.m → isB2 E := by
-    sorry
-/-
     intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
     unfold isB2 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, haa0,
-          haa1, hae01, hae10] ; ring
+        norm_num [scalarMatrix, pathLastMatrix, haa0,
+          haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a ; simp [scalarVector, lastVector, hw0, hw1] ; ring
-  -/
+      fin_cases a
+      · simp [scalarVector, lastVector, hw0]
+      · norm_num [scalarVector, lastVector]
+        calc
+          E.w 1 = 2 * r := hw1
+          _ = r * 2 := by ring
   have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = 3 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -6 * r → E.a 0 1 = 3 * r → E.a 1 0 = 3 * r →
       (∀ i, 0 < E.m i) → mConditionG2 E.m → isG2 E := by
-    sorry
-/-
     intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
     unfold isG2 realizesPattern
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, haa0,
-          haa1, hae01, hae10] ; ring
+        norm_num [scalarMatrix, pathLastMatrix, haa0,
+          haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a ; simp [scalarVector, lastVector, hw0] ; ring
-  -/
+      fin_cases a
+      · simp [scalarVector, lastVector, hw0]
+      · norm_num [scalarVector, lastVector]
+        calc
+          E.w 1 = 3 * r := hw1
+          _ = r * 3 := by ring
   have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
   rcases hp_cases with hp1 | hp23
   · have hq_cases : q = 1 ∨ q = 2 ∨ q = 3 := by omega

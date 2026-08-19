@@ -137,7 +137,7 @@ the caller through `D`, while the directed-index hypotheses are explicit.
 -/
 def CotangentComplexColimitStatement {I : Type u} [Preorder I] [Nonempty I]
     [IsDirectedOrder I]
-    (D : I ⥤ CochainComplex (ModuleCat.{u} B)) : Prop :=
+    (D : I ⥤ CochainComplex (ModuleCat.{u} B) ℤ) : Prop :=
   ∃ c : Cocone D, Nonempty (IsColimit c) ∧
     Nonempty (cotangentComplex A B ≅ c.pt)
 

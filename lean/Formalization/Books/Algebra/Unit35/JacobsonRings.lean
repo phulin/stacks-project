@@ -4,6 +4,7 @@ import Formalization.Books.Algebra.Unit34.HilbertNullstellensatz
 import Formalization.Books.Topology.Unit18.JacobsonSpaces
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.FieldTheory.Finite.Basic
+import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.LinearAlgebra.FreeAlgebra
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.LinearAlgebra.Matrix.Rank
@@ -1841,7 +1842,67 @@ theorem noetherian_jacobson_constructible_correspondence_diagram
           PrimeSpectrum S) (traceY E : Set (closedPoints (PrimeSpectrum S))) =
         closedPointPart (E : Set (PrimeSpectrum S))) ∧
       (∀ E, traceX (imageYX E) = imageY₀X₀ (traceY E)) := by
-  sorry
+  let : IsJacobsonRing S := hφ.isJacobsonRing
+  let : JacobsonSpace (PrimeSpectrum R) :=
+    (jacobson_iff_primeSpectrum_isJacobsonSpace).mp inferInstance
+  let : JacobsonSpace (PrimeSpectrum S) :=
+    (jacobson_iff_primeSpectrum_isJacobsonSpace).mp inferInstance
+  obtain ⟨traceX, htraceX, -, -, -⟩ :=
+    Formalization.Books.Topology.Unit18.exists_constructible_closedPoint_correspondence
+      (X := PrimeSpectrum R)
+  obtain ⟨traceY, htraceY, -, -, -⟩ :=
+    Formalization.Books.Topology.Unit18.exists_constructible_closedPoint_correspondence
+      (X := PrimeSpectrum S)
+  let imageYX : ConstructibleSet (PrimeSpectrum S) →
+      ConstructibleSet (PrimeSpectrum R) := fun E =>
+    ⟨PrimeSpectrum.comap φ '' (E : Set (PrimeSpectrum S)),
+      finiteType_constructible_image_isConstructible φ hφ E.property⟩
+  let imageY₀X₀ : ConstructibleSet (closedPoints (PrimeSpectrum S)) →
+      ConstructibleSet (closedPoints (PrimeSpectrum R)) := fun E =>
+    traceX (imageYX (traceY.symm E))
+  refine ⟨imageYX, imageY₀X₀, traceX, traceY, ?_, ?_, ?_, ?_, ?_⟩
+  · intro E
+    rfl
+  · intro E
+    let F := traceY.symm E
+    have hformula := jacobson_constructible_image_closedPoint_formula
+      φ hφ F.property
+    have htrace : (traceY F : Set (closedPoints (PrimeSpectrum S))) = E := by
+      exact congrArg Subtype.val (traceY.apply_symm_apply E)
+    have hclosed :
+        (Subtype.val : closedPoints (PrimeSpectrum R) → PrimeSpectrum R) ''
+            (imageY₀X₀ E : Set (closedPoints (PrimeSpectrum R))) =
+          closedPointPart (imageYX F : Set (PrimeSpectrum R)) := by
+      rw [show imageY₀X₀ E = traceX (imageYX F) by rfl]
+      rw [htraceX]
+      simp [Formalization.Books.Topology.Unit18.closedPointTrace,
+        closedPointPart, Set.inter_comm]
+    rw [hclosed]
+    have htrace_val : (F : Set (PrimeSpectrum S)) ∩ closedPoints (PrimeSpectrum S) =
+        Set.image (Subtype.val : closedPoints (PrimeSpectrum S) → PrimeSpectrum S)
+          (E : Set (closedPoints (PrimeSpectrum S))) := by
+      calc
+        (F : Set (PrimeSpectrum S)) ∩ closedPoints (PrimeSpectrum S) =
+            Set.image (Subtype.val : closedPoints (PrimeSpectrum S) → PrimeSpectrum S)
+              (traceY F : Set (closedPoints (PrimeSpectrum S))) := by
+          rw [htraceY]
+          simp [Formalization.Books.Topology.Unit18.closedPointTrace,
+            Set.inter_comm]
+        _ = Set.image (Subtype.val : closedPoints (PrimeSpectrum S) → PrimeSpectrum S)
+              (E : Set (closedPoints (PrimeSpectrum S))) := by rw [htrace]
+    rw [← hformula.2.1, htrace_val]
+  · intro E
+    rw [htraceX]
+    simp [Formalization.Books.Topology.Unit18.closedPointTrace,
+      closedPointPart, Set.inter_comm]
+  · intro E
+    rw [htraceY]
+    simp [Formalization.Books.Topology.Unit18.closedPointTrace,
+      closedPointPart, Set.inter_comm]
+  · intro E
+    change traceX (imageYX E) =
+      traceX (imageYX (traceY.symm (traceY E)))
+    rw [traceY.symm_apply_apply]
 
 /-! ## The two-axis and product-zero matrix examples -/
 
@@ -1968,7 +2029,91 @@ theorem productZero_spectrum_has_two_irreducible_components
     (k : Type u) [Field k] :
     Nonempty
       (Fin 2 ≃ irreducibleComponents (PrimeSpectrum (ProductZeroRing k))) := by
-  sorry
+  classical
+  let I := productZeroRelationIdeal k
+  have hmin : I.minimalPrimes =
+      {productZeroXAxisIdeal k, productZeroYAxisIdeal k} :=
+    productZero_minimalPrimes_are_the_two_axes k
+  let f : minimalPrimes (ProductZeroRing k) → I.minimalPrimes := fun p =>
+    ⟨Ideal.comap (Ideal.Quotient.mk I) p.1, by
+      rw [Ideal.minimalPrimes_eq_comap]
+      exact ⟨p.1, p.2, rfl⟩⟩
+  have hf_inj : Function.Injective f := by
+    intro p q hpq
+    apply Subtype.ext
+    apply Ideal.comap_injective_of_surjective (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective
+    exact congrArg Subtype.val hpq
+  have hf_surj : Function.Surjective f := by
+    intro p
+    have hp : (p : Ideal (ProductZeroPolynomialRing k)) ∈ I.minimalPrimes := p.2
+    have hpimage : (p : Ideal (ProductZeroPolynomialRing k)) ∈
+        Ideal.comap (Ideal.Quotient.mk I) '' minimalPrimes (ProductZeroRing k) := by
+      exact (congrArg (fun s : Set (Ideal (ProductZeroPolynomialRing k)) =>
+        (p : Ideal (ProductZeroPolynomialRing k)) ∈ s)
+        (Ideal.minimalPrimes_eq_comap (I := I))).mp hp
+    obtain ⟨q, hq, hqp⟩ := hpimage
+    refine ⟨⟨q, hq⟩, ?_⟩
+    apply Subtype.ext
+    exact hqp
+  let eMin : minimalPrimes (ProductZeroRing k) ≃ I.minimalPrimes :=
+    Equiv.ofBijective f ⟨hf_inj, hf_surj⟩
+  have hax : productZeroXAxisIdeal k ∈ I.minimalPrimes := by
+    rw [hmin]
+    simp
+  have hay : productZeroYAxisIdeal k ∈ I.minimalPrimes := by
+    rw [hmin]
+    simp
+  let ax : I.minimalPrimes := ⟨productZeroXAxisIdeal k, hax⟩
+  let ay : I.minimalPrimes := ⟨productZeroYAxisIdeal k, hay⟩
+  have hnotXAxis : MvPolynomial.X (R := k) 1 ∉ productZeroXAxisIdeal k := by
+    intro h
+    rw [productZeroXAxisIdeal, Ideal.mem_span_singleton'] at h
+    obtain ⟨a, ha⟩ := h
+    have he := congrArg (MvPolynomial.aeval (R := k) (![0, 1] : Fin 2 → k)) ha
+    simp at he
+  have hne : ax ≠ ay := by
+    intro h
+    apply hnotXAxis
+    have hideal : productZeroXAxisIdeal k = productZeroYAxisIdeal k :=
+      congrArg Subtype.val h
+    rw [hideal]
+    exact Ideal.mem_span_singleton_self _
+  let g : Fin 2 → I.minimalPrimes := Fin.cases ax (fun _ => ay)
+  have hg_inj : Function.Injective g := by
+    intro i j hij
+    fin_cases i <;> fin_cases j
+    · rfl
+    · have haxy := hij
+      simp only [g, Fin.cases] at haxy
+      exact (hne haxy).elim
+    · have hya := hij
+      simp only [g, Fin.cases] at hya
+      exact (hne hya.symm).elim
+    · rfl
+  have hg_surj : Function.Surjective g := by
+    intro p
+    have hp : p.1 = productZeroXAxisIdeal k ∨
+        p.1 = productZeroYAxisIdeal k := by
+      have hp' : (p : Ideal (ProductZeroPolynomialRing k)) ∈ I.minimalPrimes := p.2
+      have hp'' : (p : Ideal (ProductZeroPolynomialRing k)) ∈
+          ({productZeroXAxisIdeal k, productZeroYAxisIdeal k} : Set _ ) := by
+        exact (congrArg (fun s : Set (Ideal (ProductZeroPolynomialRing k)) =>
+          (p : Ideal (ProductZeroPolynomialRing k)) ∈ s) hmin).mp hp'
+      simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hp''
+    rcases hp with hax' | hay'
+    · refine ⟨0, ?_⟩
+      apply Subtype.ext
+      change productZeroXAxisIdeal k = p.1
+      exact hax'.symm
+    · refine ⟨1, ?_⟩
+      apply Subtype.ext
+      change productZeroYAxisIdeal k = p.1
+      exact hay'.symm
+  let eAxes : Fin 2 ≃ I.minimalPrimes := Equiv.ofBijective g ⟨hg_inj, hg_surj⟩
+  let eComponents :=
+    (minimalPrimes.equivIrreducibleComponents (ProductZeroRing k)).toEquiv
+  exact ⟨eAxes.trans eMin.symm |>.trans (eComponents.trans OrderDual.ofDual)⟩
 /-
   classical
   let I := productZeroRelationIdeal k
@@ -2062,11 +2207,153 @@ theorem productZero_solution_set_is_union_of_axes
   ext p
   simp [productZeroXAxis, productZeroYAxis, mul_eq_zero]
 
+private theorem closedPoints_mvPolynomial_equiv
+    (k : Type u) [Field k] [IsAlgClosed k] (σ : Type v) [Finite σ] :
+    Nonempty
+      (closedPoints (PrimeSpectrum (MvPolynomial σ k)) ≃ (σ → k)) := by
+  classical
+  let f : (σ → k) → closedPoints (PrimeSpectrum (MvPolynomial σ k)) := fun x =>
+    let hmax : (MvPolynomial.vanishingIdeal k ({x} : Set (σ → k))).IsMaximal :=
+      inferInstance
+    ⟨MvPolynomial.pointToPoint x,
+      mem_closedPoints_iff.mpr
+        ((PrimeSpectrum.isClosed_singleton_iff_isMaximal
+          (MvPolynomial.pointToPoint x)).mpr hmax)⟩
+  have hf_inj : Function.Injective f := by
+    intro x y hxy
+    funext i
+    let p := MvPolynomial.X i - MvPolynomial.C (x i)
+    have hpx : p ∈ (f x).1.asIdeal := by
+      change p ∈ (MvPolynomial.vanishingIdeal k ({x} : Set (σ → k)))
+      rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+      simp [p]
+    have hpy : p ∈ (f y).1.asIdeal := by
+      rw [← hxy]
+      exact hpx
+    change p ∈ (MvPolynomial.vanishingIdeal k ({y} : Set (σ → k))) at hpy
+    rw [MvPolynomial.mem_vanishingIdeal_singleton_iff] at hpy
+    exact (sub_eq_zero.mp (by simpa [p] using hpy)).symm
+  have hf_surj : Function.Surjective f := by
+    intro p
+    have hpmax : p.1.asIdeal.IsMaximal :=
+      (PrimeSpectrum.isClosed_singleton_iff_isMaximal p.1).mp
+        (mem_closedPoints_iff.mp p.2)
+    obtain ⟨x, hx⟩ :=
+      MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k hpmax
+    refine ⟨x, ?_⟩
+    apply Subtype.ext
+    apply PrimeSpectrum.ext
+    simpa [f, MvPolynomial.pointToPoint] using hx.symm
+  exact ⟨(Equiv.ofBijective f ⟨hf_inj, hf_surj⟩).symm⟩
+
 theorem productZero_closedPoints_are_algebraic_solutions
     (k : Type u) [Field k] (hk : IsAlgClosed k) :
     Nonempty
       (closedPoints (PrimeSpectrum (ProductZeroRing k)) ≃ ProductZeroSolution k) := by
-  sorry
+  classical
+  let I : Ideal (ProductZeroPolynomialRing k) := productZeroRelationIdeal k
+  let mk : ProductZeroPolynomialRing k →+* ProductZeroRing k := Ideal.Quotient.mk I
+  let P : closedPoints (PrimeSpectrum (ProductZeroRing k)) →
+      Ideal (ProductZeroPolynomialRing k) := fun q =>
+    Ideal.comap mk q.1.asIdeal
+  have hPmax (q : closedPoints (PrimeSpectrum (ProductZeroRing k))) :
+      (P q).IsMaximal := by
+    have hqmax : q.1.asIdeal.IsMaximal :=
+      (PrimeSpectrum.isClosed_singleton_iff_isMaximal q.1).mp
+        (mem_closedPoints_iff.mp q.2)
+    let : q.1.asIdeal.IsMaximal := hqmax
+    dsimp [P]
+    exact Ideal.comap_isMaximal_of_surjective mk Ideal.Quotient.mk_surjective
+  let x : closedPoints (PrimeSpectrum (ProductZeroRing k)) → Fin 2 → k := fun q =>
+    Classical.choose (MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k (hPmax q))
+  have hx (q : closedPoints (PrimeSpectrum (ProductZeroRing k))) :
+      P q = MvPolynomial.vanishingIdeal k ({x q} : Set (Fin 2 → k)) :=
+    Classical.choose_spec
+      (MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k (hPmax q))
+  have hIP (q : closedPoints (PrimeSpectrum (ProductZeroRing k))) : I ≤ P q := by
+    intro r hr
+    change mk r ∈ q.1.asIdeal
+    rw [Ideal.Quotient.eq_zero_iff_mem.mpr hr]
+    exact q.1.asIdeal.zero_mem
+  have hcoord : ∀ a b : Fin 2 → k,
+      MvPolynomial.vanishingIdeal k ({a} : Set (Fin 2 → k)) =
+        MvPolynomial.vanishingIdeal k ({b} : Set (Fin 2 → k)) → a = b := by
+    intro a b hab
+    funext i
+    let p := MvPolynomial.X i - MvPolynomial.C (a i)
+    have hpb : p ∈ MvPolynomial.vanishingIdeal k ({b} : Set (Fin 2 → k)) := by
+      rw [← hab, MvPolynomial.mem_vanishingIdeal_singleton_iff]
+      simp [p]
+    rw [MvPolynomial.mem_vanishingIdeal_singleton_iff] at hpb
+    exact (sub_eq_zero.mp (by simpa [p] using hpb)).symm
+  let f : closedPoints (PrimeSpectrum (ProductZeroRing k)) → ProductZeroSolution k :=
+    fun q => ⟨(x q 0, x q 1), by
+      have hrel : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ P q := by
+        apply hIP q
+        change MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈
+          productZeroRelationIdeal k
+        exact Ideal.subset_span (by simp)
+      have hrel' : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈
+          MvPolynomial.vanishingIdeal k ({x q} : Set (Fin 2 → k)) := by
+        rw [← hx q]
+        exact hrel
+      have heval := (MvPolynomial.mem_vanishingIdeal_singleton_iff (x q)
+        (MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1)).mp hrel'
+      simpa using heval⟩
+  have hf_inj : Function.Injective f := by
+    intro q r hqr
+    have hxr : x q = x r := by
+      funext i
+      fin_cases i
+      · exact congrArg (fun z : ProductZeroSolution k => z.1.1) hqr
+      · exact congrArg (fun z : ProductZeroSolution k => z.1.2) hqr
+    apply Subtype.ext
+    apply PrimeSpectrum.ext
+    apply Ideal.comap_injective_of_surjective mk Ideal.Quotient.mk_surjective
+    change P q = P r
+    rw [hx q, hx r, hxr]
+  have hf_surj : Function.Surjective f := by
+    intro z
+    let zfun : Fin 2 → k := ![z.1.1, z.1.2]
+    let J : Ideal (ProductZeroPolynomialRing k) :=
+      MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 2 → k))
+    have hrelJ : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ J := by
+      change MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈
+        MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 2 → k))
+      rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+      simpa [zfun] using z.2
+    have hIJ : I ≤ J := by
+      change productZeroRelationIdeal k ≤ J
+      rw [productZeroRelationIdeal]
+      apply Ideal.span_le.mpr
+      intro p hp
+      rw [Set.mem_singleton_iff] at hp
+      subst p
+      exact hrelJ
+    let qIdeal : Ideal (ProductZeroRing k) := Ideal.map mk J
+    have hker : RingHom.ker mk ≤ J := by
+      rw [Ideal.mk_ker]
+      exact hIJ
+    let : J.IsMaximal := inferInstance
+    have hqmax : qIdeal.IsMaximal := by
+      dsimp [qIdeal]
+      exact Ideal.IsMaximal.map_of_surjective_of_ker_le
+        Ideal.Quotient.mk_surjective hker
+    let q : closedPoints (PrimeSpectrum (ProductZeroRing k)) :=
+      ⟨⟨qIdeal, hqmax.isPrime⟩,
+        mem_closedPoints_iff.mpr
+          ((PrimeSpectrum.isClosed_singleton_iff_isMaximal _).mpr hqmax)⟩
+    refine ⟨q, ?_⟩
+    have hPq : P q = J := by
+      change Ideal.comap mk (Ideal.map mk J) = J
+      rw [Ideal.comap_map_of_surjective mk Ideal.Quotient.mk_surjective,
+        ← RingHom.ker_eq_comap_bot, sup_eq_left.mpr hker]
+    have hxx : x q = zfun := by
+      apply hcoord (x q) zfun
+      exact (hx q).symm.trans (hPq.trans rfl)
+    apply Subtype.ext
+    simp [f, zfun, hxx]
+  exact ⟨Equiv.ofBijective f ⟨hf_inj, hf_surj⟩⟩
 
 /-! The product-zero matrix example. -/
 
@@ -2108,7 +2395,116 @@ theorem matrixPair_polynomial_closedPoints_are_matrix_pairs
     Nonempty
       (closedPoints (PrimeSpectrum (MatrixPairPolynomial k)) ≃
         (Matrix2 k × Matrix2 k)) := by
-  sorry
+  let : IsAlgClosed k := hk
+  obtain ⟨ePoly⟩ := closedPoints_mvPolynomial_equiv k (Fin 8)
+  let idxX : Fin 2 → Fin 2 → Fin 8 :=
+    Fin.cases (fun j => Fin.cases 0 (fun _ => 1) j)
+      (fun _ => fun j => Fin.cases 2 (fun _ => 3) j)
+  let idxY : Fin 2 → Fin 2 → Fin 8 :=
+    Fin.cases (fun j => Fin.cases 4 (fun _ => 5) j)
+      (fun _ => fun j => Fin.cases 6 (fun _ => 7) j)
+  let toPair : (Fin 8 → k) → (Matrix2 k × Matrix2 k) := fun v =>
+    (fun i j => v (idxX i j), fun i j => v (idxY i j))
+  have htoPair_inj : Function.Injective toPair := by
+    have hX00 : idxX 0 0 = 0 := by decide
+    have hX01 : idxX 0 (Fin.succ 0) = 1 := by decide
+    have hX10 : idxX (Fin.succ 0) 0 = 2 := by decide
+    have hX11 : idxX (Fin.succ 0) (Fin.succ 0) = 3 := by decide
+    have hY00 : idxY 0 0 = 4 := by decide
+    have hY01 : idxY 0 (Fin.succ 0) = 5 := by decide
+    have hY10 : idxY (Fin.succ 0) 0 = 6 := by decide
+    have hY11 : idxY (Fin.succ 0) (Fin.succ 0) = 7 := by decide
+    intro v w h
+    funext n
+    fin_cases n
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.1 0 0) h
+      change v (idxX 0 0) = w (idxX 0 0) at hh
+      rw [hX00] at hh
+      exact hh
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.1 0 (Fin.succ 0)) h
+      change v (idxX 0 (Fin.succ 0)) = w (idxX 0 (Fin.succ 0)) at hh
+      rw [hX01] at hh
+      exact hh
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.1 (Fin.succ 0) 0) h
+      change v (idxX (Fin.succ 0) 0) = w (idxX (Fin.succ 0) 0) at hh
+      rw [hX10] at hh
+      exact hh
+    · have hh := congrArg
+          (fun p : Matrix2 k × Matrix2 k => p.1 (Fin.succ 0) (Fin.succ 0)) h
+      change v (idxX (Fin.succ 0) (Fin.succ 0)) =
+        w (idxX (Fin.succ 0) (Fin.succ 0)) at hh
+      rw [hX11] at hh
+      exact hh
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.2 0 0) h
+      change v (idxY 0 0) = w (idxY 0 0) at hh
+      rw [hY00] at hh
+      exact hh
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.2 0 (Fin.succ 0)) h
+      change v (idxY 0 (Fin.succ 0)) = w (idxY 0 (Fin.succ 0)) at hh
+      rw [hY01] at hh
+      exact hh
+    · have hh := congrArg (fun p : Matrix2 k × Matrix2 k => p.2 (Fin.succ 0) 0) h
+      change v (idxY (Fin.succ 0) 0) = w (idxY (Fin.succ 0) 0) at hh
+      rw [hY10] at hh
+      exact hh
+    · have hh := congrArg
+          (fun p : Matrix2 k × Matrix2 k => p.2 (Fin.succ 0) (Fin.succ 0)) h
+      change v (idxY (Fin.succ 0) (Fin.succ 0)) =
+        w (idxY (Fin.succ 0) (Fin.succ 0)) at hh
+      rw [hY11] at hh
+      exact hh
+  have htoPair_surj : Function.Surjective toPair := by
+    have hX00 : idxX 0 0 = 0 := by decide
+    have hX01 : idxX 0 (Fin.succ 0) = 1 := by decide
+    have hX10 : idxX (Fin.succ 0) 0 = 2 := by decide
+    have hX11 : idxX (Fin.succ 0) (Fin.succ 0) = 3 := by decide
+    have hY00 : idxY 0 0 = 4 := by decide
+    have hY01 : idxY 0 (Fin.succ 0) = 5 := by decide
+    have hY10 : idxY (Fin.succ 0) 0 = 6 := by decide
+    have hY11 : idxY (Fin.succ 0) (Fin.succ 0) = 7 := by decide
+    intro p
+    let v : Fin 8 → k :=
+      ![p.1 0 0, p.1 0 1, p.1 1 0, p.1 1 1,
+        p.2 0 0, p.2 0 1, p.2 1 0, p.2 1 1]
+    refine ⟨v, ?_⟩
+    apply Prod.ext
+    · funext i j
+      fin_cases i
+      · fin_cases j
+        · change v (idxX 0 0) = p.1 0 0
+          rw [hX00]
+          simp [v]
+        · change v (idxX 0 (Fin.succ 0)) = p.1 0 (Fin.succ 0)
+          rw [hX01]
+          simp [v]
+      · fin_cases j
+        · change v (idxX (Fin.succ 0) 0) = p.1 (Fin.succ 0) 0
+          rw [hX10]
+          simp [v]
+        · change v (idxX (Fin.succ 0) (Fin.succ 0)) =
+            p.1 (Fin.succ 0) (Fin.succ 0)
+          rw [hX11]
+          simp [v]
+    · funext i j
+      fin_cases i
+      · fin_cases j
+        · change v (idxY 0 0) = p.2 0 0
+          rw [hY00]
+          simp [v]
+        · change v (idxY 0 (Fin.succ 0)) = p.2 0 (Fin.succ 0)
+          rw [hY01]
+          simp [v]
+      · fin_cases j
+        · change v (idxY (Fin.succ 0) 0) = p.2 (Fin.succ 0) 0
+          rw [hY10]
+          simp [v]
+        · change v (idxY (Fin.succ 0) (Fin.succ 0)) =
+            p.2 (Fin.succ 0) (Fin.succ 0)
+          rw [hY11]
+          simp [v]
+  let eCoord : (Fin 8 → k) ≃ (Matrix2 k × Matrix2 k) :=
+    Equiv.ofBijective toPair ⟨htoPair_inj, htoPair_surj⟩
+  exact ⟨ePoly.trans eCoord⟩
 
 theorem matrixPair_closedPoints_are_product_zero_solutions
     (k : Type u) [Field k] (hk : IsAlgClosed k) :

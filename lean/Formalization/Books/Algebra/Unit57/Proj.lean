@@ -1716,9 +1716,189 @@ theorem one_variable_polynomial_prime_description
     p.asHomogeneousIdeal.toIdeal =
       Ideal.map (Polynomial.C : R →+* R[X])
         (Ideal.comap (Polynomial.C : R →+* R[X]) p.asHomogeneousIdeal.toIdeal) := by
-  sorry
+  apply le_antisymm
+  · have hpHom := p.asHomogeneousIdeal.isHomogeneous
+    rw [Ideal.IsHomogeneous.iff_exists] at hpHom
+    obtain ⟨T, hT⟩ := hpHom
+    rw [hT]
+    apply Ideal.span_le.mpr
+    rintro x ⟨x, hx, rfl⟩
+    obtain ⟨n, hxn⟩ := x.2
+    have hxp : (x : R[X]) ∈ p.asHomogeneousIdeal.toIdeal := by
+      rw [hT]
+      exact Ideal.subset_span ⟨x, hx, rfl⟩
+    obtain ⟨a, ha⟩ := (hG n (x : R[X])).mp hxn
+    have hca : Polynomial.C a ∈ p.asHomogeneousIdeal.toIdeal := by
+      cases n with
+      | zero => simpa [ha] using hxp
+      | succ n =>
+          have hpow_not : Polynomial.X ^ (n + 1) ∉ p.asHomogeneousIdeal.toIdeal := by
+            intro hpow_mem
+            apply one_variable_X_not_mem G p hG
+            exact p.isPrime.mem_of_pow_mem (n + 1) hpow_mem
+          rcases p.isPrime.2 (ha ▸ hxp) with hca | hpow_mem
+          · exact hca
+          · exact False.elim (hpow_not hpow_mem)
+    rw [ha]
+    have hca' : Polynomial.C a ∈ Ideal.span (Subtype.val '' T) := hT ▸ hca
+    exact (Ideal.map (Polynomial.C : R →+* R[X])
+      (Ideal.comap (Polynomial.C : R →+* R[X]) (Ideal.span (Subtype.val '' T)))).mul_mem_right
+      (Polynomial.X ^ n) (Ideal.mem_map_of_mem _ hca')
+  · exact Ideal.map_comap_le
 
 /-! ## Prime avoidance and homogeneous minimal primes -/
+
+private lemma exists_homogeneous_component_not_mem (G : GradedRingData S)
+    (q : Ideal S) (hq : q.IsHomogeneous G.component) (x : S) (hx : x ∉ q) :
+    ∃ d : ℕ, GradedRing.proj G.component d x ∉ q := by
+  classical
+  by_contra h
+  push_neg at h
+  apply hx
+  rw [← DirectSum.sum_support_decompose G.component x]
+  exact q.sum_mem fun j hj => by
+    simpa only [GradedRing.proj_apply] using h j
+
+private lemma exists_positive_homogeneous_component_not_mem (G : GradedRingData S)
+    (J q : Ideal S) (hJ : J.IsHomogeneous G.component)
+    (hq : q.IsHomogeneous G.component) (hJplus : J ≤ projIrrelevantIdeal G)
+    (x : S) (hxJ : x ∈ J) (hxq : x ∉ q) :
+    ∃ d : ℕ, 0 < d ∧ GradedRing.proj G.component d x ∈ J ∧
+      GradedRing.proj G.component d x ∉ q := by
+  obtain ⟨d, hd⟩ := exists_homogeneous_component_not_mem G q hq x hxq
+  have hdJ : GradedRing.proj G.component d x ∈ J := by
+    simpa only [GradedRing.proj_apply] using hJ.mem_iff.mp hxJ d
+  by_cases hd0 : d = 0
+  · have hzero : GradedRing.proj G.component 0 x = 0 :=
+      (HomogeneousIdeal.mem_irrelevant_iff G.component x).mp (hJplus hxJ)
+    exact (hd (by rw [hd0, hzero]; exact q.zero_mem)).elim
+  · exact ⟨d, Nat.pos_of_ne_zero hd0, hdJ, hd⟩
+
+private lemma finset_product_isHomogeneous (G : GradedRingData S)
+    (t : Finset (Ideal S))
+    (ht : ∀ q ∈ t, q.IsHomogeneous G.component) :
+    (t.prod id).IsHomogeneous G.component := by
+  classical
+  induction t using Finset.induction_on with
+  | empty =>
+      intro d x hx
+      simp
+  | @insert q t hqt ih =>
+      rw [Finset.prod_insert hqt]
+      exact (ht q (by simp)).mul (ih (fun r hr => ht r (by simp [hr])))
+
+private lemma homogeneous_prime_avoidance_finset (G : GradedRingData S)
+    (I : Ideal S) (hI : I.IsHomogeneous G.component)
+    (hIplus : I ≤ projIrrelevantIdeal G) (t : Finset (Ideal S))
+    (ht : t.Nonempty) (hp : ∀ q ∈ t,
+      q.IsHomogeneous G.component ∧ q.IsPrime)
+    (hinc : ∀ q ∈ t, ∀ r ∈ t, q ≤ r → q = r)
+    (havoid : ∀ q ∈ t, ¬ I ≤ q) :
+    ∃ d : ℕ, 0 < d ∧ ∃ x : S,
+      x ∈ G.component d ∧ x ∈ I ∧ ∀ q ∈ t, x ∉ q := by
+  classical
+  induction t using Finset.cons_induction with
+  | empty => exact False.elim (by simpa using ht)
+  | @cons q t hqt ih =>
+      by_cases ht' : t.Nonempty
+      · obtain ⟨d, hd, x, hxcomp, hxI, hxavoid⟩ := ih ht'
+          (fun r hr => hp r (by simp [hr]))
+          (fun r hr s hs hrs => hinc r (by simp [hr]) s (by simp [hs]) hrs)
+          (fun r hr => havoid r (by simp [hr]))
+        by_cases hxa : x ∉ q
+        · exact ⟨d, hd, x, hxcomp, hxI, fun r hr => by
+            rcases Finset.mem_cons.mp hr with rfl | hr
+            · exact hxa
+            · exact hxavoid r hr⟩
+        · have hIq : ¬ I ≤ q := havoid q (by simp)
+          have hnotle : ∀ r ∈ t, ¬ r ≤ q := by
+            intro r hr hle
+            have hreq : r = q := hinc r (by simp [hr]) q (by simp) hle
+            exact hqt (hreq ▸ hr)
+          let K : Ideal S := I * (t.prod id)
+          have hKnot : ¬ K ≤ q := by
+            intro hK
+            have hqprime := (hp q (by simp)).2
+            rcases hqprime.mul_le.mp hK with hI' | hprod'
+            · exact hIq hI'
+            · obtain ⟨r, hr, hrq⟩ := hqprime.prod_le.mp hprod'
+              exact hnotle r hr hrq
+          have hKhom : K.IsHomogeneous G.component := by
+            dsimp [K]
+            exact hI.mul (finset_product_isHomogeneous G t
+              (fun r hr => (hp r (by simp [hr])).1))
+          have hKI : K ≤ I := by
+            dsimp [K]
+            exact Ideal.mul_le_right
+          have hKplus : K ≤ projIrrelevantIdeal G := hKI.trans hIplus
+          have hy_mem : ∃ y : S, y ∈ K ∧ y ∉ q := by
+            by_contra h
+            apply hKnot
+            intro y hy
+            by_contra hyq
+            exact h ⟨y, hy, hyq⟩
+          obtain ⟨y, hyK, hyq⟩ := hy_mem
+          obtain ⟨e, he, hye, hyeq⟩ :=
+            exists_positive_homogeneous_component_not_mem G K q hKhom
+              (hp q (by simp)).1 hKplus y hyK hyq
+          have hyecomp : GradedRing.proj G.component e y ∈ G.component e := by
+            simpa only [GradedRing.proj_apply] using SetLike.coe_mem _
+          have hyeI : GradedRing.proj G.component e y ∈ I := hKI hye
+          let z : S := x ^ e + (GradedRing.proj G.component e y) ^ d
+          have hzcomp : z ∈ G.component (d * e) := by
+            dsimp [z]
+            have hxp := SetLike.pow_mem_graded e hxcomp
+            have hyp := SetLike.pow_mem_graded d hyecomp
+            simpa [nsmul_eq_mul, Nat.mul_comm] using
+              (G.component (d * e)).add_mem
+                (by simpa [nsmul_eq_mul, Nat.mul_comm] using hxp)
+                (by simpa [nsmul_eq_mul] using hyp)
+          have hzI : z ∈ I := by
+            dsimp [z]
+            exact I.add_mem (I.pow_mem_of_mem hxI e he)
+              (I.pow_mem_of_mem hyeI d hd)
+          have hzq : z ∉ q := by
+            have hxq : x ∈ q := by exact not_not.mp hxa
+            intro h
+            have hxp : x ^ e ∈ q := Ideal.pow_mem_of_mem q hxq e he
+            have hyp : (GradedRing.proj G.component e y) ^ d ∈ q := by
+              simpa [z] using q.sub_mem h hxp
+            exact hyeq ((hp q (by simp)).2.mem_of_pow_mem d hyp)
+          refine ⟨d * e, Nat.mul_pos hd he, z, hzcomp, hzI, ?_⟩
+          intro r hr
+          rcases Finset.mem_cons.mp hr with rfl | hr
+          · exact hzq
+          have hrprime := (hp r (by simp [hr])).2
+          have hprod_r : t.prod id ≤ r :=
+            Ideal.prod_le_inf.trans (Finset.inf_le hr)
+          have hKprod : K ≤ t.prod id := by
+            dsimp [K]
+            exact Ideal.mul_le_left
+          have hy_r : GradedRing.proj G.component e y ∈ r :=
+            (hKprod.trans hprod_r) hye
+          have hyp : (GradedRing.proj G.component e y) ^ d ∈ r :=
+            r.pow_mem_of_mem hy_r d hd
+          intro hz_r
+          have hxp : x ^ e ∈ r := by
+            simpa [z] using r.sub_mem hz_r hyp
+          exact hxavoid r hr (hrprime.mem_of_pow_mem e hxp)
+      · have hte : t = ∅ := Finset.not_nonempty_iff_eq_empty.mp ht'
+        subst t
+        have hmem : ∃ x : S, x ∈ I ∧ x ∉ q := by
+          by_contra h
+          apply havoid q (by simp)
+          intro x hx
+          by_contra hxq
+          exact h ⟨x, hx, hxq⟩
+        obtain ⟨y, hyI, hyq⟩ := hmem
+        obtain ⟨d, hd, hycomp, hy_not⟩ :=
+          exists_positive_homogeneous_component_not_mem G I q hI
+            (hp q (by simp)).1 hIplus y hyI hyq
+        refine ⟨d, hd, GradedRing.proj G.component d y, ?_, hycomp, ?_⟩
+        · simpa only [GradedRing.proj_apply] using SetLike.coe_mem _
+        · intro r hr
+          have hreq : r = q := by simpa using hr
+          simpa [hreq] using hy_not
 
 theorem homogeneous_prime_avoidance (G : GradedRingData S) {n : ℕ}
     (hn : 0 < n) (p : Fin n → Ideal S)
@@ -1728,7 +1908,43 @@ theorem homogeneous_prime_avoidance (G : GradedRingData S) {n : ℕ}
     (havoid : ∀ i, ¬ I ≤ p i) :
     ∃ d : ℕ, 0 < d ∧ ∃ x : S,
       x ∈ G.component d ∧ x ∈ I ∧ ∀ i, x ∉ p i := by
-  sorry
+  classical
+  let t : Finset (Ideal S) := Finset.univ.image p
+  let u : Finset (Ideal S) := t.filter (fun q => ∀ r ∈ t, q ≤ r → r ≤ q)
+  obtain ⟨i⟩ : Nonempty (Fin n) := Fin.pos_iff_nonempty.mp hn
+  have hpit : p i ∈ t := by
+    dsimp [t]
+    exact Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩
+  obtain ⟨q, hiq, hqtq⟩ := t.exists_le_maximal hpit
+  have hqu : q ∈ u := by
+    dsimp [u]
+    exact Finset.mem_filter.mpr ⟨hqtq.1,
+      fun r hr hqr => hqtq.2 hr hqr⟩
+  obtain ⟨d, hd, x, hxcomp, hxI, hxavoid⟩ :=
+    homogeneous_prime_avoidance_finset G I hI hIplus u ⟨q, hqu⟩
+      (fun q hq => by
+        obtain ⟨hqt, hqmax⟩ := Finset.mem_filter.mp hq
+        obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hqt
+        exact hp i)
+      (fun q hq r hr hqr => by
+        exact le_antisymm hqr
+          ((Finset.mem_filter.mp hq).2 r (Finset.mem_filter.mp hr).1 hqr))
+      (fun q hq => by
+        obtain ⟨hqt, hqmax⟩ := Finset.mem_filter.mp hq
+        obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hqt
+        exact havoid i)
+  refine ⟨d, hd, x, hxcomp, hxI, ?_⟩
+  intro i
+  have hpit : p i ∈ t := by
+    dsimp [t]
+    exact Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩
+  obtain ⟨q, hipq, hqtq⟩ := t.exists_le_maximal hpit
+  have hqu : q ∈ u := by
+    dsimp [u]
+    exact Finset.mem_filter.mpr ⟨hqtq.1,
+      fun r hr hqr => hqtq.2 hr hqr⟩
+  intro hxi
+  exact hxavoid q hqu (hxi |> hipq)
 
 /-- The homogeneous core of an ideal. -/
 abbrev homogeneousCore (G : GradedRingData S) (I : Ideal S) :
@@ -1746,7 +1962,13 @@ theorem homogeneousCore_isPrime (G : GradedRingData S) (p : Ideal S)
 
 theorem minimal_prime_is_homogeneous (G : GradedRingData S) (p : Ideal S)
     (hp : p ∈ minimalPrimes S) : p.IsHomogeneous G.component := by
-  sorry
+  let P : HomogeneousIdeal G.component := p.homogeneousCore G.component
+  have hPprime : P.toIdeal.IsPrime := hp.1.1.homogeneousCore
+  have hPp : P.toIdeal ≤ p := Ideal.toIdeal_homogeneousCore_le G.component p
+  have hpP : p ≤ P.toIdeal := hp.2 ⟨hPprime, bot_le⟩ hPp
+  have heq : p = P.toIdeal := le_antisymm hpP hPp
+  rw [heq]
+  exact P.isHomogeneous
 
 theorem minimal_prime_over_homogeneous_is_homogeneous (G : GradedRingData S)
     (I p : Ideal S) (hI : I.IsHomogeneous G.component)

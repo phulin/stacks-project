@@ -160,14 +160,68 @@ theorem affineBlowup_map_ideal_eq_span
     {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :
     Ideal.map (algebraMap R (affineBlowup I a)) I =
       Ideal.span {algebraMap R (affineBlowup I a) a} := by
-  sorry
+  apply le_antisymm
+  · apply Ideal.map_le_of_le_comap
+    intro x hx
+    rw [Ideal.mem_comap]
+    have hdiv :
+        algebraMap R (affineBlowup I a) x =
+          algebraMap R (affineBlowup I a) a *
+            affineBlowupGenerator I a ⟨x, hx⟩ := by
+      apply Subtype.ext
+      change algebraMap R (Localization.Away a) x =
+        algebraMap R (Localization.Away a) a *
+          (algebraMap R (Localization.Away a) x *
+            IsLocalization.Away.invSelf a)
+      calc
+        algebraMap R (Localization.Away a) x =
+            1 * algebraMap R (Localization.Away a) x := by rw [one_mul]
+        _ = (algebraMap R (Localization.Away a) a *
+            IsLocalization.Away.invSelf a) *
+              algebraMap R (Localization.Away a) x := by
+          rw [IsLocalization.Away.mul_invSelf]
+        _ = algebraMap R (Localization.Away a) a *
+            (algebraMap R (Localization.Away a) x *
+              IsLocalization.Away.invSelf a) := by ring
+    rw [hdiv]
+    simpa [mul_comm] using
+      (Ideal.mul_mem_left (Ideal.span {algebraMap R (affineBlowup I a) a})
+        (affineBlowupGenerator I a ⟨x, hx⟩)
+        (Ideal.subset_span (Set.mem_singleton _)))
+  · apply Ideal.span_le.2
+    intro x hx
+    rw [Set.mem_singleton_iff.mp hx]
+    exact Ideal.mem_map_of_mem _ ha
 
 theorem affineBlowup_localization_equiv
     {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :
     Nonempty
       (Localization.Away (algebraMap R (affineBlowup I a) a) ≃+*
         Localization.Away a) := by
-  sorry
+  let A := affineBlowup I a
+  let L := Localization.Away a
+  let haA := algebraMap R A a
+  have hunit : IsUnit (algebraMap A L haA) := by
+    rw [← IsScalarTower.algebraMap_apply R A L a]
+    exact IsLocalization.Away.algebraMap_isUnit a
+  haveI : IsLocalization.Away haA L :=
+    IsLocalization.Away.mk haA hunit
+      (fun z => by
+        obtain ⟨n, r, hzr⟩ := IsLocalization.Away.surj a z
+        refine ⟨n, algebraMap R A r, ?_⟩
+        change z * (algebraMap A L (algebraMap R A a)) ^ n =
+          algebraMap A L (algebraMap R A r)
+        rw [← IsScalarTower.algebraMap_apply R A L a,
+          ← IsScalarTower.algebraMap_apply R A L r]
+        exact hzr)
+      (fun x y hxy => by
+        have hxy' : (x : L) = (y : L) := by simpa using hxy
+        have hxy'' : x = y := by
+          apply Subtype.ext
+          exact hxy'
+        exact ⟨0, by simp [hxy'']⟩)
+  exact ⟨(IsLocalization.algEquiv (Submonoid.powers haA)
+    (Localization.Away haA) L).toRingEquiv⟩
 
 /-! ## Base change -/
 
@@ -189,7 +243,323 @@ theorem affineBlowup_baseChange
     Nonempty
       ((S ⊗[R] affineBlowup I a) ⧸ baseChangeTorsionIdeal f I a ≃+*
         affineBlowup (Ideal.map f I) (f a)) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let A := affineBlowup I a
+  let L := Localization.Away a
+  let C := affineBlowup (Ideal.map f I) (f a)
+  let hA : A →ₐ[R] L :=
+    { toFun := fun x => x.1
+      map_one' := rfl
+      map_mul' := by intro x y; rfl
+      map_zero' := rfl
+      map_add' := by intro x y; rfl
+      commutes' := by
+        intro r; rfl }
+  let haA := algebraMap R A a
+  have hunit : IsUnit (algebraMap A L haA) := by
+    rw [← IsScalarTower.algebraMap_apply R A L a]
+    exact IsLocalization.Away.algebraMap_isUnit a
+  haveI : IsLocalization.Away haA L :=
+    IsLocalization.Away.mk haA hunit
+      (fun z => by
+        obtain ⟨n, r, hzr⟩ := IsLocalization.Away.surj a z
+        refine ⟨n, algebraMap R A r, ?_⟩
+        change z * (algebraMap A L (algebraMap R A a)) ^ n =
+          algebraMap A L (algebraMap R A r)
+        rw [← IsScalarTower.algebraMap_apply R A L a,
+          ← IsScalarTower.algebraMap_apply R A L r]
+        exact hzr)
+      (fun x y hxy => by
+        have hxy' : (x : L) = (y : L) := by simpa using hxy
+        have hxy'' : x = y := by
+          apply Subtype.ext
+          exact hxy'
+        exact ⟨0, by simp [hxy'']⟩)
+  let M' := Algebra.algebraMapSubmonoid S (Submonoid.powers a)
+  let L' := Localization M'
+  let e1 : (S ⊗[R] L) ≃ₐ[S] L' :=
+    Localization.tensorLeftAlgEquiv (Submonoid.powers a) S
+  haveI : IsLocalization M' (Localization.Away (f a)) := by
+    rw [show M' = Submonoid.powers (f a) by
+      ext z
+      constructor
+      · rintro ⟨x, ⟨n, rfl⟩, rfl⟩
+        exact ⟨n, by simp [RingHom.algebraMap_toAlgebra]⟩
+      · rintro ⟨n, rfl⟩
+        exact ⟨a ^ n, ⟨n, rfl⟩, by simp [RingHom.algebraMap_toAlgebra]⟩]
+    infer_instance
+  let e2 : L' ≃ₐ[S] Localization.Away (f a) :=
+    IsLocalization.algEquiv M' L' (Localization.Away (f a))
+  let e : (S ⊗[R] L) ≃ₐ[S] Localization.Away (f a) := e1.trans e2
+  let hAL : A →ₐ[R] (S ⊗[R] L) :=
+    (Algebra.TensorProduct.includeRight (R := R) (A := S)).comp hA
+  let h0 : (S ⊗[R] A) →ₐ[S] (S ⊗[R] L) :=
+    Algebra.TensorProduct.lift
+      (Algebra.TensorProduct.includeLeft (R := R) (A := S) (B := L))
+      hAL (fun _ _ => Commute.all _ _)
+  let h : (S ⊗[R] A) →ₐ[S] Localization.Away (f a) :=
+    e.toAlgHom.comp h0
+  let q : R →+* Localization.Away (f a) :=
+    (algebraMap S (Localization.Away (f a))).comp f
+  have hq : IsUnit (q a) := by
+    change IsUnit (algebraMap S (Localization.Away (f a)) (f a))
+    exact IsLocalization.Away.algebraMap_isUnit (f a)
+  let gL : L →+* Localization.Away (f a) :=
+    IsLocalization.Away.lift (x := a) (S := L)
+      (P := Localization.Away (f a)) (g := q) hq
+  let j : L →+* Localization.Away (f a) :=
+    e.toRingEquiv.toRingHom.comp
+      (Algebra.TensorProduct.includeRight (R := R) (A := S)).toRingHom
+  have hj : j = gL := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers a)
+    ext r
+    have hgr : gL (algebraMap R L r) = q r := by
+      dsimp [gL]
+      exact IsLocalization.Away.lift_eq a hq r
+    change j (algebraMap R L r) = gL (algebraMap R L r)
+    rw [hgr]
+    dsimp [j]
+    have hr : (1 : S) ⊗ₜ[R] (algebraMap R L r) =
+        algebraMap R S r ⊗ₜ[R] (1 : L) :=
+      (Algebra.TensorProduct.tmul_one_eq_one_tmul (R := R) (A := S) (B := L) r).symm
+    rw [hr]
+    simp only [RingHom.algebraMap_toAlgebra]
+    change e2 (e1 (algebraMap S (S ⊗[R] L) (f r))) = q r
+    rw [e1.commutes, e2.commutes]
+    change algebraMap S (Localization.Away (f a)) (f r) =
+      algebraMap S (Localization.Away (f a)) (f r)
+    rfl
+  have hinv : gL (IsLocalization.Away.invSelf a) =
+      IsLocalization.Away.invSelf (f a) := by
+    apply hq.mul_left_cancel
+    calc
+      q a * gL (IsLocalization.Away.invSelf a) =
+          gL (algebraMap R L a) * gL (IsLocalization.Away.invSelf a) := by
+            rw [IsLocalization.Away.lift_eq a hq a]
+      _ = gL (algebraMap R L a * IsLocalization.Away.invSelf a) := by
+            rw [map_mul]
+      _ = 1 := by rw [IsLocalization.Away.mul_invSelf, map_one]
+      _ = q a * IsLocalization.Away.invSelf (f a) := by
+            rw [show q a = algebraMap S (Localization.Away (f a)) (f a) by rfl,
+              IsLocalization.Away.mul_invSelf]
+  let jAlg : L →ₐ[R] Localization.Away (f a) :=
+    { toRingHom := j
+      commutes' := by
+        intro r
+        change j (algebraMap R L r) = _
+        rw [hj]
+        dsimp [gL]
+        rw [IsLocalization.Away.lift_eq a hq r]
+        rfl }
+  let kA : A →ₐ[R] Localization.Away (f a) := jAlg.comp hA
+  have hkA_mem (x : A) : kA x ∈ C := by
+    have hclosure : ∀ z : L, z ∈ A → jAlg z ∈ C := by
+      intro z hz
+      induction hz using Algebra.adjoin_induction with
+      | mem z hz =>
+          rcases hz with ⟨y, hy, rfl⟩
+          change j (algebraMap R L y * IsLocalization.Away.invSelf a) ∈ C
+          rw [map_mul, hj, IsLocalization.Away.lift_eq a hq y, hinv]
+          exact (affineBlowupGenerator (Ideal.map f I) (f a)
+            ⟨f y, Ideal.mem_map_of_mem f hy⟩).property
+      | algebraMap r =>
+          change j (algebraMap R L r) ∈ C
+          rw [hj, IsLocalization.Away.lift_eq a hq r]
+          exact C.algebraMap_mem (f r)
+      | add x y hx hy ihx ihy =>
+          simpa only [map_add] using C.add_mem ihx ihy
+      | mul x y hx hy ihx ihy =>
+          simpa only [map_mul] using C.mul_mem ihx ihy
+    exact hclosure (x : L) x.property
+  let gA : A →ₐ[R] C :=
+    { toFun := fun x => ⟨kA x, hkA_mem x⟩
+      map_one' := by apply Subtype.ext; exact kA.map_one
+      map_mul' := by intro x y; apply Subtype.ext; exact kA.map_mul _ _
+      map_zero' := by apply Subtype.ext; exact kA.map_zero
+      map_add' := by intro x y; apply Subtype.ext; exact kA.map_add _ _
+      commutes' := by
+        intro r
+        apply Subtype.ext
+        exact kA.commutes r }
+  let g : (S ⊗[R] A) →ₐ[S] C :=
+    Algebra.TensorProduct.lift (Algebra.ofId S C) gA
+      (fun _ _ => Commute.all _ _)
+  let cval : C →ₐ[S] Localization.Away (f a) := C.val
+  have h_eq : cval.comp g = h := by
+    apply Algebra.TensorProduct.ext
+    · rw [AlgHom.comp_assoc, Algebra.TensorProduct.lift_comp_includeLeft,
+        AlgHom.comp_assoc, Algebra.TensorProduct.lift_comp_includeLeft]
+      ext s <;>
+        change algebraMap S (Localization.Away (f a)) s =
+          e (algebraMap S (S ⊗[R] L) s) <;>
+        exact (e.commutes s).symm
+    ·
+      ext x
+      change cval (g (Algebra.TensorProduct.includeRight x)) =
+        h (Algebra.TensorProduct.includeRight x)
+      simp [g, h, h0, cval]
+      change kA x = e (1 ⊗ₜ[R] 1) * e (hAL x)
+      rw [← Algebra.TensorProduct.one_def, map_one, one_mul]
+      rfl
+  let J : Ideal S :=
+    { carrier := {y | ∃ x : S ⊗[R] A,
+          h x = algebraMap S (Localization.Away (f a)) y *
+            IsLocalization.Away.invSelf (f a)}
+      zero_mem' := by
+        refine ⟨0, ?_⟩
+        simp
+      add_mem' := by
+        rintro y z ⟨x, hx⟩ ⟨x', hx'⟩
+        refine ⟨x + x', ?_⟩
+        simp only [map_add, hx, hx']
+        ring
+      smul_mem' := by
+        intro s y ⟨x, hx⟩
+        change ∃ z : S ⊗[R] A,
+          h z = algebraMap S (Localization.Away (f a)) (s * y) *
+            IsLocalization.Away.invSelf (f a)
+        refine ⟨(Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := A)) s * x, ?_⟩
+        simp only [map_mul]
+        have hs : (Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := A)) s =
+            algebraMap S (S ⊗[R] A) s := by
+          change s ⊗ₜ[R] (1 : A) = (algebraMap S S s) ⊗ₜ[R] (1 : A)
+          rw [show algebraMap S S s = s by simp]
+        rw [hs, h.commutes, hx]
+        ring }
+  have hJ : Ideal.map f I ≤ J := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    refine ⟨Algebra.TensorProduct.includeRight
+      (affineBlowupGenerator I a ⟨r, hr⟩), ?_⟩
+    rw [← h_eq]
+    simp [g, cval, gA, kA, jAlg, hAL, hA, j, hj, hinv]
+    change gL (algebraMap R L r * IsLocalization.Away.invSelf a) = _
+    rw [map_mul, IsLocalization.Away.lift_eq a hq r, hinv]
+    rfl
+  have hg_surj : Function.Surjective g := by
+    intro z
+    rcases z with ⟨z, hz⟩
+    induction hz using Algebra.adjoin_induction with
+    | mem y hy =>
+        rcases hy with ⟨r, hr, rfl⟩
+        rcases hJ hr with ⟨x, hx⟩
+        refine ⟨x, ?_⟩
+        apply Subtype.ext
+        change cval (g x) =
+          algebraMap S (Localization.Away (f a)) r *
+            IsLocalization.Away.invSelf (f a)
+        change (cval.comp g) x = _
+        rw [h_eq, hx]
+    | algebraMap s =>
+        refine ⟨Algebra.TensorProduct.includeLeft (R := R) (S := S)
+          (A := S) (B := A) s, ?_⟩
+        apply Subtype.ext
+        simp [g]
+    | add x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u + v, ?_⟩
+        apply Subtype.ext
+        simp only [map_add, hu, hv]
+        rfl
+    | mul x y hx hy ihx ihy =>
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u * v, ?_⟩
+        apply Subtype.ext
+        simp only [map_mul, hu, hv]
+        rfl
+  letI : Algebra (S ⊗[R] A) (S ⊗[R] L) := h0.toRingHom.toAlgebra
+  letI : IsScalarTower S (S ⊗[R] A) (S ⊗[R] L) :=
+    IsScalarTower.of_algebraMap_eq' (R := S) (S := S ⊗[R] A)
+      (A := S ⊗[R] L) (by
+      ext s
+      change algebraMap S (S ⊗[R] L) s =
+        h0 (algebraMap S (S ⊗[R] A) s)
+      exact (h0.commutes s).symm)
+  have hloc : IsLocalization
+      ((Submonoid.powers haA).map
+        (Algebra.TensorProduct.includeRight (R := R) (A := S)))
+      (S ⊗[R] L) := by
+    apply IsLocalization.tensorProduct_tensorProduct_right R S
+      (Submonoid.powers haA) L
+    ext x
+    simp [h0, hAL, hA, RingHom.algebraMap_toAlgebra]
+    rw [show (x : L) = algebraMap A L x by rfl]
+  haveI : IsLocalization.Away
+      (algebraMap S (S ⊗[R] A) (f a)) (S ⊗[R] L) := by
+    change IsLocalization (Submonoid.powers
+      (algebraMap S (S ⊗[R] A) (f a))) (S ⊗[R] L)
+    convert hloc using 1
+    ext z
+    have hb : f a ⊗ₜ[R] (1 : A) = (1 : S) ⊗ₜ[R] haA := by
+      simpa [RingHom.algebraMap_toAlgebra] using
+        (Algebra.TensorProduct.tmul_one_eq_one_tmul (R := R) (A := S) (B := A) a)
+    simp only [Submonoid.map_powers, Algebra.TensorProduct.includeRight_apply]
+    rw [Algebra.TensorProduct.algebraMap_apply,
+      show (algebraMap S S) (f a) = f a by simp, hb]
+  letI : Algebra (S ⊗[R] A) (Localization.Away (f a)) := h.toRingHom.toAlgebra
+  let eB : (S ⊗[R] L) ≃ₐ[S ⊗[R] A] Localization.Away (f a) :=
+    { toRingEquiv := e.toRingEquiv
+      commutes' := by
+        intro x
+        rfl }
+  haveI : IsLocalization.Away
+      (algebraMap S (S ⊗[R] A) (f a)) (Localization.Away (f a)) :=
+    IsLocalization.isLocalization_of_algEquiv
+      (Submonoid.powers (algebraMap S (S ⊗[R] A) (f a))) eB
+  have hker : RingHom.ker g.toRingHom =
+      baseChangeTorsionIdeal f I a := by
+    change RingHom.ker g.toRingHom =
+      powerTorsionIdeal (S ⊗[R] A)
+        (algebraMap S (S ⊗[R] A) (f a))
+    ext x
+    constructor
+    · intro hx
+      rw [mem_powerTorsionIdeal_iff]
+      change g x = 0 at hx
+      have he : cval (g x) = h x := by
+        exact congrArg (fun φ => φ x) h_eq
+      have hx' : h x = 0 := by
+        rw [← he, hx]
+        rfl
+      have hx'' :
+          algebraMap (S ⊗[R] A) (Localization.Away (f a)) x =
+            algebraMap (S ⊗[R] A) (Localization.Away (f a)) 0 := by
+        simpa [RingHom.algebraMap_toAlgebra] using hx'
+      obtain ⟨n, hn⟩ := IsLocalization.Away.exists_of_eq
+        (S := Localization.Away (f a))
+        (algebraMap S (S ⊗[R] A) (f a)) hx''
+      exact ⟨n, by simpa using hn⟩
+    · rw [mem_powerTorsionIdeal_iff]
+      rintro ⟨n, hn⟩
+      apply Subtype.ext
+      change cval (g x) = 0
+      have hxmap :
+          algebraMap (S ⊗[R] A) (Localization.Away (f a)) x = 0 := by
+        apply (IsUnit.pow n
+          (IsLocalization.Away.algebraMap_isUnit
+            (algebraMap S (S ⊗[R] A) (f a)))).mul_left_cancel
+        have hb : algebraMap S (S ⊗[R] A) (f a) =
+            f a ⊗ₜ[R] (1 : A) := by
+          rw [Algebra.TensorProduct.algebraMap_apply]
+          simp
+        rw [← map_pow, hb, Algebra.TensorProduct.tmul_pow]
+        simpa [map_mul] using
+          congrArg (algebraMap (S ⊗[R] A) (Localization.Away (f a))) hn
+      have he : cval (g x) = h x := by
+        exact congrArg (fun φ => φ x) h_eq
+      have hx' : h x = 0 := by
+        change algebraMap (S ⊗[R] A) (Localization.Away (f a)) x = 0
+        exact hxmap
+      calc
+        cval (g x) = h x := he
+        _ = 0 := hx'
+        _ = cval 0 := by simp
+  let eQ :
+      (S ⊗[R] A) ⧸ RingHom.ker g.toRingHom ≃+* C :=
+    RingHom.quotientKerEquivOfSurjective hg_surj
+  exact ⟨(Ideal.quotEquivOfEq hker.symm).trans eQ⟩
 
 /-! ## Polynomial Rees algebra -/
 
@@ -230,6 +600,44 @@ structure PolynomialReesPresentation (R : Type u) [CommRing R] (n : ℕ) where
 theorem polynomial_rees_presentation
     (R : Type u) [CommRing R] (n : ℕ) :
     Nonempty (PolynomialReesPresentation R n) := by
+  classical
+  let P := polynomialRing R n
+  let T := MvPolynomial (Fin n) P
+  let I := polynomialVariableIdeal R n
+  let eval : T →ₐ[P] _ :=
+    MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
+  have hrel : polynomialReesRelationIdeal R n ≤ RingHom.ker eval.toRingHom := by
+    apply Ideal.span_le.2
+    rintro z ⟨⟨i, j⟩, rfl⟩
+    change eval (MvPolynomial.C (MvPolynomial.X i) * MvPolynomial.X j -
+      MvPolynomial.C (MvPolynomial.X j) * MvPolynomial.X i) = 0
+    have hCi : eval (MvPolynomial.C (MvPolynomial.X i)) =
+        algebraMap P (reesAlgebra I) (MvPolynomial.X i) := by
+      change eval (algebraMap P T (MvPolynomial.X i)) = _
+      exact eval.commutes _
+    have hCj : eval (MvPolynomial.C (MvPolynomial.X j)) =
+        algebraMap P (reesAlgebra I) (MvPolynomial.X j) := by
+      change eval (algebraMap P T (MvPolynomial.X j)) = _
+      exact eval.commutes _
+    have hXi : eval (MvPolynomial.X i) = polynomialReesVariable R n i := by
+      exact MvPolynomial.aeval_X (fun i => polynomialReesVariable R n i) i
+    have hXj : eval (MvPolynomial.X j) = polynomialReesVariable R n j := by
+      exact MvPolynomial.aeval_X (fun i => polynomialReesVariable R n i) j
+    rw [map_sub, map_mul, map_mul, hCi, hXj, hCj, hXi]
+    apply Subtype.ext
+    simp [polynomialReesVariable, reesDegreeOneElement,
+      reesElement]
+    rw [show (algebraMap P (polynomialRing R n)) (MvPolynomial.X i) *
+          MvPolynomial.X j =
+        (algebraMap P (polynomialRing R n)) (MvPolynomial.X j) *
+          MvPolynomial.X i by
+            change MvPolynomial.X j * MvPolynomial.X i =
+              MvPolynomial.X i * MvPolynomial.X j
+            ring]
+    simp
+  let qmap : T ⧸ polynomialReesRelationIdeal R n →ₐ[P] reesAlgebra I :=
+    Ideal.Quotient.liftₐ (polynomialReesRelationIdeal R n) eval
+      (fun z hz => hrel hz)
   sorry
 
 /-- A multi-index and its total degree. -/

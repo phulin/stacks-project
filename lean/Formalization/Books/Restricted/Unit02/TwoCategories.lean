@@ -881,11 +881,727 @@ structure AdicSystemLimitData {A : Type u} [CommRing A] (I : Ideal A)
   complete : IsAdicComplete (cprimeIdeal I algebra) algebra
   residue_finite : Algebra.FiniteType (A ⧸ I) (cprimeResidueAlgebra I algebra)
 
+private theorem adicSystemPowerIdeal_eq_map
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (X : AdicSystemArrow A I) (n : ℕ+) :
+    let q : A →+* ((adicQuotientSystem A I).obj
+        (Opposite.op (n + 1)) : Type u) :=
+      Ideal.Quotient.mk (I ^ ((n + 1 : ℕ+) : ℕ))
+    adicSystemPowerIdeal I X n =
+      Ideal.map (X.hom.app (Opposite.op (n + 1))).hom
+        (Ideal.map q (I ^ (n : ℕ))) := by
+  dsimp
+  rfl
+
+private theorem ideal_restrictScalars_eq_smul_top_of_map
+    {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
+    (J : Ideal A) (K : Ideal B)
+    (hK : K = Ideal.map (algebraMap A B) J) :
+    (K.restrictScalars A : Submodule A B) = J • (⊤ : Submodule A B) := by
+  rw [hK, Ideal.smul_top_eq_map]
+
+private theorem isAdicComplete_of_linearEquiv
+    {A M N : Type u} [CommRing A] (I : Ideal A)
+    [AddCommGroup M] [Module A M] [AddCommGroup N] [Module A N]
+    (e : M ≃ₗ[A] N) (hM : IsAdicComplete I M) :
+    IsAdicComplete I N := by
+  refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+  · refine ⟨?_⟩
+    intro x hx
+    apply e.symm.injective
+    have hzero : e.symm x = 0 := by
+      apply hM.toIsHausdorff.haus (e.symm x)
+      intro n
+      have h := SModEq.map (hx n) e.symm.toLinearMap
+      have hm :
+          Submodule.map e.symm.toLinearMap
+              (I ^ n • (⊤ : Submodule A N)) ≤
+            I ^ n • (⊤ : Submodule A M) := by
+        rw [Submodule.map_smul'', Submodule.map_top]
+        exact smul_mono_right _ le_top
+      exact SModEq.mono hm (by simpa using h)
+    simpa using hzero
+  · refine ⟨?_⟩
+    intro f hf
+    let g : ℕ → M := fun n => e.symm (f n)
+    have hg : ∀ {m n}, m ≤ n →
+        g m ≡ g n [SMOD (I ^ m • (⊤ : Submodule A M))] := by
+      intro m n hmn
+      have h := SModEq.map (hf hmn) e.symm.toLinearMap
+      have hm :
+          Submodule.map e.symm.toLinearMap
+              (I ^ m • (⊤ : Submodule A N)) ≤
+            I ^ m • (⊤ : Submodule A M) := by
+        rw [Submodule.map_smul'', Submodule.map_top]
+        exact smul_mono_right _ le_top
+      exact SModEq.mono hm (by simpa [g] using h)
+    obtain ⟨L, hL⟩ := hM.toIsPrecomplete.prec' g hg
+    refine ⟨e L, ?_⟩
+    intro n
+    have h := SModEq.map (hL n) e.toLinearMap
+    have hm :
+        Submodule.map e.toLinearMap
+            (I ^ n • (⊤ : Submodule A M)) ≤
+          I ^ n • (⊤ : Submodule A N) := by
+      rw [Submodule.map_smul'', Submodule.map_top]
+      exact smul_mono_right _ le_top
+    exact SModEq.mono hm (by simpa [g] using h)
+
+private def adicSystemModuleSystem {A : Type u} [CommRing A]
+    (I : Ideal A) (X : AdicSystemArrow A I) :
+    Formalization.Books.Algebra.Unit87.NaturalInverseSystem A :=
+  let aMap : ∀ n : ℕ+ᵒᵖ, A →+* (X.right.obj n) :=
+    fun n => (X.hom.app n).hom.comp
+      (Ideal.Quotient.mk (I ^ (n.unop : ℕ)))
+  { obj := fun n =>
+      letI : Algebra A (X.right.obj n) := (aMap n).toAlgebra
+      ModuleCat.of A (X.right.obj n)
+    map := fun {i j} f =>
+      letI : Algebra A (X.right.obj i) := (aMap i).toAlgebra
+      letI : Algebra A (X.right.obj j) := (aMap j).toAlgebra
+      ModuleCat.ofHom
+        { toFun := (X.right.map f).hom
+          map_add' := by intro x y; simp
+          map_smul' := by
+            intro a x
+            change (X.right.map f).hom (aMap i a * x) =
+              aMap j a * (X.right.map f).hom x
+            rw [map_mul]
+            have h := congrArg
+              (fun q => q.hom (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a))
+              (X.hom.naturality f)
+            change (X.hom.app j).hom
+                (((adicQuotientSystem A I).map f).hom
+                  (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) =
+              (X.right.map f).hom
+                ((X.hom.app i).hom
+                  (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) at h
+            have hs : (X.right.map f).hom (aMap i a) = aMap j a := by
+              change (X.right.map f).hom
+                  ((X.hom.app i).hom
+                    (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) =
+                (X.hom.app j).hom
+                  (Ideal.Quotient.mk (I ^ (j.unop : ℕ)) a)
+              calc
+                _ = (X.hom.app j).hom
+                    (((adicQuotientSystem A I).map f).hom
+                      (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) := h.symm
+                _ = _ := by rfl
+            exact congrArg
+              (fun z => z * (X.right.map f).hom x) hs }
+    map_id := by
+      intro i
+      letI : Algebra A (X.right.obj i) := (aMap i).toAlgebra
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      simp
+    map_comp := by
+      intro i j k f g
+      letI : Algebra A (X.right.obj i) := (aMap i).toAlgebra
+      letI : Algebra A (X.right.obj j) := (aMap j).toAlgebra
+      letI : Algebra A (X.right.obj k) := (aMap k).toAlgebra
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      simp }
+
+private theorem adicSystemModuleSystem_isQuotient
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (X : AdicSystemArrow A I) (hX : AdicSystemProperty I X) :
+    Formalization.Books.Algebra.Unit98.IsQuotientInverseSystem I
+      (adicSystemModuleSystem I X) := by
+  intro n
+  rcases hX.2 n with ⟨s⟩
+  let B := X.right.obj (Opposite.op (n + 1))
+  let K : Ideal B := adicSystemPowerIdeal I X n
+  let q : A →+* ((adicQuotientSystem A I).obj
+      (Opposite.op (n + 1)) : Type u) :=
+    Ideal.Quotient.mk (I ^ ((n + 1 : ℕ+) : ℕ))
+  letI : Algebra A B :=
+    ((X.hom.app (Opposite.op (n + 1))).hom.comp q).toAlgebra
+  letI : Algebra A (X.right.obj (Opposite.op n)) :=
+    ((X.hom.app (Opposite.op n)).hom.comp
+      (Ideal.Quotient.mk (I ^ (n : ℕ)))).toAlgebra
+  let P : Submodule A B := I ^ (n : ℕ) • (⊤ : Submodule A B)
+  have hK' : K = Ideal.map (X.hom.app (Opposite.op (n + 1))).hom
+      (Ideal.map q (I ^ (n : ℕ))) := by
+    dsimp [K]
+    change adicSystemPowerIdeal I X n =
+      Ideal.map (X.hom.app (Opposite.op (n + 1))).hom
+        (Ideal.map q (I ^ (n : ℕ)))
+    exact adicSystemPowerIdeal_eq_map I X n
+  have hK : K = Ideal.map (algebraMap A B) (I ^ (n : ℕ)) := by
+    calc
+      K = Ideal.map (X.hom.app (Opposite.op (n + 1))).hom
+          (Ideal.map q (I ^ (n : ℕ))) := hK'
+      _ = Ideal.map
+          ((X.hom.app (Opposite.op (n + 1))).hom.comp q)
+          (I ^ (n : ℕ)) := Ideal.map_map q
+            (X.hom.app (Opposite.op (n + 1))).hom
+      _ = Ideal.map (algebraMap A B) (I ^ (n : ℕ)) := by rfl
+  have hP : P = (K.restrictScalars A : Submodule A B) := by
+    exact (ideal_restrictScalars_eq_smul_top_of_map
+      (I ^ (n : ℕ)) K hK).symm
+  let e₁ :
+      (B ⧸ P) ≃ₗ[A] (B ⧸ K) :=
+    Submodule.quotEquivOfEq P (K.restrictScalars A) hP
+  let e₂ :
+    (B ⧸ K) ≃ₗ[A] X.right.obj (Opposite.op n) :=
+      { toFun := s.equivalence
+        invFun := s.equivalence.symm
+        left_inv := s.equivalence.left_inv
+        right_inv := s.equivalence.right_inv
+        map_add' := s.equivalence.map_add
+        map_smul' := by
+          intro a x
+          obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+          change s.equivalence
+              (Ideal.Quotient.mk K (algebraMap A B a * x)) =
+            algebraMap A (X.right.obj (Opposite.op n)) a *
+              s.equivalence (Ideal.Quotient.mk K x)
+          rw [map_mul]
+          have hscalar :
+              s.equivalence (Ideal.Quotient.mk K (algebraMap A B a)) =
+                algebraMap A (X.right.obj (Opposite.op n)) a := by
+            calc
+              _ = (adicSystemTransition I X
+                    (PNat.lt_add_right n 1).le)
+                    (algebraMap A B a) := by
+                exact congrArg (fun q => q (algebraMap A B a))
+                  s.transition_eq
+              _ = _ := by
+                have h := congrArg
+                  (fun q => q (Ideal.Quotient.mk
+                    (I ^ ((n + 1 : ℕ+) : ℕ)) a))
+                  (adicSystemTransition_is_algebraMap I X n)
+                change (adicSystemTransition I X
+                    (PNat.lt_add_right n 1).le)
+                    ((X.hom.app (Opposite.op (n + 1))).hom
+                      (Ideal.Quotient.mk
+                        (I ^ ((n + 1 : ℕ+) : ℕ)) a)) =
+                  (X.hom.app (Opposite.op n)).hom
+                    (powerQuotientTransition I
+                      (m := n + 1) (n := n)
+                      (PNat.lt_add_right n 1).le
+                      (Ideal.Quotient.mk
+                        (I ^ ((n + 1 : ℕ+) : ℕ)) a)) at h
+                convert h using 1
+                · rfl
+                · rfl
+          rw [s.equivalence.map_mul, hscalar] }
+  refine ⟨{ equivalence := (e₁.trans e₂).toModuleIso, transition_eq := ?_ }⟩
+  apply ModuleCat.hom_ext
+  apply LinearMap.ext
+  intro x
+  change B at x
+  dsimp [e₁, e₂, B, K, P]
+  change s.equivalence
+      ((Submodule.quotEquivOfEq P (K.restrictScalars A) hP)
+        (Submodule.Quotient.mk x)) =
+    (X.right.map (CategoryTheory.homOfLE
+      (PNat.lt_add_right n 1).le).op).hom x
+  rw [Submodule.quotEquivOfEq_mk P (K.restrictScalars A) hP x]
+  exact congrArg (fun z => z x) s.transition_eq
+
 /-- The completeness lemma supplies an `A`-algebra structure on the limit. -/
 theorem adicSystemLimitData_exists {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) (X : AdicSystemCategory A I) :
     Nonempty (AdicSystemLimitData I X) := by
-  sorry
+  let F := adicSystemModuleSystem I X.obj
+  have hF := adicSystemModuleSystem_isQuotient I X.obj X.property
+  have hlimit := Formalization.Books.Algebra.Unit98.limit_complete I hI F hF
+  let c : Cone X.obj.right :=
+    { pt := CommRingCat.of A
+      π :=
+        { app := fun i =>
+            CommRingCat.ofHom
+              ((X.obj.hom.app i).hom.comp
+                (Ideal.Quotient.mk (I ^ (i.unop : ℕ))))
+          naturality := by
+            intro i j f
+            apply CommRingCat.hom_ext
+            apply RingHom.ext
+            intro a
+            have h := congrArg
+              (fun q => q.hom
+                (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a))
+              (X.obj.hom.naturality f)
+            change (X.obj.hom.app j).hom
+                (((adicQuotientSystem A I).map f).hom
+                  (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) =
+              (X.obj.right.map f).hom
+                ((X.obj.hom.app i).hom
+                  (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) at h
+            exact h } }
+  let φ : A →+* ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    (limit.lift X.obj.right c).hom
+  letI : Algebra A ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    φ.toAlgebra
+  have hFG :
+      F ⋙ forget₂ (ModuleCat A) AddCommGrpCat =
+        X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+          forget₂ RingCat AddCommGrpCat := by
+    rfl
+  let eStage :
+      limit (F ⋙ forget₂ (ModuleCat A) AddCommGrpCat) ≅
+        limit (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+          forget₂ RingCat AddCommGrpCat) :=
+    eqToIso (congrArg (fun G => limit G) hFG)
+  let eAddIso :
+      (forget₂ (ModuleCat A) AddCommGrpCat).obj
+          (limit F) ≅
+        (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).obj
+          (limit X.obj.right) :=
+    preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F ≪≫
+        eStage ≪≫
+        (preservesLimitIso
+          (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+          X.obj.right).symm
+  let eAdd :
+      ((limit F : ModuleCat A) : Type u) ≃+
+        ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    CategoryTheory.Iso.addCommGroupIsoToAddEquiv eAddIso
+  have hproj (y : ((limit F : ModuleCat A) : Type u))
+      (n : ℕ+) :
+      (limit.π X.obj.right (Opposite.op n)).hom (eAdd y) =
+        (limit.π F (Opposite.op n)).hom y := by
+    change (((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+      (limit.π X.obj.right (Opposite.op n))).hom (eAddIso.hom.hom y)) =
+      ((forget₂ (ModuleCat A) AddCommGrpCat).map
+        (limit.π F (Opposite.op n))).hom y
+    dsimp [eAddIso]
+    have hπ := preservesLimitIso_inv_π
+      (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+      X.obj.right (Opposite.op n)
+    have hπy := congrArg
+      (fun q => q.hom
+        (eStage.hom.hom
+          ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+      hπ
+    have hπy' :
+        ((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+          (limit.π X.obj.right (Opposite.op n))).hom
+            ((preservesLimitIso
+              (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+              X.obj.right).inv.hom
+              (eStage.hom.hom
+                ((preservesLimitIso
+                  (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y))) =
+          (limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+            (eStage.hom.hom
+              ((preservesLimitIso
+                (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)) := by
+      simpa only [ConcreteCategory.comp_apply] using hπy
+    have hstageproj : HEq
+        ((limit.π
+            (F ⋙ forget₂ (ModuleCat A) AddCommGrpCat) (Opposite.op n)).hom
+          (eStage.hom.hom
+            ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+        ((limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+          ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)) := by
+      dsimp [eStage]
+      cases hFG
+      rfl
+    have hpfy := congrArg (fun q => q.hom y)
+      (preservesLimitIso_hom_π
+        (forget₂ (ModuleCat A) AddCommGrpCat) F (Opposite.op n))
+    have hmap : HEq
+        ((limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+          (eStage.hom.hom
+            ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+        (((forget₂ (ModuleCat A) AddCommGrpCat).map
+          (limit.π F (Opposite.op n))).hom y) :=
+      hstageproj.symm.trans (heq_of_eq hpfy)
+    have hfull : HEq
+        (((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+          (limit.π X.obj.right (Opposite.op n))).hom
+          ((preservesLimitIso
+            (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+            X.obj.right).inv.hom
+            (eStage.hom.hom
+              ((preservesLimitIso
+                (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y))))
+        (((forget₂ (ModuleCat A) AddCommGrpCat).map
+          (limit.π F (Opposite.op n))).hom y) := by
+      exact (heq_of_eq hπy').trans hmap
+    exact eq_of_heq hfull
+  let eLin :
+      ((limit F : ModuleCat A) : Type u) ≃ₗ[A]
+        ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    { eAdd with
+      map_smul' := by
+        intro a y
+        apply Concrete.limit_ext X.obj.right
+        intro n
+        change (limit.π X.obj.right n).hom (eAdd (a • y)) =
+          (limit.π X.obj.right n).hom (φ a * eAdd y)
+        rw [hproj (a • y) n.unop, map_mul]
+        have hφn := congrArg (fun q => q.hom a)
+          (limit.lift_π c n)
+        change (limit.π X.obj.right n).hom (φ a) =
+          (X.obj.hom.app n).hom
+            (Ideal.Quotient.mk (I ^ (n.unop : ℕ)) a) at hφn
+        rw [hφn, hproj y n.unop]
+        change (limit.π F n).hom (a • y) =
+          a • (limit.π F n).hom y
+        rw [map_smul]
+        }
+  have hcomplete :
+      IsAdicComplete I ((limit F : ModuleCat A) : Type u) :=
+    hlimit.2
+  have hcomplete' :
+      IsAdicComplete I ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    isAdicComplete_of_linearEquiv I eLin hcomplete
+  let B : CommAlgCat A :=
+    CommAlgCat.of A ((limit X.obj.right : CommRingCat.{u}) : Type u)
+  refine ⟨AdicSystemLimitData.mk B (RingEquiv.refl _) ?_ ?_ ?_⟩
+  · intro a n
+    change (limit.π X.obj.right (Opposite.op n)).hom (φ a) = _
+    rw [← ConcreteCategory.comp_apply, limit.lift_π]
+    rfl
+  · change IsAdicComplete (Ideal.map (algebraMap A B) I) B
+    exact (IsAdicComplete.map_algebraMap_iff
+      (I := I) (M := ((limit X.obj.right : CommRingCat.{u}) : Type u))).mpr
+      hcomplete'
+  · let L : Type u := ((limit X.obj.right : CommRingCat.{u}) : Type u)
+    let S : Type u := X.obj.right.obj (Opposite.op (1 : ℕ+))
+    let J : Ideal L := cprimeIdeal I B
+    let p : L →+* S := (limit.π X.obj.right (Opposite.op (1 : ℕ+))).hom
+    let lp := Classical.choice (hlimit.1 (1 : ℕ+))
+    have hp_surj : Function.Surjective p := by
+      intro z
+      obtain ⟨q, hq⟩ := lp.equivalence.surjective z
+      obtain ⟨y, hy⟩ := Submodule.mkQ_surjective
+        (I ^ (1 : ℕ) • (⊤ : Submodule A
+          (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))) q
+      refine ⟨eLin y, ?_⟩
+      have hproj' := congrArg (fun q => q.hom y) lp.projection_eq
+      change lp.equivalence
+          ((I ^ (1 : ℕ) • (⊤ : Submodule A
+            (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))).mkQ y) =
+        (limit.π F (Opposite.op (1 : ℕ+))).hom y at hproj'
+      have hpe : p (eLin y) =
+          (limit.π F (Opposite.op (1 : ℕ+))).hom y := by
+        change (limit.π X.obj.right (Opposite.op (1 : ℕ+))).hom
+            (eAdd y) = _
+        simpa using hproj y (1 : ℕ+)
+      have hprojz := hproj'.symm.trans ((congrArg lp.equivalence hy).trans hq)
+      rw [hpe]
+      exact hprojz
+    have hp_kernel : J ≤ RingHom.ker p := by
+      dsimp [J, cprimeIdeal]
+      rw [Ideal.map_le_iff_le_comap]
+      intro a ha
+      change p (algebraMap A B a) = 0
+      have hpa := congrArg (fun q => q.hom a)
+        (limit.lift_π c (Opposite.op (1 : ℕ+)))
+      change p (φ a) =
+        (X.obj.hom.app (Opposite.op (1 : ℕ+))).hom
+          (Ideal.Quotient.mk (I ^ (1 : ℕ)) a) at hpa
+      rw [show algebraMap A B a = φ a by rfl, hpa]
+      have ha0 : Ideal.Quotient.mk (I ^ (1 : ℕ)) a = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr (by simpa using ha)
+      rw [ha0]
+      change (X.obj.hom.app (Opposite.op (1 : ℕ+))).hom
+          (0 : ((adicQuotientSystem A I).obj
+            (Opposite.op (1 : ℕ+)) : Type u)) = 0
+      exact (X.obj.hom.app (Opposite.op (1 : ℕ+))).hom.map_zero
+    let qres : (L ⧸ J) →+* S := Ideal.Quotient.lift J p (by
+      intro x hx
+      exact hp_kernel hx)
+    have qres_surj : Function.Surjective qres := by
+      intro z
+      obtain ⟨b, hb⟩ := hp_surj z
+      refine ⟨Ideal.Quotient.mk J b, ?_⟩
+      change p b = z
+      exact hb
+    have qres_inj : Function.Injective qres := by
+      intro z₁ z₂ hz
+      obtain ⟨b₁, rfl⟩ := Ideal.Quotient.mk_surjective z₁
+      obtain ⟨b₂, rfl⟩ := Ideal.Quotient.mk_surjective z₂
+      change p b₁ = p b₂ at hz
+      have hp : p (b₁ - b₂) = 0 := by
+        rw [map_sub, sub_eq_zero]
+        exact hz
+      let y := eLin.symm (b₁ - b₂)
+      have hpy : (limit.π F (Opposite.op (1 : ℕ+))).hom y = 0 := by
+        rw [← hproj y 1]
+        change p (eLin y) = 0
+        rw [eLin.apply_symm_apply]
+        exact hp
+      have hproj' := congrArg (fun q => q.hom y) lp.projection_eq
+      change lp.equivalence
+          ((I ^ (1 : ℕ) • (⊤ : Submodule A
+            (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))).mkQ y) =
+        (limit.π F (Opposite.op (1 : ℕ+))).hom y at hproj'
+      have hmk :
+          (I ^ (1 : ℕ) • (⊤ : Submodule A
+            (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))).mkQ y = 0 := by
+        apply lp.equivalence.injective
+        rw [hproj', hpy]
+        exact (lp.equivalence.map_zero).symm
+      have hy : y ∈ I ^ (1 : ℕ) • (⊤ : Submodule A
+        (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u)) := by
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hmk
+        exact hmk
+      have hmap :
+          Submodule.map eLin.toLinearMap
+              (I ^ (1 : ℕ) • (⊤ : Submodule A
+                (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))) ≤
+            (J.restrictScalars A : Submodule A L) := by
+        rw [ideal_restrictScalars_eq_smul_top_of_map
+          (I ^ (1 : ℕ)) J (by
+            dsimp [J, cprimeIdeal]
+            rw [pow_one])]
+        rw [Submodule.map_smul'', Submodule.map_top]
+        exact smul_mono_right _ le_top
+      have hmem : eLin y ∈ J := hmap
+        (Submodule.mem_map_of_mem hy)
+      rw [← sub_eq_zero]
+      change Ideal.Quotient.mk J (b₁ - b₂) = 0
+      rw [show b₁ - b₂ = eLin y by
+        dsimp [y]
+        rw [eLin.apply_symm_apply]]
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr hmem
+    let eRes : (L ⧸ J) ≃+* S := RingEquiv.ofBijective qres
+      ⟨qres_inj, qres_surj⟩
+    letI : Algebra (A ⧸ I) (L ⧸ J) :=
+      Ideal.Quotient.algebraQuotientOfLEComap
+        (R := A) (A := L) (p := I) (P := J) Ideal.le_comap_map
+    let eI : (A ⧸ I) ≃+*
+        ((adicQuotientSystem A I).obj
+          (Opposite.op (1 : ℕ+)) : Type u) :=
+      Ideal.quotEquivOfEq (by simp [adicQuotient])
+    let fstage0 : ((adicQuotientSystem A I).obj
+        (Opposite.op (1 : ℕ+)) : Type u) →+* S :=
+      (X.obj.hom.app (Opposite.op (1 : ℕ+))).hom
+    let fstage : A ⧸ I →+* S := fstage0.comp eI.toRingHom
+    have hbase : eRes.toRingHom.comp (algebraMap (A ⧸ I) (L ⧸ J)) =
+        fstage := by
+      apply RingHom.ext
+      intro x
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+      change eRes (Ideal.Quotient.mk J (algebraMap A L a)) =
+        fstage (Ideal.Quotient.mk I a)
+      rw [show eRes (Ideal.Quotient.mk J (algebraMap A L a)) =
+          p (algebraMap A L a) by rfl]
+      change p (φ a) = fstage (Ideal.Quotient.mk I a)
+      dsimp [p, φ]
+      rw [← ConcreteCategory.comp_apply, limit.lift_π]
+      change (c.π.app (Opposite.op (1 : ℕ+))).hom a =
+        fstage0 (eI (Ideal.Quotient.mk I a))
+      dsimp [c]
+      change fstage0 (Ideal.Quotient.mk (I ^ (1 : ℕ)) a) =
+        fstage0 (eI (Ideal.Quotient.mk I a))
+      rw [show eI (Ideal.Quotient.mk I a) =
+          Ideal.Quotient.mk (I ^ (1 : ℕ)) a by
+            simp only [eI, Ideal.quotEquivOfEq]
+            have hpow : I = I ^ ((1 : ℕ+) : ℕ) := by simp
+            change (Submodule.quotEquivOfEq I (I ^ ((1 : ℕ+) : ℕ)) hpow
+              (Submodule.Quotient.mk a)) = Submodule.Quotient.mk a
+            rw [Submodule.quotEquivOfEq_mk I (I ^ ((1 : ℕ+) : ℕ)) hpow a]
+        ]
+    have hfinite : RingHom.FiniteType
+        (eRes.symm.toRingHom.comp fstage) := by
+      have hg0 : RingHom.FiniteType
+          (eRes.symm.toRingHom.comp fstage0) :=
+        (X.property.1 (1 : ℕ+)).comp_surjective eRes.symm.surjective
+      have hcomp : RingHom.FiniteType
+          ((eRes.symm.toRingHom.comp fstage).comp eI.symm.toRingHom) := by
+        convert hg0 using 1
+        ext x
+        change eRes.symm (fstage0 (eI (eI.symm x))) = eRes.symm (fstage0 x)
+        rw [eI.apply_symm_apply]
+      exact RingHom.FiniteType.of_comp_finiteType hcomp
+    have heq : eRes.symm.toRingHom.comp fstage =
+        algebraMap (A ⧸ I) (L ⧸ J) := by
+      apply RingHom.ext
+      intro x
+      apply eRes.injective
+      simpa using congrArg (fun q => q x) hbase.symm
+    have hfinal : RingHom.FiniteType (algebraMap (A ⧸ I) (L ⧸ J)) := by
+      rw [← heq]
+      exact hfinite
+    have hfinal' : RingHom.FiniteType
+        (algebraMap (A ⧸ I)
+          ((cprimeResidueAlgebra I B : CommAlgCat (A ⧸ I)) : Type u)) := by
+      convert hfinal using 1
+      · rfl
+      · exact HEq.rfl
+      · exact HEq.rfl
+    rw [RingHom.finiteType_algebraMap] at hfinal'
+    exact hfinal'
+
+private noncomputable def adicSystemLimitCone {A : Type u} [CommRing A]
+    (I : Ideal A) (X : AdicSystemCategory A I) : Cone X.obj.right :=
+  { pt := CommRingCat.of A
+    π :=
+      { app := fun i =>
+          CommRingCat.ofHom
+            ((X.obj.hom.app i).hom.comp
+              (Ideal.Quotient.mk (I ^ (i.unop : ℕ))))
+        naturality := by
+          intro i j f
+          apply CommRingCat.hom_ext
+          apply RingHom.ext
+          intro a
+          have h := congrArg
+            (fun q => q.hom
+              (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a))
+            (X.obj.hom.naturality f)
+          change (X.obj.hom.app j).hom
+              (((adicQuotientSystem A I).map f).hom
+                (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) =
+            (X.obj.right.map f).hom
+              ((X.obj.hom.app i).hom
+                (Ideal.Quotient.mk (I ^ (i.unop : ℕ)) a)) at h
+          exact h } }
+
+private noncomputable def adicSystemLimitAlgebraMap {A : Type u} [CommRing A]
+    (I : Ideal A) (X : AdicSystemCategory A I) :
+    A →+* ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+  (limit.lift X.obj.right (adicSystemLimitCone I X)).hom
+
+private noncomputable instance adicSystemLimitAlgebra {A : Type u} [CommRing A]
+    (I : Ideal A) (X : AdicSystemCategory A I) :
+    Algebra A ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+  (adicSystemLimitAlgebraMap I X).toAlgebra
+
+private theorem adicSystemLimitModuleEquiv {A : Type u} [CommRing A]
+    (I : Ideal A) (X : AdicSystemCategory A I) :
+    ∃ e :
+        ((Formalization.Books.Algebra.Unit87.inverseLimitModule
+            (adicSystemModuleSystem I X.obj) : ModuleCat A) : Type u) ≃ₗ[A]
+          ((limit X.obj.right : CommRingCat.{u}) : Type u),
+      ∀ y n,
+        (limit.π X.obj.right (Opposite.op n)).hom (e y) =
+          (limit.π (adicSystemModuleSystem I X.obj)
+            (Opposite.op n)).hom y := by
+  let F := adicSystemModuleSystem I X.obj
+  have hFG :
+      F ⋙ forget₂ (ModuleCat A) AddCommGrpCat =
+        X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+          forget₂ RingCat AddCommGrpCat := by
+    rfl
+  let eStage :
+      limit (F ⋙ forget₂ (ModuleCat A) AddCommGrpCat) ≅
+        limit (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+          forget₂ RingCat AddCommGrpCat) :=
+    eqToIso (congrArg (fun G => limit G) hFG)
+  let eAddIso :
+      (forget₂ (ModuleCat A) AddCommGrpCat).obj
+          (limit F) ≅
+        (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).obj
+          (limit X.obj.right) :=
+    preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F ≪≫
+        eStage ≪≫
+        (preservesLimitIso
+          (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+          X.obj.right).symm
+  let eAdd :
+      ((limit F : ModuleCat A) : Type u) ≃+
+        ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    CategoryTheory.Iso.addCommGroupIsoToAddEquiv eAddIso
+  have hproj (y : ((limit F : ModuleCat A) : Type u))
+      (n : ℕ+) :
+      (limit.π X.obj.right (Opposite.op n)).hom (eAdd y) =
+        (limit.π F (Opposite.op n)).hom y := by
+    change (((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+      (limit.π X.obj.right (Opposite.op n))).hom (eAddIso.hom.hom y)) =
+      ((forget₂ (ModuleCat A) AddCommGrpCat).map
+        (limit.π F (Opposite.op n))).hom y
+    dsimp [eAddIso]
+    have hπ := preservesLimitIso_inv_π
+      (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+      X.obj.right (Opposite.op n)
+    have hπy := congrArg
+      (fun q => q.hom
+        (eStage.hom.hom
+          ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+      hπ
+    have hπy' :
+        ((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+          (limit.π X.obj.right (Opposite.op n))).hom
+            ((preservesLimitIso
+              (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+              X.obj.right).inv.hom
+              (eStage.hom.hom
+                ((preservesLimitIso
+                  (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y))) =
+          (limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+            (eStage.hom.hom
+              ((preservesLimitIso
+                (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)) := by
+      simpa only [ConcreteCategory.comp_apply] using hπy
+    have hstageproj : HEq
+        ((limit.π
+            (F ⋙ forget₂ (ModuleCat A) AddCommGrpCat) (Opposite.op n)).hom
+          (eStage.hom.hom
+            ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+        ((limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+          ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)) := by
+      dsimp [eStage]
+      cases hFG
+      rfl
+    have hpfy := congrArg (fun q => q.hom y)
+      (preservesLimitIso_hom_π
+        (forget₂ (ModuleCat A) AddCommGrpCat) F (Opposite.op n))
+    have hmap : HEq
+        ((limit.π
+            (X.obj.right ⋙ forget₂ CommRingCat RingCat ⋙
+              forget₂ RingCat AddCommGrpCat) (Opposite.op n)).hom
+          (eStage.hom.hom
+            ((preservesLimitIso (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y)))
+        (((forget₂ (ModuleCat A) AddCommGrpCat).map
+          (limit.π F (Opposite.op n))).hom y) := by
+      exact hstageproj.symm.trans (heq_of_eq hpfy)
+    have hfull : HEq
+        (((forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat).map
+          (limit.π X.obj.right (Opposite.op n))).hom
+          ((preservesLimitIso
+            (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+            X.obj.right).inv.hom
+            (eStage.hom.hom
+              ((preservesLimitIso
+                (forget₂ (ModuleCat A) AddCommGrpCat) F).hom.hom y))))
+        (((forget₂ (ModuleCat A) AddCommGrpCat).map
+          (limit.π F (Opposite.op n))).hom y) := by
+      exact (heq_of_eq hπy').trans hmap
+    exact eq_of_heq hfull
+  let eLin :
+      ((limit F : ModuleCat A) : Type u) ≃ₗ[A]
+        ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+    { eAdd with
+      map_smul' := by
+        intro a y
+        apply Concrete.limit_ext X.obj.right
+        intro n
+        change (limit.π X.obj.right n).hom (eAdd (a • y)) =
+          (limit.π X.obj.right n).hom
+            (adicSystemLimitAlgebraMap I X a * eAdd y)
+        rw [hproj (a • y) n.unop, map_mul]
+        have hφn := congrArg (fun q => q.hom a)
+          (limit.lift_π (adicSystemLimitCone I X) n)
+        change (limit.π X.obj.right n).hom
+            (adicSystemLimitAlgebraMap I X a) =
+          (X.obj.hom.app n).hom
+            (Ideal.Quotient.mk (I ^ (n.unop : ℕ)) a) at hφn
+        rw [hφn, hproj y n.unop]
+        change (limit.π F n).hom (a • y) =
+          a • (limit.π F n).hom y
+        rw [map_smul] }
+  exact ⟨eLin, hproj⟩
 
 noncomputable def adicSystemLimitData {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) (X : AdicSystemCategory A I) : AdicSystemLimitData I X :=
@@ -896,6 +1612,143 @@ def adicSystemLimitObject {A : Type u} [CommRing A] (I : Ideal A)
   let d := adicSystemLimitData I hI X
   ⟨d.algebra, ⟨d.complete, d.residue_finite⟩⟩
 
+private theorem adicSystemLimitData_stage_equiv {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) (X : AdicSystemCategory A I)
+    (d : AdicSystemLimitData I X) (n : ℕ+) :
+    Nonempty
+      (((d.algebra : Type u) ⧸ (cprimeIdeal I d.algebra) ^ (n : ℕ)) ≃+*
+        X.obj.right.obj (Opposite.op n)) := by
+  let F := adicSystemModuleSystem I X.obj
+  have hF := adicSystemModuleSystem_isQuotient I X.obj X.property
+  have hlimit := Formalization.Books.Algebra.Unit98.limit_complete I hI F hF
+  obtain ⟨eLin, hproj⟩ := adicSystemLimitModuleEquiv I X
+  let L : Type u := ((limit X.obj.right : CommRingCat.{u}) : Type u)
+  let B : Type u := d.algebra
+  let J : Ideal B := cprimeIdeal I d.algebra
+  let P : Submodule A (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u) :=
+    I ^ (n : ℕ) • (⊤ : Submodule A
+      (Formalization.Books.Algebra.Unit87.inverseLimitModule F : Type u))
+  let p : B →+* X.obj.right.obj (Opposite.op n) :=
+    (limit.π X.obj.right (Opposite.op n)).hom.comp d.comparison.toRingHom
+  have hcomparison_smul (a : A) (b : B) :
+      d.comparison (algebraMap A B a * b) =
+        adicSystemLimitAlgebraMap I X a * d.comparison b := by
+    apply Concrete.limit_ext X.obj.right
+    intro k
+    have hstage :
+        (limit.π X.obj.right k).hom
+            (d.comparison (algebraMap A B a)) =
+          (X.obj.hom.app k).hom
+            (Ideal.Quotient.mk (I ^ (k.unop : ℕ)) a) := by
+      simpa only [Opposite.unop_op] using d.comparison_stage a k.unop
+    have hscalar' :
+        (limit.π X.obj.right k).hom
+            (adicSystemLimitAlgebraMap I X a) =
+          (X.obj.hom.app k).hom
+            (Ideal.Quotient.mk (I ^ (k.unop : ℕ)) a) := by
+      have hscalar := congrArg (fun q => q.hom a)
+        (limit.lift_π (adicSystemLimitCone I X) k)
+      change (limit.π X.obj.right k).hom
+          (adicSystemLimitAlgebraMap I X a) =
+        (X.obj.hom.app k).hom
+          (Ideal.Quotient.mk (I ^ (k.unop : ℕ)) a)
+      exact hscalar
+    change (limit.π X.obj.right k).hom
+        (d.comparison (algebraMap A B a * b)) =
+      (limit.π X.obj.right k).hom
+        (adicSystemLimitAlgebraMap I X a * d.comparison b)
+    simp only [map_mul]
+    rw [hstage, ← hscalar']
+  let eComp : B ≃ₗ[A] L :=
+    { toFun := d.comparison
+      invFun := d.comparison.symm
+      left_inv := d.comparison.left_inv
+      right_inv := d.comparison.right_inv
+      map_add' := d.comparison.map_add
+      map_smul' := by
+        intro a b
+        rw [Algebra.smul_def, Algebra.smul_def]
+        change d.comparison (algebraMap A B a * b) =
+          adicSystemLimitAlgebraMap I X a * d.comparison b
+        exact hcomparison_smul a b }
+  have hp_surj : Function.Surjective p := by
+    let lp := Classical.choice (hlimit.1 n)
+    intro z
+    obtain ⟨q, hq⟩ := lp.equivalence.surjective z
+    obtain ⟨y, hy⟩ := Submodule.mkQ_surjective P q
+    refine ⟨d.comparison.symm (eLin y), ?_⟩
+    have hproj' := congrArg (fun q => q.hom y) lp.projection_eq
+    change lp.equivalence (P.mkQ y) =
+      (limit.π F (Opposite.op n)).hom y at hproj'
+    have hpe : p (d.comparison.symm (eLin y)) =
+        (limit.π F (Opposite.op n)).hom y := by
+      dsimp [p]
+      rw [d.comparison.apply_symm_apply]
+      simpa using hproj y n
+    have hprojz := hproj'.symm.trans ((congrArg lp.equivalence hy).trans hq)
+    rw [hpe]
+    exact hprojz
+  have hJK : J ^ (n : ℕ) ≤ RingHom.ker p := by
+    dsimp [J, cprimeIdeal]
+    rw [← Ideal.map_pow, Ideal.map_le_iff_le_comap]
+    intro a ha
+    change p (algebraMap A B a) = 0
+    change (limit.π X.obj.right (Opposite.op n)).hom
+        (d.comparison (algebraMap A B a)) = 0
+    rw [d.comparison_stage]
+    have ha0 : Ideal.Quotient.mk (I ^ (n : ℕ)) a = 0 :=
+      Ideal.Quotient.eq_zero_iff_mem.mpr ha
+    rw [ha0]
+    exact (X.obj.hom.app (Opposite.op n)).hom.map_zero
+  have hKJ : RingHom.ker p ≤ J ^ (n : ℕ) := by
+    intro b hb
+    let y := eLin.symm (d.comparison b)
+    have hycomp : eLin y = d.comparison b := by
+      dsimp [y]
+      rw [eLin.apply_symm_apply]
+    have hpy : (limit.π F (Opposite.op n)).hom y = 0 := by
+      rw [← hproj y n, hycomp]
+      exact hb
+    let lp := Classical.choice (hlimit.1 n)
+    have hproj' := congrArg (fun q => q.hom y) lp.projection_eq
+    change lp.equivalence (P.mkQ y) =
+      (limit.π F (Opposite.op n)).hom y at hproj'
+    have hmk : P.mkQ y = 0 := by
+      apply lp.equivalence.injective
+      rw [hproj', hpy]
+      exact (lp.equivalence.map_zero).symm
+    have hyP : y ∈ P := by
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hmk
+      exact hmk
+    have hmapLin :
+        Submodule.map eLin.toLinearMap P ≤
+          (I ^ (n : ℕ) • (⊤ : Submodule A L)) := by
+      rw [Submodule.map_smul'', Submodule.map_top]
+      exact smul_mono_right _ le_top
+    have hJpow : J ^ (n : ℕ) =
+        Ideal.map (algebraMap A B) (I ^ (n : ℕ)) := by
+      dsimp [J, cprimeIdeal]
+      rw [← Ideal.map_pow]
+    have hmapComp :
+        Submodule.map eComp.symm.toLinearMap
+            (I ^ (n : ℕ) • (⊤ : Submodule A L)) ≤
+          ((J ^ (n : ℕ)).restrictScalars A : Submodule A B) := by
+      rw [ideal_restrictScalars_eq_smul_top_of_map
+        (I ^ (n : ℕ)) (J ^ (n : ℕ)) hJpow]
+      rw [Submodule.map_smul'', Submodule.map_top]
+      exact smul_mono_right _ le_top
+    have hmem : eComp.symm (eLin y) ∈ J ^ (n : ℕ) := by
+      apply hmapComp
+      exact Submodule.mem_map_of_mem
+        (hmapLin (Submodule.mem_map_of_mem hyP))
+    rw [hycomp] at hmem
+    change d.comparison.symm (d.comparison b) ∈ J ^ (n : ℕ) at hmem
+    simpa using hmem
+  have hker : J ^ (n : ℕ) = RingHom.ker p :=
+    le_antisymm hJK hKJ
+  let e₀ := RingHom.quotientKerEquivOfSurjective hp_surj
+  exact ⟨(Ideal.quotEquivOfEq hker).trans e₀⟩
+
 /-- The limit algebra has the prescribed quotient at every positive stage. -/
 theorem adicSystemLimit_quotient_presentation {A : Type u} [CommRing A]
     (I : Ideal A) (hI : I.FG) (X : AdicSystemCategory A I) (n : ℕ+) :
@@ -903,19 +1756,157 @@ theorem adicSystemLimit_quotient_presentation {A : Type u} [CommRing A]
       (((adicSystemLimitObject I hI X).obj : Type u) ⧸
           (cprimeIdeal I (adicSystemLimitObject I hI X).obj) ^ (n : ℕ) ≃+*
         X.obj.right.obj (Opposite.op n)) := by
-  sorry
+  let d := adicSystemLimitData I hI X
+  change Nonempty
+    (((d.algebra : Type u) ⧸ (cprimeIdeal I d.algebra) ^ (n : ℕ)) ≃+*
+      X.obj.right.obj (Opposite.op n))
+  exact adicSystemLimitData_stage_equiv I hI X d n
 
 /-- A map of systems induces a map between the chosen complete limit algebras. -/
+private noncomputable def adicSystemLimitRingHom {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y) :
+    ((adicSystemLimitObject I hI X).obj : Type u) →+*
+      (adicSystemLimitObject I hI Y).obj :=
+  let dX := adicSystemLimitData I hI X
+  let dY := adicSystemLimitData I hI Y
+  dY.comparison.symm.toRingHom.comp
+    ((lim.map f.hom.right).hom.comp dX.comparison.toRingHom)
+
+private theorem adicSystemLimitRingHom_commutes {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y)
+    (a : A) :
+    adicSystemLimitRingHom I hI f
+        (algebraMap A (adicSystemLimitObject I hI X).obj a) =
+      algebraMap A (adicSystemLimitObject I hI Y).obj a := by
+  let dX := adicSystemLimitData I hI X
+  let dY := adicSystemLimitData I hI Y
+  let q : ((dX.algebra : Type u) : Type u) →+*
+      (dY.algebra : Type u) :=
+    dY.comparison.symm.toRingHom.comp
+      ((lim.map f.hom.right).hom.comp dX.comparison.toRingHom)
+  change q (algebraMap A dX.algebra a) = algebraMap A dY.algebra a
+  apply dY.comparison.injective
+  apply Concrete.limit_ext Y.obj.right
+  intro n
+  change (limit.π Y.obj.right n).hom
+      (dY.comparison (q (algebraMap A dX.algebra a))) =
+    (limit.π Y.obj.right n).hom
+      (dY.comparison (algebraMap A dY.algebra a))
+  dsimp [q]
+  rw [dY.comparison.apply_symm_apply]
+  rw [← ConcreteCategory.comp_apply, limMap_π]
+  change (f.hom.right.app n).hom
+      ((limit.π X.obj.right n).hom
+        (dX.comparison (algebraMap A dX.algebra a))) =
+    (limit.π Y.obj.right n).hom
+      (dY.comparison (algebraMap A dY.algebra a))
+  have hX := dX.comparison_stage a n.unop
+  have hY := dY.comparison_stage a n.unop
+  have hf := congrArg (fun z => z.hom
+      (Ideal.Quotient.mk (I ^ (n.unop : ℕ)) a))
+    (congrArg (fun z => z.app n) f.hom.w)
+  change (f.hom.right.app n).hom
+      ((X.obj.hom.app n).hom
+        (Ideal.Quotient.mk (I ^ (n.unop : ℕ)) a)) =
+    (Y.obj.hom.app n).hom
+      (Ideal.Quotient.mk (I ^ (n.unop : ℕ)) a) at hf
+  rw [hX, hY]
+  exact hf
+
+private noncomputable def adicSystemLimitAlgHom {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y) :
+    (adicSystemLimitObject I hI X).obj →ₐ[A]
+      (adicSystemLimitObject I hI Y).obj :=
+  { toRingHom := adicSystemLimitRingHom I hI f
+    commutes' := adicSystemLimitRingHom_commutes I hI f }
+
+private noncomputable def adicSystemLimitMap {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y) :
+    adicSystemLimitObject I hI X ⟶ adicSystemLimitObject I hI Y :=
+  ObjectProperty.homMk
+    (CommAlgCat.ofHom (adicSystemLimitAlgHom I hI f))
+
+private theorem adicSystemLimitRingHom_apply {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y)
+    (b : (adicSystemLimitObject I hI X).obj) :
+    adicSystemLimitRingHom I hI f b =
+      (adicSystemLimitData I hI Y).comparison.symm
+        ((lim.map f.hom.right).hom
+          ((adicSystemLimitData I hI X).comparison b)) := by
+  rfl
+
+private theorem adicSystemLimitMap_id {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) (X : AdicSystemCategory A I) :
+    adicSystemLimitMap I hI (𝟙 X) = 𝟙 (adicSystemLimitObject I hI X) := by
+  apply ObjectProperty.hom_ext
+  apply CommAlgCat.hom_ext
+  apply AlgHom.ext
+  intro b
+  dsimp [adicSystemLimitMap, adicSystemLimitAlgHom, adicSystemLimitObject]
+  change adicSystemLimitRingHom I hI (𝟙 X) b = b
+  rw [adicSystemLimitRingHom_apply]
+  apply (adicSystemLimitData I hI X).comparison.injective
+  have hlimid : (lim.map (𝟙 X.obj.right)).hom =
+      RingHom.id _ := by
+    apply RingHom.ext
+    intro x
+    apply Concrete.limit_ext X.obj.right
+    intro m
+    rw [← ConcreteCategory.comp_apply, ← limMap_eq, limMap_π]
+    simp
+  have hlimid' :
+      (lim.map (𝟙 X : X ⟶ X).hom.right).hom = RingHom.id _ := by
+    rw [show (𝟙 X : X ⟶ X).hom.right = 𝟙 X.obj.right by rfl]
+    exact hlimid
+  rw [hlimid']
+  change (adicSystemLimitData I hI X).comparison
+      ((adicSystemLimitData I hI X).comparison.invFun
+        ((adicSystemLimitData I hI X).comparison.toFun b)) =
+    (adicSystemLimitData I hI X).comparison b
+  exact congrArg (fun z => (adicSystemLimitData I hI X).comparison z)
+    ((adicSystemLimitData I hI X).comparison.left_inv b)
+
+private theorem adicSystemLimitMap_comp {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG)
+    {X Y Z : AdicSystemCategory A I} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    adicSystemLimitMap I hI (f ≫ g) =
+      adicSystemLimitMap I hI f ≫ adicSystemLimitMap I hI g := by
+  apply ObjectProperty.hom_ext
+  apply CommAlgCat.hom_ext
+  apply AlgHom.ext
+  intro b
+  dsimp [adicSystemLimitMap, adicSystemLimitAlgHom, adicSystemLimitObject]
+  change adicSystemLimitRingHom I hI (f ≫ g) b =
+    adicSystemLimitRingHom I hI g
+      (adicSystemLimitRingHom I hI f b)
+  rw [adicSystemLimitRingHom_apply, adicSystemLimitRingHom_apply,
+    adicSystemLimitRingHom_apply]
+  apply (adicSystemLimitData I hI Z).comparison.injective
+  rw [(adicSystemLimitData I hI Z).comparison.apply_symm_apply]
+  rw [(adicSystemLimitData I hI Z).comparison.apply_symm_apply]
+  rw [(adicSystemLimitData I hI Y).comparison.apply_symm_apply]
+  apply Concrete.limit_ext Z.obj.right
+  intro n
+  simp [← limMap_eq, Category.assoc]
+
 theorem adicSystemLimitMap_exists {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y) :
     Nonempty (adicSystemLimitObject I hI X ⟶ adicSystemLimitObject I hI Y) := by
-  sorry
+  exact ⟨adicSystemLimitMap I hI f⟩
 
 /-- The functor from `𝓒` to `𝓒'` defined by inverse limit. -/
 theorem systemLimitFunctor_exists {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) :
     Nonempty (AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I) := by
-  sorry
+  refine ⟨{
+    obj := fun X => adicSystemLimitObject I hI X
+    map := fun f => adicSystemLimitMap I hI f
+    map_id := by
+      intro X
+      exact adicSystemLimitMap_id I hI X
+    map_comp := by
+      intro X Y Z f g
+      exact adicSystemLimitMap_comp I hI f g }⟩
 
 noncomputable def systemLimitFunctor {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) : AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I :=

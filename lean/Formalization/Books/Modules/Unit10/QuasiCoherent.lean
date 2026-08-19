@@ -76,7 +76,9 @@ theorem locallyPresented_isLocallyGenerated
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
     (hF : LocallyPresented F) :
     locallyGenerated F := by
-  sorry
+  intro x
+  rcases hF x with ⟨U, hxU, ⟨P⟩⟩
+  exact ⟨U, hxU, ⟨P.generators⟩⟩
 
 /-- The generators-and-relations form of the local definition. -/
 theorem locallyPresented_has_generators_and_relations
@@ -87,7 +89,16 @@ theorem locallyPresented_has_generators_and_relations
         (φ : (SheafOfModules.free J : Mod (ringedOpenSubspace X U).structureSheaf) ⟶
           (SheafOfModules.free I : Mod (ringedOpenSubspace X U).structureSheaf)),
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ) := by
-  sorry
+  intro x
+  rcases hF x with ⟨U, hxU, ⟨P⟩⟩
+  let φ : (SheafOfModules.free P.relations.I :
+      Mod (ringedOpenSubspace X U).structureSheaf) ⟶
+      (SheafOfModules.free P.generators.I :
+        Mod (ringedOpenSubspace X U).structureSheaf) :=
+    (SheafOfModules.freeHomEquiv _).symm P.relations.s ≫
+      kernel.ι P.generators.π
+  refine ⟨U, hxU, P.generators.I, P.relations.I, φ, ?_⟩
+  exact ⟨P.isColimit.coconePointUniqueUpToIso (colimit.isColimit _)⟩
 
 /-- The presentation object is the canonical Mathlib packaging of the two
 parts of the source's generators-and-relations explanation. -/

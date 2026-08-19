@@ -305,7 +305,7 @@ noncomputable def productTotalDifferential
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
-  /- Prior attempt:
+  /- Prior attempt (does not compile; retained for context):
   unfold productTotalDifferential productTotalTerm
   apply Pi.hom_ext
   intro p

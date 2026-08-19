@@ -411,7 +411,7 @@ abbrev sixVariableQuadraticAlgebra (p : ℕ) :=
 /-- No flat `ℤ/p²ℤ`-algebra has the quadratic algebra above as its special
 fibre. -/
 theorem no_flat_sixVariableQuadratic_lift
-    (p : ℕ) (hp : Nat.Prime p) :
+    (p : ℕ) (_hp : Nat.Prime p) :
     ¬ ∃ (B : Type) (_ : CommRing B) (_ : Algebra (ZMod (p ^ 2)) B),
       Module.Flat (ZMod (p ^ 2)) B ∧
         Nonempty
@@ -431,7 +431,7 @@ theorem no_flat_sixVariableQuadratic_lift
       rw [Int.cast_mul]
       simpa using ha
     obtain ⟨k, hk⟩ := hzdiv
-    have hpz : (p : ℤ) ≠ 0 := by exact_mod_cast hp.ne_zero
+    have hpz : (p : ℤ) ≠ 0 := by exact_mod_cast _hp.ne_zero
     have hz : z = (p : ℤ) * k := by
       apply (mul_left_cancel₀ hpz)
       calc
@@ -496,7 +496,7 @@ theorem no_flat_sixVariableQuadratic_lift
           exact Nat.ne_of_gt hk'.2.1
         have hklt : k < p := by
           exact hk'.2.2
-        have hdiv : p ∣ p.choose k := hp.dvd_choose_self hk0 hklt
+        have hdiv : p ∣ p.choose k := _hp.dvd_choose_self hk0 hklt
         have hcast : (p.choose k : B) =
             (algebraMap R B) (p : R) *
               (algebraMap R B) ((p.choose k / p : ℕ) : R) := by
@@ -540,7 +540,7 @@ theorem no_flat_sixVariableQuadratic_lift
           intro k hk
           ring
     · intro h
-      apply hp.ne_zero
+      apply _hp.ne_zero
       have h' : 0 = p := by simpa only [Finset.mem_singleton] using h
       exact h'.symm
   let A := sixVariableQuadraticAlgebra p
@@ -583,7 +583,7 @@ theorem no_flat_sixVariableQuadratic_lift
     exact (Ideal.Quotient.eq_zero_iff_mem).mp hπq
   obtain ⟨w, hw⟩ := Ideal.mem_span_singleton'.mp hq_mem
   let P : B := algebraMap R B (p : R)
-  have hp2 : 2 ≤ p := hp.two_le
+  have hp2 : 2 ≤ p := _hp.two_le
   have hR2 : (p : R) ^ 2 = 0 := by
     change (p : ZMod (p ^ 2)) ^ 2 = 0
     rw [← Nat.cast_pow]

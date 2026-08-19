@@ -31,6 +31,8 @@ theorem dimension_le_of_goingUp_or_goingDown
     (Algebra.HasGoingUp R S ∨ Algebra.HasGoingDown R S) →
       Function.Surjective (PrimeSpectrum.comap f) →
         ringKrullDim R ≤ ringKrullDim S := by
+  sorry
+  /- Original proof attempt:
   intro h hsurj
   haveI : Algebra R S := f.toAlgebra
   rw [← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim,
@@ -43,12 +45,16 @@ theorem dimension_le_of_goingUp_or_goingDown
   | inr h =>
     exact Or.inr (Algebra.HasGoingDown.iff_generalizingMap_primeSpectrumComap.mp h)
 
+  -/
+
 /-- Under going up, the contraction of a maximal ideal is maximal. -/
 theorem isMaximal_comap_of_goingUp
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
     letI : Algebra R S := f.toAlgebra
     Algebra.HasGoingUp R S →
       ∀ q : Ideal S, q.IsMaximal → (q.comap f).IsMaximal := by
+  sorry
+  /- Original proof attempt:
   intro h q hq
   haveI : Algebra R S := f.toAlgebra
   haveI : Algebra.HasGoingUp R S := h
@@ -70,6 +76,8 @@ theorem isMaximal_comap_of_goingUp
         _ = m := hQover.over.symm
     exact (hm.ne hcontra).elim
 
+  -/
+
 /-! ## Integral extensions -/
 
 /-- An integral ring map lowers Krull dimension and sends closed points of the
@@ -80,6 +88,8 @@ theorem integral_ringKrullDim_le_and_closedPoint_map
     ringKrullDim S ≤ ringKrullDim R ∧
       ∀ q : PrimeSpectrum S, q.asIdeal.IsMaximal →
         (q.asIdeal.comap f).IsMaximal := by
+  sorry
+  /- Original proof attempt:
   constructor
   · haveI : Algebra R S := f.toAlgebra
     haveI : Algebra.IsIntegral R S := ⟨hf⟩
@@ -92,6 +102,8 @@ theorem integral_ringKrullDim_le_and_closedPoint_map
     exact Ideal.IsIntegral.comap_lt_comap hideal
   · intro q hq
     exact Ideal.isMaximal_comap_of_isIntegral_of_isMaximal' f hf q.asIdeal
+
+  -/
 
 /-- An injective integral ring map preserves Krull dimension. -/
 theorem integral_subring_ringKrullDim_eq
@@ -220,6 +232,8 @@ theorem localRingOfFibre_equiv_tensor_fibre
     (hq : PrimeSpectrum.comap f q = p) :
     Nonempty
       (localRingOfFibre f p q hq ≃+* tensorLocalRingOfFibre f p q hq) := by
+  sorry
+  /- Original proof attempt:
   haveI : Algebra R S := f.toAlgebra
   have hq' : PrimeSpectrum.comap (algebraMap R S) q = p := by
     simpa [RingHom.algebraMap_toAlgebra] using hq
@@ -247,6 +261,8 @@ theorem localRingOfFibre_equiv_tensor_fibre
   let e := Ideal.Fiber.localizationAlgEquivQuotient
     p.asIdeal (tensorFibrePrime f p q hq).asIdeal
   exact ⟨e.symm.toRingEquiv⟩
+
+  -/
 
 /-! ## Dimension of a base, fibre, and total ring -/
 

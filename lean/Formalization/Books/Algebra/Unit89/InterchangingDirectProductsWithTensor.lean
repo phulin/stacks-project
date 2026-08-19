@@ -103,7 +103,7 @@ theorem integerDiagonalToQuotientProduct_injective :
     have hcast :
         (Int.natAbs (|b - a| + 1) : ℤ) = Int.natAbs (b - a) + 1 := by
       rw [Int.natAbs_of_nonneg]
-      simp [Int.natAbs_abs]
+      simp
       positivity
     exact_mod_cast hcast
   rw [hnabs] at hnat
@@ -121,7 +121,7 @@ def rationalTensorIntegerDiagonal :
 
 theorem rationalTensorIntegerDiagonal_injective :
     Function.Injective rationalTensorIntegerDiagonal := by
-  letI : Module.Flat ℤ ℚ := IsLocalization.flat ℚ (Submonoid.pos ℤ)
+  let : Module.Flat ℤ ℚ := IsLocalization.flat ℚ (Submonoid.pos ℤ)
   exact (Module.Flat.lTensor_preserves_injective_linearMap
     integerDiagonalToQuotientProduct integerDiagonalToQuotientProduct_injective).comp
     (TensorProduct.rid ℤ ℚ).symm.injective
@@ -148,7 +148,7 @@ theorem rationalQuotientTensorProduct_subsingleton :
           rw [Int.cast_smul_eq_zsmul]
           rw [TensorProduct.smul_tmul']
           rw [TensorProduct.smul_tmul]
-          rw [show (n : ℤ) • z = (n : ℕ) • z by simp [Int.cast_smul_eq_zsmul]]
+          rw [show (n : ℤ) • z = (n : ℕ) • z by simp]
           rw [ZModModule.char_nsmul_eq_zero]
           simp
         apply (smul_eq_zero.mp hzero).resolve_left
@@ -162,11 +162,11 @@ theorem rationalQuotientTensorProduct_subsingleton :
 theorem rationalQuotientTensorMap_not_injective :
     ¬Function.Injective rationalQuotientTensorMap := by
   intro h
-  letI : Subsingleton (∀ n : ℕ+, TensorProduct ℤ ℚ (ZMod (n : ℕ))) :=
+  let : Subsingleton (∀ n : ℕ+, TensorProduct ℤ ℚ (ZMod (n : ℕ))) :=
     rationalQuotientTensorProduct_subsingleton
-  letI : Subsingleton (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
+  let : Subsingleton (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
     h.subsingleton
-  letI : Nontrivial (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
+  let : Nontrivial (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
     rationalQuotientTensorProduct_nontrivial
   exact (not_subsingleton _) (inferInstance :
     Subsingleton (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))))
@@ -213,7 +213,7 @@ theorem rationalIntegerProductTensorMap_range :
         rw [hmap]
         change (z a : ℚ) * q = _
         conv_lhs => rw [hq]
-        simp [smul_eq_mul, div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm]
+        simp [div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm]
     | add x y hx hy =>
         rcases hx with ⟨m, hm, hx⟩
         rcases hy with ⟨n, hn, hy⟩

@@ -1,15 +1,19 @@
 import Mathlib.Algebra.Category.CommAlgCat.Basic
 import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.Algebra.Algebra.Shrink
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.LocalizedModule.Int
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Finiteness.Descent
+import Mathlib.RingTheory.Finiteness.Small
+import Mathlib.RingTheory.FiniteStability
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.Algebra
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.BaseChange
+import Mathlib.RingTheory.Localization.LocalizationLocalization
 import Mathlib.RingTheory.Noetherian.Nilpotent
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Flat.Equalizer
@@ -17,6 +21,7 @@ import Mathlib.RingTheory.Flat.Tensor
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit32.LocallyNilpotent
+import Formalization.Books.Algebra.Unit108.PureIdeals
 
 /-!
 # Commutative Algebra, Chapter 126: Algebras and modules of finite presentation
@@ -786,6 +791,827 @@ theorem construct_fp_module_from_stalk {R : Type u} [CommRing R]
 
 /-! ### Local isomorphisms and spreading out -/
 
+private noncomputable def awayToAtPrime {R : Type u} [CommRing R]
+    (p : Ideal R) [p.IsPrime] (a : R) (ha : a ∉ p) :
+    Localization.Away a →ₐ[R] Localization.AtPrime p :=
+  IsLocalization.Away.liftAlgHom a (f := Algebra.ofId R (Localization.AtPrime p))
+    (IsLocalization.map_units (Localization.AtPrime p) (⟨a, ha⟩ : p.primeCompl))
+
+private lemma exists_away_lift_algHom {R : Type u} {A : Type v} [CommRing R] [CommRing A]
+    [Algebra R A] [Algebra.FinitePresentation R A]
+    (p : Ideal R) [p.IsPrime] (f : A →ₐ[R] Localization.AtPrime p) :
+    ∃ (a : R) (ha : a ∉ p) (g : A →ₐ[R] Localization.Away a),
+      (awayToAtPrime p a ha).comp g = f := by
+  classical
+  obtain ⟨n, π, hπ, hker⟩ :=
+    (inferInstance : Algebra.FinitePresentation R A).out
+  obtain ⟨s, hs⟩ := hker
+  have hrep (i : Fin n) : ∃ b : R, ∃ d : p.primeCompl,
+      IsLocalization.mk' (Localization.AtPrime p) b d = f (π (MvPolynomial.X i)) := by
+    obtain ⟨⟨b, d⟩, h⟩ :=
+      IsLocalization.mk'_surjective p.primeCompl (f (π (MvPolynomial.X i)))
+    exact ⟨b, d, h⟩
+  choose b d hd using hrep
+  let a₀ : R := ∏ i : Fin n, (d i : R)
+  have ha₀ : a₀ ∉ p := by
+    exact p.primeCompl.prod_mem fun i _ ↦ (d i).property
+  let c (i : Fin n) : R := ∏ j ∈ Finset.univ.erase i, (d j : R)
+  have ha₀_eq (i : Fin n) : a₀ = (d i : R) * c i := by
+    change (∏ j : Fin n, (d j : R)) =
+      (d i : R) * ∏ j ∈ Finset.univ.erase i, (d j : R)
+    exact (Finset.mul_prod_erase Finset.univ (fun j : Fin n ↦ (d j : R))
+      (Finset.mem_univ i)).symm
+  let z (i : Fin n) : Localization.Away a₀ :=
+    IsLocalization.mk' (Localization.Away a₀) (b i * c i)
+      (⟨a₀, Submonoid.mem_powers a₀⟩ : Submonoid.powers a₀)
+  let g₀ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away a₀ :=
+    MvPolynomial.aeval z
+  have hcomp₀ : (awayToAtPrime p a₀ ha₀).comp g₀ = f.comp π := by
+    apply MvPolynomial.algHom_ext
+    intro i
+    simp only [AlgHom.comp_apply, g₀, MvPolynomial.aeval_X, z]
+    rw [← (IsLocalization.map_units (Localization.AtPrime p)
+      (⟨a₀, ha₀⟩ : p.primeCompl)).mul_right_inj]
+    have hzspec := congrArg (awayToAtPrime p a₀ ha₀)
+      (IsLocalization.mk'_spec' (Localization.Away a₀) (b i * c i)
+        (⟨a₀, Submonoid.mem_powers a₀⟩ : Submonoid.powers a₀))
+    simp only [map_mul, AlgHom.commutes] at hzspec
+    rw [hzspec]
+    change algebraMap R (Localization.AtPrime p) (b i) *
+        algebraMap R (Localization.AtPrime p) (c i) =
+      algebraMap R (Localization.AtPrime p) a₀ * f (π (MvPolynomial.X i))
+    rw [ha₀_eq i, map_mul, ← hd i]
+    have hspec := IsLocalization.mk'_spec' (Localization.AtPrime p) (b i) (d i)
+    rw [← hspec]
+    ring
+  have hzero (x : s) : awayToAtPrime p a₀ ha₀ (g₀ x.1) = 0 := by
+    have hx : π x.1 = 0 := by
+      exact (RingHom.mem_ker.mp (hs.le (Ideal.subset_span x.2)))
+    have h := congrArg (fun h : MvPolynomial (Fin n) R →ₐ[R]
+      Localization.AtPrime p ↦ h x.1) hcomp₀
+    simpa only [AlgHom.comp_apply, hx, map_zero] using h
+  have hfrac (x : s) : ∃ y : R, ∃ k : ℕ,
+      IsLocalization.mk' (Localization.Away a₀) y
+        (⟨a₀ ^ k, (Submonoid.powers a₀).pow_mem (Submonoid.mem_powers a₀) k⟩ :
+          Submonoid.powers a₀) = g₀ x.1 := by
+    obtain ⟨y, t, ht⟩ := IsLocalization.exists_mk'_eq
+      (Submonoid.powers a₀) (g₀ x.1)
+    obtain ⟨k, hk⟩ := t.property
+    refine ⟨y, k, ?_⟩
+    have ht' : t = (⟨a₀ ^ k,
+        (Submonoid.powers a₀).pow_mem (Submonoid.mem_powers a₀) k⟩ :
+          Submonoid.powers a₀) :=
+      Subtype.ext hk.symm
+    rw [← ht']
+    exact ht
+  choose y k hy using hfrac
+  have hnumzero (x : s) : algebraMap R (Localization.AtPrime p) (y x) = 0 := by
+    have h := hzero x
+    rw [← hy x] at h
+    have hspec := congrArg (awayToAtPrime p a₀ ha₀)
+      (IsLocalization.mk'_spec' (Localization.Away a₀) (y x)
+        (⟨a₀ ^ k x, (Submonoid.powers a₀).pow_mem (Submonoid.mem_powers a₀) (k x)⟩ :
+          Submonoid.powers a₀))
+    simp only [map_mul, h, mul_zero] at hspec
+    simpa [awayToAtPrime] using hspec.symm
+  have hkill (x : s) : ∃ t : p.primeCompl, (t : R) * y x = 0 :=
+    (IsLocalization.map_eq_zero_iff p.primeCompl (Localization.AtPrime p) (y x)).mp
+      (hnumzero x)
+  choose t ht using hkill
+  let t₀ : R := ∏ x : s, (t x : R)
+  have ht₀ : t₀ ∉ p := p.primeCompl.prod_mem fun x _ ↦ (t x).property
+  let a : R := t₀ * a₀
+  have ha : a ∉ p := (inferInstance : p.IsPrime).mul_notMem ht₀ ha₀
+  have ha₀_dvd : a₀ ∣ a := ⟨t₀, by simp [a, mul_comm]⟩
+  let j : Localization.Away a₀ →ₐ[R] Localization.Away a :=
+    IsLocalization.Away.liftAlgHom a₀ (f := Algebra.ofId R (Localization.Away a))
+      (IsLocalization.Away.isUnit_of_dvd a ha₀_dvd)
+  let gP : MvPolynomial (Fin n) R →ₐ[R] Localization.Away a := j.comp g₀
+  have hrels : RingHom.ker π.toRingHom ≤ RingHom.ker gP.toRingHom := by
+    rw [← hs, Ideal.span_le]
+    intro x hx
+    change j (g₀ x) = 0
+    let x' : s := ⟨x, hx⟩
+    rw [← hy x']
+    have hdiv : (t x' : R) ∣ t₀ := by
+      exact Finset.dvd_prod_of_mem (fun z : s ↦ (t z : R)) (Finset.mem_univ x')
+    obtain ⟨q, hq⟩ := hdiv
+    have hya : a * y x' = 0 := by
+      calc
+        a * y x' = (t₀ * a₀) * y x' := rfl
+        _ = ((t x' : R) * q * a₀) * y x' := by rw [hq]
+        _ = q * a₀ * ((t x' : R) * y x') := by ring
+        _ = 0 := by rw [ht x']; simp
+    have hyA : algebraMap R (Localization.Away a) (y x') = 0 := by
+      apply (IsLocalization.map_eq_zero_iff (Submonoid.powers a)
+        (Localization.Away a) (y x')).2
+      exact ⟨(⟨a, Submonoid.mem_powers a⟩ : Submonoid.powers a), hya⟩
+    have hu : IsUnit (j (algebraMap R (Localization.Away a₀) (a₀ ^ k x'))) :=
+      (IsLocalization.map_units (Localization.Away a₀)
+        (⟨a₀ ^ k x', (Submonoid.powers a₀).pow_mem
+          (Submonoid.mem_powers a₀) (k x')⟩ : Submonoid.powers a₀)).map j
+    rw [← hu.mul_right_inj]
+    rw [mul_zero]
+    have hspec := congrArg j
+      (IsLocalization.mk'_spec' (Localization.Away a₀) (y x')
+        (⟨a₀ ^ k x', (Submonoid.powers a₀).pow_mem
+          (Submonoid.mem_powers a₀) (k x')⟩ : Submonoid.powers a₀))
+    simpa only [map_mul, AlgHom.commutes, hyA] using hspec
+  let g : A →ₐ[R] Localization.Away a :=
+    AlgHom.liftOfSurjective π hπ gP hrels
+  refine ⟨a, ha, g, ?_⟩
+  rw [← AlgHom.cancel_right hπ]
+  rw [AlgHom.comp_assoc, AlgHom.liftOfSurjective_comp]
+  rw [← hcomp₀]
+  apply MvPolynomial.algHom_ext
+  intro i
+  simp only [AlgHom.comp_apply, gP, g₀, MvPolynomial.aeval_X]
+  have hj : (awayToAtPrime p a ha).comp j = awayToAtPrime p a₀ ha₀ := by
+    apply Localization.algHom_ext (Submonoid.powers a₀)
+    ext
+  exact DFunLike.congr_fun hj (z i)
+
+private noncomputable def awayToAtPrimeOver
+    {R : Type u} {B : Type w} [CommRing R] [CommRing B] [Algebra R B]
+    (p : Ideal B) [p.IsPrime] (b : B) (hb : b ∉ p) :
+    Localization.Away b →ₐ[R] Localization.AtPrime p :=
+  (awayToAtPrime p b hb).restrictScalars R
+
+private lemma exists_away_lift_algHom_over
+    {R : Type u} {A : Type v} {B : Type w}
+    [CommRing R] [CommRing A] [CommRing B] [Algebra R A] [Algebra R B]
+    [Algebra.FinitePresentation R A]
+    (p : Ideal B) [p.IsPrime] (f : A →ₐ[R] Localization.AtPrime p) :
+    ∃ (b : B) (hb : b ∉ p) (g : A →ₐ[R] Localization.Away b),
+      (awayToAtPrimeOver p b hb).comp g = f := by
+  let BA := B ⊗[R] A
+  let : Algebra B BA := Algebra.TensorProduct.leftAlgebra
+  let : Algebra.FinitePresentation B BA := by infer_instance
+  let h : BA →ₐ[B] Localization.AtPrime p :=
+    (AlgHom.liftEquiv R B A (Localization.AtPrime p)) f
+  obtain ⟨b, hb, G, hG⟩ := exists_away_lift_algHom p h
+  let g : A →ₐ[R] Localization.Away b :=
+    (G.restrictScalars R).comp Algebra.TensorProduct.includeRight
+  refine ⟨b, hb, g, ?_⟩
+  apply AlgHom.ext
+  intro x
+  have hGx := DFunLike.congr_fun hG
+    (Algebra.TensorProduct.includeRight x)
+  change awayToAtPrime p b hb (G (Algebra.TensorProduct.includeRight x)) = f x
+  calc
+    awayToAtPrime p b hb (G (Algebra.TensorProduct.includeRight x)) =
+        h (Algebra.TensorProduct.includeRight x) := hGx
+    _ = f x := by
+      rw [Algebra.TensorProduct.includeRight_apply]
+      change ((AlgHom.liftEquiv R B A (Localization.AtPrime p)) f)
+        (1 ⊗ₜ[R] x) = f x
+      rw [AlgHom.liftEquiv_tmul, one_smul]
+
+private theorem local_isomorphism_with_selector
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
+    (f : R →+* S) (p : Ideal R) (q : Ideal S) [hp : p.IsPrime] [hq : q.IsPrime]
+    (hpq : p = q.comap f) :
+    letI : Algebra R S := f.toAlgebra
+    RingHom.FinitePresentation f →
+      Function.Bijective (Localization.localRingHom p q f hpq) →
+        ∃ a : R, a ∉ p ∧
+          ∃ C : CommAlgCat (Localization.Away a),
+            ∃ E :
+                Localization (Algebra.algebraMapSubmonoid S (Submonoid.powers a)) ≃ₐ[
+                  Localization.Away a] (Localization.Away a × (C : Type u)),
+              ∃ e : Localization
+                  (Algebra.algebraMapSubmonoid S (Submonoid.powers a)),
+                e ∉ q.map (algebraMap S
+                  (Localization
+                    (Algebra.algebraMapSubmonoid S (Submonoid.powers a)))) ∧
+                  E e = (1, 0) := by
+  let : Algebra R S := f.toAlgebra
+  intro hfp hbij
+  let : Algebra.FinitePresentation R S := hfp
+  let F : Localization.AtPrime p →ₐ[R] Localization.AtPrime q :=
+    Localization.localAlgHom p q (Algebra.ofId R S) hpq
+  have hFbij : Function.Bijective F := hbij
+  let E : Localization.AtPrime p ≃ₐ[R] Localization.AtPrime q :=
+    AlgEquiv.ofBijective F hFbij
+  let locS : S →ₐ[R] Localization.AtPrime q :=
+    IsScalarTower.toAlgHom R S (Localization.AtPrime q)
+  obtain ⟨a, ha, g, hg⟩ :=
+    exists_away_lift_algHom p (E.symm.toAlgHom.comp locS)
+  let Rp := Localization.AtPrime p
+  let Sq := Localization.AtPrime q
+  let U := Localization (Algebra.algebraMapSubmonoid S p.primeCompl)
+  let eU : Rp ⊗[R] S ≃ₐ[Rp] U :=
+    Localization.tensorRightAlgEquiv p.primeCompl S
+  let h : S →ₐ[R] Rp := E.symm.toAlgHom.comp locS
+  let rP : U →ₐ[Rp] Rp := (h.liftEquiv R Rp S Rp).comp eU.symm.toAlgHom
+  have hrPsurj : Function.Surjective rP := by
+    intro x
+    refine ⟨algebraMap Rp U x, ?_⟩
+    exact rP.commutes x
+  let M : Submonoid S := Algebra.algebraMapSubmonoid S p.primeCompl
+  have hMq : M ≤ q.primeCompl := by
+    rintro _ ⟨x, hx, rfl⟩ hmem
+    change f x ∈ q at hmem
+    exact hx (by rw [hpq]; exact hmem)
+  let : Algebra U Sq :=
+    IsLocalization.localizationAlgebraOfSubmonoidLe U Sq M q.primeCompl hMq
+  let : IsScalarTower S U Sq :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le U Sq M q.primeCompl hMq
+  let : IsLocalization (q.primeCompl.map (algebraMap S U)) Sq :=
+    IsLocalization.isLocalization_of_submonoid_le U Sq M q.primeCompl hMq
+  have hUrP : E.toRingEquiv.toRingHom.comp rP.toRingHom = algebraMap U Sq := by
+    apply IsLocalization.ringHom_ext M
+    ext x
+    have heinv : eU.symm (algebraMap S U x) = (1 : Rp) ⊗ₜ[R] x := by
+      apply eU.injective
+      rw [eU.apply_symm_apply]
+      change (algebraMap S
+        (Localization (Algebra.algebraMapSubmonoid S p.primeCompl))) x =
+          Localization.tensorRightAlgEquiv p.primeCompl S ((1 : Rp) ⊗ₜ[R] x)
+      exact (Localization.tensorRightAlgEquiv_apply_one_tmul p.primeCompl x).symm
+    change E (rP (algebraMap S U x)) = algebraMap U Sq (algebraMap S U x)
+    rw [show rP (algebraMap S U x) = h x by simp [rP, heinv]]
+    rw [← IsScalarTower.algebraMap_apply S U Sq]
+    have hloc : locS x = algebraMap S Sq x := rfl
+    simp only [h, AlgHom.comp_apply, hloc]
+    exact E.apply_symm_apply _
+  have hrPcomp : rP.toRingHom.comp (algebraMap Rp U) = RingHom.id Rp := by
+    ext x
+    exact rP.commutes x
+  have hrPfp : RingHom.FinitePresentation rP.toRingHom := by
+    apply RingHom.FinitePresentation.of_comp_finiteType (algebraMap Rp U)
+    · rw [hrPcomp]
+      exact RingHom.FinitePresentation.of_bijective Function.bijective_id
+    · apply RingHom.FiniteType.of_finitePresentation
+      let V := Rp ⊗[R] S
+      have hV : RingHom.FinitePresentation (algebraMap Rp V) :=
+        RingHom.finitePresentation_algebraMap.mpr
+          (inferInstance : Algebra.FinitePresentation Rp V)
+      have he : RingHom.FinitePresentation eU.toRingEquiv.toRingHom :=
+        RingHom.FinitePresentation.of_bijective eU.bijective
+      have hc := he.comp hV
+      convert hc using 1
+      ext x
+      symm
+      change eU (algebraMap Rp (Rp ⊗[R] S) x) = algebraMap Rp U x
+      exact eU.commutes x
+  let : Algebra U Rp := rP.toRingHom.toAlgebra
+  let : Algebra.FinitePresentation U Rp := hrPfp
+  let I : Ideal U := RingHom.ker (algebraMap U Rp)
+  have hIfg : I.FG := by
+    simpa [I] using
+      Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId U Rp) hrPsurj
+  let eUr : Rp ≃ₐ[U] Sq :=
+    { E.toRingEquiv with
+      commutes' := fun x ↦ DFunLike.congr_fun hUrP x }
+  let qE : (U ⧸ I) ≃ₐ[U] Rp :=
+    Ideal.quotientKerAlgEquivOfSurjective (f := Algebra.ofId U Rp) hrPsurj
+  have hIpure : Ideal.Pure I := by
+    have hflat : Module.Flat U Sq := IsLocalization.flat Sq
+      (q.primeCompl.map (algebraMap S U))
+    let : Module.Flat U Sq := hflat
+    exact Module.Flat.of_linearEquiv ((qE.trans eUr).toLinearEquiv)
+  obtain ⟨e, he, hIe⟩ :=
+    (Ideal.isIdempotentElem_iff_of_fg I hIfg).mp
+      (Ideal.isIdempotentElem_of_pure I)
+  let A := Localization.Away a
+  let T := Localization (Algebra.algebraMapSubmonoid S (Submonoid.powers a))
+  let eT : A ⊗[R] S ≃ₐ[A] T :=
+    Localization.tensorRightAlgEquiv (Submonoid.powers a) S
+  let r : T →ₐ[A] A := (g.liftEquiv R A S A).comp eT.symm.toAlgHom
+  have har : Submonoid.powers a ≤ p.primeCompl := by
+    intro x hx
+    obtain ⟨n, rfl⟩ := hx
+    exact fun hpow ↦ ha (hp.mem_of_pow_mem n hpow)
+  have hTM : Algebra.algebraMapSubmonoid S (Submonoid.powers a) ≤ M := by
+    rintro _ ⟨x, hx, rfl⟩
+    exact ⟨x, har hx, rfl⟩
+  let : Algebra T U := IsLocalization.localizationAlgebraOfSubmonoidLe T U
+    (Algebra.algebraMapSubmonoid S (Submonoid.powers a)) M hTM
+  let : IsScalarTower S T U :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le T U
+      (Algebra.algebraMapSubmonoid S (Submonoid.powers a)) M hTM
+  let : IsLocalization (M.map (algebraMap S T)) U :=
+    IsLocalization.isLocalization_of_submonoid_le T U
+      (Algebra.algebraMapSubmonoid S (Submonoid.powers a)) M hTM
+  let : Algebra A Rp := IsLocalization.localizationAlgebraOfSubmonoidLe A Rp
+    (Submonoid.powers a) p.primeCompl har
+  let : IsScalarTower R A Rp :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le A Rp
+      (Submonoid.powers a) p.primeCompl har
+  let : IsLocalization (p.primeCompl.map (algebraMap R A)) Rp :=
+    IsLocalization.isLocalization_of_submonoid_le A Rp
+      (Submonoid.powers a) p.primeCompl har
+  have hrbase (d : R) : r (algebraMap S T (algebraMap R S d)) =
+      algebraMap R A d := by
+    rw [← IsScalarTower.algebraMap_apply R S T]
+    rw [IsScalarTower.algebraMap_apply R A T]
+    exact r.commutes (algebraMap R A d)
+  have hmap : Submonoid.map r.toRingHom (M.map (algebraMap S T)) =
+      p.primeCompl.map (algebraMap R A) := by
+    ext x
+    constructor
+    · rintro ⟨y, ⟨s, ⟨d, hd, hds⟩, hsy⟩, hyx⟩
+      refine ⟨d, hd, ?_⟩
+      subst y
+      subst s
+      subst x
+      exact (hrbase d).symm
+    · rintro ⟨d, hd, rfl⟩
+      refine ⟨algebraMap S T (algebraMap R S d), ?_, ?_⟩
+      · exact ⟨algebraMap R S d, ⟨d, hd, rfl⟩, rfl⟩
+      · exact hrbase d
+  let lr : U →+* Rp := IsLocalization.map Rp r.toRingHom
+    (hmap.symm ▸ (M.map (algebraMap S T)).le_comap_map)
+  have hlr : lr = rP.toRingHom := by
+    apply IsLocalization.ringHom_ext M
+    ext x
+    have haway : IsScalarTower.toAlgHom R A Rp = awayToAtPrime p a ha := by
+      apply Localization.algHom_ext (Submonoid.powers a)
+      ext
+    have her : (algebraMap A Rp).comp g.toRingHom = h.toRingHom := by
+      ext y
+      change algebraMap A Rp (g y) = h y
+      have hy := DFunLike.congr_fun haway (g y)
+      change algebraMap A Rp (g y) = awayToAtPrime p a ha (g y) at hy
+      rw [hy]
+      simpa [h] using DFunLike.congr_fun hg y
+    have hrS : r (algebraMap S T x) = g x := by
+      have heinv : eT.symm (algebraMap S T x) = (1 : A) ⊗ₜ[R] x := by
+        apply eT.injective
+        rw [eT.apply_symm_apply]
+        change (algebraMap S
+          (Localization (Algebra.algebraMapSubmonoid S (Submonoid.powers a)))) x =
+            Localization.tensorRightAlgEquiv (Submonoid.powers a) S
+              ((1 : A) ⊗ₜ[R] x)
+        exact (Localization.tensorRightAlgEquiv_apply_one_tmul
+          (Submonoid.powers a) x).symm
+      simp [r, heinv]
+    have hrPS : rP (algebraMap S U x) = h x := by
+      have heinv : eU.symm (algebraMap S U x) = (1 : Rp) ⊗ₜ[R] x := by
+        apply eU.injective
+        rw [eU.apply_symm_apply]
+        change (algebraMap S
+          (Localization (Algebra.algebraMapSubmonoid S p.primeCompl))) x =
+            Localization.tensorRightAlgEquiv p.primeCompl S ((1 : Rp) ⊗ₜ[R] x)
+        exact (Localization.tensorRightAlgEquiv_apply_one_tmul p.primeCompl x).symm
+      simp [rP, heinv]
+    have hxTU : algebraMap S U x = algebraMap T U (algebraMap S T x) :=
+      IsScalarTower.algebraMap_apply S T U x
+    change lr (algebraMap S U x) = rP (algebraMap S U x)
+    calc
+      lr (algebraMap S U x) = lr (algebraMap T U (algebraMap S T x)) :=
+        congrArg lr hxTU
+      _ = algebraMap A Rp (r (algebraMap S T x)) := IsLocalization.map_eq _ _
+      _ = algebraMap A Rp (g x) := congrArg (algebraMap A Rp) hrS
+      _ = h x := DFunLike.congr_fun her x
+      _ = rP (algebraMap S U x) := hrPS.symm
+  let J : Ideal T := RingHom.ker r.toRingHom
+  have hJU : J.map (algebraMap T U) = I := by
+    rw [← IsLocalization.ker_map Rp r.toRingHom hmap]
+    change RingHom.ker lr = I
+    rw [hlr]
+    rfl
+  have hrsurj : Function.Surjective r := by
+    intro y
+    refine ⟨algebraMap A T y, ?_⟩
+    exact r.commutes y
+  have hrcomp : r.toRingHom.comp (algebraMap A T) = RingHom.id A := by
+    ext y
+    exact r.commutes y
+  have hrfp : RingHom.FinitePresentation r.toRingHom := by
+    apply RingHom.FinitePresentation.of_comp_finiteType (algebraMap A T)
+    · rw [hrcomp]
+      exact RingHom.FinitePresentation.of_bijective Function.bijective_id
+    · apply RingHom.FiniteType.of_finitePresentation
+      let V := A ⊗[R] S
+      have hV : RingHom.FinitePresentation (algebraMap A V) :=
+        RingHom.finitePresentation_algebraMap.mpr
+          (inferInstance : Algebra.FinitePresentation A V)
+      have hefp : RingHom.FinitePresentation eT.toRingEquiv.toRingHom :=
+        RingHom.FinitePresentation.of_bijective eT.bijective
+      have hc := hefp.comp hV
+      convert hc using 1
+      ext y
+      symm
+      change eT (algebraMap A (A ⊗[R] S) y) = algebraMap A T y
+      exact eT.commutes y
+  let : Algebra T A := r.toRingHom.toAlgebra
+  let : Algebra.FinitePresentation T A := hrfp
+  have hJfg : J.FG := by
+    have hfg :=
+      Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId T A) hrsurj
+    have halg : (Algebra.ofId T A).toRingHom = r.toRingHom := rfl
+    rw [halg] at hfg
+    simpa [J] using hfg
+  let N : Submonoid T := M.map (algebraMap S T)
+  obtain ⟨x, t, ht⟩ := IsLocalization.exists_mk'_eq N e
+  let K : Ideal T := Ideal.span ({x} : Set T)
+  have hspan : Ideal.span ({e} : Set U) = K.map (algebraMap T U) := by
+    rw [Ideal.map_span]
+    simp only [Set.image_singleton]
+    apply le_antisymm
+    · rw [Ideal.span_singleton_le_span_singleton]
+      have hut : IsUnit (algebraMap T U (t : T)) := IsLocalization.map_units U t
+      have hspec : e * algebraMap T U (t : T) = algebraMap T U x := by
+        rw [← ht]
+        simp
+      refine ⟨↑hut.unit⁻¹, ?_⟩
+      apply hut.mul_right_cancel
+      rw [hspec]
+      simp [mul_assoc]
+    · rw [Ideal.span_singleton_le_span_singleton]
+      refine ⟨algebraMap T U (t : T), ?_⟩
+      have hspec : e * algebraMap T U (t : T) = algebraMap T U x := by
+        rw [← ht]
+        simp
+      exact hspec.symm
+  have hJKU : J.map (algebraMap T U) = K.map (algebraMap T U) := by
+    rw [hJU, hIe]
+    change Ideal.span ({e} : Set U) = K.map (algebraMap T U)
+    exact hspan
+  have N_base (m : T) (hm : m ∈ N) :
+      ∃ d : R, d ∉ p ∧ m = algebraMap R T d := by
+    rcases hm with ⟨s, hs, rfl⟩
+    rcases hs with ⟨d, hd, rfl⟩
+    refine ⟨d, hd, ?_⟩
+    exact (IsScalarTower.algebraMap_apply R S T d).symm
+  obtain ⟨s, hsJ⟩ := hJfg
+  have hclearJ (y : s) : ∃ d : R, d ∉ p ∧
+      algebraMap R T d * y.1 ∈ K := by
+    have hyJ : y.1 ∈ J := by
+      rw [← hsJ]
+      exact Ideal.subset_span y.2
+    have hyU : algebraMap T U y.1 ∈ K.map (algebraMap T U) := by
+      rw [← hJKU]
+      exact Ideal.mem_map_of_mem (algebraMap T U) hyJ
+    obtain ⟨m, hmN, hmy⟩ :=
+      (IsLocalization.algebraMap_mem_map_algebraMap_iff N U K y.1).mp hyU
+    obtain ⟨d, hd, hmd⟩ := N_base m hmN
+    refine ⟨d, hd, ?_⟩
+    simpa [hmd] using hmy
+  choose dJ hdJ hdyJ using hclearJ
+  let cJ : R := ∏ y : s, dJ y
+  have hcJ : cJ ∉ p := p.primeCompl.prod_mem fun y _ ↦ hdJ y
+  have hcyJ (y : s) : algebraMap R T cJ * y.1 ∈ K := by
+    have hdiv : dJ y ∣ cJ :=
+      Finset.dvd_prod_of_mem (fun z : s ↦ dJ z) (Finset.mem_univ y)
+    obtain ⟨v, hv⟩ := hdiv
+    rw [hv, map_mul]
+    rw [mul_assoc]
+    have hh := K.mul_mem_left (algebraMap R T v) (hdyJ y)
+    convert hh using 1; ring
+  have hxU : algebraMap T U x ∈ J.map (algebraMap T U) := by
+    rw [hJKU]
+    exact Ideal.mem_map_of_mem (algebraMap T U) (Ideal.subset_span (Set.mem_singleton x))
+  obtain ⟨mK, hmKN, hmKx⟩ :=
+    (IsLocalization.algebraMap_mem_map_algebraMap_iff N U J x).mp hxU
+  obtain ⟨dK, hdK, hmK⟩ := N_base mK hmKN
+  have hdKx : algebraMap R T dK * x ∈ J := by simpa [hmK] using hmKx
+  obtain ⟨d₀, hd₀, htbase⟩ := N_base (t : T) t.property
+  have hspecU : algebraMap T U x = algebraMap T U (algebraMap R T d₀) * e := by
+    have hspec := IsLocalization.mk'_spec' U x t
+    rw [ht, htbase] at hspec
+    exact hspec.symm
+  let w : T := x * x - algebraMap R T d₀ * x
+  have hwU : algebraMap T U w = 0 := by
+    simp only [w, map_sub, map_mul]
+    rw [hspecU]
+    calc
+      algebraMap T U (algebraMap R T d₀) * e *
+            (algebraMap T U (algebraMap R T d₀) * e) -
+          algebraMap T U (algebraMap R T d₀) *
+            (algebraMap T U (algebraMap R T d₀) * e) =
+          (algebraMap T U (algebraMap R T d₀)) ^ 2 * (e * e - e) := by ring
+      _ = 0 := by rw [he.eq]; simp
+  obtain ⟨mI, hmIw⟩ :=
+    (IsLocalization.map_eq_zero_iff N U w).mp hwU
+  obtain ⟨dI, hdI, hmI⟩ := N_base (mI : T) mI.property
+  have hdIw : algebraMap R T dI * w = 0 := by simpa [hmI] using hmIw
+  let c : R := d₀ * dI * cJ * dK
+  have hc : c ∉ p := by
+    exact hp.mul_notMem (hp.mul_notMem (hp.mul_notMem hd₀ hdI) hcJ) hdK
+  let B := Localization.Away (algebraMap R T c)
+  let D := Localization.Away (algebraMap R A c)
+  have hd₀c : d₀ ∣ c := ⟨dI * cJ * dK, by simp [c, mul_assoc]⟩
+  have hdIc : dI ∣ c := ⟨d₀ * cJ * dK, by simp [c]; ring⟩
+  have hcJc : cJ ∣ c := ⟨d₀ * dI * dK, by simp [c]; ring⟩
+  have hdKc : dK ∣ c := ⟨d₀ * dI * cJ, by simp [c]; ring⟩
+  have hu₀ : IsUnit (algebraMap T B (algebraMap R T d₀)) :=
+    IsLocalization.Away.isUnit_of_dvd (algebraMap R T c)
+      (map_dvd (algebraMap R T) hd₀c)
+  have huI : IsUnit (algebraMap T B (algebraMap R T dI)) :=
+    IsLocalization.Away.isUnit_of_dvd (algebraMap R T c)
+      (map_dvd (algebraMap R T) hdIc)
+  have huJ : IsUnit (algebraMap T B (algebraMap R T cJ)) :=
+    IsLocalization.Away.isUnit_of_dvd (algebraMap R T c)
+      (map_dvd (algebraMap R T) hcJc)
+  have huK : IsUnit (algebraMap T B (algebraMap R T dK)) :=
+    IsLocalization.Away.isUnit_of_dvd (algebraMap R T c)
+      (map_dvd (algebraMap R T) hdKc)
+  have hwB : algebraMap T B w = 0 := by
+    apply (IsLocalization.map_eq_zero_iff (Submonoid.powers (algebraMap R T c)) B w).2
+    refine ⟨(⟨algebraMap R T c, Submonoid.mem_powers _⟩ :
+      Submonoid.powers (algebraMap R T c)), ?_⟩
+    obtain ⟨v, hv⟩ := hdIc
+    change algebraMap R T c * w = 0
+    rw [hv, map_mul]
+    calc
+      (algebraMap R T dI * algebraMap R T v) * w =
+          algebraMap R T v * (algebraMap R T dI * w) := by ring
+      _ = 0 := by rw [hdIw]; simp
+  let z : B := algebraMap T B x * ↑hu₀.unit⁻¹
+  have hzidem : IsIdempotentElem z := by
+    have hrel : algebraMap T B x * algebraMap T B x =
+        algebraMap T B (algebraMap R T d₀) * algebraMap T B x := by
+      exact sub_eq_zero.mp (by simpa [w] using hwB)
+    change z * z = z
+    simp only [z]
+    calc
+      (algebraMap T B x * ↑hu₀.unit⁻¹) *
+          (algebraMap T B x * ↑hu₀.unit⁻¹) =
+          (algebraMap T B x * algebraMap T B x) *
+            (↑hu₀.unit⁻¹ * ↑hu₀.unit⁻¹) := by ring
+      _ = (algebraMap T B (algebraMap R T d₀) * algebraMap T B x) *
+            (↑hu₀.unit⁻¹ * ↑hu₀.unit⁻¹) := by rw [hrel]
+      _ = algebraMap T B x * ↑hu₀.unit⁻¹ := by
+        have hu : algebraMap T B (algebraMap R T d₀) * ↑hu₀.unit⁻¹ = 1 := by
+          change (hu₀.unit : B) * ↑hu₀.unit⁻¹ = 1
+          simp
+        rw [show (algebraMap T B (algebraMap R T d₀) * algebraMap T B x) *
+              (↑hu₀.unit⁻¹ * ↑hu₀.unit⁻¹) =
+            (algebraMap T B (algebraMap R T d₀) * ↑hu₀.unit⁻¹) *
+              (algebraMap T B x * ↑hu₀.unit⁻¹) by ring]
+        rw [hu, one_mul]
+  have hJBK : J.map (algebraMap T B) = K.map (algebraMap T B) := by
+    apply le_antisymm
+    · rw [Ideal.map_le_iff_le_comap, ← hsJ, Ideal.span_le]
+      intro y hy
+      let ys : s := ⟨y, hy⟩
+      have hh : algebraMap T B (algebraMap R T cJ) * algebraMap T B y ∈
+          K.map (algebraMap T B) := by
+        rw [← map_mul]
+        exact Ideal.mem_map_of_mem (algebraMap T B) (hcyJ ys)
+      exact (Ideal.unit_mul_mem_iff_mem _ huJ).mp hh
+    · rw [Ideal.map_le_iff_le_comap]
+      change Ideal.span ({x} : Set T) ≤ _
+      rw [Ideal.span_le]
+      intro y hy
+      rw [Set.mem_singleton_iff.mp hy]
+      have hh : algebraMap T B (algebraMap R T dK) * algebraMap T B x ∈
+          J.map (algebraMap T B) := by
+        rw [← map_mul]
+        exact Ideal.mem_map_of_mem (algebraMap T B) hdKx
+      exact (Ideal.unit_mul_mem_iff_mem _ huK).mp hh
+  have hKz : K.map (algebraMap T B) = Ideal.span ({z} : Set B) := by
+    change (Ideal.span ({x} : Set T)).map (algebraMap T B) = _
+    rw [Ideal.map_span]
+    simp only [Set.image_singleton]
+    apply le_antisymm
+    · rw [Ideal.span_singleton_le_span_singleton]
+      refine ⟨algebraMap T B (algebraMap R T d₀), ?_⟩
+      simp only [z]
+      have hu : (↑hu₀.unit⁻¹ : B) * algebraMap T B (algebraMap R T d₀) = 1 := by
+        change (↑hu₀.unit⁻¹ : B) * (hu₀.unit : B) = 1
+        simp
+      rw [mul_assoc, hu, mul_one]
+    · rw [Ideal.span_singleton_le_span_singleton]
+      exact ⟨↑hu₀.unit⁻¹, rfl⟩
+  have hJBz : J.map (algebraMap T B) = Ideal.span ({z} : Set B) := hJBK.trans hKz
+  have hrbase' (d : R) : r (algebraMap R T d) = algebraMap R A d := by
+    rw [IsScalarTower.algebraMap_apply R S T]
+    exact hrbase d
+  have hpowmap : Submonoid.map r.toRingHom
+      (Submonoid.powers (algebraMap R T c)) =
+        Submonoid.powers (algebraMap R A c) := by
+    rw [Submonoid.map_powers]
+    apply congrArg Submonoid.powers
+    change r (algebraMap R T c) = algebraMap R A c
+    exact hrbase' c
+  let : IsLocalization
+      ((Submonoid.powers (algebraMap R T c)).map r.toRingHom) D :=
+    hpowmap.symm ▸ (inferInstance :
+      IsLocalization (Submonoid.powers (algebraMap R A c)) D)
+  let rB : B →+* D := IsLocalization.map D r.toRingHom
+    ((Submonoid.powers (algebraMap R T c)).le_comap_of_map_le
+      (le_of_eq hpowmap))
+  have hrBsurj : Function.Surjective rB := by
+    simpa [rB] using
+      (IsLocalization.map_surjective_of_surjective
+        (Submonoid.powers (algebraMap R T c)) B D hrsurj)
+  have hkerB : RingHom.ker rB = Ideal.span ({z} : Set B) := by
+    change RingHom.ker (IsLocalization.map D r.toRingHom
+      ((Submonoid.powers (algebraMap R T c)).le_comap_of_map_le
+        (le_of_eq hpowmap))) = _
+    rw [IsLocalization.ker_map D r.toRingHom hpowmap]
+    exact hJBz
+  let : Algebra B D := rB.toAlgebra
+  let qB : (B ⧸ RingHom.ker rB) ≃ₐ[B] D :=
+    Ideal.quotientKerAlgEquivOfSurjective (f := Algebra.ofId B D) hrBsurj
+  let qZ : (B ⧸ Ideal.span ({z} : Set B)) ≃ₐ[B] D :=
+    (Ideal.quotientEquivAlgOfEq B hkerB.symm).trans qB
+  let Cbig := B ⧸ Ideal.span ({1 - z} : Set B)
+  let prodQ : B ≃ₐ[B] (B ⧸ Ideal.span ({z} : Set B)) × Cbig :=
+    AlgEquiv.prodQuotientOfIsIdempotentElem B hzidem hzidem.one_sub
+      (by ring) (by rw [mul_sub, mul_one, hzidem.eq, sub_self])
+  let prodE : B ≃+* D × Cbig := prodQ.toRingEquiv.trans
+    (RingEquiv.prodCongr qZ.toRingEquiv (RingEquiv.refl Cbig))
+  have hAB (y : A) : algebraMap A B y = algebraMap T B (algebraMap A T y) :=
+    IsScalarTower.algebraMap_apply A T B y
+  have hunitAc : IsUnit (algebraMap A B (algebraMap R A c)) := by
+    rw [hAB, ← IsScalarTower.algebraMap_apply R A T]
+    exact IsLocalization.Away.algebraMap_isUnit (algebraMap R T c)
+  let sB : D →ₐ[A] B := IsLocalization.Away.liftAlgHom (algebraMap R A c)
+    (f := Algebra.ofId A B) hunitAc
+  have hrBs : rB.comp sB.toRingHom = RingHom.id D := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers (algebraMap R A c))
+    ext y
+    change rB (sB (algebraMap A D y)) = algebraMap A D y
+    rw [sB.commutes]
+    change rB (algebraMap T B (algebraMap A T y)) = algebraMap A D y
+    change IsLocalization.map D r.toRingHom _
+      (algebraMap T B (algebraMap A T y)) = algebraMap A D y
+    rw [IsLocalization.map_eq]
+    have hry : r.toRingHom (algebraMap A T y) = y := r.commutes y
+    rw [hry]
+  let : Algebra D B := sB.toRingHom.toAlgebra
+  let prodED : B ≃ₐ[D] D × Cbig :=
+    { prodE with
+      commutes' := by
+        intro y
+        ext
+        · change (prodE (sB y)).1 = y
+          simp only [prodE, RingEquiv.trans_apply, RingEquiv.prodCongr_apply,
+            prodQ, qZ]
+          change qB (Ideal.quotientEquivAlgOfEq B hkerB.symm
+            (Ideal.Quotient.mk (Ideal.span ({z} : Set B)) (sB y))) = y
+          change rB (sB y) = y
+          exact DFunLike.congr_fun hrBs y
+        · rfl }
+  let b : R := a * c
+  have hb : b ∉ p := hp.mul_notMem ha hc
+  let L := Localization.Away b
+  let LB := Localization (Algebra.algebraMapSubmonoid S (Submonoid.powers b))
+  let : IsLocalization.Away b D := by
+    exact IsLocalization.Away.mul' A D a c
+  have hTc : algebraMap R T c = algebraMap S T (algebraMap R S c) :=
+    IsScalarTower.algebraMap_apply R S T c
+  let : IsLocalization.Away (algebraMap S T (algebraMap R S c)) B := by
+    rw [← hTc]
+    infer_instance
+  let : IsLocalization.Away (algebraMap R S a) T := by
+    simp only [IsLocalization.Away, ← Algebra.algebraMapSubmonoid_powers]
+    infer_instance
+  let : IsLocalization.Away
+      (algebraMap R S a * algebraMap R S c) B :=
+    IsLocalization.Away.mul' T B (algebraMap R S a) (algebraMap R S c)
+  let : IsLocalization.Away (algebraMap R S b) B := by
+    change IsLocalization.Away (algebraMap R S (a * c)) B
+    rw [map_mul]
+    infer_instance
+  let eD : L ≃ₐ[R] D :=
+    IsLocalization.algEquiv (Submonoid.powers b) L D
+  let eB : LB ≃ₐ[S] B :=
+    IsLocalization.algEquiv (Algebra.algebraMapSubmonoid S (Submonoid.powers b)) LB B
+  let V := A ⊗[R] S
+  let : Small.{u} V := Algebra.FiniteType.small (R := A) (S := V)
+  let : Small.{u} T := small_of_surjective eT.surjective
+  let : Small.{u} B := small_of_surjective Localization.mkHom_surjective
+  let : Small.{u} Cbig := small_of_surjective Ideal.Quotient.mk_surjective
+  let : Algebra L Cbig :=
+    ((algebraMap D Cbig).comp eD.toRingEquiv.toRingHom).toAlgebra
+  let dC : D →+* Cbig := algebraMap D Cbig
+  let lC : L →+* Cbig := algebraMap L Cbig
+  let eC : Shrink Cbig ≃ₐ[L] Cbig := Shrink.algEquiv L Cbig
+  let finalRing : @RingEquiv LB (L × Shrink Cbig)
+      OreLocalization.instSemiring.toNonAssocSemiring.toDistrib.toMul
+      Prod.instSemiring.toNonAssocSemiring.toDistrib.toMul
+      OreLocalization.instSemiring.toNonAssocSemiring.toDistrib.toAdd
+      Prod.instSemiring.toNonAssocSemiring.toDistrib.toAdd :=
+    { eB.toEquiv.trans <| prodED.toEquiv.trans <|
+        Equiv.prodCongr eD.symm.toEquiv eC.symm.toEquiv with
+      map_mul' := by
+        intro x y
+        ext <;> simp
+      map_add' := by
+        intro x y
+        ext <;> simp }
+  have hfinalBase : finalRing.toRingHom.comp (algebraMap L LB) =
+      algebraMap L (L × Shrink Cbig) := by
+    apply IsLocalization.ringHom_ext (R := R) (S := L) (Submonoid.powers b)
+    apply RingHom.ext
+    intro y
+    have hLBR : algebraMap L LB (algebraMap R L y) =
+        algebraMap S LB (algebraMap R S y) := by
+      rw [← IsScalarTower.algebraMap_apply R L LB]
+      rw [← IsScalarTower.algebraMap_apply R S LB]
+    have hDB : algebraMap S B (algebraMap R S y) =
+        algebraMap D B (algebraMap R D y) := by
+      change algebraMap S B (algebraMap R S y) = sB (algebraMap R D y)
+      rw [show algebraMap R D y = algebraMap A D (algebraMap R A y) by
+        rw [← IsScalarTower.algebraMap_apply R A D]]
+      rw [sB.commutes]
+      rw [← IsScalarTower.algebraMap_apply R A B]
+      rw [← IsScalarTower.algebraMap_apply R S B]
+    have hDC : dC (algebraMap R D y) = lC (algebraMap R L y) := by
+      change dC (algebraMap R D y) = dC (eD (algebraMap R L y))
+      rw [eD.commutes]
+    change finalRing (algebraMap L LB (algebraMap R L y)) = _
+    rw [hLBR]
+    change (eD.symm (prodED (eB (algebraMap S LB (algebraMap R S y)))).1,
+      eC.symm (prodED (eB (algebraMap S LB (algebraMap R S y)))).2) = _
+    rw [eB.commutes, hDB, prodED.commutes]
+    apply Prod.ext
+    · exact eD.symm.commutes y
+    · change eC.symm (dC (algebraMap R D y)) = _
+      rw [hDC]
+      exact eC.symm.commutes (algebraMap R L y)
+  let C : CommAlgCat L := CommAlgCat.of L (Shrink Cbig)
+  let finalE : LB ≃ₐ[L] L × Shrink Cbig :=
+    { finalRing with
+      commutes' := fun y ↦ DFunLike.congr_fun hfinalBase y }
+  have heI : e ∈ I := by
+    rw [hIe]
+    exact Ideal.mem_span_singleton_self e
+  have hrPe : rP e = 0 := by
+    exact heI
+  have hSqe : algebraMap U Sq e = 0 := by
+    have heq := DFunLike.congr_fun hUrP e
+    change E (rP e) = algebraMap U Sq e at heq
+    rw [hrPe, map_zero] at heq
+    exact heq.symm
+  let tToSq : T →+* Sq := (algebraMap U Sq).comp (algebraMap T U)
+  have htx : tToSq x = 0 := by
+    change algebraMap U Sq (algebraMap T U x) = 0
+    rw [hspecU, map_mul, hSqe, mul_zero]
+  have hfc : f c ∉ q := by
+    intro h
+    apply hc
+    rw [hpq]
+    exact h
+  have htcsq : tToSq (algebraMap R T c) = algebraMap S Sq (f c) := by
+    change algebraMap U Sq (algebraMap T U (algebraMap R T c)) =
+      algebraMap S Sq (f c)
+    rw [show algebraMap R T c = algebraMap S T (f c) by
+      exact IsScalarTower.algebraMap_apply R S T c]
+    rw [← IsScalarTower.algebraMap_apply S T U]
+    rw [← IsScalarTower.algebraMap_apply S U Sq]
+  have hcunit : IsUnit (tToSq (algebraMap R T c)) := by
+    rw [htcsq]
+    exact IsLocalization.map_units Sq (⟨f c, hfc⟩ : q.primeCompl)
+  let bToSq : B →+* Sq := IsLocalization.Away.lift (algebraMap R T c) hcunit
+  have hbz : bToSq z = 0 := by
+    change bToSq (algebraMap T B x * ↑hu₀.unit⁻¹) = 0
+    rw [map_mul, IsLocalization.Away.lift_eq, htx, zero_mul]
+  have hbsel : bToSq (1 - z) = 1 := by
+    rw [map_sub, map_one, hbz, sub_zero]
+  have hrBz : rB z = 0 := by
+    rw [← RingHom.mem_ker, hkerB]
+    exact Ideal.mem_span_singleton_self z
+  have hprodSel : prodED (1 - z) = (1, 0) := by
+    apply Prod.ext
+    · change rB (1 - z) = 1
+      rw [map_sub, map_one, hrBz, sub_zero]
+    · change Ideal.Quotient.mk (Ideal.span ({1 - z} : Set B)) (1 - z) = 0
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr
+        (Ideal.mem_span_singleton_self (1 - z))
+  let sel : LB := eB.symm (1 - z)
+  have hfinalSel : finalE sel = (1, 0) := by
+    change finalRing (eB.symm (1 - z)) = (1, 0)
+    change (eD.symm (prodED (eB (eB.symm (1 - z)))).1,
+      eC.symm (prodED (eB (eB.symm (1 - z)))).2) = (1, 0)
+    rw [eB.apply_symm_apply, hprodSel]
+    simp
+  let lbToSq : LB →+* Sq := bToSq.comp eB.toRingEquiv.toRingHom
+  have hlbbase (y : S) : lbToSq (algebraMap S LB y) = algebraMap S Sq y := by
+    change bToSq (eB (algebraMap S LB y)) = algebraMap S Sq y
+    rw [eB.commutes]
+    change bToSq (algebraMap T B (algebraMap S T y)) = algebraMap S Sq y
+    rw [IsLocalization.Away.lift_eq]
+    change algebraMap U Sq (algebraMap T U (algebraMap S T y)) =
+      algebraMap S Sq y
+    rw [← IsScalarTower.algebraMap_apply S T U]
+    rw [← IsScalarTower.algebraMap_apply S U Sq]
+  have hqle : q.map (algebraMap S LB) ≤
+      (IsLocalRing.maximalIdeal Sq).comap lbToSq := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro y hy
+    change lbToSq (algebraMap S LB y) ∈ IsLocalRing.maximalIdeal Sq
+    rw [hlbbase]
+    exact (IsLocalization.AtPrime.to_map_mem_maximal_iff Sq q y).2 hy
+  have hsel : sel ∉ q.map (algebraMap S LB) := by
+    intro h
+    have hm := hqle h
+    change lbToSq sel ∈ IsLocalRing.maximalIdeal Sq at hm
+    have hlbsel : lbToSq sel = 1 := by
+      change bToSq (eB (eB.symm (1 - z))) = 1
+      rw [eB.apply_symm_apply]
+      exact hbsel
+    rw [hlbsel] at hm
+    exact (IsLocalRing.maximalIdeal.isMaximal Sq).ne_top
+      ((IsLocalRing.maximalIdeal Sq).eq_top_iff_one.mpr hm)
+  exact ⟨b, hb, C, finalE, sel, hsel, hfinalSel⟩
+
 /-- A finitely presented map which is an isomorphism at a prime spreads out
 to a product decomposition after inverting an element away from that prime. -/
 theorem local_isomorphism {R : Type u} {S : Type v} [CommRing R] [CommRing S]
@@ -800,7 +1626,11 @@ theorem local_isomorphism {R : Type u} {S : Type v} [CommRing R] [CommRing S]
               (Localization (Algebra.algebraMapSubmonoid S (Submonoid.powers a)) ≃ₐ[
                 Localization.Away a]
                 (Localization.Away a × (C : Type u))) := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  intro hfp hbij
+  obtain ⟨a, ha, C, E, _e, _he, _hE⟩ :=
+    local_isomorphism_with_selector f p q hpq hfp hbij
+  exact ⟨a, ha, C, ⟨E⟩⟩
 
 /-- An isomorphism between finite-presentation local rings spreads out to an
 isomorphism after inverting elements outside the corresponding primes. -/
@@ -816,7 +1646,242 @@ theorem isomorphic_local_rings {R : Type u} {S : Type v} {S' : Type w}
           ∃ g : S, g ∉ q ∧
             ∃ g' : S', g' ∉ q' ∧
               Nonempty (Localization.Away g ≃ₐ[R] Localization.Away g') := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R S' := f'.toAlgebra
+  intro hf hf' hE
+  let : Algebra.FinitePresentation R S := hf
+  let : Algebra.FinitePresentation R S' := hf'
+  let Sq := Localization.AtPrime q
+  let Sq' := Localization.AtPrime q'
+  let E : Sq ≃ₐ[R] Sq' := hE.some
+  let locS : S →ₐ[R] Sq := IsScalarTower.toAlgHom R S Sq
+  obtain ⟨d, hd, φ, hφ⟩ :=
+    exists_away_lift_algHom_over q' (E.toAlgHom.comp locS)
+  let T := Localization.Away d
+  have hpow : Submonoid.powers d ≤ q'.primeCompl := by
+    exact Submonoid.powers_le.mpr hd
+  let : Algebra T Sq' :=
+    IsLocalization.localizationAlgebraOfSubmonoidLe T Sq'
+      (Submonoid.powers d) q'.primeCompl hpow
+  let : IsScalarTower S' T Sq' :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le T Sq'
+      (Submonoid.powers d) q'.primeCompl hpow
+  let : IsScalarTower R T Sq' := by
+    apply IsScalarTower.of_algebraMap_eq'
+    rw [IsScalarTower.algebraMap_eq R S' Sq']
+    rw [IsScalarTower.algebraMap_eq R S' T]
+    rw [← RingHom.comp_assoc]
+    rw [← IsScalarTower.algebraMap_eq S' T Sq']
+  let : IsLocalization
+      (Submonoid.map (algebraMap S' T) q'.primeCompl) Sq' :=
+    IsLocalization.isLocalization_of_submonoid_le T Sq'
+      (Submonoid.powers d) q'.primeCompl hpow
+  let tToSq' : T →ₐ[R] Sq' := IsScalarTower.toAlgHom R T Sq'
+  have haway : awayToAtPrimeOver (R := R) (B := S') q' d hd = tToSq' := by
+    apply Localization.algHom_ext (Submonoid.powers d)
+    ext x
+    rfl
+  have hdisj : Disjoint (Submonoid.powers d : Set S') (q' : Set S') := by
+    exact Set.disjoint_left.mpr fun x hx hq'x ↦
+      (show x ∈ q'.primeCompl from hpow hx) hq'x
+  let Q : Ideal T := q'.map (algebraMap S' T)
+  have hQprime : Q.IsPrime := by
+    exact IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers d) T q' hq' hdisj
+  let _ : Q.IsPrime := hQprime
+  have hQunder : Q.under S' = q' := by
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (Submonoid.powers d) T hq' hdisj
+  let _ : IsLocalRing Sq := IsLocalization.AtPrime.isLocalRing Sq q
+  let _ : IsLocalRing Sq' := IsLocalization.AtPrime.isLocalRing Sq' q'
+  have hmaxUnder : (IsLocalRing.maximalIdeal Sq').under T = Q := by
+    apply (IsLocalization.orderEmbedding (Submonoid.powers d) T).injective
+    change ((IsLocalRing.maximalIdeal Sq').under T).under S' = Q.under S'
+    rw [hQunder]
+    apply Ideal.ext
+    intro x
+    change algebraMap T Sq' (algebraMap S' T x) ∈
+        IsLocalRing.maximalIdeal Sq' ↔ x ∈ q'
+    rw [← IsScalarTower.algebraMap_apply S' T Sq']
+    exact IsLocalization.AtPrime.to_map_mem_maximal_iff Sq' q' x
+  let N : Submonoid T := Submonoid.map (algebraMap S' T) q'.primeCompl
+  have hNQ : N ≤ Q.primeCompl := by
+    intro x hx
+    obtain ⟨y, hy, rfl⟩ := Submonoid.mem_map.mp hx
+    intro hxy
+    exact hy (by
+      rw [← hQunder]
+      exact hxy)
+  have hQunit (x : T) (hx : x ∈ Q.primeCompl) :
+      IsUnit (algebraMap T Sq' x) := by
+    have hn : algebraMap T Sq' x ∉ IsLocalRing.maximalIdeal Sq' := by
+      intro h
+      exact hx (by
+        rw [← hmaxUnder]
+        exact h)
+    simpa only [IsLocalRing.mem_maximalIdeal, mem_nonunits_iff,
+      Classical.not_not] using hn
+  let : IsLocalization.AtPrime Sq' Q :=
+    IsLocalization.of_le N Q.primeCompl hNQ hQunit
+  have hEmax : (IsLocalRing.maximalIdeal Sq').comap E.toRingEquiv.toRingHom =
+      IsLocalRing.maximalIdeal Sq := by
+    apply Ideal.ext
+    intro x
+    change E x ∈ IsLocalRing.maximalIdeal Sq' ↔
+      x ∈ IsLocalRing.maximalIdeal Sq
+    simp only [IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
+    apply not_congr
+    constructor
+    · intro hx
+      have h := hx.map E.symm.toRingEquiv.toRingHom
+      simpa using h
+    · intro hx
+      exact hx.map E.toRingEquiv.toRingHom
+  have hqφ : q = Q.comap φ.toRingHom := by
+    apply Ideal.ext
+    intro x
+    change x ∈ q ↔ φ x ∈ Q
+    rw [← hmaxUnder]
+    change x ∈ q ↔ algebraMap T Sq' (φ x) ∈ IsLocalRing.maximalIdeal Sq'
+    change x ∈ q ↔ tToSq' (φ x) ∈ IsLocalRing.maximalIdeal Sq'
+    rw [← DFunLike.congr_fun haway (φ x)]
+    have hφx : awayToAtPrimeOver (R := R) (B := S') q' d hd (φ x) = E (locS x) :=
+      DFunLike.congr_fun hφ x
+    rw [hφx]
+    change x ∈ q ↔ algebraMap S Sq x ∈
+      (IsLocalRing.maximalIdeal Sq').comap E.toRingEquiv.toRingHom
+    rw [hEmax]
+    exact (IsLocalization.AtPrime.to_map_mem_maximal_iff Sq q x).symm
+  have hφfp : RingHom.FinitePresentation φ.toRingHom := by
+    apply RingHom.FinitePresentation.of_comp_finiteType (algebraMap R S)
+    · have hRT : RingHom.FinitePresentation (algebraMap R T) :=
+        RingHom.finitePresentation_algebraMap.mpr
+          (inferInstance : Algebra.FinitePresentation R T)
+      convert hRT using 1
+      ext x
+      exact φ.commutes x
+    · exact RingHom.FiniteType.of_finitePresentation hf
+  let AtQ := Localization.AtPrime Q
+  let H : AtQ ≃ₐ[T] Sq' :=
+    IsLocalization.algEquiv Q.primeCompl AtQ Sq'
+  let loc : Sq →+* AtQ := Localization.localRingHom q Q φ.toRingHom hqφ
+  have hcomp : H.toRingEquiv.toRingHom.comp loc = E.toRingEquiv.toRingHom := by
+    apply IsLocalization.ringHom_ext q.primeCompl
+    apply RingHom.ext
+    intro x
+    change H (loc (algebraMap S Sq x)) = E (algebraMap S Sq x)
+    rw [Localization.localRingHom_to_map, H.commutes]
+    change tToSq' (φ x) = E (algebraMap S Sq x)
+    rw [← DFunLike.congr_fun haway (φ x)]
+    have hφx := DFunLike.congr_fun hφ x
+    exact hφx
+  have hlocbij : Function.Bijective loc := by
+    have hcomp_apply (x : Sq) : H (loc x) = E x := by
+      have hx := DFunLike.congr_fun hcomp x
+      exact hx
+    constructor
+    · intro x y hxy
+      apply E.injective
+      rw [← hcomp_apply x, ← hcomp_apply y, hxy]
+    · intro y
+      obtain ⟨x, hx⟩ := E.surjective (H y)
+      refine ⟨x, H.injective ?_⟩
+      rw [hcomp_apply x, hx]
+  let : Algebra S T := φ.toRingHom.toAlgebra
+  obtain ⟨g, hg, C, P, sel, hsel, hPsel⟩ :=
+    local_isomorphism_with_selector φ.toRingHom q Q hqφ hφfp hlocbij
+  let A := Localization.Away g
+  let TT := Localization (Algebra.algebraMapSubmonoid T (Submonoid.powers g))
+  let : IsLocalization.Away (algebraMap S T g) TT := by
+    simp only [IsLocalization.Away, ← Algebra.algebraMapSubmonoid_powers]
+    infer_instance
+  let s'ToTT : S' →+* TT := (algebraMap T TT).comp (algebraMap S' T)
+  let : Algebra S' TT := s'ToTT.toAlgebra
+  let : SMul S' T := (inferInstance : Algebra S' T).toSMul
+  let : SMul T TT := (inferInstance : Algebra T TT).toSMul
+  let : SMul S' TT := (inferInstance : Algebra S' TT).toSMul
+  let : IsScalarTower S' T TT := IsScalarTower.of_algebraMap_eq' rfl
+  let h : S' := (IsLocalization.Away.sec d (algebraMap S T g)).1
+  have hassoc : Associated (algebraMap S' T h) (algebraMap S T g) :=
+    IsLocalization.Away.associated_sec_fst d (algebraMap S T g)
+  let G : S' := d * h
+  let : IsLocalization.Away G TT :=
+    IsLocalization.Away.mul_of_associated d h (algebraMap S T g) hassoc
+  have hφg : algebraMap S T g ∉ Q := by
+    intro hmem
+    exact hg (by
+      rw [hqφ]
+      exact hmem)
+  have hh : h ∉ q' := by
+    intro hhq
+    apply hφg
+    rw [← Ideal.mem_iff_of_associated hassoc]
+    exact Ideal.mem_map_of_mem (algebraMap S' T) hhq
+  have hG : G ∉ q' := hq'.mul_notMem hd hh
+  let proj : TT →+* A :=
+    (RingHom.fst A C).comp P.toRingEquiv.toRingHom
+  let : Algebra TT A := proj.toAlgebra
+  let : Algebra (A × C) A := (RingHom.fst A C).toAlgebra
+  let : IsLocalization.Away sel A := by
+    change IsLocalization (Submonoid.powers sel) A
+    apply IsLocalization.of_ringEquiv_left
+      (K := A) (M₁ := Submonoid.powers ((1 : A), (0 : C)))
+      (M₂ := Submonoid.powers sel) P.toRingEquiv
+    · rw [Submonoid.map_powers]
+      exact congr_arg Submonoid.powers hPsel
+    · intro x
+      rfl
+  let k : S' := (IsLocalization.Away.sec G sel).1
+  have hassocSel : Associated (algebraMap S' TT k) sel :=
+    IsLocalization.Away.associated_sec_fst G sel
+  have hk : k ∉ q' := by
+    intro hkq
+    apply hsel
+    rw [Ideal.mem_iff_of_associated hassocSel.symm]
+    rw [IsScalarTower.algebraMap_apply S' T TT]
+    exact Ideal.mem_map_of_mem (algebraMap T TT)
+      (Ideal.mem_map_of_mem (algebraMap S' T) hkq)
+  let g' : S' := G * k
+  have hg' : g' ∉ q' := hq'.mul_notMem hG hk
+  let s'ToA : S' →+* A := proj.comp (algebraMap S' TT)
+  let : Algebra S' A := s'ToA.toAlgebra
+  let : IsScalarTower S' TT A := IsScalarTower.of_algebraMap_eq' rfl
+  let : IsLocalization.Away g' A :=
+    IsLocalization.Away.mul_of_associated G k sel hassocSel
+  have hbase (r : R) :
+      algebraMap S' TT (f' r) = algebraMap A TT (algebraMap R A r) := by
+    calc
+      algebraMap S' TT (f' r) =
+          algebraMap T TT (algebraMap S' T (f' r)) :=
+        IsScalarTower.algebraMap_apply S' T TT (f' r)
+      _ = algebraMap T TT (algebraMap R T r) := by
+        apply congr_arg (algebraMap T TT)
+        change algebraMap S' T (algebraMap R S' r) = algebraMap R T r
+        exact (IsScalarTower.algebraMap_apply R S' T r).symm
+      _ = algebraMap T TT (φ (f r)) := by
+        apply congr_arg (algebraMap T TT)
+        change algebraMap R T r = φ (algebraMap R S r)
+        exact (φ.commutes r).symm
+      _ = algebraMap S TT (f r) :=
+        (IsScalarTower.algebraMap_apply S T TT (f r)).symm
+      _ = algebraMap A TT (algebraMap S A (f r)) :=
+        IsScalarTower.algebraMap_apply S A TT (f r)
+      _ = algebraMap A TT (algebraMap R A r) := by
+        apply congr_arg (algebraMap A TT)
+        change algebraMap S A (algebraMap R S r) = algebraMap R A r
+        exact (IsScalarTower.algebraMap_apply R S A r).symm
+  have hproj (a : A) : proj (algebraMap A TT a) = a := by
+    change (P (algebraMap A TT a)).1 = a
+    rw [P.commutes]
+    rfl
+  let : IsScalarTower R S' A := IsScalarTower.of_algebraMap_eq' <| by
+    apply RingHom.ext
+    intro r
+    change algebraMap R A r = proj (algebraMap S' TT (f' r))
+    rw [hbase]
+    exact (hproj (algebraMap R A r)).symm
+  let e' : Localization.Away g' ≃ₐ[S'] A :=
+    IsLocalization.algEquiv (Submonoid.powers g') _ _
+  exact ⟨g, hg, g', hg', ⟨e'.symm.restrictScalars R⟩⟩
 
 /-! ### Nilpotent thickenings -/
 

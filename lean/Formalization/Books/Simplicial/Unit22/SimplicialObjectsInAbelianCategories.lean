@@ -828,7 +828,7 @@ theorem concentratedTruncated_hom_equiv_out
       by_cases hX : X = T
       · subst X
         rw [app_top]
-        simpa using hm'
+        simp
       · rw [app_zero _ hX, alpha_app_zero α hX]
     right_inv := by
       intro f
@@ -1323,6 +1323,56 @@ noncomputable def canonicalEilenbergMacLaneMap
   let U := concentratedTruncatedObject A k
   letI : Unit19.HasCoskeleton k U :=
     Unit19.has_coskeleton_of_has_finite_limits k U
+  letI : (Unit19.truncInclusion k).HasPointwiseRightKanExtension U := by
+    intro X
+    have : Finite (SimplexCategory.Truncated k) :=
+      Finite.of_injective
+        (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+          SimplexCategory.Truncated k → Fin (k + 1))
+        (by
+          intro x y h
+          cases x with
+          | mk x hx =>
+            cases y with
+            | mk y hy =>
+              congr
+              exact SimplexCategory.ext (Fin.ext_iff.mp h))
+    have : Fintype (SimplexCategory.Truncated k) := Fintype.ofFinite _
+    have : Fintype ((SimplexCategory.Truncated k)ᵒᵖ) :=
+      Fintype.ofEquiv _ equivToOpposite
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Finite (X ⟶ (Unit19.truncInclusion k).obj T) := fun T =>
+      Finite.of_injective (fun f => f.unop.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Opposite.unop_injective
+          apply SimplexCategory.Hom.ext
+          exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : ∀ T : (SimplexCategory.Truncated k)ᵒᵖ,
+        Fintype (X ⟶ (Unit19.truncInclusion k).obj T) := fun T =>
+      Fintype.ofFinite _
+    let : Fintype (StructuredArrow X (Unit19.truncInclusion k)) :=
+      Fintype.ofInjective
+        (fun j : StructuredArrow X (Unit19.truncInclusion k) =>
+          (⟨j.right, j.hom⟩ : Σ T, X ⟶ (Unit19.truncInclusion k).obj T))
+        (by
+          rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+          cases h
+          rfl)
+    let : ∀ j k : StructuredArrow X (Unit19.truncInclusion k),
+        Finite (j ⟶ k) := fun j k =>
+      Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Comma.hom_ext f g
+          · exact Subsingleton.elim _ _
+          · apply Opposite.unop_injective
+            apply SimplexCategory.Truncated.Hom.ext
+            exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : FinCategory (StructuredArrow X (Unit19.truncInclusion k)) :=
+      { fintypeObj := inferInstance
+        fintypeHom := fun j k => Fintype.ofFinite _ }
+    infer_instance
   have hIso : IsIso (Unit19.coskeletonCounit k U) :=
     Unit19.recover_coskeleton k U
   letI := hIso

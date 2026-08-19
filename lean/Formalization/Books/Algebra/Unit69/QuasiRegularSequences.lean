@@ -6,6 +6,7 @@ import Mathlib.LinearAlgebra.Finsupp.LSum
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.LinearAlgebra.TensorProduct.Associator
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
@@ -472,12 +473,24 @@ noncomputable def quasiRegular_graded_ring_identification
     MvPolynomial (Fin f.length) (R ⧸ Ideal.ofList f) ≃ₗ[R ⧸ Ideal.ofList f]
       quasiRegularTarget R R (Ideal.ofList f) :=
 by
-  /-
-  PRIOR ATTEMPT: This returned the canonical equivalence with the tensor-form source
-  `quasiRegularSource R R f`.  In the ring case the first tensor factor is canonically
-  the quotient ring, so the chapter-facing statement is the polynomial-ring form above.
-  -/
-  sorry
+  let I := Ideal.ofList f
+  let hI : (I • (⊤ : Submodule R R)) = (I : Submodule R R) := by
+    rw [Ideal.smul_eq_mul, Ideal.mul_top]
+  let eQ : (R ⧸ (I • (⊤ : Submodule R R))) ≃ₗ[R ⧸ I] (R ⧸ I) := by
+    let eR : (R ⧸ (I • (⊤ : Submodule R R))) ≃ₗ[R] (R ⧸ I) :=
+      Submodule.quotEquivOfEq _ _ hI
+    exact
+      { eR with
+        map_smul' := by
+          intro c x
+          obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective c
+          induction x using Submodule.Quotient.induction_on with
+          | _ x => rfl }
+  let eSource : quasiRegularSource R R f ≃ₗ[R ⧸ I]
+      MvPolynomial (Fin f.length) (R ⧸ I) :=
+    eQ.rTensor (MvPolynomial (Fin f.length) (R ⧸ I)) ≪≫ₗ
+      TensorProduct.lid (R ⧸ I) (MvPolynomial (Fin f.length) (R ⧸ I))
+  exact eSource.symm ≪≫ₗ quasiRegularCanonicalEquiv R R f hf
 
 /-! ## Base change, localization, and truncation -/
 

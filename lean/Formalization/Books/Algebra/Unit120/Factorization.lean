@@ -858,7 +858,47 @@ def DedekindDomainConditions
 theorem dedekind_domain_characterization
     {R : Type u} [CommRing R] :
     List.TFAE (DedekindDomainConditions R) := by
-  sorry
+  have h01 :
+      IsDedekindDomain R ↔
+        (∃ hR : IsDomain R,
+          letI : IsDomain R := hR
+          IsNoetherianRing R ∧ IsDedekindDomainDvr R) := by
+    constructor
+    · intro h
+      have hd := (isDedekindDomain_iff R (FractionRing R)).mp h
+      refine ⟨hd.1, hd.2.1, ?_⟩
+      exact @IsDedekindDomain.isDedekindDomainDvr R _ hd.1 h
+    · rintro ⟨hR, hnoeth, hdvr⟩
+      exact @IsDedekindDomainDvr.isDedekindDomain R _ hR hdvr
+  have h12 :
+      (∃ hR : IsDomain R,
+          letI : IsDomain R := hR
+          IsNoetherianRing R ∧ IsDedekindDomainDvr R) ↔
+        (IsNoetherianRing R ∧
+          Formalization.Books.Algebra.Unit37.IsNormalDomain R ∧
+            Ring.DimensionLEOne R) := by
+    constructor
+    · rintro ⟨hR, hnoeth, hdvr⟩
+      exact ⟨hnoeth,
+        ⟨hR, @IsDedekindDomainDvr.isIntegrallyClosed R _ hR hdvr⟩,
+        @IsDedekindDomainDvr.ring_dimensionLEOne R _ hR hdvr⟩
+    · rintro ⟨hnoeth, hnormal, hdim⟩
+      have hd : IsDedekindDomain R :=
+        (isDedekindDomain_iff R (FractionRing R)).mpr
+          ⟨hnormal.1, hnoeth, hdim,
+            (isIntegrallyClosed_iff (R := R) (K := FractionRing R)).mp hnormal.2⟩
+      exact ⟨hnormal.1, hnoeth,
+        @IsDedekindDomain.isDedekindDomainDvr R _ hnormal.1 hd⟩
+  change List.TFAE
+    [IsDedekindDomain R,
+      (∃ hR : IsDomain R,
+        letI : IsDomain R := hR
+        IsNoetherianRing R ∧ IsDedekindDomainDvr R),
+      IsNoetherianRing R ∧
+        Formalization.Books.Algebra.Unit37.IsNormalDomain R ∧
+          Ring.DimensionLEOne R]
+  exact List.tfae_cons_cons.mpr
+    ⟨h01, List.tfae_cons_cons.mpr ⟨h12, List.tfae_singleton _⟩⟩
 
 /-! ## Integral closures in finite extensions -/
 

@@ -2568,7 +2568,6 @@ noncomputable def spectralSystemSheafTransition
   exact e ≫ (pullbackSheafCompIso pj fa).hom.app (S.sheaf i) ≫
     (pullbackSheaf pj).map ψ
 
-/-- The canonical diagram of pullbacks of a spectral sheaf system. -/
 noncomputable def spectralSystemSheafDiagram
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]

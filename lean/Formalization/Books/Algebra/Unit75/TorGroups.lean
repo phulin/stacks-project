@@ -1423,6 +1423,48 @@ structure DoubleComplexHomologyIsoFamily (R : Type u) [CommRing R] where
       (iso A hrowA hcolA i).hom ≫
         chainHomologyMap (upComplexMap Φ) i
 
+set_option backward.isDefEq.respectTransparency false in
+theorem family_of_edge_quasiIso {R : Type u} [CommRing R]
+    (hR : ∀ (A : DoubleComplex R), RowsAreResolutions A → (i : ℕ) →
+      QuasiIsoAt (rightEdge A) i)
+    (hU : ∀ (A : DoubleComplex R), ColumnsAreResolutions A → (i : ℕ) →
+      QuasiIsoAt (upEdge A) i) :
+    Nonempty (DoubleComplexHomologyIsoFamily R) := by
+  let e : ∀ (A : DoubleComplex R) (hrow : RowsAreResolutions A)
+      (hcol : ColumnsAreResolutions A) (i : ℕ),
+      chainHomology (rightComplex A) i ≅ chainHomology (upComplex A) i :=
+    fun A hrow hcol i => by
+      letI := hR A hrow i
+      letI := hU A hcol i
+      exact (isoOfQuasiIsoAt (rightEdge A) i).symm ≪≫
+        isoOfQuasiIsoAt (upEdge A) i
+  refine ⟨{ iso := e, natural := ?_ }⟩
+  intro A B Φ hrowA hcolA hrowB hcolB i
+  letI := hR A hrowA i
+  letI := hR B hrowB i
+  letI := hU A hcolA i
+  letI := hU B hcolB i
+  unfold chainHomology chainHomologyMap
+  dsimp [e]
+  rw [← cancel_epi (HomologicalComplex.homologyMap (rightEdge A) i)]
+  simp only [Category.assoc, isoOfQuasiIsoAt_hom_inv_id_assoc,
+    Category.id_comp]
+  have hr := congrArg (fun k => HomologicalComplex.homologyMap k i)
+    (rightEdge_natural Φ)
+  have hu := congrArg (fun k => HomologicalComplex.homologyMap k i)
+    (upEdge_natural Φ)
+  simp only [HomologicalComplex.homologyMap_comp] at hr hu
+  rw [← Category.assoc, ← hr]
+  have hc := isoOfQuasiIsoAt_hom_inv_id (rightEdge B) i
+  calc
+    _ = HomologicalComplex.homologyMap (doubleTotalComplexMap Φ) i ≫
+        (HomologicalComplex.homologyMap (rightEdge B) i ≫
+          (isoOfQuasiIsoAt (rightEdge B) i).inv) ≫
+        (isoOfQuasiIsoAt (upEdge B) i).hom := by simp only [Category.assoc]
+    _ = HomologicalComplex.homologyMap (doubleTotalComplexMap Φ) i ≫
+        (isoOfQuasiIsoAt (upEdge B) i).hom := by rw [hc, Category.id_comp]
+    _ = _ := hu
+
 /-- The source's canonical, functorial double-complex comparison. -/
 theorem exists_doubleComplex_homology_iso_family {R : Type u} [CommRing R] :
     Nonempty (DoubleComplexHomologyIsoFamily R) := by

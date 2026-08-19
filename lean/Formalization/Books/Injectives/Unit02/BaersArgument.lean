@@ -744,7 +744,23 @@ theorem baerIteration_limit {R : Type u} [Ring R] (α : Ordinal.{u})
       (ModuleCat.{u} R ⥤ ModuleCat.{u} R)]
     (hα : Order.IsSuccLimit α) :
     Nonempty (baerIteration R α ≅ colimit (baerIterationDiagram R α)) := by
-  sorry
+  let f := Set.principalSegIioIicOfLE (le_rfl : α ≤ α)
+  have htop : Order.IsSuccLimit f.top := by
+    rw [Order.isSuccLimit_iff_of_orderBot]
+    constructor
+    · intro h
+      exact (ne_of_gt hα.bot_lt) (congrArg Subtype.val h)
+    · intro b hb
+      apply hα.isSuccPrelimit b.1
+      refine ⟨?_, ?_⟩
+      · exact hb.lt
+      · intro c hbc hca
+        let c' : Set.Iic α := ⟨c, hca.le⟩
+        exact hb.2 (show b < c' from hbc) (show c' < f.top from hca)
+  have hc := CategoryTheory.Functor.isColimitOfIsWellOrderContinuous'
+    ((baerSuccStruct R).iterationFunctor (Set.Iic α)) f htop
+  exact ⟨IsColimit.coconePointUniqueUpToIso hc
+    (colimit.isColimit (baerIterationDiagram R α))⟩
 
 /-- The cardinality of the set of ideals of `R`. -/
 def idealCardinal (R : Type u) [Ring R] : Cardinal.{u} := Cardinal.mk (Ideal R)

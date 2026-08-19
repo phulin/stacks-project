@@ -177,7 +177,33 @@ theorem homMapAt_pointwise
     (X : C) (f : X ⟶ homObject U V hU m) (u : U _⦋n⦌) :
     homObjectHomEquiv U V hU X n (f ≫ homMapAt U V hU φ) u =
       homObjectHomEquiv U V hU X m f (U.map φ.op u) ≫ V.map φ := by
-  sorry
+  let _ : Finite (U _⦋m⦌) := (hU m).1
+  let _ : Finite (U _⦋n⦌) := (hU n).1
+  change
+    (f ≫ Pi.map' (U.map φ.op) (fun _ => V.map φ)) ≫
+        Pi.π (fun _ : U _⦋n⦌ => V.obj (SimplexCategory.mk n)) u =
+      (f ≫ Pi.π (fun _ : U _⦋m⦌ => V.obj (SimplexCategory.mk m)) (U.map φ.op u)) ≫
+        V.map φ
+  have h :
+      Pi.map' (U.map φ.op) (fun _ => V.map φ) ≫
+          Pi.π (fun _ : U _⦋n⦌ => V.obj (SimplexCategory.mk n)) u =
+        Pi.π (fun _ : U _⦋m⦌ => V.obj (SimplexCategory.mk m)) (U.map φ.op u) ≫
+          V.map φ :=
+    Pi.map'_comp_π
+      (f := fun _ : U _⦋m⦌ => V.obj (SimplexCategory.mk m))
+      (g := fun _ : U _⦋n⦌ => V.obj (SimplexCategory.mk n))
+      (U.map φ.op) (fun _ => V.map φ) u
+  calc
+    _ = f ≫ (Pi.map' (U.map φ.op) (fun _ => V.map φ) ≫
+        Pi.π (fun _ : U _⦋n⦌ => V.obj (SimplexCategory.mk n)) u) :=
+      Category.assoc f (Pi.map' (U.map φ.op) (fun _ => V.map φ))
+        (Pi.π (fun _ : U _⦋n⦌ => V.obj (SimplexCategory.mk n)) u)
+    _ = f ≫ (Pi.π (fun _ : U _⦋m⦌ => V.obj (SimplexCategory.mk m)) (U.map φ.op u) ≫
+        V.map φ) := congrArg (fun k => f ≫ k) h
+    _ = _ :=
+      (Category.assoc f
+        (Pi.π (fun _ : U _⦋m⦌ => V.obj (SimplexCategory.mk m)) (U.map φ.op u))
+        (V.map φ)).symm
 
 /-! ## Functoriality in the two variables -/
 
@@ -285,7 +311,14 @@ theorem homPrecomp_id
     {U : SSet.{u}} (V : CosimplicialObject C)
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPrecomp (𝟙 U) V hU hU = 𝟙 (hom U V hU) := by
-  sorry
+  ext X
+  dsimp [homPrecomp, homPrecompApp, homObjectAt]
+  let _ : Finite (U.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.len).1
+  change
+    Pi.map' id (fun _ : U.obj (op X) => 𝟙 (V.obj X)) =
+      𝟙 (∏ᶜ fun _ : U.obj (op X) => V.obj X)
+  rw [Pi.map'_id_id]
 
 theorem homPrecomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
@@ -296,14 +329,49 @@ theorem homPrecomp_comp
     (h₃ : Unit13.FiniteNonemptySimplicialSet U₃) :
     homPrecomp g V h₃ h₂ ≫ homPrecomp f V h₂ h₁ =
       homPrecomp (f ≫ g) V h₃ h₁ := by
-  sorry
+  ext X
+  dsimp [homPrecomp, homPrecompApp, homObjectAt]
+  let _ : Finite (U₁.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (h₁ X.len).1
+  let _ : Finite (U₂.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (h₂ X.len).1
+  let _ : Finite (U₃.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (h₃ X.len).1
+  change
+    (Pi.map'
+      (f := fun _ : U₃.obj (op X) => V.obj X)
+      (g := fun _ : U₂.obj (op X) => V.obj X)
+      (g.app (op X)) (fun _ => 𝟙 (V.obj X))) ≫
+        Pi.map'
+          (f := fun _ : U₂.obj (op X) => V.obj X)
+          (g := fun _ : U₁.obj (op X) => V.obj X)
+          (f.app (op X)) (fun _ => 𝟙 (V.obj X)) =
+      Pi.map'
+        (f := fun _ : U₃.obj (op X) => V.obj X)
+        (g := fun _ : U₁.obj (op X) => V.obj X)
+        (g.app (op X) ∘ f.app (op X)) (fun _ => 𝟙 (V.obj X))
+  rw [Pi.map'_comp_map'
+    (f := fun _ : U₃.obj (op X) => V.obj X)
+    (g := fun _ : U₂.obj (op X) => V.obj X)
+    (h := fun _ : U₁.obj (op X) => V.obj X)
+    (g.app (op X)) (f.app (op X))
+    (fun _ => 𝟙 (V.obj X)) (fun _ => 𝟙 (V.obj X))]
+  simp
 
 theorem homPostcomp_id
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) {V : CosimplicialObject C}
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPostcomp U (𝟙 V) hU = 𝟙 (hom U V hU) := by
-  sorry
+  ext X
+  dsimp [homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.len).1
+  change
+    CategoryTheory.Limits.Pi.map (fun _ : U.obj (op X) => 𝟙 (V.obj X)) =
+      𝟙 (∏ᶜ fun _ : U.obj (op X) => V.obj X)
+  simpa only using
+    (CategoryTheory.Limits.Pi.map_id (f := fun _ : U.obj (op X) => V.obj X))
 
 theorem homPostcomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]

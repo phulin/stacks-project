@@ -84,7 +84,7 @@ theorem isGeometricallyConnected_subalgebra
     (PrimeSpectrum.homeomorphOfRingEquiv
       (Algebra.TensorProduct.lid k S).toRingEquiv).connectedSpace_iff.mp
       ((isGeometricallyConnected_iff_finiteSeparable (k := k) (S := S)).1 hS k)
-  haveI : Nontrivial S := by
+  have : Nontrivial S := by
     apply not_subsingleton_iff_nontrivial.mp
     intro hsub
     obtain ⟨p⟩ := hconnS0.toNonempty
@@ -96,13 +96,13 @@ theorem isGeometricallyConnected_subalgebra
     · intro
       rw [Subsingleton.elim x 0]
       exact p.asIdeal.zero_mem
-  haveI : Nontrivial A := by
+  have : Nontrivial A := by
     apply not_subsingleton_iff_nontrivial.mp
     intro hsub
     have h01 : (0 : S) = 1 := by
       exact congrArg Subtype.val (Subsingleton.elim (0 : A) 1)
     exact zero_ne_one h01
-  haveI : Nontrivial (k' ⊗[k] A) :=
+  have : Nontrivial (k' ⊗[k] A) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' A (Algebra.linearMap k A) (FaithfulSMul.algebraMap_injective k A)
   let φ : k' ⊗[k] A →ₐ[k'] k' ⊗[k] S :=
@@ -111,7 +111,7 @@ theorem isGeometricallyConnected_subalgebra
     exact Module.Flat.lTensor_preserves_injective_linearMap _ Subtype.val_injective
   apply (Formalization.Books.Algebra.Unit21.primeSpectrum_connected_iff_no_nontrivial_idempotents _).2
   intro e he
-  haveI : Nontrivial (k' ⊗[k] S) :=
+  have : Nontrivial (k' ⊗[k] S) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' S (Algebra.linearMap k S) (FaithfulSMul.algebraMap_injective k S)
   have hconn : ConnectedSpace (PrimeSpectrum (k' ⊗[k] S)) :=
@@ -143,7 +143,7 @@ theorem isGeometricallyConnected_of_finiteType_subalgebras
       (Algebra.TensorProduct.lid k (⊥ : Subalgebra k S)).toRingEquiv).connectedSpace_iff.mp
       ((isGeometricallyConnected_iff_finiteSeparable
         (k := k) (S := (⊥ : Subalgebra k S))).1 hgeomBot k)
-  haveI : Nontrivial (⊥ : Subalgebra k S) := by
+  have : Nontrivial (⊥ : Subalgebra k S) := by
     apply not_subsingleton_iff_nontrivial.mp
     intro hsub
     obtain ⟨p⟩ := hconnBot.toNonempty
@@ -155,18 +155,18 @@ theorem isGeometricallyConnected_of_finiteType_subalgebras
     · intro
       rw [Subsingleton.elim x 0]
       exact p.asIdeal.zero_mem
-  haveI : Nontrivial S :=
+  have : Nontrivial S :=
     Function.Injective.nontrivial (α := (⊥ : Subalgebra k S)) (β := S)
       (f := fun x : (⊥ : Subalgebra k S) => (x : S)) Subtype.val_injective
   apply (isGeometricallyConnected_iff_finiteSeparable (k := k) (S := S)).2
   intro k' _ _ _ _
-  haveI : Nontrivial (k' ⊗[k] S) :=
+  have : Nontrivial (k' ⊗[k] S) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' S (Algebra.linearMap k S) (FaithfulSMul.algebraMap_injective k S)
   apply (Formalization.Books.Algebra.Unit21.primeSpectrum_connected_iff_no_nontrivial_idempotents _).2
   intro e he
   obtain ⟨C, hC, heC⟩ := exists_fg_and_mem_baseChange e
-  haveI : Nontrivial C := by
+  have : Nontrivial C := by
     apply nontrivial_of_ne (0 : C) 1
     intro h
     apply zero_ne_one (α := S)
@@ -184,7 +184,7 @@ theorem isGeometricallyConnected_of_finiteType_subalgebras
       (Algebra.TensorProduct.map (AlgHom.id k' k') C.val) z
     rw [map_mul]
     exact he.eq
-  haveI : Nontrivial (k' ⊗[k] C) :=
+  have : Nontrivial (k' ⊗[k] C) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' C (Algebra.linearMap k C) (FaithfulSMul.algebraMap_injective k C)
   rcases (Formalization.Books.Algebra.Unit21.primeSpectrum_connected_iff_no_nontrivial_idempotents _).1
@@ -224,20 +224,20 @@ theorem isGeometricallyConnected_directLimit
     · intro
       rw [Subsingleton.elim x 0]
       exact p.asIdeal.zero_mem
-  haveI : Nontrivial (DirectLimit A f) := by
+  have : Nontrivial (DirectLimit A f) := by
     obtain ⟨i⟩ := ‹Nonempty ι›
-    haveI := hAi_nontrivial i
+    have := hAi_nontrivial i
     apply nontrivial_of_ne (0 : DirectLimit A f) 1
     intro hzero
     have hzero' : (⟦⟨i, (0 : A i)⟩⟧ : DirectLimit A f) =
         ⟦⟨i, (1 : A i)⟩⟧ := by
       simpa only [DirectLimit.zero_def i, DirectLimit.one_def i] using hzero
     obtain ⟨j, hij, hij', hval⟩ := Quotient.eq.mp hzero'
-    exact (zero_ne_one : (0 : A j) ≠ 1) (by simpa using hval)
+    exact (zero_ne_one : (0 : A j) ≠ 1) (by simp at hval)
   apply (isGeometricallyConnected_iff_finiteSeparable
     (k := k) (S := DirectLimit A f)).2
   intro k' _ _ _ _
-  haveI : Nontrivial (k' ⊗[k] DirectLimit A f) :=
+  have : Nontrivial (k' ⊗[k] DirectLimit A f) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' (DirectLimit A f) (Algebra.linearMap k (DirectLimit A f))
         (FaithfulSMul.algebraMap_injective k (DirectLimit A f))
@@ -303,7 +303,7 @@ theorem isGeometricallyConnected_directLimit
   apply (Formalization.Books.Algebra.Unit21.primeSpectrum_connected_iff_no_nontrivial_idempotents _).2
   intro e he
   obtain ⟨i, z, hz⟩ := hstage e
-  haveI : Nontrivial (k' ⊗[k] A i) :=
+  have : Nontrivial (k' ⊗[k] A i) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' (A i) (Algebra.linearMap k (A i))
         (FaithfulSMul.algebraMap_injective k (A i))
@@ -366,7 +366,7 @@ theorem isGeometricallyConnected_directLimit
     change zj * zj = zj
     rw [← map_mul]
     exact hzj_eq
-  haveI : Nontrivial (k' ⊗[k] A j) :=
+  have : Nontrivial (k' ⊗[k] A j) :=
     TensorProduct.nontrivial_of_linearMap_injective_of_flat_left
       k k' (A j) (Algebra.linearMap k (A j))
         (FaithfulSMul.algebraMap_injective k (A j))

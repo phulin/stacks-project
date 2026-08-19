@@ -57,7 +57,7 @@ theorem prime_avoidance
           · exact Finset.mem_insert.mpr (Or.inl hza)
           · have hz' : z ∈ s.erase a := Finset.mem_erase.mpr ⟨hza, hz⟩
             rw [he] at hz'
-            exact False.elim (by simpa using hz')
+            exact False.elim (by simp at hz')
         · obtain ⟨b, hb⟩ := s.erase a |>.nonempty_iff_ne_empty.mpr he
           refine ⟨a, b, ?_⟩
           intro z hz
@@ -68,7 +68,7 @@ theorem prime_avoidance
             exact Finset.mem_insert.mpr (Or.inr (by simpa using hzb))
     obtain ⟨a, b, hab⟩ := hex
     by_contra h
-    push_neg at h
+    push Not at h
     have hsub : (J : Set R) ⊆ ⋃ i : Fin r, (I i : Set R) := by
       intro y hy
       obtain ⟨i, hi⟩ := h y hy
@@ -143,10 +143,10 @@ theorem prime_coset_avoidance
           have hfmem : ∀ q' ∈ t, f ∈ q' := by
             intro q' hq'
             exact Ideal.prod_mem q' hq' (hc q' hq' |>.1)
-          letI : q.IsPrime := hmax_prime q hq
+          let hq' : q.IsPrime := hmax_prime q hq
           have hfnot : f ∉ q := by
             rw [Ideal.IsPrime.prod_mem_iff]
-            push_neg
+            push Not
             intro q' hq'
             exact (hc q' hq' |>.2)
           have hdiff : z - w ∉ q := by
@@ -221,8 +221,8 @@ theorem chinese_remainder_of_pairwise_distinct_maximal
       Nonempty ((R ⧸ ∏ i, I i) ≃+* (∀ i, R ⧸ I i)) := by
   apply chinese_remainder I
   intro i j hij
-  letI : (I i).IsMaximal := hmax i
-  letI : (I j).IsMaximal := hmax j
+  let hi : (I i).IsMaximal := hmax i
+  let hj : (I j).IsMaximal := hmax j
   exact (Ideal.isCoprime_of_isMaximal (hdistinct hij)).sup_eq
 
 /-! ## Determinantal ideals and matrix inverses -/
@@ -236,7 +236,7 @@ noncomputable def maximalMinorIdeal
     Unit03.rowMinor A S))
 
 theorem matrix_left_inverse_of_mem_maximalMinorIdeal
-    {R : Type u} [CommRing R] {m n : ℕ} (hmn : m ≤ n)
+    {R : Type u} [CommRing R] {m n : ℕ} (_hmn : m ≤ n)
     (A : Matrix (Fin n) (Fin m) R) {f : R}
     (hf : f ∈ maximalMinorIdeal A) :
     ∃ B : Matrix (Fin m) (Fin n) R,
@@ -267,7 +267,7 @@ theorem matrix_left_inverse_of_mem_maximalMinorIdeal
       simp [smul_eq_mul]
 
 theorem matrix_left_inverse_power_mem_maximalMinorIdeal
-    {R : Type u} [CommRing R] {m n : ℕ} (hmn : m ≤ n)
+    {R : Type u} [CommRing R] {m n : ℕ} (_hmn : m ≤ n)
     (A : Matrix (Fin n) (Fin m) R) {f : R}
     {B : Matrix (Fin m) (Fin n) R}
     (hBA : B * A = f • (1 : Matrix (Fin m) (Fin m) R)) :
@@ -277,7 +277,7 @@ theorem matrix_left_inverse_power_mem_maximalMinorIdeal
         Unit03.columnMinor B S * Unit03.rowMinor A S := by
     calc
       f ^ m = (f • (1 : Matrix (Fin m) (Fin m) R)).det := by
-        simp [Matrix.det_smul]
+        simp
       _ = (B * A).det := by rw [hBA]
       _ = _ := Unit03.cauchyBinet B A
   rw [maximalMinorIdeal, hdet]
@@ -444,7 +444,7 @@ theorem matrix_right_inverse_block_form
           exact congrArg (fun z : S.1 => (z : Fin n))
             (eSeq.apply_symm_apply (eCeq k))
         rw [hindex]
-        by_cases hkj : k = j <;> simp [C, eC, hkj]
+        by_cases hkj : k = j <;> simp [eC, hkj]
       have hrowminor : Unit03.rowMinor A S = D.det := by
         rfl
       have hdet : C.det = Equiv.Perm.sign σ * D.det := by
@@ -452,7 +452,7 @@ theorem matrix_right_inverse_block_form
       have hprod :
           (A * (A.submatrix u id).adjugate) l j = C.det := by
         rw [Matrix.mul_apply]
-        simpa [hrow] using hrow.symm
+        simp [hrow]
       rcases Int.units_eq_one_or (Equiv.Perm.sign σ) with hsign | hsign
       · refine ⟨1, Or.inl rfl, ?_⟩
         rw [hprod, hdet, hsign, hrowminor]
@@ -465,7 +465,7 @@ theorem matrix_right_inverse_block_form
 
 theorem module_map_from_fin_generators_not_injective
     {R M : Type*} [CommRing R] [Nontrivial R]
-    [AddCommGroup M] [Module R M] {n : ℕ} (hn : 1 ≤ n)
+    [AddCommGroup M] [Module R M] {n : ℕ} (_hn : 1 ≤ n)
     (hM : ∃ k : ℕ, k < n ∧
       ∃ g : (Fin k → R) →ₗ[R] M, Function.Surjective g)
     (f : (Fin n → R) →ₗ[R] M) :

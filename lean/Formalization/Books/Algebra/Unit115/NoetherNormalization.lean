@@ -48,7 +48,7 @@ def multiIndexDominates {σ : Type u} [Fintype σ] [LinearOrder σ]
 /-- Distinct multi-indices in a finite nonempty set have distinct weighted
 degrees for a dominating family of weights. -/
 theorem helper_multiIndex_separation
-    {n : ℕ} (N : Finset (Fin n →₀ ℕ)) (hN : N.Nonempty)
+    {n : ℕ} (N : Finset (Fin n →₀ ℕ)) (_hN : N.Nonempty)
     (e : Fin n → ℕ) (he : multiIndexDominates N e) :
     ∀ ⦃ν ν' : Fin n →₀ ℕ⦄,
       ν ∈ N → ν' ∈ N →

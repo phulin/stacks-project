@@ -64,7 +64,7 @@ theorem principal_quotient_short_exact
 
 theorem principal_quotient_length_additive
     {R : Type u} [CommRing R] [IsNoetherianRing R]
-    (hsemilocal : Formalization.Books.Algebra.Unit03.IsSemilocalRing R)
+    (_hsemilocal : Formalization.Books.Algebra.Unit03.IsSemilocalRing R)
     (hdim : ringKrullDim R = 1) (a b : R)
     (ha : a ∈ nonZeroDivisors R) (hb : b ∈ nonZeroDivisors R) :
     principalQuotientHasFiniteLength R a ∧

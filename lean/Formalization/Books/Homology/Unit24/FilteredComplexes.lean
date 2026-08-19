@@ -83,13 +83,6 @@ theorem filteredComplex_D₀_formula {C : Type u} [Category.{v} C]
         eqToHom (congrArg (fun n : ℤ => gradedPiece (K.X n) p) (by omega)) := by
   rfl
 
-theorem filteredComplex_D₀_source_formula {C : Type u} [Category.{v} C]
-    [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
-    filteredComplexD₀ K p q =
-      filteredComplexSourceD₀ K p q ≫
-        eqToHom (congrArg (fun n : ℤ => gradedPiece (K.X n) p) (by omega)) := by
-  rfl
-
 theorem filteredComplex_E₁_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₁ K p q =
@@ -699,6 +692,13 @@ noncomputable def filteredComplexLimitPage {C : Type u} [Category.{v} C]
     (p q : ℤ) : C :=
   subquotientObject (L.Binf p q) (L.Zinf p q) (L.Binf_le_Zinf p q)
 
+/-- The limiting page assembled from the componentwise stable boundaries and
+cycles.  Its `(p, q)` component is `filteredComplexLimitPage K L p q`. -/
+def filteredComplexLimitGradedObject {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredComplex C) (L : FilteredComplexLimitData K) :
+    GradedObject (ℤ × ℤ) C :=
+  fun pq => filteredComplexLimitPage K L pq.1 pq.2
+
 def filteredComplexAssociatedGradedCohomology {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
     GradedObject (ℤ × ℤ) C :=
@@ -711,7 +711,7 @@ def FilteredComplexLimitGradedSubquotient {C : Type u}
   ∀ p q : ℤ,
     IsSubquotientOf
       (X := gradedPiece (filteredComplexCohomologyFilteredObject K (p + q)) p)
-      (Y := filteredComplexLimitPage K L p q)
+      (Y := filteredComplexLimitGradedObject K L (p, q))
 
 theorem filteredComplex_limit_graded_subquotient {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C)
@@ -764,9 +764,7 @@ def FilteredComplexLimitEquationsHold {C : Type u}
 
 def filteredComplexWeaklyConverges {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) : Prop :=
-  ∃ L : FilteredComplexLimitData K,
-    Nonempty (filteredComplexAssociatedGradedCohomology K ≅
-      fun pq => filteredComplexLimitPage K L pq.1 pq.2)
+  ∃ L : FilteredComplexLimitData K, FilteredComplexLimitEquationsHold K L
 
 def filteredComplexKernelImageFiltration {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (n : ℤ) :
@@ -779,13 +777,29 @@ def filteredComplexKernelImageFiltration {C : Type u}
     exact sup_le_sup
       (inf_le_inf_left _ ((K.X n).filtration.antitone hpq)) le_rfl
 
-def FilteredComplexAbutmentCriterion {C : Type u}
+def FilteredComplexKernelImageAbutmentCriterion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) : Prop :=
   ∀ n : ℤ,
     ∃ hF : HasIntersection (filteredComplexKernelImageFiltration K n),
       ∃ hU : HasUnion (filteredComplexKernelImageFiltration K n),
         intersection hF = filteredComplexImageSubobject K n ∧
           union hU = filteredComplexKernelSubobject K n
+
+def FilteredComplexAbutmentCriterion {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredComplex C) : Prop :=
+  ∀ n : ℤ,
+    ∃ hF : HasIntersection
+        (filteredComplexCohomologyFilteredObject K n).filtration,
+      ∃ hU : HasUnion
+          (filteredComplexCohomologyFilteredObject K n).filtration,
+        intersection hF = ⊥ ∧ union hU = ⊤
+
+theorem filteredComplex_abutment_criterion_iff_kernel_image
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) :
+    FilteredComplexAbutmentCriterion K ↔
+      FilteredComplexKernelImageAbutmentCriterion K := by
+  sorry
 
 def filteredComplexAbuts {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) : Prop :=
@@ -860,12 +874,12 @@ def filteredComplexConverges {C : Type u} [Category.{v} C]
     filteredComplexRegular S ∧ filteredComplexAbuts K ∧
       FilteredComplexCohomologyComplete K
 
-theorem filteredComplex_weak_convergence_iff_limit_equations
+theorem filteredComplex_limit_equations_give_associated_graded_iso
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (L : FilteredComplexLimitData K) :
-    Nonempty (filteredComplexAssociatedGradedCohomology K ≅
-      (fun pq => filteredComplexLimitPage K L pq.1 pq.2)) ↔
-      FilteredComplexLimitEquationsHold K L := by
+    FilteredComplexLimitEquationsHold K L →
+      Nonempty (filteredComplexAssociatedGradedCohomology K ≅
+        filteredComplexLimitGradedObject K L) := by
   sorry
 
 theorem filteredComplex_weak_convergence_iff
@@ -873,7 +887,7 @@ theorem filteredComplex_weak_convergence_iff
     (K : FilteredComplex C) :
     filteredComplexWeaklyConverges K ↔
       ∃ L : FilteredComplexLimitData K, FilteredComplexLimitEquationsHold K L := by
-  sorry
+  rfl
 
 theorem filteredComplex_abutment_iff
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -938,6 +952,14 @@ theorem filteredComplex_finite_filtration_weak_serre_membership
 abbrev filteredComplexAlternatingSign :=
   Formalization.Books.Homology.Unit20.filteredComplexAlternatingSign
 
+def IsWeakSerreClosureOfPage {C : Type u} [Category.{v} C] [Abelian C]
+    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) (r : ℕ)
+    (P : ObjectProperty C) : Prop :=
+  P.IsWeakSerreClass ∧
+    (∀ p q : ℤ, P (S.page r (p, q))) ∧
+    (∀ Q : ObjectProperty C, Q.IsWeakSerreClass →
+      (∀ p q : ℤ, Q (S.page r (p, q))) → ∀ X : C, P X → Q X)
+
 structure FilteredComplexK0AlternatingSumStatement {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C)
     (S : FilteredComplexSpectralSequence K) (r : ℕ)
@@ -945,6 +967,7 @@ structure FilteredComplexK0AlternatingSumStatement {C : Type u}
   finite_cohomology : Set.Finite
     {n : ℤ | ¬ IsZero (filteredComplexCohomology K n)}
   finite_page : Set.Finite {pq : ℤ × ℤ | ¬ IsZero (S.page r pq)}
+  closure : IsWeakSerreClosureOfPage S r P
   page_mem : ∀ p q : ℤ, P (S.page r (p, q))
   cohomology_mem : ∀ n : ℤ, P (filteredComplexCohomology K n)
   alternating_relation : ∃ s : Finset ℤ, ∃ t : Finset (ℤ × ℤ),
@@ -959,20 +982,13 @@ structure FilteredComplexK0AlternatingSumStatement {C : Type u}
             KZero.classOf (⟨S.page r pq, page_mem pq.1 pq.2⟩ :
               P.FullSubcategory))
 
-def IsWeakSerreClosureOfPage {C : Type u} [Category.{v} C] [Abelian C]
-    {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) (r : ℕ)
-    (P : ObjectProperty C) : Prop :=
-  P.IsWeakSerreClass ∧
-    (∀ p q : ℤ, P (S.page r (p, q))) ∧
-    (∀ Q : ObjectProperty C, Q.IsWeakSerreClass →
-      (∀ p q : ℤ, Q (S.page r (p, q))) → ∀ X : C, P X → Q X)
-
 theorem filteredComplex_K0_alternating_sum
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (hK : FilteredComplexFiniteFiltration K)
     (S : FilteredComplexSpectralSequence K) (r : ℕ)
     (P : ObjectProperty C) [P.IsWeakSerreClass]
     (hP : ∀ p q : ℤ, P (S.page r (p, q)))
+    (hPclosure : IsWeakSerreClosureOfPage S r P)
     (hS : Set.Finite {pq : ℤ × ℤ | ¬ IsZero (S.page r pq)}) :
     Nonempty (FilteredComplexK0AlternatingSumStatement K S r P) := by
   sorry

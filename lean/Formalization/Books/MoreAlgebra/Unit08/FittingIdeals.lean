@@ -1063,7 +1063,280 @@ theorem fittingIdeal_baseChange
     [AddCommGroup M] [Module R M] [Module.Finite R M] (k : ℕ) :
     fittingIdeal S (S ⊗[R] M) k =
       Ideal.map (algebraMap R S) (fittingIdeal R M k) := by
-  sorry
+  classical
+  let h := Module.Finite.exists_fin' R M
+  let p := h.choose_spec.choose
+  let hp := h.choose_spec.choose_spec
+  let e := TensorProduct.piScalarRight R S S (Fin h.choose)
+  let pS := (p.baseChange S).comp e.symm.toLinearMap
+  have hpS : Function.Surjective pS := by
+    intro y
+    obtain ⟨y', rfl⟩ := LinearMap.baseChange_surjective S hp y
+    exact ⟨e y', by simp [pS, p]⟩
+  let zS : (Fin (h.choose - k) → LinearMap.ker p) →
+      (Fin (h.choose - k) → LinearMap.ker pS) := fun z j =>
+    ⟨e (1 ⊗ₜ[R] (z j).1), by
+      apply LinearMap.mem_ker.mpr
+      change (p.baseChange S) (e.symm (e (1 ⊗ₜ[R] (z j).1))) = 0
+      rw [e.symm_apply_apply, LinearMap.baseChange_tmul]
+      simp [(z j).property]⟩
+  have hsmul (r : R) : r • (1 : S) = algebraMap R S r := by
+    rw [Algebra.smul_def]
+    simp
+  have hrel (z : Fin (h.choose - k) → LinearMap.ker p) :
+      relationMatrix pS (zS z) =
+        (relationMatrix p z).map (algebraMap R S) := by
+    ext i j
+    simp [zS, relationMatrix, e, hsmul]
+  have minorIdeal_map_le {n m r : ℕ} (A : Matrix (Fin n) (Fin m) R) :
+      Ideal.map (algebraMap R S) (minorIdeal A r) ≤
+        minorIdeal (A.map (algebraMap R S)) r := by
+    apply Ideal.map_le_iff_le_comap.mpr
+    apply Ideal.span_le.2
+    rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+    apply Ideal.subset_span
+    refine ⟨rows, cols, hrows, hcols, ?_⟩
+    dsimp [matrixMinor]
+    rw [RingHom.map_det]
+    rfl
+  have hmap_le :
+      Ideal.map (algebraMap R S)
+          (fittingIdealOfSurjection p hp k) ≤
+        fittingIdealOfSurjection pS hpS k := by
+    apply Ideal.map_le_iff_le_comap.mpr
+    unfold fittingIdealOfSurjection
+    refine iSup_le fun z => ?_
+    apply (Ideal.map_le_iff_le_comap).mp
+    calc
+      Ideal.map (algebraMap R S) (minorIdeal (relationMatrix p z) (h.choose - k)) ≤
+          minorIdeal ((relationMatrix p z).map (algebraMap R S)) (h.choose - k) :=
+        minorIdeal_map_le (relationMatrix p z)
+      _ = minorIdeal (relationMatrix pS (zS z)) (h.choose - k) := by
+        rw [hrel z]
+      _ ≤ ⨆ w : Fin (h.choose - k) → LinearMap.ker pS,
+          minorIdeal (relationMatrix pS w) (h.choose - k) :=
+        le_iSup (fun w : Fin (h.choose - k) → LinearMap.ker pS =>
+          minorIdeal (relationMatrix pS w) (h.choose - k)) (zS z)
+  let g : S ⊗[R] LinearMap.ker p →ₗ[S] (Fin h.choose → S) :=
+    e.toLinearMap.comp ((LinearMap.ker p).subtype.baseChange S)
+  have g_tmul (s : S) (v : LinearMap.ker p) :
+      g (s ⊗ₜ[R] v) = s • (fun i => algebraMap R S (v.1 i)) := by
+    ext i
+    simp [g, e, Algebra.smul_def, mul_comm]
+  have hpreimage (z : LinearMap.ker pS) :
+      ∃ w : S ⊗[R] LinearMap.ker p, g w = z.1 := by
+    have hz0 : pS z.1 = 0 := z.2
+    have hz : e.symm z.1 ∈ LinearMap.ker (LinearMap.lTensor S p) := by
+      rw [LinearMap.mem_ker]
+      rw [← LinearMap.baseChange_eq_ltensor]
+      change (p.baseChange S) (e.symm z.1) = 0
+      exact hz0
+    have hz' : e.symm z.1 ∈
+        LinearMap.range (LinearMap.lTensor S (LinearMap.ker p).subtype) := by
+      rw [← (lTensor_exact S p.exact_subtype_ker_map hp).linearMap_ker_eq]
+      exact hz
+    obtain ⟨w, hw⟩ := LinearMap.mem_range.mp hz'
+    refine ⟨w, ?_⟩
+    change e ((LinearMap.ker p).subtype.baseChange S w) = z.1
+    rw [LinearMap.baseChange_eq_ltensor, hw]
+    exact e.apply_symm_apply _
+  have det_tensor_mem (w : Fin (h.choose - k) → S ⊗[R] LinearMap.ker p)
+      (rows : Fin (h.choose - k) → Fin h.choose)
+      (hdet : ∀ v : Fin (h.choose - k) → LinearMap.ker p,
+        Matrix.det ((relationMatrix (k := k) p v).submatrix rows id) ∈
+          fittingIdealOfSurjection p hp k) :
+      Matrix.det (fun i j => g (w j) (rows i)) ∈
+        Ideal.map (algebraMap R S) (fittingIdealOfSurjection p hp k) := by
+    let J : Ideal S := Ideal.map (algebraMap R S) (fittingIdealOfSurjection p hp k)
+    have aux : ∀ s : Finset (Fin (h.choose - k)),
+        ∀ A : Matrix (Fin (h.choose - k)) (Fin (h.choose - k)) S,
+        (∀ j ∈ s, ∀ i, A i j = g (w j) (rows i)) →
+        (∀ j ∉ s, ∃ v : LinearMap.ker p,
+          ∀ i, A i j = g (1 ⊗ₜ[R] v) (rows i)) →
+        Matrix.det A ∈ J := by
+      intro s
+      induction s using Finset.strongInductionOn with
+      | _ s ih =>
+          intro A hA hpure
+          classical
+          by_cases hs : s.Nonempty
+          · obtain ⟨a, ha⟩ := hs
+            let A₀ : Matrix (Fin (h.choose - k)) (Fin (h.choose - k)) S :=
+              A.updateCol a 0
+            let F : (S ⊗[R] LinearMap.ker p) →ₗ[S] S :=
+              { toFun := fun x =>
+                  Matrix.det (A₀.updateCol a (fun i => g x (rows i)))
+                map_add' := by
+                  intro x y
+                  have hxy : (fun i => g (x + y) (rows i)) =
+                      (fun i => g x (rows i)) + (fun i => g y (rows i)) := by
+                    funext i
+                    simp
+                  rw [hxy, Matrix.det_updateCol_add]
+                map_smul' := by
+                  intro c x
+                  have hcx : (fun i => g (c • x) (rows i)) =
+                      c • (fun i => g x (rows i)) := by
+                    funext i
+                    simp
+                  rw [hcx, Matrix.det_updateCol_smul]
+                  simp [smul_eq_mul] }
+            have hFA : F (w a) = Matrix.det A := by
+              apply congrArg Matrix.det
+              ext i j
+              by_cases hja : j = a
+              · subst j
+                simp [F, A₀]
+                exact (hA a ha i).symm
+              · simp [F, A₀, hja]
+            rw [← hFA]
+            induction w a using TensorProduct.induction_on with
+            | zero =>
+                simp [F, A₀, Matrix.det_eq_zero_of_column_eq_zero a]
+            | add x y hx hy =>
+                rw [map_add]
+                exact J.add_mem hx hy
+            | tmul c v =>
+                let B : Matrix (Fin (h.choose - k)) (Fin (h.choose - k)) S :=
+                  A₀.updateCol a (fun i => g (1 ⊗ₜ[R] v) (rows i))
+                have hB : Matrix.det B ∈ J := by
+                  apply ih (s.erase a) (Finset.erase_ssubset ha) B
+                  · intro j hj i
+                    have hj' : j ∈ s := Finset.mem_of_mem_erase hj
+                    have hja : j ≠ a := Finset.ne_of_mem_erase hj
+                    simpa [B, A₀, hja] using hA j hj' i
+                  · intro j hj
+                    by_cases hja : j = a
+                    · subst j
+                      exact ⟨v, by simp [B, A₀]⟩
+                    · have hjs : j ∉ s := by
+                        intro hjs
+                        exact hj (Finset.mem_erase.mpr ⟨hja, hjs⟩)
+                      obtain ⟨v', hv'⟩ := hpure j hjs
+                      refine ⟨v', ?_⟩
+                      simpa [B, A₀, hja] using hv' 
+                have hgc : (fun i => g (c ⊗ₜ[R] v) (rows i)) =
+                    c • (fun i => g (1 ⊗ₜ[R] v) (rows i)) := by
+                  funext i
+                  rw [g_tmul, g_tmul]
+                  simp
+                rw [show F (c ⊗ₜ[R] v) =
+                      Matrix.det (A₀.updateCol a
+                        (c • (fun i => g (1 ⊗ₜ[R] v) (rows i)))) by
+                    simp [F, hgc], Matrix.det_updateCol_smul]
+                exact J.mul_mem_left c hB
+          · have hs0 : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
+            subst s
+            let v : Fin (h.choose - k) → LinearMap.ker p := fun j =>
+              Classical.choose (hpure j (by simp))
+            have hv (j : Fin (h.choose - k)) :
+                ∀ i, A i j = g (1 ⊗ₜ[R] v j) (rows i) :=
+              Classical.choose_spec (hpure j (by simp))
+            have hAeq : A =
+                ((relationMatrix (k := k) p v).submatrix rows id).map
+                  (algebraMap R S) := by
+              ext i j
+              rw [hv j i]
+              simp [g, e, relationMatrix, hsmul]
+            rw [hAeq]
+            have hmem := Ideal.mem_map_of_mem (algebraMap R S) (hdet v)
+            rw [RingHom.map_det] at hmem
+            exact hmem
+    apply aux (Finset.univ : Finset (Fin (h.choose - k)))
+    · intro j hj i
+      rfl
+    · intro j hj
+      exact False.elim (hj (Finset.mem_univ j))
+  have hrev :
+      fittingIdealOfSurjection pS hpS k ≤
+        Ideal.map (algebraMap R S) (fittingIdealOfSurjection p hp k) := by
+    unfold fittingIdealOfSurjection
+    refine iSup_le fun z => ?_
+    apply Ideal.span_le.2
+    rintro x ⟨rowsSet, colsSet, hrows, hcols, rfl⟩
+    have hcols_eq : colsSet = (Finset.univ : Finset (Fin (h.choose - k))) :=
+      Finset.eq_univ_of_card colsSet (by simpa using hcols)
+    subst colsSet
+    let rows : Fin (h.choose - k) → Fin h.choose :=
+      fun i => Finset.orderEmbOfFin rowsSet hrows i
+    let w : Fin (h.choose - k) → S ⊗[R] LinearMap.ker p := fun j =>
+      Classical.choose (hpreimage (z j))
+    have hw (j : Fin (h.choose - k)) : g (w j) = (z j).1 :=
+      Classical.choose_spec (hpreimage (z j))
+    have hdet (v : Fin (h.choose - k) → LinearMap.ker p) :
+          Matrix.det ((relationMatrix (k := k) p v).submatrix rows id) ∈
+          fittingIdealOfSurjection p hp k := by
+      unfold fittingIdealOfSurjection
+      apply (le_iSup (fun v : Fin (h.choose - k) → LinearMap.ker p =>
+        minorIdeal (relationMatrix p v) (h.choose - k)) v)
+      apply Ideal.subset_span
+      refine ⟨rowsSet, Finset.univ, hrows, Finset.card_fin _, ?_⟩
+      dsimp [matrixMinor, rows]
+      apply congrArg Matrix.det
+      apply Matrix.ext
+      intro i j
+      have huniv :
+          (fun j : Fin (h.choose - k) =>
+            (Finset.univ.orderEmbOfFin (Finset.card_fin (h.choose - k)) j :
+              Fin (h.choose - k))) = id := by
+        have h := Finset.orderEmbOfFin_unique
+          (s := (Finset.univ : Finset (Fin (h.choose - k))))
+          (Finset.card_fin (h.choose - k))
+          (f := (id : Fin (h.choose - k) → Fin (h.choose - k)))
+          (fun _ => Finset.mem_univ _) strictMono_id
+        exact h.symm
+      change (relationMatrix p v)
+          (Finset.orderEmbOfFin rowsSet hrows i) j =
+        (relationMatrix p v)
+          (Finset.orderEmbOfFin rowsSet hrows i)
+          ((Finset.univ.orderEmbOfFin (Finset.card_fin (h.choose - k)) j :
+            Fin (h.choose - k)))
+      rw [congrFun huniv j]
+      rfl
+    have hmatrix :
+        (relationMatrix pS z).submatrix rows id =
+          fun i j => g (w j) (rows i) := by
+      ext i j
+      change (z j).1 (rows i) = g (w j) (rows i)
+      exact (congrFun (hw j) (rows i)).symm
+    rw [show matrixMinor (relationMatrix pS z) rowsSet Finset.univ hrows hcols =
+        Matrix.det ((relationMatrix pS z).submatrix rows id) by
+          dsimp [matrixMinor, rows]
+          apply congrArg Matrix.det
+          apply Matrix.ext
+          intro i j
+          have huniv :
+              (fun j : Fin (h.choose - k) =>
+                (Finset.univ.orderEmbOfFin hcols j :
+                  Fin (h.choose - k))) = id := by
+            have h := Finset.orderEmbOfFin_unique
+              (s := (Finset.univ : Finset (Fin (h.choose - k))))
+              hcols
+              (f := (id : Fin (h.choose - k) → Fin (h.choose - k)))
+              (fun _ => Finset.mem_univ _) strictMono_id
+            exact h.symm
+          simp only [Matrix.submatrix_apply]
+          rw [congrFun huniv j]]
+    rw [hmatrix]
+    exact det_tensor_mem w rows hdet
+  let hS := Module.Finite.exists_fin' S (S ⊗[R] M)
+  let q := hS.choose_spec.choose
+  let hq := hS.choose_spec.choose_spec
+  have hfit :
+      fittingIdealOfSurjection pS hpS k =
+        Ideal.map (algebraMap R S) (fittingIdealOfSurjection p hp k) :=
+    le_antisymm hrev hmap_le
+  have hpresentation : fittingIdeal R M k = fittingIdealOfSurjection p hp k := by
+    unfold fittingIdeal
+    rfl
+  calc
+    fittingIdeal S (S ⊗[R] M) k = fittingIdealOfSurjection q hq k := by
+      rfl
+    _ = fittingIdealOfSurjection pS hpS k :=
+      fittingIdealOfSurjection_eq q pS hq hpS k
+    _ = Ideal.map (algebraMap R S) (fittingIdealOfSurjection p hp k) := hfit
+    _ = Ideal.map (algebraMap R S) (fittingIdeal R M k) := by
+      rw [hpresentation]
 
 theorem fittingIdeal_linearEquiv
     {R M N : Type*} [CommRing R]

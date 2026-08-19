@@ -1050,12 +1050,12 @@ theorem criterion_flatness_fibre_nilpotent
         nontrivialFibreAt (M := M) g q →
           RingHom.Flat
             ((algebraMap S (Localization.AtPrime q.asIdeal)).comp f) := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Module S M := Module.compHom M g
-  letI : Module R M := Module.compHom M h
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module S M := Module.compHom M g
+  let _ : Module R M := Module.compHom M h
   have hcomm (r : R) : g (f r) = h r := by
     exact congrArg (fun k : R →+* S' => k r) comm
-  letI : IsScalarTower R S M :=
+  let _ : IsScalarTower R S M :=
     IsScalarTower.of_algebraMap_smul (fun r m => by
       change g (f r) • m = h r • m
       rw [hcomm])
@@ -1092,10 +1092,10 @@ theorem criterion_flatness_fibre_nilpotent
     rw [hEq]
     exact hgI
   let T := TensorProduct S (J : Type u) M
-  letI : Module R T := Module.compHom T f
+  let _ : Module R T := Module.compHom T f
   have hsc (r s : R) (x : T) : r • s • x = s • r • x := by
     rw [smul_smul, smul_smul, mul_comm]
-  letI : Module R (M →ₗ[R] T) :=
+  let _ : Module R (M →ₗ[R] T) :=
     { smul := fun r k =>
         { toFun := fun m => r • k m
           map_add' := by intro x y; simp [smul_add]
@@ -1162,24 +1162,19 @@ theorem criterion_flatness_fibre_nilpotent
         map_add' := by
           intro a b
           ext m
-          change TensorProduct.tmul S
-              (⟨f (a + b),
-                hmem (a + b)⟩ : J) m =
-            TensorProduct.tmul S
-              (⟨f a, hmem a⟩ : J) m +
-              TensorProduct.tmul S
-                (⟨f b, hmem b⟩ : J) m
-          rw [map_add, add_tmul]
+          have hab : (⟨f (a + b), hmem (a + b)⟩ : J) =
+              (⟨f a, hmem a⟩ : J) + ⟨f b, hmem b⟩ := by
+            apply Subtype.ext
+            simp
+          rw [hab, add_tmul]
         map_smul' := by
           intro r a
           ext m
-          change TensorProduct.tmul S
-              (⟨f (r * (a : R)),
-                hmem_mul r a⟩ : J) m =
-            (f r) • TensorProduct.tmul S
-              (⟨f (a : R), hmem a⟩ : J) m
-          rw [map_mul, TensorProduct.smul_tmul]
-          rfl }
+          have hmul : (⟨f (r * (a : R)), hmem_mul r a⟩ : J) =
+              (f r) • (⟨f (a : R), hmem a⟩ : J) := by
+            apply Subtype.ext
+            simp [smul_eq_mul]
+          rw [hmul, TensorProduct.smul_tmul] }
   have hKsurj : Function.Surjective K := by
     intro z
     induction z using TensorProduct.induction_on with

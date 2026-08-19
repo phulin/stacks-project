@@ -69,7 +69,36 @@ theorem ufd_iff_irreducibles_are_prime
     (hfactor : HasIrreducibleFactorizations R) :
     UniqueFactorizationMonoid R ↔
       ∀ x : R, Irreducible x → Prime x := by
-  sorry
+  constructor
+  · intro hU x hx
+    exact hU.irreducible_iff_prime.mp hx
+  · intro hprime
+    apply UniqueFactorizationMonoid.of_exists_prime_factors
+    intro a ha
+    by_cases hau : IsUnit a
+    · refine ⟨0, ?_, ?_⟩
+      · simp
+      · simpa using (associated_one_iff_isUnit.mpr hau).symm
+    · obtain ⟨f, hf, hfa, _⟩ := hfactor a ha hau
+      refine ⟨f, fun b hb => hprime b (hf b hb), ?_⟩
+      exact Associated.of_eq hfa
+
+private theorem has_irreducible_factorizations_of_ufd
+    {R : Type u} [CommRing R] [IsDomain R] [UniqueFactorizationMonoid R] :
+    HasIrreducibleFactorizations R := by
+  intro a ha haunit
+  exact factorization_exists_of_acc_principal_ideals ha haunit
+
+private theorem localization_ufd_of_ufd
+    {R : Type u} [CommRing R] [IsDomain R] [UniqueFactorizationMonoid R]
+    (S : Submonoid R) [IsDomain (Localization S)] :
+    UniqueFactorizationMonoid (Localization S) := by
+  infer_instance
+
+private theorem irreducible_is_prime_of_ufd
+    {R : Type u} [CommRing R] [IsDomain R] [UniqueFactorizationMonoid R]
+    {x : R} (hx : Irreducible x) : Prime x :=
+  UniqueFactorizationMonoid.irreducible_iff_prime.mp hx
 
 /-! ## Criteria for unique factorization -/
 
@@ -91,7 +120,136 @@ theorem nagata_irreducible_or_unit
     {x : A} (hx : Irreducible x) :
     Irreducible (algebraMap A (Localization S) x) ∨
       IsUnit (algebraMap A (Localization S) x) := by
-  sorry
+  rcases hS with ⟨T, hT, hTS⟩
+  by_cases hzero : (0 : A) ∈ S
+  · have hz : IsUnit (0 : Localization S) := by
+      rw [← map_zero (algebraMap A (Localization S))]
+      exact IsLocalization.map_units (R := A) (S := Localization S) (M := S)
+        ⟨0, hzero⟩
+    exact Or.inr
+      (@isUnit_of_subsingleton (Localization S) _
+        (subsingleton_of_zero_eq_one (isUnit_zero_iff.mp hz)) _)
+  · have hinj : Function.Injective (algebraMap A (Localization S)) := by
+      intro a b hab
+      obtain ⟨c, hc⟩ :=
+        (IsLocalization.eq_iff_exists (M := S) (S := Localization S)).mp hab
+      apply mul_left_cancel₀
+      · intro hc0
+        exact hzero (hc0 ▸ c.property)
+      · exact hc
+    have hmem : ∀ d : S, ∃ f : Multiset A,
+        (∀ p ∈ f, p ∈ T) ∧ f.prod = (d : A) := by
+      intro d
+      apply Submonoid.exists_multiset_of_mem_closure
+      exact hTS ▸ d.property
+    have hstrip : ∀ (f : Multiset A),
+        (∀ p ∈ f, Prime p) → (∀ p ∈ f, p ∈ S) →
+          ∀ a b : A, f.prod * x = a * b →
+            ∃ a' b' s t : A, s ∈ S ∧ t ∈ S ∧
+              a = s * a' ∧ b = t * b' ∧ x = a' * b' := by
+      intro f hf hfs
+      induction f using Multiset.induction_on with
+      | empty =>
+          intro a b hab
+          refine ⟨a, b, 1, 1, Submonoid.one_mem _, Submonoid.one_mem _, by simp,
+            by simp, ?_⟩
+          simpa using hab
+      | @cons p f ih =>
+          intro a b hab
+          have hpab : p ∣ a * b := by
+            rw [← hab, Multiset.prod_cons]
+            exact ⟨f.prod * x, by simp [mul_assoc]⟩
+          rcases (hf p (Multiset.mem_cons_self _ _)).dvd_or_dvd hpab with hpa | hpb
+          · obtain ⟨a₁, ha₁⟩ := hpa
+            have htail : f.prod * x = a₁ * b := by
+              apply mul_left_cancel₀ (hf p (Multiset.mem_cons_self _ _)).ne_zero
+              calc
+                p * (f.prod * x) = (p * f.prod) * x := by rw [mul_assoc]
+                _ = a * b := by simpa [Multiset.prod_cons] using hab
+                _ = (p * a₁) * b := by rw [ha₁]
+                _ = p * (a₁ * b) := by rw [mul_assoc]
+            obtain ⟨a', b', s, t, hs, ht, ha', hb', hx'⟩ :=
+              ih (fun q hq => hf q (by simp [hq]))
+                (fun q hq => hfs q (by simp [hq])) a₁ b htail
+            refine ⟨a', b', p * s, t, S.mul_mem
+              (hfs p (Multiset.mem_cons_self _ _)) hs, ht, ?_, hb', hx'⟩
+            calc
+              a = p * a₁ := ha₁
+              _ = p * (s * a') := by rw [ha']
+              _ = (p * s) * a' := by rw [mul_assoc]
+          · obtain ⟨b₁, hb₁⟩ := hpb
+            have htail : f.prod * x = a * b₁ := by
+              apply mul_left_cancel₀ (hf p (Multiset.mem_cons_self _ _)).ne_zero
+              calc
+                p * (f.prod * x) = (p * f.prod) * x := by rw [mul_assoc]
+                _ = a * b := by simpa [Multiset.prod_cons] using hab
+                _ = a * (p * b₁) := by rw [hb₁]
+                _ = p * (a * b₁) := by rw [mul_comm, mul_assoc, mul_comm a]
+            obtain ⟨a', b', s, t, hs, ht, ha', hb', hx'⟩ :=
+              ih (fun q hq => hf q (by simp [hq]))
+                (fun q hq => hfs q (by simp [hq])) a b₁ htail
+            refine ⟨a', b', s, p * t, hs, S.mul_mem
+              (hfs p (Multiset.mem_cons_self _ _)) ht,
+              ha', ?_, hx'⟩
+            calc
+              b = p * b₁ := hb₁
+              _ = p * (t * b') := by rw [hb']
+              _ = (p * t) * b' := by rw [mul_assoc]
+    by_cases hunit : IsUnit (algebraMap A (Localization S) x)
+    · exact Or.inr hunit
+    · left
+      refine ⟨hunit, ?_⟩
+      intro y z hxyz
+      obtain ⟨a, b, d, ha, hb⟩ := IsLocalization.surj₂ S (Localization S) y z
+      obtain ⟨f, hfT, hfd⟩ := hmem d
+      have heq : (d : A) * (d : A) * x = a * b := by
+        apply hinj
+        calc
+          algebraMap A (Localization S) ((d : A) * (d : A) * x) =
+              (algebraMap A (Localization S) d * y) *
+                (algebraMap A (Localization S) d * z) := by
+                  simp only [map_mul]
+                  rw [hxyz]
+                  ac_rfl
+          _ = algebraMap A (Localization S) a *
+                algebraMap A (Localization S) b := by
+                  rw [show algebraMap A (Localization S) d * y =
+                    algebraMap A (Localization S) a by simpa [mul_comm] using ha]
+                  rw [show algebraMap A (Localization S) d * z =
+                    algebraMap A (Localization S) b by simpa [mul_comm] using hb]
+          _ = algebraMap A (Localization S) (a * b) := by rw [map_mul]
+      have hfp : ∀ p ∈ f + f, Prime p := by
+        intro p hp
+        rw [Multiset.mem_add] at hp
+        rcases hp with hp | hp
+        · exact hT p (hfT p hp)
+        · exact hT p (hfT p hp)
+      have hfs : ∀ p ∈ f + f, p ∈ S := by
+        intro p hp
+        rw [Multiset.mem_add] at hp
+        rcases hp with hp | hp
+        · rw [← hTS]
+          exact Submonoid.subset_closure (hfT p hp)
+        · rw [← hTS]
+          exact Submonoid.subset_closure (hfT p hp)
+      obtain ⟨a', b', s, t, hs, ht, ha', hb', hx'⟩ := hstrip (f + f) hfp hfs a b (by
+        rw [Multiset.prod_add, hfd]
+        exact heq)
+      rcases hx.isUnit_or_isUnit hx' with haunit | hbunit
+      · left
+        have hu : IsUnit (algebraMap A (Localization S) a) := by
+          rw [ha', map_mul]
+          exact IsUnit.mul
+            (IsLocalization.map_units (R := A) (S := Localization S) (M := S) ⟨s, hs⟩)
+            (IsUnit.map (algebraMap A (Localization S)) haunit)
+        exact isUnit_of_mul_isUnit_left (ha ▸ hu)
+      · right
+        have hu : IsUnit (algebraMap A (Localization S) b) := by
+          rw [hb', map_mul]
+          exact IsUnit.mul
+            (IsLocalization.map_units (R := A) (S := Localization S) (M := S) ⟨t, ht⟩)
+            (IsUnit.map (algebraMap A (Localization S)) hbunit)
+        exact isUnit_of_mul_isUnit_left (hb ▸ hu)
 
 theorem nagata_prime_iff_prime_or_unit
     {A : Type u} [CommRing A] [IsDomain A]
@@ -100,7 +258,164 @@ theorem nagata_prime_iff_prime_or_unit
     Prime x ↔
       Prime (algebraMap A (Localization S) x) ∨
         IsUnit (algebraMap A (Localization S) x) := by
-  sorry
+  rcases hS with ⟨T, hT, hTS⟩
+  have hzero : (0 : A) ∉ S := by
+    intro h0
+    let N : Submonoid A :=
+      { carrier := {a | a ≠ 0}
+        one_mem' := one_ne_zero
+        mul_mem' := fun ha hb => mul_ne_zero ha hb }
+    have hTN : T ⊆ N := fun p hp => hT p hp |>.ne_zero
+    have hclosure : Submonoid.closure T ≤ N := Submonoid.closure_le.mpr hTN
+    have : (0 : A) ∈ N := by
+      exact hclosure (hTS.symm ▸ h0)
+    exact (show (0 : A) ≠ 0 from this) rfl
+  have hinj : Function.Injective (algebraMap A (Localization S)) := by
+    intro a b hab
+    obtain ⟨c, hc⟩ :=
+      (IsLocalization.eq_iff_exists (M := S) (S := Localization S)).mp hab
+    apply mul_left_cancel₀
+    · intro hc0
+      exact hzero (hc0 ▸ c.property)
+    · exact hc
+  have hmem : ∀ d : S, ∃ f : Multiset A,
+      (∀ p ∈ f, p ∈ T) ∧ f.prod = (d : A) := by
+    intro d
+    apply Submonoid.exists_multiset_of_mem_closure
+    exact hTS ▸ d.property
+  constructor
+  · intro hpx
+    by_cases hunit : IsUnit (algebraMap A (Localization S) x)
+    · exact Or.inr hunit
+    · left
+      apply Submonoid.LocalizationMap.map_prime
+        (IsLocalization.toLocalizationMap S (Localization S)) hpx
+      · intro hx0
+        apply hx.ne_zero
+        apply hinj
+        change algebraMap A (Localization S) x = 0 at hx0
+        simpa only [map_zero] using hx0
+      · exact hunit
+  · intro hright
+    rcases hright with hpx | hunit
+    · have hpull : ∀ (f : Multiset A),
+          (∀ p ∈ f, Prime p) → (∀ p ∈ f, p ∈ S) →
+            ∀ a y : A, f.prod * a = x * y → x ∣ a := by
+        intro f hf hfs
+        induction f using Multiset.induction_on with
+        | empty =>
+            intro a y hab
+            exact ⟨y, by simpa using hab⟩
+        | @cons p f ih =>
+            intro a y hab
+            have hpdiv : p ∣ x * y := by
+              rw [← hab, Multiset.prod_cons]
+              exact ⟨f.prod * a, by simp [mul_assoc]⟩
+            rcases (hf p (Multiset.mem_cons_self _ _)).dvd_or_dvd hpdiv with
+              hpx' | hpy
+            · have hassoc : Associated p x :=
+                ((hf p (Multiset.mem_cons_self _ _)).irreducible).associated_of_dvd hx hpx'
+              have hmapassoc : Associated
+                  (algebraMap A (Localization S) p)
+                  (algebraMap A (Localization S) x) :=
+                Associated.map (algebraMap A (Localization S)) hassoc
+              have hmapunitp : IsUnit (algebraMap A (Localization S) p) :=
+                IsLocalization.map_units (Localization S) ⟨p,
+                  hfs p (Multiset.mem_cons_self _ _)⟩
+              exact (hpx.not_isUnit (hmapassoc.isUnit hmapunitp)).elim
+            · obtain ⟨y₁, hy₁⟩ := hpy
+              have htail : f.prod * a = x * y₁ := by
+                apply mul_left_cancel₀ (hf p (Multiset.mem_cons_self _ _)).ne_zero
+                calc
+                  p * (f.prod * a) = (p * f.prod) * a := by rw [mul_assoc]
+                  _ = x * y := by simpa [Multiset.prod_cons] using hab
+                  _ = x * (p * y₁) := by rw [hy₁]
+                  _ = p * (x * y₁) := by rw [mul_comm, mul_assoc, mul_comm x]
+              exact ih (fun q hq => hf q (by simp [hq]))
+                (fun q hq => hfs q (by simp [hq])) a y₁ htail
+      have hpull_of_dvd : ∀ {a : A},
+          algebraMap A (Localization S) x ∣ algebraMap A (Localization S) a → x ∣ a := by
+        intro a hdiv
+        rcases hdiv with ⟨c, hc⟩
+        obtain ⟨⟨y, d⟩, hcd⟩ := IsLocalization.surj S c
+        have hcd' : c * algebraMap A (Localization S) d =
+            algebraMap A (Localization S) y := by simpa using hcd
+        have heq : a * (d : A) = x * y := by
+          apply hinj
+          calc
+            algebraMap A (Localization S) (a * (d : A)) =
+                algebraMap A (Localization S) a *
+                  algebraMap A (Localization S) d := by rw [map_mul]
+            _ = (algebraMap A (Localization S) x * c) *
+                  algebraMap A (Localization S) d := by rw [hc]
+            _ = algebraMap A (Localization S) x *
+                  (c * algebraMap A (Localization S) d) := by rw [mul_assoc]
+            _ = algebraMap A (Localization S) x *
+                  algebraMap A (Localization S) y := by rw [hcd']
+            _ = algebraMap A (Localization S) (x * y) := by rw [map_mul]
+        obtain ⟨f, hfT, hfd⟩ := hmem d
+        have hfP : ∀ p ∈ f, Prime p := fun p hp => hT p (hfT p hp)
+        have hfS : ∀ p ∈ f, p ∈ S := by
+          intro p hp
+          rw [← hTS]
+          exact Submonoid.subset_closure (hfT p hp)
+        exact hpull f hfP hfS a y (by simpa [hfd, mul_comm] using heq)
+      refine ⟨hx.ne_zero, hx.not_isUnit, ?_⟩
+      intro a b hab
+      have hmapdvd : algebraMap A (Localization S) x ∣
+          algebraMap A (Localization S) a * algebraMap A (Localization S) b := by
+        rcases hab with ⟨c, hc⟩
+        refine ⟨algebraMap A (Localization S) c, ?_⟩
+        simpa [map_mul] using congrArg (algebraMap A (Localization S)) hc
+      rcases hpx.dvd_or_dvd hmapdvd with h | h
+      · exact Or.inl (hpull_of_dvd h)
+      · exact Or.inr (hpull_of_dvd h)
+    · have hunit_inv : ∃ c : Localization S,
+          algebraMap A (Localization S) x * c = 1 := hunit.exists_right_inv
+      obtain ⟨c, hc⟩ := hunit_inv
+      obtain ⟨⟨a, d⟩, hca⟩ := IsLocalization.surj S c
+      have hca' : c * algebraMap A (Localization S) d =
+          algebraMap A (Localization S) a := by simpa using hca
+      have hxa : x * a = (d : A) := by
+        apply hinj
+        calc
+          algebraMap A (Localization S) (x * a) =
+              algebraMap A (Localization S) x *
+                algebraMap A (Localization S) a := by rw [map_mul]
+          _ = algebraMap A (Localization S) x *
+                (c * algebraMap A (Localization S) d) := by rw [hca']
+          _ = (algebraMap A (Localization S) x * c) *
+                algebraMap A (Localization S) d := by rw [mul_assoc]
+          _ = algebraMap A (Localization S) d := by rw [hc, one_mul]
+      obtain ⟨f, hfT, hfd⟩ := hmem d
+      have hprime_factor : ∀ (f : Multiset A),
+          (∀ p ∈ f, Prime p) → ∀ y : A, f.prod = x * y → Prime x := by
+        intro f hf
+        induction f using Multiset.induction_on with
+        | empty =>
+            intro y hy
+            exact (hx.not_isUnit (IsUnit.of_mul_eq_one y hy.symm)).elim
+        | @cons p f ih =>
+            intro y hy
+            have hpdiv : p ∣ x * y := by
+              rw [← hy, Multiset.prod_cons]
+              exact ⟨f.prod, by simp⟩
+            rcases (hf p (Multiset.mem_cons_self _ _)).dvd_or_dvd hpdiv with
+              hpx' | hpy
+            · have hassoc : Associated p x :=
+                ((hf p (Multiset.mem_cons_self _ _)).irreducible).associated_of_dvd hx hpx'
+              exact hassoc.prime (hf p (Multiset.mem_cons_self _ _))
+            · obtain ⟨y₁, hy₁⟩ := hpy
+              have htail : f.prod = x * y₁ := by
+                apply mul_left_cancel₀ (hf p (Multiset.mem_cons_self _ _)).ne_zero
+                calc
+                  p * f.prod = (p * f.prod) := rfl
+                  _ = x * y := by simpa [Multiset.prod_cons] using hy
+                  _ = x * (p * y₁) := by rw [hy₁]
+                  _ = p * (x * y₁) := by rw [mul_comm, mul_assoc, mul_comm x]
+              exact ih (fun q hq => hf q (by simp [hq])) y₁ htail
+      apply hprime_factor f (fun p hp => hT p (hfT p hp)) a
+      exact hfd.trans hxa.symm
 
 theorem nagata_factorization_criterion
     {A : Type u} [CommRing A] [IsDomain A]
@@ -109,7 +424,33 @@ theorem nagata_factorization_criterion
       HasIrreducibleFactorizations A ∧
         IsDomain (Localization S) ∧
           UniqueFactorizationMonoid (Localization S) := by
-  sorry
+  rcases hS with ⟨T, hT, hTS⟩
+  have hzero : (0 : A) ∉ S := by
+    intro h0
+    let N : Submonoid A :=
+      { carrier := {a | a ≠ 0}
+        one_mem' := one_ne_zero
+        mul_mem' := fun ha hb => mul_ne_zero ha hb }
+    have hTN : T ⊆ N := fun p hp => hT p hp |>.ne_zero
+    have hclosure : Submonoid.closure T ≤ N := Submonoid.closure_le.mpr hTN
+    have : (0 : A) ∈ N := hclosure (hTS.symm ▸ h0)
+    exact (show (0 : A) ≠ 0 from this) rfl
+  have hLocDomain : IsDomain (Localization S) :=
+    IsLocalization.isDomain_localization (le_nonZeroDivisors_of_noZeroDivisors hzero)
+  constructor
+  · intro hU
+    have hfactor : HasIrreducibleFactorizations A :=
+      @has_irreducible_factorizations_of_ufd A _ _ hU
+    exact ⟨hfactor, hLocDomain,
+      @localization_ufd_of_ufd A _ _ hU S hLocDomain⟩
+  · rintro ⟨hfactor, hLocDomain', hUloc⟩
+    apply (ufd_iff_irreducibles_are_prime hfactor).2
+    intro x hx
+    apply (nagata_prime_iff_prime_or_unit S (by exact ⟨T, hT, hTS⟩) hx).2
+    rcases nagata_irreducible_or_unit S (by exact ⟨T, hT, hTS⟩) hx with hi | hu
+    · exact Or.inl
+        (@irreducible_is_prime_of_ufd (Localization S) _ hLocDomain' hUloc _ hi)
+    · exact Or.inr hu
 
 theorem ufd_has_acc_principal_ideals
     {R : Type u} [CommRing R] [IsDomain R]

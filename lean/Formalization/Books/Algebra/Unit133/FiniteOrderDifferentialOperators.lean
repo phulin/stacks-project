@@ -3050,7 +3050,7 @@ theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
   revert D
   induction k with
   | zero =>
-      sorry -/
+      sorry
   | succ k ih =>
       intro D
       classical
@@ -3214,6 +3214,7 @@ theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
       let Efun : LocalizedModule T M → LocalizedModule T N := fun x =>
         x.liftOn raw hraw_wd
       sorry
+ -/
 
 noncomputable def localizedDifferentialOperator (T : Submonoid B) (k : ℕ)
     (D : differentialOperatorSubmodule (R := A) (S := B) (M := M) (N := N) k) :

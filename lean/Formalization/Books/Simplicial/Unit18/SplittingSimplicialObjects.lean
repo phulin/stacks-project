@@ -142,7 +142,78 @@ theorem simplicial_set_splitting_unique
     (U : SSet.{u}) (s : SimplicialObject.Splitting U) :
     ∀ n, ∃ e : s.N n ≅ (SSet.splitting U).N n,
       e.hom ≫ (SSet.splitting U).ι n = s.ι n := by
-  sorry
+  have hrepr : ∀ {m} (y : U.nonDegenerate m), ∃ z : s.N m, s.ι m z = y := by
+    intro m y
+    obtain ⟨A, z, hz⟩ :=
+      Cofan.inj_jointly_surjective_of_isColimit (s.isColimit (op ⦋m⦌))
+        (y : U _⦋m⦌)
+    dsimp [SimplicialObject.Splitting.cofan, Cofan.mk, Cofan.inj] at hz
+    change (s.ι A.1.unop.len ≫ U.map A.e.op) z = y at hz
+    have hlen : A.1.unop.len = m := by
+      apply le_antisymm (SimplexCategory.len_le_of_epi A.e)
+      by_contra h
+      have hlt : A.1.unop.len < m := Nat.lt_of_not_ge h
+      apply y.property
+      rw [SSet.mem_degenerate_iff]
+      refine ⟨A.1.unop.len, hlt, A.e, inferInstance, ?_⟩
+      refine ⟨s.ι A.1.unop.len z, ?_⟩
+      exact (comp_apply (s.ι A.1.unop.len) (U.map A.e.op) z).symm.trans hz
+    have hA : A.EqId := A.eqId_iff_len_eq.mpr hlen
+    change A = SimplicialObject.Splitting.IndexSet.id (op ⦋m⦌) at hA
+    subst A
+    change s.N m at z
+    refine ⟨z, ?_⟩
+    convert hz using 1
+    simp [SimplicialObject.Splitting.IndexSet.id,
+      SimplicialObject.Splitting.IndexSet.e, op_id]
+    rfl
+  have hND : ∀ (n : ℕ) (x : s.N n), s.ι n x ∈ U.nonDegenerate n := by
+    intro n x
+    obtain ⟨m, g, hg, y, hy⟩ := U.exists_nonDegenerate (s.ι n x)
+    obtain ⟨z, hz⟩ := hrepr y
+    have hindex : SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌) =
+        SimplicialObject.Splitting.IndexSet.mk g := by
+      apply Cofan.eq_of_inj_apply_eq_of_isColimit (s.isColimit (op ⦋n⦌))
+        (i₁ := SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
+        (i₂ := SimplicialObject.Splitting.IndexSet.mk g) x z
+      dsimp [SimplicialObject.Splitting.cofan, Cofan.mk, Cofan.inj]
+      change (s.ι n ≫ U.map (𝟙 (op ⦋n⦌))) x = (s.ι m ≫ U.map g.op) z
+      rw [U.map_id, Category.comp_id]
+      have hcomp := hy.trans (congrArg (U.map g.op) hz.symm)
+      exact hcomp.trans (comp_apply (s.ι m) (U.map g.op) z).symm
+    have hnm : n = m := by
+      simpa [SimplicialObject.Splitting.IndexSet.id,
+        SimplicialObject.Splitting.IndexSet.mk] using
+        congrArg (fun A : SimplicialObject.Splitting.IndexSet (op ⦋n⦌) =>
+          A.1.unop.len) hindex
+    subst m
+    have hg' : g = 𝟙 _ := SimplexCategory.eq_id_of_epi g
+    rw [hg'] at hy
+    rw [hy]
+    simp
+  intro n
+  let e : s.N n → U.nonDegenerate n := fun x => ⟨s.ι n x, hND n x⟩
+  have he_inj : Function.Injective e := by
+    intro x₁ x₂ h
+    change s.N n at x₁ x₂
+    have h' : s.ι n x₁ = s.ι n x₂ := by
+      simpa [e] using congrArg Subtype.val h
+    apply Cofan.inj_injective_of_isColimit (s.isColimit (op ⦋n⦌))
+      (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
+    dsimp [SimplicialObject.Splitting.cofan, Cofan.mk, Cofan.inj]
+    change (s.ι n ≫ U.map (𝟙 (op ⦋n⦌))) x₁ =
+      (s.ι n ≫ U.map (𝟙 (op ⦋n⦌))) x₂
+    rw [U.map_id, Category.comp_id]
+    exact h'
+  have he_surj : Function.Surjective e := by
+    intro y
+    obtain ⟨z, hz⟩ := hrepr y
+    refine ⟨z, ?_⟩
+    apply Subtype.ext
+    exact hz
+  refine ⟨(Equiv.ofBijective e ⟨he_inj, he_surj⟩).toIso, ?_⟩
+  ext x
+  rfl
 
 theorem simplicial_set_nonDegenerate_decomposition
     (U : SSet.{u}) {n : ℕ} (x : U _⦋n⦌) :
@@ -197,19 +268,59 @@ theorem simplicial_set_map_injective_of_nonDegenerate
     {U V : SSet.{u}} (f : U ⟶ V) (hf : MapsNondegenerate f)
     (hN : ∀ n, Function.Injective (nondegenerateMap f hf n)) :
     ∀ n, Function.Injective (f.app (op ⦋n⦌)) := by
-  sorry
+  intro n x₁ x₂ h
+  obtain ⟨m, g, hg, z, hz⟩ := U.exists_nonDegenerate x₁
+  obtain ⟨p, k, hk, w, hw⟩ := U.exists_nonDegenerate x₂
+  have hz' : f.app (op ⦋n⦌) x₁ = V.map g.op (f.app (op ⦋m⦌) z) := by
+    rw [hz, NatTrans.naturality_apply]
+  have hw' : f.app (op ⦋n⦌) x₂ = V.map k.op (f.app (op ⦋p⦌) w) := by
+    rw [hw, NatTrans.naturality_apply]
+  have hzm : f.app (op ⦋m⦌) z ∈ V.nonDegenerate m := hf m z z.property
+  have hwp : f.app (op ⦋p⦌) w ∈ V.nonDegenerate p := hf p w w.property
+  have hcomp : f.app (op ⦋n⦌) x₁ = V.map k.op (f.app (op ⦋p⦌) w) := h.trans hw'
+  have hdim : m = p := by
+    apply V.unique_nonDegenerate_dim (f.app (op ⦋n⦌) x₁)
+      g ⟨f.app (op ⦋m⦌) z, hzm⟩ hz'
+      k ⟨f.app (op ⦋p⦌) w, hwp⟩ hcomp
+  subst p
+  have hsimplex : (⟨f.app (op ⦋m⦌) z, hzm⟩ : V.nonDegenerate m) =
+      ⟨f.app (op ⦋m⦌) w, hwp⟩ := by
+    apply V.unique_nonDegenerate_simplex (f.app (op ⦋n⦌) x₁)
+      g ⟨f.app (op ⦋m⦌) z, hzm⟩ hz' k ⟨f.app (op ⦋m⦌) w, hwp⟩
+    exact hcomp
+  have hzw : z = w := by
+    apply hN m
+    exact hsimplex
+  have hgk : g = k := by
+    apply V.unique_nonDegenerate_map (f.app (op ⦋n⦌) x₁)
+      g ⟨f.app (op ⦋m⦌) z, hzm⟩ hz' k ⟨f.app (op ⦋m⦌) w, hwp⟩
+    exact hcomp
+  rw [hz, hw, hzw, hgk]
 
 theorem simplicial_set_map_surjective_of_nonDegenerate
     {U V : SSet.{u}} (f : U ⟶ V) (hf : MapsNondegenerate f)
     (hN : ∀ n, Function.Surjective (nondegenerateMap f hf n)) :
     ∀ n, Function.Surjective (f.app (op ⦋n⦌)) := by
-  sorry
+  intro n y
+  obtain ⟨m, g, hg, z, hz⟩ := V.exists_nonDegenerate y
+  obtain ⟨x, hx⟩ := hN m z
+  refine ⟨U.map g.op x, ?_⟩
+  rw [NatTrans.naturality_apply]
+  have hfx : f.app (op ⦋m⦌) x = z := congrArg Subtype.val hx
+  rw [hfx, ← hz]
 
 theorem simplicial_set_map_bijective_of_nonDegenerate
     {U V : SSet.{u}} (f : U ⟶ V) (hf : MapsNondegenerate f)
     (hN : ∀ n, Function.Bijective (nondegenerateMap f hf n)) :
     ∀ n, Function.Bijective (f.app (op ⦋n⦌)) := by
-  sorry
+  intro n
+  refine ⟨?_, ?_⟩
+  · apply simplicial_set_map_injective_of_nonDegenerate f hf
+    intro m
+    exact (hN m).1
+  · apply simplicial_set_map_surjective_of_nonDegenerate f hf
+    intro m
+    exact (hN m).2
 
 /-! ## The simplicial-set n-skeleton -/
 

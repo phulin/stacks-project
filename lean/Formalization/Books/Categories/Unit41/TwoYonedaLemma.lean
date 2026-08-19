@@ -846,7 +846,35 @@ theorem twoYonedaMorphismCategory_isGroupoid
     (p : A ⥤ C) (q : B ⥤ C)
     (hq : q.IsFibredInGroupoids) :
     IsGroupoid (twoYonedaMorphismCategory p q) := by
-  sorry
+  constructor
+  intro G H η
+  have hη : IsIso η.1 := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro X
+    let _ : q.IsHomLift (𝟙 (p.obj X)) (η.1.app X) :=
+      twoYonedaMorphismCategory_map_isHomLift p q η X
+    let k := Functor.Fiber.homMk q (p.obj X) (η.1.app X)
+    let _ : IsIso k :=
+      (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1 (p.obj X) |>.all_isIso k
+    change IsIso (Functor.Fiber.fiberInclusion.map k)
+    exact (Functor.Fiber.fiberInclusion.mapIso (asIso k)).isIso_hom
+  let _ : IsIso η.1 := hη
+  let _ : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) η.1 := η.2
+  let ηinv : H ⟶ G :=
+    ⟨inv η.1, CategoryTheory.IsHomLift.lift_id_inv_isIso
+      (twoYonedaPostcompositionGeneral q) p η.1⟩
+  let e : G ≅ H :=
+    { hom := η
+      inv := ηinv
+      hom_inv_id := by
+        apply Functor.Fiber.hom_ext
+        change η.1 ≫ inv η.1 = 𝟙 G.1
+        simp
+      inv_hom_id := by
+        apply Functor.Fiber.hom_ext
+        change inv η.1 ≫ η.1 = 𝟙 H.1
+        simp }
+  simpa [e] using e.isIso_hom
 
 /-! ## The groupoid case -/
 

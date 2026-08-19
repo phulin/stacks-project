@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit60.Dimension
 import Formalization.Books.Algebra.Unit35.JacobsonRings
 import Mathlib.NumberTheory.Padics.ProperSpace
 import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.RingTheory.Jacobson.Artinian
 
 /-!
 # Commutative Algebra, Chapter 61: Applications of dimension theory
@@ -600,7 +601,117 @@ theorem finite_type_algebra_finite_nr_primes
       , FiniteDimensional k S
       , IsArtinianRing S
       , DiscreteTopology (PrimeSpectrum S) ] := by
-  sorry
+  classical
+  let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  have hdim_to_art : ringKrullDim S = 0 → IsArtinianRing S := by
+    exact (Formalization.Books.Algebra.Unit60.noetherian_ringKrullDim_eq_zero_iff_artinian
+      (R := S)).1
+  have hart_to_dim : IsArtinianRing S → ringKrullDim S = 0 := by
+    exact (Formalization.Books.Algebra.Unit60.noetherian_ringKrullDim_eq_zero_iff_artinian
+      (R := S)).2
+  have hart_to_finprime : IsArtinianRing S → Finite (PrimeSpectrum S) := by
+    intro h
+    have h' : IsNoetherianRing S ∧
+        Formalization.Books.Algebra.Unit60.IsFiniteDiscretePrimeSpectrum S :=
+      ((Formalization.Books.Algebra.Unit60.dimension_zero_ring_characterization S).out
+        0 4).mp h
+    exact h'.2.1
+  have hfinprime_to_art : Finite (PrimeSpectrum S) → IsArtinianRing S := by
+    intro h
+    let _ : Finite (PrimeSpectrum S) := h
+    let hJ : IsJacobsonRing S :=
+      Formalization.Books.Algebra.Unit35.finiteType_algebra_over_field_isJacobson
+        (k := k) (A := S)
+    let _ : JacobsonSpace (PrimeSpectrum S) :=
+      (Formalization.Books.Algebra.Unit35.jacobson_iff_primeSpectrum_isJacobsonSpace
+        (R := S)).mp hJ
+    have hdisc : DiscreteTopology (PrimeSpectrum S) :=
+      Formalization.Books.Topology.Unit18.discreteTopology_of_finite_jacobson
+    have hdim : Ring.KrullDimLE 0 S :=
+      (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero.mp hdisc).2
+    exact (isArtinianRing_iff_krullDimLE_zero).2 hdim
+  have hart_to_finmax : IsArtinianRing S → Finite (MaximalSpectrum S) := by
+    intro h
+    let _ : Finite (PrimeSpectrum S) := hart_to_finprime h
+    exact Finite.of_injective MaximalSpectrum.toPrimeSpectrum
+      MaximalSpectrum.toPrimeSpectrum_injective
+  have hfinmax_to_art : Finite (MaximalSpectrum S) → IsArtinianRing S := by
+    intro h
+    let _ : Finite (MaximalSpectrum S) := h
+    have hclosed : (closedPoints (PrimeSpectrum S)).Finite := by
+      rw [Formalization.Books.Algebra.Unit35.primeSpectrum_closedPoints_eq_maximalIdeals]
+      have heq : {p : PrimeSpectrum S | p.asIdeal.IsMaximal} =
+          Set.range (@MaximalSpectrum.toPrimeSpectrum S _) := by
+        ext p
+        constructor
+        · intro hp
+          exact ⟨⟨p.asIdeal, hp⟩, by apply PrimeSpectrum.ext; rfl⟩
+        · rintro ⟨m, rfl⟩
+          exact m.isMaximal
+      rw [heq]
+      exact Set.finite_range _
+    let hJ : IsJacobsonRing S :=
+      Formalization.Books.Algebra.Unit35.finiteType_algebra_over_field_isJacobson
+        (k := k) (A := S)
+    let _ : JacobsonSpace (PrimeSpectrum S) :=
+      (Formalization.Books.Algebra.Unit35.jacobson_iff_primeSpectrum_isJacobsonSpace
+        (R := S)).mp hJ
+    have hdisc : DiscreteTopology (PrimeSpectrum S) :=
+      Formalization.Books.Topology.Unit18.discreteTopology_of_finite_closedPoints hclosed
+    have hdim : Ring.KrullDimLE 0 S :=
+      (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero.mp hdisc).2
+    exact (isArtinianRing_iff_krullDimLE_zero).2 hdim
+  have hart_to_no_inclusions : IsArtinianRing S →
+      ∀ p q : Ideal S, p.IsPrime → q.IsPrime → p ≤ q → p = q := by
+    intro h p q hp hq hpq
+    let _ : IsArtinianRing S := h
+    exact (IsArtinianRing.isMaximal_of_isPrime p).eq_of_le hq.ne_top hpq
+  have hno_inclusions_to_art :
+      (∀ p q : Ideal S, p.IsPrime → q.IsPrime → p ≤ q → p = q) →
+        IsArtinianRing S := by
+    intro h
+    have hall : ∀ p : Ideal S, p.IsPrime → p.IsMaximal := by
+      intro p hp
+      obtain ⟨m, hm, hpm⟩ := p.exists_le_maximal hp.ne_top
+      exact (h p m hp hm.isPrime hpm) ▸ hm
+    exact hdim_to_art ((ringKrullDimZero_iff_ringKrullDim_eq_zero).1
+      (Ring.KrullDimLE.mk₀ hall))
+  have hfd_to_art : FiniteDimensional k S → IsArtinianRing S := by
+    intro h
+    let _ : FiniteDimensional k S := h
+    exact Formalization.Books.Algebra.Unit53.finiteDimensional_algebra_isArtinian
+      (k := k) (R := S)
+  have hart_to_fd : IsArtinianRing S → FiniteDimensional k S := by
+    intro h
+    let _ : IsArtinianRing S := h
+    exact Module.finite_of_isArtinianRing k S
+  have hdisc_to_art : DiscreteTopology (PrimeSpectrum S) → IsArtinianRing S := by
+    intro h
+    let _ : DiscreteTopology (PrimeSpectrum S) := h
+    let _ : Finite (PrimeSpectrum S) := TopologicalSpace.NoetherianSpace.finite
+    have hdim : Ring.KrullDimLE 0 S :=
+      (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero.mp h).2
+    exact (isArtinianRing_iff_krullDimLE_zero).2 hdim
+  have hart_to_disc : IsArtinianRing S → DiscreteTopology (PrimeSpectrum S) := by
+    intro h
+    have h' : IsNoetherianRing S ∧
+        Formalization.Books.Algebra.Unit60.IsFiniteDiscretePrimeSpectrum S :=
+      ((Formalization.Books.Algebra.Unit60.dimension_zero_ring_characterization S).out
+        0 4).mp h
+    exact h'.2.2
+  tfae_have 1 → 6 := hdim_to_art
+  tfae_have 6 → 1 := hart_to_dim
+  tfae_have 6 → 2 := hart_to_finprime
+  tfae_have 2 → 6 := hfinprime_to_art
+  tfae_have 6 → 3 := hart_to_finmax
+  tfae_have 3 → 6 := hfinmax_to_art
+  tfae_have 6 → 4 := hart_to_no_inclusions
+  tfae_have 4 → 6 := hno_inclusions_to_art
+  tfae_have 6 → 5 := hart_to_fd
+  tfae_have 5 → 6 := hfd_to_art
+  tfae_have 6 → 7 := hart_to_disc
+  tfae_have 7 → 6 := hdisc_to_art
+  tfae_finish
 
 /-! ## Noetherian Jacobson rings -/
 
@@ -611,7 +722,39 @@ theorem noetherian_domain_dim_one_infinite_primes_isJacobson
     (hdim : ringKrullDim R = 1)
     (hinfinite : Infinite (PrimeSpectrum R)) :
     IsJacobsonRing R := by
-  sorry
+  let _ : FiniteRingKrullDim R :=
+    (finiteRingKrullDim_iff_ne_bot_and_top (R := R)).2
+      ⟨by rw [hdim]; simp, by
+        rw [hdim]
+        exact fun h => ENat.one_ne_top (WithBot.coe_eq_top.mp h)⟩
+  have hprime : ∀ P : Ideal R, P.IsPrime → P ≠ ⊥ → P.IsMaximal := by
+    intro P hP hP0
+    let _ : P.IsPrime := hP
+    apply P.isMaximal_of_height_eq_ringKrullDim
+    apply le_antisymm
+    · exact Ideal.height_le_ringKrullDim_of_isPrime
+    · rw [hdim]
+      have hbotlt : (⊥ : Ideal R) < P := bot_lt_iff_ne_bot.mpr hP0
+      simpa using
+        (Ideal.height_add_one_le_of_lt_of_isPrime hbotlt)
+  let _ : Infinite (PrimeSpectrum R) := hinfinite
+  have hprime_infinite_subtype : Infinite {P : Ideal R // P.IsPrime} := by
+    exact Infinite.of_injective (f := PrimeSpectrum.equivSubtype R)
+      (PrimeSpectrum.equivSubtype R).injective
+  have hprime_infinite : ({P : Ideal R | P.IsPrime} : Set (Ideal R)).Infinite :=
+    Set.infinite_coe_iff.mp hprime_infinite_subtype
+  have hnonzero_infinite :
+      (({P : Ideal R | P.IsPrime} : Set (Ideal R)) \ {⊥}).Infinite := by
+    exact hprime_infinite.sdiff (Set.finite_singleton (⊥ : Ideal R))
+  have hmaximal_infinite : ({P : Ideal R | P.IsMaximal} : Set (Ideal R)).Infinite := by
+    apply hnonzero_infinite.mono
+    intro P hP
+    have hP0 : P ≠ ⊥ := by
+      intro hP0
+      exact hP.2 (by simp [hP0])
+    exact hprime P hP.1 hP0
+  exact Formalization.Books.Algebra.Unit35.isJacobsonRing_of_domain_noetherian_nonzero_primes_maximal
+    hprime hmaximal_infinite
 
 /-- A Noetherian ring is Jacobson when every prime is either maximal or is
 contained in infinitely many prime ideals. -/
@@ -621,7 +764,186 @@ theorem noetherian_ring_isJacobson_of_prime_maximal_or_infinite_over
       p.IsMaximal ∨
         Set.Infinite {q : Ideal R | q.IsPrime ∧ p ≤ q}) :
     IsJacobsonRing R := by
-  sorry
+  by_contra hJ
+  obtain ⟨p, f, hpmax, hpf, hloc, hfield⟩ :=
+    Formalization.Books.Algebra.Unit35.characterize_nonJacobson_ring hJ
+  have hinf : Set.Infinite {q : Ideal R | q.IsPrime ∧ p.asIdeal ≤ q} :=
+    (hprime p.asIdeal p.2).resolve_left hpmax
+  let _ : p.asIdeal.IsPrime := p.2
+  let A := R ⧸ p.asIdeal
+  let fA : A := Ideal.Quotient.mk p.asIdeal f
+  let eA := p.asIdeal.primeSpectrumQuotientOrderIsoZeroLocus
+  let pA : PrimeSpectrum A := eA.symm ⟨p, by simp⟩
+  have heA_pA : (eA pA).1 = p := by
+    simp [pA]
+  have hpAbot : pA.asIdeal = (⊥ : Ideal A) := by
+    change p.asIdeal.map (Ideal.Quotient.mk p.asIdeal) = ⊥
+    rw [Ideal.map_eq_bot_iff_le_ker]
+    simp [Ideal.mk_ker]
+  have hdim_local : ∀ q : PrimeSpectrum A,
+      ringKrullDim (Localization.AtPrime q.asIdeal) ≤ 1 := by
+    intro q
+    by_contra hdim
+    have hdim2 : (2 : WithBot ℕ∞) ≤
+        ringKrullDim (Localization.AtPrime q.asIdeal) := by
+      have h := ENat.WithBot.add_one_le_iff.mpr (lt_of_not_ge hdim)
+      norm_num at h ⊢
+      exact h
+    let eQ := IsLocalization.AtPrime.primeSpectrumOrderIso
+      (Localization.AtPrime q.asIdeal) q.asIdeal
+    let z₀ : PrimeSpectrum (Localization.AtPrime q.asIdeal) :=
+      eQ.symm ⟨pA, by
+        change pA.asIdeal ≤ q.asIdeal
+        rw [hpAbot]
+        exact bot_le⟩
+    let U : Set (PrimeSpectrum (Localization.AtPrime q.asIdeal)) :=
+      PrimeSpectrum.basicOpen
+        (algebraMap A (Localization.AtPrime q.asIdeal) fA)
+    have hUopen : IsOpen U := PrimeSpectrum.isOpen_basicOpen
+    have hUnonempty : U.Nonempty := by
+      refine ⟨z₀, (PrimeSpectrum.mem_basicOpen _ _).mpr ?_⟩
+      intro hfz
+      have hfq : fA ∈ pA.asIdeal := by
+        have hunder : fA ∈ z₀.asIdeal.under A := by
+          rw [Ideal.mem_under]
+          exact hfz
+        change fA ∈ (eQ z₀).1.asIdeal at hunder
+        simpa [z₀] using hunder
+      apply hpf
+      have hfzero : fA = 0 := by simpa [hpAbot] using hfq
+      exact Ideal.Quotient.eq_zero_iff_mem.mp (by simpa [fA] using hfzero)
+    have hUinf :=
+      nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_two
+        hdim2 hUopen hUnonempty
+    have hUsingle : U ⊆ {z₀} := by
+      intro z hz
+      have hzf : algebraMap A (Localization.AtPrime q.asIdeal) fA ∉ z.asIdeal :=
+        (PrimeSpectrum.mem_basicOpen _ _).mp hz
+      let zA := (eQ z).1
+      have hzAf : fA ∉ zA.asIdeal := by
+        intro hfAq
+        apply hzf
+        rw [← Ideal.mem_under]
+        exact hfAq
+      have hzR : (eA zA).1 ∈
+          Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet p f := by
+        rw [Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet]
+        constructor
+        · exact (eA zA).2
+        · exact (PrimeSpectrum.mem_basicOpen _ _).mpr hzAf
+      have hzRp : (eA zA).1 = p := by
+        have : (eA zA).1 ∈ ({p} : Set (PrimeSpectrum R)) := hloc ▸ hzR
+        simpa using this
+      have hzA : zA = pA := by
+        apply eA.injective
+        apply Subtype.ext
+        exact hzRp.trans heA_pA.symm
+      apply eQ.injective
+      apply Subtype.ext
+      have heQ_z₀ : (eQ z₀).1 = pA := by
+        simp [z₀]
+      exact hzA.trans heQ_z₀.symm
+    exact hUinf.not_finite (Set.Finite.subset (Set.finite_singleton _) hUsingle)
+  have hDsingleton :
+      (PrimeSpectrum.basicOpen fA : Set (PrimeSpectrum A)) =
+        {pA} := by
+    ext z
+    constructor
+    · intro hz
+      have hzf : fA ∉ z.asIdeal := (PrimeSpectrum.mem_basicOpen _ _).mp hz
+      let zR := (eA z).1
+      have hzRf : f ∉ zR.asIdeal := by
+        intro hfz
+        apply hzf
+        change fA ∈ z.asIdeal
+        exact hfz
+      have hzloc : zR ∈
+          Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet p f := by
+        rw [Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet]
+        exact ⟨(eA z).2, (PrimeSpectrum.mem_basicOpen _ _).mpr hzRf⟩
+      have hzRp : zR = p := by
+        have : zR ∈ ({p} : Set (PrimeSpectrum R)) := hloc ▸ hzloc
+        simpa using this
+      have : z = pA := by
+        apply eA.injective
+        apply Subtype.ext
+        exact hzRp.trans heA_pA.symm
+      exact Set.mem_singleton_iff.mpr this
+    · intro hz
+      have hz' : z = pA := Set.mem_singleton_iff.mp hz
+      subst z
+      apply (PrimeSpectrum.mem_basicOpen _ _).mpr
+      intro hfz
+      apply hpf
+      have hfzero : fA = 0 := by simpa [hpAbot] using hfz
+      exact Ideal.Quotient.eq_zero_iff_mem.mp (by simpa [fA] using hfzero)
+  have hdim_le : ringKrullDim A ≤ 1 := by
+    rw [ringKrullDim_le_iff_isMaximal_height_le]
+    intro m hm
+    have h := hdim_local (⟨m, hm.isPrime⟩ : PrimeSpectrum A)
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height m
+      (Localization.AtPrime m)] at h
+    exact h
+  have hinfA : Infinite (PrimeSpectrum A) := by
+    let _ : Infinite {q : Ideal R // q.IsPrime ∧ p.asIdeal ≤ q} :=
+      hinf.to_subtype
+    apply Infinite.of_injective
+      (fun q : {q : Ideal R // q.IsPrime ∧ p.asIdeal ≤ q} =>
+        eA.symm ⟨⟨q, q.2.1⟩, q.2.2⟩)
+    intro q q' hqq'
+    apply Subtype.ext
+    have hsub :
+        (⟨⟨q, q.2.1⟩, q.2.2⟩ : PrimeSpectrum.zeroLocus (R := R) p.asIdeal) =
+          ⟨⟨q', q'.2.1⟩, q'.2.2⟩ := eA.symm.injective hqq'
+    exact congrArg (fun z : PrimeSpectrum.zeroLocus (R := R) p.asIdeal => z.1.asIdeal) hsub
+  have hdim_ge : (1 : WithBot ℕ∞) ≤ ringKrullDim A := by
+    obtain ⟨q, hq, hqnot⟩ := hinf.exists_notMem_finite (Set.finite_singleton p.asIdeal)
+    let qA : PrimeSpectrum A := eA.symm ⟨⟨q, hq.1⟩, hq.2⟩
+    have hqbot : qA.asIdeal ≠ ⊥ := by
+      intro hqbot
+      apply hqnot
+      have hqeq : qA = eA.symm ⟨p, by simp⟩ := by
+        apply PrimeSpectrum.ext
+        exact hqbot.trans hpAbot.symm
+      have hsub :
+          (⟨⟨q, hq.1⟩, hq.2⟩ : PrimeSpectrum.zeroLocus (R := R) p.asIdeal) =
+            ⟨p, by simp⟩ := by
+        calc
+          (⟨⟨q, hq.1⟩, hq.2⟩ : PrimeSpectrum.zeroLocus (R := R) p.asIdeal) = eA qA := by
+            simp [qA]
+          _ = eA pA := congrArg eA hqeq
+          _ = (⟨p, by simp⟩ : PrimeSpectrum.zeroLocus (R := R) p.asIdeal) := by
+            simp [pA]
+      exact congrArg (fun z : PrimeSpectrum.zeroLocus (R := R) p.asIdeal => z.1.asIdeal) hsub
+    have hheight : (1 : WithBot ℕ∞) ≤ qA.asIdeal.height := by
+      let _ : qA.asIdeal.IsPrime := qA.2
+      have hbotlt : (⊥ : Ideal A) < qA.asIdeal := bot_lt_iff_ne_bot.mpr hqbot
+      simpa using
+        (Ideal.height_add_one_le_of_lt_of_isPrime hbotlt)
+    exact hheight.trans Ideal.height_le_ringKrullDim_of_isPrime
+  have hdimA : ringKrullDim A = 1 := le_antisymm hdim_le hdim_ge
+  let _ : Infinite (PrimeSpectrum A) := hinfA
+  let _ : IsJacobsonRing A :=
+    noetherian_domain_dim_one_infinite_primes_isJacobson hdimA hinfA
+  have hclosed :
+      IsClosed ({pA} : Set (PrimeSpectrum A)) := by
+    have hbasic_open : IsOpen (PrimeSpectrum.basicOpen fA : Set (PrimeSpectrum A)) :=
+      PrimeSpectrum.isOpen_basicOpen
+    have hnonempty : (PrimeSpectrum.basicOpen fA : Set (PrimeSpectrum A)).Nonempty := by
+      rw [hDsingleton]
+      exact Set.singleton_nonempty _
+    obtain ⟨z, hz, hzclosed⟩ :=
+      PrimeSpectrum.exists_isClosed_singleton_of_isJacobsonRing
+        (PrimeSpectrum.basicOpen fA : Set (PrimeSpectrum A)) hbasic_open hnonempty
+    have hz' : z = pA := by
+      rw [hDsingleton] at hz
+      exact Set.mem_singleton_iff.mp hz
+    simpa [hz'] using hzclosed
+  have hpAmax : pA.asIdeal.IsMaximal :=
+    (PrimeSpectrum.isClosed_singleton_iff_isMaximal pA).mp hclosed
+  have hpfield : IsField A :=
+    (Ideal.isField_iff_maximal_bot).2 (by simpa [hpAbot] using hpAmax)
+  exact hpmax (Ideal.Quotient.maximal_of_isField p.asIdeal hpfield)
 
 end
 

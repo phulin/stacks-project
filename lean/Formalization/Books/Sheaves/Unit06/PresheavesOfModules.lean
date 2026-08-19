@@ -106,6 +106,13 @@ noncomputable def asIdentityRingPresheafMorphism {X : TopCat.{v}}
     (Functor.isoWhiskerRight (Functor.opId (Opens X)) O₂ ≪≫
       Functor.leftUnitor O₂).inv
 
+/-- The identity-functor transport in `asIdentityRingPresheafMorphism` is
+componentwise trivial. -/
+theorem asIdentityRingPresheafMorphism_app {X : TopCat.{w}}
+    {O O' : RingPresheaf.{w, w} X} (α : O ⟶ O') (U : (Opens X)ᵒᵖ) :
+    (asIdentityRingPresheafMorphism α).app U = α.app U := by
+  simp [asIdentityRingPresheafMorphism]
+
 /-! ## Restriction of scalars -/
 
 /-- Restriction of scalars for a morphism of presheaves of rings. -/
@@ -162,11 +169,312 @@ abbrev commRingPresheafMorphismToRingPresheaf
       (O₂ ⋙ (forget₂ CommRingCat RingCat)) :=
   Functor.whiskerRight α (forget₂ CommRingCat RingCat)
 
+/-! ### A sectionwise model for extension of scalars -/
+
+/-- The transpose of the restriction map in the sectionwise
+extension-of-scalars construction. -/
+noncomputable def pointwiseExtensionAdjointMap
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    ModuleCat.of (O.obj U) (G.obj U) ⟶
+      (ModuleCat.restrictScalars (α.app U).hom).obj
+        ((ModuleCat.restrictScalars (O'.map i).hom).obj
+          ((ModuleCat.extendScalars (α.app V).hom).obj
+            (ModuleCat.of (O.obj V) (G.obj V)))) := by
+  let E : ModuleCat (O'.obj V) :=
+    (ModuleCat.extendScalars (α.app V).hom).obj
+      (ModuleCat.of (O.obj V) (G.obj V))
+  let η := ModuleCat.ExtendRestrictScalarsAdj.Unit.map (α.app V).hom
+    (X := ModuleCat.of (O.obj V) (G.obj V))
+  let hα : (α.app V).hom.comp (O.map i).hom =
+      (O'.map i).hom.comp (α.app U).hom :=
+    congrArg CommRingCat.Hom.hom (α.naturality i)
+  exact G.map i ≫
+    (ModuleCat.restrictScalars (O.map i).hom).map η ≫
+    (ModuleCat.restrictScalarsComp'App
+      (O.map i).hom (α.app V).hom
+      ((α.app V).hom.comp (O.map i).hom) rfl E).inv ≫
+    (ModuleCat.restrictScalarsCongr hα).hom.app E ≫
+    (ModuleCat.restrictScalarsComp'App
+      (α.app U).hom (O'.map i).hom
+      ((O'.map i).hom.comp (α.app U).hom) rfl E).hom
+
+/-- The restriction map on sectionwise extensions of scalars. -/
+noncomputable def pointwiseExtensionMap
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    (ModuleCat.extendScalars (α.app U).hom).obj
+        (ModuleCat.of (O.obj U) (G.obj U)) ⟶
+      (ModuleCat.restrictScalars (O'.map i).hom).obj
+        ((ModuleCat.extendScalars (α.app V).hom).obj
+          (ModuleCat.of (O.obj V) (G.obj V))) := by
+  refine ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).homEquiv
+    (ModuleCat.of (O.obj U) (G.obj U)) _).symm
+      (pointwiseExtensionAdjointMap α G i)
+
+@[simp]
+theorem pointwiseExtensionMap_adj
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    (ModuleCat.extendRestrictScalarsAdj (α.app U).hom).homEquiv _ _
+      (pointwiseExtensionMap α G i) = pointwiseExtensionAdjointMap α G i := by
+  simp [pointwiseExtensionMap]
+
+set_option backward.isDefEq.respectTransparency false in
+@[simp]
+theorem pointwiseExtensionMap_one_tmul
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) (m : G.obj U) :
+    pointwiseExtensionMap α G i
+        ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m) =
+      (1 : O'.obj V) ⊗ₜ[(O.obj V), (α.app V).hom] G.map i m := by
+  calc
+    _ = ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).homEquiv _ _
+        (pointwiseExtensionMap α G i)) m :=
+      (ModuleCat.extendRestrictScalarsAdj_homEquiv_apply
+        (φ := pointwiseExtensionMap α G i) m).symm
+    _ = _ := by
+      rw [pointwiseExtensionMap_adj]
+      dsimp [pointwiseExtensionAdjointMap]
+      simp only [CategoryTheory.comp_apply, ModuleCat.restrictScalars.map_apply,
+        ModuleCat.restrictScalarsComp'App_inv_apply,
+        ModuleCat.restrictScalarsCongr_hom_app,
+        ModuleCat.restrictScalarsComp'App_hom_apply]
+      change (1 : O'.obj V) ⊗ₜ[(O.obj V), (α.app V).hom]
+        (show G.obj V from G.map i m) = _
+      rfl
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The presheaf whose sections are obtained by extension of scalars. -/
+noncomputable def pointwiseExtensionObj
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) :
+    CommRingPresheafModule O' where
+  obj U := (ModuleCat.extendScalars (α.app U).hom).obj
+    (ModuleCat.of (O.obj U) (G.obj U))
+  map i := pointwiseExtensionMap α G i
+  map_id U := by
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro m
+    rw [pointwiseExtensionMap_one_tmul, G.map_id]
+    rfl
+  map_comp i j := by
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro m
+    rw [pointwiseExtensionMap_one_tmul]
+    simp only [CategoryTheory.comp_apply]
+    change (1 : O'.obj _) ⊗ₜ[(O.obj _), (α.app _).hom] G.map (i ≫ j) m =
+      pointwiseExtensionMap α G j
+        (pointwiseExtensionMap α G i
+          ((1 : O'.obj _) ⊗ₜ[(O.obj _), (α.app _).hom] m))
+    rw [pointwiseExtensionMap_one_tmul, pointwiseExtensionMap_one_tmul,
+      G.map_comp_apply]
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def pointwiseExtensionObjMap
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') {G H : CommRingPresheafModule O} (φ : G ⟶ H) :
+    pointwiseExtensionObj α G ⟶ pointwiseExtensionObj α H where
+  app U := (ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+  naturality i := by
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro m
+    dsimp only [pointwiseExtensionObj]
+    simp only [CategoryTheory.comp_apply]
+    change (ModuleCat.extendScalars (α.app _).hom).map (φ.app _)
+        (pointwiseExtensionMap α G i
+          ((1 : O'.obj _) ⊗ₜ[(O.obj _), (α.app _).hom] m)) =
+      pointwiseExtensionMap α H i
+        ((ModuleCat.extendScalars (α.app _).hom).map (φ.app _)
+          ((1 : O'.obj _) ⊗ₜ[(O.obj _), (α.app _).hom] m))
+    rw [pointwiseExtensionMap_one_tmul, ModuleCat.ExtendScalars.map_tmul,
+      ModuleCat.ExtendScalars.map_tmul, pointwiseExtensionMap_one_tmul]
+    congr 1
+    exact PresheafOfModules.naturality_apply φ i m
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The functorial sectionwise model of change of rings. -/
+noncomputable def pointwiseExtension
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    CommRingPresheafModule O ⥤ CommRingPresheafModule O' where
+  obj := pointwiseExtensionObj α
+  map := pointwiseExtensionObjMap α
+  map_id G := by
+    apply PresheafOfModules.hom_ext
+    intro U
+    exact (ModuleCat.extendScalars (α.app U).hom).map_id (G.obj U)
+  map_comp φ ψ := by
+    apply PresheafOfModules.hom_ext
+    intro U
+    exact (ModuleCat.extendScalars (α.app U).hom).map_comp (φ.app U) (ψ.app U)
+
+noncomputable abbrev directRestrictionOfScalars
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :=
+  _root_.PresheafOfModules.restrictScalars
+    (commRingPresheafMorphismToRingPresheaf α)
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def pointwiseExtensionUnit
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    𝟭 (CommRingPresheafModule O) ⟶
+      pointwiseExtension α ⋙ directRestrictionOfScalars α where
+  app G :=
+    { app := fun U ↦ ModuleCat.ExtendRestrictScalarsAdj.Unit.map (α.app U).hom
+      naturality := fun {U V} i ↦ by
+        ext m
+        dsimp [directRestrictionOfScalars, pointwiseExtension,
+          pointwiseExtensionObj]
+        change (1 : O'.obj V) ⊗ₜ[(O.obj V), (α.app V).hom]
+            (show G.obj V from G.map i m) =
+          pointwiseExtensionMap α G i
+            ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)
+        rw [pointwiseExtensionMap_one_tmul] }
+  naturality G H φ := by
+    apply PresheafOfModules.hom_ext
+    intro U
+    ext m
+    change (1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] φ.app U m =
+      (ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+        ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)
+    rw [ModuleCat.ExtendScalars.map_tmul]
+    rfl
+
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def pointwiseExtensionCounit
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    directRestrictionOfScalars α ⋙ pointwiseExtension α ⟶
+      𝟭 (CommRingPresheafModule O') where
+  app F :=
+    { app := fun U ↦
+        ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom
+      naturality := fun {U V} i ↦ by
+        apply ModuleCat.ExtendScalars.hom_ext
+        intro m
+        dsimp [directRestrictionOfScalars, pointwiseExtension,
+          pointwiseExtensionObj]
+        change ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app V).hom
+            (pointwiseExtensionMap α
+              ((_root_.PresheafOfModules.restrictScalars
+                (commRingPresheafMorphismToRingPresheaf α)).obj F) i
+              ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)) =
+          F.map i (ModuleCat.ExtendRestrictScalarsAdj.Counit.map
+            (α.app U).hom
+            ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m))
+        rw [pointwiseExtensionMap_one_tmul]
+        change ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app V).hom
+            ((1 : O'.obj V) ⊗ₜ[(O.obj V), (α.app V).hom]
+              (show F.obj V from F.map i (show F.obj U from m))) =
+          F.map i (ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom
+            ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom]
+              (show F.obj U from m)))
+        change (1 : O'.obj V) •
+            (show F.obj V from F.map i (show F.obj U from m)) =
+          F.map i ((1 : O'.obj U) • (show F.obj U from m))
+        simp }
+  naturality F H φ := by
+    apply PresheafOfModules.hom_ext
+    intro U
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro m
+    dsimp [directRestrictionOfScalars, pointwiseExtension,
+      pointwiseExtensionObjMap]
+    simp only [PresheafOfModules.comp_app, CategoryTheory.comp_apply]
+    change ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom
+        ((ModuleCat.extendScalars (α.app U).hom).map
+          ((ModuleCat.restrictScalars (α.app U).hom).map (φ.app U))
+          ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)) =
+      φ.app U (ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom
+        ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m))
+    rw [ModuleCat.ExtendScalars.map_tmul]
+    change (1 : O'.obj U) •
+        (show H.obj U from φ.app U (show F.obj U from m)) =
+      φ.app U ((1 : O'.obj U) • (show F.obj U from m))
+    simp
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The sectionwise extension functor is left adjoint to direct restriction
+of scalars. -/
+noncomputable def pointwiseExtensionAdjunction
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    pointwiseExtension α ⊣ directRestrictionOfScalars α :=
+  Adjunction.mkOfUnitCounit
+    { unit := pointwiseExtensionUnit α
+      counit := pointwiseExtensionCounit α
+      left_triangle := by
+        ext G U m
+        change (ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom)
+          ((ModuleCat.extendScalars (α.app U).hom).map
+            (ModuleCat.ExtendRestrictScalarsAdj.Unit.map (α.app U).hom) m) = m
+        exact CategoryTheory.congr_fun
+          ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).left_triangle_components
+            (G.obj U)) m
+      right_triangle := by
+        ext F U m
+        change (ModuleCat.restrictScalars (α.app U).hom).map
+          (ModuleCat.ExtendRestrictScalarsAdj.Counit.map (α.app U).hom)
+          (ModuleCat.ExtendRestrictScalarsAdj.Unit.map (α.app U).hom m) = m
+        exact CategoryTheory.congr_fun
+          ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).right_triangle_components
+            (F.obj U)) m }
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Direct restriction of scalars agrees with the identity-pushforward model
+used by `restrictionOfScalars`. -/
+noncomputable def directRestrictionOfScalarsIso
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    directRestrictionOfScalars α ≅
+      restrictionOfScalars (commRingPresheafMorphismToRingPresheaf α) :=
+  NatIso.ofComponents (fun F ↦
+    PresheafOfModules.isoMk (fun U ↦
+      (ModuleCat.restrictScalarsCongr
+        (congrArg RingCat.Hom.hom
+          (asIdentityRingPresheafMorphism_app
+            (commRingPresheafMorphismToRingPresheaf α) U).symm)).app (F.obj U))
+      (fun {U V} i ↦ by ext m; rfl))
+    (fun φ ↦ by ext U m; rfl)
+
+noncomputable def pointwiseExtensionAbstractAdjunction
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    pointwiseExtension α ⊣
+      restrictionOfScalars (commRingPresheafMorphismToRingPresheaf α) :=
+  (pointwiseExtensionAdjunction α).ofNatIsoRight
+    (directRestrictionOfScalarsIso α)
+
 /-- The change-of-rings functor `PMod(O₁) ⥤ PMod(O₂)`. -/
 noncomputable abbrev changeOfRings {X : TopCat.{w}}
     {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) :
     PMod O₁ ⥤ PMod O₂ :=
   changeOfRingsCore α
+
+/-- The explicit sectionwise construction agrees naturally with Mathlib's
+abstract pullback. -/
+noncomputable def pointwiseExtensionIsoChangeOfRings
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
+    pointwiseExtension α ≅
+      changeOfRings (commRingPresheafMorphismToRingPresheaf α) :=
+  (pointwiseExtensionAbstractAdjunction α).leftAdjointUniq
+    (_root_.PresheafOfModules.pullbackPushforwardAdjunction
+      (F := 𝟭 (Opens X))
+      (asIdentityRingPresheafMorphism
+        (commRingPresheafMorphismToRingPresheaf α)))
+
+/-- Evaluation of an isomorphism of presheaves of modules on an object. -/
+noncomputable def presheafOfModulesIsoApp
+    {X : TopCat.{w}} {O : RingPresheaf.{w, w} X}
+    {G H : PMod O} (e : G ≅ H) (U : (Opens X)ᵒᵖ) :
+    G.obj U ≅ H.obj U where
+  hom := e.hom.app U
+  inv := e.inv.app U
+  hom_inv_id := by
+    rw [← PresheafOfModules.comp_app, e.hom_inv_id]
+    rfl
+  inv_hom_id := by
+    rw [← PresheafOfModules.comp_app, e.inv_hom_id]
+    rfl
 
 /-!
 ## Change of rings and stalks

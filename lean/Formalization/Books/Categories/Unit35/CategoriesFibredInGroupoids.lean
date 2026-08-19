@@ -1554,8 +1554,7 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
         dsimp [f]
         rw [hH.map_preimage]
         exact z.obj.property
-      let _ : IsIso f := by
-        exact hH.isIso_of_isIso_map f
+      let _ : IsIso f := hH.isIso_of_isIso_map f
       refine ⟨z.obj.obj.left, ⟨ObjectProperty.isoMk _
         (ObjectProperty.isoMk _
           (Comma.isoMk (Iso.refl _)

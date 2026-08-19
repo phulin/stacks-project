@@ -290,7 +290,13 @@ theorem standardOpenLocalizationMap_inverse_of_open_eq {R : Type u} [CommRing R]
       (standardOpenLocalizationMap f g h.ge).comp
           (standardOpenLocalizationMap g f h.le) =
         RingHom.id (Localization.Away g) := by
-  sorry
+  constructor
+  · apply IsLocalization.ringHom_ext (Submonoid.powers f)
+    ext a
+    simp [RingHom.comp_apply]
+  · apply IsLocalization.ringHom_ext (Submonoid.powers g)
+    ext a
+    simp [RingHom.comp_apply]
 
 theorem standardOpenModuleLocalizationMap_inverse_of_open_eq {R M : Type u}
     [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
@@ -301,7 +307,19 @@ theorem standardOpenModuleLocalizationMap_inverse_of_open_eq {R M : Type u}
       (standardOpenModuleLocalizationMap f g h.ge).comp
           (standardOpenModuleLocalizationMap g f h.le) =
         (LinearMap.id : LocalizedModule.Away g M →ₗ[R] LocalizedModule.Away g M) := by
-  sorry
+  constructor
+  · apply IsLocalizedModule.linearMap_ext (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+    rw [LinearMap.comp_assoc, standardOpenModuleLocalizationMap_comp,
+      standardOpenModuleLocalizationMap_comp]
+    rfl
+  · apply IsLocalizedModule.linearMap_ext (Submonoid.powers g)
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) M)
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) M)
+    rw [LinearMap.comp_assoc, standardOpenModuleLocalizationMap_comp,
+      standardOpenModuleLocalizationMap_comp]
+    rfl
 
 /-- A finite standard-open refinement of an open cover of `D(f)`. -/
 theorem exists_finite_standardOpen_refinement {R : Type u} [CommRing R] (f : R)
@@ -311,7 +329,51 @@ theorem exists_finite_standardOpen_refinement {R : Type u} [CommRing R] (f : R)
     ∃ n : ℕ, ∃ g : Fin n → R,
       (⨆ i, standardOpen (g i)) = standardOpen f ∧
         ∀ i, ∃ U ∈ 𝒰, standardOpen (g i) ≤ U := by
-  sorry
+  classical
+  have hlocal :
+      ∀ x : {x : PrimeSpectrum R // x ∈ standardOpen f},
+        ∃ g : R, ∃ U ∈ 𝒰,
+          x.1 ∈ standardOpen g ∧
+            standardOpen g ≤ U ∧ standardOpen g ≤ standardOpen f := by
+    intro x
+    obtain ⟨U, hU, hxU⟩ := h𝒰 x.1 x.2
+    have hopen : IsOpen ((U : Set (spectrumTop R)) ∩
+        (standardOpen f : Set (spectrumTop R))) :=
+      U.isOpen.inter (standardOpen_is_open R f)
+    obtain ⟨V, ⟨g, rfl⟩, hxV, hV⟩ :=
+      (standardOpen_is_basis R).isOpen_iff.mp hopen x.1 ⟨hxU, x.2⟩
+    refine ⟨g, U, hU, hxV, ?_, ?_⟩
+    · exact hV.trans Set.inter_subset_left
+    · exact hV.trans Set.inter_subset_right
+  choose g hg using hlocal
+  have hcover : (standardOpen f : Set (spectrumTop R)) ⊆
+      ⋃ x : {x : PrimeSpectrum R // x ∈ standardOpen f},
+        (standardOpen (g x) : Set (spectrumTop R)) := by
+    intro x hx
+    obtain ⟨U, hU, hxg, hsubU, hsubf⟩ := hg ⟨x, hx⟩
+    exact Set.mem_iUnion.mpr ⟨⟨x, hx⟩, hxg⟩
+  obtain ⟨t, ht⟩ :=
+    (standardOpen_is_compact R f).elim_finite_subcover
+      (fun x : {x : PrimeSpectrum R // x ∈ standardOpen f} =>
+        (standardOpen (g x) : Set (spectrumTop R)))
+      (fun x => standardOpen_is_open R (g x)) hcover
+  let n := Fintype.card t
+  let e : Fin n ≃ t := (Fintype.equivFin t).symm
+  let g' : Fin n → R := fun i => g (e i)
+  refine ⟨n, g', ?_, ?_⟩
+  · apply le_antisymm
+    · refine iSup_le fun i => ?_
+      obtain ⟨U, hU, hxg, hsubU, hsubf⟩ := hg (e i)
+      simpa [g'] using hsubf
+    · intro x hx
+      obtain ⟨y, hy, hxy⟩ := Set.mem_iUnion₂.mp (ht hx)
+      let i : Fin n := e.symm ⟨y, hy⟩
+      apply Opens.mem_iSup.mpr
+      refine ⟨i, ?_⟩
+      simpa [g', i] using hxy
+  · intro i
+    obtain ⟨U, hU, hxg, hsubU, hsubf⟩ := hg (e i)
+    exact ⟨U, hU, by simpa [g'] using hsubU⟩
 
 /-- The unit-ideal criterion for a finite standard-open covering of `D(f)`. -/
 theorem standardOpen_cover_iff_unitIdeal {R : Type u} [CommRing R] (f : R)
@@ -319,7 +381,47 @@ theorem standardOpen_cover_iff_unitIdeal {R : Type u} [CommRing R] (f : R)
     standardOpen f ≤ ⨆ i, standardOpen (g i) ↔
       Ideal.span (Set.range (fun i =>
         algebraMap R (Localization.Away f) (g i))) = ⊤ := by
-  sorry
+  classical
+  let S := Localization.Away f
+  let ι : PrimeSpectrum S → PrimeSpectrum R :=
+    PrimeSpectrum.comap (algebraMap R S)
+  constructor
+  · intro hcover
+    apply (PrimeSpectrum.iSup_basicOpen_eq_top_iff).mp
+    apply top_unique
+    intro p hp
+    have hqf : (PrimeSpectrum.comap (algebraMap R S) p : PrimeSpectrum.Top R) ∈
+        standardOpen f := by
+      change PrimeSpectrum.comap (algebraMap R S) p ∈
+        (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))
+      rw [← PrimeSpectrum.localization_away_comap_range S f]
+      exact ⟨p, rfl⟩
+    obtain ⟨i, hqi⟩ := Opens.mem_iSup.mp (hcover hqf)
+    apply Opens.mem_iSup.mpr
+    refine ⟨i, ?_⟩
+    change g i ∉ (PrimeSpectrum.comap (algebraMap R S) p).asIdeal at hqi
+    change algebraMap R S (g i) ∉ p.asIdeal
+    simpa only [ι, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap] using hqi
+  · intro hspan
+    have htop : (⨆ i, PrimeSpectrum.basicOpen
+        (algebraMap R S (g i))) = (⊤ : Opens (PrimeSpectrum.Top S)) :=
+      (PrimeSpectrum.iSup_basicOpen_eq_top_iff).mpr hspan
+    intro x hx
+    have hxrange : x ∈ Set.range ι := by
+      rw [PrimeSpectrum.localization_away_comap_range S f]
+      exact hx
+    obtain ⟨p, hp⟩ := hxrange
+    have hpi : p ∈ (⨆ i, PrimeSpectrum.basicOpen
+        (algebraMap R S (g i))) := by
+      rw [htop]
+      trivial
+    obtain ⟨i, hpi⟩ := Opens.mem_iSup.mp hpi
+    rw [← hp]
+    apply Opens.mem_iSup.mpr
+    refine ⟨i, ?_⟩
+    change g i ∉ (PrimeSpectrum.comap (algebraMap R S) p).asIdeal
+    change algebraMap R S (g i) ∉ p.asIdeal at hpi
+    simpa only [ι, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap] using hpi
 
 theorem standardOpen_mul_eq_member_of_cover {R : Type u} [CommRing R] (f : R)
     (n : ℕ) (g : Fin n → R)

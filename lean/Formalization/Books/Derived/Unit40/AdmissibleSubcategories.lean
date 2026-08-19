@@ -1128,13 +1128,89 @@ theorem left_adjoint_iff_decomposition
         change g X ≫ (φ.hom ≫ ψ.hom) = (g X ≫ φ.hom) ≫ ψ.hom
         simp only [Category.assoc] }⟩⟩
 
+private theorem left_adjoint_isoClosure_eq_right_orthogonal
+    (P : ObjectProperty C) [P.IsTriangulated]
+    [CategoryTheory.IsTriangulated C]
+    (hP : HasLeftAdjoint P) :
+    P.isoClosure = rightOrthogonal (leftOrthogonal P) := by
+  let hstable : P.IsStableUnderShift ℤ := inferInstance
+  have hdec : ∀ X : C, HasLeftDecomposition P X :=
+    (left_adjoint_iff_decomposition P).1 hP
+  ext X
+  constructor
+  · rintro ⟨Z, hZ, ⟨e⟩⟩
+    intro A hA fX
+    have hf : fX ≫ e.hom = 0 := hA Z hZ (fX ≫ e.hom)
+    calc
+      fX = fX ≫ 𝟙 _ := by simp
+      _ = fX ≫ (e.hom ≫ e.inv) := by simp
+      _ = (fX ≫ e.hom) ≫ e.inv := by simp only [Category.assoc]
+      _ = 0 := by rw [hf, zero_comp]
+  · intro hX
+    obtain ⟨A, B, f, g, h, hD, hA, hB⟩ := hdec X
+    have hf : f = 0 := hX A hA f
+    obtain ⟨q, hq⟩ := Triangle.coyoneda_exact₁ (Triangle.mk f g h) hD
+      (𝟙 (A⟦(1 : ℤ)⟧)) (by
+        change 𝟙 (A⟦(1 : ℤ)⟧) ≫ (shiftFunctor C (1 : ℤ)).map f = 0
+        simp [hf])
+    have horthP := orthogonal_triangulated P hstable
+    letI : (leftOrthogonal P).IsTriangulated := horthP.2.2.2
+    have hAshift : (leftOrthogonal P).IsStableUnderShift ℤ := by
+      infer_instance
+    have hq0 : q = 0 := by
+      exact (hAshift.isStableUnderShiftBy (1 : ℤ)).le_shift _ hA B hB q
+    have hAid : 𝟙 (A⟦(1 : ℤ)⟧) = 0 := by
+      calc
+        𝟙 (A⟦(1 : ℤ)⟧) = q ≫ h := by simpa [Triangle.mk] using hq
+        _ = 0 := by
+          rw [hq0]
+          exact zero_comp
+    have hgiso : IsIso g := (third_object_zero_characterization g).2.2 (by
+      intro Z g' h' hT'
+      have hT := rot_of_distTriang (Triangle.mk f g h) hD
+      obtain ⟨e, _, _⟩ := distinguished_cone_unique hT hT'
+      let eA : Z ≅ A⟦(1 : ℤ)⟧ :=
+        { hom := e.inv.hom₃
+          inv := e.hom.hom₃
+          hom_inv_id := by exact e.inv_hom_id_triangle_hom₃
+          inv_hom_id := by exact e.hom_inv_id_triangle_hom₃ }
+      apply (IsZero.iff_id_eq_zero Z).mpr
+      calc
+        𝟙 Z = eA.hom ≫ eA.inv := eA.hom_inv_id.symm
+        _ = eA.hom ≫ 𝟙 (A⟦(1 : ℤ)⟧) ≫ eA.inv := by simp
+        _ = 0 := by simp [hAid])
+    exact ⟨B, hB, ⟨(@asIso _ _ _ _ g hgiso)⟩⟩
+
 /-- A left adjoint makes the subcategory saturated. -/
 theorem left_adjoint_saturated
     (P : ObjectProperty C) [P.IsTriangulated]
     [CategoryTheory.IsTriangulated C]
     (hP : HasLeftAdjoint P) :
     IsSaturated P := by
-  sorry
+  have hEq := left_adjoint_isoClosure_eq_right_orthogonal P hP
+  have hleft : leftOrthogonal P = ObjectProperty.leftOrthogonal P := by
+    ext X
+    constructor
+    · intro h A f hA
+      exact h A hA f
+    · intro h A hA f
+      exact h f hA
+  have hleftStable : (leftOrthogonal P).IsStableUnderShift ℤ := by
+    rw [hleft]
+    infer_instance
+  have horth := orthogonal_triangulated (leftOrthogonal P) hleftStable
+  intro X Y hXY
+  rw [hEq] at hXY ⊢
+  obtain ⟨hX, hY⟩ := horth.1.2.1
+    (ObjectProperty.le_isoClosure (rightOrthogonal (leftOrthogonal P))
+      (X ⊞ Y) hXY)
+  constructor
+  · obtain ⟨Z, hZ, ⟨e⟩⟩ := hX
+    exact @ObjectProperty.prop_of_iso _ _ (rightOrthogonal (leftOrthogonal P))
+      horth.1.1 _ _ e.symm hZ
+  · obtain ⟨Z, hZ, ⟨e⟩⟩ := hY
+    exact @ObjectProperty.prop_of_iso _ _ (rightOrthogonal (leftOrthogonal P))
+      horth.1.1 _ _ e.symm hZ
 
 /-- Under strict fullness, a left-admissible subcategory is the right
 orthogonal of its left orthogonal. -/
@@ -1144,7 +1220,17 @@ theorem left_adjoint_eq_right_orthogonal
     (hP : HasLeftAdjoint P)
     (hstrict : P.IsClosedUnderIsomorphisms) :
     P = rightOrthogonal (leftOrthogonal P) := by
-  sorry
+  have hEq := left_adjoint_isoClosure_eq_right_orthogonal P hP
+  apply le_antisymm
+  · intro X hX
+    rw [← hEq]
+    exact ObjectProperty.le_isoClosure P X hX
+  · intro X hX
+    have hX' : P.isoClosure X := by
+      rw [hEq]
+      exact hX
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := hX'
+    exact @ObjectProperty.prop_of_iso _ _ P hstrict _ _ e.symm hZ
 
 /-! ## Right, left, and two-sided admissibility -/
 
@@ -1166,7 +1252,13 @@ theorem right_admissible_iff_decomposition
     RightAdmissible P ↔
       P.IsClosedUnderIsomorphisms ∧ P.IsTriangulated ∧
         (∀ X : C, HasRightDecomposition P X) := by
-  sorry
+  constructor
+  · rintro ⟨hstrict, htri, hP⟩
+    letI := htri
+    exact ⟨hstrict, htri, (right_adjoint_iff_decomposition P).1 hP⟩
+  · rintro ⟨hstrict, htri, hdec⟩
+    letI := htri
+    exact ⟨hstrict, htri, (right_adjoint_iff_decomposition P).2 hdec⟩
 
 /-- Left admissibility can equivalently be expressed by decompositions. -/
 theorem left_admissible_iff_decomposition
@@ -1174,7 +1266,13 @@ theorem left_admissible_iff_decomposition
     LeftAdmissible P ↔
       P.IsClosedUnderIsomorphisms ∧ P.IsTriangulated ∧
         (∀ X : C, HasLeftDecomposition P X) := by
-  sorry
+  constructor
+  · rintro ⟨hstrict, htri, hP⟩
+    letI := htri
+    exact ⟨hstrict, htri, (left_adjoint_iff_decomposition P).1 hP⟩
+  · rintro ⟨hstrict, htri, hdec⟩
+    letI := htri
+    exact ⟨hstrict, htri, (left_adjoint_iff_decomposition P).2 hdec⟩
 
 /-! ## Canonicality of the right-adjoint triangle -/
 

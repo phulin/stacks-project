@@ -597,6 +597,219 @@ theorem flat_tensor_short_exact
   refine ⟨?_, lTensor_exact N hexact hsurjective, LinearMap.lTensor_surjective N hsurjective⟩
   exact LinearMap.lTensor_injective_of_exact_of_flat g hsurjective f hinjective hexact N
 
+theorem flat_quotient_of_ideal_quotient_injective
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (hflat : Module.Flat R N)
+    (hquot : ∀ (I : Ideal R), I.FG →
+      Function.Injective
+        ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+          (Submodule.smul_top_le_comap_smul_top I f))) :
+    Module.Flat R (N ⧸ LinearMap.range f) := by
+  have hf : Function.Injective f := by
+    have hzero := hquot (⊥ : Ideal R) Submodule.fg_bot
+    intro x y hxy
+    have hmk :
+        ((⊥ : Ideal R) • (⊤ : Submodule R M)).mkQ x =
+          ((⊥ : Ideal R) • (⊤ : Submodule R M)).mkQ y := by
+      apply hzero
+      simp [Submodule.mapQ_apply, hxy]
+    have hrel := Quotient.exact hmk
+    have hmem : x - y ∈ ((⊥ : Ideal R) • (⊤ : Submodule R M)) :=
+      (Submodule.quotientRel_def ((⊥ : Ideal R) • (⊤ : Submodule R M))).mp hrel
+    exact sub_eq_zero.mp (by simpa using hmem)
+  apply Module.Flat.of_forall_isTrivialRelation
+  intro l a x hx
+  choose n hn using fun i =>
+    (Submodule.mkQ_surjective (p := LinearMap.range f)) (x i)
+  have hsum0 :
+      (Submodule.mkQ (LinearMap.range f)) (∑ i, a i • n i) = 0 := by
+    simp only [map_sum, map_smul, hn]
+    exact hx
+  have hsum : ∑ i, a i • n i ∈ LinearMap.range f := by
+    have hrel := Quotient.exact hsum0
+    have hmem :=
+      (Submodule.quotientRel_def (LinearMap.range f)).mp hrel
+    simpa using hmem
+  obtain ⟨m, hm⟩ := hsum
+  let I : Ideal R := Ideal.span (Set.range a)
+  have hIFG : I.FG := Submodule.fg_span (Set.finite_range a)
+  have hfmI : f m ∈ I • (⊤ : Submodule R N) := by
+    rw [hm]
+    exact Submodule.sum_mem (I • (⊤ : Submodule R N)) (fun i hi =>
+      Submodule.smul_mem_smul (Ideal.subset_span (Set.mem_range.mpr ⟨i, rfl⟩))
+        (show n i ∈ (⊤ : Submodule R N) from trivial))
+  have hmI : m ∈ I • (⊤ : Submodule R M) := by
+    have hI := hquot I hIFG
+    have hmap :
+        ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+          (Submodule.smul_top_le_comap_smul_top I f))
+            ((I • (⊤ : Submodule R M)).mkQ m) =
+          ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f))
+            ((I • (⊤ : Submodule R M)).mkQ 0) := by
+      simp only [Submodule.mapQ_apply, Submodule.mkQ_apply]
+      change (I • (⊤ : Submodule R N)).mkQ (f m) =
+        (I • (⊤ : Submodule R N)).mkQ (f 0)
+      have hzero : (I • (⊤ : Submodule R N)).mkQ (f m) =
+          (I • (⊤ : Submodule R N)).mkQ 0 := by
+        apply Quotient.sound
+        exact (Submodule.quotientRel_def (I • (⊤ : Submodule R N))).2
+          (by simpa [map_zero] using hfmI)
+      simpa using hzero
+    have hmk := hI hmap
+    have hrel := Quotient.exact hmk
+    have hmem :=
+      (Submodule.quotientRel_def (I • (⊤ : Submodule R M))).mp hrel
+    simpa using hmem
+  have hrep : ∃ b : Fin l → M, m = ∑ i, a i • b i := by
+    let P : M → Prop := fun z => ∃ b : Fin l → M, z = ∑ i, a i • b i
+    have hP : P m := by
+      refine Submodule.smul_induction_on hmI ?_ ?_
+      · intro r hr z hz
+        obtain ⟨c, hc⟩ := (Ideal.mem_span_range_iff_exists_fun.mp hr)
+        refine ⟨fun i => c i • z, ?_⟩
+        rw [← hc, Finset.sum_smul]
+        apply Finset.sum_congr rfl
+        intro i hi
+        calc
+          (c i * a i) • z = (a i * c i) • z := by rw [mul_comm]
+          _ = a i • (c i • z) := by rw [smul_smul]
+      · intro z₁ z₂ hz₁ hz₂
+        obtain ⟨b₁, hb₁⟩ := hz₁
+        obtain ⟨b₂, hb₂⟩ := hz₂
+        refine ⟨fun i => b₁ i + b₂ i, ?_⟩
+        rw [hb₁, hb₂, ← Finset.sum_add_distrib]
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [smul_add]
+    exact hP
+  obtain ⟨b, hb⟩ := hrep
+  have hrelN : ∑ i, a i • (n i - f (b i)) = 0 := by
+    calc
+      ∑ i, a i • (n i - f (b i)) =
+          (∑ i, a i • n i) - ∑ i, a i • f (b i) := by
+            simp_rw [smul_sub, Finset.sum_sub_distrib]
+      _ = f m - f (∑ i, a i • b i) := by
+        rw [← hm]
+        simp only [map_sum, map_smul]
+      _ = 0 := by rw [← hb]; simp
+  obtain ⟨k, d, y, hdy, hda⟩ :=
+    (Module.Flat.iff_forall_isTrivialRelation.mp hflat) hrelN
+  refine ⟨k, d, fun j => Submodule.mkQ (LinearMap.range f) (y j), ?_, hda⟩
+  intro i
+  have hdi := congrArg (Submodule.mkQ (LinearMap.range f)) (hdy i)
+  rw [← hn i]
+  have hfb : (Submodule.mkQ (LinearMap.range f)) (f (b i)) = 0 := by
+    apply Quotient.sound
+    exact (Submodule.quotientRel_def (LinearMap.range f)).2 (by
+      change f (b i) - 0 ∈ LinearMap.range f
+      exact ⟨b i, by simp⟩)
+  change (Submodule.mkQ (LinearMap.range f)) (n i - f (b i)) =
+    (Submodule.mkQ (LinearMap.range f)) (∑ j, d i j • y j) at hdi
+  rw [map_sub, hfb, sub_zero] at hdi
+  simpa [map_sum, map_smul] using hdi
+
+theorem linearMap_rTensor_injective_of_ideal_quotient_injective
+    {R M N : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (hflat : Module.Flat R N)
+    (hquot : ∀ (I : Ideal R), I.FG →
+      Function.Injective
+        ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+          (Submodule.smul_top_le_comap_smul_top I f))) :
+    ∀ (Q : Type u) [AddCommGroup Q] [Module R Q],
+      Function.Injective (f.rTensor Q) := by
+  have hf : Function.Injective f := by
+    have hzero := hquot (⊥ : Ideal R) Submodule.fg_bot
+    intro x y hxy
+    have hmk :
+        ((⊥ : Ideal R) • (⊤ : Submodule R M)).mkQ x =
+          ((⊥ : Ideal R) • (⊤ : Submodule R M)).mkQ y := by
+      apply hzero
+      simp [Submodule.mapQ_apply, hxy]
+    have hrel := Quotient.exact hmk
+    have hmem : x - y ∈ ((⊥ : Ideal R) • (⊤ : Submodule R M)) :=
+      (Submodule.quotientRel_def ((⊥ : Ideal R) • (⊤ : Submodule R M))).mp hrel
+    exact sub_eq_zero.mp (by simpa using hmem)
+  let C := N ⧸ LinearMap.range f
+  let g : N →ₗ[R] C := Submodule.mkQ (LinearMap.range f)
+  have hC : Module.Flat R C :=
+    flat_quotient_of_ideal_quotient_injective f hflat hquot
+  let _ : Module.Flat R C := hC
+  have hex : Function.Exact f g := LinearMap.exact_map_mkQ_range f
+  intro Q _ _
+  have ht := flat_tensor_short_exact f g hex hf (Submodule.mkQ_surjective (p := LinearMap.range f))
+    (N := Q)
+  exact (f.lTensor_inj_iff_rTensor_inj Q).mp ht.1
+
+theorem linearMap_rTensor_injective_iff_ideal_quotient_injective
+    {R M N : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (hflat : Module.Flat R N) :
+    (∀ (Q : Type u) [AddCommGroup Q] [Module R Q],
+      Function.Injective (f.rTensor Q)) ↔
+      ∀ (I : Ideal R), I.FG →
+        Function.Injective
+          ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)) := by
+  constructor
+  · intro hf I _
+    let Q := R ⧸ I
+    let eM : M ⊗[R] Q ≃ₗ[R]
+        M ⧸ (I • (⊤ : Submodule R M)) :=
+      (TensorProduct.comm R M Q).trans
+        (TensorProduct.quotTensorEquivQuotSMul M I)
+    let eN : N ⊗[R] Q ≃ₗ[R]
+        N ⧸ (I • (⊤ : Submodule R N)) :=
+      (TensorProduct.comm R N Q).trans
+        (TensorProduct.quotTensorEquivQuotSMul N I)
+    have hcomm :
+        eN.toLinearMap.comp (f.rTensor Q) =
+          ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)).comp eM.toLinearMap := by
+      apply LinearMap.ext
+      intro z
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => simp only [map_add, hx, hy]
+      | tmul x y =>
+          obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+          simp only [eM, eN, LinearMap.comp_apply, LinearMap.rTensor_tmul]
+          change (TensorProduct.quotTensorEquivQuotSMul N I)
+              ((Ideal.Quotient.mk I) r ⊗ₜ[R] f x) =
+            ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+              (Submodule.smul_top_le_comap_smul_top I f))
+              ((TensorProduct.quotTensorEquivQuotSMul M I)
+                ((Ideal.Quotient.mk I) r ⊗ₜ[R] x))
+          rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul]
+          rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul]
+          simp [Submodule.mapQ_apply]
+    have hcomm_apply (z : M ⊗[R] Q) :
+        eN ((f.rTensor Q) z) =
+          ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)) (eM z) := by
+      have h := congrArg (fun g => g z) hcomm
+      simpa [LinearMap.comp_apply] using h
+    intro x y hxy
+    apply eM.symm.injective
+    apply hf Q
+    apply eN.injective
+    calc
+      eN ((f.rTensor Q) (eM.symm x)) =
+          ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)) (eM (eM.symm x)) := by
+              exact hcomm_apply _
+      _ = ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)) x := by
+              rw [eM.apply_symm_apply]
+      _ = ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+            (Submodule.smul_top_le_comap_smul_top I f)) y := hxy
+      _ = eN ((f.rTensor Q) (eM.symm y)) := by
+        simpa using (hcomm_apply (eM.symm y)).symm
+  · intro hquot
+    exact linearMap_rTensor_injective_of_ideal_quotient_injective f hflat hquot
+
 theorem flat_short_exact
     {R M' M M'' : Type*} [CommRing R]
     [AddCommGroup M'] [AddCommGroup M] [AddCommGroup M'']

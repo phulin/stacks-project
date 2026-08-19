@@ -2,7 +2,8 @@ import Formalization.Books.MoreAlgebra.Unit53.AbelianCategoriesOfModules
 import Formalization.Books.MoreAlgebra.Unit60.DerivedBaseChange
 import Formalization.Books.MoreAlgebra.Unit71.NearProjective
 import Formalization.Books.Derived.Unit27.ExtGroups
-import Mathlib.LinearAlgebra.Matrix.Determinant
+import Mathlib.Algebra.Homology.DerivedCategory.Linear
+import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.Localization.Basic
 import Mathlib.RingTheory.RingHom.Smooth
@@ -105,7 +106,7 @@ def CohomologySupportedInTwoTerms
     (K : D R) : Prop :=
   ∀ i : ℤ, i < -1 ∨ 0 < i → IsZero (H R i K)
 
-def ExtOne
+abbrev ExtOne
     {R : Type u} [CommRing R] [HasDerivedCategory.{w} (Mod R)]
     (K : D R) (N : Mod R) : Type _ :=
   DerivedExt K (DerivedObject N) 1
@@ -178,7 +179,7 @@ ideal in the target. -/
 def NaiveCotangentExtOneAnnihilatedByIdeal
     {R S : Type u} [CommRing R] [CommRing S]
     [HasDerivedCategory.{w} (ModuleCat.{u} S)]
-    (f : R →+* S) (hf : f.FinitePresentation) (I : Ideal S)
+    (f : R →+* S) (_hf : f.FinitePresentation) (I : Ideal S)
     [NaiveCotangentComplexData f] : Prop :=
   ExtOneAnnihilatedByIdeal I (naiveCotangentObject f)
 
@@ -289,11 +290,11 @@ theorem maps_out_of_almost_free_part_four
     (a a' : M ⟶ K) (ha : (derivedComplexQuotient R).map a = α)
     (ha' : (derivedComplexQuotient R).map a' = α)
     (hdegree : a.f (-2) = a'.f (-2)) :
-    ∃ h₋₁ : M.X (-1) ⟶ K.X (-2), ∃ h₀ : M.X 0 ⟶ K.X (-1),
-      M.d (-2) (-1) ≫ h₋₁ = 0 ∧
-      a'.f (-1) = a.f (-1) + h₋₁ ≫ K.d (-2) (-1) +
-        M.d (-1) 0 ≫ h₀ ∧
-      a'.f 0 = a.f 0 + h₀ ≫ K.d (-1) 0 := by
+    ∃ hneg : M.X (-1) ⟶ K.X (-2), ∃ hzero : M.X 0 ⟶ K.X (-1),
+      M.d (-2) (-1) ≫ hneg = 0 ∧
+      a'.f (-1) = a.f (-1) + hneg ≫ K.d (-2) (-1) +
+        M.d (-1) 0 ≫ hzero ∧
+      a'.f 0 = a.f 0 + hzero ≫ K.d (-1) 0 := by
   sorry
 
 /-! ## Annihilation by an ideal -/
@@ -451,7 +452,7 @@ theorem ext_one_annihilated_power_characterization
     List.TFAE [
       ∃ c : ℕ, ExtOneAnnihilatedByIdeal (I ^ c) K,
       ∃ c : ℕ,
-        IdealAnnihilatesModule (I ^ c) (HMinusOne R K : Type u) ∧
+        IdealAnnihilatesModule (I ^ c) (M := (HMinusOne R K : Type u)) ∧
           IsIPowerProjective (I ^ c) (HZero R K)] := by
   sorry
 
@@ -464,7 +465,7 @@ theorem ext_one_annihilated_power_characterization_on_finite_modules
     List.TFAE [
       ∃ c : ℕ, ExtOneAnnihilatedByIdeal (I ^ c) K,
       ∃ c : ℕ,
-        IdealAnnihilatesModule (I ^ c) (HMinusOne R K : Type u) ∧
+        IdealAnnihilatesModule (I ^ c) (M := (HMinusOne R K : Type u)) ∧
           IsIPowerProjective (I ^ c) (HZero R K),
       ∃ c : ℕ, ExtOneAnnihilatedByIdealOnFiniteModules (I ^ c) K,
       IsIPowerTorsion I (HMinusOne R K : Type u) ∧
@@ -497,8 +498,11 @@ structure SquareTwoTermComplex
 noncomputable def squareDifferentialMatrix
     {R : Type u} [CommRing R] {n : ℕ}
     (T : SquareTwoTermComplex R n) : Matrix (Fin n) (Fin n) R :=
+  let d : (Fin n → R) →ₗ[R] (Fin n → R) :=
+    T.zeroIso.toLinearEquiv.toLinearMap.comp
+      (T.complex.differential.hom.comp T.negIso.toLinearEquiv.symm.toLinearMap)
   LinearMap.toMatrix (Pi.basisFun R (Fin n)) (Pi.basisFun R (Fin n))
-    (T.negIso.inv.hom ≫ T.complex.differential ≫ T.zeroIso.hom).hom
+    d
 
 theorem determinant_scalar_zero
     {R : Type u} [CommRing R] [HasDerivedCategory.{w} (Mod R)]

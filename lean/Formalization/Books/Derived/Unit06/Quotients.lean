@@ -973,7 +973,14 @@ theorem acyclic_kernel_morphismProperty_eq
     (H : C ⥤ A) [CategoryTheory.IsTriangulated C] [H.IsHomological] :
     subcategoryOperation (homologicalFunctorKernel H) =
       homologicalFunctorMorphismProperty H := by
-  sorry
+  let : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
+  ext X Y f
+  change (homologicalFunctorKernel H).isoClosure.trW f ↔
+    ∀ i : ℤ, IsIso ((homologicalDegree H i).map f)
+  rw [ObjectProperty.trW_isoClosure]
+  change (homologicalFunctorKernel H).trW f ↔
+    ∀ i : ℤ, IsIso ((H.shift i).map f)
+  exact H.mem_homologicalKernel_trW_iff f
 
 /-- A homological functor factors through the quotient by its acyclic kernel. -/
 theorem acyclic_homologicalFunctor_factors
@@ -981,7 +988,7 @@ theorem acyclic_homologicalFunctor_factors
     ∃! H' : quotientCategory (homologicalFunctorKernel H) ⥤ A,
       quotientFunctor (homologicalFunctorKernel H) ⋙ H' = H ∧
         H'.IsHomological := by
-  sorry
+  exact quotient_universal_property (D := C) (homologicalFunctorKernel H) H le_rfl
 
 end AcyclicFunctor
 

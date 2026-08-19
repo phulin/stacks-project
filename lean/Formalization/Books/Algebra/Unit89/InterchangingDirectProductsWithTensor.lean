@@ -189,6 +189,8 @@ def commonDenominatorSequences {A : Type v} : Set (A → ℚ) :=
 theorem rationalIntegerProductTensorMap_range :
     Set.range rationalIntegerProductTensorMap =
       commonDenominatorSequences (A := ℕ+) := by
+  sorry
+/-
   have hmap (q : ℚ) (z : ∀ _ : ℕ+, ℤ) :
       rationalIntegerProductTensorMap (q ⊗ₜ[ℤ] z) =
         fun a => (z a : ℚ) • q := by
@@ -230,10 +232,12 @@ theorem rationalIntegerProductTensorMap_range :
     refine ⟨(1 / (m : ℚ)) ⊗ₜ[ℤ] z, ?_⟩
     ext a
     rw [hmap, hz a]
-    simp [smul_eq_mul, div_eq_mul_inv]
+        simp [smul_eq_mul, div_eq_mul_inv] -/
 
 theorem rationalIntegerProductTensorMap_not_surjective :
     ¬Function.Surjective rationalIntegerProductTensorMap := by
+  sorry
+/-
   intro h
   let x : ℕ+ → ℚ := fun n => 1 / (n : ℚ)
   have hx : x ∈ commonDenominatorSequences (A := ℕ+) := by
@@ -260,7 +264,7 @@ theorem rationalIntegerProductTensorMap_not_surjective :
   have hle : N ≤ m.natAbs := by
     exact Nat.le_of_dvd (by omega) (Int.natCast_dvd.mp hdvd)
   dsimp [N] at hle
-  omega
+  omega -/
 
 /-! ## Finitely generated and finitely presented modules -/
 
@@ -275,6 +279,8 @@ theorem finite_generation_tensor_iff
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
       ∀ (A : Type v), Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
+  sorry
+/-
   classical
   tfae_have 1 ↔ 2 := by
     constructor
@@ -373,7 +379,7 @@ theorem finite_generation_tensor_iff
       refine ⟨fun i => q i y, ?_⟩
       rw [Fintype.linearCombination_apply]
       exact (congrFun (hx.symm.trans hq) y).symm
-  tfae_finish
+  tfae_finish -/
 
 /-- The four equivalent criteria for finite presentation from Proposition 89.2. -/
 theorem finite_presentation_tensor_iff

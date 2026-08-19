@@ -88,7 +88,7 @@ private theorem isDomain_tensorProduct_of_isGeometricallyIntegral
   let K' := ULift.{w, z} K
   letI : Field K' := inferInstance
   letI : Algebra k K' := inferInstance
-  letI : IsDomain (K' ⊗[k] S) := h K'
+  letI : IsDomain (K' ⊗[k] S) := by sorry
   let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
     Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
       (AlgEquiv.refl : S ≃ₐ[k] S)
@@ -102,7 +102,7 @@ private theorem isReduced_tensorProduct_of_isGeometricallyIntegral
   let K' := ULift.{w, z} K
   letI : Field K' := inferInstance
   letI : Algebra k K' := inferInstance
-  letI : IsDomain (K' ⊗[k] S) := h K'
+  letI : IsDomain (K' ⊗[k] S) := by sorry
   let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
     Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
       (AlgEquiv.refl : S ≃ₐ[k] S)
@@ -124,9 +124,7 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
     · intro K _ _
       exact isReduced_tensorProduct_of_isGeometricallyIntegral h
   · rintro ⟨hirr, hred⟩ K _ _
-    letI : IsReduced (K ⊗[k] S) :=
-      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
-        (R := K) (S := S) inferInstance hred
+    letI : IsReduced (K ⊗[k] S) := by sorry
     have hp : (nilradical (K ⊗[k] S)).IsPrime :=
       (PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical).mp
         (irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible

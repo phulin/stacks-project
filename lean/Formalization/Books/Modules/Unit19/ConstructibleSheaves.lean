@@ -282,11 +282,9 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
         _ = (rE ≫ sG) ≫ (sF ≫ pInv) :=
           (Category.assoc _ _ _).symm
         _ = (mapG ≫ rF) ≫ (sF ≫ pInv) := by
-          change ((rE ≫ sG) ≫ (sF ≫ pInv)) =
-            (mapG ≫ rF) ≫ (sF ≫ pInv)
           convert congrArg (fun k => k ≫ (sF ≫ pInv)) hmapG using 1 <;> rfl
     have hmapF_eq : rF ≫ sF = eF ≫ qF := by
-      convert hmapF using 1 <;> rfl
+      convert hmapF using 1 ; rfl
     have hmapF_assoc : (mapG ≫ rF) ≫ (sF ≫ pInv) =
         mapG ≫ ((eF ≫ qF) ≫ pInv) := by
       calc
@@ -297,7 +295,7 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
           rw [hmapF_eq]
           rfl
     have hF_eq : qF ≫ pInv = qToF := by
-      convert hF using 1 <;> rfl
+      convert hF using 1 ; rfl
     have hF_assoc : (eF ≫ qF) ≫ pInv = eF ≫ qToF := by
       calc
         _ = eF ≫ (qF ≫ pInv) := Category.assoc _ _ _
@@ -326,7 +324,7 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
         ((openSheafRestrictionFormulaNatIso U).hom.app E).app
             (op ((Opens.map (openInclusion U)).obj V)) ≫ bG := by
       convert congrArg
-        (fun k => k.app (op ((Opens.map (openInclusion U)).obj V))) he using 1 <;> rfl
+        (fun k => k.app (op ((Opens.map (openInclusion U)).obj V))) he using 1 ; rfl
     have hformula : eE ≫ (mapG ≫ eF) = bG := by
       calc
         _ = eE ≫
@@ -345,7 +343,7 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
                   (op ((Opens.map (openInclusion U)).obj V))) := by
             convert congrArg
               (fun k => k.app (op ((Opens.map (openInclusion U)).obj V)))
-              ((openSheafRestrictionFormulaNatIso U).app E).inv_hom_id using 1 <;> rfl
+              ((openSheafRestrictionFormulaNatIso U).app E).inv_hom_id using 1 ; rfl
           convert congrArg (fun k => k ≫ bG) hiE using 1 <;> rfl
     have hformula_q :
         (eE ≫ (mapG ≫ eF)) ≫ qToF = bG ≫ qToF :=
@@ -361,7 +359,7 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
         _ = bG ≫ qToF := hformula_q
     have hunit_map_q : uE ≫ bG ≫ qToF =
         (g.hom.app (op V) ≫ uF) ≫ qToF := by
-      convert (congrArg (fun k => k ≫ qToF) hunit_map).symm using 1 <;>
+      convert (congrArg (fun k => k ≫ qToF) hunit_map).symm using 1 ;
         simp only [Category.assoc]
     have hmapF_assoc_prefix :
         (uE ≫ eE) ≫ ((mapG ≫ rF) ≫ (sF ≫ pInv)) =
@@ -489,16 +487,6 @@ private lemma localConstantPUnitMap_stalk_germ {X : TopCat.{u}}
           ((ConcreteCategory.hom (eqToHom (congrArg
             (fun Z : Opens X => F.presheaf.obj (op Z)) hWU.symm))) s))
     rw [htop]
-    have hpre : (Opens.map (openInclusion U)).obj U =
-        (⊤ : Opens (openSubspace U)) := by
-      ext z
-      change ((openInclusion U) z ∈ U) ↔ _
-      constructor
-      · intro _
-        trivial
-      · intro _
-        exact z.property
-    simp only [hpre]
     let x : CostructuredArrow (Opens.map (openInclusion U)).op (op Vtop) :=
       CostructuredArrow.mk
         (@homOfLE _ _ _ ((Opens.map (openInclusion U)).obj
@@ -541,14 +529,14 @@ private lemma localConstantPUnitMap_stalk_germ {X : TopCat.{u}}
         ext z
         rfl
       cases hOp
-      convert hr0 using 1 <;>
+      convert hr0 using 1 ;
         simp [x, TopCat.Presheaf.pullbackObjObjOfImageOpen,
           CostructuredArrow.proj, CostructuredArrow.mk, Comma.fst, Functor.fromPUnit,
-          openPresheafRestriction, TopCat.Presheaf.pullback, Functor.lan,
+          TopCat.Presheaf.pullback, Functor.lan,
           Functor.lanUnit, Functor.LeftExtension.coconeAt,
           Functor.LeftExtension.mk,
           TopCat.Presheaf.pullbackPushforwardAdjunction,
-          Functor.lanAdjunction_unit] <;>
+          Functor.lanAdjunction_unit] ;
         try { exact Iff.rfl }
     rw [hr1]
     rw [ConcreteCategory.comp_apply]

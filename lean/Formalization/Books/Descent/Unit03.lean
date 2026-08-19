@@ -439,74 +439,128 @@ def descentUnitTensorPlaced (R A N : Type u) [CommRing R] [CommRing A]
       TensorProduct.mk R A (descentTerm R A N n ⟨i, Nat.lt_of_succ_lt_succ hi⟩) 1
         (descentUnitTensorPlaced R A N n ⟨i, Nat.lt_of_succ_lt_succ hi⟩ x)
 
-theorem descentTransportMap_exists {n : ℕ} {i j : Fin (n + 1)}
+/- The factor-moving isomorphism is an isomorphism over the full degree-
+`n` Amitsur algebra.  Its underlying `R`-linear equivalence is the form
+needed by the concrete tensor presentation, so keep both views tied to one
+chosen witness. -/
+structure DescentTransportMapData {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) where
+  linear : descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j
+  over : descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
+    descentTerm R A N n j
+  over_eq_linear : ∀ x, over x = linear x
+  linear_refl : i = j → HEq linear (LinearEquiv.refl R (descentTerm R A N n i))
+  over_refl : i = j → HEq over
+    (LinearEquiv.refl (relativeTensorProduct R A n) (descentTerm R A N n i))
+  map_unit : ∀ x : N,
+    linear (descentUnitTensorPlaced R A N n i x) =
+      descentUnitTensorPlaced R A N n j x
+
+theorem descentTransportMapData_exists {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
-    Nonempty (descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j) := by
+    Nonempty (DescentTransportMapData D h) := by
   sorry
+
+noncomputable def descentTransportMapData {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
+    DescentTransportMapData D h :=
+  Classical.choice (descentTransportMapData_exists D h)
 
 noncomputable def descentTransportMap {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
     descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j :=
-  Classical.choice (descentTransportMap_exists D h)
+  (descentTransportMapData D h).linear
 
-theorem descentTransportMapOver_exists {n : ℕ} {i j : Fin (n + 1)}
+theorem descentTransportMap_exists {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
-    Nonempty (descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
-      descentTerm R A N n j) := by
-  sorry
+    Nonempty (descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j) :=
+  ⟨descentTransportMap D h⟩
 
 noncomputable def descentTransportMapOver {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
     descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
       descentTerm R A N n j :=
-  Classical.choice (descentTransportMapOver_exists D h)
+  (descentTransportMapData D h).over
+
+theorem descentTransportMapOver_exists {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
+    Nonempty (descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
+      descentTerm R A N n j) :=
+  ⟨descentTransportMapOver D h⟩
 
 theorem descentTransportMapOver_refl {n : ℕ} (D : DescentDatum (R := R) (A := A) (N := N))
     (i : Fin (n + 1)) :
     descentTransportMapOver D (le_refl i) =
       LinearEquiv.refl (relativeTensorProduct R A n)
         (descentTerm R A N n i) := by
-  sorry
+  exact eq_of_heq ((descentTransportMapData D (le_refl i)).over_refl rfl)
 
 theorem descentTransportMap_unit {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) (x : N) :
     descentTransportMap D h (descentUnitTensorPlaced R A N n i x) =
       descentUnitTensorPlaced R A N n j x := by
-  sorry
+  exact (descentTransportMapData D h).map_unit x
 
 /-- The pure tensor with `x` in position `i` and units elsewhere. -/
 def descentUnitTensor {n : ℕ} (i : Fin (n + 1)) (x : N) : descentTerm R A N n i :=
   descentUnitTensorPlaced R A N n i x
 
-theorem descentReindexMap_exists {n m : ℕ}
+/- The source's `N_{β,i}` is a semilinear map which carries the pure tensor
+with the distinguished element `x` to the corresponding pure tensor in the
+target.  We retain its underlying `R`-linear map because the categorical
+cosimplicial object below lives in `ModuleCat R`; both maps are chosen from
+one piece of data so that the two presentations cannot drift apart. -/
+structure DescentReindexMapData {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) where
+  linear : descentTerm R A N n i →ₗ[R]
+    descentTerm R A N m (β.toOrderHom i)
+  semilinear : descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
+    descentTerm R A N m (β.toOrderHom i)
+  semilinear_eq_linear : ∀ x, semilinear x = linear x
+  map_unit : ∀ x : N,
+    linear (descentUnitTensorPlaced R A N n i x) =
+      descentUnitTensorPlaced R A N m (β.toOrderHom i) x
+
+theorem descentReindexMapData_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
-    Nonempty (descentTerm R A N n i →ₗ[R]
-      descentTerm R A N m (β.toOrderHom i)) := by
+    Nonempty (DescentReindexMapData D β i) := by
   sorry
+
+noncomputable def descentReindexMapData {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
+    DescentReindexMapData D β i :=
+  Classical.choice (descentReindexMapData_exists D β i)
 
 noncomputable def descentReindexMap {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
     descentTerm R A N n i →ₗ[R]
       descentTerm R A N m (β.toOrderHom i) :=
-  Classical.choice (descentReindexMap_exists D β i)
+  (descentReindexMapData D β i).linear
 
-/- The source's `N_{β,i}` is semilinear for the Amitsur ring map.  This is the
-exact interface; the preceding `R`-linear map is its underlying shadow. -/
-theorem descentReindexMap_semilinear_exists {n m : ℕ}
+theorem descentReindexMap_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
-    Nonempty (descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
-      descentTerm R A N m (β.toOrderHom i)) := by
-  sorry
+    Nonempty (descentTerm R A N n i →ₗ[R]
+      descentTerm R A N m (β.toOrderHom i)) :=
+  ⟨descentReindexMap D β i⟩
 
 noncomputable def descentReindexMapSemilinear {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
     descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
       descentTerm R A N m (β.toOrderHom i) :=
-  Classical.choice (descentReindexMap_semilinear_exists D β i)
+  (descentReindexMapData D β i).semilinear
+
+theorem descentReindexMap_semilinear_exists {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
+    Nonempty (descentTerm R A N n i →ₛₗ[(relativeTensorMap R A β).toRingHom]
+      descentTerm R A N m (β.toOrderHom i)) :=
+  ⟨descentReindexMapSemilinear D β i⟩
 
 /- The transition map on the normal form `N_{n,n}` is obtained by first
 reindexing the distinguished factor and then transporting it to the last
@@ -612,7 +666,7 @@ theorem descentReindexMapSemilinear_apply {n m : ℕ}
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1))
     (x : descentTerm R A N n i) :
     descentReindexMapSemilinear D β i x = descentReindexMap D β i x := by
-  sorry
+  exact (descentReindexMapData D β i).semilinear_eq_linear x
 
 theorem descentCosimplicialModuleMapSemilinear_apply {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
@@ -627,14 +681,15 @@ theorem descentReindexMap_unit {n m : ℕ}
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
     descentReindexMap D β i (descentUnitTensor i x) =
       descentUnitTensor (β.toOrderHom i) x := by
-  sorry
+  exact (descentReindexMapData D β i).map_unit x
 
 theorem descentReindexMapSemilinear_unit {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
     descentReindexMapSemilinear D β i (descentUnitTensor i x) =
       descentUnitTensor (β.toOrderHom i) x := by
-  sorry
+  rw [descentReindexMapSemilinear_apply]
+  exact descentReindexMap_unit D β i x
 
 noncomputable def descentCosimplicialModule
     (D : DescentDatum (R := R) (A := A) (N := N)) :
@@ -1105,6 +1160,10 @@ theorem proposition_descent_module (R A : Type u)
         (D : DescentDatum (R := R) (A := A) (N := N)),
         descentInverseModule D = descentH0 D) := by
   sorry
+
+/- In the source proof of the proposition, the final invariant element is
+written with `y_i`; the preceding expansion has `y_j`, so the mathematical
+term represented by the interface is `∑ j, σ (a_{ij}) • y_j`. -/
 
 /-! ## Standard covers -/
 

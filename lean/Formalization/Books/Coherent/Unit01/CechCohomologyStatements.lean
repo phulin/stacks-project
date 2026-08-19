@@ -231,16 +231,174 @@ theorem standard_open_module_truncation_exact {Y : Scheme.{u}} {hY : IsAffine Y}
   exact Formalization.Books.Algebra.Unit24.cover_module_exact
     𝒰.function 𝒰.span_eq_top Γ(M, ⊤)
 
-/-- Transport the algebraic localization sequence to the augmentation and
+/- Transport the algebraic localization sequence to the augmentation and
 degree-zero differential of the geometric Čech complex. -/
-/- TODO(proof agents -- leaf: sections/localization bridge): for the
-quasi-coherent `M`, construct the natural linear equivalences
+/- The following maps make the geometric/algebraic comparison explicit.  The
+`forgetToSheafModuleCat` functor is important here: it retains the global
+section ring as the scalar ring while its underlying presheaf is the
+abelian-valued presheaf used by `cechComplex`. -/
+
+/-- The sections viewed as modules over the global section ring. -/
+abbrev standardOpenModuleSections {Y : Scheme.{u}}
+    (M : Y.Modules) (U : Y.Opens) : ModuleCat.{u} (Γ(Y, ⊤)) :=
+  (((SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
+    (Limits.initialOpOfTerminal Limits.isTerminalTop)).obj M).1.obj (.op U))
+
+/-- Restriction of sections of a module on an affine scheme, regarded as a
+linear map over the ring of global functions. -/
+noncomputable def standardOpenModuleSectionRestrictionBetween {Y : Scheme.{u}}
+    (M : Y.Modules) (U V : Y.Opens) (hUV : U ≤ V) :
+    standardOpenModuleSections M V ⟶ standardOpenModuleSections M U := by
+  exact (((SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
+      (Limits.initialOpOfTerminal Limits.isTerminalTop)).obj M).1.map
+      (homOfLE hUV).op)
+
+/-- Restriction of sections of a module on an affine scheme, regarded as a
+linear map over the ring of global functions. -/
+noncomputable def standardOpenModuleSectionRestriction {Y : Scheme.{u}}
+    (M : Y.Modules) (U : Y.Opens) (hU : U ≤ (⊤ : Y.Opens)) :
+    standardOpenModuleSections M ⊤ ⟶ standardOpenModuleSections M U := by
+  exact standardOpenModuleSectionRestrictionBetween M U ⊤ hU
+
+/-- The restriction map to a basic open is a localization map for a
+quasi-coherent module on an affine scheme. -/
+theorem standardOpenModuleSectionRestriction_isLocalized
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (i : Fin 𝒰.n) :
+    IsLocalizedModule (Submonoid.powers (𝒰.function i))
+      (standardOpenModuleSectionRestriction M (𝒰.basicOpen i)
+        (Y.basicOpen_le (𝒰.function i))).hom := by
+  sorry
+
+/-- Sections on a basic open compared with the Unit 24 `Away` module. -/
+noncomputable def standardOpenSectionLocalizationEquiv
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (i : Fin 𝒰.n) :
+    (standardOpenModuleSections M (𝒰.basicOpen i) : Type u) ≃ₗ[Γ(Y, ⊤)]
+      Formalization.Books.Algebra.Unit24.standardCoverLocalModule
+        𝒰.function (standardOpenModuleSections M ⊤ : Type u) i := by
+  letI := standardOpenModuleSectionRestriction_isLocalized 𝒰 M i
+  exact IsLocalizedModule.linearEquiv (Submonoid.powers (𝒰.function i))
+    (standardOpenModuleSectionRestriction M (𝒰.basicOpen i)
+      (Y.basicOpen_le (𝒰.function i))).hom
+    (LocalizedModule.mkLinearMap (Submonoid.powers (𝒰.function i))
+      (standardOpenModuleSections M ⊤ : Type u))
+
+/-- The restriction map to a basic-open intersection is localized at both
+cover functions.  The target is the `standardCoverJointModule` of Unit 24. -/
+theorem standardOpenIntersectionSectionRestriction_isLocalized
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (i j : Fin 𝒰.n) :
+    IsLocalizedModule
+      (Formalization.Books.Algebra.Unit24.standardCoverJointSubmonoid
+        𝒰.function i j)
+      (standardOpenModuleSectionRestriction M
+        (𝒰.basicOpen i ⊓ 𝒰.basicOpen j)
+        (by simp)).hom := by
+  sorry
+
+/-- Sections on a basic-open intersection compared with the Unit 24 joint
+localization. -/
+noncomputable def standardOpenIntersectionSectionLocalizationEquiv
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (i j : Fin 𝒰.n) :
+    (standardOpenModuleSections M
+      (𝒰.basicOpen i ⊓ 𝒰.basicOpen j) : Type u) ≃ₗ[Γ(Y, ⊤)]
+      Formalization.Books.Algebra.Unit24.standardCoverJointModule
+        𝒰.function (standardOpenModuleSections M ⊤ : Type u) i j := by
+  letI := standardOpenIntersectionSectionRestriction_isLocalized 𝒰 M i j
+  exact IsLocalizedModule.linearEquiv
+    (Formalization.Books.Algebra.Unit24.standardCoverJointSubmonoid
+      𝒰.function i j)
+    (standardOpenModuleSectionRestriction M
+      (𝒰.basicOpen i ⊓ 𝒰.basicOpen j) (le_top :
+        𝒰.basicOpen i ⊓ 𝒰.basicOpen j ≤ (⊤ : Y.Opens))).hom
+    (LocalizedModule.mkLinearMap
+      (Formalization.Books.Algebra.Unit24.standardCoverJointSubmonoid
+        𝒰.function i j) (standardOpenModuleSections M ⊤ : Type u))
+
+/-- The family of restriction maps to the basic opens. -/
+noncomputable def standardOpenSectionAlpha {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+  (standardOpenModuleSections M ⊤ : Type u) →ₗ[Γ(Y, ⊤)]
+      (∀ i : Fin 𝒰.n, standardOpenModuleSections M (𝒰.basicOpen i)) :=
+  LinearMap.pi fun i => (standardOpenModuleSectionRestriction M
+    (𝒰.basicOpen i) (Y.basicOpen_le (𝒰.function i))).hom
+
+/-- The family of restriction maps to pairwise intersections. -/
+noncomputable def standardOpenSectionBeta {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    (∀ i : Fin 𝒰.n, standardOpenModuleSections M (𝒰.basicOpen i)) →ₗ[Γ(Y, ⊤)]
+      (∀ p : Fin 𝒰.n × Fin 𝒰.n,
+        standardOpenModuleSections M
+          (𝒰.basicOpen p.1 ⊓ 𝒰.basicOpen p.2)) := by
+  classical
+    exact LinearMap.pi fun p =>
+    (standardOpenModuleSectionRestrictionBetween M
+      (𝒰.basicOpen p.1 ⊓ 𝒰.basicOpen p.2) (𝒰.basicOpen p.1) inf_le_left).hom.comp
+      (LinearMap.proj p.1) -
+    (standardOpenModuleSectionRestrictionBetween M
+      (𝒰.basicOpen p.1 ⊓ 𝒰.basicOpen p.2) (𝒰.basicOpen p.2) inf_le_right).hom.comp
+      (LinearMap.proj p.2)
+
+/-- The product of the basic-open section/localization comparisons. -/
+noncomputable def standardOpenSectionProductLocalizationEquiv
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    (∀ i : Fin 𝒰.n, standardOpenModuleSections M (𝒰.basicOpen i)) ≃ₗ[Γ(Y, ⊤)]
+      (∀ i : Fin 𝒰.n,
+        Formalization.Books.Algebra.Unit24.standardCoverLocalModule
+          𝒰.function (standardOpenModuleSections M ⊤ : Type u) i) :=
+  LinearEquiv.piCongrRight fun i =>
+    standardOpenSectionLocalizationEquiv 𝒰 M i
+
+/-- The product of the pairwise-intersection section/localization
+comparisons. -/
+noncomputable def standardOpenIntersectionProductLocalizationEquiv
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    (∀ p : Fin 𝒰.n × Fin 𝒰.n,
+      standardOpenModuleSections M
+        (𝒰.basicOpen p.1 ⊓ 𝒰.basicOpen p.2)) ≃ₗ[Γ(Y, ⊤)]
+      (∀ p : Fin 𝒰.n × Fin 𝒰.n,
+        Formalization.Books.Algebra.Unit24.standardCoverJointModule
+          𝒰.function (standardOpenModuleSections M ⊤ : Type u) p.1 p.2) :=
+  LinearEquiv.piCongrRight fun p =>
+    standardOpenIntersectionSectionLocalizationEquiv 𝒰 M p.1 p.2
+
+/- The component equations are the concrete compatibility interface used to
+transport the augmentation and the degree-zero differential. -/
+theorem standardOpenSectionProductLocalizationEquiv_comp_alpha
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    (standardOpenSectionProductLocalizationEquiv 𝒰 M).toLinearMap.comp
+        (standardOpenSectionAlpha 𝒰 M) =
+      Formalization.Books.Algebra.Unit24.standardCoverModuleAlpha
+        𝒰.function (standardOpenModuleSections M ⊤ : Type u) := by
+  sorry
+
+theorem standardOpenIntersectionProductLocalizationEquiv_comp_beta
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    (standardOpenIntersectionProductLocalizationEquiv 𝒰 M).toLinearMap.comp
+        (standardOpenSectionBeta 𝒰 M) =
+      (Formalization.Books.Algebra.Unit24.standardCoverModuleBeta
+        𝒰.function (standardOpenModuleSections M ⊤ : Type u)).comp
+        (standardOpenSectionProductLocalizationEquiv 𝒰 M).toLinearMap := by
+  sorry
+
+/- The declarations above expose the natural linear equivalences for the
+quasi-coherent `M`:
 
   `M(D(f_i)) ≃ M(Y)_{f_i}` and
   `M(D(f_i) ∩ D(f_j)) ≃ M(Y)_{f_i f_j}`,
 
-including the comparison between Mathlib's finite-intersection sections and
-`Algebra.Unit24.standardCoverJointModule`.  Prove that these equivalences
+The comparison uses Mathlib's finite-intersection sections and
+`Algebra.Unit24.standardCoverJointModule`; prove that these equivalences
 intertwine `cechAugmentation` and the degree-zero Čech differential with
 `standardCoverModuleAlpha` and `standardCoverModuleBeta`.  Only then transport
 the two conclusions of `Algebra.Unit24.cover_module_exact 𝒰.function
@@ -338,20 +496,105 @@ theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
 
 /-- The Čech complex with its natural linear structure over the ring of global
 sections, used as the module-valued model for the geometric Čech complex. -/
-/- TODO(proof agents -- construction leaf: global-linear Čech model): apply
+/- The module-valued model is defined above by applying
 `CategoryTheory.cechComplexFunctor` to the underlying presheaf of
 
-  `SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
+`SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
     (Limits.initialOpOfTerminal Limits.isTerminalTop) |>.obj M`.
 
 This existing functor performs the required restriction of scalars from every
-`Γ(Y, V)` to `Γ(Y, ⊤)` and makes all restriction maps globally linear. -/
+`Γ(Y, V)` to `Γ(Y, ⊤)` and makes all restriction maps globally linear; the
+remaining proof leaf is the forgetful comparison with `cechComplex`. -/
 noncomputable def standardOpenCechModuleComplex {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
     CochainComplex (ModuleCat.{u} Γ(Y, ⊤)) ℕ := by
   exact (CategoryTheory.cechComplexFunctor 𝒰.basicOpenFamily).obj
     ((SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
       (Limits.initialOpOfTerminal Limits.isTerminalTop)).obj M).1
+
+/-- Localization commutes with every finite product of modules.  This is the
+comparison used degreewise for the finite products in the Čech complex. -/
+noncomputable def localizedFiniteModuleProductIso {R : Type u} [CommRing R]
+    (S : Submonoid R) {ι : Type u} [Fintype ι] (X : ι → ModuleCat.{u} R) :
+    (ModuleCat.localizedModuleFunctor S).obj (∏ᶜ X) ≅
+      ∏ᶜ fun i => (ModuleCat.localizedModuleFunctor S).obj (X i) :=
+  by
+    exact preservesLimitIso (ModuleCat.localizedModuleFunctor S) (Discrete.functor X) ≪≫
+      HasLimit.isoOfNatIso
+        (NatIso.ofComponents (fun _ => Iso.refl _) (by
+          intro X Y f
+          rcases X with ⟨X⟩
+          rcases Y with ⟨Y⟩
+          rcases f with ⟨⟨h⟩⟩
+          cases h
+          simp))
+
+/-- The forgetful additive complex underlying the global-linear Čech model. -/
+noncomputable def standardOpenCechModuleComplexForgotten {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    CochainComplex AddCommGrpCat.{u} ℕ :=
+  ((forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat).mapHomologicalComplex
+    (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M)
+
+/-- The canonical comparison from the forgotten global-linear complex to the
+additive-valued geometric Čech complex. -/
+theorem standardOpenCechModuleComplexForgotten_comparison_exists
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    Nonempty (standardOpenCechModuleComplexForgotten 𝒰 M ≅
+      cechComplex M 𝒰.basicOpenFamily) := by
+  sorry
+
+noncomputable def standardOpenCechModuleComplexForgotten_comparison
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    standardOpenCechModuleComplexForgotten 𝒰 M ⟶
+      cechComplex M 𝒰.basicOpenFamily :=
+  (Classical.choice
+    (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).hom
+
+/-- The geometric augmentation transported across the forgetful comparison
+to the global-linear model. -/
+noncomputable def standardOpenCechAugmentationViaComparison
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    globalSectionsObject M ⟶
+      (standardOpenCechModuleComplexForgotten 𝒰 M).X 0 :=
+  cechAugmentation M 𝒰.basicOpenFamily ≫
+    (Classical.choice
+      (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).inv.f 0
+
+/-- The transported augmentation maps back to the geometric augmentation. -/
+theorem standardOpenCechAugmentationViaComparison_comp_comparison
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    standardOpenCechAugmentationViaComparison 𝒰 M ≫
+        (Classical.choice
+          (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).hom.f 0 =
+      cechAugmentation M 𝒰.basicOpenFamily := by
+  sorry
+
+/-- The forgetful comparison intertwines the degree-zero differentials. -/
+theorem standardOpenCechModuleComplexForgotten_comparison_comm_degree_zero
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    (Classical.choice
+      (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).hom.f 0 ≫
+        (cechComplex M 𝒰.basicOpenFamily).d 0 1 =
+      (standardOpenCechModuleComplexForgotten 𝒰 M).d 0 1 ≫
+        (Classical.choice
+          (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).hom.f 1 := by
+  exact (Classical.choice
+    (standardOpenCechModuleComplexForgotten_comparison_exists 𝒰 M)).hom.comm 0 1
+
+/-- The transported augmentation has the same degree-zero cycle equation as
+`cechAugmentation`. -/
+theorem standardOpenCechAugmentationViaComparison_is_cycle
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) :
+    standardOpenCechAugmentationViaComparison 𝒰 M ≫
+        (standardOpenCechModuleComplexForgotten 𝒰 M).d 0 1 = 0 := by
+  sorry
 
 /-- The global-linear Čech complex localized at one prime. -/
 noncomputable def primeLocalizedStandardOpenCechComplex {Y : Scheme.{u}}
@@ -362,13 +605,22 @@ noncomputable def primeLocalizedStandardOpenCechComplex {Y : Scheme.{u}}
     (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M)
 
 /-- The degreewise index-insertion map on the prime-localized Čech complex. -/
-/- TODO(proof agents -- construction leaf: localized insertion map): identify
-localization of each finite product with the product of the localized terms.
-Quasi-coherence identifies the factor indexed by `i₀, ..., iₙ` with the
-iterated localization of `Γ(M, ⊤)` at the corresponding cover functions.
-Because `choice.fixed_not_mem` makes the fixed function a unit at `p`, dropping
-that factor gives the required map
-`h(s) i₀ ... iₙ := s(choice.fixed, i₀, ..., iₙ)`. -/
+/- The finite-product localization comparison and the section/localization
+maps above provide the construction interface for the insertion map.  The
+remaining proof leaf identifies its componentwise formula
+`h(s) i₀ ... iₙ := s(choice.fixed, i₀, ..., iₙ)` and uses that
+`choice.fixed_not_mem` makes the fixed function a unit at `p`. -/
+theorem standard_open_prime_localized_homotopyMap_exists
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (p : PrimeSpectrum (Γ(Y, ⊤))) (choice : LocalizedCechHomotopyData 𝒰 p) :
+    Nonempty (∀ n : ℕ,
+      (primeLocalizedStandardOpenCechComplex 𝒰 M p).X (n + 1) ⟶
+        (primeLocalizedStandardOpenCechComplex 𝒰 M p).X n) := by
+  sorry
+
+/-- The degreewise insertion map supplied by the finite-product localization
+comparisons and the choice of a cover function which is a unit at `p`. -/
 noncomputable def standard_open_prime_localized_homotopyMap
     {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
     (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
@@ -376,8 +628,8 @@ noncomputable def standard_open_prime_localized_homotopyMap
     (n : ℕ) :
     (primeLocalizedStandardOpenCechComplex 𝒰 M p).X (n + 1) ⟶
       (primeLocalizedStandardOpenCechComplex 𝒰 M p).X n := by
-  classical
-  exact if choice.fixed = choice.fixed then 0 else 0
+  exact (Classical.choice
+    (standard_open_prime_localized_homotopyMap_exists 𝒰 M p choice)) n
 
 /-- The localized insertion maps satisfy `d h + h d = 1`. -/
 /- TODO(proof agents -- leaf: alternating-sign identity): expand the Čech

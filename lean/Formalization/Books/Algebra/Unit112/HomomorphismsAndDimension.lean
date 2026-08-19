@@ -385,7 +385,9 @@ private theorem ringKrullDim_le_of_localRingHom
     | coe q =>
         cases q with
         | top => exact (htop hq).elim
-        | coe d => exact ⟨d, by simpa using hq⟩
+        | coe d =>
+            refine ⟨d, ?_⟩
+            simp
   have hparam :=
     ((Formalization.Books.Algebra.Unit60.local_dimension_characterization
       A inferInstance d).out 0 2).mp hd
@@ -465,8 +467,7 @@ theorem ringKrullDim_localization_le_base_add_fibre
         g.comp (algebraMap R (Localization.AtPrime p.asIdeal)) =
           (algebraMap S (Localization.AtPrime q.asIdeal)).comp f := by
       ext x
-      simp [g, Localization.localRingHom_to_map,
-        IsScalarTower.algebraMap_apply]
+      simp [g, Localization.localRingHom_to_map]
     rw [heq]
     rw [← Ideal.map_map]
   have hbound := ringKrullDim_le_of_localRingHom g
@@ -485,12 +486,12 @@ theorem ringKrullDim_localization_eq_base_add_fibre_of_goingDown
         ringKrullDim (Localization.AtPrime p.asIdeal) +
           ringKrullDim (localRingOfFibre f p q hq) := by
   intro hGD
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra.HasGoingDown R S := hGD
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.HasGoingDown R S := hGD
   have hcomap : q.asIdeal.comap (algebraMap R S) = p.asIdeal := by
     simpa [RingHom.algebraMap_toAlgebra, PrimeSpectrum.comap_asIdeal] using
       congrArg PrimeSpectrum.asIdeal hq
-  letI : q.asIdeal.LiesOver p.asIdeal := ⟨hcomap.symm⟩
+  let _ : q.asIdeal.LiesOver p.asIdeal := ⟨hcomap.symm⟩
   let I : Ideal S := p.asIdeal.map (algebraMap R S)
   have hheight :=
     Ideal.height_eq_height_add_of_liesOver_of_hasGoingDown
@@ -593,16 +594,16 @@ theorem isRegularLocalRing_of_flat_localHom_of_regular_fibre
       (S ⧸ (IsLocalRing.maximalIdeal R).map f))
     (hflat : RingHom.Flat f) :
     IsRegularLocalRing S := by
-  letI : Algebra R S := f.toAlgebra
-  letI : IsLocalHom (algebraMap R S) := by
+  let _ : Algebra R S := f.toAlgebra
+  let _ : IsLocalHom (algebraMap R S) := by
     change IsLocalHom f
     infer_instance
   obtain ⟨xs, hxs⟩ := exists_minimal_maximalIdeal_generators (R := R)
   have hregR : RingTheory.Sequence.IsRegular R xs :=
     (Formalization.Books.Algebra.Unit106.regular_ring_CM xs hxs).1
-  letI : Module.Flat R S := RingHom.flat_algebraMap_iff.mp (by
+  let _ : Module.Flat R S := RingHom.flat_algebraMap_iff.mp (by
     simpa [RingHom.algebraMap_toAlgebra] using hflat)
-  letI : Module.FaithfullyFlat R S :=
+  let _ : Module.FaithfullyFlat R S :=
     Module.FaithfullyFlat.of_flat_of_isLocalHom
   have hregS : RingTheory.Sequence.IsRegular S
       (xs.map (algebraMap R S)) :=
@@ -613,7 +614,7 @@ theorem isRegularLocalRing_of_flat_localHom_of_regular_fibre
     rw [← Ideal.map_ofList, hxs.1]
   have hquot : IsRegularLocalRing
       (S ⧸ Ideal.ofList (xs.map (algebraMap R S))) := by
-    letI : IsRegularLocalRing
+    let _ : IsRegularLocalRing
         (S ⧸ (IsLocalRing.maximalIdeal R).map (algebraMap R S)) := by
       simpa [RingHom.algebraMap_toAlgebra] using hFibre
     exact IsRegularLocalRing.of_ringEquiv
@@ -640,8 +641,8 @@ theorem isCohenMacaulay_of_finiteFlat_or_flat_of_ringKrullDim_le
         Formalization.Books.Algebra.Unit103.IsCohenMacaulay S S ∧
           ringKrullDim R = ringKrullDim S := by
     intro hflat hdim
-    letI : Algebra R S := f.toAlgebra
-    letI : IsLocalHom (algebraMap R S) := by
+    let _ : Algebra R S := f.toAlgebra
+    let _ : IsLocalHom (algebraMap R S) := by
       change IsLocalHom f
       infer_instance
     have hRdim :
@@ -666,9 +667,9 @@ theorem isCohenMacaulay_of_finiteFlat_or_flat_of_ringKrullDim_le
           Ideal.ofList ys • (⊤ : Submodule R R) := by
         rw [Ideal.smul_eq_mul, Ideal.mul_top, htop]
       exact hregR.top_ne_smul htop'
-    letI : Module.Flat R S := RingHom.flat_algebraMap_iff.mp (by
+    let _ : Module.Flat R S := RingHom.flat_algebraMap_iff.mp (by
       simpa [RingHom.algebraMap_toAlgebra] using hflat)
-    letI : Module.FaithfullyFlat R S :=
+    let _ : Module.FaithfullyFlat R S :=
       Module.FaithfullyFlat.of_flat_of_isLocalHom
     have hregS : RingTheory.Sequence.IsRegular S
         (ys.map (algebraMap R S)) :=

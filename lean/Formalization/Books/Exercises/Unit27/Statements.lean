@@ -1080,7 +1080,7 @@ theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
     rw [hpiece_eq i x hx, hpiece_eq j y hy]
     intro n hn
     rw [Polynomial.coeff_mul, Polynomial.coeff_monomial_mul_monomial]
-    simp [hn]
+    simpa only [if_neg (Ne.symm hn)]
   let : SetLike.GradedMonoid piece := ⟨hgradedOne, hgradedMul⟩
   have hleft (x : B) :
       DirectSum.coeAddMonoidHom piece (decompose x) = x := by
@@ -1122,7 +1122,7 @@ theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
         ⟨reesHomogeneousElement I 0 (by simp), by
           change ∀ n, n ≠ 0 → (Polynomial.monomial 0 a).coeff n = 0
           intro n hn
-          simp⟩
+          simpa only [Polynomial.coeff_monomial, if_neg (Ne.symm hn)]⟩
       left_inv := by
         intro x
         apply Subtype.ext

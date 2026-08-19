@@ -2168,8 +2168,11 @@ theorem exists_strict_composition_failure :
   have hfstrict : Strict f₀ := by
     simpa only [f₀] using (strict_induced_iff (A := B₀) X)
   have hgstrict : Strict g₀ := by
-    simpa only [g₀] using
-      (strict_quotient_iff (A := B₀) (Y := cokernel Y.arrow) q)
+    change Strict (quotientFilteredHom B₀ q)
+    exact @strict_quotient_iff
+      (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2))))
+      ULiftHom.category uliftHomFgModuleReprAbelian B₀
+      (cokernel Y.arrow) q (inferInstance : Epi q)
   refine ⟨ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2))),
     inferInstance, inferInstance, ?_⟩
   let S : StrictCompositionFailure :=

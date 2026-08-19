@@ -209,21 +209,66 @@ theorem leftAdjoint_map_is_functorial_colimit
         (op (SimplexCategory.mk n')) ≅ leftSkeletonColimit m n' U h_n'),
       e_n'.hom ≫ f =
         ((leftAdjoint m).obj U).map φ.op ≫ e_n.hom := by
-  sorry
+  let e_n : ((leftAdjoint m).obj U).obj (op (SimplexCategory.mk n)) ≅
+      leftSkeletonColimit m n U h_n :=
+    Classical.choice (leftAdjoint_obj_iso_colimit m n U h_n)
+  let e_n' : ((leftAdjoint m).obj U).obj (op (SimplexCategory.mk n')) ≅
+      leftSkeletonColimit m n' U h_n' :=
+    Classical.choice (leftAdjoint_obj_iso_colimit m n' U h_n')
+  refine ⟨e_n'.inv ≫ ((leftAdjoint m).obj U).map φ.op ≫ e_n.hom, e_n, e_n', ?_⟩
+  simp only [Iso.hom_inv_id_assoc]
 
 /-- In the truncation range the unit of the adjunction is an isomorphism. -/
 theorem leftAdjoint_unit_is_iso
     {C : Type u} [Category.{v} C] [HasFiniteColimits C]
     (m : ℕ) (U : SimplicialObject.Truncated C m) :
     IsIso (leftAdjointUnit m U) := by
-  sorry
+  letI : HasLeftSkeletonFunctor C m :=
+    has_left_skeleton_functor_of_has_finite_colimits m
+  letI : (leftSkeletonInclusion m).Full :=
+    (SimplexCategory.Truncated.inclusion.fullyFaithful m).full
+  letI : (leftSkeletonInclusion m).Faithful :=
+    (SimplexCategory.Truncated.inclusion.fullyFaithful m).faithful
+  dsimp [leftAdjointUnit, leftAdjunction, leftAdjoint]
+  rw [Functor.lanAdjunction_unit]
+  letI : ∀ X, IsIso (((leftSkeletonInclusion m).lanUnit.app U).app X) := fun X =>
+    (Functor.isPointwiseLeftKanExtensionLeftKanExtensionUnit
+      (leftSkeletonInclusion m) U ((leftSkeletonInclusion m).obj X)).isIso_hom_app
+  exact NatIso.isIso_of_isIso_app ((leftSkeletonInclusion m).lanUnit.app U)
 
 /-- The degree-`n` colimit exists from the initial object when `n ≤ m`. -/
 theorem has_left_skeleton_colimit_of_degree_le
     {C : Type u} [Category.{v} C]
     (m n : ℕ) (U : SimplicialObject.Truncated C m) (hn : n ≤ m) :
     HasColimit (leftSkeletonDiagram m n U) := by
-  sorry
+  let hff : (leftSkeletonInclusion m).FullyFaithful :=
+    SimplexCategory.Truncated.inclusion.fullyFaithful m
+  letI : (leftSkeletonInclusion m).Full := hff.full
+  letI : (leftSkeletonInclusion m).Faithful := hff.faithful
+  let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, hn⟩
+  let e : op (SimplexCategory.mk n) = (leftSkeletonInclusion m).obj Y := by rfl
+  let j0 : leftSkeletonIndex m n :=
+    CostructuredArrow.mk (Y := Y) (eqToHom e.symm)
+  let hterm : IsTerminal j0 := by
+    refine IsTerminal.ofUniqueHom (Y := j0) ?_ ?_
+    · intro A
+      let g := hff.preimage (A.hom ≫ eqToHom e)
+      exact CostructuredArrow.homMk (f := A) (f' := j0) g (by
+        change (leftSkeletonInclusion m).map g ≫ eqToHom e.symm = A.hom
+        rw [hff.map_preimage]
+        simp)
+    · intro A f
+      apply CostructuredArrow.hom_ext
+      apply (leftSkeletonInclusion m).map_injective
+      change (leftSkeletonInclusion m).map f.left =
+        (leftSkeletonInclusion m).map (hff.preimage (A.hom ≫ eqToHom e))
+      calc
+        (leftSkeletonInclusion m).map f.left = A.hom ≫ eqToHom e := by
+          simpa [j0, e] using congrArg (fun q => q ≫ eqToHom e) f.w
+        _ = (leftSkeletonInclusion m).map (hff.preimage (A.hom ≫ eqToHom e)) :=
+          (hff.map_preimage (A.hom ≫ eqToHom e)).symm
+  exact HasColimit.mk ⟨coconeOfDiagramTerminal hterm (leftSkeletonDiagram m n U),
+    colimitOfDiagramTerminal hterm (leftSkeletonDiagram m n U)⟩
 
 /-- The source's recovery statement at an individual degree. -/
 theorem leftSkeleton_recovering_degree
@@ -232,7 +277,36 @@ theorem leftSkeleton_recovering_degree
     Nonempty (leftSkeletonColimit m n U
       (has_left_skeleton_colimit_of_degree_le m n U hn) ≅
       U.obj (op ⟨SimplexCategory.mk n, hn⟩)) := by
-  sorry
+  let hcol := has_left_skeleton_colimit_of_degree_le m n U hn
+  letI : HasColimit (leftSkeletonDiagram m n U) := hcol
+  let hff : (leftSkeletonInclusion m).FullyFaithful :=
+    SimplexCategory.Truncated.inclusion.fullyFaithful m
+  letI : (leftSkeletonInclusion m).Full := hff.full
+  letI : (leftSkeletonInclusion m).Faithful := hff.faithful
+  let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, hn⟩
+  let e : op (SimplexCategory.mk n) = (leftSkeletonInclusion m).obj Y := by rfl
+  let j0 : leftSkeletonIndex m n :=
+    CostructuredArrow.mk (Y := Y) (eqToHom e.symm)
+  let hterm : IsTerminal j0 := by
+    refine IsTerminal.ofUniqueHom (Y := j0) ?_ ?_
+    · intro A
+      let g := hff.preimage (A.hom ≫ eqToHom e)
+      exact CostructuredArrow.homMk (f := A) (f' := j0) g (by
+        change (leftSkeletonInclusion m).map g ≫ eqToHom e.symm = A.hom
+        rw [hff.map_preimage]
+        simp)
+    · intro A f
+      apply CostructuredArrow.hom_ext
+      apply (leftSkeletonInclusion m).map_injective
+      change (leftSkeletonInclusion m).map f.left =
+        (leftSkeletonInclusion m).map (hff.preimage (A.hom ≫ eqToHom e))
+      calc
+        (leftSkeletonInclusion m).map f.left = A.hom ≫ eqToHom e := by
+          simpa [j0, e] using congrArg (fun q => q ≫ eqToHom e) f.w
+        _ = (leftSkeletonInclusion m).map (hff.preimage (A.hom ≫ eqToHom e)) :=
+          (hff.map_preimage (A.hom ≫ eqToHom e)).symm
+  exact ⟨(colimit.isColimit (leftSkeletonDiagram m n U)).coconePointUniqueUpToIso
+    (colimitOfDiagramTerminal hterm (leftSkeletonDiagram m n U))⟩
 
 /-- Some authors call truncation followed by `iₘ!` the `m`-skeleton. -/
 noncomputable def sourceSkeletonEndofunctor

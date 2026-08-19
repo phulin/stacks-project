@@ -285,7 +285,49 @@ private theorem canonicalNoncompleteQuotientFiniteExpansion_sub
 /-- The element `x` is a zerodivisor: `xⁱwᵢwⱼ = 0`, while `wᵢwⱼ` survives. -/
 theorem noncompleteQuotientX_isNotRegular (k : Type u) [Field k] :
     ¬ IsRegular (xElement k) := by
-  sorry
+  classical
+  let i : ℕ+ := ⟨1, by decide⟩
+  let φ : NoncompleteQuotientVariable → k := fun v =>
+    match v with
+    | .w _ => 1
+    | _ => 0
+  let e : NoncompleteQuotientPolynomial k →+* k :=
+    MvPolynomial.eval₂Hom (RingHom.id k) φ
+  have hrel : ∀ p ∈ noncompleteQuotientRelationSet k, e p = 0 := by
+    rintro p (⟨j, rfl⟩ | ⟨⟨j, l⟩, rfl⟩)
+    · simp [e, φ, Nat.ne_of_gt j.pos]
+    · simp [e, φ]
+  have hker : noncompleteQuotientRelationIdeal k ≤ RingHom.ker e := by
+    rw [noncompleteQuotientRelationIdeal, Ideal.span_le]
+    intro p hp
+    exact hrel p hp
+  let q : NoncompleteQuotientRing k →+* k :=
+    Ideal.Quotient.lift (noncompleteQuotientRelationIdeal k) e hker
+  have hqw : q (wElement k i) = 1 := by
+    change e (MvPolynomial.X (.w i)) = 1
+    simp [e, φ, i]
+  have hw : wElement k i * wElement k i ≠ 0 := by
+    intro h
+    have hzero := congrArg q h
+    rw [map_mul, hqw, map_zero] at hzero
+    rw [one_mul] at hzero
+    exact (one_ne_zero : (1 : k) ≠ 0) hzero
+  have hvanish :
+      xElement k ^ (i : ℕ) * (wElement k i * wElement k i) = 0 := by
+    calc
+      xElement k ^ (i : ℕ) * (wElement k i * wElement k i) =
+          (xElement k ^ (i : ℕ) * wElement k i) * wElement k i := by ring
+      _ = (zElement k i * tElement k) * wElement k i := by
+        rw [zElement_mul_tElement]
+      _ = 0 := by
+        rw [show (zElement k i * tElement k) * wElement k i =
+            (zElement k i * wElement k i) * tElement k by ring]
+        rw [zElement_mul_wElement, zero_mul]
+  intro hx
+  apply hw
+  exact hx.left (by
+    change xElement k * (wElement k i * wElement k i) = xElement k * 0
+    simpa [i] using hvanish)
 
 /-- The quotient ring is `(x)`-adically separated. -/
 theorem iInf_noncompleteQuotientXIdealPow_eq_bot (k : Type u) [Field k] :
@@ -631,7 +673,9 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
 /-- Each summand `xⁱwᵢ` belongs to `(t)`, by the relation `zᵢt = xⁱwᵢ`. -/
 theorem noncompleteQuotientX_pow_mul_w_mem_t (k : Type u) [Field k] (i : ℕ+) :
     xElement k ^ (i : ℕ) * wElement k i ∈ noncompleteQuotientTIdeal k := by
-  sorry
+  rw [← zElement_mul_tElement]
+  exact (noncompleteQuotientTIdeal k).mul_mem_left (zElement k i)
+    (Ideal.mem_span_singleton_self (tElement k))
 
 /-- The bad element lies in `(t, xⁿ)` for every `n`. -/
 def noncompleteQuotientCompletionMixedIdeal (k : Type u) [Field k] (n : ℕ) :
@@ -642,7 +686,104 @@ def noncompleteQuotientCompletionMixedIdeal (k : Type u) [Field k] (n : ℕ) :
 theorem noncompleteQuotientBadElement_mem_completionMixedIdeal
     (k : Type u) [Field k] (n : ℕ) :
     noncompleteQuotientBadElement k ∈ noncompleteQuotientCompletionMixedIdeal k n := by
-  sorry
+  classical
+  have hpartial_base :
+      noncompleteQuotientBadPartialSum k n ∈ noncompleteQuotientTIdeal k := by
+    simp only [noncompleteQuotientBadPartialSum]
+    apply (noncompleteQuotientTIdeal k).sum_mem
+    intro j hj
+    exact noncompleteQuotientX_pow_mul_w_mem_t k
+      ⟨j + 1, Nat.succ_pos j⟩
+  have hpart :
+      noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n) ∈
+        noncompleteQuotientCompletionTIdeal k := by
+    have hmap := Ideal.mem_map_of_mem
+      (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k))
+      hpartial_base
+    simpa [noncompleteQuotientCompletionOf,
+      noncompleteQuotientCompletionTIdeal, AdicCompletion.algebraMap_apply] using hmap
+  have hevalₐ :
+      AdicCompletion.evalₐ (noncompleteQuotientXIdeal k) n
+          (noncompleteQuotientBadElement k -
+            noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n)) = 0 := by
+    rw [map_sub, noncompleteQuotientBadElement, AdicCompletion.evalₐ_mk,
+      noncompleteQuotientCompletionOf, AdicCompletion.evalₐ_of]
+    change Ideal.Quotient.mk (noncompleteQuotientXIdeal k ^ n)
+        (noncompleteQuotientBadPartialSum k n) -
+      Ideal.Quotient.mk (noncompleteQuotientXIdeal k ^ n)
+        (noncompleteQuotientBadPartialSum k n) = 0
+    simp
+  have hfactor :
+      noncompleteQuotientXIdeal k ^ n ≤
+        noncompleteQuotientXIdeal k ^ n •
+          (⊤ : Ideal (NoncompleteQuotientRing k)) := by
+    simp [smul_eq_mul, Ideal.mul_top]
+  have heval :
+      AdicCompletion.eval (noncompleteQuotientXIdeal k)
+          (NoncompleteQuotientRing k) n
+          (noncompleteQuotientBadElement k -
+            noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n)) = 0 := by
+    rw [← AdicCompletion.factor_evalₐ_eq_eval (noncompleteQuotientXIdeal k) _ hfactor]
+    rw [hevalₐ]
+    exact map_zero _
+  have hfg : (noncompleteQuotientXIdeal k).FG :=
+    (show Submodule.IsPrincipal
+        (noncompleteQuotientXIdeal k :
+          Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
+      ⟨xElement k, rfl⟩).fg
+  have htail_base :
+      noncompleteQuotientBadElement k -
+          noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n) ∈
+        noncompleteQuotientXIdeal k ^ n •
+          (⊤ : Submodule (NoncompleteQuotientRing k)
+            (NoncompleteQuotientCompletion k)) := by
+    rw [AdicCompletion.pow_smul_top_eq_ker_eval hfg]
+    exact LinearMap.mem_ker.mpr heval
+  let Jsub : Submodule (NoncompleteQuotientRing k)
+      (NoncompleteQuotientCompletion k) :=
+    { carrier := {x | x ∈ noncompleteQuotientCompletionXIdeal k ^ n}
+      zero_mem' := (noncompleteQuotientCompletionXIdeal k ^ n).zero_mem
+      add_mem' := (noncompleteQuotientCompletionXIdeal k ^ n).add_mem
+      smul_mem' := by
+        intro r x hx
+        change algebraMap (NoncompleteQuotientRing k)
+            (NoncompleteQuotientCompletion k) r * x ∈
+          noncompleteQuotientCompletionXIdeal k ^ n
+        exact (noncompleteQuotientCompletionXIdeal k ^ n).mul_mem_left _ hx }
+  have hpow_le :
+      noncompleteQuotientXIdeal k ^ n •
+          (⊤ : Submodule (NoncompleteQuotientRing k)
+            (NoncompleteQuotientCompletion k)) ≤ Jsub := by
+    refine Submodule.smul_le.2 ?_
+    intro r hr x hx
+    change algebraMap (NoncompleteQuotientRing k)
+        (NoncompleteQuotientCompletion k) r * x ∈
+      noncompleteQuotientCompletionXIdeal k ^ n
+    have hr' : algebraMap (NoncompleteQuotientRing k)
+        (NoncompleteQuotientCompletion k) r ∈
+        noncompleteQuotientCompletionXIdeal k ^ n := by
+      change algebraMap (NoncompleteQuotientRing k)
+          (NoncompleteQuotientCompletion k) r ∈
+        ((noncompleteQuotientXIdeal k).map
+          (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k))) ^ n
+      rw [← Ideal.map_pow]
+      exact Ideal.mem_map_of_mem _ hr
+    exact (noncompleteQuotientCompletionXIdeal k ^ n).mul_mem_right x hr'
+  have htail :
+      noncompleteQuotientBadElement k -
+          noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n) ∈
+        noncompleteQuotientCompletionXIdeal k ^ n := by
+    simpa [Jsub] using hpow_le htail_base
+  have hsum :
+      (noncompleteQuotientBadElement k -
+          noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n)) +
+          noncompleteQuotientCompletionOf (noncompleteQuotientBadPartialSum k n) ∈
+        noncompleteQuotientCompletionMixedIdeal k n := by
+    apply (noncompleteQuotientCompletionMixedIdeal k n).add_mem
+    · exact Ideal.mem_sup_right htail
+    · exact Ideal.mem_sup_left hpart
+  convert hsum using 1
+  ring
 
 /-- The bad element is not in `(t)` in the completed ring. -/
 theorem noncompleteQuotientBadElement_not_mem_completionTIdeal

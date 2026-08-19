@@ -937,7 +937,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
   let B : Subalgebra R S' := f.range
   have hfinite' : Algebra.FiniteType R S' :=
     (RingHom.finiteType_algebraMap).mp hfinite
-  let hfinite' : Algebra.FiniteType R S' := hfinite'
+  let _ : Algebra.FiniteType R S' := hfinite'
   obtain ⟨s, hs⟩ := (inferInstance : Algebra.FiniteType R S').out
   choose y hy using fun x : s => hquot (Ideal.Quotient.mk J x.1)
   let d : s → S' := fun x => x.1 - f (y x)

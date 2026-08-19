@@ -65,15 +65,15 @@ theorem etale_on_fibre
 
 def FibreLocalRingDimensionProperty (d : WithBot ℕ∞) :
     SchemeGerm.GermMorphismProperty :=
-  fun {X Y} f => f.fibreLocalRingDimension = d
+  fun {_X _Y} f => f.fibreLocalRingDimension = d
 
 def ResidueFieldTranscendenceDegreeProperty (r : Cardinal) :
     SchemeGerm.GermMorphismProperty :=
-  fun {X Y} f => f.residueFieldTranscendenceDegree = r
+  fun {_X _Y} f => f.residueFieldTranscendenceDegree = r
 
 def FibrePointDimensionProperty (d : ℕ∞) :
     SchemeGerm.GermMorphismProperty :=
-  fun {X Y} f => f.fibrePointDimension = d
+  fun {_X _Y} f => f.fibrePointDimension = d
 
 theorem fibre_local_ring_dimension_is_etale_local (d : WithBot ℕ∞) :
     SchemeGerm.IsEtaleLocalOnGerms (FibreLocalRingDimensionProperty d) := by sorry

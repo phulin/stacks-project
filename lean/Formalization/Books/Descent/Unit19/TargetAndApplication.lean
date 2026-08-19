@@ -28,7 +28,7 @@ theorem universallyInjective_etale_isOpenImmersion
   sorry
 
 def GenericPointOfComponent {X : Scheme.{u}} (ξ : X) : Prop :=
-  ∃ C : Set X, IsClosed C ∧ IsIrreducible C ∧ C = closure ({ξ} : Set X)
+  ξ ∈ _root_.genericPoints X
 
 def ResidueFieldEqualAt {X Y : Scheme.{u}} (f : X ⟶ Y) (ξ : X) : Prop :=
   Nonempty (Y.residueField (f ξ) ≃+* X.residueField ξ)

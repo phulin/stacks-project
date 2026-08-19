@@ -301,14 +301,14 @@ theorem etaleSource_smoothTarget_pointwise
 /-! The orbit lemma used in the smooth-target argument. -/
 
 def triangularTranslation {k : Type u} [Field k] {n : ℕ}
-    (i j : Fin n) (d : ℕ) (hij : i ≠ j) (x : Fin n → k) : Fin n → k :=
+    (i j : Fin n) (d : ℕ) (_hij : i ≠ j) (x : Fin n → k) : Fin n → k :=
   Function.update x i (x i + x j ^ d)
 
 structure TranslationInvariantOpen (k : Type u) [Field k] (n : ℕ) where
   carrier : Set (Fin n → k)
   nonempty : carrier.Nonempty
   invariant : ∀ (i j : Fin n) (d : ℕ) (hij : i ≠ j),
-    Set.MapsTo (fun x => triangularTranslation i j d hij x) carrier carrier
+    Set.image (fun x => triangularTranslation i j d hij x) carrier = carrier
 
 def AlgebraicOverPrimeField {k : Type u} [Field k] (x : k) : Prop :=
   IsAlgebraic (⊥ : Subfield k) x

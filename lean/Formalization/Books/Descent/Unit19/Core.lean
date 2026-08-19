@@ -24,6 +24,7 @@ import Mathlib.AlgebraicGeometry.Sites.Etale
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.Regular.RegularSequence
 import Mathlib.RingTheory.RegularLocalRing.Defs
 
 /-!
@@ -94,23 +95,39 @@ inductive Topology
   | fpqc | fppf | syntomic | smooth | etale | zariski
 deriving DecidableEq, Repr
 
-/-- A Stacks-style syntomic predicate.  The finite-presentation and flat
-parts are retained explicitly; the fibre condition is the remaining source
-predicate supplied by a later syntomic development. -/
-class IsLocallyCompleteIntersectionFibre {X Y : Scheme.{u}}
-    (f : X ⟶ Y) (y : Y) : Prop where
+/-- A presentation witness for a local complete-intersection ring.
+
+This is the local-ring interface used for the fibre condition below. -/
+structure LocalCompleteIntersectionWitness (A : Type u) [CommRing A] where
+  R : Type u
+  [commRingR : CommRing R]
+  [localR : IsLocalRing R]
+  [regularR : IsRegularLocalRing R]
+  generators : List R
+  regular : RingTheory.Sequence.IsRegular R generators
+  quotientIso : Nonempty (A ≃+* (R ⧸ Ideal.ofList generators))
+
+def IsLocallyCompleteIntersectionFibre {X Y : Scheme.{u}}
+    (f : X ⟶ Y) (y : Y) : Prop :=
+  ∀ x : f.fiber y,
+    Nonempty (LocalCompleteIntersectionWitness
+      ((f.fiber y).presheaf.stalk x : Type u))
 
 class IsSyntomic {X Y : Scheme.{u}} (f : X ⟶ Y) : Prop where
   locallyOfFinitePresentation : LocallyOfFinitePresentation f
   flat : Flat f
   fibresLocallyCompleteIntersection : ∀ y : Y, IsLocallyCompleteIntersectionFibre f y
 
+noncomputable def fibreDimension {X Y : Scheme.{u}} (f : X ⟶ Y) (y : Y) : ℕ∞ :=
+  ⨆ x : f.fiber y, Order.coheight x
+
 class HasFibreDimension {X Y : Scheme.{u}} (f : X ⟶ Y) (y : Y) (d : ℕ) : Prop where
+  dimension_eq : fibreDimension f y = d
 
 class IsLocallyOfFiniteTypeOfRelativeDimension (d : ℕ)
     {X Y : Scheme.{u}} (f : X ⟶ Y) : Prop where
   locallyOfFiniteType : LocallyOfFiniteType f
-  fibreDimension : ∀ y : Y, HasFibreDimension f y d
+  fibreDimension_eq : ∀ y : Y, HasFibreDimension f y d
 
 /-- The G-unramified predicate used by the source. -/
 class IsGUnramified {X Y : Scheme.{u}} (f : X ⟶ Y) : Prop where

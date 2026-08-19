@@ -1039,14 +1039,26 @@ theorem powerSeriesXi_at_powerOfTwo
     powerSeriesXi k (positivePowOfTwo m) =
       Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (2 ^ m))
         ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) := by
-  sorry
+  classical
+  let n : ℕ+ := positivePowOfTwo m
+  have hn : (n : ℕ) = 2 ^ m := rfl
+  have h : ∃ j : ℕ, 1 ≤ j ∧ (n : ℕ) = 2 ^ j := ⟨m, hm, hn⟩
+  change powerSeriesXiCoordinate k n = _
+  simp only [powerSeriesXiCoordinate, dif_pos h]
+  have hc : Classical.choose h = m := by
+    apply (Nat.pow_right_injective (by decide : 2 ≤ 2))
+    exact ((Classical.choose_spec h).2).symm.trans hn
+  rw [hc]
+  congr 1
 
 /-- The other coordinates of `ξ` vanish. -/
 theorem powerSeriesXi_eq_zero_of_not_powerOfTwo
     (k : Type u) [Field k] (n : ℕ+)
     (h : ¬ ∃ m : ℕ, 1 ≤ m ∧ (n : ℕ) = 2 ^ m) :
     powerSeriesXi k n = 0 := by
-  sorry
+  classical
+  unfold powerSeriesXi
+  simp [powerSeriesXiCoordinate, h]
 
 /-- The eventual annihilator calculation for the displayed element. -/
 theorem powerSeriesXi_annihilator_eventually
@@ -1056,7 +1068,218 @@ theorem powerSeriesXi_annihilator_eventually
           ((powerSeriesXIdeal k) ^ (2 ^ m)) (powerSeriesXi k) =
         Ideal.span
           {((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)))} := by
-  sorry
+  classical
+  exact ⟨(1 : ℕ), by
+    intro m hm
+    ext r
+    rw [elementAnnihilatorModuloIdeal,
+      Submodule.mem_annihilator_span_singleton]
+    unfold moduleQuotientElement
+    rw [← map_smul, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    simp [powerSeriesXIdeal, Ideal.span_singleton_pow]
+    rw [Ideal.map_span]
+    simp only [Set.image_singleton]
+    rw [Ideal.mem_span_singleton, Ideal.mem_span_singleton]
+    have hxi : powerSeriesXi k (positivePowOfTwo m) =
+        Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (positivePowOfTwo m : ℕ))
+          ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) := by
+      let n : ℕ+ := positivePowOfTwo m
+      have hn : (n : ℕ) = 2 ^ m := rfl
+      have h : ∃ j : ℕ, 1 ≤ j ∧ (n : ℕ) = 2 ^ j := ⟨m, hm, hn⟩
+      change powerSeriesXiCoordinate k n = _
+      simp only [powerSeriesXiCoordinate, dif_pos h]
+      have hc : Classical.choose h = m := by
+        apply (Nat.pow_right_injective (by decide : 2 ≤ 2))
+        exact ((Classical.choose_spec h).2).symm.trans hn
+      rw [hc]
+    constructor
+    · rintro ⟨q, hq⟩
+      have hcoord := congrFun hq (positivePowOfTwo m)
+      simp only [Pi.smul_apply, Pi.mul_apply] at hcoord
+      change r • (powerSeriesXi k (positivePowOfTwo m)) = _ at hcoord
+      rw [hxi] at hcoord
+      change Ideal.Quotient.mk ((powerSeriesXIdeal k) ^
+          (positivePowOfTwo m : ℕ))
+        (r * (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) = _ at hcoord
+      have hmk : Ideal.Quotient.mk ((powerSeriesXIdeal k) ^
+          (positivePowOfTwo m : ℕ))
+          ((PowerSeries.X : PowerSeries k) ^ (2 ^ m)) = 0 := by
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        rw [show (powerSeriesXIdeal k) ^ (positivePowOfTwo m : ℕ) =
+          Ideal.span {((PowerSeries.X : PowerSeries k) ^
+            (positivePowOfTwo m : ℕ))} by
+            simp [powerSeriesXIdeal, Ideal.span_singleton_pow]]
+        apply Ideal.subset_span
+        simp [positivePowOfTwo]
+      simp [hmk] at hcoord
+      change Ideal.Quotient.mk ((powerSeriesXIdeal k) ^
+          (positivePowOfTwo m : ℕ))
+        (r * (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) = 0 at hcoord
+      rw [Ideal.Quotient.eq_zero_iff_mem] at hcoord
+      rw [show (powerSeriesXIdeal k) ^ (positivePowOfTwo m : ℕ) =
+        Ideal.span {((PowerSeries.X : PowerSeries k) ^
+          (positivePowOfTwo m : ℕ))} by
+          simp [powerSeriesXIdeal, Ideal.span_singleton_pow]] at hcoord
+      rw [Ideal.mem_span_singleton] at hcoord
+      have hcoord' : (PowerSeries.X : PowerSeries k) ^ (2 ^ m) ∣
+          r * (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) := by
+        simpa [positivePowOfTwo] using hcoord
+      rcases hcoord' with ⟨s, hs⟩
+      refine ⟨s, ?_⟩
+      have hpow : 2 ^ m = 2 ^ (m - 1) + 2 ^ (m - 1) := by
+        rw [show m = (m - 1) + 1 by omega, pow_succ]
+        simp [Nat.mul_two]
+      apply (PowerSeries.X_pow_mul_cancel (k := 2 ^ (m - 1)))
+      calc
+        (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * r =
+            r * (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) := by
+              rw [mul_comm]
+        _ = (PowerSeries.X : PowerSeries k) ^ (2 ^ m) * s := hs
+        _ = ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
+            (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) * s := by
+              rw [← pow_add, hpow]
+        _ = (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
+            ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s) := by
+              simp [mul_assoc]
+    · intro hdiv
+      rcases hdiv with ⟨s, hs⟩
+      let q : powerSeriesTorsionProduct k := fun n =>
+        if hn : ∃ j : ℕ, 1 ≤ j ∧ m ≤ j ∧ (n : ℕ) = 2 ^ j then
+          Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+            ((PowerSeries.X : PowerSeries k) ^
+              (2 ^ (Classical.choose hn - 1) - 2 ^ (m - 1)) * s)
+        else 0
+      refine ⟨q, ?_⟩
+      funext n
+      simp only [Pi.smul_apply, Pi.mul_apply]
+      by_cases hpow : ∃ j : ℕ, 1 ≤ j ∧ (n : ℕ) = 2 ^ j
+      · obtain ⟨j, hj, hjn⟩ := hpow
+        have hpow0 : ∃ l : ℕ, 1 ≤ l ∧ (n : ℕ) = 2 ^ l :=
+          ⟨j, hj, hjn⟩
+        have hxi_n : powerSeriesXi k n =
+            Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+              ((PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) := by
+          unfold powerSeriesXi
+          simp only [powerSeriesXiCoordinate, dif_pos hpow0]
+          have hc : Classical.choose hpow0 = j := by
+            apply (Nat.pow_right_injective (by decide : 2 ≤ 2))
+            exact ((Classical.choose_spec hpow0).2).symm.trans hjn
+          rw [hc]
+        by_cases hmj : m ≤ j
+        · have hq : ∃ l : ℕ, 1 ≤ l ∧ m ≤ l ∧ (n : ℕ) = 2 ^ l :=
+            ⟨j, hj, hmj, hjn⟩
+          have hcq : Classical.choose hq = j := by
+            apply (Nat.pow_right_injective (by decide : 2 ≤ 2))
+            exact ((Classical.choose_spec hq).2.2).symm.trans hjn
+          rw [hxi_n, hs]
+          change Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+              ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) = _
+          simp only [q, dif_pos hq, hcq]
+          change Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+              ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) =
+            Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+              ((PowerSeries.X : PowerSeries k) ^ (2 ^ m) *
+                ((PowerSeries.X : PowerSeries k) ^
+                  (2 ^ (j - 1) - 2 ^ (m - 1)) * s))
+          congr 1
+          have hba : 2 ^ (m - 1) ≤ 2 ^ (j - 1) := by
+            exact Nat.pow_le_pow_right (by decide : 0 < 2)
+              (Nat.sub_le_sub_right hmj 1)
+          have hsum : 2 ^ (j - 1) - 2 ^ (m - 1) + 2 ^ (m - 1) =
+              2 ^ (j - 1) := Nat.sub_add_cancel hba
+          have hpowm : 2 ^ m = 2 ^ (m - 1) + 2 ^ (m - 1) := by
+            rw [show m = (m - 1) + 1 by omega, pow_succ]
+            simp [Nat.mul_two]
+          calc
+            (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1)) =
+                (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
+                  (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1)) * s := by
+                    simp [mul_assoc, mul_comm, mul_left_comm]
+            _ = (PowerSeries.X : PowerSeries k) ^
+                (2 ^ (m - 1) + 2 ^ (j - 1)) * s := by
+                  rw [← pow_add]
+            _ = (PowerSeries.X : PowerSeries k) ^
+                (2 ^ (m - 1) +
+                  (2 ^ (j - 1) - 2 ^ (m - 1) + 2 ^ (m - 1))) * s := by
+                  rw [hsum]
+            _ = (PowerSeries.X : PowerSeries k) ^
+                (2 ^ (m - 1) + 2 ^ (m - 1)) *
+                  ((PowerSeries.X : PowerSeries k) ^
+                    (2 ^ (j - 1) - 2 ^ (m - 1)) * s) := by
+                  calc
+                    (PowerSeries.X : PowerSeries k) ^
+                        (2 ^ (m - 1) +
+                          (2 ^ (j - 1) - 2 ^ (m - 1) + 2 ^ (m - 1))) * s =
+                        ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
+                          (PowerSeries.X : PowerSeries k) ^
+                            (2 ^ (j - 1) - 2 ^ (m - 1)) *
+                        (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) * s := by
+                            rw [pow_add, pow_add]
+                            ac_rfl
+                    _ = (PowerSeries.X : PowerSeries k) ^
+                          (2 ^ (m - 1) + 2 ^ (m - 1)) *
+                        ((PowerSeries.X : PowerSeries k) ^
+                          (2 ^ (j - 1) - 2 ^ (m - 1)) * s) := by
+                            rw [pow_add]
+                            simp [mul_assoc, mul_comm, mul_left_comm]
+            _ = (PowerSeries.X : PowerSeries k) ^ (2 ^ m) *
+                  ((PowerSeries.X : PowerSeries k) ^
+                    (2 ^ (j - 1) - 2 ^ (m - 1)) * s) := by
+                  rw [hpowm]
+        · have hq : ¬ ∃ l : ℕ, 1 ≤ l ∧ m ≤ l ∧ (n : ℕ) = 2 ^ l := by
+            rintro ⟨l, hl, hml, hln⟩
+            have hlj : l = j := by
+              apply (Nat.pow_right_injective (by decide : 2 ≤ 2))
+              exact hln.symm.trans hjn
+            exact hmj (by simpa [hlj] using hml)
+          simp only [q, dif_neg hq]
+          rw [hxi_n, hs]
+          simp only [mul_zero]
+          change Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+              ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) = 0
+          have hlt : j < m := Nat.lt_of_not_ge hmj
+          have hna : 2 ^ j ≤ 2 ^ (m - 1) := by
+            exact Nat.pow_le_pow_right (by decide : 0 < 2)
+              (by omega)
+          have hadd : 2 ^ j + (2 ^ (m - 1) - 2 ^ j) = 2 ^ (m - 1) := by
+            omega
+          have hxzero : Ideal.Quotient.mk ((powerSeriesXIdeal k) ^
+              (n : ℕ)) ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) = 0 := by
+            rw [Ideal.Quotient.eq_zero_iff_mem]
+            rw [show (powerSeriesXIdeal k) ^ (n : ℕ) =
+              Ideal.span {((PowerSeries.X : PowerSeries k) ^ (n : ℕ))} by
+                simp [powerSeriesXIdeal, Ideal.span_singleton_pow]]
+            rw [Ideal.mem_span_singleton]
+            refine ⟨(PowerSeries.X : PowerSeries k) ^
+                (2 ^ (m - 1) - 2 ^ j), ?_⟩
+            rw [← pow_add, hjn, hadd]
+          calc
+            Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+                ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                  (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) =
+                Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+                  ((PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1))) *
+                  Ideal.Quotient.mk ((powerSeriesXIdeal k) ^ (n : ℕ))
+                    (s * (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) := by
+                      rw [show (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) * s *
+                          (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1)) =
+                          (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
+                            (s * (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1))) by
+                            simp [mul_assoc], map_mul]
+            _ = 0 := by rw [hxzero]; simp
+      · have hq : ¬ ∃ j : ℕ, 1 ≤ j ∧ m ≤ j ∧ (n : ℕ) = 2 ^ j := by
+          rintro ⟨j, hj, hjm, hjn⟩
+          exact hpow ⟨j, hj, hjn⟩
+        have hxi0 : powerSeriesXi k n = 0 := by
+          unfold powerSeriesXi
+          simp [powerSeriesXiCoordinate, hpow]
+        rw [hxi0]
+        simp [q, hq]
+  ⟩
 
 /-- The finite-module approximation supplied by the first characterization of
 Mittag-Leffler modules. -/

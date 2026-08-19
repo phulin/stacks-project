@@ -744,7 +744,7 @@ private theorem gradedRightModuleHomogeneousComp_assoc
         (⟨(-(j - -(k - p)), q), by omega⟩ : GradedDegreePair i) =
           ⟨(-(j + k - p), q), by omega⟩ := by
       apply Subtype.ext
-      change (-(j - -(k - p)), q) = (-(j + k - p), q)
+      show (-(j - -(k - p)), q) = (-(j + k - p), q)
       exact Prod.ext (by omega) rfl
     have hg :
         (⟨(-(k - p), j - -(k - p)), by omega⟩ : GradedDegreePair j) =

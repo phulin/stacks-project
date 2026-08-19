@@ -473,7 +473,8 @@ theorem exactCouple_limit_data_exists
     (hB : ∃ B : Subobject E, IsSubobjectUnion (exactCoupleB D) B)
     (hZ : ∃ Z : Subobject E, IsSubobjectIntersection (exactCoupleZ D) Z) :
     Nonempty (ExactCoupleLimitData D) := by
-  sorry
+  obtain ⟨B, Z, hBu, hZi, hBZ⟩ := exactCouple_limit_inclusion D hB hZ
+  exact ⟨ExactCoupleLimitData.mk B Z hBu hZi hBZ⟩
 
 /-- The limit object `E∞ = Z∞/B∞`. -/
 noncomputable def exactCoupleLimitObject
@@ -514,7 +515,18 @@ theorem shiftedExactCouple_differential_previous_comp
     (D : ShiftedExactCouple C S T A E) :
     shiftedExactCouplePreviousDifferential D ≫
       shiftedExactCoupleDifferential D = 0 := by
-  sorry
+  have hsq : shiftedExactCoupleDifferential D ≫
+      S.functor.map (shiftedExactCoupleDifferential D) = 0 := by
+    rcases D.exact with ⟨_, _, hcd, _⟩
+    rw [shiftedExactCoupleDifferential, Functor.map_comp]
+    calc
+      (D.f ≫ D.g) ≫ S.functor.map D.f ≫ S.functor.map D.g =
+          D.f ≫ ((D.g ≫ S.functor.map D.f) ≫ S.functor.map D.g) := by
+            simp only [Category.assoc]
+      _ = 0 := by rw [hcd, zero_comp, comp_zero]
+  simpa [shiftedExactCouplePreviousDifferential, shiftedExactCoupleDifferential] using
+    Formalization.Books.Homology.Unit20.translatedPreviousDifferential_comp
+      (shiftedExactCoupleDifferential D) hsq
 
 theorem shiftedExactCouple_differential_sq
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -522,7 +534,13 @@ theorem shiftedExactCouple_differential_sq
     (D : ShiftedExactCouple C S T A E) :
     shiftedExactCoupleDifferential D ≫
       S.functor.map (shiftedExactCoupleDifferential D) = 0 := by
-  sorry
+  rcases D.exact with ⟨_, _, hcd, _⟩
+  rw [shiftedExactCoupleDifferential, Functor.map_comp]
+  calc
+    (D.f ≫ D.g) ≫ S.functor.map D.f ≫ S.functor.map D.g =
+        D.f ≫ ((D.g ≫ S.functor.map D.f) ≫ S.functor.map D.g) := by
+          simp only [Category.assoc]
+    _ = 0 := by rw [hcd, zero_comp, comp_zero]
 
 /-- The shifted derived `E`-object `Ker(d)/Im(S⁻¹d)`. -/
 noncomputable def shiftedExactCoupleDerivedE {C : Type u} [Category.{v} C]

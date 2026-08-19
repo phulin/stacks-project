@@ -640,7 +640,17 @@ theorem coherentModuleProperty_iff_finitelyGenerated
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     (M : moduleCategory R) :
     coherentModuleProperty R M ↔ finitelyGeneratedModuleProperty R M := by
-  sorry
+  change (Module.Finite R (M : Type u) ∧
+    ∀ N : Submodule R (M : Type u),
+      Module.Finite R (N : Type u) →
+        Module.FinitePresentation R (N : Type u)) ↔
+    Module.Finite R (M : Type u)
+  constructor
+  · exact And.left
+  · intro hM
+    refine ⟨hM, ?_⟩
+    intro N hN
+    exact Module.finitePresentation_of_finite R (N : Type u)
 
 theorem finitelyGeneratedModuleCategory_is_abelian
     (R : Type u) [CommRing R] [IsNoetherianRing R] :
@@ -650,6 +660,31 @@ theorem finitelyGeneratedModuleCategory_is_abelian
 instance finitelyGeneratedModuleProperty_isSerreClass
     (R : Type u) [CommRing R] [IsNoetherianRing R] :
     (finitelyGeneratedModuleProperty R).IsSerreClass := by
-  sorry
+  refine @ObjectProperty.IsSerreClass.mk _ _ _ (finitelyGeneratedModuleProperty R) ?_ ?_ ?_ ?_
+  · exact ⟨⟨ModuleCat.of R (Fin 0 → R), ModuleCat.isZero_of_subsingleton _,
+      by
+        change Module.Finite R (Fin 0 → R)
+        infer_instance⟩⟩
+  · refine ⟨?_⟩
+    intro X Y f hf hY
+    change Module.Finite R (X : Type u)
+    change Module.Finite R (Y : Type u) at hY
+    let _ : Module.Finite R (Y : Type u) := hY
+    apply Module.Finite.of_injective f.hom
+    exact (ModuleCat.mono_iff_injective f).mp hf
+  · refine ⟨?_⟩
+    intro X Y f hf hX
+    change Module.Finite R (X : Type u) at hX
+    change Module.Finite R (Y : Type u)
+    let _ : Module.Finite R (X : Type u) := hX
+    apply Module.Finite.of_surjective f.hom
+    exact (ModuleCat.epi_iff_surjective f).mp hf
+  · refine ⟨?_⟩
+    intro S hS h₁ h₃
+    change Module.Finite R (S.X₂ : Type u)
+    apply (coherentModuleProperty_iff_finitelyGenerated R S.X₂).mp
+    apply (Formalization.Books.Algebra.Unit90.coherent_of_shortExact hS).2.1
+    exact ⟨(coherentModuleProperty_iff_finitelyGenerated R S.X₁).mpr h₁,
+      (coherentModuleProperty_iff_finitelyGenerated R S.X₃).mpr h₃⟩
 
 end Formalization.Books.MoreAlgebra.Unit53

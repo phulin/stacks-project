@@ -2129,6 +2129,16 @@ def IsEquivalenceOverFunctor
         ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
           IsNatIsoOver q e over)
 
+/-- Forgetting the equations and verticality data from an equivalence over a
+base gives an ordinary equivalence of the total categories. -/
+theorem isEquivalence_of_isEquivalenceOverFunctor
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (p : Functor A D) (q : Functor B D) (h : Functor A B)
+    (hh : IsEquivalenceOverFunctor p q h) : h.IsEquivalence := by
+  rcases hh with ⟨k, _hk, _hh, ⟨unit, _unitOver, _hunit⟩,
+    ⟨counit, _counitOver, _hcounit⟩⟩
+  exact Functor.IsEquivalence.mk' k unit.symm counit
+
 /-- An equivalence over a common base transports the fibred-in-groupoids
 structure, and induces an equivalence on every fibre.  In particular, the
 last conjunct packages the fibre functor's full-faithfulness and essential

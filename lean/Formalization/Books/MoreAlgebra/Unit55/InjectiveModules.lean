@@ -39,14 +39,37 @@ theorem moduleHomRestriction_injective {R : Type u} [Ring R]
 
 theorem injective_iff_hom_exact {R : Type u} [Ring R] (J : ModuleCat R) :
     Injective J ↔ IsExact (preadditiveYoneda.obj J) := by
-  sorry
+  constructor
+  · intro hJ
+    let hP : (preadditiveYoneda.obj J).PreservesEpimorphisms :=
+      (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj J).mp hJ
+    let : (preadditiveYoneda.obj J).PreservesEpimorphisms := hP
+    let : (preadditiveYoneda.obj J).PreservesHomology := by
+      apply Functor.preservesHomology_of_preservesEpis_and_kernels
+    change PreservesFiniteLimits (preadditiveYoneda.obj J) ∧
+      PreservesFiniteColimits (preadditiveYoneda.obj J)
+    exact ⟨inferInstance, Functor.preservesFiniteColimits_of_preservesHomology _⟩
+  · intro hExact
+    change PreservesFiniteLimits (preadditiveYoneda.obj J) ∧
+      PreservesFiniteColimits (preadditiveYoneda.obj J) at hExact
+    let : PreservesFiniteColimits (preadditiveYoneda.obj J) := hExact.2
+    apply (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj J).mpr
+    infer_instance
 
 theorem injective_iff_moduleHomRestriction_surjective {R : Type u} [Ring R]
     (J : ModuleCat R) :
     Injective J ↔
       ∀ (M M' : ModuleCat R) (f : M ⟶ M'), Mono f →
         Function.Surjective (moduleHomRestriction f (J := J)) := by
-  sorry
+  constructor
+  · intro hJ M M' f hf φ
+    let : Injective J := hJ
+    exact ⟨Injective.factorThru φ f, Injective.comp_factorThru φ f⟩
+  · intro hJ
+    constructor
+    intro M M' φ f hf
+    obtain ⟨g, hg⟩ := hJ M M' f hf φ
+    exact ⟨g, hg⟩
 
 /-! The extension-class comparison is the source's module `Ext¹` interface.
 

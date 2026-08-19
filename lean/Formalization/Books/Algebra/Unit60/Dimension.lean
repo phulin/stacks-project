@@ -143,7 +143,8 @@ private theorem d_eq_zero_iff_isFiniteLength
         · intro y hy
           have hy' : y ∈ (IsLocalRing.maximalIdeal R) ^ n •
               (⊤ : Submodule R R) := by
-            simpa only [smul_eq_mul, Ideal.mul_top] using hy
+            rw [smul_eq_mul, Ideal.mul_top]
+            exact hy
           rw [hn] at hy'
           exact hy'
         · exact bot_le
@@ -176,7 +177,7 @@ private theorem d_eq_zero_iff_isFiniteLength
         have hsub :
             (IsLocalRing.maximalIdeal R) ^ (k + 1) •
                 (⊤ : Submodule R R) = ⊥ := by
-          simp only [smul_eq_mul, Ideal.mul_top, hpow]
+          rw [smul_eq_mul, Ideal.mul_top, hpow]
         change
           (Module.length R
               (R ⧸ ((IsLocalRing.maximalIdeal R) ^ (k + 1) •
@@ -191,8 +192,8 @@ private theorem d_eq_zero_iff_isFiniteLength
         filter_upwards [Filter.eventually_ge_atTop (n : ℤ)] with z hz
         have hz0 : 0 ≤ z := by omega
         have hzn : n ≤ z.toNat := by omega
-        simp only [cumulativeHilbertFunctionInteger, natFunctionToInteger,
-          if_pos hz0]
+        simp only [cumulativeHilbertFunctionInteger, natFunctionToInteger]
+        rw [if_pos hz0]
         rw [hcum z.toNat hzn]
       have hcpos : 0 < moduleLengthNat (R := R) (M := R) := by
         unfold moduleLengthNat

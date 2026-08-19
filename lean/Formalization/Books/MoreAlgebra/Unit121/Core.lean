@@ -153,13 +153,13 @@ private instance finiteLengthAction_containsZero :
 private instance finiteLengthAction_closedKernels :
     (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderKernels where
   kernels_le := by
-    letI : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
-    letI : Small.{v} WalkingCospan := small_lift.{0, v} _
-    letI : PreservesLimitsOfShape WalkingCospan
+    let : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
+    let : Small.{v} WalkingCospan := small_lift.{0, v} _
+    let : PreservesLimitsOfShape WalkingCospan
         (forget (Action (ModuleCat.{v} R) (Multiplicative ℕ))) := by
       constructor
       intro F
-      letI : HasLimit (F ⋙ forget (Action (ModuleCat.{v} R) (Multiplicative ℕ))) := by
+      let : HasLimit (F ⋙ forget (Action (ModuleCat.{v} R) (Multiplicative ℕ))) := by
         infer_instance
       have hcomp : PreservesLimit F
           ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) ⋙
@@ -173,7 +173,7 @@ private instance finiteLengthAction_closedKernels :
           (D := ModuleCat.{v} R)
       simpa only [hforget] using hcomp
     rintro _ ⟨f, k, hk, ⟨hX, _⟩⟩
-    letI : Mono k.ι := Fork.IsLimit.mono hk
+    let : Mono k.ι := Fork.IsLimit.mono hk
     change IsFiniteLength R k.pt.V
     apply hX.of_injective
     change Function.Injective (k.ι.hom.hom)
@@ -182,10 +182,10 @@ private instance finiteLengthAction_closedKernels :
 private instance finiteLengthAction_closedCokernels :
     (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderCokernels where
   cokernels_le := by
-    letI : HasColimits (ModuleCat.{v} R) := inferInstance
-    letI : Small.{v} WalkingSpan := small_lift.{0, v} _
+    let : HasColimits (ModuleCat.{v} R) := inferInstance
+    let : Small.{v} WalkingSpan := small_lift.{0, v} _
     rintro _ ⟨f, k, hk, ⟨_, hY⟩⟩
-    letI : Epi k.π := Cofork.IsColimit.epi hk
+    let : Epi k.π := Cofork.IsColimit.epi hk
     have hk0 : IsColimit (CokernelCofork.ofπ k.π k.condition) := by
       exact hk.ofIsoColimit (isoOfπ k)
     have hk' : IsColimit
@@ -198,7 +198,7 @@ private instance finiteLengthAction_closedCokernels :
       isColimitCoforkMapOfIsColimit'
         (Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)) k.condition
         hk0
-    letI : Epi ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map k.π) :=
+    let : Epi ((Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).map k.π) :=
       Cofork.IsColimit.epi hk'
     change IsFiniteLength R k.pt.V
     apply hY.of_surjective

@@ -1405,7 +1405,7 @@ theorem setPresheaf_comp_fiber
             f.base.op.toLoc).toFunctor.map g.fiber ≫
         ((splitFibredPseudofunctor (setPresheafToCat F)).mapComp
             g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
-  sorry
+  rfl
 
 /- The CoGrothendieck category has the source's displayed object and
    morphism data: its objects have a base object and a value in the fibre,
@@ -1579,7 +1579,10 @@ theorem sliceProjection_fibre_object_description
     {C : Type uC} [Category.{vC} C] (X U : C)
     (x : Functor.Fiber (Over.forget X) U) :
     ∃ h : U ⟶ X, x.1 = Over.mk h := by
-  sorry
+  rcases x with ⟨⟨Y, _, f⟩, hY⟩
+  change Y = U at hY
+  subst Y
+  exact ⟨f, rfl⟩
 
 theorem sliceProjection_fibre_is_discrete
     {C : Type uC} [Category.{vC} C] (X U : C) :

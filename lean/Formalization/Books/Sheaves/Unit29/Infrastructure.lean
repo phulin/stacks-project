@@ -1744,8 +1744,15 @@ def tailProductDiagram : ℕ ⥤ AddCommGrpCat.{v} where
   obj n := AddCommGrpCat.of (ULift.{v} (∀ _ : tailIndex n, ℤ))
   map f := AddCommGrpCat.ofHom {
     toFun := fun s => ⟨fun m => s.down ⟨m.1, le_trans (leOfHom f) m.2⟩⟩
-    map_zero' := by sorry
-    map_add' := by sorry }
+    map_zero' := by
+      apply ULift.ext
+      funext m
+      rfl
+    map_add' := by
+      intro s t
+      apply ULift.ext
+      funext m
+      rfl }
   map_id := by
     intro n
     rfl

@@ -868,7 +868,7 @@ theorem truncation_product_with_standard_simplex
     {C : Type u} [Category.{v} C] [HasFiniteCoproducts C]
     (X : C) (n : ℕ) :
     (SimplicialObject.truncation (C := C) n).obj
-        (objectProductWithSimplicialSet X (Δ[n + 1] : SSet.{w})
+      (objectProductWithSimplicialSet X (Δ[n + 1] : SSet.{w})
           (Unit13.standardSimplex_finite_nonempty (n + 1))) =
       truncatedProductWithStandardSimplex X n := by
   sorry

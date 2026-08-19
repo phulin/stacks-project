@@ -349,7 +349,7 @@ private theorem zero_index_from_to_obj_eq (n : ℕ) (j : coskeletonIndex 0 n) :
   dsimp [zeroCoskeletonIndexFromDiscrete, zeroCoskeletonIndexToDiscrete,
     zeroCoskeletonIndexObject]
   refine StructuredArrow.obj_ext _ _ rfl ?_
-  simp only [eqToHom_refl, Functor.map_id, Category.comp_id]
+  simp only [eqToHom_refl]
   simpa using congrArg Quiver.Hom.op
     (SimplexCategory.eq_const_of_zero hom.unop).symm
 
@@ -384,8 +384,8 @@ private theorem has_limit_zero_coskeleton_index {C : Type u}
     HasLimit (coskeletonIndexDiagram 0 n U) := by
   let e := zeroCoskeletonIndexEquivalence n
   let X := U.obj (op ⟨SimplexCategory.mk 0, by simp⟩)
-  letI : HasLimit (Discrete.functor (fun _ : Fin (n + 1) => X)) := hP X n
-  letI : HasLimit
+  let : HasLimit (Discrete.functor (fun _ : Fin (n + 1) => X)) := hP X n
+  let : HasLimit
       (e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X)) :=
     hasLimit_equivalence_comp e
   let α : e.functor ⋙ Discrete.functor (fun _ : Fin (n + 1) => X) ≅
@@ -400,7 +400,7 @@ private theorem has_limit_zero_coskeleton_index {C : Type u}
               𝟙 X := by
           let hp : X = X := rfl
           change eqToHom hp = 𝟙 X
-          simp [Discrete.functor]
+          simp
         rw [hmap, Category.id_comp, ← U.map_comp]
         congr 1
         rw [zero_truncated_hom_eq
@@ -434,7 +434,7 @@ private noncomputable def zero_coskeleton_limit_iso {C : Type u}
               𝟙 X := by
           let hp : X = X := rfl
           change eqToHom hp = 𝟙 X
-          simp [Discrete.functor]
+          simp
         rw [hmap, Category.id_comp, ← U.map_comp]
         congr 1
         rw [zero_truncated_hom_eq
@@ -461,12 +461,12 @@ theorem cosk_zero_degree_formula {C : Type u} [Category.{v} C]
     Nonempty ((coskZero X).obj (op (SimplexCategory.mk n)) ≅
       finiteSelfProduct X n h) := by
   let U := zeroTruncatedObject X
-  letI : (truncInclusion 0).HasPointwiseRightKanExtension U := by
+  let : (truncInclusion 0).HasPointwiseRightKanExtension U := by
     rintro ⟨⟨k⟩⟩
     exact has_limit_zero_coskeleton_index U h k
-  letI : HasLimit (coskeletonIndexDiagram 0 n U) :=
+  let : HasLimit (coskeletonIndexDiagram 0 n U) :=
     has_limit_zero_coskeleton_index U h n
-  letI : (coskZero X).IsRightKanExtension (coskeletonCounit 0 U) := by
+  let : (coskZero X).IsRightKanExtension (coskeletonCounit 0 U) := by
     dsimp [coskZero, coskeleton, coskeletonCounit]
     infer_instance
   let e : coskZero X ≅
@@ -485,7 +485,7 @@ theorem cosk_zero_degree_formula {C : Type u} [Category.{v} C]
 theorem has_coskeleton_zero_of_has_binary_products {C : Type u}
     [Category.{v} C] [HasBinaryProducts C] (X : C) :
     HasCoskeleton 0 (zeroTruncatedObject X) := by
-  letI : (truncInclusion 0).HasPointwiseRightKanExtension
+  let : (truncInclusion 0).HasPointwiseRightKanExtension
       (zeroTruncatedObject X) := by
     rintro ⟨⟨n⟩⟩
     exact has_limit_zero_coskeleton_index (zeroTruncatedObject X)

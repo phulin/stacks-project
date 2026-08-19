@@ -123,11 +123,184 @@ variable {C D : Type*} [Category* C] [Category* D]
 def exactFunctorMorphismProperty (F : C ⥤ D) : MorphismProperty C :=
   (MorphismProperty.isomorphisms D).inverseImage F
 
+set_option backward.isDefEq.respectTransparency false in
 theorem exactFunctorMorphismProperty_saturated
     (F : C ⥤ D) [F.CommShift ℤ] [F.IsTriangulated] :
     SaturatedMultiplicativeSystem (exactFunctorMorphismProperty F) ∧
       CompatibleWithTriangulation (exactFunctorMorphismProperty F) := by
-  sorry
+  let W := exactFunctorMorphismProperty F
+  have hleft : W.HasLeftCalculusOfFractions := by
+    refine { id_mem := ?_, comp_mem := ?_, exists_leftFraction := ?_, ext := ?_ }
+    · intro X
+      change IsIso (F.map (𝟙 X))
+      infer_instance
+    · intro X Y Z f g hf hg
+      change IsIso (F.map f) at hf
+      change IsIso (F.map g) at hg
+      change IsIso (F.map (f ≫ g))
+      rw [F.map_comp]
+      infer_instance
+    · intro X Y φ
+      obtain ⟨s, hs, f⟩ := φ
+      change IsIso (F.map s) at hs
+      obtain ⟨Q, d, h, hT⟩ := distinguished_cocone_triangle s
+      have hQ : IsZero (F.obj Q) := by
+        apply Triangle.isZero₃_of_isIso₁ (F.mapTriangle.obj (Triangle.mk s d h))
+          (F.map_distinguished _ hT)
+        exact hs
+      obtain ⟨Y', t, k, hT'⟩ := distinguished_cocone_triangle₂
+        (h ≫ f⟦(1 : ℤ)⟧')
+      obtain ⟨g, hg₁, hg₂⟩ := complete_distinguished_triangle_morphism₂
+        (Triangle.mk s d h) (Triangle.mk t k (h ≫ f⟦(1 : ℤ)⟧')) hT hT' f (𝟙 Q) (by
+          simpa only [Triangle.mk_mor₃, Triangle.mk_obj₁, Triangle.mk_obj₃] using
+            (Category.id_comp (h ≫ (shiftFunctor C 1).map f)).symm)
+      have ht : IsIso (F.map t) := by
+        apply (Triangle.isZero₃_iff_isIso₁
+          (F.mapTriangle.obj (Triangle.mk t k (h ≫ f⟦(1 : ℤ)⟧')))
+          (F.map_distinguished _ hT')).1
+        exact hQ
+      exact ⟨MorphismProperty.LeftFraction.mk g t ht, hg₁.symm⟩
+    · rintro X' X Y f₁ f₂ s hs h
+      change IsIso (F.map s) at hs
+      have hdiff : s ≫ (f₁ - f₂) = 0 := by
+        rw [comp_sub, h, sub_self]
+      obtain ⟨Q, d, k, hT⟩ := distinguished_cocone_triangle s
+      have hQ : IsZero (F.obj Q) := by
+        apply Triangle.isZero₃_of_isIso₁ (F.mapTriangle.obj (Triangle.mk s d k))
+          (F.map_distinguished _ hT)
+        exact hs
+      obtain ⟨i, hi⟩ := Triangle.yoneda_exact₂ _ hT (f₁ - f₂) hdiff
+      obtain ⟨Y', t, l, hT'⟩ := distinguished_cocone_triangle i
+      have ht : IsIso (F.map t) := by
+        apply (Triangle.isZero₁_iff_isIso₂
+          (F.mapTriangle.obj (Triangle.mk i t l))
+          (F.map_distinguished _ hT')).1
+        exact hQ
+      refine ⟨Y', t, ht, ?_⟩
+      have eq := comp_distTriang_mor_zero₁₂ _ hT'
+      simp only [Triangle.mk_mor₂] at hi
+      simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at eq
+      rw [← sub_eq_zero, ← sub_comp, hi]
+      simpa only [Category.assoc, eq, comp_zero]
+  have hright : W.HasRightCalculusOfFractions := by
+    refine { id_mem := ?_, comp_mem := ?_, exists_rightFraction := ?_, ext := ?_ }
+    · intro X
+      change IsIso (F.map (𝟙 X))
+      infer_instance
+    · intro X Y Z f g hf hg
+      change IsIso (F.map f) at hf
+      change IsIso (F.map g) at hg
+      change IsIso (F.map (f ≫ g))
+      rw [F.map_comp]
+      infer_instance
+    · intro X Y φ
+      obtain ⟨f, s, hs⟩ := φ
+      change IsIso (F.map s) at hs
+      obtain ⟨Q, d, h, hT⟩ := distinguished_cocone_triangle s
+      have hQ : IsZero (F.obj Q) := by
+        apply Triangle.isZero₃_of_isIso₁ (F.mapTriangle.obj (Triangle.mk s d h))
+          (F.map_distinguished _ hT)
+        exact hs
+      obtain ⟨X', t, k, hT'⟩ := distinguished_cocone_triangle₁ (f ≫ d)
+      obtain ⟨g, hg₁, hg₂⟩ := complete_distinguished_triangle_morphism₁
+        (Triangle.mk t (f ≫ d) k) (Triangle.mk s d h) hT' hT f (𝟙 Q) (by
+          simpa only [Triangle.mk_mor₂] using (Category.comp_id (f ≫ d)))
+      have ht : IsIso (F.map t) := by
+        apply (Triangle.isZero₃_iff_isIso₁
+          (F.mapTriangle.obj (Triangle.mk t (f ≫ d) k))
+          (F.map_distinguished _ hT')).1
+        exact hQ
+      exact ⟨MorphismProperty.RightFraction.mk t ht g, hg₁⟩
+    · rintro X Y Y' f₁ f₂ s hs h
+      change IsIso (F.map s) at hs
+      have hdiff : (f₁ - f₂) ≫ s = 0 := by
+        rw [sub_comp, h, sub_self]
+      obtain ⟨R, r, k, hT⟩ := distinguished_cocone_triangle₁ s
+      have hR : IsZero (F.obj R) := by
+        apply Triangle.isZero₁_of_isIso₂
+          (F.mapTriangle.obj (Triangle.mk r s k))
+          (F.map_distinguished _ hT)
+        exact hs
+      obtain ⟨q, hq⟩ := Triangle.coyoneda_exact₂ _ hT (f₁ - f₂) hdiff
+      obtain ⟨X', t, l, hT'⟩ := distinguished_cocone_triangle₁ q
+      have ht : IsIso (F.map t) := by
+        apply (Triangle.isZero₃_iff_isIso₁
+          (F.mapTriangle.obj (Triangle.mk t q l))
+          (F.map_distinguished _ hT')).1
+        exact hR
+      refine ⟨X', t, ht, ?_⟩
+      have eq := comp_distTriang_mor_zero₁₂ _ hT'
+      simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at hq eq
+      rw [← sub_eq_zero, ← comp_sub, hq]
+      simpa only [← Category.assoc, eq, zero_comp]
+  have hsat : SaturatedMultiplicativeSystem W := by
+    refine ⟨⟨hleft, hright⟩, ?_⟩
+    intro X Y Z T f g h hfg hgh
+    change IsIso (F.map (f ≫ g)) at hfg
+    change IsIso (F.map (g ≫ h)) at hgh
+    change IsIso (F.map g)
+    rw [F.map_comp] at hfg hgh
+    letI := hfg
+    letI := hgh
+    exact isIso_of_adjacent_composites (F.map f) (F.map g) (F.map h)
+  have hshift : W.IsCompatibleWithShift ℤ := by
+    refine ⟨?_⟩
+    intro n
+    ext X Y f
+    change IsIso (F.map ((shiftFunctor C n).map f)) ↔ IsIso (F.map f)
+    constructor
+    · intro hf
+      letI : IsIso (F.map ((shiftFunctor C n).map f)) := hf
+      haveI : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
+      haveI : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
+      haveI : IsIso (F.map ((shiftFunctor C n).map f) ≫
+          (F.commShiftIso n).hom.app Y) := inferInstance
+      haveI : IsIso ((shiftFunctor C n ⋙ F).map f) := by
+        change IsIso (F.map ((shiftFunctor C n).map f))
+        infer_instance
+      haveI : IsIso ((F.commShiftIso n).hom.app X ≫
+          (shiftFunctor D n).map (F.map f)) := by
+        change IsIso ((F.commShiftIso n).hom.app X ≫ (F ⋙ shiftFunctor D n).map f)
+        rw [← (F.commShiftIso n).hom.naturality f]
+        infer_instance
+      haveI : IsIso ((shiftFunctor D n).map (F.map f)) :=
+        IsIso.of_isIso_comp_left
+          ((F.commShiftIso n).hom.app X) ((shiftFunctor D n).map (F.map f))
+      exact isIso_of_reflects_iso (F.map f) (shiftFunctor D n)
+    · intro hf
+      letI : IsIso (F.map f) := hf
+      haveI : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
+      haveI : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
+      haveI : IsIso ((F.commShiftIso n).hom.app X ≫
+          (shiftFunctor D n).map (F.map f)) := inferInstance
+      haveI : IsIso ((F ⋙ shiftFunctor D n).map f) := by
+        change IsIso ((shiftFunctor D n).map (F.map f))
+        infer_instance
+      haveI : IsIso (F.map ((shiftFunctor C n).map f) ≫
+          (F.commShiftIso n).hom.app Y) := by
+        change IsIso ((shiftFunctor C n ⋙ F).map f ≫
+          (F.commShiftIso n).hom.app Y)
+        rw [(F.commShiftIso n).hom.naturality f]
+        infer_instance
+      exact IsIso.of_isIso_comp_right
+        (F.map ((shiftFunctor C n).map f)) ((F.commShiftIso n).hom.app Y)
+  letI : W.IsCompatibleWithShift ℤ := hshift
+  have hcompat : CompatibleWithTriangulation W := by
+    refine ⟨?_⟩
+    intro T₁ T₂ hT₁ hT₂ a b ha hb comm
+    change IsIso (F.map a) at ha
+    change IsIso (F.map b) at hb
+    obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      T₁ T₂ hT₁ hT₂ a b comm
+    let φ := Triangle.homMk T₁ T₂ a b c comm hc₂ hc₃
+    refine ⟨c, ?_, hc₂, hc₃⟩
+    change IsIso (F.map c)
+    change IsIso (F.mapTriangle.map φ).hom₃
+    apply isIso₃_of_isIso₁₂ (F.mapTriangle.map φ)
+      (F.map_distinguished _ hT₁) (F.map_distinguished _ hT₂)
+    · exact ha
+    · exact hb
+  exact ⟨by simpa [W] using hsat, by simpa [W] using hcompat⟩
 end ExactFunctorLocalization
 
 section HomologicalFunctorLocalization
@@ -140,11 +313,137 @@ variable {C A : Type*} [Category* C] [Category* A]
 def homologicalFunctorMorphismProperty (H : C ⥤ A) : MorphismProperty C :=
   fun _ _ f => ∀ i : ℤ, IsIso ((homologicalDegree H i).map f)
 
+set_option backward.isDefEq.respectTransparency false in
 theorem homologicalFunctorMorphismProperty_saturated
     (H : C ⥤ A) [H.IsHomological] :
     SaturatedMultiplicativeSystem (homologicalFunctorMorphismProperty H) ∧
       CompatibleWithTriangulation (homologicalFunctorMorphismProperty H) := by
-  sorry
+  letI : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
+  let W := homologicalFunctorMorphismProperty H
+  let P := H.homologicalKernel
+  have hW_trW : W = P.trW := by
+    ext X Y f
+    change (∀ i : ℤ, IsIso ((homologicalDegree H i).map f)) ↔ P.trW f
+    change (∀ i : ℤ, IsIso ((H.shift i).map f)) ↔ P.trW f
+    exact (H.mem_homologicalKernel_trW_iff f).symm
+  have hleft : W.HasLeftCalculusOfFractions := by
+    refine { id_mem := ?_, comp_mem := ?_, exists_leftFraction := ?_, ext := ?_ }
+    · intro X
+      change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (𝟙 X))
+      intro i
+      infer_instance
+    · intro X Y Z f g hf hg
+      change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (f ≫ g))
+      intro i
+      haveI := hf i
+      haveI := hg i
+      rw [Functor.map_comp]
+      infer_instance
+    · intro X Y φ
+      obtain ⟨s, hs, f⟩ := φ
+      have hs' : P.trW s := by
+        exact hW_trW ▸ hs
+      obtain ⟨Q, d, h, hT⟩ := distinguished_cocone_triangle s
+      have hQ : P Q := (P.trW_iff_of_distinguished _ hT).1 hs'
+      obtain ⟨Y', t, k, hT'⟩ := distinguished_cocone_triangle₂
+        (h ≫ f⟦(1 : ℤ)⟧')
+      obtain ⟨g, hg₁, hg₂⟩ := complete_distinguished_triangle_morphism₂
+        (Triangle.mk s d h) (Triangle.mk t k (h ≫ f⟦(1 : ℤ)⟧')) hT hT' f (𝟙 Q) (by
+          simpa only [Triangle.mk_mor₃, Triangle.mk_obj₁, Triangle.mk_obj₃] using
+            (Category.id_comp (h ≫ (shiftFunctor C 1).map f)).symm)
+      have ht' : P.trW t := by
+        change P.trW (Triangle.mk t k (h ≫ f⟦(1 : ℤ)⟧')).mor₁
+        exact (P.trW_iff_of_distinguished _ hT').2 hQ
+      have ht : W t := by
+        exact hW_trW.symm ▸ ht'
+      exact ⟨MorphismProperty.LeftFraction.mk g t ht, hg₁.symm⟩
+    · rintro X' X Y f₁ f₂ s hs h
+      have hs' : P.trW s := by
+        exact hW_trW ▸ hs
+      have hdiff : s ≫ (f₁ - f₂) = 0 := by
+        rw [comp_sub, h, sub_self]
+      obtain ⟨Q, d, k, hT⟩ := distinguished_cocone_triangle s
+      have hQ : P Q := (P.trW_iff_of_distinguished _ hT).1 hs'
+      obtain ⟨i, hi⟩ := Triangle.yoneda_exact₂ _ hT (f₁ - f₂) hdiff
+      obtain ⟨Y', t, l, hT'⟩ := distinguished_cocone_triangle i
+      have ht' : P.trW t := by
+        change P.trW (Triangle.mk i t l).mor₂
+        exact (P.trW_iff_of_distinguished' _ hT').2 hQ
+      have ht : W t := by
+        exact hW_trW.symm ▸ ht'
+      refine ⟨Y', t, ht, ?_⟩
+      have eq := comp_distTriang_mor_zero₁₂ _ hT'
+      simp only [Triangle.mk_mor₂] at hi
+      simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at eq
+      rw [← sub_eq_zero, ← sub_comp, hi]
+      simpa only [Category.assoc, eq, comp_zero]
+  have hright : W.HasRightCalculusOfFractions := by
+    refine { id_mem := ?_, comp_mem := ?_, exists_rightFraction := ?_, ext := ?_ }
+    · intro X
+      change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (𝟙 X))
+      intro i
+      infer_instance
+    · intro X Y Z f g hf hg
+      change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (f ≫ g))
+      intro i
+      haveI := hf i
+      haveI := hg i
+      rw [Functor.map_comp]
+      infer_instance
+    · intro X Y φ
+      obtain ⟨f, s, hs⟩ := φ
+      have hs' : P.trW s := by
+        exact hW_trW ▸ hs
+      obtain ⟨Q, d, h, hT⟩ := distinguished_cocone_triangle s
+      have hQ : P Q := (P.trW_iff_of_distinguished _ hT).1 hs'
+      obtain ⟨X', t, k, hT'⟩ := distinguished_cocone_triangle₁ (f ≫ d)
+      obtain ⟨g, hg₁, hg₂⟩ := complete_distinguished_triangle_morphism₁
+        (Triangle.mk t (f ≫ d) k) (Triangle.mk s d h) hT' hT f (𝟙 Q) (by
+          simpa only [Triangle.mk_mor₂] using (Category.comp_id (f ≫ d)))
+      have ht' : P.trW t := by
+        change P.trW (Triangle.mk t (f ≫ d) k).mor₁
+        exact (P.trW_iff_of_distinguished _ hT').2 hQ
+      have ht : W t := by
+        exact hW_trW.symm ▸ ht'
+      exact ⟨MorphismProperty.RightFraction.mk t ht g, hg₁⟩
+    · rintro X Y Y' f₁ f₂ s hs h
+      have hs' : P.trW s := by
+        exact hW_trW ▸ hs
+      have hdiff : (f₁ - f₂) ≫ s = 0 := by
+        rw [sub_comp, h, sub_self]
+      obtain ⟨R, r, k, hT⟩ := distinguished_cocone_triangle₁ s
+      have hR : P R := (P.trW_iff_of_distinguished' _ hT).1 hs'
+      obtain ⟨q, hq⟩ := Triangle.coyoneda_exact₂ _ hT (f₁ - f₂) hdiff
+      obtain ⟨X', t, l, hT'⟩ := distinguished_cocone_triangle₁ q
+      have ht' : P.trW t := by
+        change P.trW (Triangle.mk t q l).mor₁
+        exact (P.trW_iff_of_distinguished _ hT').2 hR
+      have ht : W t := by
+        exact hW_trW.symm ▸ ht'
+      refine ⟨X', t, ht, ?_⟩
+      have eq := comp_distTriang_mor_zero₁₂ _ hT'
+      simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at hq eq
+      rw [← sub_eq_zero, ← comp_sub, hq]
+      simpa only [← Category.assoc, eq, zero_comp]
+  have hsat : SaturatedMultiplicativeSystem W := by
+    refine ⟨⟨hleft, hright⟩, ?_⟩
+    intro X Y Z T f g h hfg hgh
+    change (∀ i : ℤ, IsIso ((homologicalDegree H i).map (f ≫ g))) at hfg
+    change (∀ i : ℤ, IsIso ((homologicalDegree H i).map (g ≫ h))) at hgh
+    change ∀ i : ℤ, IsIso ((homologicalDegree H i).map g)
+    intro i
+    have hfg' := hfg i
+    have hgh' := hgh i
+    rw [Functor.map_comp] at hfg' hgh'
+    letI := hfg'
+    letI := hgh'
+    exact isIso_of_adjacent_composites
+      ((homologicalDegree H i).map f)
+      ((homologicalDegree H i).map g)
+      ((homologicalDegree H i).map h)
+  have hcompat : CompatibleWithTriangulation W := by
+    sorry
+  exact ⟨by simpa [W] using hsat, by simpa [W] using hcompat⟩
 end HomologicalFunctorLocalization
 
 /-! ## The localized pretriangulated structure and its universal property -/
@@ -245,7 +544,12 @@ theorem homological_localizationFactor_isHomological
     {A : Type*} [Category* A] [Abelian A]
     (H : C ⥤ A) [H.IsHomological] (hH : S.IsInvertedBy H) :
     (localizationFactor (S := S) H hH).IsHomological := by
-  sorry
+  letI : Pretriangulated S.Localization :=
+    CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
+  letI : S.Q.IsTriangulated := localizationFunctor_exact (S := S)
+  letI : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
+  apply Functor.isHomological_of_localization S.Q (localizationFactor (S := S) H hH) H
+  exact eqToIso (localizationFactor_fac (S := S) H hH)
 
 theorem exact_localizationFactor_isExact
     {D : Type*} [Category* D] [Preadditive D] [HasZeroObject D]

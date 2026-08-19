@@ -100,25 +100,25 @@ private theorem hasLimit_simplicialSetElementsDiagram
     (U : SSet.{w}) (V : SimplicialObject C)
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     HasLimit (simplicialSetElementsDiagram U V) := by
-  letI : ∀ X : SimplexCategoryᵒᵖ, Finite (U.obj X) := by
+  let : ∀ X : SimplexCategoryᵒᵖ, Finite (U.obj X) := by
     intro X
     simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
-  letI : Countable SimplexCategory :=
+  let : Countable SimplexCategory :=
     Function.Injective.countable (f := SimplexCategory.len) (by
       intro X Y h
       cases X
       cases Y
       cases h
       rfl)
-  letI : Countable SimplexCategoryᵒᵖ :=
+  let : Countable SimplexCategoryᵒᵖ :=
     Countable.of_equiv SimplexCategory Opposite.equivToOpposite
-  letI : CountableCategory U.Elements := by
+  let : CountableCategory U.Elements := by
     constructor
     · change Countable (Σ X : SimplexCategoryᵒᵖ, U.obj X)
       infer_instance
     · intro e e'
       change Countable {f : e.1 ⟶ e'.1 // _}
-      letI : Countable (e.1 ⟶ e'.1) :=
+      let : Countable (e.1 ⟶ e'.1) :=
         Countable.of_equiv _ (opEquiv e.1 e'.1).symm
       infer_instance
   infer_instance
@@ -172,7 +172,7 @@ private noncomputable def homToElementsCone
         have hi : i ≫
               (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase = i' := by
           dsimp [i, i', Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
-          simp [Category.assoc, hf]
+          simp [hf]
         calc
           i' ≫ γ.app Z' = (i ≫
               (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase) ≫
@@ -204,10 +204,8 @@ private noncomputable def elementsConeToHom
         intro u
         let fbase : Z ⟶ Z' := f
         let aZ : ∀ u : U.obj Z, X ⟶ V.obj Z := fun u => by
-          change X ⟶ V.obj Z
           exact α.app (Functor.elementsMk U Z u)
         let aZ' : ∀ u : U.obj Z', X ⟶ V.obj Z' := fun u => by
-          change X ⟶ V.obj Z'
           exact α.app (Functor.elementsMk U Z' u)
         let i :
             X ⟶ (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).obj Z := by
@@ -217,7 +215,7 @@ private noncomputable def elementsConeToHom
             (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase ≫
               Sigma.desc aZ' = i ≫ Sigma.desc aZ ≫ V.map fbase
         dsimp [i, Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
-        simp only [Sigma.ι_desc, Category.id_comp, Category.assoc]
+        simp only [Category.id_comp]
         simpa [aZ, aZ', simplicialSetElementsDiagram, Category.assoc] using
             congrArg (fun k => (𝟙 X) ≫ k)
             (α.naturality (CategoryOfElements.homMk
@@ -243,7 +241,6 @@ private noncomputable def elementsConeHomEquiv
       let _ := Unit13.degreewiseCoproductInstanceAt h Z
       dsimp only [elementsConeToHom, homToElementsCone]
       let a : ∀ u : U.obj Z, ((SimplicialObject.const C).obj X).obj Z ⟶ V.obj Z := fun u => by
-        change ((SimplicialObject.const C).obj X).obj Z ⟶ V.obj Z
         exact α.app (Functor.elementsMk U Z u)
       change Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
         Sigma.desc a = a u
@@ -388,7 +385,7 @@ theorem homZero_isRepresentable_countable
     (U : SSet.{w}) (V : SimplicialObject C)
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     (homZeroFunctor U V hU).IsRepresentable := by
-  letI : HasLimit (simplicialSetElementsDiagram U V) :=
+  let : HasLimit (simplicialSetElementsDiagram U V) :=
     hasLimit_simplicialSetElementsDiagram U V hU
   let D := simplicialSetElementsDiagram U V
   let L := limit D

@@ -107,7 +107,7 @@ private theorem square_zero_flatness_of_base_change
       letI : Algebra R R' := φ.toAlgebra
       Module.Flat R' (R' ⊗[R] M)) :
     Module.Flat R M := by
-  letI : Algebra R R' := φ.toAlgebra
+  let : Algebra R R' := φ.toAlgebra
   let I' : Ideal R' := Ideal.map φ I
   have hI' : I' ^ 2 = ⊥ := by
     dsimp [I']
@@ -123,7 +123,7 @@ private theorem square_zero_flatness_of_base_change
       simpa [pow_two] using (Ideal.mul_mem_mul hr x.property)
     rw [hI'] at hprod
     simpa [smul_eq_mul] using hprod
-  letI : Module (R' ⧸ I') (I' : Type u) := hI'tors.module
+  let : Module (R' ⧸ I') (I' : Type u) := hI'tors.module
   have hItors : Module.IsTorsionBySet R (I : Type u) (I : Set R) := by
     rw [Module.isTorsionBySet_iff_subset_annihilator]
     rintro r hr
@@ -134,10 +134,10 @@ private theorem square_zero_flatness_of_base_change
       simpa [pow_two] using (Ideal.mul_mem_mul hr x.property)
     rw [hI] at hprod
     simpa [smul_eq_mul] using hprod
-  letI : Module (R ⧸ I) (I : Type u) := hItors.module
+  let : Module (R ⧸ I) (I : Type u) := hItors.module
   let φbar : R ⧸ I →+* R' ⧸ I' :=
     Ideal.quotientMap I' φ Ideal.le_comap_map
-  letI : Module (R ⧸ I) (I' : Type u) := Module.compHom I' φbar
+  let : Module (R ⧸ I) (I' : Type u) := Module.compHom I' φbar
   let fI : (I : Type u) →ₗ[R ⧸ I] (I' : Type u) :=
     { toFun := fun x => ⟨φ (x : R), Ideal.mem_map_of_mem φ x.property⟩
       map_add' := by intro x y; apply Subtype.ext; simp
@@ -156,7 +156,7 @@ private theorem square_zero_flatness_of_base_change
     Module.Flat.rTensor_preserves_injective_linearMap fI hfI
   let Mbar := M ⧸ (I • (⊤ : Submodule R M))
   let eQ := quotTensorEquivQuotSMulAlg (R := R) (M := M) I
-  letI : IsScalarTower R (R ⧸ I) (I' : Type u) :=
+  let : IsScalarTower R (R ⧸ I) (I' : Type u) :=
     ⟨by
       intro r a x
       obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective a
@@ -254,7 +254,7 @@ private theorem square_zero_flatness_of_base_change
           rfl
     rw [hEq]
     exact hg
-  letI : Subsingleton (LinearMap.ker Amap) :=
+  let : Subsingleton (LinearMap.ker Amap) :=
     ⟨fun x y => Subtype.ext (hAmap (by
       exact x.property.trans y.property.symm))⟩
   have hkernel : IsZero
@@ -300,7 +300,7 @@ private theorem basis_family_lift_of_flat_of_isNilpotent
   have hsurj : Function.Surjective ψ := by
     rw [span_range_eq_top_iff_surjective_finsuppLinearCombination R] at hspanx
     exact hspanx
-  letI : Module.Flat R M := hflat
+  let : Module.Flat R M := hflat
   have hkerI : ∀ z : A →₀ R, ψ z = 0 →
       z ∈ I • (⊤ : Submodule R (A →₀ R)) := by
     intro z hz
@@ -317,9 +317,8 @@ private theorem basis_family_lift_of_flat_of_isNilpotent
             (fun f g hf hg => ?_) (fun a c => ?_)
           · rw [Finsupp.mapRange_add']
             rw [map_add, hf, hg]
-            simpa [ψ]
-          · simp [Finsupp.linearCombination_apply,
-              Finsupp.sum_mapRange_index]
+            simp
+          · simp [Finsupp.linearCombination_apply]
         _ = 0 := hz'
     have hzbar' : Finsupp.linearCombination (R ⧸ I)
         (b : A → M ⧸ IM) zbar = 0 := by
@@ -412,9 +411,8 @@ private theorem basis_family_descend_of_basis
       (fun f g hf hg => ?_) (fun a c => ?_)
     · rw [Finsupp.mapRange_add']
       rw [map_add, hf, hg]
-      simpa [ψ]
-    · simp [Finsupp.linearCombination_apply,
-        Finsupp.sum_mapRange_index]
+      simp
+    · simp [Finsupp.linearCombination_apply]
   have hli : LinearIndependent (R ⧸ I)
       (fun a => IM.mkQ (x a)) := by
     rw [linearIndependent_iff_injective_finsuppLinearCombination]
@@ -530,7 +528,7 @@ theorem local_artinian_characterize_flat
     intro hflat
     let k := R ⧸ IsLocalRing.maximalIdeal R
     let Q := M ⧸ (IsLocalRing.maximalIdeal R • (⊤ : Submodule R M))
-    letI : Field k := Ideal.Quotient.field (IsLocalRing.maximalIdeal R)
+    let : Field k := Ideal.Quotient.field (IsLocalRing.maximalIdeal R)
     let A' := Module.Basis.ofVectorSpaceIndex k Q
     let b : Module.Basis A' k Q := Module.Basis.ofVectorSpace k Q
     let y : A' → M := fun a =>
@@ -552,11 +550,11 @@ theorem local_artinian_characterize_flat
     exact Module.Free.of_basis bM
   tfae_have 2 → 3 := by
     intro hfree
-    letI : Module.Free R M := hfree
+    let : Module.Free R M := hfree
     exact Module.Projective.of_free
   tfae_have 3 → 1 := by
     intro hprojective
-    letI : Module.Projective R M := hprojective
+    let : Module.Projective R M := hprojective
     exact Module.Flat.of_projective
   tfae_finish
 
@@ -574,7 +572,7 @@ theorem lift_basis
   rcases hbasis with ⟨b, hb⟩
   have hflatbar : Module.Flat (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M))) := by
-    letI : Module.Free (R ⧸ I)
+    let : Module.Free (R ⧸ I)
         (M ⧸ (I • (⊤ : Submodule R M))) := Module.Free.of_basis b
     exact Module.Flat.of_free
   obtain ⟨n, hn⟩ := hI
@@ -602,8 +600,8 @@ private theorem prepare_lift_flatness_c_phase
     (hcomp : ∀ r : R, eRing ((algebraMap R C) r) = algebraMap R T r)
     (hTflat : Module.Flat T (T ⊗[R] M)) :
     Module.Flat C (C ⊗[A] Mbar) := by
-  letI : Algebra C T := eRing.toRingHom.toAlgebra
-  letI : IsScalarTower R C T :=
+  let : Algebra C T := eRing.toRingHom.toAlgebra
+  let : IsScalarTower R C T :=
     IsScalarTower.of_algebraMap_eq (fun r => (hcomp r).symm)
   let eRingLin : C ≃ₗ[C] T :=
     { eRing.toAddEquiv with
@@ -611,9 +609,9 @@ private theorem prepare_lift_flatness_c_phase
         intro c x
         change eRing (c * x) = eRing c * eRing x
         exact eRing.map_mul c x }
-  letI : SMul C (T ⊗[R] M) :=
+  let : SMul C (T ⊗[R] M) :=
     ⟨fun c x => eRing c • x⟩
-  letI : Module C (T ⊗[R] M) :=
+  let : Module C (T ⊗[R] M) :=
     Module.compHom (T ⊗[R] M) eRing.toRingHom
   have hTowerCT : IsScalarTower C T (T ⊗[R] M) :=
     ⟨by
@@ -623,24 +621,24 @@ private theorem prepare_lift_flatness_c_phase
   have hCT : Module.Flat C T := by
     exact Module.Flat.of_linearEquiv eRingLin.symm
   have hCflatT : Module.Flat C (T ⊗[R] M) := by
-    letI : Module.Flat C T := hCT
-    letI : Module.Flat T (T ⊗[R] M) := hTflat
+    let : Module.Flat C T := hCT
+    let : Module.Flat T (T ⊗[R] M) := hTflat
     exact @Module.Flat.trans C T (T ⊗[R] M)
       inferInstance inferInstance inferInstance inferInstance inferInstance
       inferInstance hTowerCT hCT hTflat
-  letI : IsScalarTower C T (T ⊗[R] M) := hTowerCT
+  let : IsScalarTower C T (T ⊗[R] M) := hTowerCT
   let eCM : C ⊗[R] M ≃ₗ[C] T ⊗[R] M :=
     TensorProduct.AlgebraTensorModule.congr eRingLin
       (LinearEquiv.refl R M)
   have hCflatM : Module.Flat C (C ⊗[R] M) :=
     (Module.Flat.equiv_iff eCM).mpr hCflatT
-  letI : IsScalarTower R C C :=
+  let : IsScalarTower R C C :=
     IsScalarTower.of_algebraMap_smul (fun r c => by
       simp [Algebra.smul_def])
-  letI : IsScalarTower A C C :=
+  let : IsScalarTower A C C :=
     IsScalarTower.of_algebraMap_smul (fun a c => by
       simp [Algebra.smul_def])
-  letI : SMulCommClass A C C :=
+  let : SMulCommClass A C C :=
     ⟨fun a c x => by
       simp [Algebra.smul_def, mul_assoc, mul_comm]⟩
   let eC : C ⊗[A] Mbar ≃ₗ[C] C ⊗[R] M :=
@@ -666,12 +664,12 @@ private theorem prepare_lift_flatness_tail
         (M ⧸ (J • (⊤ : Submodule R M))))) :
     Module.Flat (R ⧸ J)
       (M ⧸ (J • (⊤ : Submodule R M))) := by
-  letI : Algebra R R' := φ.toAlgebra
+  let : Algebra R R' := φ.toAlgebra
   let K : Ideal R' := Ideal.map φ (I ^ 2)
   let A := R ⧸ J
   let S := R' ⧸ K
   let Mbar := M ⧸ (J • (⊤ : Submodule R M))
-  letI : Algebra A S := φbar.toAlgebra
+  let : Algebra A S := φbar.toAlgebra
   let Ibar : Ideal A := Ideal.map (Ideal.Quotient.mk J) I
   have hIbar : Ibar ^ 2 = ⊥ := by
     dsimp [Ibar]
@@ -688,27 +686,27 @@ private theorem prepare_lift_flatness_tail
   let T := B ⧸ L
   let qT : R →+* T :=
     (Ideal.Quotient.mk L).comp (Ideal.Quotient.mk I)
-  letI : SMul B T := ⟨fun b t => (Ideal.Quotient.mk L b) * t⟩
-  letI : SMul R T := ⟨fun r t => qT r * t⟩
-  letI : Algebra B T := (Ideal.Quotient.mk L).toAlgebra
-  letI : Module B T := Module.compHom T (Ideal.Quotient.mk L)
-  letI : Algebra R T := qT.toAlgebra
-  letI : Module R T := Module.compHom T qT
+  let : SMul B T := ⟨fun b t => (Ideal.Quotient.mk L b) * t⟩
+  let : SMul R T := ⟨fun r t => qT r * t⟩
+  let : Algebra B T := (Ideal.Quotient.mk L).toAlgebra
+  let : Module B T := Module.compHom T (Ideal.Quotient.mk L)
+  let : Algebra R T := qT.toAlgebra
+  let : Module R T := Module.compHom T qT
   have hcompT (r : R) :
       (algebraMap B T) ((algebraMap R B) r) = (algebraMap R T) r := by
     change (Ideal.Quotient.mk L) (Ideal.Quotient.mk I r) = qT r
     rfl
-  letI : IsScalarTower R B T :=
+  let : IsScalarTower R B T :=
     IsScalarTower.of_algebraMap_smul (fun r t => by
       change (algebraMap B T) ((algebraMap R B) r) * t = qT r * t
       rw [hcompT]
       change qT r * t = qT r * t
       rfl)
-  letI : IsScalarTower R T T :=
+  let : IsScalarTower R T T :=
     IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
-  letI : IsScalarTower B T T :=
+  let : IsScalarTower B T T :=
     IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
-  letI : SMulCommClass B T T :=
+  let : SMulCommClass B T T :=
     ⟨fun b t x => by
       change (algebraMap B T b) * (t * x) = t * ((algebraMap B T b) * x)
       simp [mul_assoc, mul_comm]⟩
@@ -718,28 +716,28 @@ private theorem prepare_lift_flatness_tail
     LinearEquiv.baseChange B T Mfiber (B ⊗[R] M) qI.symm ≪≫ₗ
       cancel_base_change (R := R) (A := B) (B := T) (M := T) (N := M)
   have hbaseT : Module.Flat T (T ⊗[B] Mfiber) := by
-    letI : Module.Flat B Mfiber := hflat
+    let : Module.Flat B Mfiber := hflat
     infer_instance
   have hTflat : Module.Flat T (T ⊗[R] M) :=
     (Module.Flat.equiv_iff eT).mp hbaseT
   let C := A ⧸ Ibar
   let qC : R →+* C :=
     (Ideal.Quotient.mk Ibar).comp (Ideal.Quotient.mk J)
-  letI : SMul A C :=
+  let : SMul A C :=
     ⟨fun a c => (Ideal.Quotient.mk Ibar a) * c⟩
-  letI : SMul R C := ⟨fun r c => qC r * c⟩
-  letI : Algebra A C := (Ideal.Quotient.mk Ibar).toAlgebra
-  letI : Module A C := Module.compHom C (Ideal.Quotient.mk Ibar)
-  letI : Algebra R C := qC.toAlgebra
-  letI : Module R C := Module.compHom C qC
+  let : SMul R C := ⟨fun r c => qC r * c⟩
+  let : Algebra A C := (Ideal.Quotient.mk Ibar).toAlgebra
+  let : Module A C := Module.compHom C (Ideal.Quotient.mk Ibar)
+  let : Algebra R C := qC.toAlgebra
+  let : Module R C := Module.compHom C qC
   have hcompC (r : R) :
       (algebraMap A C) ((algebraMap R A) r) = (algebraMap R C) r := by
     change (Ideal.Quotient.mk Ibar) (Ideal.Quotient.mk J r) = qC r
     rfl
-  letI : IsScalarTower R A C :=
+  let : IsScalarTower R A C :=
     IsScalarTower.of_algebraMap_eq (fun r => (hcompC r).symm)
   let eRing : C ≃+* T := DoubleQuot.quotQuotEquivComm J I
-  letI : Algebra C T := eRing.toRingHom.toAlgebra
+  let : Algebra C T := eRing.toRingHom.toAlgebra
   have hcompCT (r : R) :
       (algebraMap C T) ((algebraMap R C) r) = (algebraMap R T) r := by
     change eRing (qC r) = qT r
@@ -747,7 +745,7 @@ private theorem prepare_lift_flatness_tail
         (Ideal.Quotient.mk Ibar (Ideal.Quotient.mk J r)) =
       Ideal.Quotient.mk L (Ideal.Quotient.mk I r)
     exact DoubleQuot.quotQuotEquivComm_quotQuotMk J I r
-  letI : IsScalarTower R C T :=
+  let : IsScalarTower R C T :=
     IsScalarTower.of_algebraMap_eq (fun r => (hcompCT r).symm)
   have hCflatMbar : Module.Flat C (C ⊗[A] Mbar) := by
     apply prepare_lift_flatness_c_phase eM eRing
@@ -773,7 +771,7 @@ theorem prepare_lift_flatness
       Module.Flat R' (R' ⊗[R] M)) :
     Module.Flat (R ⧸ prepareIdeal φ I)
       (M ⧸ (prepareIdeal φ I • (⊤ : Submodule R M))) := by
-  letI : Algebra R R' := φ.toAlgebra
+  let : Algebra R R' := φ.toAlgebra
   let J : Ideal R := prepareIdeal φ I
   let K : Ideal R' := Ideal.map φ (I ^ 2)
   let A := R ⧸ J
@@ -788,12 +786,12 @@ theorem prepare_lift_flatness
     change Ideal.comap φ (Ideal.map φ (I ^ 2)) ≤
       Ideal.comap φ (Ideal.map φ (I ^ 2))
     exact le_rfl
-  letI : Algebra A S := φbar.toAlgebra
+  let : Algebra A S := φbar.toAlgebra
   have hcomp (r : R) :
       (algebraMap A S) ((algebraMap R A) r) = (algebraMap R S) r := by
     change φbar (Ideal.Quotient.mk J r) = Ideal.Quotient.mk K (φ r)
     rfl
-  letI : IsScalarTower R A S :=
+  let : IsScalarTower R A S :=
     ⟨by
       intro r a s
       obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective a

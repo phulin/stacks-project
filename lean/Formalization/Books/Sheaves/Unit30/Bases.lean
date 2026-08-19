@@ -1300,7 +1300,7 @@ theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     Nonempty (TopCat.Presheaf.stalk (C := Type v)
       ((basisModuleExtension B hB O F hF).val.presheaf ⋙
         (CategoryTheory.forget AddCommGrpCat)) x ≃ basisModuleStalk B F x) := by
-  sorry
+  exact (basisModuleExtensionData B hB O F hF).stalk_iso x
 
 /-- Extension preserves the stalk as a module, after transporting scalars
 along the canonical comparison between the ordinary and basis ring stalks. -/

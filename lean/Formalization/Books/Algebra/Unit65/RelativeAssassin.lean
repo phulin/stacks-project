@@ -567,14 +567,14 @@ theorem compare_relative_assassins
     [AddCommGroup N] [Module S N] :
     relativeAssassinAFin (R := R) (S := S) (N := N) ⊆
         relativeAssassinA (R := R) (S := S) (N := N) ∧
-      relativeAssassinBFin (R := R) (S := S) (N := N) ⊆
-        relativeAssassinB (R := R) (S := S) (N := N) ∧
+      relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ⊆
+        relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinAFin (R := R) (S := S) (N := N) ⊆
         relativeAssassinAFin' (R := R) (S := S) (N := N) ∧
       relativeAssassinAFin' (R := R) (S := S) (N := N) ⊆
-        relativeAssassinBFin (R := R) (S := S) (N := N) ∧
+        relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) ⊆
-        relativeAssassinB (R := R) (S := S) (N := N) := by
+        relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
   sorry
 
 theorem relative_assassins_eq_of_noetherian_target
@@ -583,8 +583,8 @@ theorem relative_assassins_eq_of_noetherian_target
     [AddCommGroup N] [Module S N] [IsNoetherianRing S] :
     relativeAssassinA (R := R) (S := S) (N := N) =
         relativeAssassinAFin (R := R) (S := S) (N := N) ∧
-      relativeAssassinB (R := R) (S := S) (N := N) =
-        relativeAssassinBFin (R := R) (S := S) (N := N) := by
+        relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) =
+        relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
   sorry
 
 theorem relative_assassins_eq_of_flat
@@ -597,8 +597,8 @@ theorem relative_assassins_eq_of_flat
         relativeAssassinAFin (R := R) (S := S) (N := N) ∧
       relativeAssassinAFin (R := R) (S := S) (N := N) =
         relativeAssassinAFin' (R := R) (S := S) (N := N) ∧
-      relativeAssassinB (R := R) (S := S) (N := N) =
-        relativeAssassinBFin (R := R) (S := S) (N := N) := by
+      relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) =
+        relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
   sorry
 
 theorem relative_assassins_all_eq_of_noetherian_of_flat
@@ -614,9 +614,9 @@ theorem relative_assassins_all_eq_of_noetherian_of_flat
       relativeAssassinA (R := R) (S := S) (N := N) =
         relativeAssassinAFin' (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) =
-        relativeAssassinB (R := R) (S := S) (N := N) ∧
+        relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) =
-        relativeAssassinBFin (R := R) (S := S) (N := N) := by
+        relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) := by
   sorry
 
 /-! ## Bourbaki's lemma and its fibre form -/

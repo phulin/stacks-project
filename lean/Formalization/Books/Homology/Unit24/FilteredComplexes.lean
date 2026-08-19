@@ -81,14 +81,14 @@ theorem filteredComplex_D₀_formula {C : Type u} [Category.{v} C]
     filteredComplexD₀ K p q =
       filteredComplexSourceD₀ K p q ≫
         eqToHom (congrArg (fun n : ℤ => gradedPiece (K.X n) p) (by omega)) := by
-  sorry
+  rfl
 
 theorem filteredComplex_D₀_source_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexD₀ K p q =
       filteredComplexSourceD₀ K p q ≫
         eqToHom (congrArg (fun n : ℤ => gradedPiece (K.X n) p) (by omega)) := by
-  sorry
+  rfl
 
 theorem filteredComplex_E₁_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
@@ -156,14 +156,20 @@ theorem filteredComplex_boundary_le_cycle
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)
     (r p q : ℤ) :
     filteredComplexBoundaryPlus K r p q ≤ filteredComplexCyclePlus K r p q := by
-  sorry
+  exact Formalization.Books.Homology.Unit20.filteredComplex_boundary_le_cycle K r p q
 
 theorem filteredComplex_boundary_monotone
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)
     (r p q : ℤ) :
     filteredComplexBoundaryPlus K r p q ≤
       filteredComplexBoundaryPlus K (r + 1) p q := by
-  sorry
+  change Formalization.Books.Homology.Unit20.filteredComplexBoundaryPlus K r p q ≤
+    Formalization.Books.Homology.Unit20.filteredComplexBoundaryPlus K (r + 1) p q
+  apply sup_le_sup_right
+  apply inf_le_inf_right
+  apply (Subobject.exists _).monotone
+  apply (K.X (p + q - 1)).filtration.antitone
+  omega
 
 theorem filteredComplex_cycle_antitone
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)

@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Homology.HomologicalComplex
+import Mathlib.RingTheory.GradedAlgebra.TensorProduct
 import Formalization.Books.Algebra.Unit13.TensorAlgebra
 import Formalization.Books.Algebra.Unit131.Differentials
 
@@ -1669,7 +1670,564 @@ theorem deRhamBaseChangeIso_exists
           e (p + 1) (deRhamBaseChangeDifferential (A := A) (A' := A') (B := B) p x) =
             deRhamDifferential (A := A')
               (B := deRhamBaseChangeRing A A' B) p (e p x)} := by
-  sorry
+  classical
+  let T := deRhamBaseChangeRing A A' B
+  letI : Algebra B T := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra.IsPushout A A' B T := inferInstance
+  letI : SMulCommClass A' B T := inferInstance
+  let component (p : ℕ) :
+      deRhamBaseChangeTerm A A' B p →ₗ[A'] deRhamTerm A' T p := by
+    letI : Module A (deRhamTerm A' T p) :=
+      Module.restrictScalars A A' (deRhamTerm A' T p)
+    letI : IsScalarTower A A' (deRhamTerm A' T p) :=
+      IsScalarTower.restrictScalars A A' (deRhamTerm A' T p)
+    let f : deRhamTerm A B p →ₗ[A] deRhamTerm A' T p :=
+      { toFun := deRhamMapComponent (A := A) (A' := A')
+          (B := B) (B' := T) p
+        map_add' := (deRhamMapComponent (A := A) (A' := A')
+          (B := B) (B' := T) p).map_add
+        map_smul' := by
+          intro r ω
+          rw [(deRhamMapComponent (A := A) (A' := A')
+            (B := B) (B' := T) p).map_smul]
+          change (algebraMap A T r) •
+              deRhamMapComponent (A := A) (A' := A')
+                (B := B) (B' := T) p ω =
+            (algebraMap A' T (algebraMap A A' r)) •
+              deRhamMapComponent (A := A) (A' := A')
+                (B := B) (B' := T) p ω
+          rw [show algebraMap A T r = algebraMap A' T (algebraMap A A' r) by
+            exact congrArg (fun g : A →+* T => g r)
+              (IsScalarTower.algebraMap_eq A A' T)] }
+    exact @LinearMap.liftBaseChange A (deRhamTerm A B p)
+      (deRhamTerm A' T p) A' _ _ _ _ _ _
+      (Module.restrictScalars A A' (deRhamTerm A' T p)) _
+      (IsScalarTower.restrictScalars A A' (deRhamTerm A' T p)) f
+  have component_tmul (p : ℕ) (a : A') (ω : deRhamTerm A B p) :
+      component p (a ⊗ₜ[A] ω) =
+        a • deRhamMapComponent (A := A) (A' := A') (B := B) (B' := T) p ω := by
+    change a • deRhamMapComponent (A := A) (A' := A')
+      (B := B) (B' := T) p ω = _
+    rfl
+  have hbij : ∀ p, Function.Bijective (component p) := by
+    intro p
+    let M := ModuleOfDifferentials A B
+    let EB := ExteriorAlgebra B M
+    let aToEB : A →+* EB :=
+      (algebraMap B EB).comp (algebraMap A B)
+    letI : Algebra A EB := aToEB.toAlgebra' (by
+      intro a x
+      exact Algebra.commutes (algebraMap A B a) x)
+    letI : IsScalarTower A B EB := by
+      apply IsScalarTower.of_algebraMap_eq
+      intro a
+      change aToEB a = (algebraMap B EB) (algebraMap A B a)
+      rfl
+    let bToEB : B →ₐ[A] EB :=
+      { toRingHom := algebraMap B EB
+        commutes' := by
+          intro a
+          change (algebraMap B EB) (algebraMap A B a) = aToEB a
+          rfl }
+    let tToE : T →ₐ[A'] (A' ⊗[A] EB) :=
+      Algebra.TensorProduct.map (AlgHom.id A' A')
+        bToEB
+    have tToE_tmul (a : A') (b : B) :
+        tToE (a ⊗ₜ[A] b) = a ⊗ₜ[A] bToEB b := by
+      exact Algebra.TensorProduct.map_tmul _ _ _ _
+    have tToE_right (b : B) :
+        tToE (algebraMap B T b) = 1 ⊗ₜ[A] algebraMap B EB b := by
+      change tToE (1 ⊗ₜ[A] b) = _
+      rw [tToE_tmul]
+      rfl
+    letI : Algebra T (A' ⊗[A] EB) := tToE.toRingHom.toAlgebra' (by
+      intro t x
+      refine TensorProduct.induction_on t (by simp) (fun a b => ?_)
+        (fun u v hu hv => by simpa [add_mul, mul_add] using congrArg₂ (· + ·) hu hv)
+      refine TensorProduct.induction_on x (by simp) (fun c y => ?_)
+        (fun u v hu hv => by simpa [mul_add, add_mul] using congrArg₂ (· + ·) hu hv)
+      rw [show tToE.toRingHom (a ⊗ₜ[A] b) = a ⊗ₜ[A] bToEB b by
+        exact tToE_tmul a b]
+      simp only [bToEB, AlgHom.coe_mk, RingHom.coe_coe,
+        Algebra.TensorProduct.tmul_mul_tmul]
+      change (a * c) ⊗ₜ[A] ((algebraMap B EB b) * y) =
+        (c * a) ⊗ₜ[A] (y * algebraMap B EB b)
+      rw [mul_comm a c, Algebra.commutes])
+    letI : IsScalarTower A' T (A' ⊗[A] EB) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro a x
+      rw [Algebra.smul_def, Algebra.smul_def]
+      change tToE (algebraMap A' T a) * x =
+        (algebraMap A' (A' ⊗[A] EB) a) * x
+      rw [tToE.commutes]
+    letI : Module B (A' ⊗[A] M) :=
+      KaehlerDifferential.moduleBaseChange A A' B
+    letI : Module T (A' ⊗[A] M) :=
+      KaehlerDifferential.moduleBaseChange' A A' B T
+    let diffEquiv : A' ⊗[A] M ≃ₗ[T] ModuleOfDifferentials A' T :=
+      baseChangeDifferentialsEquiv (R := A) (R' := A') (S := B)
+    let ιA : M →ₗ[A] EB :=
+      { toFun := ExteriorAlgebra.ι B
+        map_add' := (ExteriorAlgebra.ι B).map_add
+        map_smul' := by
+          intro a m
+          rw [← IsScalarTower.algebraMap_smul B a m]
+          rw [(ExteriorAlgebra.ι B).map_smul]
+          change (algebraMap B EB (algebraMap A B a)) *
+              ExteriorAlgebra.ι B m = aToEB a * ExteriorAlgebra.ι B m
+          rfl }
+    let hgenA' : A' ⊗[A] M →ₗ[A'] A' ⊗[A] EB :=
+      LinearMap.baseChange A' ιA
+    have hgenA'_tmul (a : A') (m : M) :
+        hgenA' (a ⊗ₜ[A] m) = a ⊗ₜ[A] ExteriorAlgebra.ι B m := by
+      exact LinearMap.baseChange_tmul _ _ _
+    have hgenA'_smul (t : T) (x : A' ⊗[A] M) :
+        hgenA' (t • x) = t • hgenA' x := by
+      induction t using (inferInstance : Algebra.IsPushout A A' B T).1.inductionOn with
+      | zero => simp
+      | smul a t ht => rw [smul_assoc, hgenA'.map_smul, ht, smul_assoc]
+      | add u v hu hv => simp only [add_smul, map_add, hu, hv]
+      | tmul b =>
+          change hgenA' ((algebraMap B T b) • x) =
+            (algebraMap B T b) • hgenA' x
+          refine TensorProduct.induction_on x (by simp) (fun a m => ?_)
+            (fun u v hu hv => by simpa [smul_add] using congrArg₂ (· + ·) hu hv)
+          rw [show (algebraMap B T b) • (a ⊗ₜ[A] m) =
+              b • (a ⊗ₜ[A] m) by
+            exact IsScalarTower.algebraMap_smul T b (a ⊗ₜ[A] m)]
+          rw [KaehlerDifferential.mulActionBaseChange_smul_tmul]
+          rw [hgenA'_tmul, hgenA'_tmul]
+          change a ⊗ₜ[A] ExteriorAlgebra.ι B (b • m) =
+            tToE (algebraMap B T b) *
+              (a ⊗ₜ[A] ExteriorAlgebra.ι B m)
+          rw [tToE_right, Algebra.TensorProduct.tmul_mul_tmul,
+            (ExteriorAlgebra.ι B).map_smul]
+          rw [Algebra.smul_def]
+          simp only [one_mul]
+          change a ⊗ₜ[A] ((algebraMap B EB b) * ExteriorAlgebra.ι B m) = _
+          rfl
+    let hgen : A' ⊗[A] M →ₗ[T] A' ⊗[A] EB :=
+      { toFun := hgenA'
+        map_add' := hgenA'.map_add
+        map_smul' := hgenA'_smul }
+    have hgen_anticomm (x y : A' ⊗[A] M) :
+        hgen x * hgen y + hgen y * hgen x = 0 := by
+      refine TensorProduct.induction_on x (by simp) (fun a m => ?_)
+        (fun u v hu hv => ?_)
+      · refine TensorProduct.induction_on y (by simp) (fun c n => ?_)
+          (fun u v hu hv => ?_)
+        · change hgenA' (a ⊗ₜ[A] m) * hgenA' (c ⊗ₜ[A] n) +
+              hgenA' (c ⊗ₜ[A] n) * hgenA' (a ⊗ₜ[A] m) = 0
+          simp only [hgenA'_tmul, Algebra.TensorProduct.tmul_mul_tmul]
+          rw [mul_comm c a,
+            ← TensorProduct.tmul_add, ExteriorAlgebra.ι_add_mul_swap]
+          simp
+        · change hgen (a ⊗ₜ[A] m) * hgen (u + v) +
+              hgen (u + v) * hgen (a ⊗ₜ[A] m) = 0
+          simp only [hgen.map_add, mul_add, add_mul]
+          calc
+            hgen (a ⊗ₜ[A] m) * hgen u + hgen (a ⊗ₜ[A] m) * hgen v +
+                (hgen u * hgen (a ⊗ₜ[A] m) +
+                  hgen v * hgen (a ⊗ₜ[A] m)) =
+              (hgen (a ⊗ₜ[A] m) * hgen u + hgen u * hgen (a ⊗ₜ[A] m)) +
+                (hgen (a ⊗ₜ[A] m) * hgen v +
+                  hgen v * hgen (a ⊗ₜ[A] m)) := by abel
+            _ = 0 := by rw [hu, hv, add_zero]
+      · change hgen (u + v) * hgen y + hgen y * hgen (u + v) = 0
+        simp only [hgen.map_add, add_mul, mul_add]
+        calc
+          hgen u * hgen y + hgen v * hgen y +
+              (hgen y * hgen u + hgen y * hgen v) =
+            (hgen u * hgen y + hgen y * hgen u) +
+              (hgen v * hgen y + hgen y * hgen v) := by abel
+          _ = 0 := by rw [hu, hv, add_zero]
+    have hgen_sq_zero (x : A' ⊗[A] M) : hgen x * hgen x = 0 := by
+      refine TensorProduct.induction_on x (by simp) (fun a m => ?_)
+        (fun u v hu hv => ?_)
+      · change hgenA' (a ⊗ₜ[A] m) * hgenA' (a ⊗ₜ[A] m) = 0
+        simp only [hgenA'_tmul, Algebra.TensorProduct.tmul_mul_tmul]
+        rw [ExteriorAlgebra.ι_sq_zero]
+        simp
+      · simp only [hgen.map_add, add_mul, mul_add]
+        calc
+          hgen u * hgen u + hgen v * hgen u +
+              (hgen u * hgen v + hgen v * hgen v) =
+            hgen u * hgen u +
+                (hgen u * hgen v + hgen v * hgen u) +
+              hgen v * hgen v := by abel
+          _ = 0 := by rw [hu, hgen_anticomm, hv, zero_add, add_zero]
+    let N := ModuleOfDifferentials A' T
+    let ET := ExteriorAlgebra T N
+    let ggen : N →ₗ[T] A' ⊗[A] EB :=
+      hgen.comp diffEquiv.symm.toLinearMap
+    have ggen_sq_zero (x : N) : ggen x * ggen x = 0 :=
+      hgen_sq_zero (diffEquiv.symm x)
+    let g : ET →ₐ[T] A' ⊗[A] EB :=
+      ExteriorAlgebra.lift T ⟨ggen, ggen_sq_zero⟩
+    let includeM : M →ₗ[B] A' ⊗[A] M :=
+      { toFun := fun m => 1 ⊗ₜ[A] m
+        map_add' := by
+          intro m n
+          exact TensorProduct.tmul_add 1 m n
+        map_smul' := by
+          intro b m
+          change 1 ⊗ₜ[A] (b • m) = b • (1 ⊗ₜ[A] m)
+          rw [KaehlerDifferential.mulActionBaseChange_smul_tmul] }
+    let fgenT : A' ⊗[A] M →ₗ[T] ET :=
+      (ExteriorAlgebra.ι T).comp diffEquiv.toLinearMap
+    let fgen : M →ₗ[B] ET :=
+      (fgenT.restrictScalars B).comp includeM
+    have fgen_sq_zero (m : M) : fgen m * fgen m = 0 :=
+      ExteriorAlgebra.ι_sq_zero (diffEquiv (includeM m))
+    let fR : EB →ₐ[B] ET :=
+      ExteriorAlgebra.lift B ⟨fgen, fgen_sq_zero⟩
+    have fR_ι (m : M) : fR (ExteriorAlgebra.ι B m) = fgen m :=
+      ExteriorAlgebra.lift_ι_apply B fgen fgen_sq_zero m
+    let fA : EB →ₐ[A] ET :=
+      { toRingHom := fR.toRingHom
+        commutes' := by
+          intro a
+          change fR (algebraMap B EB (algebraMap A B a)) = algebraMap A ET a
+          rw [fR.commutes]
+          calc
+            algebraMap T ET (algebraMap B T (algebraMap A B a)) =
+                algebraMap T ET (algebraMap A T a) := by
+              apply congrArg (algebraMap T ET)
+              exact (congrArg (fun q : A →+* T => q a)
+                (IsScalarTower.algebraMap_eq A B T)).symm
+            _ = algebraMap A ET a := by
+              exact (congrArg (fun q : A →+* ET => q a)
+                (IsScalarTower.algebraMap_eq A T ET)).symm }
+    let sourceTower : IsScalarTower A B EB := inferInstance
+    let sourceGrading : ℕ → Submodule A EB :=
+      fun n => @Submodule.restrictScalars A B EB _ _ _ _ _ _ sourceTower
+        (exteriorPower B M n)
+    let targetGrading : ℕ → Submodule A' ET :=
+      fun n => (exteriorPower T N n).restrictScalars A'
+    letI : GradedAlgebra sourceGrading := by
+      dsimp [sourceGrading]
+      infer_instance
+    letI : GradedAlgebra targetGrading := by
+      dsimp [targetGrading]
+      infer_instance
+    have hf_gen (m : M) : fA (ExteriorAlgebra.ι B m) ∈ targetGrading 1 := by
+      change fR (ExteriorAlgebra.ι B m) ∈ exteriorPower T N 1
+      rw [fR_ι]
+      change fgen m ∈ (LinearMap.range (ExteriorAlgebra.ι T)) ^ 1
+      rw [pow_one]
+      exact LinearMap.mem_range_self _ _
+    have hf_one (b : B) : fA (algebraMap B EB b) ∈ targetGrading 0 := by
+      change fR (algebraMap B EB b) ∈ exteriorPower T N 0
+      have hzero : (1 : ET) ∈ exteriorPower T N 0 :=
+        SetLike.one_mem_graded _
+      rw [fR.commutes]
+      change algebraMap T ET (algebraMap B T b) ∈ exteriorPower T N 0
+      rw [Algebra.algebraMap_eq_smul_one]
+      exact Submodule.smul_mem _ (algebraMap B T b) hzero
+    let fgraded :
+        (fun n : ℕ => @Submodule.restrictScalars A B EB _ _ _ _ _ _ sourceTower
+          (exteriorPower B M n)) →ₐᵍ[A]
+        (fun n : ℕ => (targetGrading n).restrictScalars A) :=
+      { fA with
+        map_mem hx := by
+          induction hx using Submodule.pow_induction_on_left' with
+          | algebraMap a => exact hf_one a
+          | add x y n hx hy ihx ihy =>
+              simpa only [map_add] using add_mem ihx ihy
+          | mem_mul _ hm n x hx ih =>
+              obtain ⟨m, rfl⟩ := hm
+              rw [map_mul]
+              simpa [Nat.one_add] using
+                SetLike.mul_mem_graded (A := targetGrading) (hf_gen m) ih }
+    let V : ℕ → Submodule A' (A' ⊗[A] EB) :=
+      fun n => (sourceGrading n).baseChange A'
+    letI : GradedAlgebra V := by
+      dsimp [V]
+      infer_instance
+    have hg_zero (t : T) : algebraMap T (A' ⊗[A] EB) t ∈ V 0 := by
+      change tToE t ∈ (sourceGrading 0).baseChange A'
+      refine TensorProduct.induction_on t (by simp) (fun a b => ?_)
+        (fun u v hu hv => by simpa only [map_add] using add_mem hu hv)
+      rw [tToE_tmul]
+      apply Submodule.tmul_mem_baseChange_of_mem
+      change algebraMap B EB b ∈ exteriorPower B M 0
+      have hzero : (1 : EB) ∈ exteriorPower B M 0 :=
+        SetLike.one_mem_graded _
+      simpa only [Algebra.algebraMap_eq_smul_one] using
+        Submodule.smul_mem _ b hzero
+    have hg_one (x : N) : g (ExteriorAlgebra.ι T x) ∈ V 1 := by
+      have hmem (y : A' ⊗[A] M) : hgen y ∈ V 1 := by
+        refine TensorProduct.induction_on y (by simp) (fun a m => ?_)
+          (fun u v hu hv => by simpa only [map_add] using add_mem hu hv)
+        change hgenA' (a ⊗ₜ[A] m) ∈ V 1
+        rw [hgenA'_tmul]
+        apply Submodule.tmul_mem_baseChange_of_mem
+        change ExteriorAlgebra.ι B m ∈ exteriorPower B M 1
+        change ExteriorAlgebra.ι B m ∈ (LinearMap.range (ExteriorAlgebra.ι B)) ^ 1
+        rw [pow_one]
+        exact LinearMap.mem_range_self _ _
+      rw [show g (ExteriorAlgebra.ι T x) = ggen x by
+        exact ExteriorAlgebra.lift_ι_apply T ggen ggen_sq_zero x]
+      exact hmem (diffEquiv.symm x)
+    let gA' : ET →ₐ[A'] A' ⊗[A] EB := g.restrictScalars A'
+    let ggraded : targetGrading →ₐᵍ[A'] V :=
+      { gA' with
+        map_mem hx := by
+          induction hx using Submodule.pow_induction_on_left' with
+          | algebraMap t =>
+              change g (algebraMap T ET t) ∈ V 0
+              rw [g.commutes]
+              exact hg_zero t
+          | add x y n hx hy ihx ihy =>
+              simpa only [map_add] using add_mem ihx ihy
+          | mem_mul _ hm n x hx ih =>
+              obtain ⟨m, rfl⟩ := hm
+              rw [gA'.map_mul]
+              simpa [Nat.one_add, gA'] using
+                SetLike.mul_mem_graded (A := V) (hg_one m) ih }
+    let fbase := GradedAlgHom.liftEquiv sourceGrading targetGrading fgraded
+    have hfhgen (y : A' ⊗[A] M) :
+        fbase.toAlgHom (hgen y) = ExteriorAlgebra.ι T (diffEquiv y) := by
+      refine TensorProduct.induction_on y (by simp) (fun a m => ?_)
+        (fun u v hu hv => by simpa only [map_add] using congrArg₂ (· + ·) hu hv)
+      change fbase.toAlgHom (hgenA' (a ⊗ₜ[A] m)) = _
+      rw [hgenA'_tmul]
+      simp [fbase, fgraded, fA]
+      rw [fR_ι]
+      change a • ExteriorAlgebra.ι T (diffEquiv (1 ⊗ₜ[A] m)) = _
+      rw [← IsScalarTower.algebraMap_smul T a,
+        ← (ExteriorAlgebra.ι T).map_smul, ← diffEquiv.map_smul]
+      congr 1
+      rw [IsScalarTower.algebraMap_smul T a, TensorProduct.smul_tmul']
+      simp
+    have hf_scalar (t : T) :
+        fbase.toAlgHom (algebraMap T (A' ⊗[A] EB) t) = algebraMap T ET t := by
+      change fbase.toAlgHom (tToE t) = algebraMap T ET t
+      refine TensorProduct.induction_on t (by simp) (fun a b => ?_)
+        (fun u v hu hv => by simpa only [map_add] using congrArg₂ (· + ·) hu hv)
+      rw [tToE_tmul]
+      simp [fbase, fgraded, fA]
+      change a • fR (algebraMap B EB b) = algebraMap T ET (a ⊗ₜ[A] b)
+      rw [fR.commutes]
+      change (algebraMap A' ET a) * algebraMap T ET (algebraMap B T b) = _
+      change algebraMap T ET (algebraMap A' T a) *
+        algebraMap T ET (algebraMap B T b) = _
+      rw [← map_mul]
+      congr 1
+      change (a ⊗ₜ[A] (1 : B)) * (1 ⊗ₜ[A] b) = a ⊗ₜ[A] b
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      simp
+    have h₁ : fbase.toAlgHom.comp gA' = AlgHom.id A' ET := by
+      apply AlgHom.ext
+      intro z
+      change fbase.toAlgHom (g z) = z
+      refine ExteriorAlgebra.induction (fun t => ?_) (fun x => ?_)
+        (fun x y hx hy => by simp only [map_mul, hx, hy])
+        (fun x y hx hy => by simp only [map_add, hx, hy]) z
+      · rw [g.commutes, hf_scalar]
+      · rw [show g (ExteriorAlgebra.ι T x) = ggen x by
+          exact ExteriorAlgebra.lift_ι_apply T ggen ggen_sq_zero x]
+        change fbase.toAlgHom (hgen (diffEquiv.symm x)) = ExteriorAlgebra.ι T x
+        rw [hfhgen, diffEquiv.apply_symm_apply]
+    have hgfR (x : EB) : g (fR x) = 1 ⊗ₜ[A] x := by
+      refine ExteriorAlgebra.induction (fun b => ?_) (fun m => ?_)
+        (fun x y hx hy => by
+          rw [map_mul, map_mul, hx, hy, Algebra.TensorProduct.tmul_mul_tmul]
+          simp)
+        (fun x y hx hy => by rw [map_add, map_add, hx, hy, TensorProduct.tmul_add]) x
+      · rw [fR.commutes]
+        change g (algebraMap T ET (algebraMap B T b)) = _
+        rw [g.commutes]
+        change tToE (algebraMap B T b) = _
+        exact tToE_right b
+      · rw [fR_ι]
+        change g (ExteriorAlgebra.ι T (diffEquiv (1 ⊗ₜ[A] m))) = _
+        rw [show g (ExteriorAlgebra.ι T (diffEquiv (1 ⊗ₜ[A] m))) =
+            ggen (diffEquiv (1 ⊗ₜ[A] m)) by
+          exact ExteriorAlgebra.lift_ι_apply T ggen ggen_sq_zero _]
+        change hgen (diffEquiv.symm (diffEquiv (1 ⊗ₜ[A] m))) = _
+        rw [diffEquiv.symm_apply_apply]
+        exact hgenA'_tmul 1 m
+    have h₂ : gA'.comp fbase.toAlgHom = AlgHom.id A' (A' ⊗[A] EB) := by
+      apply AlgHom.ext
+      intro z
+      change g (fbase.toAlgHom z) = z
+      refine TensorProduct.induction_on z (by simp) (fun a x => ?_)
+        (fun u v hu hv => by simpa only [map_add] using congrArg₂ (· + ·) hu hv)
+      simp [fbase, fgraded, fA]
+      change g (a • fR x) = a ⊗ₜ[A] x
+      change gA' (a • fR x) = a ⊗ₜ[A] x
+      change gA'.toLinearMap (a • fR x) = a ⊗ₜ[A] x
+      rw [gA'.toLinearMap.map_smul]
+      change a • g (fR x) = a ⊗ₜ[A] x
+      rw [hgfR, TensorProduct.smul_tmul']
+      simp
+    let fcomp : V p →ₗ[A'] targetGrading p :=
+      (fbase.toAlgHom.toLinearMap.comp (Submodule.subtype _)).codRestrict _
+        (fun x => fbase.map_mem x.property)
+    let gcomp : targetGrading p →ₗ[A'] V p :=
+      (gA'.toLinearMap.comp (Submodule.subtype _)).codRestrict _
+        (fun x => ggraded.map_mem x.property)
+    letI : RingHomInvPair (RingHom.id A') (RingHom.id A') := RingHomInvPair.ids
+    let ecomp := LinearEquiv.ofLinear (σ₁₂ := RingHom.id A')
+      (σ₂₁ := RingHom.id A') (re₁₂ := RingHomInvPair.ids)
+      (re₂₁ := RingHomInvPair.ids) fcomp gcomp (by
+        apply LinearMap.ext
+        intro x
+        apply Subtype.ext
+        change fbase.toAlgHom (gA' (x : ET)) = (x : ET)
+        exact congrArg (fun q => q (x : ET)) h₁) (by
+        apply LinearMap.ext
+        intro x
+        apply Subtype.ext
+        change gA' (fbase.toAlgHom (x : A' ⊗[A] EB)) =
+          (x : A' ⊗[A] EB)
+        exact congrArg (fun q => q (x : A' ⊗[A] EB)) h₂)
+    let projA : EB →ₗ[A] sourceGrading p :=
+      (DirectSum.component A ℕ (fun n => ↥(sourceGrading n)) p).comp
+        (DirectSum.decomposeAlgEquiv sourceGrading).toLinearMap
+    have projA_subtype (x : sourceGrading p) : projA (x : EB) = x := by
+      apply Subtype.ext
+      exact DirectSum.decompose_of_mem_same sourceGrading x.property
+    let projBC : (A' ⊗[A] EB) →ₗ[A'] (A' ⊗[A] sourceGrading p) :=
+      LinearMap.baseChange A' projA
+    have projBC_toBaseChange (x : A' ⊗[A] sourceGrading p) :
+        projBC ((sourceGrading p).toBaseChange A' x : A' ⊗[A] EB) = x := by
+      refine TensorProduct.induction_on x (by simp) (fun a y => ?_)
+        (fun u v hu hv => by
+          rw [((sourceGrading p).toBaseChange A').map_add]
+          change projBC
+            (↑((sourceGrading p).toBaseChange A' u) +
+              ↑((sourceGrading p).toBaseChange A' v)) = u + v
+          rw [projBC.map_add, hu, hv])
+      rw [Submodule.coe_toBaseChange_tmul, LinearMap.baseChange_tmul, projA_subtype]
+    let splitBack : V p →ₗ[A'] A' ⊗[A] sourceGrading p :=
+      projBC.comp (Submodule.subtype _)
+    let splitEquiv : (A' ⊗[A] sourceGrading p) ≃ₗ[A'] V p :=
+      LinearEquiv.ofLinear (σ₁₂ := RingHom.id A') (σ₂₁ := RingHom.id A')
+        (re₁₂ := RingHomInvPair.ids) (re₂₁ := RingHomInvPair.ids)
+        ((sourceGrading p).toBaseChange A') splitBack (by
+          apply LinearMap.ext
+          intro x
+          obtain ⟨y, rfl⟩ := (sourceGrading p).toBaseChange_surjective A' x
+          change (sourceGrading p).toBaseChange A'
+            (splitBack ((sourceGrading p).toBaseChange A' y)) =
+              (sourceGrading p).toBaseChange A' y
+          apply congrArg ((sourceGrading p).toBaseChange A')
+          change projBC ((sourceGrading p).toBaseChange A' y : A' ⊗[A] EB) = y
+          exact projBC_toBaseChange y) (by
+          apply LinearMap.ext
+          intro x
+          exact projBC_toBaseChange x)
+    let termEquiv : deRhamTerm A B p ≃ₗ[A] sourceGrading p :=
+      { toFun := fun x => ⟨x, x.property⟩
+        invFun := fun x => ⟨x, x.property⟩
+        map_add' := by intro x y; rfl
+        map_smul' := by intro a x; apply Subtype.ext; rfl
+        left_inv := by intro x; apply Subtype.ext; rfl
+        right_inv := by intro x; apply Subtype.ext; rfl }
+    let ep : deRhamBaseChangeTerm A A' B p ≃ₗ[A'] deRhamTerm A' T p :=
+      (LinearEquiv.baseChange A A' _ _ termEquiv).trans (splitEquiv.trans ecomp)
+    have hdiff (b : B) :
+        diffEquiv (1 ⊗ₜ[A] universalDifferentialLinearMap A B b) =
+          universalDifferentialLinearMap A' T (algebraMap B T b) := by
+      change KaehlerDifferential.tensorKaehlerEquivBase A A' B T
+          (1 ⊗ₜ[A] universalDifferentialLinearMap A B b) = _
+      rw [KaehlerDifferential.tensorKaehlerEquivBase_tmul, one_smul]
+      exact mapOfDifferentials_apply_universalDifferential
+        (R := A) (T := A') (A := B) (B := T) b
+    have fR_ιMulti (m : Fin p → M) :
+        fR (exteriorPower.ιMulti B p m : EB) =
+          ExteriorAlgebra.ιMulti T p (fun i => diffEquiv (1 ⊗ₜ[A] m i)) := by
+      rw [exteriorPower.ιMulti_apply_coe, ExteriorAlgebra.ιMulti_apply,
+        ExteriorAlgebra.ιMulti_apply, map_list_prod]
+      simp only [List.map_ofFn, fR_ι]
+      congr 1
+      congr 1
+      funext i
+      change fR (ExteriorAlgebra.ι B (m i)) = _
+      rw [fR_ι]
+      simp [fgen, fgenT, includeM]
+    have hf_component (ω : deRhamTerm A B p) :
+        fR (ω : EB) =
+          (deRhamMapComponent (A := A) (A' := A') (B := B) (B' := T) p ω : ET) := by
+      have hω : ω ∈ Submodule.span A (deRhamGenerators (A := A) (B := B) p) := by
+        rw [deRhamGenerators_span (A := A) (B := B) p]
+        exact Submodule.mem_top
+      refine Submodule.span_induction (p := fun (x : deRhamTerm A B p) _ =>
+          fR (x : EB) =
+            (deRhamMapComponent (A := A) (A' := A') (B := B) (B' := T) p x : ET))
+        ?_ ?_ ?_ ?_ hω
+      · rintro _ ⟨z, rfl⟩
+        rcases z with ⟨b₀, b⟩
+        rw [deRhamMapComponent_on_generator]
+        simp only [deRhamGenerator, Submodule.coe_smul]
+        simp only [Algebra.smul_def]
+        rw [map_mul, fR.commutes]
+        rw [show algebraMap B ET b₀ = algebraMap T ET (algebraMap B T b₀) by
+          exact congrArg (fun q : B →+* ET => q b₀)
+            (IsScalarTower.algebraMap_eq B T ET)]
+        rw [fR_ιMulti]
+        have hm :
+            (fun i => diffEquiv
+              (1 ⊗ₜ[A] universalDifferentialLinearMap A B (b i))) =
+            (fun i => universalDifferentialLinearMap A' T (algebraMap B T (b i))) := by
+          funext i
+          exact hdiff (b i)
+        rw [hm]
+        exact (IsScalarTower.algebraMap_smul T b₀ _).symm
+      · simp
+      · intro x y hx hy ihx ihy
+        simpa only [map_add, Submodule.coe_add, ihx, ihy]
+      · intro a x hx ih
+        change fA (a • (x : EB)) =
+          (deRhamMapComponent (A := A) (A' := A')
+            (B := B) (B' := T) p) (a • x)
+        rw [show fA (a • (x : EB)) = a • fA (x : EB) by
+          exact fA.toLinearMap.map_smul a (x : EB)]
+        have hc := congrArg (fun y : deRhamTerm A' T p => (y : ET))
+          ((deRhamMapComponent (A := A) (A' := A')
+            (B := B) (B' := T) p).map_smul a x)
+        exact (congrArg (a • ·) ih).trans hc.symm
+    have ep_tmul (a : A') (ω : deRhamTerm A B p) :
+        ep (a ⊗ₜ[A] ω) = a • fR (ω : EB) := by
+      simp only [ep, LinearEquiv.trans_apply, LinearEquiv.baseChange_tmul]
+      change fbase
+          ((Submodule.toBaseChange A' (sourceGrading p))
+            (a ⊗ₜ[A] termEquiv ω) : A' ⊗[A] EB) =
+        a • fR (ω : EB)
+      rw [Submodule.coe_toBaseChange_tmul, GradedAlgHom.liftEquiv_tmul]
+      rfl
+    have hep : ep.toLinearMap = component p := by
+      apply LinearMap.ext
+      intro x
+      refine TensorProduct.induction_on x (by simp) (fun a ω => ?_)
+        (fun u v hu hv => by simpa only [map_add] using congrArg₂ (· + ·) hu hv)
+      rw [LinearEquiv.coe_toLinearMap]
+      apply Subtype.ext
+      rw [ep_tmul, component_tmul, hf_component]
+      rfl
+    rw [← hep]
+    exact ep.bijective
+  let e : ∀ p,
+      deRhamBaseChangeTerm A A' B p ≃ₗ[A'] deRhamTerm A' T p :=
+    fun p => LinearEquiv.ofBijective (component p) (hbij p)
+  refine ⟨e, ?_⟩
+  intro p x
+  change component (p + 1)
+      (deRhamBaseChangeDifferential (A := A) (A' := A') (B := B) p x) =
+    deRhamDifferential (A := A') (B := T) p (component p x)
+  refine TensorProduct.induction_on x ?_ ?_ ?_
+  · simp
+  · intro a ω
+    simp only [deRhamBaseChangeDifferential,
+      TensorProduct.AlgebraTensorModule.lTensor_tmul]
+    rw [
+      component_tmul, component_tmul]
+    rw [deRhamMapComponent_commutes]
+    exact ((deRhamDifferential (A := A') (B := T) p).map_smul a _).symm
+  · intro x y hx hy
+    simp only [map_add, hx, hy]
 
 /-- The degreewise isomorphism of de Rham complexes after arbitrary base
 change. -/

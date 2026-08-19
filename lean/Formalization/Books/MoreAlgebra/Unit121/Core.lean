@@ -3,6 +3,7 @@
 -/
 
 import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.EpiMono
 import Mathlib.Algebra.Category.ModuleCat.Limits
@@ -278,7 +279,98 @@ private instance finiteLengthAction_closedFiniteProducts :
   exact ObjectProperty.IsClosedUnderFiniteProducts.mk'
 
 noncomputable instance : Abelian (FiniteLengthEndomorphism.{u, v} R) := by
-  sorry
+  have hpow (A : Action (ModuleCat.{v} R) (Multiplicative ℕ)) (n : ℕ) :
+      (CategoryTheory.End.of (A.ρ (Multiplicative.ofAdd 1))) ^ n =
+        A.ρ (Multiplicative.ofAdd n) := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        rw [pow_succ, ih, ← A.ρ.map_mul]
+        rfl
+  let P := finiteLengthActionPropertyV.{u, v} (R := R)
+  let F : FiniteLengthEndomorphism.{u, v} R ⥤ P.FullSubcategory :=
+    { obj := fun X => ⟨pairAction X, X.finite_length⟩
+      map := fun f => ⟨pairActionHom f⟩
+      map_id := by
+        intro X
+        apply ObjectProperty.hom_ext
+        apply Action.hom_ext
+        rfl
+      map_comp := by
+        intro X Y Z f g
+        apply ObjectProperty.hom_ext
+        apply Action.hom_ext
+        rfl }
+  let G : P.FullSubcategory ⥤ FiniteLengthEndomorphism.{u, v} R :=
+    { obj := fun A =>
+        { carrier := A.obj.V
+          finite_length := A.property
+          endomorphism := A.obj.ρ (Multiplicative.ofAdd 1) }
+      map := fun f =>
+        { hom := f.hom.hom
+          comm := f.hom.comm (Multiplicative.ofAdd 1) }
+      map_id := by
+        intro X
+        apply FiniteLengthEndomorphism.Morph.ext
+        rfl
+      map_comp := by
+        intro X Y Z f g
+        apply FiniteLengthEndomorphism.Morph.ext
+        rfl }
+  let hF : F.FullyFaithful :=
+    { preimage := fun {X Y} f =>
+        { hom := f.hom.hom
+          comm := by
+            have h := f.hom.comm (Multiplicative.ofAdd 1)
+            change X.endomorphism ≫ f.hom.hom =
+              f.hom.hom ≫ Y.endomorphism at h
+            exact h }
+      map_preimage := by
+        intro X Y f
+        apply ObjectProperty.hom_ext
+        apply Action.hom_ext
+        rfl
+      preimage_map := by
+        intro X Y f
+        apply FiniteLengthEndomorphism.Morph.ext
+        rfl }
+  let hEss : F.EssSurj := by
+    refine { mem_essImage := ?_ }
+    intro A
+    refine ⟨G.obj A, ⟨?_⟩⟩
+    dsimp [P, F, G, pairAction]
+    refine ObjectProperty.isoMk P (Action.mkIso (Iso.refl A.obj.V) ?_)
+    intro n
+    let m : ℕ := Multiplicative.toAdd n
+    have hn : Multiplicative.ofAdd m = n := by
+      apply Multiplicative.toAdd.injective
+      rfl
+    change
+      (CategoryTheory.End.of (A.obj.ρ (Multiplicative.ofAdd 1)) ^ m) ≫
+          𝟙 A.obj.V =
+        𝟙 A.obj.V ≫ A.obj.ρ n
+    simp only [Category.comp_id, Category.id_comp]
+    rw [← hn]
+    exact hpow A.obj m
+  letI : Preadditive (Action (ModuleCat.{v} R) (Multiplicative ℕ)) := inferInstance
+  letI : Abelian (Action (ModuleCat.{v} R) (Multiplicative ℕ)) := inferInstance
+  letI : P.IsClosedUnderKernels := by
+    dsimp [P]
+    infer_instance
+  letI : P.IsClosedUnderCokernels := by
+    dsimp [P]
+    infer_instance
+  letI : P.IsClosedUnderFiniteProducts := inferInstance
+  letI : Abelian P.FullSubcategory := inferInstance
+  letI : Preadditive (FiniteLengthEndomorphism.{u, v} R) :=
+    Preadditive.ofFullyFaithful hF
+  letI : F.IsEquivalence :=
+    { faithful := hF.faithful
+      full := hF.full
+      essSurj := hEss }
+  letI : HasFiniteProducts (FiniteLengthEndomorphism.{u, v} R) :=
+    { out := fun n => Adjunction.hasLimitsOfShape_of_equivalence F }
+  exact abelianOfEquivalence F
 
 theorem isNoetherian_and_isArtinian (X : FiniteLengthEndomorphism.{u, v} R) :
     IsNoetherian R X.carrier ∧ IsArtinian R X.carrier :=

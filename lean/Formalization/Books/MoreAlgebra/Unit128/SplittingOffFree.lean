@@ -3,6 +3,7 @@
 -/
 
 import Formalization.Books.Topology.Unit11.CodimensionAndCatenary
+import Formalization.Books.Algebra.Unit82.UniversallyInjective
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.Pi
@@ -710,14 +711,13 @@ theorem choose_values {n : ℕ} (x : Fin n → MaximalSpectrum R)
 
 /-! ## Noetherian codimension bookkeeping -/
 
-/- `irreducibleComponents F` is formed in the subspace `F`; this predicate is
-   its ambient-space formulation, which is the form needed for codimension in
-   `Ω`. -/
-def IsAmbientIrreducibleComponent {X : Type u} [TopologicalSpace X]
+/- `irreducibleComponents F` is formed in the subspace `F`; Unit 11's
+   ambient-space predicate is the interface that lets us use those components
+   directly with absolute codimension in `X`.  Keep the local name as a
+   reducible compatibility alias rather than duplicating that interface. -/
+abbrev IsAmbientIrreducibleComponent {X : Type u} [TopologicalSpace X]
     (F : Set X) (Y : TopologicalSpace.IrreducibleCloseds X) : Prop :=
-  (Y : Set X) ⊆ F ∧
-    ∀ Z : TopologicalSpace.IrreducibleCloseds X,
-      (Z : Set X) ⊆ F → (Y : Set X) ⊆ Z → Z = Y
+  Formalization.Books.Topology.Unit11.IsAmbientIrreducibleComponent F Y
 
 def ComponentsHaveCodimensionAtLeast {X : Type u} [TopologicalSpace X]
     (F : Set X) (k : ℕ) : Prop :=
@@ -726,7 +726,108 @@ def ComponentsHaveCodimensionAtLeast {X : Type u} [TopologicalSpace X]
       (k : ℕ∞) ≤ Formalization.Books.Topology.Unit11.codimension Y
 
 /- The proposition below is the source's Serre induction step.  The finite
-   index types encode the displayed finite lists of sections and points. -/
+   index types encode the displayed finite lists of sections and points.
+
+Proof roadmap for the normal `prove` stage (escalation 6c679256832e):
+
+The codimension interface is correctly quantified: because the conclusion
+also records `IsClosed F'`, ambient irreducible closed subsets maximal in
+`F'` are exactly its irreducible components, and Unit 11's absolute
+`codimension` is codimension in the ambient maximal spectrum.
+
+* First package the component bookkeeping used three times below.  If `A` and
+  `E` are closed, define the union of the ambient irreducible components of
+  `A` which are not contained in `E`.  Finiteness comes from
+  `Formalization.Books.Topology.Unit11.noetherianSpace_finite_ambientIrreducibleComponents`
+  in
+  `Formalization/Books/Topology/Unit11/CodimensionAndCatenary.lean`, and
+  closedness of the union comes from `Set.Finite.isClosed_biUnion` in
+  `Mathlib/Topology/Basic.lean`.  Use
+  `ambientIrreducibleComponents_cover` plus irreducibility of a component in a
+  finite closed union to prove both (i) `A` is contained in `E` union this new
+  set and (ii) every component of the new set is one of the selected
+  components of `A`.  If `A ⊆ E ∪ D` and the components of `D` have
+  codimension at least `r`, the same finite-union argument and
+  `codimension_le_of_subset` transfer that lower bound to the selected
+  components of `A`.  This is the normalization step needed after each
+  induction call: the arbitrary closed error set returned by the induction
+  hypothesis must not be treated as the actual dependence locus.
+
+* Prove a second local claim for choosing a point on a selected component
+  `Y` of `A`, outside `E` and outside every other component of `A`.  Apply
+  `noetherianSpace_finite_ambientIrreducibleComponents` to the finite closed
+  family consisting of `E` and the other components.  If that family covered
+  `Y`, `isIrreducible_iff_sUnion_isClosed` (used explicitly in
+  `Formalization/Books/Topology/Unit09/NoetherianSpaces.lean` in the proof of
+  `exists_point_mem_ambientIrreducibleComponent_only`) would put `Y` in one
+  member.  The `E` case contradicts the selection of `Y`; another-component
+  case contradicts ambient maximality.  Merely calling
+  `exists_point_mem_ambientIrreducibleComponent_only` is insufficient because
+  it does not also put the point outside `E`.
+
+* Induct on `k`.  For `k = 0`, take the section supplied by `choose_values`
+  and `F' = Set.univ`; `bot_le` proves the codimension condition.  In the
+  successor case, call the induction hypothesis at `k` with the original
+  data, obtaining `u` and an error set.  Normalize that error set as above to
+  the union `G` of the actual components of `Z (Fin.snoc s u)` not contained
+  in `F`.  Thus `Z (Fin.snoc s u) ⊆ F ∪ G`, and the components of `G` have
+  codimension at least `k`.
+
+* Enumerate the selected components of `G` by a `Fin m` using the finite set
+  above, and use the point-selection claim to obtain pairwise distinct
+  `y : Fin m → MaximalSpectrum R`, with every `y j` in its component and
+  outside `F` and the other components.  The hypothesis `hZF` makes
+  `fun i => fibreToV (y j) (fibreClass (y j) (s i))` linearly independent.
+  Since `y j` lies in the actual locus `Z (Fin.snoc s u)`, the forward
+  direction of `linearIndependent_finSnoc` says that the image of `u` lies in
+  the span of those `h` vectors.  From
+  `h + (k + 1) ≤ Module.finrank _ (V (y j))`, obtain
+  `h < Module.finrank _ (V (y j))` and choose `w j` with
+  `exists_linearIndependent_snoc_of_lt_finrank` from
+  `Mathlib/LinearAlgebra/Dimension/RankNullity.lean`.  Equivalently, `w j` is
+  outside the old span.
+
+* Call the induction hypothesis at `k` again, now with sections
+  `Fin.snoc s u`, closed set `F ∪ G`, points `Fin.append x y`, and values
+  `Fin.append (fun _ => 0) w`.  Establish pairwise distinctness via
+  `Function.injective_iff_pairwise_ne` and `Fin.append_injective_iff`: the
+  old points lie in `F`, while the new points lie outside `F`.  Normalize the
+  returned error set to the union `H` of the actual components of
+  `Z (Fin.snoc (Fin.snoc s u) t)` not contained in `F ∪ G`.  Enumerate those
+  components and choose exclusive points `z : Fin p → MaximalSpectrum R`
+  outside `F ∪ G` in the same way.
+
+* The concatenation of `y` and `z` is injective (the first family lies in
+  `G`, the second outside `G`).  Apply `Ideal.isCoprime_of_isMaximal` and
+  `Ideal.exists_forall_sub_mem_ideal` exactly as in the local `hcrt` block of
+  `choose_values` to choose `f : R` whose residue is `1` at every `y j` and
+  `0` at every `z l`.  Put `q := Fin.snoc s (u + f • t)`.
+
+* Pointwise in a residue field, prove
+  `Z q ⊆ Z (Fin.snoc (Fin.snoc s u) t)`: linear independence of the latter
+  family implies independence after replacing `u` by `u + f • t` and then
+  deleting `t`.  A robust proof uses `Fintype.linearIndependent_iff` (or
+  `linearIndependent_add_smul_iff` followed by restriction to `Fin.castSucc`)
+  and avoids fragile span rewriting.
+
+* Let `C` be a component of `Z q` not contained in `F`, and suppose its
+  codimension is at most `k`.  From the preceding containment and
+  `Z (Fin.snoc (Fin.snoc s u) t) ⊆ F ∪ G ∪ H`, irreducibility puts `C` in a
+  component `D` of `G` or `H`.  The component lower bound gives
+  `(k : ℕ∞) ≤ codimension D`; apply
+  `Formalization.Books.Topology.Unit11.eq_of_subset_of_codimension_le_of_le`
+  (with `n := (k : ℕ∞)` and `ENat.natCast_ne_top k`) to conclude `C = D`.
+  If `D` is a component of `G`,
+  evaluate at its chosen `y`: the image of `u` is in the old span, `w` is
+  outside it, and `f(y)=1`, so `q` is independent there.  If `D` is a
+  component of `H`, evaluate at `z`: outside `F ∪ G` the family
+  `Fin.snoc s u` is independent, and `f(z)=0`.  Both contradict membership
+  in `Z q`.
+
+* Finally take `F'` to be the normalized union of the components of `Z q`
+  not contained in `F`.  Its normalization lemmas give closedness and
+  `Z q ⊆ F ∪ F'`; the preceding exclusion turns `¬(k + 1 ≤ codimension C)`
+  into `codimension C ≤ k` and supplies the required contradiction. -/
 theorem proposition_splitting
     [Module.FinitePresentation R M]
     [TopologicalSpace.NoetherianSpace (MaximalSpectrum R)]
@@ -755,6 +856,104 @@ def HasFreeDirectSummandAbove (A N : Type u) [CommRing A]
     IsComplemented K ∧ Module.Free A K ∧
       (d : Cardinal) < Module.rank A K
 
+/-
+Proof roadmap for the normal `prove` stage (escalation a5759f9c6a7c):
+
+The `HasFreeDirectSummandAbove` interface is sufficient as stated.  Its
+quantifier is pointwise over all maximal ideals, `IsComplemented K` supplies
+the projection from the stalk onto `K`, `Module.Free A K` supplies a basis,
+and the strict cardinal inequality supplies `d + 1` basis vectors.  Two
+constructions, rather than an extra hypothesis, are missing from the current
+file.
+
+* First prove the local rank bridge.  For `m : MaximalSpectrum R`, set
+  `A := Localization.AtPrime m.asIdeal` and
+  `N := LocalizedModule.AtPrime m.asIdeal M`, and unpack `hfree m` as
+  `K`, `hKcompl`, `hKfree`, `hKrank`.  Install `hKfree` as the local
+  `Module.Free A K` instance and use `Module.Free.chooseBasis A K` and
+  `Module.Free.rank_eq_card_chooseBasisIndex` from
+  `Mathlib/LinearAlgebra/Dimension/Free.lean`.  Rewrite the successor
+  inequality as `((d + 1 : ℕ) : Cardinal.{u}) ≤ Module.rank A K`, then use
+  `Cardinal.lift_mk_le'` from `Mathlib/SetTheory/Cardinal/Order.lean` to pick
+  an embedding `e : Fin (d + 1) ↪ Module.Free.ChooseBasisIndex A K`.
+
+  The selected basis family is split in `K`: its linear-combination map is,
+  through the basis representation, `Finsupp.mapDomain e`, whose left inverse
+  is `Finsupp.lcomapDomain e e.injective`; use
+  `Finsupp.leftInverse_lcomapDomain_mapDomain` from
+  `Mathlib/LinearAlgebra/Finsupp/Defs.lean`.  Compose that coordinate map with
+  a projection `N →ₗ[A] K` obtained from the existing private
+  `left_inverse_of_complemented`, applied to `K.subtype` and
+  `K.subtype_injective`; its last argument is `by simpa using hKcompl`, since
+  `LinearMap.range K.subtype = K`.
+
+  Lift each selected element of `N` to a numerator in `M` with
+  `IsLocalizedModule.mk'_surjective m.asIdeal.primeCompl
+  (LocalizedModule.mkLinearMap m.asIdeal.primeCompl M)`.  Its denominator is
+  a unit in `A`; rescale the coordinate left inverse by the inverse
+  denominators.  This gives `s : Fin (d + 1) → M` and a left inverse at the
+  stalk for `LocalizedModule.map m.asIdeal.primeCompl
+  (Finsupp.linearCombination R s)`.
+
+* Descend that stalk left inverse to an away-localized direct summand.  This
+  should be a private helper immediately before this theorem.  Repeat the
+  clearing-denominators argument already implemented in
+  `smul_left_inverse_of_directSummand`, now with
+  `S := m.asIdeal.primeCompl`: use
+  `Module.FinitePresentation.exists_lift_of_isLocalizedModule` to lift the
+  stalk left inverse, then
+  `Module.Finite.exists_smul_of_comp_eq_of_isLocalizedModule` to clear the
+  remaining equality.  The two denominators lie in `m.asIdeal.primeCompl`,
+  so their product `a` is not in `m.asIdeal`; feed the resulting identity
+  `g.comp (Finsupp.linearCombination R s) = a • LinearMap.id` to the existing
+  `directSummand_of_smul_left_inverse`.  Applying the forward direction of
+  `which_elements_split m s`, followed by
+  `LinearIndependent.fintype_card_le_finrank` from
+  `Mathlib/LinearAlgebra/Dimension/Finite.lean`, yields
+  `d + 1 ≤ Module.finrank (residueField m) (V m)`.
+
+  Concretely, the missing local helper should have the following interface
+  (up to names): for `m`, `r`, and `s : Fin r → M`, a map
+  `g : LocalizedModule.AtPrime m.asIdeal M →ₗ[Localization.AtPrime m.asIdeal]
+    LocalizedModule.AtPrime m.asIdeal (Fin r →₀ R)` satisfying
+  `g.comp (LocalizedModule.map m.asIdeal.primeCompl
+    (Finsupp.linearCombination R s)) = LinearMap.id` produces
+  `∃ a : R, a ∉ m.asIdeal ∧ IsLocalizedDirectSummand a s`.
+  No new upstream theorem is required: the two finite-presentation
+  declarations named in the preceding paragraph are the needed descent API.
+
+* Apply `proposition_splitting` with `h = n = 0`, the empty families,
+  `F = ∅`, and `k = d + 1`.  To prove its `F'` is empty, take a point of
+  `F'`, use
+  `Formalization.Books.Topology.Unit11.exists_ambientIrreducibleComponent_mem_of_mem`
+  to find a component `Y`,
+  and combine its lower bound `d + 1 ≤ codimension Y` with
+  `Order.coheight_le_krullDim Y` from
+  `Mathlib/Order/KrullDimension.lean`.  After unfolding
+  `Formalization.Books.Topology.Unit11.codimension` and
+  `topologicalKrullDim`, `hdim` makes the latter bound
+  `codimension Y ≤ d`, a contradiction.  Hence the returned single section
+  `t` satisfies `Z (Fin.snoc (fun i : Fin 0 => i.elim0) t) = ∅`.
+
+* Let `f := LinearMap.toSpanSingleton R M t`.  For every maximal ideal `I`,
+  turn the preceding non-membership in `Z` into an away direct summand with
+  `which_elements_split`, and then use
+  `smul_left_inverse_of_directSummand` to obtain `a ∉ I` and a global
+  coordinate functional whose value on `t` is `a`.  Localize that functional
+  at `I` and multiply by the inverse of `algebraMap R
+  (Localization.AtPrime I) a`; this is a left inverse of
+  `LocalizedModule.map I.primeCompl f` (prove the identity on fractions using
+  `IsLocalizedModule.mk'_surjective`).  Now apply
+  `Formalization.Books.Algebra.Unit82.universallyInjective_and_split_of_localization_maximal`
+  from
+  `Formalization/Books/Algebra/Unit82/UniversallyInjective.lean` to obtain
+  `g : M →ₗ[R] R` with `g.comp f = LinearMap.id`.
+
+* Finish with `M' := LinearMap.ker g`.  The explicit maps
+  `m ↦ (g m, ⟨m - f (g m), by simp [LinearMap.comp_apply]⟩)` and
+  `(r, m') ↦ f r + m'` are inverse linear maps, using `g.comp f = id`; package
+  them as `M ≃ₗ[R] R × M'`.  This keeps every type in `Type u` and avoids a
+  universe lift in the existential conclusion. -/
 theorem splitting_off_free
     [Module.FinitePresentation R M]
     [TopologicalSpace.NoetherianSpace (MaximalSpectrum R)]

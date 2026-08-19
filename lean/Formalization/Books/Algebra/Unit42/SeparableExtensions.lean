@@ -26,7 +26,7 @@ universe u v
 noncomputable section
 
 open Set
-open scoped BigOperators
+open scoped BigOperators IntermediateField
 
 /-! ## Separably generated and separable extensions -/
 
@@ -1064,6 +1064,69 @@ theorem eval_frobenius_preimage_pow
   rw [← frobenius_def, ← h, ← hq, Polynomial.eval_map]
   simpa [frobenius_def] using
     (Polynomial.eval₂_at_apply (p := Q) (frobenius F p) q).symm
+
+/-- A root in a separable extension of a separable polynomial whose
+coefficients are p-th powers is itself a p-th power. -/
+theorem pth_power_of_separable_polynomial
+    {F : Type u} {L : Type v} [Field F] [Field L] [Algebra F L]
+    [Algebra.IsSeparable F L]
+    (p : ℕ) [Fact p.Prime] [CharP F p] [CharP L p]
+    (P : Polynomial F) (alpha : L) (hPalpha : Polynomial.aeval alpha P = 0)
+    (hPsep : P.Separable) (r : ℕ → F) (hr : ∀ i, r i ^ p = P.coeff i) :
+    ∃ beta : L, beta ^ p = alpha := by
+  letI : ExpChar L p := ExpChar.prime (Fact.out : Nat.Prime p)
+  obtain ⟨Q, hQ⟩ := exists_frobenius_preimage_polynomial p P r hr
+  have hQsep : Q.Separable := by
+    rw [← Polynomial.separable_map (frobenius F p), hQ]
+    exact hPsep
+  let alpha' : AlgebraicClosure L := algebraMap L (AlgebraicClosure L) alpha
+  let q : AlgebraicClosure L := pthRootInAlgebraicClosureOfElement L p
+    (Fact.out : Nat.Prime p).pos alpha'
+  have hq : q ^ p = alpha' :=
+    pthRootInAlgebraicClosureOfElement_pow L p (Fact.out : Nat.Prime p).pos alpha'
+  have hQq : Polynomial.aeval q Q = 0 := by
+    have heval := eval_frobenius_preimage_pow p
+      (P.map (algebraMap F (AlgebraicClosure L)))
+      (Q.map (algebraMap F (AlgebraicClosure L)))
+      (by
+        ext i
+        simp only [Polynomial.coeff_map, frobenius_def]
+        rw [← map_pow]
+        exact congrArg (algebraMap F (AlgebraicClosure L)) (by
+          simpa [Polynomial.coeff_map, frobenius_def] using
+            congrArg (fun f : Polynomial F => f.coeff i) hQ)) q alpha' hq
+    have hPzero : (P.map (algebraMap F (AlgebraicClosure L))).eval alpha' = 0 := by
+      rw [Polynomial.eval_map]
+      rw [IsScalarTower.algebraMap_eq F L (AlgebraicClosure L)]
+      rw [← Polynomial.hom_eval₂]
+      simpa [alpha', Polynomial.aeval_def] using
+        congrArg (algebraMap L (AlgebraicClosure L)) hPalpha
+    rw [hPzero] at heval
+    have := eq_zero_of_pow_eq_zero heval
+    simpa [Polynomial.aeval_def] using this
+  have hqsepF : IsSeparable F q :=
+    Polynomial.Separable.of_dvd hQsep
+      (minpoly.dvd F q hQq)
+  have hqsepL : IsSeparable L q := hqsepF.tower_top L
+  let S : IntermediateField L (AlgebraicClosure L) := L⟮q⟯
+  letI : IsPurelyInseparable L S := by
+    rw [IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem L
+      (AlgebraicClosure L) p]
+    exact ⟨1, alpha, by simpa [S, pow_one] using hq.symm⟩
+  letI : Algebra.IsSeparable L S :=
+    (IntermediateField.isSeparable_adjoin_simple_iff_isSeparable L
+      (AlgebraicClosure L)).2 hqsepL
+  obtain ⟨beta, hbeta⟩ :=
+    IsPurelyInseparable.surjective_algebraMap_of_isSeparable L S
+      ⟨q, IntermediateField.mem_adjoin_simple_self L q⟩
+  refine ⟨beta, ?_⟩
+  apply (algebraMap L (AlgebraicClosure L)).injective
+  have hbeta' : algebraMap L (AlgebraicClosure L) beta = q :=
+    congrArg Subtype.val hbeta
+  rw [map_pow, hbeta']
+  exact hq
+
+
 
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is

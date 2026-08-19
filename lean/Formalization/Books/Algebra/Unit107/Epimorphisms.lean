@@ -1998,7 +1998,36 @@ theorem cardinality_target_le_source_of_epimorphism
           exact Cardinal.aleph0_mul_mk_eq (α := R)
     exact (Cardinal.mk_le_of_injective enc_injective).trans hsigma
   · let : Finite R := not_infinite_iff_finite.mp hR
-    sorry
+    let : Algebra.IsEpi R S := CommRingCat.epi_iff_epi.mp hf
+    have hsurj : Function.Surjective f := by
+      by_contra h
+      let R' : Submodule R S := (Algebra.linearMap R S).range
+      have hnontrivial : Nontrivial (S ⧸ R') := by
+        rw [Submodule.Quotient.nontrivial_iff]
+        intro htop
+        apply h
+        rw [← LinearMap.range_eq_top]
+        exact htop
+      let : Nontrivial (S ⧸ R') := hnontrivial
+      have hsub : Subsingleton ((S ⧸ R') ⊗[R] (S ⧸ R')) := by
+        refine subsingleton_of_forall_eq 0 fun y ↦ ?_
+        induction y with
+        | zero => rfl
+        | add a b e₁ e₂ => rw [e₁, zero_add]
+        | tmul x y =>
+          obtain ⟨x, rfl⟩ := R'.mkQ_surjective x
+          obtain ⟨y, rfl⟩ := R'.mkQ_surjective y
+          obtain ⟨s, hs⟩ : ∃ s, 1 ⊗ₜ[R] s = x ⊗ₜ[R] y := by
+            use x * y
+            trans x ⊗ₜ[R] 1 * 1 ⊗ₜ[R] y
+            · simp [(Algebra.isEpi_iff_forall_one_tmul_eq R S).mp inferInstance]
+            · simp
+          have hzero : R'.mkQ 1 = 0 :=
+            (Submodule.Quotient.mk_eq_zero R').mpr ⟨1, map_one (algebraMap R S)⟩
+          rw [← TensorProduct.map_tmul R'.mkQ R'.mkQ, ← hs,
+            TensorProduct.map_tmul, hzero, TensorProduct.zero_tmul]
+      exact false_of_nontrivial_of_subsingleton ((S ⧸ R') ⊗[R] (S ⧸ R'))
+    exact Cardinal.mk_le_of_surjective hsurj
 
 /-- The finite-source case in the cardinality argument is in fact surjective. -/
 theorem surjective_of_finite_source_of_epimorphism

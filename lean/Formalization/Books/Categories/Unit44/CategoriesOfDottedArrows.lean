@@ -1417,6 +1417,7 @@ theorem dottedArrow_baseChange_equivalence
 /-! ## Composition -/
 
 /-- The data of the composable solid diagram in the composition lemma. -/
+ -/
 structure CompositionData {C : Type u} [Bicategory.{w, v} C]
     [Bicategory.Strict C] where
   objS : C
@@ -1434,7 +1435,6 @@ structure CompositionData {C : Type u} [Bicategory.{w, v} C]
 
 attribute [instance] CompositionData.gamma_isIso
 
- -/
 namespace CompositionData
 
 /-- The outer rectangle in the composition lemma. -/

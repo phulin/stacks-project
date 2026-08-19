@@ -137,7 +137,9 @@ theorem exactCouple_associatedSpectralSequence_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
     Nonempty (PlainSpectralSequence C 1) := by
-  sorry
+  obtain ⟨S, _, _⟩ :=
+    Formalization.Books.Homology.Unit20.exactCouple_associatedSpectralSequence_exists D
+  exact ⟨S⟩
 
 /-- The spectral sequence obtained by iterating the derived exact couple. -/
 noncomputable def exactCoupleAssociatedSpectralSequence
@@ -185,7 +187,27 @@ def exactCoupleZ {C : Type u} [Category.{v} C] [Abelian C]
 theorem exactCouple_boundary_le_cycle {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) :
     exactCoupleBoundarySubobject D n ≤ exactCoupleCycleSubobject D n := by
-  sorry
+  let P := (Subobject.«exists» (exactCoupleAlphaPow D n)).obj (⊤ : Subobject A)
+  let K := Subobject.mk (kernel.ι (exactCoupleAlphaPow D n))
+  let B := exactCoupleBoundarySubobject D n
+  let F := Subobject.imageFactorisation D.g K
+  have hB : B.arrow ≫ D.f = 0 := by
+    change F.F.m ≫ D.f = 0
+    let _ : Epi F.F.e :=
+      (strongEpi_of_strongEpiMonoFactorisation
+        (Abelian.imageStrongEpiMonoFactorisation (K.arrow ≫ D.g)) F.isImage).epi
+    apply (cancel_epi F.F.e).mp
+    rw [← Category.assoc, F.F.fac, Category.assoc, D.g_f]
+    simp
+  let hpb := Subobject.isPullback D.f P
+  have hpbcond : 0 ≫ P.arrow = B.arrow ≫ D.f := by
+    rw [zero_comp]
+    exact hB.symm
+  exact Subobject.le_of_comm
+    (hpb.lift 0 B.arrow hpbcond)
+    (by
+      simpa [P, exactCoupleCycleSubobject, B] using
+        hpb.lift_snd 0 B.arrow hpbcond)
 
 theorem exactCouple_B_le_Z {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) (r : ℕ) :
@@ -201,7 +223,93 @@ theorem exactCouple_filtration {C : Type u} [Category.{v} C] [Abelian C]
       (∀ r, exactCoupleB D r ≤ exactCoupleB D (r + 1)) ∧
       (∀ r, exactCoupleZ D (r + 1) ≤ exactCoupleZ D r) ∧
       (∀ r, exactCoupleB D r ≤ exactCoupleZ D r) := by
-  sorry
+  have hker : ∀ n : ℕ,
+      Subobject.mk (kernel.ι (exactCoupleAlphaPow D n)) ≤
+        Subobject.mk (kernel.ι (exactCoupleAlphaPow D (n + 1))) := by
+    intro n
+    have hzero :
+        kernel.ι (exactCoupleAlphaPow D n) ≫ exactCoupleAlphaPow D (n + 1) = 0 := by
+      rw [show exactCoupleAlphaPow D (n + 1) =
+          exactCoupleAlphaPow D n ≫ D.alpha by rfl, ← Category.assoc,
+        kernel.condition]
+      simp
+    let k := kernel.lift (exactCoupleAlphaPow D (n + 1))
+      (kernel.ι (exactCoupleAlphaPow D n)) hzero
+    apply Subobject.le_mk_of_comm
+      ((Subobject.underlyingIso (kernel.ι (exactCoupleAlphaPow D n))).hom ≫ k)
+    dsimp [k]
+    rw [Category.assoc, kernel.lift_ι]
+    exact Subobject.underlyingIso_hom_comp_eq_mk _
+  have hpow_comm : ∀ n : ℕ,
+      D.alpha ≫ exactCoupleAlphaPow D n =
+        exactCoupleAlphaPow D n ≫ D.alpha := by
+    intro n
+    induction n with
+    | zero => simp [exactCoupleAlphaPow]
+    | succ n ih =>
+        rw [show exactCoupleAlphaPow D (n + 1) =
+            exactCoupleAlphaPow D n ≫ D.alpha by rfl]
+        rw [← Category.assoc, ih]
+  have hexists {X Y Z : C} (a : X ⟶ Y) (b : Y ⟶ Z) (P : Subobject X) :
+      (Subobject.«exists» (a ≫ b)).obj P =
+        (Subobject.«exists» b).obj ((Subobject.«exists» a).obj P) := by
+    apply le_antisymm
+    · have h : P ≤ (Subobject.pullback (a ≫ b)).obj
+          ((Subobject.«exists» b).obj ((Subobject.«exists» a).obj P)) := by
+        rw [Subobject.pullback_comp]
+        exact ((Subobject.existsPullbackAdj a).homEquiv P
+          ((Subobject.pullback b).obj
+            ((Subobject.«exists» b).obj ((Subobject.«exists» a).obj P))))
+          (CategoryTheory.homOfLE
+            (((Subobject.existsPullbackAdj b).homEquiv
+              ((Subobject.«exists» a).obj P)
+              ((Subobject.«exists» b).obj ((Subobject.«exists» a).obj P)))
+              (CategoryTheory.homOfLE le_rfl)).le) |>.le
+      exact ((Subobject.existsPullbackAdj (a ≫ b)).homEquiv P
+        ((Subobject.«exists» b).obj ((Subobject.«exists» a).obj P))).symm
+        (CategoryTheory.homOfLE h) |>.le
+    · have h : (Subobject.«exists» a).obj P ≤
+          (Subobject.pullback b).obj ((Subobject.«exists» (a ≫ b)).obj P) := by
+        have h' : P ≤ (Subobject.pullback (a ≫ b)).obj
+            ((Subobject.«exists» (a ≫ b)).obj P) :=
+          (((Subobject.existsPullbackAdj (a ≫ b)).homEquiv P
+            ((Subobject.«exists» (a ≫ b)).obj P))
+            (CategoryTheory.homOfLE le_rfl)).le
+        rw [Subobject.pullback_comp] at h'
+        exact ((Subobject.existsPullbackAdj a).homEquiv P
+          ((Subobject.pullback b).obj ((Subobject.«exists» (a ≫ b)).obj P))).symm
+          (CategoryTheory.homOfLE h') |>.le
+      exact ((Subobject.existsPullbackAdj b).homEquiv
+        ((Subobject.«exists» a).obj P)
+        ((Subobject.«exists» (a ≫ b)).obj P)).symm
+        (CategoryTheory.homOfLE h) |>.le
+  have himage : ∀ n : ℕ,
+      (Subobject.«exists» (exactCoupleAlphaPow D (n + 1))).obj (⊤ : Subobject A) ≤
+        (Subobject.«exists» (exactCoupleAlphaPow D n)).obj ⊤ := by
+    intro n
+    have hpow :
+        exactCoupleAlphaPow D (n + 1) =
+          D.alpha ≫ exactCoupleAlphaPow D n := by
+      rw [show exactCoupleAlphaPow D (n + 1) =
+          exactCoupleAlphaPow D n ≫ D.alpha by rfl, hpow_comm]
+    rw [hpow, hexists]
+    exact (Subobject.«exists» (exactCoupleAlphaPow D n)).monotone
+      (le_top :
+        (Subobject.«exists» D.alpha).obj (⊤ : Subobject A) ≤ ⊤)
+  refine ⟨rfl, rfl, ?_, ?_, ?_⟩
+  · intro r
+    cases r with
+    | zero => exact bot_le
+    | succ n =>
+        simpa [exactCoupleB, exactCoupleBoundarySubobject] using
+          (Subobject.«exists» D.g).monotone (hker n)
+  · intro r
+    cases r with
+    | zero => exact le_top
+    | succ n =>
+        simpa [exactCoupleZ, exactCoupleCycleSubobject] using
+          (Subobject.pullback D.f).monotone (himage n)
+  · exact exactCouple_B_le_Z D
 
 /-- The page component `E_(n+1) = Z_(n+1)/B_(n+1)`. -/
 noncomputable def exactCouplePageComponent {C : Type u} [Category.{v} C]

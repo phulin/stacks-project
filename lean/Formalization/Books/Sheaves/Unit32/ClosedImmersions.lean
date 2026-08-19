@@ -570,23 +570,64 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
           TopCat.Presheaf.stalkPullbackHom, Category.assoc]
         have hnat :
             (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
-                (f₀.op.whiskerLeft
+                ((TopCat.Presheaf.pushforward (Type w) f).map
                   (CategoryTheory.toSheafify
                     (Opens.grothendieckTopology (TopCat.of Z))
                     (f₀.op.lan.obj G.obj))) ≫
-              TopCat.Presheaf.stalkPushforward (Type w) f P₂ z =
+              TopCat.Presheaf.stalkPushforward (Type w) f
+                (((presheafToSheaf
+                  (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
+                    (f₀.op.lan.obj G.obj)).obj) z =
             TopCat.Presheaf.stalkPushforward (Type w) f
                 (f₀.op.lan.obj G.obj) z ≫
               (TopCat.Presheaf.stalkFunctor (Type w) z).map
                 (CategoryTheory.toSheafify
                   (Opens.grothendieckTopology (TopCat.of Z))
                   (f₀.op.lan.obj G.obj)) := by
-          set_option backward.isDefEq.respectTransparency false in
-          simpa [TopCat.Presheaf.pushforward] using
-            (hpush_map (P := f₀.op.lan.obj G.obj) (Q := P₂)
-              (CategoryTheory.toSheafify
-                (Opens.grothendieckTopology (TopCat.of Z))
-                (f₀.op.lan.obj G.obj)))
+          change
+            (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                ((TopCat.Presheaf.pushforward (Type w) f).map
+                  (CategoryTheory.toSheafify
+                    (Opens.grothendieckTopology (TopCat.of Z))
+                    (f₀.op.lan.obj G.obj))) ≫
+              TopCat.Presheaf.stalkPushforward (Type w) f
+                (((presheafToSheaf
+                  (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
+                    (f₀.op.lan.obj G.obj)).obj) z =
+            TopCat.Presheaf.stalkPushforward (Type w) f
+                (f₀.op.lan.obj G.obj) z ≫
+              (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                (CategoryTheory.toSheafify
+                  (Opens.grothendieckTopology (TopCat.of Z))
+                  (f₀.op.lan.obj G.obj))
+          exact hpush_map (P := f₀.op.lan.obj G.obj)
+            (Q := ((presheafToSheaf
+              (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
+                (f₀.op.lan.obj G.obj)).obj)
+            (CategoryTheory.toSheafify
+              (Opens.grothendieckTopology (TopCat.of Z))
+              (f₀.op.lan.obj G.obj))
+        change
+          ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                ((Opens.map f).op.lanUnit.app G.obj) ≫
+              (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                ((TopCat.Presheaf.pushforward (Type w) f).map
+                  (CategoryTheory.toSheafify
+                    (Opens.grothendieckTopology (TopCat.of Z))
+                    ((Opens.map f).op.lan.obj G.obj))) ≫
+              TopCat.Presheaf.stalkPushforward (Type w) f
+                (((presheafToSheaf
+                  (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
+                    ((Opens.map f).op.lan.obj G.obj)).obj) z) =
+            ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                ((Opens.map f).op.lanUnit.app G.obj) ≫
+              TopCat.Presheaf.stalkPushforward (Type w) f
+                ((Opens.map f).op.lan.obj G.obj) z) ≫
+            (@asIso _ _ _ _
+              ((TopCat.Presheaf.stalkFunctor (Type w) z).map
+                (CategoryTheory.toSheafify
+                  (Opens.grothendieckTopology (TopCat.of Z))
+                  ((Opens.map f).op.lan.obj G.obj))) hU₂).hom
         set_option backward.isDefEq.respectTransparency false in
         rw [Category.assoc, hnat]
         rfl

@@ -831,8 +831,7 @@ theorem universallyInjective_tensor
     [AddCommGroup Q] [Module R Q]
     (f : M →ₗ[R] N) (hf : universallyInjective f) :
     universallyInjective (f.rTensor Q) := by
-  intro S _ _
-  intro x y hxy
+  intro S _ _ x y hxy
   let eM := TensorProduct.assoc R M Q S
   let eN := TensorProduct.assoc R N Q S
   have hcomm : eN.toLinearMap.comp ((f.rTensor Q).rTensor S) =
@@ -857,8 +856,7 @@ theorem universallyInjective_comp
     (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (hf : universallyInjective f) (hg : universallyInjective g) :
     universallyInjective (g.comp f) := by
-  intro Q _ _
-  intro x y hxy
+  intro Q _ _ x y hxy
   apply hf Q
   apply hg Q
   rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q] at hxy
@@ -874,8 +872,7 @@ theorem universallyInjective_of_comp
     (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (hgf : universallyInjective (g.comp f)) :
     universallyInjective f := by
-  intro Q _ _
-  intro x y hxy
+  intro Q _ _ x y hxy
   apply hgf Q
   rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q]
   exact congrArg (fun z => (g.rTensor Q) z) hxy

@@ -131,7 +131,8 @@ theorem stalkPullbackHom_naturality (C : Type u) [Category.{v} C]
           ((TopCat.Presheaf.pullback C f).map g) := by
   apply TopCat.Presheaf.stalk_hom_ext F
   intro V hV
-  rw [TopCat.Presheaf.stalkFunctor_map_germ_assoc]
+  rw [TopCat.Presheaf.stalkFunctor_map_germ_assoc V (f x) hV g
+    (TopCat.Presheaf.stalkPullbackHom C f G x)]
   simp only [TopCat.Presheaf.germ_stalkPullbackHom]
   have hnat := NatTrans.congr_app
     ((TopCat.Presheaf.pullbackPushforwardAdjunction C f).unit.naturality g) (op V)
@@ -584,17 +585,17 @@ theorem openAbelianSheafExtension_counit_stalk_map_isIso
     IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
       ((openAbelianSheafExtensionAdjunction U).counit.app F).hom) := by
   let hff := Classical.choice (openAbelianSheafExtension_fullFaithful U)
-  letI : (openAbelianSheafExtensionFunctor U).Full := hff.full
-  letI : (openAbelianSheafExtensionFunctor U).Faithful := hff.faithful
+  let : (openAbelianSheafExtensionFunctor U).Full := hff.full
+  let : (openAbelianSheafExtensionFunctor U).Faithful := hff.faithful
   let f := (openAbelianSheafExtensionAdjunction U).counit.app F
   let e := openSheafRestrictionStalkIso AddCommGrpCat.{v} U
     (⟨x, hx⟩ : (openSubspace U : Type v))
-  haveI : IsIso ((openSheafRestriction AddCommGrpCat U).map f) := inferInstance
-  haveI : IsIso (((openSheafRestriction AddCommGrpCat U).map f).hom) := by
+  have : IsIso ((openSheafRestriction AddCommGrpCat U).map f) := inferInstance
+  have : IsIso (((openSheafRestriction AddCommGrpCat U).map f).hom) := by
     change IsIso ((TopCat.Sheaf.forget AddCommGrpCat (openSubspace U)).map
       ((openSheafRestriction AddCommGrpCat U).map f))
     infer_instance
-  haveI : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+  have : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
       (⟨x, hx⟩ : (openSubspace U : Type v))).map
       ((openSheafRestriction AddCommGrpCat U).map f).hom) := by infer_instance
   have h := e.hom.naturality f
@@ -613,7 +614,7 @@ theorem openAbelianSheafExtension_counit_stalk_map_isIso
   have htarget : IsIso ((TopCat.Sheaf.forget AddCommGrpCat X ⋙
       TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
         ((openInclusion U) (⟨x, hx⟩ : (openSubspace U : Type v)))).map f) := by
-    letI := hleft
+    let := hleft
     exact IsIso.of_isIso_fac_left h.symm
   change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom) at htarget
   exact htarget
@@ -638,7 +639,7 @@ theorem openAbelianSheafExtension_counit_stalk_map_compatibility
             ((openAbelianSheafExtensionAdjunction U).counit.app F).hom := by
   let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
     ((openAbelianSheafExtensionAdjunction U).counit.app F).hom
-  letI : IsIso m := openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
+  let : IsIso m := openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
   let e₂ := (openSheafRestrictionStalkIso AddCommGrpCat U ⟨x, hx⟩).app F
   refine ⟨asIso m ≪≫ e₂.symm, e₂, ?_⟩
   simp [m, Category.assoc]

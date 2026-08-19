@@ -305,7 +305,7 @@ noncomputable def productTotalDifferential
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
-  /- Prior attempt (does not compile; retained for context):
+  /- Prior attempt (coordinator diagnostics retained for context):
   unfold productTotalDifferential productTotalTerm
   apply Pi.hom_ext
   intro p
@@ -356,6 +356,7 @@ theorem productTotalDifferential_comp_zero
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d2_sq p (n - p))
+  /- Prior attempt (coordinator diagnostics in the remaining component proof):
   have hcomm :
       A.d1 (p - 1) (n - (p - 1)) ≫
           eqToHom (by congr 1 <;> ring) ≫
@@ -363,13 +364,12 @@ theorem productTotalDifferential_comp_zero
           eqToHom (by congr 1 <;> ring) =
       A.d2 (p - 1) (n - (p - 1)) ≫
           eqToHom (by congr 1 <;> ring) ≫
-        A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          A.d1 (p - 1) (n + 1 - (p - 1)) ≫
           eqToHom (by congr 1 <;> ring) := by
-    simp only [Category.assoc]
+    /- Prior attempt (coordinator diagnostics at the naturality rewrites):
     simp_rw [← eqToHom_naturality_assoc
       (fun q : ℤ => A.d2 p q)
-      (show n - (p - 1) = n + 1 - p by ring)
-      ]
+      (show n - (p - 1) = n + 1 - p by ring)]
     erw [← eqToHom_naturality_assoc
       (fun q : ℤ => A.d1 (p - 1) q)
       (show n - (p - 1) + 1 = n + 1 - (p - 1) by
@@ -377,6 +377,8 @@ theorem productTotalDifferential_comp_zero
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.comm (p - 1) (n - (p - 1))).symm
+    -/
+    sorry
   have h11' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫
           A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
@@ -390,11 +392,18 @@ theorem productTotalDifferential_comp_zero
       Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
           A.d2 p (n - p) ≫
           eqToHom (by congr 1 <;> ring) ≫
-          A.d2 p (n + 1 - p) ≫
-          eqToHom (by congr 1 <;> ring) = 0 := by
+          A.d2 p (n + 1 - p) = 0 := by
+    /- Prior attempt (the component equality loses the final `eqToHom`):
     change Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
         (totalD2Component A n p ≫ totalD2Component A (n + 1) p) = 0
     rw [h22, comp_zero]
+
+    A second attempt exposed the same transport mismatch:
+    simpa [totalD2Component, Category.assoc] using
+      congrArg (fun f =>
+        Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫ f) h22
+    -/
+    sorry
   have hcomm' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
           A.d1 (p - 1) (n - (p - 1)) ≫
@@ -409,7 +418,10 @@ theorem productTotalDifferential_comp_zero
     simpa [totalD1Component, totalD2Component, Category.assoc] using
       congrArg (fun f =>
         Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫ f) hcomm
+  /- Prior attempt (the summand rewrite did not match under the signed sum):
   rw [h11', hcomm', h22']
+  -/
+  -/
   -/
   sorry
 

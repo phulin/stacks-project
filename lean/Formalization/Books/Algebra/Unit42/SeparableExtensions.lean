@@ -1055,6 +1055,16 @@ theorem exists_frobenius_preimage_polynomial
   simp only [Q, Polynomial.map_sum, Polynomial.map_monomial, frobenius_def, hr]
   exact P.as_sum_support.symm
 
+/-- Evaluation commutes with a polynomial Frobenius preimage after taking a
+p-th root of the argument. -/
+theorem eval_frobenius_preimage_pow
+    {F : Type u} [Field F] (p : ℕ) [Fact p.Prime] [CharP F p]
+    (P Q : Polynomial F) (h : Q.map (frobenius F p) = P)
+    (q a : F) (hq : q ^ p = a) : Q.eval q ^ p = P.eval a := by
+  rw [← frobenius_def, ← h, ← hq, Polynomial.eval_map]
+  simpa [frobenius_def] using
+    (Polynomial.eval₂_at_apply (p := Q) (frobenius F p) q).symm
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Formalization.Books.Algebra.Unit88.MittagLefflerModules
+import Formalization.Books.Algebra.Unit89.InterchangingDirectProductsWithTensor
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Ideal.Operations

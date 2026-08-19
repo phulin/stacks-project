@@ -6,6 +6,7 @@ import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.Localization.Ideal
+import Mathlib.Topology.Order.UpperLowerSetTopology
 
 /-!
 # Exercises, Chapter 18: Catenary rings
@@ -406,6 +407,61 @@ theorem noetherian_local_domain_dimension_two_isCatenary
     (A : Type u) [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
     [IsDomain A] (hA : ringKrullDim A = (2 : WithBot ℕ∞)) :
     IsCatenaryRing A := by
+  /-
+  Proof roadmap (the statement needs no repair: its hypotheses are exactly the
+  source's Noetherian local domain of dimension two).
+
+  1. Use `let _ : FiniteRingKrullDim A := inferInstance`.  This instance is
+     available for a Noetherian local ring from
+     `Mathlib.RingTheory.Ideal.KrullsHeightTheorem`; it makes all order heights
+     and coheights below finite.  Establish the following small order lemma for
+     `PrimeSpectrum A`:
+
+       `no_four_chain : ¬ ∃ a b c d, a < b ∧ b < c ∧ c < d`.
+
+     Given such four points, form the length-three series with
+     `RelSeries.fromListIsChain [a, b, c, d]`, exactly as in the proof of
+     `Order.one_lt_height_iff` in
+     `Mathlib/Order/KrullDimension.lean`.  Its
+     `Order.LTSeries.length_le_krullDim` bound, followed by `hA`, says
+     `3 ≤ 2`.
+
+  2. Unfold `IsCatenaryRing` and split both weak inclusions with
+     `h₁₂.eq_or_lt` and `h₂₃.eq_or_lt`.  If either is equality,
+     `relativeHeight_self` and `simp` close the additivity equation.  Thus only
+     `p₁ < p₂ < p₃` remains.
+
+  3. In that strict case prove `p₁ = ⊥` and `p₃ = ⊤`.  The relevant
+     inferred order instances and simplification lemmas are
+     `PrimeSpectrum.asIdeal_bot` and
+     `IsLocalRing.PrimeSpectrum.asIdeal_top` from
+     `Mathlib/RingTheory/Spectrum/Prime/{Basic,Topology}.lean`.  If
+     `p₁ ≠ ⊥`, then `⊥ < p₁ < p₂ < p₃`; if `p₃ ≠ ⊤`, then
+     `p₁ < p₂ < p₃ < ⊤`.  Both contradict `no_four_chain`.
+     The same lemma shows that there is no prime strictly between `p₁` and
+     `p₂`, or between `p₂` and `p₃`.
+
+  4. Package the last observation as a local claim: if `q < p` and there is no
+     `r` with `q < r < p`, then
+
+       `relativeHeight p.asIdeal q.asIdeal _ = 1`.
+
+     Rewrite with `relativeHeight_eq_intervalCoheight p q`.  In
+     `Set.Iic p`, the point `⟨q, q ≤ p⟩` is covered by the top point.
+     Apply `Order.coheight_eq_coe_add_one_iff` with `n := 0`: finiteness is
+     `Order.coheight_lt_top`, the required successor is the top point with
+     `Order.coheight_top`, and every strict successor equals that top point by
+     the no-intermediate hypothesis.  Apply this claim to both adjacent pairs.
+
+  5. Compute the remaining relative height as two.  After substituting
+     `p₁ = ⊥` and `p₃ = ⊤`, rewrite by
+     `relativeHeight_eq_intervalCoheight`, apply `WithBot.coe_injective`, and
+     use, in order,
+     `Order.coheight_bot_eq_krullDim`, `Order.height_eq_krullDim_Iic`,
+     `PrimeSpectrum.height_eq_orderHeight`,
+     `IsLocalRing.maximalIdeal_height_eq_ringKrullDim`, and `hA`.
+     The goal is then `2 = 1 + 1`, which `norm_num` closes.
+  -/
   sorry
 
 /-! ## Exercise `finite-type-over-field-catenary` -/
@@ -435,6 +491,85 @@ theorem exists_finite_sober_catenary_space_without_dimension_function :
       @IsFiniteSoberCatenarySpace X inst ∧
         ¬ ∃ δ : X → ℤ,
           @Formalization.Books.Topology.Unit20.IsDimensionFunction X inst δ := by
+  /-
+  Proof roadmap (the existential interface is sound, but its universe matters).
+
+  1. Use `X := ULift.{u, 0} (Fin 5)`, not `Fin 5`: the latter lives in
+     `Type 0` and does not elaborate as the explicitly requested `Type u`.
+     On the five values `0, ..., 4` define a partial order whose non-reflexive
+     comparisons are
+
+       1 < 0,  1 < 2,  3 < 2,  3 < 4,  4 < 0,  3 < 0.
+
+     (The last comparison is the transitive closure of `3 < 4 < 0`.)  Define
+     the relation on `X` through `ULift.down`; its `PartialOrder` laws are a
+     finite `decide`/`native_decide` check.  Let
+     `inst := @Topology.upperSet X preorder`, using
+     `Topology.upperSet` from
+     `Mathlib/Topology/Order/UpperLowerSetTopology.lean`.  Keep the order
+     structure as an explicit local value when constructing `inst`, so it does
+     not compete later with `specializationOrder X`.
+
+  2. Record the specialization table.  The exact bridge is
+     `Topology.IsUpperSet.specializes_iff_le` in that same Mathlib file, which
+     says `x ⤳ y ↔ y ≤ x`.  Hence the cover specializations are
+
+       0 ⤳ 1,  2 ⤳ 1,  2 ⤳ 3,  4 ⤳ 3,  0 ⤳ 4,
+
+     and transitivity also gives `0 ⤳ 3`.  Prove a small comparison/cover
+     table by reducing through `ULift.down` and `fin_cases` on `Fin 5`; reuse
+     this table in both the catenarity and nonexistence parts.
+
+  3. Supply the three bundled finiteness/sobriety terms.
+
+     * `Finite X` is inferred for `ULift (Fin 5)`.
+     * For `T0Space X`, use `inseparable_iff_specializes_and` together with the
+       specialization table; the two comparisons reduce to antisymmetry of
+       the five-point partial order.
+     * For `QuasiSober X`, use the finite-space argument appearing at
+       `Formalization/Books/Topology/Unit23/SpectralSpaces.lean:1312-1336`
+       (its helper is private, so do not try to call it).  For an irreducible
+       closed `Z`, form the finite family
+       `(Set.toFinite Z).toFinset.image (fun z => closure ({z} : Set X))`.
+       Apply `isIrreducible_iff_sUnion_isClosed.mp` to obtain one member
+       containing `Z`, and conclude that its point is a generic point via
+       `isGenericPoint_def`.
+
+  4. Prove catenarity through
+     `Formalization.Books.Topology.Unit11.isCatenary_iff_finite_and_additive_relativeCodimension`
+     from `Formalization/Books/Topology/Unit11/CodimensionAndCatenary.lean`.
+     Once the two sobriety instances are installed,
+     `irreducibleSetEquivPoints` from `Mathlib/Topology/Sober.lean` is the
+     order isomorphism from irreducible closed subsets to the specialization
+     order on `X`.  For each `T ≤ T'`, explicitly restrict this isomorphism
+     to an order isomorphism between `Set.Iic T'` and
+     `Set.Iic (irreducibleSetEquivPoints T')`; then use
+     `Order.coheight_orderIso` to transport `relativeCodimension`.
+
+     The comparison table leaves only six strict intervals.  Five are
+     covers and have relative codimension one; use
+     `Order.coheight_eq_coe_add_one_iff` and `Order.coheight_top` as in the
+     preceding theorem's roadmap.  The remaining interval is `3 < 0`, whose
+     unique maximal chain is `3 < 4 < 0` and whose coheight is two (apply the
+     same coheight recursion twice).  Thus every relative codimension is
+     finite, and the only strict triple is `3 < 4 < 0`, where additivity is
+     `2 = 1 + 1`.  This proves the `IsCatenary X` conjunct without reasoning
+     directly about arbitrary `LTSeries`.
+
+  5. For nonexistence, assume `δ` is an `IsDimensionFunction`.  Unfold
+     `Formalization.Books.Topology.Unit20.IsImmediateSpecialization` and use
+     the cover table to prove that each of the five displayed arrows in step 2
+     is immediate.  The second component of the dimension-function hypothesis
+     yields
+
+       δ0 = δ1 + 1,  δ2 = δ1 + 1,  δ2 = δ3 + 1,
+       δ4 = δ3 + 1,  δ0 = δ4 + 1.
+
+     The first two equations give `δ0 = δ2`, the middle two give
+     `δ2 = δ4`, and the last is then impossible; `omega` closes it.
+     Finally assemble `⟨X, inst, ⟨inferInstance, quasiSober, t0, catenary⟩,
+     no_dimension_function⟩` (install `inst` locally before inference).
+  -/
   sorry
 
 end Formalization.Books.Exercises.Unit18

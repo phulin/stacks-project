@@ -308,7 +308,9 @@ theorem lemma_exact_artinian_local
     {length : ℕ} (C : FiniteFreeComplex R length)
     (hC : C.IsExact) :
     C.IsDirectSumOfTrivial := by
-  sorry
+  apply lemma_exact_depth_zero_local C ?_ hC
+  exact (maximalIdeal_mem_associatedPrimes_iff_localDepth_eq_zero (R := R)).mpr
+    artinian_local_depth_zero
 
 /-! ## Rank and the ideal of maximal minors -/
 

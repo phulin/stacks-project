@@ -95,7 +95,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
   let u : Module.Free.ChooseBasisIndex ℚ pQ → Fin m → ℚ :=
     fun i => b i
   have hu : LinearIndependent ℚ u := by
-    simpa [u, Function.comp_def] using b.linearIndependent.map' pQ.subtype pQ.ker_subtype
+    simp [u, Function.comp_def] using b.linearIndependent.map' pQ.subtype pQ.ker_subtype
   have huR : LinearIndependent ℝ
       (fun i => algebraMap ℚ ℝ ∘ u i) := by
     have h := (linearIndependent_algebraMap_comp_iff (R := ℚ) (S := ℝ)).mpr hu
@@ -139,9 +139,13 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 ; (ext j ; simp)
+      convert Submodule.add_mem _ hcx hcy using 1
+      · ext j
+        simp
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 ; (ext j ; simp)
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1
+      · ext j
+        simp
     · simpa [pQ] using hx
   have hcast_u (x : Fin m → ℚ) (hx : x ∈ pQ) :
       (fun j => (x j : ℝ)) ∈
@@ -163,9 +167,13 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 ; (ext j ; simp)
+      convert Submodule.add_mem _ hcx hcy using 1
+      · ext j
+        simp
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 ; (ext j ; simp)
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1
+      · ext j
+        simp
     · exact hx'
   have hspan :
       Submodule.span ℝ (Set.range (fun i j => (v i j : ℝ))) =
@@ -388,7 +396,7 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
       · intro y z hy hz hpy hpz
         exact Submodule.add_mem _ hpy hpz
       · intro a y hy hpy
-        simpa [Algebra.smul_def] using
+        simp [Algebra.smul_def] using
           Submodule.smul_mem (Submodule.span ℚ S) (a : ℚ) hpy
       · exact hx
     · rw [Submodule.span_le]

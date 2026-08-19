@@ -52,7 +52,7 @@ theorem finite_isMittagLeffler_iff_finitePresentation
   · intro hML
     have hsurj :=
       (finite_generation_tensor_iff M).out 0 1 |>.mp hM
-    have hinj : ∀ (A : Type v) (Q : A → ModuleCat.{v} R),
+    have hinj : ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
         Function.Injective (productTensorMap M Q) :=
       (mittagLeffler_tensor_iff M).out 0 1 |>.mp hML
     apply (finite_presentation_tensor_iff M).out 0 1 |>.mpr
@@ -172,12 +172,12 @@ theorem isMittagLefflerModule_of_projective
   have hFML : IsMittagLefflerModule (ModuleCat.of R F) :=
     isMittagLefflerModule_of_free (ModuleCat.of R F) hfree
   have hcrit : IsMittagLefflerModule M ↔
-      ∀ (A : Type v) (Q : A → ModuleCat.{max u v} R),
+      ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
         Function.Injective (productTensorMap M Q) :=
     (mittagLeffler_tensor_iff M).out 0 1
   apply hcrit.mpr
   intro A Q
-  have hFcrit : ∀ (A : Type v) (Q : A → ModuleCat.{max u v} R),
+  have hFcrit : ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
       Function.Injective (productTensorMap (ModuleCat.of R F) Q) := by
     exact ((mittagLeffler_tensor_iff (ModuleCat.of R F)).out 0 1).mp hFML
   let U : Type (max u v) := ∀ a, (Q a : Type (max u v))

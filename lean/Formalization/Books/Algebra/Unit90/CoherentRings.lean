@@ -679,10 +679,10 @@ theorem coherentRing_characterization
     (R : Type u) [CommRing R] :
     List.TFAE [
       IsCoherentRing R,
-      ∀ (A : Type v) (Q : A → ModuleCat.{u} R),
-        (∀ a, Module.Flat R (Q a : Type u)) →
-          Module.Flat R (∀ a, (Q a : Type u)),
-      ∀ (A : Type v), Module.Flat R (modulePower R A)
+      ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
+        (∀ a, Module.Flat R (Q a : Type (max u v))) →
+          Module.Flat R (∀ a, (Q a : Type (max u v))),
+      ∀ (A : Type (max u v)), Module.Flat R (modulePower R A)
   ] := by
   tfae_have 1 → 2 := by
     intro hR A Q hQ
@@ -694,20 +694,20 @@ theorem coherentRing_characterization
       exact (coherentRing_iff_finitelyPresented_ideals R).mp hR I hI
     have hcrit :
         Module.FinitePresentation R (P : Type u) ↔
-          ∀ (A : Type v) (Q : A → ModuleCat.{u} R),
+          ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
             Function.Bijective (productTensorMap P Q) :=
-      (finite_presentation_tensor_iff.{u, v, u, u} P).out 0 1
+      (finite_presentation_tensor_iff.{u, v, u} P).out 0 1
         (a := Module.FinitePresentation R (P : Type u))
-        (b := ∀ (A : Type v) (Q : A → ModuleCat.{u} R),
+        (b := ∀ (A : Type (max u v)) (Q : A → ModuleCat.{max u v} R),
           Function.Bijective (productTensorMap P Q))
     have hbij : Function.Bijective (productTensorMap P Q) :=
       hcrit.mp hP A Q
     have hnat
-        (z : TensorProduct R (I : Type u) (∀ a, (Q a : Type u))) (a : A) :
-        ((TensorProduct.lid R (∀ a, (Q a : Type u)))
-          ((I.subtype.rTensor (∀ a, (Q a : Type u))) z)) a =
-          (TensorProduct.lid R (Q a : Type u))
-            ((I.subtype.rTensor (Q a : Type u)) ((productTensorMap P Q z) a)) := by
+        (z : TensorProduct R (I : Type u) (∀ a, (Q a : Type (max u v)))) (a : A) :
+        ((TensorProduct.lid R (∀ a, (Q a : Type (max u v))))
+          ((I.subtype.rTensor (∀ a, (Q a : Type (max u v)))) z)) a =
+          (TensorProduct.lid R (Q a : Type (max u v)))
+            ((I.subtype.rTensor (Q a : Type (max u v))) ((productTensorMap P Q z) a)) := by
       induction z using TensorProduct.induction_on with
       | zero => simp
       | tmul i q => simp [productTensorMap]
@@ -715,25 +715,34 @@ theorem coherentRing_characterization
     intro x y hxy
     apply hbij.1
     funext a
-    have : Module.Flat R (Q a : Type u) := hQ a
+    have : Module.Flat R (Q a : Type (max u v)) := hQ a
     apply Module.Flat.rTensor_preserves_injective_linearMap
       (M := Q a) I.subtype I.subtype_injective
-    apply (TensorProduct.lid R (Q a : Type u)).injective
-    have hxy' := congrArg (TensorProduct.lid R (∀ a, (Q a : Type u))) hxy
+    apply (TensorProduct.lid R (Q a : Type (max u v))).injective
+    have hxy' := congrArg
+      (TensorProduct.lid R (∀ a, (Q a : Type (max u v)))) hxy
     rw [← hnat x a, ← hnat y a]
     exact congrFun hxy' a
   tfae_have 2 → 3 := by
     intro h A
-    exact h A (fun _ => ModuleCat.of R R) (by
-      intro a
-      exact Module.Flat.self)
+    let Q : A → ModuleCat.{max u v} R :=
+      fun _ => ModuleCat.of R (ULift.{max u v} R)
+    have hQ : Module.Flat R (∀ a, (Q a : Type (max u v))) :=
+      h A Q (by
+        intro a
+        dsimp [Q]
+        infer_instance)
+    letI : Module.Flat R (∀ a, (Q a : Type (max u v))) := hQ
+    exact Module.Flat.of_linearEquiv
+      (LinearEquiv.piCongrRight (fun _ : A =>
+        (ULift.moduleEquiv (R := R) (M := R)).symm))
   tfae_have 3 → 1 := by
     intro hR
     rw [coherentRing_iff_finitelyPresented_ideals]
     intro I hI
     let P : ModuleCat.{u} R := ModuleCat.of R (I : Type u)
     have hfinite : Module.Finite R (P : Type u) := Module.Finite.of_fg hI
-    have hbij : ∀ A : Type v,
+    have hbij : ∀ A : Type (max u v),
         Function.Bijective (tensorModulePowerMap P (A := A)) := by
       intro A
       have hnat
@@ -755,20 +764,21 @@ theorem coherentRing_characterization
         exact congrArg (fun f => fun a => I.subtype (f a)) hxy
       have hcrit :
           Module.Finite R (P : Type u) ↔
-            ∀ A : Type v, Function.Surjective (tensorModulePowerMap P (A := A)) :=
-        (finite_generation_tensor_iff.{u, v, u, u} P).out 0 3
+            ∀ A : Type (max u v),
+              Function.Surjective (tensorModulePowerMap P (A := A)) :=
+        (finite_generation_tensor_iff.{u, v, u} P).out 0 3
           (a := Module.Finite R (P : Type u))
-          (b := ∀ A : Type v,
+          (b := ∀ A : Type (max u v),
             Function.Surjective (tensorModulePowerMap P (A := A)))
       have hsurj : Function.Surjective (tensorModulePowerMap P (A := A)) :=
         hcrit.mp hfinite A
       exact ⟨hinj, hsurj⟩
     have hcrit :
         Module.FinitePresentation R (P : Type u) ↔
-          ∀ A : Type v, Function.Bijective (tensorModulePowerMap P (A := A)) :=
-      (finite_presentation_tensor_iff.{u, v, u, u} P).out 0 3
+          ∀ A : Type (max u v), Function.Bijective (tensorModulePowerMap P (A := A)) :=
+      (finite_presentation_tensor_iff.{u, v, u} P).out 0 3
         (a := Module.FinitePresentation R (P : Type u))
-        (b := ∀ A : Type v,
+        (b := ∀ A : Type (max u v),
           Function.Bijective (tensorModulePowerMap P (A := A)))
     exact hcrit.mpr hbij
   tfae_finish

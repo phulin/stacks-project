@@ -345,11 +345,12 @@ theorem finite_generation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.Finite R (M : Type w),
-      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
+      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
         Function.Surjective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{z} R) (A : Type v),
+      ∀ (Q : ModuleCat.{max u v w} R) (A : Type (max u v w)),
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
-      ∀ (A : Type v), Function.Surjective (tensorModulePowerMap M (A := A))
+      ∀ (A : Type (max u v w)),
+        Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
   sorry
 /-
@@ -458,27 +459,28 @@ theorem finite_presentation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.FinitePresentation R (M : Type w),
-      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
+      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
         Function.Bijective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{z} R) (A : Type v),
+      ∀ (Q : ModuleCat.{max u v w} R) (A : Type (max u v w)),
         Function.Bijective (productTensorMap M (fun _ : A => Q)),
-      ∀ (A : Type v), Function.Bijective (tensorModulePowerMap M (A := A))
+      ∀ (A : Type (max u v w)),
+        Function.Bijective (tensorModulePowerMap M (A := A))
     ] := by
   sorry
 
 /-- Tensor-kernel elements for finitely presented source modules factor through
     a finitely presented intermediate module (Lemma 89.3). -/
 theorem kernel_tensored_finitelyPresented
-    {R : Type u} [CommRing R] (M P Q : ModuleCat.{w} R)
-    (hP : Module.FinitePresentation R (P : Type w))
-    (f : (P : Type w) →ₗ[R] (M : Type w))
-    (x : TensorProduct R (P : Type w) (Q : Type w))
-    (hx : x ∈ LinearMap.ker (f.rTensor (Q : Type w))) :
-    ∃ P' : ModuleCat.{w} R,
-      Module.FinitePresentation R (P' : Type w) ∧
-        ∃ f' : (P : Type w) →ₗ[R] (P' : Type w),
-          (∃ g : (P' : Type w) →ₗ[R] (M : Type w), f = g.comp f') ∧
-            x ∈ LinearMap.ker (f'.rTensor (Q : Type w)) := by
+    {R : Type u} [CommRing R] (M P Q : ModuleCat.{max u w} R)
+    (hP : Module.FinitePresentation R (P : Type (max u w)))
+    (f : (P : Type (max u w)) →ₗ[R] (M : Type (max u w)))
+    (x : TensorProduct R (P : Type (max u w)) (Q : Type (max u w)))
+    (hx : x ∈ LinearMap.ker (f.rTensor (Q : Type (max u w)))) :
+    ∃ P' : ModuleCat.{max u w} R,
+      Module.FinitePresentation R (P' : Type (max u w)) ∧
+        ∃ f' : (P : Type (max u w)) →ₗ[R] (P' : Type (max u w)),
+          (∃ g : (P' : Type (max u w)) →ₗ[R] (M : Type (max u w)), f = g.comp f') ∧
+            x ∈ LinearMap.ker (f'.rTensor (Q : Type (max u w))) := by
   sorry
 
 /-- The tensor-product characterization of Mittag--Leffler modules
@@ -487,7 +489,7 @@ theorem mittagLeffler_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       IsMittagLefflerModule M,
-      ∀ (A : Type v) (Q : A → ModuleCat.{z} R),
+      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
         Function.Injective (productTensorMap M Q)
     ] := by
   sorry

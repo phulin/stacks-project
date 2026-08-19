@@ -982,11 +982,10 @@ theorem ideals_equiv_valueGroupIdeals
           rw [← hyval]
           exact hcut_mem_of_mem I hy0 hyI
     · intro hS
-      change I.IsPrime
       refine ⟨?_, ?_⟩
       · intro htop
         apply hS.2.1
-        rw [htop] <;> exact ⟨le_rfl, le_top⟩
+        rw [htop] ; exact ⟨le_rfl, le_top⟩
       · intro x y hxy
         by_cases hx0 : x = 0
         · exact Or.inl (hx0 ▸ I.zero_mem)

@@ -312,7 +312,7 @@ theorem approximate_complex
 abbrev submoduleQuotient
     {R M : Type*} [Ring R] [AddCommGroup M] [Module R M]
     (P Q : Submodule R M) : Type _ :=
-  HasQuotient.Quotient (P : Type _) (Q.comap P.subtype)
+  P ⧸ Q.comap P.subtype
 
 /-- The degree-`n` component `I^n/I^(n+1)` of the associated graded ring.
 The denominator is pulled back to the subtype `I^n` so that the quotient is

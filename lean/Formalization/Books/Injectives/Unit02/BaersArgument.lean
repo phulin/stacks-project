@@ -1,5 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit55.InjectiveModules
 import Mathlib.Algebra.Category.ModuleCat.Colimits
+import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.CategoryTheory.Limits.Types.Colimits
 import Mathlib.CategoryTheory.MorphismProperty.Basic
 import Mathlib.CategoryTheory.SmallObject.Construction
@@ -238,13 +239,40 @@ theorem collapsedNatChain_colimit_subsingleton :
 each finite stage. -/
 theorem collapsedProjection_ne_collapsedConstant (n : ℕ) :
     collapsedProjection n ≠ collapsedConstant n := by
-  sorry
+  intro h
+  have h' := congrArg (fun f : ℕ → collapsedQuotient n => f (n + 1)) h
+  have h'' := Quotient.exact h'
+  change n + 1 = 0 ∨ (n + 1 < n ∧ 0 < n) at h''
+  omega
 
 /-- The comparison map in the second example is not injective. -/
 theorem collapsedNatChain_comparison_not_injective :
     ¬ Function.Injective
       (comparisonMap (A := ℕ) collapsedNatChain) := by
-  sorry
+  intro hinj
+  let H := collapsedNatChain ⋙ coyoneda.obj (Opposite.op ℕ)
+  let x : colimit H := colimit.ι H 0 (TypeCat.ofHom (collapsedProjection 0))
+  let y : colimit H := colimit.ι H 0 (TypeCat.ofHom (collapsedConstant 0))
+  have hxy : x = y := by
+    apply hinj
+    ext z
+    exact collapsedNatChain_colimit_subsingleton.elim _ _
+  have hiff := Types.FilteredColimit.colimit_eq_iff (F := H) (i := 0) (j := 0)
+    (xi := TypeCat.ofHom (collapsedProjection 0))
+    (xj := TypeCat.ofHom (collapsedConstant 0))
+  obtain ⟨k, f, g, hfg⟩ := hiff.mp hxy
+  have hfg' : f = g := Subsingleton.elim _ _
+  subst g
+  dsimp [H] at hfg
+  have hz := congrArg (fun q : ℕ ⟶ collapsedQuotient k =>
+    (ConcreteCategory.hom q) (k + 1)) hfg
+  change (ConcreteCategory.hom (collapsedNatChain.map f))
+      (collapsedProjection 0 (k + 1)) =
+    (ConcreteCategory.hom (collapsedNatChain.map f))
+      (collapsedConstant 0 (k + 1)) at hz
+  have hz' := Quotient.exact hz
+  change k + 1 = 0 ∨ (k + 1 < k ∧ 0 < k) at hz'
+  omega
 
 /-! ## Small objects and module colimits -/
 
@@ -267,7 +295,26 @@ theorem ordinal_module_colimit_ι_mono
     (F : Set.Iio α ⥤ ModuleCat.{u} R)
     (hF : ∀ {i j : Set.Iio α} (f : i ⟶ j), Mono (F.map f)) :
     ∀ i : Set.Iio α, Mono (colimit.ι F i) := by
-  sorry
+  intro i
+  letI : Nonempty (Set.Iio α) := ⟨i⟩
+  letI : IsFiltered (Set.Iio α) := by infer_instance
+  letI : Nonempty α.ToType :=
+    ⟨Ordinal.ToType.mk (o := α) i⟩
+  letI : IsFiltered α.ToType := by infer_instance
+  letI : PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) :=
+    ModuleCat.FilteredColimits.forget_preservesFilteredColimits
+  letI : PreservesColimitsOfShape α.ToType (forget (ModuleCat.{u} R)) :=
+    PreservesFilteredColimitsOfSize.preserves_filtered_colimits.{u, u} _
+  letI : PreservesColimitsOfShape (Set.Iio α) (forget (ModuleCat.{u} R)) :=
+    preservesColimitsOfShape_of_equiv
+      (Ordinal.ToType.mk (o := α)).equivalence.symm _
+  rw [ModuleCat.mono_iff_injective]
+  intro x y hxy
+  obtain ⟨k, f, g, hfg⟩ :=
+    (Concrete.colimit_rep_eq_iff_exists F x y).mp hxy
+  have hfg' : f = g := Subsingleton.elim _ _
+  subst g
+  exact (ModuleCat.mono_iff_injective (F.map f)).mp (hF f) hfg
 
 /-- With monomorphic transition maps, the comparison map out of any module
  is injective. -/

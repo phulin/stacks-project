@@ -132,7 +132,7 @@ theorem noetherian_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f)
     (hS : IsNoetherianRing S) : IsNoetherianRing R := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let _ : Module.FaithfullyFlat R S := by
     simpa [RingHom.FaithfullyFlat] using hff
   rw [isNoetherianRing_iff_ideal_fg]
@@ -151,7 +151,7 @@ theorem normal_descends_of_faithfullyFlat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hff : RingHom.FaithfullyFlat f)
     (hS : IsNormalRing S) : IsNormalRing R := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let _ : Module.FaithfullyFlat R S := by
     simpa [RingHom.FaithfullyFlat] using hff
   have hred : IsReduced R :=
@@ -166,7 +166,7 @@ theorem normal_descends_of_faithfullyFlat
     change p.asIdeal = q.asIdeal.comap (algebraMap R S)
     exact hpq'.symm
   let hloc := Localization.localRingHom p.asIdeal q.asIdeal f hpq
-  letI : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
+  let : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
     hloc.toAlgebra
   have hflat : RingHom.Flat hloc :=
     RingHom.Flat.localRingHom hff.flat q.asIdeal p.asIdeal hpq

@@ -158,7 +158,7 @@ theorem free_mod_x
     Module.Free R M := by
   have hmem : x ∈ (⊥ : Ideal R).jacobson :=
     (maximalIdeal_le_jacobson (⊥ : Ideal R)) hx
-  letI : Module.FinitePresentation R M := Module.finitePresentation_of_finite R M
+  let : Module.FinitePresentation R M := Module.finitePresentation_of_finite R M
   exact (Module.free_quotSMulTop_iff_free (R := R) (M := M) hmem hreg).mp hfree
 
 private theorem free_of_regular_sequence
@@ -179,9 +179,9 @@ private theorem free_of_regular_sequence
       let er : R ⧸ Ideal.ofList [] ≃+* R :=
         (Ideal.quotientEquivAlgOfEq R (by simp [Ideal.ofList])).toRingEquiv.trans
           (RingEquiv.quotientBot R)
-      letI : RingHomInvPair er.toRingHom er.symm.toRingHom :=
+      let : RingHomInvPair er.toRingHom er.symm.toRingHom :=
         RingHomInvPair.of_ringEquiv er
-      letI : RingHomInvPair er.symm.toRingHom er.toRingHom :=
+      let : RingHomInvPair er.symm.toRingHom er.toRingHom :=
         RingHomInvPair.of_ringEquiv er.symm
       let em : (M ⧸ (Ideal.ofList [] • (⊤ : Submodule R M)))
           ≃ₛₗ[er.toRingHom] M :=
@@ -230,8 +230,8 @@ private theorem free_of_regular_sequence
         intro hK
         apply (maximalIdeal.isMaximal R).ne_top
         exact le_antisymm le_top (by simpa [hK] using hKle)
-      haveI : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hKne
-      haveI : IsLocalRing S := IsLocalRing.of_surjective' f f.surjective
+      have : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hKne
+      have : IsLocalRing S := IsLocalRing.of_surjective' f f.surjective
       let I : Ideal R := Ideal.ofList (x :: rs)
       let J : Ideal S := Ideal.ofList (rs.map f)
       have hIJ : J = I.map f := by
@@ -241,7 +241,7 @@ private theorem free_of_regular_sequence
         simp only [Set.image_singleton]
         have hx0 : f x = 0 := by
           apply Ideal.Quotient.eq_zero_iff_mem.mpr
-          exact Ideal.subset_span (by simp [K])
+          exact Ideal.subset_span (by simp)
         rw [hx0]
         simp [J]
       have hH : I ≤ J.comap f := by
@@ -254,7 +254,7 @@ private theorem free_of_regular_sequence
           apply Ideal.span_le.mpr
           intro y hy
           rcases Set.mem_singleton_iff.mp hy with rfl
-          exact Ideal.subset_span (by simp [I])
+          exact Ideal.subset_span (by simp)
         intro y hy
         apply hKle
         apply Ideal.Quotient.eq_zero_iff_mem.mp
@@ -265,9 +265,9 @@ private theorem free_of_regular_sequence
         RingEquiv.ofBijective qmap ⟨
           Ideal.quotientMap_injective' hH',
           Ideal.quotientMap_surjective f.surjective⟩
-      letI : RingHomInvPair he.toRingHom he.symm.toRingHom :=
+      let : RingHomInvPair he.toRingHom he.symm.toRingHom :=
         RingHomInvPair.of_ringEquiv he
-      letI : RingHomInvPair he.symm.toRingHom he.toRingHom :=
+      let : RingHomInvPair he.symm.toRingHom he.toRingHom :=
         RingHomInvPair.of_ringEquiv he.symm
       have he_mk (r : R) :
           he.toRingHom (Ideal.Quotient.mk I r) =
@@ -332,9 +332,9 @@ private theorem free_of_regular_sequence
             (Ideal.ofList (rs.map f) •
               (⊤ : Submodule S (QuotSMulTop x M)))) := by
         exact Module.Free.of_equiv esem
-      letI : Module.Finite R (QuotSMulTop x M) :=
+      let : Module.Finite R (QuotSMulTop x M) :=
         Module.Finite.of_surjective (Submodule.mkQ _) (Submodule.mkQ_surjective _)
-      letI : Module.Finite S (QuotSMulTop x M) :=
+      let : Module.Finite S (QuotSMulTop x M) :=
         Module.Finite.of_restrictScalars_finite R S (QuotSMulTop x M)
       have hfreeM : Module.Free S (QuotSMulTop x M) :=
         aux (R := S) (M := QuotSMulTop x M) (rs.map f) htail hfreeQ
@@ -353,8 +353,8 @@ private theorem spanFinrank_maximalIdeal_le_of_regular_quotient
   classical
   let K : Ideal R := Ideal.span ({x} : Set R)
   let S := R ⧸ K
-  haveI : IsRegularLocalRing S := hquot
-  haveI : IsLocalHom (Ideal.Quotient.mk K) :=
+  have : IsRegularLocalRing S := hquot
+  have : IsLocalHom (Ideal.Quotient.mk K) :=
     (Ideal.Quotient.mk_surjective (I := K)).isLocalHom
   obtain ⟨ys, hys, hyslen⟩ :=
     exists_minimalIdealGeneratingList (R := S)
@@ -452,9 +452,9 @@ theorem regular_mcm_free
     Module.Free R M := by
   classical
   by_cases hsub : Subsingleton M
-  · letI : Subsingleton M := hsub
+  · let : Subsingleton M := hsub
     infer_instance
-  · letI : Nontrivial M := not_subsingleton_iff_nontrivial.mp hsub
+  · let : Nontrivial M := not_subsingleton_iff_nontrivial.mp hsub
     obtain ⟨xs, hxs, hxslen⟩ :=
       exists_minimalIdealGeneratingList (R := R)
     have hMcm : IsCohenMacaulay R M :=
@@ -478,7 +478,7 @@ theorem regular_mcm_free
         have hq := hNsupp q.property
         rw [PrimeSpectrum.zeroLocus_eq_singleton] at hp hq
         exact (Set.mem_singleton_iff.mp hp).trans (Set.mem_singleton_iff.mp hq).symm
-      letI : Subsingleton (Module.support R N) := ⟨hsubsupp⟩
+      let : Subsingleton (Module.support R N) := ⟨hsubsupp⟩
       have hle : Module.supportDim R N ≤ 0 := by
         change Order.krullDim (Module.support R N) ≤ 0
         exact Order.krullDim_nonpos_of_subsingleton
@@ -519,7 +519,7 @@ theorem regular_mcm_free
         Formalization.Books.Algebra.Unit103.regularSequence_of_supportDim_quotient_eq
           xs.length xs.length hMcm g le_rfl hMdim hg (by simpa using hquot)
       simpa only [hlist] using hres.1
-    letI : Field (R ⧸ maximalIdeal R) := Ideal.Quotient.field (maximalIdeal R)
+    let : Field (R ⧸ maximalIdeal R) := Ideal.Quotient.field (maximalIdeal R)
     have hfreeN : Module.Free (R ⧸ maximalIdeal R) N := by infer_instance
     exact free_of_regular_sequence xs hregM (by
       rw [hxs.1]
@@ -552,7 +552,7 @@ theorem regular_local_of_regular_sequence
     | nil =>
       have hnil : Ideal.ofList ([] : List R) = (⊥ : Ideal R) := by
         simp [Ideal.ofList]
-      haveI : IsRegularLocalRing (R ⧸ (⊥ : Ideal R)) := hnil ▸ hquot
+      have : IsRegularLocalRing (R ⧸ (⊥ : Ideal R)) := hnil ▸ hquot
       exact IsRegularLocalRing.of_ringEquiv (RingEquiv.quotientBot R)
     | cons x rs =>
       obtain ⟨hxreg, htail⟩ :=
@@ -584,8 +584,8 @@ theorem regular_local_of_regular_sequence
         intro hK
         apply (maximalIdeal.isMaximal R).ne_top
         exact le_antisymm le_top (by simpa [hK] using hKle)
-      haveI : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hKne
-      haveI : IsLocalRing S := IsLocalRing.of_surjective' f f.surjective
+      have : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hKne
+      have : IsLocalRing S := IsLocalRing.of_surjective' f f.surjective
       have htailS : RingTheory.Sequence.IsRegular S
           (rs.map f) := by
         let e : QuotSMulTop x R ≃+* S :=
@@ -639,7 +639,7 @@ theorem regular_local_of_regular_sequence
           Ideal.quotientMap_injective' hH',
           Ideal.quotientMap_surjective f.surjective⟩
       have hquotS : IsRegularLocalRing (S ⧸ J) := by
-        haveI : IsRegularLocalRing (R ⧸ I) := by simpa [I] using hquot
+        have : IsRegularLocalRing (R ⧸ I) := by simpa [I] using hquot
         exact IsRegularLocalRing.of_ringEquiv he
       have hbaseS : IsRegularLocalRing S :=
         aux (R := S) (rs.map f) htailS hquotS

@@ -182,17 +182,17 @@ theorem nonreduced_example_properties (k : Type u) [Field k] :
       Ideal.span_singleton_eq_top.mp hspan
     have hzero : IsUnit (0 : k) := by
       rw [← MvPowerSeries.constantCoeff_X (1 : Fin 2)]
-      simpa [MvPowerSeries.isUnit_iff_constantCoeff] using hunit
+      simp [MvPowerSeries.isUnit_iff_constantCoeff] at hunit
     exact not_isUnit_zero hzero
   have hN : IsNoetherianRing (nonreducedExampleRing k) := by
     infer_instance
   have hL : IsLocalRing (nonreducedExampleRing k) := by
-    letI : Nontrivial (nonreducedExampleRing k) :=
+    let : Nontrivial (nonreducedExampleRing k) :=
       Ideal.Quotient.nontrivial_iff.mpr hI
     apply IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
       Ideal.Quotient.mk_surjective
-  letI : IsNoetherianRing (nonreducedExampleRing k) := hN
-  letI : IsLocalRing (nonreducedExampleRing k) := hL
+  let : IsNoetherianRing (nonreducedExampleRing k) := hN
+  let : IsLocalRing (nonreducedExampleRing k) := hL
   let a : Fin 2 → nonreducedExamplePowerSeries k :=
     ![MvPowerSeries.X (0 : Fin 2),
       MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)]
@@ -231,7 +231,7 @@ theorem nonreduced_example_properties (k : Type u) [Field k] :
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
     have hy : (MvPowerSeries.X (1 : Fin 2) :
         nonreducedExamplePowerSeries k) ^ 2 ∈ I := by
-      exact Ideal.subset_span (by simp [I, nonreducedExampleRelation])
+      exact Ideal.subset_span (by simp)
     have hp : (MvPowerSeries.X (0 : Fin 2) :
         nonreducedExamplePowerSeries k) ^ 2 *
           (MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2 ∈ I :=

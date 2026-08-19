@@ -56,7 +56,7 @@ def filteredComplexD₀ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₀ K p q ⟶ filteredComplexE₀ K p (q + 1) :=
   gradedPieceMap (C := C) (K.d (p + q) (p + q + 1)) p ≫
-    eqToHom (by congr 2 <;> ring)
+    eqToHom (by congr 2; ring)
 
 def filteredComplexE₁ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
@@ -192,7 +192,7 @@ noncomputable def filteredComplexStepFunctor
   map_comp := by
     intro A B D f g
     apply (cancel_mono (D.filtration.obj p).arrow).1
-    dsimp [filtrationStepMap, filtrationStep]
+    simp only [filtrationStepMap, filtrationStep, filteredHom_comp_hom]
     rw [Category.assoc, Subobject.factorThru_arrow, ← Category.assoc,
       Subobject.factorThru_arrow]
     rw [← Category.assoc, Subobject.factorThru_arrow]

@@ -141,7 +141,62 @@ theorem projective_plus_free_is_free
     {R : Type u} {P : Type v} [CommRing R]
     [AddCommGroup P] [Module R P] [Module.Projective R P] :
     ∃ (F : Type (max u v)) (_ : AddCommGroup F) (_ : Module R F),
-      Module.Free R F ∧ Module.Free R (P × F) := by sorry
+      Module.Free R F ∧ Module.Free R (P × F) := by
+  classical
+  let F₀ : Type (max u v) := P →₀ R
+  let j : F₀ →ₗ[R] P := Finsupp.linearCombination R (id : P → P)
+  obtain ⟨i, hi⟩ := (inferInstance : Module.Projective R P).out
+  have hji : ∀ p : P, j (i p) = p := hi
+  have hi_inj : Function.Injective i := by
+    intro p q hpq
+    have := congrArg j hpq
+    simpa [hji] using this
+  let Q : Submodule R F₀ := LinearMap.ker j
+  let iQ : P →ₗ[R] LinearMap.range i :=
+    i.codRestrict _ (fun p => ⟨p, rfl⟩)
+  have hiQ : Function.Injective iQ := by
+    intro p q hpq
+    apply hi_inj
+    exact congrArg Subtype.val hpq
+  have hiQ_surj : Function.Surjective iQ := by
+    intro x
+    rcases x.property with ⟨p, hp⟩
+    exact ⟨p, Subtype.ext hp⟩
+  let f : F₀ →ₗ[R] LinearMap.range i := iQ.comp j
+  have hf : ∀ x : LinearMap.range i, f x = x := by
+    intro x
+    rcases x.property with ⟨p, hp⟩
+    apply Subtype.ext
+    change i (j (x : F₀)) = (x : F₀)
+    rw [← hp, hji]
+  have hker : LinearMap.ker f = Q := by
+    ext x
+    change iQ (j x) = 0 ↔ j x = 0
+    constructor
+    · intro hx
+      apply hiQ
+      simpa using hx
+    · intro hx
+      simp [hx]
+  have hcomp : IsCompl (LinearMap.range i) Q := by
+    rw [← hker]
+    exact LinearMap.isCompl_of_proj hf
+  let eI : P ≃ₗ[R] LinearMap.range i :=
+    LinearEquiv.ofBijective iQ ⟨hiQ, hiQ_surj⟩
+  let ePQ : (P × Q) ≃ₗ[R] F₀ :=
+    (eI.prodCongr (LinearEquiv.refl R Q)).trans
+      (Submodule.prodEquivOfIsCompl _ _ hcomp)
+  let F : Type (max u v) := ℕ →₀ F₀
+  let eMap : (ℕ →₀ (P × Q)) ≃ₗ[R] F :=
+    Finsupp.mapRange.linearEquiv ePQ
+  let e : (P × F) ≃ₗ[R] F :=
+    ((LinearEquiv.refl R P).prodCongr eMap.symm).trans
+      ((finsupp_shift_equiv (R := R) (X := P) (Y := Q)).trans eMap)
+  refine ⟨F, inferInstance, inferInstance, inferInstance, ?_⟩
+  letI : Module.Free R F := by
+    dsimp [F]
+    infer_instance
+  exact Module.Free.of_equiv e.symm
 /-
   classical
   let F₀ : Type (max u v) := P →₀ R

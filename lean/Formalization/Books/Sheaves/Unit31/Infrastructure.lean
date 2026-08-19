@@ -380,10 +380,30 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
       }
     map_id := by
       intro F
-      sorry
+      apply NatTrans.ext'
+      funext V
+      by_cases hV : V.unop ≤ U
+      · change _ = 𝟙 _
+        simp [hV]
+        change eqToHom _ ≫ 𝟙 _ ≫ eqToHom _ = 𝟙 _
+        simp
+      · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅
+            (⊥_ C) := eqToIso (if_neg hV)
+        rw [← cancel_epi e.inv]
+        simp only [dif_neg hV]
+        exact initial.hom_ext _ _
     map_comp := by
       intro F G H φ ψ
-      sorry
+      apply NatTrans.ext'
+      funext V
+      by_cases hV : V.unop ≤ U
+      · change _ = _
+        simp [hV]
+      · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅
+            (⊥_ C) := eqToIso (if_neg hV)
+        rw [← cancel_epi e.inv]
+        simp only [dif_neg hV]
+        exact initial.hom_ext _ _
   }
 
 /-- On opens contained in `U`, extension by the initial object has the original
@@ -442,11 +462,597 @@ noncomputable abbrev openAbelianSheafExtensionByZero {X : TopCat.{v}} (U : Opens
     Ab (openSubspace U) ⥤ Ab X :=
   openSheafExtensionByInitial AddCommGrpCat U
 
-/-- The presheaf extension/restriction adjunction. -/
+private noncomputable def openPresheafRestrictionAux (C : Type u) [Category.{v} C]
+    {X : TopCat.{v}} (U : Opens X)
+    (hf : IsOpenEmbedding ⇑(ConcreteCategory.hom U.inclusion')) :
+    TopCat.Presheaf C X ⥤ TopCat.Presheaf C (openSubspace U) :=
+  (Functor.whiskeringLeft (Opens (openSubspace U))ᵒᵖ
+    (Opens X)ᵒᵖ C).obj hf.functor.op
+
+private noncomputable def openPresheafExtensionToHom (C : Type u) [Category.{v} C]
+    [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (hf : IsOpenEmbedding ⇑(ConcreteCategory.hom U.inclusion'))
+    (F : TopCat.Presheaf C (openSubspace U)) (G : TopCat.Presheaf C X)
+    (φ : (openPresheafExtensionByInitial C U).obj F ⟶ G) :
+    F ⟶ (openPresheafRestrictionAux C U hf).obj G := by
+  classical
+  let f := openInclusion U
+  let j := Opens.map f
+  have hfun : hf.functor ⋙ j = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  have hsub : ∀ V : Opens (openSubspace U), hf.functor.obj V ≤ U := by
+    intro V
+    change (f '' V) ≤ U
+    rintro x ⟨y, hy, rfl⟩
+    exact y.property
+  refine { app := ?_, naturality := ?_ }
+  · intro V
+    have hobj : j.obj (hf.functor.obj V.unop) = V.unop := by
+      simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+    let eV : F.obj V ⟶
+        ((openPresheafExtensionByInitial C U).obj F).obj
+          (hf.functor.op.obj V) := by
+      simp only [openPresheafExtensionByInitial]
+      change F.obj V ⟶
+        if hV : hf.functor.obj V.unop ≤ U then
+          F.obj (op (j.obj (hf.functor.obj V.unop))) else ⊥_ C
+      simp only [dif_pos (hsub V.unop)]
+      exact F.map (eqToHom hobj).op
+    exact eV ≫ φ.app (hf.functor.op.obj V)
+  · intro V W i
+    have hobjV : (Opens.map f).obj (hf.functor.obj V.unop) = V.unop := by
+      simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+    have hobjW : (Opens.map f).obj (hf.functor.obj W.unop) = W.unop := by
+      simpa [j] using congrArg (fun K => K.obj W.unop) hfun
+    have hmap :
+        (Opens.map f).map (hf.functor.map i.unop) =
+          eqToHom hobjW ≫ i.unop ≫ eqToHom hobjV.symm := by
+      simpa [j] using (Functor.congr_hom hfun i.unop)
+    have hEleft :
+        ((openPresheafExtensionByInitial C U).obj F).obj
+            (hf.functor.op.obj V) =
+          F.obj (j.op.obj (hf.functor.op.obj V)) := by
+      simpa [j, f] using
+        (openPresheafExtensionByInitial_obj_of_le C U F
+          (hf.functor.obj V.unop) (hsub V.unop))
+    have hEright :
+        F.obj (j.op.obj (hf.functor.op.obj W)) =
+          ((openPresheafExtensionByInitial C U).obj F).obj
+            (hf.functor.op.obj W) := by
+      simpa [j, f] using
+        (openPresheafExtensionByInitial_obj_of_le C U F
+          (hf.functor.obj W.unop) (hsub W.unop)).symm
+    have hE :
+        ((openPresheafExtensionByInitial C U).obj F).map
+            (hf.functor.op.map i) =
+          eqToHom hEleft ≫
+            F.map (j.op.map (hf.functor.op.map i)) ≫
+          eqToHom hEright := by
+      change (if h : hf.functor.obj V.unop ≤ U then
+        eqToHom _ ≫ F.map (j.op.map (hf.functor.op.map i)) ≫ eqToHom _
+      else _) = _
+      rw [dif_pos (hsub V.unop)]
+      rfl
+    dsimp [openPresheafRestrictionAux]
+    simp only [Category.assoc]
+    rw [← φ.naturality]
+    conv_rhs =>
+      rw [hE]
+    dsimp [openPresheafRestrictionAux] at ⊢
+    simp [hobjV, hobjW, hmap, hfun, j, f, Functor.map_comp, eqToHom_map,
+      Category.assoc, eqToHom_trans_assoc, eqToHom_refl, Category.id_comp,
+      Category.comp_id]
+
+private noncomputable def openPresheafExtensionFromHom (C : Type u) [Category.{v} C]
+    [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (hf : IsOpenEmbedding ⇑(ConcreteCategory.hom U.inclusion'))
+    (F : TopCat.Presheaf C (openSubspace U)) (G : TopCat.Presheaf C X)
+    (ψ : F ⟶ hf.functor.op ⋙ G) :
+    (openPresheafExtensionByInitial C U).obj F ⟶ G := by
+  classical
+  let f := openInclusion U
+  let j := Opens.map f
+  have hfun : hf.functor ⋙ j = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  have himage : ∀ W : Opens X, W ≤ U →
+      hf.functor.obj (j.obj W) = W := by
+    intro W hW
+    apply Opens.ext
+    change f '' (j.obj W) = W
+    ext x
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      exact hy
+    · intro hx
+      exact ⟨⟨x, hW hx⟩, hx, rfl⟩
+  refine { app := ?_, naturality := ?_ }
+  · intro W
+    by_cases hW : W.unop ≤ U
+    · have himageW := himage W.unop hW
+      have hG' :
+          ((openPresheafRestrictionAux C U hf).obj G).obj
+              (op (j.obj W.unop)) = G.obj W := by
+        unfold openPresheafRestrictionAux
+        change G.obj (op (hf.functor.obj (j.obj W.unop))) = G.obj W
+        exact congrArg (fun K => G.obj (op K)) himageW
+      exact eqToHom (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW) ≫
+        ψ.app (op (j.obj W.unop)) ≫
+        eqToHom hG'
+    · change (if h : W.unop ≤ U then
+        F.obj (j.op.obj W) else ⊥_ C) ⟶ G.obj W
+      rw [dif_neg hW]
+      exact initial.to _
+  · intro V W i
+    by_cases hV : V.unop ≤ U
+    · have hW : W.unop ≤ U := by
+        exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+      have himageV := himage V.unop hV
+      have himageW := himage W.unop hW
+      have hG' :
+          ((openPresheafRestrictionAux C U hf).obj G).obj
+              (op (j.obj W.unop)) = G.obj W := by
+        unfold openPresheafRestrictionAux
+        change G.obj (op (hf.functor.obj (j.obj W.unop))) = G.obj W
+        exact congrArg (fun K => G.obj (op K)) himageW
+      have hmap :
+          hf.functor.map ((Opens.map (openInclusion U)).map i.unop) =
+            eqToHom himageW ≫ i.unop ≫ eqToHom himageV.symm := by
+        apply Subsingleton.elim
+      have hEleft :
+          ((openPresheafExtensionByInitial C U).obj F).obj V =
+            F.obj ((Opens.map (openInclusion U)).op.obj V) := by
+        exact openPresheafExtensionByInitial_obj_of_le C U F V.unop hV
+      have hEright :
+          F.obj ((Opens.map (openInclusion U)).op.obj W) =
+            ((openPresheafExtensionByInitial C U).obj F).obj W := by
+        exact (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW).symm
+      have hcancelW :
+          eqToHom hEright ≫
+              eqToHom (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW) = 𝟙 _ := by
+        simp [hEright]
+      have hcancelW' :
+          eqToHom hEright ≫
+              (eqToHom (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW) ≫
+                (ψ.app (op (j.obj W.unop)) ≫ eqToHom hG')) =
+            ψ.app (op (j.obj W.unop)) ≫ eqToHom hG' := by
+        rw [← Category.assoc, hcancelW, Category.id_comp]
+      have hE :
+          ((openPresheafExtensionByInitial C U).obj F).map i =
+            eqToHom hEleft ≫
+              F.map ((Opens.map (openInclusion U)).op.map i) ≫
+            eqToHom hEright := by
+        change (if h : V.unop ≤ U then
+          eqToHom _ ≫
+              F.map ((Opens.map (openInclusion U)).op.map i) ≫ eqToHom _ else _) = _
+        simp only [dif_pos hV]
+        rfl
+      dsimp [openPresheafRestrictionAux] at ψ ⊢
+      simp only [dif_pos hV, dif_pos hW, Category.id_comp, Category.comp_id, Category.assoc]
+      rw [hE]
+      simp only [Category.assoc]
+      rw [hcancelW']
+      dsimp [j] at ⊢
+      rw [← Category.assoc
+        (F.map (((Opens.map (openInclusion U)).map i.unop).op))
+        (ψ.app (op ((Opens.map (openInclusion U)).obj W.unop))) (eqToHom hG')]
+      rw [ψ.naturality (((Opens.map (openInclusion U)).map i.unop).op)]
+      change eqToHom hEleft ≫
+          (ψ.app (op ((Opens.map (openInclusion U)).obj V.unop)) ≫
+            G.map (hf.functor.map ((Opens.map (openInclusion U)).map i.unop)).op) ≫
+          eqToHom hG' = _
+      rw [hmap]
+      simp [hfun, himageV, himageW, j, f, Category.assoc, Functor.map_comp,
+        eqToHom_map, eqToHom_trans_assoc, eqToHom_refl]
+    · let e :
+          ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+            (⊥_ C) := eqToIso
+          (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+      rw [← cancel_epi e.inv]
+      simp only [dif_neg hV]
+      exact initial.hom_ext _ _
+
+private noncomputable def openPresheafExtensionHomEquiv (C : Type u) [Category.{v} C]
+    [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (hf : IsOpenEmbedding ⇑(ConcreteCategory.hom U.inclusion'))
+    (F : TopCat.Presheaf C (openSubspace U)) (G : TopCat.Presheaf C X) :
+    ((openPresheafExtensionByInitial C U).obj F ⟶ G) ≃
+      (F ⟶ hf.functor.op ⋙ G) := by
+  exact {
+    toFun := openPresheafExtensionToHom C U hf F G
+    invFun := openPresheafExtensionFromHom C U hf F G
+    left_inv := by
+      intro φ
+      apply NatTrans.ext'
+      funext V
+      dsimp [openPresheafExtensionToHom,
+        openPresheafExtensionFromHom]
+      by_cases hV : V.unop ≤ U
+      · let f := openInclusion U
+        let j := Opens.map f
+        have hfun : hf.functor ⋙ j = 𝟭 _ := by
+          refine CategoryTheory.Functor.ext ?_ ?_
+          · intro V
+            exact TopologicalSpace.Opens.map_functor_eq' f hf V
+          · subsingleton
+        have hsub : ∀ V : Opens (openSubspace U), hf.functor.obj V ≤ U := by
+          intro V
+          change (f '' V) ≤ U
+          rintro x ⟨y, hy, rfl⟩
+          exact y.property
+        have himage : ∀ W : Opens X, W ≤ U →
+            hf.functor.obj (j.obj W) = W := by
+          intro W hW
+          apply Opens.ext
+          change f '' (j.obj W) = W
+          ext x
+          constructor
+          · rintro ⟨y, hy, rfl⟩
+            exact hy
+          · intro hx
+            exact ⟨⟨x, hW hx⟩, hx, rfl⟩
+        have hobjj :
+            j.obj (hf.functor.obj (j.obj V.unop)) = j.obj V.unop := by
+          simpa [j] using congrArg (fun K => K.obj (j.obj V.unop)) hfun
+        dsimp [openPresheafRestrictionAux]
+        simp [openPresheafExtensionByInitial, hV, hobjj, himage (V.unop) hV]
+      · let e :
+            ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+              (⊥_ C) := eqToIso
+            (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+        rw [← cancel_epi e.inv]
+        simp only [dif_neg hV]
+        exact initial.hom_ext _ _
+    right_inv := by
+      intro ψ
+      apply NatTrans.ext'
+      funext V
+      dsimp [openPresheafExtensionToHom,
+        openPresheafExtensionFromHom]
+      simp }
+  /-
+  classical
+  let f := openInclusion U
+  let j := Opens.map f
+  have hfun : hf.functor ⋙ j = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  let R₀ := openPresheafRestrictionAux C U hf
+  have hsub : ∀ V : Opens (openSubspace U), hf.functor.obj V ≤ U := by
+    intro V
+    change (f '' V) ≤ U
+    rintro x ⟨y, hy, rfl⟩
+    exact y.property
+  have himage : ∀ W : Opens X, W ≤ U →
+      hf.functor.obj (j.obj W) = W := by
+    intro W hW
+    apply Opens.ext
+    change f '' (j.obj W) = W
+    ext x
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      exact hy
+    · intro hx
+      exact ⟨⟨x, hW hx⟩, hx, rfl⟩
+  let toFun : ∀ φ : (openPresheafExtensionByInitial C U).obj F ⟶ G,
+      F ⟶ R₀.obj G := fun φ => by
+    let app : ∀ V, F.obj V ⟶ (R₀.obj G).obj V := fun V => by
+      have hobj : j.obj (hf.functor.obj V.unop) = V.unop := by
+        simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+      let eV : F.obj V ⟶
+          ((openPresheafExtensionByInitial C U).obj F).obj
+            (hf.functor.op.obj V) := by
+        simp only [openPresheafExtensionByInitial]
+        change F.obj V ⟶
+          if hV : hf.functor.obj V.unop ≤ U then
+            F.obj (op (j.obj (hf.functor.obj V.unop))) else ⊥_ C
+        simp only [dif_pos (hsub V.unop)]
+        exact F.map (eqToHom hobj).op
+      exact eV ≫ φ.app (hf.functor.op.obj V)
+    refine { app := app, naturality := ?_ }
+    intro V W i
+    have hobjV : (Opens.map f).obj (hf.functor.obj V.unop) = V.unop := by
+      simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+    have hobjW : (Opens.map f).obj (hf.functor.obj W.unop) = W.unop := by
+      simpa [j] using congrArg (fun K => K.obj W.unop) hfun
+    have hmap :
+        (Opens.map f).map (hf.functor.map i.unop) =
+          eqToHom hobjW ≫ i.unop ≫ eqToHom hobjV.symm := by
+      simpa [j] using (Functor.congr_hom hfun i.unop)
+    have hEleft :
+        ((openPresheafExtensionByInitial C U).obj F).obj
+            (hf.functor.op.obj V) =
+          F.obj (j.op.obj (hf.functor.op.obj V)) := by
+      simpa [j, f] using
+        (openPresheafExtensionByInitial_obj_of_le C U F
+          (hf.functor.obj V.unop) (hsub V.unop))
+    have hEright :
+        F.obj (j.op.obj (hf.functor.op.obj W)) =
+          ((openPresheafExtensionByInitial C U).obj F).obj
+            (hf.functor.op.obj W) := by
+      simpa [j, f] using
+        (openPresheafExtensionByInitial_obj_of_le C U F
+          (hf.functor.obj W.unop) (hsub W.unop)).symm
+    have hE :
+        ((openPresheafExtensionByInitial C U).obj F).map
+            (hf.functor.op.map i) =
+          eqToHom hEleft ≫
+            F.map (j.op.map (hf.functor.op.map i)) ≫
+          eqToHom hEright := by
+      change (if h : hf.functor.obj V.unop ≤ U then
+        eqToHom _ ≫ F.map (j.op.map (hf.functor.op.map i)) ≫ eqToHom _
+      else _) = _
+      rw [dif_pos (hsub V.unop)]
+      rfl
+    dsimp [R₀]
+    dsimp [app]
+    simp only [Category.assoc]
+    rw [← φ.naturality]
+    rw [hE]
+    simp only [Functor.map_comp, eqToHom_map, Category.assoc, eqToHom_trans_assoc,
+      eqToHom_refl, Category.id_comp, Category.comp_id]
+  let invFun : ∀ ψ : F ⟶ R₀.obj G,
+      (openPresheafExtensionByInitial C U).obj F ⟶ G := fun ψ => by
+    let app : ∀ W,
+        ((openPresheafExtensionByInitial C U).obj F).obj W ⟶ G.obj W :=
+      fun W => by
+        by_cases hW : W.unop ≤ U
+        · have himageW := himage W.unop hW
+          exact eqToHom (by
+            simpa [j, f] using
+              (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW)) ≫
+            ψ.app (j.op.obj W) ≫
+            eqToHom (by
+              change G.obj (op (hf.functor.obj (j.obj W.unop))) = G.obj W
+              rw [himageW])
+        · change (if h : W.unop ≤ U then
+            F.obj (j.op.obj W) else ⊥_ C) ⟶ G.obj W
+          simpa [hW] using (initial.to (G.obj W))
+    refine { app := app, naturality := ?_ }
+    intro V W i
+    by_cases hV : V.unop ≤ U
+    · have hW : W.unop ≤ U := by
+        exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+      have himageV := himage V.unop hV
+      have himageW := himage W.unop hW
+      have hEleft :
+          ((openPresheafExtensionByInitial C U).obj F).obj V =
+            F.obj (j.op.obj V) := by
+        simpa [j, f] using
+          (openPresheafExtensionByInitial_obj_of_le C U F V.unop hV)
+      have hEright :
+          F.obj (j.op.obj W) =
+            ((openPresheafExtensionByInitial C U).obj F).obj W := by
+        simpa [j, f] using
+          (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW).symm
+      have hE :
+          ((openPresheafExtensionByInitial C U).obj F).map i =
+            eqToHom hEleft ≫ F.map (j.op.map i) ≫ eqToHom hEright := by
+        change (if h : V.unop ≤ U then
+          eqToHom _ ≫ F.map (j.op.map i) ≫ eqToHom _ else _) = _
+        rw [dif_pos hV]
+        rfl
+      dsimp [app]
+      simp only [Category.assoc]
+      rw [← ψ.naturality]
+      rw [hE]
+      simp [R₀, hfun, himageV, himageW, j, f]
+    · let e :
+          ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+            (⊥_ C) := eqToIso
+          (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+      rw [← cancel_epi e.inv]
+      simp only [dif_neg hV]
+      exact initial.hom_ext _ _
+  refine {
+    toFun := toFun
+    invFun := invFun
+    left_inv := by
+      intro φ
+      apply NatTrans.ext'
+      funext V
+      dsimp [toFun, invFun]
+      by_cases hV : V.unop ≤ U
+      · simp [hV, hsub, hfun, j]
+      · let e :
+            ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+              (⊥_ C) := eqToIso
+            (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+        rw [← cancel_epi e.inv]
+        simp only [dif_neg hV]
+        exact initial.hom_ext _ _
+    right_inv := by
+      intro ψ
+      apply NatTrans.ext'
+      funext V
+      dsimp [toFun, invFun]
+      simp [hsub, hfun, j] }
+
+  -/
+/- The presheaf extension/restriction adjunction. -/
 theorem exists_openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
     Nonempty (openPresheafExtensionByInitial C U ⊣ openPresheafRestriction C U) := by
-  sorry
+  classical
+  let f := openInclusion U
+  let hf := U.isOpenEmbedding
+  let j := Opens.map f
+  have hfun : hf.functor ⋙ j = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  let R₀ := (Functor.whiskeringLeft (Opens (openSubspace U))ᵒᵖ
+    (Opens X)ᵒᵖ C).obj hf.functor.op
+  let adj₀ : openPresheafExtensionByInitial C U ⊣ R₀ := by
+    refine Adjunction.mkOfHomEquiv {
+      homEquiv := fun F G => openPresheafExtensionHomEquiv C U hf F G
+      /-
+        have hsub : ∀ V : Opens (openSubspace U), hf.functor.obj V ≤ U := by
+          intro V
+          change (f '' V) ≤ U
+          rintro x ⟨y, hy, rfl⟩
+          exact y.property
+        have himage : ∀ W : Opens X, W ≤ U →
+            hf.functor.obj (j.obj W) = W := by
+          intro W hW
+          apply Opens.ext
+          change f '' (j.obj W) = W
+          ext x
+          constructor
+          · rintro ⟨y, hy, rfl⟩
+            exact hy
+          · intro hx
+            exact ⟨⟨x, hW hx⟩, hx, rfl⟩
+        let toFun : ∀ φ : (openPresheafExtensionByInitial C U).obj F ⟶ G,
+            F ⟶ R₀.obj G := fun φ => by
+          let app : ∀ V, F.obj V ⟶ (R₀.obj G).obj V := fun V => by
+            have hobj : j.obj (hf.functor.obj V.unop) = V.unop := by
+              simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+            let eV : F.obj V ⟶
+                ((openPresheafExtensionByInitial C U).obj F).obj
+                  (hf.functor.op.obj V) := by
+              simp only [openPresheafExtensionByInitial]
+              change F.obj V ⟶
+                if hV : hf.functor.obj V.unop ≤ U then
+                  F.obj (op (j.obj (hf.functor.obj V.unop))) else ⊥_ C
+              simp only [dif_pos (hsub V.unop)]
+              exact F.map (eqToHom hobj).op
+            exact eV ≫ φ.app (hf.functor.op.obj V)
+          refine { app := app, naturality := ?_ }
+          intro V W i
+          have hobjV : (Opens.map f).obj (hf.functor.obj V.unop) = V.unop := by
+            simpa [j] using congrArg (fun K => K.obj V.unop) hfun
+          have hobjW : (Opens.map f).obj (hf.functor.obj W.unop) = W.unop := by
+            simpa [j] using congrArg (fun K => K.obj W.unop) hfun
+          have hmap :
+              (Opens.map f).map (hf.functor.map i.unop) =
+                eqToHom hobjW ≫ i.unop ≫ eqToHom hobjV.symm := by
+            simpa [j] using (Functor.congr_hom hfun i.unop)
+          have hEleft :
+              ((openPresheafExtensionByInitial C U).obj F).obj
+                  (hf.functor.op.obj V) =
+                F.obj (j.op.obj (hf.functor.op.obj V)) := by
+            simpa [j, f] using
+              (openPresheafExtensionByInitial_obj_of_le C U F
+                (hf.functor.obj V.unop) (hsub V.unop))
+          have hEright :
+              F.obj (j.op.obj (hf.functor.op.obj W)) =
+                ((openPresheafExtensionByInitial C U).obj F).obj
+                  (hf.functor.op.obj W) := by
+            simpa [j, f] using
+              (openPresheafExtensionByInitial_obj_of_le C U F
+                (hf.functor.obj W.unop) (hsub W.unop)).symm
+          have hE :
+              ((openPresheafExtensionByInitial C U).obj F).map
+                (hf.functor.op.map i) =
+                eqToHom hEleft ≫
+                  F.map (j.op.map (hf.functor.op.map i)) ≫
+                eqToHom hEright := by
+            change (if h : hf.functor.obj V.unop ≤ U then
+              eqToHom _ ≫ F.map (j.op.map (hf.functor.op.map i)) ≫ eqToHom _
+            else _) = _
+            rw [dif_pos (hsub V.unop)]
+            rfl
+          dsimp [R₀]
+          dsimp [app]
+          simp only [Category.assoc]
+          rw [← φ.naturality]
+          rw [hE]
+          simp only [Functor.map_comp, eqToHom_map, Category.assoc, eqToHom_trans_assoc,
+            eqToHom_refl, Category.id_comp, Category.comp_id]
+        let invFun : ∀ ψ : F ⟶ R₀.obj G,
+            (openPresheafExtensionByInitial C U).obj F ⟶ G := fun ψ => by
+          let app : ∀ W,
+              ((openPresheafExtensionByInitial C U).obj F).obj W ⟶ G.obj W :=
+            fun W => by
+              by_cases hW : W.unop ≤ U
+              · have himageW := himage W.unop hW
+                exact eqToHom (by
+                  simpa [j, f] using
+                    (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW)) ≫
+                  ψ.app (j.op.obj W) ≫
+                  eqToHom (by
+                    change G.obj (op (hf.functor.obj (j.obj W.unop))) = G.obj W
+                    rw [himageW]
+                    )
+              · change (if h : W.unop ≤ U then
+                  F.obj (j.op.obj W) else ⊥_ C) ⟶ G.obj W
+                simpa [hW] using (initial.to (G.obj W))
+          refine { app := app, naturality := ?_ }
+          intro V W i
+          by_cases hV : V.unop ≤ U
+          · have hW : W.unop ≤ U := by
+              exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+            have himageV := himage V.unop hV
+            have himageW := himage W.unop hW
+            have hEleft :
+                ((openPresheafExtensionByInitial C U).obj F).obj V =
+                  F.obj (j.op.obj V) := by
+              simpa [j, f] using
+                (openPresheafExtensionByInitial_obj_of_le C U F V.unop hV)
+            have hEright :
+                F.obj (j.op.obj W) =
+                  ((openPresheafExtensionByInitial C U).obj F).obj W := by
+              simpa [j, f] using
+                (openPresheafExtensionByInitial_obj_of_le C U F W.unop hW).symm
+            have hE :
+                ((openPresheafExtensionByInitial C U).obj F).map i =
+                  eqToHom hEleft ≫ F.map (j.op.map i) ≫ eqToHom hEright := by
+              change (if h : V.unop ≤ U then
+                eqToHom _ ≫ F.map (j.op.map i) ≫ eqToHom _ else _) = _
+              rw [dif_pos hV]
+              rfl
+            dsimp [app]
+            simp only [Category.assoc]
+            rw [← ψ.naturality]
+            rw [hE]
+            simp [R₀, hfun, himageV, himageW, j, f]
+          · let e :
+                ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+                  (⊥_ C) := eqToIso
+                    (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+            rw [← cancel_epi e.inv]
+            simp only [dif_neg hV]
+            exact initial.hom_ext _ _
+        refine {
+          toFun := toFun
+          invFun := invFun
+          left_inv := by
+            intro φ
+            apply NatTrans.ext'
+            funext V
+            dsimp [toFun, invFun]
+            by_cases hV : V.unop ≤ U
+            · simp [hV, hsub, hfun, j]
+            · let e :
+                ((openPresheafExtensionByInitial C U).obj F).obj V ≅
+                  (⊥_ C) := eqToIso
+                    (openPresheafExtensionByInitial_obj_of_not_le C U F V.unop hV)
+              rw [← cancel_epi e.inv]
+              simp only [dif_neg hV]
+              exact initial.hom_ext _ _
+          right_inv := by
+            intro ψ
+            apply NatTrans.ext'
+            funext V
+            dsimp [toFun, invFun]
+            simp [hsub, hfun, j] }
+      -/
+      homEquiv_naturality_left_symm := by
+        intros
+        simp
+      homEquiv_naturality_right := by
+        intros
+        simp }
+  exact ⟨adj₀.ofNatIsoRight hf.isOpenMap.pullbackIso.symm⟩
 
 /-- The presheaf extension/restriction adjunction. -/
 noncomputable def openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]

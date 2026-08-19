@@ -4662,7 +4662,7 @@ theorem covariant_ext_six_term_exact
           pullback.lift (extensionOfShortExact hS).inclusion 0
             (by
               dsimp [P, pullbackExtension, extensionOfShortExact]
-              simp [Category.assoc])
+              simp)
         have hb : b ≫ P.projection = 0 := by
           dsimp [b, P, pullbackExtension]
           rw [pullback.lift_snd]
@@ -4670,7 +4670,7 @@ theorem covariant_ext_six_term_exact
           pullback.lift x.down
             (𝟙 (Opposite.unop (Opposite.op N))) (by
               dsimp [P, pullbackExtension, extensionOfShortExact]
-              simp [Category.assoc])
+              simp)
         have ha : a ≫ P.projection =
             𝟙 (Opposite.unop (Opposite.op N)) := by
           dsimp [a, P, pullbackExtension]
@@ -4811,118 +4811,5 @@ theorem covariant_ext_six_term_exact
           change extensionClass (pushoutExtension F S.f) =
             extensionClass E
           exact hF
-  /-
-  intro N
-  apply ComposableArrows.exact_of_δ₀
-  · change (ComposableArrows.mk₂
-      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup N S.X₁)
-      (homPostcomposition S.f)).Exact
-    change (ShortComplex.mk
-      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup N S.X₁)
-      (homPostcomposition S.f) (by simp)).toComposableArrows.Exact
-    apply ShortComplex.Exact.exact_toComposableArrows
-    apply (ShortComplex.exact_iff_mono _ (by simp)).2
-    rw [AddCommGrpCat.mono_iff_injective]
-    let _ : Mono S.f := hS.mono_f
-    intro x y hxy
-    apply ULift.ext
-    apply (cancel_mono S.f).1
-    change ULift.up (x.down ≫ S.f) = ULift.up (y.down ≫ S.f) at hxy
-    exact congrArg ULift.down hxy
-  · apply ComposableArrows.exact_of_δ₀
-    · change (ComposableArrows.mk₂
-        (homPostcomposition S.f) (homPostcomposition S.g)).Exact
-      change (ShortComplex.mk (homPostcomposition S.f)
-        (homPostcomposition S.g) (by
-          change AddCommGrpCat.uliftFunctor.map
-              ((preadditiveCoyoneda.obj (Opposite.op N)).map S.f) ≫
-            AddCommGrpCat.uliftFunctor.map
-              ((preadditiveCoyoneda.obj (Opposite.op N)).map S.g) = 0
-          rw [← Functor.map_comp]
-          simp [← Functor.map_comp, S.zero]
-          ext
-          rfl)).toComposableArrows.Exact
-      have hbase :
-          (ComposableArrows.mk₃ (0 : (0 : C) ⟶ S.X₁)
-            S.f S.g).Exact := by
-        apply ComposableArrows.exact_of_δ₀
-        · change (ShortComplex.mk
-            (0 : (0 : C) ⟶ S.X₁) S.f (by simp)).toComposableArrows.Exact
-          apply ShortComplex.Exact.exact_toComposableArrows
-          exact (ShortComplex.exact_iff_mono _ (by rfl)).2 hS.mono_f
-        · exact hS.exact.exact_toComposableArrows
-      have h :=
-        (Formalization.Books.Homology.Unit05.covariant_hom_exact_iff
-          S.f S.g S.zero).1 hbase N
-      have h' := h.exact 1
-      exact (h'.map (AddCommGrpCat.uliftFunctor.{u, v})).exact_toComposableArrows
-    · dsimp [covariantExtSequence, sixTermSequence, ComposableArrows.precomp,
-        ComposableArrows.Precomp.map, ComposableArrows.δ₀Functor,
-        ComposableArrows.whiskerLeftFunctor, ComposableArrows.whiskerLeft,
-        ComposableArrows.Precomp.obj]
-      have hcomp := covariant_boundary_extPushout_zero S hS N
-      have hcomp' : extPushoutHom (B := N) S.f ≫
-          extPushoutHom (B := N) S.g = 0 := by
-        ext x
-        change pushoutClass S.g (pushoutClass S.f x) = zeroExtClass
-        rw [pushoutClass_comp, S.zero]
-        refine Quotient.inductionOn x ?_
-        intro E
-        change extensionClass
-          (pushoutExtension E (0 : S.X₁ ⟶ S.X₃)) =
-          extensionClass (splitExtension S.X₃ N)
-        let e : ExtensionMorphism E (splitExtension S.X₃ N) :=
-          { left := 0
-            middle := E.projection ≫ (biprod.inr : N ⟶ S.X₃ ⊞ N)
-            right := 𝟙 N
-            comm_left := by
-              dsimp [splitExtension]
-              rw [← Category.assoc, E.zero, zero_comp]
-              simp
-            comm_right := by
-              dsimp [splitExtension]
-              simp }
-        have h := pushout_pullback_extension_morphism_iso e
-        exact Quotient.sound ⟨h.some.trans
-          (pullback_extension_id_iso (splitExtension S.X₃ N)).some⟩
-      refine { zero := ?_, exact := fun i hi => ?_ }
-      · intro i hi
-        obtain rfl | rfl : i = 0 ∨ i = 1 := by sorry
-        · exact sorry
-        · exact sorry
-      · obtain rfl | rfl : i = 0 ∨ i = 1 := by sorry
-        · change (ShortComplex.mk (covariantBoundary hS N)
-            (extPushoutHom S.f) hcomp).Exact
-          apply ShortComplex.Exact.exact_toComposableArrows
-          rw [ShortComplex.ab_exact_iff]
-          intro x hx
-          change pushoutClass S.f x = zeroExtClass at hx
-          revert hx
-          refine Quotient.inductionOn x ?_
-          intro E hE
-          change extensionClass (pushoutExtension E S.f) =
-            extensionClass (splitExtension S.X₂ N) at hE
-          obtain ⟨h, hh⟩ := covariant_boundary_ext_lift_of_zero
-            S hS N E hE
-          refine ⟨ULift.up h, ?_⟩
-          change pullbackClass h
-            (extensionClass (extensionOfShortExact hS)) = extensionClass E
-          exact hh
-        · change (ShortComplex.mk (extPushoutHom S.f)
-            (extPushoutHom S.g) hcomp').Exact
-          rw [ShortComplex.ab_exact_iff]
-          intro x hx
-          change pushoutClass S.g x = zeroExtClass at hx
-          revert hx
-          refine Quotient.inductionOn x ?_
-          intro E hE
-          change extensionClass (pushoutExtension E S.g) =
-            zeroExtClass at hE
-          obtain ⟨F, hF⟩ := pushout_ext_lift_of_zero S hS N E hE
-          refine ⟨extensionClass F, ?_⟩
-          change extensionClass (pushoutExtension F S.f) =
-            extensionClass E
-          exact hF
 
--/
 end Formalization.Books.Homology.Unit06

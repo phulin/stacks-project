@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
+import Formalization.Books.Algebra.Unit98.TakingLimits
 import Mathlib.Algebra.Category.CommAlgCat.Basic
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
@@ -794,7 +795,18 @@ def cprimeQuotientMap {A : Type u} [CommRing A] (I : Ideal A)
 theorem cprimeBaseMap_map_compatibility {A : Type u} [CommRing A]
     (I : Ideal A) {B C : CommAlgCat A} (f : B ⟶ C) :
     cprimeBaseMap I B ≫ cprimeQuotientMap I f = cprimeBaseMap I C := by
-  sorry
+  apply CategoryTheory.NatTrans.ext
+  funext n
+  apply CommRingCat.hom_ext
+  apply RingHom.ext
+  intro x
+  change cprimeQuotientMapComponent I f n.unop
+      (cprimeBaseComponent I B n.unop x) =
+    cprimeBaseComponent I C n.unop x
+  dsimp [cprimeQuotientMapComponent, cprimeBaseComponent]
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  simp only [Ideal.quotientMap_mk]
+  exact congrArg (Ideal.Quotient.mk _) (f.hom.commutes x)
 
 /-- The morphism part of the canonical functor `𝓒' → 𝓒`. -/
 def completeAlgebraSystemMap {A : Type u} [CommRing A] (I : Ideal A)
@@ -807,14 +819,38 @@ def completeAlgebraSystemMap {A : Type u} [CommRing A] (I : Ideal A)
 theorem completeAlgebraSystemMap_id {A : Type u} [CommRing A]
     (I : Ideal A) (B : CompleteAlgebraCategory A I) :
     completeAlgebraSystemMap I (𝟙 B) = 𝟙 (completeAlgebraSystemObject I B) := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply StructuredArrow.hom_ext
+  apply CategoryTheory.NatTrans.ext
+  funext n
+  apply CommRingCat.hom_ext
+  apply RingHom.ext
+  intro x
+  change cprimeQuotientMapComponent I (𝟙 B.obj) n.unop x = x
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  rfl
 
 theorem completeAlgebraSystemMap_comp {A : Type u} [CommRing A]
     (I : Ideal A) {B C D : CompleteAlgebraCategory A I}
     (f : B ⟶ C) (g : C ⟶ D) :
     completeAlgebraSystemMap I (f ≫ g) =
       completeAlgebraSystemMap I f ≫ completeAlgebraSystemMap I g := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply StructuredArrow.hom_ext
+  change cprimeQuotientMap I (f ≫ g).hom =
+    cprimeQuotientMap I f.hom ≫ cprimeQuotientMap I g.hom
+  apply CategoryTheory.NatTrans.ext
+  funext n
+  apply CommRingCat.hom_ext
+  apply RingHom.ext
+  intro x
+  change cprimeQuotientMapComponent I (f ≫ g).hom n.unop x =
+    cprimeQuotientMapComponent I g.hom n.unop
+      (cprimeQuotientMapComponent I f.hom n.unop x)
+  dsimp [cprimeQuotientMapComponent]
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  simp only [Ideal.quotientMap_mk]
+  rfl
 
 /-- The canonical functor `𝓒' → 𝓒`, sending `B` to `(B/I^nB)_n`. -/
 def completeAlgebraSystemFunctor {A : Type u} [CommRing A] (I : Ideal A) :

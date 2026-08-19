@@ -766,7 +766,7 @@ theorem exists_localization_away_finitePresentation
     ∃ f : R, f ≠ 0 ∧ ∃ g : S, g ≠ 0 ∧
       RingHom.FinitePresentation (localizationAwayMulMap φ f g) := by
   classical
-  letI : Algebra R S := φ.toAlgebra
+  let : Algebra R S := φ.toAlgebra
   change Algebra.FiniteType R S at hft
   have hφ' : Function.Injective (algebraMap R S) := hφ
   have aux : ∀ t : Finset S,
@@ -815,8 +815,8 @@ theorem exists_localization_away_finitePresentation
           rw [hA'eq]
           exact Algebra.subset_adjoin (Or.inr hy)
         let ψ : A →+* A' := (Subalgebra.inclusion hAA').toRingHom
-        letI : Algebra A A' := ψ.toAlgebra
-        letI : IsScalarTower R A A' := IsScalarTower.of_algebraMap_eq' rfl
+        let : Algebra A A' := ψ.toAlgebra
+        let : IsScalarTower R A A' := IsScalarTower.of_algebraMap_eq' rfl
         let x' : A' := ⟨x, by rw [hA'eq]; exact Algebra.subset_adjoin (by simp)⟩
         have hψ : Function.Injective ψ := by
           exact Subalgebra.inclusion_injective hAA'
@@ -981,9 +981,9 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
     exact le_rfl)
   have hψinj : Function.Injective ψ := by
     apply Ideal.quotientMap_injective
-  letI : Algebra (R ⧸ p) (S ⧸ q) := ψ.toAlgebra
+  let : Algebra (R ⧸ p) (S ⧸ q) := ψ.toAlgebra
   have hft' : Algebra.FiniteType (R ⧸ p) (S ⧸ q) := by
-    letI : Algebra R S := φ.toAlgebra
+    let : Algebra R S := φ.toAlgebra
     change Algebra.FiniteType R S at hφ
     obtain ⟨n, t, qgen, hqgen⟩ := Algebra.FiniteType.iff_exists_generators.mp hφ
     let qmk : S →+* S ⧸ q := Ideal.Quotient.mk q
@@ -1025,11 +1025,11 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
   have hqprime : q.IsPrime := by
     dsimp [q]
     exact η.isPrime
-  letI : q.IsPrime := hqprime
+  let : q.IsPrime := hqprime
   have hpprime : p.IsPrime := by
     dsimp [p]
     exact Ideal.comap_isPrime φ q
-  letI : p.IsPrime := hpprime
+  let : p.IsPrime := hpprime
   let Ebar : Set (PrimeSpectrum (S ⧸ q)) :=
     PrimeSpectrum.comap (Ideal.Quotient.mk q) ⁻¹' E
   have hEbar : IsConstructible Ebar := by
@@ -1052,9 +1052,9 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
     apply hf
     exact hψinj (by simpa using h)
   have hden : ψ f * g ≠ 0 := mul_ne_zero hψf hg
-  letI : IsDomain (Localization.Away f) :=
+  let : IsDomain (Localization.Away f) :=
     @Localization.Away.isDomain (R ⧸ p) _ inferInstance f hf
-  letI : IsDomain (Localization.Away (ψ f * g)) :=
+  let : IsDomain (Localization.Away (ψ f * g)) :=
     @Localization.Away.isDomain (S ⧸ q) _ inferInstance (ψ f * g) hden
   let Efg : Set (PrimeSpectrum (Localization.Away (ψ f * g))) :=
     PrimeSpectrum.comap
@@ -1082,7 +1082,7 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
     constructor
     · intro hab
       have hab' : a = b := hRf hab
-      simpa [hab']
+      simp [hab']
     · intro hab
       have hab' : a = b := hψinj (hB hab)
       exact congrArg (algebraMap (R ⧸ p) (Localization.Away f)) hab'
@@ -1109,7 +1109,6 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
     exact Ideal.comap_bot_of_injective _ hmapinj
   have hr0closure : closure ({r0} : Set (PrimeSpectrum (Localization.Away f))) = Set.univ := by
     rw [PrimeSpectrum.closure_singleton]
-    change PrimeSpectrum.zeroLocus (r0.asIdeal : Set (Localization.Away f)) = Set.univ
     change PrimeSpectrum.zeroLocus
         (↑(⊥ : Ideal (Localization.Away f)) : Set (Localization.Away f)) = Set.univ
     exact PrimeSpectrum.zeroLocus_bot

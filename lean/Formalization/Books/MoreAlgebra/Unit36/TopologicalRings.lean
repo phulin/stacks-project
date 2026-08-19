@@ -215,6 +215,52 @@ theorem iAdicModuleTopology_hasBasis
     · rintro ⟨n, -, h⟩
       exact ⟨(I ^ n • (⊤ : Submodule R M) : Submodule R M), ⟨n, rfl⟩, h⟩⟩
 
+theorem iAdicModuleTopology_hasBasis_nhds
+    (R : Type u) [CommRing R] (I : Ideal R)
+    (M : Type v) [AddCommGroup M] [Module R M] (x : M) :
+    (@nhds M (I.adicModuleTopology M) x).HasBasis
+      (fun _ : ℕ => True)
+      (fun n => (fun y : M => x + y) ''
+        ((I ^ n • (⊤ : Submodule R M) : Submodule R M) : Set M)) := by
+  let _ : TopologicalSpace R := I.adicTopology
+  let B := (I.ringFilterBasis.moduleFilterBasis (I.adic_module_basis M)).toAddGroupFilterBasis
+  have hadd : @IsTopologicalAddGroup M (I.adicModuleTopology M)
+      (inferInstance : AddGroup M) := by
+    change @IsTopologicalAddGroup M B.topology (inferInstance : AddGroup M)
+    exact B.isTopologicalAddGroup
+  let _ : TopologicalSpace M := I.adicModuleTopology M
+  let _ : IsTopologicalAddGroup M := hadd
+  have h := (iAdicModuleTopology_hasBasis R I M).map (fun y : M => x + y)
+  rw [map_add_left_nhds_zero x] at h
+  exact h
+
+theorem topologicalSpace_eq_iAdicModuleTopology_of_cofinal_basis
+    (R : Type u) [CommRing R] (I : Ideal R)
+    (M : Type v) [AddCommGroup M] [Module R M]
+    (t : TopologicalSpace M) (K : ℕ → Submodule R M)
+    (hK : ∀ x : M, (@nhds M t x).HasBasis
+      (fun _ : ℕ => True)
+      (fun n => (fun y : M => x + y) '' (K n : Set M)))
+    (hpow : ∀ n : ℕ,
+      (I ^ n • (⊤ : Submodule R M) : Submodule R M) ≤ K n)
+    (hbound : ∃ c : ℕ, ∀ n : ℕ, K (n + c) ≤
+      (I ^ n • (⊤ : Submodule R M) : Submodule R M)) :
+    t = I.adicModuleTopology M := by
+  apply TopologicalSpace.ext_nhds
+  intro x
+  have hleft := hK x
+  have hright := iAdicModuleTopology_hasBasis_nhds R I M x
+  apply hleft.ext hright
+  · intro n hn
+    exact ⟨n, trivial, by
+      rintro z ⟨y, hy, rfl⟩
+      exact ⟨y, hpow n hy, rfl⟩⟩
+  · obtain ⟨c, hc⟩ := hbound
+    intro n hn
+    exact ⟨n + c, trivial, by
+      rintro z ⟨y, hy, rfl⟩
+      exact ⟨y, hc n hy, rfl⟩⟩
+
 theorem iAdicModuleTopology_is_topological_module
     (R : Type u) [CommRing R] (I : Ideal R)
     (M : Type v) [AddCommGroup M] [Module R M] :

@@ -131,7 +131,7 @@ theorem completion_is_adic_complete
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R)
     (M : Type v) [AddCommGroup M] [Module R M] :
     IsAdicComplete I (completion I M) := by
-  sorry
+  exact AdicCompletion.isAdicComplete I.fg_of_isNoetherianRing
 
 /- This is the canonical inclusion of the completion of `I^n M` into the
    completion of `M`; it is the source's assertion `I^n M^ = (I^n M)^`. -/
@@ -140,7 +140,8 @@ theorem completion_power_submodule_eq_range
     (M : Type v) [AddCommGroup M] [Module R M] (n : ℕ) :
     I ^ n • (⊤ : Submodule R (completion I M)) =
       (AdicCompletion.ofPowSMul I M n).range.restrictScalars R := by
-  sorry
+  rw [completion_pow_smul_eq_kernel_eval I M I.fg_of_isNoetherianRing n,
+    completion_of_power_range_eq_kernel_eval I M n]
 
 /- The quotient assertion `M^/I^n M^ = M/I^n M`, with the canonical
    evaluation map recording the identification. -/
@@ -152,7 +153,18 @@ theorem completion_quotient_power_equiv
           ≃ₗ[R] (M ⧸ (I ^ n • (⊤ : Submodule R M))),
       ∀ x : completion I M,
         e (Submodule.Quotient.mk x) = AdicCompletion.eval I M n x := by
-  sorry
+  let f := AdicCompletion.eval I M n
+  have hker : I ^ n • (⊤ : Submodule R (completion I M)) = f.ker := by
+    calc
+      I ^ n • (⊤ : Submodule R (completion I M)) =
+          (AdicCompletion.ofPowSMul I M n).range.restrictScalars R :=
+        completion_power_submodule_eq_range I M n
+      _ = f.ker := completion_of_power_range_eq_kernel_eval I M n
+  let e := (Submodule.quotEquivOfEq _ _ hker).trans
+    (f.quotKerEquivOfSurjective (AdicCompletion.eval_surjective I M n))
+  refine ⟨e, ?_⟩
+  intro x
+  simp [e, f]
 
 theorem completion_is_noetherian_of_fg_quotient
     {R : Type u} [CommRing R] (I : Ideal R)
@@ -160,7 +172,20 @@ theorem completion_is_noetherian_of_fg_quotient
     IsNoetherianRing (ringCompletion I) ∧
       IsAdicComplete
         (I.map (algebraMap R (ringCompletion I))) (ringCompletion I) := by
-  sorry
+  let K : Ideal (ringCompletion I) := I.map (algebraMap R (ringCompletion I))
+  have hKcomplete : IsAdicComplete K (ringCompletion I) := by
+    simpa [K] using (AdicCompletion.isAdicComplete_self I hI)
+  have hKnoetherian : IsNoetherianRing ((ringCompletion I) ⧸ K) := by
+    obtain ⟨e, _⟩ := Unit96.completion_quotient_power_equiv I hI 1
+    have hKpow : K = Unit96.completionPowerIdeal I 1 := by
+      simp [K, Unit96.completionPowerIdeal]
+    let e' : (R ⧸ I) ≃+* ((ringCompletion I) ⧸ K) :=
+      (Ideal.quotEquivOfEq (show I = I ^ 1 by simp)).trans
+        (e.symm.toRingEquiv.trans (Ideal.quotEquivOfEq hKpow.symm))
+    exact isNoetherianRing_of_ringEquiv (R ⧸ I) e'
+  refine ⟨?_, ?_⟩
+  · sorry
+  · simpa [K] using hKcomplete
 
 theorem completion_is_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :

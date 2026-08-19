@@ -306,10 +306,151 @@ theorem prepare_adjoint_two_out_of_three
       (HasRightDecomposition P T.obj₁ ∧
         HasRightDecomposition P T.obj₃ →
           HasRightDecomposition P T.obj₂) ∧
-        (HasRightDecomposition P T.obj₂ ∧
+      (HasRightDecomposition P T.obj₂ ∧
         HasRightDecomposition P T.obj₃ →
           HasRightDecomposition P T.obj₁) := by
-  sorry
+  let hP : P.IsStableUnderShift ℤ := inferInstance
+  have horth := orthogonal_triangulated P hP
+  let _rightClosed : (rightOrthogonal P).IsClosedUnderIsomorphisms := horth.1.1
+  let _rightTriangulated : (rightOrthogonal P).IsTriangulated := horth.1.2.2
+  have transfer_right
+      {A X B B' : C} {f : A ⟶ X}
+      {g : X ⟶ B} {h : B ⟶ A⟦(1 : ℤ)⟧}
+      {g' : X ⟶ B'} {h' : B' ⟶ A⟦(1 : ℤ)⟧}
+      (hD : Triangle.mk f g h ∈ distTriang C)
+      (hD' : Triangle.mk f g' h' ∈ distTriang C)
+      (hB : rightOrthogonal P B) : rightOrthogonal P B' := by
+    obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      (Triangle.mk f g h) (Triangle.mk f g' h') hD hD' (𝟙 _) (𝟙 _) (by
+        change f ≫ 𝟙 X = 𝟙 A ≫ f
+        simp)
+    let φ := Triangle.homMk (Triangle.mk f g h) (Triangle.mk f g' h')
+      (𝟙 A) (𝟙 X) c (by
+        change f ≫ 𝟙 X = 𝟙 A ≫ f
+        simp) hc₂ hc₃
+    let _ : IsIso φ.hom₁ := by
+      change IsIso (𝟙 A)
+      infer_instance
+    let _ : IsIso φ.hom₂ := by
+      change IsIso (𝟙 X)
+      infer_instance
+    have hc : IsIso c := by
+      change IsIso φ.hom₃
+      apply isIso₃_of_isIso₁₂ φ hD hD'
+      · exact inferInstance
+      · exact inferInstance
+    exact (rightOrthogonal P).prop_of_iso (@asIso _ _ _ _ c hc) hB
+  have shift_right :
+      ∀ {X : C}, HasRightDecomposition P X →
+        ∀ n : ℤ, HasRightDecomposition P (X⟦n⟧) := by
+    intro X hX n
+    rcases hX with ⟨A, B, f, g, h, hD, hA, hB⟩
+    let D := (Triangle.shiftFunctor C n).obj (Triangle.mk f g h)
+    refine ⟨D.obj₁, D.obj₃, D.mor₁, D.mor₂, D.mor₃, ?_, ?_, ?_⟩
+    · change D ∈ distTriang C
+      exact Triangle.shift_distinguished (Triangle.mk f g h) hD n
+    · change P (A⟦n⟧)
+      exact (hP.isStableUnderShiftBy n).le_shift _ hA
+    · change rightOrthogonal P (B⟦n⟧)
+      exact ((inferInstance : (rightOrthogonal P).IsStableUnderShift ℤ).isStableUnderShiftBy n).le_shift _ hB
+  have iso_right {X Y : C} (e : X ≅ Y) (hX : HasRightDecomposition P X) :
+      HasRightDecomposition P Y := by
+    rcases hX with ⟨A, B, f, g, h, hD, hA, hB⟩
+    refine ⟨A, B, f ≫ e.hom, e.inv ≫ g, h, ?_, hA, hB⟩
+    exact isomorphic_distinguished _ hD _
+      (Triangle.isoMk _ _ (Iso.refl A) e.symm (Iso.refl B)
+        (by
+          change (f ≫ e.hom) ≫ e.inv = 𝟙 A ≫ f
+          simp)
+        (by
+          change (e.inv ≫ g) ≫ 𝟙 B = e.inv ≫ g
+          simp)
+        (by
+          change h ≫ (shiftFunctor C (1 : ℤ)).map (𝟙 A) = 𝟙 B ≫ h
+          simp))
+  have first_case :
+      ∀ {S : Triangle C}, S ∈ distTriang C →
+        HasRightDecomposition P S.obj₁ →
+        HasRightDecomposition P S.obj₂ →
+        HasRightDecomposition P S.obj₃ := by
+    intro S hS hS₁ hS₂
+    rcases hS₁ with ⟨A₁, B₁, f₁, g₁, h₁, hD₁, hA₁, hB₁⟩
+    rcases hS₂ with ⟨A₂, B₂, f₂, g₂, h₂, hD₂, hA₂, hB₂⟩
+    have ha' := (((pre_prepare_adjoint P hP hD₂).1 hB₂ A₁ hA₁).2
+      (f₁ ≫ S.mor₁))
+    change ∃ a : A₁ ⟶ A₂, a ≫ f₂ = f₁ ≫ S.mor₁ at ha'
+    obtain ⟨a, ha⟩ := ha'
+    obtain ⟨d⟩ := three_by_three_completion f₁ f₂ a S.mor₁ ha.symm
+    have hB₀ : rightOrthogonal P d.Z :=
+      transfer_right hD₁ d.row₀ hB₁
+    have hB₁' : rightOrthogonal P d.Z' :=
+      transfer_right hD₂ d.row₁ hB₂
+    obtain ⟨A₃, hA₃, ⟨eA⟩⟩ :=
+      P.ext_of_isTriangulatedClosed₃' (Triangle.mk a d.a' d.a'') d.col₀ hA₁ hA₂
+    have eA' : d.X'' ≅ A₃ := by
+      simpa using eA
+    have hB₃ : rightOrthogonal P d.Z'' :=
+      (rightOrthogonal P).ext_of_isTriangulatedClosed₃
+        (Triangle.mk d.c d.c' d.c'') d.col₂ hB₀ hB₁'
+    have hD₃ : Triangle.mk (eA'.inv ≫ d.f'') d.g''
+        (d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧') ∈ distTriang C := by
+      let U : Triangle C :=
+        { obj₁ := A₃
+          obj₂ := d.Y''
+          obj₃ := d.Z''
+          mor₁ := eA'.inv ≫ d.f''
+          mor₂ := d.g''
+          mor₃ := d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧' }
+      let V : Triangle C :=
+        { obj₁ := d.X''
+          obj₂ := d.Y''
+          obj₃ := d.Z''
+          mor₁ := d.f''
+          mor₂ := d.g''
+          mor₃ := d.h'' }
+      have hV : V ∈ distTriang C := by
+        simpa [V, Triangle.mk] using d.row₂
+      have hU : U ∈ distTriang C := by
+        exact isomorphic_distinguished V hV U
+          (Triangle.isoMk U V eA'.symm (Iso.refl d.Y'') (Iso.refl d.Z'')
+            (by simp [U, V])
+            (by simp [U, V])
+            (by
+              simp only [U, V, Category.assoc, Iso.refl_hom, Category.id_comp]
+              rw [← Functor.map_comp]
+              simp))
+      simpa [U, Triangle.mk] using hU
+    have hY : HasRightDecomposition P d.Y'' :=
+      ⟨A₃, d.Z'', eA'.inv ≫ d.f'', d.g'', d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧',
+        hD₃, hA₃, hB₃⟩
+    obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      (Triangle.mk S.mor₁ d.b' d.b'') S d.col₁ hS (𝟙 S.obj₁) (𝟙 S.obj₂) (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
+        simp)
+    let φ := Triangle.homMk (Triangle.mk S.mor₁ d.b' d.b'') S
+      (𝟙 S.obj₁) (𝟙 S.obj₂) c (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
+        simp) hc₂ hc₃
+    let _ : IsIso φ.hom₁ := by
+      change IsIso (𝟙 S.obj₁)
+      infer_instance
+    let _ : IsIso φ.hom₂ := by
+      change IsIso (𝟙 S.obj₂)
+      infer_instance
+    let _ : IsIso c := by
+      change IsIso φ.hom₃
+      exact isIso₃_of_isIso₁₂ φ d.col₁ hS inferInstance inferInstance
+    exact iso_right (asIso c) hY
+  constructor
+  · intro h₁₂
+    exact first_case hT h₁₂.1 h₁₂.2
+  constructor
+  · intro h₁₃
+    exact first_case (inv_rot_of_distTriang _ hT)
+      (shift_right h₁₃.2 (-1 : ℤ)) h₁₃.1
+  · intro h₂₃
+    apply iso_right (shiftShiftNeg T.obj₁ (1 : ℤ))
+    exact shift_right (first_case (rot_of_distTriang _ hT) h₂₃.1 h₂₃.2) (-1 : ℤ)
 /-
   let hP : P.IsStableUnderShift ℤ := inferInstance
   have horth := orthogonal_triangulated P hP
@@ -462,7 +603,11 @@ theorem prepare_adjoint_biproduct
     {X Y : C} (hX : HasRightDecomposition P X)
     (hY : HasRightDecomposition P Y) :
     HasRightDecomposition P (X ⊞ Y) := by
-  sorry
+  exact ((prepare_adjoint_two_out_of_three P
+    (T := Triangle.mk (biprod.inl : X ⟶ X ⊞ Y)
+      (biprod.snd : X ⊞ Y ⟶ Y)
+      (0 : Y ⟶ X⟦(1 : ℤ)⟧))
+    (split_triangle_distinguished X Y)).2.1 ⟨hX, hY⟩)
 
 /-- Left-adjoint decompositions satisfy two-out-of-three for triangles. -/
 theorem prepare_adjoint_dual_two_out_of_three
@@ -478,7 +623,154 @@ theorem prepare_adjoint_dual_two_out_of_three
       (HasLeftDecomposition P T.obj₂ ∧
         HasLeftDecomposition P T.obj₃ →
           HasLeftDecomposition P T.obj₁) := by
-  sorry
+  let hP : P.IsStableUnderShift ℤ := inferInstance
+  have horth := orthogonal_triangulated P hP
+  let _leftClosed : (leftOrthogonal P).IsClosedUnderIsomorphisms := horth.2.1
+  let _leftTriangulated : (leftOrthogonal P).IsTriangulated := horth.2.2.2
+  have transfer_isoClosure
+      {A X B B' : C} {f : A ⟶ X}
+      {g : X ⟶ B} {h : B ⟶ A⟦(1 : ℤ)⟧}
+      {g' : X ⟶ B'} {h' : B' ⟶ A⟦(1 : ℤ)⟧}
+      (hD : Triangle.mk f g h ∈ distTriang C)
+      (hD' : Triangle.mk f g' h' ∈ distTriang C)
+      (hB : P B) : P.isoClosure B' := by
+    obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      (Triangle.mk f g h) (Triangle.mk f g' h') hD hD' (𝟙 _) (𝟙 _) (by
+        change f ≫ 𝟙 X = 𝟙 A ≫ f
+        simp)
+    let φ := Triangle.homMk (Triangle.mk f g h) (Triangle.mk f g' h')
+      (𝟙 A) (𝟙 X) c (by
+        change f ≫ 𝟙 X = 𝟙 A ≫ f
+        simp) hc₂ hc₃
+    let _ : IsIso φ.hom₁ := by
+      change IsIso (𝟙 A)
+      infer_instance
+    let _ : IsIso φ.hom₂ := by
+      change IsIso (𝟙 X)
+      infer_instance
+    have hc : IsIso c := by
+      change IsIso φ.hom₃
+      apply isIso₃_of_isIso₁₂ φ hD hD'
+      · exact inferInstance
+      · exact inferInstance
+    exact ⟨B, hB, ⟨(@asIso _ _ _ _ c hc).symm⟩⟩
+  have shift_left :
+      ∀ {X : C}, HasLeftDecomposition P X →
+        ∀ n : ℤ, HasLeftDecomposition P (X⟦n⟧) := by
+    intro X hX n
+    rcases hX with ⟨A, B, f, g, h, hD, hA, hB⟩
+    let D := (Triangle.shiftFunctor C n).obj (Triangle.mk f g h)
+    refine ⟨D.obj₁, D.obj₃, D.mor₁, D.mor₂, D.mor₃, ?_, ?_, ?_⟩
+    · change D ∈ distTriang C
+      exact Triangle.shift_distinguished (Triangle.mk f g h) hD n
+    · change leftOrthogonal P (A⟦n⟧)
+      exact ((inferInstance : (leftOrthogonal P).IsStableUnderShift ℤ).isStableUnderShiftBy n).le_shift _ hA
+    · change P (B⟦n⟧)
+      exact (hP.isStableUnderShiftBy n).le_shift _ hB
+  have iso_left {X Y : C} (e : X ≅ Y) (hX : HasLeftDecomposition P X) :
+      HasLeftDecomposition P Y := by
+    rcases hX with ⟨A, B, f, g, h, hD, hA, hB⟩
+    refine ⟨A, B, f ≫ e.hom, e.inv ≫ g, h, ?_, hA, hB⟩
+    exact isomorphic_distinguished _ hD _
+      (Triangle.isoMk _ _ (Iso.refl A) e.symm (Iso.refl B)
+        (by
+          change (f ≫ e.hom) ≫ e.inv = 𝟙 A ≫ f
+          simp)
+        (by
+          change (e.inv ≫ g) ≫ 𝟙 B = e.inv ≫ g
+          simp)
+        (by
+          change h ≫ (shiftFunctor C (1 : ℤ)).map (𝟙 A) = 𝟙 B ≫ h
+          simp))
+  have first_case :
+      ∀ {S : Triangle C}, S ∈ distTriang C →
+        HasLeftDecomposition P S.obj₁ →
+        HasLeftDecomposition P S.obj₂ →
+        HasLeftDecomposition P S.obj₃ := by
+    intro S hS hS₁ hS₂
+    rcases hS₁ with ⟨A₁, B₁, f₁, g₁, h₁, hD₁, hA₁, hB₁⟩
+    rcases hS₂ with ⟨A₂, B₂, f₂, g₂, h₂, hD₂, hA₂, hB₂⟩
+    have hc' := (((pre_prepare_adjoint_dual P hP hD₁).1 hA₁ B₂ hB₂).2
+      (S.mor₁ ≫ g₂))
+    change ∃ c : B₁ ⟶ B₂, g₁ ≫ c = S.mor₁ ≫ g₂ at hc'
+    obtain ⟨c, hc⟩ := hc'
+    obtain ⟨a, ha, ha'⟩ := complete_distinguished_triangle_morphism₁
+      (Triangle.mk f₁ g₁ h₁) (Triangle.mk f₂ g₂ h₂) hD₁ hD₂
+      S.mor₁ c hc
+    obtain ⟨d⟩ := three_by_three_completion f₁ f₂ a S.mor₁ ha
+    have hA₃ : leftOrthogonal P d.X'' :=
+      (leftOrthogonal P).ext_of_isTriangulatedClosed₃
+        (Triangle.mk a d.a' d.a'') d.col₀ hA₁ hA₂
+    have hB₀ : P.isoClosure d.Z :=
+      transfer_isoClosure hD₁ d.row₀ hB₁
+    have hB₁' : P.isoClosure d.Z' :=
+      transfer_isoClosure hD₂ d.row₁ hB₂
+    have hB₃' : P.isoClosure d.Z'' :=
+      (P.isoClosure).ext_of_isTriangulatedClosed₃
+        (Triangle.mk d.c d.c' d.c'') d.col₂ hB₀ hB₁'
+    obtain ⟨B₃, hB₃, ⟨eB⟩⟩ := hB₃'
+    have eB' : d.Z'' ≅ B₃ := by
+      simpa using eB
+    have hD₃ : Triangle.mk d.f'' (d.g'' ≫ eB'.hom)
+        (eB'.inv ≫ d.h'') ∈ distTriang C := by
+      let U : Triangle C :=
+        { obj₁ := d.X''
+          obj₂ := d.Y''
+          obj₃ := B₃
+          mor₁ := d.f''
+          mor₂ := d.g'' ≫ eB'.hom
+          mor₃ := eB'.inv ≫ d.h'' }
+      let V : Triangle C :=
+        { obj₁ := d.X''
+          obj₂ := d.Y''
+          obj₃ := d.Z''
+          mor₁ := d.f''
+          mor₂ := d.g''
+          mor₃ := d.h'' }
+      have hV : V ∈ distTriang C := by
+        simpa [V, Triangle.mk] using d.row₂
+      have hU : U ∈ distTriang C := by
+        exact isomorphic_distinguished V hV U
+          (Triangle.isoMk U V (Iso.refl d.X'') (Iso.refl d.Y'') eB'.symm
+            (by simp [U, V])
+            (by
+              simp only [U, V, Category.assoc, Iso.refl_hom, Category.id_comp]
+              simp)
+            (by
+              simp only [U, V, Category.assoc, Iso.refl_hom]
+              simp))
+      simpa [U, Triangle.mk] using hU
+    have hY : HasLeftDecomposition P d.Y'' :=
+      ⟨d.X'', B₃, d.f'', d.g'' ≫ eB'.hom, eB'.inv ≫ d.h'',
+        hD₃, hA₃, hB₃⟩
+    obtain ⟨c', hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      (Triangle.mk S.mor₁ d.b' d.b'') S d.col₁ hS (𝟙 S.obj₁) (𝟙 S.obj₂) (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
+        simp)
+    let φ := Triangle.homMk (Triangle.mk S.mor₁ d.b' d.b'') S
+      (𝟙 S.obj₁) (𝟙 S.obj₂) c' (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
+        simp) hc₂ hc₃
+    let _ : IsIso φ.hom₁ := by
+      change IsIso (𝟙 S.obj₁)
+      infer_instance
+    let _ : IsIso φ.hom₂ := by
+      change IsIso (𝟙 S.obj₂)
+      infer_instance
+    let _ : IsIso c' := by
+      change IsIso φ.hom₃
+      exact isIso₃_of_isIso₁₂ φ d.col₁ hS inferInstance inferInstance
+    exact iso_left (asIso c') hY
+  constructor
+  · intro h₁₂
+    exact first_case hT h₁₂.1 h₁₂.2
+  constructor
+  · intro h₁₃
+    exact first_case (inv_rot_of_distTriang _ hT)
+      (shift_left h₁₃.2 (-1 : ℤ)) h₁₃.1
+  · intro h₂₃
+    apply iso_left (shiftShiftNeg T.obj₁ (1 : ℤ))
+    exact shift_left (first_case (rot_of_distTriang _ hT) h₂₃.1 h₂₃.2) (-1 : ℤ)
 
 /-- Left-adjoint decompositions are closed under binary direct sums. -/
 theorem prepare_adjoint_dual_biproduct
@@ -487,7 +779,11 @@ theorem prepare_adjoint_dual_biproduct
     {X Y : C} (hX : HasLeftDecomposition P X)
     (hY : HasLeftDecomposition P Y) :
     HasLeftDecomposition P (X ⊞ Y) := by
-  sorry
+  exact ((prepare_adjoint_dual_two_out_of_three P
+    (T := Triangle.mk (biprod.inl : X ⟶ X ⊞ Y)
+      (biprod.snd : X ⊞ Y ⟶ Y)
+      (0 : Y ⟶ X⟦(1 : ℤ)⟧))
+    (split_triangle_distinguished X Y)).2.1 ⟨hX, hY⟩)
 
 /-! ## Adjoints of inclusions -/
 

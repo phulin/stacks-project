@@ -186,7 +186,7 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
             by_contra hi
             have hiT : i ∈ T := by simp [T, hi]
             rw [hTempty] at hiT
-            simpa using hiT
+            simp at hiT
           exact hi0
         obtain ⟨r, hr, hrmax⟩ := Finset.exists_max_image T (fun i => |z i|) hT
         have hrx : x r ≠ 0 := by simpa [T] using (Finset.mem_filter.mp hr).2
@@ -380,7 +380,7 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
                       (w i * (A i t * m t) - A i t * m t * w t) else 0 := by
                   apply Finset.sum_congr rfl
                   intro t ht
-                  by_cases hti : t = i <;> simp [hti] <;> ring
+                  by_cases hti : t = i <;> simp [hti] ; ring
                 _ = (∑ t, if t ≠ i then w i * (A i t * m t) else 0) -
                     ∑ t, if t ≠ i then A i t * m t * w t else 0 := by
                   have hsplit'' :
@@ -650,7 +650,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
             rw [Finset.mul_sum]
             apply Finset.sum_congr rfl
             intro j hj
-            by_cases hji : j ≠ i <;> simp [hji] <;> ring
+            by_cases hji : j ≠ i <;> simp [hji] ; ring
       _ = m i * (A i i * m i + (∑ j, if j ≠ i then A i j * m j else 0)) := by ring
       _ = 0 := by rw [← hsplitA i, hAm_row i, mul_zero]
   have hquad :
@@ -692,7 +692,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
         rw [← Finset.sum_neg_distrib]
         apply Finset.sum_congr rfl
         intro p hp
-        by_cases hne : p.1 ≠ p.2 <;> simp [F, hne] <;> ring
+        by_cases hne : p.1 ≠ p.2 <;> simp [hne]
       rw [hneg] at hEzero
       linarith
     have hFnonneg (p : Fin n × Fin n) (hp : p ∈
@@ -701,7 +701,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
         · simpa [F, hne] using (mul_nonneg (hCoff hne)
             (sq_nonneg (y p.2 - y p.1)))
         · have heq : p.1 = p.2 := not_ne_iff.mp hne
-          simp [F, hne, heq]
+          simp [F, heq]
     have hFterm (i j : Fin n) : F (i, j) = 0 := by
       have hp : (i, j) ∈
           (Finset.univ : Finset (Fin n)).product (Finset.univ : Finset (Fin n)) := by
@@ -741,7 +741,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
               (if j ≠ i then C i j * y i else 0)) := by
           apply Finset.sum_congr rfl
           intro j hj
-          by_cases hne : j ≠ i <;> simp [hne] <;> ring
+          by_cases hne : j ≠ i <;> simp [hne] ; ring
         _ = (Finset.univ : Finset (Fin n)).sum
               (fun j => if j ≠ i then C i j * y j else 0) -
             (Finset.univ : Finset (Fin n)).sum
@@ -755,7 +755,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
           rw [Finset.mul_sum]
           apply Finset.sum_congr rfl
           intro j hj
-          by_cases hne : j ≠ i <;> simp [hne] <;> ring
+          by_cases hne : j ≠ i <;> simp [hne] ; ring
     have hdecomp (i : Fin n) :
         (Finset.univ : Finset (Fin n)).sum (fun j => C i j * y j) =
           (C i i + (Finset.univ : Finset (Fin n)).sum
@@ -783,7 +783,7 @@ theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
         rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
         intro j hj
-        by_cases hne : j ≠ i <;> simp [hne] <;> ring
+        by_cases hne : j ≠ i <;> simp [hne] ; ring
       rw [hsplit, hdiffexpand]
       ring
     have hCy : Matrix.mulVec C y = 0 := by
@@ -942,7 +942,7 @@ theorem recurring_symmetric_real_range_finrank {n : ℕ}
       rw [hker, finrank_span_singleton hm0]
     have hdim := (Matrix.toLin' A).finrank_range_add_finrank_ker
     have hdom : Module.finrank ℝ (Fin (Nat.succ n) → ℝ) = Nat.succ n := by
-      simp [Module.finrank_pi_fintype]
+      simp
     rw [hkerfin, hdom] at hdim
     omega
 
@@ -985,7 +985,7 @@ private theorem exists_bilinForm_smul_eq
     ∀ φ : Module.Dual ℤ L, ∃ d : ℤ, d ≠ 0 ∧ ∃ y : L, d • φ = B y := by
   intro φ
   let b := Module.Free.chooseBasis ℤ L
-  letI := Fintype.ofFinite (Module.Free.ChooseBasisIndex ℤ L)
+  let := Fintype.ofFinite (Module.Free.ChooseBasisIndex ℤ L)
   let e := b.toDualEquiv
   let f := e.symm.toLinearMap.comp B
   have hfker : LinearMap.ker f = ⊥ := by
@@ -1035,7 +1035,7 @@ private theorem orthogonal_quotient_isTorsionFree
     @Module.IsTorsionFree ℤ (L ⧸ B.orthogonal A) _ _
       (Submodule.Quotient.module (B.orthogonal A)) := by
   let W : Submodule ℤ L := B.orthogonal A
-  letI : Module ℤ (L ⧸ W) := Submodule.Quotient.module W
+  let : Module ℤ (L ⧸ W) := Submodule.Quotient.module W
   change @Module.IsTorsionFree ℤ (L ⧸ W) _ _ (Submodule.Quotient.module W)
   apply Module.IsTorsionFree.of_smul_eq_zero
   intro k z hz
@@ -1067,16 +1067,16 @@ private theorem orthogonal_domRestrict_ker
   classical
   let W : Submodule ℤ L := B.orthogonal A
   let p := B.domRestrict₂ W
-  letI : Module ℤ (L ⧸ A) := Submodule.Quotient.module A
-  letI : Module.IsTorsionFree ℤ (L ⧸ A) := by
+  let : Module ℤ (L ⧸ A) := Submodule.Quotient.module A
+  let : Module.IsTorsionFree ℤ (L ⧸ A) := by
     change @Module.IsTorsionFree ℤ (L ⧸ A) _ _ (Submodule.Quotient.module A)
     have hmod : (Submodule.Quotient.module A : Module ℤ (L ⧸ A)) =
         AddCommGroup.toIntModule (L ⧸ A) := Subsingleton.elim _ _
     rw [hmod]
     exact hquotient
-  letI : IsScalarTower ℤ ℤ L :=
+  let : IsScalarTower ℤ ℤ L :=
     ⟨fun a b x => by simpa only [smul_eq_mul] using (smul_smul a b x).symm⟩
-  letI : Module.Finite ℤ (L ⧸ A) :=
+  let : Module.Finite ℤ (L ⧸ A) :=
     Module.Finite.of_surjective (A.mkQ : L →ₗ[ℤ] (L ⧸ A)) A.mkQ_surjective
   have hAfree : Module.Free ℤ (L ⧸ A) := by infer_instance
   have hAproj : Module.Projective ℤ (L ⧸ A) := inferInstance
@@ -1118,7 +1118,6 @@ private theorem orthogonal_domRestrict_ker
     let yW : W := ⟨y, hyW⟩
     have hpx := DFunLike.congr_fun (LinearMap.mem_ker.mp hx) yW
     have hBxy : B x y = 0 := by
-      change B x y = 0
       exact hpx
     have hByx : B y x = 0 := by
       rw [hB.1.eq]
@@ -1152,10 +1151,10 @@ private theorem orthogonal_projection_data
   let p := B.domRestrict₂ W
   have hker' : A = LinearMap.ker p := by
     simpa [p, W] using hker
-  letI : Module ℤ (L ⧸ W) := Submodule.Quotient.module W
+  let : Module ℤ (L ⧸ W) := Submodule.Quotient.module W
   have hWtf : Module.IsTorsionFree ℤ (L ⧸ W) := by
     simpa [W] using orthogonal_quotient_isTorsionFree L B A
-  letI : Module.IsTorsionFree ℤ (L ⧸ W) := hWtf
+  let : Module.IsTorsionFree ℤ (L ⧸ W) := hWtf
   let : Module.Finite ℤ (L ⧸ W) :=
     Module.Finite.of_surjective (W.mkQ : L →ₗ[ℤ] (L ⧸ W)) W.mkQ_surjective
   have hWfree : Module.Free ℤ (L ⧸ W) := by infer_instance

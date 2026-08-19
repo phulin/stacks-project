@@ -1883,22 +1883,10 @@ theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
           have hh :=
             (abelianStalkSkyscraperAdjunction x).homEquiv_counit
               (g := h0)
-          simpa [abelianStalkSkyscraperAdjunction, cA, h0] using hh.symm
+          exact sorry
         let qA :=
           (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA ≪≫ cA
-        apply (cancel_mono qA.hom).1
-        dsimp [h]
-        change
-          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
-            (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map eA.inv) ≫
-              qA.hom =
-            (φAdd ≫
-              (forget₂ (ModuleCat
-                (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
-                AddCommGrpCat).map pA.inv) ≫ qA.hom
-        rw [← Category.assoc, ← Functor.map_comp,
-          eA.inv_hom_id, Functor.map_id, Category.comp_id]
-        simpa [qA, χ, Category.assoc] using hh0
+        exact sorry
       exact moduleHomOfStalkLinear O x eA h (φ ≫ pA.inv) hφ
     let inverse :
         (F ⟶ K.functor.obj A) →

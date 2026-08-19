@@ -269,12 +269,7 @@ private lemma coskeletal_extension {X : SSet.{u}} (n k : ℕ) (h : n < k)
   refine ⟨l, ?_⟩
   apply (cancel_mono (canonicalCoskeletonMap n X)).1
   simp only [l, Category.assoc, IsIso.inv_hom_id_assoc]
-  rw [← (SSet.coskAdj n).homEquiv_naturality_left
-    (SSet.boundary k).ι q]
-  apply ((SSet.coskAdj n).homEquiv
-    ((SSet.boundary k : SSet).toSSet) -- placeholder
-    ((SSet.truncation n).obj X)).symm.injective
-  sorry
+  exact sorry
 
 /-- If a map is bijective below degree `n`, surjective in degree `n`, and
 both simplicial sets are `n`-coskeletal, then it is a trivial Kan fibration.

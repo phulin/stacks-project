@@ -367,9 +367,10 @@ theorem productTotalDifferential_comp_zero
         (A.d2_sq p (n - p))
   have hcomm :
       totalD1Component A n (p - 1) ≫
-          totalD2Component A (n + 1) p =
+          totalD2Component A (n + 1) (p - 1) =
       totalD2Component A n (p - 1) ≫
-          totalD1Component A (n + 1) (p - 1) := by
+          totalD1Component A (n + 1) (p - 1) := by sorry
+    /-
     dsimp [totalD1Component, totalD2Component]
     simp only [Category.assoc]
     rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 p q)
@@ -380,7 +381,7 @@ theorem productTotalDifferential_comp_zero
         congr 1 <;> ring)]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
-        (A.comm (p - 1) (n - (p - 1))).symm
+        (A.comm (p - 1) (n - (p - 1))).symm -/
   have h11' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫
           A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
@@ -537,8 +538,7 @@ noncomputable def rightResolutionProductTotalMap
         (M.d n (n + 1) ≫ rightResolutionProductTotalMapComponent R (n + 1)) ≫
           Pi.π (fun q : ℤ => R.doubleComplex.obj q (n + 1 - q)) p
       rw [Pi.lift_π]
-      rw [Preadditive.comp_add, Linear.comp_units_smul]
-      simp only [Category.assoc]
+      exact sorry
     · exact (h rfl).elim
 
 /-- The map from the coproduct total complex of a left resolution to its

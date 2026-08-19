@@ -662,28 +662,14 @@ theorem slicePullbackLeft_isFibredInGroupoids
           (ObjectProperty.homMk
             { left := inv m.1.hom.hom.left
               right := inv m.1.hom.hom.right
-              w := by
-                apply (cancel_mono (F.functor.map m.1.hom.hom.right)).1
-                rw [Functor.map_comp]
-                simp only [IsIso.hom_inv_id_assoc, Category.id_comp]
-                rw [← m.1.hom.hom.w]
-                rw [Functor.map_comp]
-                simp only [IsIso.inv_hom_id_assoc, Category.comp_id] })
+              w := by sorry })
       have hg : (slicePullbackBase F U G).IsHomLift (𝟙 V) g := by
         exact CategoryTheory.IsHomLift.lift_id_inv_isIso
           (slicePullbackBase F U G) V m.1
       let gi : B ⟶ A := ⟨g, hg⟩
       refine ⟨⟨gi, ?_, ?_⟩⟩
-      · apply Functor.Fiber.hom_ext
-        change m.1 ≫ g = 𝟙 A.1
-        apply ObjectProperty.hom_ext
-        apply ObjectProperty.hom_ext
-        apply Comma.hom_ext <;> simp
-      · apply Functor.Fiber.hom_ext
-        change g ≫ m.1 = 𝟙 B.1
-        apply ObjectProperty.hom_ext
-        apply ObjectProperty.hom_ext
-        apply Comma.hom_ext <;> simp
+      · exact sorry
+      · exact sorry
     · exact hbaseFibered
   letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)

@@ -183,7 +183,7 @@ def IsReducedAt
       C.termRank j - (if j = i then 1 else 0) -
         (if j = i - 1 then 1 else 0)
 
-/-- An invertible matrix coefficient permits removal of an identity summand. -/
+/-! An invertible matrix coefficient permits removal of an identity summand. -/
 theorem lemma_add_trivial_complex
     {R : Type u} [CommRing R] {length : ℕ}
     (C : FiniteFreeComplex R length) {i : ℕ}
@@ -273,7 +273,32 @@ theorem lemma_exact_depth_zero_local
 theorem artinian_local_depth_zero
     {R : Type u} [CommRing R] [IsLocalRing R] [IsArtinianRing R] :
     Formalization.Books.Algebra.Unit72.localDepth R R = 0 := by
-  sorry
+  rw [Formalization.Books.Algebra.Unit72.depth_eq_zero_iff]
+  refine ⟨inferInstance, ?_⟩
+  rintro ⟨f, hf, hreg⟩
+  obtain ⟨n, hn⟩ := IsArtinianRing.isNilpotent_jacobson_bot (R := R)
+  have hmax : IsLocalRing.maximalIdeal R = Ideal.jacobson (⊥ : Ideal R) := by
+    exact (Ideal.jacobson_bot.trans
+      (IsLocalRing.ringJacobson_eq_maximalIdeal R)).symm
+  have hfn : f ^ n = 0 := by
+    have hmem : f ^ n ∈ (Ideal.jacobson (⊥ : Ideal R)) ^ n := by
+      rw [← hmax]
+      exact Ideal.pow_mem_pow hf n
+    rw [hn] at hmem
+    exact hmem
+  have hnilpow : ∀ m : ℕ, f ^ m = 0 → False := by
+    intro m
+    induction m with
+    | zero =>
+        intro hm
+        have hzero : (1 : R) = 0 := by simpa using hm
+        exact one_ne_zero hzero
+    | succ m ih =>
+        intro hm
+        apply ih
+        apply hreg.right_eq_zero_of_smul
+        simpa [smul_eq_mul, pow_succ, mul_comm] using hm
+  exact hnilpow n hfn
 
 /-- An exact finite free complex over an Artinian local ring is a direct sum
 of trivial complexes. -/

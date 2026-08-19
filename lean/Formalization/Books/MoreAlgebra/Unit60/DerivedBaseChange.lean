@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.RingTheory.Polynomial.Basic
 import Formalization.Books.MoreAlgebra.Unit59
 
 /-!
@@ -221,26 +222,93 @@ theorem derivedTensorTransformation_isIso
     IsIso (derivedTensorTransformation f φ) := by
   sorry
 
-/- The source's warning is kept as a named proposition.  The two sides have
-   different A-module structures: the first gets its A-action from the fixed
-   second factor, while the second gets it from the first factor. -/
+/- The source's warning compares two derived objects carrying different
+   `A`-module structures.  Naming the two sides makes that distinction
+   available to clients instead of hiding it in a proposition. -/
+noncomputable def derivedTensorLeftSide
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    (N N' : ModuleCat.{u} A) : D A :=
+  (derivedTensorWithComplexFunctor f (moduleComplex A N')).obj
+    ((derivedRestrictionFunctor f).obj (moduleStalk A N))
+
+noncomputable def derivedTensorRightSide
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    (N N' : ModuleCat.{u} A) : D A :=
+  (derivedTensorWithComplexFunctor f (moduleComplex A N)).obj
+    ((derivedRestrictionFunctor f).obj (moduleStalk A N'))
+
 def DerivedTensorSideWarning
     {R A : Type u} [CommRing R] [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
     (N N' : ModuleCat.{u} A) : Prop :=
-  ¬ Nonempty (
-    (derivedTensorWithComplexFunctor f
-        ((CochainComplex.singleFunctor (ModuleCat.{u} A) 0).obj N')).obj
-      ((derivedRestrictionFunctor f).obj (moduleStalk A N)) ≅
-    (derivedTensorWithComplexFunctor f
-        ((CochainComplex.singleFunctor (ModuleCat.{u} A) 0).obj N)).obj
-      ((derivedRestrictionFunctor f).obj (moduleStalk A N')))
+  ¬ Nonempty (derivedTensorLeftSide f N N' ≅ derivedTensorRightSide f N N')
 
-/- The concrete instance described in the source is obtained by applying this
-   predicate to `R = k[x,y]`, `A = R/(xy)`, `N = R/(x)`, and `N' = A`.
-   The source itself leaves the final non-isomorphism verification to the
-   reader, so the reusable declaration here is the side-sensitive predicate. -/
+/- The polynomial example from the source.  The quotient `R/(x)` is made an
+   `R/(xy)`-module through the evident quotient map, so this is a genuine
+   instance of the preceding side-sensitive comparison. -/
+abbrev polynomialExampleRing (k : Type u) [CommRing k] := Polynomial (Polynomial k)
+
+noncomputable def polynomialExampleX (k : Type u) [CommRing k] :
+    polynomialExampleRing k := Polynomial.C Polynomial.X
+
+noncomputable def polynomialExampleY (k : Type u) [CommRing k] :
+    polynomialExampleRing k := Polynomial.X
+
+noncomputable def polynomialExampleXYIdeal (k : Type u) [CommRing k] :
+    Ideal (polynomialExampleRing k) :=
+  Ideal.span ({polynomialExampleX k * polynomialExampleY k} :
+    Set (polynomialExampleRing k))
+
+noncomputable def polynomialExampleXIdeal (k : Type u) [CommRing k] :
+    Ideal (polynomialExampleRing k) :=
+  Ideal.span ({polynomialExampleX k} : Set (polynomialExampleRing k))
+
+abbrev polynomialExampleQuotient (k : Type u) [CommRing k] :=
+  polynomialExampleRing k ⧸ polynomialExampleXYIdeal k
+
+abbrev polynomialExampleModuleCarrier (k : Type u) [CommRing k] :=
+  polynomialExampleRing k ⧸ polynomialExampleXIdeal k
+
+theorem polynomialExampleXY_le_X (k : Type u) [CommRing k] :
+    polynomialExampleXYIdeal k ≤ polynomialExampleXIdeal k := by
+  apply Ideal.span_le.2
+  intro z hz
+  rcases Set.mem_singleton_iff.mp hz with rfl
+  exact Ideal.mem_span_singleton'.2 ⟨polynomialExampleY k, by
+    rw [mul_comm]⟩
+
+noncomputable def polynomialExampleAction (k : Type u) [CommRing k] :
+    polynomialExampleQuotient k →+* polynomialExampleModuleCarrier k :=
+  Ideal.Quotient.factor (polynomialExampleXY_le_X k)
+
+noncomputable def polynomialExampleMap (k : Type u) [CommRing k] :
+    polynomialExampleRing k →+* polynomialExampleQuotient k :=
+  Ideal.Quotient.mk _
+
+noncomputable def polynomialExampleN (k : Type u) [CommRing k] :
+    ModuleCat.{u} (polynomialExampleQuotient k) :=
+  letI : Module (polynomialExampleQuotient k)
+      (polynomialExampleModuleCarrier k) :=
+    Module.compHom _ (polynomialExampleAction k)
+  ModuleCat.of _ (polynomialExampleModuleCarrier k)
+
+noncomputable def polynomialExampleN' (k : Type u) [CommRing k] :
+    ModuleCat.{u} (polynomialExampleQuotient k) :=
+  ModuleCat.of _ (polynomialExampleQuotient k)
+
+theorem derivedTensorSideWarning_polynomial_example
+    (k : Type u) [Field k]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (polynomialExampleRing k))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (polynomialExampleQuotient k))] :
+    DerivedTensorSideWarning (R := polynomialExampleRing k)
+      (A := polynomialExampleQuotient k) (polynomialExampleMap k)
+      (polynomialExampleN k) (polynomialExampleN' k) := by
+  sorry
 
 /-! ## Tensor--restriction adjunction -/
 

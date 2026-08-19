@@ -1333,8 +1333,7 @@ theorem dottedArrow_baseChange_equivalence
               (comparisonHom A).vertex ▷ B.q := by
             simp [liftToSource, TwoCommutativeDiagram.Hom.comp,
               sourceToOuter, TwoCommutativeDiagram.strictAssocInv,
-              Bicategory.Strict.associator_eqToIso, Category.assoc,
-              Category.id_comp]
+              Category.assoc]
           _ = _ := by
             rw [hprefix]
             rw [Category.id_comp]
@@ -1356,7 +1355,7 @@ theorem dottedArrow_baseChange_equivalence
         have hright :
             (liftHom A).right ≫ r ≫ (liftHom A).right =
               (liftHom A).right := by
-          simp [h, r, Category.assoc]
+          simp [h, r]
         have hrightf :
             ((liftHom A).right ▷ B.f) ≫ (r ▷ B.f) ≫
                 ((liftHom A).right ▷ B.f) =

@@ -756,7 +756,11 @@ theorem graded_module_component_finite
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)
     [Algebra.FiniteType (degreeZeroSubring G) S] [Module.Finite S M] :
     ∀ n : ℤ, Module.Finite (degreeZeroSubring G) (𝓜.component n) := by
-  sorry
+  intro n
+  letI : Module (degreeZeroSubring G) (𝓜.component n) :=
+    gradedComponentDegreeZeroModule G 𝓜 n
+  exact Formalization.Books.Algebra.Unit56.graded_module_component_finite
+    G 𝓜 n (by intro c y; rfl)
 
 noncomputable def gradedHilbertFunction
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)

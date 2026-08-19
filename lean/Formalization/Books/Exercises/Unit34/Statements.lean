@@ -285,14 +285,254 @@ recorded by the source. -/
 theorem tsen_conic_special_case :
     ∀ (A B C : noSectionBaseRing), A ≠ 0 → B ≠ 0 → C ≠ 0 →
       HasOpenSection (rationalSectionMorphism A B C) := by
-  sorry
+  exact fun A B C hA hB hC => rationalSection_has_open_section A B C hA hB hC
+
+private lemma polynomial_cubic_no_solution
+    (d p r : Polynomial ℂ) (hd : d ≠ 0) :
+    d ^ 3 + Polynomial.X * p ^ 3 + Polynomial.X ^ 2 * r ^ 3 ≠ 0 := by
+  intro h
+  have htwo1 : ∀ d p : Polynomial ℂ, d ≠ 0 → p ≠ 0 →
+      d ^ 3 + Polynomial.X * p ^ 3 ≠ 0 := by
+    intro d p hd hp h
+    have heq : d ^ 3 = -(Polynomial.X * p ^ 3) := by
+      linear_combination h
+    have hdeg := congrArg Polynomial.natDegree heq
+    rw [Polynomial.natDegree_pow, Polynomial.natDegree_neg,
+      Polynomial.natDegree_mul Polynomial.X_ne_zero (pow_ne_zero 3 hp),
+      Polynomial.natDegree_pow, Polynomial.natDegree_X] at hdeg
+    omega
+  have htwo2 : ∀ d r : Polynomial ℂ, d ≠ 0 → r ≠ 0 →
+      d ^ 3 + Polynomial.X ^ 2 * r ^ 3 ≠ 0 := by
+    intro d r hd hr h
+    have heq : d ^ 3 = -(Polynomial.X ^ 2 * r ^ 3) := by
+      linear_combination h
+    have hdeg := congrArg Polynomial.natDegree heq
+    rw [Polynomial.natDegree_pow, Polynomial.natDegree_neg,
+      Polynomial.natDegree_mul (pow_ne_zero 2 Polynomial.X_ne_zero)
+        (pow_ne_zero 3 hr), Polynomial.natDegree_pow, Polynomial.natDegree_pow,
+      Polynomial.natDegree_X] at hdeg
+    omega
+  have hP : p ≠ 0 := by
+    intro hpz
+    by_cases hrz : r = 0
+    · have hz : d ^ 3 = 0 := by simpa [hpz, hrz] using h
+      exact (pow_ne_zero 3 hd) hz
+    · exact htwo2 d r hd hrz (by simpa [hpz] using h)
+  have hR : r ≠ 0 := by
+    intro hrz
+    by_cases hpz : p = 0
+    · exact hP hpz
+    · exact htwo1 d p hd hpz (by simpa [hrz] using h)
+  have hp : p ≠ 0 := hP
+  have hr : r ≠ 0 := hR
+  let A : Polynomial ℂ := d ^ 3
+  let P : Polynomial ℂ := Polynomial.X * p ^ 3
+  let R : Polynomial ℂ := Polynomial.X ^ 2 * r ^ 3
+  have hh : A + P + R = 0 := by simpa [A, P, R] using h
+  have hAdeg : A.natDegree = 3 * d.natDegree := by
+    dsimp [A]
+    rw [Polynomial.natDegree_pow]
+  have hPdeg : P.natDegree = 1 + 3 * p.natDegree := by
+    dsimp [P]
+    rw [Polynomial.natDegree_mul Polynomial.X_ne_zero (pow_ne_zero 3 hp),
+      Polynomial.natDegree_pow, Polynomial.natDegree_X]
+  have hRdeg : R.natDegree = 2 + 3 * r.natDegree := by
+    dsimp [R]
+    rw [Polynomial.natDegree_mul (pow_ne_zero 2 Polynomial.X_ne_zero)
+      (pow_ne_zero 3 hr), Polynomial.natDegree_pow, Polynomial.natDegree_pow,
+      Polynomial.natDegree_X]
+  have hneq : A.natDegree ≠ P.natDegree ∧
+      A.natDegree ≠ R.natDegree ∧ P.natDegree ≠ R.natDegree := by
+    rw [hAdeg, hPdeg, hRdeg]
+    omega
+  have hcases :
+      (A.natDegree > P.natDegree ∧ A.natDegree > R.natDegree) ∨
+      (P.natDegree > A.natDegree ∧ P.natDegree > R.natDegree) ∨
+      (R.natDegree > A.natDegree ∧ R.natDegree > P.natDegree) := by
+    omega
+  rcases hcases with hD | hP | hR
+  · have hsum : (P + R).natDegree < A.natDegree := by
+      have hle := Polynomial.natDegree_add_le P R
+      omega
+    have heq : A = -(P + R) := by linear_combination hh
+    have hdeg := congrArg Polynomial.natDegree heq
+    rw [hAdeg, Polynomial.natDegree_neg] at hdeg
+    have hsum' := hsum
+    omega
+  · have hsum : (A + R).natDegree < P.natDegree := by
+      have hle := Polynomial.natDegree_add_le A R
+      omega
+    have heq : P = -(A + R) := by linear_combination hh
+    have hdeg := congrArg Polynomial.natDegree heq
+    rw [hPdeg, Polynomial.natDegree_neg] at hdeg
+    have hsum' := hsum
+    omega
+  · have hsum : (A + P).natDegree < R.natDegree := by
+      have hle := Polynomial.natDegree_add_le A P
+      omega
+    have heq : R = -(A + P) := by linear_combination hh
+    have hdeg := congrArg Polynomial.natDegree heq
+    rw [hRdeg, Polynomial.natDegree_neg] at hdeg
+    have hsum' := hsum
+    omega
 
 /-! ## Exercise `exercise-no-section-curve` -/
 
 /-- The cubic curve example has no rational section. -/
 theorem noSectionCurve_has_no_open_section :
     ¬ HasOpenSection noSectionCurveMorphism := by
-  sorry
+  intro h
+  obtain ⟨U, hU, σ, hσ⟩ := h
+  let x := genericPoint noSectionBase
+  have hxU : x ∈ U := by
+    exact ((genericPoint_spec noSectionBase).mem_open_set_iff U.isOpen).mpr
+      (by simpa using hU)
+  let hUN : Nonempty U := ⟨⟨x, hxU⟩⟩
+  let htop : Nonempty (⊤ : Opens noSectionBase) := ⟨⟨x, trivial⟩⟩
+  let τ : Γ(openSubscheme noSectionBase U, ⊤) ⟶
+      Γ(noSectionBase, U) :=
+    (Scheme.restrictFunctorΓ (X := noSectionBase)).hom.app (op U)
+  let q : noSectionCurveRing →+* noSectionBase.functionField :=
+    ((Scheme.ΓSpecIso (CommRingCat.of noSectionCurveRing)).inv ≫
+      σ.appTop ≫ τ ≫
+      @Scheme.germToFunctionField noSectionBase inferInstance U hUN).hom
+  let f : noSectionCurvePolynomialRing →+* noSectionBase.functionField :=
+    q.comp (quotientMap noSectionCurveIdeal)
+  have hrel : f noSectionCurveRelation = 0 := by
+    change q (quotientMap noSectionCurveIdeal noSectionCurveRelation) = 0
+    have hzero : quotientMap noSectionCurveIdeal noSectionCurveRelation = 0 := by
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self _)
+    calc
+      q (quotientMap noSectionCurveIdeal noSectionCurveRelation) = q 0 := by rw [hzero]
+      _ = 0 := q.map_zero
+  have hcomp : noSectionCurveMorphism.appTop ≫ σ.appTop =
+      (openSubschemeInclusion noSectionBase U).appTop := by
+    simpa only [Scheme.Hom.comp_appTop] using
+      congrArg (fun f : openSubscheme noSectionBase U ⟶ noSectionBase => f.appTop) hσ
+  let b : noSectionBaseRing →+* noSectionBase.functionField :=
+    ((Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+      @Scheme.germToFunctionField noSectionBase inferInstance
+        (⊤ : Opens noSectionBase) htop).hom
+  let alg : Algebra (CommRingCat.of noSectionBaseRing)
+      noSectionBase.functionField := RingHom.toAlgebra b
+  let fr : IsFractionRing (CommRingCat.of noSectionBaseRing)
+      noSectionBase.functionField :=
+    AlgebraicGeometry.functionField_isFractionRing_of_affine
+      (CommRingCat.of noSectionBaseRing)
+  have hbase : q.comp noSectionCurveBaseToSource = b := by
+    change (CommRingCat.ofHom noSectionCurveBaseToSource ≫
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionCurveRing)).inv ≫
+        σ.appTop ≫ τ ≫
+        @Scheme.germToFunctionField noSectionBase inferInstance U hUN).hom =
+      ((Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+        @Scheme.germToFunctionField noSectionBase inferInstance
+          (⊤ : Opens noSectionBase) htop).hom
+    have hcat0 : CommRingCat.ofHom noSectionCurveBaseToSource ≫
+          (Scheme.ΓSpecIso (CommRingCat.of noSectionCurveRing)).inv =
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+          noSectionCurveMorphism.appTop :=
+      Scheme.ΓSpecIso_inv_naturality
+        (f := CommRingCat.ofHom noSectionCurveBaseToSource)
+    have hcat : CommRingCat.ofHom noSectionCurveBaseToSource ≫
+          (Scheme.ΓSpecIso (CommRingCat.of noSectionCurveRing)).inv ≫
+          σ.appTop ≫ τ ≫
+          @Scheme.germToFunctionField noSectionBase inferInstance U hUN =
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+          @Scheme.germToFunctionField noSectionBase inferInstance
+            (⊤ : Opens noSectionBase) htop := by
+      simp only [← Category.assoc]
+      rw [hcat0]
+      have hpost :
+          ((noSectionCurveMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionBase inferInstance U hUN =
+            ((openSubschemeInclusion noSectionBase U).appTop ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionBase inferInstance U hUN := by
+        exact congrArg (fun k => (k ≫ τ) ≫
+          @Scheme.germToFunctionField noSectionBase inferInstance U hUN) hcomp
+      calc
+        (((Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+            noSectionCurveMorphism.appTop) ≫ σ.appTop ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionBase inferInstance U hUN =
+            (Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+              (((noSectionCurveMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
+                @Scheme.germToFunctionField noSectionBase inferInstance U hUN) := by
+                  simp only [Category.assoc]
+        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+              (((openSubschemeInclusion noSectionBase U).appTop ≫ τ) ≫
+                @Scheme.germToFunctionField noSectionBase inferInstance U hUN) := by
+                  rw [hpost]
+        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionBaseRing)).inv ≫
+              @Scheme.germToFunctionField noSectionBase inferInstance
+                (⊤ : Opens noSectionBase) htop := by
+                  simp [τ]
+                  erw [← Functor.map_comp]
+                  simp only [Functor.map_comp, Category.assoc, TopCat.Presheaf.germ_res']
+    simpa only using congrArg CommRingCat.Hom.hom hcat
+  have hmap : f.comp (polynomialBaseMap (K := ℂ) (n := 3) 2) = b := by
+    simpa [f, noSectionCurveBaseToSource, RingHom.comp_assoc] using hbase
+  let e0 : MvPolynomial (Fin 0) ℂ ≃ₐ[ℂ] ℂ :=
+    MvPolynomial.isEmptyAlgEquiv ℂ (Fin 0)
+  let e : noSectionBaseRing ≃ₐ[ℂ] Polynomial ℂ :=
+    (MvPolynomial.finSuccEquiv ℂ 0).trans (Polynomial.mapAlgEquiv e0)
+  let eg : noSectionBaseRing →+* FractionRing (Polynomial ℂ) :=
+    (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ))).comp e.toRingHom
+  have heg : Function.Injective eg := by
+    exact (IsFractionRing.injective (Polynomial ℂ) (FractionRing (Polynomial ℂ))).comp
+      e.injective
+  let ℓ : noSectionBase.functionField →+* FractionRing (Polynomial ℂ) :=
+    @IsFractionRing.lift (CommRingCat.of noSectionBaseRing) inferInstance
+      noSectionBase.functionField inferInstance
+      (FractionRing (Polynomial ℂ)) inferInstance alg fr eg heg
+  have hX2 := congrArg (fun g : noSectionBaseRing →+*
+      noSectionBase.functionField => g (MvPolynomial.X 0)) hmap
+  have hX2' : f (MvPolynomial.X 2) = b (MvPolynomial.X 0) := by
+    simpa [polynomialBaseMap] using hX2
+  have hℓX2 : ℓ (f (MvPolynomial.X 2)) =
+      algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X := by
+    rw [hX2']
+    change ℓ (algebraMap (CommRingCat.of noSectionBaseRing)
+      noSectionBase.functionField (MvPolynomial.X 0)) = _
+    have h := IsFractionRing.lift_algebraMap
+      (A := CommRingCat.of noSectionBaseRing)
+      (K := noSectionBase.functionField)
+      (L := FractionRing (Polynomial ℂ)) (g := eg) heg (MvPolynomial.X 0)
+    simp [ℓ, eg, e, e0, MvPolynomial.finSuccEquiv_X_zero] at h ⊢
+  have heq : 1 +
+      algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X *
+        (ℓ (f (MvPolynomial.X 0))) ^ 3 +
+      (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X) ^ 2 *
+        (ℓ (f (MvPolynomial.X 1))) ^ 3 = 0 := by
+    have h := congrArg ℓ hrel
+    simpa [noSectionCurveRelation, map_add, map_mul, map_pow, hℓX2] using h
+  obtain ⟨p, q', hq', hpq⟩ :=
+    IsFractionRing.div_surjective (Polynomial ℂ) (ℓ (f (MvPolynomial.X 0)))
+  obtain ⟨r, s, hs, hrs⟩ :=
+    IsFractionRing.div_surjective (Polynomial ℂ) (ℓ (f (MvPolynomial.X 1)))
+  have hq0 : q' ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hq'
+  have hs0 : s ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hs
+  have hqK : algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) q' ≠ 0 :=
+    IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors hq'
+  have hsK : algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) s ≠ 0 :=
+    IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors hs
+  rw [← hpq, ← hrs] at heq
+  field_simp [hqK, hsK] at heq
+  have hpoly : (q' * s) ^ 3 + Polynomial.X * (p * s) ^ 3 +
+      Polynomial.X ^ 2 * (q' * r) ^ 3 = 0 := by
+    apply (IsFractionRing.injective (Polynomial ℂ) (FractionRing (Polynomial ℂ)))
+    rw [map_zero]
+    calc
+      _ = ((algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ))) q' ^ 3 +
+          algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X *
+            (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) p) ^ 3) *
+          (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) s) ^ 3 +
+        (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) Polynomial.X) ^ 2 *
+          (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) q') ^ 3 *
+            (algebraMap (Polynomial ℂ) (FractionRing (Polynomial ℂ)) r) ^ 3 := by
+              simp only [map_add, map_mul, map_pow]
+              ring
+      _ = _ := by simpa using heq
+  exact polynomial_cubic_no_solution (q' * s) (p * s) (q' * r)
+    (mul_ne_zero hq0 hs0) hpoly
 
 /-! ## Exercise `exercise-no-section-surface` -/
 
@@ -300,6 +540,169 @@ theorem noSectionCurve_has_no_open_section :
 theorem noSectionSurface_has_no_open_section :
     ¬ HasOpenSection noSectionSurfaceMorphism := by
   sorry
+/-
+  intro h
+  obtain ⟨U, hU, σ, hσ⟩ := h
+  let x := genericPoint noSectionSurfaceBase
+  have hxU : x ∈ U := by
+    exact ((genericPoint_spec noSectionSurfaceBase).mem_open_set_iff U.isOpen).mpr
+      (by simpa using hU)
+  let hUN : Nonempty U := ⟨⟨x, hxU⟩⟩
+  let htop : Nonempty (⊤ : Opens noSectionSurfaceBase) := ⟨⟨x, trivial⟩⟩
+  let τ : Γ(openSubscheme noSectionSurfaceBase U, ⊤) ⟶
+      Γ(noSectionSurfaceBase, U) :=
+    (Scheme.restrictFunctorΓ (X := noSectionSurfaceBase)).hom.app (op U)
+  let q : noSectionSurfaceRing →+* noSectionSurfaceBase.functionField :=
+    ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
+      σ.appTop ≫ τ ≫
+      @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN).hom
+  let f : noSectionSurfacePolynomialRing →+* noSectionSurfaceBase.functionField :=
+    q.comp (quotientMap noSectionSurfaceIdeal)
+  have hrel : f noSectionSurfaceRelation = 0 := by
+    change q (quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation) = 0
+    have hzero : quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation = 0 := by
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self _)
+    calc
+      q (quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation) = q 0 := by rw [hzero]
+      _ = 0 := q.map_zero
+  have hcomp : noSectionSurfaceMorphism.appTop ≫ σ.appTop =
+      (openSubschemeInclusion noSectionSurfaceBase U).appTop := by
+    simpa only [Scheme.Hom.comp_appTop] using
+      congrArg (fun f : openSubscheme noSectionSurfaceBase U ⟶ noSectionSurfaceBase =>
+        f.appTop) hσ
+  let b : noSectionSurfaceBaseRing →+* noSectionSurfaceBase.functionField :=
+    ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+      @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
+        (⊤ : Opens noSectionSurfaceBase) htop).hom
+  let alg : Algebra (CommRingCat.of noSectionSurfaceBaseRing)
+      noSectionSurfaceBase.functionField := RingHom.toAlgebra b
+  let fr : IsFractionRing (CommRingCat.of noSectionSurfaceBaseRing)
+      noSectionSurfaceBase.functionField :=
+    AlgebraicGeometry.functionField_isFractionRing_of_affine
+      (CommRingCat.of noSectionSurfaceBaseRing)
+  have hbase : q.comp noSectionSurfaceBaseToSource = b := by
+    change (CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
+        σ.appTop ≫ τ ≫
+        @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN).hom =
+      ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+        @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
+          (⊤ : Opens noSectionSurfaceBase) htop).hom
+    have hcat0 : CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
+          (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv =
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+          noSectionSurfaceMorphism.appTop :=
+      Scheme.ΓSpecIso_inv_naturality
+        (f := CommRingCat.ofHom noSectionSurfaceBaseToSource)
+    have hcat : CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
+          (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
+          σ.appTop ≫ τ ≫
+          @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
+        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+          @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
+            (⊤ : Opens noSectionSurfaceBase) htop := by
+      simp only [← Category.assoc]
+      rw [hcat0]
+      have hpost :
+          ((noSectionSurfaceMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
+            ((openSubschemeInclusion noSectionSurfaceBase U).appTop ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN := by
+        rw [hcomp]
+      calc
+        (((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+            noSectionSurfaceMorphism.appTop) ≫ σ.appTop ≫ τ) ≫
+              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
+            (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+              (((noSectionSurfaceMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
+                @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN) := by
+                  simp only [Category.assoc]
+        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+              (((openSubschemeInclusion noSectionSurfaceBase U).appTop ≫ τ) ≫
+                @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN) := by
+                  rw [hpost]
+        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
+              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
+                (⊤ : Opens noSectionSurfaceBase) htop := by
+                  simp [τ]
+                  erw [← Functor.map_comp]
+                  simp only [Functor.map_comp, Category.assoc, TopCat.Presheaf.germ_res']
+    simpa only using congrArg CommRingCat.Hom.hom hcat
+  have hmap : f.comp noSectionSurfaceBaseMap = b := by
+    simpa [f, noSectionSurfaceBaseToSource, RingHom.comp_assoc] using hbase
+  let e0 : MvPolynomial (Fin 0) ℂ ≃ₐ[ℂ] ℂ :=
+    MvPolynomial.isEmptyAlgEquiv ℂ (Fin 0)
+  let e1 : MvPolynomial (Fin 1) ℂ ≃ₐ[ℂ] Polynomial ℂ :=
+    (MvPolynomial.finSuccEquiv ℂ 0).trans (Polynomial.mapAlgEquiv e0)
+  let e : noSectionSurfaceBaseRing ≃ₐ[ℂ] Polynomial (Polynomial ℂ) :=
+    (MvPolynomial.finSuccEquiv ℂ 1).trans (Polynomial.mapAlgEquiv e1)
+  let eg : noSectionSurfaceBaseRing →+* FractionRing (Polynomial (Polynomial ℂ)) :=
+    (algebraMap (Polynomial (Polynomial ℂ))
+      (FractionRing (Polynomial (Polynomial ℂ)))).comp e.toRingHom
+  have heg : Function.Injective eg := by
+    exact (IsFractionRing.injective (Polynomial (Polynomial ℂ))
+      (FractionRing (Polynomial (Polynomial ℂ)))).comp e.injective
+  let ℓ : noSectionSurfaceBase.functionField →+*
+      FractionRing (Polynomial (Polynomial ℂ)) :=
+    @IsFractionRing.lift (CommRingCat.of noSectionSurfaceBaseRing) inferInstance
+      noSectionSurfaceBase.functionField inferInstance
+      (FractionRing (Polynomial (Polynomial ℂ))) inferInstance alg fr eg heg
+  have hX8 := congrArg (fun g : noSectionSurfaceBaseRing →+*
+      noSectionSurfaceBase.functionField => g (MvPolynomial.X 0)) hmap
+  have hX8' : f (MvPolynomial.X 8) = b (MvPolynomial.X 0) := by
+    simpa [noSectionSurfaceBaseMap] using hX8
+  have hX9 := congrArg (fun g : noSectionSurfaceBaseRing →+*
+      noSectionSurfaceBase.functionField => g (MvPolynomial.X 1)) hmap
+  have hX9' : f (MvPolynomial.X 9) = b (MvPolynomial.X 1) := by
+    change f (Fin.cases (MvPolynomial.X 8) (fun _ => MvPolynomial.X 9) 1) =
+      b (MvPolynomial.X 1) at hX9
+    have hidx : Fin.cases (MvPolynomial.X 8) (fun _ => MvPolynomial.X 9) 1 =
+        MvPolynomial.X 9 := by
+      congr 1
+      decide
+    rw [hidx] at hX9
+    exact hX9
+  let S : FractionRing (Polynomial (Polynomial ℂ)) :=
+    algebraMap (Polynomial (Polynomial ℂ))
+      (FractionRing (Polynomial (Polynomial ℂ))) Polynomial.X
+  let T : FractionRing (Polynomial (Polynomial ℂ)) :=
+    algebraMap (Polynomial (Polynomial ℂ))
+      (FractionRing (Polynomial (Polynomial ℂ)))
+      (algebraMap (Polynomial ℂ) (Polynomial (Polynomial ℂ)) Polynomial.X)
+  have hℓX8 : ℓ (f (MvPolynomial.X 8)) = S := by
+    rw [hX8']
+    change ℓ (algebraMap (CommRingCat.of noSectionSurfaceBaseRing)
+      noSectionSurfaceBase.functionField (MvPolynomial.X 0)) = _
+    have h := IsFractionRing.lift_algebraMap
+      (A := CommRingCat.of noSectionSurfaceBaseRing)
+      (K := noSectionSurfaceBase.functionField)
+      (L := FractionRing (Polynomial (Polynomial ℂ))) (g := eg) heg (MvPolynomial.X 0)
+    rw [h]
+    simp [eg, e, e1, e0, S]
+  have hℓX9 : ℓ (f (MvPolynomial.X 9)) = T := by
+    rw [hX9']
+    change ℓ (algebraMap (CommRingCat.of noSectionSurfaceBaseRing)
+      noSectionSurfaceBase.functionField (MvPolynomial.X 1)) = _
+    have h := IsFractionRing.lift_algebraMap
+      (A := CommRingCat.of noSectionSurfaceBaseRing)
+      (K := noSectionSurfaceBase.functionField)
+      (L := FractionRing (Polynomial (Polynomial ℂ))) (g := eg) heg (MvPolynomial.X 1)
+    rw [h]
+    simp [eg, e, e1, e0, T]
+  have heq :
+      1 + S * (ℓ (f (MvPolynomial.X 0))) ^ 3 + S ^ 2 *
+          (ℓ (f (MvPolynomial.X 1))) ^ 3 +
+        T * (ℓ (f (MvPolynomial.X 2))) ^ 3 +
+        S * T * (ℓ (f (MvPolynomial.X 3))) ^ 3 +
+        S ^ 2 * T * (ℓ (f (MvPolynomial.X 4))) ^ 3 +
+        T ^ 2 * (ℓ (f (MvPolynomial.X 5))) ^ 3 +
+        S * T ^ 2 * (ℓ (f (MvPolynomial.X 6))) ^ 3 +
+        S ^ 2 * T ^ 2 * (ℓ (f (MvPolynomial.X 7))) ^ 3 = 0 := by
+    have h' := congrArg ℓ hrel
+    simpa [noSectionSurfaceRelation, map_add, map_mul, map_pow, hℓX8, hℓX9,
+      S, T] using h'
+  sorry
+-/
 
 /-! ## Exercise `exercise-for-number-theorists` -/
 

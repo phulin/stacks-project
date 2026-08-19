@@ -1614,7 +1614,7 @@ private noncomputable def moduleHomOfStalkLinear
       (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
         AddCommGrpCat).map φ) :
     F ⟶ D := by
-  letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+  let : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
   let eD : D.val.presheaf ≅ skyscraperPresheaf x (AddCommGrpCat.of (↑A)) := by
     simpa [abelianSkyscraperSheaf, skyscraperSheaf] using eD0
   have germ_injective (U : Opens X) (hxU : x ∈ U) :
@@ -1856,7 +1856,7 @@ private theorem moduleSkyscraper_presheaf_hom_ext
           ((PresheafOfModules.toPresheaf O.obj).map h₂)) :
     h₁ = h₂ := by
   classical
-  letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+  let : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
   let eD : D.val.presheaf ≅ skyscraperPresheaf x
       (AddCommGrpCat.of (↑A)) := by
     simpa [abelianSkyscraperSheaf, skyscraperSheaf] using eD0

@@ -120,7 +120,53 @@ noncomputable def canonicalExactSequence {X : TopCat.{v}} (U : Opens X) (F : Ab 
 /-- The sequence `0 ⟶ j_!j⁻¹F ⟶ F ⟶ i_*i⁻¹F ⟶ 0` is short exact. -/
 theorem canonicalExactSequence_shortExact {X : TopCat.{v}} (U : Opens X) (F : Ab X) :
     (canonicalExactSequence U F).ShortExact := by
-  sorry
+  let T (x : X) : CategoryTheory.Functor
+      (TopCat.Sheaf (AddCommGrpCat.{v}) X) (AddCommGrpCat.{v}) :=
+    TopCat.Sheaf.forget (AddCommGrpCat.{v}) X ⋙
+    TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x
+  let S (x : X) := (canonicalExactSequence U F).map (T x)
+  have hstalk (x : X) : (S x).ShortExact := by
+    by_cases hx : x ∈ U
+    · haveI : IsIso (S x).f := by
+        change IsIso ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          (canonicalExactSequenceLeft U F).hom)
+        exact openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
+      rcases closedAbelianSheafDirectImage_stalk_outside
+          (canonicalClosedSubset U) (canonicalClosedSubset_isClosed U)
+          ((closedAbelianSheafRestriction (canonicalClosedSubset U)
+            (canonicalClosedSubset_isClosed U)).obj F) x (by
+              simpa [canonicalClosedSubset] using hx) with ⟨e⟩
+      have hzero : IsZero (S x).X₃ :=
+        IsZero.of_iso (isZero_zero (AddCommGrpCat.{v})) e
+      haveI : Epi (S x).g := hzero.isInitial.epi_to _
+      exact ShortComplex.ShortExact.mk'
+        (((S x).exact_iff_epi (hzero.eq_zero_of_tgt _)).2 (by infer_instance))
+        (by infer_instance) (by infer_instance)
+    · have hxZ : x ∈ canonicalClosedSubset U := by
+        simpa [canonicalClosedSubset] using hx
+      haveI : IsIso (S x).g := by
+        change IsIso ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          (canonicalExactSequenceRight U F).hom)
+        exact closedAbelianSheafRestriction_unit_stalk_map_isIso
+          (canonicalClosedSubset U) (canonicalClosedSubset_isClosed U) F x hxZ
+      rcases openAlgebraicSheafExtension_stalk_initial (AddCommGrpCat.{v}) U
+          ((openSheafRestriction (AddCommGrpCat.{v}) U).obj F) x hx with ⟨e⟩
+      have hzero : IsZero (S x).X₁ :=
+        IsZero.of_iso (isZero_zero (AddCommGrpCat.{v}))
+          (e ≪≫ HasZeroObject.zeroIsoInitial.symm)
+      haveI : Mono (S x).f := hzero.isTerminal.mono_from _
+      exact ShortComplex.ShortExact.mk'
+        (((S x).exact_iff_mono (hzero.eq_zero_of_src _)).2 (by infer_instance))
+        (by infer_instance) (by infer_instance)
+  refine ShortComplex.ShortExact.mk'
+    ((TopCat.Sheaf.exact_iff_stalkFunctor_map_exact
+      (canonicalExactSequence U F)).2 fun x ↦ (hstalk x).exact) ?_ ?_
+  · rw [TopCat.Presheaf.mono_iff_stalk_mono]
+    intro x
+    exact (hstalk x).mono_f
+  · apply openAbelianSheaf_epi_of_stalk_map_epi
+    intro x
+    exact (hstalk x).epi_g
 
 /-! ## Functoriality -/
 

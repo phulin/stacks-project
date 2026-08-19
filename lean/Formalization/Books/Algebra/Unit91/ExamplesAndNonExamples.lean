@@ -66,12 +66,12 @@ theorem isMittagLefflerModule_of_free
     {R : Type u} [CommRing R] (M : ModuleCat.{v} R)
     (hM : Module.Free R (M : Type v)) :
     IsMittagLefflerModule M := by
-  letI := hM
+  let _freeM := hM
   classical
   obtain ⟨ι, b⟩ := (Module.free_iff_set R (M : Type v)).mp hM
   let b : Module.Basis ι R (M : Type v) := b.some
   intro P hP f
-  letI : Module.Finite R (P : Type v) := inferInstance
+  let _finiteP : Module.Finite R (P : Type v) := inferInstance
   obtain ⟨n, p, hp⟩ := Module.Finite.exists_fin' R (P : Type v)
   let T : Finset ι :=
     Finset.univ.biUnion (fun i => (b.repr (f (p (Pi.single i 1)))).support)
@@ -87,8 +87,8 @@ theorem isMittagLefflerModule_of_free
   have hlin : LinearIndependent R (fun i : T => b i) :=
     b.linearIndependent.comp (fun i : T => (i : ι)) Subtype.val_injective
   let bQ : Module.Basis T R (Q : Type v) := Module.Basis.span hlin
-  letI : Module.Free R (Q : Type v) := Module.Free.of_basis bQ
-  letI : Module.Finite R (Q : Type v) := Module.Finite.of_basis bQ
+  let _freeQ : Module.Free R (Q : Type v) := Module.Free.of_basis bQ
+  let _finiteQ : Module.Finite R (Q : Type v) := Module.Finite.of_basis bQ
   have hQ : Module.FinitePresentation R (Q : Type v) :=
     Module.finitePresentation_of_projective R (Q : Type v)
   have hgen : ∀ i : Fin n, f (p (Pi.single i 1)) ∈ Q := by
@@ -111,7 +111,7 @@ theorem isMittagLefflerModule_of_free
           apply Finset.sum_congr rfl
           intro i hi
           ext j
-          by_cases hij : i = j <;> simp [Pi.single_apply, hij]
+          by_cases hij : i = j <;> simp [hij]
     rw [hc]
     simp only [map_sum, map_smul]
     exact Submodule.sum_mem Q (fun i _ => Q.smul_mem _ (hgen i))
@@ -167,10 +167,8 @@ theorem isMittagLefflerModule_of_projective
     IsMittagLefflerModule M := by
   obtain ⟨F, hFadd, hFmod, hfree, i, s, hs⟩ :=
     (Module.Projective.iff_split (R := R) (P := (M : Type v))).mp hM
-  letI : AddCommMonoid F := hFadd
-  letI : Module R F := hFmod
-  letI : AddCommGroup F := Module.addCommMonoidToAddCommGroup R
-  letI : Module.Free R F := hfree
+  let _addCommGroup : AddCommGroup F :=
+    @Module.addCommMonoidToAddCommGroup R F _ hFadd hFmod
   have hFML : IsMittagLefflerModule (ModuleCat.of R F) :=
     isMittagLefflerModule_of_free (ModuleCat.of R F) hfree
   have hcrit : IsMittagLefflerModule M ↔
@@ -221,7 +219,7 @@ private theorem tensorProductContains_range_dual
       ((dualTensorHomEquiv R A B).symm f) := by
   classical
   let b := Module.Free.chooseBasis R B
-  letI : Fintype (Module.Free.ChooseBasisIndex R B) := Fintype.ofFinite _
+  let _fintype : Fintype (Module.Free.ChooseBasisIndex R B) := Fintype.ofFinite _
   let y : TensorProduct R (LinearMap.range f.dualMap) B :=
     ∑ i, (⟨(b.coord i).comp f, ⟨b.coord i, rfl⟩⟩ : LinearMap.range f.dualMap) ⊗ₜ[R] b i
   refine ⟨y, ?_⟩
@@ -378,17 +376,18 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
             IsLeast {G : Submodule R F | tensorProductContains G x} F' := by
   constructor
   · intro hML F _ _ hfree hfinite x
-    letI := hfree
-    letI := hfinite
+    let _free := hfree
+    let _finite := hfinite
     exact minimal_tensor_submodule hflat hML x |>.imp fun F' h => h.1
   · intro hmin
     obtain ⟨s⟩ := (lazard (R := R) (M := M)).mp hflat
-    letI : Preorder s.index := s.indexPreorder
-    letI : Nonempty s.index := s.indexNonempty
-    letI : IsDirectedOrder s.index := s.indexDirected
-    letI : ∀ i, AddCommGroup (s.stage i) := s.stageAddCommGroup
-    letI : ∀ i, Module R (s.stage i) := s.stageModule
-    letI : DirectedSystem s.stage (fun i j h => s.map i j h) := s.stageDirectedSystem
+    let _preorder : Preorder s.index := s.indexPreorder
+    let _nonempty : Nonempty s.index := s.indexNonempty
+    let _directed : IsDirectedOrder s.index := s.indexDirected
+    let _stageGroup : ∀ i, AddCommGroup (s.stage i) := s.stageAddCommGroup
+    let _stageModule : ∀ i, Module R (s.stage i) := s.stageModule
+    let _stageDirected : DirectedSystem s.stage (fun i j h => s.map i j h) :=
+      s.stageDirectedSystem
     let D : System s.index (ModuleCat.{u} R) := {
       obj := fun i => ModuleCat.of R (s.stage i)
       map := fun f => ModuleCat.ofHom (s.map _ _ f.le)
@@ -464,8 +463,8 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
         (Module.DirectLimit.linearEquiv s.stage s.map).trans e
       let i0 := i.unop
       let A := s.stage i0
-      letI : Module.Free R A := s.free i0
-      letI : Module.Finite R A := s.finite i0
+      let _freeA : Module.Free R A := s.free i0
+      let _finiteA : Module.Finite R A := s.finite i0
       let f0 : A →ₗ[R] M := (P.ι.app i.unop).hom
       let xi : TensorProduct R (Module.Dual R A) M :=
         (dualTensorHomEquiv R A M).symm f0
@@ -505,12 +504,11 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
             apply LinearMap.ext
             intro z
             dsimp [oldOf, rootOf]
-            simpa [LinearMap.comp_apply] using
-              (Module.DirectLimit.linearEquiv_of (R := R) s.stage s.map
-                (i := i0) (g := z))
+            exact Module.DirectLimit.linearEquiv_of (R := R) s.stage s.map
+              (i := i0) (g := z)
           calc
             f0 = e.comp rootOf := by
-              simp [f0, P, ι, c, D]
+              simp [f0, P, ι, D]
               change DirectLimit.Module.of R s.index s.stage s.map
                   (Opposite.unop i) =
                 DirectLimit.Module.of R s.index s.stage s.map
@@ -552,12 +550,11 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
           apply LinearMap.ext
           intro z
           dsimp [rootOf]
-          simpa [LinearMap.comp_apply] using
-            (Module.DirectLimit.linearEquiv_of (R := R) s.stage s.map
-              (i := i0) (g := z))
+          exact Module.DirectLimit.linearEquiv_of (R := R) s.stage s.map
+            (i := i0) (g := z)
         calc
           f0 = e.comp rootOf := by
-            simp [f0, P, ι, c, D]
+            simp [f0, P, ι, D]
             change DirectLimit.Module.of R s.index s.stage s.map
                 (Opposite.unop i) =
               DirectLimit.Module.of R s.index s.stage s.map
@@ -570,8 +567,8 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
           ∀ (l : s.index) (hil : i0 ≤ l),
             G ≤ LinearMap.range (s.map i0 l hil).dualMap := by
         intro l hil
-        letI : Module.Free R (s.stage l) := s.free l
-        letI : Module.Finite R (s.stage l) := s.finite l
+        let _freeStage : Module.Free R (s.stage l) := s.free l
+        let _finiteStage : Module.Finite R (s.stage l) := s.finite l
         let f_il : s.stage i0 →ₗ[R] s.stage l := s.map i0 l hil
         let x_l : TensorProduct R (Module.Dual R A) (s.stage l) :=
           (dualTensorHomEquiv R A (s.stage l)).symm f_il

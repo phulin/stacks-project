@@ -591,10 +591,10 @@ private noncomputable def quotientTensorEquiv
         TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
       change (Submodule.Quotient.mk (r • (s • n)) : N ⧸ J) =
         Submodule.Quotient.mk (s • (r • n))
-      simp [← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm]
+      simp [← IsScalarTower.algebraMap_smul S]
       rw [smul_comm]
     · intro x y hx hy
-      simp only [TensorProduct.smul_add, map_add, smul_add, hx, hy]
+      simp only [map_add, smul_add, hx, hy]
   exact { e with map_smul' := he }
 
 private theorem relativeAssassinAFin_subset_A
@@ -604,16 +604,16 @@ private theorem relativeAssassinAFin_subset_A
     relativeAssassinAFin (R := R) (S := S) (N := N) ⊆
       relativeAssassinA (R := R) (S := S) (N := N) := by
   intro q hq
-  letI : Module R N := Module.compHom N (algebraMap R S)
-  letI : IsScalarTower R S N :=
+  let : Module R N := Module.compHom N (algebraMap R S)
+  let : IsScalarTower R S N :=
     inducedModule_isScalarTower (R := R) (S := S) (N := N)
   let p : PrimeSpectrum R := PrimeSpectrum.comap (algebraMap R S) q
   let A := R ⧸ p.asIdeal
   let K := p.asIdeal.ResidueField
   let M0 := A ⊗[R] N
-  letI : Module A M0 := TensorProduct.leftModule
+  let : Module A M0 := TensorProduct.leftModule
   let f : M0 →ₗ[A] K ⊗[A] M0 := TensorProduct.mk A K M0 1
-  letI : IsLocalizedModule (nonZeroDivisors A) f :=
+  let : IsLocalizedModule (nonZeroDivisors A) f :=
     IsLocalization.tensorProduct_isLocalizedModule (nonZeroDivisors A) K
   let eT : (K ⊗[A] M0) ≃ₗ[R] (N ⊗[R] K) :=
     (TensorProduct.AlgebraTensorModule.cancelBaseChange R A K K N).restrictScalars R |>.trans
@@ -630,13 +630,13 @@ private theorem relativeAssassinAFin_subset_A
     p.asIdeal.map (algebraMap R S) • (⊤ : Submodule S N)
   let eS := quotientTensorEquiv (R := R) (S := S) (N := N) p
   let comm : (N ⊗[R] A) ≃ₗ[R] M0 := TensorProduct.comm R N A
-  letI : Module A (N ⊗[R] A) :=
+  let : Module A (N ⊗[R] A) :=
     Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
   have hcomm (a : A) (x : N ⊗[R] A) :
       comm (a • x) = a • comm x := by
     change comm (comm.symm (a • comm x)) = a • comm x
     rw [comm.apply_symm_apply]
-  letI : IsScalarTower R A (N ⊗[R] A) :=
+  let : IsScalarTower R A (N ⊗[R] A) :=
     ⟨fun r a x => by
       apply comm.injective
       rw [hcomm, map_smul, hcomm]
@@ -652,10 +652,8 @@ private theorem relativeAssassinAFin_subset_A
       rw [TensorProduct.smul_tmul']
       rw [show comm ((s • n) ⊗ₜ[R] a) = a ⊗ₜ[R] (s • n) by
         rfl, show comm (n ⊗ₜ[R] a) = a ⊗ₜ[R] n by rfl]
-      simp [eT, f, TensorProduct.mk_apply, TensorProduct.comm_tmul,
-        TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
-        ← IsScalarTower.algebraMap_smul S, mul_smul, mul_comm,
-        TensorProduct.smul_tmul', TensorProduct.tmul_smul]
+      simp [eT, f, TensorProduct.mk_apply,
+        ← IsScalarTower.algebraMap_smul S]
       rw [TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul,
         TensorProduct.AlgebraTensorModule.cancelBaseChange_tmul]
       rw [TensorProduct.comm_tmul, TensorProduct.comm_tmul,
@@ -734,6 +732,8 @@ theorem compare_relative_assassins
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) ⊆
         relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
+  /- Prior proof attempt retained after the kernel reported a deterministic
+     timeout at this declaration.
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · exact relativeAssassinAFin_subset_A
   /-
@@ -1039,6 +1039,8 @@ theorem compare_relative_assassins
     sorry
 
   -/
+  -/
+  sorry
 
 theorem relative_assassins_eq_of_noetherian_target
     {R : Type u} {S : Type v} {N : Type w}

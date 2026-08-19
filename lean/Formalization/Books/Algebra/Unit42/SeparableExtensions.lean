@@ -1702,9 +1702,11 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
         pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y)
       rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K)]
       exact ((pthRootClosureMap k K).commutes y).symm)
+  letI : Algebra P M := M.algebra
   let xM : u → M := fun z => z
   let F₀ : IntermediateField P M :=
     IntermediateField.adjoin P (range xM)
+  letI : Algebra P F₀ := F₀.algebra
   letI : Algebra.IsSeparable F₀ M := hsep
   let kToM : k →+* M := (algebraMap P M).comp (algebraMap k P)
   letI : Algebra k M := RingHom.toAlgebra kToM
@@ -1732,6 +1734,7 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
       (Finset.mem_image.mpr ⟨z, z.property, rfl⟩)⟩
   let U : IntermediateField B T :=
     IntermediateField.adjoin B (range xT)
+  letI : Algebra B U := U.algebra
   let D : IntermediateField k M :=
     IntermediateField.adjoin k
       (range xM ∪ range fun b : sP => algebraMap P M (b : P))

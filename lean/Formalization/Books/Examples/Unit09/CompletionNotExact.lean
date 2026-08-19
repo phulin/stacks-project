@@ -1,3 +1,4 @@
+import Formalization.Books.Examples.Unit08.NoncompleteQuotient
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.AdicCompletion.Exactness
@@ -15,6 +16,7 @@ the component indexed by `n` is the source summand `R/(t^(n + 1))`.
 open scoped DirectSum
 open scoped BigOperators
 open DirectSum
+open Formalization.Books.Examples.Unit08
 
 namespace Formalization.Books.Examples.Unit09
 
@@ -734,10 +736,171 @@ theorem principal_quotient_completion_failure
       Function.Surjective (completedIdealQuotientMap I J) ∧
         Set.range (completedIdealInclusionMap I J) =
           Set.range (AdicCompletion.of I R ∘ₗ idealInclusionMap J) ∧
-          J < LinearMap.ker (idealQuotientCompletionFromRing I J) ∧
-            ¬ Function.Exact (completedIdealInclusionMap I J)
+      J < LinearMap.ker (idealQuotientCompletionFromRing I J) ∧
+          ¬ Function.Exact (completedIdealInclusionMap I J)
               (completedIdealQuotientMap I J) := by
-  sorry
+  classical
+  let _hR := hR
+  have _hI := hI
+  have hmul : Function.Surjective (principalMultiplicationMap J f hf) := by
+    intro y
+    have hy : (y : R) ∈ Ideal.span {f} := by
+      rw [← hJ]
+      exact y.property
+    obtain ⟨r, hr⟩ := Ideal.mem_span_singleton.mp hy
+    refine ⟨r, ?_⟩
+    apply Subtype.ext
+    change f * r = (y : R)
+    exact hr.symm
+  have hquotient : Function.Surjective (idealQuotientMap J) := by
+    intro y
+    exact Submodule.mkQ_surjective J y
+  have hmul' :
+      Function.Surjective (completedPrincipalMultiplicationMap I J f hf) := by
+    exact AdicCompletion.map_surjective I hmul
+  have hquotient' :
+      Function.Surjective (completedIdealQuotientMap I J) := by
+    exact AdicCompletion.map_surjective I hquotient
+  have hcomp :
+      completedIdealInclusionMap I J ∘ₗ
+          completedPrincipalMultiplicationMap I J f hf =
+      AdicCompletion.map I (principalEndomorphism f) := by
+    change AdicCompletion.map I (idealInclusionMap J) ∘ₗ
+        AdicCompletion.map I (principalMultiplicationMap J f hf) =
+      AdicCompletion.map I (principalEndomorphism f)
+    rw [AdicCompletion.map_comp]
+    congr 1
+  have himage (x : AdicCompletion I J) :
+      ∃ y : J, completedIdealInclusionMap I J x =
+        AdicCompletion.of I R (y : R) := by
+    obtain ⟨z, hz⟩ := hmul' x
+    obtain ⟨r, hr⟩ := AdicCompletion.of_surjective I R z
+    refine ⟨⟨f * r, J.mul_mem_right r hf⟩, ?_⟩
+    calc
+      completedIdealInclusionMap I J x =
+          completedIdealInclusionMap I J
+            (completedPrincipalMultiplicationMap I J f hf z) := by
+              rw [hz]
+      _ = (AdicCompletion.map I (principalEndomorphism f)) z := by
+            exact congrArg (fun q ↦ q z) hcomp
+      _ = (AdicCompletion.map I (principalEndomorphism f))
+            (AdicCompletion.of I R r) := by rw [hr]
+      _ = AdicCompletion.of I R (f * r) := by
+            rw [AdicCompletion.map_of]
+            rfl
+  have hrange :
+      Set.range (completedIdealInclusionMap I J) =
+        Set.range (AdicCompletion.of I R ∘ₗ idealInclusionMap J) := by
+    ext z
+    constructor
+    · rintro ⟨x, rfl⟩
+      obtain ⟨y, hy⟩ := himage x
+      refine ⟨y, ?_⟩
+      change AdicCompletion.of I R (y : R) = completedIdealInclusionMap I J x
+      exact hy.symm
+    · rintro ⟨y, rfl⟩
+      obtain ⟨z, hz⟩ := hmul' (AdicCompletion.of I J y)
+      refine ⟨completedPrincipalMultiplicationMap I J f hf z, ?_⟩
+      change completedIdealInclusionMap I J
+          (completedPrincipalMultiplicationMap I J f hf z) =
+        AdicCompletion.of I R (y : R)
+      calc
+        completedIdealInclusionMap I J
+            (completedPrincipalMultiplicationMap I J f hf z) =
+            completedIdealInclusionMap I J
+              (AdicCompletion.of I J y) := by rw [← hz]
+        _ = AdicCompletion.of I R (y : R) := by
+          change (AdicCompletion.map I (idealInclusionMap J))
+              (AdicCompletion.of I J y) = AdicCompletion.of I R (y : R)
+          exact AdicCompletion.map_of I (idealInclusionMap J) y
+  have hJker : J ≤ LinearMap.ker (idealQuotientCompletionFromRing I J) := by
+    intro r hr
+    change completedIdealQuotientMap I J (AdicCompletion.of I R r) = 0
+    change (AdicCompletion.map I (idealQuotientMap J))
+        (AdicCompletion.of I R r) = 0
+    rw [AdicCompletion.map_of]
+    have hr0 : idealQuotientMap J r = 0 := by
+      change J.mkQ r = 0
+      exact (Submodule.Quotient.mk_eq_zero _).2 hr
+    rw [hr0]
+    rfl
+  have hsurjFromRing :
+      Function.Surjective (idealQuotientCompletionFromRing I J) := by
+    intro z
+    obtain ⟨x, hx⟩ := hquotient' z
+    obtain ⟨r, hr⟩ := AdicCompletion.of_surjective I R x
+    rw [← hr] at hx
+    refine ⟨r, ?_⟩
+    change (AdicCompletion.map I (idealQuotientMap J))
+        (AdicCompletion.of I R r) = z
+    rw [AdicCompletion.map_of]
+    exact hx
+  have hofquot_surj :
+      Function.Surjective (AdicCompletion.of I (R ⧸ J)) := by
+    intro z
+    obtain ⟨r, hr⟩ := hsurjFromRing z
+    refine ⟨idealQuotientMap J r, ?_⟩
+    change (AdicCompletion.map I (idealQuotientMap J))
+        (AdicCompletion.of I R r) = z
+    rw [AdicCompletion.map_of]
+    exact hr
+  have hquot_of (r : R) :
+      completedIdealQuotientMap I J (AdicCompletion.of I R r) =
+        AdicCompletion.of I (R ⧸ J) (idealQuotientMap J r) := by
+    change (AdicCompletion.map I (idealQuotientMap J))
+        (AdicCompletion.of I R r) =
+      AdicCompletion.of I (R ⧸ J) (idealQuotientMap J r)
+    exact AdicCompletion.map_of I (idealQuotientMap J) r
+  have hstrict : J < LinearMap.ker (idealQuotientCompletionFromRing I J) := by
+    refine lt_of_le_of_ne hJker ?_
+    intro heq
+    apply hquot
+    apply (AdicCompletion.of_bijective_iff (I := I) (M := R ⧸ J)).1
+    constructor
+    · intro x y hxy
+      obtain ⟨r, rfl⟩ := Submodule.mkQ_surjective J x
+      obtain ⟨s, rfl⟩ := Submodule.mkQ_surjective J y
+      have hxy' : idealQuotientCompletionFromRing I J r =
+          idealQuotientCompletionFromRing I J s := by
+        change completedIdealQuotientMap I J (AdicCompletion.of I R r) =
+          completedIdealQuotientMap I J (AdicCompletion.of I R s)
+        calc
+          completedIdealQuotientMap I J (AdicCompletion.of I R r) =
+              AdicCompletion.of I (R ⧸ J) (idealQuotientMap J r) := hquot_of r
+          _ = AdicCompletion.of I (R ⧸ J) (idealQuotientMap J s) := hxy
+          _ = completedIdealQuotientMap I J (AdicCompletion.of I R s) :=
+            (hquot_of s).symm
+      have hrs : r - s ∈ LinearMap.ker (idealQuotientCompletionFromRing I J) := by
+        change idealQuotientCompletionFromRing I J (r - s) = 0
+        rw [map_sub, hxy', sub_self]
+      have hrsJ : r - s ∈ J := by
+        rw [heq]
+        exact hrs
+      change (Submodule.Quotient.mk (p := J) r) =
+        Submodule.Quotient.mk (p := J) s
+      exact (Submodule.Quotient.eq J).2 hrsJ
+    · exact hofquot_surj
+  have hnotexact :
+      ¬ Function.Exact (completedIdealInclusionMap I J)
+          (completedIdealQuotientMap I J) := by
+    intro hex
+    have hnotle : ¬ LinearMap.ker (idealQuotientCompletionFromRing I J) ≤ J := by
+      intro hle
+      exact (not_lt_of_ge hle) hstrict
+    obtain ⟨r, hrker, hrnotJ⟩ := SetLike.not_le_iff_exists.mp hnotle
+    change idealQuotientCompletionFromRing I J r = 0 at hrker
+    have hzero :
+        completedIdealQuotientMap I J (AdicCompletion.of I R r) = 0 := by
+      simpa [idealQuotientCompletionFromRing, LinearMap.comp_apply] using hrker
+    obtain ⟨x, hx⟩ := (hex (AdicCompletion.of I R r)).mp hzero
+    obtain ⟨y, hy⟩ := himage x
+    have hEq : AdicCompletion.of I R (y : R) =
+        AdicCompletion.of I R r := hy.symm.trans hx
+    have hEq' : (y : R) = r := (AdicCompletion.of_inj (I := I)).mp hEq
+    apply hrnotJ
+    rw [← hEq']
+    exact y.property
+  exact ⟨hmul', hquotient', hrange, hstrict, hnotexact⟩
 
 /-- The same quotient phenomenon gives failure for the sequence
 `R → R → R/(f) → 0`. -/
@@ -748,7 +911,59 @@ theorem principal_right_completion_failure
     Function.Surjective (completedPrincipalQuotientMap I f) ∧
       ¬ Function.Exact (completedPrincipalEndomorphism I f)
         (completedPrincipalQuotientMap I f) := by
-  sorry
+  classical
+  have hmain := principal_quotient_completion_failure a f I (Ideal.span {f}) hI rfl
+    (Ideal.subset_span (Set.mem_singleton f)) hR hquot
+  have hpm := hmain.1
+  have hcomp :
+      completedIdealInclusionMap I (Ideal.span {f}) ∘ₗ
+          completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+            (Ideal.subset_span (Set.mem_singleton f)) =
+        completedPrincipalEndomorphism I f := by
+    change AdicCompletion.map I (idealInclusionMap (Ideal.span {f})) ∘ₗ
+        AdicCompletion.map I (principalMultiplicationMap (Ideal.span {f}) f
+          (Ideal.subset_span (Set.mem_singleton f))) =
+      AdicCompletion.map I (principalEndomorphism f)
+    rw [AdicCompletion.map_comp]
+    congr 1
+  refine ⟨?_, ?_⟩
+  · simpa [completedPrincipalQuotientMap, principalQuotientMap,
+      completedIdealQuotientMap, idealQuotientMap] using hmain.2.1
+  · intro hex
+    apply hmain.2.2.2.2
+    intro y
+    constructor
+    · intro hy
+      obtain ⟨z, hz⟩ := (hex y).mp hy
+      refine ⟨completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+          (Ideal.subset_span (Set.mem_singleton f)) z, ?_⟩
+      calc
+        completedIdealInclusionMap I (Ideal.span {f})
+            (completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+              (Ideal.subset_span (Set.mem_singleton f)) z) =
+            completedPrincipalEndomorphism I f z := by
+          change completedIdealInclusionMap I (Ideal.span {f})
+              (completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+                (Ideal.subset_span (Set.mem_singleton f)) z) =
+            (AdicCompletion.map I (principalEndomorphism f)) z
+          exact congrArg (fun q ↦ q z) hcomp
+        _ = y := hz
+    · rintro ⟨x, hx⟩
+      obtain ⟨z, hz⟩ := hpm x
+      apply (hex y).mpr
+      refine ⟨z, ?_⟩
+      calc
+        completedPrincipalEndomorphism I f z =
+            completedIdealInclusionMap I (Ideal.span {f})
+              (completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+                (Ideal.subset_span (Set.mem_singleton f)) z) := by
+          change (AdicCompletion.map I (principalEndomorphism f)) z =
+            completedIdealInclusionMap I (Ideal.span {f})
+              (completedPrincipalMultiplicationMap I (Ideal.span {f}) f
+                (Ideal.subset_span (Set.mem_singleton f)) z)
+          exact (congrArg (fun q ↦ q z) hcomp).symm
+        _ = completedIdealInclusionMap I (Ideal.span {f}) x := by rw [hz]
+        _ = y := hx
 
 end PrincipalQuotientCounterexample
 
@@ -819,7 +1034,140 @@ theorem completion_not_exact :
             CompletionPreservesLeftExactnessOnFinitelyPresentedModules R I) ∧
             (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R), I.FG →
               CompletionPreservesRightExactnessOnFinitelyPresentedModules R I) := by
-  sorry
+  classical
+  letI uliftRatField : Field (ULift.{u} ℚ) := Field.ofIsUnitOrEqZero (by
+    intro q
+    cases q with
+    | up q =>
+      rcases eq_or_ne q 0 with rfl | hq
+      · exact Or.inr rfl
+      · left
+        rw [isUnit_iff_exists_inv']
+        refine ⟨ULift.up q⁻¹, ?_⟩
+        change ULift.up (q⁻¹ * q) = ULift.up 1
+        rw [inv_mul_cancel₀ hq])
+  have hnot_exact :
+      ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R),
+        CompletionPreservesExactness R I := by
+    intro h
+    have hshort := first_sequence_short_exact (ULift.{u} ℚ)
+    have hp : CompletionPreservesExactness (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ)) :=
+      h (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ))
+    dsimp [CompletionPreservesExactness] at hp
+    have hpres := hp (M := firstKernel (ULift.{u} ℚ))
+      (N := firstMiddle (ULift.{u} ℚ))
+      (P := firstCokernel (ULift.{u} ℚ))
+      (firstKernelMap (ULift.{u} ℚ))
+      (firstQuotientMap (ULift.{u} ℚ))
+      hshort.1 hshort.2.1 hshort.2.2
+    exact (first_completed_sequence_not_exact (ULift.{u} ℚ)) hpres.2.1
+  have hnot_left :
+      ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R),
+        CompletionPreservesLeftExactness R I := by
+    intro h
+    have hshort := first_sequence_short_exact (ULift.{u} ℚ)
+    have hp : CompletionPreservesLeftExactness (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ)) :=
+      h (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ))
+    dsimp [CompletionPreservesLeftExactness] at hp
+    have hpres := hp (M := firstKernel (ULift.{u} ℚ))
+      (N := firstMiddle (ULift.{u} ℚ))
+      (P := firstCokernel (ULift.{u} ℚ))
+      (firstKernelMap (ULift.{u} ℚ))
+      (firstQuotientMap (ULift.{u} ℚ))
+      hshort.1 hshort.2.1
+    exact (first_completed_sequence_not_exact (ULift.{u} ℚ)) hpres.2
+  have hnot_right :
+      ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R),
+        CompletionPreservesRightExactness R I := by
+    intro h
+    have hshort := first_sequence_short_exact (ULift.{u} ℚ)
+    have hp : CompletionPreservesRightExactness (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ)) :=
+      h (polynomialRing (ULift.{u} ℚ))
+        (polynomialAdicIdeal (ULift.{u} ℚ))
+    dsimp [CompletionPreservesRightExactness] at hp
+    have hpres := hp (M := firstKernel (ULift.{u} ℚ))
+      (N := firstMiddle (ULift.{u} ℚ))
+      (P := firstCokernel (ULift.{u} ℚ))
+      (firstKernelMap (ULift.{u} ℚ))
+      (firstQuotientMap (ULift.{u} ℚ))
+      hshort.2.1 hshort.2.2
+    exact (first_completed_sequence_not_exact (ULift.{u} ℚ)) hpres.1
+  have hnot_right_fp :
+      ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R), I.FG →
+        CompletionPreservesRightExactnessOnFinitelyPresentedModules R I := by
+    intro h
+    let A := NoncompleteQuotientCompletion (ULift.{u} ℚ)
+    let IA : Ideal A := noncompleteQuotientCompletionXIdeal (ULift.{u} ℚ)
+    let JA : Ideal A := noncompleteQuotientCompletionTIdeal (ULift.{u} ℚ)
+    let xA : A := algebraMap (NoncompleteQuotientRing (ULift.{u} ℚ)) A
+      (xElement (ULift.{u} ℚ))
+    let tA : A := algebraMap (NoncompleteQuotientRing (ULift.{u} ℚ)) A
+      (tElement (ULift.{u} ℚ))
+    have hIA : IA = Ideal.span {xA} := by
+      dsimp [IA, xA]
+      simp [noncompleteQuotientCompletionXIdeal, noncompleteQuotientXIdeal,
+        Ideal.map_span]
+      rfl
+    have hJA : JA = Ideal.span {tA} := by
+      dsimp [JA, tA]
+      simp [noncompleteQuotientCompletionTIdeal, noncompleteQuotientTIdeal,
+        Ideal.map_span]
+      rfl
+    have hIAFG : IA.FG := by
+      dsimp [IA]
+      exact (noncompleteQuotientCompletionXIdeal_isPrincipal (ULift.{u} ℚ)).fg
+    have hspanFG : (Ideal.span {tA}).FG := by
+      exact Submodule.fg_span_singleton tA
+    letI quotientFP : Module.FinitePresentation A (A ⧸ Ideal.span {tA}) := by
+      apply Module.finitePresentation_of_surjective (Ideal.span {tA}).mkQ
+        (Submodule.mkQ_surjective (Ideal.span {tA}))
+      rw [Submodule.ker_mkQ]
+      exact hspanFG
+    have hA : IsAdicComplete IA A := by
+      dsimp [IA]
+      exact noncompleteQuotientCompletion_isAdicComplete (ULift.{u} ℚ)
+    have hnotA : ¬ IsAdicComplete IA (A ⧸ JA) := by
+      dsimp [IA, JA, A]
+      exact noncompleteQuotientCompletion_quotient_not_isAdicComplete
+        (ULift.{u} ℚ)
+    have hnotSpan : ¬ IsAdicComplete IA (A ⧸ Ideal.span {tA}) := by
+      rw [← hJA]
+      exact hnotA
+    have hcompzero :
+        principalQuotientMap tA ∘ₗ principalEndomorphism tA = 0 := by
+      apply LinearMap.ext
+      intro r
+      change (Ideal.span {tA}).mkQ (tA * r) = 0
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      exact (Ideal.span {tA}).mul_mem_right r
+        (Ideal.subset_span (Set.mem_singleton tA))
+    have hkerange : ∀ r, principalQuotientMap tA r = 0 →
+        r ∈ LinearMap.range (principalEndomorphism tA) := by
+      intro r hr
+      change (Ideal.span {tA}).mkQ r = 0 at hr
+      have hrmem := (Submodule.Quotient.mk_eq_zero _).mp hr
+      obtain ⟨s, hs⟩ := Ideal.mem_span_singleton.mp hrmem
+      refine ⟨s, ?_⟩
+      change tA * s = r
+      exact hs.symm
+    have hex : Function.Exact (principalEndomorphism tA)
+        (principalQuotientMap tA) :=
+      LinearMap.exact_of_comp_of_mem_range hcompzero hkerange
+    have hsurj : Function.Surjective (principalQuotientMap tA) :=
+      Submodule.mkQ_surjective (Ideal.span {tA})
+    have hp : CompletionPreservesRightExactnessOnFinitelyPresentedModules A IA :=
+      h A IA hIAFG
+    dsimp [CompletionPreservesRightExactnessOnFinitelyPresentedModules] at hp
+    have hpres := hp (M := A) (N := A) (P := A ⧸ Ideal.span {tA})
+      (principalEndomorphism tA)
+      (principalQuotientMap tA) hex hsurj
+    exact (principal_right_completion_failure xA tA IA hIA hA hnotSpan).2 hpres.1
+  exact ⟨hnot_exact, hnot_left, hnot_right, by sorry, hnot_right_fp⟩
 
 end ExactnessPredicates
 

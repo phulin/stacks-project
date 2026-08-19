@@ -457,9 +457,11 @@ private abbrev sourceCoefficientPrime : Ideal (Polynomial (Polynomial ℚ)) :=
   Ideal.map (Polynomial.C : Polynomial ℚ →+* Polynomial (Polynomial ℚ)) sourceInnerPrime
 
 private lemma sourceInnerPrime_isPrime : sourceInnerPrime.IsPrime := by
-  exact Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (-1 : ℚ))
+  simpa [sourceInnerPrime] using
+    (Ideal.isPrime_span_singleton_of_prime (Polynomial.prime_X_sub_C (-1 : ℚ)))
 private lemma sourceCoefficientPrime_isPrime : sourceCoefficientPrime.IsPrime := by
-  exact (Ideal.isPrime_map_C_iff_isPrime sourceInnerPrime).mpr sourceInnerPrime_isPrime
+  simpa [sourceCoefficientPrime] using
+    (Ideal.isPrime_map_C_iff_isPrime sourceInnerPrime).mpr sourceInnerPrime_isPrime
 private noncomputable def sourceInnerQuotientEquiv :
     (Polynomial ℚ ⧸ sourceInnerPrime) ≃+* ℚ :=
   Polynomial.quotientSpanXSubCAlgEquiv (-1 : ℚ)

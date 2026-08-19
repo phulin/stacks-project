@@ -17,6 +17,11 @@ import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.Data.Finsupp.Encodable
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Valuation.ValuationRing
+import Mathlib.RingTheory.HahnSeries.Summable
+import Mathlib.RingTheory.HahnSeries.Valuation
+import Mathlib.Algebra.Order.Group.Synonym
+import Mathlib.Algebra.Order.Monoid.Prod
+import Mathlib.RingTheory.Valuation.ValuationSubring
 import Mathlib.Algebra.Field.ULift
 import Mathlib.Algebra.GCDMonoid.IntegrallyClosed
 import Mathlib.Data.Countable.Defs
@@ -1262,12 +1267,467 @@ theorem valuationRing_powerSeries_flat (R : Type u) [CommRing R] [IsDomain R]
           congrArg (PowerSeries.coeff n) h
       exact (mul_eq_zero.mp hn).resolve_left hr)
 
+private def almostIntegralDenominatorSubmonoidAux (R : Type u) [CommRing R] :
+    Submonoid (Polynomial R) :=
+  Submonoid.comap Polynomial.constantCoeff (Submonoid.powers (1 : R))
+
+private noncomputable def almostIntegralPolynomialLocalizationMapAux
+    (R : Type u) [CommRing R] :
+    Localization (almostIntegralDenominatorSubmonoidAux R) →+* PowerSeries R :=
+  IsLocalization.lift (M := almostIntegralDenominatorSubmonoidAux R)
+    (S := Localization (almostIntegralDenominatorSubmonoidAux R))
+    (g := Polynomial.coeToPowerSeries.ringHom) (by
+      intro h
+      rw [PowerSeries.isUnit_iff_constantCoeff]
+      change IsUnit (Polynomial.constantCoeff (h : Polynomial R))
+      rcases (Submonoid.mem_powers_iff _ _).mp h.property with ⟨n, hn⟩
+      rw [← hn]
+      simp)
+
+private theorem not_flat_of_power_series_relation
+    (R : Type u) [CommRing R] [IsDomain R]
+    (a b beta : R) (F : PowerSeries R) (hb : b ≠ 0)
+    (hab : a * beta = b)
+    (hF : (PowerSeries.C a * PowerSeries.X - PowerSeries.C b) * F =
+      PowerSeries.C (-b * b))
+    (h_eval : ∀ m : Polynomial R,
+      Polynomial.constantCoeff m = 1 →
+        Polynomial.eval₂RingHom (RingHom.id R) beta m ≠ 0)
+    (hflat : Module.Flat (Polynomial R) (PowerSeries R)) : False := by
+  let _ : Algebra (Localization (almostIntegralDenominatorSubmonoidAux R))
+      (PowerSeries R) := RingHom.toAlgebra
+        (almostIntegralPolynomialLocalizationMapAux R)
+  have hff : RingHom.FaithfullyFlat
+      (almostIntegralPolynomialLocalizationMapAux R) := by
+    rw [← (almostIntegralPolynomialLocalizationMapAux R).algebraMap_toAlgebra,
+      RingHom.faithfullyFlat_algebraMap_iff]
+    let _ : IsScalarTower (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R))
+        (PowerSeries R) :=
+      ⟨fun p x z => by
+        simp only [Algebra.smul_def]
+        rw [map_mul, mul_assoc]
+        exact congrArg
+          (fun q : PowerSeries R =>
+            q * (algebraMap (Localization (almostIntegralDenominatorSubmonoidAux R))
+              (PowerSeries R) x * z))
+          (by
+            change (almostIntegralPolynomialLocalizationMapAux R)
+                (algebraMap (Polynomial R)
+                  (Localization (almostIntegralDenominatorSubmonoidAux R)) p) = _
+            rw [almostIntegralPolynomialLocalizationMapAux, IsLocalization.lift_eq]
+            rfl)⟩
+    rw [Module.FaithfullyFlat.iff_flat_and_proper_ideal]
+    refine ⟨(Module.flat_iff_of_isLocalization
+      (Localization (almostIntegralDenominatorSubmonoidAux R))
+      (almostIntegralDenominatorSubmonoidAux R) (PowerSeries R)).mpr hflat, ?_⟩
+    intro I hI
+    rw [Ideal.smul_top_eq_map]
+    intro htop
+    have h1B : (1 : PowerSeries R) ∈
+        Ideal.map (almostIntegralPolynomialLocalizationMapAux R) I := by
+      have h1 : (1 : PowerSeries R) ∈
+          Submodule.restrictScalars (Localization
+            (almostIntegralDenominatorSubmonoidAux R))
+            (Ideal.map (algebraMap (Localization
+              (almostIntegralDenominatorSubmonoidAux R)) (PowerSeries R)) I) := by
+        rw [htop]
+        trivial
+      exact h1
+    let g := PowerSeries.constantCoeff.comp
+      (almostIntegralPolynomialLocalizationMapAux R)
+    have hmem : (1 : R) ∈ Ideal.map g I := by
+      have h' := Ideal.mem_map_of_mem PowerSeries.constantCoeff h1B
+      simpa only [g, PowerSeries.constantCoeff_one, Ideal.map_map] using h'
+    have himage : g '' (I : Set _) = Set.range (fun x : I => g x) := by
+      ext y
+      constructor
+      · rintro ⟨x, hx, rfl⟩
+        exact ⟨⟨x, hx⟩, rfl⟩
+      · rintro ⟨x, rfl⟩
+        exact ⟨x, x.2, rfl⟩
+    rw [Ideal.map, himage] at hmem
+    obtain ⟨c, hc⟩ :=
+      (Finsupp.mem_ideal_span_range_iff_exists_finsupp).mp hmem
+    let t : Localization (almostIntegralDenominatorSubmonoidAux R) :=
+      c.sum (fun i a =>
+        algebraMap (Polynomial R)
+          (Localization (almostIntegralDenominatorSubmonoidAux R))
+          (Polynomial.C a) * (i : _))
+    have ht : t ∈ I := by
+      apply I.sum_mem
+      intro i hi
+      exact I.mul_mem_left _ i.2
+    have h_alg (a : R) :
+        PowerSeries.constantCoeff
+          ((almostIntegralPolynomialLocalizationMapAux R)
+            (algebraMap (Polynomial R)
+              (Localization (almostIntegralDenominatorSubmonoidAux R))
+              (Polynomial.C a))) = a := by
+      rw [almostIntegralPolynomialLocalizationMapAux, IsLocalization.lift_eq]
+      simp
+    have htc : g t = 1 := by
+      simp only [g, t]
+      rw [Finsupp.sum, map_sum]
+      calc
+        _ = ∑ x ∈ c.support,
+            c x * (PowerSeries.constantCoeff.comp
+              (almostIntegralPolynomialLocalizationMapAux R)) (x : _) := by
+          apply Finset.sum_congr rfl
+          intro x hx
+          rw [map_mul]
+          change PowerSeries.constantCoeff
+              ((almostIntegralPolynomialLocalizationMapAux R)
+                (algebraMap (Polynomial R)
+                  (Localization (almostIntegralDenominatorSubmonoidAux R))
+                  (Polynomial.C (c x)))) *
+              (PowerSeries.constantCoeff.comp
+                (almostIntegralPolynomialLocalizationMapAux R)) (x : _) =
+            c x * (PowerSeries.constantCoeff.comp
+              (almostIntegralPolynomialLocalizationMapAux R)) (x : _)
+          rw [h_alg]
+        _ = 1 := by
+          simpa only [Finsupp.sum] using hc
+    have hg (p : Polynomial R) :
+        g (algebraMap (Polynomial R)
+          (Localization (almostIntegralDenominatorSubmonoidAux R)) p) =
+            Polynomial.constantCoeff p := by
+      change PowerSeries.constantCoeff
+        ((almostIntegralPolynomialLocalizationMapAux R)
+          (algebraMap (Polynomial R)
+            (Localization (almostIntegralDenominatorSubmonoidAux R)) p)) =
+        Polynomial.constantCoeff p
+      rw [almostIntegralPolynomialLocalizationMapAux, IsLocalization.lift_eq]
+      rfl
+    have hmcc (m : almostIntegralDenominatorSubmonoidAux R) :
+        Polynomial.constantCoeff (m : Polynomial R) = 1 := by
+      have hm' := m.property
+      change Polynomial.constantCoeff (m : Polynomial R) ∈
+        Submonoid.powers (1 : R) at hm'
+      rcases (Submonoid.mem_powers_iff _ _).mp hm' with ⟨n, hn⟩
+      rw [← hn]
+      simp
+    have hunit (s : Localization (almostIntegralDenominatorSubmonoidAux R))
+        (hs : g s = 1) : IsUnit s := by
+      obtain ⟨⟨p, m⟩, hm⟩ :=
+        IsLocalization.surj (almostIntegralDenominatorSubmonoidAux R) s
+      have hpcc : Polynomial.constantCoeff p = 1 := by
+        have h := congrArg g hm
+        simpa [map_mul, hs, hg (m : Polynomial R), hg p, hmcc m] using h.symm
+      have hpM : p ∈ almostIntegralDenominatorSubmonoidAux R := by
+        change Polynomial.constantCoeff p ∈ Submonoid.powers (1 : R)
+        rw [hpcc]
+        exact Submonoid.one_mem _
+      have hpunit : IsUnit
+          (algebraMap (Polynomial R)
+            (Localization (almostIntegralDenominatorSubmonoidAux R)) p) :=
+        IsLocalization.map_units (Localization
+          (almostIntegralDenominatorSubmonoidAux R)) ⟨p, hpM⟩
+      exact isUnit_of_mul_isUnit_left (hm.symm ▸ hpunit)
+    have hunit_t := hunit t htc
+    rcases (isUnit_iff_exists_inv.mp hunit_t) with ⟨u, hu⟩
+    apply hI
+    apply I.eq_top_iff_one.mpr
+    rw [← hu]
+    simpa [mul_comm] using I.mul_mem_left u ht
+  let p : Polynomial R := Polynomial.C a * Polynomial.X - Polynomial.C b
+  let q : Polynomial R := Polynomial.C (-b * b)
+  let J : Ideal (Localization (almostIntegralDenominatorSubmonoidAux R)) :=
+    Ideal.map (algebraMap (Polynomial R)
+      (Localization (almostIntegralDenominatorSubmonoidAux R))) (Ideal.span {p})
+  have hpmap : (almostIntegralPolynomialLocalizationMapAux R)
+      (algebraMap (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R)) p) =
+        PowerSeries.C a * PowerSeries.X - PowerSeries.C b := by
+    rw [almostIntegralPolynomialLocalizationMapAux, IsLocalization.lift_eq]
+    simp [p, map_sub, map_mul]
+  have hqmap : (almostIntegralPolynomialLocalizationMapAux R)
+      (algebraMap (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R)) q) =
+        PowerSeries.C (-b * b) := by
+    rw [almostIntegralPolynomialLocalizationMapAux, IsLocalization.lift_eq]
+    simp [q]
+  have hpJ : algebraMap (Polynomial R)
+      (Localization (almostIntegralDenominatorSubmonoidAux R)) p ∈ J := by
+    exact Ideal.mem_map_of_mem _ (Ideal.mem_span_singleton_self p)
+  have hqmapJ : (almostIntegralPolynomialLocalizationMapAux R)
+      (algebraMap (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R)) q) ∈
+      Ideal.map (almostIntegralPolynomialLocalizationMapAux R) J := by
+    rw [hqmap, hF.symm, ← hpmap]
+    simpa [mul_comm] using
+      (Ideal.map (almostIntegralPolynomialLocalizationMapAux R) J).mul_mem_left
+        F (Ideal.mem_map_of_mem _ hpJ)
+  have hff' : Module.FaithfullyFlat
+      (Localization (almostIntegralDenominatorSubmonoidAux R)) (PowerSeries R) := by
+    rw [← RingHom.faithfullyFlat_algebraMap_iff]
+    rwa [(almostIntegralPolynomialLocalizationMapAux R).algebraMap_toAlgebra]
+  have hcomap (I : Ideal (Localization (almostIntegralDenominatorSubmonoidAux R))) :
+      (I.map (almostIntegralPolynomialLocalizationMapAux R)).comap
+        (almostIntegralPolynomialLocalizationMapAux R) = I := by
+    exact @Ideal.comap_map_eq_self_of_faithfullyFlat
+      (Localization (almostIntegralDenominatorSubmonoidAux R)) (PowerSeries R)
+      _ _ _ hff' I
+  have hqJ : algebraMap (Polynomial R)
+      (Localization (almostIntegralDenominatorSubmonoidAux R)) q ∈ J := by
+    have hq' : algebraMap (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R)) q ∈
+        (Ideal.map (almostIntegralPolynomialLocalizationMapAux R) J).comap
+          (almostIntegralPolynomialLocalizationMapAux R) := hqmapJ
+    rw [hcomap J] at hq'
+    exact hq'
+  have hqJ' : algebraMap (Polynomial R)
+      (Localization (almostIntegralDenominatorSubmonoidAux R)) q ∈
+      (Ideal.span {p}).map (algebraMap (Polynomial R)
+        (Localization (almostIntegralDenominatorSubmonoidAux R))) := by
+    simpa [J] using hqJ
+  obtain ⟨m, hm, hmq⟩ :=
+    (IsLocalization.algebraMap_mem_map_algebraMap_iff
+      (M := almostIntegralDenominatorSubmonoidAux R)
+      (S := Localization (almostIntegralDenominatorSubmonoidAux R))
+      (Ideal.span {p}) q).mp hqJ'
+  have hmcc : Polynomial.constantCoeff (m : Polynomial R) = 1 := by
+    have hm' := hm
+    change Polynomial.constantCoeff m ∈
+      Submonoid.powers (1 : R) at hm'
+    rcases (Submonoid.mem_powers_iff _ _).mp hm' with ⟨n, hn⟩
+    rw [← hn]
+    simp
+  obtain ⟨t, ht⟩ := (Ideal.mem_span_singleton.mp hmq)
+  let ev : Polynomial R →+* R :=
+    Polynomial.eval₂RingHom (RingHom.id R) beta
+  have hev_p : ev p = 0 := by
+    simp [ev, p, hab]
+  have hev_m : ev (m : Polynomial R) ≠ 0 := h_eval m hmcc
+  have hev_eq := congrArg ev ht
+  have hprod : ev (m : Polynomial R) * (-b * b) = 0 := by
+    simpa [ev, p, q, hev_p, map_mul] using hev_eq
+  rcases mul_eq_zero.mp hprod with hzero | hzero
+  · exact hev_m hzero
+  have hbb : b * b = 0 := by simpa using hzero
+  exact hb ((mul_eq_zero.mp hbb).resolve_left hb)
+
 theorem exists_valuationRing_dimension_gt_one_not_flat_over_polynomial :
     ∃ (R : Type u) (_ : CommRing R) (_ : IsDomain R) (_ : ValuationRing R),
       ¬ Ring.KrullDimLE 1 R ∧
         Module.Flat R (PowerSeries R) ∧
           ¬ Module.Flat (Polynomial R) (PowerSeries R) := by
-  sorry
+  let K := HahnSeries (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+  let v : Valuation K (Multiplicative (WithTop (ℤ ×ₗ ℤ))ᵒᵈ) :=
+    AddValuation.toValuation (HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ))
+  let A := v.valuationSubring
+  let f₀ : (ℤ ×ₗ ℤ) →+ ℤ := AddMonoidHom.fst ℤ ℤ
+  have hf₀ : Monotone f₀ := by
+    intro x y hxy
+    exact Prod.Lex.monotone_fst x y hxy
+  let f : WithTop (ℤ ×ₗ ℤ) →+ WithTop ℤ := f₀.withTopMap
+  have hf : Monotone f := Monotone.withTop_map hf₀
+  have htop : f ⊤ = ⊤ := by rfl
+  let w : Valuation K (Multiplicative (WithTop ℤ)ᵒᵈ) :=
+    AddValuation.toValuation
+      (AddValuation.map f htop hf
+        (HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)))
+  let B := w.valuationSubring
+  have hAB : A ≤ B := by
+    intro z hz
+    rw [Valuation.mem_valuationSubring_iff] at hz ⊢
+    change 0 ≤ HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ) z at hz
+    change 0 ≤ f (HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ) z)
+    simpa using hf hz
+  let ix : ℤ ×ₗ ℤ := (1, 0)
+  let iy : ℤ ×ₗ ℤ := (0, 1)
+  have hix : (0 : ℤ ×ₗ ℤ) ≤ ix := by
+    apply Prod.Lex.toLex_le_toLex.mpr
+    exact Or.inl (by norm_num)
+  have hiy : (0 : ℤ ×ₗ ℤ) ≤ iy := by
+    apply Prod.Lex.toLex_le_toLex.mpr
+    exact Or.inr ⟨rfl, by norm_num⟩
+  have hiypos : (0 : ℤ ×ₗ ℤ) < iy := by
+    apply Prod.Lex.toLex_lt_toLex.mpr
+    exact Or.inr ⟨rfl, by norm_num⟩
+  have hfix : (0 : WithTop ℤ) < f (ix : WithTop (ℤ ×ₗ ℤ)) := by
+    change (0 : WithTop ℤ) < (1 : ℤ)
+    norm_num
+  have hfiy : ¬ ((0 : WithTop ℤ) < f (iy : WithTop (ℤ ×ₗ ℤ))) := by
+    change ¬ ((0 : WithTop ℤ) < (0 : ℤ))
+    norm_num
+  let x : A := ⟨HahnSeries.single ix (1 : ULift.{u, 0} ℚ), by
+    rw [Valuation.mem_valuationSubring_iff]
+    change 0 ≤ HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single ix (1 : ULift.{u, 0} ℚ))
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := ix) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero]
+    exact WithTop.coe_le_coe.mpr hix⟩
+  let y : A := ⟨HahnSeries.single iy (1 : ULift.{u, 0} ℚ), by
+    rw [Valuation.mem_valuationSubring_iff]
+    change 0 ≤ HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single iy (1 : ULift.{u, 0} ℚ))
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := iy) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero]
+    exact WithTop.coe_le_coe.mpr hiy⟩
+  let P : Ideal A := A.idealOfLE B hAB
+  have hxP : x ∈ P := by
+    change (A.inclusion B hAB) x ∈ IsLocalRing.maximalIdeal B
+    rw [Valuation.mem_maximalIdeal_iff]
+    change 0 < f (HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single ix (1 : ULift.{u, 0} ℚ)))
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := ix) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero]
+    exact hfix
+  have hyMax : y ∈ IsLocalRing.maximalIdeal A := by
+    rw [Valuation.mem_maximalIdeal_iff]
+    change 0 < HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single iy (1 : ULift.{u, 0} ℚ))
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := iy) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero]
+    exact WithTop.coe_lt_coe.mpr hiypos
+  have hyNotP : y ∉ P := by
+    intro hy
+    change (A.inclusion B hAB) y ∈ IsLocalRing.maximalIdeal B at hy
+    rw [Valuation.mem_maximalIdeal_iff] at hy
+    change 0 < f (HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single iy (1 : ULift.{u, 0} ℚ))) at hy
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := iy) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero] at hy
+    exact hfiy hy
+  have hPbot : P ≠ ⊥ := by
+    intro hP
+    have hxzero : x = 0 := by
+      have hxbot : x ∈ (⊥ : Ideal A) := hP.symm ▸ hxP
+      simpa using hxbot
+    have hxne : x ≠ 0 := by
+      intro hx
+      have hv := congrArg (fun z : A => (z : K)) hx
+      change HahnSeries.single ix (1 : ULift.{u, 0} ℚ) = 0 at hv
+      exact (HahnSeries.single_ne_zero (a := ix)
+        (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero) hv
+    exact hxne hxzero
+  have hPprime : P.IsPrime := by
+    exact ValuationSubring.prime_idealOfLE A B hAB
+  have hdim : ¬ Ring.KrullDimLE 1 A := by
+    intro hdim
+    have hPmax : P.IsMaximal :=
+      (Ring.krullDimLE_one_iff_of_noZeroDivisors.mp hdim) P hPbot hPprime
+    exact hyNotP ((IsLocalRing.eq_maximalIdeal hPmax).symm ▸ hyMax)
+  let iz : ℤ ×ₗ ℤ := (1, -1)
+  have hiz : (0 : ℤ ×ₗ ℤ) ≤ iz := by
+    apply Prod.Lex.toLex_le_toLex.mpr
+    exact Or.inl (by norm_num)
+  let a : A := ⟨HahnSeries.single iz (1 : ULift.{u, 0} ℚ), by
+    rw [Valuation.mem_valuationSubring_iff]
+    change 0 ≤ HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+      (HahnSeries.single iz (1 : ULift.{u, 0} ℚ))
+    rw [HahnSeries.addVal_apply_of_ne
+      (HahnSeries.single_ne_zero (a := iz) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+      HahnSeries.order_single one_ne_zero]
+    exact WithTop.coe_le_coe.mpr hiz⟩
+  have hab : a * y = x := by
+    apply Subtype.ext
+    dsimp [a, y, x]
+    rw [HahnSeries.single_mul_single]
+    have hsum : iz + iy = ix := by
+      apply Prod.ext
+      · change (1 : ℤ) + 0 = 1
+        norm_num
+      · change (-1 : ℤ) + 1 = 0
+        norm_num
+    rw [hsum]
+    simp
+  let izn : ℕ → ℤ ×ₗ ℤ := fun n => (1, -(n : ℤ))
+  let c : ℕ → A := fun n =>
+    ⟨HahnSeries.single (izn n) (1 : ULift.{u, 0} ℚ), by
+      rw [Valuation.mem_valuationSubring_iff]
+      change 0 ≤ HahnSeries.addVal (ℤ ×ₗ ℤ) (ULift.{u, 0} ℚ)
+        (HahnSeries.single (izn n) (1 : ULift.{u, 0} ℚ))
+      rw [HahnSeries.addVal_apply_of_ne
+        (HahnSeries.single_ne_zero
+          (a := izn n) (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero),
+        HahnSeries.order_single one_ne_zero]
+      apply WithTop.coe_le_coe.mpr
+      apply Prod.Lex.toLex_le_toLex.mpr
+      exact Or.inl (by norm_num [izn])⟩
+  let F : PowerSeries A := PowerSeries.mk c
+  have hc0 : c 0 = x := by
+    apply Subtype.ext
+    change HahnSeries.single (izn 0) (1 : ULift.{u, 0} ℚ) =
+      HahnSeries.single ix (1 : ULift.{u, 0} ℚ)
+    congr 1
+  have hc_step (n : ℕ) : a * c n = x * c (n + 1) := by
+    apply Subtype.ext
+    change HahnSeries.single iz (1 : ULift.{u, 0} ℚ) *
+        HahnSeries.single (izn n) (1 : ULift.{u, 0} ℚ) =
+      HahnSeries.single ix (1 : ULift.{u, 0} ℚ) *
+        HahnSeries.single (izn (n + 1)) (1 : ULift.{u, 0} ℚ)
+    rw [HahnSeries.single_mul_single, HahnSeries.single_mul_single]
+    have hsum₁ : iz + izn n = ix + izn (n + 1) := by
+      apply Prod.ext
+      · change (1 : ℤ) + 1 = 1 + 1
+        norm_num
+      · change (-1 : ℤ) + -(n : ℤ) = 0 + -((n + 1 : ℕ) : ℤ)
+        push_cast
+        ring
+    rw [hsum₁]
+  have hF : (PowerSeries.C a * PowerSeries.X - PowerSeries.C x) * F =
+      PowerSeries.C (-x * x) := by
+    refine PowerSeries.ext (fun n => ?_)
+    rcases n with _ | n
+    · simp [F, PowerSeries.coeff_C_mul, hc0]
+    · rw [sub_mul, map_sub]
+      simp [F, PowerSeries.coeff_C_mul, PowerSeries.coeff_succ_X_mul,
+        mul_assoc]
+      rw [hc_step]
+      ring
+  have h_eval : ∀ m : Polynomial A,
+      Polynomial.constantCoeff m = 1 →
+        Polynomial.eval₂RingHom (RingHom.id A) y m ≠ 0 := by
+    intro m hm
+    let ev : Polynomial A →+* A :=
+      Polynomial.eval₂RingHom (RingHom.id A) y
+    have hev (m : Polynomial A) :
+        ev m = y * ev (Polynomial.divX m) + Polynomial.constantCoeff m := by
+      change Polynomial.eval₂ (RingHom.id A) y m =
+        y * Polynomial.eval₂ (RingHom.id A) y (Polynomial.divX m) +
+          Polynomial.constantCoeff m
+      have h := congrArg ev (Polynomial.X_mul_divX_add m)
+      change Polynomial.eval₂ (RingHom.id A) y
+          (Polynomial.X * Polynomial.divX m +
+            Polynomial.C (Polynomial.constantCoeff m)) =
+        Polynomial.eval₂ (RingHom.id A) y m at h
+      rw [Polynomial.eval₂_add, Polynomial.eval₂_mul,
+        Polynomial.eval₂_X, Polynomial.eval₂_C] at h
+      simpa only [RingHom.id_apply] using h.symm
+    intro hzero
+    change ev m = 0 at hzero
+    have hsum : (0 : A) = y * ev (Polynomial.divX m) + 1 := by
+      simpa [hm, hzero] using hev m
+    have hmul : y * ev (Polynomial.divX m) ∈ IsLocalRing.maximalIdeal A :=
+      by
+        rw [mul_comm]
+        exact (IsLocalRing.maximalIdeal A).mul_mem_left
+          (ev (Polynomial.divX m)) hyMax
+    have hone : (1 : A) ∈ IsLocalRing.maximalIdeal A := by
+      have hsub := (IsLocalRing.maximalIdeal A).sub_mem
+        (IsLocalRing.maximalIdeal A).zero_mem hmul
+      have heq : (0 : A) - y * ev (Polynomial.divX m) = 1 := by
+        rw [hsum]
+        ring
+      exact heq ▸ hsub
+    exact (IsLocalRing.maximalIdeal.isMaximal A).ne_top
+      ((IsLocalRing.maximalIdeal A).eq_top_iff_one.mpr hone)
+  refine ⟨A, inferInstance, inferInstance, inferInstance, hdim,
+    valuationRing_powerSeries_flat A, ?_⟩
+  intro hflat
+  exact not_flat_of_power_series_relation A a x y F (by
+    intro hx
+    have hv := congrArg (fun z : A => (z : K)) hx
+    change HahnSeries.single ix (1 : ULift.{u, 0} ℚ) = 0 at hv
+    exact (HahnSeries.single_ne_zero (a := ix)
+      (r := (1 : ULift.{u, 0} ℚ)) one_ne_zero) hv) hab hF h_eval hflat
 
 def IsCompletelyNormal (R K : Type*) [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K] : Prop :=
@@ -1298,7 +1758,14 @@ theorem exists_almostIntegralSeriesData
     (hpow : ∀ n : ℕ, 1 ≤ n →
       ∃ c : R, algebraMap R K c = algebraMap R K r * α ^ n) :
     Nonempty (AlmostIntegralSeriesData R K α r) := by
-  sorry
+  classical
+  choose c hc using fun n : {n : ℕ // 1 ≤ n} => hpow n n.property
+  refine ⟨⟨fun n => if h : n = 0 then r else c ⟨n, Nat.one_le_iff_ne_zero.mpr h⟩, ?_⟩⟩
+  intro n
+  by_cases hn : n = 0
+  · subst n
+    simp
+  · simpa [hn] using hc ⟨n, Nat.one_le_iff_ne_zero.mpr hn⟩
 
 theorem almostIntegralSeries_factorization
     (R : Type u) (K : Type v) [CommRing R] [IsDomain R] [Field K]
@@ -1307,7 +1774,15 @@ theorem almostIntegralSeries_factorization
     (hα : algebraMap R K a = α * algebraMap R K b) :
     (PowerSeries.C a * PowerSeries.X - PowerSeries.C b) *
         almostIntegralSeries d = PowerSeries.C (-r * b) := by
-  sorry
+  have hb' : b ≠ 0 := hb
+  refine PowerSeries.ext (fun n => ?_)
+  rcases n with _ | n <;>
+    rw [sub_mul, map_sub] <;>
+    simp [almostIntegralSeries, PowerSeries.coeff_C_mul,
+      PowerSeries.coeff_succ_X_mul, mul_assoc] <;>
+    apply (IsFractionRing.injective R K) <;>
+    simp [map_mul, d.coefficient_spec, hα, pow_succ] <;>
+    ring
 
 /-
 The multiplicative subset used in the proof consists of polynomials whose
@@ -1343,7 +1818,128 @@ theorem almostIntegralPolynomialLocalization_faithfullyFlat
     (R : Type u) [CommRing R] [IsDomain R]
     (hflat : Module.Flat (Polynomial R) (PowerSeries R)) :
     RingHom.FaithfullyFlat (almostIntegralPolynomialLocalizationMap R) := by
-  sorry
+  rw [← (almostIntegralPolynomialLocalizationMap R).algebraMap_toAlgebra,
+    RingHom.faithfullyFlat_algebraMap_iff]
+  let _ : IsScalarTower (Polynomial R) (almostIntegralPolynomialLocalization R)
+      (PowerSeries R) :=
+    ⟨fun p x z => by
+      simp only [Algebra.smul_def]
+      rw [map_mul, mul_assoc]
+      exact congrArg
+        (fun q : PowerSeries R =>
+          q * (algebraMap (almostIntegralPolynomialLocalization R)
+            (PowerSeries R) x * z))
+        (by
+          change almostIntegralPolynomialLocalizationMap R
+            (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R) p) = _
+          rw [almostIntegralPolynomialLocalizationMap, IsLocalization.lift_eq]
+          rfl)⟩
+  rw [Module.FaithfullyFlat.iff_flat_and_proper_ideal]
+  refine ⟨(Module.flat_iff_of_isLocalization
+    (almostIntegralPolynomialLocalization R)
+    (almostIntegralDenominatorSubmonoid R)
+    (PowerSeries R)).mpr hflat, ?_⟩
+  intro I hI
+  rw [Ideal.smul_top_eq_map]
+  intro htop
+  have h1B : (1 : PowerSeries R) ∈
+      Ideal.map (almostIntegralPolynomialLocalizationMap R) I := by
+    have h1 : (1 : PowerSeries R) ∈
+        Submodule.restrictScalars (almostIntegralPolynomialLocalization R)
+          (Ideal.map (algebraMap (almostIntegralPolynomialLocalization R)
+            (PowerSeries R)) I) := by
+      rw [htop]
+      trivial
+    exact h1
+  let g := PowerSeries.constantCoeff.comp
+    (almostIntegralPolynomialLocalizationMap R)
+  have hmem : (1 : R) ∈ Ideal.map g I := by
+    have h' := Ideal.mem_map_of_mem PowerSeries.constantCoeff h1B
+    simpa only [g, PowerSeries.constantCoeff_one, Ideal.map_map] using h'
+  have himage : g '' (I : Set _) = Set.range (fun x : I => g x) := by
+    ext y
+    constructor
+    · rintro ⟨x, hx, rfl⟩
+      exact ⟨⟨x, hx⟩, rfl⟩
+    · rintro ⟨x, rfl⟩
+      exact ⟨x, x.2, rfl⟩
+  rw [Ideal.map, himage] at hmem
+  obtain ⟨c, hc⟩ :=
+    (Finsupp.mem_ideal_span_range_iff_exists_finsupp).mp hmem
+  let t : almostIntegralPolynomialLocalization R :=
+    c.sum (fun i a =>
+      algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R)
+        (Polynomial.C a) * (i : _))
+  have ht : t ∈ I := by
+    apply I.sum_mem
+    intro i hi
+    exact I.mul_mem_left _ i.2
+  have h_alg (a : R) :
+      PowerSeries.constantCoeff
+        ((almostIntegralPolynomialLocalizationMap R)
+          (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R)
+            (Polynomial.C a))) = a := by
+    rw [almostIntegralPolynomialLocalizationMap, IsLocalization.lift_eq]
+    simp
+  have htc : g t = 1 := by
+    simp only [g, t]
+    rw [Finsupp.sum, map_sum]
+    calc
+      _ = ∑ x ∈ c.support,
+          c x * (PowerSeries.constantCoeff.comp
+            (almostIntegralPolynomialLocalizationMap R)) (x : _) := by
+        apply Finset.sum_congr rfl
+        intro x hx
+        rw [map_mul]
+        change PowerSeries.constantCoeff
+            ((almostIntegralPolynomialLocalizationMap R)
+              (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R)
+                (Polynomial.C (c x)))) *
+            (PowerSeries.constantCoeff.comp
+              (almostIntegralPolynomialLocalizationMap R)) (x : _) =
+          c x * (PowerSeries.constantCoeff.comp
+            (almostIntegralPolynomialLocalizationMap R)) (x : _)
+        rw [h_alg]
+      _ = 1 := by
+        simpa only [Finsupp.sum] using hc
+  have hg (p : Polynomial R) :
+      g (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R) p) =
+        Polynomial.constantCoeff p := by
+    change PowerSeries.constantCoeff
+      ((almostIntegralPolynomialLocalizationMap R)
+        (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R) p)) =
+      Polynomial.constantCoeff p
+    rw [almostIntegralPolynomialLocalizationMap, IsLocalization.lift_eq]
+    rfl
+  have hmcc (m : almostIntegralDenominatorSubmonoid R) :
+      Polynomial.constantCoeff (m : Polynomial R) = 1 := by
+    have hm' := m.property
+    change Polynomial.constantCoeff (m : Polynomial R) ∈
+      Submonoid.powers (1 : R) at hm'
+    rcases (Submonoid.mem_powers_iff _ _).mp hm' with ⟨n, hn⟩
+    rw [← hn]
+    simp
+  have hunit (s : almostIntegralPolynomialLocalization R)
+      (hs : g s = 1) : IsUnit s := by
+    obtain ⟨⟨p, m⟩, hm⟩ :=
+      IsLocalization.surj (almostIntegralDenominatorSubmonoid R) s
+    have hpcc : Polynomial.constantCoeff p = 1 := by
+      have h := congrArg g hm
+      simpa [map_mul, hs, hg (m : Polynomial R), hg p, hmcc m] using h.symm
+    have hpM : p ∈ almostIntegralDenominatorSubmonoid R := by
+      change Polynomial.constantCoeff p ∈ Submonoid.powers (1 : R)
+      rw [hpcc]
+      exact Submonoid.one_mem _
+    have hpunit : IsUnit
+        (algebraMap (Polynomial R) (almostIntegralPolynomialLocalization R) p) :=
+      IsLocalization.map_units (almostIntegralPolynomialLocalization R) ⟨p, hpM⟩
+    exact isUnit_of_mul_isUnit_left (hm.symm ▸ hpunit)
+  have hunit_t := hunit t htc
+  rcases (isUnit_iff_exists_inv.mp hunit_t) with ⟨u, hu⟩
+  apply hI
+  apply I.eq_top_iff_one.mpr
+  rw [← hu]
+  simpa [mul_comm] using I.mul_mem_left u ht
 
 def almostIntegralPrincipalPolynomial (R : Type u) [CommRing R]
     (a b : R) : Ideal (Polynomial R) :=

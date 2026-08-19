@@ -766,7 +766,7 @@ theorem coherentRing_characterization
           Module.Finite R (P : Type u) ↔
             ∀ A : Type (max u v),
               Function.Surjective (tensorModulePowerMap P (A := A)) :=
-        (finite_generation_tensor_iff.{u, v, u} P).out 0 3
+        (finite_generation_tensor_iff.{u, v, u, u} P).out 0 3
           (a := Module.Finite R (P : Type u))
           (b := ∀ A : Type (max u v),
             Function.Surjective (tensorModulePowerMap P (A := A)))
@@ -776,7 +776,7 @@ theorem coherentRing_characterization
     have hcrit :
         Module.FinitePresentation R (P : Type u) ↔
           ∀ A : Type (max u v), Function.Bijective (tensorModulePowerMap P (A := A)) :=
-      (finite_presentation_tensor_iff.{u, v, u} P).out 0 3
+      (finite_presentation_tensor_iff.{u, v, u, u} P).out 0 3
         (a := Module.FinitePresentation R (P : Type u))
         (b := ∀ A : Type (max u v),
           Function.Bijective (tensorModulePowerMap P (A := A)))

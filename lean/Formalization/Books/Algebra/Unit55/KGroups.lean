@@ -2450,13 +2450,1461 @@ private theorem prodComponent₂.projective {R₁ R₂ : Type u} [CommRing R₁]
   simpa [q₂, i₂, prodComponentMap₂] using h
 -/
 
+/- A non-reducible wrapper is used in the inverse functors, so that a module
+which already carries an action of the product ring cannot accidentally select
+that action instead of the action through a projection. -/
+private structure prodFactor₁ (R₂ : Type u) (M : Type u) where
+  val : M
+
+private structure prodFactor₂ (R₁ : Type u) (M : Type u) where
+  val : M
+
+private def prodFactor₁.equiv {R₂ M : Type u} : prodFactor₁ R₂ M ≃ M where
+  toFun := prodFactor₁.val
+  invFun := prodFactor₁.mk
+  left_inv := by intro x; cases x; rfl
+  right_inv := by intro x; rfl
+
+private def prodFactor₂.equiv {R₁ M : Type u} : prodFactor₂ R₁ M ≃ M where
+  toFun := prodFactor₂.val
+  invFun := prodFactor₂.mk
+  left_inv := by intro x; cases x; rfl
+  right_inv := by intro x; rfl
+
+private theorem prodFactor₁.ext {R₂ M : Type u} {x y : prodFactor₁ R₂ M}
+    (h : x.val = y.val) : x = y := by
+  cases x
+  cases y
+  cases h
+  rfl
+
+private theorem prodFactor₂.ext {R₁ M : Type u} {x y : prodFactor₂ R₁ M}
+    (h : x.val = y.val) : x = y := by
+  cases x
+  cases y
+  cases h
+  rfl
+
+private instance prodFactor₁.addCommGroup
+    {R₂ M : Type u} [AddCommGroup M] : AddCommGroup (prodFactor₁ R₂ M) :=
+  prodFactor₁.equiv.addCommGroup
+
+private instance prodFactor₂.addCommGroup
+    {R₁ M : Type u} [AddCommGroup M] : AddCommGroup (prodFactor₂ R₁ M) :=
+  prodFactor₂.equiv.addCommGroup
+
+private instance prodFactor₁.module
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] : Module (R₁ × R₂) (prodFactor₁ R₂ M) := by
+  letI : Module (R₁ × R₂) M := Module.compHom M (RingHom.fst R₁ R₂)
+  exact prodFactor₁.equiv.module (R₁ × R₂)
+
+private instance prodFactor₂.module
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] : Module (R₁ × R₂) (prodFactor₂ R₁ M) := by
+  letI : Module (R₁ × R₂) M := Module.compHom M (RingHom.snd R₁ R₂)
+  exact prodFactor₂.equiv.module (R₁ × R₂)
+
+@[simp] private theorem prodFactor₁.val_smul
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] (r : R₁ × R₂) (x : prodFactor₁ R₂ M) :
+    (r • x).val = r.1 • x.val := rfl
+
+@[simp] private theorem prodFactor₂.val_smul
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] (r : R₁ × R₂) (x : prodFactor₂ R₁ M) :
+    (r • x).val = r.2 • x.val := rfl
+
+private def prodFactorMap₁
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [AddCommGroup N] [Module R₁ N]
+    (f : M →ₗ[R₁] N) : prodFactor₁ R₂ M →ₗ[R₁ × R₂] prodFactor₁ R₂ N :=
+  { toFun := fun x ↦ ⟨f x.val⟩
+    map_add' := by intro x y; apply prodFactor₁.equiv.injective; exact f.map_add x.val y.val
+    map_smul' := by intro r x; apply prodFactor₁.equiv.injective; exact f.map_smul r.1 x.val }
+
+private def prodFactorMap₂
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [AddCommGroup N] [Module R₂ N]
+    (f : M →ₗ[R₂] N) : prodFactor₂ R₁ M →ₗ[R₁ × R₂] prodFactor₂ R₁ N :=
+  { toFun := fun x ↦ ⟨f x.val⟩
+    map_add' := by intro x y; apply prodFactor₂.equiv.injective; exact f.map_add x.val y.val
+    map_smul' := by intro r x; apply prodFactor₂.equiv.injective; exact f.map_smul r.2 x.val }
+
+private instance prodFactor₁.finite
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [Module.Finite R₁ M] :
+    Module.Finite (R₁ × R₂) (prodFactor₁ R₂ M) := by
+  rcases Module.Finite.exists_fin (R := R₁) (M := M) with ⟨n, s, hs⟩
+  let s' : Fin n → prodFactor₁ R₂ M := fun i ↦ ⟨s i⟩
+  refine ⟨Submodule.fg_def.mpr ⟨Set.range s', Set.finite_range s', ?_⟩⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hx' : x.val ∈ Submodule.span R₁ (Set.range s) := by
+    rw [hs]
+    exact Submodule.mem_top
+  have hmem : (⟨x.val⟩ : prodFactor₁ R₂ M) ∈
+      Submodule.span (R₁ × R₂) (Set.range s') := by
+    refine Submodule.span_induction (p := fun z _ ↦
+        (⟨z⟩ : prodFactor₁ R₂ M) ∈
+          Submodule.span (R₁ × R₂) (Set.range s')) ?_ ?_ ?_ ?_ hx'
+    · intro z hz
+      rcases hz with ⟨i, rfl⟩
+      exact Submodule.subset_span ⟨i, rfl⟩
+    · exact Submodule.zero_mem _
+    · intro a b ha hb hma hmb
+      exact Submodule.add_mem _ hma hmb
+    · intro r z hz hm
+      have hsmul : (⟨r • z⟩ : prodFactor₁ R₂ M) =
+          ((r, (0 : R₂)) : R₁ × R₂) • (⟨z⟩ : prodFactor₁ R₂ M) := by
+        apply prodFactor₁.ext
+        rfl
+      rw [hsmul]
+      exact Submodule.smul_mem _ _ hm
+  cases x
+  exact hmem
+
+private instance prodFactor₂.finite
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [Module.Finite R₂ M] :
+    Module.Finite (R₁ × R₂) (prodFactor₂ R₁ M) := by
+  rcases Module.Finite.exists_fin (R := R₂) (M := M) with ⟨n, s, hs⟩
+  let s' : Fin n → prodFactor₂ R₁ M := fun i ↦ ⟨s i⟩
+  refine ⟨Submodule.fg_def.mpr ⟨Set.range s', Set.finite_range s', ?_⟩⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hx' : x.val ∈ Submodule.span R₂ (Set.range s) := by
+    rw [hs]
+    exact Submodule.mem_top
+  have hmem : (⟨x.val⟩ : prodFactor₂ R₁ M) ∈
+      Submodule.span (R₁ × R₂) (Set.range s') := by
+    refine Submodule.span_induction (p := fun z _ ↦
+        (⟨z⟩ : prodFactor₂ R₁ M) ∈
+          Submodule.span (R₁ × R₂) (Set.range s')) ?_ ?_ ?_ ?_ hx'
+    · intro z hz
+      rcases hz with ⟨i, rfl⟩
+      exact Submodule.subset_span ⟨i, rfl⟩
+    · exact Submodule.zero_mem _
+    · intro a b ha hb hma hmb
+      exact Submodule.add_mem _ hma hmb
+    · intro r z hz hm
+      have hsmul : (⟨r • z⟩ : prodFactor₂ R₁ M) =
+          (((0 : R₁), r) : R₁ × R₂) • (⟨z⟩ : prodFactor₂ R₁ M) := by
+        apply prodFactor₂.ext
+        rfl
+      rw [hsmul]
+      exact Submodule.smul_mem _ _ hm
+  cases x
+  exact hmem
+
+private theorem prodComponentMap₁.injective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) (hf : Function.Injective f) :
+    Function.Injective (prodComponentMap₁ f) := by
+  intro x y hxy
+  apply Subtype.ext
+  apply hf
+  exact congrArg Subtype.val hxy
+
+private theorem prodComponentMap₂.injective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) (hf : Function.Injective f) :
+    Function.Injective (prodComponentMap₂ f) := by
+  intro x y hxy
+  apply Subtype.ext
+  apply hf
+  exact congrArg Subtype.val hxy
+
+private theorem prodComponentMap₁.surjective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) (hf : Function.Surjective f) :
+    Function.Surjective (prodComponentMap₁ f) := by
+  intro y
+  obtain ⟨x, hx⟩ := hf (y : N)
+  refine ⟨⟨prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M) x, ⟨x, rfl⟩⟩, ?_⟩
+  apply Subtype.ext
+  dsimp [prodComponentMap₁]
+  have hy : prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (y : N) = (y : N) := by
+    rcases y.property with ⟨z, hz⟩
+    rw [← hz]
+    simp [prodEnd₁, prodIdem₁, smul_smul]
+  calc
+    f (prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M) x) =
+        prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (f x) := by
+      simpa only [prodEnd₁, prodIdem₁, LinearMap.lsmul_apply] using
+        f.map_smul (prodIdem₁ (R₁ := R₁) (R₂ := R₂)) x
+    _ = prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (y : N) := congrArg _ hx
+    _ = (y : N) := hy
+
+private theorem prodComponentMap₂.surjective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) (hf : Function.Surjective f) :
+    Function.Surjective (prodComponentMap₂ f) := by
+  intro y
+  obtain ⟨x, hx⟩ := hf (y : N)
+  refine ⟨⟨prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M) x, ⟨x, rfl⟩⟩, ?_⟩
+  apply Subtype.ext
+  dsimp [prodComponentMap₂]
+  have hy : prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (y : N) = (y : N) := by
+    rcases y.property with ⟨z, hz⟩
+    rw [← hz]
+    simp [prodEnd₂, prodIdem₂, smul_smul]
+  calc
+    f (prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M) x) =
+        prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (f x) := by
+      simpa only [prodEnd₂, prodIdem₂, LinearMap.lsmul_apply] using
+        f.map_smul (prodIdem₂ (R₁ := R₁) (R₂ := R₂)) x
+    _ = prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (y : N) := congrArg _ hx
+    _ = (y : N) := hy
+
+private theorem prodComponentMap₁.exact
+    {R₁ R₂ M N P : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    [AddCommGroup P] [Module (R₁ × R₂) P]
+    (f : M →ₗ[R₁ × R₂] N) (g : N →ₗ[R₁ × R₂] P)
+    (hfg : Function.Exact f g) :
+    Function.Exact (prodComponentMap₁ f) (prodComponentMap₁ g) := by
+  intro x
+  constructor
+  · intro hx
+    have hx' : g (x : N) = 0 := congrArg Subtype.val hx
+    obtain ⟨y, hy⟩ := (hfg (x : N)).mp hx'
+    refine ⟨⟨prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M) y, ⟨y, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    dsimp [prodComponentMap₁]
+    have hxcomp : prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (x : N) = (x : N) := by
+      rcases x.property with ⟨z, hz⟩
+      rw [← hz]
+      simp [prodEnd₁, prodIdem₁, smul_smul]
+    calc
+      f (prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M) y) =
+          prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (f y) := by
+        simpa only [prodEnd₁, prodIdem₁, LinearMap.lsmul_apply] using
+          f.map_smul (prodIdem₁ (R₁ := R₁) (R₂ := R₂)) y
+      _ = prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := N) (x : N) := congrArg _ hy
+      _ = (x : N) := hxcomp
+  · rintro ⟨y, rfl⟩
+    apply Subtype.ext
+    exact hfg.apply_apply_eq_zero y
+
+private theorem prodComponentMap₂.exact
+    {R₁ R₂ M N P : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N]
+    [AddCommGroup P] [Module (R₁ × R₂) P]
+    (f : M →ₗ[R₁ × R₂] N) (g : N →ₗ[R₁ × R₂] P)
+    (hfg : Function.Exact f g) :
+    Function.Exact (prodComponentMap₂ f) (prodComponentMap₂ g) := by
+  intro x
+  constructor
+  · intro hx
+    have hx' : g (x : N) = 0 := congrArg Subtype.val hx
+    obtain ⟨y, hy⟩ := (hfg (x : N)).mp hx'
+    refine ⟨⟨prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M) y, ⟨y, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    dsimp [prodComponentMap₂]
+    have hxcomp : prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (x : N) = (x : N) := by
+      rcases x.property with ⟨z, hz⟩
+      rw [← hz]
+      simp [prodEnd₂, prodIdem₂, smul_smul]
+    calc
+      f (prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M) y) =
+          prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (f y) := by
+        simpa only [prodEnd₂, prodIdem₂, LinearMap.lsmul_apply] using
+          f.map_smul (prodIdem₂ (R₁ := R₁) (R₂ := R₂)) y
+      _ = prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := N) (x : N) := congrArg _ hy
+      _ = (x : N) := hxcomp
+  · rintro ⟨y, rfl⟩
+    apply Subtype.ext
+    exact hfg.apply_apply_eq_zero y
+
+private instance prodFactor₁.projective
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [Module.Projective R₁ M] :
+    Module.Projective (R₁ × R₂) (prodFactor₁ R₂ M) := by
+  apply Module.Projective.of_lifting_property
+  intro N Q _ _ _ _ f g hf
+  let f₁ := prodComponentMap₁ (R₁ := R₁) (R₂ := R₂) f
+  let g₁ : M →ₗ[R₁] prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := Q) :=
+    { toFun := fun x ↦ ⟨g ⟨x⟩, ⟨g ⟨x⟩, by
+          rw [prodEnd₁, LinearMap.lsmul_apply, prodIdem₁, ← g.map_smul]
+          congr 1
+          apply prodFactor₁.ext
+          simp⟩⟩
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        exact g.map_add ⟨x⟩ ⟨y⟩
+      map_smul' := by
+        intro r x
+        apply Subtype.ext
+        change g ⟨r • x⟩ = ((r, (0 : R₂)) : R₁ × R₂) • g ⟨x⟩
+        rw [← g.map_smul]
+        congr 1 }
+  have hf₁ : Function.Surjective f₁ :=
+    prodComponentMap₁.surjective f hf
+  obtain ⟨h₁, hh₁⟩ := Module.projective_lifting_property f₁ g₁ hf₁
+  let h : prodFactor₁ R₂ M →ₗ[R₁ × R₂] N :=
+    { toFun := fun x ↦ (h₁ x.val : N)
+      map_add' := by
+        intro x y
+        exact congrArg Subtype.val (h₁.map_add x.val y.val)
+      map_smul' := by
+        intro r x
+        rw [prodFactor₁.val_smul, h₁.map_smul]
+        rcases (h₁ x.val).property with ⟨z, hz⟩
+        change (((r.1, (0 : R₂)) : R₁ × R₂) • (h₁ x.val : N)) =
+          r • (h₁ x.val : N)
+        rw [← hz]
+        change ((r.1, (0 : R₂)) : R₁ × R₂) •
+            (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • z) =
+          r • (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • z)
+        rw [smul_smul, smul_smul]
+        congr 1
+        ext <;> simp [prodIdem₁] }
+  refine ⟨h, ?_⟩
+  apply LinearMap.ext
+  intro x
+  have hx := LinearMap.congr_fun hh₁ x.val
+  exact congrArg Subtype.val hx
+
+private instance prodFactor₂.projective
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [Module.Projective R₂ M] :
+    Module.Projective (R₁ × R₂) (prodFactor₂ R₁ M) := by
+  apply Module.Projective.of_lifting_property
+  intro N Q _ _ _ _ f g hf
+  let f₂ := prodComponentMap₂ (R₁ := R₁) (R₂ := R₂) f
+  let g₂ : M →ₗ[R₂] prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := Q) :=
+    { toFun := fun x ↦ ⟨g ⟨x⟩, ⟨g ⟨x⟩, by
+          rw [prodEnd₂, LinearMap.lsmul_apply, prodIdem₂, ← g.map_smul]
+          congr 1
+          apply prodFactor₂.ext
+          simp⟩⟩
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        exact g.map_add ⟨x⟩ ⟨y⟩
+      map_smul' := by
+        intro r x
+        apply Subtype.ext
+        change g ⟨r • x⟩ = (((0 : R₁), r) : R₁ × R₂) • g ⟨x⟩
+        rw [← g.map_smul]
+        congr 1 }
+  have hf₂ : Function.Surjective f₂ :=
+    prodComponentMap₂.surjective f hf
+  obtain ⟨h₂, hh₂⟩ := Module.projective_lifting_property f₂ g₂ hf₂
+  let h : prodFactor₂ R₁ M →ₗ[R₁ × R₂] N :=
+    { toFun := fun x ↦ (h₂ x.val : N)
+      map_add' := by
+        intro x y
+        exact congrArg Subtype.val (h₂.map_add x.val y.val)
+      map_smul' := by
+        intro r x
+        rw [prodFactor₂.val_smul, h₂.map_smul]
+        rcases (h₂ x.val).property with ⟨z, hz⟩
+        change ((((0 : R₁), r.2) : R₁ × R₂) • (h₂ x.val : N)) =
+          r • (h₂ x.val : N)
+        rw [← hz]
+        change (((0 : R₁), r.2) : R₁ × R₂) •
+            (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • z) =
+          r • (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • z)
+        rw [smul_smul, smul_smul]
+        congr 1
+        ext <;> simp [prodIdem₂] }
+  refine ⟨h, ?_⟩
+  apply LinearMap.ext
+  intro x
+  have hx := LinearMap.congr_fun hh₂ x.val
+  exact congrArg Subtype.val hx
+
+private theorem prodFactorMap₁.injective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [AddCommGroup N] [Module R₁ N]
+    (f : M →ₗ[R₁] N) (hf : Function.Injective f) :
+    Function.Injective (prodFactorMap₁ (R₂ := R₂) f) := by
+  intro x y hxy
+  apply prodFactor₁.equiv.injective
+  apply hf
+  exact congrArg prodFactor₁.val hxy
+
+private theorem prodFactorMap₂.injective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [AddCommGroup N] [Module R₂ N]
+    (f : M →ₗ[R₂] N) (hf : Function.Injective f) :
+    Function.Injective (prodFactorMap₂ (R₁ := R₁) f) := by
+  intro x y hxy
+  apply prodFactor₂.equiv.injective
+  apply hf
+  exact congrArg prodFactor₂.val hxy
+
+private theorem prodFactorMap₁.surjective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [AddCommGroup N] [Module R₁ N]
+    (f : M →ₗ[R₁] N) (hf : Function.Surjective f) :
+    Function.Surjective (prodFactorMap₁ (R₂ := R₂) f) := by
+  rintro ⟨y⟩
+  obtain ⟨x, rfl⟩ := hf y
+  exact ⟨⟨x⟩, rfl⟩
+
+private theorem prodFactorMap₂.surjective
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [AddCommGroup N] [Module R₂ N]
+    (f : M →ₗ[R₂] N) (hf : Function.Surjective f) :
+    Function.Surjective (prodFactorMap₂ (R₁ := R₁) f) := by
+  rintro ⟨y⟩
+  obtain ⟨x, rfl⟩ := hf y
+  exact ⟨⟨x⟩, rfl⟩
+
+private theorem prodFactorMap₁.exact
+    {R₁ R₂ M N P : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M]
+    [AddCommGroup N] [Module R₁ N]
+    [AddCommGroup P] [Module R₁ P]
+    (f : M →ₗ[R₁] N) (g : N →ₗ[R₁] P) (hfg : Function.Exact f g) :
+    Function.Exact (prodFactorMap₁ (R₂ := R₂) f) (prodFactorMap₁ (R₂ := R₂) g) := by
+  rintro ⟨x⟩
+  constructor
+  · intro hx
+    have hx' : g x = 0 := congrArg prodFactor₁.val hx
+    obtain ⟨y, hy⟩ := (hfg x).mp hx'
+    exact ⟨⟨y⟩, prodFactor₁.equiv.injective hy⟩
+  · rintro ⟨⟨y⟩, hy⟩
+    apply prodFactor₁.equiv.injective
+    exact (hfg x).mpr ⟨y, congrArg prodFactor₁.val hy⟩
+
+private theorem prodFactorMap₂.exact
+    {R₁ R₂ M N P : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M]
+    [AddCommGroup N] [Module R₂ N]
+    [AddCommGroup P] [Module R₂ P]
+    (f : M →ₗ[R₂] N) (g : N →ₗ[R₂] P) (hfg : Function.Exact f g) :
+    Function.Exact (prodFactorMap₂ (R₁ := R₁) f) (prodFactorMap₂ (R₁ := R₁) g) := by
+  rintro ⟨x⟩
+  constructor
+  · intro hx
+    have hx' : g x = 0 := congrArg prodFactor₂.val hx
+    obtain ⟨y, hy⟩ := (hfg x).mp hx'
+    exact ⟨⟨y⟩, prodFactor₂.equiv.injective hy⟩
+  · rintro ⟨⟨y⟩, hy⟩
+    apply prodFactor₂.equiv.injective
+    exact (hfg x).mpr ⟨y, congrArg prodFactor₂.val hy⟩
+
+private def prodFactor₁.componentEquiv
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] :
+    prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₁ R₂ M) ≃ₗ[R₁] M :=
+  { toFun := fun x ↦ x.val.val
+    invFun := fun x ↦ ⟨⟨x⟩, ⟨⟨x⟩, by
+        rw [prodEnd₁, LinearMap.lsmul_apply, prodIdem₁]
+        apply prodFactor₁.ext
+        simp⟩⟩
+    left_inv := by intro x; apply Subtype.ext; cases x.val; rfl
+    right_inv := by intro x; rfl
+    map_add' := by intro x y; rfl
+    map_smul' := by intro r x; rfl }
+
+private def prodFactor₂.componentEquiv
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] :
+    prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₂ R₁ M) ≃ₗ[R₂] M :=
+  { toFun := fun x ↦ x.val.val
+    invFun := fun x ↦ ⟨⟨x⟩, ⟨⟨x⟩, by
+        rw [prodEnd₂, LinearMap.lsmul_apply, prodIdem₂]
+        apply prodFactor₂.ext
+        simp⟩⟩
+    left_inv := by intro x; apply Subtype.ext; cases x.val; rfl
+    right_inv := by intro x; rfl
+    map_add' := by intro x y; rfl
+    map_smul' := by intro r x; rfl }
+
+private theorem prodFactor₁.otherComponent_subsingleton
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] :
+    Subsingleton (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₁ R₂ M)) := by
+  constructor
+  intro x y
+  apply Subtype.ext
+  apply prodFactor₁.ext
+  have hx : x.val.val = 0 := by
+    rcases x.property with ⟨z, hz⟩
+    rw [← congrArg prodFactor₁.val hz]
+    simp [prodEnd₂, prodIdem₂]
+  have hy : y.val.val = 0 := by
+    rcases y.property with ⟨z, hz⟩
+    rw [← congrArg prodFactor₁.val hz]
+    simp [prodEnd₂, prodIdem₂]
+  exact hx.trans hy.symm
+
+private theorem prodFactor₂.otherComponent_subsingleton
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] :
+    Subsingleton (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₂ R₁ M)) := by
+  constructor
+  intro x y
+  apply Subtype.ext
+  apply prodFactor₂.ext
+  have hx : x.val.val = 0 := by
+    rcases x.property with ⟨z, hz⟩
+    rw [← congrArg prodFactor₂.val hz]
+    simp [prodEnd₁, prodIdem₁]
+  have hy : y.val.val = 0 := by
+    rcases y.property with ⟨z, hz⟩
+    rw [← congrArg prodFactor₂.val hz]
+    simp [prodEnd₁, prodIdem₁]
+  exact hx.trans hy.symm
+
+private theorem module_projective_of_subsingleton
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] [Subsingleton M] :
+    Module.Projective R M := by
+  apply Module.Projective.of_lifting_property
+  intro N P _ _ _ _ f g hf
+  refine ⟨0, ?_⟩
+  apply LinearMap.ext
+  intro x
+  rw [Subsingleton.elim x 0]
+  simp
+
+private def prodFactorComponent₁.linearEquiv
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] :
+    prodFactor₁ R₂ (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) ≃ₗ[R₁ × R₂]
+      prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M) :=
+  { toFun := prodFactor₁.val
+    invFun := prodFactor₁.mk
+    left_inv := by intro x; cases x; rfl
+    right_inv := by intro x; rfl
+    map_add' := by intro x y; rfl
+    map_smul' := by
+      intro r x
+      rw [prodFactor₁.val_smul]
+      apply Subtype.ext
+      rcases x.val.property with ⟨z, hz⟩
+      change ((r.1, (0 : R₂)) : R₁ × R₂) • (x.val : M) = r • (x.val : M)
+      rw [← hz]
+      change (r.1, (0 : R₂)) •
+          (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • z) =
+        r • (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • z)
+      rw [smul_smul, smul_smul]
+      congr 1
+      ext <;> simp [prodIdem₁] }
+
+private def prodFactorComponent₂.linearEquiv
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] :
+    prodFactor₂ R₁ (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) ≃ₗ[R₁ × R₂]
+      prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M) :=
+  { toFun := prodFactor₂.val
+    invFun := prodFactor₂.mk
+    left_inv := by intro x; cases x; rfl
+    right_inv := by intro x; rfl
+    map_add' := by intro x y; rfl
+    map_smul' := by
+      intro r x
+      rw [prodFactor₂.val_smul]
+      apply Subtype.ext
+      rcases x.val.property with ⟨z, hz⟩
+      change (((0 : R₁), r.2) : R₁ × R₂) • (x.val : M) = r • (x.val : M)
+      rw [← hz]
+      change ((0 : R₁), r.2) •
+          (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • z) =
+        r • (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • z)
+      rw [smul_smul, smul_smul]
+      congr 1
+      ext <;> simp [prodIdem₂] }
+
+private def prodModuleFactorDecomp
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] :
+    M ≃ₗ[R₁ × R₂]
+      (prodFactor₁ R₂ (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) ×
+        prodFactor₂ R₁ (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M))) :=
+  (prodModuleDecomp (R₁ := R₁) (R₂ := R₂) (M := M)).trans
+    (prodFactorComponent₁.linearEquiv.symm.prodCongr
+      prodFactorComponent₂.linearEquiv.symm)
+
+private def prodComponentLinearEquiv₁
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N] (e : M ≃ₗ[R₁ × R₂] N) :
+    prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M) ≃ₗ[R₁]
+      prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := N) :=
+  { toLinearMap := prodComponentMap₁ e.toLinearMap
+    invFun := prodComponentMap₁ e.symm.toLinearMap
+    left_inv := by
+      intro x
+      apply Subtype.ext
+      exact e.symm_apply_apply (x : M)
+    right_inv := by
+      intro x
+      apply Subtype.ext
+      exact e.apply_symm_apply (x : N) }
+
+private def prodComponentLinearEquiv₂
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M]
+    [AddCommGroup N] [Module (R₁ × R₂) N] (e : M ≃ₗ[R₁ × R₂] N) :
+    prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M) ≃ₗ[R₂]
+      prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := N) :=
+  { toLinearMap := prodComponentMap₂ e.toLinearMap
+    invFun := prodComponentMap₂ e.symm.toLinearMap
+    left_inv := by
+      intro x
+      apply Subtype.ext
+      exact e.symm_apply_apply (x : M)
+    right_inv := by
+      intro x
+      apply Subtype.ext
+      exact e.apply_symm_apply (x : N) }
+
+private def prodFactorLinearEquiv₁
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [AddCommGroup N] [Module R₁ N]
+    (e : M ≃ₗ[R₁] N) : prodFactor₁ R₂ M ≃ₗ[R₁ × R₂] prodFactor₁ R₂ N :=
+  { toLinearMap := prodFactorMap₁ e.toLinearMap
+    invFun := prodFactorMap₁ e.symm.toLinearMap
+    left_inv := by intro x; apply prodFactor₁.ext; exact e.symm_apply_apply x.val
+    right_inv := by intro x; apply prodFactor₁.ext; exact e.apply_symm_apply x.val }
+
+private def prodFactorLinearEquiv₂
+    {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [AddCommGroup N] [Module R₂ N]
+    (e : M ≃ₗ[R₂] N) : prodFactor₂ R₁ M ≃ₗ[R₁ × R₂] prodFactor₂ R₁ N :=
+  { toLinearMap := prodFactorMap₂ e.toLinearMap
+    invFun := prodFactorMap₂ e.symm.toLinearMap
+    left_inv := by intro x; apply prodFactor₂.ext; exact e.symm_apply_apply x.val
+    right_inv := by intro x; apply prodFactor₂.ext; exact e.apply_symm_apply x.val }
+
+private def kPrimeZeroProdComponentsOnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZeroFree (R₁ × R₂) →+ (KPrimeZero R₁ × KPrimeZero R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    let _ : Module.Finite R₁
+        (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+      prodComponent₁.finite
+    let _ : Module.Finite R₂
+        (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+      prodComponent₂.finite
+    (kPrimeZeroClass (R := R₁)
+        (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)),
+      kPrimeZeroClass (R := R₂)
+        (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module)))
+
+private theorem kPrimeZeroProdComponentsOnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kPrimeZeroCon (R₁ × R₂) ≤ AddCon.ker kPrimeZeroProdComponentsOnFree := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kPrimeZeroProdComponentsOnFree]
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.left.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.middle.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.right.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.left.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.middle.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.right.module)) :=
+    prodComponent₂.finite
+  apply Prod.ext
+  · exact kPrimeZeroClass_exact
+      (prodComponentMap₁ S.leftToMiddle) (prodComponentMap₁ S.middleToRight)
+      (prodComponentMap₁.injective _ S.left_injective)
+      (prodComponentMap₁.surjective _ S.middle_surjective)
+      (prodComponentMap₁.exact _ _ S.exact)
+  · exact kPrimeZeroClass_exact
+      (prodComponentMap₂ S.leftToMiddle) (prodComponentMap₂ S.middleToRight)
+      (prodComponentMap₂.injective _ S.left_injective)
+      (prodComponentMap₂.surjective _ S.middle_surjective)
+      (prodComponentMap₂.exact _ _ S.exact)
+
+private noncomputable def kPrimeZeroProdComponents
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZero (R₁ × R₂) →+ (KPrimeZero R₁ × KPrimeZero R₂) :=
+  (kPrimeZeroCon (R₁ × R₂)).lift kPrimeZeroProdComponentsOnFree
+    kPrimeZeroProdComponentsOnFree_respects_relations
+
+private def kPrimeZeroFactor₁OnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZeroFree R₁ →+ KPrimeZero (R₁ × R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ P.module)
+
+private theorem kPrimeZeroFactor₁OnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kPrimeZeroCon R₁ ≤ AddCon.ker (kPrimeZeroFactor₁OnFree (R₂ := R₂)) := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kPrimeZeroFactor₁OnFree]
+  exact kPrimeZeroClass_exact
+    (prodFactorMap₁ (R₂ := R₂) S.leftToMiddle)
+    (prodFactorMap₁ (R₂ := R₂) S.middleToRight)
+    (prodFactorMap₁.injective _ S.left_injective)
+    (prodFactorMap₁.surjective _ S.middle_surjective)
+    (prodFactorMap₁.exact _ _ S.exact)
+
+private noncomputable def kPrimeZeroFactor₁
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZero R₁ →+ KPrimeZero (R₁ × R₂) :=
+  (kPrimeZeroCon R₁).lift (kPrimeZeroFactor₁OnFree (R₂ := R₂))
+    kPrimeZeroFactor₁OnFree_respects_relations
+
+private def kPrimeZeroFactor₂OnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZeroFree R₂ →+ KPrimeZero (R₁ × R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ P.module)
+
+private theorem kPrimeZeroFactor₂OnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kPrimeZeroCon R₂ ≤ AddCon.ker (kPrimeZeroFactor₂OnFree (R₁ := R₁)) := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kPrimeZeroFactor₂OnFree]
+  exact kPrimeZeroClass_exact
+    (prodFactorMap₂ (R₁ := R₁) S.leftToMiddle)
+    (prodFactorMap₂ (R₁ := R₁) S.middleToRight)
+    (prodFactorMap₂.injective _ S.left_injective)
+    (prodFactorMap₂.surjective _ S.middle_surjective)
+    (prodFactorMap₂.exact _ _ S.exact)
+
+private noncomputable def kPrimeZeroFactor₂
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KPrimeZero R₂ →+ KPrimeZero (R₁ × R₂) :=
+  (kPrimeZeroCon R₂).lift (kPrimeZeroFactor₂OnFree (R₁ := R₁))
+    kPrimeZeroFactor₂OnFree_respects_relations
+
+private noncomputable def kPrimeZeroProdAssemble
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    (KPrimeZero R₁ × KPrimeZero R₂) →+ KPrimeZero (R₁ × R₂) where
+  toFun x := kPrimeZeroFactor₁ x.1 + kPrimeZeroFactor₂ x.2
+  map_zero' := by simp
+  map_add' := by
+    intro x y
+    change kPrimeZeroFactor₁ (x.1 + y.1) + kPrimeZeroFactor₂ (x.2 + y.2) = _
+    rw [map_add, map_add]
+    abel
+
+@[simp] private theorem kPrimeZeroProdComponents_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation (R₁ × R₂)) :
+    kPrimeZeroProdComponents (kPrimeZeroClassOfPresentation P) =
+      let _ : Module.Finite R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+        prodComponent₁.finite
+      let _ : Module.Finite R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+        prodComponent₂.finite
+      (kPrimeZeroClass (R := R₁)
+          (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)),
+        kPrimeZeroClass (R := R₂)
+          (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module))) := by
+  rfl
+
+@[simp] private theorem kPrimeZeroFactor₁_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation R₁) :
+    kPrimeZeroFactor₁ (R₂ := R₂) (kPrimeZeroClassOfPresentation P) =
+      kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ P.module) := by
+  rfl
+
+@[simp] private theorem kPrimeZeroFactor₂_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation R₂) :
+    kPrimeZeroFactor₂ (R₁ := R₁) (kPrimeZeroClassOfPresentation P) =
+      kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ P.module) := by
+  rfl
+
+private theorem kPrimeZeroProdComponents_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M] :
+    kPrimeZeroProdComponents (kPrimeZeroClass (R := R₁ × R₂) (M := M)) =
+      let _ : Module.Finite R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        prodComponent₁.finite
+      let _ : Module.Finite R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        prodComponent₂.finite
+      (kPrimeZeroClass (R := R₁)
+          (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)),
+        kPrimeZeroClass (R := R₂)
+          (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M))) := by
+  let P := Classical.choose
+    (exists_finite_module_presentation (R := R₁ × R₂) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_module_presentation (R := R₁ × R₂) (M := M)))
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    prodComponent₂.finite
+  change kPrimeZeroProdComponents (kPrimeZeroClassOfPresentation P) = _
+  rw [kPrimeZeroProdComponents_apply_presentation]
+  dsimp only
+  apply Prod.ext
+  · exact kPrimeZeroClass_eq_of_linearEquiv (prodComponentLinearEquiv₁ eP)
+  · exact kPrimeZeroClass_eq_of_linearEquiv (prodComponentLinearEquiv₂ eP)
+
+private theorem kPrimeZeroFactor₁_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [Module.Finite R₁ M] :
+    kPrimeZeroFactor₁ (R₂ := R₂) (kPrimeZeroClass (R := R₁) (M := M)) =
+      kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ M) := by
+  let P := Classical.choose (exists_finite_module_presentation (R := R₁) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_module_presentation (R := R₁) (M := M)))
+  change kPrimeZeroFactor₁ (R₂ := R₂) (kPrimeZeroClassOfPresentation P) = _
+  rw [kPrimeZeroFactor₁_apply_presentation]
+  exact kPrimeZeroClass_eq_of_linearEquiv (prodFactorLinearEquiv₁ (R₂ := R₂) eP)
+
+private theorem kPrimeZeroFactor₂_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [Module.Finite R₂ M] :
+    kPrimeZeroFactor₂ (R₁ := R₁) (kPrimeZeroClass (R := R₂) (M := M)) =
+      kPrimeZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ M) := by
+  let P := Classical.choose (exists_finite_module_presentation (R := R₂) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_module_presentation (R := R₂) (M := M)))
+  change kPrimeZeroFactor₂ (R₁ := R₁) (kPrimeZeroClassOfPresentation P) = _
+  rw [kPrimeZeroFactor₂_apply_presentation]
+  exact kPrimeZeroClass_eq_of_linearEquiv (prodFactorLinearEquiv₂ (R₁ := R₁) eP)
+
+private theorem kPrimeZeroProdComponents_factor₁_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation R₁) :
+    kPrimeZeroProdComponents
+        (kPrimeZeroFactor₁ (R₂ := R₂) (kPrimeZeroClassOfPresentation P)) =
+      (kPrimeZeroClassOfPresentation P, 0) := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₁ R₂ P.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₁ R₂ P.module)) :=
+    prodComponent₂.finite
+  rw [kPrimeZeroFactor₁_apply_presentation, kPrimeZeroProdComponents_apply_class]
+  dsimp only
+  apply Prod.ext
+  · exact (kPrimeZeroClass_eq_of_linearEquiv prodFactor₁.componentEquiv).trans
+      (kPrimeZeroClass_eq_of_presentation P)
+  · let _ : Subsingleton
+        (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₁ R₂ P.module)) :=
+      prodFactor₁.otherComponent_subsingleton
+    exact kPrimeZeroClass_subsingleton
+
+private theorem kPrimeZeroProdComponents_factor₂_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation R₂) :
+    kPrimeZeroProdComponents
+        (kPrimeZeroFactor₂ (R₁ := R₁) (kPrimeZeroClassOfPresentation P)) =
+      (0, kPrimeZeroClassOfPresentation P) := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₂ R₁ P.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₂ R₁ P.module)) :=
+    prodComponent₂.finite
+  rw [kPrimeZeroFactor₂_apply_presentation, kPrimeZeroProdComponents_apply_class]
+  dsimp only
+  apply Prod.ext
+  · let _ : Subsingleton
+        (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := prodFactor₂ R₁ P.module)) :=
+      prodFactor₂.otherComponent_subsingleton
+    exact kPrimeZeroClass_subsingleton
+  · exact (kPrimeZeroClass_eq_of_linearEquiv prodFactor₂.componentEquiv).trans
+      (kPrimeZeroClass_eq_of_presentation P)
+
+private theorem kPrimeZeroProdComponents_factor₁
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KPrimeZero R₁) :
+    kPrimeZeroProdComponents (kPrimeZeroFactor₁ (R₂ := R₂) x) = (x, 0) := by
+  rcases kPrimeZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  calc
+    ∑ i, z i • kPrimeZeroProdComponents
+        (kPrimeZeroFactor₁ (R₂ := R₂) (kPrimeZeroClassOfPresentation (P i))) =
+        ∑ i, z i • (kPrimeZeroClassOfPresentation (P i), 0) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [kPrimeZeroProdComponents_factor₁_presentation]
+    _ = (∑ i, z i • kPrimeZeroClassOfPresentation (P i), 0) := by
+      let fstHom : (KPrimeZero R₁ × KPrimeZero R₂) →+ KPrimeZero R₁ :=
+        { toFun := Prod.fst, map_zero' := rfl, map_add' := by intro a b; rfl }
+      let sndHom : (KPrimeZero R₁ × KPrimeZero R₂) →+ KPrimeZero R₂ :=
+        { toFun := Prod.snd, map_zero' := rfl, map_add' := by intro a b; rfl }
+      apply Prod.ext
+      · change fstHom (∑ i, z i • (kPrimeZeroClassOfPresentation (P i), 0)) = _
+        rw [map_sum]
+        rfl
+      · change sndHom (∑ i, z i • (kPrimeZeroClassOfPresentation (P i), 0)) = 0
+        rw [map_sum]
+        dsimp [sndHom]
+        change ∑ i : Fin n, z i • (0 : KPrimeZero R₂) = 0
+        simp
+
+private theorem kPrimeZeroProdComponents_factor₂
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KPrimeZero R₂) :
+    kPrimeZeroProdComponents (kPrimeZeroFactor₂ (R₁ := R₁) x) = (0, x) := by
+  rcases kPrimeZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  calc
+    ∑ i, z i • kPrimeZeroProdComponents
+        (kPrimeZeroFactor₂ (R₁ := R₁) (kPrimeZeroClassOfPresentation (P i))) =
+        ∑ i, z i • (0, kPrimeZeroClassOfPresentation (P i)) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [kPrimeZeroProdComponents_factor₂_presentation]
+    _ = (0, ∑ i, z i • kPrimeZeroClassOfPresentation (P i)) := by
+      let fstHom : (KPrimeZero R₁ × KPrimeZero R₂) →+ KPrimeZero R₁ :=
+        { toFun := Prod.fst, map_zero' := rfl, map_add' := by intro a b; rfl }
+      let sndHom : (KPrimeZero R₁ × KPrimeZero R₂) →+ KPrimeZero R₂ :=
+        { toFun := Prod.snd, map_zero' := rfl, map_add' := by intro a b; rfl }
+      apply Prod.ext
+      · change fstHom (∑ i, z i • (0, kPrimeZeroClassOfPresentation (P i))) = 0
+        rw [map_sum]
+        dsimp [fstHom]
+        change ∑ i : Fin n, z i • (0 : KPrimeZero R₁) = 0
+        simp
+      · change sndHom (∑ i, z i • (0, kPrimeZeroClassOfPresentation (P i))) = _
+        rw [map_sum]
+        rfl
+
+private theorem kPrimeZeroProdAssemble_components_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteModulePresentation (R₁ × R₂)) :
+    kPrimeZeroProdAssemble
+        (kPrimeZeroProdComponents (kPrimeZeroClassOfPresentation P)) =
+      kPrimeZeroClassOfPresentation P := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module)) :=
+    prodComponent₂.finite
+  rw [kPrimeZeroProdComponents_apply_presentation]
+  dsimp [kPrimeZeroProdAssemble]
+  rw [kPrimeZeroFactor₁_apply_class, kPrimeZeroFactor₂_apply_class]
+  let e := prodModuleFactorDecomp (R₁ := R₁) (R₂ := R₂) (M := P.module)
+  calc
+    kPrimeZeroClass (R := R₁ × R₂)
+          (M := prodFactor₁ R₂
+            (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module))) +
+        kPrimeZeroClass (R := R₁ × R₂)
+          (M := prodFactor₂ R₁
+            (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module))) =
+        kPrimeZeroClass (R := R₁ × R₂)
+          (M := prodFactor₁ R₂
+              (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.module)) ×
+            prodFactor₂ R₁
+              (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.module))) :=
+      kPrimeZeroClass_prod.symm
+    _ = kPrimeZeroClass (R := R₁ × R₂) (M := P.module) :=
+      (kPrimeZeroClass_eq_of_linearEquiv e).symm
+    _ = kPrimeZeroClassOfPresentation P := kPrimeZeroClass_eq_of_presentation P
+
+private theorem kPrimeZeroProdAssemble_components
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KPrimeZero (R₁ × R₂)) :
+    kPrimeZeroProdAssemble (kPrimeZeroProdComponents x) = x := by
+  rcases kPrimeZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  apply Finset.sum_congr rfl
+  intro i hi
+  rw [kPrimeZeroProdAssemble_components_presentation]
+
+private theorem kPrimeZeroProdComponents_assemble
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (x : KPrimeZero R₁ × KPrimeZero R₂) :
+    kPrimeZeroProdComponents (kPrimeZeroProdAssemble x) = x := by
+  rcases x with ⟨x₁, x₂⟩
+  change kPrimeZeroProdComponents (kPrimeZeroFactor₁ x₁ + kPrimeZeroFactor₂ x₂) =
+    (x₁, x₂)
+  rw [map_add, kPrimeZeroProdComponents_factor₁, kPrimeZeroProdComponents_factor₂]
+  simp
+
+private def kZeroProdComponentsOnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZeroFree (R₁ × R₂) →+ (KZero R₁ × KZero R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    let _ : Module.Finite R₁
+        (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+      prodComponent₁.finite
+    let _ : Module.Projective R₁
+        (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+      prodComponent₁.projective P
+    let _ : Module.Finite R₂
+        (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+      prodComponent₂.finite
+    let _ : Module.Projective R₂
+        (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+      prodComponent₂.projective P
+    (kZeroClass (R := R₁)
+        (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)),
+      kZeroClass (R := R₂)
+        (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)))
+
+private theorem kZeroProdComponentsOnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kZeroCon (R₁ × R₂) ≤ AddCon.ker kZeroProdComponentsOnFree := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kZeroProdComponentsOnFree]
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.left.presentation.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.left.presentation.module)) :=
+    prodComponent₁.projective S.left
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.middle.presentation.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.middle.presentation.module)) :=
+    prodComponent₁.projective S.middle
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.right.presentation.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := S.right.presentation.module)) :=
+    prodComponent₁.projective S.right
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.left.presentation.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.left.presentation.module)) :=
+    prodComponent₂.projective S.left
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.middle.presentation.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.middle.presentation.module)) :=
+    prodComponent₂.projective S.middle
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.right.presentation.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := S.right.presentation.module)) :=
+    prodComponent₂.projective S.right
+  apply Prod.ext
+  · exact kZeroClass_exact
+      (prodComponentMap₁ S.leftToMiddle) (prodComponentMap₁ S.middleToRight)
+      (prodComponentMap₁.injective _ S.left_injective)
+      (prodComponentMap₁.surjective _ S.middle_surjective)
+      (prodComponentMap₁.exact _ _ S.exact)
+  · exact kZeroClass_exact
+      (prodComponentMap₂ S.leftToMiddle) (prodComponentMap₂ S.middleToRight)
+      (prodComponentMap₂.injective _ S.left_injective)
+      (prodComponentMap₂.surjective _ S.middle_surjective)
+      (prodComponentMap₂.exact _ _ S.exact)
+
+private noncomputable def kZeroProdComponents
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZero (R₁ × R₂) →+ (KZero R₁ × KZero R₂) :=
+  (kZeroCon (R₁ × R₂)).lift kZeroProdComponentsOnFree
+    kZeroProdComponentsOnFree_respects_relations
+
+private def kZeroFactor₁OnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZeroFree R₁ →+ KZero (R₁ × R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    kZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ P.presentation.module)
+
+private theorem kZeroFactor₁OnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kZeroCon R₁ ≤ AddCon.ker (kZeroFactor₁OnFree (R₂ := R₂)) := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kZeroFactor₁OnFree]
+  exact kZeroClass_exact
+    (prodFactorMap₁ (R₂ := R₂) S.leftToMiddle)
+    (prodFactorMap₁ (R₂ := R₂) S.middleToRight)
+    (prodFactorMap₁.injective _ S.left_injective)
+    (prodFactorMap₁.surjective _ S.middle_surjective)
+    (prodFactorMap₁.exact _ _ S.exact)
+
+private noncomputable def kZeroFactor₁
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZero R₁ →+ KZero (R₁ × R₂) :=
+  (kZeroCon R₁).lift (kZeroFactor₁OnFree (R₂ := R₂))
+    kZeroFactor₁OnFree_respects_relations
+
+private def kZeroFactor₂OnFree
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZeroFree R₂ →+ KZero (R₁ × R₂) :=
+  FreeAbelianGroup.lift fun P ↦
+    kZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ P.presentation.module)
+
+private theorem kZeroFactor₂OnFree_respects_relations
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    kZeroCon R₂ ≤ AddCon.ker (kZeroFactor₂OnFree (R₁ := R₁)) := by
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kZeroFactor₂OnFree]
+  exact kZeroClass_exact
+    (prodFactorMap₂ (R₁ := R₁) S.leftToMiddle)
+    (prodFactorMap₂ (R₁ := R₁) S.middleToRight)
+    (prodFactorMap₂.injective _ S.left_injective)
+    (prodFactorMap₂.surjective _ S.middle_surjective)
+    (prodFactorMap₂.exact _ _ S.exact)
+
+private noncomputable def kZeroFactor₂
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    KZero R₂ →+ KZero (R₁ × R₂) :=
+  (kZeroCon R₂).lift (kZeroFactor₂OnFree (R₁ := R₁))
+    kZeroFactor₂OnFree_respects_relations
+
+private noncomputable def kZeroProdAssemble
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
+    (KZero R₁ × KZero R₂) →+ KZero (R₁ × R₂) where
+  toFun x := kZeroFactor₁ x.1 + kZeroFactor₂ x.2
+  map_zero' := by simp
+  map_add' := by
+    intro x y
+    change kZeroFactor₁ (x.1 + y.1) + kZeroFactor₂ (x.2 + y.2) = _
+    rw [map_add, map_add]
+    abel
+
+@[simp] private theorem kZeroProdComponents_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation (R₁ × R₂)) :
+    kZeroProdComponents (kZeroClassOfPresentation P) =
+      let _ : Module.Finite R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+        prodComponent₁.finite
+      let _ : Module.Projective R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+        prodComponent₁.projective P
+      let _ : Module.Finite R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+        prodComponent₂.finite
+      let _ : Module.Projective R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+        prodComponent₂.projective P
+      (kZeroClass (R := R₁)
+          (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)),
+        kZeroClass (R := R₂)
+          (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module))) := by
+  rfl
+
+@[simp] private theorem kZeroFactor₁_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation R₁) :
+    kZeroFactor₁ (R₂ := R₂) (kZeroClassOfPresentation P) =
+      kZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ P.presentation.module) := by
+  rfl
+
+@[simp] private theorem kZeroFactor₂_apply_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation R₂) :
+    kZeroFactor₂ (R₁ := R₁) (kZeroClassOfPresentation P) =
+      kZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ P.presentation.module) := by
+  rfl
+
+private theorem kZeroProdComponents_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M]
+    [Module.Projective (R₁ × R₂) M] :
+    kZeroProdComponents (kZeroClass (R := R₁ × R₂) (M := M)) =
+      let _ : Module.Finite R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        prodComponent₁.finite
+      let _ : Module.Projective R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        Classical.choice (show Nonempty (Module.Projective R₁
+          (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M))) from ⟨by
+            let P := Classical.choose
+              (exists_finite_projective_presentation (R := R₁ × R₂) (M := M))
+            let eP := Classical.choice (Classical.choose_spec
+              (exists_finite_projective_presentation (R := R₁ × R₂) (M := M)))
+            let _ : Module.Projective R₁
+                (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+              prodComponent₁.projective P
+            exact Module.Projective.of_equiv' (prodComponentLinearEquiv₁ eP)⟩)
+      let _ : Module.Finite R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        prodComponent₂.finite
+      let _ : Module.Projective R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+        Classical.choice (show Nonempty (Module.Projective R₂
+          (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M))) from ⟨by
+            let P := Classical.choose
+              (exists_finite_projective_presentation (R := R₁ × R₂) (M := M))
+            let eP := Classical.choice (Classical.choose_spec
+              (exists_finite_projective_presentation (R := R₁ × R₂) (M := M)))
+            let _ : Module.Projective R₂
+                (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+              prodComponent₂.projective P
+            exact Module.Projective.of_equiv' (prodComponentLinearEquiv₂ eP)⟩)
+      (kZeroClass (R := R₁)
+          (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)),
+        kZeroClass (R := R₂)
+          (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M))) := by
+  let P := Classical.choose
+    (exists_finite_projective_presentation (R := R₁ × R₂) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_projective_presentation (R := R₁ × R₂) (M := M)))
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₁.projective P
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₂.projective P
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    Module.Projective.of_equiv' (prodComponentLinearEquiv₁ eP)
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    Module.Projective.of_equiv' (prodComponentLinearEquiv₂ eP)
+  change kZeroProdComponents (kZeroClassOfPresentation P) = _
+  rw [kZeroProdComponents_apply_presentation]
+  dsimp only
+  apply Prod.ext
+  · exact kZeroClass_eq_of_linearEquiv (prodComponentLinearEquiv₁ eP)
+  · exact kZeroClass_eq_of_linearEquiv (prodComponentLinearEquiv₂ eP)
+
+private theorem kZeroFactor₁_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₁ M] [Module.Finite R₁ M] [Module.Projective R₁ M] :
+    kZeroFactor₁ (R₂ := R₂) (kZeroClass (R := R₁) (M := M)) =
+      kZeroClass (R := R₁ × R₂) (M := prodFactor₁ R₂ M) := by
+  let P := Classical.choose
+    (exists_finite_projective_presentation (R := R₁) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_projective_presentation (R := R₁) (M := M)))
+  change kZeroFactor₁ (R₂ := R₂) (kZeroClassOfPresentation P) = _
+  rw [kZeroFactor₁_apply_presentation]
+  exact kZeroClass_eq_of_linearEquiv (prodFactorLinearEquiv₁ (R₂ := R₂) eP)
+
+private theorem kZeroFactor₂_apply_class
+    {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module R₂ M] [Module.Finite R₂ M] [Module.Projective R₂ M] :
+    kZeroFactor₂ (R₁ := R₁) (kZeroClass (R := R₂) (M := M)) =
+      kZeroClass (R := R₁ × R₂) (M := prodFactor₂ R₁ M) := by
+  let P := Classical.choose
+    (exists_finite_projective_presentation (R := R₂) (M := M))
+  let eP := Classical.choice (Classical.choose_spec
+    (exists_finite_projective_presentation (R := R₂) (M := M)))
+  change kZeroFactor₂ (R₁ := R₁) (kZeroClassOfPresentation P) = _
+  rw [kZeroFactor₂_apply_presentation]
+  exact kZeroClass_eq_of_linearEquiv (prodFactorLinearEquiv₂ (R₁ := R₁) eP)
+
+private theorem kZeroProdComponents_factor₁_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation R₁) :
+    kZeroProdComponents (kZeroFactor₁ (R₂ := R₂) (kZeroClassOfPresentation P)) =
+      (kZeroClassOfPresentation P, 0) := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₁ R₂ P.presentation.module)) := prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₁ R₂ P.presentation.module)) :=
+    Module.Projective.of_equiv' prodFactor₁.componentEquiv.symm
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₁ R₂ P.presentation.module)) := prodComponent₂.finite
+  let _ : Subsingleton
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₁ R₂ P.presentation.module)) :=
+    prodFactor₁.otherComponent_subsingleton
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₁ R₂ P.presentation.module)) :=
+    module_projective_of_subsingleton
+  rw [kZeroFactor₁_apply_presentation, kZeroProdComponents_apply_class]
+  dsimp only
+  apply Prod.ext
+  · exact (kZeroClass_eq_of_linearEquiv prodFactor₁.componentEquiv).trans
+      (kZeroClass_eq_of_presentation P)
+  · exact kZeroClass_subsingleton
+
+private theorem kZeroProdComponents_factor₂_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation R₂) :
+    kZeroProdComponents (kZeroFactor₂ (R₁ := R₁) (kZeroClassOfPresentation P)) =
+      (0, kZeroClassOfPresentation P) := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₂ R₁ P.presentation.module)) := prodComponent₁.finite
+  let _ : Subsingleton
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₂ R₁ P.presentation.module)) :=
+    prodFactor₂.otherComponent_subsingleton
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₂ R₁ P.presentation.module)) :=
+    module_projective_of_subsingleton
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₂ R₁ P.presentation.module)) := prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := prodFactor₂ R₁ P.presentation.module)) :=
+    Module.Projective.of_equiv' prodFactor₂.componentEquiv.symm
+  rw [kZeroFactor₂_apply_presentation, kZeroProdComponents_apply_class]
+  dsimp only
+  apply Prod.ext
+  · exact kZeroClass_subsingleton
+  · exact (kZeroClass_eq_of_linearEquiv prodFactor₂.componentEquiv).trans
+      (kZeroClass_eq_of_presentation P)
+
+private theorem kZeroProdComponents_factor₁
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KZero R₁) :
+    kZeroProdComponents (kZeroFactor₁ (R₂ := R₂) x) = (x, 0) := by
+  rcases kZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  calc
+    ∑ i, z i • kZeroProdComponents
+        (kZeroFactor₁ (R₂ := R₂) (kZeroClassOfPresentation (P i))) =
+        ∑ i, z i • (kZeroClassOfPresentation (P i), 0) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [kZeroProdComponents_factor₁_presentation]
+    _ = (∑ i, z i • kZeroClassOfPresentation (P i), 0) := by
+      let fstHom : (KZero R₁ × KZero R₂) →+ KZero R₁ :=
+        { toFun := Prod.fst, map_zero' := rfl, map_add' := by intro a b; rfl }
+      let sndHom : (KZero R₁ × KZero R₂) →+ KZero R₂ :=
+        { toFun := Prod.snd, map_zero' := rfl, map_add' := by intro a b; rfl }
+      apply Prod.ext
+      · change fstHom (∑ i, z i • (kZeroClassOfPresentation (P i), 0)) = _
+        rw [map_sum]
+        rfl
+      · change sndHom (∑ i, z i • (kZeroClassOfPresentation (P i), 0)) = 0
+        rw [map_sum]
+        dsimp [sndHom]
+        change ∑ i : Fin n, z i • (0 : KZero R₂) = 0
+        simp
+
+private theorem kZeroProdComponents_factor₂
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KZero R₂) :
+    kZeroProdComponents (kZeroFactor₂ (R₁ := R₁) x) = (0, x) := by
+  rcases kZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  calc
+    ∑ i, z i • kZeroProdComponents
+        (kZeroFactor₂ (R₁ := R₁) (kZeroClassOfPresentation (P i))) =
+        ∑ i, z i • (0, kZeroClassOfPresentation (P i)) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [kZeroProdComponents_factor₂_presentation]
+    _ = (0, ∑ i, z i • kZeroClassOfPresentation (P i)) := by
+      let fstHom : (KZero R₁ × KZero R₂) →+ KZero R₁ :=
+        { toFun := Prod.fst, map_zero' := rfl, map_add' := by intro a b; rfl }
+      let sndHom : (KZero R₁ × KZero R₂) →+ KZero R₂ :=
+        { toFun := Prod.snd, map_zero' := rfl, map_add' := by intro a b; rfl }
+      apply Prod.ext
+      · change fstHom (∑ i, z i • (0, kZeroClassOfPresentation (P i))) = 0
+        rw [map_sum]
+        dsimp [fstHom]
+        change ∑ i : Fin n, z i • (0 : KZero R₁) = 0
+        simp
+      · change sndHom (∑ i, z i • (0, kZeroClassOfPresentation (P i))) = _
+        rw [map_sum]
+        rfl
+
+private theorem kZeroProdAssemble_components_presentation
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation (R₁ × R₂)) :
+    kZeroProdAssemble (kZeroProdComponents (kZeroClassOfPresentation P)) =
+      kZeroClassOfPresentation P := by
+  let _ : Module.Finite R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₁.finite
+  let _ : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₁.projective P
+  let _ : Module.Finite R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₂.finite
+  let _ : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) :=
+    prodComponent₂.projective P
+  rw [kZeroProdComponents_apply_presentation]
+  dsimp [kZeroProdAssemble]
+  rw [kZeroFactor₁_apply_class, kZeroFactor₂_apply_class]
+  let e := prodModuleFactorDecomp
+    (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)
+  calc
+    kZeroClass (R := R₁ × R₂)
+          (M := prodFactor₁ R₂
+            (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module))) +
+        kZeroClass (R := R₁ × R₂)
+          (M := prodFactor₂ R₁
+            (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module))) =
+        kZeroClass (R := R₁ × R₂)
+          (M := prodFactor₁ R₂
+              (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module)) ×
+            prodFactor₂ R₁
+              (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := P.presentation.module))) :=
+      kZeroClass_prod.symm
+    _ = kZeroClass (R := R₁ × R₂) (M := P.presentation.module) :=
+      (kZeroClass_eq_of_linearEquiv e).symm
+    _ = kZeroClassOfPresentation P := kZeroClass_eq_of_presentation P
+
+private theorem kZeroProdAssemble_components
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] (x : KZero (R₁ × R₂)) :
+    kZeroProdAssemble (kZeroProdComponents x) = x := by
+  rcases kZero_generated x with ⟨n, P, z, rfl⟩
+  simp only [map_sum, map_zsmul]
+  apply Finset.sum_congr rfl
+  intro i hi
+  rw [kZeroProdAssemble_components_presentation]
+
+private theorem kZeroProdComponents_assemble
+    {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (x : KZero R₁ × KZero R₂) :
+    kZeroProdComponents (kZeroProdAssemble x) = x := by
+  rcases x with ⟨x₁, x₂⟩
+  change kZeroProdComponents (kZeroFactor₁ x₁ + kZeroFactor₂ x₂) = (x₁, x₂)
+  rw [map_add, kZeroProdComponents_factor₁, kZeroProdComponents_factor₂]
+  simp
+
 /- Product decomposition for both K-groups. -/
 theorem kGroups_prod
     {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
     Nonempty (KZero (R₁ × R₂) ≃+ (KZero R₁ × KZero R₂)) ∧
       Nonempty (KPrimeZero (R₁ × R₂) ≃+
         (KPrimeZero R₁ × KPrimeZero R₂)) := by
-  sorry
+  constructor
+  · refine ⟨AddEquiv.ofBijective kZeroProdComponents ⟨?_, ?_⟩⟩
+    · exact Function.LeftInverse.injective (fun x ↦ kZeroProdAssemble_components x)
+    · exact Function.RightInverse.surjective (fun x ↦ kZeroProdComponents_assemble x)
+  · refine ⟨AddEquiv.ofBijective kPrimeZeroProdComponents ⟨?_, ?_⟩⟩
+    · exact Function.LeftInverse.injective (fun x ↦ kPrimeZeroProdAssemble_components x)
+    · exact Function.RightInverse.surjective (fun x ↦ kPrimeZeroProdComponents_assemble x)
 private theorem kPrimeZeroClass_eq_length_smul_artinian_local
     (R : Type u) [CommRing R] [IsArtinianRing R] [IsLocalRing R]
     {M : Type u} [AddCommGroup M] [Module R M] [Module.Finite R M] :

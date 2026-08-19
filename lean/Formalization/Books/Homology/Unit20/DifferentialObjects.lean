@@ -5,6 +5,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Homology.HomologicalComplexAbelian
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Preadditive.Transfer
+import Mathlib.CategoryTheory.Subobject.Limits
 
 /-!
 # Differential objects
@@ -645,12 +646,86 @@ abbrev differentialSelfMapD₀
     differentialSelfMapE₀ α ⟶ differentialSelfMapE₀ α :=
   (quotientDifferentialObject α).d
 
+private noncomputable def selfMapPageZeroHomologyIso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) :
+    (plainSpectralSequencePage
+      (quotientDifferentialObject α).carrier
+      (quotientDifferentialObject α).d
+      (quotientDifferentialObject α).d_squared).homology PUnit.unit ≅
+      plainDifferentialHomology (quotientDifferentialObject α) := by
+  let Q := quotientDifferentialObject α
+  let d := Q.d
+  have hd : d ≫ d = 0 := Q.d_squared
+  let P₀ : HomologicalComplex C (ComplexShape.refl PUnit.{1}) :=
+    plainSpectralSequencePage Q.carrier d hd
+  let S : ShortComplex C := P₀.sc' PUnit.unit PUnit.unit PUnit.unit
+  let k₀ : Q.carrier ⟶ kernel d := kernel.lift d d hd
+  let k : Abelian.image d ⟶ kernel d :=
+    kernel.lift d (Abelian.image.ι d) (by
+      apply (cancel_epi (Abelian.factorThruImage d)).1
+      simp only [← Category.assoc, Abelian.image.fac, hd, comp_zero])
+  have hk : k₀ = Abelian.factorThruImage d ≫ k := by
+    apply (cancel_mono (kernel.ι d)).1
+    simp [k, k₀, Category.assoc]
+  let π : kernel d ⟶ cokernel k := cokernel.π k
+  have wπ : k₀ ≫ π = 0 := by
+    rw [hk, Category.assoc, cokernel.condition, comp_zero]
+  have hπ : IsColimit (CokernelCofork.ofπ π wπ) :=
+    CokernelCofork.IsColimit.ofπ _ _
+      (fun x hx => cokernel.desc k x (by
+        apply (cancel_epi (Abelian.factorThruImage d)).1
+        simp only [← Category.assoc, ← hk, hx, comp_zero]))
+      (fun x hx => by exact cokernel.π_desc _ _ _)
+      (fun x hx b hb => by
+        apply (cancel_epi π).1
+        rw [hb, cokernel.π_desc])
+  let hData : S.LeftHomologyData :=
+    { K := kernel d
+      H := plainDifferentialHomology Q
+      i := kernel.ι d
+      π := π
+      wi := by
+        change kernel.ι d ≫ d = 0
+        exact kernel.condition d
+      hi := kernelIsKernel d
+      wπ := wπ
+      hπ := hπ }
+  exact
+    (HomologicalComplex.homologyIsoSc'
+      (plainSpectralSequencePage Q.carrier d hd)
+      PUnit.unit PUnit.unit PUnit.unit rfl rfl) ≪≫ hData.homologyIso
+
 theorem differentialSelfMap_starting_at_zero_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) :
     Nonempty (PlainSpectralSequence C 0) := by
-  sorry
+  let Q := quotientDifferentialObject α
+  let E := differentialSelfMapAssociatedSpectralSequence α
+  let P₀ := plainSpectralSequencePage Q.carrier Q.d Q.d_squared
+  have hE₁ : Nonempty (plainPageObject E 1 ≅ plainDifferentialHomology Q) :=
+    differentialSelfMap_E1 α
+  let S : PlainSpectralSequence C 0 := by
+    refine { page := ?_, iso := ?_ }
+    · intro r hr
+      exact if h : r = 0 then P₀ else E.page r (by omega)
+    · intro r r' pq hrr' hr
+      by_cases h : r = 0
+      · subst r
+        have hr' : r' = 1 := by omega
+        subst r'
+        cases pq
+        simpa [P₀] using
+          (selfMapPageZeroHomologyIso α ≪≫ (Classical.choice hE₁).symm)
+      · have hr₁ : (1 : ℤ) ≤ r := by omega
+        have hr'₀ : r' ≠ 0 := by omega
+        split
+        · rename_i hzero
+          exact (h hzero).elim
+        · convert E.iso r r' pq hrr' hr₁ using 1
+  exact ⟨S⟩
 
 def selfMapAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
@@ -658,6 +733,40 @@ def selfMapAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
       (A.carrier ⟶ A.carrier)
   | 0 => 𝟙 A.carrier
   | n + 1 => selfMapAlphaPow α n ≫ α.hom.hom
+
+private theorem selfMapAlphaPow_mono
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) :
+    ∀ n, Mono (selfMapAlphaPow α n) := by
+  letI : Mono α.hom.hom := α.injective
+  intro n
+  induction n with
+  | zero =>
+      dsimp [selfMapAlphaPow]
+      infer_instance
+  | succ n ih =>
+      dsimp [selfMapAlphaPow]
+      infer_instance
+
+private theorem selfMapAlphaPow_comm
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) :
+    ∀ n, A.d ≫ selfMapAlphaPow α n = selfMapAlphaPow α n ≫ A.d := by
+  intro n
+  induction n with
+  | zero => simp [selfMapAlphaPow]
+  | succ n ih =>
+      change A.d ≫ (selfMapAlphaPow α n ≫ α.hom.hom) =
+        (selfMapAlphaPow α n ≫ α.hom.hom) ≫ A.d
+      calc
+        A.d ≫ (selfMapAlphaPow α n ≫ α.hom.hom) =
+            (A.d ≫ selfMapAlphaPow α n) ≫ α.hom.hom := by simp only [Category.assoc]
+        _ = (selfMapAlphaPow α n ≫ A.d) ≫ α.hom.hom := by rw [ih]
+        _ = selfMapAlphaPow α n ≫ (A.d ≫ α.hom.hom) := by simp only [Category.assoc]
+        _ = selfMapAlphaPow α n ≫ (α.hom.hom ≫ A.d) := by rw [α.hom.comm]
+        _ = (selfMapAlphaPow α n ≫ α.hom.hom) ≫ A.d := by simp only [Category.assoc]
 
 def selfMapBoundaryPreimage {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
@@ -680,12 +789,84 @@ theorem selfMap_boundary_preimage_le_cycle_preimage
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     selfMapBoundaryPreimage α r ≤ selfMapCyclePreimage α r := by
-  sorry
+  by_cases hr : r = 0
+  · subst r
+    simp [selfMapBoundaryPreimage, selfMapCyclePreimage]
+  · simp only [selfMapBoundaryPreimage, selfMapCyclePreimage, if_neg hr]
+    let I := (Subobject.«exists» A.d).obj (⊤ : Subobject A.carrier)
+    let B := (Subobject.pullback (selfMapAlphaPow α (r - 1))).obj I
+    let J := (Subobject.«exists» (selfMapAlphaPow α r)).obj (⊤ : Subobject A.carrier)
+    let Z := (Subobject.pullback A.d).obj J
+    change B ≤ Z
+    have hI : I.arrow ≫ A.d = 0 := by
+      let F := Subobject.imageFactorisation A.d (⊤ : Subobject A.carrier)
+      haveI : Epi F.F.e := by
+        let eIso := IsImage.isoExt F.isImage
+          (Image.isImage ((⊤ : Subobject A.carrier).arrow ≫ A.d))
+        have hcomp : F.F.e ≫ eIso.hom =
+            Limits.factorThruImage ((⊤ : Subobject A.carrier).arrow ≫ A.d) := by
+          simpa [eIso] using
+            (IsImage.e_isoExt_hom F.isImage
+              (Image.isImage ((⊤ : Subobject A.carrier).arrow ≫ A.d)))
+        haveI : Epi (F.F.e ≫ eIso.hom) := by
+          rw [hcomp]
+          infer_instance
+        exact (epi_comp_iff_of_isIso F.F.e eIso.hom).1 inferInstance
+      apply (cancel_epi F.F.e).1
+      change F.F.e ≫ F.F.m ≫ A.d = F.F.e ≫ 0
+      rw [← Category.assoc, F.F.fac]
+      simp [A.d_squared]
+    have hfactor : I.Factors (B.arrow ≫ selfMapAlphaPow α (r - 1)) := by
+      rw [← Limits.pullback_factors_iff]
+      exact Subobject.factors_self B
+    have hcomp : (B.arrow ≫ A.d) ≫ selfMapAlphaPow α (r - 1) = 0 := by
+      calc
+        (B.arrow ≫ A.d) ≫ selfMapAlphaPow α (r - 1) =
+            B.arrow ≫ (A.d ≫ selfMapAlphaPow α (r - 1)) := by
+              simp only [Category.assoc]
+        _ = B.arrow ≫ (selfMapAlphaPow α (r - 1) ≫ A.d) := by
+              rw [selfMapAlphaPow_comm α]
+        _ = (B.arrow ≫ selfMapAlphaPow α (r - 1)) ≫ A.d := by
+              simp only [Category.assoc]
+        _ = (I.factorThru (B.arrow ≫ selfMapAlphaPow α (r - 1)) hfactor ≫
+              I.arrow) ≫ A.d := by
+              rw [I.factorThru_arrow]
+        _ = 0 := by rw [Category.assoc, hI, comp_zero]
+    have hzero : B.arrow ≫ A.d = 0 := by
+      letI : Mono (selfMapAlphaPow α (r - 1)) :=
+        selfMapAlphaPow_mono α (r - 1)
+      apply (cancel_mono (selfMapAlphaPow α (r - 1))).1
+      simpa using hcomp
+    apply Subobject.le_of_factors
+    rw [Limits.pullback_factors_iff, hzero]
+    exact Subobject.factors_zero
 
 noncomputable def selfMapQuotientImageSubobject
     {C : Type u} [Category.{v} C] [Abelian C]
     {X Q : C} (π : X ⟶ Q) (B : Subobject X) : Subobject Q :=
   Subobject.mk (Abelian.image.ι (B.arrow ≫ π))
+
+private theorem selfMapQuotientImageSubobject_mono
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Q : C} (π : X ⟶ Q) {B B' : Subobject X} (h : B ≤ B') :
+    selfMapQuotientImageSubobject π B ≤ selfMapQuotientImageSubobject π B' := by
+  dsimp [selfMapQuotientImageSubobject]
+  apply Subobject.mk_le_mk_of_comm
+    (kernel.lift (cokernel.π (B'.arrow ≫ π))
+      (Abelian.image.ι (B.arrow ≫ π)) (by
+        apply Abelian.image_ι_comp_eq_zero
+        change (B.arrow ≫ π) ≫ cokernel.π (B'.arrow ≫ π) = 0
+        calc
+          (B.arrow ≫ π) ≫ cokernel.π (B'.arrow ≫ π) =
+              (Subobject.ofLE B B' h ≫ (B'.arrow ≫ π)) ≫
+                cokernel.π (B'.arrow ≫ π) := by
+            rw [← Subobject.ofLE_arrow h]
+            simp only [Category.assoc]
+          _ = Subobject.ofLE B B' h ≫
+                ((B'.arrow ≫ π) ≫ cokernel.π (B'.arrow ≫ π)) := by
+            simp only [Category.assoc]
+          _ = 0 := by rw [cokernel.condition, comp_zero]))
+  simp
 
 noncomputable def selfMapBoundaryPlus {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
@@ -706,9 +887,12 @@ theorem selfMap_boundary_plus_le_cycle_plus
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     selfMapBoundaryPlus α r ≤ selfMapCyclePlus α r := by
-  /- prior attempt: exact sup_le_sup
-      (selfMap_boundary_preimage_le_cycle_preimage α r) le_rfl -/
-  sorry
+  change selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+      (selfMapBoundaryPreimage α r) ≤
+    selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+      (selfMapCyclePreimage α r)
+  exact selfMapQuotientImageSubobject_mono (cokernel.π α.hom.hom)
+    (selfMap_boundary_preimage_le_cycle_preimage α r)
 
 def selfMapBoundarySubobject {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
@@ -729,7 +913,12 @@ theorem selfMap_boundary_le_cycle
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     selfMapBoundarySubobject α r ≤ selfMapCycleSubobject α r := by
-  sorry
+  change selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+      (selfMapBoundaryPreimage α r) ≤
+    selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+      (selfMapCyclePreimage α r)
+  exact selfMapQuotientImageSubobject_mono (cokernel.π α.hom.hom)
+    (selfMap_boundary_preimage_le_cycle_preimage α r)
 
 noncomputable def selfMapPageComponent
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -14,6 +14,9 @@ import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.IntegralClosure.Algebra.Defs
 import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.Kaehler.Polynomial
+import Mathlib.RingTheory.Kaehler.TensorProduct
+import Mathlib.RingTheory.Etale.Kaehler
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.Pullback
@@ -322,7 +325,96 @@ abbrev FpTranscendentalField (p : ℕ) [Fact p.Prime] :=
 
 theorem FpTranscendentalField_infiniteDegree (p : ℕ) [Fact p.Prime] :
     InfiniteDegreeOverPowers (FpTranscendentalField p) p := by
-  sorry
+  intro hfinite
+  letI : Module.Finite (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p) := hfinite
+  let hli₀ : LinearIndependent (MvPolynomial ℕ (ZMod p))
+      (KaehlerDifferential.mvPolynomialBasis (ZMod p) ℕ) :=
+    (KaehlerDifferential.mvPolynomialBasis (ZMod p) ℕ).linearIndependent
+  let hli₁ : LinearIndependent (FpTranscendentalField p)
+      (fun i : ℕ => KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+        (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+          (MvPolynomial.X i))) := by
+    let f := KaehlerDifferential.map (ZMod p) (ZMod p)
+      (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+    have h := hli₀.of_isLocalizedModule (FpTranscendentalField p)
+      (nonZeroDivisors (MvPolynomial ℕ (ZMod p))) f
+    have heq :
+        (fun i : ℕ => KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+          (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+            (MvPolynomial.X i))) =
+        (fun i : ℕ => f ((KaehlerDifferential.mvPolynomialBasis (ZMod p) ℕ) i)) := by
+      funext i
+      dsimp [f]
+      rw [KaehlerDifferential.mvPolynomialBasis_apply,
+        KaehlerDifferential.map_D (ZMod p) (ZMod p)
+          (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)]
+    rw [heq]
+    exact h
+  let dlin : FpTranscendentalField p →ₗ[pPowerSubfield (FpTranscendentalField p) p]
+      KaehlerDifferential (ZMod p) (FpTranscendentalField p) := by
+    refine
+      { toFun := KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+        map_add' := ?_
+        map_smul' := ?_ }
+    · intro x y
+      exact (KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)).map_add x y
+    · intro c x
+      obtain ⟨y, hy⟩ := (RingHom.mem_fieldRange).mp c.property
+      have hy' : y ^ p = (c : FpTranscendentalField p) := by
+        change y ^ p = (c : FpTranscendentalField p) at hy
+        exact hy
+      have hcy : KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+          (c : FpTranscendentalField p) = 0 := by
+        rw [← hy', (KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)).leibniz_pow]
+        rw [← Nat.cast_smul_eq_nsmul (FpTranscendentalField p),
+          CharP.cast_eq_zero (FpTranscendentalField p) p]
+        simp
+      change KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+          ((c : FpTranscendentalField p) * x) =
+        (c : FpTranscendentalField p) •
+          KaehlerDifferential.D (ZMod p) (FpTranscendentalField p) x
+      rw [(KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)).leibniz,
+        hcy]
+      simp
+  let d : Derivation (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p)
+      (KaehlerDifferential (ZMod p) (FpTranscendentalField p)) :=
+    Derivation.mk' dlin (by
+      intro x y
+      exact (KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)).leibniz x y)
+  let φ := d.liftKaehlerDifferential
+  have hliF : LinearIndependent (FpTranscendentalField p)
+      (fun i : ℕ => KaehlerDifferential.D (pPowerSubfield (FpTranscendentalField p) p)
+        (FpTranscendentalField p)
+        (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+          (MvPolynomial.X i))) := by
+    apply LinearIndependent.of_comp φ
+    have heq :
+        (fun i : ℕ => φ
+          (KaehlerDifferential.D (pPowerSubfield (FpTranscendentalField p) p)
+            (FpTranscendentalField p)
+            (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+              (MvPolynomial.X i)))) =
+        (fun i : ℕ => KaehlerDifferential.D (ZMod p) (FpTranscendentalField p)
+          (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+              (MvPolynomial.X i))) := by
+      funext i
+      dsimp [φ]
+      rw [Derivation.liftKaehlerDifferential_comp_D]
+      rfl
+    change LinearIndependent (FpTranscendentalField p) (fun i : ℕ => φ
+      (KaehlerDifferential.D (pPowerSubfield (FpTranscendentalField p) p)
+        (FpTranscendentalField p)
+        (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+          (MvPolynomial.X i))))
+    rw [heq]
+    exact hli₁
+  exact (Module.Finite.not_linearIndependent_of_infinite
+    (fun i : ℕ => KaehlerDifferential.D (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p)
+      (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)
+        (MvPolynomial.X i))) hliF)
 
 section TwoVariableSeries
 
@@ -348,16 +440,44 @@ def ACondition (f : TwoVariablePowerSeries k) : Prop :=
 
 theorem aCondition_zero :
     ACondition k p 0 := by
-  sorry
+  intro n
+  unfold FiniteDegreeOverPowers
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (0 : TwoVariablePowerSeries k) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  simp
 
 theorem aCondition_one :
     ACondition k p 1 := by
-  sorry
+  intro n
+  unfold FiniteDegreeOverPowers
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (1 : TwoVariablePowerSeries k) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  by_cases hd0 : d = 0
+  · subst d
+    simp
+  · rw [MvPowerSeries.coeff_one, if_neg hd0]
+    exact (⊥ : IntermediateField (pPowerSubfield k p) k).zero_mem
 
 theorem aCondition_add {f g : TwoVariablePowerSeries k}
     (hf : ACondition k p f) (hg : ACondition k p g) :
     ACondition k p (f + g) := by
-  sorry
+  unfold ACondition at hf hg ⊢
+  intro n
+  unfold FiniteDegreeOverPowers at hf hg ⊢
+  rcases hf n with ⟨F, hF, hFfin⟩
+  rcases hg n with ⟨G, hG, hGfin⟩
+  refine ⟨F ⊔ G, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  have hfd : MvPowerSeries.coeff d f ∈ (F ⊔ G : IntermediateField (pPowerSubfield k p) k) :=
+    (le_sup_left : F ≤ F ⊔ G) (hF ⟨d, hd, rfl⟩)
+  have hgd : MvPowerSeries.coeff d g ∈ (F ⊔ G : IntermediateField (pPowerSubfield k p) k) :=
+    (le_sup_right : G ≤ F ⊔ G) (hG ⟨d, hd, rfl⟩)
+  change MvPowerSeries.coeff d f + MvPowerSeries.coeff d g ∈ F ⊔ G
+  simpa only [map_add] using add_mem hfd hgd
 
 theorem aCondition_mul {f g : TwoVariablePowerSeries k}
     (hf : ACondition k p f) (hg : ACondition k p g) :

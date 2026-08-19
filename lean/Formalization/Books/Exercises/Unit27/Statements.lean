@@ -1,5 +1,6 @@
 import Formalization.Books.Exercises.Unit27.Core
 import Mathlib.AlgebraicGeometry.Morphisms.IsIso
+import Mathlib.Algebra.MonoidAlgebra.Grading
 import Mathlib.RingTheory.Ideal.Maximal
 import Mathlib.RingTheory.MvPolynomial.Ideal
 
@@ -21,6 +22,249 @@ open _root_.Topology
 open AlgebraicGeometry
 
 namespace Formalization.Books.Exercises.Unit27
+
+private def reesGradedPieces {A : Type u} [CommRing A] (I : Ideal A) (d : ℕ) :
+    Submodule ℤ (blowupAlgebra I) :=
+  Submodule.comap
+    (((Polynomial.toFinsuppIsoLinear A).toLinearMap.restrictScalars ℤ).comp
+      ((reesAlgebra I).val.toLinearMap.restrictScalars ℤ))
+    ((AddMonoidAlgebra.grade A d).restrictScalars ℤ)
+
+private lemma reesGradedPieces_mem_iff {A : Type u} [CommRing A] (I : Ideal A)
+    (d : ℕ) (x : blowupAlgebra I) :
+    x ∈ reesGradedPieces I d ↔
+      ∃ a : A, ∃ _ha : a ∈ I ^ d, x.1 = Polynomial.monomial d a := by
+  constructor
+  · intro hx
+    have hs : (x.1.support : Set ℕ) ⊆ ({d} : Set ℕ) := by
+      exact hx
+    refine ⟨x.1.coeff d, ?_, ?_⟩
+    · by_cases hd : d ∈ x.1.support
+      · exact x.2 d
+      · have hzero : x.1.coeff d = 0 := by
+          apply Classical.not_not.mp
+          intro hn
+          exact hd (Finsupp.mem_support_iff.mpr hn)
+        rw [hzero]
+        exact (I ^ d).zero_mem
+    · apply Polynomial.ext
+      intro n
+      by_cases hnd : n = d
+      · subst hnd
+        simp
+      · have hzero : x.1.coeff n = 0 := by
+          apply Classical.not_not.mp
+          intro hn
+          exact hnd (hs (Finsupp.mem_support_iff.mpr hn))
+        have hdn : d ≠ n := by
+          intro h
+          exact hnd (Eq.symm h)
+        rw [Polynomial.coeff_monomial]
+        simp [hzero, hnd, hdn]
+  · rintro ⟨a, ha, hxa⟩
+    simpa [reesGradedPieces, hxa] using
+      (AddMonoidAlgebra.single_mem_grade (R := A) d a)
+
+private def reesGradedMonoid {A : Type u} [CommRing A] (I : Ideal A) :
+    SetLike.GradedMonoid (reesGradedPieces I) where
+  one_mem := by
+    rw [reesGradedPieces_mem_iff]
+    exact ⟨1, by simp, by simp⟩
+  mul_mem := by
+    intro i j x y hx hy
+    rw [reesGradedPieces_mem_iff] at hx hy ⊢
+    rcases hx with ⟨a, ha, hxa⟩
+    rcases hy with ⟨b, hb, hya⟩
+    refine ⟨a * b, ?_, ?_⟩
+    · rw [pow_add]
+      exact Ideal.mul_mem_mul ha hb
+    · change x.1 * y.1 = _
+      rw [hxa, hya]
+      simp [Polynomial.monomial_mul_monomial]
+
+private lemma polynomial_monomial_add {A : Type u} [CommRing A]
+    (d : ℕ) (a b : A) :
+    Polynomial.monomial d (a + b) =
+      Polynomial.monomial d a + Polynomial.monomial d b := by
+  apply Polynomial.ext
+  intro n
+  by_cases hnd : n = d
+  · subst hnd
+    simp
+  · have hdn : d ≠ n := by
+      intro h
+      exact hnd h.symm
+    simp [Polynomial.coeff_add, hnd, hdn]
+
+private def reesHomogeneousComponent {A : Type u} [CommRing A] (I : Ideal A)
+    (x : blowupAlgebra I) (d : ℕ) : reesGradedPieces I d :=
+  ⟨reesHomogeneousElement I d (x.2 d),
+    (reesGradedPieces_mem_iff I d _).2 ⟨x.1.coeff d, x.2 d, rfl⟩⟩
+
+private def reesDecompose {A : Type u} [CommRing A] (I : Ideal A) :
+    blowupAlgebra I →+ DirectSum ℕ (fun d => reesGradedPieces I d) :=
+  { toFun := fun x =>
+      DirectSum.mk (fun d : ℕ => reesGradedPieces I d) x.1.support
+        (fun d => reesHomogeneousComponent I x d.1)
+    map_zero' := by
+      classical
+      apply DirectSum.ext
+      intro d
+      rw [DirectSum.mk_apply_of_notMem (by simp)]
+      rfl
+    map_add' := by
+      classical
+      intro x y
+      apply DirectSum.ext
+      intro d
+      by_cases hx0 : x.1.coeff d = 0
+      · by_cases hy0 : y.1.coeff d = 0
+        · simp [DirectSum.add_apply, DirectSum.mk, reesHomogeneousComponent,
+            reesHomogeneousElement, Polynomial.coeff_add, Finsupp.mem_support_iff,
+            hx0, hy0]
+        · simp [DirectSum.add_apply, DirectSum.mk, reesHomogeneousComponent,
+            reesHomogeneousElement, Polynomial.coeff_add, Finsupp.mem_support_iff,
+            hx0, hy0]
+      · by_cases hy0 : y.1.coeff d = 0
+        · simp [DirectSum.add_apply, DirectSum.mk, reesHomogeneousComponent,
+            reesHomogeneousElement, Polynomial.coeff_add, Finsupp.mem_support_iff,
+            hx0, hy0]
+        · by_cases hsum : x.1.coeff d + y.1.coeff d = 0
+          · rw [DirectSum.mk_apply_of_notMem]
+            · rw [DirectSum.add_apply]
+              have hxmem : d ∈ x.1.support := by
+                simp [Finsupp.mem_support_iff, hx0]
+              have hymem : d ∈ y.1.support := by
+                simp [Finsupp.mem_support_iff, hy0]
+              rw [DirectSum.mk_apply_of_mem hxmem,
+                DirectSum.mk_apply_of_mem hymem]
+              apply Subtype.ext
+              apply Subtype.ext
+              change (0 : Polynomial A) =
+                Polynomial.monomial d (x.1.coeff d) +
+                  Polynomial.monomial d (y.1.coeff d)
+              rw [← polynomial_monomial_add, hsum]
+              simp
+            · simp [Finsupp.mem_support_iff, hsum]
+          · simp [DirectSum.add_apply, DirectSum.mk, reesHomogeneousComponent,
+              reesHomogeneousElement, Polynomial.coeff_add, Finsupp.mem_support_iff,
+              polynomial_monomial_add, hsum, hx0, hy0]
+  }
+
+private def reesGradedRing {A : Type u} [CommRing A] (I : Ideal A) :
+    GradedRing (reesGradedPieces I) :=
+  { reesGradedMonoid I with
+    decompose' := reesDecompose I
+    left_inv := by
+      classical
+      intro x
+      apply Subtype.ext
+      rw [DirectSum.coeAddMonoidHom_eq_dfinsuppSum]
+      change DFinsupp.sum (reesDecompose I x)
+          (fun _ z => (z : blowupAlgebra I)) = x.1
+      have hsupport : (reesDecompose I x).support = x.1.support := by
+        ext i
+        rw [DFinsupp.mem_support_iff, Polynomial.mem_support_iff]
+        change
+          (DirectSum.mk (fun d : ℕ => reesGradedPieces I d) x.1.support
+            (fun d : (x.1.support : Set ℕ) =>
+              (reesHomogeneousComponent I x d.1 :
+                reesGradedPieces I d.1)) i ≠ 0) ↔
+            x.1.coeff i ≠ 0
+        constructor
+        · intro h
+          by_contra hi
+          have hi0 : x.1.coeff i = 0 := hi
+          have hnot : i ∉ x.1.support := by
+            intro hi'
+            exact ((Finsupp.mem_support_iff).1 hi' hi0).elim
+          have : (DirectSum.mk (fun d : ℕ => reesGradedPieces I d)
+              x.1.support
+              (fun d : (x.1.support : Set ℕ) =>
+                (reesHomogeneousComponent I x d.1 : reesGradedPieces I d.1)) i) = 0 := by
+            simp [DirectSum.mk, hnot]
+          exact h this
+        · intro h
+          simp only [DirectSum.mk, DFinsupp.mk_apply,
+            dif_pos (Finsupp.mem_support_iff.2 h)]
+          intro hz
+          apply h
+          have hz' := congrArg
+            (fun z : reesGradedPieces I i =>
+              (z : blowupAlgebra I).1.coeff i) hz
+          simpa [DirectSum.mk, h, reesHomogeneousComponent,
+            reesHomogeneousElement] using hz'
+      simp only [DFinsupp.sum, hsupport]
+      have hsum : (∑ i ∈ x.1.support,
+          ((reesDecompose I x) i : blowupAlgebra I)) = x := by
+        apply Subtype.ext
+        change (reesAlgebra I).val (∑ i ∈ x.1.support,
+          ((reesDecompose I x) i : blowupAlgebra I)) = x.1
+        rw [map_sum]
+        calc
+          (∑ i ∈ x.1.support,
+              (reesAlgebra I).val ((reesDecompose I x) i)) =
+              ∑ i ∈ x.1.support, Polynomial.monomial i (x.1.coeff i) := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            simp [reesDecompose, DirectSum.mk, hi, reesHomogeneousComponent,
+              reesHomogeneousElement]
+          _ = x.1 := (Polynomial.as_sum_support x.1).symm
+      exact congrArg Subtype.val hsum
+    right_inv := by
+      classical
+      intro x
+      induction x using DirectSum.induction_on with
+      | zero =>
+          apply DirectSum.ext
+          intro i
+          simp [reesDecompose, DirectSum.mk]
+      | of i y =>
+          apply DirectSum.ext
+          intro j
+          simp only [DirectSum.coeAddMonoidHom_of]
+          change
+            (DirectSum.mk (fun d : ℕ => reesGradedPieces I d) y.1.1.support
+              (fun d => reesHomogeneousComponent I (y : blowupAlgebra I) d.1)) j = _
+          have hy : (y : blowupAlgebra I).1 =
+              Polynomial.monomial i ((y : blowupAlgebra I).1.coeff i) := by
+            obtain ⟨a, ha, hya⟩ :=
+              (reesGradedPieces_mem_iff I i (y : blowupAlgebra I)).1 y.property
+            rw [hya]
+            simp
+          by_cases hij : i = j
+          · subst hij
+            by_cases hmem : i ∈ y.1.1.support
+            · rw [DirectSum.mk_apply_of_mem hmem, DirectSum.of_eq_same]
+              apply Subtype.ext
+              apply Subtype.ext
+              change Polynomial.monomial i ((y : blowupAlgebra I).1.coeff i) =
+                (y : blowupAlgebra I).1
+              exact hy.symm
+            · rw [DirectSum.mk_apply_of_notMem hmem, DirectSum.of_eq_same]
+              apply Subtype.ext
+              apply Subtype.ext
+              have hi0 : (y : blowupAlgebra I).1.coeff i = 0 := by
+                by_contra hi0
+                exact hmem ((Finsupp.mem_support_iff).2 hi0)
+              change (0 : Polynomial A) = (y : blowupAlgebra I).1
+              rw [hy, hi0]
+              rw [Polynomial.monomial_zero_right]
+          · by_cases hmem : j ∈ (y : blowupAlgebra I).1.support
+            · have hjne : (y : blowupAlgebra I).1.coeff j ≠ 0 :=
+                (Finsupp.mem_support_iff).1 hmem
+              have hj0 : (y : blowupAlgebra I).1.coeff j = 0 := by
+                rw [hy]
+                simpa [Polynomial.coeff_monomial, hij]
+              exact (hjne hj0).elim
+            · rw [DirectSum.mk_apply_of_notMem hmem]
+              have hji : j ≠ i := by
+                intro h
+                exact hij h.symm
+              rw [DirectSum.of_eq_of_ne (β := fun i => reesGradedPieces I i)
+                i j y hji]
+      | add x y hx hy =>
+          simp only [map_add, hx, hy] }
 
 variable {R : Type u} [CommRing R]
 
@@ -660,10 +904,288 @@ theorem blowupBaseOpen_isOpen {A : Type u} [CommRing A] (I : Ideal A) :
     IsOpen (blowupBaseOpen I) := by
   change IsOpen ((PrimeSpectrum.zeroLocus (I : Set A))ᶜ)
   exact ((PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨(I : Set A), rfl⟩).isOpen_compl
+
+private lemma localizationAwayComapSubtype_isHomeomorph
+    {R : Type u} [CommRing R] (r : R) :
+    IsHomeomorph (fun q : PrimeSpectrum (Localization.Away r) =>
+      (⟨PrimeSpectrum.comap (algebraMap R (Localization.Away r)) q,
+        by
+          change PrimeSpectrum.comap (algebraMap R (Localization.Away r)) q ∈
+            (PrimeSpectrum.basicOpen r : Set (PrimeSpectrum R))
+          rw [← PrimeSpectrum.localization_away_comap_range (Localization.Away r) r]
+          exact ⟨q, rfl⟩⟩ :
+        {p : PrimeSpectrum R // p ∈ PrimeSpectrum.basicOpen r})) := by
+  apply isHomeomorph_iff_isEmbedding_surjective.2
+  constructor
+  · exact (PrimeSpectrum.localization_away_isOpenEmbedding
+      (Localization.Away r) r).toIsEmbedding.codRestrict _ _
+  · intro p
+    have hp : p.1 ∈ Set.range
+        (PrimeSpectrum.comap (algebraMap R (Localization.Away r))) := by
+      rw [PrimeSpectrum.localization_away_comap_range (Localization.Away r) r]
+      exact p.2
+    obtain ⟨q, hq⟩ := hp
+    exact ⟨q, Subtype.ext hq⟩
+
+private lemma subtypeSubtype_isHomeomorph
+    {X : Type u} [TopologicalSpace X] [T0Space X] {s t : Set X} (hst : s ⊆ t) :
+    IsHomeomorph (fun x : {x : X // x ∈ s} =>
+      (⟨⟨x.1, hst x.2⟩, x.2⟩ : {x : {x : X // x ∈ t} // x.1 ∈ s})) := by
+  apply isHomeomorph_iff_isEmbedding_surjective.2
+  constructor
+  · rw [isEmbedding_iff_isInducing]
+    have houter : IsInducing
+        (fun y : {x : X // x ∈ t} => (y.1 : X)) :=
+      Topology.IsInducing.subtypeVal
+    have hinner : IsInducing
+        (fun x : {x : X // x ∈ s} => (x.1 : X)) :=
+      Topology.IsInducing.subtypeVal
+    have hcomp : IsInducing
+        (fun x : {x : X // x ∈ s} =>
+          ((⟨x.1, hst x.2⟩ : {x : X // x ∈ t}) : X)) := by
+      simpa using hinner
+    have hcontg : Continuous
+        (fun x : {x : X // x ∈ s} =>
+          (⟨⟨x.1, hst x.2⟩, x.2⟩ :
+            {x : {x : X // x ∈ t} // x.1 ∈ s})) := by
+      exact (continuous_subtype_val.subtype_mk (fun x => hst x.2)).subtype_mk
+        (fun x => x.2)
+    have hcomp' : IsInducing
+        (fun x : {x : X // x ∈ s} =>
+          (((⟨⟨x.1, hst x.2⟩, x.2⟩ :
+            {x : {x : X // x ∈ t} // x.1 ∈ s}).1 : {x : X // x ∈ t}) : X)) := by
+      simpa using hcomp
+    have hcomp'' : IsInducing
+        ((fun z : {x : {x : X // x ∈ t} // x.1 ∈ s} => (z.1.1 : X)) ∘
+          (fun x : {x : X // x ∈ s} =>
+          (⟨⟨x.1, hst x.2⟩, x.2⟩ :
+            {x : {x : X // x ∈ t} // x.1 ∈ s}))) := by
+      simpa [Function.comp_def] using hcomp'
+    have houtercont : Continuous
+        (fun z : {x : {x : X // x ∈ t} // x.1 ∈ s} => (z.1.1 : X)) :=
+      continuous_subtype_val.comp continuous_subtype_val
+    exact Topology.IsInducing.of_comp
+      hcontg houtercont hcomp''
+  · intro y
+    exact ⟨⟨y.1.1, y.2⟩, Subtype.ext rfl⟩
+
+private lemma homeomorphSubtypePreimage_isHomeomorph
+    {X Y : Type u} [TopologicalSpace X] [TopologicalSpace Y] [T0Space X]
+    (e : X ≃ₜ Y) (s : Set X) :
+    IsHomeomorph (fun x : {x : X // x ∈ s} =>
+      (⟨e x.1, by simpa using x.2⟩ : {y : Y // e.symm y ∈ s})) := by
+  apply isHomeomorph_iff_isEmbedding_surjective.2
+  constructor
+  · rw [isEmbedding_iff_isInducing]
+    have hcomp : IsInducing
+        (fun x : {x : X // x ∈ s} => e x.1) :=
+      e.isInducing.comp Topology.IsInducing.subtypeVal
+    have hcontg : Continuous
+        (fun x : {x : X // x ∈ s} =>
+          (⟨e x.1, by simpa using x.2⟩ : {y : Y // e.symm y ∈ s})) := by
+      exact (e.continuous.comp continuous_subtype_val).subtype_mk
+        (fun x => by simpa using x.2)
+    have hcomp' : IsInducing
+        (fun x : {x : X // x ∈ s} =>
+          ((⟨e x.1, by simpa using x.2⟩ :
+            {y : Y // e.symm y ∈ s}) : Y)) := by
+      simpa using hcomp
+    have houtercont : Continuous
+        (fun y : {y : Y // e.symm y ∈ s} => (y.1 : Y)) :=
+      continuous_subtype_val
+    exact Topology.IsInducing.of_comp hcontg houtercont hcomp'
+  · intro y
+    exact ⟨⟨e.symm y.1, y.2⟩, by simp⟩
+
+private lemma blowup_chart_awayMap_bijective
+    {A : Type u} [CommRing A] {I : Ideal A}
+    {P : BlowupPresentation I} {d : ℕ} {f : blowupAlgebra I}
+    (hf : f ∈ P.gradedPieces d) (hd : 0 < d) (a : A) (ha : a ∈ I ^ d)
+    (hfa : f.1 = Polynomial.monomial d a) :
+    (letI : GradedRing P.gradedPieces := P.graded;
+      Function.Bijective
+        (Localization.awayMap
+          (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+            (Submonoid.powers f))
+          (P.degreeZeroEquiv.symm a))) := by
+  letI : GradedRing P.gradedPieces := P.graded
+  let R₀ := P.gradedPieces 0
+  let S := HomogeneousLocalization.Away P.gradedPieces f
+  let g : R₀ →+* S :=
+    HomogeneousLocalization.fromZeroRingHom P.gradedPieces (Submonoid.powers f)
+  let r := P.degreeZeroEquiv.symm a
+  have hr : (r : blowupAlgebra I) = algebraMap A (blowupAlgebra I) a :=
+    P.degreeZeroEquiv_spec a
+  have hx0 (x : R₀) : (x : blowupAlgebra I) =
+      algebraMap A (blowupAlgebra I) (P.degreeZeroEquiv x) := by
+    simpa using P.degreeZeroEquiv_spec (P.degreeZeroEquiv x)
+  constructor
+  · rw [Localization.awayMap_injective_iff]
+    intro x hx
+    have hxval :
+        Localization.mk (x : blowupAlgebra I)
+          (⟨1, one_mem _⟩ : Submonoid.powers f) = 0 := by
+      have hx' := congrArg HomogeneousLocalization.val hx
+      change HomogeneousLocalization.val
+          (HomogeneousLocalization.mk
+            (⟨0, x, 1, one_mem _⟩ :
+              HomogeneousLocalization.NumDenSameDeg P.gradedPieces
+                (Submonoid.powers f))) =
+        HomogeneousLocalization.val 0 at hx'
+      rw [HomogeneousLocalization.val_mk] at hx'
+      simpa [Submonoid.coe_one] using hx'
+    rw [Localization.mk_eq_mk'] at hxval
+    obtain ⟨m, hm⟩ := (IsLocalization.mk'_eq_zero_iff _ _).1 hxval
+    obtain ⟨j, hj⟩ := (Submonoid.mem_powers_iff (m : blowupAlgebra I) f).1 m.property
+    have hm' : f ^ j * x = 0 := by
+      rw [hj]
+      exact hm
+    refine ⟨j, ?_⟩
+    apply Subtype.ext
+    have hcoeff := congrArg
+      (fun z : blowupAlgebra I => z.1.coeff (j * d)) hm'
+    have hax : a ^ j * P.degreeZeroEquiv x = 0 := by
+      simpa [hfa, hx0 x, hr, Polynomial.coeff_mul, Polynomial.coeff_monomial,
+        Polynomial.coeff_zero, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hcoeff
+    calc
+      ((r ^ j * x : R₀) : blowupAlgebra I) =
+          (r : blowupAlgebra I) ^ j * (x : blowupAlgebra I) := rfl
+      _ = algebraMap A (blowupAlgebra I) (a ^ j * P.degreeZeroEquiv x) := by
+        rw [hr, hx0]
+        simp
+      _ = 0 := by rw [hax]; simp
+  · rw [Localization.awayMap_surjective_iff]
+    intro s
+    obtain ⟨n, c, hc, rfl⟩ := HomogeneousLocalization.Away.mk_surjective
+      P.gradedPieces hf s
+    obtain ⟨b, hb, hcb⟩ :=
+      (P.gradedPieces_spec (n • d) c).1 hc
+    refine ⟨P.degreeZeroEquiv.symm b, n, ?_⟩
+    apply HomogeneousLocalization.val_injective
+    have hpoly :
+        (algebraMap A (blowupAlgebra I) b) * f ^ n =
+          (algebraMap A (blowupAlgebra I) a) ^ n * c := by
+      apply Subtype.ext
+      change
+        Polynomial.C b * f.1 ^ n = Polynomial.C a ^ n * c.1
+      rw [hcb, hfa]
+      rw [Polynomial.monomial_pow, Polynomial.C_mul_monomial,
+        ← Polynomial.C_pow, Polynomial.C_mul_monomial]
+      congr 1
+      · simp [Nat.mul_comm]
+      · exact mul_comm _ _
+    have hbval :
+        (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+          (Submonoid.powers f) (P.degreeZeroEquiv.symm b)).val =
+          Localization.mk ((P.degreeZeroEquiv.symm b : P.gradedPieces 0) :
+            blowupAlgebra I) (1 : Submonoid.powers f) := by
+      rfl
+    have haval :
+        (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+          (Submonoid.powers f) (P.degreeZeroEquiv.symm a)).val =
+          Localization.mk ((P.degreeZeroEquiv.symm a : P.gradedPieces 0) :
+            blowupAlgebra I) (1 : Submonoid.powers f) := by
+      rfl
+    have hcval :
+        (HomogeneousLocalization.Away.mk P.gradedPieces hf n c hc).val =
+          Localization.mk c
+            (⟨f ^ n, ⟨n, rfl⟩⟩ : Submonoid.powers f) := by
+      rfl
+    rw [HomogeneousLocalization.val_mul, HomogeneousLocalization.val_pow]
+    rw [hbval, haval, hcval]
+    rw [P.degreeZeroEquiv_spec b, P.degreeZeroEquiv_spec a]
+    rw [Localization.mk_pow, Localization.mk_mul]
+    rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+    refine ⟨1, ?_⟩
+    rw [← hpoly]
+    simpa [g, HomogeneousLocalization.fromZeroRingHom,
+      HomogeneousLocalization.val_mk, Localization.mk_mul,
+      Localization.mk_pow] using
+      (mul_comm (f ^ n) (algebraMap A (blowupAlgebra I) b))
 theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :
-    IsHomeomorph (blowupRestrictionMap P) := by sorry
+    IsHomeomorph (blowupRestrictionMap P) := by
+  letI : GradedRing P.gradedPieces := P.graded
+  let β := {p : PrimeSpectrum A // p ∈ blowupBaseOpen I}
+  let α := {x : blowupProjPoints P // (blowupMap P).base x ∈ blowupBaseOpen I}
+  let e₀ : PrimeSpectrum (P.gradedPieces 0) ≃ₜ PrimeSpectrum A :=
+    PrimeSpectrum.homeomorphOfRingEquiv P.degreeZeroEquiv
+  let V : I → Set β := fun a =>
+    {p : β | e₀.symm p.1 ∈
+      PrimeSpectrum.basicOpen (P.degreeZeroEquiv.symm (a : A))}
+  have hVopen : ∀ a : I, IsOpen (V a) := by
+    intro a
+    exact PrimeSpectrum.isOpen_basicOpen.preimage
+      (e₀.symm.continuous.comp continuous_subtype_val)
+  let U : I → Opens β := fun a => ⟨V a, hVopen a⟩
+  have hU : TopologicalSpace.IsOpenCover U := by
+    refine TopologicalSpace.IsOpenCover.of_sets hVopen ?_
+    apply Set.eq_univ_of_forall
+    intro p
+    by_contra hp
+    have hpall : (I : Set A) ⊆ p.1.asIdeal := by
+      intro a ha
+      by_contra hnot
+      apply hp
+      apply Set.mem_iUnion.2
+      refine ⟨⟨a, ha⟩, ?_⟩
+      have hmem : e₀.symm p.1 ∈
+          PrimeSpectrum.basicOpen (P.degreeZeroEquiv.symm (a : A)) ↔
+          (a : A) ∉ p.1.asIdeal := by
+        change (P.degreeZeroEquiv.symm (a : A) : P.gradedPieces 0) ∉
+          (PrimeSpectrum.comap P.degreeZeroEquiv.toRingHom p.1).asIdeal ↔ _
+        change P.degreeZeroEquiv (P.degreeZeroEquiv.symm (a : A)) ∉
+            p.1.asIdeal ↔ (a : A) ∉ p.1.asIdeal
+        simp
+      exact hmem.mpr hnot
+    exact p.2 ((PrimeSpectrum.mem_zeroLocus p.1 (I : Set A)).2 hpall)
+  have hcont : Continuous (blowupRestrictionMap P) := by
+    change Continuous (fun x : α =>
+      (⟨(blowupMap P).base x.1, x.2⟩ : β))
+    exact ((blowupMap P).continuous.comp continuous_subtype_val).subtype_mk
+      (fun x => x.2)
+  rw [hU.isHomeomorph_iff_restrictPreimage hcont]
+  intro a
+  let f : blowupAlgebra I := reesHomogeneousElement I 1
+    (a := (a : A)) (by simpa using a.2)
+  have hf : f ∈ P.gradedPieces 1 := by
+    rw [P.gradedPieces_spec]
+    exact ⟨a.1, by simpa using a.2, by rfl⟩
+  have hbij := blowup_chart_awayMap_bijective hf (by omega) a.1
+    (by simpa using a.2) rfl
+  let r := P.degreeZeroEquiv.symm (a : A)
+  let e : Localization.Away r ≃+*
+      degreeZeroLocalization P.gradedPieces f :=
+    RingEquiv.ofBijective
+      (Localization.awayMap
+        (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+          (Submonoid.powers f)) r) hbij
+  let s : Set (PrimeSpectrum A) :=
+    {p | e₀.symm p ∈ PrimeSpectrum.basicOpen r}
+  have hs : s ⊆ blowupBaseOpen I := by
+    intro p hp
+    change p ∉ PrimeSpectrum.zeroLocus (I : Set A)
+    intro hpz
+    have hpa : (a : A) ∈ p.asIdeal :=
+      (PrimeSpectrum.mem_zeroLocus p (I : Set A)).1 hpz a.2
+    have hmem : e₀.symm p ∈ PrimeSpectrum.basicOpen r ↔
+        (a : A) ∉ p.asIdeal := by
+      change P.degreeZeroEquiv (P.degreeZeroEquiv.symm (a : A)) ∉
+          p.asIdeal ↔ (a : A) ∉ p.asIdeal
+      simp
+    exact hmem.mp hp hpa
+  let hsub := localizationAwayComapSubtype_isHomeomorph (r : P.gradedPieces 0)
+  let htransport := homeomorphSubtypePreimage_isHomeomorph e₀ s
+  let hnested := subtypeSubtype_isHomeomorph hs
+  let H : {x : blowupProjPoints P // x ∈ dPlus P.gradedPieces f} ≃ₜ
+      {x : α // x ∈ (U a).carrier} :=
+    (dPlusHomeomorph P.graded hf (by omega)).trans
+      ((PrimeSpectrum.homeomorphOfRingEquiv e).symm.trans
+        (hsub.homeomorph.trans (htransport.homeomorph.trans hnested.homeomorph)))
+  apply (isHomeomorph_iff_exists_homeomorph).2
+  refine ⟨H, ?_⟩
+  sorry
 theorem strictTransform_conditions
     {A : Type u} [CommRing A] {I : Ideal A}
     {P : BlowupPresentation I} (D : StrictTransformData P) :
@@ -671,11 +1193,50 @@ theorem strictTransform_conditions
       ¬ (D.Z : Set (PrimeSpectrum A)) ⊆
         PrimeSpectrum.zeroLocus (I : Set A) ∧
       D.genericPoint ∈ blowupBaseOpen I ∧
-      ((D.Z : Set (PrimeSpectrum A)) ∩ blowupBaseOpen I).Nonempty := by sorry
+      ((D.Z : Set (PrimeSpectrum A)) ∩ blowupBaseOpen I).Nonempty := by
+  refine ⟨D.genericPoint_mem_baseOpen, ?_, D.genericPoint_mem_baseOpen, ?_⟩
+  · intro hZ
+    have hclosed : IsClosed (PrimeSpectrum.zeroLocus (I : Set A)) :=
+      (PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨(I : Set A), rfl⟩
+    exact D.genericPoint_mem_baseOpen
+      ((D.genericPoint_isGeneric.mem_closed_set_iff hclosed).2 hZ)
+  · exact D.genericPoint_isGeneric.mem_open_set_iff (blowupBaseOpen_isOpen I) |>.1
+      D.genericPoint_mem_baseOpen
 theorem strictTransform_eq_viaOpen
     {A : Type u} [CommRing A] {I : Ideal A}
     {P : BlowupPresentation I} (D : StrictTransformData P) :
-    strictTransform D = strictTransformViaOpen D := by sorry
+    strictTransform D = strictTransformViaOpen D := by
+  let b := (blowupMap P).base
+  let U := blowupBaseOpen I
+  let e := blowupRestrictionMap P
+  have he : IsHomeomorph e := blowupRestrictionMap_isHomeomorph P
+  let xl : {x : blowupProjPoints P // b x ∈ U} :=
+    ⟨D.lift, by
+      change (blowupMap P).base D.lift ∈ blowupBaseOpen I
+      rw [D.lift_over_generic]
+      exact D.genericPoint_mem_baseOpen⟩
+  have hxl : b D.lift ∈ (D.Z : Set (PrimeSpectrum A)) := by
+    rw [D.lift_over_generic]
+    exact D.genericPoint_isGeneric.mem
+  have hxl' : D.lift ∈ b ⁻¹' ((D.Z : Set (PrimeSpectrum A)) ∩ U) := by
+    exact ⟨hxl, xl.property⟩
+  have hsubset : b ⁻¹' ((D.Z : Set (PrimeSpectrum A)) ∩ U) ⊆
+      closure ({D.lift} : Set (blowupProjPoints P)) := by
+    intro y hy
+    let yl : {x : blowupProjPoints P // b x ∈ U} := ⟨y, hy.2⟩
+    have hbase : (D.genericPoint : PrimeSpectrum A) ⤳ b y :=
+      D.genericPoint_isGeneric.specializes hy.1
+    have hsub : e xl ⤳ e yl := by
+      apply (subtype_specializes_iff (e xl) (e yl)).2
+      change (blowupMap P).base D.lift ⤳ (blowupMap P).base y
+      rw [D.lift_over_generic]
+      exact hbase
+    have hsub' : xl ⤳ yl := by
+      exact (he.homeomorph.isInducing.specializes_iff).mp hsub
+    exact (subtype_specializes_iff xl yl).1 hsub' |>.mem_closure
+  apply le_antisymm
+  · exact closure_mono (Set.singleton_subset_iff.mpr hxl')
+  · exact closure_minimal hsubset isClosed_closure
 abbrev twoVariablePolynomialRing (k : Type u) [Field k] :=
   MvPolynomial (Fin 2) k
 
@@ -702,7 +1263,60 @@ def twoVariableParabolaIdeal (k : Type u) [Field k] :
   Ideal.span {twoVariableX k - twoVariableY k ^ 2}
 
 theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
-    Nonempty (BlowupPresentation (twoVariableMaximalIdeal k)) := by sorry
+    Nonempty (BlowupPresentation (twoVariableMaximalIdeal k)) := by
+  let A := twoVariablePolynomialRing k
+  let I := twoVariableMaximalIdeal k
+  let 𝒜 := reesGradedPieces I
+  letI : GradedRing 𝒜 := reesGradedRing I
+  let φ : 𝒜 0 →+* A :=
+    { toFun := fun p => Polynomial.constantCoeff (p.1.1)
+      map_one' := by simp
+      map_mul' := by intro p q; simp
+      map_zero' := by simp
+      map_add' := by intro p q; simp }
+  have hφ : Function.Bijective φ := by
+    constructor
+    · intro p q hpq
+      apply Subtype.ext
+      apply Subtype.ext
+      apply Polynomial.ext
+      intro n
+      have hp := (reesGradedPieces_mem_iff I 0 p.1).1 p.2
+      have hq := (reesGradedPieces_mem_iff I 0 q.1).1 q.2
+      rcases hp with ⟨a, ha, hpa⟩
+      rcases hq with ⟨b, hb, hqb⟩
+      have hab : a = b := by simpa [φ, hpa, hqb] using hpq
+      subst hab
+      simpa [hpa, hqb]
+    · intro a
+      refine ⟨⟨reesHomogeneousElement I 0 (a := a) (by simp), ?_⟩, ?_⟩
+      · exact (reesGradedPieces_mem_iff I 0 _).2 ⟨a, by simp, rfl⟩
+      · change Polynomial.constantCoeff (Polynomial.monomial 0 a) = a
+        simp
+  let e : 𝒜 0 ≃+* A := RingEquiv.ofBijective φ hφ
+  have he : ∀ a : A,
+      ((e.symm a : 𝒜 0) : blowupAlgebra I) = algebraMap A (blowupAlgebra I) a := by
+    intro a
+    apply Subtype.ext
+    obtain ⟨b, hb, h⟩ :=
+      (reesGradedPieces_mem_iff I 0 (e.symm a : blowupAlgebra I)).1
+        (e.symm a).property
+    have hba : b = a := by
+      have hea : φ (e.symm a) = a := by
+        change e (e.symm a) = a
+        exact e.apply_symm_apply a
+      simpa [A, φ, h] using hea
+    subst hba
+    simpa [A, h]
+  refine ⟨{
+    gradedPieces := 𝒜
+    graded := reesGradedRing I
+    degreeZeroEquiv := e
+    gradedPieces_spec := ?_
+    degreeZeroEquiv_spec := ?_ }⟩
+  · intro d x
+    exact reesGradedPieces_mem_iff I d x
+  · exact he
 noncomputable def twoVariableBlowupPresentation (k : Type u) [Field k] :
     BlowupPresentation (twoVariableMaximalIdeal k) :=
   Classical.choice (twoVariableBlowupPresentation_exists k)

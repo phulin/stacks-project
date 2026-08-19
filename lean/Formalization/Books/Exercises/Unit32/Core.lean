@@ -424,7 +424,105 @@ theorem directSumSheaf_is_associated_to_presheaf
       (CategoryTheory.presheafToSheaf
         (Opens.grothendieckTopology X) AddCommGrpCat).obj
         (abelianSheafDirectSumPresheaf F)) := by
-  sorry
+  classical
+  let P := abelianSheafDirectSumPresheaf F
+  let leg : ∀ i : I, (F i).presheaf ⟶ P := fun i =>
+    { app := fun U => AddCommGrpCat.ofHom
+        (DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i)
+      naturality := by
+        intro U V f
+        apply AddCommGrpCat.hom_ext
+        ext s
+        change (DirectSum.of (fun j : I => ((F j).presheaf.obj V : Type v)) i)
+            ((F i).presheaf.map f s) =
+          DirectSum.toAddMonoid
+            (fun j =>
+              (DirectSum.of (fun k : I => ((F k).presheaf.obj V : Type v)) j).comp
+                ((F j).presheaf.map f).hom)
+            ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) s)
+        rw [DirectSum.toAddMonoid_of]
+        rfl }
+  let c : Cofan (fun i : I =>
+      (CategoryTheory.sheafToPresheaf
+        (Opens.grothendieckTopology X) AddCommGrpCat).obj (F i)) :=
+    Cofan.mk P leg
+  let desc : ∀ s : Cofan (fun i : I => (F i).presheaf), P ⟶ s.pt := fun s =>
+    { app := fun U => AddCommGrpCat.ofHom
+        (DirectSum.toAddMonoid (fun i => ((s.inj i).app U).hom))
+      naturality := by
+        intro U V f
+        apply AddCommGrpCat.hom_ext
+        apply DirectSum.addHom_ext
+        intro i z
+        change
+          (DirectSum.toAddMonoid (fun j => ((s.inj j).app V).hom))
+              (abelianSheafDirectSumMap F f
+                ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) z)) =
+            (s.pt.map f)
+              ((DirectSum.toAddMonoid (fun j => ((s.inj j).app U).hom)
+                ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) z)))
+        rw [show abelianSheafDirectSumMap F f
+              ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) z) =
+            (DirectSum.of (fun j : I => ((F j).presheaf.obj V : Type v)) i)
+              ((F i).presheaf.map f z) by simp [abelianSheafDirectSumMap]]
+        rw [DirectSum.toAddMonoid_of, DirectSum.toAddMonoid_of]
+        exact congrArg (fun h => h z) ((s.inj i).naturality f) }
+  let fac : ∀ (s : Cofan (fun i : I => (F i).presheaf)) (i : I),
+      c.inj i ≫ desc s = s.inj i := by
+    intro s i
+    apply NatTrans.ext
+    funext U
+    apply AddCommGrpCat.hom_ext
+    ext z
+    change (DirectSum.toAddMonoid (fun j => ((s.inj j).app U).hom))
+        ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) z) =
+      ((s.inj i).app U).hom z
+    rw [DirectSum.toAddMonoid_of]
+  let uniq : ∀ (s : Cofan (fun i : I => (F i).presheaf))
+      (m : c.pt ⟶ s.pt) (_ : ∀ i, c.inj i ≫ m = s.inj i), m = desc s := by
+    intro s m hm
+    apply NatTrans.ext
+    funext U
+    apply AddCommGrpCat.hom_ext
+    apply DirectSum.addHom_ext
+    intro i z
+    change (m.app U)
+        ((DirectSum.of (fun i : I => ((F i).presheaf.obj U : Type v)) i) z) =
+      (DirectSum.toAddMonoid (fun i => ((s.inj i).app U).hom))
+        ((DirectSum.of (fun i : I => ((F i).presheaf.obj U : Type v)) i) z)
+    rw [DirectSum.toAddMonoid_of]
+    have h := congrArg (fun q => (q.app U) z) (hm i)
+    change (m.app U)
+      ((DirectSum.of (fun j : I => ((F j).presheaf.obj U : Type v)) i) z) =
+      ((s.inj i).app U).hom z at h
+    exact h
+  let c₀ : Cocone ((Discrete.functor F) ⋙
+      CategoryTheory.sheafToPresheaf
+        (Opens.grothendieckTopology X) AddCommGrpCat) :=
+    { pt := P, ι := Discrete.natTrans (fun i => leg i.as) }
+  let toCofan : ∀ s : Cocone ((Discrete.functor F) ⋙
+      CategoryTheory.sheafToPresheaf
+        (Opens.grothendieckTopology X) AddCommGrpCat),
+      Cofan (fun i : I =>
+        (CategoryTheory.sheafToPresheaf
+          (Opens.grothendieckTopology X) AddCommGrpCat).obj (F i)) :=
+    fun s => Cofan.mk s.pt (fun i => s.ι.app (Discrete.mk i))
+  let hC₀ : IsColimit c₀ :=
+    { desc := fun s => desc (toCofan s)
+      fac := by
+        intro s j
+        change leg j.as ≫ desc (toCofan s) = s.ι.app j
+        exact fac (toCofan s) j.as
+      uniq := by
+        intro s m hm
+        apply uniq (toCofan s) m
+        intro j
+        have hj := hm (Discrete.mk j)
+        change c.inj j ≫ m = (toCofan s).inj j at hj
+        exact hj }
+  let hAssoc := CategoryTheory.Sheaf.isColimitSheafifyCocone c₀ hC₀
+  let hSheaf := directSumSheaf_isColimit F
+  exact ⟨hSheaf.coconePointUniqueUpToIso hAssoc⟩
 
 /-- The index of all integral extension-by-zero maps into an abelian sheaf. -/
 abbrev integerGeneratorIndex {X : TopCat.{v}}

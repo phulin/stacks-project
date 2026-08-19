@@ -89,7 +89,7 @@ theorem extensionByEmpty_stalk_isEmpty
     {X : TopCat.{v}} (U : Opens X)
     (G : Sh.{v, v} (openSubspace U)) (x : X) (hx : x ∉ U) :
     IsEmpty (((extensionByEmpty U).obj G).presheaf.stalk x) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit22.openSetSheafExtension_stalk_empty U G x hx
 
 /-- On the open subspace, extension by the empty set has the original stalk. -/
 theorem extensionByEmpty_stalk_iso
@@ -97,7 +97,7 @@ theorem extensionByEmpty_stalk_iso
     (G : Sh.{v, v} (openSubspace U)) (x : X) (hx : x ∈ U) :
     Nonempty (((extensionByEmpty U).obj G).presheaf.stalk x ≃
       G.presheaf.stalk ⟨x, hx⟩) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit22.openSetSheafExtension_stalk_iso U G x hx
 
 /-- Extension by zero is left adjoint to restriction for abelian sheaves. -/
 noncomputable def extensionByZero_leftAdjoint
@@ -112,7 +112,8 @@ theorem extensionByZero_stalk_zero
     (x : X) (hx : x ∉ U) :
     Nonempty (((extensionByZero U).obj G).presheaf.stalk x ≅
       (⊥_ AddCommGrpCat.{v})) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit22.openAlgebraicSheafExtension_stalk_initial
+    AddCommGrpCat U G x hx
 
 /-- On the open subspace, extension by zero has the original additive stalk. -/
 theorem extensionByZero_stalk_iso

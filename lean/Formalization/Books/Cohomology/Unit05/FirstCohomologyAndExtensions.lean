@@ -312,6 +312,90 @@ noncomputable def ringedSpaceModulePullbackExtensionMorphism
 /- The source's `Ext¹` is the extension class represented by a short exact
   sequence.  The theorem records both the bijection and its specified value
   on every extension; the chosen equivalence below gives a reusable map. -/
+/- Proof roadmap.
+
+  The statement is sound: for `S = E.toShortComplex`, Mathlib's
+  `S.ShortExact.extClass` has type `Ext S.X₃ S.X₁ 1`, hence here it is an
+  element of `Ext O_X F 1`.  The obstruction is instead an interface gap.
+  Mathlib's extension class is the boundary in its derived-category Ext
+  sequence, whereas `ringedSpaceModuleExtensionImageOfOne` uses the boundary
+  of the independently chosen universal delta-functor from Chapter 2.  There
+  is no declaration currently identifying those two choices.
+
+  A concrete proof can make that comparison through universality as follows.
+
+  1. Abbreviate `C := Mod X.structureSheaf` and
+     `O := ringedSpaceStructureSheafModule X`.  Define a local
+     `Eδ : CohomologicalDeltaFunctor C AddCommGrpCat.{v}` by
+       * `Eδ.functor n := CategoryTheory.Abelian.extFunctorObj O n`, and
+       * `Eδ.delta S hS n :=
+           AddCommGrpCat.ofHom (hS.extClass.postcomp O (rfl : n + 1 = n + 1))`.
+     Its four exactness fields are exactly
+     `Abelian.Ext.covariant_sequence_exact₁'`,
+     `Abelian.Ext.covariant_sequence_exact₂'`, and
+     `Abelian.Ext.covariant_sequence_exact₃'` from
+     `Mathlib/Algebra/Homology/DerivedCategory/Ext/ExactSequences.lean`;
+     `at_zero` follows from `Abelian.Ext.mono_postcomp_mk₀_of_mono` and
+     `hS.mono_f`.  Prove naturality by evaluating on an Ext class, reassociating
+     with `Abelian.Ext.comp_assoc`, and applying
+     `ShortComplex.ShortExact.extClass_naturality` from `Ext/ExtClass.lean`.
+
+  2. Prove `Eδ.IsUniversal` with `effaceable_isUniversal` from
+     `Homology/Unit12/CohomologicalDeltaFunctors.lean`.  For positive `n`,
+     efface an object with `ringedSpaceModuleInjectiveEmbedding X Y`; its
+     target is injective by `ringedSpaceModuleInjectiveObject_injective`, so
+     the induced Ext map is zero by `Abelian.Ext.eq_zero_of_injective` from
+     `Ext/EnoughInjectives.lean` (write `n = k + 1`).
+
+  3. Let `D := ringedSpaceModuleCohomologyDeltaFunctor X` and let
+     `U := forget₂ (ModuleCat.{v}
+       (X.structureSheaf.obj.obj (op (⊤ : Opens X.carrier)))) AddCommGrpCat.{v}`.
+     Define `Hδ : CohomologicalDeltaFunctor C AddCommGrpCat.{v}` by applying
+     `U` to every functor, connecting map, and exact pair of `D`.  The
+     forgetful functor preserves finite limits and colimits, so use
+     `ShortComplex.Exact.map` for the exactness fields.  Prove `Hδ` universal
+     by `effaceable_isUniversal` again: embed into the same chosen injective,
+     rewrite with `ringedSpaceModuleCohomologyDeltaFunctor_functor`, and use
+     `higherRightDerivedFunctor_obj_isZero_of_injective`; the map into that
+     zero object is zero by `IsZero.eq_of_tgt`.
+
+  4. Construct the required degree-zero natural isomorphism
+     `Eδ.functor 0 ≅ Hδ.functor 0`.  At an object `Y`, compose
+       * `Abelian.Ext.addEquiv₀ : Ext O Y 0 ≃+ (O ⟶ Y)`,
+       * evaluation at the global unit,
+         `f ↦ ((ringedSpaceModuleGlobalSections X).map f).hom
+           (ringedSpaceModuleGlobalUnitSection X)`, and
+       * `((ringedSpaceModuleGlobalSectionsIso X).inv.app Y).hom`.
+     For the inverse to the middle map, send a top-open value `y` to the
+     compatible section whose value on `V` is the restriction of `y` along
+     `homOfLE (show V.unop ≤ ⊤ from le_top)`, then apply
+     `SheafOfModules.unitHomEquiv Y |>.symm`.  This is the same construction
+     already used in `exists_ringedSpaceModule_quotient_section`; use
+     `SheafOfModules.unitHomEquiv_apply_coe` and
+     `SheafOfModules.unitHomEquiv_comp_apply` for the inverse and naturality
+     checks.  Package the additive equivalences with
+     `AddEquiv.toAddCommGrpIso` and `NatIso.ofComponents`.  Record the
+     normalization that the component at `O` sends
+     `Abelian.Ext.mk₀ (𝟙 O)` to
+     `((ringedSpaceModuleGlobalSectionsIso X).inv.app O).hom
+       (ringedSpaceModuleGlobalUnitSection X)`.
+
+  5. Apply `universal_deltaFunctor_unique_iso Eδ Hδ` from Unit 12 to
+     the degree-zero isomorphism.  Its degree-one component, followed by
+     `(ringedSpaceModuleCohomologyFunctorIso X 1).hom.app F`, gives the desired
+     type equivalence.  For an extension `E`, evaluate the delta-functor
+     compatibility square on `Abelian.Ext.mk₀ (𝟙 O)`.  The Ext-side
+     boundary is `E.toShortComplex_shortExact.extClass` by
+     `Abelian.Ext.mk₀_id_comp`; the degree-zero normalization makes the other
+     side `D.delta E.toShortComplex E.toShortComplex_shortExact 0` applied to
+     the chosen preimage of `1`.  After the final cohomology comparison this
+     unfolds exactly to `ringedSpaceModuleExtensionImageOfOne X F E`.
+
+  Do not try to obtain this theorem merely from
+  `exists_ringedSpaceModule_quotient_section`: that result proves surjectivity
+  on H¹ but supplies neither injectivity nor the required compatibility with
+  `ShortExact.extClass`; those are precisely what the universal-delta-functor
+  comparison provides. -/
 theorem exists_ringedSpaceModule_ext_h1_equiv
     (X : RingedSpace.{v}) (F : Mod X.structureSheaf) :
     ∃ e : ringedSpaceModuleExtensionClass X F ≃

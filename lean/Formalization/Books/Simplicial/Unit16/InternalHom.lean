@@ -36,13 +36,19 @@ abbrev HasFiniteNonemptyCoproducts (C : Type u) [Category.{v} C] : Prop :=
 theorem hasBinaryProducts_of_hasFiniteNonemptyProducts
     {C : Type u} [Category.{v} C]
     (hC : HasFiniteNonemptyProducts C) : HasBinaryProducts C := by
-  sorry
+  let _ := hC 1
+  exact
+    hasLimitsOfShape_of_equivalence
+      (Discrete.equivalence (WalkingPair.equivBool.trans finTwoEquiv.symm).symm)
 
 /-- The binary coproducts needed for the earlier `Δ[n] × V` construction. -/
 theorem hasBinaryCoproducts_of_hasFiniteNonemptyCoproducts
     {C : Type u} [Category.{v} C]
     (hC : HasFiniteNonemptyCoproducts C) : HasBinaryCoproducts C := by
-  sorry
+  let _ := hC 1
+  exact
+    hasColimitsOfShape_of_equivalence
+      (Discrete.equivalence (WalkingPair.equivBool.trans finTwoEquiv.symm).symm)
 
 /-! ## Products of simplicial objects and the representing functor -/
 

@@ -343,7 +343,7 @@ noncomputable def eilenbergMacLaneExtension
         have hgb : extensionImageProperty (g.unop ≫ β.1) := by
           simpa only [β, Category.assoc] using hcomp
         rw [Fintype.sum_eq_single β]
-        · simp [β, hfa, hgb, hcomp', hcomp, Category.assoc]
+        · simp [β, hfa, hgb]
         · intro x hx
           simp only [dif_pos hfa]
           by_cases hxe : x = β
@@ -365,7 +365,7 @@ noncomputable def eilenbergMacLaneExtension
             apply hcomp'
             simpa only [β, Category.assoc] using hgb
           rw [Fintype.sum_eq_single β]
-          · simp [β, hfa, hgb, hcomp', hcomp, Category.assoc]
+          · simp [β, hfa, hgb]
           · intro x hx
             simp only [dif_pos hfa]
             by_cases hxe : x = β
@@ -376,7 +376,7 @@ noncomputable def eilenbergMacLaneExtension
                 apply hx
                 simpa [β] using h'
               simp [hxe']
-        · simp [hfa, hcomp', hcomp]
+        · simp [hfa, hcomp']
   }
 
 theorem eilenbergMacLaneExtension_acyclic

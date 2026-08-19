@@ -8,6 +8,7 @@ import Mathlib.AlgebraicTopology.SimplicialObject.Op
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Subobject.Lattice
 import Mathlib.CategoryTheory.Subobject.Limits
+import Mathlib.CategoryTheory.Limits.MonoCoprod
 
 /-!
 # Simplicial Methods, Chapter 18: Splitting simplicial objects
@@ -495,8 +496,18 @@ private def reverseSplitting
             A.e.op := by
         rw [Quiver.Hom.unop_op]
         exact congrArg Quiver.Hom.op hrev
-      exact sorry
-    sorry
+      rw [hrev'] at hmap'
+      simpa [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
+        SimplexCategory.rev, Category.assoc] using hmap'
+    have h' : IsColimit (Cofan.mk (U.obj Δ)
+        (fun A : SimplicialObject.Splitting.IndexSet Δ =>
+          s.ι A.1.unop.len ≫ U.map A.e.op)) := by
+      apply IsColimit.ofIsoColimit h
+      exact Cofan.ext (Iso.refl _) (fun A => by
+        dsimp [Cofan.inj, Cofan.mk, Discrete.natTrans]
+        erw [Category.comp_id]
+        exact hinj A)
+    exact h'
     /- simpa [e, SimplicialObject.Splitting.cofan,
       SimplicialObject.Splitting.cofan', SimplicialObject.opFunctor_obj_map,
       SimplexCategory.rev_map_rev_map, hinj] using h -/
@@ -510,7 +521,61 @@ theorem simplicial_abelian_group_has_normalized_splitting
     (CategoryTheory.Abelian.DoldKan.equivalence (A := AddCommGrpCat.{u})).unitIso.app U'
   let s : SimplicialObject.Splitting U' :=
     (AlgebraicTopology.DoldKan.Γ₀.splitting K).ofIso e.symm
-  exact sorry
+  exact ⟨reverseSplitting s, by
+    constructor
+    · intro n
+      have hnorm :
+          AlgebraicTopology.NormalizedMooreComplex.objX U' n =
+            normalizedSubobject U n := by
+        rcases n with _ | n
+        · rfl
+        · dsimp [AlgebraicTopology.NormalizedMooreComplex.objX, normalizedSubobject]
+          change
+            (Finset.univ.inf (fun k : Fin (n + 1) =>
+              kernelSubobject (U'.δ k.succ)) :
+                Subobject (U'.obj (op ⦋n + 1⦌))) =
+            (Finset.univ.inf (fun i : Fin (n + 1) =>
+              kernelSubobject (U.δ i.castSucc)) :
+                Subobject (U'.obj (op ⦋n + 1⦌)))
+          have hrev (i : Fin (n + 1)) :
+              (Fin.rev i).succ.rev = i.castSucc := by
+            rw [Fin.rev_succ, Fin.rev_rev]
+          have himage :
+              (Finset.univ : Finset (Fin (n + 1))).image Fin.rev = Finset.univ :=
+            Finset.image_univ_of_surjective Fin.rev_surjective
+          rw [← himage, Finset.inf_image]
+          congr 1
+          · exact himage.symm
+          · funext i
+            change kernelSubobject (U'.δ (Fin.rev i).succ) =
+              kernelSubobject (U.δ i.castSucc)
+            rw [SimplicialObject.opFunctor_obj_δ, hrev]
+            simp [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
+              SimplexCategory.rev, Category.assoc]
+            exact Eq.refl _
+      sorry
+    · intro n
+      change Mono (s.ι n)
+      dsimp [s, SimplicialObject.Splitting.ofIso]
+      let f := (AlgebraicTopology.DoldKan.Γ₀.splitting K).ι n
+      have hf : Mono f := by
+        change Mono (Sigma.ι
+          (AlgebraicTopology.DoldKan.Γ₀.Obj.summand K (op ⦋n⦌))
+          (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌)))
+        let f' := Sigma.ι
+          (AlgebraicTopology.DoldKan.Γ₀.Obj.summand K (op ⦋n⦌))
+          (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
+        letI : IsSplitMono f' := inferInstance
+        exact ⟨fun {Z} g h eq => by
+          rw [← Category.comp_id g, ← Category.comp_id h, ← IsSplitMono.id f']
+          rw [← Category.assoc, eq, Category.assoc]⟩
+      change Mono (f ≫ e.inv.app (op ⦋n⦌))
+      have he : Mono (e.inv.app (op ⦋n⦌)) := by infer_instance
+      exact ⟨fun {Z} g h eq => by
+        apply hf.right_cancellation
+        apply he.right_cancellation
+        rw [← Category.assoc] at eq
+        exact eq⟩⟩
 
 /-- The normalized summands are functorial under maps of simplicial objects. -/
 theorem normalizedSubobject_map_factors

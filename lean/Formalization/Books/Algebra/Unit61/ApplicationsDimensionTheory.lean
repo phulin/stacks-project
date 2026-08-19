@@ -1,6 +1,5 @@
 import Formalization.Books.Algebra.Unit60.Dimension
 import Formalization.Books.Algebra.Unit35.JacobsonRings
-import Mathlib.RingTheory.KrullDimension.NonZeroDivisors
 import Mathlib.NumberTheory.Padics.ProperSpace
 import Mathlib.RingTheory.PowerSeries.Basic
 
@@ -22,6 +21,13 @@ open Set
 universe u
 
 noncomputable section
+
+private theorem ringKrullDim_quotient_unit61
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    ringKrullDim (R ⧸ I) =
+      Order.krullDim (PrimeSpectrum.zeroLocus (R := R) I) := by
+  rw [ringKrullDim,
+    Order.krullDim_eq_of_orderIso I.primeSpectrumQuotientOrderIsoZeroLocus]
 
 private theorem finite_primeSpectrum_of_isDiscreteValuationRing
     {R : Type u} [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] :
@@ -403,7 +409,7 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
           simpa [b2, a, z] using hzq
       · exact fun hq => hK1leK2.trans hq
     have hdimEq : ringKrullDim (R ⧸ K1) = ringKrullDim (R ⧸ K2) := by
-      rw [ringKrullDim_quotient, ringKrullDim_quotient, hzero]
+      rw [ringKrullDim_quotient_unit61, ringKrullDim_quotient_unit61, hzero]
     have hcast : ((d₀ - 1 : ℕ) : WithBot ℕ∞) =
         ((d₀ - 2 : ℕ) : WithBot ℕ∞) := by
       calc

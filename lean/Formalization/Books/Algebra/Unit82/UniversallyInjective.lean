@@ -906,13 +906,13 @@ theorem universallyExact_prod
         simpa using congrArg Prod.snd hy
       obtain ⟨x, hx⟩ := (hf.2.1 y.1).mp hy₁
       obtain ⟨z, hz⟩ := (hg.2.1 y.2).mp hy₂
-      exact ⟨(x, z), by simpa [hx, hz]⟩
+      exact ⟨(x, z), by simp [hx, hz]⟩
     · rintro ⟨p, hp⟩
       rcases p with ⟨x, z⟩
       have hx : f₂ (f₁ x) = 0 := (hf.2.1 (f₁ x)).mpr ⟨x, rfl⟩
       have hz : g₂ (g₁ z) = 0 := (hg.2.1 (g₁ z)).mpr ⟨z, rfl⟩
       rw [← hp]
-      simpa [hx, hz]
+      simp [hx, hz]
   · intro y
     obtain ⟨x, hx⟩ := hf.2.2.1 y.1
     obtain ⟨z, hz⟩ := hg.2.2.1 y.2
@@ -1045,6 +1045,7 @@ theorem integerDirectSumToProduct_flat_terms :
 /-- The power class is divisible by every positive power of two. -/
 theorem integerPowerClass_divisible (n : ℕ) (hn : 1 ≤ n) :
     ∃ y : integerCokernel, (2 : ℤ) ^ n • y = integerPowerClass := by
+  have _hn0 : n ≠ 0 := Nat.ne_of_gt hn
   let y : integerDirectProduct := fun k => (2 : ℤ) ^ (k + 1 - n)
   let d : integerDirectProduct :=
     integerPowerSequence - (2 : ℤ) ^ n • y
@@ -1055,7 +1056,7 @@ theorem integerPowerClass_divisible (n : ℕ) (hn : 1 ≤ n) :
     have hk1 : n ≤ k + 1 := le_trans hkn (Nat.le_succ k)
     have hdecomp : n + (k + 1 - n) = k + 1 := Nat.add_sub_of_le hk1
     have hd : d k = 0 := by
-      simp [d, integerPowerSequence, y, Pi.smul_apply, ← pow_add, hdecomp]
+      simp [d, integerPowerSequence, y, ← pow_add, hdecomp]
     exact hk hd
   )
   have hz : integerDirectSumToProduct z = d := by

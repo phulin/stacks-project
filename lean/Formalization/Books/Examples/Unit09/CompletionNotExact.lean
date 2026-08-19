@@ -305,12 +305,10 @@ theorem firstXi_exists :
           · subst i
             ext z
             simp [firstKernelMap, firstKernelComponentMap,
-              DirectSum.component.of, LinearMap.comp_apply]
-          · simp [firstKernelMap, firstKernelComponentMap,
-              DirectSum.component.of, LinearMap.comp_apply, hi]
+              LinearMap.comp_apply]
+          · simp [firstKernelMap, firstKernelComponentMap]
             ext z
-            simp [firstKernelMap, firstKernelComponentMap,
-              DirectSum.component.of, LinearMap.comp_apply, hi]
+            simp [DirectSum.component.of, LinearMap.comp_apply, hi]
         have htrunc :
             DirectSum.component (polynomialRing k) ℕ
                 (fun _ : ℕ ↦ polynomialRing k) n (firstXiTruncation k l) =
@@ -344,7 +342,7 @@ theorem firstXi_exists :
             a l - a 2 ∈ (polynomialAdicIdeal k) ^ 2 •
               (⊤ : Submodule (polynomialRing k) (firstKernel k)) := by
           exact SModEq.sub_mem.mp
-            (SModEq.symm (a.property (show 2 ≤ l by simp [l, hn2])))
+            (SModEq.symm (a.property (show 2 ≤ l by simp [l])))
         have hlow := hcomponent 2 (a l - a 2) hlowmem
         have hlow' :
             DirectSum.component (polynomialRing k) ℕ
@@ -405,7 +403,7 @@ theorem firstXi_exists :
           simpa using hsub
         exact hnot hX
       by_cases hs : (a 2).support = ∅
-      · exact hbad 2 (by decide) (by simpa [hs])
+      · exact hbad 2 (by decide) (by simp [hs])
       · let b := (a 2).support.max'
           (Finset.nonempty_iff_ne_empty.mpr hs)
         let n := max 2 (b + 1)
@@ -452,12 +450,10 @@ theorem first_sequence_short_exact :
     · subst i
       ext z
       simp [firstKernelMap, firstKernelComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply]
-    · simp [firstKernelMap, firstKernelComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply, hi]
+        LinearMap.comp_apply]
+    · simp [firstKernelMap, firstKernelComponentMap]
       ext z
-      simp [firstKernelMap, firstKernelComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply, hi]
+      simp [DirectSum.component.of, LinearMap.comp_apply, hi]
   have hquot_diag (n : ℕ) :
       (DirectSum.component (polynomialRing k) ℕ
           (fun n : ℕ ↦ polynomialRing k ⧸
@@ -470,14 +466,12 @@ theorem first_sequence_short_exact :
     intro i
     by_cases hi : i = n
     · subst i
-      ext z
+      ext
       simp [firstQuotientMap, firstQuotientComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply]
-    · simp [firstQuotientMap, firstQuotientComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply, hi]
-      ext z
-      simp [firstQuotientMap, firstQuotientComponentMap,
-        DirectSum.component.of, LinearMap.comp_apply, hi]
+        LinearMap.comp_apply]
+    · simp [firstQuotientMap, firstQuotientComponentMap]
+      ext
+      simp [DirectSum.component.of, LinearMap.comp_apply, hi]
   have hcomponent_exact (n : ℕ) (r : polynomialRing k) :
       firstQuotientComponentMap k n r = 0 ↔
         ∃ s : polynomialRing k, firstKernelComponentMap k n s = r := by

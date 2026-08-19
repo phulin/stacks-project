@@ -1,9 +1,13 @@
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
+import Formalization.Books.Algebra.Unit13.TensorAlgebra
+import Mathlib.LinearAlgebra.ExteriorPower.Basis
+import Mathlib.RingTheory.GradedAlgebra.TensorProduct
 import Mathlib.RingTheory.Ideal.Pure
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Support
+import Mathlib.RingTheory.Spectrum.Prime.Module
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.Topology.Inseparable
 
@@ -19,6 +23,8 @@ Chapter 78.
 namespace Formalization.Books.Algebra.Unit108
 
 open Set
+open scoped TensorProduct
+open Formalization.Books.Algebra.Unit09
 
 universe u v
 
@@ -736,6 +742,202 @@ theorem finitely_generated_pure_ideal_characterization
 /- `FiniteLocallyFree` is the earlier chapter's source-facing formulation of
    being finite locally free on a standard-open cover. -/
 
+private noncomputable def localized_exteriorPower_equiv
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (S : Submonoid R) (n : ℕ) :
+    LocalizedModule S (Formalization.Books.Algebra.Unit13.exteriorPower R M n) ≃ₗ[
+      Localization S]
+      Formalization.Books.Algebra.Unit13.exteriorPower (Localization S)
+        (LocalizedModule S M) n := by
+  let T := Localization S
+  let e := Formalization.Books.Algebra.Unit12.tensorProductLocalizationModuleEquiv S
+    (M := M)
+  let fgen : M →ₗ[R] ExteriorAlgebra T (LocalizedModule S M) :=
+    (ExteriorAlgebra.ι T).restrictScalars R |>.comp
+      (LocalizedModule.mkLinearMap S M)
+  let fR : ExteriorAlgebra R M →ₐ[R] ExteriorAlgebra T (LocalizedModule S M) :=
+    ExteriorAlgebra.lift R ⟨fgen, by
+      intro m
+      simp [fgen]⟩
+  have hf_one (r : T) :
+      algebraMap T (T ⊗[R] ExteriorAlgebra R M) r ∈
+        (Formalization.Books.Algebra.Unit13.exteriorPower R M 0).baseChange T := by
+    have hmem : (1 : ExteriorAlgebra R M) ∈
+        Formalization.Books.Algebra.Unit13.exteriorPower R M 0 :=
+      SetLike.one_mem_graded _
+    simpa [Algebra.smul_def] using
+      Submodule.smul_mem _ r (Submodule.tmul_mem_baseChange_of_mem (p :=
+        Formalization.Books.Algebra.Unit13.exteriorPower R M 0) 1 hmem)
+  have hf_gen (m : M) : fR (ExteriorAlgebra.ι R m) ∈
+      Formalization.Books.Algebra.Unit13.exteriorPower T
+        (LocalizedModule S M) 1 := by
+    simp only [fR, fgen, ExteriorAlgebra.lift_ι_apply, LinearMap.coe_comp,
+      Function.comp_apply, LinearMap.coe_restrictScalars,
+      LocalizedModule.mkLinearMap_apply]
+    change ExteriorAlgebra.ι T (LocalizedModule.mk m 1) ∈
+      (LinearMap.range (ExteriorAlgebra.ι T)) ^ 1
+    rw [pow_one]
+    exact LinearMap.mem_range_self _ _
+  have hf_one_local (r : R) :
+      fR (algebraMap R (ExteriorAlgebra R M) r) ∈
+        Formalization.Books.Algebra.Unit13.exteriorPower T
+          (LocalizedModule S M) 0 := by
+    have hzero : (1 : ExteriorAlgebra T (LocalizedModule S M)) ∈
+        Formalization.Books.Algebra.Unit13.exteriorPower T
+          (LocalizedModule S M) 0 := by
+      exact SetLike.one_mem_graded _
+    rw [show fR (algebraMap R (ExteriorAlgebra R M) r) =
+      algebraMap T (ExteriorAlgebra T (LocalizedModule S M)) (algebraMap R T r) by
+        simp [fR]
+        exact (IsScalarTower.algebraMap_apply R T
+          (ExteriorAlgebra T (LocalizedModule S M)) r).symm]
+    simpa only [Algebra.algebraMap_eq_smul_one] using
+      Submodule.smul_mem _ (algebraMap R T r) hzero
+  let fgraded :
+      (fun i : ℕ => Formalization.Books.Algebra.Unit13.exteriorPower R M i) →ₐᵍ[R]
+        ((fun i : ℕ => Formalization.Books.Algebra.Unit13.exteriorPower T
+          (LocalizedModule S M) i) · |>.restrictScalars R) :=
+    { fR with
+      map_mem hx := by
+        induction hx using Submodule.pow_induction_on_left' with
+        | algebraMap r => exact hf_one_local r
+        | add x y i hx hy ihx ihy => simpa only [map_add] using add_mem ihx ihy
+        | mem_mul _ hm i x hx ih =>
+            obtain ⟨m, rfl⟩ := hm
+            rw [map_mul]
+            simpa [Nat.one_add] using SetLike.mul_mem_graded (hf_gen m) ih }
+  let ggen : LocalizedModule S M →ₗ[T]
+      T ⊗[R] ExteriorAlgebra R M :=
+    (LinearMap.baseChange T (ExteriorAlgebra.ι R)).comp e.symm.toLinearMap
+  have he (m : M) (s : S) :
+      e.symm (localizedModuleFraction S m s) =
+        (Localization.mk 1 s ⊗ₜ[R] m) := by
+    apply e.injective
+    simp [e]
+  let g : ExteriorAlgebra T (LocalizedModule S M) →ₐ[T]
+      T ⊗[R] ExteriorAlgebra R M :=
+    ExteriorAlgebra.lift T ⟨ggen, by
+      intro x
+      induction x using LocalizedModule.induction_on with
+      | _ m s =>
+          dsimp [ggen]
+          rw [show e.symm (LocalizedModule.mk m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) by
+              simpa [localizedModuleFraction] using he m s]
+          simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.tmul_mul_tmul]⟩
+  have hg_one (x : LocalizedModule S M) : g (ExteriorAlgebra.ι T x) ∈
+      (Formalization.Books.Algebra.Unit13.exteriorPower R M 1).baseChange T := by
+    have hmem (y : T ⊗[R] M) :
+        (LinearMap.baseChange T (ExteriorAlgebra.ι R)) y ∈
+          (Formalization.Books.Algebra.Unit13.exteriorPower R M 1).baseChange T := by
+      induction y using TensorProduct.induction_on with
+      | zero => exact zero_mem _
+      | add x y hx hy =>
+          rw [map_add]
+          exact add_mem hx hy
+      | tmul r m =>
+          rw [LinearMap.baseChange_tmul]
+          exact Submodule.tmul_mem_baseChange_of_mem r
+            (show ExteriorAlgebra.ι R m ∈
+              Formalization.Books.Algebra.Unit13.exteriorPower R M 1 by
+              change ExteriorAlgebra.ι R m ∈
+                (LinearMap.range (ExteriorAlgebra.ι R)) ^ 1
+              rw [pow_one]
+              exact LinearMap.mem_range_self _ _)
+    simpa [g, ggen] using hmem (e.symm x)
+  let V : ℕ → Submodule T (T ⊗[R] ExteriorAlgebra R M) :=
+    fun i => (Formalization.Books.Algebra.Unit13.exteriorPower R M i).baseChange T
+  letI : GradedAlgebra V := by
+    dsimp [V]
+    infer_instance
+  let ggraded :
+      (fun i : ℕ => Formalization.Books.Algebra.Unit13.exteriorPower T
+        (LocalizedModule S M) i) →ₐᵍ[T]
+        V :=
+    { g with
+      map_mem hx := by
+        induction hx using Submodule.pow_induction_on_left' with
+        | algebraMap r => simpa [g, V, Algebra.algebraMap_eq_smul_one] using hf_one r
+        | add x y i hx hy ihx ihy => simpa only [map_add] using add_mem ihx ihy
+        | mem_mul _ hm i x hx ih =>
+            obtain ⟨m, rfl⟩ := hm
+            rw [map_mul]
+            simpa [Nat.one_add] using
+              SetLike.mul_mem_graded (A := V) (hg_one m) ih }
+  let fbase := GradedAlgHom.liftEquiv
+    (fun i : ℕ => Formalization.Books.Algebra.Unit13.exteriorPower R M i)
+    (fun i : ℕ => Formalization.Books.Algebra.Unit13.exteriorPower T
+      (LocalizedModule S M) i) fgraded
+  have hgen : fbase.toAlgHom.toLinearMap.comp ggen = ExteriorAlgebra.ι T := by
+    apply LinearMap.ext
+    intro x
+    induction x using LocalizedModule.induction_on with
+      | _ m s =>
+          dsimp [ggen]
+          rw [show e.symm (LocalizedModule.mk m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) by
+              simpa [localizedModuleFraction] using he m s]
+          simp [fbase, fgraded, fR, fgen]
+          rw [← (ExteriorAlgebra.ι T).map_smul]
+          apply congrArg (ExteriorAlgebra.ι T)
+          change Localization.mk 1 s • LocalizedModule.mk m 1 =
+            LocalizedModule.mk m s
+          simpa using (LocalizedModule.mk_smul_mk (R := R) 1 m s 1)
+  have h₁ : fbase.toAlgHom.comp g = AlgHom.id T
+      (ExteriorAlgebra T (LocalizedModule S M)) := by
+    apply ExteriorAlgebra.hom_ext
+    simpa [g, LinearMap.comp_assoc] using hgen
+  have hmap : (ggen.restrictScalars R).comp (LocalizedModule.mkLinearMap S M) =
+      (((Algebra.TensorProduct.includeRight :
+        ExteriorAlgebra R M →ₐ[R] T ⊗[R] ExteriorAlgebra R M).toLinearMap).comp
+        (ExteriorAlgebra.ι R)) := by
+    apply LinearMap.ext
+    intro m
+    dsimp [ggen]
+    rw [LocalizedModule.mkLinearMap_apply]
+    rw [show e.symm (LocalizedModule.mk m 1) =
+      (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
+        simpa [localizedModuleFraction] using he m 1]
+    simp [LinearMap.baseChange_tmul]
+    rw [Localization.mk_one_eq_algebraMap, map_one]
+  have h₂ : g.comp fbase.toAlgHom = AlgHom.id T
+      (T ⊗[R] ExteriorAlgebra R M) := by
+    apply Algebra.TensorProduct.ext_ring
+    apply ExteriorAlgebra.hom_ext
+    ext m
+    simp [fbase, fgraded, fR, fgen, g, Algebra.TensorProduct.includeRight]
+    simpa using LinearMap.congr_fun hmap m
+  let fcomp :
+      (Formalization.Books.Algebra.Unit13.exteriorPower R M n).baseChange T →ₗ[T]
+        Formalization.Books.Algebra.Unit13.exteriorPower T (LocalizedModule S M) n :=
+    (fbase.toAlgHom.toLinearMap.comp
+      (Submodule.subtype _)).codRestrict _ (fun x => fbase.map_mem x.property)
+  let gcomp :
+      Formalization.Books.Algebra.Unit13.exteriorPower T (LocalizedModule S M) n →ₗ[T]
+        (Formalization.Books.Algebra.Unit13.exteriorPower R M n).baseChange T :=
+    (g.toLinearMap.comp
+      (Submodule.subtype _)).codRestrict _ (fun x => ggraded.map_mem x.property)
+  letI : RingHomInvPair (RingHom.id T) (RingHom.id T) := RingHomInvPair.ids
+  let ecomp := LinearEquiv.ofLinear (σ₁₂ := RingHom.id T) (σ₂₁ := RingHom.id T)
+    (re₁₂ := RingHomInvPair.ids) (re₂₁ := RingHomInvPair.ids)
+    fcomp gcomp (by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    change fbase (g (x : ExteriorAlgebra T (LocalizedModule S M))) =
+      (x : ExteriorAlgebra T (LocalizedModule S M))
+    exact congrArg (fun h => h (x : ExteriorAlgebra T (LocalizedModule S M))) h₁) (by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    change g (fbase (x : T ⊗[R] ExteriorAlgebra R M)) =
+      (x : T ⊗[R] ExteriorAlgebra R M)
+    exact congrArg (fun h => h (x : T ⊗[R] ExteriorAlgebra R M)) h₂)
+  exact (LocalizedModule.equivTensorProduct S
+      (Formalization.Books.Algebra.Unit13.exteriorPower R M n)).trans <|
+    (Submodule.toBaseChange.toLinearEquiv T
+      (Formalization.Books.Algebra.Unit13.exteriorPower R M n)).trans ecomp
+
 /-- A ring has the source's finite-flat finiteness property exactly when finite
 flat modules are finite locally free. -/
 theorem finite_flat_module_finiteLocallyFree_characterization
@@ -779,7 +981,107 @@ theorem finite_flat_module_finiteLocallyFree_characterization
       exact hres.2
     rw [hZI] at hopen
     exact hopen
-  sorry
+  tfae_have 1 → 2 := by
+    intro hR M _ _ hfin hflat
+    letI := hfin
+    letI := hflat
+    let W (n : ℕ) := Formalization.Books.Algebra.Unit13.exteriorPower R M n
+    have hflat_ext (n : ℕ) : Module.Flat R (Formalization.Books.Algebra.Unit13.exteriorPower R M n) := by
+      apply Module.flat_of_localized_maximal
+      intro I hI
+      let S := Localization.AtPrime I
+      let L := LocalizedModule.AtPrime I M
+      letI : Module.Free S L :=
+        Formalization.Books.Algebra.Unit78.finite_flat_local_is_free
+      letI : Module.Flat S
+          (Formalization.Books.Algebra.Unit13.exteriorPower S L n) :=
+        Module.Flat.of_free
+      letI : Module.Flat S
+          (LocalizedModule I.primeCompl
+            (Formalization.Books.Algebra.Unit13.exteriorPower R M n)) :=
+        Module.Flat.of_linearEquiv
+          (localized_exteriorPower_equiv I.primeCompl (M := M) n)
+      exact Module.Flat.trans R S
+        (LocalizedModule I.primeCompl
+          (Formalization.Books.Algebra.Unit13.exteriorPower R M n))
+    have hsupport_open (n : ℕ) : IsOpen (Module.support R (W n)) := by
+      letI : Module.Flat R (W n) := hflat_ext n
+      apply hR
+      · exact Module.isClosed_support
+      · intro p q hpq hq
+        rw [← Module.rankAtStalk_pos_iff_mem_support (M := W n) p,
+          ← Module.rankAtStalk_pos_iff_mem_support (M := W n) q] at *
+        have heq := Module.rankAtStalk_eq_of_le_of_finite_of_flat (W n)
+          ((PrimeSpectrum.le_iff_specializes q p).mpr hpq)
+        rw [← heq] at hq
+        exact hq
+    have hrank_support (n : ℕ) (p : PrimeSpectrum R) :
+        p ∈ Module.support R (W n) ↔ n ≤ Module.rankAtStalk M p := by
+      letI : Module.Flat R (W n) := hflat_ext n
+      let S := Localization.AtPrime p.asIdeal
+      let L := LocalizedModule.AtPrime p.asIdeal M
+      letI : Module.Free S L :=
+        Formalization.Books.Algebra.Unit78.finite_flat_local_is_free
+      rw [← Module.rankAtStalk_pos_iff_mem_support (M := W n) p]
+      change 0 < Module.finrank S
+          (LocalizedModule p.asIdeal.primeCompl
+            (Formalization.Books.Algebra.Unit13.exteriorPower R M n)) ↔
+        n ≤ Module.finrank S (LocalizedModule p.asIdeal.primeCompl M)
+      rw [(localized_exteriorPower_equiv p.asIdeal.primeCompl
+        (M := M) n).finrank_eq]
+      rw [exteriorPower.finrank_eq]
+      change 0 < Nat.choose (Module.finrank S L) n ↔ n ≤ Module.finrank S L
+      constructor
+      · intro h
+        by_contra hn
+        exact (Nat.ne_of_gt h) (Nat.choose_eq_zero_of_lt (Nat.lt_of_not_ge hn))
+      · exact Nat.choose_pos
+    have hrank_locally_constant :
+        IsLocallyConstant (Module.rankAtStalk (R := R) M) := by
+      apply (IsLocallyConstant.iff_exists_open _).2
+      intro p
+      let k := Module.rankAtStalk M p
+      let U : Set (PrimeSpectrum R) :=
+        Module.support R (W k) ∩ (Module.support R (W (k + 1)))ᶜ
+      refine ⟨U, ?_, ?_, ?_⟩
+      · exact (hsupport_open k).inter (Module.isClosed_support.isOpen_compl)
+      · constructor
+        · exact (hrank_support k p).2 le_rfl
+        · intro hp
+          exact (Nat.not_succ_le_self k) ((hrank_support (k + 1) p).1 hp)
+      · intro q hq
+        have hk : k ≤ Module.rankAtStalk M q :=
+          (hrank_support k q).1 hq.1
+        have hks : ¬ k + 1 ≤ Module.rankAtStalk M q := by
+          intro h
+          exact hq.2 ((hrank_support (k + 1) q).2 h)
+        have hqk : Module.rankAtStalk M q ≤ k :=
+          Nat.le_of_lt_succ (Nat.lt_of_not_ge hks)
+        have heq : Module.rankAtStalk M q = k := Nat.le_antisymm hqk hk
+        simpa [k] using heq
+    have hfree : ∀ p : PrimeSpectrum R, p ∈ Module.freeLocus R M := by
+      intro p
+      change Module.Free (Localization.AtPrime p.asIdeal)
+        (LocalizedModule.AtPrime p.asIdeal M)
+      exact Formalization.Books.Algebra.Unit78.finite_flat_local_is_free
+    have hrank_locally_constant_int :
+        IsLocallyConstant (fun p : PrimeSpectrum R =>
+          (Module.rankAtStalk M p : ℤ)) :=
+      hrank_locally_constant.comp (fun n : ℕ => (n : ℤ))
+    have hrankFunction_eq :
+        Formalization.Books.Algebra.Unit78.rankFunction R M =
+          (fun p : PrimeSpectrum R => (Module.rankAtStalk M p : ℤ)) := by
+      funext p
+      simp [Formalization.Books.Algebra.Unit78.rankFunction,
+        Ideal.finrank_fiber_eq_rankAtStalk]
+    have hchar :=
+      Formalization.Books.Algebra.Unit78.finite_projective_characterization
+        (R := R) (M := M)
+    apply (hchar.out 7 6).mp
+    refine ⟨inferInstance, hfree, ?_⟩
+    rw [hrankFunction_eq]
+    exact hrank_locally_constant_int
+  tfae_finish
 
 end
 

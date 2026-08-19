@@ -514,7 +514,7 @@ private theorem isLocalizationOfQuotient_of_localization
   letI : Algebra P T := l.toAlgebra
   rcases hp with ⟨J, M, q, hq, hloc⟩
   let I' : Ideal T := RingHom.ker h
-  letI : IsLocalization N T := hlocN
+  let : IsLocalization N T := hlocN
   let mkI : P →+* P ⧸ J := Ideal.Quotient.mk J
   let mkI' : T →+* T ⧸ I' := Ideal.Quotient.mk I'
   have hker : RingHom.ker mkI ≤ RingHom.ker (mkI'.comp l) := by
@@ -548,9 +548,9 @@ private theorem isLocalizationOfQuotient_of_localization
     apply RingHom.ext
     intro x
     simpa [q'] using Ideal.Quotient.lift_mk I' h hIker
-  letI : Algebra (P ⧸ J) S := q.toAlgebra
-  letI : IsLocalization M S := hloc
-  letI : Algebra (P ⧸ J) (T ⧸ I') := a.toAlgebra
+  let : Algebra (P ⧸ J) S := q.toAlgebra
+  let : IsLocalization M S := hloc
+  let : Algebra (P ⧸ J) (T ⧸ I') := a.toAlgebra
   have hqa : q'.comp a = q := by
     apply RingHom.ext
     intro x
@@ -563,7 +563,7 @@ private theorem isLocalizationOfQuotient_of_localization
       _ = q (mkI x) := (DFunLike.congr_fun hq x).symm
   have hloc' : letI : Algebra (T ⧸ I') S := q'.toAlgebra
       IsLocalization (M.map a) S := by
-    letI : Algebra (T ⧸ I') S := q'.toAlgebra
+    let : Algebra (T ⧸ I') S := q'.toAlgebra
     refine ⟨?_, ?_, ?_⟩
     · rintro ⟨_, ⟨u, hu, rfl⟩⟩
       change IsUnit (q' (a u))
@@ -796,7 +796,7 @@ theorem exists_localization_at_closed_point_special_fibre
   rcases hf with ⟨A, M, hA, hloc⟩
   obtain ⟨n, a, ha⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp hA
   let P := MvPolynomial (Fin n) R
-  letI : CommSemiring P := AddMonoidAlgebra.commSemiring
+  let : CommSemiring P := AddMonoidAlgebra.commSemiring
   let p : P →+* S := (algebraMap A S).comp a.toRingHom
   have hp : RingHom.IsLocalizationOfQuotient p := by
     exact isLocalizationOfQuotient_of_surjective a.toRingHom ha
@@ -806,8 +806,8 @@ theorem exists_localization_at_closed_point_special_fibre
   by_cases hJ : J ≠ ⊤
   · obtain ⟨m, hm, hJm⟩ := Ideal.exists_le_maximal J hJ
     let m' : MaximalSpectrum P := ⟨m, hm⟩
-    letI : m.IsMaximal := hm
-    letI : m.IsPrime := hm.isPrime
+    let : m.IsMaximal := hm
+    let : m.IsPrime := hm.isPrime
     have hmap : (IsLocalRing.maximalIdeal R).map (algebraMap R P) ≤ m :=
       le_trans le_sup_right hJm
     have hcomap : (m.comap (algebraMap R P)) = IsLocalRing.maximalIdeal R := by
@@ -834,7 +834,7 @@ theorem exists_localization_at_closed_point_special_fibre
       isLocalizationOfQuotient_of_localization p
         (algebraMap P (Localization.AtPrime m)) h m.primeCompl
         (by
-          letI : Algebra P (Localization.AtPrime m) :=
+          let : Algebra P (Localization.AtPrime m) :=
             (algebraMap P (Localization.AtPrime m)).toAlgebra
           have hcan : @IsLocalization P AddMonoidAlgebra.commSemiring m.primeCompl
               (Localization.AtPrime m) _ OreLocalization.instAlgebra :=

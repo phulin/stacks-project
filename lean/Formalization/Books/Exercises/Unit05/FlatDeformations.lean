@@ -634,7 +634,415 @@ theorem no_flat_sixVariableQuadratic_lift
     rw [← hq_pow, hsum_pow, ha_pow, hb_pow, hc_pow]
     simp
   exfalso
-  sorry
+  obtain ⟨u, hu⟩ := hdivide (D a b + D (a + b) c) hDkill
+  have hTzero : φ (D a b + D (a + b) c) = 0 := by
+    rw [hu]
+    change e (π ((p : R) • u)) = 0
+    rw [← e.map_zero]
+    exact congrArg (fun t => e t) (by
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      rw [Algebra.smul_def]
+      simpa [mul_comm] using
+        K.mul_mem_left u (Ideal.subset_span (Set.mem_singleton _)))
+  have hxi (i : Fin 6) : e (π (x i)) = y i := by
+    simpa [φ] using hx i
+  have hcoeff (n : ℕ) :
+      e (π (algebraMap R B (n : R))) = (n : A) := by
+    change φ (algebraMap R B (n : R)) = (n : A)
+    have hmap : algebraMap R B (n : R) = (n : B) :=
+      map_natCast (algebraMap R B) n
+    rw [hmap]
+    exact map_natCast φ n
+  have hTimage :
+      (∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+          (p.choose k / p : A) * (y 0 * y 1) ^ k * (y 2 * y 3) ^ (p - k)) +
+        (∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+          (p.choose k / p : A) * ((y 0 * y 1) + (y 2 * y 3)) ^ k *
+            (y 4 * y 5) ^ (p - k)) = 0 := by
+    simpa [D, a, b, c, φ, y, map_sum, map_mul, map_pow, hxi, hcoeff] using hTzero
+  have hqA : y 0 * y 1 + y 2 * y 3 + y 4 * y 5 = 0 := by
+    have hπq : π q = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hq_mem
+    have := congrArg e hπq
+    simpa [φ, q, a, b, c, hxi] using this
+  have hcA_pow : (y 4 * y 5) ^ p = 0 := by
+    rw [mul_pow, hy_pow, zero_mul]
+  have hsecond :
+      (∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+          (p.choose k / p : A) * ((y 0 * y 1) + (y 2 * y 3)) ^ k *
+            (y 4 * y 5) ^ (p - k)) = 0 := by
+    apply Finset.sum_eq_zero
+    intro k hk
+    have hk' : k < p + 1 ∧ 0 < k ∧ k < p := by
+      simpa only [Finset.mem_filter, Finset.mem_range] using hk
+    have hkle : k ≤ p := Nat.le_of_lt hk'.2.2
+    have huA : y 0 * y 1 + y 2 * y 3 = -(y 4 * y 5) := by
+      exact eq_neg_of_add_eq_zero_left hqA
+    rw [huA]
+    calc
+      (p.choose k / p : A) * (-(y 4 * y 5)) ^ k *
+          (y 4 * y 5) ^ (p - k) =
+        (p.choose k / p : A) * ((-1 : A) ^ k * (y 4 * y 5) ^ k) *
+          (y 4 * y 5) ^ (p - k) := by
+            rw [neg_pow (y 4 * y 5) k]
+      _ = (p.choose k / p : A) * ((-1 : A) ^ k *
+          ((y 4 * y 5) ^ k * (y 4 * y 5) ^ (p - k))) := by ring
+      _ = (p.choose k / p : A) * ((-1 : A) ^ k * (y 4 * y 5) ^ p) := by
+        rw [← pow_add, Nat.add_sub_of_le hkle]
+      _ = 0 := by rw [hcA_pow, mul_zero, mul_zero]
+  rw [hsecond] at hTimage
+  let P₆ := MvPolynomial (Fin 6) (ZMod p)
+  let J₆ : Ideal P₆ :=
+    Ideal.span (Set.range (fun i : Fin 6 => (MvPolynomial.X i : P₆) ^ p))
+  let q₆ : P₆ := sixVariableQuadratic (ZMod p)
+  let s₁ : P₆ :=
+    ∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+      (p.choose k / p : P₆) *
+        (MvPolynomial.X 0 * MvPolynomial.X 1) ^ k *
+          (MvPolynomial.X 2 * MvPolynomial.X 3) ^ (p - k)
+  have hs₁mem : s₁ ∈ sixVariableQuadraticIdeal p (ZMod p) := by
+    rw [← Ideal.Quotient.eq_zero_iff_mem]
+    simpa [s₁, y, P₆] using hTimage
+  let Q : P₆ →+* (P₆ ⧸ J₆) := Ideal.Quotient.mk J₆
+  have hIle : sixVariableQuadraticIdeal p (ZMod p) ≤
+      Ideal.comap Q (Ideal.span {Q q₆}) := by
+    rw [sixVariableQuadraticIdeal]
+    apply Ideal.span_le.2
+    intro r hr
+    rcases hr with hr | hr
+    · rcases hr with ⟨i, rfl⟩
+      change Q ((MvPolynomial.X i : P₆) ^ p) ∈ Ideal.span {Q q₆}
+      have hi : (MvPolynomial.X i : P₆) ^ p ∈ J₆ :=
+        Ideal.subset_span ⟨i, rfl⟩
+      have hzero : Q ((MvPolynomial.X i : P₆) ^ p) = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hi
+      rw [hzero]
+      exact Ideal.zero_mem _
+    · simp only [Set.mem_singleton_iff] at hr
+      change Q r ∈ Ideal.span {Q q₆}
+      rw [hr]
+      exact Ideal.subset_span (Set.mem_singleton _)
+  have hQmem : Q s₁ ∈ Ideal.span {Q q₆} := hIle hs₁mem
+  obtain ⟨t, ht⟩ := Ideal.mem_span_singleton'.mp hQmem
+  have hqQpow : (Q q₆) ^ p = 0 := by
+    classical
+    rw [← map_pow]
+    have hadd (u v : P₆) : (u + v) ^ p = u ^ p + v ^ p := by
+      classical
+      rw [add_pow]
+      have hmid :
+          ∑ m ∈ (Finset.range (p + 1)).filter (fun m => 0 < m ∧ m < p),
+            u ^ m * v ^ (p - m) * (p.choose m : P₆) = 0 := by
+        apply Finset.sum_eq_zero
+        intro m hm
+        have hm' := Finset.mem_filter.mp hm
+        obtain ⟨d, hd⟩ := Nat.Prime.dvd_choose_self _hp
+          (Nat.ne_of_gt hm'.2.1) hm'.2.2
+        rw [hd, Nat.cast_mul]
+        simp
+      have hnotset :
+          (Finset.range (p + 1)).filter (fun m => ¬(0 < m ∧ m < p)) =
+            {0, p} := by
+        ext m
+        simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_insert,
+          Finset.mem_singleton]
+        omega
+      rw [← Finset.sum_filter_add_sum_filter_not
+        (s := Finset.range (p + 1)) (p := fun m => 0 < m ∧ m < p)]
+      rw [hmid, hnotset]
+      rw [Finset.sum_insert]
+      · rw [Finset.sum_singleton]
+        simp
+        ring
+      · simpa using (Nat.ne_of_gt _hp.pos).symm
+    have hqpow : q₆ ^ p =
+        (MvPolynomial.X 0 * MvPolynomial.X 1 : P₆) ^ p +
+          (MvPolynomial.X 2 * MvPolynomial.X 3 : P₆) ^ p +
+            (MvPolynomial.X 4 * MvPolynomial.X 5 : P₆) ^ p := by
+      change ((MvPolynomial.X 0 : P₆) * MvPolynomial.X 1 +
+        MvPolynomial.X 2 * MvPolynomial.X 3 +
+          MvPolynomial.X 4 * MvPolynomial.X 5) ^ p = _
+      rw [hadd, hadd]
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    rw [hqpow]
+    have hpair (i j : Fin 6) :
+        ((MvPolynomial.X i : P₆) * MvPolynomial.X j) ^ p ∈ J₆ := by
+      rw [mul_pow]
+      exact J₆.mul_mem_left _ (Ideal.subset_span ⟨j, rfl⟩)
+    exact J₆.add_mem (J₆.add_mem (hpair 0 1) (hpair 2 3)) (hpair 4 5)
+  have hQprod : Q (s₁ * q₆ ^ (p - 1)) = 0 := by
+    rw [map_mul, map_pow, ← ht]
+    calc
+      t * Q q₆ * Q q₆ ^ (p - 1) =
+          t * (Q q₆) ^ ((p - 1) + 1) := by rw [pow_succ']; ring
+      _ = t * (Q q₆) ^ p := by rw [Nat.sub_add_cancel _hp.one_le]
+      _ = 0 := by rw [hqQpow, mul_zero]
+  let m : Fin 6 →₀ ℕ :=
+    Finsupp.single 0 (p - 1) + Finsupp.single 1 (p - 1) +
+      Finsupp.single 2 1 + Finsupp.single 3 1 +
+        Finsupp.single 4 (p - 1) + Finsupp.single 5 (p - 1)
+  let aa : Fin 6 →₀ ℕ := Finsupp.single 0 1 + Finsupp.single 1 1
+  let bb : Fin 6 →₀ ℕ := Finsupp.single 2 1 + Finsupp.single 3 1
+  let cc : Fin 6 →₀ ℕ := Finsupp.single 4 1 + Finsupp.single 5 1
+  have hX (i : Fin 6) : (MvPolynomial.X i : P₆) =
+      MvPolynomial.monomial (Finsupp.single i 1) (1 : ZMod p) := by
+    rfl
+  have haa : (MvPolynomial.X 0 : P₆) * MvPolynomial.X 1 =
+      MvPolynomial.monomial aa 1 := by
+    dsimp [aa]
+    rw [MvPolynomial.monomial_single_add]
+    simpa [pow_one] using hX 1
+  have hbb : (MvPolynomial.X 2 : P₆) * MvPolynomial.X 3 =
+      MvPolynomial.monomial bb 1 := by
+    dsimp [bb]
+    rw [MvPolynomial.monomial_single_add]
+    simpa [pow_one] using hX 3
+  have hcc : (MvPolynomial.X 4 : P₆) * MvPolynomial.X 5 =
+      MvPolynomial.monomial cc 1 := by
+    dsimp [cc]
+    rw [MvPolynomial.monomial_single_add]
+    simpa [pow_one] using hX 5
+  have hqdecomp : q₆ = MvPolynomial.monomial aa 1 +
+      MvPolynomial.monomial bb 1 + MvPolynomial.monomial cc 1 := by
+    change (MvPolynomial.X 0 : P₆) * MvPolynomial.X 1 +
+        MvPolynomial.X 2 * MvPolynomial.X 3 +
+          MvPolynomial.X 4 * MvPolynomial.X 5 = _
+    rw [haa, hbb, hcc]
+  have hqcoeff : ∀ n : ℕ,
+      (q₆ ^ n).coeff (n • cc) = 1 := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+      rw [pow_succ, hqdecomp, mul_add, mul_add,
+        MvPolynomial.coeff_add, MvPolynomial.coeff_add]
+      have haa_le : ¬ aa ≤ (n + 1) • cc := by
+        intro h
+        have h0 := h 0
+        simp [aa, cc] at h0
+      have hbb_le : ¬ bb ≤ (n + 1) • cc := by
+        intro h
+        have h2 := h 2
+        simp [bb, cc] at h2
+      have hcc_le : cc ≤ (n + 1) • cc := by
+        rw [Finsupp.le_def]
+        intro i
+        simp [cc, add_smul]
+        omega
+      rw [MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.coeff_mul_monomial']
+      simp only [if_neg haa_le, if_neg hbb_le, if_pos hcc_le, zero_add,
+        add_zero]
+      rw [show (n + 1) • cc - cc = n • cc by
+        ext i
+        simp [cc, add_smul]
+        omega]
+      simpa [hqdecomp] using ih
+  let _ : Fact (1 < p) := ⟨_hp.one_lt⟩
+  have hq_support : q₆.support ⊆ ({aa, bb, cc} : Finset (Fin 6 →₀ ℕ)) := by
+    intro d hd
+    rw [hqdecomp] at hd
+    rcases Finset.mem_union.mp
+        (MvPolynomial.support_add hd) with hd | hd
+    · rcases Finset.mem_union.mp
+          (MvPolynomial.support_add hd) with hd | hd
+      · have hd' : d ∈ ({aa} : Finset (Fin 6 →₀ ℕ)) := by
+          rw [MvPolynomial.support_monomial, if_neg one_ne_zero] at hd
+          exact hd
+        exact Finset.mem_insert.mpr (Or.inl (Finset.mem_singleton.mp hd'))
+      · have hd' : d ∈ ({bb} : Finset (Fin 6 →₀ ℕ)) := by
+          rw [MvPolynomial.support_monomial, if_neg one_ne_zero] at hd
+          exact hd
+        exact Finset.mem_insert.mpr (Or.inr (Finset.mem_insert.mpr
+          (Or.inl (Finset.mem_singleton.mp hd'))))
+    · have hd' : d ∈ ({cc} : Finset (Fin 6 →₀ ℕ)) := by
+        rw [MvPolynomial.support_monomial, if_neg one_ne_zero] at hd
+        exact hd
+      exact Finset.mem_insert.mpr (Or.inr (Finset.mem_insert.mpr
+        (Or.inr (Finset.mem_singleton.mpr (Finset.mem_singleton.mp hd')))))
+  have hq_support_pow : ∀ n : ℕ, ∀ d,
+      d ∈ (q₆ ^ n).support →
+        ∃ i j k : ℕ, i + j + k = n ∧
+          d = i • aa + j • bb + k • cc := by
+    intro n
+    induction n with
+    | zero =>
+        intro d hd
+        rw [pow_zero] at hd
+        have hd0 : d = 0 := by
+          rw [MvPolynomial.support_one] at hd
+          exact Finset.mem_singleton.mp hd
+        exact ⟨0, 0, 0, by omega, by simp [hd0]⟩
+    | succ n ih =>
+        intro d hd
+        rw [pow_succ] at hd
+        rcases Finset.mem_add.mp (MvPolynomial.support_mul _ _ hd) with
+          ⟨d₁, hd₁, d₂, hd₂, rfl⟩
+        obtain ⟨i, j, k, hijk, hd₁eq⟩ := ih d₁ hd₁
+        rcases Finset.mem_insert.mp (hq_support hd₂) with rfl | hd₂
+        · refine ⟨i + 1, j, k, by omega, ?_⟩
+          rw [hd₁eq]
+          simp [add_smul, add_assoc, add_comm]
+        · rcases Finset.mem_insert.mp hd₂ with rfl | hd₂
+          · refine ⟨i, j + 1, k, by omega, ?_⟩
+            rw [hd₁eq]
+            simp [add_smul, add_assoc, add_left_comm, add_comm]
+          · have hd₂ : d₂ = cc := by simpa using hd₂
+            rw [hd₂]
+            refine ⟨i, j, k + 1, by omega, ?_⟩
+            rw [hd₁eq]
+            simp [add_smul, add_assoc, add_left_comm, add_comm]
+  have hterm (k : ℕ) :
+      ((MvPolynomial.X 0 : P₆) * MvPolynomial.X 1) ^ k *
+          (MvPolynomial.X 2 * MvPolynomial.X 3) ^ (p - k) =
+        MvPolynomial.monomial (k • aa + (p - k) • bb) 1 := by
+    rw [haa, hbb, MvPolynomial.monomial_pow, MvPolynomial.monomial_pow,
+      MvPolynomial.monomial_mul]
+    simp
+  have hterm' (k : ℕ) :
+      (p.choose k / p : P₆) *
+          ((MvPolynomial.X 0 : P₆) * MvPolynomial.X 1) ^ k *
+            (MvPolynomial.X 2 * MvPolynomial.X 3) ^ (p - k) =
+        (p.choose k / p : P₆) *
+          MvPolynomial.monomial (k • aa + (p - k) • bb) 1 := by
+    rw [mul_assoc, hterm]
+  let r : Fin 6 →₀ ℕ := (p - 1) • aa + bb
+  let z : Fin 6 →₀ ℕ := (p - 1) • cc
+  have hm : m = r + z := by
+    ext i
+    fin_cases i <;> simp [m, r, z, aa, bb, cc]
+  have hs_coeff_r : s₁.coeff r = 1 := by
+    have hcast (n : ℕ) : (n : P₆) = MvPolynomial.C (n : ZMod p) := by
+      rfl
+    dsimp [s₁]
+    rw [MvPolynomial.coeff_sum]
+    simp_rw [hterm']
+    simp_rw [hcast]
+    change (∑ x ∈ (Finset.range (p + 1)).filter (fun x => 0 < x ∧ x < p),
+      MvPolynomial.coeff r
+        (MvPolynomial.C (p.choose x / p : ZMod p) *
+          MvPolynomial.monomial (x • aa + (p - x) • bb) 1)) = 1
+    rw [Finset.sum_eq_single (p - 1) (by
+      intro x hx hne
+      have hneq : r ≠ x • aa + (p - x) • bb := by
+        intro heq
+        have h2 := congrArg (fun d : Fin 6 →₀ ℕ => d 2) heq
+        simp [r, aa, bb] at h2
+        omega
+      rw [MvPolynomial.coeff_C_mul, MvPolynomial.coeff_monomial,
+        if_neg (Ne.symm hneq)]
+      simp)
+      (by
+        intro hnot
+        exfalso
+        apply hnot
+        simp
+        omega)]
+    have heq : r = (p - 1) • aa + (p - (p - 1)) • bb := by
+      simp [r, show p - (p - 1) = 1 by omega]
+    rw [MvPolynomial.coeff_C_mul, MvPolynomial.coeff_monomial, if_pos heq.symm]
+    have hchoose : p.choose (p - 1) = p := by
+      rw [Nat.choose_symm (n := p) (k := 1) (by omega), Nat.choose_one_right]
+    rw [hchoose]
+    have hpdiv : p / p = 1 := Nat.div_self (by omega)
+    rw [hpdiv]
+    simp
+  have hs_support (d : Fin 6 →₀ ℕ) (hd : d ∈ s₁.support) :
+      ∃ k ∈ (Finset.range (p + 1)).filter (fun k => 0 < k ∧ k < p),
+        d = k • aa + (p - k) • bb := by
+    dsimp [s₁] at hd
+    rcases Finset.mem_biUnion.mp (MvPolynomial.support_sum hd) with
+      ⟨k, hk, hdk⟩
+    have hdk' : d ∈ MvPolynomial.support
+        ((p.choose k / p : P₆) *
+          MvPolynomial.monomial (k • aa + (p - k) • bb) 1) := by
+      simpa [hterm'] using hdk
+    have hdk'' : d ∈ MvPolynomial.support
+        ((p.choose k / p : ZMod p) •
+          MvPolynomial.monomial (k • aa + (p - k) • bb) (1 : ZMod p)) := by
+      have hcastk : (p.choose k / p : P₆) =
+          MvPolynomial.C (p.choose k / p : ZMod p) := by
+        rfl
+      rw [hcastk, MvPolynomial.C_mul'] at hdk'
+      exact hdk'
+    have hdk''' : d ∈ MvPolynomial.support
+        (MvPolynomial.monomial (k • aa + (p - k) • bb) (1 : ZMod p)) :=
+      (MvPolynomial.support_smul
+        (a := (p.choose k / p : ZMod p))
+        (f := MvPolynomial.monomial (k • aa + (p - k) • bb) (1 : ZMod p))) hdk''
+    have hdk'''' : d ∈ ({k • aa + (p - k) • bb} : Finset (Fin 6 →₀ ℕ)) := by
+      simpa only [MvPolynomial.support_monomial, if_neg one_ne_zero] using hdk'''
+    exact ⟨k, hk, Finset.mem_singleton.mp hdk''''⟩
+  have hq_coeff_z : (q₆ ^ (p - 1)).coeff z = 1 := by
+    simpa [z] using hqcoeff (p - 1)
+  have hcoef : (s₁ * q₆ ^ (p - 1)).coeff m = 1 := by
+    classical
+    rw [MvPolynomial.coeff_mul]
+    rw [Finset.sum_eq_single (r, z) (by
+      intro x hx hne
+      by_cases hs : s₁.coeff x.1 = 0
+      · simp [hs]
+      by_cases hq : (q₆ ^ (p - 1)).coeff x.2 = 0
+      · simp [hq]
+      obtain ⟨i, hi, hshape1⟩ :=
+        hs_support x.1 (MvPolynomial.mem_support_iff.mpr hs)
+      obtain ⟨j, k, l, hjkl, hshape2⟩ :=
+        hq_support_pow (p - 1) x.2 (MvPolynomial.mem_support_iff.mpr hq)
+      have hsum : x.1 + x.2 = m := Finset.mem_antidiagonal.mp hx
+      rw [hshape1, hshape2, hm] at hsum
+      have h0 := congrArg (fun d : Fin 6 →₀ ℕ => d 0) hsum
+      have h2 := congrArg (fun d : Fin 6 →₀ ℕ => d 2) hsum
+      have h4 := congrArg (fun d : Fin 6 →₀ ℕ => d 4) hsum
+      simp [r, z, aa, bb, cc] at h0 h2 h4
+      have hi' : i = p - 1 := by omega
+      have hj' : j = 0 := by omega
+      have hk' : k = 0 := by omega
+      have hl' : l = p - 1 := by omega
+      have hxr : x.1 = r := by
+        rw [hshape1, hi', show p - (p - 1) = 1 by omega]
+        rw [one_nsmul]
+      have hxz : x.2 = z := by
+        rw [hshape2, hj', hk', hl']
+        rw [zero_nsmul, zero_nsmul]
+        simp [z]
+      exact (hne (Prod.ext hxr hxz)).elim)
+      (by
+        intro hnot
+        exact (hnot (Finset.mem_antidiagonal.mpr hm.symm)).elim)]
+    change s₁.coeff r * (q₆ ^ (p - 1)).coeff z = 1
+    rw [hs_coeff_r, hq_coeff_z]
+    simp
+  have hXi (i : Fin 6) : (MvPolynomial.X i : P₆) ^ p =
+      MvPolynomial.monomial (p • Finsupp.single i 1) (1 : ZMod p) := by
+    rw [hX i, MvPolynomial.monomial_pow]
+    simp
+  let S₆ : Set (Fin 6 →₀ ℕ) :=
+    Set.range (fun i : Fin 6 => p • Finsupp.single i 1)
+  have hJ : J₆ = Ideal.span
+      ((fun d => MvPolynomial.monomial d (1 : ZMod p)) '' S₆) := by
+    apply le_antisymm
+    · dsimp [J₆]
+      apply Ideal.span_le.2
+      rintro _ ⟨i, rfl⟩
+      change (MvPolynomial.X i : P₆) ^ p ∈
+        Ideal.span ((fun d => MvPolynomial.monomial d (1 : ZMod p)) '' S₆)
+      rw [hXi]
+      exact Ideal.subset_span ⟨p • Finsupp.single i 1, ⟨i, rfl⟩, rfl⟩
+    · apply Ideal.span_le.2
+      rintro _ ⟨d, ⟨i, rfl⟩, rfl⟩
+      change MvPolynomial.monomial (p • Finsupp.single i 1) (1 : ZMod p) ∈ J₆
+      rw [← hXi]
+      exact Ideal.subset_span ⟨i, rfl⟩
+  have hmem : s₁ * q₆ ^ (p - 1) ∈ J₆ :=
+    Ideal.Quotient.eq_zero_iff_mem.mp hQprod
+  rw [hJ] at hmem
+  have hsupport := MvPolynomial.mem_ideal_span_monomial_image.mp hmem
+  have hprod_support : m ∈ (s₁ * q₆ ^ (p - 1)).support :=
+    MvPolynomial.mem_support_iff.mpr (by rw [hcoef]; exact one_ne_zero)
+  obtain ⟨d, hd, hle⟩ := hsupport m hprod_support
+  rcases hd with ⟨i, rfl⟩
+  have hi := hle i
+  fin_cases i <;> simp [m] at hi <;> omega
 
 /-- In particular, the characteristic-two algebra in the source has no flat
 lift to a `ℤ/4ℤ`-algebra. -/

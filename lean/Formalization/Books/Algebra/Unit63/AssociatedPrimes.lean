@@ -5,6 +5,7 @@ import Mathlib.RingTheory.Ideal.AssociatedPrime.Finiteness
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Localization
 import Mathlib.RingTheory.Regular.IsSMulRegular
 import Mathlib.RingTheory.Spectrum.Prime.Topology
+import Mathlib.RingTheory.KrullDimension.Regular
 
 /-!
 # Commutative Algebra, Chapter 63: associated primes
@@ -18,6 +19,7 @@ hypotheses, where Mathlib's radical-based definition has the same description.
 namespace Formalization.Books.Algebra.Unit63
 
 open Set
+open scoped Pointwise
 
 universe u v
 
@@ -538,7 +540,44 @@ theorem ass_of_minimal_support
     (p : PrimeSpectrum R) (hp : p ∈ Module.support R M)
     (hminimal : Minimal (fun q : PrimeSpectrum R => q ∈ Module.support R M) p) :
     p ∈ associatedPrimes R M := by
-  sorry
+  classical
+  obtain ⟨m, hm⟩ := Module.mem_support_iff'.mp hp
+  let N : Submodule R M := R ∙ m
+  have hmpN : p ∈ Module.support R N := by
+    rw [Module.mem_support_iff']
+    refine ⟨⟨m, Submodule.mem_span_singleton_self m⟩, ?_⟩
+    intro r hr hzero
+    apply hm r hr
+    exact congrArg Subtype.val hzero
+  have hpann : Module.annihilator R N ≤ p.asIdeal :=
+    Module.annihilator_le_of_mem_support hmpN
+  obtain ⟨qI, hqI, hqle⟩ := Ideal.exists_minimalPrimes_le hpann
+  let q : PrimeSpectrum R := ⟨qI, hqI.1.1⟩
+  have hqN : q ∈ Module.support R N :=
+    Module.mem_support_iff_of_finite.mpr hqI.1.2
+  have hqM : q ∈ Module.support R M :=
+    Module.support_subset_of_injective N.subtype N.subtype_injective hqN
+  have hqass : qI ∈ _root_.associatedPrimes R N :=
+    Module.associatedPrimes.minimalPrimes_annihilator_subset_associatedPrimes
+      R N hqI
+  rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hqass
+  obtain ⟨_, n, hn⟩ := hqass
+  have hqp : q ≤ p := hqle
+  have hpq : p ≤ q := hminimal.2 hqM hqp
+  have hqeq : q = p := le_antisymm hqp hpq
+  rw [← hqeq]
+  refine ⟨n.1, ?_⟩
+  ext r
+  rw [Submodule.mem_colon_singleton]
+  change r • (n : M) = 0 ↔ r ∈ qI
+  rw [hn, Submodule.mem_colon_singleton]
+  change r • (n : M) = 0 ↔ r • n = 0
+  constructor
+  · intro h
+    apply Subtype.ext
+    exact h
+  · intro h
+    exact congrArg Subtype.val h
 
 /-- The union of the associated primes is the set of module zerodivisors. -/
 theorem iUnion_associatedPrimes_eq_module_zeroDivisors
@@ -547,7 +586,72 @@ theorem iUnion_associatedPrimes_eq_module_zeroDivisors
     (⋃ p : {p : PrimeSpectrum R // p ∈ associatedPrimes R M},
         (p.1.asIdeal : Set R)) =
       {x : R | ∃ m : M, m ≠ 0 ∧ x • m = 0} := by
-  sorry
+  classical
+  ext x
+  constructor
+  · intro hx
+    obtain ⟨p, hxp⟩ := Set.mem_iUnion.mp hx
+    have hp := p.2
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.1.asIdeal at hp
+    obtain ⟨m, hm⟩ := hp
+    refine ⟨m, ?_, ?_⟩
+    · intro hm0
+      apply p.1.isPrime.ne_top
+      rw [← hm, Submodule.colon_eq_top_iff_subset]
+      simp [hm0]
+    · have hxp' : x ∈ p.1.asIdeal := hxp
+      rw [← hm] at hxp'
+      simpa [Submodule.mem_colon_singleton] using hxp'
+  · rintro ⟨m, hm, hxm⟩
+    let K : Submodule R M :=
+      { carrier := {y | x • y = 0}
+        zero_mem' := by simp
+        add_mem' := by
+          intro y z hy hz
+          change x • y = 0 at hy
+          change x • z = 0 at hz
+          change x • (y + z) = 0
+          rw [smul_add, hy, hz, add_zero]
+        smul_mem' := by
+          intro r y hy
+          change x • y = 0 at hy
+          change x • (r • y) = 0
+          rw [smul_smul, mul_comm, ← smul_smul, hy, smul_zero] }
+    have hKnontrivial : Nontrivial K := by
+      refine ⟨⟨m, hxm⟩, 0, ?_⟩
+      intro heq
+      apply hm
+      exact congrArg Subtype.val heq
+    obtain ⟨I, hI⟩ :=
+      @_root_.associatedPrimes.nonempty R _ K _ _ _ hKnontrivial
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hI
+    obtain ⟨hprime, n, hn⟩ := hI
+    let q : PrimeSpectrum R := ⟨I, hprime⟩
+    have hnM : (⊥ : Submodule R M).colon ({(n : M)} : Set M) = q.asIdeal := by
+      ext r
+      rw [Submodule.mem_colon_singleton]
+      change r • (n : M) = 0 ↔ r ∈ I
+      rw [hn, Submodule.mem_colon_singleton]
+      change r • (n : M) = 0 ↔ r • n = 0
+      constructor
+      · intro h
+        apply Subtype.ext
+        exact h
+      · intro h
+        exact congrArg Subtype.val h
+    apply Set.mem_iUnion.mpr
+    refine ⟨⟨q, ?_⟩, ?_⟩
+    · change IsAssociatedPrime q M
+      exact ⟨n.1, hnM⟩
+    · rw [← hnM]
+      have hnK : x • (n : M) = 0 := by
+        exact n.property
+      have hz : x • (n : M) ∈ (⊥ : Submodule R M) := by
+        simpa using hnK
+      have hx' : x ∈ (⊥ : Submodule R M).colon ({(n : M)} : Set M) := by
+        rw [Submodule.mem_colon_singleton]
+        exact hz
+      exact hx'
 
 /-! ## One equation -/
 
@@ -575,7 +679,62 @@ theorem one_equation_module
       (IsSMulRegular M f →
         ∀ p : PrimeSpectrum R,
           p ∈ minimalPoints (Module.support R M) → f ∉ p.asIdeal) := by
-  sorry
+  have e :
+      quotientByElement R M f ≃ₗ[R] QuotSMulTop f M :=
+    Submodule.quotEquivOfEq
+      (Ideal.span ({f} : Set R) • (⊤ : Submodule R M))
+      (f • (⊤ : Submodule R M))
+      (Submodule.ideal_span_singleton_smul f (⊤ : Submodule R M))
+  have hdimEq :
+      Module.supportDim R (quotientByElement R M f) =
+        Module.supportDim R (QuotSMulTop f M) :=
+    Module.supportDim_eq_of_equiv e
+  have hsecondQ :
+      Module.supportDim R M ≤ Module.supportDim R (QuotSMulTop f M) + 1 :=
+    Module.supportDim_le_supportDim_quotSMulTop_succ hf
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · apply Module.supportDim_le_of_surjective
+    exact Submodule.mkQ_surjective _
+  · rw [hdimEq]
+    exact hsecondQ
+  · intro hmin
+    have hnot :
+        ∀ q ∈ (Module.annihilator R M).minimalPrimes, f ∉ q := by
+      intro q hq
+      let p : PrimeSpectrum R := ⟨q, hq.1.1⟩
+      have hp : p ∈ Module.support R M :=
+        Module.mem_support_iff_of_finite.mpr hq.1.2
+      have hpmin :
+          Minimal (fun r : PrimeSpectrum R => r ∈ Module.support R M) p := by
+        refine ⟨hp, ?_⟩
+        intro r hr hrp
+        exact hq.2
+          ⟨r.isPrime, Module.annihilator_le_of_mem_support hr⟩ hrp
+      exact hmin p ⟨hp, hpmin⟩
+    have heqQ :
+        Module.supportDim R (QuotSMulTop f M) + 1 =
+          Module.supportDim R M :=
+      Module.supportDim_quotSMulTop_succ_eq_of_notMem_minimalPrimes_of_mem_maximalIdeal
+        hnot hf
+    rw [← hdimEq] at heqQ
+    exact heqQ.symm
+  · intro hreg p hp
+    have hass := ass_of_minimal_support p hp.1 hp.2
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hass
+    obtain ⟨m, hm⟩ := hass
+    intro hfp
+    have hfm : f ∈ (⊥ : Submodule R M).colon ({m} : Set M) := by
+      rw [hm]
+      exact hfp
+    have hzero : f • m = 0 := by
+      rw [Submodule.mem_colon_singleton] at hfm
+      simpa using hfm
+    have hmne : m ≠ 0 := by
+      intro hm0
+      apply p.isPrime.ne_top
+      rw [← hm, Submodule.colon_eq_top_iff_subset]
+      simp [hm0]
+    exact hmne (hreg (by simpa using hzero))
 
 /-! ## Functoriality -/
 
@@ -588,7 +747,26 @@ theorem ass_functorial
     (letI : Module R M := Module.compHom M φ;
       PrimeSpectrum.comap φ '' associatedPrimes S M ⊆
         associatedPrimes R M) := by
-  sorry
+  change
+    PrimeSpectrum.comap φ ''
+        (@associatedPrimes S M _ _ inferInstance) ⊆
+      (@associatedPrimes R M _ _ (Module.compHom M φ))
+  intro p hp
+  obtain ⟨q, hq, hqp⟩ := hp
+  subst p
+  change ∃ m,
+    (@Submodule.colon R M _ _ (Module.compHom M φ)
+      (⊥ : @Submodule R M _ _ (Module.compHom M φ)) ({m} : Set M)) =
+        (PrimeSpectrum.comap φ q).asIdeal
+  change ∃ m, (⊥ : Submodule S M).colon ({m} : Set M) = q.asIdeal at hq
+  obtain ⟨m, hm⟩ := hq
+  refine ⟨m, ?_⟩
+  ext r
+  rw [@Submodule.mem_colon_singleton R M _ _ (Module.compHom M φ)]
+  change φ r • m = 0 ↔ r ∈ (PrimeSpectrum.comap φ q).asIdeal
+  change φ r • m = 0 ↔ φ r ∈ q.asIdeal
+  rw [← hm, Submodule.mem_colon_singleton]
+  rfl
 
 /-! ### The reverse-inclusion example -/
 

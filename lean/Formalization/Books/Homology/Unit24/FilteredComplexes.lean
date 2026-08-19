@@ -176,7 +176,15 @@ theorem filteredComplex_cycle_antitone
     (r p q : ℤ) :
     filteredComplexCyclePlus K (r + 1) p q ≤
       filteredComplexCyclePlus K r p q := by
-  sorry
+  change (filteredComplexCycleCore K (r + 1) p q ⊔
+      (K.X (p + q)).filtration.obj (p + 1)) ≤
+    (filteredComplexCycleCore K r p q ⊔
+      (K.X (p + q)).filtration.obj (p + 1))
+  apply sup_le_sup_right
+  apply inf_le_inf_right
+  apply (Subobject.pullback _).monotone
+  apply (K.X (p + q + 1)).filtration.antitone
+  omega
 
 /-- The source's `Zᵣ^{p,q}` and `Bᵣ^{p,q}` as categorical subquotients of
 `K^(p+q)`. -/
@@ -219,7 +227,171 @@ theorem filteredComplex_page_subobjects_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (r p q : ℤ) :
     Nonempty (FilteredComplexPageSubobjectData K r p q) := by
-  sorry
+  let hF10 : (K.X (p + q)).filtration.obj (p + 1) ≤
+      (K.X (p + q)).filtration.obj p :=
+    (K.X (p + q)).filtration.antitone (by omega)
+  let hB1 : (K.X (p + q)).filtration.obj (p + 1) ≤
+      filteredComplexBoundaryPlus K r p q := le_sup_right
+  let hZ1 : (K.X (p + q)).filtration.obj (p + 1) ≤
+      filteredComplexCyclePlus K r p q := le_sup_right
+  let hB0 : filteredComplexBoundaryPlus K r p q ≤
+      (K.X (p + q)).filtration.obj p := by
+    apply sup_le
+    · exact inf_le_right
+    · exact (K.X (p + q)).filtration.antitone (by omega)
+  let hZ0 : filteredComplexCyclePlus K r p q ≤
+      (K.X (p + q)).filtration.obj p := by
+    apply sup_le
+    · exact inf_le_right
+    · exact (K.X (p + q)).filtration.antitone (by omega)
+  let bObj : C := cokernel (Subobject.ofLE
+      ((K.X (p + q)).filtration.obj (p + 1))
+      (filteredComplexBoundaryPlus K r p q) hB1)
+  let zObj : C := cokernel (Subobject.ofLE
+      ((K.X (p + q)).filtration.obj (p + 1))
+      (filteredComplexCyclePlus K r p q) hZ1)
+  let bMap : bObj ⟶ filteredComplexE₀ K p q :=
+    cokernel.map
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        (filteredComplexBoundaryPlus K r p q) hB1)
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        ((K.X (p + q)).filtration.obj p) hF10)
+      (𝟙 ((K.X (p + q)).filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredComplexBoundaryPlus K r p q)
+        ((K.X (p + q)).filtration.obj p) hB0)
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexBoundaryPlus K r p q)
+            ((K.X (p + q)).filtration.obj p)
+            hB1 hB0))
+  have hbMap_mono : Mono bMap := by
+    apply Abelian.mono_cokernel_map_of_isPullback
+    apply IsPullback.of_vert_isIso_mono
+    exact ⟨by
+      simpa only [Category.id_comp] using
+        (Subobject.ofLE_comp_ofLE
+          ((K.X (p + q)).filtration.obj (p + 1))
+          (filteredComplexBoundaryPlus K r p q)
+          ((K.X (p + q)).filtration.obj p)
+          le_sup_right hB0)⟩
+  letI : Mono bMap := hbMap_mono
+  let zMap : zObj ⟶ filteredComplexE₀ K p q :=
+    cokernel.map
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        (filteredComplexCyclePlus K r p q) hZ1)
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        ((K.X (p + q)).filtration.obj p) hF10)
+      (𝟙 ((K.X (p + q)).filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredComplexCyclePlus K r p q)
+        ((K.X (p + q)).filtration.obj p) hZ0)
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexCyclePlus K r p q)
+            ((K.X (p + q)).filtration.obj p)
+            hZ1 hZ0))
+  have hzMap_mono : Mono zMap := by
+    apply Abelian.mono_cokernel_map_of_isPullback
+    apply IsPullback.of_vert_isIso_mono
+    exact ⟨by
+      simpa only [Category.id_comp] using
+        (Subobject.ofLE_comp_ofLE
+          ((K.X (p + q)).filtration.obj (p + 1))
+          (filteredComplexCyclePlus K r p q)
+          ((K.X (p + q)).filtration.obj p)
+          le_sup_right hZ0)⟩
+  letI : Mono zMap := hzMap_mono
+  let bzMap : bObj ⟶ zObj :=
+    cokernel.map
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        (filteredComplexBoundaryPlus K r p q) hB1)
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        (filteredComplexCyclePlus K r p q) hZ1)
+      (𝟙 ((K.X (p + q)).filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredComplexBoundaryPlus K r p q)
+        (filteredComplexCyclePlus K r p q)
+        (filteredComplex_boundary_le_cycle K r p q))
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexBoundaryPlus K r p q)
+            (filteredComplexCyclePlus K r p q)
+            hB1 (filteredComplex_boundary_le_cycle K r p q)))
+  have hBZ : Subobject.mk bMap ≤ Subobject.mk zMap := by
+    apply Subobject.mk_le_mk_of_comm bzMap
+    apply (cancel_epi (cokernel.π
+      (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+        (filteredComplexBoundaryPlus K r p q) hB1))).1
+    have hbzπ : cokernel.π
+          (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexBoundaryPlus K r p q) hB1) ≫ bzMap =
+        Subobject.ofLE (filteredComplexBoundaryPlus K r p q)
+          (filteredComplexCyclePlus K r p q)
+          (filteredComplex_boundary_le_cycle K r p q) ≫
+          cokernel.π (Subobject.ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexCyclePlus K r p q) hZ1) := by
+      dsimp [bObj, zObj, bzMap]
+      exact cokernel.π_desc _ _ _
+    have hzπ : cokernel.π
+          (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexCyclePlus K r p q) hZ1) ≫ zMap =
+        Subobject.ofLE (filteredComplexCyclePlus K r p q)
+          ((K.X (p + q)).filtration.obj p) hZ0 ≫
+          cokernel.π (Subobject.ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            ((K.X (p + q)).filtration.obj p) hF10) := by
+      dsimp [bObj, zObj, filteredComplexE₀, zMap]
+      exact cokernel.π_desc _ _ _
+    have hbπ : cokernel.π
+          (Subobject.ofLE ((K.X (p + q)).filtration.obj (p + 1))
+            (filteredComplexBoundaryPlus K r p q) hB1) ≫ bMap =
+        Subobject.ofLE (filteredComplexBoundaryPlus K r p q)
+          ((K.X (p + q)).filtration.obj p) hB0 ≫
+          cokernel.π (Subobject.ofLE
+            ((K.X (p + q)).filtration.obj (p + 1))
+            ((K.X (p + q)).filtration.obj p) hF10) := by
+      dsimp [bObj, filteredComplexE₀, bMap]
+      exact cokernel.π_desc _ _ _
+    rw [← Category.assoc, hbzπ, Category.assoc, hzπ, hbπ]
+    simpa [filteredComplexE₀,
+      Formalization.Books.Homology.Unit20.filteredComplexE₀,
+      Formalization.Books.Homology.Unit19.gradedPiece, Category.assoc] using
+      congrArg (fun f => f ≫ cokernel.π (Subobject.ofLE
+        ((K.X (p + q)).filtration.obj (p + 1))
+        ((K.X (p + q)).filtration.obj p) hF10))
+        (Subobject.ofLE_comp_ofLE
+          (filteredComplexBoundaryPlus K r p q)
+          (filteredComplexCyclePlus K r p q)
+          ((K.X (p + q)).filtration.obj p)
+          (filteredComplex_boundary_le_cycle K r p q) hZ0)
+  exact ⟨{
+    B := Subobject.mk bMap
+    Z := Subobject.mk zMap
+    B_le_Z := hBZ
+    B_component := by
+      let e : (Subobject.mk bMap : C) ≅ bObj := {
+        hom := (Subobject.underlyingIso bMap).hom
+        inv := (Subobject.underlyingIso bMap).inv
+        hom_inv_id := (Subobject.underlyingIso bMap).hom_inv_id
+        inv_hom_id := (Subobject.underlyingIso bMap).inv_hom_id
+      }
+      exact ⟨by simpa [bObj, filteredComplexB,
+        Formalization.Books.Homology.Unit20.subquotientObject] using e⟩
+    Z_component := by
+      let e : (Subobject.mk zMap : C) ≅ zObj := {
+        hom := (Subobject.underlyingIso zMap).hom
+        inv := (Subobject.underlyingIso zMap).inv
+        hom_inv_id := (Subobject.underlyingIso zMap).hom_inv_id
+        inv_hom_id := (Subobject.underlyingIso zMap).inv_hom_id
+      }
+      exact ⟨by simpa [zObj, filteredComplexZ,
+        Formalization.Books.Homology.Unit20.subquotientObject] using e⟩
+  }⟩
 
 structure FilteredComplexPageDifferentials {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) where

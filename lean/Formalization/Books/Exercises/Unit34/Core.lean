@@ -2,8 +2,6 @@ import Formalization.Books.Exercises.Unit33.Core
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Finite
 import Mathlib.AlgebraicGeometry.Morphisms.FiniteType
-import Mathlib.AlgebraicGeometry.Morphisms.Flat
-import Mathlib.AlgebraicGeometry.Geometrically.Irreducible
 import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Basic
 import Mathlib.Data.Complex.Basic
 import Mathlib.RingTheory.Finiteness.Basic
@@ -12,7 +10,6 @@ import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
 import Mathlib.RingTheory.Noetherian.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
 
 /-!
 # Exercises, Chapter 34: Morphisms

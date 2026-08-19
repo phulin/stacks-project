@@ -1,4 +1,5 @@
 import Formalization.Books.Exercises.Unit34.Core
+import Mathlib.FieldTheory.IsAlgClosed.Basic
 
 /-!
 # Exercises, Chapter 34: Morphisms
@@ -96,9 +97,10 @@ theorem exists_finiteField_finite_surjective_closed_subscheme
 /-- The two preceding exercises have the source's common geometric
 interpretation: a finite surjective base change admits a section after base
 change. -/
-theorem finite_surjective_base_change_interpretation
+theorem finite_surjective_lift_interprets_as_base_change_section
     {X S : Scheme.{u}} (f : X ⟶ S)
-    [Flat f] [Surjective f] [GeometricallyIrreducible f] :
+    (hlift : ∃ (S' : Scheme.{u}) (g : S' ⟶ S) (i : S' ⟶ X),
+      IsFiniteSurjective g ∧ i ≫ f = g) :
     HasFiniteSurjectiveBaseChangeSection f := by
   sorry
 

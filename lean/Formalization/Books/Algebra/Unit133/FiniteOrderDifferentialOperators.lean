@@ -2474,7 +2474,9 @@ variable {A : Type uA} {A' : Type uA'} {B : Type uB} {M : Type uM}
 /-- The base-change statement for principal parts, with the tensor-product
 convention used by Mathlib (`B ⊗[A] A'`).  The required target module
 structures are explicit parameters because Mathlib deliberately does not
-install all tensor-product algebra actions globally.
+install all tensor-product algebra actions globally.  The displayed maximum
+universes are exactly those of the two tensor products, so the literal tensor
+products can be used as witnesses without a universe lift.
 -/
 structure PrincipalPartsBaseChangeData (k : ℕ) where
   B' : Type (max uB uA')
@@ -2493,6 +2495,92 @@ structure PrincipalPartsBaseChangeData (k : ℕ) where
     PrincipalParts (R := A) (S := B) (M := M) k ⊗[A] A' ≃ₗ[B']
       PrincipalParts (R := A') (S := B') (M := M') k
 
+/- Proof roadmap.
+
+The universe-polymorphism obstruction from the earlier statement is gone: set
+`B₁ := B ⊗[A] A' : Type (max uB uA')` and
+`M₁ := M ⊗[A] A' : Type (max uM uA')`.  These are the `B'` and `M'`
+fields, and `identify_B'` and `identify_M'` can finally be `RingEquiv.refl _`
+and `LinearEquiv.refl A _`.  Do not instead use
+`(B ⊗[A] A') ⊗[B] M` as `M'`: its universe contains `uB`, recreating
+the mismatch which motivated the existential, maximum-universe fields.
+
+1. Install the canonical structures without changing these two types.
+   Use `Algebra.TensorProduct.rightAlgebra` for `Algebra A' B₁`.  For each
+   `X = M` and
+   `X = PrincipalParts (R := A) (S := B) (M := M) k`, transport the ordinary
+   left `A'`-module structure on `A' ⊗[A] X` across
+   `TensorProduct.comm A X A'` with `AddEquiv.module`; the associated
+   `AddEquiv.linearEquiv` is the needed `A'`-linear commutor.  Prove that this
+   right-factor action commutes with the existing left `B`-action by
+   `TensorProduct.induction_on`, using `TensorProduct.comm_tmul`.  Then
+   `TensorProduct.Algebra.module` gives a `Module B₁ (X ⊗[A] A')`, with
+   its pure-tensor rule `TensorProduct.Algebra.smul_def`.  Prove the two local
+   `IsScalarTower A' B₁ (X ⊗[A] A')` instances from that rule and
+   `Algebra.TensorProduct.right_algebraMap_apply`; retain the `X = M` tower
+   and both `B₁`-modules as the corresponding structure fields.  The
+   transport tools are in `Mathlib/Algebra/Module/TransferInstance.lean`, and
+   all the tensor-algebra tools in this step are in
+   `Mathlib/RingTheory/TensorProduct/Basic.lean` (the commutor itself is in
+   `Mathlib/LinearAlgebra/TensorProduct/Basic.lean`).
+
+2. Put `f m := m ⊗ₜ[A] 1`.  Its `B`-semilinearity follows from
+   `TensorProduct.Algebra.smul_def`, while the square of algebra maps is
+   `Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap` (read in the
+   direction matching the right algebra).  Apply
+   `principalParts_functoriality_exists` to obtain `F`.  Package `F.map k` as
+   an `A`-linear map `Fₖ` using `F.map_add`, `F.map_smul`, and the algebra-map
+   square.  Compose `(Fₖ.liftBaseChange A')` with the transported
+   `A'`-linear commutor from Step 1 to define
+   `Φ : PrincipalParts A B M k ⊗[A] A' →ₗ[B₁]
+     PrincipalParts A' B₁ M₁ k`.
+   Establish `B₁`-linearity first on `(b ⊗ₜ a')` and `(p ⊗ₜ c')`,
+   using `F.map_smul`, and then use `TensorProduct.induction_on` in both
+   variables.  `LinearMap.liftBaseChange` and
+   `LinearMap.liftBaseChange_tmul` are in
+   `Mathlib/RingTheory/TensorProduct/Basic.lean`.
+
+3. Let `U := principalPartsUniversalLinearMap (R := A) (S := B)
+   (M := M) k`.  Define the `A'`-linear map
+   `D : M₁ →ₗ[A'] PrincipalParts A B M k ⊗[A] A'` by commuting to
+   `A' ⊗[A] M`, applying `U.baseChange A'`, and commuting back.  From
+   `LinearMap.baseChange_tmul` (in
+   `Mathlib/LinearAlgebra/TensorProduct/Tower.lean`) obtain
+   `D (m ⊗ₜ a') = principalPartsGenerator k m ⊗ₜ a'`.
+   Prove locally, by induction on the order, that this base-change operation
+   preserves `IsDifferentialOperator`.  In the successor case induct on a
+   coefficient of `B₁`: zero and addition use
+   `isDifferentialOperator_zero` and `isDifferentialOperator_add`; for
+   `b ⊗ₜ a'`, extensionality and the pure-tensor action show that the
+   commutator is `(1 ⊗ₜ a')` times the base change of the commutator with
+   `b`, so finish with the induction hypothesis and
+   `isDifferentialOperator_smul`.  Apply this to
+   `principalPartsUniversalLinearMap_isDifferentialOperator`.
+
+4. Feed the resulting differential operator to
+   `principalPartsHomEquiv (R := A') (S := B₁) (M := M₁) k _`; call the
+   resulting `B₁`-linear map `Ψ`.  Its factorization theorem
+   `principalPartsHomEquiv_factorization`, together with
+   `principalPartsUniversalLinearMap_apply`, gives
+   `Ψ (principalPartsGenerator k (m ⊗ₜ a')) =
+     principalPartsGenerator k m ⊗ₜ a'`.
+
+5. For `Φ.comp Ψ = LinearMap.id`, use
+   `principalParts_factorization_unique` after checking equality on the
+   universal generators; reduce an arbitrary `m' : M₁` by
+   `TensorProduct.induction_on`.  For the other composite, first prove
+   `Ψ (F.map k p) = p ⊗ₜ 1`: choose a representative with
+   `Submodule.mkQ_surjective` and use `Finsupp.induction_linear`,
+   `F.map_generator`, and `F.map_smul`.  A final tensor induction gives
+   `Ψ.comp Φ = LinearMap.id`.  Assemble `equivalence` with
+   `LinearEquiv.ofLinear Φ Ψ`, and fill the structure with the instances
+   and reflexive identifications from Step 1.
+
+The later theorem `differentialOperator_tensor_product_base_change` in this
+file proves a closely related induction but occurs after this declaration and
+therefore cannot be referenced here; Step 3 is the chronological local form
+needed at this point in the file.
+-/
 theorem principalParts_base_change (k : ℕ) :
     Nonempty (PrincipalPartsBaseChangeData (A := A) (A' := A') (B := B) (M := M) k) := by
   sorry

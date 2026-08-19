@@ -246,45 +246,6 @@ private lemma standardδ_simplicialInsert
           omega) =
       SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) j) ≫
         standardδ L (m₁ := n + 1) (m₂ := n + 1 + L.length) (by omega) := by
-  /- Prior attempt:
-  induction L generalizing j n with
-  | nil => simp [SimplexCategoryGenRel.simplicialInsert, standardδ]
-  | cons a L ih =>
-    simp only [SimplexCategoryGenRel.simplicialInsert]
-    split_ifs with h
-    · simp only [standardδ]
-    · have ha : a ≤ j := by omega
-      have hL' : SimplexCategoryGenRel.IsAdmissible (n + 3) L := hL.of_cons
-      have hj' : j + 1 ≤ n + 2 := by omega
-      have hih := ih (n := n + 1) (j := j + 1) hL' hj'
-      have hδ :
-          SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) a) ≫
-              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) (j + 1)) =
-              SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) j) ≫
-              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) a) := by
-        have ha' : Fin.ofNat (n + 2) a =
-            (⟨a, show a < n + 2 by omega⟩ : Fin (n + 2)) := by
-          apply Fin.ext
-          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
-        have hj' : Fin.ofNat (n + 2) j =
-            (⟨j, show j < n + 2 by omega⟩ : Fin (n + 2)) := by
-          apply Fin.ext
-          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
-        have hj₁ : Fin.ofNat (n + 3) (j + 1) =
-            (⟨j + 1, show j + 1 < n + 3 by omega⟩ : Fin (n + 3)) := by
-          apply Fin.ext
-          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
-        have ha₁ : Fin.ofNat (n + 3) a =
-            (⟨a, show a < n + 3 by omega⟩ : Fin (n + 3)) := by
-          apply Fin.ext
-          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
-        simpa only [ha', hj', hj₁, ha₁] using
-          (SimplexCategoryGenRel.δ_comp_δ_nat (n := n) a j (by omega)
-            (by omega) (by omega))
-      simp only [standardδ]
-      rw [hih, hδ]
-      simp only [Category.assoc]
-  -/
   induction L generalizing n j with
   | nil => simp [standardδ, SimplexCategoryGenRel.simplicialInsert]
   | cons a L ih =>

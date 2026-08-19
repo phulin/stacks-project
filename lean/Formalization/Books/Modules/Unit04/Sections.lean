@@ -979,20 +979,19 @@ theorem generatedSubsheaf_stalk {X : TopCat.{v}}
       (C := AddCommGrpCat.{v}) t.U x hx
       ((PresheafOfModules.toPresheaf O.obj).map
         (generatedSubsheaf S).arrow.val) u
-    change (ConcreteCategory.hom
-        ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
-          ((PresheafOfModules.toPresheaf O.obj).map
-            (generatedSubsheaf S).arrow.val)))
-        (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
-          ((PresheafOfModules.toPresheaf O.obj).obj
-            (Subobject.underlying.obj (generatedSubsheaf S)).val)
-          t.U x hx u) =
-      TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
-        ((PresheafOfModules.toPresheaf O.obj).obj F.val) t.U x hx
-        (f.val.app (op t.U) (η.app (op t.U)
-          ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)) at hmap
-    rw [hfac_elem, hunit_elem] at hmap
-    exact hmap
+    have hmap' :
+        (ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map
+              (generatedSubsheaf S).arrow.val)))
+          (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+            (generatedSubsheaf S : Mod O).val.presheaf t.U x hx u) =
+        TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf t.U x hx
+          (f.val.app (op t.U) (η.app (op t.U)
+            ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)) := by
+      simpa [PresheafOfModules.toPresheaf_obj_coe] using hmap
+    rw [hfac_elem, hunit_elem] at hmap'
+    exact hmap'
   -/
 
 noncomputable def tensorProductSheaf {X : TopCat.{v}}

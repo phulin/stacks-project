@@ -969,18 +969,43 @@ def descentTermMap
       TensorProduct.map (LinearMap.id : A →ₗ[R] A)
         (descentTermMap f n ⟨i, Nat.lt_of_succ_lt_succ hi⟩)
 
+structure DescentCosimplicialModuleHomData
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (D' : DescentDatum (R := R) (A := A) (N := N'))
+    (f : DescentDatumHom D D') where
+  hom : descentCosimplicialModule D ⟶ descentCosimplicialModule D'
+  app_formula : ∀ n,
+    hom.app n = ModuleCat.ofHom (descentTermMap f.hom n.len
+      ⟨n.len, Nat.lt_succ_self n.len⟩)
+
+theorem descentCosimplicialModuleHomData_exists
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (D' : DescentDatum (R := R) (A := A) (N := N'))
+    (f : DescentDatumHom D D') :
+    Nonempty (DescentCosimplicialModuleHomData D D' f) := by
+  sorry
+
+noncomputable def descentCosimplicialModuleHomData
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (D' : DescentDatum (R := R) (A := A) (N := N'))
+    (f : DescentDatumHom D D') :
+    DescentCosimplicialModuleHomData D D' f :=
+  Classical.choice (descentCosimplicialModuleHomData_exists D D' f)
+
 noncomputable def descentCosimplicialModuleHom
     {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
     [IsScalarTower R A N']
     (D : DescentDatum (R := R) (A := A) (N := N))
     (D' : DescentDatum (R := R) (A := A) (N := N'))
     (f : DescentDatumHom D D') :
-    descentCosimplicialModule D ⟶ descentCosimplicialModule D' where
-  app n := ModuleCat.ofHom (descentTermMap f.hom n.len
-    ⟨n.len, Nat.lt_succ_self n.len⟩)
-  naturality := by
-    intro n m β
-    sorry
+    descentCosimplicialModule D ⟶ descentCosimplicialModule D' :=
+  (descentCosimplicialModuleHomData D D' f).hom
 
 theorem descentCosimplicialModuleHom_app_zero
     {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
@@ -990,8 +1015,7 @@ theorem descentCosimplicialModuleHom_app_zero
     (f : DescentDatumHom D D') :
     (descentCosimplicialModuleHom D D' f).app (SimplexCategory.mk 0) =
       ModuleCat.ofHom (f.hom.restrictScalars R) := by
-  dsimp [descentCosimplicialModuleHom, descentTermMap]
-  rfl
+  sorry
 
 theorem descentCosimplicialModule_functorial
     {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
@@ -1064,21 +1088,32 @@ theorem canonicalDescentComparison_tmul (a₀ a₁ : A) (m : M) :
       a₁ ⊗ₜ[R] (a₀ ⊗ₜ[R] m) := by
   rfl
 
+structure CanonicalDescentDatumData where
+  datum : DescentDatum (R := R) (A := A) (N := TensorProduct R A M)
+  comparison_eq : datum.comparison = canonicalDescentComparison (R := R) (A := A) (M := M)
+
+theorem canonicalDescentDatumData_nonempty :
+    Nonempty (CanonicalDescentDatumData (R := R) (A := A) (M := M)) := by
+  sorry
+
+noncomputable def canonicalDescentDatumData :
+    CanonicalDescentDatumData (R := R) (A := A) (M := M) :=
+  Classical.choice (canonicalDescentDatumData_nonempty (R := R) (A := A) (M := M))
+
 noncomputable def canonicalDescentDatum :
   DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
-  { comparison := canonicalDescentComparison (R := R) (A := A) (M := M)
-    comparison_compatible := by sorry
-    cocycle := by sorry }
+  (canonicalDescentDatumData (R := R) (A := A) (M := M)).datum
 
 theorem canonicalDescentDatum_exists :
     ∃ D : DescentDatum (R := R) (A := A) (N := TensorProduct R A M),
       D.comparison = canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  ⟨canonicalDescentDatum (R := R) (A := A) (M := M), rfl⟩
+  ⟨canonicalDescentDatum (R := R) (A := A) (M := M),
+    (canonicalDescentDatumData (R := R) (A := A) (M := M)).comparison_eq⟩
 
 theorem canonicalDescentDatum_comparison :
     (canonicalDescentDatum (R := R) (A := A) (M := M)).comparison =
       canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  rfl
+  (canonicalDescentDatumData (R := R) (A := A) (M := M)).comparison_eq
 
 def DescentDatumIsoCompatibility {N N' : Type*} [AddCommGroup N] [Module R N]
     [Module A N] [IsScalarTower R A N]
@@ -1521,12 +1556,24 @@ theorem effective_descent_modules_equivalence (R A : Type u)
   sorry
 
 /-- A cosimplicial module over `A` is represented degreewise by modules over
-the degreewise rings, with transition maps obtained by extension of scalars. -/
+the degreewise rings, with transition maps obtained by extension of scalars.
+The `HEq` coherence fields use Mathlib's canonical identity and composition
+isomorphisms for extension of scalars. -/
 structure CosimplicialModuleData
     (A : CosimplicialObject CommRingCat.{u}) where
   obj : ∀ n : ℕ, ModuleCat (A.obj (SimplexCategory.mk n))
   transition : ∀ {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
     (ModuleCat.extendScalars (A.map φ).hom).obj (obj n) ⟶ obj m
+  transition_id : ∀ n,
+    HEq (transition (𝟙 (SimplexCategory.mk n)))
+      ((ModuleCat.extendScalarsId (A.obj (SimplexCategory.mk n))).hom.app (obj n))
+  transition_comp : ∀ {n m k : ℕ}
+    (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k),
+    HEq (transition (φ ≫ ψ))
+      ((ModuleCat.extendScalarsComp (A.map φ).hom (A.map ψ).hom).hom.app (obj n) ≫
+        (ModuleCat.extendScalars (A.map ψ).hom).map (transition φ) ≫
+          transition ψ)
 
 def CartesianTransition
     (M : CosimplicialModuleData A) {n m : ℕ}

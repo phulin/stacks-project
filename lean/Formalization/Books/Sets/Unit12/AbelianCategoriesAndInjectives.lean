@@ -1,6 +1,7 @@
 import Mathlib.CategoryTheory.Abelian.Injective.Basic
 import Mathlib.CategoryTheory.Limits.ExactFunctor
 import Mathlib.CategoryTheory.ObjectProperty.Small
+import Formalization.CategoryTheory.SmallAbelianClosure
 
 /-!
 # Set Theory, Chapter 12: Abelian categories and injectives
@@ -60,6 +61,25 @@ theorem exists_abelian_injective_subcategory
     {A : Type (u + 1)} [LargeCategory A] [Abelian A]
     [EnoughInjectives A] (S : Type u) (A₀ : S → A) :
     Nonempty (AbelianInjectiveSubcategory A S A₀) := by
-  sorry
+  let P := Formalization.CategoryTheory.SmallAbelianClosure.generatedProperty S A₀
+  letI : Abelian P.FullSubcategory :=
+    Formalization.CategoryTheory.SmallAbelianClosure.generatedAbelian S A₀
+  letI : EnoughInjectives P.FullSubcategory :=
+    Formalization.CategoryTheory.SmallAbelianClosure.generatedEnoughInjectives S A₀
+  letI : PreservesFiniteLimits P.ι :=
+    Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteLimits S A₀
+  letI : PreservesFiniteColimits P.ι :=
+    Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteColimits S A₀
+  exact ⟨{
+    property := P
+    abelian := inferInstance
+    exact_inclusion := ⟨
+      Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteLimits S A₀,
+      Formalization.CategoryTheory.SmallAbelianClosure.generatedInclusionPreservesFiniteColimits S A₀⟩
+    small := inferInstance
+    contains := Formalization.CategoryTheory.SmallAbelianClosure.generated_contains S A₀
+    enough_injectives := inferInstance
+    injective_iff :=
+      Formalization.CategoryTheory.SmallAbelianClosure.generated_injective_iff_ambient S A₀ }⟩
 
 end Formalization.Books.Sets.Unit12

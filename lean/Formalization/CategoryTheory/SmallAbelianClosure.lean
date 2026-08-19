@@ -1,6 +1,8 @@
 import Mathlib.CategoryTheory.Abelian.Injective.Basic
 import Mathlib.CategoryTheory.Abelian.Subcategory
+import Mathlib.CategoryTheory.Abelian.Transfer
 import Mathlib.CategoryTheory.Limits.ExactFunctor
+import Mathlib.CategoryTheory.Limits.Preserves.Shapes.AbelianImages
 
 /-!
 # Small abelian subcategories closed under injective presentations
@@ -259,6 +261,50 @@ lemma cokernelArrow_condition (S : Type u) (A₀ : S → A)
   rw [zero_comp] at h
   simpa only [commonHom, Category.assoc, zero_comp, comp_zero] using h
 
+/-- The generated kernel arrow is a kernel in the ambient category. -/
+def kernelArrowIsLimit (S : Type u) (A₀ : S → A)
+    {i j : Code S A₀} (f : realize S A₀ i ⟶ realize S A₀ j) :
+    IsLimit (KernelFork.ofι (kernelArrow S A₀ f) (kernelArrow_condition S A₀ f)) := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  refine KernelFork.IsLimit.ofι _ _
+    (fun g hg ↦ kernel.lift (commonHom S A₀ f)
+      (g ≫ eqToHom (obj_commonLeft S A₀ i).symm)
+      (toCommon_comp_commonHom S A₀ f g hg) ≫ (kernelIso S A₀ f).inv) ?_ ?_
+  · intro W g hg
+    dsimp [kernelArrow]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    rw [← Category.assoc, kernel.lift_ι]
+    simp
+  · intro W g hg q hq
+    rw [← cancel_mono (kernelIso S A₀ f).hom]
+    apply Fork.IsLimit.hom_ext (kernelIsKernel (commonHom S A₀ f))
+    rw [← cancel_mono (eqToHom (obj_commonLeft S A₀ i))]
+    simpa [kernelArrow, Category.assoc] using hq
+
+/-- The generated cokernel arrow is a cokernel in the ambient category. -/
+def cokernelArrowIsColimit (S : Type u) (A₀ : S → A)
+    {i j : Code S A₀} (f : realize S A₀ i ⟶ realize S A₀ j) :
+    IsColimit (CokernelCofork.ofπ (cokernelArrow S A₀ f)
+      (cokernelArrow_condition S A₀ f)) := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  refine CokernelCofork.IsColimit.ofπ _ _
+    (fun g hg ↦ (cokernelIso S A₀ f).hom ≫
+      cokernel.desc (commonHom S A₀ f)
+        (eqToHom (obj_commonRight S A₀ j) ≫ g)
+        (commonHom_comp_fromCommon S A₀ f g hg)) ?_ ?_
+  · intro W g hg
+    dsimp [cokernelArrow]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    rw [cokernel.π_desc]
+    simp
+  · intro W g hg q hq
+    rw [← cancel_epi (cokernelIso S A₀ f).inv]
+    apply Cofork.IsColimit.hom_ext (cokernelIsCokernel (commonHom S A₀ f))
+    rw [← cancel_epi (eqToHom (obj_commonRight S A₀ j).symm)]
+    simpa [cokernelArrow, Category.assoc] using hq
+
 /-- A code for a chosen ambient injective object under a represented object. -/
 abbrev injectiveCode (S : Type u) (A₀ : S → A) : Code S A₀ → Code S A₀
   | ⟨n, i⟩ => ⟨n + 1, StepIndex.injective i⟩
@@ -268,6 +314,11 @@ lemma realize_injectiveCode (S : Type u) (A₀ : S → A) (i : Code S A₀) :
     realize S A₀ (injectiveCode S A₀ i) = Injective.under (realize S A₀ i) := by
   rcases i with ⟨n, i⟩
   rfl
+
+/-- The represented injective object identified with the chosen ambient injective. -/
+def injectiveIso (S : Type u) (A₀ : S → A) (i : Code S A₀) :
+    realize S A₀ (injectiveCode S A₀ i) ≅ Injective.under (realize S A₀ i) :=
+  eqToIso (realize_injectiveCode S A₀ i)
 
 /-- The small induced category on all generated object codes. -/
 abbrev Closure (S : Type u) (A₀ : S → A) :=
@@ -410,6 +461,13 @@ instance closureHasKernel {X Y : Closure S A₀} (f : X ⟶ Y) : HasKernel f :=
 instance closureHasKernels : HasKernels (Closure S A₀) :=
   ⟨fun f ↦ closureHasKernel S A₀ f⟩
 
+instance inclusionPreservesKernel {X Y : Closure S A₀} (f : X ⟶ Y) :
+    PreservesLimit (parallelPair f 0) (inclusion S A₀) := by
+  apply preservesLimit_of_preserves_limit_cone (closureKernelForkIsLimit S A₀ f)
+  apply (KernelFork.isLimitMapConeEquiv _ (inclusion S A₀)).2
+  apply IsLimit.ofIsoLimit (kernelArrowIsLimit S A₀ f.hom)
+  exact Fork.ext (Iso.refl _) (Category.id_comp _)
+
 /-- The selected cokernel cofork of a morphism in the closure. -/
 abbrev closureCokernelCofork {X Y : Closure S A₀} (f : X ⟶ Y) : CokernelCofork f :=
   CokernelCofork.ofπ (InducedCategory.homMk (cokernelArrow S A₀ f.hom)) (by
@@ -463,6 +521,147 @@ instance closureHasCokernel {X Y : Closure S A₀} (f : X ⟶ Y) : HasCokernel f
 
 instance closureHasCokernels : HasCokernels (Closure S A₀) :=
   ⟨fun f ↦ closureHasCokernel S A₀ f⟩
+
+instance inclusionPreservesCokernel {X Y : Closure S A₀} (f : X ⟶ Y) :
+    PreservesColimit (parallelPair f 0) (inclusion S A₀) := by
+  apply preservesColimit_of_preserves_colimit_cocone (closureCokernelCoforkIsColimit S A₀ f)
+  apply (CokernelCofork.isColimitMapCoconeEquiv _ (inclusion S A₀)).2
+  apply IsColimit.ofIsoColimit (cokernelArrowIsColimit S A₀ f.hom)
+  exact Cofork.ext (Iso.refl _) (Category.comp_id _)
+
+noncomputable instance closureAbelian : Abelian (Closure S A₀) := by
+  have comparisonIsIso {X Y : Closure S A₀} (f : X ⟶ Y) :
+      IsIso (Abelian.coimageImageComparison f) := by
+    have hmap : IsIso ((inclusion S A₀).map (Abelian.coimageImageComparison f)) := by
+      let e := Abelian.PreservesCoimageImageComparison.iso (inclusion S A₀) f
+      rw [Arrow.isIso_iff_isIso_of_isIso e.hom]
+      infer_instance
+    exact isIso_of_reflects_iso (Abelian.coimageImageComparison f) (inclusion S A₀)
+  letI : ∀ {X Y : Closure S A₀} (f : X ⟶ Y),
+      IsIso (Abelian.coimageImageComparison f) := comparisonIsIso
+  exact Abelian.ofCoimageImageComparisonIsIso
+
+noncomputable instance inclusionPreservesFiniteLimits :
+    PreservesFiniteLimits (inclusion S A₀) := by
+  rw [((Functor.preservesFiniteLimits_tfae (inclusion S A₀)).out 3 2 :)]
+  intro X Y f
+  infer_instance
+
+noncomputable instance inclusionPreservesFiniteColimits :
+    PreservesFiniteColimits (inclusion S A₀) := by
+  rw [((Functor.preservesFiniteColimits_tfae (inclusion S A₀)).out 3 2 :)]
+  intro X Y f
+  infer_instance
+
+/-- The chosen monomorphism from a generated object to a generated injective. -/
+def closureInjectiveArrow (X : Closure S A₀) :
+    X ⟶ (injectiveCode S A₀ X : Closure S A₀) :=
+  InducedCategory.homMk (Injective.ι (realize S A₀ X) ≫ (injectiveIso S A₀ X).inv)
+
+instance closureInjectiveArrow_mono (X : Closure S A₀) :
+    Mono (closureInjectiveArrow S A₀ X) := by
+  apply (inclusion S A₀).mono_of_mono_map
+  change Mono (Injective.ι (realize S A₀ X) ≫ (injectiveIso S A₀ X).inv)
+  infer_instance
+
+lemma closure_injective_of_ambient (X : Closure S A₀)
+    (hX : Injective ((inclusion S A₀).obj X)) : Injective X :=
+  (inclusion S A₀).injective_of_map_injective hX
+
+noncomputable instance closureEnoughInjectives : EnoughInjectives (Closure S A₀) where
+  presentation X := ⟨{
+    J := (injectiveCode S A₀ X : Closure S A₀)
+    injective := closure_injective_of_ambient S A₀ _
+      (Injective.of_iso (injectiveIso S A₀ X).symm inferInstance)
+    f := closureInjectiveArrow S A₀ X }⟩
+
+lemma ambient_injective_of_closure (X : Closure S A₀) (hX : Injective X) :
+    Injective ((inclusion S A₀).obj X) := by
+  letI : Injective X := hX
+  let j : Closure S A₀ := injectiveCode S A₀ X
+  let i : X ⟶ j := closureInjectiveArrow S A₀ X
+  let r : j ⟶ X := Injective.factorThru (𝟙 X) i
+  have hJ : Injective ((inclusion S A₀).obj j) :=
+    Injective.of_iso (injectiveIso S A₀ X).symm inferInstance
+  letI : Injective ((inclusion S A₀).obj j) := hJ
+  exact (Retract.mk ((inclusion S A₀).map i) ((inclusion S A₀).map r) (by
+    rw [← Functor.map_comp, Injective.comp_factorThru]
+    exact (inclusion S A₀).map_id X)).injective
+
+lemma closure_injective_iff_ambient (X : Closure S A₀) :
+    Injective X ↔ Injective ((inclusion S A₀).obj X) :=
+  ⟨ambient_injective_of_closure S A₀ X, closure_injective_of_ambient S A₀ X⟩
+
+/-- The strict range of the generated objects in the ambient category. -/
+abbrev generatedProperty : ObjectProperty A :=
+  (⊤ : ObjectProperty (Closure S A₀)).strictMap (inclusion S A₀)
+
+/-- The code category maps equivalently onto the full subcategory on its strict range. -/
+def rangeLift : Closure S A₀ ⥤ (generatedProperty S A₀).FullSubcategory where
+  obj X := ⟨(realize S A₀ X), ObjectProperty.strictMap.mk X trivial⟩
+  map f := ObjectProperty.homMk f.hom
+  map_id _ := by apply ObjectProperty.hom_ext; rfl
+  map_comp _ _ := by apply ObjectProperty.hom_ext; rfl
+
+instance rangeLift_faithful : (rangeLift S A₀).Faithful where
+  map_injective h := by
+    apply InducedCategory.hom_ext
+    exact congrArg (fun q ↦ q.hom) h
+
+instance rangeLift_full : (rangeLift S A₀).Full where
+  map_surjective f := ⟨InducedCategory.homMk f.hom, by
+    apply ObjectProperty.hom_ext
+    rfl⟩
+
+instance rangeLift_essSurj : (rangeLift S A₀).EssSurj where
+  mem_essImage Y := by
+    rcases Y with ⟨Y, hY⟩
+    rcases hY with ⟨X, -, rfl⟩
+    exact ⟨X, ⟨Iso.refl _⟩⟩
+
+noncomputable instance rangeLift_isEquivalence : (rangeLift S A₀).IsEquivalence where
+
+/-- The inclusion obtained from the inverse range equivalence agrees with the full-subcategory
+inclusion. -/
+noncomputable def inverseRangeInclusionIso :
+    (rangeLift S A₀).inv ⋙ inclusion S A₀ ≅ (generatedProperty S A₀).ι :=
+  NatIso.ofComponents
+    (fun Y ↦ (generatedProperty S A₀).ι.mapIso
+      ((rangeLift S A₀).asEquivalence.counitIso.app Y))
+    (fun f ↦ congrArg (fun q ↦ q.hom)
+      ((rangeLift S A₀).asEquivalence.counitIso.hom.naturality f))
+
+noncomputable instance generatedAbelian :
+    Abelian (generatedProperty S A₀).FullSubcategory := by
+  letI : HasFiniteProducts (generatedProperty S A₀).FullSubcategory :=
+    ⟨fun J ↦ Adjunction.hasLimitsOfShape_of_equivalence (rangeLift S A₀).inv⟩
+  exact abelianOfEquivalence (rangeLift S A₀).inv
+
+noncomputable instance generatedEnoughInjectives :
+    EnoughInjectives (generatedProperty S A₀).FullSubcategory :=
+  EnoughInjectives.of_equivalence (rangeLift S A₀).inv
+
+noncomputable instance generatedInclusionPreservesFiniteLimits :
+    PreservesFiniteLimits (generatedProperty S A₀).ι := by
+  haveI : PreservesFiniteLimits ((rangeLift S A₀).inv ⋙ inclusion S A₀) :=
+    comp_preservesFiniteLimits _ _
+  exact preservesFiniteLimits_of_natIso (inverseRangeInclusionIso S A₀)
+
+noncomputable instance generatedInclusionPreservesFiniteColimits :
+    PreservesFiniteColimits (generatedProperty S A₀).ι := by
+  haveI : PreservesFiniteColimits ((rangeLift S A₀).inv ⋙ inclusion S A₀) :=
+    comp_preservesFiniteColimits _ _
+  exact preservesFiniteColimits_of_natIso (inverseRangeInclusionIso S A₀)
+
+lemma generated_injective_iff_ambient (Y : (generatedProperty S A₀).FullSubcategory) :
+    Injective Y ↔ Injective ((generatedProperty S A₀).ι.obj Y) := by
+  let E := (rangeLift S A₀).asEquivalence.symm
+  exact (E.map_injective_iff Y).symm.trans
+    ((closure_injective_iff_ambient S A₀ (E.functor.obj Y)).trans
+      (Injective.iso_iff ((inverseRangeInclusionIso S A₀).app Y)))
+
+lemma generated_contains (s : S) : generatedProperty S A₀ (A₀ s) :=
+  ObjectProperty.strictMap.mk (baseCode S A₀ s) trivial
 
 end CategoryStructure
 

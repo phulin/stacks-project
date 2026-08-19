@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit37.NormalRings
 import Formalization.Books.Algebra.Unit36.FiniteIntegralRingExtensions
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
+import Formalization.Books.Algebra.Unit119.AroundKrullAkizuki
 import Mathlib.RingTheory.DedekindDomain.Basic
 import Mathlib.RingTheory.DedekindDomain.Dvr
 import Mathlib.RingTheory.Ideal.UFD

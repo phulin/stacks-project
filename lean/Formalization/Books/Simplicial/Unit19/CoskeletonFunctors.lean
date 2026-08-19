@@ -6,6 +6,7 @@ import Mathlib.CategoryTheory.Limits.Constructions.Over.Connected
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 import Mathlib.CategoryTheory.RepresentedBy
+import Mathlib.Data.Finite.Sigma
 
 /-!
 # Simplicial Methods, Chapter 19: Coskeleton functors
@@ -101,7 +102,7 @@ theorem coskeletonIndexDiagram_map {C : Type u} [Category.{v} C]
     (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk n') :
     coskeletonIndexMap φ ⋙ coskeletonIndexDiagram m n' U =
       coskeletonIndexDiagram m n U := by
-  sorry
+  rfl
 
 /-- The pointwise value of the coskeleton at degree `n`. -/
 noncomputable def pointwiseCoskeletonValue {C : Type u} [Category.{v} C]
@@ -134,12 +135,63 @@ theorem pointwiseCoskeleton_obj_formula {C : Type u} [Category.{v} C]
     (U : SimplicialObject.Truncated C m) :
     Nonempty (((pointwiseCoskeleton m).obj U).obj
         (op (SimplexCategory.mk n)) ≅ pointwiseCoskeletonValue m n U) := by
-  sorry
+  exact ⟨Functor.ranObjObjIsoLimit (truncInclusion m) U (op (SimplexCategory.mk n))⟩
 
 theorem has_coskeleton_of_has_finite_limits {C : Type u} [Category.{v} C]
     [HasFiniteLimits C] (m : ℕ) (U : SimplicialObject.Truncated C m) :
     HasCoskeleton m U := by
-  sorry
+  let : (truncInclusion m).HasPointwiseRightKanExtension U := by
+    intro X
+    have : Finite (SimplexCategory.Truncated m) :=
+      Finite.of_injective
+        (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+          SimplexCategory.Truncated m → Fin (m + 1))
+        (by
+          intro x y h
+          cases x with
+          | mk x hx =>
+            cases y with
+            | mk y hy =>
+              congr
+              exact SimplexCategory.ext (Fin.ext_iff.mp h))
+    have : Fintype (SimplexCategory.Truncated m) := Fintype.ofFinite _
+    have : Fintype ((SimplexCategory.Truncated m)ᵒᵖ) :=
+      Fintype.ofEquiv _ equivToOpposite
+    let : ∀ T : (SimplexCategory.Truncated m)ᵒᵖ,
+        Finite (X ⟶ (truncInclusion m).obj T) := fun T =>
+      Finite.of_injective (fun f => f.unop.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Opposite.unop_injective
+          apply SimplexCategory.Hom.ext
+          exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : ∀ T : (SimplexCategory.Truncated m)ᵒᵖ,
+        Fintype (X ⟶ (truncInclusion m).obj T) := fun T => Fintype.ofFinite _
+    let : Fintype (StructuredArrow X (truncInclusion m)) :=
+      Fintype.ofInjective
+        (fun j : StructuredArrow X (truncInclusion m) =>
+          (⟨j.right, j.hom⟩ : Σ T, X ⟶ (truncInclusion m).obj T))
+        (by
+          rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+          cases h
+          rfl)
+    let : ∀ j k : StructuredArrow X (truncInclusion m), Finite (j ⟶ k) :=
+      fun j k =>
+        Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+          (by
+            intro f g h
+            apply Comma.hom_ext f g
+            · exact Subsingleton.elim _ _
+            · apply Opposite.unop_injective
+              apply SimplexCategory.Truncated.Hom.ext
+              exact DFunLike.ext _ _ (fun i => congrFun h i))
+    let : FinCategory (StructuredArrow X (truncInclusion m)) :=
+      { fintypeObj := inferInstance
+        fintypeHom := fun j k => Fintype.ofFinite _ }
+    infer_instance
+  exact
+    (Functor.pointwiseRightKanExtensionIsPointwiseRightKanExtension
+      (truncInclusion m) U).hasRightKanExtension
 
 theorem has_coskeleton_functor_of_has_finite_limits {C : Type u} [Category.{v} C]
     [HasFiniteLimits C] (m : ℕ) : HasCoskeletonFunctor (C := C) m := by
@@ -151,7 +203,11 @@ limit described in the source. -/
 theorem has_trivial_coskeleton_limit {C : Type u} [Category.{v} C]
     (m n : ℕ) (h : n ≤ m) (U : SimplicialObject.Truncated C m) :
     HasLimit (coskeletonIndexDiagram m n U) := by
-  sorry
+  let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, h⟩
+  let := SimplexCategory.Truncated.inclusion.fullyFaithful m
+  letI : HasInitial (coskeletonIndex m n) :=
+    (StructuredArrow.mkIdInitial (T := truncInclusion m) (Y := Y)).hasInitial
+  infer_instance
 
 noncomputable def trivialCoskeletonLimit {C : Type u} [Category.{v} C]
     (m n : ℕ) (h : n ≤ m) (U : SimplicialObject.Truncated C m) : C :=

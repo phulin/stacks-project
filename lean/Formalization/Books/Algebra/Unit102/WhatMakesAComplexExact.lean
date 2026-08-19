@@ -291,7 +291,8 @@ theorem artinian_local_depth_zero
     induction m with
     | zero =>
         intro hm
-        have hzero : (1 : R) = 0 := by simpa using hm
+        have hzero : (1 : R) = 0 := by
+          simpa only [pow_zero] using hm
         exact one_ne_zero hzero
     | succ m ih =>
         intro hm

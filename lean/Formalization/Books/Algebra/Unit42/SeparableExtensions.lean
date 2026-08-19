@@ -529,6 +529,31 @@ theorem exists_uniform_pow_mem_of_finset
   congr 2
   omega
 
+/-- If the coefficients and variables occurring in a multivariable polynomial
+have p-th roots in a field of characteristic `p`, then so does its value. -/
+theorem exists_pth_root_eval₂
+    {k : Type u} {L : Type v} {ι : Type*}
+    [Field k] [Field L] (p : ℕ) [Fact p.Prime]
+    [CharP k p] [CharP L p]
+    (f : k →+* L) (y z : ι → L) (r : k → L)
+    (s : Finset k) (P : MvPolynomial ι k)
+    (hcoeff : ∀ m ∈ P.support, MvPolynomial.coeff m P ∈ s)
+    (hr : ∀ a ∈ s, r a ^ p = f a)
+    (hz : ∀ i, z i ^ p = y i) :
+    ∃ q : L, q ^ p = MvPolynomial.eval₂ f y P := by
+  classical
+  refine ⟨∑ m ∈ P.support,
+    r (MvPolynomial.coeff m P) * ∏ i ∈ m.support, z i ^ m i, ?_⟩
+  rw [sum_pow_char, MvPolynomial.eval₂_eq]
+  apply Finset.sum_congr rfl
+  intro m hm
+  rw [mul_pow, hr _ (hcoeff m hm)]
+  congr 1
+  rw [← Finset.prod_pow]
+  apply Finset.prod_congr rfl
+  intro i hi
+  rw [← pow_mul, mul_comm, pow_mul, hz]
+
 /-- Finitely many elements of a rational function field can be represented
 with numerators and denominators involving only finitely many coefficients of
 the ground field. -/

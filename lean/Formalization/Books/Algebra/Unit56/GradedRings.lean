@@ -3471,6 +3471,7 @@ private theorem gradedScale_coeff (G : GradedRingData S) (x : S) (d : ℕ) :
       rw [map_add, Polynomial.coeff_add, DirectSum.decompose_add]
       exact congrArg₂ (· + ·) hx hy
 
+attribute [local instance] Polynomial.algebra in
 theorem integralClosure_is_graded
     (G : GradedRingData R) (H : GradedRingData S)
     (f : GradedRingMap G H) :
@@ -3499,7 +3500,6 @@ theorem integralClosure_is_graded
   intro d x hx
   rw [mem_integralClosure_iff] at hx ⊢
   obtain ⟨p, hp, hpx⟩ := hx
-  letI : Algebra (Polynomial R) (Polynomial S) := Polynomial.algebra R S
   have hscaled : IsIntegral (Polynomial R) (gradedScale H x) := by
     refine ⟨p.map (gradedScale G), hp.map _, ?_⟩
     have hcompat' :

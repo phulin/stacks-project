@@ -348,7 +348,12 @@ theorem simplicial_set_n_skeleton_high_simplices_degenerate
     (U : SSet.{u}) (n m : ℕ) (hm : n < m)
     {x : U _⦋m⦌} (hx : x ∈ (simplicialSetNSkeleton U n).obj (op ⦋m⦌)) :
     x ∈ U.degenerate m := by
-  sorry
+  rw [SSet.mem_degenerate_iff_notMem_nonDegenerate]
+  intro hxn
+  have hdim : m < n + 1 :=
+    (U.mem_skeleton_obj_iff_of_nonDegenerate ⟨x, hxn⟩ (n + 1)).mp (by
+      simpa [simplicialSetNSkeleton] using hx)
+  omega
 
 /-! ## Normalized subobjects in an abelian category -/
 
@@ -407,7 +412,23 @@ theorem normalizedSubobject_map_factors
     {U V : SimplicialObject C} (f : U ⟶ V) (n : ℕ) :
     (normalizedSubobject V n).Factors
       ((normalizedSubobject U n).arrow ≫ f.app (op ⦋n⦌)) := by
-  sorry
+  rcases n with _ | n
+  · apply Subobject.top_factors
+  · rw [normalizedSubobject, normalizedSubobject]
+    apply (Subobject.finset_inf_factors _).mpr
+    intro i _
+    apply kernelSubobject_factors
+    rw [SimplicialObject.δ_def, Category.assoc,
+      ← f.naturality (SimplexCategory.δ i.castSucc).op]
+    rw [← Category.assoc]
+    rw [← Subobject.factorThru_arrow
+      (kernelSubobject (U.δ i.castSucc))
+      (Finset.univ.inf (fun j : Fin (n + 1) => kernelSubobject (U.δ j.castSucc))).arrow
+      (Subobject.finset_inf_arrow_factors Finset.univ
+        (fun j : Fin (n + 1) => kernelSubobject (U.δ j.castSucc)) i (by simp))]
+    simp only [Category.assoc]
+    simp only [← SimplicialObject.δ_def, Category.assoc,
+      kernelSubobject_arrow_comp_assoc, zero_comp, comp_zero]
 
 noncomputable def normalizedSubobjectMap
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -438,7 +459,12 @@ theorem normalizedSubobjectMap_comp
     {U V W : SimplicialObject C} (f : U ⟶ V) (g : V ⟶ W) (n : ℕ) :
     normalizedSubobjectMap (f ≫ g) n =
       normalizedSubobjectMap f n ≫ normalizedSubobjectMap g n := by
-  sorry
+  apply (cancel_mono (normalizedSubobject W n).arrow).1
+  rw [normalizedSubobjectMap_arrow]
+  simp only [Category.assoc]
+  rw [normalizedSubobjectMap_arrow]
+  rw [← Category.assoc, normalizedSubobjectMap_arrow]
+  simp [Category.assoc]
 
 /-! ## Splitting in an abelian category -/
 

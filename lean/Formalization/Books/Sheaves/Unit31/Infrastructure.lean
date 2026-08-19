@@ -1,7 +1,10 @@
 import Formalization.Books.Sheaves.Unit30.Infrastructure
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Formalization.Books.Sheaves.Unit08.AbelianSheaves
+import Formalization.Books.Sheaves.Unit17.Sheafification
+import Mathlib.CategoryTheory.Sites.ConstantSheaf
 import Mathlib.CategoryTheory.Sites.Sheafification
+import Mathlib.Topology.Connected.Clopen
 import Mathlib.Topology.Constructions
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.SheafCondition.Sites
@@ -32,6 +35,372 @@ open Formalization.Books.Sheaves.Unit10
 universe v u
 
 noncomputable section
+
+/-! ## Constant sheaves on a topological space -/
+
+/-- The site-theoretic constant sheaf of types agrees with the concrete
+sheaf of locally constant functions. -/
+noncomputable def constantTypeSheafIso (X : TopCat.{v}) (A : Type v) :
+    (CategoryTheory.constantSheaf (Opens.grothendieckTopology X) (Type v)).obj A ≅
+      Formalization.Books.Sheaves.Unit07.constantSheaf X A := by
+  let P := Formalization.Books.Sheaves.Unit03.constantPresheaf (X := X) A
+  let k :
+      (CategoryTheory.constantSheaf (Opens.grothendieckTopology X) (Type v)).obj A ⟶
+        Formalization.Books.Sheaves.Unit07.constantSheaf X A :=
+    ((CategoryTheory.sheafificationAdjunction
+      (Opens.grothendieckTopology X) (Type v)).homEquiv P
+        (Formalization.Books.Sheaves.Unit07.constantSheaf X A)).symm
+        (Formalization.Books.Sheaves.Unit11.constantPresheafToConstantSheaf A)
+  have hkcomp :
+      CategoryTheory.toSheafify (Opens.grothendieckTopology X) P ≫ k.hom =
+        Formalization.Books.Sheaves.Unit11.constantPresheafToConstantSheaf A :=
+    by
+      change
+        ((CategoryTheory.sheafificationAdjunction
+          (Opens.grothendieckTopology X) (Type v)).homEquiv P
+            (Formalization.Books.Sheaves.Unit07.constantSheaf X A)) k = _
+      exact ((CategoryTheory.sheafificationAdjunction
+        (Opens.grothendieckTopology X) (Type v)).homEquiv P
+          (Formalization.Books.Sheaves.Unit07.constantSheaf X A)).apply_symm_apply _
+  have hk : IsIso k :=
+    (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso k).2 (by
+      intro x
+      let u := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+        (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)
+      let m := (TopCat.Presheaf.stalkFunctor (Type v) x).map k.hom
+      let w := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+        (Formalization.Books.Sheaves.Unit11.constantPresheafToConstantSheaf A)
+      have hu : Function.Bijective u := by
+        rw [← isIso_iff_bijective]
+        exact
+        TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso x (Type v) P
+      have hw : Function.Bijective w := by
+        exact Formalization.Books.Sheaves.Unit11.constantSheafStalkMap_bijective A x
+      have huw : u ≫ m = w := by
+        dsimp only [u, m, w]
+        calc
+          _ = (TopCat.Presheaf.stalkFunctor (Type v) x).map
+                (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P ≫ k.hom) :=
+            (Functor.map_comp _ _ _).symm
+          _ = _ := congrArg
+            (fun q => (TopCat.Presheaf.stalkFunctor (Type v) x).map q) hkcomp
+      rw [isIso_iff_bijective]
+      constructor
+      · intro a b hab
+        obtain ⟨a₀, ha₀⟩ := hu.2 a
+        obtain ⟨b₀, hb₀⟩ := hu.2 b
+        have ha := congrArg (fun q => q a₀) huw
+        have hb := congrArg (fun q => q b₀) huw
+        change m (u a₀) = w a₀ at ha
+        change m (u b₀) = w b₀ at hb
+        rw [ha₀] at ha
+        rw [hb₀] at hb
+        have hab₀ : a₀ = b₀ := hw.1 (ha.symm.trans (hab.trans hb))
+        exact ha₀.symm.trans ((congrArg (fun z => u z) hab₀).trans hb₀)
+      · intro b
+        obtain ⟨a, ha⟩ := hw.2 b
+        refine ⟨u a, ?_⟩
+        have h := congrArg (fun q => q a) huw
+        change m (u a) = w a at h
+        exact h.trans ha)
+  letI := hk
+  exact asIso k
+
+/-- After forgetting the additive structure, the site-theoretic constant
+additive sheaf is the concrete sheaf of locally constant functions. -/
+noncomputable def constantAddCommGrpSheafUnderlyingIso
+    (X : TopCat.{v}) (A : AddCommGrpCat.{v}) :
+    (((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj ⋙ CategoryTheory.forget AddCommGrpCat) ≅
+      (Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf := by
+  exact (CategoryTheory.sheafToPresheaf
+      (Opens.grothendieckTopology X) (Type v)).mapIso
+        ((CategoryTheory.constantCommuteCompose
+          (Opens.grothendieckTopology X)
+          (CategoryTheory.forget AddCommGrpCat)).app A) ≪≫
+    (CategoryTheory.sheafToPresheaf
+      (Opens.grothendieckTopology X) (Type v)).mapIso
+        (constantTypeSheafIso X A)
+
+/-- A section of a constant additive sheaf, viewed as a locally constant
+function after forgetting its additive structure. -/
+noncomputable def constantAddCommGrpSheafSectionFunction
+    {X : TopCat.{v}} (A : AddCommGrpCat.{v}) (U : Opens X)
+    (s : ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj.obj (op U)) : U → A :=
+  fun x => ConcreteCategory.hom (ConcreteCategory.hom
+    ((constantAddCommGrpSheafUnderlyingIso X A).hom.app (op U)) s) x
+
+/-- The locus where a section of a constant additive sheaf differs from the
+zero section is clopen. -/
+theorem constantAddCommGrpSheafSectionFunction_ne_zero_isClopen
+    {X : TopCat.{v}} (A : AddCommGrpCat.{v}) (U : Opens X)
+    (s : ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj.obj (op U)) :
+    IsClopen {x : U |
+      constantAddCommGrpSheafSectionFunction A U s x ≠
+        constantAddCommGrpSheafSectionFunction A U 0 x} := by
+  let e := constantAddCommGrpSheafUnderlyingIso X A
+  let fs := e.hom.app (op U) s
+  let fz := e.hom.app (op U) 0
+  let : TopologicalSpace A := ⊥
+  let : DiscreteTopology A := ⟨rfl⟩
+  let h : U → A × A := fun x => (ConcreteCategory.hom fs x,
+    ConcreteCategory.hom fz x)
+  have hh : Continuous h :=
+    (ConcreteCategory.hom fs).continuous.prodMk
+      (ConcreteCategory.hom fz).continuous
+  have hc : IsClopen {p : A × A | p.1 ≠ p.2} := isClopen_discrete _
+  convert hc.preimage hh using 1
+  ext x
+  rfl
+
+/-- For a section of a constant additive sheaf, vanishing of the germ is
+detected by the value of the associated locally constant function. -/
+theorem constantAddCommGrpSheaf_germ_eq_zero_iff
+    {X : TopCat.{v}} (A : AddCommGrpCat.{v}) (U : Opens X)
+    (s : ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj.obj (op U))
+    (x : X) (hx : x ∈ U) :
+    ConcreteCategory.hom
+        (TopCat.Presheaf.germ
+          (((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+            AddCommGrpCat.{v}).obj A).obj) U x hx) s = 0 ↔
+      constantAddCommGrpSheafSectionFunction A U s ⟨x, hx⟩ =
+        constantAddCommGrpSheafSectionFunction A U 0 ⟨x, hx⟩ := by
+  let F : TopCat.Presheaf AddCommGrpCat.{v} X :=
+    ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj
+  let e := constantAddCommGrpSheafUnderlyingIso X A
+  constructor
+  · intro hs
+    have hs' : ConcreteCategory.hom (F.germ U x hx) s =
+        ConcreteCategory.hom (F.germ U x hx) 0 := by
+      simpa only [map_zero] using hs
+    rcases F.germ_eq x hx hx s 0 hs' with ⟨W, hxW, i₁, i₂, hres⟩
+    have hi : i₂ = i₁ := Subsingleton.elim _ _
+    subst i₂
+    have heq := congrArg
+      (fun z => ConcreteCategory.hom (e.hom.app (op W)) z) hres
+    have hnat := e.hom.naturality i₁.op
+    have hnat_s := ConcreteCategory.congr_hom hnat s
+    have hnat_z := ConcreteCategory.congr_hom hnat (0 : F.obj (op U))
+    change e.hom.app (op W) (F.map i₁.op s) =
+      ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i₁.op)
+        (e.hom.app (op U) s) at hnat_s
+    change e.hom.app (op W) (F.map i₁.op 0) =
+      ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i₁.op)
+        (e.hom.app (op U) 0) at hnat_z
+    have ht :
+        ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i₁.op)
+            (e.hom.app (op U) s) =
+          ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i₁.op)
+            (e.hom.app (op U) 0) := by
+      calc
+        _ = e.hom.app (op W) (F.map i₁.op s) := by simpa using hnat_s.symm
+        _ = e.hom.app (op W) (F.map i₁.op 0) := heq
+        _ = _ := by simpa using hnat_z
+    have ht' := congrArg
+      (fun z : (Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.obj
+          (op W) => ConcreteCategory.hom z ⟨x, hxW⟩) ht
+    change constantAddCommGrpSheafSectionFunction A U s (i₁ ⟨x, hxW⟩) =
+      constantAddCommGrpSheafSectionFunction A U 0 (i₁ ⟨x, hxW⟩) at ht'
+    have hix : i₁ ⟨x, hxW⟩ = (⟨x, hx⟩ : U) := by
+      apply Subtype.ext
+      rfl
+    simpa [hix] using ht'
+  · intro hs
+    let S : Set U := {y |
+      constantAddCommGrpSheafSectionFunction A U s y ≠
+        constantAddCommGrpSheafSectionFunction A U 0 y}
+    have hS := constantAddCommGrpSheafSectionFunction_ne_zero_isClopen A U s
+    have hxS : (⟨x, hx⟩ : U) ∈ Sᶜ := by simpa [S] using hs
+    let W : Opens X :=
+      ⟨Subtype.val '' Sᶜ, U.isOpenEmbedding.isOpenMap Sᶜ hS.1.isOpen_compl⟩
+    have hxW : x ∈ W := ⟨⟨x, hx⟩, hxS, rfl⟩
+    have hWU : W ≤ U := by
+      rintro y ⟨z, -, rfl⟩
+      exact z.2
+    let i : W ⟶ U := homOfLE hWU
+    have ht :
+        ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i.op)
+            (e.hom.app (op U) s) =
+          ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i.op)
+            (e.hom.app (op U) 0) := by
+      apply TopCat.hom_ext
+      apply ContinuousMap.ext
+      intro y
+      rcases y.2 with ⟨z, hz, hzy⟩
+      have hz' : z ∉ S := hz
+      have hval :
+          constantAddCommGrpSheafSectionFunction A U s z =
+            constantAddCommGrpSheafSectionFunction A U 0 z := not_ne_iff.mp hz'
+      have hiyz : i y = z := by
+        apply Subtype.ext
+        exact hzy.symm
+      change constantAddCommGrpSheafSectionFunction A U s (i y) =
+        constantAddCommGrpSheafSectionFunction A U 0 (i y)
+      simpa [hiyz] using hval
+    have hnat := e.hom.naturality i.op
+    have hnat_s := ConcreteCategory.congr_hom hnat s
+    have hnat_z := ConcreteCategory.congr_hom hnat (0 : F.obj (op U))
+    change e.hom.app (op W) (F.map i.op s) =
+      ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i.op)
+        (e.hom.app (op U) s) at hnat_s
+    change e.hom.app (op W) (F.map i.op 0) =
+      ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i.op)
+        (e.hom.app (op U) 0) at hnat_z
+    have heq : e.hom.app (op W) (F.map i.op s) =
+        e.hom.app (op W) (F.map i.op 0) := by
+      calc
+        _ = ((Formalization.Books.Sheaves.Unit07.constantSheaf X A).presheaf.map i.op)
+              (e.hom.app (op U) s) := by simpa using hnat_s
+        _ = _ := ht
+        _ = e.hom.app (op W) (F.map i.op 0) := by simpa using hnat_z.symm
+    have hres : F.map i.op s = F.map i.op 0 :=
+      (e.app (op W)).toEquiv.injective heq
+    have hg : ConcreteCategory.hom (F.germ U x hx) s =
+        ConcreteCategory.hom (F.germ U x hx) 0 :=
+      F.germ_ext (hxU := hx) (hxV := hx) W hxW i i hres
+    simpa only [map_zero] using hg
+
+/-- The support of a section of an additive sheaf, inside its domain. -/
+def additiveSectionSupport {X : TopCat.{v}}
+    (F : TopCat.Sheaf AddCommGrpCat.{v} X) (U : Opens X)
+    (s : F.presheaf.obj (op U)) : Set U :=
+  {x | ConcreteCategory.hom (F.presheaf.germ U x.1 x.2) s ≠ 0}
+
+/-- The support of a section of an additive sheaf is closed in its domain. -/
+theorem additiveSectionSupport_isClosed {X : TopCat.{v}}
+    (F : TopCat.Sheaf AddCommGrpCat.{v} X) (U : Opens X)
+    (s : F.presheaf.obj (op U)) : IsClosed (additiveSectionSupport F U s) := by
+  apply isOpen_compl_iff.mp
+  apply isOpen_iff_mem_nhds.mpr
+  intro x hx
+  simp only [additiveSectionSupport, Set.mem_compl_iff, Set.mem_ofPred_eq,
+    not_ne_iff] at hx
+  have hx' : ConcreteCategory.hom (F.presheaf.germ U x.1 x.2) s =
+      ConcreteCategory.hom (F.presheaf.germ U x.1 x.2) 0 := by
+    simpa only [map_zero] using hx
+  rcases F.presheaf.germ_eq x.1 x.2 x.2 s 0 hx' with
+    ⟨W, hxW, i₁, i₂, hres⟩
+  let O : Set U := (Subtype.val : U → X) ⁻¹' (W : Set X)
+  have hOopen : IsOpen O := W.isOpen.preimage continuous_subtype_val
+  refine Filter.mem_of_superset (hOopen.mem_nhds hxW) ?_
+  intro y hy
+  simp only [additiveSectionSupport, Set.mem_compl_iff, Set.mem_ofPred_eq,
+    not_ne_iff]
+  have hgy := F.presheaf.germ_ext (x := y.1) (hxU := y.2) (hxV := y.2)
+    W hy i₁ i₂ hres
+  simpa only [map_zero] using hgy
+
+/-- An isomorphism of additive sheaves identifies the supports of
+corresponding sections. -/
+theorem additiveSectionSupport_map_iso {X : TopCat.{v}}
+    (F G : TopCat.Sheaf AddCommGrpCat.{v} X)
+    (e : F.presheaf ≅ G.presheaf)
+    (U : Opens X) (s : F.presheaf.obj (op U)) :
+    additiveSectionSupport G U (e.hom.app (op U) s) =
+      additiveSectionSupport F U s := by
+  ext x
+  let ei := (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x.1).mapIso
+    e
+  have hei : Function.Injective (ConcreteCategory.hom ei.hom) := by
+    intro a b hab
+    have hab' := congrArg (ConcreteCategory.hom ei.inv) hab
+    have hleft : ConcreteCategory.hom ei.inv
+        (ConcreteCategory.hom ei.hom a) = a := by
+      change ConcreteCategory.hom (ei.hom ≫ ei.inv) a = a
+      rw [ei.hom_inv_id]
+      rfl
+    have hright : ConcreteCategory.hom ei.inv
+        (ConcreteCategory.hom ei.hom b) = b := by
+      change ConcreteCategory.hom (ei.hom ≫ ei.inv) b = b
+      rw [ei.hom_inv_id]
+      rfl
+    exact hleft.symm.trans (hab'.trans hright)
+  have h := TopCat.Presheaf.stalkFunctor_map_germ_apply U x.1 x.2 e.hom s
+  have h' : ConcreteCategory.hom (G.presheaf.germ U x.1 x.2)
+        (e.hom.app (op U) s) =
+      ConcreteCategory.hom ei.hom
+        (ConcreteCategory.hom (F.presheaf.germ U x.1 x.2) s) := by
+    simpa [ei] using h.symm
+  simp only [additiveSectionSupport, Set.mem_ofPred_eq]
+  rw [h']
+  constructor
+  · intro hs hs0
+    apply hs
+    calc
+      _ = ConcreteCategory.hom ei.hom 0 := congrArg _ hs0
+      _ = 0 := map_zero _
+  · intro hs hs0
+    apply hs
+    apply hei
+    exact hs0.trans (map_zero _).symm
+
+/-- Every section of a categorical constant additive sheaf has clopen
+support. -/
+theorem constantAddCommGrpSheaf_support_isClopen
+    {X : TopCat.{v}} (A : AddCommGrpCat.{v}) (U : Opens X)
+    (s : ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A).obj.obj (op U)) :
+    IsClopen (additiveSectionSupport
+      ((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+        AddCommGrpCat.{v}).obj A) U s) := by
+  have h := constantAddCommGrpSheafSectionFunction_ne_zero_isClopen A U s
+  convert h using 1
+  ext x
+  change (ConcreteCategory.hom (TopCat.Presheaf.germ
+      (((CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+        AddCommGrpCat.{v}).obj A).obj) U x.1 x.2) s ≠ 0) ↔
+    constantAddCommGrpSheafSectionFunction A U s x ≠
+      constantAddCommGrpSheafSectionFunction A U 0 x
+  simpa using not_congr
+    (constantAddCommGrpSheaf_germ_eq_zero_iff A U s x.1 x.2)
+
+/-- A morphism from a constant additive sheaf has zero stalk map at a point
+which admits a neighbourhood with no target sections. -/
+theorem constantAddCommGrpSheaf_stalk_map_eq_zero_of_isZero
+    {X : TopCat.{v}} (A : AddCommGrpCat.{v})
+    (G : TopCat.Sheaf AddCommGrpCat.{v} X)
+    (f : (CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A ⟶ G)
+    (V : Opens X) (x : X) (hx : x ∈ V)
+    (hV : IsZero (G.presheaf.obj (op V))) :
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom = 0 := by
+  let P : TopCat.Presheaf AddCommGrpCat.{v} X :=
+    (Functor.const (Opens X)ᵒᵖ).obj A
+  let K : TopCat.Sheaf AddCommGrpCat.{v} X :=
+    (CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
+      AddCommGrpCat.{v}).obj A
+  let η : P ⟶ K.presheaf :=
+    CategoryTheory.toSheafify (Opens.grothendieckTopology X) P
+  let q : P ⟶ G.presheaf := η ≫ f.hom
+  have : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map η) :=
+    TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+      x AddCommGrpCat.{v} P
+  apply (cancel_epi
+    ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map η)).1
+  rw [← Functor.map_comp]
+  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map q = 0
+  apply TopCat.Presheaf.stalk_hom_ext P
+  intro U hxU
+  let W := U ⊓ V
+  have hxW : x ∈ W := ⟨hxU, hx⟩
+  let iWU : W ⟶ U := homOfLE inf_le_left
+  let iWV : W ⟶ V := homOfLE inf_le_right
+  have hqV : q.app (op V) = 0 := hV.eq_of_tgt _ _
+  have hqW : q.app (op W) = 0 := by
+    have hnat := q.naturality iWV.op
+    rw [hqV, zero_comp] at hnat
+    simpa [P] using hnat
+  rw [TopCat.Presheaf.stalkFunctor_map_germ]
+  calc
+    q.app (op U) ≫ G.presheaf.germ U x hxU = 0 := by
+      rw [← G.presheaf.germ_res iWU x hxW]
+      rw [← Category.assoc, ← q.naturality iWU.op, hqW]
+      simp only [comp_zero, zero_comp]
+    _ = P.germ U x hxU ≫ 0 := (comp_zero).symm
 
 /-! ## Restriction to an open subspace -/
 
@@ -102,6 +471,16 @@ noncomputable def openPresheafRestriction_obj_iso (C : Type u)
         (U.isOpenEmbedding.isOpenMap V V.2)⟩) := by
   exact TopCat.Presheaf.pullbackObjObjOfImageOpen
     (openInclusion U) F V (U.isOpenEmbedding.isOpenMap V V.2)
+
+/-- The presheaf of the restricted sheaf, written directly as ambient
+sections on image opens. -/
+noncomputable def openSheafRestrictionImageIso (C : Type u)
+    [Category.{v} C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Sheaf C X) :
+    ((openSheafRestriction C U).obj F).presheaf ≅
+      U.isOpenEmbedding.isOpenMap.functor.op ⋙ F.presheaf :=
+  (openSheafRestrictionPresheafIso C U).app F ≪≫
+    U.isOpenEmbedding.isOpenMap.pullbackObjIso F.presheaf
 
 /-- The open-subspace sheaf restriction has the corresponding presheaf. -/
 theorem openSheafRestriction_formula (C : Type u) [Category.{v} C]
@@ -175,6 +554,25 @@ noncomputable def pullbackStalkIso (C : Type u) [Category.{v} C]
               (TopCat.Presheaf.stalkFunctor C (f x)).map g := by simp
         _ = _ := by simp)
 
+set_option backward.isDefEq.respectTransparency false in
+/-- For an open map, the section isomorphism over the image of an open is
+compatible with the canonical pullback-stalk isomorphism. -/
+theorem pullbackObjObjOfImageOpen_hom_germ (C : Type u) [Category.{v} C]
+    [HasColimits C] {X Y : TopCat.{v}} (f : X ⟶ Y) (hf : IsOpenMap f)
+    (F : TopCat.Presheaf C Y) (V : Opens X) (x : X) (hx : x ∈ V) :
+    (TopCat.Presheaf.pullbackObjObjOfImageOpen f F V
+        (hf (V : Set X) V.2)).hom ≫
+        F.germ ⟨f '' V, hf (V : Set X) V.2⟩ (f x) ⟨x, hx, rfl⟩ =
+      TopCat.Presheaf.germToPullbackStalk C f F V x hx := by
+  dsimp [TopCat.Presheaf.pullbackObjObjOfImageOpen,
+    TopCat.Presheaf.germToPullbackStalk]
+  refine ((Opens.map f).op.isPointwiseLeftKanExtensionLeftKanExtensionUnit F
+    (op V)).hom_ext (fun j ↦ ?_)
+  rw [Limits.IsColimit.comp_coconePointUniqueUpToIso_hom_assoc,
+    Limits.IsColimit.fac]
+  dsimp
+  apply F.germ_res
+
 /-- Restriction to an open subspace preserves its stalks, naturally in the
 ambient sheaf. -/
 noncomputable def openSheafRestrictionStalkIso (C : Type u)
@@ -189,6 +587,168 @@ noncomputable def openSheafRestrictionStalkIso (C : Type u)
     Functor.isoWhiskerLeft (TopCat.Sheaf.forget C X)
       (pullbackStalkIso C (openInclusion U) u)
 
+set_option backward.isDefEq.respectTransparency false in
+/-- The image-open description of restriction carries germs to the
+corresponding ambient germs. -/
+theorem openSheafRestrictionImageIso_germ (C : Type u)
+    [Category.{v} C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Sheaf C X) (V : Opens (openSubspace U))
+    (x : U) (hx : x ∈ V) :
+    ((openSheafRestriction C U).obj F).presheaf.germ V x hx ≫
+        ((openSheafRestrictionStalkIso C U x).app F).hom =
+      (openSheafRestrictionImageIso C U F).hom.app (op V) ≫
+        F.presheaf.germ
+          ⟨(openInclusion U) '' V,
+            U.isOpenEmbedding.isOpenMap V V.2⟩
+          ((openInclusion U) x) ⟨x, hx, rfl⟩ := by
+  dsimp [openSheafRestrictionStalkIso, openSheafRestrictionImageIso,
+    pullbackStalkIso, openPresheafRestriction,
+    TopCat.Presheaf.stalkPullbackIso, IsOpenMap.pullbackObjIso]
+  rw [← Category.assoc, TopCat.Presheaf.stalkFunctor_map_germ,
+    Category.assoc, TopCat.Presheaf.germ_stalkPullbackInv,
+    Category.assoc]
+  let P := (TopCat.Sheaf.forget C X).obj F
+  change ((openSheafRestrictionPresheafIso C U).hom.app F).app (op V) ≫
+      TopCat.Presheaf.germToPullbackStalk C (openInclusion U) P V x hx =
+    ((openSheafRestrictionPresheafIso C U).hom.app F).app (op V) ≫
+      (TopCat.Presheaf.pullbackObjObjOfImageOpen (openInclusion U) P V
+        (U.isOpenEmbedding.isOpenMap V V.2)).hom ≫
+        P.germ ⟨(openInclusion U) '' V,
+          U.isOpenEmbedding.isOpenMap V V.2⟩
+          ((openInclusion U) x) ⟨x, hx, rfl⟩
+  have hpb := pullbackObjObjOfImageOpen_hom_germ C (openInclusion U)
+    U.isOpenEmbedding.isOpenMap P V x hx
+  simpa only [Category.assoc] using congrArg
+    (fun k ↦ ((openSheafRestrictionPresheafIso C U).hom.app F).app (op V) ≫ k)
+    hpb.symm
+
+/-- If a section is supported in an open on which the sheaf is constant,
+then its support is open. -/
+theorem additiveSectionSupport_isOpen_of_restrict_iso_constant
+    {X : TopCat.{v}} (E : TopCat.Sheaf AddCommGrpCat.{v} X)
+    (U : Opens X) (A : AddCommGrpCat.{v})
+    (e : (openSheafRestriction AddCommGrpCat.{v} U).obj E ≅
+      (CategoryTheory.constantSheaf
+        (Opens.grothendieckTopology (openSubspace U))
+        AddCommGrpCat.{v}).obj A)
+    (V : Opens X) (s : E.presheaf.obj (op V))
+    (hsupport : ∀ x : V, x ∈ additiveSectionSupport E V s → x.1 ∈ U) :
+    IsOpen (additiveSectionSupport E V s) := by
+  apply isOpen_iff_mem_nhds.mpr
+  intro x hx
+  have hxU : x.1 ∈ U := hsupport x hx
+  let W : Opens (openSubspace U) :=
+    (Opens.map (openInclusion U)).obj V
+  have hWmemV (y : W) : (openInclusion U) y.1 ∈ V := y.2
+  let Q : Opens X :=
+    ⟨(openInclusion U) '' W, U.isOpenEmbedding.isOpenMap W W.2⟩
+  have hQV : Q ≤ V := by
+    rintro z ⟨y, hy, rfl⟩
+    exact hy
+  let iQV : Q ⟶ V := homOfLE hQV
+  let sQ : E.presheaf.obj (op Q) := E.presheaf.map iQV.op s
+  let R := (openSheafRestriction AddCommGrpCat.{v} U).obj E
+  let eImage := openSheafRestrictionImageIso AddCommGrpCat.{v} U E
+  let t : R.presheaf.obj (op W) := eImage.inv.app (op W) sQ
+  let K := (CategoryTheory.constantSheaf
+    (Opens.grothendieckTopology (openSubspace U))
+    AddCommGrpCat.{v}).obj A
+  let ep : R.presheaf ≅ K.obj :=
+    (TopCat.Sheaf.forget AddCommGrpCat.{v} (openSubspace U)).mapIso e
+  let c : K.obj.obj (op W) := ep.hom.app (op W) t
+  have ht : eImage.hom.app (op W) t = sQ := by
+    have h := ConcreteCategory.congr_hom
+      (eImage.inv_hom_id_app (op W)) sQ
+    change eImage.hom.app (op W) (eImage.inv.app (op W) sQ) = sQ at h
+    simpa only [t] using h
+  have hsupport_t : IsClopen (additiveSectionSupport R W t) := by
+    have hc := constantAddCommGrpSheaf_support_isClopen A W c
+    have heq := additiveSectionSupport_map_iso R K ep W t
+    rw [heq] at hc
+    exact hc
+  have hpoint : ∀ y : W,
+      y ∈ additiveSectionSupport R W t ↔
+        (⟨(openInclusion U) y.1, hWmemV y⟩ : V) ∈
+          additiveSectionSupport E V s := by
+    intro y
+    let rStalk : R.presheaf.stalk y.1 ≅
+        E.presheaf.stalk ((openInclusion U) y.1) :=
+      (openSheafRestrictionStalkIso AddCommGrpCat.{v} U y.1).app E
+    have hrinj : Function.Injective (ConcreteCategory.hom rStalk.hom) := by
+      intro a b hab
+      have hab' := congrArg (ConcreteCategory.hom rStalk.inv) hab
+      have hleft : ConcreteCategory.hom rStalk.inv
+          (ConcreteCategory.hom rStalk.hom a) = a := by
+        change ConcreteCategory.hom (rStalk.hom ≫ rStalk.inv) a = a
+        rw [rStalk.hom_inv_id]
+        rfl
+      have hright : ConcreteCategory.hom rStalk.inv
+          (ConcreteCategory.hom rStalk.hom b) = b := by
+        change ConcreteCategory.hom (rStalk.hom ≫ rStalk.inv) b = b
+        rw [rStalk.hom_inv_id]
+        rfl
+      exact hleft.symm.trans (hab'.trans hright)
+    have hgImage := ConcreteCategory.congr_hom
+      (openSheafRestrictionImageIso_germ AddCommGrpCat.{v} U E W y.1 y.2) t
+    have hgImage' :
+        ConcreteCategory.hom rStalk.hom
+            (ConcreteCategory.hom (R.presheaf.germ W y.1 y.2) t) =
+          ConcreteCategory.hom (E.presheaf.germ Q ((openInclusion U) y.1)
+            ⟨y.1, y.2, rfl⟩) sQ := by
+      change ConcreteCategory.hom rStalk.hom
+          (ConcreteCategory.hom (R.presheaf.germ W y.1 y.2) t) =
+        ConcreteCategory.hom (E.presheaf.germ Q ((openInclusion U) y.1)
+          ⟨y.1, y.2, rfl⟩) (eImage.hom.app (op W) t) at hgImage
+      rw [ht] at hgImage
+      exact hgImage
+    have hgRes := ConcreteCategory.congr_hom
+      (E.presheaf.germ_res iQV ((openInclusion U) y.1)
+        ⟨y.1, y.2, rfl⟩) s
+    have hg :
+        ConcreteCategory.hom rStalk.hom
+            (ConcreteCategory.hom (R.presheaf.germ W y.1 y.2) t) =
+          ConcreteCategory.hom (E.presheaf.germ V
+            ((openInclusion U) y.1) (hWmemV y)) s := by
+      change ConcreteCategory.hom (E.presheaf.germ Q ((openInclusion U) y.1)
+          ⟨y.1, y.2, rfl⟩) (E.presheaf.map iQV.op s) =
+        ConcreteCategory.hom (E.presheaf.germ V
+          ((openInclusion U) y.1) (hWmemV y)) s at hgRes
+      exact hgImage'.trans (by simpa only [sQ] using hgRes)
+    simp only [additiveSectionSupport, Set.mem_ofPred_eq]
+    apply not_congr
+    constructor
+    · intro hz
+      rw [← hg, hz, map_zero]
+    · intro hz
+      apply hrinj
+      rw [hg, hz, map_zero]
+  let ST : Set W := additiveSectionSupport R W t
+  let OU : Set U := Subtype.val '' ST
+  have hOU : IsOpen OU := by
+    exact W.isOpenEmbedding.isOpenMap ST hsupport_t.2
+  let OX : Set X := Subtype.val '' OU
+  have hOX : IsOpen OX := U.isOpenEmbedding.isOpenMap OU hOU
+  let OV : Set V := (Subtype.val : V → X) ⁻¹' OX
+  have hOV : IsOpen OV := hOX.preimage continuous_subtype_val
+  have hxW : (⟨x.1, hxU⟩ : U) ∈ W := x.2
+  let xW : W := ⟨⟨x.1, hxU⟩, hxW⟩
+  have hxST : xW ∈ ST := by
+    apply (hpoint xW).2
+    have hxeq : (⟨(openInclusion U) xW.1, hWmemV xW⟩ : V) = x := by
+      apply Subtype.ext
+      rfl
+    simpa only [hxeq] using hx
+  have hxOV : x ∈ OV := by
+    exact ⟨⟨x.1, hxU⟩, ⟨xW, hxST, rfl⟩, rfl⟩
+  refine Filter.mem_of_superset (hOV.mem_nhds hxOV) ?_
+  intro y hy
+  rcases hy with ⟨yu, ⟨yw, hyw, hyw_eq⟩, hyu_eq⟩
+  have hy' := (hpoint yw).1 hyw
+  have heq : (⟨(openInclusion U) yw.1, hWmemV yw⟩ : V) = y := by
+    apply Subtype.ext
+    exact (congrArg Subtype.val hyw_eq).trans hyu_eq
+  simpa only [heq] using hy'
+
 /-- Sections of a sheaf restricted to an open subspace are the ambient
 sections over the corresponding image open. -/
 theorem openSheafRestriction_obj_iso (C : Type u) [Category.{v} C]
@@ -199,6 +759,26 @@ theorem openSheafRestriction_obj_iso (C : Type u) [Category.{v} C]
         (U.isOpenEmbedding.isOpenMap V V.2)⟩)) := by
   rcases openSheafRestriction_formula C U F with ⟨e⟩
   exact ⟨e.app (op V) ≪≫ openPresheafRestriction_obj_iso C U F.presheaf V⟩
+
+/-- A morphism from a constant additive sheaf to a restricted sheaf has
+zero stalk map when the corresponding ambient image open has no sections. -/
+theorem constantAddCommGrpSheaf_stalk_map_eq_zero_of_restriction_image_isZero
+    {X : TopCat.{v}} (U : Opens X) (G : TopCat.Sheaf AddCommGrpCat.{v} X)
+    (A : AddCommGrpCat.{v})
+    (f : (CategoryTheory.constantSheaf
+      (Opens.grothendieckTopology (openSubspace U))
+      AddCommGrpCat.{v}).obj A ⟶
+        (openSheafRestriction AddCommGrpCat.{v} U).obj G)
+    (V : Opens (openSubspace U)) (x : U) (hx : x ∈ V)
+    (hV : IsZero (G.presheaf.obj
+      (op ⟨(openInclusion U) '' V,
+        U.isOpenEmbedding.isOpenMap V V.2⟩))) :
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom = 0 := by
+  rcases openSheafRestriction_obj_iso AddCommGrpCat.{v} U G V with ⟨eV⟩
+  have hRV : IsZero (((openSheafRestriction AddCommGrpCat.{v} U).obj G).presheaf.obj
+      (op V)) := (eV.isZero_iff).2 hV
+  exact constantAddCommGrpSheaf_stalk_map_eq_zero_of_isZero A
+    ((openSheafRestriction AddCommGrpCat.{v} U).obj G) f V x hx hRV
 
 /-- Restriction preserves the stalk at a point of the open subspace. -/
 theorem openSheafRestriction_stalk_iso (C : Type u) [Category.{v} C]
@@ -217,6 +797,29 @@ theorem openAbelianSheaf_stalk_map_epi {X : TopCat.{v}}
   rw [AddCommGrpCat.epi_iff_surjective]
   apply (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks f.hom).mp
   exact (TopCat.Sheaf.isLocallySurjective_iff_epi f).mpr inferInstance
+
+/-- An epimorphism of additive sheaves whose map on a stalk is zero has a
+zero target stalk. -/
+theorem openAbelianSheaf_target_stalk_isZero_of_epi_of_map_eq_zero
+    {X : TopCat.{v}} {F G : TopCat.Sheaf AddCommGrpCat.{v} X}
+    (f : F ⟶ G) [Epi f] (x : X)
+    (hzero : (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom = 0) :
+    IsZero (G.presheaf.stalk x) := by
+  let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom
+  let : Epi m := openAbelianSheaf_stalk_map_epi f x
+  have hsurj : Function.Surjective (ConcreteCategory.hom m) := by
+    rw [← AddCommGrpCat.epi_iff_surjective]
+    infer_instance
+  rw [AddCommGrpCat.isZero_iff_subsingleton]
+  constructor
+  intro a b
+  obtain ⟨p, hp⟩ := hsurj a
+  obtain ⟨q, hq⟩ := hsurj b
+  have hm : m = 0 := hzero
+  rw [hm] at hp hq
+  change 0 = a at hp
+  change 0 = b at hq
+  exact hp.symm.trans hq
 
 /-- An additive sheaf morphism is an epimorphism when all of its stalk maps
 are epimorphisms. -/
@@ -943,6 +1546,137 @@ theorem openAlgebraicSheafExtension_stalk_iso (C : Type u) [Category.{v} C]
 noncomputable abbrev openAbelianSheafExtensionFunctor {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :=
   openAlgebraicSheafExtensionFunctor AddCommGrpCat U
+
+/-- A section of the extension by zero of a constant additive sheaf on a
+preconnected open which meets the complement of the extension locus is
+zero. -/
+theorem openAbelianSheafExtension_constant_sections_isZero_of_isPreconnected
+    {X : TopCat.{v}} (U V : Opens X) (A : AddCommGrpCat.{v})
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
+    (hV : IsPreconnected (V : Set X))
+    (x₀ : X) (hx₀V : x₀ ∈ V) (hx₀U : x₀ ∉ U) :
+    IsZero (((openAbelianSheafExtensionFunctor U).obj
+      ((CategoryTheory.constantSheaf
+        (Opens.grothendieckTopology (openSubspace U))
+        AddCommGrpCat.{v}).obj A)).presheaf.obj (op V)) := by
+  let F := (CategoryTheory.constantSheaf
+    (Opens.grothendieckTopology (openSubspace U))
+    AddCommGrpCat.{v}).obj A
+  let E := (openAbelianSheafExtensionFunctor U).obj F
+  rcases openAlgebraicSheafExtension_restrict_iso
+    AddCommGrpCat.{v} U F with ⟨e⟩
+  have hsupportU : ∀ (s : E.presheaf.obj (op V)) (x : V),
+      x ∈ additiveSectionSupport E V s → x.1 ∈ U := by
+    intro s x hx
+    by_contra hxU
+    rcases openAlgebraicSheafExtension_stalk_initial
+      AddCommGrpCat.{v} U F x.1 hxU with ⟨ez⟩
+    have hezinj : Function.Injective (ConcreteCategory.hom ez.hom) := by
+      intro a b hab
+      have hab' := congrArg (ConcreteCategory.hom ez.inv) hab
+      have hleft : ConcreteCategory.hom ez.inv
+          (ConcreteCategory.hom ez.hom a) = a := by
+        change ConcreteCategory.hom (ez.hom ≫ ez.inv) a = a
+        rw [ez.hom_inv_id]
+        rfl
+      have hright : ConcreteCategory.hom ez.inv
+          (ConcreteCategory.hom ez.hom b) = b := by
+        change ConcreteCategory.hom (ez.hom ≫ ez.inv) b = b
+        rw [ez.hom_inv_id]
+        rfl
+      exact hleft.symm.trans (hab'.trans hright)
+    apply hx
+    apply hezinj
+    let ezero : (⊥_ AddCommGrpCat.{v}) ≅ (0 : AddCommGrpCat.{v}) :=
+      initialIsInitial.uniqueUpToIso
+        (CategoryTheory.Limits.isZero_zero AddCommGrpCat.{v}).isInitial
+    have hzeroInitial : IsZero (⊥_ AddCommGrpCat.{v}) :=
+      (CategoryTheory.Limits.isZero_zero AddCommGrpCat.{v}).of_iso ezero
+    have hsub : Subsingleton (↑(⊥_ AddCommGrpCat.{v})) :=
+      AddCommGrpCat.subsingleton_of_isZero hzeroInitial
+    exact hsub.elim _ _
+  have hsection_zero : ∀ s : E.presheaf.obj (op V), s = 0 := by
+    intro s
+    let S := additiveSectionSupport E V s
+    have hSclosed : IsClosed S := additiveSectionSupport_isClosed E V s
+    have hSopen : IsOpen S :=
+      additiveSectionSupport_isOpen_of_restrict_iso_constant
+        E U A e V s (hsupportU s)
+    have hSclopen : IsClopen S := ⟨hSclosed, hSopen⟩
+    let : PreconnectedSpace V := Subtype.preconnectedSpace hV
+    let xV : V := ⟨x₀, hx₀V⟩
+    have hxVnot : xV ∉ S := by
+      intro hxS
+      exact hx₀U (hsupportU s xV hxS)
+    have hSne : S ≠ Set.univ := by
+      intro hSu
+      apply hxVnot
+      rw [hSu]
+      exact Set.mem_univ _
+    have hSempty : S = ∅ :=
+      (isClopen_iff.mp hSclopen).resolve_right hSne
+    apply TopCat.Presheaf.section_ext E V
+    intro x hxV
+    have hxnot : (⟨x, hxV⟩ : V) ∉ S := by
+      rw [hSempty]
+      simp only [Set.mem_empty_iff_false, not_false_eq_true]
+    have hg : ConcreteCategory.hom (E.presheaf.germ V x hxV) s = 0 := by
+      exact not_ne_iff.mp hxnot
+    simpa only [map_zero] using hg
+  change IsZero (E.presheaf.obj (op V))
+  rw [AddCommGrpCat.isZero_iff_subsingleton]
+  constructor
+  intro s t
+  exact (hsection_zero s).trans (hsection_zero t).symm
+
+/-- The positive half-line, named here for the extension-by-zero
+infrastructure. -/
+def positiveRealHalfLine : Opens (TopCat.of ℝ) :=
+  ⟨Set.Ioi (0 : ℝ), isOpen_Ioi⟩
+
+/-- Extension by zero of a constant additive sheaf from the positive
+half-line. -/
+noncomputable def positiveRealHalfLineConstantExtension
+    (A : AddCommGrpCat) : TopCat.Sheaf AddCommGrpCat (TopCat.of ℝ) :=
+  (openAbelianSheafExtensionFunctor positiveRealHalfLine).obj
+    ((CategoryTheory.constantSheaf
+      (Opens.grothendieckTopology (openSubspace positiveRealHalfLine))
+      AddCommGrpCat).obj A)
+
+/-- Sections of a positive-half-line constant extension vanish on an
+interval which meets both the positive half-line and its complement. -/
+theorem positiveRealHalfLineConstantExtension_interval_sections_isZero
+    (A : AddCommGrpCat) (a b : ℝ) (ha : a < 0) (hb : 0 < b) :
+    IsZero ((positiveRealHalfLineConstantExtension A).presheaf.obj
+      (op (⟨Set.Ioo a b, isOpen_Ioo⟩ : Opens (TopCat.of ℝ)))) := by
+  apply openAbelianSheafExtension_constant_sections_isZero_of_isPreconnected
+    positiveRealHalfLine
+    (⟨Set.Ioo a b, isOpen_Ioo⟩ : Opens (TopCat.of ℝ)) A
+    isPreconnected_Ioo (0 : ℝ)
+  · exact ⟨ha, hb⟩
+  · change ¬ (0 : ℝ) < 0
+    exact lt_irrefl 0
+
+/-- At a positive point, every morphism from a constant additive sheaf to
+the positive-half-line constant extension induces the zero map on stalks. -/
+theorem positiveRealHalfLineConstantExtension_stalk_map_eq_zero
+    (A B : AddCommGrpCat)
+    (f : (CategoryTheory.constantSheaf
+      (Opens.grothendieckTopology (TopCat.of ℝ)) AddCommGrpCat).obj B ⟶
+        positiveRealHalfLineConstantExtension A)
+    (x : ℝ) (hx : 0 < x) :
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map f.hom = 0 := by
+  let V : Opens (TopCat.of ℝ) :=
+    ⟨Set.Ioo (-1 : ℝ) (x + 1), isOpen_Ioo⟩
+  have hxV : x ∈ V := by
+    change -1 < x ∧ x < x + 1
+    constructor <;> linarith
+  have hV : IsZero
+      ((positiveRealHalfLineConstantExtension A).presheaf.obj (op V)) := by
+    exact positiveRealHalfLineConstantExtension_interval_sections_isZero
+      A (-1) (x + 1) (by norm_num) (by linarith)
+  exact constantAddCommGrpSheaf_stalk_map_eq_zero_of_isZero
+    B (positiveRealHalfLineConstantExtension A) f V x hxV hV
 
 /-- The abelian sheaf extension/restriction adjunction. -/
 noncomputable abbrev openAbelianSheafExtensionAdjunction

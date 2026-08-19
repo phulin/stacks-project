@@ -740,7 +740,6 @@ private theorem gradedRightModuleHomogeneousComp_assoc
     obtain ⟨⟨p, q⟩, hq⟩ := s
     dsimp [gradedRightModuleHomogeneousComp,
       gradedRightModuleHomogeneousCompFamily]
-    change _
     have hf :
         (⟨(-(j - -(k - p)), q), by omega⟩ : GradedDegreePair i) =
           ⟨(-(j + k - p), q), by omega⟩ := by

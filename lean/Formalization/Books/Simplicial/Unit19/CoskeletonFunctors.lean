@@ -205,7 +205,7 @@ theorem has_trivial_coskeleton_limit {C : Type u} [Category.{v} C]
     HasLimit (coskeletonIndexDiagram m n U) := by
   let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, h⟩
   let := SimplexCategory.Truncated.inclusion.fullyFaithful m
-  letI : HasInitial (coskeletonIndex m n) :=
+  let : HasInitial (coskeletonIndex m n) :=
     (StructuredArrow.mkIdInitial (T := truncInclusion m) (Y := Y)).hasInitial
   infer_instance
 

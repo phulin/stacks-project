@@ -437,7 +437,185 @@ theorem dominates_iff_pushout_inr_universallyInjective
     dominates g f ↔
       universallyInjective
         ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom) := by
-  sorry
+  constructor
+  · intro hd Q _ _
+    intro x y hxy
+    apply sub_eq_zero.mp
+    let p := pushout (ModuleCat.ofHom f) (ModuleCat.ofHom g)
+    let d : M →ₗ[R]
+        (ModuleCat.of R N ⊞ ModuleCat.of R N').carrier :=
+      (biprod.lift (ModuleCat.ofHom f) (-(ModuleCat.ofHom g))).hom
+    let π : (ModuleCat.of R N ⊞ ModuleCat.of R N').carrier →ₗ[R] (p : Type w) :=
+      (biprod.desc (pushout.inl (ModuleCat.ofHom f) (ModuleCat.ofHom g))
+        (pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g))).hom
+    let S := ShortComplex.moduleCatMk d π (by
+      change (biprod.lift (ModuleCat.ofHom f) (-(ModuleCat.ofHom g)) ≫
+        biprod.desc (pushout.inl (ModuleCat.ofHom f) (ModuleCat.ofHom g))
+          (pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g))).hom = 0
+      rw [biprod.lift_desc]
+      rw [CategoryTheory.Preadditive.neg_comp]
+      rw [← pushout.condition (f := ModuleCat.ofHom f) (g := ModuleCat.ofHom g)]
+      simp)
+    have hp := IsPushout.of_isColimit
+      (pushoutIsPushout (ModuleCat.ofHom f) (ModuleCat.ofHom g))
+    have hS : S.Exact := by
+      apply ShortComplex.exact_of_g_is_cokernel
+      exact hp.isColimitCokernelCofork
+    have hπ : Function.Surjective π := by
+      apply (ModuleCat.epi_iff_surjective _).mp
+      exact epi_of_isColimit_cofork hp.isColimitCokernelCofork
+    have hExact : Function.Exact d π :=
+      (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS
+    have hπQ := rTensor_exact Q hExact hπ
+    have hfd :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom ∘ₗ d = f := by
+      dsimp [d]
+      ext z
+      change
+        ((biprod.lift (ModuleCat.ofHom f) (-ModuleCat.ofHom g) ≫
+          (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+            ModuleCat.of R N)).hom) z = f z
+      rw [biprod.lift_fst]
+      rfl
+    have hfi :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom ∘ₗ
+            (biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom = 0 := by
+      ext z
+      change ((biprod.inr : ModuleCat.of R N' ⟶
+          (ModuleCat.of R N ⊞ ModuleCat.of R N')) ≫
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N)).hom z = 0
+      rw [biprod.inr_fst]
+      rfl
+    have hsd :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom ∘ₗ d = -g := by
+      dsimp [d]
+      ext z
+      change (biprod.lift (ModuleCat.ofHom f) (-ModuleCat.ofHom g) ≫
+        biprod.snd).hom z = (-g) z
+      rw [biprod.lift_snd]
+      rfl
+    have hsi :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom ∘ₗ
+            (biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom =
+          LinearMap.id := by
+      ext z
+      change ((biprod.inr : ModuleCat.of R N' ⟶
+          (ModuleCat.of R N ⊞ ModuleCat.of R N')) ≫
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N')).hom z = LinearMap.id z
+      rw [biprod.inr_snd]
+      rfl
+    have hfdQ :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom.rTensor Q ∘ₗ d.rTensor Q = f.rTensor Q := by
+      rw [← LinearMap.rTensor_comp Q, hfd]
+    have hfiQ :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom.rTensor Q ∘ₗ
+            (biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q = 0 := by
+      rw [← LinearMap.rTensor_comp Q, hfi]
+      simp
+    have hsdQ :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom.rTensor Q ∘ₗ d.rTensor Q = -(g.rTensor Q) := by
+      rw [← LinearMap.rTensor_comp Q, hsd]
+      simp
+    have hsiQ :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom.rTensor Q ∘ₗ
+            (biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q =
+          LinearMap.id := by
+      rw [← LinearMap.rTensor_comp Q, hsi]
+      simp
+    have hfd_apply (z : M ⊗[R] Q) :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom.rTensor Q ((d.rTensor Q) z) =
+          (f.rTensor Q) z := by
+      rw [← LinearMap.comp_apply, hfdQ]
+    have hfi_apply (z : (ModuleCat.of R N' : Type w) ⊗[R] Q) :
+        (biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom.rTensor Q
+            ((biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q z) = 0 := by
+      rw [← LinearMap.comp_apply, hfiQ]
+      rfl
+    have hsd_apply (z : M ⊗[R] Q) :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom.rTensor Q ((d.rTensor Q) z) =
+            -(g.rTensor Q) z := by
+      rw [← LinearMap.comp_apply, hsdQ]
+      simp
+    have hsi_apply (z : (ModuleCat.of R N' : Type w) ⊗[R] Q) :
+        (biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N').hom.rTensor Q
+            ((biprod.inr : ModuleCat.of R N' ⟶
+              (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q z) = z := by
+      rw [← LinearMap.comp_apply, hsiQ]
+      rfl
+    have hx0 : ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q)
+        (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hxπ : (π.rTensor Q)
+        ((biprod.inr : ModuleCat.of R N' ⟶
+          (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q (x - y)) = 0 := by
+      have heq :
+          (π.rTensor Q).comp ((biprod.inr : ModuleCat.of R N' ⟶
+            (ModuleCat.of R N ⊞ ModuleCat.of R N')).hom.rTensor Q) =
+            ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q) := by
+        rw [← LinearMap.rTensor_comp]
+        congr 1
+        change (biprod.inr ≫
+          biprod.desc (pushout.inl (ModuleCat.ofHom f) (ModuleCat.ofHom g))
+            (pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g))).hom =
+          (pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom
+        simp
+      rw [← LinearMap.comp_apply, heq, hx0]
+    obtain ⟨a, ha⟩ := (hπQ _).mp hxπ
+    have hfa : (f.rTensor Q) a = 0 := by
+      have hfst := congrArg (fun z =>
+        ((biprod.fst : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+          ModuleCat.of R N).hom.rTensor Q) z) ha
+      rw [hfd_apply, hfi_apply] at hfst
+      simpa using hfst
+    have hga : (g.rTensor Q) a = 0 := hd Q (LinearMap.mem_ker.mpr hfa)
+    have hsnd := congrArg (fun z =>
+      ((biprod.snd : (ModuleCat.of R N ⊞ ModuleCat.of R N') ⟶
+        ModuleCat.of R N').hom.rTensor Q) z) ha
+    rw [hsd_apply, hsi_apply] at hsnd
+    have hxy0 : x - y = 0 := by
+      rw [hga, neg_zero] at hsnd
+      exact hsnd.symm
+    exact hxy0
+  · intro hu Q _ _ x hx
+    change (g.rTensor Q) x = 0
+    change (f.rTensor Q) x = 0 at hx
+    have hpush := pushout.condition
+      (f := ModuleCat.ofHom f) (g := ModuleCat.ofHom g)
+    have hpush' := congrArg ModuleCat.Hom.hom hpush
+    have hpushQ :
+        ((pushout.inl (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q).comp
+            (f.rTensor Q) =
+          ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q).comp
+            (g.rTensor Q) := by
+      rw [← LinearMap.rTensor_comp Q, ← LinearMap.rTensor_comp Q]
+      simpa using congrArg (fun t => t.rTensor Q) hpush'
+    have hz :
+        ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q)
+          ((g.rTensor Q) x) = 0 := by
+      have heq := congrArg (fun t => t x) hpushQ
+      rw [LinearMap.comp_apply, LinearMap.comp_apply, hx] at heq
+      simpa using heq.symm
+    apply (hu Q)
+    simpa using hz
 /-
   constructor
   · intro hd Q _ _
@@ -501,8 +679,18 @@ private lemma injective_of_universallyInjective
     {R : Type u} [CommRing R] {M N : Type w}
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     {f : M →ₗ[R] N}
-    (hu : universallyInjective f) : Function.Injective f := by
-  sorry
+  (hu : universallyInjective f) : Function.Injective f := by
+  intro x y hxy
+  have ht : (f.rTensor (ULift.{w} R))
+        (TensorProduct.tmul R x (ULift.up 1)) =
+      (f.rTensor (ULift.{w} R))
+        (TensorProduct.tmul R y (ULift.up 1)) := by
+    simp [hxy]
+  have ht' := (hu (ULift.{w} R)) ht
+  have ht'' := congrArg
+    (TensorProduct.congr (LinearEquiv.refl R M)
+      (ULift.moduleEquiv : ULift.{w} R ≃ₗ[R] R)) ht'
+  simpa using congrArg (TensorProduct.rid R M) ht''
 /-
   intro x y hxy
   apply (TensorProduct.rid R N).injective

@@ -530,13 +530,84 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
             TopCat.Presheaf.stalkPushforward (Type w) f Q z =
           TopCat.Presheaf.stalkPushforward (Type w) f P z ≫
             (TopCat.Presheaf.stalkFunctor (Type w) z).map φ := by
-        set_option backward.isDefEq.respectTransparency false in
-        exact TopCat.Presheaf.stalk_hom_ext _ (fun U hxU => by
-          rw [TopCat.Presheaf.stalkFunctor_map_germ_assoc]
-          rw [TopCat.Presheaf.stalkPushforward_germ]
-          rw [TopCat.Presheaf.stalkPushforward_germ_assoc]
-          rw [TopCat.Presheaf.stalkFunctor_map_germ]
-          rw [TopCat.Presheaf.pushforward_map_app'])
+        apply TopCat.Presheaf.stalk_hom_ext
+          ((TopCat.Presheaf.pushforward (Type w) f).obj P)
+        intro U hxU
+        change _ ≫
+            (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+              ((TopCat.Presheaf.pushforward (Type w) f).map φ) ≫ _ = _
+        have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+          (C := Type w) U (f z) hxU
+            ((TopCat.Presheaf.pushforward (Type w) f).map φ)
+        have hmap' := hmap
+        change TopCat.Presheaf.germ
+              ((TopCat.Presheaf.pushforward (Type w) f).obj P) U
+              (f z) hxU ≫
+              (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                ((TopCat.Presheaf.pushforward (Type w) f).map φ) =
+            ((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
+              TopCat.Presheaf.germ
+                ((TopCat.Presheaf.pushforward (Type w) f).obj Q) U
+                (f z) hxU at hmap'
+        have hpushP := TopCat.Presheaf.stalkPushforward_germ
+          (C := Type w) f P U z hxU
+        have hpushQ := TopCat.Presheaf.stalkPushforward_germ
+          (C := Type w) f Q U z hxU
+        have hpushP' :
+            TopCat.Presheaf.germ
+                ((TopCat.Presheaf.pushforward (Type w) f).obj P) U
+                (f z) hxU ≫
+              TopCat.Presheaf.stalkPushforward (Type w) f P z =
+            P.germ ((Opens.map f).obj U) z hxU := by
+          simpa only [TopCat.Presheaf.pushforward] using hpushP
+        have hpushQ' :
+            TopCat.Presheaf.germ
+                ((TopCat.Presheaf.pushforward (Type w) f).obj Q) U
+                (f z) hxU ≫
+              TopCat.Presheaf.stalkPushforward (Type w) f Q z =
+            Q.germ ((Opens.map f).obj U) z hxU := by
+          simpa only [TopCat.Presheaf.pushforward] using hpushQ
+        have hφmap := TopCat.Presheaf.stalkFunctor_map_germ
+          (C := Type w) ((Opens.map f).obj U) z hxU φ
+        have hφmap' := hφmap
+        change P.germ ((Opens.map f).obj U) z hxU ≫
+              (TopCat.Presheaf.stalkFunctor (Type w) z).map φ =
+            φ.app (op ((Opens.map f).obj U)) ≫
+              Q.germ ((Opens.map f).obj U) z hxU at hφmap'
+        have hleft :
+            (TopCat.Presheaf.germ
+                  ((TopCat.Presheaf.pushforward (Type w) f).obj P) U
+                  (f z) hxU ≫
+                (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+                  ((TopCat.Presheaf.pushforward (Type w) f).map φ)) ≫
+                TopCat.Presheaf.stalkPushforward (Type w) f Q z =
+            ((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
+              Q.germ ((Opens.map f).obj U) z hxU := by
+          calc
+            _ = (((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
+                ((TopCat.Presheaf.pushforward (Type w) f).obj Q).germ U
+                  (f z) hxU) ≫
+                TopCat.Presheaf.stalkPushforward (Type w) f Q z := by
+              convert congrArg (fun k =>
+                k ≫ TopCat.Presheaf.stalkPushforward (Type w) f Q z) hmap' using 1
+              all_goals (simp only [TopCat.Presheaf.pushforward] <;> rfl)
+            _ = ((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
+                Q.germ ((Opens.map f).obj U) z hxU := by
+              exact congrArg
+                (fun k => ((TopCat.Presheaf.pushforward (Type w) f).map φ).app
+                  (op U) ≫ k) hpushQ'
+        have hright :
+            (TopCat.Presheaf.germ
+                  ((TopCat.Presheaf.pushforward (Type w) f).obj P) U
+                  (f z) hxU ≫
+                TopCat.Presheaf.stalkPushforward (Type w) f P z) ≫
+              (TopCat.Presheaf.stalkFunctor (Type w) z).map φ =
+            ((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
+              Q.germ ((Opens.map f).obj U) z hxU := by
+          rw [hpushP']
+          rw [TopCat.Presheaf.pushforward_map_app']
+          exact hφmap'
+        exact hleft.trans hright.symm
       have hunit₂ :
           (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
             (adj₂.unit.app G).hom ≫
@@ -628,9 +699,10 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
                 (CategoryTheory.toSheafify
                   (Opens.grothendieckTopology (TopCat.of Z))
                   ((Opens.map f).op.lan.obj G.obj))) hU₂).hom
-        set_option backward.isDefEq.respectTransparency false in
-        rw [Category.assoc, hnat]
-        rfl
+        have hnat' := congrArg (fun q =>
+          (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+              ((Opens.map f).op.lanUnit.app G.obj) ≫ q) hnat
+        convert hnat' using 1 <;> rfl
       letI : IsIso
           ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
             ((closedSubsetSetPushforward Z).map (e₀.hom.app G)).hom) := by

@@ -20,6 +20,7 @@ need not be definitionally equal.
 namespace Formalization.Books.Modules.Unit27
 
 open CategoryTheory Opposite TopologicalSpace
+open scoped ChangeOfRings
 
 universe u
 
@@ -578,6 +579,75 @@ noncomputable abbrev localizedModulePresheaf
   (Formalization.Books.Sheaves.Unit06.changeOfRingsCore
     (ringPresheafMap (localizationPresheafMap S))).obj F
 
+/- This is the remaining algebraic transport after the generic sectionwise
+   comparison in Sheaves 6.  Unfold `localizedRingPresheaf` and identify the
+   target ring action with the canonical `Localization (S.obj U)` action;
+   the resulting tensor product is carried to `LocalizedModule` by
+   `LocalizedModule.equivTensorProduct`.  Keeping this coercion-heavy step
+   separate lets the presheaf proof use ordinary composition of isomorphisms. -/
+set_option backward.isDefEq.respectTransparency false in
+noncomputable def extendScalarsLocalizationIso
+    {X : TopCat.{u}} {O : CommRingPresheaf X}
+    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
+    (U : (Opens X)ᵒᵖ) :
+    (ModuleCat.extendScalars ((localizationPresheafMap S).app U).hom).obj
+        (ModuleCat.of (O.obj U) (F.obj U)) ≅
+      ModuleCat.of (Localization (S.obj U))
+        (LocalizedModule (S.obj U) (F.obj U)) := by
+  rw [show ((localizationPresheafMap S).app U).hom =
+    algebraMap (O.obj U) (Localization (S.obj U)) from rfl]
+  let A := Localization (S.obj U)
+  let M₁ := (ModuleCat.restrictScalars (algebraMap (O.obj U) A)).obj
+    (ModuleCat.of A A)
+  letI : IsScalarTower (O.obj U) A M₁ :=
+    ⟨fun r s x ↦ by
+      dsimp only [M₁]
+      rw [ModuleCat.restrictScalars.smul_def]
+      simp [Algebra.smul_def, mul_assoc]⟩
+  let e₁ : M₁ ≃ₗ[A] A := LinearEquiv.refl A A
+  let eTensor := TensorProduct.AlgebraTensorModule.congr e₁
+    (LinearEquiv.refl (O.obj U) (F.obj U))
+  let eLocalized :=
+    (LocalizedModule.equivTensorProduct (S.obj U) (F.obj U)).symm
+  let eFinal : TensorProduct (O.obj U) M₁ (F.obj U) ≃ₗ[A]
+      LocalizedModule (S.obj U) (F.obj U) :=
+    { toFun := fun x ↦ eLocalized (eTensor x)
+      invFun := fun x ↦ eTensor.symm (eLocalized.symm x)
+      left_inv := fun x ↦ by simp
+      right_inv := fun x ↦ by simp
+      map_add' := fun x y ↦ by simp
+      map_smul' := fun r x ↦ by simp }
+  exact LinearEquiv.toModuleIso eFinal
+
+set_option backward.isDefEq.respectTransparency false in
+@[simp]
+theorem extendScalarsLocalizationIso_hom_mk_tmul
+    {X : TopCat.{u}} {O : CommRingPresheaf X}
+    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
+    (U : (Opens X)ᵒᵖ) (t : F.obj U) (s : S.obj U) :
+    (extendScalarsLocalizationIso S F U).hom
+        (Localization.mk 1 s ⊗ₜ[(O.obj U),
+          ((localizationPresheafMap S).app U).hom] t) =
+      LocalizedModule.mk t s := by
+  simp [extendScalarsLocalizationIso,
+    TensorProduct.AlgebraTensorModule.congr]
+  change (LocalizedModule.equivTensorProduct (S.obj U) (F.obj U)).symm
+    (Localization.mk 1 s ⊗ₜ[(O.obj U)] t) = LocalizedModule.mk t s
+  simp
+
+theorem extendScalars_localization_iso
+    {X : TopCat.{u}} {O : CommRingPresheaf X}
+    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
+    (U : (Opens X)ᵒᵖ) :
+    Nonempty
+      ((ModuleCat.extendScalars ((localizationPresheafMap S).app U).hom).obj
+          (ModuleCat.of (O.obj U) (F.obj U)) ≅
+        ModuleCat.of (Localization (S.obj U))
+          (LocalizedModule (S.obj U) (F.obj U))) :=
+  ⟨extendScalarsLocalizationIso S F U⟩
+
+set_option maxHeartbeats 800000 in
+set_option backward.isDefEq.respectTransparency false in
 /-- Under the sectionwise localized-module identifications, restriction sends
 `t/s` to the fraction of the restricted numerator and denominator. -/
 theorem localizedModulePresheaf_fraction_restriction
@@ -595,24 +665,75 @@ theorem localizedModulePresheaf_fraction_restriction
                 (eU.inv.hom (LocalizedModule.mk t s))) =
               LocalizedModule.mk (F.map i t)
               ⟨(O.map i).hom s, S.map i s.property⟩ := by
-  sorry
-
-/- This is the remaining algebraic transport after the generic sectionwise
-   comparison in Sheaves 6.  Unfold `localizedRingPresheaf` and identify the
-   target ring action with the canonical `Localization (S.obj U)` action;
-   the resulting tensor product is carried to `LocalizedModule` by
-   `LocalizedModule.equivTensorProduct`.  Keeping this coercion-heavy step
-   separate lets the presheaf proof use ordinary composition of isomorphisms. -/
-theorem extendScalars_localization_iso
-    {X : TopCat.{u}} {O : CommRingPresheaf X}
-    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
-    (U : (Opens X)ᵒᵖ) :
-    Nonempty
-      ((ModuleCat.extendScalars ((localizationPresheafMap S).app U).hom).obj
-          (ModuleCat.of (O.obj U) (F.obj U)) ≅
-        ModuleCat.of (Localization (S.obj U))
-          (LocalizedModule (S.obj U) (F.obj U))) := by
-  sorry
+  let c :=
+    Formalization.Books.Sheaves.Unit06.pointwiseExtensionIsoChangeOfRings
+      (localizationPresheafMap S)
+  let cU := Formalization.Books.Sheaves.Unit06.presheafOfModulesIsoApp
+    (c.app F) U
+  let cV := Formalization.Books.Sheaves.Unit06.presheafOfModulesIsoApp
+    (c.app F) V
+  let lU := extendScalarsLocalizationIso S F U
+  let lV := extendScalarsLocalizationIso S F V
+  let eU := cU.symm ≪≫ lU
+  let eV := cV.symm ≪≫ lV
+  refine ⟨eU, eV, ?_⟩
+  intro t s
+  let qU :=
+    (show (localizedRingPresheaf S).obj U from Localization.mk 1 s) ⊗ₜ[(O.obj U),
+      ((localizationPresheafMap S).app U).hom] t
+  have hInv : eU.inv (LocalizedModule.mk t s) = cU.hom qU := by
+    rw [← extendScalarsLocalizationIso_hom_mk_tmul S F U t s]
+    change cU.hom (lU.inv (lU.hom qU)) = cU.hom qU
+    rw [Iso.hom_inv_id_apply]
+  rw [hInv]
+  change lV.hom
+      (cV.inv ((localizedModulePresheaf S F).map i (cU.hom qU))) = _
+  have hc : (localizedModulePresheaf S F).map i (cU.hom qU) =
+      cV.hom
+        ((Formalization.Books.Sheaves.Unit06.pointwiseExtensionObj
+          (localizationPresheafMap S) F).map i qU) :=
+    by
+      simpa [cU, cV, c, localizedModulePresheaf,
+        Formalization.Books.Sheaves.Unit06.pointwiseExtension,
+        Formalization.Books.Sheaves.Unit06.presheafOfModulesIsoApp] using
+        (PresheafOfModules.naturality_apply (c.app F).hom i qU).symm
+  rw [hc]
+  rw [Iso.hom_inv_id_apply]
+  let oneTensor :=
+    (1 : (localizedRingPresheaf S).obj U) ⊗ₜ[(O.obj U),
+      ((localizationPresheafMap S).app U).hom] t
+  have hq : qU =
+      (show (localizedRingPresheaf S).obj U from Localization.mk 1 s) • oneTensor := by
+    dsimp [qU, oneTensor]
+    rw [ModuleCat.ExtendScalars.smul_tmul]
+    simp
+  rw [hq, PresheafOfModules.map_smul]
+  dsimp only [oneTensor]
+  dsimp only [Formalization.Books.Sheaves.Unit06.pointwiseExtensionObj]
+  change lV.hom
+      ((localizedRingPresheaf S).map i
+          (show (localizedRingPresheaf S).obj U from Localization.mk 1 s) •
+        Formalization.Books.Sheaves.Unit06.pointwiseExtensionMap
+          (localizationPresheafMap S) F i
+          ((1 : (localizedRingPresheaf S).obj U) ⊗ₜ[(O.obj U),
+            ((localizationPresheafMap S).app U).hom] t)) = _
+  rw [Formalization.Books.Sheaves.Unit06.pointwiseExtensionMap_one_tmul]
+  rw [ModuleCat.ExtendScalars.smul_tmul]
+  simp only [mul_one]
+  rw [Localization.mk_eq_mk']
+  change lV.hom
+      ((localizedRingPresheaf S).map i
+        (IsLocalization.mk' (Localization (S.obj U)) 1 s) ⊗ₜ[(O.obj V),
+          ((localizationPresheafMap S).app V).hom] F.map i t) = _
+  rw [localizationPresheaf_fraction_restriction]
+  simp only [map_one]
+  rw [← Localization.mk_eq_mk']
+  change lV.hom
+      ((Localization.mk 1
+        ⟨(O.map i).hom s, S.map i s.property⟩ : Localization (S.obj V)) ⊗ₜ[(O.obj V),
+          ((localizationPresheafMap S).app V).hom] F.map i t) = _
+  exact extendScalarsLocalizationIso_hom_mk_tmul S F V (F.map i t)
+    ⟨(O.map i).hom s, S.map i s.property⟩
 
 /-- The sectionwise object of `S⁻¹ F` is canonically the usual localized
 module. -/

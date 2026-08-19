@@ -3090,24 +3090,31 @@ theorem amelioration_unique_when_strictly_commutative
 
 /-! ## Presheaves of categories -/
 
-/- A presheaf of categories is represented by the canonical pseudofunctor
-   from `Cᵒᵖ` to `Cat`.  The CoGrothendieck construction below is Mathlib's
-   source-faithful implementation of the displayed objects, morphisms, and
-   composition law. -/
+/- A presheaf of categories is an ordinary functor from `Cᵒᵖ` to `Cat`.
+   The source deliberately uses strict equality of restriction functors in
+   the definition of a split fibred category.  We use the canonical
+   strict-to-pseudofunctor embedding only to reuse Mathlib's
+   CoGrothendieck implementation of the total category. -/
 
 abbrev CategoryPresheaf (C : Type u') [Category.{v'} C] :=
-  PseudofunctorFromCategory Cᵒᵖ (Cat.{v', u'})
+  Cᵒᵖ ⥤ Cat.{v', u'}
+
+noncomputable def categoryPresheafPseudofunctor
+    {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
+    PseudofunctorFromCategory Cᵒᵖ
+      (Cat.{v', u'}) :=
+  F.toPseudofunctor'
 
 abbrev categoryPresheafCategory
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) :=
-  Pseudofunctor.CoGrothendieck F
+  Pseudofunctor.CoGrothendieck (categoryPresheafPseudofunctor F)
 
 abbrev categoryPresheafProjection
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) :
     categoryPresheafCategory F ⥤ C :=
-  Pseudofunctor.CoGrothendieck.forget F
+  Pseudofunctor.CoGrothendieck.forget (categoryPresheafPseudofunctor F)
 
 abbrev categoryPresheafObject
     {C : Type u'} [Category.{v'} C]
@@ -3123,8 +3130,8 @@ abbrev categoryPresheafHom
 abbrev categoryPresheafRestriction
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U) :
-    F.obj ⟨Opposite.op U⟩ ⥤ F.obj ⟨Opposite.op V⟩ :=
-  (F.map f.op.toLoc).toFunctor
+    F.obj (Opposite.op U) ⥤ F.obj (Opposite.op V) :=
+  (F.map f.op).toFunctor
 
 theorem categoryPresheafRestriction_comp
     {C : Type u'} [Category.{v'} C]
@@ -3132,9 +3139,9 @@ theorem categoryPresheafRestriction_comp
     Nonempty (categoryPresheafRestriction F (g ≫ f) ≅
       categoryPresheafRestriction F f ⋙ categoryPresheafRestriction F g) := by
   refine ⟨?_⟩
-  change (F.map (g ≫ f).op.toLoc).toFunctor ≅
-    (F.map f.op.toLoc).toFunctor ⋙ (F.map g.op.toLoc).toFunctor
-  convert CategoryTheory.Cat.Hom.toNatIso (F.mapComp f.op.toLoc g.op.toLoc) using 1 <;> rfl
+  change (F.map (g ≫ f).op).toFunctor ≅
+    (F.map f.op).toFunctor ⋙ (F.map g.op).toFunctor
+  exact eqToIso (by simp)
 
 @[simp]
 theorem categoryPresheafProjection_obj
@@ -3172,40 +3179,43 @@ theorem categoryPresheaf_comp_fiber
     {X Y Z : categoryPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
     (f ≫ g).fiber =
       f.fiber ≫
-        (F.map f.base.op.toLoc).toFunctor.map g.fiber ≫
-        (F.mapComp g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
+        ((categoryPresheafPseudofunctor F).map f.base.op.toLoc).toFunctor.map g.fiber ≫
+        ((categoryPresheafPseudofunctor F).mapComp g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
   rfl
 
 abbrev categoryPresheafCartesianDomain
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
-    (x : F.obj ⟨op U⟩) : categoryPresheafCategory F :=
-  Pseudofunctor.CoGrothendieck.domainCartesianLift x f
+    (x : F.obj (op U)) : categoryPresheafCategory F :=
+  Pseudofunctor.CoGrothendieck.domainCartesianLift
+    (F := categoryPresheafPseudofunctor F) x f
 
 abbrev categoryPresheafCartesianLift
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
-    (x : F.obj ⟨op U⟩) :
+    (x : F.obj (op U)) :
     categoryPresheafCartesianDomain F f x ⟶
       (⟨U, x⟩ : categoryPresheafCategory F) :=
-  Pseudofunctor.CoGrothendieck.cartesianLift x f
+  Pseudofunctor.CoGrothendieck.cartesianLift
+    (F := categoryPresheafPseudofunctor F) x f
 
 theorem categoryPresheafCartesianLift_isHomLift
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
-    (x : F.obj ⟨op U⟩) :
+    (x : F.obj (op U)) :
     (categoryPresheafProjection F).IsHomLift f
       (categoryPresheafCartesianLift F f x) := by
-  infer_instance
+  exact Pseudofunctor.CoGrothendieck.isHomLift_cartesianLift
+    (F := categoryPresheafPseudofunctor F) x f
 
 theorem categoryPresheafCartesianLift_isStronglyCartesian
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
-    (x : F.obj ⟨op U⟩) :
+    (x : F.obj (op U)) :
     Functor.IsStronglyCartesian (categoryPresheafProjection F) f
       (categoryPresheafCartesianLift F f x) := by
   exact Pseudofunctor.CoGrothendieck.isStronglyCartesian_homCartesianLift
-    (F := F) x f
+    (F := categoryPresheafPseudofunctor F) x f
 
 theorem categoryPresheafProjection_isFibered
     {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
@@ -4102,10 +4112,10 @@ theorem fibredCategory_isEquivalentTo_split
 /-! ## Presheaves of groupoids -/
 
 structure GroupoidPresheaf
-    (C : Type u') [Category.{v'} C] where
+  (C : Type u') [Category.{v'} C] where
   value : CategoryPresheaf C
   fibre_is_groupoid : ∀ U : C,
-    IsGroupoid (value.obj ⟨Opposite.op U⟩)
+    IsGroupoid (value.obj (Opposite.op U))
 
 abbrev groupoidPresheafCategory
     {C : Type u'} [Category.{v'} C]
@@ -4121,7 +4131,7 @@ abbrev groupoidPresheafProjection
 abbrev groupoidPresheafRestriction
     {C : Type u'} [Category.{v'} C]
     (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U) :
-    F.value.obj ⟨Opposite.op U⟩ ⥤ F.value.obj ⟨Opposite.op V⟩ :=
+    F.value.obj (Opposite.op U) ⥤ F.value.obj (Opposite.op V) :=
   categoryPresheafRestriction F.value f
 
 theorem groupoidPresheafRestriction_comp
@@ -4149,7 +4159,7 @@ theorem groupoidPresheafProjection_isFibredInGroupoids
 theorem groupoidPresheaf_exists_lift
     {C : Type u'} [Category.{v'} C]
     (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U)
-    (x : F.value.obj ⟨op U⟩) :
+    (x : F.value.obj (op U)) :
     ∃ y : groupoidPresheafCategory F,
       ∃ φ : y ⟶ (⟨U, x⟩ : groupoidPresheafCategory F),
         (groupoidPresheafProjection F).IsHomLift f φ := by

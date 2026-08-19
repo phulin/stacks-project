@@ -6,6 +6,7 @@ import Mathlib.RingTheory.Ideal.AssociatedPrime.Localization
 import Mathlib.RingTheory.Regular.IsSMulRegular
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.RingTheory.KrullDimension.Regular
+import Mathlib.RingTheory.MvPolynomial.Ideal
 
 /-!
 # Commutative Algebra, Chapter 63: associated primes
@@ -792,7 +793,126 @@ theorem ass_reverse_functoriality_example
         PrimeSpectrum.comap (algebraMap k (reverseFunctorialityExampleRing k)) ''
           associatedPrimes (reverseFunctorialityExampleRing k)
             (reverseFunctorialityExampleRing k)) := by
-  sorry
+  classical
+  let Q := reverseFunctorialityExampleRing k
+  let P := MvPolynomial ℕ k
+  let I := reverseFunctorialityExampleIdeal k
+  have hgen :
+      (Set.range (fun i : ℕ => (MvPolynomial.X i : P) ^ 2)) =
+        (fun d : ℕ →₀ ℕ => MvPolynomial.monomial d (1 : k)) ''
+          Set.range (fun i : ℕ => Finsupp.single i 2) := by
+    ext z
+    constructor
+    · rintro ⟨i, rfl⟩
+      refine ⟨Finsupp.single i 2, ⟨i, rfl⟩, ?_⟩
+      exact (MvPolynomial.X_pow_eq_monomial (R := k) (σ := ℕ) (e := 2) (n := i)).symm
+    · rintro ⟨d, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, MvPolynomial.X_pow_eq_monomial (R := k) (σ := ℕ) (e := 2) (n := i)⟩
+  have hIcrit (f : P) :
+      f ∈ I ↔ ∀ d ∈ f.support, ∃ i : ℕ, Finsupp.single i 2 ≤ d := by
+    change f ∈ Ideal.span (Set.range (fun i : ℕ => (MvPolynomial.X i : P) ^ 2)) ↔ _
+    rw [hgen, MvPolynomial.mem_ideal_span_monomial_image]
+    simp only [Set.mem_range]
+    constructor
+    · intro h d hd
+      obtain ⟨si, ⟨i, rfl⟩, hsi⟩ := h d hd
+      exact ⟨i, hsi⟩
+    · intro h d hd
+      obtain ⟨i, hi⟩ := h d hd
+      exact ⟨Finsupp.single i 2, ⟨i, rfl⟩, hi⟩
+  have hQnontrivial : Nontrivial Q := by
+    let hev : MvPolynomial ℕ k →+* k :=
+      MvPolynomial.eval₂Hom (RingHom.id k) (fun _ : ℕ => 0)
+    have hIker : I ≤ RingHom.ker hev := by
+      change reverseFunctorialityExampleIdeal k ≤ RingHom.ker hev
+      rw [reverseFunctorialityExampleIdeal, Ideal.span_le]
+      rintro _ ⟨i, rfl⟩
+      change (MvPolynomial.X i : P) ^ 2 ∈ RingHom.ker hev
+      change hev ((MvPolynomial.X i : P) ^ 2) = 0
+      change MvPolynomial.eval₂Hom (RingHom.id k) (fun _ : ℕ => 0)
+        ((MvPolynomial.X i : P) ^ 2) = 0
+      simp
+    refine ⟨1, 0, ?_⟩
+    intro hzero
+    have hmem : (1 : P) ∈ I := Ideal.Quotient.eq_zero_iff_mem.mp hzero
+    have : hev 1 = 0 := hIker hmem
+    simpa using this
+  have hnonempty : (associatedPrimes k Q).Nonempty := by
+    apply Set.nonempty_iff_ne_empty.mpr
+    intro h
+    have hsub : Subsingleton Q :=
+      (ass_eq_empty_iff_subsingleton (R := k) (M := Q)).mpr h
+    exact not_subsingleton_iff_nontrivial.mpr hQnontrivial hsub
+  have hQempty : associatedPrimes Q Q = ∅ := by
+    ext p
+    constructor
+    · intro hp
+      change ∃ m, (⊥ : Submodule Q Q).colon ({m} : Set Q) = p.asIdeal at hp
+      obtain ⟨m, hm⟩ := hp
+      obtain ⟨f, rfl⟩ := Ideal.Quotient.mk_surjective m
+      have hxi (i : ℕ) :
+          Ideal.Quotient.mk I (MvPolynomial.X i : P) ∈ p.asIdeal := by
+        apply p.isPrime.mem_of_pow_mem 2
+        have hsq : (Ideal.Quotient.mk I (MvPolynomial.X i : P)) ^ 2 = 0 := by
+          rw [← map_pow, Ideal.Quotient.eq_zero_iff_mem]
+          exact Ideal.subset_span (Set.mem_range_self i)
+        rw [hsq]
+        exact p.asIdeal.zero_mem
+      have hkill (i : ℕ) :
+          (MvPolynomial.X i : P) * f ∈ I := by
+        have hxmem : Ideal.Quotient.mk I (MvPolynomial.X i : P) ∈
+            (⊥ : Submodule Q Q).colon
+              ({Ideal.Quotient.mk I f} : Set Q) := by
+          rw [hm]
+          exact hxi i
+        rw [Submodule.mem_colon_singleton] at hxmem
+        have hxzero : Ideal.Quotient.mk I
+            ((MvPolynomial.X i : P) * f) = 0 := by
+          simpa [Algebra.smul_def, Ideal.Quotient.algebraMap_eq, ← map_mul]
+            using hxmem
+        exact Ideal.Quotient.eq_zero_iff_mem.mp hxzero
+      have hfI : f ∈ I := by
+        by_contra hf
+        have hnot : ¬ (∀ d ∈ f.support,
+            ∃ i : ℕ, Finsupp.single i 2 ≤ d) := by
+          intro hall
+          exact hf ((hIcrit f).mpr hall)
+        push_neg at hnot
+        obtain ⟨d, hd, hnone⟩ := hnot
+        obtain ⟨i, hi⟩ := d.support.exists_notMem
+        have he : Finsupp.single i 1 + d ∈
+            (MvPolynomial.X i * f).support := by
+          rw [MvPolynomial.mem_support_iff, MvPolynomial.coeff_X_mul]
+          exact MvPolynomial.mem_support_iff.mp hd
+        obtain ⟨j, hj⟩ :=
+          ((hIcrit (MvPolynomial.X i * f)).mp (hkill i))
+            (Finsupp.single i 1 + d) he
+        by_cases hji : j = i
+        · subst j
+          have hdi : d i = 0 := by
+            by_contra hdi
+            exact hi (Finsupp.mem_support_iff.mpr hdi)
+          have := hj i
+          simp [Finsupp.single_apply, hdi] at this
+        · apply hnone j
+          intro l
+          by_cases hlj : j = l
+          · subst l
+            have h := hj j
+            simpa [Finsupp.single_apply, hji] using h
+          · simp [Finsupp.single_apply, hlj]
+      have hmzero : Ideal.Quotient.mk I f = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hfI
+      apply p.isPrime.ne_top
+      rw [← hm, hmzero]
+      rw [Submodule.colon_singleton_zero]
+    · simp
+  refine ⟨hnonempty, hQempty, ?_⟩
+  intro hsubset
+  obtain ⟨p, hp⟩ := hnonempty
+  obtain ⟨q, hq, hqp⟩ := hsubset hp
+  rw [hQempty] at hq
+  exact Set.notMem_empty q hq
 
 /-- If the target ring is Noetherian, the functoriality inclusion is an
 equality. -/
@@ -803,7 +923,65 @@ theorem ass_functorial_eq_of_noetherian
     (letI : Module R M := Module.compHom M φ;
       PrimeSpectrum.comap φ '' associatedPrimes S M =
         associatedPrimes R M) := by
-  sorry
+  letI : Module R M := Module.compHom M φ
+  change PrimeSpectrum.comap φ '' associatedPrimes S M = associatedPrimes R M
+  apply Set.Subset.antisymm (ass_functorial φ)
+  intro p hp
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  let I : Ideal S := (⊥ : Submodule S M).colon ({m} : Set M)
+  have hIcomap : I.comap φ = p.asIdeal := by
+    ext r
+    change φ r ∈ I ↔ r ∈ p.asIdeal
+    change φ r ∈ (⊥ : Submodule S M).colon ({m} : Set M) ↔ _
+    rw [Submodule.mem_colon_singleton, ← hm, Submodule.mem_colon_singleton]
+    rfl
+  have hpmin : p.asIdeal ∈ (I.comap φ).minimalPrimes := by
+    rw [hIcomap]
+    exact ⟨⟨p.isPrime, le_rfl⟩, fun q hq hqp => hq.2⟩
+  obtain ⟨qI, hqI, hqcomap⟩ :=
+    Ideal.exists_minimalPrimes_comap_eq φ p.asIdeal hpmin
+  let q : PrimeSpectrum S := ⟨qI, hqI.isPrime⟩
+  have hq_support : q ∈ Module.support S (S ⧸ I) := by
+    apply Module.mem_support_iff_of_finite.mpr
+    simpa only [Ideal.annihilator_quotient] using hqI.le
+  have hq_minimal :
+      Minimal (fun r : PrimeSpectrum S => r ∈ Module.support S (S ⧸ I)) q := by
+    refine ⟨hq_support, ?_⟩
+    intro r hr hrq
+    have hrI : I ≤ r.asIdeal := by
+      simpa only [Ideal.annihilator_quotient] using
+        (Module.annihilator_le_of_mem_support hr)
+    exact hqI.2 ⟨r.isPrime, hrI⟩ hrq
+  have hqass : q ∈ associatedPrimes S (S ⧸ I) :=
+    ass_of_minimal_support q hq_support hq_minimal
+  change ∃ x, (⊥ : Submodule S (S ⧸ I)).colon ({x} : Set (S ⧸ I)) = qI
+    at hqass
+  obtain ⟨x, hx⟩ := hqass
+  let f₀ : S →ₗ[S] M := LinearMap.toSpanSingleton S M m
+  have hker : I = LinearMap.ker f₀ := by
+    ext r
+    change r ∈ (⊥ : Submodule S M).colon ({m} : Set M) ↔ r • m = 0
+    rw [Submodule.mem_colon_singleton]
+    simp
+  let f : (S ⧸ I) →ₗ[S] M := I.liftQ f₀ hker.le
+  have hf : Function.Injective f := by
+    apply LinearMap.ker_eq_bot.mp
+    exact Submodule.ker_liftQ_eq_bot' I f₀ hker
+  have hqM : q ∈ associatedPrimes S M := by
+    change ∃ y, (⊥ : Submodule S M).colon ({y} : Set M) = qI
+    refine ⟨f x, ?_⟩
+    ext r
+    rw [Submodule.mem_colon_singleton, ← hx, Submodule.mem_colon_singleton]
+    change r • f x = 0 ↔ r • x = 0
+    constructor
+    · intro hr
+      apply hf
+      rw [map_smul, hr, map_zero]
+    · intro hr
+      rw [← map_smul, hr, map_zero]
+  refine ⟨q, hqM, ?_⟩
+  exact PrimeSpectrum.ext hqcomap
 
 /-! ## Quotients and localization -/
 
@@ -815,7 +993,40 @@ theorem ass_quotient_ring
     (letI : Module R M := Module.compHom M (Ideal.Quotient.mk I);
       PrimeSpectrum.comap (Ideal.Quotient.mk I) ''
           associatedPrimes (R ⧸ I) M = associatedPrimes R M) := by
-  sorry
+  letI : Module R M := Module.compHom M (Ideal.Quotient.mk I)
+  change PrimeSpectrum.comap (Ideal.Quotient.mk I) ''
+      associatedPrimes (R ⧸ I) M = associatedPrimes R M
+  apply Set.Subset.antisymm (ass_functorial (Ideal.Quotient.mk I))
+  intro p hp
+  change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+  obtain ⟨m, hm⟩ := hp
+  have hIp : I ≤ p.asIdeal := by
+    intro r hr
+    rw [← hm, Submodule.mem_colon_singleton]
+    change r • m = 0
+    have hrzero : Ideal.Quotient.mk I r = 0 :=
+      Ideal.Quotient.eq_zero_iff_mem.mpr hr
+    change (Ideal.Quotient.mk I r) • m = 0
+    rw [hrzero, zero_smul]
+  let qI : Ideal (R ⧸ I) := p.asIdeal.map (Ideal.Quotient.mk I)
+  have hqI : qI.IsPrime := by
+    dsimp [qI]
+    exact Ideal.isPrime_map_quotientMk_of_isPrime hIp
+  let q : PrimeSpectrum (R ⧸ I) := ⟨qI, hqI⟩
+  have hcomap : qI.comap (Ideal.Quotient.mk I) = p.asIdeal := by
+    dsimp [qI]
+    exact Ideal.comap_map_mk hIp
+  refine ⟨q, ?_, ?_⟩
+  · change ∃ m, (⊥ : Submodule (R ⧸ I) M).colon ({m} : Set M) = q.asIdeal
+    refine ⟨m, ?_⟩
+    ext x
+    rw [Submodule.mem_colon_singleton]
+    obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective x
+    change r • m = 0 ↔ r ∈ qI.comap (Ideal.Quotient.mk I)
+    rw [hcomap, ← hm, Submodule.mem_colon_singleton]
+    simp
+  · apply PrimeSpectrum.ext
+    exact hcomap
 
 /-- Localization sends an associated prime to the closed point of the
 localized module.  If the prime is finitely generated, the converse holds. -/
@@ -831,7 +1042,123 @@ theorem associated_primes_localize_at_prime
             associatedPrimes (Localization.AtPrime p.asIdeal)
               (LocalizedModule.AtPrime p.asIdeal M) →
           p ∈ associatedPrimes R M)) := by
-  sorry
+  constructor
+  · intro hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+    obtain ⟨m, hm⟩ := hp
+    change ∃ m, (⊥ : Submodule (Localization.AtPrime p.asIdeal)
+        (LocalizedModule.AtPrime p.asIdeal M)).colon ({m} : Set _) =
+      IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)
+    refine ⟨LocalizedModule.mkLinearMap p.asIdeal.primeCompl M m, ?_⟩
+    ext t
+    rw [Submodule.mem_colon_singleton]
+    rcases IsLocalization.exists_mk'_eq p.asIdeal.primeCompl t with ⟨r, s, hrs⟩
+    change t • LocalizedModule.mkLinearMap p.asIdeal.primeCompl M m = 0 ↔
+      t ∈ IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)
+    rw [← hrs, ← IsLocalizedModule.mk'_one p.asIdeal.primeCompl
+      (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m,
+      IsLocalizedModule.mk'_smul_mk', mul_one,
+      IsLocalizedModule.mk'_eq_zero', IsLocalization.mk'_mem_iff,
+      ← Ideal.mem_under, Localization.AtPrime.under_maximalIdeal]
+    constructor
+    · rintro ⟨s', hs'⟩
+      have hsrm : ((s' : R) * r) • m = 0 := by
+        calc
+          ((s' : R) * r) • m = (s' : R) • (r • m) := by rw [smul_smul]
+          _ = 0 := by
+            change s' • (r • m) = 0
+            exact hs'
+      have hsr : (s' : R) * r ∈ p.asIdeal := by
+        have hmem : (s' : R) * r ∈
+            (⊥ : Submodule R M).colon ({m} : Set M) := by
+          rw [Submodule.mem_colon_singleton]
+          exact hsrm
+        rw [hm] at hmem
+        exact hmem
+      exact (p.isPrime.mem_or_mem hsr).resolve_left s'.property
+    · intro hr
+      refine ⟨1, ?_⟩
+      have hrm : r • m = 0 := by
+        have hmem : r ∈ (⊥ : Submodule R M).colon ({m} : Set M) := by
+          rw [hm]
+          exact hr
+        simpa [Submodule.mem_colon_singleton] using hmem
+      simpa [smul_smul] using hrm
+  · intro hfg hass
+    change p.asIdeal.FG at hfg
+    change ∃ x, (⊥ : Submodule (Localization.AtPrime p.asIdeal)
+        (LocalizedModule.AtPrime p.asIdeal M)).colon ({x} : Set _) =
+      IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal) at hass
+    obtain ⟨x, hx⟩ := hass
+    rcases hfg with ⟨T, hT⟩
+    rcases IsLocalizedModule.mk'_surjective p.asIdeal.primeCompl
+        (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) x with
+      ⟨⟨m, s⟩, rfl⟩
+    simp only [Function.uncurry_apply_pair] at hx
+    have mem (a : T) : (a : R) ∈ p.asIdeal := by
+      simpa [← hT] using Ideal.subset_span a.2
+    have memzero (a : T) : ∃ g : p.asIdeal.primeCompl,
+        (g : R) • ((a : R) • m) = 0 := by
+      have ha : algebraMap R (Localization.AtPrime p.asIdeal) (a : R) ∈
+          IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal) := by
+        rw [← Ideal.mem_under, Localization.AtPrime.under_maximalIdeal]
+        exact mem a
+      have ha' : algebraMap R (Localization.AtPrime p.asIdeal) (a : R) ∈
+          (⊥ : Submodule (Localization.AtPrime p.asIdeal)
+            (LocalizedModule.AtPrime p.asIdeal M)).colon
+            ({IsLocalizedModule.mk' (LocalizedModule.mkLinearMap
+              p.asIdeal.primeCompl M) m s} : Set _) := by
+        rw [hx]
+        exact ha
+      rw [Submodule.mem_colon_singleton] at ha'
+      rw [algebraMap_smul, ← IsLocalizedModule.mk'_smul] at ha'
+      have ha0 : IsLocalizedModule.mk'
+          (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M)
+          ((a : R) • m) s = 0 := by
+        simpa only [Submodule.mem_bot] using ha'
+      rw [IsLocalizedModule.mk'_eq_zero'] at ha0
+      exact ha0
+    choose g hg using memzero
+    change ∃ n, (⊥ : Submodule R M).colon ({n} : Set M) = p.asIdeal
+    refine ⟨(∏ a, g a).1 • m, ?_⟩
+    have hple : p.asIdeal ≤
+        (⊥ : Submodule R M).colon ({(∏ a, g a).1 • m} : Set M) := by
+      apply hT.symm.le.trans
+      rw [Ideal.span_le]
+      intro a ha
+      have hmem : a ∈
+          (⊥ : Submodule R M).colon ({(∏ a, g a).1 • m} : Set M) := by
+        rw [Submodule.mem_colon_singleton]
+        obtain ⟨u, hu⟩ : g ⟨a, ha⟩ ∣ (∏ a, g a) := by
+          apply Finset.dvd_prod_of_mem g (Finset.mem_univ ⟨a, ha⟩)
+        rw [hu, Submonoid.coe_mul, smul_smul, ← mul_assoc, mul_comm,
+          ← smul_smul, mul_comm, ← smul_smul]
+        exact smul_eq_zero_of_right u.1 (hg ⟨a, ha⟩)
+      exact hmem
+    ext r
+    constructor
+    · intro hr
+      have hr' : r • ((∏ a, g a).1 • m) = 0 := by
+        rw [Submodule.mem_colon_singleton] at hr
+        exact hr
+      have hrg : r * (∏ a, g a).1 ∈ p.asIdeal := by
+        have hrzero : (r * (∏ a, g a).1) • m = 0 := by
+          simpa [smul_smul] using hr'
+        have hloc : algebraMap R (Localization.AtPrime p.asIdeal)
+              (r * (∏ a, g a).1) ∈
+            IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal) := by
+          rw [← hx, Submodule.mem_colon_singleton]
+          rw [algebraMap_smul, ← IsLocalizedModule.mk'_smul, hrzero]
+          simp
+        have hloc' : r * (∏ a, g a).1 ∈
+            (IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)).under R :=
+          (Ideal.mem_under R
+            (IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal))).2 hloc
+        simpa only [Localization.AtPrime.under_maximalIdeal] using hloc'
+      exact (p.isPrime.mem_or_mem hrg).resolve_right (∏ a, g a).property
+    · intro hr
+      have hmem := hple hr
+      simpa [Submodule.mem_colon_singleton] using hmem
 
 /-- The associated-prime set of a localized module, viewed over the localized
 ring, maps to the associated-prime set viewed over the original ring. -/

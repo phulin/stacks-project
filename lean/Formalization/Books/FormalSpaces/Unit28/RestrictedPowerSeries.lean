@@ -449,6 +449,77 @@ theorem restrictedPowerSeries_universal_property
       (@Continuous (restrictedPowerSeries A B r) C
         (restrictedPowerSeriesLimitTopology A B r) inferInstance F) ∧
         F.comp (restrictedPowerSeriesPolynomialMap A B r) = f.toRingHom := by
+  /-
+  Proof roadmap (dense uniform extension).
+
+  * Abbreviate `P := MvPolynomial (Fin r) A`,
+    `M := restrictedPowerSeries A B r`, and
+    `ι := restrictedPowerSeriesPolynomialMap A B r`.  Destructure
+    `restrictedPowerSeries_complete_for_limit_topology A B r` to obtain a
+    uniformity `uM` on `M`; install `uM`, its `IsUniformAddGroup`,
+    `CompleteSpace`, and `T2Space` witnesses locally, rewriting its induced
+    topology with the returned equality.  On `C`, install
+    `IsTopologicalAddGroup.rightUniformSpace C`; the two components of
+    `hC.2` are exactly the required `CompleteSpace` and `T2Space` instances.
+    Install `hC.1 : IsLinearTopology C C` locally as well.
+
+  * Give `P` the pulled-back uniformity `UniformSpace.comap ι uM`.  Then
+    `ι` is an `IsUniformInducing` by reflexivity.  Construct the associated
+    `IsUniformAddGroup P` by `uniformContinuous_comap'`, using
+    `ι.map_sub`; similarly record that addition, negation, and multiplication
+    on `M` are continuous by unfolding
+    `restrictedPowerSeriesLimitTopology` and testing every coordinate with
+    `continuous_iff_le_induced`.  Each coordinate is a ring homomorphism into
+    a discrete ring, so `continuous_of_discreteTopology` closes the coordinate
+    goals.  This supplies the `IsTopologicalSemiring M` instance needed by
+    `IsDenseInducing.extendRingHom` from
+    `Mathlib/Topology/Algebra/UniformRing.lean`.
+
+  * Prove `hι_dense : DenseRange ι`.  First derive a neighbourhood basis at
+    `x : M` consisting of finite intersections
+    `⋂ i ∈ s, (restrictedPowerSeriesProjection A B r i) ⁻¹'
+      {restrictedPowerSeriesProjection A B r i x}`; use `nhds_iInf`,
+    `nhds_induced`, discreteness, and
+    `Filter.hasBasis_iInf_principal_finite`.  For finite `s`, repeatedly use
+    `B.directed` to choose `k : B.Index` above every member of `s`.  Lift the
+    polynomial `restrictedPowerSeriesProjection A B r k x` to `p : P` via
+    `MvPolynomial.map_surjective Ideal.Quotient.mk_surjective`.  The limit
+    compatibility `limit.w (restrictedPowerSeriesDiagram A B r)` and
+    `restrictedPowerSeriesProjection_polynomialMap` then show that `ι p`
+    agrees with `x` at every index in `s`, hence lies in the prescribed
+    neighbourhood.
+
+  * Prove `hf0 : ContinuousAt f.toRingHom 0` for the pulled-back topology on
+    `P`.  Given a neighbourhood of `0` in `C`, refine it to an open ideal
+    `J` using `linearlyTopologizedRing_hasBasis_open_ideal C`.  Apply
+    `hAC.continuousAt` and `B.fundamental` to choose `i` such that
+    `B.I i ⊆ (algebraMap A C) ⁻¹' J`.  The preimage under `ι` of the kernel
+    of the `i`-th projection is a neighbourhood of zero.  If `p` is in it,
+    `restrictedPowerSeriesProjection_polynomialMap` says that
+    `MvPolynomial.map (Ideal.Quotient.mk (B.I i)) p = 0`.
+    Apply `polynomialQuotientEquiv A (B.I i) r` and
+    `Ideal.Quotient.eq_zero_iff_mem` to get
+    `p ∈ polynomialExtensionIdeal A (B.I i) r`.  Unfold that ideal and use
+    `Ideal.map_le_iff_le_comap`, `f.commutes`, and the choice of `i` to obtain
+    `f p ∈ J`.  Upgrade `hf0` first with
+    `continuous_of_continuousAt_zero f.toRingHom`, then with
+    `uniformContinuous_addMonoidHom_of_continuous` from
+    `Mathlib/Topology/Algebra/IsUniformGroup/Defs.lean`.
+
+  * Define `F` with
+    `IsDenseInducing.extendRingHom hι_uniform hι_dense hf_uniform`.  Its
+    continuity is
+    `(uniformContinuous_uniformly_extend hι_uniform hι_dense hf_uniform).continuous`.
+    The extension equation follows pointwise from
+    `uniformly_extend_of_ind hι_uniform hι_dense hf_uniform`; finish the
+    bundled equality with `RingHom.ext` (or `rfl` after extensionality).
+
+  * For uniqueness, if `G` is another continuous extension, compare `F` and
+    `G` on `Set.univ`.  Their equality on `Set.range ι` is the two extension
+    equations, this range is dense by `hι_dense`, and `hC.2.2` makes the
+    equalizer closed.  Apply `Continuous.ext_on` (equivalently
+    `DenseRange.induction_on`) to get `F = G`.
+  -/
   sorry
 
 /-! ## The I-adic comparison and its warnings -/
@@ -1053,12 +1124,35 @@ theorem iAdicRestrictedPowerSeries_complete_for_limit_topology
   exact @restrictedPowerSeries_complete_for_limit_topology A _ I.adicTopology
     (iAdicOpenIdealBasis A I) r
 
-/-- The I-adic topology on the polynomial completion need not be complete. -/
-theorem iAdicPolynomialCompletion_not_always_iAdically_complete :
-    ¬ ∀ (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ),
-      IsAdicComplete I A →
-        IsAdicComplete (polynomialExtensionIdeal A I r)
-          (iAdicPolynomialCompletion A I r) := by
+/-- If the defining ideal is finitely generated, the polynomial completion is
+complete for its I-adic topology.
+
+Without finite generation the source only warns that completeness is not
+automatic; it does not assert a counterexample with an I-adically complete
+coefficient ring. -/
+theorem iAdicPolynomialCompletion_iAdically_complete_of_fg
+    (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ) (hI : I.FG) :
+    IsAdicComplete (polynomialExtensionIdeal A I r)
+      (iAdicPolynomialCompletion A I r) := by
+  /-
+  Proof roadmap.
+
+  * Put `P := MvPolynomial (Fin r) A` and
+    `J := polynomialExtensionIdeal A I r`.
+  * Obtain `hJ : J.FG` from
+    `hI.map (algebraMap A P)` in
+    `Mathlib/RingTheory/Finiteness/Ideal.lean`; after unfolding
+    `polynomialExtensionIdeal`, this is definitionally the required ideal.
+  * The goal unfolds to `IsAdicComplete J (AdicCompletion J P)`.  Close it
+    with `AdicCompletion.isAdicComplete hJ` from
+    `Mathlib/RingTheory/AdicCompletion/Completeness.lean`.
+
+  Do not use
+  `Formalization.Books.MoreAlgebra.Unit36.adicCompletion_not_always_iAdically_complete`:
+  that theorem quantifies over arbitrary modules `M` and supplies neither a
+  polynomial module specialization nor an I-adically complete coefficient
+  ring, so it cannot prove the former negative interface.
+  -/
   sorry
 
 /-- If the defining ideal is finitely generated, the ring identification is

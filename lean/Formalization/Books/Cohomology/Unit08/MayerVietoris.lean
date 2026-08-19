@@ -99,7 +99,7 @@ noncomputable def mayerVietorisTermMap
         ((ringedSpaceModuleSectionsCohomology X
           (⊤ : Opens X.carrier) (n / 3)).map φ)
     · by_cases h₁ : n % 3 = 1
-      · simp only [mayerVietorisTerm, hn, ↓reduceIte, h₀, h₁]
+      · simp only [mayerVietorisTerm, hn, ↓reduceIte, h₁]
         exact Limits.prod.map
           ((forget₂
             (ModuleCat (X.structureSheaf.obj.obj (op U))) AddCommGrpCat).map
@@ -176,7 +176,7 @@ noncomputable def relativeMayerVietorisTermMap
     · simp only [relativeMayerVietorisTerm, hn, ↓reduceIte, h₀]
       exact (ringedSpaceModuleHigherDirectImage f (n / 3)).map φ
     · by_cases h₁ : n % 3 = 1
-      · simp only [relativeMayerVietorisTerm, hn, ↓reduceIte, h₀, h₁]
+      · simp only [relativeMayerVietorisTerm, hn, ↓reduceIte, h₁]
         exact Limits.prod.map
           ((ringedSpaceModuleHigherDirectImage
             (relativeMayerVietorisMap f U) (n / 3)).map

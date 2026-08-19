@@ -156,8 +156,7 @@ def exactCoupleAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
 def exactCoupleBoundarySubobject {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) (n : ℕ) : Subobject E :=
   (Subobject.«exists» D.g).obj
-    ((Subobject.pullback (exactCoupleAlphaPow D n)).obj
-      (Subobject.mk (kernel.ι (exactCoupleAlphaPow D n))))
+    (Subobject.mk (kernel.ι (exactCoupleAlphaPow D n)))
 
 /-- The cycle subobject `Z_(n+1) = f⁻¹(Im(alpha^n))`. -/
 def exactCoupleCycleSubobject {C : Type u} [Category.{v} C] [Abelian C]
@@ -207,6 +206,24 @@ theorem exactCouple_associatedSpectralSequence_exists
           Nonempty (plainPageObject S (n + 1 : ℤ) ≅
             exactCouplePageComponent D n) := by
   sorry
+
+/-- Transport the quotient-page identifications along a separately presented
+    page-component family.  This is useful to importing chapters which retain
+    the same exact-couple filtration under a local namespace. -/
+theorem exactCouple_associatedSpectralSequence_transport
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) (P : ℕ → C)
+    (hP : ∀ n : ℕ, Nonempty (exactCouplePageComponent D n ≅ P n)) :
+    ∃ S : PlainSpectralSequence C 1,
+      Nonempty (plainPageObject S 1 ≅ E) ∧
+        ∀ n : ℕ,
+          Nonempty (plainPageObject S (n + 1 : ℤ) ≅ P n) := by
+  obtain ⟨S, hE, hpage⟩ := exactCouple_associatedSpectralSequence_exists D
+  refine ⟨S, hE, ?_⟩
+  intro n
+  obtain ⟨e⟩ := hpage n
+  obtain ⟨eP⟩ := hP n
+  exact ⟨e ≪≫ eP⟩
 
 noncomputable def exactCoupleAssociatedSpectralSequence
     {C : Type u} [Category.{v} C] [Abelian C]

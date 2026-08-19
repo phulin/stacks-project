@@ -6,6 +6,7 @@ import Mathlib.Order.Zorn
 import Mathlib.Topology.KrullDimension
 import Mathlib.Topology.NoetherianSpace
 import Mathlib.Topology.WithTopology
+import Formalization.Books.Topology.Unit09.NoetherianSpaces
 
 /-!
 # Topology, Chapter 11: Codimension and catenary spaces
@@ -44,6 +45,138 @@ theorem codimension_eq_iSup_length (Y : IrreducibleCloseds X) :
       ⨆ (p : LTSeries (IrreducibleCloseds X)) (_ : p.head = Y),
         (p.length : ℕ∞) := by
   simpa [codimension] using Order.coheight_eq_iSup_head_eq Y
+
+/-! ## Finite components and codimension bookkeeping -/
+
+/-
+  A closed subset is a subspace in `irreducibleComponents`.  The following
+  predicate records the corresponding maximality statement for its ambient
+  irreducible closed subsets.  It is intentionally set-theoretic so that it
+  can be used by downstream chapters without choosing a second component type.
+-/
+def IsAmbientIrreducibleComponent (F : Set X)
+    (Y : IrreducibleCloseds X) : Prop :=
+  (Y : Set X) ⊆ F ∧
+    ∀ Z : IrreducibleCloseds X,
+      (Z : Set X) ⊆ F → (Y : Set X) ⊆ Z → Z = Y
+
+noncomputable def ambientIrreducibleClosedOfComponent {F : Set X}
+    (hF : IsClosed F) (C : irreducibleComponents F) : IrreducibleCloseds X :=
+  Formalization.Books.Topology.Unit09.ambientIrreducibleClosedOfComponent hF C
+
+@[simp]
+theorem coe_ambientIrreducibleClosedOfComponent {F : Set X} (hF : IsClosed F)
+    (C : irreducibleComponents F) :
+    (ambientIrreducibleClosedOfComponent hF C : Set X) =
+      (Subtype.val : F → X) '' (C : Set F) := by
+  rfl
+
+theorem ambientIrreducibleClosedOfComponent_isAmbient {F : Set X}
+    (hF : IsClosed F) (C : irreducibleComponents F) :
+    IsAmbientIrreducibleComponent F
+      (ambientIrreducibleClosedOfComponent hF C) := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent,
+    ambientIrreducibleClosedOfComponent] using
+    (Formalization.Books.Topology.Unit09.ambientIrreducibleClosedOfComponent_isAmbient
+      hF C)
+
+theorem ambientIrreducibleComponents_eq_range {F : Set X} (hF : IsClosed F) :
+    {Y : IrreducibleCloseds X | IsAmbientIrreducibleComponent F Y} =
+      Set.range (fun C : irreducibleComponents F =>
+        ambientIrreducibleClosedOfComponent hF C) := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent,
+    ambientIrreducibleClosedOfComponent] using
+    (Formalization.Books.Topology.Unit09.ambientIrreducibleComponents_eq_range hF)
+
+theorem noetherianSpace_finite_irreducibleComponents
+    [NoetherianSpace X] : (irreducibleComponents X).Finite := by
+  exact Formalization.Books.Topology.Unit09.noetherianSpace_finite_irreducibleComponents
+
+theorem noetherianSpace_finite_ambientIrreducibleComponents
+    [NoetherianSpace X] (F : Set X) (hF : IsClosed F) :
+    ({Y : IrreducibleCloseds X | IsAmbientIrreducibleComponent F Y}).Finite := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent] using
+    (Formalization.Books.Topology.Unit09.noetherianSpace_finite_ambientIrreducibleComponents
+      F hF)
+
+theorem ambientIrreducibleComponents_cover {F : Set X} (hF : IsClosed F) :
+    ⋃₀ ((fun Y : IrreducibleCloseds X => (Y : Set X)) ''
+      {Y | IsAmbientIrreducibleComponent F Y}) = F := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent] using
+    (Formalization.Books.Topology.Unit09.ambientIrreducibleComponents_cover hF)
+
+theorem exists_ambientIrreducibleComponent_mem_of_mem
+    [NoetherianSpace X] {F : Set X} (hF : IsClosed F) {x : X} (hx : x ∈ F) :
+    ∃ Y : IrreducibleCloseds X,
+      IsAmbientIrreducibleComponent F Y ∧ x ∈ Y := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent] using
+    (Formalization.Books.Topology.Unit09.exists_ambientIrreducibleComponent_mem_of_mem
+      hF hx)
+
+theorem exists_point_mem_ambientIrreducibleComponent_only
+    [NoetherianSpace X] {F : Set X} (hF : IsClosed F)
+    (Y : IrreducibleCloseds X)
+    (hY : IsAmbientIrreducibleComponent F Y) :
+    ∃ x : X, x ∈ Y ∧
+      ∀ Z : IrreducibleCloseds X,
+        IsAmbientIrreducibleComponent F Z → x ∈ Z → Z = Y := by
+  simpa [IsAmbientIrreducibleComponent,
+    Formalization.Books.Topology.Unit09.IsAmbientIrreducibleComponent] using
+    (Formalization.Books.Topology.Unit09.exists_point_mem_ambientIrreducibleComponent_only
+      hF Y hY)
+
+theorem codimension_anti :
+    Antitone (codimension : IrreducibleCloseds X → ℕ∞) := by
+  intro Y Z hYZ
+  change Order.coheight Z ≤ Order.coheight Y
+  exact Order.coheight_anti hYZ
+
+theorem codimension_le_of_subset {Y Z : IrreducibleCloseds X}
+    (hYZ : (Y : Set X) ⊆ (Z : Set X)) :
+    codimension Z ≤ codimension Y := by
+  exact codimension_anti hYZ
+
+theorem codimension_strictAnti {Y Z : IrreducibleCloseds X}
+    (hYZ : Y < Z) (hfinite : codimension Z < ⊤) :
+    codimension Z < codimension Y := by
+  change Order.coheight Z < Order.coheight Y
+  exact Order.coheight_strictAnti hYZ hfinite
+
+theorem codimension_strict_lt_of_subset {Y Z : IrreducibleCloseds X}
+    (hYZ : (Y : Set X) ⊂ (Z : Set X)) (hfinite : codimension Z < ⊤) :
+    codimension Z < codimension Y := by
+  exact codimension_strictAnti hYZ hfinite
+
+theorem eq_of_subset_of_codimension_le_of_le
+    {Y Z : IrreducibleCloseds X} {n : ℕ∞}
+    (hYZ : Y ≤ Z) (hY : codimension Y ≤ n)
+    (hZ : n ≤ codimension Z) (hn : n < ⊤) : Y = Z := by
+  apply le_antisymm hYZ
+  by_contra hnot
+  have hne : Y ≠ Z := by
+    intro heq
+    exact hnot (heq ▸ le_rfl)
+  have hlt : Y < Z := lt_of_le_of_ne hYZ hne
+  have hfinite : codimension Z < ⊤ :=
+    (codimension_anti hYZ).trans_lt (hY.trans_lt hn)
+  exact (not_lt_of_ge (hY.trans hZ))
+    (codimension_strictAnti hlt hfinite)
+
+theorem eq_of_subset_of_codimension_eq {Y Z : IrreducibleCloseds X}
+    (hYZ : Y ≤ Z) (hcodim : codimension Y = codimension Z)
+    (hfinite : codimension Z < ⊤) : Y = Z := by
+  apply le_antisymm hYZ
+  by_contra hnot
+  have hne : Y ≠ Z := by
+    intro heq
+    exact hnot (heq ▸ le_rfl)
+  exact (not_lt_of_ge (le_of_eq hcodim))
+    (codimension_strictAnti (lt_of_le_of_ne hYZ hne) hfinite)
 
 /-
   This is the source's maximal-chain observation.  `Flag` is Mathlib's

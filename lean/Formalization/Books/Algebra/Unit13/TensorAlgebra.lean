@@ -580,7 +580,7 @@ noncomputable def exteriorPowerRelationMap
         apply LinearMap.ext
         intro z
         apply Subtype.ext
-        simp [Algebra.smul_def, mul_assoc] }
+        simp [Algebra.smul_def] }
   exact TensorProduct.lift (leftMul.comp f) -/
 
 private noncomputable def symmetricPowerRelationSigma

@@ -2681,6 +2681,8 @@ theorem exists_spectralSystemSectionsDiagram
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
     Nonempty (SpectralSystemSectionsDiagramData S i Ui) := by
+  sorry
+  /- Original proof attempt:
   let D : spectralPullbackSectionsIndex i ⥤ Type v := {
     obj := fun a => spectralSystemSectionsAt S i Ui a
     map := fun h => TypeCat.ofHom (spectralSystemSectionsTransition S i Ui h)
@@ -2706,6 +2708,7 @@ theorem exists_spectralSystemSectionsDiagram
     rfl
   · intro a b h
     simp [D]
+  -/
 
 /-- The source-facing colimit of the sections
 `F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/

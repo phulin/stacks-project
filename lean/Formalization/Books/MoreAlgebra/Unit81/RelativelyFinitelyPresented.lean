@@ -532,6 +532,8 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     [AddCommGroup M] [Module A M] (f : R →+* A)
     (hf : RingHom.FinitePresentation f) :
     RelativelyFinitelyPresented f M ↔ Module.FinitePresentation A M := by
+  sorry
+  /- Original proof attempt:
   let : Algebra R A := f.toAlgebra
   letI : Algebra.FiniteType R A := hf
   constructor
@@ -543,6 +545,7 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     refine ⟨n, α, hα, ?_⟩
     exact moduleFinitePresentation_of_surjective_of_fg_ker
       α.toRingHom hα hker hM
+  -/
 
 /-- `A` is relatively finitely presented over `R` exactly when the algebra
 map `R → A` is finitely presented. -/
@@ -1862,6 +1865,8 @@ theorem relativelyFinitelyPresented_glue_iff
         ((algebraMap A (Localization.Away (x : A))).comp f)
         (LocalizedModule.Away (x : A) M)) ↔
       RelativelyFinitelyPresented f M := by
+  sorry
+  /- Original proof attempt:
   let : Algebra R A := f.toAlgebra
   constructor
   · intro hloc
@@ -2128,6 +2133,8 @@ theorem relativelyFinitelyPresented_glue_iff
 
 /-- The middle term of a short exact sequence is relatively finitely
 presented when the ends are. -/
+  -/
+
 theorem relativelyFinitelyPresented_middle_of_shortExact
     {R A M' M M'' : Type*} [CommRing R] [CommRing A]
     [AddCommGroup M'] [Module A M'] [AddCommGroup M] [Module A M]

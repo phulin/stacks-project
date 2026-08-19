@@ -27,7 +27,7 @@ condition reuses Chapter 3's `locallyNilpotentIdeal`.
 namespace Formalization.Books.Algebra.Unit46
 
 open Set
-open Topology
+open _root_.Topology
 open scoped TensorProduct
 open Formalization.Books.Algebra.Unit14
 
@@ -686,13 +686,13 @@ theorem exists_helpWithPowers_exponent
         dsimp [a]
         omega
     have hxp : MvPolynomial.X (0 : Fin 2) ^ (p ^ n) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hyp : MvPolynomial.X (1 : Fin 2) ^ (p ^ m) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hxr : (p ^ n : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hyr : (p ^ m : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (1 : Fin 2) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hxterm : (p ^ (n * r) : MvPolynomial (Fin 2) ℤ) *
         MvPolynomial.X (0 : Fin 2) ^ i ∈ A := by
       have hpow : (MvPolynomial.X (0 : Fin 2) : MvPolynomial (Fin 2) ℤ) ^ i =
@@ -706,7 +706,7 @@ theorem exists_helpWithPowers_exponent
       have hmem := A.mul_mem (A.pow_mem hxr r) (A.pow_mem hxp (i / p ^ n))
       convert hmem using 1
       rw [hpow]
-      simp only [Nat.cast_pow, pow_mul]
+      simp only [pow_mul]
       ring
     have hyterm : (p ^ (m * s) : MvPolynomial (Fin 2) ℤ) *
         MvPolynomial.X (1 : Fin 2) ^ j ∈ A := by
@@ -721,16 +721,16 @@ theorem exists_helpWithPowers_exponent
       have hmem := A.mul_mem (A.pow_mem hyr s) (A.pow_mem hyp (j / p ^ m))
       convert hmem using 1
       rw [hpow]
-      simp only [Nat.cast_pow, pow_mul]
+      simp only [pow_mul]
       ring
     obtain ⟨d, hd⟩ := hchoose
     have hterm := A.mul_mem (A.algebraMap_mem d) (A.mul_mem hxterm hyterm)
     simpa [hd, Nat.cast_mul, Nat.cast_pow, pow_add, mul_assoc, mul_comm, mul_left_comm] using hterm
   · let A := helpWithPowersSubalgebra p n m
     have hx : (p ^ n : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hy : (p ^ m : MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (1 : Fin 2) ∈ A :=
-      Algebra.subset_adjoin (by simp [A, helpWithPowersSubalgebra])
+      Algebra.subset_adjoin (by simp)
     have hpn : (p ^ (n * p ^ n + m * p ^ m + n + m) :
         MvPolynomial (Fin 2) ℤ) * MvPolynomial.X (0 : Fin 2) ∈ A := by
       have hna : n ≤ n * p ^ n + m * p ^ m + n + m := by omega
@@ -829,7 +829,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
       ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
         pPowerGenerated (baseChangeRingMap f g) p ∧
           locallyNilpotentKernel (baseChangeRingMap f g) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let T : Set S := {x : S | ∃ n : ℕ, 0 < n ∧
     x ^ (p ^ n) ∈ f.range ∧ (p ^ n : S) * x ∈ f.range}
   have hgen' : Algebra.adjoin R T = ⊤ := by
@@ -839,7 +839,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
       zero_mem' := by
         refine ⟨1, by simp, ?_, ?_⟩
         · exact ⟨0, by simp [hp.ne_zero]⟩
-        · exact ⟨0, by simp [hp.ne_zero]⟩
+        · exact ⟨0, by simp⟩
       one_mem' := by
         refine ⟨1, by simp, ?_, ?_⟩
         · exact ⟨1, by simp⟩
@@ -919,7 +919,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
   · intro q
     let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
     let L := q.asIdeal.ResidueField
-    letI : Algebra K L := (residueFieldMap f q).toAlgebra
+    let : Algebra K L := (residueFieldMap f q).toAlgebra
     have hgenq : pPowerFieldGenerated (k := K) (k' := L) p := by
       change IntermediateField.adjoin K
         {z : L | ∃ n : ℕ, 0 < n ∧ z ^ (p ^ n) ∈
@@ -1019,9 +1019,9 @@ theorem pPowerGenerated_locallyNilpotentKernel
           ring
     exact ⟨hgenq, (pPowerFieldGenerated_iff p hp).mp hgenq⟩
   · intro R' _ g
-    letI : Algebra R R' := g.toAlgebra
+    let : Algebra R R' := g.toAlgebra
     let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
-    letI : Algebra R' (S ⊗[R] R') := bc.toAlgebra
+    let : Algebra R' (S ⊗[R] R') := bc.toAlgebra
     let T' : Set (S ⊗[R] R') := {x : S ⊗[R] R' | ∃ n : ℕ, 0 < n ∧
       x ^ (p ^ n) ∈ bc.range ∧ (p ^ n : S ⊗[R] R') * x ∈ bc.range}
     let D : Subalgebra R' (S ⊗[R] R') :=
@@ -1029,7 +1029,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
         zero_mem' := by
           refine ⟨1, by simp, ?_, ?_⟩
           · exact ⟨0, by simp [hp.ne_zero]⟩
-          · exact ⟨0, by simp [hp.ne_zero]⟩
+          · exact ⟨0, by simp⟩
         one_mem' := by
           refine ⟨1, by simp, ?_, ?_⟩
           · exact ⟨1, by simp⟩
@@ -1141,7 +1141,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
       · exact D.zero_mem
       · intro s r'
         have hbc : bc r' = (1 : S) ⊗ₜ[R] r' := by
-          simp [bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra]
+          simp [bc, baseChangeRingMap]
         have hmul := D.mul_mem (hleft s) (D.algebraMap_mem r')
         change a s * bc r' ∈ D at hmul
         rw [hbc] at hmul
@@ -1166,7 +1166,7 @@ theorem pPowerGenerated_locallyNilpotentKernel
       (Algebra.TensorProduct.comm R R' S).toRingEquiv
     have heq : e.toRingHom.comp (algebraMap R' (R' ⊗[R] S)) = bc := by
       ext r'
-      simp [e, bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra]
+      simp [e, bc, baseChangeRingMap]
     have hsurj : Function.Surjective (PrimeSpectrum.comap bc) := by
       rw [← heq, PrimeSpectrum.comap_comp]
       exact hsurj0.comp
@@ -1186,8 +1186,8 @@ theorem radicial_baseChange
       Function.Injective (PrimeSpectrum.comap (baseChangeRingMap f g)) ∧
         residueFieldExtensionsPurelyInseparable (baseChangeRingMap f g) := by
   intro R' _ g
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
   let a : S →+* S ⊗[R] R' := baseChangeAlgebraMap f g
   have hcomp : a.comp f = bc.comp g := by
@@ -1218,17 +1218,17 @@ theorem radicial_baseChange
     let L := qS.asIdeal.ResidueField
     let kmap := Ideal.ResidueField.map p.asIdeal p'.asIdeal g hfp
     let lmap := residueFieldMap f qS
-    letI : Algebra k K := kmap.toAlgebra
-    letI : Algebra k L := lmap.toAlgebra
-    letI : SMul R K :=
+    let : Algebra k K := kmap.toAlgebra
+    let : Algebra k L := lmap.toAlgebra
+    let : SMul R K :=
       (Module.compHom K ((algebraMap R' K).comp g)).toSMul
-    letI : Module R K := Module.compHom K ((algebraMap R' K).comp g)
-    letI : SMul R L :=
+    let : Module R K := Module.compHom K ((algebraMap R' K).comp g)
+    let : SMul R L :=
       (Module.compHom L ((algebraMap S L).comp f)).toSMul
-    letI : Module R L := Module.compHom L ((algebraMap S L).comp f)
-    letI : Algebra R K :=
+    let : Module R L := Module.compHom L ((algebraMap S L).comp f)
+    let : Algebra R K :=
       ((algebraMap R' K).comp g).toAlgebra
-    letI : Algebra R L :=
+    let : Algebra R L :=
       ((algebraMap S L).comp f).toAlgebra
     have hpure : IsPurelyInseparable k L := by
       change IsPurelyInseparable (PrimeSpectrum.comap f qS).asIdeal.ResidueField L
@@ -1240,10 +1240,9 @@ theorem radicial_baseChange
           (PrimeSpectrum.comap f qS).asIdeal qS.asIdeal f rfl r)
     have hscalarK (r : R) :
         kmap (algebraMap R k r) = algebraMap R' K (g r) := by
-      simpa [k, K, kmap] using
-        (Ideal.ResidueField.map_algebraMap p.asIdeal p'.asIdeal g hfp r)
+      simp [k, K, kmap]
     let F := K ⊗[k] L
-    letI : Algebra R F :=
+    let : Algebra R F :=
       ((algebraMap k F).comp (algebraMap R k)).toAlgebra
     let smap : S →+* F :=
       (Algebra.TensorProduct.includeRight : L →ₐ[k] F).toRingHom.comp
@@ -1273,23 +1272,19 @@ theorem radicial_baseChange
               (lmap (algebraMap R k r) * algebraMap S L x) =
             ((1 : K) ⊗ₜ[k] lmap (algebraMap R k r)) *
               ((1 : K) ⊗ₜ[k] algebraMap S L x) := by
-                simpa using
-                  (Algebra.TensorProduct.tmul_mul_tmul
-                    (1 : K) (1 : K) (lmap (algebraMap R k r))
-                    (algebraMap S L x)).symm
+                simp
         _ = (kmap (algebraMap R k r) ⊗ₜ[k] (1 : L)) *
               ((1 : K) ⊗ₜ[k] algebraMap S L x) := by
                 rw [htmul]
     )
     let rmapAlg : R' →ₐ[R] F := AlgHom.mk' rmap (by
-      intro r
-      intro x
+      intro r x
       simp [rmap, F, k, K, kmap, hscalarK r, Algebra.smul_def,
         RingHom.algebraMap_toAlgebra])
-    letI : IsScalarTower R R F := ⟨by
+    let : IsScalarTower R R F := ⟨by
       intro r s x
       exact smul_assoc r s x⟩
-    letI : IsScalarTower R R S := ⟨by
+    let : IsScalarTower R R S := ⟨by
       intro r s x
       exact smul_assoc r s x⟩
     let dmap : (S ⊗[R] R') →ₐ[R] F :=
@@ -1302,8 +1297,8 @@ theorem radicial_baseChange
       Ideal.ResidueField.map p'.asIdeal q.asIdeal bc rfl
     let qL : L →+* Q :=
       Ideal.ResidueField.map qS.asIdeal q.asIdeal a rfl
-    letI : Algebra K Q := qK.toAlgebra
-    letI : Algebra k Q :=
+    let : Algebra K Q := qK.toAlgebra
+    let : Algebra k Q :=
       ((algebraMap K Q).comp (algebraMap k K)).toAlgebra
     have hbaseQ : qK.comp kmap = qL.comp lmap := by
       ext c
@@ -1389,8 +1384,8 @@ theorem radicial_baseChange
       Ideal.ResidueField.map p'.asIdeal q'.asIdeal bc hp'
     let qL' : L →+* Q' :=
       Ideal.ResidueField.map qS.asIdeal q'.asIdeal a hqS'
-    letI : Algebra K Q' := qK'.toAlgebra
-    letI : Algebra k Q' :=
+    let : Algebra K Q' := qK'.toAlgebra
+    let : Algebra k Q' :=
       ((algebraMap K Q').comp (algebraMap k K)).toAlgebra
     have hbaseQ' : qK'.comp kmap = qL'.comp lmap := by
       ext c
@@ -1554,17 +1549,17 @@ theorem radicial_baseChange
     let L := qS.asIdeal.ResidueField
     let kmap := Ideal.ResidueField.map p.asIdeal p'.asIdeal g hfp
     let lmap := residueFieldMap f qS
-    letI : Algebra k K := kmap.toAlgebra
-    letI : Algebra k L := lmap.toAlgebra
-    letI : SMul R K :=
+    let : Algebra k K := kmap.toAlgebra
+    let : Algebra k L := lmap.toAlgebra
+    let : SMul R K :=
       (Module.compHom K ((algebraMap R' K).comp g)).toSMul
-    letI : Module R K := Module.compHom K ((algebraMap R' K).comp g)
-    letI : SMul R L :=
+    let : Module R K := Module.compHom K ((algebraMap R' K).comp g)
+    let : SMul R L :=
       (Module.compHom L ((algebraMap S L).comp f)).toSMul
-    letI : Module R L := Module.compHom L ((algebraMap S L).comp f)
-    letI : Algebra R K :=
+    let : Module R L := Module.compHom L ((algebraMap S L).comp f)
+    let : Algebra R K :=
       ((algebraMap R' K).comp g).toAlgebra
-    letI : Algebra R L :=
+    let : Algebra R L :=
       ((algebraMap S L).comp f).toAlgebra
     have hpure : IsPurelyInseparable k L := by
       change IsPurelyInseparable (PrimeSpectrum.comap f qS).asIdeal.ResidueField L
@@ -1576,10 +1571,9 @@ theorem radicial_baseChange
           (PrimeSpectrum.comap f qS).asIdeal qS.asIdeal f rfl r)
     have hscalarK (r : R) :
         kmap (algebraMap R k r) = algebraMap R' K (g r) := by
-      simpa [k, K, kmap] using
-        (Ideal.ResidueField.map_algebraMap p.asIdeal p'.asIdeal g hfp r)
+      simp [k, K, kmap]
     let F := K ⊗[k] L
-    letI : Algebra R F :=
+    let : Algebra R F :=
       ((algebraMap k F).comp (algebraMap R k)).toAlgebra
     let smap : S →+* F :=
       (Algebra.TensorProduct.includeRight : L →ₐ[k] F).toRingHom.comp
@@ -1609,23 +1603,19 @@ theorem radicial_baseChange
               (lmap (algebraMap R k r) * algebraMap S L x) =
             ((1 : K) ⊗ₜ[k] lmap (algebraMap R k r)) *
               ((1 : K) ⊗ₜ[k] algebraMap S L x) := by
-                simpa using
-                  (Algebra.TensorProduct.tmul_mul_tmul
-                    (1 : K) (1 : K) (lmap (algebraMap R k r))
-                    (algebraMap S L x)).symm
+                simp
         _ = (kmap (algebraMap R k r) ⊗ₜ[k] (1 : L)) *
               ((1 : K) ⊗ₜ[k] algebraMap S L x) := by
                 rw [htmul]
     )
     let rmapAlg : R' →ₐ[R] F := AlgHom.mk' rmap (by
-      intro r
-      intro x
+      intro r x
       simp [rmap, F, k, K, kmap, hscalarK r, Algebra.smul_def,
         RingHom.algebraMap_toAlgebra])
-    letI : IsScalarTower R R F := ⟨by
+    let : IsScalarTower R R F := ⟨by
       intro r s x
       exact smul_assoc r s x⟩
-    letI : IsScalarTower R R S := ⟨by
+    let : IsScalarTower R R S := ⟨by
       intro r s x
       exact smul_assoc r s x⟩
     let dmap : (S ⊗[R] R') →ₐ[R] F :=
@@ -1638,8 +1628,8 @@ theorem radicial_baseChange
       Ideal.ResidueField.map p'.asIdeal q.asIdeal bc rfl
     let qL : L →+* Q :=
       Ideal.ResidueField.map qS.asIdeal q.asIdeal a rfl
-    letI : Algebra K Q := qK.toAlgebra
-    letI : Algebra k Q :=
+    let : Algebra K Q := qK.toAlgebra
+    let : Algebra k Q :=
       ((algebraMap K Q).comp (algebraMap k K)).toAlgebra
     have hbaseQ : qK.comp kmap = qL.comp lmap := by
       ext c
@@ -1724,7 +1714,7 @@ theorem radicial_baseChange
     change IsPurelyInseparable K Q
     rw [isPurelyInseparable_iff_pow_mem K (ringExpChar K)]
     intro z
-    letI : ExpChar k (ringExpChar K) :=
+    let : ExpChar k (ringExpChar K) :=
       (algebraMap k K).expChar (algebraMap k K).injective (ringExpChar K)
     obtain ⟨aa, bb, hbb, hz⟩ :=
       IsFractionRing.div_surjective ((S ⊗[R] R') ⧸ q.asIdeal) z
@@ -1829,14 +1819,14 @@ private theorem universallyBijectiveGenerated_baseChange
     (f : R →+* S) (g : R →+* R')
     (hgen : universallyBijectiveGenerated f) :
     universallyBijectiveGenerated (baseChangeRingMap f g) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
     simpa [U, universallyBijectiveGenerated, generatedBy] using hgen
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
-  letI : Algebra R' (S ⊗[R] R') := bc.toAlgebra
+  let : Algebra R' (S ⊗[R] R') := bc.toAlgebra
   let a : S →+* S ⊗[R] R' := baseChangeAlgebraMap f g
   have hcomp : a.comp f = bc.comp g := by
     change Algebra.TensorProduct.includeLeftRingHom.comp f =
@@ -1883,7 +1873,7 @@ private theorem universallyBijective_residueField
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hgen : universallyBijectiveGenerated f) :
     residueFieldExtensionsPurelyInseparable f := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
@@ -1892,7 +1882,7 @@ private theorem universallyBijective_residueField
   let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
   let L := q.asIdeal.ResidueField
   let hq : K →+* L := residueFieldMap f q
-  letI : Algebra K L := hq.toAlgebra
+  let : Algebra K L := hq.toAlgebra
   have hmapr (r : R) :
       algebraMap K L (algebraMap R K r) = algebraMap S L (f r) := by
     change hq (algebraMap R K r) = algebraMap S L (f r)
@@ -2001,7 +1991,7 @@ private theorem universallyBijective_residueField
 private theorem universallyBijective_integral
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hgen : universallyBijectiveGenerated f) : f.IsIntegral := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
@@ -2009,7 +1999,7 @@ private theorem universallyBijective_integral
   let I := RingHom.ker f
   let k : R →+* R ⧸ I := Ideal.Quotient.mk I
   let f₀ : R ⧸ I →+* S := f.kerLift
-  letI : Algebra (R ⧸ I) S := f₀.toAlgebra
+  let : Algebra (R ⧸ I) S := f₀.toAlgebra
   let A : Subalgebra (R ⧸ I) S := Algebra.adjoin (R ⧸ I) U
   have hgen₀ : A = ⊤ := by
     apply top_unique
@@ -2067,7 +2057,7 @@ private theorem universallyBijective_integral
     obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective x
     refine ⟨(Polynomial.X - Polynomial.C r : Polynomial R),
       Polynomial.monic_X_sub_C _, ?_⟩
-    simp [Polynomial.aeval_def]
+    simp
     change (Ideal.Quotient.mk I r - Ideal.Quotient.mk I r) = 0
     simp
   have hcomp : f₀.comp k = f := by
@@ -2080,7 +2070,7 @@ private theorem universallyBijective_comap_injective
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hgen : universallyBijectiveGenerated f) :
     Function.Injective (PrimeSpectrum.comap f) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
@@ -2094,16 +2084,16 @@ private theorem universallyBijective_comap_injective
   let L' := q'.asIdeal.ResidueField
   let hq : K →+* L := Ideal.ResidueField.map I q.asIdeal f rfl
   let hq' : K →+* L' := Ideal.ResidueField.map I q'.asIdeal f hI
-  letI : Algebra K L := hq.toAlgebra
-  letI : Algebra K L' := hq'.toAlgebra
+  let : Algebra K L := hq.toAlgebra
+  let : Algebra K L' := hq'.toAlgebra
   let T := L ⊗[K] L'
-  letI : Nontrivial T :=
+  let : Nontrivial T :=
     Algebra.TensorProduct.nontrivial_of_algebraMap_injective_of_isDomain
       K L L' (RingHom.injective _) (RingHom.injective _)
   obtain ⟨M, hM⟩ := Ideal.exists_maximal T
-  letI : M.IsMaximal := hM
+  let : M.IsMaximal := hM
   let Q := T ⧸ M
-  letI : Field Q := Ideal.Quotient.field M
+  let : Field Q := Ideal.Quotient.field M
   let m : T →+* Q := Ideal.Quotient.mk M
   let jL : L →+* Q := m.comp
     (Algebra.TensorProduct.includeLeft : L →ₐ[K] T).toRingHom
@@ -2111,32 +2101,30 @@ private theorem universallyBijective_comap_injective
     (Algebra.TensorProduct.includeRight : L' →ₐ[K] T).toRingHom
   have hjL : Function.Injective jL := RingHom.injective _
   have hjL' : Function.Injective jL' := RingHom.injective _
-  letI : Algebra R L := ((algebraMap S L).comp f).toAlgebra
-  letI : Algebra R L' := ((algebraMap S L').comp f).toAlgebra
-  letI : Algebra R T :=
+  let : Algebra R L := ((algebraMap S L).comp f).toAlgebra
+  let : Algebra R L' := ((algebraMap S L').comp f).toAlgebra
+  let : Algebra R T :=
     ((algebraMap K T).comp (algebraMap R K)).toAlgebra
-  letI : Algebra R Q :=
+  let : Algebra R Q :=
     ((m.comp (algebraMap K T)).comp (algebraMap R K)).toAlgebra
   have hscalar (r : R) :
       hq (algebraMap R K r) = algebraMap S L (f r) := by
-    simpa [I, K, L, hq, residueFieldMap] using
-      (Ideal.ResidueField.map_algebraMap I q.asIdeal f rfl r)
+    simp [I, K, L, hq]
   have hscalar' (r : R) :
       hq' (algebraMap R K r) = algebraMap S L' (f r) := by
-    simpa [I, K, L', hq'] using
-      (Ideal.ResidueField.map_algebraMap I q'.asIdeal f hI r)
+    simp [I, K, L', hq']
   let φ : S →+* Q := jL.comp (algebraMap S L)
   let ψ : S →+* Q := jL'.comp (algebraMap S L')
   have hφ (r : R) : φ (f r) = algebraMap R Q r := by
     change jL (algebraMap S L (f r)) = algebraMap R Q r
     rw [← hscalar r]
-    simp [φ, jL, m]
+    simp [jL]
     change m (algebraMap K T (algebraMap R K r)) = algebraMap R Q r
     rfl
   have hψ (r : R) : ψ (f r) = algebraMap R Q r := by
     change jL' (algebraMap S L' (f r)) = algebraMap R Q r
     rw [← hscalar' r]
-    simp [ψ, jL', m]
+    simp [jL']
     have htmul :
         (1 : L) ⊗ₜ[K] hq' (algebraMap R K r) =
           hq (algebraMap R K r) ⊗ₜ[K] (1 : L') := by
@@ -2211,7 +2199,7 @@ theorem universallyBijective
       ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
           locallyNilpotentKernel (baseChangeRingMap f g) ∧
             universallyBijectiveGenerated (baseChangeRingMap f g) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have hint : f.IsIntegral := universallyBijective_integral f hgen
   have hinj : Function.Injective (PrimeSpectrum.comap f) :=
     universallyBijective_comap_injective f hgen
@@ -2232,7 +2220,7 @@ theorem universallyBijective
   intro R' _ g
   have hgenbc := universallyBijectiveGenerated_baseChange f g hgen
   refine ⟨?_, hgenbc⟩
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   let bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g
   have hsurj0 : Function.Surjective (PrimeSpectrum.comap
       (algebraMap R' (R' ⊗[R] S))) :=
@@ -2242,7 +2230,7 @@ theorem universallyBijective
     (Algebra.TensorProduct.comm R R' S).toRingEquiv
   have heq : e.toRingHom.comp (algebraMap R' (R' ⊗[R] S)) = bc := by
     ext r'
-    simp [e, bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra]
+    simp [e, bc, baseChangeRingMap]
   have hsurj : Function.Surjective (PrimeSpectrum.comap bc) := by
     rw [← heq, PrimeSpectrum.comap_comp]
     exact hsurj0.comp

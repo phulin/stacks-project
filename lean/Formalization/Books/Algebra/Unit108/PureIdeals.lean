@@ -983,20 +983,20 @@ theorem finite_flat_module_finiteLocallyFree_characterization
     exact hopen
   tfae_have 1 → 2 := by
     intro hR M _ _ hfin hflat
-    letI := hfin
-    letI := hflat
+    let := hfin
+    let := hflat
     let W (n : ℕ) := Formalization.Books.Algebra.Unit13.exteriorPower R M n
     have hflat_ext (n : ℕ) : Module.Flat R (Formalization.Books.Algebra.Unit13.exteriorPower R M n) := by
       apply Module.flat_of_localized_maximal
       intro I hI
       let S := Localization.AtPrime I
       let L := LocalizedModule.AtPrime I M
-      letI : Module.Free S L :=
+      let : Module.Free S L :=
         Formalization.Books.Algebra.Unit78.finite_flat_local_is_free
-      letI : Module.Flat S
+      let : Module.Flat S
           (Formalization.Books.Algebra.Unit13.exteriorPower S L n) :=
         Module.Flat.of_free
-      letI : Module.Flat S
+      let : Module.Flat S
           (LocalizedModule I.primeCompl
             (Formalization.Books.Algebra.Unit13.exteriorPower R M n)) :=
         Module.Flat.of_linearEquiv
@@ -1005,7 +1005,7 @@ theorem finite_flat_module_finiteLocallyFree_characterization
         (LocalizedModule I.primeCompl
           (Formalization.Books.Algebra.Unit13.exteriorPower R M n))
     have hsupport_open (n : ℕ) : IsOpen (Module.support R (W n)) := by
-      letI : Module.Flat R (W n) := hflat_ext n
+      let : Module.Flat R (W n) := hflat_ext n
       apply hR
       · exact Module.isClosed_support
       · intro p q hpq hq
@@ -1017,10 +1017,10 @@ theorem finite_flat_module_finiteLocallyFree_characterization
         exact hq
     have hrank_support (n : ℕ) (p : PrimeSpectrum R) :
         p ∈ Module.support R (W n) ↔ n ≤ Module.rankAtStalk M p := by
-      letI : Module.Flat R (W n) := hflat_ext n
+      let : Module.Flat R (W n) := hflat_ext n
       let S := Localization.AtPrime p.asIdeal
       let L := LocalizedModule.AtPrime p.asIdeal M
-      letI : Module.Free S L :=
+      let : Module.Free S L :=
         Formalization.Books.Algebra.Unit78.finite_flat_local_is_free
       rw [← Module.rankAtStalk_pos_iff_mem_support (M := W n) p]
       change 0 < Module.finrank S

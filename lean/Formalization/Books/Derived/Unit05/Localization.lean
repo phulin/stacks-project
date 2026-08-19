@@ -797,7 +797,36 @@ theorem restrictedMorphismProperty_compatible
     {S : MorphismProperty C} [CompatibleWithTriangulation S] [S.RespectsIso]
     (P : ObjectProperty C) [P.IsTriangulated] :
     CompatibleWithTriangulation (restrictedMorphismProperty S P) := by
-  sorry
+  refine { condition := ?_, compatible_with_triangulation := ?_ }
+  · intro n
+    ext X Y f
+    change S (P.ι.map ((shiftFunctor P.FullSubcategory n).map f)) ↔ S (P.ι.map f)
+    rw [← MorphismProperty.cancel_left_of_respectsIso S ((P.ι.commShiftIso n).inv.app X)]
+    rw [← P.ι.commShiftIso_inv_naturality f n]
+    rw [MorphismProperty.cancel_right_of_respectsIso S ((shiftFunctor C n).map (P.ι.map f))
+      ((P.ι.commShiftIso n).inv.app Y)]
+    exact MorphismProperty.IsCompatibleWithShift.iff S (P.ι.map f) n
+  · intro T₁ T₂ hT₁ hT₂ a b ha hb comm
+    obtain ⟨c, hc, hc₂, hc₃⟩ :=
+      MorphismProperty.IsCompatibleWithTriangulation.compatible_with_triangulation
+        (P.ι.mapTriangle.obj T₁) (P.ι.mapTriangle.obj T₂)
+        hT₁ hT₂ (P.ι.map a) (P.ι.map b) ha hb (by
+          simpa only [Functor.mapTriangle_obj, Functor.map_comp] using! P.ι.congr_map comm)
+    refine ⟨P.fullyFaithfulι.preimage c, ?_, ?_, ?_⟩
+    · exact hc
+    · apply P.ι.map_injective
+      simpa only [Functor.mapTriangle_obj, Functor.map_comp, Functor.map_preimage] using! hc₂
+    · apply P.ι.map_injective
+      rw [← cancel_mono ((Functor.commShiftIso P.ι (1 : ℤ)).hom.app T₂.obj₁)]
+      have hc₃' :
+          (P.ι.map T₁.mor₃ ≫ (P.ι.commShiftIso (1 : ℤ)).hom.app T₁.obj₁) ≫
+              (shiftFunctor C (1 : ℤ)).map (P.ι.map a) =
+            c ≫ (P.ι.map T₂.mor₃ ≫ (P.ι.commShiftIso (1 : ℤ)).hom.app T₂.obj₁) := by
+        simpa only [Functor.mapTriangle_obj, Triangle.mk_mor₃] using! hc₃
+      simp only [Functor.map_comp, Functor.comp_obj, Category.assoc,
+        Functor.commShiftIso_hom_naturality]
+      rw [show P.ι.map (ObjectProperty.homMk c) = c by rfl]
+      convert hc₃' using 1 <;> simp only [Category.assoc] <;> rfl
 
 noncomputable def fullSubcategoryLocalizationFunctor
     (S : MorphismProperty C) (P : ObjectProperty C) :

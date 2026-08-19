@@ -363,18 +363,158 @@ theorem completion_original_complete_implies_extended :
 
 theorem completionMaximalIdeal_pow_le_kernel (n : ℕ) :
     completionMaximalIdeal m ^ n ≤ completionKernel m n := by
-  sorry
+  cases n with
+  | zero =>
+      rw [pow_zero, Ideal.one_eq_top]
+      intro x hx
+      change AdicCompletion.evalₐ m 0 x = 0
+      letI : Subsingleton (R ⧸ (m ^ 0)) := by
+        apply subsingleton_of_zero_eq_one
+        change Ideal.Quotient.mk (m ^ 0) 0 = Ideal.Quotient.mk (m ^ 0) 1
+        rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+        simp
+      exact Subsingleton.elim _ _
+  | succ n =>
+      let f := (AdicCompletion.evalₐ m (n + 1)).toRingHom
+      let q := Ideal.Quotient.mk (m ^ (n + 1))
+      have hcomp :
+          (Ideal.Quotient.factor (Ideal.pow_le_self (by omega))).comp f =
+            (AdicCompletion.evalOneₐ m).toRingHom := by
+        ext x
+        induction x using AdicCompletion.induction_on with
+        | h a =>
+            simp [f, q, AdicCompletion.evalOneₐ,
+              AdicCompletion.transitionMap_ideal_mk]
+            have ha := a.property (show 1 ≤ n + 1 by omega)
+            simpa [AdicCompletion.transitionMap_ideal_mk] using
+              congrArg
+                (fun z : R ⧸ (m ^ 1 • (⊤ : Ideal R)) =>
+                  Ideal.Quotient.factor
+                    (show m ^ 1 • (⊤ : Ideal R) ≤ m by simp) z) ha
+                |>.symm
+      have hm : m.map (algebraMap R (AdicCompletion m R)) ≤
+          completionMaximalIdeal m := by
+        rw [Ideal.map_le_iff_le_comap]
+        intro r hr
+        change ((AdicCompletion.evalOneₐ m).toRingHom.comp
+          (algebraMap R (AdicCompletion m R))) r = 0
+        rw [AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk]
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      have hmap : Ideal.map f (completionMaximalIdeal m) ≤ Ideal.map q m := by
+        rw [Ideal.map_le_iff_le_comap]
+        intro x hx
+        change f x ∈ Ideal.map q m
+        rw [← Ideal.Quotient.factor_ker (Ideal.pow_le_self (by omega))]
+        change ((Ideal.Quotient.factor (Ideal.pow_le_self (by omega))).comp f) x = 0
+        rw [hcomp]
+        simpa [completionMaximalIdeal, RingHom.mem_ker] using hx
+      intro x hx
+      change f x = 0
+      have hzero : Ideal.map f (completionMaximalIdeal m ^ (n + 1)) = ⊥ := by
+        apply le_antisymm
+        · calc
+            Ideal.map f (completionMaximalIdeal m ^ (n + 1)) =
+                Ideal.map f (completionMaximalIdeal m) ^ (n + 1) :=
+              Ideal.map_pow f (completionMaximalIdeal m) (n + 1)
+            _ ≤ Ideal.map q m ^ (n + 1) := Ideal.pow_right_mono hmap (n + 1)
+            _ = Ideal.map q (m ^ (n + 1)) := (Ideal.map_pow q m (n + 1)).symm
+            _ = ⊥ := Ideal.map_quotient_self _
+        · exact bot_le
+      have hxzero : f x ∈ (⊥ : Ideal (R ⧸ m ^ (n + 1))) := by
+        rw [← hzero]
+        exact Ideal.mem_map_of_mem f hx
+      simpa using hxzero
 
 theorem completionKernel_succ_le (n : ℕ) :
     completionKernel m (n + 1) ≤ completionKernel m n := by
-  sorry
+  intro x hx
+  change AdicCompletion.evalₐ m n x = 0
+  have h : AdicCompletion.evalₐ m (n + 1) x = 0 := hx
+  have hfactor (k : ℕ) :
+      Function.Injective
+        (Ideal.Quotient.factor (show m ^ k • (⊤ : Ideal R) ≤ m ^ k by simp)) := by
+    have heq : m ^ k • (⊤ : Ideal R) = m ^ k := by ext; simp
+    simpa [RingHom.injective_iff_ker_eq_bot, Ideal.Quotient.factor_ker]
+      using Ideal.map_mk_eq_bot_of_le (le_of_eq heq.symm)
+  have h' : AdicCompletion.eval m R (n + 1) x = 0 := by
+    apply hfactor (n + 1)
+    calc
+      (Ideal.Quotient.factor (show m ^ (n + 1) • (⊤ : Ideal R) ≤ m ^ (n + 1) by simp))
+          (AdicCompletion.eval m R (n + 1) x) =
+          AdicCompletion.evalₐ m (n + 1) x := by
+            exact AdicCompletion.factor_eval_eq_evalₐ m x (by simp)
+      _ = 0 := h
+  have hn : AdicCompletion.eval m R n x = 0 := by
+    calc
+      AdicCompletion.eval m R n x = x.val n := AdicCompletion.eval_apply m R n x
+      _ = AdicCompletion.transitionMap m R (Nat.le_succ n) (x.val (n + 1)) :=
+        (AdicCompletion.transitionMap_comp_eval_apply m R (Nat.le_succ n) x).symm
+      _ = AdicCompletion.transitionMap m R (Nat.le_succ n)
+          (AdicCompletion.eval m R (n + 1) x) := by
+            rw [AdicCompletion.eval_apply]
+      _ = 0 := by rw [h']; simp
+  calc
+    AdicCompletion.evalₐ m n x =
+        (Ideal.Quotient.factor (show m ^ n • (⊤ : Ideal R) ≤ m ^ n by simp))
+          (AdicCompletion.eval m R n x) :=
+      (AdicCompletion.factor_eval_eq_evalₐ m x (by simp)).symm
+    _ = 0 := by rw [hn]; simp
 
 /-- The projection sends `(m')ⁿ` onto `mⁿ/mⁿ⁺¹`. -/
 theorem completion_projection_pow_image (n : ℕ) :
     (completionMaximalIdeal m ^ n).map
         (AdicCompletion.evalₐ m (n + 1)).toRingHom =
       (m ^ n).map (Ideal.Quotient.mk (m ^ (n + 1))) := by
-  sorry
+  let f := (AdicCompletion.evalₐ m (n + 1)).toRingHom
+  let q := Ideal.Quotient.mk (m ^ (n + 1))
+  have hcomp :
+      (Ideal.Quotient.factor (Ideal.pow_le_self (by omega))).comp f =
+        (AdicCompletion.evalOneₐ m).toRingHom := by
+    ext x
+    induction x using AdicCompletion.induction_on with
+    | h a =>
+        simp [f, q, AdicCompletion.evalOneₐ,
+          AdicCompletion.transitionMap_ideal_mk]
+        have ha := a.property (show 1 ≤ n + 1 by omega)
+        simpa [AdicCompletion.transitionMap_ideal_mk] using
+          congrArg
+            (fun z : R ⧸ (m ^ 1 • (⊤ : Ideal R)) =>
+              Ideal.Quotient.factor (show m ^ 1 • (⊤ : Ideal R) ≤ m by simp) z) ha
+            |>.symm
+  have hm : m.map (algebraMap R (AdicCompletion m R)) ≤ completionMaximalIdeal m := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    change ((AdicCompletion.evalOneₐ m).toRingHom.comp
+      (algebraMap R (AdicCompletion m R))) r = 0
+    rw [AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk]
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+  have hmap : Ideal.map f (completionMaximalIdeal m) ≤ Ideal.map q m := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro x hx
+    change f x ∈ Ideal.map q m
+    rw [← Ideal.Quotient.factor_ker (Ideal.pow_le_self (by omega))]
+    change ((Ideal.Quotient.factor (Ideal.pow_le_self (by omega))).comp f) x = 0
+    rw [hcomp]
+    simpa [completionMaximalIdeal, RingHom.mem_ker] using hx
+  have hqcomp : f.comp (algebraMap R (AdicCompletion m R)) = q := by
+    ext r
+    rfl
+  apply le_antisymm
+  · calc
+      Ideal.map f (completionMaximalIdeal m ^ n) =
+          Ideal.map f (completionMaximalIdeal m) ^ n :=
+        Ideal.map_pow f (completionMaximalIdeal m) n
+      _ ≤ Ideal.map q m ^ n := Ideal.pow_right_mono hmap n
+      _ = Ideal.map q (m ^ n) := (Ideal.map_pow q m n).symm
+  · calc
+      Ideal.map q (m ^ n) = Ideal.map (f.comp (algebraMap R (AdicCompletion m R))) (m ^ n) := by
+        rw [hqcomp]
+      _ = Ideal.map f (Ideal.map (algebraMap R (AdicCompletion m R)) (m ^ n)) := by
+        rw [Ideal.map_map]
+      _ = Ideal.map f (m.map (algebraMap R (AdicCompletion m R)) ^ n) := by
+        rw [Ideal.map_pow]
+      _ ≤ Ideal.map f (completionMaximalIdeal m ^ n) := by
+        exact Ideal.map_mono (Ideal.pow_right_mono hm n)
 
 /-- The additive quotient `Kₙ/(m')ⁿ` from the exact sequence in the source. -/
 noncomputable abbrev completionKernelQuotient (n : ℕ) :=

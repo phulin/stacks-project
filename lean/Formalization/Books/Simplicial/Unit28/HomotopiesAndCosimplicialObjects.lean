@@ -113,13 +113,165 @@ theorem cylinderHomotopy_to_degreewise
     {C : Type u} [Category.{v} C] [HasFiniteProducts C]
     {U V : CosimplicialObject C} {a b : U ⟶ V}
     (H : CylinderHomotopy a b) : Nonempty (DegreewiseHomotopy a b) := by
-  sorry
+  refine ⟨{
+    h := fun n α => by
+      let _ : Finite ((interval : SSet.{0}).obj (op (SimplexCategory.mk n))) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite n).1
+      exact H.h.app (SimplexCategory.mk n) ≫
+        Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+          V.obj (SimplexCategory.mk n)) α
+    h_zero := by
+      intro n
+      let _ : Finite ((interval : SSet.{0}).obj (op (SimplexCategory.mk n))) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite n).1
+      have h₀ := congrArg (fun k => k.app (SimplexCategory.mk n)) H.h₀
+      change
+        H.h.app (SimplexCategory.mk n) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+              V.obj (SimplexCategory.mk n))
+              (SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n))) =
+          a.app (SimplexCategory.mk n) at h₀
+      exact h₀
+    h_one := by
+      intro n
+      let _ : Finite ((interval : SSet.{0}).obj (op (SimplexCategory.mk n))) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite n).1
+      have h₁ := congrArg (fun k => k.app (SimplexCategory.mk n)) H.h₁
+      change
+        H.h.app (SimplexCategory.mk n) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+              V.obj (SimplexCategory.mk n))
+              (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n))) =
+          b.app (SimplexCategory.mk n) at h₁
+      exact h₁
+    naturality := by
+      intro n m f α
+      let _ : Finite ((interval : SSet.{0}).obj (op (SimplexCategory.mk n))) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite n).1
+      let _ : Finite ((interval : SSet.{0}).obj (op (SimplexCategory.mk m))) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite m).1
+      dsimp
+      change
+        U.map f ≫ H.h.app (SimplexCategory.mk m) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+              V.obj (SimplexCategory.mk m)) α =
+          (H.h.app (SimplexCategory.mk n) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+              V.obj (SimplexCategory.mk n))
+              ((interval : SSet.{0}).map f.op α)) ≫ V.map f
+      calc
+        U.map f ≫ H.h.app (SimplexCategory.mk m) ≫
+              Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                V.obj (SimplexCategory.mk m)) α =
+            (U.map f ≫ H.h.app (SimplexCategory.mk m)) ≫
+              Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                V.obj (SimplexCategory.mk m)) α := by
+          exact (Category.assoc _ _ _).symm
+        _ = (H.h.app (SimplexCategory.mk n) ≫
+              (hom interval V intervalFinite).map f) ≫
+              Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                V.obj (SimplexCategory.mk m)) α := by
+          rw [H.h.naturality f]
+        _ = (H.h.app (SimplexCategory.mk n) ≫
+              homMapAt interval V intervalFinite f) ≫
+              Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                V.obj (SimplexCategory.mk m)) α := by
+          rfl
+        _ = (H.h.app (SimplexCategory.mk n) ≫
+              Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+                V.obj (SimplexCategory.mk n))
+                ((interval : SSet.{0}).map f.op α)) ≫ V.map f := by
+          calc
+            (H.h.app (SimplexCategory.mk n) ≫ homMapAt interval V intervalFinite f) ≫
+                Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                  V.obj (SimplexCategory.mk m)) α =
+              H.h.app (SimplexCategory.mk n) ≫
+                (homMapAt interval V intervalFinite f ≫
+                  Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                    V.obj (SimplexCategory.mk m)) α) := Category.assoc _ _ _
+            _ = H.h.app (SimplexCategory.mk n) ≫
+                (Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+                  V.obj (SimplexCategory.mk n))
+                  ((interval : SSet.{0}).map f.op α) ≫ V.map f) := by
+              change
+                H.h.app (SimplexCategory.mk n) ≫
+                  (Pi.map' (interval.map f.op) (fun _ => V.map f) ≫
+                    Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                      V.obj (SimplexCategory.mk m)) α) = _
+              have hπ :
+                  (Pi.map' (interval.map f.op) (fun _ => V.map f)) ≫
+                      Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                        V.obj (SimplexCategory.mk m)) α =
+                    Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+                      V.obj (SimplexCategory.mk n))
+                      ((interval : SSet.{0}).map f.op α) ≫ V.map f :=
+                Pi.map'_comp_π
+                  (f := fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+                    V.obj (SimplexCategory.mk n))
+                  (g := fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk m)) =>
+                    V.obj (SimplexCategory.mk m))
+                  (p := interval.map f.op) (q := fun _ => V.map f) α
+              exact congrArg (fun k => H.h.app (SimplexCategory.mk n) ≫ k) hπ
+            _ = (H.h.app (SimplexCategory.mk n) ≫
+                Pi.π (fun _ : (interval : SSet.{0}).obj (op (SimplexCategory.mk n)) =>
+                  V.obj (SimplexCategory.mk n))
+                  ((interval : SSet.{0}).map f.op α)) ≫ V.map f :=
+              (Category.assoc _ _ _).symm
+  }⟩
 
 theorem degreewise_to_cylinderHomotopy
     {C : Type u} [Category.{v} C] [HasFiniteProducts C]
     {U V : CosimplicialObject C} {a b : U ⟶ V}
     (H : DegreewiseHomotopy a b) : Nonempty (CylinderHomotopy a b) := by
-  sorry
+  refine ⟨{
+    h := {
+      app := by
+        intro X
+        let _ : Finite ((interval : SSet.{0}).obj (op X)) := by
+          simpa only [SimplexCategory.mk_len] using (intervalFinite X.len).1
+        exact Pi.lift (fun α => H.h X.len α)
+      naturality := by
+        intro X Y f
+        let _ : Finite ((interval : SSet.{0}).obj (op X)) := by
+          simpa only [SimplexCategory.mk_len] using (intervalFinite X.len).1
+        let _ : Finite ((interval : SSet.{0}).obj (op Y)) := by
+          simpa only [SimplexCategory.mk_len] using (intervalFinite Y.len).1
+        dsimp
+        apply Pi.hom_ext
+        intro α
+        change
+          (U.map f ≫ Pi.lift (fun α => H.h Y.len α)) ≫ Pi.π _ α =
+            (Pi.lift (fun α => H.h X.len α) ≫
+              Pi.map' (interval.map f.op) (fun _ => V.map f)) ≫ Pi.π _ α
+        rw [Category.assoc, Pi.lift_π, Category.assoc, Pi.map'_comp_π,
+          ← Category.assoc, Pi.lift_π]
+        exact H.naturality f α
+    }
+    h₀ := by
+      ext X
+      let _ : Finite ((interval : SSet.{0}).obj (op X)) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite X.len).1
+      dsimp
+      change
+        Pi.lift (fun α => H.h X.len α) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op X) => V.obj X)
+              (SSet.stdSimplex.const 1 0 (op X)) =
+          a.app X
+      rw [Pi.lift_π]
+      exact H.h_zero X.len
+    h₁ := by
+      ext X
+      let _ : Finite ((interval : SSet.{0}).obj (op X)) := by
+        simpa only [SimplexCategory.mk_len] using (intervalFinite X.len).1
+      dsimp
+      change
+        Pi.lift (fun α => H.h X.len α) ≫
+            Pi.π (fun _ : (interval : SSet.{0}).obj (op X) => V.obj X)
+              (SSet.stdSimplex.const 1 1 (op X)) =
+          b.app X
+      rw [Pi.lift_π]
+      exact H.h_one X.len
+  }⟩
 
 theorem cylinderHomotopy_iff_degreewise
     {C : Type u} [Category.{v} C] [HasFiniteProducts C]
@@ -225,7 +377,285 @@ theorem compareHomotopies
     Nonempty (DegreewiseHomotopy a b) ↔
       Nonempty (Formalization.Books.Simplicial.Unit26.DegreewiseHomotopy
         (oppositeCosimplicialMap a) (oppositeCosimplicialMap b)) := by
-  sorry
+  constructor
+  · rintro ⟨H⟩
+    refine ⟨{
+      h := fun n i => (H.h n (intervalSimplex n i)).op
+      h_zero := by
+        intro n
+        change (H.h n (intervalSimplex n 0)).op = (b.app (SimplexCategory.mk n)).op
+        have hz : intervalSimplex n 0 =
+            SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)) := by
+          apply SSet.stdSimplex.ext
+          intro j
+          rw [intervalSimplex_zero_is_constant_one n j]
+          rfl
+        rw [hz]
+        exact congrArg (fun k => k.op) (H.h_one n)
+      h_last := by
+        intro n
+        change (H.h n (intervalSimplex n (Fin.last (n + 1)))).op =
+          (a.app (SimplexCategory.mk n)).op
+        have hl : intervalSimplex n (Fin.last (n + 1)) =
+            SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n)) := by
+          apply SSet.stdSimplex.ext
+          intro j
+          rw [intervalSimplex_last_is_constant_zero n j]
+          rfl
+        rw [hl]
+        exact congrArg (fun k => k.op) (H.h_zero n)
+      face_of_gt := by
+        intro n i j hji
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.δ j).op
+                (intervalSimplex (n + 1) i) =
+              intervalSimplex n (i.pred (Fin.ne_zero_of_lt hji)) := by
+          change (Δ[1] : SSet.{0}).δ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.δ_objMk₁_of_lt i j hji
+        simpa [SimplicialObject.δ, oppositeCosimplicialObject, op_comp, hindex] using
+          congrArg (fun k => k.op)
+            (H.naturality (SimplexCategory.δ j) (intervalSimplex (n + 1) i))
+      face_of_le := by
+        intro n i j hij
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.δ j).op
+                (intervalSimplex (n + 1) i) =
+              intervalSimplex n
+                (i.castPred (Fin.ne_last_of_lt
+                  (lt_of_le_of_lt hij j.castSucc_lt_succ))) := by
+          change (Δ[1] : SSet.{0}).δ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.δ_objMk₁_of_le i j hij
+        simpa [SimplicialObject.δ, oppositeCosimplicialObject, op_comp, hindex] using
+          congrArg (fun k => k.op)
+            (H.naturality (SimplexCategory.δ j) (intervalSimplex (n + 1) i))
+      degeneracy_of_gt := by
+        intro n i j hji
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.σ j).op
+                (intervalSimplex n i) = intervalSimplex (n + 1) i.succ := by
+          change (Δ[1] : SSet.{0}).σ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.σ_objMk₁_of_lt i j hji
+        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp, hindex] using
+          congrArg (fun k => k.op)
+            (H.naturality (SimplexCategory.σ j) (intervalSimplex n i))
+      degeneracy_of_le := by
+        intro n i j hij
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.σ j).op
+                (intervalSimplex n i) = intervalSimplex (n + 1) i.castSucc := by
+          change (Δ[1] : SSet.{0}).σ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.σ_objMk₁_of_le i j hij
+        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp, hindex] using
+          congrArg (fun k => k.op)
+            (H.naturality (SimplexCategory.σ j) (intervalSimplex n i))
+    }⟩
+  · rintro ⟨H⟩
+    let hh : ∀ (n : ℕ), (interval : SSet.{0}) _⦋n⦌ →
+        (U.obj (SimplexCategory.mk n) ⟶ V.obj (SimplexCategory.mk n)) :=
+      fun n α =>
+        (H.h n (Function.invFun (intervalSimplex n) α)).unop
+    have hinv : ∀ (n : ℕ) (i : Fin (n + 2)),
+        Function.invFun
+            ((intervalSimplex.{0} n) :
+              Fin (n + 2) → (interval : SSet.{0}) _⦋n⦌)
+            (intervalSimplex.{0} n i) = i := by
+      intro n i
+      letI : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
+        interval_degree_finite_nonempty n |>.2
+      apply (intervalSimplex_bijective.{0} n).1
+      rw [Function.leftInverse_invFun (intervalSimplex_bijective.{0} n).1]
+    have hδ : ∀ {n : ℕ} (j : Fin (n + 2))
+        (α : (interval : SSet.{0}) _⦋n + 1⦌),
+        U.map (SimplexCategory.δ j) ≫ hh (n + 1) α =
+          hh n ((interval : SSet.{0}).map (SimplexCategory.δ j).op α) ≫
+            V.map (SimplexCategory.δ j) := by
+      intro n j α
+      letI : Nonempty ((interval : SSet.{0}) _⦋n + 1⦌) :=
+        interval_degree_finite_nonempty (n + 1) |>.2
+      let i := Function.invFun (intervalSimplex (n + 1)) α
+      have hi : intervalSimplex (n + 1) i = α := by
+        exact Function.rightInverse_invFun (intervalSimplex_bijective (n + 1)).2 α
+      by_cases hji : j.castSucc < i
+      · have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.δ j).op
+                (intervalSimplex (n + 1) i) =
+              intervalSimplex n (i.pred (Fin.ne_zero_of_lt hji)) := by
+          change (Δ[1] : SSet.{0}).δ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.δ_objMk₁_of_lt i j hji
+        rw [← hi]
+        rw [hindex]
+        dsimp [hh]
+        rw [hinv (n + 1) i, hinv n (i.pred (Fin.ne_zero_of_lt hji))]
+        simpa [SimplicialObject.δ, oppositeCosimplicialObject, op_comp] using
+          congrArg (fun q => q.unop) (H.face_of_gt i j hji)
+      · have hij : i ≤ j.castSucc := le_of_not_gt hji
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.δ j).op
+                (intervalSimplex (n + 1) i) =
+              intervalSimplex n
+                (i.castPred (Fin.ne_last_of_lt
+                  (lt_of_le_of_lt hij j.castSucc_lt_succ))) := by
+          change (Δ[1] : SSet.{0}).δ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.δ_objMk₁_of_le i j hij
+        rw [← hi]
+        rw [hindex]
+        dsimp [hh]
+        rw [hinv (n + 1) i,
+          hinv n (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ)))]
+        simpa [SimplicialObject.δ, oppositeCosimplicialObject, op_comp] using
+          congrArg (fun q => q.unop) (H.face_of_le i j hij)
+    have hσ : ∀ {n : ℕ} (j : Fin (n + 1))
+        (α : (interval : SSet.{0}) _⦋n⦌),
+        U.map (SimplexCategory.σ j) ≫ hh n α =
+          hh (n + 1) ((interval : SSet.{0}).map (SimplexCategory.σ j).op α) ≫
+            V.map (SimplexCategory.σ j) := by
+      intro n j α
+      letI : Nonempty ((interval : SSet.{0}) _⦋n⦌) :=
+        interval_degree_finite_nonempty n |>.2
+      let i := Function.invFun (intervalSimplex n) α
+      have hi : intervalSimplex n i = α := by
+        exact Function.rightInverse_invFun (intervalSimplex_bijective n).2 α
+      by_cases hji : j.castSucc < i
+      · have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.σ j).op
+                (intervalSimplex n i) = intervalSimplex (n + 1) i.succ := by
+          change (Δ[1] : SSet.{0}).σ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.σ_objMk₁_of_lt i j hji
+        rw [← hi]
+        rw [hindex]
+        dsimp [hh]
+        rw [hinv n i, hinv (n + 1) i.succ]
+        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
+          congrArg (fun q => q.unop) (H.degeneracy_of_gt i j hji)
+      · have hij : i ≤ j.castSucc := le_of_not_gt hji
+        have hindex :
+            (interval : SSet.{0}).map (SimplexCategory.σ j).op
+                (intervalSimplex n i) = intervalSimplex (n + 1) i.castSucc := by
+          change (Δ[1] : SSet.{0}).σ j (SSet.stdSimplex.objMk₁ i) = _
+          exact SSet.stdSimplex.σ_objMk₁_of_le i j hij
+        rw [← hi]
+        rw [hindex]
+        dsimp [hh]
+        rw [hinv n i, hinv (n + 1) i.castSucc]
+        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
+          congrArg (fun q => q.unop) (H.degeneracy_of_le i j hij)
+    have hnat : ∀ {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+        (α : (interval : SSet.{0}) _⦋m⦌),
+        U.map f ≫ hh m α =
+          hh n ((interval : SSet.{0}).map f.op α) ≫ V.map f := by
+      let P : ℕ → Prop := fun k =>
+        ∀ n m, k = n + m →
+          ∀ (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+            (α : (interval : SSet.{0}) _⦋m⦌),
+            U.map f ≫ hh m α =
+              hh n ((interval : SSet.{0}).map f.op α) ≫ V.map f
+      have hP : ∀ k, P k := by
+        intro k
+        induction k using Nat.strong_induction_on with
+        | h k ih =>
+          intro n m hnm f α
+          by_cases hni : Function.Injective f.toOrderHom
+          · by_cases hns : Function.Surjective f.toOrderHom
+            · have hcard : n + 1 = m + 1 := by
+                simpa using Nat.card_congr
+                  (Equiv.ofBijective f.toOrderHom ⟨hni, hns⟩)
+              have hnm' : n = m := by omega
+              subst m
+              have hmono : Mono f := (SimplexCategory.mono_iff_injective).mpr hni
+              rw [SimplexCategory.eq_id_of_mono f, U.map_id, V.map_id,
+                Category.id_comp, Category.comp_id]
+              have hα :
+                  (interval : SSet.{0}).map (𝟙 (op (SimplexCategory.mk n))) α = α := by
+                simpa using congrArg (fun g => g α)
+                  (interval.map_id (op (SimplexCategory.mk n)))
+              have hα' :
+                  (interval : SSet.{0}).map (𝟙 (SimplexCategory.mk n)).op α = α := by
+                simpa only [op_id] using hα
+              rw [hα']
+            · cases m with
+              | zero =>
+                exfalso
+                apply hns
+                intro y
+                exact ⟨0, (Fin.eq_zero _).trans (Fin.eq_zero y).symm⟩
+              | succ m =>
+                obtain ⟨i, f', hf⟩ :=
+                  SimplexCategory.eq_comp_δ_of_not_surjective f hns
+                have hi := ih (n + m) (by omega) n m rfl f'
+                  ((interval : SSet.{0}).map (SimplexCategory.δ i).op α)
+                rw [hf, U.map_comp, Category.assoc, hδ i α]
+                rw [← Category.assoc, hi]
+                have hcomp :
+                    (interval : SSet.{0}).map (f' ≫ SimplexCategory.δ i).op α =
+                      (interval : SSet.{0}).map f'.op
+                        ((interval : SSet.{0}).map (SimplexCategory.δ i).op α) := by
+                  rw [op_comp, Functor.map_comp]
+                  rfl
+                rw [hcomp, V.map_comp]
+                simp only [Category.assoc]
+          · cases n with
+            | zero =>
+              exfalso
+              apply hni
+              intro x y hxy
+              exact (Fin.eq_zero x).trans (Fin.eq_zero y).symm
+            | succ n =>
+              obtain ⟨i, f', hf⟩ :=
+                SimplexCategory.eq_σ_comp_of_not_injective f hni
+              have hi := ih (n + m) (by omega) n m rfl f' α
+              rw [hf, U.map_comp, Category.assoc]
+              rw [hi]
+              rw [← Category.assoc, hσ i ((interval : SSet.{0}).map f'.op α)]
+              have hcomp :
+                  (interval : SSet.{0}).map (SimplexCategory.σ i ≫ f').op α =
+                    (interval : SSet.{0}).map (SimplexCategory.σ i).op
+                      ((interval : SSet.{0}).map f'.op α) := by
+                rw [op_comp, Functor.map_comp]
+                rfl
+              rw [hcomp, V.map_comp]
+              simp only [Category.assoc]
+      intro n m f α
+      exact hP (n + m) n m rfl f α
+    refine ⟨{
+      h := hh
+      h_zero := by
+        intro n
+        have hl : intervalSimplex n (Fin.last (n + 1)) =
+            SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n)) := by
+          apply SSet.stdSimplex.ext
+          intro j
+          rw [intervalSimplex_last_is_constant_zero n j]
+          rfl
+        have hi : Function.invFun (intervalSimplex n)
+            (SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n))) =
+              Fin.last (n + 1) := by
+          rw [← hl]
+          exact hinv n (Fin.last (n + 1))
+        dsimp [hh]
+        rw [hi]
+        simpa [oppositeCosimplicialMap, oppositeCosimplicialObject] using
+          congrArg (fun q => q.unop) (H.h_last n)
+      h_one := by
+        intro n
+        have hz : intervalSimplex n 0 =
+            SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)) := by
+          apply SSet.stdSimplex.ext
+          intro j
+          rw [intervalSimplex_zero_is_constant_one n j]
+          rfl
+        have hi : Function.invFun (intervalSimplex n)
+            (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n))) = 0 := by
+          rw [← hz]
+          exact hinv n 0
+        dsimp [hh]
+        rw [hi]
+        simpa [oppositeCosimplicialMap, oppositeCosimplicialObject] using
+          congrArg (fun q => q.unop) (H.h_zero n)
+      naturality := by
+        intro n m f α
+        exact hnat f α
+    }⟩
 
 theorem homotopic_iff_opposite_homotopic
     {C : Type u} [Category.{v} C]

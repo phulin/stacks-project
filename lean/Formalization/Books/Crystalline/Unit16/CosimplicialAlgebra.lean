@@ -225,6 +225,18 @@ models for tensor products, exterior powers, base change, and completions.
 The interfaces record the degreewise operation and its compatibility with
 the induced maps; homotopy preservation remains the content of the chapter's
 lemmas rather than an assumption on the operation.
+
+Interface audit for the four homotopy lemmas below: the operation structures
+already contain enough data.  A one-step homotopy supplies commuting degree
+squares via `CosimplicialModuleHomotopy.naturality`; `map_component` identifies
+the endpoints after applying the operation, and `degreewise_naturality` or
+`componentMap_naturality` turns those squares into the naturality equation for
+the new homotopy.  No preservation-of-homotopy field should be added, since
+that would assume the conclusion of the lemmas.
+
+The local declarations cited in the roadmaps are all in
+`Formalization/Books/Crystalline/Unit16/CosimplicialAlgebra.lean`;
+`Relation.EqvGen` and its constructors are in `Mathlib/Logic/Relation.lean`.
 -/
 
 /-- A tensor-product operation on cosimplicial modules, with its degreewise
@@ -276,6 +288,41 @@ theorem homotopy_tensor
     :
     CosimplicialModuleHomotopic
       (T.map (L := L) φ) (T.map (L := L) ψ) := by
+  /-
+  Proof roadmap (trial-checked against this declaration):
+
+  1. Induct on `h`, which is `Relation.EqvGen` from
+     `Mathlib/Logic/Relation.lean`.  Use `Relation.EqvGen.refl`, `.symm`, and
+     `.trans` directly for those three induction cases; no identity or
+     composition law for `T.map` is required.
+  2. In the `.rel` case, unpack
+     `CosimplicialModuleOneStepHomotopy φ₀ ψ₀` to a witness `h₀`.
+     Build a `CosimplicialModuleHomotopy (T.map φ₀) (T.map ψ₀)` whose
+     `(n, α)` component is
+
+       `(T.degreeIso _ L n).symm.toLinearMap.comp
+          ((tensorHomotopyComponent h₀ L n α).comp
+            (T.degreeIso _ L n).toLinearMap)`.
+
+     Here all modules and rings live in universe `u`, and this is an
+     `A.obj (SimplexCategory.mk n)`-linear map from `(T.obj _ L).obj n` to
+     `(T.obj _ L).obj n` with the source and target inferred from `h₀`.
+  3. Prove the endpoint fields with
+     `simp only [tensorHomotopyComponent, h₀.at_zero, T.map_component]` and
+     the analogous `at_one` statement.
+  4. For `f : mk n ⟶ mk m`, `α : mk m ⟶ mk 1`, and `x`, apply
+     `T.degreewise_naturality f (h₀.app n (f ≫ α)) (h₀.app m α)`.
+     Its square premise is exactly `h₀.naturality f α`, and evaluating
+     the result at `x` is definitionally the required naturality field.
+  5. Wrap the constructed homotopy in `Nonempty`, then in
+     `Relation.EqvGen.rel`.  The other induction cases finish the generated
+     equivalence relation as described in step 1.
+
+  All local declarations named here are in this file.  In particular, trying
+  to handle only the one-step witness is insufficient: the input relation is
+  the reflexive, symmetric, transitive closure and must be eliminated by the
+  `EqvGen` induction.
+  -/
   sorry
 
 /-- An exterior-power operation on cosimplicial modules. -/
@@ -311,6 +358,38 @@ theorem homotopy_exterior_power
     {φ ψ : CosimplicialModuleHom M N} (h : CosimplicialModuleHomotopic φ ψ)
     (W : CosimplicialExteriorPowerOperation A) (i : ℕ) :
     CosimplicialModuleHomotopic (W.map i φ) (W.map i ψ) := by
+  /-
+  Proof roadmap (trial-checked against this declaration):
+
+  1. Induct on the `Relation.EqvGen` witness `h` exactly as for
+     `homotopy_tensor`, using the constructors from
+     `Mathlib/Logic/Relation.lean` for the reflexive, symmetric, and transitive
+     cases.
+  2. In the `.rel` case, unpack the `Nonempty` one-step witness to `h₀` and
+     define a `CosimplicialModuleHomotopy (W.map i φ₀) (W.map i ψ₀)`.
+     Its component in degree `n` at `α` is the
+     `A.obj (SimplexCategory.mk n)`-linear map
+
+       `(W.degreeIso _ i n).symm.toLinearMap.comp
+          ((exteriorPower.map i (h₀.app n α)).comp
+            (W.degreeIso _ i n).toLinearMap)`.
+
+     This is the body of `exteriorPowerHomotopyComponent` below, but that
+     declaration occurs after this theorem and is therefore unavailable here;
+     inline the displayed term rather than referring forward to it.
+  3. The endpoints close with
+     `simp only [h₀.at_zero, W.map_component]` and the corresponding
+     `at_one` simplification.
+  4. The naturality field is exactly
+     `W.degreewise_naturality i f (h₀.app n (f ≫ α)) (h₀.app m α)
+       (h₀.naturality f α) x`.
+     The universe remains `u`, and both exterior-power degrees are modules
+     over `A.obj (SimplexCategory.mk n)` or `A.obj (SimplexCategory.mk m)` as
+     dictated by the indices.
+  5. Package the homotopy into the one-step `Nonempty`, introduce it with
+     `Relation.EqvGen.rel`, and assemble the remaining three induction cases
+     with `.refl`, `.symm`, and `.trans`.
+  -/
   sorry
 
 /-- The degreewise `∧^i h` component in the source's proof. -/
@@ -372,6 +451,34 @@ theorem homotopy_base_change
     (h : CosimplicialModuleHomotopic φ ψ)
     (F : CosimplicialBaseChangeOperation f) :
     CosimplicialModuleHomotopic (F.map φ) (F.map ψ) := by
+  /-
+  Proof roadmap (trial-checked against this declaration):
+
+  1. Induct on `h : Relation.EqvGen _ φ ψ`.  The `.refl`, `.symm`, and
+     `.trans` branches map directly to the same constructors of the target
+     `CosimplicialModuleHomotopic` relation.
+  2. In the `.rel` branch, unpack the one-step witness to `h₀` and construct
+     `CosimplicialModuleHomotopy (F.map φ₀) (F.map ψ₀)` with
+
+       `app := fun n α => F.componentMap n (h₀.app n α)`.
+
+     Although `h₀.app n α` is linear over
+     `A.obj (SimplexCategory.mk n)`, `F.componentMap` returns precisely the
+     required map linear over `B.obj (SimplexCategory.mk n)` between the
+     degree-`n` objects of `F.obj`; both rings and modules are in universe `u`.
+  3. Establish the endpoints using
+     `simp only [h₀.at_zero, F.map_component]` and its `at_one` analogue.
+  4. For the naturality field use
+     `F.componentMap_naturality g (h₀.app n (g ≫ α)) (h₀.app m α)
+       (h₀.naturality g α) x`.
+     This is exactly the target equality after unfolding the chosen `app`.
+     Neither `degreeEquiv` nor `componentMap_formula` is needed: those fields
+     identify the concrete tensor-product model, while naturality is already
+     exposed by `componentMap_naturality`.
+  5. Wrap the result in `Nonempty` and `Relation.EqvGen.rel`, then finish the
+     generated-relation induction with the constructors from
+     `Mathlib/Logic/Relation.lean`.
+  -/
   sorry
 
 /-- The degreewise `h ⊗ 1` component for base change. -/
@@ -425,6 +532,36 @@ theorem homotopy_completion
     (h : CosimplicialModuleHomotopic φ ψ)
     (F : CosimplicialCompletionOperation I) :
     CosimplicialModuleHomotopic (F.map φ) (F.map ψ) := by
+  /-
+  Proof roadmap (trial-checked against this declaration):
+
+  1. Eliminate `h` by induction on `Relation.EqvGen` (defined in
+     `Mathlib/Logic/Relation.lean`).  Transport `.refl`, `.symm`, and `.trans`
+     with the corresponding target constructors.
+  2. In the `.rel` case, unpack the `Nonempty` homotopy witness to `h₀` and
+     build `CosimplicialModuleHomotopy (F.map φ₀) (F.map ψ₀)` using
+
+       `app := fun n α => F.componentMap n (h₀.app n α)`.
+
+     At universe `u`, `F.componentMap` has exactly the required
+     `A.obj (SimplexCategory.mk n)`-linear source and target; no coercion
+     through the underlying completion type is needed.
+  3. The zero and one endpoint fields follow from
+     `simp only [h₀.at_zero, F.map_component]` and
+     `simp only [h₀.at_one, F.map_component]`.
+  4. Supply naturality with
+     `F.componentMap_naturality g (h₀.app n (g ≫ α)) (h₀.app m α)
+       (h₀.naturality g α) x`.
+     As for base change, `degreeEquiv` and `componentMap_formula` only describe
+     the concrete completion model and are unnecessary for this square.
+  5. Package the new homotopy as a one-step relation, apply
+     `Relation.EqvGen.rel`, and complete the outer induction using `.refl`,
+     `.symm`, and `.trans`.
+
+  `completionHomotopyComponent` below is merely the same `componentMap`
+  wrapper and is declared too late to use here; the displayed `app` avoids a
+  forward reference.
+  -/
   sorry
 
 /-- The degreewise `h^` component for completion. -/

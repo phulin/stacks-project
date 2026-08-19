@@ -630,10 +630,7 @@ theorem quotientFactor_unique {E : Type*} [Category* E]
 /-- The Verdier quotient has the source's universal property for homological
 functors and exact functors. -/
 theorem quotient_universal_property
-    {A D : Type*} [Category* A] [Category* D]
-    [Abelian A] [AdditiveCategory D]
-    [HasShift D ℤ] [∀ n : ℤ, (shiftFunctor D n).Additive]
-    [Pretriangulated D]
+    {A : Type*} [Category* A] [Abelian A]
     (P : ObjectProperty C) [CategoryTheory.IsTriangulated C]
     [P.IsTriangulated]
     (H : C ⥤ A) [H.IsHomological]
@@ -988,7 +985,7 @@ theorem acyclic_homologicalFunctor_factors
     ∃! H' : quotientCategory (homologicalFunctorKernel H) ⥤ A,
       quotientFunctor (homologicalFunctorKernel H) ⋙ H' = H ∧
         H'.IsHomological := by
-  exact quotient_universal_property (D := C) (homologicalFunctorKernel H) H le_rfl
+  exact quotient_universal_property (homologicalFunctorKernel H) H le_rfl
 
 end AcyclicFunctor
 

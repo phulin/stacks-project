@@ -4145,7 +4145,21 @@ theorem groupoidPresheaf_fibre_is_groupoid
     {C : Type u'} [Category.{v'} C]
     (F : GroupoidPresheaf C) (U : C) :
     IsGroupoid (Functor.Fiber (groupoidPresheafProjection F) U) := by
-  sorry
+  let j :=
+    Functor.Fiber.inducedFunctor
+      (Pseudofunctor.CoGrothendieck.comp_const
+        (categoryPresheafPseudofunctor F.value) U)
+  have hj : j.IsEquivalence := inferInstance
+  let e := @Functor.asEquivalence _ _ _ _ j hj
+  have hG : IsGroupoid
+      ((categoryPresheafPseudofunctor F.value).obj
+        ⟨Opposite.op U⟩) := by
+    change IsGroupoid (F.value.obj (Opposite.op U))
+    exact F.fibre_is_groupoid U
+  refine { all_isIso := ?_ }
+  intro X Y f
+  let _ : IsIso (e.inverse.map f) := hG.all_isIso _
+  exact e.fullyFaithfulInverse.isIso_of_isIso_map f
 
 theorem groupoidPresheafProjection_isFibredInGroupoids
     {C : Type u'} [Category.{v'} C]

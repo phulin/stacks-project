@@ -2012,7 +2012,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       (doubleComplexShift A a b).obj r (n - r) =
         A.obj (r + a) (n + (a + b) - (r + a)) := by
     dsimp [doubleComplexShift]
-    congr 1 <;> lia
+    congr 1; lia
   let e : ∀ n : ℤ,
       (∐ fun p : ℤ => A.obj p (n + (a + b) - p)) ≅
         (∐ fun r : ℤ => (doubleComplexShift A a b).obj r (n - r)) :=
@@ -2033,7 +2033,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           rw [Linear.units_smul_comp]
           rw [Category.assoc, Sigma.ι_desc]
           rw [Linear.comp_units_smul]
-          simp only [smul_smul, Int.units_mul_self, one_smul]
+          simp only [smul_smul]
           rw [← Category.assoc, eqToHom_trans]
           have hsign :
               totalizationShiftSign p (n + (a + b) - p) a b *
@@ -2054,7 +2054,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           rw [Linear.units_smul_comp]
           rw [Category.assoc, Sigma.ι_desc]
           rw [Linear.comp_units_smul]
-          simp only [smul_smul, Int.units_mul_self, one_smul]
+          simp only [smul_smul]
           rw [← Category.assoc, eqToHom_trans]
           rw [← eqToHom_naturality
             (fun t : ℤ => Sigma.ι
@@ -2063,10 +2063,10 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           simp }
   have e_component_shift (k r : ℤ) :
       Sigma.ι (fun p : ℤ => A.obj p (k + (a + b) + 1 - p)) r ≫
-          eqToHom (by congr 1 <;> lia) ≫
+          eqToHom (by congr 1; lia) ≫
           (e (k + 1)).hom =
         totalizationShiftSign r (k + 1 + (a + b) - r) a b •
-          (eqToHom (by congr 1 <;> lia) ≫
+          (eqToHom (by congr 1; lia) ≫
             eqToHom (e_hom_obj (k + 1) r) ≫
             Sigma.ι (fun p : ℤ =>
               (doubleComplexShift A a b).obj p (k + 1 - p)) (r - a)) := by
@@ -2077,17 +2077,17 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       (show k + (a + b) + 1 = k + 1 + (a + b) by ring_nf)]
     rw [Sigma.ι_desc]
     rw [Linear.comp_units_smul]
-    simp [Category.assoc, totalizationShiftSign, smul_smul]
+    simp [totalizationShiftSign]
   have e_component_shift_expanded (k r : ℤ) :
       Sigma.ι (fun p : ℤ => A.obj p (k + (a + b) + 1 - p)) r ≫
-          eqToHom (by congr 1 <;> lia) ≫
+          eqToHom (by congr 1; lia) ≫
           Sigma.desc (fun p : ℤ =>
             totalizationShiftSign p (1 + k + a + b - p) a b •
               (eqToHom (e_hom_obj (k + 1) p) ≫
                 Sigma.ι (fun r : ℤ =>
                   (doubleComplexShift A a b).obj r (k + 1 - r)) (p - a))) =
         totalizationShiftSign r (1 + k + a + b - r) a b •
-          (eqToHom (by congr 1 <;> lia) ≫
+          (eqToHom (by congr 1; lia) ≫
             eqToHom (e_hom_obj (k + 1) r) ≫
             Sigma.ι (fun p : ℤ =>
               (doubleComplexShift A a b).obj p (k + 1 - p)) (r - a)) := by
@@ -2112,8 +2112,8 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
               ∐ fun p : ℤ => A.obj p (j - p)) =
             totalDifferential A i ≫
               eqToHom (by
-                congr 1 <;> simp [h]) := by
-        subst j <;> simp
+                congr 1; simp [h]) := by
+        subst j; simp
       dsimp [e, totalComplex, CochainComplex.shiftFunctor]
       ring_nf
       simp only [if_pos, dif_pos]
@@ -2126,7 +2126,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
         rw [← Category.assoc]
         congr
         rw [← Linear.comp_units_smul]
-      simp only [Category.assoc, Linear.comp_units_smul, Sigma.ι_desc]
+      simp only [Linear.comp_units_smul]
       conv_rhs =>
         rw [← Linear.units_smul_comp]
       conv_rhs =>
@@ -2136,10 +2136,8 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       simp only [Category.assoc, Linear.units_smul_comp, Preadditive.add_comp]
       conv_rhs =>
         rw [e_component_shift_expanded n (p + 1), e_component_shift_expanded n p]
-      simp only [Category.assoc, totalD1Component, totalD2Component,
-        shiftedD1Component, shiftedD2Component, totalizationShiftSign_first,
-        totalizationShiftSign_second]
-      simp [Category.assoc, totalizationShiftSign, Int.negOnePow_add, smul_smul,
+      simp only [Category.assoc, totalD1Component, totalD2Component]
+      simp [totalizationShiftSign, Int.negOnePow_add, smul_smul,
         mul_comm]
       ring_nf
       have hshift_d1_left :
@@ -2152,7 +2150,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
             e_hom_obj n p
           _ = (doubleComplexShift A a b).obj (p - a)
               (n + 1 - (p - a + 1)) := by
-            congr 1 <;> lia
+            congr 1; lia
       have hshift_d1_right :
           A.obj (p + 1) (n + (a + b) - p) =
             (doubleComplexShift A a b).obj (p + 1 - a)
@@ -2160,7 +2158,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
         calc
           A.obj (p + 1) (n + (a + b) - p) =
               A.obj (p + 1) ((n + 1) + (a + b) - (p + 1)) := by
-            congr 1 <;> lia
+            congr 1; lia
           _ = (doubleComplexShift A a b).obj (p + 1 - a)
               (n + 1 - (p + 1 - a)) := e_hom_obj (n + 1) (p + 1)
       have hshift_d1_left_unfolded :
@@ -2269,7 +2267,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
             eqToHom (show A.obj (p + 1) (n + (a + b) - p) =
                 (doubleComplexShift A a b).obj (p + 1 - a)
                   (n + 1 - (p + 1 - a)) by
-              congr 1 <;> lia) ≫
+              congr 1) ≫
                 Sigma.ι (fun r : ℤ =>
                   (doubleComplexShift A a b).obj r (n + 1 - r))
                   (p + 1 - a) =
@@ -2280,7 +2278,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           have e1 : A.obj (p + 1) (n + (a + b) - p) =
               (doubleComplexShift A a b).obj (p + 1 - a)
                 (n + 1 - (p + 1 - a)) := by
-            congr 1 <;> lia
+            congr 1
           simpa [Category.assoc, eqToHom_trans] using
             (congrArg
               (fun f =>
@@ -2289,11 +2287,11 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
         apply congrArg (fun f =>
           (a.negOnePow * b.negOnePow * (b + b * p).negOnePow) • f)
         convert hnat.symm using 1
-        case e'_1 => simp
-        case e'_2 => simp [Category.assoc, doubleComplexShift, hq]
+        case e'_1 => simp [doubleComplexShift]
+        case e'_2 => simp [Category.assoc, doubleComplexShift]
         case e'_3 =>
           simp
-          simp [Category.assoc, doubleComplexShift, hq]
+          simp [doubleComplexShift]
           apply congrArg (fun f => A.d1 p (n + (a + b) - p) ≫ f)
           simpa [Category.assoc, doubleComplexShift, eqToHom_trans] using hq
       have hshift_d2_left_unfolded :
@@ -2303,18 +2301,18 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       have hshift_d2_right_unfolded :
           A.obj (p - a + a) ((n - (p - a) + 1) + b) =
             A.obj (p - a + a) (n + 1 - (p - a) + b) := by
-        congr 1 <;> lia
+        congr 1; lia
       have hshift_d2_mid :
           (doubleComplexShift A a b).obj (p - a) (n - (p - a) + 1) =
             (doubleComplexShift A a b).obj (p - a) (n + 1 - (p - a)) := by
-        congr 1 <;> lia
+        congr 1; lia
       have hshift_d2_right :
           A.obj p ((n + (a + b) - p) + 1) =
             (doubleComplexShift A a b).obj (p - a) (n + 1 - (p - a)) := by
         calc
           A.obj p ((n + (a + b) - p) + 1) =
               A.obj p ((n + 1) + (a + b) - p) := by
-            congr 1 <;> lia
+            congr 1; lia
           _ = (doubleComplexShift A a b).obj (p - a)
               (n + 1 - (p - a)) := e_hom_obj (n + 1) p
       have hshift_d2_outer_unfolded :
@@ -2324,7 +2322,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       have hshift_d2_g :
           A.obj (p - a + a) ((n - (p - a) + b) + 1) =
             A.obj (p - a + a) (n + 1 - (p - a) + b) := by
-        congr 1 <;> lia
+        congr 1; lia
       have h2 :
           ((b * p).negOnePow * (p - a).negOnePow) •
               ((eqToHom (e_hom_obj n p) ≫
@@ -2373,7 +2371,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
                 (b * p + (p + a) + b).negOnePow := by
               simp only [Int.negOnePow_add, mul_assoc]
             _ = (a + b + (p + b * p)).negOnePow := by
-              congr 1 <;> ring_nf
+              congr 1; ring_nf
             _ = a.negOnePow * b.negOnePow *
                 (p.negOnePow * (b * p).negOnePow) := by
               simp only [Int.negOnePow_add, mul_assoc]
@@ -2396,11 +2394,13 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
       have h2' := h2
       simp only [Category.assoc] at h2'
       rw [h1', h2']
+      rw [show b * (p + 1) = b + b * p by ring_nf]
       )
   refine ⟨{ iso := iso, component_formula := ?_ }⟩
   intro n p
-  dsimp [iso, e]
-  rfl
+  dsimp [iso, e, HomologicalComplex.Hom.isoOfComponents, totalComplex,
+    CochainComplex.shiftFunctor]
+  rw [Sigma.ι_desc]
 
 
 noncomputable def totalComplexShiftData [HasCountableCoproducts C]
@@ -2462,7 +2462,7 @@ theorem totalMapComponent_comm [HasCountableCoproducts C]
         (fun q : ℤ => f.f (p + 1) q)
         (show n - p = n + 1 - (p + 1) by ring)]
     simpa [Category.assoc] using
-      congrArg (fun k => k ≫ eqToHom (by congr 1 <;> ring) ≫
+      congrArg (fun k => k ≫ eqToHom (by congr 1; ring) ≫
         Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) (p + 1))
         (f.comm1 p (n - p)).symm
   have h2core :
@@ -2477,7 +2477,7 @@ theorem totalMapComponent_comm [HasCountableCoproducts C]
         (fun q : ℤ => f.f p q)
         (show n - p + 1 = n + 1 - p by ring)]
     simpa [Category.assoc] using
-      congrArg (fun k => k ≫ eqToHom (by congr 1 <;> ring) ≫
+      congrArg (fun k => k ≫ eqToHom (by congr 1; ring) ≫
         Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) p)
         (f.comm2 p (n - p)).symm
   have h2 := congrArg (fun k => p.negOnePow • k) h2core

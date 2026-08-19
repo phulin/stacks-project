@@ -1196,8 +1196,6 @@ theorem exteriorPower_relation_range_eq_kernel
     {n : ℕ} (hn : 0 < n) :
       LinearMap.range (exteriorPowerRelationMap f hn) =
       LinearMap.ker (exteriorPowerQuotientMap n g) := by
-  sorry
-/-
   cases n with
   | zero => exact (Nat.not_lt_zero _ hn).elim
   | succ k =>
@@ -1396,17 +1394,28 @@ theorem exteriorPower_relation_range_eq_kernel
               · subst j
                 simp [hgh, g.map_smul]
               · simp [hji, hgh]
-            rw [heq, ht, AlternatingMap.map_update_smul]
-            simp
+            have htm :
+                exteriorPower.ιMulti R (Nat.succ k)
+                    (fun j => h ((Function.update q i m) j)) =
+                  exteriorPower.ιMulti R (Nat.succ k)
+                    (Function.update (fun j => h (q j)) i (h m)) := by
+              have hu' :
+                  (fun j => h ((Function.update q i m) j)) =
+                    Function.update (fun j => h (q j)) i (h m) := by
+                funext j
+                by_cases hji : j = i <;> simp [hji]
+              exact congrArg (exteriorPower.ιMulti R (Nat.succ k)) hu'
+            rw [heq, htm, ← Submodule.Quotient.mk_smul,
+              AlternatingMap.map_update_smul]
           map_eq_zero_of_eq' := by
             intro q i j hq hij
             have hz : exteriorPower.ιMulti R (Nat.succ k)
                 (fun l => h (q l)) = 0 := by
-              apply (exteriorPower.ιMulti R (Nat.succ k)).map_eq_zero_of_eq _ i j
-              simp [hq]
-              exact hij
+              apply (exteriorPower.ιMulti R (Nat.succ k)).map_eq_zero_of_eq _
+                (congrArg h hq) hij
             dsimp
-            rw [hz, map_zero]
+            rw [hz]
+            rfl
         }
       let D := exteriorPower.alternatingMapLinearEquiv A
       have hD_pure (q : Fin (Nat.succ k) → M₁) :
@@ -1415,7 +1424,8 @@ theorem exteriorPower_relation_range_eq_kernel
             Submodule.Quotient.mk (p := L)
               (exteriorPower.ιMulti R (Nat.succ k) q) := by
         rw [exteriorPowerQuotientMap_ιMulti]
-        change A (fun i => h (g (q i))) = _
+        dsimp [D]
+        rw [exteriorPower.alternatingMapLinearEquiv_apply_ιMulti]
         dsimp [A]
         apply mk_eq_of_g_eq
         intro i
@@ -1431,39 +1441,51 @@ theorem exteriorPower_relation_range_eq_kernel
         refine TensorProduct.induction_on y (by simp) ?_ ?_
         · intro z t
           let F : exteriorPower R M₁ k →ₗ[R]
-              (exteriorPower R M₁ (Nat.succ k)) :=
+              (exteriorPower R M (Nat.succ k)) :=
             (exteriorPowerQuotientMap (Nat.succ k) g).comp
               ((exteriorPowerRelationMap f hn).comp
                 (TensorProduct.mk R M₂ (exteriorPower R M₁ k) z))
           have hF : F = 0 := by
             apply LinearMap.ext
             intro u
+            change F u = 0
             have hu : u ∈ Submodule.span R
                 (Set.range (exteriorPower.ιMulti R k)) := by
               rw [exteriorPower.ιMulti_span]
               exact Submodule.mem_top
-            induction hu using Submodule.span_induction with
-            | mem v hv =>
-                rcases hv with ⟨r, rfl⟩
-                change exteriorPowerQuotientMap (Nat.succ k) g
-                  (exteriorPowerRelationMap f hn
-                    (z ⊗ₜ[R] exteriorPower.ιMulti R k r)) = 0
-                rw [relation_ιMulti, exteriorPowerQuotientMap_ιMulti]
-                simp [hfg z]
-            | zero => simp [F]
-            | add u v hu hv =>
-                rw [F.map_add, hu, hv, map_zero]
-            | smul a u hu =>
-                rw [F.map_smul, hu, smul_zero]
-          exact hF t
+            refine Submodule.span_induction (p := fun u _ => F u = 0) ?_ ?_ ?_ ?_ hu
+            · rintro v ⟨r, rfl⟩
+              change F (exteriorPower.ιMulti R k r) = 0
+              dsimp [F]
+              change exteriorPowerQuotientMap (Nat.succ k) g
+                (exteriorPowerRelationMap f hn
+                  (z ⊗ₜ[R] exteriorPower.ιMulti R k r)) = 0
+              rw [relation_ιMulti, exteriorPowerQuotientMap_ιMulti]
+              have hgf : g (f z) = 0 := (hfg (f z)).mpr ⟨z, rfl⟩
+              apply (exteriorPower.ιMulti R (Nat.succ k)).map_coord_zero 0
+              simpa using hgf
+            · simp
+            · intro u v hu hv hFu hFv
+              rw [F.map_add, hFu, hFv, add_zero]
+            · intro a u hu hFu
+              rw [F.map_smul, hFu, smul_zero]
+          exact LinearMap.congr_fun hF t
         · intro x y hx hy
           change exteriorPowerQuotientMap (Nat.succ k) g
             (exteriorPowerRelationMap f hn (x + y)) = 0
-          rw [(exteriorPowerRelationMap f hn).map_add, hx, hy, map_zero]
+          change exteriorPowerQuotientMap (Nat.succ k) g
+              (exteriorPowerRelationMap f hn x) = 0 at hx
+          change exteriorPowerQuotientMap (Nat.succ k) g
+              (exteriorPowerRelationMap f hn y) = 0 at hy
+          rw [(exteriorPowerRelationMap f hn).map_add,
+            (exteriorPowerQuotientMap (Nat.succ k) g).map_add, hx, hy, add_zero]
       · intro x hx
         apply (Submodule.Quotient.mk_eq_zero _).mp
-        rw [← hD x, LinearMap.comp_apply, hx]
-        exact D.map_zero -/
+        change L.mkQ x = 0
+        change exteriorPowerQuotientMap (Nat.succ k) g x = 0 at hx
+        have hDx := LinearMap.congr_fun hD x
+        rw [← hDx, LinearMap.comp_apply, hx]
+        exact D.map_zero
 
 /-- The right-exact sequences for symmetric and exterior powers of a quotient. -/
 theorem presentation_symmetric_exterior_power

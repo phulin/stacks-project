@@ -1997,7 +1997,7 @@ theorem cardinality_target_le_source_of_epimorphism
           simp only [Cardinal.mk_nat, Cardinal.lift_aleph0, Cardinal.lift_id]
           exact Cardinal.aleph0_mul_mk_eq (α := R)
     exact (Cardinal.mk_le_of_injective enc_injective).trans hsigma
-  · have : Finite R := not_infinite_iff_finite.mp hR
+  · let : Finite R := not_infinite_iff_finite.mp hR
     sorry
 
 /-- The finite-source case in the cardinality argument is in fact surjective. -/

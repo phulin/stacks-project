@@ -991,16 +991,16 @@ private def adicSystemModuleSystem {A : Type u} [CommRing A]
               (fun z => z * (X.right.map f).hom x) hs }
     map_id := by
       intro i
-      letI : Algebra A (X.right.obj i) := (aMap i).toAlgebra
+      let : Algebra A (X.right.obj i) := (aMap i).toAlgebra
       apply ModuleCat.hom_ext
       apply LinearMap.ext
       intro x
       simp
     map_comp := by
       intro i j k f g
-      letI : Algebra A (X.right.obj i) := (aMap i).toAlgebra
-      letI : Algebra A (X.right.obj j) := (aMap j).toAlgebra
-      letI : Algebra A (X.right.obj k) := (aMap k).toAlgebra
+      let : Algebra A (X.right.obj i) := (aMap i).toAlgebra
+      let : Algebra A (X.right.obj j) := (aMap j).toAlgebra
+      let : Algebra A (X.right.obj k) := (aMap k).toAlgebra
       apply ModuleCat.hom_ext
       apply LinearMap.ext
       intro x
@@ -1018,9 +1018,9 @@ private theorem adicSystemModuleSystem_isQuotient
   let q : A →+* ((adicQuotientSystem A I).obj
       (Opposite.op (n + 1)) : Type u) :=
     Ideal.Quotient.mk (I ^ ((n + 1 : ℕ+) : ℕ))
-  letI : Algebra A B :=
+  let : Algebra A B :=
     ((X.hom.app (Opposite.op (n + 1))).hom.comp q).toAlgebra
-  letI : Algebra A (X.right.obj (Opposite.op n)) :=
+  let : Algebra A (X.right.obj (Opposite.op n)) :=
     ((X.hom.app (Opposite.op n)).hom.comp
       (Ideal.Quotient.mk (I ^ (n : ℕ)))).toAlgebra
   let P : Submodule A B := I ^ (n : ℕ) • (⊤ : Submodule A B)
@@ -1136,7 +1136,7 @@ theorem adicSystemLimitData_exists {A : Type u} [CommRing A] (I : Ideal A)
             exact h } }
   let φ : A →+* ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
     (limit.lift X.obj.right c).hom
-  letI : Algebra A ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
+  let : Algebra A ((limit X.obj.right : CommRingCat.{u}) : Type u) :=
     φ.toAlgebra
   have hFG :
       F ⋙ forget₂ (ModuleCat A) AddCommGrpCat =
@@ -1372,13 +1372,13 @@ theorem adicSystemLimitData_exists {A : Type u} [CommRing A] (I : Ideal A)
       exact Ideal.Quotient.eq_zero_iff_mem.mpr hmem
     let eRes : (L ⧸ J) ≃+* S := RingEquiv.ofBijective qres
       ⟨qres_inj, qres_surj⟩
-    letI : Algebra (A ⧸ I) (L ⧸ J) :=
+    let : Algebra (A ⧸ I) (L ⧸ J) :=
       Ideal.Quotient.algebraQuotientOfLEComap
         (R := A) (A := L) (p := I) (P := J) Ideal.le_comap_map
     let eI : (A ⧸ I) ≃+*
         ((adicQuotientSystem A I).obj
           (Opposite.op (1 : ℕ+)) : Type u) :=
-      Ideal.quotEquivOfEq (by simp [adicQuotient])
+      Ideal.quotEquivOfEq (by simp)
     let fstage0 : ((adicQuotientSystem A I).obj
         (Opposite.op (1 : ℕ+)) : Type u) →+* S :=
       (X.obj.hom.app (Opposite.op (1 : ℕ+))).hom
@@ -1887,7 +1887,7 @@ private theorem adicSystemLimitMap_comp {A : Type u} [CommRing A]
   rw [(adicSystemLimitData I hI Y).comparison.apply_symm_apply]
   apply Concrete.limit_ext Z.obj.right
   intro n
-  simp [← limMap_eq, Category.assoc]
+  simp
 
 theorem adicSystemLimitMap_exists {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) {X Y : AdicSystemCategory A I} (f : X ⟶ Y) :
@@ -1895,22 +1895,21 @@ theorem adicSystemLimitMap_exists {A : Type u} [CommRing A] (I : Ideal A)
   exact ⟨adicSystemLimitMap I hI f⟩
 
 /-- The functor from `𝓒` to `𝓒'` defined by inverse limit. -/
-theorem systemLimitFunctor_exists {A : Type u} [CommRing A] (I : Ideal A)
-    (hI : I.FG) :
-    Nonempty (AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I) := by
-  refine ⟨{
-    obj := fun X => adicSystemLimitObject I hI X
+noncomputable def systemLimitFunctor {A : Type u} [CommRing A] (I : Ideal A)
+    (hI : I.FG) : AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I :=
+  { obj := fun X => adicSystemLimitObject I hI X
     map := fun f => adicSystemLimitMap I hI f
     map_id := by
       intro X
       exact adicSystemLimitMap_id I hI X
     map_comp := by
       intro X Y Z f g
-      exact adicSystemLimitMap_comp I hI f g }⟩
+      exact adicSystemLimitMap_comp I hI f g }
 
-noncomputable def systemLimitFunctor {A : Type u} [CommRing A] (I : Ideal A)
-    (hI : I.FG) : AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I :=
-  Classical.choice (systemLimitFunctor_exists I hI)
+theorem systemLimitFunctor_exists {A : Type u} [CommRing A] (I : Ideal A)
+    (hI : I.FG) :
+    Nonempty (AdicSystemCategory A I ⥤ CompleteAlgebraCategory A I) := by
+  exact ⟨systemLimitFunctor I hI⟩
 
 /-- The two constructions are quasi-inverse equivalences of categories. -/
 theorem quotient_limit_quasiInverse {A : Type u} [CommRing A] (I : Ideal A)
@@ -2003,7 +2002,7 @@ theorem adicCompletionAlgebra_property {A : Type u} [CommRing A]
         (IsScalarTower.algebraMap_eq A (C : Type u)
           (AdicCompletion J (C : Type u))).symm
       rw [hAlg, ← Ideal.map_map]
-      simpa [J, cprimeIdeal]
+      simp [J, cprimeIdeal]
     let e : (Q ⧸ K) ≃+* ((C : Type u) ⧸ J) :=
       (Ideal.quotEquivOfEq hker).trans
         (RingHom.quotientKerEquivOfSurjective

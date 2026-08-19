@@ -484,8 +484,7 @@ private theorem differentialObjectSelfMap_boundary_preimage_monotone
     (Subobject.pullbackπ p I ≫ hI) ((Subobject.pullback p).obj I).arrow hcond
   apply Subobject.le_of_comm l
   simp [l, p, p', differentialObjectSelfMapAlphaPow,
-    Formalization.Books.Homology.Unit20.selfMapAlphaPow,
-    differentialObjectSelfMapBoundaryPreimage]
+    Formalization.Books.Homology.Unit20.selfMapAlphaPow]
 
 private theorem differentialObjectSelfMap_cycle_preimage_antitone
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -524,11 +523,11 @@ private theorem differentialObjectSelfMap_quotient_image_mono
       Formalization.Books.Homology.Unit20.selfMapQuotientImageSubobject q R := by
   let sq : Arrow.mk (P.arrow ≫ q) ⟶ Arrow.mk (R.arrow ≫ q) :=
     Arrow.homMk' (Subobject.ofLE P R h) (𝟙 Q) (by
-      simp [Category.assoc, Subobject.ofLE_arrow])
-  letI : Mono (Abelian.image.ι (P.arrow ≫ q)) := by
+      simp)
+  let : Mono (Abelian.image.ι (P.arrow ≫ q)) := by
     dsimp [Abelian.image]
     infer_instance
-  letI : Mono (Abelian.image.ι (R.arrow ≫ q)) := by
+  let : Mono (Abelian.image.ι (R.arrow ≫ q)) := by
     dsimp [Abelian.image]
     infer_instance
   let g := (Subobject.underlyingIso (Abelian.image.ι (P.arrow ≫ q))).hom ≫
@@ -627,7 +626,7 @@ private theorem differentialObjectSelfMap_cycle_plus_factors
   let S := Formalization.Books.Homology.Unit20.selfMapAlphaSubobject α α.injective
   let Q := differentialObjectSelfMapCyclePlus α r
   let q : A.carrier ⟶ differentialObjectSelfMapE₀ α := cokernel.π α.hom.hom
-  letI : Mono α.hom.hom := α.injective
+  let : Mono α.hom.hom := α.injective
   have hP : R.Factors (P.arrow ≫ q) := by
     apply (Subobject.factors_iff R (P.arrow ≫ q)).mpr
     refine ⟨Abelian.factorThruImage (P.arrow ≫ q) ≫
@@ -845,12 +844,26 @@ abbrev ShiftedDifferentialLongExactSequence {C : Type u} [Category.{v} C]
     [Abelian C] (S : C ≌ C) (X : ℤ → C) :=
   Formalization.Books.Homology.Unit20.ShiftedLongExactSequence S X
 
+def shiftedEquivalenceIntPower {C : Type u} [Category.{v} C]
+    (S : C ≌ C) (n : ℤ) : C ≌ C :=
+  if h : 0 ≤ n then Formalization.Books.Homology.Unit21.shiftedEquivalenceIterate S n.toNat
+  else Formalization.Books.Homology.Unit21.shiftedEquivalenceIterate S.symm (-n).toNat
+
+def shiftedDifferentialObjectHomologyLongTerm
+    {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
+    (A B D : ShiftedDifferentialObject C S) (n : ℤ) : C :=
+  let R := shiftedEquivalenceIntPower S (n / 3)
+  if n % 3 = 0 then R.functor.obj (shiftedDifferentialObjectHomology A)
+  else if n % 3 = 1 then R.functor.obj (shiftedDifferentialObjectHomology B)
+  else R.functor.obj (shiftedDifferentialObjectHomology D)
+
 theorem shiftedDifferentialShortExact_homology_long_exact
     {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
     {A B D : ShiftedDifferentialObject C S}
     (Q : ShiftedDifferentialShortExact A B D) :
-    ∃ X : ℤ → C, Nonempty (ShiftedDifferentialLongExactSequence S X) := by
-  exact Formalization.Books.Homology.Unit20.shiftedDifferentialShortExact_homology_long_exact Q
+    Nonempty (ShiftedDifferentialLongExactSequence S
+      (shiftedDifferentialObjectHomologyLongTerm A B D)) := by
+  sorry
 
 /-! ### The shifted injective self-map and exact couple -/
 
@@ -961,7 +974,7 @@ theorem shiftedDifferentialObjectSpectralSequenceData_exists
             r = (r - 1) + 1 := by omega
             _ = Int.ofNat (Int.toNat (r - 1)) + 1 := by rw [hrsub']
         have hrplus : 1 ≤ r + 1 := by omega
-        simp only [dif_pos hr, dif_pos hrplus]
+        simp only [dif_pos hrplus]
         let k := Int.toNat (r - 1)
         have hrk : r = Int.ofNat (k + 1) := by simpa [k] using hr'
         have hrnat : r.toNat = k + 1 := by
@@ -974,7 +987,7 @@ theorem shiftedDifferentialObjectSpectralSequenceData_exists
         have hpage :
             (if hp : 1 ≤ (Int.ofNat (k + 1) : ℤ) then
                 P (Int.toNat (Int.ofNat (k + 1) - 1)) else h.sequence.page 1) = P k := by
-          simp [hkpos, hknat]
+          simp
         rw [hpage] }
   refine ⟨{ sequence := E, starts_at_one := rfl, translation := by intro r; rfl, page_one := ?_ }⟩
   change Nonempty (P 0 ≅ shiftedSelfMapE₁ D)

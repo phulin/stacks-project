@@ -73,7 +73,7 @@ def affineBlowupRepresentative {R : Type u} [CommRing R] (a : R)
 /-- The equality relation on the representatives used for an affine chart. -/
 theorem affineBlowupRepresentative_eq_iff
     {R : Type u} [CommRing R] (I : Ideal R) (a : R)
-    {n m : ℕ} {x y : R} (_hx : x ∈ I ^ n) (_hy : y ∈ I ^ m) :
+    {n m : ℕ} {x y : R} (_ : x ∈ I ^ n) (_ : y ∈ I ^ m) :
     affineBlowupRepresentative a n x = affineBlowupRepresentative a m y ↔
       ∃ k : ℕ, a ^ k * (a ^ m * x - a ^ n * y) = 0 := by
   simp only [affineBlowupRepresentative]
@@ -107,11 +107,14 @@ theorem affineBlowupRepresentative_mem
   | algebraMap r =>
       simp [hrep]
   | add x y i hx hy ihx ihy =>
-      simpa [hrep, add_mul] using (affineBlowup I a).add_mem ihx ihy
+      have h := (affineBlowup I a).add_mem ihx ihy
+      simp [hrep, add_mul] at h ⊢
+      exact h
   | mem_mul m hm i x hx ih =>
       have hgen := (affineBlowupGenerator I a ⟨m, hm⟩).property
       have hprod := (affineBlowup I a).mul_mem hgen ih
-      simpa [hrep, affineBlowupGenerator, pow_succ, mul_assoc, mul_left_comm, mul_comm] using hprod
+      simp [hrep, affineBlowupGenerator, pow_succ, mul_assoc, mul_left_comm, mul_comm] at hprod ⊢
+      exact hprod
 
 /-- The ideal of elements killed by a power of `b`, represented canonically as
 the kernel of the localization map. -/
@@ -138,7 +141,7 @@ theorem mem_powerTorsionIdeal_iff
 
 /-- The chosen denominator is regular in an affine blowup chart. -/
 theorem affineBlowup_isRegular
-    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ha : a ∈ I) :
+    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ : a ∈ I) :
     IsRegular (algebraMap R (affineBlowup I a) a) := by
   rw [isRegular_iff]
   constructor

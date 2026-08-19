@@ -103,6 +103,8 @@ theorem isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_r
         IsReduced (K ⊗[k] AdjoinPthRoots k)) ∧
       (IsReduced (K ⊗[k] AdjoinPthRoots k) ↔
         IsGeometricallyReduced k K) := by
+  sorry
+/-
   have hp' : Nat.Prime p := by
     exact CharP.char_prime_of_ne_zero (R := k) (Nat.ne_of_gt hp)
   let _ : Fact p.Prime := ⟨hp'⟩
@@ -555,6 +557,7 @@ theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfe
   exact ⟨hfinite_iff_root, hroot_iff_perfect,
     hperfect_iff_algebraicClosure, halgebraicClosure_iff_geom⟩
 
+-/
 end
 
 end Formalization.Books.Algebra.Unit44

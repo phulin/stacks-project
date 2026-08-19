@@ -433,7 +433,7 @@ private lemma sourceFullReindex_tRelation :
         Polynomial.C (MvPolynomial.X 0) := by
     rfl
   simp [sourceFullReindex, sourceTRelation, sourceTPolynomial, sourceFullReindexAux,
-    RingEquiv.trans_apply, Polynomial.mapEquiv_apply, MvPolynomial.renameEquiv_apply,
+    MvPolynomial.renameEquiv_apply,
     Equiv.swap_apply_left, Equiv.swap_apply_right, MvPolynomial.finSuccEquiv_apply,
     hfin, hfin', Polynomial.map_C, Polynomial.map_X]
 private lemma sourceSPolynomial_span_isPrime :

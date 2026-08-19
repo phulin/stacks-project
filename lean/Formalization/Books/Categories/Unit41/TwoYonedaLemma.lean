@@ -931,12 +931,12 @@ theorem twoYoneda_groupoid_equivalence
     intro G
     exact twoYonedaGroupoidMorphism_preservesCartesian p U G
   let I := (twoYonedaPreservesCartesian p U).ι
-  letI : I.EssSurj := by
+  let : I.EssSurj := by
     constructor
     intro G
     exact ⟨⟨G, hAll G⟩, ⟨Iso.refl G⟩⟩
-  letI : I.IsEquivalence := {}
-  letI : (I ⋙ twoYonedaEvaluationCore p U).IsEquivalence :=
+  let : I.IsEquivalence := {}
+  let : (I ⋙ twoYonedaEvaluationCore p U).IsEquivalence :=
     twoYoneda_fibred_equivalence p U
   exact Functor.isEquivalence_of_comp_left I (twoYonedaEvaluationCore p U)
 
@@ -1176,7 +1176,7 @@ theorem twoYonedaHomPresheaf_map_comp
             ((Over.map f.unop).whiskerLeft (η.1 : G.1 ⟶ H.1)) := by
       apply heq_of_eq
       rw [Functor.whiskerLeft_twice]
-      ext Q <;> simp
+      ext Q; simp
     exact (hwhisker (Over.mapComp_eq g.unop f.unop)).trans hassoc
   · exact congrArg₂
       (fun A B : twoYonedaGroupoidMorphismCategory p Z.unop => A.1 ⟶ B.1)
@@ -1333,7 +1333,7 @@ theorem twoYonedaAssociatedFunctorMap_map_id
   have hk : k = eqToHom hA := by
     dsimp [k]
     ext
-    simp [A, B, hA]
+    simp [A, B]
   let e :
       (twoYonedaHomPresheaf p).map (𝟙 (op X.base)) =
         𝟙 ((twoYonedaHomPresheaf p).obj (op X.base)) :=

@@ -1583,6 +1583,102 @@ noncomputable def fibredInSetsFibrePresheaf
       (pullback_composition_iso p P g.unop f.unop)
     exact (hp W.unop).eq_of_hom (e.hom.app x)
 
+/-- A morphism is precisely the witness that its source is the chosen
+pullback of its target along its image in the base. -/
+theorem fibredInSets_pullback_eq
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) {x y : S} (f : x ⟶ y) :
+    P.pullback (p.map f) (⟨y, rfl⟩ : Functor.Fiber p (p.obj y)) =
+      (⟨x, rfl⟩ : Functor.Fiber p (p.obj x)) := by
+  let cart := P.pullbackMap (p.map f)
+    (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))
+  letI : p.IsStronglyCartesian (p.map f) cart :=
+    P.pullbackMap_isStronglyCartesian _ _
+  have hf : p.IsHomLift (p.map f) f := inferInstance
+  letI : p.IsHomLift (p.map f) f := hf
+  have hcomp : p.map f = 𝟙 (p.obj x) ≫ p.map f :=
+    (Category.id_comp _).symm
+  let lift : x ⟶ (P.pullback (p.map f)
+      (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))).1 :=
+    Functor.IsStronglyCartesian.map p (p.map f) cart
+      (f' := p.map f) (g := 𝟙 (p.obj x)) hcomp f
+  have hlift : p.IsHomLift (𝟙 (p.obj x)) lift := by
+    dsimp [lift]
+    exact Functor.IsStronglyCartesian.map_isHomLift p (p.map f) cart hcomp f
+  exact (hp (p.obj x)).eq_of_hom ⟨lift, hlift⟩ |>.symm
+
+/-- The canonical comparison from a fibred category in sets to the category
+of elements of its fibre-object presheaf. -/
+noncomputable def fibredInSetsToFibrePresheafCategory
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) :
+    S ⥤ setPresheafCategory (fibredInSetsFibrePresheaf p hp P) where
+  obj x := ⟨p.obj x, Discrete.mk (⟨x, rfl⟩ : Functor.Fiber p (p.obj x))⟩
+  map {x y} f := setPresheafHomOf _ (p.map f)
+    (fibredInSets_pullback_eq p hp P f)
+  map_id x := setPresheafHom_ext _ (p.map_id x)
+  map_comp f g := setPresheafHom_ext _ (p.map_comp f g)
+
+@[simp]
+theorem fibredInSetsToFibrePresheafCategory_obj_base
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) (x : S) :
+    ((fibredInSetsToFibrePresheafCategory p hp P).obj x).base = p.obj x := rfl
+
+@[simp]
+theorem fibredInSetsToFibrePresheafCategory_map_base
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) {x y : S} (f : x ⟶ y) :
+    ((fibredInSetsToFibrePresheafCategory p hp P).map f).base = p.map f := rfl
+
+/-- A fibred category with discrete fibres is faithful over its base. -/
+theorem fibredInSets_faithful
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibredInGroupoids]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U)) : p.Faithful := by
+  constructor
+  intro x y f g hfg
+  obtain ⟨k, hk, huniq⟩ := fibredInGroupoids_unique_lift p f g
+    (f := 𝟙 (p.obj x)) (by simpa using hfg)
+  have hkId : k = 𝟙 x := by
+    let x' : Functor.Fiber p (p.obj x) := ⟨x, rfl⟩
+    let k' : x' ⟶ x' := ⟨k, hk.1⟩
+    have heq := hp (p.obj x) |>.eq_of_hom k'
+    have : k' = eqToHom heq :=
+      @Subsingleton.elim _ ((hp (p.obj x)).subsingleton _ _) _ _
+    exact congrArg Subtype.val this
+  simpa [hkId] using hk.2
+
+/-- The arrow represented by a morphism in the category of elements. -/
+noncomputable def fibrePresheafCategoryToHom
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p)
+    {X Y : setPresheafCategory (fibredInSetsFibrePresheaf p hp P)}
+    (f : X ⟶ Y) :
+    (setPresheafObjectValue (fibredInSetsFibrePresheaf p hp P) X).1 ⟶
+      (setPresheafObjectValue (fibredInSetsFibrePresheaf p hp P) Y).1 :=
+  eqToHom (congrArg
+      (fun z : Functor.Fiber p X.base => z.1)
+      (setPresheafHom_fibre_condition _ f).symm) ≫
+    P.pullbackMap f.base
+      (setPresheafObjectValue (fibredInSetsFibrePresheaf p hp P) Y)
+
 /-- Every object of the fixed-base 2-category is fibred-equivalent over `C` to
 the CoGrothendieck category of a set-valued presheaf.  This is the
 fixed-base replacement for an ordinary categorical equivalence whose

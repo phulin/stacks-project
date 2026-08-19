@@ -560,7 +560,18 @@ theorem exact_localizationFactor_isExact
     (hF : S.IsInvertedBy F) :
     IsExactLocalizationFactor
       (S := S) (localizationFactor (S := S) F hF) := by
-  sorry
+  let prove (hR : RightMultiplicativeSystem S) :
+      IsExactLocalizationFactor
+        (S := S) (localizationFactor (S := S) F hF) := by
+    let : Localization.Lifting S.Q S F (localizationFactor (S := S) F hF) :=
+      ⟨eqToIso (localizationFactor_fac (S := S) F hF)⟩
+    let : (localizationFactor (S := S) F hF).CommShift ℤ :=
+      Functor.commShiftOfLocalization S.Q S ℤ F (localizationFactor (S := S) F hF)
+    let : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
+    refine ⟨inferInstance, ?_⟩
+    exact Functor.isTriangulated_of_precomp_iso
+      (Localization.Lifting.iso S.Q S F (localizationFactor (S := S) F hF))
+  exact prove (inferInstance : RightMultiplicativeSystem S)
 
 end LocalizationConstruction
 
@@ -581,7 +592,21 @@ theorem restrictedMorphismProperty_saturated
     (hS : SaturatedMultiplicativeSystem S) (P : ObjectProperty C)
     [P.IsTriangulated] :
     SaturatedMultiplicativeSystem (restrictedMorphismProperty S P) := by
-  sorry
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : RightMultiplicativeSystem S := hS.1.2
+  let : AdditiveCategory P.FullSubcategory := {}
+  let : AdditiveCategory S.Localization := {}
+  let F : P.FullSubcategory ⥤ S.Localization := P.ι ⋙ S.Q
+  have hF := exactFunctorMorphismProperty_saturated F
+  have hEq : restrictedMorphismProperty S P = exactFunctorMorphismProperty F := by
+    ext X Y f
+    change S (P.ι.map f) ↔ IsIso (F.map f)
+    change S (P.ι.map f) ↔ IsIso (S.Q.map (P.ι.map f))
+    have hiff : S (P.ι.map f) ↔ invertedByLocalization S (P.ι.map f) := by
+      rw [invertedByLocalization_eq_of_saturated hS]
+    exact hiff.trans (by rfl)
+  rw [hEq]
+  exact hF.1
 
 theorem restrictedMorphismProperty_compatible
     {S : MorphismProperty C} [CompatibleWithTriangulation S]

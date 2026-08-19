@@ -691,8 +691,8 @@ and third components is zero. -/
 theorem triangle_middle_composite_zero
     {T : Triangle C} (hT : T ∈ distTriang C)
     (φ ψ : T ⟶ T)
-    (_hφ₁ : φ.hom₁ = 0) (hφ₃ : φ.hom₃ = 0)
-    (hψ₁ : ψ.hom₁ = 0) (_hψ₃ : ψ.hom₃ = 0) :
+    (_ : φ.hom₁ = 0) (hφ₃ : φ.hom₃ = 0)
+    (hψ₁ : ψ.hom₁ = 0) (_ : ψ.hom₃ = 0) :
     φ.hom₂ ≫ ψ.hom₂ = 0 := by
   have hψ : T.mor₁ ≫ ψ.hom₂ = 0 := by
     rw [ψ.comm₁, hψ₁, zero_comp]

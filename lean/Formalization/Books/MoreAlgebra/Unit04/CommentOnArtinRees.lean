@@ -3,6 +3,7 @@ import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Tower
 import Mathlib.RingTheory.Filtration
 import Mathlib.RingTheory.Flat.Basic
+import Formalization.Books.Algebra.Unit150.FormallyEtaleMaps
 
 /-!
 # More on Algebra, Chapter 4: A comment on the Artin-Rees property
@@ -161,7 +162,7 @@ stage supplies the quotient-compatibility calculations. -/
 theorem associatedGradedRing_gcommRing_exists
     {R : Type u} [CommRing R] (I : Ideal R) :
     Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
-  sorry
+  exact Formalization.Books.Algebra.Unit150.associatedGradedRing_gcommRing_exists I
 
 noncomputable instance associatedGradedRing_gcommRing
     {R : Type u} [CommRing R] (I : Ideal R) :

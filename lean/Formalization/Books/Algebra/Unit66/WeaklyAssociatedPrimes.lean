@@ -1,8 +1,11 @@
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit63
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
+import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.MvPolynomial
+import Mathlib.RingTheory.MvPolynomial.Ideal
+import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Basic
 import Mathlib.Algebra.Module.LocalizedModule.Exact
@@ -721,7 +724,9 @@ theorem associatedPrimes_eq_weaklyAssociatedPrimes_of_noetherian
     [AddCommGroup M] [Module R M] [IsNoetherianRing R] :
     Formalization.Books.Algebra.Unit63.associatedPrimes R M =
       weaklyAssociatedPrimes R M := by
-  sorry
+  ext p
+  exact associated_iff_weaklyAssociated_of_fg p
+    p.asIdeal.fg_of_isNoetherianRing
 
 /-! ### The non-functoriality example -/
 
@@ -808,7 +813,231 @@ theorem weaklyAssociated_nonFunctoriality_example
              (weaklyAssociatedExampleRing k)).colon ({s} : Set _)).FG)) ∧
       (weaklyAssociatedExampleQ k).comap (weaklyAssociatedExampleMap k) =
         weaklyAssociatedExampleP k := by
-  sorry
+  classical
+  let A := weaklyAssociatedExamplePolynomialRing k
+  let L := weaklyAssociatedExampleRelationIdeal k
+  let mk : A →+* weaklyAssociatedExampleRing k := Ideal.Quotient.mk L
+  let K : Ideal A := Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i)
+  let V : Ideal (MvPolynomial ℕ (MvPolynomial ℕ k)) :=
+    MvPolynomial.idealOfVars ℕ (MvPolynomial ℕ k)
+  have hVker : V = RingHom.ker (MvPolynomial.constantCoeff :
+      MvPolynomial ℕ (MvPolynomial ℕ k) →+* MvPolynomial ℕ k) := by
+    ext f
+    change f ∈ Ideal.span (Set.range MvPolynomial.X) ↔ _
+    rw [← Set.image_univ, MvPolynomial.mem_ideal_span_X_image]
+    constructor
+    · intro hf
+      rw [RingHom.mem_ker, MvPolynomial.constantCoeff_eq]
+      by_contra h0
+      have hmem : (0 : ℕ →₀ ℕ) ∈ f.support :=
+        MvPolynomial.mem_support_iff.mpr h0
+      obtain ⟨i, _, hi⟩ := hf 0 hmem
+      exact hi (by simp)
+    · intro hf m hm
+      rw [RingHom.mem_ker] at hf
+      by_contra hzero
+      have hmzero : m = 0 := by
+        ext i
+        by_contra hi
+        exact hzero ⟨i, Set.mem_univ _, hi⟩
+      have hmcoeff := MvPolynomial.mem_support_iff.mp hm
+      apply hmcoeff
+      simpa [hmzero, MvPolynomial.constantCoeff_eq] using hf
+  have hVprime : V.IsPrime := by
+    rw [hVker]
+    exact RingHom.ker_isPrime _
+  have hKprime : K.IsPrime := by
+    let e := MvPolynomial.sumAlgEquiv k ℕ ℕ
+    have hem : Ideal.map e.toRingEquiv K = V := by
+      change Ideal.map e.toRingEquiv
+          (Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i)) =
+        Ideal.span (Set.range MvPolynomial.X)
+      rw [Ideal.map_span]
+      congr 1
+      ext z
+      constructor
+      · rintro ⟨a, ⟨i, rfl⟩, h⟩
+        exact ⟨i, by simpa [weaklyAssociatedExampleX, e] using h⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨weaklyAssociatedExampleX k i, ⟨i, rfl⟩,
+          by simp [weaklyAssociatedExampleX, e]⟩
+    letI : V.IsPrime := hVprime
+    have hcomp : (Ideal.map e.toRingEquiv K).comap e.toRingEquiv = K :=
+      Ideal.comap_map_of_bijective e.toRingEquiv e.bijective (I := K)
+    rw [hem] at hcomp
+    rw [← hcomp]
+    exact Ideal.comap_isPrime e.toRingEquiv V
+  have hLleK : L ≤ K := by
+    change Ideal.span (Set.range fun i : ℕ =>
+      weaklyAssociatedExampleX k i * weaklyAssociatedExampleY k i) ≤ K
+    refine Ideal.span_le.mpr ?_
+    rintro _ ⟨i, rfl⟩
+    have hx : weaklyAssociatedExampleX k i ∈
+        Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i) :=
+      Ideal.subset_span (Set.mem_range_self i)
+    change weaklyAssociatedExampleX k i * weaklyAssociatedExampleY k i ∈
+      Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i)
+    simpa [mul_comm] using @Ideal.mul_mem_left A _
+      (Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i))
+      (weaklyAssociatedExampleY k i) (weaklyAssociatedExampleX k i) hx
+  have hQmap : weaklyAssociatedExampleQ k = Ideal.map mk K := by
+    change Ideal.span (Set.range fun i : ℕ => mk (weaklyAssociatedExampleX k i)) =
+      Ideal.map mk (Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i))
+    rw [Ideal.map_span]
+    congr 1
+    ext z
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact ⟨weaklyAssociatedExampleX k i, ⟨i, rfl⟩, rfl⟩
+    · rintro ⟨a, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, rfl⟩
+  have hQprime : (weaklyAssociatedExampleQ k).IsPrime := by
+    rw [hQmap]
+    letI : K.IsPrime := hKprime
+    apply Ideal.map_isPrime_of_surjective Ideal.Quotient.mk_surjective
+    simpa [mk, L] using hLleK
+  have hQmin : weaklyAssociatedExampleQ k ∈
+      minimalPrimes (weaklyAssociatedExampleRing k) := by
+    refine ⟨⟨hQprime, bot_le⟩, ?_⟩
+    intro q hq hqle
+    letI : q.IsPrime := hq.1
+    have hqA : (q.comap mk).IsPrime := Ideal.comap_isPrime mk q
+    have hLq : L ≤ q.comap mk := by
+      simpa [mk, L] using (Ideal.ker_le_comap (K := q) mk)
+    have hqAleK : q.comap mk ≤ K := by
+      rw [hQmap] at hqle
+      exact (Ideal.comap_mono hqle).trans_eq <| by
+        rw [Ideal.comap_map_of_surjective mk Ideal.Quotient.mk_surjective]
+        apply sup_eq_left.mpr
+        rw [← RingHom.ker_eq_comap_bot]
+        change RingHom.ker (Ideal.Quotient.mk L) ≤ K
+        rw [Ideal.mk_ker]
+        exact hLleK
+    have hyK : ∀ i : ℕ, weaklyAssociatedExampleY k i ∉ K := by
+      intro i hy
+      have hset :
+            (MvPolynomial.X : (ℕ ⊕ ℕ) → MvPolynomial (ℕ ⊕ ℕ) k) ''
+            (Set.range (fun j : ℕ => (Sum.inl j : ℕ ⊕ ℕ))) =
+          Set.range (fun j : ℕ =>
+            (MvPolynomial.X (Sum.inl j : ℕ ⊕ ℕ) : MvPolynomial (ℕ ⊕ ℕ) k)) := by
+        ext z
+        constructor
+        · rintro ⟨a, ⟨j, rfl⟩, rfl⟩
+          exact ⟨j, rfl⟩
+        · rintro ⟨j, rfl⟩
+          exact ⟨Sum.inl j, ⟨j, rfl⟩, rfl⟩
+      have hy' : weaklyAssociatedExampleY k i ∈
+          Ideal.span ((MvPolynomial.X : (ℕ ⊕ ℕ) → MvPolynomial (ℕ ⊕ ℕ) k) ''
+            (Set.range (fun j : ℕ => (Sum.inl j : ℕ ⊕ ℕ)))) := by
+        rw [hset]
+        simpa [K, weaklyAssociatedExampleX] using hy
+      rw [MvPolynomial.mem_ideal_span_X_image] at hy'
+      have hysupp : (Finsupp.single (Sum.inr i) 1 : (ℕ ⊕ ℕ) →₀ ℕ) ∈
+          (weaklyAssociatedExampleY k i).support := by
+        apply MvPolynomial.mem_support_iff.mpr
+        simp [weaklyAssociatedExampleY]
+      obtain ⟨m, hm, hm'⟩ := hy' _ hysupp
+      rcases hm with ⟨j, rfl⟩
+      simp [weaklyAssociatedExampleY] at hm'
+    have hKq : K ≤ q.comap mk := by
+      change Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i) ≤
+        q.comap mk
+      rw [Ideal.span_le]
+      rintro _ ⟨i, rfl⟩
+      have hrel : weaklyAssociatedExampleX k i *
+          weaklyAssociatedExampleY k i ∈ q.comap mk := hLq (by
+        exact Ideal.subset_span ⟨i, rfl⟩)
+      exact (hqA.mem_or_mem hrel).resolve_right (fun h => hyK i (hqAleK h))
+    rw [hQmap]
+    exact Ideal.map_le_iff_le_comap.mpr hKq
+  let q' : PrimeSpectrum (weaklyAssociatedExampleRing k) :=
+    ⟨weaklyAssociatedExampleQ k, hQprime⟩
+  have hqweak : q' ∈ weaklyAssociatedPrimes
+      (weaklyAssociatedExampleRing k) (weaklyAssociatedExampleRing k) := by
+    change ∃ m : weaklyAssociatedExampleRing k,
+      weaklyAssociatedExampleQ k ∈
+        ((⊥ : Submodule (weaklyAssociatedExampleRing k)
+          (weaklyAssociatedExampleRing k)).colon ({m} : Set _)).minimalPrimes
+    refine ⟨1, ?_⟩
+    have hcol :
+        (⊥ : Submodule (weaklyAssociatedExampleRing k)
+          (weaklyAssociatedExampleRing k)).colon ({(1 : weaklyAssociatedExampleRing k)} : Set _) =
+          (⊥ : Ideal (weaklyAssociatedExampleRing k)) := by
+      ext x
+      simp [Submodule.mem_colon_singleton, smul_eq_mul]
+    rw [hcol]
+    exact hQmin
+  let ψ : weaklyAssociatedExampleBaseRing k →+*
+      weaklyAssociatedExamplePolynomialRing k :=
+    (MvPolynomial.rename (Sum.inl : ℕ → ℕ ⊕ ℕ) :
+      weaklyAssociatedExampleBaseRing k →ₐ[k]
+        weaklyAssociatedExamplePolynomialRing k).toRingHom
+  let κ : weaklyAssociatedExamplePolynomialRing k →+*
+      weaklyAssociatedExampleBaseRing k :=
+    (MvPolynomial.killCompl (Sum.inl_injective : Function.Injective
+      (Sum.inl : ℕ → ℕ ⊕ ℕ))).toRingHom
+  have hψmap : weaklyAssociatedExampleMap k = mk.comp ψ := by
+    ext z
+    · simp [weaklyAssociatedExampleMap, ψ, mk, L,
+        MvPolynomial.rename_eq_aeval]
+    · simp [weaklyAssociatedExampleMap, ψ, mk, L,
+        weaklyAssociatedExampleX, MvPolynomial.rename_eq_aeval]
+  have hPmap : Ideal.map ψ (weaklyAssociatedExampleP k) ≤ K := by
+    change Ideal.map ψ (Ideal.span (Set.range MvPolynomial.X)) ≤ K
+    rw [Ideal.map_span]
+    apply Ideal.span_le.mpr
+    rintro z ⟨a, ⟨i, rfl⟩, hz⟩
+    rw [← hz]
+    have hψX : ψ (MvPolynomial.X i) = weaklyAssociatedExampleX k i := by
+      simp [ψ, weaklyAssociatedExampleX]
+    rw [hψX]
+    exact Ideal.subset_span ⟨i, rfl⟩
+  have hKmap : Ideal.map κ K ≤ weaklyAssociatedExampleP k := by
+    change Ideal.map κ
+        (Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i)) ≤
+      Ideal.span (Set.range MvPolynomial.X)
+    rw [Ideal.map_span]
+    apply Ideal.span_le.mpr
+    rintro z ⟨a, ⟨i, rfl⟩, hz⟩
+    rw [← hz]
+    have hi : κ (weaklyAssociatedExampleX k i) = MvPolynomial.X i := by
+      simpa [κ, weaklyAssociatedExampleX] using
+        (MvPolynomial.killCompl_rename_app
+          (Sum.inl_injective : Function.Injective (Sum.inl : ℕ → ℕ ⊕ ℕ))
+          (MvPolynomial.X i))
+    rw [hi]
+    exact Ideal.subset_span ⟨i, rfl⟩
+  have hPcomap : (weaklyAssociatedExampleP k) = K.comap ψ := by
+    apply le_antisymm
+    · exact Ideal.map_le_iff_le_comap.mp hPmap
+    · intro f hf
+      have hmem : ψ f ∈ K := hf
+      have hmem' : κ (ψ f) ∈ Ideal.map κ K :=
+        Ideal.mem_map_of_mem κ hmem
+      have hcomp : κ (ψ f) = f := by
+        simpa [ψ, κ] using
+          (MvPolynomial.killCompl_rename_app
+            (Sum.inl_injective : Function.Injective (Sum.inl : ℕ → ℕ ⊕ ℕ)) f)
+      rw [hcomp] at hmem'
+      exact hKmap hmem'
+  refine ⟨hQprime, hQmin, hqweak, ?_⟩
+  have hQcomap : (weaklyAssociatedExampleQ k).comap mk = K := by
+    rw [hQmap, Ideal.comap_map_of_surjective mk Ideal.Quotient.mk_surjective]
+    apply sup_eq_left.mpr
+    rw [← RingHom.ker_eq_comap_bot]
+    change RingHom.ker (Ideal.Quotient.mk L) ≤ K
+    rw [Ideal.mk_ker]
+    exact hLleK
+  have hcomap :
+        (weaklyAssociatedExampleQ k).comap (weaklyAssociatedExampleMap k) =
+        weaklyAssociatedExampleP k := by
+    rw [hψmap]
+    ext f
+    change ψ f ∈ (weaklyAssociatedExampleQ k).comap mk ↔
+      f ∈ weaklyAssociatedExampleP k
+    rw [hQcomap, hPcomap]
+    simp only [Ideal.mem_comap]
+  refine ⟨?_, ?_, hcomap⟩
 
 /-- Weakly associated primes pull back along every ring map. -/
 theorem weaklyAssociatedPrimes_reverse_functorial
@@ -817,7 +1046,61 @@ theorem weaklyAssociatedPrimes_reverse_functorial
     (letI : Module R M := Module.compHom M φ;
       weaklyAssociatedPrimes R M ⊆
         PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M) := by
-  sorry
+  letI : Module R M := Module.compHom M φ
+  intro p hp
+  change ∃ m : M,
+    p.asIdeal ∈ ((⊥ : Submodule R M).colon ({m} : Set M)).minimalPrimes at hp
+  rcases hp with ⟨m, hm⟩
+  let I : Ideal R := (⊥ : Submodule R M).colon ({m} : Set M)
+  let J : Ideal S := (⊥ : Submodule S M).colon ({m} : Set M)
+  let T : Submonoid S := p.asIdeal.primeCompl.map φ
+  let B := Localization T
+  have hdisj : Disjoint (T : Set S) (J : Set S) := by
+    rw [Set.disjoint_left]
+    rintro s hsT hsJ
+    rcases hsT with ⟨r, hr, rfl⟩
+    have hsJ' : φ r • m = 0 := by
+      simpa [J, Submodule.mem_colon_singleton, Submodule.mem_bot] using hsJ
+    apply hr
+    have hrI : r ∈ I := by
+      simp only [I, Submodule.mem_colon_singleton, Submodule.mem_bot]
+      change φ r • m = 0
+      exact hsJ'
+    exact hm.le hrI
+  have hmapne : J.map (algebraMap S B) ≠ ⊤ := by
+    exact (IsLocalization.map_algebraMap_ne_top_iff_disjoint T B J).mpr hdisj
+  obtain ⟨q, hq⟩ := Ideal.nonempty_minimalPrimes hmapne
+  have hqprime : q.IsPrime := hq.isPrime
+  have hqS : q.under S ∈ J.minimalPrimes := by
+    rw [IsLocalization.minimalPrimes_map T B J] at hq
+    exact hq
+  let qS : Ideal S := q.under S
+  have hqSprime : qS.IsPrime := by
+    exact (IsLocalization.isPrime_iff_isPrime_disjoint T B q).mp hqprime |>.1
+  have hqSle : qS.comap φ ≤ p.asIdeal := by
+    apply (Ideal.disjoint_map_primeCompl_iff_comap_le
+      (f := φ) (p := p.asIdeal) (I := qS)).mp
+    simpa [qS, T] using
+      ((IsLocalization.isPrime_iff_isPrime_disjoint T B q).mp hqprime).2.symm
+  have hIle : I ≤ qS.comap φ := by
+    intro r hr
+    rw [Ideal.mem_comap]
+    have hrJ : φ r ∈ J := by
+      simp only [J, Submodule.mem_colon_singleton, Submodule.mem_bot]
+      change φ r • m = 0
+      simp only [I, Submodule.mem_colon_singleton, Submodule.mem_bot] at hr
+      change φ r • m = 0 at hr
+      exact hr
+    exact hqS.le hrJ
+  have hpq : p.asIdeal ≤ qS.comap φ :=
+    hm.2 ⟨Ideal.comap_isPrime φ qS, hIle⟩ hqSle
+  have hpqeq : qS.comap φ = p.asIdeal := le_antisymm hqSle hpq
+  let q' : PrimeSpectrum S := ⟨qS, hqSprime⟩
+  have hqweak : q' ∈ weaklyAssociatedPrimes S M := by
+    exact ⟨m, hqS⟩
+  refine ⟨q', hqweak, ?_⟩
+  apply PrimeSpectrum.ext
+  exact hpqeq
 
 /-- The associated/weakly associated spectrum-map inclusion chain. -/
 theorem associated_weaklyAssociated_functorial_chain
@@ -831,7 +1114,10 @@ theorem associated_weaklyAssociated_functorial_chain
           weaklyAssociatedPrimes R M ∧
         weaklyAssociatedPrimes R M ⊆
           PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M) := by
-  sorry
+  letI : Module R M := Module.compHom M φ
+  exact ⟨Formalization.Books.Algebra.Unit63.ass_functorial φ,
+    associatedPrimes_subset_weaklyAssociatedPrimes_subset_support.1,
+    weaklyAssociatedPrimes_reverse_functorial φ⟩
 
 /-- If the target ring is Noetherian, every inclusion in the preceding chain
 is an equality. -/

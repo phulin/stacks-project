@@ -1275,7 +1275,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       tripleTotalSign₂ p ((s + 1) - p) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
-    simp
+    simp [Int.negOnePow_succ]
   have hs1q_raw :
       (p + ((s + 1) - p)).negOnePow = (p + (s - p)).negOnePow := by
     congr 1 <;> ring

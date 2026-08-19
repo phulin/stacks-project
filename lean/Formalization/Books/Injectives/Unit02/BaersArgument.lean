@@ -323,7 +323,44 @@ theorem module_comparisonMap_injective
     (A : ModuleCat.{u} R) (F : Set.Iio α ⥤ ModuleCat.{u} R)
     (hF : ∀ {i j : Set.Iio α} (f : i ⟶ j), Mono (F.map f)) :
     Function.Injective (comparisonMap A F) := by
-  sorry
+  classical
+  let H := F ⋙ coyoneda.obj (Opposite.op A)
+  intro x y hxy
+  obtain ⟨i, f, hf⟩ := Types.jointly_surjective H (colimit.isColimit H) x
+  obtain ⟨j, g, hg⟩ := Types.jointly_surjective H (colimit.isColimit H) y
+  by_cases hα : 0 < α
+  · let : Nonempty (Set.Iio α) := ⟨⟨0, hα⟩⟩
+    let : IsFiltered (Set.Iio α) := by infer_instance
+    let : Nonempty α.ToType :=
+      ⟨Ordinal.ToType.mk (o := α) ⟨0, hα⟩⟩
+    let : IsFiltered α.ToType := by infer_instance
+    let : PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) :=
+      inferInstance
+    let : PreservesColimitsOfShape α.ToType (forget (ModuleCat.{u} R)) :=
+      PreservesFilteredColimitsOfSize.preserves_filtered_colimits.{u, u} _
+    let : PreservesColimitsOfShape (Set.Iio α) (forget (ModuleCat.{u} R)) :=
+      preservesColimitsOfShape_of_equiv
+        (Ordinal.ToType.mk (o := α)).equivalence.symm _
+    let k : Set.Iio α := ⟨max i j, by
+      show max (i : Ordinal) (j : Ordinal) < α
+      exact max_lt i.2 j.2⟩
+    let fi : i ⟶ k := homOfLE (le_max_left _ _)
+    let gj : j ⟶ k := homOfLE (le_max_right _ _)
+    let : Mono (colimit.ι F k) := ordinal_module_colimit_ι_mono F hF k
+    rw [← hf, ← hg] at hxy
+    have hstage : f ≫ colimit.ι F i = g ≫ colimit.ι F j := by
+      simpa [comparisonMap, H] using hxy
+    have hcommon : f ≫ F.map fi = g ≫ F.map gj := by
+      apply (cancel_mono (colimit.ι F k)).mp
+      simp only [Category.assoc]
+      rw [colimit.w F fi, colimit.w F gj]
+      exact hstage
+    rw [← hf, ← hg]
+    apply (Types.FilteredColimit.colimit_eq_iff (F := H)
+      (i := i) (j := j) (xi := f) (xj := g)).2
+    exact ⟨k, fi, gj, by
+      simpa [H] using hcommon⟩
+  · exact (hα (lt_of_le_of_lt bot_le i.2)).elim
 
 /-- In the concrete module interpretation of the ordinal colimit, the
 underlying module is the union of the images of its stages. -/
@@ -334,7 +371,31 @@ theorem ordinal_module_colimit_union
     (hF : ∀ {i j : Set.Iio α} (f : i ⟶ j), Mono (F.map f)) :
     (Set.univ : Set (↑(colimit F : ModuleCat.{u} R))) =
       ⋃ i : Set.Iio α, Set.range (fun x => (colimit.ι F i) x) := by
-  sorry
+  classical
+  let : Nonempty (Set.Iio α) := ⟨⟨0, hα⟩⟩
+  let : IsFiltered (Set.Iio α) := by infer_instance
+  let : Nonempty α.ToType :=
+    ⟨Ordinal.ToType.mk (o := α) ⟨0, hα⟩⟩
+  let : IsFiltered α.ToType := by infer_instance
+  let : PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) :=
+    inferInstance
+  let : PreservesColimitsOfShape α.ToType (forget (ModuleCat.{u} R)) :=
+    PreservesFilteredColimitsOfSize.preserves_filtered_colimits.{u, u} _
+  let : PreservesColimitsOfShape (Set.Iio α) (forget (ModuleCat.{u} R)) :=
+    preservesColimitsOfShape_of_equiv
+      (Ordinal.ToType.mk (o := α)).equivalence.symm _
+  let _ : Mono (colimit.ι F ⟨0, hα⟩) :=
+    ordinal_module_colimit_ι_mono F hF ⟨0, hα⟩
+  let hc : IsColimit ((forget (ModuleCat.{u} R)).mapCocone (colimit.cocone F)) :=
+    isColimitOfPreserves (forget (ModuleCat.{u} R)) (colimit.isColimit F)
+  ext x
+  constructor
+  · intro hx
+    obtain ⟨i, y, hy⟩ :=
+      Types.jointly_surjective (F ⋙ forget (ModuleCat.{u} R)) hc x
+    exact Set.mem_iUnion.2 ⟨i, Set.mem_range.2 ⟨y, hy⟩⟩
+  · intro hx
+    exact Set.mem_univ x
 
 /-- The cardinality used in the module smallness proposition. -/
 def moduleSubmoduleCardinal (R : Type u) [Ring R]
@@ -347,7 +408,105 @@ theorem module_is_alpha_small
     {R : Type u} [Ring R] (M : ModuleCat.{u} R) (α : Ordinal.{u})
     (hα : moduleSubmoduleCardinal R M < Ordinal.cof α) :
     IsAlphaSmall M α (MorphismProperty.monomorphisms (ModuleCat.{u} R)) := by
-  sorry
+  open scoped Ordinal in
+  classical
+  have hαpos : 0 < α := by
+    by_contra h
+    have hzero : α = 0 := le_antisymm (not_lt.mp h) bot_le
+    subst α
+    simp at hα
+  intro F hF hFcol hHom
+  let _ : HasColimit F := hFcol
+  let _ : HasColimit (F ⋙ coyoneda.obj (Opposite.op M)) := hHom
+  have hFmono : ∀ {i j : Set.Iio α} (q : i ⟶ j), Mono (F.map q) :=
+    fun q => hF q
+  have hinj : Function.Injective (comparisonMap M F) :=
+    module_comparisonMap_injective M F hFmono
+  refine ⟨hinj, ?_⟩
+  intro f
+  let P : ∀ i : Set.Iio α, Submodule R (↑(colimit F : ModuleCat.{u} R)) :=
+    fun i => LinearMap.range (colimit.ι F i).hom
+  let L : ∀ i : Set.Iio α, Submodule R (M : Type u) :=
+    fun i => (P i).comap f.hom
+  have hP_mono : ∀ {i j : Set.Iio α} (q : i ⟶ j), P i ≤ P j := by
+    intro i j q z hz
+    rcases hz with ⟨y, rfl⟩
+    refine ⟨(F.map q).hom y, ?_⟩
+    change (F.map q ≫ colimit.ι F j).hom y =
+      (colimit.ι F i).hom y
+    rw [colimit.w F q]
+  have hL_mono : ∀ {i j : Set.Iio α} (q : i ⟶ j), L i ≤ L j := by
+    intro i j q
+    exact Submodule.comap_mono (hP_mono q)
+  have hL_nonempty : ∀ m : (M : Type u), ∃ i : Set.Iio α, m ∈ L i := by
+    intro m
+    have hm : f.hom m ∈ ⋃ i : Set.Iio α, Set.range (fun x => (colimit.ι F i) x) := by
+      rw [← ordinal_module_colimit_union F hαpos hFmono]
+      exact Set.mem_univ _
+    obtain ⟨i, y, hy⟩ := Set.mem_iUnion.1 hm
+    refine ⟨i, ?_⟩
+    change f.hom m ∈ LinearMap.range (colimit.ι F i).hom
+    exact ⟨y, hy⟩
+  let s : Submodule R (M : Type u) → Ordinal := fun K =>
+    if hK : ∃ i : Set.Iio α, L i = K then
+      (Classical.choose hK : Set.Iio α).1
+    else 0
+  have hslt (K : Submodule R (M : Type u)) : s K < α := by
+    dsimp [s]
+    split_ifs with hK
+    · exact (Classical.choose hK).2
+    · exact hαpos
+  have hstage (i : Set.Iio α) :
+      ∃ j : Set.Iio α, L j = L i ∧ (j : Ordinal) = s (L i) := by
+    have hi : ∃ j : Set.Iio α, L j = L i := ⟨i, rfl⟩
+    let j : Set.Iio α := Classical.choose hi
+    have hj : L j = L i := Classical.choose_spec hi
+    refine ⟨j, hj, ?_⟩
+    change (j : Ordinal) =
+      if hK : ∃ k : Set.Iio α, L k = L i then
+        (Classical.choose hK : Set.Iio α).1 else 0
+    rw [dif_pos hi]
+  have hsup : (⨆ K : Submodule R (M : Type u), s K) < α :=
+    Ordinal.iSup_lt_of_lt_cof
+      (by simpa [moduleSubmoduleCardinal] using hα) hslt
+  let β : Set.Iio α :=
+    ⟨⨆ K : Submodule R (M : Type u), s K, hsup⟩
+  have hLtop : L β = ⊤ := by
+    apply top_unique
+    intro m hm
+    obtain ⟨i, hi⟩ := hL_nonempty m
+    obtain ⟨j, hji, hsj⟩ := hstage i
+    have hjβ : (j : Ordinal) ≤ β := by
+      change (j : Ordinal) ≤ ⨆ K : Submodule R (M : Type u), s K
+      rw [hsj]
+      exact Ordinal.le_iSup s (L i)
+    have hle : L j ≤ L β :=
+      hL_mono (homOfLE hjβ)
+    apply hle
+    rw [hji]
+    exact hi
+  let : Mono (colimit.ι F β) := ordinal_module_colimit_ι_mono F hFmono β
+  let eβ : (F.obj β : Type u) ≃ₗ[R] P β :=
+    LinearEquiv.ofInjective (colimit.ι F β).hom
+      ((ModuleCat.mono_iff_injective (colimit.ι F β)).mp inferInstance)
+  have hf_range : ∀ m : (M : Type u), f.hom m ∈ P β := by
+    intro m
+    have hm : m ∈ L β := by
+      rw [hLtop]
+      exact Submodule.mem_top
+    exact hm
+  let fβ : M ⟶ F.obj β :=
+    ModuleCat.ofHom
+      (eβ.symm.toLinearMap.comp (f.hom.codRestrict (P β) hf_range))
+  have hfactor : fβ ≫ colimit.ι F β = f := by
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro m
+    change (colimit.ι F β).hom
+        (eβ.symm ⟨f.hom m, hf_range m⟩) = f.hom m
+    exact congrArg Subtype.val (eβ.apply_symm_apply ⟨f.hom m, hf_range m⟩)
+  refine ⟨colimit.ι (F ⋙ coyoneda.obj (Opposite.op M)) β fβ, ?_⟩
+  simpa [comparisonMap] using hfactor
 
 /-! ## Baer's criterion and the first pushout -/
 

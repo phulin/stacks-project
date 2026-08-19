@@ -75,9 +75,9 @@ private theorem mittagLeffler_baseChange
     (mittagLeffler_tensor_iff target).out 0 1
   apply hcritS.mpr
   intro A Q
-  letI (a : A) : Module R (Q a : Type (max u v)) :=
+  let (a : A) : Module R (Q a : Type (max u v)) :=
     Module.compHom (Q a : Type (max u v)) (algebraMap R S)
-  letI (a : A) : IsScalarTower R S (Q a : Type (max u v)) :=
+  let (a : A) : IsScalarTower R S (Q a : Type (max u v)) :=
     IsScalarTower.of_compHom R S (Q a : Type (max u v))
   let RQ : A → ModuleCat.{max u v} R :=
     fun a => ModuleCat.of R (Q a : Type (max u v))

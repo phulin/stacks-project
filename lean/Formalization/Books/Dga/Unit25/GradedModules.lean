@@ -457,7 +457,7 @@ private theorem gradedRightModuleHomogeneousComp_id_left
           (fun x : ℤ × ℤ => x.1 + x.2 = j) := by
       funext x
       simp only [zero_add]
-    apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp)).2
+    apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp.symm)).2
     rfl
   have hfamily : ∀ {n m : ℤ} (h' : n = m)
       (u : GradedRightModuleHomogeneous K L n)
@@ -547,7 +547,433 @@ def GradedModuleTotalizationSpec : Type _ :=
       (f : GradedRightModuleHomogeneous K L i)
       (g : GradedRightModuleHomogeneous L M j),
       D.homogeneous_comp f g =
-        gradedRightModuleHomogeneousComp i j f g)}
+      gradedRightModuleHomogeneousComp i j f g)}
+
+/- private def gradedRightModuleTotalComp
+    {K L M : GradedRightModule (R := R) (A := A)} :
+    DirectSum ℤ (fun n => GradedRightModuleHomogeneous K L n) →
+      DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n) →
+        DirectSum ℤ (fun n => GradedRightModuleHomogeneous K M n) :=
+  fun f g =>
+    DirectSum.toModule R ℤ
+      ((DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n)) →ₗ[R]
+        DirectSum ℤ (fun n => GradedRightModuleHomogeneous K M n))
+      (fun i =>
+        { toFun := fun fi =>
+            DirectSum.toModule R ℤ
+              (DirectSum ℤ (fun n => GradedRightModuleHomogeneous K M n))
+              (fun j =>
+                { toFun := fun gj =>
+                    DirectSum.lof R ℤ
+                      (fun n => GradedRightModuleHomogeneous K M n) (i + j)
+                      (gradedRightModuleHomogeneousComp i j fi gj)
+                  map_add' := by
+                    intro gj gj'
+                    rw [gradedRightModuleHomogeneousComp_add_right]
+                    exact (DirectSum.lof R ℤ
+                      (fun n => GradedRightModuleHomogeneous K M n) (i + j)).map_add _ _
+                  map_smul' := by
+                    intro r gj
+                    rw [gradedRightModuleHomogeneousComp_smul_right]
+                    exact (DirectSum.lof R ℤ
+                      (fun n => GradedRightModuleHomogeneous K M n) (i + j)).map_smul _ _ })
+          map_add' := by
+            intro fi fi'
+            apply DirectSum.linearMap_ext
+            intro j
+            apply LinearMap.ext
+            intro gj
+            simp only [LinearMap.comp_apply, LinearMap.add_apply]
+            simp only [DirectSum.toModule_lof]
+            dsimp
+            rw [gradedRightModuleHomogeneousComp_add_left]
+            exact (DirectSum.lof R ℤ
+              (fun n => GradedRightModuleHomogeneous K M n) (i + j)).map_add _ _
+          map_smul' := by
+            intro r fi
+            apply DirectSum.linearMap_ext
+            intro j
+            apply LinearMap.ext
+            intro gj
+            simp only [LinearMap.comp_apply, LinearMap.smul_apply]
+            simp only [DirectSum.toModule_lof]
+            dsimp
+            rw [gradedRightModuleHomogeneousComp_smul_left]
+            exact (DirectSum.lof R ℤ
+              (fun n => GradedRightModuleHomogeneous K M n) (i + j)).map_smul _ _ }) f g
+
+private theorem gradedRightModuleTotalComp_add_left
+    {K L M : GradedRightModule (R := R) (A := A)}
+    (f f' : DirectSum ℤ (fun n => GradedRightModuleHomogeneous K L n))
+    (g : DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n)) :
+    gradedRightModuleTotalComp (f + f') g =
+      gradedRightModuleTotalComp f g + gradedRightModuleTotalComp f' g := by
+  simp [gradedRightModuleTotalComp]
+
+private theorem gradedRightModuleTotalComp_add_right
+    {K L M : GradedRightModule (R := R) (A := A)}
+    (f : DirectSum ℤ (fun n => GradedRightModuleHomogeneous K L n))
+    (g g' : DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n)) :
+    gradedRightModuleTotalComp f (g + g') =
+      gradedRightModuleTotalComp f g + gradedRightModuleTotalComp f g' := by
+  simp [gradedRightModuleTotalComp]
+
+private theorem gradedRightModuleTotalComp_smul_left
+    {K L M : GradedRightModule (R := R) (A := A)}
+    (r : R) (f : DirectSum ℤ (fun n => GradedRightModuleHomogeneous K L n))
+    (g : DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n)) :
+    gradedRightModuleTotalComp (r • f) g =
+      r • gradedRightModuleTotalComp f g := by
+  simp [gradedRightModuleTotalComp]
+
+private theorem gradedRightModuleTotalComp_smul_right
+    {K L M : GradedRightModule (R := R) (A := A)}
+    (r : R) (f : DirectSum ℤ (fun n => GradedRightModuleHomogeneous K L n))
+    (g : DirectSum ℤ (fun n => GradedRightModuleHomogeneous L M n)) :
+    gradedRightModuleTotalComp f (r • g) =
+      r • gradedRightModuleTotalComp f g := by
+  simp [gradedRightModuleTotalComp]
+
+private theorem gradedRightModuleTotalComp_lof
+    {K L M : GradedRightModule (R := R) (A := A)} {i j : ℤ}
+    (f : GradedRightModuleHomogeneous K L i)
+    (g : GradedRightModuleHomogeneous L M j) :
+    gradedRightModuleTotalComp
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous K L n) i f)
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous L M n) j g) =
+      DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous K M n) (i + j)
+        (gradedRightModuleHomogeneousComp i j f g) := by
+  simp [gradedRightModuleTotalComp]
+
+private theorem gradedRightModuleHomogeneous_lof_cast
+    {K L : GradedRightModule (R := R) (A := A)} {i j : ℤ}
+    (h : i = j) (f : GradedRightModuleHomogeneous K L i) :
+    DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous K L n) i f =
+      DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous K L n) j
+        (cast (congrArg (fun n => GradedRightModuleHomogeneous K L n) h) f) := by
+  subst j
+  rfl
+
+private theorem gradedRightModuleTotalComp_id_left
+    {K L : GradedRightModule (R := R) (A := A)} {j : ℤ}
+    (f : GradedRightModuleHomogeneous K L j) :
+    gradedRightModuleTotalComp
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous K K n) 0
+          (gradedRightModuleHomogeneousId K))
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous K L n) j f) =
+      DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous K L n) j f := by
+  rw [gradedRightModuleTotalComp_lof,
+    gradedRightModuleHomogeneousComp_id_left]
+  exact (gradedRightModuleHomogeneous_lof_cast
+    (show j = 0 + j by omega) f).symm
+
+private theorem gradedRightModuleTotalComp_id_right
+    {K L : GradedRightModule (R := R) (A := A)} {i : ℤ}
+    (f : GradedRightModuleHomogeneous K L i) :
+    gradedRightModuleTotalComp
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous K L n) i f)
+        (DirectSum.lof R ℤ
+          (fun n => GradedRightModuleHomogeneous L L n) 0
+          (gradedRightModuleHomogeneousId L)) =
+      DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous K L n) i f := by
+  rw [gradedRightModuleTotalComp_lof,
+    gradedRightModuleHomogeneousComp_id_right]
+  exact (gradedRightModuleHomogeneous_lof_cast
+    (show i = i + 0 by omega) f).symm
+
+private theorem gradedRightModuleHomogeneousComp_assoc
+    {W X Y Z : GradedRightModule (R := R) (A := A)}
+    {i j k : ℤ}
+    (f : GradedRightModuleHomogeneous W X i)
+    (g : GradedRightModuleHomogeneous X Y j)
+    (h : GradedRightModuleHomogeneous Y Z k) :
+    gradedRightModuleHomogeneousComp (i + j) k
+        (gradedRightModuleHomogeneousComp i j f g) h =
+      cast (congrArg (fun n => GradedRightModuleHomogeneous W Z n)
+        (show (i + j) + k = i + (j + k) by omega)).symm
+        (gradedRightModuleHomogeneousComp i (j + k) f
+          (gradedRightModuleHomogeneousComp j k g h)) := by
+  apply Subtype.ext
+  funext s
+  apply LinearMap.ext
+  intro m
+  have hsum : (i + j) + k = i + (j + k) := by omega
+  have hfamily : ∀ {n m : ℤ} (h' : n = m)
+      (u : GradedRightModuleHomogeneous W Z n)
+      (t : GradedDegreePair m),
+      HEq ((cast (congrArg (fun d => GradedRightModuleHomogeneous W Z d)
+        h') u).1 t)
+        (u.1 (cast (congrArg (fun d => GradedDegreePair d) h'.symm) t)) := by
+    intro n m h' u t
+    cases h'
+    rfl
+  have hcomp :
+      (gradedRightModuleHomogeneousComp (i + j) k
+        (gradedRightModuleHomogeneousComp i j f g) h).1 s m =
+        (gradedRightModuleHomogeneousComp i (j + k) f
+          (gradedRightModuleHomogeneousComp j k g h)).1
+          ⟨s.1, by omega⟩ m := by
+    obtain ⟨⟨p, q⟩, hq⟩ := s
+    dsimp [gradedRightModuleHomogeneousComp,
+      gradedRightModuleHomogeneousCompFamily]
+    change _
+    have hf :
+        (⟨(-(j - -(k - p)), q), by omega⟩ : GradedDegreePair i) =
+          ⟨(-(j + k - p), q), by omega⟩ := by
+      apply Subtype.ext
+      change (-(j - -(k - p)), q) = (-(j + k - p), q)
+      exact Prod.ext (by omega) rfl
+    have hg :
+        (⟨(-(k - p), j - -(k - p)), by omega⟩ : GradedDegreePair j) =
+          ⟨(-(k - p), j + k - p), by omega⟩ := by
+      apply Subtype.ext
+      change (-(k - p), j - -(k - p)) =
+        (-(k - p), j + k - p)
+      exact Prod.ext (by rfl) (by omega)
+    have hfamily_f : ∀ {u v : GradedDegreePair i} (huv : u = v)
+        {x : W.component (-u.1.2)} {y : W.component (-v.1.2)},
+        HEq x y → HEq (f.1 u x) (f.1 v y) := by
+      intro u v huv x y hxy
+      cases huv
+      cases hxy
+      rfl
+    have hfamily_g : ∀ {u v : GradedDegreePair j} (huv : u = v)
+        {x : X.component (-u.1.2)} {y : X.component (-v.1.2)},
+        HEq x y → HEq (g.1 u x) (g.1 v y) := by
+      intro u v huv x y hxy
+      cases huv
+      cases hxy
+      rfl
+    have hcastEq :
+        X.component ((⟨(-(j + k - p), q), by omega⟩ :
+          GradedDegreePair i).1.1) =
+          X.component (-((⟨(-(k - p), j + k - p), by omega⟩ :
+            GradedDegreePair j).1.2)) := by
+      congr 1
+    have hcast_heq :
+        ∀ {U V : Type _} (hh : U = V) (x : U), HEq x (cast hh x) := by
+      intro U V hh x
+      cases hh
+      rfl
+    have hfm : HEq
+        ((f.1 ⟨(-(j - -(k - p)), q), by omega⟩) m)
+        (cast hcastEq
+          ((f.1 ⟨(-(j + k - p), q), by omega⟩) m)) := by
+      have hff : HEq
+          ((f.1 ⟨(-(j - -(k - p)), q), by omega⟩) m)
+          ((f.1 ⟨(-(j + k - p), q), by omega⟩) m) := by
+        apply hfamily_f
+        · apply Subtype.ext
+          apply Prod.ext
+          · change -(j - -(k - p)) = -(j + k - p)
+            omega
+          · rfl
+        · exact heq_of_eq rfl
+      exact hff.trans (hcast_heq hcastEq _)
+    have hgm : HEq
+        ((g.1 ⟨(-(k - p), j - -(k - p)), by omega⟩)
+          ((f.1 ⟨(-(j - -(k - p)), q), by omega⟩) m))
+        ((g.1 ⟨(-(k - p), j + k - p), by omega⟩)
+          (cast hcastEq
+            ((f.1 ⟨(-(j + k - p), q), by omega⟩) m))) := by
+      apply hfamily_g hg
+      exact hfm
+    have hh : HEq
+        (h.1 ⟨(p, k - p), by omega⟩)
+        (h.1 ⟨(p, k - p), by omega⟩) := by
+      apply congr_arg_heq h.1
+      rfl
+    have hval : HEq
+        ((h.1 ⟨(p, k - p), by omega⟩)
+          ((g.1 ⟨(-(k - p), j - -(k - p)), by omega⟩)
+            ((f.1 ⟨(-(j - -(k - p)), q), by omega⟩) m)))
+        ((h.1 ⟨(p, k - p), by omega⟩)
+          ((g.1 ⟨(-(k - p), j + k - p), by omega⟩)
+            (cast hcastEq
+              ((f.1 ⟨(-(j + k - p), q), by omega⟩) m)))) := by
+      apply dcongr_heq (a₁ :=
+        (g.1 ⟨(-(k - p), j - -(k - p)), by omega⟩)
+          ((f.1 ⟨(-(j - -(k - p)), q), by omega⟩) m))
+        (a₂ :=
+        (g.1 ⟨(-(k - p), j + k - p), by omega⟩)
+          (cast hcastEq
+            ((f.1 ⟨(-(j + k - p), q), by omega⟩) m)))
+      · exact hgm
+      · intro x y hxy
+        cases hxy
+        rfl
+      · intro _ _
+        rfl
+    exact eq_of_heq hval
+  apply eq_of_heq
+  rcases s with ⟨⟨p, q⟩, hq⟩
+  have hs0 :
+      (⟨⟨p, q⟩, by omega⟩ : GradedDegreePair (i + (j + k))) =
+        cast (congrArg (fun n => GradedDegreePair n) hsum)
+          (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k)) := by
+    apply eq_of_heq
+    apply (heq_cast_iff_heq _ _ _).2
+    have hp :
+        (fun x : ℤ × ℤ => x.1 + x.2 = (i + j) + k) =
+          (fun x : ℤ × ℤ => x.1 + x.2 = i + (j + k)) := by
+      funext x
+      simp only [add_assoc]
+    have hsub : HEq
+        (⟨⟨p, q⟩, by omega⟩ : GradedDegreePair (i + (j + k)))
+        (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k)) := by
+      apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp.symm)).2
+      exact heq_of_eq rfl
+    exact hsub
+  have hcast := hfamily hsum.symm
+    (gradedRightModuleHomogeneousComp i (j + k) f
+      (gradedRightModuleHomogeneousComp j k g h))
+      (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k))
+  have hinput :
+      W.component (-((⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k)).1.2)) =
+        W.component (-((cast (congrArg (fun d => GradedDegreePair d) hsum)
+          (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k))).1.2)) := by
+    congr 1
+    simpa using congrArg
+      (fun z : GradedDegreePair (i + (j + k)) => -z.1.2) hs0
+  have hcast_heq :
+      ∀ {U V : Type _} (hh : U = V) (x : U), HEq x (cast hh x) := by
+    intro U V hh x
+    cases hh
+    rfl
+  have happly : HEq
+      (((cast (congrArg (fun d => GradedRightModuleHomogeneous W Z d)
+        hsum.symm)
+        (gradedRightModuleHomogeneousComp i (j + k) f
+          (gradedRightModuleHomogeneousComp j k g h))).1
+        (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k))) m)
+      (((gradedRightModuleHomogeneousComp i (j + k) f
+        (gradedRightModuleHomogeneousComp j k g h)).1
+        (cast (congrArg (fun d => GradedDegreePair d) hsum)
+          (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k))))
+          (cast hinput m)) := by
+    apply dcongr_heq (a₁ := m) (a₂ := cast hinput m)
+    · exact hcast_heq hinput m
+    · intro x y hxy
+      cases hxy
+      rfl
+    · intro _ _
+      exact congr_arg_heq (fun z => z.toFun) hcast
+  have hmid : HEq
+      (((gradedRightModuleHomogeneousComp i (j + k) f
+        (gradedRightModuleHomogeneousComp j k g h)).1
+        (⟨⟨p, q⟩, by omega⟩ : GradedDegreePair (i + (j + k)))) m)
+      (((gradedRightModuleHomogeneousComp i (j + k) f
+        (gradedRightModuleHomogeneousComp j k g h)).1
+        (cast (congrArg (fun d => GradedDegreePair d) hsum)
+          (⟨⟨p, q⟩, hq⟩ : GradedDegreePair ((i + j) + k))))
+        (cast hinput m)) := by
+    apply dcongr_heq (a₁ := m) (a₂ := cast hinput m)
+    · exact hcast_heq hinput m
+    · intro x y hxy
+      cases hxy
+      rfl
+    · exact congr_arg_heq (fun z => z.toFun)
+        (congr_arg_heq
+          (gradedRightModuleHomogeneousComp i (j + k) f
+            (gradedRightModuleHomogeneousComp j k g h)).1 hs0)
+  exact (heq_of_eq hcomp).trans
+    (hmid.trans happly.symm)
+
+theorem gradedModuleTotalizationSpec_nonempty :
+    Nonempty (GradedModuleTotalizationSpec (R := R) (A := A)) := by
+  refine ⟨
+    { homogeneous_id := fun L => gradedRightModuleHomogeneousId L
+      homogeneous_comp := fun f g => gradedRightModuleHomogeneousComp _ _ f g
+      total_comp := gradedRightModuleTotalComp
+      total_comp_add_left := by
+        intro K L M f f' g
+        exact gradedRightModuleTotalComp_add_left f f' g
+      total_comp_add_right := by
+        intro K L M f g g'
+        exact gradedRightModuleTotalComp_add_right f g g'
+      total_comp_smul_left := by
+        intro K L M r f g
+        exact gradedRightModuleTotalComp_smul_left r f g
+      total_comp_smul_right := by
+        intro K L M r f g
+        exact gradedRightModuleTotalComp_smul_right r f g
+      total_comp_lof := by
+        intro K L M i j f g
+        exact gradedRightModuleTotalComp_lof f g
+      total_comp_degree := by
+        intro K L M i j f g
+        rcases f.property with ⟨f', hf⟩
+        rcases g.property with ⟨g', hg⟩
+        refine ⟨gradedRightModuleHomogeneousComp i j f' g', ?_⟩
+        rw [← hf, ← hg]
+        rw [gradedRightModuleTotalComp_lof]
+      total_id := fun L => DirectSum.lof R ℤ
+        (fun n => GradedRightModuleHomogeneous L L n) 0
+        (gradedRightModuleHomogeneousId L)
+      total_id_eq_lof := by intro L; rfl
+      total_id_comp := by
+        intro K L f
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [gradedRightModuleTotalComp]
+        · intro j f
+          exact gradedRightModuleTotalComp_id_left f
+        · intro f g hf hg
+          rw [gradedRightModuleTotalComp_add_right, hf, hg]
+      total_comp_id := by
+        intro K L f
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [gradedRightModuleTotalComp]
+        · intro i f
+          exact gradedRightModuleTotalComp_id_right f
+        · intro f g hf hg
+          rw [gradedRightModuleTotalComp_add_left, hf, hg]
+      total_assoc := by
+        intro W X Y Z f g h
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [gradedRightModuleTotalComp]
+        · intro i f
+          refine DirectSum.induction_on g ?_ ?_ ?_
+          · simp [gradedRightModuleTotalComp]
+          · intro j g
+            refine DirectSum.induction_on h ?_ ?_ ?_
+            · simp [gradedRightModuleTotalComp]
+            · intro k h
+              rw [gradedRightModuleTotalComp_lof,
+                gradedRightModuleTotalComp_lof,
+                gradedRightModuleTotalComp_lof,
+                gradedRightModuleTotalComp_lof]
+              rw [gradedRightModuleHomogeneousComp_assoc]
+              exact gradedRightModuleHomogeneous_lof_cast _ _
+            · intro h h' hh hh'
+              rw [gradedRightModuleTotalComp_add_right,
+                gradedRightModuleTotalComp_add_right,
+                hh, hh']
+        · intro g g' hg hg'
+          rw [gradedRightModuleTotalComp_add_right,
+            gradedRightModuleTotalComp_add_left,
+            hg, hg']
+        · intro f f' hf hf'
+          rw [gradedRightModuleTotalComp_add_left,
+            gradedRightModuleTotalComp_add_left,
+            hf, hf'] }
+    , by
+      constructor
+      · intro L
+        rfl
+      · intro K L M i j f g
+        rfl⟩
+
+ -/
 
 theorem gradedModuleTotalizationSpec_nonempty :
     Nonempty (GradedModuleTotalizationSpec (R := R) (A := A)) := by

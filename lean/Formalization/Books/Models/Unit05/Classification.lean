@@ -5818,14 +5818,371 @@ theorem lemma_D5 (T : NumericalType) (S : MinusTwoSubgraph T 5)
   refine ⟨Equiv.refl _, ?_⟩
   unfold isD5 realizesPattern
   exact ⟨D.w 1, hDpos 1, hmat, hvec, local_m_pos S, hm⟩
+
+private theorem no_positive_cycle
+    {t k : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)
+    (hB : B.PosDef) (e : Fin k → Fin t) (he : Function.Injective e)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hlower : ∀ i j, 0 < D.a i j → (D.w i : ℝ) ≤ D.a i j)
+    (hoff : ∀ i j, i ≠ j → 0 ≤ D.a i j)
+    (hBentry : ∀ i j, B i j = -((D.a i j : ℤ) : ℝ))
+    (hk : 3 ≤ k)
+    (hcycle : ∀ i, 0 < D.a (e i) (e (if i.val + 1 = k then 0 else
+      ⟨i.val + 1, by omega⟩))) : False := by
+  classical
+  let next : Fin k → Fin k := fun i => if i.val + 1 = k then 0 else
+    ⟨i.val + 1, by omega⟩
+  let prev : Fin k → Fin k := fun i => if i = 0 then Fin.last k else
+    ⟨i.val - 1, by omega⟩
+  have hnext : ∀ i, next i ≠ i := by
+    intro i
+    dsimp [next]
+    split <;> omega
+  have hprev : ∀ i, prev i ≠ i := by
+    intro i
+    dsimp [prev]
+    split <;> omega
+  have hnextprev : ∀ i, next (prev i) = i := by
+    intro i
+    dsimp [next, prev]
+    split <;> apply Fin.ext <;> omega
+  have hprevnext : ∀ i, prev (next i) = i := by
+    intro i
+    dsimp [next, prev]
+    split <;> apply Fin.ext <;> omega
+  have hne_next_prev : ∀ i, next i ≠ prev i := by
+    intro i h
+    have h' := congrArg prev h
+    rw [hprevnext, hnextprev] at h'
+    exact hprev i h'.symm
+  have hcycle' : ∀ i, 0 < D.a (e i) (e (next i)) := by
+    intro i
+    simpa [next] using hcycle i
+  have hcycle_prev : ∀ i, 0 < D.a (e i) (e (prev i)) := by
+    intro i
+    have h := hcycle' (prev i)
+    rw [hnextprev] at h
+    rw [hsymm]
+    exact h
+  let f : Fin k → Fin k → ℝ := fun i j => -((D.a (e i) (e j) : ℤ) : ℝ)
+  have hinner (i : Fin k) : (∑ j : Fin k, f i j) ≤
+      2 * (D.w (e i) : ℝ) - D.a (e i) (e (next i)) -
+        D.a (e i) (e (prev i)) := by
+    let rest : Finset (Fin k) :=
+      (((Finset.univ.erase i).erase (next i)).erase (prev i))
+    have hrest : rest.sum (f i) ≤ 0 := by
+      apply Finset.sum_nonpos
+      intro j hj
+      have hji : j ≠ i := by
+        exact (Finset.mem_erase.mp (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).2).1
+      have hej : e i ≠ e j := by
+        intro h
+        exact hji (he h)
+      have hnon : 0 ≤ D.a (e i) (e j) := hoff _ _ hej
+      exact neg_nonpos.mpr (by exact_mod_cast hnon)
+    have hmem_next : next i ∈ (Finset.univ.erase i) := by
+      simp [hnext i]
+    have hmem_prev : prev i ∈ (Finset.univ.erase i).erase (next i) := by
+      rw [Finset.mem_erase]
+      exact ⟨hne_next_prev i, by simp [hprev i]⟩
+    have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin k)))
+      (a := i) (f := f i) (Finset.mem_univ _)
+    have hs2 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin k)).erase i) (a := next i) (f := f i)
+      hmem_next
+    have hs3 := Finset.sum_erase_add
+      (s := ((Finset.univ : Finset (Fin k)).erase i).erase (next i))
+      (a := prev i) (f := f i) hmem_prev
+    have hdiagR : f i i = 2 * (D.w (e i) : ℝ) := by
+      dsimp [f]
+      rw [hdiag]
+      push_cast
+      ring
+    have hnextR : f i (next i) = -D.a (e i) (e (next i)) := by rfl
+    have hprevR : f i (prev i) = -D.a (e i) (e (prev i)) := by rfl
+    dsimp [rest] at hrest
+    linarith [hs1, hs2, hs3, hrest, hdiagR, hnextR, hprevR]
+  let x : Fin k → ℝ := fun _ => 1
+  have hx : x ≠ 0 := by
+    intro h
+    have h0 := congrFun h ⟨0, by omega⟩
+    simp [x] at h0
+  have hq := Matrix.PosDef.dotProduct_mulVec_pos (hB.submatrix he) hx
+  have hq' : 0 < ∑ i : Fin k, ∑ j : Fin k, f i j := by
+    simpa [x, f, B, hBentry, Matrix.submatrix, dotProduct, Matrix.mulVec] using hq
+  have hsum : (∑ i : Fin k, ∑ j : Fin k, f i j) ≤
+      ∑ i : Fin k, (2 * (D.w (e i) : ℝ) - D.a (e i) (e (next i)) -
+        D.a (e i) (e (prev i))) := by
+    exact Finset.sum_le_sum (fun i hi => hinner i)
+  have hsum_next : (∑ i : Fin k, (D.w (e i) : ℝ)) ≤
+      ∑ i : Fin k, D.a (e i) (e (next i)) := by
+    exact Finset.sum_le_sum (fun i hi => hlower _ _ (hcycle' i))
+  have hsum_prev : (∑ i : Fin k, (D.w (e i) : ℝ)) ≤
+      ∑ i : Fin k, D.a (e i) (e (prev i)) := by
+    exact Finset.sum_le_sum (fun i hi => hlower _ _ (hcycle_prev i))
+  rw [Finset.sum_sub_distrib, Finset.sum_sub_distrib] at hsum
+  simp only [Finset.sum_mul, mul_sum] at hsum
+  nlinarith
+
+private theorem long_edge_ratio
+    {t : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hpos : ∀ i, 0 < D.w i) (hBpos : B.PosDef)
+    (hB : ∀ i j, B i j = -((D.a i j : ℤ) : ℝ))
+    (i j : Fin t) (hij : 0 < D.a i j)
+    (hdivi : D.w i ∣ D.a i j) (hdivj : D.w j ∣ D.a i j) :
+    ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+      D.a i j = q * D.w j ∧ p * q < 4 := by
+  let p : ℤ := D.a i j / D.w i
+  let q : ℤ := D.a i j / D.w j
+  have hp : 0 < p := by
+    dsimp [p]
+    exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hpos i)) hdivi
+  have hq : 0 < q := by
+    dsimp [q]
+    exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hpos j)) hdivj
+  have hpa : D.a i j = p * D.w i := by
+    dsimp [p]
+    exact (Int.ediv_mul_cancel hdivi).symm
+  have hqa : D.a i j = q * D.w j := by
+    dsimp [q]
+    exact (Int.ediv_mul_cancel hdivj).symm
+  have hne : i ≠ j := by
+    intro h
+    subst j
+    rw [hdiag i] at hij
+    nlinarith [hpos i]
+  let e : Fin 2 → Fin t := fun z => if z = 0 then i else j
+  have he : Function.Injective e := by
+    intro u v h
+    fin_cases u <;> fin_cases v <;> simp [e, hne, hne.symm] at h ⊢
+  have hdet := Matrix.PosDef.det_pos (hBpos.submatrix he)
+  have hdetraw : (D.a i j : ℝ) * D.a i j <
+      2 * D.w i * (2 * D.w j) := by
+    rw [Matrix.det_fin_two] at hdet
+    simpa [Matrix.submatrix, e, hB, hdiag, hsymm] using hdet
+  have hdet' : 0 < 4 * (D.w i : ℝ) * D.w j - (D.a i j : ℝ) ^ 2 := by
+    nlinarith [hdetraw]
+  have hsq : D.a i j ^ 2 = p * q * (D.w i * D.w j) :=
+    square_factorization _ _ _ _ _ hpa hqa
+  have hsqR : (D.a i j : ℝ) ^ 2 = (p : ℝ) * q * (D.w i * D.w j) := by
+    exact_mod_cast hsq
+  have hwpqR : (0 : ℝ) < D.w i * D.w j := by
+    exact_mod_cast (mul_pos (hpos i) (hpos j))
+  have hpqR : (p : ℝ) * q < 4 := by
+    nlinarith [hdet', hsqR, hwpqR]
+  exact ⟨p, q, hp, hq, hpa, hqa, by exact_mod_cast hpqR⟩
+
+private theorem long_window_ratio_cases
+    {t : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)
+    (hBpos : B.PosDef) (s : Fin t) (hs : s.val + 4 < t)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hpos : ∀ i, 0 < D.w i)
+    (hzero : ∀ i j, i.val + 2 ≤ j.val → D.a i j = 0)
+    (hedge : ∀ i j, i.val + 1 = j.val → 0 < D.a i j)
+    (hdiv : ∀ i j, D.w i ∣ D.a i j) :
+    (let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
+      ∃ p01 q01 p12 q12 p23 q23 p34 q34 : ℤ,
+        0 < p01 ∧ 0 < q01 ∧ 0 < p12 ∧ 0 < q12 ∧
+        0 < p23 ∧ 0 < q23 ∧ 0 < p34 ∧ 0 < q34 ∧
+        D.a (e5 0) (e5 1) = p01 * D.w (e5 0) ∧
+        D.a (e5 0) (e5 1) = q01 * D.w (e5 1) ∧
+        D.a (e5 1) (e5 2) = p12 * D.w (e5 1) ∧
+        D.a (e5 1) (e5 2) = q12 * D.w (e5 2) ∧
+        D.a (e5 2) (e5 3) = p23 * D.w (e5 2) ∧
+        D.a (e5 2) (e5 3) = q23 * D.w (e5 3) ∧
+        D.a (e5 3) (e5 4) = p34 * D.w (e5 3) ∧
+        D.a (e5 3) (e5 4) = q34 * D.w (e5 4) ∧
+        ((p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1) ∨
+          (p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 2) ∨
+          (p01 * q01 = 2 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1))) := by
+  classical
+  let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
+  have he5 : Function.Injective e5 := by
+    intro i j h
+    apply Fin.ext
+    simpa [e5] using congrArg Fin.val h
+  let B5 : Matrix (Fin 5) (Fin 5) ℝ := B.submatrix e5 e5
+  have hB5 : B5.PosDef := hBpos.submatrix he5
+  let E : LocalNumericalData 5 :=
+    { m := fun i => D.m (e5 i)
+      a := fun i j => D.a (e5 i) (e5 j)
+      w := fun i => D.w (e5 i) }
+  have hEdiag : ∀ i, E.a i i = -2 * E.w i := by
+    intro i
+    simpa [E] using hdiag (e5 i)
+  have hEsymm : ∀ i j, E.a i j = E.a j i := by
+    intro i j
+    simpa [E] using hsymm (e5 i) (e5 j)
+  have hEpos : ∀ i, 0 < E.w i := by
+    intro i
+    simpa [E] using hpos (e5 i)
+  have hEzero : E.a 0 2 = 0 ∧ E.a 0 3 = 0 ∧ E.a 1 3 = 0 ∧
+      E.a 1 4 = 0 ∧ E.a 2 4 = 0 ∧ E.a 0 4 = 0 := by
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    · apply hzero
+      dsimp [E, e5]
+      omega
+  have hdetA5 : (Matrix.map E.a (fun x : ℤ => (x : ℝ))).det < 0 := by
+    have hdetB := Matrix.PosDef.det_pos hB5
+    let A5 : Matrix (Fin 5) (Fin 5) ℝ := Matrix.map E.a (fun x : ℤ => (x : ℝ))
+    have hneg := Matrix.det_neg A5
+    have hpow : (-1 : ℝ) ^ Fintype.card (Fin 5) = -1 := by
+      change (-1 : ℝ) ^ 5 = -1
+      norm_num
+    rw [hpow, neg_one_mul] at hneg
+    have hrel : B5 = -A5 := by
+      ext i j
+      simp [B5, A5, Matrix.submatrix, E, hB]
+    rw [hrel, hneg] at hdetB
+    linarith
+  have hrat (i j : Fin 5) (hij : 0 < E.a i j) :
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ E.a i j = p * E.w i ∧
+        E.a i j = q * E.w j ∧ p * q < 4 := by
+    exact long_edge_ratio D B hdiag hsymm hpos hBpos (by intro i j; exact hB i j)
+      (e5 i) (e5 j) (by simpa [E] using hij) (by simpa [E] using hdiv _ _)
+        (by simpa [E] using hdiv _ _)
+  have ha01 : 0 < E.a 0 1 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha12 : 0 < E.a 1 2 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha23 : 0 < E.a 2 3 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha34 : 0 < E.a 3 4 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  obtain ⟨p01, q01, hp01, hq01, hpa01, hqa01, hpq01⟩ := hrat 0 1 ha01
+  obtain ⟨p12, q12, hp12, hq12, hpa12, hqa12, hpq12⟩ := hrat 1 2 ha12
+  obtain ⟨p23, q23, hp23, hq23, hpa23, hqa23, hpq23⟩ := hrat 2 3 ha23
+  obtain ⟨p34, q34, hp34, hq34, hpa34, hqa34, hpq34⟩ := hrat 3 4 ha34
+  have hsq01 : E.a 0 1 ^ 2 = p01 * q01 * (E.w 0 * E.w 1) :=
+    square_factorization _ _ _ _ _ hpa01 hqa01
+  have hsq12 : E.a 1 2 ^ 2 = p12 * q12 * (E.w 1 * E.w 2) :=
+    square_factorization _ _ _ _ _ hpa12 hqa12
+  have hsq23 : E.a 2 3 ^ 2 = p23 * q23 * (E.w 2 * E.w 3) :=
+    square_factorization _ _ _ _ _ hpa23 hqa23
+  have hsq34 : E.a 3 4 ^ 2 = p34 * q34 * (E.w 3 * E.w 4) :=
+    square_factorization _ _ _ _ _ hpa34 hqa34
+  have hsq01R : (E.a 0 1 : ℝ) ^ 2 = (p01 * q01 : ℝ) * (E.w 0 * E.w 1) := by
+    exact_mod_cast hsq01
+  have hsq12R : (E.a 1 2 : ℝ) ^ 2 = (p12 * q12 : ℝ) * (E.w 1 * E.w 2) := by
+    exact_mod_cast hsq12
+  have hsq23R : (E.a 2 3 : ℝ) ^ 2 = (p23 * q23 : ℝ) * (E.w 2 * E.w 3) := by
+    exact_mod_cast hsq23
+  have hsq34R : (E.a 3 4 : ℝ) ^ 2 = (p34 * q34 : ℝ) * (E.w 3 * E.w 4) := by
+    exact_mod_cast hsq34
+  have hineqR := five_path_det_strict_ineq E hEdiag hEsymm hEzero hEpos hdetA5
+    (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
+    hsq01R hsq12R hsq23R hsq34R
+  have hineqI : 4 * (p01 * q01) + 4 * (p12 * q12) +
+      4 * (p23 * q23) + 4 * (p34 * q34) <
+      16 + (p01 * q01) * (p23 * q23) +
+        (p01 * q01) * (p34 * q34) + (p12 * q12) * (p34 * q34) := by
+    exact_mod_cast hineqR
+  have hcases := five_path_ratio_cases (p01 * q01) (p12 * q12)
+    (p23 * q23) (p34 * q34) (mul_pos hp01 hq01) (mul_pos hp12 hq12)
+    (mul_pos hp23 hq23) (mul_pos hp34 hq34) hpq01 hpq12 hpq23 hpq34 hineqI
+  refine ⟨p01, q01, p12, q12, p23, q23, p34, q34,
+    hp01, hq01, hp12, hq12, hp23, hq23, hp34, hq34,
+    ?_⟩
+  · simpa [E, e5] using hpa01
+  · simpa [E, e5] using hqa01
+  · simpa [E, e5] using hpa12
+  · simpa [E, e5] using hqa12
+  · simpa [E, e5] using hpa23
+  · simpa [E, e5] using hqa23
+  · simpa [E, e5] using hpa34
+  · simpa [E, e5] using hqa34
+  · exact hcases
+
+private theorem long_path_matrix_eq {t : ℕ} (D : LocalNumericalData t)
+    (r : ℤ) (hdiag : ∀ i, D.a i i = -2 * r)
+    (hforward : ∀ i j, i.val + 1 = j.val → D.a i j = r)
+    (hreverse : ∀ i j, j.val + 1 = i.val → D.a i j = r)
+    (hzero : ∀ i j, i ≠ j → ¬ i.val + 1 = j.val → ¬ j.val + 1 = i.val →
+      D.a i j = 0) :
+    D.a = scalarMatrix (pathMatrix t (constantVector (-2)) 1) r := by
+  ext i j
+  by_cases hij : i = j
+  · subst j
+    simp [scalarMatrix, pathMatrix, constantVector, hdiag]
+    ring
+  · by_cases hforward' : i.val + 1 = j.val
+    · simp [scalarMatrix, pathMatrix, hij, hforward', hforward i j hforward']
+    · by_cases hreverse' : j.val + 1 = i.val
+      · simp [scalarMatrix, pathMatrix, hij, hforward', hreverse',
+          hreverse i j hreverse']
+      · simp [scalarMatrix, pathMatrix, hij, hforward', hreverse',
+          hzero i j hij hforward' hreverse']
+
+private theorem long_pathLast_matrix_eq {t : ℕ} (D : LocalNumericalData t)
+    (d ld e le r : ℤ)
+    (hdiag : ∀ i, D.a i i = r * (if i.val + 1 = t then ld else d))
+    (hforward : ∀ i j, i.val + 1 = j.val →
+      D.a i j = r * (if j.val + 1 = t then le else e))
+    (hreverse : ∀ i j, j.val + 1 = i.val →
+      D.a i j = r * (if i.val + 1 = t then le else e))
+    (hzero : ∀ i j, i ≠ j → ¬ i.val + 1 = j.val → ¬ j.val + 1 = i.val →
+      D.a i j = 0) :
+    D.a = scalarMatrix (pathLastMatrix t d ld e le) r := by
+  ext i j
+  by_cases hij : i = j
+  · subst j
+    simp [scalarMatrix, pathLastMatrix, hdiag]
+  · by_cases hforward' : i.val + 1 = j.val
+    · rw [hforward i j hforward']
+      dsimp [scalarMatrix, pathLastMatrix]
+      simp [hij, hforward']
+    · by_cases hreverse' : j.val + 1 = i.val
+      · rw [hreverse i j hreverse']
+        dsimp [scalarMatrix, pathLastMatrix]
+        simp [hij, hforward', hreverse']
+      · rw [hzero i j hij hforward' hreverse']
+        dsimp [scalarMatrix, pathLastMatrix]
+        simp [hij, hforward', hreverse']
+
+private theorem long_last_vector_eq {t : ℕ} (D : LocalNumericalData t)
+    (c last r : ℤ)
+    (hweight : ∀ i, D.w i = r * (if i.val + 1 = t then last else c)) :
+    D.w = scalarVector (lastVector t c last) r := by
+  funext i
+  simp [scalarVector, lastVector, hweight]
+
 /-! The three long-path possibilities (`Aₙ`, `Cₙ`, and `Bₙ`). -/
 /-! The three long-path possibilities (`Aₙ`, `Cₙ`, and `Bₙ`). -/
 theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
     (ht : 5 < t) (hn : t < T.n) (hedges : hasPathEdges (localData S)) :
     UpToReversal (localData S) (fun D => isAn D ∨ isCn D ∨ isBn D) := by
   sorry
-
-/-! The extended branch classification (`Dₙ`). -/
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →

@@ -204,6 +204,17 @@ theorem doldKanComponentMap_zero_of_other_case
     doldKanComponentMap A f a b = 0 := by
   simp [doldKanComponentMap, hdegree, hdrop]
 
+private theorem doldKanComponentMap_drop_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Y : SimplexCategory} (A : ChainComplex C ℕ) (f : X ⟶ Y)
+    (a : DoldKanIndex Y) (b : DoldKanIndex X)
+    (hdegree : a.1.1 = b.1.1 + 1)
+    (hcomp : ¬HEq (f ≫ a.2.1)
+      (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))) :
+    doldKanComponentMap A f a b = 0 := by
+  unfold doldKanComponentMap
+  split <;> simp_all
+
 /-- The map induced by `f : X ⟶ Y`, from the `Y`-degree to the `X`-degree. -/
 noncomputable def doldKanMap
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -214,20 +225,849 @@ noncomputable def doldKanMap
       doldKanComponentMap A f a b ≫
         Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b)
 
-/- The source's four composition cases, and the cancellation of the two
-   successive differential cases, are exactly the following functor laws. -/
+private theorem sigma_hom_ext_of_π
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {J : Type} [Fintype J] [DecidableEq J] (F : J → C) {Z : C}
+    (u w : Z ⟶ ∐ F)
+    (h : ∀ j, u ≫ Sigma.π F j = w ≫ Sigma.π F j) :
+    u = w := by
+  classical
+  let e := biproduct.isoCoproduct F
+  apply (cancel_mono e.inv).1
+  apply biproduct.hom_ext
+  intro j
+  have hp : e.inv ≫ biproduct.π F j = Sigma.π F j := by
+    apply Sigma.hom_ext
+    intro i
+    simp [e, biproduct.isoCoproduct_inv, biproduct.ι_π, Sigma.ι_π]
+  rw [Category.assoc, hp, Category.assoc, hp]
+  exact h j
+
+private theorem doldKanMap_summand
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y : SimplexCategory} (f : X ⟶ Y)
+    (a : DoldKanIndex Y) :
+    (Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A f =
+      ∑ b : DoldKanIndex X,
+        doldKanComponentMap A f a b ≫
+          (Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b :
+            A.X b.1.1 ⟶ doldKanDegree A X) := by
+  simp only [doldKanMap, Sigma.ι_desc]
+  rfl
+
+private theorem doldKanMap_summand_comp
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y : SimplexCategory} (f : X ⟶ Y)
+    (a : DoldKanIndex Y) (d : DoldKanIndex X) :
+    ((Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A f) ≫
+        (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+          doldKanDegree A X ⟶ A.X d.1.1) =
+      ∑ b : DoldKanIndex X,
+        (doldKanComponentMap A f a b ≫
+          (Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) b :
+            A.X b.1.1 ⟶ doldKanDegree A X)) ≫
+          (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+            doldKanDegree A X ⟶ A.X d.1.1) := by
+  have h := congrArg
+    (fun q => q ≫
+      (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+        doldKanDegree A X ⟶ A.X d.1.1))
+    (doldKanMap_summand A f a)
+  apply h.trans
+  rw [Preadditive.sum_comp]
+
+private theorem doldKanMap_component_projection
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y : SimplexCategory} (f : X ⟶ Y)
+    (a : DoldKanIndex Y) (d : DoldKanIndex X) :
+    ((Sigma.ι (fun a : DoldKanIndex Y => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A f) ≫
+        (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+          doldKanDegree A X ⟶ A.X d.1.1) =
+      doldKanComponentMap A f a d := by
+  rw [doldKanMap_summand_comp]
+  rw [Fintype.sum_eq_single d]
+  · simp
+  · intro b hb
+    rw [Category.assoc]
+    simp [Sigma.ι_π, hb]
+
+private theorem doldKanMap_two_summand_projection
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (a : DoldKanIndex Z) (d : DoldKanIndex X) :
+    (((Sigma.ι (fun a : DoldKanIndex Z => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Z) ≫ doldKanMap A g) ≫
+        doldKanMap A f) ≫
+      (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+        doldKanDegree A X ⟶ A.X d.1.1) =
+      ∑ b : DoldKanIndex Y,
+        doldKanComponentMap A g a b ≫ doldKanComponentMap A f b d := by
+  rw [Category.assoc
+    ((Sigma.ι (fun a : DoldKanIndex Z => A.X a.1.1) a :
+      A.X a.1.1 ⟶ doldKanDegree A Z) ≫ doldKanMap A g)
+    (doldKanMap A f)
+    (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d)]
+  have h :
+      ((Sigma.ι (fun a : DoldKanIndex Z => A.X a.1.1) a :
+        A.X a.1.1 ⟶ doldKanDegree A Z) ≫ doldKanMap A g) ≫
+          (doldKanMap A f ≫
+            (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+              doldKanDegree A X ⟶ A.X d.1.1)) =
+        (∑ b : DoldKanIndex Y,
+          doldKanComponentMap A g a b ≫
+            (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+              A.X b.1.1 ⟶ doldKanDegree A Y)) ≫
+          (doldKanMap A f ≫
+            (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+              doldKanDegree A X ⟶ A.X d.1.1)) := by
+    rw [doldKanMap_summand]
+    rfl
+  apply h.trans
+  have hsum :
+      (∑ b : DoldKanIndex Y,
+        doldKanComponentMap A g a b ≫
+          (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+            A.X b.1.1 ⟶ doldKanDegree A Y)) ≫
+          (doldKanMap A f ≫
+            (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+              doldKanDegree A X ⟶ A.X d.1.1)) =
+        ∑ b : DoldKanIndex Y,
+          (doldKanComponentMap A g a b ≫
+            (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+              A.X b.1.1 ⟶ doldKanDegree A Y)) ≫
+            (doldKanMap A f ≫
+              (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+                doldKanDegree A X ⟶ A.X d.1.1)) := by
+    rw [Preadditive.sum_comp]
+  apply hsum.trans
+  apply Finset.sum_congr rfl
+  intro b hb
+  calc
+    (doldKanComponentMap A g a b ≫
+        (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+          A.X b.1.1 ⟶ doldKanDegree A Y)) ≫
+        (doldKanMap A f ≫
+          (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+            doldKanDegree A X ⟶ A.X d.1.1)) =
+      doldKanComponentMap A g a b ≫
+        (((Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+          A.X b.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A f) ≫
+            (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+              doldKanDegree A X ⟶ A.X d.1.1)) := by
+          calc
+            (doldKanComponentMap A g a b ≫
+                (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+                  A.X b.1.1 ⟶ doldKanDegree A Y)) ≫
+                (doldKanMap A f ≫
+                  (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+                    doldKanDegree A X ⟶ A.X d.1.1)) =
+              doldKanComponentMap A g a b ≫
+                ((Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+                  A.X b.1.1 ⟶ doldKanDegree A Y) ≫
+                  (doldKanMap A f ≫
+                    (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+                      doldKanDegree A X ⟶ A.X d.1.1))) :=
+              Category.assoc _ _ _
+            _ = doldKanComponentMap A g a b ≫
+                (((Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b :
+                  A.X b.1.1 ⟶ doldKanDegree A Y) ≫ doldKanMap A f) ≫
+                  (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d :
+                    doldKanDegree A X ⟶ A.X d.1.1)) := by
+              exact congrArg (fun k => doldKanComponentMap A g a b ≫ k)
+                (Category.assoc
+                  (Sigma.ι (fun b : DoldKanIndex Y => A.X b.1.1) b)
+                  (doldKanMap A f)
+                  (Sigma.π (fun b : DoldKanIndex X => A.X b.1.1) d)).symm
+    _ = doldKanComponentMap A g a b ≫
+        doldKanComponentMap A f b d := by
+      rw [doldKanMap_component_projection]
+
+private theorem doldKanComponentMap_id_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X : SimplexCategory}
+    (a b : DoldKanIndex X) (h : b ≠ a) :
+    doldKanComponentMap A (𝟙 X) a b = 0 := by
+  classical
+  by_cases hab : a.1.1 = b.1.1
+  · have hcomp : ¬HEq b.2.1 ((𝟙 X) ≫ a.2.1) := by
+      intro hcomp
+      have hba : b = a := by
+        have hfin : b.1 = a.1 := by
+          apply Fin.ext
+          exact hab.symm
+        have hval : HEq b.2.1 a.2.1 := by
+          simpa only [Category.id_comp] using hcomp
+        apply Sigma.ext
+        · exact hfin
+        · have hp : (fun α : X ⟶ ⦋b.1.1⦌ => Epi α) ≍
+            (fun α : X ⟶ ⦋a.1.1⦌ => Epi α) := by
+            have hnat : b.1.1 = a.1.1 := congrArg Fin.val hfin
+            rw [hnat]
+          exact (Subtype.heq_iff_coe_heq (type_eq_of_heq hval) hp).2 hval
+      exact h hba
+    have hcomp' : ¬HEq b.2.1 a.2.1 := by
+      simpa only [Category.id_comp] using hcomp
+    simp [doldKanComponentMap, hab, hcomp']
+  · by_cases hdrop : a.1.1 = b.1.1 + 1
+    · have hcomp : ¬HEq ((𝟙 X) ≫ a.2.1)
+          (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1))) := by
+        intro hcomp
+        have hobj : (⦋a.1.1⦌ : SimplexCategory) =
+            ⦋b.1.1 + 1⦌ :=
+          congrArg (fun n : ℕ => ⦋n⦌) hdrop
+        have hcomp_eq : ((𝟙 X) ≫ a.2.1) ≫ eqToHom hobj =
+            b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)) := by
+          apply eq_of_heq
+          exact (comp_eqToHom_heq ((𝟙 X) ≫ a.2.1) hobj).trans hcomp
+        have hcomp_epi : Epi (((𝟙 X) ≫ a.2.1) ≫ eqToHom hobj) :=
+          epi_comp' (epi_comp' (inferInstance : Epi (𝟙 X)) a.2.2)
+            (inferInstance : Epi (eqToHom hobj))
+        have hbd_epi : Epi (b.2.1 ≫
+            SimplexCategory.δ (Fin.last (b.1.1 + 1))) :=
+          hcomp_eq ▸ hcomp_epi
+        have hδepi : Epi (SimplexCategory.δ (Fin.last (b.1.1 + 1))) :=
+          @epi_of_epi _ _ _ _ _ b.2.1
+            (SimplexCategory.δ (Fin.last (b.1.1 + 1))) hbd_epi
+        have hlen := @SimplexCategory.len_le_of_epi _ _
+          (SimplexCategory.δ (Fin.last (b.1.1 + 1))) hδepi
+        dsimp at hlen
+        omega
+      have hcomp' : ¬HEq a.2.1
+          (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1))) := by
+        simpa only [Category.id_comp] using hcomp
+      simp [doldKanComponentMap, hdrop, hcomp']
+    · simp [doldKanComponentMap, hab, hdrop]
+
+private theorem doldKanComponentMap_id_self
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X : SimplexCategory}
+    (a : DoldKanIndex X) :
+    doldKanComponentMap A (𝟙 X) a a = 𝟙 _ := by
+  rw [doldKanComponentMap_same_degree A (𝟙 X) a a rfl (by simp)]
+  simp
+
+private theorem simplex_epi_of_comp_epi
+    {X Y Z : SimplexCategory} (f : X ⟶ Y) (g : Y ⟶ Z)
+    (hcomp : Epi (f ≫ g)) : Epi g := by
+  apply (SimplexCategory.epi_iff_surjective).2
+  intro z
+  obtain ⟨x, hx⟩ :=
+    (SimplexCategory.epi_iff_surjective).1 hcomp z
+  refine ⟨f.toOrderHom x, ?_⟩
+  simpa only [SimplexCategory.comp_toOrderHom, OrderHom.comp_coe,
+    Function.comp_apply] using hx
+
+private theorem simplex_last_coface_heq {m n : ℕ} (h : m = n) :
+    HEq (SimplexCategory.δ (Fin.last (m + 1)))
+      (SimplexCategory.δ (Fin.last (n + 1))) := by
+  subst n
+  rfl
+
+private theorem simplex_last_factorization
+    {X Y : SimplexCategory} {m k : ℕ}
+    (f : X ⟶ Y) (q : Y ⟶ ⦋m⦌) (e : X ⟶ ⦋k⦌) (hepi : Epi e)
+    (hm : m = k + 1)
+    (h : HEq (f ≫ q) (e ≫ SimplexCategory.δ (Fin.last (k + 1)))) :
+    Epi q ∨ ∃ (q' : Y ⟶ ⦋k⦌), Epi q' ∧
+      HEq q (q' ≫ SimplexCategory.δ (Fin.last (k + 1))) ∧ f ≫ q' = e := by
+  classical
+  subst m
+  have h' : f ≫ q = e ≫ SimplexCategory.δ (Fin.last (k + 1)) :=
+    eq_of_heq h
+  by_cases hq : Epi q
+  · exact Or.inl hq
+  · right
+    have hqns : ¬Function.Surjective q.toOrderHom := by
+      intro hsurj
+      exact hq ((SimplexCategory.epi_iff_surjective).2 hsurj)
+    have hfactor := SimplexCategory.eq_comp_δ_of_not_surjective q hqns
+    let i : Fin (k + 2) := hfactor.choose
+    let hfactor_i := hfactor.choose_spec
+    let q' : Y ⟶ ⦋k⦌ := hfactor_i.choose
+    have hfactor_q := hfactor_i.choose_spec
+    have hqfac : q = q' ≫ SimplexCategory.δ i := hfactor_q
+    have he : Function.Surjective e.toOrderHom :=
+      (SimplexCategory.epi_iff_surjective).1 hepi
+    have hi : i = Fin.last (k + 1) := by
+      apply Fin.eq_last_of_not_lt
+      intro hilast
+      let j : Fin (k + 1) := ⟨i.1, hilast⟩
+      obtain ⟨x, hx⟩ := he j
+      have hqx : q.toOrderHom (f.toOrderHom x) =
+          (SimplexCategory.δ (Fin.last (k + 1))).toOrderHom j := by
+        have h'' := congrArg (fun t : X ⟶ ⦋k + 1⦌ => t.toOrderHom x) h'
+        rw [SimplexCategory.comp_toOrderHom,
+          SimplexCategory.comp_toOrderHom] at h''
+        simpa [Function.comp_apply, j, hx] using h''
+      have hqfac' := congrArg
+        (fun t : Y ⟶ ⦋k + 1⦌ => t.toOrderHom (f.toOrderHom x)) hqfac
+      rw [SimplexCategory.comp_toOrderHom] at hqfac'
+      have hδlast :
+          (SimplexCategory.δ (Fin.last (k + 1))).toOrderHom j = i := by
+        change (Fin.last (k + 1)).succAbove j = i
+        rw [Fin.succAbove_of_castSucc_lt]
+        · apply Fin.ext
+          rfl
+        · dsimp [j]
+          exact hilast
+      have hi' : (SimplexCategory.δ i).toOrderHom
+          (q'.toOrderHom (f.toOrderHom x)) = i :=
+        hqfac'.symm.trans (hqx.trans hδlast)
+      have hi'' : i.succAbove
+          (q'.toOrderHom (f.toOrderHom x)) = i := by
+        change (SimplexCategory.δ i).toOrderHom
+            (q'.toOrderHom (f.toOrderHom x)) = i
+        exact hi'
+      exact Fin.succAbove_ne i _ hi''
+    rw [hi] at hqfac
+    have hq' : Function.Surjective q'.toOrderHom := by
+      intro y
+      obtain ⟨x, hx⟩ := he y
+      refine ⟨f.toOrderHom x, ?_⟩
+      have h'' := congrArg (fun t : X ⟶ ⦋k + 1⦌ => t.toOrderHom x) h'
+      rw [SimplexCategory.comp_toOrderHom,
+        SimplexCategory.comp_toOrderHom] at h''
+      rw [hqfac] at h''
+      rw [SimplexCategory.comp_toOrderHom] at h''
+      simp only [OrderHom.comp_coe, Function.comp_apply] at h''
+      rw [hx] at h''
+      exact ((SimplexCategory.mono_iff_injective).1
+        (inferInstance : Mono (SimplexCategory.δ (Fin.last (k + 1))))) h''
+    refine ⟨q', (SimplexCategory.epi_iff_surjective).2 hq', heq_of_eq hqfac, ?_⟩
+    apply (cancel_mono (SimplexCategory.δ (Fin.last (k + 1)))).1
+    rw [Category.assoc, ← hqfac, h']
+
+private theorem heq_comp_same
+    {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z) {k : ℕ}
+    {c : Z ⟶ ⦋k⦌} {b : Y ⟶ ⦋k⦌} {d : X ⟶ ⦋k⦌}
+    (h₁ : HEq b (g ≫ c)) (h₂ : HEq d (f ≫ b)) :
+    HEq d ((f ≫ g) ≫ c) := by
+  have h₁' : b = g ≫ c := eq_of_heq h₁
+  have h₂' : d = f ≫ b := eq_of_heq h₂
+  apply heq_of_eq
+  calc
+    d = f ≫ b := h₂'
+    _ = f ≫ (g ≫ c) := by rw [h₁']
+    _ = (f ≫ g) ≫ c := (Category.assoc _ _ _).symm
+
+private theorem heq_comp_drop_right
+    {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z) {k : ℕ}
+    {c : Z ⟶ ⦋k + 1⦌} {b : Y ⟶ ⦋k + 1⦌} {d : X ⟶ ⦋k⦌}
+    (h₁ : HEq b (g ≫ c))
+    (h₂ : HEq (f ≫ b) (d ≫ SimplexCategory.δ (Fin.last (k + 1)))) :
+    HEq ((f ≫ g) ≫ c) (d ≫ SimplexCategory.δ (Fin.last (k + 1))) := by
+  have h₁' : b = g ≫ c := eq_of_heq h₁
+  have h₂' : f ≫ b = d ≫ SimplexCategory.δ (Fin.last (k + 1)) :=
+    eq_of_heq h₂
+  apply heq_of_eq
+  calc
+    (f ≫ g) ≫ c = f ≫ (g ≫ c) := Category.assoc _ _ _
+    _ = f ≫ b := by rw [h₁']
+    _ = d ≫ SimplexCategory.δ (Fin.last (k + 1)) := h₂'
+
+private theorem heq_trans_explicit
+    {α β γ : Sort u} {a : α} {b : β} {c : γ}
+    (h₁ : HEq a b) (h₂ : HEq b c) : HEq a c :=
+  HEq.trans h₁ h₂
+
+private theorem heq_cancel_mono_trans
+    {C : Type u} [Category.{v} C]
+    {X Y Z X' Y' Z' : C}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (f' : X' ⟶ Y') (g' : Y' ⟶ Z')
+    {W W' : C} (m : W ⟶ W')
+    (hX : X = X') (hY : Y = Y') (hZ : Z = Z')
+    (hg : HEq g g') (h₁ : HEq (f ≫ g) m)
+    (h₂ : HEq m (f' ≫ g')) [Mono g] : HEq f f' := by
+  cases hX
+  cases hY
+  cases hZ
+  have hgg : g = g' := eq_of_heq hg
+  have hcomp : f ≫ g = f' ≫ g' :=
+    eq_of_heq (heq_trans_explicit h₁ h₂)
+  apply heq_of_eq
+  apply (cancel_mono g).1
+  simpa [hgg] using hcomp
+
+private theorem doldKanComponentMap_comp_sum_gap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (c : DoldKanIndex Z) (d : DoldKanIndex X)
+    (h₀ : c.1.1 ≠ d.1.1) (h₁ : c.1.1 ≠ d.1.1 + 1) :
+    (∑ b : DoldKanIndex Y,
+      doldKanComponentMap A g c b ≫ doldKanComponentMap A f b d) = 0 := by
+  classical
+  rw [Fintype.sum_eq_zero]
+  intro b
+  by_cases hcb : c.1.1 = b.1.1
+  · by_cases hbd : b.1.1 = d.1.1
+    · exfalso
+      apply h₀
+      omega
+    · by_cases hbdrop : b.1.1 = d.1.1 + 1
+      · exfalso
+        apply h₁
+        omega
+      · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop, comp_zero]
+  · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+    · by_cases hbd : b.1.1 = d.1.1
+      · exfalso
+        apply h₁
+        omega
+      · by_cases hbdrop : b.1.1 = d.1.1 + 1
+        · by_cases hgc : HEq (g ≫ c.2.1)
+              (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+          · by_cases hfd : HEq (f ≫ b.2.1)
+                (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))
+            · rw [doldKanComponentMap_drop_degree A g c b hcbdrop hgc]
+              rw [doldKanComponentMap_drop_degree A f b d hbdrop hfd]
+              simp only [Preadditive.zsmul_comp, Preadditive.comp_zsmul,
+                HomologicalComplex.d_comp_d]
+              simp
+            · have hfzero : doldKanComponentMap A f b d = 0 :=
+                doldKanComponentMap_drop_zero A f b d hbdrop hfd
+              simp [hfzero]
+          · have hgzero : doldKanComponentMap A g c b = 0 :=
+              doldKanComponentMap_drop_zero A g c b hcbdrop hgc
+            simp [hgzero]
+        · simp [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop]
+    · simp [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop]
+
+private theorem doldKanComponentMap_comp_sum_same_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (c : DoldKanIndex Z) (d : DoldKanIndex X)
+    (hcd : c.1.1 = d.1.1)
+    (hcomp : ¬HEq d.2.1 ((f ≫ g) ≫ c.2.1)) :
+    (∑ b : DoldKanIndex Y,
+      doldKanComponentMap A g c b ≫ doldKanComponentMap A f b d) = 0 := by
+  classical
+  rw [Fintype.sum_eq_zero]
+  intro b
+  by_cases hcb : c.1.1 = b.1.1
+  · by_cases hgb : HEq b.2.1 (g ≫ c.2.1)
+    · by_cases hbd : b.1.1 = d.1.1
+      · by_cases hfd : HEq d.2.1 (f ≫ b.2.1)
+        · exfalso
+          apply hcomp
+          have hbcobj : (⦋b.1.1⦌ : SimplexCategory) = ⦋c.1.1⦌ :=
+            (congrArg (fun n : ℕ => ⦋n⦌) hcb).symm
+          have h₁ : HEq (f ≫ b.2.1) (f ≫ (g ≫ c.2.1)) := by
+            exact heq_comp rfl rfl hbcobj HEq.rfl hgb
+          have h₂ : HEq ((f ≫ g) ≫ c.2.1)
+              (f ≫ (g ≫ c.2.1)) := heq_of_eq (Category.assoc _ _ _)
+          exact hfd.trans (h₁.trans h₂.symm)
+        · rw [show doldKanComponentMap A f b d = 0 by
+            simp [doldKanComponentMap, hbd, hfd], comp_zero]
+      · by_cases hbdrop : b.1.1 = d.1.1 + 1
+        · exfalso
+          omega
+        · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+            comp_zero]
+    · rw [show doldKanComponentMap A g c b = 0 by
+        simp [doldKanComponentMap, hcb, hgb], zero_comp]
+  · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+    · by_cases hbd : b.1.1 = d.1.1
+      · exfalso
+        omega
+      · by_cases hbdrop : b.1.1 = d.1.1 + 1
+        · exfalso
+          omega
+        · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+            comp_zero]
+    · rw [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop,
+        zero_comp]
+
+private theorem doldKanComponentMap_comp_sum_same
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (c : DoldKanIndex Z) (d : DoldKanIndex X)
+    (hcd : c.1.1 = d.1.1)
+    (hcomp : HEq d.2.1 ((f ≫ g) ≫ c.2.1)) :
+    (∑ b : DoldKanIndex Y,
+      doldKanComponentMap A g c b ≫ doldKanComponentMap A f b d) =
+      doldKanComponentMap A (f ≫ g) c d := by
+  classical
+  have hd_epi : Epi d.2.1 := d.2.2
+  have hobj : (⦋c.1.1⦌ : SimplexCategory) = ⦋d.1.1⦌ :=
+    congrArg (fun n : ℕ => ⦋n⦌) hcd
+  have hcomp_eq : d.2.1 =
+      ((f ≫ g) ≫ c.2.1) ≫ eqToHom hobj := by
+    apply eq_of_heq
+    exact hcomp.trans (comp_eqToHom_heq ((f ≫ g) ≫ c.2.1) hobj).symm
+  have hcomp_eq_epi : Epi (((f ≫ g) ≫ c.2.1) ≫ eqToHom hobj) :=
+    hcomp_eq ▸ hd_epi
+  have hcomp_epi : Epi ((f ≫ g) ≫ c.2.1) :=
+    (epi_comp_iff_of_isIso ((f ≫ g) ≫ c.2.1) (eqToHom hobj)).1 hcomp_eq_epi
+  have hassoc_epi : Epi (f ≫ (g ≫ c.2.1)) := by
+    simpa only [Category.assoc] using hcomp_epi
+  let q := g ≫ c.2.1
+  have hq_epi : Epi q := simplex_epi_of_comp_epi f q hassoc_epi
+  let kY : Fin (Y.len + 1) :=
+    ⟨c.1.1, by
+      have hlen := @SimplexCategory.len_le_of_epi _ _ q hq_epi
+      dsimp [q] at hlen ⊢
+      omega⟩
+  let b₀ : DoldKanIndex Y := ⟨kY, ⟨q, hq_epi⟩⟩
+  rw [Fintype.sum_eq_single b₀]
+  · have hgb : HEq b₀.2.1 (g ≫ c.2.1) := by rfl
+    have hfd : HEq d.2.1 (f ≫ b₀.2.1) := by
+      simpa only [b₀, q, Category.assoc, hcd] using hcomp
+    rw [doldKanComponentMap_same_degree A g c b₀ (by rfl) hgb,
+      doldKanComponentMap_same_degree A f b₀ d
+        (by simp [b₀, kY, hcd]) hfd]
+    rw [doldKanComponentMap_same_degree A (f ≫ g) c d hcd hcomp]
+    simp
+  · intro b hb
+    by_cases hcb : c.1.1 = b.1.1
+    · by_cases hgb : HEq b.2.1 (g ≫ c.2.1)
+      · have hbb₀ : b = b₀ := by
+          apply Sigma.ext
+          · apply Fin.ext
+            change b.1.1 = c.1.1
+            exact hcb.symm
+          · have hval : HEq b.2.1 b₀.2.1 := by
+              simpa [b₀, q] using hgb
+            have hnat : b.1.1 = b₀.1.1 := by
+              change b.1.1 = c.1.1
+              exact hcb.symm
+            have hp : (fun α : Y ⟶ ⦋b.1.1⦌ => Epi α) ≍
+                (fun α : Y ⟶ ⦋b₀.1.1⦌ => Epi α) := by
+              rw [hnat]
+            exact (Subtype.heq_iff_coe_heq (type_eq_of_heq hval) hp).2 hval
+        exact (hb hbb₀).elim
+      · rw [show doldKanComponentMap A g c b = 0 by
+          simp [doldKanComponentMap, hcb, hgb], zero_comp]
+    · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+      · by_cases hbd : b.1.1 = d.1.1
+        · exfalso
+          omega
+        · by_cases hbdrop : b.1.1 = d.1.1 + 1
+          · exfalso
+            omega
+          · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+              comp_zero]
+      · rw [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop,
+          zero_comp]
+private theorem doldKanComponentMap_comp_sum_drop_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (c : DoldKanIndex Z) (d : DoldKanIndex X)
+    (hcd : c.1.1 = d.1.1 + 1)
+    (hcomp : ¬HEq ((f ≫ g) ≫ c.2.1)
+      (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))) :
+    (∑ b : DoldKanIndex Y,
+      doldKanComponentMap A g c b ≫ doldKanComponentMap A f b d) = 0 := by
+  classical
+  rw [Fintype.sum_eq_zero]
+  intro b
+  by_cases hcb : c.1.1 = b.1.1
+  · by_cases hgb : HEq b.2.1 (g ≫ c.2.1)
+    · by_cases hbd : b.1.1 = d.1.1
+      · exfalso
+        omega
+      · by_cases hbdrop : b.1.1 = d.1.1 + 1
+        · by_cases hfd : HEq (f ≫ b.2.1)
+              (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))
+          · exfalso
+            apply hcomp
+            have hbcobj : (⦋b.1.1⦌ : SimplexCategory) = ⦋c.1.1⦌ :=
+              (congrArg (fun n : ℕ => ⦋n⦌) hcb).symm
+            have h₁ : HEq (f ≫ b.2.1) (f ≫ (g ≫ c.2.1)) := by
+              exact heq_comp rfl rfl hbcobj HEq.rfl hgb
+            have h₂ : HEq ((f ≫ g) ≫ c.2.1)
+                (f ≫ (g ≫ c.2.1)) := heq_of_eq (Category.assoc _ _ _)
+            exact h₂.trans (h₁.symm.trans hfd)
+          · rw [show doldKanComponentMap A f b d = 0 by
+              exact doldKanComponentMap_drop_zero A f b d hbdrop hfd, comp_zero]
+        · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+            comp_zero]
+    · rw [show doldKanComponentMap A g c b = 0 by
+        simp [doldKanComponentMap, hcb, hgb], zero_comp]
+  · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+    · by_cases hbd : b.1.1 = d.1.1
+      · by_cases hgc : HEq (g ≫ c.2.1)
+            (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+        · by_cases hfd : HEq d.2.1 (f ≫ b.2.1)
+          · exfalso
+            apply hcomp
+            have hcbobj : (⦋c.1.1⦌ : SimplexCategory) =
+                ⦋b.1.1 + 1⦌ := congrArg (fun n : ℕ => ⦋n⦌) hcbdrop
+            have hbdobj : (⦋b.1.1⦌ : SimplexCategory) = ⦋d.1.1⦌ :=
+              congrArg (fun n : ℕ => ⦋n⦌) hbd
+            have hbdplus : (⦋b.1.1 + 1⦌ : SimplexCategory) =
+                ⦋d.1.1 + 1⦌ := congrArg (fun n : ℕ => ⦋n + 1⦌) hbd
+            have h₁ : HEq (f ≫ (g ≫ c.2.1))
+                (f ≫ (b.2.1 ≫
+                  SimplexCategory.δ (Fin.last (b.1.1 + 1)))) :=
+              heq_comp rfl rfl hcbobj HEq.rfl hgc
+            have h₂ : HEq ((f ≫ b.2.1) ≫
+                SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+                (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1))) :=
+              heq_comp rfl hbdobj hbdplus hfd.symm
+                (simplex_last_coface_heq hbd)
+            have h₃ : HEq ((f ≫ g) ≫ c.2.1)
+                (f ≫ (g ≫ c.2.1)) := heq_of_eq (Category.assoc _ _ _)
+            have h₄ : HEq (f ≫ (b.2.1 ≫
+                SimplexCategory.δ (Fin.last (b.1.1 + 1))))
+                ((f ≫ b.2.1) ≫
+                  SimplexCategory.δ (Fin.last (b.1.1 + 1))) :=
+              heq_of_eq (Category.assoc _ _ _).symm
+            exact h₃.trans (h₁.trans (h₄.trans h₂))
+          · rw [show doldKanComponentMap A f b d = 0 by
+              simp [doldKanComponentMap, hbd, hfd], comp_zero]
+        · rw [show doldKanComponentMap A g c b = 0 by
+            exact doldKanComponentMap_drop_zero A g c b hcbdrop hgc, zero_comp]
+      · by_cases hbdrop : b.1.1 = d.1.1 + 1
+        · exfalso
+          omega
+        · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+            comp_zero]
+    · rw [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop,
+        zero_comp]
+
+private theorem doldKanComponentMap_comp_sum_drop
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
+    (f : X ⟶ Y) (g : Y ⟶ Z)
+    (c : DoldKanIndex Z) (d : DoldKanIndex X)
+    (hcd : c.1.1 = d.1.1 + 1)
+    (hcomp : HEq ((f ≫ g) ≫ c.2.1)
+      (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))) :
+    (∑ b : DoldKanIndex Y,
+      doldKanComponentMap A g c b ≫ doldKanComponentMap A f b d) =
+      doldKanComponentMap A (f ≫ g) c d := by
+  classical
+  have hfac : HEq (f ≫ (g ≫ c.2.1))
+      (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1))) := by
+    simpa only [Category.assoc] using hcomp
+  let q := g ≫ c.2.1
+  by_cases hq : Epi q
+  · have hq_epi : Epi q := hq
+    let kY : Fin (Y.len + 1) :=
+      ⟨c.1.1, by
+        have hlen := @SimplexCategory.len_le_of_epi _ _ q hq_epi
+        dsimp [q] at hlen ⊢
+        omega⟩
+    let b₀ : DoldKanIndex Y := ⟨kY, ⟨q, hq_epi⟩⟩
+    rw [Fintype.sum_eq_single b₀]
+    · have hgb : HEq b₀.2.1 (g ≫ c.2.1) := by rfl
+      have hfd : HEq (f ≫ b₀.2.1)
+          (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1))) := by
+        simpa only [b₀, q, Category.assoc] using hfac
+      rw [doldKanComponentMap_same_degree A g c b₀ (by rfl) hgb,
+        doldKanComponentMap_drop_degree A f b₀ d
+          (by simp [b₀, kY, hcd]) hfd,
+        doldKanComponentMap_drop_degree A (f ≫ g) c d hcd hcomp]
+      simp [b₀, kY, hcd]
+    · intro b hb
+      by_cases hcb : c.1.1 = b.1.1
+      · by_cases hgb : HEq b.2.1 (g ≫ c.2.1)
+        · have hbb₀ : b = b₀ := by
+            apply Sigma.ext
+            · apply Fin.ext
+              change b.1.1 = c.1.1
+              exact hcb.symm
+            · have hval : HEq b.2.1 b₀.2.1 := by
+                simpa [b₀, q] using hgb
+              have hnat : b.1.1 = b₀.1.1 := by
+                change b.1.1 = c.1.1
+                exact hcb.symm
+              have hp : (fun α : Y ⟶ ⦋b.1.1⦌ => Epi α) ≍
+                  (fun α : Y ⟶ ⦋b₀.1.1⦌ => Epi α) := by
+                rw [hnat]
+              exact (Subtype.heq_iff_coe_heq (type_eq_of_heq hval) hp).2 hval
+          exact (hb hbb₀).elim
+        · rw [show doldKanComponentMap A g c b = 0 by
+            simp [doldKanComponentMap, hcb, hgb], zero_comp]
+      · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+        · by_cases hbd : b.1.1 = d.1.1
+          · by_cases hgc : HEq (g ≫ c.2.1)
+                (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+            · have hδepi : Epi (SimplexCategory.δ (Fin.last (b.1.1 + 1))) := by
+                have hobj : (⦋c.1.1⦌ : SimplexCategory) =
+                    ⦋b.1.1 + 1⦌ := congrArg (fun n : ℕ => ⦋n⦌) hcbdrop
+                have hqeq : q ≫ eqToHom hobj =
+                    b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)) := by
+                  apply eq_of_heq
+                  exact (comp_eqToHom_heq q hobj).trans hgc
+                have hqeq_epi : Epi (q ≫ eqToHom hobj) :=
+                  epi_comp' hq (inferInstance : Epi (eqToHom hobj))
+                have hbd_epi : Epi (b.2.1 ≫
+                    SimplexCategory.δ (Fin.last (b.1.1 + 1))) :=
+                  hqeq ▸ hqeq_epi
+                exact @epi_of_epi _ _ _ _ _ b.2.1
+                  (SimplexCategory.δ (Fin.last (b.1.1 + 1))) hbd_epi
+              have hlen := @SimplexCategory.len_le_of_epi _ _
+                (SimplexCategory.δ (Fin.last (b.1.1 + 1))) hδepi
+              dsimp at hlen
+              omega
+            · rw [show doldKanComponentMap A g c b = 0 by
+                exact doldKanComponentMap_drop_zero A g c b hcbdrop hgc, zero_comp]
+          · by_cases hbdrop : b.1.1 = d.1.1 + 1
+            · exfalso
+              omega
+            · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+                comp_zero]
+        · rw [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop,
+            zero_comp]
+  · rcases simplex_last_factorization f q d.2.1 d.2.2 hcd hfac with hq' | hq'
+    · exact (hq hq').elim
+    · rcases hq' with ⟨q', hq', hqfac, hfq⟩
+      let kY : Fin (Y.len + 1) :=
+        ⟨d.1.1, by
+          have hlen := @SimplexCategory.len_le_of_epi _ _ q' hq'
+          dsimp at hlen ⊢
+          omega⟩
+      let b₀ : DoldKanIndex Y := ⟨kY, ⟨q', hq'⟩⟩
+      rw [Fintype.sum_eq_single b₀]
+      · have hgc : HEq (g ≫ c.2.1)
+            (b₀.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1))) := by
+          simpa only [b₀, q] using hqfac
+        have hfd : HEq d.2.1 (f ≫ b₀.2.1) := by
+          simpa only [b₀] using heq_of_eq hfq.symm
+        rw [doldKanComponentMap_drop_degree A g c b₀ hcd hgc,
+          doldKanComponentMap_same_degree A f b₀ d (by rfl) hfd,
+          doldKanComponentMap_drop_degree A (f ≫ g) c d hcd hcomp]
+        simp [b₀, kY]
+      · intro b hb
+        by_cases hcb : c.1.1 = b.1.1
+        · by_cases hgb : HEq b.2.1 (g ≫ c.2.1)
+          · have hqepi : Epi q := by
+              have hobj : (⦋b.1.1⦌ : SimplexCategory) = ⦋c.1.1⦌ :=
+                (congrArg (fun n : ℕ => ⦋n⦌) hcb).symm
+              have hbq : b.2.1 = q ≫ eqToHom hobj.symm := by
+                apply eq_of_heq
+                exact hgb.trans (comp_eqToHom_heq q hobj.symm).symm
+              have hqeq_epi : Epi (q ≫ eqToHom hobj.symm) :=
+                hbq ▸ b.2.2
+              exact (epi_comp_iff_of_isIso q (eqToHom hobj.symm)).1 hqeq_epi
+            exact (hq hqepi).elim
+          · rw [show doldKanComponentMap A g c b = 0 by
+              simp [doldKanComponentMap, hcb, hgb], zero_comp]
+        · by_cases hcbdrop : c.1.1 = b.1.1 + 1
+          · by_cases hbd : b.1.1 = d.1.1
+            · by_cases hgc : HEq (g ≫ c.2.1)
+                  (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+              · have hbb₀ : b = b₀ := by
+                  apply Sigma.ext
+                  · apply Fin.ext
+                    change b.1.1 = d.1.1
+                    exact hbd
+                  · have hqfac' : HEq (g ≫ c.2.1)
+                        (b₀.2.1 ≫
+                          SimplexCategory.δ (Fin.last (d.1.1 + 1))) := by
+                      simpa only [b₀, q] using hqfac
+                    have hbdobj : (⦋b.1.1⦌ : SimplexCategory) = ⦋d.1.1⦌ :=
+                      congrArg (fun n : ℕ => ⦋n⦌) hbd
+                    have hbdplus : (⦋b.1.1 + 1⦌ : SimplexCategory) =
+                        ⦋d.1.1 + 1⦌ := congrArg (fun n : ℕ => ⦋n + 1⦌) hbd
+                    have hbeq : HEq b.2.1 b₀.2.1 := by
+                      apply heq_cancel_mono_trans
+                        b.2.1
+                        (SimplexCategory.δ (Fin.last (b.1.1 + 1)))
+                        b₀.2.1
+                        (SimplexCategory.δ (Fin.last (d.1.1 + 1)))
+                        (g ≫ c.2.1) rfl hbdobj hbdplus
+                        (simplex_last_coface_heq hbd)
+                      · exact hgc.symm
+                      · exact hqfac'
+                    have hnat : b.1.1 = b₀.1.1 := by
+                      change b.1.1 = d.1.1
+                      exact hbd
+                    have hp : (fun α : Y ⟶ ⦋b.1.1⦌ => Epi α) ≍
+                        (fun α : Y ⟶ ⦋b₀.1.1⦌ => Epi α) := by
+                      rw [hnat]
+                    exact (Subtype.heq_iff_coe_heq (type_eq_of_heq hbeq) hp).2 hbeq
+                exact (hb hbb₀).elim
+              · rw [show doldKanComponentMap A g c b = 0 by
+                  exact doldKanComponentMap_drop_zero A g c b hcbdrop hgc, zero_comp]
+            · by_cases hbdrop : b.1.1 = d.1.1 + 1
+              · exfalso
+                omega
+              · rw [doldKanComponentMap_zero_of_other_case A f b d hbd hbdrop,
+                  comp_zero]
+          · rw [doldKanComponentMap_zero_of_other_case A g c b hcb hcbdrop,
+              zero_comp]
+
 theorem doldKanMap_id
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℕ) (X : SimplexCategory) :
     doldKanMap A (𝟙 X) = 𝟙 (doldKanDegree A X) := by
-  sorry
+  classical
+  apply Sigma.hom_ext
+  intro a
+  rw [doldKanMap_summand]
+  rw [Fintype.sum_eq_single a]
+  · rw [doldKanComponentMap_id_self, Category.id_comp]
+    change Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) a =
+      Sigma.ι (fun b : DoldKanIndex X => A.X b.1.1) a ≫
+        𝟙 (∐ fun b : DoldKanIndex X => A.X b.1.1)
+    rw [Category.comp_id]
+  · intro b hb
+    rw [doldKanComponentMap_id_zero A a b hb, zero_comp]
 
 theorem doldKanMap_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℕ) {X Y Z : SimplexCategory}
-    (f : X ⟶ Y) (g : Y ⟶ Z) :
+  (f : X ⟶ Y) (g : Y ⟶ Z) :
     doldKanMap A (f ≫ g) = doldKanMap A g ≫ doldKanMap A f := by
-  sorry
+  classical
+  apply Sigma.hom_ext
+  intro c
+  change (Sigma.ι (fun b : DoldKanIndex Z => A.X b.1.1) c ≫
+      doldKanMap A (f ≫ g) :
+        A.X c.1.1 ⟶ ∐ fun a : DoldKanIndex X => A.X a.1.1) =
+    (Sigma.ι (fun b : DoldKanIndex Z => A.X b.1.1) c ≫
+      (doldKanMap A g ≫ doldKanMap A f) :
+        A.X c.1.1 ⟶ ∐ fun a : DoldKanIndex X => A.X a.1.1)
+  apply sigma_hom_ext_of_π (fun a : DoldKanIndex X => A.X a.1.1)
+  intro d
+  change ((Sigma.ι (fun b : DoldKanIndex Z => A.X b.1.1) c :
+      A.X c.1.1 ⟶ doldKanDegree A Z) ≫ doldKanMap A (f ≫ g)) ≫
+      (Sigma.π (fun a : DoldKanIndex X => A.X a.1.1) d :
+        doldKanDegree A X ⟶ A.X d.1.1) =
+    ((Sigma.ι (fun b : DoldKanIndex Z => A.X b.1.1) c :
+      A.X c.1.1 ⟶ doldKanDegree A Z) ≫
+      (doldKanMap A g ≫ doldKanMap A f)) ≫
+      (Sigma.π (fun a : DoldKanIndex X => A.X a.1.1) d :
+        doldKanDegree A X ⟶ A.X d.1.1)
+  rw [← Category.assoc
+    (Sigma.ι (fun b : DoldKanIndex Z => A.X b.1.1) c)
+    (doldKanMap A g) (doldKanMap A f)]
+  rw [doldKanMap_component_projection]
+  rw [doldKanMap_two_summand_projection]
+  by_cases hdegree : c.1.1 = d.1.1
+  · by_cases hcomp : HEq d.2.1 ((f ≫ g) ≫ c.2.1)
+    · exact (doldKanComponentMap_comp_sum_same A f g c d hdegree hcomp).symm
+    · have hz : doldKanComponentMap A (f ≫ g) c d = 0 := by
+        have hcomp' : ¬HEq d.2.1 (f ≫ (g ≫ c.2.1)) := by
+          simpa only [Category.assoc] using hcomp
+        simp [doldKanComponentMap, hdegree, hcomp']
+      rw [hz]
+      exact (doldKanComponentMap_comp_sum_same_zero A f g c d hdegree hcomp).symm
+  · by_cases hdrop : c.1.1 = d.1.1 + 1
+    · by_cases hcomp : HEq ((f ≫ g) ≫ c.2.1)
+          (d.2.1 ≫ SimplexCategory.δ (Fin.last (d.1.1 + 1)))
+      · exact (doldKanComponentMap_comp_sum_drop A f g c d hdrop hcomp).symm
+      · have hz : doldKanComponentMap A (f ≫ g) c d = 0 := by
+          exact doldKanComponentMap_drop_zero A (f ≫ g) c d hdrop hcomp
+        rw [hz]
+        exact (doldKanComponentMap_comp_sum_drop_zero A f g c d hdrop hcomp).symm
+    · have hz : doldKanComponentMap A (f ≫ g) c d = 0 := by
+        exact doldKanComponentMap_zero_of_other_case A (f ≫ g) c d hdegree hdrop
+      rw [hz]
+      exact (doldKanComponentMap_comp_sum_gap A f g c d hdegree hdrop).symm
 
 /-- The simplicial object `S(A_•)` from the source's reverse construction. -/
 noncomputable def doldKanSimplicialObject
@@ -282,12 +1122,31 @@ noncomputable def doldKanIdentitySummand
 theorem doldKanIndex_eq_identity_of_degree_ge
     {n : ℕ} (a : DoldKanIndex ⦋n⦌) (h : n ≤ a.1.1) :
     a = doldKanIdentityIndex n := by
-  sorry
+  rcases a with ⟨⟨k, hk⟩, α⟩
+  change n ≤ k at h
+  change k < n + 1 at hk
+  have hk' : k = n := by omega
+  subst k
+  apply Sigma.ext
+  · apply Fin.ext
+    rfl
+  · apply heq_of_eq
+    apply Subtype.ext
+    apply SimplexCategory.Hom.ext
+    apply OrderHom.eq_id_of_injective
+    have hsurj : Function.Surjective α.val.toOrderHom :=
+      (SimplexCategory.epi_iff_surjective).1 α.property
+    simpa only [SimplexCategory.len_mk] using
+      (Finite.injective_iff_surjective.mpr hsurj)
 
 theorem doldKanIndex_degree_ge_iff_identity
     {n : ℕ} (a : DoldKanIndex ⦋n⦌) :
     n ≤ a.1.1 ↔ a = doldKanIdentityIndex n := by
-  sorry
+  constructor
+  · exact doldKanIndex_eq_identity_of_degree_ge a
+  · intro h
+    rw [h]
+    rfl
 
 theorem doldKan_identity_degenerate_decomposition
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -169,11 +169,11 @@ def EtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
     (_hqResidue : ResidueFieldIdentification q hq),
     Nonempty (A →ₐ[R] R)
 
-/-- The unique finite-étale retraction characterization in item (8). -/
+/-- The unique étale retraction characterization in item (8). -/
 def UniqueEtaleRetractionProperty
     (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
   ∀ {A : Type u} [CommRing A] [Algebra R A]
-    (_hA : Algebra.Etale R A) (_hAfinite : Module.Finite R A)
+    (_hA : Algebra.Etale R A)
     (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
     (_hqResidue : ResidueFieldIdentification q hq),
@@ -452,11 +452,11 @@ theorem zero_dimensional_local_henselian
 
 /-! ## Maps into Henselian rings and polynomial systems -/
 
-/-- The finite-étale map-into-henselian interface. -/
+/-- The étale map-into-henselian interface. -/
 theorem map_into_henselian
     {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
     [Algebra R A] [Algebra R S] [HenselianLocalRing S]
-    (hA : Algebra.Etale R A) (hAfin : Module.Finite R A)
+    (hA : Algebra.Etale R A)
     (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) =
       (IsLocalRing.maximalIdeal S).comap (algebraMap R S))
@@ -499,8 +499,6 @@ theorem strictly_henselian_solution_bijection
     (φ : R →+* S) (hφ : IsLocalHom φ) (n : ℕ)
     (P : Fin n → MvPolynomial (Fin n) R)
     (hP : Algebra.Etale R
-      (MvPolynomial (Fin n) R ⧸ Ideal.span (Set.range P)))
-    (hPfinite : Module.Finite R
       (MvPolynomial (Fin n) R ⧸ Ideal.span (Set.range P))) :
     Function.Bijective (polynomialSystemMap φ n P) := by
   sorry

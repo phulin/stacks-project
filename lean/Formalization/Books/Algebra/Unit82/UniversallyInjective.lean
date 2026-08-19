@@ -12,11 +12,13 @@ import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Prod
+import Mathlib.LinearAlgebra.Projection
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
 import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Module
+import Mathlib.RingTheory.LocalProperties.Exactness
 
 /-!
 # Commutative Algebra, Chapter 82: Universally injective module maps
@@ -47,6 +49,17 @@ def universallyInjective
     (f : M →ₗ[R] N) : Prop :=
   ∀ (Q : Type (max u (max v w))) [AddCommGroup Q] [Module R Q],
     Function.Injective (f.rTensor Q)
+
+/-- A left inverse makes a linear map universally injective. -/
+theorem universallyInjective_of_left_inverse
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (g : N →ₗ[R] M)
+    (hgf : g.comp f = LinearMap.id) :
+    universallyInjective f := by
+  intro Q _ _ x y hxy
+  have h := congrArg (fun z => (g.rTensor Q) z) hxy
+  simpa [LinearMap.rTensor, TensorProduct.map_map, hgf] using h
 
 /-- A short exact sequence is universally exact when its first map remains
 injective after every tensor base change. -/
@@ -2181,6 +2194,143 @@ theorem universallyInjective_iff_check_stalks
       intro q
       exact (hlocalize_prime q).mpr (hq q)
   exact ⟨hprime, hmax, hprimeAt, hmaxAt⟩
+
+/-! ## Local split injections with finitely presented terms -/
+
+/-- The image of a map is a complemented summand. -/
+def IsComplementedSummand
+    {A F N : Type*} [CommRing A] [AddCommGroup F] [Module A F]
+    [AddCommGroup N] [Module A N] (l : F →ₗ[A] N) : Prop :=
+  Function.Injective l ∧ IsComplemented (LinearMap.range l)
+
+/-- A complemented summand with a free source.  This is the interface used for
+localized free summands; the source may be `LocalizedModule.AtPrime`. -/
+def IsComplementedFreeSummand
+    {A F N : Type*} [CommRing A] [AddCommGroup F] [Module A F]
+    [AddCommGroup N] [Module A N] (l : F →ₗ[A] N) : Prop :=
+  Module.Free A F ∧ IsComplementedSummand l
+
+/-- A finitely presented map which is a split injection at every maximal stalk
+is universally injective and is already split over the original ring. -/
+theorem universallyInjective_and_split_of_localization_maximal
+    {R M N : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.FinitePresentation R M]
+    [AddCommGroup N] [Module R N] [Module.FinitePresentation R N]
+    (f : M →ₗ[R] N)
+    (H : ∀ (I : Ideal R) [I.IsMaximal],
+      ∃ g : LocalizedModule.AtPrime I N →ₗ[Localization.AtPrime I]
+          LocalizedModule.AtPrime I M,
+        g.comp (LocalizedModule.map I.primeCompl f) = LinearMap.id) :
+    universallyInjective f ∧
+      ∃ g : N →ₗ[R] M, g.comp f = LinearMap.id := by
+  have hlocal : ∀ (I : Ideal R) [I.IsMaximal],
+      universallyInjectiveLocalizedAsAlgebra
+        (R := R) (A := R) I.primeCompl f := by
+    intro I hI
+    let A := Localization.AtPrime I
+    let X := LocalizedModule.AtPrime I M
+    let Y := LocalizedModule.AtPrime I N
+    let _ : Algebra R A :=
+      ((algebraMap R (Localization.AtPrime I)).comp (algebraMap R R)).toAlgebra
+    let _ : SMul R A := (inferInstance : Algebra R A).toSMul
+    let _ : SMul R X := (Module.restrictScalars R A X).toSMul
+    let _ : SMul R Y := (Module.restrictScalars R A Y).toSMul
+    let _ : Module R X := Module.restrictScalars R A X
+    let _ : Module R Y := Module.restrictScalars R A Y
+    let _ : IsScalarTower R A X := IsScalarTower.of_compHom R A X
+    let _ : IsScalarTower R A Y := IsScalarTower.of_compHom R A Y
+    obtain ⟨g, hg⟩ := H I
+    have hgf : (g.restrictScalars R).comp
+        ((LocalizedModule.map I.primeCompl f).restrictScalars R) =
+        LinearMap.id := by
+      exact congrArg (fun k => k.restrictScalars R) hg
+    have hUI := universallyInjective_of_left_inverse
+      ((LocalizedModule.map I.primeCompl f).restrictScalars R)
+      (g.restrictScalars R) hgf
+    simpa [X, Y, universallyInjective,
+      universallyInjectiveLocalizedAsAlgebra,
+      universallyInjectiveAsAlgebra, universallyInjectiveOver] using hUI
+  have hUA : universallyInjectiveAsAlgebra (R := R) (A := R) f :=
+    ((universallyInjective_iff_check_stalks (R := R) (A := R) f).2.1).mpr hlocal
+  have hu : universallyInjective f := by
+    simpa [universallyInjective, universallyInjectiveAsAlgebra,
+      universallyInjectiveOver] using hUA
+  have hinj : Function.Injective f := by
+    apply injective_of_localized_maximal f
+    intro I hI
+    obtain ⟨g, hg⟩ := H I
+    have hleft : Function.LeftInverse g (LocalizedModule.map I.primeCompl f) := by
+      intro x
+      simpa [LinearMap.comp_apply] using congrArg (fun k => k x) hg
+    exact hleft.injective
+  let P := N ⧸ LinearMap.range f
+  let q : N →ₗ[R] P := (LinearMap.range f).mkQ
+  have hq : Function.Surjective q := Submodule.mkQ_surjective _
+  have hqker : (LinearMap.ker q).FG := by
+    dsimp [q]
+    rw [Submodule.ker_mkQ]
+    exact Submodule.fg_range f
+  letI : Module.FinitePresentation R P :=
+    Module.finitePresentation_of_surjective q hq hqker
+  have hex : Function.Exact f q := by
+    dsimp [q]
+    rw [LinearMap.exact_iff, Submodule.ker_mkQ]
+  have hshort : Function.Injective f ∧ Function.Exact f q ∧
+      Function.Surjective q := ⟨hinj, hex, hq⟩
+  have hUE : universallyExact f q := ⟨hinj, hex, hq, hu⟩
+  obtain ⟨s, hs⟩ :=
+    (universallyExact_iff_split_of_finitePresentation f q hshort).mp hUE
+  let k : N →ₗ[R] N := LinearMap.id - s.comp q
+  have hk0 : q.comp k = 0 := by
+    ext x
+    dsimp [k]
+    have hx := congrArg (fun g => g (q x)) hs
+    have hx' : q (s (q x)) = q x := by
+      simpa [LinearMap.comp_apply] using hx
+    simp only [map_sub, hx']
+    exact sub_self (q x)
+  have hk_mem (x : N) : k x ∈ LinearMap.range f := by
+    exact (hex (k x)).mp (congrArg (fun g => g x) hk0)
+  let e : M ≃ₗ[R] LinearMap.range f := LinearEquiv.ofInjective f hinj
+  let r : N →ₗ[R] M := e.symm.toLinearMap.comp
+    (k.codRestrict (LinearMap.range f) hk_mem)
+  have hfr : f.comp r = k := by
+    ext x
+    change f (e.symm (k.codRestrict (LinearMap.range f) hk_mem x)) = k x
+    exact congrArg Subtype.val (e.apply_symm_apply _)
+  have hkf : k.comp f = f := by
+    ext x
+    have hx := congrArg (fun g => g x) hex.comp_eq_zero
+    have hx' : q (f x) = 0 := by simpa [Function.comp_apply] using hx
+    simp [k, LinearMap.comp_apply, hx']
+  have hrf : r.comp f = LinearMap.id := by
+    ext x
+    apply hinj
+    have h₁ := congrArg (fun g => g (f x)) hfr
+    have h₂ := congrArg (fun g => g x) hkf
+    exact h₁.trans h₂
+  exact ⟨hu, ⟨r, hrf⟩⟩
+
+/-- The preceding criterion in the complemented-free-summand interface. -/
+theorem universallyInjective_and_split_of_complemented_free_localization
+    {R M N : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.FinitePresentation R M]
+    [AddCommGroup N] [Module R N] [Module.FinitePresentation R N]
+    (f : M →ₗ[R] N)
+    (H : ∀ (I : Ideal R) [I.IsMaximal],
+      IsComplementedFreeSummand
+        (LocalizedModule.map I.primeCompl f)) :
+    universallyInjective f ∧
+      ∃ g : N →ₗ[R] M, g.comp f = LinearMap.id := by
+  apply universallyInjective_and_split_of_localization_maximal f
+  intro I hI
+  obtain ⟨_, hinj, hcompl⟩ := H I
+  obtain ⟨K, hK⟩ := hcompl
+  let g := LinearMap.linearProjOfIsCompl (q := K)
+    (LocalizedModule.map I.primeCompl f) hinj hK
+  refine ⟨g, ?_⟩
+  ext x
+  simp [g]
 
 /-! ## Localization and the finitely generated ideal criterion -/
 

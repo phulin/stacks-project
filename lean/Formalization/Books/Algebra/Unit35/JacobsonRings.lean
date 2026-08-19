@@ -3243,13 +3243,64 @@ theorem idempotent_matrix_different_rank_orbits_disjoint
         (Matrix.diagonal (fun i : Fin n => if i.1 < r then 1 else 0)))
       (idempotentMatrixOrbit (k := k) n
         (Matrix.diagonal (fun i : Fin n => if i.1 < s then 1 else 0))) := by
-  sorry
+  classical
+  have hcard (t : ℕ) (ht : t ≤ n) : Fintype.card {i : Fin n // i.1 < t} = t := by
+    let e : Fin t ≃ {i : Fin n // i.1 < t} :=
+      Equiv.ofBijective (fun i => ⟨⟨i.1, lt_of_lt_of_le i.2 ht⟩, i.2⟩) ⟨
+        (by
+          intro i j hij
+          exact Fin.ext (congrArg (fun x => x.1.1) hij)),
+        (by
+          intro i
+          refine ⟨⟨i.1, i.2⟩, ?_⟩
+          apply Subtype.ext
+          exact Fin.ext rfl)⟩
+    exact (Fintype.card_congr e).symm.trans (Fintype.card_fin t)
+  rw [Set.disjoint_left]
+  intro X hXr hXs
+  rcases hXr with ⟨g, rfl⟩
+  rcases hXs with ⟨h, hh⟩
+  have hgr : (matrixConjugation n g
+      (Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0))).rank = r := by
+    unfold matrixConjugation
+    calc
+      ((g : Matrix (Fin n) (Fin n) k) *
+          Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0) *
+          (↑(g⁻¹) : Matrix (Fin n) (Fin n) k)).rank =
+          ((g : Matrix (Fin n) (Fin n) k) *
+            Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0)).rank :=
+        Matrix.rank_mul_eq_left_of_det_ne_zero _ _
+          (g⁻¹).det_ne_zero
+      _ = (Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0)).rank :=
+        Matrix.rank_mul_eq_right_of_det_ne_zero _ _ g.det_ne_zero
+      _ = r := by
+        rw [Matrix.rank_diagonal]
+        simpa using hcard r hr
+  have hgs : (matrixConjugation n h
+      (Matrix.diagonal (fun i : Fin n => if i.1 < s then (1 : k) else 0))).rank = s := by
+    unfold matrixConjugation
+    calc
+      ((h : Matrix (Fin n) (Fin n) k) *
+          Matrix.diagonal (fun i : Fin n => if i.1 < s then (1 : k) else 0) *
+          (↑(h⁻¹) : Matrix (Fin n) (Fin n) k)).rank =
+          ((h : Matrix (Fin n) (Fin n) k) *
+            Matrix.diagonal (fun i : Fin n => if i.1 < s then (1 : k) else 0)).rank :=
+        Matrix.rank_mul_eq_left_of_det_ne_zero _ _
+          (h⁻¹).det_ne_zero
+      _ = (Matrix.diagonal (fun i : Fin n => if i.1 < s then (1 : k) else 0)).rank :=
+        Matrix.rank_mul_eq_right_of_det_ne_zero _ _ h.det_ne_zero
+      _ = s := by
+        rw [Matrix.rank_diagonal]
+        simpa using hcard s hs
+  have hEqRank := congrArg Matrix.rank hh
+  exact hrs (hgr.symm.trans (hEqRank.symm.trans hgs))
 
 theorem matrixTrace_diagonalIdempotent
     {k : Type u} [Field k] (n r : ℕ) (hr : r ≤ n) :
     matrixTrace (k := k)
         (Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0)) = r := by
-  sorry
+  classical
+  simp [matrixTrace, Matrix.diagonal, Fin.card_filter_val_lt, min_eq_right hr]
 
 theorem matrixTrace_separates_idempotent_ranks
     {k : Type u} [Field k] [CharZero k] (n r s : ℕ)
@@ -3258,7 +3309,8 @@ theorem matrixTrace_separates_idempotent_ranks
         (Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0)) ≠
       matrixTrace (k := k)
         (Matrix.diagonal (fun i : Fin n => if i.1 < s then (1 : k) else 0)) := by
-  sorry
+  rw [matrixTrace_diagonalIdempotent n r hr, matrixTrace_diagonalIdempotent n s hs]
+  exact fun h => hrs (Nat.cast_injective h)
 
 theorem characteristic_three_trace_does_not_separate_zero_and_full_rank
     {k : Type u} [Field k] [CharP k 3] :

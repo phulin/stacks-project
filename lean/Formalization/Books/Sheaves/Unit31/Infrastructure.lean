@@ -67,6 +67,23 @@ abbrev openSheafDirectImage (C : Type u) [Category.{v} C]
     TopCat.Sheaf C (openSubspace U) ⥤ TopCat.Sheaf C X :=
   TopCat.Sheaf.pushforward C (openInclusion U)
 
+/-- The presheaf underlying restriction to an open subspace is naturally
+isomorphic to presheaf pullback. -/
+noncomputable def openSheafRestrictionPresheafIso (C : Type u)
+    [Category.{v} C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
+    openSheafRestriction C U ⋙ TopCat.Sheaf.forget C (openSubspace U) ≅
+      TopCat.Sheaf.forget C X ⋙ openPresheafRestriction C U := by
+  let H : IsOpenEmbedding
+      (TopCat.Hom.hom (TopCat.ofHom ⟨_, continuous_subtype_val⟩)) :=
+    U.isOpenEmbedding
+  let : H.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X) := H.functor_isContinuous
+  exact (H.isOpenMap.functor.sheafPushforwardContinuousCompSheafToPresheafIso
+      C (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X)) ≪≫
+    Functor.isoWhiskerLeft (TopCat.Sheaf.forget C X)
+      H.isOpenMap.pullbackIso.symm
+
 /-- The presheaf restriction is the canonical pullback construction. -/
 theorem openPresheafRestriction_formula (C : Type u) [Category.{v} C]
     [HasColimits C] {X : TopCat.{v}} (U : Opens X)
@@ -100,6 +117,76 @@ theorem openSheafRestriction_formula (C : Type u) [Category.{v} C]
       C (Opens.grothendieckTopology (openSubspace U))
       (Opens.grothendieckTopology X)).app F ≪≫
     (H.isOpenMap.pullbackObjIso F.presheaf).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The canonical stalk morphism for presheaf pullback is natural in the
+presheaf. -/
+theorem stalkPullbackHom_naturality (C : Type u) [Category.{v} C]
+    [HasColimits C] {X Y : TopCat.{v}} (f : X ⟶ Y)
+    {F G : TopCat.Presheaf C Y} (g : F ⟶ G) (x : X) :
+    (TopCat.Presheaf.stalkFunctor C (f x)).map g ≫
+        TopCat.Presheaf.stalkPullbackHom C f G x =
+      TopCat.Presheaf.stalkPullbackHom C f F x ≫
+        (TopCat.Presheaf.stalkFunctor C x).map
+          ((TopCat.Presheaf.pullback C f).map g) := by
+  apply TopCat.Presheaf.stalk_hom_ext F
+  intro V hV
+  rw [TopCat.Presheaf.stalkFunctor_map_germ_assoc]
+  simp only [TopCat.Presheaf.germ_stalkPullbackHom]
+  have hnat := NatTrans.congr_app
+    ((TopCat.Presheaf.pullbackPushforwardAdjunction C f).unit.naturality g) (op V)
+  change g.app (op V) ≫
+      ((TopCat.Presheaf.pullbackPushforwardAdjunction C f).unit.app G).app (op V) =
+    ((TopCat.Presheaf.pullbackPushforwardAdjunction C f).unit.app F).app (op V) ≫
+      ((TopCat.Presheaf.pullback C f).map g).app (op ((Opens.map f).obj V)) at hnat
+  rw [← Category.assoc, hnat]
+  rw [TopCat.Presheaf.germ_stalkPullbackHom_assoc,
+    TopCat.Presheaf.stalkFunctor_map_germ]
+  simp
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Pullback preserves the stalk at a point, naturally in the presheaf. -/
+noncomputable def pullbackStalkIso (C : Type u) [Category.{v} C]
+    [HasColimits C] {X Y : TopCat.{v}} (f : X ⟶ Y) (x : X) :
+    TopCat.Presheaf.pullback C f ⋙ TopCat.Presheaf.stalkFunctor C x ≅
+      TopCat.Presheaf.stalkFunctor C (f x) :=
+  NatIso.ofComponents
+    (fun F ↦ (TopCat.Presheaf.stalkPullbackIso C f F x).symm)
+    (fun {F G} g ↦ by
+      apply (cancel_epi (TopCat.Presheaf.stalkPullbackIso C f F x).hom).1
+      change (TopCat.Presheaf.stalkPullbackIso C f F x).hom ≫
+          (TopCat.Presheaf.stalkFunctor C x).map
+            ((TopCat.Presheaf.pullback C f).map g) ≫
+            (TopCat.Presheaf.stalkPullbackIso C f G x).inv =
+        (TopCat.Presheaf.stalkPullbackIso C f F x).hom ≫
+          (TopCat.Presheaf.stalkPullbackIso C f F x).inv ≫
+            (TopCat.Presheaf.stalkFunctor C (f x)).map g
+      calc
+        _ = ((TopCat.Presheaf.stalkFunctor C (f x)).map g ≫
+            (TopCat.Presheaf.stalkPullbackIso C f G x).hom) ≫
+              (TopCat.Presheaf.stalkPullbackIso C f G x).inv := by
+          simpa only [TopCat.Presheaf.stalkPullbackIso, Category.assoc] using congrArg
+            (fun k ↦ k ≫ (TopCat.Presheaf.stalkPullbackIso C f G x).inv)
+            (stalkPullbackHom_naturality C f g x).symm
+        _ = (TopCat.Presheaf.stalkFunctor C (f x)).map g := by simp
+        _ = ((TopCat.Presheaf.stalkPullbackIso C f F x).hom ≫
+            (TopCat.Presheaf.stalkPullbackIso C f F x).inv) ≫
+              (TopCat.Presheaf.stalkFunctor C (f x)).map g := by simp
+        _ = _ := by simp)
+
+/-- Restriction to an open subspace preserves its stalks, naturally in the
+ambient sheaf. -/
+noncomputable def openSheafRestrictionStalkIso (C : Type u)
+    [Category.{v} C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (u : openSubspace U) :
+    openSheafRestriction C U ⋙ TopCat.Sheaf.forget C (openSubspace U) ⋙
+        TopCat.Presheaf.stalkFunctor C u ≅
+      TopCat.Sheaf.forget C X ⋙
+        TopCat.Presheaf.stalkFunctor C ((openInclusion U) u) :=
+  Functor.isoWhiskerRight (openSheafRestrictionPresheafIso C U)
+      (TopCat.Presheaf.stalkFunctor C u) ≪≫
+    Functor.isoWhiskerLeft (TopCat.Sheaf.forget C X)
+      (pullbackStalkIso C (openInclusion U) u)
 
 /-- Sections of a sheaf restricted to an open subspace are the ambient
 sections over the corresponding image open. -/
@@ -482,6 +569,56 @@ noncomputable abbrev openAbelianSheafExtensionAdjunction
       openSheafRestriction AddCommGrpCat U :=
   openAlgebraicSheafExtensionAdjunction AddCommGrpCat U
 
+/-- Extension by zero for abelian sheaves is fully faithful. -/
+theorem openAbelianSheafExtension_fullFaithful {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
+    Nonempty (openAbelianSheafExtensionFunctor U).FullyFaithful := by
+  sorry
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The open-extension counit is an isomorphism on stalks over the open. -/
+theorem openAbelianSheafExtension_counit_stalk_map_isIso
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
+    (F : TopCat.Sheaf AddCommGrpCat X) (x : X) (hx : x ∈ U) :
+    IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      ((openAbelianSheafExtensionAdjunction U).counit.app F).hom) := by
+  let hff := Classical.choice (openAbelianSheafExtension_fullFaithful U)
+  letI : (openAbelianSheafExtensionFunctor U).Full := hff.full
+  letI : (openAbelianSheafExtensionFunctor U).Faithful := hff.faithful
+  let f := (openAbelianSheafExtensionAdjunction U).counit.app F
+  let e := openSheafRestrictionStalkIso AddCommGrpCat.{v} U
+    (⟨x, hx⟩ : (openSubspace U : Type v))
+  haveI : IsIso ((openSheafRestriction AddCommGrpCat U).map f) := inferInstance
+  haveI : IsIso (((openSheafRestriction AddCommGrpCat U).map f).hom) := by
+    change IsIso ((TopCat.Sheaf.forget AddCommGrpCat (openSubspace U)).map
+      ((openSheafRestriction AddCommGrpCat U).map f))
+    infer_instance
+  haveI : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+      (⟨x, hx⟩ : (openSubspace U : Type v))).map
+      ((openSheafRestriction AddCommGrpCat U).map f).hom) := by infer_instance
+  have h := e.hom.naturality f
+  have hleft : IsIso
+      ((openSheafRestriction AddCommGrpCat U ⋙
+          TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙
+          TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+            (⟨x, hx⟩ : (openSubspace U : Type v))).map f ≫
+        e.hom.app ((Functor.id (TopCat.Sheaf AddCommGrpCat X)).obj F)) := by
+    apply IsIso.comp_isIso'
+    · change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+          (⟨x, hx⟩ : (openSubspace U : Type v))).map
+        ((openSheafRestriction AddCommGrpCat U).map f).hom)
+      infer_instance
+    · infer_instance
+  have htarget : IsIso ((TopCat.Sheaf.forget AddCommGrpCat X ⋙
+      TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+        ((openInclusion U) (⟨x, hx⟩ : (openSubspace U : Type v)))).map f) := by
+    letI := hleft
+    exact IsIso.of_isIso_fac_left h.symm
+  change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map f.hom) at htarget
+  exact htarget
+
+set_option backward.isDefEq.respectTransparency false in
 /-- The counit of open extension and restriction agrees on a stalk over the
 open with the canonical extension and restriction stalk identifications. -/
 theorem openAbelianSheafExtension_counit_stalk_map_compatibility
@@ -499,20 +636,12 @@ theorem openAbelianSheafExtension_counit_stalk_map_compatibility
         e₁.hom ≫ e₂.hom =
           (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
             ((openAbelianSheafExtensionAdjunction U).counit.app F).hom := by
-  sorry
-
-/-- In particular, the open-extension counit is an isomorphism on stalks over
-the open. -/
-theorem openAbelianSheafExtension_counit_stalk_map_isIso
-    {X : TopCat.{v}} (U : Opens X)
-    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
-    (F : TopCat.Sheaf AddCommGrpCat X) (x : X) (hx : x ∈ U) :
-    IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
-      ((openAbelianSheafExtensionAdjunction U).counit.app F).hom) := by
-  rcases openAbelianSheafExtension_counit_stalk_map_compatibility U F x hx with
-    ⟨e₁, e₂, h⟩
-  rw [← h]
-  exact IsIso.comp_isIso' e₁.isIso_hom e₂.isIso_hom
+  let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+    ((openAbelianSheafExtensionAdjunction U).counit.app F).hom
+  letI : IsIso m := openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
+  let e₂ := (openSheafRestrictionStalkIso AddCommGrpCat U ⟨x, hx⟩).app F
+  refine ⟨asIso m ≪≫ e₂.symm, e₂, ?_⟩
+  simp [m, Category.assoc]
 
 /-- The module-valued open subspace of a ringed space. -/
 def ringedOpenSubspace (X : RingedSpace.{v}) (U : Opens X.carrier) : RingedSpace.{v} where
@@ -677,12 +806,6 @@ theorem openSetSheafExtension_essentialImage {X : TopCat.{v}} (U : Opens X)
     (G : TopCat.Sheaf (Type v) X) :
     (∃ F, Nonempty ((openSetSheafExtensionByEmpty U).obj F ≅ G)) ↔
       OpenEmptyStalkCondition U G := by
-  sorry
-
-/-- Extension by zero for abelian sheaves is fully faithful. -/
-theorem openAbelianSheafExtension_fullFaithful {X : TopCat.{v}} (U : Opens X)
-    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
-    Nonempty (openAbelianSheafExtensionFunctor U).FullyFaithful := by
   sorry
 
 /-- The abelian essential image of extension by zero is characterized by

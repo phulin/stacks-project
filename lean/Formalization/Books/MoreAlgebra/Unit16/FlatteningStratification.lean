@@ -62,6 +62,75 @@ def IsUniversalFlattening
    are roadmap assertions for the later scheme-theoretic source section and
    have no separate algebraic declaration at this source boundary. -/
 
+private def quotient_restrictScalars_equiv
+    {R A M : Type*} [CommRing R] [CommRing A] [AddCommGroup M]
+    [Module R M] [Module A M] [Algebra R A] [IsScalarTower R A M]
+    (p : Submodule A M) :
+    (M ⧸ p) ≃ₗ[R] (M ⧸ p.restrictScalars R) := by
+  let pR : Submodule R M := p.restrictScalars R
+  let e : (M ⧸ p) ≃ₗ[R] (M ⧸ pR) := {
+    toFun := Quotient.lift (fun x => (Submodule.Quotient.mk x : M ⧸ pR)) (by
+      intro x y hxy
+      rw [Submodule.Quotient.eq]
+      simpa [pR] using p.quotientRel_def.mp hxy)
+    invFun := Quotient.lift (fun x => (Submodule.Quotient.mk x : M ⧸ p)) (by
+      intro x y hxy
+      rw [Submodule.Quotient.eq]
+      simpa [pR] using pR.quotientRel_def.mp hxy)
+    map_add' := by
+      intro x y
+      induction x using Submodule.Quotient.induction_on with
+      | _ x =>
+        induction y using Submodule.Quotient.induction_on with
+        | _ y => rfl
+    map_smul' := by
+      intro r x
+      induction x using Submodule.Quotient.induction_on with
+      | _ x => rfl
+    left_inv := by
+      intro x
+      induction x using Submodule.Quotient.induction_on with
+      | _ x => rfl
+    right_inv := by
+      intro x
+      induction x using Submodule.Quotient.induction_on with
+      | _ x => rfl
+  }
+  exact e
+
+private theorem flat_of_ringEquiv_of_addEquiv
+    {B C S T : Type*} [CommRing B] [CommRing C]
+    [AddCommGroup S] [AddCommGroup T] [Module B S] [Module C T]
+    (eRing : B ≃+* C) (eAdd : S ≃+ T)
+    (hsmul : ∀ (c : C) (x : S),
+      eAdd (eRing.symm c • x) = c • eAdd x)
+    (hT : Module.Flat C T) : Module.Flat B S :=
+  letI : Algebra B C := eRing.toRingHom.toAlgebra
+  letI : Module C S := Module.compHom S eRing.symm.toRingHom
+  let eMod : S ≃ₗ[C] T := {
+    __ := eAdd
+    map_smul' := by
+      intro c x
+      exact hsmul c x
+  }
+  let eRingLin : B ≃ₗ[B] C := {
+    __ := eRing.toAddEquiv
+    map_smul' := by
+      intro b c
+      change eRing (b * c) = eRing b * eRing c
+      exact eRing.map_mul b c
+  }
+  letI : Module.Flat B C := Module.Flat.of_linearEquiv eRingLin.symm
+  letI : Module.Flat C T := hT
+  letI : Module.Flat C S := Module.Flat.of_linearEquiv eMod
+  letI : IsScalarTower B C S := ⟨by
+    intro b c x
+    change eRing.symm (eRing b * c) • x = b • (eRing.symm c • x)
+    rw [map_mul, eRing.symm_apply_apply]
+    rw [mul_smul]
+  ⟩
+  Module.Flat.trans B C S
+
 /-! ## The intersection lemma -/
 
 /-- If the reductions of an `R`-module modulo two ideals are flat over the
@@ -81,17 +150,11 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
   let A := R ⧸ I₁
   let N := M ⧸ (I₁ • (⊤ : Submodule R M))
   let P : Ideal A := J.map I₁.mkQ
-  let e0 : (A ⊗[R] M) ≃ₗ[A] N := {
-    __ := TensorProduct.quotTensorEquivQuotSMul M I₁
-    map_smul' := by
-      rintro ⟨r⟩ x
-      induction x using TensorProduct.induction_on with
-      | zero => simp
-      | add x y ihx ihy =>
-          simp_rw [TensorProduct.smul_add]
-          rw [ihx, ihy]
-      | tmul a m => simp
-  }
+  have hA : Function.Surjective (algebraMap R A) := by
+    simpa [A] using Ideal.Quotient.mk_surjective
+  let e0 : (A ⊗[R] M) ≃ₗ[A] N :=
+    (TensorProduct.quotTensorEquivQuotSMul M I₁).extendScalarsOfSurjective
+      hA
   let ebase : (P ⊗[A] (A ⊗[R] M)) ≃ₗ[A] (P ⊗[R] M) :=
     TensorProduct.AlgebraTensorModule.cancelBaseChange R A A P M
   let e1 : (P ⊗[R] M) ≃ₗ[A] (P ⊗[A] N) :=
@@ -100,6 +163,10 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
   have hP : Function.Injective (P.subtype.rTensor N) :=
     (Module.Flat.iff_rTensor_injective'.mp h₁) P
   let qM : M →ₗ[R] N := (I₁ • (⊤ : Submodule R M)).mkQ
+  have he0 (m : M) : e0 (1 ⊗ₜ[R] m) = qM m := by
+    change (TensorProduct.quotTensorEquivQuotSMul M I₁) (1 ⊗ₜ[R] m) = qM m
+    rw [TensorProduct.quotTensorEquivQuotSMul_mk_one_tmul]
+    rfl
   let φP : (P ⊗[R] M) →ₗ[R] N :=
     (TensorProduct.lid A N).restrictScalars R ∘ₗ
       (P.subtype.rTensor N).restrictScalars R ∘ₗ e1.restrictScalars R
@@ -107,43 +174,54 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
     toFun := fun p => {
       toFun := fun m => (p : A) • qM m
       map_add' := by intro m n; simp
-      map_smul' := by intro r m; simp [smul_smul, mul_comm]
+      map_smul' := by
+        intro r m
+        rw [qM.map_smul, smul_comm]
+        simp
     }
-    map_add' := by intro p p'; ext m; simp
-    map_smul' := by intro r p; ext m; simp [smul_smul, mul_comm]
+    map_add' := by
+      intro p p'
+      ext m
+      dsimp
+      rw [add_smul]
+    map_smul' := by
+      intro r p
+      ext m
+      dsimp
+      rw [smul_assoc]
   }
   have hφP0 : φP = φP0 := by
     apply TensorProduct.ext'
     intro p m
-    simp [φP, φP0, qM, e1, ebase, e0]
+    simp [φP, φP0, qM, e1, ebase]
+    rw [he0]
   have hφP : Function.Injective φP := by
     exact (TensorProduct.lid A N).injective.comp
       (hP.comp e1.injective)
   let f : J →ₗ[R] P := {
     toFun := fun x => ⟨I₁.mkQ x, Ideal.mem_map_of_mem I₁.mkQ x.property⟩
     map_add' := by intro x y; ext; simp
-    map_smul' := by intro r x; ext; simp
+    map_smul' := by
+      intro r x
+      apply Subtype.ext
+      change (Ideal.Quotient.mk I₁ r) * (Ideal.Quotient.mk I₁ (x : R)) =
+        algebraMap R A r * (Ideal.Quotient.mk I₁ (x : R))
+      rfl
   }
   have hcomm : φP.comp (f.rTensor M) =
       qM.comp ((TensorProduct.lid R M).comp (J.subtype.rTensor M)) := by
     rw [hφP0]
     apply TensorProduct.ext'
     intro j m
-    simp [φP0, f, qM]
+    simp [φP0, f, qM]; rfl
   let A₂ := R ⧸ I₂
   let N₂ := M ⧸ (I₂ • (⊤ : Submodule R M))
   let P₂ : Ideal A₂ := (J ⊓ I₁).map I₂.mkQ
-  let e02 : (A₂ ⊗[R] M) ≃ₗ[A₂] N₂ := {
-    __ := TensorProduct.quotTensorEquivQuotSMul M I₂
-    map_smul' := by
-      rintro ⟨r⟩ x
-      induction x using TensorProduct.induction_on with
-      | zero => simp
-      | add x y ihx ihy =>
-          simp_rw [TensorProduct.smul_add]
-          rw [ihx, ihy]
-      | tmul a m => simp
-  }
+  have hA₂ : Function.Surjective (algebraMap R A₂) := by
+    simpa [A₂] using Ideal.Quotient.mk_surjective
+  let e02 : (A₂ ⊗[R] M) ≃ₗ[A₂] N₂ :=
+    (TensorProduct.quotTensorEquivQuotSMul M I₂).extendScalarsOfSurjective
+      hA₂
   let ebase₂ : (P₂ ⊗[A₂] (A₂ ⊗[R] M)) ≃ₗ[A₂] (P₂ ⊗[R] M) :=
     TensorProduct.AlgebraTensorModule.cancelBaseChange R A₂ A₂ P₂ M
   let e2 : (P₂ ⊗[R] M) ≃ₗ[A₂] (P₂ ⊗[A₂] N₂) :=
@@ -152,6 +230,10 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
   have hP₂ : Function.Injective (P₂.subtype.rTensor N₂) :=
     (Module.Flat.iff_rTensor_injective'.mp h₂) P₂
   let qM₂ : M →ₗ[R] N₂ := (I₂ • (⊤ : Submodule R M)).mkQ
+  have he02 (m : M) : e02 (1 ⊗ₜ[R] m) = qM₂ m := by
+    change (TensorProduct.quotTensorEquivQuotSMul M I₂) (1 ⊗ₜ[R] m) = qM₂ m
+    rw [TensorProduct.quotTensorEquivQuotSMul_mk_one_tmul]
+    rfl
   let φP₂ : (P₂ ⊗[R] M) →ₗ[R] N₂ :=
     (TensorProduct.lid A₂ N₂).restrictScalars R ∘ₗ
       (P₂.subtype.rTensor N₂).restrictScalars R ∘ₗ e2.restrictScalars R
@@ -159,24 +241,35 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
     toFun := fun p => {
       toFun := fun m => (p : A₂) • qM₂ m
       map_add' := by intro m n; simp
-      map_smul' := by intro r m; simp [smul_smul, mul_comm]
+      map_smul' := by
+        intro r m
+        rw [qM₂.map_smul, smul_comm]
+        simp
     }
-    map_add' := by intro p p'; ext m; simp
-    map_smul' := by intro r p; ext m; simp [smul_smul, mul_comm]
+    map_add' := by
+      intro p p'
+      ext m
+      dsimp
+      rw [add_smul]
+    map_smul' := by
+      intro r p
+      ext m
+      dsimp
+      rw [smul_assoc]
   }
   have hφP₂0 : φP₂ = φP₂0 := by
     apply TensorProduct.ext'
     intro p m
-    simp [φP₂, φP₂0, qM₂, e2, ebase₂, e02]
+    simp [φP₂, φP₂0, qM₂, e2, ebase₂]
+    rw [he02]
   have hφP₂ : Function.Injective φP₂ := by
-    rw [hφP₂0]
     exact (TensorProduct.lid A₂ N₂).injective.comp
       (hP₂.comp e2.injective)
   have hf : Function.Surjective f := by
     intro x
-    obtain ⟨y, hy, hxy⟩ := Ideal.mem_map_iff_of_surjective I₁.mkQ
-      I₁.mkQ_surjective |>.mp x.property
-    exact ⟨⟨y, hy⟩, Subtype.ext hxy.symm⟩
+    obtain ⟨y, hy, hxy⟩ := Ideal.mem_map_iff_of_surjective
+      (Ideal.Quotient.mk I₁) Ideal.Quotient.mk_surjective |>.mp x.property
+    exact ⟨⟨y, hy⟩, Subtype.ext hxy⟩
   let K : Ideal R := J ⊓ I₁
   let k : K →ₗ[R] J := {
     toFun := fun x => ⟨x, x.property.1⟩
@@ -186,7 +279,12 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
   let g : K →ₗ[R] P₂ := {
     toFun := fun x => ⟨I₂.mkQ x, Ideal.mem_map_of_mem I₂.mkQ x.property⟩
     map_add' := by intro x y; ext; simp
-    map_smul' := by intro r x; ext; simp
+    map_smul' := by
+      intro r x
+      apply Subtype.ext
+      change (Ideal.Quotient.mk I₂ r) * (Ideal.Quotient.mk I₂ (x : R)) =
+        algebraMap R A₂ r * (Ideal.Quotient.mk I₂ (x : R))
+      rfl
   }
   have hg : Function.Injective g := by
     intro x y hxy
@@ -200,32 +298,38 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
       ⟨sub_mem (show (x : R) ∈ I₁ from x.property.2)
           (show (y : R) ∈ I₁ from y.property.2), hz'⟩
     rw [hI] at hbot
-    simpa using hbot
+    exact sub_eq_zero.mp hbot
   have hg_surj : Function.Surjective g := by
     intro x
-    obtain ⟨y, hy, hxy⟩ := Ideal.mem_map_iff_of_surjective I₂.mkQ
-      I₂.mkQ_surjective |>.mp x.property
-    exact ⟨⟨y, hy⟩, Subtype.ext hxy.symm⟩
+    obtain ⟨y, hy, hxy⟩ := Ideal.mem_map_iff_of_surjective
+      (Ideal.Quotient.mk I₂) Ideal.Quotient.mk_surjective |>.mp x.property
+    exact ⟨⟨y, hy⟩, Subtype.ext hxy⟩
   let eg : K ≃ₗ[R] P₂ := LinearEquiv.ofBijective g ⟨hg, hg_surj⟩
   have hgT : Function.Injective (g.rTensor M) := by
-    simpa [eg] using (eg.rTensor M).injective
+    have heg : eg.toLinearMap = g := by
+      ext x
+      rfl
+    rw [← heg]
+    exact (eg.rTensor M).injective
   have hfk : Function.Exact k f := by
     rw [LinearMap.exact_iff]
     apply le_antisymm
-    · rintro x ⟨y, rfl⟩
-      change f (k y) = 0
-      simp [f, k, Ideal.Quotient.eq_zero_iff_mem, y.property.2]
     · intro x hx
       have hxI : (x : R) ∈ I₁ := by
         apply Ideal.Quotient.eq_zero_iff_mem.mp
-        simpa [f] using hx
-      exact ⟨⟨(x : R), ⟨x.property, hxI⟩⟩, rfl⟩
+        simpa [f] using LinearMap.mem_ker.mp hx
+      refine ⟨⟨(x : R), ⟨x.property, hxI⟩⟩, ?_⟩
+      rfl
+    · rintro x ⟨y, rfl⟩
+      change f (k y) = 0
+      apply Subtype.ext
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr y.property.2
   have hcomm₂ : φP₂.comp (g.rTensor M) =
       qM₂.comp ((TensorProduct.lid R M).comp (K.subtype.rTensor M)) := by
     rw [hφP₂0]
     apply TensorProduct.ext'
     intro x m
-    simp [φP₂0, g, qM₂]
+    simp [φP₂0, g, qM₂]; rfl
   let φJ : (J ⊗[R] M) →ₗ[R] M :=
     (TensorProduct.lid R M).comp (J.subtype.rTensor M)
   have hφJ : Function.Injective φJ := by
@@ -233,22 +337,32 @@ private theorem flat_of_flat_quotients_of_inf_eq_bot
     rw [eq_bot_iff]
     intro x hx
     have hzero : φP (f.rTensor M x) = 0 := by
+      change (φP.comp (f.rTensor M)) x = 0
       rw [hcomm, LinearMap.comp_apply, hx]
       simp
     have hfx : (f.rTensor M) x = 0 := hφP hzero
-    have hex : Function.Exact (K.subtype.rTensor M) (f.rTensor M) :=
-      TensorProduct.rTensor_exact M hfk hf
-    have hxrange : x ∈ LinearMap.range (K.subtype.rTensor M) := by
+    have hex : Function.Exact (k.rTensor M) (f.rTensor M) :=
+      rTensor_exact M hfk hf
+    have hxrange : x ∈ LinearMap.range (k.rTensor M) := by
       rw [← hex.linearMap_ker_eq]
       exact hfx
     obtain ⟨y, hy⟩ := hxrange
-    have hyzero : (TensorProduct.lid R M) ((K.subtype.rTensor M) y) = 0 := by
+    have hyzero : (TensorProduct.lid R M)
+        ((J.subtype.rTensor M) ((k.rTensor M) y)) = 0 := by
       rw [hy]
       exact hx
+    have hKzero : (TensorProduct.lid R M) ((K.subtype.rTensor M) y) = 0 := by
+      have hcomp : (Submodule.subtype J).comp k = Submodule.subtype K := by
+        ext z
+        rfl
+      rw [← hcomp, LinearMap.rTensor_comp_apply]
+      exact hyzero
     have hgy : (g.rTensor M) y = 0 := by
       apply hφP₂
-      rw [hcomm₂, LinearMap.comp_apply, hyzero]
-      simp
+      change (φP₂.comp (g.rTensor M)) y = 0
+      rw [hcomm₂]
+      simp only [LinearMap.comp_apply]
+      simpa using congrArg (fun z : M => qM₂ z) hKzero
     have hy0 : y = 0 := hgT hgy
     rw [← hy, hy0]
     simp
@@ -269,17 +383,17 @@ theorem flat_quotient_inf_of_flat_quotients
   let K : Ideal R := I₁ ⊓ I₂
   let A := R ⧸ K
   let N := M ⧸ (K • (⊤ : Submodule R M))
-  let I₁' : Ideal A := I₁.map K.mkQ
-  let I₂' : Ideal A := I₂.map K.mkQ
+  let I₁' : Ideal A := I₁.map (Ideal.Quotient.mk K)
+  let I₂' : Ideal A := I₂.map (Ideal.Quotient.mk K)
   have hK₁ : K ≤ I₁ := by exact inf_le_left
   have hK₂ : K ≤ I₂ := by exact inf_le_right
   have hI' : I₁' ⊓ I₂' = ⊥ := by
     apply le_antisymm
     · intro x hx
-      obtain ⟨r₁, hr₁, e₁⟩ := Ideal.mem_map_iff_of_surjective K.mkQ
-        K.mkQ_surjective |>.mp hx.1
-      obtain ⟨r₂, hr₂, e₂⟩ := Ideal.mem_map_iff_of_surjective K.mkQ
-        K.mkQ_surjective |>.mp hx.2
+      obtain ⟨r₁, hr₁, e₁⟩ := Ideal.mem_map_iff_of_surjective
+        (Ideal.Quotient.mk K) Ideal.Quotient.mk_surjective |>.mp hx.1
+      obtain ⟨r₂, hr₂, e₂⟩ := Ideal.mem_map_iff_of_surjective
+        (Ideal.Quotient.mk K) Ideal.Quotient.mk_surjective |>.mp hx.2
       have hrel : r₁ - r₂ ∈ K := by
         apply Ideal.Quotient.eq_zero_iff_mem.mp
         rw [map_sub, e₁, e₂]
@@ -299,28 +413,32 @@ theorem flat_quotient_inf_of_flat_quotients
   let S₁ := N ⧸ (I₁' • (⊤ : Submodule A N))
   let T₁ := M ⧸ (I₁ • (⊤ : Submodule R M))
   let eRing₁ : B₁ ≃+* C₁ := DoubleQuot.quotQuotEquivQuotOfLE hK₁
+  have hden₁ :
+      (I₁' • (⊤ : Submodule A N)).restrictScalars R =
+        Submodule.map ((K • (⊤ : Submodule R M)).mkQ)
+          (I₁ • (⊤ : Submodule R M)) := by
+    change (I₁.map (algebraMap R A) • (⊤ : Submodule A N)).restrictScalars R = _
+    rw [Ideal.smul_restrictScalars, Submodule.map_smul'']
+    rw [Submodule.map_top,
+      LinearMap.range_eq_top.mpr (K • (⊤ : Submodule R M)).mkQ_surjective]
+    rfl
   let eMod₁R : S₁ ≃ₗ[R] T₁ := by
-    simpa [S₁, N, K, I₁', hSub₁] using
-      (Submodule.quotientQuotientEquivQuotient
-        (K • (⊤ : Submodule R M)) (I₁ • (⊤ : Submodule R M)) hSub₁)
-  have h₁' : Module.Flat B₁ S₁ := by
-    letI : Module C₁ S₁ := Module.compHom S₁ eRing₁.symm.toRingHom
-    let eMod₁ : S₁ ≃ₗ[C₁] T₁ := {
-      __ := eMod₁R
-      map_smul' := by
-        rintro ⟨r⟩ ⟨m⟩
-        rfl
-    }
-    letI : Algebra B₁ C₁ := eRing₁.toAlgebra
-    letI : Module.Flat B₁ C₁ :=
-      Module.Flat.of_linearEquiv eRing₁.toLinearEquiv.symm
-    letI : Module.Flat C₁ S₁ := Module.Flat.of_linearEquiv eMod₁ h₁
-    letI : IsScalarTower B₁ C₁ S₁ := ⟨by
-      intro b c x
-      change (eRing₁ b * c) • x = b • c • x
-      simp [Module.compHom, mul_smul]
-    ⟩
-    exact Module.Flat.trans B₁ C₁ S₁
+    let eRestr := quotient_restrictScalars_equiv
+      (R := R) (A := A) (M := N) (I₁' • (⊤ : Submodule A N))
+    let eQuot := Submodule.quotEquivOfEq _ _ hden₁
+    let eBase := Submodule.quotientQuotientEquivQuotient
+      (K • (⊤ : Submodule R M)) (I₁ • (⊤ : Submodule R M)) hSub₁
+    exact eRestr.trans (eQuot.trans eBase)
+  have h₁' : Module.Flat B₁ S₁ :=
+    flat_of_ringEquiv_of_addEquiv eRing₁ eMod₁R.toAddEquiv (by
+      intro c x
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective c
+      induction x using Submodule.Quotient.induction_on with
+      | _ x =>
+        induction x using Submodule.Quotient.induction_on with
+        | _ x =>
+          rfl
+    ) h₁
   have hSub₂ : K • (⊤ : Submodule R M) ≤ I₂ • (⊤ : Submodule R M) :=
     Submodule.smul_mono hK₂ le_rfl
   let B₂ := A ⧸ I₂'
@@ -328,28 +446,32 @@ theorem flat_quotient_inf_of_flat_quotients
   let S₂ := N ⧸ (I₂' • (⊤ : Submodule A N))
   let T₂ := M ⧸ (I₂ • (⊤ : Submodule R M))
   let eRing₂ : B₂ ≃+* C₂ := DoubleQuot.quotQuotEquivQuotOfLE hK₂
+  have hden₂ :
+      (I₂' • (⊤ : Submodule A N)).restrictScalars R =
+        Submodule.map ((K • (⊤ : Submodule R M)).mkQ)
+          (I₂ • (⊤ : Submodule R M)) := by
+    change (I₂.map (algebraMap R A) • (⊤ : Submodule A N)).restrictScalars R = _
+    rw [Ideal.smul_restrictScalars, Submodule.map_smul'']
+    rw [Submodule.map_top,
+      LinearMap.range_eq_top.mpr (K • (⊤ : Submodule R M)).mkQ_surjective]
+    rfl
   let eMod₂R : S₂ ≃ₗ[R] T₂ := by
-    simpa [S₂, N, K, I₂', hSub₂] using
-      (Submodule.quotientQuotientEquivQuotient
-        (K • (⊤ : Submodule R M)) (I₂ • (⊤ : Submodule R M)) hSub₂)
-  have h₂' : Module.Flat B₂ S₂ := by
-    letI : Module C₂ S₂ := Module.compHom S₂ eRing₂.symm.toRingHom
-    let eMod₂ : S₂ ≃ₗ[C₂] T₂ := {
-      __ := eMod₂R
-      map_smul' := by
-        rintro ⟨r⟩ ⟨m⟩
-        rfl
-    }
-    letI : Algebra B₂ C₂ := eRing₂.toAlgebra
-    letI : Module.Flat B₂ C₂ :=
-      Module.Flat.of_linearEquiv eRing₂.toLinearEquiv.symm
-    letI : Module.Flat C₂ S₂ := Module.Flat.of_linearEquiv eMod₂ h₂
-    letI : IsScalarTower B₂ C₂ S₂ := ⟨by
-      intro b c x
-      change (eRing₂ b * c) • x = b • c • x
-      simp [Module.compHom, mul_smul]
-    ⟩
-    exact Module.Flat.trans B₂ C₂ S₂
+    let eRestr := quotient_restrictScalars_equiv
+      (R := R) (A := A) (M := N) (I₂' • (⊤ : Submodule A N))
+    let eQuot := Submodule.quotEquivOfEq _ _ hden₂
+    let eBase := Submodule.quotientQuotientEquivQuotient
+      (K • (⊤ : Submodule R M)) (I₂ • (⊤ : Submodule R M)) hSub₂
+    exact eRestr.trans (eQuot.trans eBase)
+  have h₂' : Module.Flat B₂ S₂ :=
+    flat_of_ringEquiv_of_addEquiv eRing₂ eMod₂R.toAddEquiv (by
+      intro c x
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective c
+      induction x using Submodule.Quotient.induction_on with
+      | _ x =>
+        induction x using Submodule.Quotient.induction_on with
+        | _ x =>
+          rfl
+    ) h₂
   exact flat_of_flat_quotients_of_inf_eq_bot I₁' I₂' hI' h₁' h₂'
 
 /- The proof's displayed tensor identity identifies the quotient of `J` by

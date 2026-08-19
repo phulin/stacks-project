@@ -3,6 +3,7 @@ import Mathlib.Algebra.Homology.ShortComplex.Linear
 import Mathlib.Algebra.Homology.ShortComplex.PreservesHomology
 import Mathlib.Algebra.Homology.ShortComplex.FunctorEquivalence
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.Descent
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
@@ -272,6 +273,146 @@ theorem exists_target_tor_module {R R' : Type u} [CommRing R] [CommRing R']
   · intro s x
     rfl
 
+/-! ## Chain-level flat base change -/
+
+private noncomputable def extendFreeResolution
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f) {M : ModuleCat.{u} R}
+    (F : FreeResolution R M) :
+    FreeResolution R' ((ModuleCat.extendScalars f).obj M) := by
+  letI : Algebra R R' := f.toAlgebra
+  letI : (ModuleCat.extendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    change ModuleCat.ofHom (LinearMap.baseChange R' (g.hom + h.hom)) =
+      ModuleCat.ofHom (LinearMap.baseChange R' g.hom) +
+        ModuleCat.ofHom (LinearMap.baseChange R' h.hom)
+    rw [LinearMap.baseChange_add]
+    rfl
+  letI : PreservesFiniteLimits (ModuleCat.extendScalars f) :=
+    ModuleCat.preservesFiniteLimits_extendScalars_of_flat hf
+  let E := ModuleCat.extendScalars f
+  refine
+    { resolution :=
+        { complex := E.mapHomologicalComplex (ComplexShape.down ℕ) |>.obj F.complex
+          augmentation := E.map F.resolution.augmentation
+          augmentation_condition := by
+            change E.map (F.complex.d 1 0) ≫ E.map F.resolution.augmentation = 0
+            rw [← E.map_comp, F.resolution.augmentation_condition, E.map_zero]
+          exact_zero := ?_
+          exact_succ := ?_
+          augmentation_epi := ?_ }
+      free := ?_ }
+  · change ((ShortComplex.mk (F.complex.d 1 0) F.resolution.augmentation
+        F.resolution.augmentation_condition).map E).Exact
+    exact F.resolution.exact_zero.map E
+  · intro n
+    change ((ShortComplex.mk (F.complex.d (n + 2) (n + 1))
+      (F.complex.d (n + 1) n) (F.complex.d_comp_d (n + 2) (n + 1) n)).map E).Exact
+    exact (F.resolution.exact_succ n).map E
+  · letI : Epi F.resolution.augmentation := F.resolution.augmentation_epi
+    exact Functor.map_epi E F.resolution.augmentation
+  · intro n
+    letI : Module.Free R (F.complex.X n) := F.free n
+    exact Module.Free.of_basis ((Module.Free.chooseBasis R (F.complex.X n)).baseChange R')
+
+private noncomputable def tensorComplexBaseChangeIso
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (F : ModuleChainComplex R) (N : ModuleCat.{u} R) :
+    ((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.down ℕ)).obj
+        (tensorComplex F N) ≅
+      tensorComplex
+        (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.down ℕ)).obj F)
+        ((ModuleCat.extendScalars f).obj N) := by
+  letI : Algebra R R' := f.toAlgebra
+  let e (n : ℕ) :
+      ((ModuleCat.extendScalars f).obj ((tensorComplex F N).X n)) ≅
+        (tensorComplex
+          (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.down ℕ)).obj F)
+          ((ModuleCat.extendScalars f).obj N)).X n := by
+    letI : Module R ((ModuleCat.extendScalars f).obj (F.X n)) := Module.compHom _ f
+    letI : IsScalarTower R R' ((ModuleCat.extendScalars f).obj (F.X n)) :=
+      IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+    exact LinearEquiv.toModuleIso
+      ((TensorProduct.AlgebraTensorModule.assoc R R R'
+          R' (F.X n) N).symm ≪≫ₗ
+        (TensorProduct.AlgebraTensorModule.cancelBaseChange R R' R'
+          ((ModuleCat.extendScalars f).obj (F.X n)) N).symm)
+  exact HomologicalComplex.Hom.isoOfComponents e (by
+    intro i j hij
+    have hji : j + 1 = i := by simpa only [ComplexShape.down_Rel] using hij
+    apply ModuleCat.hom_ext
+    simp only [Functor.mapHomologicalComplex_obj_d, tensorComplex, dif_pos hji]
+    let L := ModuleCat.Hom.hom ((e i).hom ≫
+      ModuleCat.ofHom (LinearMap.rTensor
+        ((ModuleCat.extendScalars f).obj N)
+        ((ModuleCat.extendScalars f).map (F.d i j)).hom))
+    let Q := ModuleCat.Hom.hom
+      ((ModuleCat.extendScalars f).map
+        (ModuleCat.ofHom (LinearMap.rTensor N (F.d i j).hom)) ≫ (e j).hom)
+    change L = Q
+    apply LinearMap.ext
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => exact L.map_zero.trans Q.map_zero.symm
+    | add x y hx hy =>
+      exact (L.map_add x y).trans ((congrArg₂ (.+.) hx hy).trans (Q.map_add x y).symm)
+    | tmul a z =>
+      induction z using TensorProduct.induction_on with
+      | zero =>
+        have hzero : a ⊗ₜ[R] (0 : TensorProduct R (F.X i) N) = 0 := by simp
+        exact (congrArg L hzero).trans ((L.map_zero).trans Q.map_zero.symm)
+      | add x y hx hy =>
+        have hadd : a ⊗ₜ[R] (x + y) = a ⊗ₜ[R] x + a ⊗ₜ[R] y :=
+          TensorProduct.tmul_add a x y
+        exact (congrArg L hadd).trans ((L.map_add _ _).trans
+          ((congrArg₂ (.+.) hx hy).trans ((Q.map_add _ _).symm.trans (congrArg Q hadd.symm))))
+      | tmul x y => rfl)
+
+private noncomputable def chainHomologyBaseChangeIso
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f) (K : ModuleChainComplex R) (i : ℕ) :
+    (ModuleCat.extendScalars f).obj (chainHomology K i) ≅
+      chainHomology
+        (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.down ℕ)).obj K) i := by
+  letI : Algebra R R' := f.toAlgebra
+  letI : (ModuleCat.extendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    change ModuleCat.ofHom (LinearMap.baseChange R' (g.hom + h.hom)) =
+      ModuleCat.ofHom (LinearMap.baseChange R' g.hom) +
+        ModuleCat.ofHom (LinearMap.baseChange R' h.hom)
+    rw [LinearMap.baseChange_add]
+    rfl
+  letI : PreservesFiniteLimits (ModuleCat.extendScalars f) :=
+    ModuleCat.preservesFiniteLimits_extendScalars_of_flat hf
+  exact ((K.sc i).mapHomologyIso (ModuleCat.extendScalars f)).symm
+
+private noncomputable def torFlatBaseChangeIso
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f)
+    (M N : ModuleCat.{u} R) (i : ℕ) :
+    (ModuleCat.extendScalars f).obj (Tor M N i) ≅
+      Tor ((ModuleCat.extendScalars f).obj M)
+        ((ModuleCat.extendScalars f).obj N) i := by
+  letI : Algebra R R' := f.toAlgebra
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  let F' : FreeResolution R' ((ModuleCat.extendScalars f).obj M) :=
+    extendFreeResolution f hf F
+  let G : FreeResolution R' ((ModuleCat.extendScalars f).obj M) :=
+    Classical.choice (exists_free_resolution ((ModuleCat.extendScalars f).obj M))
+  let α : ResolutionMap F'.resolution G.resolution (𝟙 _) :=
+    Classical.choice (resolution_map_exists F' G.resolution (𝟙 _))
+  let q := resolutionTorMap F' G (𝟙 _) α ((ModuleCat.extendScalars f).obj N) i
+  let hq : IsIso q := isIso_resolutionTorMap_of_isIso F' G (𝟙 _) α _ i
+  let qi : resolutionTor F' ((ModuleCat.extendScalars f).obj N) i ≅
+      resolutionTor G ((ModuleCat.extendScalars f).obj N) i :=
+    @asIso (ModuleCat R') _ _ _ q hq
+  change (ModuleCat.extendScalars f).obj (resolutionTor F N i) ≅ resolutionTor G _ i
+  exact (chainHomologyBaseChangeIso f hf (tensorComplex F.complex N) i).trans
+    (((HomologicalComplex.homologyFunctor (ModuleCat R') (ComplexShape.down ℕ) i).mapIso
+      (tensorComplexBaseChangeIso f F.complex N)).trans qi)
+
 /-! ## The natural change-of-rings maps -/
 
 /-- The complete source-faithful change-of-rings datum for Tor.  The two
@@ -331,19 +472,10 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
             ((ModuleCat.restrictScalars f).map ψ) i x) ∧
           ψ' ≫ map_mixed M N'₂ i =
         map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
-  flat_base_change :
-    ∀ (_hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
-      IsIso ((ModuleCat.extendScalars f).map (map_both M N i) ≫
-        (ModuleCat.extendRestrictScalarsAdj f).counit.app
-          (extendedTor f M N i))
-/-! The flat-base-change assertion is retained as a field of the complete
-datum so that the chosen maps cannot be replaced by arbitrary natural maps. -/
 
 /-- Existence of the natural change-of-rings data. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
-  /-
-  Prior attempt (before `flat_base_change` was added to the datum):
   classical
   let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
       TargetTorModule f M N' i :=
@@ -441,8 +573,6 @@ theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R
     · intro x
       rfl
     · simp
-  -/
-  sorry
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -454,7 +584,12 @@ noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [Co
 noncomputable def canonicalTorChangeOfRingsMap {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (M N : ModuleCat.{u} R) (i : ℕ) :
     Tor M N i ⟶ restrictedModule f (extendedTor f M N i) :=
-  (canonicalTorChangeOfRingsData f).map_both M N i
+  by
+    classical
+    exact if hf : RingHom.Flat f then
+      (ModuleCat.extendRestrictScalarsAdj f).homEquiv _ _
+        (torFlatBaseChangeIso f hf M N i).hom
+    else 0
 
 /-- The natural `R'`-linear map
 `Tor_R(M,N') → Tor_R'(M ⊗_R R',N')`. -/
@@ -477,15 +612,36 @@ noncomputable def canonicalMixedTorChangeOfRingsMap
 noncomputable def torFlatBaseChangeMap {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (M N : ModuleCat.{u} R) (i : ℕ) :
     (ModuleCat.extendScalars f).obj (Tor M N i) ⟶ extendedTor f M N i :=
-  (ModuleCat.extendScalars f).map (canonicalTorChangeOfRingsMap f M N i) ≫
-    (ModuleCat.extendRestrictScalarsAdj f).counit.app (extendedTor f M N i)
+  by
+    classical
+    exact if hf : RingHom.Flat f then (torFlatBaseChangeIso f hf M N i).hom else 0
+
+/-- For a flat ring map, the chain-level comparison agrees with the adjoint
+extension of the underlying change-of-rings map. -/
+theorem torFlatBaseChangeMap_eq_adjoint {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
+    (ModuleCat.extendScalars f).map (canonicalTorChangeOfRingsMap f M N i) ≫
+        (ModuleCat.extendRestrictScalarsAdj f).counit.app (extendedTor f M N i) =
+      torFlatBaseChangeMap f M N i := by
+  classical
+  simp only [canonicalTorChangeOfRingsMap, torFlatBaseChangeMap, dif_pos hf]
+  let adj := ModuleCat.extendRestrictScalarsAdj f
+  have h {X : ModuleCat R} {Y : ModuleCat R'}
+      (q : (ModuleCat.extendScalars f).obj X ⟶ Y) :
+      (ModuleCat.extendScalars f).map (adj.homEquiv X Y q) ≫ adj.counit.app Y = q := by
+    calc
+      _ = (adj.homEquiv _ _).symm ((adj.homEquiv _ _) q) :=
+        (adj.homEquiv_counit X Y (adj.homEquiv X Y q)).symm
+      _ = q := (adj.homEquiv _ _).symm_apply_apply q
+  exact h _
 
 /-- Flat base change makes the Tor base-change map an isomorphism. -/
 theorem flat_base_change_tor {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (torFlatBaseChangeMap f M N i) := by
-  unfold torFlatBaseChangeMap canonicalTorChangeOfRingsMap
-  exact (canonicalTorChangeOfRingsData f).flat_base_change hf M N i
+  classical
+  rw [torFlatBaseChangeMap, dif_pos hf]
+  infer_instance
 
 /-! ## Filtered colimits -/
 

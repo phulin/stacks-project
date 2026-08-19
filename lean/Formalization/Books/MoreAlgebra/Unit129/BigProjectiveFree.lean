@@ -193,7 +193,7 @@ theorem projective_plus_free_is_free
     ((LinearEquiv.refl R P).prodCongr eMap.symm).trans
       ((finsupp_shift_equiv (R := R) (X := P) (Y := Q)).trans eMap)
   refine ⟨F, inferInstance, inferInstance, inferInstance, ?_⟩
-  letI : Module.Free R F := by
+  let _ : Module.Free R F := by
     dsimp [F]
     infer_instance
   exact Module.Free.of_equiv e.symm

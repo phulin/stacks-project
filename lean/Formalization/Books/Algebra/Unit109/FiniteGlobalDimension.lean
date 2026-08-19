@@ -44,6 +44,22 @@ def productLinearMap {R M M' N N' : Type u} [Semiring R]
       intro r x
       ext <;> simp }
 
+/- The map from a product into a common codomain, as used by the two maps
+   `(p₁, 0)` and `(0, p₂)` in Schanuel's diagram. -/
+
+/-- Add two linear maps after projecting from a product. -/
+def productToCommonLinearMap {R M N P : Type u} [Semiring R]
+    [AddCommMonoid M] [AddCommMonoid N] [AddCommMonoid P]
+    [Module R M] [Module R N] [Module R P]
+    (f : M →ₗ[R] P) (g : N →ₗ[R] P) : M × N →ₗ[R] P :=
+  { toFun := fun x => f x.1 + g x.2
+    map_add' := by
+      intro x y
+      simp [add_assoc, add_left_comm, add_comm]
+    map_smul' := by
+      intro r x
+      simp }
+
 /-- The unbundled-module form of a short exact sequence
 0 → K → P → M → 0. -/
 def IsShortExactLinearSequence {R K P M : Type u} [Semiring R]
@@ -55,7 +71,8 @@ def IsShortExactLinearSequence {R K P M : Type u} [Semiring R]
 /-- The commutative diagram in the precise form of Schanuel's lemma.
 
 The two displayed vertical arrows are bundled as linear equivalences, and the
-two square-commutativity conditions are written using productLinearMap. -/
+two square-commutativity conditions use the product maps into products and the
+maps from products into the common codomain. -/
 def SchanuelDiagram {R K L P₁ P₂ M : Type u} [Semiring R]
     [AddCommMonoid K] [AddCommMonoid L] [AddCommMonoid P₁] [AddCommMonoid P₂]
     [AddCommMonoid M] [Module R K] [Module R L] [Module R P₁] [Module R P₂]
@@ -65,8 +82,8 @@ def SchanuelDiagram {R K L P₁ P₂ M : Type u} [Semiring R]
     ∃ e₂ : (P₁ × P₂) ≃ₗ[R] (P₁ × P₂),
       e₂.toLinearMap.comp (productLinearMap c₁ (LinearMap.id : P₂ →ₗ[R] P₂)) =
           (productLinearMap (LinearMap.id : P₁ →ₗ[R] P₁) c₂).comp e₁.toLinearMap ∧
-        productLinearMap p₁ (0 : P₂ →ₗ[R] M) =
-          (productLinearMap (0 : P₁ →ₗ[R] M) p₂).comp e₂.toLinearMap
+        productToCommonLinearMap p₁ (0 : P₂ →ₗ[R] M) =
+          (productToCommonLinearMap (0 : P₁ →ₗ[R] M) p₂).comp e₂.toLinearMap
 
 /-- Schanuel's lemma, including the commutative diagram with isomorphic
 vertical arrows displayed in the source. -/

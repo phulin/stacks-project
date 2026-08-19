@@ -942,7 +942,7 @@ theorem noetherian_ring_isJacobson_of_prime_maximal_or_infinite_over
   have hpAmax : pA.asIdeal.IsMaximal :=
     (PrimeSpectrum.isClosed_singleton_iff_isMaximal pA).mp hclosed
   have hpfield : IsField A :=
-    (Ideal.isField_iff_maximal_bot).2 (by simpa [hpAbot] using hpAmax)
+    (Ring.isField_iff_maximal_bot).2 (by simpa [hpAbot] using hpAmax)
   exact hpmax (Ideal.Quotient.maximal_of_isField p.asIdeal hpfield)
 
 end

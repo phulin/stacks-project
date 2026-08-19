@@ -3596,7 +3596,153 @@ private theorem pullback_ext_lift_of_zero
     (E : Extension C N S.X₂)
     (hE : extensionClass (pullbackExtension E S.f) = zeroExtClass) :
     ∃ F : Extension C N S.X₃,
-      extensionClass (pullbackExtension F S.g) = extensionClass E := by sorry
+      extensionClass (pullbackExtension F S.g) = extensionClass E := by
+  change extensionClass (pullbackExtension E S.f) =
+    extensionClass (splitExtension N S.X₁) at hE
+  rcases Quotient.exact hE with ⟨e⟩
+  let i : S.X₁ ⟶ (splitExtension N S.X₁).middle := by
+    let hi : (N ⊞ S.X₁) = (splitExtension N S.X₁).middle := by
+      unfold splitExtension
+      rfl
+    let ei : (N ⊞ S.X₁) ⟶ (splitExtension N S.X₁).middle :=
+      eqToHom hi
+    exact (biprod.inr : S.X₁ ⟶ N ⊞ S.X₁) ≫ ei
+  have hi_proj : i ≫ (splitExtension N S.X₁).projection = 𝟙 S.X₁ := by
+    dsimp [i]
+    simp [splitExtension]
+  let j : S.X₁ ⟶ E.middle :=
+    i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle
+  have hj : j ≫ E.projection = S.f := by
+    dsimp [j]
+    have hpr := (pullbackExtensionMorphism E S.f).comm_right
+    change (pullbackExtensionMorphism E S.f).middle ≫ E.projection =
+      (pullbackExtension E S.f).projection ≫ S.f at hpr
+    calc
+      (i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle) ≫
+          E.projection =
+          i ≫ e.inv.middle ≫ (pullbackExtension E S.f).projection ≫
+            S.f := by
+              simpa only [Category.assoc] using
+                congrArg (fun k => i ≫ e.inv.middle ≫ k) hpr
+      _ = i ≫ (splitExtension N S.X₁).projection ≫ S.f := by
+        simpa only [Category.assoc] using
+          congrArg (fun k => i ≫ k ≫ S.f) e.inv.comm_right
+      _ = S.f := by
+        have h := congrArg (fun k => k ≫ S.f) hi_proj
+        simpa only [Category.assoc, Category.id_comp] using h
+  let _ : Mono S.f := hS.mono_f
+  have hj_mono : Mono j := by
+    constructor
+    intro Z a b hab
+    apply (cancel_mono S.f).1
+    calc
+      a ≫ S.f = a ≫ (j ≫ E.projection) := by rw [hj]
+      _ = (a ≫ j) ≫ E.projection := by simp [Category.assoc]
+      _ = (b ≫ j) ≫ E.projection := by rw [hab]
+      _ = b ≫ S.f := by rw [Category.assoc, hj]
+  let q : E.middle ⟶ cokernel j := cokernel.π j
+  have hjd : j ≫ E.projection ≫ S.g = 0 := by
+    have h := congrArg (fun k => k ≫ S.g) hj
+    simpa only [Category.assoc, S.zero, comp_zero] using h
+  let d : cokernel j ⟶ S.X₃ := cokernel.desc j
+    (E.projection ≫ S.g) hjd
+  have hqd' : q ≫ d = E.projection ≫ S.g := by
+    dsimp [q, d]
+    exact cokernel.π_desc j (E.projection ≫ S.g) hjd
+  have hzero : (E.inclusion ≫ q) ≫ d = 0 := by
+    have h := congrArg (fun k => k ≫ S.g) E.zero
+    simpa only [Category.assoc, hqd', zero_comp] using h
+  let T : ShortComplex C := ShortComplex.mk (E.inclusion ≫ q) d hzero
+  have hT_exact : T.Exact := by
+    rw [ShortComplex.exact_iff_exact_up_to_refinements]
+    intro Z k hk
+    let π : pullback k q ⟶ Z := pullback.fst k q
+    let x : pullback k q ⟶ E.middle := pullback.snd k q
+    have hπ : Epi π := by
+      dsimp [π]
+      exact Abelian.epi_pullback_of_epi_g k q
+    have hxpg : x ≫ E.projection ≫ S.g = 0 := by
+      calc
+        x ≫ E.projection ≫ S.g = x ≫ (q ≫ d) := by rw [hqd']
+        _ = (x ≫ q) ≫ d := by simp [Category.assoc]
+        _ = (π ≫ k) ≫ d := by rw [pullback.condition]
+        _ = 0 := by
+          have h := congrArg (fun m => π ≫ m) hk
+          simpa [T, Category.assoc] using h
+    obtain ⟨Z', r, hr, a, ha⟩ :=
+      hS.exact.exact_up_to_refinements (x ≫ E.projection) (by
+        simpa [Category.assoc] using hxpg)
+    have hvr : (r ≫ x - a ≫ j) ≫ E.projection = 0 := by
+      simp [sub_comp, Category.assoc, ha, hj]
+    let b : Z' ⟶ N := E.shortExact.fIsKernel.lift
+      (KernelFork.ofι (r ≫ x - a ≫ j) hvr)
+    have hb : b ≫ E.inclusion = r ≫ x - a ≫ j := by
+      dsimp [b]
+      simpa using
+        (E.shortExact.fIsKernel.fac
+          (KernelFork.ofι (r ≫ x - a ≫ j) hvr)
+          WalkingParallelPair.zero)
+    have hba : r ≫ x = b ≫ E.inclusion + a ≫ j := by
+      rw [hb, sub_add_cancel]
+    refine ⟨Z', r ≫ π, inferInstance, b, ?_⟩
+    calc
+      (r ≫ π) ≫ k = r ≫ (π ≫ k) := by simp [Category.assoc]
+      _ = r ≫ (x ≫ q) := by rw [pullback.condition]
+      _ = (r ≫ x) ≫ q := by simp [Category.assoc]
+      _ = (b ≫ E.inclusion + a ≫ j) ≫ q := by rw [hba]
+      _ = b ≫ (E.inclusion ≫ q) := by
+        rw [add_comp, Category.assoc, Category.assoc,
+          cokernel.condition, comp_zero, add_zero]
+  have hmono : Mono (E.inclusion ≫ q) := by
+    rw [Preadditive.mono_iff_cancel_zero]
+    let _ : Mono E.inclusion := E.shortExact.mono_f
+    intro Z k hk
+    let U : ShortComplex C := ShortComplex.mk j q (cokernel.condition j)
+    have hU : U.Exact := by
+      dsimp [U]
+      exact ShortComplex.exact_of_g_is_cokernel _ (cokernelIsCokernel j)
+    obtain ⟨Z', r, hr, a, ha⟩ :=
+      hU.exact_up_to_refinements (k ≫ E.inclusion) (by
+        simpa [Category.assoc] using hk)
+    have haf : a ≫ S.f = 0 := by
+      change r ≫ k ≫ E.inclusion = a ≫ j at ha
+      calc
+        a ≫ S.f = a ≫ (j ≫ E.projection) := by rw [hj]
+        _ = (a ≫ j) ≫ E.projection := by simp [Category.assoc]
+        _ = (r ≫ k ≫ E.inclusion) ≫ E.projection := by rw [← ha]
+        _ = 0 := by simp [Category.assoc, E.zero]
+    have ha0 : a = 0 := (cancel_mono S.f).1 (by simpa using haf)
+    have hrx : r ≫ (k ≫ E.inclusion) = 0 := by
+      rw [ha, ha0, zero_comp]
+    have hrk : r ≫ k = 0 := by
+      apply (cancel_mono E.inclusion).1
+      simpa [Category.assoc] using hrx
+    exact (cancel_epi r).1 (by simpa using hrk)
+  have hepi : Epi d := by
+    let _ : Epi E.projection := E.shortExact.epi_g
+    let _ : Epi S.g := hS.epi_g
+    apply epi_of_epi_fac (f := q) (g := d) (h := E.projection ≫ S.g)
+    exact hqd'
+  let F : Extension C N S.X₃ :=
+    { middle := cokernel j
+      inclusion := E.inclusion ≫ q
+      projection := d
+      zero := hzero
+      shortExact := ShortComplex.ShortExact.mk' hT_exact hmono hepi }
+  refine ⟨F, ?_⟩
+  let em : ExtensionMorphism E F :=
+    { left := 𝟙 N
+      middle := q
+      right := S.g
+      comm_left := by
+        dsimp [F]
+        rw [Category.id_comp]
+      comm_right := by
+        dsimp [F]
+        exact hqd' }
+  have hem := pushout_pullback_extension_morphism_iso em
+  exact Quotient.sound ⟨
+    hem.some.symm.trans (pushout_extension_id_iso E).some⟩
 /- Prior attempt (retained for reference):
   change extensionClass (pullbackExtension E S.f) =
     extensionClass (splitExtension N S.X₁) at hE
@@ -4095,7 +4241,190 @@ theorem contravariant_ext_six_term_exact
                   ((pushout_extension_id_iso (splitExtension N S.X₁)).some.symm.trans
                     (h.some.trans (pullback_extension_id_iso
                       (pullbackExtension E (0 : S.X₁ ⟶ S.X₃))).some)).symm⟩)).Exact
-            sorry
+            rw [ShortComplex.ab_exact_iff]
+            intro x hx
+            change pullbackClass S.f x = zeroExtClass at hx
+            revert hx
+            refine Quotient.inductionOn x ?_
+            intro E hE
+            change extensionClass (pullbackExtension E S.f) =
+              zeroExtClass at hE
+            obtain ⟨F, hF⟩ := pullback_ext_lift_of_zero S hS N E hE
+            refine ⟨extensionClass F, ?_⟩
+            change extensionClass (pullbackExtension F S.g) =
+              extensionClass E
+            exact hF
+
+private theorem pushout_ext_lift_of_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (S : ShortComplex C) (hS : S.ShortExact) (N : C)
+    (E : Extension C S.X₂ N)
+    (hE : extensionClass (pushoutExtension E S.g) = zeroExtClass) :
+    ∃ F : Extension C S.X₁ N,
+      extensionClass (pushoutExtension F S.f) = extensionClass E := by
+  change extensionClass (pushoutExtension E S.g) =
+    extensionClass (splitExtension S.X₃ N) at hE
+  rcases Quotient.exact hE with ⟨e⟩
+  let fst : (splitExtension S.X₃ N).middle ⟶ S.X₃ := by
+    dsimp [splitExtension]
+    exact biprod.fst
+  let j : E.middle ⟶ S.X₃ :=
+    (pushoutExtensionMorphism E S.g).middle ≫ e.hom.middle ≫
+      fst
+  have hj : E.inclusion ≫ j = S.g := by
+    dsimp [j]
+    have hm := (pushoutExtensionMorphism E S.g).comm_left
+    change E.inclusion ≫ (pushoutExtensionMorphism E S.g).middle =
+      S.g ≫ (pushoutExtension E S.g).inclusion at hm
+    have he := e.hom.comm_left
+    change (pushoutExtension E S.g).inclusion ≫ e.hom.middle =
+      (splitExtension S.X₃ N).inclusion at he
+    calc
+      E.inclusion ≫ (pushoutExtensionMorphism E S.g).middle ≫
+          e.hom.middle ≫ fst =
+          (E.inclusion ≫ (pushoutExtensionMorphism E S.g).middle) ≫
+            e.hom.middle ≫ fst := by simp [Category.assoc]
+      _ = (S.g ≫ (pushoutExtension E S.g).inclusion) ≫
+          e.hom.middle ≫ fst := by rw [hm]
+      _ = S.g ≫ ((pushoutExtension E S.g).inclusion ≫
+          e.hom.middle) ≫ fst := by simp [Category.assoc]
+      _ = S.g ≫ (splitExtension S.X₃ N).inclusion ≫ fst := by rw [he]
+      _ = S.g := by
+        simp [fst, splitExtension]
+  let _ : Epi S.g := hS.epi_g
+  have hj_epi : Epi j := by
+    let _ : Epi (pushout.inr S.g E.inclusion) := by infer_instance
+    let _ : Epi e.hom.middle := by
+      constructor
+      intro Z a b hab
+      have hi : e.inv.middle ≫ e.hom.middle = 𝟙 _ := by
+        exact congrArg
+          (fun q : (splitExtension S.X₃ N) ⟶ (splitExtension S.X₃ N) => q.middle)
+          e.inv_hom_id
+      calc
+        a = 𝟙 _ ≫ a := by simp
+        _ = (e.inv.middle ≫ e.hom.middle) ≫ a := by rw [hi]
+        _ = e.inv.middle ≫ (e.hom.middle ≫ a) := by simp [Category.assoc]
+        _ = e.inv.middle ≫ (e.hom.middle ≫ b) := by rw [hab]
+        _ = (e.inv.middle ≫ e.hom.middle) ≫ b := by simp [Category.assoc]
+        _ = b := by rw [hi]; simp
+    let _ : Epi fst := by
+      dsimp [fst, splitExtension]
+      infer_instance
+    have h₁ : e.hom.middle ≫ fst ≫ a = e.hom.middle ≫ fst ≫ b := by
+      apply (cancel_epi (pushout.inr S.g E.inclusion)).1
+      simpa [j, pushoutExtensionMorphism, Category.assoc] using hab
+    have h₂ : fst ≫ a = fst ≫ b := (cancel_epi e.hom.middle).1 h₁
+    exact (cancel_epi fst).1 h₂
+  let k : kernel j ⟶ E.middle := kernel.ι j
+  let i : S.X₁ ⟶ kernel j := kernel.lift j
+    (S.f ≫ E.inclusion) (by
+      simp [Category.assoc, hj, S.zero])
+  have hik : i ≫ k = S.f ≫ E.inclusion := by
+    dsimp [i, k]
+    exact kernel.lift_ι j (S.f ≫ E.inclusion) _
+  let p : kernel j ⟶ N := k ≫ E.projection
+  have hzero : i ≫ p = 0 := by
+    have h := congrArg (fun m => m ≫ E.projection) hik
+    simpa only [p, Category.assoc, E.zero, comp_zero] using h
+  let _ : Mono S.f := hS.mono_f
+  let _ : Mono E.inclusion := E.shortExact.mono_f
+  have hmono_i : Mono i := by
+    constructor
+    intro Z a b hab
+    apply (cancel_mono S.f).1
+    apply (cancel_mono E.inclusion).1
+    have h := congrArg (fun z => z ≫ k) hab
+    simpa [Category.assoc, hik] using h
+  let K : ShortComplex C := ShortComplex.mk i p hzero
+  have hK_exact : K.Exact := by
+    rw [ShortComplex.exact_iff_exact_up_to_refinements]
+    intro Z x hx
+    let y : Z ⟶ E.middle := x ≫ k
+    have hy : y ≫ E.projection = 0 := by
+      dsimp [y, p] at hx ⊢
+      simpa [Category.assoc] using hx
+    obtain ⟨Z', r, hr, b, hb⟩ :=
+      E.shortExact.exact.exact_up_to_refinements y hy
+    have hbg : b ≫ S.g = 0 := by
+      change r ≫ y = b ≫ E.inclusion at hb
+      calc
+        b ≫ S.g = b ≫ E.inclusion ≫ j := by
+          simpa only [Category.assoc] using
+            (congrArg (fun m => b ≫ m) hj).symm
+        _ = (r ≫ y) ≫ j := by
+          simpa only [Category.assoc] using
+            (congrArg (fun m => m ≫ j) hb).symm
+        _ = 0 := by simp [y, k, Category.assoc]
+    obtain ⟨Z'', s, hs, c, hc⟩ :=
+      hS.exact.exact_up_to_refinements b hbg
+    have hfac : (s ≫ r) ≫ x = c ≫ i := by
+      apply (cancel_mono k).1
+      calc
+        ((s ≫ r) ≫ x) ≫ k = s ≫ (r ≫ y) := by
+          simp [y, k, Category.assoc]
+        _ = s ≫ (b ≫ E.inclusion) := by rw [hb]
+        _ = (s ≫ b) ≫ E.inclusion := by simp [Category.assoc]
+        _ = (c ≫ S.f) ≫ E.inclusion := by rw [hc]
+        _ = (c ≫ i) ≫ k := by
+          simpa only [Category.assoc] using
+            (congrArg (fun m => c ≫ m) hik).symm
+    refine ⟨Z'', s ≫ r, inferInstance, c, ?_⟩
+    exact hfac
+  have hepi_p : Epi p := by
+    rw [Preadditive.epi_iff_cancel_zero]
+    intro Z a ha
+    have hka : k ≫ E.projection ≫ a = 0 := by
+      simpa [p, Category.assoc] using ha
+    let c : S.X₃ ⟶ Z := Abelian.epiDesc j
+      (E.projection ≫ a) (by simpa [Category.assoc] using hka)
+    have hfac : j ≫ c = E.projection ≫ a := by
+      dsimp [c]
+      exact Abelian.comp_epiDesc j (E.projection ≫ a) _
+    have hgc : S.g ≫ c = 0 := by
+      calc
+        S.g ≫ c = E.inclusion ≫ j ≫ c := by
+          simpa only [Category.assoc] using
+            (congrArg (fun m => m ≫ c) hj).symm
+        _ = E.inclusion ≫ E.projection ≫ a := by
+          simpa only [Category.assoc] using
+            congrArg (fun m => E.inclusion ≫ m) hfac
+        _ = 0 := by
+          have h := congrArg (fun m => m ≫ a) E.zero
+          simpa only [Category.assoc, zero_comp] using h
+    have hc0 : c = 0 := (cancel_epi S.g).1 (by simpa using hgc)
+    let _ : Epi E.projection := E.shortExact.epi_g
+    have hpa : E.projection ≫ a = 0 := by
+      calc
+        E.projection ≫ a = j ≫ c := by rw [← hfac]
+        _ = 0 := by rw [hc0, comp_zero]
+    exact (cancel_epi E.projection).1 (by simpa using hpa)
+  let F : Extension C S.X₁ N :=
+    { middle := kernel j
+      inclusion := i
+      projection := p
+      zero := hzero
+      shortExact := ShortComplex.ShortExact.mk' hK_exact hmono_i hepi_p }
+  refine ⟨F, ?_⟩
+  change extensionClass (pushoutExtension F S.f) = extensionClass E
+  let u : (pushoutExtension F S.f).middle ⟶ E.middle :=
+    pushout.desc E.inclusion k hik.symm
+  let em : ExtensionMorphism (pushoutExtension F S.f) E :=
+    { left := 𝟙 S.X₂
+      middle := u
+      right := 𝟙 N
+      comm_left := by
+        dsimp [u, F, pushoutExtension]
+        rw [pushout.inl_desc, Category.id_comp]
+      comm_right := by
+        dsimp [u, F, pushoutExtension]
+        apply pushout.hom_ext
+        · simp only [← Category.assoc, pushout.inl_desc, E.zero, zero_comp]
+        · simp only [← Category.assoc, pushout.inr_desc] }
+  have hem := pushout_pullback_extension_morphism_iso em
+  exact Quotient.sound ⟨
+    ((pushout_extension_id_iso (pushoutExtension F S.f)).some.symm.trans
+      (hem.some.trans (pullback_extension_id_iso E).some))⟩
 
 theorem covariant_ext_six_term_exact
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -4149,6 +4478,41 @@ theorem covariant_ext_six_term_exact
         ((preadditiveCoyoneda.obj (Opposite.op N)).map S.g) (by
           simp [← Functor.map_comp, S.zero])).Exact at h'
       exact (h'.map (AddCommGrpCat.uliftFunctor.{u, v})).exact_toComposableArrows
-    · sorry
+    · change (ShortComplex.mk (extPushoutHom S.f)
+        (extPushoutHom S.g) (by
+          ext x
+          change pushoutClass S.g (pushoutClass S.f x) = zeroExtClass
+          rw [pushoutClass_comp, S.zero]
+          refine Quotient.inductionOn x ?_
+          intro E
+          change extensionClass
+            (pushoutExtension E (0 : S.X₁ ⟶ S.X₃)) =
+            extensionClass (splitExtension S.X₃ N)
+          let e : ExtensionMorphism E (splitExtension S.X₃ N) :=
+            { left := 0
+              middle := E.projection ≫ (biprod.inr : N ⟶ S.X₃ ⊞ N)
+              right := 𝟙 N
+              comm_left := by
+                dsimp [splitExtension]
+                rw [← Category.assoc, E.zero, zero_comp]
+              comm_right := by
+                dsimp [splitExtension]
+                simp }
+          have h := pushout_pullback_extension_morphism_iso e
+          exact Quotient.sound ⟨h.some.trans
+            (pullback_extension_id_iso (splitExtension S.X₃ N)).some⟩)).Exact
+      rw [ShortComplex.ab_exact_iff]
+      intro x hx
+      change pushoutClass S.g x = zeroExtClass at hx
+      revert hx
+      refine Quotient.inductionOn x ?_
+      intro E hE
+      change extensionClass (pushoutExtension E S.g) =
+        zeroExtClass at hE
+      obtain ⟨F, hF⟩ := pushout_ext_lift_of_zero S hS N E hE
+      refine ⟨extensionClass F, ?_⟩
+      change extensionClass (pushoutExtension F S.f) =
+        extensionClass E
+      exact hF
 
 end Formalization.Books.Homology.Unit06

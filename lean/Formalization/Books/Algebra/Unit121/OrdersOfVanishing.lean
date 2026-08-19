@@ -1,10 +1,10 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit52.Length
-import Formalization.Books.Algebra.Unit119.AroundKrullAkizuki
 import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.Algebra.Module.Equiv.Basic
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+import Mathlib.LinearAlgebra.FreeModule.PID
 import Mathlib.LinearAlgebra.Pi
 import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.LinearAlgebra.Transvection.Generation

@@ -3,6 +3,7 @@ import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
 import Formalization.Books.Cohomology.Unit02.CohomologyOfSheaves
 import Formalization.Books.Homology.Unit12.CohomologicalDeltaFunctors
 import Formalization.Books.MoreAlgebra.Unit04.CommentOnArtinRees
+import Formalization.Books.MoreAlgebra.Unit36.OpenMapping
 import Formalization.Books.MoreAlgebra.Unit36.TopologicalRings
 import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
@@ -598,6 +599,47 @@ theorem lemma_ML_general_better_stable_image
 `lemma-topology-I-adic-general`: the ordinary graded-ACC topology result.
 The source proof chooses generators of `I`, so finite generation is explicit
 in this interface.
+
+Proof roadmap:
+* No hypothesis is missing.  Factor the common hard part of this theorem and
+  `lemma_topology_I_adic_general_uniform_bound` into a private theorem, placed
+  before both wrappers, named
+  `inverseSystemLimitHasUniformAdicBound_of_gradedACC`.  It should be universe
+  polymorphic in `A : Type v`, take
+  `M : InverseSystem ℕ+ (ModuleCat.{v} A)`, `P : ℕ → ModuleCat.{v} A`, and
+  `E : ∀ n, Submodule A (P n)`, followed by the seven inputs represented
+  here by `hI`, `hN`, `hE`, `hECompatible`, `hFiltration`,
+  `hFiltrationGraded`, and `hACC`, and conclude
+  `inverseSystemLimitHasUniformAdicBound I M`.  The detailed construction is
+  recorded at the uniform-bound wrapper below.
+* Apply that helper with `M := cohomologySystem H S p`,
+  `P := powerCohomologyModuleFamily H S p`, and
+  `E := fun n => powerCohomologyFiltrationSubmodule H S p n`; call the result
+  `hbound`.
+* Prove `hpow : ∀ n, I ^ n • (⊤ : Submodule A (cohomologyLimit H S p)) ≤
+  inverseSystemLimitFiltrationAt (cohomologySystem H S p) n` by induction.
+  The successor step is `smul_mono_right I` applied to the induction
+  hypothesis, followed by `hFiltration n`; normalize with `pow_succ'`,
+  `mul_smul`, and `Nat.add_comm`.
+* Establish the translated-kernel basis
+  `∀ x, (@nhds _ (inverseSystemLimitTopology (cohomologySystem H S p)) x).HasBasis
+    (fun _ : ℕ => True)
+    (fun n => (fun y => x + y) ''
+      (inverseSystemLimitFiltrationAt (cohomologySystem H S p) n : Set _))`.
+  At zero, unfold `inverseSystemLimitTopology`, rewrite with `nhds_iInf`,
+  `nhds_induced`, `nhds_discrete`, and `Filter.comap_pure`, and collapse finite
+  intersections of kernels using `Filter.hasBasis_iInf_principal` plus
+  `limit.w`; the proof of
+  `Formalization.Books.MoreAlgebra.Unit36.inverseLimit_kernels_form_fundamental_system`
+  in `MoreAlgebra/Unit36/TopologicalGroups.lean` is the exact model.  Translate
+  from zero with `map_add_left_nhds_zero`.
+* Finish with
+  `Formalization.Books.MoreAlgebra.Unit36.topologicalSpace_eq_iAdicModuleTopology_of_cofinal_basis`
+  from `MoreAlgebra/Unit36/TopologicalRings.lean`, instantiated with
+  `R := A`, `M := (cohomologyLimit H S p : Type v)`,
+  `t := inverseSystemLimitTopology (cohomologySystem H S p)`, and
+  `K := inverseSystemLimitFiltrationAt (cohomologySystem H S p)`, supplying
+  the basis, `hpow`, and `hbound` in that order.
 -/
 theorem lemma_topology_I_adic_general
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
@@ -623,7 +665,76 @@ theorem lemma_topology_I_adic_general
       inverseSystemLimitIAdicTopology I (cohomologySystem H S p) := by
   sorry
 
-/-- The uniform filtration estimate recorded in the topology lemma's footnote. -/
+/-- The uniform filtration estimate recorded in the topology lemma's footnote.
+
+Proof roadmap for the shared graded-ACC-to-uniform-bound bridge:
+* Put `G := associatedGradedRing I`, `F n :=
+  inverseSystemLimitFiltrationAt (cohomologySystem H S p) n`, and
+  `Q n := submoduleQuotient (F n) (F (n + 1))`.  Unpack
+  `hFiltrationGraded` as `⟨hQ, e, he_surj, he_graded, hsmul⟩`, installing its
+  `DirectSum.Gmodule` instances with `letI`.  Use `hECompatible` to make the
+  componentwise inclusions `E n → P n` into a `G`-linear map
+  `iE : DirectSum ℕ (fun n => (E n : Type v)) →ₗ[G]
+    DirectSum ℕ (fun n => (P n : Type v))`.  Its `toFun` is
+  `DirectSum.map (fun n => (E n).subtype.toAddMonoidHom)`; prove `map_smul'`
+  by `DirectSum.induction_on` twice, reducing the homogeneous case with
+  `DirectSum.Gmodule.of_smul_of`, `DirectSum.map_of`, and `hECompatible`.
+  The same construction applied to `e` and `he_graded` gives a `G`-linear
+  `qE : DirectSum ℕ (fun n => (E n : Type v)) →ₗ[G]
+    DirectSum ℕ (fun n => (Q n : Type v))`.
+* Prove `iE` injective componentwise, turn `hACC` into a local
+  `IsNoetherian G (DirectSum ℕ (fun n => (P n : Type v)))` instance, and use
+  `isNoetherian_of_injective iE`.  Prove `qE` surjective with
+  `DirectSum.lmap_surjective.mpr he_surj` (its underlying function is the
+  componentwise `DirectSum.lmap e`) and use `isNoetherian_of_surjective`.
+  Thus `IsNoetherian.noetherian (⊤ : Submodule G (DirectSum ℕ Q))` supplies a
+  finite generating family via
+  `Submodule.fg_iff_exists_fin_generating_family`.
+* Homogenize that family: replace every generator by its finitely many
+  components and use `DirectSum.sum_support_of` to show the replacement still
+  spans.  Let `c` be the maximum of their degrees.  Choose representatives
+  `a_j : F (degree j)` of the homogeneous quotient generators using
+  `Submodule.mkQ_surjective`.
+* For every `m ≥ c`, prove the key equality
+  `F (m + 1) = F (m + 2) ⊔ I • F m`.  Project a homogeneous spanning
+  expression to degree `m + 1`; `DirectSum.Gmodule.of_smul_of` eliminates all
+  degree-mismatched terms.  Quotient-induct the remaining scalars and rewrite
+  their products using
+  `Formalization.Books.Algebra.Unit150.associatedGradedPieceMul_mk_mk` from
+  `Algebra/Unit150/FormallyEtaleMaps.lean`.  Factor
+  `I ^ (m + 1 - degree j)` as `I * I ^ (m - degree j)` using
+  `Ideal.IsTwoSided.pow_add`; the last clause `hsmul` then identifies the
+  homogeneous action with the actual scalar multiple of `a_j`.  The opposite
+  inclusion uses the structural antitonicity of the kernel filtration and
+  `hFiltration`.
+* Iterating the key equality shows `I • F m` is dense in `F (m + 1)` for the
+  kernel topology.  Use `hI` to choose a finite generating family of `I` and
+  form the continuous additive homomorphism
+  `u : (Fin r → (F m : Type v)) →+ (F (m + 1) : Type v)` sending
+  `(x_i)` to `∑ i, k_i • x_i`.  Apply
+  `Formalization.Books.MoreAlgebra.Unit36.openMapping_or_nowhereDense_image`
+  from `MoreAlgebra/Unit36/OpenMapping.lean`.  Supply completeness, linearity,
+  and the countable kernel basis by adapting, respectively,
+  `inverseLimit_is_complete`, `inverseLimit_is_linearly_topologized`, and
+  `inverseLimit_kernels_form_fundamental_system` from
+  `MoreAlgebra/Unit36/TopologicalGroups.lean` to this module-valued inverse
+  limit and its closed filtration submodules.  The density statement excludes
+  the nowhere-dense alternative for every basic open subgroup, so `u` is open;
+  its dense image is therefore all of `F (m + 1)`.  Conclude
+  `I • F m = F (m + 1)` for `m ≥ c`.
+* Package `F` as `Ideal.Filtration I (cohomologyLimit H S p)`: prove `mono`
+  from `limit.w` (split the zero index) and use `hFiltration` for `smul_le`.
+  The preceding equality is its `Ideal.Filtration.Stable` witness.  Apply
+  `Ideal.Filtration.Stable.exists_pow_smul_eq` from
+  `Mathlib/RingTheory/Filtration.lean` and obtain
+  `F (c + n) = I ^ n • F c ≤ I ^ n • ⊤`; commute `c + n` to `n + c` to
+  assemble `inverseSystemLimitHasUniformAdicBound`.
+
+Do not retry `Ideal.Filtration.submodule_fg_iff_stable`: it asks for finite
+generation of every `F n` and of the Rees-filtration submodule, neither of
+which follows from the supplied graded ACC.  The open-mapping step above is
+what upgrades density to the required equality.
+-/
 theorem lemma_topology_I_adic_general_uniform_bound
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -647,7 +758,27 @@ theorem lemma_topology_I_adic_general_uniform_bound
     inverseSystemLimitHasUniformAdicBound I (cohomologySystem H S p) := by
   sorry
 
-/-- `lemma-topology-I-adic-general-better`: the stable-`N_n` topology result. -/
+/-- `lemma-topology-I-adic-general-better`: the stable-`N_n` topology result.
+
+Proof roadmap:
+* No extra hypothesis is needed.  Invoke the common private bridge described
+  at `lemma_topology_I_adic_general_uniform_bound` with
+  `M := cohomologySystem H S p`,
+  `P := stablePowerCohomologyModuleFamily H S p`, and
+  `E := fun n => stablePowerCohomologyFiltrationSubmodule H S p n`.  The
+  arguments `hN`, `hE`, `hECompatible`, `hFiltration`,
+  `hFiltrationGraded`, and `hACC` have exactly the bridge's types; no
+  comparison with the non-stable power family is required.
+* Reuse the kernel-basis and power-inclusion constructions from
+  `lemma_topology_I_adic_general`: they depend only on
+  `cohomologySystem H S p` and `hFiltration`, not on the chosen ambient graded
+  family.
+* Apply
+  `Formalization.Books.MoreAlgebra.Unit36.topologicalSpace_eq_iAdicModuleTopology_of_cofinal_basis`
+  with `R := A`, `M := (cohomologyLimit H S p : Type v)`, and
+  `K := inverseSystemLimitFiltrationAt (cohomologySystem H S p)`, using the
+  stable-family bridge result as its uniform bound.
+-/
 theorem lemma_topology_I_adic_general_better
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
@@ -673,7 +804,27 @@ theorem lemma_topology_I_adic_general_better
       inverseSystemLimitIAdicTopology I (cohomologySystem H S p) := by
   sorry
 
-/-- The same uniform filtration estimate for the stable-`N_n` criterion. -/
+/-- The same uniform filtration estimate for the stable-`N_n` criterion.
+
+Proof roadmap:
+* Apply the shared
+  `inverseSystemLimitHasUniformAdicBound_of_gradedACC` construction detailed at
+  `lemma_topology_I_adic_general_uniform_bound`, now with
+  `P := stablePowerCohomologyModuleFamily H S p` and
+  `E := fun n => stablePowerCohomologyFiltrationSubmodule H S p n`.
+* In the two direct-sum maps, install the supplied stable-family structures
+  `hN` and `hE`; use `hECompatible` for the inclusion into `P` and unpack
+  `hFiltrationGraded` for the surjection onto
+  `DirectSum ℕ (fun n => submoduleQuotient
+    (inverseSystemLimitFiltrationAt (cohomologySystem H S p) n)
+    (inverseSystemLimitFiltrationAt (cohomologySystem H S p) (n + 1)))`.
+  All remaining kernel-filtration, density, open-mapping, and stability steps
+  are definitionally the ordinary roadmap after these substitutions.
+* Return the bridge conclusion directly; the topology comparison theorem is
+  not needed in this wrapper.  In particular, do not try to reduce this to
+  the ordinary uniform-bound theorem: there is no map from the stable graded
+  family to the ordinary one in the hypotheses.
+-/
 theorem lemma_topology_I_adic_general_better_uniform_bound
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)

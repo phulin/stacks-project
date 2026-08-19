@@ -18,6 +18,8 @@ theorem descend_reduced_of_flat_surjective
 /-- Locally finitely presented, flat and surjective descent of regular spaces. -/
 theorem descend_regular_of_lfp_flat_surjective
     {X Y : AlgebraicSpaceInterface.Space.{u}}
+    [AlgebraicSpaceInterface.AlgebraicSpaceTheory.{u}]
+    [AlgebraicSpaceInterface.RegularSpaceTheory.{u}]
     (f : AlgebraicSpaceInterface.Hom X Y)
     (hfp : AlgebraicSpaceInterface.IsLocallyOfFinitePresentation f)
     (hflat : AlgebraicSpaceInterface.IsFlat f)

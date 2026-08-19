@@ -1,13 +1,14 @@
 import Mathlib.AlgebraicGeometry.Morphisms.Flat
 import Mathlib.AlgebraicGeometry.Properties
+import Formalization.Books.SpacesCohomology.Unit02.Core
 
 /-!
 # Descent, Chapter 19: Variants on descending properties
 
 This file contains the presentation-level interface needed by the regularity
-statement. Scheme predicates are Mathlib predicates; Mathlib has no native
-algebraic-space object in this snapshot, so the regularity statement uses the
-small explicit interface below.
+statement. Scheme predicates are Mathlib predicates; the project’s established
+topological algebraic-space interface is reused, with a chapter-local
+regularity predicate because that interface does not yet provide one.
 -/
 
 universe u v
@@ -21,26 +22,34 @@ namespace Formalization.Books.Descent.Unit19
 
 namespace AlgebraicSpaceInterface
 
-/-- The minimal algebraic-space interface needed by the regularity lemma. -/
-structure Space where
-  carrier : Type u
-  [topology : TopologicalSpace carrier]
-  regular : Prop
+/-!
+The project has an established topological algebraic-space interface in
+`SpacesCohomology.Unit02.Core`.  Reuse its objects, morphisms, and morphism
+predicates here.  That interface does not yet include regularity, so this
+chapter adds only the missing object predicate as a separate law class.
+-/
 
-attribute [instance] Space.topology
+abbrev Space := Formalization.Books.SpacesCohomology.Unit01.AlgebraicSpace
+abbrev Hom := Formalization.Books.SpacesCohomology.Unit01.SpaceHom
+abbrev AlgebraicSpaceTheory :=
+  Formalization.Books.SpacesCohomology.Unit01.AlgebraicSpaceTheory
 
-/-- A morphism of algebraic spaces, with the three predicates used in the source. -/
-structure Hom (X Y : Space.{u}) where
-  map : ContinuousMap X.carrier Y.carrier
-  locallyOfFinitePresentation : Prop
-  flat : Prop
-  surjective : Prop
+class RegularSpaceTheory [AlgebraicSpaceTheory.{u}] where
+  isRegular : Space.{u} → Prop
 
-def IsRegular (X : Space.{u}) : Prop := X.regular
-def IsLocallyOfFinitePresentation {X Y : Space.{u}} (f : Hom X Y) : Prop :=
-  f.locallyOfFinitePresentation
-def IsFlat {X Y : Space.{u}} (f : Hom X Y) : Prop := f.flat
-def IsSurjective {X Y : Space.{u}} (f : Hom X Y) : Prop := f.surjective
+def IsRegular (X : Space.{u}) [AlgebraicSpaceTheory.{u}]
+    [RegularSpaceTheory.{u}] : Prop :=
+  RegularSpaceTheory.isRegular X
+
+def IsLocallyOfFinitePresentation {X Y : Space.{u}} (f : Hom X Y)
+    [AlgebraicSpaceTheory.{u}] : Prop :=
+  Formalization.Books.SpacesCohomology.Unit01.IsLocallyOfFinitePresentation f
+
+def IsFlat {X Y : Space.{u}} (f : Hom X Y) [AlgebraicSpaceTheory.{u}] : Prop :=
+  Formalization.Books.SpacesCohomology.Unit01.IsFlat f
+
+def IsSurjective {X Y : Space.{u}} (f : Hom X Y) : Prop :=
+  Formalization.Books.SpacesCohomology.Unit01.IsSurjective f
 
 end AlgebraicSpaceInterface
 

@@ -2,6 +2,7 @@ import Formalization.Books.Cotangent.Unit03.StandardResolution
 import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Homology.Embedding.Extend
 import Mathlib.AlgebraicTopology.AlternatingFaceMapComplex
+import Mathlib.Order.Directed
 import Mathlib.RingTheory.Kaehler.Basic
 import Mathlib.RingTheory.TensorProduct.Basic
 
@@ -128,12 +129,15 @@ theorem cotangentComplex_positive_degree
 
 /-!
 The textbook's filtered-colimit lemma is recorded at the level of complexes
-as the canonical comparison property below.  The source does not specify the
-transition maps on the cotangent complexes, so those maps are necessarily part
-of the diagram parameter here.
+as the canonical comparison property below.  The source suppresses the
+transition maps on the cotangent complexes; here `D` is the resulting diagram
+after the stage complexes have been transported to the common colimit algebra
+`B`.  Thus the ring-map system and its induced transition maps are supplied by
+the caller through `D`, while the directed-index hypotheses are explicit.
 -/
-def CotangentComplexColimitStatement {I : Type u} [Preorder I]
-    (D : I ⥤ CochainComplex (ModuleCat.{u} B) ℤ) : Prop :=
+def CotangentComplexColimitStatement {I : Type u} [Preorder I] [Nonempty I]
+    [IsDirectedOrder I]
+    (D : I ⥤ CochainComplex (ModuleCat.{u} B)) : Prop :=
   ∃ c : Cocone D, Nonempty (IsColimit c) ∧
     Nonempty (cotangentComplex A B ≅ c.pt)
 

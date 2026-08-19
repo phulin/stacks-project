@@ -270,6 +270,12 @@ theorem standardResolution_one :
       CommAlgCat.of A (PolynomialAlgebra A (PolynomialAlgebra A B)) := by
   rfl
 
+theorem standardResolution_degree (n : ℕ) :
+    (standardResolution (A := A) (B := B)).obj
+        (Opposite.op (SimplexCategory.mk n)) =
+      CommAlgCat.of A (iteratedPolynomial A (n + 1) B) := by
+  rfl
+
 /-! ## The variant resolution in the source remark -/
 
 abbrev AlgebraArrow := AlgebraArrowCategory A B

@@ -334,10 +334,10 @@ private theorem slice_map_isIso_of_isEquivalence
       have hkl := congrArg CommaMorphism.left hk
       simpa [m] using hkl
     simpa [A, B, hkleft] using (Over.w k).symm
-  letI : Mono f := hmono
+  let : Mono f := hmono
   obtain ⟨U, ⟨e⟩⟩ :=
     Functor.EssSurj.mem_essImage (F := Over.map f) (Over.mk (𝟙 Y))
-  letI : IsIso e.hom.left := by
+  let : IsIso e.hom.left := by
     change IsIso ((Over.forget Y).map e.hom)
     infer_instance
   let g : Y ⟶ X := inv e.hom.left ≫ U.hom
@@ -392,7 +392,7 @@ theorem representablePresentations_are_isomorphic
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     {p : S ⥤ C}
-    (h : IsRepresentableCategoryFibredInGroupoids p)
+    (_h : IsRepresentableCategoryFibredInGroupoids p)
     (P Q : RepresentablePresentation p) :
     Nonempty (RepresentablePresentationIso P Q) := by
   rcases P.isEquivalence with
@@ -401,12 +401,12 @@ theorem representablePresentations_are_isomorphic
   rcases Q.isEquivalence with
     ⟨Q_inv, hQ_inv, hQ_inv_cart, ⟨Q_unit, Q_unit_over, hQ_unit⟩,
       ⟨Q_counit, Q_counit_over, hQ_counit⟩⟩
-  letI : P.equivalence.functor.IsEquivalence :=
+  let : P.equivalence.functor.IsEquivalence :=
     Functor.IsEquivalence.mk' P_inv P_unit.symm P_counit
-  letI : P_inv.IsEquivalence :=
+  let : P_inv.IsEquivalence :=
     Functor.IsEquivalence.mk' P.equivalence.functor
       P_counit.symm P_unit
-  letI : Q.equivalence.functor.IsEquivalence :=
+  let : Q.equivalence.functor.IsEquivalence :=
     Functor.IsEquivalence.mk' Q_inv Q_unit.symm Q_counit
   let H : Over P.representingObject ⥤ Over Q.representingObject :=
     P_inv ⋙ Q.equivalence.functor
@@ -414,15 +414,15 @@ theorem representablePresentations_are_isomorphic
       Over.forget P.representingObject := by
     dsimp [H]
     rw [Functor.assoc, Q.equivalence.over, hP_inv]
-  letI : H.IsEquivalence := inferInstance
+  let : H.IsEquivalence := inferInstance
   obtain ⟨f, e, over, he⟩ :=
     slice_functor_over_isomorphic_to_map H hH
-  letI : (Over.map f).Faithful := Functor.Faithful.of_iso e
-  letI : (Over.map f).Full := Functor.Full.of_iso e
-  letI : (Over.map f).EssSurj := Functor.essSurj_of_iso e
-  letI : (Over.map f).IsEquivalence :=
+  let : (Over.map f).Faithful := Functor.Faithful.of_iso e
+  let : (Over.map f).Full := Functor.Full.of_iso e
+  let : (Over.map f).EssSurj := Functor.essSurj_of_iso e
+  let : (Over.map f).IsEquivalence :=
     ⟨inferInstance, inferInstance, inferInstance⟩
-  letI : IsIso f := slice_map_isIso_of_isEquivalence f
+  let : IsIso f := slice_map_isIso_of_isEquivalence f
   let objectIso : P.representingObject ≅ Q.representingObject :=
     ⟨f, inv f, IsIso.hom_inv_id f, IsIso.inv_hom_id f⟩
   let ePQ : P.equivalence.functor ⋙ H ≅ Q.equivalence.functor :=
@@ -473,9 +473,7 @@ theorem representablePresentations_are_isomorphic
       intro Z
       dsimp [ePQ, overPQ]
       dsimp [H]
-      simp only [Functor.associator_inv_app, Functor.whiskerRight_app,
-        Functor.leftUnitor_hom_app, Iso.trans_hom, Iso.symm_hom,
-        Category.assoc, Category.id_comp, Category.comp_id]
+      simp only [Category.id_comp, Category.comp_id]
       have hQ_obj (X : S) :
           (Q.equivalence.functor.obj X).left = p.obj X := by
         simpa only [Functor.comp_obj, Over.forget_obj] using
@@ -490,7 +488,7 @@ theorem representablePresentations_are_isomorphic
         simpa only [Functor.comp_map, Over.forget_map, Functor.comp_obj,
           Over.forget_obj] using hQmap
       rw [hQmap, hP_unit Z]
-      simp [eqToHom_trans, Over.id_left]
+      simp [eqToHom_trans]
     have hcomp := isNatIsoOver_comp
       (Over.forget Q.representingObject)
       (Functor.isoWhiskerLeft P.equivalence.functor e).symm _ hE'

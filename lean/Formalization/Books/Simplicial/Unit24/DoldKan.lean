@@ -1370,7 +1370,7 @@ theorem doldKan_normalized_differential_formula
     ∃ (e₁ : normalizedObject (doldKanSimplicialObject A) (n + 1) ≅ A.X (n + 1))
       (e₀ : normalizedObject (doldKanSimplicialObject A) n ≅ A.X n),
       e₁.inv ≫ (normalizedChainComplex (doldKanSimplicialObject A)).d (n + 1) n ≫
-          e₀.hom = doldKanIdentityDifferential A n := by
+          e₀.hom = A.d (n + 1) n := by
   sorry
 
 theorem doldKan_normalized_identity_differential

@@ -288,13 +288,278 @@ def relativeAssassin
 
 /-! ## Comparing the six sets -/
 
+private theorem relativeAssassinA'_subset_A
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N] :
+    relativeAssassinA' (R := R) (S := S) (N := N) ⊆
+      relativeAssassinA (R := R) (S := S) (N := N) := by
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  intro q hq
+  simp only [relativeAssassinA', Set.mem_setOf_eq] at hq
+  rcases hq with ⟨p, hp, hmem⟩
+  rw [hp] at hmem
+  rw [relativeFiberAssociatedPrimesImage] at hmem
+  rcases hmem with ⟨r, hr, hcomap⟩
+  letI : AddCommGroup
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    TensorProduct.addCommGroup
+  letI : Module S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    TensorProduct.leftModule
+  letI : Module (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    Formalization.Books.Algebra.Unit12.tensorProductBModule
+      R (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField N
+      (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
+  letI : IsScalarTower R S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    TensorProduct.isScalarTower_left
+  letI : IsScalarTower R
+      (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    tensorProductScalar_isScalarTower_right
+      (R := R) (S := S)
+      (A := (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
+      (N := N)
+  letI : SMulCommClass S
+      (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    tensorProductScalar_smulCommClass
+      (R := R) (S := S)
+      (A := (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
+      (N := N)
+  letI : Module (S ⊗[R]
+      (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
+    TensorProduct.Algebra.module
+  have hsmul (s : S)
+      (z : N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :
+      ((Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) s) • z =
+        s • z := by
+    change (s ⊗ₜ[R]
+      (1 : (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)) • z = s • z
+    rw [TensorProduct.Algebra.smul_def, one_smul]
+  rcases hr with ⟨m, hm⟩
+  have hcomapIdeal : Ideal.comap
+      (Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) r.asIdeal =
+      q.asIdeal := by
+    have hideal := congrArg PrimeSpectrum.asIdeal hcomap
+    rw [PrimeSpectrum.comap_asIdeal] at hideal
+    exact hideal
+  simp only [relativeAssassinA, Set.mem_setOf_eq]
+  change ∃ m, (⊥ : Submodule S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+        ({m} : Set _) = q.asIdeal
+  refine ⟨m, ?_⟩
+  ext s
+  constructor
+  · intro hs
+    have hsT : ((Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) s) ∈
+        (⊥ : Submodule
+          (S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
+          (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+            ({m} : Set _) := by
+      apply Submodule.mem_colon_singleton.mpr
+      exact (hsmul s m).trans
+        (Submodule.mem_colon_singleton.mp hs)
+    have hsR : ((Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) s) ∈
+        r.asIdeal := by
+      rw [← hm]
+      exact hsT
+    rw [← hcomapIdeal, Ideal.mem_comap]
+    exact hsR
+  · intro hs
+    have hsR : ((Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) s) ∈
+        r.asIdeal := by
+      have hs' : s ∈ Ideal.comap
+          (Algebra.TensorProduct.includeLeftRingHom : S →+*
+            S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) r.asIdeal := by
+        rw [hcomapIdeal]
+        exact hs
+      exact (Ideal.mem_comap.mp hs')
+    have hsT : ((Algebra.TensorProduct.includeLeftRingHom : S →+*
+        S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) s) ∈
+        (⊥ : Submodule
+          (S ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
+          (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+            ({m} : Set _) := by
+      rw [hm]
+      exact hsR
+    apply Submodule.mem_colon_singleton.mpr
+    exact (hsmul s m).symm.trans
+      (Submodule.mem_colon_singleton.mp hsT)
+
+private theorem relativeAssassinA_subset_A'
+    {R : Type u} {S : Type v} {N : Type w}
+    [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup N] [Module S N] :
+    relativeAssassinA (R := R) (S := S) (N := N) ⊆
+      relativeAssassinA' (R := R) (S := S) (N := N) := by
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  intro q hq
+  simp only [relativeAssassinA, Set.mem_setOf_eq] at hq
+  change ∃ m, (⊥ : Submodule S
+      (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
+        ({m} : Set _) = q.asIdeal at hq
+  obtain ⟨m, hm⟩ := hq
+  let p : PrimeSpectrum R := PrimeSpectrum.comap (algebraMap R S) q
+  let M := N ⊗[R] p.asIdeal.ResidueField
+  let T := S ⊗[R] p.asIdeal.ResidueField
+  letI : AddCommGroup M := TensorProduct.addCommGroup
+  letI : Module R M := TensorProduct.leftModule
+  letI : Module S M := TensorProduct.leftModule
+  letI : Module p.asIdeal.ResidueField M :=
+    Formalization.Books.Algebra.Unit12.tensorProductBModule
+      R p.asIdeal.ResidueField N p.asIdeal.ResidueField
+  letI : IsScalarTower R S M := TensorProduct.isScalarTower_left
+  letI : IsScalarTower R p.asIdeal.ResidueField M :=
+    tensorProductScalar_isScalarTower_right
+      (R := R) (S := S) (A := p.asIdeal.ResidueField) (N := N)
+  letI : SMulCommClass S p.asIdeal.ResidueField M :=
+    tensorProductScalar_smulCommClass
+      (R := R) (S := S) (A := p.asIdeal.ResidueField) (N := N)
+  letI : Module T M := TensorProduct.Algebra.module
+  have hsmul (s : S) (z : M) :
+      ((Algebra.TensorProduct.includeLeftRingHom : S →+* T) s) • z = s • z := by
+    change (s ⊗ₜ[R] (1 : p.asIdeal.ResidueField)) • z = s • z
+    rw [TensorProduct.Algebra.smul_def, one_smul]
+  have hRT (r : R) (z : M) :
+      (algebraMap R T r) • z = r • z := by
+    rw [Algebra.TensorProduct.algebraMap_apply',
+      TensorProduct.Algebra.smul_def, one_smul,
+      ← IsScalarTower.algebraMap_smul p.asIdeal.ResidueField]
+    simp
+  have hreg (r : R) (hr : r ∉ p.asIdeal) : IsSMulRegular M r := by
+    have hrk : algebraMap R p.asIdeal.ResidueField r ≠ 0 := by
+      intro hzero
+      exact hr (Ideal.algebraMap_residueField_eq_zero.mp hzero)
+    have hu : IsUnit (algebraMap R p.asIdeal.ResidueField r) :=
+      isUnit_iff_ne_zero.mpr hrk
+    refine IsSMulRegular.of_right_eq_zero_of_smul ?_
+    intro z hz
+    exact (hu.isSMulRegular M).right_eq_zero_of_smul
+      ((IsScalarTower.algebraMap_smul p.asIdeal.ResidueField r z).trans hz)
+  let P : Ideal T := (⊥ : Submodule T M).colon ({m} : Set M)
+  have hmne : m ≠ 0 := by
+    intro hmzero
+    apply q.isPrime.ne_top
+    rw [← hm, hmzero]
+    rw [Submodule.colon_eq_top_iff_subset]
+    rintro x rfl
+    exact Submodule.zero_mem _
+  have hPprime : P.IsPrime := by
+    refine ⟨?_, ?_⟩
+    · intro htop
+      apply hmne
+      have hmzero : m ∈ (⊥ : Submodule T M) :=
+        (Submodule.colon_eq_top_iff_subset ({m} : Set M)).mp htop
+          (by exact mem_singleton m)
+      simpa only [Submodule.mem_bot] using hmzero
+    · intro x y hxy
+      obtain ⟨rx, hrx, sx, hsx⟩ :=
+        Ideal.ResidueField.exists_smul_eq_tmul_one p.asIdeal x
+      obtain ⟨ry, hry, sy, hsy⟩ :=
+        Ideal.ResidueField.exists_smul_eq_tmul_one p.asIdeal y
+      have hprod : (x * y) • m = 0 :=
+        Submodule.mem_colon_singleton.mp hxy
+      have hprod' : ((rx • x) * (ry • y)) • m = 0 := by
+        calc
+          ((rx • x) * (ry • y)) • m =
+              (algebraMap R T (rx * ry) * (x * y)) • m := by
+                rw [Algebra.smul_def, Algebra.smul_def, map_mul]
+                congr 1
+                ac_rfl
+          _ = (algebraMap R T (rx * ry)) • ((x * y) • m) := by
+                rw [mul_smul]
+          _ = (rx * ry) • ((x * y) • m) := by
+                exact hRT (rx * ry) _
+          _ = 0 := by rw [hprod, smul_zero]
+      have hprod'' : (sx * sy) • m = 0 := by
+        rw [hsx, hsy, Algebra.TensorProduct.tmul_mul_tmul] at hprod'
+        rw [one_mul] at hprod'
+        rw [TensorProduct.Algebra.smul_def] at hprod'
+        simpa only [one_smul] using hprod'
+      have hmemprod : sx * sy ∈ q.asIdeal := by
+        rw [← hm, Submodule.mem_colon_singleton]
+        exact hprod''
+      rcases q.isPrime.mem_or_mem hmemprod with hsxq | hsyq
+      · left
+        apply Submodule.mem_colon_singleton.mpr
+        have hzero : (rx • x) • m = 0 := by
+          rw [hsx]
+          change (sx ⊗ₜ[R] (1 : p.asIdeal.ResidueField)) • m = 0
+          rw [TensorProduct.Algebra.smul_def, one_smul]
+          have hsxmem : sx ∈ (⊥ : Submodule S M).colon ({m} : Set M) := by
+            rw [hm]
+            exact hsxq
+          exact Submodule.mem_colon_singleton.mp hsxmem
+        rw [Algebra.smul_def, mul_smul] at hzero
+        exact (hreg rx hrx).right_eq_zero_of_smul
+          ((hRT rx (x • m)).symm.trans hzero)
+      · right
+        apply Submodule.mem_colon_singleton.mpr
+        have hzero : (ry • y) • m = 0 := by
+          rw [hsy]
+          change (sy ⊗ₜ[R] (1 : p.asIdeal.ResidueField)) • m = 0
+          rw [TensorProduct.Algebra.smul_def, one_smul]
+          have hsymem : sy ∈ (⊥ : Submodule S M).colon ({m} : Set M) := by
+            rw [hm]
+            exact hsyq
+          exact Submodule.mem_colon_singleton.mp hsymem
+        rw [Algebra.smul_def, mul_smul] at hzero
+        exact (hreg ry hry).right_eq_zero_of_smul
+          ((hRT ry (y • m)).symm.trans hzero)
+  have hPcomap : P.comap
+      (Algebra.TensorProduct.includeLeftRingHom : S →+* T) = q.asIdeal := by
+    ext s
+    constructor
+    · intro hs
+      have hsTzero :
+          ((Algebra.TensorProduct.includeLeftRingHom : S →+* T) s) • m = 0 :=
+        Submodule.mem_colon_singleton.mp hs
+      have hsSzero : s • m = 0 := (hsmul s m).symm.trans hsTzero
+      rw [← hm, Submodule.mem_colon_singleton]
+      exact hsSzero
+    · intro hs
+      have hsSzero : s • m = 0 := by
+        have hsScolon : s ∈ (⊥ : Submodule S M).colon ({m} : Set M) := by
+          rw [hm]
+          exact hs
+        exact Submodule.mem_colon_singleton.mp hsScolon
+      change ((Algebra.TensorProduct.includeLeftRingHom : S →+* T) s) ∈
+        (⊥ : Submodule T M).colon ({m} : Set M)
+      have hsTzero : ((Algebra.TensorProduct.includeLeftRingHom : S →+* T) s) • m = 0 :=
+        (hsmul s m).trans hsSzero
+      exact Submodule.mem_colon_singleton.mpr hsTzero
+  refine ⟨p, rfl, ?_⟩
+  refine ⟨⟨P, hPprime⟩, ?_, ?_⟩
+  · change ∃ z, (⊥ : Submodule T M).colon ({z} : Set M) = P
+    exact ⟨m, rfl⟩
+  · apply PrimeSpectrum.ext
+    simpa [PrimeSpectrum.comap_asIdeal] using hPcomap
+
 theorem relativeAssassinA_eq_A'
     {R : Type u} {S : Type v} {N : Type w}
     [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup N] [Module S N] :
     relativeAssassinA (R := R) (S := S) (N := N) =
       relativeAssassinA' (R := R) (S := S) (N := N) := by
-  sorry
+  ext q
+  constructor
+  · intro hq
+    exact relativeAssassinA_subset_A' hq
+  · intro hq
+    exact relativeAssassinA'_subset_A hq
 
 theorem compare_relative_assassins
     {R : Type u} {S : Type v} {N : Type w}

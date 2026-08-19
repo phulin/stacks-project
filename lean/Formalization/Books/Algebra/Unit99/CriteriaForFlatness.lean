@@ -190,7 +190,89 @@ theorem prepare_local_criterion_flatness
     {N : Type u} [AddCommGroup N] [Module R N]
     (hN : IsFiniteLength R N) :
     IsZero (tor (R := R) N M 1) := by
-  sorry
+    induction hN with
+    | of_subsingleton =>
+      rename_i N' _ _ hsub
+      have hflat : Module.Flat R N' := by infer_instance
+      have hcrit : Module.Flat R N' ↔
+          TorFunctorZero (ModuleCat.of R N') 1 :=
+        (flat_iff_tor_criteria (ModuleCat.of R N')).out 0 2
+      exact hcrit.mp hflat (ModuleCat.of R M)
+    | of_simple_quotient =>
+      rename_i M' hAdd hMod N' hsimple hfin ih
+      obtain ⟨I, hI, eI⟩ :=
+        (isSimpleModule_iff_quot_maximal (R := R) (M := M' ⧸ N')).mp hsimple
+      have hIe : I = IsLocalRing.maximalIdeal R :=
+        IsLocalRing.eq_maximalIdeal hI
+      subst I
+      have hTorI : IsZero (tor (R := R) (R ⧸ IsLocalRing.maximalIdeal R) M 1) := hTor
+      have hTorI' : IsZero (tor (R := R) M
+          (R ⧸ IsLocalRing.maximalIdeal R) 1) :=
+        IsZero.of_iso hTorI
+          (torLeftRightIso (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R))
+            (ModuleCat.of R M) 1).symm
+      let eQ : ModuleCat.of R (M' ⧸ N') ≅
+          ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R) :=
+        (Classical.choice eI).toModuleIso
+      let qMap := torMapSecond (ModuleCat.of R M)
+        (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R)) (ModuleCat.of R (M' ⧸ N')) eQ.inv 1
+      let qMapInv := torMapSecond (ModuleCat.of R M)
+        (ModuleCat.of R (M' ⧸ N')) (ModuleCat.of R (R ⧸ IsLocalRing.maximalIdeal R)) eQ.hom 1
+      have hq1 : qMap ≫ qMapInv = 𝟙 _ := by
+        dsimp [qMap, qMapInv]
+        rw [← torMapSecond_comp, eQ.inv_hom_id, torMapSecond_id]
+      have hq2 : qMapInv ≫ qMap = 𝟙 _ := by
+        dsimp [qMap, qMapInv]
+        rw [← torMapSecond_comp, eQ.hom_inv_id, torMapSecond_id]
+      haveI : IsIso qMap := ⟨⟨qMapInv, hq1, hq2⟩⟩
+      have hquotSym : IsZero (tor (R := R) M (M' ⧸ N') 1) :=
+        IsZero.of_iso hTorI' (asIso qMap).symm
+      have hiSym : IsZero (tor (R := R) M (N' : Type u) 1) :=
+        IsZero.of_iso ih
+          (torLeftRightIso (ModuleCat.of R (N' : Type u)) (ModuleCat.of R M) 1).symm
+      let S : ShortComplex (ModuleCat.{u} R) :=
+        ShortComplex.mk (ModuleCat.ofHom N'.subtype)
+          (ModuleCat.ofHom (Submodule.mkQ N')) (by
+            apply ModuleCat.hom_ext
+            ext x
+            simp [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero, x.property])
+      have hS : S.ShortExact := by
+        apply ModuleCat.shortComplex_shortExact
+        · simpa [S] using (LinearMap.exact_subtype_mkQ N')
+        · exact Subtype.val_injective
+        · exact Submodule.mkQ_surjective N'
+      let hseq := Classical.choice (exists_tor_long_exact_sequence
+        (ModuleCat.of R M) S hS)
+      have hzero1 : IsZero (Tor (ModuleCat.of R M) S.X₁ 1) := by
+        simpa [S] using hiSym
+      have hzero3 : IsZero (Tor (ModuleCat.of R M) S.X₃ 1) := by
+        simpa [S] using hquotSym
+      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₁ 1) :=
+        (ModuleCat.isZero_iff_subsingleton).mp hzero1
+      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₃ 1) :=
+        (ModuleCat.isZero_iff_subsingleton).mp hzero3
+      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₂ 1) := by
+        constructor
+        intro x y
+        have hxker : hseq.map₂ x = 0 := Subsingleton.elim _ _
+        obtain ⟨z, hz⟩ := (hseq.exact₁ x).mp hxker
+        have hz0 : z = 0 := Subsingleton.elim _ _
+        have hx0 : x = 0 := by
+          rw [← hz, hz0]
+          simp
+        have hyker : hseq.map₂ y = 0 := Subsingleton.elim _ _
+        obtain ⟨w, hw⟩ := (hseq.exact₁ y).mp hyker
+        have hw0 : w = 0 := Subsingleton.elim _ _
+        have hy0 : y = 0 := by
+          rw [← hw, hw0]
+          simp
+        exact hx0.trans hy0.symm
+      have hzero2 : IsZero (Tor (ModuleCat.of R M) S.X₂ 1) :=
+        ModuleCat.isZero_of_subsingleton _
+      have hzero2' : IsZero (tor (R := R) M M' 1) := by
+        simpa [S] using hzero2
+      exact IsZero.of_iso hzero2'
+        (torLeftRightIso (ModuleCat.of R M') (ModuleCat.of R M) 1)
 
 theorem local_criterion_flatness
     {R S M : Type u} [CommRing R] [CommRing S]

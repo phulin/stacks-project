@@ -923,6 +923,105 @@ theorem FinitePthRootTower.exists_baseChangeTower
     (K := K) p hp ∅
   exact ⟨tower, hbase⟩
 
+/-- A finite family in a rational-function field acquires p-th roots in one
+finite paired purely inseparable tower. -/
+theorem exists_tower_pth_roots_adjoin_finset
+    {k : Type u} {K : Type v} {ι : Type*}
+    [Field k] [Field K] [Algebra k K] [Fintype ι]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (x : ι → K) (hx : AlgebraicIndependent k x)
+    (c : Finset (IntermediateField.adjoin k (Set.range x))) :
+    ∃ tower : FinitePthRootBaseChangeTower k K p hp,
+      ∀ a ∈ c, ∃ q : finitePthRootTopAtLevel tower,
+        q ^ p = (algebraMap K (finitePthRootTopAtLevel tower)) a := by
+  classical
+  obtain ⟨num, den, s, hrep⟩ := exists_finite_coefficients_reprField x hx c
+  letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let baseRoot (a : k) : perfectClosure k (AlgebraicClosure k) :=
+    ⟨pthRootInAlgebraicClosure k p hp a, by
+      apply (mem_perfectClosure_iff_pow_mem p).2
+      refine ⟨1, a, ?_⟩
+      simp⟩
+  let baseRoots := s.image baseRoot
+  obtain ⟨base, hbase⟩ :=
+    exists_finite_pth_root_tower_of_perfectClosure_finset p hp baseRoots
+  let topRoot (i : ι) : perfectClosure K (AlgebraicClosure K) :=
+    ⟨pthRootInAlgebraicClosure K p hp (x i), by
+      apply (mem_perfectClosure_iff_pow_mem p).2
+      refine ⟨1, x i, ?_⟩
+      simp⟩
+  let topRoots := Finset.univ.image topRoot
+  obtain ⟨tower, htower, htop⟩ :=
+    base.exists_baseChangeTower_containing (K := K) p hp topRoots
+  subst base
+  let B := finitePthRootFieldAtLevel tower.base
+  let T := finitePthRootTopAtLevel tower
+  letI : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
+  letI : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
+  let r (a : k) : T := by
+    by_cases ha : a ∈ s
+    · let ba : B := ⟨baseRoot a, hbase (baseRoot a)
+          (Finset.mem_image.mpr ⟨a, ha, rfl⟩)⟩
+      exact algebraMap B T ba
+    · exact 0
+  have hr : ∀ a ∈ s, r a ^ p = algebraMap k T a := by
+    intro a ha
+    simp only [r, dif_pos ha]
+    apply Subtype.ext
+    change (pthRootClosureMap k K (pthRootInAlgebraicClosure k p hp a)) ^ p =
+      algebraMap k (AlgebraicClosure K) a
+    rw [← map_pow, pthRootInAlgebraicClosure_pow]
+    exact (pthRootClosureMap k K).commutes a
+  let z (i : ι) : T := ⟨topRoot i, htop (topRoot i)
+    (Finset.mem_image.mpr ⟨i, Finset.mem_univ i, rfl⟩)⟩
+  let y (i : ι) : T := algebraMap K T (x i)
+  have hz : ∀ i, z i ^ p = y i := by
+    intro i
+    apply Subtype.ext
+    exact pthRootInAlgebraicClosure_pow K p hp (x i)
+  refine ⟨tower, ?_⟩
+  intro a ha
+  obtain ⟨hfrac, hden, hnumcoeff, hdencoeff⟩ := hrep a ha
+  obtain ⟨qn, hqn⟩ := exists_pth_root_eval₂ p (algebraMap k T) y z r s
+    (num a) hnumcoeff hr hz
+  obtain ⟨qd, hqd⟩ := exists_pth_root_eval₂ p (algebraMap k T) y z r s
+    (den a) hdencoeff hr hz
+  let mapFT : IntermediateField.adjoin k (Set.range x) →+* T :=
+    (algebraMap K T).comp (IntermediateField.adjoin k (Set.range x)).val
+  let φ : FractionRing (MvPolynomial ι k) →+* T :=
+    mapFT.comp hx.aevalEquivField.toRingEquiv.toRingHom
+  have hφ (P : MvPolynomial ι k) :
+      φ (algebraMap (MvPolynomial ι k) (FractionRing (MvPolynomial ι k)) P) =
+        MvPolynomial.eval₂ (algebraMap k T) y P := by
+    change algebraMap K T
+      (↑(hx.aevalEquivField
+        (algebraMap (MvPolynomial ι k) (FractionRing (MvPolynomial ι k)) P)) : K) = _
+    rw [AlgebraicIndependent.aevalEquivField_algebraMap_apply_coe]
+    simpa only [MvPolynomial.aeval_eq_eval₂Hom, MvPolynomial.coe_eval₂Hom, y,
+      IsScalarTower.algebraMap_eq k K T] using
+      MvPolynomial.map_eval₂Hom (algebraMap k K) x (algebraMap K T) P
+  have hmul := congrArg φ hfrac
+  rw [map_mul, hφ, hφ] at hmul
+  have hφa : φ (hx.reprField a) = mapFT a := by
+    simp [φ, mapFT, AlgebraicIndependent.reprField]
+  rw [hφa] at hmul
+  have hden0 : MvPolynomial.eval₂ (algebraMap k T) y (den a) ≠ 0 := by
+    intro h
+    have hy : AlgebraicIndependent k y := by
+      change AlgebraicIndependent k ((algebraMap K T) ∘ x)
+      exact hx.map' (f := IsScalarTower.toAlgHom k K T) (algebraMap K T).injective
+    exact hden ((algebraicIndependent_iff_injective_aeval.mp hy) (by
+      simpa [MvPolynomial.aeval_eq_eval₂Hom] using h))
+  have hqd0 : qd ≠ 0 := by
+    intro h
+    apply hden0
+    rw [← hqd, h, zero_pow (Fact.out : Nat.Prime p).pos.ne']
+  refine ⟨qn / qd, ?_⟩
+  rw [div_pow, hqn, hqd]
+  symm
+  simpa [mapFT] using (eq_div_iff hden0).2 hmul
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

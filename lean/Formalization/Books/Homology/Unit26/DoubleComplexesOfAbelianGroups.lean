@@ -373,7 +373,7 @@ noncomputable def rightResolutionTotalMap
     subst m
     cases hnm'
     simp only [totalComplex, dif_pos, totalDifferential, Sigma.ι_desc,
-      Category.assoc, Preadditive.comp_add, Linear.comp_units_smul,
+      Category.assoc, Preadditive.comp_add,
       Int.negOnePow_zero, one_smul]
     have haug_d := congrArg (fun f => f.f n) R.augmentation_d
     simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d

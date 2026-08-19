@@ -45,8 +45,7 @@ theorem finiteLocallyFreeOfRank_one_iff_invertible
     obtain ⟨s, hs, hsr⟩ := hM
     have hfin : Formalization.Books.Algebra.Unit78.FiniteLocallyFree R M := by
       refine ⟨s, hs, ?_⟩
-      intro f
-      intro hf
+      intro f hf
       obtain ⟨e⟩ := hsr f hf
       exact ⟨Module.Finite.of_surjective e.symm.toLinearMap e.symm.surjective,
         Module.Free.of_equiv e.symm⟩
@@ -119,15 +118,10 @@ theorem finiteLocallyFreeOfRank_one_iff_invertible
             rw [LinearMap.baseChange_tmul,
               TensorProduct.AlgebraTensorModule.rid_tmul]
             simp [Algebra.smul_def]
-          simp [sourceEquiv, targetEquiv, hdual, ibcM, ibcP, ibcR, hP,
-            LocalizedModule.mk, Module.FinitePresentation.isBaseChange_map]
+          simp [sourceEquiv, targetEquiv, hdual, hP, LocalizedModule.mk]
           rw [TensorProduct.AlgebraTensorModule.distribBaseChange_tmul,
             TensorProduct.AlgebraTensorModule.congr_tmul]
-          simp [hdual, ibcM, ibcP, ibcR, hP, hM,
-            LocalizedModule.mk,
-            TensorProduct.AlgebraTensorModule.rid_tmul, IsBaseChange.equiv_tmul,
-            LinearMap.baseChange_tmul, hbase,
-            Module.FinitePresentation.isBaseChange_map]
+          simp [hM, LocalizedModule.mk, IsBaseChange.equiv_tmul, hbase]
           have hmk : f m /ₒ (1 : S) = algebraMap R A (f m) := by
             change Localization.mk (f m) (1 : S) = algebraMap R A (f m)
             exact Localization.mk_one_eq_algebraMap (f m)

@@ -1632,7 +1632,7 @@ private noncomputable def stupidTruncLEπ (K : CochainComplex C ℤ) (n : ℤ) :
       have hli : ∃ t : ℕ, (ComplexShape.embeddingUpIntLE n).f t =
           (ComplexShape.embeddingUpIntLE n).f l := ⟨l, rfl⟩
       rw [← hk, ← hl]
-      simp only [stupidTruncLEπ_f, dif_pos hki, dif_pos hli, Function.id_def]
+      simp only [stupidTruncLEπ_f, Function.id_def]
       change _ ≫ ((K.restriction (ComplexShape.embeddingUpIntLE n)).extend
           (ComplexShape.embeddingUpIntLE n)).d _ _ = _
       rw [HomologicalComplex.extend_d_eq
@@ -1640,7 +1640,7 @@ private noncomputable def stupidTruncLEπ (K : CochainComplex C ℤ) (n : ℤ) :
         (ComplexShape.embeddingUpIntLE n) hki.choose_spec hli.choose_spec,
         HomologicalComplex.restriction_d_eq K
           (ComplexShape.embeddingUpIntLE n) hki.choose_spec hli.choose_spec]
-      simp [Category.assoc] <;> congr 1
+      simp [Category.assoc]; congr 1
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (ComplexShape.embeddingUpIntLE n) j (by
           intro k hk
@@ -1758,7 +1758,7 @@ private noncomputable def stupidTruncLETransition (K : CochainComplex C ℤ)
                 hp).inv = _
           have hst : h.choose = t :=
             (ComplexShape.embeddingUpIntLE (n - 1)).injective_f hp
-          simp [hst]
+          simp
         · rename_i h
           exact (h ⟨t, rfl⟩).elim
       have hd₁ (a b : ℕ) :
@@ -1866,17 +1866,14 @@ private noncomputable def stupidTruncLETransition (K : CochainComplex C ℤ)
             HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
           rfl
         rw [hstupid_a, hstupid_b_inv]
-        simp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
-          Iso.trans_inv, HomologicalComplex.restrictionXIso,
+        simp [HomologicalComplex.restrictionXIso,
           HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
           Category.assoc]
       rw [htr k, htr l, hd₁ k l]
       rw [hd₀ k l]
-      simp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
-        Iso.trans_inv, HomologicalComplex.restrictionXIso,
+      simp [HomologicalComplex.stupidTruncXIso,
         HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
-        Category.assoc, HomologicalComplex.extend,
-        HomologicalComplex.restriction] <;> congr 1
+        Category.assoc, HomologicalComplex.restriction]
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (ComplexShape.embeddingUpIntLE (n - 1)) j (by
           intro k hk
@@ -1961,7 +1958,7 @@ theorem stupidTruncLE_transition (K : CochainComplex C ℤ) (n : ℤ) :
             apply Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
             simpa only [Int.neg_neg] using hi
           exact hz.eq_of_src _ _
-        simp only [dif_pos hj, hd, zero_comp, comp_zero]
+        simp only [dif_pos hj, hd, zero_comp]
       · simp only [dif_neg hj, zero_comp, comp_zero]
   have hzero : q ≫ f = 0 := by
     ext i
@@ -2003,7 +2000,6 @@ theorem stupidTruncLE_transition (K : CochainComplex C ℤ) (n : ℤ) :
         rfl)).2
       change Mono (f.f i)
       dsimp [f, stupidTruncLETransition]
-      change Mono (stupidTruncLETransition_f K n i)
       unfold stupidTruncLETransition_f
       rw [dif_pos hi1]
       change Mono (_ ≫ _)
@@ -2024,7 +2020,7 @@ theorem stupidTruncLE_transition (K : CochainComplex C ℤ) (n : ℤ) :
           rfl
         apply (ShortComplex.exact_iff_epi _ hfi).2
         change Epi (q_f n)
-        simp only [q_f, dif_pos rfl]
+        simp only [q_f]
         change Epi (_ ≫ _)
         exact epi_comp' (epi_iso_hom _) (epi_iso_inv _)
       · have hz : IsZero ((stupidTruncLE K n).X i) := by
@@ -2041,7 +2037,6 @@ theorem stupidTruncLE_transition (K : CochainComplex C ℤ) (n : ℤ) :
     by_cases hi : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = i
     · obtain ⟨k, hk⟩ := hi
       dsimp [f, stupidTruncLETransition]
-      change Epi (stupidTruncLETransition_f K n i)
       unfold stupidTruncLETransition_f
       rw [dif_pos ⟨k, hk⟩]
       change Epi (_ ≫ _)

@@ -118,9 +118,10 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
     exact Ideal.zero_mem _
   let s : Finset (PrimeSpectrum R) := hUfin.toFinset.erase p₀
   let ι := {q : PrimeSpectrum R // q ∈ s}
-  letI : Fintype ι := Fintype.ofFinite ι
   have hqchoice (q : ι) : ∃ a : R, a ∈ q.1.asIdeal ∧ a ≠ 0 := by
-    have hqmem : q.1 ∈ hUfin.toFinset.erase p₀ := by simpa [s] using q.2
+    have hqmem : q.1 ∈ hUfin.toFinset.erase p₀ := by
+      change q.1 ∈ s
+      exact q.2
     have hqne : q.1 ≠ p₀ := (Finset.mem_erase.mp hqmem).1
     have hqbot : q.1.asIdeal ≠ (⊥ : Ideal R) := by
       intro hqbot
@@ -200,7 +201,7 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
     intro hq
     rw [hq, hdimNat] at hdimq
     have hbad : (⊥ : WithBot ℕ∞) = (d₀ : WithBot ℕ∞) := by
-      simpa using hdimq
+      simp at hdimq
     exact (WithBot.bot_ne_coe) hbad
   let qInf : ℕ∞ := (ringKrullDim (R ⧸ I)).unbot hqbot
   have hqInf : (qInf : WithBot ℕ∞) = ringKrullDim (R ⧸ I) :=
@@ -213,7 +214,7 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
       _ = (qInf : WithBot ℕ∞) + 1 := by rw [hqInf]
       _ = ⊤ := by
         rw [hqInfTop, ← WithBot.coe_one, ← WithBot.coe_add]
-        simpa using congrArg (fun q : ℕ∞ => (q : WithBot ℕ∞))
+        exact congrArg (fun q : ℕ∞ => (q : WithBot ℕ∞))
           (WithTop.top_add (1 : ℕ∞))
   obtain ⟨n, hn⟩ := WithTop.ne_top_iff_exists.mp hqInfTop
   have hqInfNat : qInf = (n : ℕ) := by
@@ -244,12 +245,14 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
       change ringKrullDim (R ⧸ I) ≠ ⊥
       exact hqbot
     exact PrimeSpectrum.nonempty_iff_nontrivial.mp hqspec
-  letI : Nontrivial (R ⧸ I) := hqnontriv
-  letI : IsLocalRing (R ⧸ I) :=
+  let hlocal : IsLocalRing (R ⧸ I) :=
     IsLocalRing.of_surjective' (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
-  letI : IsLocalHom (Ideal.Quotient.mk I) :=
+  let hlocalhom : IsLocalHom (Ideal.Quotient.mk I) :=
     IsLocalHom.of_surjective (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
   have hparamq :=
+    letI : Nontrivial (R ⧸ I) := hqnontriv
+    letI : IsLocalRing (R ⧸ I) := hlocal
+    letI : IsLocalHom (Ideal.Quotient.mk I) := hlocalhom
     ((Formalization.Books.Algebra.Unit60.local_dimension_characterization
       (R ⧸ I) inferInstance (d₀ - 1)).out 0 2).mp hdimqNat
   obtain ⟨w, hw, hdefq⟩ := hparamq.1
@@ -273,10 +276,13 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
     rw [← hmap, Ideal.comap_map_of_surjective (Ideal.Quotient.mk I) hsurj,
       ← RingHom.ker_eq_comap_bot,
       Ideal.mk_ker, sup_comm]
-  have hdefK : Unit59.IsIdealOfDefinition R (I ⊔ J) := by
-    unfold Unit59.IsIdealOfDefinition
-    rw [← hcomap, ← Ideal.comap_radical, hdefq,
-      IsLocalRing.maximalIdeal_comap]
+  have hdefK : Unit59.IsIdealOfDefinition R (I ⊔ J) :=
+    letI : IsLocalRing (R ⧸ I) := hlocal
+    letI : IsLocalHom (Ideal.Quotient.mk I) := hlocalhom
+    by
+      unfold Unit59.IsIdealOfDefinition
+      rw [← hcomap, ← Ideal.comap_radical, hdefq,
+        IsLocalRing.maximalIdeal_comap]
   have hlen : (d₀ - 1) + 1 = d₀ := by omega
   have htail : (d₀ - 2) + 1 = d₀ - 1 := by omega
   let vzero : R := v ⟨0, by omega⟩
@@ -333,14 +339,25 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
             ⟩
   have hvmax : ∀ k, v k ∈ IsLocalRing.maximalIdeal R := by
     intro k
-    have hk : (Ideal.Quotient.mk I) (v k) ∈
-        IsLocalRing.maximalIdeal (R ⧸ I) := by
-      rw [hv k]
-      exact hw k
-    have hk' : v k ∈ Ideal.comap (Ideal.Quotient.mk I)
-        (IsLocalRing.maximalIdeal (R ⧸ I)) := hk
-    rw [IsLocalRing.maximalIdeal_comap] at hk'
-    exact hk'
+    have hk :=
+      letI : IsLocalRing (R ⧸ I) := hlocal
+      letI : IsLocalHom (Ideal.Quotient.mk I) := hlocalhom
+      (show (Ideal.Quotient.mk I) (v k) ∈
+          IsLocalRing.maximalIdeal (R ⧸ I) from by
+        rw [hv k]
+        exact hw k)
+    have hk' :=
+      letI : IsLocalRing (R ⧸ I) := hlocal
+      letI : IsLocalHom (Ideal.Quotient.mk I) := hlocalhom
+      (show v k ∈ Ideal.comap (Ideal.Quotient.mk I)
+          (IsLocalRing.maximalIdeal (R ⧸ I)) from hk)
+    have hk'' :=
+      letI : IsLocalRing (R ⧸ I) := hlocal
+      letI : IsLocalHom (Ideal.Quotient.mk I) := hlocalhom
+      by
+        rw [IsLocalRing.maximalIdeal_comap] at hk'
+        exact hk'
+    exact hk''
   have ha : ∀ i, a i ∈ IsLocalRing.maximalIdeal R := by
     intro i
     let j : Fin ((d₀ - 1) + 1) := Fin.cast hlen.symm i
@@ -485,7 +502,7 @@ theorem noetherian_ring_with_finite_primeSpectrum_dim_le_one
     apply eA.symm.lt_iff_lt.mpr
     change p₁ < p₂
     exact hp₁₂
-  letI : m.IsPrime := hm.1.1
+  let hmprime : m.IsPrime := hm.1.1
   let T := Localization.AtPrime p₂A.asIdeal
   let eT := IsLocalization.AtPrime.primeSpectrumOrderIso T p₂A.asIdeal
   have hp₀A₂ : p₀A ≤ p₂A := hp₀₁A.le.trans hp₁₂A.le
@@ -522,14 +539,16 @@ theorem noetherian_ring_with_finite_primeSpectrum_dim_le_one
     intro p q h
     apply eA.injective
     exact Subtype.ext h
-  letI : Finite (PrimeSpectrum A) := hAfin
-  have hTfin : Finite (PrimeSpectrum T) := by
-    apply Finite.of_injective (fun p => (eT p).1)
-    intro p q h
-    apply eT.injective
-    exact Subtype.ext h
-  letI : Finite (PrimeSpectrum T) := hTfin
+  have hTfin : Finite (PrimeSpectrum T) :=
+    letI : Finite (PrimeSpectrum A) := hAfin
+    by
+      apply Finite.of_injective (fun p => (eT p).1)
+      intro p q h
+      apply eT.injective
+      exact Subtype.ext h
   have hInf :=
+    letI : m.IsPrime := hmprime
+    letI : Finite (PrimeSpectrum T) := hTfin
     nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_two
       (R := T) hTdim (U := Set.univ) isOpen_univ Set.univ_nonempty
   have hInfT : Infinite (PrimeSpectrum T) := Set.infinite_univ_iff.mp hInf

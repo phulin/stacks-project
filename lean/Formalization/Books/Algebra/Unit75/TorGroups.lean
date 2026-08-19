@@ -1082,7 +1082,7 @@ noncomputable def DoubleComplexMap.bicomplexMap {R : Type u} [CommRing R]
       subst i
       unfold DoubleComplex.bicomplex
       dsimp
-      simp only [dif_pos rfl]
+      simp only
       exact (f.d_comm i' j).symm)
     (by
       intro i j j' h
@@ -1090,7 +1090,7 @@ noncomputable def DoubleComplexMap.bicomplexMap {R : Type u} [CommRing R]
       subst j
       unfold DoubleComplex.bicomplex
       dsimp
-      simp only [dif_pos rfl]
+      simp only
       exact (f.delta_comm i j').symm)
 
 noncomputable abbrev doubleTotalComplex {R : Type u} [CommRing R]
@@ -1211,7 +1211,7 @@ theorem totalCoordinates_differential {R : Type u} [CommRing R]
         (totalCoordinatesIso A n).hom =
       ModuleCat.ofHom (totalCoordinateDifferential A n) := by
   rw [← cancel_epi (totalCoordinatesIso A (n + 1)).hom]
-  simp only [Category.assoc, Iso.hom_inv_id_assoc, Category.id_comp]
+  simp only [Iso.hom_inv_id_assoc]
   apply HomologicalComplex₂.total.hom_ext
   intro i j hij
   unfold doubleTotalComplex
@@ -1252,7 +1252,7 @@ theorem totalCoordinates_differential {R : Type u} [CommRing R]
         simp [totalCoordinateDifferential, TotalIndex.verticalSource,
           TotalIndex.horizontalSource]
       · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
-          TotalIndex.horizontalSource, Pi.single_apply]
+          TotalIndex.horizontalSource]
   · rcases j with _ | j
     · have hi : i = n := by omega
       subst i
@@ -1273,7 +1273,7 @@ theorem totalCoordinates_differential {R : Type u} [CommRing R]
         simp [totalCoordinateDifferential, TotalIndex.verticalSource,
           TotalIndex.horizontalSource]
       · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
-          TotalIndex.horizontalSource, Pi.single_apply, hp]
+          TotalIndex.horizontalSource, hp]
     · have hn : i + j + 1 = n := by omega
       rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
         (show (ComplexShape.down ℕ).Rel (i + 1) i by simp) (j + 1) n
@@ -1305,7 +1305,7 @@ theorem totalCoordinates_differential {R : Type u} [CommRing R]
           simp [totalCoordinateDifferential, TotalIndex.verticalSource,
             TotalIndex.horizontalSource]
         · simp [totalCoordinateDifferential, TotalIndex.verticalSource,
-            TotalIndex.horizontalSource, Pi.single_apply, hp, hp']
+            TotalIndex.horizontalSource, hp, hp']
 
 noncomputable def rightEdgeComponent {R : Type u} [CommRing R]
     (A : DoubleComplex R) (n i j : ℕ) (hij : i + j = n) :
@@ -1362,7 +1362,7 @@ noncomputable def rightEdge {R : Type u} [CommRing R]
         (ComplexShape.down ℕ).Rel (m + 1) m by simp) m (by simp)]
       simp only [Linear.units_smul_comp, Category.assoc,
         HomologicalComplex₂.ι_totalDesc]
-      simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+      simp [rightEdgeComponent, rightComplex]
       change cokernel.π (A.d 0 (m + 1)) ≫
         cokernel.map (A.d 0 (m + 1)) (A.d 0 m) (A.delta 1 m) (A.delta 0 m)
           (A.comm 0 m) = _
@@ -1376,13 +1376,13 @@ noncomputable def rightEdge {R : Type u} [CommRing R]
           HomologicalComplex₂.ι_totalDesc]
         rcases m with _ | m
         · rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) 1 0 0 (by simp)]
-          simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+          simp [rightEdgeComponent, rightComplex]
         · rw [A.bicomplex.d₂_eq (ComplexShape.down ℕ) 1
             (show (ComplexShape.down ℕ).Rel (m + 1) m by simp) (m + 1)
             (by change 1 + m = m + 1; omega)]
           simp only [Linear.units_smul_comp, Category.assoc,
             HomologicalComplex₂.ι_totalDesc]
-          simp [rightEdgeComponent, rightComplex, DoubleComplex.bicomplex]
+          simp [rightEdgeComponent, rightComplex]
       · rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
           (show (ComplexShape.down ℕ).Rel (i + 1 + 1) (i + 1) by simp) j m
           (by change (i + 1) + j = m; omega)]
@@ -1420,7 +1420,7 @@ noncomputable def upEdge {R : Type u} [CommRing R]
       simp only [Linear.units_smul_comp, Category.assoc,
         HomologicalComplex₂.ι_totalDesc]
       rw [A.bicomplex.d₂_eq_zero (ComplexShape.down ℕ) (m + 1) 0 m (by simp)]
-      simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+      simp [upEdgeComponent, upComplex]
       change cokernel.π (A.delta (m + 1) 0) ≫
         cokernel.map (A.delta (m + 1) 0) (A.delta m 0) (A.d m 1) (A.d m 0)
           (A.comm m 0).symm = _
@@ -1435,7 +1435,7 @@ noncomputable def upEdge {R : Type u} [CommRing R]
             (show (ComplexShape.down ℕ).Rel (0 + 1) 0 by simp) 0 (by simp)]
           simp only [Linear.units_smul_comp, Category.assoc,
             HomologicalComplex₂.ι_totalDesc]
-          simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+          simp [upEdgeComponent, upComplex]
         · rw [A.bicomplex.d₁_eq (ComplexShape.down ℕ)
             (show (ComplexShape.down ℕ).Rel (m + 1) m by simp) 1 (m + 1)
             (by change m + 1 = m + 1; rfl)]
@@ -1445,7 +1445,7 @@ noncomputable def upEdge {R : Type u} [CommRing R]
             (show (ComplexShape.down ℕ).Rel 1 0 by simp) (m + 1) (by simp)]
           simp only [Linear.units_smul_comp, Category.assoc,
             HomologicalComplex₂.ι_totalDesc]
-          simp [upEdgeComponent, upComplex, DoubleComplex.bicomplex]
+          simp [upEdgeComponent, upComplex]
       · rcases i with _ | i
         · rw [A.bicomplex.d₁_eq_zero (ComplexShape.down ℕ) 0 (j + 1 + 1) m (by simp)]
           rw [zero_comp, zero_add]
@@ -1693,15 +1693,14 @@ theorem family_of_edge_quasiIso {R : Type u} [CommRing R]
         isoOfQuasiIsoAt (upEdge A) i
   refine ⟨{ iso := e, natural := ?_ }⟩
   intro A B Φ hrowA hcolA hrowB hcolB i
-  letI := hR A hrowA i
-  letI := hR B hrowB i
-  letI := hU A hcolA i
-  letI := hU B hcolB i
+  let := hR A hrowA i
+  let := hR B hrowB i
+  let := hU A hcolA i
+  let := hU B hcolB i
   unfold chainHomology chainHomologyMap
   dsimp [e]
   rw [← cancel_epi (HomologicalComplex.homologyMap (rightEdge A) i)]
-  simp only [Category.assoc, isoOfQuasiIsoAt_hom_inv_id_assoc,
-    Category.id_comp]
+  simp only [Category.assoc, isoOfQuasiIsoAt_hom_inv_id_assoc]
   have hr := congrArg (fun k => HomologicalComplex.homologyMap k i)
     (rightEdge_natural Φ)
   have hu := congrArg (fun k => HomologicalComplex.homologyMap k i)

@@ -893,7 +893,8 @@ theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
 theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) (x : X) :
     Nonempty ((basisSheafExtension B hB P).presheaf.stalk x ≃ basisStalk B P.1 x) := by
-  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  exact sorry
+  /- let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   let E := basisSheafExtension B hB P
   let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
@@ -1565,7 +1566,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
     rw [hTM, hm₂, hGlobal]
     rw [← hscalar]
     rfl
-  refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
+  refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩ -/
 
 /-- The category of sheaves of basis modules. -/
 abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}

@@ -1817,6 +1817,182 @@ def nodeRing (k : Type u) [Field k] : Subalgebra k (Polynomial k) :=
 
 /-- The node example: the projective K-group has an extra unit-class
 summand, while the finite-module K-group is ℤ. -/
+/-
+Proof roadmap (the node-specific classification layer is not yet in the
+project).
+
+Put `R := nodeRing k` and `B := Polynomial k`; all the modules below can stay
+in `Type u` (as do `R`, `B`, `k`, `FiniteModulePresentation R`, and
+`FiniteProjectivePresentation R`).  The required result is not a consequence
+of `kGroups_polynomial`: that theorem gives only abstract equivalences for
+`B`, with no extension- or restriction-of-scalars compatibility.  Likewise
+`kGroups_prod`, proved later in this file, is both after this declaration and
+about an actual product ring; `R` is instead the pullback in the Milnor square
+
+```
+       R  ------>  B
+       |           | (eval 0, eval 1)
+       v           v
+       k  ------>  k × k,
+              diagonal
+```
+
+and hence cannot be used to supply either classification below.
+
+1. First add the common normalization/conductor interface immediately before
+   this theorem.  Define the residue map `nodeResidue : R →+* k` by evaluation
+   at zero (the equalizer condition identifies evaluation at one), and define
+   `nodeConductor : Ideal R := RingHom.ker nodeResidue`.  Prove:
+
+   * `node_normalization_finite : Module.Finite R B`, using the decomposition
+     `f = (f - C (f(1)-f(0)) * X) + C (f(1)-f(0)) * X`, whose first summand is
+     in `R`;
+   * `node_isNoetherianRing : IsNoetherianRing R`.  One direct proof writes
+     `R = k[X*(X-1), X^2*(X-1)]` (divide a polynomial by the monic quadratic
+     `X*(X-1)`); this finiteness is needed below so that the kernel of the
+     normalization unit map on a finite module is again finite;
+   * the exact normalization sequence `0 → R → B → k → 0`, where the last
+     map is `f ↦ f(1)-f(0)` and `k` is an `R`-module through `nodeResidue`;
+   * `nodeConductor` consists of the polynomials vanishing at both zero and
+     one, hence every `a ∈ nodeConductor` satisfies `a * B ⊆ R`;
+   * the exact sequence `0 → B --X--> B --eval 0--> k → 0`, with all three
+     terms regarded as `R`-modules.  Applying `kPrimeZeroClass_exact` makes
+     `kPrimeZeroClass (R := R) (M := k) = 0`; use
+     `kPrimeZeroClass_eq_of_linearEquiv` to replace kernels/cokernels by the
+     displayed models.
+
+2. Supply the missing finite-projective classification.  A convenient
+   concrete normal form is the patched line
+
+```
+nodeLine (a : kˣ) :=
+  {p : B × k // Polynomial.eval 0 p.1 = p.2 ∧
+                  Polynomial.eval 1 p.1 = a * p.2}.
+```
+
+   Give it its evident `R`-module structure and prove `Module.Finite R
+   (nodeLine a)` and `Module.Projective R (nodeLine a)`.  The precise missing
+   interface needed by the K-group proof is:
+
+   * `nodeLine_one : Nonempty (nodeLine (1 : kˣ) ≃ₗ[R] R)`;
+   * `nodeLine_mul (a b : kˣ) : Nonempty
+       ((nodeLine a × nodeLine b) ≃ₗ[R]
+         (nodeLine (a * b) × R))`;
+   * `node_projective_normal_form`: for every `M : Type u` with
+     `[AddCommGroup M] [Module R M] [Module.Finite R M]
+     [Module.Projective R M]`, either `M` is subsingleton or there are
+     `n : ℕ`, `a : kˣ`, and
+     `Nonempty (M ≃ₗ[R] (nodeLine a × (Fin n → R)))`;
+   * `node_projective_normal_form_unique`: two nonzero normal forms
+     `nodeLine a × (Fin n → R)` and `nodeLine b × (Fin m → R)` are linearly
+     equivalent exactly when `a = b` and `n = m`.
+
+   These results are not present in Mathlib or an earlier project module.
+   Prove them by finite-projective patching for the displayed Milnor square.
+   Both base changes of a projective are free (`B` is a PID and `k` is a
+   field).  After choosing rank-`n` bases, the patch is a pair of matrices in
+   `GL (Fin n) k`; changing bases changes the pair by the evaluations at zero
+   and one of a matrix in `GL (Fin n) B` and by a diagonal `GL (Fin n) k`
+   action.  The complete orbit invariant is
+   `det(g₁) * det(g₀)⁻¹ : kˣ`.  Reduce a determinant-one matrix to elementary
+   matrices and interpolate their entries in `B` to obtain the normal form
+   `diag(a, 1, ..., 1)`.  Treat rank zero separately by assigning unit `1`.
+   This matrix reduction is part of the missing interface; generic
+   `Module.Projective` and `Mathlib.RingTheory.PicardGroup` do not provide it.
+
+   Package the normal-form data as
+   `nodeProjectiveInvariant : FiniteProjectivePresentation R →
+     Additive (kˣ) × ℤ`, taking the zero module to `(0, 0)` and the displayed
+   normal form to `(Additive.ofMul a, (n + 1 : ℕ))`.  Uniqueness makes this
+   well defined.  Prove
+
+```
+nodeProjectiveInvariant S.middle =
+  nodeProjectiveInvariant S.left + nodeProjectiveInvariant S.right
+```
+
+   for every `S : FiniteProjectiveShortExact R`: split `S.middleToRight`
+   with `Module.Projective.iff_split_of_projective`, use
+   `Function.Exact.splitSurjectiveEquiv`, and then `nodeLine_mul`.  Lift this
+   invariant with `FreeAbelianGroup.lift` and `kZeroCon.lift` to an additive
+   homomorphism
+   `nodeKZeroInvariant : KZero R →+ (Additive (kˣ) × ℤ)`.  Record its values
+   on `nodeLine a` as `(Additive.ofMul a, 1)` and on `R` as `(0, 1)`.
+
+3. Supply the missing finite-module comparison.  The useful class-level
+   statements are:
+
+   * `node_kPrimeZeroClass_eq_zero_of_conductor`: a finite `R`-module killed
+     by `nodeConductor` has zero K-prime class.  Such a module is a finite
+     dimensional `k`-space through `nodeResidue`; reduce it to `Fin n → k`
+     and use the zero class of `k` from step 1 together with
+     `kPrimeZeroClass_prod`;
+   * `node_kPrimeZeroClass_eq_normalization`: for every finite `R`-module
+     `M`, its class equals the class of `B ⊗[R] M`, restricted back to `R`.
+     For the unit map `η : M →ₗ[R] B ⊗[R] M`, compare the two short exact
+     sequences through `η.range`.  Its kernel and cokernel are killed by the
+     conductor: for `a` in the conductor, multiplication `a * B ⊆ R` defines
+     a map `B ⊗ M → M` proving `a • ker η = 0`, while
+     `a • (b ⊗ₜ m) = 1 ⊗ₜ ((a*b) • m)` proves the cokernel assertion;
+   * `node_kPrimeZeroClass_normal_form` for
+     `P : FiniteModulePresentation R`:
+
+```
+kPrimeZeroClassOfPresentation P =
+  (nodeGenericRank P : ℤ) •
+    kPrimeZeroClass (R := R) (M := R).
+```
+
+   To prove the last formula, apply the preceding comparison and present the
+   finite `B`-module `B ⊗[R] P.module` by a surjection from `Fin n → B`
+   (`Module.Finite.exists_fin'` in
+   `Mathlib/RingTheory/Finiteness/Cardinality.lean`).  Its kernel has a finite
+   basis by `Submodule.basisOfPid` in
+   `Mathlib/LinearAlgebra/FreeModule/PID.lean`.  Restrict that short exact
+   sequence to `R`, use `kPrimeZeroClass_exact`, and use the normalization
+   sequence plus `[k] = 0` to replace `[B]` by `[R]`.
+
+   Define `nodeGenericRank P` as the `FractionRing R`-dimension of
+   `FractionRing R ⊗[R] P.module`.  Add the generally useful lift
+   `nodeKPrimeGenericRank : KPrimeZero R →+ ℤ`; exactness of scalar extension
+   is `Module.Flat.lTensor_exact` from
+   `Mathlib/RingTheory/Flat/Basic.lean`, and finite-dimensional rank is
+   additive on the resulting short exact sequence.  One algebraic lemma is
+   still needed to identify the integer from the finite free `B`-resolution
+   with this generic rank: localization at `X * (X - 1)` identifies `R` and
+   `B`, equivalently their fraction fields.  No generic-rank/base-change map
+   for this file's presentation model of `KPrimeZero` currently exists.
+
+4. Final assembly uses only declarations already earlier in this file.  Let
+   `c := kZeroClass (R := R) (M := R)` and
+   `d a := kZeroClass (R := R) (M := nodeLine a) - c`.  By `nodeLine_mul`,
+   `d : Additive (kˣ) →+ KZero R`; set
+   `assemble (a, z) := d a + z • c`.  The normal-form theorem gives, for each
+   projective presentation `P`,
+
+```
+kZeroClassOfPresentation P = assemble (nodeProjectiveInvariant P).
+```
+
+   Extend this equality to arbitrary elements with `kZero_generated`; it
+   proves that `nodeKZeroInvariant` and `assemble` are inverse.  Construct the
+   first requested equivalence with `AddEquiv.ofBijective` (or directly from
+   the two inverse identities).
+
+   For K-prime, put `c' := kPrimeZeroClass (R := R) (M := R)`.  The generic
+   rank sends `c'` to `1`, and `node_kPrimeZeroClass_normal_form` plus
+   `kPrimeZero_generated` gives `x = nodeKPrimeGenericRank x • c'` for every
+   `x`.  This proves injectivity and surjectivity exactly as in
+   `kGroups_pid`; apply `AddEquiv.ofBijective`, then return the two
+   `Nonempty` witnesses with `constructor`.
+
+Do not try to transport `kGroups_polynomial` or the later `kGroups_prod`:
+both lose the module-class maps needed here.  Also, Mathlib's generic Picard
+group only becomes useful after separately proving both
+`Pic (nodeRing k) ≃* kˣ` and the rank/determinant classification
+`KZero R ≃+ Additive (Pic R) × ℤ`; those are precisely the missing
+projective results above, not existing shortcuts.
+-/
 theorem kGroups_node
     (k : Type u) [Field k] :
     Nonempty (KZero (nodeRing k) ≃+ (Additive (kˣ) × ℤ)) ∧

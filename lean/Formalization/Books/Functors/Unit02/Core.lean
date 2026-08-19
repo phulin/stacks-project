@@ -47,26 +47,26 @@ instance finitelyPresentedModuleCat_hasFiniteColimits
     HasFiniteColimits (FinitelyPresentedModuleCat A) := by
   change HasFiniteColimits ((finitelyPresentedModuleProperty A).FullSubcategory)
   let P := finitelyPresentedModuleProperty.{u, u_1} A
-  letI : P.IsClosedUnderIsomorphisms := {
+  let : P.IsClosedUnderIsomorphisms := {
     of_iso := by
       intro X Y e hX
-      letI : Module.FinitePresentation A (X : Type _) := hX
+      let : Module.FinitePresentation A (X : Type _) := hX
       change Module.FinitePresentation A (Y : Type _)
       exact Module.FinitePresentation.of_equiv e.toLinearEquiv
   }
-  letI : P.ContainsZero := {
+  let : P.ContainsZero := {
     exists_zero := by
       refine ⟨ModuleCat.of A PUnit, ModuleCat.isZero_of_subsingleton _, ?_⟩
       · change Module.FinitePresentation A PUnit
         exact inferInstance
   }
-  letI : P.IsClosedUnderBinaryCoproducts := by
+  let : P.IsClosedUnderBinaryCoproducts := by
     apply ObjectProperty.IsClosedUnderColimitsOfShape.mk'
     rintro _ ⟨F, hF⟩
     let X₁ := F.obj ⟨WalkingPair.left⟩
     let X₂ := F.obj ⟨WalkingPair.right⟩
-    letI : Module.FinitePresentation A (X₁ : Type u_1) := hF _
-    letI : Module.FinitePresentation A (X₂ : Type u_1) := hF _
+    let : Module.FinitePresentation A (X₁ : Type u_1) := hF _
+    let : Module.FinitePresentation A (X₂ : Type u_1) := hF _
     have hprod : P (ModuleCat.of A (X₁ × X₂)) := by
       change Module.FinitePresentation A (X₁ × X₂)
       exact inferInstance
@@ -80,15 +80,15 @@ instance finitelyPresentedModuleCat_hasFiniteColimits
         ((IsColimit.precomposeHomEquiv (diagramIsoPair F).symm (colimit.cocone F)).2
           (colimit.isColimit F)))
     exact P.prop_of_iso eprod hprod
-  letI : P.IsClosedUnderFiniteCoproducts :=
+  let : P.IsClosedUnderFiniteCoproducts :=
     ObjectProperty.IsClosedUnderFiniteCoproducts.mk'
-  letI : P.IsClosedUnderCokernels := by
+  let : P.IsClosedUnderCokernels := by
     refine { cokernels_le := ?_ }
     rintro _ ⟨f, k, hk, ⟨hX, hY⟩⟩
-    letI : Module.FinitePresentation A _ := hX
-    letI : Module.FinitePresentation A _ := hY
+    let : Module.FinitePresentation A _ := hX
+    let : Module.FinitePresentation A _ := hY
     have hrange : Module.Finite A (LinearMap.range f.hom) := inferInstance
-    letI : Module.Finite A (LinearMap.range f.hom) := hrange
+    let : Module.Finite A (LinearMap.range f.hom) := hrange
     have hquot :=
       Module.finitePresentation_of_surjective (LinearMap.range f.hom).mkQ
         (Submodule.mkQ_surjective _) (by
@@ -108,26 +108,26 @@ theorem finitelyPresentedModuleCat_hasFiniteLimits_of_coherent
     HasFiniteLimits (FinitelyPresentedModuleCat A) := by
   change HasFiniteLimits ((finitelyPresentedModuleProperty.{u, u_1} A).FullSubcategory)
   let P := finitelyPresentedModuleProperty.{u, u_1} A
-  letI : P.IsClosedUnderIsomorphisms := {
+  let : P.IsClosedUnderIsomorphisms := {
     of_iso := by
       intro X Y e hX
-      letI : Module.FinitePresentation A (X : Type u_1) := hX
+      let : Module.FinitePresentation A (X : Type u_1) := hX
       change Module.FinitePresentation A (Y : Type u_1)
       exact Module.FinitePresentation.of_equiv e.toLinearEquiv
   }
-  letI : P.ContainsZero := {
+  let : P.ContainsZero := {
     exists_zero := by
       refine ⟨ModuleCat.of A PUnit, ModuleCat.isZero_of_subsingleton _, ?_⟩
       change Module.FinitePresentation A PUnit
       exact inferInstance
   }
-  letI : P.IsClosedUnderBinaryProducts := by
+  let : P.IsClosedUnderBinaryProducts := by
     apply ObjectProperty.IsClosedUnderLimitsOfShape.mk'
     rintro _ ⟨F, hF⟩
     let X₁ := F.obj ⟨WalkingPair.left⟩
     let X₂ := F.obj ⟨WalkingPair.right⟩
-    letI : Module.FinitePresentation A (X₁ : Type u_1) := hF _
-    letI : Module.FinitePresentation A (X₂ : Type u_1) := hF _
+    let : Module.FinitePresentation A (X₁ : Type u_1) := hF _
+    let : Module.FinitePresentation A (X₂ : Type u_1) := hF _
     have hprod : P (ModuleCat.of A (X₁ × X₂)) := by
       change Module.FinitePresentation A (X₁ × X₂)
       exact inferInstance
@@ -140,9 +140,9 @@ theorem finitelyPresentedModuleCat_hasFiniteLimits_of_coherent
         ((IsLimit.postcomposeHomEquiv (diagramIsoPair F) (limit.cone F)).2
           (limit.isLimit F))
     exact P.prop_of_iso eprod hprod
-  letI : P.IsClosedUnderFiniteProducts :=
+  let : P.IsClosedUnderFiniteProducts :=
     ObjectProperty.IsClosedUnderFiniteProducts.mk'
-  letI : P.IsClosedUnderKernels := by
+  let : P.IsClosedUnderKernels := by
     refine { kernels_le := ?_ }
     rintro _ ⟨f, k, hk, ⟨hX, hY⟩⟩
     have hkercoh :=
@@ -225,7 +225,7 @@ def filteredKernelComparison
       (kernel.ι (D.obj i).hom ≫ (colimit.ι D i).left) ≫ (colimit D).hom =
         (0 : kernel (D.obj i).hom ⟶ (colimit D).right)
     rw [Category.assoc, Arrow.Hom.w (colimit.ι D i)]
-    simp [Category.assoc])
+    simp)
 
 def FilteredColimitsCommuteWithKernels
     (B : Type u') [Category.{v'} B]

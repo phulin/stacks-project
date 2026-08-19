@@ -1406,7 +1406,7 @@ theorem simplexMaxHomotopy_exists (m : ℕ) :
           (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
       apply SSet.stdSimplex.objEquiv.injective
       ext k
-      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+      simp [g, SSet.stdSimplex.map_apply] ; rfl
     }
   let H : SSet.Homotopy (𝟙 (Δ[m] : SSet.{u}))
       (simplexToPoint m ≫ pointToSimplexLast m) := by
@@ -1428,7 +1428,7 @@ theorem simplexMaxHomotopy_exists (m : ℕ) :
           have hsnd := SSet.ι₀_app_snd_apply (X := (Δ[m] : SSet.{u})) x
           apply SSet.stdSimplex.objEquiv.injective
           ext k
-          simp [g, hfst, hsnd, SSet.stdSimplex.const]
+          simp [g, hfst, hsnd]
     · change SSet.ι₁ ≫ h = simplexToPoint m ≫ pointToSimplexLast m
       apply SimplicialObject.hom_ext
       intro X
@@ -1505,7 +1505,7 @@ theorem simplexFirstHomotopy_exists (m : ℕ) :
           (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
       apply SSet.stdSimplex.objEquiv.injective
       ext k
-      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+      simp [g, SSet.stdSimplex.map_apply] ; rfl
     }
   refine ⟨?_⟩
   unfold SSet.Homotopy
@@ -1546,7 +1546,7 @@ theorem simplexFirstHomotopy_exists (m : ℕ) :
         have hsnd := SSet.ι₁_app_snd_apply (X := (Δ[m] : SSet.{u})) x
         apply SSet.stdSimplex.objEquiv.injective
         ext k
-        simp [g, hfst, hsnd, SSet.stdSimplex.const]
+        simp [g, hfst, hsnd]
   · ext m x
     exact x.1.property.elim
 
@@ -1634,7 +1634,7 @@ theorem simplex_homotopy_equivalent_point (m : ℕ) :
       rw [hH]
       simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply,
         simplexToPoint, pointToSimplexLast, SSet.stdSimplex.const,
-        SSet.stdSimplex.map_apply] <;> rfl
+        SSet.stdSimplex.map_apply] ; rfl
     h_last := by
       intro n
       apply ConcreteCategory.hom_ext
@@ -1703,7 +1703,7 @@ theorem intervalMaxMap_exists :
           (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
       apply SSet.stdSimplex.objEquiv.injective
       ext k
-      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+      simp [g, SSet.stdSimplex.map_apply] ; rfl
     }
   refine ⟨μ, ?_⟩
   intro n β₁ β₂
@@ -1740,7 +1740,7 @@ theorem intervalMinMap_exists :
           (SSet.stdSimplex.objEquiv.symm (g x.1 x.2))
       apply SSet.stdSimplex.objEquiv.injective
       ext k
-      simp [g, SSet.stdSimplex.map_apply] <;> rfl
+      simp [g, SSet.stdSimplex.map_apply] ; rfl
     }
   refine ⟨μ, ?_⟩
   intro n β₁ β₂

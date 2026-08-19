@@ -1240,12 +1240,14 @@ theorem exists_tower_pth_roots_minpoly_coefficients
     (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
     (x : ι → K) (hx : AlgebraicIndependent k x) (a : K) :
     ∃ tower : FinitePthRootBaseChangeTower k K p hp,
-      ∀ i : ℕ, ∃ q : finitePthRootTopAtLevel tower,
-        q ^ p = algebraMap K (finitePthRootTopAtLevel tower)
-          ((minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i : K) := by
-  obtain ⟨tower, _, hcoeff⟩ := exists_tower_pth_roots_adjoin_finset p hp x hx
+      @Algebra.IsAlgebraic tower.comparisonLower tower.comparisonUpper _ _
+          (RingHom.toAlgebra tower.comparisonMap) ∧
+        ∀ i : ℕ, ∃ q : finitePthRootTopAtLevel tower,
+          q ^ p = algebraMap K (finitePthRootTopAtLevel tower)
+            ((minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i : K) := by
+  obtain ⟨tower, hAlg, hcoeff⟩ := exists_tower_pth_roots_adjoin_finset p hp x hx
     (minpoly (IntermediateField.adjoin k (Set.range x)) a).coeffs
-  refine ⟨tower, ?_⟩
+  refine ⟨tower, hAlg, ?_⟩
   intro i
   by_cases hi : (minpoly (IntermediateField.adjoin k (Set.range x)) a).coeff i = 0
   · refine ⟨0, ?_⟩

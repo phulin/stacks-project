@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
+import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
 /-!
@@ -1263,7 +1264,50 @@ theorem closed_subset_eq_VPlus (G : GradedRingData S)
 theorem VPlus_empty_iff (G : GradedRingData S)
     (I : HomogeneousIdeal G.component) :
     VPlus G I = ∅ ↔ projIrrelevantIdeal G ≤ I.toIdeal.radical := by
-  sorry
+  constructor
+  · intro h
+    by_contra hnot
+    obtain ⟨x, hxirr, hxrad⟩ := Set.not_subset.mp hnot
+    have hrad :
+        (I.toIdeal.radical : Set S) =
+          (↑(sInf {J : Ideal S |
+            Ideal.IsHomogeneous G.component J ∧ I.toIdeal ≤ J ∧ J.IsPrime} : Ideal S) : Set S) :=
+      congrArg (fun K : Ideal S => (K : Set S)) I.isHomogeneous.radical_eq
+    have hxrad' : x ∉ (↑(sInf {J : Ideal S |
+        Ideal.IsHomogeneous G.component J ∧ I.toIdeal ≤ J ∧ J.IsPrime} : Ideal S) : Set S) := by
+      exact fun hx => hxrad (hrad.symm ▸ hx)
+    have hxrad'' : ¬ x ∈ (sInf {J : Ideal S |
+        Ideal.IsHomogeneous G.component J ∧ I.toIdeal ≤ J ∧ J.IsPrime} : Ideal S) := by
+      intro hx
+      exact hxrad' hx
+    obtain ⟨J, hJhom, hIJ, hJprime, hxJ⟩ :
+        ∃ J : Ideal S,
+          Ideal.IsHomogeneous G.component J ∧ I.toIdeal ≤ J ∧ J.IsPrime ∧ x ∉ J := by
+      by_contra hJ
+      push Not at hJ
+      apply hxrad''
+      apply Ideal.mem_sInf.mpr
+      intro J hJ'
+      exact hJ J hJ'.1 hJ'.2.1 hJ'.2.2
+    let p : projectiveSpectrum G :=
+      { asHomogeneousIdeal := ⟨J, hJhom⟩
+        isPrime := hJprime
+        not_irrelevant_le := by
+          intro hle
+          exact hxJ (hle hxirr) }
+    have hpV : p ∈ VPlus G I := by
+      change p ∈ ProjectiveSpectrum.zeroLocus G.component I
+      rw [ProjectiveSpectrum.mem_zeroLocus]
+      exact hIJ
+    exact h ▸ hpV
+  · intro h
+    apply Set.eq_empty_iff_forall_notMem.mpr
+    intro p hp
+    have hIp : I.toIdeal ≤ p.asHomogeneousIdeal.toIdeal := by
+      exact (mem_VPlus G I p).mp hp
+    have htop : projIrrelevantIdeal G ≤ p.asHomogeneousIdeal.toIdeal := by
+      exact h.trans (p.isPrime.radical_le_iff.mpr hIp)
+    exact p.not_irrelevant_le htop
 
 /-- The polynomial-ring example proving that Proj need not be quasi-compact. -/
 def IsStandardPolynomialGrading (G : GradedRingData (MvPolynomial ℕ R)) : Prop :=
@@ -1275,13 +1319,195 @@ theorem infinite_polynomial_proj_cover
     (hG : IsStandardPolynomialGrading G) :
     (Set.univ : Set (projectiveSpectrum G)) =
       ⋃ i : ℕ, DPlus G (MvPolynomial.X i) := by
-  sorry
+  ext p
+  constructor
+  · intro hp
+    simp only [Set.mem_iUnion, mem_DPlus]
+    by_contra hX
+    push Not at hX
+    apply p.not_irrelevant_le
+    rw [HomogeneousIdeal.irrelevant_le]
+    intro n hn x hx
+    have hxhom : MvPolynomial.IsHomogeneous x n := (hG n x).mp hx
+    apply (show Ideal.span (MvPolynomial.X '' (Set.univ : Set ℕ)) ≤
+      p.asHomogeneousIdeal.toIdeal from
+      Ideal.span_le.mpr (fun y hy => by
+        obtain ⟨i, hi, rfl⟩ := hy
+        exact hX i))
+    apply (MvPolynomial.mem_ideal_span_X_image
+      (x := x) (s := (Set.univ : Set ℕ))).mpr
+    intro m hm
+    have hsome : ∃ i, m i ≠ 0 := by
+      have hdeg := hxhom.degree_eq_sum_deg_support hm
+      have hsum_ne : (∑ i ∈ m.support, m i) ≠ 0 := by
+        intro hsum
+        rw [hsum] at hdeg
+        exact (Nat.ne_of_gt hn) hdeg
+      obtain ⟨i, hi, hne⟩ := Finset.exists_ne_zero_of_sum_ne_zero hsum_ne
+      exact ⟨i, hne⟩
+    obtain ⟨i, hi⟩ := hsome
+    exact ⟨i, Set.mem_univ i, hi⟩
+  · intro hp
+    trivial
 
 theorem infinite_polynomial_proj_not_quasi_compact :
     ∃ G : GradedRingData (MvPolynomial ℕ ℤ),
       IsStandardPolynomialGrading G ∧
         ¬ IsCompact (Set.univ : Set (projectiveSpectrum G)) := by
-  sorry
+  let G : GradedRingData (MvPolynomial ℕ ℤ) :=
+    let A : ℕ → AddSubgroup (MvPolynomial ℕ ℤ) :=
+      fun n => (MvPolynomial.homogeneousSubmodule ℕ ℤ n).toAddSubgroup
+    let e : ∀ n : ℕ,
+        (MvPolynomial.homogeneousSubmodule ℕ ℤ n) ≃+
+          (MvPolynomial.homogeneousSubmodule ℕ ℤ n).toAddSubgroup := fun n =>
+      { toFun := fun x => ⟨x, x.property⟩
+        invFun := fun x => ⟨x, x.property⟩
+        left_inv := by intro x; rfl
+        right_inv := by intro x; rfl
+        map_add' := by intro x y; rfl }
+    let eDS : (⨁ n, MvPolynomial.homogeneousSubmodule ℕ ℤ n) ≃+
+        (⨁ n, A n) := DirectSum.congrAddEquiv e
+    let decompose' : MvPolynomial ℕ ℤ → ⨁ n, A n := fun x =>
+      eDS (MvPolynomial.decomposition.decompose' x)
+    let hcoeHom :
+        (DirectSum.coeAddMonoidHom A).comp eDS.toAddMonoidHom =
+          DirectSum.coeAddMonoidHom
+            (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) := by
+      apply DirectSum.addHom_ext
+      intro n x
+      change DirectSum.coeAddMonoidHom A
+          (eDS (DirectSum.of
+            (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) n x)) =
+        DirectSum.coeAddMonoidHom
+          (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n)
+            (DirectSum.of
+              (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) n x)
+      change DirectSum.coeAddMonoidHom A
+          (DirectSum.map (fun i => (e i).toAddMonoidHom)
+            (DirectSum.of
+              (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) n x)) =
+        DirectSum.coeAddMonoidHom
+          (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n)
+            (DirectSum.of
+              (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) n x)
+      rw [DirectSum.map_of, DirectSum.coeAddMonoidHom_of,
+        DirectSum.coeAddMonoidHom_of]
+      rfl
+    have hcoe (z : ⨁ n, MvPolynomial.homogeneousSubmodule ℕ ℤ n) :
+        DirectSum.coeAddMonoidHom A (eDS z) =
+          DirectSum.coeAddMonoidHom
+            (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n) z :=
+      DFunLike.congr_fun hcoeHom z
+    have hcoe_inj : Function.Injective (DirectSum.coeAddMonoidHom A) := by
+      intro x y hxy
+      apply eDS.symm.injective
+      apply Function.RightInverse.injective
+        MvPolynomial.decomposition.right_inv
+      calc
+        DirectSum.coeAddMonoidHom
+              (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n)
+              (eDS.symm x) =
+            DirectSum.coeAddMonoidHom A (eDS (eDS.symm x)) :=
+          (hcoe (eDS.symm x)).symm
+        _ = DirectSum.coeAddMonoidHom A x := by
+          rw [eDS.apply_symm_apply]
+        _ = DirectSum.coeAddMonoidHom A y := hxy
+        _ = DirectSum.coeAddMonoidHom
+              A (eDS (eDS.symm y)) := by
+          rw [eDS.apply_symm_apply]
+        _ = DirectSum.coeAddMonoidHom
+              (fun n : ℕ => MvPolynomial.homogeneousSubmodule ℕ ℤ n)
+              (eDS.symm y) := hcoe (eDS.symm y)
+    have hleft (x : MvPolynomial ℕ ℤ) :
+        DirectSum.coeAddMonoidHom A (decompose' x) = x := by
+      change DirectSum.coeAddMonoidHom A
+          (eDS (MvPolynomial.decomposition.decompose' x)) = x
+      rw [hcoe]
+      exact MvPolynomial.decomposition.left_inv x
+    have hright (z : ⨁ n, A n) : decompose'
+        (DirectSum.coeAddMonoidHom A z) = z := by
+      apply hcoe_inj
+      exact hleft (DirectSum.coeAddMonoidHom A z)
+    let graded : GradedRing A :=
+      { toGradedMonoid :=
+          { one_mem := by
+              change MvPolynomial.IsHomogeneous (1 : MvPolynomial ℕ ℤ) 0
+              exact MvPolynomial.isHomogeneous_one ℕ ℤ
+            mul_mem := by
+              intro i j x y hx hy
+              change MvPolynomial.IsHomogeneous x i at hx
+              change MvPolynomial.IsHomogeneous y j at hy
+              exact MvPolynomial.IsHomogeneous.mul hx hy }
+        toDecomposition :=
+          { decompose' := decompose'
+            left_inv := hleft
+            right_inv := hright } }
+    { component := A, graded := graded }
+  let _ : GradedRing G.component := G.graded
+  have hG : IsStandardPolynomialGrading G := by
+    intro n p
+    change p ∈ (MvPolynomial.homogeneousSubmodule ℕ ℤ n).toAddSubgroup ↔ _
+    rfl
+  refine ⟨G, hG, ?_⟩
+  intro hcompact
+  have hopen : ∀ i : ℕ, IsOpen (DPlus G (MvPolynomial.X i)) := by
+    intro i
+    apply isOpen_DPlus G
+    exact ⟨1, Nat.zero_lt_one,
+      (hG 1 (MvPolynomial.X i)).mpr (MvPolynomial.isHomogeneous_X ℤ i)⟩
+  obtain ⟨t, ht⟩ := hcompact.elim_finite_subcover
+    (fun i : ℕ => (DPlus G (MvPolynomial.X i) : Set (projectiveSpectrum G)))
+    hopen
+    (by rw [← infinite_polynomial_proj_cover G hG])
+  let n : ℕ := t.sup id + 1
+  have hn_not_mem : n ∉ t := by
+    intro hn
+    have hle : n ≤ t.sup id := Finset.le_sup (f := id) hn
+    dsimp [n] at hle
+    omega
+  let φ : MvPolynomial ℕ ℤ →+* Polynomial ℤ :=
+    MvPolynomial.eval₂Hom (Polynomial.C : ℤ →+* Polynomial ℤ)
+      (fun i => if i = n then Polynomial.X else 0)
+  let q : Ideal (MvPolynomial ℕ ℤ) := RingHom.ker φ
+  let P : HomogeneousIdeal G.component :=
+    q.homogeneousCore G.component
+  have hqprime : q.IsPrime := RingHom.ker_isPrime φ
+  have hPprime : P.toIdeal.IsPrime := hqprime.homogeneousCore
+  have hPq : P.toIdeal ≤ q := Ideal.toIdeal_homogeneousCore_le _ _
+  have hXnq : MvPolynomial.X n ∉ q := by
+    intro hx
+    have hxker : MvPolynomial.X (R := ℤ) (σ := ℕ) n ∈ RingHom.ker φ := by
+      simpa only [q] using hx
+    have hx' : φ (MvPolynomial.X (R := ℤ) (σ := ℕ) n) = 0 := hxker
+    have hx'' : Polynomial.X = 0 := by
+      simpa only [φ, MvPolynomial.eval₂Hom_X', if_pos rfl] using hx'
+    exact Polynomial.X_ne_zero hx''
+  have hXnP : MvPolynomial.X n ∉ P := by
+    intro hx
+    exact hXnq (hPq hx)
+  let p : projectiveSpectrum G :=
+    { asHomogeneousIdeal := P
+      isPrime := hPprime
+      not_irrelevant_le := by
+        intro hle
+        apply hXnP
+        apply hle
+        apply HomogeneousIdeal.mem_irrelevant_of_mem (𝒜 := G.component)
+        · exact Nat.zero_lt_one
+        · exact (hG 1 (MvPolynomial.X n)).mpr (MvPolynomial.isHomogeneous_X ℤ n) }
+  have hp : p ∈ (Set.univ : Set (projectiveSpectrum G)) := trivial
+  obtain ⟨i, hi, hpi⟩ := Set.mem_iUnion₂.mp (ht hp)
+  have hin : i ≠ n := by
+    intro h
+    exact hn_not_mem (h ▸ hi)
+  have hXi_q : MvPolynomial.X i ∈ q := by
+    change φ (MvPolynomial.X i) = 0
+    simp only [φ, MvPolynomial.eval₂Hom_X', if_neg hin]
+  have hXi_P : MvPolynomial.X i ∈ P := by
+    exact Ideal.mem_homogeneousCore_of_homogeneous_of_mem
+      (⟨1, (hG 1 (MvPolynomial.X i)).mpr
+        (MvPolynomial.isHomogeneous_X ℤ i)⟩) hXi_q
+  exact (mem_DPlus G p).mp hpi hXi_P
 
 theorem infinite_polynomial_proj_no_finite_refinement
     (G : GradedRingData (MvPolynomial ℕ ℤ))

@@ -707,7 +707,7 @@ private lemma isGlobalCatenary_of_lowerSet
 private def liftChain_upper {α : Type*} [Preorder α] {P : Set α}
     (hP : ∀ ⦃p q : α⦄, p ∈ P → p ≤ q → q ∈ P)
     {p q : α} (hp : p ∈ P) (c : LTSeries α)
-    (_hhead : c.head = p) (hlast : c.last = q) : LTSeries P :=
+    (_hhead : c.head = p) (_hlast : c.last = q) : LTSeries P :=
   { length := c.length
     toFun := fun i => ⟨c i, by
       apply hP hp

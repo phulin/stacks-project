@@ -1,6 +1,8 @@
 import Formalization.Books.Exercises.Unit19.Core
 
 import Mathlib.RingTheory.Localization.FractionRing
+import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Localization.LocalizationLocalization
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.Algebra.Polynomial.SpecificDegree
 import Mathlib.RingTheory.Polynomial.Eisenstein.Basic
@@ -800,5 +802,744 @@ private lemma sourceT_quotient_isEisenstein :
     exact (Ideal.mem_span_singleton (x := bS) (y := q0)).mpr hbdiv
 instance sourceRing_isDomain : IsDomain sourceRing := by sorry
 instance planeCurveRing_isDomain : IsDomain planeCurveRing := by sorry
+
+private abbrev quadraticAuxiliaryRing :=
+  Polynomial ℚ ⧸ Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)}
+
+private lemma quadraticAuxiliary_X_ne_zero :
+    (Ideal.Quotient.mk (Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)})
+      Polynomial.X : quadraticAuxiliaryRing) ≠ 0 := by
+  intro h
+  rw [Ideal.Quotient.eq_zero_iff_mem] at h
+  rw [Ideal.mem_span_singleton] at h
+  obtain ⟨u, hu⟩ := h
+  have hm : (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)).Monic :=
+    Polynomial.monic_X_pow_add_C (a := (24 : ℚ)) (by norm_num)
+  exact hm.not_dvd_of_natDegree_lt (by simp) (by simp) ⟨u, hu⟩
+
+private lemma source_sum_ne_zero :
+    (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3)) +
+      Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3)) :
+        sourceRing) ≠ 0 := by
+  let q : Polynomial ℚ →+* quadraticAuxiliaryRing := Ideal.Quotient.mk _
+  let f : sourcePolynomialRing →+* quadraticAuxiliaryRing :=
+    MvPolynomial.eval₂Hom (algebraMap ℚ quadraticAuxiliaryRing)
+      ![-1, q Polynomial.X, 0]
+  have hquad : q Polynomial.X ^ 2 + (24 : quadraticAuxiliaryRing) = 0 := by
+    have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+      (Ideal.mem_span_singleton_self (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)))
+    change q (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) = 0 at h
+    rw [map_add, map_pow] at h
+    norm_num at h
+    exact h
+  have hS : sourceRelationsIdeal ≤ RingHom.ker f := by
+    rw [sourceRelationsIdeal, Ideal.span_le]
+    intro p hp
+    change f p = 0
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl
+    · rw [sourceSRelation]
+      simp [f, MvPolynomial.eval₂Hom_X']
+      convert hquad using 1 <;> norm_num [map_ofNat]
+    · rw [sourceTRelation]
+      simp [f, MvPolynomial.eval₂Hom_X']
+  let F : sourceRing →+* quadraticAuxiliaryRing :=
+    Ideal.Quotient.lift sourceRelationsIdeal f (by
+      intro a ha
+      simpa only [RingHom.mem_ker] using hS ha)
+  intro h
+  have h' := congrArg F h
+  dsimp [F] at h'
+  simp only [map_add, map_zero, Ideal.Quotient.lift_mk] at h'
+  have h'' : q Polynomial.X = 0 := by
+    simpa [f] using h'
+  exact quadraticAuxiliary_X_ne_zero h''
+
+private lemma plane_y_ne_zero :
+    (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      (MvPolynomial.X (1 : Fin 2)) : planeCurveRing) ≠ 0 := by
+  let q : Polynomial ℚ →+* quadraticAuxiliaryRing := Ideal.Quotient.mk _
+  let f : planePolynomialRing →+* quadraticAuxiliaryRing :=
+    MvPolynomial.eval₂Hom (algebraMap ℚ quadraticAuxiliaryRing)
+      ![-1, q Polynomial.X]
+  have hquad : q Polynomial.X ^ 2 + (24 : quadraticAuxiliaryRing) = 0 := by
+    have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+      (Ideal.mem_span_singleton_self (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)))
+    change q (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) = 0 at h
+    rw [map_add, map_pow] at h
+    norm_num at h
+    exact h
+  have hP : Ideal.span {planeRelation} ≤ RingHom.ker f := by
+    rw [Ideal.span_le]
+    intro p hp
+    change f p = 0
+    simp only [Set.mem_singleton_iff] at hp
+    subst p
+    rw [planeRelation]
+    simp [f, planeFirstCubic, planeSecondCubic, MvPolynomial.eval₂Hom_X']
+    convert congrArg (fun z : quadraticAuxiliaryRing => z ^ 2) hquad using 1 <;>
+      norm_num [map_ofNat]
+  let F : planeCurveRing →+* quadraticAuxiliaryRing :=
+    Ideal.Quotient.lift (Ideal.span {planeRelation}) f (by
+      intro a ha
+      simpa only [RingHom.mem_ker] using hP ha)
+  intro h
+  have h' := congrArg F h
+  dsimp [F] at h'
+  simp only [map_zero, Ideal.Quotient.lift_mk] at h'
+  have h'' : q Polynomial.X = 0 := by
+    simpa [f] using h'
+  exact quadraticAuxiliary_X_ne_zero h''
+
+private lemma primitive_element_quadratic_identities {R : Type*} [CommRing R]
+    {y p q v c : R} (hy : y * v = 1) (hc : 2 * c = 1)
+    (hrel : (y ^ 2 - p - q) ^ 2 = 4 * p * q) :
+    (c * (y + (p - q) * v)) ^ 2 = p ∧
+      (c * (y - (p - q) * v)) ^ 2 = q := by
+  have hy2 : y ^ 2 * v ^ 2 = 1 := by
+    rw [← mul_pow, hy, one_pow]
+  have hfirst : v ^ 2 * y ^ 4 = y ^ 2 := by
+    calc
+      v ^ 2 * y ^ 4 = y ^ 2 * (y ^ 2 * v ^ 2) := by ring
+      _ = y ^ 2 := by rw [hy2, mul_one]
+  have hsecond : v ^ 2 * (y ^ 2 * (p + q)) = p + q := by
+    calc
+      v ^ 2 * (y ^ 2 * (p + q)) = (y ^ 2 * v ^ 2) * (p + q) := by ring
+      _ = p + q := by rw [hy2, one_mul]
+  have hrel' : y ^ 2 - 2 * (p + q) + (p - q) ^ 2 * v ^ 2 = 0 := by
+    calc
+      y ^ 2 - 2 * (p + q) + (p - q) ^ 2 * v ^ 2 =
+          v ^ 2 * y ^ 4 - 2 * (v ^ 2 * (y ^ 2 * (p + q))) +
+            (p - q) ^ 2 * v ^ 2 := by rw [hfirst, hsecond]
+      _ = v ^ 2 * ((y ^ 2 - p - q) ^ 2 - 4 * p * q) := by ring
+      _ = 0 := by rw [hrel]; ring
+  have hplus : (y + (p - q) * v) ^ 2 = 4 * p := by
+    calc
+      (y + (p - q) * v) ^ 2 =
+          y ^ 2 + 2 * (p - q) + (p - q) ^ 2 * v ^ 2 := by
+            calc
+              (y + (p - q) * v) ^ 2 =
+                  y ^ 2 + 2 * (p - q) * (y * v) + (p - q) ^ 2 * v ^ 2 := by ring
+              _ = y ^ 2 + 2 * (p - q) + (p - q) ^ 2 * v ^ 2 := by rw [hy, mul_one]
+      _ = 4 * p := by linear_combination hrel'
+  have hminus : (y - (p - q) * v) ^ 2 = 4 * q := by
+    calc
+      (y - (p - q) * v) ^ 2 =
+          y ^ 2 - 2 * (p - q) + (p - q) ^ 2 * v ^ 2 := by
+            calc
+              (y - (p - q) * v) ^ 2 =
+                  y ^ 2 - 2 * (p - q) * (y * v) + (p - q) ^ 2 * v ^ 2 := by ring
+              _ = y ^ 2 - 2 * (p - q) + (p - q) ^ 2 * v ^ 2 := by rw [hy, mul_one]
+      _ = 4 * q := by linear_combination hrel'
+  constructor
+  · calc
+      (c * (y + (p - q) * v)) ^ 2 = c ^ 2 * (y + (p - q) * v) ^ 2 := by ring
+      _ = c ^ 2 * (4 * p) := by rw [hplus]
+      _ = p := by calc
+        c ^ 2 * (4 * p) = (2 * c) ^ 2 * p := by ring
+        _ = p := by rw [hc, one_pow, one_mul]
+  · calc
+      (c * (y - (p - q) * v)) ^ 2 = c ^ 2 * (y - (p - q) * v) ^ 2 := by ring
+      _ = c ^ 2 * (4 * q) := by rw [hminus]
+      _ = q := by calc
+        c ^ 2 * (4 * q) = (2 * c) ^ 2 * q := by ring
+        _ = q := by rw [hc, one_pow, one_mul]
+
+private lemma source_plane_localization_comp_simple
+    {yA : sourceRing} {yB : planeCurveRing}
+    (gA : sourceRing →+* Localization.Away yB)
+    (gB : planeCurveRing →+* Localization.Away yA)
+    (FA : Localization.Away yA →+* Localization.Away yB)
+    (hFA_comp : FA.comp (algebraMap sourceRing (Localization.Away yA)) = gA)
+    (hconstA : ∀ r : ℚ, algebraMap ℚ (Localization.Away yA) r =
+      algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r)))
+    (hconstB : ∀ r : ℚ, algebraMap ℚ (Localization.Away yB) r =
+      algebraMap planeCurveRing (Localization.Away yB)
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r)))
+    (hgA_C : ∀ r : ℚ, gA (Ideal.Quotient.mk sourceRelationsIdeal
+        (MvPolynomial.C r)) = algebraMap ℚ (Localization.Away yB) r)
+    (hgB_C : ∀ r : ℚ, gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.C r)) = algebraMap ℚ (Localization.Away yA) r)
+    (hFA_x : FA (algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)))) =
+      algebraMap planeCurveRing (Localization.Away yB)
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (0 : Fin 2))))
+    (hFA_y : FA (algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3)) +
+          Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3)))) =
+      algebraMap planeCurveRing (Localization.Away yB)
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (1 : Fin 2))))
+    (hgB_x : gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.X (0 : Fin 2))) =
+      algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3))))
+    (hgB_y : gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.X (1 : Fin 2))) =
+      algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3)) +
+          Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3)))) :
+    FA.comp gB = algebraMap planeCurveRing (Localization.Away yB) := by
+  apply Ideal.Quotient.ringHom_ext
+  apply MvPolynomial.ringHom_ext
+  · intro r
+    change FA (gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      (MvPolynomial.C r))) =
+      algebraMap planeCurveRing (Localization.Away yB)
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r))
+    calc
+      FA (gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+          (MvPolynomial.C r))) = FA (algebraMap ℚ (Localization.Away yA) r) := by
+        rw [hgB_C r]
+      _ = FA (algebraMap sourceRing (Localization.Away yA)
+          (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r))) := by
+        rw [hconstA r]
+      _ = gA (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r)) :=
+        RingHom.congr_fun hFA_comp _
+      _ = algebraMap ℚ (Localization.Away yB) r := hgA_C r
+      _ = algebraMap planeCurveRing (Localization.Away yB)
+          (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r)) :=
+        hconstB r
+  · intro i
+    fin_cases i
+    · have hx : FA (gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+          (MvPolynomial.X (0 : Fin 2)))) =
+        algebraMap planeCurveRing (Localization.Away yB)
+          (Ideal.Quotient.mk (Ideal.span {planeRelation})
+            (MvPolynomial.X (0 : Fin 2))) := by
+        rw [hgB_x, hFA_x]
+      convert hx using 1 <;> rfl
+    · have hy : FA (gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+          (MvPolynomial.X (1 : Fin 2)))) =
+        algebraMap planeCurveRing (Localization.Away yB)
+          (Ideal.Quotient.mk (Ideal.span {planeRelation})
+            (MvPolynomial.X (1 : Fin 2))) := by
+        rw [hgB_y, hFA_y]
+      convert hy using 1 <;> rfl
+
+private lemma source_plane_localization_comp_coordinates
+    {yA : sourceRing} {yB : planeCurveRing}
+    (xA' yA' : Localization.Away yA)
+    (xB' yB' : Localization.Away yB)
+    (gA : sourceRing →+* Localization.Away yB)
+    (gB : planeCurveRing →+* Localization.Away yA)
+    (FA : Localization.Away yA →+* Localization.Away yB)
+    (hFA_comp : FA.comp (algebraMap sourceRing (Localization.Away yA)) = gA)
+    (hconstA : ∀ r : ℚ, algebraMap ℚ (Localization.Away yA) r =
+      algebraMap sourceRing (Localization.Away yA)
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r)))
+    (hconstB : ∀ r : ℚ, algebraMap ℚ (Localization.Away yB) r =
+      algebraMap planeCurveRing (Localization.Away yB)
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r)))
+    (hgA_C : ∀ r : ℚ, gA (Ideal.Quotient.mk sourceRelationsIdeal
+        (MvPolynomial.C r)) = algebraMap ℚ (Localization.Away yB) r)
+    (hgB_C : ∀ r : ℚ, gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.C r)) = algebraMap ℚ (Localization.Away yA) r)
+    (hFA_x : FA xA' = xB')
+    (hFA_y : FA yA' = yB')
+    (hgB_x : gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.X (0 : Fin 2))) = xA')
+    (hgB_y : gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (MvPolynomial.X (1 : Fin 2))) = yA')
+    (hxA : xA' = algebraMap sourceRing (Localization.Away yA)
+      (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3))))
+    (hyA : yA' = algebraMap sourceRing (Localization.Away yA)
+      (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3)) +
+        Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3))))
+    (hxB : xB' = algebraMap planeCurveRing (Localization.Away yB)
+      (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (0 : Fin 2))))
+    (hyB : yB' = algebraMap planeCurveRing (Localization.Away yB)
+      (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (1 : Fin 2)))) :
+    FA.comp gB = algebraMap planeCurveRing (Localization.Away yB) := by
+  refine source_plane_localization_comp_simple (yA := yA) (yB := yB)
+    gA gB FA hFA_comp hconstA hconstB hgA_C hgB_C ?_ ?_ ?_ ?_
+  · rw [← hxA, ← hxB]
+    exact hFA_x
+  · rw [← hyA, ← hyB]
+    exact hFA_y
+  · rw [hgB_x, hxA]
+  · rw [hgB_y, hyA]
+
+private lemma source_away_hom_compositions
+    {yA : sourceRing} {yB : planeCurveRing}
+    (gA : sourceRing →+* Localization.Away yB)
+    (gB : planeCurveRing →+* Localization.Away yA)
+    (FA : Localization.Away yA →+* Localization.Away yB)
+    (FB : Localization.Away yB →+* Localization.Away yA)
+    (hFA_comp : FA.comp (algebraMap sourceRing (Localization.Away yA)) = gA)
+    (hFB_comp : FB.comp (algebraMap planeCurveRing (Localization.Away yB)) = gB)
+    (hcompA : FB.comp gA = algebraMap sourceRing (Localization.Away yA))
+    (hcompB : FA.comp gB = algebraMap planeCurveRing (Localization.Away yB)) :
+    FB.comp FA = RingHom.id (Localization.Away yA) ∧
+      FA.comp FB = RingHom.id (Localization.Away yB) := by
+  constructor
+  · apply IsLocalization.ringHom_ext (Submonoid.powers yA)
+    apply RingHom.ext
+    intro z
+    change FB (FA (algebraMap sourceRing (Localization.Away yA) z)) =
+      algebraMap sourceRing (Localization.Away yA) z
+    calc
+      FB (FA (algebraMap sourceRing (Localization.Away yA) z)) = FB (gA z) := by
+        change FB ((FA.comp (algebraMap sourceRing (Localization.Away yA))) z) = FB (gA z)
+        rw [RingHom.congr_fun hFA_comp z]
+      _ = algebraMap sourceRing (Localization.Away yA) z :=
+        RingHom.congr_fun hcompA z
+  · apply IsLocalization.ringHom_ext (Submonoid.powers yB)
+    apply RingHom.ext
+    intro z
+    change FA (FB (algebraMap planeCurveRing (Localization.Away yB) z)) =
+      algebraMap planeCurveRing (Localization.Away yB) z
+    calc
+      FA (FB (algebraMap planeCurveRing (Localization.Away yB) z)) = FA (gB z) := by
+        change FA ((FB.comp (algebraMap planeCurveRing (Localization.Away yB))) z) = FA (gB z)
+        rw [RingHom.congr_fun hFB_comp z]
+      _ = algebraMap planeCurveRing (Localization.Away yB) z :=
+        RingHom.congr_fun hcompB z
+
+private lemma fractionRing_equiv_of_away_equiv
+    {yA : sourceRing} {yB : planeCurveRing}
+    (hyA : yA ≠ 0) (hyB : yB ≠ 0)
+    (e : Localization.Away yA ≃+* Localization.Away yB) :
+    Nonempty (FractionRing sourceRing ≃+* FractionRing planeCurveRing) := by
+  let algA : Localization.Away yA →ₐ[sourceRing] FractionRing sourceRing :=
+    IsLocalization.Away.liftAlgHom (R := sourceRing) (S := Localization.Away yA)
+      (P := FractionRing sourceRing)
+      (f := Algebra.ofId sourceRing (FractionRing sourceRing)) yA
+      (isUnit_iff_ne_zero.mpr
+        ((map_ne_zero_iff _
+          (IsFractionRing.injective sourceRing (FractionRing sourceRing))).mpr hyA))
+  let _ : Algebra (Localization.Away yA) (FractionRing sourceRing) := algA.toAlgebra
+  let algB : Localization.Away yB →ₐ[planeCurveRing] FractionRing planeCurveRing :=
+    IsLocalization.Away.liftAlgHom (R := planeCurveRing) (S := Localization.Away yB)
+      (P := FractionRing planeCurveRing)
+      (f := Algebra.ofId planeCurveRing (FractionRing planeCurveRing)) yB
+      (isUnit_iff_ne_zero.mpr
+        ((map_ne_zero_iff _
+          (IsFractionRing.injective planeCurveRing (FractionRing planeCurveRing))).mpr hyB))
+  let _ : Algebra (Localization.Away yB) (FractionRing planeCurveRing) := algB.toAlgebra
+  letI : IsFractionRing (Localization.Away yA) (FractionRing sourceRing) :=
+    IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+      (Submonoid.powers yA) (Localization.Away yA) (FractionRing sourceRing)
+  letI : IsFractionRing (Localization.Away yB) (FractionRing planeCurveRing) :=
+    IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+      (Submonoid.powers yB) (Localization.Away yB) (FractionRing planeCurveRing)
+  exact ⟨(IsFractionRing.ringEquivOfRingEquiv e :
+    FractionRing sourceRing ≃+* FractionRing planeCurveRing)⟩
+
+private lemma source_square_relations
+    (xA sA tA : sourceRing)
+    (hxA : xA = Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)))
+    (hsA : sA = Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3)))
+    (htA : tA = Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3))) :
+    sA ^ 2 = (xA - 1) * (xA - 2) * (xA - 3) ∧
+      tA ^ 2 = (xA + 1) * (xA + 2) * (xA + 3) := by
+  subst xA
+  subst sA
+  subst tA
+  have hC2 :
+      (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C (2 : ℚ)) : sourceRing) = 2 := by
+    change Ideal.Quotient.mk sourceRelationsIdeal (algebraMap ℚ sourcePolynomialRing 2) = 2
+    rw [Ideal.Quotient.mk_algebraMap]
+    exact map_ofNat (algebraMap ℚ sourceRing) 2
+  have hC3 :
+      (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C (3 : ℚ)) : sourceRing) = 3 := by
+    change Ideal.Quotient.mk sourceRelationsIdeal (algebraMap ℚ sourcePolynomialRing 3) = 3
+    rw [Ideal.Quotient.mk_algebraMap]
+    exact map_ofNat (algebraMap ℚ sourceRing) 3
+  constructor
+  · have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+      (show sourceSRelation ∈ sourceRelationsIdeal from
+        Ideal.subset_span (by simp))
+    rw [sourceSRelation] at h
+    simp only [map_sub, map_mul, map_pow, map_add] at h
+    rw [hC2, hC3] at h
+    have h0 :
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3))) ^ 2 -
+          (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) - 1) *
+            (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) - 2) *
+              (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) - 3) = 0 := by
+      simpa using h
+    exact sub_eq_zero.mp h0
+  · have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+      (show sourceTRelation ∈ sourceRelationsIdeal from
+        Ideal.subset_span (by simp))
+    rw [sourceTRelation] at h
+    simp only [map_sub, map_mul, map_pow, map_add] at h
+    rw [hC2, hC3] at h
+    have h0 :
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3))) ^ 2 -
+          (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) + 1) *
+            (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) + 2) *
+              (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3)) + 3) = 0 := by
+      simpa using h
+    exact sub_eq_zero.mp h0
+
 theorem source_fraction_field_equiv_plane_curve :
-    Nonempty (FractionRing sourceRing ≃+* FractionRing planeCurveRing) := by sorry
+    Nonempty (FractionRing sourceRing ≃+* FractionRing planeCurveRing) := by
+  let xA : sourceRing :=
+    Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (0 : Fin 3))
+  let sA : sourceRing :=
+    Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3))
+  let tA : sourceRing :=
+    Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (2 : Fin 3))
+  let yA : sourceRing := sA + tA
+  let pA : sourceRing :=
+    (xA - 1) * (xA - 2) * (xA - 3)
+  let qA : sourceRing :=
+    (xA + 1) * (xA + 2) * (xA + 3)
+  let xB : planeCurveRing :=
+    Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (0 : Fin 2))
+  let yB : planeCurveRing :=
+    Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (1 : Fin 2))
+  let pB : planeCurveRing :=
+    (xB - 1) * (xB - 2) * (xB - 3)
+  let qB : planeCurveRing :=
+    (xB + 1) * (xB + 2) * (xB + 3)
+  have hyA : yA ≠ 0 := by
+    simpa [yA, sA, tA] using source_sum_ne_zero
+  have hyB : yB ≠ 0 := by
+    simpa [yB] using plane_y_ne_zero
+  have hsource := source_square_relations xA sA tA rfl rfl rfl
+  have hsA : sA ^ 2 = pA := by simpa [pA] using hsource.1
+  have htA : tA ^ 2 = qA := by simpa [qA] using hsource.2
+  let A' := Localization.Away yA
+  let B' := Localization.Away yB
+  let xA' : A' := algebraMap sourceRing A' xA
+  let sA' : A' := algebraMap sourceRing A' sA
+  let tA' : A' := algebraMap sourceRing A' tA
+  let yA' : A' := algebraMap sourceRing A' yA
+  let xB' : B' := algebraMap planeCurveRing B' xB
+  let yB' : B' := algebraMap planeCurveRing B' yB
+  let pB' : B' := algebraMap planeCurveRing B' pB
+  let qB' : B' := algebraMap planeCurveRing B' qB
+  have hsA' : sA' ^ 2 = algebraMap sourceRing A' pA := by
+    simpa [sA', pA] using congrArg (algebraMap sourceRing A') hsA
+  have htA' : tA' ^ 2 = algebraMap sourceRing A' qA := by
+    simpa [tA', qA] using congrArg (algebraMap sourceRing A') htA
+  have hC2A : algebraMap ℚ A' (2 : ℚ) = algebraMap sourceRing A' (2 : sourceRing) := by
+    simpa only [map_ofNat] using IsScalarTower.algebraMap_apply ℚ sourceRing A' (2 : ℚ)
+  have hC3A : algebraMap ℚ A' (3 : ℚ) = algebraMap sourceRing A' (3 : sourceRing) := by
+    simpa only [map_ofNat] using IsScalarTower.algebraMap_apply ℚ sourceRing A' (3 : ℚ)
+  have hpA' :
+      (xA' - 1) * (xA' - algebraMap ℚ A' 2) * (xA' - algebraMap ℚ A' 3) =
+        algebraMap sourceRing A' pA := by
+    simp [pA, xA']
+    rw [hC2A, hC3A]
+  have hqA' :
+      (xA' + 1) * (xA' + algebraMap ℚ A' 2) * (xA' + algebraMap ℚ A' 3) =
+        algebraMap sourceRing A' qA := by
+    simp [qA, xA']
+    rw [hC2A, hC3A]
+  let fB : planePolynomialRing →+* A' :=
+    MvPolynomial.eval₂Hom (algebraMap ℚ A') ![xA', sA' + tA']
+  have hfB_rel : fB planeRelation = 0 := by
+    simp [fB, planeRelation, planeFirstCubic, planeSecondCubic,
+      MvPolynomial.eval₂Hom_X']
+    rw [hpA', hqA']
+    rw [← hsA', ← htA']
+    ring
+  have hfB_ker : ∀ a ∈ Ideal.span {planeRelation}, fB a = 0 := by
+    intro a ha
+    rw [Ideal.mem_span_singleton] at ha
+    obtain ⟨u, rfl⟩ := ha
+    simp [map_mul, hfB_rel]
+  let gB : planeCurveRing →+* A' :=
+    Ideal.Quotient.lift (Ideal.span {planeRelation})
+      (MvPolynomial.eval₂Hom (algebraMap ℚ A') ![xA', sA' + tA']) hfB_ker
+  have hgB_C : ∀ r : ℚ, gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      (MvPolynomial.C r)) = algebraMap ℚ A' r := by
+    intro r
+    dsimp only [gB]
+    rw [Ideal.Quotient.lift_mk, MvPolynomial.eval₂Hom_C]
+  let invYB : B' := IsLocalization.Away.invSelf yB
+  have hYB : yB' * invYB = 1 := by
+    simpa [yB'] using IsLocalization.Away.mul_invSelf yB
+  let cB : B' := algebraMap ℚ B' (1 / 2 : ℚ)
+  let sB' : B' := cB * (yB' + (pB' - qB') * invYB)
+  let tB' : B' := cB * (yB' - (pB' - qB') * invYB)
+  have hcB : 2 * cB = 1 := by
+    dsimp [cB]
+    rw [← map_ofNat (algebraMap ℚ B') 2, ← map_mul]
+    norm_num
+  have hB_rel : (yB' ^ 2 - pB' - qB') ^ 2 = 4 * pB' * qB' := by
+    have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+      (show planeRelation ∈ Ideal.span {planeRelation} from Ideal.subset_span (by simp))
+    have h0 := h
+    change (Ideal.Quotient.mk (Ideal.span {planeRelation}))
+      (((MvPolynomial.X (1 : Fin 2)) ^ 2 - planeFirstCubic - planeSecondCubic) ^ 2 -
+        4 * planeFirstCubic * planeSecondCubic) = 0 at h0
+    simp only [map_sub, map_mul, map_pow, map_add] at h0
+    have hC2 :
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C (2 : ℚ)) :
+          planeCurveRing) = 2 := by
+      change Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (algebraMap ℚ planePolynomialRing 2) = 2
+      rw [Ideal.Quotient.mk_algebraMap]
+      exact map_ofNat (algebraMap ℚ planeCurveRing) 2
+    have hC3 :
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C (3 : ℚ)) :
+          planeCurveRing) = 3 := by
+      change Ideal.Quotient.mk (Ideal.span {planeRelation})
+        (algebraMap ℚ planePolynomialRing 3) = 3
+      rw [Ideal.Quotient.mk_algebraMap]
+      exact map_ofNat (algebraMap ℚ planeCurveRing) 3
+    have hFirst :
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) planeFirstCubic :
+          planeCurveRing) = pB := by
+      simp [planeFirstCubic, pB, xB]
+      rw [hC2, hC3]
+    have hSecond :
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) planeSecondCubic :
+          planeCurveRing) = qB := by
+      simp [planeSecondCubic, qB, xB]
+      rw [hC2, hC3]
+    rw [hFirst, hSecond] at h0
+    simp only [map_ofNat] at h0
+    have h0' : (yB ^ 2 - pB - qB) ^ 2 - 4 * pB * qB = 0 := by
+      simpa [pB, qB, xB] using h0
+    have h' := congrArg (algebraMap planeCurveRing B') h0'
+    simp only [map_sub, map_mul, map_pow, map_add] at h'
+    have hC4 : algebraMap planeCurveRing B' (4 : planeCurveRing) = 4 :=
+      map_ofNat (algebraMap planeCurveRing B') 4
+    rw [hC4] at h'
+    have h0'' :
+        (yB' ^ 2 - pB' - qB') ^ 2 - 4 * pB' * qB' = 0 := by
+      simpa [pB', qB', yB'] using h'
+    exact sub_eq_zero.mp h0''
+  have hsB : sB' ^ 2 = pB' := by
+    exact (primitive_element_quadratic_identities hYB hcB hB_rel).1
+  have htB : tB' ^ 2 = qB' := by
+    exact (primitive_element_quadratic_identities hYB hcB hB_rel).2
+  let fA : sourcePolynomialRing →+* B' :=
+    MvPolynomial.eval₂Hom (algebraMap ℚ B') ![xB', sB', tB']
+  have hfA_s : fA (MvPolynomial.X (1 : Fin 3)) = sB' := by
+    simp [fA]
+  have hfA_t : fA (MvPolynomial.X (2 : Fin 3)) = tB' := by
+    simp [fA]
+  have hfA_rel : fA sourceSRelation = 0 ∧ fA sourceTRelation = 0 := by
+    have hC2B : algebraMap ℚ B' (2 : ℚ) =
+        algebraMap planeCurveRing B' (2 : planeCurveRing) := by
+      simpa only [map_ofNat] using
+        IsScalarTower.algebraMap_apply ℚ planeCurveRing B' (2 : ℚ)
+    have hC3B : algebraMap ℚ B' (3 : ℚ) =
+        algebraMap planeCurveRing B' (3 : planeCurveRing) := by
+      simpa only [map_ofNat] using
+        IsScalarTower.algebraMap_apply ℚ planeCurveRing B' (3 : ℚ)
+    have hpB' :
+        pB' = (xB' - 1) * (xB' - algebraMap ℚ B' 2) *
+          (xB' - algebraMap ℚ B' 3) := by
+      dsimp [pB', pB, xB', xB]
+      simp only [map_mul, map_sub, map_add, map_one]
+      rw [hC2B, hC3B]
+    have hqB' :
+        qB' = (xB' + 1) * (xB' + algebraMap ℚ B' 2) *
+          (xB' + algebraMap ℚ B' 3) := by
+      dsimp [qB', qB, xB', xB]
+      simp only [map_mul, map_add, map_one]
+      rw [hC2B, hC3B]
+    constructor
+    · simp [fA, sourceSRelation, MvPolynomial.eval₂Hom_X', hsB, hpB']
+    · simp [fA, sourceTRelation, MvPolynomial.eval₂Hom_X', htB, hqB']
+  have hFA : sourceRelationsIdeal ≤ RingHom.ker fA := by
+    rw [sourceRelationsIdeal, Ideal.span_le]
+    intro p hp
+    change fA p = 0
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl
+    · exact hfA_rel.1
+    · exact hfA_rel.2
+  have hFA_ker : ∀ a ∈ sourceRelationsIdeal, fA a = 0 := by
+    intro a ha
+    simpa only [RingHom.mem_ker] using hFA ha
+  let gA : sourceRing →+* B' :=
+    Ideal.Quotient.lift sourceRelationsIdeal
+      (MvPolynomial.eval₂Hom (algebraMap ℚ B') ![xB', sB', tB']) hFA_ker
+  have hgA_C : ∀ r : ℚ, gA (Ideal.Quotient.mk sourceRelationsIdeal
+      (MvPolynomial.C r)) = algebraMap ℚ B' r := by
+    intro r
+    dsimp only [gA]
+    rw [Ideal.Quotient.lift_mk, MvPolynomial.eval₂Hom_C]
+  have hgA_y : gA yA = yB' := by
+    simp [gA, yA, sA, tA]
+    dsimp [sB', tB']
+    calc
+      cB * (yB' + (pB' - qB') * invYB) +
+          cB * (yB' - (pB' - qB') * invYB) = (2 * cB) * yB' := by ring
+      _ = yB' := by rw [hcB, one_mul]
+  have hgA_powers : ∀ z : Submonoid.powers yA, IsUnit (gA z) := by
+    rintro ⟨_, n, rfl⟩
+    rw [map_pow, hgA_y]
+    exact IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit yB)
+  let FA : A' →+* B' :=
+    IsLocalization.lift (M := Submonoid.powers yA) (g := gA) hgA_powers
+  have hFA_comp : FA.comp (algebraMap sourceRing A') = gA := by
+    simpa [FA, yA, sA', tA'] using
+      (IsLocalization.lift_comp (M := Submonoid.powers yA) (g := gA) hgA_powers)
+  have hFA_xA : FA xA' = xB' := by
+    dsimp [xA']
+    calc
+      FA (algebraMap sourceRing A' xA) = gA xA :=
+        RingHom.congr_fun hFA_comp xA
+      _ = xB' := by simp [gA, xA, fA, xB']
+  have hFA_yA : FA yA' = yB' := by
+    dsimp [yA']
+    exact (RingHom.congr_fun hFA_comp yA).trans hgA_y
+  have hgB_y : gB yB = yA' := by
+    simp [gB, yB, yA', fB]
+    change sA' + tA' = algebraMap sourceRing A' (sA + tA)
+    rw [map_add]
+  have hgB_powers : ∀ z : Submonoid.powers yB, IsUnit (gB z) := by
+    rintro ⟨_, n, rfl⟩
+    rw [map_pow, hgB_y]
+    exact IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit yA)
+  let FB : B' →+* A' :=
+    IsLocalization.lift (M := Submonoid.powers yB) (g := gB) hgB_powers
+  have hFB_comp : FB.comp (algebraMap planeCurveRing B') = gB := by
+    simpa [FB] using
+      (IsLocalization.lift_comp (M := Submonoid.powers yB) (g := gB) hgB_powers)
+  have hFB_yB : FB yB' = yA' := by
+    dsimp [yB']
+    exact (RingHom.congr_fun hFB_comp yB).trans hgB_y
+  let invYA : A' := IsLocalization.Away.invSelf yA
+  have hYA : yA' * invYA = 1 := by
+    simpa [invYA, yA'] using IsLocalization.Away.mul_invSelf yA
+  have hFB_invYB : FB invYB = invYA := by
+    apply (IsLocalization.Away.algebraMap_isUnit yA).mul_left_inj.mp
+    change FB invYB * yA' = invYA * yA'
+    calc
+      FB invYB * yA' = FB invYB * FB yB' := by rw [hFB_yB]
+      _ = FB (invYB * yB') := by rw [← map_mul]
+      _ = 1 := by rw [mul_comm invYB yB', hYB, map_one]
+      _ = invYA * yA' := by
+        calc
+          1 = yA' * invYA := hYA.symm
+          _ = invYA * yA' := mul_comm _ _
+  have hFB_xB : FB xB' = xA' := by
+    dsimp [xB']
+    have h := RingHom.congr_fun hFB_comp xB
+    simpa [xB', xB, gB, fB, xA'] using h
+  have hgB_x : gB xB = xA' := by
+    simp [gB, xB, fB, xA']
+  have hFB_pB : FB pB' = algebraMap sourceRing A' pA := by
+    dsimp [pB']
+    calc
+      FB (algebraMap planeCurveRing B' pB) = gB pB :=
+        RingHom.congr_fun hFB_comp pB
+      _ = algebraMap sourceRing A' pA := by
+        simp only [pB, map_mul, map_sub, map_ofNat]
+        rw [hgB_x]
+        simp [pA, xA', xA, map_ofNat]
+  have hFB_qB : FB qB' = algebraMap sourceRing A' qA := by
+    dsimp [qB']
+    calc
+      FB (algebraMap planeCurveRing B' qB) = gB qB :=
+        RingHom.congr_fun hFB_comp qB
+      _ = algebraMap sourceRing A' qA := by
+        simp only [qB, map_mul, map_add, map_ofNat]
+        rw [hgB_x]
+        simp [qA, xA', xA, map_ofNat]
+  let cA : A' := algebraMap ℚ A' (1 / 2)
+  have hcA : (2 : A') * cA = 1 := by
+    dsimp [cA]
+    rw [← map_ofNat (algebraMap ℚ A') 2, ← map_mul]
+    norm_num
+  have h2A : IsUnit (2 : A') := by
+    rw [← map_ofNat (algebraMap ℚ A') 2]
+    exact IsUnit.map _ (isUnit_iff_ne_zero.mpr (by norm_num))
+  have hFB_cB : FB cB = cA := by
+    apply h2A.mul_left_inj.mp
+    calc
+      FB cB * 2 = FB (cB * 2) := by rw [map_mul, map_ofNat]
+      _ = 1 := by rw [mul_comm cB 2, hcB, map_one]
+      _ = cA * 2 := by rw [mul_comm, hcA]
+  have hdiffA : (algebraMap sourceRing A' pA -
+      algebraMap sourceRing A' qA) = (sA' - tA') * yA' := by
+    rw [← hsA', ← htA']
+    have hyA' : yA' = sA' + tA' := by
+      simp [yA', yA, sA', tA']
+    rw [hyA']
+    ring
+  have hdiffA_inv : (algebraMap sourceRing A' pA -
+      algebraMap sourceRing A' qA) * invYA = sA' - tA' := by
+    rw [hdiffA, mul_assoc, hYA, mul_one]
+  have hprimitiveA_s : cA * (yA' +
+      (algebraMap sourceRing A' pA - algebraMap sourceRing A' qA) * invYA) = sA' := by
+    have hyA' : yA' = sA' + tA' := by
+      simp [yA', yA, sA', tA']
+    rw [hyA', hdiffA_inv]
+    calc
+      cA * ((sA' + tA') + (sA' - tA')) = (2 * cA) * sA' := by ring
+      _ = sA' := by rw [hcA, one_mul]
+  have hprimitiveA_t : cA * (yA' -
+      (algebraMap sourceRing A' pA - algebraMap sourceRing A' qA) * invYA) = tA' := by
+    have hyA' : yA' = sA' + tA' := by
+      simp [yA', yA, sA', tA']
+    rw [hyA', hdiffA_inv]
+    calc
+      cA * ((sA' + tA') - (sA' - tA')) = (2 * cA) * tA' := by ring
+      _ = tA' := by rw [hcA, one_mul]
+  have hFB_sB : FB sB' = sA' := by
+    dsimp [sB']
+    rw [map_mul, hFB_cB, map_add, map_mul, map_sub, hFB_yB, hFB_pB,
+      hFB_qB, hFB_invYB]
+    exact hprimitiveA_s
+  have hFB_tB : FB tB' = tA' := by
+    dsimp [tB']
+    rw [map_mul, hFB_cB, map_sub, map_mul, map_sub, hFB_yB, hFB_pB,
+      hFB_qB, hFB_invYB]
+    exact hprimitiveA_t
+  have hconstA : ∀ r : ℚ, algebraMap ℚ A' r =
+      algebraMap sourceRing A'
+        (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r)) := by
+    intro r
+    change algebraMap ℚ A' r =
+      algebraMap sourceRing A'
+        (Ideal.Quotient.mk sourceRelationsIdeal
+          (algebraMap ℚ sourcePolynomialRing r))
+    rw [Ideal.Quotient.mk_algebraMap]
+    exact (IsScalarTower.algebraMap_apply ℚ sourceRing A' r).symm
+  have hconstB : ∀ r : ℚ, algebraMap ℚ B' r =
+      algebraMap planeCurveRing B'
+        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r)) := by
+    intro r
+    change algebraMap ℚ B' r =
+      algebraMap planeCurveRing B'
+        (Ideal.Quotient.mk (Ideal.span {planeRelation})
+          (algebraMap ℚ planePolynomialRing r))
+    rw [Ideal.Quotient.mk_algebraMap]
+    exact (IsScalarTower.algebraMap_apply ℚ planeCurveRing B' r).symm
+  have hcompA : (FB.comp gA) = algebraMap sourceRing A' := by
+    apply Ideal.Quotient.ringHom_ext
+    apply MvPolynomial.ringHom_ext
+    · intro r
+      change FB (fA (MvPolynomial.C r)) =
+        algebraMap sourceRing A'
+          (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r))
+      rw [show fA (MvPolynomial.C r) = algebraMap ℚ B' r by simp [fA]]
+      have hgB_const : gB (Ideal.Quotient.mk (Ideal.span {planeRelation})
+          (MvPolynomial.C r)) = algebraMap ℚ A' r := by
+        simp [gB, fB]
+      rw [hconstB r]
+      calc
+        FB (algebraMap planeCurveRing B'
+            (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r))) =
+            gB (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C r)) :=
+          RingHom.congr_fun hFB_comp _
+        _ = algebraMap ℚ A' r := hgB_const
+        _ = algebraMap sourceRing A'
+            (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.C r)) := hconstA r
+    · intro i
+      fin_cases i
+      · simpa [RingHom.comp_apply, gA, fA, xB', xA', xB, xA] using hFB_xB
+      · simpa [RingHom.comp_apply, gA, fA, sB', sA', xB', xA', xB, xA] using hFB_sB
+      · simpa [RingHom.comp_apply, gA, fA, tB', tA', xB', xA', xB, xA] using hFB_tB
+  have hcompB : (FA.comp gB) = algebraMap planeCurveRing B' := by
+    exact source_plane_localization_comp_coordinates
+      (xA' := xA') (yA' := yA') (xB' := xB') (yB' := yB')
+      gA gB FA hFA_comp hconstA hconstB hgA_C hgB_C hFA_xA hFA_yA
+      hgB_x hgB_y (by rfl) (by rfl) (by rfl) (by rfl)
+  have hcomps := source_away_hom_compositions gA gB FA FB hFA_comp hFB_comp hcompA hcompB
+  have hcompFA : FB.comp FA = RingHom.id A' := hcomps.1
+  have hcompBF : FA.comp FB = RingHom.id B' := hcomps.2
+  let e : A' ≃+* B' := RingEquiv.ofRingHom FA FB hcompBF hcompFA
+  exact fractionRing_equiv_of_away_equiv hyA hyB e

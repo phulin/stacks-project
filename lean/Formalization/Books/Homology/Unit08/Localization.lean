@@ -42,14 +42,14 @@ theorem localization_preadditive_left
   · exact CategoryTheory.Localization.functor_additive L W
   · intro p hp
     apply Preadditive.ext; funext X Y; apply AddCommGroup.ext; funext f g
-    letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+    let : L.EssSurj := CategoryTheory.Localization.essSurj L W
     let eX := L.objObjPreimageIso X
     let eY := L.objObjPreimageIso Y
     let u := eX.hom ≫ f ≫ eY.inv
     let v := eX.hom ≫ g ≫ eY.inv
     obtain ⟨φ, hu, hv⟩ := CategoryTheory.Localization.exists_leftFraction₂ L W u v
-    letI : Preadditive D := p
-    letI : Functor.Additive L := hp
+    let : Preadditive D := p
+    let : Functor.Additive L := hp
     have hfp : f + g =
         eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
       calc
@@ -60,8 +60,8 @@ theorem localization_preadditive_left
         _ = eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
           rw [hu, hv, ← MorphismProperty.LeftFraction₂.map_add]
     let q := CategoryTheory.Localization.preadditive L W
-    letI : Preadditive D := q
-    letI : Functor.Additive L := CategoryTheory.Localization.functor_additive L W
+    let : Preadditive D := q
+    let : Functor.Additive L := CategoryTheory.Localization.functor_additive L W
     have hq : f + g =
         eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
       calc
@@ -79,12 +79,12 @@ theorem localization_preadditive_right
     [Preadditive C] {W : MorphismProperty C} (L : C ⥤ D)
     [L.IsLocalization W] (hW : RightMultiplicativeSystem W) :
     ∃! p : Preadditive D, @Functor.Additive C D _ _ _ p L := by
-  letI : RightMultiplicativeSystem W := hW
+  let : RightMultiplicativeSystem W := hW
   let pop := CategoryTheory.Localization.preadditive L.op W.op
-  letI : Preadditive Dᵒᵖ := pop
+  let : Preadditive Dᵒᵖ := pop
   let hFF := Functor.FullyFaithful.ofFullyFaithful (opOp D)
   let pD := Preadditive.ofFullyFaithful hFF
-  letI : Preadditive D := pD
+  let : Preadditive D := pD
   have hpop : (@CategoryTheory.instPreadditiveOpposite D _ pD) = pop := by
     apply Preadditive.ext; funext X Y; apply AddCommGroup.ext; funext f g
     apply Quiver.Hom.unop_inj
@@ -101,14 +101,14 @@ theorem localization_preadditive_right
     apply Quiver.Hom.op_inj
     rw [op_add]
     rw [hpop]
-    letI : Functor.Additive L.op := CategoryTheory.Localization.functor_additive L.op W.op
+    let : Functor.Additive L.op := CategoryTheory.Localization.functor_additive L.op W.op
     have h := Functor.Additive.map_add (F := L.op) (f := f.op) (g := g.op)
     simpa only [Functor.op_map, unop_add, Quiver.Hom.unop_op] using h
   · intro q hq
-    letI : Preadditive D := q
-    letI : Functor.Additive L := hq
-    letI : Preadditive Dᵒᵖ := @CategoryTheory.instPreadditiveOpposite D _ q
-    letI : W.op.HasLeftCalculusOfFractions := inferInstance
+    let : Preadditive D := q
+    let : Functor.Additive L := hq
+    let : Preadditive Dᵒᵖ := @CategoryTheory.instPreadditiveOpposite D _ q
+    let : W.op.HasLeftCalculusOfFractions := inferInstance
     have hopq : Functor.Additive L.op := by infer_instance
     obtain ⟨p', hp', huniq⟩ :=
       localization_preadditive_left (W := W.op) L.op
@@ -139,7 +139,7 @@ theorem localization_preadditive
     (hW : LeftMultiplicativeSystem W ∨ RightMultiplicativeSystem W) :
     ∃! p : Preadditive D, @Functor.Additive C D _ _ _ p L := by
   rcases hW with hW | hW
-  · letI : LeftMultiplicativeSystem W := hW
+  · let : LeftMultiplicativeSystem W := hW
     exact localization_preadditive_left (W := W) L
   · exact localization_preadditive_right (W := W) L hW
 
@@ -152,9 +152,9 @@ theorem localization_additive_left
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
   obtain ⟨p, hp, _⟩ :=
     localization_preadditive_left (W := W) L
-  letI : Preadditive D := p
-  letI : Functor.Additive L := hp
-  letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+  let : Preadditive D := p
+  let : Functor.Additive L := hp
+  let : L.EssSurj := CategoryTheory.Localization.essSurj L W
   have hprod : HasFiniteProducts D :=
     Functor.hasFiniteProducts_of_additive_of_essSurj L
   let hD : Formalization.Books.Homology.Unit03.AdditiveCategory D :=
@@ -171,9 +171,9 @@ theorem localization_additive_right
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
   obtain ⟨p, hp, _⟩ :=
     localization_preadditive_right (W := W) L hW
-  letI : Preadditive D := p
-  letI : Functor.Additive L := hp
-  letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+  let : Preadditive D := p
+  let : Functor.Additive L := hp
+  let : L.EssSurj := CategoryTheory.Localization.essSurj L W
   have hprod : HasFiniteProducts D :=
     Functor.hasFiniteProducts_of_additive_of_essSurj L
   let hD : Formalization.Books.Homology.Unit03.AdditiveCategory D :=
@@ -206,11 +206,11 @@ theorem localization_zero_iff
     (hW : MultiplicativeSystem W) (X : C) :
     (IsZero (L.obj X) ↔ ∃ Y : C, W (0 : X ⟶ Y)) ∧
       (IsZero (L.obj X) ↔ ∃ Z : C, W (0 : Z ⟶ X)) := by
-  letI : LeftMultiplicativeSystem W := hW.1
-  letI : RightMultiplicativeSystem W := hW.2
+  let : LeftMultiplicativeSystem W := hW.1
+  let : RightMultiplicativeSystem W := hW.2
   obtain ⟨hD, hL⟩ := localization_additive (W := W) L (Or.inl hW.1)
-  letI : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
-  letI : Functor.Additive L := hL
+  let : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  let : Functor.Additive L := hL
   constructor
   · constructor
     · intro hX
@@ -266,23 +266,23 @@ theorem localization_has_cokernels_of_left
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
     [Abelian C] {W : MorphismProperty C} (L : C ⥤ D)
     [L.IsLocalization W] (hW : LeftMultiplicativeSystem W) :
-    ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
+    ∃ _hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       HasCokernels D ∧
         ∀ {X Y : C} (f : X ⟶ Y),
           PreservesColimit (parallelPair f 0) L := by
   let hC : Formalization.Books.Homology.Unit03.AdditiveCategory C :=
     { toPreadditive := inferInstance
       toHasFiniteProducts := inferInstance }
-  letI : Formalization.Books.Homology.Unit03.AdditiveCategory C := hC
-  letI : LeftMultiplicativeSystem W := hW
+  let : Formalization.Books.Homology.Unit03.AdditiveCategory C := hC
+  let : LeftMultiplicativeSystem W := hW
   obtain ⟨hD, hL⟩ := localization_additive_left (W := W) L
-  letI : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
-  letI : Functor.Additive L := hL
-  letI : PreservesFiniteColimits (leftLocalizationFunctor W) :=
+  let : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  let : Functor.Additive L := hL
+  let : PreservesFiniteColimits (leftLocalizationFunctor W) :=
     left_localization_preserves_finite_colimits
   let e := CategoryTheory.Localization.uniq (leftLocalizationFunctor W) L W
-  letI : PreservesFiniteColimits e.functor := inferInstance
-  letI : PreservesFiniteColimits ((leftLocalizationFunctor W) ⋙ e.functor) :=
+  let : PreservesFiniteColimits e.functor := inferInstance
+  let : PreservesFiniteColimits ((leftLocalizationFunctor W) ⋙ e.functor) :=
     comp_preservesFiniteColimits (leftLocalizationFunctor W) e.functor
   have hpres : PreservesFiniteColimits L :=
     preservesFiniteColimits_of_natIso
@@ -292,7 +292,7 @@ theorem localization_has_cokernels_of_left
   · exact ⟨fun f => by
       obtain ⟨g, ⟨eg⟩⟩ :=
         (CategoryTheory.Localization.essSurj_mapArrow L W).mem_essImage (Arrow.mk f)
-      letI : PreservesFiniteColimits L := hpres
+      let : PreservesFiniteColimits L := hpres
       have : HasColimit (parallelPair (L.map g.hom) 0) :=
         ⟨_, (CokernelCofork.ofπ (cokernel.π g.hom)
             (by simp)).mapIsColimit
@@ -314,7 +314,7 @@ theorem localization_has_cokernels_of_left
             dsimp [e0, e1]
             exact eg.inv.w.symm)
           (by dsimp [e0, e1]; rw [zero_comp, comp_zero]))⟩
-  · letI : PreservesFiniteColimits L := hpres
+  · let : PreservesFiniteColimits L := hpres
     intro X Y f
     exact inferInstance
 

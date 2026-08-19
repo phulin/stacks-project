@@ -3,6 +3,7 @@ import Mathlib.Algebra.Category.Grp.Colimits
 import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Category.ModuleCat.Sheaf
+import Mathlib.CategoryTheory.Adjunction.CompositionIso
 import Mathlib.CategoryTheory.Sites.SheafHom
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Over
@@ -110,7 +111,325 @@ private theorem sheafPullbackCompIso_assoc_app (C : Type u) [Category.{v} C]
       (sheafPullbackCompIso C (f ≫ g) h).hom.app F ≫
         (sheafPullbackCompIso C f g).hom.app
           ((sheafPullback C h).obj F) := by
-  sorry
+  have hgh :
+      TopCat.Sheaf.pushforward C g ⋙ TopCat.Sheaf.pushforward C h =
+        TopCat.Sheaf.pushforward C (g ≫ h) := by rfl
+  have hghf :
+      TopCat.Sheaf.pushforward C f ⋙
+          (TopCat.Sheaf.pushforward C g ⋙ TopCat.Sheaf.pushforward C h) =
+        TopCat.Sheaf.pushforward C f ⋙
+          TopCat.Sheaf.pushforward C (g ≫ h) := by rfl
+  have hLUgh :
+      (sheafPullbackCompIso C g h).hom =
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))).symm
+          (eqToHom hgh) := by rfl
+  have hwhiskerRight :
+      Functor.whiskerRight (sheafPullbackCompIso C g h).hom
+          (sheafPullback C f) =
+        (Adjunction.leftAdjointUniq
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))).hom := by
+    apply
+      (conjugateEquiv
+        (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f))).injective
+    rw [conjugateEquiv_whiskerRight]
+    rw [hLUgh]
+    have hconj :
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)))
+          ((conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))).symm
+            (eqToHom hgh)) =
+          eqToHom hgh :=
+      (conjugateEquiv
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))).apply_symm_apply _
+    rw [hconj]
+    have hleft :
+        (TopCat.Sheaf.pushforward C f).whiskerLeft (eqToHom hgh) =
+          eqToHom hghf := by rfl
+    rw [hleft]
+    have hLU :
+        (Adjunction.leftAdjointUniq
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))).hom =
+        (conjugateEquiv
+          (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))).symm
+          (eqToHom hghf) := by rfl
+    exact
+      ((conjugateEquiv
+        (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f))).apply_symm_apply
+        (eqToHom hghf)).symm.trans
+        (congrArg
+          (conjugateEquiv
+            (((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C g)).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))
+          hLU.symm)
+  have hfg :
+      TopCat.Sheaf.pushforward C f ⋙ TopCat.Sheaf.pushforward C g =
+        TopCat.Sheaf.pushforward C (f ≫ g) := by rfl
+  have hfgh :
+      (TopCat.Sheaf.pushforward C f ⋙ TopCat.Sheaf.pushforward C g) ⋙
+          TopCat.Sheaf.pushforward C h =
+        TopCat.Sheaf.pushforward C (f ≫ g) ⋙
+          TopCat.Sheaf.pushforward C h := by rfl
+  have hLUfg :
+      (sheafPullbackCompIso C f g).hom =
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))).symm
+          (eqToHom hfg) := by rfl
+  have hwhiskerLeft :
+      Functor.whiskerLeft (sheafPullback C h)
+          (sheafPullbackCompIso C f g).hom =
+        (Adjunction.leftAdjointUniq
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))).hom := by
+    apply
+      (conjugateEquiv
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))).injective
+    rw [conjugateEquiv_whiskerLeft]
+    rw [hLUfg]
+    have hconj :
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+          ((conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))).symm
+            (eqToHom hfg)) =
+          eqToHom hfg :=
+      (conjugateEquiv
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))).apply_symm_apply _
+    rw [hconj]
+    have hleft :
+        Functor.whiskerRight (eqToHom hfg)
+            (TopCat.Sheaf.pushforward C h) =
+          eqToHom hfgh := by rfl
+    rw [hleft]
+    have hLU :
+        (Adjunction.leftAdjointUniq
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))).hom =
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))).symm
+          (eqToHom hfgh) := by rfl
+    exact
+      ((conjugateEquiv
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))
+        ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))).apply_symm_apply
+        (eqToHom hfgh)).symm.trans
+        (congrArg
+          (conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+                (TopCat.Sheaf.pullbackPushforwardAdjunction C f)))
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))))
+          hLU.symm)
+  have hnat :
+      (sheafPullbackCompIso C f (g ≫ h)).hom ≫
+          Functor.whiskerRight (sheafPullbackCompIso C g h).hom
+            (sheafPullback C f) =
+      (sheafPullbackCompIso C (f ≫ g) h).hom ≫
+          Functor.whiskerLeft (sheafPullback C h)
+            (sheafPullbackCompIso C f g).hom := by
+    have hfull :
+        TopCat.Sheaf.pushforward C f ⋙
+          TopCat.Sheaf.pushforward C (g ≫ h) =
+          TopCat.Sheaf.pushforward C (f ≫ g ≫ h) := by rfl
+    have hfull' :
+        TopCat.Sheaf.pushforward C (f ≫ g) ⋙
+            TopCat.Sheaf.pushforward C h =
+          TopCat.Sheaf.pushforward C ((f ≫ g) ≫ h) := by rfl
+    have hassoc :=
+      Adjunction.leftAdjointCompIso_assoc
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C g)
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C f)
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))
+        (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))
+        (eqToIso hgh) (eqToIso hfg) (eqToIso hfull') (eqToIso hfull)
+        (by
+          ext X
+          simp [Category.assoc, eqToHom_map])
+    have hgh_id : eqToHom hgh = 𝟙 _ := by cases hgh; rfl
+    have hfg_id : eqToHom hfg = 𝟙 _ := by cases hfg; rfl
+    have hfull_id : eqToHom hfull = 𝟙 _ := by cases hfull; rfl
+    have hfull'_id : eqToHom hfull' = 𝟙 _ := by cases hfull'; rfl
+    have hcomp_fgh :
+        (Adjunction.leftAdjointCompIso
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))
+          (eqToIso hfull)).symm =
+        sheafPullbackCompIso C f (g ≫ h) := by
+      cases hfull
+      rfl
+    have hcomp_gh :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))
+        (eqToIso hgh)).symm =
+        sheafPullbackCompIso C g h := by
+      apply Iso.ext
+      apply
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))).injective
+      simp only [Iso.symm_hom]
+      rw [Adjunction.conjugateEquiv_leftAdjointCompIso_inv]
+      simpa using
+        (congrArg
+          (conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C g))
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h)))
+          hLUgh).symm
+    have hcomp_fg :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))
+        (eqToIso hfg)).symm =
+        sheafPullbackCompIso C f g := by
+      apply Iso.ext
+      apply
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))).injective
+      simp only [Iso.symm_hom]
+      rw [Adjunction.conjugateEquiv_leftAdjointCompIso_inv]
+      simpa using
+        (congrArg
+          (conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C g).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C f))
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+          hLUfg).symm
+    have hcomp_fgh_right :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))
+        (eqToIso hfull')).symm =
+        sheafPullbackCompIso C (f ≫ g) h := by
+      apply Iso.ext
+      apply
+        (conjugateEquiv
+          ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+            (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))).injective
+      simp only [Iso.symm_hom]
+      rw [Adjunction.conjugateEquiv_leftAdjointCompIso_inv]
+      have hLU_fgh_right :
+          (sheafPullbackCompIso C (f ≫ g) h).hom =
+            (conjugateEquiv
+              ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+                (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))).symm
+              (eqToHom hfull') := by rfl
+      simpa using
+        (congrArg
+          (conjugateEquiv
+            ((TopCat.Sheaf.pullbackPushforwardAdjunction C h).comp
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g)))
+              (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h)))
+          hLU_fgh_right).symm
+    have hcomp_gh_hom :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))
+          (eqToIso hgh)).inv =
+        (sheafPullbackCompIso C g h).hom := by
+      simpa only [Iso.symm_hom] using congrArg Iso.hom hcomp_gh
+    have hcomp_fg_hom :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C g)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))
+          (eqToIso hfg)).inv =
+        (sheafPullbackCompIso C f g).hom := by
+      simpa only [Iso.symm_hom] using congrArg Iso.hom hcomp_fg
+    have hcomp_fgh_hom :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (g ≫ h))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C f)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))
+          (eqToIso hfull)).inv =
+        (sheafPullbackCompIso C f (g ≫ h)).hom := by
+      simpa only [Iso.symm_hom] using congrArg Iso.hom hcomp_fgh
+    have hcomp_fgh_right_hom :
+        (Adjunction.leftAdjointCompIso
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C h)
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g))
+          (TopCat.Sheaf.pullbackPushforwardAdjunction C (f ≫ g ≫ h))
+          (eqToIso hfull')).inv =
+        (sheafPullbackCompIso C (f ≫ g) h).hom := by
+      simpa only [Iso.symm_hom] using congrArg Iso.hom hcomp_fgh_right
+    have hassoc_inv := congrArg Iso.inv hassoc
+    ext F
+    simpa [Functor.isoWhiskerLeft_inv, Functor.isoWhiskerRight_inv,
+      Functor.associator_hom_app,
+      hcomp_gh_hom, hcomp_fg_hom, hcomp_fgh_hom,
+      hcomp_fgh_right_hom, Category.assoc] using congr_app hassoc_inv.symm F
+  exact congr_app hnat F
 
 /-- Restriction of sheaves to an open subspace. -/
 noncomputable abbrev sheafRestriction (C : Type u) [Category.{v} C]

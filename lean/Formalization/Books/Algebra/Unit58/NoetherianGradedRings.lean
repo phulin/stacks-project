@@ -746,11 +746,269 @@ abbrev associatedGradedModule
     (I : Ideal R) : Type _ :=
   DirectSum ℕ (fun n => associatedGradedModulePiece (M := M) I n)
 
+private def associatedGradedRingPieceMulAux
+    {R : Type u} [CommRing R] (I : Ideal R) (i j : ℕ) :
+    (I ^ i : Submodule R R) →ₗ[R] (I ^ j : Submodule R R) →ₗ[R]
+      associatedGradedRingPiece I (i + j) := by
+  exact {
+    toFun := fun x => {
+      toFun := fun y => Submodule.Quotient.mk ⟨(x : R) * (y : R), by
+        rw [Ideal.IsTwoSided.pow_add]
+        exact Ideal.mul_mem_mul x.property y.property⟩
+      map_add' := by
+        intro y z
+        apply congrArg Submodule.Quotient.mk
+        apply Subtype.ext
+        exact mul_add (x : R) (y : R) (z : R)
+      map_smul' := by
+        intro r y
+        rw [← Submodule.Quotient.mk_smul]
+        apply congrArg Submodule.Quotient.mk
+        apply Subtype.ext
+        change (x : R) * (r * (y : R)) = r * ((x : R) * (y : R))
+        ring
+    }
+    map_add' := by
+      intro x y
+      apply LinearMap.ext
+      intro z
+      apply congrArg Submodule.Quotient.mk
+      apply Subtype.ext
+      exact add_mul (x : R) (y : R) (z : R)
+    map_smul' := by
+      intro r x
+      apply LinearMap.ext
+      intro y
+      change (Submodule.Quotient.mk _ : associatedGradedRingPiece I (i + j)) =
+        r • (Submodule.Quotient.mk _ : associatedGradedRingPiece I (i + j))
+      rw [← Submodule.Quotient.mk_smul]
+      apply congrArg (fun z : (I ^ (i + j) : Submodule R R) =>
+        (Submodule.Quotient.mk z : associatedGradedRingPiece I (i + j)))
+      apply Subtype.ext
+      simp only [Subtype.coe_mk]
+      change (r * (x : R)) * (y : R) = r * ((x : R) * (y : R))
+      ring
+  }
+
+private def associatedGradedRingPieceMul
+    {R : Type u} [CommRing R] (I : Ideal R) (i j : ℕ) :
+    associatedGradedRingPiece I i → associatedGradedRingPiece I j →
+      associatedGradedRingPiece I (i + j) := by
+  intro x y
+  refine Quotient.liftOn₂' x y (fun a b => associatedGradedRingPieceMulAux I i j a b) ?_
+  intro a₁ a₂ b₁ b₂ ha hb
+  apply (Submodule.Quotient.eq _).2
+  rw [Submodule.quotientRel_def] at ha hb
+  change (a₁ : R) - (b₁ : R) ∈ I ^ (i + 1) at ha
+  change (a₂ : R) - (b₂ : R) ∈ I ^ (j + 1) at hb
+  change (a₁ : R) * (a₂ : R) - (b₁ : R) * (b₂ : R) ∈ I ^ (i + j + 1)
+  have h₁ : ((a₁ : R) - (b₁ : R)) * (a₂ : R) ∈ I ^ (i + j + 1) := by
+    have h := Ideal.mul_mem_mul ha a₂.property
+    rw [← Ideal.IsTwoSided.pow_add] at h
+    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h
+  have h₂ : (b₁ : R) * ((a₂ : R) - (b₂ : R)) ∈ I ^ (i + j + 1) := by
+    have h := Ideal.mul_mem_mul b₁.property hb
+    rw [← Ideal.IsTwoSided.pow_add] at h
+    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h
+  rw [show (a₁ : R) * (a₂ : R) - (b₁ : R) * (b₂ : R) =
+      ((a₁ : R) - (b₁ : R)) * (a₂ : R) +
+        (b₁ : R) * ((a₂ : R) - (b₂ : R)) by ring]
+  exact (I ^ (i + j + 1) : Ideal R).add_mem h₁ h₂
+
+private theorem associatedGradedRingPiece_cast_mk
+    {R : Type u} [CommRing R] (I : Ideal R) {i j : ℕ} (h : i = j)
+    (a : (I ^ i : Submodule R R)) :
+    cast (congrArg (fun n => associatedGradedRingPiece I n) h)
+        (Submodule.Quotient.mk a) =
+      Submodule.Quotient.mk ⟨(a : R), by
+        rw [← h]
+        exact a.property⟩ := by
+  cases h
+  rfl
+
+private theorem associatedGradedRingPiece_mk_heq
+    {R : Type u} [CommRing R] (I : Ideal R) {i j : ℕ} (h : i = j)
+    (a : (I ^ i : Submodule R R)) (b : (I ^ j : Submodule R R))
+    (hab : (a : R) = (b : R)) :
+    HEq (Submodule.Quotient.mk a : associatedGradedRingPiece I i)
+      (Submodule.Quotient.mk b : associatedGradedRingPiece I j) := by
+  apply heq_of_eqRec_eq
+    (congrArg (fun n => associatedGradedRingPiece I n) h)
+  cases h
+  apply congrArg (fun z : (I ^ i : Submodule R R) =>
+    (Submodule.Quotient.mk z : associatedGradedRingPiece I i))
+  apply Subtype.ext
+  exact hab
+
 /-- The canonical ring operations on the associated graded ring. -/
 theorem associatedGradedRing_gcommRing_exists
     {R : Type u} [CommRing R] (I : Ideal R) :
     Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
-  sorry
+  let one : associatedGradedRingPiece I 0 :=
+    Submodule.Quotient.mk ⟨1, by simp⟩
+  letI : GradedMonoid.GOne (associatedGradedRingPiece I) := ⟨one⟩
+  letI : GradedMonoid.GMul (associatedGradedRingPiece I) :=
+    ⟨@associatedGradedRingPieceMul R _ I⟩
+  refine ⟨{
+    mul := @associatedGradedRingPieceMul R _ I
+    one := one
+    one_mul := by
+      rintro ⟨n, x⟩
+      change GradedMonoid.mk 0 one * GradedMonoid.mk n x = GradedMonoid.mk n x
+      have h : 0 + n = n := zero_add n
+      apply Sigma.ext h
+      refine Submodule.Quotient.induction_on _ x ?_
+      intro a
+      change HEq (associatedGradedRingPieceMul I 0 n one (Submodule.Quotient.mk a))
+        (Submodule.Quotient.mk a)
+      simp [one, associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux, zero_add]
+      refine (heq_of_eqRec_eq
+        (α := associatedGradedRingPiece I n)
+        (β := associatedGradedRingPiece I (0 + n))
+        (a := Submodule.Quotient.mk a)
+        (b := Submodule.Quotient.mk ⟨(a : R), by simpa using a.property⟩)
+        (congrArg (fun k => associatedGradedRingPiece I k) h.symm)
+        (associatedGradedRingPiece_cast_mk I h.symm a)).symm
+    mul_one := by
+      rintro ⟨n, x⟩
+      change GradedMonoid.mk n x * GradedMonoid.mk 0 one = GradedMonoid.mk n x
+      apply Sigma.ext (by
+        change n + 0 = n
+        exact add_zero n)
+      refine Submodule.Quotient.induction_on _ x ?_
+      intro a
+      change HEq (associatedGradedRingPieceMul I n 0 (Submodule.Quotient.mk a) one)
+        (Submodule.Quotient.mk a)
+      simp [one, associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux, add_zero]
+      rfl
+    mul_assoc := by
+      rintro ⟨i, x⟩ ⟨j, y⟩ ⟨k, z⟩
+      change (GradedMonoid.mk i x * GradedMonoid.mk j y) * GradedMonoid.mk k z =
+        GradedMonoid.mk i x * (GradedMonoid.mk j y * GradedMonoid.mk k z)
+      apply Sigma.ext (add_assoc i j k)
+      refine Submodule.Quotient.induction_on _ x ?_
+      intro a
+      refine Submodule.Quotient.induction_on _ y ?_
+      intro b
+      refine Submodule.Quotient.induction_on _ z ?_
+      intro c
+      change HEq (associatedGradedRingPieceMul I (i + j) k
+          (associatedGradedRingPieceMul I i j
+            (Submodule.Quotient.mk a) (Submodule.Quotient.mk b))
+          (Submodule.Quotient.mk c))
+        (associatedGradedRingPieceMul I i (j + k)
+          (Submodule.Quotient.mk a)
+          (associatedGradedRingPieceMul I j k
+            (Submodule.Quotient.mk b) (Submodule.Quotient.mk c)))
+      simpa [associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux, add_assoc] using
+        (associatedGradedRingPiece_mk_heq I (add_assoc i j k)
+          (⟨((a : R) * (b : R)) * (c : R), by
+            rw [Ideal.IsTwoSided.pow_add, Ideal.IsTwoSided.pow_add]
+            exact Ideal.mul_mem_mul
+              (Ideal.mul_mem_mul a.property b.property) c.property⟩)
+          (⟨(a : R) * ((b : R) * (c : R)), by
+            rw [Ideal.IsTwoSided.pow_add, Ideal.IsTwoSided.pow_add]
+            exact Ideal.mul_mem_mul a.property
+              (Ideal.mul_mem_mul b.property c.property)⟩) (by ring))
+    natCast := fun n => Submodule.Quotient.mk ⟨n, by simp⟩
+    natCast_zero := by
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      simp
+    natCast_succ := by
+      intro n
+      apply (Submodule.Quotient.eq _).2
+      simp [one, Submodule.Quotient.mk]
+    intCast := fun z => Submodule.Quotient.mk ⟨z, by simp⟩
+    intCast_ofNat := by
+      intro n
+      apply (Submodule.Quotient.eq _).2
+      simp [Submodule.Quotient.mk]
+    intCast_negSucc_ofNat := by
+      intro n
+      apply (Submodule.Quotient.eq _).2
+      simp [Submodule.Quotient.mk]
+    mul_comm := by
+      rintro ⟨i, x⟩ ⟨j, y⟩
+      change GradedMonoid.mk i x * GradedMonoid.mk j y =
+        GradedMonoid.mk j y * GradedMonoid.mk i x
+      apply Sigma.ext (add_comm i j)
+      refine Submodule.Quotient.induction_on _ x ?_
+      intro a
+      refine Submodule.Quotient.induction_on _ y ?_
+      intro b
+      change HEq (associatedGradedRingPieceMul I i j
+          (Submodule.Quotient.mk a) (Submodule.Quotient.mk b))
+        (associatedGradedRingPieceMul I j i
+          (Submodule.Quotient.mk b) (Submodule.Quotient.mk a))
+      simpa [associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux, add_comm] using
+        (associatedGradedRingPiece_mk_heq I (add_comm i j)
+          (⟨(a : R) * (b : R), by
+            rw [Ideal.IsTwoSided.pow_add]
+            exact Ideal.mul_mem_mul a.property b.property⟩)
+          (⟨(b : R) * (a : R), by
+            rw [Ideal.IsTwoSided.pow_add]
+            exact Ideal.mul_mem_mul b.property a.property⟩) (by ring))
+    mul_zero := by
+      intro i j a
+      rw [← Submodule.Quotient.mk_zero]
+      refine Submodule.Quotient.induction_on _ a ?_
+      intro a
+      change associatedGradedRingPieceMul I i j
+          (Submodule.Quotient.mk a)
+          (Submodule.Quotient.mk (0 : (I ^ j : Submodule R R))) =
+        (0 : associatedGradedRingPiece I (i + j))
+      simp [associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux]
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      simp
+    zero_mul := by
+      intro i j a
+      rw [← Submodule.Quotient.mk_zero]
+      refine Submodule.Quotient.induction_on _ a ?_
+      intro a
+      change associatedGradedRingPieceMul I i j
+          (Submodule.Quotient.mk (0 : (I ^ i : Submodule R R)))
+          (Submodule.Quotient.mk a) =
+        (0 : associatedGradedRingPiece I (i + j))
+      simp [associatedGradedRingPieceMul, Submodule.Quotient.mk,
+        associatedGradedRingPieceMulAux]
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      simp
+    mul_add := by
+      intro i j a b c
+      refine Submodule.Quotient.induction_on _ a ?_
+      intro a
+      refine Submodule.Quotient.induction_on _ b ?_
+      intro b
+      refine Submodule.Quotient.induction_on _ c ?_
+      intro c
+      rw [← Submodule.Quotient.mk_add]
+      apply (Submodule.Quotient.eq _).2
+      change (a : R) * ((b : R) + (c : R)) -
+          ((a : R) * (b : R) + (a : R) * (c : R)) ∈ I ^ (i + j + 1)
+      rw [show (a : R) * ((b : R) + (c : R)) -
+          ((a : R) * (b : R) + (a : R) * (c : R)) = 0 by ring]
+      exact (I ^ (i + j + 1) : Ideal R).zero_mem
+    add_mul := by
+      intro i j a b c
+      refine Submodule.Quotient.induction_on _ a ?_
+      intro a
+      refine Submodule.Quotient.induction_on _ b ?_
+      intro b
+      refine Submodule.Quotient.induction_on _ c ?_
+      intro c
+      rw [← Submodule.Quotient.mk_add]
+      apply (Submodule.Quotient.eq _).2
+      change ((a : R) + (b : R)) * (c : R) -
+          ((a : R) * (c : R) + (b : R) * (c : R)) ∈ I ^ (i + j + 1)
+      rw [show ((a : R) + (b : R)) * (c : R) -
+          ((a : R) * (c : R) + (b : R) * (c : R)) = 0 by ring]
+      exact (I ^ (i + j + 1) : Ideal R).zero_mem
+  }⟩
 
 noncomputable instance associatedGradedRing_gcommRing
     {R : Type u} [CommRing R] (I : Ideal R) :

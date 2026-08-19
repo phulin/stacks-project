@@ -1085,8 +1085,9 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
       (f : A ⟶ B) (g : B ⟶ C) :
       k A C (f ≫ g) = k A B f ≫ k B C g := by
-    simp only [k, Functor.map_comp, Category.assoc,
-      Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc]
+    simp only [k, Functor.map_comp]
+    simp only [Category.assoc]
+    simp only [Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc]
   have hα_id (A : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
       alpha A A (𝟙 A) = 𝟙 _ := by

@@ -294,44 +294,44 @@ private theorem relativeAssassinA'_subset_A
     [AddCommGroup N] [Module S N] :
     relativeAssassinA' (R := R) (S := S) (N := N) ⊆
       relativeAssassinA (R := R) (S := S) (N := N) := by
-  letI : Module R N := Module.compHom N (algebraMap R S)
-  letI : IsScalarTower R S N :=
+  let : Module R N := Module.compHom N (algebraMap R S)
+  let : IsScalarTower R S N :=
     inducedModule_isScalarTower (R := R) (S := S) (N := N)
   intro q hq
-  simp only [relativeAssassinA', Set.mem_setOf_eq] at hq
+  simp only [relativeAssassinA', Set.mem_ofPred_eq] at hq
   rcases hq with ⟨p, hp, hmem⟩
   rw [hp] at hmem
   rw [relativeFiberAssociatedPrimesImage] at hmem
   rcases hmem with ⟨r, hr, hcomap⟩
-  letI : AddCommGroup
+  let : AddCommGroup
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     TensorProduct.addCommGroup
-  letI : Module S
+  let : Module S
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     TensorProduct.leftModule
-  letI : Module (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
+  let : Module (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     Formalization.Books.Algebra.Unit12.tensorProductBModule
       R (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField N
       (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
-  letI : IsScalarTower R S
+  let : IsScalarTower R S
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     TensorProduct.isScalarTower_left
-  letI : IsScalarTower R
+  let : IsScalarTower R
       (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     tensorProductScalar_isScalarTower_right
       (R := R) (S := S)
       (A := (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
       (N := N)
-  letI : SMulCommClass S
+  let : SMulCommClass S
       (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     tensorProductScalar_smulCommClass
       (R := R) (S := S)
       (A := (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
       (N := N)
-  letI : Module (S ⊗[R]
+  let : Module (S ⊗[R]
       (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField) :=
     TensorProduct.Algebra.module
@@ -351,7 +351,7 @@ private theorem relativeAssassinA'_subset_A
     have hideal := congrArg PrimeSpectrum.asIdeal hcomap
     rw [PrimeSpectrum.comap_asIdeal] at hideal
     exact hideal
-  simp only [relativeAssassinA, Set.mem_setOf_eq]
+  simp only [relativeAssassinA, Set.mem_ofPred_eq]
   change ∃ m, (⊥ : Submodule S
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
         ({m} : Set _) = q.asIdeal
@@ -403,11 +403,11 @@ private theorem relativeAssassinA_subset_A'
     [AddCommGroup N] [Module S N] :
     relativeAssassinA (R := R) (S := S) (N := N) ⊆
       relativeAssassinA' (R := R) (S := S) (N := N) := by
-  letI : Module R N := Module.compHom N (algebraMap R S)
-  letI : IsScalarTower R S N :=
+  let : Module R N := Module.compHom N (algebraMap R S)
+  let : IsScalarTower R S N :=
     inducedModule_isScalarTower (R := R) (S := S) (N := N)
   intro q hq
-  simp only [relativeAssassinA, Set.mem_setOf_eq] at hq
+  simp only [relativeAssassinA, Set.mem_ofPred_eq] at hq
   change ∃ m, (⊥ : Submodule S
       (N ⊗[R] (PrimeSpectrum.comap (algebraMap R S) q).asIdeal.ResidueField)).colon
         ({m} : Set _) = q.asIdeal at hq
@@ -415,20 +415,20 @@ private theorem relativeAssassinA_subset_A'
   let p : PrimeSpectrum R := PrimeSpectrum.comap (algebraMap R S) q
   let M := N ⊗[R] p.asIdeal.ResidueField
   let T := S ⊗[R] p.asIdeal.ResidueField
-  letI : AddCommGroup M := TensorProduct.addCommGroup
-  letI : Module R M := TensorProduct.leftModule
-  letI : Module S M := TensorProduct.leftModule
-  letI : Module p.asIdeal.ResidueField M :=
+  let : AddCommGroup M := TensorProduct.addCommGroup
+  let : Module R M := TensorProduct.leftModule
+  let : Module S M := TensorProduct.leftModule
+  let : Module p.asIdeal.ResidueField M :=
     Formalization.Books.Algebra.Unit12.tensorProductBModule
       R p.asIdeal.ResidueField N p.asIdeal.ResidueField
-  letI : IsScalarTower R S M := TensorProduct.isScalarTower_left
-  letI : IsScalarTower R p.asIdeal.ResidueField M :=
+  let : IsScalarTower R S M := TensorProduct.isScalarTower_left
+  let : IsScalarTower R p.asIdeal.ResidueField M :=
     tensorProductScalar_isScalarTower_right
       (R := R) (S := S) (A := p.asIdeal.ResidueField) (N := N)
-  letI : SMulCommClass S p.asIdeal.ResidueField M :=
+  let : SMulCommClass S p.asIdeal.ResidueField M :=
     tensorProductScalar_smulCommClass
       (R := R) (S := S) (A := p.asIdeal.ResidueField) (N := N)
-  letI : Module T M := TensorProduct.Algebra.module
+  let : Module T M := TensorProduct.Algebra.module
   have hsmul (s : S) (z : M) :
       ((Algebra.TensorProduct.includeLeftRingHom : S →+* T) s) • z = s • z := by
     change (s ⊗ₜ[R] (1 : p.asIdeal.ResidueField)) • z = s • z

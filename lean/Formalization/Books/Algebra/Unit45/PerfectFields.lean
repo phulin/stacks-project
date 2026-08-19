@@ -640,7 +640,10 @@ theorem pthRootLevel_mono
     {k : Type u} [Field k] (p : ℕ) [Fact p.Prime] [CharP k p]
     (n : ℕ) :
     pthRootLevel k p n ≤ pthRootLevel k p (n + 1) := by
-  sorry
+  unfold pthRootLevel
+  apply IntermediateField.adjoin.mono k
+  rintro _ ⟨x, rfl⟩
+  exact ⟨x ^ p, PerfectClosure.mk_succ_pow k p n x⟩
 
 /-- The finite root level is uniquely determined, up to a unique isomorphism,
     by its algebraicity and its two `p^n`-power properties. -/
@@ -653,7 +656,158 @@ theorem pthRootLevel_unique_up_to_unique_algEquiv
       y ^ (p ^ n) = algebraMap k L x) :
     ∃ e : pthRootLevel k p n ≃ₐ[k] L,
       ∀ e' : pthRootLevel k p n ≃ₐ[k] L, e' = e := by
-  sorry
+  let _ : ExpChar k p := ExpChar.prime Fact.out
+  let _ : CharP L p := charP_of_injective_algebraMap' k p
+  let _ : ExpChar L p := ExpChar.prime Fact.out
+  let _ : CharP (pthRootLevel k p n) p := charP_of_injective_algebraMap' k p
+  let _ : ExpChar (pthRootLevel k p n) p := ExpChar.prime Fact.out
+  let _ : ExpChar (PerfectClosure k p) p := ExpChar.prime Fact.out
+  have hp0 : p ≠ 0 := (Fact.out : p.Prime).ne_zero
+  have hpowL : Function.Injective (fun y : L => y ^ (p ^ n)) := by
+    intro y z h
+    apply iterateFrobenius_inj L p n
+    simpa [iterateFrobenius_def, hp0] using h
+  have hpowC : Function.Injective
+      (fun y : PerfectClosure k p => y ^ (p ^ n)) := by
+    intro y z h
+    apply iterateFrobenius_inj (PerfectClosure k p) p n
+    simpa [iterateFrobenius_def, hp0] using h
+  let g : L →+* k :=
+    { toFun := fun y => Classical.choose (hbase y)
+      map_one' := by
+        apply FaithfulSMul.algebraMap_injective k L
+        rw [← Classical.choose_spec (hbase 1)]
+        simp [hp0]
+      map_mul' := by
+        intro y z
+        apply FaithfulSMul.algebraMap_injective k L
+        rw [← Classical.choose_spec (hbase (y * z)), map_mul,
+          ← Classical.choose_spec (hbase y), ← Classical.choose_spec (hbase z),
+          mul_pow]
+      map_zero' := by
+        apply FaithfulSMul.algebraMap_injective k L
+        rw [← Classical.choose_spec (hbase 0)]
+        simp [hp0]
+      map_add' := by
+        intro y z
+        apply FaithfulSMul.algebraMap_injective k L
+        rw [← Classical.choose_spec (hbase (y + z)), map_add,
+          ← Classical.choose_spec (hbase y), ← Classical.choose_spec (hbase z),
+          add_pow_char_pow] }
+  have hg_spec (y : L) : y ^ (p ^ n) = algebraMap k L (g y) :=
+    Classical.choose_spec (hbase y)
+  have hg_base (x : k) : g (algebraMap k L x) = x ^ (p ^ n) := by
+    apply FaithfulSMul.algebraMap_injective k L
+    rw [map_pow, ← hg_spec]
+  have hmk (x : k) :
+      (PerfectClosure.mk k p (n, x)) ^ (p ^ n) = PerfectClosure.of k p x := by
+    rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]
+  let r : k →+* pthRootLevel k p n :=
+    { toFun := fun x =>
+        ⟨PerfectClosure.mk k p (n, x),
+          IntermediateField.subset_adjoin k _ ⟨x, rfl⟩⟩
+      map_one' := by
+        apply Subtype.ext
+        apply hpowC
+        change (PerfectClosure.mk k p (n, 1)) ^ (p ^ n) =
+          (1 : PerfectClosure k p) ^ (p ^ n)
+        rw [hmk, map_one]
+        simp [hp0]
+      map_mul' := by
+        intro x y
+        apply Subtype.ext
+        apply hpowC
+        change (PerfectClosure.mk k p (n, x * y)) ^ (p ^ n) =
+          (PerfectClosure.mk k p (n, x) * PerfectClosure.mk k p (n, y)) ^ (p ^ n)
+        rw [hmk, mul_pow, hmk, hmk, map_mul]
+      map_zero' := by
+        apply Subtype.ext
+        apply hpowC
+        change (PerfectClosure.mk k p (n, 0)) ^ (p ^ n) =
+          (0 : PerfectClosure k p) ^ (p ^ n)
+        rw [hmk, map_zero]
+        simp [hp0]
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        apply hpowC
+        change (PerfectClosure.mk k p (n, x + y)) ^ (p ^ n) =
+          (PerfectClosure.mk k p (n, x) + PerfectClosure.mk k p (n, y)) ^ (p ^ n)
+        rw [hmk, add_pow_char_pow, hmk, hmk, map_add] }
+  have hr_pow (x : k) :
+      ((r x : pthRootLevel k p n) : PerfectClosure k p) ^ (p ^ n) =
+        PerfectClosure.of k p x :=
+    hmk x
+  let φ : L →ₐ[k] pthRootLevel k p n :=
+    { toRingHom := r.comp g
+      commutes' := by
+        intro x
+        change r (g (algebraMap k L x)) = algebraMap k (pthRootLevel k p n) x
+        apply Subtype.ext
+        apply hpowC
+        change ((r (g (algebraMap k L x)) : pthRootLevel k p n) :
+            PerfectClosure k p) ^ (p ^ n) =
+          ((algebraMap k (pthRootLevel k p n) x : pthRootLevel k p n) :
+            PerfectClosure k p) ^ (p ^ n)
+        rw [hr_pow, hg_base, map_pow]
+        change (PerfectClosure.of k p x) ^ (p ^ n) =
+          (PerfectClosure.of k p x) ^ (p ^ n)
+        rfl }
+  have hφ_pow (y : L) :
+      ((φ y : pthRootLevel k p n) : PerfectClosure k p) ^ (p ^ n) =
+        PerfectClosure.of k p (g y) := by
+    change ((r (g y) : pthRootLevel k p n) : PerfectClosure k p) ^ (p ^ n) = _
+    exact hr_pow (g y)
+  have hφ_pow' (y : L) :
+      (φ y : pthRootLevel k p n) ^ (p ^ n) =
+        algebraMap k (pthRootLevel k p n) (g y) := by
+    apply Subtype.ext
+    exact hφ_pow y
+  have hφ_inj : Function.Injective φ := by
+    intro y z hyz
+    apply hpowL
+    change y ^ (p ^ n) = z ^ (p ^ n)
+    rw [hg_spec y, hg_spec z]
+    have h := congrArg (fun w : pthRootLevel k p n =>
+      ((w : PerfectClosure k p) ^ (p ^ n))) hyz
+    rw [hφ_pow y, hφ_pow z] at h
+    exact congrArg (algebraMap k L)
+      (FaithfulSMul.algebraMap_injective k (PerfectClosure k p) h)
+  have hφ_surj : Function.Surjective φ := by
+    intro z
+    obtain ⟨x, hx⟩ := pthRootLevel_element_pow_mem_base p n z
+    obtain ⟨y, hy⟩ := hroot x
+    have hgy : g y = x := by
+      apply FaithfulSMul.algebraMap_injective k L
+      exact (hg_spec y).symm.trans hy
+    refine ⟨y, ?_⟩
+    apply Subtype.ext
+    apply hpowC
+    change ((φ y : pthRootLevel k p n) : PerfectClosure k p) ^ (p ^ n) =
+      (z : PerfectClosure k p) ^ (p ^ n)
+    rw [hφ_pow, hgy, ← hx]
+  let e₀ : L ≃ₐ[k] pthRootLevel k p n := AlgEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩
+  let e : pthRootLevel k p n ≃ₐ[k] L := e₀.symm
+  refine ⟨e, ?_⟩
+  intro e'
+  apply AlgEquiv.ext
+  intro z
+  obtain ⟨y, hy⟩ := e₀.surjective z
+  have hey : e' (φ y) = y := by
+    apply hpowL
+    calc
+      e' (φ y) ^ (p ^ n) = e' ((φ y) ^ (p ^ n)) := by
+        rw [map_pow]
+      _ = e' (algebraMap k (pthRootLevel k p n) (g y)) := by
+        rw [hφ_pow']
+      _ = algebraMap k L (g y) := e'.commutes _
+      _ = y ^ (p ^ n) := (hg_spec y).symm
+  rw [← hy]
+  calc
+    e' (e₀ y) = y := by
+      change e' (φ y) = y
+      exact hey
+    _ = e (e₀ y) := by simp [e, e₀]
 
 /-- Every element of the canonical `p`-th-root level has the expected
     `p^n`-th power in the base. -/
@@ -661,7 +815,7 @@ theorem perfectClosure_mk_pow
     {k : Type u} [Field k] (p : ℕ) [Fact p.Prime] [CharP k p]
     (n : ℕ) (x : k) :
     (PerfectClosure.mk k p (n, x)) ^ (p ^ n) = PerfectClosure.of k p x := by
-  sorry
+  rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]
 
 /-- Every element of the absolute perfect closure occurs at some finite
     `p`-th-root level. -/

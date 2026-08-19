@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit62
+import Formalization.Books.Algebra.Unit35.JacobsonRings
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Finiteness
@@ -1407,7 +1408,46 @@ theorem ideal_contains_regular_iff
     (hI : I ≤ IsLocalRing.maximalIdeal R) :
     (∃ x : R, x ∈ I ∧ IsSMulRegular M x) ↔
       ∀ q : PrimeSpectrum R, q ∈ associatedPrimes R M → ¬ I ≤ q.asIdeal := by
-  sorry
+  classical
+  let _ := hI
+  let s : Set (Ideal R) :=
+    (fun q : PrimeSpectrum R => q.asIdeal) '' associatedPrimes R M
+  have hs : s.Finite := by
+    exact (finite_ass (R := R) (M := M)).image _
+  have hsp : ∀ J ∈ s, J ≠ (⊤ : Ideal R) → J ≠ (⊤ : Ideal R) → J.IsPrime := by
+    rintro J ⟨q, hq, rfl⟩ _ _
+    exact q.isPrime
+  have hunion :
+      (⋃ J ∈ s, (J : Set R)) =
+        {x : R | ∃ m : M, m ≠ 0 ∧ x • m = 0} := by
+    rw [← iUnion_associatedPrimes_eq_module_zeroDivisors (R := R) (M := M)]
+    ext x
+    simp [s]
+  constructor
+  · rintro ⟨x, hxI, hxreg⟩ q hq hIq
+    have hxnot : x ∉ (⋃ J ∈ s, (J : Set R)) := by
+      rw [hunion]
+      rintro ⟨m, hm, hxm⟩
+      exact hm (hxreg (by simpa using hxm))
+    apply hxnot
+    refine Set.mem_iUnion_of_mem q.asIdeal ?_
+    refine Set.mem_iUnion_of_mem ⟨q, hq, rfl⟩ ?_
+    exact hIq hxI
+  · intro h
+    have hnot : ¬ (I : Set R) ⊆ ⋃ J ∈ s, (J : Set R) := by
+      intro hsub
+      obtain ⟨J, hJs, hIJ⟩ :=
+        (Ideal.subset_union_prime_finite hs (⊤ : Ideal R) (⊤ : Ideal R) hsp).mp hsub
+      obtain ⟨q, hq, hqJ⟩ := hJs
+      exact h q hq (by simpa [← hqJ] using hIJ)
+    obtain ⟨x, hxI, hxnot⟩ := Set.not_subset.mp hnot
+    refine ⟨x, hxI, ?_⟩
+    apply isSMulRegular_iff_right_eq_zero_of_smul.mpr
+    intro m hxm
+    by_contra hm
+    apply hxnot
+    rw [hunion]
+    exact ⟨m, hm, hxm⟩
 
 /-- The canonical map from a module to the product of its localizations at
 its associated primes. -/
@@ -1426,7 +1466,51 @@ theorem localizationAtAssociatedPrimesMap_injective
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] [IsNoetherianRing R] :
     Function.Injective (localizationAtAssociatedPrimesMap (R := R) (M := M)) := by
-  sorry
+  exact fun x y hxy => by
+    by_contra hxy'
+    let z : M := x - y
+    let N : Submodule R M := R ∙ z
+    have hN : Nontrivial N := by
+      refine ⟨⟨z, Submodule.mem_span_singleton_self z⟩, 0, ?_⟩
+      intro h
+      apply hxy'
+      apply sub_eq_zero.mp
+      simpa [z] using congrArg Subtype.val h
+    obtain ⟨J, hJ⟩ := _root_.associatedPrimes.nonempty R N
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hJ
+    obtain ⟨hprime, n, hn⟩ := hJ
+    let p : PrimeSpectrum R := ⟨J, hprime⟩
+    have hpN : p ∈ associatedPrimes R N := by
+      change ∃ n, (⊥ : Submodule R N).colon ({n} : Set _) = p.asIdeal
+      exact ⟨n, hn.symm⟩
+    have hpM : p ∈ associatedPrimes R M :=
+      (ass_subset_ass_of_short_exact
+        (f := N.subtype) (g := N.mkQ)
+        N.subtype_injective N.mkQ_surjective
+        (LinearMap.exact_subtype_mkQ N)).1 hpN
+    have hzero :
+        localizationAtAssociatedPrimesMap (R := R) (M := M) z = 0 := by
+      rw [show z = x - y by rfl, map_sub, hxy, sub_self]
+    have hloc := congrFun hzero ⟨p, hpM⟩
+    change LocalizedModule.mkLinearMap p.asIdeal.primeCompl M z = 0 at hloc
+    rw [LocalizedModule.mkLinearMap_apply,
+      ← LocalizedModule.zero_mk (S := p.asIdeal.primeCompl) (M := M) 1] at hloc
+    obtain ⟨u, hu⟩ :=
+      (LocalizedModule.mk_eq (S := p.asIdeal.primeCompl) (M := M)).mp hloc
+    have huz : (u : R) • z = 0 := by
+      simpa [Submonoid.smul_def] using hu
+    obtain ⟨r, hr⟩ := Submodule.mem_span_singleton.mp n.property
+    have hun : (u : R) • (n : M) = 0 := by
+      calc
+        (u : R) • (n : M) = (u : R) • (r • z) := by rw [hr]
+        _ = r • ((u : R) • z) := by
+          rw [smul_smul, smul_smul, mul_comm]
+        _ = 0 := by rw [huz, smul_zero]
+    have huJ : (u : R) ∈ J := by
+      rw [hn, Submodule.mem_colon_singleton]
+      apply Subtype.ext
+      exact hun
+    exact u.property (by simpa [p] using huJ)
 
 /-! ## A dimension-one auxiliary statement -/
 
@@ -1437,7 +1521,100 @@ theorem exists_nonzerodivisor_nonunit_of_finiteType_of_positive_dimension
     [Algebra.FiniteType k S]
     (hdim : 0 < ringKrullDim S) :
     ∃ f : S, f ∈ nonZeroDivisors S ∧ ¬ IsUnit f := by
-  sorry
+  classical
+  let _ : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  let _ : IsJacobsonRing S :=
+    Formalization.Books.Algebra.Unit35.finiteType_algebra_over_field_isJacobson
+      (k := k) (A := S)
+  have hchain : ∃ p q : PrimeSpectrum S, p < q := by
+    rw [ringKrullDim] at hdim
+    exact Order.krullDim_pos_iff.mp hdim
+  obtain ⟨p, q, hpq⟩ := hchain
+  have hpmax : ¬ p.asIdeal.IsMaximal := by
+    intro hp
+    have heq : p.asIdeal = q.asIdeal :=
+      hp.eq_of_le q.isPrime.ne_top hpq.le
+    exact (ne_of_lt hpq) (PrimeSpectrum.ext heq)
+  let Z : Set (PrimeSpectrum S) :=
+    Formalization.Books.Algebra.Unit35.primeSpectrumLocallyClosedSet p 1
+  have hZinf : Z.Infinite := by
+    exact Formalization.Books.Algebra.Unit35.jacobson_locally_closed_sets_infinite
+      p 1 hpmax (fun h => p.isPrime.ne_top (p.asIdeal.eq_top_iff_one.mpr h))
+  have hm : ∃ m : PrimeSpectrum S, m ∈ Z ∧
+      m ∈ closedPoints (PrimeSpectrum S) ∧ m ∉ associatedPrimes S S := by
+    by_contra h
+    have hass : ∀ m : PrimeSpectrum S, m ∈ Z →
+        m ∈ closedPoints (PrimeSpectrum S) → m ∈ associatedPrimes S S := by
+      intro m hmZ hmclosed
+      by_contra hmassoc
+      exact h ⟨m, hmZ, hmclosed, hmassoc⟩
+    let F : Set (PrimeSpectrum S) := Z ∩ closedPoints (PrimeSpectrum S)
+    have hFfin : F.Finite := by
+      apply (finite_ass (R := S) (M := S)).subset
+      intro m hmF
+      exact hass m hmF.1 hmF.2
+    have hFclosed : IsClosed F := by
+      rw [← F.biUnion_of_singleton]
+      exact hFfin.isClosed_biUnion fun m hm => mem_closedPoints_iff.mp hm.2
+    have hZF : (Z \ F).Nonempty :=
+      (hZinf.sdiff hFfin).nonempty
+    have hZloc : IsLocallyClosed Z := by
+      change IsLocallyClosed
+        (PrimeSpectrum.zeroLocus (p.asIdeal : Set S) ∩
+          (PrimeSpectrum.basicOpen (1 : S) : Set (PrimeSpectrum S)))
+      exact (PrimeSpectrum.isClosed_zeroLocus _).isLocallyClosed.inter
+        PrimeSpectrum.isOpen_basicOpen.isLocallyClosed
+    obtain ⟨m, hmZF, hmclosed⟩ :=
+      nonempty_inter_closedPoints hZF (hZloc.inter hFclosed.isOpen_compl.isLocallyClosed)
+    exact hmZF.2 ⟨hmZF.1, hmclosed⟩
+  obtain ⟨m, hmZ, hmclosed, hmassoc⟩ := hm
+  have hmmax : m.asIdeal.IsMaximal := by
+    have hmclosed' := hmclosed
+    rw [Formalization.Books.Algebra.Unit35.primeSpectrum_closedPoints_eq_maximalIdeals] at hmclosed'
+    exact hmclosed'
+  let A : Set (Ideal S) :=
+    (fun q : PrimeSpectrum S => q.asIdeal) '' associatedPrimes S S
+  have hAfin : A.Finite := (finite_ass (R := S) (M := S)).image _
+  have hAprime : ∀ J ∈ A, J ≠ (⊤ : Ideal S) → J ≠ (⊤ : Ideal S) → J.IsPrime := by
+    rintro J ⟨q, hq, rfl⟩ _ _
+    exact q.isPrime
+  have hAunion :
+      (⋃ J ∈ A, (J : Set S)) =
+        {x : S | ∃ m : S, m ≠ 0 ∧ x • m = 0} := by
+    rw [← iUnion_associatedPrimes_eq_module_zeroDivisors (R := S) (M := S)]
+    ext x
+    simp [A]
+  have hnot : ¬ (m.asIdeal : Set S) ⊆ ⋃ J ∈ A, (J : Set S) := by
+    intro hsub
+    obtain ⟨J, hJA, hMJ⟩ :=
+      (Ideal.subset_union_prime_finite hAfin (⊤ : Ideal S) (⊤ : Ideal S) hAprime).mp hsub
+    obtain ⟨q, hq, hqJ⟩ := hJA
+    have hMq : m.asIdeal ≤ q.asIdeal := by simpa [← hqJ] using hMJ
+    have heq : m.asIdeal = q.asIdeal :=
+      hmmax.eq_of_le q.isPrime.ne_top hMq
+    have hmq : m = q := PrimeSpectrum.ext heq
+    apply hmassoc
+    simpa [hmq] using hq
+  obtain ⟨f, hfm, hfnot⟩ := Set.not_subset.mp hnot
+  have hreg : IsSMulRegular S f := by
+    apply isSMulRegular_iff_right_eq_zero_of_smul.mpr
+    intro x hfx
+    by_contra hx
+    apply hfnot
+    rw [hAunion]
+    exact ⟨x, hx, hfx⟩
+  refine ⟨f, ?_, ?_⟩
+  · rw [mem_nonZeroDivisors_iff]
+    constructor
+    · intro x hxf
+      apply hreg.right_eq_zero_of_smul
+      simpa [smul_eq_mul] using hxf
+    · intro x hxf
+      apply hreg.right_eq_zero_of_smul
+      simpa [smul_eq_mul, mul_comm] using hxf
+  · intro hfunit
+    apply hmmax.ne_top
+    exact Ideal.eq_top_of_isUnit_mem m.asIdeal hfm hfunit
 
 end
 

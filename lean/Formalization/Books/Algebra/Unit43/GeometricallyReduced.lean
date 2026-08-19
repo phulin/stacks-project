@@ -762,6 +762,81 @@ theorem isReduced_tensorProduct_of_separable_extension
         (k := k) (R := S) (S := K) hS hgeomK
     exact isReduced_of_injective e.symm e.symm.injective
 
+private theorem isReduced_top_tensorProduct_of_separablyGenerated
+    {k : Type u} {S : Type v} {B : Type u} {T : Type u}
+    [Field k] [CommRing S] [Field B] [Field T]
+    [Algebra k S] [Algebra k B] [Algebra k T] [Algebra B T]
+    [IsScalarTower k B T] [FiniteDimensional k B]
+    [IsPurelyInseparable k B]
+    (S' : Subalgebra k S)
+    (hsep : Formalization.Books.Algebra.Unit42.IsSeparablyGenerated B T)
+    (h : ∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) :
+    IsReduced (T ⊗[k] S') := by
+  let _ : Algebra B (B ⊗[k] S') :=
+    Algebra.TensorProduct.leftAlgebra
+  let _ : Module B (B ⊗[k] S') :=
+    @Algebra.toModule B (B ⊗[k] S') _ _ Algebra.TensorProduct.leftAlgebra
+  let q : (B ⊗[k] S') →ₐ[k] (B ⊗[k] S) :=
+    Algebra.TensorProduct.map (AlgHom.id k B) S'.val
+  have hq : Function.Injective q :=
+    TensorProduct.map_injective_of_flat_flat (LinearMap.id) S'.val.toLinearMap
+      Function.injective_id Subtype.val_injective
+  let _ : IsReduced (B ⊗[k] S) := h B
+  have hbase : IsReduced (B ⊗[k] S') := isReduced_of_injective q hq
+  have htop₀ : IsReduced (T ⊗[B] (B ⊗[k] S')) :=
+    isReduced_tensorProduct_of_separable_extension
+      (k := B) (S := B ⊗[k] S') (K := T) hbase (Or.inr hsep)
+  let e₁ : (T ⊗[B] (B ⊗[k] S')) ≃ₐ[T] T ⊗[k] S' :=
+    Algebra.TensorProduct.cancelBaseChange k B T T S'
+  let _ : IsReduced (T ⊗[B] (B ⊗[k] S')) := htop₀
+  exact isReduced_of_injective e₁.symm.toRingEquiv.toRingHom e₁.symm.injective
+
+private theorem isReduced_fractionRing_tensorProduct
+    {k : Type u} {S : Type v} {K : Type u}
+    [Field k] [CommRing S] [Field K]
+    [Algebra k S] [Algebra k K]
+    (R' : Subalgebra k K) (S' : Subalgebra k S)
+    (hR' : Algebra.FiniteType k R')
+    (h : ∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) :
+    IsReduced (FractionRing R' ⊗[k] S') := by
+  let _ : Algebra.FiniteType k R' := hR'
+  let : CommRing R' := Subalgebra.toCommRing R'
+  let : IsDomain R' := by
+    have hK : IsDomain K := inferInstance
+    have hinj : Function.Injective (R'.val.toRingHom : R' →+* K) :=
+      Subtype.val_injective
+    exact Function.Injective.isDomain R'.val.toRingHom hinj
+  let L := FractionRing R'
+  let _ : Algebra.EssFiniteType k L := inferInstance
+  obtain ⟨D⟩ := Formalization.Books.Algebra.Unit42.exists_purely_inseparable_base_change
+    (k := k) (K := L)
+  let _ : Field D.base := D.baseField
+  let _ : Field D.top := D.topField
+  let _ : Algebra k D.base := D.baseAlgebra
+  let _ : Algebra k D.top := D.topAlgebra
+  let _ : Algebra L D.top := D.topOverK
+  let _ : Algebra D.base D.top := D.topOverBase
+  let _ : IsScalarTower k D.base D.top := D.baseTower
+  let _ : IsScalarTower k L D.top := D.topTower
+  let _ : FiniteDimensional k D.base := D.baseFinite
+  let _ : IsPurelyInseparable k D.base := D.basePurelyInseparable
+  let _ : FiniteDimensional L D.top := D.topFinite
+  let _ : IsPurelyInseparable L D.top := D.topPurelyInseparable
+  have htop : IsReduced (D.top ⊗[k] S') :=
+    isReduced_top_tensorProduct_of_separablyGenerated S' D.topSeparablyGenerated h
+  let m : (L ⊗[k] S') →ₐ[k] (D.top ⊗[k] S') :=
+    Algebra.TensorProduct.map (IsScalarTower.toAlgHom k L D.top) (AlgHom.id k S')
+  have hm : Function.Injective m :=
+    TensorProduct.map_injective_of_flat_flat
+      (IsScalarTower.toAlgHom k L D.top).toLinearMap (LinearMap.id)
+      (IsScalarTower.toAlgHom k L D.top).injective Function.injective_id
+  let _ : IsReduced (D.top ⊗[k] S') := htop
+  exact isReduced_of_injective m hm
+
 /-- It is enough to test reducedness after every finite purely inseparable
 field extension of the base. -/
 theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
@@ -771,7 +846,35 @@ theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
       [FiniteDimensional k k'] [IsPurelyInseparable k k'],
       IsReduced (k' ⊗[k] S)) :
     IsGeometricallyReduced k S := by
-  sorry
+  classical
+  intro K _ _
+  let _ : IsReduced S := hS
+  by_contra hnot
+  obtain ⟨R', S', hR', hS', hnot'⟩ :=
+    exists_finiteType_subalgebras_of_not_isReduced_tensorProduct hnot
+  let L := FractionRing R'
+  have hL : IsReduced (L ⊗[k] S') :=
+    isReduced_fractionRing_tensorProduct R' S' hR' h
+  let : CommRing R' := Subalgebra.toCommRing R'
+  let _ : IsDomain R' := by
+    have hK : IsDomain K := inferInstance
+    have hinj : Function.Injective (R'.val.toRingHom : R' →+* K) :=
+      Subtype.val_injective
+    exact Function.Injective.isDomain R'.val.toRingHom hinj
+  let _ : IsScalarTower k R' L := IsScalarTower.of_algebraMap_eq' (by
+    ext x
+    simp [← IsScalarTower.algebraMap_apply])
+  let n : (R' ⊗[k] S') →ₐ[k] (L ⊗[k] S') :=
+    Algebra.TensorProduct.map (IsScalarTower.toAlgHom k R' L) (AlgHom.id k S')
+  have hR'L : Function.Injective (IsScalarTower.toAlgHom k R' L) := by
+    intro x y hxy
+    exact (IsFractionRing.injective R' L) (by simpa using hxy)
+  have hn : Function.Injective n :=
+    TensorProduct.map_injective_of_flat_flat
+      (IsScalarTower.toAlgHom k R' L).toLinearMap (LinearMap.id)
+      hR'L Function.injective_id
+  have hRS : IsReduced (R' ⊗[k] S') := isReduced_of_injective n hn
+  exact hnot' hRS
 
 /-- The minimal-prime criterion for geometric reducedness. -/
 theorem isGeometricallyReduced_of_minimalPrime_localizations

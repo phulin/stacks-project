@@ -5,14 +5,16 @@ import Mathlib.RingTheory.NoetherNormalization
 import Mathlib.RingTheory.RingHom.FiniteType
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
+import Mathlib.RingTheory.Spectrum.Prime.Topology
+import Formalization.Books.Topology.Unit10.KrullDimension
 
 /-!
 # Commutative Algebra, Chapter 115: Noether normalization
 
 The canonical polynomial-ring, finite-map, residue-field, localization, and
 Krull-dimension interfaces are used throughout.  The source-facing auxiliary
-definitions below make the weighted multi-index and affine normalization
-statements explicit without duplicating Mathlib's polynomial-ring API.
+definitions below make the weighted multi-index and normalization statements
+explicit without duplicating Mathlib's polynomial-ring API.
 -/
 
 namespace Formalization.Books.Algebra.Unit115
@@ -23,6 +25,7 @@ noncomputable section
 
 open Set
 open scoped Polynomial
+open Formalization.Books.Topology.Unit10
 
 /-! ## The two helper lemmas -/
 
@@ -296,12 +299,6 @@ theorem noether_normalization
 
 /-! ## Normalization at a point -/
 
-/-- The affine local dimension at a prime, written as the infimum of the
-Krull dimensions of its principal neighborhoods. -/
-def affineDimensionAtPrime {S : Type u} [CommRing S]
-    (q : Ideal S) : WithBot ℕ∞ :=
-  ⨅ (g : { g : S // g ∉ q }), ringKrullDim (Localization.Away (g : S))
-
 /-- At a point of a finite-type affine algebra over a field, one principal
 neighborhood realizes the local dimension and admits finite injective
 normalization. -/
@@ -312,7 +309,7 @@ theorem noether_normalization_at_point
     let x : PrimeSpectrum S := ⟨q, hq⟩
     ∃ g : S, g ∉ x.asIdeal ∧
       ∃ d : ℕ,
-        affineDimensionAtPrime x.asIdeal = d ∧
+        krullDimensionAt x = d ∧
           ringKrullDim (Localization.Away g) = d ∧
             ∃ φ : MvPolynomial (Fin d) k →ₐ[k] Localization.Away g,
               Function.Injective φ ∧ RingHom.Finite φ.toRingHom := by

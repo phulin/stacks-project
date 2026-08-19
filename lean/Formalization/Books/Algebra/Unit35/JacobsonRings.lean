@@ -2812,6 +2812,136 @@ instance matrixPairAction_mulAction {k : Type u} [Field k] :
   one_smul := matrixPairAction_one k
   mul_smul := matrixPairAction_mul k
 
+/- Proof roadmap for `matrixProduct_minimalPrime_components`.
+
+The statement is sound over an arbitrary `Field k`; no algebraic-closedness
+hypothesis is needed.  Prove it ring-theoretically, before passing to the
+spectrum.  The following source-ordered helpers should be put immediately
+before this theorem (the existing `matrixProduct_components_are_prime` is a
+consumer of this theorem and therefore cannot supply primeness here).
+
+1. First record `matrixProductIdeal_le_rank{Two,One,Zero}ComponentIdeal`.
+   For the middle ideal this is `Ideal.span_mono Set.subset_union_left`.  For
+   the two coordinate ideals, unfold `matrixPairProductEquations`, use
+   `Ideal.span_le`, split its four-element set, and use `Ideal.mul_mem_left`
+   or `Ideal.mul_mem_right` for the relevant `X * Y` summands.
+
+2. Prove each of the three displayed ideals prime independently.
+
+   * For the rank-zero and rank-two ideals, use the evaluation homomorphism
+     which sends, respectively, variables `0,...,3` or `4,...,7` to zero and
+     renames the other four variables into `MvPolynomial (Fin 4) k`.  Identify
+     its kernel with the displayed span using
+     `MvPolynomial.mem_ideal_span_X_image` from
+     `Mathlib/RingTheory/MvPolynomial/Ideal.lean`, then apply
+     `RingHom.ker_isPrime` from `Mathlib/RingTheory/Ideal/Maps.lean`.
+     `MvPolynomial.rename_injective` from
+     `Mathlib/Algebra/MvPolynomial/Rename.lean` is the useful fact on the
+     surviving monomials.  Add those two focused imports if they are not
+     already available transitively.
+
+   * The rank-one ideal is the only substantial step.  Do not try to infer
+     its primeness from this theorem.  Reindex the eight variables as the
+     entries of the following `2 x 4` matrix:
+
+       `[ x11  x21  -y21  -y22 ]`
+       `[ x12  x22   y11   y12 ]`.
+
+     Its six `2 x 2` minors are, in column-pair order, `detX`, the four
+     entries of `X * Y`, and `detY` (up to harmless commutativity/sign
+     normalization).  Thus `matrixProductRankOneComponentIdeal` is the
+     generic rank-at-most-one determinantal ideal.
+
+     A self-contained way to establish primeness in the current Mathlib
+     snapshot is to define
+
+       `seg : MatrixPairPolynomial k ->+* MvPolynomial (Fin 2 ⊕ Fin 4) k`
+
+     with `k : Type u` throughout (both finite index types live in `Type 0`)
+     and coefficient map
+     `(MvPolynomial.C : k ->+* MvPolynomial (Fin 2 ⊕ Fin 4) k)` in
+     `MvPolynomial.eval₂Hom`.  Send the above matrix entry in row `i`, column
+     `j` to
+     `X (Sum.inl i) * X (Sum.inr j)`.  In terms of the present coordinates:
+     `x11,x12,x21,x22` go to `u0*v0,u1*v0,u0*v1,u1*v1`, and
+     `y11,y12,y21,y22` go to `u1*v2,u1*v3,-u0*v2,-u0*v3`.
+     Check the six generators map to zero with `ring`.
+
+     Prove the reverse kernel inclusion by the standard-monomial argument
+     for a `2 x 4` matrix.  With a diagonal term order, divide by the six
+     minors using `MonomialOrder.div` from
+     `Mathlib/RingTheory/MvPolynomial/Groebner.lean`.  The remainder has no
+     factor `z(1,j) * z(0,l)` with `j < l`.  Such a standard monomial is
+     uniquely determined by its two row sums and four column sums (fill the
+     row-zero exponents from left to right).  Its image under `seg` is the
+     monomial with precisely those six exponents, with a nonzero sign.
+     Consequently distinct remainder monomials have distinct images, so
+     `seg r = 0` forces every coefficient of `r` to vanish.  The division
+     identity then gives `ker seg <= span(minors)`.  Useful concrete APIs are
+     `MvPolynomial.eval₂Hom_monomial` in
+     `Mathlib/Algebra/MvPolynomial/Eval.lean`, `MvPolynomial.as_sum` and
+     `MvPolynomial.monomial_mul` in
+     `Mathlib/Algebra/MvPolynomial/Basic.lean`, and
+     `Finsupp.mem_span_iff_linearCombination` for the combination returned
+     by division.  After `ker seg = matrixProductRankOneComponentIdeal`, use
+     `RingHom.ker_isPrime seg`; the target polynomial ring is a domain.
+
+3. Classify an arbitrary prime `p` containing `matrixProductIdeal`.  First
+   prove the following eight identities belong to `matrixProductIdeal`, using
+   its four generators and `ring` (write `Eij` for the corresponding entry
+   of `X * Y`):
+
+       `x11*detY = y22*E00 - y21*E01`
+       `x12*detY = y11*E01 - y12*E00`
+       `x21*detY = y22*E10 - y21*E11`
+       `x22*detY = y11*E11 - y12*E10`
+       `detX*y11 = x22*E00 - x12*E10`
+       `detX*y12 = x22*E01 - x12*E11`
+       `detX*y21 = x11*E10 - x21*E00`
+       `detX*y22 = x11*E11 - x21*E01`.
+
+   If all four `X` variables lie in `p`, then the rank-zero component is
+   below `p`.  Otherwise choose an `X` variable outside `p`; the first four
+   identities and `p.IsPrime.mem_or_mem` force `detY` into `p`.  Similarly,
+   if all four `Y` variables lie in `p`, the rank-two component is below
+   `p`; otherwise the last four identities force `detX` into `p`.  In the
+   remaining case both determinants and all four product equations lie in
+   `p`, so the rank-one component is below `p`.  Package this as
+   `exists_matrixProduct_component_le_of_prime` with hypotheses
+   `hp : p.IsPrime` and `hIp : matrixProductIdeal (k := k) <= p`.
+
+4. Record pairwise incomparability of the three component ideals.  Evaluation
+   gives short witnesses: `x11` separates rank-zero from rank-two and from
+   rank-one; `y11` separates rank-two from rank-zero and from rank-one;
+   `detY` is in rank-one but not rank-zero (evaluate at `X = 0, Y = 1`), and
+   `detX` is in rank-one but not rank-two (evaluate at `X = 1, Y = 0`).  A
+   helper indexed by `Fin 3` whose conclusion is `C i <= C j <-> i = j`
+   makes the final minimality argument identical to
+   `idempotentRankOrbitPrime_le_iff` / `idempotentMatrix_minimalPrimes` below.
+
+5. Finish by `ext p`.  For `hp : p \in matrixProductIdeal.minimalPrimes`, use
+   step 3 to choose `C <= p`, then `hp.2` applied to the prime `C` and the
+   containment from step 1 gives `p <= C`, hence equality.  Conversely, for
+   a displayed `C`, install its prime instance and call
+   `Ideal.exists_minimalPrimes_le` from
+   `Mathlib/RingTheory/Ideal/MinimalPrime/Basic.lean` to get a minimal prime
+   `q <= C`; step 3 gives `C' <= q`, and step 4 forces `C' = C`, hence
+   `q = C`.  This is exactly the two-direction assembly used by
+   `idempotentMatrix_minimalPrimes` later in this file.
+
+The quotient/spectrum APIs do not replace step 2 or step 3:
+`Ideal.minimalPrimes_eq_comap` in
+`Mathlib/RingTheory/Ideal/MinimalPrime/Localization.lean` only transports the
+result to `MatrixPairRing k`, and
+`minimalPrimes.equivIrreducibleComponents` in
+`Mathlib/RingTheory/Spectrum/Prime/Topology.lean` only turns that transported
+classification into components.  See
+`productZero_spectrum_has_two_irreducible_components` and
+`idempotent_matrix_rank_orbits_are_components` in this file for their exact
+use.  Likewise, the later `generalLinearTriple_spectrum_isIrreducible` only
+shows an orbit target is irreducible; without proving that its orbit-map
+kernel is the six-minor ideal, it leaves precisely the same missing step.
+-/
 theorem matrixProduct_minimalPrime_components
     (k : Type u) [Field k] :
     (matrixProductIdeal (k := k)).minimalPrimes =

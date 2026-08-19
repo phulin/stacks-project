@@ -278,6 +278,116 @@ structure RepresentablePresentationIso
           Q.equivalence.functor ⋙ Over.forget Q.representingObject,
         IsNatIsoOver (Over.forget Q.representingObject) e h
 
+private theorem slice_functor_over_isomorphic_to_map
+    {C : Type uC} [Category.{vC} C] {X Y : C}
+    (F : Over X ⥤ Over Y)
+    (hF : F ⋙ Over.forget Y = Over.forget X) :
+    ∃ f : X ⟶ Y, ∃ e : F ≅ Over.map f,
+      ∃ over : F ⋙ Over.forget Y = (Over.map f) ⋙ Over.forget Y,
+        IsNatIsoOver (Over.forget Y) e over := by
+  let hobj : ∀ U : Over X, (F.obj U).left = U.left := fun U =>
+    Functor.congr_obj hF U
+  let f : X ⟶ Y :=
+    eqToHom (hobj (Over.mk (𝟙 X))).symm ≫
+      (F.obj (Over.mk (𝟙 X))).hom
+  let eapp : ∀ U : Over X, F.obj U ≅ (Over.map f).obj U := fun U => by
+    refine Over.isoMk (eqToIso (hobj U)) ?_
+    let u : U ⟶ Over.mk (𝟙 X) := Over.homMk U.hom
+    have hu := Functor.congr_hom hF u
+    change (F.map u).left =
+      eqToHom (hobj U) ≫ u.left ≫
+        eqToHom (hobj (Over.mk (𝟙 X))).symm at hu
+    rw [← Over.w (F.map u), hu]
+    dsimp [f, u]
+    simp [Category.assoc]
+  let e : F ≅ Over.map f := NatIso.ofComponents eapp (by
+    intro U V k
+    apply (Over.forget Y).map_injective
+    have hk := Functor.congr_hom hF k
+    change (F.map k).left =
+      eqToHom (hobj U) ≫ k.left ≫ eqToHom (hobj V).symm at hk
+    change (F.map k).left ≫ eqToHom (hobj V) =
+      eqToHom (hobj U) ≫ k.left
+    rw [hk]
+    simp only [Category.assoc, eqToHom_trans, eqToHom_refl, Category.comp_id])
+  let over : F ⋙ Over.forget Y = (Over.map f) ⋙ Over.forget Y :=
+    hF.trans (Over.mapForget_eq f).symm
+  refine ⟨f, e, over, ?_⟩
+  intro U
+  change (eapp U).hom.left =
+    eqToHom (congrArg (fun L : Over X ⥤ C => L.obj U) over)
+  dsimp [e, eapp, over, hobj]
+  simp
+
+private theorem slice_map_isIso_of_isEquivalence
+    {C : Type uC} [Category.{vC} C] {X Y : C} (f : X ⟶ Y)
+    [hF : (Over.map f).IsEquivalence] : IsIso f := by
+  let hmono : Mono f := by
+    constructor
+    intro Z a b hab
+    let A : Over X := Over.mk a
+    let B : Over X := Over.mk b
+    let m : (Over.map f).obj A ⟶ (Over.map f).obj B :=
+      Over.homMk (𝟙 Z) (by simpa [A, B] using hab.symm)
+    obtain ⟨k, hk⟩ := (Functor.Full.map_surjective m)
+    have hkleft : k.left = 𝟙 Z := by
+      have hkl := congrArg CommaMorphism.left hk
+      simpa [m] using hkl
+    simpa [A, B, hkleft] using (Over.w k).symm
+  letI : Mono f := hmono
+  obtain ⟨U, ⟨e⟩⟩ :=
+    Functor.EssSurj.mem_essImage (F := Over.map f) (Over.mk (𝟙 Y))
+  letI : IsIso e.hom.left := by
+    change IsIso ((Over.forget Y).map e.hom)
+    infer_instance
+  let g : Y ⟶ X := inv e.hom.left ≫ U.hom
+  have hgf : g ≫ f = 𝟙 Y := by
+    have he := Over.w e.hom
+    dsimp [g]
+    simpa [Category.assoc] using congrArg (fun t => inv e.hom.left ≫ t) he.symm
+  have hfg : f ≫ g = 𝟙 X := by
+    apply (cancel_mono f).1
+    simp [g, hgf, Category.assoc]
+  exact ⟨⟨g, hfg, hgf⟩⟩
+
+private theorem isNatIsoOver_comp
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (q : B ⥤ D) {F G K : A ⥤ B}
+    (e : F ≅ G) (over : F ⋙ q = G ⋙ q)
+    (h : IsNatIsoOver q e over)
+    (e' : G ≅ K) (over' : G ⋙ q = K ⋙ q)
+    (h' : IsNatIsoOver q e' over') :
+    IsNatIsoOver q (e ≪≫ e') (over.trans over') := by
+  intro Z
+  change q.map (e.hom.app Z ≫ e'.hom.app Z) = _
+  rw [Functor.map_comp]
+  rw [h Z, h' Z]
+  simp only [eqToHom_trans]
+
+private theorem isNatIsoOver_whiskerLeft
+    {A B D E : Type*} [Category* A] [Category* B]
+      [Category* D] [Category* E]
+    (q : B ⥤ D) {F G : A ⥤ B} (e : F ≅ G)
+    (over : F ⋙ q = G ⋙ q) (h : IsNatIsoOver q e over)
+      (L : E ⥤ A) :
+    IsNatIsoOver q (Functor.isoWhiskerLeft L e)
+      ((Functor.assoc L F q).trans
+        ((congrArg (fun K : A ⥤ D => L ⋙ K) over).trans
+          (Functor.assoc L G q).symm)) := by
+  intro Z
+  change q.map (e.hom.app (L.obj Z)) = _
+  simpa only [eqToHom_trans] using h (L.obj Z)
+
+private theorem isNatIsoOver_symm
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (q : B ⥤ D) {F G : A ⥤ B} (e : F ≅ G)
+    (over : F ⋙ q = G ⋙ q) (h : IsNatIsoOver q e over) :
+    IsNatIsoOver q e.symm over.symm := by
+  intro Z
+  apply (cancel_mono (q.map (e.hom.app Z))).1
+  rw [← q.map_comp]
+  simp [h Z]
+
 theorem representablePresentations_are_isomorphic
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
@@ -285,7 +395,114 @@ theorem representablePresentations_are_isomorphic
     (h : IsRepresentableCategoryFibredInGroupoids p)
     (P Q : RepresentablePresentation p) :
     Nonempty (RepresentablePresentationIso P Q) := by
-  sorry
+  rcases P.isEquivalence with
+    ⟨P_inv, hP_inv, hP_inv_cart, ⟨P_unit, P_unit_over, hP_unit⟩,
+      ⟨P_counit, P_counit_over, hP_counit⟩⟩
+  rcases Q.isEquivalence with
+    ⟨Q_inv, hQ_inv, hQ_inv_cart, ⟨Q_unit, Q_unit_over, hQ_unit⟩,
+      ⟨Q_counit, Q_counit_over, hQ_counit⟩⟩
+  letI : P.equivalence.functor.IsEquivalence :=
+    Functor.IsEquivalence.mk' P_inv P_unit.symm P_counit
+  letI : P_inv.IsEquivalence :=
+    Functor.IsEquivalence.mk' P.equivalence.functor
+      P_counit.symm P_unit
+  letI : Q.equivalence.functor.IsEquivalence :=
+    Functor.IsEquivalence.mk' Q_inv Q_unit.symm Q_counit
+  let H : Over P.representingObject ⥤ Over Q.representingObject :=
+    P_inv ⋙ Q.equivalence.functor
+  have hH : H ⋙ Over.forget Q.representingObject =
+      Over.forget P.representingObject := by
+    dsimp [H]
+    rw [Functor.assoc, Q.equivalence.over, hP_inv]
+  letI : H.IsEquivalence := inferInstance
+  obtain ⟨f, e, over, he⟩ :=
+    slice_functor_over_isomorphic_to_map H hH
+  letI : (Over.map f).Faithful := Functor.Faithful.of_iso e
+  letI : (Over.map f).Full := Functor.Full.of_iso e
+  letI : (Over.map f).EssSurj := Functor.essSurj_of_iso e
+  letI : (Over.map f).IsEquivalence :=
+    ⟨inferInstance, inferInstance, inferInstance⟩
+  letI : IsIso f := slice_map_isIso_of_isEquivalence f
+  let objectIso : P.representingObject ≅ Q.representingObject :=
+    ⟨f, inv f, IsIso.hom_inv_id f, IsIso.inv_hom_id f⟩
+  let ePQ : P.equivalence.functor ⋙ H ≅ Q.equivalence.functor :=
+    (Functor.associator P.equivalence.functor P_inv Q.equivalence.functor).symm ≪≫
+      Functor.isoWhiskerRight P_unit Q.equivalence.functor ≪≫
+      Functor.leftUnitor Q.equivalence.functor
+  let comparison' :
+      P.equivalence.functor ⋙ Over.map f ≅ Q.equivalence.functor :=
+    (Functor.isoWhiskerLeft P.equivalence.functor e).symm ≪≫ ePQ
+  let overComparison' :
+      (P.equivalence.functor ⋙ Over.map f) ⋙
+          Over.forget Q.representingObject =
+      Q.equivalence.functor ⋙ Over.forget Q.representingObject := by
+    rw [Functor.assoc, Over.mapForget_eq, P.equivalence.over,
+      Q.equivalence.over]
+  let overPQ :
+      (P.equivalence.functor ⋙ H) ⋙
+          Over.forget Q.representingObject =
+        Q.equivalence.functor ⋙ Over.forget Q.representingObject := by
+    dsimp [H]
+    calc
+      (P.equivalence.functor ⋙ (P_inv ⋙ Q.equivalence.functor)) ⋙
+          Over.forget Q.representingObject =
+          (P.equivalence.functor ⋙ P_inv) ⋙
+            (Q.equivalence.functor ⋙ Over.forget Q.representingObject) := by
+        simp [Functor.assoc]
+      _ = (P.equivalence.functor ⋙ P_inv) ⋙ p := by
+        rw [Q.equivalence.over]
+      _ = (𝟭 S) ⋙ p := P_unit_over
+      _ = (𝟭 S) ⋙ (Q.equivalence.functor ⋙
+          Over.forget Q.representingObject) := by
+        rw [Q.equivalence.over]
+      _ = Q.equivalence.functor ⋙ Over.forget Q.representingObject := by
+        rw [Functor.id_comp]
+  let hcomparison' : IsNatIsoOver (Over.forget Q.representingObject)
+      comparison' overComparison' := by
+    have hE := isNatIsoOver_whiskerLeft
+      (Over.forget Q.representingObject) e over he P.equivalence.functor
+    have hE' := isNatIsoOver_symm
+      (Over.forget Q.representingObject)
+      (Functor.isoWhiskerLeft P.equivalence.functor e)
+      ((Functor.assoc _ _ _).trans
+        ((congrArg (fun K : Over P.representingObject ⥤ C =>
+          P.equivalence.functor ⋙ K) over).trans
+          (Functor.assoc _ _ _).symm)) hE
+    have hPQ : IsNatIsoOver (Over.forget Q.representingObject)
+        ePQ overPQ := by
+      intro Z
+      dsimp [ePQ, overPQ]
+      dsimp [H]
+      simp only [Functor.associator_inv_app, Functor.whiskerRight_app,
+        Functor.leftUnitor_hom_app, Iso.trans_hom, Iso.symm_hom,
+        Category.assoc, Category.id_comp, Category.comp_id]
+      have hQ_obj (X : S) :
+          (Q.equivalence.functor.obj X).left = p.obj X := by
+        simpa only [Functor.comp_obj, Over.forget_obj] using
+          Functor.congr_obj Q.equivalence.over X
+      have hQmap :
+          Over.Hom.left (Q.equivalence.functor.map (P_unit.hom.app Z)) =
+            eqToHom (hQ_obj ((P.equivalence.functor ⋙ P_inv).obj Z)) ≫
+              p.map (P_unit.hom.app Z) ≫
+                eqToHom (hQ_obj ((𝟭 S).obj Z)).symm := by
+        have hQmap := Functor.congr_hom Q.equivalence.over
+          (P_unit.hom.app Z)
+        simpa only [Functor.comp_map, Over.forget_map, Functor.comp_obj,
+          Over.forget_obj] using hQmap
+      rw [hQmap, hP_unit Z]
+      simp [eqToHom_trans, Over.id_left]
+    have hcomp := isNatIsoOver_comp
+      (Over.forget Q.representingObject)
+      (Functor.isoWhiskerLeft P.equivalence.functor e).symm _ hE'
+      ePQ overPQ hPQ
+    simpa [comparison', overComparison'] using hcomp
+  refine ⟨{
+    objectIso := objectIso
+    comparison := ⟨by simpa [objectIso, sliceFibredMorphism] using comparison',
+      by simpa [objectIso, sliceFibredMorphism] using overComparison', ?_⟩ }⟩
+  change ∀ Z : S, _
+  intro Z
+  simpa [objectIso, sliceFibredMorphism] using hcomparison' Z
 
 /-! ## Fibred morphisms modulo 2-isomorphism -/
 

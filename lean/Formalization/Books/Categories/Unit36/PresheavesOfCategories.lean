@@ -693,6 +693,33 @@ def IsFibredEquivalenceOver
         (over : (G ⋙ F) ⋙ q = (𝟭 T) ⋙ q),
         Formalization.Books.Categories.Unit34.IsOverNaturalIso q over e)
 
+/-- Reflexivity of equivalence in the 2-category of fibred categories over a
+fixed base. -/
+theorem isFibredEquivalenceOver_refl
+    {S C : Type*} [Category* S] [Category* C] (p : Functor S C) :
+    IsFibredEquivalenceOver p p := by
+  refine ⟨Functor.id S, Functor.id S, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · intro X Y f hf
+    simpa using hf
+  · intro X Y f hf
+    simpa using hf
+  · refine ⟨Functor.leftUnitor (Functor.id S), rfl, ?_⟩
+    intro X
+    simp
+  · refine ⟨Functor.leftUnitor (Functor.id S), rfl, ?_⟩
+    intro X
+    simp
+
+/-- Symmetry of equivalence in the 2-category of fibred categories over a
+fixed base. -/
+theorem isFibredEquivalenceOver_symm
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : Functor S C} {q : Functor T C}
+    (h : IsFibredEquivalenceOver p q) :
+    IsFibredEquivalenceOver q p := by
+  rcases h with ⟨F, G, hF, hG, hFcart, hGcart, hFG, hGF⟩
+  exact ⟨G, F, hG, hF, hGcart, hFcart, hGF, hFG⟩
+
 /-- A strict isomorphism over the base is, in particular, an equivalence in
 the 2-category of fibred categories over that base. This is the bridge from
 the source's definition of a split fibred category to the stronger

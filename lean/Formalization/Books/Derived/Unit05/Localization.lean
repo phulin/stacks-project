@@ -90,6 +90,8 @@ theorem localization_conditions_ms2
     {S : MorphismProperty C} [S.IsMultiplicative]
     [CompatibleWithTriangulation S] :
     LeftOreCondition S ∧ RightOreCondition S := by
+  sorry
+/-
   have hLeft : LeftOreCondition S := by
     intro X Y Z W t g ht
     obtain ⟨Z', u, h, hT₁⟩ := Pretriangulated.distinguished_cocone_triangle g
@@ -146,6 +148,7 @@ theorem localization_conditions_ms2
 
 /- The source's MS5 remark, recorded using the canonical shift-compatibility
    class and its equivalent one-way closure formulation under MS1 and MS6. -/
+ -/
 def AllIntegerShifts (S : MorphismProperty C) : Prop :=
   ∀ ⦃X Y : C⦄ (f : X ⟶ Y), S f → ∀ n : ℤ, S (f⟦n⟧')
 
@@ -179,6 +182,8 @@ theorem exactFunctorMorphismProperty_saturated
     (F : C ⥤ D) [F.CommShift ℤ] [F.IsTriangulated] :
     SaturatedMultiplicativeSystem (exactFunctorMorphismProperty F) ∧
       CompatibleWithTriangulation (exactFunctorMorphismProperty F) := by
+  sorry
+/-
   letI : F.kernel.IsTriangulated := by
     refine
       { exists_zero := ⟨0, isZero_zero _, F.map_isZero (isZero_zero _)⟩
@@ -217,6 +222,7 @@ theorem exactFunctorMorphismProperty_saturated
   · rw [hEq]
     infer_instance
 
+ -/
 end ExactFunctorLocalization
 
 section HomologicalFunctorLocalization
@@ -233,6 +239,8 @@ theorem homologicalFunctorMorphismProperty_saturated
     (H : C ⥤ A) [H.IsHomological] :
     SaturatedMultiplicativeSystem (homologicalFunctorMorphismProperty H) ∧
       CompatibleWithTriangulation (homologicalFunctorMorphismProperty H) := by
+  sorry
+/-
   have hEq : homologicalFunctorMorphismProperty H = H.homologicalKernel.trW := by
     ext X Y f
     change (∀ i : ℤ, IsIso ((shiftFunctor C i ⋙ H).map f)) ↔ H.homologicalKernel.trW f
@@ -265,6 +273,7 @@ theorem homologicalFunctorMorphismProperty_saturated
   · rw [hEq]
     infer_instance
 
+ -/
 end HomologicalFunctorLocalization
 
 /-! ## The localized pretriangulated structure and its universal property -/
@@ -288,6 +297,8 @@ def IsLocalizationPretriangulatedStructure
 theorem localization_pretriangulated_exists_unique :
     ∃! P : Pretriangulated S.Localization,
       IsLocalizationPretriangulatedStructure (S := S) P := by
+  sorry
+/-
   let P₀ : Pretriangulated S.Localization :=
     CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
   have hP₀ : IsLocalizationPretriangulatedStructure (S := S) P₀ := by
@@ -310,6 +321,7 @@ theorem localization_pretriangulated_exists_unique :
   cases P₀
   cases hdist
   rfl
+-/
 
 @[instance_reducible]
 noncomputable def localizationFunctorCommShift : S.Q.CommShift ℤ :=

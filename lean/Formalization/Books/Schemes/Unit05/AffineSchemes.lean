@@ -1460,7 +1460,317 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
       sorry
     simpa [ST, T', T, pf, lf, pg, lg, hlf, hlg] using hloc -/
   have hST : ST.Exact := by
-    sorry
+    apply (TopCat.Sheaf.exact_iff_stalkFunctor_map_exact ST).2
+    intro x
+    rw [ShortComplex.ab_exact_iff_function_exact]
+    have hfun : Function.Exact S.f.hom S.g.hom :=
+      (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS
+    let x₀ : PrimeSpectrum.Top R := by
+      change PrimeSpectrum R at x
+      exact x
+    let : x₀.asIdeal.IsPrime := x₀.2
+    let pf := ((Sheaf.forget AddCommGrpCat
+      (AlgebraicGeometry.Spec (CommRingCat.of R))).map
+        ((SheafOfModules.toSheaf
+          (R := (AlgebraicGeometry.Spec (CommRingCat.of R)).ringCatSheaf)).map
+          (AlgebraicGeometry.tilde.map S.f)))
+    let lf : (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R (S.X₁ : ModuleCat (CommRingCat.of R))).presheaf x₀)) →ₗ[R]
+        (↑(TopCat.Presheaf.stalk
+          (AlgebraicGeometry.moduleStructurePresheaf R (S.X₂ : ModuleCat (CommRingCat.of R))).presheaf x₀)) :=
+      { toFun := ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf)
+        map_add' := by intros; exact map_add _ _ _
+        map_smul' := by
+          intros r z
+          obtain ⟨U, hxU, s, rfl⟩ :=
+            TopCat.Presheaf.exists_germ_eq
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf z
+          let s' : (AlgebraicGeometry.structureSheafInType R S.X₁).obj.obj (op U) := s
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+              (AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s') = _
+          have hscalar :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s' =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s' := by
+            congr 1
+            exact (AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r).symm
+          rw [hscalar]
+          have hgerm := (AlgebraicGeometry.moduleStructurePresheaf R
+            (S.X₁ : ModuleCat (CommRingCat.of R))).germ_smul
+            x₀ U hxU
+            ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s'
+          rw [← hgerm]
+          have hstalk :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pf.app (op U)))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf
+              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 <;> rfl
+          have hstalk₀ :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s') =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pf.app (op U))) s') := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf s' using 1 <;> rfl
+          apply hstalk.trans
+          let t' : (AlgebraicGeometry.structureSheafInType R S.X₂).obj.obj (op U) :=
+            (ConcreteCategory.hom (pf.app (op U))) s'
+          have hmap :
+              (ConcreteCategory.hom (pf.app (op U)))
+                  (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') =
+                ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t' := by
+            dsimp [t']
+            convert ((AlgebraicGeometry.tilde.map S.f).val.app (op U)).hom.map_smul
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 <;> rfl
+          rw [hmap]
+          have hgm₂ :
+              (ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                  (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t') =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' := by
+            convert (AlgebraicGeometry.moduleStructurePresheaf R
+              (S.X₂ : ModuleCat (CommRingCat.of R))).germ_smul
+              x₀ U hxU
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 <;> rfl
+          apply hgm₂.trans
+          have hsring :
+              (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                U x₀ hxU))
+                  ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' =
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' := by
+            congr 1
+            exact AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r
+          rw [hsring]
+          have htower :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' =
+                (RingHom.id R) r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' := by
+            convert IsScalarTower.algebraMap_smul
+              ((AlgebraicGeometry.structurePresheafInCommRingCat R).stalk x₀) r
+              ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t') using 1 <;> rfl
+          rw [htower]
+          exact congrArg (fun q => (RingHom.id R) r • q) hstalk₀.symm
+          }
+    have hlf : lf =
+        IsLocalizedModule.map x₀.asIdeal.primeCompl
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀) S.f.hom := by
+      apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+      ext m
+      change (ConcreteCategory.hom ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+          (TopCat.Presheaf.germ
+            (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf ⊤ x₀ (by simp)
+              (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤ m)) = _
+      have hstalk :
+          (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+              ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf ⊤ x₀ (by simp)))
+                ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m)) =
+            (ConcreteCategory.hom (TopCat.Presheaf.germ
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf ⊤ x₀ (by simp)))
+              ((ConcreteCategory.hom (pf.app (op ⊤)))
+                ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m)) := by
+        convert TopCat.Presheaf.stalkFunctor_map_germ_apply ⊤ x₀ (by simp) pf
+          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m) using 1 <;> rfl
+      rw [hstalk]
+      rw [LinearMap.comp_apply, IsLocalizedModule.map_apply]
+      have htop :
+          (ConcreteCategory.hom (pf.app (op ⊤)))
+              ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₁ ⊤) m) =
+            (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) ((ModuleCat.Hom.hom S.f) m) := by
+        have htop' := AlgebraicGeometry.tilde.toOpen_map_app S.f
+          (⊤ : Opens (PrimeSpectrum.Top R))
+        convert congrArg (fun q => q m) htop' using 1 <;> rfl
+      rw [htop]
+      rfl
+    let pg := ((Sheaf.forget AddCommGrpCat
+      (AlgebraicGeometry.Spec (CommRingCat.of R))).map
+        ((SheafOfModules.toSheaf
+          (R := (AlgebraicGeometry.Spec (CommRingCat.of R)).ringCatSheaf)).map
+          (AlgebraicGeometry.tilde.map S.g)))
+    let lg : (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R (S.X₂ : ModuleCat (CommRingCat.of R))).presheaf x₀)) →ₗ[R]
+        (↑(TopCat.Presheaf.stalk
+          (AlgebraicGeometry.moduleStructurePresheaf R (S.X₃ : ModuleCat (CommRingCat.of R))).presheaf x₀)) :=
+      { toFun := ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg)
+        map_add' := by intros; exact map_add _ _ _
+        map_smul' := by
+          intros r z
+          obtain ⟨U, hxU, s, rfl⟩ :=
+            TopCat.Presheaf.exists_germ_eq
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf z
+          let s' : (AlgebraicGeometry.structureSheafInType R S.X₂).obj.obj (op U) := s
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+              (AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s') = _
+          have hscalar :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s' =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s' := by
+            congr 1
+            exact (AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r).symm
+          rw [hscalar]
+          have hgerm := (AlgebraicGeometry.moduleStructurePresheaf R
+            (S.X₂ : ModuleCat (CommRingCat.of R))).germ_smul
+            x₀ U hxU
+            ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s'
+          rw [← hgerm]
+          have hstalk :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pg.app (op U)))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pg
+              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 <;> rfl
+          have hstalk₀ :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s') =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pg.app (op U))) s') := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pg s' using 1 <;> rfl
+          apply hstalk.trans
+          let t' : (AlgebraicGeometry.structureSheafInType R S.X₃).obj.obj (op U) :=
+            (ConcreteCategory.hom (pg.app (op U))) s'
+          have hmap :
+              (ConcreteCategory.hom (pg.app (op U)))
+                  (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') =
+                ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t' := by
+            dsimp [t']
+            convert ((AlgebraicGeometry.tilde.map S.g).val.app (op U)).hom.map_smul
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s' using 1 <;> rfl
+          rw [hmap]
+          have hgm₃ :
+              (ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU))
+                  (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • t') =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t' := by
+            convert (AlgebraicGeometry.moduleStructurePresheaf R
+              (S.X₃ : ModuleCat (CommRingCat.of R))).germ_smul
+              x₀ U hxU
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t' using 1 <;> rfl
+          apply hgm₃.trans
+          have hsring :
+              (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                U x₀ hxU))
+                  ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t' =
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t' := by
+            congr 1
+            exact AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r
+          rw [hsring]
+          have htower :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t' =
+                (RingHom.id R) r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t' := by
+            convert IsScalarTower.algebraMap_smul
+              ((AlgebraicGeometry.structurePresheafInCommRingCat R).stalk x₀) r
+              ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf U x₀ hxU)) t') using 1 <;> rfl
+          rw [htower]
+          exact congrArg (fun q => (RingHom.id R) r • q) hstalk₀.symm
+          }
+    have hlg : lg =
+        IsLocalizedModule.map x₀.asIdeal.primeCompl
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀) S.g.hom := by
+      apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀)
+      ext m
+      change (ConcreteCategory.hom ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+          (TopCat.Presheaf.germ
+            (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf ⊤ x₀ (by simp)
+              (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤ m)) = _
+      have hstalk :
+          (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+              ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf ⊤ x₀ (by simp)))
+                ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m)) =
+            (ConcreteCategory.hom (TopCat.Presheaf.germ
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₃).presheaf ⊤ x₀ (by simp)))
+              ((ConcreteCategory.hom (pg.app (op ⊤)))
+                ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m)) := by
+        convert TopCat.Presheaf.stalkFunctor_map_germ_apply ⊤ x₀ (by simp) pg
+          ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m) using 1 <;> rfl
+      rw [hstalk]
+      rw [LinearMap.comp_apply, IsLocalizedModule.map_apply]
+      have htop :
+          (ConcreteCategory.hom (pg.app (op ⊤)))
+              ((AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₂ ⊤) m) =
+            (AlgebraicGeometry.StructureSheaf.toOpenₗ R S.X₃ ⊤) ((ModuleCat.Hom.hom S.g) m) := by
+        have htop' := AlgebraicGeometry.tilde.toOpen_map_app S.g
+          (⊤ : Opens (PrimeSpectrum.Top R))
+        convert congrArg (fun q => q m) htop' using 1 <;> rfl
+      rw [htop]
+      rfl
+    have hloc := IsLocalizedModule.map_exact x₀.asIdeal.primeCompl
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀)
+      S.f.hom S.g.hom hfun
+    change Function.Exact lf lg
+    rw [hlf, hlg]
+    exact hloc
   let : T'.Faithful := by
     constructor
     intro X Y f g h

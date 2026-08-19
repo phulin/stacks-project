@@ -1180,7 +1180,7 @@ private theorem isCountablyGenerated_directSum_of_countable
     (hN : ∀ i, Module.IsCountablyGenerated R (N i)) :
     Module.IsCountablyGenerated R (⨁ i, N i) := by
   classical
-  let : Countable ι := Set.countable_univ_iff.mp hι
+  have hιcount : Countable ι := Set.countable_univ_iff.mp hι
   let s : Set (⨁ i, N i) :=
     ⋃ i, DirectSum.lof R ι N i '' (Classical.choose (hN i))
   have hs : s.Countable := by

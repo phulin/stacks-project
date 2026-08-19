@@ -1492,7 +1492,7 @@ theorem deRhamMapData_exists
             (deRhamDegreeZeroEquivA A B).symm_apply_apply,
             (deRhamDegreeZeroEquivA A' B').symm_apply_apply, hone,
             (componentData 1).2 1 (fun _ => b₀)]
-          simp only [map_one, one_smul]
+          simp only [map_one]
           rw [← hone']
         · simp
         · intro x y hx hy ihx ihy
@@ -1543,7 +1543,6 @@ theorem deRhamMapData_exists
           rcases z with ⟨b₀, b⟩
           rw [deRhamDifferential_on_generator (p + 1)
             (Nat.succ_le_succ (Nat.zero_le p))]
-          simp only [Prod.fst, Prod.snd]
           rw [show deRhamDifferentialGenerator (p + 1) b₀ b =
               deRhamGenerator (p + 2) 1 (Fin.cons b₀ b) by
             simp only [deRhamDifferentialGenerator, deRhamGenerator, one_smul]
@@ -1554,7 +1553,7 @@ theorem deRhamMapData_exists
           rw [(componentData (p + 1)).2 b₀ b]
           rw [deRhamDifferential_on_generator (p + 1)
             (Nat.succ_le_succ (Nat.zero_le p))]
-          simp only [deRhamGenerator, deRhamDifferentialGenerator, one_smul]
+          simp only [deRhamGenerator, deRhamDifferentialGenerator]
           simp only [map_one, one_smul]
           congr 1
           funext i
@@ -1954,8 +1953,7 @@ theorem quotientDeRhamProjection_commutes
           simp [deRhamUniversalDifferential, deRhamDegreeOneEquivA,
             deRhamDegreeOneEquiv, deRhamGenerator, exteriorPower.oneEquiv]
         rw [← hzero, deRhamDifferential_zero]
-        simp only [LinearMap.comp_apply,
-          (deRhamDegreeZeroEquivA A B).symm_apply_apply]
+        simp only [LinearMap.comp_apply]
         have hsymm :
             (deRhamDegreeZeroEquivA A B).symm
                 ((deRhamDegreeZeroEquivA A B) b₀) = b₀ := by

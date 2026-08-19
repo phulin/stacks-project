@@ -66,9 +66,9 @@ def comparisonMapBijective
   letI := hHom
   Function.Bijective (comparisonMap A F)
 
-/-- A finite set is small for every ordinal-indexed system of sets. -/
+/-- A finite set is small for every nonempty ordinal-indexed system of sets. -/
 theorem comparisonMap_bijective_of_finite
-    (α : Ordinal.{w}) (A : Type u) [Finite A]
+    (α : Ordinal.{w}) (hα : 0 < α) (A : Type u) [Finite A]
     (F : Set.Iio α ⥤ Type u) [HasColimit F]
     [HasColimit (F ⋙ coyoneda.obj (Opposite.op A))] :
     Function.Bijective (comparisonMap A F) := by

@@ -534,7 +534,73 @@ noncomputable def exteriorPowerRelationMap
     (f : M₂ →ₗ[R] M₁) {n : ℕ} (hn : 0 < n) :
     TensorProduct R M₂ (exteriorPower R M₁ (n - 1)) →ₗ[R]
       exteriorPower R M₁ n := by
-  sorry
+  let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  let leftMul : M₁ →ₗ[R]
+      exteriorPower R M₁ (n - 1) →ₗ[R] exteriorPower R M₁ n :=
+    { toFun := fun x =>
+        let hx : exteriorPower R M₁ 1 := (exteriorPower.oneEquiv R M₁).symm x
+        { toFun := fun y =>
+            ⟨(hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁), by
+              simpa [h₁] using
+                (SetLike.mul_mem_graded
+                  (A := fun i : ℕ => exteriorPower R M₁ i)
+                  hx.property y.property)⟩
+          map_add' := by
+            intro y z
+            apply Subtype.ext
+            change (hx : ExteriorAlgebra R M₁) *
+                ((y : ExteriorAlgebra R M₁) + (z : ExteriorAlgebra R M₁)) =
+              (hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁) +
+                (hx : ExteriorAlgebra R M₁) * (z : ExteriorAlgebra R M₁)
+            rw [mul_add]
+          map_smul' := by
+            intro r y
+            apply Subtype.ext
+            change (hx : ExteriorAlgebra R M₁) * (r • (y : ExteriorAlgebra R M₁)) =
+              r • ((hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁))
+            rw [Algebra.smul_def, Algebra.smul_def]
+            calc
+              (hx : ExteriorAlgebra R M₁) *
+                    (algebraMap R (ExteriorAlgebra R M₁) r * (y : ExteriorAlgebra R M₁)) =
+                  ((hx : ExteriorAlgebra R M₁) *
+                    algebraMap R (ExteriorAlgebra R M₁) r) *
+                    (y : ExteriorAlgebra R M₁) := (mul_assoc _ _ _).symm
+              _ = (algebraMap R (ExteriorAlgebra R M₁) r *
+                    (hx : ExteriorAlgebra R M₁)) *
+                    (y : ExteriorAlgebra R M₁) := by rw [Algebra.commutes]
+              _ = algebraMap R (ExteriorAlgebra R M₁) r *
+                    ((hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁)) :=
+                mul_assoc _ _ _ }
+      map_add' := by
+        intro x y
+        apply LinearMap.ext
+        intro z
+        apply Subtype.ext
+        rw [(exteriorPower.oneEquiv R M₁).symm.map_add]
+        change ((↑((exteriorPower.oneEquiv R M₁).symm x) : ExteriorAlgebra R M₁) +
+            (↑((exteriorPower.oneEquiv R M₁).symm y) : ExteriorAlgebra R M₁)) *
+              (z : ExteriorAlgebra R M₁) =
+          (↑((exteriorPower.oneEquiv R M₁).symm x) : ExteriorAlgebra R M₁) *
+              (z : ExteriorAlgebra R M₁) +
+            (↑((exteriorPower.oneEquiv R M₁).symm y) : ExteriorAlgebra R M₁) *
+              (z : ExteriorAlgebra R M₁)
+        rw [add_mul]
+      map_smul' := by
+        intro r x
+        apply LinearMap.ext
+        intro z
+        apply Subtype.ext
+        change (↑((exteriorPower.oneEquiv R M₁).symm (r • x)) :
+            ExteriorAlgebra R M₁) * (z : ExteriorAlgebra R M₁) =
+          algebraMap R (ExteriorAlgebra R M₁) r *
+            ((↑((exteriorPower.oneEquiv R M₁).symm x) : ExteriorAlgebra R M₁) *
+              (z : ExteriorAlgebra R M₁))
+        rw [(exteriorPower.oneEquiv R M₁).symm.map_smul]
+        change (algebraMap R (ExteriorAlgebra R M₁) r *
+            (↑((exteriorPower.oneEquiv R M₁).symm x) : ExteriorAlgebra R M₁)) *
+              (z : ExteriorAlgebra R M₁) = _
+        rw [mul_assoc] }
+  exact TensorProduct.lift (leftMul.comp f)
 /-
   let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
   let leftMul : M₁ →ₗ[R]
@@ -762,15 +828,15 @@ theorem symmetricPower_relation_range_eq_kernel
             symmetricPowerQuotientMap n g
                 (symmetricPowerRelationMap f hn
                   (z ⊗ₜ[R] SymmetricPower.tprod R r)) = 0 := by
-          change symmetricPowerQuotientMap n g
-              (TensorProduct.lift _
-                (z ⊗ₜ[R] SymmetricPower.tprod R r)) = 0
-          rw [TensorProduct.lift.tmul]
-          /-
-          Prior attempt:
-          dsimp only [symmetricPowerRelationMap]
-          -/
-          sorry
+          rw [symmetricPowerRelationMap_tprod, symmetricPowerQuotientMap_tprod]
+          let σ := symmetricPowerRelationSigma (R := R) (M₁ := M₁) hn
+          let i := σ.symm (Sum.inl (ULift.up 0))
+          have hi :
+              (fun j => g (Sum.elim (fun _ => f z) r (σ j))) i = 0 := by
+            dsimp [i]
+            rw [Equiv.apply_symm_apply]
+            exact (hfg (f z)).mpr ⟨z, rfl⟩
+          exact (SymmetricPower.tprod R).map_coord_zero i hi
         rw [hpure]
         simp
       · intro x y hx hy
@@ -800,7 +866,325 @@ theorem symmetricPower_relation_range_eq_kernel
       rw [map_add]
       rw [hy₁, hy₂]
       simp
-  · sorry
+  · classical
+    let L := LinearMap.range (symmetricPowerRelationMap f hn)
+    let h : M → M₁ := Function.surjInv hg
+    have hgh (x : M) : g (h x) = x := by
+      exact Function.rightInverse_surjInv hg x
+    let σ := symmetricPowerRelationSigma (R := R) (M₁ := M₁) hn
+    let j := σ.symm (Sum.inl (ULift.up 0))
+    have hker (x : M₁) (hx : g x = 0) : x ∈ LinearMap.range f :=
+      (hfg x).mp hx
+    have pure_mem (a : ULift.{_} (Fin n) → M₁) (i : ULift.{_} (Fin n))
+        (hi : g (a i) = 0) : SymmetricPower.tprod R a ∈ L := by
+      obtain ⟨z, hz⟩ := hker (a i) hi
+      let p : Equiv.Perm (ULift.{_} (Fin n)) := Equiv.swap j i
+      have hp : p j = i := by
+        by_cases hji : j = i
+        · subst i
+          simp [p]
+        · simp [p]
+      let r : ULift.{_} (Fin (n - 1)) → M₁ :=
+        fun b => a (p (σ.symm (Sum.inr b)))
+      have hfun :
+          (fun k => Sum.elim (fun _ => f z) r (σ k)) =
+            (fun k => a (p k)) := by
+        funext k
+        cases hk : σ k with
+        | inl b =>
+            have hb : b = ULift.up 0 := Subsingleton.elim _ _
+            have hkj : k = j := by
+              apply σ.injective
+              simp [j, hk, hb]
+            simp [r, hb, hkj, hp, hz]
+        | inr b =>
+            have hks : σ.symm (Sum.inr b) = k := by
+              apply σ.injective
+              simp [hk]
+            simp [r, hks]
+      refine ⟨z ⊗ₜ[R] SymmetricPower.tprod R r, ?_⟩
+      rw [symmetricPowerRelationMap_tprod]
+      rw [hfun]
+      exact SymmetricPower.tprod_equiv p a
+    have pure_eq_at (a b : ULift.{_} (Fin n) → M₁)
+        (i : ULift.{_} (Fin n)) (hi : ∀ k ≠ i, a k = b k)
+        (hd : a i - b i ∈ LinearMap.range f) :
+        Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R a) =
+          Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R b) := by
+      let d : ULift.{_} (Fin n) → M₁ := Function.update b i (a i - b i)
+      have hda : a = Function.update b i (a i) := by
+        funext k
+        by_cases hki : k = i
+        · subst k
+          simp
+        · simp [hki, hi k hki]
+      have hdadd :
+          SymmetricPower.tprod R (Function.update b i (a i)) =
+            SymmetricPower.tprod R b + SymmetricPower.tprod R d := by
+        rw [show Function.update b i (a i) =
+            Function.update b i (b i + (a i - b i)) by
+              funext k
+              by_cases hki : k = i <;> simp [hki]]
+        rw [MultilinearMap.map_update_add]
+        simp [d]
+      have hzero : SymmetricPower.tprod R d ∈ L := by
+        apply pure_mem d i
+        apply (hfg (d i)).mpr
+        simpa [d] using hd
+      rw [Submodule.Quotient.eq]
+      rw [hda, hdadd]
+      simpa [sub_eq_add_neg, add_assoc] using hzero
+    have pure_eq (a b : ULift.{_} (Fin n) → M₁)
+        (hd : ∀ i, a i - b i ∈ LinearMap.range f) :
+        Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R a) =
+          Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R b) := by
+      let P : Prop := ∀ s : Finset (ULift.{_} (Fin n)),
+          ∀ a b : ULift.{_} (Fin n) → M₁,
+            (∀ i ∈ s, a i - b i ∈ LinearMap.range f) →
+              (∀ i ∉ s, a i = b i) →
+                Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R a) =
+                  Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R b)
+      have hP : P := by
+        intro s
+        induction s using Finset.induction_on with
+        | empty =>
+            intro a b _ hab
+            have hab' : a = b := by
+              funext i
+              exact hab i (by simp)
+            rw [hab']
+        | @insert i s his ih =>
+            intro a b hab houts
+            let c := Function.update b i (a i)
+            have hac :
+                Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R a) =
+                  Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R c) := by
+              apply ih
+              · intro k hk
+                have hki : k ≠ i := by
+                  intro hki
+                  subst k
+                  exact his hk
+                simpa [c, hki] using hab k (Finset.mem_insert_of_mem hk)
+              · intro k hk
+                by_cases hki : k = i
+                · subst k
+                  simp [c]
+                · simp [c, hki, houts k
+                    (by simp [hki, hk])]
+            have hcb := pure_eq_at c b i (by
+              intro k hki
+              simp [c, hki]) (by
+              simpa [c] using hab i (Finset.mem_insert_self i s))
+            exact hac.trans hcb
+      exact hP Finset.univ a b (fun i _ => hd i) (by simp)
+    have mk_eq_of_g_eq (a b : ULift.{_} (Fin n) → M₁)
+        (hab : ∀ i, g (a i) = g (b i)) :
+        Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R a) =
+          Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R b) := by
+      apply pure_eq
+      intro i
+      apply hker
+      rw [g.map_sub, hab i]
+      simp
+    let φ : (R × (ULift.{_} (Fin n) → M)) →
+        (symmetricPower R M₁ n) ⧸ L :=
+      fun p => p.1 • Submodule.Quotient.mk (p := L)
+        (SymmetricPower.tprod R (fun i => h (p.2 i)))
+    have hφ0 : ∀ (r : R) (q : ULift.{_} (Fin n) → M)
+        (i : ULift.{_} (Fin n)) (_ : q i = 0), φ (r, q) = 0 := by
+      intro r q i hi
+      dsimp [φ]
+      have hm :
+          Submodule.Quotient.mk (p := L)
+              (SymmetricPower.tprod R (fun k => h (q k))) = 0 := by
+        apply (Submodule.Quotient.mk_eq_zero _).2
+        apply pure_mem (fun k => h (q k)) i
+        simp [hgh, hi]
+      rw [hm, smul_zero]
+    have hφ0' : ∀ (q : ULift.{_} (Fin n) → M), φ (0, q) = 0 := by
+      intro q
+      simp [φ]
+    have hφadd : ∀ [DecidableEq (ULift.{_} (Fin n))]
+        (r : R) (q : ULift.{_} (Fin n) → M) (i : ULift.{_} (Fin n))
+        (m₁ m₂ : M),
+        φ (r, Function.update q i m₁) + φ (r, Function.update q i m₂) =
+          φ (r, Function.update q i (m₁ + m₂)) := by
+      intro _ r q i m₁ m₂
+      dsimp [φ]
+      have hu (m : M) :
+          (fun k => h ((Function.update q i m) k)) =
+            Function.update (fun k => h (q k)) i (h m) := by
+        funext k
+        by_cases hk : k = i <;> simp [hk]
+      have ht (m : M) :
+          SymmetricPower.tprod R (fun k => h ((Function.update q i m) k)) =
+            SymmetricPower.tprod R
+              (Function.update (fun k => h (q k)) i (h m)) :=
+        congrArg (SymmetricPower.tprod R) (hu m)
+      have heq :
+          Submodule.Quotient.mk (p := L)
+              (SymmetricPower.tprod R
+                (fun k => h ((Function.update q i (m₁ + m₂)) k))) =
+            Submodule.Quotient.mk (p := L)
+              (SymmetricPower.tprod R
+                (Function.update (fun k => h (q k)) i (h m₁ + h m₂))) := by
+        apply mk_eq_of_g_eq
+        intro k
+        by_cases hk : k = i
+        · subst k
+          simp [hgh, g.map_add]
+        · simp [hk, hgh]
+      rw [ht m₁, ht m₂, ht (m₁ + m₂)]
+      rw [ht (m₁ + m₂)] at heq
+      rw [← smul_add, ← Submodule.Quotient.mk_add,
+        ← MultilinearMap.map_update_add, heq]
+    have hφadd_scalar : ∀ (r r' : R) (q : ULift.{_} (Fin n) → M),
+        φ (r, q) + φ (r', q) = φ (r + r', q) := by
+      intro r r' q
+      dsimp [φ]
+      rw [← add_smul]
+    have hφsmul : ∀ [DecidableEq (ULift.{_} (Fin n))]
+        (r : R) (q : ULift.{_} (Fin n) → M) (i : ULift.{_} (Fin n)) (r' : R),
+        φ (r, Function.update q i (r' • q i)) = φ (r' * r, q) := by
+      intro _ r q i r'
+      dsimp [φ]
+      have hu :
+          (fun k => h ((Function.update q i (r' • q i)) k)) =
+            Function.update (fun k => h (q k)) i (h (r' • q i)) := by
+        funext k
+        by_cases hk : k = i <;> simp [hk]
+      have ht :
+          SymmetricPower.tprod R
+              (fun k => h ((Function.update q i (r' • q i)) k)) =
+            SymmetricPower.tprod R
+              (Function.update (fun k => h (q k)) i (h (r' • q i))) :=
+        congrArg (SymmetricPower.tprod R) hu
+      have heq :
+          Submodule.Quotient.mk (p := L)
+              (SymmetricPower.tprod R
+                (fun k => h ((Function.update q i (r' • q i)) k))) =
+            Submodule.Quotient.mk (p := L)
+              (SymmetricPower.tprod R
+                (Function.update (fun k => h (q k)) i (r' • h (q i)))) := by
+        apply mk_eq_of_g_eq
+        intro k
+        by_cases hk : k = i
+        · subst k
+          simp [hgh, g.map_smul]
+        · simp [hk, hgh]
+      rw [ht] at heq ⊢
+      rw [heq, MultilinearMap.map_update_smul]
+      simp [smul_smul, mul_comm]
+    let C : (⨂[R] _ : ULift.{_} (Fin n), M) →+
+        (symmetricPower R M₁ n) ⧸ L :=
+      PiTensorProduct.liftAddHom φ hφ0 hφ0' hφadd hφadd_scalar hφsmul
+    have C_tprodCoeff (r : R) (q : ULift.{_} (Fin n) → M) :
+        C (PiTensorProduct.tprodCoeff R r q) = φ (r, q) := by
+      simp only [C, PiTensorProduct.liftAddHom, PiTensorProduct.tprodCoeff,
+        AddCon.coe_mk']
+      conv_lhs => apply AddCon.lift_coe
+      rfl
+    have C_tprod (q : ULift.{_} (Fin n) → M) :
+        C (PiTensorProduct.tprod R q) = φ (1, q) := by
+      rw [PiTensorProduct.tprod_eq_tprodCoeff_one, C_tprodCoeff]
+    have hCrel :
+        addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M) ≤
+          AddCon.ker C := by
+      apply AddCon.addConGen_le.2
+      intro x y hxy
+      cases hxy with
+      | perm e q =>
+          change C (PiTensorProduct.tprod R q) =
+            C (PiTensorProduct.tprod R (fun i => q (e i)))
+          rw [C_tprod, C_tprod]
+          dsimp [φ]
+          simp only [one_smul]
+          exact congrArg (Submodule.Quotient.mk (p := L))
+            (SymmetricPower.tprod_equiv e (fun i => h (q i))).symm
+    let D : symmetricPower R M n →ₗ[R] (symmetricPower R M₁ n) ⧸ L :=
+      { toFun := AddCon.lift
+          (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M))
+          C hCrel
+        map_add' := by intro x y; exact map_add _ _ _
+        map_smul' := by
+          intro r x
+          refine AddCon.induction_on x ?_
+          intro t
+          change C (r • t) = r • C t
+          refine PiTensorProduct.induction_on' t ?_ ?_
+          · intro r' q
+            rw [PiTensorProduct.smul_tprodCoeff' r r' q,
+              C_tprodCoeff, C_tprodCoeff]
+            dsimp [φ]
+            simp [smul_smul]
+          · intro x y hx hy
+            calc
+              C (r • (x + y)) = C (r • x + r • y) := by rw [smul_add]
+              _ = C (r • x) + C (r • y) := C.map_add _ _
+              _ = r • C x + r • C y := by rw [hx, hy]
+              _ = r • (C x + C y) := (smul_add _ _ _).symm
+              _ = r • C (x + y) := by rw [C.map_add] }
+    have hD_pure (q : ULift.{_} (Fin n) → M₁) :
+        D (symmetricPowerQuotientMap n g (SymmetricPower.tprod R q)) =
+          Submodule.Quotient.mk (p := L) (SymmetricPower.tprod R q) := by
+      rw [symmetricPowerQuotientMap_tprod]
+      change AddCon.lift
+          (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M)) C hCrel
+          (AddCon.mk' _ (PiTensorProduct.tprod R (fun i => g (q i)))) = _
+      calc
+        _ = C (PiTensorProduct.tprod R (fun i => g (q i))) :=
+          AddCon.lift_coe hCrel _
+        _ = φ (1, fun i => g (q i)) := C_tprod _
+        _ = _ := by
+          dsimp [φ]
+          simp only [one_smul]
+          apply mk_eq_of_g_eq
+          intro i
+          simp [hgh]
+    have hD (x : symmetricPower R M₁ n) :
+        D (symmetricPowerQuotientMap n g x) =
+          Submodule.Quotient.mk (p := L) x := by
+      refine AddCon.induction_on x ?_
+      intro t
+      change D (symmetricPowerQuotientMap n g (AddCon.mk' _ t)) =
+        Submodule.Quotient.mk (p := L) (AddCon.mk' _ t)
+      refine PiTensorProduct.induction_on' t ?_ ?_
+      · intro r q
+        rw [PiTensorProduct.tprodCoeff_eq_smul_tprod]
+        change D (symmetricPowerQuotientMap n g
+            (r • SymmetricPower.tprod R q)) =
+          Submodule.Quotient.mk (p := L) (r • SymmetricPower.tprod R q)
+        rw [map_smul, map_smul, hD_pure]
+        simp
+      · intro x y hx hy
+        let sx : symmetricPower R M₁ n :=
+          AddCon.mk' (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁)) x
+        let sy : symmetricPower R M₁ n :=
+          AddCon.mk' (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁)) y
+        have hmk :
+            AddCon.mk' (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁))
+                (x + y) =
+              sx + sy := by
+          dsimp [sx, sy]
+          exact (AddCon.mk' (addConGen
+            (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁))).map_add x y
+        have hsx : D (symmetricPowerQuotientMap n g sx) =
+            Submodule.Quotient.mk (p := L) sx := by
+          simpa [sx] using hx
+        have hsy : D (symmetricPowerQuotientMap n g sy) =
+            Submodule.Quotient.mk (p := L) sy := by
+          simpa [sy] using hy
+        rw [hmk]
+        change D (symmetricPowerQuotientMap n g (sx + sy)) =
+          Submodule.Quotient.mk (p := L) (sx + sy)
+        rw [(symmetricPowerQuotientMap n g).map_add, D.map_add, hsx, hsy]
+        rw [Submodule.Quotient.mk_add]
+    intro x hx
+    change x ∈ L
+    apply (Submodule.Quotient.mk_eq_zero _).mp
+    rw [← hD x, hx]
+    exact D.map_zero
 
 /-- Focused image-equals-kernel interface for the exterior presentation. -/
 theorem exteriorPower_relation_range_eq_kernel
@@ -810,9 +1194,274 @@ theorem exteriorPower_relation_range_eq_kernel
     (f : M₂ →ₗ[R] M₁) (g : M₁ →ₗ[R] M)
     (hfg : Function.Exact f g) (hg : Function.Surjective g)
     {n : ℕ} (hn : 0 < n) :
-    LinearMap.range (exteriorPowerRelationMap f hn) =
+      LinearMap.range (exteriorPowerRelationMap f hn) =
       LinearMap.ker (exteriorPowerQuotientMap n g) := by
-  sorry
+  cases n with
+  | zero => exact (Nat.not_lt_zero _ hn).elim
+  | succ k =>
+      have relation_ιMulti (z : M₂) (r : Fin k → M₁) :
+          exteriorPowerRelationMap f hn
+              (z ⊗ₜ[R] exteriorPower.ιMulti R k r) =
+            exteriorPower.ιMulti R (Nat.succ k) (Fin.cons (f z) r) := by
+        simp [exteriorPowerRelationMap]
+        apply Subtype.ext
+        simp [exteriorPower.ιMulti, ExteriorAlgebra.ιMulti_succ_apply,
+          exteriorPower.oneEquiv]
+        rw [show Matrix.vecTail (Fin.cons (f z) r) = r by rfl]
+      let L := LinearMap.range (exteriorPowerRelationMap f hn)
+      let h : M → M₁ := Function.surjInv hg
+      have hgh (x : M) : g (h x) = x := by
+        exact Function.rightInverse_surjInv hg x
+      have hker (x : M₁) (hx : g x = 0) : x ∈ LinearMap.range f :=
+        (hfg x).mp hx
+      have pure_mem (a : Fin (Nat.succ k) → M₁) (i : Fin (Nat.succ k))
+          (hi : g (a i) = 0) : exteriorPower.ιMulti R (Nat.succ k) a ∈ L := by
+        obtain ⟨z, hz⟩ := hker (a i) hi
+        by_cases hi0 : i = 0
+        · subst i
+          let r : Fin k → M₁ := fun j => a j.succ
+          have ha : Fin.cons (f z) r = a := by
+            funext j
+            refine Fin.cases ?_ (fun j => ?_) j
+            · simp [r, hz]
+            · simp [r]
+          refine ⟨z ⊗ₜ[R] exteriorPower.ιMulti R k r, ?_⟩
+          rw [relation_ιMulti, ha]
+        · let p : Equiv.Perm (Fin (Nat.succ k)) := Equiv.swap 0 i
+          let r : Fin k → M₁ := fun j => a (p j.succ)
+          have ha : Fin.cons (f z) r = (fun j => a (p j)) := by
+            funext j
+            refine Fin.cases ?_ (fun j => ?_) j
+            · simp [p, r, hz]
+            · simp [r]
+          have hrel : exteriorPower.ιMulti R (Nat.succ k)
+              (fun j => a (p j)) ∈ L := by
+            refine ⟨z ⊗ₜ[R] exteriorPower.ιMulti R k r, ?_⟩
+            rw [relation_ιMulti, ha]
+          have hneg : - exteriorPower.ιMulti R (Nat.succ k) a ∈ L := by
+            change exteriorPower.ιMulti R (Nat.succ k) (a ∘ p) ∈ L at hrel
+            rw [(exteriorPower.ιMulti R (Nat.succ k)).map_perm a p] at hrel
+            have h0i : (0 : Fin (Nat.succ k)) ≠ i := Ne.symm hi0
+            simpa [p, h0i, Function.comp_def] using hrel
+          simpa using L.neg_mem hneg
+      have pure_eq_at (a b : Fin (Nat.succ k) → M₁) (i : Fin (Nat.succ k))
+          (hi : ∀ j ≠ i, a j = b j)
+          (hd : a i - b i ∈ LinearMap.range f) :
+          Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) a) =
+            Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) b) := by
+        let d : Fin (Nat.succ k) → M₁ := Function.update b i (a i - b i)
+        have hda : a = Function.update b i (a i) := by
+          funext j
+          by_cases hji : j = i
+          · subst j
+            simp
+          · simp [hji, hi j hji]
+        have hdiff :
+            exteriorPower.ιMulti R (Nat.succ k) (Function.update b i (a i)) -
+                exteriorPower.ιMulti R (Nat.succ k) b =
+              exteriorPower.ιMulti R (Nat.succ k) d := by
+          have hadd :
+              exteriorPower.ιMulti R (Nat.succ k) (Function.update b i (a i)) =
+                exteriorPower.ιMulti R (Nat.succ k) b +
+                  exteriorPower.ιMulti R (Nat.succ k) d := by
+            rw [show Function.update b i (a i) =
+                Function.update b i (b i + (a i - b i)) by
+                  funext j
+                  by_cases hji : j = i <;> simp [hji]]
+            rw [AlternatingMap.map_update_add]
+            simp [d]
+          rw [hadd]
+          simp [sub_eq_add_neg, add_assoc]
+        have hzero : exteriorPower.ιMulti R (Nat.succ k) d ∈ L := by
+          apply pure_mem d i
+          have hgd : g (a i - b i) = 0 := (hfg _).mpr hd
+          simpa [d] using hgd
+        rw [Submodule.Quotient.eq, hda, hdiff]
+        exact hzero
+      have pure_eq (a b : Fin (Nat.succ k) → M₁)
+          (hd : ∀ i, a i - b i ∈ LinearMap.range f) :
+          Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) a) =
+            Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) b) := by
+        let P : Prop := ∀ s : Finset (Fin (Nat.succ k)),
+            ∀ a b : Fin (Nat.succ k) → M₁,
+              (∀ i ∈ s, a i - b i ∈ LinearMap.range f) →
+                (∀ i ∉ s, a i = b i) →
+                  Submodule.Quotient.mk (p := L)
+                      (exteriorPower.ιMulti R (Nat.succ k) a) =
+                    Submodule.Quotient.mk (p := L)
+                      (exteriorPower.ιMulti R (Nat.succ k) b)
+        have hP : P := by
+          intro s
+          induction s using Finset.induction_on with
+          | empty =>
+              intro a b _ hab
+              have hab' : a = b := by
+                funext i
+                exact hab i (by simp)
+              rw [hab']
+          | @insert i s his ih =>
+              intro a b hab houts
+              let c := Function.update b i (a i)
+              have hac :
+                  Submodule.Quotient.mk (p := L)
+                      (exteriorPower.ιMulti R (Nat.succ k) a) =
+                    Submodule.Quotient.mk (p := L)
+                      (exteriorPower.ιMulti R (Nat.succ k) c) := by
+                apply ih
+                · intro j hj
+                  have hji : j ≠ i := by
+                    intro hji
+                    subst j
+                    exact his hj
+                  simpa [c, hji] using hab j (Finset.mem_insert_of_mem hj)
+                · intro j hj
+                  by_cases hji : j = i
+                  · subst j
+                    simp [c]
+                  · simp [c, hji, houts j (by simp [hji, hj])]
+              have hcb := pure_eq_at c b i (by
+                intro j hji
+                simp [c, hji]) (by
+                simpa [c] using hab i (Finset.mem_insert_self i s))
+              exact hac.trans hcb
+        exact hP Finset.univ a b (fun i _ => hd i) (by simp)
+      have mk_eq_of_g_eq (a b : Fin (Nat.succ k) → M₁)
+          (hab : ∀ i, g (a i) = g (b i)) :
+          Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) a) =
+            Submodule.Quotient.mk (p := L) (exteriorPower.ιMulti R (Nat.succ k) b) := by
+        apply pure_eq
+        intro i
+        apply hker
+        rw [g.map_sub, hab i]
+        simp
+      let A : M [⋀^Fin (Nat.succ k)]→ₗ[R]
+          ((exteriorPower R M₁ (Nat.succ k)) ⧸ L) :=
+        { toFun := fun q =>
+            Submodule.Quotient.mk (p := L)
+              (exteriorPower.ιMulti R (Nat.succ k) (fun i => h (q i)))
+          map_update_add' := by
+            intro _ q i m₁ m₂
+            have hu (m : M) :
+                (fun j => h ((Function.update q i m) j)) =
+                  Function.update (fun j => h (q j)) i (h m) := by
+              funext j
+              by_cases hji : j = i <;> simp [hji]
+            have ht (m : M) :
+                exteriorPower.ιMulti R (Nat.succ k)
+                    (fun j => h ((Function.update q i m) j)) =
+                  exteriorPower.ιMulti R (Nat.succ k)
+                    (Function.update (fun j => h (q j)) i (h m)) :=
+              congrArg (exteriorPower.ιMulti R (Nat.succ k)) (hu m)
+            have heq :
+                Submodule.Quotient.mk (p := L)
+                    (exteriorPower.ιMulti R (Nat.succ k)
+                      (fun j => h ((Function.update q i (m₁ + m₂)) j))) =
+                  Submodule.Quotient.mk (p := L)
+                    (exteriorPower.ιMulti R (Nat.succ k)
+                      (Function.update (fun j => h (q j)) i (h m₁ + h m₂))) := by
+              apply mk_eq_of_g_eq
+              intro j
+              by_cases hji : j = i
+              · subst j
+                simp [hgh, g.map_add]
+              · simp [hji, hgh]
+            rw [ht m₁, ht m₂]
+            rw [← Submodule.Quotient.mk_add,
+              ← AlternatingMap.map_update_add, heq]
+          map_update_smul' := by
+            intro _ q i r m
+            have hu :
+                (fun j => h ((Function.update q i (r • m)) j)) =
+                  Function.update (fun j => h (q j)) i (h (r • m)) := by
+              funext j
+              by_cases hji : j = i <;> simp [hji]
+            have ht :
+                exteriorPower.ιMulti R (Nat.succ k)
+                    (fun j => h ((Function.update q i (r • m)) j)) =
+                  exteriorPower.ιMulti R (Nat.succ k)
+                    (Function.update (fun j => h (q j)) i (h (r • m))) :=
+              congrArg (exteriorPower.ιMulti R (Nat.succ k)) hu
+            have heq :
+                Submodule.Quotient.mk (p := L)
+                    (exteriorPower.ιMulti R (Nat.succ k)
+                      (fun j => h ((Function.update q i (r • m)) j))) =
+                  Submodule.Quotient.mk (p := L)
+                    (exteriorPower.ιMulti R (Nat.succ k)
+                      (Function.update (fun j => h (q j)) i (r • h m))) := by
+              apply mk_eq_of_g_eq
+              intro j
+              by_cases hji : j = i
+              · subst j
+                simp [hgh, g.map_smul]
+              · simp [hji, hgh]
+            rw [heq, ht, AlternatingMap.map_update_smul]
+            simp
+          map_eq_zero_of_eq' := by
+            intro q i j hq hij
+            have hz : exteriorPower.ιMulti R (Nat.succ k)
+                (fun l => h (q l)) = 0 := by
+              apply (exteriorPower.ιMulti R (Nat.succ k)).map_eq_zero_of_eq _ i j
+              simp [hq]
+              exact hij
+            dsimp
+            rw [hz, map_zero]
+        }
+      let D := exteriorPower.alternatingMapLinearEquiv A
+      have hD_pure (q : Fin (Nat.succ k) → M₁) :
+          D (exteriorPowerQuotientMap (Nat.succ k) g
+              (exteriorPower.ιMulti R (Nat.succ k) q)) =
+            Submodule.Quotient.mk (p := L)
+              (exteriorPower.ιMulti R (Nat.succ k) q) := by
+        rw [exteriorPowerQuotientMap_ιMulti]
+        change A (fun i => h (g (q i))) = _
+        dsimp [A]
+        apply mk_eq_of_g_eq
+        intro i
+        simp [hgh]
+      have hD :
+          D.comp (exteriorPowerQuotientMap (Nat.succ k) g) =
+            Submodule.mkQ L := by
+        apply exteriorPower.linearMap_ext
+        ext q
+        exact hD_pure q
+      apply le_antisymm
+      · rintro x ⟨y, rfl⟩
+        refine TensorProduct.induction_on y (by simp) ?_ ?_
+        · intro z t
+          let F : exteriorPower R M₁ k →ₗ[R]
+              (exteriorPower R M₁ (Nat.succ k)) :=
+            (exteriorPowerQuotientMap (Nat.succ k) g).comp
+              ((exteriorPowerRelationMap f hn).comp
+                (TensorProduct.mk R M₂ (exteriorPower R M₁ k) z))
+          have hF : F = 0 := by
+            apply LinearMap.ext
+            intro u
+            have hu : u ∈ Submodule.span R
+                (Set.range (exteriorPower.ιMulti R k)) := by
+              rw [exteriorPower.ιMulti_span]
+              exact Submodule.mem_top
+            induction hu using Submodule.span_induction with
+            | mem v hv =>
+                rcases hv with ⟨r, rfl⟩
+                change exteriorPowerQuotientMap (Nat.succ k) g
+                  (exteriorPowerRelationMap f hn
+                    (z ⊗ₜ[R] exteriorPower.ιMulti R k r)) = 0
+                rw [relation_ιMulti, exteriorPowerQuotientMap_ιMulti]
+                simp [hfg z]
+            | zero => simp [F]
+            | add u v hu hv =>
+                rw [F.map_add, hu, hv, map_zero]
+            | smul a u hu =>
+                rw [F.map_smul, hu, smul_zero]
+          exact hF t
+        · intro x y hx hy
+          change exteriorPowerQuotientMap (Nat.succ k) g
+            (exteriorPowerRelationMap f hn (x + y)) = 0
+          rw [(exteriorPowerRelationMap f hn).map_add, hx, hy, map_zero]
+      · intro x hx
+        apply (Submodule.Quotient.mk_eq_zero _).mp
+        rw [← hD x, LinearMap.comp_apply, hx]
+        exact D.map_zero
 
 /-- The right-exact sequences for symmetric and exterior powers of a quotient. -/
 theorem presentation_symmetric_exterior_power

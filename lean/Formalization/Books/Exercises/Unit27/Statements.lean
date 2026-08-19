@@ -56,18 +56,29 @@ theorem projToPrimeSpectrum_injective
   simpa only [projToPrimeSpectrum] using congrArg PrimeSpectrum.asIdeal h
 theorem projToPrimeSpectrum_inducing
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
-    IsInducing (projToPrimeSpectrum 𝒜) := by sorry
+    IsInducing (projToPrimeSpectrum 𝒜) := by
+  refine ⟨TopologicalSpace.ext_isClosed fun Z ↦ ?_⟩
+  rw [isClosed_induced_iff, ProjectiveSpectrum.isClosed_iff_zeroLocus]
+  constructor
+  · rintro ⟨s, rfl⟩
+    refine ⟨PrimeSpectrum.zeroLocus s, ?_, ?_⟩
+    · exact (PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨s, rfl⟩
+    rfl
+  · rintro ⟨t, ht, h⟩
+    obtain ⟨s, rfl⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus _).1 ht
+    exact ⟨s, h.symm⟩
 theorem projToPrimeSpectrum_isEmbedding
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
-    IsEmbedding (projToPrimeSpectrum 𝒜) := by sorry
+    IsEmbedding (projToPrimeSpectrum 𝒜) :=
+  ⟨projToPrimeSpectrum_inducing 𝒜, projToPrimeSpectrum_injective 𝒜⟩
 theorem mem_dPlus_iff
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     (f : R) (x : ProjPoints 𝒜) :
-    x ∈ dPlus 𝒜 f ↔ f ∉ x.asHomogeneousIdeal := by sorry
+    x ∈ dPlus 𝒜 f ↔ f ∉ x.asHomogeneousIdeal := by rfl
 theorem mem_vPlus_iff
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     (I : HomogeneousIdeal 𝒜) (x : ProjPoints 𝒜) :
-    x ∈ vPlus 𝒜 I ↔ (I : Set R) ⊆ x.asHomogeneousIdeal := by sorry
+    x ∈ vPlus 𝒜 I ↔ (I : Set R) ⊆ x.asHomogeneousIdeal := by rfl
 theorem isOpen_dPlus
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (f : R) :
     IsOpen (dPlus 𝒜 f) := by sorry

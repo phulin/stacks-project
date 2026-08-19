@@ -1354,7 +1354,141 @@ theorem lemma_syspar
           IsSystemOfParameters R 2 ![f + h, g] ∧
             idealQuotientLength (Ideal.span (Set.range ![f, g])) =
               idealQuotientLength (Ideal.span (Set.range ![f + h, g])) := by
-  sorry
+  obtain ⟨v, i, hiv, hvi, hv⟩ :=
+    lemma_sopexists R 2 hdim (by norm_num) f hf hmin 0
+  have hstable :
+      ∀ (g : R), IsSystemOfParameters R 2 ![f, g] →
+        ∃ N, ∀ h ∈ (IsLocalRing.maximalIdeal R) ^ N,
+          IsSystemOfParameters R 2 ![f + h, g] ∧
+            idealQuotientLength (Ideal.span (Set.range ![f, g])) =
+              idealQuotientLength (Ideal.span (Set.range ![f + h, g])) := by
+    intro g hvg
+    let I : Ideal R := Ideal.span (Set.range ![f, g])
+    have hIdef : Formalization.Books.Algebra.Unit59.IsIdealOfDefinition R I := by
+      simpa [I] using hvg.2
+    have hmuldef :
+        Formalization.Books.Algebra.Unit59.IsIdealOfDefinition R
+          (IsLocalRing.maximalIdeal R * I) := by
+      unfold Formalization.Books.Algebra.Unit59.IsIdealOfDefinition at hIdef ⊢
+      rw [Ideal.radical_mul, hIdef,
+        (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical]
+      exact inf_idem _
+    obtain ⟨N, hN⟩ :=
+      Formalization.Books.Algebra.Unit59.exists_pow_maximalIdeal_le_of_isIdealOfDefinition
+        (IsLocalRing.maximalIdeal R * I) hmuldef
+    refine ⟨N, ?_⟩
+    intro h hh
+    have hmem : h ∈ IsLocalRing.maximalIdeal R * I := hN hh
+    have hmem' : h ∈ IsLocalRing.maximalIdeal R • I := by exact hmem
+    obtain ⟨a, ha, hsum⟩ :=
+      (Submodule.mem_ideal_smul_span_iff_exists_sum
+        (I := IsLocalRing.maximalIdeal R) (f := ![f, g]) h).mp hmem'
+    rw [a.sum_fintype (fun i c => c • ![f, g] i) (by simp)] at hsum
+    rw [Fin.sum_univ_two] at hsum
+    have hsum' : a 0 * f + a 1 * g = h := by
+      simpa [smul_eq_mul] using hsum
+    have ha0 : a 0 ∈ IsLocalRing.maximalIdeal R := ha 0
+    have ha1 : a 1 ∈ IsLocalRing.maximalIdeal R := ha 1
+    let J : Ideal R := Ideal.span (Set.range ![f + h, g])
+    have hfh : f + h ∈ J := by
+      apply Ideal.subset_span
+      exact ⟨0, by simp⟩
+    have hgJ : g ∈ J := by
+      apply Ideal.subset_span
+      exact ⟨1, by simp⟩
+    have hunit : IsUnit (1 + a 0) := by
+      apply IsLocalRing.notMem_maximalIdeal.mp
+      intro hbad
+      have hone : (1 : R) ∈ IsLocalRing.maximalIdeal R := by
+        simpa using (IsLocalRing.maximalIdeal R).sub_mem hbad ha0
+      exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) hone
+    obtain ⟨u, hu⟩ := hunit
+    have huf : (1 + a 0) * f ∈ J := by
+      have hsub : (f + h) - a 1 * g ∈ J :=
+        J.sub_mem hfh (J.mul_mem_left _ hgJ)
+      convert hsub using 1
+      rw [← hsum']
+      ring
+    have hfJ : f ∈ J := by
+      have hmul := J.mul_mem_left (↑(u⁻¹) : R) huf
+      simpa [← hu, mul_assoc] using hmul
+    have hJleI : J ≤ I := by
+      apply Ideal.span_le.mpr
+      rintro z ⟨j, rfl⟩
+      fin_cases j
+      · apply I.add_mem
+        · exact Ideal.subset_span (by exact ⟨0, by simp⟩)
+        · exact (Ideal.mul_le_left (I := IsLocalRing.maximalIdeal R) (J := I)) hmem
+      · exact Ideal.subset_span (by exact ⟨1, by simp⟩)
+    have hIleJ : I ≤ J := by
+      apply Ideal.span_le.mpr
+      rintro z ⟨j, rfl⟩
+      fin_cases j
+      · exact hfJ
+      · exact hgJ
+    have hIJ : I = J := le_antisymm hIleJ hJleI
+    have hnewmem : ∀ j : Fin 2, ![f + h, g] j ∈ IsLocalRing.maximalIdeal R := by
+      intro j
+      fin_cases j
+      · have hmemM : h ∈ IsLocalRing.maximalIdeal R :=
+          (Ideal.mul_le_right (I := IsLocalRing.maximalIdeal R) (J := I)) hmem
+        simpa using (IsLocalRing.maximalIdeal R).add_mem hf hmemM
+      · simpa using hvg.1 1
+    refine ⟨⟨hnewmem, ?_⟩, ?_⟩
+    · change Formalization.Books.Algebra.Unit59.IsIdealOfDefinition R J
+      rw [← hIJ]
+      exact hIdef
+    · change idealQuotientLength I = idealQuotientLength J
+      rw [hIJ]
+  fin_cases i
+  · let g := v 1
+    have hv' : v = ![f, g] := by
+      funext j
+      fin_cases j
+      · simpa using hiv
+      · rfl
+    have hvg : IsSystemOfParameters R 2 ![f, g] := by
+      rcases hv with ⟨hv_mem, hv_def⟩
+      constructor
+      · intro j
+        fin_cases j
+        · have ht : f ∈ IsLocalRing.maximalIdeal R := by
+            rw [← hiv]
+            exact hv_mem 0
+          simpa using ht
+        · simpa [g] using hv_mem (1 : Fin 2)
+      · have hspan : Ideal.span (Set.range ![f, g]) =
+            Ideal.span (Set.range v) := by rw [hv']
+        rw [hspan]
+        exact hv_def
+    obtain ⟨N, hN⟩ := hstable g hvg
+    exact ⟨g, N, hvg, hN⟩
+  · let g := v 0
+    have hv' : v = ![g, f] := by
+      funext j
+      fin_cases j
+      · rfl
+      · simpa using hiv
+    have hvg : IsSystemOfParameters R 2 ![f, g] := by
+      rcases hv with ⟨hv_mem, hv_def⟩
+      constructor
+      · intro j
+        fin_cases j
+        · have ht : f ∈ IsLocalRing.maximalIdeal R := by
+            rw [← hiv]
+            exact hv_mem 1
+          simpa using ht
+        · simpa [g] using hv_mem (0 : Fin 2)
+      · have hrange : Set.range ![f, g] = Set.range ![g, f] := by
+          ext z
+          simp [or_comm]
+        have hspan : Ideal.span (Set.range ![f, g]) =
+            Ideal.span (Set.range v) := by
+          rw [hrange, ← hv']
+        rw [hspan]
+        exact hv_def
+    obtain ⟨N, hN⟩ := hstable g hvg
+    exact ⟨g, N, hvg, hN⟩
 
 /-! ## Reduced principal quotients in dimension two -/
 

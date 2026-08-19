@@ -188,7 +188,20 @@ theorem isGeometricallyIrreducible_iff_irreducibleSpectrum
     [IsSepClosed k] :
     IsGeometricallyIrreducible k S ↔
       IrreducibleSpace (PrimeSpectrum S) := by
-  sorry
+  have htests :=
+    isGeometricallyIrreducible_iff_finiteSeparable_iff_separableClosure_iff_algebraicClosure
+      (k := k) (S := S)
+  constructor
+  · intro h
+    have h' := htests.1.mp h
+    have hk := h' k
+    exact (PrimeSpectrum.homeomorphOfRingEquiv
+      (Algebra.TensorProduct.lid k S).toRingEquiv).irreducibleSpace_iff.mp hk
+  · intro hS
+    apply htests.1.mpr
+    intro K _ _ _ _
+    exact separablyClosed_tensorProduct_irreducible
+      (R := K) (S := S) inferInstance hS
 
 /-! ## Permanence properties -/
 

@@ -1027,7 +1027,7 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
         rw [Ideal.mul_comm] at h₂'
         exact h₂'
       have hsum := add_mem h₁ h₂
-      convert hsum using 1 ; simp [Subalgebra.coe_mul] ; ring
+      convert hsum using 1 ; simp ; ring
   have hpow (n : ℕ) : Kmap ^ n = (K ^ n).map (algebraMap R S') := by
     rw [← Ideal.map_pow]
   obtain ⟨n, hn⟩ := hKnil

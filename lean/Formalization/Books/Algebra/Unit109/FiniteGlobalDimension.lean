@@ -472,13 +472,127 @@ theorem independent_projective_resolution {R : Type u} [Ring R]
 theorem projective_dimension_resolution_criteria {R : Type u} [Ring R]
     (M : ModuleCat.{u} R) (d : ℕ) :
     List.TFAE (projectiveDimensionResolutionConditions M d) := by
-  sorry
+  have hAB : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      HasFiniteProjectiveResolutionLE M d := by
+    constructor
+    · intro hA
+      by_cases hd0 : d = 0
+      · subst d
+        have hprojM : CategoryTheory.Projective M :=
+          (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero M).mpr hA
+        have hmoduleM : Module.Projective R (M : Type u) :=
+          (IsProjective.iff_projective (M : Type u)).mpr hprojM
+        simpa [HasFiniteProjectiveResolutionLE] using hmoduleM
+      · rw [HasFiniteProjectiveResolutionLE, if_neg hd0]
+        let P : ProjectiveResolution M := ProjectiveResolution.of M
+        have hterminal := resolutionSyzygy_bound_up P d (d - 1) (by omega) hA
+        have hprojP : CategoryTheory.Projective (resolutionSyzygy P (d - 1)) :=
+          CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mpr (by
+            have hdeg : d - (d - 1) = 1 := by omega
+            simpa [hdeg] using hterminal)
+        have hmoduleP : Module.Projective R (resolutionSyzygy P (d - 1) : Type u) :=
+          (IsProjective.iff_projective _).mpr hprojP
+        exact ⟨P, hmoduleP⟩
+    · intro hB
+      by_cases hd0 : d = 0
+      · subst d
+        rw [HasFiniteProjectiveResolutionLE, if_pos rfl] at hB
+        exact (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero M).mp
+          ((IsProjective.iff_projective _).mp hB)
+      · rw [HasFiniteProjectiveResolutionLE, if_neg hd0] at hB
+        rcases hB with ⟨P, hP⟩
+        have hprojP : CategoryTheory.Projective (resolutionSyzygy P (d - 1)) :=
+          (IsProjective.iff_projective _).mp hP
+        have hterminal : CategoryTheory.HasProjectiveDimensionLT
+            (resolutionSyzygy P (d - 1)) 1 :=
+          CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hprojP
+        have hzero := resolutionSyzygy_bound_down P (d - 1) 1 hterminal
+        have hzero' : CategoryTheory.HasProjectiveDimensionLT
+            (resolutionSyzygy P 0) d := by
+          have hdeg : 1 + (d - 1) = d := by omega
+          simpa [hdeg] using hzero
+        let S := ShortComplex.mk (kernel.ι (P.π.f 0)) (P.π.f 0)
+          (kernel.condition (P.π.f 0))
+        have hS : S.ShortExact :=
+          { exact := ShortComplex.exact_kernel (P.π.f 0)
+            mono_f := by infer_instance
+            epi_g := by infer_instance }
+        have hproj₂ : CategoryTheory.Projective S.X₂ := by
+          dsimp [S]
+          exact P.projective 0
+        have hbase₂ : CategoryTheory.HasProjectiveDimensionLT S.X₂ 1 :=
+          CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hproj₂
+        have hmid : CategoryTheory.HasProjectiveDimensionLT S.X₂ (d + 1) := by
+          exact hasProjectiveDimensionLT_of_ge_explicit
+            S.X₂ 1 (d + 1) (by omega) hbase₂
+        have h := hS.hasProjectiveDimensionLT_X₃ d
+          (by simpa [S, resolutionSyzygy] using hzero') hmid
+        simpa [S, CategoryTheory.HasProjectiveDimensionLE] using h
+  have hBC : HasFiniteProjectiveResolutionLE M d ↔
+      ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d := by
+    by_cases hd0 : d = 0
+    · subst d
+      simp only [HasFiniteProjectiveResolutionLE, ResolutionHasProjectiveSyzygyAt, if_pos rfl]
+      constructor
+      · intro h
+        exact ⟨ProjectiveResolution.of M, h⟩
+      · rintro ⟨P, h⟩
+        exact h
+    · simp only [HasFiniteProjectiveResolutionLE, ResolutionHasProjectiveSyzygyAt,
+        if_neg hd0]
+  have hAD : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d := by
+    constructor
+    · intro hA P
+      by_cases hd0 : d = 0
+      · subst d
+        have hprojM : CategoryTheory.Projective M :=
+          (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero M).mpr hA
+        have hmoduleM : Module.Projective R (M : Type u) :=
+          (IsProjective.iff_projective (M : Type u)).mpr hprojM
+        simpa [ResolutionHasProjectiveSyzygyAt] using hmoduleM
+      · rw [ResolutionHasProjectiveSyzygyAt, if_neg hd0]
+        have hterminal := resolutionSyzygy_bound_up P d (d - 1) (by omega) hA
+        have hprojP : CategoryTheory.Projective (resolutionSyzygy P (d - 1)) :=
+          CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mpr (by
+            have hdeg : d - (d - 1) = 1 := by omega
+            simpa [hdeg] using hterminal)
+        exact (IsProjective.iff_projective _).mpr hprojP
+    · intro hD
+      apply hAB.mpr
+      apply hBC.mpr
+      exact ⟨ProjectiveResolution.of M, hD (ProjectiveResolution.of M)⟩
+  have hAC : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d :=
+    hAB.trans hBC
+  change List.TFAE [
+    CategoryTheory.HasProjectiveDimensionLE M d,
+    HasFiniteProjectiveResolutionLE M d,
+    ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d,
+    ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d]
+  apply List.tfae_of_forall (CategoryTheory.HasProjectiveDimensionLE M d)
+  intro a ha
+  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil] at ha
+  rcases ha with rfl | rfl | rfl | rfl | h
+  · exact Iff.rfl
+  · exact hAB.symm
+  · exact hAC.symm
+  · exact hAD.symm
+  · exact False.elim h
 
 /-- Projective dimension zero is the projective-module case. -/
 theorem projective_dimension_zero_iff_projective {R : Type u} [Ring R]
     (M : ModuleCat.{u} R) :
     HasProjectiveDimensionExactly M 0 ↔ Module.Projective R M := by
-  sorry
+  constructor
+  · intro h
+    exact (IsProjective.iff_projective _).mpr
+      ((CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero M).mpr h.1)
+  · intro h
+    refine ⟨(CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero M).mp
+      ((IsProjective.iff_projective _).mp h), ?_⟩
+    intro e he
+    omega
 
 /-! ## Local and Noetherian resolution criteria -/
 
@@ -530,7 +644,59 @@ theorem projective_dimension_resolution_criteria_local
         ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d,
         ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d,
         HasFiniteFreeProjectiveResolutionLE M d ] := by
-  sorry
+  have hBF : HasFiniteProjectiveResolutionLE M d ↔
+      HasFiniteFreeProjectiveResolutionLE M d := by
+    by_cases hd0 : d = 0
+    · subst d
+      simp only [HasFiniteProjectiveResolutionLE, HasFiniteFreeProjectiveResolutionLE, if_pos rfl]
+      constructor
+      · intro h
+        exact Formalization.Books.Algebra.Unit85.projective_free_over_local_ring h
+      · intro h
+        letI : Module.Free R (M : Type u) := h
+        exact (inferInstance : Module.Projective R (M : Type u))
+    · simp only [HasFiniteProjectiveResolutionLE, HasFiniteFreeProjectiveResolutionLE,
+        if_neg hd0]
+      constructor
+      · rintro ⟨P, hP⟩
+        refine ⟨P, ?_, ?_⟩
+        · intro i hi
+          exact Formalization.Books.Algebra.Unit85.projective_free_over_local_ring
+            ((IsProjective.iff_projective _).mpr (P.projective i))
+        · exact Formalization.Books.Algebra.Unit85.projective_free_over_local_ring hP
+      · rintro ⟨P, hterms, hterminal⟩
+        refine ⟨P, ?_⟩
+        letI : Module.Free R (resolutionSyzygy P (d - 1) : Type u) := hterminal
+        exact (inferInstance : Module.Projective R (resolutionSyzygy P (d - 1) : Type u))
+  have hcriteria := projective_dimension_resolution_criteria M d
+  have hAB : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      HasFiniteProjectiveResolutionLE M d :=
+    List.TFAE.out hcriteria 0 1
+  have hAC : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d :=
+    List.TFAE.out hcriteria 0 2
+  have hAD : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d :=
+    List.TFAE.out hcriteria 0 3
+  have hAE : CategoryTheory.HasProjectiveDimensionLE M d ↔
+      HasFiniteFreeProjectiveResolutionLE M d :=
+    hAB.trans hBF
+  change List.TFAE [
+    CategoryTheory.HasProjectiveDimensionLE M d,
+    HasFiniteProjectiveResolutionLE M d,
+    ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d,
+    ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d,
+    HasFiniteFreeProjectiveResolutionLE M d]
+  apply List.tfae_of_forall (CategoryTheory.HasProjectiveDimensionLE M d)
+  intro a ha
+  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil] at ha
+  rcases ha with rfl | rfl | rfl | rfl | rfl | h
+  · exact Iff.rfl
+  · exact hAB.symm
+  · exact hAC.symm
+  · exact hAD.symm
+  · exact hAE.symm
+  · exact False.elim h
 
 /-- Over a Noetherian ring, finite modules have finite-projective resolution
 criteria. -/

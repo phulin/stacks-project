@@ -1293,7 +1293,7 @@ theorem setPresheaf_fibre_is_discrete
     (F : Cᵒᵖ ⥤ Type uS) (U : C) :
     IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
   sorry
-/-
+/- Prior attempt (does not compile):
   apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
   intro X Y f
   rcases X with ⟨⟨X, x⟩, hX⟩
@@ -1307,7 +1307,7 @@ theorem setPresheaf_fibre_is_discrete
   cases hbase
   have hfiber := Discrete.eq_of_hom f.val.fiber
   have hxy : x = y := by
-    simpa using congrArg Discrete.as hfiber
+    exact congrArg Discrete.as hfiber
   cases hxy
   rfl -/
 

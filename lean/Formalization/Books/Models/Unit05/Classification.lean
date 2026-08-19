@@ -216,7 +216,7 @@ def mConditionA5 (m : Fin 5 → ℤ) : Prop :=
 
 def mConditionC5 (m : Fin 5 → ℤ) : Prop :=
   2 * m 0 ≥ m 1 ∧ 2 * m 1 ≥ m 0 + m 2 ∧
-    2 * m 2 ≥ m 1 + 2 * m 3 ∧ 2 * m 3 ≥ m 2 + m 4 ∧ 2 * m 4 ≥ m 3
+    2 * m 2 ≥ m 1 + m 3 ∧ 2 * m 3 ≥ m 2 + m 4 ∧ 2 * m 4 ≥ m 3
 
 def mConditionB5 (m : Fin 5 → ℤ) : Prop :=
   2 * m 0 ≥ m 1 ∧ 2 * m 1 ≥ m 0 + m 2 ∧

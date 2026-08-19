@@ -72,6 +72,40 @@ private local instance generalFilteredColimit92IndexFiltered
 private theorem exists_generalFilteredColimit92
     {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) :
     Nonempty (GeneralFilteredColimit92 N) := by
+  /-
+  Proof roadmap.
+
+  * Use the construction in
+    `Formalization/Books/Algebra/Unit88/MittagLefflerModules.lean`, theorem
+    `exists_finitelyPresentedFilteredColimit`, as the template, but do not try
+    to extract a `Preorder` from that theorem's result: the public
+    `FinitelyPresentedFilteredColimit` interface remembers only a `Category`
+    instance. This declaration needs the actual thin preorder in order to
+    feed `exists_countable_directed_subcolimit`.
+  * Repeat that construction with `M := (N : Type (max u w))` and
+    `Index : Type (max u w)`. Every stage, the diagram, and the forgetful
+    functor must likewise use `ModuleCat.{max u w} R`; the `Type w` and
+    `ModuleCat.{w} R` annotations in the retained sketch below are invalid
+    when `u` is larger than `w`.
+  * Order pairs `(S, E)` by extension of the finite set of generators and of
+    the finite set of relations. Prove filteredness by finite unions, exactly
+    as in `exists_finitelyPresentedFilteredColimit`. Define each stage as
+    `(S →₀ R) ⧸ Submodule.span R E`; use `Submodule.mapQ` for transition maps
+    and `Submodule.liftQ` for the maps to `N`.
+  * Prove the underlying type cocone colimiting with
+    `Types.FilteredColimit.isColimitOf'` from
+    `Mathlib/CategoryTheory/Limits/Types/Filtered.lean`: singleton generators
+    give joint surjectivity, while adjoining `x' - y'` to `E` gives eventual
+    equality.
+  * Bundle the same `diag`, `ι`, underlying colimit witness, and finite
+    presentation proof first as
+    `FinitelyPresentedFilteredColimit.{u, max u w, w} N`. Then obtain the
+    module-category witness with `finitelyPresentedFilteredColimit_isColimit`
+    from Unit 88 and use it to form `ColimitPresentation Index N`. Finally
+    package that presentation, the local `Preorder`/`IsFiltered` instances,
+    the underlying witness, and `Module.finitePresentation_of_surjective` into
+    `GeneralFilteredColimit92 N`.
+  -/
   /- prior attempt retained during diagnostic repair:
   classical
   let M := (N : Type w)
@@ -308,16 +342,56 @@ subdiagram of any finitely presented colimit presentation with the same
 colimit. -/
 theorem exists_countable_directed_subcolimit
     {R : Type u} [CommRing R] {I : Type v} [Preorder I]
-    [Nonempty I] [IsDirectedOrder I] {M : ModuleCat.{max u v} R}
+    [Nonempty I] [IsDirectedOrder I] {M : ModuleCat.{max u w} R}
     (P : ColimitPresentation I M)
     (hstage : ∀ i, Module.FinitePresentation R (P.diag.obj i))
     (hML : IsMittagLefflerModule M)
-    (hcountable : Module.IsCountablyGenerated R (M : Type (max u v))) :
-    ∃ (S : Set I) (Q : ModuleCat.{max u v} R)
+    (hcountable : Module.IsCountablyGenerated R (M : Type (max u w))) :
+    ∃ (S : Set I) (Q : ModuleCat.{max u w} R)
       (P' : ColimitPresentation S Q)
       (hdiag : P'.diag = subtypeInclusion S ⋙ P.diag),
       S.Countable ∧ IsDirectedSet S ∧
         IsIso (restrictedColimitMap P P' hdiag) := by
+  /-
+  Proof roadmap.
+
+  * Work throughout in the carrier universe `Type (max u w)`; the index stays
+    in `Type v`. This separation is the reason for the signature repair above.
+    Obtain a countable spanning set `X` from `hcountable`, insert zero,
+    enumerate it, and represent each enumerated generator at a stage using
+    `Types.jointly_surjective_of_isColimit` from
+    `Mathlib/CategoryTheory/Limits/Types/Colimits.lean` applied to
+    `isColimitOfPreserves (forget (ModuleCat.{max u w} R)) P.isColimit`.
+  * Instantiate
+    `mittagLeffler_characterization.{u, v, max u w, max u w} P hstage`
+    (Unit 88) and take conditions 1 and 3. For each `i`, choose `stable i`
+    with `i ≤ stable i` and maps back from every later stage which factor the
+    transition `i ⟶ stable i`.
+  * Choose binary upper bounds and recursively define `a : ℕ → I` so that
+    `a n ≤ a (n + 1)`, the `n`th generator stage lies below `a n`, and
+    `stable (a n) ≤ a (n + 1)`. Put `S := Set.range a`; prove countability by
+    `Set.countable_range` and directedness with the stage `a (max m n)`.
+  * Let `D := subtypeInclusion S ⋙ P.diag` in
+    `ModuleCat.{max u w} R`, take `Q := colimit D`, and use `colimit.cocone`
+    and `colimit.isColimit` for `P' : ColimitPresentation S Q`. Set
+    `uS := restrictedColimitMap P P' rfl`.
+  * Prove `uS.hom` surjective by checking that its linear range contains the
+    spanning set: move each chosen representative from its generator stage to
+    `a n` and use `P'.isColimit.fac` plus `P.ι.naturality`.
+  * For injectivity, use
+    `Types.FilteredColimit.isColimit_eq_iff`/`isColimit_eq_iff'` from
+    `Mathlib/CategoryTheory/Limits/Types/Filtered.lean`. If `x` at `i : S`
+    maps to zero, write `i.1 = a n`, make `x` zero at some full-diagram stage
+    `k`, and apply the Mittag-Leffler factorization to make it zero at
+    `stable i.1`. Then map once more along
+    `stable (a n) ≤ a (n + 1)` and use the restricted stage `a (n + 1)`.
+    Crucially, do not use `stable i.1` itself as an object of `S`: the data only
+    proves it lies below a member of `S`, not that it is in `Set.range a`.
+  * Convert injectivity and surjectivity to `Mono uS` and `Epi uS` with
+    `ModuleCat.mono_iff_injective` and `ModuleCat.epi_iff_surjective`
+    (`Mathlib/Algebra/Category/ModuleCat/EpiMono.lean`), apply
+    `isIso_of_mono_of_epi`, and return `⟨S, Q, P', rfl, ...⟩`.
+  -/
   /- prior attempt retained during diagnostic repair:
   classical
   obtain ⟨X, hX, hspan⟩ := hcountable
@@ -488,6 +562,42 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
     (hcountable : Module.IsCountablyGenerated R (M : Type (max u w))) :
     ∃ P : ColimitPresentation ℕ M,
       ∀ n, Module.FinitePresentation R (P.diag.obj n) := by
+  /-
+  Proof roadmap.
+
+  * Choose `C : GeneralFilteredColimit92 M`; install its `Preorder` and
+    `IsFiltered` fields and derive `Nonempty C.index` and
+    `IsDirectedOrder C.index` from `C.indexFiltered.cocone_objs`.
+  * Apply `exists_countable_directed_subcolimit` to `C.presentation` at index
+    universe `max u w` and module universe `max u w`. This yields a countable
+    directed `S`, a presentation `P' : ColimitPresentation S Q`, and an
+    isomorphism `uS : Q ⟶ M`. Install `Countable S` using
+    `hScountable.to_subtype` and the filtered-category instance coming from
+    `hSdirected`.
+  * Apply `exists_cofinal_monotone_sequence hSdirected` to obtain
+    `a : ℕ → S`. Define `D : ℕ ⥤ ModuleCat.{max u w} R` by
+    `D.obj n := P'.diag.obj (a n)` and map the unique order morphisms using
+    monotonicity of `a`.
+  * Put `L := colimit D` and define `vLQ : L ⟶ Q` by the cocone with legs
+    `P'.ι.app (a n)`. Prove surjectivity of `vLQ.hom` using
+    `Types.jointly_surjective_of_isColimit` for `P'` followed by cofinality of
+    `a`. Prove injectivity by representing two elements in stages `n,m`, using
+    `Types.FilteredColimit.isColimit_eq_iff` in `P'`, choosing a cofinal stage,
+    and moving both representatives to `max (max n m) k₀`.
+  * Obtain `IsIso vLQ` with the ModuleCat mono/epi criteria. Compose it with
+    `uS` to get an isomorphism `wLM : L ⟶ M`. Transport
+    `colimit.isColimit D` across `wLM`: the cocone legs are
+    `colimit.ι D n ≫ wLM`, its `desc` is
+    `inv wLM ≫ (colimit.isColimit D).desc`, and uniqueness follows by
+    cancelling the epi `wLM`.
+  * Bundle this transported cocone as `P : ColimitPresentation ℕ M`.
+    Rewrite `P'.diag` with `hdiag` and discharge finite presentation of
+    `D.obj n` using `C.finitelyPresented (a n).1`.
+
+  The retained sketch has the correct assembly but all occurrences of
+  `Type w`/`ModuleCat.{w}` in it must be replaced by
+  `Type (max u w)`/`ModuleCat.{max u w}`.
+  -/
   /- prior attempt retained during diagnostic repair:
   classical
   obtain ⟨C⟩ := exists_generalFilteredColimit92 M
@@ -652,10 +762,30 @@ def FactorsThroughFinitelyPresented
     ∃ g : M ⟶ Q, ∃ h : Q ⟶ N, g ≫ h = f
 
 private theorem exists_section_with_value_zero
-    {V : Type v} (E : ℕᵒᵖ ⥤ Type v)
+    (E : ℕᵒᵖ ⥤ Type v)
     (hE : ∀ ⦃i j : ℕᵒᵖ⦄ (f : i ⟶ j), Function.Surjective (E.map f))
     (y : E.obj (Opposite.op 0)) :
     ∃ s : E.sections, s.val (Opposite.op 0) = y := by
+  /-
+  Proof roadmap.
+
+  * Specialize `hE` to the successor arrows and apply
+    `Types.surjective_π_app_zero_of_surjective_map` from
+    `Mathlib/CategoryTheory/Limits/Types/Images.lean` to
+    `Types.limitConeIsLimit E`. Concretely, the second argument is
+    `(fun n => hE ((homOfLE (Nat.le_succ n)).op))`.
+  * In this universe (`ℕᵒᵖ : Type` and `E : ℕᵒᵖ ⥤ Type v`),
+    `Types.limitCone E` is definitionally the cone whose point is
+    `E.sections` and whose zero projection is
+    `s ↦ s.val (Opposite.op 0)`
+    (`Mathlib/CategoryTheory/Limits/Types/Limits.lean`). Apply the resulting
+    surjectivity statement to `y` and return its preimage directly.
+
+  Do not pass through `IsFiltered.sequentialFunctor`, initial-functor limit
+  isomorphisms, or `Types.limitEquivSections`; that retained route adds an
+  unnecessary reindexing and obscures the definitional section model. The
+  direct four-line proof has been checked at this hole.
+  -/
   /- prior attempt retained during diagnostic repair:
   let hI : IsDirectedSet ℕ := ⟨inferInstance, inferInstance⟩
   let Q₀ : ℕ ⥤ ℕ := IsFiltered.sequentialFunctor ℕ

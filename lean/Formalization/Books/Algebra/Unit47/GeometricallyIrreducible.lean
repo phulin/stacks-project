@@ -43,7 +43,51 @@ theorem isGeometricallyIrreducible_iff_unique_minimalPrime
       ∀ (K : Type w) [Field K] [Algebra k K],
         ∃! p : PrimeSpectrum (K ⊗[k] S),
           p.asIdeal ∈ minimalPrimes (K ⊗[k] S) := by
-  sorry
+  constructor
+  · intro h K _ _
+    have hK : IrreducibleSpace (PrimeSpectrum (K ⊗[k] S)) := h K
+    have hnil : (nilradical (K ⊗[k] S)).IsPrime :=
+      PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp hK
+    have hmin : nilradical (K ⊗[k] S) ∈ minimalPrimes (K ⊗[k] S) ∧
+        ∀ p : Ideal (K ⊗[k] S), p ∈ minimalPrimes (K ⊗[k] S) →
+          p = nilradical (K ⊗[k] S) := by
+      rw [minimalPrimes_eq_minimals]
+      constructor
+      · change Minimal Ideal.IsPrime (nilradical (K ⊗[k] S))
+        exact ⟨hnil, fun q hq _ => @nilradical_le_prime _ _ q hq⟩
+      · intro p hp
+        change Minimal Ideal.IsPrime p at hp
+        exact (hp.eq_of_le hnil (@nilradical_le_prime _ _ p hp.1)).symm
+    refine ⟨⟨nilradical (K ⊗[k] S), hnil⟩, hmin.1, ?_⟩
+    intro q hq
+    cases q with
+    | mk q hqprime =>
+      have hqeq := hmin.2 q hq
+      subst q
+      rfl
+  · intro h K _ _
+    obtain ⟨p, hp, hpu⟩ := h K
+    have hunique : ∀ q : Ideal (K ⊗[k] S), q ∈ minimalPrimes (K ⊗[k] S) →
+        q = p.asIdeal := by
+      intro q hq
+      have hqprime : q.IsPrime := hq.isPrime
+      have heq : (⟨q, hqprime⟩ : PrimeSpectrum (K ⊗[k] S)) = p :=
+        hpu ⟨q, hqprime⟩ hq
+      exact congrArg PrimeSpectrum.asIdeal heq
+    have hnil : nilradical (K ⊗[k] S) = p.asIdeal := by
+      rw [nilradical_eq_sInf]
+      apply le_antisymm
+      · simpa only [nilradical_eq_sInf] using
+          (@nilradical_le_prime _ _ p.asIdeal hp.isPrime)
+      · rw [le_sInf_iff]
+        intro q hq
+        letI : q.IsPrime := hq
+        obtain ⟨r, hr, hrq⟩ := Ideal.exists_minimalPrimes_le
+          (I := (⊥ : Ideal (K ⊗[k] S))) (J := q) bot_le
+        exact (hunique r hr).symm ▸ hrq
+    rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+    rw [hnil]
+    exact hp.isPrime
 
 /-- The fibre of an algebra map at a point of the base spectrum. -/
 def irreducibleFiber {R S : Type*} [CommRing R] [CommRing S]

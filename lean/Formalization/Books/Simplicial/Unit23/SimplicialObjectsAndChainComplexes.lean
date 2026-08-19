@@ -148,12 +148,24 @@ theorem associatedChainComplexFunctor_exact
 
 /-! ## The extension and Eilenberg--Mac Lane homology statements -/
 
-/-- The source's extension object between consecutive Eilenberg--Mac Lane
-objects, using the canonical Chapter 22 interface. -/
-abbrev eilenbergMacLaneExtension
+/- The source's extension is not the biproduct of two Eilenberg--Mac Lane
+   objects: precomposition can send a `[k + 1]` summand to a `[k]` summand.
+   The Chapter 22 degreewise carrier and map already encode this cross-term,
+   so use them directly here. -/
+noncomputable def eilenbergMacLaneExtension
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : C) (k : ℕ) : SimplicialObject C :=
-  extensionObject A k
+  { obj := fun n => extensionDegreeDirectSum A k n.unop.len
+    map := fun {X Y} f =>
+      let φ : ⦋Y.unop.len⦌ ⟶ ⦋X.unop.len⦌ := by
+        simpa only [SimplexCategory.mk_len] using f.unop
+      extensionDirectSumMap A k Y.unop.len X.unop.len φ
+    map_id := by
+      intro X
+      sorry
+    map_comp := by
+      intro X Y Z f g
+      sorry }
 
 theorem eilenbergMacLaneExtension_acyclic
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -389,7 +389,7 @@ private noncomputable def cechNerveZeroOfTruncatedMap {C : Type u} [Category.{v}
       (cechNerve f h).map (SimplexCategory.δ (0 : Fin 2)).op ≫ p₀ ≫ f =
         (cechNerve f h).map (SimplexCategory.δ (1 : Fin 2)).op ≫ p₀ ≫ f := by
     let F : Arrow C := Arrow.mk f
-    letI : ∀ n : ℕ,
+    let : ∀ n : ℕ,
         HasWidePullback F.right
           (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
       intro n
@@ -487,7 +487,7 @@ theorem cechNerve_truncated_hom_equiv_zero {C : Type u} [Category.{v} C]
   · intro g
     let d := cechNerveZeroOfTruncatedMap f h V p₀ g
     let F : Arrow C := Arrow.mk f
-    letI : ∀ n : ℕ,
+    let : ∀ n : ℕ,
         HasWidePullback F.right
           (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
       intro n
@@ -551,7 +551,7 @@ theorem cechNerve_truncated_hom_equiv_zero {C : Type u} [Category.{v} C]
           apply SimplexCategory.Hom.ext_zero_left
           rfl
         rw [hconst]
-        simp only [CategoryTheory.op_id, V.map_id, Category.id_comp]
+        simp only [CategoryTheory.op_id, V.map_id]
         rw [hghn]
         exact Category.id_comp _
       · dsimp [cechNerveMapOfZero]
@@ -627,7 +627,7 @@ theorem cechNerve_truncated_hom_equiv_zero {C : Type u} [Category.{v} C]
                 (op (SimplexCategory.mk 1)) =
               V.map (SimplexCategory.const (SimplexCategory.mk 0)
                 (SimplexCategory.mk 1) 0).op ≫ d.1 ≫ f := by
-          simp [augmentationOfZero, Category.assoc]
+          simp [augmentationOfZero]
         have hi := g.naturality
           (SimplexCategory.Truncated.Hom.tr
             (SimplexCategory.δ (1 : Fin 2))).op
@@ -641,7 +641,7 @@ theorem cechNerve_truncated_hom_equiv_zero {C : Type u} [Category.{v} C]
           WidePullback.lift_π] using hi''
   · intro d
     let F : Arrow C := Arrow.mk f
-    letI : ∀ n : ℕ,
+    let : ∀ n : ℕ,
         HasWidePullback F.right
           (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
       intro n
@@ -679,7 +679,7 @@ private lemma cechNerve_truncated_map_of_zero {C : Type u} [Category.{v} C]
           (cechNerveZeroOfTruncatedMap f h V p g)) = g := by
   let d := cechNerveZeroOfTruncatedMap f h V p g
   let F : Arrow C := Arrow.mk f
-  letI : ∀ n : ℕ,
+  let : ∀ n : ℕ,
       HasWidePullback F.right
         (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
     intro n
@@ -740,7 +740,7 @@ private lemma cechNerve_truncated_map_of_zero {C : Type u} [Category.{v} C]
         apply SimplexCategory.Hom.ext_zero_left
         rfl
       rw [hconst]
-      simp only [CategoryTheory.op_id, V.map_id, Category.id_comp]
+      simp only [CategoryTheory.op_id, V.map_id]
       rw [hghn]
       exact Category.id_comp _
     · dsimp [cechNerveMapOfZero]
@@ -811,7 +811,7 @@ private lemma cechNerve_truncated_map_of_zero {C : Type u} [Category.{v} C]
               (op (SimplexCategory.mk 1)) =
             V.map (SimplexCategory.const (SimplexCategory.mk 0)
               (SimplexCategory.mk 1) 0).op ≫ d.1 ≫ f := by
-        simp [augmentationOfZero, Category.assoc]
+        simp [augmentationOfZero]
       have hi := g.naturality
         (SimplexCategory.Truncated.Hom.tr
           (SimplexCategory.δ (1 : Fin 2))).op
@@ -833,7 +833,7 @@ theorem cechNerve_hom_equiv_zero {C : Type u} [Category.{v} C]
   · intro g
     let d := cechNerveZeroOfMap f h V g
     let F : Arrow C := Arrow.mk f
-    letI : ∀ n : ℕ,
+    let : ∀ n : ℕ,
         HasWidePullback F.right
           (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
       intro n
@@ -880,7 +880,6 @@ theorem cechNerve_hom_equiv_zero {C : Type u} [Category.{v} C]
     change V ⟶ F.cechNerve at g
     change (show V ⟶ F.cechNerve from cechNerveMapOfZero f h V d) = g
     let pF0 : F.cechNerve.obj (op (SimplexCategory.mk 0)) ⟶ Y := by
-      change F.cechNerve.obj (op (SimplexCategory.mk 0)) ⟶ Y
       rw [Formalization.Books.Simplicial.Unit03.cech_nerve_degree F 0]
       exact WidePullback.π (fun _ : Fin (0 + 1) => f) 0
     have hdF : d.1 = g.app (op (SimplexCategory.mk 0)) ≫ pF0 := by
@@ -893,9 +892,6 @@ theorem cechNerve_hom_equiv_zero {C : Type u} [Category.{v} C]
     rcases n with ⟨⟨n⟩⟩
     cases Formalization.Books.Simplicial.Unit03.cech_nerve_degree F n
     cases cechNerve_obj_formula f h n
-    change (show V ⟶ F.cechNerve from cechNerveMapOfZero f h V d).app
-        (op (SimplexCategory.mk n)) =
-      g.app (op (SimplexCategory.mk n))
     apply WidePullback.hom_ext _ _ _ (fun i => ?_) ?_
     · dsimp [cechNerveMapOfZero]
       dsimp [F]
@@ -921,8 +917,7 @@ theorem cechNerve_hom_equiv_zero {C : Type u} [Category.{v} C]
           (SimplexCategory.mk n) i).op
       have hi' := congrArg (fun k => k ≫ pF0) hi
       rw [hdF]
-      simpa [F, Arrow.cechNerve, pF0, Category.assoc,
-        WidePullback.lift_π] using hi'
+      simp [F, Arrow.cechNerve, pF0, WidePullback.lift_π]
   · intro d
     apply Subtype.ext
     simp only [cechNerveZeroOfMap]
@@ -1012,7 +1007,7 @@ theorem cechNerve_is_one_coskeletal {C : Type u} [Category.{v} C]
     intro n
     rcases n with ⟨⟨n⟩⟩
     let F : Arrow C := Arrow.mk f
-    letI : ∀ n : ℕ,
+    let : ∀ n : ℕ,
         HasWidePullback F.right
           (fun _ : Fin (n + 1) => F.left) (fun _ => F.hom) := by
       intro n

@@ -181,7 +181,45 @@ theorem localRingOfFibre_equiv_localized_quotient
     Nonempty
       (localRingOfFibre f p q hq ≃+*
         Localization.AtPrime (fibreQuotientPrime f p q hq).asIdeal) := by
-  sorry
+  let I : Ideal S := fibreIdealInTarget f p
+  let Sp := Localization.AtPrime q.asIdeal
+  let Q := Sp ⧸ I.map (algebraMap S Sp)
+  let M : Submonoid S := q.asIdeal.primeCompl
+  let qbar := fibreQuotientPrime f p q hq
+  have hIle : I ≤ q.asIdeal := by
+    change p.asIdeal.map f ≤ q.asIdeal
+    apply Ideal.map_le_iff_le_comap.mpr
+    change p.asIdeal ≤ q.asIdeal.comap f
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq).symm.le
+  have hqcomap : qbar.asIdeal.comap (Ideal.Quotient.mk I) = q.asIdeal := by
+    change (q.asIdeal.map (Ideal.Quotient.mk I)).comap (Ideal.Quotient.mk I) = q.asIdeal
+    rw [Ideal.comap_map_of_surjective (f := Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective]
+    apply sup_eq_left.mpr
+    intro x hx
+    rw [Ideal.mem_comap] at hx
+    have hx0 : Ideal.Quotient.mk I x = 0 := by simpa using hx
+    exact hIle (Ideal.Quotient.eq_zero_iff_mem.mp hx0)
+  have hM : M.map (Ideal.Quotient.mk I) = qbar.asIdeal.primeCompl := by
+    rw [← hqcomap]
+    exact Ideal.map_primeCompl_comap_of_surjective
+      Ideal.Quotient.mk_surjective qbar.asIdeal
+  have hloc : IsLocalization (M.map (Ideal.Quotient.mk I)) Q := by
+    apply IsLocalization.of_surjective M Sp (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective
+      (Ideal.Quotient.mk (I.map (algebraMap S Sp)))
+      Ideal.Quotient.mk_surjective
+    · rfl
+    · simp
+  let : IsLocalization qbar.asIdeal.primeCompl Q := by
+    rw [← hM]
+    exact hloc
+  simpa [localRingOfFibre, fibreIdealInLocalization, fibreIdealInTarget,
+    Q, Sp, I, qbar, Ideal.map_map] using
+    (⟨(IsLocalization.algEquiv qbar.asIdeal.primeCompl
+      (Localization.AtPrime qbar.asIdeal) Q).symm.toRingEquiv⟩ :
+      Nonempty (Q ≃+* Localization.AtPrime qbar.asIdeal))
 
 /-- The quotient presentation of the local ring of a fibre is canonically
 ring-equivalent to the localization of the tensor-product fibre
@@ -192,7 +230,26 @@ theorem localRingOfFibre_equiv_tensor_fibre
     (hq : PrimeSpectrum.comap f q = p) :
     Nonempty
       (localRingOfFibre f p q hq ≃+* tensorLocalRingOfFibre f p q hq) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let q' : {q : PrimeSpectrum S // PrimeSpectrum.comap (algebraMap R S) q = p} :=
+    ⟨q, by simpa [RingHom.algebraMap_toAlgebra] using hq⟩
+  let qbar : PrimeSpectrum (p.asIdeal.Fiber S) :=
+    PrimeSpectrum.preimageEquivFiber R S p q'
+  have hqbar : qbar.asIdeal.comap Algebra.TensorProduct.includeRight = q.asIdeal := by
+    have h := (PrimeSpectrum.preimageEquivFiber R S p).symm_apply_apply q'
+    have h' := congrArg (fun x : {q : PrimeSpectrum S //
+        PrimeSpectrum.comap (algebraMap R S) q = p} => x.1.asIdeal) h
+    simpa [qbar] using h'
+  have e := Ideal.Fiber.algEquivAux₂ p.asIdeal qbar.asIdeal
+  simpa [localRingOfFibre, fibreIdealInLocalization, tensorLocalRingOfFibre,
+    tensorFibrePrime, qbar, q', hqbar, Ideal.map_map,
+    RingHom.algebraMap_toAlgebra] using
+    (⟨e.symm.toRingEquiv⟩ : Nonempty
+      ((Localization.AtPrime qbar.asIdeal.comap Algebra.TensorProduct.includeRight ⧸
+          (p.asIdeal.map f).map
+            (algebraMap S
+              (Localization.AtPrime qbar.asIdeal.comap Algebra.TensorProduct.includeRight))) ≃+*
+        Localization.AtPrime qbar.asIdeal))
 
 /-! ## Dimension of a base, fibre, and total ring -/
 
@@ -206,7 +263,68 @@ theorem ringKrullDim_localization_le_base_add_fibre
     ringKrullDim (Localization.AtPrime q.asIdeal) ≤
       ringKrullDim (Localization.AtPrime p.asIdeal) +
         ringKrullDim (localRingOfFibre f p q hq) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  have hcomap : q.asIdeal.comap (algebraMap R S) = p.asIdeal := by
+    simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+      congrArg PrimeSpectrum.asIdeal hq
+  let φ := Localization.localRingHom p.asIdeal q.asIdeal f hcomap.symm
+  letI : Algebra (Localization.AtPrime p.asIdeal)
+      (Localization.AtPrime q.asIdeal) := φ.toAlgebra
+  have hideal :
+      (IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)).map
+          (algebraMap (Localization.AtPrime p.asIdeal)
+            (Localization.AtPrime q.asIdeal)) =
+        fibreIdealInLocalization f p q := by
+    rw [← Localization.AtPrime.map_eq_maximalIdeal]
+    rw [Ideal.map_map]
+    ext r
+    simpa [φ, RingHom.algebraMap_toAlgebra] using
+      (Localization.localRingHom_to_map p.asIdeal q.asIdeal f hcomap.symm r)
+  have hPover :
+      (IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal)).LiesOver
+        (IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)) := by
+    exact (Ideal.liesOver_iff _ _).mpr
+      (IsLocalRing.maximalIdeal_comap φ).symm
+  rw [Formalization.Books.Algebra.Unit60.ringKrullDim_le_iff_maximal_height_le]
+  intro m hm
+  have hm_eq : m = IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal) :=
+    (IsLocalRing.maximal_ideal_unique _).unique m hm
+  rw [hm_eq]
+  let P := IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal)
+  let p₀ := IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal)
+  let _ : P.LiesOver p₀ := hPover
+  let _ : (P.map (Ideal.Quotient.mk (p₀.map
+      (algebraMap (Localization.AtPrime p.asIdeal)
+        (Localization.AtPrime q.asIdeal)))).IsPrime :=
+    Ideal.isPrime_map_quotientMk_of_isPrime hPover.over
+  have hheight := Ideal.height_le_height_add_of_liesOver p₀ P
+  have hbase : p₀.height ≤ ringKrullDim (Localization.AtPrime p.asIdeal) :=
+    le_of_eq IsLocalRing.maximalIdeal_height_eq_ringKrullDim
+  have hquot :
+      (P.map (Ideal.Quotient.mk (p₀.map
+        (algebraMap (Localization.AtPrime p.asIdeal)
+          (Localization.AtPrime q.asIdeal))))).height ≤
+        ringKrullDim
+          ((Localization.AtPrime q.asIdeal) ⧸
+            p₀.map (algebraMap (Localization.AtPrime p.asIdeal)
+              (Localization.AtPrime q.asIdeal))) :=
+    Ideal.height_le_ringKrullDim_of_isPrime
+  have hquot_eq :
+      ringKrullDim
+          ((Localization.AtPrime q.asIdeal) ⧸
+            p₀.map (algebraMap (Localization.AtPrime p.asIdeal)
+              (Localization.AtPrime q.asIdeal))) =
+        ringKrullDim (localRingOfFibre f p q hq) := by
+    simpa [localRingOfFibre, p₀, hideal]
+  calc
+    P.height ≤ p₀.height +
+        (P.map (Ideal.Quotient.mk (p₀.map
+          (algebraMap (Localization.AtPrime p.asIdeal)
+            (Localization.AtPrime q.asIdeal)))).height := hheight
+    _ ≤ ringKrullDim (Localization.AtPrime p.asIdeal) +
+        ringKrullDim (localRingOfFibre f p q hq) := by
+      rw [hquot_eq]
+      exact add_le_add hbase hquot
 
 /-- Going down gives equality in the base--fibre dimension formula. -/
 theorem ringKrullDim_localization_eq_base_add_fibre_of_goingDown
@@ -219,7 +337,45 @@ theorem ringKrullDim_localization_eq_base_add_fibre_of_goingDown
       ringKrullDim (Localization.AtPrime q.asIdeal) =
         ringKrullDim (Localization.AtPrime p.asIdeal) +
           ringKrullDim (localRingOfFibre f p q hq) := by
-  sorry
+  intro hGD
+  letI : Algebra R S := f.toAlgebra
+  let _ : Algebra.HasGoingDown R S := hGD
+  have hcomap : q.asIdeal.comap (algebraMap R S) = p.asIdeal := by
+    simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+      congrArg PrimeSpectrum.asIdeal hq
+  have hqover : q.asIdeal.LiesOver p.asIdeal := by
+    exact (Ideal.liesOver_iff _ _).mpr hcomap.symm
+  let _ : q.asIdeal.LiesOver p.asIdeal := hqover
+  let _ : (q.asIdeal.map (Ideal.Quotient.mk (p.asIdeal.map f))).IsPrime :=
+    Ideal.isPrime_map_quotientMk_of_isPrime hqover.over
+  have hheight :=
+    Ideal.height_eq_height_add_of_liesOver_of_hasGoingDown p.asIdeal q.asIdeal
+  have hbase :
+      ringKrullDim (Localization.AtPrime p.asIdeal) = p.asIdeal.height :=
+    IsLocalization.AtPrime.ringKrullDim_eq_height p.asIdeal
+      (Localization.AtPrime p.asIdeal)
+  let qbar := fibreQuotientPrime f p q hq
+  have hqbar :
+      ringKrullDim (Localization.AtPrime qbar.asIdeal) =
+        (q.asIdeal.map (Ideal.Quotient.mk (p.asIdeal.map f))).height := by
+    simpa [qbar, fibreQuotientPrime, fibreIdealInTarget] using
+      (IsLocalization.AtPrime.ringKrullDim_eq_height qbar.asIdeal
+        (Localization.AtPrime qbar.asIdeal))
+  have hfibre :
+      ringKrullDim (localRingOfFibre f p q hq) =
+        ringKrullDim (Localization.AtPrime qbar.asIdeal) := by
+    obtain ⟨e⟩ := localRingOfFibre_equiv_localized_quotient f p q hq
+    exact ringKrullDim_eq_of_ringEquiv e
+  calc
+    ringKrullDim (Localization.AtPrime q.asIdeal) = q.asIdeal.height :=
+      IsLocalization.AtPrime.ringKrullDim_eq_height q.asIdeal
+        (Localization.AtPrime q.asIdeal)
+    _ = p.asIdeal.height +
+        (q.asIdeal.map (Ideal.Quotient.mk (p.asIdeal.map f))).height := by
+      simpa [RingHom.algebraMap_toAlgebra] using hheight
+    _ = ringKrullDim (Localization.AtPrime p.asIdeal) +
+        ringKrullDim (localRingOfFibre f p q hq) := by
+      rw [← hbase, ← hqbar, ← hfibre]
 
 /-! ## Regular and Cohen--Macaulay consequences -/
 

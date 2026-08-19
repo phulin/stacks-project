@@ -1258,13 +1258,19 @@ noncomputable def upEdge {R : Type u} [CommRing R]
             HomologicalComplex₂.ι_totalDesc]
           simp [upEdgeComponent, upComplex]
 
-/-- A fixed chain complex and augmentation are a resolution in the sense of
-the preceding chapter's `Resolution` interface. -/
-def IsResolution {R : Type u} [CommRing R]
+/-- Exactness data for a fixed augmented complex.  Keeping the data on the
+given complex avoids transporting the augmentation across an equality of
+dependent complex objects in the acyclic-assembly argument. -/
+structure IsResolution {R : Type u} [CommRing R]
     (F : ModuleChainComplex R) (M : ModuleCat.{u} R)
-    (augmentation : F.X 0 ⟶ M) : Prop :=
-  ∃ (Q : Resolution R M) (hQ : Q.complex = F),
-    hQ ▸ Q.augmentation = augmentation
+    (augmentation : F.X 0 ⟶ M) : Prop where
+  augmentation_condition : F.d 1 0 ≫ augmentation = 0
+  exact_zero :
+    (ShortComplex.mk (F.d 1 0) augmentation augmentation_condition).Exact
+  exact_succ : ∀ n,
+    (ShortComplex.mk (F.d (n + 2) (n + 1)) (F.d (n + 1) n)
+      (F.d_comp_d (n + 2) (n + 1) n)).Exact
+  augmentation_epi : Epi augmentation
 
 /-- The row-resolution hypothesis in the double-complex lemma. -/
 def RowsAreResolutions {R : Type u} [CommRing R]

@@ -643,14 +643,52 @@ theorem exists_finite_coefficients_reprField
     refine ⟨a, ha, Finset.mem_union_right _ ?_⟩
     exact Finset.mem_image.mpr ⟨m, hm, rfl⟩
 
+private theorem adjoin_finset_powers_le
+    {F : Type u} [Field F] (p : ℕ) (s s' : Finset (AlgebraicClosure F))
+    (hs' : ∀ a ∈ s', ∃ z ∈ s, a = z ^ p) :
+    IntermediateField.adjoin F (s' : Set (AlgebraicClosure F)) ≤
+      IntermediateField.adjoin F (s : Set (AlgebraicClosure F)) := by
+  classical
+  apply IntermediateField.adjoin_le_iff.mpr
+  intro z hz
+  obtain ⟨w, hw, hzw⟩ := hs' z hz
+  rw [hzw]
+  have hw' : w ∈ IntermediateField.adjoin F
+      (s : Set (AlgebraicClosure F)) := IntermediateField.subset_adjoin F _ hw
+  exact (IntermediateField.adjoin F
+    (s : Set (AlgebraicClosure F))).toSubalgebra.pow_mem hw' p
+
+private theorem adjoin_selected_roots_le
+    {F : Type u} [Field F] (p : ℕ) (hp : 0 < p)
+    (s s' : Finset (AlgebraicClosure F))
+    (hs' : ∀ a ∈ s', ∃ z ∈ s, a = z ^ p)
+    [Fact p.Prime] [CharP F p] :
+    IntermediateField.adjoin F
+        (Set.range fun a : s' ↦
+          pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F)) ≤
+      IntermediateField.adjoin F (s : Set (AlgebraicClosure F)) := by
+  classical
+  apply IntermediateField.adjoin_le_iff.mpr
+  rintro _ ⟨a, rfl⟩
+  obtain ⟨z, hz, ha⟩ := hs' a a.property
+  have hroot : pthRootInAlgebraicClosureOfElement F p hp
+      (a : AlgebraicClosure F) = z := by
+    apply sub_eq_zero.mp
+    apply eq_zero_of_pow_eq_zero
+    rw [sub_pow_char, pthRootInAlgebraicClosureOfElement_pow F p hp, ha]
+    simp
+  change pthRootInAlgebraicClosureOfElement F p hp
+    (a : AlgebraicClosure F) ∈ _
+  rw [hroot]
+  exact IntermediateField.subset_adjoin F _ hz
+
 private theorem exists_finite_pth_root_tower_of_uniform
     {F : Type u} [Field F] (n : ℕ) (s : Finset (AlgebraicClosure F))
     [Fact p.Prime] [CharP F p]
     (hs : ∀ z ∈ s, z ^ (p ^ n) ∈ (algebraMap F (AlgebraicClosure F)).range) :
     ∃ tower : FinitePthRootTower F p hp,
       (∀ z ∈ s, z ∈ finitePthRootFieldAtLevel tower) ∧
-        finitePthRootFieldAtLevel tower =
-          IntermediateField.adjoin F (s : Set (AlgebraicClosure F)) := by
+        finitePthRootFieldAtLevel tower ≤ IntermediateField.adjoin F (s : Set _) := by
   classical
   induction n generalizing s with
   | zero =>
@@ -667,18 +705,12 @@ private theorem exists_finite_pth_root_tower_of_uniform
             omega
           finite_dimensional := by infer_instance
           purely_inseparable := by infer_instance }
-      refine ⟨tower, ?_, ?_⟩
+      refine ⟨tower, ?_, bot_le⟩
       intro z hz
       simp only [finitePthRootFieldAtLevel]
       change z ∈ (⊥ : IntermediateField F (AlgebraicClosure F))
       apply IntermediateField.mem_bot.mpr
       simpa using hs z hz
-      · apply le_antisymm
-        · exact bot_le
-        · rw [IntermediateField.adjoin_le_iff]
-          intro z hz
-          apply IntermediateField.mem_bot.mpr
-          simpa using hs z (Finset.mem_coe.mp hz)
   | succ n ih =>
       let s' : Finset (AlgebraicClosure F) := s.image (fun z => z ^ p)
       have hs' : ∀ z ∈ s', z ^ (p ^ n) ∈
@@ -686,7 +718,7 @@ private theorem exists_finite_pth_root_tower_of_uniform
         intro z hz
         rcases Finset.mem_image.mp hz with ⟨w, hw, rfl⟩
         simpa [pow_succ', ← pow_mul] using hs w hw
-      obtain ⟨tower, htower, htower_eq⟩ := ih s' hs'
+      obtain ⟨tower, htower, htower_le⟩ := ih s' hs'
       let L := finitePthRootFieldAtLevel tower
       let R : IntermediateField F (AlgebraicClosure F) :=
         IntermediateField.adjoin F (Set.range fun a : s' =>
@@ -773,73 +805,42 @@ private theorem exists_finite_pth_root_tower_of_uniform
               dsimp [newLevel]
               exact if_neg hnot
             exact hlevel ▸ hfinalpure }
-      refine ⟨newTower, ?_, ?_⟩
-      intro z hz
-      have hz' : z ^ p ∈ s' := Finset.mem_image.mpr ⟨z, hz, rfl⟩
-      let a : s' := ⟨z ^ p, hz'⟩
-      have hroot : pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F) = z := by
-        apply sub_eq_zero.mp
-        apply eq_zero_of_pow_eq_zero
-        rw [sub_pow_char, pthRootInAlgebraicClosureOfElement_pow F p hp,
-          show (a : AlgebraicClosure F) = z ^ p by rfl]
-        simp
-      have hzR : z ∈ R := by
-        change z ∈ IntermediateField.adjoin F (Set.range fun a : s' =>
-          pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F))
-        apply IntermediateField.subset_adjoin F _
-        exact ⟨a, hroot⟩
-      have hzfinal : z ∈ final := (show R ≤ final from le_sup_right) hzR
-      change z ∈ newLevel (tower.length + 1)
-      dsimp [newLevel]
-      rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
-      exact hzfinal
-      · have hfinal_eq : final =
-            IntermediateField.adjoin F (s : Set (AlgebraicClosure F)) := by
-          apply le_antisymm
-          · rw [sup_le_iff]
-            constructor
-            · change finitePthRootFieldAtLevel tower ≤ _
-              rw [htower_eq]
-              rw [IntermediateField.adjoin_le_iff]
-              intro z hz
-              rcases Finset.mem_image.mp hz with ⟨w, hw, rfl⟩
-              simpa using
-                (IntermediateField.adjoin F (s : Set (AlgebraicClosure F))).pow_mem
-                  (IntermediateField.subset_adjoin F _ hw) (p : ℤ)
-                  
-            · rw [IntermediateField.adjoin_le_iff]
-              rintro _ ⟨a, rfl⟩
-              rcases Finset.mem_image.mp a.property with ⟨w, hw, hwa⟩
-              let hroot : pthRootInAlgebraicClosureOfElement F p hp
-                  (a : AlgebraicClosure F) = w := by
-                apply sub_eq_zero.mp
-                apply eq_zero_of_pow_eq_zero
-                rw [sub_pow_char,
-                  pthRootInAlgebraicClosureOfElement_pow F p hp,
-                  show (a : AlgebraicClosure F) = w ^ p by simpa [hwa]]
-                simp
-              change pthRootInAlgebraicClosureOfElement F p hp
-                (a : AlgebraicClosure F) ∈ _
-              rw [hroot]
-              exact IntermediateField.subset_adjoin F _ hw
-          · rw [IntermediateField.adjoin_le_iff]
-            intro z hz
-            have hz' : z ∈ s := Finset.mem_coe.mp hz
-            have hz'' : z ^ p ∈ s' := Finset.mem_image.mpr ⟨z, hz', rfl⟩
-            let a : s' := ⟨z ^ p, hz''⟩
-            have hroot : pthRootInAlgebraicClosureOfElement F p hp
-                (a : AlgebraicClosure F) = z := by
-              apply sub_eq_zero.mp
-              apply eq_zero_of_pow_eq_zero
-              rw [sub_pow_char, pthRootInAlgebraicClosureOfElement_pow F p hp,
-                show (a : AlgebraicClosure F) = z ^ p by rfl]
-              simp
-            exact (show R ≤ final from le_sup_right)
-              (IntermediateField.subset_adjoin F _ ⟨a, hroot⟩)
-        · change newLevel (tower.length + 1) = _
-          dsimp [newLevel]
-          rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
-          exact hfinal_eq
+      have hmem : ∀ z ∈ s, z ∈ finitePthRootFieldAtLevel newTower := by
+        intro z hz
+        have hz' : z ^ p ∈ s' := Finset.mem_image.mpr ⟨z, hz, rfl⟩
+        let a : s' := ⟨z ^ p, hz'⟩
+        have hroot : pthRootInAlgebraicClosureOfElement F p hp
+            (a : AlgebraicClosure F) = z := by
+          apply sub_eq_zero.mp
+          apply eq_zero_of_pow_eq_zero
+          rw [sub_pow_char, pthRootInAlgebraicClosureOfElement_pow F p hp,
+            show (a : AlgebraicClosure F) = z ^ p by rfl]
+          simp
+        have hzR : z ∈ R := by
+          change z ∈ IntermediateField.adjoin F (Set.range fun a : s' =>
+            pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F))
+          apply IntermediateField.subset_adjoin F _
+          exact ⟨a, hroot⟩
+        have hzfinal : z ∈ final := (show R ≤ final from le_sup_right) hzR
+        change z ∈ newLevel (tower.length + 1)
+        dsimp [newLevel]
+        rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
+        exact hzfinal
+      refine ⟨newTower, hmem, ?_⟩
+      have hfinal : finitePthRootFieldAtLevel newTower = final := by
+        change newLevel (tower.length + 1) = final
+        dsimp [newLevel]
+        rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
+      rw [hfinal]
+      apply sup_le
+      · exact htower_le.trans (adjoin_finset_powers_le p s s' (by
+          intro a ha
+          obtain ⟨z, hz, h⟩ := Finset.mem_image.mp ha
+          exact ⟨z, hz, h.symm⟩))
+      · exact adjoin_selected_roots_le p hp s s' (by
+          intro a ha
+          obtain ⟨z, hz, h⟩ := Finset.mem_image.mp ha
+          exact ⟨z, hz, h.symm⟩)
 
 /-- A finite set of elements of the relative perfect closure is contained in
 one finite p-th-root tower over the base field. -/
@@ -850,10 +851,8 @@ theorem exists_finite_pth_root_tower_of_perfectClosure_finset
     ∃ tower : FinitePthRootTower F p hp,
       (∀ z ∈ s, (z : AlgebraicClosure F) ∈
         finitePthRootFieldAtLevel tower) ∧
-        finitePthRootFieldAtLevel tower =
-          IntermediateField.adjoin F
-            (s.image (fun z : perfectClosure F (AlgebraicClosure F) =>
-              (z : AlgebraicClosure F)) : Set (AlgebraicClosure F)) := by
+      finitePthRootFieldAtLevel tower ≤ IntermediateField.adjoin F
+        ((↑) '' (s : Set (perfectClosure F (AlgebraicClosure F)))) := by
   classical
   obtain ⟨n, hn⟩ := exists_uniform_pow_mem_of_finset
     (F := F) (E := perfectClosure F (AlgebraicClosure F)) p s
@@ -867,13 +866,17 @@ theorem exists_finite_pth_root_tower_of_perfectClosure_finset
     obtain ⟨b, hb⟩ := hn a ha
     refine ⟨b, ?_⟩
     exact congrArg Subtype.val hb
-  obtain ⟨tower, htower, htower_eq⟩ :=
+  obtain ⟨tower, htower, htower_le⟩ :=
     exists_finite_pth_root_tower_of_uniform (p := p) (hp := hp) n s' hs'
   refine ⟨tower, ?_, ?_⟩
   · intro z hz
     exact htower (z : AlgebraicClosure F)
       (Finset.mem_image.mpr ⟨z, hz, rfl⟩)
-  · exact htower_eq
+  · refine htower_le.trans ?_
+    apply IntermediateField.adjoin_le_iff.mpr
+    intro z hz
+    obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hz
+    exact IntermediateField.subset_adjoin F _ ⟨a, ha, rfl⟩
 
 /-- Any finite base root tower can be completed to a compatible paired tower
 over a field extension which also contains a prescribed finite subset of the
@@ -906,7 +909,7 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
     rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
     exact ((pthRootClosureMap k K).commutes b).symm
   let roots : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift ∪ t
-  obtain ⟨top, htop⟩ :=
+  obtain ⟨top, htop, _⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp roots
   let T := finitePthRootFieldAtLevel top
   let baseToTop : B →+* T :=
@@ -1006,7 +1009,7 @@ theorem exists_tower_pth_roots_adjoin_finset
       refine ⟨1, a, ?_⟩
       simp⟩
   let baseRoots := s.image baseRoot
-  obtain ⟨base, hbase⟩ :=
+  obtain ⟨base, hbase, _⟩ :=
     exists_finite_pth_root_tower_of_perfectClosure_finset p hp baseRoots
   let topRoot (i : ι) : perfectClosure K (AlgebraicClosure K) :=
     ⟨pthRootInAlgebraicClosure K p hp (x i), by

@@ -510,10 +510,146 @@ noncomputable def finitePthRootBaseChangeAtLevel
    interface instead of pretending that one root layer suffices. -/
 private theorem exists_finite_pth_root_tower_of_uniform
     {F : Type u} [Field F] (n : ℕ) (s : Finset (AlgebraicClosure F))
+    [Fact p.Prime] [CharP F p]
     (hs : ∀ z ∈ s, z ^ (p ^ n) ∈ (algebraMap F (AlgebraicClosure F)).range) :
     ∃ tower : FinitePthRootTower F p hp,
       ∀ z ∈ s, z ∈ finitePthRootFieldAtLevel tower := by
-  sorry
+  classical
+  induction n generalizing s with
+  | zero =>
+      let tower : FinitePthRootTower F p hp :=
+        { length := 0
+          level := fun _ => ⊥
+          generators := fun _ => ∅
+          base := rfl
+          generators_mem := by
+            intro i hi
+            omega
+          step := by
+            intro i hi
+            omega
+          finite_dimensional := by infer_instance
+          purely_inseparable := by infer_instance }
+      refine ⟨tower, ?_⟩
+      intro z hz
+      simp only [finitePthRootFieldAtLevel]
+      change z ∈ (⊥ : IntermediateField F (AlgebraicClosure F))
+      apply IntermediateField.mem_bot.mpr
+      simpa using hs z hz
+  | succ n ih =>
+      let s' : Finset (AlgebraicClosure F) := s.image (fun z => z ^ p)
+      have hs' : ∀ z ∈ s', z ^ (p ^ n) ∈
+          (algebraMap F (AlgebraicClosure F)).range := by
+        intro z hz
+        rcases Finset.mem_image.mp hz with ⟨w, hw, rfl⟩
+        simpa [pow_succ', ← pow_mul] using hs w hw
+      obtain ⟨tower, htower⟩ := ih s' hs'
+      let L := finitePthRootFieldAtLevel tower
+      let R : IntermediateField F (AlgebraicClosure F) :=
+        IntermediateField.adjoin F (Set.range fun a : s' =>
+          pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F))
+      let final : IntermediateField F (AlgebraicClosure F) := L ⊔ R
+      have hRfinite : FiniteDimensional F R := by
+        apply IntermediateField.finiteDimensional_adjoin
+        rintro _ ⟨a, rfl⟩
+        exact Algebra.IsIntegral.isIntegral _
+      have hfinalfinite : FiniteDimensional F final := by
+        letI : FiniteDimensional F L := tower.finite_dimensional
+        letI : FiniteDimensional F R := hRfinite
+        exact inferInstance
+      letI : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
+      have hRpure : IsPurelyInseparable F R := by
+        rw [IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem F
+          (AlgebraicClosure F) p]
+        rintro _ ⟨a, rfl⟩
+        let aL : L := ⟨a, htower (a : AlgebraicClosure F) a.property⟩
+        letI : Field L := inferInstance
+        letI : Algebra F L := inferInstance
+        letI : IsPurelyInseparable F L := tower.purely_inseparable
+        obtain ⟨m, b, hb⟩ := IsPurelyInseparable.pow_mem (F := F) (E := L)
+          (q := p) (x := aL)
+        refine ⟨m + 1, b, ?_⟩
+        rw [pow_succ', pow_mul,
+          pthRootInAlgebraicClosureOfElement_pow F p hp (a : AlgebraicClosure F)]
+        simpa [aL] using congrArg Subtype.val hb
+      have hfinalpure : IsPurelyInseparable F final := by
+        letI : IsPurelyInseparable F L := tower.purely_inseparable
+        letI : IsPurelyInseparable F R := hRpure
+        exact inferInstance
+      let newLevel : ℕ → IntermediateField F (AlgebraicClosure F) :=
+        fun i => if i ≤ tower.length then tower.level i else final
+      let newGenerators : ℕ → Finset (AlgebraicClosure F) :=
+        fun i => if i < tower.length then tower.generators i else s'
+      let newTower : FinitePthRootTower F p hp :=
+        { length := tower.length + 1
+          level := newLevel
+          generators := newGenerators
+          base := by
+            simp [newLevel, tower.base]
+          generators_mem := by
+            intro i hi a ha
+            by_cases h : i < tower.length
+            · have hi_le : i ≤ tower.length := Nat.le_of_lt h
+              have ha' : a ∈ tower.generators i := by
+                simpa [newGenerators, h] using ha
+              dsimp [newLevel]
+              rw [if_pos hi_le]
+              exact tower.generators_mem i h a ha'
+            · have hi' : i = tower.length := by omega
+              have hi_le : i ≤ tower.length := Nat.le_of_eq hi'
+              have ha'' : a ∈ s' := by simpa [newGenerators, hi'] using ha
+              subst i
+              dsimp [newLevel]
+              rw [if_pos le_rfl]
+              have ha' : a ∈ finitePthRootFieldAtLevel tower := htower a ha''
+              simpa [finitePthRootFieldAtLevel] using ha'
+          step := by
+            intro i hi
+            by_cases h : i < tower.length
+            · have hi_le : i ≤ tower.length := Nat.le_of_lt h
+              have hi_succ_le : i + 1 ≤ tower.length := by omega
+              dsimp [newLevel, newGenerators]
+              rw [if_pos hi_succ_le, if_pos hi_le, if_pos h]
+              exact tower.step i h
+            · have hi' : i = tower.length := by omega
+              have hi_le : i ≤ tower.length := Nat.le_of_eq hi'
+              have hi_succ_not_le : ¬ i + 1 ≤ tower.length := by omega
+              subst i
+              dsimp [newLevel, newGenerators]
+              rw [if_neg hi_succ_not_le, if_pos hi_le, if_neg h]
+              dsimp [final, L, R, finitePthRootFieldAtLevel]
+          finite_dimensional := by
+            have hnot : ¬ tower.length + 1 ≤ tower.length := by omega
+            have hlevel : newLevel (tower.length + 1) = final := by
+              dsimp [newLevel]
+              exact if_neg hnot
+            exact hlevel ▸ hfinalfinite
+          purely_inseparable := by
+            have hnot : ¬ tower.length + 1 ≤ tower.length := by omega
+            have hlevel : newLevel (tower.length + 1) = final := by
+              dsimp [newLevel]
+              exact if_neg hnot
+            exact hlevel ▸ hfinalpure }
+      refine ⟨newTower, ?_⟩
+      intro z hz
+      have hz' : z ^ p ∈ s' := Finset.mem_image.mpr ⟨z, hz, rfl⟩
+      let a : s' := ⟨z ^ p, hz'⟩
+      have hroot : pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F) = z := by
+        apply sub_eq_zero.mp
+        apply eq_zero_of_pow_eq_zero
+        rw [sub_pow_char, pthRootInAlgebraicClosureOfElement_pow F p hp,
+          show (a : AlgebraicClosure F) = z ^ p by rfl]
+        simp
+      have hzR : z ∈ R := by
+        change z ∈ IntermediateField.adjoin F (Set.range fun a : s' =>
+          pthRootInAlgebraicClosureOfElement F p hp (a : AlgebraicClosure F))
+        apply IntermediateField.subset_adjoin F _
+        exact ⟨a, hroot⟩
+      have hzfinal : z ∈ final := (show R ≤ final from le_sup_right) hzR
+      change z ∈ newLevel (tower.length + 1)
+      dsimp [newLevel]
+      rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
+      exact hzfinal
 
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is

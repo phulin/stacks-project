@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit82.UniversallyInjective
 import Formalization.Books.Algebra.Unit87.InverseSystems
+import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.EpiMono
@@ -116,6 +117,164 @@ instance finitelyPresentedFilteredColimitIndexFiltered
     {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
     (C : FinitelyPresentedFilteredColimit N) : IsFiltered C.index :=
   C.indexFiltered
+
+/-- The bundled module cocone underlying a finitely presented filtered-colimit
+presentation is colimiting. -/
+noncomputable def finitelyPresentedFilteredColimit_isColimit
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} N) :
+    IsColimit ({ pt := N, ι := C.ι } : Cocone C.diag) := by
+  letI : ReflectsColimit
+      (C.diag ⋙ forget₂ (ModuleCat.{max u w} R) AddCommGrpCat)
+      (forget AddCommGrpCat) :=
+    reflectsColimit_of_reflectsIsomorphisms _ _
+  apply isColimitOfReflects
+    (forget₂ (ModuleCat.{max u w} R) AddCommGrpCat)
+  apply isColimitOfReflects (forget AddCommGrpCat)
+  exact C.underlyingIsColimit
+
+/-- Tensoring on the right by a fixed module, without requiring the ring and
+the modules to lie in the same universe. -/
+def moduleTensorRightFunctor
+    {R : Type u} [CommRing R] (P : ModuleCat.{max u w} R) :
+    ModuleCat.{max u w} R ⥤ ModuleCat.{max u w} R where
+  obj N := ModuleCat.of R
+    (TensorProduct R (N : Type (max u w)) (P : Type (max u w)))
+  map f := ModuleCat.ofHom (f.hom.rTensor (P : Type (max u w)))
+  map_id N := by
+    apply ModuleCat.hom_ext
+    exact LinearMap.rTensor_id (P : Type (max u w)) (N : Type (max u w))
+  map_comp f g := by
+    apply ModuleCat.hom_ext
+    exact LinearMap.rTensor_comp (P : Type (max u w)) g.hom f.hom
+
+/-- The cocone obtained by tensoring a finitely presented filtered-colimit
+presentation on the right. -/
+def finitelyPresentedFilteredColimit_tensorCocone
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} N)
+    (P : ModuleCat.{max u w} R) :
+    Cocone (C.diag ⋙ moduleTensorRightFunctor P) :=
+  (moduleTensorRightFunctor P).mapCocone
+    ({ pt := N, ι := C.ι } : Cocone C.diag)
+
+/-- Currying a cocone on a tensor diagram gives a cocone on the original
+module diagram with target a module of linear maps. -/
+def finitelyPresentedFilteredColimit_curryCocone
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} N)
+    (P : ModuleCat.{max u w} R)
+    (s : Cocone (C.diag ⋙ moduleTensorRightFunctor P)) : Cocone C.diag where
+  pt := ModuleCat.of R
+    ((P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)))
+  ι :=
+    { app := fun i => ModuleCat.ofHom (TensorProduct.curry (s.ι.app i).hom)
+      naturality := by
+        intro i j f
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro x
+        apply LinearMap.ext
+        intro p
+        change (s.ι.app j).hom
+            ((C.diag.map f).hom x ⊗ₜ[R] p) =
+          (s.ι.app i).hom (x ⊗ₜ[R] p)
+        have h := congrArg ModuleCat.Hom.hom (s.ι.naturality f)
+        change (s.ι.app j).hom.comp
+            ((C.diag.map f).hom.rTensor (P : Type (max u w))) =
+            (s.ι.app i).hom at h
+        have h' := congrArg (fun k => k (x ⊗ₜ[R] p)) h
+        change (s.ι.app j).hom
+          ((C.diag.map f).hom.rTensor (P : Type (max u w)) (x ⊗ₜ[R] p)) =
+            (s.ι.app i).hom (x ⊗ₜ[R] p) at h'
+        rw [LinearMap.rTensor_tmul] at h'
+        exact h' }
+
+/-- Tensoring on the right preserves the colimit exhibited by a finitely
+presented filtered-colimit presentation, in arbitrary module universes. -/
+noncomputable def finitelyPresentedFilteredColimit_tensorCoconeIsColimit
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} N)
+    (P : ModuleCat.{max u w} R) :
+    IsColimit (finitelyPresentedFilteredColimit_tensorCocone C P) := by
+  let hc := finitelyPresentedFilteredColimit_isColimit C
+  refine
+    { desc := fun s => ModuleCat.ofHom <| TensorProduct.lift
+        (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom
+      fac := ?_
+      uniq := ?_ }
+  · intro s i
+    apply ModuleCat.hom_ext
+    apply TensorProduct.ext
+    apply LinearMap.ext
+    intro x
+    apply LinearMap.ext
+    intro p
+    change
+      (show (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) from
+        (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom
+          ((C.ι.app i).hom x)) p =
+        (s.ι.app i).hom (x ⊗ₜ[R] p)
+    have h := congrArg ModuleCat.Hom.hom
+      (hc.fac (finitelyPresentedFilteredColimit_curryCocone C P s) i)
+    have h' := congrArg (fun k => k x) h
+    have h'' := congrArg
+      (fun k : (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) => k p) h'
+    change
+      (show (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) from
+        (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom
+          ((C.ι.app i).hom x)) p =
+        (s.ι.app i).hom (x ⊗ₜ[R] p) at h''
+    exact h''
+  · intro s m hm
+    let m' : N ⟶ (finitelyPresentedFilteredColimit_curryCocone C P s).pt :=
+      ModuleCat.ofHom (TensorProduct.curry m.hom)
+    have hm' : m' =
+        hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s) := by
+      apply hc.uniq
+      intro i
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      apply LinearMap.ext
+      intro p
+      change m.hom ((C.ι.app i).hom x ⊗ₜ[R] p) =
+        (s.ι.app i).hom (x ⊗ₜ[R] p)
+      have h := congrArg ModuleCat.Hom.hom (hm i)
+      change m.hom.comp
+          ((C.ι.app i).hom.rTensor (P : Type (max u w))) =
+          (s.ι.app i).hom at h
+      have h' := congrArg (fun k => k (x ⊗ₜ[R] p)) h
+      change m.hom
+        ((C.ι.app i).hom.rTensor (P : Type (max u w)) (x ⊗ₜ[R] p)) =
+          (s.ι.app i).hom (x ⊗ₜ[R] p) at h'
+      rw [LinearMap.rTensor_tmul] at h'
+      exact h'
+    apply ModuleCat.hom_ext
+    apply TensorProduct.ext
+    apply LinearMap.ext
+    intro x
+    apply LinearMap.ext
+    intro p
+    change m.hom (x ⊗ₜ[R] p) =
+      TensorProduct.lift
+        (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom
+        (x ⊗ₜ[R] p)
+    have h := congrArg ModuleCat.Hom.hom hm'
+    have h' := congrArg (fun k => k x) h
+    have h'' := congrArg
+      (fun k : (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) => k p) h'
+    change m.hom (x ⊗ₜ[R] p) =
+      (show (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) from
+        (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom x) p at h''
+    have hlift :
+        TensorProduct.lift
+            (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom
+            (x ⊗ₜ[R] p) =
+          (show (P : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) from
+            (hc.desc (finitelyPresentedFilteredColimit_curryCocone C P s)).hom x) p :=
+      TensorProduct.lift.tmul x p
+    exact h''.trans hlift.symm
 
 /-- Every module is a filtered colimit of finitely presented modules in a
 universe containing both the ring and the module. -/
@@ -417,6 +576,43 @@ lemma finitelyPresentedFilteredColimit_eventually_zero
       (hx.trans (by simp))
   exact ⟨j, h, by simpa using hh⟩
 
+/-- A tensor represented at one stage and vanishing in the colimit already
+vanishes after a transition to some later stage. -/
+lemma finitelyPresentedFilteredColimit_tensor_eventually_zero
+    {R : Type u} [CommRing R]
+    {Q : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} Q)
+    (P : ModuleCat.{max u w} R) {i : C.index}
+    (x : TensorProduct R (C.diag.obj i : Type (max u w))
+      (P : Type (max u w)))
+    (hx : (C.ι.app i).hom.rTensor (P : Type (max u w)) x = 0) :
+    ∃ (j : C.index) (h : i ⟶ j),
+      (C.diag.map h).hom.rTensor (P : Type (max u w)) x = 0 := by
+  have hTc := finitelyPresentedFilteredColimit_tensorCoconeIsColimit C P
+  have hAdd := isColimitOfPreserves
+    (forget₂ (ModuleCat.{max u w} R) AddCommGrpCat) hTc
+  have hT := isColimitOfPreserves (forget AddCommGrpCat) hAdd
+  have hx' :
+      ((forget AddCommGrpCat).mapCocone
+        ((forget₂ (ModuleCat.{max u w} R) AddCommGrpCat).mapCocone
+          (finitelyPresentedFilteredColimit_tensorCocone C P))).ι.app i x =
+        ((forget AddCommGrpCat).mapCocone
+          ((forget₂ (ModuleCat.{max u w} R) AddCommGrpCat).mapCocone
+            (finitelyPresentedFilteredColimit_tensorCocone C P))).ι.app i
+              (0 : TensorProduct R (C.diag.obj i : Type (max u w))
+                (P : Type (max u w))) := by
+    change (C.ι.app i).hom.rTensor (P : Type (max u w)) x =
+      (C.ι.app i).hom.rTensor (P : Type (max u w)) 0
+    rw [hx, map_zero]
+  obtain ⟨j, h, hh⟩ :=
+    (Types.FilteredColimit.isColimit_eq_iff' hT x
+      (0 : TensorProduct R (C.diag.obj i : Type (max u w))
+        (P : Type (max u w)))).1 hx'
+  refine ⟨j, h, ?_⟩
+  change (C.diag.map h).hom.rTensor (P : Type (max u w)) x =
+    (C.diag.map h).hom.rTensor (P : Type (max u w)) 0 at hh
+  simpa only [map_zero] using hh
+
 /-- A map from a finite module which is zero in the colimit becomes zero at a
 later stage. -/
 lemma finitelyPresentedFilteredColimit_eventually_zero_map
@@ -620,6 +816,74 @@ lemma finitelyPresentedFilteredColimit_map_factor
   have hιg₁y := congrArg (fun h => h y) hιg₁
   simpa [LinearMap.comp_apply] using
     (congrArg (C.ι.app r).hom hgp'y).trans hιg₁y
+
+/-- A map from a finitely presented module factors through a stage at which a
+specified tensor-kernel element already vanishes. -/
+lemma finitelyPresentedFilteredColimit_kernel_factor
+    {R : Type u} [CommRing R]
+    {M P Q : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit.{u, max u w, w} M)
+    (hP : Module.FinitePresentation R (P : Type (max u w)))
+    (f : (P : Type (max u w)) →ₗ[R] (M : Type (max u w)))
+    (x : TensorProduct R (P : Type (max u w)) (Q : Type (max u w)))
+    (hx : x ∈ LinearMap.ker (f.rTensor (Q : Type (max u w)))) :
+    ∃ (i : C.index)
+      (f' : (P : Type (max u w)) →ₗ[R]
+        (C.diag.obj i : Type (max u w))),
+      (C.ι.app i).hom.comp f' = f ∧
+        x ∈ LinearMap.ker (f'.rTensor (Q : Type (max u w))) := by
+  obtain ⟨i, g, hg⟩ :=
+    finitelyPresentedFilteredColimit_map_factor C hP f
+  have hzero :
+      (C.ι.app i).hom.rTensor (Q : Type (max u w))
+          (g.rTensor (Q : Type (max u w)) x) = 0 := by
+    rw [← LinearMap.rTensor_comp_apply, hg]
+    exact LinearMap.mem_ker.mp hx
+  obtain ⟨j, h, hh⟩ :=
+    finitelyPresentedFilteredColimit_tensor_eventually_zero C Q
+      (g.rTensor (Q : Type (max u w)) x) hzero
+  let f' : (P : Type (max u w)) →ₗ[R]
+      (C.diag.obj j : Type (max u w)) :=
+    (C.diag.map h).hom.comp g
+  refine ⟨j, f', ?_, ?_⟩
+  · have hnat : (C.ι.app j).hom.comp (C.diag.map h).hom =
+        (C.ι.app i).hom := by
+      have hnat' := congrArg ModuleCat.Hom.hom (C.ι.naturality h)
+      change (C.ι.app j).hom.comp (C.diag.map h).hom =
+        (C.ι.app i).hom at hnat'
+      exact hnat'
+    calc
+      (C.ι.app j).hom.comp f' =
+          ((C.ι.app j).hom.comp (C.diag.map h).hom).comp g := by
+        rw [LinearMap.comp_assoc]
+      _ = (C.ι.app i).hom.comp g := by rw [hnat]
+      _ = f := hg
+  · apply LinearMap.mem_ker.mpr
+    change ((C.diag.map h).hom.comp g).rTensor
+      (Q : Type (max u w)) x = 0
+    rw [LinearMap.rTensor_comp_apply]
+    exact hh
+
+/-- Given a tensor-kernel element for a map out of a finitely presented
+module, there is a finitely presented intermediate module through which the
+map factors and at which that element already vanishes. -/
+theorem exists_finitelyPresented_kernel_factor
+    {R : Type u} [CommRing R] (M P Q : ModuleCat.{max u w} R)
+    (hP : Module.FinitePresentation R (P : Type (max u w)))
+    (f : (P : Type (max u w)) →ₗ[R] (M : Type (max u w)))
+    (x : TensorProduct R (P : Type (max u w)) (Q : Type (max u w)))
+    (hx : x ∈ LinearMap.ker (f.rTensor (Q : Type (max u w)))) :
+    ∃ P' : ModuleCat.{max u w} R,
+      Module.FinitePresentation R (P' : Type (max u w)) ∧
+        ∃ f' : (P : Type (max u w)) →ₗ[R] (P' : Type (max u w)),
+          (∃ g : (P' : Type (max u w)) →ₗ[R] (M : Type (max u w)),
+            f = g.comp f') ∧
+            x ∈ LinearMap.ker (f'.rTensor (Q : Type (max u w))) := by
+  let C := Classical.choice (exists_finitelyPresentedFilteredColimit M)
+  obtain ⟨i, f', hfactor, hzero⟩ :=
+    finitelyPresentedFilteredColimit_kernel_factor C hP f x hx
+  refine ⟨C.diag.obj i, C.finitelyPresented i, f', ?_, hzero⟩
+  exact ⟨(C.ι.app i).hom, hfactor.symm⟩
 
 theorem dominates_iff_finitelyPresented
     {R : Type u} [CommRing R] {M N N' : Type w}

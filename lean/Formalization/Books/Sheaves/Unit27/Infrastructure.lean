@@ -1824,6 +1824,25 @@ private noncomputable def moduleHomOfStalkLinear
             (0 : AddCommGrpCat) ≅ ⊤_ AddCommGrpCat).symm))
     exact Subsingleton.elim _ _
 
+private theorem moduleStalkFunctor_map_moduleHomOfStalkLinear
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    {F D : Mod O}
+    {A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)}
+    (eD0 : D.val.presheaf ≅
+      (abelianSkyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf)
+    (h : F.val.presheaf ⟶ D.val.presheaf)
+    (φ : (moduleStalkFunctor O x).obj F ⟶
+      (moduleStalkFunctor O x).obj D)
+    (hφ : (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h =
+      (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+        AddCommGrpCat).map φ) :
+    (moduleStalkFunctor O x).map
+        (moduleHomOfStalkLinear O x eD0 h φ hφ) = φ := by
+  apply (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    AddCommGrpCat).map_injective
+  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h = _
+  exact hφ
+
 /-- The source-facing module stalk/skyscraper adjunction. -/
 theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
@@ -1881,12 +1900,44 @@ theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
             (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
                 cA.hom = χ := by
           have hh :=
-            (abelianStalkSkyscraperAdjunction x).homEquiv_counit
-              (g := h0)
-          exact sorry
+            (stalkSkyscraperSheafAdjunction x).homEquiv_counit (g := h0)
+          change _ = (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
+            cA.hom at hh
+          have hsymm :
+              ((stalkSkyscraperSheafAdjunction x).homEquiv
+                ((SheafOfModules.toSheaf O).obj F) (AddCommGrpCat.of (↑A))).symm h0 = χ := by
+            exact Equiv.symm_apply_apply _ χ
+          rw [hsymm] at hh
+          exact hh.symm
         let qA :=
           (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA ≪≫ cA
-        exact sorry
+        change (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+            (h0.hom ≫ eA.inv) = _
+        apply (cancel_mono qA.hom).1
+        have hmap :=
+          (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map_comp h0.hom eA.inv
+        rw [hmap]
+        dsimp [qA]
+        change
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).inv) ≫
+            (((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).hom ≫ cA.hom) = χ
+        have hcancel0 :=
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).inv_hom_id_assoc cA.hom
+        have hcancel := congrArg
+          (fun k => (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫ k) hcancel0
+        have hassoc :
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).inv) ≫
+                (((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).hom ≫ cA.hom) =
+              (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom ≫
+                (((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).inv ≫
+                  ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).hom ≫ cA.hom) := by
+          exact Category.assoc
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h0.hom)
+            (((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).inv)
+            (((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso eA).hom ≫ cA.hom)
+        exact hassoc.trans (hcancel.trans hh0)
       exact moduleHomOfStalkLinear O x eA h (φ ≫ pA.inv) hφ
     let inverse :
         (F ⟶ K.functor.obj A) →
@@ -1895,8 +1946,16 @@ theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
     exact
       { toFun := forward
         invFun := inverse
-        left_inv := by sorry
-        right_inv := by sorry }
+        left_inv := by
+          intro φ
+          dsimp [inverse, forward]
+          calc
+            _ = (φ ≫ pA.inv) ≫ pA.hom := by
+              congr 1
+              apply moduleStalkFunctor_map_moduleHomOfStalkLinear
+            _ = φ := by simp
+        right_inv := by
+          sorry }
   exact ⟨Adjunction.mkOfHomEquiv {
     homEquiv := E
     homEquiv_naturality_left_symm := by sorry

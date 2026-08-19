@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit60.Dimension
 import Formalization.Books.Algebra.Unit35.JacobsonRings
+import Mathlib.RingTheory.KrullDimension.NonZeroDivisors
 import Mathlib.NumberTheory.Padics.ProperSpace
 import Mathlib.RingTheory.PowerSeries.Basic
 
@@ -22,6 +23,38 @@ universe u
 
 noncomputable section
 
+private theorem finite_primeSpectrum_of_isDiscreteValuationRing
+    {R : Type u} [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] :
+    Finite (PrimeSpectrum R) := by
+  classical
+  obtain ⟨_, P, hP, hPuniq⟩ :=
+    (IsDiscreteValuationRing.iff_pid_with_one_nonzero_prime R).mp
+      (inferInstance : IsDiscreteValuationRing R)
+  let f : PrimeSpectrum R → Bool :=
+    fun p => if p.asIdeal = (⊥ : Ideal R) then false else true
+  apply Finite.of_injective f
+  intro p q h
+  apply PrimeSpectrum.ext
+  by_cases hp : p.asIdeal = (⊥ : Ideal R)
+  · have hq : q.asIdeal = (⊥ : Ideal R) := by
+      by_contra hq
+      have hne : f p ≠ f q := by
+        change (if p.asIdeal = (⊥ : Ideal R) then false else true) ≠
+          (if q.asIdeal = (⊥ : Ideal R) then false else true)
+        rw [if_pos hp, if_neg hq]
+        decide
+      exact hne h
+    exact hp.trans hq.symm
+  · have hq : q.asIdeal ≠ (⊥ : Ideal R) := by
+      intro hq
+      have hne : f p ≠ f q := by
+        change (if p.asIdeal = (⊥ : Ideal R) then false else true) ≠
+          (if q.asIdeal = (⊥ : Ideal R) then false else true)
+        rw [if_neg hp, if_pos hq]
+        decide
+      exact hne h
+    exact (hPuniq _ (And.intro hp p.2)).trans (hPuniq _ (And.intro hq q.2)).symm
+
 /-! ## Infinite spectra and finite-prime rings -/
 
 /-- A nonempty open subset of the spectrum of a Noetherian local domain of
@@ -32,7 +65,384 @@ theorem nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_t
     {U : Set (PrimeSpectrum R)} (hUopen : IsOpen U)
     (hUnonempty : U.Nonempty) :
     U.Infinite := by
-  sorry
+  classical
+  obtain ⟨p, hp⟩ := hUnonempty
+  have hbot : ringKrullDim R ≠ ⊥ := by
+    change Order.krullDim (PrimeSpectrum R) ≠ ⊥
+    exact Order.krullDim_ne_bot_iff.mpr ⟨p⟩
+  have hle := Formalization.Books.Algebra.Unit60.ringKrullDim_le_maximalIdeal_spanFinrank R
+  have htop : ringKrullDim R ≠ ⊤ := by
+    intro h
+    have hlt : ringKrullDim R < ⊤ := by
+      exact lt_of_le_of_lt hle
+        (WithBot.coe_lt_coe.mpr
+          (WithTop.coe_lt_top (IsLocalRing.maximalIdeal R).spanFinrank))
+    exact (ne_of_lt hlt) h
+  let dInf : ℕ∞ := (ringKrullDim R).unbot hbot
+  have hdInf : (dInf : WithBot ℕ∞) = ringKrullDim R :=
+    WithBot.coe_unbot _ _
+  have htopInf : dInf ≠ ⊤ := by
+    intro hd
+    apply htop
+    rw [← hdInf, hd]
+    rfl
+  obtain ⟨d₀, hd₀⟩ := WithTop.ne_top_iff_exists.mp htopInf
+  have hdimNat : ringKrullDim R = (d₀ : ℕ) := by
+    calc
+      ringKrullDim R = (dInf : WithBot ℕ∞) := hdInf.symm
+      _ = (d₀ : WithBot ℕ∞) := by rw [← hd₀]; exact WithBot.coe_natCast d₀
+  have hd₀ge2 : 2 ≤ d₀ := by
+    rw [hdimNat] at hdim
+    exact_mod_cast hdim
+  by_contra hUinf
+  have hUfin : U.Finite := not_not.mp hUinf
+  let p₀ : PrimeSpectrum R := ⟨⊥, Ideal.isPrime_bot⟩
+  have hp₀U : p₀ ∈ U := by
+    apply hUopen.stableUnderGeneralization (show p₀ ⤳ p from by
+      rw [← PrimeSpectrum.le_iff_specializes]
+      exact bot_le)
+    exact hp
+  obtain ⟨_, ⟨x, rfl⟩, hpx, hxU⟩ :=
+    PrimeSpectrum.isTopologicalBasis_basic_opens.exists_subset_of_mem_open hp hUopen
+  have hxnot : x ∉ p.asIdeal := (PrimeSpectrum.mem_basicOpen x p).mp hpx
+  have hx0 : x ≠ 0 := by
+    intro hx0
+    apply hxnot
+    rw [hx0]
+    exact Ideal.zero_mem _
+  let s : Finset (PrimeSpectrum R) := hUfin.toFinset.erase p₀
+  let ι := {q : PrimeSpectrum R // q ∈ s}
+  letI : Fintype ι := Fintype.ofFinite ι
+  have hqchoice (q : ι) : ∃ a : R, a ∈ q.1.asIdeal ∧ a ≠ 0 := by
+    have hqmem : q.1 ∈ hUfin.toFinset.erase p₀ := by simpa [s] using q.2
+    have hqne : q.1 ≠ p₀ := (Finset.mem_erase.mp hqmem).1
+    have hqbot : q.1.asIdeal ≠ (⊥ : Ideal R) := by
+      intro hqbot
+      apply hqne
+      apply PrimeSpectrum.ext
+      exact hqbot
+    exact Submodule.exists_mem_ne_zero_of_ne_bot hqbot
+  choose g hgmem hgzero using hqchoice
+  let z : R := x * ∏ q : ι, g q
+  have hzprod : (∏ q : ι, g q) ≠ 0 := by
+    exact Finset.prod_ne_zero_iff.mpr (fun q _ => hgzero q)
+  have hz0 : z ≠ 0 := by
+    exact mul_ne_zero hx0 hzprod
+  have hzU : (PrimeSpectrum.basicOpen z : Set (PrimeSpectrum R)) ⊆ U := by
+    intro q hq
+    apply hxU
+    apply (PrimeSpectrum.mem_basicOpen x q).mpr
+    intro hxq
+    apply (PrimeSpectrum.mem_basicOpen z q).mp hq
+    change x * ∏ q : ι, g q ∈ q.asIdeal
+    exact q.asIdeal.mul_mem_right _ hxq
+  have hzsingle : (PrimeSpectrum.basicOpen z : Set (PrimeSpectrum R)) = {p₀} := by
+    ext q
+    constructor
+    · intro hq
+      have hqU : q ∈ U := hzU hq
+      by_cases hqeq : q = p₀
+      · exact Set.mem_singleton_iff.mpr hqeq
+      · have hqfin : q ∈ hUfin.toFinset := hUfin.mem_toFinset.mpr hqU
+        let q' : ι := ⟨q, by simpa [s] using (Finset.mem_erase.mpr ⟨hqeq, hqfin⟩)⟩
+        have hqprod : (∏ r : ι, g r) ∈ q.asIdeal := by
+          simpa using Ideal.prod_mem q.asIdeal (Finset.mem_univ q') (hgmem q')
+        have hzq : z ∈ q.asIdeal := by
+          change x * ∏ r : ι, g r ∈ q.asIdeal
+          exact q.asIdeal.mul_mem_left _ hqprod
+        exact False.elim ((PrimeSpectrum.mem_basicOpen z q).mp hq hzq)
+    · intro hq
+      have hqeq : q = p₀ := Set.mem_singleton_iff.mp hq
+      subst q
+      apply (PrimeSpectrum.mem_basicOpen z p₀).mpr
+      simpa [p₀] using hz0
+  have hzmax : z ∈ IsLocalRing.maximalIdeal R := by
+    let m : PrimeSpectrum R :=
+      ⟨IsLocalRing.maximalIdeal R, (IsLocalRing.maximalIdeal.isMaximal R).isPrime⟩
+    have hp₀ne : p₀ ≠ m := by
+      intro hp₀max
+      have hmaxbot : IsLocalRing.maximalIdeal R = (⊥ : Ideal R) := by
+        have h := congrArg PrimeSpectrum.asIdeal hp₀max
+        simpa [p₀, m] using h.symm
+      have hfield : IsField R :=
+        IsLocalRing.isField_iff_maximalIdeal_eq.mpr hmaxbot
+      have hdimzero : ringKrullDim R = 0 := ringKrullDim_eq_zero_of_isField hfield
+      rw [hdimzero] at hdim
+      have hdimNat' : (2 : ℕ) ≤ 0 := by exact_mod_cast hdim
+      omega
+    by_contra hzmax
+    have hunit : IsUnit z := (IsLocalRing.notMem_maximalIdeal).mp hzmax
+    have htopopen : PrimeSpectrum.basicOpen z = ⊤ := by
+      ext q
+      change (z ∉ q.asIdeal) ↔ True
+      constructor
+      · intro _
+        trivial
+      · intro _ hzq
+        exact q.2.ne_top (q.asIdeal.eq_top_of_isUnit_mem hzq hunit)
+    have hmaxmem : m ∈ ({p₀} : Set _ ) := by
+      rw [← hzsingle, htopopen]
+      trivial
+    exact hp₀ne (Set.mem_singleton_iff.mp hmaxmem).symm
+  let I : Ideal R := Ideal.span ({z} : Set R)
+  have hzreg : z ∈ nonZeroDivisors R := (mem_nonZeroDivisors_iff_ne_zero).mpr hz0
+  have hdimq : ringKrullDim (R ⧸ I) + 1 = ringKrullDim R := by
+    dsimp [I]
+    exact (Formalization.Books.Algebra.Unit60.one_equation_dimension_eq_of_nonzerodivisor
+      R inferInstance z hzmax hzreg).symm
+  have hqbot : ringKrullDim (R ⧸ I) ≠ ⊥ := by
+    intro hq
+    rw [hq, hdimNat] at hdimq
+    have hbad : (⊥ : WithBot ℕ∞) = (d₀ : WithBot ℕ∞) := by
+      simpa using hdimq
+    exact (WithBot.bot_ne_coe) hbad
+  let qInf : ℕ∞ := (ringKrullDim (R ⧸ I)).unbot hqbot
+  have hqInf : (qInf : WithBot ℕ∞) = ringKrullDim (R ⧸ I) :=
+    WithBot.coe_unbot _ _
+  have hqInfTop : qInf ≠ ⊤ := by
+    intro hqInfTop
+    apply htop
+    calc
+      ringKrullDim R = ringKrullDim (R ⧸ I) + 1 := hdimq.symm
+      _ = (qInf : WithBot ℕ∞) + 1 := by rw [hqInf]
+      _ = ⊤ := by
+        rw [hqInfTop, ← WithBot.coe_one, ← WithBot.coe_add]
+        simpa using congrArg (fun q : ℕ∞ => (q : WithBot ℕ∞))
+          (WithTop.top_add (1 : ℕ∞))
+  obtain ⟨n, hn⟩ := WithTop.ne_top_iff_exists.mp hqInfTop
+  have hqInfNat : qInf = (n : ℕ) := by
+    exact hn.symm
+  have hdimqInf : qInf + 1 = (d₀ : ℕ∞) := by
+    have hdimq' : (qInf : WithBot ℕ∞) + 1 = (d₀ : WithBot ℕ∞) := by
+      calc
+        (qInf : WithBot ℕ∞) + 1 = ringKrullDim (R ⧸ I) + 1 := by rw [hqInf]
+        _ = ringKrullDim R := hdimq
+        _ = (d₀ : WithBot ℕ∞) := hdimNat
+    exact WithBot.coe_eq_coe.mp (by simpa using hdimq')
+  have hdimqNat' : n + 1 = d₀ := by
+    rw [hqInfNat] at hdimqInf
+    exact_mod_cast hdimqInf
+  have hdimqNat : ringKrullDim (R ⧸ I) = (d₀ - 1 : ℕ) := by
+    calc
+      ringKrullDim (R ⧸ I) = (qInf : WithBot ℕ∞) := hqInf.symm
+      _ = (n : WithBot ℕ∞) := by
+        calc
+          (qInf : WithBot ℕ∞) = ((n : ℕ∞) : WithBot ℕ∞) :=
+            congrArg (fun q : ℕ∞ => (q : WithBot ℕ∞)) hn.symm
+          _ = (n : WithBot ℕ∞) := WithBot.coe_natCast n
+      _ = ((d₀ - 1 : ℕ) : WithBot ℕ∞) := by
+        rw [show n = d₀ - 1 by omega]
+  have hqnontriv : Nontrivial (R ⧸ I) := by
+    have hqspec : Nonempty (PrimeSpectrum (R ⧸ I)) := by
+      apply Order.krullDim_ne_bot_iff.mp
+      change ringKrullDim (R ⧸ I) ≠ ⊥
+      exact hqbot
+    exact PrimeSpectrum.nonempty_iff_nontrivial.mp hqspec
+  letI : Nontrivial (R ⧸ I) := hqnontriv
+  letI : IsLocalRing (R ⧸ I) :=
+    IsLocalRing.of_surjective' (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
+  letI : IsLocalHom (Ideal.Quotient.mk I) :=
+    IsLocalHom.of_surjective (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
+  have hparamq :=
+    ((Formalization.Books.Algebra.Unit60.local_dimension_characterization
+      (R ⧸ I) inferInstance (d₀ - 1)).out 0 2).mp hdimqNat
+  obtain ⟨w, hw, hdefq⟩ := hparamq.1
+  choose v hv using fun i => Ideal.Quotient.mk_surjective (w i)
+  let J : Ideal R := Ideal.span (Set.range v)
+  have hmap : Ideal.map (Ideal.Quotient.mk I) J =
+      Ideal.span (Set.range w) := by
+    dsimp [J]
+    rw [Ideal.map_span]
+    congr 1
+    ext y
+    constructor
+    · rintro ⟨x, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, (hv i).symm⟩
+    · rintro ⟨i, rfl⟩
+      exact ⟨v i, ⟨i, rfl⟩, hv i⟩
+  have hsurj : Function.Surjective (Ideal.Quotient.mk I) :=
+    Ideal.Quotient.mk_surjective
+  have hcomap : Ideal.comap (Ideal.Quotient.mk I) (Ideal.span (Set.range w)) =
+      I ⊔ J := by
+    rw [← hmap, Ideal.comap_map_of_surjective (Ideal.Quotient.mk I) hsurj,
+      ← RingHom.ker_eq_comap_bot,
+      Ideal.mk_ker, sup_comm]
+  have hdefK : Unit59.IsIdealOfDefinition R (I ⊔ J) := by
+    unfold Unit59.IsIdealOfDefinition
+    rw [← hcomap, ← Ideal.comap_radical, hdefq,
+      IsLocalRing.maximalIdeal_comap]
+  have hlen : (d₀ - 1) + 1 = d₀ := by omega
+  have htail : (d₀ - 2) + 1 = d₀ - 1 := by omega
+  let vzero : R := v ⟨0, by omega⟩
+  let a : Fin d₀ → R := fun i =>
+    Fin.cases vzero
+      (fun k => Fin.cases z (fun l => v (Fin.cast htail l.succ)) (Fin.cast htail.symm k))
+      (Fin.cast hlen.symm i)
+  have hArange : Set.range a = insert z (Set.range v) := by
+    ext r
+    constructor
+    · rintro ⟨i, rfl⟩
+      let j : Fin ((d₀ - 1) + 1) := Fin.cast hlen.symm i
+      change Fin.cases vzero
+        (fun k => Fin.cases z (fun l => v (Fin.cast htail l.succ))
+          (Fin.cast htail.symm k)) j ∈
+        insert z (Set.range v)
+      refine Fin.cases ?_ (fun k => ?_) j
+      · exact Set.mem_insert_iff.mpr
+          (Or.inr ⟨(⟨0, by omega⟩ : Fin (d₀ - 1)), by rfl⟩)
+      · let k' : Fin ((d₀ - 2) + 1) := Fin.cast htail.symm k
+        change Fin.cases z (fun l => v (Fin.cast htail l.succ)) k' ∈
+          insert z (Set.range v)
+        refine Fin.cases ?_ (fun l => ?_) k'
+        · exact Set.mem_insert_iff.mpr (Or.inl rfl)
+        · exact Set.mem_insert_iff.mpr
+            (Or.inr ⟨Fin.cast htail l.succ, rfl⟩)
+    · intro hr
+      rcases Set.mem_insert_iff.mp hr with rfl | ⟨k, rfl⟩
+      · let zeroTail : Fin (d₀ - 1) := ⟨0, by omega⟩
+        have hzero : Fin.cast hlen.symm (Fin.cast hlen (Fin.succ zeroTail)) =
+            Fin.succ zeroTail := by
+          apply Fin.ext
+          simp
+        have hzidx : Fin.cast htail.symm zeroTail = 0 := by
+          apply Fin.ext
+          simp [zeroTail]
+        exact ⟨Fin.cast hlen (Fin.succ zeroTail), by simp [a, hzero, hzidx]
+          ⟩
+      · by_cases hk0 : k.val = 0
+        · have hk0' : k = (⟨0, by omega⟩ : Fin (d₀ - 1)) := by
+            apply Fin.ext
+            simpa using hk0
+          rw [hk0']
+          exact ⟨Fin.cast hlen 0, by simp [a, vzero]
+            ⟩
+        · let l : Fin (d₀ - 2) := ⟨k.val - 1, by omega⟩
+          have hkl : k = Fin.cast htail l.succ := by
+            apply Fin.ext
+            dsimp [l]
+            omega
+          rw [hkl]
+          exact ⟨Fin.cast hlen (Fin.succ (Fin.cast htail l.succ)), by
+            simp [a]
+            ⟩
+  have hvmax : ∀ k, v k ∈ IsLocalRing.maximalIdeal R := by
+    intro k
+    have hk : (Ideal.Quotient.mk I) (v k) ∈
+        IsLocalRing.maximalIdeal (R ⧸ I) := by
+      rw [hv k]
+      exact hw k
+    have hk' : v k ∈ Ideal.comap (Ideal.Quotient.mk I)
+        (IsLocalRing.maximalIdeal (R ⧸ I)) := hk
+    rw [IsLocalRing.maximalIdeal_comap] at hk'
+    exact hk'
+  have ha : ∀ i, a i ∈ IsLocalRing.maximalIdeal R := by
+    intro i
+    let j : Fin ((d₀ - 1) + 1) := Fin.cast hlen.symm i
+    change Fin.cases vzero
+      (fun k => Fin.cases z (fun l => v (Fin.cast htail l.succ))
+        (Fin.cast htail.symm k)) j ∈
+      IsLocalRing.maximalIdeal R
+    refine Fin.cases ?_ (fun k => ?_) j
+    · exact hvmax ⟨0, by omega⟩
+    · let k' : Fin ((d₀ - 2) + 1) := Fin.cast htail.symm k
+      change Fin.cases z (fun l => v (Fin.cast htail l.succ)) k' ∈
+        IsLocalRing.maximalIdeal R
+      refine Fin.cases ?_ (fun l => ?_) k'
+      · exact hzmax
+      · exact hvmax (Fin.cast htail l.succ)
+  have hdefa : Unit59.IsIdealOfDefinition R (Ideal.span (Set.range a)) := by
+    rw [hArange, Ideal.span_insert]
+    exact hdefK
+  have hdimseq :=
+    Formalization.Books.Algebra.Unit60.dimensions_of_successive_parameter_quotients
+      R d₀ a ha hdefa hdimNat
+  have hdim1 := hdimseq 1 (by omega) (by omega)
+  have hdim2 := hdimseq 2 (by omega) (by omega)
+  let b1 : Fin 1 → R := fun j =>
+    a ⟨j.1, lt_of_lt_of_le j.2 (by omega)⟩
+  let b2 : Fin 2 → R := fun j =>
+    a ⟨j.1, lt_of_lt_of_le j.2 (by omega)⟩
+  have hdim1' : ringKrullDim (R ⧸ Ideal.span (Set.range b1)) =
+      (d₀ - 1 : ℕ) := by
+    simpa [b1] using hdim1
+  have hdim2' : ringKrullDim (R ⧸ Ideal.span (Set.range b2)) =
+      (d₀ - 2 : ℕ) := by
+    simpa [b2] using hdim2
+  let K1 : Ideal R := Ideal.span (Set.range b1)
+  let K2 : Ideal R := Ideal.span (Set.range b2)
+  have hK1dim : ringKrullDim (R ⧸ K1) = (d₀ - 1 : ℕ) := hdim1'
+  have hK2dim : ringKrullDim (R ⧸ K2) = (d₀ - 2 : ℕ) := hdim2'
+  have hK1leK2 : K1 ≤ K2 := by
+    dsimp [K1, K2]
+    apply Ideal.span_le.mpr
+    rintro y ⟨j, rfl⟩
+    have hj : j = 0 := Subsingleton.elim _ _
+    subst j
+    exact Ideal.subset_span ⟨0, by simp [b1, b2, a, vzero]⟩
+  have hex : ∃ q : PrimeSpectrum R, K1 ≤ q.asIdeal ∧ z ∉ q.asIdeal := by
+    by_contra h
+    have hall : ∀ q : PrimeSpectrum R, K1 ≤ q.asIdeal → z ∈ q.asIdeal := by
+      intro q hq
+      by_contra hzq
+      exact h ⟨q, hq, hzq⟩
+    have hzero : PrimeSpectrum.zeroLocus (K1 : Set R) =
+        PrimeSpectrum.zeroLocus (K2 : Set R) := by
+      ext q
+      simp only [PrimeSpectrum.mem_zeroLocus, SetLike.coe_subset_coe]
+      constructor
+      · intro hq
+        have hzq : z ∈ q.asIdeal := hall q hq
+        apply Ideal.span_le.mpr
+        rintro y ⟨j, rfl⟩
+        refine Fin.cases ?_ (fun k => ?_) j
+        · have hvzeroq : vzero ∈ q.asIdeal :=
+            hq (Ideal.subset_span ⟨0, by simp [b1, a, vzero]⟩)
+          simpa [b2, a, vzero] using hvzeroq
+        · have hk : k = 0 := Subsingleton.elim _ _
+          subst k
+          simpa [b2, a, z] using hzq
+      · exact fun hq => hK1leK2.trans hq
+    have hdimEq : ringKrullDim (R ⧸ K1) = ringKrullDim (R ⧸ K2) := by
+      rw [ringKrullDim_quotient, ringKrullDim_quotient, hzero]
+    have hcast : ((d₀ - 1 : ℕ) : WithBot ℕ∞) =
+        ((d₀ - 2 : ℕ) : WithBot ℕ∞) := by
+      calc
+        ((d₀ - 1 : ℕ) : WithBot ℕ∞) = ringKrullDim (R ⧸ K1) := hK1dim.symm
+        _ = ringKrullDim (R ⧸ K2) := hdimEq
+        _ = ((d₀ - 2 : ℕ) : WithBot ℕ∞) := hK2dim
+    have hnat : d₀ - 1 = d₀ - 2 := by
+      exact_mod_cast hcast
+    omega
+  obtain ⟨q, hqK1, hzq⟩ := hex
+  have hqp : q = p₀ := by
+    apply Set.mem_singleton_iff.mp
+    rw [← hzsingle]
+    exact (PrimeSpectrum.mem_basicOpen z q).mpr hzq
+  have hvzero0 : vzero = 0 := by
+    have hvzeroq : vzero ∈ q.asIdeal :=
+      hqK1 (Ideal.subset_span ⟨0, by simp [b1, a, vzero]⟩)
+    simpa [hqp, p₀] using hvzeroq
+  have hK1bot : K1 = (⊥ : Ideal R) := by
+    apply le_antisymm
+    · dsimp [K1]
+      apply Ideal.span_le.mpr
+      rintro y ⟨j, rfl⟩
+      have hj : j = 0 := Subsingleton.elim _ _
+      subst j
+      simp [b1, a, vzero, hvzero0]
+    · exact bot_le
+  have hdim1R : ringKrullDim (R ⧸ K1) = ringKrullDim R := by
+    rw [hK1bot]
+    exact ringKrullDim_eq_of_ringEquiv (RingEquiv.quotientBot R)
+  have hbad : ((d₀ - 1 : ℕ) : WithBot ℕ∞) =
+      (d₀ : WithBot ℕ∞) := by
+    calc
+      ((d₀ - 1 : ℕ) : WithBot ℕ∞) = ringKrullDim (R ⧸ K1) := hK1dim.symm
+      _ = ringKrullDim R := hdim1R
+      _ = (d₀ : WithBot ℕ∞) := hdimNat
+  have hbadNat : d₀ - 1 = d₀ := by
+    exact_mod_cast hbad
+  omega
 
 /-- A Noetherian ring with finitely many prime ideals has Krull dimension at
 most one. -/
@@ -40,7 +450,84 @@ theorem noetherian_ring_with_finite_primeSpectrum_dim_le_one
     {R : Type u} [CommRing R] [IsNoetherianRing R]
     [Finite (PrimeSpectrum R)] :
     ringKrullDim R ≤ 1 := by
-  sorry
+  by_contra hdimle
+  have hdim2 : (2 : WithBot ℕ∞) ≤ ringKrullDim R := by
+    have h := ENat.WithBot.add_one_le_iff.mpr (lt_of_not_ge hdimle)
+    norm_num at h ⊢
+    exact h
+  obtain ⟨l, hl⟩ := Order.le_krullDim_iff.mp hdim2
+  have hl2 : l.length = 2 := hl
+  let p₀ : PrimeSpectrum R := l ⟨0, by omega⟩
+  let p₁ : PrimeSpectrum R := l ⟨1, by omega⟩
+  let p₂ : PrimeSpectrum R := l ⟨2, by omega⟩
+  have hp₀₁ : p₀ < p₁ := by
+    simpa [p₀, p₁, hl2] using l.step ⟨0, by omega⟩
+  have hp₁₂ : p₁ < p₂ := by
+    simpa [p₁, p₂, hl2] using l.step ⟨1, by omega⟩
+  obtain ⟨m, hm, hmle⟩ :=
+    Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal R)) (J := p₀.asIdeal) bot_le
+  let A := R ⧸ m
+  let eA := m.primeSpectrumQuotientOrderIsoZeroLocus
+  let p₀A : PrimeSpectrum A := eA.symm ⟨p₀, hmle⟩
+  let p₁A : PrimeSpectrum A := eA.symm ⟨p₁, hmle.trans hp₀₁.le⟩
+  let p₂A : PrimeSpectrum A := eA.symm ⟨p₂, hmle.trans (hp₀₁.trans hp₁₂).le⟩
+  have hp₀₁A : p₀A < p₁A := by
+    apply eA.symm.lt_iff_lt.mpr
+    change p₀ < p₁
+    exact hp₀₁
+  have hp₁₂A : p₁A < p₂A := by
+    apply eA.symm.lt_iff_lt.mpr
+    change p₁ < p₂
+    exact hp₁₂
+  letI : m.IsPrime := hm.1.1
+  let T := Localization.AtPrime p₂A.asIdeal
+  let eT := IsLocalization.AtPrime.primeSpectrumOrderIso T p₂A.asIdeal
+  have hp₀A₂ : p₀A ≤ p₂A := hp₀₁A.le.trans hp₁₂A.le
+  have hp₁A₂ : p₁A ≤ p₂A := hp₁₂A.le
+  let t₀ : PrimeSpectrum T := eT.symm ⟨p₀A, hp₀A₂⟩
+  let t₁ : PrimeSpectrum T := eT.symm ⟨p₁A, hp₁A₂⟩
+  let t₂ : PrimeSpectrum T := eT.symm ⟨p₂A, by change p₂A ≤ p₂A; exact le_rfl⟩
+  have ht₀₁ : t₀ < t₁ := by
+    apply eT.symm.lt_iff_lt.mpr
+    change p₀A < p₁A
+    exact hp₀₁A
+  have ht₁₂ : t₁ < t₂ := by
+    apply eT.symm.lt_iff_lt.mpr
+    change p₁A < p₂A
+    exact hp₁₂A
+  let lT : LTSeries (PrimeSpectrum T) :=
+    { length := 2
+      toFun := fun i =>
+        Fin.cases t₀ (fun j => Fin.cases t₁ (fun _ => t₂) j) i
+      step := by
+        intro i
+        refine Fin.cases ?_ (fun j => ?_) i
+        · change t₀ < t₁
+          exact ht₀₁
+        · have hj : j = 0 := Subsingleton.elim _ _
+          subst j
+          change t₁ < t₂
+          exact ht₁₂ }
+  have hTdim : (2 : WithBot ℕ∞) ≤ ringKrullDim T := by
+    apply Order.le_krullDim_iff.mpr
+    exact ⟨lT, by rfl⟩
+  have hAfin : Finite (PrimeSpectrum A) := by
+    apply Finite.of_injective (fun p => (eA p).1)
+    intro p q h
+    apply eA.injective
+    exact Subtype.ext h
+  letI : Finite (PrimeSpectrum A) := hAfin
+  have hTfin : Finite (PrimeSpectrum T) := by
+    apply Finite.of_injective (fun p => (eT p).1)
+    intro p q h
+    apply eT.injective
+    exact Subtype.ext h
+  letI : Finite (PrimeSpectrum T) := hTfin
+  have hInf :=
+    nonempty_open_primeSpectrum_infinite_of_local_noetherian_domain_dim_ge_two
+      (R := T) hTdim (U := Set.univ) isOpen_univ Set.univ_nonempty
+  have hInfT : Infinite (PrimeSpectrum T) := Set.infinite_univ_iff.mp hInf
+  exact hTfin.not_infinite hInfT
 
 /- The source's examples are the one-variable formal power-series ring over a
    field and the ring of p-adic integers.  The latter is the only p-adic
@@ -53,7 +540,11 @@ theorem powerSeries_field_is_noetherian_dim_one_finite_primeSpectrum
     IsNoetherianRing (PowerSeries k) ∧
       ringKrullDim (PowerSeries k) = 1 ∧
         Finite (PrimeSpectrum (PowerSeries k)) := by
-  sorry
+  constructor
+  · infer_instance
+  constructor
+  · exact IsDiscreteValuationRing.ringKrullDim_eq_one _
+  · exact finite_primeSpectrum_of_isDiscreteValuationRing
 
 /-- The p-adic integers give a Noetherian dimension-one ring with finitely
 many prime ideals. -/
@@ -62,7 +553,11 @@ theorem padicIntegers_is_noetherian_dim_one_finite_primeSpectrum
     IsNoetherianRing ℤ_[p] ∧
       ringKrullDim ℤ_[p] = 1 ∧
         Finite (PrimeSpectrum ℤ_[p]) := by
-  sorry
+  constructor
+  · infer_instance
+  constructor
+  · exact IsDiscreteValuationRing.ringKrullDim_eq_one _
+  · exact finite_primeSpectrum_of_isDiscreteValuationRing
 
 /-! ## Finite-type algebras of dimension zero -/
 

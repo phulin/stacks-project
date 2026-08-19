@@ -3,8 +3,10 @@ import Mathlib.Algebra.DirectSum.Module
 import Mathlib.LinearAlgebra.TensorProduct.Map
 
 /-!
-# Commutative Algebra, Chapter 93: Descending properties of modules
+# Supporting interface for Commutative Algebra, Chapter 95
 
+This file is retained as the implementation imported by Chapter 95's
+chapter-facing wrapper.  It is not imported by the Chapter 93 top-level file.
 The faithfully flat hypotheses use Mathlib's canonical
 `Module.FaithfullyFlat` predicate.  Base change is written as
 `S ⊗[R] M`, and the auxiliary maps below make the source's images and direct

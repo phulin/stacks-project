@@ -1,11 +1,12 @@
 import Formalization.Books.Algebra.Unit93.CharacterizingProjectiveModules
 
 /-!
-# Commutative Algebra, Chapter 93: Ascending properties of modules
+# Supporting interface for Commutative Algebra, Chapter 94
 
-The base-change tensor product is written in Mathlib's canonical orientation
-`S ⊗[R] M`.  An `Algebra R S` instance is the standard Lean representation of
-the source's ring map `R → S`.
+This file is retained as the implementation imported by Chapter 94's
+chapter-facing wrapper.  It is not imported by the Chapter 93 top-level file;
+the base-change tensor product is written in Mathlib's canonical orientation
+`S ⊗[R] M`.
 -/
 
 namespace Formalization.Books.Algebra.Unit93

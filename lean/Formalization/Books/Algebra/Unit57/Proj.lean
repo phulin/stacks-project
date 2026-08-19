@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit56.GradedRings
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.LocalizedModule.Away
+import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Scheme
 import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Topology
 import Mathlib.RingTheory.GradedAlgebra.HomogeneousLocalization
 import Mathlib.RingTheory.GradedAlgebra.Radical
@@ -986,13 +987,238 @@ private lemma naturalLocalizationComponent_exists_fraction (G : GradedRingData S
           ring
         · rw [Localization.mk_zero]
 
+private lemma naturalLocalizationComponent_disjoint (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d)
+    {z w : ℤ} (hzw : z ≠ w) :
+    Disjoint (naturalLocalizationComponent G hf z)
+      (naturalLocalizationComponent G hf w) := by
+  rw [disjoint_iff_inf_le]
+  intro x hx
+  rcases naturalLocalizationComponent_exists_fraction G hf hd hx.1 with
+    ⟨n, k, a, ha, hka, hax⟩
+  rcases naturalLocalizationComponent_exists_fraction G hf hd hx.2 with
+    ⟨m, l, b, hb, hlb, hbx⟩
+  have hab : Localization.mk a
+      ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩ =
+      Localization.mk b
+        ⟨f ^ m, (Submonoid.mem_powers_iff _ _).mpr ⟨m, rfl⟩⟩ := hax.symm.trans hbx
+  rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists] at hab
+  obtain ⟨c, hc⟩ := hab
+  obtain ⟨q, hq⟩ := (Submonoid.mem_powers_iff _ _).mp c.2
+  rw [← hq] at hc
+  have hleft : f ^ q * (f ^ m * a) = f ^ q * (f ^ n * b) := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hc
+  by_cases hzero : f ^ q * (f ^ m * a) = 0
+  · change x = 0
+    rw [hax, Localization.mk_eq_mk']
+    apply (IsLocalization.mk'_eq_zero_iff _ _).2
+    refine ⟨⟨f ^ (m + q), (Submonoid.mem_powers_iff _ _).mpr ⟨m + q, rfl⟩⟩, ?_⟩
+    simpa [pow_add, mul_comm, mul_left_comm, mul_assoc] using hzero
+  · have hleft_mem : f ^ q * (f ^ m * a) ∈
+        G.component (q * d + (m * d + k)) := by
+      simpa [smul_eq_mul, add_assoc, add_left_comm, add_comm] using
+        SetLike.mul_mem_graded (SetLike.pow_mem_graded q hf)
+          (SetLike.mul_mem_graded (SetLike.pow_mem_graded m hf) ha)
+    have hright_mem : f ^ q * (f ^ n * b) ∈
+        G.component (q * d + (n * d + l)) := by
+      simpa [smul_eq_mul, add_assoc, add_left_comm, add_comm] using
+        SetLike.mul_mem_graded (SetLike.pow_mem_graded q hf)
+          (SetLike.mul_mem_graded (SetLike.pow_mem_graded n hf) hb)
+    have hdegree : q * d + (m * d + k) = q * d + (n * d + l) :=
+      DirectSum.degree_eq_of_mem_mem G.component hleft_mem
+        (hleft.symm ▸ hright_mem) hzero
+    apply False.elim
+    apply hzw
+    push_cast at hdegree
+    omega
+
+private lemma naturalLocalizationComponent_iSupIndep (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d) :
+    iSupIndep (naturalLocalizationComponent G hf) := by
+  classical
+  rw [← iSupIndep_map_orderIso_iff
+    (AddSubgroup.toIntSubmodule : AddSubgroup _ ≃o Submodule ℤ _)]
+  rw [iSupIndep_iff_finsetSum_eq_zero_imp_eq_zero]
+  intro s v hv hv0 i hi
+  choose n k a ha hdeg hval using fun j : s =>
+    naturalLocalizationComponent_exists_fraction G hf hd (hv j.1 j.2)
+  let N : ℕ := ∑ j : s, n j
+  have hnle (j : s) : n j ≤ N := by
+    dsimp [N]
+    exact Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ j)
+  have hterm (j : s) :
+      Localization.mk (a j * f ^ (N - n j))
+          ⟨f ^ N, (Submonoid.mem_powers_iff _ _).mpr ⟨N, rfl⟩⟩ = v j := by
+    rw [hval j, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+    refine ⟨1, ?_⟩
+    simp only [Submonoid.coe_one, one_mul, Subtype.coe_mk]
+    change f ^ n j * (a j * f ^ (N - n j)) = f ^ N * a j
+    calc
+      f ^ n j * (a j * f ^ (N - n j)) =
+          a j * (f ^ n j * f ^ (N - n j)) := by ac_rfl
+      _ = a j * f ^ N := by
+        rw [← pow_add, add_comm, Nat.sub_add_cancel (hnle j)]
+      _ = f ^ N * a j := by rw [mul_comm]
+  have hsum : (∑ j ∈ s, v j) =
+      Localization.mk (∑ j : s, a j * f ^ (N - n j))
+        ⟨f ^ N, (Submonoid.mem_powers_iff _ _).mpr ⟨N, rfl⟩⟩ := by
+    calc
+      (∑ j ∈ s, v j) = ∑ j : s, v j := (Finset.sum_attach s v).symm
+      _ = ∑ j : s, Localization.mk (a j * f ^ (N - n j))
+          ⟨f ^ N, (Submonoid.mem_powers_iff _ _).mpr ⟨N, rfl⟩⟩ := by
+            apply Finset.sum_congr rfl
+            intro j hj
+            exact (hterm j).symm
+      _ = _ := by rw [← Localization.mk_sum]
+  have hmkzero : Localization.mk (∑ j : s, a j * f ^ (N - n j))
+        ⟨f ^ N, (Submonoid.mem_powers_iff _ _).mpr ⟨N, rfl⟩⟩ = 0 :=
+    hsum.symm ▸ hv0
+  rw [Localization.mk_eq_mk'] at hmkzero
+  rw [IsLocalization.mk'_eq_zero_iff] at hmkzero
+  obtain ⟨c, hc⟩ := hmkzero
+  obtain ⟨q, hq⟩ := (Submonoid.mem_powers_iff _ _).mp c.2
+  rw [← hq] at hc
+  have hqa : f ^ q * (∑ j : s, a j * f ^ (N - n j)) = 0 := by
+    simpa [Subtype.coe_mk] using hc
+  have hmem (j : s) :
+      f ^ q * (a j * f ^ (N - n j)) ∈
+        G.component (q * d + (k j + (N - n j) * d)) := by
+    simpa [smul_eq_mul, add_assoc, add_left_comm, add_comm] using
+      SetLike.mul_mem_graded (SetLike.pow_mem_graded q hf)
+        (SetLike.mul_mem_graded (ha j) (SetLike.pow_mem_graded (N - n j) hf))
+  have hsum_zero : ∑ j : s, f ^ q * (a j * f ^ (N - n j)) = 0 := by
+    simpa [Finset.mul_sum] using hqa
+  let i₀ : s := ⟨i, hi⟩
+  let e : s → ℕ := fun j => q * d + (k j + (N - n j) * d)
+  have he_ne (j : s) (hji : j ≠ i₀) : e j ≠ e i₀ := by
+    intro heq
+    have heqZ : (q * d + (k j + (N - n j) * d) : ℕ) =
+        q * d + (k i₀ + (N - n i₀) * d) := heq
+    have heqZ' : (q : ℤ) * (d : ℤ) + (k j : ℤ) +
+          ((N - n j : ℕ) : ℤ) * (d : ℤ) =
+        (q : ℤ) * (d : ℤ) + (k i₀ : ℤ) +
+          ((N - n i₀ : ℕ) : ℤ) * (d : ℤ) := by
+      have hcast := congr_arg (fun x : ℕ => (x : ℤ)) heqZ
+      push_cast at hcast
+      simpa [add_assoc, add_left_comm, add_comm] using hcast
+    have hj := hdeg j
+    have hi' := hdeg i₀
+    push_cast at hj hi'
+    have hcancel (j : s) :
+        (k j : ℤ) + ((N - n j : ℕ) : ℤ) * (d : ℤ) =
+          (j : ℤ) + (N : ℤ) * (d : ℤ) := by
+      rw [Nat.cast_sub (hnle j)]
+      have hj' := hdeg j
+      push_cast at hj'
+      ring_nf at hj' ⊢
+      linarith
+    have hcj := hcancel j
+    have hci := hcancel i₀
+    have : (j : ℤ) = (i₀ : ℤ) := by
+      linarith [heqZ', hcj, hci]
+    exact hji (Subtype.ext this)
+  have hprojterm (j : s) :
+      GradedRing.proj G.component (e i₀) (f ^ q * (a j * f ^ (N - n j))) =
+        if j = i₀ then f ^ q * (a j * f ^ (N - n j)) else 0 := by
+    by_cases hji : j = i₀
+    · subst j
+      rw [if_pos rfl, GradedRing.proj_apply,
+        DirectSum.decompose_of_mem_same G.component (hmem i₀)]
+    · rw [if_neg hji, GradedRing.proj_apply,
+        DirectSum.decompose_of_mem_ne G.component (hmem j) (he_ne j hji)]
+  have hproj := congr_arg (GradedRing.proj G.component (e i₀)) hsum_zero
+  simp only [map_sum] at hproj
+  have hti : f ^ q * (a i₀ * f ^ (N - n i₀)) = 0 := by
+    simpa [hprojterm] using hproj
+  rw [hval i₀, Localization.mk_eq_mk']
+  apply (IsLocalization.mk'_eq_zero_iff _ _).2
+  refine ⟨⟨f ^ (q + (N - n i₀)),
+    (Submonoid.mem_powers_iff _ _).mpr ⟨q + (N - n i₀), rfl⟩⟩, ?_⟩
+  simpa [pow_add, mul_comm, mul_left_comm, mul_assoc] using hti
+
+private lemma naturalLocalizationComponent_isInternal (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d) :
+    DirectSum.IsInternal (naturalLocalizationComponent G hf) := by
+  have hindep : iSupIndep (naturalLocalizationComponent G hf) := by
+    exact naturalLocalizationComponent_iSupIndep G hf hd
+  have htop : ⨆ z : ℤ, naturalLocalizationComponent G hf z = ⊤ :=
+    naturalLocalizationComponent_iSup_eq_top G hf
+  refine ⟨?_, ?_⟩
+  · intro x y hxy
+    apply (iSupIndep_iff_dfinsuppSumAddHom_injective
+      (naturalLocalizationComponent G hf)).mp hindep
+    convert hxy using 1 <;> rfl
+  · intro x
+    have hx : x ∈ ⨆ z : ℤ, naturalLocalizationComponent G hf z :=
+      htop.symm ▸ (show x ∈ (⊤ : AddSubgroup (Localization (Submonoid.powers f))) by trivial)
+    induction hx using AddSubgroup.iSup_induction' with
+    | hp z y hy =>
+        exact ⟨DirectSum.of _ z ⟨y, hy⟩, by simp⟩
+    | h1 => exact ⟨0, by simp⟩
+    | hadd x y hx hy hcx hcy =>
+        rcases hcx with ⟨x, rfl⟩
+        rcases hcy with ⟨y, rfl⟩
+        exact ⟨x + y, by simp⟩
+
 /-- The natural Z-grading of the ordinary localization in a projective chart. -/
 theorem exists_natural_localization_z_grading (G : GradedRingData S)
     {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d) :
     ∃ H : ZGradedRingData (Localization (Submonoid.powers f)),
       HasPositiveHomogeneousUnit H ∧
         Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) := by
-  sorry
+  let D : DirectSum.Decomposition (naturalLocalizationComponent G hf) :=
+    (naturalLocalizationComponent_isInternal G hf hd).chooseDecomposition
+  let H : ZGradedRingData (Localization (Submonoid.powers f)) :=
+    { component := naturalLocalizationComponent G hf
+      graded := { naturalLocalizationComponent_graded G hf with
+        decompose' := D.decompose'
+        left_inv := D.left_inv
+        right_inv := D.right_inv } }
+  letI : GradedRing H.component := H.graded
+  refine ⟨H, ?_, ?_⟩
+  · refine ⟨(d : ℤ), algebraMap S (Localization (Submonoid.powers f)) f,
+      by exact_mod_cast hd, ?_, IsLocalization.Away.algebraMap_isUnit f⟩
+    change algebraMap S (Localization (Submonoid.powers f)) f ∈
+      naturalLocalizationComponent G hf (d : ℤ)
+    apply Set.mem_union_left
+    refine ⟨0, d, f, hf, by simp, ?_⟩
+    calc
+      algebraMap S (Localization (Submonoid.powers f)) f =
+          Localization.mk f (1 : Submonoid.powers f) :=
+        (Localization.mk_one_eq_algebraMap (M := Submonoid.powers f) f).symm
+      _ = Localization.mk f ⟨f ^ 0,
+          (Submonoid.mem_powers_iff _ _).mpr ⟨0, rfl⟩⟩ := by
+        congr 1
+        exact Subtype.ext (by simp)
+  · let φ : homogeneousLocalizationAway G f →+* H.component 0 :=
+      { toFun := fun z =>
+          ⟨z.val, by
+            obtain ⟨n, a, ha, rfl⟩ :=
+              HomogeneousLocalization.Away.mk_surjective G.component hf z
+            apply Set.mem_union_left
+            refine ⟨n, n * d, a, ha, ?_, by rfl⟩
+            push_cast
+            simp [smul_eq_mul]
+          ⟩
+        map_zero' := by apply Subtype.ext; simp
+        map_add' := by intro x y; apply Subtype.ext; simp
+        map_one' := by apply Subtype.ext; simp
+        map_mul' := by intro x y; apply Subtype.ext; simp }
+    have hφsurj : Function.Surjective φ := by
+      intro x
+      obtain ⟨n, k, a, ha, hdeg, hx⟩ :=
+        naturalLocalizationComponent_exists_fraction G hf hd x.property
+      have hkZ : (k : ℤ) = (n : ℤ) * d := by linarith
+      have hk : k = n * d := by exact_mod_cast hkZ
+      refine ⟨HomogeneousLocalization.Away.mk G.component hf n a
+        (by simpa [hk, smul_eq_mul] using ha), ?_⟩
+      apply Subtype.ext
+      simpa [φ, HomogeneousLocalization.Away.val_mk] using hx.symm
+    have hφinj : Function.Injective φ := by
+      intro x y hxy
+      apply (HomogeneousLocalization.ext_iff_val x y).2
+      exact congr_arg Subtype.val hxy
+    exact ⟨(RingEquiv.ofBijective φ ⟨hφinj, hφsurj⟩).symm⟩
 
 /-- The two homeomorphisms in the affine-chart description of `D_+(f)`. -/
 theorem DPlus_chart_homeomorphisms (G : GradedRingData S)
@@ -1004,7 +1230,23 @@ theorem DPlus_chart_homeomorphisms (G : GradedRingData S)
         Nonempty (DPlus G f ≃ₜ zGradedPrimeSpectrum H) ∧
           Nonempty (zGradedPrimeSpectrum H ≃ₜ
             PrimeSpectrum (homogeneousLocalizationAway G f)) := by
-  sorry
+  let h := exists_natural_localization_z_grading G hf hd
+  let H := h.choose
+  have hHunit := h.choose_spec.1
+  change HasPositiveHomogeneousUnit H at hHunit
+  rcases hHunit with ⟨dH, fH, hdH, hfH, hunitH⟩
+  have he0N := h.choose_spec.2
+  let e0 := Classical.choice he0N
+  have hzhome := zGradedPrime_homeomorph_degree_zero H hfH hdH hunitH
+  let eProj : DPlus G f ≃ₜ PrimeSpectrum (homogeneousLocalizationAway G f) :=
+    TopCat.homeoOfIso
+      (AlgebraicGeometry.projIsoSpecTopComponent (𝒜 := G.component) hf hd)
+  let eRing : PrimeSpectrum (zDegreeZeroSubring H) ≃ₜ
+      PrimeSpectrum (homogeneousLocalizationAway G f) :=
+    PrimeSpectrum.homeomorphOfRingEquiv e0
+  refine ⟨H, ⟨dH, fH, hdH, hfH, hunitH⟩, ⟨e0⟩, hzhome, ?_, ?_⟩
+  · exact ⟨(eProj.trans eRing.symm).trans hzhome.homeomorph.symm⟩
+  · exact ⟨hzhome.homeomorph.trans eRing⟩
 
 theorem isClosed_VPlus (G : GradedRingData S)
     (I : HomogeneousIdeal G.component) :
@@ -1018,7 +1260,10 @@ theorem isClosed_VPlusSet (G : GradedRingData S) (E : Set S) :
 theorem closed_subset_eq_VPlus (G : GradedRingData S)
     {T : Set (projectiveSpectrum G)} (hT : IsClosed T) :
     ∃ I : HomogeneousIdeal G.component, T = VPlus G I := by
-  sorry
+  refine ⟨ProjectiveSpectrum.vanishingIdeal T, ?_⟩
+  change T = ProjectiveSpectrum.zeroLocus G.component
+    (ProjectiveSpectrum.vanishingIdeal T : Set S)
+  rw [ProjectiveSpectrum.zeroLocus_vanishingIdeal_eq_closure, hT.closure_eq]
 
 theorem VPlus_empty_iff (G : GradedRingData S)
     (I : HomogeneousIdeal G.component) :

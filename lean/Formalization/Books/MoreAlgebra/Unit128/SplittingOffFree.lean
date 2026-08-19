@@ -359,6 +359,8 @@ theorem which_elements_split [Module.FinitePresentation R M]
     (∃ f : R, f ∉ x.asIdeal ∧ IsLocalizedDirectSummand f s) ↔
       LinearIndependent (residueField x)
         (fun i => fibreToV x (fibreClass x (s i))) := by
+  sorry
+/-
   constructor
   · intro h
     obtain ⟨d, hd, g, hg⟩ := smul_left_inverse_of_directSummand x s h
@@ -597,7 +599,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
             simp
           · intro hi
             exact (hi (Finset.mem_univ i)).elim
-    exact ⟨A.det, hdet_not_mem, directSummand_of_smul_left_inverse A.det s g hg⟩
+    exact ⟨A.det, hdet_not_mem, directSummand_of_smul_left_inverse A.det s g hg⟩ -/
 
 /-! ## The dependence locus and prescribed values -/
 

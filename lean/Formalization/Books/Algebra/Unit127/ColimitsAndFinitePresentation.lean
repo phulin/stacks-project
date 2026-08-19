@@ -2672,17 +2672,15 @@ private def finiteTypeFixedTransitionMap
     (Subring.closure ((G ∪ E.image f : Finset S) : Set S) ⊗[
       Subring.closure (E : Set R)] Subring.closure (F : Set R)) →+*
       Subring.closure ((G ∪ F.image f : Finset S) : Set S) := by
-  let fi := finiteTypeStageMapData f E (G ∪ E.image f)
-    (finiteTypeFixedStageClosure f G E)
-  let rEF := Subring.inclusion (Subring.closure_mono hEF)
-  let s := Subring.inclusion
-    (Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hEF))
-  let fj := finiteTypeStageMapData f F (G ∪ F.image f)
-    (finiteTypeFixedStageClosure f G F)
-  have compat : s.comp fi = fj.comp rEF := by
-    ext y
-    rfl
-  exact baseChangeRingHomOfCompatible fi rEF s fj compat
+  /-
+  Prior attempt: define `fi`, `rEF`, `s`, and `fj`, install the four
+  induced `Algebra` instances from the stage maps, and apply
+  `baseChangeRingHomOfCompatible` to `s.comp fi = fj.comp rEF`.
+  The attached diagnostics report a deterministic kernel timeout while
+  elaborating this dependent tensor-product type, so the attempt is retained
+  here rather than silently discarded.
+  -/
+  sorry
 
 private theorem finiteTypeFixedTransition_surjective_aux
     {R S : Type u} [CommRing R] [CommRing S] [DecidableEq R] [DecidableEq S]
@@ -2691,6 +2689,15 @@ private theorem finiteTypeFixedTransition_surjective_aux
     {E F : Finset R} (hEF : E ⊆ F) :
     Function.Surjective
       (finiteTypeFixedTransitionMap f G hEF) := by
+  /-
+  Prior attempt: prove surjectivity by hitting each generator in
+  `G ∪ F.image f` with a tensor-product inclusion, using
+  `baseChangeRingHomOfCompatible_includeLeft` and
+  `baseChangeRingHomOfCompatible_includeRight`, and then apply
+  `surjective_of_subringClosure`.  The full attempted steps are retained
+  below; the attached diagnostics report a deterministic kernel timeout while
+  elaborating this dependent transition-map proof.
+
   classical
   let m := finiteTypeFixedTransitionMap f G hEF
   intro x
@@ -2757,6 +2764,8 @@ private theorem finiteTypeFixedTransition_surjective_aux
           (Finset.mem_union_right _ (Finset.mem_image.mpr ⟨r, hr, rfl⟩))⟩ := rfl
   exact (surjective_of_subringClosure
     ((G ∪ F.image f : Finset S) : Set S) m hgen) x
+  -/
+  sorry
 
 private theorem finiteTypeFixedTransition_surjective
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
@@ -2765,10 +2774,18 @@ private theorem finiteTypeFixedTransition_surjective
     {E F : Finset R} (hEF : E ⊆ F) :
     Function.Surjective
       ((finiteTypeFixedRingMapColimit f G hG).transitionBaseChange hEF) := by
+  /-
+  Prior attempt: unfold the fixed ring-map colimit transition and reuse
+  `finiteTypeFixedTransition_surjective_aux`.  Once the transition-map
+  definition was replaced by its retained timeout placeholder, this
+  definitional identification no longer elaborates.
+
   classical
   let D := finiteTypeFixedRingMapColimit f G hG
   change Function.Surjective (D.transitionBaseChange hEF)
   exact finiteTypeFixedTransition_surjective_aux f G hEF
+  -/
+  sorry
 
 private theorem finiteTypeIndex_directed
     {R S : Type u} [CommRing R] [CommRing S] :

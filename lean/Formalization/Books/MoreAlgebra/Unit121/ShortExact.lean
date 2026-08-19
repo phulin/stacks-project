@@ -464,12 +464,12 @@ theorem lemma_ses_characteristicPolynomial
       exact ⟨y, Submodule.mem_top, hy⟩
   let r : StableSubmoduleSeries φ₂ := p.smash q hjoin
   have hr_head : r.head.carrier = ⊥ := by
-    simp only [r, RelSeries.head_smash, RelSeries.head_map, mapRel]
+    simp only [r, RelSeries.head_smash]
     change Submodule.map S.f.hom.hom s₁.series.head.carrier = ⊥
     rw [s₁.head_eq_bot]
     simp
   have hr_last : r.last.carrier = ⊤ := by
-    simp only [r, RelSeries.last_smash, RelSeries.last_map, comapRel]
+    simp only [r, RelSeries.last_smash]
     change Submodule.comap S.g.hom.hom s₃.series.last.carrier = ⊤
     rw [s₃.last_eq_top]
     simp
@@ -532,7 +532,6 @@ theorem lemma_ses_characteristicPolynomial
     let gU : (q j.succ).carrier →ₗ[R] (s₃.series j.succ).carrier :=
       { toFun := fun x =>
           ⟨S.g.hom.hom x, by
-            change S.g.hom.hom x ∈ (s₃.series j.succ).carrier
             exact x.property⟩
         map_add' := by
           intro x y
@@ -547,7 +546,7 @@ theorem lemma_ses_characteristicPolynomial
       obtain ⟨x, hxy⟩ := hdata.2.2 (y : S.X₃.carrier)
       refine ⟨⟨x, ?_⟩, ?_⟩
       · change S.g.hom.hom x ∈ (s₃.series j.succ).carrier
-        simpa [hxy] using y.property
+        simp [hxy]
       · apply Subtype.ext
         exact hxy
     let L₂ : Submodule R (q j.succ).carrier :=
@@ -575,7 +574,7 @@ theorem lemma_ses_characteristicPolynomial
       obtain ⟨x, hxy⟩ := hdata.2.2 (y : S.X₃.carrier)
       let x' : (q j.succ).carrier := ⟨x, by
         change S.g.hom.hom x ∈ (s₃.series j.succ).carrier
-        simpa [hxy] using y.property⟩
+        simp [hxy]⟩
       refine ⟨L₂.mkQ x', ?_⟩
       change L₃.mkQ (gU x') = L₃.mkQ y
       exact congrArg L₃.mkQ (Subtype.ext hxy)
@@ -585,11 +584,7 @@ theorem lemma_ses_characteristicPolynomial
         factorEnd p (Fin.cast (by simp [p]) j) (factor_map_iso j x) := by
     refine Submodule.Quotient.induction_on _ x ?_
     intro x
-    change factor_map_iso j (factorEnd s₁.series j (Submodule.Quotient.mk x)) =
-      factorEnd p (Fin.cast (by simp [p]) j)
-        (factor_map_iso j (Submodule.Quotient.mk x))
-    simp [factor_map_iso, factorEnd, Submodule.Quotient.equiv_apply,
-      Submodule.mapQ_apply]
+    simp [factor_map_iso, factorEnd, Submodule.mapQ_apply]
     change Submodule.Quotient.mk _ = Submodule.Quotient.mk _
     congr 1
     apply Subtype.ext
@@ -600,11 +595,7 @@ theorem lemma_ses_characteristicPolynomial
         factorEnd s₃.series j (factor_comap_iso j x) := by
     refine Submodule.Quotient.induction_on _ x ?_
     intro x
-    change factor_comap_iso j
-        (factorEnd q (Fin.cast (by simp [q]) j) (Submodule.Quotient.mk x)) =
-      factorEnd s₃.series j (factor_comap_iso j (Submodule.Quotient.mk x))
-    simp [factor_comap_iso, factorEnd, Submodule.Quotient.equiv_apply,
-      Submodule.mapQ_apply]
+    simp [factor_comap_iso, factorEnd, Submodule.mapQ_apply]
     change Submodule.Quotient.mk _ = Submodule.Quotient.mk _
     congr 1
     apply Subtype.ext
@@ -652,7 +643,6 @@ theorem lemma_ses_characteristicPolynomial
         change (x : S.X₂.carrier) ∈ (p j.castSucc).carrier at hx
         let y : ((p.smash q hjoin) i.succ).carrier :=
           ⟨x, by
-            change (x : S.X₂.carrier) ∈ ((p.smash q hjoin) i.succ).carrier
             rw [hcar_succ]
             exact x.property⟩
         refine ⟨y, ?_, ?_⟩
@@ -706,7 +696,6 @@ theorem lemma_ses_characteristicPolynomial
         change (x : S.X₂.carrier) ∈ (q j.castSucc).carrier at hx
         let y : ((p.smash q hjoin) i.succ).carrier :=
           ⟨x, by
-            change (x : S.X₂.carrier) ∈ ((p.smash q hjoin) i.succ).carrier
             rw [hcar_succ]
             exact x.property⟩
         refine ⟨y, ?_, ?_⟩
@@ -728,7 +717,7 @@ theorem lemma_ses_characteristicPolynomial
     simp [factor_smash_left, factorEnd, Submodule.Quotient.equiv_apply,
       Submodule.mapQ_apply]
     all_goals
-      congr 1 <;> apply Subtype.ext <;> rfl
+      congr 1
   have factor_smash_right_comm (j : Fin q.length)
       (x : factorModule (p.smash q hjoin)
         (Fin.cast (by simp [p, q]) (j.natAdd p.length))) :
@@ -740,7 +729,7 @@ theorem lemma_ses_characteristicPolynomial
     simp [factor_smash_right, factorEnd, Submodule.Quotient.equiv_apply,
       Submodule.mapQ_apply]
     all_goals
-      congr 1 <;> apply Subtype.ext <;> rfl
+      congr 1
   let pIndex (j : Fin s₁.series.length) : Fin p.length :=
     Fin.cast (by simp [p]) j
   let qIndex (j : Fin s₃.series.length) : Fin q.length :=

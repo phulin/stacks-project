@@ -1271,7 +1271,7 @@ theorem associatedGradedModule_gmodule_exists
 /-
   let smul : {i j : ℕ} → associatedGradedRingPiece I i →
       associatedGradedModulePiece (M := M) I j →
-        associatedGradedModulePiece (M := M) I (i + j) := by
+        associatedGradedModulePiece (M := M) I (i + j)) := by
     intro i j a b
     refine Quotient.liftOn₂' a b (fun x y =>
       Submodule.Quotient.mk ⟨(x : R) • (y : M), ?_⟩) ?_
@@ -1442,6 +1442,24 @@ noncomputable instance associatedGradedModule_gmodule
     DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => associatedGradedModulePiece (M := M) I n) :=
   associatedGradedModule_gmodule_canonical I
+
+private theorem associatedGradedModule_gmodule_canonical_smul_mk
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) {i j : ℕ}
+    (a : (I ^ i : Submodule R R))
+    (b : ((I ^ j : Submodule R R) • (⊤ : Submodule R M) : Submodule R M)) :
+    (associatedGradedModule_gmodule I).toGdistribMulAction.toGMulAction.toGSMul.smul
+        (Submodule.Quotient.mk a : associatedGradedRingPiece I i)
+        (Submodule.Quotient.mk b : associatedGradedModulePiece (M := M) I j) =
+      (Submodule.Quotient.mk ⟨(a : R) • (b : M), by
+        have h := Submodule.smul_mem_smul a.property b.property
+        rw [← Submodule.smul_assoc, Ideal.smul_eq_mul,
+          ← Ideal.IsTwoSided.pow_add] at h
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h⟩ :
+        associatedGradedModulePiece (M := M) I (i + j)) := by
+  change associatedGradedModule_smul I (Submodule.Quotient.mk a)
+      (Submodule.Quotient.mk b) = _
+  exact associatedGradedModule_smul_mk I a b
 
 /-- The associated graded module is finite over the associated graded ring. -/
 theorem associatedGradedModule_finite

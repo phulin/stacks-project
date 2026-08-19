@@ -1954,6 +1954,7 @@ theorem universallyInjective_iff_check_stalks
         | tmul x y =>
             simp only [e, eN, IsLocalization.moduleTensorEquiv,
               TensorProduct.equivOfCompatibleSMul,
+              TensorProduct.mapOfCompatibleSMul_tmul,
               LinearMap.rTensor_tmul]
             rfl
       intro x y hxy
@@ -2205,11 +2206,276 @@ theorem universallyInjective_localize
       ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
      universallyInjectiveAsAlgebra (R := R) (A := Localization S')
        (LocalizedModule.map S' f)) ∧
-    (letI : Algebra (Localization S) (Localization S') :=
+       (letI : Algebra (Localization S) (Localization S') :=
       (localizationRingHom S S' hS).toAlgebra
      universallyInjectiveAsAlgebra (R := Localization S)
        (A := Localization S') (LocalizedModule.map S' f)) := by
-  sorry
+  let _ : Module R M := Module.restrictScalars R A M
+  let _ : Module R N := Module.restrictScalars R A N
+  let _ : IsScalarTower R A M := IsScalarTower.of_compHom R A M
+  let _ : IsScalarTower R A N := IsScalarTower.of_compHom R A N
+  constructor
+  · dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+    intro Q _ _
+    let _ : Module R (LocalizedModule S' M) :=
+      Module.restrictScalars R (Localization S') (LocalizedModule S' M)
+    let _ : Module R (LocalizedModule S' N) :=
+      Module.restrictScalars R (Localization S') (LocalizedModule S' N)
+    let _ : SMul R (LocalizedModule S' M) :=
+      (Module.restrictScalars R (Localization S') (LocalizedModule S' M)).toSMul
+    let _ : SMul R (LocalizedModule S' N) :=
+      (Module.restrictScalars R (Localization S') (LocalizedModule S' N)).toSMul
+    let _ : IsScalarTower R (Localization S') (LocalizedModule S' M) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rfl
+    let _ : IsScalarTower R (Localization S') (LocalizedModule S' N) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rfl
+    let _ : IsScalarTower R A (LocalizedModule S' M) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      congr 1
+    let _ : IsScalarTower R A (LocalizedModule S' N) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      congr 1
+    let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+      TensorProduct.AlgebraTensorModule.rTensor R Q f
+    have hF : Function.Injective F := by
+      change Function.Injective ((f.restrictScalars R).rTensor Q)
+      exact hf Q
+    let gM : M →ₗ[A] LocalizedModule S' M :=
+      LocalizedModule.mkLinearMap S' M
+    let gN : N →ₗ[A] LocalizedModule S' N :=
+      LocalizedModule.mkLinearMap S' N
+    let gMQ : M ⊗[R] Q →ₗ[A]
+        LocalizedModule S' M ⊗[R] Q :=
+      TensorProduct.AlgebraTensorModule.rTensor R Q gM
+    let gNQ : N ⊗[R] Q →ₗ[A]
+        LocalizedModule S' N ⊗[R] Q :=
+      TensorProduct.AlgebraTensorModule.rTensor R Q gN
+    have hmap :
+        IsLocalizedModule.map S' gMQ gNQ F =
+          TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.map S' f) := by
+      apply IsLocalizedModule.linearMap_ext S' gMQ gNQ
+      dsimp [gMQ, gNQ, F]
+      rw [IsLocalizedModule.map_comp]
+      apply LinearMap.ext
+      intro t
+      induction t using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => simp only [map_add, hx, hy]
+      | tmul x y =>
+          have hmk : LocalizedModule.map S' f (gM x) = gN (f x) := by
+            dsimp [gM, gN, LocalizedModule.mkLinearMap]
+            exact LocalizedModule.map_mk S' f x 1
+          change gN (f x) ⊗ₜ[R] y =
+            LocalizedModule.map S' f (gM x) ⊗ₜ[R] y
+          rw [hmk]
+    change Function.Injective
+      (TensorProduct.AlgebraTensorModule.rTensor R Q
+        (LocalizedModule.map S' f))
+    have hinj := IsLocalizedModule.map_injective S' gMQ gNQ F hF
+    rw [hmap] at hinj
+    exact hinj
+  · letI : Algebra R (Localization S') :=
+      ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
+    letI : Algebra (Localization S) (Localization S') :=
+      (localizationRingHom S S' hS).toAlgebra
+    dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+    intro Q _ _
+    let X := LocalizedModule S' M
+    let Y := LocalizedModule S' N
+    let P := Localization S
+    let _ : SMul R (Localization S') := Algebra.toSMul
+    let _ : Module R (Localization S') := Algebra.toModule
+    let _ : SMul R X :=
+      (Module.restrictScalars R (Localization S') X).toSMul
+    let _ : SMul R Y :=
+      (Module.restrictScalars R (Localization S') Y).toSMul
+    let _ : SMul P X :=
+      (Module.restrictScalars P (Localization S') X).toSMul
+    let _ : SMul P Y :=
+      (Module.restrictScalars P (Localization S') Y).toSMul
+    let _ : Module R X := Module.restrictScalars R (Localization S') X
+    let _ : Module R Y := Module.restrictScalars R (Localization S') Y
+    let _ : Module P X := Module.restrictScalars P (Localization S') X
+    let _ : Module P Y := Module.restrictScalars P (Localization S') Y
+    let _ : IsScalarTower P (Localization S') X :=
+      IsScalarTower.of_compHom P (Localization S') X
+    let _ : IsScalarTower P (Localization S') Y :=
+      IsScalarTower.of_compHom P (Localization S') Y
+    have hmap :
+        (algebraMap P (Localization S')).comp (algebraMap R P) =
+          (algebraMap A (Localization S')).comp (algebraMap R A) := by
+      change (localizationRingHom S S' hS).comp
+          (algebraMap R (Localization S)) =
+        (algebraMap A (Localization S')).comp (algebraMap R A)
+      exact IsLocalization.map_comp (Q := Localization S') hS
+    let _ : IsScalarTower R A (Localization S') :=
+      IsScalarTower.of_algebraMap_eq' rfl
+    let _ : IsScalarTower R P (Localization S') := by
+      apply IsScalarTower.of_algebraMap_eq'
+      exact hmap.symm
+    let _ : IsScalarTower R A X := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      rw [IsScalarTower.algebraMap_eq R A (Localization S')]
+      simp only [RingHom.comp_apply]
+    let _ : IsScalarTower R A Y := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      rw [IsScalarTower.algebraMap_eq R A (Localization S')]
+      simp only [RingHom.comp_apply]
+    let _ : IsScalarTower R (Localization S') X := by
+      exact IsScalarTower.to₁₃₄ R A (Localization S') X
+    let _ : IsScalarTower R (Localization S') Y := by
+      exact IsScalarTower.to₁₃₄ R A (Localization S') Y
+    let _ : IsScalarTower R P X := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := Localization S')
+        (algebraMap R P r) x]
+      change _ = ((algebraMap A (Localization S')).comp (algebraMap R A) r) • x
+      exact congrArg (fun z => z • x) (congrArg (fun k => k r) hmap)
+    let _ : IsScalarTower R P Y := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := Localization S')
+        (algebraMap R P r) x]
+      change _ = ((algebraMap A (Localization S')).comp (algebraMap R A) r) • x
+      exact congrArg (fun z => z • x) (congrArg (fun k => k r) hmap)
+    let _ : IsScalarTower R A X := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      rw [IsScalarTower.algebraMap_eq R A (Localization S')]
+      simp only [RingHom.comp_apply]
+    let _ : IsScalarTower R A Y := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization S')
+        (algebraMap R A r) x]
+      change _ = (algebraMap R (Localization S') r) • x
+      rw [IsScalarTower.algebraMap_eq R A (Localization S')]
+      simp only [RingHom.comp_apply]
+    let _ : Module R Q := Module.restrictScalars R P Q
+    let _ : IsScalarTower R P Q := IsScalarTower.of_compHom R P Q
+    let e := IsLocalization.moduleTensorEquiv (R := R)
+      (A := Localization S) (S := S)
+      (M₁ := X) (M₂ := Q)
+    let eN := IsLocalization.moduleTensorEquiv (R := R)
+      (A := Localization S) (S := S)
+      (M₁ := Y) (M₂ := Q)
+    let mM : Module R (LocalizedModule S' M) :=
+      Module.restrictScalars R (Localization S') (LocalizedModule S' M)
+    let mN : Module R (LocalizedModule S' N) :=
+      Module.restrictScalars R (Localization S') (LocalizedModule S' N)
+    let gR : @LinearMap R R _ _ (RingHom.id R)
+        (LocalizedModule S' M) (LocalizedModule S' N) _ _ mM mN :=
+      @LinearMap.mk R R _ _ (RingHom.id R)
+        (LocalizedModule S' M) (LocalizedModule S' N) _ _ mM mN
+        { toFun := LocalizedModule.map S' f
+          map_add' := by intro x y; exact map_add _ _ _ }
+        (by
+          intro r x
+          calc
+            LocalizedModule.map S' f
+                (@SMul.smul R (LocalizedModule S' M) mM.toSMul r x) =
+                LocalizedModule.map S' f
+                  ((algebraMap R (Localization S') r) • x) := by rfl
+            _ = (algebraMap R (Localization S') r) •
+                LocalizedModule.map S' f x := by rw [map_smul]
+            _ = @SMul.smul R (LocalizedModule S' N) mN.toSMul r
+                (LocalizedModule.map S' f x) := by rfl)
+    let gP : @LinearMap (Localization S) (Localization S)
+        _ _ (RingHom.id (Localization S))
+        (LocalizedModule S' M) (LocalizedModule S' N) _ _
+        (Module.restrictScalars (Localization S) (Localization S')
+          (LocalizedModule S' M))
+        (Module.restrictScalars (Localization S) (Localization S')
+          (LocalizedModule S' N)) :=
+      (LocalizedModule.map S' f).restrictScalars (Localization S)
+    have hq : Function.Injective (LinearMap.rTensor Q gP) := by
+      have hR : Function.Injective (LinearMap.rTensor Q gR) := by
+        let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+          TensorProduct.AlgebraTensorModule.rTensor R Q f
+        have hF : Function.Injective F := by
+          change Function.Injective ((f.restrictScalars R).rTensor Q)
+          exact hf Q
+        let gM : M →ₗ[A] LocalizedModule S' M :=
+          LocalizedModule.mkLinearMap S' M
+        let gN : N →ₗ[A] LocalizedModule S' N :=
+          LocalizedModule.mkLinearMap S' N
+        let gMQ : M ⊗[R] Q →ₗ[A]
+            LocalizedModule S' M ⊗[R] Q :=
+          TensorProduct.AlgebraTensorModule.rTensor R Q gM
+        let gNQ : N ⊗[R] Q →ₗ[A]
+            LocalizedModule S' N ⊗[R] Q :=
+          TensorProduct.AlgebraTensorModule.rTensor R Q gN
+        have hmap :
+            IsLocalizedModule.map S' gMQ gNQ F =
+              TensorProduct.AlgebraTensorModule.rTensor R Q
+                (LocalizedModule.map S' f) := by
+          apply IsLocalizedModule.linearMap_ext S' gMQ gNQ
+          dsimp [gMQ, gNQ, F]
+          rw [IsLocalizedModule.map_comp]
+          apply LinearMap.ext
+          intro t
+          induction t using TensorProduct.induction_on with
+          | zero => simp
+          | add x y hx hy => simp only [map_add, hx, hy]
+          | tmul x y =>
+              have hmk : LocalizedModule.map S' f (gM x) = gN (f x) := by
+                dsimp [gM, gN, LocalizedModule.mkLinearMap]
+                exact LocalizedModule.map_mk S' f x 1
+              change gN (f x) ⊗ₜ[R] y =
+                LocalizedModule.map S' f (gM x) ⊗ₜ[R] y
+              rw [hmk]
+        change Function.Injective
+          (TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.map S' f))
+        have hinj := IsLocalizedModule.map_injective S' gMQ gNQ F hF
+        rw [hmap] at hinj
+        exact hinj
+      intro x y hxy
+      apply e.injective
+      apply hR
+      have hcomm (z : LocalizedModule S' M ⊗[Localization S] Q) :
+          eN ((LinearMap.rTensor Q gP) z) =
+            (LinearMap.rTensor Q gR) (e z) := by
+        induction z using TensorProduct.induction_on with
+        | zero => simp only [map_zero]
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            simp only [e, eN, IsLocalization.moduleTensorEquiv,
+              TensorProduct.equivOfCompatibleSMul,
+              TensorProduct.mapOfCompatibleSMul_tmul,
+              LinearMap.rTensor_tmul]
+            rfl
+      calc
+        (LinearMap.rTensor Q gR) (e x) = eN ((LinearMap.rTensor Q gP) x) :=
+          (hcomm x).symm
+        _ = eN ((LinearMap.rTensor Q gP) y) := congrArg eN hxy
+        _ = (LinearMap.rTensor Q gR) (e y) := hcomm y
+    exact hq
 
 /-- For modules on which the localized target ring already acts, universal
 injectivity over the base ring is equivalent to universal injectivity over the
@@ -2229,7 +2495,251 @@ theorem universallyInjective_localize_iff
        universallyInjectiveAsAlgebra (R := Localization S)
          (A := Localization S')
          (f.extendScalarsOfIsLocalization S' (Localization S'))) := by
-  sorry
+  let _ : Module R M := Module.restrictScalars R A M
+  let _ : Module R N := Module.restrictScalars R A N
+  let _ : IsScalarTower R A M := IsScalarTower.of_compHom R A M
+  let _ : IsScalarTower R A N := IsScalarTower.of_compHom R A N
+  constructor
+  · intro hf
+    letI : Algebra R (Localization S') :=
+      ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
+    letI : Algebra (Localization S) (Localization S') :=
+      (localizationRingHom S S' hS).toAlgebra
+    dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+    intro Q _ _
+    let P := Localization S
+    let T := Localization S'
+    let _ : SMul R T := Algebra.toSMul
+    let _ : Module R T := Algebra.toModule
+    let _ : SMul P M :=
+      (Module.restrictScalars P T M).toSMul
+    let _ : SMul P N :=
+      (Module.restrictScalars P T N).toSMul
+    let _ : Module P M := Module.restrictScalars P T M
+    let _ : Module P N := Module.restrictScalars P T N
+    let _ : IsScalarTower P T M := IsScalarTower.of_compHom P T M
+    let _ : IsScalarTower P T N := IsScalarTower.of_compHom P T N
+    have hmap :
+        (algebraMap P T).comp (algebraMap R P) =
+          (algebraMap A T).comp (algebraMap R A) := by
+      change (localizationRingHom S S' hS).comp
+          (algebraMap R (Localization S)) =
+        (algebraMap A (Localization S')).comp (algebraMap R A)
+      exact IsLocalization.map_comp (Q := Localization S') hS
+    let _ : IsScalarTower R A T :=
+      IsScalarTower.of_algebraMap_eq' rfl
+    let _ : IsScalarTower R P T := by
+      apply IsScalarTower.of_algebraMap_eq'
+      exact hmap.symm
+    let _ : IsScalarTower R P M := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := T)
+        (algebraMap R P r) x]
+      rw [← IsScalarTower.algebraMap_smul (R := R) (A := A) r x]
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := T)
+        (algebraMap R A r) x]
+      exact congrArg (fun z => z • x) (congrArg (fun k => k r) hmap)
+    let _ : IsScalarTower R P N := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := T)
+        (algebraMap R P r) x]
+      rw [← IsScalarTower.algebraMap_smul (R := R) (A := A) r x]
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := T)
+        (algebraMap R A r) x]
+      exact congrArg (fun z => z • x) (congrArg (fun k => k r) hmap)
+    let _ : Module R Q := Module.restrictScalars R P Q
+    let _ : IsScalarTower R P Q := IsScalarTower.of_compHom R P Q
+    let e := IsLocalization.moduleTensorEquiv (R := R)
+      (A := P) (S := S) (M₁ := M) (M₂ := Q)
+    let eN := IsLocalization.moduleTensorEquiv (R := R)
+      (A := P) (S := S) (M₁ := N) (M₂ := Q)
+    let gR : M →ₗ[R] N := f.restrictScalars R
+    let gP : M →ₗ[P] N :=
+      (f.extendScalarsOfIsLocalization S' T).restrictScalars P
+    have hq : Function.Injective (LinearMap.rTensor Q gP) := by
+      intro x y hxy
+      apply e.injective
+      apply hf Q
+      have hcomm (z : M ⊗[P] Q) :
+          eN ((LinearMap.rTensor Q gP) z) =
+            (LinearMap.rTensor Q gR) (e z) := by
+        induction z using TensorProduct.induction_on with
+        | zero => simp only [map_zero]
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            simp only [e, eN, IsLocalization.moduleTensorEquiv,
+              TensorProduct.equivOfCompatibleSMul,
+              TensorProduct.mapOfCompatibleSMul_tmul,
+              LinearMap.rTensor_tmul]
+            rfl
+      calc
+        (LinearMap.rTensor Q gR) (e x) = eN ((LinearMap.rTensor Q gP) x) :=
+          (hcomm x).symm
+        _ = eN ((LinearMap.rTensor Q gP) y) := congrArg eN hxy
+        _ = (LinearMap.rTensor Q gR) (e y) := hcomm y
+    exact hq
+  · intro hP
+    letI : Algebra R (Localization S') :=
+      ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
+    letI : Algebra (Localization S) (Localization S') :=
+      (localizationRingHom S S' hS).toAlgebra
+    dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver] at hP
+    dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+    intro Q _ _
+    let P := Localization S
+    let T := Localization S'
+    let X := M
+    let Y := N
+    let Qp := LocalizedModule S Q
+    let _ : SMul P X := (Module.restrictScalars P T X).toSMul
+    let _ : SMul P Y := (Module.restrictScalars P T Y).toSMul
+    let _ : SMul R T := Algebra.toSMul
+    let _ : Module R T := Algebra.toModule
+    let _ : Module P X := Module.restrictScalars P T X
+    let _ : Module P Y := Module.restrictScalars P T Y
+    let _ : IsScalarTower P T X := IsScalarTower.of_compHom P T X
+    let _ : IsScalarTower P T Y := IsScalarTower.of_compHom P T Y
+    have hmap :
+        (algebraMap P T).comp (algebraMap R P) =
+          (algebraMap A T).comp (algebraMap R A) := by
+      change (localizationRingHom S S' hS).comp
+          (algebraMap R (Localization S)) =
+        (algebraMap A (Localization S')).comp (algebraMap R A)
+      exact IsLocalization.map_comp (Q := Localization S') hS
+    let _ : IsScalarTower R A T :=
+      IsScalarTower.of_algebraMap_eq' rfl
+    let _ : IsScalarTower R P T := by
+      apply IsScalarTower.of_algebraMap_eq'
+      exact hmap.symm
+    let _ : IsScalarTower R P X := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r x
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := T)
+        (algebraMap R P r) x]
+      rw [← IsScalarTower.algebraMap_smul (R := R) (A := A) r x]
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := T)
+        (algebraMap R A r) x]
+      exact congrArg (fun z => z • x) (congrArg (fun k => k r) hmap)
+    let _ : IsScalarTower R P Y := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r y
+      rw [← IsScalarTower.algebraMap_smul (R := P) (A := T)
+        (algebraMap R P r) y]
+      rw [← IsScalarTower.algebraMap_smul (R := R) (A := A) r y]
+      rw [← IsScalarTower.algebraMap_smul (R := A) (A := T)
+        (algebraMap R A r) y]
+      exact congrArg (fun z => z • y) (congrArg (fun k => k r) hmap)
+    let eX₀ := IsLocalization.moduleTensorEquiv (R := R)
+      (A := P) (S := S) (M₁ := X) (M₂ := Qp)
+    let eY₀ := IsLocalization.moduleTensorEquiv (R := R)
+      (A := P) (S := S) (M₁ := Y) (M₂ := Qp)
+    let lQ : Q →ₗ[R] Qp := LocalizedModule.mkLinearMap S Q
+    let eX : X ⊗[R] Q →ₗ[R] X ⊗[P] Qp :=
+      (eX₀.symm.restrictScalars R).toLinearMap.comp
+        (TensorProduct.map (LinearMap.id : X →ₗ[R] X) lQ)
+    let eY : Y ⊗[R] Q →ₗ[R] Y ⊗[P] Qp :=
+      (eY₀.symm.restrictScalars R).toLinearMap.comp
+        (TensorProduct.map (LinearMap.id : Y →ₗ[R] Y) lQ)
+    let _ : Module P (X ⊗[R] Q) := TensorProduct.leftModule
+    let _ : Module P (Y ⊗[R] Q) := TensorProduct.leftModule
+    let _ : IsScalarTower R P (X ⊗[R] Q) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r z
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | add z w hz hw => simp only [smul_add, hz, hw]
+      | tmul x y =>
+          change (algebraMap R P r • x) ⊗ₜ[R] y = (r • x) ⊗ₜ[R] y
+          rw [IsScalarTower.algebraMap_smul (R := R) (A := P) r x]
+    let _ : IsScalarTower R P (Y ⊗[R] Q) := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro r z
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | add z w hz hw => simp only [smul_add, hz, hw]
+      | tmul x y =>
+          change (algebraMap R P r • x) ⊗ₜ[R] y = (r • x) ⊗ₜ[R] y
+          rw [IsScalarTower.algebraMap_smul (R := R) (A := P) r x]
+    let _ : IsLocalizedModule S (LinearMap.id : X →ₗ[R] X) :=
+      isLocalizedModule_id S X P
+    let _ : IsLocalizedModule S (LinearMap.id : Y →ₗ[R] Y) :=
+      isLocalizedModule_id S Y P
+    have hmapX : IsLocalizedModule S
+        (TensorProduct.map (LinearMap.id : X →ₗ[R] X) lQ) := inferInstance
+    have hmapY : IsLocalizedModule S
+        (TensorProduct.map (LinearMap.id : Y →ₗ[R] Y) lQ) := inferInstance
+    have hmapXinj : Function.Injective
+        (TensorProduct.map (LinearMap.id : X →ₗ[R] X) lQ) := by
+      apply (IsLocalizedModule.injective_iff_isRegular
+        (S := S) (f := TensorProduct.map (LinearMap.id : X →ₗ[R] X) lQ)).mpr
+      intro c
+      have hc : IsUnit
+          (algebraMap R (Module.End R (X ⊗[R] Q)) (c : R)) := by
+        rw [← (Algebra.lsmul R (A := P) R (X ⊗[R] Q)).commutes]
+        exact (IsLocalization.map_units P c).map _
+      have hreg := hc.isSMulRegular (X ⊗[R] Q)
+      intro x y hxy
+      apply hreg
+      change (c : R) • x = (c : R) • y at hxy
+      change (c : R) • x = (c : R) • y
+      exact hxy
+    have hmapYinj : Function.Injective
+        (TensorProduct.map (LinearMap.id : Y →ₗ[R] Y) lQ) := by
+      apply (IsLocalizedModule.injective_iff_isRegular
+        (S := S) (f := TensorProduct.map (LinearMap.id : Y →ₗ[R] Y) lQ)).mpr
+      intro c
+      have hc : IsUnit
+          (algebraMap R (Module.End R (Y ⊗[R] Q)) (c : R)) := by
+        rw [← (Algebra.lsmul R (A := P) R (Y ⊗[R] Q)).commutes]
+        exact (IsLocalization.map_units P c).map _
+      have hreg := hc.isSMulRegular (Y ⊗[R] Q)
+      intro x y hxy
+      apply hreg
+      change (c : R) • x = (c : R) • y at hxy
+      change (c : R) • x = (c : R) • y
+      exact hxy
+    have hxe : Function.Injective eX := by
+      intro x y hxy
+      apply hmapXinj
+      apply (eX₀.symm.restrictScalars R).injective
+      simpa [eX] using hxy
+    have hye : Function.Injective eY := by
+      intro x y hxy
+      apply hmapYinj
+      apply (eY₀.symm.restrictScalars R).injective
+      simpa [eY] using hxy
+    have hP' := hP
+    have hP'' := hP' Qp
+    let gR : X →ₗ[R] Y := f.restrictScalars R
+    let gP : X →ₗ[P] Y :=
+      (f.extendScalarsOfIsLocalization S' T).restrictScalars P
+    have hqP : Function.Injective (LinearMap.rTensor Qp gP) := by
+      simpa [gP, X, Y, P, T] using hP''
+    have hcomm (z : X ⊗[R] Q) :
+        eY ((LinearMap.rTensor Q gR) z) =
+          (LinearMap.rTensor Qp gP) (eX z) := by
+      induction z using TensorProduct.induction_on with
+      | zero => simp only [map_zero]
+      | add x y hx hy => simp only [map_add, hx, hy]
+      | tmul x y =>
+          simp only [eX, eY, gR, lQ, gP,
+            LinearMap.comp_apply,
+            TensorProduct.map_tmul,
+            LinearMap.rTensor_tmul]
+          change
+            (f x) ⊗ₜ[P] (LocalizedModule.mkLinearMap S Q y) =
+              (f x) ⊗ₜ[P] (LocalizedModule.mkLinearMap S Q y)
+          rfl
+    intro x y hxy
+    apply hxe
+    apply hqP
+    calc
+      (LinearMap.rTensor Qp gP) (eX x) =
+          eY ((LinearMap.rTensor Q gR) x) := (hcomm x).symm
+      _ = eY ((LinearMap.rTensor Q gR) y) := congrArg eY hxy
+      _ = (LinearMap.rTensor Qp gP) (eX y) := hcomm y
 
 /-- The map induced on quotients by a linear map modulo a finitely generated
 ideal. -/
@@ -2254,7 +2764,55 @@ theorem universallyInjective_into_flat_iff
     universallyInjective f ↔
       ∀ (I : Ideal R), I.FG →
         Function.Injective (quotientMapByIdeal I f) := by
-  sorry
+  constructor
+  · intro hf I _
+    let Q := R ⧸ I
+    let eM : M ⊗[R] Q ≃ₗ[R]
+        M ⧸ (I • (⊤ : Submodule R M)) :=
+      (TensorProduct.comm R M Q).trans
+        (TensorProduct.quotTensorEquivQuotSMul M I)
+    let eN : N ⊗[R] Q ≃ₗ[R]
+        N ⧸ (I • (⊤ : Submodule R N)) :=
+      (TensorProduct.comm R N Q).trans
+        (TensorProduct.quotTensorEquivQuotSMul N I)
+    have hcomm :
+        eN.toLinearMap.comp (f.rTensor Q) =
+          (quotientMapByIdeal I f).comp eM.toLinearMap := by
+      apply LinearMap.ext
+      intro z
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => simp only [map_add, hx, hy]
+      | tmul x y =>
+          obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+          simp only [eM, eN, LinearMap.comp_apply, LinearMap.rTensor_tmul,
+            LinearEquiv.trans_apply, TensorProduct.comm_tmul]
+          change (TensorProduct.quotTensorEquivQuotSMul N I)
+              ((Ideal.Quotient.mk I) r ⊗ₜ[R] f x) =
+            (quotientMapByIdeal I f)
+              ((TensorProduct.quotTensorEquivQuotSMul M I)
+                ((Ideal.Quotient.mk I) r ⊗ₜ[R] x))
+          rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul]
+          rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul]
+          simp [quotientMapByIdeal, Submodule.mapQ_apply]
+    have hcomm_apply (z : M ⊗[R] Q) :
+        eN ((f.rTensor Q) z) =
+          (quotientMapByIdeal I f) (eM z) := by
+      have h := congrArg (fun g => g z) hcomm
+      simpa [LinearMap.comp_apply] using h
+    intro x y hxy
+    apply eM.symm.injective
+    apply hf Q
+    apply eN.injective
+    calc
+      eN ((f.rTensor Q) (eM.symm x)) =
+          (quotientMapByIdeal I f) (eM (eM.symm x)) := by
+            exact hcomm_apply _
+      _ = (quotientMapByIdeal I f) x := by rw [eM.apply_symm_apply]
+      _ = (quotientMapByIdeal I f) y := hxy
+      _ = eN ((f.rTensor Q) (eM.symm y)) := by
+        simpa using (hcomm_apply (eM.symm y)).symm
+  · sorry
 
 /-! ## Faithfully flat base change -/
 

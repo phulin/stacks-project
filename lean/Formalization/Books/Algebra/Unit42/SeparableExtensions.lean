@@ -827,12 +827,16 @@ theorem exists_finite_pth_root_tower_of_perfectClosure_finset
   · exact htower_eq
 
 /-- Any finite base root tower can be completed to a compatible paired tower
-over a field extension. -/
-theorem FinitePthRootTower.exists_baseChangeTower
+over a field extension which also contains a prescribed finite subset of the
+relative perfect closure of the top field. -/
+theorem FinitePthRootTower.exists_baseChangeTower_containing
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
-    (base : FinitePthRootTower k p hp) :
-    ∃ tower : FinitePthRootBaseChangeTower k K p hp, tower.base = base := by
+    (base : FinitePthRootTower k p hp)
+    (t : Finset (perfectClosure K (AlgebraicClosure K))) :
+    ∃ tower : FinitePthRootBaseChangeTower k K p hp,
+      tower.base = base ∧ ∀ z ∈ t, (z : AlgebraicClosure K) ∈
+        finitePthRootTopAtLevel tower := by
   classical
   let B := finitePthRootFieldAtLevel base
   let : FiniteDimensional k B := base.finite_dimensional
@@ -852,30 +856,48 @@ theorem FinitePthRootTower.exists_baseChangeTower
     rw [← map_pow, ← hb']
     rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) b]
     exact ((pthRootClosureMap k K).commutes b).symm
-  let t : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift
+  let roots : Finset (perfectClosure K (AlgebraicClosure K)) := s.image lift ∪ t
   obtain ⟨top, htop⟩ :=
-    exists_finite_pth_root_tower_of_perfectClosure_finset p hp t
-  refine ⟨{ base := base, top := top, map_mem := ?_ }, rfl⟩
-  intro x
-  have hx : x ∈ IntermediateField.adjoin k (s : Set B) := by
-    rw [hs]
-    trivial
-  apply IntermediateField.adjoin_induction (F := k) (s := (s : Set B))
-    (p := fun y _ => pthRootClosureMap k K (y : AlgebraicClosure k) ∈
-      finitePthRootFieldAtLevel top)
-  · intro y hy
-    exact htop (lift y) (Finset.mem_image.mpr ⟨y, hy, rfl⟩)
-  · intro y
-    change pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y) ∈ _
-    rw [(pthRootClosureMap k K).commutes]
-    exact (finitePthRootFieldAtLevel top).algebraMap_mem (algebraMap k K y)
-  · intro x y hx hy hmx hmy
-    simpa using (finitePthRootFieldAtLevel top).add_mem hmx hmy
-  · intro x hx hmx
-    simpa using (finitePthRootFieldAtLevel top).inv_mem hmx
-  · intro x y hx hy hmx hmy
-    simpa using (finitePthRootFieldAtLevel top).mul_mem hmx hmy
-  · exact hx
+    exists_finite_pth_root_tower_of_perfectClosure_finset p hp roots
+  let tower : FinitePthRootBaseChangeTower k K p hp :=
+    { base := base
+      top := top
+      map_mem := by
+        intro x
+        have hx : x ∈ IntermediateField.adjoin k (s : Set B) := by
+          rw [hs]
+          trivial
+        apply IntermediateField.adjoin_induction (F := k) (s := (s : Set B))
+          (p := fun y _ => pthRootClosureMap k K (y : AlgebraicClosure k) ∈
+            finitePthRootFieldAtLevel top)
+        · intro y hy
+          exact htop (lift y) (Finset.mem_union_left _ <|
+            Finset.mem_image.mpr ⟨y, hy, rfl⟩)
+        · intro y
+          change pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) y) ∈ _
+          rw [(pthRootClosureMap k K).commutes]
+          exact (finitePthRootFieldAtLevel top).algebraMap_mem (algebraMap k K y)
+        · intro x y hx hy hmx hmy
+          simpa using (finitePthRootFieldAtLevel top).add_mem hmx hmy
+        · intro x hx hmx
+          simpa using (finitePthRootFieldAtLevel top).inv_mem hmx
+        · intro x y hx hy hmx hmy
+          simpa using (finitePthRootFieldAtLevel top).mul_mem hmx hmy
+        · exact hx }
+  refine ⟨tower, rfl, ?_⟩
+  intro z hz
+  exact htop z (Finset.mem_union_right _ hz)
+
+/-- Any finite base root tower can be completed to a compatible paired tower
+over a field extension. -/
+theorem FinitePthRootTower.exists_baseChangeTower
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (base : FinitePthRootTower k p hp) :
+    ∃ tower : FinitePthRootBaseChangeTower k K p hp, tower.base = base := by
+  obtain ⟨tower, hbase, _⟩ := base.exists_baseChangeTower_containing
+    (K := K) p hp ∅
+  exact ⟨tower, hbase⟩
 
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is

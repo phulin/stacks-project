@@ -573,11 +573,10 @@ theorem exists_contentIdeal_of_flat_mittagLeffler
     (hM : Formalization.Books.Algebra.Unit88.IsMittagLefflerModule
       (ModuleCat.of A M)) (x : M) :
     ∃ I : Ideal A, IsContentIdeal x I := by
-  /- Prior attempt:
   let z : TensorProduct A A M := 1 ⊗ₜ[A] x
-  obtain ⟨I, hI⟩ :=
-    (Formalization.Books.Algebra.Unit91.flat_isMittagLeffler_iff_minimal_tensor_submodule
-      (M := M) inferInstance).mp hM A (by infer_instance) (by infer_instance) z
+  obtain ⟨I, hI, _⟩ :=
+    Formalization.Books.Algebra.Unit89.minimal_tensor_submodule
+      (M := M) inferInstance hM z
   have hiff (J : Ideal A) :
       Formalization.Books.Algebra.Unit89.tensorProductContains J z ↔
         x ∈ J • (⊤ : Submodule A M) := by
@@ -587,7 +586,7 @@ theorem exists_contentIdeal_of_flat_mittagLeffler
       refine ⟨y, ?_⟩
       change (TensorProduct.lid A M) (J.subtype.rTensor M y) = x
       rw [hy]
-      simp
+      simp [z]
     · intro hx
       rw [← Ideal.subtype_rTensor_range] at hx
       obtain ⟨y, hy⟩ := hx
@@ -595,15 +594,12 @@ theorem exists_contentIdeal_of_flat_mittagLeffler
       apply (TensorProduct.lid A M).injective
       change (TensorProduct.lid A M) (J.subtype.rTensor M y) =
         (TensorProduct.lid A M) (1 ⊗ₜ[A] x)
-      rw [hy]
-      simp
+      simpa [LinearMap.comp_apply] using hy
   refine ⟨I, ?_⟩
   constructor
+  · exact (hiff I).mp hI.1
   · intro J hJ
-    exact hI.1 ((hiff J).mpr hJ)
-  · exact (hiff I).mp hI.2
-  -/
-  sorry
+    exact hI.2 ((hiff J).mpr hJ)
 
 end
 

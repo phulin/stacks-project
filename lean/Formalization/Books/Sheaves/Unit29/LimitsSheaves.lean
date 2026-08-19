@@ -24,6 +24,7 @@ statements are included in source order.
 namespace Formalization.Books.Sheaves.Unit29
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open Formalization.Books.Sheaves.Unit03
 open Formalization.Books.Sheaves.Unit21
 open Formalization.Books.Sheaves.Unit27
 open scoped ZeroObject
@@ -580,12 +581,26 @@ noncomputable def computePullbackToSpectralLimitSections
 
 /-! ## A cofiltered system of sheaves -/
 
+/- The identity law for an `f`-map over an identity continuous map. -/
+noncomputable def spectralSystemIdentityFMap {X : TopCat.{v}}
+    (F : TopCat.Sheaf (Type v) X) : FMap (𝟙 X) F F :=
+  fMapOfFamily {
+    app := fun U V h s => restriction (F := F.presheaf) (by simpa using h) s
+    naturality := by
+      intro U U' V V' hUU' hVV' hU hU' s
+      have hU'V' : U' ≤ V' := by simpa using hU'
+      have hUV : U ≤ V := by simpa using hU
+      rw [restriction_restriction (F := F.presheaf)]
+      rw [restriction_restriction (F := F.presheaf)]
+  }
+
 /-- A cofiltered system of sheaves and `f`-maps over a spectral diagram. -/
 structure SpectralSheafSystem {I : Type u} [Category.{w} I]
     (X : I ⥤ TopCat.{v}) where
   sheaf : ∀ i, TopCat.Sheaf (Type v) (X.obj i)
   map : ∀ {j i} (a : j ⟶ i),
     FMap (X.map a) (sheaf i) (sheaf j)
+  map_id : ∀ i, HEq (map (𝟙 i)) (spectralSystemIdentityFMap (sheaf i))
   map_comp : ∀ {k j i} (b : k ⟶ j) (a : j ⟶ i),
     HEq (map (b ≫ a)) (fMapComp (map b) (map a))
 

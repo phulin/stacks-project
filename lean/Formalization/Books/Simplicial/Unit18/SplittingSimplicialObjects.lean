@@ -553,7 +553,10 @@ theorem simplicial_abelian_group_has_normalized_splitting
             simp [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
               SimplexCategory.rev]
             exact Eq.refl _
-      sorry
+      refine ⟨eqToIso (congrArg (fun X => (X : C)) hnorm), ?_⟩
+      dsimp [reverseSplitting, s, SimplicialObject.Splitting.ofIso]
+      cases hnorm
+      rfl
     · intro n
       change Mono (s.ι n)
       dsimp [s, SimplicialObject.Splitting.ofIso]
@@ -574,8 +577,7 @@ theorem simplicial_abelian_group_has_normalized_splitting
       exact ⟨fun {Z} g h eq => by
         apply hf.right_cancellation
         apply he.right_cancellation
-        rw [← Category.assoc] at eq
-        exact eq⟩⟩
+        simpa only [Category.assoc] using eq⟩⟩
 
 /-- The normalized summands are functorial under maps of simplicial objects. -/
 theorem normalizedSubobject_map_factors

@@ -11,8 +11,12 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Noetherian.Nilpotent
+import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.Flat.Equalizer
+import Mathlib.RingTheory.Flat.Tensor
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit14.BaseChange
+import Formalization.Books.Algebra.Unit32.LocallyNilpotent
 
 /-!
 # Commutative Algebra, Chapter 126: Algebras and modules of finite presentation
@@ -1086,7 +1090,231 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
     (hfp : RingHom.FinitePresentation (algebraMap R S'))
     (hflat : Module.Flat R (Localization (q.primeCompl.map f.toRingHom))) :
     ∃ g : S, g ∉ q ∧ Function.Bijective (localizedRingHom f.toRingHom (Submonoid.powers g)) := by
-  sorry
+  classical
+  let A := Localization q.primeCompl
+  let B := Localization (q.primeCompl.map f.toRingHom)
+  let F : A →+* B := localizedRingHom f.toRingHom q.primeCompl
+  let IA : Ideal A := I.map (algebraMap R A)
+  let IB : Ideal B := I.map (algebraMap R B)
+  let K : Ideal A := RingHom.ker F
+  have hcomp : RingHom.FinitePresentation
+      (f.toRingHom.comp (algebraMap R S)) := by
+    have hcomp' : f.toRingHom.comp (algebraMap R S) = algebraMap R S' := by
+      ext r
+      exact f.commutes r
+    rw [hcomp']
+    exact hfp
+  have hfpp : RingHom.FinitePresentation f.toRingHom :=
+    RingHom.FinitePresentation.of_comp_finiteType (algebraMap R S)
+      (g := f.toRingHom) hcomp hfinite
+  letI : Algebra S S' := f.toRingHom.toAlgebra
+  letI : Algebra.FinitePresentation S S' := hfpp
+  have hker : (RingHom.ker f.toRingHom).FG := by
+    have hker' :=
+      Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId S S') hsurj
+    convert hker' using 1
+    ext x
+    rfl
+  have hK : K.FG := by
+    change (RingHom.ker (IsLocalization.map B f.toRingHom
+      q.primeCompl.le_comap_map)).FG
+    rw [IsLocalization.ker_map B f.toRingHom rfl]
+    exact hker.map (algebraMap S A)
+  have hFsurj : Function.Surjective F := by
+    exact IsLocalization.map_surjective_of_surjective _ _ _ hsurj
+  have hFA (r : R) : F (algebraMap R A r) = algebraMap R B r := by
+    change IsLocalization.map B f.toRingHom _ (algebraMap R A r) = _
+    rw [IsScalarTower.algebraMap_apply R S A]
+    rw [IsLocalization.map_eq]
+    simp [IsScalarTower.algebraMap_apply R S' B, f.commutes]
+  let Flin : A →ₗ[R] B :=
+    { toFun := F
+      map_add' := fun x y => F.map_add x y
+      map_smul' := by
+        intro r x
+        simp [Algebra.smul_def, hFA] }
+  have hIAIB : IA ≤ IB.comap F := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    change F (algebraMap R A r) ∈ IB
+    rw [hFA]
+    simpa [IB] using
+      (Ideal.mem_map_of_mem (algebraMap R B) hr)
+  obtain ⟨e, he⟩ := hlocal
+  have hKIA : K ≤ IA := by
+    intro x hx
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    apply e.injective
+    rw [he x]
+    change F x = 0 at hx
+    rw [hx]
+    change (0 : _) = e 0
+    exact (map_zero e).symm
+  let lA : I ⊗[R] A →ₗ[R] A :=
+    TensorProduct.lift ((LinearMap.lsmul R A).comp I.subtype)
+  let lB : I ⊗[R] B →ₗ[R] B :=
+    TensorProduct.lift ((LinearMap.lsmul R B).comp I.subtype)
+  have hmem (x : A) (hx : x ∈ IA) : ∃ y : I ⊗[R] A, lA y = x := by
+    change x ∈ Ideal.map (algebraMap R A) I at hx
+    induction hx using Submodule.span_induction with
+    | mem x hx =>
+        obtain ⟨r, hr, rfl⟩ := hx
+        refine ⟨(⟨r, hr⟩ : I) ⊗ₜ[R] (1 : A), ?_⟩
+        simp [lA, Algebra.smul_def]
+    | zero => exact ⟨0, by simp [lA]⟩
+    | add x y _ _ ihx ihy =>
+        exact ⟨ihx.choose + ihy.choose, by simp [lA, ihx.choose_spec, ihy.choose_spec]⟩
+    | smul c x _ ihx =>
+        let hmul (y : I ⊗[R] A) :
+            lA (TensorProduct.map (LinearMap.id : I →ₗ[R] I)
+              (LinearMap.mulLeft R c) y) = c * lA y := by
+          induction y using TensorProduct.induction_on with
+          | zero => simp [lA]
+          | add y z ihy ihz => simp [lA, ihy, ihz, mul_add]
+          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+        refine ⟨TensorProduct.map (LinearMap.id : I →ₗ[R] I)
+            (LinearMap.mulLeft R c) ihx.choose, ?_⟩
+        rw [hmul, ihx.choose_spec]
+        rfl
+  change Module.Flat R B at hflat
+  have hlB : Function.Injective lB := by
+    intro x y hxy
+    have hlt : Function.Injective (I.subtype.rTensor B) :=
+      Module.Flat.iff_rTensor_injective'.mp hflat I
+    have hxy' : (TensorProduct.lid R B).toLinearMap (I.subtype.rTensor B x) =
+        (TensorProduct.lid R B).toLinearMap (I.subtype.rTensor B y) := by
+      simpa only [lB, LinearMap.comp_apply,
+        ← LinearMap.lid_comp_rTensor (R := R) (M := B) I.subtype] using hxy
+    exact hlt ((TensorProduct.lid R B).injective hxy')
+  let Klin : Submodule R A := LinearMap.ker Flin
+  have hker_smul : K ≤ IA * K := by
+    intro x hx
+    obtain ⟨y, hy⟩ := hmem x (hKIA hx)
+    have hyzero : (Flin.lTensor I) y = 0 := by
+      apply hlB
+      have hcomm (z : I ⊗[R] A) : lB ((Flin.lTensor I) z) = F (lA z) := by
+        induction z using TensorProduct.induction_on with
+        | zero => simp [lA, lB]
+        | add y z ihy ihz => simp [lA, lB, ihy, ihz]
+        | tmul y z =>
+            simp only [lA, lB, LinearMap.lTensor_tmul, TensorProduct.lift.tmul,
+              LinearMap.comp_apply, LinearMap.lsmul_apply, Flin]
+            simp [Algebra.smul_def, map_mul, hFA, mul_comm, mul_left_comm, mul_assoc]
+            rfl
+      rw [hcomm]
+      change F x = 0 at hx
+      rw [hy, hx]
+      simp
+    let z : I ⊗[R] Klin :=
+      (LinearMap.kerLTensorEquivOfSurjective Flin hFsurj I)
+        ⟨y, hyzero⟩
+    have hz : Klin.subtype.lTensor I z = y := by
+      have hz' := congrArg Subtype.val
+        ((LinearMap.kerLTensorEquivOfSurjective Flin hFsurj I).symm_apply_apply
+          ⟨y, hyzero⟩)
+      change ((LinearMap.kerLTensorEquivOfSurjective Flin hFsurj I).symm z).1 = y
+      exact hz'
+    have hzl : lA (Klin.subtype.lTensor I z) ∈ IA * K := by
+      induction z using TensorProduct.induction_on with
+      | zero => simp [lA]
+      | add y z ihy ihz =>
+          simpa [lA] using add_mem ihy ihz
+      | tmul y z =>
+          have hzK : z.1 ∈ K := by
+            change F z.1 = 0
+            exact z.2
+          simpa [lA, Algebra.smul_def] using
+            (Ideal.mul_mem_mul (Ideal.mem_map_of_mem (algebraMap R A) y.2) hzK)
+    rw [hz, hy] at hzl
+    exact hzl
+  have hIAq : IA ≤ q.map (algebraMap S A) := by
+    simpa [IA, Ideal.map_map, ← IsScalarTower.algebraMap_eq R S A] using
+      (Ideal.map_mono hIq : (I.map (algebraMap R S)).map (algebraMap S A) ≤
+        q.map (algebraMap S A))
+  have hIAjac : IA ≤ Ideal.jacobson (⊥ : Ideal A) := by
+    rw [IsLocalRing.jacobson_eq_maximalIdeal (⊥ : Ideal A) (by exact bot_ne_top),
+      ← Localization.AtPrime.map_eq_maximalIdeal]
+    exact hIAq
+  have hKzero : K = ⊥ := by
+    have hKsmul : (K : Submodule A A) ≤ IA • (K : Submodule A A) := by
+      simpa [smul_eq_mul] using hker_smul
+    have hIAjac' : IA ≤ Ring.jacobson A := by
+      simpa only [Ideal.jacobson_bot] using hIAjac
+    exact Submodule.FG.eq_bot_of_le_jacobson_smul hK
+      (hKsmul.trans (Submodule.smul_mono hIAjac' le_rfl))
+  have hKmap : K = (RingHom.ker f.toRingHom).map (algebraMap S A) := by
+    change RingHom.ker (IsLocalization.map B f.toRingHom
+      q.primeCompl.le_comap_map) = _
+    rw [IsLocalization.ker_map B f.toRingHom rfl]
+  obtain ⟨t, htfin, htspan⟩ := Submodule.fg_def.mp hker
+  letI : Fintype t := htfin.fintype
+  choose s hs using fun x : t => by
+    have hxK : algebraMap S A (x : S) ∈ K := by
+      rw [hKmap]
+      exact Ideal.mem_map_of_mem (algebraMap S A)
+        (show (x : S) ∈ RingHom.ker f.toRingHom by
+          rw [← htspan]
+          exact Submodule.subset_span x.2)
+    have hxzero : algebraMap S A (x : S) = 0 := by
+      rw [hKzero] at hxK
+      exact hxK
+    exact (IsLocalization.map_eq_zero_iff q.primeCompl A (x : S)).mp hxzero
+  let g : S := ∏ x : t, (s x : S)
+  have hg : g ∉ q := by
+    intro hgq
+    obtain ⟨x, -, hxq⟩ :=
+      (hq.prod_mem_iff (s := (Finset.univ : Finset t))
+        (x := fun x : t => (s x : S))).mp (by simpa [g] using hgq)
+    exact (s x).property hxq
+  have hgj : ∀ x ∈ RingHom.ker f.toRingHom, g * x = 0 := by
+    intro x hx
+    rw [← htspan] at hx
+    induction hx using Submodule.span_induction with
+    | mem x hx =>
+        obtain ⟨y, hy⟩ := Finset.dvd_prod_of_mem (fun z : t => (s z : S))
+          (Finset.mem_univ (⟨x, hx⟩ : t))
+        change (∏ z : t, (s z : S)) * x = 0
+        rw [hy]
+        calc
+          (s ⟨x, hx⟩ : S) * y * x =
+              y * ((s ⟨x, hx⟩ : S) * x) := by ring
+          _ = 0 := by rw [hs ⟨x, hx⟩, mul_zero]
+    | zero => simp
+    | add x y _ _ ihx ihy => simp [mul_add, ihx, ihy]
+    | smul c x _ ihx =>
+        simpa [smul_eq_mul, mul_assoc, mul_left_comm, mul_comm] using
+          congrArg (fun z => c * z) ihx
+  have haway_inj :
+      Function.Injective (localizedRingHom f.toRingHom (Submonoid.powers g)) := by
+    let L := Localization (Submonoid.powers g)
+    letI : Algebra S L := by
+      dsimp [L]
+      infer_instance
+    let L' := Localization ((Submonoid.powers g).map f.toRingHom)
+    let G : Localization (Submonoid.powers g) →+*
+        Localization ((Submonoid.powers g).map f.toRingHom) :=
+      localizedRingHom f.toRingHom (Submonoid.powers g)
+    have hGker : RingHom.ker G =
+        (RingHom.ker f.toRingHom).map (algebraMap S L) := by
+      change RingHom.ker (IsLocalization.map L' f.toRingHom
+        (Submonoid.powers g).le_comap_map) = _
+      rw [IsLocalization.ker_map L' f.toRingHom rfl]
+    have hGzero : RingHom.ker G = ⊥ := by
+      rw [hGker]
+      apply le_antisymm
+      · apply Ideal.map_le_iff_le_comap.mpr
+        intro x hx
+        change algebraMap S L x ∈ (⊥ : Ideal L)
+        rw [Ideal.mem_bot]
+        apply (IsLocalization.map_eq_zero_iff (Submonoid.powers g) L x).2
+        refine ⟨⟨g, 1, by simp⟩, ?_⟩
+        exact hgj x hx
+      · exact bot_le
+    exact (RingHom.injective_iff_ker_eq_bot G).2 hGzero
+  have haway_surj :
+      Function.Surjective (localizedRingHom f.toRingHom (Submonoid.powers g)) := by
+    exact IsLocalization.map_surjective_of_surjective _ _ _ hsurj
+  exact ⟨g, hg, haway_inj, haway_surj⟩
 
 /-! ### Isomorphisms modulo a locally nilpotent ideal -/
 
@@ -1111,7 +1339,161 @@ theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Typ
     (hfp : RingHom.FinitePresentation (algebraMap R S'))
     (hflat : Module.Flat R S') :
     Function.Bijective f := by
-  sorry
+  classical
+  obtain ⟨e, he⟩ := hquot
+  have hquotSurj : Function.Surjective
+      ((Ideal.Quotient.mk (I.map (algebraMap R S'))).comp f.toRingHom) := by
+    intro z
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective z
+    obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective
+      (e.symm (Ideal.Quotient.mk (I.map (algebraMap R S')) x))
+    refine ⟨y, ?_⟩
+    change Ideal.Quotient.mk _ (f y) = Ideal.Quotient.mk _ x
+    calc
+      Ideal.Quotient.mk (I.map (algebraMap R S')) (f y) =
+          e (Ideal.Quotient.mk (I.map (algebraMap R S)) y) := (he y).symm
+      _ = e (e.symm (Ideal.Quotient.mk (I.map (algebraMap R S')) x)) := congrArg e hy
+      _ = Ideal.Quotient.mk (I.map (algebraMap R S')) x := e.apply_symm_apply _
+  have hfinite' : RingHom.FiniteType (algebraMap R S') :=
+    RingHom.FiniteType.of_finitePresentation hfp
+  have hsurj : Function.Surjective f :=
+    surjective_mod_locally_nilpotent f I hI hquotSurj hfinite'
+  have hcomp : RingHom.FinitePresentation
+      (f.toRingHom.comp (algebraMap R S)) := by
+    have hcomp' : f.toRingHom.comp (algebraMap R S) = algebraMap R S' := by
+      ext r
+      exact f.commutes r
+    rw [hcomp']
+    exact hfp
+  have hfpp : RingHom.FinitePresentation f.toRingHom :=
+    RingHom.FinitePresentation.of_comp_finiteType (algebraMap R S)
+      (g := f.toRingHom) hcomp hfinite
+  letI : Algebra S S' := f.toRingHom.toAlgebra
+  letI : Algebra.FinitePresentation S S' := hfpp
+  have hker : (RingHom.ker f.toRingHom).FG := by
+    have hker' :=
+      Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId S S') hsurj
+    convert hker' using 1
+    ext x
+    rfl
+  let JA : Ideal S := I.map (algebraMap R S)
+  let JB : Ideal S' := I.map (algebraMap R S')
+  let K : Ideal S := RingHom.ker f.toRingHom
+  have hKIA : K ≤ JA := by
+    intro x hx
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    apply e.injective
+    rw [he x]
+    change f x = 0 at hx
+    rw [hx]
+    change (0 : _) = e 0
+    exact (map_zero e).symm
+  let lA : I ⊗[R] S →ₗ[R] S :=
+    TensorProduct.lift ((LinearMap.lsmul R S).comp I.subtype)
+  let lB : I ⊗[R] S' →ₗ[R] S' :=
+    TensorProduct.lift ((LinearMap.lsmul R S').comp I.subtype)
+  have hmem (x : S) (hx : x ∈ JA) : ∃ y : I ⊗[R] S, lA y = x := by
+    change x ∈ Ideal.map (algebraMap R S) I at hx
+    induction hx using Submodule.span_induction with
+    | mem x hx =>
+        obtain ⟨r, hr, rfl⟩ := hx
+        refine ⟨(⟨r, hr⟩ : I) ⊗ₜ[R] (1 : S), ?_⟩
+        simp [lA, Algebra.smul_def]
+    | zero => exact ⟨0, by simp [lA]⟩
+    | add x y _ _ ihx ihy =>
+        exact ⟨ihx.choose + ihy.choose, by simp [lA, ihx.choose_spec, ihy.choose_spec]⟩
+    | smul c x _ ihx =>
+        let hmul (y : I ⊗[R] S) :
+            lA (TensorProduct.map (LinearMap.id : I →ₗ[R] I)
+              (LinearMap.mulLeft R c) y) = c * lA y := by
+          induction y using TensorProduct.induction_on with
+          | zero => simp [lA]
+          | add y z ihy ihz => simp [lA, ihy, ihz, mul_add]
+          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+        refine ⟨TensorProduct.map (LinearMap.id : I →ₗ[R] I)
+            (LinearMap.mulLeft R c) ihx.choose, ?_⟩
+        rw [hmul, ihx.choose_spec]
+        rfl
+  have hlB : Function.Injective lB := by
+    intro x y hxy
+    have hlt : Function.Injective (I.subtype.rTensor S') :=
+      Module.Flat.iff_rTensor_injective'.mp hflat I
+    have hxy' : (TensorProduct.lid R S').toLinearMap (I.subtype.rTensor S' x) =
+        (TensorProduct.lid R S').toLinearMap (I.subtype.rTensor S' y) := by
+      simpa only [lB, LinearMap.comp_apply,
+        ← LinearMap.lid_comp_rTensor (R := R) (M := S') I.subtype] using hxy
+    exact hlt ((TensorProduct.lid R S').injective hxy')
+  let Flin : S →ₗ[R] S' :=
+    { toFun := f
+      map_add' := fun x y => f.map_add x y
+      map_smul' := by
+        intro r x
+        simp [Algebra.smul_def] }
+  have hker_smul : K ≤ JA * K := by
+    intro x hx
+    obtain ⟨y, hy⟩ := hmem x (hKIA hx)
+    have hyzero : (Flin.lTensor I) y = 0 := by
+      apply hlB
+      have hcomm (z : I ⊗[R] S) : lB ((Flin.lTensor I) z) = f (lA z) := by
+        induction z using TensorProduct.induction_on with
+        | zero => simp [lA, lB]
+        | add y z ihy ihz => simp [lA, lB, ihy, ihz]
+        | tmul y z =>
+            simp only [lA, lB, LinearMap.lTensor_tmul, TensorProduct.lift.tmul,
+              LinearMap.comp_apply, LinearMap.lsmul_apply, Flin]
+            simp [Algebra.smul_def, map_mul, f.commutes, mul_comm, mul_left_comm,
+              mul_assoc]
+      rw [hcomm]
+      change f x = 0 at hx
+      rw [hy, hx]
+      simp
+    let Klin : Submodule R S := LinearMap.ker Flin
+    let z : I ⊗[R] Klin :=
+      (LinearMap.kerLTensorEquivOfSurjective Flin hsurj I)
+        ⟨y, hyzero⟩
+    have hz : Klin.subtype.lTensor I z = y := by
+      have hz' := congrArg Subtype.val
+        ((LinearMap.kerLTensorEquivOfSurjective Flin hsurj I).symm_apply_apply
+          ⟨y, hyzero⟩)
+      change ((LinearMap.kerLTensorEquivOfSurjective Flin hsurj I).symm z).1 = y
+      exact hz'
+    have hzl : lA (Klin.subtype.lTensor I z) ∈ JA * K := by
+      induction z using TensorProduct.induction_on with
+      | zero => simp [lA]
+      | add y z ihy ihz => simpa [lA] using add_mem ihy ihz
+      | tmul y z =>
+          have hzK : z.1 ∈ K := by
+            change f z.1 = 0
+            exact z.2
+          simpa [lA, Algebra.smul_def] using
+            (Ideal.mul_mem_mul (Ideal.mem_map_of_mem (algebraMap R S) y.2) hzK)
+    rw [hz, hy] at hzl
+    exact hzl
+  have hJA_rad : JA ≤ nilradical S := by
+    intro x hx
+    exact (mem_nilradical).2
+      (Formalization.Books.Algebra.Unit32.locallyNilpotentIdeal_map
+        (algebraMap R S) I hI x hx)
+  have hJA_jac : JA ≤ Ring.jacobson S :=
+    hJA_rad.trans (nilradical_le_jacobson S)
+  have hKzero : K = ⊥ := by
+    have hKsmul : (K : Submodule S S) ≤ JA • (K : Submodule S S) := by
+      simpa [smul_eq_mul] using hker_smul
+    have hKsmul' : (K : Submodule S S) ≤ (Ring.jacobson S) • (K : Submodule S S) :=
+      hKsmul.trans (Submodule.smul_mono hJA_jac le_rfl)
+    exact Submodule.FG.eq_bot_of_le_jacobson_smul hker hKsmul'
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    have hmem : x - y ∈ K := by
+      change f (x - y) = 0
+      rw [map_sub, hxy, sub_self]
+    have hzero : x - y = 0 := by
+      have hmem' : x - y ∈ (⊥ : Ideal S) := by
+        rw [← hKzero]
+        exact hmem
+      exact Ideal.mem_bot.mp hmem'
+    exact sub_eq_zero.mp hzero
+  exact ⟨hinj, hsurj⟩
 
 end
 

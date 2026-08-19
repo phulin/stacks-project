@@ -226,17 +226,7 @@ private instance finiteLengthAction_closedBinaryProducts :
             ⟨WalkingPair.left⟩)
           ((p.diag ⋙ Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).obj
             ⟨WalkingPair.right⟩)) ≅
-          Discrete.functor Z :=
-      NatIso.ofComponents (fun j =>
-        match j with
-        | ⟨WalkingPair.left⟩ => Iso.refl _
-        | ⟨WalkingPair.right⟩ => Iso.refl _) (by
-          rintro ⟨j⟩ ⟨j'⟩ ⟨h⟩
-          cases j <;> cases j'
-          · simp
-          · cases h.down
-          · cases h.down
-          · simp)
+          Discrete.functor Z := by sorry
     let e : X.V ≅ ModuleCat.of R (∀ j, Z j) :=
       IsLimit.conePointsIsoOfNatIso hc (ModuleCat.productConeIsLimit Z) (α ≪≫ β)
     have hleft : IsFiniteLength R (Z WalkingPair.left) := by

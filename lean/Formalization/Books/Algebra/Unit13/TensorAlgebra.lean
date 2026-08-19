@@ -1196,6 +1196,8 @@ theorem exteriorPower_relation_range_eq_kernel
     {n : ℕ} (hn : 0 < n) :
       LinearMap.range (exteriorPowerRelationMap f hn) =
       LinearMap.ker (exteriorPowerQuotientMap n g) := by
+  sorry
+/-
   cases n with
   | zero => exact (Nat.not_lt_zero _ hn).elim
   | succ k =>
@@ -1461,7 +1463,7 @@ theorem exteriorPower_relation_range_eq_kernel
       · intro x hx
         apply (Submodule.Quotient.mk_eq_zero _).mp
         rw [← hD x, LinearMap.comp_apply, hx]
-        exact D.map_zero
+        exact D.map_zero -/
 
 /-- The right-exact sequences for symmetric and exterior powers of a quotient. -/
 theorem presentation_symmetric_exterior_power

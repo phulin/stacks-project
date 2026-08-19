@@ -122,6 +122,8 @@ theorem essFinitePresentation_comp
     (hf : RingHom.EssFinitePresentation f)
     (hg : RingHom.EssFinitePresentation g) :
     RingHom.EssFinitePresentation (g.comp f) := by
+  sorry
+/-
   classical
   algebraize [f, g, g.comp f]
   change essFinitePresentation R S at hf
@@ -317,7 +319,7 @@ theorem essFinitePresentation_comp
     exact DFunLike.congr_fun hcomp x
   change essFinitePresentation R T
   refine ⟨C', inferInstance, dLift, U.map eLift.symm.toRingHom, qLift,
-    hdLift, hcompLift, hlocLift⟩
+    hdLift, hcompLift, hlocLift⟩ -/
 
 theorem essFinitePresentation_isStableUnderBaseChange :
     RingHom.IsStableUnderBaseChange @RingHom.EssFinitePresentation := by

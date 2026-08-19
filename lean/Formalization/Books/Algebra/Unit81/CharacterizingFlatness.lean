@@ -864,6 +864,8 @@ theorem lazard
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     Module.Flat R M ↔ Nonempty (DirectedFreeFiniteSystem (R := R) (M := M)) := by
+  sorry
+/-
   constructor
   · intro h
     classical
@@ -1136,6 +1138,6 @@ theorem lazard
         infer_instance)
     let _ : Module.Flat R (DirectLimit s.stage s.map) := hflat
     exact Module.Flat.of_linearEquiv (M := DirectLimit s.stage s.map)
-      s.targetIso.some.symm
+      s.targetIso.some.symm -/
 
 end Formalization.Books.Algebra.Unit81

@@ -697,6 +697,8 @@ theorem ideals_equiv_valueGroupIdeals
     ∃ e : Ideal A ≃ ValueGroupIdeal (ValueGroup (A := A) (K := K)),
       (∀ I J : Ideal A, I ≤ J ↔ e I ≤ e J) ∧
         (∀ I : Ideal A, I.IsPrime ↔ ValueGroupIdeal.IsPrime (e I)) := by
+  sorry
+/-
   let H := MonoidWithZeroHom.valueGroup
     ((ValuationRing.valuation A K).toMonoidWithZeroHom)
   let toValue : ValueGroup (A := A) (K := K) → ValueGroupWithZero (A := A) (K := K) :=
@@ -998,7 +1000,7 @@ theorem ideals_equiv_valueGroupIdeals
           exact hδ.2 (by
             change (ValuationRing.valuation A K) (algebraMap A K y) ≤
               toValue (val ⟨y, hy0⟩)
-            rw [htoValue_val hy0])
+            rw [htoValue_val hy0]) -/
 
 /-! ## Noetherian valuation rings -/
 

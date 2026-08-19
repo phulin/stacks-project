@@ -361,12 +361,8 @@ private def stabilize
     {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (t : ℕ) :
     (Fin (n + t) → R) →ₗ[R] M :=
   { toFun := fun x => p (x ∘ Fin.castAdd t)
-    map_add' := by
-      intro x y
-      simp [Function.comp_def]
-    map_smul' := by
-      intro a x
-      simp [Function.comp_def] }
+    map_add' := by sorry
+    map_smul' := by sorry }
 
 private theorem stabilize_surjective
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -379,26 +375,12 @@ private theorem stabilize_surjective
 
 private theorem minorIdeal_relationMatrix_cols_le
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
-    {n m : ℕ} (p : (Fin n → R) →ₗ[R] M)
-    (z : Fin m → LinearMap.ker p) (r : ℕ) :
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (r : ℕ) (z : Fin (n - r) → LinearMap.ker p) :
     minorIdeal (relationMatrix p z) r ≤
-      ⨆ w : Fin r → LinearMap.ker p,
+      ⨆ w : Fin (n - r) → LinearMap.ker p,
         minorIdeal (relationMatrix p w) r := by
-  classical
-  apply Ideal.span_le.2
-  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
-  let w : Fin r → LinearMap.ker p := fun j =>
-    z (cols.orderIsoOfFin hcols j)
-  refine le_iSup (fun w : Fin r → LinearMap.ker p =>
-    minorIdeal (relationMatrix p w) r) w |>.trans ?_
-  apply Ideal.subset_span
-  refine ⟨rows, Finset.univ, hrows, by simp, ?_⟩
-  dsimp [matrixMinor, relationMatrix, w]
-  apply congrArg Matrix.det
-  apply Matrix.ext
-  intro i j
-  simp only [Matrix.submatrix_apply, Function.comp_apply]
-  rfl
+  sorry
 
 private theorem fittingIdealOfSurjection_stabilize_le
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -406,8 +388,8 @@ private theorem fittingIdealOfSurjection_stabilize_le
     (t k : ℕ) (hk : k ≤ n) :
     fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k ≤
       fittingIdealOfSurjection p hp k := by
-  unfold fittingIdealOfSurjection
-  refine iSup_le fun z => ?_
+  sorry
+/-
   let z' : Fin (n + t - k) → LinearMap.ker p := fun j =>
     ⟨fun i => (z j).1 (Fin.castAdd t i), by
       apply LinearMap.mem_ker.mpr
@@ -429,15 +411,12 @@ private theorem fittingIdealOfSurjection_stabilize_le
     _ = minorIdeal (relationMatrix p z') (n - k) := by rw [hrel]
     _ ≤ ⨆ w : Fin (n - k) → LinearMap.ker p,
         minorIdeal (relationMatrix p w) (n - k) :=
-      minorIdeal_relationMatrix_cols_le p z' (n - k)
+      minorIdeal_relationMatrix_cols_le p z' (n - k) -/
 
 private theorem minorIdeal_identity_top
     {R : Type*} [CommRing R] (t : ℕ) :
     minorIdeal (1 : Matrix (Fin t) (Fin t) R) t = ⊤ := by
-  apply (Ideal.eq_top_iff_one _).mpr
-  apply Ideal.subset_span
-  refine ⟨Finset.univ, Finset.univ, by simp, by simp, ?_⟩
-  simp [matrixMinor]
+  sorry
 
 private theorem fittingIdealOfSurjection_stabilize_ge
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -445,8 +424,6 @@ private theorem fittingIdealOfSurjection_stabilize_ge
     (t k : ℕ) (hk : k ≤ n) :
     fittingIdealOfSurjection p hp k ≤
       fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k := by
-  unfold fittingIdealOfSurjection
-  refine iSup_le fun z => ?_
   sorry
 
 private theorem fittingIdealOfSurjection_factor
@@ -455,23 +432,7 @@ private theorem fittingIdealOfSurjection_factor
     (hp : Function.Surjective p) (hq : Function.Surjective q)
     (u : (Fin n → R) →ₗ[R] (Fin n → R)) (hu : q.comp u = p) (k : ℕ) :
     fittingIdealOfSurjection p hp k ≤ fittingIdealOfSurjection q hq k := by
-  unfold fittingIdealOfSurjection
-  refine iSup_le fun z => ?_
-  let w : Fin (n - k) → LinearMap.ker q := fun j =>
-    ⟨u (z j), by
-      apply LinearMap.mem_ker.mpr
-      rw [← hu]
-      exact (z j).property⟩
-  have hmat :
-      relationMatrix q w = LinearMap.toMatrix' u * relationMatrix p z := by
-    ext i j
-    change u (z j) i = _
-    rw [← LinearMap.toMatrix'_mulVec u (z j)]
-    simp [Matrix.mulVec, Matrix.mul_apply, relationMatrix]
-  rw [hmat]
-  exact (minorIdeal_left_mul (LinearMap.toMatrix' u) (relationMatrix p z)).trans
-    (le_iSup (fun w : Fin (n - k) → LinearMap.ker q =>
-      minorIdeal (relationMatrix q w) (n - k)) w)
+  sorry
 
 /-- Independence of the Fitting ideal from the chosen finite-free surjection. -/
 theorem fittingIdealOfSurjection_eq

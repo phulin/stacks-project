@@ -1,4 +1,3 @@
-import Formalization.Books.Simplicial.Unit21.LeftAdjointsToSkeletonFunctors
 import Formalization.Books.Simplicial.Unit26.Homotopies
 import Mathlib.AlgebraicTopology.SimplicialSet.Boundary
 import Mathlib.AlgebraicTopology.SimplicialSet.CategoryWithFibrations
@@ -100,20 +99,23 @@ theorem trivialKanFibration_lift
         { l := l
           fac_left := by
             let e : (∂Δ[0] : SSet.{u}) ≅ initial SSet.{u} :=
-              (Formalization.Books.Simplicial.Unit21.boundary_zero_is_empty).some
+              by
+                rw [SSet.boundary_zero]
+                exact (SSet.Subcomplex.isInitialBot (X := (Δ[0] : SSet.{u}))).uniqueUpToIso
+                  (initialIsInitial)
             apply (cancel_epi e.inv).1
             exact Subsingleton.elim _ _
           fac_right := hl₂ }
-  letI : Mono i := hi'
   let sq : CommSq a i f b := ⟨comm⟩
-  letI : HasLiftingProperty i f := hf' i hi'
-  exact ⟨sq.lift, sq.fac_left, sq.fac_right⟩
+  have hsq : HasLiftingProperty i f := hf' i hi'
+  obtain ⟨l, hl_left, hl_right⟩ := (hsq.sq_hasLift sq).exists_lift.some
+  exact ⟨l, hl_left, hl_right⟩
 
 /-- Base change preserves trivial Kan fibrations. -/
 theorem trivialKanFibration_baseChange
     {X Y Y' : SSet.{u}} (f : X ⟶ Y) (hf : TrivialKanFibration f)
     (g : Y' ⟶ Y) :
-    TrivialKanFibration (pullback.fst f g) := by
+    TrivialKanFibration (pullback.snd f g) := by
   sorry
 
 /-- The composite of trivial Kan fibrations is a trivial Kan fibration. -/

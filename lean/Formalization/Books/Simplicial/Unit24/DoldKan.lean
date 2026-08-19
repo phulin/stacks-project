@@ -34,28 +34,60 @@ attribute [local instance] CategoryTheory.Abelian.hasFiniteBiproducts
 theorem normalizedChainComplexFunctor_faithful
     {C : Type u} [Category.{v} C] [Abelian C] :
     (normalizedChainComplexFunctor C).Faithful := by
-  sorry
+  refine ⟨?_⟩
+  intro U V f g hfg
+  obtain ⟨s, hs⟩ := abelian_category_has_normalized_splitting U
+  apply s.hom_ext f g
+  intro n
+  rcases hs.1 n with ⟨e, he⟩
+  have hN : normalizedSubobjectMap f n = normalizedSubobjectMap g n := by
+    exact congrArg (fun k => k.f n) hfg
+  change s.ι n ≫ f.app (op ⦋n⦌) = s.ι n ≫ g.app (op ⦋n⦌)
+  rw [← he]
+  simp only [Category.assoc]
+  rw [← normalizedSubobjectMap_arrow f n, ← normalizedSubobjectMap_arrow g n, hN]
 
 theorem normalizedChainComplexFunctor_reflects_monomorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
     (hf : Mono ((normalizedChainComplexFunctor C).map f)) :
     Mono f := by
-  sorry
+  rw [simplicial_mono_iff_componentwise]
+  intro n
+  let _ : Mono ((normalizedChainComplexFunctor C).map f) := hf
+  have hstd : ∀ k : ℕ, Mono (f.app (op ⦋k⦌)) :=
+    normalized_reflects_monomorphism f (fun k => by
+      change Mono (((normalizedChainComplexFunctor C).map f).f k)
+      infer_instance)
+  simpa only [SimplexCategory.mk_len] using (hstd n.unop.len)
 
 theorem normalizedChainComplexFunctor_reflects_epimorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
     (hf : Epi ((normalizedChainComplexFunctor C).map f)) :
     Epi f := by
-  sorry
+  rw [simplicial_epi_iff_componentwise]
+  intro n
+  let _ : Epi ((normalizedChainComplexFunctor C).map f) := hf
+  have hstd : ∀ k : ℕ, Epi (f.app (op ⦋k⦌)) :=
+    normalized_reflects_epimorphism f (fun k => by
+      change Epi (((normalizedChainComplexFunctor C).map f).f k)
+      infer_instance)
+  simpa only [SimplexCategory.mk_len] using (hstd n.unop.len)
 
 theorem normalizedChainComplexFunctor_reflects_isomorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
     (hf : IsIso ((normalizedChainComplexFunctor C).map f)) :
     IsIso f := by
-  sorry
+  rw [NatTrans.isIso_iff_isIso_app]
+  intro n
+  let _ : IsIso ((normalizedChainComplexFunctor C).map f) := hf
+  have hstd : ∀ k : ℕ, IsIso (f.app (op ⦋k⦌)) :=
+    normalized_reflects_isomorphism f (fun k => by
+      change IsIso (((normalizedChainComplexFunctor C).map f).f k)
+      infer_instance)
+  simpa only [SimplexCategory.mk_len] using (hstd n.unop.len)
 
 /-! ## The abstract quasi-inverse criterion -/
 

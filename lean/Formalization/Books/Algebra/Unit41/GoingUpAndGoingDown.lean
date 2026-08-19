@@ -986,11 +986,11 @@ private lemma exists_prime_comap_eq_of_disjoint
     · exact haQ
     · exact ⟨a, haP, rfl⟩
   have hmapQ : P.map (algebraMap A B) ≤ Q :=
-    le_trans (by simpa [L] using (le_add_left le_rfl : P.map (algebraMap A B) ≤ L)) hIle
+    le_trans (by simp [L]) hIle
   have hPunder : P ≤ Q.comap (algebraMap A B) := by
     exact (Ideal.map_le_iff_le_comap).mp hmapQ
   exact ⟨Q, hQprime, le_antisymm hQunder hPunder,
-    le_trans (by simpa [L] using (le_add_right le_rfl : I ≤ L)) hIle⟩
+    le_trans (by simp [L]) hIle⟩
 
 private lemma prime_of_tensor_pair
     {A B K M : Type*} [CommRing A] [CommRing B] [Field K]
@@ -1013,7 +1013,7 @@ private lemma prime_of_tensor_pair
     intro b hb
     change k ⊗ₜ[A] (b • m) = 0
     rw [Submodule.mem_annihilator_span_singleton] at hb
-    simpa [hb]
+    simp [hb]
   have hI : P.map (algebraMap A B) + (Submodule.span B {m}).annihilator ≤ J :=
     add_le hPmap hAnn
   let T : Submonoid B :=
@@ -1038,7 +1038,7 @@ private lemma prime_of_tensor_pair
   have hP : P.IsPrime := by
     dsimp [P]
     infer_instance
-  letI : P.IsPrime := hP
+  let : P.IsPrime := hP
   obtain ⟨Q, hQprime, hQeq, hQann⟩ :=
     exists_prime_comap_eq_of_disjoint P (Submodule.span B {m}).annihilator hdisj
   exact ⟨Q, hQprime, hQeq, hQann⟩
@@ -1088,12 +1088,12 @@ theorem support_generalizingMap_of_finite_flat
   let A := Localization.AtPrime p'
   let B := Localization.AtPrime q'.asIdeal
   let M := LocalizedModule q'.asIdeal.primeCompl N
-  letI : Algebra A B := Localization.AtPrime.algebraOfLiesOver p' q'.asIdeal
-  letI : Module A M := Module.compHom _ (algebraMap A B)
-  letI : IsScalarTower A B M := IsScalarTower.of_algebraMap_smul fun a m => by
+  let : Algebra A B := Localization.AtPrime.algebraOfLiesOver p' q'.asIdeal
+  let : Module A M := Module.compHom _ (algebraMap A B)
+  let : IsScalarTower A B M := IsScalarTower.of_algebraMap_smul fun a m => by
     change algebraMap A B a • m = a • m
     rfl
-  letI : IsLocalHom (algebraMap A B) := by
+  let : IsLocalHom (algebraMap A B) := by
     rw [RingHom.algebraMap_toAlgebra]
     exact Localization.isLocalHom_localRingHom p' q'.asIdeal
       (algebraMap R S) (by rfl)
@@ -1107,7 +1107,7 @@ theorem support_generalizingMap_of_finite_flat
   have hM : Nontrivial M := by
     change Nontrivial (LocalizedModule q'.asIdeal.primeCompl N)
     exact hq'
-  letI : Module.FaithfullyFlat A M :=
+  let : Module.FaithfullyFlat A M :=
     faithfullyFlat_of_localized_module (A := A) (B := B) (M := M) hflatA hM
   have hpy : y.asIdeal ≤ p' := by
     have h := (primeSpectrum_specializes_iff_ideal_inclusion
@@ -1121,8 +1121,8 @@ theorem support_generalizingMap_of_finite_flat
       rw [isUnit_iff_ne_zero, ne_eq, not_congr Ideal.algebraMap_residueField_eq_zero]
       intro hz
       exact (show (z : R) ∉ p' from Ideal.mem_primeCompl_iff.mp z.2) (hpy hz))
-  letI : Algebra A K := fAK.toRingHom.toAlgebra
-  letI : Module A K := Module.compHom _ fAK.toRingHom
+  let : Algebra A K := fAK.toRingHom.toAlgebra
+  let : Module A K := Module.compHom _ fAK.toRingHom
   have hKfiber' : Nontrivial (M ⊗[A] K) :=
     (Module.FaithfullyFlat.nontrivial_tensorProduct_iff_right
       (R := A) (M := M) (N := K)).2 (by infer_instance)

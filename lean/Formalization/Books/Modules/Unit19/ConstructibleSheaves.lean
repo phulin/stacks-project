@@ -142,7 +142,251 @@ private lemma openRestrictionStalkIso_naturality {X : TopCat.{u}}
         (StalkMap (((openSheafRestriction (Type u) U).map g).hom) y
           ((openRestrictionStalkIso U E y).inv a)) =
       StalkMap g.hom ((openInclusion U) y) a := by
-  sorry
+  let lhs := (openRestrictionStalkIso U E y).inv ≫
+    StalkMap (((openSheafRestriction (Type u) U).map g).hom) y ≫
+    (openRestrictionStalkIso U F y).hom
+  change (ConcreteCategory.hom lhs) a =
+    (ConcreteCategory.hom (StalkMap g.hom ((openInclusion U) y))) a
+  have hlhs : lhs = StalkMap g.hom ((openInclusion U) y) := by
+    apply TopCat.Presheaf.stalk_hom_ext E.presheaf
+    intro V hV
+    dsimp [lhs, openRestrictionStalkIso, Functor.mapIso,
+      TopCat.Presheaf.stalkPullbackIso, Iso.trans, Iso.symm]
+    have hE := TopCat.Presheaf.germ_stalkPullbackHom
+      (C := Type u) (X := openSubspace U) (Y := X)
+      (f := openInclusion U) (F := E.presheaf) (x := y)
+      (U := V) (hU := hV)
+    have hy : (y.1 : X) = (ConcreteCategory.hom (openInclusion U)) y := rfl
+    have hV' : (y.1 : X) ∈ V := by
+      simpa only [hy] using hV
+    have hVpull : y ∈ (Opens.map (openInclusion U)).obj V := hV
+    have hE' :
+        E.presheaf.germ V (y.1 : X) hV ≫
+            TopCat.Presheaf.stalkPullbackHom (Type u) (openInclusion U)
+              E.presheaf y =
+          ((TopCat.Presheaf.pullbackPushforwardAdjunction
+            (Type u) (openInclusion U)).unit.app E.presheaf).app (op V) ≫
+            ((openPresheafRestriction (Type u) U).obj E.presheaf).germ
+              ((Opens.map (openInclusion U)).obj V) y hV := by
+      convert hE using 1
+      · cases hy
+        rfl
+    let mE : ((openPresheafRestriction (Type u) U).obj E.presheaf).stalk y ⟶
+        ((openSheafRestriction (Type u) U).obj E).presheaf.stalk y :=
+      (TopCat.Presheaf.stalkFunctor (Type u) y).map
+        ((openSheafRestrictionFormulaNatIso U).inv.app E)
+    have hE'' :
+        E.presheaf.germ V (y.1 : X) hV ≫
+            (TopCat.Presheaf.stalkPullbackHom (Type u) (openInclusion U)
+              E.presheaf y ≫ mE) =
+          (((TopCat.Presheaf.pullbackPushforwardAdjunction
+            (Type u) (openInclusion U)).unit.app E.presheaf).app (op V) ≫
+            ((openPresheafRestriction (Type u) U).obj E.presheaf).germ
+              ((Opens.map (openInclusion U)).obj V) y hV) ≫ mE := by
+      calc
+        _ = (E.presheaf.germ V (y.1 : X) hV ≫
+            TopCat.Presheaf.stalkPullbackHom (Type u) (openInclusion U)
+              E.presheaf y) ≫ mE := by
+          exact (Category.assoc _ _ _).symm
+        _ = (((TopCat.Presheaf.pullbackPushforwardAdjunction
+            (Type u) (openInclusion U)).unit.app E.presheaf).app (op V) ≫
+            ((openPresheafRestriction (Type u) U).obj E.presheaf).germ
+              ((Opens.map (openInclusion U)).obj V) y hV) ≫ mE := by
+          rw [hE']
+    dsimp [mE] at hE''
+    have hmapE := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := Type u) ((Opens.map (openInclusion U)).obj V) y hV
+      ((openSheafRestrictionFormulaNatIso U).app E).inv
+    conv_lhs =>
+      rw [← Category.assoc]
+      change (E.presheaf.germ V (y.1 : X) hV ≫
+        (TopCat.Presheaf.stalkPullbackHom (Type u) (openInclusion U)
+          E.presheaf y ≫
+          (TopCat.Presheaf.stalkFunctor (Type u) y).map
+            ((openSheafRestrictionFormulaNatIso U).inv.app E))) ≫ _
+      erw [hE'']
+    have hassoc :
+        (((TopCat.Presheaf.pullbackPushforwardAdjunction
+            (Type u) (openInclusion U)).unit.app E.presheaf).app (op V) ≫
+          ((openPresheafRestriction (Type u) U).obj E.presheaf).germ
+            ((Opens.map (openInclusion U)).obj V) y hVpull) ≫ mE =
+          ((TopCat.Presheaf.pullbackPushforwardAdjunction
+            (Type u) (openInclusion U)).unit.app E.presheaf).app (op V) ≫
+            (((openPresheafRestriction (Type u) U).obj E.presheaf).germ
+              ((Opens.map (openInclusion U)).obj V) y hVpull ≫ mE) :=
+      Category.assoc _ _ _
+    erw [hassoc]
+    erw [hmapE]
+    have hmapG := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := Type u) ((Opens.map (openInclusion U)).obj V) y hVpull
+      (((openSheafRestriction (Type u) U).map g).hom)
+    have hmapF := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := Type u) ((Opens.map (openInclusion U)).obj V) y hVpull
+      ((openSheafRestrictionFormulaNatIso U).app F).hom
+    have hF := TopCat.Presheaf.germ_stalkPullbackInv
+      (C := Type u) (f := openInclusion U) (F := F.presheaf)
+      (x := y) (V := (Opens.map (openInclusion U)).obj V) (hV := hVpull)
+    dsimp [StalkMap]
+    let uE : E.presheaf.obj (op V) ⟶
+        ((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj E.presheaf).obj
+          (op ((Opens.map (openInclusion U)).obj V)) :=
+      ((TopCat.Presheaf.pullbackPushforwardAdjunction
+        (Type u) (openInclusion U)).unit.app E.presheaf).app (op V)
+    let uF : F.presheaf.obj (op V) ⟶
+        ((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj F.presheaf).obj
+          (op ((Opens.map (openInclusion U)).obj V)) :=
+      ((TopCat.Presheaf.pullbackPushforwardAdjunction
+        (Type u) (openInclusion U)).unit.app F.presheaf).app (op V)
+    let eE :
+        ((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj E.presheaf).obj
+          (op ((Opens.map (openInclusion U)).obj V)) ⟶
+        ((openSheafRestriction (Type u) U).obj E).obj.obj
+          (op ((Opens.map (openInclusion U)).obj V)) :=
+      ((openSheafRestrictionFormulaNatIso U).inv.app E).app
+        (op ((Opens.map (openInclusion U)).obj V))
+    let rE := TopCat.Presheaf.germ
+      ((openSheafRestriction (Type u) U).obj E).obj
+      ((Opens.map (openInclusion U)).obj V) y hVpull
+    let sG := (TopCat.Presheaf.stalkFunctor (Type u) y).map
+      (((openSheafRestriction (Type u) U).map g).hom)
+    let sF := (TopCat.Presheaf.stalkFunctor (Type u) y).map
+      ((openSheafRestrictionFormulaNatIso U).hom.app F)
+    let pInv := TopCat.Presheaf.stalkPullbackInv
+      (Type u) (openInclusion U) F.presheaf y
+    have hassoc1 : (uE ≫ eE) ≫ rE = uE ≫ (eE ≫ rE) :=
+      Category.assoc _ _ _
+    have hassoc2 : ((uE ≫ eE) ≫ rE) ≫ (sG ≫ (sF ≫ pInv)) =
+        (uE ≫ eE) ≫ (rE ≫ (sG ≫ (sF ≫ pInv))) :=
+      Category.assoc _ _ _
+    change ((uE ≫ eE ≫ rE) ≫ (sG ≫ (sF ≫ pInv))) =
+      E.presheaf.germ V ((ConcreteCategory.hom (openInclusion U)) y) hV ≫
+        (TopCat.Presheaf.stalkFunctor (Type u)
+          ((ConcreteCategory.hom (openInclusion U)) y)).map g.hom
+    let mapG := ((openSheafRestriction (Type u) U).map g).hom.app
+      (op ((Opens.map (openInclusion U)).obj V))
+    let rF := TopCat.Presheaf.germ
+      ((openSheafRestriction (Type u) U).obj F).obj
+      ((Opens.map (openInclusion U)).obj V) y hVpull
+    let eF := ((openSheafRestrictionFormulaNatIso U).hom.app F).app
+      (op ((Opens.map (openInclusion U)).obj V))
+    let qF := TopCat.Presheaf.germ
+      ((TopCat.Sheaf.forget (Type u) X ⋙
+        openPresheafRestriction (Type u) U).obj F)
+      ((Opens.map (openInclusion U)).obj V) y hVpull
+    let qToF := TopCat.Presheaf.germToPullbackStalk
+      (Type u) (openInclusion U) F.presheaf
+      ((Opens.map (openInclusion U)).obj V) y hVpull
+    have hmapG_assoc : rE ≫ (sG ≫ (sF ≫ pInv)) =
+        (mapG ≫ rF) ≫ (sF ≫ pInv) := by
+      calc
+        _ = (rE ≫ sG) ≫ (sF ≫ pInv) :=
+          (Category.assoc _ _ _).symm
+        _ = (mapG ≫ rF) ≫ (sF ≫ pInv) := by
+          change ((rE ≫ sG) ≫ (sF ≫ pInv)) =
+            (mapG ≫ rF) ≫ (sF ≫ pInv)
+          convert congrArg (fun k => k ≫ (sF ≫ pInv)) hmapG using 1 <;> rfl
+    have hmapF_eq : rF ≫ sF = eF ≫ qF := by
+      convert hmapF using 1 <;> rfl
+    have hmapF_assoc : (mapG ≫ rF) ≫ (sF ≫ pInv) =
+        mapG ≫ ((eF ≫ qF) ≫ pInv) := by
+      calc
+        _ = mapG ≫ (rF ≫ (sF ≫ pInv)) := Category.assoc _ _ _
+        _ = mapG ≫ ((rF ≫ sF) ≫ pInv) := by
+          congr 1
+        _ = mapG ≫ ((eF ≫ qF) ≫ pInv) := by
+          rw [hmapF_eq]
+          rfl
+    have hF_eq : qF ≫ pInv = qToF := by
+      convert hF using 1 <;> rfl
+    have hF_assoc : (eF ≫ qF) ≫ pInv = eF ≫ qToF := by
+      calc
+        _ = eF ≫ (qF ≫ pInv) := Category.assoc _ _ _
+        _ = eF ≫ qToF := by rw [hF_eq]
+    have hmapG_assoc_prefix :
+        (uE ≫ eE) ≫ (rE ≫ (sG ≫ (sF ≫ pInv))) =
+          (uE ≫ eE) ≫ ((mapG ≫ rF) ≫ (sF ≫ pInv)) :=
+      congrArg (fun k => (uE ≫ eE) ≫ k) hmapG_assoc
+    have he := (openSheafRestrictionFormulaNatIso U).hom.naturality g
+    let bG :
+        ((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj E.presheaf).obj
+          (op ((Opens.map (openInclusion U)).obj V)) ⟶
+        ((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj F.presheaf).obj
+          (op ((Opens.map (openInclusion U)).obj V)) :=
+      ((TopCat.Sheaf.forget (Type u) X ⋙
+        openPresheafRestriction (Type u) U).map g).app
+        (op ((Opens.map (openInclusion U)).obj V))
+    have hunit_map :
+        g.hom.app (op V) ≫ uF = uE ≫ bG := by
+      have hu :=
+        (TopCat.Presheaf.pullbackPushforwardAdjunction
+          (Type u) (openInclusion U)).unit.naturality g.hom
+      have huV := congrArg (fun k => k.app (op V)) hu
+      exact huV
+    have heW : mapG ≫ eF =
+        ((openSheafRestrictionFormulaNatIso U).hom.app E).app
+            (op ((Opens.map (openInclusion U)).obj V)) ≫ bG := by
+      convert congrArg
+        (fun k => k.app (op ((Opens.map (openInclusion U)).obj V))) he using 1 <;> rfl
+    have hformula : eE ≫ (mapG ≫ eF) = bG := by
+      calc
+        _ = eE ≫
+            (((openSheafRestrictionFormulaNatIso U).hom.app E).app
+              (op ((Opens.map (openInclusion U)).obj V)) ≫ bG) := by
+          exact congrArg (fun k => eE ≫ k) heW
+        _ = bG := by
+          dsimp [eE]
+          have hiE :
+              ((openSheafRestrictionFormulaNatIso U).inv.app E).app
+                  (op ((Opens.map (openInclusion U)).obj V)) ≫
+                ((openSheafRestrictionFormulaNatIso U).hom.app E).app
+                  (op ((Opens.map (openInclusion U)).obj V)) =
+              𝟙 (((TopCat.Presheaf.pullback (Type u) (openInclusion U)).obj
+                E.presheaf).obj
+                  (op ((Opens.map (openInclusion U)).obj V))) := by
+            convert congrArg
+              (fun k => k.app (op ((Opens.map (openInclusion U)).obj V)))
+              ((openSheafRestrictionFormulaNatIso U).app E).inv_hom_id using 1 <;> rfl
+          convert congrArg (fun k => k ≫ bG) hiE using 1 <;> rfl
+    have hformula_q :
+        (eE ≫ (mapG ≫ eF)) ≫ qToF = bG ≫ qToF :=
+      congrArg (fun k => k ≫ qToF) hformula
+    have hformula_q' : eE ≫ mapG ≫ (eF ≫ qToF) = bG ≫ qToF := by
+      calc
+        _ = (eE ≫ mapG) ≫ (eF ≫ qToF) :=
+          (Category.assoc _ _ _).symm
+        _ = ((eE ≫ mapG) ≫ eF) ≫ qToF :=
+          (Category.assoc _ _ _).symm
+        _ = (eE ≫ (mapG ≫ eF)) ≫ qToF := by
+          exact congrArg (fun k => k ≫ qToF) (Category.assoc eE mapG eF)
+        _ = bG ≫ qToF := hformula_q
+    have hunit_map_q : uE ≫ bG ≫ qToF =
+        (g.hom.app (op V) ≫ uF) ≫ qToF := by
+      convert (congrArg (fun k => k ≫ qToF) hunit_map).symm using 1 <;>
+        simp only [Category.assoc]
+    have hmapF_assoc_prefix :
+        (uE ≫ eE) ≫ ((mapG ≫ rF) ≫ (sF ≫ pInv)) =
+          (uE ≫ eE) ≫ (mapG ≫ ((eF ≫ qF) ≫ pInv)) :=
+      congrArg (fun k => (uE ≫ eE) ≫ k) hmapF_assoc
+    have hF_assoc_prefix :
+        (uE ≫ eE) ≫ (mapG ≫ ((eF ≫ qF) ≫ pInv)) =
+          (uE ≫ eE) ≫ (mapG ≫ (eF ≫ qToF)) :=
+      congrArg (fun k => (uE ≫ eE) ≫ (mapG ≫ k)) hF_assoc
+    have hunitF : uF ≫ qToF =
+        F.presheaf.germ V ((ConcreteCategory.hom (openInclusion U)) y) hV := by
+      simpa [uF, qToF] using
+        (TopCat.Presheaf.pullbackPushforwardAdjunction_unit_app_app_germToPullbackStalk
+          (C := Type u) (f := openInclusion U) (F := F.presheaf)
+          (V := op V) (x := y) (hx := hV))
+    have hstalk := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := Type u) V ((ConcreteCategory.hom (openInclusion U)) y) hV g.hom
+    rw [← hassoc1, hassoc2, hmapG_assoc_prefix,
+      hmapF_assoc_prefix, hF_assoc_prefix]
+    simp only [Category.assoc]
+    rw [hformula_q', hunit_map_q]
+    simp only [Category.assoc]
+    rw [hunitF]
+    exact hstalk.symm
+  rw [hlhs]
 
 private lemma germ_eqToHom_of_eq {X : TopCat.{u}}
     (F : X.Presheaf (Type u)) {U V : Opens X} (h : U = V)
@@ -161,8 +405,6 @@ private lemma localConstantPUnitMap_stalk_germ {X : TopCat.{u}}
         (StalkMap (localConstantPUnitMap U F s) y
           (constantPresheafStalkMap (X := openSubspace U) PUnit y PUnit.unit)) =
       F.presheaf.germ U ((openInclusion U) y) (by exact y.2) s := by
-  sorry
-/-
   dsimp [constantPresheafStalkMap]
   have h1 := stalkMap_germ (localConstantPUnitMap U F s) y
     (U := (⊤ : Opens (openSubspace U)))
@@ -170,43 +412,45 @@ private lemma localConstantPUnitMap_stalk_germ {X : TopCat.{u}}
   let p : (constantPresheaf (X := openSubspace U) PUnit).obj
       (op (⊤ : Opens (openSubspace U))) := PUnit.unit
   rw [h1]
-  dsimp [openRestrictionStalkIso]
-  change (ConcreteCategory.hom
-      ((TopCat.Presheaf.stalkPullbackIso (Type u) (openInclusion U)
-        F.presheaf y).symm.hom))
-      ((ConcreteCategory.hom
-        ((TopCat.Presheaf.stalkFunctor (Type u) y).map
-          ((openSheafRestrictionFormulaNatIso U).app F).hom))
-        (germApply (F := ((openSheafRestriction (Type u) U).obj F).presheaf)
-          (⊤ : Opens (openSubspace U)) y (Set.mem_univ y)
-          ((ConcreteCategory.hom ((localConstantPUnitMap U F s).app
-            (op (⊤ : Opens (openSubspace U))))) p) = _
+  dsimp [openRestrictionStalkIso, TopCat.Presheaf.stalkFunctor, Functor.mapIso,
+    Iso.trans, Iso.symm]
   have h2 := TopCat.Presheaf.stalkFunctor_map_germ_apply
     (C := Type u) (⊤ : Opens (openSubspace U)) y
     (show y ∈ (⊤ : Opens (openSubspace U)) from Set.mem_univ y)
     ((openSheafRestrictionFormulaNatIso U).app F).hom
     ((ConcreteCategory.hom ((localConstantPUnitMap U F s).app
       (op (⊤ : Opens (openSubspace U))))) p)
-  rw [h2]
   change (ConcreteCategory.hom
+      ((TopCat.Presheaf.stalkPullbackIso (Type u) (openInclusion U)
+        F.presheaf y).symm.hom))
+      ((ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor (Type u) y).map
+          ((openSheafRestrictionFormulaNatIso U).app F).hom))
+        ((ConcreteCategory.hom
+          (((openSheafRestriction (Type u) U ⋙
+            TopCat.Sheaf.forget (Type u) (openSubspace U)).obj F).germ
+              (⊤ : Opens (openSubspace U)) y (Set.mem_univ y)))
+          ((ConcreteCategory.hom ((localConstantPUnitMap U F s).app
+            (op (⊤ : Opens (openSubspace U))))) p))) = _
+  rw [h2]
+  change (TopCat.Presheaf.stalkPullbackIso (Type u) (openInclusion U)
+      F.presheaf y).symm.hom
       (((openPresheafRestriction (Type u) U).obj F.presheaf).germ
-        (⊤ : Opens (openSubspace U)) y (Set.mem_univ y) ≫
-        (TopCat.Presheaf.stalkPullbackIso (Type u) (openInclusion U)
-          F.presheaf y).symm.hom))
-      ((ConcreteCategory.hom (((openSheafRestrictionFormulaNatIso U).app F).hom.app
-        (op (⊤ : Opens (openSubspace U)))))
-        ((ConcreteCategory.hom ((localConstantPUnitMap U F s).app
-        (op (⊤ : Opens (openSubspace U))))) p) = _
+        (⊤ : Opens (openSubspace U)) y (Set.mem_univ y)
+        (((openSheafRestrictionFormulaNatIso U).app F).hom.app
+          (op (⊤ : Opens (openSubspace U)))
+          (((localConstantPUnitMap U F s).app
+            (op (⊤ : Opens (openSubspace U)))) p))) = _
   dsimp [openPresheafRestriction, TopCat.Presheaf.stalkPullbackIso]
   have h3 := TopCat.Presheaf.germ_stalkPullbackInv
     (C := Type u) (openInclusion U) F.presheaf y
       (⊤ : Opens (openSubspace U)) (Set.mem_univ y)
   have h4 := congrArg (fun q => ConcreteCategory.hom q) h3
-  have h5 := congrArg (fun q => q
-      ((ConcreteCategory.hom (((openSheafRestrictionFormulaNatIso U).app F).hom.app
+  have h5 := congrArg (fun q =>
+      q ((ConcreteCategory.hom (((openSheafRestrictionFormulaNatIso U).app F).hom.app
         (op (⊤ : Opens (openSubspace U)))))
         ((ConcreteCategory.hom ((localConstantPUnitMap U F s).app
-          (op (⊤ : Opens (openSubspace U))))) p) h4
+          (op (⊤ : Opens (openSubspace U))))) p))) h4
   exact h5.trans (by
     let e0 := (openSheafRestrictionFormulaNatIso U).app F
     let Vtop : Opens (openSubspace U) := ⊤
@@ -336,7 +580,6 @@ private lemma localConstantPUnitMap_stalk_germ {X : TopCat.{u}}
       (by exact ⟨y, trivial, rfl⟩) s
     simpa [x, Vtop] using (hgerm_apply.trans htransport))
 
- -/
 /-! ## The coproducts and finite coequalizer presentations in the source -/
 
 /-- The coproduct of extensions by the empty set of constant sheaves on opens.

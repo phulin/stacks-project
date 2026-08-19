@@ -2,6 +2,7 @@ import Formalization.Books.MoreAlgebra.Unit55.InjectiveModules
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.CategoryTheory.Limits.Types.Colimits
+import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 import Mathlib.CategoryTheory.MorphismProperty.Basic
 import Mathlib.CategoryTheory.SmallObject.Construction
 import Mathlib.CategoryTheory.SmallObject.TransfiniteIteration
@@ -545,10 +546,10 @@ theorem idealPushout_inclusion_mono
     (φ : ModuleCat.of R I ⟶ M) :
     Mono (idealPushout_inclusion I M φ) := by
   change Mono (pushout.inr (ModuleCat.ofHom I.subtype) φ)
-  letI : Mono (ModuleCat.ofHom I.subtype) := by
+  have hmono : Mono (ModuleCat.ofHom I.subtype) := by
     rw [ModuleCat.mono_iff_injective]
     exact Subtype.val_injective
-  infer_instance
+  exact @CategoryTheory.Abelian.mono_pushout_of_mono_f _ _ _ _ _ _ _ _ _ hmono
 
 /-! ## The huge pushout and its functorial iteration -/
 
@@ -622,14 +623,36 @@ theorem baerStepEmbedding_mono
   change Mono (pushout.inl _ _)
   have hleft : Mono (SmallObject.functorObjLeft idealInclusionFamily
       ((toZeroArrowFunctor R).obj M).hom) := by
-    exact @Sigma.map_mono _ _ _ _ _ _ _
-      (fun x => SmallObject.functorObjLeftFamily idealInclusionFamily
-        ((toZeroArrowFunctor R).obj M).hom x) (by
-          intro x
-          dsimp [SmallObject.functorObjLeftFamily, idealInclusionFamily]
-          rw [ModuleCat.mono_iff_injective]
-          exact Subtype.val_injective)
-  exact @CategoryTheory.Abelian.mono_pushout_of_mono_g _ _ _ _ _ _ _ _ _ _ hleft
+    have hmono : ∀ x, Mono (SmallObject.functorObjLeftFamily idealInclusionFamily
+        ((toZeroArrowFunctor R).obj M).hom x) := by
+      intro x
+      rw [ModuleCat.mono_iff_injective]
+      exact Subtype.val_injective
+    let φ : Discrete.functor (SmallObject.functorObjSrcFamily idealInclusionFamily
+        ((toZeroArrowFunctor R).obj M).hom) ⟶
+        Discrete.functor (SmallObject.functorObjTgtFamily idealInclusionFamily
+          ((toZeroArrowFunctor R).obj M).hom) :=
+      Discrete.natTrans (fun x => SmallObject.functorObjLeftFamily
+        idealInclusionFamily ((toZeroArrowFunctor R).obj M).hom x.as)
+    have hφ : Mono φ :=
+      @NatTrans.mono_of_mono_app _ _ _ _ _ _ φ (fun x => by
+        change Mono (SmallObject.functorObjLeftFamily idealInclusionFamily
+          ((toZeroArrowFunctor R).obj M).hom x.as)
+        exact hmono x.as)
+    exact @CategoryTheory.Limits.colim.map_mono' _ _ _ _ _ _ _ _ φ hφ
+      _ (colimit.isColimit _)
+      _ (colimit.isColimit _) _ (by
+        intro x
+        change Sigma.ι (SmallObject.functorObjSrcFamily idealInclusionFamily
+          ((toZeroArrowFunctor R).obj M).hom) x.as ≫
+            CategoryTheory.Limits.Sigma.map (SmallObject.functorObjLeftFamily idealInclusionFamily
+              ((toZeroArrowFunctor R).obj M).hom) =
+          SmallObject.functorObjLeftFamily idealInclusionFamily
+              ((toZeroArrowFunctor R).obj M).hom x.as ≫
+            Sigma.ι (SmallObject.functorObjTgtFamily idealInclusionFamily
+              ((toZeroArrowFunctor R).obj M).hom) x.as
+        exact Sigma.ι_map _ x.as)
+  exact @CategoryTheory.Abelian.mono_pushout_of_mono_g _ _ _ _ _ _ _ _ _ hleft
 
 /-- The successor structure used by the transfinite construction. -/
 noncomputable def baerSuccStruct (R : Type u) [Ring R] :

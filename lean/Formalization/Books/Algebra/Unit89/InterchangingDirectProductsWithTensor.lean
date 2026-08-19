@@ -765,6 +765,16 @@ theorem kernel_tensored_finitelyPresented
         ∃ f' : (P : Type (max u w)) →ₗ[R] (P' : Type (max u w)),
           (∃ g : (P' : Type (max u w)) →ₗ[R] (M : Type (max u w)), f = g.comp f') ∧
             x ∈ LinearMap.ker (f'.rTensor (Q : Type (max u w))) := by
+  /-
+  Proof roadmap.  This declaration is the public Chapter 89 name for an
+  interface already proved in Chapter 88.  Use
+  `exists_finitelyPresented_kernel_factor M P Q hP f x hx` from
+  `Formalization/Books/Algebra/Unit88/MittagLefflerModules.lean`.  Its ring,
+  the three `ModuleCat.{max u w}` objects, the factorization orientation
+  `f = g.comp f'`, and the final `rTensor Q` kernel membership are
+  definitionally the goal here, so `exact` (not a `simpa` that re-infers the
+  maximum universe) closes the proof.
+  -/
   sorry
 
 /-- The tensor-product characterization of Mittag--Leffler modules
@@ -776,6 +786,52 @@ theorem mittagLeffler_tensor_iff
       ∀ (A : Type (max v w)) (Q : A → ModuleCat.{max u z} R),
         Function.Injective (productTensorMap M Q)
     ] := by
+  /-
+  Proof roadmap (Stacks Project, Proposition 10.89.5).
+
+  * First isolate universe transport.  Put all carriers in
+    `Type (max u v w z)` with `ULift.moduleEquiv`, and prove local conjugacy
+    formulas for `LinearMap.rTensor` and `productTensorMap` by
+    `TensorProduct.induction_on`.  Transport `MLModuleCondition` across those
+    linear equivalences by composing its test map and its two domination
+    inclusions.  This is needed because the filtered-colimit API below uses
+    `ModuleCat.{max u _}`, whereas the theorem deliberately accepts `M` in
+    `ModuleCat.{w}` and the family in `ModuleCat.{max u z}`.
+  * For `1 -> 2`, choose
+    `exists_finitelyPresentedFilteredColimit` from
+    `Formalization/Books/Algebra/Unit88/MittagLefflerModules.lean` for the
+    (transported) `M`.  Represent `x - y` at one stage with
+    `finitelyPresentedFilteredColimit_tensor_rep` (commute the two tensor
+    factors with `TensorProduct.comm` before and after applying that lemma).
+    Apply the ML condition to the finitely presented stage and its cocone
+    map.  Factor the resulting finitely presented comparison object through
+    a later stage using `finitelyPresentedFilteredColimit_map_factor`; after
+    taking a common filtered successor, the transition map and the cocone
+    map mutually dominate.  The coordinate vanishing supplied by the
+    hypothesis therefore holds after that transition.  Both stage product
+    maps are injective by `(finite_presentation_tensor_iff _).out 0 1` and
+    the `finitelyPresented` field of the presentation, so the stage tensor is
+    zero and hence `x = y`.  Use `productTensorMap_rTensor` for every square.
+  * For `2 -> 1`, unfold `IsMittagLefflerModule`/`MLModuleCondition` and fix
+    `P`, `hP`, and `f`.  Index a family by codes for finite presentations
+    `(Fin m -> R) -> (Fin n -> R)` together with elements of the corresponding
+    tensor kernel; use `ULift` so that the index is exactly
+    `Type (max v w)` and the coded quotients are in
+    `ModuleCat.{max u z}`.  Surjectivity of
+    `productTensorMap P` follows from `(finite_presentation_tensor_iff P).out
+    0 1`, so lift the tuple of all kernel elements to a single tensor `t`.
+    Naturality (`productTensorMap_rTensor`) and the assumed injectivity for
+    `M` show `t` lies in the kernel of `f.rTensor`.
+  * Apply `kernel_tensored_finitelyPresented` to obtain `P'` and `f'`.
+    Injectivity/bijectivity of the product maps for `P` and `P'` shows every
+    coded kernel element for `f` is killed by `f'`.  Transport from the coded
+    presentation to an arbitrary finitely presented test module, then use
+    `dominates_iff_finitelyPresented` from Unit88 for `dominates f' f`.
+    The factorization `f = g.comp f'` gives `dominates f f'` directly via
+    `LinearMap.rTensor_comp_apply`.  Return `P'`, its finite-presentation
+    proof, `f'`, and these two inclusions, then finish the two-entry TFAE with
+    `tfae_finish`.
+  -/
   sorry
 
 /-! ## Permanence lemmas -/
@@ -799,6 +855,38 @@ theorem minimal_tensor_submodule
     ∃ F' : Submodule R F,
       IsLeast {G : Submodule R F | tensorProductContains G x} F' ∧
         Module.Finite R (F' : Type v) := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.6).
+
+  * Let `S := {G : Submodule R F | tensorProductContains G x}` and
+    `F' := sInf S`.  The family is nonempty because `top` contains `x`
+    (use the inverse of `Submodule.topEquiv` on the first tensor factor), so
+    `F'` is automatically the least member once containment is proved.
+  * Bundle `q : F ->ₗ[R] (forall G : S, F / G.1)` with
+    `LinearMap.pi (fun G => G.1.mkQ)`.  Show
+    `LinearMap.ker q = F'` using `LinearMap.ker_pi`,
+    `Submodule.ker_mkQ`, and membership in `sInf`.  For every coordinate,
+    the witness in `tensorProductContains G.1 x` and
+    `G.1.mkQ.comp G.1.subtype = 0` show
+    `(G.1.mkQ.rTensor M) x = 0`.
+  * Apply the injective half of `(mittagLeffler_tensor_iff
+    (ModuleCat.of R M)).out 0 1` to the quotient family (raise the subtype
+    index and quotient carriers with `ULift` at the theorem's explicit
+    universes).  Use `TensorProduct.comm` and `productTensorMap_rTensor` to
+    identify its source map with `q.rTensor M`; conclude
+    `(q.rTensor M) x = 0`.
+  * From `LinearMap.exact_subtype_ker_map q` and `hflat`, obtain
+    `Function.Exact (F'.subtype.rTensor M) (q.rTensor M)` via
+    `Module.Flat.rTensor_exact`.  Exactness supplies a tensor over `F'`
+    mapping to `x`, hence `tensorProductContains F' x` and the required
+    `IsLeast` pair.
+  * Finally induct on that tensor witness with `TensorProduct.induction_on`
+    to write it as a finite sum of pure tensors.  Let `G <= F'` be the span
+    of the finitely many first components.  The same expression proves that
+    `G` contains `x`; minimality gives `F' <= G`, while construction gives
+    `G <= F'`.  Rewrite by equality and use `Submodule.fg_span` (or
+    `Module.Finite.iff_fg`) to prove `Module.Finite R F'`.
+  -/
   sorry
 
 /-- In a universally exact sequence, Mittag--Lefflerness descends to the
@@ -811,6 +899,28 @@ theorem pure_submodule_mittagLeffler
     (IsMittagLefflerModule M₂ → IsMittagLefflerModule M₁) ∧
       ((IsMittagLefflerModule M₁ ∧ IsMittagLefflerModule M₃) →
         IsMittagLefflerModule M₂) := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.7).  Use the injectivity
+  criterion `(mittagLeffler_tensor_iff _).out 0 1` for all three modules and
+  fix one family `Q`.  The naturality squares are exactly
+  `productTensorMap_rTensor Q f₁` and `productTensorMap_rTensor Q f₂`.
+
+  For the first implication, equality after `productTensorMap M₁ Q` maps,
+  by the `f₁` square, to equality after `productTensorMap M₂ Q`; injectivity
+  for `M₂`, followed by `hseq.2.2.2` instantiated at
+  `forall a, (Q a : _)`, gives equality in the source.
+
+  For the second implication, subtract the two candidate tensors.  Its image
+  under `f₂.rTensor` has zero product coordinates, so injectivity for `M₃`
+  makes that image zero.  Use
+  `rTensor_exact (forall a, (Q a : _)) hseq.2.1 hseq.2.2.1` to write the
+  difference as `f₁.rTensor` of a tensor over `M₁`.  The `f₁` naturality
+  square and coordinatewise injectivity `hseq.2.2.2 (Q a : _)` make the
+  latter tensor's product image zero; injectivity for `M₁` makes it zero.
+  Restore equality with `sub_eq_zero.mp`.  Keep the components of
+  `universallyExact` in the order displayed above: injective, exact,
+  surjective, universally injective.
+  -/
   sorry
 
 /-- A quotient by a finitely generated submodule of a Mittag--Leffler module is
@@ -824,6 +934,26 @@ theorem quotient_module_mittagLeffler
     (hfinite : Module.Finite R (M₁ : Type w))
     (hML : IsMittagLefflerModule M₂) :
     IsMittagLefflerModule M₃ := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.8).  Apply the injectivity side
+  of `mittagLeffler_tensor_iff` to `M₃` and fix `A`, `Q`, and a tensor `x`
+  whose product image is zero.  Lift `x` to
+  `y : M₂ tensor (forall a, Q a)` using
+  `LinearMap.rTensor_surjective _ hsurj`.  For each coordinate, naturality
+  (`productTensorMap_rTensor`) and the zero hypothesis put the coordinate of
+  `productTensorMap M₂ Q y` in the kernel of `f₂.rTensor (Q a)`.
+
+  Use `rTensor_exact (Q a) hexact hsurj` to choose coordinate preimages in
+  `M₁ tensor Q a`.  Assemble them as a dependent function.  The surjective
+  half of `(finite_generation_tensor_iff M₁).out 0 1`, instantiated with
+  `hfinite`, lifts that function to
+  `z : M₁ tensor (forall a, Q a)`.  Subtract
+  `f₁.rTensor _ z` from `y`; its `M₂` product image is zero by the two
+  naturality squares, hence the ML injectivity for `M₂` makes the difference
+  zero.  Apply `f₂.rTensor` and use exactness (`hexact.comp_eq_zero`, or the
+  corresponding consequence of `rTensor_exact`) to conclude `x = 0`.
+  Prove injectivity by applying this kernel argument to `x - y`.
+  -/
   sorry
 
 /-- A directed colimit of Mittag--Leffler modules with universally injective
@@ -836,6 +966,32 @@ theorem colimit_mittagLeffler_of_universallyInjective
     (htrans : ∀ {i j : I} (hij : i ≤ j),
       universallyInjective ((P.diag.map (homOfLE hij)).hom)) :
     IsMittagLefflerModule M := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.9).
+
+  * Establish first that every cocone component `(P.ι.app i).hom` is
+    universally injective.  After tensoring by an arbitrary `N`, use
+    `isColimitOfPreserves` for the module tensor-right functor (the
+    construction `moduleTensorRightFunctor` in Unit88 is the model) and then
+    `Types.FilteredColimit.isColimit_eq_iff'` after the two forgetful
+    functors.  Equality in the colimit becomes equality after a morphism
+    `i -> j`.  Rewrite that preorder morphism as `homOfLE (leOfHom h)` and
+    cancel it using `htrans (leOfHom h) N`.  When the ring or tensor carrier
+    is above `w`, first conjugate by the same `ULift.moduleEquiv` transport
+    used in `mittagLeffler_tensor_iff`.
+  * Apply `(mittagLeffler_tensor_iff M).out 0 1`.  For a fixed family `Q`,
+    represent the difference of two source tensors at some stage.  This can
+    be proved by `TensorProduct.induction_on`, using joint surjectivity of the
+    colimit cocone and `directed_of` to combine the finitely many stages; it
+    is the generic-`ColimitPresentation` analogue of
+    `finitelyPresentedFilteredColimit_tensor_rep` in Unit88.
+  * The `productTensorMap_rTensor` square says that every coordinate of the
+    stage product tensor maps to zero under the corresponding cocone
+    component.  Cancel those maps with the universal injectivity established
+    in the first step.  Now `(mittagLeffler_tensor_iff (P.diag.obj i)).out
+    0 1` and `hstage i` make the represented stage tensor zero.  Its image is
+    the original difference, so finish with `sub_eq_zero.mp`.
+  -/
   sorry
 
 /-- A direct sum is Mittag--Leffler exactly when each summand is
@@ -846,6 +1002,40 @@ theorem directSum_mittagLeffler_iff
     IsMittagLefflerModule
         (ModuleCat.of R (⨁ i, (M i : Type w))) ↔
       ∀ i, IsMittagLefflerModule (M i) := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.10).
+
+  For `->`, each summand inclusion `DirectSum.lof R I (fun i => (M i :
+  Type w)) i` has the coordinate projection as a left inverse (build it with
+  `DirectSum.toModule` from
+  `Mathlib/Algebra/DirectSum/Module.lean`, using a `dite` family which is the
+  identity at `i` and zero elsewhere).  Either apply the first
+  half of `pure_submodule_mittagLeffler` to the resulting split short exact
+  sequence (`universallyExact_of_split` in Unit82), or make the shorter
+  retract diagram for `productTensorMap`; injectivity of the direct-sum map
+  then implies injectivity for the summand.  The latter route handles the
+  `w` versus `max v w` carrier levels by conjugating with `ULift.moduleEquiv`.
+
+  For `<-`, use `MLModuleCondition` directly.  A map from a finitely
+  presented `P` has finite image support: obtain finite generators from
+  `Module.Finite.exists_fin'`, take the union of the `DFinsupp.support`s of
+  their images, and use linearity to show the map factors through the
+  submodule `D_s` of the direct sum supported on that `Finset I`.  Prove
+  `D_s` is Mittag--Leffler by induction on `s`, identifying the successor
+  with a binary direct sum and applying the second half of
+  `pure_submodule_mittagLeffler` to its split exact sequence.  Apply its ML
+  condition to the factored map to obtain the finitely presented comparison
+  map.  Finally compose with `D_s.subtype`; this inclusion has a linear left
+  inverse (coordinate truncation), hence is universally injective by
+  `universallyInjective_of_left_inverse`.  Its tensor kernels are zero, so
+  composing it does not change either domination inclusion.  Return the
+  same comparison object for the original map.
+
+  Universe discipline: bundle `D_s` in `ModuleCat.{max v w}` and transport
+  the finite direct sum of the `M i` to that carrier before invoking the
+  induction; do not try to treat `Type w` and `Type (max v w)` as
+  definitionally equal.
+  -/
   sorry
 
 /-- Flat Mittag--Leffler modules over a Mittag--Leffler ring module remain
@@ -858,6 +1048,38 @@ theorem flat_mittagLeffler_of_mittagLeffler_restrictScalars
     (hflat : Module.Flat S (M : Type w))
     (hM : IsMittagLefflerModule M) :
     IsMittagLefflerModule ((ModuleCat.restrictScalars f).obj M) := by
+  /-
+  Proof roadmap (Stacks Project, Lemma 10.89.11).
+
+  * Install `letI : Algebra R S := f.toAlgebra`, the restricted
+    `Module R (M : Type w) := Module.compHom _ f`, and
+    `IsScalarTower R S M := IsScalarTower.of_compHom R S M`.  Apply the
+    injectivity criterion `mittagLeffler_tensor_iff` to the restricted
+    module and fix an R-module family `Q`.
+  * Apply the R-criterion to `hS` to get injectivity of
+    `S tensor[R] (forall a, Q a) -> forall a, S tensor[R] Q a`.  Bundle the
+    same function as an S-linear map (prove `map_smul'` on pure tensors using
+    `TensorProduct.smul_tmul'`).  Tensor it on the left by `M`; its
+    injectivity follows from `hflat` via
+    `Module.Flat.lTensor_preserves_injective_linearMap`.
+  * Put `SQ a := ModuleCat.of S (S tensor[R] (Q a : _))`.  The S-criterion
+    applied to `hM` makes `productTensorMap M SQ` injective.  Thus the
+    composite
+      `M tensor[S] (S tensor[R] product Q)`
+      ` -> M tensor[S] product (S tensor[R] Q a)`
+      ` -> product (M tensor[S] (S tensor[R] Q a))`
+    is injective.
+  * Conjugate its source and every target coordinate with
+    `TensorProduct.AlgebraTensorModule.cancelBaseChange R S S M _`, restricted
+    to R-scalars.  These give respectively
+    `M tensor[R] product Q` and `M tensor[R] Q a`.  Prove on pure tensors,
+    using `cancelBaseChange_tmul`/`cancelBaseChange_symm_tmul` and
+    `productTensorMap_tmul`, that the conjugated composite is exactly the
+    R-linear `productTensorMap` for `((ModuleCat.restrictScalars f).obj M)`.
+    Its injectivity is the required criterion.  Raise `Q`, `SQ`, and `M`
+    together with `ULift.moduleEquiv` when applying the three criterion
+    instances so that their explicit universes agree.
+  -/
   sorry
 
 end

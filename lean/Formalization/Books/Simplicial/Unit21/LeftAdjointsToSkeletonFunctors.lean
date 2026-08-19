@@ -640,7 +640,162 @@ theorem glue_simplex
       f ≫ i = (SSet.boundary n).ι ≫ simplexMapOfSimplex V n x ∧
       IsPushout (SSet.boundary n).ι f
         (simplexMapOfSimplex V n x) i := by
-  sorry
+  letI : Mono i := h.mono_i
+  have hx_nd : x ∈ V.nonDegenerate n := by
+    rw [SSet.mem_nonDegenerate_iff_notMem_degenerate]
+    intro hxdeg
+    obtain ⟨m, hm, g, hg, z, hz⟩ := (SSet.mem_degenerate_iff (X := V) x).mp hxdeg
+    obtain ⟨w, hw⟩ := h.agrees_below hm z
+    apply h.new_not_in_range
+    refine ⟨U.map g.op w, ?_⟩
+    rw [NatTrans.naturality_apply, hw, hz]
+  have simplexMap_app (d : ℕ) (g : ⦋d⦌ ⟶ ⦋n⦌) :
+      (simplexMapOfSimplex V n x).app (op ⦋d⦌)
+          (SSet.stdSimplex.objEquiv.symm g) = V.map g.op x := by
+    change dsimp% (SSet.yonedaEquiv.symm x).app (op ⦋d⦌)
+      (SSet.stdSimplex.objEquiv.symm g) = V.map g.op x
+    exact SSet.yonedaEquiv_symm_app_objEquiv_symm x g
+  let p : (∂Δ[n] : SSet.{u}) ⟶ V :=
+    (SSet.boundary n).ι ≫ simplexMapOfSimplex V n x
+  have hp_range : SSet.Subcomplex.range p ≤ SSet.Subcomplex.range i := by
+    rw [SSet.Subcomplex.range_comp, SSet.Subcomplex.image_le_iff]
+    rw [show SSet.Subcomplex.range (SSet.boundary n).ι = SSet.boundary n from
+      CategoryTheory.Subfunctor.range_ι _]
+    change (SSet.boundary n) ≤
+      (SSet.Subcomplex.range i).preimage (simplexMapOfSimplex V n x)
+    rw [SSet.Subcomplex.le_iff_contains_nonDegenerate]
+    intro d y hy
+    let y' : (SSet.boundary n : SSet.{u}).nonDegenerate d :=
+      ⟨⟨y, hy⟩, by
+        exact (SSet.Subcomplex.mem_nonDegenerate_iff (SSet.boundary n)
+          (⟨y, hy⟩ : (SSet.boundary n).obj (op ⦋d⦌))).mpr y.property⟩
+    have hd : d < n := SSet.dim_lt_of_nonDegenerate
+      (X := (SSet.boundary n : SSet.{u})) y' n
+    obtain ⟨z, hz⟩ := h.agrees_below hd
+      ((simplexMapOfSimplex V n x).app (op ⦋d⦌) y)
+    change (simplexMapOfSimplex V n x).app (op ⦋d⦌) y ∈
+      Set.range (i.app (op ⦋d⦌))
+    exact ⟨z, hz⟩
+  let q : (∂Δ[n] : SSet.{u}) ⟶ SSet.Subcomplex.range i :=
+    SSet.Subcomplex.lift p hp_range
+  let f : (∂Δ[n] : SSet.{u}) ⟶ U :=
+    q ≫ inv (SSet.Subcomplex.toRange i)
+  have hf : f ≫ i = p := by
+    dsimp [f]
+    change q ≫ inv (SSet.Subcomplex.toRange i) ≫ i = p
+    have ht : inv (SSet.Subcomplex.toRange i) ≫ i =
+        (SSet.Subcomplex.range i).ι := by
+      apply (cancel_epi (SSet.Subcomplex.toRange i)).1
+      simp [Category.assoc]
+    calc
+      q ≫ inv (SSet.Subcomplex.toRange i) ≫ i = q ≫
+          (inv (SSet.Subcomplex.toRange i) ≫ i) := by simp only [Category.assoc]
+      _ = p := by rw [ht, SSet.Subcomplex.lift_ι]
+  refine ⟨f, hf, ?_⟩
+  refine { w := by simpa [p] using hf.symm, isColimit' := ⟨evaluationJointlyReflectsColimits _
+    (fun ⟨⟨d⟩⟩ ↦ by
+    refine (isColimitMapCoconePushoutCoconeEquiv _ _).2
+      (IsPushout.isColimit ?_)
+    refine (Types.isPushout_of_isPullback_of_mono' ?_ ?_ ?_).flip
+    · rw [Types.isPullback_iff]
+      refine ⟨congr($(hf).app (op ⦋d⦌)), ?_, ?_⟩
+      · intro a b hab
+        apply Subtype.ext
+        simpa using hab.2
+      · intro a b hab
+        by_cases ha : b ∈ (SSet.boundary n).obj (op ⦋d⦌)
+        · refine ⟨⟨b, ha⟩, ?_, rfl⟩
+          apply injective_of_mono (i.app (op ⦋d⦌))
+          have hfac := congrArg (fun k : (∂Δ[n] : SSet.{u}) ⟶ V =>
+            k.app (op ⦋d⦌) ⟨b, ha⟩) hf
+          change i.app (op ⦋d⦌) (f.app (op ⦋d⦌) ⟨b, ha⟩) =
+              (simplexMapOfSimplex V n x).app (op ⦋d⦌) b at hfac
+          exact hfac.trans hab.symm
+        · obtain ⟨r, rfl⟩ :=
+            (SSet.stdSimplex.objEquiv (n := ⦋n⦌) (m := op ⦋d⦌)).symm.surjective b
+          have hr_epi : Epi r := by
+            simpa [SimplexCategory.epi_iff_surjective, SSet.boundary] using! ha
+          have hdim : n ≤ d := by simpa using (SimplexCategory.len_le_of_epi r)
+          have htop : n = d := by
+            by_contra hlt
+            have hsection := isSplitEpi_of_epi r
+            have hxrange : x ∈ Set.range (i.app (op ⦋n⦌)) := by
+              refine ⟨(U.map (section_ r).op) a, ?_⟩
+              calc
+                (i.app (op ⦋n⦌)) ((U.map (section_ r).op) a) =
+                    V.map (section_ r).op (i.app (op ⦋d⦌) a) := by
+                  rw [NatTrans.naturality_apply]
+                _ = V.map (section_ r).op
+                    ((simplexMapOfSimplex V n x).app _
+                      (SSet.stdSimplex.objEquiv.symm r)) := by
+                  simpa using congrArg (V.map (section_ r).op) hab
+                _ = V.map (section_ r).op (V.map r.op x) := by
+                  rw [simplexMap_app]
+                _ = x := by
+                  rw [← Functor.map_comp_apply, ← op_comp]
+                  simp
+            exact h.new_not_in_range hxrange
+          subst d
+          have hr_id : r = 𝟙 _ := SimplexCategory.eq_id_of_epi r
+          subst r
+          exact (h.new_not_in_range ⟨a, by
+            simpa [simplexMap_app] using hab⟩).elim
+    · ext y
+      simp only [Set.mem_union, Set.mem_range, Set.mem_univ, iff_true]
+      by_cases hy : y ∈ Set.range (i.app (op ⦋d⦌))
+      · exact Or.inl hy
+      · obtain ⟨m, g, hg, z, hz⟩ := V.exists_nonDegenerate y
+        have hz_not : z.1 ∉ Set.range (i.app (op ⦋m⦌)) := by
+          intro hz'
+          obtain ⟨w, hw⟩ := hz'
+          apply hy
+          refine ⟨U.map g.op w, ?_⟩
+          rw [NatTrans.naturality_apply, hw, hz]
+        have hm : m = n := by
+          rcases Nat.lt_trichotomy m n with hmn | rfl | hnm
+          · obtain ⟨w, hw⟩ := h.agrees_below hmn z.1
+            exact (hz_not ⟨w, hw⟩).elim
+          · rfl
+          · exact (z.property (h.outside_degenerate hnm z.1 hz_not)).elim
+        subst hm
+        have hzx : z.1 = x := (h.exactly_one_new z.1).resolve_left hz_not
+        refine Or.inr ⟨SSet.stdSimplex.objEquiv.symm g, ?_⟩
+        calc
+          (simplexMapOfSimplex V m x).app (op ⦋d⦌)
+              (SSet.stdSimplex.objEquiv.symm g) = V.map g.op x :=
+            simplexMap_app d g
+          _ = y := hzx ▸ hz.symm
+    · intro a b ha hb hab
+      obtain ⟨r₁, rfl⟩ :=
+        (SSet.stdSimplex.objEquiv (n := ⦋n⦌) (m := op ⦋d⦌)).symm.surjective a
+      obtain ⟨r₂, rfl⟩ :=
+        (SSet.stdSimplex.objEquiv (n := ⦋n⦌) (m := op ⦋d⦌)).symm.surjective b
+      have ha' : SSet.stdSimplex.objEquiv.symm r₁ ∉
+          (SSet.boundary n).obj (op ⦋d⦌) := by
+        intro ha_mem
+        apply ha
+        exact ⟨⟨SSet.stdSimplex.objEquiv.symm r₁, ha_mem⟩, rfl⟩
+      have hb' : SSet.stdSimplex.objEquiv.symm r₂ ∉
+          (SSet.boundary n).obj (op ⦋d⦌) := by
+        intro hb_mem
+        apply hb
+        exact ⟨⟨SSet.stdSimplex.objEquiv.symm r₂, hb_mem⟩, rfl⟩
+      have hr₁ : Epi r₁ := by
+        simpa [SimplexCategory.epi_iff_surjective, SSet.boundary] using! ha'
+      have hr₂ : Epi r₂ := by
+        simpa [SimplexCategory.epi_iff_surjective, SSet.boundary] using! hb'
+      have hr : r₁ = r₂ := V.unique_nonDegenerate_map
+          ((simplexMapOfSimplex V n x).app (op ⦋d⦌)
+            (SSet.stdSimplex.objEquiv.symm r₁)) r₁ ⟨x, hx_nd⟩ (by
+              exact simplexMap_app d r₁) r₂ ⟨x, hx_nd⟩ (by
+              calc
+                (simplexMapOfSimplex V n x).app (op ⦋d⦌)
+                    (SSet.stdSimplex.objEquiv.symm r₁) =
+                    (simplexMapOfSimplex V n x).app (op ⦋d⦌)
+                      (SSet.stdSimplex.objEquiv.symm r₂) := hab
+                _ = V.map r₂.op x := simplexMap_app d r₂)
+      simpa [hr]
+    )⟩ }
 
 /-- A finite inclusion is obtained by adjoining finitely many simplices. -/
 theorem finite_simplicial_set_filtration

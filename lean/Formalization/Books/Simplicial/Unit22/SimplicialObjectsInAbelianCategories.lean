@@ -380,10 +380,10 @@ theorem concentratedTruncatedObject_map_of_ne_id
     cases p
     rfl
   by_cases hX : X.unop.obj.len = k
-  · simp only [dif_pos rfl, dif_pos hX, dif_neg hf]
+  · simp only [dif_pos hX, dif_neg hf]
     exact hcast_zero (B := concentratedTruncatedValue A k X.unop)
       (by simp [concentratedTruncatedValue, hX]) _
-  · simp only [dif_pos rfl, dif_neg hX]
+  · simp only [dif_neg hX]
     exact hcast_zero_zero (B := concentratedTruncatedValue A k X.unop)
       (by simp [concentratedTruncatedValue, hX]) _
 
@@ -443,7 +443,8 @@ theorem concentratedTruncated_hom_equiv_in
       simpa only [U_obj_eq_zero hY] using (isZero_zero C)
     exact hI.eq_of_tgt _ _
   have eTop : U.obj T = A := by
-    simpa [U, T] using concentratedTruncatedObject_top A k
+    change (concentratedTruncatedObject A k).obj (op (topTruncatedSimplex k)) = A
+    exact concentratedTruncatedObject_top A k
   let app (g : A ⟶ V.obj T) (X : (SimplexCategory.Truncated k)ᵒᵖ) :
       U.obj X ⟶ V.obj X :=
     if hX : X = T then
@@ -531,7 +532,7 @@ theorem concentratedTruncated_hom_equiv_in
               apply ObjectProperty.hom_ext
               exact hfac
             rw [hfac', V.map_comp, ← Category.assoc]
-            rw [hg (by simpa using Nat.lt_succ_self k) θ]
+            rw [hg (by simp) θ]
             simp
         · obtain ⟨i, θ, hfac⟩ :=
             SimplexCategory.eq_comp_δ_of_not_surjective q.unop.hom hs
@@ -547,7 +548,7 @@ theorem concentratedTruncated_hom_equiv_in
             apply ObjectProperty.hom_ext
             exact hfac
           rw [hfac', V.map_comp, ← Category.assoc]
-          rw [hg (by simpa using Nat.lt_succ_self k) (SimplexCategory.δ i)]
+          rw [hg (by simp) (SimplexCategory.δ i)]
           simp
   let nat_of_app (g : A ⟶ V.obj T)
       (hg : truncatedIncomingCondition A k V g) : U ⟶ V :=
@@ -653,7 +654,8 @@ theorem concentratedTruncated_hom_equiv_out
       simpa only [U_obj_eq_zero hY] using (isZero_zero C)
     exact hI.eq_of_tgt _ _
   have eTop : U.obj T = A := by
-    simpa [U, T] using concentratedTruncatedObject_top A k
+    change (concentratedTruncatedObject A k).obj (op (topTruncatedSimplex k)) = A
+    exact concentratedTruncatedObject_top A k
   let app (g : V.obj T ⟶ A) (X : (SimplexCategory.Truncated k)ᵒᵖ) :
       V.obj X ⟶ U.obj X :=
     if hX : X = T then
@@ -741,7 +743,7 @@ theorem concentratedTruncated_hom_equiv_out
               apply ObjectProperty.hom_ext
               exact hfac
             rw [hfac', V.map_comp, Category.assoc]
-            rw [hg (by simpa using Nat.lt_succ_self k) (SimplexCategory.σ i)]
+            rw [hg (by simp) (SimplexCategory.σ i)]
             simp
         · obtain ⟨i, θ, hfac⟩ :=
             SimplexCategory.eq_comp_δ_of_not_surjective q.unop.hom hs
@@ -756,7 +758,7 @@ theorem concentratedTruncated_hom_equiv_out
             apply ObjectProperty.hom_ext
             exact hfac
           rw [hfac', V.map_comp, Category.assoc]
-          rw [hg (by simpa using Nat.lt_succ_self k) θ]
+          rw [hg (by simp) θ]
           simp
   let nat_of_app (g : V.obj T ⟶ A)
       (hg : truncatedOutgoingCondition A k V g) : V ⟶ U :=
@@ -917,7 +919,8 @@ theorem eilenbergMacLane_degree_formula
   let D := Unit21.leftSkeletonDiagram k n U
   let E : C := ∐ (fun _ : SurjectiveSimplexIndex n k => A)
   have eTop : U.obj (op (topTruncatedSimplex k)) = A := by
-    simpa [U] using concentratedTruncatedObject_top A k
+    change (concentratedTruncatedObject A k).obj (op (topTruncatedSimplex k)) = A
+    exact concentratedTruncatedObject_top A k
   have topObjEq {X : I} (hX : X.left = op (topTruncatedSimplex k)) :
       X.left.unop = topTruncatedSimplex k := by
     simpa using congrArg Opposite.unop hX
@@ -931,7 +934,7 @@ theorem eilenbergMacLane_degree_formula
     have hx : X.left.unop.obj.len = k := by
       rw [topObjEq hX]
     change U.obj X.left = A
-    simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hx]
+    simp [U, concentratedTruncatedObject, concentratedTruncatedValue, hx]
   let leg : ∀ X : I, D.obj X ⟶ E := fun X => by
     by_cases hX : X.left = op (topTruncatedSimplex k)
     · by_cases hα : Epi (topMap hX)
@@ -949,7 +952,7 @@ theorem eilenbergMacLane_degree_formula
       calc
         f.left = 𝟙 _ ≫ f.left := by simp
         _ = (eqToHom hXY ≫ eqToHom hXY.symm) ≫ f.left := by simp
-        _ = eqToHom hXY ≫ q := by simp [q, Category.assoc]
+        _ = eqToHom hXY ≫ q := by simp [q]
         _ = eqToHom hXY ≫ 𝟙 _ := by rw [hq]
         _ = _ := by simp
     change U.map f.left = 0
@@ -984,7 +987,7 @@ theorem eilenbergMacLane_degree_formula
                 eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
                   (topObjEq (X := X) hX))
               have hq : Epi q := by
-                letI : Epi (topMap hX) := hαX
+                let : Epi (topMap hX) := hαX
                 have hfac : topMap hY ≫ q = topMap hX := by
                   simpa [q] using hrel.symm
                 exact epi_of_epi_fac hfac
@@ -1029,7 +1032,7 @@ theorem eilenbergMacLane_degree_formula
                 apply CostructuredArrow.ext
                 simpa using hfl
               subst f
-              simp [leg, hX, hY]
+              simp [leg, hX]
             · by_cases hαY : Epi (topMap hY)
               · have hfl_ne : f.left ≠ eqToHom (by
                     exact hX.trans hY.symm) := by
@@ -1054,7 +1057,7 @@ theorem eilenbergMacLane_degree_formula
                   congrArg (fun z => z ≫
                     eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
                       (topObjEq (X := X) hX))) hbase
-              letI : Epi (topMap hX) := hαX
+              let : Epi (topMap hX) := hαX
               have hq : Epi q := epi_of_epi_fac hfac
               have hle : k ≤ Y.left.unop.obj.len := SimplexCategory.le_of_epi q
               have hlt : Y.left.unop.obj.len < k := by
@@ -1163,7 +1166,7 @@ theorem eilenbergMacLane_degree_formula
           have hleft : (Xα α).left = op (topTruncatedSimplex k) := by
             simp [Xα]
           have hmap : topMap hleft = α.1 := by
-            simp [topMap, Xα, α, Category.assoc]
+            simp [topMap, Xα, α]
           have hα' : Epi (topMap hleft) := by
             rw [hmap]
             exact α.2
@@ -1196,7 +1199,7 @@ theorem eilenbergMacLane_degree_formula
           rw [Category.assoc, hdesc]
           simp
         · have hs := cocone_ι_zero (s := s) hX hαX
-          simp [c, leg, desc, hX, hαX, hs]
+          simp [leg, desc, hX, hαX, hs]
       · have hI : IsZero (D.obj X) := by
           change IsZero (U.obj X.left)
           have hlen : X.left.unop.obj.len ≠ k := by
@@ -1218,7 +1221,7 @@ theorem eilenbergMacLane_degree_formula
       have hleft : Xa.left = op (topTruncatedSimplex k) := by
         simp [Xa, Xα]
       have hmap : topMap hleft = a.1 := by
-        simp [topMap, Xa, Xα, a, Category.assoc]
+        simp [topMap, Xa, Xα, a]
       have hα : Epi (topMap hleft) := by
         rw [hmap]
         exact a.2
@@ -1266,12 +1269,12 @@ theorem eilenbergMacLane_degree_formula
         _ = eqToHom (topObjValueEq hleft).symm ≫
             (eqToHom (topObjValueEq hleft) ≫
               Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m) := by
-              simp [Category.assoc]
+              simp
         _ = eqToHom (topObjValueEq hleft).symm ≫ s.ι.app Xa := by
           rw [hm_reassoc]
     exact { desc := desc, fac := fac, uniq := uniq }
   let hD := Unit21.has_left_skeleton_colimit_of_has_finite_colimits k n U
-  letI := hD
+  let := hD
   let eColim : E ≅ Unit21.leftSkeletonColimit k n U hD :=
     hc.coconePointUniqueUpToIso (colimit.isColimit D)
   let eKan :=

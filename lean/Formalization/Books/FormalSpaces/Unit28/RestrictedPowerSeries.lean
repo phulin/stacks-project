@@ -365,7 +365,7 @@ theorem restrictedPowerSeries_complete_for_limit_topology
           ((uniformContinuous_comap (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))).comp
             uniformContinuous_snd))) using 1
     ext p
-    simp only [Function.comp_apply, map_sub]
+    simp [map_sub]
   let : IsUniformAddGroup M := hu
   have htop : u.toTopologicalSpace = restrictedPowerSeriesLimitTopology A B r := by
     change TopologicalSpace.induced g Pi.topologicalSpace = _

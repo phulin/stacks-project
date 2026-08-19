@@ -198,7 +198,15 @@ theorem homMapAt_comp_projection
     (u : U.obj (SimplexCategory.mk m)) :
     homMapAt U V hU φ ≫ homProjection U V hU m u =
       homProjection U V hU n (U.map φ u) ≫ V.map φ.op := by
-  sorry
+  let _ : Finite (U.obj (SimplexCategory.mk m)) := (hU m).1
+  let _ : Finite (U.obj (SimplexCategory.mk n)) := (hU n).1
+  change
+    Pi.map' (U.map φ) (fun _ => V.map φ.op) ≫
+        Pi.π (fun _ : U.obj (SimplexCategory.mk m) =>
+          V.obj (op (SimplexCategory.mk m))) u =
+      Pi.π (fun _ : U.obj (SimplexCategory.mk n) =>
+          V.obj (op (SimplexCategory.mk n))) (U.map φ u) ≫ V.map φ.op
+  rw [Pi.map'_comp_π]
 
 /-! ## Functoriality in the two variables -/
 
@@ -229,7 +237,42 @@ noncomputable def homPrecomp
     hom U V hU ⟶ hom U' V hU' where
   app X := homPrecompApp f V hU hU' X.unop
   naturality := by
-    sorry
+    intro X Y φ
+    dsimp [homPrecompApp, homMapAt, homObjectAt]
+    let _ : Finite (U.obj X.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+    let _ : Finite (U.obj Y.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU Y.unop.len).1
+    let _ : Finite (U'.obj X.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU' X.unop.len).1
+    let _ : Finite (U'.obj Y.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU' Y.unop.len).1
+    change
+      (Pi.map'
+          (f := fun _ : U.obj X.unop => V.obj X)
+          (g := fun _ : U.obj Y.unop => V.obj Y)
+          (U.map φ.unop) (fun _ => V.map φ.unop.op)) ≫
+          (Pi.map'
+            (f := fun _ : U.obj Y.unop => V.obj Y)
+            (g := fun _ : U'.obj Y.unop => V.obj Y)
+            (f.app Y.unop) (fun _ => 𝟙 (V.obj Y))) =
+        (Pi.map'
+            (f := fun _ : U.obj X.unop => V.obj X)
+            (g := fun _ : U'.obj X.unop => V.obj X)
+            (f.app X.unop) (fun _ => 𝟙 (V.obj X))) ≫
+          (Pi.map'
+            (f := fun _ : U'.obj X.unop => V.obj X)
+            (g := fun _ : U'.obj Y.unop => V.obj Y)
+            (U'.map φ.unop) (fun _ => V.map φ.unop.op))
+    ext u
+    simp [Pi.map'_comp_π, Category.assoc]
+    have h :
+        (U.map φ.unop) (f.app Y.unop u) =
+          (f.app X.unop) (U'.map φ.unop u) := by
+      simpa only [CategoryTheory.comp_apply] using
+        congrArg (fun k => k u) (f.naturality φ.unop).symm
+    exact congrArg
+      (fun z => Pi.π (fun _ : U.obj X.unop => V.obj X) z ≫ V.map φ) h
 
 /-- The map induced by a simplicial map in the covariant variable. -/
 noncomputable def homPostcompApp
@@ -253,7 +296,19 @@ noncomputable def homPostcomp
     hom U V hU ⟶ hom U V' hU where
   app X := homPostcompApp U f hU X.unop
   naturality := by
-    sorry
+    intro X Y φ
+    dsimp [homPostcompApp, homMapAt, homObjectAt]
+    let _ : Finite (U.obj X.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+    let _ : Finite (U.obj Y.unop) := by
+      simpa only [SimplexCategory.mk_len] using (hU Y.unop.len).1
+    change
+      (Pi.map' (U.map φ.unop) (fun _ => V.map φ.unop.op)) ≫
+          (CategoryTheory.Limits.Pi.map (fun _ => f.app Y)) =
+        (CategoryTheory.Limits.Pi.map (fun _ => f.app X)) ≫
+          (Pi.map' (U.map φ.unop) (fun _ => V'.map φ.unop.op))
+    ext u
+    simp [Pi.map'_comp_π, Pi.map_π, Category.assoc]
 
 /-!
 The following laws record the functoriality asserted in the source.  Their
@@ -266,7 +321,14 @@ theorem homPrecomp_id
     {U : CosimplicialObject (Type u)} (V : SimplicialObject C)
     (hU : FiniteNonemptyCosimplicialSet U) :
     homPrecomp (𝟙 U) V hU hU = 𝟙 (hom U V hU) := by
-  sorry
+  ext X
+  dsimp [homPrecomp, homPrecompApp, homObjectAt]
+  let _ : Finite (U.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  change
+    Pi.map' id (fun _ : U.obj X.unop => 𝟙 (V.obj X)) =
+      𝟙 (∏ᶜ fun _ : U.obj X.unop => V.obj X)
+  rw [Pi.map'_id_id]
 
 theorem homPrecomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]

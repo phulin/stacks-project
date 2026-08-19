@@ -553,11 +553,11 @@ noncomputable def constantObjectProductWithSimplexOf_hom_equiv
     intro f
     apply NatTrans.ext
     funext Y
-    letI : HasCoproduct
+    let : HasCoproduct
         (fun _ : (Δ[k] : SSet.{w}).obj Y =>
           ((SimplicialObject.const C).obj X).obj Y) :=
       degreewiseCoproductInstanceAt h Y
-    letI : HasCoproduct
+    let : HasCoproduct
         (fun _ : (Δ[k] : SSet.{w}).obj (op (SimplexCategory.mk k)) =>
           ((SimplicialObject.const C).obj X).obj (op (SimplexCategory.mk k))) :=
       degreewiseCoproductInstanceAt h (op (SimplexCategory.mk k))
@@ -587,8 +587,7 @@ noncomputable def constantObjectProductWithSimplexOf_hom_equiv
             congr 1
             exact (f.naturality (SSet.stdSimplex.objEquiv u).op).symm
       _ = Sigma.ι _ u ≫ f.app Y := by
-        simp [constantObjectProductWithSimplexOf, simplicialSetProductOf,
-          Category.assoc]
+        simp [constantObjectProductWithSimplexOf, simplicialSetProductOf]
         have hu :
             (Δ[k] : SSet.{w}).map (SSet.stdSimplex.objEquiv u).op
                 (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) = u := by
@@ -653,8 +652,7 @@ theorem exists_constantObjectProductWithSimplexOf_truncated_hom_equiv
           apply Sigma.hom_ext
           intro α
           simp [SimplicialObject.truncation, constantObjectProductWithSimplexOf,
-            simplicialSetProductOf, SimplexCategory.Truncated.Hom.tr_comp,
-            Category.assoc]
+            simplicialSetProductOf, Category.assoc]
           rw [← W.map_comp]
           congr 1 }
     left_inv := by
@@ -692,7 +690,7 @@ theorem exists_constantObjectProductWithSimplexOf_truncated_hom_equiv
               exact (γ.naturality q.op).symm
         _ = Sigma.ι _ α ≫ γ.app Y := by
           simp [SimplicialObject.truncation, constantObjectProductWithSimplexOf,
-            simplicialSetProductOf, Category.assoc]
+            simplicialSetProductOf]
           have hu :
               (Δ[k] : SSet.{w}).map q.hom.op
                   (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k))) = α := by

@@ -1290,7 +1290,61 @@ theorem right_admissible_decomposition_iso
     (hA' : P A') (hB' : rightOrthogonal P B') :
     ∃ e : Triangle.mk f g h ≅ Triangle.mk f' g' h',
       e.hom.hom₂ = 𝟙 X := by
-  sorry
+  rcases hP with ⟨hstrict, htri, hAdj⟩
+  let _ : P.IsTriangulated := htri
+  let hstable : P.IsStableUnderShift ℤ := inferInstance
+  have hbij : Function.Bijective (fun q : A ⟶ A' => q ≫ f') :=
+    (pre_prepare_adjoint P hstable hT').1 hB' A hA
+  have hbij' : Function.Bijective (fun q : A' ⟶ A => q ≫ f) :=
+    (pre_prepare_adjoint P hstable hT).1 hB A' hA'
+  have hbij₀ : Function.Bijective (fun q : A ⟶ A => q ≫ f) :=
+    (pre_prepare_adjoint P hstable hT).1 hB A hA
+  have hbij₀' : Function.Bijective (fun q : A' ⟶ A' => q ≫ f') :=
+    (pre_prepare_adjoint P hstable hT').1 hB' A' hA'
+  obtain ⟨a, ha⟩ := hbij.2 f
+  obtain ⟨b, hb⟩ := hbij'.2 f'
+  change a ≫ f' = f at ha
+  change b ≫ f = f' at hb
+  have hcomm : f ≫ 𝟙 X = a ≫ f' := by
+    simpa using ha.symm
+  have hcomm' : f' ≫ 𝟙 X = b ≫ f := by
+    simpa using hb.symm
+  obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+    (Triangle.mk f g h) (Triangle.mk f' g' h') hT hT' a (𝟙 X) hcomm
+  have hab : a ≫ b = 𝟙 A := by
+    apply hbij₀.1
+    calc
+      (a ≫ b) ≫ f = a ≫ (b ≫ f) := by simp only [Category.assoc]
+      _ = a ≫ f' := by rw [hb]
+      _ = f := ha
+      _ = (𝟙 A) ≫ f := by simp
+  have hba : b ≫ a = 𝟙 A' := by
+    apply hbij₀'.1
+    calc
+      (b ≫ a) ≫ f' = b ≫ (a ≫ f') := by simp only [Category.assoc]
+      _ = b ≫ f := by rw [ha]
+      _ = f' := hb
+      _ = (𝟙 A') ≫ f' := by simp
+  let ea : A ≅ A' :=
+    { hom := a
+      inv := b
+      hom_inv_id := hab
+      inv_hom_id := hba }
+  let φ := Triangle.homMk (Triangle.mk f g h) (Triangle.mk f' g' h')
+    a (𝟙 X) c hcomm hc₂ hc₃
+  let _ : IsIso φ.hom₁ := by
+    change IsIso a
+    exact ea.isIso_hom
+  let _ : IsIso φ.hom₂ := by
+    change IsIso (𝟙 X)
+    infer_instance
+  have hc : IsIso c := by
+    change IsIso φ.hom₃
+    exact isIso₃_of_isIso₁₂ φ hT hT' inferInstance inferInstance
+  let _ : IsIso c := hc
+  let e := Triangle.isoMk (Triangle.mk f g h) (Triangle.mk f' g' h')
+    ea (Iso.refl X) (asIso c) hcomm hc₂ hc₃
+  exact ⟨e, rfl⟩
 
 /-! ## The summary proposition -/
 

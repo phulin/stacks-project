@@ -1482,10 +1482,10 @@ theorem finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
     have hf : f.FiniteType := by
       exact RingHom.FiniteType.of_comp_finiteType
         (f := Ideal.Quotient.mk p) (g := f) (hfac ▸ hcomp)
-    letI : Field (S ⧸ q.asIdeal) :=
+    let : Field (S ⧸ q.asIdeal) :=
       (Ideal.Quotient.maximal_ideal_iff_isField_quotient q.asIdeal).mp q.2 |>.toField
-    letI : Algebra (R ⧸ p) (S ⧸ q.asIdeal) := f.toAlgebra
-    letI : Algebra.FiniteType (R ⧸ p) (S ⧸ q.asIdeal) := hf
+    let : Algebra (R ⧸ p) (S ⧸ q.asIdeal) := f.toAlgebra
+    let : Algebra.FiniteType (R ⧸ p) (S ⧸ q.asIdeal) := hf
     have hinj : Function.Injective (algebraMap (R ⧸ p) (S ⧸ q.asIdeal)) := by
       rw [RingHom.algebraMap_toAlgebra]
       simpa [p, f] using (Ideal.quotientMap_injective (I := q.asIdeal) (f := φ))
@@ -1494,8 +1494,8 @@ theorem finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
     simpa [p] using Ideal.Quotient.maximal_of_isField p hfield.1
   · intro q
     let p := q.asIdeal.comap φ
-    letI : p.IsPrime := Ideal.comap_isPrime φ q.asIdeal
-    letI : Algebra p.ResidueField q.asIdeal.ResidueField :=
+    let : p.IsPrime := Ideal.comap_isPrime φ q.asIdeal
+    let : Algebra p.ResidueField q.asIdeal.ResidueField :=
       residueFieldAlgebraOfMap p q.asIdeal φ rfl
     have hcomp :
         ((algebraMap S q.asIdeal.ResidueField).comp φ).FiniteType :=
@@ -1524,7 +1524,7 @@ theorem finiteType_algebra_over_integers_isJacobson
     {A : Type u} [CommRing A] [Algebra ℤ A]
     [Algebra.FiniteType ℤ A] :
     IsJacobsonRing A := by
-  letI : IsJacobsonRing ℤ := integer_isJacobson
+  let : IsJacobsonRing ℤ := integer_isJacobson
   exact isJacobsonRing_of_finiteType (A := ℤ) (B := A)
 
 /-! ## Constructible images and closed points -/
@@ -1571,7 +1571,7 @@ theorem jacobson_constructible_image_closedPoint_formula
     hpres.2.1
   have hEjac := Formalization.Books.Topology.Unit18.jacobsonSpace_of_isConstructible
     (X := PrimeSpectrum S) hE
-  letI : JacobsonSpace E := hEjac.1
+  let : JacobsonSpace E := hEjac.1
   let g : E → F := fun z =>
     ⟨PrimeSpectrum.comap φ z.1, ⟨z.1, z.2, rfl⟩⟩
   have hg : Continuous g := by
@@ -1703,9 +1703,9 @@ theorem jacobson_constructible_image_closedPoint_formula
       obtain ⟨T, hTcomm, ψ, hψfp, hψrange⟩ :=
         Formalization.Books.Algebra.Unit29.exists_finitePresentation_ringHom_of_isConstructible
           hE
-      letI : CommRing T := hTcomm
+      let : CommRing T := hTcomm
       let hψft : RingHom.FiniteType ψ := RingHom.FiniteType.of_finitePresentation hψfp
-      letI : IsJacobsonRing T := hψft.isJacobsonRing
+      let : IsJacobsonRing T := hψft.isJacobsonRing
       have hEclosed : E ∩ closedPoints (PrimeSpectrum S) =
           PrimeSpectrum.comap ψ '' closedPoints (PrimeSpectrum T) := by
         apply Set.Subset.antisymm
@@ -1748,7 +1748,6 @@ theorem jacobson_constructible_image_closedPoint_formula
         dsimp [G]
         rw [hEclosed, ← Set.image_comp, ← PrimeSpectrum.comap_comp]
       let θ : R →+* T := ψ.comp φ
-      have hθ : θ = ψ.comp φ := rfl
       let p : Ideal R := ξ.asIdeal
       let f : R ⧸ p →+* T ⧸ p.map θ :=
         Ideal.quotientMap (p.map θ) θ Ideal.le_comap_map

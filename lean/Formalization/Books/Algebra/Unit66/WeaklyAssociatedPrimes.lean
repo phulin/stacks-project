@@ -861,7 +861,7 @@ theorem weaklyAssociated_nonFunctoriality_example
       · rintro ⟨i, rfl⟩
         exact ⟨weaklyAssociatedExampleX k i, ⟨i, rfl⟩,
           by simp [weaklyAssociatedExampleX, e]⟩
-    letI : V.IsPrime := hVprime
+    let : V.IsPrime := hVprime
     have hcomp : (Ideal.map e.toRingEquiv K).comap e.toRingEquiv = K :=
       Ideal.comap_map_of_bijective e.toRingEquiv e.bijective (I := K)
     rw [hem] at hcomp
@@ -893,14 +893,14 @@ theorem weaklyAssociated_nonFunctoriality_example
       exact ⟨i, rfl⟩
   have hQprime : (weaklyAssociatedExampleQ k).IsPrime := by
     rw [hQmap]
-    letI : K.IsPrime := hKprime
+    let : K.IsPrime := hKprime
     apply Ideal.map_isPrime_of_surjective Ideal.Quotient.mk_surjective
     simpa [mk, L] using hLleK
   have hQmin : weaklyAssociatedExampleQ k ∈
       minimalPrimes (weaklyAssociatedExampleRing k) := by
     refine ⟨⟨hQprime, bot_le⟩, ?_⟩
     intro q hq hqle
-    letI : q.IsPrime := hq.1
+    let : q.IsPrime := hq.1
     have hqA : (q.comap mk).IsPrime := Ideal.comap_isPrime mk q
     have hLq : L ≤ q.comap mk := by
       simpa [mk, L] using (Ideal.ker_le_comap (K := q) mk)
@@ -938,7 +938,7 @@ theorem weaklyAssociated_nonFunctoriality_example
         simp [weaklyAssociatedExampleY]
       obtain ⟨m, hm, hm'⟩ := hy' _ hysupp
       rcases hm with ⟨j, rfl⟩
-      simp [weaklyAssociatedExampleY] at hm'
+      simp at hm'
     have hKq : K ≤ q.comap mk := by
       change Ideal.span (Set.range fun i : ℕ => weaklyAssociatedExampleX k i) ≤
         q.comap mk
@@ -1015,9 +1015,7 @@ theorem weaklyAssociated_nonFunctoriality_example
       have hmem' : κ (ψ f) ∈ Ideal.map κ K :=
         Ideal.mem_map_of_mem κ hmem
       have hcomp : κ (ψ f) = f := by
-        simpa [ψ, κ] using
-          (MvPolynomial.killCompl_rename_app
-            (Sum.inl_injective : Function.Injective (Sum.inl : ℕ → ℕ ⊕ ℕ)) f)
+        simp [ψ, κ]
       rw [hcomp] at hmem'
       exact hKmap hmem'
   refine ⟨hQprime, hQmin, hqweak, ?_⟩
@@ -1038,6 +1036,8 @@ theorem weaklyAssociated_nonFunctoriality_example
     rw [hQcomap, hPcomap]
     simp only [Ideal.mem_comap]
   refine ⟨?_, ?_, hcomap⟩
+  · sorry
+  · sorry
 
 /-- Weakly associated primes pull back along every ring map. -/
 theorem weaklyAssociatedPrimes_reverse_functorial
@@ -1046,7 +1046,7 @@ theorem weaklyAssociatedPrimes_reverse_functorial
     (letI : Module R M := Module.compHom M φ;
       weaklyAssociatedPrimes R M ⊆
         PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M) := by
-  letI : Module R M := Module.compHom M φ
+  let : Module R M := Module.compHom M φ
   intro p hp
   change ∃ m : M,
     p.asIdeal ∈ ((⊥ : Submodule R M).colon ({m} : Set M)).minimalPrimes at hp
@@ -1114,7 +1114,7 @@ theorem associated_weaklyAssociated_functorial_chain
           weaklyAssociatedPrimes R M ∧
         weaklyAssociatedPrimes R M ⊆
           PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M) := by
-  letI : Module R M := Module.compHom M φ
+  let : Module R M := Module.compHom M φ
   exact ⟨Formalization.Books.Algebra.Unit63.ass_functorial φ,
     associatedPrimes_subset_weaklyAssociatedPrimes_subset_support.1,
     weaklyAssociatedPrimes_reverse_functorial φ⟩

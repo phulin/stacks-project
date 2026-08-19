@@ -156,7 +156,20 @@ theorem isGeometricallyIntegral_any_integral_base_change
     [Field k] [CommRing S] [CommRing R] [Algebra k S] [Algebra k R]
     [IsDomain R] (hS : IsGeometricallyIntegral.{u, v, u} k S) :
     IsDomain (R ⊗[k] S) := by
-  sorry
+  have hparts :=
+    isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyReduced.mp hS
+  let : IsReduced R := inferInstance
+  let : IsReduced (R ⊗[k] S) :=
+    isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+      (k := k) (R := R) (S := S) inferInstance hparts.2
+  have hspace :=
+    irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible
+      (k := k) (S := S) (R := R) hparts.1
+  have hp : (nilradical (R ⊗[k] S)).IsPrime :=
+    (PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical).mp hspace
+  rw [nilradical_eq_zero] at hp
+  let : (⊥ : Ideal (R ⊗[k] S)).IsPrime := hp
+  exact IsDomain.of_bot_isPrime _
 
 end
 

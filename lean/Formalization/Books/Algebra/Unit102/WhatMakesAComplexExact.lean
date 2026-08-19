@@ -398,7 +398,23 @@ theorem rankIdeal_eq_top_of_rank_eq_zero
     (φ : (Fin m → R) →ₗ[R] (Fin n → R))
     (hφ : rank φ = 0) :
     rankIdeal φ = ⊤ := by
-  sorry
+  have hzero : φ = 0 := (rank_eq_zero_iff φ).mp hφ
+  subst φ
+  have h1 : (1 : R) ∈ rankIdeal (0 : (Fin m → R) →ₗ[R] (Fin n → R)) := by
+    rw [rankIdeal]
+    rw [hφ]
+    apply Ideal.subset_span
+    refine ⟨⟨⟨fun i => Fin.elim0 i, fun i j _ => Fin.elim0 i⟩,
+      ⟨fun i => Fin.elim0 i, fun i j _ => Fin.elim0 i⟩⟩, ?_⟩
+    simp [Matrix.det_fin_zero]
+  apply le_antisymm
+  · exact le_top
+  · rw [← Ideal.span_univ]
+    apply Ideal.span_le.2
+    intro x hx
+    change x ∈ rankIdeal (0 : (Fin m → R) →ₗ[R] (Fin n → R))
+    simpa only [mul_one] using
+      Ideal.mul_mem_left (rankIdeal (0 : (Fin m → R) →ₗ[R] (Fin n → R))) x h1
 
 /-- The alternating sum occurring in the source's rank formula. -/
 def alternatingRank

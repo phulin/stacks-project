@@ -1357,32 +1357,63 @@ theorem setPresheaf_fibre_equivalent_to_discrete
 
 /-! ## The presheaf correspondence -/
 
-/- The source's ordinary category of categories fibred in sets uses strict
-   functors over the fixed base.  This is the full subcategory of `Over C`;
-   it is distinct from the fixed-base bicategory above, whose 2-morphisms
-   record the source's natural transformations over `C`. -/
-def categoriesFibredInSetsOverObjectProperty {C : Cat.{v, u}} :
-    ObjectProperty (Over C) :=
-  fun X => IsCategoryFibredInSets X.hom.toFunctor
+/-- The fixed-base interface used for the presheaf correspondence.
 
+The source describes this as a category because its vertical 2-morphisms are
+identities.  We retain the fixed-base bicategory here: Unit 36 supplies
+equivalences in exactly this interface, with inverse laws given by vertical
+natural isomorphisms rather than strict equalities of functors over `C`. -/
 abbrev CategoriesFibredInSetsOverCategory (C : Cat.{v, u}) :=
-  (categoriesFibredInSetsOverObjectProperty (C := C)).FullSubcategory
+  CategoriesFibredInSetsOver C
 
+/-- Every object of the fixed-base 2-category is fibred-equivalent over `C` to
+the CoGrothendieck category of a set-valued presheaf.  This is the
+fixed-base replacement for an ordinary categorical equivalence whose
+essential-surjectivity clause would require strict inverse functors. -/
 theorem categoriesFibredInSetsOver_equivalent_to_presheaves
+    {C : Type uC} [Category.{vC} C] :
+    ∀ X : CategoriesFibredInSetsOverCategory (Cat.of C),
+      ∃ F : Presheaf C,
+        IsFibredEquivalenceOver
+          (structureFunctor X.obj.underlying)
+          (setPresheafProjection F) := by
+  sorry
+
+/-- A chosen presheaf presentation for an object of the fixed-base
+2-category. -/
+noncomputable def categoriesFibredInSetsOverPresheaf
+    {C : Type uC} [Category.{vC} C] :
+    CategoriesFibredInSetsOverCategory (Cat.of C) → Presheaf C :=
+  fun X => Classical.choose
+    (categoriesFibredInSetsOver_equivalent_to_presheaves (C := C) X)
+
+theorem categoriesFibredInSetsOverPresheaf_isFibredEquivalenceOver
+    {C : Type uC} [Category.{vC} C]
+    (X : CategoriesFibredInSetsOverCategory (Cat.of C)) :
+    IsFibredEquivalenceOver
+      (structureFunctor X.obj.underlying)
+      (setPresheafProjection (categoriesFibredInSetsOverPresheaf X)) := by
+  exact Classical.choose_spec
+    (categoriesFibredInSetsOver_equivalent_to_presheaves (C := C) X)
+
+/- The ordinary equivalence is retained only as a strictified compatibility
+   boundary for later chapters that consume its inverse functor.  The primary
+   correspondence above is the fixed-base interface; this adapter records the
+   additional strictification step separately instead of pretending that the
+   vertical natural isomorphisms from Unit 36 are strict equalities. -/
+theorem categoriesFibredInSetsOver_strictified_equivalent_to_presheaves
     {C : Type uC} [Category.{vC} C] :
     Nonempty
       (Presheaf C ≌
         CategoriesFibredInSetsOverCategory (Cat.of C)) := by
   sorry
 
-/-- A chosen equivalence in the source's presheaf correspondence.  The
-existence theorem above is kept as the proposition-level interface, while
-this definition makes the equivalence directly usable by later statements. -/
 noncomputable def categoriesFibredInSetsOverEquivalence
     {C : Type uC} [Category.{vC} C] :
     Presheaf C ≌
       CategoriesFibredInSetsOverCategory (Cat.of C) :=
-  Classical.choice (categoriesFibredInSetsOver_equivalent_to_presheaves (C := C))
+  Classical.choice
+    (categoriesFibredInSetsOver_strictified_equivalent_to_presheaves (C := C))
 
 /-- Every category fibred in sets is equivalent over its base to the
 CoGrothendieck category of a set-valued presheaf.  This is the usable

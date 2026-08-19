@@ -1135,7 +1135,8 @@ private theorem associatedGradedModule_smul_mk
             (show (1 : R) ∈ (I ^ 0 : Submodule R R) by simp) y.property
           rw [← Submodule.smul_assoc, Ideal.smul_eq_mul,
             ← Ideal.IsTwoSided.pow_add] at h
-          simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h⟩)
+          simp only [one_smul, zero_add] at h ⊢
+          exact h⟩)
         (⟨(y : M), y.property⟩) (by simp)
     mul_smul := by
       rintro ⟨i, a⟩ ⟨j, a'⟩ ⟨k, b⟩
@@ -1178,14 +1179,17 @@ private theorem associatedGradedModule_smul_mk
           simpa [← Submodule.smul_assoc, Ideal.smul_eq_mul,
             ← Ideal.IsTwoSided.pow_add, smul_smul, Nat.add_assoc,
             Nat.add_comm, Nat.add_left_comm] using h⟩)
-        (by simp only [Subtype.coe_mk]; rw [smul_smul]) }
+        (by
+          change ((a : R) * (a' : R)) • (b : M) =
+            (a : R) • ((a' : R) • (b : M))
+          rw [smul_smul]) }
 
 /-- The canonical graded-module action of `Gr_I(R)` on `Gr_I(M)`. -/
-theorem associatedGradedModule_gmodule_exists
+@[instance_reducible] private noncomputable def associatedGradedModule_gmodule_canonical
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (I : Ideal R) :
-    Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
-      (fun n => associatedGradedModulePiece (M := M) I n)) := by
+    DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) := by
   let gmulAction : GradedMonoid.GMulAction (associatedGradedRingPiece I)
       (fun n => associatedGradedModulePiece (M := M) I n) :=
     associatedGradedModule_gmulAction I
@@ -1225,10 +1229,10 @@ theorem associatedGradedModule_gmodule_exists
         intro i j a
         refine Submodule.Quotient.induction_on _ a ?_
         intro a
-        simp [associatedGradedModule_smul, Submodule.Quotient.mk]
+        simp [Submodule.Quotient.mk]
         apply (Submodule.Quotient.mk_eq_zero _).2
         simp }
-  exact ⟨{ gdistrib with
+  exact { gdistrib with
     smul := fun {i j} => associatedGradedModule_smul I
     add_smul := by
       intro i j a a' b
@@ -1255,7 +1259,15 @@ theorem associatedGradedModule_gmodule_exists
       intro b
       simp [associatedGradedModule_smul, Submodule.Quotient.mk]
       apply (Submodule.Quotient.mk_eq_zero _).2
-      simp }⟩
+      simp }
+
+/-- The canonical graded-module action of `Gr_I(R)` on `Gr_I(M)`. -/
+theorem associatedGradedModule_gmodule_exists
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n)) :=
+  ⟨associatedGradedModule_gmodule_canonical I⟩
 /-
   let smul : {i j : ℕ} → associatedGradedRingPiece I i →
       associatedGradedModulePiece (M := M) I j →
@@ -1429,7 +1441,7 @@ noncomputable instance associatedGradedModule_gmodule
     (I : Ideal R) :
     DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => associatedGradedModulePiece (M := M) I n) :=
-  Classical.choice (associatedGradedModule_gmodule_exists I)
+  associatedGradedModule_gmodule_canonical I
 
 /-- The associated graded module is finite over the associated graded ring. -/
 theorem associatedGradedModule_finite

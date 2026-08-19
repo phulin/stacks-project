@@ -301,7 +301,20 @@ theorem integerPowerSeriesModP_countablyGenerated
       apply Subtype.ext
       simpa [u, PowerSeries.smul_eq_C_mul] using hpoly
       -/
-      sorry
+      apply Subtype.ext
+      dsimp [u]
+      rw [Submodule.coe_sum]
+      simp only [Submodule.coe_smul]
+      calc
+        g = ∑ i ∈ Finset.range k,
+            PowerSeries.monomial i (PowerSeries.coeff i (x : PowerSeries ℤ)) := hpoly
+        _ = ∑ i ∈ Finset.range k,
+            (PowerSeries.coeff i (x : PowerSeries ℤ)) • PowerSeries.monomial i 1 := by
+          apply Finset.sum_congr rfl
+          intro i hi
+          simpa [PowerSeries.smul_eq_C_mul] using
+            (PowerSeries.monomial i).map_smul
+              (PowerSeries.coeff i (x : PowerSeries ℤ)) (1 : ℤ)
     have hqpoly : Q.mkQ u ∈ Submodule.span (ℤ ⧸ I) G := by
       rw [hpoly_sub, map_sum]
       apply Submodule.sum_mem
@@ -735,6 +748,63 @@ theorem integerPowerSeries_flat_mittagLeffler_not_projective :
 
 /-! ## The projectivity characterization -/
 
+private theorem isMittagLefflerModule_of_linearEquiv_unit93
+    {R : Type u} [CommRing R] {M N : Type v}
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (e : M ≃ₗ[R] N)
+    (hM : IsMittagLefflerModule (ModuleCat.of R M)) :
+    IsMittagLefflerModule (ModuleCat.of R N) := by
+  intro P hP f
+  obtain ⟨Q, hQ, g, hmut⟩ := hM P hP (e.symm.toLinearMap.comp f)
+  refine ⟨Q, hQ, g, ?_⟩
+  constructor
+  · intro X _ _ z hz
+    apply hmut.1 X
+    apply LinearMap.mem_ker.mpr
+    rw [LinearMap.rTensor_comp_apply]
+    simp [LinearMap.mem_ker.mp hz]
+  · intro X _ _ z hz
+    have hz' := hmut.2 X (LinearMap.mem_ker.mpr hz)
+    apply LinearMap.mem_ker.mpr
+    apply (LinearEquiv.rTensor X e.symm).injective
+    have hz'' : (e.symm.toLinearMap.rTensor X) ((f.rTensor X) z) = 0 := by
+      rw [← LinearMap.rTensor_comp_apply]
+      exact LinearMap.mem_ker.mp hz'
+    exact hz''
+
+private theorem isMittagLefflerModule_of_split_unit93
+    {R : Type u} [CommRing R] {M N : Type v}
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (i : N →ₗ[R] M) (r : M →ₗ[R] N) (hri : r.comp i = LinearMap.id)
+    (hM : IsMittagLefflerModule (ModuleCat.of R M)) :
+    IsMittagLefflerModule (ModuleCat.of R N) := by
+  intro P hP f
+  obtain ⟨Q, hQ, g, hmut⟩ := hM P hP (i.comp f)
+  refine ⟨Q, hQ, g, ?_⟩
+  constructor
+  · intro X _ _ z hz
+    apply hmut.1 X
+    apply LinearMap.mem_ker.mpr
+    rw [LinearMap.rTensor_comp_apply]
+    simp [LinearMap.mem_ker.mp hz]
+  · intro X _ _ z hz
+    apply LinearMap.mem_ker.mpr
+    have hz' := hmut.2 X (LinearMap.mem_ker.mpr hz)
+    have hfactor : (r.rTensor X).comp ((i.comp f).rTensor X) = f.rTensor X := by
+      calc
+        (r.rTensor X).comp ((i.comp f).rTensor X) =
+            (r.rTensor X).comp ((i.rTensor X).comp (f.rTensor X)) := by
+              rw [LinearMap.rTensor_comp]
+        _ = ((r.rTensor X).comp (i.rTensor X)).comp (f.rTensor X) := by
+              rw [LinearMap.comp_assoc]
+        _ = ((r.comp i).rTensor X).comp (f.rTensor X) := by
+              rw [LinearMap.rTensor_comp]
+        _ = (LinearMap.id.rTensor X).comp (f.rTensor X) := by rw [hri]
+        _ = f.rTensor X := by simp
+    have hz'' := congrArg (fun y => (r.rTensor X) y) (LinearMap.mem_ker.mp hz')
+    rw [← LinearMap.comp_apply, hfactor] at hz''
+    simpa using hz''
+
 /-- Projectivity is equivalent to flatness, Mittag--Lefflerness, and being a
 direct sum of countably generated modules. -/
 theorem projectivity_characterization
@@ -744,9 +814,128 @@ theorem projectivity_characterization
       Module.Flat R M ∧
         IsMittagLefflerModule (ModuleCat.of R M) ∧
           IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M) := by
-  sorry
+  constructor
+  · intro hP
+    letI : Module.Projective R M := hP
+    have hflat : Module.Flat R M := Module.Flat.of_projective
+    have hML : IsMittagLefflerModule (ModuleCat.of R M) :=
+      Formalization.Books.Algebra.Unit91.isMittagLefflerModule_of_projective
+        (ModuleCat.of R M) hP
+    obtain ⟨ι, N, hN, ⟨e⟩⟩ :=
+      projective_isDirectSumOfCountablyGeneratedProjectiveModules
+        (R := R) (M := M)
+    refine ⟨hflat, hML, ?_⟩
+    refine ⟨ι, N, ?_, ⟨e⟩⟩
+    intro i
+    exact (hN i).1
+  · rintro ⟨hflat, hML, ⟨ι, N, hN, ⟨e⟩⟩⟩
+    classical
+    have hflatDS : Module.Flat R (⨁ i, (N i : Type v)) := by
+      letI : Module.Flat R M := hflat
+      exact Module.Flat.of_linearEquiv e.symm
+    letI : Module.Flat R (⨁ i, (N i : Type v)) := hflatDS
+    have hMLDS : IsMittagLefflerModule
+        (ModuleCat.of R (⨁ i, (N i : Type v))) :=
+      isMittagLefflerModule_of_linearEquiv_unit93 e hML
+    have hprojN : ∀ i, Module.Projective R (N i : Type v) := by
+      intro i
+      let inc : (N i : Type v) →ₗ[R] (⨁ i, (N i : Type v)) :=
+        DirectSum.lof R ι (fun i => (N i : Type v)) i
+      let proj : (⨁ i, (N i : Type v)) →ₗ[R] (N i : Type v) :=
+        DirectSum.component R ι (fun i => (N i : Type v)) i
+      have hproj : proj.comp inc = LinearMap.id := by
+        ext x
+        simp [inc, proj]
+      have hflat_i : Module.Flat R (N i : Type v) :=
+        Module.Flat.of_retract inc proj hproj
+      have hML_i : IsMittagLefflerModule (N i) := by
+        change IsMittagLefflerModule (ModuleCat.of R (N i : Type v))
+        exact isMittagLefflerModule_of_split_unit93 inc proj hproj hMLDS
+      exact projective_of_flat_of_mittagLeffler_of_countablyGenerated
+        hflat_i hML_i (hN i)
+    letI (i : ι) : Module.Projective R (N i : Type v) := hprojN i
+    have hprojDS : Module.Projective R (⨁ i, (N i : Type v)) := by
+      apply Module.Projective.directSum_iff.mpr
+      intro i
+      exact hprojN i
+    letI : Module.Projective R (⨁ i, (N i : Type v)) := hprojDS
+    exact Module.Projective.of_equiv' e.symm
 
 /-! ## Universally injective descent -/
+
+private theorem flat_of_universallyInjective_into_flat_unit93
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+  (f : M →ₗ[R] N) (hf : universallyInjective f)
+    (hNflat : Module.Flat R N) :
+    Module.Flat R M := by
+  have hflat_iff :
+      Module.Flat R M ↔
+        ∀ ⦃P Q : Type (max u (max v w))⦄
+          [AddCommGroup P] [AddCommGroup Q] [Module R P] [Module R Q]
+          (i : P →ₗ[R] Q), Function.Injective i →
+          Function.Injective (i.lTensor M) :=
+    Module.Flat.iff_lTensor_preserves_injective_linearMap'
+  apply hflat_iff.2
+  intro P Q _ _ _ _ i hi
+  have hiN : Function.Injective (i.lTensor N) := by
+    letI : Module.Flat R N := hNflat
+    exact Module.Flat.lTensor_preserves_injective_linearMap i hi
+  have hfP : Function.Injective (f.rTensor P) := hf P
+  have hcomm : (i.lTensor N).comp (f.rTensor P) =
+      (f.rTensor Q).comp (i.lTensor M) := by
+    rw [LinearMap.lTensor_comp_rTensor, LinearMap.rTensor_comp_lTensor]
+  intro x y hxy
+  apply hfP
+  apply hiN
+  have h := congrArg (fun z => (f.rTensor Q) z) hxy
+  calc
+    (i.lTensor N) ((f.rTensor P) x) =
+        (f.rTensor Q) ((i.lTensor M) x) := by
+          change ((i.lTensor N).comp (f.rTensor P)) x =
+            ((f.rTensor Q).comp (i.lTensor M)) x
+          rw [hcomm]
+    _ = (f.rTensor Q) ((i.lTensor M) y) := h
+    _ = (i.lTensor N) ((f.rTensor P) y) := by
+          change ((f.rTensor Q).comp (i.lTensor M)) y =
+            ((i.lTensor N).comp (f.rTensor P)) y
+          rw [hcomm]
+
+private theorem isMittagLefflerModule_of_universallyInjective_unit93
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (hf : universallyInjective f)
+    (hN : IsMittagLefflerModule (ModuleCat.of R N)) :
+    IsMittagLefflerModule (ModuleCat.of R M) := by
+  have hNprod :
+      ∀ (A : Type (max v w))
+        (Q : A → ModuleCat.{max u (max v w)} R),
+        Function.Injective
+          (Formalization.Books.Algebra.Unit89.productTensorMap
+            (ModuleCat.of R N) Q) :=
+    (((Formalization.Books.Algebra.Unit89.mittagLeffler_tensor_iff.{u, max v w, w, max v w}
+      (M := ModuleCat.of R N)).out 0 1).mp hN)
+  apply ((Formalization.Books.Algebra.Unit89.mittagLeffler_tensor_iff.{u, max v w, v, max v w}
+    (M := ModuleCat.of R M)).out 0 1).mpr
+  intro A Q
+  have hproduct (x : TensorProduct R M (∀ a, (Q a : Type (max u (max v w))))) :
+      Formalization.Books.Algebra.Unit89.productTensorMap (ModuleCat.of R N) Q
+          (f.rTensor (∀ a, (Q a : Type (max u (max v w)))) x) =
+        fun a => f.rTensor (Q a : Type (max u (max v w)))
+          (Formalization.Books.Algebra.Unit89.productTensorMap
+            (ModuleCat.of R M) Q x a) := by
+    induction x using TensorProduct.induction_on with
+    | zero => ext a; simp [Formalization.Books.Algebra.Unit89.productTensorMap]
+    | tmul m q => ext a; simp [Formalization.Books.Algebra.Unit89.productTensorMap]
+    | add x y hx hy => ext a; simp [map_add, hx, hy]
+  intro x y hxy
+  apply hf (∀ a, (Q a : Type (max u (max v w))))
+  apply hNprod A Q
+  rw [hproduct, hproduct]
+  funext a
+  exact congrArg (f.rTensor (Q a : Type (max u (max v w))) ) (congrFun hxy a)
 
 /-- A universally injective map into a flat Mittag--Leffler module descends
 projectivity to a countable direct sum of modules. -/
@@ -759,7 +948,10 @@ theorem projective_of_universallyInjective_of_directSumOfCountablyGenerated
     (hNflat : Module.Flat R N)
     (hNML : IsMittagLefflerModule (ModuleCat.of R N)) :
     Module.Projective R M := by
-  sorry
+  have hflatM := flat_of_universallyInjective_into_flat_unit93 f hf hNflat
+  have hMLM := isMittagLefflerModule_of_universallyInjective_unit93 f hf hNML
+  exact (projectivity_characterization (R := R) (M := M)).2
+    ⟨hflatM, hMLM, hM⟩
 
 /-- If a direct sum of countably generated modules over a Noetherian ring maps
 universally injectively into a finite-variable formal power-series module, it
@@ -771,7 +963,16 @@ theorem projective_of_universallyInjective_to_mvPowerSeries
     {n : ℕ} (f : M →ₗ[R] MvPowerSeries (Fin n) R)
     (hf : universallyInjective f) :
     Module.Projective R M := by
-  sorry
+  have hpos :=
+    Formalization.Books.Algebra.Unit91.modulePower_is_flat_and_mittagLeffler
+      R (Fin n →₀ ℕ)
+  apply projective_of_universallyInjective_of_directSumOfCountablyGenerated
+    (f := f) hf hM
+  · change Module.Flat R ((Fin n →₀ ℕ) → R)
+    exact hpos.1
+  · change IsMittagLefflerModule
+      (ModuleCat.of R ((Fin n →₀ ℕ) → R))
+    exact hpos.2
 
 end
 

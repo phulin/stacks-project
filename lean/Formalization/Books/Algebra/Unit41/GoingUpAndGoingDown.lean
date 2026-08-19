@@ -492,7 +492,7 @@ private noncomputable def tensorProductRingHom
     [Semiring D] [Algebra T D]
     (e : A ≃ₐ[T] C) (e' : B ≃ₐ[T] D) :
     A ⊗[T] B →+* C ⊗[T] D :=
-  (Algebra.TensorProduct.congr e e').toRingEquiv.toRingHom
+  (tensorProductRingEquiv e e').toRingHom
 
 private lemma tensorProductRingHom_injective
     {T A B C D : Type*} [CommSemiring T] [Semiring A] [Algebra T A]
@@ -603,6 +603,7 @@ private lemma tensorLocalizationBaseMap_comap_comp
   rw [tensorLocalizationBaseMap_comp (k := k) (R := R) (S := S) S' f]
   exact PrimeSpectrum.comap_comp _ _
 
+set_option maxHeartbeats 210000 in
 theorem same_image
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] (S' : Subalgebra k S)
@@ -622,15 +623,13 @@ theorem same_image
   let _ : Algebra R (S' ⊗[k] R) :=
     Algebra.TensorProduct.rightAlgebra (R := k) (A := S') (B := R)
   let _ : Algebra R (Localization.Away f) :=
-    ((algebraMap (S' ⊗[k] R) (Localization.Away f)).comp
-      (Algebra.TensorProduct.includeRight : R →ₐ[k] S' ⊗[k] R).toRingHom).toAlgebra
+    (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f).toAlgebra
   let _ : Algebra R (S ⊗[k] R) :=
     Algebra.TensorProduct.rightAlgebra (R := k) (A := S) (B := R)
   let _ : Algebra R (Localization.Away
       (tensorSubalgebraMap (k := k) (R := R) S' f)) :=
-    ((algebraMap (S ⊗[k] R)
-      (Localization.Away (tensorSubalgebraMap (k := k) (R := R) S' f))).comp
-        (Algebra.TensorProduct.includeRight : R →ₐ[k] S ⊗[k] R).toRingHom).toAlgebra
+    (tensorLocalizationBaseMap (k := k) (A := S) (R := R)
+      (tensorSubalgebraMap (k := k) (R := R) S' f)).toAlgebra
   have hright_small :
       algebraMap R (S' ⊗[k] R) =
         tensorRightRingHom (k := k) (A := S') (R := R) := by

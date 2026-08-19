@@ -122,8 +122,6 @@ theorem essFinitePresentation_comp
     (hf : RingHom.EssFinitePresentation f)
     (hg : RingHom.EssFinitePresentation g) :
     RingHom.EssFinitePresentation (g.comp f) := by
-  sorry
-/-
   classical
   algebraize [f, g, g.comp f]
   change essFinitePresentation R S at hf
@@ -267,9 +265,10 @@ theorem essFinitePresentation_comp
   have hL : L.comp aP = (b.comp q).comp a := by
     apply RingHom.ext
     intro x
-    change p (F (aP x)) = b (q (a x))
-    simp only [F, aP, RingHom.comp_apply, MvPolynomial.map_C]
-    simpa only [MvPolynomial.algebraMap_eq] using p.commutes (q (a x))
+    change p ((MvPolynomial.map q) (MvPolynomial.C (a x))) = b (q (a x))
+    rw [MvPolynomial.map_C]
+    rw [← RingHom.algebraMap_toAlgebra b]
+    exact p.commutes (q (a x))
   have hcomp : (r.comp c).comp d = algebraMap R T := by
     apply RingHom.ext
     intro x
@@ -301,15 +300,17 @@ theorem essFinitePresentation_comp
   let dLift : R →+* C' := eLift.symm.toRingHom.comp d
   let qLift : C' →+* T := (r.comp c).comp eLift.toRingHom
   letI : Algebra C' T := qLift.toAlgebra
-  have hlocLift : IsLocalization (U.map eLift.symm.toRingHom) T := by
+  have hlocLift : IsLocalization
+      ((IsLocalization.localizationLocalizationSubmodule U N).map eLift.symm.toRingHom) T := by
     convert IsLocalization.isLocalization_of_base_ringEquiv
       (IsLocalization.localizationLocalizationSubmodule U N) T eLift.symm using 1
+    rfl
     apply Algebra.algebra_ext
     intro x
     rfl
   have hdLift : RingHom.FinitePresentation dLift := by
     apply RingHom.FinitePresentation.comp
-      (RingHom.FinitePresentation.of_bijective eLift.symm.toRingHom eLift.symm.bijective)
+      (RingHom.FinitePresentation.of_bijective eLift.symm.bijective)
     exact hd
   have hcompLift : qLift.comp dLift = algebraMap R T := by
     apply RingHom.ext
@@ -318,8 +319,9 @@ theorem essFinitePresentation_comp
     rw [eLift.apply_symm_apply]
     exact DFunLike.congr_fun hcomp x
   change essFinitePresentation R T
-  refine ⟨C', inferInstance, dLift, U.map eLift.symm.toRingHom, qLift,
-    hdLift, hcompLift, hlocLift⟩ -/
+  refine ⟨C', inferInstance, dLift,
+    (IsLocalization.localizationLocalizationSubmodule U N).map eLift.symm.toRingHom, qLift,
+    hdLift, hcompLift, hlocLift⟩
 
 theorem essFinitePresentation_isStableUnderBaseChange :
     RingHom.IsStableUnderBaseChange @RingHom.EssFinitePresentation := by

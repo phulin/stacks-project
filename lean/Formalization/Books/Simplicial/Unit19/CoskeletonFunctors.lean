@@ -218,7 +218,12 @@ theorem trivial_coskeleton_limit_iso {C : Type u} [Category.{v} C]
     (m n : ℕ) (h : n ≤ m) (U : SimplicialObject.Truncated C m) :
     Nonempty (trivialCoskeletonLimit m n h U ≅
       U.obj (op ⟨SimplexCategory.mk n, by exact h⟩)) := by
-  sorry
+  let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, h⟩
+  let := SimplexCategory.Truncated.inclusion.fullyFaithful m
+  let hY := StructuredArrow.mkIdInitial (T := truncInclusion m) (Y := Y)
+  let : HasLimit (coskeletonIndexDiagram m n U) := has_trivial_coskeleton_limit m n h U
+  exact ⟨(limit.isLimit (coskeletonIndexDiagram m n U)).conePointUniqueUpToIso
+    (limitOfDiagramInitial hY (coskeletonIndexDiagram m n U))⟩
 
 theorem recover_coskeleton {C : Type u} [Category.{v} C] (n : ℕ)
     (U : SimplicialObject.Truncated C n) [HasCoskeleton n U] :

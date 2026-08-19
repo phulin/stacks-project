@@ -317,7 +317,22 @@ theorem exists_simplicialSetProduct_hom_natIso
     Nonempty
       (uliftCoyoneda.{w}.obj (op (simplicialSetProductOf U V h)) ≅
         productWithSimplicialSetHomFunctor U V) := by
-  sorry
+  refine ⟨NatIso.ofComponents (fun W =>
+    Equiv.toIso (Equiv.ulift.trans (simplicialSetProduct_hom_equiv h W))) ?_⟩
+  intro W W' k
+  ext x
+  induction x with
+  | up x =>
+    apply Subtype.ext
+    funext n u
+    change
+      (let _ := h n;
+        Sigma.ι (fun _ : U _⦋n⦌ => V.obj (op (SimplexCategory.mk n))) u ≫
+          (x.app (op (SimplexCategory.mk n)) ≫ k.app (op (SimplexCategory.mk n)))) =
+        (let _ := h n;
+          Sigma.ι (fun _ : U _⦋n⦌ => V.obj (op (SimplexCategory.mk n))) u ≫
+            x.app (op (SimplexCategory.mk n))) ≫ k.app (op (SimplexCategory.mk n))
+    exact (Category.assoc _ _ _).symm
 
 noncomputable def simplicialSetProduct_hom_natIso
     {C : Type u} [Category.{v} C]
@@ -361,7 +376,35 @@ noncomputable def productWithSimplicialSetMap
         g.app X ≫ Sigma.ι (fun _ : U'.obj.obj X => V'.obj X)
           (f.hom.app X u))
     naturality := by
-      sorry }
+      intro X Y φ
+      let hUV : HasDegreewiseCoproducts U.obj V :=
+        degreewiseCoproductInstance U.obj V U.property
+      let hU'V' : HasDegreewiseCoproducts U'.obj V' :=
+        degreewiseCoproductInstance U'.obj V' U'.property
+      letI : HasCoproduct (fun _ : U.obj.obj X => V.obj X) :=
+        degreewiseCoproductInstanceAt hUV X
+      letI : HasCoproduct (fun _ : U.obj.obj Y => V.obj Y) :=
+        degreewiseCoproductInstanceAt hUV Y
+      letI : HasCoproduct (fun _ : U'.obj.obj X => V'.obj X) :=
+        degreewiseCoproductInstanceAt hU'V' X
+      letI : HasCoproduct (fun _ : U'.obj.obj Y => V'.obj Y) :=
+        degreewiseCoproductInstanceAt hU'V' Y
+      change
+        (Sigma.desc (fun u =>
+            V.map φ ≫ Sigma.ι (fun _ : U.obj.obj Y => V.obj Y)
+              (U.obj.map φ u)) ≫
+          Sigma.desc (fun u =>
+            g.app Y ≫ Sigma.ι (fun _ : U'.obj.obj Y => V'.obj Y)
+              (f.hom.app Y u))) =
+        Sigma.desc (fun u =>
+            g.app X ≫ Sigma.ι (fun _ : U'.obj.obj X => V'.obj X)
+              (f.hom.app X u)) ≫
+          Sigma.desc (fun u =>
+            V'.map φ ≫ Sigma.ι (fun _ : U'.obj.obj Y => V'.obj Y)
+              (U'.obj.map φ u))
+      apply Sigma.hom_ext
+      intro u
+      simp [Category.assoc, f.hom.naturality, g.naturality] }
 
 /-! The source's rule `(U, V) ↦ U × V` is now given as an actual functor.
 The two functor laws are proposition-valued interfaces for the proof stage. -/
@@ -372,9 +415,54 @@ noncomputable def productWithSimplicialSetBifunctor
   { obj := fun Z => simplicialSetProduct Z.1.obj Z.2 Z.1.property
     map := fun f => productWithSimplicialSetMap f.1 f.2
     map_id := by
-      sorry
+      intro X
+      let hX : HasDegreewiseCoproducts X.1.obj X.2 :=
+        degreewiseCoproductInstance X.1.obj X.2 X.1.property
+      apply NatTrans.ext
+      funext Y
+      letI : HasCoproduct (fun _ : X.1.obj.obj Y => X.2.obj Y) :=
+        degreewiseCoproductInstanceAt hX Y
+      change
+        Sigma.desc (fun u =>
+          𝟙 (X.2.obj Y) ≫ Sigma.ι (fun _ : X.1.obj.obj Y => X.2.obj Y) u) = 𝟙 _
+      apply Sigma.hom_ext
+      intro u
+      simp [productWithSimplicialSetMap, Category.assoc]
     map_comp := by
-      sorry }
+      intro X Y Z f g
+      apply NatTrans.ext
+      funext T
+      let hX : HasDegreewiseCoproducts X.1.obj X.2 :=
+        degreewiseCoproductInstance X.1.obj X.2 X.1.property
+      let hY : HasDegreewiseCoproducts Y.1.obj Y.2 :=
+        degreewiseCoproductInstance Y.1.obj Y.2 Y.1.property
+      let hZ : HasDegreewiseCoproducts Z.1.obj Z.2 :=
+        degreewiseCoproductInstance Z.1.obj Z.2 Z.1.property
+      letI : HasCoproduct (fun _ : X.1.obj.obj T => X.2.obj T) :=
+        degreewiseCoproductInstanceAt hX T
+      letI : HasCoproduct (fun _ : Y.1.obj.obj T => Y.2.obj T) :=
+        degreewiseCoproductInstanceAt hY T
+      letI : HasCoproduct (fun _ : Z.1.obj.obj T => Z.2.obj T) :=
+        degreewiseCoproductInstanceAt hZ T
+      simp [productWithSimplicialSetMap]
+      have hdesc :
+          (Sigma.desc (fun u =>
+            f.2.app T ≫ Sigma.ι (fun _ : Y.1.obj.obj T => Y.2.obj T)
+              (f.1.hom.app T u))) ≫
+              Sigma.desc (fun u =>
+                g.2.app T ≫ Sigma.ι (fun _ : Z.1.obj.obj T => Z.2.obj T)
+                  (g.1.hom.app T u)) =
+            Sigma.desc (fun u =>
+              (f.2.app T ≫ g.2.app T) ≫
+                Sigma.ι (fun _ : Z.1.obj.obj T => Z.2.obj T)
+                  (g.1.hom.app T (f.1.hom.app T u))) := by
+        apply Sigma.hom_ext
+        intro u
+        simp [Category.assoc]
+      have hfg : (f.1 ≫ g.1).hom.app T = f.1.hom.app T ≫ g.1.hom.app T := by
+        rfl
+      rw [hfg]
+      exact hdesc.symm }
 
 theorem exists_productWithSimplicialSetFunctor
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C] :

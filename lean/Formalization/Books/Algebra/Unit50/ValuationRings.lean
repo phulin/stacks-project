@@ -667,6 +667,11 @@ def ValueGroupIdeal (Γ : Type u) [AddCommGroup Γ] [LinearOrder Γ]
     [IsOrderedAddMonoid Γ] :=
   {I : Set Γ // IsValueGroupIdeal I}
 
+instance ValueGroupIdeal.instMembership
+    (Γ : Type u) [AddCommGroup Γ] [LinearOrder Γ] [IsOrderedAddMonoid Γ] :
+    Membership Γ (ValueGroupIdeal Γ) :=
+  ⟨fun I γ => γ ∈ I.1⟩
+
 instance ValueGroupIdeal.instPartialOrder
     (Γ : Type u) [AddCommGroup Γ] [LinearOrder Γ] [IsOrderedAddMonoid Γ] :
     PartialOrder (ValueGroupIdeal Γ) where
@@ -809,7 +814,7 @@ theorem ideals_equiv_valueGroupIdeals
         exact Units.ne_zero
           ((OrderDual.ofDual γ.toMul : H) :
             (ValueGroupWithZero (A := A) (K := K))ˣ)
-      exact htv0 (by simpa using hz)
+      exact htv0 (by simpa using hz.symm)
     obtain ⟨x, hx⟩ := hv.exists_of_le_one (by
       rw [hz]
       exact htoValue_nonneg hγ)
@@ -869,7 +874,7 @@ theorem ideals_equiv_valueGroupIdeals
       · intro γ hγ δ hδ
         change 0 ≤ γ ∧ cutIdeal γ ≤ I at hγ
         change 0 ≤ δ ∧ cutIdeal δ ≤ I
-        exact ⟨hγ.1.trans hδ, fun x hx => hx.trans (htoValue_le hδ)⟩⟩
+        exact ⟨hγ.1.trans hδ, fun x hx => hγ.2 (hx.trans (htoValue_le hδ))⟩⟩
   let invFun : ValueGroupIdeal (ValueGroup (A := A) (K := K)) → Ideal A := fun S =>
     { carrier := {x | x = 0 ∨ ∃ γ, γ ∈ S.1 ∧ x ∈ cutIdeal γ}
       zero_mem' := Or.inl rfl
@@ -911,16 +916,16 @@ theorem ideals_equiv_valueGroupIdeals
     change (0 ≤ γ ∧ cutIdeal γ ≤ invFun S) ↔ γ ∈ S.1
     constructor
     · intro hγ
-      obtain ⟨x, hx0, hxval⟩ := hexists hγ.1
+      obtain ⟨x, hx0, hx, hxval⟩ := hexists hγ.1
       have hxcut : x ∈ cutIdeal γ := by
         change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ
-        rw [← hxval, htoValue_val hx0]
+        rw [← hxval, htoValue_val hx]
       have hxinv := hγ.2 hxcut
       change x = 0 ∨ ∃ δ, δ ∈ S.1 ∧ x ∈ cutIdeal δ at hxinv
       rcases hxinv with hxzero | ⟨δ, hδ, hxδ⟩
       · exact (hx0 hxzero).elim
       · apply S.2.2 δ hδ γ
-        exact (hval_le_general' hx0).mp hxδ |>.trans_eq hxval.symm
+        exact (hval_le_general' hx).mp hxδ |>.trans_eq hxval.symm
     · intro hγ
       refine ⟨S.2.1 γ hγ, ?_⟩
       intro x hx
@@ -931,12 +936,12 @@ theorem ideals_equiv_valueGroupIdeals
     constructor
     · intro hx
       rcases hx with hxzero | ⟨γ, hγ, hxcut⟩
-      · simpa [hxzero] using I.zero_mem
+      · simp [hxzero]
       · exact hγ.2 hxcut
     · intro hx
       by_cases hx0 : x = 0
       · exact Or.inl hx0
-        · refine Or.inr ⟨val ⟨x, hx0⟩, ?_, ?_⟩
+      · refine Or.inr ⟨val ⟨x, hx0⟩, ?_, ?_⟩
         · exact ⟨hval_nonneg hx0, hcut_mem_of_mem I hx0 hx⟩
         · change (ValuationRing.valuation A K) (algebraMap A K x) ≤
             toValue (val ⟨x, hx0⟩)
@@ -958,33 +963,36 @@ theorem ideals_equiv_valueGroupIdeals
       constructor
       · intro hzero
         apply hI.ne_top
-        apply Ideal.eq_top_iff_one.mpr
+        apply (Ideal.eq_top_iff_one).mpr
         exact hzero.2 (by
           change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ toValue 0
           change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ 1
           simp)
       · intro γ δ hγ hδ hsum
-        obtain ⟨x, hx0, hxval⟩ := hexists hγ
-        obtain ⟨y, hy0, hyval⟩ := hexists hδ
+        obtain ⟨x, hx0, hx, hxval⟩ := hexists hγ
+        obtain ⟨y, hy0, hy, hyval⟩ := hexists hδ
         have hxycut : x * y ∈ cutIdeal (γ + δ) := by
           change (ValuationRing.valuation A K) (algebraMap A K (x * y)) ≤ toValue (γ + δ)
           rw [← htoValue_val (mul_ne_zero hx0 hy0), hval_mul hx0 hy0, hxval, hyval]
         have hxyI := hsum.2 hxycut
         rcases hI.2 hxyI with hxI | hyI
-        · exact Or.inl ⟨hγ, hcut_mem_of_mem I hx0 hxI⟩
-        · exact Or.inr ⟨hδ, hcut_mem_of_mem I hy0 hyI⟩
+        · refine Or.inl ⟨hγ, ?_⟩
+          rw [← hxval]
+          exact hcut_mem_of_mem I hx0 hxI
+        · refine Or.inr ⟨hδ, ?_⟩
+          rw [← hyval]
+          exact hcut_mem_of_mem I hy0 hyI
     · intro hS
       change I.IsPrime
       refine ⟨?_, ?_⟩
       · intro htop
         apply hS.2.1
-        rw [htop]
-        exact ⟨zero_le, le_top⟩
+        rw [htop] <;> exact ⟨le_rfl, le_top⟩
       · intro x y hxy
         by_cases hx0 : x = 0
-        · exact Or.inl hx0
+        · exact Or.inl (hx0 ▸ I.zero_mem)
         by_cases hy0 : y = 0
-        · exact Or.inr hy0
+        · exact Or.inr (hy0 ▸ I.zero_mem)
         have hsum : val ⟨x, hx0⟩ + val ⟨y, hy0⟩ ∈ eFun I := by
           refine ⟨add_nonneg (hval_nonneg hx0) (hval_nonneg hy0), ?_⟩
           simpa [hval_mul hx0 hy0] using
@@ -1019,14 +1027,14 @@ theorem valuationRing_isNoetherian_iff_isDiscreteValuationRing_or_isField
   · intro hN
     by_cases hF : IsField A
     · exact Or.inr hF
-    · letI : IsNoetherianRing A := hN
+    · let : IsNoetherianRing A := hN
       exact Or.inl (((IsDiscreteValuationRing.TFAE A hF).out 1 0).mp
         (inferInstance : ValuationRing A))
   · rintro (hD | hF)
-    · letI : IsDiscreteValuationRing A := hD
+    · let : IsDiscreteValuationRing A := hD
       infer_instance
-    · letI : IsField A := hF
-      letI := hF.toField
+    · let : IsField A := hF
+      let := hF.toField
       infer_instance
 
 end

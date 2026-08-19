@@ -1155,6 +1155,21 @@ theorem separableClosure_map_eq_of_isPurelyInseparable
         (S := separableClosure F K) (IsScalarTower.toAlgHom F K L)).2 hymem
     exact hy ▸ hmap
 
+/-- After an algebraic base change and a purely inseparable top change, the
+new separable closure is the compositum with the mapped old separable
+closure. -/
+theorem separableClosure_eq_adjoin_map_of_pure_baseChange
+    {F : Type u} {K : Type v} {E : Type*} {L : Type*}
+    [Field F] [Field K] [Field E] [Field L]
+    [Algebra F K] [Algebra F E] [Algebra F L] [Algebra K L] [Algebra E L]
+    [IsScalarTower F K L] [IsScalarTower F E L]
+    [IsPurelyInseparable K L] [Algebra.IsAlgebraic F E] :
+    IntermediateField.adjoin E
+        ((separableClosure F K).map (IsScalarTower.toAlgHom F K L) : Set L) =
+      separableClosure E L := by
+  rw [separableClosure_map_eq_of_isPurelyInseparable]
+  exact separableClosure.adjoin_eq_of_isAlgebraic (F := F) (E := E) (K := L)
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

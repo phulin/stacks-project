@@ -1339,7 +1339,23 @@ theorem zLocalizedAtTwo_closedPoint_maps_to_generic_point
             (e.toRingHom.comp (algebraMap ZLocalizedAtTwo ZLocalizedAtTwoAtTwo))
             (⟨⊥, inferInstance⟩ : PrimeSpectrum ℚ) =
           (⟨⊥, inferInstance⟩ : PrimeSpectrum ZLocalizedAtTwo) := by
-  sorry
+  obtain ⟨e⟩ := zLocalizedAtTwo_is_rational
+  refine ⟨e, ?_⟩
+  apply PrimeSpectrum.ext
+  change Ideal.comap (e.toRingHom.comp
+    (algebraMap ZLocalizedAtTwo ZLocalizedAtTwoAtTwo)) (⊥ : Ideal ℚ) = ⊥
+  apply Ideal.comap_bot_of_injective
+  apply e.injective.comp
+  apply IsLocalization.injective (M :=
+    Submonoid.powers (algebraMap ℤ ZLocalizedAtTwo (2 : ℤ)))
+    ZLocalizedAtTwoAtTwo
+  apply powers_le_nonZeroDivisors_of_noZeroDivisors
+  intro h
+  have hinj : Function.Injective (algebraMap ℤ ZLocalizedAtTwo) :=
+    IsLocalization.injective ZLocalizedAtTwo
+      integerTwoIdeal.primeCompl_le_nonZeroDivisors
+  have h20 : (2 : ℤ) = 0 := hinj (by simpa using h)
+  norm_num at h20
 
 abbrev RationalLocalizationOfIntegers :=
   Localization (nonZeroDivisors ℤ)
@@ -1354,7 +1370,15 @@ theorem rationalLocalization_closedPoint_maps_to_generic_point
             (e.toRingHom.comp (algebraMap ℤ RationalLocalizationOfIntegers))
             (⟨⊥, inferInstance⟩ : PrimeSpectrum ℚ) =
           (⟨⊥, inferInstance⟩ : PrimeSpectrum ℤ) := by
-  sorry
+  obtain ⟨e⟩ := rationalLocalizationOfIntegers_is_rational
+  refine ⟨e, ?_⟩
+  apply PrimeSpectrum.ext
+  change Ideal.comap (e.toRingHom.comp
+    (algebraMap ℤ RationalLocalizationOfIntegers)) (⊥ : Ideal ℚ) = ⊥
+  apply Ideal.comap_bot_of_injective
+  apply e.injective.comp
+  exact IsLocalization.injective (M := nonZeroDivisors ℤ)
+    RationalLocalizationOfIntegers le_rfl
 
 theorem quotient_of_isJacobson_isJacobson_with_maximal_correspondence
     {R : Type u} [CommRing R] [IsJacobsonRing R] (I : Ideal R) :
@@ -1364,14 +1388,74 @@ theorem quotient_of_isJacobson_isJacobson_with_maximal_correspondence
             {N : Ideal R // N.IsMaximal ∧ I ≤ N},
         (∀ M, Ideal.map (Ideal.Quotient.mk I) (e M).1 = M.1) ∧
           (∀ N, Ideal.comap (Ideal.Quotient.mk I) (e.symm N).1 = N.1) := by
-  sorry
+  constructor
+  · infer_instance
+  · let f : R →+* R ⧸ I := Ideal.Quotient.mk I
+    let e :
+        {M : Ideal (R ⧸ I) // M.IsMaximal} ≃
+          {N : Ideal R // N.IsMaximal ∧ I ≤ N} :=
+      { toFun := fun M =>
+          let _ : M.1.IsMaximal := M.2
+          ⟨Ideal.comap f M.1,
+            ⟨Ideal.comap_isMaximal_of_surjective f Ideal.Quotient.mk_surjective,
+              by
+                change I ≤ Ideal.comap (Ideal.Quotient.mk I) M.1
+                exact (Ideal.mk_ker (I := I)).ge.trans
+                  (Ideal.ker_le_comap (Ideal.Quotient.mk I))⟩⟩
+        invFun := fun N =>
+          let _ : N.1.IsMaximal := N.2.1
+          ⟨Ideal.map f N.1,
+            Ideal.IsMaximal.map_of_surjective_of_ker_le
+              Ideal.Quotient.mk_surjective (by
+                exact (Ideal.mk_ker (I := I)).le.trans N.2.2)⟩
+        left_inv := fun M =>
+          Subtype.ext (Ideal.map_comap_of_surjective f
+            Ideal.Quotient.mk_surjective M.1)
+        right_inv := fun N => by
+          apply Subtype.ext
+          change Ideal.comap f (Ideal.map f N.1) = N.1
+          rw [Ideal.comap_map_of_surjective f Ideal.Quotient.mk_surjective]
+          change N.1 ⊔ Ideal.comap (Ideal.Quotient.mk I)
+              (⊥ : Ideal (R ⧸ I)) = N.1
+          rw [← RingHom.ker_eq_comap_bot, Ideal.mk_ker]
+          exact sup_eq_left.mpr N.2.2 }
+    refine ⟨e, ?_, ?_⟩
+    · intro M
+      exact Ideal.map_comap_of_surjective f Ideal.Quotient.mk_surjective M.1
+    · intro N
+      change Ideal.comap f (Ideal.map f N.1) = N.1
+      rw [Ideal.comap_map_of_surjective f Ideal.Quotient.mk_surjective]
+      change N.1 ⊔ Ideal.comap (Ideal.Quotient.mk I)
+          (⊥ : Ideal (R ⧸ I)) = N.1
+      rw [← RingHom.ker_eq_comap_bot, Ideal.mk_ker]
+      exact sup_eq_left.mpr N.2.2
 
 theorem jacobson_subring_of_finiteType_field
     {R K : Type u} [CommRing R] [Field K] [Algebra R K]
     [IsJacobsonRing R] [Algebra.FiniteType R K]
     (hRK : Function.Injective (algebraMap R K)) :
     IsField R ∧ Module.Finite R K := by
-  sorry
+  letI : IsDomain R := hRK.isDomain
+  obtain ⟨f, hf, hfield, _, _⟩ :=
+    Formalization.Books.Algebra.Unit34.field_finite_type_over_domain hRK
+  letI : Field (Localization.Away f) := hfield.toField
+  have halg_inj : Function.Injective (algebraMap R (Localization.Away f)) :=
+    IsLocalization.injective (M := Submonoid.powers f) (Localization.Away f)
+      (powers_le_nonZeroDivisors_of_noZeroDivisors hf)
+  have hmax : (⊥ : Ideal R).IsMaximal := by
+    have hm :=
+      (maximalIdealLocalizationOrderIso f
+        ⟨(⊥ : Ideal (Localization.Away f)), inferInstance⟩).2
+    have heq :
+        (maximalIdealLocalizationOrderIso f
+          ⟨(⊥ : Ideal (Localization.Away f)), inferInstance⟩).1 =
+            (⊥ : Ideal R) := by
+      change Ideal.comap (algebraMap R (Localization.Away f)) ⊥ = ⊥
+      exact Ideal.comap_bot_of_injective _ halg_inj
+    rw [heq] at hm
+    exact hm.1
+  refine ⟨Ring.isField_iff_maximal_bot.mpr hmax, ?_⟩
+  exact finite_of_finite_type_of_isJacobsonRing R K
 
 theorem finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
     {R S : Type u} [CommRing R] [CommRing S] [IsJacobsonRing R]

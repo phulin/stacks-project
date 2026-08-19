@@ -3,6 +3,7 @@ import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Ideal.IsPrincipal
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Data.PNat.Notation
+import Formalization.Books.Algebra.Unit96.Completion
 
 /-!
 # Examples, Chapter 8: Noncomplete quotient
@@ -796,7 +797,34 @@ theorem noncompleteQuotientCompletion_quotient_not_isAdicComplete
     (k : Type u) [Field k] :
     ¬ IsAdicComplete (noncompleteQuotientCompletionXIdeal k)
       (NoncompleteQuotientCompletion k ⧸ noncompleteQuotientCompletionTIdeal k) := by
-  sorry
+  intro hcomplete
+  have hclosed :
+      (noncompleteQuotientCompletionTIdeal k :
+        Submodule (NoncompleteQuotientCompletion k) (NoncompleteQuotientCompletion k)) =
+        ⨅ n : ℕ,
+          (noncompleteQuotientCompletionTIdeal k :
+            Submodule (NoncompleteQuotientCompletion k) (NoncompleteQuotientCompletion k)) ⊔
+            (noncompleteQuotientCompletionXIdeal k) ^ n •
+              (⊤ : Submodule (NoncompleteQuotientCompletion k)
+                (NoncompleteQuotientCompletion k)) :=
+    (Formalization.Books.Algebra.Unit96.quotient_isAdicComplete_iff
+      (noncompleteQuotientCompletionXIdeal k)
+      (noncompleteQuotientCompletion_isAdicComplete k)
+      (noncompleteQuotientCompletionTIdeal k)).mpr hcomplete
+  have hbad :
+      noncompleteQuotientBadElement k ∈
+        ⨅ n : ℕ,
+          (noncompleteQuotientCompletionTIdeal k :
+            Submodule (NoncompleteQuotientCompletion k) (NoncompleteQuotientCompletion k)) ⊔
+            (noncompleteQuotientCompletionXIdeal k) ^ n •
+              (⊤ : Submodule (NoncompleteQuotientCompletion k)
+                (NoncompleteQuotientCompletion k)) := by
+    apply (Submodule.mem_iInf _).2
+    intro n
+    have hn := noncompleteQuotientBadElement_mem_completionMixedIdeal k n
+    simpa [noncompleteQuotientCompletionMixedIdeal, smul_eq_mul, Ideal.mul_top] using hn
+  have hbad' := hclosed.symm ▸ hbad
+  exact noncompleteQuotientBadElement_not_mem_completionTIdeal k hbad'
 
 theorem noncompleteQuotientCompletionXIdeal_isPrincipal
     (k : Type u) [Field k] :

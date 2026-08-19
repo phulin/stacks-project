@@ -109,19 +109,141 @@ theorem dOnProj_eq_zero_component_union_positive
     dOnProj 𝒜 g =
       dOnProj 𝒜 (GradedRing.proj 𝒜 0 g) ∪
         ⋃ n : {n : ℕ // 0 < n},
-          dPlus 𝒜 (GradedRing.proj 𝒜 n.1 g) := by sorry
+          dPlus 𝒜 (GradedRing.proj 𝒜 n.1 g) := by
+  ext x
+  simp only [Set.mem_union, Set.mem_iUnion, mem_dPlus_iff]
+  change g ∉ x.asHomogeneousIdeal.toIdeal ↔
+    (GradedRing.proj 𝒜 0 g) ∉ x.asHomogeneousIdeal.toIdeal ∨
+      ∃ n : {n : ℕ // 0 < n},
+        GradedRing.proj 𝒜 n.1 g ∉ x.asHomogeneousIdeal.toIdeal
+  have hx : x.asHomogeneousIdeal.toIdeal.IsHomogeneous 𝒜 :=
+    x.asHomogeneousIdeal.isHomogeneous
+  have hcomp : g ∈ x.asHomogeneousIdeal.toIdeal ↔
+      ∀ n : ℕ, GradedRing.proj 𝒜 n g ∈ x.asHomogeneousIdeal.toIdeal := by
+    simpa only [GradedRing.proj_apply] using hx.mem_iff
+  constructor
+  · intro hg
+    by_cases h0 : GradedRing.proj 𝒜 0 g ∈ x.asHomogeneousIdeal.toIdeal
+    · right
+      by_contra hnone
+      apply hg
+      apply hcomp.mpr
+      intro n
+      cases n with
+      | zero => exact h0
+      | succ n =>
+          by_contra hn
+          exact hnone ⟨⟨n + 1, Nat.zero_lt_succ n⟩, hn⟩
+    · exact Or.inl h0
+  · rintro (h0 | ⟨n, hn⟩) hg
+    · apply h0
+      exact (hcomp.mp hg) 0
+    · have hnm : GradedRing.proj 𝒜 n.1 g ∈ x.asHomogeneousIdeal.toIdeal :=
+        (hcomp.mp hg) n.1
+      exact hn hnm
 theorem dOnProj_degree_zero_eq_iUnion_mul
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     {g : R} (_hg : g ∈ 𝒜 0) {ι : Type v} (f : ι → R)
     (_hf : ∀ i, ∃ n : ℕ, 0 < n ∧ f i ∈ 𝒜 n)
     (hspan : (HomogeneousIdeal.irrelevant 𝒜).toIdeal ≤
       Ideal.span (Set.range f)) :
-    dOnProj 𝒜 g = ⋃ i, dPlus 𝒜 (g * f i) := by sorry
+    dOnProj 𝒜 g = ⋃ i, dPlus 𝒜 (g * f i) := by
+  ext x
+  simp only [Set.mem_iUnion, mem_dPlus_iff]
+  change g ∉ x.asHomogeneousIdeal.toIdeal ↔
+    ∃ i, g * f i ∉ x.asHomogeneousIdeal.toIdeal
+  have hex : ∃ i, f i ∉ x.asHomogeneousIdeal.toIdeal := by
+    by_contra h
+    have hfi : ∀ i, f i ∈ x.asHomogeneousIdeal.toIdeal := by
+      intro i
+      by_contra hi
+      exact h ⟨i, hi⟩
+    apply x.not_irrelevant_le
+    intro y hy
+    have hy' : y ∈ (HomogeneousIdeal.irrelevant 𝒜).toIdeal := hy
+    have hyspan : y ∈ Ideal.span (Set.range f) := hspan hy'
+    have hspanP : Ideal.span (Set.range f) ≤ x.asHomogeneousIdeal.toIdeal := by
+      apply Ideal.span_le.2
+      rintro _ ⟨i, rfl⟩
+      exact hfi i
+    exact hspanP hyspan
+  constructor
+  · intro hg
+    obtain ⟨i, hi⟩ := hex
+    refine ⟨i, ?_⟩
+    intro hprod
+    exact (x.isPrime.2 hprod).elim hg hi
+  · rintro ⟨i, hi⟩ hg
+    apply hi
+    exact x.asHomogeneousIdeal.toIdeal.mul_mem_right (f i) hg
 theorem dPlus_isTopologicalBasis
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     IsTopologicalBasis
       {U : Set (ProjPoints 𝒜) |
-        ∃ (n : ℕ) (_hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by sorry
+        ∃ (n : ℕ) (_hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by
+  let B : Set (Set (ProjPoints 𝒜)) :=
+    Set.range (fun x : Σ n : {n : ℕ // 0 < n}, 𝒜 n.1 => dPlus 𝒜 (x.2 : R))
+  have hB : IsTopologicalBasis B := by
+    apply TopologicalSpace.IsTopologicalBasis.isTopologicalBasis_of_exists_subset
+      (ProjectiveSpectrum.isTopologicalBasis_basic_opens 𝒜)
+    · rintro _ ⟨x, rfl⟩
+      exact isOpen_dPlus_of_positive_homogeneous 𝒜 x.2.2 x.1.2
+    · rintro U ⟨g, rfl⟩ p hp
+      change g ∉ p.asHomogeneousIdeal.toIdeal at hp
+      have hp' : p ∈ dOnProj 𝒜 g := hp
+      rw [dOnProj_eq_zero_component_union_positive] at hp'
+      simp only [Set.mem_union, Set.mem_iUnion] at hp'
+      rcases hp' with hp0 | ⟨i, hi⟩
+      · have hp0' : p ∈ dOnProj 𝒜 (GradedRing.proj 𝒜 0 g) := hp0
+        let ι : Type u := Σ n : {n : ℕ // 0 < n}, 𝒜 n.1
+        let f : ι → R := fun x => x.2
+        have hf : ∀ x, ∃ n : ℕ, 0 < n ∧ f x ∈ 𝒜 n := by
+          intro x
+          exact ⟨x.1.1, x.1.2, x.2.2⟩
+        have hspan : (HomogeneousIdeal.irrelevant 𝒜).toIdeal ≤
+            Ideal.span (Set.range f) := by
+          rw [HomogeneousIdeal.toIdeal_irrelevant_le]
+          intro n hn y hy
+          apply Ideal.subset_span
+          exact ⟨⟨⟨n, hn⟩, ⟨y, hy⟩⟩, rfl⟩
+        rw [dOnProj_degree_zero_eq_iUnion_mul (𝒜 := 𝒜)
+          (g := GradedRing.proj 𝒜 0 g) (SetLike.coe_mem _)
+          f hf hspan] at hp0'
+        simp only [Set.mem_iUnion] at hp0'
+        obtain ⟨x, hx⟩ := hp0'
+        have hproj0 : GradedRing.proj 𝒜 0 g ∈ 𝒜 0 := SetLike.coe_mem _
+        let y : Σ n : {n : ℕ // 0 < n}, 𝒜 n.1 :=
+          ⟨x.1, ⟨GradedRing.proj 𝒜 0 g * (x.2 : R),
+            by
+              convert SetLike.mul_mem_graded hproj0 x.2.2 using 1
+              simp⟩⟩
+        refine ⟨dPlus 𝒜 (y.2 : R), ⟨y, rfl⟩, ?_, ?_⟩
+        · simpa [y, f] using hx
+        · intro q hq
+          change g ∉ q.asHomogeneousIdeal.toIdeal
+          intro hg
+          apply hq
+          exact q.asHomogeneousIdeal.toIdeal.mul_mem_right (x.2 : R)
+            ((q.asHomogeneousIdeal.isHomogeneous.mem_iff.mp hg) 0)
+      · let x : Σ n : {n : ℕ // 0 < n}, 𝒜 n.1 :=
+          ⟨i, ⟨GradedRing.proj 𝒜 i.1 g, SetLike.coe_mem _⟩⟩
+        refine ⟨dPlus 𝒜 (x.2 : R), ⟨x, rfl⟩, hi, ?_⟩
+        intro q hq
+        change g ∉ q.asHomogeneousIdeal.toIdeal
+        intro hg
+        apply hq
+        exact (q.asHomogeneousIdeal.isHomogeneous.mem_iff.mp hg) i.1
+  have hEq : B =
+      {U : Set (ProjPoints 𝒜) |
+        ∃ (n : ℕ) (_hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by
+    ext U
+    constructor
+    · rintro ⟨x, rfl⟩
+      exact ⟨x.1.1, x.1.2, x.2, x.2.2, rfl⟩
+    · rintro ⟨n, hn, f, hf, rfl⟩
+      exact ⟨⟨⟨n, hn⟩, ⟨f, hf⟩⟩, rfl⟩
+  rw [← hEq]
+  exact hB
 noncomputable def dPlusHomeomorph
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     {m : ℕ} {f : R} (_hf : f ∈ 𝒜 m) (_hm : 0 < m) :
@@ -133,7 +255,8 @@ noncomputable def dPlusHomeomorph
 theorem dPlus_chart_bijective
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     {m : ℕ} {f : R} (hf : f ∈ 𝒜 m) (hm : 0 < m) :
-    Function.Bijective (dPlusHomeomorph 𝒜 hf hm) := by sorry
+    Function.Bijective (dPlusHomeomorph 𝒜 hf hm) := by
+  exact (dPlusHomeomorph 𝒜 hf hm).bijective
 abbrev InfinitePolynomialGrading (k : Type u) [CommRing k] :
     ℕ → Submodule k (MvPolynomial ℕ k) :=
   MvPolynomial.homogeneousSubmodule ℕ k

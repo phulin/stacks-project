@@ -1943,8 +1943,8 @@ theorem directedColimitSectionsMap_bijective_of_cofinal_cover
         rcases S.2 x hx with ⟨V, f, hf, hxV⟩
         exact Set.mem_iUnion.2 ⟨⟨V, f, hf⟩, hxV⟩
     obtain ⟨J₀, hfin, W, hW, hWref, hWqc⟩ := hU S.Arrow (fun a => a.Y) hSU
-    letI : Finite J₀ := hfin
-    letI : Fintype J₀ := Fintype.ofFinite J₀
+    let : Finite J₀ := hfin
+    let : Fintype J₀ := Fintype.ofFinite J₀
     choose k hk using hWref
     let A : J₀ → S.Arrow := fun j =>
       ⟨W j, homOfLE (hk j) ≫ (k j).f,
@@ -1964,7 +1964,6 @@ theorem directedColimitSectionsMap_bijective_of_cofinal_cover
     obtain ⟨T, hT, hTqc⟩ := hcompact (⊤ : J.Cover U)
     have hcompactUnion : IsCompact (⋃ I ∈ T, (I.Y : Set X)) := by
       exact T.isCompact_biUnion (fun I hI => by
-        change IsCompact (I.Y : Set X)
         simpa [QuasiCompactOpen, inf_idem] using hTqc I hI I hI)
     have hUeq : (U : Set X) = ⋃ I ∈ T, (I.Y : Set X) := by
       apply Set.Subset.antisymm

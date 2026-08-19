@@ -63,8 +63,43 @@ def IsStrictlyFullSaturatedPretriangulated (P : ObjectProperty C) : Prop :=
 
 /-- Saturation and the source's epaissse condition are equivalent. -/
 theorem isSaturated_iff_isEpaissse (P : ObjectProperty C)
-    [P.IsTriangulated] :
+    [CategoryTheory.IsTriangulated C] [P.IsTriangulated] :
     IsSaturated P ↔ IsEpaissse P := by
+  /-
+  Proof roadmap (Rickard's direct-summand criterion; normal `prove` stage):
+
+  * Work throughout with `R := P.isoClosure : ObjectProperty C`.  The instance
+    `P.isoClosure.IsTriangulated` is provided by
+    `Mathlib/CategoryTheory/Triangulated/Subcategory.lean`, so `R.le_shift` and
+    `R.ext_of_isTriangulatedClosed₁'`/`₂'`/`₃'` may be used without replacing
+    the given, possibly non-strict, predicate `P` by a stricter hypothesis.
+  * For the forward implication, formulate the Rickard intermediate claim for
+    `X S Y T : C`: if `a : X ⟶ S`, `c : S ⟶ Y`, `b = a ≫ c`, and
+    `Triangle.mk b d e` is distinguished, then from `R S` and `R T` construct
+    `X' Y' : C` with `R (X ⊞ X')` and `R (Y ⊞ Y')`.  Complete `a` and `c`
+    using `distinguished_cocone_triangle`, and apply
+    `Triangulated.someOctahedron` to the three triangles for `a`, `c`, and
+    `a ≫ c`; the needed fourth distinguished triangle is `Octahedron.mem`.
+    Combine it with `binaryBiproductTriangle_distinguished` and transport the
+    resulting triangles with `isomorphic_distinguished`/`Triangle.isoMk`.
+    This is precisely the TR4 step for which the ambient
+    `[CategoryTheory.IsTriangulated C]` instance is required.  Apply the
+    assumed `IsSaturated P` to the two resulting `R`-biproducts and retain the
+    first components, giving `R X ∧ R Y`.
+  * For the reverse implication, given `hXY : R (X ⊞ Y)`, use
+    `(binaryBiproductTriangle Y X).invRotate`.  It is distinguished by
+    `inv_rot_of_distTriang _ (binaryBiproductTriangle_distinguished Y X)`, its
+    first morphism is zero, and its third object is `Y ⊞ X`.  Feed this triangle
+    to the epaissse hypothesis with both auxiliary objects equal to `Y ⊞ X`,
+    factor the zero map through that object with zero morphisms, and transport
+    `hXY` along `biprod.braiding X Y`.  The result is `R (X⟦-1⟧) ∧ R Y`.
+    Apply `R.le_shift (1 : ℤ)` to the first component and transport along
+    `shiftNegShift X (1 : ℤ)` to obtain `R X`; pair it with `R Y`.
+
+  Do not try to close the forward direction with `quotientFunctor_kernel_iff`
+  or `quotientKernel_is_smallest`: both occur later in this file, and the latter
+  already depends on the same saturation/direct-summand argument.
+  -/
   sorry
 
 end SaturatedSubcategories
@@ -771,8 +806,33 @@ theorem quotientKernel_is_smallest (P : ObjectProperty C)
     IsStrictlyFullSaturatedPretriangulated (quotientKernel P) ∧
       P ≤ quotientKernel P ∧
       ∀ Q : ObjectProperty C,
-        Q.IsClosedUnderIsomorphisms → Q.IsTriangulated → IsSaturated Q →
+        P ≤ Q → Q.IsClosedUnderIsomorphisms → Q.IsTriangulated → IsSaturated Q →
         quotientKernel P ≤ Q := by
+  /-
+  Proof roadmap (normal `prove` stage):
+
+  * For the first conjunct, take
+    `exactFunctorKernel_properties (F := quotientFunctor P)`.  Prove
+    `exactFunctorKernel (quotientFunctor P) = quotientKernel P` by extensionality
+    in `Z : C` and `quotientFunctor_kernel_iff P Z`, rewrite by that equality,
+    and use the returned `IsStrictlyFullSaturatedPretriangulated` package.
+  * For `P ≤ quotientKernel P`, send `Z : C` and `hZ : P Z` to the witness
+    `Z' := 0`.  The required `P.isoClosure (Z ⊞ 0)` is witnessed by `Z`, `hZ`,
+    and the explicit isomorphism with `hom := biprod.fst` and
+    `inv := biprod.inl`; its two inverse laws are discharged by `simp`.
+  * For minimality, introduce `Q : ObjectProperty C`, `hPQ : P ≤ Q`,
+    `hQiso : Q.IsClosedUnderIsomorphisms`, `hQtri : Q.IsTriangulated`, and
+    `hQsat : IsSaturated Q`.  Install the two class-valued hypotheses with
+    `letI`.  For `Z : C` and `⟨Z', hZZ'⟩ : quotientKernel P Z`, obtain
+    `Q (Z ⊞ Z')` from `hZZ' : P.isoClosure (Z ⊞ Z')` via
+    `(ObjectProperty.isoClosure_le_iff (P := P) (Q := Q)).2 hPQ`.
+    Promote this to `Q.isoClosure (Z ⊞ Z')` with `Q.le_isoClosure`, apply
+    `hQsat`, and keep its first component.  Finally rewrite
+    `Q.isoClosure = Q` using `ObjectProperty.isoClosure_eq_self` (or transport
+    the witness with `Q.prop_of_iso`) to conclude `Q Z`.  The `hQtri`
+    instance is part of the source's target class even though this last
+    elementwise step only uses strict fullness and saturation.
+  -/
   sorry
 /-
   refine ⟨?_, ?_, ?_⟩

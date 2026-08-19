@@ -377,6 +377,11 @@ structure FinitePthRootBaseChangeTower
             (separableClosure comparisonLower K : Set K)))
         (finitePthRootFieldAtLevel top) ≤
       Field.finInsepDegree comparisonLower K
+  comparison_separableClosure :
+    IntermediateField.adjoin comparisonUpper
+        (algebraMap K (finitePthRootFieldAtLevel top) ''
+          (separableClosure comparisonLower K : Set K)) =
+      separableClosure comparisonUpper (finitePthRootFieldAtLevel top)
   reflectsSeparableClosure : ∀ y : K,
     algebraMap K (finitePthRootFieldAtLevel top) y ∈
         IntermediateField.adjoin comparisonUpper
@@ -968,6 +973,33 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
               intro y
               exact ⟨⟨y, trivial⟩, rfl⟩)
         exact Nat.one_le_iff_ne_zero.mpr (NeZero.ne _)
+      comparison_separableClosure := by
+        have hadjoin : IntermediateField.adjoin
+            (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop))
+              (algebraMap K T ''
+                (separableClosure (⊤ : IntermediateField k K) K : Set K)) = ⊤ := by
+          apply top_unique
+          intro x _
+          exact (IntermediateField.adjoin
+            (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop))
+              (algebraMap K T ''
+                (separableClosure (⊤ : IntermediateField k K) K : Set K))).algebraMap_mem
+            ⟨x, trivial⟩
+        rw [hadjoin]
+        symm
+        apply (separableClosure.eq_top_iff _ _).2
+        refine ⟨fun y ↦ ?_⟩
+        have hy : IsSeparable
+            (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop))
+            (algebraMap
+              (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop)) T
+              (⟨y, trivial⟩ :
+                (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop)))) :=
+          isSeparable_algebraMap _
+        rw [show algebraMap
+          (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop)) T
+            ⟨y, trivial⟩ = y by rfl] at hy
+        exact hy
       reflectsSeparableClosure := by
         intro y _
         apply mem_separableClosure_iff.mpr

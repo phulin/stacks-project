@@ -1730,10 +1730,525 @@ theorem prime_injective_hull_residue_field
         ∃ Eₚ : ModuleCat.{u} (Localization.AtPrime p),
           Nonempty
               (E ≅
-                (ModuleCat.restrictScalars (algebraMap R (Localization.AtPrime p))).obj Eₚ) ∧
+              (ModuleCat.restrictScalars (algebraMap R (Localization.AtPrime p))).obj Eₚ) ∧
             ∃ g : ModuleCat.of (Localization.AtPrime p) p.ResidueField ⟶ Eₚ,
               InjectiveHull g := by
-  sorry
+  let q := residueFieldQuotientMap p
+  have hqmono : Mono q := by
+    apply (ModuleCat.mono_iff_injective _).mpr
+    change Function.Injective (algebraMap (R ⧸ p) p.ResidueField)
+    exact p.injective_algebraMap_quotient_residueField
+  have hqess : EssentialExtension q := by
+    let S : Submodule R p.ResidueField := LinearMap.range q.hom
+    let e : (R ⧸ p) ≃ₗ[R] S :=
+      LinearEquiv.ofBijective q.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff q.hom).2
+            (ModuleCat.mono_iff_injective q |>.mp hqmono),
+          q.hom.surjective_rangeRestrict⟩
+    have hS : EssentialSubmodule S := by
+      apply (essentialSubmodule_iff_smul S).2
+      intro x hx
+      obtain ⟨⟨a, b⟩, hab⟩ :=
+        IsLocalization.surj (R := R ⧸ p) (nonZeroDivisors (R ⧸ p)) x
+      obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective (b : R ⧸ p)
+      refine ⟨s, ?_, ?_⟩
+      · refine ⟨a, ?_⟩
+        dsimp [q, residueFieldQuotientMap]
+        change algebraMap (R ⧸ p) p.ResidueField a = s • x
+        rw [Algebra.smul_def]
+        rw [← Ideal.algebraMap_quotient_residueField_mk]
+        rw [hs]
+        simpa [mul_comm] using hab.symm
+      · have hb0 : algebraMap (R ⧸ p) p.ResidueField (b : R ⧸ p) ≠ 0 :=
+          map_ne_zero_of_mem_nonZeroDivisors _ p.injective_algebraMap_quotient_residueField b.2
+        have hprod : x * algebraMap (R ⧸ p) p.ResidueField (b : R ⧸ p) ≠ 0 :=
+          mul_ne_zero hx hb0
+        simpa [Algebra.smul_def, ← IsScalarTower.algebraMap_apply R (R ⧸ p)
+          p.ResidueField, ← hs, mul_comm] using hprod
+    let : Mono (ModuleCat.ofHom S.subtype) :=
+      ConcreteCategory.mono_of_injective _ Subtype.val_injective
+    have hcat : EssentialExtension (ModuleCat.ofHom S.subtype) :=
+      (essentialSubmodule_iff_essentialExtension S).1 hS
+    have heq : e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = q := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk q = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm q (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+    unfold EssentialExtension at hcat ⊢
+    refine ⟨hqmono, ?_⟩
+    intro P hP
+    rw [hmk]
+    exact hcat.2 P hP
+  have range_essential :
+      ∀ (A B : ModuleCat.{u} R) (u : A ⟶ B), EssentialExtension u →
+        EssentialSubmodule (LinearMap.range u.hom) := by
+    intro A B u hu
+    let : Mono u := hu.1
+    let : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
+      ConcreteCategory.mono_of_injective _ Subtype.val_injective
+    let S : Submodule R (B : Type u) := LinearMap.range u.hom
+    let e : (A : Type u) ≃ₗ[R] S :=
+      LinearEquiv.ofBijective u.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff u.hom).2
+            (ModuleCat.mono_iff_injective u |>.mp hu.1),
+          u.hom.surjective_rangeRestrict⟩
+    have heq : e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = u := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk u = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm u (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+    have hcat : EssentialExtension (ModuleCat.ofHom S.subtype) := by
+      unfold EssentialExtension
+      refine ⟨inferInstance, ?_⟩
+      intro P hP
+      rw [← hmk]
+      exact hu.2 P hP
+    exact (essentialSubmodule_iff_essentialExtension S).2 hcat
+  let : CategoryTheory.Injective E := hf.2
+  have hRf : EssentialSubmodule (LinearMap.range f.hom) :=
+    range_essential _ _ f hf.1
+  have hEnonzero : ¬ IsZero E := by
+    intro h
+    have hsub : ¬ Subsingleton (E : Type u) := by
+      intro hs
+      apply (not_subsingleton_iff_nontrivial.mpr
+        (Ideal.Quotient.nontrivial_iff.mpr (inferInstance : p.IsPrime).ne_top))
+      constructor
+      intro x y
+      apply (ModuleCat.mono_iff_injective f).mp hf.1.1
+      exact hs.elim _ _
+    exact hsub (ModuleCat.subsingleton_of_isZero h)
+  have hquot_uniform :
+      ∀ K L : Submodule R (R ⧸ p), K ≠ ⊥ → L ≠ ⊥ → K ⊓ L ≠ ⊥ := by
+    intro K L hK hL
+    obtain ⟨a, haK, ha0⟩ := K.ne_bot_iff.mp hK
+    obtain ⟨b, hbL, hb0⟩ := L.ne_bot_iff.mp hL
+    obtain ⟨r, hr⟩ := Ideal.Quotient.mk_surjective a
+    obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective b
+    have hrp : r ∉ p := by
+      intro hrp
+      apply ha0
+      rw [← hr, Ideal.Quotient.eq_zero_iff_mem.mpr hrp]
+    have hsp : s ∉ p := by
+      intro hsp
+      apply hb0
+      rw [← hs, Ideal.Quotient.eq_zero_iff_mem.mpr hsp]
+    have hmemK : Ideal.Quotient.mk p (s * r) ∈ K := by
+      have h := K.smul_mem s haK
+      simpa [← hr, ← Submodule.Quotient.mk_smul, Algebra.smul_def, mul_comm] using h
+    have hmemL : Ideal.Quotient.mk p (s * r) ∈ L := by
+      have h := L.smul_mem r hbL
+      simpa [← hs, ← Submodule.Quotient.mk_smul, Algebra.smul_def, mul_comm] using h
+    have hmem0 : Ideal.Quotient.mk p (s * r) ≠ 0 := by
+      intro hzero
+      have hmem : s * r ∈ p := Ideal.Quotient.eq_zero_iff_mem.mp hzero
+      exact (inferInstance : p.IsPrime).mul_notMem hsp hrp hmem
+    exact (K ⊓ L).ne_bot_iff.mpr
+      ⟨Ideal.Quotient.mk p (s * r), ⟨hmemK, hmemL⟩, hmem0⟩
+  have biprod_zero_of_projections :
+      ∀ (Y Z : ModuleCat.{u} R) (z : (Y ⊞ Z : ModuleCat.{u} R)),
+        (biprod.fst : (Y ⊞ Z) ⟶ Y).hom z = 0 →
+          (biprod.snd : (Y ⊞ Z) ⟶ Z).hom z = 0 → z = 0 := by
+    intro Y Z z hfst hsnd
+    let w := ModuleCat.biprodIsoProd Y Z
+    apply (ModuleCat.mono_iff_injective w.hom).mp inferInstance
+    apply Prod.ext
+    · have hw :
+          w.hom ≫ ModuleCat.ofHom (LinearMap.fst R Y Z) = biprod.fst := by
+        calc
+          w.hom ≫ ModuleCat.ofHom (LinearMap.fst R Y Z) =
+              w.hom ≫ (w.inv ≫ biprod.fst) := by
+                rw [ModuleCat.biprodIsoProd_inv_comp_fst]
+          _ = (w.hom ≫ w.inv) ≫ biprod.fst := by rw [Category.assoc]
+          _ = biprod.fst := by rw [w.hom_inv_id, Category.id_comp]
+      have h := congrArg (fun k => k.hom z) hw
+      simpa using h.trans hfst
+    · have hw :
+          w.hom ≫ ModuleCat.ofHom (LinearMap.snd R Y Z) = biprod.snd := by
+        calc
+          w.hom ≫ ModuleCat.ofHom (LinearMap.snd R Y Z) =
+              w.hom ≫ (w.inv ≫ biprod.snd) := by
+                rw [ModuleCat.biprodIsoProd_inv_comp_snd]
+          _ = (w.hom ≫ w.inv) ≫ biprod.snd := by rw [Category.assoc]
+          _ = biprod.snd := by rw [w.hom_inv_id, Category.id_comp]
+      have h := congrArg (fun k => k.hom z) hw
+      simpa using h.trans hsnd
+  have hInd : CategoryTheory.Indecomposable E := by
+    refine ⟨hEnonzero, ?_⟩
+    intro Y Z e
+    by_cases hY : IsZero Y
+    · exact Or.inl hY
+    by_cases hZ : IsZero Z
+    · exact Or.inr hZ
+    exfalso
+    let jY : Y ⟶ E := biprod.inl ≫ e.inv
+    let jZ : Z ⟶ E := biprod.inr ≫ e.inv
+    let : Mono jY := by
+      dsimp [jY]
+      infer_instance
+    let : Mono jZ := by
+      dsimp [jZ]
+      infer_instance
+    have hYsub : ¬ Subsingleton (Y : Type u) := by
+      intro h
+      exact hY (ModuleCat.isZero_of_subsingleton Y)
+    have hZsub : ¬ Subsingleton (Z : Type u) := by
+      intro h
+      exact hZ (ModuleCat.isZero_of_subsingleton Z)
+    have hRangeY : LinearMap.range jY.hom ≠ ⊥ := by
+      intro hbot
+      apply hYsub
+      constructor
+      intro y₁ y₂
+      apply (ModuleCat.mono_iff_injective jY).mp inferInstance
+      have hy₁ : jY.hom y₁ = 0 := by
+        have hy := hbot ▸ (show jY.hom y₁ ∈ LinearMap.range jY.hom from ⟨y₁, rfl⟩)
+        simpa using hy
+      have hy₂ : jY.hom y₂ = 0 := by
+        have hy := hbot ▸ (show jY.hom y₂ ∈ LinearMap.range jY.hom from ⟨y₂, rfl⟩)
+        simpa using hy
+      rw [hy₁, hy₂]
+    have hRangeZ : LinearMap.range jZ.hom ≠ ⊥ := by
+      intro hbot
+      apply hZsub
+      constructor
+      intro z₁ z₂
+      apply (ModuleCat.mono_iff_injective jZ).mp inferInstance
+      have hz₁ : jZ.hom z₁ = 0 := by
+        have hz := hbot ▸ (show jZ.hom z₁ ∈ LinearMap.range jZ.hom from ⟨z₁, rfl⟩)
+        simpa using hz
+      have hz₂ : jZ.hom z₂ = 0 := by
+        have hz := hbot ▸ (show jZ.hom z₂ ∈ LinearMap.range jZ.hom from ⟨z₂, rfl⟩)
+        simpa using hz
+      rw [hz₁, hz₂]
+    have hkerZ :
+        LinearMap.ker (f ≫ e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom ≠ ⊥ := by
+      apply (LinearMap.ker _).ne_bot_iff.mpr
+      obtain ⟨x, hxmem, hx0⟩ :=
+        (LinearMap.range f.hom ⊓ LinearMap.range jY.hom).ne_bot_iff.mp
+          (hRf _ hRangeY)
+      obtain ⟨m, hm⟩ := hxmem.1
+      obtain ⟨y, hy⟩ := hxmem.2
+      refine ⟨m, ?_, ?_⟩
+      · apply LinearMap.mem_ker.mpr
+        have hxy : f.hom m = jY.hom y := hm.trans hy.symm
+        have h := congrArg
+          (fun z : E => (e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom z) hxy
+        calc
+          (e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom (f.hom m) =
+              (biprod.snd : (Y ⊞ Z) ⟶ Z).hom
+                ((biprod.inl : Y ⟶ Y ⊞ Z).hom y) := by
+            simpa [jY, Category.assoc] using h
+          _ = 0 := by
+            change ((biprod.inl : Y ⟶ Y ⊞ Z) ≫
+              (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom y = 0
+            rw [biprod.inl_snd]
+            rfl
+      · intro hm0
+        apply hx0
+        rw [← hm, hm0, map_zero]
+    have hkerY :
+        LinearMap.ker (f ≫ e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom ≠ ⊥ := by
+      apply (LinearMap.ker _).ne_bot_iff.mpr
+      obtain ⟨x, hxmem, hx0⟩ :=
+        (LinearMap.range f.hom ⊓ LinearMap.range jZ.hom).ne_bot_iff.mp
+          (hRf _ hRangeZ)
+      obtain ⟨m, hm⟩ := hxmem.1
+      obtain ⟨z, hz⟩ := hxmem.2
+      refine ⟨m, ?_, ?_⟩
+      · apply LinearMap.mem_ker.mpr
+        have hxy : f.hom m = jZ.hom z := hm.trans hz.symm
+        have h := congrArg
+          (fun w : E => (e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom w) hxy
+        calc
+          (e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom (f.hom m) =
+              (biprod.fst : (Y ⊞ Z) ⟶ Y).hom
+                ((biprod.inr : Z ⟶ Y ⊞ Z).hom z) := by
+            simpa [jZ, Category.assoc] using h
+          _ = 0 := by
+            change ((biprod.inr : Z ⟶ Y ⊞ Z) ≫
+              (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom z = 0
+            rw [biprod.inr_fst]
+            rfl
+      · intro hm0
+        apply hx0
+        rw [← hm, hm0, map_zero]
+    obtain ⟨m, hmker, hm0⟩ :=
+      ((LinearMap.ker (f ≫ e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom ⊓
+          LinearMap.ker (f ≫ e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom).ne_bot_iff).mp
+        (hquot_uniform (LinearMap.ker (f ≫ e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom)
+          (LinearMap.ker (f ≫ e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom) hkerY hkerZ)
+    have hfst :
+        (f ≫ e.hom ≫ (biprod.fst : (Y ⊞ Z) ⟶ Y)).hom m = 0 :=
+      LinearMap.mem_ker.mp hmker.1
+    have hsnd :
+        (f ≫ e.hom ≫ (biprod.snd : (Y ⊞ Z) ⟶ Z)).hom m = 0 :=
+      LinearMap.mem_ker.mp hmker.2
+    have hpair : e.hom.hom (f.hom m) = 0 := by
+      apply biprod_zero_of_projections Y Z (e.hom.hom (f.hom m))
+      · simpa [Category.assoc] using hfst
+      · simpa [Category.assoc] using hsnd
+    have hfzero : f.hom m = 0 := by
+      apply (ModuleCat.mono_iff_injective e.hom).mp inferInstance
+      simpa using hpair
+    have hmzero : m = 0 := by
+      apply (ModuleCat.mono_iff_injective f).mp hf.1.1
+      simpa using hfzero
+    exact hm0 hmzero
+  let g : ModuleCat.of R p.ResidueField ⟶ E := Injective.factorThru f q
+  have hgfac : q ≫ g = f := Injective.comp_factorThru f q
+  have hRg : EssentialSubmodule (LinearMap.range g.hom) := by
+    intro T hT
+    obtain ⟨x, hxmem, hx0⟩ := (LinearMap.range f.hom ⊓ T).ne_bot_iff.mp (hRf T hT)
+    refine (LinearMap.range g.hom ⊓ T).ne_bot_iff.mpr ⟨x, ?_, hx0⟩
+    refine ⟨?_, hxmem.2⟩
+    obtain ⟨m, hm⟩ := hxmem.1
+    refine ⟨q.hom m, ?_⟩
+    calc
+      g.hom (q.hom m) = (q ≫ g).hom m := rfl
+      _ = f.hom m := by rw [hgfac]
+      _ = x := hm
+  have hgm : Function.Injective g.hom := by
+    intro x y hxy
+    by_contra hxy0
+    have hd0 : x - y ≠ 0 := sub_ne_zero.mpr hxy0
+    obtain ⟨r, hrange, hr0⟩ :=
+      (essentialSubmodule_iff_smul (LinearMap.range q.hom)).1
+        (range_essential _ _ q hqess) (x - y) hd0
+    obtain ⟨m, hm⟩ := hrange
+    have hgd : g.hom (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hz : g.hom (r • (x - y)) = 0 := by
+      rw [map_smul, hgd, smul_zero]
+    have hgmq : g.hom (q.hom m) = 0 := by
+      rw [hm, hz]
+    have hfm : f.hom m = 0 := by
+      calc
+        f.hom m = (q ≫ g).hom m := by rw [hgfac]
+        _ = g.hom (q.hom m) := rfl
+        _ = 0 := hgmq
+    have hm0 : m = 0 := by
+      apply (ModuleCat.mono_iff_injective f).mp hf.1.1
+      simpa using hfm
+    apply hr0
+    rw [← hm, hm0, map_zero]
+  let : Mono g := ConcreteCategory.mono_of_injective _ hgm
+  have hgess : EssentialExtension g := by
+    let S : Submodule R (E : Type u) := LinearMap.range g.hom
+    let e : (p.ResidueField : Type u) ≃ₗ[R] S :=
+      LinearEquiv.ofBijective g.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff g.hom).2 hgm,
+          g.hom.surjective_rangeRestrict⟩
+    let : Mono (ModuleCat.ofHom S.subtype) :=
+      ConcreteCategory.mono_of_injective _ Subtype.val_injective
+    have hcat : EssentialExtension (ModuleCat.ofHom S.subtype) :=
+      (essentialSubmodule_iff_essentialExtension S).1 hRg
+    have heq : e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = g := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk g = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm g (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+    unfold EssentialExtension at hcat ⊢
+    refine ⟨inferInstance, ?_⟩
+    intro P hP
+    rw [hmk]
+    exact hcat.2 P hP
+  obtain ⟨p', hp', hpzero, Eₚ, hiso, hEₚ⟩ :=
+    indecomposable_injective_zero_divisors E hf.2 hInd
+  have hzero :
+      (p : Set R) = ModuleZeroDivisors R (E : Type u) := by
+    ext r
+    constructor
+    · intro hr
+      refine ⟨f.hom (Ideal.Quotient.mk p (1 : R)), ?_, ?_⟩
+      · intro hzero
+        have hm1 : (Ideal.Quotient.mk p (1 : R) : R ⧸ p) = 0 := by
+          apply (ModuleCat.mono_iff_injective f).mp hf.1.1
+          simpa using hzero
+        have htop : p = ⊤ := (Ideal.eq_top_iff_one p).mpr
+          (Ideal.Quotient.eq_zero_iff_mem.mp hm1)
+        exact (inferInstance : p.IsPrime).ne_top htop
+      · calc
+          r • f.hom (Ideal.Quotient.mk p (1 : R)) =
+              f.hom (r • Ideal.Quotient.mk p (1 : R)) :=
+            (f.hom.map_smul r _).symm
+          _ = f.hom (Ideal.Quotient.mk p r) := by
+            congr 1
+            simp [Algebra.smul_def]
+          _ = 0 := by
+            rw [Ideal.Quotient.eq_zero_iff_mem.mpr hr, map_zero]
+    · rintro ⟨x, hx, hxr⟩
+      by_contra hr
+      let φ : Module.End R (E : Type u) := algebraMap R (Module.End R (E : Type u)) r
+      have hker : LinearMap.ker φ ≠ ⊥ := by
+        apply (LinearMap.ker _).ne_bot_iff.mpr
+        refine ⟨x, ?_, hx⟩
+        apply LinearMap.mem_ker.mpr
+        simpa [φ, Module.algebraMap_end_apply] using hxr
+      obtain ⟨y, hymem, hy0⟩ :=
+        (LinearMap.range f.hom ⊓ LinearMap.ker φ).ne_bot_iff.mp
+          (hRf _ hker)
+      obtain ⟨m, hm⟩ := hymem.1
+      have hrfm : r • f.hom m = 0 := by
+        have h := LinearMap.mem_ker.mp hymem.2
+        rw [← hm] at h
+        simpa [φ, Module.algebraMap_end_apply] using h
+      have hrmm : r • m = 0 := by
+        apply (ModuleCat.mono_iff_injective f).mp hf.1.1
+        calc
+          f.hom (r • m) = r • f.hom m := f.hom.map_smul r m
+          _ = 0 := hrfm
+          _ = f.hom 0 := by simp
+      have hrq : (Ideal.Quotient.mk p r : R ⧸ p) ≠ 0 := by
+        intro hrq
+        apply hr
+        exact Ideal.Quotient.eq_zero_iff_mem.mp hrq
+      have hmq : m ≠ 0 := by
+        intro hm0
+        apply hy0
+        rw [← hm, hm0, map_zero]
+      have hprod : (Ideal.Quotient.mk p r : R ⧸ p) * m = 0 := by
+        simpa [Algebra.smul_def] using hrmm
+      exact hmq ((mul_eq_zero.mp hprod).resolve_left hrq)
+  have hp_eq : p' = p := by
+    apply Submodule.ext
+    intro r
+    change r ∈ (p' : Set R) ↔ r ∈ (p : Set R)
+    rw [hpzero, hzero]
+  subst p'
+  refine ⟨hInd, ⟨g, ⟨hgess, hf.2⟩, hgfac⟩, ?_⟩
+  obtain ⟨hiso⟩ := hiso
+  refine ⟨Eₚ, ⟨⟨hiso⟩, ?_⟩⟩
+  let gLoc : ModuleCat.of (Localization.AtPrime p) p.ResidueField ⟶ Eₚ :=
+    ModuleCat.ofHom
+      { toFun := fun x => hiso.hom.hom (g.hom x)
+        map_add' := by
+          intro x y
+          rw [g.hom.map_add, hiso.hom.hom.map_add]
+          rfl
+        map_smul' := by
+          intro z y
+          obtain ⟨⟨r, s⟩, hz⟩ :=
+            IsLocalization.surj (R := R) p.primeCompl z
+          apply (IsUnit.smul_left_cancel
+            (@IsLocalization.map_units R _ p.primeCompl (Localization.AtPrime p)
+              _ _ _ s)).mp
+          calc
+            algebraMap R (Localization.AtPrime p) (s : R) •
+                hiso.hom.hom (g.hom (z • y)) =
+                hiso.hom.hom (g.hom
+                  (algebraMap R (Localization.AtPrime p) (s : R) • (z • y))) := by
+              rw [show algebraMap R (Localization.AtPrime p) (s : R) • (z • y) =
+                  (s : R) • (z • y) from
+                    algebraMap_smul (Localization.AtPrime p) (s : R) (z • y)]
+              rw [g.hom.map_smul, hiso.hom.hom.map_smul]
+              exact (ModuleCat.restrictScalars.smul_def'
+                (algebraMap R (Localization.AtPrime p)) (s : R)
+                (hiso.hom.hom (g.hom (z • y)))).symm
+            _ = hiso.hom.hom (g.hom
+                  ((z * algebraMap R (Localization.AtPrime p) (s : R)) • y)) := by
+              congr 2
+              rw [← mul_smul, mul_comm]
+            _ = hiso.hom.hom (g.hom ((algebraMap R (Localization.AtPrime p) r) • y)) := by
+              rw [hz]
+            _ = hiso.hom.hom (g.hom (r • y)) := by
+              rw [algebraMap_smul (Localization.AtPrime p) r y]
+            _ = hiso.hom.hom (r • g.hom y) := by rw [g.hom.map_smul]
+            _ = r • hiso.hom.hom (g.hom y) := by rw [hiso.hom.hom.map_smul]
+            _ = algebraMap R (Localization.AtPrime p) r •
+                hiso.hom.hom (g.hom y) := by
+              exact ModuleCat.restrictScalars.smul_def'
+                (algebraMap R (Localization.AtPrime p)) r
+                (hiso.hom.hom (g.hom y))
+            _ = (z * algebraMap R (Localization.AtPrime p) (s : R)) •
+                hiso.hom.hom (g.hom y) := by rw [hz]
+            _ = algebraMap R (Localization.AtPrime p) (s : R) •
+                (z • hiso.hom.hom (g.hom y)) := by
+              rw [mul_smul, smul_comm] }
+  have hgmLoc : Function.Injective gLoc.hom := by
+    intro x y hxy
+    apply hgm
+    apply (ModuleCat.mono_iff_injective hiso.hom).mp inferInstance
+    exact hxy
+  let : Mono gLoc := ConcreteCategory.mono_of_injective _ hgmLoc
+  have hRgLoc : EssentialSubmodule (LinearMap.range gLoc.hom) := by
+    intro T hT
+    let T_R : Submodule R
+        (((ModuleCat.restrictScalars (algebraMap R (Localization.AtPrime p))).obj Eₚ :
+          ModuleCat R) : Type u) :=
+      { carrier := (T : Set (Eₚ : Type u))
+        zero_mem' := T.zero_mem
+        add_mem' := T.add_mem
+        smul_mem' := by
+          intro r x hx
+          change algebraMap R (Localization.AtPrime p) r • x ∈ T
+          exact T.smul_mem _ hx }
+    let U : Submodule R (E : Type u) := T_R.comap hiso.hom.hom
+    have hU : U ≠ ⊥ := by
+      obtain ⟨z, hzT, hz0⟩ := T.ne_bot_iff.mp hT
+      have hz_eq : hiso.hom.hom (hiso.inv.hom z) = z := by
+        have h := congrArg (fun k => k.hom z) hiso.inv_hom_id
+        change hiso.hom.hom (hiso.inv.hom z) = z at h
+        exact h
+      refine U.ne_bot_iff.mpr ⟨hiso.inv.hom z, ?_, ?_⟩
+      · change hiso.hom.hom (hiso.inv.hom z) ∈ T_R
+        rw [hz_eq]
+        exact hzT
+      · intro hz'
+        apply hz0
+        rw [← hz_eq, hz', map_zero]
+        rfl
+    obtain ⟨y, hy, hy0⟩ :=
+      (LinearMap.range g.hom ⊓ U).ne_bot_iff.mp (hRg U hU)
+    refine (LinearMap.range gLoc.hom ⊓ T).ne_bot_iff.mpr
+      ⟨hiso.hom.hom y, ?_, ?_⟩
+    · obtain ⟨m, hm⟩ := hy.1
+      constructor
+      · refine ⟨m, ?_⟩
+        change hiso.hom.hom (g.hom m) = hiso.hom.hom y
+        rw [hm]
+      · change hiso.hom.hom y ∈ T_R
+        have hyU := hy.2
+        change hiso.hom.hom y ∈ T_R at hyU
+        exact hyU
+    · intro hz
+      apply hy0
+      have h := congrArg (fun k : ModuleCat.of R (E : Type u) ⟶
+          ModuleCat.of R (E : Type u) => k.hom y) hiso.hom_inv_id
+      change hiso.inv.hom (hiso.hom.hom y) = y at h
+      have hzR : hiso.hom.hom y =
+          (0 : (((ModuleCat.restrictScalars
+            (algebraMap R (Localization.AtPrime p))).obj Eₚ : ModuleCat R) : Type u)) := by
+        exact hz
+      rw [hzR, hiso.inv.hom.map_zero] at h
+      exact h.symm
+  have hLocEss : EssentialExtension gLoc := by
+    let S : Submodule (Localization.AtPrime p) (Eₚ : Type u) :=
+      LinearMap.range gLoc.hom
+    let eLoc : (p.ResidueField : Type u) ≃ₗ[Localization.AtPrime p] S :=
+      LinearEquiv.ofBijective gLoc.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff gLoc.hom).2 hgmLoc,
+          gLoc.hom.surjective_rangeRestrict⟩
+    let : Mono (ModuleCat.ofHom S.subtype) :=
+      ConcreteCategory.mono_of_injective _ Subtype.val_injective
+    have hcat : EssentialExtension (ModuleCat.ofHom S.subtype) :=
+      (essentialSubmodule_iff_essentialExtension S).1 hRgLoc
+    have heq : eLoc.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = gLoc := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk gLoc = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm gLoc (ModuleCat.ofHom S.subtype)
+        eLoc.toModuleIso heq
+    unfold EssentialExtension at hcat ⊢
+    refine ⟨inferInstance, ?_⟩
+    intro P hP
+    rw [hmk]
+    exact hcat.2 P hP
+  exact ⟨gLoc, ⟨hLocEss, hEₚ⟩⟩
 
 /-- Over a Noetherian ring, every indecomposable injective is a residue-field
 injective hull. -/
@@ -1744,7 +2259,127 @@ theorem noetherian_indecomposable_injective_residue_field_hull
     ∃ (p : Ideal R) (hp : p.IsPrime),
       letI := hp
       ∃ g : ModuleCat.of R p.ResidueField ⟶ E, InjectiveHull g := by
-  sorry
+  classical
+  obtain ⟨p, hp, hpzero, _⟩ :=
+    indecomposable_injective_zero_divisors E hE hInd
+  let : p.IsPrime := hp
+  have hEsub : ¬ Subsingleton (E : Type u) := by
+    intro h
+    exact hInd.1 (ModuleCat.isZero_of_subsingleton E)
+  let : Nontrivial (E : Type u) :=
+    not_subsingleton_iff_nontrivial.mp hEsub
+  obtain ⟨U, hUfin, hUspan⟩ :=
+    Submodule.fg_def.mp (Ideal.fg_of_isNoetherianRing p)
+  let K : R → Submodule R (E : Type u) := fun r =>
+    LinearMap.ker (algebraMap R (Module.End R (E : Type u)) r)
+  have hK : ∀ r ∈ U, K r ≠ ⊥ := by
+    intro r hr
+    have hrp : r ∈ p := by
+      rw [← hUspan]
+      exact Submodule.subset_span hr
+    have hzd : r ∈ ModuleZeroDivisors R (E : Type u) := by
+      exact hpzero ▸ hrp
+    obtain ⟨x, hx, hxr⟩ := hzd
+    apply (K r).ne_bot_iff.mpr
+    refine ⟨x, ?_, hx⟩
+    apply LinearMap.mem_ker.mpr
+    simpa [K, Module.algebraMap_end_apply] using hxr
+  have hKfin : ∀ s : Finset R, (∀ r ∈ s, K r ≠ ⊥) → s.inf K ≠ ⊥ := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        intro _
+        simp
+    | @insert r s hrs ih =>
+        intro hs
+        rw [Finset.inf_insert]
+        apply indecomposable_injective_submodule_intersection E hE hInd
+        · exact hs r (Finset.mem_insert_self r s)
+        · apply ih
+          intro t ht
+          exact hs t (Finset.mem_insert_of_mem ht)
+  let u := hUfin.toFinset
+  have huK : u.inf K ≠ ⊥ := by
+    apply hKfin
+    intro r hr
+    apply hK
+    exact hUfin.mem_toFinset.mp hr
+  obtain ⟨x, hxK, hx0⟩ := u.inf K |>.ne_bot_iff.mp huK
+  let φ : R →ₗ[R] (E : Type u) :=
+    { toFun := fun r => r • x
+      map_add' := by intro r s; rw [add_smul]
+      map_smul' := by
+        intro r s
+        simp only [smul_eq_mul, RingHom.id_apply]
+        rw [smul_smul] }
+  have hpker : (p : Submodule R R) ≤ LinearMap.ker φ := by
+    rw [← hUspan]
+    apply Submodule.span_le.mpr
+    intro r hr
+    have hru : r ∈ u := by
+      exact hUfin.mem_toFinset.mpr hr
+    have hle : u.inf K ≤ K r := Finset.inf_le hru
+    have hxKr : x ∈ K r := hle hxK
+    apply LinearMap.mem_ker.mpr
+    simpa [φ, K, Module.algebraMap_end_apply] using LinearMap.mem_ker.mp hxKr
+  have hker : LinearMap.ker φ = (p : Submodule R R) := by
+    apply le_antisymm
+    · intro r hr
+      by_contra hrp
+      apply hrp
+      have hz : r ∈ ModuleZeroDivisors R (E : Type u) :=
+        ⟨x, hx0, by simpa [φ] using LinearMap.mem_ker.mp hr⟩
+      change r ∈ (p : Set R)
+      rw [hpzero]
+      exact hz
+    · exact hpker
+  let f0 : ModuleCat.of R (R ⧸ p) ⟶ E :=
+    ModuleCat.ofHom (p.liftQ φ hpker)
+  have hf0mono : Mono f0 := by
+    apply (ModuleCat.mono_iff_injective _).mpr
+    change Function.Injective (p.liftQ φ hpker)
+    exact LinearMap.ker_eq_bot.mp
+      (Submodule.ker_liftQ_eq_bot' p φ hker.symm)
+  have h1 : f0.hom (Ideal.Quotient.mk p (1 : R)) ≠ 0 := by
+    intro hzero
+    apply hx0
+    change (p.liftQ φ hpker) (Ideal.Quotient.mk p (1 : R)) = 0 at hzero
+    rw [← Ideal.Quotient.mk_eq_mk] at hzero
+    rw [Submodule.liftQ_apply] at hzero
+    simpa [φ] using hzero
+  have hS : LinearMap.range f0.hom ≠ ⊥ := by
+    apply (LinearMap.range f0.hom).ne_bot_iff.mpr
+    refine ⟨f0.hom (Ideal.Quotient.mk p (1 : R)), ?_, h1⟩
+    exact ⟨Ideal.Quotient.mk p (1 : R), rfl⟩
+  have hrange : EssentialSubmodule (LinearMap.range f0.hom) := by
+    let S : Submodule R (E : Type u) := LinearMap.range f0.hom
+    exact (essentialSubmodule_iff_essentialExtension S).2
+      (indecomposable_injective_submodule_hull E hE hInd S hS).1
+  have hf0ess : EssentialExtension f0 := by
+    let S : Submodule R (E : Type u) := LinearMap.range f0.hom
+    let e : (R ⧸ p : Type u) ≃ₗ[R] S :=
+      LinearEquiv.ofBijective f0.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff f0.hom).2
+            ((ModuleCat.mono_iff_injective f0).mp hf0mono),
+          f0.hom.surjective_rangeRestrict⟩
+    let : Mono (ModuleCat.ofHom S.subtype) :=
+      ConcreteCategory.mono_of_injective _ Subtype.val_injective
+    have hcat : EssentialExtension (ModuleCat.ofHom S.subtype) :=
+      (essentialSubmodule_iff_essentialExtension S).1 hrange
+    have heq : e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = f0 := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk f0 = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm f0 (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+    unfold EssentialExtension at hcat ⊢
+    refine ⟨hf0mono, ?_⟩
+    intro P hP
+    rw [hmk]
+    exact hcat.2 P hP
+  obtain ⟨_, ⟨g, hg, _⟩, _⟩ :=
+    prime_injective_hull_residue_field p E f0 ⟨hf0ess, hE⟩
+  exact ⟨p, hp, g, hg⟩
 
 /-- A Noetherian injective module is a direct sum of indecomposable injectives. -/
 def IsDirectSumOfIndecomposableInjectives

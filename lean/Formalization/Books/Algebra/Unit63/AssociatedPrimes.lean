@@ -260,7 +260,143 @@ theorem minimal_primes_associated_primes
       minimalPoints (associatedPrimes R M) =
         minimalPoints {p : PrimeSpectrum R |
           p.asIdeal ∈ Set.range F.prime} := by
-  sorry
+  have exists_min_support_le :
+      ∀ p : PrimeSpectrum R, p ∈ Module.support R M →
+        ∃ q : PrimeSpectrum R,
+          q ∈ Module.support R M ∧
+            Minimal (fun x : PrimeSpectrum R => x ∈ Module.support R M) q ∧
+              q ≤ p := by
+    intro p hp
+    have hpann : Module.annihilator R M ≤ p.asIdeal :=
+      Module.annihilator_le_of_mem_support hp
+    obtain ⟨qI, hqI, hqle⟩ := Ideal.exists_minimalPrimes_le hpann
+    let q : PrimeSpectrum R := ⟨qI, hqI.isPrime⟩
+    have hqmem : q ∈ Module.support R M :=
+      Module.mem_support_iff_of_finite.mpr hqI.le
+    have hqmin :
+        Minimal (fun x : PrimeSpectrum R => x ∈ Module.support R M) q := by
+      refine ⟨hqmem, ?_⟩
+      intro r hr hrq
+      exact hqI.2
+        ⟨r.isPrime, Module.annihilator_le_of_mem_support hr⟩ hrq
+    exact ⟨q, hqmem, hqmin, hqle⟩
+
+  have minimal_support_mem_associated :
+      ∀ p : PrimeSpectrum R,
+        p ∈ Module.support R M →
+        Minimal (fun x : PrimeSpectrum R => x ∈ Module.support R M) p →
+        p ∈ associatedPrimes R M := by
+    intro p hp hminimal
+    have hpann : Module.annihilator R M ≤ p.asIdeal :=
+      Module.mem_support_iff_of_finite.mp hp
+    have hpminann :
+        p.asIdeal ∈ (Module.annihilator R M).minimalPrimes := by
+      refine ⟨⟨p.isPrime, hpann⟩, ?_⟩
+      intro q hq hqp
+      let q' : PrimeSpectrum R := ⟨q, hq.1⟩
+      have hqmem : q' ∈ Module.support R M :=
+        Module.mem_support_iff_of_finite.mpr hq.2
+      exact hminimal.2 hqmem hqp
+    have hroot : p.asIdeal ∈ _root_.associatedPrimes R M :=
+      Module.associatedPrimes.minimalPrimes_annihilator_subset_associatedPrimes
+        R M hpminann
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hroot
+    obtain ⟨hprime, m, hm⟩ := hroot
+    exact ⟨m, hm.symm⟩
+
+  have hsupport_factor :
+      {p : PrimeSpectrum R | p.asIdeal ∈ Set.range F.prime} ⊆
+        Module.support R M := by
+    rintro p ⟨i, hi⟩
+    have hp : p = (⟨F.prime i, F.prime_isPrime i⟩ : PrimeSpectrum R) :=
+      PrimeSpectrum.ext hi.symm
+    subst p
+    let N : Submodule R (F.stage (Fin.succ i)) :=
+      (F.stage (Fin.castSucc i)).comap (F.stage (Fin.succ i)).subtype
+    obtain ⟨e⟩ := F.quotient i
+    have hq :
+        (⟨F.prime i, F.prime_isPrime i⟩ : PrimeSpectrum R) ∈
+          Module.support R (F.stage (Fin.succ i) ⧸ N) := by
+      rw [Module.mem_support_iff']
+      refine ⟨e.symm 1, ?_⟩
+      intro r hr hzero
+      apply hr
+      have hzero' : r • (1 : R ⧸ F.prime i) = 0 := by
+        calc
+          r • (1 : R ⧸ F.prime i) = e (r • e.symm 1) := by
+            rw [e.map_smul, e.apply_symm_apply]
+          _ = e 0 := by rw [hzero]
+          _ = 0 := e.map_zero
+      exact Ideal.Quotient.eq_zero_iff_mem.mp
+        (by simpa [Algebra.smul_def, Ideal.Quotient.algebraMap_eq] using hzero')
+    have hstage :
+        (⟨F.prime i, F.prime_isPrime i⟩ : PrimeSpectrum R) ∈
+          Module.support R (F.stage (Fin.succ i)) :=
+      Module.support_subset_of_surjective (Submodule.mkQ N)
+        (Submodule.mkQ_surjective N) hq
+    exact Module.support_subset_of_injective
+      (F.stage (Fin.succ i)).subtype Subtype.val_injective hstage
+
+  have hass_support :
+      minimalPoints (Module.support R M) ⊆
+        minimalPoints (associatedPrimes R M) := by
+    intro p hp
+    have hpass : p ∈ associatedPrimes R M :=
+      minimal_support_mem_associated p hp.1 hp.2
+    refine ⟨hpass, ⟨hpass, ?_⟩⟩
+    intro q hq hqp
+    exact hp.2.2 (ass_subset_support hq) hqp
+
+  have hsupport_ass :
+      minimalPoints (associatedPrimes R M) ⊆
+        minimalPoints (Module.support R M) := by
+    intro p hp
+    obtain ⟨q, hq, hqmin, hqp⟩ :=
+      exists_min_support_le p (ass_subset_support hp.1)
+    have hqass : q ∈ associatedPrimes R M :=
+      minimal_support_mem_associated q hq hqmin
+    have hpq : p ≤ q := hp.2.2 hqass hqp
+    have hqp' : q = p := le_antisymm hqp hpq
+    subst p
+    exact ⟨hq, hqmin⟩
+
+  have hass_factor :
+      minimalPoints (associatedPrimes R M) ⊆
+        minimalPoints {p : PrimeSpectrum R |
+          p.asIdeal ∈ Set.range F.prime} := by
+    intro p hp
+    have hpfactor : p ∈ {p : PrimeSpectrum R |
+        p.asIdeal ∈ Set.range F.prime} :=
+      ass_subset_primeFiltration F hp.1
+    refine ⟨hpfactor, ⟨hpfactor, ?_⟩⟩
+    intro q hq hqp
+    obtain ⟨r, hr, hrmin, hrq⟩ :=
+      exists_min_support_le q (hsupport_factor hq)
+    have hrass : r ∈ associatedPrimes R M :=
+      minimal_support_mem_associated r hr hrmin
+    exact (hp.2.2 hrass (hrq.trans hqp)).trans hrq
+
+  have hfactor_ass :
+      minimalPoints {p : PrimeSpectrum R |
+          p.asIdeal ∈ Set.range F.prime} ⊆
+        minimalPoints (associatedPrimes R M) := by
+    intro p hp
+    obtain ⟨q, hq, hqmin, hqp⟩ :=
+      exists_min_support_le p (hsupport_factor hp.1)
+    have hqass : q ∈ associatedPrimes R M :=
+      minimal_support_mem_associated q hq hqmin
+    have hqfactor : q ∈ {p : PrimeSpectrum R |
+        p.asIdeal ∈ Set.range F.prime} :=
+      ass_subset_primeFiltration F hqass
+    have hpq : p ≤ q := hp.2.2 hqfactor hqp
+    have hqp' : q = p := le_antisymm hqp hpq
+    subst p
+    refine ⟨hqass, ⟨hqass, ?_⟩⟩
+    intro r hr hrp
+    exact hqmin.2 (ass_subset_support hr) hrp
+
+  exact ⟨Set.Subset.antisymm hass_support hsupport_ass,
+    Set.Subset.antisymm hass_factor hfactor_ass⟩
 
 /-! ## Exact sequences, zero modules, and zerodivisors -/
 
@@ -276,7 +412,76 @@ theorem ass_subset_ass_of_short_exact
     associatedPrimes R M' ⊆ associatedPrimes R M ∧
       associatedPrimes R M ⊆
         associatedPrimes R M' ∪ associatedPrimes R M'' := by
-  sorry
+  constructor
+  · intro p hp
+    change ∃ m, (⊥ : Submodule R M').colon ({m} : Set M') = p.asIdeal at hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal
+    obtain ⟨m, hm⟩ := hp
+    refine ⟨f m, ?_⟩
+    ext r
+    rw [Submodule.mem_colon_singleton, ← hm, Submodule.mem_colon_singleton]
+    change r • f m = 0 ↔ r • m = 0
+    constructor
+    · intro hr
+      apply hf
+      rw [map_smul, hr, map_zero]
+    · intro hr
+      rw [← map_smul, hr, map_zero]
+  · intro p hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+    obtain ⟨m, hm⟩ := hp
+    by_cases h : ∃ a ∈ p.asIdeal.primeCompl, ∃ y : M', ∃ k, f y = a ^ k • m
+    · obtain ⟨a, ha, y, k, hy⟩ := h
+      left
+      refine ⟨y, ?_⟩
+      ext b
+      rw [Submodule.mem_colon_singleton, ← hm, Submodule.mem_colon_singleton]
+      change b • y = 0 ↔ b • m = 0
+      have ha' : a ∉ p.asIdeal := by simpa using ha
+      have hpow : a ^ k ∉ p.asIdeal := by
+        intro hak
+        exact ha' (p.isPrime.mem_of_pow_mem k hak)
+      constructor
+      · intro hby
+        have hba : b * a ^ k ∈ p.asIdeal := by
+          rw [← hm, Submodule.mem_colon_singleton]
+          rw [← smul_smul, ← hy, ← map_smul, hby, map_zero]
+          simp
+        have hb : b ∈ p.asIdeal :=
+          (p.isPrime.mem_or_mem hba).resolve_right hpow
+        rw [← hm, Submodule.mem_colon_singleton] at hb
+        simpa using hb
+      · intro hbm
+        apply hf
+        calc
+          f (b • y) = b • f y := map_smul f b y
+          _ = b • (a ^ k • m) := by rw [hy]
+          _ = a ^ k • (b • m) := by rw [smul_smul, smul_smul, mul_comm]
+          _ = 0 := by rw [hbm, smul_zero]
+          _ = f 0 := (map_zero f).symm
+    · right
+      refine ⟨g m, ?_⟩
+      ext b
+      rw [Submodule.mem_colon_singleton, ← hm, Submodule.mem_colon_singleton]
+      change b • g m = 0 ↔ b • m = 0
+      constructor
+      · intro hbg
+        have hbker : b • m ∈ LinearMap.ker g := by
+          rw [← map_smul] at hbg
+          rw [LinearMap.mem_ker]
+          exact hbg
+        rw [hfg.linearMap_ker_eq] at hbker
+        obtain ⟨y, hy⟩ := hbker
+        have hb : b ∈ p.asIdeal := by
+          by_contra hb'
+          apply h
+          refine ⟨b, ?_, y, 1, ?_⟩
+          simpa using hb'
+          simpa [pow_one] using hy
+        rw [← hm, Submodule.mem_colon_singleton] at hb
+        simpa using hb
+      · intro hbm
+        rw [← map_smul, hbm, map_zero]
 
 /-- The associated-prime set of a binary direct sum, represented by the
 product module `M' × M''`. -/
@@ -286,7 +491,13 @@ theorem ass_prod
     [AddCommGroup M''] [Module R M''] :
     associatedPrimes R (M' × M'') =
       associatedPrimes R M' ∪ associatedPrimes R M'' := by
-  sorry
+  let h₁ := ass_subset_ass_of_short_exact
+    (f := LinearMap.inl R M' M'') (g := LinearMap.snd R M' M'')
+    LinearMap.inl_injective (fun z => ⟨(0, z), rfl⟩) Function.Exact.inl_snd
+  let h₂ := ass_subset_ass_of_short_exact
+    (f := LinearMap.inr R M' M'') (g := LinearMap.fst R M' M'')
+    LinearMap.inr_injective (fun z => ⟨(z, 0), rfl⟩) Function.Exact.inr_fst
+  exact h₁.2.antisymm (Set.union_subset_iff.2 ⟨h₁.1, h₂.1⟩)
 
 /-- Over a Noetherian ring, a module is zero exactly when it has no associated
 prime. -/
@@ -294,7 +505,29 @@ theorem ass_eq_empty_iff_subsingleton
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] [IsNoetherianRing R] :
     Subsingleton M ↔ associatedPrimes R M = ∅ := by
-  sorry
+  constructor
+  · intro hM
+    ext p
+    simp only [Set.mem_empty_iff_false, iff_false]
+    intro hp
+    change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+    obtain ⟨m, hm⟩ := hp
+    have hm0 : m = 0 := Subsingleton.elim _ _
+    have htop : (⊥ : Submodule R M).colon ({m} : Set M) = ⊤ := by
+      rw [Submodule.colon_eq_top_iff_subset]
+      simp [hm0]
+    exact p.isPrime.ne_top (by rw [← hm, htop])
+  · intro h
+    classical
+    by_contra hM
+    have hnontrivial : Nontrivial M := not_subsingleton_iff_nontrivial.mp hM
+    obtain ⟨I, hI⟩ := _root_.associatedPrimes.nonempty R M
+    rw [_root_.AssociatedPrimes.mem_iff, _root_.isAssociatedPrime_iff] at hI
+    obtain ⟨hprime, m, hm⟩ := hI
+    let p : PrimeSpectrum R := ⟨I, hprime⟩
+    have hp : p ∈ associatedPrimes R M := ⟨m, hm.symm⟩
+    rw [h] at hp
+    exact Set.notMem_empty p hp
 
 /-- Every minimal point of the support of a module over a Noetherian ring is
 associated. -/

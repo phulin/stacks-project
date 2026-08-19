@@ -7,6 +7,7 @@ import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Countable
 import Mathlib.LinearAlgebra.Dimension.StrongRankCondition
 import Mathlib.RingTheory.Ideal.Int
+import Mathlib.RingTheory.PrincipalIdealDomain
 
 /-!
 # Commutative Algebra, Chapter 93: Characterizing projective modules
@@ -392,13 +393,347 @@ theorem integerPowerSeriesSubmodule_not_free
   apply integerPowerSeriesSubmodule_not_countable p hp
   exact hNcount
 
+private theorem free_of_submodule_of_free_pid
+    {R : Type u} {F : Type v} [CommRing R] [IsDomain R]
+    [IsPrincipalIdealRing R] [AddCommGroup F] [Module R F]
+    [Module.Free R F] (N : Submodule R F) : Module.Free R N := by
+  classical
+  let b := Module.Free.chooseBasis R F
+  let J := Module.Free.ChooseBasisIndex R F
+  let T : Ordinal.{v} := Cardinal.ord (Cardinal.mk J)
+  have hcard : Cardinal.mk T.ToType = Cardinal.mk J := by
+    simp [T]
+  let eJ : T.ToType ≃ J := (Cardinal.eq.mp hcard).some
+  let bT : Module.Basis T.ToType R F := b.reindex eJ.symm
+  let S : Ordinal.{v} := T + 1
+  let base : Set.Iio S → Set T.ToType := fun α =>
+    {i : T.ToType | (i : Ordinal) < α.1}
+  let ambient : Set.Iio S → Submodule R F := fun α =>
+    Submodule.span R (bT '' base α)
+  let stage : Set.Iio S → Submodule R N := fun α =>
+    (ambient α).comap N.subtype
+  have hbase_mono : Monotone base := by
+    intro α β hαβ i hi
+    exact (show (i : Ordinal) < α.1 from hi).trans_le hαβ
+  have hambient_mono : Monotone ambient := by
+    intro α β hαβ
+    exact Submodule.span_mono (Set.image_mono (hbase_mono hαβ))
+  have hstage_mono : Monotone stage := by
+    intro α β hαβ
+    exact Submodule.comap_mono (hambient_mono hαβ)
+  have hstage_zero : stage ⟨0, by simp [S]⟩ = ⊥ := by
+    apply le_antisymm
+    · intro x hx
+      apply (Submodule.mem_bot R).2
+      apply Subtype.ext
+      simpa [stage, ambient, base] using hx
+    · exact bot_le
+  let αT : Set.Iio S := ⟨T, ordinal_lt_add_one T⟩
+  have hbase_top : base αT = Set.univ := by
+    ext i
+    constructor
+    · intro _
+      trivial
+    · intro _
+      change i ∈ base αT
+      dsimp [base, αT]
+      exact Ordinal.typein_lt_self i
+  have hambient_top : ambient αT = ⊤ := by
+    simpa [ambient, hbase_top] using bT.span_eq
+  have hstage_top : stage αT = ⊤ := by
+    simp [stage, hambient_top]
+  have hambient_limit :
+      ∀ (α : Set.Iio S), Order.IsSuccLimit α.1 →
+        ambient α = ⨆ β : Set.Iio α.1,
+          ambient ⟨β.1, by
+            exact β.2.trans (show α.1 < S from α.2)⟩ := by
+    intro α hα
+    apply le_antisymm
+    · intro x hx
+      change x ∈ Submodule.span R (bT '' base α) at hx
+      rw [Module.Basis.mem_span_image] at hx
+      by_cases hs : (bT.repr x).support.Nonempty
+      · let i := (bT.repr x).support.max' hs
+        have hi : (i : Ordinal) < α.1 := hx (Finset.max'_mem _ hs)
+        let β : Set.Iio α.1 := ⟨(i : Ordinal) + 1, by
+          exact hα.succ_lt hi⟩
+        apply Submodule.mem_iSup_of_mem β
+        change x ∈ Submodule.span R (bT ''
+          {j : T.ToType | (j : Ordinal) < β.1})
+        rw [Module.Basis.mem_span_image]
+        intro j hj
+        have hji : j ≤ i := Finset.le_max' _ j hj
+        have hji' : (j : Ordinal) ≤ (i : Ordinal) := by
+          change (Ordinal.ToType.mk.symm j).1 ≤ (Ordinal.ToType.mk.symm i).1
+          exact (Ordinal.ToType.mk.symm.le_iff_le).mpr hji
+        exact lt_of_le_of_lt hji' (ordinal_lt_add_one (i : Ordinal))
+      · have hc : bT.repr x = 0 := by
+          ext i
+          by_contra hi
+          exact hs ⟨i, Finsupp.mem_support_iff.mpr hi⟩
+        have hx0 : x = 0 := bT.repr.injective (by simpa [hc])
+        rw [hx0]
+        exact Submodule.zero_mem _
+    · refine iSup_le fun β => ?_
+      exact hambient_mono (show
+        (⟨β.1, β.2.trans (show α.1 < S from α.2)⟩ : Set.Iio S) ≤ α from β.2.le)
+  have hstage_limit :
+      ∀ (α : Set.Iio S), Order.IsSuccLimit α.1 →
+        stage α = ⨆ β : Set.Iio α.1,
+          stage ⟨β.1, by
+            exact β.2.trans (show α.1 < S from α.2)⟩ := by
+    intro α hα
+    apply le_antisymm
+    · intro x hx
+      have hxA : (x : F) ∈ ambient α := hx
+      rw [hambient_limit α hα] at hxA
+      obtain ⟨β₀, hβ₀⟩ := hα.nonempty_Iio
+      letI : Nonempty (Set.Iio α.1) := ⟨⟨β₀, hβ₀⟩⟩
+      have hdir : Directed (· ≤ ·) (fun β : Set.Iio α.1 =>
+          ambient ⟨β.1, β.2.trans (show α.1 < S from α.2)⟩) := by
+        intro β γ
+        refine ⟨max β γ, ?_, ?_⟩
+        · exact hambient_mono (show
+            (⟨β.1, β.2.trans (show α.1 < S from α.2)⟩ : Set.Iio S) ≤
+              ⟨(max β γ).1, (max β γ).2.trans (show α.1 < S from α.2)⟩ by
+                change β.1 ≤ (max β γ).1
+                exact le_max_left _ _)
+        · exact hambient_mono (show
+            (⟨γ.1, γ.2.trans (show α.1 < S from α.2)⟩ : Set.Iio S) ≤
+              ⟨(max β γ).1, (max β γ).2.trans (show α.1 < S from α.2)⟩ by
+                change γ.1 ≤ (max β γ).1
+                exact le_max_right _ _)
+      obtain ⟨β, hxβ⟩ := (Submodule.mem_iSup_of_directed _ hdir).mp hxA
+      exact Submodule.mem_iSup_of_mem β hxβ
+    · refine iSup_le fun β => ?_
+      exact hstage_mono (show
+        (⟨β.1, β.2.trans (show α.1 < S from α.2)⟩ : Set.Iio S) ≤ α from β.2.le)
+  have hstage_union : (⨆ α : Set.Iio S, stage α) = ⊤ := by
+    apply top_unique
+    rw [← hstage_top]
+    exact le_iSup stage αT
+  let D : Formalization.Books.Algebra.Unit84.IncreasingDevissage
+      (R := R) (M := (N : Type v)) S :=
+    { stage := stage
+      monotone := hstage_mono
+      zero_lt := by
+        change (0 : Ordinal.{v}) < T + 1
+        exact Order.bot_lt_succ T
+      zero := hstage_zero
+      union_eq_top := hstage_union
+      limit := hstage_limit }
+  have hsuccessor :
+      ∀ α : Formalization.Books.Algebra.Unit84.SuccessorIndex S,
+        ∃ C : Submodule R (D.stage ⟨α.1 + 1, α.2⟩),
+          IsCompl (D.successorSubmodule α) C ∧
+            Module.Free R (D.successorQuotient α) := by
+    intro α
+    let α₀ : Set.Iio S := ⟨α.1, (ordinal_lt_add_one α.1).trans α.2⟩
+    let α₁ : Set.Iio S := ⟨α.1 + 1, α.2⟩
+    let W : Submodule R N := stage α₁
+    let P : Submodule R W := D.successorSubmodule α
+    have hαT : α.1 < T := by
+      simpa only [S, Order.succ_eq_add_one] using
+        (Order.succ_lt_succ_iff.mp α.2)
+    let iα : T.ToType := Ordinal.ToType.mk ⟨α.1, hαT⟩
+    have hiα : (iα : Ordinal) = α.1 := by simp [iα]
+    let coord : W →ₗ[R] R := (bT.coord iα).comp N.subtype |>.comp W.subtype
+    have hker : LinearMap.ker coord = P := by
+      ext x
+      constructor
+      · intro hx
+        change (x : N) ∈ stage α₀
+        change (x : F) ∈ ambient α₀
+        rw [Module.Basis.mem_span_image]
+        intro j hj
+        have hx₁ : (x : F) ∈ ambient α₁ := x.property
+        have hsupp : (↑(bT.repr (x : F)).support : Set T.ToType) ⊆ base α₁ :=
+          (Module.Basis.mem_span_image bT).mp hx₁
+        have hj₁ : (j : Ordinal) < α.1 + 1 := hsupp hj
+        have hji : j ≠ iα := by
+          intro hji
+          have hcoord : bT.repr (x : F) iα = 0 := by
+            simpa [coord] using (LinearMap.mem_ker.mp hx)
+          exact (Finsupp.mem_support_iff.mp hj) (by simpa [hji] using hcoord)
+        have hjle : (j : Ordinal) ≤ α.1 := by
+          apply Order.le_of_lt_succ
+          simpa only [Order.succ_eq_add_one] using hj₁
+        by_contra hjα
+        have hjα' : (j : Ordinal) = α.1 := le_antisymm hjle (not_lt.mp hjα)
+        apply hji
+        apply (Ordinal.ToType.mk.symm.injective)
+        apply Subtype.ext
+        simpa [hiα] using hjα'
+      · intro hx
+        apply LinearMap.mem_ker.mpr
+        change bT.coord iα (x : F) = 0
+        have hsupp : (↑(bT.repr (x : F)).support : Set T.ToType) ⊆ base α₀ := by
+          exact (Module.Basis.mem_span_image bT).mp hx
+        have hnot : iα ∉ (bT.repr (x : F)).support := by
+          intro hi
+          have hlt : (iα : Ordinal) < α.1 := hsupp hi
+          exact (not_lt_of_ge (le_of_eq hiα.symm)) hlt
+        have hrepr : bT.repr (x : F) iα = 0 := by
+          by_contra hrepr
+          exact hnot (Finsupp.mem_support_iff.mpr hrepr)
+        simpa using hrepr
+    let I : Submodule R R := LinearMap.range coord
+    letI : I.IsPrincipal := IsPrincipalIdealRing.principal I
+    letI : Module.Finite R I := Module.Finite.of_fg
+      (Submodule.IsPrincipal.fg (IsPrincipalIdealRing.principal I))
+    letI : Module.Free R I := Module.free_of_finite_type_torsion_free'
+    let q : W →ₗ[R] I := coord.codRestrict I (fun x => ⟨x, rfl⟩)
+    have hq : Function.Surjective q := by
+      intro y
+      rcases y.property with ⟨x, hx⟩
+      refine ⟨x, ?_⟩
+      apply Subtype.ext
+      exact hx
+    letI : Module.Projective R I := Module.Projective.of_free
+    obtain ⟨s, hs⟩ := LinearMap.exists_rightInverse_of_surjective q
+      (LinearMap.range_eq_top_of_surjective q hq)
+    let C : Submodule R W := LinearMap.range s
+    let p : W →ₗ[R] W := s.comp q
+    have hpC (x : C) : p (x : W) = (x : W) := by
+      rcases x.property with ⟨y, hy⟩
+      change s (q (x : W)) = (x : W)
+      rw [← hy]
+      change s (q (s y)) = s y
+      exact congrArg s (LinearMap.congr_fun hs y)
+    have hkerp : LinearMap.ker p = P := by
+      apply le_antisymm
+      · intro x hx
+        rw [← hker]
+        apply LinearMap.mem_ker.mpr
+        have hq0 : q x = 0 := by
+          apply Subtype.ext
+          have hqpx : q (p x) = q x := by
+            change q (s (q x)) = q x
+            simpa using LinearMap.congr_fun hs (q x)
+          rw [LinearMap.mem_ker.mp hx] at hqpx
+          simpa using hqpx.symm
+        exact congrArg Subtype.val hq0
+      · intro x hx
+        apply LinearMap.mem_ker.mpr
+        change s (q x) = 0
+        have hq0 : q x = 0 := by
+          apply Subtype.ext
+          have hx' : x ∈ LinearMap.ker coord := by rw [hker]; exact hx
+          change coord x = 0
+          exact LinearMap.mem_ker.mp hx'
+        rw [hq0, map_zero]
+    have hcomp : IsCompl P C := by
+      have hpcomp : IsCompl C (LinearMap.ker p) := by
+        let proj : W →ₗ[R] C := p.codRestrict C (fun x => ⟨q x, rfl⟩)
+        have hproj (x : C) : proj (x : W) = x := by
+          apply Subtype.ext
+          exact hpC x
+        have h := LinearMap.isCompl_of_proj hproj
+        have hkerproj : LinearMap.ker proj = LinearMap.ker p := by
+          ext x
+          change proj x = 0 ↔ p x = 0
+          constructor
+          · intro hx
+            exact congrArg Subtype.val hx
+          · intro hx
+            apply Subtype.ext
+            exact hx
+        simpa [hkerproj] using h
+      simpa [hkerp] using hpcomp.symm
+    refine ⟨C, ?_, ?_⟩
+    · change IsCompl P C
+      exact hcomp
+    · let sC : I →ₗ[R] C := s.codRestrict C (fun y => ⟨y, rfl⟩)
+      have hsC : Function.Bijective sC := by
+        constructor
+        · intro x y hxy
+          have hxy' := congrArg (fun z : C => q (z : W)) hxy
+          change q (s x) = q (s y) at hxy'
+          calc
+            x = q (s x) := by simpa using (LinearMap.congr_fun hs x).symm
+            _ = q (s y) := hxy'
+            _ = y := by simpa using LinearMap.congr_fun hs y
+        · intro z
+          rcases z.property with ⟨y, hy⟩
+          refine ⟨y, ?_⟩
+          apply Subtype.ext
+          exact hy
+      let eIC : I ≃ₗ[R] C := LinearEquiv.ofBijective sC hsC
+      let eQ : D.successorQuotient α ≃ₗ[R] I :=
+        (Submodule.quotientEquivOfIsCompl P C hcomp).trans eIC.symm
+      exact Module.Free.of_equiv' (by infer_instance) eQ.symm
+  have hsucc : D.isSuccessorComplemented := by
+    intro α
+    rcases hsuccessor α with ⟨C, hC, _⟩
+    exact ⟨C, hC⟩
+  let DD : Formalization.Books.Algebra.Unit84.DirectSumDevissage
+      (R := R) (M := (N : Type v)) S :=
+    { toIncreasingDevissage := D
+      successor := hsucc }
+  obtain ⟨e⟩ :=
+    Formalization.Books.Algebra.Unit84.directSumDevissage_decomposition DD
+  let _ : ∀ α : Formalization.Books.Algebra.Unit84.SuccessorIndex S,
+      Module.Free R (D.successorQuotient α) := fun α =>
+    (hsuccessor α).choose_spec.2
+  let hfree : Module.Free R
+      (⨁ α : Formalization.Books.Algebra.Unit84.SuccessorIndex S,
+        D.successorQuotient α) :=
+    Module.Free.dfinsupp R (fun α : Formalization.Books.Algebra.Unit84.SuccessorIndex S =>
+      D.successorQuotient α)
+  exact Module.Free.of_equiv' hfree e.symm
+
+private theorem projective_free_of_pid
+    {R : Type u} {P : Type v} [CommRing R] [IsDomain R]
+    [IsPrincipalIdealRing R] [AddCommGroup P] [Module R P]
+    (hP : Module.Projective R P) : Module.Free R P := by
+  obtain ⟨M, hMadd, hMmodule, hMfree, ⟨i, s, his⟩⟩ :=
+    Module.Projective.iff_split.mp hP
+  letI : AddCommMonoid M := hMadd
+  letI : Module R M := hMmodule
+  letI : AddCommGroup M := Module.addCommMonoidToAddCommGroup R
+  letI : Module.Free R M := hMfree
+  let Q : Submodule R M := LinearMap.range i
+  let ii : P →ₗ[R] Q := i.codRestrict Q (fun x => ⟨x, rfl⟩)
+  have hii : Function.Bijective ii := by
+    constructor
+    · intro x y hxy
+      have hxy' := congrArg (fun z : Q => s (z : M)) hxy
+      have hix : s (i x) = x := by
+        simpa using congrArg (fun f : P →ₗ[R] P => f x) his
+      have hiy : s (i y) = y := by
+        simpa using congrArg (fun f : P →ₗ[R] P => f y) his
+      change s (i x) = s (i y) at hxy'
+      exact hix.symm.trans (hxy'.trans hiy)
+    · intro z
+      rcases z.property with ⟨x, hx⟩
+      refine ⟨x, ?_⟩
+      apply Subtype.ext
+      exact hx
+  let e : P ≃ₗ[R] Q := LinearEquiv.ofBijective ii hii
+  have hQfree : Module.Free R Q :=
+    free_of_submodule_of_free_pid (R := R) (F := M) Q
+  exact Module.Free.of_equiv' hQfree e.symm
+
 /-- The warning example: `ℤ[[x]]` is flat and Mittag--Leffler but not
 projective. -/
 theorem integerPowerSeries_flat_mittagLeffler_not_projective :
     Module.Flat ℤ (PowerSeries ℤ) ∧
       IsMittagLefflerModule (ModuleCat.of ℤ (PowerSeries ℤ)) ∧
-        ¬ Module.Projective ℤ (PowerSeries ℤ) := by
-  sorry
+      ¬ Module.Projective ℤ (PowerSeries ℤ) := by
+  have hpos :=
+    Formalization.Books.Algebra.Unit91.modulePower_is_flat_and_mittagLeffler
+      ℤ (Unit →₀ ℕ)
+  refine ⟨?_, ?_, ?_⟩
+  · change Module.Flat ℤ ((Unit →₀ ℕ) → ℤ)
+    exact hpos.1
+  · change IsMittagLefflerModule (ModuleCat.of ℤ ((Unit →₀ ℕ) → ℤ))
+    exact hpos.2
+  · intro hP
+    letI : Module.Free ℤ (PowerSeries ℤ) :=
+      projective_free_of_pid hP
+    apply integerPowerSeriesSubmodule_not_free 2 Nat.prime_two
+    exact free_of_submodule_of_free_pid (R := ℤ) (F := PowerSeries ℤ)
+      (integerPowerSeriesSubmodule 2)
 
 /-! ## The projectivity characterization -/
 

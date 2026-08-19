@@ -550,19 +550,55 @@ theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submono
 theorem construct_fp_module_from_localization {R : Type u} [CommRing R]
     (S : Submonoid R) (M : ModuleCat.{v} R) :
     (Module.Finite (Localization S) (LocalizedModule S (M : Type v)) →
-      ∃ M' : ModuleCat.{v} R,
-        Module.Finite R (M' : Type v) ∧
-          ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
+      ∃ M' : ModuleCat.{max u v} R,
+        Module.Finite R (M' : Type (max u v)) ∧
+          ∃ f : (M' : Type (max u v)) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map S f)) ∧
     (Module.FinitePresentation (Localization S) (LocalizedModule S (M : Type v)) →
-      ∃ M' : ModuleCat.{v} R,
-        Module.FinitePresentation R (M' : Type v) ∧
-          ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
+      ∃ M' : ModuleCat.{max u v} R,
+        Module.FinitePresentation R (M' : Type (max u v)) ∧
+          ∃ f : (M' : Type (max u v)) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map S f)) := by
   constructor
   · intro hM
     obtain ⟨P, hP, hbij⟩ := finite_localized_submodule S hM
-    exact ⟨ModuleCat.of R (P : Type v), hP, P.subtype, hbij⟩
+    let eUL : (ULift.{u} (P : Type v)) ≃ₗ[R] (P : Type v) := ULift.moduleEquiv
+    let f : (ULift.{u} (P : Type v)) →ₗ[R] (M : Type v) :=
+      P.subtype.comp eUL.toLinearMap
+    have hbijP : Function.Bijective
+        (IsLocalizedModule.map S (LocalizedModule.mkLinearMap S (P : Type v))
+          (LocalizedModule.mkLinearMap S (M : Type v)) P.subtype) := by
+      rw [IsLocalizedModule.map_bijective_iff_localizedModuleMap_bijective]
+      exact hbij
+    have hbijUL : Function.Bijective
+        (IsLocalizedModule.map S
+          (LocalizedModule.mkLinearMap S (ULift.{u} (P : Type v)))
+          (LocalizedModule.mkLinearMap S (P : Type v)) eUL.toLinearMap) := by
+      rw [IsLocalizedModule.map_bijective_iff_localizedModuleMap_bijective]
+      exact ⟨LocalizedModule.map_injective S eUL.toLinearMap eUL.injective,
+        LocalizedModule.map_surjective S eUL.toLinearMap eUL.surjective⟩
+    have hcomp :
+        IsLocalizedModule.map S
+            (LocalizedModule.mkLinearMap S (ULift.{u} (P : Type v)))
+            (LocalizedModule.mkLinearMap S (M : Type v)) f =
+          IsLocalizedModule.map S (LocalizedModule.mkLinearMap S (P : Type v))
+            (LocalizedModule.mkLinearMap S (M : Type v)) P.subtype ∘ₗ
+            IsLocalizedModule.map S
+              (LocalizedModule.mkLinearMap S (ULift.{u} (P : Type v)))
+              (LocalizedModule.mkLinearMap S (P : Type v)) eUL.toLinearMap := by
+      exact IsLocalizedModule.map_comp' (S := S)
+        (f₀ := LocalizedModule.mkLinearMap S (ULift.{u} (P : Type v)))
+        (f₁ := LocalizedModule.mkLinearMap S (P : Type v))
+        (f₂ := LocalizedModule.mkLinearMap S (M : Type v)) eUL.toLinearMap P.subtype
+    have hbij' : Function.Bijective (LocalizedModule.map S f) := by
+      apply (IsLocalizedModule.map_bijective_iff_localizedModuleMap_bijective
+        (g₁ := LocalizedModule.mkLinearMap S (ULift.{u} (P : Type v)))
+        (g₂ := LocalizedModule.mkLinearMap S (M : Type v)) (l := f)).mp
+      rw [hcomp]
+      exact hbijP.comp hbijUL
+    let : Module.Finite R (ULift.{u} (P : Type v)) :=
+      Module.Finite.equiv eUL.symm
+    exact ⟨ModuleCat.of R (ULift.{u} (P : Type v)), inferInstance, f, hbij'⟩
   · sorry
 
 /-! ### The stalk case -/
@@ -572,15 +608,15 @@ theorem construct_fp_module_from_stalk {R : Type u} [CommRing R]
     (p : Ideal R) [hp : p.IsPrime] (M : ModuleCat.{v} R) :
     (Module.Finite (Localization.AtPrime p)
         (LocalizedModule p.primeCompl (M : Type v)) →
-      ∃ M' : ModuleCat.{v} R,
-        Module.Finite R (M' : Type v) ∧
-          ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
+      ∃ M' : ModuleCat.{max u v} R,
+        Module.Finite R (M' : Type (max u v)) ∧
+          ∃ f : (M' : Type (max u v)) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map p.primeCompl f)) ∧
     (Module.FinitePresentation (Localization.AtPrime p)
         (LocalizedModule p.primeCompl (M : Type v)) →
-      ∃ M' : ModuleCat.{v} R,
-        Module.FinitePresentation R (M' : Type v) ∧
-          ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
+      ∃ M' : ModuleCat.{max u v} R,
+        Module.FinitePresentation R (M' : Type (max u v)) ∧
+          ∃ f : (M' : Type (max u v)) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map p.primeCompl f)) := by
   constructor
   · intro hM

@@ -840,12 +840,11 @@ private theorem associatedGradedRingPiece_mk_heq
   exact hab
 
 /-- The canonical ring operations on the associated graded ring. -/
-theorem associatedGradedRing_gcommRing_exists
+@[instance_reducible] private noncomputable def associatedGradedRing_gcommRing_canonical
     {R : Type u} [CommRing R] (I : Ideal R) :
-    Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
+    DirectSum.GCommRing (associatedGradedRingPiece I) := by
   let one : associatedGradedRingPiece I 0 :=
     Submodule.Quotient.mk ⟨1, by simp⟩
-  refine ⟨?_⟩
   let : GradedMonoid.GOne (associatedGradedRingPiece I) := ⟨one⟩
   let : GradedMonoid.GMul (associatedGradedRingPiece I) :=
     ⟨@associatedGradedRingPieceMul R _ I⟩
@@ -1008,10 +1007,15 @@ theorem associatedGradedRing_gcommRing_exists
       exact (I ^ (i + j + 1) : Ideal R).zero_mem
   }
 
+theorem associatedGradedRing_gcommRing_exists
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) :=
+  ⟨associatedGradedRing_gcommRing_canonical I⟩
+
 noncomputable instance associatedGradedRing_gcommRing
     {R : Type u} [CommRing R] (I : Ideal R) :
     DirectSum.GCommRing (associatedGradedRingPiece I) :=
-  Classical.choice (associatedGradedRing_gcommRing_exists I)
+  associatedGradedRing_gcommRing_canonical I
 
 /-- The canonical graded-module action of `Gr_I(R)` on `Gr_I(M)`. -/
 theorem associatedGradedModule_gmodule_exists

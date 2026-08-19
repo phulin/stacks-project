@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit72
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.LinearAlgebra.ExteriorPower.Basic
+import Mathlib.LinearAlgebra.ExteriorPower.Basis
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.RingTheory.Artinian.Ring
@@ -333,7 +334,65 @@ theorem rank_eq_zero_iff
     {R : Type u} [CommRing R] [Nontrivial R] {m n : ℕ}
     (φ : (Fin m → R) →ₗ[R] (Fin n → R)) :
     rank φ = 0 ↔ φ = 0 := by
-  sorry
+  constructor
+  · intro h
+    have hbounded : BddAbove {r : ℕ | exteriorPower.map r φ ≠ 0} := by
+      refine ⟨n, ?_⟩
+      intro r hr
+      by_contra hnr
+      have hlt : n < r := Nat.lt_of_not_ge hnr
+      have hfin : Module.finrank R (⋀[R]^r (Fin n → R)) = 0 := by
+        rw [exteriorPower.finrank_eq, Module.finrank_fin_fun,
+          Nat.choose_eq_zero_of_lt hlt]
+      letI : Subsingleton (⋀[R]^r (Fin n → R)) :=
+        (Module.finrank_eq_zero_iff_of_free R _).mp hfin
+      exact hr (Subsingleton.elim _ _)
+    have hmap : exteriorPower.map 1 φ = 0 := by
+      by_contra hne
+      have hmem : 1 ∈ {r : ℕ | exteriorPower.map r φ ≠ 0} := hne
+      have hle := le_csSup hbounded hmem
+      change 1 ≤ rank φ at hle
+      rw [h] at hle
+      exact Nat.not_succ_le_zero 0 hle
+    apply LinearMap.ext
+    intro x
+    have hn := exteriorPower.oneEquiv_naturality
+      (R := R) (M := Fin m → R) (N := Fin n → R) φ
+    have hx := congrArg
+      (fun f => f ((exteriorPower.oneEquiv R (Fin m → R)).symm x)) hn
+    rw [hmap] at hx
+    simpa using hx.symm
+  · intro h
+    subst φ
+    rw [rank]
+    apply le_antisymm
+    · apply csSup_le
+      · refine ⟨0, ?_⟩
+        intro hzero
+        have hn := exteriorPower.zeroEquiv_naturality
+          (R := R) (M := Fin m → R) (N := Fin n → R)
+          (0 : (Fin m → R) →ₗ[R] (Fin n → R))
+        rw [hzero] at hn
+        have hone := congrArg
+          (fun f : (⋀[R]^0 (Fin m → R)) →ₗ[R] R =>
+            f (exteriorPower.ιMulti R 0 (fun _ => (0 : Fin m → R)))) hn
+        simpa using hone
+      · intro r hr
+        by_contra hpos
+        have hrne : r ≠ 0 := by
+          intro hr0
+          apply hpos
+          simp [hr0]
+        have hrpos : 0 < r := Nat.pos_of_ne_zero hrne
+        apply hr
+        apply exteriorPower.linearMap_ext
+        ext v
+        cases r with
+        | zero => simp at hrpos
+        | succ r =>
+          simp [exteriorPower.map_apply_ιMulti,
+            ExteriorAlgebra.ιMulti_succ_apply]
+    · exact Nat.zero_le _
 
 theorem rankIdeal_eq_top_of_rank_eq_zero
     {R : Type u} [CommRing R] [Nontrivial R] {m n : ℕ}

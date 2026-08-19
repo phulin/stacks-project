@@ -1,3 +1,7 @@
+/-
+PRIOR ATTEMPT: This file retained declarations from later Descent sections.
+They remain here for proof history but are not Chapter 19 content.
+
 import Formalization.Books.Descent.Unit19.VariantsOnDescendingProperties
 
 universe u
@@ -90,3 +94,4 @@ theorem relativeAmple_isFpqcLocal
   sorry
 
 end Formalization.Books.Descent.Unit19
+-/

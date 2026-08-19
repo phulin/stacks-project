@@ -1,3 +1,7 @@
+/-
+PRIOR ATTEMPT: This file retained declarations from later Descent sections.
+They remain here for proof history but are not Chapter 19 content.
+
 import Formalization.Books.Descent.Unit19.TargetAndApplication
 import Mathlib.AlgebraicGeometry.Noetherian
 import Mathlib.FieldTheory.PrimeField
@@ -336,3 +340,4 @@ theorem etaleLocalOnSourceAndTarget_of_etaleSource_smoothTarget
     : IsEtaleLocalOnSourceAndTarget P := by sorry
 
 end Formalization.Books.Descent.Unit19
+-/

@@ -1,3 +1,7 @@
+/-
+PRIOR ATTEMPT: This file retained declarations from later Descent sections.
+They remain here for proof history but are not Chapter 19 content.
+
 import Formalization.Books.Descent.Unit19.SourceProperties
 import Mathlib.RingTheory.AlgebraicIndependent.Basic
 
@@ -86,3 +90,4 @@ theorem fibre_point_dimension_is_etale_local (d : ℕ∞) :
     SchemeGerm.IsEtaleLocalOnGerms (FibrePointDimensionProperty d) := by sorry
 
 end Formalization.Books.Descent.Unit19
+-/

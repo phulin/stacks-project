@@ -2,6 +2,39 @@ import Formalization.Books.Descent.Unit19.Core
 
 universe u
 
+open CategoryTheory
+open AlgebraicGeometry
+
+namespace Formalization.Books.Descent.Unit19
+
+/-! ## Variants on descending properties -/
+
+/-- Flat and surjective descent of reduced schemes. -/
+theorem descend_reduced_of_flat_surjective
+    {X Y : Scheme.{u}} (f : X ⟶ Y) [Flat f] [Surjective f]
+    [IsReduced X] : IsReduced Y := by
+  sorry
+
+/-- Locally finitely presented, flat and surjective descent of regular spaces. -/
+theorem descend_regular_of_lfp_flat_surjective
+    {X Y : AlgebraicSpaceInterface.Space.{u}}
+    (f : AlgebraicSpaceInterface.Hom X Y)
+    (hfp : AlgebraicSpaceInterface.IsLocallyOfFinitePresentation f)
+    (hflat : AlgebraicSpaceInterface.IsFlat f)
+    (hsurj : AlgebraicSpaceInterface.IsSurjective f)
+    (hX : AlgebraicSpaceInterface.IsRegular X) :
+    AlgebraicSpaceInterface.IsRegular Y := by
+  sorry
+
+end Formalization.Books.Descent.Unit19
+
+/-
+PRIOR ATTEMPT: The declarations below were retained from a broader draft that
+also covered later sections of Descent. They are kept verbatim for proof
+history, but are not part of Chapter 19 and are intentionally commented out.
+
+universe u
+
 open CategoryTheory CategoryTheory.Limits
 open AlgebraicGeometry
 
@@ -296,3 +329,4 @@ theorem regularImmersion_isFpqcLocalOnTarget :
       IsFlatLocalOnTarget (@IsQuasiRegularImmersion) := by sorry
 
 end Formalization.Books.Descent.Unit19
+-/

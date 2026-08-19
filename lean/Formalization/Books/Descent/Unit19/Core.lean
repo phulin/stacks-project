@@ -1,40 +1,13 @@
-import Mathlib.AlgebraicGeometry.AffineSpace
-import Mathlib.AlgebraicGeometry.Fiber
-import Mathlib.AlgebraicGeometry.Morphisms.Affine
-import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
-import Mathlib.AlgebraicGeometry.Morphisms.Etale
-import Mathlib.AlgebraicGeometry.Morphisms.Finite
-import Mathlib.AlgebraicGeometry.Morphisms.FlatRank
-import Mathlib.AlgebraicGeometry.Morphisms.FinitePresentation
-import Mathlib.AlgebraicGeometry.Morphisms.FiniteType
 import Mathlib.AlgebraicGeometry.Morphisms.Flat
-import Mathlib.AlgebraicGeometry.Morphisms.Immersion
-import Mathlib.AlgebraicGeometry.Morphisms.Integral
-import Mathlib.AlgebraicGeometry.Morphisms.Proper
-import Mathlib.AlgebraicGeometry.Morphisms.QuasiFinite
-import Mathlib.AlgebraicGeometry.Morphisms.QuasiSeparated
-import Mathlib.AlgebraicGeometry.Morphisms.Separated
-import Mathlib.AlgebraicGeometry.Morphisms.SmoothFiber
-import Mathlib.AlgebraicGeometry.Morphisms.UniversallyClosed
-import Mathlib.AlgebraicGeometry.Morphisms.UniversallyInjective
-import Mathlib.AlgebraicGeometry.Morphisms.UniversallyOpen
 import Mathlib.AlgebraicGeometry.Properties
-import Mathlib.AlgebraicGeometry.QuasiAffine
-import Mathlib.AlgebraicGeometry.Sites.Etale
-import Mathlib.AlgebraicGeometry.Sites.Fpqc
-import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
-import Mathlib.RingTheory.KrullDimension.Basic
-import Mathlib.RingTheory.Regular.RegularSequence
-import Mathlib.RingTheory.RegularLocalRing.Defs
 
 /-!
 # Descent, Chapter 19: Variants on descending properties
 
-This file contains the chapter-wide interfaces used by the section files.  The
-scheme predicates are Mathlib predicates whenever Mathlib provides them.  The
-two small interfaces for algebraic spaces and for syntomic morphisms record
-the corresponding Stacks predicates, which are not native objects in this
-Mathlib snapshot.
+This file contains the presentation-level interface needed by the regularity
+statement. Scheme predicates are Mathlib predicates; Mathlib has no native
+algebraic-space object in this snapshot, so the regularity statement uses the
+small explicit interface below.
 -/
 
 universe u v
@@ -44,7 +17,7 @@ open AlgebraicGeometry
 
 namespace Formalization.Books.Descent.Unit19
 
-/-! ## The first two descent statements -/
+/-! ## Supporting algebraic-space interface -/
 
 namespace AlgebraicSpaceInterface
 
@@ -58,7 +31,7 @@ attribute [instance] Space.topology
 
 /-- A morphism of algebraic spaces, with the three predicates used in the source. -/
 structure Hom (X Y : Space.{u}) where
-  map : X.carrier → Y.carrier
+  map : ContinuousMap X.carrier Y.carrier
   locallyOfFinitePresentation : Prop
   flat : Prop
   surjective : Prop
@@ -71,22 +44,10 @@ def IsSurjective {X Y : Space.{u}} (f : Hom X Y) : Prop := f.surjective
 
 end AlgebraicSpaceInterface
 
-/-- Flat and surjective descent of reduced schemes. -/
-theorem descend_reduced_of_flat_surjective
-    {X Y : Scheme.{u}} (f : X ⟶ Y) [Flat f] [Surjective f]
-    [IsReduced X] : IsReduced Y := by
-  sorry
-
-/-- Locally finitely presented, flat and surjective descent of regular spaces. -/
-theorem descend_regular_of_lfp_flat_surjective
-    {X Y : AlgebraicSpaceInterface.Space.{u}}
-    (f : AlgebraicSpaceInterface.Hom X Y)
-    (hfp : AlgebraicSpaceInterface.IsLocallyOfFinitePresentation f)
-    (hflat : AlgebraicSpaceInterface.IsFlat f)
-    (hsurj : AlgebraicSpaceInterface.IsSurjective f)
-    (hX : AlgebraicSpaceInterface.IsRegular X) :
-    AlgebraicSpaceInterface.IsRegular Y := by
-  sorry
+/-
+PRIOR ATTEMPT: The declarations below were retained from a broader draft that
+also covered later sections of Descent. They are kept verbatim for proof
+history, but are not part of Chapter 19 and are intentionally commented out.
 
 /-! ## Topologies, covers, and pullbacks -/
 
@@ -312,3 +273,4 @@ noncomputable def Hom.residueFieldTranscendenceDegree
 end SchemeGerm
 
 end Formalization.Books.Descent.Unit19
+-/

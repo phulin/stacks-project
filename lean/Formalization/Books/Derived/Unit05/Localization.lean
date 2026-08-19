@@ -794,7 +794,7 @@ theorem restrictedMorphismProperty_saturated
   exact hF.1
 
 theorem restrictedMorphismProperty_compatible
-    {S : MorphismProperty C} [CompatibleWithTriangulation S]
+    {S : MorphismProperty C} [CompatibleWithTriangulation S] [S.RespectsIso]
     (P : ObjectProperty C) [P.IsTriangulated] :
     CompatibleWithTriangulation (restrictedMorphismProperty S P) := by
   sorry

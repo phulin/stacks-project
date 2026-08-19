@@ -269,12 +269,12 @@ theorem chain_homotopy_shift_self (a : A ⟶ B) :
       zero := by
         intro i j hij
         dsimp
-        split_ifs with h
+        by_cases h : j = i + (-1 : ℤ)
         · exfalso
           apply hij
           simp only [ComplexShape.down]
           exact h.symm
-        · rfl
+        · rw [if_neg h]
       comm := by
         intro i
         let H : ∀ i j, A.X i ⟶ B.X j := fun i j => dite (j = i + 1)
@@ -1064,12 +1064,12 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
       zero := by
         intro i j hij
         dsimp [hhom]
-        split_ifs with h
+        by_cases h : j = i + (-1 : ℤ)
         · exfalso
           apply hij
           simp only [ComplexShape.down]
           exact h.symm
-        · rfl
+        · rw [if_neg h]
       comm := by
         intro i
         have hi : i = i - 1 + 1 := (sub_add_cancel i 1).symm
@@ -1099,8 +1099,10 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
         simp only [hhom, dif_pos hi, dif_pos rfl]
         rw [δ.hom_f i, δ'.hom_f i]
         dsimp [termwiseSplitConnectingFamily, termwiseSplittingDifference]
-        simp only [hproj]
-        simp only [sub_eq_add_neg]
+        rw [hproj]
+        set_option backward.isDefEq.respectTransparency false in
+          simp only [dif_pos (show i = i + 1 + (-1 : ℤ) by omega)]
+        simp only [dif_pos (show i + (-1 : ℤ) = i + (-1 : ℤ) by rfl)]
         have hterm :
             (((s' i).s ≫ (s i).r) ≫
                 (S.X₁.XIsoOfEq (hshift i (i + 1) rfl).symm).inv) ≫
@@ -1108,10 +1110,10 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
             -(((s' i).s ≫ (s i).r) ≫
                 S.X₁.d i (i + (-1 : ℤ))) ≫
               (S.X₁.XIsoOfEq rfl).inv := by
-          dsimp [shiftFunctor]
+          dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
           rw [show (-1 : ℤ).negOnePow = -1 by
             rw [Int.negOnePow_neg, Int.negOnePow_one]]
-          simp only [Units.neg_smul, one_smul, Category.comp_id,
+          simp only [neg_one_smul, Units.neg_smul, one_smul, Category.comp_id,
             Preadditive.comp_neg]
           have hd := HomologicalComplex.XIsoOfEq_inv_comp_d S.X₁
             (hshift i (i + 1) rfl).symm (i + (-1 : ℤ))
@@ -1129,10 +1131,11 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
                     (hshift i (i + 1) rfl).symm).inv ≫
                   S.X₁.d (i + 1 + (-1 : ℤ)) (i + (-1 : ℤ))) :=
             Category.assoc _ _ _
-          exact congrArg
-            (fun z : S.X₃.X i ⟶ S.X₁.X (i + (-1 : ℤ)) => -z) ha
-        set_option backward.isDefEq.respectTransparency false in
-          conv_rhs => rw [hterm]
+          convert congrArg (fun z : S.X₃.X i ⟶ S.X₁.X (i + 1) => -z) ha using 1 <;>
+            simp [Category.assoc]
+        dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+        simp [hterm, hi, CochainComplex.shiftFunctorObjXIso,
+          CochainComplex.shiftFunctor]
         exact by
           simp
           erw [Category.comp_id]
@@ -1238,6 +1241,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
   dsimp [H, hhom, termwiseSplittingDifferenceShift, termwiseSplittingDifference]
   split_ifs with h
   · congr 1
+    simp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
   · exact (h rfl).elim
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
@@ -1416,7 +1420,7 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           apply hij
           change j + 1 = i
           omega
-        · rfl
+        · rw [dif_neg h]
       comm := by
         intro i
         let H : ∀ i j, A.X i ⟶ B.X j := fun i j => dite
@@ -1863,13 +1867,370 @@ theorem termwiseSplitConnectingMap_induces_connecting
           S.X₁.homology (i + 1),
       HomologicalComplex.homologyMap δ.hom i ≫ e.hom =
         Formalization.Books.Homology.Unit13.cochainConnectingMap hS i := by
-  sorry
+  let E := cochainCohomologyShiftIso S.X₁ 1 i
+  refine ⟨E.symm, ?_⟩
+  change HomologicalComplex.homologyMap δ.hom i ≫ E.inv =
+    hS.δ i (i + 1) (by simp [ComplexShape.up, ComplexShape.up'])
+  apply (cancel_epi (S.X₃.homologyπ i)).1
+  let a : S.X₃.cycles i ⟶ S.X₃.X i := S.X₃.iCycles i
+  let b : S.X₃.cycles i ⟶ S.X₂.X i := a ≫ (s i).s
+  let c : S.X₃.cycles i ⟶ S.X₁.X (i + 1) :=
+    a ≫ (s i).s ≫ S.X₂.d i (i + 1) ≫ (s (i + 1)).r
+  set_option backward.isDefEq.respectTransparency false in
+  have hxc :
+      c ≫ S.f.f (i + 1) = a ≫ (s i).s ≫ S.X₂.d i (i + 1) := by
+    dsimp [c, b, a]
+    have hrf : (s (i + 1)).r ≫ S.f.f (i + 1) =
+        𝟙 _ - S.g.f (i + 1) ≫ (s (i + 1)).s := by
+      convert (s (i + 1)).r_f using 1 <;> rfl
+    have hzero :
+        (S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i + 1)) ≫
+            S.g.f (i + 1) ≫ (s (i + 1)).s = 0 := by
+      have hsg : (s i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+        convert (s i).s_g using 1 <;> rfl
+      have hsg' :
+          (S.X₃.iCycles i ≫ (s i).s) ≫ S.g.f i =
+            S.X₃.iCycles i ≫ 𝟙 (S.X₃.X i) := by
+        calc
+          (S.X₃.iCycles i ≫ (s i).s) ≫ S.g.f i =
+              S.X₃.iCycles i ≫ ((s i).s ≫ S.g.f i) :=
+            Category.assoc _ _ _
+          _ = S.X₃.iCycles i ≫ 𝟙 (S.X₃.X i) :=
+            congrArg (fun z => S.X₃.iCycles i ≫ z) hsg
+      calc
+        (S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i + 1)) ≫
+            S.g.f (i + 1) ≫ (s (i + 1)).s =
+            S.X₃.iCycles i ≫ (s i).s ≫
+              (S.X₂.d i (i + 1) ≫ S.g.f (i + 1)) ≫
+                (s (i + 1)).s := by
+              simp only [Category.assoc']
+        _ = S.X₃.iCycles i ≫ (s i).s ≫
+              (S.g.f i ≫ S.X₃.d i (i + 1)) ≫
+                (s (i + 1)).s := by
+          exact congrArg (fun z =>
+            S.X₃.iCycles i ≫ (s i).s ≫ z ≫ (s (i + 1)).s)
+            (S.g.comm i (i + 1)).symm
+        _ = 0 := by
+          have hcomp := congrArg (fun z =>
+            z ≫ S.X₃.d i (i + 1) ≫ (s (i + 1)).s) hsg'
+          simpa only [Category.assoc, Category.id_comp, Category.comp_id,
+            S.X₃.iCycles_d_assoc, zero_comp] using hcomp
+    have hzero' :
+        S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i + 1) ≫
+          S.g.f (i + 1) ≫ (s (i + 1)).s = 0 := by
+      simpa only [Category.assoc] using hzero
+    simp only [Category.assoc]
+    rw [hrf]
+    simp only [Preadditive.comp_sub, Category.comp_id]
+    rw [hzero']
+    simp only [sub_zero]
+  have hδ := hS.δ_eq (i := i) (j := i + 1)
+      (by simp [ComplexShape.up, ComplexShape.up'])
+      a (by
+        dsimp [a]
+        exact S.X₃.iCycles_d i (i + 1))
+      b (by
+        dsimp [b, a]
+        have hsg : (s i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+          convert (s i).s_g using 1 <;> rfl
+        simp only [Category.assoc, hsg, Category.comp_id])
+      c (by
+        dsimp [b]
+        rw [hxc]
+        exact (Category.assoc _ _ _).symm)
+      (i + 2) (by
+        exact (ComplexShape.up' (1 : ℤ)).next_eq' (by simp [add_assoc]))
+  have hla :
+      S.X₃.liftCycles a (i + 1) (by
+        exact (ComplexShape.up ℤ).next_eq' (by rfl))
+        (by dsimp [a]; exact S.X₃.iCycles_d i (i + 1)) =
+        𝟙 (S.X₃.cycles i) := by
+    apply (cancel_mono (S.X₃.iCycles i)).1
+    simp [a]
+  have hδ' := hδ
+  rw [hla] at hδ'
+  simp only [Category.id_comp] at hδ'
+  have hf' :
+      (S.X₃.iCycles i ≫ δ.hom.f i) ≫
+        ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).d i (i + 1) = 0 := by
+    rw [Category.assoc, δ.hom.comm i (i + 1)]
+    simp only [S.X₃.iCycles_d_assoc, zero_comp]
+  have hf :
+      (S.X₃.iCycles i ≫ δ.hom.f i) ≫
+        ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ) ⋙
+          shortComplexFunctor C (ComplexShape.up ℤ) i).obj S.X₁).g = 0 := by
+    simpa [HomologicalComplex.shortComplexFunctor,
+      HomologicalComplex.shortComplexFunctor',
+      CategoryTheory.shiftFunctor,
+      (ComplexShape.up ℤ).next_eq' (by rfl)] using hf'
+  have hcycles :
+      ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).liftCycles
+          (S.X₃.iCycles i ≫ δ.hom.f i) (i + 1)
+          (by
+            exact (ComplexShape.up' (1 : ℤ)).next_eq' (by rfl)) (by
+            simpa [HomologicalComplex.shortComplexFunctor',
+              CategoryTheory.shiftFunctor] using hf) =
+        HomologicalComplex.cyclesMap δ.hom i := by
+    apply (cancel_mono (((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).iCycles i)).1
+    rw [HomologicalComplex.liftCycles_i]
+    simpa only [Category.assoc] using
+      (HomologicalComplex.cyclesMap_i δ.hom i).symm
+  have hft :
+      (S.X₃.iCycles i ≫ δ.hom.f i) ≫
+          (S.X₁.shiftFunctorObjXIso 1 i (i + 1) (by lia)).hom = c := by
+    rw [δ.hom_f i]
+    dsimp [termwiseSplitConnectingFamily, CochainComplex.shiftFunctorObjXIso,
+      CochainComplex.shiftFunctor]
+    dsimp [c, a]
+    simp
+  have hnat := HomologicalComplex.homologyπ_naturality δ.hom i
+  calc
+    S.X₃.homologyπ i ≫ HomologicalComplex.homologyMap δ.hom i ≫ E.inv =
+        HomologicalComplex.cyclesMap δ.hom i ≫
+          ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).homologyπ i ≫ E.inv := by
+      simpa only [Category.assoc] using
+        congrArg (fun z => z ≫ E.inv) hnat
+    _ = ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).liftCycles
+          (S.X₃.iCycles i ≫ δ.hom.f i) (i + 1)
+          (by
+            exact (ComplexShape.up' (1 : ℤ)).next_eq' (by rfl)) (by
+            simpa [HomologicalComplex.shortComplexFunctor',
+              CategoryTheory.shiftFunctor] using hf) ≫
+          ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).homologyπ i ≫ E.inv := by
+      rw [hcycles]
+    _ = S.X₁.liftCycles c (i + 2) _ _ ≫
+          S.X₁.homologyπ (i + 1) := by
+      have hs := CochainComplex.liftCycles_shift_homologyπ S.X₁
+        (S.X₃.iCycles i ≫ δ.hom.f i) (i + 1)
+        (by
+          exact (ComplexShape.up ℤ).next_eq' (by rfl)) (by
+          simpa [HomologicalComplex.shortComplexFunctor',
+            CategoryTheory.shiftFunctor] using hf')
+        (i + 1) (by lia) (i + 2) (by
+          have hi' : (ComplexShape.up ℤ).next (i + 1) = i + 2 :=
+            (ComplexShape.up ℤ).next_eq' (by simp [add_assoc])
+          exact hi')
+      have hE :
+          ((HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) 0).shiftIso
+            1 i (i + 1) (by lia)).inv.app S.X₁ ≫ E.inv =
+            𝟙 (S.X₁.homology (i + 1)) := by
+        dsimp [E, cochainCohomologyShiftIso]
+        simp only [CochainComplex.homologyFunctor_shift]
+        exact ((HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) 0).shiftIso
+          1 i (i + 1) (by lia)).inv_hom_id_app S.X₁
+      have hs' := congrArg (fun z => z ≫ E.inv) hs
+      simp only [Category.assoc] at hs'
+      rw [hE] at hs'
+      simpa [Category.assoc, Category.comp_id, Category.id_comp, ← hft] using hs'
+    _ = S.X₃.homologyπ i ≫ hS.δ i (i + 1)
+          (by simp [ComplexShape.up, ComplexShape.up']) := hδ'.symm
 
 end CochainComplex
 
 namespace CochainComplex
 
 variable {C : Type u} [Category.{v} C] [Preadditive C]
+
+/-- Private cochain homotopy for the change-of-splitting calculation. -/
+private theorem termwiseSplitConnectingMap_homotopy_of_difference
+    {S : ShortComplex (CochainComplex C ℤ)}
+    (s s' : TermwiseSplitting S)
+    (δ : TermwiseSplitConnectingMap s)
+    (δ' : TermwiseSplitConnectingMap s') :
+    ∃ h : Homotopy δ'.hom δ.hom,
+      ∀ n : ℤ, h.hom n (n + (-1 : ℤ)) =
+        -(termwiseSplittingDifferenceShift s s' n) := by
+  let hshift : ∀ i j : ℤ, j = i + (-1 : ℤ) → i = j + 1 :=
+    fun i j h => by omega
+  let hhom : ∀ i j, S.X₃.X i ⟶ ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).X j :=
+    fun i j => dite (j = i + (-1 : ℤ))
+      (fun h => -(termwiseSplittingDifference s s' i) ≫
+        (CochainComplex.shiftFunctorObjXIso S.X₁ (1 : ℤ) j i (hshift i j h)).inv)
+      (fun _ => 0)
+  let H : Homotopy δ'.hom δ.hom :=
+    { hom := hhom
+      zero := by
+        intro i j hij
+        dsimp [hhom]
+        by_cases h : j = i + (-1 : ℤ)
+        · exfalso
+          apply hij
+          change j + 1 = i
+          omega
+        · rw [if_neg h]
+      comm := by
+        intro i
+        have hi : i = i + 1 + (-1 : ℤ) := by omega
+        have hq (n : ℤ) :
+            termwiseSplittingDifference s s' n ≫
+                (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f =
+              (s' n).s - (s n).s := by
+          rw [termwiseSplitting_section_eq s s' n]
+          abel
+        have hproj (n : ℤ) :
+            (s' n).r = (s n).r +
+              (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+                (-(termwiseSplittingDifference s s' n)) := by
+          exact termwiseSplitting_projection_eq s s' n
+        rw [dNext_eq hhom (show (ComplexShape.up ℤ).Rel i (i + 1) by simp),
+          prevD_eq hhom (show (ComplexShape.up ℤ).Rel (i + (-1 : ℤ)) i by
+            simp [ComplexShape.up])]
+        simp only [hhom, dif_pos hi, dif_pos rfl]
+        rw [δ'.hom_f i, δ.hom_f i]
+        dsimp [termwiseSplitConnectingFamily, termwiseSplittingDifference]
+        rw [hproj]
+        set_option backward.isDefEq.respectTransparency false in
+          simp only [dif_pos (show i = i + 1 + (-1 : ℤ) by omega)]
+        simp only [dif_pos (show i + (-1 : ℤ) = i + (-1 : ℤ) by rfl)]
+        have hterm :
+            (((s' i).s ≫ (s i).r) ≫
+                (S.X₁.XIsoOfEq
+                  (hshift i (i + (-1 : ℤ)) (by omega)).symm).inv) ≫
+              (-1 • S.X₁.d (i + (-1 : ℤ) + 1) (i + 1)) =
+            -(((s' i).s ≫ (s i).r) ≫
+                S.X₁.d i (i + 1)) ≫
+              (S.X₁.XIsoOfEq rfl).inv := by
+          dsimp [CochainComplex.shiftFunctorObjXIso]
+          simp only [neg_one_smul, Units.neg_smul, one_smul, Category.comp_id,
+            Preadditive.comp_neg]
+          have hd := HomologicalComplex.XIsoOfEq_inv_comp_d S.X₁
+            (hshift i (i + (-1 : ℤ)) (by omega)).symm (i + 1)
+          convert congrArg
+            (fun z : S.X₁.X i ⟶ S.X₁.X (i + 1) =>
+              (-(((s' i).s ≫ (s i).r) ≫ z) :
+                S.X₃.X i ⟶ S.X₁.X (i + 1))) hd using 1
+          have ha :
+              (((s' i).s ≫ (s i).r) ≫
+                  (S.X₁.XIsoOfEq
+                    (hshift i (i + (-1 : ℤ)) (by omega)).symm).inv) ≫
+                S.X₁.d (i + (-1 : ℤ) + 1) (i + 1) =
+              ((s' i).s ≫ (s i).r) ≫
+                ((S.X₁.XIsoOfEq
+                    (hshift i (i + (-1 : ℤ)) (by omega)).symm).inv ≫
+                  S.X₁.d (i + (-1 : ℤ) + 1) (i + 1)) :=
+            Category.assoc _ _ _
+          exact congrArg
+            (fun z : S.X₃.X i ⟶ S.X₁.X (i + 1) => -z) ha
+        have hterm'' :
+            (-((s' i).s ≫ (s i).r) ≫
+                (S.X₁.XIsoOfEq
+                  (hshift i (i + (-1 : ℤ)) (by omega)).symm).inv) ≫
+              (-1 • S.X₁.d (i + (-1 : ℤ) + 1) (i + 1)) =
+            ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + 1) ≫
+              (S.X₁.XIsoOfEq rfl).inv := by
+          convert congrArg Neg.neg hterm using 1
+          · simp [Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+          · simp [Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+        set_option backward.isDefEq.respectTransparency false in
+          conv_rhs => rw [hterm'']
+        exact by
+          simp
+          erw [Category.comp_id]
+          erw [Preadditive.comp_add]
+          erw [Preadditive.comp_neg]
+          erw [Preadditive.comp_add]
+          erw [Preadditive.comp_neg]
+          have hAD :
+              ((s' i).s - (s i).s) ≫ S.X₂.d i (i + (-1 : ℤ)) ≫
+                  (s (i + (-1 : ℤ))).r =
+              ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ)) := by
+            rw [← hq i]
+            dsimp [termwiseSplittingDifference]
+            change (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                S.X₂.d i (i + (-1 : ℤ)) ≫ (s (i + (-1 : ℤ))).r =
+              ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))
+            have hfr : S.f.f (i + (-1 : ℤ)) ≫ (s (i + (-1 : ℤ))).r =
+                𝟙 (S.X₁.X (i + (-1 : ℤ))) := by
+              convert (s (i + (-1 : ℤ))).f_r using 1; rfl
+            have hcomm_fd :
+                (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ)) =
+                  (((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))) ≫
+                    S.f.f (i + (-1 : ℤ)) := by
+              calc
+                (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ)) =
+                  ((s' i).s ≫ (s i).r) ≫
+                    (S.f.f i ≫ S.X₂.d i (i + (-1 : ℤ))) :=
+                    Category.assoc _ _ _
+                _ = ((s' i).s ≫ (s i).r) ≫
+                    (S.X₁.d i (i + (-1 : ℤ)) ≫ S.f.f (i + (-1 : ℤ))) :=
+                  congrArg (fun z => ((s' i).s ≫ (s i).r) ≫ z)
+                    (S.f.comm i (i + (-1 : ℤ)))
+                _ = (((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))) ≫
+                    S.f.f (i + (-1 : ℤ)) := (Category.assoc _ _ _).symm
+            have hAD' :
+                ((((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ))) ≫ (s (i + (-1 : ℤ))).r =
+                  ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ)) := by
+              set_option backward.isDefEq.respectTransparency false in
+                erw [congrArg (fun z => z ≫ (s (i + (-1 : ℤ))).r) hcomm_fd]
+              erw [Category.assoc, hfr, Category.comp_id]
+            exact
+              (Category.assoc (((s' i).s ≫ (s i).r) ≫ S.f.f i)
+                (S.X₂.d i (i + (-1 : ℤ))) (s (i + (-1 : ℤ))).r).symm.trans hAD'
+          have hB :
+              (s' i).s ≫ S.X₂.d i (i + (-1 : ℤ)) ≫ S.g.f (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) =
+                S.X₃.d i (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+            have hsg : (s' i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+              convert (s' i).s_g using 1; rfl
+            have hcomm_dg :
+                ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ)) =
+                  ((s' i).s ≫ S.g.f i) ≫ S.X₃.d i (i + (-1 : ℤ)) := by
+              calc
+                ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ)) =
+                  (s' i).s ≫
+                    (S.X₂.d i (i + (-1 : ℤ)) ≫ S.g.f (i + (-1 : ℤ))) :=
+                    Category.assoc _ _ _
+                _ = (s' i).s ≫
+                    (S.g.f i ≫ S.X₃.d i (i + (-1 : ℤ))) :=
+                  congrArg (fun z => (s' i).s ≫ z)
+                    (S.g.comm i (i + (-1 : ℤ))).symm
+                _ = ((s' i).s ≫ S.g.f i) ≫ S.X₃.d i (i + (-1 : ℤ)) :=
+                  (Category.assoc _ _ _).symm
+            have hB' :
+                (((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ))) ≫
+                    termwiseSplittingDifference s s' (i + (-1 : ℤ)) =
+                  S.X₃.d i (i + (-1 : ℤ)) ≫
+                    termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+              set_option backward.isDefEq.respectTransparency false in
+                erw [congrArg
+                  (fun z => z ≫ termwiseSplittingDifference s s' (i + (-1 : ℤ)))
+                  hcomm_dg]
+              set_option backward.isDefEq.respectTransparency false in
+                erw [hsg, Category.id_comp]
+            exact
+              (Category.assoc ((s' i).s)
+                (S.X₂.d i (i + (-1 : ℤ)))
+                (S.g.f (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)))).symm.trans
+                ((Category.assoc ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ)))
+                  (S.g.f (i + (-1 : ℤ)))
+                  (termwiseSplittingDifference s s' (i + (-1 : ℤ)))).symm.trans hB')
+          erw [← hAD, hB]
+          have hcancel :
+              S.X₃.d i (i + (-1 : ℤ)) ≫ (s' (i + (-1 : ℤ))).s ≫ (s (i + (-1 : ℤ))).r =
+                  S.X₃.d i (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+            dsimp [termwiseSplittingDifference]
+            rfl
+          set_option backward.isDefEq.respectTransparency false in
+            rw [hcancel]
+          erw [Preadditive.sub_comp]
+          erw [neg_sub]
+          abel_nf
+          set_option backward.isDefEq.respectTransparency false in
+            simp [Mathlib.Tactic.Abel.termg] }
+  refine ⟨H, ?_⟩
+  intro n
+  dsimp [H, hhom, termwiseSplittingDifferenceShift, termwiseSplittingDifference]
+  split_ifs with h
+  · simp only [dif_pos h]
+    congr 1
+  · exact (h rfl).elim
+
 
 /-- The change-of-splitting formula, including the induced homotopy between
 the two assembled cochain connecting maps. -/
@@ -1887,7 +2248,12 @@ theorem termwiseSplitConnectingMap_homotopic
             (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
               (-(h n))) ∧
         Nonempty (Homotopy δ'.hom δ.hom) := by
-  sorry
+  obtain ⟨H, _⟩ := termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
+  refine ⟨termwiseSplittingDifference s s', ?_, ?_, ⟨H⟩⟩
+  · intro n
+    rfl
+  · intro n
+    exact termwiseSplitting_projection_eq s s' n
 
 /-- In the orientation matching the displayed formula in the source, the
 change-of-splitting homotopy has the Mathlib component equation
@@ -1901,8 +2267,11 @@ theorem termwiseSplitConnectingMap_change_formula
       ∀ n : ℤ,
         δ'.hom.f n =
           _root_.dNext n h.hom +
-            _root_.prevD n h.hom + δ.hom.f n := by
-  sorry
+          _root_.prevD n h.hom + δ.hom.f n := by
+  obtain ⟨H, _⟩ := termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
+  refine ⟨H, ?_⟩
+  intro n
+  simpa [sub_eq_add_neg, add_assoc] using H.comm n
 
 theorem termwiseSplitConnectingMap_homotopy_components
     {S : ShortComplex (CochainComplex C ℤ)}
@@ -1913,7 +2282,7 @@ theorem termwiseSplitConnectingMap_homotopy_components
       ∀ n : ℤ,
         h.hom n (n + (-1 : ℤ)) =
           -(termwiseSplittingDifferenceShift s s' n) := by
-  sorry
+  exact termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
 
 end CochainComplex
 

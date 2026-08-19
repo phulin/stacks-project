@@ -94,7 +94,7 @@ theorem openSheafRestriction_formula (C : Type u) [Category.{v} C]
   refine ⟨?_⟩
   let H : IsOpenEmbedding (TopCat.Hom.hom (TopCat.ofHom ⟨_, continuous_subtype_val⟩)) :=
     U.isOpenEmbedding
-  letI : H.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
+  let : H.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
       (Opens.grothendieckTopology X) := H.functor_isContinuous
   exact (H.isOpenMap.functor.sheafPushforwardContinuousCompSheafToPresheafIso
       C (Opens.grothendieckTopology (openSubspace U))

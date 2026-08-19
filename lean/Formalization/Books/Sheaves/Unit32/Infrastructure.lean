@@ -546,17 +546,17 @@ theorem closedAbelianSheafRestriction_unit_stalk_map_isIso
   let L := TopCat.Sheaf.pullback (AddCommGrpCat.{v}) f
   let R := TopCat.Sheaf.pushforward (AddCommGrpCat.{v}) f
   let adj := TopCat.Sheaf.pullbackPushforwardAdjunction (AddCommGrpCat.{v}) f
-  letI : IsIso adj.counit := closedSheafRestriction_directImage_counit_isIso hZ
+  let : IsIso adj.counit := closedSheafRestriction_directImage_counit_isIso hZ
   let hff := adj.fullyFaithfulROfIsIsoCounit
-  letI : R.Full := hff.full
-  letI : R.Faithful := hff.faithful
+  let : R.Full := hff.full
+  let : R.Faithful := hff.faithful
   let g := adj.unit.app G
-  haveI : IsIso (L.map g) := inferInstance
-  haveI : IsIso ((L.map g).hom) := by
+  have : IsIso (L.map g) := inferInstance
+  have : IsIso ((L.map g).hom) := by
     change IsIso ((TopCat.Sheaf.forget AddCommGrpCat (closedSubspace Z)).map
       (L.map g))
     infer_instance
-  haveI : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
+  have : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
       (⟨x, hx⟩ : (closedSubspace Z : Type v))).map (L.map g).hom) := by
     infer_instance
   let e := sheafPullbackStalkIso (AddCommGrpCat.{v}) f
@@ -573,7 +573,7 @@ theorem closedAbelianSheafRestriction_unit_stalk_map_isIso
     · change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v}
         (⟨x, hx⟩ : (closedSubspace Z : Type v))).map (L.map g).hom)
       infer_instance
-  letI := hright
+  let := hright
   have hmap : IsIso ((TopCat.Sheaf.forget AddCommGrpCat X ⋙
       TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map g) :=
     IsIso.of_isIso_fac_right h
@@ -599,7 +599,7 @@ theorem closedAbelianSheafRestriction_unit_stalk_map_compatibility
   let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
     ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
       (closedInclusion Z)).unit.app G).hom
-  letI : IsIso m :=
+  let : IsIso m :=
     closedAbelianSheafRestriction_unit_stalk_map_isIso Z hZ G x hx
   let e₁ := (sheafPullbackStalkIso (AddCommGrpCat.{v}) (closedInclusion Z)
     (⟨x, hx⟩ : (closedSubspace Z : Type v))).app G

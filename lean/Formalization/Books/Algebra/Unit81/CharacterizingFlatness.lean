@@ -10,7 +10,9 @@ import Mathlib.CategoryTheory.Limits.Cones
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.LinearAlgebra.Finsupp.LSum
 import Mathlib.LinearAlgebra.Finsupp.SumProd
+import Mathlib.LinearAlgebra.Finsupp.VectorSpace
 import Mathlib.Logic.Equiv.Fin.Basic
+import Mathlib.RingTheory.Finiteness.Finsupp
 import Mathlib.RingTheory.Finiteness.Prod
 
 /-!
@@ -862,8 +864,7 @@ theorem lazard
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     Module.Flat R M ↔ Nonempty (DirectedFreeFiniteSystem (R := R) (M := M)) := by
-  sorry
-/-
+  
   constructor
   · intro h
     classical
@@ -934,55 +935,81 @@ theorem lazard
         (K ⋙ forget (ModuleCat.{max u v} R))
         ((forget (ModuleCat.{max u v} R)).mapCocone cTarget)
       · intro x
+        let x' : ULift.{u} M := x
         let A : J := {
           rank := 1
-          factor := standardFiniteFreePointFactor x }
+          factor := standardFiniteFreePointFactor x' }
         refine ⟨A, ULift.up (Finsupp.single (0 : Fin 1) (1 : R)), ?_⟩
-        change A.factor (Finsupp.single 0 1) = x
-        simp [A]
+        change x' = A.factor (Finsupp.single 0 1)
+        change x' = (Finsupp.single (0 : Fin 1) (1 : R)) 0 • x'
+        simp
       · intro A B x y hxy
-        let e : (Fin (A.rank + B.rank) →₀ R) ≃ₗ[R]
-            (Fin A.rank →₀ R) × (Fin B.rank →₀ R) :=
-          (Finsupp.domLCongr (finSumFinEquiv (m := A.rank) (n := B.rank)).symm).trans
-            (Finsupp.sumFinsuppLEquivProdFinsupp R)
-        let q : (Fin (A.rank + B.rank) →₀ R) →ₗ[R] ULift.{u} M :=
-          (LinearMap.coprod A.factor B.factor).comp e.toLinearMap
-        let C : J := { rank := A.rank + B.rank, factor := q }
-        let l : (Fin A.rank →₀ R) →ₗ[R] (Fin C.rank →₀ R) :=
-          e.symm.toLinearMap.comp (LinearMap.inl R _ _)
-        let r : (Fin B.rank →₀ R) →ₗ[R] (Fin C.rank →₀ R) :=
-          e.symm.toLinearMap.comp (LinearMap.inr R _ _)
-        have hl : C.factor.comp l = A.factor := by
-          apply LinearMap.ext
-          intro z
-          change (LinearMap.coprod A.factor B.factor) (e (e.symm (z, 0))) = A.factor z
-          simp
-        have hr : C.factor.comp r = B.factor := by
-          apply LinearMap.ext
-          intro z
-          change (LinearMap.coprod A.factor B.factor) (e (e.symm (0, z))) = B.factor z
-          simp
-        refine ⟨C, standardFiniteFreeHomMk l hl, standardFiniteFreeHomMk r hr, ?_⟩
+        change ULift.{max u v} (Fin A.rank →₀ R) at x
+        change ULift.{max u v} (Fin B.rank →₀ R) at y
         let eA : ULift.{max u v} (Fin A.rank →₀ R) ≃ₗ[R] Fin A.rank →₀ R :=
           ULift.moduleEquiv
         let eB : ULift.{max u v} (Fin B.rank →₀ R) ≃ₗ[R] Fin B.rank →₀ R :=
           ULift.moduleEquiv
+        let N : Type u :=
+          (Fin A.rank →₀ R) × (Fin B.rank →₀ R)
+        let : AddCommGroup N := inferInstance
+        let : Module R N := inferInstance
+        let : Module.Free R N := Module.Free.prod R _ _
+        let : Module.Finite R N := Module.Finite.prod
+        let q : N →ₗ[R] ULift.{u} M := LinearMap.coprod A.factor B.factor
+        let v : R →ₗ[R] N := LinearMap.toSpanSingleton R N
+          (LinearMap.inl R _ _ (eA x) - LinearMap.inr R _ _ (eB y))
+        have hxy' : A.factor (eA x) = B.factor (eB y) := by
+          change A.factor (eA x) = B.factor (eB y) at hxy
+          exact hxy
+        have hqv : q.comp v = 0 := by
+          apply LinearMap.ext
+          intro r
+          dsimp [q, v, LinearMap.toSpanSingleton]
+          rw [map_smul]
+          rw [LinearMap.coprod_apply]
+          have hfst : ((eA x, 0) - (0, eB y)).1 = eA x := by simp
+          have hsnd : ((eA x, 0) - (0, eB y)).2 = -eB y := by simp
+          rw [hfst, hsnd]
+          simp [hxy']
+        obtain ⟨k, a, b, hab, ha⟩ :=
+          Module.Flat.exists_factorization_of_comp_eq_zero_of_free hqv
+        let C : J := { rank := k, factor := b }
+        let f : (Fin A.rank →₀ R) →ₗ[R] (Fin C.rank →₀ R) :=
+          a.comp (LinearMap.inl R _ _)
+        let g : (Fin B.rank →₀ R) →ₗ[R] (Fin C.rank →₀ R) :=
+          a.comp (LinearMap.inr R _ _)
+        have hf : C.factor.comp f = A.factor := by
+          dsimp [C, f]
+          rw [← LinearMap.comp_assoc, ← hab]
+          apply LinearMap.ext
+          intro z
+          dsimp [q]
+          rw [LinearMap.coprod_apply]
+          rw [LinearMap.inl_apply]
+          simp
+        have hg : C.factor.comp g = B.factor := by
+          dsimp [C, g]
+          rw [← LinearMap.comp_assoc, ← hab]
+          apply LinearMap.ext
+          intro z
+          dsimp [q]
+          rw [LinearMap.coprod_apply]
+          rw [LinearMap.inr_apply]
+          simp
+        refine ⟨C, standardFiniteFreeHomMk f hf, standardFiniteFreeHomMk g hg, ?_⟩
+        have hxy' : a (LinearMap.inl R _ _ (eA x)) =
+            a (LinearMap.inr R _ _ (eB y)) := by
+          have hv := congrArg (fun l => l (1 : R)) ha
+          apply sub_eq_zero.mp
+          simpa [LinearMap.comp_apply, v] using hv
         let eC : ULift.{max u v} (Fin C.rank →₀ R) ≃ₗ[R] Fin C.rank →₀ R :=
           ULift.moduleEquiv
         dsimp [K, standardFiniteFreeFactorizationDiagram,
           standardFiniteFreeLiftMap, standardFiniteFreeHomMk]
-        change C.factor (eC (eC.symm (l (eA x)))) =
-          C.factor (eC (eC.symm (r (eB y))))
-        rw [eC.apply_symm_apply, eC.apply_symm_apply]
-        calc
-          C.factor (l (eA x)) = A.factor (eA x) := by
-            simpa [LinearMap.comp_apply] using
-              congrArg (fun q => q (eA x)) hl
-          _ = B.factor (eB y) := hxy
-          _ = C.factor (r (eB y)) := by
-            symm
-            simpa [LinearMap.comp_apply] using
-              congrArg (fun q => q (eB y)) hr
+        change eC.symm (a (LinearMap.inl R _ _ (eA x))) =
+          eC.symm (a (LinearMap.inr R _ _ (eB y)))
+        exact congrArg (fun z => eC.symm z) hxy'
     let c₀ := ModuleCat.FilteredColimits.colimitCocone K
     let hc₀ := ModuleCat.FilteredColimits.colimitCoconeIsColimit K
     let phi : c₀.pt ⟶ cTarget.pt :=
@@ -993,44 +1020,78 @@ theorem lazard
         obtain ⟨i, x, hia⟩ := ModuleCat.FilteredColimits.M.mk_surjective K a
         obtain ⟨j, y, hjb⟩ := ModuleCat.FilteredColimits.M.mk_surjective K b
         have hia' : (c₀.ι.app i).hom x = a := by
-          simpa [c₀, ModuleCat.FilteredColimits.coconeMorphism,
-            ModuleCat.FilteredColimits.M.mk] using hia
+          dsimp [c₀, ModuleCat.FilteredColimits.colimitCocone,
+            ModuleCat.FilteredColimits.coconeMorphism,
+            ModuleCat.FilteredColimits.M.mk]
+          exact hia
         have hjb' : (c₀.ι.app j).hom y = b := by
-          simpa [c₀, ModuleCat.FilteredColimits.coconeMorphism,
-            ModuleCat.FilteredColimits.M.mk] using hjb
+          dsimp [c₀, ModuleCat.FilteredColimits.colimitCocone,
+            ModuleCat.FilteredColimits.coconeMorphism,
+            ModuleCat.FilteredColimits.M.mk]
+          exact hjb
         have hab' : (cTarget.ι.app i).hom x = (cTarget.ι.app j).hom y := by
           calc
             (cTarget.ι.app i).hom x = phi.hom ((c₀.ι.app i).hom x) := by
               symm
-              simpa [phi] using congrArg (fun q => q x)
-                (congrArg ModuleCat.Hom.hom (hc₀.fac cTarget i))
-            _ = phi.hom ((c₀.ι.app j).hom y) := hab
+              simpa only [phi, c₀, ModuleCat.hom_comp, LinearMap.comp_apply] using
+                congrArg (fun q => q x)
+                  (congrArg ModuleCat.Hom.hom
+                    (ModuleCat.FilteredColimits.ι_colimitDesc (F := K) cTarget i))
+            _ = phi.hom ((c₀.ι.app j).hom y) := by
+              simpa [hia', hjb'] using hab
             _ = (cTarget.ι.app j).hom y := by
-              simpa [phi] using congrArg (fun q => q y)
-                (congrArg ModuleCat.Hom.hom (hc₀.fac cTarget j))
+              simpa only [phi, c₀, ModuleCat.hom_comp, LinearMap.comp_apply] using
+                congrArg (fun q => q y)
+                  (congrArg ModuleCat.Hom.hom
+                    (ModuleCat.FilteredColimits.ι_colimitDesc (F := K) cTarget j))
         obtain ⟨k, f, g, hfg⟩ :=
           (Types.FilteredColimit.isColimit_eq_iff
             (K ⋙ forget (ModuleCat.{max u v} R)) hType).mp hab'
         rw [← hia', ← hjb']
         calc
           (c₀.ι.app i).hom x = (c₀.ι.app k).hom ((K.map f).hom x) := by
-            simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
-              (congrArg (fun q => q x)
-                (congrArg ModuleCat.Hom.hom (c₀.ι.naturality f))).symm
-          _ = (c₀.ι.app k).hom ((K.map g).hom y) := by rw [hfg]
+            have hn := congrArg ModuleCat.Hom.hom (c₀.ι.naturality f)
+            change (c₀.ι.app i).hom x =
+              (c₀.ι.app k).hom ((K.map f).hom x)
+            simpa [ModuleCat.hom_comp, LinearMap.comp_apply,
+              Functor.const_obj_map] using
+              (congrArg (fun q => q x) hn).symm
+          _ = (c₀.ι.app k).hom ((K.map g).hom y) := by
+            have hfg' : (K.map f).hom x = (K.map g).hom y := by
+              change (ConcreteCategory.hom ((K ⋙ forget (ModuleCat R)).map f)) x =
+                (ConcreteCategory.hom ((K ⋙ forget (ModuleCat R)).map g)) y
+              exact hfg
+            rw [hfg']
           _ = (c₀.ι.app j).hom y := by
-            simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
-              congrArg (fun q => q y)
-                (congrArg ModuleCat.Hom.hom (c₀.ι.naturality g))
+            have hn := congrArg ModuleCat.Hom.hom (c₀.ι.naturality g)
+            change (c₀.ι.app k).hom ((K.map g).hom y) =
+              (c₀.ι.app j).hom y
+            simpa [ModuleCat.hom_comp, LinearMap.comp_apply,
+              Functor.const_obj_map] using
+              congrArg (fun q => q y) hn
       · intro y
         let A : J := {
           rank := 1
           factor := standardFiniteFreePointFactor y }
         refine ⟨(c₀.ι.app A).hom
           (ULift.up (Finsupp.single (0 : Fin 1) (1 : R))), ?_⟩
-        simpa [phi, c₀] using congrArg (fun q => q
-          (ULift.up (Finsupp.single (0 : Fin 1) (1 : R))))
-          (congrArg ModuleCat.Hom.hom (hc₀.fac cTarget A))
+        have hι := congrArg ModuleCat.Hom.hom
+          (ModuleCat.FilteredColimits.ι_colimitDesc (F := K) cTarget A)
+        have hι' := congrArg (fun q => q
+          (ULift.up (Finsupp.single (0 : Fin 1) (1 : R)))) hι
+        change phi.hom ((c₀.ι.app A).hom
+            (ULift.up (Finsupp.single (0 : Fin 1) (1 : R)))) = y
+        change phi.hom ((c₀.ι.app A).hom
+            (ULift.up (Finsupp.single (0 : Fin 1) (1 : R)))) =
+          (cTarget.ι.app A).hom
+            (ULift.up (Finsupp.single (0 : Fin 1) (1 : R))) at hι'
+        rw [hι']
+        dsimp [cTarget, standardFiniteFreeFactorizationCocone,
+          standardFiniteFreeCoconeLeg, A]
+        change (standardFiniteFreePointFactor y)
+          (Finsupp.single (0 : Fin 1) (1 : R)) = y
+        change (Finsupp.single (0 : Fin 1) (1 : R)) 0 • y = y
+        simp
     let phiIso : c₀.pt ≃ₗ[R] ULift.{u} M :=
       LinearEquiv.ofBijective phi.hom hphi_bij
     obtain ⟨α, hαorder, hαdirected, hαnonempty, F₀, hF₀⟩ :=
@@ -1100,7 +1161,8 @@ theorem lazard
         apply ModuleCat.hom_ext
         apply LinearMap.ext
         intro x
-        simp [d, desc, g]
+        change desc (DirectLimit.Module.of R α stage map i x) = g i x
+        exact DirectLimit.Module.lift_of (g := g) (Hg := hg) x
       simpa [inv, ModuleCat.hom_comp] using congrArg ModuleCat.Hom.hom hcomp
     have hright : inv.comp desc = LinearMap.id := by
       apply DirectLimit.Module.hom_ext
@@ -1110,18 +1172,24 @@ theorem lazard
       have hi := congrArg ModuleCat.Hom.hom (hc.fac d i)
       change (hc.desc d).hom ((c.ι.app i).hom x) =
         DirectLimit.Module.of R α stage map i x
-      simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using congrArg (fun q => q x) hi
+      have hi' := congrArg (fun q => q x) hi
+      change (hc.desc d).hom ((c.ι.app i).hom x) =
+        DirectLimit.Module.of R α stage map i x at hi'
+      exact hi'
     refine ⟨{
       index := α
       stage := stage
       map := map
       free := fun i => by
         dsimp [stage, G, K, standardFiniteFreeFactorizationDiagram]
-        exact Module.Free.of_equiv (ULift.moduleEquiv.symm)
+        exact Module.Free.ulift R (Fin (F.obj i).rank →₀ R)
       finite := fun i => by
         dsimp [stage, G, K, standardFiniteFreeFactorizationDiagram]
-        exact Module.Finite.equiv (ULift.moduleEquiv.symm)
-      targetIso := ⟨((LinearEquiv.ofLinear desc inv hleft hright).trans phiIso).trans
+        exact Module.Finite.equiv (R := R) (M := Fin (F.obj i).rank →₀ R)
+          (N := ULift.{max u v} (Fin (F.obj i).rank →₀ R)) ULift.moduleEquiv.symm
+      targetIso := ⟨((LinearEquiv.ofLinear (σ₁₂ := RingHom.id R)
+        (σ₂₁ := RingHom.id R) (re₁₂ := RingHomInvPair.ids)
+        (re₂₁ := RingHomInvPair.ids) desc inv hleft hright).trans phiIso).trans
         (ULift.moduleEquiv : ULift.{u} M ≃ₗ[R] M)⟩ }⟩
   · intro ⟨s⟩
     let : Preorder s.index := s.indexPreorder
@@ -1136,6 +1204,6 @@ theorem lazard
         infer_instance)
     let _ : Module.Flat R (DirectLimit s.stage s.map) := hflat
     exact Module.Flat.of_linearEquiv (M := DirectLimit s.stage s.map)
-      s.targetIso.some.symm -/
+      s.targetIso.some.symm
 
 end Formalization.Books.Algebra.Unit81

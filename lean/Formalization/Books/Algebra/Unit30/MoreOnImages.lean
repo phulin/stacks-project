@@ -600,33 +600,6 @@ private theorem adjoin_insert_eval_surjective
   obtain ⟨p, hp⟩ := hsurj_aeval s
   refine ⟨p, ?_⟩
   simpa [A, Polynomial.aeval_def] using hp
-/-
-  let A := Algebra.adjoin R (↑t : Set S)
-  have hgen' : Algebra.adjoin A ({x} : Set S) = ⊤ := by
-    apply Algebra.eq_top_iff.2
-    intro y
-    have hy : y ∈ Algebra.adjoin R (insert x (↑t : Set S)) := by
-      rw [hgen]
-      exact Algebra.mem_top
-    induction hy using Algebra.adjoin_induction with
-    | mem y hy =>
-        rcases hy with (rfl | hy)
-        · exact Algebra.subset_adjoin (Set.mem_singleton x)
-        · let ya : A := ⟨y, Algebra.subset_adjoin hy⟩
-          simpa using Subalgebra.algebraMap_mem (Algebra.adjoin A ({x} : Set S)) ya
-    | algebraMap r =>
-        rw [IsScalarTower.algebraMap_apply R A S]
-        exact Subalgebra.algebraMap_mem _ _
-    | add y z _ _ hy hz =>
-        exact Subalgebra.add_mem _ hy hz
-    | mul y z _ _ hy hz =>
-        exact Subalgebra.mul_mem _ hy hz
-  have hsurj_aeval : Function.Surjective
-      (Polynomial.aeval x : Polynomial A →ₐ[A] S) := by
-    rw [← AlgHom.range_eq_top, ← Algebra.adjoin_singleton_eq_range_aeval A x]
-    exact hgen'
-  simpa [Polynomial.aeval_def] using hsurj_aeval
--/
 
 private theorem localizationAwayMulMap_comp_finitePresentation
     {R : Type u} {A S : Type v} [CommRing R] [CommRing A] [CommRing S]

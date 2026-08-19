@@ -1946,14 +1946,16 @@ theorem tensorProduct_isMittagLefflerModule
 
 /-- The finite-free test for the Mittag-Leffler condition. -/
 theorem isMittagLefflerModule_iff_finiteFreeTest
-    {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
+    {R : Type u} [CommRing R] (M : ModuleCat.{max u w} R) :
     IsMittagLefflerModule M ↔
-      ∀ (F : ModuleCat.{w} R), Module.Free R F → Module.Finite R F →
-      ∀ f : (F : Type w) →ₗ[R] (M : Type w),
-            ∃ Q : ModuleCat.{w} R, Module.FinitePresentation R Q ∧
-            ∃ g : (F : Type w) →ₗ[R] (Q : Type w), mutuallyDominates g f := by
+      ∀ (F : ModuleCat.{max u w} R), Module.Free R F → Module.Finite R F →
+      ∀ f : (F : Type (max u w)) →ₗ[R] (M : Type (max u w)),
+            ∃ Q : ModuleCat.{max u w} R, Module.FinitePresentation R Q ∧
+            ∃ g : (F : Type (max u w)) →ₗ[R] (Q : Type (max u w)),
+              mutuallyDominates g f := by
   sorry
-/-
+/- Prior proof attempt retained for review; it used a finite-free carrier in
+`ModuleCat.{w}`, which is not available when the ring universe is larger.
   constructor
   · intro h F hFfree hFfinite f
     exact h F hFfree hFfinite f

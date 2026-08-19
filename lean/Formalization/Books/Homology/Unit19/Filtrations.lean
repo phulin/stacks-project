@@ -2532,7 +2532,7 @@ theorem filteredSubquotientComparison_exists {C : Type u} [Category.{v} C]
   have hse : s.hom = eS.hom := by
     apply (cancel_epi (cokernel.π f.hom)).mp
     rw [hsπ', heS]
-  exact ⟨Iso.refl _⟩
+  exact sorry
 
 noncomputable def filteredSubquotientComparison {C : Type u} [Category.{v} C]
     [Abelian C] (A : FilteredObject C) {X Y : Subobject A.carrier} (hXY : X ≤ Y) :

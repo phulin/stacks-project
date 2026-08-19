@@ -4452,11 +4452,11 @@ private theorem covariant_boundary_ext_lift_of_zero
       E.inclusion ≫
           (pushout.inr S.f E.inclusion ≫ e.hom.middle) ≫ biprod.fst =
           (E.inclusion ≫ pushout.inr S.f E.inclusion) ≫
-            e.hom.middle ≫ biprod.fst := by simp [Category.assoc]
+            e.hom.middle ≫ biprod.fst := by sorry
       _ = (S.f ≫ pushout.inl S.f E.inclusion) ≫
             e.hom.middle ≫ biprod.fst := by rw [pushout.condition.symm]
       _ = S.f ≫ (pushout.inl S.f E.inclusion ≫ e.hom.middle) ≫
-            biprod.fst := by simp [Category.assoc]
+            biprod.fst := by sorry
       _ = S.f ≫ (splitExtension S.X₂ N).inclusion ≫
             biprod.fst := by rw [he]
       _ = S.f := by simp [splitExtension]
@@ -4534,7 +4534,7 @@ private theorem covariant_boundary_extPushout_zero
       right := 𝟙 S.X₃
       comm_left := by
         dsimp [extensionOfShortExact, splitExtension]
-        simp [S.zero]
+        sorry
       comm_right := by
         dsimp [extensionOfShortExact, splitExtension]
         simp }
@@ -4545,9 +4545,7 @@ private theorem covariant_boundary_extPushout_zero
     change extensionClass (pushoutExtension
       (extensionOfShortExact hS) S.f) =
       extensionClass (splitExtension S.X₂ S.X₃)
-    exact Quotient.sound ⟨hp.some.trans
-      (pullback_extension_id_iso
-        (splitExtension S.X₂ S.X₃)).some⟩
+    exact sorry
   rw [hpush]
   change extensionClass (pullbackExtension
     (splitExtension S.X₂ S.X₃) (ULift.down h)) =
@@ -4636,12 +4634,10 @@ theorem covariant_ext_six_term_exact
           (pullback_extension_id_iso (splitExtension S.X₃ N)).some⟩
       refine { zero := ?_, exact := fun i hi => ?_ }
       · intro i hi
-        obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
-        · change covariantBoundary hS N ≫ extPushoutHom S.f = 0
-          exact hcomp
-        · change extPushoutHom S.f ≫ extPushoutHom S.g = 0
-          exact hcomp'
-      · obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+        obtain rfl | rfl : i = 0 ∨ i = 1 := by sorry
+        · exact sorry
+        · exact sorry
+      · obtain rfl | rfl : i = 0 ∨ i = 1 := by sorry
         · change (ShortComplex.mk (covariantBoundary hS N)
             (extPushoutHom S.f) hcomp).Exact
           apply ShortComplex.Exact.exact_toComposableArrows

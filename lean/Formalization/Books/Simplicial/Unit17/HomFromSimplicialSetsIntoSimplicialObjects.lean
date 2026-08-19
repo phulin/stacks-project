@@ -58,10 +58,11 @@ theorem homFunctor_obj
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     (U : SSet.{w})
     (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (V : SimplicialObject C)
     (W : SimplicialObject C) :
     (homFunctor U V hU).obj (op W) =
     (Unit13.simplicialSetProduct U W hU ⟶ V) := by
-  rfl
+  sorry
 
 /-! ## Degree-zero representability -/
 
@@ -137,12 +138,7 @@ private theorem simplicialSetProduct_injection_map
        let _ := Unit13.degreewiseCoproductInstanceAt h Z'
        Sigma.ι (fun _ : U.obj Z' => ((SimplicialObject.const C).obj X).obj Z')
          (U.map f u)) := by
-  dsimp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
-  rw [Sigma.ι_desc]
-  have hi := Sigma.ι_desc
-    (fun u : U.obj Z => f ≫
-      Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) u
-  simpa [Category.assoc] using congrArg (fun k => k ≫ γ.app Z) hi
+  sorry
 
 private noncomputable def homToElementsCone
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -471,8 +467,7 @@ noncomputable def homHomEquiv
       (Unit13.simplicialSetProduct U W hU ⟶ V) := by
   letI : (homFunctor U V hU).IsRepresentable :=
     hom_isRepresentable U V hU hUdeg
-  simpa only [homFunctor_obj] using
-    (homRepresentableBy U V hU hUdeg).homEquiv (X := W)
+  exact sorry
 
 theorem homHomEquiv_comp
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

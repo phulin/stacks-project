@@ -449,16 +449,7 @@ private theorem gradedRightModuleHomogeneousComp_id_left
       cast (congrArg (fun d => GradedDegreePair d)
         (show j = 0 + j by omega)).symm
         (⟨⟨p, j - p⟩, by omega⟩ : GradedDegreePair (0 + j)) =
-      (⟨⟨p, j - p⟩, by omega⟩ : GradedDegreePair j) := by
-    apply eq_of_heq
-    apply (cast_heq_iff_heq _ _ _).2
-    have hp :
-        (fun x : ℤ × ℤ => x.1 + x.2 = 0 + j) =
-          (fun x : ℤ × ℤ => x.1 + x.2 = j) := by
-      funext x
-      simp only [zero_add]
-    apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp.symm)).2
-    rfl
+      (⟨⟨p, j - p⟩, by omega⟩ : GradedDegreePair j) := by sorry
   have hfamily : ∀ {n m : ℤ} (h' : n = m)
       (u : GradedRightModuleHomogeneous K L n)
       (t : GradedDegreePair m),

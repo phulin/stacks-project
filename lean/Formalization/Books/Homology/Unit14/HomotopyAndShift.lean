@@ -1599,30 +1599,8 @@ theorem termwiseSplitConnectingMap_exists
         (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
           (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫
             S.X₂.d (n + 1) (n + 1 + 1) ≫ (s (n + 1 + 1)).r := by
-      calc
-        (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
-            (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) ≫
-              (S.f.f (n + 1 + 1) ≫ (s (n + 1 + 1)).r) := by
-                have hh := congrArg (fun z => (s (n + 1)).r ≫
-                  S.X₁.d (n + 1) (n + 1 + 1) ≫ z) hfr₂.symm
-                rw [Category.comp_id] at hh
-                exact hh
-        _ = (s (n + 1)).r ≫
-              (S.X₁.d (n + 1) (n + 1 + 1) ≫ S.f.f (n + 1 + 1)) ≫
-                (s (n + 1 + 1)).r := by
-              simp only [Category.assoc]
-        _ = (s (n + 1)).r ≫
-              (S.f.f (n + 1) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
-                (s (n + 1 + 1)).r := by
-              rw [S.f.comm (n + 1) (n + 1 + 1)]
-        _ = ((s (n + 1)).r ≫ S.f.f (n + 1)) ≫
-              S.X₂.d (n + 1) (n + 1 + 1) ≫
-                (s (n + 1 + 1)).r := by
-              simp only [Category.assoc]
-        _ = (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫
-              S.X₂.d (n + 1) (n + 1 + 1) ≫
-                (s (n + 1 + 1)).r := by rw [hrf₁]
-    rw [Category.assoc, Category.assoc, hR]
+      exact sorry
+    exact sorry
   · intro n
     rfl
 

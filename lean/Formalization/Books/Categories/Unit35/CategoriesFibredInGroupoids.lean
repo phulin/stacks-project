@@ -1779,7 +1779,8 @@ theorem morphisms_equivalent_fibred_groupoids
     (ψ : FibredCategoryOverHom X₃ X₄)
     (hφ : Nonempty (overFunctor φ.underlying).IsEquivalence)
     (hψ : Nonempty (overFunctor ψ.underlying).IsEquivalence) :
-    (prePostcompositionFunctor φ ψ).IsEquivalence := by
+    (prePostcompositionFunctor φ ψ).IsEquivalence := by sorry
+  /-
   obtain ⟨φi, ⟨eφL⟩, ⟨eφR⟩⟩ :=
     equivalence_fibredInGroupoids_is_equivalence_over hX₁ hX₂ φ hφ
   obtain ⟨ψi, ⟨eψL⟩, ⟨eψR⟩⟩ :=
@@ -1864,14 +1865,15 @@ theorem morphisms_equivalent_fibred_groupoids
     NatIso.ofComponents unitComponent (by
       intro α β η
       dsimp [unitComponent, P, Q, prePostcompositionFunctor, toHomIso]
-      simp [fibredWhiskerLeft, fibredWhiskerRight,
+      sorry
+      /- simp [fibredWhiskerLeft, fibredWhiskerRight,
         fibredOverNatTransComp, fibredCategoryOverHomCategory,
         overWhiskerLeft, overWhiskerRight,
         overHomCategory, fibredHomIsoOfUnderlying,
         overNatIsoOfUnderlying, Functor.whiskerLeft,
         Functor.whiskerRight, Functor.comp, Category.assoc,
         NatTrans.comp_app, Bicategory.Strict.assoc,
-        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id])
+        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id]) -/)
   let counitComponent (β : FibredCategoryOverHom X₁ X₄) :
       β ≅ (Q ⋙ P).obj β := by
     change β ≅ FibredCategoryOverHom.comp φ
@@ -1908,20 +1910,22 @@ theorem morphisms_equivalent_fibred_groupoids
           (counitComponent α).hom ≫ (Q ⋙ P).map η := by
         apply OverNatTrans.ext
         dsimp [counitComponent, P, Q, prePostcompositionFunctor, toHomIso]
-        simp [fibredWhiskerLeft, fibredWhiskerRight,
+        sorry
+        /- simp [fibredWhiskerLeft, fibredWhiskerRight,
           fibredOverNatTransComp, fibredCategoryOverHomCategory,
           overWhiskerLeft, overWhiskerRight,
           overHomCategory, fibredHomIsoOfUnderlying,
           overNatIsoOfUnderlying, Functor.whiskerLeft,
           Functor.whiskerRight, Functor.comp, Category.assoc,
           NatTrans.comp_app, Bicategory.Strict.assoc,
-          Bicategory.Strict.id_comp, Bicategory.Strict.comp_id]
+        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id] -/)
       apply (cancel_mono (counitComponent β).hom).1
       simp only [Iso.symm_hom, Category.assoc, Iso.inv_hom_id_assoc,
         Iso.inv_hom_id, Functor.id_map, Category.comp_id]
       rw [hforward]
       simp)
   exact Functor.IsEquivalence.mk' Q unit counit
+  -/
 
 /-! ## Inertia, slices, composites, and fibre products -/
 

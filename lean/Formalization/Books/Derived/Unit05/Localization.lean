@@ -91,64 +91,9 @@ theorem localization_conditions_ms2
     [CompatibleWithTriangulation S] :
     LeftOreCondition S ∧ RightOreCondition S := by
   sorry
-/-
-  have hLeft : LeftOreCondition S := by
-    intro X Y Z W t g ht
-    obtain ⟨Z', u, h, hT₁⟩ := Pretriangulated.distinguished_cocone_triangle g
-    obtain ⟨Y', f, v, hT₂⟩ :=
-      Pretriangulated.distinguished_cocone_triangle₂ (h ≫ t⟦(1 : ℤ)⟧')
-    let T₁ : Triangle C := Triangle.mk g u h
-    let T₂ : Triangle C := Triangle.mk f v (h ≫ t⟦(1 : ℤ)⟧')
-    change T₁ ∈ distTriang C at hT₁
-    change T₂ ∈ distTriang C at hT₂
-    obtain ⟨s, hs, hsq, _⟩ :=
-      MorphismProperty.compatible_with_triangulation
-        T₁.invRotate T₂.invRotate
-        (Pretriangulated.inv_rot_of_distTriang _ hT₁)
-        (Pretriangulated.inv_rot_of_distTriang _ hT₂)
-        ((𝟙 Z')⟦(-1 : ℤ)⟧') t
-        (MorphismProperty.shift S (S.id_mem _) (-1)) ht (by
-          dsimp [T₁, T₂, Triangle.invRotate]
-          simp only [Functor.map_id, Functor.map_comp, Functor.map_neg, id_comp, neg_comp]
-          rw [← (shiftEquiv C (1 : ℤ)).unitIso.inv.naturality_assoc])
-    refine ⟨s, f, hs, ?_⟩
-    simpa only [T₁, T₂, Triangle.invRotate, Triangle.mk] using hsq
-  have hIso : MorphismProperty.isomorphisms C ≤ S :=
-    localization_conditions_contains_isomorphisms
-  constructor
-  · exact hLeft
-  · intro X Y Z W g s hs
-    obtain ⟨Z', u, h, hT₁⟩ := Pretriangulated.distinguished_cocone_triangle g
-    obtain ⟨R, q, f, hq, hqf⟩ := hLeft s u hs
-    obtain ⟨A, f', k, hT₂⟩ := Pretriangulated.distinguished_cocone_triangle₁ f
-    let T₁ : Triangle C := Triangle.mk g u h
-    let T₂ : Triangle C := Triangle.mk f' f k
-    change T₁ ∈ distTriang C at hT₁
-    change T₂ ∈ distTriang C at hT₂
-    obtain ⟨d, hd, hd₂, hd₃⟩ :=
-      MorphismProperty.compatible_with_triangulation
-        T₁.rotate T₂.rotate
-        (Pretriangulated.rot_of_distTriang _ hT₁)
-        (Pretriangulated.rot_of_distTriang _ hT₂)
-        s q hs hq hqf.symm
-    let φᵣ : T₁.rotate ⟶ T₂.rotate :=
-      Triangle.homMk _ _ s q d hqf.symm hd₂ hd₃
-    let e₁ := (Pretriangulated.rotCompInvRot C).app T₁
-    let e₂ := (Pretriangulated.rotCompInvRot C).app T₂
-    let φ : T₁ ⟶ T₂ := e₁.hom ≫ (Pretriangulated.invRotate C).map φᵣ ≫ e₂.inv
-    have hφ : S φ.hom₁ := by
-      have hd' : S (d⟦(-1 : ℤ)⟧') := MorphismProperty.shift S hd (-1)
-      have hcomp : S (e₁.hom.hom₁ ≫ d⟦(-1 : ℤ)⟧' ≫ e₂.inv.hom₁) := by
-        exact S.comp_mem _ _
-          (S.comp_mem _ _ (hIso _ (by infer_instance)) hd')
-          (hIso _ (by infer_instance))
-      simpa [φ, e₁, e₂, φᵣ] using hcomp
-    refine ⟨φ.hom₁, f', hφ, ?_⟩
-    simpa [φ, e₁, e₂, φᵣ] using φ.comm₁.symm
 
 /- The source's MS5 remark, recorded using the canonical shift-compatibility
    class and its equivalent one-way closure formulation under MS1 and MS6. -/
- -/
 def AllIntegerShifts (S : MorphismProperty C) : Prop :=
   ∀ ⦃X Y : C⦄ (f : X ⟶ Y), S f → ∀ n : ℤ, S (f⟦n⟧')
 
@@ -183,46 +128,6 @@ theorem exactFunctorMorphismProperty_saturated
     SaturatedMultiplicativeSystem (exactFunctorMorphismProperty F) ∧
       CompatibleWithTriangulation (exactFunctorMorphismProperty F) := by
   sorry
-/-
-  letI : F.kernel.IsTriangulated := by
-    refine
-      { exists_zero := ⟨0, isZero_zero _, F.map_isZero (isZero_zero _)⟩
-        toIsStableUnderShift := ⟨fun a ↦ ⟨fun X hX b ↦ ?_⟩⟩
-        toIsTriangulatedClosed₂ :=
-          ObjectProperty.IsTriangulatedClosed₂.mk' (fun T hT h₁ h₃ n ↦ ?_) }
-    · exact (hX (a + b)).of_iso (F.mapIso ((shiftFunctorAdd C a b).app X).symm)
-    · exact
-        Triangle.isZero₂_of_isZero₁₃ _
-          (F.map_distinguished _ (Triangle.shift_distinguished T hT n)) (h₁ n) (h₃ n)
-  have hEq : exactFunctorMorphismProperty F = F.kernel.trW := by
-    ext X Y f
-    obtain ⟨Z, g, h, hT⟩ := Pretriangulated.distinguished_cocone_triangle f
-    change IsIso (F.map f) ↔ F.kernel.trW f
-    rw [F.kernel.trW_iff_of_distinguished _ hT]
-    exact (Triangle.isZero₃_iff_isIso₁ _ (F.map_distinguished _ hT)).symm
-  have hSat : SaturatedMultiplicativeSystem F.kernel.trW := by
-    refine ⟨⟨inferInstance, inferInstance⟩, ?_⟩
-    intro X Y Z T f g h hfg hgh
-    rw [← hEq] at hfg hgh ⊢
-    change IsIso (F.map (f ≫ g)) at hfg
-    change IsIso (F.map (g ≫ h)) at hgh
-    change IsIso (F.map g)
-    letI : IsIso (F.map (f ≫ g)) := hfg
-    letI : IsIso (F.map (g ≫ h)) := hgh
-    letI : IsIso (F.map f ≫ F.map g) := by
-      rw [← F.map_comp]
-      infer_instance
-    letI : IsIso (F.map g ≫ F.map h) := by
-      rw [← F.map_comp]
-      infer_instance
-    exact isIso_of_adjacent_composites _ _ _
-  constructor
-  · rw [hEq]
-    exact hSat
-  · rw [hEq]
-    infer_instance
-
- -/
 end ExactFunctorLocalization
 
 section HomologicalFunctorLocalization
@@ -240,40 +145,6 @@ theorem homologicalFunctorMorphismProperty_saturated
     SaturatedMultiplicativeSystem (homologicalFunctorMorphismProperty H) ∧
       CompatibleWithTriangulation (homologicalFunctorMorphismProperty H) := by
   sorry
-/-
-  have hEq : homologicalFunctorMorphismProperty H = H.homologicalKernel.trW := by
-    ext X Y f
-    change (∀ i : ℤ, IsIso ((shiftFunctor C i ⋙ H).map f)) ↔ H.homologicalKernel.trW f
-    rw [Functor.mem_homologicalKernel_trW_iff]
-    constructor
-    · intro hf i
-      exact (NatIso.isIso_map_iff (H.isoShift i) f).1 (hf i)
-    · intro hf i
-      exact (NatIso.isIso_map_iff (H.isoShift i) f).2 (hf i)
-  have hSat : SaturatedMultiplicativeSystem H.homologicalKernel.trW := by
-    refine ⟨⟨inferInstance, inferInstance⟩, ?_⟩
-    intro X Y Z T f g h hfg hgh
-    rw [← hEq] at hfg hgh ⊢
-    change (∀ i : ℤ, IsIso ((shiftFunctor C i ⋙ H).map (f ≫ g))) at hfg
-    change (∀ i : ℤ, IsIso ((shiftFunctor C i ⋙ H).map (g ≫ h))) at hgh
-    change ∀ i : ℤ, IsIso ((shiftFunctor C i ⋙ H).map g)
-    intro i
-    letI : IsIso ((shiftFunctor C i ⋙ H).map (f ≫ g)) := hfg i
-    letI : IsIso ((shiftFunctor C i ⋙ H).map (g ≫ h)) := hgh i
-    letI : IsIso ((shiftFunctor C i ⋙ H).map f ≫ (shiftFunctor C i ⋙ H).map g) := by
-      rw [← Functor.map_comp]
-      infer_instance
-    letI : IsIso ((shiftFunctor C i ⋙ H).map g ≫ (shiftFunctor C i ⋙ H).map h) := by
-      rw [← Functor.map_comp]
-      infer_instance
-    exact isIso_of_adjacent_composites _ _ _
-  constructor
-  · rw [hEq]
-    exact hSat
-  · rw [hEq]
-    infer_instance
-
- -/
 end HomologicalFunctorLocalization
 
 /-! ## The localized pretriangulated structure and its universal property -/
@@ -297,8 +168,6 @@ def IsLocalizationPretriangulatedStructure
 theorem localization_pretriangulated_exists_unique :
     ∃! P : Pretriangulated S.Localization,
       IsLocalizationPretriangulatedStructure (S := S) P := by
-  sorry
-/-
   let P₀ : Pretriangulated S.Localization :=
     CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
   have hP₀ : IsLocalizationPretriangulatedStructure (S := S) P₀ := by
@@ -311,17 +180,20 @@ theorem localization_pretriangulated_exists_unique :
   letI : Pretriangulated S.Localization := P
   change Functor.IsTriangulated S.Q at hP
   letI : Functor.IsTriangulated S.Q := hP
+  letI : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
   have hPdist : P.distinguishedTriangles = S.Q.essImageDistTriang := by
     ext T
     exact Functor.distTriang_iff S.Q T
   have hP₀dist : P₀.distinguishedTriangles = S.Q.essImageDistTriang := by
     rfl
   have hdist : P.distinguishedTriangles = P₀.distinguishedTriangles := hPdist.trans hP₀dist.symm
-  cases P
-  cases P₀
-  cases hdist
-  rfl
--/
+  have hExt : ∀ (P₁ P₂ : Pretriangulated S.Localization),
+      P₁.distinguishedTriangles = P₂.distinguishedTriangles → P₁ = P₂ := by
+    intro P₁ P₂ h
+    cases P₁
+    cases P₂
+    congr
+  exact hExt P P₀ hdist
 
 @[instance_reducible]
 noncomputable def localizationFunctorCommShift : S.Q.CommShift ℤ :=

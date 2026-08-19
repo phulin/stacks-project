@@ -584,14 +584,77 @@ def positiveRealOpen : Opens (TopCat.of ℝ) :=
 
 theorem positiveRealOpen_not_closed :
     ¬ IsClosed (positiveRealOpen : Set (TopCat.of ℝ)) := by
-  sorry
+  intro hclosed
+  have hzero : (0 : ℝ) ∈ (positiveRealOpen : Set (TopCat.of ℝ)) := by
+    apply hclosed.mem_of_tendsto tendsto_one_div_add_atTop_nhds_zero_nat
+    exact Filter.Eventually.of_forall fun n => by
+      change 0 < 1 / ((n : ℝ) + 1)
+      exact one_div_pos.mpr (by positivity)
+  change 0 < (0 : ℝ) at hzero
+  exact (lt_irrefl 0) hzero
 
 theorem positiveRealOpen_extension_support :
     additiveSheafSupport
         ((openAbelianSheafExtensionFunctor positiveRealOpen).obj
           (integerConstantAbelianSheaf (X := openSubspace positiveRealOpen))) =
       (positiveRealOpen : Set (TopCat.of ℝ)) := by
-  sorry
+  apply openAbelianExtension_support_eq_open
+  intro x
+  let P : TopCat.Presheaf AddCommGrpCat (openSubspace positiveRealOpen) :=
+    (Functor.const (Opens (openSubspace positiveRealOpen))ᵒᵖ).obj
+      (AddCommGrpCat.of (ULift ℤ))
+  change Nontrivial
+    (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat)
+      ((CategoryTheory.presheafToSheaf
+        (Opens.grothendieckTopology (openSubspace positiveRealOpen)) AddCommGrpCat).obj P).1 x))
+  have hP : Nontrivial (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) P x)) := by
+    rw [← not_subsingleton_iff_nontrivial]
+    intro hsub
+    apply not_subsingleton_iff_nontrivial.mpr
+      (show Nontrivial (ULift ℤ) by infer_instance)
+    refine ⟨?_⟩
+    intro a b
+    have h := hsub.elim
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ (C := AddCommGrpCat) P
+          (⊤ : Opens (openSubspace positiveRealOpen)) x (by simp)) a)
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ (C := AddCommGrpCat) P
+          (⊤ : Opens (openSubspace positiveRealOpen)) x (by simp)) b)
+    rcases TopCat.Presheaf.germ_eq (C := AddCommGrpCat) P x (by simp) (by simp) a b h with
+      ⟨W, hxW, iW, iW', hW⟩
+    have hiW : iW = homOfLE iW.le := Subsingleton.elim _ _
+    have hiW' : iW' = homOfLE iW'.le := Subsingleton.elim _ _
+    simpa [P, hiW, hiW'] using (show a = b from by
+      change a = b at hW
+      exact hW)
+  rw [← not_subsingleton_iff_nontrivial]
+  intro hsub
+  apply not_subsingleton_iff_nontrivial.mpr hP
+  refine ⟨?_⟩
+  intro a b
+  let m := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+    (CategoryTheory.toSheafify
+      (Opens.grothendieckTopology (openSubspace positiveRealOpen)) P)
+  have hm : IsIso m :=
+    TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso x AddCommGrpCat P
+  rcases hm.out with ⟨mInv, hmhom, hminv⟩
+  let e : (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).obj P ≅
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).obj
+        (((CategoryTheory.presheafToSheaf
+          (Opens.grothendieckTopology (openSubspace positiveRealOpen)) AddCommGrpCat).obj P).1) :=
+    { hom := m
+      inv := mInv
+      hom_inv_id := hmhom
+      inv_hom_id := hminv }
+  have h := hsub.elim (ConcreteCategory.hom e.hom a) (ConcreteCategory.hom e.hom b)
+  have h' := congrArg (fun z => ConcreteCategory.hom e.inv z) h
+  have h'' : (ConcreteCategory.hom (e.hom ≫ e.inv)) a =
+      (ConcreteCategory.hom (e.hom ≫ e.inv)) b := by
+    exact h'
+  rw [e.hom_inv_id] at h''
+  change a = b at h''
+  exact h''
 
 /-! ## Sheaves of rings -/
 
@@ -602,7 +665,54 @@ def ringSheafSupport {X : TopCat.{v}} (O : RingSheaf.{v, v} X) : Set X :=
 /-- The support of a sheaf of rings is closed. -/
 theorem ringSheafSupport_isClosed {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) : IsClosed (ringSheafSupport O) := by
-  sorry
+  apply isOpen_compl_iff.mp
+  apply isOpen_iff_mem_nhds.mpr
+  intro x hx
+  change ¬ Nontrivial (TopCat.Presheaf.stalk (C := RingCat) O.obj x) at hx
+  have hxsub : Subsingleton (↑(TopCat.Presheaf.stalk (C := RingCat) O.obj x)) :=
+    not_nontrivial_iff_subsingleton.mp hx
+  have hx1 :
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ (C := RingCat) O.obj (⊤ : Opens X) x (by simp)))
+          (1 : O.obj.obj (op (⊤ : Opens X))) = 0 := by
+    exact hxsub.elim _ _
+  have hx1' :
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ (C := RingCat) O.obj (⊤ : Opens X) x (by simp)))
+          (1 : O.obj.obj (op (⊤ : Opens X))) =
+        (ConcreteCategory.hom
+          (TopCat.Presheaf.germ (C := RingCat) O.obj (⊤ : Opens X) x (by simp))) 0 := by
+    rw [map_zero]
+    exact hx1
+  obtain ⟨W, hxW, iU, iV, hres⟩ :=
+    TopCat.Presheaf.germ_eq (C := RingCat) O.obj
+      (U := (⊤ : Opens X)) (V := (⊤ : Opens X)) x (by simp) (by simp)
+      (1 : O.obj.obj (op (⊤ : Opens X))) 0 hx1'
+  refine Filter.mem_of_superset (W.isOpen.mem_nhds hxW) ?_
+  intro y hy
+  change ¬ Nontrivial (TopCat.Presheaf.stalk (C := RingCat) O.obj y)
+  intro hyNontrivial
+  rw [← not_subsingleton_iff_nontrivial] at hyNontrivial
+  apply hyNontrivial
+  have hy1 :
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ (C := RingCat) O.obj (⊤ : Opens X) y (by simp)))
+          (1 : O.obj.obj (op (⊤ : Opens X))) = 0 := by
+    have hgy := TopCat.Presheaf.germ_ext (C := RingCat) O.obj
+      (x := y) (hxU := by simp) (hxV := by simp) W hy iU iV hres
+    rw [map_zero] at hgy
+    exact hgy
+  have hyunit : (1 : ↑(TopCat.Presheaf.stalk (C := RingCat) O.obj y)) = 0 := by
+    simpa only [map_one] using hy1
+  refine ⟨?_⟩
+  intro a b
+  calc
+    a = 1 * a := by rw [one_mul]
+    _ = 0 * a := by rw [hyunit]
+    _ = 0 := by rw [zero_mul]
+    _ = 0 * b := by rw [zero_mul]
+    _ = 1 * b := by rw [hyunit]
+    _ = b := by rw [one_mul]
 
 end
 end Formalization.Books.Modules.Unit05

@@ -209,11 +209,11 @@ theorem simple_invert
       by
         let jU : (Opens X)ᵒᵖ := (OpenNhds.inclusion x).op.obj U
         let hxU : x ∈ jU.unop := U.unop.2
-        letI : Algebra (O.obj jU) (((OpenNhds.inclusion x).op ⋙
+        let : Algebra (O.obj jU) (((OpenNhds.inclusion x).op ⋙
             localizedRingPresheaf S).obj U) := by
           change Algebra (O.obj jU) (Localization (S.obj jU))
           infer_instance
-        letI : IsLocalization (S.obj jU)
+        let : IsLocalization (S.obj jU)
             (((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj U) := by
           change IsLocalization (S.obj jU) (Localization (S.obj jU))
           infer_instance
@@ -397,7 +397,7 @@ theorem simple_invert
       apply (localizedRingPresheaf S).stalk_hom_ext
       intro U hx
       rw [← Category.assoc, hf_germ]
-      simpa using hfgU (op ⟨U, hx⟩)
+      exact (hfgU (op ⟨U, hx⟩)).trans (by simp)
     let e : (localizedRingPresheaf S).stalk x ≅
         CommRingCat.of (Localization (stalkSubmonoid S x)) :=
       { hom := f, inv := CommRingCat.ofHom g,

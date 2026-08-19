@@ -440,6 +440,116 @@ private theorem universallyExact_factor_finiteFree
 
 /-- The six equivalent criteria for a short exact sequence to be universally
 exact.  Finite free modules are represented by finitely supported functions. -/
+/-
+Proof roadmap.
+
+Use `List.TFAE` with the cycle (1) -> (2) -> (4) -> (5) -> (6) -> (1),
+and attach (3) with (4) -> (3).  The converse translation (3) -> (4) is
+also useful as a separate local claim.
+
+1. For (1) -> (2), unpack `universallyExact`.  The injective part is its
+   fourth field specialized to `Q`.  Obtain the other two fields from
+   `_root_.rTensor_exact Q hshort.2.1 hshort.2.2` and
+   `LinearMap.rTensor_surjective Q hshort.2.2`
+   (`Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean`).
+
+2. For (2) -> (4), use `universallyExact_factor_finiteFree_aux` above.  For
+   its displayed matrix `a`, put
+   `A j = ∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1` and
+   `Q := (Fin n →₀ R) ⧸ LinearMap.range A`, exactly as in that helper.
+   Install `Module.FinitePresentation R Q` with
+   `Module.finitePresentation_of_surjective (Submodule.mkQ _)`,
+   `Submodule.mkQ_surjective`, `Submodule.ker_mkQ`, and
+   `Submodule.fg_range A` (`Mathlib/Algebra/Module/FinitePresentation.lean`).
+   Condition (2), specialized to this `Q`, supplies the injectivity required
+   by the helper.
+
+3. Translate (3) and (4) explicitly.  From (3), apply it to
+   `x i := u (Finsupp.single i 1)`,
+   `y j := v (Finsupp.single j 1)`, and
+   `a i j := a (Finsupp.single i 1) j`; define the resulting `w` with
+   `Finsupp.linearCombination R z`, and prove equality by
+   `Finsupp.lhom_ext'`.  Conversely, define the matrix linear map by
+   `Finsupp.linearCombination R (fun i =>
+     ∑ j, a i j • Finsupp.single j 1)`, take `u` and `v` to be the linear
+   combinations of `x` and `y`, and evaluate the lift from (4) on
+   `Finsupp.single i 1`.
+
+4. For (4) -> (5), fix `phi : P →ₗ[R] M₃` and choose
+   `n, m, p, g, hp, hgp` from
+   `Module.FinitePresentation.exists_fin' R P`.  Conjugate `g` by
+   `Finsupp.linearEquivFunOnFinite` so that condition (4) applies to the
+   finite free modules used in this statement.  Lift `phi.comp p` through
+   the surjection `f₂` using `Module.projective_lifting_property` for the
+   finite free source.  Exactness says the composite with `g` lands in
+   `LinearMap.range f₁`; use `LinearEquiv.ofInjective f₁ hshort.1` to obtain
+   `h₁` with `f₁.comp h₁ = h₂.comp g`.  Condition (4) gives `k` with
+   `k.comp g = h₁`, so `h₂ - f₁.comp k` kills `g`.  Descend this map through
+   `LinearMap.quotKerEquivOfSurjective p hp` (using `hgp.linearMap_ker_eq`)
+   to a map `P →ₗ[R] M₂`; cancel the surjective map `p` to prove that its
+   postcomposition with `f₂` is `phi`.  Finish with
+   `Unit10.internalHomPostcomp_apply` from
+   `Formalization/Books/Algebra/Unit10/InternalHom.lean`.
+
+5. The substantial step is (5) -> (6).  Introduce private, source-local data
+   for an explicit finite presentation over `M₃`: natural numbers `n,m`, a
+   relation map `(Fin m →₀ R) →ₗ[R] (Fin n →₀ R)`, and a map from its
+   quotient by the relation range to `M₃`.  Make these presentations a
+   category, with morphisms the linear maps commuting with the maps to
+   `M₃`.  This category lives in `Type u` (unlike the category of all
+   `ModuleCat.{u} R` objects).  Prove it filtered directly with
+   `IsFiltered.mk` (`Mathlib/CategoryTheory/Filtered/Basic.lean`): the zero
+   presentation is an object; products give a common successor; and the
+   quotient by the range of the difference of two parallel maps gives an
+   equalizing successor.  The latter quotient is finitely presented by
+   `Module.finitePresentation_of_surjective`, since
+   `Module.Finite.fg_top` and `Submodule.FG.map` make that range finitely
+   generated.  Re-encode each product or quotient using
+   `Module.FinitePresentation.exists_fin'` and
+   `Finsupp.linearEquivFunOnFinite`.
+
+   Let `D₃` send a presentation to its quotient module.  Its tautological
+   cocone to `ModuleCat.of R M₃` is colimiting: represent an element of
+   `M₃` at the one-generator, no-relation presentation; prove additivity and
+   scalar compatibility at a two-generator common successor; and use the
+   equalizing successor for independence and uniqueness.  This gives a
+   `ColimitPresentation` of `M₃` by finitely presented modules without a
+   later-chapter or large-category import.
+
+   For every stage `i`, condition (5) chooses a lift
+   `s i : D₃.obj i →ₗ[R] M₂` of its structure map.  Use the split stage
+   `M₁ → M₁ × D₃.obj i → D₃.obj i`, with `inl` and `snd`, and map its middle
+   term to `M₂` by `(x,p) ↦ f₁ x + s i p`.  On a transition `a : i ⟶ j`,
+   the difference `s i - (s j).comp a` lands in `range f₁`; use
+   `LinearEquiv.ofInjective f₁ hshort.1` to define the unique correction
+   `δ a : D₃.obj i →ₗ[R] M₁`.  The middle transition is
+   `(x,p) ↦ (x + δ a p, a p)`.  Injectivity of `f₁` proves identities and
+   composition, hence these stages form a functor to
+   `ShortComplex (ModuleCat.{u} R)` and a cocone to
+   `ShortComplex.moduleCatMk f₁ f₂ hshort.2.1.comp_eq_zero`.
+
+   Prove the component cocones colimiting: component one is the constant
+   cocone, handled by `isColimitConstCocone` because a filtered category is
+   connected; component three is the preceding presentation; component two
+   is an elementwise diagram chase using exactness of `hshort` and the
+   equalizing property of the index.  Assemble them with
+   `ShortComplex.isColimitOfIsColimitπ`
+   (`Mathlib/Algebra/Homology/ShortComplex/Limits.lean`).  Each stage has
+   `Module.FinitePresentation` by construction, and its standard splitting
+   is `ShortComplex.Splitting.ofHasBinaryBiproduct`; use
+   `ShortComplex.Splitting.shortExact` for `stage_split`.  These data fill
+   `DirectedSplitExactColimitPresentation`.
+
+6. For (6) -> (1), simply choose the presentation and apply
+   `universallyExact_of_directedSplitColimit` above.  Close the equivalence
+   list with `tfae_finish`.
+
+Known dead ends: do not index by all finitely presented `ModuleCat.{u} R`
+objects, since that index is one universe too large for the structure above.
+Also, `Module.FinitePresentation.exists_fin'` alone does not produce the
+filtered colimit; the explicit presentation category and its equalizing
+quotients are the missing construction.
+-/
 theorem universallyExact_criteria
     {R : Type u} {M₁ M₂ M₃ : Type u} [CommRing R]
     [AddCommGroup M₁] [Module R M₁]
@@ -2904,6 +3014,71 @@ def quotientMapByIdeal
 
 /-- Into a flat module, universal injectivity is detected modulo finitely
 generated ideals. -/
+/-
+Proof roadmap for the reverse implication.
+
+1. First enlarge the hypothesis from finitely generated ideals to all ideals.
+   Prove the local claim
+   `z ∈ I • (⊤ : Submodule R X) →
+     ∃ J : Ideal R, J ≤ I ∧ J.FG ∧ z ∈ J • ⊤`
+   by `Submodule.smul_induction_on`: use `⊥` for zero, the span of the one
+   coefficient in the scalar case, and `J₁ ⊔ J₂` in the additive case;
+   `Submodule.fg_bot`, `Submodule.fg_span_singleton`, and
+   `Submodule.FG.sup` supply finite generation.  Apply this to the witness
+   obtained from `Submodule.Quotient.eq` after choosing representatives with
+   `Submodule.mkQ_surjective`.  Injectivity for the resulting `J`, followed
+   by `Submodule.smul_mono`, proves injectivity of `quotientMapByIdeal I f`
+   for arbitrary `I`.  Taking `I = ⊥` and using
+   `Submodule.Quotient.eq`, `Submodule.mem_bot`, and `sub_eq_zero` also gives
+   `Function.Injective f`.
+
+2. Record the converse of the tensor/quotient comparison already proved in
+   the forward branch: for every ideal `I`, the two equivalences
+   `(TensorProduct.comm R M (R ⧸ I)).trans
+      (TensorProduct.quotTensorEquivQuotSMul M I)` and its `N` analogue
+   conjugate `f.rTensor (R ⧸ I)` to `quotientMapByIdeal I f`.  Hence the
+   all-ideal result from step 1 makes `f.rTensor (R ⧸ I)` injective for every
+   ideal `I`.
+
+3. Install `let : Module.Flat R N := hflat` (the anonymous `let` is an
+   instance for synthesis and avoids the proof-valued `letI` linter).  Prove
+   by finite-generator induction the local statement that `f.rTensor Q` is
+   injective whenever `Module.Finite R Q`.  If `S ≤ T` is one step of a
+   filtration of `Q`, with `T = S ⊔ R ∙ q`, set
+   `iST : S →ₗ[R] T := Submodule.inclusion hST` and
+   `K := LinearMap.range iST`.  The quotient `T ⧸ K` is cyclic.  The map
+   `R →ₗ[R] T ⧸ K` sending `r` to the class of `r • q` is surjective; put
+   `I` equal to its kernel and use
+   `LinearMap.quotKerEquivOfSurjective` to identify the quotient with
+   `R ⧸ I`.  Step 2 therefore gives injectivity after tensoring this cyclic
+   quotient.
+
+   Now chase the diagram obtained by tensoring
+   `iST` and `K.mkQ : T →ₗ[R] T ⧸ K` with `M` and `N`.  Use
+   `LinearMap.exact_map_mkQ_range iST` and `Submodule.mkQ_surjective K` as
+   the inputs to `_root_.lTensor_exact`.  The left vertical map is injective
+   by the induction hypothesis, the right vertical map by the cyclic case,
+   and the lower first horizontal map by
+   `Module.Flat.lTensor_preserves_injective_linearMap iST
+     (Submodule.inclusion_injective hST)`.  If an element in the middle upper term maps to
+   zero, exactness moves it left, lower injectivity moves its image left,
+   and the two vertical injectivity hypotheses finish the chase.  Obtain a
+   finite filtration from `Module.Finite.fg_top`; equivalently package this chase with
+   `Submodule.fg_induction` from
+   `Mathlib/RingTheory/Finiteness/Basic.lean`.
+
+4. Let `C := N ⧸ LinearMap.range f` and
+   `q := (LinearMap.range f).mkQ`.  The injectivity from step 1, together
+   with `LinearMap.exact_map_mkQ_range` and
+   `Submodule.mkQ_surjective`, gives the short exact hypothesis for
+   `universallyExact_criteria f q`.  Its criterion (2) only asks for
+   finitely presented `Q`, hence finite `Q`, so step 3 proves that criterion.
+   Use `(universallyExact_criteria f q hshort).out 1 0` and take the fourth
+   field of the resulting `universallyExact` proof.
+
+The flatness of `N` is used precisely in the lower-row injection in step 3;
+without it the finitely generated ideal tests do not suffice.
+-/
 theorem universallyInjective_into_flat_iff
     {R M N : Type u} [CommRing R]
     [AddCommGroup M] [Module R M]
@@ -2965,10 +3140,48 @@ theorem universallyInjective_into_flat_iff
 
 /-- Tensoring with a universally injective algebra map reflects injections,
 surjections, and bijections of modules. -/
+/-
+Proof roadmap.
+
+The modules must stay in `Type u`: by definition, the hypothesis `hA` for
+`Algebra.linearMap R A` only tests `Type u` modules.  No flatness hypothesis
+on `A` is needed.
+
+1. For an `R`-module `X : Type u`, define the unit map
+   `ηX : X →ₗ[R] X ⊗[R] A := (TensorProduct.mk R X A).flip 1`.  Show it is
+   injective from `hA X`: after precomposing with
+   `(TensorProduct.lid R X).toLinearMap` and postcomposing with
+   `(TensorProduct.comm R A X).toLinearMap`, it is
+   `(Algebra.linearMap R A).rTensor X`.  Prove this equality with
+   `TensorProduct.ext'` and `LinearMap.rTensor_tmul`.
+
+2. Prove naturality
+   `ηN.comp f = (f.rTensor A).comp ηM` by `LinearMap.ext` and `rfl` on each
+   element.  If `f.rTensor A` is injective, apply this identity to an
+   equality `f x = f y` and then use injectivity of `ηM`.
+
+3. For reflection of surjectivity, put
+   `C := N ⧸ LinearMap.range f` and
+   `q := (LinearMap.range f).mkQ`.  Given `n : N`, surjectivity of
+   `f.rTensor A` supplies `z : M ⊗[R] A` with
+   `(f.rTensor A) z = ηN n`.  Naturality for `q`, together with
+   `LinearMap.rTensor_comp_apply` and `q.comp f = 0`, shows
+   `ηC (q n) = 0`.  Injectivity of `ηC` gives `q n = 0`; rewrite this with
+   `Submodule.mkQ_apply` and `Submodule.Quotient.mk_eq_zero` to obtain
+   `n ∈ LinearMap.range f`, which is exactly a preimage of `n`.
+
+4. The bijective clause is the conjunction of the preceding injective and
+   surjective clauses (`Function.Bijective`); reuse those two local results.
+
+Known dead end: applying `hA M` when `M : Type v` fails with the universe
+constraint `v = u`.  `ULift M` has universe `max u v` and does not fix that
+constraint; this is why the statement below is intentionally universe
+bounded rather than assuming nonexistent universe-polymorphic purity.
+-/
 theorem baseChange_reflects_of_universallyInjective_algebraMap
     {R A : Type u} [CommRing R] [CommRing A] [Algebra R A]
     (hA : universallyInjective (Algebra.linearMap R A)) :
-    ∀ {M N : Type v} [AddCommGroup M] [Module R M]
+    ∀ {M N : Type u} [AddCommGroup M] [Module R M]
       [AddCommGroup N] [Module R N] (f : M →ₗ[R] N),
       (Function.Injective (f.rTensor A) → Function.Injective f) ∧
       (Function.Surjective (f.rTensor A) → Function.Surjective f) ∧
@@ -2977,6 +3190,29 @@ theorem baseChange_reflects_of_universallyInjective_algebraMap
 
 /-- A faithfully flat algebra map is universally injective, and contraction
 of an extended ideal recovers the original ideal. -/
+/-
+Proof roadmap.
+
+1. Convert the proposition on the ring map to the module typeclass with
+   `(RingHom.faithfullyFlat_algebraMap_iff (R := R) (S := A)).mp hA`, and
+   install the result as `let : Module.FaithfullyFlat R A` (use an anonymous
+   `let`, not proof-valued `letI`, to keep the style linter quiet).
+
+2. For universal injectivity, fix `Q : Type u`.  Mathlib gives injectivity of
+   the unit map `TensorProduct.mk R A Q 1 : Q →ₗ[R] A ⊗[R] Q` as
+   `Module.FaithfullyFlat.tensorProduct_mk_injective Q`
+   (`Mathlib/RingTheory/Flat/FaithfullyFlat/Algebra.lean`).  The map
+   `(Algebra.linearMap R A).rTensor Q` is this unit map precomposed with
+   `TensorProduct.lid R Q`; verify the equality on pure tensors using
+   `LinearMap.rTensor_tmul` and normalize scalar multiplication with
+   `Algebra.smul_def`, then compose the two injective maps.
+
+3. The ideal clause is exactly
+   `Ideal.comap_map_eq_self_of_faithfullyFlat (B := A) I` from the same
+   Mathlib file.  Thus faithful flatness is sufficient for both conclusions;
+   no separate injectivity or flatness assumption on the algebra map is
+   required.
+-/
 theorem faithfullyFlat_universallyInjective_and_ideal_comap
     {R A : Type u} [CommRing R] [CommRing A] [Algebra R A]
     (hA : RingHom.FaithfullyFlat (algebraMap R A)) :

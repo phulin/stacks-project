@@ -3,6 +3,7 @@ import Mathlib.CategoryTheory.Triangulated.HomologicalFunctor
 import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
 import Formalization.Books.Categories.Unit27.Localization
 import Formalization.Books.Derived.Unit04.ElementaryResults
+import Formalization.Books.Homology.Unit08.Localization
 
 /-!
 # Derived Categories, Chapter 5: localization of triangulated categories
@@ -823,7 +824,13 @@ theorem fullSubcategoryLocalization_isExact
     [CompatibleWithTriangulation (restrictedMorphismProperty S P)] :
     IsExactLocalizationFactor (S := restrictedMorphismProperty S P)
       (fullSubcategoryLocalizationFunctor S P) := by
-  sorry
+  let F : P.FullSubcategory ⥤ S.Localization := P.ι ⋙ S.Q
+  have hF : (restrictedMorphismProperty S P).IsInvertedBy F := by
+    intro X Y f hf
+    exact MorphismProperty.Q_inverts S (P.ι.map f) hf
+  have h := exact_localizationFactor_isExact
+    (S := restrictedMorphismProperty S P) F hF
+  simpa [F, fullSubcategoryLocalizationFunctor, localizationFactor] using h
 
 end LocalizationSubcategory
 
@@ -869,8 +876,124 @@ theorem kernel_localization_characterization (Z : C) :
     ∀ hS : SaturatedMultiplicativeSystem S,
       (IsZeroAfterLocalization S Z ↔ KernelLocalizationZeroToObject S Z) ∧
       (KernelLocalizationZeroToObject S Z ↔ KernelLocalizationObjectToZero S Z) ∧
-      (KernelLocalizationObjectToZero S Z ↔ KernelLocalizationTriangle S Z) := by
-  sorry
+        (KernelLocalizationObjectToZero S Z ↔ KernelLocalizationTriangle S Z) := by
+  let hzero := Formalization.Books.Homology.Unit08.localization_zero_iff
+    (L := S.Q) (W := S)
+    (⟨inferInstance, inferInstance⟩ : MultiplicativeSystem S) Z
+  have hout : IsZeroAfterLocalization S Z ↔ KernelLocalizationOutgoingZero S Z := by
+    simpa [IsZeroAfterLocalization, KernelLocalizationOutgoingZero] using hzero.1
+  have hin : IsZeroAfterLocalization S Z ↔ KernelLocalizationIncomingZero S Z := by
+    simpa [IsZeroAfterLocalization, KernelLocalizationIncomingZero] using hzero.2
+  refine ⟨hout, hout.symm.trans hin, ?_, ?_⟩
+  · constructor
+    · intro hIn
+      obtain ⟨Z', hZ'⟩ := hIn
+      let T₀ := (Triangle.mk
+        (biprod.inl : Z ⟶ Z ⊞ (Z'⟦(1 : ℤ)⟧))
+        (biprod.snd : Z ⊞ (Z'⟦(1 : ℤ)⟧) ⟶ Z'⟦(1 : ℤ)⟧)
+        (0 : Z'⟦(1 : ℤ)⟧ ⟶ Z⟦(1 : ℤ)⟧)).invRotate
+      have hT₀ : T₀ ∈ distTriang C := by
+        dsimp [T₀]
+        exact inv_rot_of_distTriang _
+          (Formalization.Books.Derived.Unit04.split_triangle_distinguished
+            Z (Z'⟦(1 : ℤ)⟧))
+      have hshift₁ : S ((0 : Z' ⟶ Z)⟦(1 : ℤ)⟧') :=
+        S.shift hZ' (1 : ℤ)
+      have hshift : S ((0 : Z' ⟶ Z)⟦(1 : ℤ)⟧'⟦(-1 : ℤ)⟧') :=
+        S.shift hshift₁ (-1 : ℤ)
+      have hfirst : S T₀.mor₁ := by
+        change S (-(((0 : (Z'⟦(1 : ℤ)⟧) ⟶ Z⟦(1 : ℤ)⟧)⟦(-1 : ℤ)⟧') ≫
+          (shiftFunctorCompIsoId C (1 : ℤ) (-1) (by simp)).hom.app
+            Z))
+        have hmap : S ((shiftFunctor C (-1)).map
+            (0 : (Z'⟦(1 : ℤ)⟧) ⟶ Z⟦(1 : ℤ)⟧)) := by
+          simpa only [shift_zero_eq_zero] using hshift
+        have hIso : S ((shiftFunctorCompIsoId C (1 : ℤ) (-1) (by simp)).hom.app Z) :=
+          localization_conditions_contains_isomorphisms (S := S)
+            _ (MorphismProperty.isomorphisms.infer_property _)
+        have hcomp : S ((shiftFunctor C (-1)).map
+            (0 : (Z'⟦(1 : ℤ)⟧) ⟶ Z⟦(1 : ℤ)⟧) ≫
+            (shiftFunctorCompIsoId C (1 : ℤ) (-1) (by simp)).hom.app Z) :=
+          S.comp_mem _ _ hmap hIso
+        have hzero : (shiftFunctor C (-1)).map
+            (0 : (Z'⟦(1 : ℤ)⟧) ⟶ Z⟦(1 : ℤ)⟧) ≫
+            (shiftFunctorCompIsoId C (1 : ℤ) (-1) (by simp)).hom.app Z = 0 := by
+          rw [Functor.map_zero, zero_comp]
+        simpa only [hzero, neg_zero] using hcomp
+      exact ⟨Z'⟦(1 : ℤ)⟧, T₀.obj₁, T₀.obj₂, T₀.mor₁, T₀.mor₂, T₀.mor₃,
+        hT₀, hfirst⟩
+    · intro hB
+      obtain ⟨Z', X, Y, f, g, h, hT, hf⟩ := hB
+      have hTQ : S.Q.mapTriangle.obj (Triangle.mk f g h) ∈ distTriang _ :=
+        S.Q.map_distinguished _ hT
+      have hQsum : IsZero (S.Q.obj (Z ⊞ Z')) := by
+        apply Triangle.isZero₃_of_isIso₁ _ hTQ
+        exact MorphismProperty.Q_inverts S f hf
+      let hPres : PreservesBinaryBiproducts S.Q :=
+        ⟨fun {X Y} => preservesBinaryBiproduct_of_preservesBiproduct S.Q X Y⟩
+      have hBiprod : IsZero (S.Q.obj Z ⊞ S.Q.obj Z') :=
+        hQsum.of_iso
+          (@Functor.mapBiprod _ _ _ _ _ _ S.Q Z Z' _ _ hPres.preserves).symm
+      obtain ⟨hQZ, _⟩ := (biprod_isZero_iff _ _).1 hBiprod
+      exact hin.mp hQZ
+  · intro hS
+    have hSat := invertedByLocalization_eq_of_saturated (W := S) hS
+    have hzeroTo : IsZeroAfterLocalization S Z ↔
+        KernelLocalizationZeroToObject S Z := by
+      constructor
+      · intro hZ
+        have hInv : invertedByLocalization S (0 : (0 : C) ⟶ Z) := by
+          change IsIso (S.Q.map (0 : (0 : C) ⟶ Z))
+          simpa only [Functor.map_zero] using
+            (isIsoZero_iff_source_target_isZero _ _).2
+              ⟨Functor.map_isZero S.Q (isZero_zero C), hZ⟩
+        rw [hSat] at hInv
+        exact hInv
+      · intro h0
+        have hInv : invertedByLocalization S (0 : (0 : C) ⟶ Z) := by
+          rw [hSat]
+          exact h0
+        change IsIso (S.Q.map (0 : (0 : C) ⟶ Z)) at hInv
+        letI : IsIso (S.Q.map (0 : (0 : C) ⟶ Z)) := hInv
+        exact IsZero.of_iso (Functor.map_isZero S.Q (isZero_zero C))
+          (asIso (S.Q.map (0 : (0 : C) ⟶ Z))).symm
+    have hObjTo : KernelLocalizationZeroToObject S Z ↔
+        KernelLocalizationObjectToZero S Z := by
+      constructor
+      · intro h0
+        have hZ : IsZeroAfterLocalization S Z := hzeroTo.mpr h0
+        have hInv : invertedByLocalization S (0 : Z ⟶ (0 : C)) := by
+          change IsIso (S.Q.map (0 : Z ⟶ (0 : C)))
+          simpa only [Functor.map_zero] using
+            (isIsoZero_iff_source_target_isZero _ _).2
+              ⟨hZ, Functor.map_isZero S.Q (isZero_zero C)⟩
+        rw [hSat] at hInv
+        exact hInv
+      · intro h0
+        have hInv : invertedByLocalization S (0 : Z ⟶ (0 : C)) := by
+          rw [hSat]
+          exact h0
+        change IsIso (S.Q.map (0 : Z ⟶ (0 : C))) at hInv
+        letI : IsIso (S.Q.map (0 : Z ⟶ (0 : C))) := hInv
+        have hZ : IsZero (S.Q.obj Z) :=
+          IsZero.of_iso (Functor.map_isZero S.Q (isZero_zero C))
+            (asIso (S.Q.map (0 : Z ⟶ (0 : C))))
+        exact hzeroTo.mp hZ
+    have htriangle : KernelLocalizationObjectToZero S Z ↔
+        KernelLocalizationTriangle S Z := by
+      constructor
+      · intro h0
+        refine ⟨(0 : C), Z, (0 : (0 : C) ⟶ Z), 𝟙 Z,
+          (0 : Z ⟶ (0 : C)⟦(1 : ℤ)⟧), contractible_distinguished₁ Z, ?_⟩
+        exact hObjTo.mpr h0
+      · rintro ⟨X, Y, f, g, h, hT, hf⟩
+        have hTQ : S.Q.mapTriangle.obj (Triangle.mk f g h) ∈ distTriang _ :=
+          S.Q.map_distinguished _ hT
+        have hQZ : IsZero (S.Q.obj Z) := by
+          apply Triangle.isZero₃_of_isIso₁ _ hTQ
+          exact MorphismProperty.Q_inverts S f hf
+        exact hObjTo.mp (hzeroTo.mp hQZ)
+    exact ⟨hzeroTo, hObjTo, htriangle⟩
 
 end LocalizationKernel
 

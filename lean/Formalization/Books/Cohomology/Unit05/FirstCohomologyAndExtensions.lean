@@ -212,7 +212,7 @@ theorem exists_ringedSpaceModule_quotient_section
   let E := ringedSpaceModuleInjectiveQuotientExtension X F
   let S := E.toShortComplex
   let hS := E.toShortComplex_shortExact
-  letI : Injective (ringedSpaceModuleInjectiveObject X F) :=
+  let : Injective (ringedSpaceModuleInjectiveObject X F) :=
     ringedSpaceModuleInjectiveObject_injective X F
   have hzero : IsZero ((D.functor 1).obj
       (ringedSpaceModuleInjectiveObject X F)) := by
@@ -242,8 +242,6 @@ theorem exists_ringedSpaceModule_quotient_section
     (ringedSpaceModuleInjectiveQuotient X F)).hom zq
   let y0 : ((ringedSpaceModuleInjectiveQuotient X F).val.presheaf.obj
       (op (⊤ : Opens X.carrier)) : Type v) := by
-    change ((ringedSpaceModuleInjectiveQuotient X F).val.presheaf.obj
-      (op (⊤ : Opens X.carrier)) : Type v)
     exact y
   let s : (ringedSpaceModuleInjectiveQuotient X F).sections :=
     ⟨fun V => (ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map
@@ -270,7 +268,7 @@ theorem exists_ringedSpaceModule_quotient_section
         ((ringedSpaceModuleQuotientSectionEquiv X F).symm s) = s
       exact (ringedSpaceModuleQuotientSectionEquiv X F).apply_symm_apply s
     rw [ht]
-    simp [s, y0, y] <;> rfl
+    simp [s, y0, y] ; rfl
   have hinput :
       ((ringedSpaceModuleGlobalSectionsIso X).inv.app
         (ringedSpaceModuleInjectiveQuotient X F)).hom

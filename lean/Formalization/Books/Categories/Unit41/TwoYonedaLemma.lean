@@ -621,7 +621,57 @@ theorem twoYonedaPullbackNatTrans_isOver
     {x y : Functor.Fiber p U} (η : x ⟶ y) :
     (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
       (twoYonedaPullbackNatTrans p P U η) := by
-  sorry
+  have hx := twoYonedaPullbackFunctor_isOver p P U x
+  have hy := twoYonedaPullbackFunctor_isOver p P U y
+  apply IsHomLift.of_fac' (twoYonedaPostcomposition p U)
+    (𝟙 (Over.forget U)) (twoYonedaPullbackNatTrans p P U η) hx hy
+  ext f
+  change p.map (Functor.Fiber.fiberInclusion.map
+      ((P.pullbackFunctor f.hom).map η)) =
+    (eqToHom hx).app f ≫ 𝟙 f.left ≫ (eqToHom hy.symm).app f
+  let hη := (P.pullbackFunctor f.hom).map η
+  let : p.IsHomLift (𝟙 f.left)
+      (Functor.Fiber.fiberInclusion.map hη) := hη.2
+  have hdom : p.obj (Functor.Fiber.fiberInclusion.obj
+      ((P.pullbackFunctor f.hom).obj x)) = f.left :=
+    ((P.pullbackFunctor f.hom).obj x).property
+  have hcod : p.obj (Functor.Fiber.fiberInclusion.obj
+      ((P.pullbackFunctor f.hom).obj y)) = f.left :=
+    ((P.pullbackFunctor f.hom).obj y).property
+  have hxf' : p.obj (Functor.Fiber.fiberInclusion.obj
+      ((P.pullbackFunctor f.hom).obj x)) = f.left := by
+    simpa [twoYonedaPullbackFunctor, twoYonedaPullbackFunctorObj,
+      PullbackChoice.pullbackFunctor, Functor.Fiber.fiberInclusion] using
+      congrArg (fun F : Over U ⥤ C => F.obj f) hx
+  have hyf' : p.obj (Functor.Fiber.fiberInclusion.obj
+      ((P.pullbackFunctor f.hom).obj y)) = f.left := by
+    simpa [twoYonedaPullbackFunctor, twoYonedaPullbackFunctorObj,
+      PullbackChoice.pullbackFunctor, Functor.Fiber.fiberInclusion] using
+      congrArg (fun F : Over U ⥤ C => F.obj f) hy
+  have hxapp : (eqToHom hx).app f = eqToHom hxf' := by
+    rw [CategoryTheory.eqToHom_app]
+    congr 1
+  have hyapp : (eqToHom hy.symm).app f = eqToHom hyf'.symm := by
+    rw [CategoryTheory.eqToHom_app]
+    congr 1
+  have hdom_eq' : hdom = hxf' := by
+    apply Subsingleton.elim
+  have hcod_eq' : hcod = hyf' := by
+    apply Subsingleton.elim
+  have hfac := IsHomLift.fac' p (𝟙 f.left)
+    (Functor.Fiber.fiberInclusion.map hη)
+  have hfac' : p.map (Functor.Fiber.fiberInclusion.map hη) =
+      eqToHom hdom ≫ 𝟙 f.left ≫ eqToHom hcod.symm := by
+    exact hfac
+  rw [hxapp, hyapp]
+  dsimp [hη]
+  rw [hfac']
+  rw [hdom_eq', hcod_eq']
+  simp only [Category.assoc, Category.id_comp, Category.comp_id]
+  simp [Category.assoc]
+  change eqToHom (hxf'.trans hyf'.symm) =
+    eqToHom hxf' ≫ (𝟙 f.left ≫ eqToHom hyf'.symm)
+  rw [Category.id_comp, CategoryTheory.eqToHom_trans]
 
 def twoYonedaPullbackMorphismMap
     {C : Type uC} [Category.{vC} C]
@@ -641,7 +691,16 @@ theorem twoYonedaPullbackMorphismMap_map_id
     (x : Functor.Fiber p U) :
     twoYonedaPullbackMorphismMap p P U (𝟙 x) =
       𝟙 (twoYonedaPullbackMorphism p P U x) := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply Functor.Fiber.hom_ext
+  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans]
+  ext f
+  dsimp [twoYonedaPullbackNatTransApp]
+  simp [Functor.Fiber.fiberInclusion, Functor.map_id]
+  change 𝟙 (Functor.Fiber.fiberInclusion.obj
+      ((P.pullbackFunctor f.hom).obj x)) =
+    𝟙 (Functor.Fiber.fiberInclusion.obj ((P.pullbackFunctor f.hom).obj x))
+  rfl
 
 theorem twoYonedaPullbackMorphismMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -651,7 +710,18 @@ theorem twoYonedaPullbackMorphismMap_map_comp
     twoYonedaPullbackMorphismMap p P U (η ≫ θ) =
       twoYonedaPullbackMorphismMap p P U η ≫
         twoYonedaPullbackMorphismMap p P U θ := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply Functor.Fiber.hom_ext
+  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans]
+  ext f
+  dsimp [twoYonedaPullbackNatTransApp]
+  simp [Functor.Fiber.fiberInclusion, Functor.map_comp, NatTrans.comp_app]
+  change Functor.Fiber.fiberInclusion.map
+      (((P.pullbackFunctor f.hom).map η) ≫
+        ((P.pullbackFunctor f.hom).map θ)) =
+    Functor.Fiber.fiberInclusion.map ((P.pullbackFunctor f.hom).map η) ≫
+      Functor.Fiber.fiberInclusion.map ((P.pullbackFunctor f.hom).map θ)
+  rw [Functor.map_comp]
 
 /- The functor below is the inverse constructed in the source after choosing
    pullbacks.  Its functoriality is exactly the omitted verification in the

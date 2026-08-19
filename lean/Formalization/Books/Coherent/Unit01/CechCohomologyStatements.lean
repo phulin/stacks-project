@@ -457,6 +457,8 @@ theorem standard_open_cech_exactAt_of_module_model_exactAt
     (M : Y.Modules) (n : ℕ)
     (hmodule : (standardOpenCechModuleComplex 𝒰 M).ExactAt n) :
     (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
+  /- Prior attempt: the module-valued and additive-valued Cech short complexes
+     are not definitionally equal, so this direct transfer cannot be elaborated.
   rw [HomologicalComplex.exactAt_iff] at hmodule ⊢
   have hm :=
     (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
@@ -464,7 +466,8 @@ theorem standard_open_cech_exactAt_of_module_model_exactAt
   rw [ShortComplex.exact_iff_of_hasForget]
   intro x hx
   obtain ⟨y, hy⟩ := hm x hx
-  exact ⟨y, hy⟩
+  exact ⟨y, hy⟩ -/
+  sorry
 
 /-- Positive-degree exactness of the standard-open Čech complex, obtained by
 prime localization and the textbook's contracting homotopy. -/

@@ -1770,7 +1770,7 @@ theorem quotientDeRhamProjection_surjective
     (π : ModuleOfDifferentials A B →ₗ[B] Ω)
     (hπ : Function.Surjective π) (p : ℕ) :
     Function.Surjective (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p) := by
-  sorry
+  exact exteriorPower.map_surjective hπ
 
 /-- The differential on the quotient module induced by the universal one. -/
 def quotientUniversalDifferential

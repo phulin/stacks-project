@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.CommAlgCat.Basic
 import Mathlib.Algebra.MvPolynomial.Monad
+import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
 
 /-!
@@ -45,8 +46,9 @@ abbrev polynomialForget : CommAlgCat A ⥤ Type u := CategoryTheory.forget _
 
 /-- The universal bijection for the free polynomial algebra. -/
 noncomputable def polynomialFreeHomEquiv (E : Type u) (C : CommAlgCat A) :
-    ((polynomialFree A).obj E ⟶ C) ≃ (E → C) :=
-  { toFun := fun f e => f.hom (MvPolynomial.X e)
+    ((polynomialFree A).obj E ⟶ C) ≃
+      (E ⟶ (polynomialForget A).obj C) :=
+  { toFun := fun f => TypeCat.ofHom (fun e => f.hom (MvPolynomial.X e))
     invFun := fun g => CommAlgCat.ofHom (MvPolynomial.aeval g)
     left_inv := by
       intro f
@@ -59,18 +61,28 @@ noncomputable def polynomialFreeHomEquiv (E : Type u) (C : CommAlgCat A) :
       rw [MvPolynomial.aeval_X]
     right_inv := by
       intro g
-      funext e
+      apply ConcreteCategory.hom_ext
+      intro e
       exact MvPolynomial.aeval_X (f := g) e }
 
-/-- A proposition recording the free-forgetful adjunction in hom-set form. -/
+/-- The free-forgetful adjunction for polynomial algebras. -/
+noncomputable def polynomialFreeAdjunction :
+    polynomialFree A ⊣ polynomialForget A :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv := fun E C => by
+        exact polynomialFreeHomEquiv A E C
+      homEquiv_naturality_left_symm := by
+        sorry
+      homEquiv_naturality_right := by
+        sorry }
+
+/-- A proposition recording the free-forgetful adjunction. -/
 def PolynomialFreeForgetfulAdjunction : Prop :=
-  ∀ (E : Type u) (C : CommAlgCat A),
-    Nonempty (((polynomialFree A).obj E ⟶ C) ≃ (E → C))
+  Nonempty (polynomialFree A ⊣ polynomialForget A)
 
 theorem polynomialFreeForgetfulAdjunction :
-    PolynomialFreeForgetfulAdjunction A := by
-  intro E C
-  exact ⟨polynomialFreeHomEquiv A E C⟩
+    PolynomialFreeForgetfulAdjunction A :=
+  ⟨polynomialFreeAdjunction A⟩
 
 /-! ## The arrow-category variant from the source remark -/
 
@@ -107,6 +119,13 @@ def variantAlgebraProjection (A B : Type u) [CommRing A] [CommRing B]
 def variantSetProjection (B : Type u) [CommRing B] : SetArrowCategory B ⥤ Type u :=
   CostructuredArrow.proj (𝟭 (Type u)) B
 
+/-- The hom-set equivalence for the arrow-category adjunction. -/
+noncomputable def variantFreeHomEquiv (A B : Type u) [CommRing A] [CommRing B]
+    [Algebra A B] (X : AlgebraArrowCategory A B) (Y : SetArrowCategory B) :
+    ((variantFree A B).obj Y ⟶ X) ≃
+      (Y ⟶ (variantForgetful A B).obj X) := by
+  sorry
+
 theorem variant_projection_commutes (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] (X : AlgebraArrowCategory A B) :
     (variantSetProjection B).obj ((variantForgetful A B).obj X) =
@@ -119,15 +138,24 @@ theorem variant_projection_functors_commute (A B : Type u) [CommRing A] [CommRin
       variantAlgebraProjection A B ⋙ polynomialForget A := by
   rfl
 
-/-- Hom-set form of the adjunction in the arrow-category variant. -/
+/-- The free-forgetful adjunction in the arrow-category variant. -/
+noncomputable def variantFreeAdjunction (A B : Type u) [CommRing A] [CommRing B]
+    [Algebra A B] :
+    variantFree A B ⊣ variantForgetful A B :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv := fun Y X => variantFreeHomEquiv A B X Y
+      homEquiv_naturality_left_symm := by
+        sorry
+      homEquiv_naturality_right := by
+        sorry }
+
+/-- A proposition recording the arrow-category adjunction. -/
 def VariantFreeForgetfulAdjunction (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] : Prop :=
-  ∀ (X : AlgebraArrowCategory A B) (Y : SetArrowCategory B),
-    Nonempty (((variantFree A B).obj Y ⟶ X) ≃
-      (Y ⟶ (variantForgetful A B).obj X))
+  Nonempty (variantFree A B ⊣ variantForgetful A B)
 
 theorem variantFreeForgetfulAdjunction (A B : Type u) [CommRing A] [CommRing B]
-    [Algebra A B] : VariantFreeForgetfulAdjunction A B := by
-  sorry
+    [Algebra A B] : VariantFreeForgetfulAdjunction A B :=
+  ⟨variantFreeAdjunction A B⟩
 
 end Formalization.Books.Cotangent.Unit03

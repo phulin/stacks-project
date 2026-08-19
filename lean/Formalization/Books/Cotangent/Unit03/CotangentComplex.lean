@@ -31,7 +31,7 @@ variable {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
 
 /-- The augmentation map in simplicial degree `n`. -/
 noncomputable def standardResolutionAugmentationMap (n : ℕ) :
-    iteratedPolynomial A (n + 1) B →+* B :=
+    iteratedPolynomial A (n + 1) B →ₐ[A] B :=
   ((standardResolutionAugmentation (A := A) (B := B)).hom.app
       (Opposite.op (SimplexCategory.mk n))).hom
 
@@ -39,7 +39,7 @@ noncomputable def standardResolutionAugmentationMap (n : ℕ) :
 noncomputable def standardCotangentTerm (n : ℕ) : Type u :=
   let P := iteratedPolynomial A (n + 1) B
   let ε := standardResolutionAugmentationMap (A := A) (B := B) n
-  letI := ε.toAlgebra
+  letI := ε.toRingHom.toAlgebra
   -- The factors are written in the symmetric order `B ⊗[P] Ω[P/A]`,
   -- which exposes the canonical `B`-module structure.
   TensorProduct P B (KaehlerDifferential A P)
@@ -48,7 +48,7 @@ noncomputable instance standardCotangentTermAddCommGroup (n : ℕ) :
     AddCommGroup (standardCotangentTerm (A := A) (B := B) n) := by
   let P := iteratedPolynomial A (n + 1) B
   let ε := standardResolutionAugmentationMap (A := A) (B := B) n
-  letI := ε.toAlgebra
+  letI := ε.toRingHom.toAlgebra
   change AddCommGroup (TensorProduct P B (KaehlerDifferential A P))
   infer_instance
 
@@ -56,7 +56,7 @@ noncomputable instance standardCotangentTermModule (n : ℕ) :
     Module B (standardCotangentTerm (A := A) (B := B) n) := by
   let P := iteratedPolynomial A (n + 1) B
   let ε := standardResolutionAugmentationMap (A := A) (B := B) n
-  letI := ε.toAlgebra
+  letI := ε.toRingHom.toAlgebra
   change Module B (TensorProduct P B (KaehlerDifferential A P))
   infer_instance
 
@@ -65,8 +65,20 @@ structure CotangentSimplicialModule (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] where
   module : SimplicialObject (ModuleCat.{u} B)
   termIso : ∀ n : ℕ,
-    module.obj (Opposite.op (SimplexCategory.mk n)) ≅
+      module.obj (Opposite.op (SimplexCategory.mk n)) ≅
       ModuleCat.of B (standardCotangentTerm (A := A) (B := B) n)
+
+/-- The simplicial module whose terms are the base-changed differentials of the
+standard resolution.  Its maps are induced by the face and degeneracy maps on
+the resolution, together with functoriality of Kähler differentials and tensor
+base change. -/
+noncomputable def standardCotangentSimplicialModule :
+    CotangentSimplicialModule (A := A) (B := B) where
+  module := by
+    sorry
+  termIso := by
+    intro n
+    sorry
 
 /-! ## Alternating face-map complex -/
 
@@ -75,28 +87,43 @@ structure CotangentSimplicialModule (A B : Type u) [CommRing A] [CommRing B]
 The `embeddingDownNat` extension places simplicial degree `n` in cochain degree
 `-n` and makes all positive degrees zero, exactly as in the source convention.
 -/
-noncomputable def cotangentComplex (Q : CotangentSimplicialModule (A := A) (B := B)) :
+noncomputable def cotangentComplexOf
+    (Q : CotangentSimplicialModule (A := A) (B := B)) :
     CochainComplex (ModuleCat.{u} B) ℤ :=
   (AlgebraicTopology.alternatingFaceMapComplex (ModuleCat.{u} B)).obj Q.module |>.extend
     ComplexShape.embeddingDownNat
 
-noncomputable def cotangentComplex_degree (Q : CotangentSimplicialModule (A := A) (B := B))
+noncomputable def cotangentComplex
+    (A : Type u) (B : Type u) [CommRing A] [CommRing B] [Algebra A B] :
+    CochainComplex (ModuleCat.{u} B) ℤ :=
+  cotangentComplexOf (standardCotangentSimplicialModule (A := A) (B := B))
+
+noncomputable def cotangentComplexOf_degree
+    (Q : CotangentSimplicialModule (A := A) (B := B))
     (n : ℕ) :
-    (cotangentComplex Q).X (-(n : ℤ)) ≅
+    (cotangentComplexOf Q).X (-(n : ℤ)) ≅
       Q.module.obj (Opposite.op (SimplexCategory.mk n)) :=
   HomologicalComplex.extendXIso
     ((AlgebraicTopology.alternatingFaceMapComplex (ModuleCat.{u} B)).obj Q.module)
     ComplexShape.embeddingDownNat (by rfl)
 
 /-- The degree identification with the source's tensor-product term. -/
-noncomputable def cotangentComplex_term (Q : CotangentSimplicialModule (A := A) (B := B))
+noncomputable def cotangentComplexOf_term
+    (Q : CotangentSimplicialModule (A := A) (B := B))
     (n : ℕ) :
-    (cotangentComplex Q).X (-(n : ℤ)) ≅
+    (cotangentComplexOf Q).X (-(n : ℤ)) ≅
       ModuleCat.of B (standardCotangentTerm (A := A) (B := B) n) :=
-  (cotangentComplex_degree Q n).trans (Q.termIso n)
+  (cotangentComplexOf_degree Q n).trans (Q.termIso n)
 
-theorem cotangentComplex_positive_degree (Q : CotangentSimplicialModule (A := A) (B := B))
-    (m : ℤ) (hm : 0 < m) : CategoryTheory.Limits.IsZero ((cotangentComplex Q).X m) := by
+noncomputable def cotangentComplex_degree
+    (A : Type u) (B : Type u) [CommRing A] [CommRing B] [Algebra A B] (n : ℕ) :
+    (cotangentComplex A B).X (-(n : ℤ)) ≅
+      ModuleCat.of B (standardCotangentTerm (A := A) (B := B) n) :=
+  cotangentComplexOf_term (standardCotangentSimplicialModule (A := A) (B := B)) n
+
+theorem cotangentComplex_positive_degree
+    (m : ℤ) (hm : 0 < m) :
+    CategoryTheory.Limits.IsZero ((cotangentComplex A B).X m) := by
   sorry
 
 /-!
@@ -106,8 +133,8 @@ transition maps on the cotangent complexes, so those maps are necessarily part
 of the diagram parameter here.
 -/
 def CotangentComplexColimitStatement {I : Type u} [Preorder I]
-    (D : I ⥤ CochainComplex (ModuleCat.{u} B) ℤ)
-  (L : CochainComplex (ModuleCat.{u} B) ℤ) : Prop :=
-  ∃ c : Cocone D, Nonempty (IsColimit c) ∧ Nonempty (L ≅ c.pt)
+    (D : I ⥤ CochainComplex (ModuleCat.{u} B) ℤ) : Prop :=
+  ∃ c : Cocone D, Nonempty (IsColimit c) ∧
+    Nonempty (cotangentComplex A B ≅ c.pt)
 
 end Formalization.Books.Cotangent.Unit03

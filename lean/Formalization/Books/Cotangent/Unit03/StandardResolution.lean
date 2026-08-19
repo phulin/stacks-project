@@ -1,18 +1,17 @@
 import Formalization.Books.Cotangent.Unit03.AlgebraInterfaces
 import Formalization.Books.Simplicial.Unit03.SimplicialObjects
-import Mathlib.Algebra.Category.Ring.Basic
+import Formalization.Books.Simplicial.Unit34.StandardResolutions
 import Mathlib.Algebra.MvPolynomial.Monad
 import Mathlib.AlgebraicTopology.SimplicialObject.Basic
-import Mathlib.RingTheory.Kaehler.Basic
 
 /-!
 # The standard simplicial polynomial resolution
 
-This file gives a chapter-owned interface for the standard resolution used in
-the cotangent-complex construction.  The terms are the iterates of the
-polynomial-algebra monad, and the face and degeneracy maps are the usual monad
-multiplication/unit maps.  Mathlib supplies the simplicial-object category and
-the polynomial monad, but not this particular resolution.
+This file gives a chapter-owned polynomial model for the standard resolution
+used in the cotangent-complex construction.  The established simplicial
+standard-resolution interface supplies the functor-valued construction; the
+terms here are its iterated polynomial algebras, and the displayed face and
+degeneracy maps are the corresponding monad multiplication/unit maps.
 -/
 
 namespace Formalization.Books.Cotangent.Unit03
@@ -53,35 +52,35 @@ noncomputable instance iteratedPolynomialAlgebra (A : Type u) [CommRing A] (X : 
 
 /-- The ring hom induced by a map of variables at an iterated polynomial level. -/
 noncomputable def iteratedPolynomialMap (A : Type u) [CommRing A] {X Y : Type u}
-    [CommRing X] [CommRing Y]
-    (n : ℕ) (f : X →+* Y) : iteratedPolynomial A n X →+* iteratedPolynomial A n Y :=
+    [CommRing X] [CommRing Y] [Algebra A X] [Algebra A Y]
+    (n : ℕ) (f : X →ₐ[A] Y) : iteratedPolynomial A n X →ₐ[A] iteratedPolynomial A n Y :=
   match n with
   | 0 => by
-      change X →+* Y
+      change X →ₐ[A] Y
       exact f
   | n + 1 => by
-      change MvPolynomial (iteratedPolynomial A n X) A →+*
+      change MvPolynomial (iteratedPolynomial A n X) A →ₐ[A]
         MvPolynomial (iteratedPolynomial A n Y) A
-      exact (MvPolynomial.rename (R := A) (iteratedPolynomialMap A n f)).toRingHom
+      exact MvPolynomial.rename (R := A) (iteratedPolynomialMap A n f)
 
 theorem iteratedPolynomialMap_zero (A : Type u) [CommRing A] {X Y : Type u}
-    [CommRing X] [CommRing Y]
-    (f : X →+* Y) : iteratedPolynomialMap A 0 f = f := rfl
+    [CommRing X] [CommRing Y] [Algebra A X] [Algebra A Y]
+    (f : X →ₐ[A] Y) : iteratedPolynomialMap A 0 f = f := rfl
 
 /-! ## Monad faces and degeneracies -/
 
 variable {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
 
 /-- The algebra action of the polynomial monad on the `A`-algebra `B`. -/
-def polynomialAlgebraAction : PolynomialAlgebra A B →+* B :=
-  (MvPolynomial.aeval (R := A) (fun b : B => b)).toRingHom
+def polynomialAlgebraAction : PolynomialAlgebra A B →ₐ[A] B :=
+  MvPolynomial.aeval (R := A) (fun b : B => b)
 
 /-- The face maps of the standard resolution. -/
 noncomputable def standardResolutionFace : ∀ n : ℕ, Fin (n + 2) →
-    iteratedPolynomial A (n + 2) B →+* iteratedPolynomial A (n + 1) B
+    iteratedPolynomial A (n + 2) B →ₐ[A] iteratedPolynomial A (n + 1) B
   | 0, i =>
       Fin.cases
-        (MvPolynomial.join₁ (R := A) (σ := B)).toRingHom
+        (MvPolynomial.join₁ (R := A) (σ := B))
         (fun j =>
           Fin.cases
             (iteratedPolynomialMap A 1 polynomialAlgebraAction)
@@ -89,22 +88,37 @@ noncomputable def standardResolutionFace : ∀ n : ℕ, Fin (n + 2) →
   | n + 1, i =>
       Fin.cases
         (MvPolynomial.join₁ (R := A)
-          (σ := iteratedPolynomial A (n + 1) B)).toRingHom
+          (σ := iteratedPolynomial A (n + 1) B))
         (fun j => iteratedPolynomialMap A 1 (standardResolutionFace n j)) i
 
 /-- The degeneracy maps of the standard resolution. -/
 noncomputable def standardResolutionDegeneracy : ∀ n : ℕ, Fin (n + 1) →
-    iteratedPolynomial A (n + 1) B →+* iteratedPolynomial A (n + 2) B
+    iteratedPolynomial A (n + 1) B →ₐ[A] iteratedPolynomial A (n + 2) B
   | 0, _ =>
-      (MvPolynomial.rename (R := A) (MvPolynomial.X : B → PolynomialAlgebra A B)).toRingHom
+      MvPolynomial.rename (R := A) (MvPolynomial.X : B → PolynomialAlgebra A B)
   | n + 1, i =>
       Fin.cases
-        ((MvPolynomial.rename (R := A)
+        (MvPolynomial.rename (R := A)
           (MvPolynomial.X : iteratedPolynomial A (n + 1) B →
-            PolynomialAlgebra A (iteratedPolynomial A (n + 1) B))).toRingHom)
+            PolynomialAlgebra A (iteratedPolynomial A (n + 1) B)))
         (fun j => iteratedPolynomialMap A 1 (standardResolutionDegeneracy n j)) i
 
 /-! ## The simplicial object -/
+
+/-- The adjunction situation used by the established simplicial standard
+resolution construction. -/
+noncomputable def polynomialResolutionSituation (A : Type u) [CommRing A] :
+    Formalization.Books.Simplicial.Unit34.StandardResolutionSituation
+      (CommAlgCat A) (Type u) :=
+  { U := polynomialFree A
+    V := polynomialForget A
+    adjunction := polynomialFreeAdjunction A }
+
+/-- The functor-valued simplicial object `X_•` from the source. -/
+noncomputable def standardResolutionFunctor :
+    SimplicialObject (CommAlgCat A ⥤ CommAlgCat A) :=
+  Formalization.Books.Simplicial.Unit34.standardResolutionObject
+    (polynomialResolutionSituation A)
 
 /-
 The next map is defined by the standard epi-mono factorization of a simplex
@@ -115,7 +129,7 @@ are the standard monad-law calculation.
 -/
 noncomputable def standardResolutionMap : ∀ {m n : ℕ},
     (SimplexCategory.mk m ⟶ SimplexCategory.mk n) →
-      iteratedPolynomial A (n + 1) B →+* iteratedPolynomial A (m + 1) B
+      iteratedPolynomial A (n + 1) B →ₐ[A] iteratedPolynomial A (m + 1) B
   | m, n, f => by
       classical
       by_cases hs : Function.Surjective f.toOrderHom
@@ -129,7 +143,7 @@ noncomputable def standardResolutionMap : ∀ {m n : ℕ},
           have hf : f = 𝟙 _ := by
             exact @SimplexCategory.eq_id_of_isIso _ f
               (SimplexCategory.isIso_of_bijective ⟨hi, hs⟩)
-          exact RingHom.id _
+          exact AlgHom.id A _
         · cases m with
           | zero =>
               exfalso
@@ -162,7 +176,7 @@ noncomputable def standardResolutionMap : ∀ {m n : ℕ},
 
 theorem standardResolutionMap_id {n : ℕ} :
     standardResolutionMap (A := A) (B := B) (𝟙 (SimplexCategory.mk n)) =
-      RingHom.id _ := by
+      AlgHom.id A _ := by
   sorry
 
 theorem standardResolutionMap_comp {m n k : ℕ}
@@ -173,8 +187,8 @@ theorem standardResolutionMap_comp {m n k : ℕ}
   sorry
 
 /-- The standard simplicial `A`-algebra resolution of `B`. -/
-noncomputable def standardResolution : SimplicialObject CommRingCat where
-  obj Δ := CommRingCat.of (iteratedPolynomial A (Δ.unop.len + 1) B)
+noncomputable def standardResolution : SimplicialObject (CommAlgCat A) where
+  obj Δ := CommAlgCat.of A (iteratedPolynomial A (Δ.unop.len + 1) B)
   map := fun {X Y} f => by
     cases X with
     | op X =>
@@ -184,7 +198,7 @@ noncomputable def standardResolution : SimplicialObject CommRingCat where
         | mk m =>
           cases Y with
           | mk n =>
-            exact CommRingCat.ofHom
+            exact CommAlgCat.ofHom
               (standardResolutionMap (A := A) (B := B) f.unop)
   map_id := by
     intro Δ
@@ -192,7 +206,7 @@ noncomputable def standardResolution : SimplicialObject CommRingCat where
     | op Δ =>
       cases Δ with
       | mk n =>
-        simpa using congrArg CommRingCat.ofHom
+        simpa using congrArg CommAlgCat.ofHom
           (standardResolutionMap_id (A := A) (B := B) (n := n))
   map_comp := by
     intro X Y Z f g
@@ -208,9 +222,20 @@ noncomputable def standardResolution : SimplicialObject CommRingCat where
             | mk n =>
               cases Z with
               | mk k =>
-                simpa using congrArg CommRingCat.ofHom
+                simpa using congrArg CommAlgCat.ofHom
                   (standardResolutionMap_comp (A := A) (B := B)
                     (f := g.unop) (g := f.unop))
+
+/-- Evaluation of the functor-valued standard resolution at an `A`-algebra. -/
+noncomputable def standardResolutionFunctorAt : SimplicialObject (CommAlgCat A) :=
+  ((SimplicialObject.whiskering (CommAlgCat A ⥤ CommAlgCat A) (CommAlgCat A)).obj
+      ((CategoryTheory.evaluation (CommAlgCat A) (CommAlgCat A)).obj
+        (CommAlgCat.of A B))).obj (standardResolutionFunctor (A := A))
+
+theorem standardResolutionFunctorAt_eq_standardResolution :
+    standardResolutionFunctorAt (A := A) (B := B) =
+      standardResolution (A := A) (B := B) := by
+  sorry
 
 /-! ## The augmentation -/
 
@@ -222,27 +247,27 @@ def standardResolutionZeroAugmentation :
 theorem standardResolution_augmentation_compatibility
     (i : SimplexCategory) (f g : SimplexCategory.mk 0 ⟶ i) :
     (standardResolution (A := A) (B := B)).map f.op ≫
-        CommRingCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)).toRingHom =
+        CommAlgCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)) =
       (standardResolution (A := A) (B := B)).map g.op ≫
-        CommRingCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)).toRingHom := by
+        CommAlgCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)) := by
   sorry
 
-/-- The augmentation of the standard resolution to the constant simplicial ring `B`. -/
+/-- The augmentation of the standard resolution to the constant simplicial `A`-algebra `B`. -/
 noncomputable def standardResolutionAugmentation :
-    SimplicialObject.Augmented CommRingCat :=
-  (standardResolution (A := A) (B := B)).augment (CommRingCat.of B)
-    (CommRingCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)).toRingHom)
+    SimplicialObject.Augmented (CommAlgCat A) :=
+  (standardResolution (A := A) (B := B)).augment (CommAlgCat.of A B)
+    (CommAlgCat.ofHom (standardResolutionZeroAugmentation (A := A) (B := B)))
     (standardResolution_augmentation_compatibility (A := A) (B := B))
 
 theorem standardResolution_zero :
     (standardResolution (A := A) (B := B)).obj
-        (Opposite.op (SimplexCategory.mk 0)) = CommRingCat.of (PolynomialAlgebra A B) := by
+        (Opposite.op (SimplexCategory.mk 0)) = CommAlgCat.of A (PolynomialAlgebra A B) := by
   rfl
 
 theorem standardResolution_one :
     (standardResolution (A := A) (B := B)).obj
         (Opposite.op (SimplexCategory.mk 1)) =
-      CommRingCat.of (PolynomialAlgebra A (PolynomialAlgebra A B)) := by
+      CommAlgCat.of A (PolynomialAlgebra A (PolynomialAlgebra A B)) := by
   rfl
 
 /-! ## The variant resolution in the source remark -/
@@ -253,12 +278,43 @@ abbrev AlgebraArrow := AlgebraArrowCategory A B
 def identityAlgebraArrow : AlgebraArrow (A := A) (B := B) :=
   CostructuredArrow.mk (𝟙 (CommAlgCat.of A B))
 
-/-- The resolution obtained from the identity arrow in the variant setup. -/
-noncomputable def variantResolutionAtIdentity : SimplicialObject CommRingCat :=
-  standardResolution (A := A) (B := B)
+/-- The adjunction situation for the arrow-category variant. -/
+noncomputable def variantResolutionSituation (A B : Type u) [CommRing A] [CommRing B]
+    [Algebra A B] :
+    Formalization.Books.Simplicial.Unit34.StandardResolutionSituation
+      (AlgebraArrowCategory A B) (SetArrowCategory B) :=
+  { U := variantFree A B
+    V := variantForgetful A B
+    adjunction := variantFreeAdjunction A B }
 
-theorem variantResolutionAtIdentity_eq_standardResolution :
-    variantResolutionAtIdentity (A := A) (B := B) =
-      standardResolution (A := A) (B := B) := rfl
+/-- The functor-valued standard resolution in the arrow-category variant. -/
+noncomputable def variantResolutionFunctor (A B : Type u) [CommRing A] [CommRing B]
+    [Algebra A B] :
+    SimplicialObject (AlgebraArrowCategory A B ⥤ AlgebraArrowCategory A B) :=
+  Formalization.Books.Simplicial.Unit34.standardResolutionObject
+    (variantResolutionSituation A B)
+
+/-- Evaluation of the variant resolution at the identity arrow `B → B`. -/
+noncomputable def variantResolutionAtIdentity (A B : Type u)
+    [CommRing A] [CommRing B] [Algebra A B] :
+    SimplicialObject (AlgebraArrowCategory A B) :=
+  ((SimplicialObject.whiskering
+      (AlgebraArrowCategory A B ⥤ AlgebraArrowCategory A B)
+      (AlgebraArrowCategory A B)).obj
+      ((CategoryTheory.evaluation (AlgebraArrowCategory A B)
+        (AlgebraArrowCategory A B)).obj (identityAlgebraArrow (A := A) (B := B)))).obj
+    (variantResolutionFunctor A B)
+
+/-- The underlying simplicial `A`-algebra of the identity-arrow resolution. -/
+noncomputable def variantResolutionAtIdentityProjection (A B : Type u)
+    [CommRing A] [CommRing B] [Algebra A B] : SimplicialObject (CommAlgCat A) :=
+  ((SimplicialObject.whiskering (AlgebraArrowCategory A B) (CommAlgCat A)).obj
+    (variantAlgebraProjection A B)).obj (variantResolutionAtIdentity A B)
+
+theorem variantResolutionAtIdentityProjection_eq_standardResolution (A B : Type u)
+    [CommRing A] [CommRing B] [Algebra A B] :
+    variantResolutionAtIdentityProjection A B =
+      standardResolution (A := A) (B := B) := by
+  sorry
 
 end Formalization.Books.Cotangent.Unit03

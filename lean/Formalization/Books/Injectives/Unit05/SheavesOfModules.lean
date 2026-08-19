@@ -3,10 +3,12 @@ import Formalization.Books.Sheaves.Unit25.Infrastructure
 import Formalization.Books.Sheaves.Unit27.Skyscraper
 import Formalization.Books.Injectives.Unit04.AbelianSheaves
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
+import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 import Mathlib.CategoryTheory.Abelian.Injective.Basic
+import Mathlib.CategoryTheory.Generator.Abelian
 import Mathlib.Topology.Sheaves.Skyscraper
 
 /-!
@@ -484,6 +486,278 @@ theorem sheafOfModules_has_enough_injectives (X : RingedSpace.{v}) :
                 injective := stalkwiseProductMap_target_injective X F D,
                 f := stalkwiseProductMap X F D,
                 mono := stalkwiseProductMap_mono X F D }⟩
-  · sorry
+  · have hI : ∀ x : X, ∃ I : ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x),
+        Injective I ∧ IsCoseparator I := by
+      intro x
+      let R := TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x
+      letI : EnoughInjectives (ModuleCat R) := ModuleCat.enoughInjectives R
+      exact Abelian.has_injective_coseparator (ModuleCat.of R (Shrink R))
+        (ModuleCat.isSeparator R)
+    let I : ∀ x : X, ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
+      fun x => Classical.choose (hI x)
+    have hI_injective : ∀ x : X, Injective (I x) := by
+      intro x
+      exact (Classical.choose_spec (hI x)).1
+    have hI_coseparator : ∀ x : X, IsCoseparator (I x) := by
+      intro x
+      exact (Classical.choose_spec (hI x)).2
+    let K : ∀ (F : Mod X.structureSheaf) (x : X), ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
+      fun F x => ∏ᶜ fun _ : (stalkModule X F x ⟶ I x) => I x
+    have hK_injective : ∀ (F : Mod X.structureSheaf) (x : X),
+        Injective (K F x) := by
+      intro F x
+      letI : Injective (I x) := hI_injective x
+      exact inferInstance
+    have hK_mono : ∀ (F : Mod X.structureSheaf) (x : X), Mono
+        (Pi.lift fun h : stalkModule X F x ⟶ I x => h) := by
+      intro F x
+      exact (isCoseparator_iff_mono (I x)).1 (hI_coseparator x) _
+    let D : ∀ F : Mod X.structureSheaf, StalkwiseInjectiveEmbeddingData X F :=
+      fun F => {
+        I := K F
+        j := fun x => Pi.lift fun h : stalkModule X F x ⟶ I x => h
+        mono_j := hK_mono F
+        injective_I := hK_injective F }
+    let S : ∀ x : X, ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) ⥤
+          Mod X.structureSheaf :=
+      fun x => Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor
+        X.structureSheaf x
+    have hS_injective : ∀ (x : X) (A : ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)),
+        Injective A → Injective ((S x).obj A) := by
+      intro x A hA
+      let e := Classical.choice
+        ((Classical.choice
+          (Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheafFunctor
+            X.structureSheaf x)).obj_iso A)
+      exact Injective.of_iso e.symm
+        (moduleSkyscraper_injective X x A hA)
+    let T : ∀ F : Mod X.structureSheaf, Mod X.structureSheaf :=
+      fun F => ∏ᶜ fun x : X => (S x).obj (K F x)
+    have hT_injective : ∀ F : Mod X.structureSheaf, Injective (T F) := by
+      intro F
+      letI : ∀ x : X, Injective ((S x).obj (K F x)) :=
+        fun x => hS_injective x (K F x) (hK_injective F x)
+      exact inferInstance
+    let j' {F : Mod X.structureSheaf} (x : X) :
+        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).obj F ⟶ K F x := by
+      exact (D F).j x
+    let η : ∀ F : Mod X.structureSheaf, F ⟶ T F :=
+      fun F => Pi.lift fun x =>
+        Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+          X.structureSheaf x F (K F x) (j' x)
+    let stalkMap {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X) :
+        stalkModule X F x ⟶ stalkModule X G x :=
+      Formalization.Books.Sheaves.Unit27.moduleStalkFunctor X.structureSheaf x |>.map f
+    let k {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X) :
+        K F x ⟶ K G x :=
+      Pi.lift fun h : stalkModule X G x ⟶ I x =>
+        Pi.π (fun _ : stalkModule X F x ⟶ I x => I x)
+          (stalkMap f x ≫ h)
+    have k_component {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X)
+        (h : stalkModule X G x ⟶ I x) :
+        k f x ≫ Pi.π (fun _ : stalkModule X G x ⟶ I x => I x) h =
+          Pi.π (fun _ : stalkModule X F x ⟶ I x => I x)
+            (stalkMap f x ≫ h) := by
+      dsimp [k]
+      exact Pi.lift_π _ _
+    have k_id (F : Mod X.structureSheaf) (x : X) :
+        k (𝟙 F) x = 𝟙 (K F x) := by
+      apply limit.hom_ext
+      rintro ⟨h⟩
+      change k (𝟙 F) x ≫ Pi.π
+        (fun _ : stalkModule X F x ⟶ I x => I x) h =
+          𝟙 (K F x) ≫ Pi.π
+            (fun _ : stalkModule X F x ⟶ I x => I x) h
+      rw [k_component]
+      change Pi.π (fun _ : stalkModule X F x ⟶ I x => I x)
+        ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map (𝟙 F) ≫ h) = _
+      rw [(Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+        X.structureSheaf x).map_id]
+      exact congrArg (Pi.π (fun _ : stalkModule X F x ⟶ I x => I x))
+        (Category.id_comp h)
+    have k_comp {F G H : Mod X.structureSheaf}
+        (f : F ⟶ G) (g : G ⟶ H) (x : X) :
+        k (f ≫ g) x = k f x ≫ k g x := by
+      apply limit.hom_ext
+      rintro ⟨h⟩
+      rw [Category.assoc, k_component, k_component, k_component]
+      have hmap : stalkMap (f ≫ g) x = stalkMap f x ≫ stalkMap g x := by
+        change (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map (f ≫ g) =
+          (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map f ≫
+            (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+              X.structureSheaf x).map g
+        exact (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map_comp f g
+      rw [hmap, Category.assoc]
+    have k_fac {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X) :
+        (D F).j x ≫ k f x =
+          stalkMap f x ≫ (D G).j x := by
+      apply limit.hom_ext
+      rintro ⟨h⟩
+      have hk : k f x ≫ Pi.π
+          (fun _ : stalkModule X G x ⟶ I x => I x) h =
+          Pi.π (fun _ : stalkModule X F x ⟶ I x => I x)
+            (stalkMap f x ≫ h) := by
+        dsimp [k]
+        exact Pi.lift_π _ _
+      have hj : (D G).j x ≫ limit.π
+          (Discrete.functor (fun _ : stalkModule X G x ⟶ I x => I x))
+            (Discrete.mk h) = h := by
+        change (D G).j x ≫ Pi.π
+          (fun _ : stalkModule X G x ⟶ I x => I x) h = h
+        dsimp [D]
+        exact Pi.lift_π _ _
+      have hjF : (D F).j x ≫ Pi.π
+          (fun _ : stalkModule X F x ⟶ I x => I x)
+            (stalkMap f x ≫ h) = stalkMap f x ≫ h := by
+        dsimp [D]
+        exact Pi.lift_π _ _
+      rw [Category.assoc, hk, hjF, Category.assoc, hj]
+    have k_fac' {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X) :
+        j' x ≫ k f x = stalkMap f x ≫ j' x := by
+      simpa [j', stalkMap,
+        Formalization.Books.Sheaves.Unit27.moduleStalkFunctor, stalkModule] using k_fac f x
+    let q {F G : Mod X.structureSheaf} (f : F ⟶ G) : T F ⟶ T G :=
+      Pi.lift fun x => Pi.π (fun x : X => (S x).obj (K F x)) x ≫
+        (S x).map (k f x)
+    have eta_fac {F G : Mod X.structureSheaf} (f : F ⟶ G) :
+        f ≫ η G = η F ≫ q f := by
+      apply limit.hom_ext
+      rintro ⟨x⟩
+      have hη : η G ≫ Pi.π
+          (fun x : X => (S x).obj (K G x)) x =
+          Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+            X.structureSheaf x G (K G x) (j' x) := by
+        dsimp [η]
+        exact Pi.lift_π _ _
+      have hq : q f ≫ Pi.π
+          (fun x : X => (S x).obj (K G x)) x =
+          Pi.π (fun x : X => (S x).obj (K F x)) x ≫ (S x).map (k f x) := by
+        dsimp [q]
+        exact Pi.lift_π _ _
+      have hηF : η F ≫ Pi.π
+          (fun x : X => (S x).obj (K F x)) x =
+          Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+            X.structureSheaf x F (K F x) (j' x) := by
+        dsimp [η]
+        exact Pi.lift_π _ _
+      rw [Category.assoc, hη, Category.assoc, hq]
+      rw [← Category.assoc, hηF]
+      dsimp [S]
+      rw [← (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperAdjunction
+        X.structureSheaf x).homEquiv_naturality_left,
+        ← (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperAdjunction
+          X.structureSheaf x).homEquiv_naturality_right, k_fac' f x]
+      rfl
+    have hη_mono (F : Mod X.structureSheaf) : Mono (η F) := by
+      have hstalk : ∀ x : X, Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map (η F)) := by
+        intro x
+        let φ := (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+          X.structureSheaf x F (K F x)) (j' x)
+        have hj' : Mono (j' (F := F) x) := by
+          dsimp [j']
+          exact (D F).mono_j x
+        have hφ : Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map φ) := by
+          have hc := Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv_counit
+            X.structureSheaf x F
+              (K F x) (j' x)
+          constructor
+          intro Z a b hab
+          apply hj'.right_cancellation
+          rw [hc]
+          simpa only [Category.assoc] using congrArg (fun t => t ≫
+            (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperAdjunction
+              X.structureSheaf x).counit.app (K F x)) hab
+        have hcomponent : Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map
+            (η F ≫ Pi.π (fun x : X => (S x).obj (K F x)) x)) := by
+          have hηx : η F ≫ Pi.π
+              (fun x : X => (S x).obj (K F x)) x = φ := by
+            dsimp [φ, η]
+            exact Pi.lift_π _ _
+          rw [hηx]
+          exact hφ
+        constructor
+        intro Z a b hab
+        apply hcomponent.right_cancellation
+        simpa only [Functor.map_comp, Category.assoc] using congrArg (fun t => t ≫
+          (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map
+            (Pi.π (fun x : X => (S x).obj (K F x)) x)) hab
+      have hSheaf : Mono ((SheafOfModules.toSheaf X.structureSheaf).map (η F)) := by
+        apply (TopCat.Presheaf.mono_iff_stalk_mono _).2
+        intro x
+        have hx := hstalk x
+        apply (AddCommGrpCat.mono_iff_injective _).mpr
+        intro a b hab
+        apply (ModuleCat.mono_iff_injective _).mp hx
+        exact hab
+      constructor
+      intro Z a b hab
+      apply (SheafOfModules.toSheaf X.structureSheaf).map_injective
+      apply hSheaf.right_cancellation
+      simpa only [Functor.map_comp] using congrArg (fun t =>
+        (SheafOfModules.toSheaf X.structureSheaf).map t) hab
+    have q_component {F G : Mod X.structureSheaf} (f : F ⟶ G) (x : X) :
+        q f ≫ Pi.π (fun x : X => (S x).obj (K G x)) x =
+          Pi.π (fun x : X => (S x).obj (K F x)) x ≫ (S x).map (k f x) := by
+      dsimp [q]
+      exact Pi.lift_π _ _
+    have q_id (F : Mod X.structureSheaf) :
+        q (𝟙 F) = 𝟙 (T F) := by
+      apply limit.hom_ext
+      rintro ⟨x⟩
+      rw [q_component, k_id]
+      simp
+    have q_comp {F G H : Mod X.structureSheaf}
+        (f : F ⟶ G) (g : G ⟶ H) :
+        q (f ≫ g) = q f ≫ q g := by
+      apply limit.hom_ext
+      rintro ⟨x⟩
+      rw [q_component]
+      rw [Category.assoc, q_component]
+      rw [← Category.assoc, q_component]
+      rw [k_comp f g x, Functor.map_comp, Category.assoc]
+    let J : Mod X.structureSheaf ⥤ Arrow (Mod X.structureSheaf) :=
+      { obj := fun F => Arrow.mk (η F)
+        map := fun {F G} f => Arrow.homMk f (q f) (by
+          change f ≫ η G = η F ≫ q f
+          exact eta_fac f)
+        map_id := by
+          intro F
+          apply Arrow.hom_ext
+          · rfl
+          · exact q_id F
+        map_comp := by
+          intro F G H f g
+          apply Arrow.hom_ext
+          · rfl
+          · exact q_comp f g }
+    have hJleft : J ⋙ Arrow.leftFunc = 𝟭 (Mod X.structureSheaf) := by
+      apply CategoryTheory.Functor.hext
+      · intro A
+        rfl
+      · intro A B f
+        rfl
+    have hJmono : ∀ A : Mod X.structureSheaf, Mono (J.obj A).hom := by
+      intro A
+      change Mono (η A)
+      exact hη_mono A
+    have hJinjective : ∀ A : Mod X.structureSheaf, Injective (J.obj A).right := by
+      intro A
+      change Injective (T A)
+      exact hT_injective A
+    exact ⟨J, hJleft, hJmono, hJinjective⟩
 
 end Formalization.Books.Injectives.Unit05

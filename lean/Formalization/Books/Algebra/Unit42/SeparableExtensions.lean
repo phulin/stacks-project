@@ -1127,6 +1127,33 @@ theorem pth_power_of_separable_polynomial
   exact hq
 
 
+/-- A purely inseparable extension of the top field introduces no new
+elements separable over the original base. -/
+theorem separableClosure_map_eq_of_isPurelyInseparable
+    {F : Type u} {K : Type v} {L : Type*}
+    [Field F] [Field K] [Field L] [Algebra F K] [Algebra F L]
+    [Algebra K L] [IsScalarTower F K L] [IsPurelyInseparable K L] :
+    (separableClosure F K).map (IsScalarTower.toAlgHom F K L) =
+      separableClosure F L := by
+  apply le_antisymm
+  · exact separableClosure.map_le_of_algHom (IsScalarTower.toAlgHom F K L)
+  · intro x hx
+    have hxsepF : IsSeparable F x := mem_separableClosure_iff.mp hx
+    have hxsepK : IsSeparable K x := hxsepF.tower_top K
+    obtain ⟨y, hy⟩ := IsPurelyInseparable.inseparable K x hxsepK
+    have hymem' : y ∈ (separableClosure F L).comap
+        (IsScalarTower.toAlgHom F K L) := by
+      change (IsScalarTower.toAlgHom F K L) y ∈ separableClosure F L
+      rw [show (IsScalarTower.toAlgHom F K L) y = x from hy]
+      exact hx
+    have hymem : y ∈ separableClosure F K := by
+      rw [separableClosure.comap_eq_of_algHom] at hymem'
+      exact hymem'
+    have hmap : (IsScalarTower.toAlgHom F K L) y ∈
+        (separableClosure F K).map (IsScalarTower.toAlgHom F K L) :=
+      (IntermediateField.map_mem_map
+        (S := separableClosure F K) (IsScalarTower.toAlgHom F K L)).2 hymem
+    exact hy ▸ hmap
 
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is

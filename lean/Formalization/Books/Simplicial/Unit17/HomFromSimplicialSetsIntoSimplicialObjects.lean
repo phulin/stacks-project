@@ -1163,14 +1163,15 @@ theorem finiteNonempty_pushout
     (hW : Unit13.FiniteNonemptySimplicialSet W) :
     Unit13.FiniteNonemptySimplicialSet (pushout a b) := by
   intro n
+  have _hU := hU
   let X : SimplexCategoryᵒᵖ := op (SimplexCategory.mk n)
   let e := pushoutObjIso a b X
-  letI : Finite (V.obj X) := by simpa [X] using (hV n).1
-  letI : Finite (W.obj X) := by simpa [X] using (hW n).1
-  letI : Fintype (V.obj X) := Fintype.ofFinite _
-  letI : Fintype (W.obj X) := Fintype.ofFinite _
-  letI : Nonempty (V.obj X) := by simpa [X] using (hV n).2
-  letI : Nonempty (W.obj X) := by simpa [X] using (hW n).2
+  let : Finite (V.obj X) := by simpa [X] using (hV n).1
+  let : Finite (W.obj X) := by simpa [X] using (hW n).1
+  let : Fintype (V.obj X) := Fintype.ofFinite _
+  let : Fintype (W.obj X) := Fintype.ofFinite _
+  let : Nonempty (V.obj X) := by simpa [X] using (hV n).2
+  let : Nonempty (W.obj X) := by simpa [X] using (hW n).2
   have hfin : Finite (pushout (a.app X) (b.app X)) := by
     let f : V.obj X ⊕ W.obj X → pushout (a.app X) (b.app X) :=
       Sum.elim (pushout.inl (a.app X) (b.app X))
@@ -1188,7 +1189,7 @@ theorem finiteNonempty_pushout
       exact hz.symm.trans hy
     · exact ⟨Sum.inl y, hy⟩
     · exact ⟨Sum.inr y, hy⟩
-  letI : Finite (pushout (a.app X) (b.app X)) := hfin
+  let : Finite (pushout (a.app X) (b.app X)) := hfin
   have hne : Nonempty (pushout (a.app X) (b.app X)) :=
     Nonempty.map (pushout.inl (a.app X) (b.app X)) inferInstance
   constructor
@@ -1208,9 +1209,9 @@ theorem eventuallyDegenerate_pushout
   rcases hVdeg with ⟨dV, hdV⟩
   rcases hWdeg with ⟨dW, hdW⟩
   let d := max dU (max dV dW)
-  letI : U.HasDimensionLT dU := hdU
-  letI : V.HasDimensionLT dV := hdV
-  letI : W.HasDimensionLT dW := hdW
+  let : U.HasDimensionLT dU := hdU
+  let : V.HasDimensionLT dV := hdV
+  let : W.HasDimensionLT dW := hdW
   have hU' : U.HasDimensionLT d :=
     SSet.hasDimensionLT_of_le U dU d (Nat.le_max_left _ _)
   have hV' : V.HasDimensionLT d :=
@@ -1288,7 +1289,7 @@ private theorem homPrecomp_homHomEquiv
           (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
           ((ConcreteCategory.hom (a.app X)) u))
     rw [← Category.assoc, Sigma.ι_desc]
-    simp [Category.assoc, Sigma.ι_desc]
+    simp [Category.assoc]
   have hprod' :
       Unit13.productWithSimplicialSetMap (ObjectProperty.homMk a : U₀ ⟶ V₀) (𝟙 Z) ≫
           Unit13.productWithSimplicialSetMap
@@ -1322,7 +1323,7 @@ private theorem homPrecomp_homHomEquiv
           (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
           ((ConcreteCategory.hom (a.app X)) u))
     rw [← Category.assoc, Sigma.ι_desc]
-    simp [Category.assoc, Sigma.ι_desc]
+    simp
   have hhom0 :
       homHomEquiv V T hV hVdeg Z f =
         productWithSimplicialSetMapSecond V hV f ≫
@@ -1514,8 +1515,6 @@ private noncomputable def compatibleFamily_pushout
     let Y : SimplexCategoryᵒᵖ := op (SimplexCategory.mk m)
     let eX := pushoutObjIso a b X
     let eY := pushoutObjIso a b Y
-    letI : HasPushout (a.app X) (b.app X) := inferInstance
-    letI : HasPushout (a.app Y) (b.app Y) := inferInstance
     have hq : a.app X ≫ V.map φ.op = U.map φ.op ≫ a.app Y :=
       (a.naturality φ.op).symm
     have hq' : b.app X ≫ W.map φ.op = U.map φ.op ≫ b.app Y :=

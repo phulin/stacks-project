@@ -371,6 +371,34 @@ def oppositeCosimplicialMap
     simpa [op_comp] using
       (congrArg (fun k => k.op) (a.naturality f.unop)).symm
 
+/-- Recover a cosimplicial map from a map between the opposite simplicial
+objects. -/
+def unoppositeCosimplicialMap
+    {C : Type u} [Category.{v} C] {U V : CosimplicialObject C}
+    (a : oppositeCosimplicialObject V ⟶ oppositeCosimplicialObject U) :
+    U ⟶ V where
+  app X := (a.app (op X)).unop
+  naturality X Y f := by
+    have h := a.naturality f.op
+    simpa [oppositeCosimplicialObject, op_comp] using
+      (congrArg (fun k => k.unop) h).symm
+
+@[simp]
+theorem unoppositeCosimplicialMap_oppositeCosimplicialMap
+    {C : Type u} [Category.{v} C] {U V : CosimplicialObject C}
+    (a : U ⟶ V) :
+    unoppositeCosimplicialMap (oppositeCosimplicialMap a) = a := by
+  ext X
+  rfl
+
+@[simp]
+theorem oppositeCosimplicialMap_unoppositeCosimplicialMap
+    {C : Type u} [Category.{v} C] {U V : CosimplicialObject C}
+    (a : oppositeCosimplicialObject V ⟶ oppositeCosimplicialObject U) :
+    oppositeCosimplicialMap (unoppositeCosimplicialMap a) = a := by
+  ext X
+  rfl
+
 theorem compareHomotopies
     {C : Type u} [Category.{v} C]
     {U V : CosimplicialObject C} {a b : U ⟶ V} :
@@ -656,13 +684,45 @@ theorem compareHomotopies
         exact hnat f α
     }⟩
 
+private theorem eqvGen_map {A B : Type*} {r : A → A → Prop}
+    {s : B → B → Prop} (F : A → B)
+    (hF : ∀ {a b}, r a b → s (F a) (F b)) {a b : A}
+    (h : Relation.EqvGen r a b) : Relation.EqvGen s (F a) (F b) := by
+  induction h with
+  | rel a b h => exact Relation.EqvGen.rel _ _ (hF h)
+  | refl a => exact Relation.EqvGen.refl _
+  | symm a b h ih => exact Relation.EqvGen.symm _ _ ih
+  | trans a b c h₁ h₂ ih₁ ih₂ => exact Relation.EqvGen.trans _ _ _ ih₁ ih₂
+
 theorem homotopic_iff_opposite_homotopic
     {C : Type u} [Category.{v} C]
     {U V : CosimplicialObject C} {a b : U ⟶ V} :
     Homotopic a b ↔
       Formalization.Books.Simplicial.Unit26.Homotopic
         (oppositeCosimplicialMap a) (oppositeCosimplicialMap b) := by
-  sorry
+  constructor
+  · intro h
+    apply eqvGen_map oppositeCosimplicialMap (a := a) (b := b) _ h
+    intro q r hqr
+    rcases (compareHomotopies).1 hqr with ⟨H⟩
+    exact ⟨Formalization.Books.Simplicial.Unit26.degreewiseHomotopyToHomotopy H⟩
+  · intro h
+    have mapped : Homotopic
+        (unoppositeCosimplicialMap (oppositeCosimplicialMap a))
+        (unoppositeCosimplicialMap (oppositeCosimplicialMap b)) :=
+      eqvGen_map unoppositeCosimplicialMap (a := oppositeCosimplicialMap a)
+      (b := oppositeCosimplicialMap b) (s := fun q r => OneStepHomotopy q r)
+      (fun {q r} hqr => by
+        rcases hqr with ⟨H⟩
+        have HD :=
+          Formalization.Books.Simplicial.Unit26.homotopyToDegreewiseHomotopy H
+        have Hop : Nonempty
+            (Formalization.Books.Simplicial.Unit26.DegreewiseHomotopy
+              (oppositeCosimplicialMap (unoppositeCosimplicialMap q))
+              (oppositeCosimplicialMap (unoppositeCosimplicialMap r))) := by
+          simpa using ⟨HD⟩
+        exact (compareHomotopies).2 Hop) h
+    simpa using mapped
 
 /-! ## Functoriality, in covariant and contravariant forms -/
 

@@ -535,6 +535,278 @@ abbrev Homotopy
     {U V : SimplicialObject C} (a b : U ⟶ V) :=
   SimplicialObject.Homotopy a b
 
+/-! The source's degree-preserving convention and Mathlib's degree-raising
+convention contain the same data.  We keep both explicit because the former
+is convenient for interval arguments, while the latter interfaces with
+Mathlib's normalized-chain-complex API. -/
+
+private noncomputable def homotopyDegreewiseComponent
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : Homotopy a b) (n : ℕ) (i : Fin (n + 2)) :
+    U.obj (op (SimplexCategory.mk n)) ⟶ V.obj (op (SimplexCategory.mk n)) :=
+  Fin.lastCases (a.app (op (SimplexCategory.mk n)))
+    (fun i => H.h i ≫ V.δ i.castSucc) i
+
+private lemma homotopyDegreewiseComponent_castSucc
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : Homotopy a b) (n : ℕ) (i : Fin (n + 1)) :
+    homotopyDegreewiseComponent H n i.castSucc = H.h i ≫ V.δ i.castSucc := by
+  simp [homotopyDegreewiseComponent]
+
+private lemma homotopyDegreewiseComponent_succ
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : Homotopy a b) (n : ℕ) (i : Fin (n + 1)) :
+    homotopyDegreewiseComponent H n i.succ = H.h i ≫ V.δ i.succ := by
+  cases i using Fin.lastCases with
+  | last =>
+      simpa [homotopyDegreewiseComponent] using (H.h_last_comp_δ_last n).symm
+  | cast i =>
+      cases n with
+      | zero => exact Fin.elim0 i
+      | succ n =>
+          rw [show i.castSucc.succ = i.succ.castSucc by ext; rfl,
+            homotopyDegreewiseComponent_castSucc]
+          simpa using H.h_succ_comp_δ_castSucc_succ i
+
+/-- Convert Mathlib's degree-raising simplicial homotopy to the source's
+degree-preserving convention. -/
+noncomputable def homotopyToDegreewiseHomotopy
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : Homotopy a b) : DegreewiseHomotopy a b where
+  h n := homotopyDegreewiseComponent H n
+  h_zero n := by
+    rw [show (0 : Fin (n + 2)) = (0 : Fin (n + 1)).castSucc by rfl,
+      homotopyDegreewiseComponent_castSucc]
+    exact H.h_zero_comp_δ_zero n
+  h_last n := by simp [homotopyDegreewiseComponent]
+  face_of_gt := by
+    intro n i j hji
+    cases i using Fin.lastCases with
+    | last =>
+        simp only [homotopyDegreewiseComponent, Fin.lastCases_last, Fin.pred_last]
+        exact (a.naturality _).symm
+    | cast k =>
+        simp only [homotopyDegreewiseComponent, Fin.lastCases_castSucc]
+        cases k using Fin.cases with
+        | zero => simp at hji
+        | succ l =>
+            have hk : l.succ.castSucc.pred (Fin.ne_zero_of_lt hji) = l.castSucc := by
+              apply Fin.ext
+              simp
+            rw [hk, Fin.lastCases_castSucc]
+            have hval : (j : ℕ) < (l : ℕ) + 1 := by exact hji
+            have hle : j ≤ l.castSucc := Fin.le_iff_val_le_val.mpr
+              (Nat.le_of_lt_succ hval)
+            have hδ := V.δ_comp_δ (i := j) (j := l.castSucc) hle
+            have hH := H.h_succ_comp_δ_castSucc_of_lt j l hle
+            rw [show l.succ.castSucc = l.castSucc.succ by ext; rfl]
+            simp only [Category.assoc]
+            rw [hδ, ← Category.assoc, hH, Category.assoc]
+  face_of_le := by
+    intro n i j hij
+    cases i using Fin.cases with
+    | zero =>
+        have hc₁ : homotopyDegreewiseComponent H (n + 1) 0 =
+            H.h 0 ≫ V.δ 0 := by
+          simpa using homotopyDegreewiseComponent_castSucc H (n + 1)
+            (0 : Fin (n + 2))
+        have hc₀ : homotopyDegreewiseComponent H n ((0 : Fin (n + 3)).castPred
+            (Fin.ne_last_of_lt (lt_of_le_of_lt hij j.castSucc_lt_succ))) =
+            H.h 0 ≫ V.δ 0 := by
+          have hz : (0 : Fin (n + 3)).castPred
+              (Fin.ne_last_of_lt (lt_of_le_of_lt hij j.castSucc_lt_succ)) = 0 := by
+            apply Fin.ext
+            rfl
+          rw [hz]
+          simpa using homotopyDegreewiseComponent_castSucc H n (0 : Fin (n + 1))
+        rw [hc₁, hc₀, H.h_zero_comp_δ_zero (n + 1),
+          H.h_zero_comp_δ_zero n]
+        exact (b.naturality _).symm
+    | succ k =>
+        have hklt : k < Fin.last (n + 1) := by
+          change (k : ℕ) < n + 1
+          have hv : (k : ℕ) + 1 ≤ (j : ℕ) := Fin.le_iff_val_le_val.mp hij
+          omega
+        let l : Fin (n + 1) := k.castPred (ne_of_lt hklt)
+        have hkl : k = l.castSucc := by apply Fin.ext; rfl
+        have hi : k.succ.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ)) = l.succ := by
+          apply Fin.ext
+          simp [l]
+        rw [hi, homotopyDegreewiseComponent_succ,
+          homotopyDegreewiseComponent_succ, hkl]
+        have hlt : l.castSucc < j := by
+          apply Fin.lt_def.mpr
+          exact lt_of_lt_of_le (Nat.lt_succ_self _) (Fin.le_iff_val_le_val.mp hij)
+        have hδ := V.δ_comp_δ (i := l.succ) (j := j) hij
+        have hH := H.h_castSucc_comp_δ_succ_of_lt j l hlt
+        rw [show l.castSucc.succ = l.succ.castSucc by ext; rfl]
+        simp only [Category.assoc]
+        rw [← hδ, ← Category.assoc, hH, Category.assoc]
+  degeneracy_of_gt := by
+    intro n i j hji
+    cases i using Fin.cases with
+    | zero => simp at hji
+    | succ k =>
+        rw [homotopyDegreewiseComponent_succ]
+        rw [homotopyDegreewiseComponent_succ]
+        have hle : j ≤ k := by
+          apply Fin.le_iff_val_le_val.mpr
+          exact Nat.le_of_lt_succ hji
+        have hδσ := V.δ_comp_σ_of_gt (i := k.succ) (j := j) hji
+        have hH := H.h_comp_σ_castSucc_of_le j k hle
+        simp only [Category.assoc]
+        rw [← hδσ, ← Category.assoc, hH, Category.assoc]
+  degeneracy_of_le := by
+    intro n i j hij
+    cases i using Fin.cases with
+    | zero =>
+        have hc₀ : homotopyDegreewiseComponent H n 0 = H.h 0 ≫ V.δ 0 := by
+          simpa using homotopyDegreewiseComponent_castSucc H n (0 : Fin (n + 1))
+        have hc₁ : homotopyDegreewiseComponent H (n + 1)
+            (0 : Fin (n + 2)).castSucc = H.h 0 ≫ V.δ 0 :=
+          homotopyDegreewiseComponent_castSucc H (n + 1) 0
+        rw [hc₀, hc₁, H.h_zero_comp_δ_zero n,
+          H.h_zero_comp_δ_zero (n + 1)]
+        exact (b.naturality _).symm
+    | succ k =>
+        rw [homotopyDegreewiseComponent_succ]
+        rw [show k.succ.castSucc = k.castSucc.succ by ext; rfl,
+          homotopyDegreewiseComponent_succ]
+        have hle : k ≤ j := by
+          apply Fin.le_iff_val_le_val.mpr
+          exact le_trans (Nat.le_succ _) (Fin.le_iff_val_le_val.mp hij)
+        have hδσ := V.δ_comp_σ_of_le (i := k.succ) (j := j) hij
+        have hH := H.h_comp_σ_succ_of_lt j k hle
+        simp only [Category.assoc]
+        rw [← hδσ, ← Category.assoc, hH, Category.assoc]
+        congr 2
+
+/-- Convert the source's degree-preserving homotopy to Mathlib's
+degree-raising convention. -/
+noncomputable def degreewiseHomotopyToHomotopy
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) : Homotopy a b := {
+    h := fun {n} i => U.σ i ≫ H.h (n + 1) i.castSucc.succ
+    h_zero_comp_δ_zero := by
+      intro n
+      let i : Fin (n + 3) := (Fin.castSucc (0 : Fin (n + 1))).succ
+      have hpos : (0 : Fin (n + 2)).castSucc < i := by simp [i]
+      have hface := H.face_of_gt (n := n) i (0 : Fin (n + 2)) hpos
+      have hpred : i.pred (Fin.ne_zero_of_lt hpos) = (0 : Fin (n + 2)) := by
+        apply Fin.ext
+        rfl
+      rw [hpred] at hface
+      simp only [Category.assoc]
+      rw [hface, H.h_zero n]
+      rw [U.δ_comp_σ_self'_assoc (i := 0) (j := 0) (by ext; rfl)]
+    h_last_comp_δ_last := by
+      intro n
+      let i : Fin (n + 3) := (Fin.last n).castSucc.succ
+      let j : Fin (n + 2) := Fin.last (n + 1)
+      have hle : i ≤ j.castSucc := by simp [i, j]
+      have hface := H.face_of_le (n := n) i j hle
+      have hcast : i.castPred
+          (Fin.ne_last_of_lt (lt_of_le_of_lt hle j.castSucc_lt_succ)) =
+            Fin.last (n + 1) := by
+        apply Fin.ext
+        rfl
+      rw [hcast] at hface
+      simp only [Category.assoc]
+      rw [hface]
+      rw [U.δ_comp_σ_succ'_assoc (i := Fin.last n)
+        (j := Fin.last (n + 1)) (by ext; rfl)]
+      simp [H.h_last]
+    h_succ_comp_δ_castSucc_of_lt := by
+      intro n i j hij
+      have hgt : i.castSucc.castSucc < j.succ.castSucc.succ := by
+        apply Fin.val_fin_lt.mpr
+        have hij' : (i : ℕ) ≤ (j : ℕ) := Fin.le_iff_val_le_val.mp hij
+        exact hij'.trans_lt (Nat.lt_succ_of_le (Nat.le_succ _))
+      have hface := H.face_of_gt (n := n + 1)
+        (i := j.succ.castSucc.succ) (j := i.castSucc) hgt
+      have hpred : (j.succ.castSucc.succ).pred (Fin.ne_zero_of_lt hgt) =
+          j.castSucc.succ := by
+        apply Fin.ext
+        rfl
+      rw [hpred] at hface
+      simp only [Category.assoc]
+      rw [hface, U.δ_comp_σ_of_le_assoc hij]
+    h_succ_comp_δ_castSucc_succ := by
+      intro n j
+      have hface₁ := H.face_of_gt (n := n + 1)
+        (i := j.succ.castSucc.succ) (j := j.castSucc.succ) (by simp)
+      have hpred₁ : (j.succ.castSucc.succ).pred
+          (Fin.ne_zero_of_lt (show (j.castSucc.succ).castSucc <
+            j.succ.castSucc.succ by simp)) = j.castSucc.succ := by
+        apply Fin.ext
+        rfl
+      rw [hpred₁] at hface₁
+      have hface₂ := H.face_of_le (n := n + 1)
+        (i := j.castSucc.castSucc.succ) (j := j.castSucc.succ) (by simp)
+      have hpred₂ : (j.castSucc.castSucc.succ).castPred
+          (Fin.ne_last_of_lt (lt_of_le_of_lt (by simp)
+            (j.castSucc.succ).castSucc_lt_succ)) = j.castSucc.succ := by
+        apply Fin.ext
+        rfl
+      rw [hpred₂] at hface₂
+      have hJ : j.castSucc.succ = j.succ.castSucc := by
+        apply Fin.ext
+        rfl
+      simp only [Category.assoc]
+      rw [hface₁]
+      rw [hJ, U.δ_comp_σ_self_assoc (i := j.succ)]
+      rw [← hJ, hface₂, U.δ_comp_σ_succ_assoc (i := j.castSucc)]
+    h_castSucc_comp_δ_succ_of_lt := by
+      intro n i j hji
+      have hle : j.castSucc.castSucc.succ ≤ i.succ.castSucc := by
+        have hle₀ : j.castSucc.castSucc < i.succ :=
+          (Fin.castSucc_lt_succ_iff).2 (le_of_lt hji)
+        exact (Fin.succ_le_castSucc_iff).2 hle₀
+      have hface := H.face_of_le (n := n + 1)
+        (i := j.castSucc.castSucc.succ) (j := i.succ) hle
+      have hpred : (j.castSucc.castSucc.succ).castPred
+          (Fin.ne_last_of_lt (lt_of_le_of_lt hle i.succ.castSucc_lt_succ)) =
+            j.castSucc.succ := by
+        apply Fin.ext
+        rfl
+      rw [hpred] at hface
+      simp only [Category.assoc]
+      rw [hface, U.δ_comp_σ_of_gt_assoc hji]
+    h_comp_σ_castSucc_of_le := by
+      intro n i j hij
+      have hgt : i.castSucc.castSucc < j.castSucc.succ := by
+        apply Fin.val_fin_lt.mpr
+        have hij' : (i : ℕ) ≤ (j : ℕ) := Fin.le_iff_val_le_val.mp hij
+        simpa using Nat.lt_succ_of_le hij'
+      have hface := H.degeneracy_of_gt (n := n + 1)
+        (i := j.castSucc.succ) (j := i.castSucc) hgt
+      have hidx : j.castSucc.succ.succ = j.succ.castSucc.succ := by
+        apply Fin.ext
+        simp
+      rw [hidx] at hface
+      simp only [Category.assoc]
+      rw [hface, U.σ_comp_σ_assoc hij]
+    h_comp_σ_succ_of_lt := by
+      intro n i j hji
+      have hji' : (j : ℕ) ≤ (i : ℕ) := Fin.le_iff_val_le_val.mp hji
+      have hle : j.castSucc.succ ≤ i.succ.castSucc := by
+        apply Fin.val_fin_le.mpr
+        simpa using Nat.succ_le_succ hji'
+      have hface := H.degeneracy_of_le (n := n + 1)
+        (i := j.castSucc.succ) (j := i.succ) hle
+      have hidx : (j.castSucc.succ).castSucc = j.castSucc.castSucc.succ := by
+        apply Fin.ext
+        simp
+      rw [hidx] at hface
+      simp only [Category.assoc]
+      rw [hface, ← U.σ_comp_σ_assoc hji] }
+
 /-- The one-step homotopy relation. -/
 def OneStepHomotopy
     {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
@@ -596,7 +868,11 @@ theorem homotopy_iff_degreewise
     {U V : SimplicialObject C} {a b : U ⟶ V} :
     Nonempty (CylinderHomotopy a b) ↔ OneStepHomotopy a b := by
   rw [cylinderHomotopy_iff_degreewise]
-  sorry
+  constructor
+  · rintro ⟨H⟩
+    exact ⟨degreewiseHomotopyToHomotopy H⟩
+  · rintro ⟨H⟩
+    exact ⟨homotopyToDegreewiseHomotopy H⟩
 
 theorem trivialCylinderHomotopy
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

@@ -1,5 +1,7 @@
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.Sheaves.Unit25.Infrastructure
+import Formalization.Books.Sheaves.Unit27.Skyscraper
+import Formalization.Books.Injectives.Unit04.AbelianSheaves
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
 import Mathlib.Algebra.Category.ModuleCat.Stalk
@@ -62,7 +64,13 @@ theorem exists_moduleSkyscraperSheaf (X : RingedSpace.{v}) (x : X)
     (I : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)) :
     Nonempty (ModuleSkyscraperData X x I) := by
-  sorry
+  classical
+  let D := Classical.choice
+    (Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheaf
+      X.structureSheaf x I)
+  refine ⟨{ sheaf := D.sheaf, underlying_iso := ?_ }⟩
+  simpa [additiveSkyscraperSheaf,
+    Formalization.Books.Sheaves.Unit27.abelianSkyscraperSheaf] using D.underlying_iso
 
 /-- A chosen module-valued skyscraper sheaf. -/
 noncomputable def moduleSkyscraperSheaf (X : RingedSpace.{v}) (x : X)
@@ -95,7 +103,14 @@ theorem pointwiseProductSheaf_value_formula (X : RingedSpace.{v})
     Nonempty
       ((pointwiseProductSheaf X I).presheaf.obj (op U) ≅
         AddCommGrpCat.of (pointwiseProductValue X I U)) := by
-  sorry
+  simpa [pointwiseProductSheaf, pointwiseProductValue,
+    additiveSkyscraperSheaf,
+    skyscraperSheafFunctor,
+    Formalization.Books.Injectives.Unit04.abelianSheafSkyscraperProduct,
+    Formalization.Books.Injectives.Unit04.abelianSkyscraperSheafFunctor,
+    Formalization.Books.Injectives.Unit04.abelianSheafPointwiseProductObject] using
+    (Formalization.Books.Injectives.Unit04.abelianSheafSkyscraperProduct_pointwise_formula
+      (fun x : X => AddCommGrpCat.of (I x : Type v)) U)
 
 /-! ## The module skyscraper product -/
 
@@ -115,7 +130,102 @@ theorem skyscraperProduct_underlying_iso (X : RingedSpace.{v})
     Nonempty
       ((skyscraperProduct X I).val.presheaf ≅
         (pointwiseProductSheaf X I).presheaf) := by
-  sorry
+  let G := PresheafOfModules.toPresheaf X.structureSheaf.obj
+  let D : Discrete X ⥤ Mod X.structureSheaf :=
+    Discrete.functor (fun x => moduleSkyscraperSheaf X x (I x))
+  let F : Discrete X ⥤ PresheafOfModules X.structureSheaf.obj :=
+    D ⋙ SheafOfModules.forget X.structureSheaf
+  let K : Discrete X ⥤ TopCat.Sheaf AddCommGrpCat X.carrier :=
+    Discrete.functor (fun x =>
+      (additiveSkyscraperSheaf X x
+        (AddCommGrpCat.of (I x : Type v))))
+  let H : Discrete X ⥤ TopCat.Presheaf AddCommGrpCat X.carrier :=
+    K ⋙ TopCat.Sheaf.forget AddCommGrpCat X.carrier
+  let eNat : F ⋙ G ≅ H :=
+    Discrete.natIso (fun j =>
+      (Classical.choice
+        (exists_moduleSkyscraperSheaf X j.as (I j.as))).underlying_iso.some)
+  let p₀ : (SheafOfModules.forget X.structureSheaf).obj (limit D) ≅ limit F :=
+    CategoryTheory.preservesLimitIso (SheafOfModules.forget X.structureSheaf) D
+  let pD : (∏ᶜ fun x : X => moduleSkyscraperSheaf X x (I x)) ≅ limit D :=
+    CategoryTheory.Limits.Pi.isoLimit D
+  let p : G.obj (limit F) ≅ limit (F ⋙ G) :=
+    CategoryTheory.preservesLimitIso G F
+  let r₀ : (TopCat.Sheaf.forget AddCommGrpCat X.carrier).obj (limit K) ≅ limit H :=
+    CategoryTheory.preservesLimitIso (TopCat.Sheaf.forget AddCommGrpCat X.carrier) K
+  let pK : (∏ᶜ fun x : X =>
+      additiveSkyscraperSheaf X x (AddCommGrpCat.of (I x : Type v))) ≅ limit K :=
+    CategoryTheory.Limits.Pi.isoLimit K
+  let c : Cone H :=
+    { pt := limit (F ⋙ G)
+      π :=
+        { app := fun j => limit.π (F ⋙ G) j ≫ eNat.hom.app j
+          naturality := by
+            intro j j' f
+            change limit.π (F ⋙ G) j' ≫ eNat.hom.app j' =
+              limit.π (F ⋙ G) j ≫ eNat.hom.app j ≫ H.map f
+            rw [← eNat.hom.naturality f, ← Category.assoc, limit.w] } }
+  let c' : Cone (F ⋙ G) :=
+    { pt := limit H
+      π :=
+        { app := fun j => limit.π H j ≫ eNat.inv.app j
+          naturality := by
+            intro j j' f
+            change limit.π H j' ≫ eNat.inv.app j' =
+              limit.π H j ≫ eNat.inv.app j ≫ (F ⋙ G).map f
+            rw [← eNat.inv.naturality f, ← Category.assoc, limit.w] } }
+  let q : limit (F ⋙ G) ≅ limit H :=
+    { hom := limit.lift H c
+      inv := limit.lift (F ⋙ G) c'
+      hom_inv_id := by
+        apply (limit.isLimit (F ⋙ G)).hom_ext
+        intro j
+        simp [c, c', eNat]
+      inv_hom_id := by
+        apply (limit.isLimit H).hom_ext
+        intro j
+        simp [c, c', eNat] }
+  refine ⟨?_⟩
+  let underlyingIso (M : PresheafOfModules X.structureSheaf.obj) :
+      G.obj M ≅ M.presheaf := by
+    refine NatIso.ofComponents (fun U => ?_) (fun {U V} f => ?_)
+    · let hU := PresheafOfModules.toPresheaf_obj_coe M U
+      refine
+        { hom := AddCommGrpCat.ofHom
+            { toFun := fun m => hU ▸ m
+              map_zero' := by subst hU; rfl
+              map_add' := by intro m n; subst hU; rfl }
+          inv := AddCommGrpCat.ofHom
+            { toFun := fun m => hU.symm ▸ m
+              map_zero' := by subst hU; rfl
+              map_add' := by intro m n; subst hU; rfl }
+          hom_inv_id := by
+            apply AddCommGrpCat.hom_ext
+            ext m
+            subst hU
+            rfl
+          inv_hom_id := by
+            apply AddCommGrpCat.hom_ext
+            ext m
+            subst hU
+            rfl }
+    · apply AddCommGrpCat.hom_ext
+      ext m
+      rfl
+  let sheafUnderlyingIso (S : TopCat.Sheaf AddCommGrpCat X.carrier) :
+      (TopCat.Sheaf.forget AddCommGrpCat X.carrier).obj S ≅ S.presheaf :=
+    Iso.refl _
+  let hD : (skyscraperProduct X I).val.presheaf ≅
+      G.obj ((SheafOfModules.forget X.structureSheaf).obj (limit D)) := by
+    simpa [skyscraperProduct, D] using
+      (underlyingIso (skyscraperProduct X I).val).symm.trans
+        (G.mapIso ((SheafOfModules.forget X.structureSheaf).mapIso pD))
+  let hK : limit H ≅ (pointwiseProductSheaf X I).presheaf := by
+    simpa [pointwiseProductSheaf, K, H] using
+      r₀.symm.trans
+        (((TopCat.Sheaf.forget AddCommGrpCat X.carrier).mapIso pK).symm.trans
+          (sheafUnderlyingIso (pointwiseProductSheaf X I)))
+  exact hD.trans ((G.mapIso p₀).trans ((p.trans q).trans hK))
 
 /-- The displayed section formula for the `𝒪_X`-module product. -/
 theorem skyscraperProduct_value_formula (X : RingedSpace.{v})
@@ -125,7 +235,9 @@ theorem skyscraperProduct_value_formula (X : RingedSpace.{v})
     Nonempty
       ((skyscraperProduct X I).val.presheaf.obj (op U) ≅
         AddCommGrpCat.of (pointwiseProductValue X I U)) := by
-  sorry
+  obtain ⟨e⟩ := skyscraperProduct_underlying_iso X I
+  obtain ⟨f⟩ := pointwiseProductSheaf_value_formula X I U
+  exact ⟨e.app (op U) ≪≫ f⟩
 
 /-! ## The canonical stalk map and injectivity -/
 

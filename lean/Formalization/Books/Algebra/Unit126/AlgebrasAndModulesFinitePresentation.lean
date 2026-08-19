@@ -599,7 +599,162 @@ theorem construct_fp_module_from_localization {R : Type u} [CommRing R]
     let : Module.Finite R (ULift.{u} (P : Type v)) :=
       Module.Finite.equiv eUL.symm
     exact ⟨ModuleCat.of R (ULift.{u} (P : Type v)), inferInstance, f, hbij'⟩
-  · sorry
+  · intro hM
+    let : Module.FinitePresentation (Localization S) (LocalizedModule S (M : Type v)) := hM
+    obtain ⟨s, hs⟩ := hM
+    have hrep (y : s) : ∃ x : (M : Type v), ∃ t : S,
+        IsLocalizedModule.mk' (LocalizedModule.mkLinearMap S (M : Type v)) x t = y.1 := by
+      obtain ⟨⟨x, t⟩, hx⟩ := IsLocalizedModule.mk'_surjective S (LocalizedModule.mkLinearMap S (M : Type v)) y.1
+      exact ⟨x, t, hx⟩
+    choose r d hr using hrep
+    let g : (s →₀ R) →ₗ[R] (M : Type v) := Finsupp.linearCombination R (fun y : s => r y)
+    let gL := LocalizedModule.map S g
+    have hgen (y : s) : y.1 ∈ LinearMap.range gL := by
+      refine ⟨(LocalizedModule.mk (M := s →₀ R) (S := S)
+          (Finsupp.single y (1 : R)) (d y) : LocalizedModule S (s →₀ R)), ?_⟩
+      rw [LocalizedModule.map_mk]
+      rw [IsLocalizedModule.mk_eq_mk']
+      rw [Finsupp.linearCombination_single, one_smul]
+      exact hr y
+    have hrange : LinearMap.range gL =
+        (⊤ : Submodule (Localization S) (LocalizedModule S (M : Type v))) := by
+      apply top_unique
+      rw [← hs.1]
+      refine (Submodule.span_le (R := Localization S)).2 ?_
+      intro y hy
+      exact hgen ⟨y, hy⟩
+    have hsurj : Function.Surjective gL := LinearMap.range_eq_top.mp hrange
+    let K : Submodule R (s →₀ R) := LinearMap.ker g
+    let eK : LocalizedModule S (K : Type _) ≃ₗ[Localization S]
+        LinearMap.ker gL := by
+      let e₁ := (Submodule.localizedEquiv S K).symm
+      let e₂ : K.localized S ≃ₗ[Localization S] LinearMap.ker gL :=
+        LinearEquiv.ofEq _ _
+          (LinearMap.localized'_ker_eq_ker_localizedMap
+            (S := Localization S) (p := S)
+            (f := LocalizedModule.mkLinearMap S (s →₀ R))
+            (f' := LocalizedModule.mkLinearMap S (M : Type v)) g)
+      exact e₁.trans e₂
+    have hKfg : (LinearMap.ker gL).FG :=
+      Module.FinitePresentation.fg_ker
+        (M := LocalizedModule S (s →₀ R))
+        (N := LocalizedModule S (M : Type v)) gL hsurj
+    let : Module.Finite (Localization S) (LinearMap.ker gL) :=
+      Module.Finite.of_fg hKfg
+    let : Module.Finite (Localization S) (LocalizedModule S (K : Type _)) :=
+      Module.Finite.equiv eK.symm
+    obtain ⟨P, hP, hPbij⟩ := finite_localized_submodule S
+        (M := (K : Type _)) (inferInstance : Module.Finite (Localization S)
+          (LocalizedModule S (K : Type _)))
+    let K' : Submodule R (s →₀ R) := P.map K.subtype
+    have hPfg : P.FG := (Module.Finite.iff_fg).mp hP
+    have hK'fg : K'.FG := by
+      change (P.map K.subtype).FG
+      exact hPfg.map K.subtype
+    have hKle : K' ≤ K := by
+      change P.map K.subtype ≤ K
+      rintro x ⟨p, hp, rfl⟩
+      exact p.property
+    have hKleG : K' ≤ LinearMap.ker g := by
+      simpa [K] using hKle
+    let q : (s →₀ R) →ₗ[R] ((s →₀ R) ⧸ K') := K'.mkQ
+    have hq : Function.Surjective q := K'.mkQ_surjective
+    let f : ((s →₀ R) ⧸ K') →ₗ[R] (M : Type v) :=
+      K'.liftQ g hKleG
+    have hfq : f ∘ₗ q = g := by
+      ext x
+      simp [f, q]
+    let : Module.FinitePresentation R ((s →₀ R) ⧸ K') :=
+      Module.finitePresentation_of_free_of_surjective q hq (by simpa [q] using hK'fg)
+    let qL := LocalizedModule.map S q
+    let fL := LocalizedModule.map S f
+    have hcomp : fL ∘ₗ qL = gL := by
+      ext x
+      induction x using LocalizedModule.induction_on with
+      | _ x t =>
+        change LocalizedModule.map S f (LocalizedModule.map S q (LocalizedModule.mk x t)) =
+          LocalizedModule.map S g (LocalizedModule.mk x t)
+        rw [LocalizedModule.map_mk, LocalizedModule.map_mk]
+        have h := congrArg (fun h : (s →₀ R) →ₗ[R] (M : Type v) => h x) hfq
+        simpa [LinearMap.comp_apply] using
+          congrArg (fun z : (M : Type v) => LocalizedModule.mk z t) h
+    have hqLsurj : Function.Surjective qL := LocalizedModule.map_surjective S q hq
+    have hkcomm : (LinearMap.ker gL).subtype ∘ₗ eK =
+          LocalizedModule.map S K.subtype := by
+      have hkcommR :
+          ((LinearMap.ker gL).subtype ∘ₗ eK).restrictScalars R =
+            (LocalizedModule.map S K.subtype).restrictScalars R := by
+        exact IsLocalizedModule.linearMap_ext (S := S)
+          (f := LocalizedModule.mkLinearMap S (K : Type _))
+          (f' := LocalizedModule.mkLinearMap S (s →₀ R))
+          (g := ((LinearMap.ker gL).subtype ∘ₗ eK).restrictScalars R)
+          (g' := (LocalizedModule.map S K.subtype).restrictScalars R)
+          (by
+            ext x
+            simp only [LinearMap.comp_apply]
+            simp [eK, Submodule.localizedEquiv]
+            change ((Submodule.localizedEquiv S K).symm (LocalizedModule.mk x 1)).1 =
+              LocalizedModule.mk (K.subtype x) 1
+            have he : (Submodule.localizedEquiv S K).symm (LocalizedModule.mk x 1) =
+                K.toLocalized (p := S) x := by
+              apply (Submodule.localizedEquiv S K).injective
+              simp [Submodule.localizedEquiv]
+            rw [he]
+            rfl)
+      ext x
+      exact congrArg (fun h => h x) hkcommR
+    have hqP (p : P) : q (K.subtype p) = 0 := by
+      change Submodule.Quotient.mk (K.subtype p) = 0
+      rw [Submodule.Quotient.mk_eq_zero]
+      exact ⟨p, p.property, rfl⟩
+    have hqP' : qL ∘ₗ LocalizedModule.map S K.subtype ∘ₗ
+            LocalizedModule.map S P.subtype = 0 := by
+      ext x
+      induction x using LocalizedModule.induction_on with
+      | _ x t =>
+        simp only [LinearMap.comp_apply]
+        rw [LocalizedModule.map_mk, LocalizedModule.map_mk, LocalizedModule.map_mk]
+        have hxq : q (K.subtype (P.subtype x)) = 0 := hqP x
+        rw [hxq]
+        simp
+    have hfLsurj : Function.Surjective fL := by
+      intro y
+      obtain ⟨x, hx⟩ := hsurj y
+      refine ⟨qL x, ?_⟩
+      calc
+        fL (qL x) = (fL ∘ₗ qL) x := rfl
+        _ = gL x := congrArg (fun h => h x) hcomp
+        _ = y := hx
+    have hfLinj : Function.Injective fL := by
+      intro z z' hzz
+      obtain ⟨x, hx⟩ := hqLsurj z
+      obtain ⟨x', hx'⟩ := hqLsurj z'
+      have hgx : gL x = fL (qL x) := by
+        simpa [LinearMap.comp_apply] using congrArg (fun h => h x) hcomp.symm
+      have hgx' : gL x' = fL (qL x') := by
+        simpa [LinearMap.comp_apply] using congrArg (fun h => h x') hcomp.symm
+      have hxg : gL (x - x') = 0 := by
+        calc
+          gL (x - x') = gL x - gL x' := by rw [map_sub]
+          _ = fL (qL x) - fL (qL x') := by rw [hgx, hgx']
+          _ = fL z - fL z' := by rw [hx, hx']
+          _ = 0 := sub_eq_zero.mpr hzz
+      let y : LinearMap.ker gL := Subtype.mk (x - x') hxg
+      obtain ⟨p, hp⟩ := hPbij.2 (eK.symm y)
+      have hpx : LocalizedModule.map S K.subtype
+          (LocalizedModule.map S P.subtype p) = x - x' := by
+        rw [← hkcomm, LinearMap.comp_apply, hp]
+        simp [y]
+      have hz0 : qL (x - x') = 0 := by
+        rw [← hpx]
+        simpa [LinearMap.comp_apply] using congrArg (fun z => z p) hqP'
+      have hqeq : qL x = qL x' :=
+        sub_eq_zero.mp (by simpa using hz0)
+      calc
+        z = qL x := hx.symm
+        _ = qL x' := hqeq
+        _ = z' := hx'
+    exact ⟨ModuleCat.of R ((s →₀ R) ⧸ K'), inferInstance, f, hfLinj, hfLsurj⟩
 
 /-! ### The stalk case -/
 

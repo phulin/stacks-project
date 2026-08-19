@@ -1483,7 +1483,7 @@ private lemma graded_finite_homogeneous_generators
     apply Submodule.sum_mem (Submodule.span S (Set.range x))
     intro j hj
     apply Submodule.subset_span
-    refine ⟨e ⟨i, ⟨j, hj⟩⟩, ?_⟩
+    refine Set.mem_range.mpr ⟨e ⟨i, ⟨j, hj⟩⟩, ?_⟩
     dsimp [x]
     rw [e.symm_apply_apply]
 

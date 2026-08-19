@@ -975,7 +975,152 @@ theorem affineBlowup_in_principal
       Nonempty
         (Localization.Away (algebraMap R (affineBlowup I a) a) ≃+*
           Localization.Away a) := by
-  sorry
+  let K : Ideal R := Ideal.span ({f} : Set R)
+  have hzero : PrimeSpectrum.zeroLocus (K : Set R) =
+      PrimeSpectrum.zeroLocus ({f} : Set R) := by
+    change PrimeSpectrum.zeroLocus (Ideal.span ({f} : Set R) : Set R) =
+      PrimeSpectrum.zeroLocus ({f} : Set R)
+    exact PrimeSpectrum.zeroLocus_span ({f} : Set R)
+  have hrad : I.radical = K.radical := by
+    rw [Ideal.radical_eq_sInf I, Ideal.radical_eq_sInf K]
+    apply le_antisymm
+    · apply le_sInf
+      intro J hJ
+      rw [← Ideal.radical_eq_sInf I]
+      apply (hJ.2.radical_le_iff).2
+      let p : PrimeSpectrum R := ⟨J, hJ.2⟩
+      have hpK : p ∈ PrimeSpectrum.zeroLocus (K : Set R) := by
+        rw [PrimeSpectrum.mem_zeroLocus]
+        exact hJ.1
+      have hpI : p ∈ PrimeSpectrum.zeroLocus (I : Set R) := by
+        rw [hzero] at hpK
+        rw [hf] at hpK
+        exact hpK
+      rw [PrimeSpectrum.mem_zeroLocus] at hpI
+      exact hpI
+    · apply le_sInf
+      intro J hJ
+      rw [← Ideal.radical_eq_sInf K]
+      apply (hJ.2.radical_le_iff).2
+      let p : PrimeSpectrum R := ⟨J, hJ.2⟩
+      have hpI : p ∈ PrimeSpectrum.zeroLocus (I : Set R) := by
+        rw [PrimeSpectrum.mem_zeroLocus]
+        exact hJ.1
+      have hpK : p ∈ PrimeSpectrum.zeroLocus (K : Set R) := by
+        rw [hzero, hf]
+        exact hpI
+      rw [PrimeSpectrum.mem_zeroLocus] at hpK
+      exact hpK
+  have hfIrad : f ∈ I.radical := by
+    rw [hrad]
+    exact (Ideal.le_radical : K ≤ K.radical)
+      (Ideal.subset_span (Set.mem_singleton f))
+  obtain ⟨n, hn⟩ := Ideal.mem_radical_iff.mp hfIrad
+  have haKrad : a ∈ K.radical := by
+    rw [← hrad]
+    exact (Ideal.le_radical : I ≤ I.radical) ha
+  obtain ⟨m, hm⟩ := Ideal.mem_radical_iff.mp haKrad
+  let A := affineBlowup I a
+  let B := Localization.Away a
+  let aA : A := algebraMap R A a
+  let fA : A := algebraMap R A f
+  have hfdiv : fA ^ n ∈ Ideal.span ({aA} : Set A) := by
+    have hmap : algebraMap R A (f ^ n) ∈ Ideal.map (algebraMap R A) I :=
+      Ideal.mem_map_of_mem (algebraMap R A) hn
+    rw [affineBlowup_map_ideal_eq_span I ha] at hmap
+    simpa only [map_pow] using hmap
+  have hadiv : aA ^ m ∈ Ideal.span ({fA} : Set A) := by
+    have hmap : algebraMap R A (a ^ m) ∈ Ideal.map (algebraMap R A) K :=
+      Ideal.mem_map_of_mem (algebraMap R A) hm
+    have hKmap : Ideal.map (algebraMap R A) K =
+        Ideal.span ({fA} : Set A) := by
+      change Ideal.map (algebraMap R A) (Ideal.span ({f} : Set R)) =
+        Ideal.span ({algebraMap R A f} : Set A)
+      rw [Ideal.map_span]
+      simp only [Set.image_singleton]
+    rw [hKmap] at hmap
+    simpa only [map_pow] using hmap
+  obtain ⟨d, hd⟩ := Ideal.mem_span_singleton.mp hfdiv
+  obtain ⟨c, hc⟩ := Ideal.mem_span_singleton.mp hadiv
+  have hregf : IsRegular fA := by
+    rw [isRegular_iff]
+    constructor
+    · intro x y hxy
+      apply (affineBlowup_isRegular I ha).pow m |>.left
+      calc
+        aA ^ m * x = (fA * c) * x := by rw [hc]
+        _ = c * (fA * x) := by ring
+        _ = c * (fA * y) := by exact congrArg (fun z => c * z) hxy
+        _ = (fA * c) * y := by ring
+        _ = aA ^ m * y := by rw [hc]
+    · intro x y hxy
+      apply (affineBlowup_isRegular I ha).pow m |>.right
+      calc
+        x * aA ^ m = x * (fA * c) := by rw [hc]
+        _ = (x * fA) * c := by ring
+        _ = (y * fA) * c := by exact congrArg (fun z => z * c) hxy
+        _ = y * (fA * c) := by ring
+        _ = y * aA ^ m := by rw [hc]
+  let g : A →+* B :=
+    { toFun := fun x => x.1
+      map_one' := rfl
+      map_mul' := by intro x y; rfl
+      map_zero' := rfl
+      map_add' := by intro x y; rfl }
+  let _ : Algebra A B := g.toAlgebra
+  have hscalar (r : R) :
+      algebraMap A B (algebraMap R A r) = algebraMap R B r := by
+    rfl
+  have haB : IsUnit (algebraMap A B aA) := by
+    change IsUnit ((algebraMap R A a : A) : B)
+    change IsUnit (algebraMap R B a)
+    exact IsLocalization.Away.algebraMap_isUnit a
+  have ha_map : algebraMap A B aA = algebraMap R B a := by
+    change ((algebraMap R A a : A) : B) = algebraMap R B a
+    rfl
+  have hfdiv' : (algebraMap A B fA) ^ n =
+      algebraMap A B aA * algebraMap A B d := by
+    rw [← map_pow, hd, map_mul]
+  have hadiv' : (algebraMap A B aA) ^ m =
+      algebraMap A B fA * algebraMap A B c := by
+    rw [← map_pow, hc, map_mul]
+  have hfB : IsUnit (algebraMap A B fA) := by
+    have hprod : IsUnit (algebraMap A B fA * algebraMap A B c) := by
+      rw [← hadiv']
+      exact haB.pow m
+    obtain ⟨u, hu⟩ := hprod.exists_right_inv
+    apply IsUnit.of_mul_eq_one (algebraMap A B c * u)
+    calc
+      algebraMap A B fA * (algebraMap A B c * u) =
+          (algebraMap A B fA * algebraMap A B c) * u := by ring
+      _ = 1 := hu
+  have hloc : IsLocalization.Away fA B := by
+    apply IsLocalization.Away.mk fA hfB
+    · intro z
+      obtain ⟨k, r, hr⟩ := IsLocalization.Away.surj a z
+      refine ⟨n * k, algebraMap R A r * d ^ k, ?_⟩
+      calc
+        z * (algebraMap A B fA) ^ (n * k) =
+            z * ((algebraMap A B fA) ^ n) ^ k := by rw [pow_mul]
+        _ = z * (algebraMap A B aA * algebraMap A B d) ^ k := by
+          rw [hfdiv']
+        _ = z * (algebraMap A B aA) ^ k *
+              (algebraMap A B d) ^ k := by rw [mul_pow]; ring
+        _ = algebraMap R B r * (algebraMap A B d) ^ k := by
+          rw [ha_map, ← hr]
+        _ = algebraMap A B (algebraMap R A r * d ^ k) := by
+          rw [map_mul, ← map_pow]
+          rw [hscalar r]
+    · intro x y hxy
+      refine ⟨0, ?_⟩
+      have hxy' : x = y := by
+        apply Subtype.ext
+        exact hxy
+      simp [hxy']
+  let e : Localization.Away fA ≃ₐ[A] B :=
+    IsLocalization.algEquiv (Submonoid.powers fA) (Localization.Away fA) B
+  rcases affineBlowup_localization_equiv I ha with ⟨ea⟩
+  exact ⟨hregf, ⟨e.toRingEquiv.trans ea.symm⟩, ⟨ea⟩⟩
 
 /-- The ideal `fI` occurring in the add-principal comparison. -/
 def principalMultiplyIdeal {R : Type u} [CommRing R] (f : R) (I : Ideal R) :

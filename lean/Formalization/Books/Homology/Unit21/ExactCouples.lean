@@ -425,7 +425,29 @@ theorem exactCouple_limit_inclusion
     ∃ B Z : Subobject E,
       IsSubobjectUnion (exactCoupleB D) B ∧
       IsSubobjectIntersection (exactCoupleZ D) Z ∧ B ≤ Z := by
-  sorry
+  obtain ⟨B, hB⟩ := hB
+  obtain ⟨Z, hZ⟩ := hZ
+  refine ⟨B, Z, hB, hZ, ?_⟩
+  have hfil := exactCouple_filtration D
+  have hBmono : ∀ {m n : ℕ}, m ≤ n → exactCoupleB D m ≤ exactCoupleB D n := by
+    intro m n hmn
+    induction n, hmn using Nat.le_induction with
+    | base => exact le_rfl
+    | succ n hmn ih =>
+        exact le_trans ih (hfil.2.2.1 n)
+  have hZmono : ∀ {m n : ℕ}, m ≤ n → exactCoupleZ D n ≤ exactCoupleZ D m := by
+    intro m n hmn
+    induction n, hmn using Nat.le_induction with
+    | base => exact le_rfl
+    | succ n hmn ih =>
+        exact le_trans (hfil.2.2.2.1 n) ih
+  apply hZ.2 B
+  intro n
+  apply hB.2 (exactCoupleZ D n)
+  intro m
+  rcases le_total m n with hmn | hnm
+  · exact le_trans (hBmono hmn) (hfil.2.2.2.2 n)
+  · exact le_trans (hfil.2.2.2.2 m) (hZmono hnm)
 
 theorem exactCouple_limit_data_exists
     {C : Type u} [Category.{v} C] [Abelian C]

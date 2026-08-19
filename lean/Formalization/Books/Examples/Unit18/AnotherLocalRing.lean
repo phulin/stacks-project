@@ -497,12 +497,126 @@ theorem aCondition_add {f g : TwoVariablePowerSeries k}
 theorem aCondition_mul {f g : TwoVariablePowerSeries k}
     (hf : ACondition k p f) (hg : ACondition k p g) :
     ACondition k p (f * g) := by
-  sorry
+  unfold ACondition at hf hg ⊢
+  intro n
+  unfold FiniteDegreeOverPowers at hf hg ⊢
+  have hfinite : ∀ r : ℕ, ∃ H : IntermediateField (pPowerSubfield k p) k,
+      (∀ m ≤ r, diagonalCoefficients k f m ⊆ H) ∧
+        (∀ m ≤ r, diagonalCoefficients k g m ⊆ H) ∧
+          Module.Finite (pPowerSubfield k p) H := by
+    intro r
+    induction r with
+    | zero =>
+        rcases hf 0 with ⟨F, hF, hFfin⟩
+        rcases hg 0 with ⟨G, hG, hGfin⟩
+        refine ⟨F ⊔ G, ?_, ?_, inferInstance⟩
+        · intro m hm
+          have hm0 : m = 0 := Nat.eq_zero_of_le_zero hm
+          subst m
+          intro x hx
+          exact (le_sup_left : F ≤ F ⊔ G) (hF hx)
+        · intro m hm
+          have hm0 : m = 0 := Nat.eq_zero_of_le_zero hm
+          subst m
+          intro x hx
+          exact (le_sup_right : G ≤ F ⊔ G) (hG hx)
+    | succ r ihr =>
+        rcases ihr with ⟨H, hHf, hHg, hHfin⟩
+        rcases hf (r + 1) with ⟨F, hF, hFfin⟩
+        rcases hg (r + 1) with ⟨G, hG, hGfin⟩
+        refine ⟨H ⊔ F ⊔ G, ?_, ?_, inferInstance⟩
+        · intro m hm
+          have hmr : m ≤ r ∨ m = r + 1 := by omega
+          rcases hmr with hmr | rfl
+          · have hHF : H ≤ H ⊔ F ⊔ G :=
+              (le_sup_left : H ≤ H ⊔ F).trans
+                (le_sup_left : H ⊔ F ≤ H ⊔ F ⊔ G)
+            intro x hx
+            exact hHF (hHf m hmr hx)
+          · have hF' : F ≤ H ⊔ F ⊔ G :=
+              (le_sup_right : F ≤ H ⊔ F).trans
+                (le_sup_left : H ⊔ F ≤ H ⊔ F ⊔ G)
+            intro x hx
+            exact hF' (hF hx)
+        · intro m hm
+          have hmr : m ≤ r ∨ m = r + 1 := by omega
+          rcases hmr with hmr | rfl
+          · have hHF : H ≤ H ⊔ F ⊔ G :=
+              (le_sup_left : H ≤ H ⊔ F).trans
+                (le_sup_left : H ⊔ F ≤ H ⊔ F ⊔ G)
+            intro x hx
+            exact hHF (hHg m hmr hx)
+          · intro x hx
+            exact (le_sup_right : G ≤ H ⊔ F ⊔ G) (hG hx)
+  rcases hfinite n with ⟨H, hHf, hHg, hHfin⟩
+  refine ⟨H, ?_, hHfin⟩
+  have hcoeff_f : ∀ e : Fin 2 →₀ ℕ, e 0 ≤ n ∨ e 1 ≤ n →
+      MvPowerSeries.coeff e f ∈ H := by
+    intro e he
+    by_cases he01 : e 0 ≤ e 1
+    · have he0 : e 0 ≤ n := by
+        rcases he with he0 | he1
+        · exact he0
+        · exact he01.trans he1
+      exact (hHf (e 0) he0) ⟨e, Or.inl ⟨rfl, he01⟩, rfl⟩
+    · have he10 : e 1 ≤ e 0 := by omega
+      have he1 : e 1 ≤ n := by
+        rcases he with he0 | he1
+        · exact he10.trans he0
+        · exact he1
+      exact (hHf (e 1) he1) ⟨e, Or.inr ⟨rfl, he10⟩, rfl⟩
+  have hcoeff_g : ∀ e : Fin 2 →₀ ℕ, e 0 ≤ n ∨ e 1 ≤ n →
+      MvPowerSeries.coeff e g ∈ H := by
+    intro e he
+    by_cases he01 : e 0 ≤ e 1
+    · have he0 : e 0 ≤ n := by
+        rcases he with he0 | he1
+        · exact he0
+        · exact he01.trans he1
+      exact (hHg (e 0) he0) ⟨e, Or.inl ⟨rfl, he01⟩, rfl⟩
+    · have he10 : e 1 ≤ e 0 := by omega
+      have he1 : e 1 ≤ n := by
+        rcases he with he0 | he1
+        · exact he10.trans he0
+        · exact he1
+      exact (hHg (e 1) he1) ⟨e, Or.inr ⟨rfl, he10⟩, rfl⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (f * g) ∈ H
+  rw [MvPowerSeries.coeff_mul]
+  apply H.sum_mem
+  intro q hq
+  have hqadd : q.1 + q.2 = d := Finset.HasAntidiagonal.mem_antidiagonal.mp hq
+  have hq0 := congrArg (fun z : (Fin 2 →₀ ℕ) => z 0) hqadd
+  have hq1 := congrArg (fun z : (Fin 2 →₀ ℕ) => z 1) hqadd
+  change q.1 0 + q.2 0 = d 0 at hq0
+  change q.1 1 + q.2 1 = d 1 at hq1
+  change (d 0 = n ∧ n ≤ d 1) ∨ (d 1 = n ∧ n ≤ d 0) at hd
+  have hqf : q.1 0 ≤ n ∨ q.1 1 ≤ n := by
+    rcases hd with ⟨hd0, hdn⟩ | ⟨hd1, hdn⟩
+    · left
+      omega
+    · right
+      omega
+  have hqg : q.2 0 ≤ n ∨ q.2 1 ≤ n := by
+    rcases hd with ⟨hd0, hdn⟩ | ⟨hd1, hdn⟩
+    · left
+      omega
+    · right
+      omega
+  exact mul_mem (hcoeff_f q.1 hqf) (hcoeff_g q.2 hqg)
 
 theorem aCondition_neg {f : TwoVariablePowerSeries k}
     (hf : ACondition k p f) :
     ACondition k p (-f) := by
-  sorry
+  unfold ACondition at hf ⊢
+  intro n
+  unfold FiniteDegreeOverPowers at hf ⊢
+  rcases hf n with ⟨F, hF, hFfin⟩
+  refine ⟨F, ?_, hFfin⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d (-f) ∈ F
+  rw [map_neg]
+  exact F.neg_mem (hF ⟨d, hd, rfl⟩)
 
 /-- The bivariate subring `A` from the example. -/
 def aSubring : Subring (TwoVariablePowerSeries k) where
@@ -539,7 +653,18 @@ noncomputable instance pPowerSeriesRingAlgebra :
 
 theorem pPowerSeriesSubring_le_aSubring :
     pPowerSeriesSubring k p ≤ aSubring k p := by
-  sorry
+  intro f hf
+  rcases hf with ⟨g, rfl⟩
+  unfold aSubring ACondition FiniteDegreeOverPowers
+  intro n
+  refine ⟨⊥, ?_, inferInstance⟩
+  rintro a ⟨d, hd, rfl⟩
+  change MvPowerSeries.coeff d
+      (MvPowerSeries.map (σ := Fin 2) (pPowerSubfield k p).subtype g) ∈
+    (⊥ : IntermediateField (pPowerSubfield k p) k)
+  rw [MvPowerSeries.coeff_map]
+  apply IntermediateField.mem_bot.mpr
+  exact ⟨MvPowerSeries.coeff d g, rfl⟩
 
 /-- The ring `A` is a `k^p[[x, y]]`-subalgebra of `k[[x, y]]`. -/
 def aSubalgebra : Subalgebra (pPowerSeriesRing k p) (TwoVariablePowerSeries k) where
@@ -577,7 +702,7 @@ def diagonalBlockCoefficients (f : TwoVariablePowerSeries k) (n : ℕ) : Set k :
 
 theorem diagonalBlock_spec_left (f : TwoVariablePowerSeries k) (n i : ℕ) :
     PowerSeries.coeff i (diagonalBlock k f n).1 = coefficientXY k f (n + i) n := by
-  sorry
+  simp [diagonalBlock, PowerSeries.coeff_mk]
 
 theorem diagonalBlock_spec_right (f : TwoVariablePowerSeries k) (n j : ℕ) :
     PowerSeries.coeff j (diagonalBlock k f n).2 = coefficientXY k f n (n + j) := by

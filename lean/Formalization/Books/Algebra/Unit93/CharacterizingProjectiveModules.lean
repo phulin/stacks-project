@@ -218,7 +218,7 @@ theorem integerPowerSeriesModP_countablyGenerated
     let h : PowerSeries ℤ := PowerSeries.mk cfun
     have hhmem : h ∈ integerPowerSeriesSubmodule p := by
       rw [integerPowerSeriesSubmodule_carrier]
-      simpa [h] using hhc
+      exact hhc
     let g : PowerSeries ℤ := PowerSeries.mk (fun i =>
       if i < k then PowerSeries.coeff i (x : PowerSeries ℤ) else 0)
     have hgc : integerPowerSeriesCondition p g := by
@@ -239,7 +239,11 @@ theorem integerPowerSeriesModP_countablyGenerated
       · have hik : ¬ k ≤ i := Nat.not_le_of_gt hi
         change PowerSeries.coeff i (x : PowerSeries ℤ) - PowerSeries.coeff i g =
           (p : ℤ) * PowerSeries.coeff i h
-        simp [g, h, cfun, hi, hik, PowerSeries.coeff_mk]
+        rw [show PowerSeries.coeff i g = PowerSeries.coeff i (x : PowerSeries ℤ) by
+          simp only [g, PowerSeries.coeff_mk, if_pos hi]]
+        rw [show PowerSeries.coeff i h = 0 by
+          simp only [h, PowerSeries.coeff_mk, cfun, dif_neg hik]]
+        simp
       · have hik : k ≤ i := Nat.le_of_not_gt hi
         change PowerSeries.coeff i (x : PowerSeries ℤ) - PowerSeries.coeff i g =
           (p : ℤ) * PowerSeries.coeff i h

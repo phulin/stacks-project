@@ -1892,13 +1892,13 @@ private theorem universallyBijective_residueField
   let V : Set L := {z : L | ∃ x ∈ U, algebraMap S L x = z}
   let A : IntermediateField K L := IntermediateField.adjoin K V
   have hleft (s : S) : algebraMap S L s ∈ A := by
-    have hs : s ∈ Algebra.adjoin R U := by simp [hgen']
+    have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
     refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ A)
       ?_ ?_ ?_ ?_ hs
     · intro x hx
       exact IntermediateField.subset_adjoin K V ⟨x, hx, rfl⟩
     · intro r
-      simpa [RingHom.algebraMap_toAlgebra] using
+      simpa only [RingHom.algebraMap_toAlgebra] using
         (hmapr r).symm ▸ A.algebraMap_mem (algebraMap R K r)
     · intro x y hx hy hxp hyp
       simpa only [map_add] using A.add_mem hxp hyp
@@ -2005,7 +2005,7 @@ private theorem universallyBijective_integral
     apply top_unique
     intro s hs
     have hs' : s ∈ Algebra.adjoin R U := by
-      simp [hgen']
+      rw [hgen']; trivial
     refine Algebra.adjoin_induction (p := fun x _ => x ∈ A)
       ?_ ?_ ?_ ?_ hs'
     · intro x hx
@@ -2072,7 +2072,7 @@ private theorem universallyBijective_comap_injective
   let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
     P.map f = (Polynomial.X - Polynomial.C x) ^ n}
   have hgen' : Algebra.adjoin R U = ⊤ := by
-    simpa [universallyBijectiveGenerated, generatedBy] using hgen
+    simpa only [universallyBijectiveGenerated, generatedBy] using hgen
   intro q q' hqq'
   have hI : q.asIdeal.comap f = q'.asIdeal.comap f := by
     simpa using congrArg PrimeSpectrum.asIdeal hqq'
@@ -2116,13 +2116,12 @@ private theorem universallyBijective_comap_injective
   have hφ (r : R) : φ (f r) = algebraMap R Q r := by
     change jL (algebraMap S L (f r)) = algebraMap R Q r
     rw [← hscalar r]
-    simp [jL]
     change m (algebraMap K T (algebraMap R K r)) = algebraMap R Q r
     rfl
   have hψ (r : R) : ψ (f r) = algebraMap R Q r := by
     change jL' (algebraMap S L' (f r)) = algebraMap R Q r
     rw [← hscalar' r]
-    simp [jL']
+    change m ((1 : L) ⊗ₜ[K] hq' (algebraMap R K r)) = algebraMap R Q r
     have htmul :
         (1 : L) ⊗ₜ[K] hq' (algebraMap R K r) =
           hq (algebraMap R K r) ⊗ₜ[K] (1 : L') := by
@@ -2138,7 +2137,7 @@ private theorem universallyBijective_comap_injective
     rw [hφ, hψ]
   have hmap (s : S) : φ s = ψ s := by
     have hs : s ∈ Algebra.adjoin R U := by
-      simp [hgen']
+      rw [hgen']; trivial
     refine Algebra.adjoin_induction (p := fun x _ => φ x = ψ x)
       ?_ ?_ ?_ ?_ hs
     · intro x hx
@@ -2210,9 +2209,8 @@ theorem universallyBijective
     universallyBijective_comap_injective f hgen
   have hres : residueFieldExtensionsPurelyInseparable f :=
     universallyBijective_residueField f hgen
-  have hker' : RingHom.ker f ≤ nilradical R := by
-    intro x hx
-    exact mem_nilradical.mpr (hker x hx)
+  have hker' : RingHom.ker f ≤ nilradical R :=
+    fun x hx => mem_nilradical.mpr (hker x hx)
   have hsurj : Function.Surjective (PrimeSpectrum.comap f) := by
     exact (PrimeSpectrum.comap_quotientMk_bijective_of_le_nilradical hker').2.comp
       (hint.kerLift.comap_surjective f.kerLift_injective)
@@ -2242,8 +2240,7 @@ theorem universallyBijective
       (PrimeSpectrum.isHomeomorph_comap_of_bijective e.bijective).surjective
   have hkerbc : RingHom.ker bc ≤ nilradical R' :=
     (PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical bc).1 hsurj.denseRange
-  intro x hx
-  exact mem_nilradical.mp (hkerbc hx)
+  exact fun x hx => mem_nilradical.mp (hkerbc hx)
 
 end
 

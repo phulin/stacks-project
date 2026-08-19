@@ -1043,6 +1043,18 @@ theorem exists_tower_pth_roots_minpoly_coefficients
     simp [hi, hp.ne']
   · exact hcoeff _ (Polynomial.coeff_mem_coeffs hi)
 
+/-- A polynomial whose coefficients have chosen p-th roots is in the image of
+the Frobenius map on coefficients. -/
+theorem exists_frobenius_preimage_polynomial
+    {F : Type u} [Field F] (p : ℕ) [Fact p.Prime] [CharP F p]
+    (P : Polynomial F) (r : ℕ → F) (hr : ∀ i, r i ^ p = P.coeff i) :
+    ∃ Q : Polynomial F, Q.map (frobenius F p) = P := by
+  classical
+  let Q : Polynomial F := P.support.sum fun i => Polynomial.monomial i (r i)
+  refine ⟨Q, ?_⟩
+  simp only [Q, Polynomial.map_sum, Polynomial.map_monomial, frobenius_def, hr]
+  exact P.as_sum_support.symm
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

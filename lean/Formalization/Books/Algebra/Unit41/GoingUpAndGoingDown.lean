@@ -737,8 +737,7 @@ theorem same_image
           ψ
             (tensorProductRingHom csmallEquiv (AlgEquiv.refl : κ ≃ₐ[R] κ)
             (f ⊗ₜ[R] (1 : κ))) := by
-      simp [tensorProductRingHom, Algebra.TensorProduct.congr, AlgEquiv.ofAlgHom,
-        Algebra.TensorProduct.map_tmul, ψ, residueFiberAlgHom]
+      simp [tensorProductRingHom, ψ, residueFiberAlgHom]
       change cbigEquiv (g f) ⊗ₜ[R] (1 : κ) =
         (Algebra.TensorProduct.map (AlgHom.id R R) S'.val)
           (csmallEquiv f) ⊗ₜ[R] (1 : κ)

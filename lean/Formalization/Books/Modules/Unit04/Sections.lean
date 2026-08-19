@@ -107,13 +107,347 @@ def globalSectionGermSubmodule {X : TopCat.{v}}
       ((sheafModuleStalkFunctor O x).obj F) :=
   Submodule.span _ (Set.range (fun i => globalSectionGerm (s i) x))
 
+private def presheafSection {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (U : (Opens X)ᵒᵖ) (m : F.val.obj U) :
+    F.val.presheaf.obj U := by
+  simpa only [PresheafOfModules.presheaf_obj_coe] using m
+
+private def rawGlobalSectionGermSubmodule {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} {I : Type v}
+    (s : I → F.sections) (x : X) :
+    Submodule (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+      (TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x) :=
+  Submodule.span _ (Set.range (fun i =>
+    TopCat.Presheaf.Γgerm (C := AddCommGrpCat.{v}) F.val.presheaf x
+      ((s i).val (op ⊤))))
+
+private def globalGermBoundedPresheafSubmodule {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} {I : Type v}
+    (s : I → F.sections) (x : X) :
+    PresheafOfModules.Submodule F.val :=
+  { obj := fun U =>
+      { carrier := {m | ∀ hx : x ∈ U.unop,
+          TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+            U.unop x hx (presheafSection U m) ∈ rawGlobalSectionGermSubmodule s x}
+        zero_mem' := by
+          intro hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+            U.unop x hx (presheafSection U (0 : F.val.obj U)) ∈
+              rawGlobalSectionGermSubmodule s x
+          have hzero : presheafSection U (0 : F.val.obj U) = 0 := by rfl
+          rw [hzero, map_zero]
+          exact (rawGlobalSectionGermSubmodule s x).zero_mem
+        add_mem' := by
+          intro a b ha hb hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+              U.unop x hx (presheafSection U (a + b)) ∈
+                rawGlobalSectionGermSubmodule s x
+          have hadd : presheafSection U (a + b) =
+              presheafSection U a + presheafSection U b := by rfl
+          rw [hadd]
+          have hga := map_add (ConcreteCategory.hom
+            (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+              F.val.presheaf U.unop x hx))
+          rw [hga]
+          exact (rawGlobalSectionGermSubmodule s x).add_mem (ha hx) (hb hx)
+        smul_mem' := by
+          intro r m hm hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+              U.unop x hx (presheafSection U (r • m)) ∈
+                rawGlobalSectionGermSubmodule s x
+          have hsmul : presheafSection U (r • m) =
+              r • presheafSection U m := by rfl
+          rw [hsmul]
+          have hg := PresheafOfModules.germ_ringCat_smul F.val x U.unop hx r
+            (presheafSection U m)
+          have hmem := (rawGlobalSectionGermSubmodule s x).smul_mem
+            (TopCat.Presheaf.germ (C := RingCat.{v}) O.obj U.unop x hx r) (hm hx)
+          exact hg.symm ▸ hmem }
+    map := by
+      intro U V f m hm hx
+      change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+          V.unop x hx (F.val.presheaf.map f (presheafSection U m)) ∈
+            rawGlobalSectionGermSubmodule s x
+      have hres := TopCat.Presheaf.germ_res_apply F.val.presheaf
+        f.unop x hx (presheafSection U m)
+      rw [show F.val.presheaf.map f (presheafSection U m) =
+          F.val.presheaf.map f.unop.op (presheafSection U m) by rfl]
+      rw [hres]
+      exact hm (f.unop.le hx) }
+
 /-- A family of global sections generates if and only if its germs generate
 every stalk. -/
 theorem globallyGenerates_iff_stalks {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} {I : Type v}
     (s : I → F.sections) :
     globallyGenerates s ↔
-      ∀ x : X, globalSectionGermSubmodule s x = ⊤ := by sorry
+      ∀ x : X, globalSectionGermSubmodule s x = ⊤ := by
+  constructor
+  · intro hf x
+    let T := globalGermBoundedPresheafSubmodule s x
+    let G := (PresheafOfModules.sheafification (𝟙 O.obj)).obj
+      T.toPresheafOfModules
+    let η := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app
+      T.toPresheafOfModules
+    let g : G ⟶ F :=
+      (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).symm T.ι
+    have hsi (i : I) (U : (Opens X)ᵒᵖ) :
+        (s i).val U ∈ T.obj U := by
+      change ∀ hx : x ∈ U.unop,
+        TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+          U.unop x hx (presheafSection U ((s i).val U)) ∈
+            rawGlobalSectionGermSubmodule s x
+      intro hx
+      have hsec :
+          F.val.presheaf.map (homOfLE (le_top : U.unop ≤ (⊤ : Opens X))).op
+              (presheafSection (op ⊤) ((s i).val (op ⊤))) =
+            presheafSection U ((s i).val U) := by
+        exact PresheafOfModules.sections_property (s i)
+          (homOfLE (le_top : U.unop ≤ (⊤ : Opens X))).op
+      rw [← hsec]
+      rw [TopCat.Presheaf.Γgerm_res_apply]
+      exact Submodule.subset_span ⟨i, rfl⟩
+    let qi : I → T.toPresheafOfModules.sections := fun i =>
+      PresheafOfModules.sectionsMk (fun U =>
+        ⟨(s i).val U, hsi i U⟩) (by
+          intro U V f
+          apply Subtype.ext
+          change (ConcreteCategory.hom (F.val.map f)) ((s i).val U) =
+            (s i).val V
+          exact PresheafOfModules.sections_property (s i) f)
+    let σ : I → G.sections := fun i => by
+      let qmap := PresheafOfModules.sectionsMap η (qi i)
+      refine G.val.sectionsMk (fun U => qmap.val U) ?_
+      intro U V f
+      convert qmap.property f using 1
+      all_goals rfl
+    let θ : SheafOfModules.free I ⟶ G := G.freeHomEquiv.symm σ
+    have hunit : η ≫
+        (PresheafOfModules.restrictScalars (𝟙 O.obj)).map g.val = T.ι := by
+      change
+        (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj))
+            ((PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).symm T.ι) = T.ι
+      exact (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).apply_symm_apply T.ι
+    have hfac : θ ≫ g = globalGenerationMap s := by
+      apply F.freeHomEquiv.injective
+      funext i
+      rw [SheafOfModules.freeHomEquiv_comp_apply]
+      simp only [globalGenerationMap, Equiv.apply_symm_apply]
+      have hθ : G.freeHomEquiv θ = σ := by
+        dsimp [θ]
+        exact Equiv.apply_symm_apply _ _
+      rw [hθ]
+      change SheafOfModules.sectionsMap g (σ i) = s i
+      apply PresheafOfModules.sections_ext
+      intro U
+      have hunit_app := congrArg (fun k => k.app U) hunit
+      have hunit_elem := congrArg (fun k => (ConcreteCategory.hom k)
+          ((qi i).val U)) hunit_app
+      change g.val.app U (η.app U ((qi i).val U)) = (s i).val U at hunit_elem
+      change g.val.app U (η.app U ((qi i).val U)) = (s i).val U
+      exact hunit_elem
+    have hg : Epi g := @epi_of_epi_fac _ _ _ _ _ _ _ _ hf hfac
+    have hstalk : Epi ((sheafModuleStalkFunctor O x).map g) := by
+      let z : F ⟶ F := 0
+      have hz : g ≫ z = 0 := by
+        change g ≫ (0 : F ⟶ F) = 0
+        exact comp_zero
+      let C := sheafModuleShortComplex O g z hz
+      have hC : C.Exact := by
+        apply (C.exact_iff_epi (by
+          change z = 0
+          rfl)).2
+        exact hg
+      have hCx : ∀ y : X,
+          (C.map (sheafModuleStalkFunctor O y)).Exact := by
+        exact (sheafModule_exact_iff_stalkwise O g z hz).mp hC
+      apply ((C.map (sheafModuleStalkFunctor O x)).exact_iff_epi (by
+        change (sheafModuleStalkFunctor O x).map z = 0
+        exact (sheafModuleStalkFunctor O x).map_zero _ _)).mp (hCx x)
+    have hηloc : Presheaf.IsLocallySurjective
+        (Opens.grothendieckTopology X)
+        ((PresheafOfModules.toPresheaf O.obj).map η) := by
+      rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+      exact (Opens.grothendieckTopology X).W_toSheafify
+        T.toPresheafOfModules.presheaf |>.isLocallySurjective
+    have hηstalk : Function.Surjective
+        ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          ((PresheafOfModules.toPresheaf O.obj).map η)) := by
+      exact (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks _).mp
+        hηloc x
+    have hunit' :
+        (PresheafOfModules.toPresheaf O.obj).map η ≫
+            (PresheafOfModules.toPresheaf O.obj).map
+              ((PresheafOfModules.restrictScalars (𝟙 O.obj)).map g.val) =
+          (PresheafOfModules.toPresheaf O.obj).map T.ι := by
+      rw [← (PresheafOfModules.toPresheaf O.obj).map_comp]
+      exact congrArg (fun k => (PresheafOfModules.toPresheaf O.obj).map k) hunit
+    have hunit_stalk :
+        (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map η) ≫
+            (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map
+                ((PresheafOfModules.restrictScalars (𝟙 O.obj)).map g.val)) =
+          (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map T.ι) := by
+      rw [← Functor.map_comp]
+      exact congrArg
+        (fun k => (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map k)
+        hunit'
+    have hraw : rawGlobalSectionGermSubmodule s x =
+        globalSectionGermSubmodule s x := by
+      apply Submodule.ext
+      intro y
+      rfl
+    apply le_antisymm
+    · exact le_top
+    · intro y hy
+      let y' : TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x := y
+      obtain ⟨a, ha⟩ := (ModuleCat.epi_iff_surjective _).mp hstalk y
+      have ha' : (ConcreteCategory.hom ((sheafModuleStalkFunctor O x).map g)) a = y' := by
+        simpa [y'] using ha
+      obtain ⟨qstalk, hqstalk⟩ := hηstalk a
+      obtain ⟨U, hxU, q, hq⟩ :=
+        TopCat.Presheaf.exists_germ_eq T.toPresheafOfModules.presheaf qstalk
+      have hqraw : TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+          U x hxU (presheafSection (op U) q.val) ∈
+            rawGlobalSectionGermSubmodule s x :=
+        q.property hxU
+      have hunit_eval := congrArg
+        (fun k => (ConcreteCategory.hom k) qstalk) hunit_stalk
+      have hgerm :
+          ((sheafModuleStalkFunctor O x).map g).hom a =
+            TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+              U x hxU (presheafSection (op U) q.val) := by
+        change (ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map g.val))) a = _
+        rw [← hqstalk]
+        have hunit_eval' :
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map g.val)))
+                ((ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                    ((PresheafOfModules.toPresheaf O.obj).map η))) qstalk) =
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                  ((PresheafOfModules.toPresheaf O.obj).map T.ι))) qstalk := by
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map g.val)))
+                ((ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                    ((PresheafOfModules.toPresheaf O.obj).map η))) qstalk) =
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map T.ι))) qstalk at hunit_eval
+          exact hunit_eval
+        rw [hunit_eval', ← hq]
+        have hmap := TopCat.Presheaf.stalkFunctor_map_germ_apply
+          (C := AddCommGrpCat.{v}) U x hxU
+          ((PresheafOfModules.toPresheaf O.obj).map T.ι) q
+        convert hmap using 1
+        all_goals rfl
+      have ha'' :
+          (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map g.val))) a = y' := by
+        change (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map g.val))) a = y' at ha'
+        exact ha'
+      have hgerm' :
+          (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map g.val))) a =
+            TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+              U x hxU (presheafSection (op U) q.val) := by
+        change (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+              ((PresheafOfModules.toPresheaf O.obj).map g.val))) a = _ at hgerm
+        exact hgerm
+      have hyq : y' =
+          TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+            U x hxU (presheafSection (op U) q.val) := by
+        rw [← ha'']
+        exact hgerm'
+      have htarget_raw : y' ∈ rawGlobalSectionGermSubmodule s x :=
+        hyq ▸ hqraw
+      have htarget : y ∈ globalSectionGermSubmodule s x := by
+        rw [← hraw]
+        change y' ∈ rawGlobalSectionGermSubmodule s x
+        exact htarget_raw
+      exact htarget
+  · intro hs
+    change Epi (globalGenerationMap s)
+    have hstalk : ∀ x : X,
+        Function.Surjective
+          ((sheafModuleStalkFunctor O x).map (globalGenerationMap s)).hom := by
+      intro x
+      have hrange : globalSectionGermSubmodule s x ≤
+          LinearMap.range
+            ((sheafModuleStalkFunctor O x).map (globalGenerationMap s)).hom := by
+        change Submodule.span _ _ ≤ _
+        apply Submodule.span_le.2
+        rintro y ⟨i, rfl⟩
+        refine ⟨globalSectionGerm (SheafOfModules.freeSection i) x, ?_⟩
+        change (ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map
+              (globalGenerationMap s).val)))
+            (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+              ((PresheafOfModules.toPresheaf O.obj).obj
+                (SheafOfModules.free I).val) ⊤ x True.intro
+              ((SheafOfModules.freeSection i).val (op ⊤))) =
+          TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+            ((PresheafOfModules.toPresheaf O.obj).obj F.val) ⊤ x True.intro
+            ((s i).val (op ⊤))
+        have hmap := TopCat.Presheaf.stalkFunctor_map_germ_apply
+          (C := AddCommGrpCat.{v}) (⊤ : Opens X) x True.intro
+          ((PresheafOfModules.toPresheaf O.obj).map (globalGenerationMap s).val)
+          ((SheafOfModules.freeSection i).val (op ⊤))
+        have hsections := SheafOfModules.sectionsMap_freeHomEquiv_symm_freeSection s i
+        have hmap'' :
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map
+                  (globalGenerationMap s).val)))
+                (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+                  ((PresheafOfModules.toPresheaf O.obj).obj
+                    (SheafOfModules.free I).val) ⊤ x True.intro
+                  ((SheafOfModules.freeSection i).val (op ⊤))) =
+              TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+                ((PresheafOfModules.toPresheaf O.obj).obj F.val) ⊤ x True.intro
+                ((s i).val (op ⊤)) := by
+          have hout := congrArg (fun k => k.val (op ⊤)) hsections
+          change (ConcreteCategory.hom
+              (((PresheafOfModules.toPresheaf O.obj).map
+                (globalGenerationMap s).val).app (op ⊤)))
+              ((SheafOfModules.freeSection i).val (op ⊤)) = (s i).val (op ⊤)
+            at hout
+          rw [hout] at hmap
+          simpa [PresheafOfModules.toPresheaf_obj_coe] using hmap
+        exact hmap''
+      intro y
+      have hy : y ∈ globalSectionGermSubmodule s x := by
+        rw [hs x]
+        exact Submodule.mem_top
+      exact hrange hy
+    let z : F ⟶ F := 0
+    have hz : globalGenerationMap s ≫ z = 0 := by
+      change globalGenerationMap s ≫ (0 : F ⟶ F) = 0
+      exact comp_zero
+    let C := sheafModuleShortComplex O (globalGenerationMap s) z hz
+    have hshort (x : X) : (C.map (sheafModuleStalkFunctor O x)).Exact := by
+      refine ((C.map (sheafModuleStalkFunctor O x)).exact_iff_epi ?_).mpr ?_
+      · change (sheafModuleStalkFunctor O x).map z = 0
+        exact (sheafModuleStalkFunctor O x).map_zero _ _
+      · exact (ModuleCat.epi_iff_surjective _).2 (hstalk x)
+    have hC : C.Exact :=
+      (sheafModule_exact_iff_stalkwise O (globalGenerationMap s) z hz).2 hshort
+    exact (C.exact_iff_epi (by rfl)).1 hC
 structure LocalSection {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     (F : Mod O) where
   U : Opens X
@@ -189,12 +523,215 @@ noncomputable def generatedSubsheaf {X : TopCat.{v}}
 theorem generatedSubsheaf_contains {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O}
     (S : Set (LocalSection O F)) (t : LocalSection O F) (ht : t ∈ S) :
-    localSectionInSubobject (generatedSubsheaf S) t := by sorry
+    localSectionInSubobject (generatedSubsheaf S) t := by
+  let T := localSectionPresheafSubmodule S
+  let f := sheafifiedLocalSectionMap S
+  let η := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app
+    T.toPresheafOfModules
+  let q := factorThruImageSubobject f
+  refine ⟨q.val.app (op t.U) (η.app (op t.U)
+    ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩), ?_⟩
+  have hfac : q ≫ (generatedSubsheaf S).arrow = f := by
+    exact imageSubobject_arrow_comp f
+  have hfac_app := congrArg (fun k => k.val.app (op t.U)) hfac
+  have hfac_elem := congrArg (fun k => (ConcreteCategory.hom k)
+      (η.app (op t.U) ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩))
+    hfac_app
+  have hunit : η ≫
+      (PresheafOfModules.restrictScalars (𝟙 O.obj)).map f.val = T.ι := by
+    change
+      (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj))
+          ((PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).symm T.ι) = T.ι
+    exact (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).apply_symm_apply T.ι
+  have hunit_app := congrArg (fun k => k.app (op t.U)) hunit
+  have hunit_elem := congrArg (fun k => (ConcreteCategory.hom k)
+      ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩) hunit_app
+  change f.val.app (op t.U) (η.app (op t.U)
+      ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩) = t.s at hunit_elem
+  calc
+    (ConcreteCategory.hom ((generatedSubsheaf S).arrow.val.app (op t.U)))
+        ((ConcreteCategory.hom (q.val.app (op t.U)))
+          (η.app (op t.U) ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)) =
+    (ConcreteCategory.hom (f.val.app (op t.U)))
+        (η.app (op t.U) ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩) := by
+          convert hfac_elem using 1
+          all_goals rfl
+    _ = t.s := hunit_elem
+
+private def subobjectRangePresheafSubmodule {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (P : Subobject F) :
+    PresheafOfModules.Submodule F.val :=
+  { obj := fun U => LinearMap.range ((P.arrow.val.app U).hom)
+    map := by
+      intro U V f m hm
+      obtain ⟨p, rfl⟩ := hm
+      refine ⟨((P : Mod O).val.map f) p, ?_⟩
+      have hnat := congrArg (fun k => (ConcreteCategory.hom k) p)
+        (P.arrow.val.naturality f)
+      exact hnat }
+
+private noncomputable def subobjectRangeLiftApp {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (P : Subobject F)
+    (N : PresheafOfModules.Submodule F.val)
+    (hN : N ≤ subobjectRangePresheafSubmodule P) (U : (Opens X)ᵒᵖ) :
+    N.obj U →ₗ[O.obj.obj U] (P : Mod O).val.obj U := by
+  let e := LinearEquiv.ofBijective (P.arrow.val.app U).hom.rangeRestrict
+    ⟨by
+        have hmono : Mono (P.arrow.val.app U) := by
+          change Mono ((SheafOfModules.evaluation O U).map P.arrow)
+          infer_instance
+        intro a b hab
+        apply (ModuleCat.mono_iff_injective (P.arrow.val.app U)).mp hmono
+        exact congrArg (fun z => z.val) hab,
+      LinearMap.surjective_rangeRestrict _⟩
+  exact e.symm.toLinearMap.comp (Submodule.inclusion (hN U))
+
+private theorem subobjectRangeLiftApp_arrow {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (P : Subobject F)
+    (N : PresheafOfModules.Submodule F.val)
+    (hN : N ≤ subobjectRangePresheafSubmodule P) (U : (Opens X)ᵒᵖ)
+    (m : N.obj U) :
+    (P.arrow.val.app U).hom (subobjectRangeLiftApp P N hN U m) = m.val := by
+  let e := LinearEquiv.ofBijective (P.arrow.val.app U).hom.rangeRestrict
+    ⟨by
+        have hmono : Mono (P.arrow.val.app U) := by
+          change Mono ((SheafOfModules.evaluation O U).map P.arrow)
+          infer_instance
+        intro a b hab
+        apply (ModuleCat.mono_iff_injective (P.arrow.val.app U)).mp hmono
+        exact congrArg (fun z => z.val) hab,
+      LinearMap.surjective_rangeRestrict _⟩
+  change (P.arrow.val.app U).hom
+      (e.symm ((Submodule.inclusion (hN U)) m)) = m.val
+  exact congrArg Subtype.val (e.apply_symm_apply ((Submodule.inclusion (hN U)) m))
+
+private theorem subobjectRangeLiftApp_naturality {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (P : Subobject F)
+    (N : PresheafOfModules.Submodule F.val)
+    (hN : N ≤ subobjectRangePresheafSubmodule P)
+    {U V : (Opens X)ᵒᵖ} (f : U ⟶ V) (m : N.obj U) :
+    (P.arrow.val.app V).hom
+        (subobjectRangeLiftApp P N hN V (N.toPresheafOfModules.map f m)) =
+    (P.arrow.val.app V).hom
+        ((P : Mod O).val.map f (subobjectRangeLiftApp P N hN U m)) := by
+  have hV : (P.arrow.val.app V).hom
+      (subobjectRangeLiftApp P N hN V (N.toPresheafOfModules.map f m)) =
+        (N.toPresheafOfModules.map f m).val :=
+    subobjectRangeLiftApp_arrow P N hN V (N.toPresheafOfModules.map f m)
+  have hmap : (N.toPresheafOfModules.map f m).val = F.val.map f m.val := by
+    rw [PresheafOfModules.Submodule.toPresheafOfModules_map_apply]
+  rw [hV, hmap]
+  have hnat := congrArg
+    (fun k => (ConcreteCategory.hom k) (subobjectRangeLiftApp P N hN U m))
+    (P.arrow.val.naturality f)
+  change (P.arrow.val.app V).hom
+      ((P : Mod O).val.map f (subobjectRangeLiftApp P N hN U m)) =
+    F.val.map f ((P.arrow.val.app U).hom
+      (subobjectRangeLiftApp P N hN U m)) at hnat
+  rw [subobjectRangeLiftApp_arrow P N hN U] at hnat
+  exact hnat.symm
+
+private theorem stalkMap_surjective_of_epi {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F G : Mod O} (g : F ⟶ G) [Epi g] (x : X) :
+    Function.Surjective ((sheafModuleStalkFunctor O x).map g).hom := by
+  let z : G ⟶ G := 0
+  have hz : g ≫ z = 0 := by
+    change g ≫ (0 : G ⟶ G) = 0
+    exact comp_zero
+  let C := sheafModuleShortComplex O g z hz
+  have hC : C.Exact := by
+    apply (C.exact_iff_epi (by
+      change z = 0
+      rfl)).2
+    infer_instance
+  have hCx : ∀ y : X, (C.map (sheafModuleStalkFunctor O y)).Exact := by
+    exact (sheafModule_exact_iff_stalkwise O g z hz).mp hC
+  apply (ModuleCat.epi_iff_surjective _).mp
+  apply ((C.map (sheafModuleStalkFunctor O x)).exact_iff_epi (by
+    change (sheafModuleStalkFunctor O x).map z = 0
+    exact (sheafModuleStalkFunctor O x).map_zero _ _)).mp (hCx x)
+
+private theorem sheafifiedLocalSectionMap_factors {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : Set (LocalSection O F)) (P : Subobject F)
+    (α : (localSectionPresheafSubmodule S).toPresheafOfModules ⟶
+      (P : Mod O).val)
+    (hα : α ≫ P.arrow.val = (localSectionPresheafSubmodule S).ι) :
+    P.Factors (sheafifiedLocalSectionMap S) := by
+  let T := localSectionPresheafSubmodule S
+  let f := sheafifiedLocalSectionMap S
+  let A := PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)
+  let G := SheafOfModules.forget O ⋙ PresheafOfModules.restrictScalars (𝟙 O.obj)
+  let E_P := A.homEquiv T.toPresheafOfModules (Subobject.underlying.obj P)
+  let E_F := A.homEquiv T.toPresheafOfModules F
+  refine (Subobject.factors_iff P f).2 ?_
+  refine ⟨E_P.symm α, ?_⟩
+  change E_P.symm α ≫ P.arrow = f
+  have hα' : α ≫ G.map P.arrow = T.ι := by
+    change α ≫ P.arrow.val = T.ι
+    exact hα
+  calc
+    _ = E_F.symm (α ≫ G.map P.arrow) :=
+      by
+        exact (A.homEquiv_naturality_right_symm
+          (Y := Subobject.underlying.obj P) (Y' := F) α P.arrow).symm
+    _ = E_F.symm T.ι := by
+      exact congrArg E_F.symm hα'
+    _ = f := by
+      apply E_F.injective
+      refine (E_F.apply_symm_apply T.ι).trans ?_
+      dsimp [E_F, A, T, f, sheafifiedLocalSectionMap]
+      rw [PresheafOfModules.sheafificationAdjunction_homEquiv_apply]
+      exact ((PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).apply_symm_apply T.ι).symm
+
 theorem generatedSubsheaf_le {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O}
     (S : Set (LocalSection O F)) (P : Subobject F)
     (hP : ∀ t ∈ S, localSectionInSubobject P t) :
-    generatedSubsheaf S ≤ P := by sorry
+    generatedSubsheaf S ≤ P := by
+  let T := localSectionPresheafSubmodule S
+  let η := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app
+    T.toPresheafOfModules
+  let N := subobjectRangePresheafSubmodule P
+  have hTN : T ≤ N := by
+    refine sInf_le ?_
+    change localSectionPresheafContains S N
+    intro t ht
+    obtain ⟨u, hu⟩ := hP t ht
+    exact ⟨u, hu⟩
+  let α : T.toPresheafOfModules ⟶ (P : Mod O).val :=
+    PresheafOfModules.homMk
+      { app := fun U => AddCommGrpCat.ofHom
+          (subobjectRangeLiftApp P T hTN U).toAddMonoidHom
+        naturality := by
+          intro U V f
+          ext m
+          dsimp [PresheafOfModules.Submodule.toPresheafOfModules] at m
+          have hmono : Mono (P.arrow.val.app V) := by
+            change Mono ((SheafOfModules.evaluation O V).map P.arrow)
+            infer_instance
+          apply (ModuleCat.mono_iff_injective (P.arrow.val.app V)).mp hmono
+          change (P.arrow.val.app V).hom
+              (subobjectRangeLiftApp P T hTN V (T.toPresheafOfModules.map f m)) =
+            (P.arrow.val.app V).hom
+              ((P : Mod O).val.map f (subobjectRangeLiftApp P T hTN U m))
+          exact subobjectRangeLiftApp_naturality P T hTN f m
+          }
+      (by
+        intro U r m
+        dsimp [PresheafOfModules.Submodule.toPresheafOfModules] at m
+        exact (subobjectRangeLiftApp P T hTN U).map_smul r m)
+  have hα : α ≫ P.arrow.val = T.ι := by
+    ext U m
+    change (P.arrow.val.app U).hom
+        (subobjectRangeLiftApp P T hTN U m) = m.val
+    exact subobjectRangeLiftApp_arrow P T hTN U m
+  let f := sheafifiedLocalSectionMap S
+  have hfactor : P.Factors f := by
+    apply sheafifiedLocalSectionMap_factors S P α
+    exact hα
+  exact imageSubobject_le f (P.factorThru f hfactor)
+    (Subobject.factorThru_arrow P f hfactor)
 abbrev subsheafGeneratedByLocalSections {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O}
     (S : Set (LocalSection O F)) : Subobject F :=
@@ -210,6 +747,61 @@ def localSectionGermSubmodule {X : TopCat.{v}}
   Submodule.span _
     {m | ∃ t ∈ S, ∃ hx : t.isDefinedAt x, localSectionGerm t x hx = m}
 
+private def localGermBoundedPresheafSubmodule {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : Set (LocalSection O F)) (x : X) :
+    PresheafOfModules.Submodule F.val :=
+  { obj := fun U =>
+      { carrier := {m | ∀ hx : x ∈ U.unop,
+          TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+            U.unop x hx (presheafSection U m) ∈ localSectionGermSubmodule S x}
+        zero_mem' := by
+          intro hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+            U.unop x hx (presheafSection U (0 : F.val.obj U)) ∈
+              localSectionGermSubmodule S x
+          have hzero : presheafSection U (0 : F.val.obj U) = 0 := by rfl
+          rw [hzero, map_zero]
+          exact (localSectionGermSubmodule S x).zero_mem
+        add_mem' := by
+          intro a b ha hb hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+              U.unop x hx (presheafSection U (a + b)) ∈
+                localSectionGermSubmodule S x
+          have hadd : presheafSection U (a + b) =
+              presheafSection U a + presheafSection U b := by rfl
+          rw [hadd]
+          have hga := map_add (ConcreteCategory.hom
+            (TopCat.Presheaf.germ (C := AddCommGrpCat)
+              F.val.presheaf U.unop x hx))
+          rw [hga]
+          exact (localSectionGermSubmodule S x).add_mem (ha hx) (hb hx)
+        smul_mem' := by
+          intro r m hm hx
+          change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+              U.unop x hx (presheafSection U (r • m)) ∈
+                localSectionGermSubmodule S x
+          have hsmul : presheafSection U (r • m) =
+              r • presheafSection U m := by rfl
+          rw [hsmul]
+          have hg := PresheafOfModules.germ_ringCat_smul F.val x U.unop hx r
+            (presheafSection U m)
+          have hmem := (localSectionGermSubmodule S x).smul_mem
+            (TopCat.Presheaf.germ (C := RingCat.{v}) O.obj U.unop x hx r)
+            (hm hx)
+          exact hg.symm ▸ hmem }
+    map := by
+      intro U V f m hm hx
+      change TopCat.Presheaf.germ (C := AddCommGrpCat) F.val.presheaf
+          V.unop x hx (F.val.presheaf.map f (presheafSection U m)) ∈
+            localSectionGermSubmodule S x
+      have hres := TopCat.Presheaf.germ_res_apply F.val.presheaf
+        f.unop x hx (presheafSection U m)
+      rw [show F.val.presheaf.map f (presheafSection U m) =
+          F.val.presheaf.map f.unop.op (presheafSection U m) by rfl]
+      rw [hres]
+      exact hm (f.unop.le hx) }
+
 /-- The image in a stalk of a categorical subsheaf inclusion. -/
 noncomputable def subobjectStalkImage {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (P : Subobject F) (x : X) :
@@ -224,7 +816,178 @@ theorem generatedSubsheaf_stalk {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O}
     (S : Set (LocalSection O F)) (x : X) :
     subobjectStalkImage (generatedSubsheaf S) x =
-      localSectionGermSubmodule S x := by sorry
+      localSectionGermSubmodule S x := by
+  let T := localSectionPresheafSubmodule S
+  let f := sheafifiedLocalSectionMap S
+  let η := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app
+    T.toPresheafOfModules
+  let q := factorThruImageSubobject f
+  have hfac : q ≫ (generatedSubsheaf S).arrow = f := by
+    exact imageSubobject_arrow_comp f
+  have hq : Function.Surjective
+      ((sheafModuleStalkFunctor O x).map q).hom := by
+    exact stalkMap_surjective_of_epi q x
+  let L := localGermBoundedPresheafSubmodule S x
+  have hTL : T ≤ L := by
+    refine sInf_le ?_
+    change localSectionPresheafContains S L
+    intro t ht
+    intro hx
+    change localSectionGerm t x hx ∈ localSectionGermSubmodule S x
+    exact Submodule.subset_span ⟨t, ht, hx, rfl⟩
+  have hηloc : Presheaf.IsLocallySurjective
+      (Opens.grothendieckTopology X)
+      ((PresheafOfModules.toPresheaf O.obj).map η) := by
+    rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+    exact (Opens.grothendieckTopology X).W_toSheafify
+      T.toPresheafOfModules.presheaf |>.isLocallySurjective
+  have hηstalk : Function.Surjective
+      ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+        ((PresheafOfModules.toPresheaf O.obj).map η)) := by
+    exact (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks _).mp
+      hηloc x
+  have hunit : η ≫
+      (PresheafOfModules.restrictScalars (𝟙 O.obj)).map f.val = T.ι := by
+    change
+      (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj))
+          ((PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).symm T.ι) = T.ι
+    exact (PresheafOfModules.sheafificationHomEquiv (𝟙 O.obj)).apply_symm_apply T.ι
+  have hunit' :
+      (PresheafOfModules.toPresheaf O.obj).map η ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((PresheafOfModules.restrictScalars (𝟙 O.obj)).map f.val) =
+        (PresheafOfModules.toPresheaf O.obj).map T.ι := by
+    rw [← (PresheafOfModules.toPresheaf O.obj).map_comp]
+    exact congrArg (fun k => (PresheafOfModules.toPresheaf O.obj).map k) hunit
+  have hunit_stalk :
+      (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map η) ≫
+          (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map
+              ((PresheafOfModules.restrictScalars (𝟙 O.obj)).map f.val)) =
+        (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          ((PresheafOfModules.toPresheaf O.obj).map T.ι) := by
+    rw [← Functor.map_comp]
+    exact congrArg
+      (fun k => (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map k)
+      hunit'
+  apply le_antisymm
+  · intro y hy
+    change y ∈ LinearMap.range
+      ((sheafModuleStalkFunctor O x).map (generatedSubsheaf S).arrow).hom at hy
+    obtain ⟨a, ha⟩ := hy
+    obtain ⟨b, hb⟩ := hq a
+    have hfac_stalk :
+        (sheafModuleStalkFunctor O x).map q ≫
+            (sheafModuleStalkFunctor O x).map (generatedSubsheaf S).arrow =
+          (sheafModuleStalkFunctor O x).map f := by
+      calc
+        _ = (sheafModuleStalkFunctor O x).map
+            (q ≫ (generatedSubsheaf S).arrow) := by
+          exact (Functor.map_comp (sheafModuleStalkFunctor O x) q
+            (generatedSubsheaf S).arrow).symm
+        _ = _ := congrArg (fun k => (sheafModuleStalkFunctor O x).map k) hfac
+    have hyf :
+        (ConcreteCategory.hom ((sheafModuleStalkFunctor O x).map f)) b = y := by
+      have h := congrArg (fun k => (ConcreteCategory.hom k) b) hfac_stalk
+      change (ConcreteCategory.hom
+          ((sheafModuleStalkFunctor O x).map (generatedSubsheaf S).arrow))
+            ((ConcreteCategory.hom ((sheafModuleStalkFunctor O x).map q)) b) =
+          (ConcreteCategory.hom ((sheafModuleStalkFunctor O x).map f)) b at h
+      rw [hb] at h
+      exact h.symm.trans ha
+    have hfmem :
+        (ConcreteCategory.hom ((sheafModuleStalkFunctor O x).map f)) b ∈
+          localSectionGermSubmodule S x := by
+      obtain ⟨c, hc⟩ := hηstalk b
+      obtain ⟨U, hxU, qstalk, hqstalk⟩ :=
+        TopCat.Presheaf.exists_germ_eq T.toPresheafOfModules.presheaf c
+      have hqraw :
+          TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+              U x hxU (presheafSection (op U) qstalk.val) ∈
+            localSectionGermSubmodule S x := by
+        exact (hTL (op U) qstalk.property) hxU
+      have hunit_eval := congrArg
+        (fun k => (ConcreteCategory.hom k) c) hunit_stalk
+      have hgerm :
+          ((sheafModuleStalkFunctor O x).map f).hom b =
+            TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+              U x hxU (presheafSection (op U) qstalk.val) := by
+        change (ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+            ((PresheafOfModules.toPresheaf O.obj).map f.val))) b = _
+        rw [← hc]
+        have hunit_eval' :
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map f.val)))
+                ((ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                    ((PresheafOfModules.toPresheaf O.obj).map η))) c) =
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                  ((PresheafOfModules.toPresheaf O.obj).map T.ι))) c := by
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map f.val)))
+                ((ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                    ((PresheafOfModules.toPresheaf O.obj).map η))) c) =
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+                ((PresheafOfModules.toPresheaf O.obj).map T.ι))) c at hunit_eval
+          exact hunit_eval
+        rw [hunit_eval', ← hqstalk]
+        have hmap := TopCat.Presheaf.stalkFunctor_map_germ_apply
+          (C := AddCommGrpCat.{v}) U x hxU
+          ((PresheafOfModules.toPresheaf O.obj).map T.ι) qstalk
+        convert hmap using 1
+        all_goals rfl
+      exact hgerm.symm ▸ hqraw
+    exact hyf ▸ hfmem
+  · change localSectionGermSubmodule S x ≤
+      LinearMap.range
+        ((sheafModuleStalkFunctor O x).map (generatedSubsheaf S).arrow).hom
+    change Submodule.span _ _ ≤ _
+    apply Submodule.span_le.2
+    rintro y ⟨t, ht, hx, rfl⟩
+    let u : (generatedSubsheaf S : Mod O).val.obj (op t.U) :=
+      q.val.app (op t.U) (η.app (op t.U)
+        ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)
+    refine ⟨TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+        (generatedSubsheaf S : Mod O).val.presheaf t.U x hx u, ?_⟩
+    have hfac_app := congrArg (fun k => k.val.app (op t.U)) hfac
+    have hfac_elem := congrArg (fun k => (ConcreteCategory.hom k)
+        (η.app (op t.U) ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩))
+      hfac_app
+    have hunit_app := congrArg (fun k => k.app (op t.U)) hunit
+    have hunit_elem := congrArg (fun k => (ConcreteCategory.hom k)
+        ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩) hunit_app
+    change f.val.app (op t.U) (η.app (op t.U)
+        ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩) = t.s at hunit_elem
+    change (ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          ((PresheafOfModules.toPresheaf O.obj).map
+            (generatedSubsheaf S).arrow.val)))
+        (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+          (generatedSubsheaf S : Mod O).val.presheaf t.U x hx u) =
+      TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf
+        t.U x hx t.s
+    have hmap := TopCat.Presheaf.stalkFunctor_map_germ_apply
+      (C := AddCommGrpCat.{v}) t.U x hx
+      ((PresheafOfModules.toPresheaf O.obj).map
+        (generatedSubsheaf S).arrow.val) u
+    change (ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+          ((PresheafOfModules.toPresheaf O.obj).map
+            (generatedSubsheaf S).arrow.val)))
+        (TopCat.Presheaf.germ (C := AddCommGrpCat.{v})
+          (generatedSubsheaf S : Mod O).val.presheaf t.U x hx u) =
+      TopCat.Presheaf.germ (C := AddCommGrpCat.{v}) F.val.presheaf t.U x hx
+        (f.val.app (op t.U) (η.app (op t.U)
+          ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)) at hmap
+    rw [hfac_elem, hunit_elem] at hmap
+    exact hmap
 noncomputable def tensorProductSheaf {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) :
     CommRingSheafModule O :=

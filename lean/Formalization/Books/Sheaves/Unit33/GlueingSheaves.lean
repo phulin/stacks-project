@@ -1156,7 +1156,19 @@ theorem glueingSectionRestrict_comp
     (h₁ : W' ≤ W) (h₂ : W'' ≤ W') (s : GlueingSection D W) :
     glueingSectionRestrict D h₂ (glueingSectionRestrict D h₁ s) =
       glueingSectionRestrict D (h₂.trans h₁) s := by
-  sorry
+  have section_ext (a b : GlueingSection D W'') (hab : a.value = b.value) : a = b := by
+    cases a with
+    | mk av ap =>
+      cases b with
+      | mk bv bp =>
+        cases hab
+        rfl
+  apply section_ext
+  funext i
+  dsimp [glueingSectionRestrict, glueingSectionRestrictValue]
+  rw [← ConcreteCategory.comp_apply]
+  rw [← (D.sheaf i).presheaf.map_comp]
+  rfl
 
 /-- The presheaf whose sections are the compatible families in the explicit
 construction. -/

@@ -39,11 +39,67 @@ abbrev HasLeftSkeletonFunctor
   ∀ U : SimplicialObject.Truncated C m,
     (leftSkeletonInclusion m).HasLeftKanExtension U
 
+private noncomputable def leftSkeletonIndexFinCategory (m : ℕ) (X : SimplexCategoryᵒᵖ) :
+    FinCategory (CostructuredArrow (leftSkeletonInclusion m) X) := by
+  letI : Finite (SimplexCategory.Truncated m) := by
+    let f : SimplexCategory.Truncated m → Fin (m + 1) :=
+      fun X => ⟨X.obj.len, Nat.lt_succ_of_le X.property⟩
+    apply Finite.of_injective f
+    intro X Y h
+    cases X with
+    | mk X hX =>
+      cases Y with
+      | mk Y hY =>
+        apply ObjectProperty.FullSubcategory.ext
+        exact SimplexCategory.ext (congrArg Fin.val h)
+  letI : Finite ((SimplexCategory.Truncated m)ᵒᵖ) := by
+    apply Finite.of_injective (fun X => X.unop)
+    intro X Y h
+    exact congrArg op h
+  letI : ∀ a b : (SimplexCategory.Truncated m)ᵒᵖ, Finite (a ⟶ b) := fun a b => by
+    apply Finite.of_injective (fun f => f.unop.hom)
+    intro f g h
+    apply Quiver.Hom.unop_inj
+    apply ObjectProperty.hom_ext
+    exact h
+  letI : ∀ a : (SimplexCategory.Truncated m)ᵒᵖ,
+      Finite ((leftSkeletonInclusion m).obj a ⟶ X) := fun a => by
+    apply Finite.of_injective (fun f => f.unop)
+    intro f g h
+    exact Quiver.Hom.unop_inj h
+  letI : Finite (CostructuredArrow (leftSkeletonInclusion m) X) := by
+    let f : CostructuredArrow (leftSkeletonInclusion m) X →
+        Σ a : (SimplexCategory.Truncated m)ᵒᵖ,
+          (leftSkeletonInclusion m).obj a ⟶ X :=
+      fun A => ⟨A.left, A.hom⟩
+    apply Finite.of_injective f
+    intro X Y h
+    apply Comma.ext
+    · exact congrArg Sigma.fst h
+    · exact Subsingleton.elim _ _
+    · cases X
+      cases Y
+      cases h
+      rfl
+  letI : ∀ a b : CostructuredArrow (leftSkeletonInclusion m) X, Finite (a ⟶ b) := fun a b => by
+    apply Finite.of_injective (fun f => f.left)
+    intro f g h
+    apply CommaMorphism.ext
+    · exact h
+    · exact Subsingleton.elim _ _
+  exact { fintypeObj := Fintype.ofFinite _, fintypeHom := fun a b => Fintype.ofFinite _ }
+
 /-- Finite colimits provide the left adjoint required in this chapter. -/
 theorem has_left_skeleton_functor_of_has_finite_colimits
     {C : Type u} [Category.{v} C] [HasFiniteColimits C] (m : ℕ) :
     HasLeftSkeletonFunctor C m := by
-  sorry
+  intro U
+  letI : Functor.HasPointwiseLeftKanExtension (leftSkeletonInclusion m) U := fun X => by
+    letI : FinCategory (CostructuredArrow (leftSkeletonInclusion m) X) :=
+      leftSkeletonIndexFinCategory m X
+    infer_instance
+  exact Functor.HasLeftKanExtension.mk _
+    (Functor.pointwiseLeftKanExtensionUnit (leftSkeletonInclusion m) U)
 
 /-- The source's left adjoint `iₘ!`, implemented by Mathlib's `lan`. -/
 noncomputable def leftAdjoint
@@ -108,7 +164,7 @@ theorem leftSkeletonDiagram_map
     (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk n') :
     leftSkeletonIndexMap φ ⋙ leftSkeletonDiagram m n U =
       leftSkeletonDiagram m n' U := by
-  sorry
+  rfl
 
 /-- The colimit in the source's pointwise formula. -/
 noncomputable def leftSkeletonColimit
@@ -123,7 +179,9 @@ theorem has_left_skeleton_colimit_of_has_finite_colimits
     {C : Type u} [Category.{v} C] [HasFiniteColimits C]
     (m n : ℕ) (U : SimplicialObject.Truncated C m) :
     HasColimit (leftSkeletonDiagram m n U) := by
-  sorry
+  letI : FinCategory (leftSkeletonIndex m n) :=
+    leftSkeletonIndexFinCategory m (op (SimplexCategory.mk n))
+  infer_instance
 
 /-- The left Kan extension has the source's pointwise colimit description. -/
 theorem leftAdjoint_obj_iso_colimit
@@ -132,7 +190,14 @@ theorem leftAdjoint_obj_iso_colimit
     (h : HasColimit (leftSkeletonDiagram m n U)) :
     Nonempty (((leftAdjoint m).obj U).obj
         (op (SimplexCategory.mk n)) ≅ leftSkeletonColimit m n U h) := by
-  sorry
+  letI : HasLeftSkeletonFunctor C m :=
+    has_left_skeleton_functor_of_has_finite_colimits m
+  letI : Functor.HasPointwiseLeftKanExtension (leftSkeletonInclusion m) U := fun X => by
+    letI : FinCategory (CostructuredArrow (leftSkeletonInclusion m) X) :=
+      leftSkeletonIndexFinCategory m X
+    infer_instance
+  exact ⟨Functor.leftKanExtensionObjIsoColimit (leftSkeletonInclusion m) U
+    (op (SimplexCategory.mk n))⟩
 
 /-- The simplicial map of `iₘ!U` is the map transported from the functorial
 colimit construction along the degreewise colimit isomorphisms. -/

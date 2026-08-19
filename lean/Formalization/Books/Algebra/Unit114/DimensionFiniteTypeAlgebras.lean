@@ -124,36 +124,40 @@ theorem dimension_closed_point_finite_type_field
 /-! ## Cohen--Macaulay finite-type algebras -/
 
 /- The first form of the final lemma indexes the source's `T₀, ..., T_d`
-   by the finite type `Fin (d + 1)`. -/
+   by the finite type `Fin (d + 1)`. The empty-spectrum case is included
+   separately, matching the source's convention that the empty space has
+   dimension `-∞`. -/
 def HasDisjointEquidimensionalDecomposition
     (S : Type u) [CommRing S] : Prop :=
-  ∃ d : ℕ, ringKrullDim S = d ∧
-    ∃ T : Fin (d + 1) → Set (PrimeSpectrum S),
-      (∀ i, IsClopen (T i) ∧
-        ∀ C ∈ irreducibleComponents (T i),
-          topologicalKrullDim C = (i.1 : WithBot ℕ∞)) ∧
-        (⋃ i, T i) = (Set.univ : Set (PrimeSpectrum S)) ∧
-          (∀ i j, i ≠ j → Disjoint (T i) (T j))
+  IsEmpty (PrimeSpectrum S) ∨
+    (∃ d : ℕ, ringKrullDim S = d ∧
+      ∃ T : Fin (d + 1) → Set (PrimeSpectrum S),
+        (∀ i, IsClopen (T i) ∧
+          ∀ C ∈ irreducibleComponents (T i),
+            topologicalKrullDim C = (i.1 : WithBot ℕ∞)) ∧
+          (⋃ i, T i) = (Set.univ : Set (PrimeSpectrum S)) ∧
+            (∀ i j, i ≠ j → Disjoint (T i) (T j)))
 
 /- The equivalent product form of the source's decomposition.  The explicit
    family of commutative-ring structures keeps the product factors usable as
    ordinary Lean types. -/
 def HasDimensionProductDecomposition
     (S : Type u) [CommRing S] : Prop :=
-  ∃ d : ℕ, ringKrullDim S = d ∧
-    ∃ (R : Fin (d + 1) → Type u) (hR : ∀ i, CommRing (R i)),
-      letI : ∀ i, CommRing (R i) := hR
-      Nonempty (S ≃+* (∀ i, R i)) ∧
-        ∀ i : Fin (d + 1),
-          ∀ m : MaximalSpectrum (R i),
-            m.asIdeal.height = (i.1 : ℕ∞)
+  IsEmpty (PrimeSpectrum S) ∨
+    (∃ d : ℕ, ringKrullDim S = d ∧
+      ∃ (R : Fin (d + 1) → Type u) (hR : ∀ i, CommRing (R i)),
+        letI : ∀ i, CommRing (R i) := hR
+        Nonempty (S ≃+* (∀ i, R i)) ∧
+          ∀ i : Fin (d + 1),
+            ∀ m : MaximalSpectrum (R i),
+              m.asIdeal.height = (i.1 : ℕ∞))
 
-/-- A nontrivial finite-type Cohen--Macaulay algebra over a field decomposes
+/-- A finite-type Cohen--Macaulay algebra over a field decomposes
 into open and closed equidimensional pieces, equivalently into ring factors
 whose maximal ideals have the corresponding heights. -/
 theorem disjoint_decomposition_CM_algebra
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    [Algebra.FiniteType k S] [Nontrivial S]
+    [Algebra.FiniteType k S]
     (hS :
       letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
       Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S) :

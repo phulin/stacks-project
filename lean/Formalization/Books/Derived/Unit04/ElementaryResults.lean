@@ -471,14 +471,6 @@ lemma special_triangle_isIso₁
     change Function.Bijective (fun x : W ⟶ T.obj₁ => x ≫ φ.hom₁) at hb
     exact hb)
 
-private theorem special_triangle_isIso₁_apply
-    {D : Type*} [Category D] [AdditiveCategory D]
-    [HasShift D ℤ] [∀ n : ℤ, (shiftFunctor D n).Additive]
-    [Pretriangulated D] {S S' : Triangle D} (hS : SpecialTriangle S)
-    (hS' : SpecialTriangle S') (ψ : S ⟶ S') (h₂ : IsIso ψ.hom₂)
-    (h₃ : IsIso ψ.hom₃) : IsIso ψ.hom₁ := by
-  exact special_triangle_isIso₁ hS hS' ψ h₂ h₃
-
 set_option maxHeartbeats 1000000 in
 /-- The dual two-out-of-three statement for co-special triangles. -/
 theorem coSpecial_triangle_two_out_of_three
@@ -925,25 +917,20 @@ theorem direct_sum_triangle_distinguished_iff
       T ∈ distTriang C ∧ T' ∈ distTriang C := by
   sorry
 
-/-- A right inverse of a morphism, in the categorical composition convention. -/
-def TriangleRightInverse {Y Z : C} (g : Y ⟶ Z) (s : Z ⟶ Y) : Prop :=
-  s ≫ g = 𝟙 Z
-
 /-- If the third map of a distinguished triangle is zero, its second map has a
 right inverse. -/
 theorem distinguished_triangle_second_right_inverse
     {T : Triangle C} (hT : T ∈ distTriang C) (hzero : T.mor₃ = 0) :
-    ∃ s : T.obj₃ ⟶ T.obj₂, TriangleRightInverse T.mor₂ s := by
+    ∃ s : T.obj₃ ⟶ T.obj₂, s ≫ T.mor₂ = 𝟙 T.obj₃ := by
   obtain ⟨e, _, he₂⟩ := exists_iso_binaryBiproduct_of_distTriang T hT hzero
   refine ⟨biprod.inr ≫ e.inv, ?_⟩
-  dsimp [TriangleRightInverse]
   simp only [Category.assoc, he₂, e.inv_hom_id_assoc, biprod.inr_snd]
 
 /-- A right inverse of the second map makes the biproduct comparison map an
 isomorphism. -/
 theorem split_triangle_biproduct_iso
     {T : Triangle C} (hT : T ∈ distTriang C) (s : T.obj₃ ⟶ T.obj₂)
-    (hs : TriangleRightInverse T.mor₂ s) :
+    (hs : s ≫ T.mor₂ = 𝟙 T.obj₃) :
     IsIso (biprod.desc T.mor₁ s) := by
   change s ≫ T.mor₂ = 𝟙 T.obj₃ at hs
   have hzero : T.mor₃ = 0 := by
@@ -1121,33 +1108,23 @@ theorem karoubian_of_countable_coproducts
 
 /-! ## The octahedral axiom and full subcategories -/
 
-/-- The data of the three distinguished triangles and the octahedron used in
-TR4 for a composable pair.  This is the canonical Mathlib `Octahedron` datum,
-with only the three cone triangles made explicit at the source-facing level. -/
-structure OctahedronWitness {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) where
-  Qone : C
-  Qtwo : C
-  Qthree : C
-  pone : Y ⟶ Qone
-  done : Qone ⟶ X⟦(1 : ℤ)⟧
-  ptwo : Z ⟶ Qtwo
-  dtwo : Qtwo ⟶ X⟦(1 : ℤ)⟧
-  pthree : Z ⟶ Qthree
-  dthree : Qthree ⟶ Y⟦(1 : ℤ)⟧
-  h₁₂ : Triangle.mk f pone done ∈ distTriang C
-  h₁₃ : Triangle.mk (f ≫ g) ptwo dtwo ∈ distTriang C
-  h₂₃ : Triangle.mk g pthree dthree ∈ distTriang C
-  octahedron :
-    Nonempty (Triangulated.Octahedron (C := C) (by rfl) h₁₂ h₂₃ h₁₃)
-
 /-- The source's easier formulation of TR4 is equivalent to the canonical
 octahedron axiom after replacing the three objects by isomorphic ones. -/
 theorem easier_axiom_four_iff :
     CategoryTheory.IsTriangulated C ↔
       ∀ {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z),
         ∃ (X' Y' Z' : C) (eX : X' ≅ X) (eY : Y' ≅ Y) (eZ : Z' ≅ Z),
-          Nonempty (OctahedronWitness
-            (eX.hom ≫ f ≫ eY.inv) (eY.hom ≫ g ≫ eZ.inv)) := by
+          ∃ (Qone Qtwo Qthree : C)
+            (pone : Y' ⟶ Qone) (done : Qone ⟶ X'⟦(1 : ℤ)⟧)
+            (ptwo : Z' ⟶ Qtwo) (dtwo : Qtwo ⟶ X'⟦(1 : ℤ)⟧)
+            (pthree : Z' ⟶ Qthree) (dthree : Qthree ⟶ Y'⟦(1 : ℤ)⟧),
+            ∃ (h₁₂ : Triangle.mk (eX.hom ≫ f ≫ eY.inv) pone done ∈ distTriang C)
+              (h₁₃ : Triangle.mk
+                ((eX.hom ≫ f ≫ eY.inv) ≫ (eY.hom ≫ g ≫ eZ.inv)) ptwo dtwo ∈
+                distTriang C)
+              (h₂₃ : Triangle.mk (eY.hom ≫ g ≫ eZ.inv) pthree dthree ∈
+                distTriang C),
+              Nonempty (Triangulated.Octahedron (C := C) (by rfl) h₁₂ h₂₃ h₁₃) := by
   sorry
 
 /-- The source-facing closure condition for a full triangulated subcategory:
@@ -1255,14 +1232,6 @@ theorem exact_precomposition_deltaFunctor
     Nonempty (DeltaFunctor (K ⋙ F)) := by
   sorry
 
-/-- Postcomposing a homological functor with an exact abelian functor remains
-homological. -/
-theorem exact_abelian_postcomposition_homological
-    (H : D ⥤ A) [H.IsHomological] (K : A ⥤ A')
-    (hK : IsExact K) :
-    (H ⋙ K).IsHomological := by
-  sorry
-
 /-- The degreewise cohomology of a δ-functor after a homological functor is a
 cohomological δ-functor under the source's negative-degree vanishing
 hypothesis. -/
@@ -1286,8 +1255,9 @@ variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
 
 /-- All rows and columns of the source's 3 by 3 diagram, including the
 commutativity conditions and the single anticommuting lower-right square.  The
-bottom row and rightmost column use shift maps literally, so the source's
-``obtained by applying [1]`` clause is part of the type. -/
+bottom row and rightmost column use Mathlib's canonical triangle shift, so the
+signs and shift comparison maps in the source's ``obtained by applying [1]``
+clause are part of the type. -/
 structure ThreeByThreeDiagram
     {X Y X' Y' : C} (f : X ⟶ Y) (f' : X' ⟶ Y')
     (a : X ⟶ X') (b : Y ⟶ Y')
@@ -1314,21 +1284,25 @@ structure ThreeByThreeDiagram
   row₀ : Triangle.mk f g h ∈ distTriang C
   row₁ : Triangle.mk f' g' h' ∈ distTriang C
   row₂ : Triangle.mk f'' g'' h'' ∈ distTriang C
-  row₃ : Triangle.mk (f⟦(1 : ℤ)⟧') (g⟦(1 : ℤ)⟧')
-      (h⟦(1 : ℤ)⟧') ∈ distTriang C
+  row₃ : (Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h) ∈
+      distTriang C
   col₀ : Triangle.mk a a' a'' ∈ distTriang C
   col₁ : Triangle.mk b b' b'' ∈ distTriang C
   col₂ : Triangle.mk c c' c'' ∈ distTriang C
-  col₃ : Triangle.mk (a⟦(1 : ℤ)⟧') (a'⟦(1 : ℤ)⟧')
-      (a''⟦(1 : ℤ)⟧') ∈ distTriang C
+  col₃ : (Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk a a' a'') ∈
+      distTriang C
   comm₀₁ : g ≫ c = b ≫ g'
   comm₀₂ : h ≫ a⟦(1 : ℤ)⟧' = c ≫ h'
   comm₁₀ : f' ≫ b' = a' ≫ f''
   comm₁₁ : g' ≫ c' = b' ≫ g''
   comm₁₂ : h' ≫ a'⟦(1 : ℤ)⟧' = c' ≫ h''
-  comm₂₀ : f'' ≫ b'' = a'' ≫ f⟦(1 : ℤ)⟧'
-  comm₂₁ : g'' ≫ c'' = b'' ≫ g⟦(1 : ℤ)⟧'
-  anti₂₂ : h'' ≫ a''⟦(1 : ℤ)⟧' = -(c'' ≫ h⟦(1 : ℤ)⟧')
+  comm₂₀ : f'' ≫ b'' = a'' ≫
+      ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₁
+  comm₂₁ : g'' ≫ c'' = b'' ≫
+      ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₂
+  anti₂₂ : h'' ≫
+      ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk a a' a'')).mor₃ =
+      -(c'' ≫ ((Triangle.shiftFunctor C (1 : ℤ)).obj (Triangle.mk f g h)).mor₃)
 
 /-- TR4 completes every commutative square to the source's 3 by 3 diagram. -/
 theorem three_by_three_completion

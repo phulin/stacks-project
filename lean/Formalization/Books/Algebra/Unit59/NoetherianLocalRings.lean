@@ -346,7 +346,7 @@ theorem idealPowerPiece_isFiniteLength
     · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
         Submodule.ker_mkQ]
       have hIP : I • P ≤ Q := by
-        simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+        simp [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
       intro x hx
       exact hIP ((Submodule.mem_smul_top_iff I P x).mp hx)
     · exact bot_le

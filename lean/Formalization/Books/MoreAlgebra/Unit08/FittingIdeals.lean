@@ -356,6 +356,123 @@ theorem fittingIdealInt_negOne
     fittingIdealInt R M (-1) = fittingIdealNegOne R M := by
   rfl
 
+private def stabilize
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (t : ℕ) :
+    (Fin (n + t) → R) →ₗ[R] M :=
+  { toFun := fun x => p (x ∘ Fin.castAdd t)
+    map_add' := by
+      intro x y
+      simp [Function.comp_def]
+    map_smul' := by
+      intro a x
+      simp [Function.comp_def] }
+
+private theorem stabilize_surjective
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (hp : Function.Surjective p) (t : ℕ) :
+    Function.Surjective (stabilize p t) := by
+  intro y
+  obtain ⟨x, rfl⟩ := hp y
+  refine ⟨Fin.addCases x (fun _ => 0), ?_⟩
+  simp [stabilize, Function.comp_def]
+
+private theorem minorIdeal_relationMatrix_cols_le
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (z : Fin m → LinearMap.ker p) (r : ℕ) :
+    minorIdeal (relationMatrix p z) r ≤
+      ⨆ w : Fin r → LinearMap.ker p,
+        minorIdeal (relationMatrix p w) r := by
+  classical
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let w : Fin r → LinearMap.ker p := fun j =>
+    z (cols.orderIsoOfFin hcols j)
+  refine le_iSup (fun w : Fin r → LinearMap.ker p =>
+    minorIdeal (relationMatrix p w) r) w |>.trans ?_
+  apply Ideal.subset_span
+  refine ⟨rows, Finset.univ, hrows, by simp, ?_⟩
+  dsimp [matrixMinor, relationMatrix, w]
+  apply congrArg Matrix.det
+  apply Matrix.ext
+  intro i j
+  simp only [Matrix.submatrix_apply, Function.comp_apply]
+  rfl
+
+private theorem fittingIdealOfSurjection_stabilize_le
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (hp : Function.Surjective p)
+    (t k : ℕ) (hk : k ≤ n) :
+    fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k ≤
+      fittingIdealOfSurjection p hp k := by
+  unfold fittingIdealOfSurjection
+  refine iSup_le fun z => ?_
+  let z' : Fin (n + t - k) → LinearMap.ker p := fun j =>
+    ⟨fun i => (z j).1 (Fin.castAdd t i), by
+      apply LinearMap.mem_ker.mpr
+      change stabilize p t (z j).1 = 0
+      exact (z j).property⟩
+  have hrel :
+      (relationMatrix (stabilize p t) z).submatrix (Fin.castAdd t) id =
+        relationMatrix p z' := by
+    ext i j
+    rfl
+  have hindex : n - k + t = n + t - k := by omega
+  calc
+    minorIdeal (relationMatrix (stabilize p t) z) (n + t - k) =
+        minorIdeal (relationMatrix (stabilize p t) z) (n - k + t) := by
+          rw [hindex]
+    _ ≤ minorIdeal
+        ((relationMatrix (stabilize p t) z).submatrix (Fin.castAdd t) id) (n - k) :=
+      minorIdeal_firstRows (relationMatrix (stabilize p t) z)
+    _ = minorIdeal (relationMatrix p z') (n - k) := by rw [hrel]
+    _ ≤ ⨆ w : Fin (n - k) → LinearMap.ker p,
+        minorIdeal (relationMatrix p w) (n - k) :=
+      minorIdeal_relationMatrix_cols_le p z' (n - k)
+
+private theorem minorIdeal_identity_top
+    {R : Type*} [CommRing R] (t : ℕ) :
+    minorIdeal (1 : Matrix (Fin t) (Fin t) R) t = ⊤ := by
+  apply (Ideal.eq_top_iff_one _).mpr
+  apply Ideal.subset_span
+  refine ⟨Finset.univ, Finset.univ, by simp, by simp, ?_⟩
+  simp [matrixMinor]
+
+private theorem fittingIdealOfSurjection_stabilize_ge
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (hp : Function.Surjective p)
+    (t k : ℕ) (hk : k ≤ n) :
+    fittingIdealOfSurjection p hp k ≤
+      fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k := by
+  unfold fittingIdealOfSurjection
+  refine iSup_le fun z => ?_
+  sorry
+
+private theorem fittingIdealOfSurjection_factor
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n : ℕ} (p q : (Fin n → R) →ₗ[R] M)
+    (hp : Function.Surjective p) (hq : Function.Surjective q)
+    (u : (Fin n → R) →ₗ[R] (Fin n → R)) (hu : q.comp u = p) (k : ℕ) :
+    fittingIdealOfSurjection p hp k ≤ fittingIdealOfSurjection q hq k := by
+  unfold fittingIdealOfSurjection
+  refine iSup_le fun z => ?_
+  let w : Fin (n - k) → LinearMap.ker q := fun j =>
+    ⟨u (z j), by
+      apply LinearMap.mem_ker.mpr
+      rw [← hu]
+      exact (z j).property⟩
+  have hmat :
+      relationMatrix q w = LinearMap.toMatrix' u * relationMatrix p z := by
+    ext i j
+    change u (z j) i = _
+    rw [← LinearMap.toMatrix'_mulVec u (z j)]
+    simp [Matrix.mulVec, Matrix.mul_apply, relationMatrix]
+  rw [hmat]
+  exact (minorIdeal_left_mul (LinearMap.toMatrix' u) (relationMatrix p z)).trans
+    (le_iSup (fun w : Fin (n - k) → LinearMap.ker q =>
+      minorIdeal (relationMatrix q w) (n - k)) w)
+
 /-- Independence of the Fitting ideal from the chosen finite-free surjection. -/
 theorem fittingIdealOfSurjection_eq
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

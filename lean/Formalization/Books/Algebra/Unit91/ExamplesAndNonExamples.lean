@@ -1197,7 +1197,7 @@ theorem powerSeriesXi_annihilator_eventually
                 (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1)) =
                 (PowerSeries.X : PowerSeries k) ^ (2 ^ (m - 1)) *
                   (PowerSeries.X : PowerSeries k) ^ (2 ^ (j - 1)) * s := by
-                    simp [mul_assoc, mul_comm, mul_left_comm]
+                    simp [mul_assoc, mul_comm]
             _ = (PowerSeries.X : PowerSeries k) ^
                 (2 ^ (m - 1) + 2 ^ (j - 1)) * s := by
                   rw [← pow_add]

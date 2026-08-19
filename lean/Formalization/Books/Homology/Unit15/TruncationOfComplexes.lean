@@ -1632,7 +1632,8 @@ private noncomputable def stupidTruncLEπ (K : CochainComplex C ℤ) (n : ℤ) :
       have hli : ∃ t : ℕ, (ComplexShape.embeddingUpIntLE n).f t =
           (ComplexShape.embeddingUpIntLE n).f l := ⟨l, rfl⟩
       rw [← hk, ← hl]
-      simp only [stupidTruncLEπ_f, Function.id_def]
+      unfold stupidTruncLEπ_f
+      simp only [Function.id_def]
       change _ ≫ ((K.restriction (ComplexShape.embeddingUpIntLE n)).extend
           (ComplexShape.embeddingUpIntLE n)).d _ _ = _
       rw [HomologicalComplex.extend_d_eq

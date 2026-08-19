@@ -4,6 +4,7 @@ import Mathlib.RingTheory.GradedAlgebra.RingHom
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
 import Mathlib.RingTheory.IntegralClosure.Algebra.Basic
+import Mathlib.RingTheory.PolynomialAlgebra
 import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 
@@ -3498,12 +3499,16 @@ theorem integralClosure_is_graded
   intro d x hx
   rw [mem_integralClosure_iff] at hx ⊢
   obtain ⟨p, hp, hpx⟩ := hx
-  letI : Algebra (Polynomial R) (Polynomial S) :=
-    (Polynomial.mapRingHom (algebraMap R S)).toAlgebra
+  letI : Algebra (Polynomial R) (Polynomial S) := Polynomial.algebra R S
   have hscaled : IsIntegral (Polynomial R) (gradedScale H x) := by
     refine ⟨p.map (gradedScale G), hp.map _, ?_⟩
+    have hcompat' :
+        (algebraMap (Polynomial R) (Polynomial S)).comp (gradedScale G) =
+          (gradedScale H).comp (algebraMap R S) := by
+      rw [Polynomial.algebraMap_def]
+      exact hcompat
     have heval := Polynomial.map_aeval_eq_aeval_map
-      (φ := gradedScale G) (ψ := gradedScale H) hcompat p x
+      (φ := gradedScale G) (ψ := gradedScale H) hcompat' p x
     change Polynomial.aeval (gradedScale H x) (p.map (gradedScale G)) = 0
     have hpx' : Polynomial.aeval x p = 0 := by
       simpa [Polynomial.aeval_def] using hpx

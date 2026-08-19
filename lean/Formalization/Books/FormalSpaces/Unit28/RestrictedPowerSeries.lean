@@ -517,7 +517,7 @@ def iAdicRestrictedPowerSeriesLimitTopology (A : Type u) [CommRing A]
 ring is the restricted power series ring as a ring. -/
 theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ)
-    (hA : IsAdicComplete I A) :
+    (_hA : IsAdicComplete I A) :
     Nonempty
       (iAdicPolynomialCompletion A I r ≃+*
         iAdicRestrictedPowerSeries A I r) := by
@@ -784,7 +784,7 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
 
 private theorem iAdicPolynomialCompletion_canonical_equiv_with_coordinates
     (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ)
-    (hA : IsAdicComplete I A) :
+    (_hA : IsAdicComplete I A) :
     ∃ (e : iAdicPolynomialCompletion A I r ≃+*
         iAdicRestrictedPowerSeries A I r),
       ∃ q : ∀ n : ℕ,
@@ -1123,9 +1123,9 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_topologicalRing_of
       cases i with
       | up n =>
         dsimp [B, iAdicOpenIdealBasis] at *
-        letI : TopologicalSpace (AdicCompletion J P) :=
+        let : TopologicalSpace (AdicCompletion J P) :=
           AdicCompletionLimitTopology P J P
-        letI : TopologicalSpace (P ⧸ (J ^ n • (⊤ : Submodule P P))) := ⊥
+        let : TopologicalSpace (P ⧸ (J ^ n • (⊤ : Submodule P P))) := ⊥
         let : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ I ^ n)) := ⊥
         change @Continuous (AdicCompletion J P)
           (iAdicRestrictedPowerSeries A I r)

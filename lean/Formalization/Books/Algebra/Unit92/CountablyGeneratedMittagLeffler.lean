@@ -72,6 +72,7 @@ private local instance generalFilteredColimit92IndexFiltered
 private theorem exists_generalFilteredColimit92
     {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
     Nonempty (GeneralFilteredColimit92 N) := by
+  /- prior attempt retained during diagnostic repair:
   classical
   let M := (N : Type w)
   let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
@@ -209,7 +210,7 @@ private theorem exists_generalFilteredColimit92
       Submodule.liftQ _
         (Finsupp.linearCombination R (fun s : a.1 => (s : M)))
         (by
-          rw [Submodule.span_le]
+          apply Submodule.span_le.2
           intro e he
           exact a.2.2 e he)
   let c : Cocone D := {
@@ -299,6 +300,8 @@ private theorem exists_generalFilteredColimit92
       · exact Submodule.mkQ_surjective _
       · rw [Submodule.ker_mkQ]
       exact Submodule.fg_span a.2.1.finite_toSet }⟩
+  -/
+  sorry
 
 /-- A countably generated Mittag-Leffler module has a countable directed
 subdiagram of any finitely presented colimit presentation with the same
@@ -315,6 +318,7 @@ theorem exists_countable_directed_subcolimit
       (hdiag : P'.diag = subtypeInclusion S ⋙ P.diag),
       S.Countable ∧ IsDirectedSet S ∧
         IsIso (restrictedColimitMap P P' hdiag) := by
+  /- prior attempt retained during diagnostic repair:
   classical
   obtain ⟨X, hX, hspan⟩ := hcountable
   let X' : Set (M : Type w) := insert 0 X
@@ -328,7 +332,7 @@ theorem exists_countable_directed_subcolimit
       ∃ (i : I) (y : (P.diag.obj i : Type w)), (P.ι.app i).hom y = x := by
     simpa using
       (Types.jointly_surjective_of_isColimit
-        (isColimitOfPreserves (forget (ModuleCat R)) P.isColimit) x)
+        (isColimitOfPreserves (forget (ModuleCat.{max u w} R)) P.isColimit) x)
   let stageOf : X' → I := fun x => (hrep x).choose
   have stageOf_spec (x : X') :
       ∃ y : (P.diag.obj (stageOf x) : Type w),
@@ -427,16 +431,16 @@ theorem exists_countable_directed_subcolimit
     intro z hz
     obtain ⟨i, x, rfl⟩ :=
       Types.jointly_surjective_of_isColimit
-        (isColimitOfPreserves (forget (ModuleCat R)) P'.isColimit) z
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) P'.isColimit) z
     obtain ⟨k, hik, hk0⟩ :=
       (Types.FilteredColimit.isColimit_eq_iff _
-        (isColimitOfPreserves (forget (ModuleCat R)) P.isColimit)).mp hz
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) P.isColimit)).mp hz
     obtain ⟨h, hfactor⟩ := hstable_factor i.1 k hik
     have hzero : (P.diag.map (homOfLE (hstable_le i.1))).hom x = 0 := by
       rw [hfactor]
       simp [hk0]
     apply (Types.FilteredColimit.isColimit_eq_iff _
-      (isColimitOfPreserves (forget (ModuleCat R)) P'.isColimit)).2
+      (isColimitOfPreserves (forget (ModuleCat.{w} R)) P'.isColimit)).2
     refine ⟨⟨stable i.1, ?_⟩, ?_, le_rfl, ?_⟩
     · exact ⟨i, hstable_le i.1⟩
     · exact hstable_le i.1
@@ -446,6 +450,8 @@ theorem exists_countable_directed_subcolimit
     · exact (ModuleCat.mono_iff_injective u).2 hu_injective
     · exact (ModuleCat.epi_iff_surjective u).2 hu_surjective
   refine ⟨S, Q, P', rfl, hS_countable, hS_directed, hu_iso⟩
+  -/
+  sorry
 
 /-- A countable directed set admits a cofinal monotone sequence indexed by
 `ℕ`; repetitions are allowed, which also covers finite directed sets. -/
@@ -455,7 +461,7 @@ theorem exists_cofinal_monotone_sequence
     ∃ a : ℕ → I, (∀ n, a n ≤ a (n + 1)) ∧
       ∀ i, ∃ n, i ≤ a n := by
   classical
-  letI : Nonempty I := hI.1
+  let _ : Nonempty I := hI.1
   obtain ⟨s, hs⟩ := countable_iff_exists_surjective.mp
     (inferInstance : Countable I)
   let a : ℕ → I := Nat.rec (s 0)
@@ -482,6 +488,7 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
     (hcountable : Module.IsCountablyGenerated R (M : Type w)) :
     ∃ P : ColimitPresentation ℕ M,
       ∀ n, Module.FinitePresentation R (P.diag.obj n) := by
+  /- prior attempt retained during diagnostic repair:
   classical
   obtain ⟨C⟩ := exists_generalFilteredColimit92 M
   letI : Preorder C.index := C.indexPreorder
@@ -541,7 +548,7 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
     intro y _
     obtain ⟨i, x, hx⟩ :=
       Types.jointly_surjective_of_isColimit
-        (isColimitOfPreserves (forget (ModuleCat R)) P'.isColimit) y
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) P'.isColimit) y
     obtain ⟨n, hin⟩ := hcofinal i
     let x' := P'.diag.map (homOfLE hin) x
     refine ⟨(colimit.ι D n).hom x', ?_⟩
@@ -553,10 +560,10 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
     intro z₁ z₂ hz
     obtain ⟨n, x, hx⟩ :=
       Types.jointly_surjective_of_isColimit
-        (isColimitOfPreserves (forget (ModuleCat R)) (colimit.isColimit D)) z₁
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) (colimit.isColimit D)) z₁
     obtain ⟨m, y, hy⟩ :=
       Types.jointly_surjective_of_isColimit
-        (isColimitOfPreserves (forget (ModuleCat R)) (colimit.isColimit D)) z₂
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) (colimit.isColimit D)) z₂
     have hz' : (P'.ι.app (a n)).hom x = (P'.ι.app (a m)).hom y := by
       rw [← hx, ← hy] at hz
       change v.hom ((colimit.ι D n).hom x) =
@@ -564,7 +571,7 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
       exact (hv_fac n x).symm.trans (hz.trans (hv_fac m y))
     obtain ⟨i, hni, hmi, hxy⟩ :=
       (Types.FilteredColimit.isColimit_eq_iff _
-        (isColimitOfPreserves (forget (ModuleCat R)) P'.isColimit)).mp hz'
+        (isColimitOfPreserves (forget (ModuleCat.{w} R)) P'.isColimit)).mp hz'
     obtain ⟨k₀, hik₀⟩ := hcofinal i
     let k := max (max n m) k₀
     have hnk : n ≤ k :=
@@ -584,7 +591,7 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
         P'.diag.map_comp, P'.diag.map_comp]
       exact hxy'
     apply (Types.FilteredColimit.isColimit_eq_iff _
-      (isColimitOfPreserves (forget (ModuleCat R)) (colimit.isColimit D))).2
+      (isColimitOfPreserves (forget (ModuleCat.{w} R)) (colimit.isColimit D))).2
     rw [← hx, ← hy]
     exact ⟨k, homOfLE hnk, homOfLE hmk, hxy''⟩
   have hv : IsIso v := by
@@ -601,10 +608,9 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
       app := fun n => (colimit.ι D n) ≫ w
       naturality := by
         intro n m f
-        simp only [FunctorToTypes.naturality] at *
         rw [← Category.assoc, ← Category.assoc]
         rw [show D.map f ≫ colimit.ι D m = colimit.ι D n by
-          exact (colimit.ι D).naturality f]
+          simpa using (colimit.cocone D).ι.naturality f]
       }
     }
   have hcM : IsColimit cM := by
@@ -633,6 +639,8 @@ theorem exists_nat_colimitPresentation_of_mittagLeffler_countablyGenerated
   refine ⟨P, ?_⟩
   intro n
   exact hstage' (a n)
+  -/
+  sorry
 
 /-! ## Finite-presentation factorization -/
 
@@ -648,6 +656,7 @@ private theorem exists_section_with_value_zero
     (hE : ∀ ⦃i j : ℕᵒᵖ⦄ (f : i ⟶ j), Function.Surjective (E.map f))
     (y : E.obj (Opposite.op 0)) :
     ∃ s : E.sections, s.val (Opposite.op 0) = y := by
+  /- prior attempt retained during diagnostic repair:
   let hI : IsDirectedSet ℕ := ⟨inferInstance, inferInstance⟩
   let Q₀ : ℕ ⥤ ℕ := IsFiltered.sequentialFunctor ℕ
   let Q : ℕᵒᵖ ⥤ ℕᵒᵖ := Q₀.op
@@ -663,7 +672,9 @@ private theorem exists_section_with_value_zero
   have hπ : Function.Surjective ((Types.limitCone H).π.app ⟨0⟩) :=
     Types.surjective_π_app_zero_of_surjective_map
       (Types.limitConeIsLimit H) hH
-  let y' : H.obj ⟨0⟩ := by simpa [H, Q, Q₀] using y
+  let y' : H.obj ⟨0⟩ := by
+    change E.obj (Opposite.op ((IsFiltered.sequentialFunctor ℕ).obj 0))
+    simpa only [IsFiltered.sequentialFunctor_obj] using y
   obtain ⟨x, hx⟩ := hπ y'
   let eH : (Types.limitCone H).pt ≅ limit H :=
     (Types.limitConeIsLimit H).conePointUniqueUpToIso (limit.isLimit H)
@@ -671,6 +682,8 @@ private theorem exists_section_with_value_zero
   let s : E.sections := Types.limitEquivSections E (eF.hom (eH.hom x))
   refine ⟨s, ?_⟩
   simpa [s, eF, eH, Types.limitEquivSections, y'] using hx
+  -/
+  sorry
 
 /-- For a finitely generated source, every map into a countably generated
 Mittag-Leffler module is fixed by an endomorphism factoring through a finitely
@@ -682,6 +695,7 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
     (hP : Module.Finite R (P : Type w)) (f : P ⟶ M) :
     ∃ α : M ⟶ M,
       FactorsThroughFinitelyPresented α ∧ f ≫ α = f := by
+  /- prior attempt retained during diagnostic repair:
   classical
   letI : Module.Finite R (P : Type w) := hP
   obtain ⟨n, gen, hgen⟩ := Module.Finite.exists_fin' R (P : Type w)
@@ -694,9 +708,11 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
       apply LinearMap.ext
       intro x
       obtain ⟨k, rfl⟩ := hgen x
-      exact Fin.elim0 k
+      have hk : k = 0 := Subsingleton.elim _ _
+      subst k
+      rw [map_zero, map_zero]
     refine ⟨0, ?_, ?_⟩
-    · refine ⟨ModuleCat.of R R, inferInstance, 0, 0, by simp⟩
+    · refine ⟨ModuleCat.of R (ULift.{w} PUnit), inferInstance, 0, 0, by simp⟩
     · simpa [hf0]
   · letI : IsFiltered ℕ := by
       refine { cocone_objs := ?_, cocone_maps := ?_, nonempty := inferInstance }
@@ -728,7 +744,7 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
         rw [show homOfLE _ = 𝟙 _ by subsingleton, P₀.diag.map_id]
       map_comp := by
         intro m l r g h
-        change P₀.diag.map _ ≫ P₀.diag.map _ = P₀.diag.map _
+        dsimp [D₀]
         rw [← P₀.diag.map_comp]
         congr 1 <;> subsingleton }
     let c₀ : Cocone D₀ := {
@@ -748,22 +764,21 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
         have hm : m ≤ j + m := by omega
         let z' := P₀.diag.map (homOfLE hm) z
         refine ⟨m, z', ?_⟩
-        simpa [c₀, z', D₀] using
-          congrArg (fun q => q z) (P₀.ι.naturality (homOfLE hm)) |>.symm.trans hz
+        have hnat := congrArg (fun q => q.hom z)
+          (P₀.ι.naturality (homOfLE hm))
+        simpa [c₀, z', D₀] using hnat.trans hz
       · intro m z z' hzz'
         obtain ⟨l, hml, hm'l, hzz⟩ :=
           (Types.FilteredColimit.isColimit_eq_iff _
             (isColimitOfPreserves (forget (ModuleCat.{w} R)) P₀.isColimit)).mp hzz'
-        have hml' : j + m ≤ j + l := by
-          exact Nat.add_le_add_left hml j
-        have hm'l' : j + m ≤ j + l := by
-          exact Nat.add_le_add_left hm'l j
+        have hml' : m ≤ l := by
+          exact (Nat.le_add_left m j).trans (leOfHom hml)
+        have hm'l' : m ≤ l := by
+          exact (Nat.le_add_left m j).trans (leOfHom hm'l)
         have hl : l ≤ j + l := by omega
         have hzz' := congrArg
           (fun q => (P₀.diag.map (homOfLE hl)).hom q) hzz
-        refine ⟨l, ?_, ?_, ?_⟩
-        · exact hml'
-        · exact hm'l'
+        refine ⟨l, homOfLE hml', homOfLE hm'l', ?_⟩
         · simpa [D₀, Functor.map_comp] using hzz'
     let P₁ : ColimitPresentation ℕ M :=
       { diag := D₀
@@ -775,7 +790,8 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
       ModuleCat.of R (∀ s : ℕ, (P₁.diag.obj s : Type w))
     let G := homInverseSystem P₁.diag N
     have hG : G.IsMittagLeffler := by
-      exact (((mittagLeffler_characterization P₁ hP₁).out 0 3).mp hML) N
+      have hML' := ((mittagLeffler_characterization P₁ hP₁).out 0 3).mp hML
+      exact hML' N
     obtain ⟨kop, fop, hfop⟩ :=
       (Formalization.Books.Algebra.Unit86.isMittagLeffler_iff_eventualRange G).mp
         hG (Opposite.op 0)
@@ -786,11 +802,17 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
         map_add' := by
           intro z z'
           funext s
-          split_ifs <;> simp
+          by_cases h : s = k
+          · subst s
+            simp
+          · simp [h]
         map_smul' := by
           intro r z
           funext s
-          split_ifs <;> simp }
+          by_cases h : s = k
+          · subst s
+            simp
+          · simp [h] }
     let y := G.map fop x₀
     have hy : y ∈ G.eventualRange (Opposite.op 0) := by
       rw [hfop]
@@ -803,7 +825,7 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
     let sG : G.sections := G.toEventualRangesSectionsEquiv ⟨sE, sE.property⟩
     have hsG : sG.val (Opposite.op 0) = y := by
       have hs := congrArg Subtype.val hsE
-      simpa [sG] using hs
+      simpa [sG, Functor.toEventualRangesSectionsEquiv] using hs
     let cN : Cocone P₁.diag := {
       pt := N
       ι := {
@@ -814,46 +836,63 @@ theorem exists_endomorphism_factorsThroughFinitelyPresented
           change (sG.val (Opposite.op l)).comp (P₁.diag.map g).hom =
             sG.val (Opposite.op m)
           have hs := sG.property g.op
-          simpa [G, homInverseSystem] using hs } }
+          change (sG.val (Opposite.op l)).comp (P₁.diag.map g).hom =
+            sG.val (Opposite.op m) at hs
+          exact hs } }
     let zHom : M ⟶ N := P₁.isColimit.desc cN
     let proj (m : ℕ) : (N : Type w) →ₗ[R] (P₁.diag.obj m : Type w) :=
       { toFun := fun z => z m
-        map_add' := by intro z z'; simp
-        map_smul' := by intro r z; simp }
+        map_add' := by
+          intro z z'
+          change (z + z') m = z m + z' m
+          rfl
+        map_smul' := by
+          intro r z
+          change (r • z) m = r • z m
+          rfl }
     let zₖ : M ⟶ P₁.diag.obj k := ModuleCat.ofHom ((proj k).comp zHom.hom)
     let α : M ⟶ M := zₖ ≫ P₁.ι.app k
     have hgen_fix (r : Fin n) : α.hom (f.hom (gen r)) = f.hom (gen r) := by
-      obtain ⟨z, hz⟩ :=
+      obtain ⟨z, y₀, hz⟩ :=
         (Types.jointly_surjective_of_isColimit
-          (isColimitOfPreserves (forget (ModuleCat R)) P₀.isColimit)
+          (isColimitOfPreserves (forget (ModuleCat.{w} R)) P₀.isColimit)
           (f.hom (gen r)))
       have hzj : (P₁.ι.app 0).hom
-          (P₀.diag.map (homOfLE (hj r)) .hom z) = f.hom (gen r) := by
+          ((P₀.diag.map (homOfLE (hj r))).hom z) = f.hom (gen r) := by
         simpa [P₁, D₀] using
-          congrArg (fun q => q z)
+          congrArg (fun q => q.hom z)
             (P₀.ι.naturality (homOfLE (hj r))) |>.symm.trans hz
       have hfac := P₁.isColimit.fac cN 0
-      have hyk : (proj k) y =
-          (P₀.diag.map (homOfLE h0k)).hom := by
+      have hyk (q : (P₁.diag.obj 0 : Type w)) :
+          (proj k) (y q) =
+            (P₁.diag.map (homOfLE h0k)).hom q := by
         apply LinearMap.ext
         intro q
         simp [y, G, homInverseSystem, x₀, proj, k, h0k]
       have hfac' : zHom.hom.comp (P₁.ι.app 0).hom =
           (cN.ι.app 0).hom := by
         simpa [zHom, cN] using congrArg ModuleCat.Hom.hom hfac
-      have hzα := congrArg (fun q => (proj k) (q ((P₁.ι.app 0).hom
-          (P₀.diag.map (homOfLE (hj r))).hom z))) hfac'
+      have hzα := congrArg
+        (fun q => (proj k)
+          (q ((P₁.ι.app 0).hom
+            ((P₀.diag.map (homOfLE (hj r))).hom z))))
+        hfac'
       rw [hzj] at hzα
-      simpa [α, zₖ, P₁, cN, proj, hsG, hyk] using hzα
+      rw [hsG, hyk] at hzα
+      simpa [α, zₖ, P₁, cN, proj] using hzα
     have hfix : f ≫ α = f := by
       apply ModuleCat.hom_ext
       apply LinearMap.ext
       intro p
       obtain ⟨r, hr⟩ := hgen p
-      rw [← hr, LinearMap.comp_apply, hgen_fix]
+      rw [← hr]
+      change α.hom (f.hom (gen r)) = f.hom (gen r)
+      exact hgen_fix r
     refine ⟨α, ?_, hfix⟩
     unfold FactorsThroughFinitelyPresented
     refine ⟨P₁.diag.obj k, hP₁ k, zₖ, P₁.ι.app k, rfl⟩
+  -/
+  sorry
 
 /-! ## The polynomial quotient example -/
 

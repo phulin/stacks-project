@@ -147,7 +147,94 @@ def HasCanonicalNoncompleteQuotientFiniteExpansion
       (∀ i, coeff i ≠ 0 ↔ i ∈ s) ∧
         f = noncompleteQuotientFiniteExpansionValue coeff s
 
-/-- Every element has a unique finite expansion in the source's normal form. -/
+/-- Every element has a unique finite expansion in the source's normal form.
+
+Proof roadmap (statement review completed):
+
+* The degree-sensitive clause in `IsCanonicalNoncompleteQuotientCoefficient` is
+  essential, and is strong enough for uniqueness of the *raw* polynomials.  With
+  only `IsReducedNoncompleteQuotientCoefficient`, the monomial `w_j ^ 2` could
+  occur at degree `j`, although
+  `x ^ j * w_j ^ 2 = (z_j * t) * w_j = 0`.  The canonical clause excludes this
+  monomial (and, more generally, every non-singleton `w`-monomial containing a
+  `w_j` with `j ≤ i`) from coefficient `i`.  Thus do not weaken the target back
+  to the source's informal reduced condition.
+
+* First add a private normalizer on global exponent vectors
+  `m : NoncompleteQuotientVariable →₀ ℕ`.  It should return either `none` for a
+  zero monomial or `some m'` for its canonical representative.  Split into the
+  following exhaustive cases: a monomial containing both a `z` and a `w` is
+  zero; one containing a `z` and `t` is zero unless its whole `z`-part is the
+  single factor `z_j`, in which case replace `z_j * t` by `x ^ j * w_j`; with no
+  `z`, a `w`-part is zero when it is not the single factor `w_j` and some
+  occurring `j` satisfies `j ≤ m .x`; all remaining monomials are fixed.  Prove
+  that every returned exponent is canonical, that canonical exponents are
+  fixed, and that the `some` output is unique.  Use `Finsupp.erase_add_single`,
+  `Finsupp.erase_same`, and `Finsupp.erase_ne` from
+  `Mathlib/Algebra/Group/Finsupp.lean` to split off the `x` exponent.  The
+  positive index must stay `j : ℕ+`, with external degree `(j : ℕ)`.
+
+* Extend this monomial operation k-linearly to a private
+  `normalForm : NoncompleteQuotientPolynomial k →ₗ[k]
+    NoncompleteQuotientPolynomial k`, sending the `none` case to zero.  The
+  useful API in `Mathlib/Algebra/MvPolynomial/Basic.lean` is
+  `MvPolynomial.as_sum`, `MvPolynomial.sum_def`,
+  `MvPolynomial.monomial_mul`, `MvPolynomial.monomial_add_single`,
+  `MvPolynomial.X_pow_eq_monomial`, and `MvPolynomial.coeff_monomial`.
+  Establish the three normal-form lemmas needed below:
+  (1) `p - normalForm p ∈ noncompleteQuotientRelationIdeal k`;
+  (2) every element of `noncompleteQuotientRelationIdeal k` has normal form
+  zero; and (3) a polynomial supported on canonical global monomials is fixed
+  by `normalForm`.
+
+* For (1), use `MvPolynomial.as_sum` and prove the claim one monomial at a
+  time.  Each nontrivial case is either a polynomial multiple of
+  `z_j * t - x ^ (j : ℕ) * w_j`, a multiple of `z_j * w_l`, or the sum of one
+  of each (the latter handles `x ^ i` times a forbidden `w`-product).  Insert
+  these generators with `Ideal.subset_span`.  For (2), prove first that the
+  normal form of every monomial multiple of either family in
+  `noncompleteQuotientRelationSet k` is zero.  Then apply
+  `Submodule.span_induction` from `Mathlib/LinearAlgebra/Span/Defs.lean` to the
+  underlying `NoncompleteQuotientPolynomial k`-submodule of the ideal, using
+  the strengthened predicate `fun q _ => ∀ a, normalForm (a * q) = 0`; this
+  strengthened predicate makes the scalar step valid.  Reduce the arbitrary
+  multiplier `a` with `MvPolynomial.induction_on'`.  Do not try to make
+  `normalForm` a ring homomorphism.
+
+* Package and unpackage the external `x` degree.  For a finite family define
+  its raw polynomial as
+  `∑ i ∈ s, coeff i * MvPolynomial.X .x ^ i`; `map_sum`, `map_mul`, and the
+  definition of `noncompleteQuotientFiniteExpansionValue` identify its quotient
+  class with the displayed expansion.  Conversely, for a canonical global
+  polynomial `q`, set
+  `coeff i := ∑ m ∈ q.support.filter (fun m => m .x = i),
+    MvPolynomial.monomial (m.erase .x) (MvPolynomial.coeff m q)`
+  and take the image of `q.support` under `fun m => m .x` as the candidate
+  finite support.  Distinct exponents in a fixed fibre have distinct erasures;
+  recover the original exponent with `Finsupp.erase_add_single`.  This proves
+  the support iff (use `MvPolynomial.mem_support_iff`) and reconstructs `q` by
+  `MvPolynomial.as_sum`.  The normalizer case lemmas prove
+  `IsCanonicalNoncompleteQuotientCoefficient i (coeff i)`.
+
+* For existence, use `Ideal.Quotient.mk_surjective` from
+  `Mathlib/RingTheory/Ideal/Quotient/Defs.lean` to write `f` as the class of a
+  polynomial `p`, normalize `p`, unpackage the result as above, and use (1)
+  together with `Ideal.Quotient.mk_eq_mk_iff_sub_mem` to obtain the value
+  equality.
+
+* For uniqueness, unpack two witnesses into global polynomials `P` and `Q`.
+  Their quotient equality gives `P - Q ∈ noncompleteQuotientRelationIdeal k`
+  by `Ideal.Quotient.mk_eq_mk_iff_sub_mem`; (2), linearity, and (3) give
+  `P = Q`.  For every `i : ℕ` and every
+  `m : NoncompleteQuotientVariable →₀ ℕ` with `m .x = 0`, compare the
+  coefficient of `m + Finsupp.single .x i` in this equality.  The exact-support
+  iff disposes of indices outside `s`, while `MvPolynomial.coeff_mul_monomial`
+  and `MvPolynomial.coeff_monomial` identify the two sides with
+  `MvPolynomial.coeff m (coeff i)`.  If instead `m .x ≠ 0`, canonicality and
+  `MvPolynomial.mem_support_iff` show directly that both raw coefficient
+  polynomials have coefficient zero at `m`.  Apply `MvPolynomial.ext` for each
+  `i`, then `funext`, to finish the `ExistsUnique` uniqueness field.
+-/
 theorem existsUnique_canonicalNoncompleteQuotientFiniteExpansion
     {k : Type u} [Field k] (f : NoncompleteQuotientRing k) :
     ∃! coeff : ℕ → NoncompleteQuotientPolynomial k,

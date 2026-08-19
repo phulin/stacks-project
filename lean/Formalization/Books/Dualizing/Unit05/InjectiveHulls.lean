@@ -42,13 +42,14 @@ def InjectiveHull {R : Type u} [Ring R] {M E : ModuleCat.{v} R}
   EssentialExtension f ∧ CategoryTheory.Injective E
 
 /-- Every module has an injective hull. -/
-theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
+theorem exists_injective_hull {R : Type u} [Ring R] [Small.{v} R]
+    (M : ModuleCat.{v} R) :
     ∃ (E : ModuleCat.{v} R) (f : M ⟶ E), InjectiveHull f := by
   let p : InjectivePresentation M :=
-    ((ModuleCat.enoughInjectives R).presentation M).some
-  letI : CategoryTheory.Injective p.J := p.injective
+    (EnoughInjectives.presentation M).some
+  let : CategoryTheory.Injective p.J := p.injective
   let I : Type v := (p.J : Type v)
-  letI : Module.Injective R I :=
+  let : Module.Injective R I :=
     Module.injective_module_of_injective_object R (p.J : Type v)
   let j : (M : Type v) →ₗ[R] I := p.f.hom
   have hj : Function.Injective j :=
@@ -65,8 +66,8 @@ theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
       ∀ (A B : ModuleCat.{v} R) (u : A ⟶ B), EssentialExtension u →
         EssentialSubmodule (LinearMap.range u.hom) := by
     intro A B u hu
-    letI : Mono u := hu.1
-    letI : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
+    let : Mono u := hu.1
+    let : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
       ConcreteCategory.mono_of_injective _ Subtype.val_injective
     let S : Submodule R (B : Type v) := LinearMap.range u.hom
     let e : (A : Type v) ≃ₗ[R] S :=
@@ -171,12 +172,10 @@ theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
           _ = s • (e : I) := by rw [← he']
           _ = z := hs
       refine (J ⊓ T).ne_bot_iff.mpr ⟨(s * r) • (x : I), ?_, ?_⟩
-      · rw [hsr]
-        exact ⟨hz.1, T.smul_mem (s * r) hxT⟩
+      · exact ⟨(hsr.symm ▸ hz).1, T.smul_mem (s * r) hxT⟩
       · rw [hsr]
         exact hz0
-    apply le_antisymm hEE'
-    exact hEmax hGoodE' hEE'
+    exact hEmax.eq_of_le hGoodE' hEE'
   have hE_module : Module.Injective R E := by
     refine ⟨?_⟩
     intro X Y _ _ _ _ i hi g
@@ -405,13 +404,14 @@ theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
       exact (hk0 hk0').elim
   have hEcat : CategoryTheory.Injective (ModuleCat.of R E) := by
     constructor
-    intro X Y f g hf
+    intro X Y g f hf
     have hf_inj : Function.Injective f.hom :=
       (ModuleCat.mono_iff_injective f).mp hf
     obtain ⟨h, hh⟩ := hE_module.out f.hom hf_inj g.hom
     refine ⟨ModuleCat.ofHom h, ?_⟩
     apply ModuleCat.hom_ext
-    exact hh
+    ext x
+    simpa using hh x
   let fE : (M : Type v) →ₗ[R] E :=
     j.codRestrict E (fun m => hEGood.1 (show j m ∈ J from ⟨m, rfl⟩))
   let f : M ⟶ ModuleCat.of R E := ModuleCat.ofHom fE
@@ -444,16 +444,18 @@ theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
         (fE m : I) = j m := rfl
         _ = z := hm
         _ = r • (x : I) := hr.symm
-    · rw [← hr]
-      exact hz0
+    · intro hzero
+      apply hz0
+      rw [← hr]
+      exact congrArg Subtype.val hzero
   have hfmono : Mono f := by
     apply (ModuleCat.mono_iff_injective f).mpr
     intro x y hxy
     apply hj
     exact congrArg Subtype.val hxy
   have hEssf : EssentialExtension f := by
-    letI : Mono f := hfmono
-    letI : Mono (ModuleCat.ofHom (LinearMap.range fE).subtype) :=
+    let : Mono f := hfmono
+    let : Mono (ModuleCat.ofHom (LinearMap.range fE).subtype) :=
       ConcreteCategory.mono_of_injective _ Subtype.val_injective
     let e : (M : Type v) ≃ₗ[R] LinearMap.range fE :=
       LinearEquiv.ofBijective fE.rangeRestrict
@@ -476,7 +478,7 @@ theorem exists_injective_hull {R : Type u} [Ring R] (M : ModuleCat.{v} R) :
     unfold EssentialExtension at hsub ⊢
     refine ⟨hfmono, ?_⟩
     intro P hP
-    rw [← hmk]
+    rw [hmk]
     exact hsub.2 P hP
   exact ⟨ModuleCat.of R E, f, ⟨hEssf, hEcat⟩⟩
 
@@ -490,8 +492,8 @@ theorem injective_hull_extend
     (hf : InjectiveHull f) (hg : InjectiveHull g) (φ : M ⟶ N) :
     ∃ ψ : E ⟶ E', f ≫ ψ = φ ≫ g := by
   rcases hf.1 with ⟨hfmono, _⟩
-  letI := hfmono
-  letI := hg.2
+  let := hfmono
+  let := hg.2
   exact ⟨Injective.factorThru (φ ≫ g) f, Injective.comp_factorThru (φ ≫ g) f⟩
 
 /-- The extension of a monomorphism is a monomorphism. -/
@@ -563,8 +565,8 @@ theorem injective_hull_extend_isIso_of_essential
       ∀ (A B : ModuleCat.{v} R) (u : A ⟶ B), EssentialExtension u →
         EssentialSubmodule (LinearMap.range u.hom) := by
     intro A B u hu
-    letI : Mono u := hu.1
-    letI : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
+    let : Mono u := hu.1
+    let : Mono (ModuleCat.ofHom (LinearMap.range u.hom).subtype) :=
       ConcreteCategory.mono_of_injective _ Subtype.val_injective
     let S : Submodule R (B : Type v) := LinearMap.range u.hom
     let e : (A : Type v) ≃ₗ[R] S :=
@@ -633,8 +635,8 @@ theorem injective_hull_extend_isIso_of_essential
         _ = (b * a) • y := by rw [mul_smul]
         _ = 0 := hzero
     exact ⟨b * a, hmem, hnonzero⟩
-  letI : Mono ψ := hψmono
-  letI : CategoryTheory.Injective E := hf.2
+  let : Mono ψ := hψmono
+  let : CategoryTheory.Injective E := hf.2
   let ρ : E' ⟶ E := Injective.factorThru (𝟙 E) ψ
   have hρ : ψ ≫ ρ = 𝟙 E := by
     change ψ ≫ Injective.factorThru (𝟙 E) ψ = 𝟙 E

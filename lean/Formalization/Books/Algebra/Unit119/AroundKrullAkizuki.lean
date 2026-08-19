@@ -76,9 +76,275 @@ theorem dominate_by_dimension_one
       IsLocalRing S ∧
         IsNoetherianRing S ∧
           ringKrullDim S = 1 ∧
-            IsLocalHom (algebraMap R S) ∧
+              IsLocalHom (algebraMap R S) ∧
               RingHom.EssFiniteType (algebraMap R S) := by
-  sorry
+  classical
+  let m : Ideal R := IsLocalRing.maximalIdeal R
+  have hm_ne_bot : m ≠ ⊥ :=
+    Ring.ne_bot_of_isMaximal_of_not_isField (IsLocalRing.maximalIdeal.isMaximal R) hfield
+  have hfg : m.FG := m.fg_of_isNoetherianRing
+  let G : Set R := m.generators \ {0}
+  have hGfinite : G.Finite := by
+    change (m.generators \ ({0} : Set R)).Finite
+    exact Set.Finite.sdiff (Submodule.FG.finite_generators hfg)
+  have hGnonempty : G.Nonempty := by
+    by_contra hG
+    have hGempty : G = ∅ := Set.not_nonempty_iff_eq_empty.mp hG
+    have hgens : m.generators ⊆ ({0} : Set R) := by
+      intro y hy
+      by_contra hy0
+      have : y ∈ G := ⟨hy, hy0⟩
+      rw [hGempty] at this
+      exact this
+    have hm_le_bot : m ≤ (⊥ : Ideal R) := by
+      rw [← m.span_generators]
+      apply Ideal.span_le.2
+      intro y hy
+      have hy0 : y = 0 := hgens hy
+      simp [hy0]
+    exact hm_ne_bot (bot_unique hm_le_bot)
+  let V0 : LocalSubring K := LocalSubring.range (algebraMap R K)
+  obtain ⟨V, hVdom⟩ :=
+    Formalization.Books.Algebra.Unit50.exists_valuationSubring_dominating V0
+  obtain ⟨hVsub, hVlocal⟩ :=
+    Formalization.Books.Algebra.Unit50.dominates_iff.mp hVdom
+  have hRmem (r : R) : algebraMap R K r ∈ V.toSubring := by
+    apply hVsub
+    exact ⟨r, rfl⟩
+  let F : Finset R := hGfinite.toFinset
+  obtain ⟨x, hxF, hxmin⟩ :=
+    Finset.exists_max_image F (fun z : R => V.valuation (algebraMap R K z))
+      (by
+        obtain ⟨z, hz⟩ := hGnonempty
+        exact ⟨z, hGfinite.mem_toFinset.mpr hz⟩)
+  have hxG : x ∈ G := hGfinite.mem_toFinset.mp hxF
+  have hxmax : x ∈ m := by
+    rw [← m.span_generators]
+    exact Ideal.subset_span hxG.1
+  have hx0 : x ≠ 0 := hxG.2
+  have hxK : algebraMap R K x ≠ 0 := by
+    intro hx
+    apply hx0
+    apply FaithfulSMul.algebraMap_injective R K
+    simpa using hx
+  have hxminG (y : R) (hy : y ∈ G) :
+      V.valuation (algebraMap R K y) ≤ V.valuation (algebraMap R K x) :=
+    hxmin y (hGfinite.mem_toFinset.mpr hy)
+  let ratio : R → K := fun y => algebraMap R K y / algebraMap R K x
+  have hratio (y : R) (hy : y ∈ G) : ratio y ∈ V.toSubring := by
+    change ratio y ∈ V
+    rw [← V.valuation_le_one_iff]
+    dsimp [ratio]
+    rw [V.valuation.map_div]
+    exact div_le_one_of_le₀ (hxminG y hy) zero_le
+  let A : Subalgebra R K := Algebra.adjoin R (ratio '' G)
+  have hAfg : A.FG := by
+    apply Subalgebra.fg_def.2
+    exact ⟨ratio '' G, hGfinite.image ratio, rfl⟩
+  let _ : IsNoetherianRing A := isNoetherianRing_of_fg hAfg
+  have hAsubV : ∀ a : A, (a : K) ∈ V := by
+    have hclosure : ∀ z : K, z ∈ A → z ∈ V := by
+      intro z hz
+      induction hz using Algebra.adjoin_induction with
+      | mem z hz =>
+          rcases hz with ⟨y, hy, rfl⟩
+          exact hratio y hy
+      | algebraMap r =>
+          exact hRmem r
+      | add x y hx hy ihx ihy =>
+          exact V.add_mem _ _ ihx ihy
+      | mul x y hx hy ihx ihy =>
+          exact V.mul_mem _ _ ihx ihy
+    intro a
+    exact hclosure (a : K) a.property
+  have hxA : algebraMap R A x ≠ 0 := by
+    intro hx
+    apply hxK
+    simpa using congrArg (fun z : A => (z : K)) hx
+  have hmap : Ideal.map (algebraMap R A) m =
+      Ideal.span ({algebraMap R A x} : Set A) := by
+    apply le_antisymm
+    · rw [Ideal.map_le_iff_le_comap, ← m.span_generators]
+      apply Ideal.span_le.2
+      intro y hy
+      show algebraMap R A y ∈ Ideal.span ({algebraMap R A x} : Set A)
+      by_cases hy0 : y = 0
+      · simp [hy0]
+      · let z : A := ⟨ratio y, Algebra.subset_adjoin ⟨y, ⟨hy, hy0⟩, rfl⟩⟩
+        have hzy : algebraMap R A y = algebraMap R A x * z := by
+          apply Subtype.ext
+          change algebraMap R K y = algebraMap R K x * ratio y
+          dsimp [ratio]
+          calc
+            algebraMap R K y = algebraMap R K y * 1 := by rw [mul_one]
+            _ = algebraMap R K y *
+                (algebraMap R K x * (algebraMap R K x)⁻¹) := by
+              rw [mul_inv_cancel₀ hxK]
+            _ = algebraMap R K x *
+                (algebraMap R K y * (algebraMap R K x)⁻¹) := by
+              ring
+            _ = algebraMap R K x *
+                (algebraMap R K y / algebraMap R K x) := by
+              congr 1
+              exact (div_eq_mul_inv _ _).symm
+        rw [hzy]
+        simpa [mul_comm] using
+          (Ideal.span ({algebraMap R A x} : Set A)).mul_mem_left z
+            (Ideal.subset_span (Set.mem_singleton _))
+    · apply Ideal.span_le.2
+      intro y hy
+      rw [Set.mem_singleton_iff.mp hy]
+      exact Ideal.mem_map_of_mem (algebraMap R A) hxmax
+  have hxnonunit : ¬ IsUnit (algebraMap R A x) := by
+    intro hxu
+    have hxuV : IsUnit
+        (⟨(algebraMap R K x), hAsubV (algebraMap R A x)⟩ :
+          V.toLocalSubring.toSubring) := by
+      have hmapu := hxu.map
+        ((A.val : A →+* K).codRestrict V.toLocalSubring.toSubring
+          (fun a => hAsubV a))
+      change IsUnit (((A.val : A →+* K).codRestrict V.toLocalSubring.toSubring
+        (fun a => hAsubV a)) (algebraMap R A x))
+      exact hmapu
+    let g0 : R →+* V0.toSubring :=
+      (algebraMap R K).codRestrict V0.toSubring (fun r => ⟨r, rfl⟩)
+    have hg0surj : Function.Surjective g0 := by
+      rintro ⟨z, ⟨r, hr⟩⟩
+      refine ⟨r, ?_⟩
+      apply Subtype.ext
+      exact hr
+    have hg0local : IsLocalHom g0 := IsLocalHom.of_surjective g0 hg0surj
+    have hxuV0 : IsUnit (g0 x) := by
+      let _ : IsLocalHom (Subring.inclusion hVsub) := hVlocal
+      exact isUnit_of_map_unit (Subring.inclusion hVsub) (g0 x) (by
+        change IsUnit (⟨algebraMap R K x, _⟩ : V.toLocalSubring.toSubring)
+        exact hxuV)
+    let _ : IsLocalHom g0 := hg0local
+    have hxuR : IsUnit x := isUnit_of_map_unit g0 x hxuV0
+    have hxnonunitR : x ∈ nonunits R :=
+      (IsLocalRing.mem_maximalIdeal x).mp hxmax
+    exact hxnonunitR hxuR
+  have hspan_ne_top : Ideal.span ({algebraMap R A x} : Set A) ≠ ⊤ := by
+    intro htop
+    have hdiv : algebraMap R A x ∣ (1 : A) := by
+      rw [← Ideal.mem_span_singleton]
+      rw [htop]
+      simp
+    exact hxnonunit (isUnit_iff_dvd_one.mpr hdiv)
+  obtain ⟨q, hq⟩ := Ideal.nonempty_minimalPrimes hspan_ne_top
+  let _ : q.IsPrime := hq.isPrime
+  have hq_ne_bot : q ≠ ⊥ := by
+    intro hqbot
+    have hxq : algebraMap R A x ∈ q :=
+      hq.le (Ideal.subset_span (by simp))
+    rw [hqbot] at hxq
+    exact hxA (by simpa using hxq)
+  have hqheight_le : q.height ≤ 1 :=
+    Formalization.Books.Algebra.Unit60.height_le_one_of_minimal_over_singleton
+      (R := A) (algebraMap R A x) hq
+  have hqheight_ne : q.height ≠ 0 := by
+    intro hqzero
+    exact hq_ne_bot ((Ideal.height_eq_zero_iff_eq_bot).mp hqzero)
+  have hqheight : q.height = 1 :=
+    le_antisymm hqheight_le ((Order.one_le_iff_ne_zero).mpr hqheight_ne)
+  let T := Localization.AtPrime q
+  let _ : IsNoetherianRing T := inferInstance
+  have hTdim : ringKrullDim T = 1 := by
+    calc
+      ringKrullDim T = q.height := IsLocalization.AtPrime.ringKrullDim_eq_height q T
+      _ = 1 := by exact_mod_cast hqheight
+  have hqmap : Ideal.map (algebraMap R A) m ≤ q := by
+    rw [hmap]
+    exact hq.le
+  have hcomap_eq : q.comap (algebraMap R A) = m := by
+    apply le_antisymm
+    · apply IsLocalRing.le_maximalIdeal
+      exact Ideal.comap_ne_top (algebraMap R A) hq.isPrime.ne_top
+    · exact (Ideal.map_le_iff_le_comap).mp hqmap
+  have hlocalRT : IsLocalHom (algebraMap R T) := by
+    apply ((IsLocalRing.local_hom_TFAE (algebraMap R T)).out 3 0).mp
+    intro r hr
+    have hrq : algebraMap R A r ∈ q := by
+      have : r ∈ q.comap (algebraMap R A) := by
+        rw [hcomap_eq]
+        exact hr
+      exact this
+    have hmem :=
+      (IsLocalization.AtPrime.to_map_mem_maximal_iff T q (algebraMap R A r)).2 hrq
+    change algebraMap R T r ∈ IsLocalRing.maximalIdeal T
+    simpa only [IsScalarTower.algebraMap_apply R A T r] using hmem
+  have hunit (s : q.primeCompl) : IsUnit (A.val (s : A)) := by
+    rw [isUnit_iff_ne_zero]
+    intro hs
+    apply s.2
+    have hs0 : (s : A) = 0 := by
+      apply Subtype.ext
+      exact hs
+    rw [hs0]
+    exact q.zero_mem
+  let f : T →ₐ[R] K := IsLocalization.liftAlgHom (f := A.val) hunit
+  have hf : Function.Injective f := by
+    change Function.Injective f.toRingHom
+    rw [IsLocalization.injective_iff_map_algebraMap_eq q.primeCompl]
+    intro a b
+    constructor
+    · intro hab
+      have := congrArg f hab
+      simpa using this
+    · intro hab
+      have hab' : a = b := by
+        apply Subtype.ext
+        simpa [f] using hab
+      simp [hab']
+  let S : Subalgebra R K := f.range
+  let e : T ≃ₐ[R] S := AlgEquiv.ofInjective f hf
+  let _ : IsNoetherianRing S := AlgHom.isNoetherianRing_range f
+  let _ : IsLocalRing S := by
+    exact e.toRingEquiv.isLocalRing
+  have hSdim : ringKrullDim S = 1 := by
+    rw [← ringKrullDim_eq_of_ringEquiv e.toRingEquiv]
+    exact hTdim
+  have hlocalRS : IsLocalHom (algebraMap R S) := by
+    have helocal : IsLocalHom e.toRingHom := by
+      constructor
+      intro a ha
+      have := IsUnit.map e.symm.toRingHom ha
+      simpa using this
+    have he_apply (z : T) : e.toRingEquiv.toRingHom z = e z := rfl
+    have hcomp : e.toRingHom.comp (algebraMap R T) = algebraMap R S := by
+      ext r
+      simpa only [RingHom.comp_apply, he_apply] using
+        congrArg (fun z : S => (z : K)) (e.commutes r)
+    rw [← hcomp]
+    infer_instance
+  let _ : Algebra.FiniteType R A := (Subalgebra.fg_iff_finiteType A).mp hAfg
+  have hRA : RingHom.FiniteType (algebraMap R A) := by
+    rw [RingHom.finiteType_algebraMap]
+    infer_instance
+  have hAT : RingHom.EssFiniteType (algebraMap A T) := by
+    rw [RingHom.essFiniteType_algebraMap]
+    exact Algebra.EssFiniteType.of_isLocalization (R := A) (S := T) q.primeCompl
+  have hcompAT : (algebraMap A T).comp (algebraMap R A) = algebraMap R T := by
+    ext r
+    exact IsScalarTower.algebraMap_apply R A T r
+  have hRT : RingHom.EssFiniteType (algebraMap R T) := by
+    have h := RingHom.EssFiniteType.comp
+      (RingHom.FiniteType.essFiniteType hRA) hAT
+    rw [hcompAT] at h
+    exact h
+  have hefinite : RingHom.FiniteType e.toRingHom :=
+    RingHom.FiniteType.of_surjective _ e.surjective
+  have hST : RingHom.EssFiniteType (algebraMap R S) := by
+    have hcomp := RingHom.EssFiniteType.comp hRT
+      (RingHom.FiniteType.essFiniteType hefinite)
+    have he_apply (z : T) : e.toRingEquiv.toRingHom z = e z := rfl
+    have heq : e.toRingHom.comp (algebraMap R T) = algebraMap R S := by
+      ext r
+      simpa only [RingHom.comp_apply, he_apply] using
+        congrArg (fun z : S => (z : K)) (e.commutes r)
+    rw [heq] at hcomp
+    exact hcomp
+  exact ⟨S, inferInstance, inferInstance, hSdim, hlocalRS, hST⟩
 
 theorem kollar_local_ring_alternative
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :

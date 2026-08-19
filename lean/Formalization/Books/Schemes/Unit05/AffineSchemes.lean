@@ -2,6 +2,7 @@ import Formalization.Books.Schemes.Unit02.LocallyRingedSpaces
 import Mathlib.Algebra.Homology.ShortComplex.ExactFunctor
 import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.RingTheory.Localization.Module
+import Mathlib.Topology.Sheaves.Abelian
 
 /-!
 # Affine schemes
@@ -699,7 +700,35 @@ theorem ring_standardOpen_restriction_compatibility {R : Type u} [CommRing R]
         (ringLocalizationToStandardOpenSections R f x) =
       ringLocalizationToStandardOpenSections R g
         (standardOpenLocalizationMap f g h x) := by
-  sorry
+  let A_f := (AlgebraicGeometry.structureSheafInType R R).obj.obj
+    (op (PrimeSpectrum.basicOpen f))
+  let A_g := (AlgebraicGeometry.structureSheafInType R R).obj.obj
+    (op (PrimeSpectrum.basicOpen g))
+  let res : A_f →+* A_g :=
+    { toFun := (AlgebraicGeometry.structureSheafInType R R).obj.map (homOfLE h).op
+      map_one' := by rfl
+      map_mul' := by intros; rfl
+      map_zero' := by rfl
+      map_add' := by intros; rfl }
+  let left : Localization.Away f →+* A_g :=
+    res.comp (ringLocalizationToStandardOpenSections R f).toRingHom
+  let right : Localization.Away f →+* A_g :=
+    (ringLocalizationToStandardOpenSections R g).toRingHom.comp
+      (standardOpenLocalizationMap f g h)
+  have heq : left = right := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers f)
+    ext r
+    simp [left, right, res, ringLocalizationToStandardOpenSections,
+      standardOpenLocalizationMap]
+    change (AlgebraicGeometry.structureSheafInType R R).obj.map (homOfLE h).op
+        ((AlgebraicGeometry.StructureSheaf.toOpenₗ R R
+          (PrimeSpectrum.basicOpen f)) r) =
+      (AlgebraicGeometry.StructureSheaf.toOpenₗ R R
+        (PrimeSpectrum.basicOpen g) r)
+    unfold AlgebraicGeometry.StructureSheaf.toOpenₗ
+    rfl
+  change left x = right x
+  rw [heq]
 
 theorem module_standardOpen_restriction_compatibility {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f g : R) (h : standardOpen g ≤ standardOpen f) :
@@ -708,7 +737,182 @@ theorem module_standardOpen_restriction_compatibility {R M : Type u} [CommRing R
           (moduleLocalizationToStandardOpenSections R M f x) =
         moduleLocalizationToStandardOpenSections R M g
           (standardOpenModuleLocalizationMap f g h x) := by
-  sorry
+  intro x
+  let T :=
+    (AlgebraicGeometry.modulesSpecToSheaf (R := CommRingCat.of R)).obj
+      (AlgebraicGeometry.tilde (R := CommRingCat.of R) (ModuleCat.of R M))
+  let U_f : Opens (AlgebraicGeometry.Spec (CommRingCat.of R)) :=
+    PrimeSpectrum.basicOpen f
+  let U_g : Opens (AlgebraicGeometry.Spec (CommRingCat.of R)) :=
+    PrimeSpectrum.basicOpen g
+  let T_f := T.presheaf.obj (op U_f)
+  let T_g := T.presheaf.obj (op U_g)
+  have hunit : IsUnit (algebraMap R (Module.End R T_g) f) := by
+    exact AlgebraicGeometry.Scheme.Modules.isUnit_algebraMap_end_of_le_basicOpen
+      (M := AlgebraicGeometry.tilde (R := CommRingCat.of R) (ModuleCat.of R M)) f
+      (show U_g ≤ PrimeSpectrum.basicOpen f from h)
+  have hunitPowers : ∀ s : Submonoid.powers f,
+      IsUnit (algebraMap R (Module.End R T_g) s) := by
+    rintro ⟨_, n, rfl⟩
+    change IsUnit (algebraMap R (Module.End R T_g) (f ^ n))
+    simpa only [map_pow] using hunit.pow n
+  let hlocf : IsLocalizedModule (Submonoid.powers f)
+      ((AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_f).hom) :=
+    AlgebraicGeometry.tilde.instAwayCarrierCarrierObjOppositeOpensCarrierCarrierCommRingCatSpecModuleCatPresheafModulesSheafModulesSpecToSheafOpBasicOpenHomToOpen
+      (R := CommRingCat.of R) (ModuleCat.of R M) f
+  let hlocg : IsLocalizedModule (Submonoid.powers g)
+      ((AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom) :=
+    AlgebraicGeometry.tilde.instAwayCarrierCarrierObjOppositeOpensCarrierCarrierCommRingCatSpecModuleCatPresheafModulesSheafModulesSpecToSheafOpBasicOpenHomToOpen
+      (R := CommRingCat.of R) (ModuleCat.of R M) g
+  letI := hlocf
+  letI := hlocg
+  let e_f : LocalizedModule.Away f M ≃ₗ[R] T_f :=
+    IsLocalizedModule.linearEquiv (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+      ((AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_f).hom)
+  let e_g : LocalizedModule.Away g M ≃ₗ[R] T_g :=
+    IsLocalizedModule.linearEquiv (Submonoid.powers g)
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) M)
+      ((AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom)
+  let res : T_f →ₗ[R] T_g :=
+    (T.presheaf.map (homOfLE (show U_g ≤ U_f from h)).op).hom
+  let left : LocalizedModule.Away f M →ₗ[R] T_g :=
+    res.comp e_f.toLinearMap
+  let right : LocalizedModule.Away f M →ₗ[R] T_g :=
+    e_g.toLinearMap.comp (standardOpenModuleLocalizationMap f g h)
+  have hleft : left.comp (LocalizedModule.mkLinearMap (Submonoid.powers f) M) =
+      (AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom := by
+    ext m
+    change res (e_f ((LocalizedModule.mkLinearMap (Submonoid.powers f) M) m)) =
+      (AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom m
+    rw [IsLocalizedModule.linearEquiv_apply]
+    change (T.presheaf.map (homOfLE (show U_g ≤ U_f from h)).op).hom
+        ((AlgebraicGeometry.tilde.toOpen
+          (R := CommRingCat.of R) (ModuleCat.of R M) U_f).hom m) =
+      (AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom m
+    exact congr($(AlgebraicGeometry.tilde.toOpen_res
+      (R := CommRingCat.of R) (M := ModuleCat.of R M)
+      (PrimeSpectrum.basicOpen f) (PrimeSpectrum.basicOpen g) (homOfLE h)).hom m)
+  have hright : right.comp (LocalizedModule.mkLinearMap (Submonoid.powers f) M) =
+      (AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom := by
+    ext m
+    change e_g ((standardOpenModuleLocalizationMap f g h).comp
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) M) m) =
+      (AlgebraicGeometry.tilde.toOpen
+        (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom m
+    rw [standardOpenModuleLocalizationMap_comp]
+    exact IsLocalizedModule.linearEquiv_apply _ _ _ m
+  have hleft' := LocalizedModule.lift_unique (Submonoid.powers f)
+    ((AlgebraicGeometry.tilde.toOpen
+      (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom) hunitPowers left hleft
+  have hright' := LocalizedModule.lift_unique (Submonoid.powers f)
+    ((AlgebraicGeometry.tilde.toOpen
+      (R := CommRingCat.of R) (ModuleCat.of R M) U_g).hom) hunitPowers right hright
+  have heq : left x = right x := by
+    rw [← hleft', ← hright']
+  let α :=
+    AlgebraicGeometry.tilde.modulesSpecToSheafIso
+      (R := CommRingCat.of R) (ModuleCat.of R M)
+  have hαf (z : T_f) :
+      (α.app (op U_f)).hom.hom z =
+        (z : (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
+          (op (PrimeSpectrum.basicOpen f))) := by
+    rfl
+  have hαg (z : T_g) :
+      (α.app (op U_g)).hom.hom z =
+        (z : (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
+          (op (PrimeSpectrum.basicOpen g))) := by
+    rfl
+  have hnat (z : T_f) :
+      (α.app (op U_g)).hom.hom
+          ((T.presheaf.map (homOfLE (show U_g ≤ U_f from h)).op).hom z) =
+        ((AlgebraicGeometry.structurePresheafInModuleCat R M).map
+          (homOfLE (show U_g ≤ U_f from h)).op).hom
+          ((α.app (op U_f)).hom.hom z) := by
+    exact congr($(α.hom.naturality (homOfLE (show U_g ≤ U_f from h)).op).hom z)
+  have hef :
+      (α.app (op U_f)).hom.hom.comp e_f.toLinearMap =
+        (moduleLocalizationToStandardOpenSections R M f).toLinearMap := by
+    apply IsLocalizedModule.linearMap_ext (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+      (AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+        (PrimeSpectrum.basicOpen f))
+    ext m
+    change (α.app (op U_f)).hom.hom
+        (e_f ((LocalizedModule.mkLinearMap (Submonoid.powers f) M) m)) =
+      (moduleLocalizationToStandardOpenSections R M f)
+        ((LocalizedModule.mkLinearMap (Submonoid.powers f) M) m)
+    rw [IsLocalizedModule.linearEquiv_apply]
+    rw [hαf]
+    change (AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+      (PrimeSpectrum.basicOpen f)) m = _
+    simpa only [moduleLocalizationToStandardOpenSections] using
+      (IsLocalizedModule.linearEquiv_apply (S := Submonoid.powers f)
+        (f := LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+        (g := AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+          (PrimeSpectrum.basicOpen f)) m).symm
+  have heg :
+      (α.app (op U_g)).hom.hom.comp e_g.toLinearMap =
+        (moduleLocalizationToStandardOpenSections R M g).toLinearMap := by
+    apply IsLocalizedModule.linearMap_ext (Submonoid.powers g)
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) M)
+      (AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+        (PrimeSpectrum.basicOpen g))
+    ext m
+    change (α.app (op U_g)).hom.hom
+        (e_g ((LocalizedModule.mkLinearMap (Submonoid.powers g) M) m)) =
+      (moduleLocalizationToStandardOpenSections R M g)
+        ((LocalizedModule.mkLinearMap (Submonoid.powers g) M) m)
+    rw [IsLocalizedModule.linearEquiv_apply]
+    rw [hαg]
+    change (AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+      (PrimeSpectrum.basicOpen g)) m = _
+    simpa only [moduleLocalizationToStandardOpenSections] using
+      (IsLocalizedModule.linearEquiv_apply (S := Submonoid.powers g)
+        (f := LocalizedModule.mkLinearMap (Submonoid.powers g) M)
+        (g := AlgebraicGeometry.StructureSheaf.toOpenₗ R M
+          (PrimeSpectrum.basicOpen g)) m).symm
+  have heq' := congrArg (fun z : T_g =>
+      (α.app (op U_g)).hom.hom z) heq
+  change
+    (α.app (op U_g)).hom.hom
+        ((T.presheaf.map (homOfLE (show U_g ≤ U_f from h)).op).hom (e_f x)) =
+      (α.app (op U_g)).hom.hom
+        (e_g (standardOpenModuleLocalizationMap f g h x)) at heq'
+  rw [hnat (e_f x)] at heq'
+  have hleftvalue := congrArg (fun q => q x) hef
+  have hrightvalue := congrArg
+    (fun q => q (standardOpenModuleLocalizationMap f g h x)) heg
+  have hleftvalue' :
+      (α.app (op U_f)).hom.hom (e_f x) =
+        moduleLocalizationToStandardOpenSections R M f x := by
+    change (α.app (op U_f)).hom.hom (e_f x) =
+      (moduleLocalizationToStandardOpenSections R M f x :
+        (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
+          (op (PrimeSpectrum.basicOpen f)))
+    exact hleftvalue
+  have hrightvalue' :
+      (α.app (op U_g)).hom.hom
+          (e_g (standardOpenModuleLocalizationMap f g h x)) =
+        moduleLocalizationToStandardOpenSections R M g
+          (standardOpenModuleLocalizationMap f g h x) := by
+    change (α.app (op U_g)).hom.hom
+        (e_g (standardOpenModuleLocalizationMap f g h x)) =
+      (moduleLocalizationToStandardOpenSections R M g
+        (standardOpenModuleLocalizationMap f g h x) :
+        (AlgebraicGeometry.structurePresheafInModuleCat R M).obj
+          (op (PrimeSpectrum.basicOpen g)))
+    exact hrightvalue
+  rw [hleftvalue', hrightvalue'] at heq'
+  exact heq'
 
 /-- Global sections of the structure sheaf recover the original ring. -/
 noncomputable def structureSheafGlobalSectionsIso {R : Type u} [CommRing R] :
@@ -784,7 +988,245 @@ theorem standardOpenCech_exact {R M : Type u} [CommRing R]
     Function.Injective (standardOpenCechZero (R := R) (M := M) f n g hcover) ∧
       Function.Exact (standardOpenCechZero (R := R) (M := M) f n g hcover)
         (standardOpenCechOne (R := R) (M := M) f n g hcover) := by
-  sorry
+  classical
+  let ι : Type u := ULift (Fin n)
+  let U : ι → Opens (spectrumTop R) := fun i => standardOpen (g i.down)
+  let F := (AlgebraicGeometry.structureSheafInType R M).presheaf
+  have hiSup : iSup U = standardOpen f := by
+    apply le_antisymm
+    · refine iSup_le ?_
+      intro i
+      rw [hcover]
+      exact le_iSup_of_le i.down (by rfl)
+    · rw [hcover]
+      refine iSup_le ?_
+      intro i
+      exact le_iSup_of_le (.up i) (by rfl)
+  have hle (i : ι) : U i ≤ standardOpen f := by
+    rw [← hiSup]
+    exact le_iSup U i
+  let sec (x : LocalizedModule.Away f M) (i : ι) :
+      F.obj (op (U i)) :=
+    moduleLocalizationToStandardOpenSections R M (g i.down)
+      (standardOpenModuleLocalizationMap f (g i.down) (hle i) x)
+  have hlocal_compatible (x : LocalizedModule.Away f M) :
+      TopCat.Presheaf.IsCompatible F U (sec x) := by
+    intro i j
+    have hleft : Opens.infLELeft (U i) (U j) =
+        homOfLE (show U i ⊓ U j ≤ U i from inf_le_left) :=
+      Subsingleton.elim _ _
+    have hright : Opens.infLERight (U i) (U j) =
+        homOfLE (show U i ⊓ U j ≤ U j from inf_le_right) :=
+      Subsingleton.elim _ _
+    rw [hleft, hright]
+    have hinter : U i ⊓ U j = standardOpen (g i.down * g j.down) := by
+      dsimp [U]
+      rw [standardOpen_inter]
+    let hgi : standardOpen (g i.down * g j.down) ≤
+        standardOpen (g i.down) := standardOpen_mul_le_left _ _
+    let hgj : standardOpen (g i.down * g j.down) ≤
+        standardOpen (g j.down) := standardOpen_mul_le_right _ _
+    have hres_i := module_standardOpen_restriction_compatibility
+      (R := R) (M := M) (g i.down) (g i.down * g j.down) hgi
+        (standardOpenModuleLocalizationMap f (g i.down) (hle i) x)
+    have hres_j := module_standardOpen_restriction_compatibility
+      (R := R) (M := M) (g j.down) (g i.down * g j.down) hgj
+        (standardOpenModuleLocalizationMap f (g j.down) (hle j) x)
+    have hres_i' :
+        F.map (homOfLE hgi).op
+            (moduleLocalizationToStandardOpenSections R M (g i.down)
+              (standardOpenModuleLocalizationMap f (g i.down) (hle i) x)) =
+          moduleLocalizationToStandardOpenSections R M (g i.down * g j.down)
+            (standardOpenModuleLocalizationMap (g i.down) (g i.down * g j.down)
+              hgi (standardOpenModuleLocalizationMap f (g i.down) (hle i) x)) := by
+      simpa [F] using hres_i
+    have hres_j' :
+        F.map (homOfLE hgj).op
+            (moduleLocalizationToStandardOpenSections R M (g j.down)
+              (standardOpenModuleLocalizationMap f (g j.down) (hle j) x)) =
+          moduleLocalizationToStandardOpenSections R M (g i.down * g j.down)
+            (standardOpenModuleLocalizationMap (g j.down) (g i.down * g j.down)
+              hgj (standardOpenModuleLocalizationMap f (g j.down) (hle j) x)) := by
+      simpa [F] using hres_j
+    have hrestr_i :
+        F.map (homOfLE (show U i ⊓ U j ≤ U i from inf_le_left)).op (sec x i) =
+          F.map (eqToHom hinter).op
+            (F.map (homOfLE hgi).op
+              (moduleLocalizationToStandardOpenSections R M (g i.down)
+                (standardOpenModuleLocalizationMap f (g i.down) (hle i) x))) := by
+      dsimp [sec]
+      rw [← Functor.map_comp_apply]
+      congr 1
+    have hrestr_j :
+        F.map (homOfLE (show U i ⊓ U j ≤ U j from inf_le_right)).op (sec x j) =
+          F.map (eqToHom hinter).op
+            (F.map (homOfLE hgj).op
+              (moduleLocalizationToStandardOpenSections R M (g j.down)
+                (standardOpenModuleLocalizationMap f (g j.down) (hle j) x))) := by
+      dsimp [sec]
+      rw [← Functor.map_comp_apply]
+      congr 1
+    rw [hrestr_i, hrestr_j, hres_i', hres_j']
+    congr 1
+    rw [← LinearMap.comp_apply,
+      ← standardOpenModuleLocalizationMap_comp_of_subset f (g i.down)
+        (g i.down * g j.down) (hle i) hgi]
+    rw [← LinearMap.comp_apply,
+      ← standardOpenModuleLocalizationMap_comp_of_subset f (g j.down)
+        (g i.down * g j.down) (hle j) hgj]
+  have hF : TopCat.Presheaf.IsSheaf F := by
+    exact (AlgebraicGeometry.structureSheafInType R M).property
+  let global (x : LocalizedModule.Away f M) : F.obj (op (standardOpen f)) :=
+    moduleLocalizationToStandardOpenSections R M f x
+  let transported (x : LocalizedModule.Away f M) : F.obj (op (iSup U)) :=
+    F.map (eqToHom hiSup).op (global x)
+  have hglobal_glue (x : LocalizedModule.Away f M) :
+      TopCat.Presheaf.IsGluing F U (sec x) (transported x) := by
+    intro i
+    dsimp [transported]
+    rw [← Functor.map_comp_apply]
+    rw [show (eqToHom hiSup).op ≫ (Opens.leSupr U i).op =
+        (homOfLE (hle i)).op from Subsingleton.elim _ _]
+    simpa [F, global, sec, U] using
+      (module_standardOpen_restriction_compatibility
+        (R := R) (M := M) f (g i.down) (hle i) x)
+  constructor
+  · intro x y hxy
+    have hsec : sec x = sec y := by
+      funext i
+      dsimp [sec]
+      congr 1
+      simpa [standardOpenCechZero] using congrFun hxy i.down
+    have hglue_x := hglobal_glue x
+    have hglue_y :
+        TopCat.Presheaf.IsGluing F U (sec x) (transported y) := by
+      simpa [hsec] using hglobal_glue y
+    obtain ⟨tx, htx, htx_unique⟩ :=
+      hF.isSheafUniqueGluing_types (sec x) (hlocal_compatible x)
+    have htransport : transported x = transported y :=
+      (htx_unique (transported x) hglue_x).trans
+        (htx_unique (transported y) hglue_y).symm
+    have hglobal : global x = global y := by
+      apply (ConcreteCategory.bijective_of_isIso
+        (F.map (eqToHom hiSup).op)).1
+      exact htransport
+    exact (moduleLocalizationToStandardOpenSections R M f).injective hglobal
+  · intro z
+    constructor
+    · intro hz
+      have hpair (i j : Fin n) :
+          standardOpenModuleLocalizationMap (g i) (g i * g j)
+              (standardOpen_mul_le_left _ _) (z i) =
+            standardOpenModuleLocalizationMap (g j) (g i * g j)
+              (standardOpen_mul_le_right _ _) (z j) := by
+        have h := congrFun hz (i, j)
+        change standardOpenModuleLocalizationMap (g i) (g i * g j)
+              (standardOpen_mul_le_left _ _) (z i) -
+            standardOpenModuleLocalizationMap (g j) (g i * g j)
+              (standardOpen_mul_le_right _ _) (z j) = 0 at h
+        exact sub_eq_zero.mp h
+      let zsec (i : ι) : F.obj (op (U i)) :=
+        moduleLocalizationToStandardOpenSections R M (g i.down) (z i.down)
+      have hzcompat : TopCat.Presheaf.IsCompatible F U zsec := by
+        intro i j
+        have hleft : Opens.infLELeft (U i) (U j) =
+            homOfLE (show U i ⊓ U j ≤ U i from inf_le_left) :=
+          Subsingleton.elim _ _
+        have hright : Opens.infLERight (U i) (U j) =
+            homOfLE (show U i ⊓ U j ≤ U j from inf_le_right) :=
+          Subsingleton.elim _ _
+        rw [hleft, hright]
+        have hinter : U i ⊓ U j = standardOpen (g i.down * g j.down) := by
+          dsimp [U]
+          rw [standardOpen_inter]
+        let hgi : standardOpen (g i.down * g j.down) ≤
+            standardOpen (g i.down) := standardOpen_mul_le_left _ _
+        let hgj : standardOpen (g i.down * g j.down) ≤
+            standardOpen (g j.down) := standardOpen_mul_le_right _ _
+        have hres_i := module_standardOpen_restriction_compatibility
+          (R := R) (M := M) (g i.down) (g i.down * g j.down) hgi (z i.down)
+        have hres_j := module_standardOpen_restriction_compatibility
+          (R := R) (M := M) (g j.down) (g i.down * g j.down) hgj (z j.down)
+        have hres_i' :
+            F.map (homOfLE hgi).op (zsec i) =
+              moduleLocalizationToStandardOpenSections R M
+                (g i.down * g j.down)
+                (standardOpenModuleLocalizationMap (g i.down)
+                  (g i.down * g j.down) hgi (z i.down)) := by
+          simpa [F, zsec] using hres_i
+        have hres_j' :
+            F.map (homOfLE hgj).op (zsec j) =
+              moduleLocalizationToStandardOpenSections R M
+                (g i.down * g j.down)
+                (standardOpenModuleLocalizationMap (g j.down)
+                  (g i.down * g j.down) hgj (z j.down)) := by
+          simpa [F, zsec] using hres_j
+        have hrestr_i :
+            F.map (homOfLE (show U i ⊓ U j ≤ U i from inf_le_left)).op
+                (zsec i) =
+              F.map (eqToHom hinter).op (F.map (homOfLE hgi).op (zsec i)) := by
+          rw [← Functor.map_comp_apply]
+          congr 1
+        have hrestr_j :
+            F.map (homOfLE (show U i ⊓ U j ≤ U j from inf_le_right)).op
+                (zsec j) =
+              F.map (eqToHom hinter).op (F.map (homOfLE hgj).op (zsec j)) := by
+          rw [← Functor.map_comp_apply]
+          congr 1
+        rw [hrestr_i, hrestr_j, hres_i', hres_j']
+        rw [hpair i.down j.down]
+      obtain ⟨t, ht, _⟩ := hF.isSheafUniqueGluing_types zsec hzcompat
+      let s : F.obj (op (standardOpen f)) :=
+        F.map (eqToHom hiSup.symm).op t
+      let x : LocalizedModule.Away f M :=
+        (moduleLocalizationToStandardOpenSections R M f).symm s
+      have hs (i : ι) :
+          F.map (homOfLE (hle i)).op s = zsec i := by
+        dsimp [s]
+        rw [← Functor.map_comp_apply]
+        rw [show (eqToHom hiSup.symm).op ≫ (homOfLE (hle i)).op =
+            (Opens.leSupr U i).op from Subsingleton.elim _ _]
+        exact ht i
+      have hx (i : ι) :
+          standardOpenModuleLocalizationMap f (g i.down) (hle i) x = z i.down := by
+        have h := module_standardOpen_restriction_compatibility
+          (R := R) (M := M) f (g i.down) (hle i) x
+        have h' :
+            F.map (homOfLE (hle i)).op (s) =
+              moduleLocalizationToStandardOpenSections R M (g i.down)
+                (standardOpenModuleLocalizationMap f (g i.down) (hle i) x) := by
+          simpa [F, s, x] using h
+        rw [hs i] at h'
+        exact (moduleLocalizationToStandardOpenSections R M (g i.down)).injective h'.symm
+      refine ⟨x, ?_⟩
+      funext i
+      simpa [standardOpenCechZero, zsec, U] using hx (.up i)
+    · intro hy
+      obtain ⟨x, rfl⟩ := hy
+      ext ij
+      let hfi : standardOpen (g ij.1) ≤ standardOpen f := by
+        rw [hcover]
+        exact le_iSup (fun i => standardOpen (g i)) ij.1
+      let hfj : standardOpen (g ij.2) ≤ standardOpen f := by
+        rw [hcover]
+        exact le_iSup (fun i => standardOpen (g i)) ij.2
+      let hij : standardOpen (g ij.1 * g ij.2) ≤ standardOpen (g ij.1) :=
+        standardOpen_mul_le_left _ _
+      let hjj : standardOpen (g ij.1 * g ij.2) ≤ standardOpen (g ij.2) :=
+        standardOpen_mul_le_right _ _
+      change standardOpenModuleLocalizationMap (g ij.1)
+              (g ij.1 * g ij.2) hij
+              (standardOpenModuleLocalizationMap f (g ij.1) hfi x) -
+          standardOpenModuleLocalizationMap (g ij.2)
+              (g ij.1 * g ij.2) hjj
+              (standardOpenModuleLocalizationMap f (g ij.2) hfj x) = 0
+      rw [← LinearMap.comp_apply,
+        ← standardOpenModuleLocalizationMap_comp_of_subset f (g ij.1)
+          (g ij.1 * g ij.2) hfi hij]
+      rw [← LinearMap.comp_apply,
+        ← standardOpenModuleLocalizationMap_comp_of_subset f (g ij.2)
+          (g ij.1 * g ij.2) hfj hjj]
+      simp
 
 /-! ## Functoriality and exactness of associated module sheaves -/
 
@@ -803,7 +1245,226 @@ instance associatedModuleFunctor_preservesZeroMorphisms {R : Type u} [CommRing R
 theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
     (S : ShortComplex (ModuleCat (CommRingCat.of R))) (hS : S.Exact) :
     (S.map (associatedModuleFunctor R)).Exact := by
-  sorry
+  let T := SheafOfModules.toSheaf
+    (R := (AlgebraicGeometry.Spec (CommRingCat.of R)).ringCatSheaf)
+  let T' : (AlgebraicGeometry.Spec (CommRingCat.of R)).Modules ⥤
+      TopCat.Sheaf AddCommGrpCat (AlgebraicGeometry.Spec (CommRingCat.of R)) :=
+    { obj := T.obj
+      map := T.map
+      map_id := by intro X; exact T.map_id X
+      map_comp := by intro X Y Z f g; exact T.map_comp f g }
+  let hTzero : T'.PreservesZeroMorphisms := by
+    constructor
+    intro X Y
+    change T.map (0 : X ⟶ Y) = 0
+    exact T.map_zero X Y
+  let ST : ShortComplex _ :=
+    @ShortComplex.map _ _ _ _ _ _ (S.map (associatedModuleFunctor R)) T' hTzero
+  have hST : ST.Exact := by
+    rw [TopCat.Sheaf.exact_iff_stalkFunctor_map_exact]
+    intro x
+    rw [ShortComplex.ab_exact_iff_function_exact]
+    have hfun : Function.Exact S.f.hom S.g.hom :=
+      (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS
+    let x₀ : PrimeSpectrum.Top R := by
+      change PrimeSpectrum R at x
+      exact x
+    letI : x₀.asIdeal.IsPrime := x₀.2
+    have hloc := IsLocalizedModule.map_exact x₀.asIdeal.primeCompl
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+      (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀)
+      S.f.hom S.g.hom hfun
+    let pf := ((Sheaf.forget AddCommGrpCat
+      (AlgebraicGeometry.Spec (CommRingCat.of R))).map
+        ((SheafOfModules.toSheaf
+          (R := (AlgebraicGeometry.Spec (CommRingCat.of R)).ringCatSheaf)).map
+          (AlgebraicGeometry.tilde.map S.f)))
+    let lf : (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R (S.X₁ : ModuleCat (CommRingCat.of R))).presheaf x₀)) →ₗ[R]
+        (↑(TopCat.Presheaf.stalk
+          (AlgebraicGeometry.moduleStructurePresheaf R (S.X₂ : ModuleCat (CommRingCat.of R))).presheaf x₀)) :=
+      { toFun := ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf)
+        map_add' := by intros; exact map_add _ _ _
+        map_smul' := by
+          intros r z
+          obtain ⟨U, hxU, s, rfl⟩ :=
+            TopCat.Presheaf.exists_germ_eq
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf z
+          let s' : (AlgebraicGeometry.structureSheafInType R S.X₁).obj.obj (op U) := s
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+              (AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s') = _
+          have hgm :=
+            (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).germ_smul
+              (U := U) (x := x₀) (hx := hxU)
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s'
+          have hmap :=
+            ((AlgebraicGeometry.tilde.map S.f).val.app (op U)).hom.map_smul
+              ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) s'
+          have hscalar :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s' =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s' := by
+            congr 1
+            exact (AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r).symm
+          have hstalk :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pf.app (op U)))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf
+              (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') using 1 <;>
+              rfl
+          have hstalk₀ :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s') =
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                  ((ConcreteCategory.hom (pf.app (op U))) s') := by
+            convert TopCat.Presheaf.stalkFunctor_map_germ_apply U x₀ hxU pf s' using 1 <;>
+              rfl
+          have h1 :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  (AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                    (ConcreteCategory.hom (TopCat.Presheaf.germ
+                      (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU)) s') =
+                (ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pf))
+                  ((ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₁).presheaf U x₀ hxU))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) := by
+            exact (congrArg _ hscalar).trans (congrArg _ hgm.symm)
+          let t' : (AlgebraicGeometry.structureSheafInType R S.X₂).obj.obj (op U) :=
+            (ConcreteCategory.hom (pf.app (op U))) s'
+          have h2 :
+              (ConcreteCategory.hom (TopCat.Presheaf.germ
+                (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                ((ConcreteCategory.hom (pf.app (op U)))
+                  (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s')) =
+                (RingHom.id R) r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU))
+                    t' := by
+            have hmap_pf :
+                (ConcreteCategory.hom (pf.app (op U)))
+                    (((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) • s') =
+                  ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                    t' := by
+              dsimp [t']
+              convert hmap using 1 <;> rfl
+            rw [hmap_pf]
+            have hgm₂ :=
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).germ_smul
+                (U := U) (x := x₀) (hx := hxU)
+                ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) t'
+            have hsring :
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' =
+                (ConcreteCategory.hom (AlgebraicGeometry.StructureSheaf.toStalk R x₀)) r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) t' := by
+              congr 1
+              exact AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r
+            exact hgm₂.trans (hsring.trans
+              (IsScalarTower.algebraMap_smul
+                ((AlgebraicGeometry.structurePresheafInCommRingCat R).stalk x₀) r _))
+          exact h1.trans (hstalk.trans (h2.trans
+            (congrArg (fun q => (RingHom.id R) r • q) hstalk₀.symm))) }
+    have hlf : lf =
+        IsLocalizedModule.map x₀.asIdeal.primeCompl
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀) S.f.hom := by
+      apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₁ x₀)
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+      ext m
+      simp [lf, pf, AlgebraicGeometry.StructureSheaf.toStalkₗ,
+        AlgebraicGeometry.tilde.map,
+        AlgebraicGeometry.tilde.modulesSpecToSheafIso]
+      rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+      rw [IsLocalizedModule.map_apply]
+    let pg := ((Sheaf.forget AddCommGrpCat
+      (AlgebraicGeometry.Spec (CommRingCat.of R))).map
+        ((SheafOfModules.toSheaf
+          (R := (AlgebraicGeometry.Spec (CommRingCat.of R)).ringCatSheaf)).map
+          (AlgebraicGeometry.tilde.map S.g)))
+    let lg : (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R (S.X₂ : ModuleCat (CommRingCat.of R))).presheaf x₀)) →ₗ[R]
+        (↑(TopCat.Presheaf.stalk
+          (AlgebraicGeometry.moduleStructurePresheaf R (S.X₃ : ModuleCat (CommRingCat.of R))).presheaf x₀)) :=
+      { toFun := ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg)
+        map_add' := by intros; exact map_add _ _ _
+        map_smul' := by
+          intros r z
+          obtain ⟨U, hxU, s, rfl⟩ :=
+            TopCat.Presheaf.exists_germ_eq
+              (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf z
+          let s' : (AlgebraicGeometry.structureSheafInType R S.X₂).obj.obj (op U) := s
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x₀).map pg))
+              (AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                (ConcreteCategory.hom (TopCat.Presheaf.germ
+                  (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s') = _
+          have hscalar :
+              AlgebraicGeometry.StructureSheaf.toStalk R x₀ r •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s' =
+                (ConcreteCategory.hom ((AlgebraicGeometry.structurePresheafInCommRingCat R).germ
+                  U x₀ hxU))
+                    ((algebraMap R ((AlgebraicGeometry.structureSheafInType R R).obj.obj (op U))) r) •
+                  (ConcreteCategory.hom (TopCat.Presheaf.germ
+                    (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).presheaf U x₀ hxU)) s' := by
+            congr 1
+            exact (AlgebraicGeometry.StructureSheaf.algebraMap_germ_apply U x₀ hxU r).symm
+          rw [hscalar]
+          rw [← (AlgebraicGeometry.moduleStructurePresheaf R S.X₂).germ_smul
+            (U := U) (x := x₀) (hx := hxU)]
+          rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+          rw [((AlgebraicGeometry.tilde.map S.g).val.app (op U)).hom.map_smul]
+          rw [(AlgebraicGeometry.moduleStructurePresheaf R S.X₃).germ_smul]
+          rw [IsScalarTower.algebraMap_smul
+            ((AlgebraicGeometry.structurePresheafInCommRingCat R).stalk x₀) r]
+          rfl }
+    have hlg : lg =
+        IsLocalizedModule.map x₀.asIdeal.primeCompl
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+          (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀) S.g.hom := by
+      apply IsLocalizedModule.linearMap_ext x₀.asIdeal.primeCompl
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₂ x₀)
+        (AlgebraicGeometry.StructureSheaf.toStalkₗ R S.X₃ x₀)
+      ext m
+      simp [lg, pg, AlgebraicGeometry.StructureSheaf.toStalkₗ,
+        AlgebraicGeometry.tilde.map,
+        AlgebraicGeometry.tilde.modulesSpecToSheafIso]
+      rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+      rw [IsLocalizedModule.map_apply]
+    simpa [ST, T', T, pf, lf, pg, lg, hlf, hlg] using hloc
+  letI : T'.Faithful := by
+    constructor
+    intro X Y f g h
+    exact T.map_injective h
+  exact CategoryTheory.Functor.reflects_exact_of_faithful T' _ hST
 
 /-- The standard-open section maps of associated module sheaves are functorial. -/
 theorem associatedModule_section_map_natural {R : CommRingCat.{u}}

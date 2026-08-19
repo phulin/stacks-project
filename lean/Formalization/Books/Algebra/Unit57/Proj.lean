@@ -1299,7 +1299,8 @@ theorem VPlus_empty_iff (G : GradedRingData S)
       change p ∈ ProjectiveSpectrum.zeroLocus G.component I
       rw [ProjectiveSpectrum.mem_zeroLocus]
       exact hIJ
-    simpa [h] using hpV
+    rw [h] at hpV
+    exact hpV
   · intro h
     apply Set.eq_empty_iff_forall_notMem.mpr
     intro p hp
@@ -1480,7 +1481,7 @@ theorem infinite_polynomial_proj_not_quasi_compact :
       simpa only [q] using hx
     have hx' : φ (MvPolynomial.X (R := ℤ) (σ := ℕ) n) = 0 := hxker
     have hx'' : (Polynomial.X : Polynomial ℤ) = 0 := by
-      simpa [φ, MvPolynomial.eval₂Hom_X'] using hx'
+      simp [φ, MvPolynomial.eval₂Hom_X'] at hx'
     exact Polynomial.X_ne_zero hx''
   have hXnP : MvPolynomial.X n ∉ P := by
     intro hx

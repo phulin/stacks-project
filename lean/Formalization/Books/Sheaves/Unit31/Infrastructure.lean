@@ -5,6 +5,7 @@ import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.Topology.Constructions
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.SheafCondition.Sites
+import Mathlib.Topology.Sheaves.LocallySurjective
 import Mathlib.Topology.Sheaves.Stalks
 
 /-!
@@ -120,6 +121,14 @@ theorem openSheafRestriction_stalk_iso (C : Type u) [Category.{v} C]
   rcases openSheafRestriction_formula C U F with ⟨e⟩
   exact ⟨(TopCat.Presheaf.stalkFunctor C u).mapIso e ≪≫
     (TopCat.Presheaf.stalkPullbackIso C (openInclusion U) F.presheaf u).symm⟩
+
+/-- An epimorphism of additive sheaves is epimorphic on every stalk. -/
+theorem openAbelianSheaf_stalk_map_epi {X : TopCat.{v}}
+    {F G : TopCat.Sheaf AddCommGrpCat.{v} X} (f : F ⟶ G) [Epi f] (x : X) :
+    Epi ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map f.hom) := by
+  rw [AddCommGrpCat.epi_iff_surjective]
+  apply (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks f.hom).mp
+  exact (TopCat.Sheaf.isLocallySurjective_iff_epi f).mpr inferInstance
 
 /-- Direct image is computed by inverse images of opens. -/
 @[simp] theorem openPresheafDirectImage_obj (C : Type u) [Category.{v} C]

@@ -900,7 +900,74 @@ theorem artinReesWorks_baseChange
     (hc : ArtinReesWorks I f c) :
     ArtinReesWorks (I.map (algebraMap A B))
       (LinearMap.baseChange B f) c := by
-  sorry
+  intro n hn
+  let S : Submodule A N := I ^ n • (⊤ : Submodule A N)
+  let Q : Submodule A M := I ^ (n - c) • (⊤ : Submodule A M)
+  have hmap : Submodule.map f (Submodule.comap f S) ≤ Submodule.map f Q := by
+    intro y hy
+    rcases hy with ⟨x, hx, rfl⟩
+    apply hc n hn
+    exact ⟨⟨x, rfl⟩, hx⟩
+  have hmap_baseChange (P : Submodule A M) :
+      (Submodule.map f P).baseChange B =
+        Submodule.map (LinearMap.baseChange B f) (P.baseChange B) := by
+    apply le_antisymm
+    · rw [Submodule.baseChange_eq_span, Submodule.span_le]
+      intro x hx
+      rcases hx with ⟨y, hy, rfl⟩
+      rcases hy with ⟨z, hz, rfl⟩
+      refine Submodule.mem_map.mpr ⟨(1 : B) ⊗ₜ[A] z, ?_, ?_⟩
+      · exact Submodule.tmul_mem_baseChange_of_mem (p := P) 1 hz
+      · simp [LinearMap.baseChange_tmul]
+    · rw [Submodule.map_le_iff_le_comap, Submodule.baseChange_eq_span]
+      intro x hx
+      refine Submodule.span_induction (p := fun x _ =>
+          x ∈ Submodule.comap (LinearMap.baseChange B f)
+            ((Submodule.map f P).baseChange B)) ?_ ?_ ?_ ?_
+          hx
+      · intro z hz
+        rcases hz with ⟨z, hz, rfl⟩
+        have hz' : f z ∈ Submodule.map f P := ⟨z, hz, rfl⟩
+        simpa [LinearMap.baseChange_tmul] using
+          (Submodule.tmul_mem_baseChange_of_mem (p := Submodule.map f P) 1 hz')
+      · exact Submodule.zero_mem _
+      · intro x y _ _ hx hy
+        exact add_mem hx hy
+      · intro b x _ hx
+        exact (Submodule.comap (LinearMap.baseChange B f)
+          ((Submodule.map f P).baseChange B)).smul_mem b hx
+  have hmap' :
+      (Submodule.map f (Submodule.comap f S)).baseChange B ≤
+        (Submodule.map f Q).baseChange B :=
+    Submodule.baseChange_mono B hmap
+  intro x hx
+  rcases hx.1 with ⟨y, rfl⟩
+  have hy : y ∈ (Submodule.comap f S).baseChange B := by
+    rw [← flat_baseChange_preimage I f n]
+    exact hx.2
+  have hy' : (LinearMap.baseChange B f) y ∈
+      (Submodule.map f (Submodule.comap f S)).baseChange B := by
+    rw [Submodule.baseChange_eq_span] at hy
+    refine Submodule.span_induction (p := fun z _ =>
+        (LinearMap.baseChange B f) z ∈
+          (Submodule.map f (Submodule.comap f S)).baseChange B) ?_ ?_ ?_ ?_ hy
+    · intro z hz
+      rcases hz with ⟨m, hm, rfl⟩
+      have hm' : f m ∈ Submodule.map f (Submodule.comap f S) :=
+        ⟨m, hm, rfl⟩
+      simpa [LinearMap.baseChange_tmul] using
+        (Submodule.tmul_mem_baseChange_of_mem
+          (p := Submodule.map f (Submodule.comap f S)) 1 hm')
+    · simp
+    · intro z w _ _ hz hw
+      simpa only [map_add] using add_mem hz hw
+    · intro b z _ hz
+      simpa only [map_smul] using
+        ((Submodule.map f (Submodule.comap f S)).baseChange B).smul_mem b hz
+  have hy'' : (LinearMap.baseChange B f) y ∈ (Submodule.map f Q).baseChange B :=
+    hmap' hy'
+  rw [hmap_baseChange Q] at hy''
+  simpa [Q, submodule_baseChange_ideal_pow] using hy''
 
 end
 

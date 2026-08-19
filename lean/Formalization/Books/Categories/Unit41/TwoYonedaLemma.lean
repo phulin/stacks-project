@@ -825,7 +825,65 @@ def twoYonedaEvaluation
 
 /-- The source's first 2-Yoneda lemma: evaluation at `id_U` is an
 equivalence from fibred functors `Over U ⥤ S` over `C` to the fibre of `p`
-over `U`. -/
+over `U`.
+
+Proof roadmap:
+
+* Put `E := twoYonedaEvaluation p U`, choose
+  `P : PullbackChoice p := PullbackChoice.default p`, and put
+  `Q := twoYonedaPullback p P U`.  These have the universe-polymorphic
+  types
+  `E : twoYonedaFibredMorphismCategory p U ⥤ Functor.Fiber p U` and
+  `Q : Functor.Fiber p U ⥤ twoYonedaFibredMorphismCategory p U`; no
+  `Cat`-level universe identification is needed.
+* For `f : Over U`, use the canonical arrow
+  `k_f : f ⟶ Over.mk (𝟙 U)`, defined by
+  `Over.homMk f.hom (by simp)`.  Construct its
+  `Functor.IsStronglyCartesian` instance directly: the lift field is
+  `Functor.IsHomLift.map k_f`, and in `universal_property'` the required
+  factor is `Over.homMk g`; prove its triangle and uniqueness with
+  `Over.hom_ext`.  The class and its universal-property API are in
+  `Mathlib/CategoryTheory/FiberedCategory/Cartesian.lean`.  Hence, for
+  every source object `G`,
+  `G.2 k_f` says that `G.1.1.map k_f` is strongly cartesian for `p`.
+* Make `E` faithful.  If `η θ : G ⟶ H` agree after evaluation, use
+  `ObjectProperty.hom_ext`, `Functor.Fiber.hom_ext`, and `NatTrans.ext`.
+  At `f`, naturality against `k_f` says that both `η.1.1.app f` and
+  `θ.1.1.app f`, which are vertical by their `Functor.Fiber` hom fields,
+  have the same composite with the strongly cartesian arrow
+  `H.1.1.map k_f`.  Apply `Functor.IsStronglyCartesian.ext` to obtain
+  equality of the components.
+* Make `E` full.  Given
+  `a : E.obj G ⟶ E.obj H`, define the component at `f` to be the unique
+  vertical factor through `H.1.1.map k_f` of
+  `G.1.1.map k_f ≫ a.1`.  Obtain it with
+  `Functor.IsStronglyCartesian.map` (or the existence part of
+  `universal_property`) and retain both its `IsHomLift (𝟙 f.left)` proof
+  and its factorization equation.  Prove naturality for `l : f ⟶ g` by
+  postcomposing the two candidates with `H.1.1.map k_g`, rewriting with
+  the two factorization equations, functoriality, and the equality
+  `k_f = l ≫ k_g`, then use `Functor.IsStronglyCartesian.ext` again.
+  Package the resulting natural transformation as a morphism of
+  `twoYonedaOverCategory p U` with `IsHomLift.of_fac'`, using `G.1.2`,
+  `H.1.2`, and the pointwise verticality just proved; then use
+  `ObjectProperty.homMk`.  At `Over.mk (𝟙 U)`, uniqueness (and
+  `k_(id_U) = 𝟙 _`) gives `E.map η = a` by `Functor.Fiber.hom_ext`.
+* Make `E` essentially surjective.  For `x : Functor.Fiber p U`, take
+  `Q.obj x`.  The evaluated object is the chosen pullback of `x` along
+  `𝟙 U`.  Let
+  `i := Classical.choose (pullback_identity_iso p P U)` from
+  `Formalization/Books/Categories/Unit33/FibredCategories.lean`; its component
+  (in the inverse direction) gives `E.obj (Q.obj x) ≅ x`.  Any mismatch
+  between the two proof fields
+  of the fibre objects is proposition-valued: build the component in
+  `Functor.Fiber` and close equality with `Functor.Fiber.hom_ext` and
+  `Subsingleton.elim`.
+* Install the three instances `E.Faithful`, `E.Full`, and `E.EssSurj`, and
+  finish with `show E.IsEquivalence; exact {}`.  This route uses the
+  strict-over-base equality and vertical hom data already stored by
+  `Functor.Fiber`; replacing them by bare natural transformations loses
+  exactly the transports needed in the fullness step.
+-/
 theorem twoYoneda_fibred_equivalence
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
@@ -1838,11 +1896,92 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
 /- The source's final appeal to the equivalence lemma is an equivalence in
    the 2-category of categories fibred in groupoids, not only an equivalence
    of the underlying categories. -/
+def twoYonedaAssociatedFibredMorphism
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] :
+    FibredMorphism (twoYonedaAssociatedProjection p) p where
+  functor := twoYonedaAssociatedFunctor p
+  over := twoYonedaAssociatedFunctor_over p
+  preserves := by
+    intro X Y f _hf
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian p
+      (inferInstance : p.IsFibredInGroupoids)
+      ((twoYonedaAssociatedFunctor p).map f)
+
+/-- The associated evaluation functor, with its strict base triangle and
+cartesian-preservation proof fixed, is an equivalence of fibred categories
+over `C`.
+
+Proof roadmap:
+
+* Abbreviate `A := twoYonedaAssociatedCategory p`,
+  `q := twoYonedaAssociatedProjection p`,
+  `F := twoYonedaAssociatedFunctor p`, and
+  `Ffib := twoYonedaAssociatedFibredMorphism p`.  Install
+  `twoYonedaAssociatedFunctor_isEquivalence p` as an `F.IsEquivalence`
+  instance and let `e := F.asEquivalence`, so
+  `H := e.inverse : S ⥤ A`, `e.unitIso : 𝟭 A ≅ F ⋙ H`, and
+  `e.counitIso : H ⋙ F ≅ 𝟭 S` are available.  Keep
+  `hF := twoYonedaAssociatedFunctor_over p : F ⋙ p = q` explicit.
+* The ordinary inverse `H` is not strictly over `C`; strictify it using
+  cartesian transport in `q`.  Let `P : PullbackChoice q :=
+  PullbackChoice.default q`, using
+  `twoYonedaAssociatedProjection_isFibredInGroupoids p` and the local
+  `twoYoneda_isFibered_of_isFibredInGroupoids` instance.  For `x : S`, set
+  `hx := Functor.congr_obj hF (H.obj x)` and define the base isomorphism
+  `b_x : q.obj (H.obj x) ⟶ p.obj x` as
+  `eqToHom hx.symm ≫ p.map (e.counitIso.hom.app x)`.  Both factors are
+  isomorphisms.  Define `K.obj x` to be the underlying object of
+  `P.pullback (inv b_x) ⟨H.obj x, rfl⟩`; its fibre proof gives
+  `q.obj (K.obj x) = p.obj x`.
+* Write `ρ_x := P.pullbackMap (inv b_x) ⟨H.obj x, rfl⟩ :
+  K.obj x ⟶ H.obj x`.  It is strongly cartesian by
+  `PullbackChoice.pullbackMap_isStronglyCartesian`, and is an isomorphism
+  by `stronglyCartesian_of_base_isIso` from
+  `Formalization/Books/Categories/Unit33/FibredCategories.lean`.  Define
+  `K.map f := ρ_x ≫ H.map f ≫ inv ρ_y`.  Prove `map_id` and `map_comp` by
+  cancelling the isomorphisms `ρ`; the base calculation follows from
+  `e.counitIso.hom.naturality f`, `Functor.congr_hom hF`, and
+  `CategoryTheory.IsHomLift.fac'` for the two pullback maps.  Assemble
+  `K : S ⥤ A` and prove `hK : K ⋙ q = p` with `Functor.hext`, using the
+  fibre equalities on objects and `conj_eqToHom_iff_heq` on maps, exactly as
+  in `twoYonedaAssociatedFunctor_over` above.
+* The equations defining `K.map` make the `ρ_x` into a natural isomorphism
+  `ρ : K ≅ H`.  Package `K` as
+  `Kfib : FibredMorphism p q`: its `over` field is `hK`, while its
+  `preserves` field is immediate from
+  `fibredInGroupoids_all_morphisms_stronglyCartesian q
+  (twoYonedaAssociatedProjection_isFibredInGroupoids p)`.
+* Form the required isomorphisms
+  `unit : F ⋙ K ≅ 𝟭 A` as
+  `isoWhiskerLeft F ρ ≪≫ e.unitIso.symm`, and
+  `counit : K ⋙ F ≅ 𝟭 S` as
+  `isoWhiskerRight ρ F ≪≫ e.counitIso`.  Obtain their base equalities by
+  rewriting with `hF` and `hK`.  For `IsFibredNatIsoOver`, calculate each
+  component.  Counit verticality is the defining cancellation
+  `q.map ρ_x = inv b_x`; unit verticality is the triangle identity
+  `e.counitIso_functor_comp`.  Normalize the equality transports with
+  `CategoryTheory.eqToHom_trans` and use `Subsingleton.elim` when two
+  proofs of the same object equality differ.
+* Return `⟨Kfib, ⟨unit, unit_over, unit_vertical⟩,
+  ⟨counit, counit_over, counit_vertical⟩⟩`.
+
+Do not try to apply
+`equivalence_fibredInGroupoids_is_equivalence_over` from
+`Formalization/Books/Categories/Unit35/CategoriesFibredInGroupoids.lean`:
+its `FibredCategoryOver` wrapper
+requires the two total categories to inhabit one fixed `Cat.{v,u}`, whereas
+`A` and `S` here have independent universes.  The universe-polymorphic
+`FibredMorphism`/`IsFibredEquivalenceOverMap` interface used in this
+statement retains the same strict triangles and vertical coherence without
+that obstruction.
+-/
 theorem twoYonedaAssociatedFunctor_isFibredEquivalenceOver
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
-    IsFibredEquivalenceOver p (twoYonedaAssociatedProjection p) := by
+    IsFibredEquivalenceOverMap (twoYonedaAssociatedFibredMorphism p) := by
   sorry
 
 end

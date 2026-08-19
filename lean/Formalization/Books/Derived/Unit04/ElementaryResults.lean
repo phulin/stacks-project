@@ -10,6 +10,8 @@ import Formalization.Books.Homology.Unit04.KaroubianCategories
 import Formalization.Books.Homology.Unit12.CohomologicalDeltaFunctors
 import Formalization.Books.Derived.Unit03.Definitions
 
+set_option maxHeartbeats 1000000
+
 /-!
 # Derived Categories, Chapter 4: elementary results on triangulated categories
 

@@ -670,6 +670,35 @@ private theorem exists_finite_pth_root_tower_of_uniform
       rw [if_neg (by omega : ¬tower.length + 1 ≤ tower.length)]
       exact hzfinal
 
+/-- A finite set of elements of the relative perfect closure is contained in
+one finite p-th-root tower over the base field. -/
+theorem exists_finite_pth_root_tower_of_perfectClosure_finset
+    {F : Type u} [Field F] (p : ℕ) (hp : 0 < p)
+    [Fact p.Prime] [CharP F p]
+    (s : Finset (perfectClosure F (AlgebraicClosure F))) :
+    ∃ tower : FinitePthRootTower F p hp,
+      ∀ z ∈ s, (z : AlgebraicClosure F) ∈
+        finitePthRootFieldAtLevel tower := by
+  classical
+  obtain ⟨n, hn⟩ := exists_uniform_pow_mem_of_finset
+    (F := F) (E := perfectClosure F (AlgebraicClosure F)) p s
+  let s' : Finset (AlgebraicClosure F) := s.image
+    (fun z : perfectClosure F (AlgebraicClosure F) =>
+      (z : AlgebraicClosure F))
+  have hs' : ∀ z ∈ s', z ^ (p ^ n) ∈
+      (algebraMap F (AlgebraicClosure F)).range := by
+    intro z hz
+    obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hz
+    obtain ⟨b, hb⟩ := hn a ha
+    refine ⟨b, ?_⟩
+    exact congrArg Subtype.val hb
+  obtain ⟨tower, htower⟩ :=
+    exists_finite_pth_root_tower_of_uniform (p := p) (hp := hp) n s' hs'
+  refine ⟨tower, ?_⟩
+  intro z hz
+  exact htower (z : AlgebraicClosure F)
+    (Finset.mem_image.mpr ⟨z, hz, rfl⟩)
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

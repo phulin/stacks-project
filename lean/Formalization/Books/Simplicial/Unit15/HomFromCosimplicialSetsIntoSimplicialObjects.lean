@@ -653,8 +653,6 @@ noncomputable def simplexHomProduct_truncated_hom_equiv
     apply NatTrans.ext
     funext Y
     dsimp
-    let := hX (SimplexCategory.mk k ⟶ Y.unop.obj)
-    let := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
     let p :
         ((SimplicialObject.truncation (C := C) k).obj
           (simplexHomProduct X k hX)).obj

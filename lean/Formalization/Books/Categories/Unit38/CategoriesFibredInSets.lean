@@ -1256,6 +1256,18 @@ theorem setPresheafProjection_map
     (setPresheafProjection F).map f = f.base :=
   rfl
 
+/-- A natural isomorphism of set-valued presheaves induces a fibred
+equivalence between their CoGrothendieck projections.  The direction of the
+equivalence follows the direction of the presheaf isomorphism; callers can
+use the inverse equivalence when composing with a presentation in the other
+direction. -/
+theorem setPresheafProjection_isFibredEquivalenceOver_of_iso
+    {C : Type uC} [Category.{vC} C]
+    {F G : Cᵒᵖ ⥤ Type uS} (e : F ≅ G) :
+    IsFibredEquivalenceOver (setPresheafProjection F)
+      (setPresheafProjection G) := by
+  sorry
+
 @[simp]
 theorem setPresheaf_id_base
     {C : Type uC} [Category.{vC} C]

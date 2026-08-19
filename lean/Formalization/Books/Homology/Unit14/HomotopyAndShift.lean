@@ -271,10 +271,10 @@ theorem chain_homotopy_shift_self (a : A ⟶ B) :
       zero := by
         intro i j hij
         dsimp
-        by_cases h : j = i + (-1 : ℤ)
+        by_cases h : j = i + 1
         · exfalso
           apply hij
-          simp only [ComplexShape.down]
+          change i + 1 = j
           exact h.symm
         · rw [if_neg h]
       comm := by
@@ -1062,18 +1062,18 @@ private lemma termwiseSplitConnectingMap_homotopy_of_difference
     fun i j h => by omega
   let hhom : ∀ i j, S.X₃.X i ⟶ ((shiftFunctor C (-1 : ℤ)).obj S.X₁).X j :=
     fun i j => dite (j = i + 1)
-      (fun h => termwiseSplittingDifference s s' i ≫
-        (shiftFunctorObjXIso S.X₁ (-1 : ℤ) j i (hshift i j h)).inv)
+      (fun h => termwiseSplittingDifferenceShift s s' i ≫
+        eqToHom (by rw [h]))
       (fun _ => 0)
   let H : Homotopy δ.hom δ'.hom :=
     { hom := hhom
       zero := by
         intro i j hij
         dsimp [hhom]
-        by_cases h : j = i + (-1 : ℤ)
+        by_cases h : j = i + 1
         · exfalso
           apply hij
-          simp only [ComplexShape.down]
+          change i + 1 = j
           exact h.symm
         · rw [if_neg h]
       comm := by
@@ -1101,7 +1101,7 @@ private lemma termwiseSplitConnectingMap_homotopy_of_difference
           abel
         rw [dNext_eq hhom (show (ComplexShape.down ℤ).Rel i (i - 1) by simp),
           prevD_eq hhom (show (ComplexShape.down ℤ).Rel (i + 1) i by
-            norm_num [ComplexShape.down, add_assoc])]
+            simp [ComplexShape.down, ComplexShape.down', add_assoc])]
         simp only [hhom, dif_pos hi, dif_pos rfl]
         rw [δ.hom_f i, δ'.hom_f i]
         dsimp [termwiseSplitConnectingFamily, termwiseSplittingDifference]
@@ -1239,9 +1239,7 @@ private lemma termwiseSplitConnectingMap_homotopy_of_difference
             rw [hcancel]
           erw [Preadditive.sub_comp]
           erw [neg_sub]
-          abel_nf
-          set_option backward.isDefEq.respectTransparency false in
-            simp [Mathlib.Tactic.Abel.termg] }
+          abel_nf }
   refine ⟨H, ?_⟩
   intro n
   dsimp [H, hhom, termwiseSplittingDifferenceShift, termwiseSplittingDifference]
@@ -1431,7 +1429,7 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           apply hij
           change j + 1 = i
           omega
-        · rw [dif_neg h]
+        · rfl
       comm := by
         intro i
         let H : ∀ i j, A.X i ⟶ B.X j := fun i j => dite
@@ -2057,8 +2055,8 @@ private lemma termwiseSplitConnectingMap_homotopy_of_difference
       omega
   let hhom : ∀ i j, S.X₃.X i ⟶ ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) (1 : ℤ)).obj S.X₁).X j :=
     fun i j => dite (i = j + 1)
-      (fun h => -(termwiseSplittingDifference s s' i) ≫
-        (CochainComplex.shiftFunctorObjXIso S.X₁ (1 : ℤ) j i h).inv)
+      (fun h => -(termwiseSplittingDifferenceShift s s' i) ≫
+        eqToHom (by omega))
       (fun _ => 0)
   let H : Homotopy δ'.hom δ.hom :=
     { hom := hhom

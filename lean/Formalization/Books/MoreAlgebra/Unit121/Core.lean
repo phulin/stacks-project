@@ -211,7 +211,7 @@ private instance finiteLengthAction_closedCokernels :
 private instance finiteLengthAction_closedBinaryProducts :
     (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderBinaryProducts where
   limitsOfShape_le := by
-    letI : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
+    let _ : HasLimits (ModuleCat.{v} R) := ModuleCat.hasLimits
     rintro X ⟨p⟩
     let Z : WalkingPair → ModuleCat.{v} R :=
       fun j => (p.diag.obj ⟨j⟩).V
@@ -226,7 +226,8 @@ private instance finiteLengthAction_closedBinaryProducts :
             ⟨WalkingPair.left⟩)
           ((p.diag ⋙ Action.forget (ModuleCat.{v} R) (Multiplicative ℕ)).obj
             ⟨WalkingPair.right⟩)) ≅
-          Discrete.functor Z := by sorry
+          Discrete.functor Z := by
+      exact mapPairIso (Iso.refl _) (Iso.refl _)
     let e : X.V ≅ ModuleCat.of R (∀ j, Z j) :=
       IsLimit.conePointsIsoOfNatIso hc (ModuleCat.productConeIsLimit Z) (α ≪≫ β)
     have hleft : IsFiniteLength R (Z WalkingPair.left) := by
@@ -235,13 +236,13 @@ private instance finiteLengthAction_closedBinaryProducts :
     have hright : IsFiniteLength R (Z WalkingPair.right) := by
       change IsFiniteLength R ((p.diag.obj ⟨WalkingPair.right⟩).V)
       exact p.prop_diag_obj ⟨WalkingPair.right⟩
-    letI : IsNoetherian R (Z WalkingPair.left) :=
+    let _ : IsNoetherian R (Z WalkingPair.left) :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hleft).1
-    letI : IsArtinian R (Z WalkingPair.left) :=
+    let _ : IsArtinian R (Z WalkingPair.left) :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hleft).2
-    letI : IsNoetherian R (Z WalkingPair.right) :=
+    let _ : IsNoetherian R (Z WalkingPair.right) :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hright).1
-    letI : IsArtinian R (Z WalkingPair.right) :=
+    let _ : IsArtinian R (Z WalkingPair.right) :=
       (isFiniteLength_iff_isNoetherian_isArtinian.mp hright).2
     let eMap : (∀ j, Z j) →ₗ[R] Z WalkingPair.left × Z WalkingPair.right :=
       { toFun := fun x => (x WalkingPair.left, x WalkingPair.right)
@@ -271,7 +272,7 @@ private instance finiteLengthAction_closedIsomorphisms :
 
 private instance finiteLengthAction_closedFiniteProducts :
     (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderFiniteProducts := by
-  letI : (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderLimitsOfShape
+  let _ : (finiteLengthActionPropertyV.{u, v} (R := R)).IsClosedUnderLimitsOfShape
       (Discrete.{0} PEmpty) := by
     infer_instance
   exact ObjectProperty.IsClosedUnderFiniteProducts.mk'

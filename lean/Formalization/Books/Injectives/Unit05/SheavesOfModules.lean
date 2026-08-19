@@ -3,6 +3,7 @@ import Formalization.Books.Sheaves.Unit25.Infrastructure
 import Formalization.Books.Sheaves.Unit27.Skyscraper
 import Formalization.Books.Injectives.Unit04.AbelianSheaves
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
+import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 import Mathlib.CategoryTheory.Abelian.Injective.Basic
@@ -328,7 +329,19 @@ theorem stalkwiseProductMap_target_injective (X : RingedSpace.{v})
 theorem exists_stalkwiseInjectiveEmbeddingData (X : RingedSpace.{v})
     (F : Mod X.structureSheaf) :
     Nonempty (StalkwiseInjectiveEmbeddingData X F) := by
-  sorry
+  classical
+  let P : ∀ x : X, InjectivePresentation (stalkModule X F x) :=
+    fun x => by
+      letI : EnoughInjectives (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)) :=
+        ModuleCat.enoughInjectives _
+      exact Classical.choice (EnoughInjectives.presentation (stalkModule X F x))
+  exact ⟨{
+    I := fun x => (P x).J
+    j := fun x => (P x).f
+    mono_j := fun x => (P x).mono
+    injective_I := fun x => (P x).injective
+  }⟩
 
 /-! ## Enough injectives and functorial embeddings -/
 

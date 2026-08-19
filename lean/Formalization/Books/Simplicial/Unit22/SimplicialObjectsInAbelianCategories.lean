@@ -211,7 +211,7 @@ theorem concentratedTruncatedMap_comp
       (hP : P.unop.obj.len = k) : P = Q := by
     have h' : v.unop.hom ≫ u.unop.hom = 𝟙 P.unop.obj := by
       simpa using congrArg (fun w => w.hom) (congrArg Quiver.Hom.unop h)
-    letI : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
+    let _ : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
     have hlen : P.unop.obj.len ≤ Q.unop.obj.len :=
       SimplexCategory.len_le_of_mono v.unop.hom
     have hQ : Q.unop.obj.len = k :=
@@ -223,7 +223,7 @@ theorem concentratedTruncatedMap_comp
       u = 𝟙 P ∧ v = 𝟙 P := by
     have h' : v.unop.hom ≫ u.unop.hom = 𝟙 P.unop.obj := by
       simpa using congrArg (fun w => w.hom) (congrArg Quiver.Hom.unop h)
-    letI : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
+    let _ : IsSplitMono v.unop.hom := IsSplitMono.mk' ⟨u.unop.hom, h'⟩
     have hv' : v.unop.hom = 𝟙 _ := SimplexCategory.eq_id_of_mono _
     have hv'' : v.unop = 𝟙 P.unop := by
       apply ObjectProperty.hom_ext _

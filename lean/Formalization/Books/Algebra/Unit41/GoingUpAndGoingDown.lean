@@ -97,6 +97,8 @@ theorem hasGoingDown_of_isOpenMap
   intro q p hpq
   let K := p.asIdeal.ResidueField
   let B := S ⊗[R] K
+  letI : Algebra S B :=
+    (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toAlgebra
   let M : Submonoid B :=
     Submonoid.map
       (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom
@@ -110,7 +112,6 @@ theorem hasGoingDown_of_isOpenMap
     intro h0
     obtain ⟨s, hs, hs0⟩ := (Submonoid.mem_map).mp h0
     apply hnil s hs
-    change IsNilpotent ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s)
     rw [hs0]
     exact IsNilpotent.zero
   let L := Localization M
@@ -124,6 +125,8 @@ theorem hasGoingDown_of_isOpenMap
   letI : IsScalarTower R B L := by
     apply IsScalarTower.of_algebraMap_smul
     intro r x
+    change algebraMap B L (algebraMap R B r) * x = algebraMap R L r * x
+    congr 1
     rfl
   let fS : S →ₐ[R] L :=
     (IsScalarTower.toAlgHom R B L).comp
@@ -134,9 +137,7 @@ theorem hasGoingDown_of_isOpenMap
   let fSloc : Localization.AtPrime q.asIdeal →ₐ[R] L :=
     IsLocalization.liftAlgHom (f := fS) (fun y => by
       obtain ⟨s, hs⟩ := y
-      change IsUnit (algebraMap B L
-        ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s))
-      exact IsLocalization.map_units L
+      simpa [fS] using IsLocalization.map_units L
         ⟨_, Submonoid.mem_map_of_mem
           (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom hs⟩)
   letI := Algebra.TensorProduct.rightAlgebra (R := R) (A := K)
@@ -148,7 +149,8 @@ theorem hasGoingDown_of_isOpenMap
       (RingHom.domain_nontrivial fFiber.toRingHom)
   refine ⟨PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q',
     ?_, ?_⟩
-  · apply (primeSpectrum_specializes_iff_ideal_inclusion _ q).2
+  · apply (primeSpectrum_specializes_iff_ideal_inclusion q
+      (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q')).2
     have hdisj : Disjoint (q.asIdeal.primeCompl : Set S)
         (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q').asIdeal := by
       rw [← PrimeSpectrum.localization_comap_range
@@ -158,7 +160,100 @@ theorem hasGoingDown_of_isOpenMap
   · rw [← PrimeSpectrum.comap_comp_apply]
     simpa [IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)] using hq'
   -/
-  sorry
+  rw [hasGoingDown_iff_generalizingMap]
+  intro q p hpq
+  let K := p.asIdeal.ResidueField
+  let B := S ⊗[R] K
+  let M : Submonoid B :=
+    Submonoid.map
+      (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom
+      q.asIdeal.primeCompl
+  have hnil (s : S) (hs : s ∉ q.asIdeal) :
+      ¬ IsNilpotent (algebraMap S B s) := by
+    apply (PrimeSpectrum.mem_image_comap_basicOpen s p).mp
+    apply (hopen _ (PrimeSpectrum.basicOpen s).isOpen).stableUnderGeneralization hpq
+    exact ⟨q, (PrimeSpectrum.mem_basicOpen s q).2 hs, rfl⟩
+  have hzero : (0 : B) ∉ M := by
+    intro h0
+    obtain ⟨s, hs, hs0⟩ := (Submonoid.mem_map).mp h0
+    apply hnil s hs
+    have hs0' : (Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s = 0 := hs0
+    exact hs0' ▸ IsNilpotent.zero
+  let L := Localization M
+  have hL : Nontrivial L := by
+    apply not_subsingleton_iff_nontrivial.mp
+    intro hsub
+    exact hzero ((IsLocalization.subsingleton_iff).mp hsub)
+  letI : Nontrivial L := hL
+  letI : Algebra R L :=
+    ((algebraMap B L).comp (algebraMap R B)).toAlgebra
+  letI : IsScalarTower R B L := by
+    apply IsScalarTower.of_algebraMap_smul
+    intro r x
+    induction x using Localization.induction_on with
+    | _ bs =>
+        rcases bs with ⟨b, s⟩
+        rw [Localization.smul_mk, Localization.smul_mk]
+        simp [Algebra.smul_def]
+  let fS : S →ₐ[R] L :=
+    { toRingHom := (algebraMap B L).comp
+        (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toRingHom
+      commutes' := by
+        intro r
+        calc
+          algebraMap B L
+              ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B)
+              (algebraMap R S r)) = algebraMap B L (algebraMap R B r) := by
+            rw [(Algebra.TensorProduct.includeLeft : S →ₐ[R] B).commutes]
+          _ = algebraMap R L r := by
+            change (algebraMap B L).comp (algebraMap R B) r = _
+            rfl }
+  let fK : K →ₐ[R] L :=
+    { toRingHom := (algebraMap B L).comp
+        (Algebra.TensorProduct.includeRight : K →ₐ[R] B).toRingHom
+      commutes' := by
+        intro r
+        calc
+          algebraMap B L
+              ((Algebra.TensorProduct.includeRight : K →ₐ[R] B)
+              (algebraMap R K r)) = algebraMap B L (algebraMap R B r) := by
+            rw [(Algebra.TensorProduct.includeRight : K →ₐ[R] B).commutes]
+          _ = algebraMap R L r := by
+            change (algebraMap B L).comp (algebraMap R B) r = _
+            rfl }
+  let fSloc : Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    IsLocalization.liftAlgHom (f := fS) (fun y => by
+      obtain ⟨s, hs⟩ := y
+      change IsUnit (algebraMap B L
+        ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s))
+      exact IsLocalization.map_units (M := M) L
+        ⟨_, Submonoid.mem_map_of_mem
+          (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom hs⟩)
+  letI : SMul R L := (inferInstance : Algebra R L).toSMul
+  letI : IsScalarTower R R L := by
+    exact IsScalarTower.of_algebraMap_eq' rfl
+  let fFiber : K ⊗[R] Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    Algebra.TensorProduct.lift fK fSloc (fun _ _ => Commute.all _ _)
+  obtain ⟨q', hq'⟩ :=
+    (PrimeSpectrum.nontrivial_iff_mem_rangeComap p).mp
+      (RingHom.domain_nontrivial fFiber.toRingHom)
+  refine ⟨PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q',
+    ?_, ?_⟩
+  · apply (primeSpectrum_specializes_iff_ideal_inclusion q
+      (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q')).2
+    have hdisj : Disjoint (q.asIdeal.primeCompl : Set S)
+        (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q').asIdeal := by
+      change Disjoint (q.asIdeal.primeCompl : Set S)
+        (PrimeSpectrum.comap (algebraMap S (Localization q.asIdeal.primeCompl)) q').asIdeal
+      change PrimeSpectrum.comap (algebraMap S (Localization q.asIdeal.primeCompl)) q' ∈
+        {p : PrimeSpectrum S |
+          Disjoint (q.asIdeal.primeCompl : Set S) p.asIdeal}
+      rw [← PrimeSpectrum.localization_comap_range
+        (Localization q.asIdeal.primeCompl) q.asIdeal.primeCompl]
+      exact ⟨q', rfl⟩
+    exact disjoint_compl_left_iff.mp hdisj
+  · rw [← PrimeSpectrum.comap_comp_apply]
+    simpa [IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)] using hq'
 
 /-! ## Composition and images -/
 
@@ -287,7 +382,18 @@ theorem same_image
         tensorSubalgebraMap]
     rw [hcomp, PrimeSpectrum.comap_comp]
   -/
-  sorry
+  constructor
+  · ext p
+    simp [tensorLocalizationBaseMap, tensorSubalgebraMap]
+  · have hcomp :
+      tensorLocalizationBaseMap (k := k) (A := S) (R := R)
+          (tensorSubalgebraMap (k := k) (R := R) S' f) =
+        (tensorLocalizationMap (k := k) (R := R) S' f).comp
+          (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f) := by
+      ext x
+      simp [tensorLocalizationBaseMap, tensorLocalizationMap,
+        tensorSubalgebraMap]
+    rw [hcomp, PrimeSpectrum.comap_comp]
 
 theorem map_into_tensor_algebra_isOpenMap
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]
@@ -387,6 +493,26 @@ theorem unique_prime_over_localize_below
     (Localization.AtPrime q)).toRingEquiv⟩
 
 /-! ## Generalizations in the support of a finite flat module -/
+
+private lemma localizedModule_support_witness
+    {R N : Type*} [CommRing R] [AddCommGroup N] [Module R N]
+    (U : Submonoid R) (Q : Ideal (Localization U)) (z : LocalizedModule U N)
+    (hz : (Submodule.span (Localization U) {z}).annihilator ≤ Q) :
+    ∃ n : N, ∀ r ∉ Q.comap (algebraMap R (Localization U)), r • n ≠ 0 := by
+  induction z using LocalizedModule.induction_on with
+  | _ n s =>
+      refine ⟨n, ?_⟩
+      intro r hr hrn
+      have hmzero : (algebraMap R (Localization U) r) •
+          LocalizedModule.mk n s = 0 := by
+        change (Localization.mk r (1 : U)) • LocalizedModule.mk n s = 0
+        rw [LocalizedModule.mk_smul_mk, hrn]
+        simp
+      have hrQ : algebraMap R (Localization U) r ∈ Q := by
+        apply hz
+        rw [Submodule.mem_annihilator_span_singleton]
+        exact hmzero
+      exact hr (show r ∈ Q.comap (algebraMap R (Localization U)) from hrQ)
 
 noncomputable def supportSpectrumMap
     {R S N : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -512,7 +638,132 @@ theorem support_generalizingMap_of_finite_flat
     (TensorProduct.comm A M K).nontrivial_congr.mp hKfiber'
   /- Prior attempt: the preceding tensor-fiber construction left the required
      generalization witness as an unsolved existential. -/
-  sorry
+  have hpure : ∃ k : K, ∃ m : M, k ⊗ₜ[A] m ≠ 0 := by
+    by_contra h
+    have hsub : Subsingleton (K ⊗[A] M) := by
+      refine ⟨fun x y => ?_⟩
+      have hz : ∀ z : K ⊗[A] M, z = 0 := by
+        intro z
+        induction z using TensorProduct.induction_on with
+        | zero => rfl
+        | tmul k m =>
+            have hk : k ⊗ₜ[A] m = 0 := by
+              by_contra hkm
+              exact h ⟨k, m, hkm⟩
+            exact hk
+        | add x y hx hy => rw [hx, hy, add_zero]
+      exact (hz x).trans (hz y).symm
+    exact (not_subsingleton_iff_nontrivial.mpr hKfiber) hsub
+  obtain ⟨k, m, hkm⟩ := hpure
+  let P : Ideal A := Ideal.comap (algebraMap A K) ⊥
+  let J : Ideal B :=
+    { carrier := {b | k ⊗ₜ[A] (b • m) = 0}
+      zero_mem' := by simp
+      add_mem' := by
+        intro b c hb hc
+        change k ⊗ₜ[A] ((b + c) • m) = 0
+        rw [add_smul, TensorProduct.tmul_add, hb, hc, add_zero]
+      smul_mem' := by
+        intro b c hc
+        change k ⊗ₜ[A] ((b * c) • m) = 0
+        change k ⊗ₜ[A] (c • m) = 0 at hc
+        let fb : M →ₗ[A] M :=
+          { toFun := fun n => b • n
+            map_add' := by intro n n'; exact smul_add b n n'
+            map_smul' := by intro a n; exact smul_comm b a n }
+        have hmap := congrArg
+          (TensorProduct.map (LinearMap.id : K →ₗ[A] K) fb) hc
+        rw [mul_smul]
+        rw [TensorProduct.map_tmul, LinearMap.id_apply, map_zero] at hmap
+        dsimp [fb] at hmap
+        change k ⊗ₜ[A] (b • (c • m)) = 0 at hmap
+        exact hmap }
+  have hPmap : P.map (algebraMap A B) ≤ J := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro a ha
+    change k ⊗ₜ[A] ((algebraMap A B a) • m) = 0
+    rw [IsScalarTower.algebraMap_smul B a m, TensorProduct.tmul_smul]
+    have ha' : fAK a = 0 := ha
+    change fAK a • (k ⊗ₜ[A] m) = 0
+    rw [ha', zero_smul]
+  have hAnn : (Submodule.span B {m}).annihilator ≤ J := by
+    intro b hb
+    change k ⊗ₜ[A] (b • m) = 0
+    rw [Submodule.mem_annihilator_span_singleton] at hb
+    simpa [hb]
+  have hI : P.map (algebraMap A B) + (Submodule.span B {m}).annihilator ≤ J :=
+    add_le hPmap hAnn
+  let T : Submonoid B :=
+    Submonoid.map (algebraMap A B).toMonoidHom P.primeCompl
+  have hdisj : Disjoint
+      (P.map (algebraMap A B) + (Submodule.span B {m}).annihilator : Set B)
+      (T : Set B) := by
+    rw [Set.disjoint_left]
+    intro z hzI hzT
+    obtain ⟨a, ha, haz⟩ := (Submonoid.mem_map.mp hzT)
+    have hzJ : z ∈ J := hI hzI
+    have hz0 : k ⊗ₜ[A] (z • m) = 0 := hzJ
+    rw [← haz] at hz0
+    change k ⊗ₜ[A] ((algebraMap A B a) • m) = 0 at hz0
+    rw [IsScalarTower.algebraMap_smul B a m, TensorProduct.tmul_smul] at hz0
+    have hka : algebraMap A K a ≠ 0 := by
+      intro hka
+      exact ha hka
+    have hz0' : algebraMap A K a • (k ⊗ₜ[A] m) = 0 := by
+      simpa [fAK] using hz0
+    exact hkm ((smul_eq_zero.mp hz0').resolve_left hka)
+  obtain ⟨Q, hQprime, hIle, hQdisj⟩ :=
+    (P.map (algebraMap A B) + (Submodule.span B {m}).annihilator).exists_le_prime_disjoint
+      T hdisj
+  let qB : PrimeSpectrum B := ⟨Q, hQprime⟩
+  have hQunder : Q.comap (algebraMap A B) ≤ P := by
+    intro a haQ
+    by_contra haP
+    apply Set.disjoint_left.mp hQdisj
+    · exact haQ
+    · exact ⟨a, haP, rfl⟩
+  have hmapQ : P.map (algebraMap A B) ≤ Q :=
+    le_trans (le_add_left le_rfl) hIle
+  have hPunder : P ≤ Q.comap (algebraMap A B) := by
+    rw [Ideal.le_comap_iff_map_le]
+    exact hmapQ
+  have hQeq : Q.comap (algebraMap A B) = P := le_antisymm hQunder hPunder
+  have hqBsupport : qB ∈ Module.support B M := by
+    rw [Module.mem_support_iff_exists_annihilator]
+    exact ⟨m, le_trans le_add_right hIle⟩
+  let qS : PrimeSpectrum S := PrimeSpectrum.comap (algebraMap S B) qB
+  have hqSsupport : qS ∈ Module.support S N := by
+    rw [Module.mem_support_iff']
+    obtain ⟨n, hn⟩ := localizedModule_support_witness
+      q'.asIdeal.primeCompl Q m (by simpa [B] using le_trans le_add_right hIle)
+    refine ⟨n, ?_⟩
+    intro r hr hrn
+    apply hn r
+    · intro hrQ
+      apply hr
+      exact hrQ
+    · exact hrn
+  have hqSle : qS.asIdeal ≤ q'.asIdeal := by
+    have hdisj : Disjoint (q'.asIdeal.primeCompl : Set S) qS.asIdeal := by
+      rw [← PrimeSpectrum.localization_comap_range B q'.asIdeal.primeCompl]
+      exact ⟨qB, rfl⟩
+    exact disjoint_compl_left_iff.mp hdisj
+  have hspec : qS ⤳ q' :=
+    (primeSpectrum_specializes_iff_ideal_inclusion q' qS).2 hqSle
+  refine ⟨⟨qS, hqSsupport⟩, hspec, ?_⟩
+  apply PrimeSpectrum.ext
+  ext r
+  change algebraMap R B r ∈ Q ↔ r ∈ y.asIdeal
+  have hQmembership (a : A) : algebraMap A B a ∈ Q ↔ a ∈ P := by
+    change a ∈ Q.comap (algebraMap A B) ↔ a ∈ P
+    rw [hQeq]
+  calc
+    algebraMap R B r ∈ Q ↔ algebraMap A B (algebraMap R A r) ∈ Q := by
+      rw [IsScalarTower.algebraMap_apply R A B]
+    _ ↔ algebraMap R A r ∈ P := hQmembership _
+    _ ↔ fAK (algebraMap R A r) = 0 := by rfl
+    _ ↔ algebraMap R K r = 0 := by rw [fAK.commutes]
+    _ ↔ r ∈ y.asIdeal := Ideal.algebraMap_residueField_eq_zero
 
 end
 

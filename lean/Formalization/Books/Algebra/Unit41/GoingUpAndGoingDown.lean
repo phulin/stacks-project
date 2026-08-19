@@ -77,6 +77,42 @@ theorem flat_hasGoingDown
     Algebra.HasGoingDown R S := by
   infer_instance
 
+/- A flat map contracts a minimal prime over an extended ideal to a minimal
+   prime over the original ideal.  This is the ideal-level form used when an
+   annihilator is obtained by extending scalars. -/
+theorem flat_map_minimalPrimes_comap
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Module.Flat R S] {I : Ideal R} {Q : Ideal S}
+    (hQ : Q ∈ (I.map (algebraMap R S)).minimalPrimes) :
+    Q.comap (algebraMap R S) ∈ I.minimalPrimes := by
+  let P : Ideal R := Q.comap (algebraMap R S)
+  have hQprime : Q.IsPrime := hQ.isPrime
+  have hPprime : P.IsPrime := by
+    dsimp [P]
+    infer_instance
+  refine ⟨⟨hPprime, ?_⟩, ?_⟩
+  · exact Ideal.map_le_iff_le_comap.mp hQ.le
+  · intro P' hP' hP'le
+    by_contra hnot
+    have hne : P' ≠ P := by
+      intro hEq
+      apply hnot
+      rw [hEq]
+    have hlt : P' < P := lt_of_le_of_ne hP'le hne
+    let : P.IsPrime := hPprime
+    let : P'.IsPrime := hP'.1
+    let : Q.LiesOver P := ⟨rfl⟩
+    obtain ⟨Q', hQ'lt, hQ'prime, hQ'over⟩ :=
+      Q.exists_ideal_lt_liesOver_of_lt (p := P') (q := P) hlt
+    have hIle : I ≤ Q'.comap (algebraMap R S) := by
+      change I ≤ Q'.under R
+      rw [← hQ'over.over]
+      exact hP'.2
+    have hmap : I.map (algebraMap R S) ≤ Q' :=
+      Ideal.map_le_iff_le_comap.mpr hIle
+    exact (not_le_of_gt hQ'lt)
+      (hQ.2 ⟨hQ'prime, hmap⟩ hQ'lt.le)
+
 theorem localization_hasGoingDown
     {R : Type*} [CommRing R] (M : Submonoid R) :
     Algebra.HasGoingDown R (Localization M) := by

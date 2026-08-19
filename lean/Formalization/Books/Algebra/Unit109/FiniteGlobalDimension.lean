@@ -992,10 +992,17 @@ theorem exact_sequence_projective_dimension {R : Type u} [Ring R]
       (CategoryTheory.HasProjectiveDimensionLE S.X₁ n ∧
         CategoryTheory.HasProjectiveDimensionLE S.X₃ n →
       CategoryTheory.HasProjectiveDimensionLE S.X₂ n) ∧
-        (CategoryTheory.HasProjectiveDimensionLE S.X₁ n ∧
+      (CategoryTheory.HasProjectiveDimensionLE S.X₁ n ∧
           CategoryTheory.HasProjectiveDimensionLE S.X₂ (n + 1) →
         CategoryTheory.HasProjectiveDimensionLE S.X₃ (n + 1)) := by
-  sorry
+  constructor
+  · intro h
+    exact hS.hasProjectiveDimensionLT_X₁ (n + 1) h.1 h.2
+  · constructor
+    · intro h
+      exact hS.hasProjectiveDimensionLT_X₂ (n + 1) h.1 h.2
+    · intro h
+      exact hS.hasProjectiveDimensionLT_X₃ (n + 1) h.1 h.2
 
 /-! ## Global dimension -/
 
@@ -1016,14 +1023,30 @@ noncomputable def globalDimension (R : Type u) [Ring R] : WithBot ℕ∞ :=
 projective-dimension bound. -/
 theorem globalDimension_le_iff {R : Type u} [Ring R] (n : ℕ) :
     globalDimension R ≤ ((n : ℕ∞) : WithBot ℕ∞) ↔ HasGlobalDimensionLE R n := by
-  sorry
+  simp [globalDimension, CategoryTheory.projectiveDimension_le_iff, HasGlobalDimensionLE]
 
 /-- Finiteness of global dimension is equivalent to the global dimension not
 being infinite. -/
 theorem hasFiniteGlobalDimension_iff_globalDimension_ne_top
     {R : Type u} [Ring R] :
     HasFiniteGlobalDimension R ↔ globalDimension R ≠ ⊤ := by
-  sorry
+  constructor
+  · rintro ⟨n, hn⟩
+    exact ne_top_of_le_ne_top
+      (by
+        intro htop
+        apply ENat.natCast_ne_top n
+        exact WithBot.coe_eq_top.mp htop)
+      ((globalDimension_le_iff n).2 hn)
+  · intro h
+    have hbound : ∃ n : ℕ, globalDimension R ≤ ((n : ℕ∞) : WithBot ℕ∞) := by
+      by_contra hbound
+      apply h
+      rw [ENat.WithBot.eq_top_iff_forall_ge]
+      intro m
+      exact (lt_of_not_ge (fun hm => hbound ⟨m, hm⟩)).le
+    rcases hbound with ⟨n, hn⟩
+    exact ⟨n, (globalDimension_le_iff n).1 hn⟩
 
 /-! ## Well-ordered unions of modules -/
 

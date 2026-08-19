@@ -711,14 +711,14 @@ theorem flat_quotient_of_ideal_quotient_injective
   simpa [map_sum, map_smul] using hdi
 
 theorem linearMap_rTensor_injective_of_ideal_quotient_injective
-    {R M N : Type u} [CommRing R]
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) (hflat : Module.Flat R N)
     (hquot : ∀ (I : Ideal R), I.FG →
       Function.Injective
         ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
           (Submodule.smul_top_le_comap_smul_top I f))) :
-    ∀ (Q : Type u) [AddCommGroup Q] [Module R Q],
+    ∀ (Q : Type z) [AddCommGroup Q] [Module R Q],
       Function.Injective (f.rTensor Q) := by
   have hf : Function.Injective f := by
     have hzero := hquot (⊥ : Ideal R) Submodule.fg_bot
@@ -744,10 +744,10 @@ theorem linearMap_rTensor_injective_of_ideal_quotient_injective
   exact (f.lTensor_inj_iff_rTensor_inj Q).mp ht.1
 
 theorem linearMap_rTensor_injective_iff_ideal_quotient_injective
-    {R M N : Type u} [CommRing R]
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) (hflat : Module.Flat R N) :
-    (∀ (Q : Type u) [AddCommGroup Q] [Module R Q],
+    (∀ (Q : Type (max u (max v w))) [AddCommGroup Q] [Module R Q],
       Function.Injective (f.rTensor Q)) ↔
       ∀ (I : Ideal R), I.FG →
         Function.Injective
@@ -756,6 +756,38 @@ theorem linearMap_rTensor_injective_iff_ideal_quotient_injective
   constructor
   · intro hf I _
     let Q := R ⧸ I
+    let Q' : Type (max u (max v w)) :=
+      ULift.{max u (max v w), u} Q
+    let eQ : Q' ≃ₗ[R] Q := ULift.moduleEquiv
+    let eM' : M ⊗[R] Q' ≃ₗ[R] M ⊗[R] Q :=
+      TensorProduct.congr (LinearEquiv.refl R M) eQ
+    let eN' : N ⊗[R] Q' ≃ₗ[R] N ⊗[R] Q :=
+      TensorProduct.congr (LinearEquiv.refl R N) eQ
+    have hcomm' :
+        eN'.toLinearMap.comp (f.rTensor Q') =
+          (f.rTensor Q).comp eM'.toLinearMap := by
+      apply LinearMap.ext
+      intro z
+      induction z using TensorProduct.induction_on with
+      | zero => rfl
+      | add x y hx hy => rw [map_add, map_add, hx, hy]
+      | tmul x y => simp [eM', eN', eQ]
+    have hcomm_apply' (z : M ⊗[R] Q') :
+        eN' ((f.rTensor Q') z) = (f.rTensor Q) (eM' z) := by
+      have h := LinearMap.congr_fun hcomm' z
+      simpa [LinearMap.comp_apply] using h
+    have hfQ : Function.Injective (f.rTensor Q) := by
+      intro x y hxy
+      apply eM'.symm.injective
+      apply hf Q'
+      apply eN'.injective
+      calc
+        eN' ((f.rTensor Q') (eM'.symm x)) =
+            (f.rTensor Q) (eM' (eM'.symm x)) := hcomm_apply' _
+        _ = (f.rTensor Q) x := by rw [eM'.apply_symm_apply]
+        _ = (f.rTensor Q) y := hxy
+        _ = (f.rTensor Q) (eM' (eM'.symm y)) := by rw [eM'.apply_symm_apply]
+        _ = eN' ((f.rTensor Q') (eM'.symm y)) := (hcomm_apply' _).symm
     let eM : M ⊗[R] Q ≃ₗ[R]
         M ⧸ (I • (⊤ : Submodule R M)) :=
       (TensorProduct.comm R M Q).trans
@@ -793,7 +825,7 @@ theorem linearMap_rTensor_injective_iff_ideal_quotient_injective
       simpa [LinearMap.comp_apply] using h
     intro x y hxy
     apply eM.symm.injective
-    apply hf Q
+    apply hfQ
     apply eN.injective
     calc
       eN ((f.rTensor Q) (eM.symm x)) =
@@ -809,6 +841,39 @@ theorem linearMap_rTensor_injective_iff_ideal_quotient_injective
         simpa using (hcomm_apply (eM.symm y)).symm
   · intro hquot
     exact linearMap_rTensor_injective_of_ideal_quotient_injective f hflat hquot
+
+/-- Injectivity of the map modulo an ideal says intrinsically that the pullback of
+`I • N` to `M` is `I • M`.  For an inclusion, this is the equality
+`M ∩ I • N = I • M`. -/
+theorem ideal_quotient_map_injective_iff_comap_eq
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (I : Ideal R) (f : M →ₗ[R] N) :
+    Function.Injective
+        ((I • (⊤ : Submodule R M)).mapQ (I • (⊤ : Submodule R N)) f
+          (Submodule.smul_top_le_comap_smul_top I f)) ↔
+      (I • (⊤ : Submodule R N)).comap f = I • (⊤ : Submodule R M) := by
+  rw [← LinearMap.ker_eq_bot, Submodule.ker_mapQ,
+    ← LinearMap.le_ker_iff_map, Submodule.ker_mkQ]
+  exact ⟨fun h => le_antisymm h (Submodule.smul_top_le_comap_smul_top I f),
+    fun h => h.le⟩
+
+/-- If the target is flat, universal injectivity is equivalent to the purity
+criterion `M ∩ I • N = I • M` for every finitely generated ideal `I`. -/
+theorem linearMap_rTensor_injective_iff_ideal_comap_eq
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (f : M →ₗ[R] N) (hflat : Module.Flat R N) :
+    (∀ (Q : Type (max u (max v w))) [AddCommGroup Q] [Module R Q],
+      Function.Injective (f.rTensor Q)) ↔
+      ∀ (I : Ideal R), I.FG →
+        (I • (⊤ : Submodule R N)).comap f = I • (⊤ : Submodule R M) := by
+  rw [linearMap_rTensor_injective_iff_ideal_quotient_injective f hflat]
+  constructor
+  · intro h I hI
+    exact (ideal_quotient_map_injective_iff_comap_eq I f).mp (h I hI)
+  · intro h I hI
+    exact (ideal_quotient_map_injective_iff_comap_eq I f).mpr (h I hI)
 
 theorem flat_short_exact
     {R M' M M'' : Type*} [CommRing R]

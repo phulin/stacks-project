@@ -238,7 +238,7 @@ theorem isCategoryFibredInSetoids_of_fibredEquivalence_slice
   rcases h with ⟨F, G, hF, hG, hFcart, hGcart,
     ⟨eFG, overFG, hFG⟩, ⟨eGF, overGF, hGF⟩⟩
   refine (equivalence_to_fibredInSets_gives_setoidFibres
-    p (Over.forget X) F F.over ?_ (sliceProjection_isFibredInSets X)).1
+    p (Over.forget X) F hF ?_ (sliceProjection_isFibredInSets X)).1
   exact ⟨G, hF, hG, ⟨eFG, overFG, hFG⟩, ⟨eGF, overGF, hGF⟩⟩
 
 theorem isRepresentableCategoryFibredInGroupoids_iff_setoid_and_objectClassPresheaf
@@ -320,20 +320,24 @@ theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
   · intro F
     refine ⟨𝟙 F.functor, ?_, inferInstance⟩
     intro Z
-    simp [FibredMorphismNatTrans]
+    simp
   · intro F G hFG
     rcases hFG with ⟨η, hη, hηiso⟩
     refine ⟨inv η, ?_, inferInstance⟩
     intro Z
-    rw [Functor.map_inv, hη]
-    simp [FibredMorphismNatTrans]
+    apply (cancel_mono (q.map (η.app Z))).1
+    have hinv : (inv η).app Z ≫ η.app Z = 𝟙 _ := by
+      exact congrArg (fun τ => τ.app Z) (IsIso.inv_hom_id η)
+    rw [← q.map_comp, hinv, q.map_id, hη]
+    simp
   · intro F G K hFG hGK
     rcases hFG with ⟨η, hη, hηiso⟩
     rcases hGK with ⟨θ, hθ, hθiso⟩
     refine ⟨η ≫ θ, ?_, inferInstance⟩
     intro Z
+    change q.map (η.app Z ≫ θ.app Z) = _
     rw [Functor.map_comp, hη, hθ]
-    simp [FibredMorphismNatTrans, Category.assoc]
+    simp
 
 /- The source's displayed equality is represented by an equivalence of the
    quotient type with the hom type in the base. -/

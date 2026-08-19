@@ -117,6 +117,64 @@ private theorem numericalPolynomialDegree_eq_zero_of_eventually_eq
   rw [heq]
   exact Polynomial.degree_C hcq
 
+private theorem numericalPolynomialDegree_le_zero_of_eventually_bounded
+    (f : ℤ → ℤ) (hf : IsNumericalPolynomial f) (C : ℕ)
+    (hbound : ∀ᶠ n : ℤ in Filter.atTop, 0 ≤ f n ∧ f n ≤ C) :
+    numericalPolynomialDegree f ≤ 0 := by
+  classical
+  let P := eventuallyRationalPolynomial f
+  obtain ⟨N, hN⟩ := Filter.eventually_atTop.1
+    ((eventuallyRationalPolynomial_spec f hf).and hbound)
+  let g : ℕ → Fin (C + 1) := fun k =>
+    ⟨(f (N + k)).toNat, by
+      have hk := (hN (N + k) (by omega)).2
+      have hcast : ((f (N + k)).toNat : ℤ) = f (N + k) :=
+        Int.toNat_of_nonneg hk.1
+      have hle : ((f (N + k)).toNat : ℤ) ≤ C := by
+        rw [hcast]
+        exact hk.2
+      exact Nat.lt_succ_of_le (by exact_mod_cast hle)⟩
+  obtain ⟨a, ha⟩ := Finite.exists_infinite_fiber g
+  let ι : (g ⁻¹' ({a} : Set (Fin (C + 1)))) → ℚ := fun k =>
+    ((N + k.1 : ℤ) : ℚ)
+  have hι : Function.Injective ι := by
+    intro i j hij
+    apply Subtype.ext
+    have hij' : (i.1 : ℤ) = (j.1 : ℤ) := by
+      dsimp [ι] at hij
+      have hij'' : N + (i.1 : ℤ) = N + (j.1 : ℤ) := by
+        exact_mod_cast hij
+      omega
+    exact_mod_cast hij'
+  have hιinf : Set.Infinite (Set.range ι) :=
+    Set.infinite_range_of_injective hι
+  have heq : P = Polynomial.C (a.1 : ℚ) := by
+    apply Polynomial.eq_of_infinite_eval_eq P (Polynomial.C (a.1 : ℚ))
+    refine hιinf.mono ?_
+    rintro z ⟨k, rfl⟩
+    have hka : g k.1 = a := by
+      have hk := k.2
+      change g k.1 ∈ ({a} : Set (Fin (C + 1))) at hk
+      simpa only [Set.mem_singleton_iff] using hk
+    have hN' := hN (N + k.1) (by omega)
+    have hto : (f (N + k.1)).toNat = a.1 :=
+      congrArg Fin.val hka
+    have hcast : ((f (N + k.1)).toNat : ℤ) = f (N + k.1) :=
+      Int.toNat_of_nonneg hN'.2.1
+    have hfc : (f (N + k.1) : ℚ) = (a.1 : ℚ) := by
+      rw [← hcast]
+      exact_mod_cast hto
+    change (eventuallyRationalPolynomial f).eval
+      ((N + k.1 : ℤ) : ℚ) =
+      (Polynomial.C (a.1 : ℚ)).eval ((N + k.1 : ℤ) : ℚ)
+    rw [hN'.1, hfc]
+    simp
+  change P.degree ≤ 0
+  rw [heq]
+  by_cases ha0 : (a.1 : ℚ) = 0
+  · simp [ha0]
+  · rw [Polynomial.degree_C ha0]
+
 private theorem d_eq_zero_iff_isFiniteLength
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     (hR₀ : Nontrivial R) :
@@ -474,6 +532,183 @@ theorem dimension_zero_ring_characterization
 
 /-! ## Dimension one and general local dimension -/
 
+def HasIdealOfDefinitionGeneratedBy
+    (R : Type u) [CommRing R] [IsLocalRing R] (n : ℕ) : Prop :=
+  ∃ x : Fin n → R,
+    (∀ i, x i ∈ maximalIdeal R) ∧
+      IsIdealOfDefinition R (Ideal.span (Set.range x))
+
+private theorem exists_isIdealOfDefinition_finset_card_eq
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (n : ℕ) (hdim : ringKrullDim R = n) :
+    ∃ s : Finset R, s.card = n ∧
+      IsIdealOfDefinition R (Ideal.span (s : Set R)) := by
+  classical
+  obtain ⟨s, hsmin, hscard⟩ :=
+    Ideal.exists_finset_card_eq_height_of_isNoetherianRing
+      (IsLocalRing.maximalIdeal R)
+  have hscard' : s.card = n := by
+    have hscard'' : (s.card : WithBot ℕ∞) = (n : WithBot ℕ∞) := by
+      calc
+        (s.card : WithBot ℕ∞) = (IsLocalRing.maximalIdeal R).height := by
+          exact_mod_cast hscard
+        _ = ringKrullDim R := IsLocalRing.maximalIdeal_height_eq_ringKrullDim
+        _ = (n : WithBot ℕ∞) := hdim
+    exact_mod_cast hscard''
+  refine ⟨s, hscard', ?_⟩
+  unfold IsIdealOfDefinition
+  apply le_antisymm
+  · rw [← (IsLocalRing.maximalIdeal.isMaximal R).isPrime.radical]
+    exact Ideal.radical_mono hsmin.le
+  · rw [Ideal.radical_eq_sInf]
+    refine le_sInf fun p hp => ?_
+    rcases hp with ⟨hpI, hp⟩
+    have hpmax : p ≤ IsLocalRing.maximalIdeal R :=
+      IsLocalRing.le_maximalIdeal hp.ne_top
+    have hmaxp : IsLocalRing.maximalIdeal R ≤ p := by
+      exact hsmin.2 ⟨hp, hpI⟩ hpmax
+    exact hmaxp
+
+private theorem ringKrullDim_le_of_isIdealOfDefinition_span
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    {s : Finset R} (hdef : IsIdealOfDefinition R (Ideal.span (s : Set R))) :
+    ringKrullDim R ≤ s.card := by
+  have hmin : IsLocalRing.maximalIdeal R ∈
+      (Ideal.span (s : Set R)).minimalPrimes := by
+    refine ⟨⟨(IsLocalRing.maximalIdeal.isMaximal R).isPrime, ?_⟩, ?_⟩
+    · exact Ideal.le_radical.trans_eq hdef
+    · intro p hp hpI
+      have hpm : p ≤ IsLocalRing.maximalIdeal R :=
+        IsLocalRing.le_maximalIdeal hp.1.ne_top
+      have hrad : IsLocalRing.maximalIdeal R ≤ p := by
+        rw [← hdef]
+        exact hp.1.radical_le_iff.mpr hp.2
+      exact hrad
+  have hh := Ideal.height_le_card_of_mem_minimalPrimes_span
+    (Set.toFinite (s : Set R)) hmin
+  rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim]
+  exact_mod_cast hh
+
+private theorem exists_parameter_of_ringKrullDim_eq
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (n : ℕ) (hdim : ringKrullDim R = n) :
+    ∃ x : Fin n → R,
+      (∀ i, x i ∈ maximalIdeal R) ∧
+        IsIdealOfDefinition R (Ideal.span (Set.range x)) := by
+  classical
+  obtain ⟨s, hs_card, hdef⟩ :=
+    exists_isIdealOfDefinition_finset_card_eq R n hdim
+  let e : s ≃ Fin n := Finset.equivFinOfCardEq hs_card
+  let x : Fin n → R := fun i => e.symm i
+  have hxmem : ∀ i, x i ∈ maximalIdeal R := by
+    intro i
+    rw [← hdef]
+    exact Ideal.le_radical (Ideal.subset_span (e.symm i).property)
+  have hrange : Set.range x = (s : Set R) := by
+    ext y
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact (e.symm i).property
+    · intro hy
+      exact ⟨e ⟨y, hy⟩, by simp [x]⟩
+  refine ⟨x, hxmem, ?_⟩
+  rw [hrange]
+  exact hdef
+
+private theorem ringKrullDim_eq_iff_parameter_minimal
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [Nontrivial R] (n : ℕ) :
+    ringKrullDim R = n ↔
+      HasIdealOfDefinitionGeneratedBy R n ∧
+        ∀ m : ℕ, m < n → ¬ HasIdealOfDefinitionGeneratedBy R m := by
+  classical
+  constructor
+  · intro hdim
+    obtain ⟨x, hx, hdef⟩ := exists_parameter_of_ringKrullDim_eq R n hdim
+    refine ⟨⟨x, hx, hdef⟩, ?_⟩
+    intro m hm hparam
+    rcases hparam with ⟨y, hy, hdefy⟩
+    let s : Finset R := Finset.univ.image y
+    have hspan : Ideal.span (s : Set R) = Ideal.span (Set.range y) := by
+      have hsset : (s : Set R) = Set.range y := by
+        ext z
+        simp [s]
+      rw [hsset]
+    have hdefs : IsIdealOfDefinition R (Ideal.span (s : Set R)) := by
+      simpa [hspan] using hdefy
+    have hle : ringKrullDim R ≤ s.card :=
+      ringKrullDim_le_of_isIdealOfDefinition_span R hdefs
+    have hle' : n ≤ m := by
+      have hs_card : s.card ≤ m := by
+        dsimp [s]
+        simpa using (Finset.card_image_le (f := y) (s := (Finset.univ : Finset (Fin m))))
+      have hle'' : (n : WithBot ℕ∞) ≤ (m : WithBot ℕ∞) := by
+        rw [← hdim]
+        exact hle.trans (by exact_mod_cast hs_card)
+      exact_mod_cast hle''
+    omega
+  · rintro ⟨hparam, hminimal⟩
+    rcases hparam with ⟨x, hx, hdef⟩
+    let s : Finset R := Finset.univ.image x
+    have hspan : Ideal.span (s : Set R) = Ideal.span (Set.range x) := by
+      have hsset : (s : Set R) = Set.range x := by
+        ext z
+        simp [s]
+      rw [hsset]
+    have hdefs : IsIdealOfDefinition R (Ideal.span (s : Set R)) := by
+      simpa [hspan] using hdef
+    have hle : ringKrullDim R ≤ s.card :=
+      ringKrullDim_le_of_isIdealOfDefinition_span R hdefs
+    have hle' : ringKrullDim R ≤ n := by
+      have hs_card : s.card ≤ n := by
+        dsimp [s]
+        simpa using (Finset.card_image_le (f := x) (s := (Finset.univ : Finset (Fin n))))
+      exact hle.trans (by exact_mod_cast hs_card)
+    have hbot : ringKrullDim R ≠ ⊥ := ringKrullDim_ne_bot
+    have htop : ringKrullDim R ≠ ⊤ := ringKrullDim_ne_top
+    cases hq : ringKrullDim R with
+    | bot => exact (hbot hq).elim
+    | coe q =>
+        cases q with
+        | top => exact (htop hq).elim
+        | coe k =>
+            rw [hq] at hle'
+            have hk : k ≤ n := by
+              exact_mod_cast hle'
+            have hkn : ¬ k < n := by
+              intro hkn
+              apply hminimal k hkn
+              obtain ⟨z, hz, hdefz⟩ :=
+                exists_parameter_of_ringKrullDim_eq R k (by rw [hq]; rfl)
+              exact ⟨z, hz, hdefz⟩
+            have : k = n := by omega
+            subst k
+            rfl
+
+private theorem isIdealOfDefinition_bot_of_isNilpotent_of_principal
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    {x : R} (hdef : IsIdealOfDefinition R (Ideal.span ({x} : Set R)))
+    (hnil : IsNilpotent x) :
+    IsIdealOfDefinition R (⊥ : Ideal R) := by
+  have hrad : (Ideal.span ({x} : Set R)).radical ≤ nilradical R := by
+    intro y hy
+    rcases (Ideal.mem_radical_iff.mp hy) with ⟨n, hyn⟩
+    rcases (Ideal.mem_span_singleton.mp hyn) with ⟨r, hr⟩
+    rcases hnil with ⟨k, hk⟩
+    apply mem_nilradical.mpr
+    refine ⟨n * k, ?_⟩
+    rw [pow_mul, hr, mul_pow, hk, zero_mul]
+  have hmax : IsLocalRing.maximalIdeal R ≤ nilradical R := by
+    rw [← hdef]
+    exact hrad
+  have hmax' : nilradical R ≤ IsLocalRing.maximalIdeal R :=
+    nilradical_le_prime (IsLocalRing.maximalIdeal R)
+  have heq : IsLocalRing.maximalIdeal R = nilradical R :=
+    le_antisymm hmax hmax'
+  unfold IsIdealOfDefinition
+  simpa [nilradical] using heq.symm
+
+
 theorem local_dimension_one_characterization
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
     List.TFAE
@@ -487,12 +722,6 @@ theorem local_dimension_one_characterization
           IsIdealOfDefinition R (Ideal.span ({x} : Set R))) ∧
           ¬ IsIdealOfDefinition R (⊥ : Ideal R) ] := by
   sorry
-
-def HasIdealOfDefinitionGeneratedBy
-    (R : Type u) [CommRing R] [IsLocalRing R] (n : ℕ) : Prop :=
-  ∃ x : Fin n → R,
-    (∀ i, x i ∈ maximalIdeal R) ∧
-      IsIdealOfDefinition R (Ideal.span (Set.range x))
 
 theorem local_dimension_characterization
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]

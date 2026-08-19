@@ -1218,7 +1218,7 @@ theorem two_term_homotopy_cancellation
         · dsimp
           simp only [map_smul, smul_sub]
         · dsimp
-          simp only [map_smul, smul_add] }
+          rw [map_smul, map_smul, smul_add] }
   let G : TwoTermSum B₁ A₀ →ₗ[R] TwoTermSum A₁ B₀ :=
     { toFun := fun x =>
         (H.ψ₁ x.1 + H.hA x.2, -H.dB x.1 + H.φ₀ x.2)

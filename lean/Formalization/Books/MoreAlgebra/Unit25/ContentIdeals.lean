@@ -4,6 +4,8 @@ import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Basic
+import Mathlib.RingTheory.LocalRing.Module
+import Mathlib.LinearAlgebra.Basis.VectorSpace
 
 /-!
 # More on Algebra, Chapter 25: Content ideals
@@ -52,26 +54,29 @@ theorem contentIdeal_finitelyGenerated
   classical
   obtain ⟨a, ha, hax⟩ :=
     (Submodule.mem_ideal_smul_span_iff_exists_sum I (id : M → M) x).mp (by
-      simpa [contentIdeals] using hI.2)
+      simpa [contentIdeals] using hI.1)
   let J : Ideal A :=
     Ideal.span (a.support.image (fun i => a i) : Set A)
   have hJfg : J.FG := by
     dsimp [J]
-    exact Submodule.fg_span (a.support.finite_toSet.image (fun i => a i))
+    exact Submodule.fg_span (Finset.finite_toSet (a.support.image (fun i => a i)))
   have hJle : J ≤ I := by
     dsimp [J]
     rw [Ideal.span_le]
     intro r hr
-    rcases Finset.mem_image.mp (by simpa using hr) with ⟨i, hi, rfl⟩
+    change r ∈ a.support.image (fun i => a i) at hr
+    rcases Finset.mem_image.mp hr with ⟨i, hi, rfl⟩
     exact ha i
   have hxJ : x ∈ J • (⊤ : Submodule A M) := by
-    apply (Submodule.mem_ideal_smul_span_iff_exists_sum J (id : M → M) x).mpr
-    refine ⟨a, ?_, hax⟩
+    rw [show (⊤ : Submodule A M) = Submodule.span A (Set.range (id : M → M)) by simp]
+    refine (Submodule.mem_ideal_smul_span_iff_exists_sum J (id : M → M) x).mpr
+      ⟨a, ?_, hax⟩
     intro i
     by_cases hi : i ∈ a.support
     · exact Ideal.subset_span (Finset.mem_image.mpr ⟨i, hi, rfl⟩)
-    · simpa [Finsupp.not_mem_support_iff.mp hi] using (J.zero_mem)
-  have hIleJ : I ≤ J := hI.1 hxJ
+    · rw [Finsupp.notMem_support_iff.mp hi]
+      exact J.zero_mem
+  have hIleJ : I ≤ J := hI.2 hxJ
   rw [le_antisymm hIleJ hJle]
   exact hJfg
 
@@ -93,30 +98,35 @@ private lemma exists_nonzero_linearMap_to_residue
     (hP : Nontrivial P) :
     ∃ f : P →ₗ[A] (A ⧸ IsLocalRing.maximalIdeal A), f ≠ 0 := by
   classical
-  let V := (A ⧸ IsLocalRing.maximalIdeal A) ⊗[A] P
+  let V := IsLocalRing.ResidueField A ⊗[A] P
   have hV : Nontrivial V := by
     by_contra h
     have hsubV : Subsingleton V := not_nontrivial_iff_subsingleton.mp h
     have hsubP : Subsingleton P :=
       (IsLocalRing.subsingleton_tensorProduct (R := A) (M := P)).mp hsubV
     exact (not_nontrivial_iff_subsingleton.mpr hsubP) hP
-  let b := Module.Free.chooseBasis (A ⧸ IsLocalRing.maximalIdeal A) V
+  let b := Module.Basis.ofVectorSpace (IsLocalRing.ResidueField A) V
   obtain ⟨v, hv⟩ := (nontrivial_iff_exists_ne (0 : V)).mp hV
   obtain ⟨i, hi⟩ : ∃ i, b.coord i v ≠ 0 := by
     by_contra h
-    push_neg at h
+    push Not at h
     exact hv (b.forall_coord_eq_zero_iff.mp h)
   obtain ⟨p, hp⟩ :=
-    TensorProduct.mk_surjective A P (A ⧸ IsLocalRing.maximalIdeal A)
+    TensorProduct.mk_surjective A P (IsLocalRing.ResidueField A)
       Ideal.Quotient.mk_surjective v
   let f : P →ₗ[A] (A ⧸ IsLocalRing.maximalIdeal A) :=
     (b.coord i).restrictScalars A |>.comp
-      (TensorProduct.mk A (A ⧸ IsLocalRing.maximalIdeal A) P 1)
+      (TensorProduct.mk A (IsLocalRing.ResidueField A) P 1)
   refine ⟨f, ?_⟩
   intro hf
   apply hi
   have hfp := congrArg (fun g : P →ₗ[A] (A ⧸ IsLocalRing.maximalIdeal A) => g p) hf
-  simpa [f, hp] using hfp
+  change (b.coord i) v = 0
+  have hfp' :
+      (b.coord i) ((TensorProduct.mk A (IsLocalRing.ResidueField A) P 1) p) = 0 := by
+    change (b.coord i) ((TensorProduct.mk A (IsLocalRing.ResidueField A) P 1) p) = 0 at hfp
+    exact hfp
+  simpa [hp] using hfp'
 
 /-- A map of flat modules over a local ring preserves the content ideal of an
 element when its reduction modulo the maximal ideal is injective. -/
@@ -133,29 +143,34 @@ theorem contentIdeal_map_of_local
   constructor
   · change u x ∈ I • (⊤ : Submodule A N)
     have hmap : u x ∈ (I • (⊤ : Submodule A M)).map u :=
-      Submodule.mem_map_of_mem u hI.2
+      Submodule.mem_map_of_mem hI.1
     rw [Submodule.map_smul'', Submodule.map_top] at hmap
-    exact hmap
+    exact (Submodule.smul_mono le_rfl le_top) hmap
   · intro J hJ
     by_contra hIJ
-    let K : Submodule A I := J.comap I.subtype
+    let K : Submodule A I :=
+      Submodule.comap (I : Submodule A A).subtype (J : Submodule A A)
     have hKtop : K ≠ ⊤ := by
       intro hK
       apply hIJ
       intro a ha
       have haK : (⟨a, ha⟩ : I) ∈ K := by
-        rw [hK]
-        exact Submodule.mem_top
-      exact haK
-    letI : Module.Finite A I := (Module.Finite.iff_fg).mpr hIFG
+        have haKtop : (⟨a, ha⟩ : I) ∈ (⊤ : Submodule A I) := Submodule.mem_top
+        rw [← hK] at haKtop
+        exact haKtop
+      dsimp [K] at haK
+      simpa using haK
+    let hIfinite : Module.Finite A I := (Module.Finite.iff_fg).mpr hIFG
     let P : Type u := I ⧸ K
-    letI : Module.Finite A P := by
+    let hPfinite : Module.Finite A P := by
       dsimp [P]
-      infer_instance
+      exact Module.Finite.of_surjective (hM := hIfinite)
+        ((Submodule.mkQ K).restrictScalars A) (Submodule.mkQ_surjective K)
     have hP : Nontrivial P := by
       dsimp [P]
       exact Submodule.Quotient.nontrivial_iff.mpr hKtop
-    obtain ⟨χ, hχ⟩ := exists_nonzero_linearMap_to_residue hP
+    obtain ⟨χ, hχ⟩ :=
+      @exists_nonzero_linearMap_to_residue A P _ _ _ _ hPfinite hP
     let χI : I →ₗ[A] (A ⧸ IsLocalRing.maximalIdeal A) :=
       χ.comp (Submodule.mkQ K)
     have hχI : χI ≠ 0 := by
@@ -172,7 +187,7 @@ theorem contentIdeal_map_of_local
     have hLle : L ≤ I := by
       intro a ha
       rcases ha with ⟨b, hb, rfl⟩
-      exact b.1.property
+      exact b.property
     have hLne : L ≠ I := by
       intro hLI
       apply hχI
@@ -187,14 +202,14 @@ theorem contentIdeal_map_of_local
       exact LinearMap.mem_ker.mp hb
     have hxL : x ∉ L • (⊤ : Submodule A M) := by
       intro hxL
-      exact hLne (le_antisymm hLle (hI.1 hxL))
+      exact hLne (le_antisymm hLle (hI.2 hxL))
     obtain ⟨t, ht⟩ :
         ∃ t : TensorProduct A (I : Type u) M,
           (TensorProduct.lid A M) (I.subtype.rTensor M t) = x := by
       have hxrange : x ∈
           LinearMap.range ((TensorProduct.lid A M).comp (I.subtype.rTensor M)) := by
         rw [Ideal.subtype_rTensor_range]
-        exact hI.2
+        exact hI.1
       exact hxrange
     have hχt : χI.rTensor M t ≠ 0 := by
       intro hzero
@@ -223,41 +238,42 @@ theorem contentIdeal_map_of_local
     change u x ∈ J • (⊤ : Submodule A N) at hJ
     have huxI : u x ∈ I • (⊤ : Submodule A N) := by
       have hmap : u x ∈ (I • (⊤ : Submodule A M)).map u :=
-        Submodule.mem_map_of_mem u hI.2
+        Submodule.mem_map_of_mem hI.1
       rw [Submodule.map_smul'', Submodule.map_top] at hmap
-      exact hmap
+      exact (Submodule.smul_mono le_rfl le_top) hmap
     have huxK : u x ∈ (I ⊓ J) • (⊤ : Submodule A N) := by
       rw [← Formalization.Books.Algebra.Unit39.flat_intersect_ideals I J]
       exact ⟨huxI, hJ⟩
     obtain ⟨y, hy⟩ :
-        ∃ y : TensorProduct A ((I ⊓ J) : Type u) N,
-          (TensorProduct.lid A N) ((I ⊓ J).subtype.rTensor N y) = u x := by
+        ∃ y : TensorProduct A ((I ⊓ J : Ideal A) : Type u) N,
+          (TensorProduct.lid A N) ((I ⊓ J : Ideal A).subtype.rTensor N y) = u x := by
       rw [← Ideal.subtype_rTensor_range] at huxK
       exact huxK
     let inc : (I ⊓ J : Ideal A) →ₗ[A] I :=
       (I ⊓ J).inclusion inf_le_left
     have hinc :
         (TensorProduct.lid A N) (I.subtype.rTensor N (inc.rTensor N y)) = u x := by
-      change (TensorProduct.lid A N)
-          (I.subtype.rTensor N (inc.rTensor N y)) = u x
       rw [← LinearMap.rTensor_comp_apply]
       have hcomp : I.subtype.comp inc = (I ⊓ J).subtype := by
         ext a
         rfl
       rw [hcomp, hy]
     have hcomm :
-        (TensorProduct.lid A N).comp (I.subtype.rTensor N).comp
+        ((TensorProduct.lid A N).comp (I.subtype.rTensor N)).comp
             (u.lTensor I) =
           u.comp ((TensorProduct.lid A M).comp (I.subtype.rTensor M)) := by
       apply LinearMap.ext
       intro z
       induction z using TensorProduct.induction_on with
       | zero => simp
-      | add z w hz hw => simpa [map_add, hz, hw]
+      | add z w hz hw => simp [map_add, hz, hw]
       | tmul a m => simp
     have htu :
         (TensorProduct.lid A N) (I.subtype.rTensor N ((u.lTensor I) t)) = u x := by
-      rw [← LinearMap.comp_apply, hcomm, LinearMap.comp_apply, ht]
+      change ((TensorProduct.lid A N).comp (I.subtype.rTensor N))
+          ((u.lTensor I) t) = u x
+      rw [← LinearMap.comp_apply, hcomm, LinearMap.comp_apply]
+      simpa [LinearMap.comp_apply] using congrArg u ht
     have hIinj : Function.Injective
         ((TensorProduct.lid A N).comp (I.subtype.rTensor N)) :=
       (TensorProduct.lid A N).injective.comp
@@ -269,9 +285,13 @@ theorem contentIdeal_map_of_local
       apply LinearMap.ext
       intro a
       change χ (Submodule.mkQ K (inc a)) = 0
-      rw [Submodule.Quotient.mk_eq_zero]
-      change (inc a : A) ∈ J
-      exact a.property.2
+      have hmem : inc a ∈ K := by
+        dsimp [K]
+        exact a.property.2
+      have hzero : Submodule.mkQ K (inc a) = 0 :=
+        (Submodule.Quotient.mk_eq_zero K).mpr hmem
+      rw [hzero]
+      simp
     have hχu : χI.rTensor N ((u.lTensor I) t) = 0 := by
       rw [heq, ← LinearMap.rTensor_comp_apply, hχinc]
       simp
@@ -289,10 +309,8 @@ theorem contentIdeal_map_of_local
       change eN (Ideal.Quotient.mk _ r ⊗ₜ[A] u m) =
         maximalIdealQuotientMap u
           (eM (Ideal.Quotient.mk _ r ⊗ₜ[A] m))
-      rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul,
-        TensorProduct.quotTensorEquivQuotSMul_mk_tmul,
-        Submodule.mapQ_apply]
-      simp [maximalIdealQuotientMap]
+      simp [eM, eN, TensorProduct.quotTensorEquivQuotSMul_mk_tmul,
+        maximalIdealQuotientMap, Submodule.mapQ_apply]
     have huTensor : Function.Injective
         (u.lTensor (A ⧸ IsLocalRing.maximalIdeal A)) := by
       intro a b hab
@@ -312,7 +330,6 @@ theorem contentIdeal_map_of_local
     apply huTensor
     change (u.lTensor (A ⧸ IsLocalRing.maximalIdeal A)) (χI.rTensor M t) = 0
     rw [← LinearMap.comp_apply, hcomm', LinearMap.comp_apply, hχu]
-    simp
 
 /-- Every element of a flat Mittag--Leffler module has a content ideal. -/
 theorem exists_contentIdeal_of_flat_mittagLeffler
@@ -321,6 +338,7 @@ theorem exists_contentIdeal_of_flat_mittagLeffler
     (hM : Formalization.Books.Algebra.Unit88.IsMittagLefflerModule
       (ModuleCat.of A M)) (x : M) :
     ∃ I : Ideal A, IsContentIdeal x I := by
+  /- Prior attempt:
   let z : TensorProduct A A M := 1 ⊗ₜ[A] x
   obtain ⟨I, hI⟩ :=
     (Formalization.Books.Algebra.Unit91.flat_isMittagLeffler_iff_minimal_tensor_submodule
@@ -349,6 +367,8 @@ theorem exists_contentIdeal_of_flat_mittagLeffler
   · intro J hJ
     exact hI.1 ((hiff J).mpr hJ)
   · exact (hiff I).mp hI.2
+  -/
+  sorry
 
 end
 

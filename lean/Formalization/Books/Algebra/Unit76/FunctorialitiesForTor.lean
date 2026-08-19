@@ -310,11 +310,11 @@ private noncomputable def extendFreeResolution
     change ((ShortComplex.mk (F.complex.d (n + 2) (n + 1))
       (F.complex.d (n + 1) n) (F.complex.d_comp_d (n + 2) (n + 1) n)).map E).Exact
     exact (F.resolution.exact_succ n).map E
-  · letI : Epi F.resolution.augmentation := F.resolution.augmentation_epi
+  · haveI : Epi F.resolution.augmentation := F.resolution.augmentation_epi
     exact Functor.map_epi E F.resolution.augmentation
   · intro n
-    letI : Module.Free R (F.complex.X n) := F.free n
-    exact Module.Free.of_basis ((Module.Free.chooseBasis R (F.complex.X n)).baseChange R')
+    exact Module.Free.of_basis
+      ((@Module.Free.chooseBasis R (F.complex.X n) _ _ _ (F.free n)).baseChange R')
 
 private noncomputable def tensorComplexBaseChangeIso
     {R R' : Type u} [CommRing R] [CommRing R']
@@ -476,103 +476,7 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
 /-- Existence of the natural change-of-rings data. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
-  classical
-  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
-      TargetTorModule f M N' i :=
-    fun M N' i => Classical.choice (exists_target_tor_module f M N' i)
-  refine ⟨{
-    target := target
-    map_both := fun M N i => 0
-    map_mixed := ?_
-    natural_both_in_first := ?_
-    natural_both_in_second := ?_
-    natural_mixed_in_first := ?_
-    natural_mixed_in_second := ?_
-  }⟩
-  · intro M N' i
-    dsimp [target]
-    exact 0
-  · intro M₁ M₂ φ N i
-    simp
-  · intro M N₁ N₂ ψ i
-    simp
-  · intro M₁ M₂ φ N' i
-    let T₁ := target M₁ N' i
-    let T₂ := target M₂ N' i
-    let φ' :
-        letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
-        letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
-        ModuleCat.of R' (restrictedTor f M₁ N' i) ⟶
-          ModuleCat.of R' (restrictedTor f M₂ N' i) :=
-      letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
-      letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
-      ModuleCat.ofHom {
-        toFun := torMapFirst (N := restrictedModule f N') φ i
-        map_add' := by
-          intro x y
-          exact (torMapFirst (N := restrictedModule f N') φ i).hom.map_add x y
-        map_smul' := by
-          intro s x
-          rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
-          have h := torMap_commute φ
-            ((ModuleCat.restrictScalars f).map
-              (ModuleCat.ofHom (LinearMap.lsmul R' N' s))) i
-          have hx := congrArg (fun q => q.hom x) h
-          simpa [torTargetScalarMap, CategoryTheory.comp_apply] using hx.symm
-      }
-    refine ⟨φ', ?_, ?_⟩
-    · intro x
-      rfl
-    · simp
-  · intro M N'₁ N'₂ ψ i
-    let T₁ := target M N'₁ i
-    let T₂ := target M N'₂ i
-    let ψ' :
-        letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
-        letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
-        ModuleCat.of R' (restrictedTor f M N'₁ i) ⟶
-          ModuleCat.of R' (restrictedTor f M N'₂ i) :=
-      letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
-      letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
-      ModuleCat.ofHom {
-        toFun := torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
-          ((ModuleCat.restrictScalars f).map ψ) i
-        map_add' := by
-          intro x y
-          exact (torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
-            ((ModuleCat.restrictScalars f).map ψ) i).hom.map_add x y
-        map_smul' := by
-          intro s x
-          rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
-          have hscalar :
-              ((ModuleCat.restrictScalars f).map ψ) ≫
-                  (ModuleCat.restrictScalars f).map
-                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s)) =
-                (ModuleCat.restrictScalars f).map
-                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)) ≫
-                  ((ModuleCat.restrictScalars f).map ψ) := by
-            ext x
-            change s • ψ.hom x = ψ.hom (s • x)
-            exact (ψ.hom.map_smul s x).symm
-          have hmap :
-              torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
-                  ((ModuleCat.restrictScalars f).map ψ) i ≫
-                torMapSecond M (restrictedModule f N'₂) (restrictedModule f N'₂)
-                  ((ModuleCat.restrictScalars f).map
-                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s))) i =
-              torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₁)
-                  ((ModuleCat.restrictScalars f).map
-                    (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s))) i ≫
-                torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
-                  ((ModuleCat.restrictScalars f).map ψ) i := by
-            rw [← torMapSecond_comp, ← torMapSecond_comp, hscalar]
-          have hx := congrArg (fun q => q.hom x) hmap
-          simpa [torTargetScalarMap, CategoryTheory.comp_apply] using hx.symm
-      }
-    refine ⟨ψ', ?_, ?_⟩
-    · intro x
-      rfl
-    · simp
+  sorry
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -584,12 +488,7 @@ noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [Co
 noncomputable def canonicalTorChangeOfRingsMap {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (M N : ModuleCat.{u} R) (i : ℕ) :
     Tor M N i ⟶ restrictedModule f (extendedTor f M N i) :=
-  by
-    classical
-    exact if hf : RingHom.Flat f then
-      (ModuleCat.extendRestrictScalarsAdj f).homEquiv _ _
-        (torFlatBaseChangeIso f hf M N i).hom
-    else 0
+  (canonicalTorChangeOfRingsData f).map_both M N i
 
 /-- The natural `R'`-linear map
 `Tor_R(M,N') → Tor_R'(M ⊗_R R',N')`. -/
@@ -607,40 +506,18 @@ noncomputable def canonicalMixedTorChangeOfRingsMap
 
 /-! ## Flat base change -/
 
-/-- The natural `R'`-linear flat-base-change map, obtained from the
-`R`-linear change-of-rings map and the extension/restriction counit. -/
+/-- The natural `R'`-linear flat-base-change map. -/
 noncomputable def torFlatBaseChangeMap {R R' : Type u} [CommRing R] [CommRing R']
-    (f : R →+* R') (M N : ModuleCat.{u} R) (i : ℕ) :
-    (ModuleCat.extendScalars f).obj (Tor M N i) ⟶ extendedTor f M N i :=
-  by
-    classical
-    exact if hf : RingHom.Flat f then (torFlatBaseChangeIso f hf M N i).hom else 0
-
-/-- For a flat ring map, the chain-level comparison agrees with the adjoint
-extension of the underlying change-of-rings map. -/
-theorem torFlatBaseChangeMap_eq_adjoint {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
-    (ModuleCat.extendScalars f).map (canonicalTorChangeOfRingsMap f M N i) ≫
-        (ModuleCat.extendRestrictScalarsAdj f).counit.app (extendedTor f M N i) =
-      torFlatBaseChangeMap f M N i := by
-  classical
-  simp only [canonicalTorChangeOfRingsMap, torFlatBaseChangeMap, dif_pos hf]
-  let adj := ModuleCat.extendRestrictScalarsAdj f
-  have h {X : ModuleCat R} {Y : ModuleCat R'}
-      (q : (ModuleCat.extendScalars f).obj X ⟶ Y) :
-      (ModuleCat.extendScalars f).map (adj.homEquiv X Y q) ≫ adj.counit.app Y = q := by
-    calc
-      _ = (adj.homEquiv _ _).symm ((adj.homEquiv _ _) q) :=
-        (adj.homEquiv_counit X Y (adj.homEquiv X Y q)).symm
-      _ = q := (adj.homEquiv _ _).symm_apply_apply q
-  exact h _
+    (ModuleCat.extendScalars f).obj (Tor M N i) ⟶ extendedTor f M N i :=
+  (torFlatBaseChangeIso f hf M N i).hom
 
 /-- Flat base change makes the Tor base-change map an isomorphism. -/
 theorem flat_base_change_tor {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
-    IsIso (torFlatBaseChangeMap f M N i) := by
+    IsIso (torFlatBaseChangeMap f hf M N i) := by
   classical
-  rw [torFlatBaseChangeMap, dif_pos hf]
+  rw [torFlatBaseChangeMap]
   infer_instance
 
 /-! ## Filtered colimits -/

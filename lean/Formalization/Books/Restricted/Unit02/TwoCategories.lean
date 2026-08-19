@@ -873,6 +873,11 @@ structure AdicSystemLimitData {A : Type u} [CommRing A] (I : Ideal A)
     (X : AdicSystemCategory A I) where
   algebra : CommAlgCat A
   comparison : (algebra : Type u) ≃+* adicSystemLimitRing I X
+  comparison_stage : ∀ (a : A) (n : ℕ+),
+    (limit.π X.obj.right (Opposite.op n)).hom
+        (comparison (algebraMap A algebra a)) =
+      (X.obj.hom.app (Opposite.op n)).hom
+        (Ideal.Quotient.mk (I ^ (n : ℕ)) a)
   complete : IsAdicComplete (cprimeIdeal I algebra) algebra
   residue_finite : Algebra.FiniteType (A ⧸ I) (cprimeResidueAlgebra I algebra)
 

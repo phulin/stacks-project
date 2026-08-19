@@ -45,12 +45,125 @@ abbrev FinitelyPresentedModuleCat (A : Type u) [Ring A] :=
 instance finitelyPresentedModuleCat_hasFiniteColimits
     (A : Type u) [Ring A] :
     HasFiniteColimits (FinitelyPresentedModuleCat A) := by
-  sorry
+  change HasFiniteColimits ((finitelyPresentedModuleProperty A).FullSubcategory)
+  let P := finitelyPresentedModuleProperty.{u, u_1} A
+  letI : P.IsClosedUnderIsomorphisms := {
+    of_iso := by
+      intro X Y e hX
+      letI : Module.FinitePresentation A (X : Type _) := hX
+      change Module.FinitePresentation A (Y : Type _)
+      exact Module.FinitePresentation.of_equiv e.toLinearEquiv
+  }
+  letI : P.ContainsZero := {
+    exists_zero := by
+      refine ⟨ModuleCat.of A PUnit, ModuleCat.isZero_of_subsingleton _, ?_⟩
+      · change Module.FinitePresentation A PUnit
+        exact inferInstance
+  }
+  letI : P.IsClosedUnderBinaryCoproducts := by
+    apply ObjectProperty.IsClosedUnderColimitsOfShape.mk'
+    rintro _ ⟨F, hF⟩
+    let X₁ := F.obj ⟨WalkingPair.left⟩
+    let X₂ := F.obj ⟨WalkingPair.right⟩
+    letI : Module.FinitePresentation A (X₁ : Type u_1) := hF _
+    letI : Module.FinitePresentation A (X₂ : Type u_1) := hF _
+    have hprod : P (ModuleCat.of A (X₁ × X₂)) := by
+      change Module.FinitePresentation A (X₁ × X₂)
+      exact inferInstance
+    have eprod : ModuleCat.of A (X₁ × X₂) ≅ colimit F :=
+      (ModuleCat.biprodIsoProd X₁ X₂).symm.trans
+        (IsColimit.coconePointUniqueUpToIso
+        (F := pair X₁ X₂)
+        (s := (BinaryBiproduct.bicone X₁ X₂).toCocone)
+        (t := ((Cocone.precompose (diagramIsoPair F).inv).obj (colimit.cocone F)))
+        (BinaryBiproduct.isColimit X₁ X₂)
+        ((IsColimit.precomposeHomEquiv (diagramIsoPair F).symm (colimit.cocone F)).2
+          (colimit.isColimit F)))
+    exact P.prop_of_iso eprod hprod
+  letI : P.IsClosedUnderFiniteCoproducts :=
+    ObjectProperty.IsClosedUnderFiniteCoproducts.mk'
+  letI : P.IsClosedUnderCokernels := by
+    refine { cokernels_le := ?_ }
+    rintro _ ⟨f, k, hk, ⟨hX, hY⟩⟩
+    letI : Module.FinitePresentation A _ := hX
+    letI : Module.FinitePresentation A _ := hY
+    have hrange : Module.Finite A (LinearMap.range f.hom) := inferInstance
+    letI : Module.Finite A (LinearMap.range f.hom) := hrange
+    have hquot :=
+      Module.finitePresentation_of_surjective (LinearMap.range f.hom).mkQ
+        (Submodule.mkQ_surjective _) (by
+          simpa only [Submodule.ker_mkQ] using (Module.Finite.iff_fg.mp hrange))
+    have e : ModuleCat.of A _ ≅ k.pt :=
+      (ModuleCat.cokernelIsoRangeQuotient f).symm.trans
+        (IsColimit.coconePointUniqueUpToIso
+          (colimit.isColimit (parallelPair f 0)) hk)
+    exact P.prop_of_iso e hquot
+  let hCoEq : HasCoequalizers P.FullSubcategory :=
+    Preadditive.hasCoequalizers_of_hasCokernels
+  exact @hasFiniteColimits_of_hasCoequalizers_and_finite_coproducts
+    P.FullSubcategory _ _ hCoEq
 
 theorem finitelyPresentedModuleCat_hasFiniteLimits_of_coherent
     (A : Type u) [CommRing A] (hA : IsCoherentRing A) :
     HasFiniteLimits (FinitelyPresentedModuleCat A) := by
-  sorry
+  change HasFiniteLimits ((finitelyPresentedModuleProperty.{u, u_1} A).FullSubcategory)
+  let P := finitelyPresentedModuleProperty.{u, u_1} A
+  letI : P.IsClosedUnderIsomorphisms := {
+    of_iso := by
+      intro X Y e hX
+      letI : Module.FinitePresentation A (X : Type u_1) := hX
+      change Module.FinitePresentation A (Y : Type u_1)
+      exact Module.FinitePresentation.of_equiv e.toLinearEquiv
+  }
+  letI : P.ContainsZero := {
+    exists_zero := by
+      refine ⟨ModuleCat.of A PUnit, ModuleCat.isZero_of_subsingleton _, ?_⟩
+      change Module.FinitePresentation A PUnit
+      exact inferInstance
+  }
+  letI : P.IsClosedUnderBinaryProducts := by
+    apply ObjectProperty.IsClosedUnderLimitsOfShape.mk'
+    rintro _ ⟨F, hF⟩
+    let X₁ := F.obj ⟨WalkingPair.left⟩
+    let X₂ := F.obj ⟨WalkingPair.right⟩
+    letI : Module.FinitePresentation A (X₁ : Type u_1) := hF _
+    letI : Module.FinitePresentation A (X₂ : Type u_1) := hF _
+    have hprod : P (ModuleCat.of A (X₁ × X₂)) := by
+      change Module.FinitePresentation A (X₁ × X₂)
+      exact inferInstance
+    have eprod : ModuleCat.of A (X₁ × X₂) ≅ limit F :=
+      IsLimit.conePointUniqueUpToIso
+        (F := pair X₁ X₂)
+        (s := (ModuleCat.binaryProductLimitCone X₁ X₂).cone)
+        (t := ((Cone.postcompose (diagramIsoPair F).hom).obj (limit.cone F)))
+        (ModuleCat.binaryProductLimitCone X₁ X₂).isLimit
+        ((IsLimit.postcomposeHomEquiv (diagramIsoPair F) (limit.cone F)).2
+          (limit.isLimit F))
+    exact P.prop_of_iso eprod hprod
+  letI : P.IsClosedUnderFiniteProducts :=
+    ObjectProperty.IsClosedUnderFiniteProducts.mk'
+  letI : P.IsClosedUnderKernels := by
+    refine { kernels_le := ?_ }
+    rintro _ ⟨f, k, hk, ⟨hX, hY⟩⟩
+    have hkercoh :=
+      (coherent_kernel_cokernel_of_coherent f
+        ((coherentModule_iff_finitePresentation hA _).mpr hX)
+        ((coherentModule_iff_finitePresentation hA _).mpr hY)).1
+    have hkerfp : Module.FinitePresentation A (LinearMap.ker f.hom) :=
+      (coherentModule_iff_finitePresentation hA
+        (ModuleCat.of A (LinearMap.ker f.hom))).mp hkercoh
+    have hker : P (ModuleCat.of A (LinearMap.ker f.hom)) := by
+      change Module.FinitePresentation A (LinearMap.ker f.hom)
+      exact hkerfp
+    have e : ModuleCat.of A (LinearMap.ker f.hom) ≅ k.pt :=
+      (ModuleCat.kernelIsoKer f).symm.trans
+        (IsLimit.conePointUniqueUpToIso
+          (limit.isLimit (parallelPair f 0)) hk)
+    exact P.prop_of_iso e hker
+  let hEq : HasEqualizers P.FullSubcategory :=
+    Preadditive.hasEqualizers_of_hasKernels
+  exact @hasFiniteLimits_of_hasEqualizers_and_finite_products
+    P.FullSubcategory _ _ hEq
 
 /-! ## Filtered colimits, direct sums, and finite limits/colimits -/
 
@@ -90,8 +203,29 @@ def filteredKernelComparison
       ι :=
         { app := fun i =>
             kernel.ι ((D.obj i).hom) ≫ (colimit.ι D i).left
-          naturality := by sorry } }
-  exact kernel.lift _ (colimit.desc (D ⋙ (ker (C := B))) c) (by sorry)
+          naturality := by
+            intro i j f
+            dsimp only [Functor.comp_map, ker, Functor.const]
+            simp only [Category.comp_id]
+            change
+              (kernel.lift (D.obj j).hom
+                (kernel.ι (D.obj i).hom ≫ (D.map f).left) _) ≫
+                  kernel.ι (D.obj j).hom ≫ (colimit.ι D j).left =
+                kernel.ι (D.obj i).hom ≫ (colimit.ι D i).left
+            rw [← Category.assoc, kernel.lift_ι]
+            rw [Category.assoc,
+              ← congrArg (fun g => g.left) (colimit.w D f)]
+            rw [Arrow.comp_left] } }
+  exact kernel.lift _ (colimit.desc (D ⋙ (ker (C := B))) c) (by
+    apply colimit.hom_ext
+    intro i
+    simp only [colimit.ι_desc_assoc, comp_zero]
+    dsimp [c, ker, Functor.comp]
+    change
+      (kernel.ι (D.obj i).hom ≫ (colimit.ι D i).left) ≫ (colimit D).hom =
+        (0 : kernel (D.obj i).hom ⟶ (colimit D).right)
+    rw [Category.assoc, Arrow.Hom.w (colimit.ι D i)]
+    simp [Category.assoc])
 
 def FilteredColimitsCommuteWithKernels
     (B : Type u') [Category.{v'} B]

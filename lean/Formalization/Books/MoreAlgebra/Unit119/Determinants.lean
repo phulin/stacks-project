@@ -3,7 +3,6 @@ import Formalization.Books.Algebra.Unit55.KGroups
 import Formalization.Books.MoreAlgebra.Unit118.PicardGroups
 
 set_option genSizeOf false
-set_option linter.all false
 
 /-!
 # More on Algebra, Chapter 119: Determinants
@@ -73,6 +72,12 @@ structure RankProductDecomposition
     Nonempty
       (M ≃ₗ[R] componentProductModule componentRing componentModule)
 
+/-- The product of the top exterior powers in a rank decomposition. -/
+abbrev rankProductDeterminant
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (D : RankProductDecomposition R M) : Type u :=
+  ∀ i, exteriorPower (D.componentRing i) (D.componentModule i) i
+
 /-- Every finite projective module admits the source's rank-product decomposition. -/
 theorem exists_rankProductDecomposition
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
@@ -111,6 +116,17 @@ theorem mem_determinantModule_iff
       ∀ m : M, ExteriorAlgebra.ι R m * x = 0 :=
   Iff.rfl
 
+/-- The intrinsic determinant line agrees with the product construction in a
+rank decomposition. -/
+theorem determinantModule_equiv_rankProduct
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (D : RankProductDecomposition R M) :
+    letI : Module R (rankProductDeterminant D) :=
+      Module.compHom _ D.ringEquiv.toRingHom
+    Nonempty
+      (determinantModule R M ≃ₗ[R] rankProductDeterminant D) := by
+  sorry
+
 /-- The determinant line is finite locally free of rank one. -/
 theorem determinantModule_finiteLocallyFree_rank_one
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -137,7 +153,7 @@ theorem determinantMap_mem
     [Module.Finite R N] [Module.Projective R N]
     (f : M →ₗ[R] N) (h : SameRankAtPrimes R M N)
     (x : determinantModule R M) :
-    ExteriorAlgebra.map f x ∈ determinantModule R N := by
+    exteriorAlgebraMap f x ∈ determinantModule R N := by
   sorry
 
 /-- The determinant map attached to a map between finite projectives of the
@@ -150,7 +166,7 @@ def determinantMap
     (f : M →ₗ[R] N) (h : SameRankAtPrimes R M N) :
     determinantModule R M →ₗ[R] determinantModule R N :=
   LinearMap.codRestrict (determinantModule R N)
-    ((ExteriorAlgebra.map f).toLinearMap.comp
+    ((exteriorAlgebraMap f).toLinearMap.comp
       (determinantModule R M).subtype)
     (fun x => determinantMap_mem f h x)
 
@@ -163,7 +179,7 @@ theorem determinantMap_coe
     (f : M →ₗ[R] N) (h : SameRankAtPrimes R M N)
     (x : determinantModule R M) :
     (determinantMap f h x : exteriorAlgebra R N) =
-      ExteriorAlgebra.map f x :=
+      exteriorAlgebraMap f x :=
   rfl
 
 /-- The determinant map of an identity map is the identity. -/
@@ -257,6 +273,23 @@ noncomputable def determinantMonoidHom
 
 /-! ## Determinants of exact sequences -/
 
+/-- The defining wedge property of the determinant isomorphism of a short
+exact sequence.  It characterizes the canonical map used below: lift the
+second factor to the middle exterior algebra, wedge it with the image of the
+first factor, and use the quotient map to show independence of the lift. -/
+def determinantShortExactIsoSpec
+    {R : Type u} {M' M M'' : Type v} [CommRing R]
+    [AddCommGroup M'] [Module R M'] [AddCommGroup M] [Module R M]
+    [AddCommGroup M''] [Module R M'']
+    (f : M' →ₗ[R] M) (g : M →ₗ[R] M'')
+    (γ : determinantModule R M' ⊗[R] determinantModule R M''
+      ≃ₗ[R] determinantModule R M) : Prop :=
+  ∀ (x' : determinantModule R M') (x'' : determinantModule R M'')
+    (y : exteriorAlgebra R M),
+    exteriorAlgebraMap g y = (x'' : exteriorAlgebra R M'') →
+      ((γ (x' ⊗ₜ[R] x'') : determinantModule R M) : exteriorAlgebra R M) =
+        exteriorAlgebraMap f (x' : exteriorAlgebra R M') * y
+
 /-- The ModuleCat short complex associated to a linear exact sequence. -/
 def determinantShortExactComplex
     {R : Type u} {M' M M'' : Type v} [CommRing R]
@@ -295,12 +328,12 @@ theorem exists_determinantShortExactIso
     (hfg : Function.Exact f g) (hf : Function.Injective f)
     (hg : Function.Surjective g) :
     Nonempty
-      (determinantModule R M' ⊗[R] determinantModule R M''
-        ≃ₗ[R] determinantModule R M) := by
+      {γ : determinantModule R M' ⊗[R] determinantModule R M''
+          ≃ₗ[R] determinantModule R M //
+        determinantShortExactIsoSpec f g γ} := by
   sorry
 
-/-- A chosen representative of the canonical determinant isomorphism of a
-short exact sequence. -/
+/-- The canonical determinant isomorphism of a short exact sequence. -/
 noncomputable def determinantShortExactIso
     {R : Type u} {M' M M'' : Type v} [CommRing R]
     [AddCommGroup M'] [Module R M'] [Module.Finite R M']
@@ -314,7 +347,22 @@ noncomputable def determinantShortExactIso
     (hg : Function.Surjective g) :
     determinantModule R M' ⊗[R] determinantModule R M''
       ≃ₗ[R] determinantModule R M :=
-  Classical.choice (exists_determinantShortExactIso f g hfg hf hg)
+  (Classical.choice (exists_determinantShortExactIso f g hfg hf hg)).1
+
+theorem determinantShortExactIso_spec
+    {R : Type u} {M' M M'' : Type v} [CommRing R]
+    [AddCommGroup M'] [Module R M'] [Module.Finite R M']
+    [Module.Projective R M']
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [Module.Projective R M]
+    [AddCommGroup M''] [Module R M''] [Module.Finite R M'']
+    [Module.Projective R M'']
+    (f : M' →ₗ[R] M) (g : M →ₗ[R] M'')
+    (hfg : Function.Exact f g) (hf : Function.Injective f)
+    (hg : Function.Surjective g) :
+    determinantShortExactIsoSpec f g
+      (determinantShortExactIso f g hfg hf hg) :=
+  (Classical.choice (exists_determinantShortExactIso f g hfg hf hg)).2
 
 /-- Naturality of the determinant isomorphism for a commutative diagram of
 short exact sequences with vertical isomorphisms. -/
@@ -388,63 +436,48 @@ The two paths are respectively the determinant isomorphisms for
 `0 → L/K → M/K → M/L → 0`; tensor associativity is made explicit. -/
 theorem determinant_filtration
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
-    [Module.Finite R M] [Module.Projective R M]
     (K L : Submodule R M) (hKL : K ≤ L)
     [Module.Finite R K] [Module.Projective R K]
-    [Module.Finite R L] [Module.Projective R L]
     [Module.Finite R (L ⧸ filtrationSubmoduleInL K L)]
     [Module.Projective R (L ⧸ filtrationSubmoduleInL K L)]
-    [Module.Finite R (M ⧸ K)] [Module.Projective R (M ⧸ K)]
-    [Module.Finite R (M ⧸ L)] [Module.Projective R (M ⧸ L)]
-    (hKL_exact :
-      Function.Exact (filtrationKToL K L hKL) (filtrationLToQuotient K L))
-    (hKL_injective : Function.Injective (filtrationKToL K L hKL))
-    (hKL_surjective : Function.Surjective (filtrationLToQuotient K L))
-    (hLM_exact : Function.Exact L.subtype L.mkQ)
-    (hLM_injective : Function.Injective L.subtype)
-    (hLM_surjective : Function.Surjective L.mkQ)
-    (hKM_exact : Function.Exact K.subtype K.mkQ)
-    (hKM_injective : Function.Injective K.subtype)
-    (hKM_surjective : Function.Surjective K.mkQ)
-    (hquot_exact :
-      Function.Exact (filtrationQuotientInclusion K L)
-        (filtrationQuotientProjection K L hKL))
-    (hquot_injective : Function.Injective (filtrationQuotientInclusion K L))
-    (hquot_surjective : Function.Surjective (filtrationQuotientProjection K L hKL)) :
-    let γKL := determinantShortExactIso
-      (filtrationKToL K L hKL) (filtrationLToQuotient K L)
-      hKL_exact hKL_injective hKL_surjective
-    let γLM := determinantShortExactIso L.subtype L.mkQ
-      hLM_exact hLM_injective hLM_surjective
-    let γKM := determinantShortExactIso K.subtype K.mkQ
-      hKM_exact hKM_injective hKM_surjective
-    let γquot := determinantShortExactIso
-      (filtrationQuotientInclusion K L)
-      (filtrationQuotientProjection K L hKL)
-      hquot_exact hquot_injective hquot_surjective
-    (TensorProduct.congr γKL
-        (LinearEquiv.refl R (determinantModule R (M ⧸ L))) ≪≫ₗ γLM) =
-      (TensorProduct.assoc R (determinantModule R K)
-        (determinantModule R (L ⧸ filtrationSubmoduleInL K L))
-        (determinantModule R (M ⧸ L)) ≪≫ₗ
-      TensorProduct.congr
-        (LinearEquiv.refl R (determinantModule R K)) γquot ≪≫ₗ γKM) := by
+    [Module.Finite R (M ⧸ L)] [Module.Projective R (M ⧸ L)] :
+    ∃ (γKL : determinantModule R K ⊗[R]
+          determinantModule R (L ⧸ filtrationSubmoduleInL K L)
+            ≃ₗ[R] determinantModule R L)
+      (γLM : determinantModule R L ⊗[R] determinantModule R (M ⧸ L)
+            ≃ₗ[R] determinantModule R M)
+      (γKM : determinantModule R K ⊗[R] determinantModule R (M ⧸ K)
+            ≃ₗ[R] determinantModule R M)
+      (γquot : determinantModule R (L ⧸ filtrationSubmoduleInL K L) ⊗[R]
+          determinantModule R (M ⧸ L) ≃ₗ[R] determinantModule R (M ⧸ K)),
+      determinantShortExactIsoSpec
+          (filtrationKToL K L hKL) (filtrationLToQuotient K L) γKL ∧
+      determinantShortExactIsoSpec L.subtype L.mkQ γLM ∧
+      determinantShortExactIsoSpec K.subtype K.mkQ γKM ∧
+      determinantShortExactIsoSpec
+          (filtrationQuotientInclusion K L)
+          (filtrationQuotientProjection K L hKL) γquot ∧
+      (TensorProduct.congr γKL
+          (LinearEquiv.refl R (determinantModule R (M ⧸ L))) ≪≫ₗ γLM) =
+        (TensorProduct.assoc R (determinantModule R K)
+          (determinantModule R (L ⧸ filtrationSubmoduleInL K L))
+          (determinantModule R (M ⧸ L)) ≪≫ₗ
+        TensorProduct.congr
+          (LinearEquiv.refl R (determinantModule R K)) γquot ≪≫ₗ γKM) := by
   sorry
 
 /-! ## Direct sums and the switch sign -/
 
-/-- The determinant isomorphism for the canonical direct-sum exact sequence.
-A binary product is the additive direct-sum model used by Mathlib. -/
-theorem exists_determinantDirectSumIso
-    {R M' M'' : Type u} [CommRing R]
-    [AddCommGroup M'] [Module R M'] [Module.Finite R M'] [Module.Projective R M']
-    [AddCommGroup M''] [Module R M''] [Module.Finite R M'']
-    [Module.Projective R M''] :
-    Nonempty
-      (determinantModule R M' ⊗[R] determinantModule R M''
-        ≃ₗ[R] determinantModule R (M' × M'')) := by
+/-- A finite product of projective modules is projective. -/
+theorem moduleProjective_prod
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Projective R M]
+    [AddCommGroup N] [Module R N] [Module.Projective R N] :
+    Module.Projective R (M × N) := by
   sorry
 
+/-- The determinant isomorphism for the canonical direct-sum exact sequence.
+A binary product is the additive direct-sum model used by Mathlib. -/
 noncomputable def determinantDirectSumIso
     {R M' M'' : Type u} [CommRing R]
     [AddCommGroup M'] [Module R M'] [Module.Finite R M'] [Module.Projective R M']
@@ -452,14 +485,29 @@ noncomputable def determinantDirectSumIso
     [Module.Projective R M''] :
     determinantModule R M' ⊗[R] determinantModule R M''
       ≃ₗ[R] determinantModule R (M' × M'') :=
-  Classical.choice (exists_determinantDirectSumIso (R := R) (M' := M') (M'' := M''))
+  letI : Module.Projective R (M' × M'') :=
+    moduleProjective_prod (R := R) (M := M') (N := M'')
+  determinantShortExactIso
+    (LinearMap.inl R M' M'') (LinearMap.snd R M' M'')
+    Function.Exact.inl_snd LinearMap.inl_injective LinearMap.snd_surjective
+
+/-- The canonical direct-sum determinant isomorphism exists. -/
+theorem exists_determinantDirectSumIso
+    {R M' M'' : Type u} [CommRing R]
+    [AddCommGroup M'] [Module R M'] [Module.Finite R M'] [Module.Projective R M']
+    [AddCommGroup M''] [Module R M''] [Module.Finite R M'']
+    [Module.Projective R M''] :
+    Nonempty
+      (determinantModule R M' ⊗[R] determinantModule R M''
+        ≃ₗ[R] determinantModule R (M' × M'')) :=
+  ⟨determinantDirectSumIso (R := R) (M' := M') (M'' := M'')⟩
 
 /-- The determinant of minus the identity on a tensor product is a unit. -/
 theorem determinant_neg_identity_isUnit
     {R M N : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Module.Projective R M]
     [AddCommGroup N] [Module R N] [Module.Finite R N] [Module.Projective R N]
-    [Module.Finite R (M ⊗[R] N)] [Module.Projective R (M ⊗[R] N)] :
+    :
     IsUnit
       (determinant (M := M ⊗[R] N)
         (-(LinearMap.id : Module.End R (M ⊗[R] N)))) := by
@@ -470,7 +518,7 @@ noncomputable def determinantSwitchSign
     {R M N : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Module.Projective R M]
     [AddCommGroup N] [Module R N] [Module.Finite R N] [Module.Projective R N]
-    [Module.Finite R (M ⊗[R] N)] [Module.Projective R (M ⊗[R] N)] : Rˣ :=
+    : Rˣ :=
   (determinant_neg_identity_isUnit (R := R) (M := M) (N := N)).unit
 
 /-- The sign-twisted tensor switch on determinant lines. -/
@@ -483,17 +531,27 @@ noncomputable def determinantSwitchTensorEquiv
   determinantSwitchSign (R := R) (M := M) (N := N) •
     TensorProduct.comm R (determinantModule R M) (determinantModule R N)
 
+/-- The determinant equivalence induced by switching two product factors. -/
+noncomputable def determinantProductCommEquiv
+    {R M N : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Module.Projective R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N] [Module.Projective R N] :
+    determinantModule R (M × N) ≃ₗ[R] determinantModule R (N × M) := by
+  letI : Module.Projective R (M × N) :=
+    moduleProjective_prod (R := R) (M := M) (N := N)
+  letI : Module.Projective R (N × M) :=
+    moduleProjective_prod (R := R) (M := N) (N := M)
+  exact determinantEquiv (LinearEquiv.prodComm R M N)
+
 /-- Switching two direct-sum factors gives the sign-twisted tensor switch. -/
 theorem determinant_directSum_switch
     {R M' M'' : Type u} [CommRing R]
     [AddCommGroup M'] [Module R M'] [Module.Finite R M'] [Module.Projective R M']
     [AddCommGroup M''] [Module R M''] [Module.Finite R M'']
     [Module.Projective R M'']
-    [Module.Finite R (M' × M'')] [Module.Projective R (M' × M'')]
-    [Module.Finite R (M'' × M')] [Module.Projective R (M'' × M')]
-    [Module.Finite R (M' ⊗[R] M'')] [Module.Projective R (M' ⊗[R] M'')] :
+    :
     determinantDirectSumIso (R := R) (M' := M') (M'' := M'') ≪≫ₗ
-        determinantEquiv (LinearEquiv.prodComm R M' M'') =
+        determinantProductCommEquiv (R := R) (M := M') (N := M'') =
       determinantSwitchTensorEquiv (R := R) (M := M') (N := M'') ≪≫ₗ
         determinantDirectSumIso (R := R) (M' := M'') (M'' := M') := by
   sorry

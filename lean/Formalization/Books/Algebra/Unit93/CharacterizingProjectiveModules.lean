@@ -435,11 +435,10 @@ private theorem free_of_submodule_of_free_pid
     · intro _
       trivial
     · intro _
-      change i ∈ base αT
       dsimp [base, αT]
       exact Ordinal.typein_lt_self i
   have hambient_top : ambient αT = ⊤ := by
-    simpa [ambient, hbase_top] using bT.span_eq
+    simp [ambient, hbase_top]
   have hstage_top : stage αT = ⊤ := by
     simp [stage, hambient_top]
   have hambient_limit :
@@ -471,7 +470,7 @@ private theorem free_of_submodule_of_free_pid
           ext i
           by_contra hi
           exact hs ⟨i, Finsupp.mem_support_iff.mpr hi⟩
-        have hx0 : x = 0 := bT.repr.injective (by simpa [hc])
+        have hx0 : x = 0 := bT.repr.injective (by simp [hc])
         rw [hx0]
         exact Submodule.zero_mem _
     · refine iSup_le fun β => ?_
@@ -488,7 +487,7 @@ private theorem free_of_submodule_of_free_pid
       have hxA : (x : F) ∈ ambient α := hx
       rw [hambient_limit α hα] at hxA
       obtain ⟨β₀, hβ₀⟩ := hα.nonempty_Iio
-      letI : Nonempty (Set.Iio α.1) := ⟨⟨β₀, hβ₀⟩⟩
+      let : Nonempty (Set.Iio α.1) := ⟨⟨β₀, hβ₀⟩⟩
       have hdir : Directed (· ≤ ·) (fun β : Set.Iio α.1 =>
           ambient ⟨β.1, β.2.trans (show α.1 < S from α.2)⟩) := by
         intro β γ
@@ -578,10 +577,10 @@ private theorem free_of_submodule_of_free_pid
           exact hnot (Finsupp.mem_support_iff.mpr hrepr)
         simpa using hrepr
     let I : Submodule R R := LinearMap.range coord
-    letI : I.IsPrincipal := IsPrincipalIdealRing.principal I
-    letI : Module.Finite R I := Module.Finite.of_fg
+    let : I.IsPrincipal := IsPrincipalIdealRing.principal I
+    let : Module.Finite R I := Module.Finite.of_fg
       (Submodule.IsPrincipal.fg (IsPrincipalIdealRing.principal I))
-    letI : Module.Free R I := Module.free_of_finite_type_torsion_free'
+    let : Module.Free R I := Module.free_of_finite_type_torsion_free'
     let q : W →ₗ[R] I := coord.codRestrict I (fun x => ⟨x, rfl⟩)
     have hq : Function.Surjective q := by
       intro y
@@ -589,7 +588,7 @@ private theorem free_of_submodule_of_free_pid
       refine ⟨x, ?_⟩
       apply Subtype.ext
       exact hx
-    letI : Module.Projective R I := Module.Projective.of_free
+    let : Module.Projective R I := Module.Projective.of_free
     obtain ⟨s, hs⟩ := LinearMap.exists_rightInverse_of_surjective q
       (LinearMap.range_eq_top_of_surjective q hq)
     let C : Submodule R W := LinearMap.range s
@@ -598,7 +597,6 @@ private theorem free_of_submodule_of_free_pid
       rcases x.property with ⟨y, hy⟩
       change s (q (x : W)) = (x : W)
       rw [← hy]
-      change s (q (s y)) = s y
       exact congrArg s (LinearMap.congr_fun hs y)
     have hkerp : LinearMap.ker p = P := by
       apply le_antisymm
@@ -688,10 +686,10 @@ private theorem projective_free_of_pid
     (hP : Module.Projective R P) : Module.Free R P := by
   obtain ⟨M, hMadd, hMmodule, hMfree, ⟨i, s, his⟩⟩ :=
     Module.Projective.iff_split.mp hP
-  letI : AddCommMonoid M := hMadd
-  letI : Module R M := hMmodule
-  letI : AddCommGroup M := Module.addCommMonoidToAddCommGroup R
-  letI : Module.Free R M := hMfree
+  let : AddCommMonoid M := hMadd
+  let : Module R M := hMmodule
+  let : AddCommGroup M := Module.addCommMonoidToAddCommGroup R
+  let : Module.Free R M := hMfree
   let Q : Submodule R M := LinearMap.range i
   let ii : P →ₗ[R] Q := i.codRestrict Q (fun x => ⟨x, rfl⟩)
   have hii : Function.Bijective ii := by
@@ -729,7 +727,7 @@ theorem integerPowerSeries_flat_mittagLeffler_not_projective :
   · change IsMittagLefflerModule (ModuleCat.of ℤ ((Unit →₀ ℕ) → ℤ))
     exact hpos.2
   · intro hP
-    letI : Module.Free ℤ (PowerSeries ℤ) :=
+    let : Module.Free ℤ (PowerSeries ℤ) :=
       projective_free_of_pid hP
     apply integerPowerSeriesSubmodule_not_free 2 Nat.prime_two
     exact free_of_submodule_of_free_pid (R := ℤ) (F := PowerSeries ℤ)

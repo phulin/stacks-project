@@ -1126,7 +1126,7 @@ theorem associatedCochainBoundaryAdditive_comp
     (U : CosimplicialObject C) (n : ℕ) :
     associatedCochainBoundaryAdditive U n ≫
         associatedCochainBoundaryAdditive U (n + 1) = 0 := by
-  sorry
+  exact AlgebraicTopology.AlternatingCofaceMapComplex.d_squared U n
 
 def associatedCochainComplexAdditive
     {C : Type u} [Category.{v} C] [Preadditive C]
@@ -1142,7 +1142,8 @@ theorem associatedCochainMapAdditive_comm
     ∀ i j : ℕ, (ComplexShape.up ℕ).Rel i j →
       f.app ⦋i⦌ ≫ (associatedCochainComplexAdditive V).d i j =
         (associatedCochainComplexAdditive U).d i j ≫ f.app ⦋j⦌ := by
-  sorry
+  intro i j hij
+  exact (AlgebraicTopology.AlternatingCofaceMapComplex.map f).comm i j
 
 def associatedCochainMapAdditive
     {C : Type u} [Category.{v} C] [Preadditive C]

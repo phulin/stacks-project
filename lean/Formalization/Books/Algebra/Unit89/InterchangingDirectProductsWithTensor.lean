@@ -782,23 +782,23 @@ theorem mittagLeffler_tensor_iff
 
 /-- The predicate that an element of `F ⊗ M` comes from `F' ⊗ M`. -/
 def tensorProductContains
-    {R F M : Type u} [CommRing R]
+    {R : Type u} {F : Type v} {M : Type w} [CommRing R]
     [AddCommGroup F] [AddCommGroup M] [Module R F] [Module R M]
     (F' : Submodule R F) (x : TensorProduct R F M) : Prop :=
-  ∃ y : TensorProduct R (F' : Type u) M,
+  ∃ y : TensorProduct R (F' : Type v) M,
     F'.subtype.rTensor M y = x
 
 /- The smallest submodule in Lemma 89.5 is expressed by `IsLeast` in the
    complete lattice of submodules. -/
 theorem minimal_tensor_submodule
-    {R F M : Type u} [CommRing R]
+    {R : Type u} {F : Type v} {M : Type w} [CommRing R]
     [AddCommGroup F] [AddCommGroup M] [Module R F] [Module R M]
     (hflat : Module.Flat R M)
     (hML : IsMittagLefflerModule (ModuleCat.of R M))
     (x : TensorProduct R F M) :
     ∃ F' : Submodule R F,
       IsLeast {G : Submodule R F | tensorProductContains G x} F' ∧
-        Module.Finite R (F' : Type u) := by
+        Module.Finite R (F' : Type v) := by
   sorry
 
 /-- In a universally exact sequence, Mittag--Lefflerness descends to the

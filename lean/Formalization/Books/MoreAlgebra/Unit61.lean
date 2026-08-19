@@ -395,8 +395,8 @@ noncomputable abbrev derivedCohomologySourceObject
 
 /-- Models for the two cohomology modules in the source's comparison
 identity.  The fields identify the models with the actual derived-category
-cohomology objects and record that the right-hand model is scalar extension
-of the original `A ⊗[R] B`-module. -/
+cohomology objects and supply the missing tensor-product module actions.
+The comparison itself is stated separately below. -/
 structure DerivedCohomologyBaseChange
     {R A B R' A' B' : Type u}
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
@@ -416,8 +416,6 @@ structure DerivedCohomologyBaseChange
     ModuleCat.{u} (A' ⊗[R'] B')
   source : ℤ → Formalization.Books.MoreAlgebra.Unit60.D A ⥤
     ModuleCat.{u} (A ⊗[R] B)
-  right : ℤ → Formalization.Books.MoreAlgebra.Unit60.D A ⥤
-    ModuleCat.{u} (A' ⊗[R'] B')
   left_underlying : ∀ (i : ℤ)
     (M : Formalization.Books.MoreAlgebra.Unit60.D A),
     Nonempty ((ModuleCat.restrictScalars
@@ -433,10 +431,6 @@ structure DerivedCohomologyBaseChange
       ((source i).obj M) ≅
       (derivedCohomologyFunctor (R := B) i).obj
         (derivedCohomologySourceObject (R := R) (A := A) (B := B) M))
-  right_baseChange : ∀ (i : ℤ)
-    (M : Formalization.Books.MoreAlgebra.Unit60.D A),
-    Nonempty ((ModuleCat.extendScalars S.baseMap).obj ((source i).obj M) ≅
-      (right i).obj M)
 
 /-- The source's cohomology isomorphism after flat base change. -/
 theorem derivedCohomology_flat_baseChange
@@ -458,13 +452,12 @@ theorem derivedCohomology_flat_baseChange
     (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
     (C : DerivedCohomologyBaseChange S) (i : ℤ)
     (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
-    Nonempty ((C.left i).obj M ≅ (C.right i).obj M) := by
+    Nonempty ((C.left i).obj M ≅
+      (ModuleCat.extendScalars S.baseMap).obj ((C.source i).obj M)) := by
   sorry
 
-/-- The cohomology models and their identifications can be chosen for every
-flat-base-change square.  This packages the source's assertion that the
-comparison isomorphisms are canonical, while leaving their proof to the
-theorem stage. -/
+/-- The two cohomology action models can be chosen for every flat-base-change
+square.  Their comparison isomorphism is the separate theorem above. -/
 theorem existsDerivedCohomologyBaseChange
     {R A B R' A' B' : Type u}
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
@@ -485,7 +478,7 @@ theorem existsDerivedCohomologyBaseChange
     Nonempty (DerivedCohomologyBaseChange S) := by
   sorry
 
-/-- A chosen package of the canonical cohomology comparison data. -/
+/-- A chosen package of the canonical cohomology action data. -/
 noncomputable def derivedCohomologyBaseChange
     {R A B R' A' B' : Type u}
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
@@ -526,7 +519,8 @@ theorem derivedCohomology_flat_baseChange_canonical
     (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
     (i : ℤ) (M : Formalization.Books.MoreAlgebra.Unit60.D A) :
     Nonempty (((derivedCohomologyBaseChange S hR hA hB).left i).obj M ≅
-      ((derivedCohomologyBaseChange S hR hA hB).right i).obj M) := by
+      (ModuleCat.extendScalars S.baseMap).obj
+        ((derivedCohomologyBaseChange S hR hA hB).source i).obj M) := by
   sorry
 
 /-! ## Localization criterion -/
@@ -708,6 +702,21 @@ structure LocalTensorMap
         (Localization.AtPrime S.p.asIdeal ⊗[Localization.AtPrime S.r.asIdeal]
           Localization.AtPrime S.q.asIdeal)) = S.qToS
 
+/-- The tensor-product map induced by the two localization maps. -/
+theorem existsLocalTensorMap
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    Nonempty (LocalTensorMap S) := by
+  sorry
+
+/-- A chosen tensor-product map for the localizations at a tensor-product
+prime. -/
+noncomputable def localTensorMap
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    LocalTensorMap S :=
+  Classical.choice (existsLocalTensorMap S)
+
 /-- The localized Tor group over `R_𝔯`, then localized at `s`. -/
 noncomputable def localizedLocalTor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
@@ -720,16 +729,6 @@ noncomputable def localizedLocalTor
       (Localization.AtPrime S.q.asIdeal) := S.toLocalPrimePair.rToBq.toAlgebra
   exact (ModuleCat.extendScalars L.map).obj ((localTorTensorModule S).object i)
 
-/-- The localized comparison identity from the source.  Both sides are now
-the actual localized Tor constructions; only the canonical map between the
-two localization rings remains an explicit interface. -/
-structure LocalizedTorIdentity
-    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) where
-  localTensor : LocalTensorMap S
-  comparison : ∀ i, Nonempty (localizedGlobalTor (torTensorModule R A B) S i ≅
-    localizedLocalTor S localTensor i)
-
 /-- Tor independence is equivalent to Tor independence after localization at
 corresponding primes. -/
 theorem torIndependent_iff_localPrimePairs
@@ -739,47 +738,28 @@ theorem torIndependent_iff_localPrimePairs
       ∀ P : LocalPrimePair R A B, P.TorIndependent := by
   sorry
 
-/-- The prime-localized Tor identity used in the third formulation of the
-source lemma. -/
-theorem tor_localization_identity
-    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
-    Nonempty (LocalizedTorIdentity S) := by
-  sorry
-
-/- The source's third criterion uses the Tor groups over the corresponding
-   local rings.  Choose the comparison data once so that this formulation is
-   available without making an auxiliary identity witness an argument of
-   every client theorem. -/
-noncomputable def localizedTorIdentity
-    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
-    LocalizedTorIdentity S :=
-  Classical.choice (tor_localization_identity S)
-
 noncomputable def localizedLocalTorAtPrime
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
     ModuleCat (Localization.AtPrime S.s.asIdeal) :=
-  localizedLocalTor S (localizedTorIdentity S).localTensor i
+  localizedLocalTor S (localTensorMap S) i
 
 /-- The localized comparison isomorphism supplied by the prime-localization
 identity. -/
 theorem localizedTor_comparison
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B)
-    (D : LocalizedTorIdentity S) (i : ℕ) :
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
     Nonempty (localizedGlobalTor (torTensorModule R A B) S i ≅
-      localizedLocalTor S D.localTensor i) := by
-  exact D.comparison i
+      localizedLocalTorAtPrime S i) := by
+  sorry
 
 /-- Vanishing is invariant under the localized comparison isomorphism. -/
 theorem localizedTor_isZero_iff
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B)
-    (D : LocalizedTorIdentity S) (i : ℕ) :
+    (i : ℕ) :
     IsZero (localizedGlobalTor (torTensorModule R A B) S i) ↔
-      IsZero (localizedLocalTor S D.localTensor i) := by
+      IsZero (localizedLocalTorAtPrime S i) := by
   sorry
 
 /-- A chosen localized Tor object supplied by the localization identity. -/
@@ -799,9 +779,9 @@ theorem torIndependent_iff_localizedTor_vanishing
         0 < i → IsZero (localizedTor S i) := by
   sorry
 
-/- The source's third criterion is the vanishing of the Tor groups over the
-   corresponding local rings, after localization at the prime of the tensor
-   product. -/
+/-- The source's third criterion is the vanishing of the Tor groups over the
+corresponding local rings, after localization at the prime of the tensor
+product. -/
 theorem torIndependent_iff_localizedLocalTor_vanishing
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
@@ -811,8 +791,7 @@ theorem torIndependent_iff_localizedLocalTor_vanishing
   sorry
 
 /-- The second and third localization formulations in the source are
-   equivalent; the comparison identity is supplied by
-   `tor_localization_identity`. -/
+equivalent by the localized comparison isomorphism. -/
 theorem localPrimePairs_iff_localizedLocalTor_vanishing
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
@@ -828,9 +807,8 @@ theorem localPrimePairs_iff_localizedLocalTor_vanishing
       (torIndependent_iff_localizedLocalTor_vanishing.mpr h)
 
 /-- The two local formulations, together with the global definition, are
-equivalent.  The comparison identity in `tor_localization_identity` records
-the equality between the global localized Tor module and the localized Tor
-module over the local rings in the source's third formulation. -/
+equivalent.  The localized comparison theorem identifies the two Tor
+constructions used here. -/
 theorem torIndependent_iff_localization_criteria
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :

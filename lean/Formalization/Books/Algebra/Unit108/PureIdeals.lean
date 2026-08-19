@@ -733,8 +733,6 @@ theorem finitely_generated_pure_ideal_characterization
       exact ⟨Module.Flat.of_projective, hFG⟩
   tfae_finish
 
-/-! ## Finite flat modules -/
-
 /- `FiniteLocallyFree` is the earlier chapter's source-facing formulation of
    being finite locally free on a standard-open cover. -/
 
@@ -748,6 +746,39 @@ theorem finite_flat_module_finiteLocallyFree_characterization
         ∀ (M : Type (max u v)) [AddCommGroup M] [Module R M],
         Module.Finite R M → Module.Flat R M →
             Formalization.Books.Algebra.Unit78.FiniteLocallyFree R M ] := by
+  tfae_have 2 → 1 := by
+    intro hM Z hZ hgen
+    obtain ⟨⟨I, hIpure⟩, hIZ⟩ :=
+      (pure_ideal_zeroLocus_bijective (R := R)).2 ⟨Z, hZ, hgen⟩
+    have hZI : PrimeSpectrum.zeroLocus (I : Set R) = Z := by
+      exact congrArg Subtype.val hIZ
+    let M₀ := R ⧸ I
+    letI : Module.Finite R M₀ :=
+      Module.Finite.of_surjective (Submodule.mkQ I) (Submodule.mkQ_surjective I)
+    letI : Module.Flat R M₀ := hIpure
+    letI : Module.Finite R (ULift.{v} M₀) :=
+      Module.Finite.equiv (ULift.moduleEquiv (R := R) (M := M₀)).symm
+    letI : Module.Flat R (ULift.{v} M₀) :=
+      Module.Flat.of_linearEquiv (ULift.moduleEquiv (R := R) (M := M₀))
+    have hflf :
+        Formalization.Books.Algebra.Unit78.FiniteLocallyFree R (ULift.{v} M₀) :=
+      hM (ULift.{v} M₀) inferInstance inferInstance
+    letI : Module.FinitePresentation R (ULift.{v} M₀) :=
+      Formalization.Books.Algebra.Unit78.finitePresentation_of_finiteLocallyFree hflf
+    letI : Module.FinitePresentation R M₀ :=
+      Module.FinitePresentation.of_equiv
+        (ULift.moduleEquiv (R := R) (M := M₀))
+    have hFGker : (LinearMap.ker (Submodule.mkQ I)).FG :=
+      Module.FinitePresentation.fg_ker (Submodule.mkQ I) (Submodule.mkQ_surjective I)
+    have hFG : I.FG := by
+      change Submodule.FG I
+      simpa [Submodule.ker_mkQ] using hFGker
+    have hopen : IsOpen (PrimeSpectrum.zeroLocus (I : Set R)) := by
+      have hcond := (finitely_generated_pure_ideal_characterization I).out 0 2
+      have hres := hcond.mp ⟨hIpure, hFG⟩
+      exact hres.2
+    rw [hZI] at hopen
+    exact hopen
   sorry
 
 end

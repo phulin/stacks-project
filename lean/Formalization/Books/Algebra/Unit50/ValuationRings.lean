@@ -702,8 +702,6 @@ theorem ideals_equiv_valueGroupIdeals
     ∃ e : Ideal A ≃ ValueGroupIdeal (ValueGroup (A := A) (K := K)),
       (∀ I J : Ideal A, I ≤ J ↔ e I ≤ e J) ∧
         (∀ I : Ideal A, I.IsPrime ↔ ValueGroupIdeal.IsPrime (e I)) := by
-  sorry
-/-
   let H := MonoidWithZeroHom.valueGroup
     ((ValuationRing.valuation A K).toMonoidWithZeroHom)
   let toValue : ValueGroup (A := A) (K := K) → ValueGroupWithZero (A := A) (K := K) :=
@@ -874,7 +872,7 @@ theorem ideals_equiv_valueGroupIdeals
       · intro γ hγ δ hδ
         change 0 ≤ γ ∧ cutIdeal γ ≤ I at hγ
         change 0 ≤ δ ∧ cutIdeal δ ≤ I
-        exact ⟨hγ.1.trans hδ, fun x hx => hγ.2 (hx.trans (htoValue_le hδ))⟩⟩
+        exact ⟨hγ.1.trans hδ, fun x hx => hγ.2 ((hcut_mono hδ) hx)⟩⟩
   let invFun : ValueGroupIdeal (ValueGroup (A := A) (K := K)) → Ideal A := fun S =>
     { carrier := {x | x = 0 ∨ ∃ γ, γ ∈ S.1 ∧ x ∈ cutIdeal γ}
       zero_mem' := Or.inl rfl
@@ -883,7 +881,7 @@ theorem ideals_equiv_valueGroupIdeals
         rcases hx with rfl | ⟨γ, hγ, hx⟩
         · simpa using hy
         rcases hy with rfl | ⟨δ, hδ, hy⟩
-        · simpa using hx
+        · exact Or.inr ⟨γ, hγ, by simpa using hx⟩
         rcases le_total γ δ with hγδ | hδγ
         · exact Or.inr ⟨γ, hγ, (cutIdeal γ).add_mem hx ((hcut_mono hγδ) hy)⟩
         · exact Or.inr ⟨δ, hδ, (cutIdeal δ).add_mem ((hcut_mono hδγ) hx) hy⟩
@@ -925,7 +923,8 @@ theorem ideals_equiv_valueGroupIdeals
       rcases hxinv with hxzero | ⟨δ, hδ, hxδ⟩
       · exact (hx0 hxzero).elim
       · apply S.2.2 δ hδ γ
-        exact (hval_le_general' hx).mp hxδ |>.trans_eq hxval.symm
+        change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue δ at hxδ
+        exact (hval_le_general' hx).mpr hxδ |>.trans_eq hxval
     · intro hγ
       refine ⟨S.2.1 γ hγ, ?_⟩
       intro x hx
@@ -963,7 +962,7 @@ theorem ideals_equiv_valueGroupIdeals
       constructor
       · intro hzero
         apply hI.ne_top
-        apply (Ideal.eq_top_iff_one).mpr
+        apply (Ideal.eq_top_iff_one I).mpr
         exact hzero.2 (by
           change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ toValue 0
           change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ 1
@@ -1008,8 +1007,7 @@ theorem ideals_equiv_valueGroupIdeals
           exact hδ.2 (by
             change (ValuationRing.valuation A K) (algebraMap A K y) ≤
               toValue (val ⟨y, hy0⟩)
-            rw [htoValue_val hy0]) -/
-
+            rw [htoValue_val hy0])
 /-! ## Noetherian valuation rings -/
 
 /-- The finitely-generated-principal characterization of valuation rings is

@@ -22,7 +22,7 @@ namespace Formalization.Books.Algebra.Unit97
 open scoped TensorProduct
 open Formalization.Books.Algebra.Unit96
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -329,7 +329,8 @@ theorem completion_finite_extension
 
 theorem completion_split_exact
     {R : Type u} [CommRing R] (I : Ideal R)
-    {K P M : Type v} [AddCommGroup K] [AddCommGroup P] [AddCommGroup M]
+    {K P : Type v} {M : Type w}
+    [AddCommGroup K] [AddCommGroup P] [AddCommGroup M]
     [Module R K] [Module R P] [Module R M] [Module.Flat R M]
     [Module.Projective (R ⧸ I) (M ⧸ (I • (⊤ : Submodule R M)))]
     (f : K →ₗ[R] P) (g : P →ₗ[R] M)

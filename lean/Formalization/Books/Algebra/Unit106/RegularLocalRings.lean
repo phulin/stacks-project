@@ -413,7 +413,7 @@ private theorem spanFinrank_maximalIdeal_le_of_regular_quotient
         apply Ideal.span_le.mpr
         intro y hy
         rcases Set.mem_singleton_iff.mp hy with rfl
-        exact Ideal.subset_span (by simp [I])
+        exact Ideal.subset_span (by simp)
       exact hKI (by simpa [K] using hdiff)
     simpa [sub_eq_add_neg] using add_mem ha hdiff'
   have hspan : Ideal.span ((↑((x :: ys').toFinset) : Finset R) : Set R) =
@@ -614,7 +614,7 @@ theorem regular_local_of_regular_sequence
         simp only [Set.image_singleton]
         have hx0 : f x = 0 := by
           apply Ideal.Quotient.eq_zero_iff_mem.mpr
-          exact Ideal.subset_span (by simp [K])
+          exact Ideal.subset_span (by simp)
         rw [hx0]
         simp [J]
       have hH : I ≤ J.comap f := by
@@ -627,7 +627,7 @@ theorem regular_local_of_regular_sequence
           apply Ideal.span_le.mpr
           intro y hy
           rcases Set.mem_singleton_iff.mp hy with rfl
-          exact Ideal.subset_span (by simp [I])
+          exact Ideal.subset_span (by simp)
         intro y hy
         apply hKle
         apply Ideal.Quotient.eq_zero_iff_mem.mp

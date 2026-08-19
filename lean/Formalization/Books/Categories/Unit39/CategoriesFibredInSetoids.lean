@@ -330,7 +330,7 @@ theorem canonical_twoFibreProductOverBase_isCategoryFibredInSetoids
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     (hX : IsSetoidFibredCategoryOver X)
     (hY : IsSetoidFibredCategoryOver Y)
-    (hS : IsSetoidFibredCategoryOver S)
+    (_hS : IsSetoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     IsCategoryFibredInSetoids
       (twoFibreProductOverBaseFunctor F.underlying G.underlying) := by

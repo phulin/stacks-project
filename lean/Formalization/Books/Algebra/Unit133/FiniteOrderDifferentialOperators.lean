@@ -2788,10 +2788,9 @@ theorem differentialOperator_check_on_algebra_generators
     have hs : s ∈ Algebra.adjoin A (Set.range g) := by
       rw [hg]
       exact Algebra.mem_top
-    refine Algebra.adjoin_induction (R := A) (s := Set.range g)
+    apply Algebra.adjoin_induction (R := A) (s := Set.range g)
       (p := fun x _ => IsDifferentialOperator (R := A) (S := B) (k - 1)
         (differentialOperatorCommutator (R := A) (S := B) D x))
-      (mem := ?_) (algebraMap := ?_) (add := ?_) (mul := ?_) hs
     · intro x hx
       rcases hx with ⟨i, rfl⟩
       exact hD i
@@ -2813,6 +2812,7 @@ theorem differentialOperator_check_on_algebra_generators
           (R := A) (S := B) (k - 1) 0
           (differentialOperatorCommutator (R := A) (S := B) D y)
           (DistribSMul.toLinearMap A N x) hpy (hmulN x)
+    · exact hs
   rw [← Nat.sub_add_cancel hk]
   intro s
   exact hcomm_all s

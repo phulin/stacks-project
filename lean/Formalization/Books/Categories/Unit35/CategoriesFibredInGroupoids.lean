@@ -2188,7 +2188,7 @@ theorem fibredInGroupoids_of_isEquivalenceOverFunctor
           simpa only [Functor.comp_map] using hKφ
         rw [hKφ']
         rw [hφ']
-        simp [Category.assoc, eqToHom_trans]
+        simp
       exact hχbase
     · intro x y z φ ψ f hcomp
       let hx : p'.obj (G.obj x) = p.obj x :=
@@ -2212,7 +2212,7 @@ theorem fibredInGroupoids_of_isEquivalenceOverFunctor
         change (eqToHom hz ≫ f ≫ eqToHom hy.symm) ≫
             (eqToHom hy ≫ p.map φ ≫ eqToHom hx.symm) =
           eqToHom hz ≫ p.map ψ ≫ eqToHom hx.symm
-        simp [Category.assoc]
+        simp
         rw [← Category.assoc f (p.map φ) (eqToHom hx.symm)]
         rw [hcomp]
       obtain ⟨χ', hχ', hχunique⟩ := hp'.unique_lift (G.map φ) (G.map ψ) hbase
@@ -2831,8 +2831,7 @@ theorem amelioration_unique
             eqToHom (hKobj' (Lobj b)).symm := by
       simpa only [Functor.comp_map] using hKj
     rw [Functor.map_comp, hKj']
-    simpa [vhom, hjfac, Category.assoc] using
-      (Iso.inv_hom_id_assoc (eps b) (eqToHom (hz b)).symm)
+    simp [hjfac, Category.assoc]
   have hj_iso (b : X'.underlying.left) : IsIso (j b) := by
     let _ : q.IsHomLift (p.map (eps b).inv) (j b) := hj b
     let _ : q.IsStronglyCartesian (q.map (j b)) (j b) :=
@@ -2896,7 +2895,7 @@ theorem amelioration_unique
       _ = eqToHom (hz b₁) ≫ p.map f ≫ eqToHom (hz b₂).symm := by
         simp only [hlm, raw, Functor.map_comp, Category.assoc]
         rw [hv, hv_inv]
-        simp [Category.assoc, eqToHom_trans]
+        simp [eqToHom_trans]
   have hLsq : Ls ⋙ q = p := by
     refine CategoryTheory.Functor.ext (fun b => hz b) (fun b₁ b₂ f => ?_)
     exact hLsmap_base f
@@ -2935,7 +2934,7 @@ theorem amelioration_unique
       change K.map (f ≫ uHom a₂) =
         K.map (uHom a₁ ≫ Ls.map (K.map f))
       simp only [Functor.map_comp, huHom, hLsmap, hlm]
-      simp [raw, Category.assoc])
+      simp [raw])
   let unit := unitForward.symm
   have hqu (a : X''.underlying.left) :
       q.map (uHom a) =
@@ -2958,23 +2957,21 @@ theorem amelioration_unique
     let _ : IsIso (q.map (uHom a)) := Functor.map_isIso q (uHom a)
     apply (cancel_mono (q.map (uHom a))).1
     rw [← q.map_comp, hqu, (uIso a).inv_hom_id, q.map_id]
-    simp [Category.assoc, eqToHom_trans]
+    simp [eqToHom_trans]
   let overUnit : (K ⋙ Ls) ⋙ q = (𝟭 X''.underlying.left) ⋙ q := by
     simp only [Functor.assoc]
     rw [hLsq, hKp]
-    simpa only [Functor.id_comp]
+    simp only [Functor.id_comp]
   let overCounit : (Ls ⋙ K) ⋙ p = (𝟭 X'.underlying.left) ⋙ p := by
     simp only [Functor.assoc]
     rw [hKp, hLsq]
-    simpa only [Functor.id_comp]
+    simp only [Functor.id_comp]
   have hunitOver : IsNatIsoOver q unit overUnit := by
     intro a
-    change q.map (unit.hom.app a) = _
     change q.map (uInv a) = _
     rw [hqu_inv]
   have hcounitOver : IsNatIsoOver p counit overCounit := by
     intro b
-    change p.map (counit.hom.app b) = _
     change p.map ((v b).hom) = _
     rw [hv]
   let eKH : Kover ≅ h0.underlying :=

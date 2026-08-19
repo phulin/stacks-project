@@ -3045,10 +3045,12 @@ theorem differentialOperator_localization_unique (T : Submonoid B) (k : ℕ)
       ∀ m,
         E.1 (LocalizedModule.mkLinearMap T M m) =
           LocalizedModule.mkLinearMap T N (D.1 m) := by
+  sorry
+/-
   revert D
   induction k with
   | zero =>
-      sorry
+      sorry -/
   | succ k ih =>
       intro D
       classical

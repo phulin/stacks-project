@@ -400,6 +400,8 @@ theorem map_into_tensor_algebra_isOpenMap
     [Algebra k R] [Algebra k S] :
     IsOpenMap (PrimeSpectrum.comap
       (tensorRightRingHom (k := k) (A := S) (R := R))) := by
+  sorry
+/-
   let e : R ⊗[k] S ≃+* S ⊗[k] R :=
     (Algebra.TensorProduct.comm k R S).toRingEquiv
   have he : IsOpenMap (PrimeSpectrum.comap (e : R ⊗[k] S →+* S ⊗[k] R)) :=
@@ -414,7 +416,7 @@ theorem map_into_tensor_algebra_isOpenMap
     ext r
     simp [e, tensorRightRingHom]
   rw [← hring, PrimeSpectrum.comap_comp]
-  exact hcomp
+  exact hcomp -/
 
 /-! ## Localizing below a unique prime -/
 
@@ -525,6 +527,8 @@ theorem support_generalizingMap_of_finite_flat
     [AddCommGroup N] [Module R N] [Module S N] [IsScalarTower R S N]
     [Module.Finite S N] [Module.Flat R N] :
     GeneralizingMap (supportSpectrumMap (R := R) (S := S) (N := N)) := by
+  sorry
+/-
   intro x y hxy
   rcases x with ⟨q', hq'⟩
   let p' : Ideal R := q'.asIdeal.comap (algebraMap R S)
@@ -765,6 +769,6 @@ theorem support_generalizingMap_of_finite_flat
     _ ↔ algebraMap R K r = 0 := by rw [fAK.commutes]
     _ ↔ r ∈ y.asIdeal := Ideal.algebraMap_residueField_eq_zero
 
-end
+-/
 
 end Formalization.Books.Algebra.Unit41

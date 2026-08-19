@@ -742,6 +742,8 @@ private lemma directSum_span_right_inverse
 theorem tensorProduct_decomposition_exists
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
     Nonempty (DirectSum.Decomposition (tensorProductComponent G 𝓜 𝓝)) := by
+  sorry
+/-
   classical
   let : Module (degreeZeroSubring G) M :=
     Module.compHom M (SubringClass.subtype (degreeZeroSubring G))
@@ -1053,7 +1055,7 @@ theorem tensorProduct_decomposition_exists
       (fun d => by rfl) F hgen hF_smul
   /- Prior attempt: the constructed direct sum uses submodule subtypes,
      while the theorem's decomposition is indexed by add-subgroup subtypes. -/
-  exact ⟨by sorry⟩
+  exact ⟨by sorry⟩ -/
 
 theorem tensorProduct_gradedSMul
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :

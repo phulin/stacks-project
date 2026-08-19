@@ -1850,7 +1850,7 @@ def QuotientDifferentialsKernelCondition
     [AddCommGroup Ω] [Module B Ω]
     (π : ModuleOfDifferentials A B →ₗ[B] Ω) : Prop :=
   LinearMap.ker π =
-    Submodule.span B (quotientClosedOneForms (A := A) (B := B) (Ω := Ω) π)
+  Submodule.span B (quotientClosedOneForms (A := A) (B := B) (Ω := Ω) π)
 
 theorem quotientDeRhamDifferentialData_exists
     {A B Ω : Type*} [CommRing A] [CommRing B] [Algebra A B]
@@ -1914,9 +1914,119 @@ theorem quotientDeRhamProjection_commutes
     (p : ℕ) (ω : deRhamTerm A B p) :
     quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)
         (deRhamDifferential (A := A) (B := B) p ω) =
-      quotientDeRhamDifferential π hπ hker p
+    quotientDeRhamDifferential π hπ hker p
         (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p ω) := by
-  sorry
+  have hgen : ∀ (n : ℕ) (b₀ : B) (b : Fin n → B),
+      quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π n
+          (deRhamGenerator n b₀ b) =
+        quotientGenerator (quotientUniversalDifferential π) n b₀ b := by
+    intro n b₀ b
+    simp [deRhamGenerator, quotientGenerator, quotientDeRhamProjection,
+      quotientModuleLinearMap]
+    rfl
+  have hω : ω ∈ Submodule.span A (deRhamGenerators (A := A) (B := B) p) := by
+    rw [deRhamGenerators_span (A := A) (B := B) p]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun x _ =>
+      quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)
+          (deRhamDifferential (A := A) (B := B) p x) =
+        quotientDeRhamDifferential π hπ hker p
+          (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p x))
+    ?_ ?_ ?_ ?_ hω
+  · rintro _ ⟨z, rfl⟩
+    rcases z with ⟨b₀, b⟩
+    cases p with
+    | zero =>
+        change quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 1
+            (deRhamDifferential (A := A) (B := B) 0
+              (deRhamGenerator 0 b₀ b)) =
+          quotientDeRhamDifferential π hπ hker 0
+            (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 0
+              (deRhamGenerator 0 b₀ b))
+        have hzero : deRhamDegreeZeroEquivA A B b₀ =
+            deRhamGenerator 0 b₀ b := by
+          apply (exteriorPower.zeroEquiv B (ModuleOfDifferentials A B)).injective
+          simp [deRhamDegreeZeroEquivA, deRhamDegreeZeroEquiv,
+            deRhamGenerator, exteriorPower.zeroEquiv]
+        have hone : deRhamUniversalDifferential A B b₀ =
+            deRhamGenerator 1 1 (fun _ => b₀) := by
+          apply (exteriorPower.oneEquiv B (ModuleOfDifferentials A B)).injective
+          simp [deRhamUniversalDifferential, deRhamDegreeOneEquivA,
+            deRhamDegreeOneEquiv, deRhamGenerator, exteriorPower.oneEquiv]
+        rw [← hzero, deRhamDifferential_zero]
+        simp only [LinearMap.comp_apply,
+          (deRhamDegreeZeroEquivA A B).symm_apply_apply]
+        have hsymm :
+            (deRhamDegreeZeroEquivA A B).symm
+                ((deRhamDegreeZeroEquivA A B) b₀) = b₀ := by
+          exact (deRhamDegreeZeroEquivA A B).symm_apply_apply b₀
+        change quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 1
+            (deRhamUniversalDifferential A B
+              ((deRhamDegreeZeroEquivA A B).symm
+                ((deRhamDegreeZeroEquivA A B) b₀))) =
+          quotientDeRhamDifferential π hπ hker 0
+            (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 0
+              (deRhamDegreeZeroEquivA A B b₀))
+        rw [hsymm]
+        rw [hone,
+          hgen 1 1 (fun _ => b₀),
+          hzero,
+          hgen 0 b₀ b,
+          quotientDeRhamDifferential_on_generator π hπ hker 0 b₀ b]
+        simp only [quotientGenerator, one_smul, quotientDifferentialGenerator]
+        congr 1
+        funext i
+        refine Fin.cases (by rfl) (fun j => Fin.elim0 j) i
+    | succ p =>
+        rw [deRhamDifferential_on_generator (p + 1)
+          (Nat.succ_le_succ (Nat.zero_le p))]
+        rw [show deRhamDifferentialGenerator (p + 1) b₀ b =
+            deRhamGenerator (p + 2) 1 (Fin.cons b₀ b) by
+          simp only [deRhamDifferentialGenerator, deRhamGenerator, one_smul]
+          congr 1
+          funext i
+          refine Fin.cases ?_ (fun j => ?_) i <;> rfl]
+        rw [hgen (p + 2) 1 (Fin.cons b₀ b),
+          hgen (p + 1) b₀ b,
+          quotientDeRhamDifferential_on_generator π hπ hker (p + 1) b₀ b]
+        simp only [quotientGenerator, one_smul, quotientDifferentialGenerator]
+        congr 1
+        funext i
+        refine Fin.cases ?_ (fun j => ?_) i <;> rfl
+  · simp
+  · intro x y hx hy ihx ihy
+    simp only [map_add, ihx, ihy]
+  · intro a x hx ih
+    have hscalar (q : ℕ) (a : A) (y : quotientDeRhamTerm A B Ω q) :
+        a • y = (algebraMap A B a) • y := by
+      rfl
+    have hqsmul :
+        quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p (a • x) =
+          a • quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p x := by
+      rw [← IsScalarTower.algebraMap_smul B a x,
+        (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p).map_smul,
+        (hscalar p a _).symm]
+    calc
+      quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)
+          (deRhamDifferential (A := A) (B := B) p (a • x)) =
+            quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)
+            (a • deRhamDifferential (A := A) (B := B) p x) := by
+              exact congrArg
+                (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1))
+                ((deRhamDifferential (A := A) (B := B) p).map_smul a x)
+      _ = a • quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)
+          (deRhamDifferential (A := A) (B := B) p x) := by
+            rw [← IsScalarTower.algebraMap_smul B a,
+              (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π (p + 1)).map_smul,
+              (hscalar (p + 1) a _).symm]
+      _ = a • quotientDeRhamDifferential π hπ hker p
+          (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p x) := by rw [ih]
+      _ = quotientDeRhamDifferential π hπ hker p
+          (a • quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p x) := by
+            rw [(quotientDeRhamDifferential π hπ hker p).map_smul]
+      _ = quotientDeRhamDifferential π hπ hker p
+          (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p (a • x)) := by
+            rw [hqsmul]
 
 /-- The quotient-module de Rham complex asserted in the source lemma. -/
 abbrev QuotientDeRhamComplex (A : Type*) [CommRing A] :=

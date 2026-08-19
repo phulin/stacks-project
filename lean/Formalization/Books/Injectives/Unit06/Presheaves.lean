@@ -93,7 +93,66 @@ theorem presheafRightKanExtension_obj_iso_incomingProduct
     Nonempty
       (((presheafRightKanExtension (C := C)).obj A).obj (Opposite.op U) ≅
         incomingProduct A U) := by
-  sorry
+  let e : StructuredArrow (Opposite.op U) (objectInclusion (C := C)).op ≃
+      incomingMorphismIndex U :=
+    { toFun := fun j => ⟨j.right.unop.as, j.hom.unop⟩
+      invFun := fun p =>
+        StructuredArrow.mk (Y := Opposite.op (Discrete.mk p.1)) p.2.op
+      left_inv := by
+        intro j
+        obtain ⟨Y, f, rfl⟩ := j.mk_surjective
+        rfl
+      right_inv := by
+        intro p
+        rfl }
+  let J := StructuredArrow (Opposite.op U) (objectInclusion (C := C)).op
+  have j_eq_of_hom {j k : J} (f : j ⟶ k) : j = k := by
+    have hr : j.right = k.right := by
+      apply Opposite.unop_injective
+      apply Discrete.ext
+      exact (Discrete.eq_of_hom f.right.unop).symm
+    refine StructuredArrow.obj_ext j k hr ?_
+    have hf : eqToHom hr = f.right := Subsingleton.elim _ _
+    simpa [hf] using StructuredArrow.w f
+  let E : Discrete J ≌ J :=
+    { functor := Discrete.functor id
+      inverse :=
+        { obj := fun j => Discrete.mk j
+          map := fun f => Discrete.eqToHom (j_eq_of_hom f)
+          map_id := by
+            intro j
+            simp
+          map_comp := by
+            intro j k l f g
+            simp }
+      unitIso := NatIso.ofComponents (fun j => Iso.refl _)
+      counitIso := NatIso.ofComponents (fun j => Iso.refl _) }
+  let K := StructuredArrow.proj (Opposite.op U) (objectInclusion (C := C)).op ⋙ A
+  have hobj (j : J) :
+      A.obj (Opposite.op (Discrete.mk (e j).1)) = K.obj j := by
+    dsimp [e, K]
+    congr 1
+  let w₁ : E.functor ⋙ K ≅ Discrete.functor K.obj :=
+    NatIso.ofComponents (fun j => Iso.refl _)
+      (by
+        rintro ⟨j⟩ ⟨k⟩ f
+        cases f.down.down
+        simp)
+  let e₁ : limit (Discrete.functor K.obj) ≅ limit K :=
+    HasLimit.isoOfEquivalence E w₁
+  let w₂ : (Discrete.equivalence e).functor ⋙
+      Discrete.functor (fun p : incomingMorphismIndex U =>
+        A.obj (Opposite.op (Discrete.mk p.1))) ≅
+      Discrete.functor K.obj :=
+    Discrete.natIso (fun ⟨j⟩ => eqToIso (hobj j))
+  let e₂ : limit (Discrete.functor K.obj) ≅
+      limit (Discrete.functor (fun p : incomingMorphismIndex U =>
+        A.obj (Opposite.op (Discrete.mk p.1)))) :=
+    HasLimit.isoOfEquivalence (Discrete.equivalence e) w₂
+  refine ⟨?_⟩
+  simpa [K, incomingProduct, presheafRightKanExtension] using
+    (((objectInclusion (C := C)).op.ranObjObjIsoLimit A (Opposite.op U)).trans
+      (e₁.symm.trans e₂))
 
 /-- The component of the right Kan extension counit at an incoming arrow. -/
 noncomputable def presheafRightKanExtensionProjection
@@ -110,10 +169,40 @@ noncomputable def presheafRightKanExtensionProjection
 theorem presheafRightKanExtension_map_projection
     {C : Type u} [Category.{v} C] (A : ObjectAbelianPresheaf C)
     {X V U : C} (g : V ⟶ U) (ψ : X ⟶ V) :
-    ((presheafRightKanExtension (C := C)).obj A).map g.op ≫
+      ((presheafRightKanExtension (C := C)).obj A).map g.op ≫
         presheafRightKanExtensionProjection A ψ =
       presheafRightKanExtensionProjection A (ψ ≫ g) := by
-  sorry
+  simp only [presheafRightKanExtension, presheafRightKanExtensionProjection]
+  let fV : StructuredArrow (Opposite.op V) (objectInclusion (C := C)).op :=
+    StructuredArrow.mk (Y := Opposite.op (Discrete.mk X)) ψ.op
+  let fU : StructuredArrow (Opposite.op U) (objectInclusion (C := C)).op :=
+    StructuredArrow.mk (Y := Opposite.op (Discrete.mk X)) (ψ ≫ g).op
+  have hV := Functor.ranObjObjIsoLimit_hom_π
+    (objectInclusion (C := C)).op A (Opposite.op V) fV
+  have hU := Functor.ranObjObjIsoLimit_hom_π
+    (objectInclusion (C := C)).op A (Opposite.op U) fU
+  dsimp [fV] at hV
+  change
+    ((objectInclusion (C := C)).op.ran.obj A).map g.op ≫
+        (((objectInclusion (C := C)).op.ranObjObjIsoLimit A
+          (Opposite.op V)).hom ≫
+          limit.π
+            (StructuredArrow.proj (Opposite.op V) (objectInclusion (C := C)).op ⋙ A)
+            fV) =
+      ((objectInclusion (C := C)).op.ranObjObjIsoLimit A
+          (Opposite.op U)).hom ≫
+        limit.π
+          (StructuredArrow.proj (Opposite.op U) (objectInclusion (C := C)).op ⋙ A)
+          fU
+  rw [hV, hU]
+  change (((objectInclusion (C := C)).op.ran.obj A).map g.op ≫
+      ((objectInclusion (C := C)).op.ran.obj A).map ψ.op) ≫
+        ((objectInclusion (C := C)).op.ranCounit.app A).app
+          (Opposite.op (Discrete.mk X)) =
+    ((objectInclusion (C := C)).op.ran.obj A).map (g.op ≫ ψ.op) ≫
+      ((objectInclusion (C := C)).op.ranCounit.app A).app
+        (Opposite.op (Discrete.mk X))
+  rw [← (objectInclusion (C := C)).op.ran.obj A |>.map_comp]
 
 /-! ## Exactness and the canonical maps -/
 
@@ -135,7 +224,88 @@ theorem presheafRestriction_isExact {C : Type u} [Category.{v} C] :
 /-- The right Kan extension is exact, as asserted in the source. -/
 theorem presheafRightKanExtension_isExact {C : Type u} [Category.{v} C] :
     IsExact (presheafRightKanExtension (C := C)) := by
-  sorry
+  constructor
+  · change PreservesFiniteLimits (presheafRightKanExtension (C := C))
+    refine ⟨fun J _ _ => ?_⟩
+    exact (presheafRestrictionAdjunction (C := C)).rightAdjoint_preservesLimits.preservesLimitsOfShape
+  · change PreservesFiniteColimits (presheafRightKanExtension (C := C))
+    exact preservesFiniteColimits_of_evaluation
+      (presheafRightKanExtension (C := C)) (fun U => by
+      let J := StructuredArrow U (objectInclusion (C := C)).op
+      have j_eq_of_hom {j k : J} (f : j ⟶ k) : j = k := by
+        have hr : j.right = k.right := by
+          apply Opposite.unop_injective
+          apply Discrete.ext
+          exact (Discrete.eq_of_hom f.right.unop).symm
+        refine StructuredArrow.obj_ext j k hr ?_
+        have hf : eqToHom hr = f.right := Subsingleton.elim _ _
+        simpa [hf] using StructuredArrow.w f
+      let E : Discrete J ≌ J :=
+        { functor := Discrete.functor id
+          inverse :=
+            { obj := fun j => Discrete.mk j
+              map := fun f => Discrete.eqToHom (j_eq_of_hom f)
+              map_id := by
+                intro j
+                simp
+              map_comp := by
+                intro j k l f g
+                simp }
+          unitIso := NatIso.ofComponents (fun j => Iso.refl _)
+          counitIso := NatIso.ofComponents (fun j => Iso.refl _) }
+      let : HasLimitsOfShape J (ModuleCat.{max u v} (abelianScalar C)) :=
+        hasLimitsOfShape_of_equivalence E
+      let : HasExactLimitsOfShape J (ModuleCat.{max u v} (abelianScalar C)) :=
+        HasExactLimitsOfShape.of_domain_equivalence _ E
+      let Kfun :=
+        (Functor.whiskeringLeft J ((objectCategory C)ᵒᵖ)
+          (ModuleCat.{max u v} (abelianScalar C))).obj
+          (StructuredArrow.proj U (objectInclusion (C := C)).op)
+      let Ffun :=
+        (presheafRightKanExtension (C := C)) ⋙
+          (evaluation (Cᵒᵖ) (ModuleCat.{max u v} (abelianScalar C))).obj U
+      let Lfun := (lim : (J ⥤ ModuleCat.{max u v} (abelianScalar C)) ⥤
+        ModuleCat.{max u v} (abelianScalar C))
+      let η : Ffun ≅ Kfun ⋙ Lfun := NatIso.ofComponents
+        (fun A => by
+          simpa [Ffun, Kfun, Lfun, presheafRightKanExtension] using
+            ((objectInclusion (C := C)).op.ranObjObjIsoLimit A U))
+        (by
+          intro A B f
+          apply limit.hom_ext
+          intro j
+          dsimp [Ffun, Kfun, Lfun, presheafRightKanExtension]
+          rw [Category.assoc, Category.assoc, limMap_π,
+            Functor.ranObjObjIsoLimit_hom_π_assoc,
+            Functor.ranObjObjIsoLimit_hom_π]
+          change
+            ((objectInclusion (C := C)).op.ran.map f).app U ≫
+                ((objectInclusion (C := C)).op.ran.obj B).map j.hom ≫
+                ((objectInclusion (C := C)).op.ranCounit.app B).app j.right =
+              ((objectInclusion (C := C)).op.ran.obj A).map j.hom ≫
+                ((objectInclusion (C := C)).op.ranCounit.app A).app j.right ≫
+                f.app j.right
+          rw [← Category.assoc,
+            ← ((objectInclusion (C := C)).op.ran.map f).naturality j.hom]
+          have hc :
+              ((objectInclusion (C := C)).op.ran.map f).app
+                  ((objectInclusion (C := C)).op.obj j.right) ≫
+                ((objectInclusion (C := C)).op.ranCounit.app B).app j.right =
+              ((objectInclusion (C := C)).op.ranCounit.app A).app j.right ≫
+                f.app j.right := by
+            have hc' :=
+              congr_app ((objectInclusion (C := C)).op.ranCounit.naturality f) j.right
+            change
+              ((objectInclusion (C := C)).op.ran.map f).app
+                    ((objectInclusion (C := C)).op.obj j.right) ≫
+                  ((objectInclusion (C := C)).op.ranCounit.app B).app j.right =
+                ((objectInclusion (C := C)).op.ranCounit.app A).app j.right ≫
+                  f.app j.right at hc'
+            exact hc'
+          rw [Category.assoc, hc])
+      let : PreservesFiniteColimits (Kfun ⋙ Lfun) :=
+        comp_preservesFiniteColimits Kfun Lfun
+      exact preservesFiniteColimits_of_natIso η.symm)
 
 /-- Restriction preserves monomorphisms. -/
 theorem presheafRestriction_preservesMonomorphisms
@@ -172,7 +342,52 @@ noncomputable def presheafCanonicalUnit
 theorem presheafCanonicalCounit_epi
     {C : Type u} [Category.{v} C] (A : ObjectAbelianPresheaf C) :
     Epi (presheafCanonicalCounit A) := by
-  sorry
+  rw [presheafCanonicalCounit, NatTrans.epi_iff_epi_app]
+  intro k
+  change Epi (((objectInclusion (C := C)).op.ranCounit.app A).app k)
+  let X := (objectInclusion (C := C)).op.obj k
+  let J := StructuredArrow X (objectInclusion (C := C)).op
+  let f : J := StructuredArrow.mk (Y := k) (𝟙 X)
+  let K := StructuredArrow.proj X (objectInclusion (C := C)).op ⋙ A
+  classical
+  have j_eq_of_hom {j l : J} (g : j ⟶ l) : j = l := by
+    have hr : j.right = l.right := by
+      apply Opposite.unop_injective
+      apply Discrete.ext
+      exact (Discrete.eq_of_hom g.right.unop).symm
+    refine StructuredArrow.obj_ext j l hr ?_
+    have hg : eqToHom hr = g.right := Subsingleton.elim _ _
+    simpa [hg] using StructuredArrow.w g
+  let c : Cone K :=
+    { pt := K.obj f
+      π :=
+        { app := fun j =>
+            if h : j = f then eqToHom (congrArg K.obj h.symm) else 0
+          naturality := by
+            intro j l g
+            have h : j = l := j_eq_of_hom g
+            subst l
+            have hg : g.right = 𝟙 _ := Subsingleton.elim _ _
+            have hg' : g = 𝟙 j := StructuredArrow.hom_ext g (𝟙 j) hg
+            rw [hg']
+            simp } }
+  let s : K.obj f ⟶ limit K := limit.lift K c
+  have hs : s ≫ limit.π K f = 𝟙 _ := by
+    dsimp [s]
+    rw [limit.lift_π]
+    dsimp [c]
+    simp
+  let se : SplitEpi (limit.π K f) := { section_ := s, id := hs }
+  have hπ : Epi (limit.π K f) := se.epi
+  have hfac :
+      ((objectInclusion (C := C)).op.ranObjObjIsoLimit A X).hom ≫ limit.π K f =
+        ((objectInclusion (C := C)).op.ranCounit.app A).app k := by
+    simpa [K, f, X] using
+      Functor.ranObjObjIsoLimit_hom_π
+        (objectInclusion (C := C)).op A X f
+  rw [← hfac]
+  exact epi_comp' (inferInstance :
+    Epi ((objectInclusion (C := C)).op.ranObjObjIsoLimit A X).hom) hπ
 
 theorem presheafCanonicalUnit_mono
     {C : Type u} [Category.{v} C] (B : AbelianPresheaf C) :

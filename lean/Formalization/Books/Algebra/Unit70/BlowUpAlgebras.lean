@@ -195,7 +195,7 @@ theorem affineBlowup_map_ideal_eq_span
     exact Ideal.mem_map_of_mem _ ha
 
 theorem affineBlowup_localization_equiv
-    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :
+    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ha : a ∈ I) :
     Nonempty
       (Localization.Away (algebraMap R (affineBlowup I a) a) ≃+*
         Localization.Away a) := by
@@ -205,7 +205,7 @@ theorem affineBlowup_localization_equiv
   have hunit : IsUnit (algebraMap A L haA) := by
     rw [← IsScalarTower.algebraMap_apply R A L a]
     exact IsLocalization.Away.algebraMap_isUnit a
-  haveI : IsLocalization.Away haA L :=
+  have : IsLocalization.Away haA L :=
     IsLocalization.Away.mk haA hunit
       (fun z => by
         obtain ⟨n, r, hzr⟩ := IsLocalization.Away.surj a z
@@ -239,12 +239,12 @@ def baseChangeTorsionIdeal
 denominator's power torsion. -/
 theorem affineBlowup_baseChange
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
-    (f : R →+* S) (I : Ideal R) {a : R} (ha : a ∈ I) :
+    (f : R →+* S) (I : Ideal R) {a : R} (_ha : a ∈ I) :
     letI : Algebra R S := f.toAlgebra
     Nonempty
       ((S ⊗[R] affineBlowup I a) ⧸ baseChangeTorsionIdeal f I a ≃+*
         affineBlowup (Ideal.map f I) (f a)) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let A := affineBlowup I a
   let L := Localization.Away a
   let C := affineBlowup (Ideal.map f I) (f a)
@@ -260,7 +260,7 @@ theorem affineBlowup_baseChange
   have hunit : IsUnit (algebraMap A L haA) := by
     rw [← IsScalarTower.algebraMap_apply R A L a]
     exact IsLocalization.Away.algebraMap_isUnit a
-  haveI : IsLocalization.Away haA L :=
+  have : IsLocalization.Away haA L :=
     IsLocalization.Away.mk haA hunit
       (fun z => by
         obtain ⟨n, r, hzr⟩ := IsLocalization.Away.surj a z
@@ -280,7 +280,7 @@ theorem affineBlowup_baseChange
   let L' := Localization M'
   let e1 : (S ⊗[R] L) ≃ₐ[S] L' :=
     Localization.tensorLeftAlgEquiv (Submonoid.powers a) S
-  haveI : IsLocalization M' (Localization.Away (f a)) := by
+  have : IsLocalization M' (Localization.Away (f a)) := by
     rw [show M' = Submonoid.powers (f a) by
       ext z
       constructor
@@ -390,10 +390,7 @@ theorem affineBlowup_baseChange
     apply Algebra.TensorProduct.ext
     · rw [AlgHom.comp_assoc, Algebra.TensorProduct.lift_comp_includeLeft,
         AlgHom.comp_assoc, Algebra.TensorProduct.lift_comp_includeLeft]
-      ext s <;>
-        change algebraMap S (Localization.Away (f a)) s =
-          e (algebraMap S (S ⊗[R] L) s) <;>
-        exact (e.commutes s).symm
+      ext
     ·
       ext x
       change cval (g (Algebra.TensorProduct.includeRight x)) =
@@ -433,7 +430,7 @@ theorem affineBlowup_baseChange
     refine ⟨Algebra.TensorProduct.includeRight
       (affineBlowupGenerator I a ⟨r, hr⟩), ?_⟩
     rw [← h_eq]
-    simp [g, cval, gA, kA, jAlg, hAL, hA, j, hj, hinv]
+    simp [g, cval, gA, kA, jAlg, hA, j, hj]
     change gL (algebraMap R L r * IsLocalization.Away.invSelf a) = _
     rw [map_mul, IsLocalization.Away.lift_eq a hq r, hinv]
     rfl
@@ -470,8 +467,8 @@ theorem affineBlowup_baseChange
         apply Subtype.ext
         simp only [map_mul, hu, hv]
         rfl
-  letI : Algebra (S ⊗[R] A) (S ⊗[R] L) := h0.toRingHom.toAlgebra
-  letI : IsScalarTower S (S ⊗[R] A) (S ⊗[R] L) :=
+  let : Algebra (S ⊗[R] A) (S ⊗[R] L) := h0.toRingHom.toAlgebra
+  let : IsScalarTower S (S ⊗[R] A) (S ⊗[R] L) :=
     IsScalarTower.of_algebraMap_eq' (R := S) (S := S ⊗[R] A)
       (A := S ⊗[R] L) (by
       ext s
@@ -487,7 +484,7 @@ theorem affineBlowup_baseChange
     ext x
     simp [h0, hAL, hA, RingHom.algebraMap_toAlgebra]
     rw [show (x : L) = algebraMap A L x by rfl]
-  haveI : IsLocalization.Away
+  have : IsLocalization.Away
       (algebraMap S (S ⊗[R] A) (f a)) (S ⊗[R] L) := by
     change IsLocalization (Submonoid.powers
       (algebraMap S (S ⊗[R] A) (f a))) (S ⊗[R] L)
@@ -499,13 +496,13 @@ theorem affineBlowup_baseChange
     simp only [Submonoid.map_powers, Algebra.TensorProduct.includeRight_apply]
     rw [Algebra.TensorProduct.algebraMap_apply,
       show (algebraMap S S) (f a) = f a by simp, hb]
-  letI : Algebra (S ⊗[R] A) (Localization.Away (f a)) := h.toRingHom.toAlgebra
+  let : Algebra (S ⊗[R] A) (Localization.Away (f a)) := h.toRingHom.toAlgebra
   let eB : (S ⊗[R] L) ≃ₐ[S ⊗[R] A] Localization.Away (f a) :=
     { toRingEquiv := e.toRingEquiv
       commutes' := by
         intro x
         rfl }
-  haveI : IsLocalization.Away
+  have : IsLocalization.Away
       (algebraMap S (S ⊗[R] A) (f a)) (Localization.Away (f a)) :=
     IsLocalization.isLocalization_of_algEquiv
       (Submonoid.powers (algebraMap S (S ⊗[R] A) (f a))) eB

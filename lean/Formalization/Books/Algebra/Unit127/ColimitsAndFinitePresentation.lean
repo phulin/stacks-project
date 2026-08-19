@@ -1327,10 +1327,10 @@ private theorem baseChangeRingHomOfCompatible_includeLeft
     ∀ a : S,
       baseChangeRingHomOfCompatible f g h k compat
         (Algebra.TensorProduct.includeLeftRingHom a) = h a := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
-  letI : Algebra R S' := (h.comp f).toAlgebra
-  letI : Algebra R' S' := k.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R S' := (h.comp f).toAlgebra
+  let : Algebra R' S' := k.toAlgebra
   intro a
   let hs : S →ₐ[R] S' :=
     { toRingHom := h
@@ -1357,10 +1357,10 @@ private theorem baseChangeRingHomOfCompatible_includeRight
     ∀ b : R',
       baseChangeRingHomOfCompatible f g h k compat
         (Algebra.TensorProduct.includeRight.toRingHom b) = k b := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
-  letI : Algebra R S' := (h.comp f).toAlgebra
-  letI : Algebra R' S' := k.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R S' := (h.comp f).toAlgebra
+  let : Algebra R' S' := k.toAlgebra
   intro b
   let hs : S →ₐ[R] S' :=
     { toRingHom := h
@@ -2242,7 +2242,7 @@ private theorem finiteTypeCoverBySourceElements
     (x : S) :
     ∃ E : Finset R,
       x ∈ Subring.closure ((G ∪ E.image f : Finset S) : Set S) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have hx : x ∈ Algebra.adjoin R (G : Set S) := by
     rw [hG]
     trivial
@@ -2302,7 +2302,7 @@ private theorem finiteTypeCoverBySourceElements
             (Finset.mem_image.mpr ⟨r, Finset.mem_union_right _ hr, rfl⟩)
       exact (Subring.closure_mono hsub) hF
 
-private def finiteSetIndexDirected {R : Type u} [CommRing R] :
+private theorem finiteSetIndexDirected {R : Type u} [CommRing R] :
     IsDirectedSet (Finset R) := by
   classical
   refine ⟨⟨∅⟩, ⟨?_⟩⟩
@@ -3326,7 +3326,7 @@ theorem limitFiniteType
     (hS : f.FiniteType) :
     Nonempty (DirectedFiniteTypeWithQuotient f) := by
   classical
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   change Algebra.FiniteType R S at hS
   obtain ⟨G, hG⟩ := hS.out
   let D := finiteTypeFixedRingMapColimit f G hG

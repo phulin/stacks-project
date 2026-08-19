@@ -169,7 +169,106 @@ theorem nonreduced_example_properties (k : Type u) [Field k] :
                       f (nonreducedExampleY k) =
                         nonreducedExampleTargetX k *
                           nonreducedExampleTargetZ k := by
-  sorry
+  classical
+  let I := nonreducedExampleRelation k
+  have hI : I ≠ ⊤ := by
+    intro h
+    have hspan : Ideal.span
+        ({((MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2)} :
+          Set (nonreducedExamplePowerSeries k)) = ⊤ := by
+      simpa [I, nonreducedExampleRelation] using h
+    have hunit : IsUnit
+        ((MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2) :=
+      Ideal.span_singleton_eq_top.mp hspan
+    have hzero : IsUnit (0 : k) := by
+      rw [← MvPowerSeries.constantCoeff_X (1 : Fin 2)]
+      simpa [MvPowerSeries.isUnit_iff_constantCoeff] using hunit
+    exact not_isUnit_zero hzero
+  have hN : IsNoetherianRing (nonreducedExampleRing k) := by
+    infer_instance
+  have hL : IsLocalRing (nonreducedExampleRing k) := by
+    letI : Nontrivial (nonreducedExampleRing k) :=
+      Ideal.Quotient.nontrivial_iff.mpr hI
+    apply IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective
+  letI : IsNoetherianRing (nonreducedExampleRing k) := hN
+  letI : IsLocalRing (nonreducedExampleRing k) := hL
+  let a : Fin 2 → nonreducedExamplePowerSeries k :=
+    ![MvPowerSeries.X (0 : Fin 2),
+      MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)]
+  have ha : MvPowerSeries.HasSubst a := by
+    constructor
+    · intro s
+      fin_cases s <;> simp [a]
+    · intro d
+      exact Set.toFinite _
+  let g : nonreducedExamplePowerSeries k →+*
+      nonreducedExamplePowerSeries k :=
+    (MvPowerSeries.substAlgHom ha).toRingHom
+  let f₀ : nonreducedExamplePowerSeries k →+*
+      nonreducedExampleRing k :=
+    (Ideal.Quotient.mk I).comp g
+  have hker : I ≤ RingHom.ker f₀ := by
+    rw [show I = Ideal.span
+        ({((MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2)} :
+          Set (nonreducedExamplePowerSeries k)) by
+      rfl]
+    refine Ideal.span_le.2 ?_
+    intro z hz
+    have hz' : z = (MvPowerSeries.X (1 : Fin 2) :
+        nonreducedExamplePowerSeries k) ^ 2 := by
+      simpa using hz
+    rw [hz']
+    change f₀ ((MvPowerSeries.X (1 : Fin 2) :
+      nonreducedExamplePowerSeries k) ^ 2) = 0
+    change Ideal.Quotient.mk I
+      (g ((MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2)) = 0
+    rw [map_pow, show g (MvPowerSeries.X (1 : Fin 2)) =
+      MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2) by
+        change MvPowerSeries.substAlgHom ha (MvPowerSeries.X (1 : Fin 2)) = _
+        rw [MvPowerSeries.substAlgHom_X]
+        rfl]
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    have hy : (MvPowerSeries.X (1 : Fin 2) :
+        nonreducedExamplePowerSeries k) ^ 2 ∈ I := by
+      exact Ideal.subset_span (by simp [I, nonreducedExampleRelation])
+    have hp : (MvPowerSeries.X (0 : Fin 2) :
+        nonreducedExamplePowerSeries k) ^ 2 *
+          (MvPowerSeries.X (1 : Fin 2) : nonreducedExamplePowerSeries k) ^ 2 ∈ I :=
+      I.mul_mem_left _ hy
+    rw [mul_pow]
+    exact hp
+  have hker' : ∀ x, x ∈ I → f₀ x = 0 := by
+    intro x hx
+    exact hker hx
+  let f : nonreducedExampleRing k →+*
+      nonreducedExampleTargetRing k :=
+    Ideal.Quotient.lift I f₀ hker'
+  refine ⟨hN, hL, ?_⟩
+  refine And.intro (by sorry) ?_
+  refine And.intro (by sorry) ?_
+  refine ⟨f, ?_⟩
+  refine And.intro (by sorry) ?_
+  refine And.intro (by sorry) ?_
+  refine And.intro (by sorry) ?_
+  refine And.intro ?_ ?_
+  · change (Ideal.Quotient.lift I f₀ hker')
+        (Ideal.Quotient.mk I (MvPowerSeries.X (0 : Fin 2))) =
+      Ideal.Quotient.mk I (MvPowerSeries.X (0 : Fin 2))
+    rw [Ideal.Quotient.lift_mk]
+    change Ideal.Quotient.mk I
+        (MvPowerSeries.substAlgHom ha (MvPowerSeries.X (0 : Fin 2))) = _
+    rw [MvPowerSeries.substAlgHom_X]
+    rfl
+  · change (Ideal.Quotient.lift I f₀ hker')
+        (Ideal.Quotient.mk I (MvPowerSeries.X (1 : Fin 2))) =
+      Ideal.Quotient.mk I (MvPowerSeries.X (0 : Fin 2)) *
+        Ideal.Quotient.mk I (MvPowerSeries.X (1 : Fin 2))
+    rw [Ideal.Quotient.lift_mk]
+    change Ideal.Quotient.mk I
+        (MvPowerSeries.substAlgHom ha (MvPowerSeries.X (1 : Fin 2))) = _
+    rw [MvPowerSeries.substAlgHom_X]
+    rfl
 
 def pPowerSubfield (k : Type u) (p : ℕ) [Field k] [Fact p.Prime]
     [CharP k p] : Subfield k :=

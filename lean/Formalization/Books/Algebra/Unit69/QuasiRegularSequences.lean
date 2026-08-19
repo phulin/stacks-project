@@ -5,6 +5,7 @@ import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Finsupp.LSum
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Map
 import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
@@ -206,7 +207,12 @@ theorem quasiRegularPolynomialMap_smul
     (m : M ⧸ (Ideal.ofList f • (⊤ : Submodule R M))) :
     quasiRegularPolynomialMap R M f (c • m) =
       c • quasiRegularPolynomialMap R M f m := by
-  sorry
+  apply LinearMap.ext
+  intro p
+  dsimp [quasiRegularPolynomialMap]
+  simp_rw [map_smul, LinearMap.toSpanSingleton_smul]
+  rw [Finsupp.smul_sum]
+  rfl
 
 /-- The bilinear map underlying the canonical tensor-product map. -/
 def quasiRegularBilinearMap
@@ -243,14 +249,181 @@ theorem quasiRegularCanonicalMap_monomial
         (fun n => quasiRegularPiece R M (Ideal.ofList f) n)
         (quasiRegularDegree d)
         (quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m)) := by
-  sorry
+  simp [quasiRegularCanonicalMap, quasiRegularBilinearMap, quasiRegularPolynomialMap]
 
 /-- The canonical graded map is always surjective. -/
 theorem quasiRegularCanonicalMap_surjective
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     (f : List R) :
     Function.Surjective (quasiRegularCanonicalMap R M f) := by
-  sorry
+  classical
+  let I := Ideal.ofList f
+  let P : ℕ → Submodule R M := fun n => I ^ n • (⊤ : Submodule R M)
+  let G : ∀ n, Set (↥(P n)) := fun n =>
+    {x | ∃ d : Fin f.length →₀ ℕ, ∃ hd : quasiRegularDegree d = n,
+        ∃ m : M, x = ⟨quasiRegularMonomialCoefficient f d • m,
+          Submodule.smul_mem_smul (by
+            simpa [I, hd] using (quasiRegularMonomialCoefficient_mem f d))
+            Submodule.mem_top⟩}
+  let S : ∀ n, Submodule R (↥(P n)) := fun n => Submodule.span R (G n)
+  have hcoeff (d : Fin f.length →₀ ℕ) (i : Fin f.length) :
+      quasiRegularMonomialCoefficient f (d + Finsupp.single i 1) =
+        quasiRegularMonomialCoefficient f d * f.get i := by
+    change (d + Finsupp.single i 1).prod (fun j e => f.get j ^ e) =
+      d.prod (fun j e => f.get j ^ e) * f.get i
+    rw [Finsupp.prod_add_index' (h_zero := fun j => by exact pow_zero _)
+      (h_add := fun j a b => by rw [pow_add])]
+    rw [Finsupp.prod_single_index (by exact pow_zero _)]
+    rw [pow_one]
+  have hdeg (d : Fin f.length →₀ ℕ) (i : Fin f.length) :
+      quasiRegularDegree (d + Finsupp.single i 1) =
+        quasiRegularDegree d + 1 := by
+    simp [quasiRegularDegree, Finsupp.sum_add_index]
+  have hI (i : Fin f.length) : f.get i ∈ I := by
+    simpa [I] using (Ideal.subset_span (show f.get i ∈ {r | r ∈ f} by simp))
+  have hP (n : ℕ) (i : Fin f.length) (z : M) (hz : z ∈ P n) :
+      f.get i • z ∈ P (n + 1) := by
+    simpa [P, pow_succ', Submodule.mul_smul, mul_comm] using
+      (Submodule.smul_mem_smul (hI i) hz)
+  have hshift :
+      ∀ (n : ℕ) (i : Fin f.length) (y : ↥(P n)), y ∈ S n →
+        (⟨f.get i • (y : M), hP n i (y : M) y.property⟩ : ↥(P (n + 1))) ∈
+          S (n + 1) := by
+    intro n i y hy
+    change y ∈ Submodule.span R (G n) at hy
+    refine Submodule.span_induction (p := fun (z : ↥(P n)) hz =>
+        (⟨f.get i • (z : M), hP n i (z : M) z.property⟩ : ↥(P (n + 1))) ∈
+          S (n + 1)) ?_ ?_ ?_ ?_ hy
+    · intro z hz
+      rcases hz with ⟨d, hd, m, rfl⟩
+      apply Submodule.subset_span
+      refine ⟨d + Finsupp.single i 1, ?_, m, ?_⟩
+      · rw [hdeg, hd]
+      · apply Subtype.ext
+        simp only [Subtype.coe_mk]
+        simp [hcoeff, smul_smul, smul_eq_mul, mul_comm]
+    · convert Submodule.zero_mem (S (n + 1)) using 1
+      apply Subtype.ext
+      simp
+    · intro y z hy hz Cy Cz
+      simpa [add_smul] using (Submodule.add_mem (S (n + 1)) Cy Cz)
+    · intro a z hz Cz
+      convert Submodule.smul_mem (S (n + 1)) a Cz using 1
+      apply Subtype.ext
+      simp [smul_smul, mul_comm]
+  have hmul (n : ℕ) (b : R) (hb : b ∈ I) (r : R) (hr : r ∈ I ^ n) :
+      b * r ∈ I ^ (n + 1) := by
+    simpa [I, Ideal.ofList, pow_succ', smul_eq_mul, mul_comm] using
+      (Submodule.smul_mem_smul hb hr)
+  have hpow :
+      ∀ (n : ℕ) (r : R) (hr : r ∈ I ^ n) (m : M),
+        (⟨r • m, Submodule.smul_mem_smul hr Submodule.mem_top⟩ : ↥(P n)) ∈ S n := by
+    intro n r hr
+    refine Submodule.pow_induction_on_left' I
+      (C := fun n r hr => ∀ m : M,
+        (⟨r • m, Submodule.smul_mem_smul hr Submodule.mem_top⟩ : ↥(P n)) ∈ S n) ?_ ?_ ?_ hr
+    · intro a m
+      apply Submodule.subset_span
+      refine ⟨0, ?_, a • m, ?_⟩
+      · simp [quasiRegularDegree]
+      · apply Subtype.ext
+        simp [quasiRegularMonomialCoefficient]
+    · intro x y i hx hy Cx Cy m
+      simpa [add_smul] using (Submodule.add_mem (S i) (Cx m) (Cy m))
+    · intro a ha i r hr Cr
+      have ha' : a ∈ Submodule.span R {r | r ∈ f} := by
+        simpa [I, Ideal.ofList] using ha
+      refine Submodule.span_induction (p := fun b hb => ∀ m : M,
+          (⟨(b * r) • m,
+            Submodule.smul_mem_smul (hmul i b (by simpa [I] using hb) r hr)
+              Submodule.mem_top⟩ : ↥(P (i + 1))) ∈ S (i + 1)) ?_ ?_ ?_ ?_ ha'
+      · intro b hb m
+        obtain ⟨j, hj⟩ := List.mem_iff_get.mp hb
+        subst b
+        have hs := hshift i j
+          (⟨r • m, Submodule.smul_mem_smul hr Submodule.mem_top⟩ : ↥(P i))
+          (Cr m)
+        simpa [P, pow_succ', Submodule.mul_smul, smul_smul, mul_comm, mul_left_comm,
+          mul_assoc, smul_eq_mul] using hs
+      · intro m
+        convert Submodule.zero_mem (S (i + 1)) using 1
+        apply Subtype.ext
+        simp
+      · intro b c hb hc Hb Hc m
+        simpa [add_mul, add_smul] using (Submodule.add_mem (S (i + 1)) (Hb m) (Hc m))
+      · intro a b hb Hb m
+        simpa [mul_smul, smul_eq_mul, mul_assoc] using
+          (Submodule.smul_mem (S (i + 1)) a (Hb m))
+  have hspan : ∀ (n : ℕ) (x : ↥(P n)), x ∈ S n := by
+    intro n x
+    change (⟨(x : M), x.property⟩ : ↥(P n)) ∈ S n
+    refine Submodule.smul_induction_on' (p := fun z hz =>
+        (⟨z, hz⟩ : ↥(P n)) ∈ S n) x.property ?_ ?_
+    · intro r hr m hm
+      exact hpow n r hr m
+    · intro y hy z hz Cy Cz
+      simpa using (Submodule.add_mem (S n) Cy Cz)
+  have hmono :
+      ∀ (d : Fin f.length →₀ ℕ) (m : M),
+        quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m) =
+          Submodule.Quotient.mk
+            ⟨quasiRegularMonomialCoefficient f d • m,
+              Submodule.smul_mem_smul (quasiRegularMonomialCoefficient_mem f d)
+                Submodule.mem_top⟩ := by
+    intro d m
+    simp [quasiRegularMonomialMapQuotient, quotientSemilinearMapToLinear,
+      quasiRegularMonomialMapRaw]
+    rfl
+  have hgood :
+      ∀ (n : ℕ) (y : ↥(P n)), y ∈ S n →
+        ∃ z : quasiRegularSource R M f,
+          quasiRegularCanonicalMap R M f z =
+            (DirectSum.lof (R ⧸ I) ℕ (fun n => quasiRegularPiece R M I n) n)
+              (Submodule.Quotient.mk y) := by
+    intro n y hy
+    change y ∈ Submodule.span R (G n) at hy
+    refine Submodule.span_induction (p := fun z _ =>
+        ∃ w : quasiRegularSource R M f,
+          quasiRegularCanonicalMap R M f w =
+            (DirectSum.lof (R ⧸ I) ℕ (fun n => quasiRegularPiece R M I n) n)
+              (Submodule.Quotient.mk z)) ?_ ?_ ?_ ?_ hy
+    · intro z hz
+      rcases hz with ⟨d, hd, m, rfl⟩
+      subst n
+      refine ⟨Submodule.Quotient.mk m ⊗ₜ[R ⧸ I] MvPolynomial.monomial d 1, ?_⟩
+      rw [quasiRegularCanonicalMap_monomial]
+      simpa [I] using congrArg
+        (DirectSum.lof (R ⧸ I) ℕ (fun n => quasiRegularPiece R M I n)
+          (quasiRegularDegree d)) (hmono d m)
+    · exact ⟨0, by simp⟩
+    · intro y z hy hz ⟨uy, huy⟩ ⟨uz, huz⟩
+      refine ⟨uy + uz, ?_⟩
+      rw [map_add, huy, huz]
+      simp
+    · intro a z hz ⟨uz, huz⟩
+      refine ⟨(Ideal.Quotient.mk I a) • uz, ?_⟩
+      rw [map_smul, huz]
+      rw [← (DirectSum.lof (R ⧸ I) ℕ
+        (fun n => quasiRegularPiece R M I n) n).map_smul]
+      have hN := Module.isTorsionBySet_quotient_ideal_smul
+        (M := ↥(I ^ n • (⊤ : Submodule R M))) (I := I)
+      rw [Module.IsTorsionBySet.mk_smul hN]
+      rw [Submodule.Quotient.mk_smul]
+  intro x
+  refine DirectSum.induction_on x ?_ ?_ ?_
+  · exact ⟨0, by simp⟩
+  · intro n y
+    unfold quasiRegularPiece at y
+    refine Submodule.Quotient.induction_on
+      (p := Ideal.ofList f •
+        (⊤ : Submodule R ↥((Ideal.ofList f) ^ n • (⊤ : Submodule R M)))) y ?_
+    intro z
+    rcases hgood n z (by simpa [P, I] using hspan n z) with ⟨w, hw⟩
+    simpa [I] using ⟨w, hw⟩
+  · intro x y hx hy
+    rcases hx with ⟨ux, hux⟩
+    rcases hy with ⟨uy, huy⟩
+    exact ⟨ux + uy, by rw [map_add, hux, huy]⟩
 
 /-! ## Definition and basic properties -/
 

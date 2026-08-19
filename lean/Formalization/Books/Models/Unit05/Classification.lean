@@ -6566,7 +6566,131 @@ private theorem long_window_ratio_cases
         D.a (e5 3) (e5 4) = q34 * D.w (e5 4) ∧
         ((p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1) ∨
           (p01 * q01 = 1 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 2) ∨
-          (p01 * q01 = 2 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1))) := by sorry
+          (p01 * q01 = 2 ∧ p12 * q12 = 1 ∧ p23 * q23 = 1 ∧ p34 * q34 = 1))) := by
+  classical
+  let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
+  have he5 : Function.Injective e5 := by
+    intro i j h
+    apply Fin.ext
+    simpa [e5] using congrArg Fin.val h
+  let B5 : Matrix (Fin 5) (Fin 5) ℝ := B.submatrix e5 e5
+  have hB5 : B5.PosDef := hBpos.submatrix he5
+  let E : LocalNumericalData 5 :=
+    { m := fun i => D.m (e5 i)
+      a := fun i j => D.a (e5 i) (e5 j)
+      w := fun i => D.w (e5 i) }
+  have hEdiag : ∀ i, E.a i i = -2 * E.w i := by
+    intro i
+    simpa [E] using hdiag (e5 i)
+  have hEsymm : ∀ i j, E.a i j = E.a j i := by
+    intro i j
+    simpa [E] using hsymm (e5 i) (e5 j)
+  have hEpos : ∀ i, 0 < E.w i := by
+    intro i
+    simpa [E] using hpos (e5 i)
+  have hEzero : E.a 0 2 = 0 ∧ E.a 0 3 = 0 ∧ E.a 1 3 = 0 ∧
+      E.a 1 4 = 0 ∧ E.a 2 4 = 0 ∧ E.a 0 4 = 0 := by
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    constructor
+    · apply hzero
+      dsimp [E, e5]
+      omega
+    · apply hzero
+      dsimp [E, e5]
+      omega
+  have hdetA5 : (Matrix.map E.a (fun x : ℤ => (x : ℝ))).det < 0 := by
+    have hdetB := Matrix.PosDef.det_pos hB5
+    let A5 : Matrix (Fin 5) (Fin 5) ℝ := Matrix.map E.a (fun x : ℤ => (x : ℝ))
+    have hneg := Matrix.det_neg A5
+    have hpow : (-1 : ℝ) ^ Fintype.card (Fin 5) = -1 := by
+      change (-1 : ℝ) ^ 5 = -1
+      norm_num
+    rw [hpow, neg_one_mul] at hneg
+    have hrel : B5 = -A5 := by
+      ext i j
+      simp [B5, A5, Matrix.submatrix, E, hB]
+    rw [hrel, hneg] at hdetB
+    linarith
+  have hrat (i j : Fin 5) (hij : 0 < E.a i j) :
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ E.a i j = p * E.w i ∧
+        E.a i j = q * E.w j ∧ p * q < 4 := by
+    exact long_edge_ratio D B hdiag hsymm hpos hBpos (by intro i j; exact hB i j)
+      (e5 i) (e5 j) (by simpa [E] using hij) (by simpa [E] using hdiv _ _)
+        (by simpa [E] using hdiv _ _)
+  have ha01 : 0 < E.a 0 1 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha12 : 0 < E.a 1 2 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha23 : 0 < E.a 2 3 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  have ha34 : 0 < E.a 3 4 := by
+    apply hedge
+    dsimp [E, e5]
+    omega
+  obtain ⟨p01, q01, hp01, hq01, hpa01, hqa01, hpq01⟩ := hrat 0 1 ha01
+  obtain ⟨p12, q12, hp12, hq12, hpa12, hqa12, hpq12⟩ := hrat 1 2 ha12
+  obtain ⟨p23, q23, hp23, hq23, hpa23, hqa23, hpq23⟩ := hrat 2 3 ha23
+  obtain ⟨p34, q34, hp34, hq34, hpa34, hqa34, hpq34⟩ := hrat 3 4 ha34
+  have hsq01 : E.a 0 1 ^ 2 = p01 * q01 * (E.w 0 * E.w 1) :=
+    square_factorization _ _ _ _ _ hpa01 hqa01
+  have hsq12 : E.a 1 2 ^ 2 = p12 * q12 * (E.w 1 * E.w 2) :=
+    square_factorization _ _ _ _ _ hpa12 hqa12
+  have hsq23 : E.a 2 3 ^ 2 = p23 * q23 * (E.w 2 * E.w 3) :=
+    square_factorization _ _ _ _ _ hpa23 hqa23
+  have hsq34 : E.a 3 4 ^ 2 = p34 * q34 * (E.w 3 * E.w 4) :=
+    square_factorization _ _ _ _ _ hpa34 hqa34
+  have hsq01R : (E.a 0 1 : ℝ) ^ 2 = (p01 * q01 : ℝ) * (E.w 0 * E.w 1) := by
+    exact_mod_cast hsq01
+  have hsq12R : (E.a 1 2 : ℝ) ^ 2 = (p12 * q12 : ℝ) * (E.w 1 * E.w 2) := by
+    exact_mod_cast hsq12
+  have hsq23R : (E.a 2 3 : ℝ) ^ 2 = (p23 * q23 : ℝ) * (E.w 2 * E.w 3) := by
+    exact_mod_cast hsq23
+  have hsq34R : (E.a 3 4 : ℝ) ^ 2 = (p34 * q34 : ℝ) * (E.w 3 * E.w 4) := by
+    exact_mod_cast hsq34
+  have hineqR := five_path_det_strict_ineq E hEdiag hEsymm hEzero hEpos hdetA5
+    (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
+    hsq01R hsq12R hsq23R hsq34R
+  have hineqI : 4 * (p01 * q01) + 4 * (p12 * q12) +
+      4 * (p23 * q23) + 4 * (p34 * q34) <
+      16 + (p01 * q01) * (p23 * q23) +
+        (p01 * q01) * (p34 * q34) + (p12 * q12) * (p34 * q34) := by
+    exact_mod_cast hineqR
+  have hcases := five_path_ratio_cases (p01 * q01) (p12 * q12)
+    (p23 * q23) (p34 * q34) (mul_pos hp01 hq01) (mul_pos hp12 hq12)
+    (mul_pos hp23 hq23) (mul_pos hp34 hq34) hpq01 hpq12 hpq23 hpq34 hineqI
+  refine ⟨p01, q01, p12, q12, p23, q23, p34, q34,
+    hp01, hq01, hp12, hq12, hp23, hq23, hp34, hq34,
+    ?_⟩
+  · simpa [E, e5] using hpa01
+  · simpa [E, e5] using hqa01
+  · simpa [E, e5] using hpa12
+  · simpa [E, e5] using hqa12
+  · simpa [E, e5] using hpa23
+  · simpa [E, e5] using hqa23
+  · simpa [E, e5] using hpa34
+  · simpa [E, e5] using hqa34
+  · exact hcases
 /-
   classical
   let e5 : Fin 5 → Fin t := fun i => ⟨s.val + i.val, by omega⟩
@@ -6753,7 +6877,824 @@ private theorem long_last_vector_eq {t : ℕ} (D : LocalNumericalData t)
 theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
     (ht : 5 < t) (hn : t < T.n) (hedges : hasPathEdges (localData S)) :
     UpToReversal (localData S) (fun D => isAn D ∨ isCn D ∨ isBn D) := by
-  sorry
+  classical
+  let D := localData S
+  have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
+    intro i
+    change T.a (S.index i) (S.index i) = -2 * T.w (S.index i)
+    exact (S.minus_two i).2
+  have hDsym : ∀ i j, D.a i j = D.a j i := by
+    intro i j
+    simpa [D] using local_a_symmetric S i j
+  have hDpos : ∀ i, 0 < D.w i := by
+    intro i
+    simpa [D] using local_w_pos S i
+  have hDmp : ∀ i, 0 < D.m i := by
+    intro i
+    simpa [D] using local_m_pos S i
+  let B : Matrix (Fin t) (Fin t) ℝ := fun i j => -((D.a i j : ℤ) : ℝ)
+  have hBpos : B.PosDef := by
+    simpa [B, D, localData] using local_principal_neg_posDef T S (by omega) hn
+  have hBentry : ∀ i j, B i j = -((D.a i j : ℤ) : ℝ) := by
+    intro i j
+    rfl
+  have hnonneg : ∀ i j : Fin t, i ≠ j → 0 ≤ D.a i j := by
+    intro i j hij
+    change 0 ≤ T.a (S.index i) (S.index j)
+    apply T.a_offdiag_nonneg
+    intro h
+    exact hij (S.index_injective h)
+  have hdiv : ∀ i j : Fin t, D.w i ∣ D.a i j := by
+    intro i j
+    simpa [D, localData] using T.w_dvd (S.index i) (S.index j)
+  have hlower : ∀ i j : Fin t, 0 < D.a i j →
+      (D.w i : ℝ) ≤ D.a i j := by
+    intro i j hij
+    obtain ⟨p, q, hp, hq, hpa, hqa, hpq⟩ :=
+      long_edge_ratio D B hDdiag hDsym hDpos hBpos hBentry i j hij
+        (hdiv i j) (by simpa [hDsym i j] using hdiv j i)
+    have hp1 : (1 : ℤ) ≤ p := by omega
+    have hp1R : (1 : ℝ) ≤ p := by exact_mod_cast hp1
+    have hpaR : (D.a i j : ℝ) = (p : ℝ) * D.w i := by
+      exact_mod_cast hpa
+    have hwiR : (0 : ℝ) < D.w i := by exact_mod_cast hDpos i
+    nlinarith
+  have hzero' : ∀ i j : Fin t, i ≠ j →
+      ¬ i.val + 1 = j.val → ¬ j.val + 1 = i.val → D.a i j = 0 := by
+    intro i j hij hforward hreverse
+    have hnotpos : ¬ 0 < D.a i j := by
+      intro ha
+      by_cases hlt : i.val < j.val
+      · let k : ℕ := j.val - i.val + 1
+        let e : Fin k → Fin t := fun z =>
+          ⟨i.val + z.val, by dsimp [k]; omega⟩
+        have he : Function.Injective e := by
+          intro u v huv
+          apply Fin.ext
+          have hv := congrArg Fin.val huv
+          dsimp [e] at hv ⊢
+          omega
+        have hcycle : ∀ z : Fin k,
+            0 < D.a (e z) (e (if h : z.val + 1 = k then
+              ⟨0, by dsimp [k]; omega⟩ else ⟨z.val + 1, by dsimp [k]; omega⟩)) := by
+          intro z
+          by_cases hz : z.val + 1 = k
+          · have hzval : z.val = j.val - i.val := by
+              dsimp [k] at hz
+              omega
+            have hlast : e z = j := by
+              apply Fin.ext
+              dsimp [e]
+              omega
+            have hfirst : e (⟨0, by dsimp [k]; omega⟩ : Fin k) = i := by
+              apply Fin.ext
+              dsimp [e]
+            simp only [dif_pos hz]
+            rw [hlast, hfirst, hDsym j i]
+            exact ha
+          · have hstep : (e z).val + 1 =
+                (e (⟨z.val + 1, by dsimp [k]; omega⟩ : Fin k)).val := by
+              dsimp [e]
+              omega
+            simpa [hz] using (hedges hstep)
+        exact no_positive_cycle D B hBpos e he hDdiag hDsym hlower hnonneg hBentry
+          (by dsimp [k]; omega) hcycle
+      · have hlt' : j.val < i.val := by omega
+        let k : ℕ := i.val - j.val + 1
+        let e : Fin k → Fin t := fun z =>
+          ⟨j.val + z.val, by dsimp [k]; omega⟩
+        have he : Function.Injective e := by
+          intro u v huv
+          apply Fin.ext
+          have hv := congrArg Fin.val huv
+          dsimp [e] at hv ⊢
+          omega
+        have hcycle : ∀ z : Fin k,
+            0 < D.a (e z) (e (if h : z.val + 1 = k then
+              ⟨0, by dsimp [k]; omega⟩ else ⟨z.val + 1, by dsimp [k]; omega⟩)) := by
+          intro z
+          by_cases hz : z.val + 1 = k
+          · have hzval : z.val = i.val - j.val := by
+              dsimp [k] at hz
+              omega
+            have hlast : e z = i := by
+              apply Fin.ext
+              dsimp [e]
+              omega
+            have hfirst : e (⟨0, by dsimp [k]; omega⟩ : Fin k) = j := by
+              apply Fin.ext
+              dsimp [e]
+            simp only [dif_pos hz]
+            rw [hlast, hfirst]
+            exact ha
+          · have hstep : (e z).val + 1 =
+                (e (⟨z.val + 1, by dsimp [k]; omega⟩ : Fin k)).val := by
+              dsimp [e]
+              omega
+            simpa [hz] using (hedges hstep)
+        exact no_positive_cycle D B hBpos e he hDdiag hDsym hlower hnonneg hBentry
+          (by dsimp [k]; omega) hcycle
+    have hnon := hnonneg i j hij
+    omega
+  have hzero : ∀ i j : Fin t, i.val + 2 ≤ j.val → D.a i j = 0 := by
+    intro i j h
+    apply hzero' i j
+    · omega
+    · omega
+    · omega
+  have hunit : ∀ i j : Fin t, i.val + 1 = j.val → 1 ≤ i.val →
+      i.val + 2 < t →
+      D.w i = D.w j ∧ D.a i j = D.w j := by
+    intro i j hij hi hiti
+    let s : Fin t := ⟨i.val - 1, by
+      have hle : i.val - 1 ≤ i.val := Nat.sub_le _ _
+      have hiLt : i.val < t := i.isLt
+      exact Nat.lt_of_le_of_lt hle hiLt⟩
+    have hs : s.val + 4 < t := by dsimp [s]; omega
+    have hw := long_window_ratio_cases D B hBpos s hs hDdiag hDsym hDpos hzero hedges hdiv
+    dsimp at hw
+    rcases hw with ⟨p01, q01, p12, q12, p23, q23, p34, q34,
+      hp01, hq01, hp12, hq12, hp23, hq23, hp34, hq34,
+      hpa01, hqa01, hpa12, hqa12, hpa23, hqa23, hpa34, hqa34, hcases⟩
+    have hprod : p12 * q12 = 1 := by
+      rcases hcases with hA | hC | hB
+      · exact hA.2.1
+      · exact hC.2.1
+      · exact hB.2.1
+    have hcon := ratio_one_consequences hp12 hq12 hprod hpa12 hqa12
+    have hu1 : (⟨s.val + 1, by omega⟩ : Fin t) = i := by
+      apply Fin.ext
+      dsimp [s]
+      omega
+    have hu2 : (⟨s.val + 2, by omega⟩ : Fin t) = j := by
+      apply Fin.ext
+      dsimp [s]
+      omega
+    have hconw := hcon.1
+    have hcona := hcon.2
+    rw [hu1, hu2] at hconw hcona
+    exact ⟨hconw, hcona⟩
+  have hwMiddle : ∀ n : ℕ, 1 ≤ n → n ≤ t - 2 →
+      D.w ⟨n, by omega⟩ = D.w ⟨1, by omega⟩ := by
+    intro n hnN
+    induction n, hnN using Nat.le_induction with
+    | base =>
+        intro hnt
+        rfl
+    | succ n hnN ih =>
+        intro hnt
+        have hnlt : n + 2 < t := by omega
+        have hstep := hunit ⟨n, by omega⟩ ⟨n + 1, by omega⟩ (by omega) (by omega)
+          hnlt
+        calc
+          D.w ⟨n + 1, by omega⟩ = D.w ⟨n, by omega⟩ := hstep.1.symm
+          _ = D.w ⟨1, by omega⟩ := ih (by omega)
+  have ht0 : 0 < t := by omega
+  have hfirst := long_window_ratio_cases D B hBpos
+    (⟨0, by omega⟩ : Fin t) (by
+      change 0 + 4 < t
+      omega)
+    hDdiag hDsym hDpos hzero hedges hdiv
+  dsimp at hfirst
+  rcases hfirst with ⟨pf01, qf01, pf12, qf12, pf23, qf23, pf34, qf34,
+    hpf01, hqf01, hpf12, hqf12, hpf23, hqf23, hpf34, hqf34,
+    hpfa01, hqfa01, hpfa12, hqfa12, hpfa23, hqfa23, hpfa34, hqfa34,
+    hfirstcases⟩
+  have hfirstprod : pf01 * qf01 = 1 ∨ pf01 * qf01 = 2 := by
+    rcases hfirstcases with hA | hC | hB
+    · exact Or.inl hA.1
+    · exact Or.inl hC.1
+    · exact Or.inr hB.1
+  have hlast := long_window_ratio_cases D B hBpos
+    (⟨t - 5, by omega⟩ : Fin t) (by
+      change (t - 5) + 4 < t
+      omega) hDdiag hDsym hDpos hzero hedges hdiv
+  dsimp at hlast
+  rcases hlast with ⟨pl01, ql01, pl12, ql12, pl23, ql23, pl34, ql34,
+    hpl01, hql01, hpl12, hql12, hpl23, hql23, hpl34, hql34,
+    hpla01, hqla01, hpla12, hqla12, hpla23, hqla23, hpla34, hqla34,
+    hlastcases⟩
+  have hlastprod : pl34 * ql34 = 1 ∨ pl34 * ql34 = 2 := by
+    rcases hlastcases with hA | hC | hB
+    · exact Or.inl hA.2.2.2
+    · exact Or.inr hC.2.2.2
+    · exact Or.inl hB.2.2.2
+  let z0 : Fin t := ⟨0, by omega⟩
+  let z1 : Fin t := ⟨1, by omega⟩
+  let z2 : Fin t := ⟨2, by omega⟩
+  let z3 : Fin t := ⟨3, by omega⟩
+  let z4 : Fin t := ⟨4, by omega⟩
+  let zl2 : Fin t := ⟨t - 2, by omega⟩
+  let zl1 : Fin t := ⟨t - 1, by omega⟩
+  let r : ℤ := D.w z1
+  have hr : 0 < r := by
+    dsimp [r]
+    exact hDpos z1
+  have hfpa01 : D.a z0 z1 = pf01 * D.w z0 := by
+    simpa [z0, z1] using hpfa01
+  have hqfa01' : D.a z0 z1 = qf01 * D.w z1 := by
+    simpa [z0, z1] using hqfa01
+  have hzL2 : zl2 = (⟨t - 5 + 3, by omega⟩ : Fin t) := by
+    apply Fin.ext
+    dsimp [zl2]
+    omega
+  have hzL1 : zl1 = (⟨t - 5 + 4, by omega⟩ : Fin t) := by
+    apply Fin.ext
+    dsimp [zl1]
+    omega
+  have hpla34' : D.a zl2 zl1 = pl34 * D.w zl2 := by
+    rw [hzL2, hzL1]
+    exact hpla34
+  have hqla34' : D.a zl2 zl1 = ql34 * D.w zl1 := by
+    rw [hzL2, hzL1]
+    exact hqla34
+  have hwMiddle' (i : Fin t) (hi : 1 ≤ i.val) (hj : i.val ≤ t - 2) :
+      D.w i = r := by
+    have hh := hwMiddle i.val hi hj
+    simpa [r] using hh
+  have hmakeLast (d ld e le c last r : ℤ) (hr : 0 < r)
+      (hw : ∀ i, D.w i = r * (if i.val + 1 = t then last else c))
+      (hd : ∀ i, D.a i i = r * (if i.val + 1 = t then ld else d))
+      (hf : ∀ i j, i.val + 1 = j.val →
+        D.a i j = r * (if j.val + 1 = t then le else e))
+      (hb : ∀ i j, j.val + 1 = i.val →
+        D.a i j = r * (if i.val + 1 = t then le else e)) :
+      realizesAW D (pathLastMatrix t d ld e le) (lastVector t c last) := by
+    unfold realizesAW
+    refine ⟨r, hr, ?_, ?_, hDmp⟩
+    · exact long_pathLast_matrix_eq D d ld e le r hd hf hb hzero'
+    · exact long_last_vector_eq D c last r hw
+  have hmakeA (r : ℤ) (hr : 0 < r)
+      (hw : ∀ i, D.w i = r)
+      (hd : ∀ i, D.a i i = -2 * r)
+      (hf : ∀ i j, i.val + 1 = j.val → D.a i j = r)
+      (hb : ∀ i j, j.val + 1 = i.val → D.a i j = r) :
+      realizesAW D (pathMatrix t (constantVector (-2)) 1) (constantVector 1) := by
+    unfold realizesAW
+    refine ⟨r, hr, ?_, ?_, hDmp⟩
+    · exact long_path_matrix_eq D r hd hf hb hzero'
+    · funext i
+      simp [scalarVector, constantVector, hw]
+  have hmidEdge (i j : Fin t) (hij : i.val + 1 = j.val)
+      (hi : 1 ≤ i.val) (hj : j.val + 2 < t) :
+      D.a i j = r := by
+    have hh := hunit i j hij hi (by omega)
+    rw [hh.2]
+    exact hwMiddle' j (by omega) (by omega)
+  have hmiddleWeight (i : Fin t) (hi : 1 ≤ i.val)
+      (hilast : ¬ i.val + 1 = t) : D.w i = r := by
+    apply hwMiddle' i hi
+    omega
+  let rv : Fin t → Fin t := fun i => ⟨t - 1 - i.val, by omega⟩
+  have hrv_inj : Function.Injective rv := by
+    intro i j h
+    apply Fin.ext
+    have hh := congrArg Fin.val h
+    dsimp [rv] at hh
+    omega
+  let rev : Fin t ≃ Fin t := Equiv.ofBijective rv ⟨hrv_inj, by
+    intro i
+    refine ⟨rv i, ?_⟩
+    apply Fin.ext
+    dsimp [rv]
+    omega⟩
+  have hrev_order : ∀ i : Fin t, (rev i).val + i.val + 1 = t := by
+    intro i
+    change (t - 1 - i.val) + i.val + 1 = t
+    omega
+  have hreverseMake (d ld e le c last r0 : ℤ) (hr0 : 0 < r0)
+      (hwF : ∀ i, D.w i = r0 * (if i.val = 0 then last else c))
+      (hdF : ∀ i, D.a i i = r0 * (if i.val = 0 then ld else d))
+      (hfF : ∀ i j, i.val + 1 = j.val →
+        D.a i j = r0 * (if i.val = 0 then le else e))
+      (hbF : ∀ i j, j.val + 1 = i.val →
+        D.a i j = r0 * (if j.val = 0 then le else e)) :
+      realizesAW (reindexLocalData D rev) (pathLastMatrix t d ld e le)
+        (lastVector t c last) := by
+    let E := reindexLocalData D rev
+    have hEw : ∀ i, E.w i = r0 *
+        (if i.val + 1 = t then last else c) := by
+      intro i
+      change D.w (rev i) = _
+      rw [hwF]
+      by_cases hi : i.val + 1 = t
+      · have hz : (rev i).val = 0 := by
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+      · have hz : (rev i).val ≠ 0 := by
+          intro hz
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+    have hEd : ∀ i, E.a i i = r0 *
+        (if i.val + 1 = t then ld else d) := by
+      intro i
+      change D.a (rev i) (rev i) = _
+      rw [hdF]
+      by_cases hi : i.val + 1 = t
+      · have hz : (rev i).val = 0 := by
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+      · have hz : (rev i).val ≠ 0 := by
+          intro hz
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+    have hEf : ∀ i j, i.val + 1 = j.val →
+        E.a i j = r0 * (if j.val + 1 = t then le else e) := by
+      intro i j hij
+      change D.a (rev i) (rev j) = _
+      have hadj : (rev j).val + 1 = (rev i).val := by
+        have hi' := hrev_order i
+        have hj' := hrev_order j
+        omega
+      rw [hbF _ _ hadj]
+      by_cases hj : j.val + 1 = t
+      · have hz : (rev j).val = 0 := by
+          have ho := hrev_order j
+          omega
+        simp [hj, hz]
+      · have hz : (rev j).val ≠ 0 := by
+          intro hz
+          have ho := hrev_order j
+          omega
+        simp [hj, hz]
+    have hEb : ∀ i j, j.val + 1 = i.val →
+        E.a i j = r0 * (if i.val + 1 = t then le else e) := by
+      intro i j hij
+      change D.a (rev i) (rev j) = _
+      have hadj : (rev i).val + 1 = (rev j).val := by
+        have hi' := hrev_order i
+        have hj' := hrev_order j
+        omega
+      rw [hfF _ _ hadj]
+      by_cases hi : i.val + 1 = t
+      · have hz : (rev i).val = 0 := by
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+      · have hz : (rev i).val ≠ 0 := by
+          intro hz
+          have ho := hrev_order i
+          omega
+        simp [hi, hz]
+    have hEz : ∀ i j, i ≠ j → ¬ i.val + 1 = j.val →
+        ¬ j.val + 1 = i.val → E.a i j = 0 := by
+      intro i j hij hif hib
+      change D.a (rev i) (rev j) = 0
+      apply hzero' (rev i) (rev j)
+      · intro h
+        exact hij (rev.injective h)
+      · intro h
+        apply hib
+        have hi' := hrev_order i
+        have hj' := hrev_order j
+        omega
+      · intro h
+        apply hif
+        have hi' := hrev_order i
+        have hj' := hrev_order j
+        omega
+    unfold realizesAW
+    refine ⟨r0, hr0, ?_, ?_, ?_⟩
+    · exact long_pathLast_matrix_eq E d ld e le r0 hEd hEf hEb hEz
+    · exact long_last_vector_eq E c last r0 hEw
+    · intro i
+      exact hDmp (rev i)
+  have hkernel (a0 f0 al fl : ℤ) (x0 xm xl : ℝ)
+      (hdiagK : ∀ i, B i i =
+        if i.val = 0 then (a0 : ℝ) else
+          if i.val + 1 = t then (al : ℝ) else 2 * (r : ℝ))
+      (hfK : ∀ i j, i.val + 1 = j.val → B i j =
+        if i.val = 0 then -(f0 : ℝ) else
+          if j.val + 1 = t then -(fl : ℝ) else -(r : ℝ))
+      (hbK : ∀ i j, j.val + 1 = i.val → B i j =
+        if j.val = 0 then -(f0 : ℝ) else
+          if i.val + 1 = t then -(fl : ℝ) else -(r : ℝ))
+      (hzK : ∀ i j, i ≠ j → ¬ i.val + 1 = j.val →
+        ¬ j.val + 1 = i.val → B i j = 0)
+      (hleft0 : (a0 : ℝ) * x0 = (f0 : ℝ) * xm)
+      (hleft1 : (f0 : ℝ) * x0 = (r : ℝ) * xm)
+      (hright0 : (al : ℝ) * xl = (fl : ℝ) * xm)
+      (hright1 : (fl : ℝ) * xl = (r : ℝ) * xm) :
+      Matrix.mulVec B (fun i =>
+        if i.val = 0 then x0 else if i.val + 1 = t then xl else xm) = 0 := by
+    let x : Fin t → ℝ := fun i =>
+      if i.val = 0 then x0 else if i.val + 1 = t then xl else xm
+    have h2t : ¬ (2 : ℕ) = t := by omega
+    have hprev0 : ¬ (t - 2 : ℕ) = 0 := by omega
+    have hprevlast : ¬ (t - 2 : ℕ) + 1 = t := by omega
+    have hrow : ∀ i, (∑ j : Fin t, B i j * x j) = 0 := by
+      intro i
+      by_cases hi0 : i.val = 0
+      · let next : Fin t := ⟨1, by omega⟩
+        let rest : Finset (Fin t) := (Finset.univ.erase i).erase next
+        have hrest : rest.sum (fun j => B i j * x j) = 0 := by
+          apply Finset.sum_eq_zero
+          intro j hj
+          dsimp [rest] at hj
+          have hji : j ≠ i :=
+            (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).1
+          have hjnext : j ≠ next := (Finset.mem_erase.mp hj).1
+          have hnotf : ¬ i.val + 1 = j.val := by
+            intro h
+            apply hjnext
+            apply Fin.ext
+            dsimp [next]
+            omega
+          have hnotb : ¬ j.val + 1 = i.val := by
+            intro h
+            apply hjnext
+            apply Fin.ext
+            dsimp [next]
+            omega
+          rw [hzK i j hji.symm hnotf hnotb]
+          simp
+        have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin t)))
+          (a := i) (f := fun j => B i j * x j) (Finset.mem_univ _)
+        have hs2 := Finset.sum_erase_add
+          (s := (Finset.univ : Finset (Fin t)).erase i) (a := next)
+          (f := fun j => B i j * x j)
+          (by rw [Finset.mem_erase]; exact ⟨by
+            intro h
+            have hh := congrArg Fin.val h
+            dsimp [next] at hh
+            omega, Finset.mem_univ _⟩)
+        have hdi : B i i * x i = (a0 : ℝ) * x0 := by
+          rw [hdiagK i]
+          simp [x, hi0]
+        have hfn : B i next * x next = -(f0 : ℝ) * xm := by
+          rw [hfK i next (by dsimp [next]; omega)]
+          simp [x, next, hi0, h2t]
+        dsimp [rest] at hrest
+        linarith [hs1, hs2, hrest, hdi, hfn, hleft0]
+      · by_cases hilast : i.val + 1 = t
+        · let prev : Fin t := ⟨t - 2, by omega⟩
+          let rest : Finset (Fin t) := (Finset.univ.erase i).erase prev
+          have hrest : rest.sum (fun j => B i j * x j) = 0 := by
+            apply Finset.sum_eq_zero
+            intro j hj
+            dsimp [rest] at hj
+            have hji : j ≠ i :=
+              (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).1
+            have hjprev : j ≠ prev := (Finset.mem_erase.mp hj).1
+            have hnotf : ¬ i.val + 1 = j.val := by
+              intro h
+              apply hjprev
+              apply Fin.ext
+              dsimp [prev]
+              omega
+            have hnotb : ¬ j.val + 1 = i.val := by
+              intro h
+              apply hjprev
+              apply Fin.ext
+              dsimp [prev]
+              omega
+            rw [hzK i j hji.symm hnotf hnotb]
+            simp
+          have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin t)))
+            (a := i) (f := fun j => B i j * x j) (Finset.mem_univ _)
+          have hs2 := Finset.sum_erase_add
+            (s := (Finset.univ : Finset (Fin t)).erase i) (a := prev)
+            (f := fun j => B i j * x j)
+            (by rw [Finset.mem_erase]; exact ⟨by
+              intro h
+              have hh := congrArg Fin.val h
+              dsimp [prev] at hh
+              have hi' := hilast
+              omega, Finset.mem_univ _⟩)
+          have hdi : B i i * x i = (al : ℝ) * xl := by
+            rw [hdiagK i]
+            simp [x, hi0, hilast, h2t]
+          have hbp : B i prev * x prev = -(fl : ℝ) * xm := by
+            rw [hbK i prev (by dsimp [prev]; omega)]
+            simp [x, prev, hi0, hilast, h2t, hprev0, hprevlast]
+          dsimp [rest] at hrest
+          linarith [hs1, hs2, hrest, hdi, hbp, hright0]
+        · let next : Fin t := ⟨i.val + 1, by omega⟩
+          let prev : Fin t := ⟨i.val - 1, by omega⟩
+          let rest : Finset (Fin t) :=
+            (((Finset.univ.erase i).erase next).erase prev)
+          have hrest : rest.sum (fun j => B i j * x j) = 0 := by
+            apply Finset.sum_eq_zero
+            intro j hj
+            dsimp [rest] at hj
+            have hji : j ≠ i :=
+              (Finset.mem_erase.mp (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).2).1
+            have hjnext : j ≠ next :=
+              (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).1
+            have hjprev : j ≠ prev := (Finset.mem_erase.mp hj).1
+            have hnotf : ¬ i.val + 1 = j.val := by
+              intro h
+              apply hjnext
+              apply Fin.ext
+              dsimp [next]
+              omega
+            have hnotb : ¬ j.val + 1 = i.val := by
+              intro h
+              apply hjprev
+              apply Fin.ext
+              dsimp [prev]
+              omega
+            rw [hzK i j hji.symm hnotf hnotb]
+            simp
+          have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin t)))
+            (a := i) (f := fun j => B i j * x j) (Finset.mem_univ _)
+          have hs2 := Finset.sum_erase_add
+            (s := (Finset.univ : Finset (Fin t)).erase i) (a := next)
+            (f := fun j => B i j * x j)
+            (by rw [Finset.mem_erase]; exact ⟨by
+              intro h
+              have hh := congrArg Fin.val h
+              dsimp [next] at hh
+              omega, Finset.mem_univ _⟩)
+          have hs3 := Finset.sum_erase_add
+            (s := ((Finset.univ : Finset (Fin t)).erase i).erase next)
+            (a := prev) (f := fun j => B i j * x j)
+            (by rw [Finset.mem_erase]; exact ⟨by
+              intro h
+              have hh := congrArg Fin.val h
+              dsimp [prev, next] at hh
+              omega, by rw [Finset.mem_erase]; exact ⟨by
+                intro h
+                have hh := congrArg Fin.val h
+                have hh' : i.val - 1 = i.val := by simpa [prev] using hh
+                omega, Finset.mem_univ _⟩⟩)
+          have hdi : B i i * x i = (2 : ℝ) * r * xm := by
+            rw [hdiagK i]
+            simp [x, hi0, hilast]
+          have hfn : B i next * x next =
+              if i.val + 2 = t then -(fl : ℝ) * xl else -(r : ℝ) * xm := by
+            rw [hfK i next (by dsimp [next])]
+            by_cases hnext : i.val + 2 = t
+            · have : next.val + 1 = t := by
+                dsimp [next] at hnext ⊢
+                omega
+              simp [x, next, hi0, hnext, this, hilast]
+            · simp [x, next, hi0, hnext, hilast]
+          have hbp : B i prev * x prev =
+              if i.val = 1 then -(f0 : ℝ) * x0 else -(r : ℝ) * xm := by
+            rw [hbK i prev (by dsimp [prev]; omega)]
+            by_cases hprev : i.val = 1
+            · have hprev0' : prev.val = 0 := by
+                dsimp [prev] at hprev ⊢
+                omega
+              have hprevLast' : ¬ prev.val + 1 = t := by
+                dsimp [prev]
+                omega
+              simp [x, prev, hi0, hilast, hprev, hprev0', hprevLast']
+            · have hprev0' : prev.val ≠ 0 := by
+                dsimp [prev] at hprev ⊢
+                omega
+              have hprevLast' : ¬ prev.val + 1 = t := by
+                dsimp [prev]
+                omega
+              simp [x, prev, hi0, hilast, hprev, hprev0', hprevLast']
+          dsimp [rest] at hrest
+          by_cases hnext : i.val + 2 = t
+          · by_cases hprev : i.val = 1
+            · simp [hnext, hprev] at hfn hbp
+              linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hleft1, hright1]
+            · simp [hnext, hprev] at hfn hbp
+              linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hright1]
+          · by_cases hprev : i.val = 1
+            · simp [hnext, hprev] at hfn hbp
+              linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp, hleft1]
+            · simp [hnext, hprev] at hfn hbp
+              linarith [hs1, hs2, hs3, hrest, hdi, hfn, hbp]
+    change Matrix.mulVec B x = 0
+    funext i
+    exact hrow i
+  have hfirstOne : pf01 * qf01 = 1 →
+      D.w z0 = r ∧ D.a z0 z1 = r := by
+    intro h
+    have hh := ratio_one_consequences hpf01 hqf01 h hfpa01 hqfa01'
+    exact ⟨by simpa [r] using hh.1, by simpa [r] using hh.2⟩
+  have hlastOne : pl34 * ql34 = 1 →
+      D.w zl2 = r ∧ D.w zl1 = r ∧ D.a zl2 zl1 = r := by
+    intro h
+    have hh := ratio_one_consequences hpl34 hql34 h hpla34' hqla34'
+    have hm : D.w zl2 = r := hwMiddle' zl2 (by dsimp [zl2]; omega)
+      (by dsimp [zl2]; omega)
+    refine ⟨hm, ?_, ?_⟩
+    · rw [← hh.1]
+      exact hm
+    · rw [hh.2, hm]
+  rcases hfirstprod with hf1 | hf2
+  · rcases hlastprod with hl1 | hl2
+    · have hfo := hfirstOne hf1
+      have hlo := hlastOne hl1
+      have hwA : ∀ i, D.w i = r := by
+        intro i
+        by_cases hi : i.val = 0
+        · have : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+          rw [this]
+          exact hfo.1
+        · by_cases hj : i.val + 1 = t
+          · have : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+            rw [this]
+            exact hlo.2.1
+          · exact hmiddleWeight i (by omega) hj
+      have hdA : ∀ i, D.a i i = -2 * r := by
+        intro i
+        rw [hDdiag i, hwA i]
+        ring
+      have hfA : ∀ i j, i.val + 1 = j.val → D.a i j = r := by
+        intro i j hij
+        by_cases hi : i.val = 0
+        · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+          have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+          rw [hzi, hzj]
+          exact hfo.2
+        · by_cases hj : j.val + 1 = t
+          · have hzl2 : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+            have hzlast : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+            rw [hzl2, hzlast]
+            exact hlo.2.2
+          · exact hmidEdge i j hij (by omega) (by omega)
+      have hbA : ∀ i j, j.val + 1 = i.val → D.a i j = r := by
+        intro i j hij
+        rw [hDsym i j]
+        exact hfA j i hij
+      refine Or.inl ?_
+      simpa [D, isAn] using hmakeA r hr hwA hdA hfA hbA
+    · have hlastTwo : pl34 * ql34 = 2 := hl2
+      obtain ⟨hpone, hqtwo⟩ | ⟨hptwo, hqone⟩ :=
+        positive_product_two pl34 ql34 hpl34 hql34 hlastTwo
+      · let s0 : ℤ := D.w zl1
+        have hs0 : 0 < s0 := by dsimp [s0]; exact hDpos zl1
+        have hrel : r = 2 * s0 := by
+          have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          nlinarith [hpla34', hqla34', hpone, hqtwo, hm]
+        have hlastA : D.a zl2 zl1 = 2 * s0 := by
+          rw [hpla34', hqla34', hpone, hqtwo]
+          dsimp [s0]
+          nlinarith [hrel]
+        have hwB : ∀ i, D.w i = s0 * (if i.val + 1 = t then 1 else 2) := by
+          intro i
+          by_cases hi : i.val + 1 = t
+          · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+            rw [hz]
+            simp [s0]
+          · have hwri : D.w i = r := by
+              by_cases hi0 : i.val = 0
+              · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
+                rw [hz]
+                exact (hfirstOne hf1).1
+              · exact hmiddleWeight i (by omega) hi
+            rw [hwri, hrel]
+            simp
+        have hdB : ∀ i, D.a i i = s0 * (if i.val + 1 = t then -2 else -4) := by
+          intro i
+          rw [hDdiag i, hwB i]
+          by_cases hi : i.val + 1 = t <;> simp [hi] <;> ring
+        have hfB : ∀ i j, i.val + 1 = j.val →
+            D.a i j = s0 * (if j.val + 1 = t then 2 else 2) := by
+          intro i j hij
+          have hval : D.a i j = r := by
+            by_cases hi : i.val = 0
+            · exact (hfirstOne hf1).2
+            · by_cases hj : j.val + 1 = t
+              · exact hlastA
+              · exact hmidEdge i j hij (by omega) (by omega)
+          rw [hval, hrel]
+          simp
+        have hbB : ∀ i j, j.val + 1 = i.val →
+            D.a i j = s0 * (if i.val + 1 = t then 2 else 2) := by
+          intro i j hij
+          rw [hDsym i j]
+          exact hfB j i hij
+        refine Or.inr ?_
+        exact Or.inr (by
+          simpa [D, isBn] using hmakeLast (-4) (-2) 2 2 2 1 s0 hs0 hwB hdB hfB hbB)
+      · let hlastR : D.w zl1 = 2 * r := by
+          have hm := hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)
+          nlinarith [hpla34', hqla34', hptwo, hqone, hm]
+        have hlastEdge : D.a zl2 zl1 = 2 * r := by
+          rw [hpla34', hqla34', hptwo, hqone]
+          nlinarith [hwMiddle' zl2 (by dsimp [zl2]; omega) (by dsimp [zl2]; omega)]
+        have hwC : ∀ i, D.w i = r * (if i.val + 1 = t then 2 else 1) := by
+          intro i
+          by_cases hi : i.val + 1 = t
+          · have hz : i = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+            rw [hz, hlastR]
+            simp
+          · by_cases hi0 : i.val = 0
+            · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi0
+              rw [hz]
+              exact (hfirstOne hf1).1
+            · have hh := hmiddleWeight i (by omega) hi
+              rw [hh]
+              simp
+        have hdC : ∀ i, D.a i i = r * (if i.val + 1 = t then -4 else -2) := by
+          intro i
+          rw [hDdiag i, hwC i]
+          by_cases hi : i.val + 1 = t <;> simp [hi] <;> ring
+        have hfC : ∀ i j, i.val + 1 = j.val →
+            D.a i j = r * (if i.val = 0 then 2 else if j.val + 1 = t then 2 else 1) := by
+          intro i j hij
+          by_cases hi : i.val = 0
+          · exact (by
+              have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+              have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+              rw [hzi, hzj]
+              have := (hfirstOne hf1).2
+              simpa using this)
+          · by_cases hj : j.val + 1 = t
+            · have hz2 : i = zl2 := by apply Fin.ext; dsimp [zl2]; omega
+              have hz1 : j = zl1 := by apply Fin.ext; dsimp [zl1]; omega
+              rw [hz2, hz1, hlastEdge]
+              simp
+            · rw [hmidEdge i j hij (by omega) (by omega)]
+              simp [hi, hj]
+        have hbC : ∀ i j, j.val + 1 = i.val →
+            D.a i j = r * (if j.val = 0 then 2 else if i.val + 1 = t then 2 else 1) := by
+          intro i j hij
+          rw [hDsym i j]
+          exact hfC j i hij
+        refine Or.inr (by
+          simpa [D, isCn] using hmakeLast (-2) (-4) 1 2 1 2 r hr hwC hdC hfC hbC)
+  · rcases hlastprod with hl1 | hl2
+    · obtain ⟨hpone, hqtwo⟩ | ⟨hptwo, hqone⟩ :=
+        positive_product_two pf01 qf01 hpf01 hqf01 hf2
+      · have hfirstW : D.w z0 = 2 * r := by
+          nlinarith [hfpa01, hqfa01', hpone, hqtwo]
+        have hfirstEdge : D.a z0 z1 = 2 * r := by
+          rw [hfpa01, hqfa01', hpone, hqtwo]
+          nlinarith
+        have hwF : ∀ i, D.w i = r * (if i.val = 0 then 2 else 1) := by
+          intro i
+          by_cases hi : i.val = 0
+          · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+            rw [hz, hfirstW]
+            simp
+          · exact hmiddleWeight i (by omega) (by omega)
+        have hdF : ∀ i, D.a i i = r * (if i.val = 0 then -4 else -2) := by
+          intro i
+          rw [hDdiag i, hwF i]
+          by_cases hi : i.val = 0 <;> simp [hi] <;> ring
+        have hfF : ∀ i j, i.val + 1 = j.val →
+            D.a i j = r * (if i.val = 0 then 2 else 1) := by
+          intro i j hij
+          by_cases hi : i.val = 0
+          · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+            have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+            rw [hzi, hzj, hfirstEdge]
+            simp
+          · exact hmidEdge i j hij (by omega) (by omega)
+        have hbF : ∀ i j, j.val + 1 = i.val →
+            D.a i j = r * (if j.val = 0 then 2 else 1) := by
+          intro i j hij
+          rw [hDsym i j]
+          exact hfF j i hij
+        have hE := hreverseMake (-2) (-4) 1 2 1 2 r hr hwF hdF hfF hbF
+        change UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E)
+        refine Or.inr ⟨rev, hrev_order, ?_⟩
+        exact Or.inr (Or.inl (by simpa [isCn] using hE))
+      · let s0 : ℤ := D.w z0
+        have hs0 : 0 < s0 := by dsimp [s0]; exact hDpos z0
+        have hrel : r = 2 * s0 := by
+          nlinarith [hfpa01, hqfa01', hptwo, hqone]
+        have hfirstEdge : D.a z0 z1 = 2 * s0 := by
+          rw [hfpa01, hqfa01', hptwo, hqone]
+          nlinarith
+        have hwF : ∀ i, D.w i = s0 * (if i.val = 0 then 1 else 2) := by
+          intro i
+          by_cases hi : i.val = 0
+          · have hz : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+            rw [hz]
+            simp [s0]
+          · have hh := hmiddleWeight i (by omega) (by omega)
+            rw [hh, hrel]
+            simp
+        have hdF : ∀ i, D.a i i = s0 * (if i.val = 0 then -2 else -4) := by
+          intro i
+          rw [hDdiag i, hwF i]
+          by_cases hi : i.val = 0 <;> simp [hi] <;> ring
+        have hfF : ∀ i j, i.val + 1 = j.val →
+            D.a i j = s0 * (if i.val = 0 then 2 else 2) := by
+          intro i j hij
+          by_cases hi : i.val = 0
+          · have hzi : i = z0 := by apply Fin.ext; dsimp [z0]; exact hi
+            have hzj : j = z1 := by apply Fin.ext; dsimp [z1]; omega
+            rw [hzi, hzj, hfirstEdge]
+            simp
+          · have hh := hmidEdge i j hij (by omega) (by omega)
+            rw [hh, hrel]
+            simp
+        have hbF : ∀ i j, j.val + 1 = i.val →
+            D.a i j = s0 * (if j.val = 0 then 2 else 2) := by
+          intro i j hij
+          rw [hDsym i j]
+          exact hfF j i hij
+        have hE := hreverseMake (-4) (-2) 2 2 2 1 s0 hs0 hwF hdF hfF hbF
+        change UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E)
+        refine Or.inr ⟨rev, hrev_order, ?_⟩
+        exact Or.inr (Or.inr (by simpa [isBn] using hE))
+    · sorry
+  omega
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →

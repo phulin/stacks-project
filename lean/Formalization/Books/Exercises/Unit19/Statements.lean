@@ -573,7 +573,6 @@ private def sourceTPolynomial : Polynomial (Polynomial (Polynomial ℚ)) :=
 
 private lemma sourceFullReindex_tRelation :
     sourceFullReindex sourceTRelation = sourceTPolynomial := by
-  /- Prior attempt:
   let f : MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ) :=
     (Polynomial.mapRingHom
       (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1) :
@@ -591,6 +590,12 @@ private lemma sourceFullReindex_tRelation :
           (MvPolynomial.X (Fin.succ (0 : Fin 1)))) = _
     rw [MvPolynomial.finSuccEquiv_X_succ]
     simp [MvPolynomial.uniqueAlgEquiv]
+  have hC1 : f (MvPolynomial.C (1 : ℚ)) =
+      Polynomial.C (Polynomial.C (1 : ℚ)) := by
+    change Polynomial.map (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingHom
+        ((MvPolynomial.finSuccEquiv ℚ 1) (MvPolynomial.C (1 : ℚ))) = _
+    rw [MvPolynomial.finSuccEquiv_apply]
+    simp [MvPolynomial.uniqueAlgEquiv]
   change Polynomial.map f
       ((MvPolynomial.finSuccEquiv ℚ 2)
         (MvPolynomial.rename (Equiv.swap (0 : Fin 3) 2) sourceTRelation)) =
@@ -598,6 +603,15 @@ private lemma sourceFullReindex_tRelation :
   have hswap0 : (Equiv.swap (0 : Fin 3) 2) 0 = 2 := by decide
   have hswap1 : (Equiv.swap (0 : Fin 3) 2) 1 = 1 := by decide
   have hswap2 : (Equiv.swap (0 : Fin 3) 2) 2 = 0 := by decide
+  have hcase0 : Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+      (fun k => Polynomial.C (MvPolynomial.X k)) 0 =
+      (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ)) := by rfl
+  have hcase1 : Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+      (fun k => Polynomial.C (MvPolynomial.X k)) 1 =
+      Polynomial.C (MvPolynomial.X (0 : Fin 2)) := by rfl
+  have hcase2 : Fin.cases (Polynomial.X : Polynomial (MvPolynomial (Fin 2) ℚ))
+      (fun k => Polynomial.C (MvPolynomial.X k)) 2 =
+      Polynomial.C (MvPolynomial.X (1 : Fin 2)) := by rfl
   have hfin2 :
       Polynomial.map f (Fin.cases Polynomial.X
         (fun k => Polynomial.C (MvPolynomial.X k)) 2) =
@@ -616,22 +630,26 @@ private lemma sourceFullReindex_tRelation :
         ((MvPolynomial.finSuccEquiv ℚ 1) (MvPolynomial.C (3 : ℚ))) = _
     rw [MvPolynomial.finSuccEquiv_apply]
     simp [MvPolynomial.uniqueAlgEquiv]
-  simp only [sourceTRelation, MvPolynomial.rename_X, MvPolynomial.rename_C,
-    hswap0, hswap1, hswap2, map_sub, map_mul, map_pow,
-    MvPolynomial.finSuccEquiv_X_zero, MvPolynomial.finSuccEquiv_X_succ,
-    MvPolynomial.finSuccEquiv_apply, Polynomial.map_sub, Polynomial.map_pow,
-    Polynomial.map_C, Polynomial.map_X, hf0, hf1, hfin2, hC2, hC3]
-  have hfin2' := hfin2
-  have hC2' := hC2
-  have hC3' := hC3
-  simp only [f] at hfin2' hC2' hC3'
-  simp only [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_C,
-    RingHom.comp_apply, hfin2', hC2', hC3']
-  simp [map_mul, map_sub, map_pow, Polynomial.map_mul, Polynomial.map_sub, Polynomial.map_C,
-    hfin2', hC2', hC3', sourceSecondRelation, sourceTPolynomial, f,
-    MvPolynomial.finSuccEquiv_apply, MvPolynomial.uniqueAlgEquiv]
-  -/
-  sorry
+  have hrename :
+      (MvPolynomial.finSuccEquiv ℚ 2)
+          (MvPolynomial.rename (Equiv.swap (0 : Fin 3) 2) sourceTRelation) =
+        Polynomial.X ^ 2 -
+          (Polynomial.C (MvPolynomial.X (1 : Fin 2)) +
+              Polynomial.C (MvPolynomial.C (1 : ℚ))) *
+            (Polynomial.C (MvPolynomial.X (1 : Fin 2)) +
+              Polynomial.C (MvPolynomial.C (2 : ℚ))) *
+          (Polynomial.C (MvPolynomial.X (1 : Fin 2)) +
+              Polynomial.C (MvPolynomial.C (3 : ℚ))) := by
+      simp only [sourceTRelation, MvPolynomial.rename_X, MvPolynomial.rename_C,
+      hswap0, hswap1, hswap2, map_add, map_sub, map_mul, map_pow,
+        MvPolynomial.finSuccEquiv_X_zero, MvPolynomial.finSuccEquiv_X_succ,
+      MvPolynomial.finSuccEquiv_apply, MvPolynomial.eval₂Hom_X',
+      MvPolynomial.eval₂Hom_C, MvPolynomial.eval₂Hom_rename,
+      RingHom.comp_apply, Function.comp_apply, hcase0, hcase1, hcase2]
+  rw [hrename]
+  simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_mul,
+    Polynomial.map_C, Polynomial.map_X, map_add, hf1, hC1, hC2, hC3]
+  simp [sourceTPolynomial, hf1, hC1, hC2, hC3]
 
 private lemma sourceSPolynomial_span_isPrime :
     (Ideal.span {sourceSPolynomial} :

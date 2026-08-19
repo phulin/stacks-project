@@ -1516,7 +1516,56 @@ theorem infinite_polynomial_proj_no_finite_refinement
     ¬ ∃ t : Finset ℕ,
       (Set.univ : Set (projectiveSpectrum G)) ⊆
         ⋃ i ∈ t, DPlus G (MvPolynomial.X i) := by
-  sorry
+  rintro ⟨t, ht⟩
+  let n : ℕ := t.sup id + 1
+  have hn_not_mem : n ∉ t := by
+    intro hn
+    have hle : n ≤ t.sup id := Finset.le_sup (f := id) hn
+    dsimp [n] at hle
+    omega
+  let φ : MvPolynomial ℕ ℤ →+* Polynomial ℤ :=
+    MvPolynomial.eval₂Hom (Polynomial.C : ℤ →+* Polynomial ℤ)
+      (fun i => if i = n then Polynomial.X else 0)
+  let q : Ideal (MvPolynomial ℕ ℤ) := RingHom.ker φ
+  let P : HomogeneousIdeal G.component :=
+    q.homogeneousCore G.component
+  have hqprime : q.IsPrime := RingHom.ker_isPrime φ
+  have hPprime : P.toIdeal.IsPrime := hqprime.homogeneousCore
+  have hPq : P.toIdeal ≤ q := Ideal.toIdeal_homogeneousCore_le _ _
+  have hXnq : MvPolynomial.X n ∉ q := by
+    intro hx
+    have hxker : MvPolynomial.X (R := ℤ) (σ := ℕ) n ∈ RingHom.ker φ := by
+      simpa only [q] using hx
+    have hx' : φ (MvPolynomial.X (R := ℤ) (σ := ℕ) n) = 0 := hxker
+    have hx'' : (Polynomial.X : Polynomial ℤ) = 0 := by
+      simp [φ, MvPolynomial.eval₂Hom_X'] at hx'
+    exact Polynomial.X_ne_zero hx''
+  have hXnP : MvPolynomial.X n ∉ P := by
+    intro hx
+    exact hXnq (hPq hx)
+  let p : projectiveSpectrum G :=
+    { asHomogeneousIdeal := P
+      isPrime := hPprime
+      not_irrelevant_le := by
+        intro hle
+        apply hXnP
+        apply hle
+        apply HomogeneousIdeal.mem_irrelevant_of_mem (𝒜 := G.component)
+        · exact Nat.zero_lt_one
+        · exact (hG 1 (MvPolynomial.X n)).mpr (MvPolynomial.isHomogeneous_X ℤ n) }
+  have hp : p ∈ (Set.univ : Set (projectiveSpectrum G)) := trivial
+  obtain ⟨i, hi, hpi⟩ := Set.mem_iUnion₂.mp (ht hp)
+  have hin : i ≠ n := by
+    intro h
+    exact hn_not_mem (h ▸ hi)
+  have hXi_q : MvPolynomial.X i ∈ q := by
+    change φ (MvPolynomial.X i) = 0
+    simp only [φ, MvPolynomial.eval₂Hom_X', if_neg hin]
+  have hXi_P : MvPolynomial.X i ∈ P := by
+    exact Ideal.mem_homogeneousCore_of_homogeneous_of_mem
+      (⟨1, (hG 1 (MvPolynomial.X i)).mpr
+        (MvPolynomial.isHomogeneous_X ℤ i)⟩) hXi_q
+  exact (mem_DPlus G p).mp hpi hXi_P
 
 /-! ## The one-variable polynomial example and stalks -/
 
@@ -1531,13 +1580,135 @@ def oneVariableProjToSpec (G : GradedRingData R[X]) :
 theorem one_variable_X_not_mem (G : GradedRingData R[X])
     (p : projectiveSpectrum G) (hG : IsStandardOneVariablePolynomialGrading G) :
     Polynomial.X ∉ p.asHomogeneousIdeal.toIdeal := by
-  sorry
+  intro hX
+  apply p.not_irrelevant_le
+  rw [HomogeneousIdeal.irrelevant_le]
+  intro n hn x hx
+  obtain ⟨a, ha⟩ := (hG n x).mp hx
+  rw [ha]
+  exact Ideal.mul_mem_left _ _
+    (show Polynomial.X ^ n ∈ p.asHomogeneousIdeal.toIdeal from
+      Ideal.pow_mem_of_mem _ hX n hn)
 
 theorem one_variable_polynomial_proj_homeomorph
     (G : GradedRingData R[X])
     (hG : IsStandardOneVariablePolynomialGrading G) :
     IsHomeomorph (oneVariableProjToSpec G) := by
-  sorry
+  let hfX : Polynomial.X ∈ G.component 1 :=
+    (hG 1 Polynomial.X).mpr ⟨1, by simp⟩
+  let c0 : R →+* G.component 0 :=
+    { toFun := fun a =>
+        ⟨Polynomial.C a, (hG 0 (Polynomial.C a)).mpr ⟨a, by simp⟩⟩
+      map_one' := by apply Subtype.ext; simp
+      map_mul' := by intro a b; apply Subtype.ext; simp
+      map_zero' := by apply Subtype.ext; simp
+      map_add' := by intro a b; apply Subtype.ext; simp }
+  let ψ : R →+* homogeneousLocalizationAway G Polynomial.X :=
+    (HomogeneousLocalization.fromZeroRingHom G.component
+      (Submonoid.powers Polynomial.X)).comp c0
+  let ev1 : Polynomial R →+* R := Polynomial.eval₂RingHom (RingHom.id R) 1
+  let φloc : Localization (Submonoid.powers (Polynomial.X : Polynomial R)) →+* R :=
+    Localization.awayLift ev1 Polynomial.X (by
+      rw [show ev1 Polynomial.X = 1 by simp [ev1]]
+      exact isUnit_one)
+  let φ : homogeneousLocalizationAway G Polynomial.X →+* R :=
+    φloc.comp (algebraMap _ _)
+  have hφψ (a : R) : φ (ψ a) = a := by
+    change φloc (Localization.mk (Polynomial.C a)
+      ⟨(1 : Polynomial R), by simp⟩) = a
+    change φloc (Localization.mk (Polynomial.C a)
+      (1 : Submonoid.powers (Polynomial.X : Polynomial R))) = a
+    rw [Localization.mk_one_eq_algebraMap (M := Submonoid.powers Polynomial.X)]
+    simp [φloc, ev1, Localization.awayLift, IsLocalization.Away.lift]
+  have hψφ (z : homogeneousLocalizationAway G Polynomial.X) : ψ (φ z) = z := by
+    obtain ⟨n, a, ha, rfl⟩ :=
+      HomogeneousLocalization.Away.mk_surjective G.component hfX z
+    obtain ⟨b, hb⟩ := (hG n a).mp (by simpa using ha)
+    subst a
+    have hz : HomogeneousLocalization.Away.mk G.component hfX n
+        (Polynomial.C b * Polynomial.X ^ n) ha = ψ b := by
+      apply HomogeneousLocalization.val_injective
+      change Localization.mk (Polynomial.C b * Polynomial.X ^ n)
+          (⟨Polynomial.X ^ n,
+            (Submonoid.mem_powers_iff _ _).2 ⟨n, rfl⟩⟩ :
+              Submonoid.powers (Polynomial.X : Polynomial R)) =
+        Localization.mk (Polynomial.C b)
+          (1 : Submonoid.powers (Polynomial.X : Polynomial R))
+      rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+      exact ⟨1, by simp [Submonoid.coe_mul]
+        ⟩
+    simpa [hz] using congrArg ψ (hφψ b)
+  have hφsurj : Function.Surjective φ := by
+    intro a
+    exact ⟨ψ a, hφψ a⟩
+  have hφinj : Function.Injective φ := by
+    intro x y hxy
+    calc
+      x = ψ (φ x) := (hψφ x).symm
+      _ = ψ (φ y) := congrArg ψ hxy
+      _ = y := hψφ y
+  let eR : homogeneousLocalizationAway G Polynomial.X ≃+* R :=
+    RingEquiv.ofBijective φ ⟨hφinj, hφsurj⟩
+  have hD : DPlus G Polynomial.X = (Set.univ : Set (projectiveSpectrum G)) := by
+    ext p
+    constructor
+    · intro hp
+      trivial
+    · intro hp
+      exact one_variable_X_not_mem G p hG
+  let eD : projectiveSpectrum G ≃ₜ DPlus G Polynomial.X :=
+    (Homeomorph.Set.univ (projectiveSpectrum G)).symm.trans
+      (Homeomorph.setCongr hD.symm)
+  let eProj : DPlus G Polynomial.X ≃ₜ
+      PrimeSpectrum (homogeneousLocalizationAway G Polynomial.X) :=
+    TopCat.homeoOfIso
+      (AlgebraicGeometry.projIsoSpecTopComponent
+        (𝒜 := G.component) hfX Nat.zero_lt_one)
+  let eRing : PrimeSpectrum (homogeneousLocalizationAway G Polynomial.X) ≃ₜ
+      PrimeSpectrum R := PrimeSpectrum.homeomorphOfRingEquiv eR
+  let e : projectiveSpectrum G ≃ₜ PrimeSpectrum R :=
+    eD.trans (eProj.trans eRing)
+  have he : e.toFun = oneVariableProjToSpec G := by
+    funext p
+    apply PrimeSpectrum.ext
+    dsimp [e, eRing]
+    ext r
+    change eR.symm r ∈ (eProj (eD p)).asIdeal ↔
+      Polynomial.C r ∈ p.asHomogeneousIdeal.toIdeal
+    have heR : eR.symm r = ψ r := by
+      apply eR.injective
+      change eR (eR.symm r) = eR (ψ r)
+      rw [eR.apply_symm_apply]
+      change r = φ (ψ r)
+      exact (hφψ r).symm
+    rw [heR]
+    dsimp [eProj]
+    change ψ r ∈
+        (AlgebraicGeometry.ProjIsoSpecTopComponent.ToSpec.toFun
+          (𝒜 := G.component) Polynomial.X (eD p)).asIdeal ↔ _
+    change ψ r ∈
+        AlgebraicGeometry.ProjIsoSpecTopComponent.ToSpec.carrier
+          (𝒜 := G.component) (f := Polynomial.X) (eD p) ↔ _
+    change HomogeneousLocalization.mk
+        (⟨0, ⟨Polynomial.C r, (hG 0 (Polynomial.C r)).mpr ⟨r, by simp⟩⟩,
+          ⟨1, SetLike.GradedOne.one_mem⟩, ⟨0, rfl⟩⟩ :
+          HomogeneousLocalization.NumDenSameDeg G.component
+            (Submonoid.powers (Polynomial.X : Polynomial R))) ∈
+        AlgebraicGeometry.ProjIsoSpecTopComponent.ToSpec.carrier
+          (𝒜 := G.component) (f := Polynomial.X) (eD p) ↔ _
+    have hm := AlgebraicGeometry.ProjIsoSpecTopComponent.ToSpec.mk_mem_carrier
+      (show _ from eD p)
+      (⟨0, ⟨Polynomial.C r, (hG 0 (Polynomial.C r)).mpr ⟨r, by simp⟩⟩,
+        ⟨1, SetLike.GradedOne.one_mem⟩, ⟨0, rfl⟩⟩ :
+        HomogeneousLocalization.NumDenSameDeg G.component
+          (Submonoid.powers (Polynomial.X : Polynomial R)))
+    have heDval : (eD p : projectiveSpectrum G) = p := by
+      rfl
+    rw [heDval] at hm
+    simpa [ψ, c0, HomogeneousLocalization.fromZeroRingHom, eD, hD, heDval]
+      using hm
+  rw [← he]
+  exact e.isHomeomorph
 
 /-- The degree-zero prime of a point of `Proj(R[X])` is the contraction to `R`. -/
 theorem one_variable_polynomial_prime_description

@@ -2759,20 +2759,22 @@ theorem differentialOperator_check_on_algebra_generators
     simp [Algebra.smul_def, smul_smul, mul_comm]
   have hcomm_add (x y : B) :
       differentialOperatorCommutator (R := A) (S := B) D (x + y) =
-        differentialOperatorCommutator (R := A) (S := B) D x +
+      differentialOperatorCommutator (R := A) (S := B) D x +
           differentialOperatorCommutator (R := A) (S := B) D y := by
     ext m
-    simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm, add_smul, smul_add, smul_smul] <;> abel_nf
+    simp [differentialOperatorCommutator, DistribSMul.toLinearMap,
+      sub_eq_add_neg, add_assoc, add_comm, add_left_comm, add_smul,
+      smul_add, smul_smul] <;> abel_nf
   have hcomm_mul (x y : B) :
       differentialOperatorCommutator (R := A) (S := B) D (x * y) =
         (differentialOperatorCommutator (R := A) (S := B) D x).comp
             (DistribSMul.toLinearMap A M y) +
-          (DistribSMul.toLinearMap A N x).comp
+            (DistribSMul.toLinearMap A N x).comp
             (differentialOperatorCommutator (R := A) (S := B) D y) := by
     ext m
-    simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm, mul_assoc, add_smul, smul_add, smul_smul] <;> abel_nf
+    simp [differentialOperatorCommutator, DistribSMul.toLinearMap,
+      sub_eq_add_neg, add_assoc, add_comm, add_left_comm, mul_assoc,
+      mul_smul, smul_add] <;> abel_nf
   have hcomm_algebraMap (a : A) :
       differentialOperatorCommutator (R := A) (S := B) D (algebraMap A B a) = 0 := by
     ext m

@@ -999,6 +999,34 @@ private theorem adjoin_eq_top_of_le_adjoin
     exact (IntermediateField.adjoin E (Set.range (algebraMap K T))).mul_mem hx hy
   · exact hq
 
+private theorem isAlgebraic_adjoin_of_isAlgebraic_generators
+    {F : Type u} {B : Type*} {T : Type v}
+    [Field F] [Field B] [Field T] [Algebra F T] [Algebra B T]
+    (s : Set T) (E : IntermediateField B T)
+    (hE : E = IntermediateField.adjoin B s)
+    (f : F →+* E)
+    (hf : ∀ a : F, ((f a : E) : T) = algebraMap F T a)
+    (hB : ∀ b : B, IsAlgebraic F (algebraMap B T b))
+    (hs : ∀ z ∈ s, IsAlgebraic F z) :
+    @Algebra.IsAlgebraic F E _ _ (RingHom.toAlgebra f) := by
+  letI : Algebra F E := RingHom.toAlgebra f
+  let φ : E →ₐ[F] T :=
+    { toRingHom := E.val
+      commutes' := hf }
+  refine ⟨fun q ↦ (isAlgebraic_algHom_iff φ φ.injective).mp ?_⟩
+  apply IntermediateField.adjoin_induction (F := B) (s := s)
+    (p := fun z _ ↦ IsAlgebraic F z)
+  · exact hs
+  · exact hB
+  · intro x y _ _ hx hy
+    exact hx.add hy
+  · intro x _ hx
+    exact hx.inv
+  · intro x y _ _ hx hy
+    exact hx.mul hy
+  · rw [← hE]
+    exact q.property
+
 /-- A finite family in a rational-function field acquires p-th roots in one
 finite paired purely inseparable tower. -/
 theorem exists_tower_pth_roots_adjoin_finset

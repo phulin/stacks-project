@@ -882,7 +882,7 @@ private theorem shortComplex_biproduct_exact_pos
         rw [biprod.lift_eq, biprod.desc_eq]
         simp)
   have hk : IsLimit (KernelFork.ofι
-        (biprod.inr : S.X₃ ⟶ U.X₂) (by
+      (biprod.inr : S.X₃ ⟶ U.X₂) (by
         exact (by
           rw [biprod.desc_eq]
           simp :

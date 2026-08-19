@@ -243,7 +243,19 @@ theorem normalizedBoundary_naturality
     {U V : SimplicialObject C} (f : U ⟶ V) (n : ℕ) :
     normalizedSubobjectMap f (n + 1) ≫ normalizedBoundary V n =
       normalizedBoundary U n ≫ normalizedSubobjectMap f n := by
-  sorry
+  simp only [normalizedBoundary, Preadditive.comp_zsmul, Preadditive.zsmul_comp]
+  congr 1
+  apply (cancel_mono (normalizedSubobject V n).arrow).1
+  rw [Category.assoc, normalizedLastFace_arrow]
+  rw [← Category.assoc, normalizedSubobjectMap_arrow]
+  rw [Category.assoc]
+  rw [SimplicialObject.δ_def]
+  rw [← f.naturality (SimplexCategory.δ (Fin.last (n + 1))).op]
+  rw [Category.assoc, normalizedSubobjectMap_arrow]
+  rw [← Category.assoc (normalizedLastFace U n)
+    ((normalizedSubobject U n).arrow) (f.app (op ⦋n⦌))]
+  rw [normalizedLastFace_arrow]
+  simp only [SimplicialObject.δ_def, Category.assoc]
 
 theorem normalizedChainComplexMap_comm
     {C : Type u} [Category.{v} C] [Abelian C]

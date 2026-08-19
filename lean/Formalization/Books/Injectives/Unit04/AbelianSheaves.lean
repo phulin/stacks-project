@@ -1,5 +1,6 @@
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.MoreAlgebra.Unit54.InjectiveAbelianGroups
+import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.EnoughInjectives
 import Mathlib.CategoryTheory.Sites.Limits
 import Mathlib.Topology.Sheaves.AddCommGrpCat
 import Mathlib.Topology.Sheaves.SheafOfFunctions
@@ -20,6 +21,7 @@ namespace Formalization.Books.Injectives.Unit04
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Homology.Unit27
+open ZeroObject
 
 universe v
 
@@ -547,14 +549,57 @@ theorem abelianSheafInjectiveProduct_injective
 theorem abelianSheafInjectiveEmbedding_mono
     {X : TopCat.{v}} (F : TopCat.Sheaf AddCommGrpCat.{v} X) :
     Mono (abelianSheafInjectiveEmbedding F) := by
-  sorry
+  rw [TopCat.Presheaf.mono_iff_stalk_mono]
+  intro x
+  let L := TopCat.Sheaf.forget AddCommGrpCat.{v} X ⋙
+    TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x
+  let p : abelianSheafInjectiveProduct F ⟶
+      (abelianSkyscraperSheafFunctor x).obj
+        (abelianGroupInjectiveObject (abelianSheafStalk F x)) :=
+    limit.π (Discrete.functor (fun y : X =>
+      (abelianSkyscraperSheafFunctor y).obj
+        (abelianGroupInjectiveObject (abelianSheafStalk F y)))) (Discrete.mk x)
+  let j := abelianGroupInjectiveMap (abelianSheafStalk F x)
+  let _ : Mono j := abelianGroupInjectiveMap_mono _
+  apply mono_of_mono_fac (h := j)
+  change L.map (abelianSheafInjectiveEmbedding F) ≫
+    L.map p ≫ (abelianStalkSkyscraperAdjunction x).counit.app
+      (abelianGroupInjectiveObject (abelianSheafStalk F x)) = j
+  rw [← Category.assoc, ← L.map_comp,
+    abelianSheafInjectiveEmbedding_projection]
+  rw [Functor.map_comp, Category.assoc]
+  change L.map ((abelianStalkSkyscraperAdjunction x).unit.app F) ≫
+    (TopCat.Sheaf.forget AddCommGrpCat.{v} X ⋙
+      TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map
+      ((abelianSkyscraperSheafFunctor x).map
+        (abelianGroupInjectiveMap (abelianSheafStalk F x))) ≫
+      (abelianStalkSkyscraperAdjunction x).counit.app
+        (abelianGroupInjectiveObject (abelianSheafStalk F x)) = j
+  have hnat := (abelianStalkSkyscraperAdjunction x).counit_naturality
+    (abelianGroupInjectiveMap (abelianSheafStalk F x))
+  rw [hnat]
+  change
+    ((TopCat.Sheaf.forget AddCommGrpCat.{v} X ⋙
+      TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map
+        ((abelianStalkSkyscraperAdjunction x).unit.app F) ≫
+      (abelianStalkSkyscraperAdjunction x).counit.app
+        ((TopCat.Sheaf.forget AddCommGrpCat.{v} X ⋙
+          TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).obj F)) ≫ j = j
+  simpa only [Category.id_comp] using
+    congrArg (fun f => f ≫ j)
+      ((abelianStalkSkyscraperAdjunction x).left_triangle_components F)
 
 /-! ## Enough injectives -/
 
 /-- Abelian sheaves on a topological space have enough injectives. -/
 theorem abelian_sheaves_have_enough_injectives {X : TopCat.{v}} :
     EnoughInjectives (TopCat.Sheaf AddCommGrpCat.{v} X) := by
-  sorry
+  refine ⟨?_⟩
+  intro F
+  refine ⟨abelianSheafInjectiveProduct F,
+    abelianSheafInjectiveProduct_injective F,
+    abelianSheafInjectiveEmbedding F,
+    abelianSheafInjectiveEmbedding_mono F⟩
 
 /-- Abelian sheaves on a topological space have functorial injective
 embeddings. -/
@@ -562,7 +607,57 @@ theorem abelian_sheaves_have_functorial_injective_embeddings
     {X : TopCat.{v}} :
     HasFunctorialInjectiveEmbeddings
       (C := TopCat.Sheaf AddCommGrpCat.{v} X) := by
-  sorry
+  let d := MorphismProperty.functorialFactorizationData
+    (MorphismProperty.monomorphisms (TopCat.Sheaf AddCommGrpCat.{v} X))
+    (MorphismProperty.monomorphisms (TopCat.Sheaf AddCommGrpCat.{v} X)).rlp
+  let z : TopCat.Sheaf AddCommGrpCat.{v} X ⥤
+      Arrow (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    { obj M := Arrow.mk (0 : M ⟶ (0 : TopCat.Sheaf AddCommGrpCat.{v} X))
+      map {M N} f :=
+        Arrow.homMk f (𝟙 (0 : TopCat.Sheaf AddCommGrpCat.{v} X)) (by simp)
+      map_id M := by
+        apply Arrow.hom_ext <;> simp
+      map_comp f g := by
+        apply Arrow.hom_ext <;> simp }
+  let J : TopCat.Sheaf AddCommGrpCat.{v} X ⥤
+      Arrow (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    { obj M := Arrow.mk (d.i.app (z.obj M))
+      map {M N} f :=
+        Arrow.homMk f (d.Z.map (z.map f)) (d.i.naturality (z.map f))
+      map_id M := by
+        apply Arrow.hom_ext
+        · change (𝟙 M) = 𝟙 M
+          rfl
+        · change d.Z.map (z.map (𝟙 M)) = 𝟙 _
+          rw [z.map_id, d.Z.map_id]
+      map_comp f g := by
+        apply Arrow.hom_ext
+        · change f ≫ g = f ≫ g
+          rfl
+        · change d.Z.map (z.map (f ≫ g)) =
+            d.Z.map (z.map f) ≫ d.Z.map (z.map g)
+          rw [z.map_comp, d.Z.map_comp] }
+  have hJleft : J ⋙ Arrow.leftFunc =
+      𝟭 (TopCat.Sheaf AddCommGrpCat.{v} X) := by
+    apply CategoryTheory.Functor.hext
+    · intro M
+      rfl
+    · intro M N f
+      rfl
+  have hJmono : ∀ M : TopCat.Sheaf AddCommGrpCat.{v} X, Mono (J.obj M).hom := by
+    intro M
+    change Mono (d.i.app (z.obj M))
+    exact d.hi _
+  have hJinjective : ∀ M : TopCat.Sheaf AddCommGrpCat.{v} X,
+      Injective (J.obj M).right := by
+    intro M
+    change Injective (d.Z.obj (z.obj M))
+    change Injective
+      (IsGrothendieckAbelian.monoMapFactorizationDataRlp
+        (C := TopCat.Sheaf AddCommGrpCat.{v} X)
+        (0 : M ⟶ (0 : TopCat.Sheaf AddCommGrpCat.{v} X))).Z
+    infer_instance
+  exact ⟨J, hJleft, hJmono, hJinjective⟩
 
 end
 

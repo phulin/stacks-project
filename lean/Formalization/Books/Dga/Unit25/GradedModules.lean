@@ -748,9 +748,9 @@ private theorem gradedRightModuleHomogeneousComp_assoc
       exact Prod.ext (by omega) rfl
     have hg :
         (⟨(-(k - p), j - -(k - p)), by omega⟩ : GradedDegreePair j) =
-          ⟨(-(k - p), j + k - p), by omega⟩ := by
+      ⟨(-(k - p), j + k - p), by omega⟩ := by
       apply Subtype.ext
-      change (-(k - p), j - -(k - p)) =
+      show (-(k - p), j - -(k - p)) =
         (-(k - p), j + k - p)
       exact Prod.ext (by rfl) (by omega)
     have hfamily_f : ∀ {u v : GradedDegreePair i} (huv : u = v)

@@ -449,7 +449,8 @@ theorem filteredColimitMap_eq
 essential extension. -/
 theorem essentialExtension_filteredColimit
     {R : Type u} [Ring R] {I : Type v} [SmallCategory I] [IsFiltered I]
-    (M : ModuleCat.{max v u} R) (F : I ⥤ ModuleCat.{max v u} R)
+    [UnivLE.{v, u}]
+    (M : ModuleCat.{u} R) (F : I ⥤ ModuleCat.{u} R)
     (t : Cocone F) (ht : IsColimit t) (u : ∀ i : I, M ⟶ F.obj i)
     (hu : CompatibleEssentialSystem M F u) :
     EssentialExtension (filteredColimitMap M F t u) := by

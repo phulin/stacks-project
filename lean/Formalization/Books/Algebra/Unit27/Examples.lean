@@ -3579,7 +3579,7 @@ private theorem affineA_sub_C_ne_zero (r : ℚ) :
   norm_num at hcoeff
 
 private theorem affine_second_nontrivial_of_aux (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2)
+    (_haHalf : a ≠ 1 / 2)
     (t : Finset (PrimeSpectrum affineBaseSubalgebra))
     (htmem : ∀ p, p ∈ t ↔
       p ∈ PrimeSpectrum.zeroLocus (Ideal.span {affineG a} : Set affineBaseSubalgebra))
@@ -3681,7 +3681,7 @@ private theorem affine_second_nontrivial_of_aux (a : ℚ) (ha0 : a ≠ 0) (ha1 :
           have hv := RingHom.mem_ker.mp hz
           change affineEvaluation (-1 - a) z = 0 at hv
           simp [z, affineEvaluation, affineA, affineBaseElement] at hv
-          nlinarith [hquad, haHalf]
+          nlinarith [hquad, _haHalf]
         apply hz1
         rw [heq]
         exact hz0
@@ -3696,8 +3696,8 @@ private theorem affine_second_nontrivial_of_aux (a : ℚ) (ha0 : a ≠ 0) (ha1 :
       exact ⟨pM, hpMt, hpMne⟩
   exact hsecond
 
-private theorem affine_second_finite_data (a : ℚ) (ha0 : a ≠ 0)
-    (ha1 : a ≠ 1) (haHalf : a ≠ 1 / 2) :
+private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
+    (_ha1 : a ≠ 1) (_haHalf : a ≠ 1 / 2) :
     ∃ t : Finset (PrimeSpectrum affineBaseSubalgebra), t.card ≤ 3 ∧
       affinePoint a ∈ t ∧
       (∀ p ∈ t, p.asIdeal.IsMaximal) ∧
@@ -4155,7 +4155,7 @@ private theorem affine_second_finite_data (a : ℚ) (ha0 : a ≠ 0)
     intro p hpt
     have hpT : p ∈ T := (htmem _).1 hpt
     let q : PrimeSpectrum Q := eZero.symm ⟨p, hpT⟩
-    letI : q.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime q.asIdeal
+    let : q.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime q.asIdeal
     have hqmax : (q.asIdeal.comap (Ideal.Quotient.mk I)).IsMaximal :=
       Ideal.comap_isMaximal_of_surjective (Ideal.Quotient.mk I)
         Ideal.Quotient.mk_surjective
@@ -4412,7 +4412,6 @@ private theorem affine_second_finite_data (a : ℚ) (ha0 : a ≠ 0)
       have hpG : affineG a ∈ p.asIdeal := by
         change ¬ p ∈ (PrimeSpectrum.basicOpen (affineG a) :
           Set (PrimeSpectrum affineBaseSubalgebra)) at hp
-        change affineG a ∈ p.asIdeal
         apply not_not.mp
         intro hpnot
         apply hp
@@ -4504,9 +4503,7 @@ private theorem affine_second_basic_open_complement_proof_impl (a : ℚ) (ha0 : 
           Polynomial.C (4 * r)) =
       (Polynomial.aeval affineA P : Polynomial ℚ)
     rw [Polynomial.aeval_subalgebra_coe]
-    simp only [P, qP, d, c, r, alpha, Polynomial.aeval_def, Polynomial.eval₂_add,
-      Polynomial.eval₂_sub, Polynomial.eval₂_neg, Polynomial.eval₂_mul,
-      Polynomial.eval₂_pow, Polynomial.eval₂_X, Polynomial.eval₂_X_pow,
+    simp only [P, qP, d, c, r, alpha, Polynomial.aeval_def, Polynomial.eval₂_X,
       Polynomial.eval₂_C, map_add, map_sub, map_mul, map_pow, map_neg, map_ofNat,
       map_one]
     simp only [← Polynomial.C_eq_algebraMap]
@@ -4557,7 +4554,6 @@ private theorem affine_second_basic_open_complement_proof_impl (a : ℚ) (ha0 : 
       have hxzero : (x : Polynomial ℚ) = 0 := by
         simpa using hk.symm
       apply affineA_sub_C_ne_zero r
-      change (affineA : Polynomial ℚ) - Polynomial.C r = 0
       exact hxzero
     · have hkpoly : (k : Polynomial ℚ) * (affineG a : Polynomial ℚ) = (x : Polynomial ℚ) :=
         congrArg Subtype.val hk
@@ -4630,7 +4626,6 @@ private theorem affine_second_basic_open_complement_proof_impl (a : ℚ) (ha0 : 
       have hpG : affineG a ∈ p.asIdeal := by
         change ¬ p ∈ (PrimeSpectrum.basicOpen (affineG a) :
           Set (PrimeSpectrum affineBaseSubalgebra)) at hp
-        change affineG a ∈ p.asIdeal
         apply not_not.mp
         intro hpnot
         apply hp
@@ -5624,9 +5619,9 @@ theorem affine_open_is_not_a_localization (a : ℚ)
       simpa [show a ^ 2 - a = a * (a - 1) by ring] using
         (mul_ne_zero ha0 (sub_ne_zero.mpr ha1))
     exact hnonzero hzero
-  letI : Algebra affineBaseSubalgebra (AffineOpenRing a) :=
+  let : Algebra affineBaseSubalgebra (AffineOpenRing a) :=
     (affineBaseToOpen a).toAlgebra
-  letI : IsLocalization M (AffineOpenRing a) := hloc
+  let : IsLocalization M (AffineOpenRing a) := hloc
   have hMunit : ∀ m : M, IsUnit (m : affineBaseSubalgebra) := by
     intro m
     have hmopen : IsUnit (affineBaseToOpen a (m : affineBaseSubalgebra)) :=

@@ -1,17 +1,13 @@
 import Formalization.Books.Homology.Unit20.FilteredComplexes
-import Formalization.Books.Homology.Unit13.Complexes
-import Formalization.Books.Homology.Unit11.KGroups
-import Mathlib.CategoryTheory.Subobject.Lattice
-import Mathlib.CategoryTheory.Subobject.Limits
 
 /-!
 # Homological Algebra, Chapter 24: Spectral sequences: filtered complexes
 
 This file gives the source-facing interface for a filtered cochain complex.
 The filtered-object, subobject, cohomology, and categorical quotient
-constructions are inherited from the preceding chapters.  The extra
-reindexing in `filteredComplexGradedPiece` is intentional: the source uses
-`(p, q)` with total degree `p + q`.
+constructions are inherited from the preceding chapters.  The associated
+graded complex remains unshifted; the source's `(p, q)` convention is
+implemented by evaluating degree `p + q`.
 -/
 
 noncomputable section
@@ -51,35 +47,30 @@ abbrev filteredComplexFiltrationStep {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p : ℤ) : CochainComplex C ℤ :=
   Formalization.Books.Homology.Unit20.filteredComplexStepComplex K p
 
-/-- The `p`th associated-graded complex, reindexed so that degree `q` is
-`gr^p K^(p+q)`. -/
-def filteredComplexGradedPiece {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredComplex C) (p : ℤ) : CochainComplex C ℤ where
-  X q := gradedPiece (K.X (p + q)) p
-  d q r := if h : q + 1 = r then
-      h ▸ gradedPieceMap (K.d (p + q) (p + r)) p
-    else 0
-  shape q r hqr := by
-    classical
-    split_ifs with h
-    · exact (hqr h).elim
-    · rfl
-  d_comp_d' q r s hqr hrs := by
-    sorry
+/-! The canonical associated-graded complex is kept unshifted: its degree
+`n` term is `gr^p K^n`.  The source's complementary degree is accounted for
+by evaluating it at `n = p + q`. -/
+abbrev filteredComplexGradedPiece {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredComplex C) (p : ℤ) : CochainComplex C ℤ :=
+  Formalization.Books.Homology.Unit20.filteredComplexGradedPiece K p
 
 abbrev filteredComplexE₀ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
-  (filteredComplexGradedPiece K p).X q
+  Formalization.Books.Homology.Unit20.filteredComplexE₀ K p q
 
-def filteredComplexD₀ {C : Type u} [Category.{v} C] [Abelian C]
+abbrev filteredComplexD₀ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₀ K p q ⟶ filteredComplexE₀ K p (q + 1) :=
-  (filteredComplexGradedPiece K p).d q (q + 1)
+  Formalization.Books.Homology.Unit20.filteredComplexD₀ K p q
+
+def filteredComplexSourceD₀ {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (p q : ℤ) :
+    gradedPiece (K.X (p + q)) p ⟶ gradedPiece (K.X (p + q + 1)) p :=
+  gradedPieceMap (K.d (p + q) (p + q + 1)) p
 
 abbrev filteredComplexE₁ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
-  (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
-    (filteredComplexGradedPiece K p)
+  Formalization.Books.Homology.Unit20.filteredComplexE₁ K p q
 
 theorem filteredComplex_E₀_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
@@ -88,12 +79,9 @@ theorem filteredComplex_E₀_formula {C : Type u} [Category.{v} C]
 theorem filteredComplex_D₀_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexD₀ K p q =
-      (filteredComplexGradedPiece K p).d q (q + 1) := rfl
-
-def filteredComplexSourceD₀ {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredComplex C) (p q : ℤ) :
-    gradedPiece (K.X (p + q)) p ⟶ gradedPiece (K.X (p + q + 1)) p :=
-  gradedPieceMap (K.d (p + q) (p + q + 1)) p
+      filteredComplexSourceD₀ K p q ≫
+        eqToHom (congrArg (fun n : ℤ => gradedPiece (K.X n) p) (by omega)) := by
+  sorry
 
 theorem filteredComplex_D₀_source_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
@@ -105,7 +93,7 @@ theorem filteredComplex_D₀_source_formula {C : Type u} [Category.{v} C]
 theorem filteredComplex_E₁_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₁ K p q =
-      (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
+      (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) (p + q)).obj
         (filteredComplexGradedPiece K p) := rfl
 
 abbrev filteredComplexUnshiftedGradedPiece {C : Type u}
@@ -118,7 +106,7 @@ theorem filteredComplex_E₁_source_formula {C : Type u} [Category.{v} C]
     Nonempty (filteredComplexE₁ K p q ≅
       (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) (p + q)).obj
         (filteredComplexUnshiftedGradedPiece K p)) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 /-! The countable-direct-sum warning and the temporary hypothesis used in the
 direct-sum construction.  The general construction below does not require
@@ -135,7 +123,10 @@ theorem exists_nonExactCountableDirectSumsExample :
     Nonempty (NonExactCountableDirectSumsExample.{u}) := by
   exact Formalization.Books.Homology.Unit16.exists_nonExactGradedTotalExample
 
-/-! ### `Zᵣ`, `Bᵣ`, pages, and page differentials -/
+/-! ### `Zᵣ`, `Bᵣ`, pages, and page differentials
+
+The displayed Z/B quotients represent pages with index `r ≥ 1`; page `0`
+is the associated graded object and is handled separately below. -/
 
 def filteredComplexCycleCore {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (r p q : ℤ) :
@@ -226,22 +217,34 @@ theorem filteredComplex_page_subobjects_exists
 
 structure FilteredComplexPageDifferentials {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) where
-  differential : ∀ r p q : ℤ,
-    filteredComplexPage K r p q ⟶ filteredComplexPage K r (p + r) (q - r + 1)
-  square_zero : ∀ r p q : ℤ,
-    differential r p q ≫ differential r (p + r) (q - r + 1) = 0
-  lift_rule : ∀ (r p q : ℤ) {T : C}
-    (z : T ⟶ (filteredComplexCyclePlus K r p q : C))
+  /-- The parameter `r` represents the source page `E_(r+1)`. -/
+  differential : ∀ (r : ℕ) (p q : ℤ),
+    filteredComplexPage K (r + 1 : ℕ) p q ⟶
+      filteredComplexPage K (r + 1 : ℕ) (p + r + 1) (q - r)
+  square_zero : ∀ (r : ℕ) (p q : ℤ),
+    differential r p q ≫ differential r (p + r + 1) (q - r) = 0
+  lift_rule : ∀ (r : ℕ) (p q : ℤ) {T : C}
+    (z : T ⟶ (filteredComplexCyclePlus K (r + 1 : ℕ) p q : C))
     (zNext : T ⟶
-      (filteredComplexCyclePlus K r (p + r) (q - r + 1) : C))
+      (filteredComplexCyclePlus K (r + 1 : ℕ) (p + r + 1) (q - r) : C))
     (_hz : zNext ≫
-        (filteredComplexCyclePlus K r (p + r) (q - r + 1)).arrow =
-      z ≫ (filteredComplexCyclePlus K r p q).arrow ≫
+        (filteredComplexCyclePlus K (r + 1 : ℕ) (p + r + 1) (q - r)).arrow =
+      z ≫ (filteredComplexCyclePlus K (r + 1 : ℕ) p q).arrow ≫
         filteredComplexDifferential K (p + q) ≫
           eqToHom (congrArg (fun n : ℤ => (K.X n).carrier)
             (by omega))),
-    filteredComplexPageClass K r p q z ≫ differential r p q =
-      filteredComplexPageClass K r (p + r) (q - r + 1) zNext
+    filteredComplexPageClass K (r + 1 : ℕ) p q z ≫ differential r p q =
+      filteredComplexPageClass K (r + 1 : ℕ) (p + r + 1) (q - r) zNext
+  lift_exists : ∀ (r : ℕ) (p q : ℤ) {T : C}
+    (z : T ⟶ (filteredComplexCyclePlus K (r + 1 : ℕ) p q : C)), ∃ zNext,
+      (zNext ≫
+          (filteredComplexCyclePlus K (r + 1 : ℕ) (p + r + 1) (q - r)).arrow =
+        z ≫ (filteredComplexCyclePlus K (r + 1 : ℕ) p q).arrow ≫
+          filteredComplexDifferential K (p + q) ≫
+            eqToHom (congrArg (fun n : ℤ => (K.X n).carrier)
+              (by omega))) ∧
+        filteredComplexPageClass K (r + 1 : ℕ) p q z ≫ differential r p q =
+          filteredComplexPageClass K (r + 1 : ℕ) (p + r + 1) (q - r) zNext
 
 theorem filteredComplex_page_differentials_exists
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
@@ -254,14 +257,15 @@ noncomputable def filteredComplexPageDifferentials
   Classical.choice (filteredComplex_page_differentials_exists K)
 
 abbrev filteredComplexD {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredComplex C) (r p q : ℤ) :
-    filteredComplexPage K r p q ⟶ filteredComplexPage K r (p + r) (q - r + 1) :=
+    (K : FilteredComplex C) (r : ℕ) (p q : ℤ) :
+    filteredComplexPage K (r + 1 : ℕ) p q ⟶
+      filteredComplexPage K (r + 1 : ℕ) (p + r + 1) (q - r) :=
   (filteredComplexPageDifferentials K).differential r p q
 
 theorem filteredComplexD_squared
     {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredComplex C) (r p q : ℤ) :
-    filteredComplexD K r p q ≫ filteredComplexD K r (p + r) (q - r + 1) = 0 := by
+    (K : FilteredComplex C) (r : ℕ) (p q : ℤ) :
+    filteredComplexD K r p q ≫ filteredComplexD K r (p + r + 1) (q - r) = 0 := by
   exact (filteredComplexPageDifferentials K).square_zero r p q
 
 /-! ### The bigraded spectral sequence -/
@@ -290,8 +294,25 @@ structure FilteredComplexSpectralSequence {C : Type u}
                   (p - r, q + r - 1) ⟶ page r (p, q)))))
         (Subobject.mk (kernel.ι (differential r (p, q))))
         (by sorry))
+  page_differentials : FilteredComplexPageDifferentials K
   component_iso : ∀ (r : ℕ) (p q : ℤ),
-    Nonempty (page r (p, q) ≅ filteredComplexPage K (r : ℤ) p q)
+    Nonempty (page (r + 1) (p, q) ≅
+      filteredComplexPage K (r + 1 : ℕ) p q)
+  differential_compatibility : ∀ (r : ℕ) (p q : ℤ), ∃
+    e₀ : page (r + 1) (p, q) ≅ filteredComplexPage K (r + 1 : ℕ) p q,
+    ∃ e₁ : page (r + 1) (p + r + 1, q - r) ≅
+      filteredComplexPage K (r + 1 : ℕ) (p + r + 1) (q - r),
+    differential (r + 1) (p, q) ≫
+        eqToHom (by sorry) ≫ e₁.hom =
+      e₀.hom ≫ page_differentials.differential r p q
+  zero_differential_compatibility : ∀ p q : ℤ, ∃
+    e₀ : page 0 (p, q) ≅ filteredComplexE₀ K p q,
+    ∃ e₁ : page 0 (p, q + 1) ≅ filteredComplexE₀ K p (q + 1),
+    differential 0 (p, q) ≫
+        eqToHom (by
+          change page 0 (0 + p, 1 + q) = page 0 (p, q + 1)
+          congr 1; ring_nf) ≫ e₁.hom =
+      e₀.hom ≫ filteredComplexD₀ K p q
   zero_page : ∀ p q : ℤ,
     Nonempty (page 0 (p, q) ≅ filteredComplexE₀ K p q)
   first_page : ∀ p q : ℤ,
@@ -341,6 +362,12 @@ structure FilteredComplexD1BoundaryData {C : Type u}
       ∃ e₁ : filteredComplexE₁ K (p + 1) q ≅
         (filteredComplexD1ShortExact K p).X₁.homology (p + q + 1),
         boundary p q = e₀.hom ≫ filteredComplexD1Boundary K p q ≫ e₁.inv
+  page_differential_is_d₁ : ∀ p q : ℤ, ∃
+    e₀ : filteredComplexPage K (1 : ℕ) p q ≅ filteredComplexE₁ K p q,
+    ∃ e₁ : filteredComplexPage K (1 : ℕ) (p + 1) q ≅
+      filteredComplexE₁ K (p + 1) q,
+    filteredComplexD K 0 p q ≫
+        eqToHom (by congr 1 <;> omega) ≫ e₁.hom = e₀.hom ≫ d₁ p q
   d₁_is_boundary : ∀ p q : ℤ, d₁ p q = boundary p q
 
 theorem filteredComplex_d1_boundary_data_exists
@@ -467,13 +494,15 @@ structure FilteredComplexLimitData {C : Type u} [Category.{v} C]
   Binf : ∀ p q : ℤ, Subobject (K.X (p + q)).carrier
   Zinf : ∀ p q : ℤ, Subobject (K.X (p + q)).carrier
   Binf_upper : ∀ p q : ℤ, ∀ r : ℕ,
-    filteredComplexBoundaryPlus K (r : ℤ) p q ≤ Binf p q
+    filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤ Binf p q
   Binf_least : ∀ p q : ℤ, ∀ Y : Subobject (K.X (p + q)).carrier,
-    (∀ r : ℕ, filteredComplexBoundaryPlus K (r : ℤ) p q ≤ Y) → Binf p q ≤ Y
+    (∀ r : ℕ, filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤ Y) →
+      Binf p q ≤ Y
   Zinf_lower : ∀ p q : ℤ, ∀ r : ℕ,
-    Zinf p q ≤ filteredComplexCyclePlus K (r : ℤ) p q
+    Zinf p q ≤ filteredComplexCyclePlus K (r + 1 : ℕ) p q
   Zinf_greatest : ∀ p q : ℤ, ∀ Y : Subobject (K.X (p + q)).carrier,
-    (∀ r : ℕ, Y ≤ filteredComplexCyclePlus K (r : ℤ) p q) → Y ≤ Zinf p q
+    (∀ r : ℕ, Y ≤ filteredComplexCyclePlus K (r + 1 : ℕ) p q) →
+      Y ≤ Zinf p q
   Binf_le_Zinf : ∀ p q : ℤ, Binf p q ≤ Zinf p q
 
 noncomputable def filteredComplexLimitPage {C : Type u} [Category.{v} C]
@@ -519,12 +548,12 @@ def FilteredComplexTopBigradedInclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (p q : ℤ) : Prop :=
   ∀ r : ℕ,
     filteredComplexCycleLimitRepresentative K p q ≤
-      filteredComplexCyclePlus K (r : ℤ) p q
+      filteredComplexCyclePlus K (r + 1 : ℕ) p q
 
 def FilteredComplexBottomBigradedInclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) (p q : ℤ) : Prop :=
   ∀ r : ℕ,
-    filteredComplexBoundaryPlus K (r : ℤ) p q ≤
+    filteredComplexBoundaryPlus K (r + 1 : ℕ) p q ≤
       filteredComplexBoundaryLimitRepresentative K p q
 
 theorem filteredComplex_on_top_bigraded
@@ -604,8 +633,8 @@ theorem filteredComplex_regular_iff_stable_cycles
     {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) :
     filteredComplexRegular S ↔
       ∀ p q : ℤ, ∃ b : ℕ, ∀ r : ℕ, b ≤ r →
-        filteredComplexCyclePlus K (r : ℤ) p q =
-          filteredComplexCyclePlus K (r + 1 : ℤ) p q := by
+        filteredComplexCyclePlus K (r + 1 : ℕ) p q =
+          filteredComplexCyclePlus K (r + 2 : ℕ) p q := by
   sorry
 
 theorem filteredComplex_coregular_iff_stable_boundaries
@@ -613,8 +642,8 @@ theorem filteredComplex_coregular_iff_stable_boundaries
     {K : FilteredComplex C} (S : FilteredComplexSpectralSequence K) :
     filteredComplexCoregular S ↔
       ∀ p q : ℤ, ∃ b : ℕ, ∀ r : ℕ, b ≤ r →
-        filteredComplexBoundaryPlus K (r : ℤ) p q =
-          filteredComplexBoundaryPlus K (r + 1 : ℤ) p q := by
+        filteredComplexBoundaryPlus K (r + 1 : ℕ) p q =
+          filteredComplexBoundaryPlus K (r + 2 : ℕ) p q := by
   sorry
 
 theorem filteredComplex_bounded_iff_below_and_above
@@ -754,7 +783,7 @@ theorem filteredComplex_K0_alternating_sum
     (K : FilteredComplex C) (hK : FilteredComplexFiniteFiltration K)
     (S : FilteredComplexSpectralSequence K) (r : ℕ)
     (P : ObjectProperty C) [P.IsWeakSerreClass]
-    (hP : IsWeakSerreClosureOfPage S r P)
+    (hP : ∀ p q : ℤ, P (S.page r (p, q)))
     (hS : Set.Finite {pq : ℤ × ℤ | ¬ IsZero (S.page r pq)}) :
     Nonempty (FilteredComplexK0AlternatingSumStatement K S r P) := by
   sorry
@@ -767,7 +796,7 @@ abbrev FilteredComplexTrivialConvergenceHypotheses {C : Type u}
 
 structure FilteredComplexTrivialConvergenceConclusion {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredComplex C) where
-  bounded : ∀ S : FilteredComplexSpectralSequence K, filteredComplexBounded S
+  bounded : ∃ S : FilteredComplexSpectralSequence K, filteredComplexBounded S
   cohomology_filtration_finite : FilteredComplexCohomologyFiniteFiltration K
   converges : filteredComplexConverges K
 

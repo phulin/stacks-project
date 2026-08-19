@@ -298,7 +298,7 @@ structure UniversallyCatenaryDescentCounterexample where
   formallyUnramified : RingHom.FormallyUnramified f
   noetherianA : IsNoetherianRing A
   notUniversallyCatenaryA :
-    ¬ Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u, u} A
+    ¬ Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u} A
   m : PrimeSpectrum B
   n : PrimeSpectrum B
   m_maximal : m.asIdeal.IsMaximal
@@ -356,7 +356,7 @@ structure UniversallyCatenaryDescentCounterexample where
     ∃ e : (A' ⧸ q₂) ≃+* B₂,
       e.toRingHom.comp (Ideal.Quotient.mk q₂) = factorMap₂
   universallyCatenaryA' :
-    Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u, u} A'
+    Formalization.Books.Algebra.Unit105.IsUniversallyCatenary.{u} A'
 
 attribute [instance] UniversallyCatenaryDescentCounterexample.commRingA
   UniversallyCatenaryDescentCounterexample.commRingB

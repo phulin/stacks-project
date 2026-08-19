@@ -2057,7 +2057,7 @@ private theorem diagonalBiproduct_singleStep_zero
   · rw [← Subobject.underlyingIso_hom_comp_eq_mk, Category.assoc]
     simp
 
-set_option maxHeartbeats 2000000 in
+set_option maxHeartbeats 8000000 in
 theorem exists_strict_composition_failure :
     ∃ (C : Type u) (_ : Category.{v} C) (_ : Abelian C),
       Nonempty (@StrictCompositionFailure C _ _) := by

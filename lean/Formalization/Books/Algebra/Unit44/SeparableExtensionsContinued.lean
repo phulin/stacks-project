@@ -566,6 +566,20 @@ theorem isSeparableExtension_of_isSeparablyGenerated
     IsSeparableExtension k K := by
   sorry
 
+theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfectClosure_iff_algebraicClosure
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
+    ((∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) ↔
+        IsReduced (AdjoinPthRoots k ⊗[k] S)) ∧
+      (IsReduced (AdjoinPthRoots k ⊗[k] S) ↔
+        IsReduced (perfectClosure k (AlgebraicClosure k) ⊗[k] S)) ∧
+      (IsReduced (perfectClosure k (AlgebraicClosure k) ⊗[k] S) ↔
+        IsReduced (AlgebraicClosure k ⊗[k] S)) ∧
+      (IsReduced (AlgebraicClosure k ⊗[k] S) ↔
+        IsGeometricallyReduced k S) := by
+  sorry
+
 end
 
 end Formalization.Books.Algebra.Unit44

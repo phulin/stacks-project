@@ -76,9 +76,6 @@ theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
       IsReduced (k' ⊗[k] S)) :
     IsGeometricallyReduced k S := by
   sorry
-/-
-  sorry
-
 /-! ## Elementary permanence properties -/
 
 /-- Geometric reducedness descends to every `k`-subalgebra. -/
@@ -782,6 +779,8 @@ theorem isGeometricallyReduced_of_minimalPrime_localizations
     (hmin : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
       IsGeometricallyReduced k (Localization.AtPrime p.1.asIdeal)) :
     IsGeometricallyReduced k S := by
+  sorry
+/-
   classical
   intro K _ _
   let f : S →ₐ[k]
@@ -1387,8 +1386,7 @@ private theorem test_finitePurelyInseparable_baseChanges
       (IsScalarTower.toAlgHom k R' L).toLinearMap (LinearMap.id)
       (IsScalarTower.toAlgHom k R' L).injective Function.injective_id
   have hRS : IsReduced (R' ⊗[k] S') := isReduced_of_injective n hn
-  exact hnot' hRS
--/
+  exact hnot' hRS -/
 
 end
 

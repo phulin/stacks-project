@@ -1203,6 +1203,13 @@ theorem setPresheafHom_ext
   apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
   exact Subsingleton.elim _ _ -/
 
+theorem setPresheafHom_ext
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} {f g : X ⟶ Y}
+    (h : f.base = g.base) : f = g := by
+  sorry
+
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
     {C : Type uC} [Category.{vC} C]

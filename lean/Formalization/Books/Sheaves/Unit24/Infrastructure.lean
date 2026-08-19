@@ -5,6 +5,7 @@ import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Pullback
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackContinuous
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.PushforwardContinuous
+import Mathlib.Topology.Sheaves.Module
 
 /-!
 # Shared infrastructure for Chapter 24: Continuous maps and sheaves of modules
@@ -294,6 +295,201 @@ noncomputable def moduleSheafPullback {X Y : TopCat.{v}}
     Mod O ⥤ Mod ((moduleRingSheafPullback f).obj O) :=
   moduleSheafPullbackAlong f
     (moduleSheafPullbackUnit f O)
+
+/-! ## Restriction to an open subspace -/
+
+/-- The canonical map from a sheaf of rings to the direct image of its
+restriction to an open subspace. -/
+noncomputable def openModuleRestrictionRingMap {X : TopCat.{v}}
+    (U : Opens X) (O : RingSheaf X) :
+    O ⟶ (TopCat.Sheaf.pushforward RingCat (Opens.inclusion' U)).obj
+      ((TopologicalSpace.Opens.sheafRestrict U).obj O) :=
+  (TopCat.Sheaf.pullbackPushforwardAdjunction RingCat
+      (Opens.inclusion' U)).unit.app O ≫
+    (TopCat.Sheaf.pushforward RingCat (Opens.inclusion' U)).map
+      ((Topology.IsOpenEmbedding.sheafPullbackIso (A := RingCat)
+        U.isOpenEmbedding).app O).hom
+
+instance openModuleRestrictionMap_isContinuous {X : TopCat.{v}}
+    (U : Opens X) :
+    (Opens.map (Opens.inclusion' U)).IsContinuous
+      (Opens.grothendieckTopology X) (Opens.grothendieckTopology U) := by
+  apply Functor.isContinuous_of_coverPreserving
+  · exact compatiblePreserving_opens_map (Opens.inclusion' U)
+  · exact coverPreserving_opens_map (Opens.inclusion' U)
+
+/-- Direct image of modules from an open subspace, along the canonical map of
+restricted scalar sheaves. -/
+noncomputable abbrev openModuleRestrictionDirectImage {X : TopCat.{v}}
+    (U : Opens X) (O : RingSheaf X) :
+    SheafOfModules.{v} ((TopologicalSpace.Opens.sheafRestrict U).obj O) ⥤
+      SheafOfModules.{v} O :=
+  SheafOfModules.pushforward (F := Opens.map (Opens.inclusion' U))
+    (openModuleRestrictionRingMap U O)
+
+/-- The site functor obtained from the over-category description of an open
+subspace agrees with inverse image of open sets along the inclusion. -/
+noncomputable def openModuleRestrictionBaseIso {X : TopCat.{v}}
+    (U : Opens X) :
+    Over.star U ⋙ U.overEquivalence.functor ≅ Opens.map (Opens.inclusion' U) :=
+  NatIso.ofComponents (fun V ↦ eqToIso (by
+    ext x
+    simp
+    constructor <;> intro hx <;> exact hx))
+
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.defeqAttrib.useBackward true in
+/-- The direct image right adjoint in the over-category description agrees
+with direct image along the open inclusion. -/
+noncomputable def openModuleRestrictionRightAdjointIso {X : TopCat.{v}}
+    (U : Opens X) (O : RingSheaf X) :
+    (U.sheafOfModulesEquivOver O).inverse ⋙
+        SheafOfModules.pushforward.{v} (SheafOfModules.pushforwardOver U) ≅
+      openModuleRestrictionDirectImage U O := by
+  change Sheaf (Opens.grothendieckTopology X) RingCat at O
+  change
+    SheafOfModules.pushforward.{v}
+        (U.sheafRestrictSheafEquivOver.app O).inv ⋙
+      SheafOfModules.pushforward.{v} (SheafOfModules.pushforwardOver U) ≅ _
+  letI compContinuous : (Over.star U ⋙ U.overEquivalence.functor).IsContinuous
+      (Opens.grothendieckTopology X) (Opens.grothendieckTopology U) :=
+    Functor.isContinuous_comp _ _ _
+      ((Opens.grothendieckTopology X).over U) _
+  letI mapContinuous : (Opens.map (Opens.inclusion' U)).IsContinuous
+      (Opens.grothendieckTopology X) (Opens.grothendieckTopology U) :=
+    openModuleRestrictionMap_isContinuous U
+  refine SheafOfModules.pushforwardComp
+      (SheafOfModules.pushforwardOver U)
+      (U.sheafRestrictSheafEquivOver.app O).inv ≪≫ ?_
+  refine @SheafOfModules.pushforwardCongr₂.{v}
+    (Opens X) _ (Opens U) _
+    (Opens.grothendieckTopology X) (Opens.grothendieckTopology U)
+    (Opens.map (Opens.inclusion' U))
+    (Over.star U ⋙ U.overEquivalence.functor) O
+    ((TopologicalSpace.Opens.sheafRestrict U).obj O)
+    mapContinuous compContinuous _ _
+    (openModuleRestrictionBaseIso U).symm ?_
+  let e₁ := TopCat.Sheaf.pullbackIso RingCat (Opens.inclusion' U)
+  let e₂ := e₁.symm ≪≫
+    Topology.IsOpenEmbedding.sheafPullbackIso (A := RingCat)
+      U.isOpenEmbedding
+  have he :
+      ((Topology.IsOpenEmbedding.sheafPullbackIso (A := RingCat)
+        U.isOpenEmbedding).app O).hom =
+        e₁.hom.app O ≫ e₂.hom.app O := by
+    simp [e₂]
+  rw [openModuleRestrictionRingMap]
+  erw [he]
+  rw [Functor.map_comp, Category.assoc]
+  dsimp only [e₁, TopCat.Sheaf.pullbackIso,
+    Functor.sheafPullbackConstruction.sheafPullbackIso,
+    TopCat.Sheaf.pullbackPushforwardAdjunction, TopCat.Sheaf.pushforward]
+  have hunit := Adjunction.unit_leftAdjointUniq_hom_app
+    (Functor.sheafAdjunctionContinuous (Opens.map (Opens.inclusion' U))
+      RingCat (Opens.grothendieckTopology X)
+      (Opens.grothendieckTopology ((Opens.toTopCat X).obj U)))
+    (Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+      (Opens.map (Opens.inclusion' U)) RingCat
+      (Opens.grothendieckTopology X)
+      (Opens.grothendieckTopology ((Opens.toTopCat X).obj U))) O
+  conv_rhs => rw [← Category.assoc]
+  rw [hunit]
+  rw [Sheaf.hom_ext_iff]
+  change _ =
+    (sheafToPresheaf (Opens.grothendieckTopology X) RingCat).map
+        ((Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+          (Opens.map (Opens.inclusion' U)) RingCat
+          (Opens.grothendieckTopology X)
+          (Opens.grothendieckTopology
+            ((Opens.toTopCat X).obj U))).unit.app O) ≫
+      Functor.whiskerLeft (Opens.map (Opens.inclusion' U)).op
+        (e₂.hom.app O).hom
+  erw [Adjunction.map_restrictFullyFaithful_unit_app]
+  simp only [Adjunction.comp_unit_app, sheafificationAdjunction_unit_app,
+    Iso.refl_hom, NatTrans.id_app, Category.comp_id,
+    Functor.comp_obj]
+  simp only [Functor.id_obj, ObjectProperty.ι_obj, Iso.app_inv, Iso.symm_hom,
+    ObjectProperty.FullSubcategory.comp_hom,
+    Functor.sheafPushforwardContinuousNatTrans_app_hom,
+    Functor.whiskeringLeft_obj_obj, Functor.lanAdjunction_unit,
+    Functor.whiskeringLeft_obj_map, Functor.comp_map, ObjectProperty.ι_map,
+    ObjectProperty.FullSubcategory.id_hom, Functor.whiskerLeft_id',
+    Category.comp_id, Category.assoc]
+  simp only [SheafOfModules.pushforwardOver, Functor.op_obj, Over.forget_obj,
+    Over.star_obj_left, Opens.overEquivalence, homOfLE_leOfHom, Over.mk_left,
+    Functor.id_obj, Functor.comp_obj, Opens.coe_mk,
+    Opens.sheafRestrictSheafEquivOver, Opens.overPullbackSheafEquivOver,
+    Iso.symm_inv, Iso.isoCompInverse_hom_app, Iso.refl_hom, NatTrans.id_app,
+    CategoryTheory.Functor.map_id, Category.comp_id,
+    openModuleRestrictionBaseIso, TopCat.Sheaf.pullbackIso,
+    Topology.IsOpenEmbedding.sheafPullbackIso, IsOpenMap.functor,
+    Opens.coe_inclusion', Functor.whiskeringLeft_obj_obj,
+    Iso.symm_self_id_assoc, NatIso.ofComponents_hom_app, Iso.trans_hom,
+    Functor.mapIso_hom, Iso.app_hom, Functor.FullyFaithful.preimageIso_hom,
+    ObjectProperty.ι_obj, Iso.symm_hom, isoSheafify_inv, e₂, e₁]
+  erw [ObjectProperty.FullSubcategory.comp_hom]
+  erw [sheafifyMap_sheafifyLift]
+  erw [Category.comp_id]
+  rw [← Category.assoc, ← Functor.whiskerLeft_comp]
+  erw [toSheafify_sheafifyLift]
+  ext V : 2
+  change ((_ : O.obj.obj V ⟶ _) ≫ _ ≫ _) =
+    ((_ : O.obj.obj V ⟶ _) ≫ _)
+  dsimp [IsOpenMap.pullbackIso, IsOpenMap.pullbackObjIso,
+    TopCat.Presheaf.pullbackObjObjOfImageOpen]
+  let g : CostructuredArrow (Opens.map (Opens.inclusion' U)).op
+      ((Opens.map (Opens.inclusion' U)).op.obj V) :=
+    CostructuredArrow.mk (𝟙 _)
+  conv_rhs =>
+    lhs
+    rw [← Category.comp_id
+      (((Opens.map (Opens.inclusion' U)).op.lanUnit.app O.obj).app V)]
+    rhs
+    change 𝟙 (((Opens.map (Opens.inclusion' U)).op.lan.obj O.obj).obj
+      ((Opens.map (Opens.inclusion' U)).op.obj V))
+    rw [← CategoryTheory.Functor.map_id
+      ((Opens.map (Opens.inclusion' U)).op.lan.obj O.obj)]
+  change _ =
+    ((Functor.LeftExtension.mk
+      ((Opens.map (Opens.inclusion' U)).op.lan.obj O.obj)
+      ((Opens.map (Opens.inclusion' U)).op.lanUnit.app O.obj)).coconeAt
+        ((Opens.map (Opens.inclusion' U)).op.obj V)).ι.app g ≫ _
+  rw [Limits.IsColimit.comp_coconePointUniqueUpToIso_hom]
+  rw [Limits.coconeOfDiagramTerminal_ι_app]
+  dsimp [g]
+  change _ = O.obj.map
+    (homOfLE
+      (x := U.isOpenEmbedding.isOpenMap.functor.obj
+        ((Opens.map (Opens.inclusion' U)).obj (unop V)))
+      (Set.image_preimage_subset (Opens.inclusion' U)
+        ((unop V : Opens X) : Set X))).op
+  rw [← Functor.map_comp, ← Functor.map_comp]
+  rfl
+
+/-- Restricting a module through the over category and then identifying the
+over site with the open subspace is naturally isomorphic to module pullback
+along the open inclusion. -/
+noncomputable def openModuleRestrictionComparison {X : TopCat.{v}}
+    (U : Opens X) (O : RingSheaf X)
+    [(openModuleRestrictionDirectImage U O).IsRightAdjoint] :
+    SheafOfModules.overFunctor.{v} O U ⋙
+        (U.sheafOfModulesEquivOver.{v} O).functor ≅
+      (openModuleRestrictionDirectImage U O).leftAdjoint := by
+  let adj := (SheafOfModules.overPushforwardOverAdj (R := O) U).comp
+    (U.sheafOfModulesEquivOver O).toAdjunction
+  exact Adjunction.leftAdjointUniq
+    (adj.ofNatIsoRight (openModuleRestrictionRightAdjointIso U O))
+    (Adjunction.ofIsRightAdjoint (openModuleRestrictionDirectImage U O))
+
+/-- Objectwise form of `openModuleRestrictionComparison`, convenient for
+transporting a presentation to the restriction of a module. -/
+noncomputable def openModuleRestrictionObjIso {X : TopCat.{v}}
+    (U : Opens X) (O : RingSheaf X)
+    [(openModuleRestrictionDirectImage U O).IsRightAdjoint]
+    (F : SheafOfModules.{v} O) :
+    (U.sheafOfModulesEquivOver.{v} O).functor.obj (F.over U) ≅
+      (openModuleRestrictionDirectImage U O).leftAdjoint.obj F :=
+  (openModuleRestrictionComparison U O).app F
 
 /-- The module sheaf pushforward is the sheaf-level form of the presheaf
 pushforward module action. -/

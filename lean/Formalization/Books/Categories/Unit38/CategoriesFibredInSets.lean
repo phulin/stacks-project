@@ -1357,12 +1357,12 @@ theorem setPresheafProjection_isFibredEquivalenceOver_of_iso
   have hFG : FG ⋙ setPresheafProjection G = setPresheafProjection F := rfl
   have hGF : GF ⋙ setPresheafProjection F = setPresheafProjection G := rfl
   have hpF : (setPresheafProjection F).IsFibredInGroupoids := by
-    apply groupoidPresheafProjection_isFibredInGroupoids
+    apply Unit37.groupoidPresheafProjection_isFibredInGroupoids
     intro U
     change IsGroupoid (Discrete (F.obj (Opposite.op U)))
     infer_instance
   have hpG : (setPresheafProjection G).IsFibredInGroupoids := by
-    apply groupoidPresheafProjection_isFibredInGroupoids
+    apply Unit37.groupoidPresheafProjection_isFibredInGroupoids
     intro U
     change IsGroupoid (Discrete (G.obj (Opposite.op U)))
     infer_instance
@@ -1523,7 +1523,7 @@ theorem setPresheaf_category_isFibredInGroupoids
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) :
     (setPresheafProjection F).IsFibredInGroupoids := by
-  apply groupoidPresheafProjection_isFibredInGroupoids
+  apply Unit37.groupoidPresheafProjection_isFibredInGroupoids
   intro U
   change IsGroupoid (Discrete (F.obj (Opposite.op U)))
   infer_instance

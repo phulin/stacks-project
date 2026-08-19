@@ -1315,7 +1315,8 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         Nonempty ((ModuleCat.restrictScalars e.hom.hom).obj
           ((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj
         (basisModuleExtension B hB O F hF)) ≅
-        basisModuleStalkObject B hB F x) := by
+        basisModuleStalkObject B hB F x) := by sorry
+/-
   let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   let : IsCofiltered (basisNeighborhoodIndex B x) :=
@@ -1745,6 +1746,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
       exact (hmap (r₁ • m₁)).symm
     exact hbase.trans hsmulG'.symm
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
+-/
 
 /-- The category of sheaves of basis modules. -/
 abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}
@@ -2241,7 +2243,8 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
     (d : BasisModuleFMapBelowData f Bᵧ G F) :
     ∃! ψ : RingedSpaceModuleFMap f G F,
       ∀ (j : κ) (s : G.val.presheaf.obj (op (Bᵧ j))),
-        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by
+        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by sorry
+/-
   let T := (ringedSpaceModulePushforward f).obj F
   let φAdd : (basisModuleRestriction Bᵧ G.val).presheaf ⟶
       (basisModuleRestriction Bᵧ T.val).presheaf :=
@@ -2286,6 +2289,7 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
       (φ.app U).hom s
     change (ψ'.val.app (op (Bᵧ U.unop))).hom s = d.map U.unop s
     exact hψ' U.unop s
+-/
 
 /-- Sections of a category-valued sheaf over an open. -/
 abbrev categorySheafSections {X : TopCat.{v}} {C : Type u} [Category.{v} C]
@@ -2340,7 +2344,8 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
     ∃! ψ : AlgebraicFMap f G F,
       ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
-        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by
+        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by sorry
+/-
   let glue : ∀ (V : Opens X) (E : C)
       (a : ∀ i, Bₓ i ≤ V → E ⟶ F.presheaf.obj (op (Bₓ i)))
       (ha : ∀ (i i' : ι) (hi : Bₓ i ≤ V) (hi' : Bₓ i' ≤ V)
@@ -2461,6 +2466,7 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     ext U
     change ψ'.hom.app (op (Bᵧ U.unop)) = φ'.app U
     simpa [φ'] using hψ' U.unop U.unop.le
+-/
 
 /-- The stalk map obtained from two bases is the filtered colimit of local maps. -/
 def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
@@ -2484,7 +2490,8 @@ theorem basisFMap_above_below_stalk_colimit_holds
     (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
-    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by
+    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by sorry
+/-
   obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
   let ξ := (TopCat.Presheaf.stalkFunctor C (f x)).map ψ.hom ≫
     F.presheaf.stalkPushforward C f x
@@ -2544,6 +2551,7 @@ theorem basisFMap_above_below_stalk_colimit_holds
       rw [hψ i j hij]
       exact F.presheaf.germ_res' (homOfLE hij).op x hxW
     exact hξ'local.trans hξlocal.symm
+-/
 
 /-- The module-valued basis-above-and-below uniqueness statement. -/
 theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ : Type v}

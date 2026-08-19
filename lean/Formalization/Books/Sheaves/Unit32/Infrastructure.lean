@@ -765,7 +765,13 @@ theorem closedAlgebraicSheafDirectImage_fullFaithful
 
 /-- The generic essential image is characterized by final stalks off the closed subset. -/
 theorem closedAlgebraicSheafDirectImage_essentialImage
-    (C : Type u) [Category.{v} C] [HasColimits C] [HasTerminal C]
+    (C : Type u) [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ A B, FunLike (FC A B) (CC A) (CC B)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (G : TopCat.Sheaf C X) :
     (∃ F, Nonempty ((closedAlgebraicSheafDirectImage C Z hZ).obj F ≅ G)) ↔
       ClosedFinalStalkCondition C Z hZ G := by

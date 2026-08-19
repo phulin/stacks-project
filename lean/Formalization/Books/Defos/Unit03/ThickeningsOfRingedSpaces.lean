@@ -117,7 +117,27 @@ theorem thickening_module_category_equivalence
     Nonempty
       (Mod X.structureSheaf ≌
         AnnihilatedByThickeningIdealCategory i) := by
-  sorry
+  have hclosed := hi.underlying_homeomorph.isClosedEmbedding
+  let F : Mod X.structureSheaf ⥤ AnnihilatedByThickeningIdealCategory i :=
+    { obj := fun G => ⟨(ringedSpaceModulePushforward i).obj G, by
+        exact (closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi
+          ((ringedSpaceModulePushforward i).obj G)).mp ⟨G, ⟨Iso.refl _⟩⟩⟩
+      map := fun f => ObjectProperty.homMk ((ringedSpaceModulePushforward i).map f)
+      map_id := by intros; apply ObjectProperty.hom_ext; simp
+      map_comp := by intros; apply ObjectProperty.hom_ext; simp }
+  have hcomp : (F ⋙ ObjectProperty.ι (AnnihilatedByThickeningIdeal i)).FullyFaithful := by
+    dsimp [F]
+    exact (closedImmersion_pushforward_fullyFaithful i hclosed hi.structureSheaf_epi).some
+  have hF : F.FullyFaithful := Functor.FullyFaithful.ofCompFaithful hcomp
+  have hEss : Functor.EssSurj F := by
+    refine { mem_essImage := ?_ }
+    intro G
+    rcases (closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi G.obj).mpr G.property with ⟨H, ⟨e⟩⟩
+    refine ⟨H, ?_⟩
+    let e' : F.obj H ≅ G := ObjectProperty.isoMk (P := AnnihilatedByThickeningIdeal i) (X := F.obj H) (Y := G) e
+    exact ⟨e'⟩
+  let hEq : F.IsEquivalence := { full := hF.full, faithful := hF.faithful, essSurj := hEss }
+  exact ⟨@Functor.asEquivalence _ _ _ _ F hEq⟩
 
 /-- Objectwise essential-image form of the module-category equivalence. -/
 theorem thickening_module_essential_image
@@ -126,7 +146,8 @@ theorem thickening_module_essential_image
     (∃ F : Mod X.structureSheaf,
       Nonempty ((ringedSpaceModulePushforward i).obj F ≅ G)) ↔
       AnnihilatedByThickeningIdeal i G := by
-  sorry
+  have hclosed := hi.underlying_homeomorph.isClosedEmbedding
+  exact closedImmersion_pushforward_essentialImage i hclosed hi.structureSheaf_epi G
 
 /-- For a first-order thickening, the kernel ideal is an
 `𝒪_X`-module, expressed through the module-category equivalence. -/
@@ -137,7 +158,49 @@ theorem firstOrderThickening_kernel_is_module
       Nonempty
         ((ringedSpaceModulePushforward i).obj I ≅
           (thickeningIdeal i).carrier) := by
-  sorry
+  have hclosed := hi.toIsThickening.underlying_homeomorph.isClosedEmbedding
+  apply (closedImmersion_pushforward_essentialImage i hclosed
+    hi.toIsThickening.structureSheaf_epi (thickeningIdeal i).carrier).mpr
+  intro U a b
+  let a' : X'.structureSheaf.obj.obj (op U) := by
+    have t := ((closedImmersionIdealInclusion i).val.app (op U)).hom a
+    change X'.structureSheaf.obj.obj (op U) at t
+    exact t
+  let b' : X'.structureSheaf.obj.obj (op U) := by
+    have t := ((thickeningIdeal i).inclusion.val.app (op U)).hom b
+    change X'.structureSheaf.obj.obj (op U) at t
+    exact t
+  have ha' : a' =
+      (show X'.structureSheaf.obj.obj (op U) from
+        ((closedImmersionIdealInclusion i).val.app (op U)).hom a) := by
+    rfl
+  have hb' : b' =
+      (show X'.structureSheaf.obj.obj (op U) from
+        ((thickeningIdeal i).inclusion.val.app (op U)).hom b) := by
+    rfl
+  change a' • b = 0
+  have hmono : Mono ((thickeningIdeal i).inclusion.val.app (op U)) := by
+    exact @Functor.map_mono _ _ _ _
+      (SheafOfModules.evaluation X'.structureSheaf (op U)) _ _ _
+      (thickeningIdeal i).inclusion (thickeningIdeal i).inclusion_mono
+  apply (ModuleCat.mono_iff_injective _).1 hmono
+  have hmap := ((thickeningIdeal i).inclusion.val.app (op U)).hom.map_smul a' b
+  have hunit :
+      a' • ((thickeningIdeal i).inclusion.val.app (op U)).hom b = a' * b' := by
+    change a' • b' = a' * b'
+    exact smul_eq_mul a' b'
+  have hsq := hi.kernel_square_zero
+  dsimp [IsSquareZeroIdeal] at hsq
+  let ha : (thickeningIdeal i).carrier.val.obj (op U) := by
+    simpa only [thickeningIdeal] using a
+  let hb : (thickeningIdeal i).carrier.val.obj (op U) := by
+    simpa only [thickeningIdeal] using b
+  have hz : a' * b' = 0 := by
+    rw [ha', hb']
+    convert hsq U ha hb using 1; rfl
+  rw [hmap, hunit]
+  simp only [map_zero]
+  assumption
 
 /-! ## Morphisms of thickenings -/
 

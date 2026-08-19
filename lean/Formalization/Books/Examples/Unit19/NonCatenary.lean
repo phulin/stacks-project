@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Localization.Integral
 import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
+import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RegularLocalRing.Defs
 
 /-!
@@ -701,6 +702,75 @@ theorem quotient_mIdeal_equiv (d : PowerSeriesData k) :
       intro c
       exact ⟨algebraMap k (R d) c, by simp [f, generatedRingInclusion]⟩)⟩
 
+private theorem generatedRing_sub_constantCoeff_mem_mIdeal
+    (d : PowerSeriesData k) (y : PowerSeries k) (hy : y ∈ generatedRing d) :
+    (⟨y, hy⟩ : R d) - algebraMap k (R d) (PowerSeries.constantCoeff y) ∈
+      mIdeal d := by
+  refine Algebra.adjoin_induction
+    (p := fun y hy =>
+      (⟨y, hy⟩ : R d) - algebraMap k (R d) (PowerSeries.constantCoeff y) ∈
+        mIdeal d)
+    ?_ ?_ ?_ ?_ hy
+  · rintro y (rfl | hy)
+    · change xInGeneratedRing d -
+        algebraMap k (R d) (PowerSeries.constantCoeff PowerSeries.X) ∈ mIdeal d
+      simp only [PowerSeries.constantCoeff_X, map_zero, sub_zero]
+      exact Ideal.subset_span (by simp [mIdeal])
+    · rcases Set.mem_insert_iff.mp hy with rfl | hy
+      · change zInGeneratedRing d -
+          algebraMap k (R d)
+            (PowerSeries.constantCoeff
+              (zPowerSeries (k := k) d.coefficients)) ∈ mIdeal d
+        simp only [zPowerSeries, PowerSeries.constantCoeff_mk,
+          d.constantCoeff_zero, map_zero, sub_zero]
+        have hz : zInGeneratedRing d =
+            xInGeneratedRing d * zSuccInGeneratedRing d 0 := by
+          apply Subtype.ext
+          simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
+            using z_eq_X_mul_zTail_one d
+        rw [hz]
+        exact (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+      · rcases Set.mem_range.mp hy with ⟨j, rfl⟩
+        change zSuccInGeneratedRing d j -
+            algebraMap k (R d)
+              (PowerSeries.constantCoeff
+                (zTail (k := k) d.coefficients (j + 1))) ∈ mIdeal d
+        have hconst : PowerSeries.constantCoeff
+            (zTail (k := k) d.coefficients (j + 1)) = d.coefficients (j + 1) := by
+          simp [zTail]
+        rw [hconst]
+        have hrec : xInGeneratedRing d * zSuccInGeneratedRing d (j + 1) +
+              algebraMap k (R d) (d.coefficients (j + 1)) =
+            zSuccInGeneratedRing d j := by
+          apply Subtype.ext
+          change PowerSeries.X * zTail (k := k) d.coefficients (j + 2) +
+              PowerSeries.C (d.coefficients (j + 1)) =
+            zTail (k := k) d.coefficients (j + 1)
+          exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
+        have hmem : xInGeneratedRing d * zSuccInGeneratedRing d (j + 1) ∈
+            mIdeal d :=
+          (mIdeal d).mul_mem_right _ (Ideal.subset_span (by simp [mIdeal]))
+        convert hmem using 1
+        rw [← hrec]
+        ring
+  · intro c
+    change algebraMap k (R d) c - algebraMap k (R d) c ∈ mIdeal d
+    simp
+  · intro y z _ _ hy hz
+    have hmem := (mIdeal d).add_mem hy hz
+    rw [sub_add_sub_comm] at hmem
+    convert hmem using 1
+    apply Subtype.ext
+    simp [map_add]
+  · intro y z hyY hyZ hy hz
+    have hmem := (mIdeal d).add_mem
+      ((mIdeal d).mul_mem_right (⟨z, hyZ⟩ : R d) hy) ((mIdeal d).mul_mem_left
+        (algebraMap k (R d) (PowerSeries.constantCoeff y)) hz)
+    convert hmem using 1
+    apply Subtype.ext
+    simp [map_mul]
+    ring
+
 /-- The ideal `𝔪` is maximal. -/
 theorem mIdeal_isMaximal (d : PowerSeriesData k) :
     (mIdeal d).IsMaximal := by
@@ -950,10 +1020,247 @@ private theorem quotient_xSubOne_generated_surjective
       _ = g py * g pz := by rw [hpy, hpz]
       _ = g (py * pz) := by rw [map_mul]
 
+private theorem xzPolynomialMap_eval₂_X (d : PowerSeriesData k) (p : Polynomial k) :
+    xzPolynomialMap d
+        (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k)))
+          (Polynomial.X : Polynomial (Polynomial k)) p) =
+      Polynomial.eval₂ (algebraMap k (FractionRing (R d)))
+        (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)) p := by
+  induction p using Polynomial.induction_on' with
+  | add p q hp hq =>
+      rw [Polynomial.eval₂_add, map_add, Polynomial.eval₂_add, hp, hq]
+  | monomial n a =>
+      simp [xzPolynomialMap]
+
+private theorem algebraMap_eval₂_z (d : PowerSeriesData k) (p : Polynomial k) :
+    algebraMap (R d) (FractionRing (R d))
+        (Polynomial.eval₂ (algebraMap k (R d)) (zInGeneratedRing d) p) =
+      Polynomial.eval₂ (algebraMap k (FractionRing (R d)))
+        (algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)) p := by
+  rw [Polynomial.hom_eval₂]
+  have hcomp :
+      (algebraMap (R d) (FractionRing (R d))).comp (algebraMap k (R d)) =
+        algebraMap k (FractionRing (R d)) := by
+    ext a
+    exact (IsScalarTower.algebraMap_apply k (R d) (FractionRing (R d)) a).symm
+  rw [hcomp]
+
+private theorem evalP_eval_X (p : Polynomial k) :
+    (Polynomial.eval₂RingHom
+        (Polynomial.eval₂RingHom (Polynomial.C : k →+* Polynomial k) 1)
+        (Polynomial.X : Polynomial k))
+      (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k)))
+        (Polynomial.X : Polynomial (Polynomial k)) p) = p := by
+  induction p using Polynomial.induction_on' with
+  | add p q hp hq =>
+      rw [Polynomial.eval₂_add, map_add, hp, hq]
+  | monomial n a =>
+      simp
+      ext m
+      by_cases h : m = n
+      · subst m
+        simp
+      · have h' : n ≠ m := by exact Ne.symm h
+        simp [Polynomial.coeff_monomial, h, h']
+
+private theorem quotient_xSubOneIdeal_tailQ
+    (d : PowerSeriesData k)
+    (qz : R d ⧸ xSubOneIdeal d)
+    (g : Polynomial k →+* (R d ⧸ xSubOneIdeal d))
+    (hqz : qz = Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d))
+    (hg : g = Polynomial.eval₂RingHom
+      (algebraMap k (R d ⧸ xSubOneIdeal d)) qz) :
+    ∀ n : ℕ, ∃ p : Polynomial k,
+      Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d n) = g p := by
+  subst qz
+  subst g
+  let qz : R d ⧸ xSubOneIdeal d :=
+    Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d)
+  let g : Polynomial k →+* (R d ⧸ xSubOneIdeal d) :=
+    Polynomial.eval₂RingHom
+      (algebraMap k (R d ⧸ xSubOneIdeal d)) qz
+  intro n
+  induction n with
+  | zero =>
+      refine ⟨Polynomial.X, ?_⟩
+      change Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d 0) =
+        g Polynomial.X
+      have hzero :
+          Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d 0) =
+            Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d) := by
+        rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+        have hzR : zInGeneratedRing d =
+            xInGeneratedRing d * zSuccInGeneratedRing d 0 := by
+          apply Subtype.ext
+          simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
+            using z_eq_X_mul_zTail_one d
+        have hxmem : xInGeneratedRing d - 1 ∈ xSubOneIdeal d :=
+          Ideal.subset_span (by simp [xSubOneIdeal])
+        rw [hzR]
+        have hdiff : zSuccInGeneratedRing d 0 -
+            xInGeneratedRing d * zSuccInGeneratedRing d 0 =
+            -(xInGeneratedRing d - 1) * zSuccInGeneratedRing d 0 := by ring
+        rw [hdiff]
+        have hmem := (xSubOneIdeal d).neg_mem
+          ((xSubOneIdeal d).mul_mem_right
+            (zSuccInGeneratedRing d 0) hxmem)
+        convert hmem using 1 <;> ring
+      simpa [g, qz] using hzero
+  | succ n ih =>
+      obtain ⟨p, hp⟩ := ih
+      refine ⟨p - Polynomial.C (d.coefficients (n + 1)), ?_⟩
+      have hrecR : xInGeneratedRing d * zSuccInGeneratedRing d (n + 1) +
+          algebraMap k (R d) (d.coefficients (n + 1)) =
+            zSuccInGeneratedRing d n := by
+        apply Subtype.ext
+        change PowerSeries.X * zTail (k := k) d.coefficients (n + 2) +
+            PowerSeries.C (d.coefficients (n + 1)) =
+          zTail (k := k) d.coefficients (n + 1)
+        exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
+      have hxQ : Ideal.Quotient.mk (xSubOneIdeal d) (xInGeneratedRing d) = 1 :=
+        (Ideal.Quotient.mk_eq_one_iff_sub_mem
+          (I := xSubOneIdeal d) (xInGeneratedRing d)).2
+          (Ideal.subset_span (by simp [xSubOneIdeal]))
+      have hrecQ := congrArg (Ideal.Quotient.mk (xSubOneIdeal d)) hrecR
+      rw [map_add, map_mul, hxQ] at hrecQ
+      have hrecQ' :
+          Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d (n + 1)) +
+            algebraMap k (R d ⧸ xSubOneIdeal d) (d.coefficients (n + 1)) =
+          Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d n) := by
+        simpa using hrecQ
+      change Ideal.Quotient.mk (xSubOneIdeal d)
+          (zSuccInGeneratedRing d (n + 1)) =
+        g (p - Polynomial.C (d.coefficients (n + 1)))
+      calc
+        Ideal.Quotient.mk (xSubOneIdeal d)
+            (zSuccInGeneratedRing d (n + 1)) =
+          g p - algebraMap k (R d ⧸ xSubOneIdeal d)
+              (d.coefficients (n + 1)) := by
+          have htail_eq :
+              Ideal.Quotient.mk (xSubOneIdeal d)
+                  (zSuccInGeneratedRing d (n + 1)) =
+                Ideal.Quotient.mk (xSubOneIdeal d)
+                    (zSuccInGeneratedRing d n) -
+                  algebraMap k (R d ⧸ xSubOneIdeal d)
+                    (d.coefficients (n + 1)) := by
+            rw [← hrecQ']
+            ring
+          rw [htail_eq, hp]
+        _ = g (p - Polynomial.C (d.coefficients (n + 1))) := by
+          rw [map_sub]
+          congr 1
+          simp [g, Polynomial.eval₂RingHom]
+
+private theorem quotient_xSubOneIdeal_kernel
+    (d : PowerSeriesData k)
+    (xP zP : Polynomial (Polynomial k))
+    (L : Type u) [CommRing L] [Algebra (Polynomial (Polynomial k)) L]
+    (xK zK : FractionRing (R d))
+    (eLoc : L →+* FractionRing (R d))
+    (heLoc : Function.Injective eLoc)
+    (evalP : Polynomial (Polynomial k) →+* Polynomial k)
+    (evalL : L →+* Polynomial k)
+    (hevalP_x : evalP xP = 1)
+    (hevalP_z : evalP zP = Polynomial.X)
+    (hevalP_eval : ∀ p : Polynomial k,
+      evalP (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k)))
+        (Polynomial.X : Polynomial (Polynomial k)) p) = p)
+    (hevalL_alg : ∀ p : Polynomial (Polynomial k),
+      evalL (algebraMap (Polynomial (Polynomial k)) L p) = evalP p)
+    (heLoc_alg : ∀ p : Polynomial (Polynomial k),
+      eLoc (algebraMap (Polynomial (Polynomial k)) L p) = xzPolynomialMap d p)
+    (hrange : ∀ (y : PowerSeries k) (hy : y ∈ generatedRing d),
+      ∃ q : L, eLoc q = algebraMap (R d) (FractionRing (R d)) ⟨y, hy⟩)
+    (qz : R d ⧸ xSubOneIdeal d)
+    (g : Polynomial k →+* (R d ⧸ xSubOneIdeal d))
+    (hxP : xP = Polynomial.C Polynomial.X)
+    (hzP : zP = Polynomial.X)
+    (hxK : xK = algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d))
+    (hzK : zK = algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d))
+    (hqz : qz = Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d))
+    (hg : g = Polynomial.eval₂RingHom
+      (algebraMap k (R d ⧸ xSubOneIdeal d)) qz) :
+    RingHom.ker g = ⊥ := by
+  subst xP
+  subst zP
+  subst xK
+  subst zK
+  subst qz
+  subst g
+  let xP : Polynomial (Polynomial k) := Polynomial.C Polynomial.X
+  let zP : Polynomial (Polynomial k) := Polynomial.X
+  let xK : FractionRing (R d) :=
+    algebraMap (R d) (FractionRing (R d)) (xInGeneratedRing d)
+  let zK : FractionRing (R d) :=
+    algebraMap (R d) (FractionRing (R d)) (zInGeneratedRing d)
+  let qz : R d ⧸ xSubOneIdeal d :=
+    Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d)
+  let g : Polynomial k →+* (R d ⧸ xSubOneIdeal d) :=
+    Polynomial.eval₂RingHom (algebraMap k (R d ⧸ xSubOneIdeal d)) qz
+  apply le_antisymm
+  · intro p hp
+    rw [RingHom.mem_ker] at hp
+    let pR : R d :=
+      Polynomial.eval₂ (algebraMap k (R d)) (zInGeneratedRing d) p
+    have hgp : g p = Ideal.Quotient.mk (xSubOneIdeal d) pR := by
+      change Polynomial.eval₂ (algebraMap k (R d ⧸ xSubOneIdeal d)) qz p =
+        Ideal.Quotient.mk (xSubOneIdeal d)
+          (Polynomial.eval₂ (algebraMap k (R d)) (zInGeneratedRing d) p)
+      rw [Polynomial.hom_eval₂]
+      rfl
+    have hpRmem : pR ∈ xSubOneIdeal d := by
+      rw [← Ideal.Quotient.eq_zero_iff_mem]
+      rw [← hgp]
+      exact hp
+    obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hpRmem
+    obtain ⟨q, hq⟩ := hrange a.1 a.2
+    let pP : Polynomial (Polynomial k) :=
+      Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k))) zP p
+    have hmap_p :
+        algebraMap (R d) (FractionRing (R d)) pR =
+          Polynomial.eval₂ (algebraMap k (FractionRing (R d))) zK p := by
+      simpa [pR, zK] using algebraMap_eval₂_z d p
+    have heLoc_pP :
+        eLoc (algebraMap (Polynomial (Polynomial k)) L pP) =
+          Polynomial.eval₂ (algebraMap k (FractionRing (R d))) zK p := by
+      rw [heLoc_alg]
+      simpa [pP, zP, zK] using xzPolynomialMap_eval₂_X d p
+    have hprod := congrArg (algebraMap (R d) (FractionRing (R d))) ha
+    rw [map_mul] at hprod
+    have hprod' :
+        algebraMap (R d) (FractionRing (R d)) a * (xK - 1) =
+          algebraMap (R d) (FractionRing (R d)) pR := by
+      simpa [xK] using hprod
+    have hqeq :
+        algebraMap (Polynomial (Polynomial k)) L pP =
+          (algebraMap (Polynomial (Polynomial k)) L xP - 1) * q := by
+      apply heLoc
+      calc
+        eLoc (algebraMap (Polynomial (Polynomial k)) L pP) =
+            algebraMap (R d) (FractionRing (R d)) pR := by
+              rw [heLoc_pP, ← hmap_p]
+        _ = algebraMap (R d) (FractionRing (R d)) a * (xK - 1) :=
+              hprod'.symm
+        _ = (xK - 1) * algebraMap (R d) (FractionRing (R d)) a := by ring
+        _ = eLoc ((algebraMap (Polynomial (Polynomial k)) L xP - 1) * q) := by
+          rw [map_mul, map_sub, heLoc_alg, hq]
+          simp [xP, xK, xzPolynomialMap]
+    have heval_pP :
+        evalL (algebraMap (Polynomial (Polynomial k)) L pP) = p := by
+      rw [hevalL_alg]
+      simpa [pP, zP] using hevalP_eval p
+    have heval_eq := congrArg evalL hqeq
+    rw [heval_pP, map_mul, map_sub, hevalL_alg] at heval_eq
+    have hx : evalP xP = 1 := by simpa [xP] using hevalP_x
+    rw [hx, map_one, sub_self, zero_mul] at heval_eq
+    simpa using heval_eq
+  · exact bot_le
+
 /-- The quotient by `(x - 1)` is the polynomial ring `k[z]`. -/
-theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
-    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by sorry
-/-
+private theorem quotient_xSubOneIdeal_equiv_with_z (d : PowerSeriesData k) :
+    ∃ e : R d ⧸ xSubOneIdeal d ≃+* Polynomial k,
+      e (Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d)) =
+        Polynomial.X := by
   let xP : Polynomial (Polynomial k) := Polynomial.C Polynomial.X
   let zP : Polynomial (Polynomial k) := Polynomial.X
   let L := Localization.Away xP
@@ -1147,76 +1454,8 @@ theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
     Polynomial.eval₂RingHom
       (algebraMap k (R d ⧸ xSubOneIdeal d)) qz
   have htailQ : ∀ n : ℕ, ∃ p : Polynomial k,
-      Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d n) = g p := by
-    intro n
-    induction n with
-    | zero =>
-        refine ⟨Polynomial.X, ?_⟩
-        change Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d 0) =
-          g Polynomial.X
-        have hzero :
-            Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d 0) =
-              Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d) := by
-          rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
-          have hzR : zInGeneratedRing d =
-              xInGeneratedRing d * zSuccInGeneratedRing d 0 := by
-            apply Subtype.ext
-            simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
-              using z_eq_X_mul_zTail_one d
-          have hxmem : xInGeneratedRing d - 1 ∈ xSubOneIdeal d :=
-            Ideal.subset_span (by simp [xSubOneIdeal])
-          rw [hzR]
-          have hdiff : zSuccInGeneratedRing d 0 -
-              xInGeneratedRing d * zSuccInGeneratedRing d 0 =
-              -(xInGeneratedRing d - 1) * zSuccInGeneratedRing d 0 := by ring
-          rw [hdiff]
-          have hmem := (xSubOneIdeal d).neg_mem
-            ((xSubOneIdeal d).mul_mem_right
-              (zSuccInGeneratedRing d 0) hxmem)
-          convert hmem using 1 <;> ring
-        simpa [g, qz] using hzero
-    | succ n ih =>
-        obtain ⟨p, hp⟩ := ih
-        refine ⟨p - Polynomial.C (d.coefficients (n + 1)), ?_⟩
-        have hrecR : xInGeneratedRing d * zSuccInGeneratedRing d (n + 1) +
-            algebraMap k (R d) (d.coefficients (n + 1)) =
-              zSuccInGeneratedRing d n := by
-          apply Subtype.ext
-          change PowerSeries.X * zTail (k := k) d.coefficients (n + 2) +
-              PowerSeries.C (d.coefficients (n + 1)) =
-            zTail (k := k) d.coefficients (n + 1)
-          exact X_mul_zTail_succ_add_coeff_eq_zTail d (by omega)
-        have hxQ : Ideal.Quotient.mk (xSubOneIdeal d) (xInGeneratedRing d) = 1 :=
-          (Ideal.Quotient.mk_eq_one_iff_sub_mem
-            (I := xSubOneIdeal d) (xInGeneratedRing d)).2
-            (Ideal.subset_span (by simp [xSubOneIdeal]))
-        have hrecQ := congrArg (Ideal.Quotient.mk (xSubOneIdeal d)) hrecR
-        rw [map_add, map_mul, hxQ] at hrecQ
-        have hrecQ' :
-            Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d (n + 1)) +
-              algebraMap k (R d ⧸ xSubOneIdeal d) (d.coefficients (n + 1)) =
-            Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d n) := by
-          simpa using hrecQ
-        change Ideal.Quotient.mk (xSubOneIdeal d)
-            (zSuccInGeneratedRing d (n + 1)) =
-          g (p - Polynomial.C (d.coefficients (n + 1)))
-        calc
-          Ideal.Quotient.mk (xSubOneIdeal d)
-              (zSuccInGeneratedRing d (n + 1)) =
-            g p - algebraMap k (R d ⧸ xSubOneIdeal d)
-                (d.coefficients (n + 1)) := by
-            have htail_eq :
-                Ideal.Quotient.mk (xSubOneIdeal d)
-                    (zSuccInGeneratedRing d (n + 1)) =
-                  Ideal.Quotient.mk (xSubOneIdeal d)
-                    (zSuccInGeneratedRing d n) -
-                    algebraMap k (R d ⧸ xSubOneIdeal d)
-                      (d.coefficients (n + 1)) := by
-              rw [← hrecQ']
-              ring
-            rw [htail_eq, hp]
-          _ = g (p - Polynomial.C (d.coefficients (n + 1))) := by
-            simp [g]
+      Ideal.Quotient.mk (xSubOneIdeal d) (zSuccInGeneratedRing d n) = g p :=
+    quotient_xSubOneIdeal_tailQ d qz g (by rfl) (by rfl)
   have hg_surjective : Function.Surjective g := by
     intro r
     obtain ⟨r0, rfl⟩ := Ideal.Quotient.mk_surjective r
@@ -1224,92 +1463,195 @@ theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
       (by simp [g, qz]) (by intro c; simp [g])
     obtain ⟨p, hp⟩ := hquot_gen r0.1 r0.2
     exact ⟨p, hp.symm⟩
-  have hker : RingHom.ker g = ⊥ := by
-    apply le_antisymm
-    · intro p hp
-      rw [RingHom.mem_ker] at hp
-      let pR : R d :=
-        Polynomial.eval₂ (algebraMap k (R d))
-          (zInGeneratedRing d) p
-      have hgp : g p =
-          Ideal.Quotient.mk (xSubOneIdeal d) pR := by
-        change Polynomial.eval₂
-            (algebraMap k (R d ⧸ xSubOneIdeal d)) qz p =
-          Ideal.Quotient.mk (xSubOneIdeal d)
-            (Polynomial.eval₂ (algebraMap k (R d))
-              (zInGeneratedRing d) p)
-        rw [Polynomial.hom_eval₂]
-        rfl
-      have hpRmem : pR ∈ xSubOneIdeal d := by
-        rw [← Ideal.Quotient.eq_zero_iff_mem]
-        rw [← hgp]
-        exact hp
-      obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hpRmem
-      obtain ⟨q, hq⟩ := hrange a.1 a.2
-      let pP : Polynomial (Polynomial k) :=
-        Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k))) zP p
-      have hmap_p :
-          algebraMap (R d) (FractionRing (R d)) pR =
-            Polynomial.eval₂ (algebraMap k (FractionRing (R d))) zK p := by
-        change algebraMap (R d) (FractionRing (R d))
-            (Polynomial.eval₂ (algebraMap k (R d))
-              (zInGeneratedRing d) p) = _
-        rw [Polynomial.hom_eval₂]
-        rfl
-      have heLoc_pP :
-          eLoc (algebraMap (Polynomial (Polynomial k)) L pP) =
-            Polynomial.eval₂ (algebraMap k (FractionRing (R d))) zK p := by
-        rw [heLoc_alg]
-        change Polynomial.eval₂
-            (algebraMap k (FractionRing (R d))) zK
-            (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k))) zP p) = _
-        rw [Polynomial.hom_eval₂]
-        rfl
-      have hprod := congrArg (algebraMap (R d) (FractionRing (R d))) ha
-      rw [map_mul] at hprod
-      have hprod' :
-          algebraMap (R d) (FractionRing (R d)) a * (xK - 1) =
-            algebraMap (R d) (FractionRing (R d)) pR := by
-        simpa [xK] using hprod
-      have hqeq :
-          algebraMap (Polynomial (Polynomial k)) L pP =
-            (algebraMap (Polynomial (Polynomial k)) L xP - 1) * q := by
-        apply heLoc
-        calc
-          eLoc (algebraMap (Polynomial (Polynomial k)) L pP) =
-              algebraMap (R d) (FractionRing (R d)) pR := by
-                rw [heLoc_pP, ← hmap_p]
-          _ = algebraMap (R d) (FractionRing (R d)) a * (xK - 1) :=
-                hprod'.symm
-          _ = (xK - 1) * algebraMap (R d) (FractionRing (R d)) a := by ring
-          _ = eLoc ((algebraMap (Polynomial (Polynomial k)) L xP - 1) * q) := by
-            rw [map_mul, map_sub, heLoc_alg, hq]
-            rfl
-      have heval_pP :
-          evalL (algebraMap (Polynomial (Polynomial k)) L pP) = p := by
-        rw [hevalL_alg]
-        change evalP
-            (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k))) zP p) = p
-        rw [Polynomial.hom_eval₂, hevalP_z]
-        simp [evalP]
-      have heval_eq := congrArg evalL hqeq
-      rw [heval_pP, map_mul, map_sub, hevalL_alg, hevalP_x, sub_self,
-        zero_mul] at heval_eq
-      simpa using heval_eq
-    · exact bot_le
+  have hevalP_eval : ∀ p : Polynomial k,
+      evalP (Polynomial.eval₂ (algebraMap k (Polynomial (Polynomial k)))
+        (Polynomial.X : Polynomial (Polynomial k)) p) = p := by
+    intro p
+    simpa [evalP] using evalP_eval_X (k := k) p
+  have hker : RingHom.ker g = ⊥ :=
+    quotient_xSubOneIdeal_kernel d xP zP L xK zK eLoc heLoc evalP evalL
+      hevalP_x hevalP_z hevalP_eval hevalL_alg heLoc_alg hrange qz g
+      (by rfl) (by rfl)
+      (by rfl) (by rfl) (by rfl) (by rfl)
   let eQ := RingHom.quotientKerEquivOfSurjective (f := g) hg_surjective
-  exact ⟨eQ.symm.trans ((Ideal.quotEquivOfEq hker).trans
-    (RingEquiv.quotientBot (Polynomial k)))⟩
+  let e : R d ⧸ xSubOneIdeal d ≃+* Polynomial k :=
+    eQ.symm.trans ((Ideal.quotEquivOfEq hker).trans
+      (RingEquiv.quotientBot (Polynomial k)))
+  refine ⟨e, ?_⟩
+  dsimp [e]
+  have hgX : g Polynomial.X =
+      Ideal.Quotient.mk (xSubOneIdeal d) (zInGeneratedRing d) := by
+    simp [g, qz]
+  rw [← hgX]
+  rw [RingHom.quotientKerEquivOfSurjective_symm_apply]
+  simp
 
--/
+theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
+    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by
+  rcases quotient_xSubOneIdeal_equiv_with_z d with ⟨e, _⟩
+  exact ⟨e⟩
+
 theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
     nIdeal d = Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
-  sorry
+  let J : Ideal (R d) :=
+    Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}
+  change nIdeal d = J
+  have hx1 : xInGeneratedRing d - 1 ∈ J :=
+    Ideal.subset_span (by simp [J])
+  have hz : zInGeneratedRing d ∈ J :=
+    Ideal.subset_span (by simp [J])
+  have hgen : ∀ j : ℕ, nGenerator d j ∈ J := by
+    intro j
+    induction j with
+    | zero =>
+        have hmem := J.sub_mem hz (J.mul_mem_right
+          (zSuccInGeneratedRing d 0) hx1)
+        have heq : nGenerator d 0 =
+            zInGeneratedRing d -
+              (xInGeneratedRing d - 1) * zSuccInGeneratedRing d 0 := by
+          apply Subtype.ext
+          simp only [nGenerator, initialCoefficientSum, Finset.sum_range_zero,
+            map_zero, add_zero]
+          change zTail (k := k) d.coefficients 1 =
+            zPowerSeries (k := k) d.coefficients -
+              (PowerSeries.X - 1) * zTail (k := k) d.coefficients 1
+          rw [z_eq_X_mul_zTail_one d]
+          ring
+        rw [heq]
+        exact hmem
+    | succ j ih =>
+        have hrec := X_mul_zTail_succ_add_coeff_eq_zTail d (by omega : 1 ≤ j + 1)
+        have hnrec : nGenerator d j =
+            nGenerator d (j + 1) +
+              (xInGeneratedRing d - 1) * zSuccInGeneratedRing d (j + 1) := by
+          apply Subtype.ext
+          change zTail (k := k) d.coefficients (j + 1) +
+              PowerSeries.C (initialCoefficientSum d j) =
+            (zTail (k := k) d.coefficients (j + 2) +
+                PowerSeries.C (initialCoefficientSum d (j + 1))) +
+              (PowerSeries.X - 1) * zTail (k := k) d.coefficients (j + 2)
+          have hsum : initialCoefficientSum d (j + 1) =
+              initialCoefficientSum d j + d.coefficients (j + 1) := by
+            simp [initialCoefficientSum, Finset.sum_range_succ]
+          rw [hsum]
+          rw [← hrec]
+          rw [map_add]
+          ring
+        have hmem := J.sub_mem ih (J.mul_mem_right
+          (zSuccInGeneratedRing d (j + 1)) hx1)
+        convert hmem using 1
+        rw [hnrec]
+        ring
+  apply le_antisymm
+  · rw [nIdeal, Ideal.span_le]
+    intro y hy
+    rcases Set.mem_insert_iff.mp hy with rfl | hy
+    · exact hx1
+    · rcases Set.mem_range.mp hy with ⟨j, rfl⟩
+      exact hgen j
+  · rw [Ideal.span_le]
+    intro y hy
+    rcases Set.mem_insert_iff.mp hy with rfl | rfl
+    · exact Ideal.subset_span (by simp [nIdeal])
+    · have hn0 : nGenerator d 0 ∈ nIdeal d :=
+        Ideal.subset_span (by
+          simp [nIdeal])
+      have hz1 : zSuccInGeneratedRing d 0 ∈ nIdeal d := by
+        simpa [nGenerator, initialCoefficientSum] using hn0
+      have hzR : zInGeneratedRing d =
+          xInGeneratedRing d * zSuccInGeneratedRing d 0 := by
+        apply Subtype.ext
+        simpa [xInGeneratedRing, zInGeneratedRing, zSuccInGeneratedRing]
+          using z_eq_X_mul_zTail_one d
+      have hmem := (nIdeal d).mul_mem_right
+        (xInGeneratedRing d) hz1
+      rw [hzR]
+      simpa [mul_comm] using hmem
 
 /-- The ideal `𝔫` is maximal. -/
 theorem nIdeal_isMaximal (d : PowerSeriesData k) :
     (nIdeal d).IsMaximal := by
-  sorry
+  rcases quotient_xSubOneIdeal_equiv_with_z d with ⟨e, hez⟩
+  let q : R d →+* R d ⧸ xSubOneIdeal d :=
+    Ideal.Quotient.mk (xSubOneIdeal d)
+  let f : R d →+* k :=
+    Polynomial.constantCoeff.comp (e.toRingHom.comp q)
+  have hez' : e (q (zInGeneratedRing d)) = Polynomial.X := by
+    simpa [q] using hez
+  have hxJ : xInGeneratedRing d - 1 ∈
+      Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+    exact Ideal.subset_span (by simp)
+  have hzJ : zInGeneratedRing d ∈
+      Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+    exact Ideal.subset_span (by simp)
+  have hkerJ : RingHom.ker f =
+      Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+    apply le_antisymm
+    · intro r hr
+      change Polynomial.constantCoeff (e (q r)) = 0 at hr
+      have hpoly : e (q r) ∈
+          Ideal.span {(Polynomial.X : Polynomial k)} := by
+        rw [← Polynomial.ker_constantCoeff]
+        exact hr
+      obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hpoly
+      let a₀ := e.symm a
+      obtain ⟨s, hs⟩ := Ideal.Quotient.mk_surjective a₀
+      have hea : e a₀ = a := by
+        simp [a₀]
+      have heq : e (q r) = e (q (zInGeneratedRing d) * q s) := by
+        rw [map_mul, hez', hs, hea]
+        simpa [mul_comm] using ha.symm
+      have hqr : q r = q (zInGeneratedRing d) * q s :=
+        e.injective heq
+      have hdiff : r - zInGeneratedRing d * s ∈ xSubOneIdeal d := by
+        rw [← Ideal.Quotient.eq_zero_iff_mem]
+        change q (r - zInGeneratedRing d * s) = 0
+        rw [map_sub, map_mul, hqr]
+        ring
+      obtain ⟨b, hb⟩ := by
+        rw [xSubOneIdeal] at hdiff
+        exact Ideal.mem_span_singleton'.mp hdiff
+      have hdiff' : r - zInGeneratedRing d * s ∈
+          Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+        rw [← hb]
+        simpa [mul_comm] using
+          (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).mul_mem_right b hxJ
+      have hzs : zInGeneratedRing d * s ∈
+          Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+        have h := (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).mul_mem_right s hzJ
+        simpa [mul_comm] using h
+      simpa [sub_add_cancel] using
+        (Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d}).add_mem hdiff' hzs
+    · rw [Ideal.span_le]
+      intro r hr
+      change Polynomial.constantCoeff (e (q r)) = 0
+      rcases Set.mem_insert_iff.mp hr with rfl | rfl
+      · have hq : q (xInGeneratedRing d - 1) = 0 := by
+          change Ideal.Quotient.mk (xSubOneIdeal d)
+            (xInGeneratedRing d - 1) = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact Ideal.subset_span (by simp [xSubOneIdeal])
+        rw [hq]
+        simp
+      · rw [hez']
+        simp
+  have hker : RingHom.ker f = nIdeal d := by
+    rw [nIdeal_eq_span_xSubOne_z d]
+    exact hkerJ
+  have hf : Function.Surjective f := by
+    intro c
+    obtain ⟨r, hr⟩ :=
+      Ideal.Quotient.mk_surjective (e.symm (Polynomial.C c))
+    refine ⟨r, ?_⟩
+    change Polynomial.constantCoeff (e (q r)) = c
+    have hqr : q r = e.symm (Polynomial.C c) := by
+      simpa [q] using hr
+    rw [hqr]
+    simp
+  let eF := (Ideal.quotEquivOfEq hker.symm).trans
+    (RingHom.quotientKerEquivOfSurjective (f := f) hf)
+  apply Ideal.Quotient.maximal_of_isField
+  exact eF.toMulEquiv.isField (Field.toIsField k)
 
 theorem mIdeal_isPrime (d : PowerSeriesData k) :
     (mIdeal d).IsPrime :=
@@ -1327,7 +1669,15 @@ instance nIdeal_isPrime_instance (d : PowerSeriesData k) :
 
 theorem non_m_maps_to_powerSeries_unit (d : PowerSeriesData k) :
     ∀ r : R d, r ∉ mIdeal d → IsUnit (generatedRingInclusion d r) := by
-  sorry
+  intro r hr
+  have hconst : PowerSeries.constantCoeff (r : PowerSeries k) ≠ 0 := by
+    intro hzero
+    apply hr
+    have h := generatedRing_sub_constantCoeff_mem_mIdeal d r.1 r.2
+    simpa [hzero] using h
+  change IsUnit (r : PowerSeries k)
+  rw [PowerSeries.isUnit_iff_constantCoeff]
+  exact isUnit_iff_ne_zero.mpr hconst
 
 /-- The localization `R_𝔪` embeds in `k⟦x⟧`. -/
 theorem localization_m_embeds_in_powerSeries (d : PowerSeriesData k) :

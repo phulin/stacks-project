@@ -695,7 +695,178 @@ theorem lemma_surjection {X : TopCat.{u}} (B : Set (Opens X))
     refine ⟨φ, ?_⟩
     rw [sheaf_surjective_iff_stalk_surjective]
     intro x
-    sorry
+    intro y
+    let i : I := ⟨x, y⟩
+    let E := (openSetSheafExtensionByEmpty (U i)).obj
+      (constantSheaf (openSubspace (U i)) PUnit)
+    let a : E ⟶ F := c.ι.app (Discrete.mk i)
+    have ha : (openSetSheafExtensionHomEquiv (U i)
+        (constantSheaf (openSubspace (U i)) PUnit) F) a = q i := by
+      change (openSetSheafExtensionHomEquiv (U i)
+        (constantSheaf (openSubspace (U i)) PUnit) F) a = q i
+      exact Equiv.apply_symm_apply _ _
+    let adj := openSheafExtensionAdjunction (Type u) (U i)
+    have hunit := adj.homEquiv_unit (f := a)
+    let u := (adj.unit.app (constantSheaf (openSubspace (U i)) PUnit)).hom
+    have hqa : u ≫ ((openSheafRestriction (Type u) (U i)).map a).hom =
+        (q i).hom := by
+      have hh := congrArg (fun k => k.hom) hunit
+      rw [ha] at hh
+      exact hh.symm
+    let y' : openSubspace (U i) := ⟨x, hxi i⟩
+    let z : (constantSheaf (openSubspace (U i)) PUnit).presheaf.stalk y' :=
+      constantSheafStalkMap (X := openSubspace (U i)) PUnit y'
+        (constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit)
+    let z' := ConcreteCategory.hom
+      ((TopCat.Presheaf.stalkFunctor (Type u) y').map u) z
+    let zE : ((openSheafRestriction (Type u) (U i)).obj E).presheaf.stalk y' := by
+      exact z'
+    let e := ConcreteCategory.hom (openRestrictionStalkIso (U i) E y').hom zE
+    let e0 : E.presheaf.stalk x := by
+      exact e
+    let j : E ⟶ openExtensionCoproduct I U (fun _ => PUnit) :=
+      colimit.ι (Discrete.functor fun k =>
+        (openSetSheafExtensionByEmpty (U k)).obj
+          (constantSheaf (openSubspace (U k)) PUnit)) (Discrete.mk i)
+    refine ⟨ConcreteCategory.hom
+      ((TopCat.Presheaf.stalkFunctor (Type u) x).map j.hom) e0, ?_⟩
+    have hj : j ≫ φ = a := by
+      dsimp [j, a, φ, E]
+      exact colimit.ι_desc c (Discrete.mk i)
+    change ConcreteCategory.hom
+        (((TopCat.Presheaf.stalkFunctor (Type u) x).map j.hom) ≫
+          ((TopCat.Presheaf.stalkFunctor (Type u) x).map φ.hom)) e0 = y
+    rw [← Functor.map_comp]
+    have hj' : j.hom ≫ φ.hom = a.hom := by
+      change (j ≫ φ).hom = a.hom
+      exact congrArg (fun k => k.hom) hj
+    rw [hj']
+    have hqa_stalk := congrArg
+      (fun k => ConcreteCategory.hom
+        ((TopCat.Presheaf.stalkFunctor (Type u) y').map k) z) hqa
+    dsimp [e0]
+    have hn := openRestrictionStalkIso_naturality (U i) a y' e
+    have htarget :
+        (ConcreteCategory.hom
+          (StalkMap a.hom ((ConcreteCategory.hom (openInclusion (U i))) y'))) e = y := by
+      rw [← hn]
+      dsimp [e]
+      have he_inv := Iso.hom_inv_id_apply
+        (openRestrictionStalkIso (U i) E y') zE
+      have hlocal := localConstantPUnitMap_stalk_germ
+        (U i) F (s i) y'
+      have hcomp := congrArg
+        (fun w => (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+          ((ConcreteCategory.hom
+            (StalkMap ((openSheafRestriction (Type u) (U i)).map a).hom y')) w)) he_inv
+      have hmid :
+          (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+            ((ConcreteCategory.hom
+              (StalkMap ((openSheafRestriction (Type u) (U i)).map a).hom y')) zE) = y := by
+        have hqa_elem :
+            (ConcreteCategory.hom
+              (StalkMap ((openSheafRestriction (Type u) (U i)).map a).hom y')) zE =
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map (q i).hom)) z := by
+          have hh := hqa_stalk
+          rw [Functor.map_comp] at hh
+          have hcomp_apply :
+              (ConcreteCategory.hom
+                (((TopCat.Presheaf.stalkFunctor (Type u) y').map u) ≫
+                  ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                    ((openSheafRestriction (Type u) (U i)).map a).hom))) z =
+                (ConcreteCategory.hom
+                  ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                    ((openSheafRestriction (Type u) (U i)).map a).hom))
+                  ((ConcreteCategory.hom
+                    ((TopCat.Presheaf.stalkFunctor (Type u) y').map u)) z) := by
+            rfl
+          rw [hcomp_apply] at hh
+          change @Eq (TopCat.Presheaf.stalk
+            ((openSheafRestriction (Type u) (U i)).obj F).presheaf y') _ _
+          exact hh
+        have hq_local :
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (Type u) y').map (q i).hom)) z =
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                  (localConstantPUnitMap (U i) F (s i))))
+                (constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit) := by
+          dsimp [q, localSectionHom]
+          change (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+              (constantSheafPUnitToConstantPresheaf ≫
+                localConstantPUnitMap (U i) F (s i)))) z = _
+          rw [Functor.map_comp]
+          change (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                (localConstantPUnitMap (U i) F (s i))))
+            ((ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                constantSheafPUnitToConstantPresheaf)) z) = _
+          have hA :
+              (ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                  constantSheafPUnitToConstantPresheaf)) z =
+                constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit := by
+            rcases (constantPresheafStalkMap_bijective
+              (X := openSubspace (U i)) PUnit y').2
+              ((ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                  constantSheafPUnitToConstantPresheaf)) z) with ⟨a, ha⟩
+            rcases (constantPresheafStalkMap_bijective
+              (X := openSubspace (U i)) PUnit y').2
+              (constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit) with
+              ⟨b, hb⟩
+            cases a
+            cases b
+            exact ha.symm.trans hb
+          rw [hA]
+          rfl
+        have hq_local_iso := congrArg
+          (fun w => (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom) w)
+          hq_local
+        have hlocal' :
+            (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+              ((ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                  (localConstantPUnitMap (U i) F (s i))))
+                (constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit)) =
+              (ConcreteCategory.hom (F.presheaf.germ (U i)
+                ((ConcreteCategory.hom (openInclusion (U i))) y') (by exact y'.2))) (s i) := by
+          exact hlocal
+        have hsy :
+            (ConcreteCategory.hom (F.presheaf.germ (U i)
+              ((ConcreteCategory.hom (openInclusion (U i))) y') (by exact y'.2))) (s i) = y := by
+          exact hs i
+        have hmid0 :
+            (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+                ((ConcreteCategory.hom
+                  (StalkMap ((openSheafRestriction (Type u) (U i)).map a).hom y')) zE) =
+              (ConcreteCategory.hom (F.presheaf.germ (U i)
+                ((ConcreteCategory.hom (openInclusion (U i))) y') (by exact y'.2))) (s i) := by
+          calc
+          _ = (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+              ((ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map (q i).hom)) z) := by
+            exact congrArg
+              (fun w => (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom) w)
+              hqa_elem
+          _ = (ConcreteCategory.hom (openRestrictionStalkIso (U i) F y').hom)
+              ((ConcreteCategory.hom
+                ((TopCat.Presheaf.stalkFunctor (Type u) y').map
+                  (localConstantPUnitMap (U i) F (s i))))
+                (constantPresheafStalkMap (X := openSubspace (U i)) PUnit y' PUnit.unit)) :=
+            hq_local_iso
+          _ = (ConcreteCategory.hom (F.presheaf.germ (U i)
+              ((ConcreteCategory.hom (openInclusion (U i))) y') (by exact y'.2))) (s i) :=
+            hlocal'
+        convert hmid0.trans hsy using 1
+      exact hcomp.trans hmid
+    have hpoint : (ConcreteCategory.hom (openInclusion (U i))) y' = x := rfl
+    convert htarget using 1
+    cases hpoint
+    rfl
 
 /-- Every sheaf is a filtered colimit of finite coequalizer presentations. -/
 theorem lemma_filtered_colimit_constructibles {X : TopCat.{u}}

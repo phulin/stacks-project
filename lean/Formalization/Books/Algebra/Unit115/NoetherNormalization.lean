@@ -1,9 +1,10 @@
-import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
 import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.AlgebraicIndependent.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.NoetherNormalization
 import Mathlib.RingTheory.RingHom.FiniteType
+import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
 
 /-!
 # Commutative Algebra, Chapter 115: Noether normalization

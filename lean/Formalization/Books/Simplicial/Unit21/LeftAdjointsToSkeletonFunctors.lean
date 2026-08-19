@@ -223,15 +223,15 @@ theorem leftAdjoint_unit_is_iso
     {C : Type u} [Category.{v} C] [HasFiniteColimits C]
     (m : ℕ) (U : SimplicialObject.Truncated C m) :
     IsIso (leftAdjointUnit m U) := by
-  letI : HasLeftSkeletonFunctor C m :=
+  let : HasLeftSkeletonFunctor C m :=
     has_left_skeleton_functor_of_has_finite_colimits m
-  letI : (leftSkeletonInclusion m).Full :=
+  let : (leftSkeletonInclusion m).Full :=
     (SimplexCategory.Truncated.inclusion.fullyFaithful m).full
-  letI : (leftSkeletonInclusion m).Faithful :=
+  let : (leftSkeletonInclusion m).Faithful :=
     (SimplexCategory.Truncated.inclusion.fullyFaithful m).faithful
   dsimp [leftAdjointUnit, leftAdjunction, leftAdjoint]
   rw [Functor.lanAdjunction_unit]
-  letI : ∀ X, IsIso (((leftSkeletonInclusion m).lanUnit.app U).app X) := fun X =>
+  let : ∀ X, IsIso (((leftSkeletonInclusion m).lanUnit.app U).app X) := fun X =>
     (Functor.isPointwiseLeftKanExtensionLeftKanExtensionUnit
       (leftSkeletonInclusion m) U ((leftSkeletonInclusion m).obj X)).isIso_hom_app
   exact NatIso.isIso_of_isIso_app ((leftSkeletonInclusion m).lanUnit.app U)
@@ -243,8 +243,8 @@ theorem has_left_skeleton_colimit_of_degree_le
     HasColimit (leftSkeletonDiagram m n U) := by
   let hff : (leftSkeletonInclusion m).FullyFaithful :=
     SimplexCategory.Truncated.inclusion.fullyFaithful m
-  letI : (leftSkeletonInclusion m).Full := hff.full
-  letI : (leftSkeletonInclusion m).Faithful := hff.faithful
+  let : (leftSkeletonInclusion m).Full := hff.full
+  let : (leftSkeletonInclusion m).Faithful := hff.faithful
   let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, hn⟩
   let e : op (SimplexCategory.mk n) = (leftSkeletonInclusion m).obj Y := by rfl
   let j0 : leftSkeletonIndex m n :=
@@ -278,11 +278,11 @@ theorem leftSkeleton_recovering_degree
       (has_left_skeleton_colimit_of_degree_le m n U hn) ≅
       U.obj (op ⟨SimplexCategory.mk n, hn⟩)) := by
   let hcol := has_left_skeleton_colimit_of_degree_le m n U hn
-  letI : HasColimit (leftSkeletonDiagram m n U) := hcol
+  let : HasColimit (leftSkeletonDiagram m n U) := hcol
   let hff : (leftSkeletonInclusion m).FullyFaithful :=
     SimplexCategory.Truncated.inclusion.fullyFaithful m
-  letI : (leftSkeletonInclusion m).Full := hff.full
-  letI : (leftSkeletonInclusion m).Faithful := hff.faithful
+  let : (leftSkeletonInclusion m).Full := hff.full
+  let : (leftSkeletonInclusion m).Faithful := hff.faithful
   let Y : (SimplexCategory.Truncated m)ᵒᵖ := op ⟨SimplexCategory.mk n, hn⟩
   let e : op (SimplexCategory.mk n) = (leftSkeletonInclusion m).obj Y := by rfl
   let j0 : leftSkeletonIndex m n :=

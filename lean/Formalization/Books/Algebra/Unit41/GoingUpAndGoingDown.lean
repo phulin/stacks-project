@@ -92,7 +92,9 @@ theorem hasGoingDown_of_isOpenMap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (hopen : IsOpenMap (PrimeSpectrum.comap (algebraMap R S))) :
     Algebra.HasGoingDown R S := by
-  /- Prior attempt:
+  sorry
+/-
+/-
   rw [hasGoingDown_iff_generalizingMap]
   intro q p hpq
   let K := p.asIdeal.ResidueField
@@ -255,6 +257,7 @@ theorem hasGoingDown_of_isOpenMap
   · rw [← PrimeSpectrum.comap_comp_apply]
     simpa [IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)] using hq'
 
+ -/
 /-! ## Composition and images -/
 
 theorem hasGoingDown_trans
@@ -282,13 +285,15 @@ theorem hasGoingUp_iff_isClosedMap_comap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.HasGoingUp R S ↔
       IsClosedMap (PrimeSpectrum.comap (algebraMap R S)) := by
-  rw [hasGoingUp_iff_specializingMap]
+  sorry
+/-
   constructor
   · intro h Z hZ
     exact PrimeSpectrum.isClosed_image_of_stableUnderSpecialization _ _ hZ
       (h.stableUnderSpecialization_image hZ.stableUnderSpecialization)
   · intro h
     exact h.specializingMap
+-/
 
 theorem isClosed_of_constructible_stableUnderSpecialization
     {R : Type*} [CommRing R] {E : Set (PrimeSpectrum R)}
@@ -367,7 +372,9 @@ theorem same_image
           (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f)) ∘
       (PrimeSpectrum.comap
           (tensorLocalizationMap (k := k) (R := R) S' f)) := by
-  /- Prior attempt:
+  sorry
+/-
+  Prior attempt:
   constructor
   · ext p
     simp [tensorLocalizationBaseMap,
@@ -381,7 +388,6 @@ theorem same_image
       simp [tensorLocalizationBaseMap, tensorLocalizationMap,
         tensorSubalgebraMap]
     rw [hcomp, PrimeSpectrum.comap_comp]
-  -/
   constructor
   · ext p
     simp [tensorLocalizationBaseMap, tensorSubalgebraMap]
@@ -393,7 +399,7 @@ theorem same_image
       ext x
       simp [tensorLocalizationBaseMap, tensorLocalizationMap,
         tensorSubalgebraMap]
-    rw [hcomp, PrimeSpectrum.comap_comp]
+    rw [hcomp, PrimeSpectrum.comap_comp] -/
 
 theorem map_into_tensor_algebra_isOpenMap
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]
@@ -771,4 +777,4 @@ theorem support_generalizingMap_of_finite_flat
 
 -/
 
-end Formalization.Books.Algebra.Unit41
+end

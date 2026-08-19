@@ -517,6 +517,30 @@ theorem normalizedChainComplexFunctor_exact
     {C : Type u} [Category.{v} C] [Abelian C] :
     exactFunctor (SimplicialObject C) (ChainComplex C ℕ)
       (normalizedChainComplexFunctor C) := by
+  /- Prior attempt: the associated-complex evaluation proof does not apply to
+     normalized terms.  After `exactFunctor_iff`, evaluation leaves the
+     targets
+     `PreservesLimitsOfShape J
+       (normalizedChainComplexFunctor C ⋙ eval C (ComplexShape.down ℕ) n)`
+     and the corresponding colimit targets; these are not definitionally the
+     ordinary simplicial degree-evaluation functors.
+
+     rw [exactFunctor_iff]
+     constructor
+     · refine ⟨?_⟩
+       intro J _ _
+       apply HomologicalComplex.preservesLimitsOfShape_of_eval
+       intro n
+       change PreservesLimitsOfShape J
+         ((evaluation (SimplexCategoryᵒᵖ) C).obj (op ⦋n⦌))
+       infer_instance
+     · refine ⟨?_⟩
+       intro J _ _
+       apply HomologicalComplex.preservesColimitsOfShape_of_eval
+       intro n
+       change PreservesColimitsOfShape J
+         ((evaluation (SimplexCategoryᵒᵖ) C).obj (op ⦋n⦌))
+       infer_instance -/
   sorry
 
 /-! ## The canonical map from normalized to associated complexes -/

@@ -1562,6 +1562,7 @@ finite, nontrivial-fibre affine blowups described in the source. -/
 theorem valuationRing_directedColimit_affineBlowups
     {R K : Type u} [CommRing R] [IsDomain R] [IsLocalRing R]
     [Field K] [Algebra R K] [IsFractionRing R K]
+    (hR : ¬ IsField R)
     (A : ValuationSubring K)
     (hA : DominatesValuationSubring (R := R) (K := K) A) :
     Nonempty (ValuationBlowupColimitData (R := R) (K := K) A) := by

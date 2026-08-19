@@ -1126,7 +1126,7 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_topologicalRing_of
         letI : TopologicalSpace (AdicCompletion J P) :=
           AdicCompletionLimitTopology P J P
         letI : TopologicalSpace (P ⧸ (J ^ n • (⊤ : Submodule P P))) := ⊥
-        letI : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ I ^ n)) := ⊥
+        let : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ I ^ n)) := ⊥
         change @Continuous (AdicCompletion J P)
           (iAdicRestrictedPowerSeries A I r)
           (AdicCompletionLimitTopology P J P)
@@ -1182,14 +1182,14 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_topologicalRing_of
     intro n
     rw [continuous_induced_rng]
     dsimp [B, iAdicOpenIdealBasis] at *
-    letI : TopologicalSpace (iAdicRestrictedPowerSeries A I r) :=
+    let : TopologicalSpace (iAdicRestrictedPowerSeries A I r) :=
       ⨅ i : B.Indexᵒᵖ,
         TopologicalSpace.induced
           ((limit.π (restrictedPowerSeriesDiagram A B r) i).hom)
           (⊥ : TopologicalSpace
             (MvPolynomial (Fin r) (A ⧸ B.I i.unop)))
-    letI : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ I ^ n)) := ⊥
-    letI : TopologicalSpace (P ⧸ (J ^ n • (⊤ : Submodule P P))) := ⊥
+    let : TopologicalSpace (MvPolynomial (Fin r) (A ⧸ I ^ n)) := ⊥
+    let : TopologicalSpace (P ⧸ (J ^ n • (⊤ : Submodule P P))) := ⊥
     have hpn : @Continuous (iAdicRestrictedPowerSeries A I r)
         (MvPolynomial (Fin r) (A ⧸ I ^ n))
         (⨅ i : B.Indexᵒᵖ,

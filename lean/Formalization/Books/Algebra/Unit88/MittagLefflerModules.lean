@@ -96,32 +96,32 @@ def mutuallyDominates
 /-- Tensor-kernel inclusion only needs to be tested on finitely presented
 modules. -/
 private structure GeneralFilteredColimit
-    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) where
+    {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) where
   index : Type (max u w)
   [indexCategory : Category.{max u w} index]
   [indexFiltered : IsFiltered index]
-  presentation : ColimitPresentation index N
+  diag : index ⥤ ModuleCat.{max u w} R
+  ι : diag ⟶ (Functor.const index).obj N
   underlyingIsColimit :
-    IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.cocone)
-  finitelyPresented : ∀ i, Module.FinitePresentation R (presentation.diag.obj i)
+    IsColimit ((forget (ModuleCat.{max u w} R)).mapCocone
+      { pt := N, ι := ι })
+  finitelyPresented : ∀ i, Module.FinitePresentation R (diag.obj i)
 
 private local instance generalFilteredColimitIndexCategory
-    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
     (C : GeneralFilteredColimit N) : Category.{max u w} C.index :=
   C.indexCategory
 
 private local instance generalFilteredColimitIndexFiltered
-    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
     (C : GeneralFilteredColimit N) : IsFiltered C.index :=
   C.indexFiltered
 
 private theorem exists_generalFilteredColimit
-    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
+    {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) :
     Nonempty (GeneralFilteredColimit N) := by
-  sorry
-/-
   classical
-  let M := (N : Type w)
+  let M := (N : Type (max u w))
   let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
     { toFun := fun s => ⟨s.1, hST s.2⟩
       inj' := by
@@ -209,7 +209,7 @@ private theorem exists_generalFilteredColimit
       exact ⟨c, homOfLE hac, homOfLE hbc, trivial⟩
     · intro X Y f g
       exact ⟨Y, 𝟙 _, by subsingleton⟩
-  let stage (a : Index) : ModuleCat.{w} R :=
+  let stage (a : Index) : ModuleCat.{max u w} R :=
     ModuleCat.of R ((a.1 →₀ R) ⧸ Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
   have span_extend {a b : Index} (h : a ≤ b) :
       Submodule.span R (a.2.1 : Set (a.1 →₀ R)) ≤
@@ -226,7 +226,7 @@ private theorem exists_generalFilteredColimit
       Submodule.mapQ (Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
         (Submodule.span R (b.2.1 : Set (b.1 →₀ R)))
         (extend a.1 b.1 h.choose) (span_extend h)
-  let D : Index ⥤ ModuleCat.{w} R := {
+  let D : Index ⥤ ModuleCat.{max u w} R := {
     obj := stage
     map := fun {a b} f => stageMap (leOfHom f)
     map_id := by
@@ -276,7 +276,7 @@ private theorem exists_generalFilteredColimit
             Finsupp.linearCombination R (fun s : a.1 => (s : M)) x
           rw [Finsupp.linearCombination_mapDomain]
           rfl } }
-  have hc : IsColimit ((forget (ModuleCat.{w} R)).mapCocone c) := by
+  have hc : IsColimit ((forget (ModuleCat.{max u w} R)).mapCocone c) := by
     apply Types.FilteredColimit.isColimitOf'
     · intro x
       let S : Finset M := {x}
@@ -329,15 +329,12 @@ private theorem exists_generalFilteredColimit
       rw [← map_sub]
       apply (Submodule.Quotient.mk_eq_zero _).2
       exact Submodule.subset_span (Finset.mem_insert_self _ _)
-  let P : ColimitPresentation Index N :=
-    { diag := D
-      ι := c.ι
-      isColimit := isColimitOfReflects (forget (ModuleCat.{w} R)) hc }
   exact ⟨{
     index := Index
     indexCategory := inferInstance
     indexFiltered := index_filtered
-    presentation := P
+    diag := D
+    ι := c.ι
     underlyingIsColimit := hc
     finitelyPresented := by
       intro a
@@ -346,15 +343,14 @@ private theorem exists_generalFilteredColimit
       apply Module.finitePresentation_of_surjective (Submodule.mkQ _)
       · exact Submodule.mkQ_surjective _
       · rw [Submodule.ker_mkQ]
-      exact Submodule.fg_span a.2.1.finite_toSet }⟩
--/
+        exact Submodule.fg_span a.2.1.finite_toSet }⟩
 private lemma tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
-    {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
-    ∀ x : TensorProduct R P (Q : Type w),
+    {Q : ModuleCat.{max u w} R} (C : GeneralFilteredColimit Q) :
+    ∀ x : TensorProduct R P (Q : Type (max u w)),
         ∃ (i : C.index) (y : TensorProduct R P
-          (C.presentation.diag.obj i : Type w)),
-        (C.presentation.ι.app i).hom.lTensor P y = x := by
+          (C.diag.obj i : Type (max u w))),
+        (C.ι.app i).hom.lTensor P y = x := by
   intro x
   induction x using TensorProduct.induction_on with
   | zero =>
@@ -364,38 +360,39 @@ private lemma tensor_rep
       obtain ⟨i, qi, hqi⟩ :=
         Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
       refine ⟨i, p ⊗ₜ[R] qi, ?_⟩
-      have hqi' : (C.presentation.ι.app i).hom qi = q := by
+      have hqi' : (C.ι.app i).hom qi = q := by
         change (ConcreteCategory.hom
-          (((forget (ModuleCat.{w} R)).mapCocone C.presentation.cocone).ι.app i)) qi = q
+          (((forget (ModuleCat.{max u w} R)).mapCocone
+            { pt := Q, ι := C.ι }).ι.app i)) qi = q
         exact hqi
       simp [hqi']
   | add x y hx hy =>
       obtain ⟨i, xi, hxi⟩ := hx
       obtain ⟨j, yj, hyj⟩ := hy
       obtain ⟨k, a, b, _⟩ := IsFilteredOrEmpty.cocone_objs i j
-      let yk := (C.presentation.diag.map a).hom.lTensor P xi +
-        (C.presentation.diag.map b).hom.lTensor P yj
+      let yk := (C.diag.map a).hom.lTensor P xi +
+        (C.diag.map b).hom.lTensor P yj
       refine ⟨k, yk, ?_⟩
       dsimp [yk]
       rw [map_add, ← hxi, ← hyj]
-      have ha0 : (C.presentation.ι.app k).hom.comp
-          (C.presentation.diag.map a).hom = (C.presentation.ι.app i).hom := by
+      have ha0 : (C.ι.app k).hom.comp
+          (C.diag.map a).hom = (C.ι.app i).hom := by
         apply LinearMap.ext
         intro v
-        have hnat := congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)
+        have hnat := congrArg ModuleCat.Hom.hom (C.ι.naturality a)
         dsimp at hnat
         simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
-          congrArg (fun h : (C.presentation.diag.obj i : Type w) →ₗ[R]
-            (Q : Type w) => h v) hnat
-      have hb0 : (C.presentation.ι.app k).hom.comp
-          (C.presentation.diag.map b).hom = (C.presentation.ι.app j).hom := by
+          congrArg (fun h : (C.diag.obj i : Type (max u w)) →ₗ[R]
+            (Q : Type (max u w)) => h v) hnat
+      have hb0 : (C.ι.app k).hom.comp
+          (C.diag.map b).hom = (C.ι.app j).hom := by
         apply LinearMap.ext
         intro v
-        have hnat := congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)
+        have hnat := congrArg ModuleCat.Hom.hom (C.ι.naturality b)
         dsimp at hnat
         simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
-          congrArg (fun h : (C.presentation.diag.obj j : Type w) →ₗ[R]
-            (Q : Type w) => h v) hnat
+          congrArg (fun h : (C.diag.obj j : Type (max u w)) →ₗ[R]
+            (Q : Type (max u w)) => h v) hnat
       have ha := congrArg (fun t => t.lTensor P) ha0
       have hb := congrArg (fun t => t.lTensor P) hb0
       rw [LinearMap.lTensor_comp] at ha hb
@@ -403,11 +400,11 @@ private lemma tensor_rep
       simp only [LinearMap.comp_apply]
 
 private lemma eventually_zero
-    {R : Type u} [CommRing R] {Q : ModuleCat.{w} R}
-    (C : GeneralFilteredColimit Q) {i : C.index} (x : C.presentation.diag.obj i) :
-    (C.presentation.ι.app i).hom x = 0 →
+    {R : Type u} [CommRing R] {Q : ModuleCat.{max u w} R}
+    (C : GeneralFilteredColimit Q) {i : C.index} (x : C.diag.obj i) :
+    (C.ι.app i).hom x = 0 →
       ∃ (j : C.index) (h : i ⟶ j),
-        (C.presentation.diag.map h).hom x = 0 := by
+        (C.diag.map h).hom x = 0 := by
   intro hx
   obtain ⟨j, h, hh⟩ :=
     (Types.FilteredColimit.isColimit_eq_iff' C.underlyingIsColimit x 0).1
@@ -455,6 +452,7 @@ theorem dominates_iff_pushout_inr_universallyInjective
       rw [biprod.lift_desc]
       rw [CategoryTheory.Preadditive.neg_comp]
       rw [← pushout.condition (f := ModuleCat.ofHom f) (g := ModuleCat.ofHom g)]
+      rw [pushout.inr_desc]
       simp)
     have hp := IsPushout.of_isColimit
       (pushoutIsPushout (ModuleCat.ofHom f) (ModuleCat.ofHom g))
@@ -709,11 +707,13 @@ private lemma pushout_inr_cokernel
     let p := pushout ff gg
     let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
     let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
-      (pushout.desc (ModuleCat.ofHom q) 0 (by sorry)).hom
+      (pushout.desc (ModuleCat.ofHom q) 0 (by
+        ext x
+        change Submodule.Quotient.mk (f x) = 0
+        apply (Submodule.Quotient.mk_eq_zero _).2
+        exact LinearMap.mem_range_self f x)).hom
     Function.Exact (ModuleCat.Hom.hom (pushout.inr ff gg)) π ∧
       Function.Surjective π := by
-  sorry
-/-
   dsimp
   let ff := ModuleCat.ofHom f
   let gg := ModuleCat.ofHom g
@@ -722,44 +722,75 @@ private lemma pushout_inr_cokernel
   let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
     (pushout.desc (ModuleCat.ofHom q) 0 (by
       ext x
-      simp [q])).hom
+      change Submodule.Quotient.mk (f x) = 0
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      exact LinearMap.mem_range_self f x)).hom
+  have hπinl : pushout.inl ff gg ≫ ModuleCat.ofHom π = ModuleCat.ofHom q := by
+    dsimp [π]
+    change pushout.inl ff gg ≫ pushout.desc (ModuleCat.ofHom q) 0 _ =
+      ModuleCat.ofHom q
+    rw [pushout.inl_desc]
+  have hπinr : pushout.inr ff gg ≫ ModuleCat.ofHom π = 0 := by
+    dsimp [π]
+    change pushout.inr ff gg ≫ pushout.desc (ModuleCat.ofHom q) 0 _ = 0
+    rw [pushout.inr_desc]
   have hqcol := ModuleCat.cokernelIsColimit ff
+  dsimp [ModuleCat.cokernelCocone] at hqcol
+  have hπsurj : Function.Surjective π := by
+    intro z
+    obtain ⟨n, hn⟩ := Submodule.mkQ_surjective
+      (LinearMap.range f) z
+    refine ⟨(pushout.inl ff gg).hom n, ?_⟩
+    change π ((pushout.inl ff gg).hom n) = z
+    change (pushout.inl ff gg ≫
+      pushout.desc (ModuleCat.ofHom q) 0 _).hom n = z
+    rw [pushout.inl_desc]
+    simpa [q] using hn
+  letI : Epi (ModuleCat.ofHom π) :=
+    (ModuleCat.epi_iff_surjective _).2 hπsurj
   let cπ : CokernelCofork (pushout.inr ff gg) :=
     CokernelCofork.ofπ (ModuleCat.ofHom π) (by
-      ext x
-      simp [π])
+      change pushout.inr ff gg ≫ pushout.desc (ModuleCat.ofHom q) 0 _ = 0
+      rw [pushout.inr_desc])
   have hcπ : IsColimit cπ := by
-    refine Cofork.IsColimit.mk _ ?_ ?_ ?_
-    · intro s
-      let k : N ⟶ s.pt := pushout.inl ff gg ≫ s.π
-      have hk : ff ≫ k = 0 := by
-        rw [← pushout.condition_assoc]
-        simp [k, s.condition]
-      exact hqcol.desc (CokernelCofork.ofπ k hk)
-    · intro s
-      apply (pushoutIsPushout ff gg).hom_ext
-      · simp
-      · simp [π, s.condition]
-    · intro s m hm
-      haveI : Epi hqcol.π := epi_of_isColimit_cofork hqcol
-      apply (cancel_epi hqcol.π).1
+    apply CokernelCofork.IsColimit.ofπ'
+    intro A k hk
+    let k' : ModuleCat.of R N ⟶ A := pushout.inl ff gg ≫ k
+    have hk' : ff ≫ k' = 0 := by
+      dsimp [k']
+      rw [pushout.condition_assoc]
+      simp [hk]
+    refine ⟨hqcol.desc (CokernelCofork.ofπ k' hk'), ?_⟩
+    apply pushout.hom_ext
+    · change (pushout.inl ff gg ≫ ModuleCat.ofHom π ≫
+        hqcol.desc (CokernelCofork.ofπ k' hk')) =
+          pushout.inl ff gg ≫ k
       calc
-        hqcol.π ≫ m = pushout.inl ff gg ≫ π ≫ m := by simp [π]
-        _ = pushout.inl ff gg ≫ s.π := by rw [hm]
-        _ = hqcol.π ≫ hqcol.desc
-            (CokernelCofork.ofπ (pushout.inl ff gg ≫ s.π) (by
-              rw [← pushout.condition_assoc]
-              simp [s.condition])) := by
-          symm
-          exact Cofork.IsColimit.π_desc hqcol
+        _ = (pushout.inl ff gg ≫ ModuleCat.ofHom π) ≫
+            hqcol.desc (CokernelCofork.ofπ k' hk') := by
+          rw [Category.assoc]
+        _ = ModuleCat.ofHom q ≫
+            hqcol.desc (CokernelCofork.ofπ k' hk') := by rw [hπinl]
+        _ = k' := Cofork.IsColimit.π_desc hqcol
+        _ = pushout.inl ff gg ≫ k := rfl
+    · dsimp [π]
+      change (pushout.inr ff gg ≫ ModuleCat.ofHom π) ≫
+        hqcol.desc (CokernelCofork.ofπ k' hk') =
+          pushout.inr ff gg ≫ k
+      rw [hπinr]
+      rw [hk]
+      simp only [zero_comp]
   let S' := ShortComplex.moduleCatMk
     (ModuleCat.Hom.hom (pushout.inr ff gg)) π (by
       ext x
-      simp [π])
+      change (pushout.inr ff gg ≫
+        pushout.desc (ModuleCat.ofHom q) 0 _).hom x = 0
+      rw [pushout.inr_desc]
+      simp
+      )
   have hS' : S'.Exact := S'.exact_of_g_is_cokernel hcπ
-  exact ⟨(S'.moduleCat_exact_iff_function_exact).mp hS',
-    ModuleCat.epi_iff_surjective.mp (epi_of_isColimit_cofork hcπ)⟩
--/
+  exact ⟨(ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S').mp hS',
+    (ModuleCat.epi_iff_surjective _).mp (epi_of_isColimit_cofork hcπ)⟩
 
 theorem dominates_iff_factors_of_finitelyPresented_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}

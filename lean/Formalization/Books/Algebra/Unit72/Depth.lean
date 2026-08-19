@@ -985,7 +985,7 @@ theorem localDepth_drops_by_one
       unfold localDepth depth
       rw [dif_neg hmax]
       exact le_sSup ⟨x :: rs, rfl, hcons_mem, hrs_cons⟩
-    simpa [hrs, List.length_cons, Nat.cast_add, add_comm] using hle
+    simpa [hrs, List.length_cons, Nat.cast_add] using hle
   apply le_antisymm
   · exact ENat.le_sub_of_add_le_right ENat.one_ne_top hupper
   · exact hlower

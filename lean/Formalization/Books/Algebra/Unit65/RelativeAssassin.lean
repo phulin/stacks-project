@@ -576,6 +576,8 @@ theorem compare_relative_assassins
         relativeAssassinBFin.{u, v, w, u} (R := R) (S := S) (N := N) ∧
       relativeAssassinA (R := R) (S := S) (N := N) ⊆
         relativeAssassinB.{u, v, w, u} (R := R) (S := S) (N := N) := by
+  sorry
+  /- Original proof attempt:
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · sorry
   · intro q hq
@@ -643,6 +645,8 @@ theorem compare_relative_assassins
     sorry
   · intro q hq
     sorry
+
+  -/
 
 theorem relative_assassins_eq_of_noetherian_target
     {R : Type u} {S : Type v} {N : Type w}

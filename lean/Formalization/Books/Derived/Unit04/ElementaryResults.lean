@@ -482,10 +482,10 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  letI : AdditiveCategory Cᵒᵖ :=
+  let : AdditiveCategory Cᵒᵖ :=
     { toPreadditive := inferInstance
       toHasFiniteProducts := inferInstance }
-  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let : Pretriangulated Cᵒᵖ := inferInstance
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -563,10 +563,10 @@ theorem coSpecial_triangle_isIso₂
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  letI : AdditiveCategory Cᵒᵖ :=
+  let : AdditiveCategory Cᵒᵖ :=
     { toPreadditive := inferInstance
       toHasFiniteProducts := inferInstance }
-  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let : Pretriangulated Cᵒᵖ := inferInstance
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -611,10 +611,10 @@ theorem coSpecial_triangle_isIso₁
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  letI : AdditiveCategory Cᵒᵖ :=
+  let : AdditiveCategory Cᵒᵖ :=
     { toPreadditive := inferInstance
       toHasFiniteProducts := inferInstance }
-  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let : Pretriangulated Cᵒᵖ := inferInstance
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -667,10 +667,10 @@ set_option maxHeartbeats 1000000 in
 /-- Every distinguished triangle is co-special. -/
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
-  letI : AdditiveCategory Cᵒᵖ :=
+  let : AdditiveCategory Cᵒᵖ :=
     { toPreadditive := inferInstance
       toHasFiniteProducts := inferInstance }
-  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let : Pretriangulated Cᵒᵖ := inferInstance
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   change SpecialTriangle Top

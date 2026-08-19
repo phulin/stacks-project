@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit39.FlatModules
 import Formalization.Books.Algebra.Unit60.Dimension
 import Formalization.Books.Algebra.Unit106.RegularLocalRings
 import Formalization.Books.Algebra.Unit109.FiniteGlobalDimension
+import Mathlib.RingTheory.LocalProperties.ProjectiveDimension
 
 /-!
 # Commutative Algebra, Chapter 110: Regular rings and global dimension
@@ -54,7 +55,17 @@ theorem finite_global_dimension_iff_localizations
     HasGlobalDimensionLE R n ↔
       ∀ m : MaximalSpectrum R,
         HasGlobalDimensionLE (Localization.AtPrime m.asIdeal) n := by
-  sorry
+  constructor
+  · intro h m
+    exact (localize_projective_dimension
+      (R := R) (M := R) m.asIdeal.primeCompl n).2 h
+  · intro h
+    apply ((finite_global_dimension_criterion (R := R) n).out 0 1).mpr
+    intro M hM
+    letI : Module.Finite R M := hM
+    apply (ModuleCat.hasProjectiveDimensionLE_iff_forall_maximalSpectrum n M).mpr
+    intro m
+    exact h m (M.localizedModule m.1.primeCompl)
 
 /-! ## The residue field and dimension bounds -/
 

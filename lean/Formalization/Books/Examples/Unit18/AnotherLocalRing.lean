@@ -22,6 +22,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.Pullback
 import Mathlib.RingTheory.MvPowerSeries.Rename
 import Mathlib.RingTheory.PowerSeries.Basic
+import Formalization.Books.Algebra.Unit119.AroundKrullAkizuki
 import Formalization.Books.Examples.Unit12.NonflatCompletions
 
 /-!
@@ -43,22 +44,21 @@ section CoefficientFields
 
 variable (k : Type u) (p : ℕ) [Field k] [Fact p.Prime] [CharP k p]
 
-/-- The subfield of `p`th powers, represented by the Frobenius field range. -/
-def pPowerSubfield : Subfield k :=
-  (frobenius k p).fieldRange
+/-- Chapter 18's name for the established Frobenius subfield interface. -/
+abbrev pPowerSubfield : Subfield k :=
+  Formalization.Books.Algebra.Unit119.pPowerSubfield k p
 
-/-- A set of elements is contained in a finite extension of `k ^ p`. -/
-def FiniteDegreeOverPowers (s : Set k) : Prop :=
-  ∃ F : IntermediateField (pPowerSubfield k p) k,
-    s ⊆ (F : Set k) ∧ Module.Finite (pPowerSubfield k p) F
+/-- Chapter 18's name for the established finite-degree coefficient condition. -/
+abbrev FiniteDegreeOverPowers (s : Set k) : Prop :=
+  Formalization.Books.Algebra.Unit119.finiteDegreeOverPowers k p s
 
 /-- The hypothesis that `k` has infinite degree over its `p`th-power field. -/
 def InfiniteDegreeOverPowers : Prop :=
   ¬ Module.Finite (pPowerSubfield k p) k
 
-/-- The coefficient condition used for the one-variable bad DVR. -/
-def OneVariableFiniteDegree (f : PowerSeries k) : Prop :=
-  FiniteDegreeOverPowers k p (Set.range (fun i : ℕ => PowerSeries.coeff i f))
+/-- Chapter 18's name for the established one-variable coefficient condition. -/
+abbrev OneVariableFiniteDegree (f : PowerSeries k) : Prop :=
+  Formalization.Books.Algebra.Unit119.badDvrCoefficientCondition k p f
 
 theorem oneVariableFiniteDegree_zero :
     OneVariableFiniteDegree k p 0 := by
@@ -725,13 +725,21 @@ def embedOneVariableSeries (f : PowerSeries k) : TwoVariablePowerSeries k :=
 def InfiniteCoefficientDegree (f : PowerSeries k) : Prop :=
   ¬ OneVariableFiniteDegree k p f
 
+/-- An infinite purely inseparable coefficient extension supplies a one-variable
+series whose coefficients are not contained in any finite intermediate
+extension.  This is the existence step implicit in the choice of `f` in the
+source example. -/
+theorem exists_infiniteCoefficientDegree_series
+    (h : InfiniteDegreeOverPowers k p) :
+    ∃ f : PowerSeries k, InfiniteCoefficientDegree k p f := by
+  sorry
+
 theorem embeddedSeries_not_mem_aSubring (f : PowerSeries k)
     (hf : InfiniteCoefficientDegree k p f) :
     embedOneVariableSeries k f ∉ aSubring k p := by
   sorry
 
-theorem embeddedSeries_pow_mem_aSubring (f : PowerSeries k)
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem embeddedSeries_pow_mem_aSubring (f : PowerSeries k) :
     (embedOneVariableSeries k f) ^ p ∈ aSubring k p := by
   sorry
 
@@ -779,23 +787,19 @@ theorem bXYIdeal_is_principal (f : PowerSeries k) :
 abbrev bCompletion (f : PowerSeries k) : Type u :=
   AdicCompletion (bXYIdeal k p f) (bRing k p f)
 
-theorem b_is_finite_over_a (f : PowerSeries k)
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem b_is_finite_over_a (f : PowerSeries k) :
     Module.Finite (aRing k p) (bRing k p f) := by
   sorry
 
-theorem b_is_noetherian (f : PowerSeries k)
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem b_is_noetherian (f : PowerSeries k) :
     IsNoetherianRing (bRing k p f) := by
   sorry
 
-theorem b_is_domain (f : PowerSeries k)
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem b_is_domain (f : PowerSeries k) :
     IsDomain (bRing k p f) := by
   sorry
 
-theorem b_is_complete (f : PowerSeries k)
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem b_is_complete (f : PowerSeries k) :
     IsAdicComplete (bXYIdeal k p f) (bRing k p f) := by
   sorry
 
@@ -850,11 +854,11 @@ theorem bLocalizedXYIdeal_eq_x :
     bLocalizedXYIdeal k p f = bLocalizedIdeal k p f := by
   sorry
 
-theorem localized_power_quotient_formula (n : ℕ) :
+theorem localized_power_formula (n : ℕ) :
     (aLocalizedXYIdeal k p) ^ n = (aLocalizedIdeal k p) ^ n := by
   sorry
 
-theorem localized_b_power_quotient_formula (n : ℕ) :
+theorem localized_b_power_formula (n : ℕ) :
     (bLocalizedXYIdeal k p f) ^ n = (bLocalizedIdeal k p f) ^ n := by
   sorry
 
@@ -949,8 +953,7 @@ theorem localized_completion_is_nonreduced
     ¬ IsReduced (bLocalizedCompletion k p f) := by
   sorry
 
-theorem a_localized_completion_is_DVR
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem a_localized_completion_is_DVR :
     ∃ h : IsDomain (aLocalizedCompletion k p),
       ∃ h' : @IsDiscreteValuationRing (aLocalizedCompletion k p) inferInstance h,
         letI : IsDomain (aLocalizedCompletion k p) := h
@@ -960,8 +963,7 @@ theorem a_localized_completion_is_DVR
             (aLocalizedX k p)} := by
   sorry
 
-theorem a_localized_completion_residue_field
-    (hf : InfiniteCoefficientDegree k p f) :
+theorem a_localized_completion_residue_field :
     ∃ h : IsDomain (aLocalizedCompletion k p),
       ∃ h' : @IsDiscreteValuationRing (aLocalizedCompletion k p) inferInstance h,
         letI : IsDomain (aLocalizedCompletion k p) := h

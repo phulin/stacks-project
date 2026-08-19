@@ -179,7 +179,7 @@ theorem exists_finitelyPresentedFilteredColimit
     · intro a b
       let S : Finset M := a.1 ∪ b.1
       have haS : a.1 ≤ S := by simp [S]
-      have hbS : b.1 ≤ S := by simp [S]
+      have hbS : b.1 ≤ S := by exact Finset.subset_union_right
       let Ea : Finset (S →₀ R) := a.2.1.image (extend a.1 S haS)
       let Eb : Finset (S →₀ R) := b.2.1.image (extend b.1 S hbS)
       let E : Finset (S →₀ R) := Ea ∪ Eb
@@ -1762,7 +1762,7 @@ theorem isMittagLefflerModule_of_restrictScalars
     (hfinitelyPresented : RingHom.FinitePresentation f)
     (M : ModuleCat.{w} S)
     (hM : IsMittagLefflerModule (R := S) M) :
-    letI : Module R (M : Type w) := Module.compHom (M : Type w) f
+    let : Module R (M : Type w) := Module.compHom (M : Type w) f
     IsMittagLefflerModule (R := R) (ModuleCat.of R (M : Type w)) := by
   sorry
 
@@ -1771,7 +1771,7 @@ when passing between a ring and its quotient. -/
 theorem isMittagLefflerModule_iff_quotient
     {R : Type u} [CommRing R] (I : Ideal R) (hI : I.FG)
     (M : ModuleCat.{w} (R ⧸ I)) :
-    (letI : Module R (M : Type w) :=
+    (let : Module R (M : Type w) :=
       Module.compHom (M : Type w) (Ideal.Quotient.mk I);
       IsMittagLefflerModule (R := R) (ModuleCat.of R (M : Type w))) ↔
       IsMittagLefflerModule (R := R ⧸ I) M := by

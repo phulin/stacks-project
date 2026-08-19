@@ -210,6 +210,14 @@ theorem cosimplicialModuleHomotopic_of_homotopy
     CosimplicialModuleHomotopic φ ψ :=
   Relation.EqvGen.rel φ ψ ⟨h⟩
 
+/-- Two degreewise linear maps form a square over a cosimplicial structure map. -/
+def CosimplicialModuleDegreeSquare {A : CosimplicialRing.{u}}
+    {M N : CosimplicialModule.{u} A} {n m : ℕ}
+    (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (u : M.obj n →ₗ[A.obj (SimplexCategory.mk n)] N.obj n)
+    (v : M.obj m →ₗ[A.obj (SimplexCategory.mk m)] N.obj m) : Prop :=
+  ∀ x, v (M.map f x) = N.map f (u x)
+
 /-!
 The remaining source assertions are recorded through functorial operation
 interfaces.  This keeps the theorem statements independent of choices of
@@ -237,6 +245,17 @@ structure CosimplicialTensorProductOperation (A : CosimplicialRing.{u}) where
       (degreeIso N L n).symm.toLinearMap.comp
         ((TensorProduct.map (φ.app n) LinearMap.id).comp
           (degreeIso M L n).toLinearMap)
+
+  degreewise_naturality : ∀ {M N L : CosimplicialModule.{u} A}
+    {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (u : M.obj n →ₗ[A.obj (SimplexCategory.mk n)] N.obj n)
+    (v : M.obj m →ₗ[A.obj (SimplexCategory.mk m)] N.obj m),
+    CosimplicialModuleDegreeSquare f u v →
+      ∀ x, (degreeIso N L m).symm
+          (TensorProduct.map v LinearMap.id
+            (degreeIso M L m ((obj M L).map f x))) =
+        (obj N L).map f ((degreeIso N L n).symm
+          (TensorProduct.map u LinearMap.id (degreeIso M L n x)))
 
 /-- The degreewise tensor map induced by a homomorphism. -/
 def tensorHomotopyComponent {A : CosimplicialRing.{u}}
@@ -274,6 +293,17 @@ structure CosimplicialExteriorPowerOperation (A : CosimplicialRing.{u})
       (degreeIso N i n).symm.toLinearMap.comp
         ((exteriorPower.map i (φ.app n)).comp
           (degreeIso M i n).toLinearMap)
+
+  degreewise_naturality : ∀ {M N : CosimplicialModule.{u} A}
+    (i : ℕ) {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (u : M.obj n →ₗ[A.obj (SimplexCategory.mk n)] N.obj n)
+    (v : M.obj m →ₗ[A.obj (SimplexCategory.mk m)] N.obj m),
+    CosimplicialModuleDegreeSquare f u v →
+      ∀ x, (degreeIso N i m).symm
+          (exteriorPower.map i v
+            (degreeIso M i m ((obj i M).map f x))) =
+        (obj i N).map f ((degreeIso N i n).symm
+          (exteriorPower.map i u (degreeIso M i n x)))
 
 /-- Homotopy is preserved by an exterior-power operation. -/
 theorem homotopy_exterior_power
@@ -327,6 +357,14 @@ structure CosimplicialBaseChangeOperation {A B : CosimplicialRing.{u}}
     degreeEquiv N n (componentMap n h x) =
       TensorProduct.map h LinearMap.id (degreeEquiv M n x)
 
+  componentMap_naturality : ∀ {M N : CosimplicialModule.{u} A}
+    {n m : ℕ} (g : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (u : M.obj n →ₗ[A.obj (SimplexCategory.mk n)] N.obj n)
+    (v : M.obj m →ₗ[A.obj (SimplexCategory.mk m)] N.obj m),
+    CosimplicialModuleDegreeSquare g u v →
+      ∀ x, componentMap m v ((obj M).map g x) =
+        (obj N).map g (componentMap n u x)
+
 /-- Homotopy is preserved by base change. -/
 theorem homotopy_base_change
     {A B : CosimplicialRing.{u}} (f : CosimplicialRingHom A B)
@@ -371,6 +409,14 @@ structure CosimplicialCompletionOperation {A : CosimplicialRing.{u}}
     degreeEquiv N n (componentMap n h x) =
       Formalization.Books.Algebra.Unit96.completionMap (I.carrier n) h
         (degreeEquiv M n x)
+
+  componentMap_naturality : ∀ {M N : CosimplicialModule.{u} A}
+    {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (u : M.obj n →ₗ[A.obj (SimplexCategory.mk n)] N.obj n)
+    (v : M.obj m →ₗ[A.obj (SimplexCategory.mk m)] N.obj m),
+    CosimplicialModuleDegreeSquare f u v →
+      ∀ x, componentMap m v ((obj M).map f x) =
+        (obj N).map f (componentMap n u x)
 
 /-- Homotopy is preserved by completion. -/
 theorem homotopy_completion

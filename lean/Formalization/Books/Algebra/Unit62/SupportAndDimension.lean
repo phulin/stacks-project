@@ -71,7 +71,7 @@ theorem exists_primeFiltration
           (s (Fin.succ i) ⧸
             (s (Fin.castSucc i)).submoduleOf (s (Fin.succ i))) := by
       rw [Submodule.Quotient.subsingleton_iff, htop]
-    letI : Subsingleton
+    let : Subsingleton
         (s (Fin.succ i) ⧸
           (s (Fin.castSucc i)).submoduleOf (s (Fin.succ i))) := hsub
     let e := Classical.choice (hp i)
@@ -81,7 +81,7 @@ theorem exists_primeFiltration
         exact Subsingleton.elim _ _]
       exact map_zero e
     have hone : (1 : R ⧸ (p i).asIdeal) ≠ 0 := by
-      letI : Nontrivial (R ⧸ (p i).asIdeal) :=
+      let : Nontrivial (R ⧸ (p i).asIdeal) :=
         Ideal.Quotient.nontrivial_iff.mpr (p i).isPrime.ne_top
       exact one_ne_zero
     exact hone hzero
@@ -204,9 +204,7 @@ theorem support_eq_iUnion_zeroLocus_of_primeFiltration
             (F.cyclic.stage (Fin.castSucc i)))
     rw [e.support_eq, Module.support_eq_zeroLocus]
     rw [PrimeSpectrum.mem_zeroLocus]
-    simpa [Submodule.annihilator_quotient] using
-      (show ∀ r : R, r ∈ F.cyclic.ideal i → r ∈ F.cyclic.ideal i from
-        fun _ h => h)
+    simp [Submodule.annihilator_quotient]
   have hi' : (⟨F.cyclic.ideal i, F.ideal_isPrime i⟩ : PrimeSpectrum R) ∈
       Module.support R B := Module.support_subset_of_surjective g hg hi
   exact Module.support_subset_of_injective B.subtype B.subtype_injective hi'

@@ -344,7 +344,7 @@ theorem rank_eq_zero_iff
       have hfin : Module.finrank R (⋀[R]^r (Fin n → R)) = 0 := by
         rw [exteriorPower.finrank_eq, Module.finrank_fin_fun,
           Nat.choose_eq_zero_of_lt hlt]
-      letI : Subsingleton (⋀[R]^r (Fin n → R)) :=
+      let : Subsingleton (⋀[R]^r (Fin n → R)) :=
         (Module.finrank_eq_zero_iff_of_free R _).mp hfin
       exact hr (Subsingleton.elim _ _)
     have hmap : exteriorPower.map 1 φ = 0 := by
@@ -376,7 +376,7 @@ theorem rank_eq_zero_iff
         have hone := congrArg
           (fun f : (⋀[R]^0 (Fin m → R)) →ₗ[R] R =>
             f (exteriorPower.ιMulti R 0 (fun _ => (0 : Fin m → R)))) hn
-        simpa using hone
+        simp at hone
       · intro r hr
         by_contra hpos
         have hrne : r ≠ 0 := by
@@ -390,8 +390,7 @@ theorem rank_eq_zero_iff
         cases r with
         | zero => simp at hrpos
         | succ r =>
-          simp [exteriorPower.map_apply_ιMulti,
-            ExteriorAlgebra.ιMulti_succ_apply]
+          simp
     · exact Nat.zero_le _
 
 theorem rankIdeal_eq_top_of_rank_eq_zero

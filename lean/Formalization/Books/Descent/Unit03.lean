@@ -691,6 +691,21 @@ theorem descentReindexMap_semilinear_exists {n m : ℕ}
       descentTerm R A N m (β.toOrderHom i)) :=
   ⟨descentReindexMapSemilinear D β i⟩
 
+/-- The source characterizes `N_{β,i}` by its value on the pure tensor with
+the distinguished element in position `i`.  This is the corresponding
+uniqueness interface; the semilinearity supplies the coefficients in all the
+other tensor positions. -/
+theorem descentReindexMapSemilinear_unique {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1))
+    (f g : descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
+      descentTerm R A N m (β.toOrderHom i))
+    (h : ∀ x : N,
+      f (descentUnitTensorPlaced R A N n i x) =
+        g (descentUnitTensorPlaced R A N n i x)) :
+    f = g := by
+  sorry
+
 /- The transition map on the normal form `N_{n,n}` is obtained by first
 reindexing the distinguished factor and then transporting it to the last
 position.  The coherence proofs are part of the chosen cosimplicial datum;
@@ -698,6 +713,18 @@ this prevents independent classical choices for different simplex maps from
 being mistaken for a functor. -/
 structure DescentCosimplicialModuleData
     (D : DescentDatum (R := R) (A := A) (N := N)) where
+  /-- A coherent choice of the factor-moving isomorphisms. -/
+  transport : ∀ {n : ℕ} {i j : Fin (n + 1)} (h : i ≤ j),
+    descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j
+  transport_refl : ∀ {n : ℕ} (i : Fin (n + 1)),
+    transport (le_refl i) =
+      LinearEquiv.refl R (descentTerm R A N n i)
+  transport_comp : ∀ {n : ℕ} {i j k : Fin (n + 1)}
+    (hij : i ≤ j) (hjk : j ≤ k) (hik : i ≤ k),
+    (transport hij).trans (transport hjk) = transport hik
+  transport_unit : ∀ {n : ℕ} {i j : Fin (n + 1)} (h : i ≤ j) (x : N),
+    transport h (descentUnitTensorPlaced R A N n i x) =
+      descentUnitTensorPlaced R A N n j x
   map : ∀ {n m : ℕ} (_β : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
     descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₗ[R]
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩
@@ -706,6 +733,12 @@ structure DescentCosimplicialModuleData
     (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
     (ψ : SimplexCategory.mk m ⟶ SimplexCategory.mk k),
     map (φ ≫ ψ) = (map ψ).comp (map φ)
+  /-- The formula from the source: reindex the distinguished factor and then
+  move it to the last position. -/
+  map_formula : ∀ {n m : ℕ} (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (x),
+    map β x =
+      transport (Fin.le_last _)
+        (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩ x)
   map_semilinear : ∀ {n m : ℕ} (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
     descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[relativeTensorMap R A β]
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩
@@ -845,6 +878,15 @@ theorem descentCosimplicialModuleMap_semilinear_exists {n m : ℕ}
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩) :=
   ⟨(descentCosimplicialModuleData D).map_semilinear β⟩
 
+theorem descentCosimplicialModuleMap_formula {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (x : descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩) :
+    descentCosimplicialModuleMap D β x =
+      (descentCosimplicialModuleData D).transport (Fin.le_last _)
+        (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩ x) := by
+  exact (descentCosimplicialModuleData D).map_formula β x
+
 /- The source's cosimplicial transition is the semilinear map above; its
 underlying `R`-linear map is the presentation used by the categorical object. -/
 noncomputable def descentCosimplicialModuleMapSemilinear {n m : ℕ}
@@ -911,14 +953,54 @@ theorem descentCosimplicialModule_degree
   exact ⟨by simpa [descentCosimplicialModule] using
     (Iso.refl (descentTermModule R A N n ⟨n, Nat.lt_succ_self n⟩))⟩
 
+/-- The degreewise map induced by a morphism of descent data, before the
+factor-moving normalization to the last position. -/
+def descentTermMap
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (f : N →ₗ[A] N') :
+    ∀ (n : ℕ) (i : Fin (n + 1)),
+      descentTerm R A N n i →ₗ[R] descentTerm R A N' n i
+  | 0, _ => f.restrictScalars R
+  | n + 1, ⟨0, _⟩ =>
+      TensorProduct.map (f.restrictScalars R)
+        (LinearMap.id : relativeTensorPower R A n →ₗ[R] relativeTensorPower R A n)
+  | n + 1, ⟨i + 1, hi⟩ =>
+      TensorProduct.map (LinearMap.id : A →ₗ[R] A)
+        (descentTermMap f n ⟨i, Nat.lt_of_succ_lt_succ hi⟩)
+
+noncomputable def descentCosimplicialModuleHom
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (D' : DescentDatum (R := R) (A := A) (N := N'))
+    (f : DescentDatumHom D D') :
+    descentCosimplicialModule D ⟶ descentCosimplicialModule D' where
+  app n := ModuleCat.ofHom (descentTermMap f.hom n.len
+    ⟨n.len, Nat.lt_succ_self n.len⟩)
+  naturality := by
+    intro n m β
+    sorry
+
+theorem descentCosimplicialModuleHom_app_zero
+    {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
+    [IsScalarTower R A N']
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (D' : DescentDatum (R := R) (A := A) (N := N'))
+    (f : DescentDatumHom D D') :
+    (descentCosimplicialModuleHom D D' f).app (SimplexCategory.mk 0) =
+      ModuleCat.ofHom (f.hom.restrictScalars R) := by
+  dsimp [descentCosimplicialModuleHom, descentTermMap]
+  rfl
+
 theorem descentCosimplicialModule_functorial
     {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
     [IsScalarTower R A N']
     (D : DescentDatum (R := R) (A := A) (N := N))
     (D' : DescentDatum (R := R) (A := A) (N := N'))
     (f : DescentDatumHom D D') :
-    Nonempty (descentCosimplicialModule D ⟶ descentCosimplicialModule D') := by
-  sorry
+    Nonempty (descentCosimplicialModule D ⟶ descentCosimplicialModule D') :=
+  ⟨descentCosimplicialModuleHom D D' f⟩
 
 def DescentCosimplicialModulePresentation
     (D : DescentDatum (R := R) (A := A) (N := N))
@@ -965,22 +1047,25 @@ variable {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]
   [AddCommGroup M] [Module R M]
 
 /-- The comparison map for the canonical datum.  We use the commuted normal
-form `A ⊗[R] M` for the source's `M ⊗[R] A`; the commutation equivalence is
-part of the canonical identification. -/
+form `A ⊗[R] M` for the source's `M ⊗[R] A`; the displayed permutation still
+moves the second copy of `A` to the first tensor position. -/
 def canonicalDescentComparison :
     TensorProduct R (TensorProduct R A M) A ≃ₗ[R]
       TensorProduct R A (TensorProduct R A M) :=
-  (TensorProduct.assoc R A M A).trans
-    (TensorProduct.congr (LinearEquiv.refl R A) (TensorProduct.comm R M A))
+  (((TensorProduct.assoc R A M A).trans
+      (TensorProduct.congr (LinearEquiv.refl R A) (TensorProduct.comm R M A))).trans
+    (TensorProduct.assoc R A A M).symm).trans
+      ((TensorProduct.congr (TensorProduct.comm R A A) (LinearEquiv.refl R M)).trans
+        (TensorProduct.assoc R A A M))
 
 theorem canonicalDescentComparison_tmul (a₀ a₁ : A) (m : M) :
     canonicalDescentComparison (R := R) (A := A) (M := M)
         ((a₀ ⊗ₜ[R] m) ⊗ₜ[R] a₁) =
-      a₀ ⊗ₜ[R] (a₁ ⊗ₜ[R] m) := by
+      a₁ ⊗ₜ[R] (a₀ ⊗ₜ[R] m) := by
   rfl
 
 noncomputable def canonicalDescentDatum :
-    DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
+  DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
   { comparison := canonicalDescentComparison (R := R) (A := A) (M := M)
     comparison_compatible := by sorry
     cocycle := by sorry }
@@ -1222,6 +1307,12 @@ theorem descentCanonicalMap_on_pure
     descentCanonicalMap D (a ⊗ₜ[R] n) = a • (n : N) := by
   rfl
 
+theorem descentCanonicalMap_smul_A
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A)
+    (x : TensorProduct R A (descentH0 D)) :
+    descentCanonicalMap D (a • x) = a • descentCanonicalMap D x := by
+  sorry
+
 /-! The raw tensor model of the base change used in the proof of descent
 along a faithfully flat extension.  The associativity and commutativity
 equivalences in `TensorProduct` identify this model with the usual
@@ -1294,6 +1385,18 @@ theorem recognize_effective_descent
     D.IsEffective ↔ Function.Bijective (descentCanonicalMap D) := by
   sorry
 
+/-- Source-facing form of the recognition criterion: the canonical map from
+`A ⊗[R] H⁰(s(N_•))` to `N` is an isomorphism.  The displayed equality makes
+the isomorphism an isomorphism of the canonical map itself, rather than merely
+an abstract equivalence of the two underlying modules. -/
+theorem recognize_effective_descent_isomorphism
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    [Module.FaithfullyFlat R A] :
+    D.IsEffective ↔
+      ∃ e : TensorProduct R A (descentH0 D) ≃ₗ[A] N,
+        ∀ x, e x = descentCanonicalMap D x := by
+  sorry
+
 theorem descent_effective_after_baseChange
     (D : DescentDatum (R := R) (A := A) (N := N))
     (R' : Type u) [CommRing R'] [Algebra R R'] [Module.FaithfullyFlat R R']
@@ -1310,6 +1413,14 @@ abbrev DescentCoalgebraCategory (R A : Type u) [CommRing R] [CommRing A]
     (f : R →+* A) :=
   (ModuleCat.extendRestrictScalarsAdj.{u, u, u} f).toComonad.Coalgebra
 
+/-- The canonical functor in the source's effective-descent proposition.  Its
+target is Mathlib's Eilenberg--Moore category for the extension/restriction
+comonad, which is the standard categorical realization of descent data. -/
+noncomputable def canonicalDescentDataFunctor (R A : Type u) [CommRing R] [CommRing A]
+    (f : R →+* A) :
+    ModuleCat.{u, u} R ⥤ DescentCoalgebraCategory R A f :=
+  Comonad.comparison (ModuleCat.extendRestrictScalarsAdj.{u, u, u} f)
+
 def DescentModulesEquivalence (R A : Type u) [CommRing R] [CommRing A]
     (f : R →+* A) : Prop :=
   Nonempty (ModuleCat.{u, u} R ≌ DescentCoalgebraCategory R A f)
@@ -1323,6 +1434,11 @@ theorem effective_descent_for_modules (R A : Type u) [CommRing R] [CommRing A]
 theorem effective_descent_for_modules_category_equivalence (R A : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [Module.FaithfullyFlat R A] :
     DescentModulesEquivalence R A (algebraMap R A) := by
+  sorry
+
+theorem canonicalDescentDataFunctor_isEquivalence (R A : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [Module.FaithfullyFlat R A] :
+    (canonicalDescentDataFunctor R A (algebraMap R A)).IsEquivalence := by
   sorry
 
 /-- The inverse in the source's equivalence is the degree-zero equalizer. -/

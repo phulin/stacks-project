@@ -1329,7 +1329,7 @@ theorem lemma_minprimespoly
 other parameters chosen in any prescribed power of the maximal ideal. -/
 theorem lemma_sopexists
     (R : Type*) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    (d : ℕ) (hd : 1 < d)
+    (d : ℕ) (hdim : ringKrullDim R = d) (hd : 1 < d)
     (f : R) (hf : f ∈ IsLocalRing.maximalIdeal R)
     (hmin : ∀ p ∈ (⊥ : Ideal R).minimalPrimes, f ∉ p)
     (k : ℕ) :

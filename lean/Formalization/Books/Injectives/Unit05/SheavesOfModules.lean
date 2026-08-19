@@ -78,7 +78,7 @@ noncomputable def moduleSkyscraperSheaf (X : RingedSpace.{v}) (x : X)
     (I : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)) :
     Mod X.structureSheaf :=
-  (Classical.choice (exists_moduleSkyscraperSheaf X x I)).sheaf
+  Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheaf X.structureSheaf x I
 
 /-- The family of modules occurring in the source's pointwise formula. -/
 abbrev pointwiseProductValue (X : RingedSpace.{v})
@@ -145,7 +145,8 @@ theorem skyscraperProduct_underlying_iso (X : RingedSpace.{v})
   let eNat : F ⋙ G ≅ H :=
     Discrete.natIso (fun j =>
       (Classical.choice
-        (exists_moduleSkyscraperSheaf X j.as (I j.as))).underlying_iso.some)
+        (Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheaf
+          X.structureSheaf j.as (I j.as))).underlying_iso.some)
   let p₀ : (SheafOfModules.forget X.structureSheaf).obj (limit D) ≅ limit F :=
     CategoryTheory.preservesLimitIso (SheafOfModules.forget X.structureSheaf) D
   let pD : (∏ᶜ fun x : X => moduleSkyscraperSheaf X x (I x)) ≅ limit D :=
@@ -267,8 +268,23 @@ noncomputable def stalkSkyscraperHomEquiv (X : RingedSpace.{v}) (x : X)
     (I : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)) :
     (stalkModule X F x ⟶ I) ≃
-      (F ⟶ moduleSkyscraperSheaf X x I) :=
-  Classical.choice (exists_stalkSkyscraperHomEquiv X x F I)
+    (F ⟶ moduleSkyscraperSheaf X x I) :=
+  let K := Classical.choice
+    (Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheafFunctor
+      X.structureSheaf x)
+  let e : (Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor
+        X.structureSheaf x).obj I ≅ moduleSkyscraperSheaf X x I := by
+    simpa [K, Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor,
+      moduleSkyscraperSheaf, exists_moduleSkyscraperSheaf] using
+      (K.obj_iso I).some
+  let eHom : (F ⟶ (Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor
+      X.structureSheaf x).obj I) ≃ (F ⟶ moduleSkyscraperSheaf X x I) :=
+    { toFun := fun h => h ≫ e.hom
+      invFun := fun h => h ≫ e.inv
+      left_inv := by intro h; simp [e, Category.assoc]
+      right_inv := by intro h; simp [e, Category.assoc] }
+  (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+      X.structureSheaf x F I).trans eHom
 
 /-- Each module skyscraper with injective support stalk is injective. -/
 theorem moduleSkyscraper_injective (X : RingedSpace.{v}) (x : X)
@@ -317,7 +333,117 @@ theorem stalkwiseProductMap_component (X : RingedSpace.{v})
 theorem stalkwiseProductMap_mono (X : RingedSpace.{v})
     (F : Mod X.structureSheaf) (D : StalkwiseInjectiveEmbeddingData X F) :
     Mono (stalkwiseProductMap X F D) := by
-  sorry
+  have hstalk (x : X) :
+      Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor X.structureSheaf x).map
+        (stalkwiseProductMap X F D)) := by
+    let jx :
+        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).obj F ⟶ D.I x := D.j x
+    let K := Classical.choice
+      (Formalization.Books.Sheaves.Unit27.exists_moduleSkyscraperSheafFunctor
+        X.structureSheaf x)
+    let e : (Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor
+          X.structureSheaf x).obj (D.I x) ≅
+        moduleSkyscraperSheaf X x (D.I x) := by
+      simpa [K, Formalization.Books.Sheaves.Unit27.moduleSkyscraperSheafFunctor,
+        moduleSkyscraperSheaf, exists_moduleSkyscraperSheaf] using
+        (K.obj_iso (D.I x)).some
+    let φ :=
+      Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv
+        X.structureSheaf x F (D.I x)
+    have hφ : Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+        X.structureSheaf x).map
+        (φ jx)) := by
+      constructor
+      intro Z a b hab
+      have hjx : Mono jx := by
+        exact D.mono_j x
+      apply hjx.right_cancellation
+      change a ≫ D.j x = b ≫ D.j x
+      have hc :=
+        Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperHomEquiv_counit
+          X.structureSheaf x F (D.I x) (D.j x)
+      rw [hc]
+      simpa only [jx, Category.assoc] using congrArg (fun k => k ≫
+        (Formalization.Books.Sheaves.Unit27.moduleStalkSkyscraperAdjunction
+          X.structureSheaf x).counit.app (D.I x)) hab
+    have heq :
+        stalkSkyscraperHomEquiv X x F (D.I x) (D.j x) =
+          φ jx ≫ e.hom := by
+      rfl
+    have hcomponent : Mono
+        ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map
+          (stalkwiseProductMap X F D ≫
+            (show skyscraperProduct X D.I ⟶
+                moduleSkyscraperSheaf X x (D.I x) from
+              Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x))) := by
+      rw [stalkwiseProductMap_component, heq]
+      change Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+        X.structureSheaf x).map (φ jx ≫ e.hom))
+      have hcomp : Mono (
+          (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map (φ jx) ≫
+          (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map e.hom) := by
+        have hEmono : Mono ((Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+            X.structureSheaf x).map e.hom) := by
+          constructor
+          intro Z a b hab
+          have hab' := congrArg (fun k => k ≫
+            (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+              X.structureSheaf x).map e.inv) hab
+          simp only [Category.assoc] at hab'
+          rw [← Functor.map_comp, Iso.hom_inv_id] at hab'
+          simpa using hab'
+        constructor
+        intro Z a b hab
+        apply hφ.right_cancellation
+        apply hEmono.right_cancellation
+        exact hab
+      rw [← Functor.map_comp] at hcomp
+      exact hcomp
+    constructor
+    intro Z a b hab
+    apply hcomponent.right_cancellation
+    change a ≫
+        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map
+          (stalkwiseProductMap X F D ≫
+            (show skyscraperProduct X D.I ⟶
+                moduleSkyscraperSheaf X x (D.I x) from
+              Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x)) =
+      b ≫
+        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map
+          (stalkwiseProductMap X F D ≫
+            (show skyscraperProduct X D.I ⟶
+                moduleSkyscraperSheaf X x (D.I x) from
+              Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x))
+    rw [Functor.map_comp]
+    simpa only [Category.assoc] using congrArg
+      (fun k => k ≫
+        (Formalization.Books.Sheaves.Unit27.moduleStalkFunctor
+          X.structureSheaf x).map
+          (show skyscraperProduct X D.I ⟶
+              moduleSkyscraperSheaf X x (D.I x) from
+            Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x)) hab
+  have hSheaf : Mono
+      ((SheafOfModules.toSheaf X.structureSheaf).map
+        (stalkwiseProductMap X F D)) := by
+    apply (TopCat.Presheaf.mono_iff_stalk_mono _).2
+    intro x
+    have hx := hstalk x
+    apply (AddCommGrpCat.mono_iff_injective _).mpr
+    intro a b hab
+    apply (ModuleCat.mono_iff_injective _).mp hx
+    exact hab
+  constructor
+  intro Z f g hfg
+  apply (SheafOfModules.toSheaf X.structureSheaf).map_injective
+  apply hSheaf.right_cancellation
+  simpa only [Functor.map_comp] using congrArg
+    (fun k => (SheafOfModules.toSheaf X.structureSheaf).map k) hfg
 
 /-- The target of the canonical stalkwise map is injective. -/
 theorem stalkwiseProductMap_target_injective (X : RingedSpace.{v})
@@ -350,6 +476,14 @@ injectives, and the embeddings can be chosen functorially. -/
 theorem sheafOfModules_has_enough_injectives (X : RingedSpace.{v}) :
     EnoughInjectives (Mod X.structureSheaf) ∧
       HasFunctorialInjectiveEmbeddings (C := Mod X.structureSheaf) := by
-  sorry
+  constructor
+  · refine ⟨?_⟩
+    intro F
+    obtain ⟨D⟩ := exists_stalkwiseInjectiveEmbeddingData X F
+    refine ⟨{ J := skyscraperProduct X D.I,
+                injective := stalkwiseProductMap_target_injective X F D,
+                f := stalkwiseProductMap X F D,
+                mono := stalkwiseProductMap_mono X F D }⟩
+  · sorry
 
 end Formalization.Books.Injectives.Unit05

@@ -1,5 +1,7 @@
 import Formalization.Books.Algebra.Unit29.ImagesOfFinitePresentation
+import Formalization.Books.Topology.Unit21.NowhereDenseSets
 import Mathlib.RingTheory.Algebraic.Basic
+import Mathlib.RingTheory.Extension.Generators
 import Mathlib.RingTheory.Localization.FractionRing
 
 /-!
@@ -570,7 +572,34 @@ private theorem adjoin_insert_eval_surjective
     Function.Surjective
       (Polynomial.eval₂RingHom
         (algebraMap (Algebra.adjoin R (↑t : Set S)) S) x) := by
-  sorry
+  let A := Algebra.adjoin R (↑t : Set S)
+  have hgen' : Algebra.adjoin A ({x} : Set S) = ⊤ := by
+    apply Algebra.eq_top_iff.2
+    intro y
+    have hy : y ∈ Algebra.adjoin R (insert x (↑t : Set S)) := by
+      rw [hgen]
+      exact Algebra.mem_top
+    induction hy using Algebra.adjoin_induction with
+    | mem y hy =>
+        rcases hy with (rfl | hy)
+        · exact Algebra.subset_adjoin (Set.mem_singleton y)
+        · let ya : A := ⟨y, Algebra.subset_adjoin hy⟩
+          simpa using Subalgebra.algebraMap_mem (Algebra.adjoin A ({x} : Set S)) ya
+    | algebraMap r =>
+        rw [IsScalarTower.algebraMap_apply R A S]
+        exact Subalgebra.algebraMap_mem _ _
+    | add y z _ _ hy hz =>
+        exact Subalgebra.add_mem _ hy hz
+    | mul y z _ _ hy hz =>
+        exact Subalgebra.mul_mem _ hy hz
+  have hsurj_aeval : Function.Surjective
+      (Polynomial.aeval x : Polynomial A →ₐ[A] S) := by
+    rw [← AlgHom.range_eq_top, ← Algebra.adjoin_singleton_eq_range_aeval A x]
+    exact hgen'
+  intro s
+  obtain ⟨p, hp⟩ := hsurj_aeval s
+  refine ⟨p, ?_⟩
+  simpa [A, Polynomial.aeval_def] using hp
 /-
   let A := Algebra.adjoin R (↑t : Set S)
   have hgen' : Algebra.adjoin A ({x} : Set S) = ⊤ := by
@@ -763,7 +792,195 @@ theorem exists_localization_away_finitePresentation
     (hft : RingHom.FiniteType φ) :
     ∃ f : R, f ≠ 0 ∧ ∃ g : S, g ≠ 0 ∧
       RingHom.FinitePresentation (localizationAwayMulMap φ f g) := by
-  sorry
+  classical
+  letI : Algebra R S := φ.toAlgebra
+  change Algebra.FiniteType R S at hft
+  have hφ' : Function.Injective (algebraMap R S) := hφ
+  have aux : ∀ t : Finset S,
+      ∃ f : R, f ≠ 0 ∧ ∃ g : Algebra.adjoin R (↑t : Set S), g ≠ 0 ∧
+        RingHom.FinitePresentation
+          (localizationAwayMulMap
+            (algebraMap R (Algebra.adjoin R (↑t : Set S))) f g) := by
+    intro t
+    induction t using Finset.induction_on with
+    | empty =>
+        let A := Algebra.adjoin R (↑(∅ : Finset S) : Set S)
+        have hA : A = ⊥ := by simp [A]
+        have hinjA : Function.Injective (algebraMap R A) := by
+          intro r s hrs
+          apply hφ'
+          have hrs' := congrArg (fun z : A => (z : S)) hrs
+          simpa [A] using hrs'
+        have hsurjA : Function.Surjective (algebraMap R A) := by
+          intro y
+          have hy : (y : S) ∈ (⊥ : Subalgebra R S) := by
+            rw [← hA]
+            exact y.property
+          obtain ⟨r, hr⟩ := Algebra.mem_bot.mp hy
+          refine ⟨r, ?_⟩
+          apply Subtype.ext
+          simpa [A] using hr
+        have hfpA : RingHom.FinitePresentation (algebraMap R A) :=
+          RingHom.FinitePresentation.of_bijective ⟨hinjA, hsurjA⟩
+        simpa [A] using
+          (show ∃ f : R, f ≠ 0 ∧ ∃ g : A, g ≠ 0 ∧
+              RingHom.FinitePresentation
+                (localizationAwayMulMap (algebraMap R A) f g) from
+            ⟨1, one_ne_zero, 1, one_ne_zero,
+              localizationAwayMulMap_one_finitePresentation_of_finitePresentation
+                (algebraMap R A) hfpA⟩)
+    | @insert x t hx ih =>
+        let A := Algebra.adjoin R (↑t : Set S)
+        let A' := Algebra.adjoin R (↑(insert x t) : Set S)
+        have hA'eq : A' = Algebra.adjoin R (insert x (↑t : Set S)) := by
+          apply SetLike.coe_injective
+          ext y
+          simp [A']
+        have hAA' : A ≤ A' := by
+          apply Algebra.adjoin_le
+          intro y hy
+          rw [hA'eq]
+          exact Algebra.subset_adjoin (Or.inr hy)
+        let ψ : A →+* A' := (Subalgebra.inclusion hAA').toRingHom
+        letI : Algebra A A' := ψ.toAlgebra
+        letI : IsScalarTower R A A' := IsScalarTower.of_algebraMap_eq' rfl
+        let x' : A' := ⟨x, by rw [hA'eq]; exact Algebra.subset_adjoin (by simp)⟩
+        have hψ : Function.Injective ψ := by
+          exact Subalgebra.inclusion_injective hAA'
+        have hpre : Algebra.adjoin R
+            (((↑) : A' → S) ⁻¹' (insert x (↑t : Set S))) = ⊤ := by
+          rw [hA'eq]
+          exact Algebra.adjoin_adjoin_coe_preimage
+        have hB : Subalgebra.restrictScalars R
+            (Algebra.adjoin A ({x'} : Set A')) = ⊤ := by
+          apply Algebra.eq_top_iff.2
+          intro y
+          have hy : y ∈ Algebra.adjoin R
+              (((↑) : A' → S) ⁻¹' (insert x (↑t : Set S))) := by
+            rw [hpre]
+            exact Algebra.mem_top
+          induction hy using Algebra.adjoin_induction with
+          | mem z hz =>
+              change (z : S) ∈ insert x (↑t : Set S) at hz
+              rcases hz with (hz | hz)
+              · have hzx : z = x' := by
+                  apply Subtype.ext
+                  exact hz
+                rw [hzx]
+                change x' ∈ Algebra.adjoin A ({x'} : Set A')
+                exact Algebra.subset_adjoin (Set.mem_singleton x')
+              · let za : A := ⟨z, Algebra.subset_adjoin hz⟩
+                change z ∈ Algebra.adjoin A ({x'} : Set A')
+                have hza : algebraMap A A' za = z := by
+                  apply Subtype.ext
+                  rfl
+                rw [← hza]
+                exact Subalgebra.algebraMap_mem _ za
+          | algebraMap r =>
+              change (algebraMap R A' r) ∈ Algebra.adjoin A ({x'} : Set A')
+              rw [IsScalarTower.algebraMap_apply R A A']
+              exact Subalgebra.algebraMap_mem _ _
+          | add y z _ _ hy hz =>
+              exact Subalgebra.add_mem _ hy hz
+          | mul y z _ _ hy hz =>
+              exact Subalgebra.mul_mem _ hy hz
+        have hgenA : Algebra.adjoin A ({x'} : Set A') = ⊤ := by
+          apply Subalgebra.restrictScalars_injective R
+          rw [Subalgebra.restrictScalars_top]
+          exact hB
+        have hev : Function.Surjective
+            (Polynomial.eval₂RingHom ψ x') := by
+          have hsurj : Function.Surjective
+              (Polynomial.aeval x' : Polynomial A →ₐ[A] A') := by
+            rw [← AlgHom.range_eq_top, ← Algebra.adjoin_singleton_eq_range_aeval A x']
+            exact hgenA
+          intro y
+          obtain ⟨p, hp⟩ := hsurj y
+          refine ⟨p, ?_⟩
+          have hψalg : ψ = (algebraMap A A' : A →+* A') := by rfl
+          simpa [Polynomial.aeval_def, hψalg] using hp
+        obtain ⟨f, hf, g, hg, h₁⟩ := ih
+        obtain ⟨a, ha, b, hb, h₂⟩ :=
+          one_generator_local_fp_general ψ hψ x' hev
+        have hinjA : Function.Injective (algebraMap R A) := by
+          intro r s hrs
+          apply hφ'
+          have hrs' := congrArg (fun z : A => (z : S)) hrs
+          simpa [A] using hrs'
+        have hcomp := localizationAwayMulMap_comp_finitePresentation
+          (φ := algebraMap R A) (ψ := ψ) f g a b hf hg ha hb hinjA hψ h₁ h₂
+        have hψcomp : ψ.comp (algebraMap R A) = algebraMap R A' := by
+          ext r
+          rfl
+        have hψa : ψ a ≠ 0 := by
+          intro h
+          apply ha
+          exact hψ (by simpa using h)
+        have hψg : ψ g ≠ 0 := by
+          intro h
+          apply hg
+          exact hψ (by simpa using h)
+        have hnonzero : ψ a * b * ψ g ≠ 0 :=
+          mul_ne_zero (mul_ne_zero hψa hb) hψg
+        refine ⟨f, hf, ψ a * b * ψ g, hnonzero, ?_⟩
+        change RingHom.FinitePresentation
+          (localizationAwayMulMap (algebraMap R A') f (ψ a * b * ψ g))
+        rw [← hψcomp]
+        exact hcomp
+  obtain ⟨n, q, hq⟩ :=
+    (Algebra.FiniteType.iff_quotient_mvPolynomial'').mp hft
+  let v : Fin n → S := fun i => q (MvPolynomial.X i)
+  have hqv : MvPolynomial.aeval v = q := by
+    ext p
+    simp [v]
+  let t : Finset S := Finset.univ.image v
+  have ht : Algebra.adjoin R (↑t : Set S) = ⊤ := by
+    have hset : (↑t : Set S) = Set.range v := by
+      ext y
+      constructor
+      · intro hy
+        rcases Finset.mem_image.mp hy with ⟨i, -, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩
+    rw [hset, Algebra.adjoin_range_eq_range_aeval]
+    rw [hqv]
+    rw [AlgHom.range_eq_top]
+    exact hq
+  obtain ⟨f, hf, g, hg, hfp⟩ := aux t
+  let A := Algebra.adjoin R (↑t : Set S)
+  let e : A ≃ₐ[R] S :=
+    (Subalgebra.equivOfEq A (⊤ : Subalgebra R S) ht).trans
+      (Subalgebra.topEquiv : (⊤ : Subalgebra R S) ≃ₐ[R] S)
+  have heq : (e : A →+* S).comp (algebraMap R A) = φ := by
+    ext r
+    change e (algebraMap R A r) = φ r
+    rw [e.commutes]
+    rfl
+  have hefp : RingHom.FinitePresentation (e : A →+* S) :=
+    RingHom.FinitePresentation.of_bijective e.bijective
+  have h₂ : RingHom.FinitePresentation
+      (localizationAwayMulMap (e : A →+* S) 1 1) :=
+    localizationAwayMulMap_one_finitePresentation_of_finitePresentation
+      (e : A →+* S) hefp
+  have hinjA : Function.Injective (algebraMap R A) := by
+    intro r s hrs
+    apply hφ'
+    have hrs' := congrArg (fun z : A => (z : S)) hrs
+    simpa [A] using hrs'
+  have hcomp := localizationAwayMulMap_comp_finitePresentation
+    (φ := algebraMap R A) (ψ := (e : A →+* S)) f g 1 1 hf hg one_ne_zero one_ne_zero
+    hinjA e.injective hfp h₂
+  refine ⟨f, hf, e g, ?_, ?_⟩
+  · intro h
+    apply hg
+    exact e.injective (by simpa using h)
+  · rw [heq] at hcomp
+    have hden : (e : A →+* S) 1 * 1 * (e : A →+* S) g = e g := by
+      rw [map_one]
+      simp
+    rw [hden] at hcomp
+    exact hcomp
 
 /- The quotient/localization square in the source proof is proof scaffolding:
 the canonical quotient spectra and `PrimeSpectrum.comap` already provide its
@@ -783,7 +1000,334 @@ theorem image_constructible_contains_open_dense_subset_of_finiteType
     ∃ U : Set (closure ({ξ} : Set (PrimeSpectrum R))),
       IsOpen U ∧ Dense U ∧
         (U : Set (PrimeSpectrum R)) ⊆ PrimeSpectrum.comap φ '' E := by
-  sorry
+  rcases hξ with ⟨η, hηE, rfl⟩
+  let p : Ideal R := Ideal.comap φ η.asIdeal
+  let q : Ideal S := η.asIdeal
+  let ψ : R ⧸ p →+* S ⧸ q := Ideal.quotientMap q φ (by
+    dsimp [p, q]
+    exact le_rfl)
+  have hψinj : Function.Injective ψ := by
+    apply Ideal.quotientMap_injective
+  letI : Algebra (R ⧸ p) (S ⧸ q) := ψ.toAlgebra
+  have hft' : Algebra.FiniteType (R ⧸ p) (S ⧸ q) := by
+    letI : Algebra R S := φ.toAlgebra
+    change Algebra.FiniteType R S at hφ
+    obtain ⟨n, t, qgen, hqgen⟩ := Algebra.FiniteType.iff_exists_generators.mp hφ
+    let qmk : S →+* S ⧸ q := Ideal.Quotient.mk q
+    let t' : Fin n → S ⧸ q := fun i => qmk (t i)
+    have hmap_eval (P : MvPolynomial (Fin n) R) :
+        qmk (MvPolynomial.aeval t P) =
+          MvPolynomial.aeval t' (MvPolynomial.map (Ideal.Quotient.mk p) P) := by
+      let lhs : MvPolynomial (Fin n) R →+* (S ⧸ q) :=
+        qmk.comp (MvPolynomial.aeval t).toRingHom
+      let rhs : MvPolynomial (Fin n) R →+* (S ⧸ q) :=
+        (MvPolynomial.aeval t').toRingHom.comp
+          (MvPolynomial.map (Ideal.Quotient.mk p))
+      have heq : lhs = rhs := by
+        apply MvPolynomial.ringHom_ext
+        · intro r
+          simp [lhs, rhs]
+          rw [show algebraMap R S r = φ r by rfl]
+          rfl
+        · intro i
+          simp [lhs, rhs, t']
+      exact congrArg (fun f : MvPolynomial (Fin n) R →+* (S ⧸ q) => f P) heq
+    let lift : (S ⧸ q) → S := fun y => Classical.choose (Ideal.Quotient.mk_surjective y)
+    have hlift (y : S ⧸ q) : qmk (lift y) = y :=
+      Classical.choose_spec (Ideal.Quotient.mk_surjective y)
+    let qbar : (S ⧸ q) → MvPolynomial (Fin n) (R ⧸ p) :=
+      fun y => MvPolynomial.map (Ideal.Quotient.mk p) (qgen (lift y))
+    have hqbar (y : S ⧸ q) :
+        MvPolynomial.aeval t' (qbar y) = y := by
+      dsimp [qbar]
+      rw [← hmap_eval, hqgen, hlift]
+    have hsurj : Function.Surjective
+        (MvPolynomial.aeval t' :
+          MvPolynomial (Fin n) (R ⧸ p) →ₐ[R ⧸ p] (S ⧸ q)) := by
+      intro y
+      exact ⟨qbar y, hqbar y⟩
+    exact Algebra.FiniteType.iff_exists_generators.mpr
+      ⟨n, ⟨Algebra.Generators.ofAlgHom _ hsurj⟩⟩
+  change RingHom.FiniteType ψ at hft'
+  have hqprime : q.IsPrime := by
+    dsimp [q]
+    exact η.isPrime
+  letI : q.IsPrime := hqprime
+  have hpprime : p.IsPrime := by
+    dsimp [p]
+    exact Ideal.comap_isPrime φ q
+  letI : p.IsPrime := hpprime
+  let Ebar : Set (PrimeSpectrum (S ⧸ q)) :=
+    PrimeSpectrum.comap (Ideal.Quotient.mk q) ⁻¹' E
+  have hEbar : IsConstructible Ebar := by
+    exact (Formalization.Books.Algebra.Unit29.affine_map_quasiCompact_and_constructible_preimage
+      (Ideal.Quotient.mk q)).2 E hE
+  let ηbar : PrimeSpectrum (S ⧸ q) := ⟨⊥, inferInstance⟩
+  have hηbar : PrimeSpectrum.comap (Ideal.Quotient.mk q) ηbar = η := by
+    apply PrimeSpectrum.ext
+    change Ideal.comap (Ideal.Quotient.mk q) (⊥ : Ideal (S ⧸ q)) = q
+    rw [← RingHom.ker_eq_comap_bot]
+    exact q.mk_ker
+  have hηbarE : ηbar ∈ Ebar := by
+    change PrimeSpectrum.comap (Ideal.Quotient.mk q) ηbar ∈ E
+    rw [hηbar]
+    exact hηE
+  obtain ⟨f, hf, g, hg, hfp⟩ :=
+    exists_localization_away_finitePresentation ψ hψinj hft'
+  have hψf : ψ f ≠ 0 := by
+    intro h
+    apply hf
+    exact hψinj (by simpa using h)
+  have hden : ψ f * g ≠ 0 := mul_ne_zero hψf hg
+  letI : IsDomain (Localization.Away f) :=
+    @Localization.Away.isDomain (R ⧸ p) _ inferInstance f hf
+  letI : IsDomain (Localization.Away (ψ f * g)) :=
+    @Localization.Away.isDomain (S ⧸ q) _ inferInstance (ψ f * g) hden
+  let Efg : Set (PrimeSpectrum (Localization.Away (ψ f * g))) :=
+    PrimeSpectrum.comap
+      (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) ⁻¹' Ebar
+  have hEfg : IsConstructible Efg := by
+    exact (Formalization.Books.Algebra.Unit29.affine_map_quasiCompact_and_constructible_preimage
+      (algebraMap (S ⧸ q) (Localization.Away (ψ f * g)))).2 Ebar hEbar
+  have hI : IsConstructible
+      (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg) := by
+    exact PrimeSpectrum.isConstructible_comap_image hfp hEfg
+  have hRf : Function.Injective
+      (algebraMap (R ⧸ p) (Localization.Away f)) :=
+    IsLocalization.injective (Localization.Away f)
+      (@powers_le_nonZeroDivisors_of_noZeroDivisors (R ⧸ p) _ f
+        (@IsDomain.to_noZeroDivisors (R ⧸ p) _ inferInstance) hf)
+  have hB : Function.Injective
+      (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) :=
+    IsLocalization.injective (Localization.Away (ψ f * g))
+      (@powers_le_nonZeroDivisors_of_noZeroDivisors (S ⧸ q) _ (ψ f * g)
+        (@IsDomain.to_noZeroDivisors (S ⧸ q) _ inferInstance) hden)
+  have hmapinj : Function.Injective (localizationAwayMulMap ψ f g) := by
+    unfold localizationAwayMulMap Localization.awayLift IsLocalization.Away.lift
+    rw [IsLocalization.lift_injective_iff]
+    intro a b
+    constructor
+    · intro hab
+      have hab' : a = b := hRf hab
+      simpa [hab']
+    · intro hab
+      have hab' : a = b := hψinj (hB hab)
+      exact congrArg (algebraMap (R ⧸ p) (Localization.Away f)) hab'
+  let r0 : PrimeSpectrum (Localization.Away f) := ⟨⊥, inferInstance⟩
+  let s0 : PrimeSpectrum (Localization.Away (ψ f * g)) := ⟨⊥, inferInstance⟩
+  have hs0 : PrimeSpectrum.comap
+      (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s0 = ηbar := by
+    apply PrimeSpectrum.ext
+    change Ideal.comap
+        (algebraMap (S ⧸ q) (Localization.Away (ψ f * g)))
+        (⊥ : Ideal (Localization.Away (ψ f * g))) = ⊥
+    exact Ideal.comap_bot_of_injective _ hB
+  have hs0E : s0 ∈ Efg := by
+    change PrimeSpectrum.comap
+        (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s0 ∈ Ebar
+    rw [hs0]
+    exact hηbarE
+  have hr0 : r0 ∈ PrimeSpectrum.comap
+      (localizationAwayMulMap ψ f g) '' Efg := by
+    refine ⟨s0, hs0E, ?_⟩
+    apply PrimeSpectrum.ext
+    change Ideal.comap (localizationAwayMulMap ψ f g)
+        (⊥ : Ideal (Localization.Away (ψ f * g))) = ⊥
+    exact Ideal.comap_bot_of_injective _ hmapinj
+  have hr0closure : closure ({r0} : Set (PrimeSpectrum (Localization.Away f))) = Set.univ := by
+    rw [PrimeSpectrum.closure_singleton]
+    change PrimeSpectrum.zeroLocus (r0.asIdeal : Set (Localization.Away f)) = Set.univ
+    change PrimeSpectrum.zeroLocus
+        (↑(⊥ : Ideal (Localization.Away f)) : Set (Localization.Away f)) = Set.univ
+    exact PrimeSpectrum.zeroLocus_bot
+  have hIclosure : closure
+      (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg) = Set.univ := by
+    apply Set.Subset.antisymm le_top
+    calc
+      (Set.univ : Set (PrimeSpectrum (Localization.Away f))) =
+          closure ({r0} : Set (PrimeSpectrum (Localization.Away f))) :=
+        hr0closure.symm
+      _ ⊆ closure (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg) :=
+        closure_mono (singleton_subset_iff.mpr hr0)
+  obtain ⟨W, hWopen, hWdense, hWsub⟩ :=
+    Formalization.Books.Topology.Unit21.exists_dense_open_subset_of_closure_of_isConstructible hI
+  let eUniv : (Set.univ : Set (PrimeSpectrum (Localization.Away f))) ≃ₜ
+      PrimeSpectrum (Localization.Away f) :=
+    { toFun := Subtype.val
+      invFun := fun x => ⟨x, Set.mem_univ x⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      continuous_toFun := continuous_subtype_val
+      continuous_invFun := by
+        apply Continuous.subtype_mk
+        exact continuous_id }
+  let eI : closure (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg) ≃ₜ
+      PrimeSpectrum (Localization.Away f) :=
+    (Homeomorph.setCongr hIclosure).trans eUniv
+  let V0 : Set (PrimeSpectrum (Localization.Away f)) := eI '' W
+  have hV0open : IsOpen V0 := eI.isOpenMap W hWopen
+  have hV0dense : Dense V0 := by
+    rw [dense_iff_inter_open] at hWdense ⊢
+    intro O hO hOne
+    have hpreopen : IsOpen (eI ⁻¹' O) := hO.preimage eI.continuous
+    have hprene : (eI ⁻¹' O).Nonempty := by
+      rcases hOne with ⟨y, hy⟩
+      exact ⟨eI.symm y, by simpa using hy⟩
+    obtain ⟨x, hxpre, hxW⟩ := hWdense _ hpreopen hprene
+    exact ⟨eI x, hxpre, ⟨x, hxW, rfl⟩⟩
+  let eR :=
+    Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph f
+  let Vsub : Set {r : PrimeSpectrum (R ⧸ p) //
+      r ∈ (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (R ⧸ p)))} := eR '' V0
+  have hVsubopen : IsOpen Vsub := eR.isOpenMap V0 hV0open
+  have hVsubdense : Dense Vsub := by
+    rw [dense_iff_inter_open] at hV0dense ⊢
+    intro O hO hOne
+    have hpreopen : IsOpen (eR ⁻¹' O) := hO.preimage eR.continuous
+    have hprene : (eR ⁻¹' O).Nonempty := by
+      rcases hOne with ⟨y, hy⟩
+      exact ⟨eR.symm y, by simpa using hy⟩
+    obtain ⟨x, hxpre, hxV⟩ := hV0dense _ hpreopen hprene
+    exact ⟨eR x, hxpre, ⟨x, hxV, rfl⟩⟩
+  let rb0 : PrimeSpectrum (R ⧸ p) := ⟨⊥, inferInstance⟩
+  have hrb0closure : closure ({rb0} : Set (PrimeSpectrum (R ⧸ p))) = Set.univ := by
+    rw [PrimeSpectrum.closure_singleton]
+    change PrimeSpectrum.zeroLocus
+        (↑(⊥ : Ideal (R ⧸ p)) : Set (R ⧸ p)) = Set.univ
+    exact PrimeSpectrum.zeroLocus_bot
+  have hrb0basic : rb0 ∈
+      (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (R ⧸ p))) := by
+    apply (PrimeSpectrum.mem_basicOpen f rb0).2
+    simpa [rb0] using hf
+  have hbasicdense : Dense
+      (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (R ⧸ p))) := by
+    have hzero : Dense ({rb0} : Set (PrimeSpectrum (R ⧸ p))) := by
+      rw [dense_iff_closure_eq]
+      exact hrb0closure
+    exact hzero.mono (singleton_subset_iff.mpr hrb0basic)
+  let Vbar : Set (PrimeSpectrum (R ⧸ p)) := Subtype.val '' Vsub
+  have hVbaropen : IsOpen Vbar := by
+    exact (PrimeSpectrum.isOpen_basicOpen.isOpenEmbedding_subtypeVal.isOpen_iff_image_isOpen).mp
+      hVsubopen
+  have hVbardense : Dense Vbar := by
+    rw [dense_iff_inter_open] at hVsubdense ⊢
+    intro O hO hOne
+    have hOD : (O ∩ (PrimeSpectrum.basicOpen f :
+        Set (PrimeSpectrum (R ⧸ p)))).Nonempty := by
+      exact (dense_iff_inter_open.mp hbasicdense) O hO hOne
+    rcases hOD with ⟨y, hyO, hybasic⟩
+    let Osub : Set {r : PrimeSpectrum (R ⧸ p) //
+        r ∈ (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (R ⧸ p)))} :=
+      Subtype.val ⁻¹' O
+    have hOsub : IsOpen Osub := hO.preimage continuous_subtype_val
+    have hOsubprene : Osub.Nonempty := by
+      exact ⟨⟨y, hybasic⟩, hyO⟩
+    have hinter : (Osub ∩ Vsub).Nonempty :=
+      hVsubdense (U := Osub) hOsub hOsubprene
+    obtain ⟨x, hxpre, hxV⟩ := hinter
+    exact ⟨(x : PrimeSpectrum (R ⧸ p)), hxpre, ⟨x, hxV, rfl⟩⟩
+  have hbase :
+      (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))).comp ψ =
+        (localizationAwayMulMap ψ f g).comp
+          (algebraMap (R ⧸ p) (Localization.Away f)) := by
+    ext a
+    simp only [RingHom.comp_apply]
+    unfold localizationAwayMulMap
+    rw [IsLocalization.Away.lift_eq]
+    simp [RingHom.comp_apply]
+  have hquot :
+      (Ideal.Quotient.mk q).comp φ = ψ.comp (Ideal.Quotient.mk p) := by
+    ext r
+    rfl
+  have hξclosure :
+      closure ({PrimeSpectrum.comap φ η} : Set (PrimeSpectrum R)) =
+        PrimeSpectrum.zeroLocus (p : Set R) := by
+    rw [PrimeSpectrum.closure_singleton]
+    simp [p]
+  let eQ := Formalization.Books.Algebra.Unit17.quotientSpectrumHomeomorph p
+  let eQ' : PrimeSpectrum (R ⧸ p) ≃ₜ
+      closure ({PrimeSpectrum.comap φ η} : Set (PrimeSpectrum R)) :=
+    eQ.trans (Homeomorph.setCongr hξclosure.symm)
+  let U : Set (closure ({PrimeSpectrum.comap φ η} : Set (PrimeSpectrum R))) :=
+    eQ' '' Vbar
+  have hUopen : IsOpen U := eQ'.isOpenMap Vbar hVbaropen
+  have hUdense : Dense U := by
+    rw [dense_iff_inter_open] at hVbardense ⊢
+    intro O hO hOne
+    have hpreopen : IsOpen (eQ' ⁻¹' O) := hO.preimage eQ'.continuous
+    have hprene : (eQ' ⁻¹' O).Nonempty := by
+      rcases hOne with ⟨y, hy⟩
+      exact ⟨eQ'.symm y, by simpa using hy⟩
+    have hinter : ((eQ' ⁻¹' O) ∩ Vbar).Nonempty :=
+      hVbardense (U := eQ' ⁻¹' O) hpreopen hprene
+    obtain ⟨y, hyO, hyV⟩ := hinter
+    exact ⟨eQ' y, hyO, ⟨y, hyV, rfl⟩⟩
+  have heIval (w : closure
+      (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg)) :
+      eI w = (w : PrimeSpectrum (Localization.Away f)) := by
+    rfl
+  have heRval (x : PrimeSpectrum (Localization.Away f)) :
+      (eR x : PrimeSpectrum (R ⧸ p)) =
+        PrimeSpectrum.comap (algebraMap (R ⧸ p) (Localization.Away f)) x := by
+    rw [Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph_apply]
+  have heQval (y : PrimeSpectrum (R ⧸ p)) :
+      ((eQ' y : closure ({PrimeSpectrum.comap φ η} : Set (PrimeSpectrum R))) :
+        PrimeSpectrum R) = PrimeSpectrum.comap (Ideal.Quotient.mk p) y := by
+    change ((eQ y : {r : PrimeSpectrum R //
+      r ∈ PrimeSpectrum.zeroLocus (p : Set R)}) : PrimeSpectrum R) = _
+    rw [Formalization.Books.Algebra.Unit17.quotientSpectrumHomeomorph_apply]
+  have hcomp' :
+      ((algebraMap (S ⧸ q) (Localization.Away (ψ f * g))).comp
+        (Ideal.Quotient.mk q)).comp φ =
+        ((localizationAwayMulMap ψ f g).comp
+          (algebraMap (R ⧸ p) (Localization.Away f))).comp
+            (Ideal.Quotient.mk p) := by
+    ext r
+    simp only [RingHom.comp_apply]
+    have hq := congrArg (fun F : R →+* (S ⧸ q) => F r) hquot
+    have hb := congrArg
+      (fun F : (R ⧸ p) →+* Localization.Away (ψ f * g) =>
+        F (Ideal.Quotient.mk p r)) hbase
+    change (algebraMap (S ⧸ q) (Localization.Away (ψ f * g)))
+        ((Ideal.Quotient.mk q).comp φ r) = _
+    rw [hq]
+    exact hb
+  refine ⟨U, hUopen, hUdense, ?_⟩
+  rintro z ⟨u, huU, rfl⟩
+  rcases huU with ⟨y, hyV, rfl⟩
+  rcases hyV with ⟨y', hyVsub, rfl⟩
+  rcases hyVsub with ⟨x, hxV0, rfl⟩
+  rcases hxV0 with ⟨w, hwW, rfl⟩
+  have hwI : (w : PrimeSpectrum (Localization.Away f)) ∈
+      PrimeSpectrum.comap (localizationAwayMulMap ψ f g) '' Efg :=
+    hWsub ⟨w, hwW, rfl⟩
+  rcases hwI with ⟨s, hs, hws⟩
+  have hsE : PrimeSpectrum.comap (Ideal.Quotient.mk q)
+      (PrimeSpectrum.comap
+        (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s) ∈ E := by
+    change PrimeSpectrum.comap
+        (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s ∈ Ebar at hs
+    exact hs
+  refine ⟨PrimeSpectrum.comap (Ideal.Quotient.mk q)
+      (PrimeSpectrum.comap
+        (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s), hsE, ?_⟩
+  have hpoint :
+      PrimeSpectrum.comap (Ideal.Quotient.mk p)
+          (PrimeSpectrum.comap (algebraMap (R ⧸ p) (Localization.Away f))
+            (PrimeSpectrum.comap (localizationAwayMulMap ψ f g) s)) =
+        PrimeSpectrum.comap φ
+          (PrimeSpectrum.comap (Ideal.Quotient.mk q)
+            (PrimeSpectrum.comap
+              (algebraMap (S ⧸ q) (Localization.Away (ψ f * g))) s)) := by
+    apply PrimeSpectrum.ext
+    ext r
+    have hr := congrArg (fun F : R →+* Localization.Away (ψ f * g) =>
+      F r) hcomp'
+    simpa [PrimeSpectrum.comap_asIdeal, RingHom.comp_apply] using
+      (congrArg (fun z => z ∈ s.asIdeal) hr).symm
+  rw [heQval]
+  rw [heRval (eI w), heIval w, ← hws]
+  exact hpoint.symm
 
 /-! ## Surjectivity on spectra and radical ideals -/
 

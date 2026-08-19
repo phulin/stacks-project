@@ -47,7 +47,7 @@ theorem additiveAssociatedBoundary_comp
     {C : Type u} [Category.{v} C] [Preadditive C]
     (U : SimplicialObject C) (n : ℕ) :
     additiveAssociatedBoundary U (n + 1) ≫ additiveAssociatedBoundary U n = 0 := by
-  sorry
+  exact AlgebraicTopology.AlternatingFaceMapComplex.d_squared U n
 
 /-- The source's associated chain complex `s(U)` in an additive category. -/
 noncomputable def additiveAssociatedChainComplex
@@ -77,7 +77,10 @@ theorem additiveAssociatedBoundary_naturality
     {U V : SimplicialObject C} (f : U ⟶ V) (n : ℕ) :
     f.app (op ⦋n + 1⦌) ≫ additiveAssociatedBoundary V n =
       additiveAssociatedBoundary U n ≫ f.app (op ⦋n⦌) := by
-  sorry
+  simp only [additiveAssociatedBoundary, CategoryTheory.Preadditive.comp_sum,
+    CategoryTheory.Preadditive.sum_comp, CategoryTheory.Preadditive.comp_zsmul,
+    CategoryTheory.Preadditive.zsmul_comp]
+  simp
 
 theorem additiveAssociatedChainComplexMap_comm
     {C : Type u} [Category.{v} C] [Preadditive C]
@@ -85,7 +88,10 @@ theorem additiveAssociatedChainComplexMap_comm
     ∀ i j : ℕ, (ComplexShape.down ℕ).Rel i j →
       f.app (op ⦋i⦌) ≫ (additiveAssociatedChainComplex V).d i j =
         (additiveAssociatedChainComplex U).d i j ≫ f.app (op ⦋j⦌) := by
-  sorry
+  intro i j hij
+  simp only [ComplexShape.down_Rel] at hij
+  subst i
+  simpa [additiveAssociatedChainComplex_d] using additiveAssociatedBoundary_naturality f j
 
 /-- The chain map `s(f)` induced by a map of simplicial objects. -/
 def additiveAssociatedChainComplexMap
@@ -134,9 +140,13 @@ theorem additiveAssociatedHomotopyComponent_boundary_expansion
     (H : DegreewiseHomotopy a b) (n : ℕ) :
     additiveAssociatedHomotopyComponent H n ≫ additiveAssociatedBoundary V n =
       ∑ j : Fin (n + 2), ∑ i : Fin (n + 1),
-        (-1 : ℤ) ^ ((j : ℕ) + (i : ℕ) + 1) •
+          (-1 : ℤ) ^ ((j : ℕ) + (i : ℕ) + 1) •
           (U.σ i ≫ H.h (n + 1) i.castSucc.succ ≫ V.δ j) := by
-  sorry
+  simp only [additiveAssociatedHomotopyComponent, additiveAssociatedBoundary,
+    CategoryTheory.Preadditive.comp_sum, CategoryTheory.Preadditive.sum_comp,
+    CategoryTheory.Preadditive.comp_zsmul, CategoryTheory.Preadditive.zsmul_comp,
+    smul_smul, ← Finset.sum_zsmul, ← pow_add]
+  simp [Category.assoc, add_assoc]
 
 theorem additiveAssociatedHomotopyComponent_previous_boundary_expansion
     {C : Type u} [Category.{v} C] [Preadditive C]

@@ -40,6 +40,24 @@ abbrev finiteType {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
 
 /-! ## Lemmas `pullback-finite-type` and `extension-finite-type` -/
 
+private lemma factorThruImage_overFunctor_epi
+    {X : RingedSpace.{v}} {F G : Mod X.structureSheaf}
+    (φ : F ⟶ G) (U : Opens X.carrier) :
+    Epi ((SheafOfModules.overFunctor X.structureSheaf U).map
+      (factorThruImage φ)) := by
+  let p : F ⟶ image φ := factorThruImage φ
+  let preservesColimits :
+      PreservesColimitsOfShape WalkingSpan
+        (SheafOfModules.overFunctor.{v} X.structureSheaf U) :=
+    (Adjunction.leftAdjoint_preservesColimits
+      (SheafOfModules.overPushforwardOverAdj (R := X.structureSheaf) U)).preservesColimitsOfShape
+  change Epi ((SheafOfModules.overFunctor.{v} X.structureSheaf U).map p)
+  exact @Functor.map_epi _ _ _ _
+    (SheafOfModules.overFunctor.{v} X.structureSheaf U)
+    (@CategoryTheory.preservesEpimorphisms_of_preservesColimitsOfShape _ _ _ _
+      (SheafOfModules.overFunctor.{v} X.structureSheaf U) preservesColimits)
+    F (image φ) p (by dsimp [p]; infer_instance)
+
 /-- Pullback along a morphism of ringed spaces preserves finite type. -/
 theorem finiteType_pullback
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -55,24 +73,27 @@ theorem finiteType_image
     (φ : F ⟶ G) (hF : finiteType F) :
     finiteType (image φ) := by
   change SheafOfModules.IsFiniteType (image φ)
-  let p : F ⟶ image φ := factorThruImage φ
-  letI : Epi p := inferInstance
   obtain ⟨σ, hσ⟩ := hF.exists_localGeneratorsData
-  haveI (i : σ.I) :
-      Functor.IsLeftAdjoint
-        (SheafOfModules.overFunctor X.structureSheaf (σ.X i)) :=
-    ⟨_, ⟨SheafOfModules.overPushforwardOverAdj (R := X.structureSheaf) (σ.X i)⟩⟩
   let τ : (image φ).LocalGeneratorsData := {
     I := σ.I
     X := σ.X
     coversTop := σ.coversTop
-    generators := fun i => (σ.generators i).ofEpi
-      ((SheafOfModules.overFunctor X.structureSheaf (σ.X i)).map p) }
+    generators := fun i => {
+      I := (σ.generators i).I
+      s := fun j => SheafOfModules.sectionsMap
+        ((SheafOfModules.overFunctor X.structureSheaf (σ.X i)).map (factorThruImage φ))
+        ((σ.generators i).s j)
+      epi := by
+        rw [← SheafOfModules.freeHomEquiv_symm_comp]
+        exact epi_comp' (σ.generators i).epi
+          (factorThruImage_overFunctor_epi φ (σ.X i))
+      } }
   refine { exists_localGeneratorsData := ⟨τ, ?_⟩ }
   refine { isFiniteType := ?_ }
   intro i
   dsimp [τ]
   refine { finite := ?_ }
+  change Finite (σ.generators i).I
   rcases hσ.isFiniteType i with ⟨hfinite⟩
   exact hfinite
 

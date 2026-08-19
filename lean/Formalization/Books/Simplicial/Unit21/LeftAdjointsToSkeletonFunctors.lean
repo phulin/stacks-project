@@ -110,9 +110,6 @@ noncomputable def leftAdjoint
   let hsk : HasLeftSkeletonFunctor C m :=
     has_left_skeleton_functor_of_has_finite_colimits m
   letI : HasLeftSkeletonFunctor C m := hsk
-  letI : (leftSkeletonInclusion m).HasLeftKanExtension U := hsk U
-  letI : (leftSkeletonInclusion m).HasLeftKanExtension U :=
-    has_left_skeleton_functor_of_has_finite_colimits m U
   SimplicialObject.Truncated.sk m
 
 /-- The adjunction `iₘ! ⊣ skₘ`, using the canonical Kan-extension adjunction. -/

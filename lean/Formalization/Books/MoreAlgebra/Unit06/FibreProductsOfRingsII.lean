@@ -1,5 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit05.FibreProductsOfRingsI
 import Mathlib.Algebra.Category.ModuleCat.Projective
+import Mathlib.Algebra.DualNumber
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.AlgebraicGeometry.Spec
 import Mathlib.CategoryTheory.Limits.Types.Pushouts
@@ -1097,7 +1098,6 @@ theorem fibreProductModuleAdjunctionMap_not_injective_in_general :
         (L' : ModuleCat.{u} (fibreProductRing D)),
         Function.Injective (fun x => fibreProductModuleAdjunctionMap D L' x)) := by
   sorry
-
 /-! ## The concrete non-injectivity example -/
 
 /-- The polynomial ring `k[x,y]` used in the source's example. -/
@@ -1199,7 +1199,190 @@ theorem fibreProductExample_x_nonzero_maps_zero (k : Type u) [Field k] :
       (moduleFiberProductAdjunctionData (fibreProductExampleRingSquare k)).adjunction.unit.app
           (fibreProductExampleModule k)
           (fibreProductExampleXClass k) = 0 := by
-  sorry
+  let e : fibreProductExamplePolynomialRing k →ₐ[k] DualNumber k :=
+    MvPolynomial.aeval (fun _ : Fin 2 => (DualNumber.eps : DualNumber k))
+  have hXY : ∀ p ∈ fibreProductExampleXYIdeal k, e p = 0 := by
+    intro p hp
+    obtain ⟨a, rfl⟩ := Ideal.mem_span_singleton'.mp hp
+    simp [e]
+  let eB : fibreProductExampleBPrime k →+* DualNumber k :=
+    Ideal.Quotient.lift (fibreProductExampleXYIdeal k) e hXY
+  have hdiff : ∀ p ∈ fibreProductExampleXYDifferenceIdeal k, eB p = 0 := by
+    intro p hp
+    obtain ⟨a, rfl⟩ := Ideal.mem_span_singleton'.mp hp
+    rw [map_mul]
+    have hxy : eB ((Ideal.Quotient.mk (fibreProductExampleXYIdeal k))
+        (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2))) = 0 := by
+      change e (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2)) = 0
+      simp [e]
+    rw [hxy, mul_zero]
+  let eL : fibreProductExampleLPrime k →+* DualNumber k :=
+    Ideal.Quotient.lift (fibreProductExampleXYDifferenceIdeal k) eB hdiff
+  have hε : (DualNumber.eps : DualNumber k) ≠ 0 := by
+    intro h
+    have hs := congrArg (TrivSqZeroExt.snd : DualNumber k → k) h
+    simp at hs
+  have hx : fibreProductExampleXClass k ≠ 0 := by
+    intro hx
+    apply hε
+    have he := congrArg eL hx
+    have heps : eL (fibreProductExampleXClass k) = DualNumber.eps := by
+      change e (MvPolynomial.X (0 : Fin 2)) = DualNumber.eps
+      simp [e]
+    rw [heps] at he
+    simpa using he
+  let r : fibreProductExampleBPrime k :=
+    Ideal.Quotient.mk (fibreProductExampleXYIdeal k)
+      (MvPolynomial.X (0 : Fin 2))
+  let q : fibreProductExampleBPrime k :=
+    Ideal.Quotient.mk (fibreProductExampleXYIdeal k)
+      (MvPolynomial.X (1 : Fin 2))
+  have hrq : r - q ∈ fibreProductExampleXYDifferenceIdeal k := by
+    change Ideal.Quotient.mk (fibreProductExampleXYIdeal k)
+        (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2)) ∈ _
+    exact Ideal.mem_span_singleton'.mpr ⟨1, by simp⟩
+  have hrel : ∀ z : fibreProductExampleLPrime k, (r - q) • z = 0 := by
+    intro z
+    have hz : Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k)
+        (r - q) = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hrq
+    change (Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k)
+        (r - q)) • z = 0
+    rw [hz]
+    change (0 : fibreProductExampleLPrime k) * z = 0
+    exact zero_mul z
+  have hqB : fibreProductExampleBPrimeToB k q = 0 := by
+    change Ideal.Quotient.mk (fibreProductExampleYIdeal k) q = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.mem_span_singleton'.mpr ⟨1, by simp [q]⟩
+  have hleft : ∀ z : TensorProduct (fibreProductExampleBPrime k)
+      (fibreProductExampleB k) (fibreProductExampleLPrime k), r • z = 0 := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul b z =>
+        rw [TensorProduct.smul_tmul']
+        rw [← sub_add_cancel r q]
+        rw [add_smul]
+        rw [TensorProduct.add_tmul]
+        rw [TensorProduct.smul_tmul]
+        have hqsmul : q • b = 0 := by
+          change (fibreProductExampleBPrimeToB k q) * b = 0
+          rw [hqB]
+          exact zero_mul b
+        simp [hrel, hqsmul]
+    | add z₁ z₂ hz₁ hz₂ => simp [hz₁, hz₂]
+  have hright : ∀ z : TensorProduct (fibreProductExampleBPrime k)
+      (fibreProductExampleA' k) (fibreProductExampleLPrime k), r • z = 0 := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul b z =>
+        rw [TensorProduct.smul_tmul']
+        have hrA' : fibreProductExampleBPrimeToA' k r = 0 := by
+          change Ideal.Quotient.mk (fibreProductExampleXIdeal k) r = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact Ideal.mem_span_singleton'.mpr ⟨1, by simp [r]⟩
+        change ((fibreProductExampleBPrimeToA' k r) • b) ⊗ₜ z = 0
+        rw [hrA']
+        change ((0 : fibreProductExampleA' k) * b) ⊗ₜ[fibreProductExampleBPrime k] z = 0
+        calc
+          ((0 : fibreProductExampleA' k) * b) ⊗ₜ[fibreProductExampleBPrime k] z =
+              (0 : fibreProductExampleA' k) ⊗ₜ[fibreProductExampleBPrime k] z := by
+            congr 1
+            exact zero_mul b
+          _ = 0 := TensorProduct.zero_tmul (fibreProductExampleA' k) z
+    | add z₁ z₂ hz₁ hz₂ => simp [hz₁, hz₂]
+  let X0 := (moduleBaseChangeFunctor (fibreProductExampleRingSquare k)).obj
+    (fibreProductExampleModule k)
+  let f0 := moduleFiberLeftMap (fibreProductExampleRingSquare k) X0
+  let g0 := moduleFiberRightMap (fibreProductExampleRingSquare k) X0
+  have htarget : ∀ z : moduleFiberProduct (fibreProductExampleRingSquare k) X0,
+      r • z = 0 := by
+    intro z
+    apply (Concrete.pullbackEquiv f0 g0).injective
+    apply Subtype.ext
+    apply Prod.ext
+    · unfold Concrete.pullbackEquiv
+      simp only [Iso.toEquiv, Equiv.coe_fn_mk, Iso.trans_hom,
+        CategoryTheory.comp_apply]
+      rw [Types.pullbackIsoPullback_hom_fst, Types.pullbackIsoPullback_hom_fst]
+      have hcoord (w : moduleFiberProduct (fibreProductExampleRingSquare k) X0) :
+          (ConcreteCategory.hom
+              (pullback.fst (↾⇑(ConcreteCategory.hom f0))
+                (↾⇑(ConcreteCategory.hom g0))))
+              ((ConcreteCategory.hom
+                (PreservesPullback.iso (forget (ModuleCat (fibreProductExampleBPrime k)))
+                  f0 g0).hom) w) =
+            (ConcreteCategory.hom (pullback.fst f0 g0)) w := by
+        simpa [CategoryTheory.comp_apply] using
+          congrArg (fun k => k.hom w)
+            (PreservesPullback.iso_hom_fst
+              (forget (ModuleCat (fibreProductExampleBPrime k))) f0 g0)
+      rw [hcoord (r • z), hcoord 0]
+      have hzero : r • (pullback.fst f0 g0 z) = 0 := by
+        change r • (pullback.fst f0 g0 z) =
+          (0 : TensorProduct (fibreProductExampleBPrime k)
+            (fibreProductExampleB k) (fibreProductExampleLPrime k))
+        exact hleft (pullback.fst f0 g0 z)
+      simpa only [map_smul, map_zero] using hzero
+    · have hpair (w : moduleFiberProduct (fibreProductExampleRingSquare k) X0) :
+          ((Concrete.pullbackEquiv f0 g0 w).1.2) =
+            (ConcreteCategory.hom
+              (pullback.snd (↾⇑(ConcreteCategory.hom f0))
+                (↾⇑(ConcreteCategory.hom g0))))
+              ((ConcreteCategory.hom
+                (PreservesPullback.iso (forget (ModuleCat (fibreProductExampleBPrime k)))
+                  f0 g0).hom) w) := by
+        simpa only [Concrete.pullbackEquiv, Iso.toEquiv, Equiv.coe_fn_mk,
+          Iso.trans_hom, CategoryTheory.comp_apply] using
+          Types.pullbackIsoPullback_hom_snd
+            (↾⇑(ConcreteCategory.hom f0))
+            (↾⇑(ConcreteCategory.hom g0))
+            ((PreservesPullback.iso (forget (ModuleCat (fibreProductExampleBPrime k)))
+              f0 g0).hom w)
+      have hcoord (w : moduleFiberProduct (fibreProductExampleRingSquare k) X0) :
+          (ConcreteCategory.hom
+              (pullback.snd (↾⇑(ConcreteCategory.hom f0))
+                (↾⇑(ConcreteCategory.hom g0))))
+              ((ConcreteCategory.hom
+                (PreservesPullback.iso (forget (ModuleCat (fibreProductExampleBPrime k)))
+                  f0 g0).hom) w) =
+            (ConcreteCategory.hom (pullback.snd f0 g0)) w := by
+        simpa [CategoryTheory.comp_apply] using
+          congrArg (fun k => k.hom w)
+            (PreservesPullback.iso_hom_snd
+              (forget (ModuleCat (fibreProductExampleBPrime k))) f0 g0)
+      calc
+        (Concrete.pullbackEquiv f0 g0 (r • z)).1.2 =
+            (ConcreteCategory.hom (pullback.snd f0 g0)) (r • z) :=
+          (hpair (r • z)).trans (hcoord (r • z))
+        _ = r • (ConcreteCategory.hom (pullback.snd f0 g0)) z := by
+          simp only [map_smul]
+        _ = 0 := by
+          have hzero : r • (pullback.snd f0 g0 z) = 0 := by
+            change r • (pullback.snd f0 g0 z) =
+              (0 : TensorProduct (fibreProductExampleBPrime k)
+                (fibreProductExampleA' k) (fibreProductExampleLPrime k))
+            exact hright (pullback.snd f0 g0 z)
+          exact hzero
+        _ = (ConcreteCategory.hom (pullback.snd f0 g0)) 0 := by
+          simp only [map_zero]
+        _ = (ConcreteCategory.hom
+              (pullback.snd (↾⇑(ConcreteCategory.hom f0))
+                (↾⇑(ConcreteCategory.hom g0))))
+              ((ConcreteCategory.hom
+                (PreservesPullback.iso (forget (ModuleCat (fibreProductExampleBPrime k)))
+                  f0 g0).hom) 0) := (hcoord 0).symm
+        _ = (Concrete.pullbackEquiv f0 g0 0).1.2 := (hpair 0).symm
+  have hclass : fibreProductExampleXClass k = r • (1 : fibreProductExampleLPrime k) := by
+    change Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k) r = r • 1
+    change Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k) r =
+      Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k) r * 1
+    exact (mul_one (Ideal.Quotient.mk (fibreProductExampleXYDifferenceIdeal k) r)).symm
+  constructor
+  · exact hx
+  · rw [hclass, map_smul]
+    exact htarget _
 
 /-- The compatible-pair pullback is functorial for morphisms of triples. -/
 theorem fibreProductModule_map_surjective

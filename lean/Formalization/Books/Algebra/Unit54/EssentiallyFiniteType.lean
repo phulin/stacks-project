@@ -4,6 +4,9 @@ import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.Finiteness.NilpotentKer
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.BaseChange
+import Mathlib.RingTheory.Localization.Ideal
+import Mathlib.RingTheory.Localization.LocalizationLocalization
+import Mathlib.RingTheory.MvPolynomial.Localization
 import Mathlib.RingTheory.RingHom.EssFiniteType
 import Mathlib.RingTheory.RingHom.FinitePresentation
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Defs
@@ -119,7 +122,202 @@ theorem essFinitePresentation_comp
     (hf : RingHom.EssFinitePresentation f)
     (hg : RingHom.EssFinitePresentation g) :
     RingHom.EssFinitePresentation (g.comp f) := by
-  sorry
+  classical
+  algebraize [f, g, g.comp f]
+  change essFinitePresentation R S at hf
+  change essFinitePresentation S T at hg
+  rcases hf with ⟨Aorig, hAorig, aorig, Morig, qorig, hqorig, hqaorig, hlocorig⟩
+  rcases hg with ⟨B, hB, b, N, r, hb, hbr, hloc'⟩
+  letI : CommRing Aorig := hAorig
+  letI : CommRing B := hB
+  letI : Algebra Aorig S := qorig.toAlgebra
+  letI : IsLocalization Morig S := hlocorig
+  letI : Algebra R Aorig := aorig.toAlgebra
+  letI : Algebra.FinitePresentation R Aorig := hqorig
+  obtain ⟨k, e, he, hker⟩ := Algebra.FinitePresentation.out (R := R) (A := Aorig)
+  let P0 := MvPolynomial (Fin k) R
+  let I0 : Ideal P0 := RingHom.ker e.toRingHom
+  let A := P0 ⧸ I0
+  letI : CommRing A := by
+    dsimp [A]
+    infer_instance
+  let e0 : A ≃+* Aorig := RingHom.quotientKerEquivOfSurjective he
+  let mk0 : P0 →+* A := Ideal.Quotient.mk I0
+  let a : R →+* A := mk0.comp (algebraMap R P0)
+  let M : Submonoid A := Morig.map e0.symm
+  let q : A →+* S := qorig.comp e0.toRingHom
+  letI : Algebra A S := q.toAlgebra
+  have hmk0 : RingHom.FinitePresentation mk0 := by
+    apply RingHom.FinitePresentation.of_surjective mk0 Ideal.Quotient.mk_surjective
+    rw [show RingHom.ker mk0 = I0 by
+      dsimp [mk0]
+      exact Ideal.mk_ker]
+    exact hker
+  have hP0 : RingHom.FinitePresentation (algebraMap R P0) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  have hq : RingHom.FinitePresentation a := hmk0.comp hP0
+  have hqa : q.comp a = algebraMap R S := by
+    apply RingHom.ext
+    intro x
+    change qorig (e0 (mk0 (algebraMap R P0 x))) = algebraMap R S x
+    rw [show e0 (mk0 (algebraMap R P0 x)) = e (algebraMap R P0 x) by
+      exact RingHom.quotientKerEquivOfSurjective_apply_mk he _]
+    rw [show e (algebraMap R P0 x) = aorig x by
+      exact e.commutes x]
+    exact DFunLike.congr_fun hqaorig x
+  have hloc : IsLocalization M S := by
+    convert IsLocalization.isLocalization_of_base_ringEquiv Morig S e0.symm using 1
+    apply Algebra.algebra_ext
+    intro x
+    rfl
+  letI : IsLocalization M S := hloc
+  letI : Algebra B T := r.toAlgebra
+  letI : Algebra S T := g.toAlgebra
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra S B := b.toAlgebra
+  letI : IsScalarTower S B T :=
+    IsScalarTower.of_algebraMap_eq' (by rw [← hbr]; rfl)
+  letI : Algebra.FinitePresentation S B := hb
+  obtain ⟨n, p, hp, hK⟩ := Algebra.FinitePresentation.out (R := S) (A := B)
+  let P := MvPolynomial (Fin n) A
+  let Q := MvPolynomial (Fin n) S
+  let F : P →+* Q := MvPolynomial.map q
+  letI : Algebra P Q := F.toAlgebra
+  letI : IsLocalization (M.map (MvPolynomial.C : A →+* P)) Q :=
+    MvPolynomial.isLocalization M S
+  let K : Ideal Q := RingHom.ker p.toRingHom
+  obtain ⟨s, hs⟩ := hK
+  choose t ht using fun x : s =>
+    IsLocalization.surj (M := M.map (MvPolynomial.C : A →+* P)) x.1
+  let u : s → P := fun x => (t x).1
+  let v : s → M.map (MvPolynomial.C : A →+* P) := fun x => (t x).2
+  have huv (x : s) : x.1 * algebraMap P Q (v x) = algebraMap P Q (u x) := by
+    exact ht x
+  let uf : Finset P := Finset.univ.image u
+  let I : Ideal P := Ideal.span (uf : Set P)
+  have huI (x : s) : u x ∈ I := by
+    apply Ideal.subset_span
+    simp [I, uf]
+  have hxK (x : s) : x.1 ∈ K := by
+    change x.1 ∈ RingHom.ker p.toRingHom
+    rw [← hs]
+    exact Ideal.subset_span x.2
+  have hu (x : s) : (p.toRingHom.comp F) (u x) = 0 := by
+    have hpx : p x.1 = 0 := hxK x
+    have hpu : p (algebraMap P Q (u x)) = 0 := by
+      rw [← huv x, map_mul, hpx, zero_mul]
+    exact hpu
+  let L : P →+* B := p.toRingHom.comp F
+  have hI : I ≤ RingHom.ker L := by
+    change Ideal.span (uf : Set P) ≤ RingHom.ker L
+    refine Ideal.span_le.2 ?_
+    intro z hz
+    simp only [uf, Finset.mem_coe, Finset.mem_image, Finset.mem_univ, true_and] at hz
+    obtain ⟨x, rfl⟩ := hz
+    exact hu x
+  let C := P ⧸ I
+  letI : CommRing C := by
+    dsimp [C]
+    infer_instance
+  let c : C →+* B := Ideal.Quotient.lift I L hI
+  have hc : c.comp (Ideal.Quotient.mk I) = L := by
+    apply RingHom.ext
+    intro x
+    exact Ideal.Quotient.lift_mk I L hI
+  letI : Algebra C B := c.toAlgebra
+  have hH : p.toRingHom.comp (algebraMap P Q) =
+      (algebraMap C B).comp (Ideal.Quotient.mk I) := by
+    apply RingHom.ext
+    intro x
+    change p (F x) = (Ideal.Quotient.lift I L hI) (Ideal.Quotient.mk I x)
+    rfl
+  have hH' : RingHom.ker p.toRingHom ≤
+      (RingHom.ker (Ideal.Quotient.mk I)).map (algebraMap P Q) := by
+    rw [Ideal.mk_ker]
+    change RingHom.ker p.toRingHom ≤ I.map (algebraMap P Q)
+    rw [← hs]
+    refine Ideal.span_le.2 ?_
+    intro z hz
+    let x : s := ⟨z, hz⟩
+    apply (IsLocalization.mem_map_algebraMap_iff (M.map (MvPolynomial.C : A →+* P)) Q).2
+    exact ⟨⟨(⟨u x, huI x⟩ : I), v x⟩, huv x⟩
+  have hlocB : IsLocalization
+      ((M.map (MvPolynomial.C : A →+* P)).map (Ideal.Quotient.mk I)) B := by
+    apply IsLocalization.of_surjective (M.map (MvPolynomial.C : A →+* P)) Q
+      (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective p.toRingHom hp hH hH'
+  have hC : RingHom.FinitePresentation (MvPolynomial.C : A →+* P) := by
+    rw [← MvPolynomial.algebraMap_eq, RingHom.finitePresentation_algebraMap]
+    infer_instance
+  let aP : R →+* P := (MvPolynomial.C : A →+* P).comp a
+  have haP : RingHom.FinitePresentation aP := by
+    exact hC.comp hq
+  let mk : P →+* C := Ideal.Quotient.mk I
+  have hIFG : I.FG := ⟨uf, rfl⟩
+  have hmk : RingHom.FinitePresentation mk := by
+    apply RingHom.FinitePresentation.of_surjective mk Ideal.Quotient.mk_surjective
+    rw [show RingHom.ker mk = I by
+      dsimp [mk]
+      exact Ideal.mk_ker]
+    exact hIFG
+  let d : R →+* C := mk.comp aP
+  have hd : RingHom.FinitePresentation d := hmk.comp haP
+  have hL : L.comp aP = (b.comp q).comp a := by
+    apply RingHom.ext
+    intro x
+    change p (F (aP x)) = b (q (a x))
+    simp only [F, aP, RingHom.comp_apply, MvPolynomial.map_C]
+    simpa only [MvPolynomial.algebraMap_eq] using p.commutes (q (a x))
+  have hcomp : (r.comp c).comp d = algebraMap R T := by
+    apply RingHom.ext
+    intro x
+    change r (c (mk (aP x))) = algebraMap R T x
+    have hcmk : c (mk (aP x)) = L (aP x) :=
+      DFunLike.congr_fun hc (aP x)
+    have hLx : L (aP x) = b (q (a x)) := DFunLike.congr_fun hL x
+    calc
+      r (c (mk (aP x))) = r (L (aP x)) := congrArg r hcmk
+      _ = r (b (q (a x))) := congrArg r hLx
+      _ = algebraMap S T (q (a x)) := DFunLike.congr_fun hbr (q (a x))
+      _ = algebraMap R T x := by
+        have hqax : q (a x) = algebraMap R S x := by
+          simpa only [RingHom.comp_apply] using DFunLike.congr_fun hqa x
+        rw [hqax]
+        exact (IsScalarTower.algebraMap_apply R S T x).symm
+  let U : Submonoid C :=
+    (M.map (MvPolynomial.C : A →+* P)).map (Ideal.Quotient.mk I)
+  letI : IsLocalization U B := hlocB
+  letI : IsLocalization N T := hloc'
+  letI : Algebra C T := (r.comp c).toAlgebra
+  letI : IsScalarTower C B T :=
+    IsScalarTower.of_algebraMap_eq' (by rfl)
+  have hlocT : IsLocalization
+      (IsLocalization.localizationLocalizationSubmodule U N) T :=
+    IsLocalization.localization_localization_isLocalization U N T
+  let C' := ULift.{u_3} C
+  let eLift : C' ≃+* C := ULift.ringEquiv
+  let dLift : R →+* C' := eLift.symm.toRingHom.comp d
+  let qLift : C' →+* T := (r.comp c).comp eLift.toRingHom
+  letI : Algebra C' T := qLift.toAlgebra
+  have hlocLift : IsLocalization (U.map eLift.symm.toRingHom) T := by
+    convert IsLocalization.isLocalization_of_base_ringEquiv
+      (IsLocalization.localizationLocalizationSubmodule U N) T eLift.symm using 1
+    apply Algebra.algebra_ext
+    intro x
+    rfl
+  have hdLift : RingHom.FinitePresentation dLift := by
+    apply RingHom.FinitePresentation.comp
+      (RingHom.FinitePresentation.of_bijective eLift.symm.toRingHom eLift.symm.bijective)
+    exact hd
+  have hcompLift : qLift.comp dLift = algebraMap R T := by
+    apply RingHom.ext
+    intro x
+    change (r.comp c) (eLift (eLift.symm (d x))) = algebraMap R T x
+    rw [eLift.apply_symm_apply]
+    exact DFunLike.congr_fun hcomp x
+  change essFinitePresentation R T
+  refine ⟨C', inferInstance, dLift, U.map eLift.symm.toRingHom, qLift,
+    hdLift, hcompLift, hlocLift⟩
 
 theorem essFinitePresentation_isStableUnderBaseChange :
     RingHom.IsStableUnderBaseChange @RingHom.EssFinitePresentation := by

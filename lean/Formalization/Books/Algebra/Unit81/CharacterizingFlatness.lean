@@ -465,6 +465,173 @@ private def finiteFreeFactorizationCocone
         intro f g k
         exact CostructuredArrow.w k } }
 
+private def finiteFreeFactorizationPoint
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (x : ModuleCat.of R (ULift.{u} M)) :
+    CostructuredArrow (finiteFreeProperty (R := R)).ι
+      (ModuleCat.of R (ULift.{u} M)) := by
+  let P : ObjectProperty (ModuleCat.{max u v} R) := finiteFreeProperty (R := R)
+  let D : P.FullSubcategory ⥤ ModuleCat.{max u v} R := P.ι
+  let X : ModuleCat.{max u v} R := ModuleCat.of R (ULift.{u} M)
+  let Y : P.FullSubcategory :=
+    { obj := ModuleCat.of R (ULift.{max u v} R)
+      property := by exact ⟨inferInstance, inferInstance⟩ }
+  let eR : ULift.{max u v} R ≃ₗ[R] R := ULift.moduleEquiv
+  exact CostructuredArrow.mk (Y := Y) (ModuleCat.ofHom
+    ((LinearMap.toSpanSingleton R X x).comp eR.toLinearMap) : D.obj Y ⟶ X)
+
+private def finiteFreeFactorizationDescLinear
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (t : Cocone (finiteFreeFactorizationDiagram (R := R) (M := M))) :
+    ModuleCat.of R (ULift.{u} M) →ₗ[R] t.pt := by
+  let P : ObjectProperty (ModuleCat.{max u v} R) := finiteFreeProperty (R := R)
+  let D : P.FullSubcategory ⥤ ModuleCat.{max u v} R := P.ι
+  let X : ModuleCat.{max u v} R := ModuleCat.of R (ULift.{u} M)
+  let I := CostructuredArrow D X
+  let Y : P.FullSubcategory :=
+    { obj := ModuleCat.of R (ULift.{max u v} R)
+      property := by exact ⟨inferInstance, inferInstance⟩ }
+  let eR : ULift.{max u v} R ≃ₗ[R] R := ULift.moduleEquiv
+  let point (x : X) : I := finiteFreeFactorizationPoint (R := R) (M := M) x
+  let g : X →ₗ[R] t.pt := {
+    toFun := fun x => (t.ι.app (point x)) (1 : ULift.{max u v} R)
+    map_add' := by
+      intro x y
+      let Z : P.FullSubcategory :=
+        { obj := ModuleCat.of R
+            ((ULift.{max u v} R) × (ULift.{max u v} R))
+          property := by
+            exact ⟨Module.Free.prod R _ _, Module.Finite.prod⟩ }
+      let q : D.obj Z ⟶ X := ModuleCat.ofHom
+        (LinearMap.coprod (point x).hom.hom (point y).hom.hom)
+      let z : I := CostructuredArrow.mk (Y := Z) q
+      let d : ULift.{max u v} R →ₗ[R]
+          (ULift.{max u v} R) × (ULift.{max u v} R) :=
+        LinearMap.prod LinearMap.id LinearMap.id
+      let k : point (x + y) ⟶ z := CostructuredArrow.homMk
+        (P.homMk (ModuleCat.ofHom d)) (by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro r
+          dsimp [point, q, z, finiteFreeFactorizationPoint, d]
+          change (eR r) • x + (eR r) • y = (eR r) • (x + y)
+          simp [smul_add])
+      let kx : point x ⟶ z := CostructuredArrow.homMk
+        (P.homMk (ModuleCat.ofHom (LinearMap.inl R _ _))) (by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro r
+          change (LinearMap.coprod (point x).hom.hom (point y).hom.hom)
+              (LinearMap.inl R _ _ r) =
+            (point x).hom.hom r
+          simp [LinearMap.coprod_apply])
+      let ky : point y ⟶ z := CostructuredArrow.homMk
+        (P.homMk (ModuleCat.ofHom (LinearMap.inr R _ _))) (by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro r
+          change (LinearMap.coprod (point x).hom.hom (point y).hom.hom)
+              (LinearMap.inr R _ _ r) =
+            (point y).hom.hom r
+          simp [LinearMap.coprod_apply])
+      have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
+        (congrArg ModuleCat.Hom.hom (t.ι.naturality k))
+      dsimp [k, point, finiteFreeFactorizationPoint,
+        finiteFreeFactorizationDiagram] at hk
+      have hkx := congrArg (fun m => m (1 : ULift.{max u v} R))
+        (congrArg ModuleCat.Hom.hom (t.ι.naturality kx))
+      have hky := congrArg (fun m => m (1 : ULift.{max u v} R))
+        (congrArg ModuleCat.Hom.hom (t.ι.naturality ky))
+      change (ConcreteCategory.hom (t.ι.app z))
+          ((1 : ULift.{max u v} R), (1 : ULift.{max u v} R)) =
+        (ConcreteCategory.hom (t.ι.app (point (x + y))))
+          (1 : ULift.{max u v} R) at hk
+      change (ConcreteCategory.hom (t.ι.app z))
+          ((1 : ULift.{max u v} R), (0 : ULift.{max u v} R)) =
+        (ConcreteCategory.hom (t.ι.app (point x)))
+          (1 : ULift.{max u v} R) at hkx
+      change (ConcreteCategory.hom (t.ι.app z))
+          ((0 : ULift.{max u v} R), (1 : ULift.{max u v} R)) =
+        (ConcreteCategory.hom (t.ι.app (point y)))
+          (1 : ULift.{max u v} R) at hky
+      have hsum :
+          (ConcreteCategory.hom (t.ι.app z))
+              ((1 : ULift.{max u v} R), (1 : ULift.{max u v} R)) =
+            (ConcreteCategory.hom (t.ι.app z))
+                ((1 : ULift.{max u v} R), (0 : ULift.{max u v} R)) +
+              (ConcreteCategory.hom (t.ι.app z))
+                ((0 : ULift.{max u v} R), (1 : ULift.{max u v} R)) := by
+        calc
+          (ConcreteCategory.hom (t.ι.app z))
+                ((1 : ULift.{max u v} R), (1 : ULift.{max u v} R)) =
+              (ConcreteCategory.hom (t.ι.app z))
+                (((1 : ULift.{max u v} R), (0 : ULift.{max u v} R)) +
+                  ((0 : ULift.{max u v} R), (1 : ULift.{max u v} R))) := by
+                congr 1
+                apply Prod.ext <;> simp
+          _ = (ConcreteCategory.hom (t.ι.app z))
+                ((1 : ULift.{max u v} R), (0 : ULift.{max u v} R)) +
+              (ConcreteCategory.hom (t.ι.app z))
+                ((0 : ULift.{max u v} R), (1 : ULift.{max u v} R)) :=
+            (ConcreteCategory.hom (t.ι.app z)).map_add _ _
+      rw [← hkx, ← hky]
+      exact hk.symm.trans hsum
+    map_smul' := by
+      intro r x
+      let m : ULift.{max u v} R →ₗ[R] ULift.{max u v} R :=
+        { toFun := fun a => eR.symm (r * eR a)
+          map_add' := by intro a b; simp [mul_add]
+          map_smul' := by
+            intro s a
+            rw [← eR.symm.map_smul, smul_eq_mul]
+            simp [mul_assoc, mul_comm, mul_left_comm] }
+      let k : point (r • x) ⟶ point x := CostructuredArrow.homMk
+        (P.homMk (ModuleCat.ofHom m)) (by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro a
+          dsimp [point, finiteFreeFactorizationPoint] at a ⊢
+          change (eR (m a)) • x = (eR a) • (r • x)
+          rw [smul_smul]
+          simp [m, mul_comm])
+      have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
+        (congrArg ModuleCat.Hom.hom (t.ι.naturality k))
+      have hr : eR.symm r = r • (1 : ULift.{max u v} R) := by
+        apply eR.injective
+        simp [eR]
+      have hkm : (ConcreteCategory.hom (finiteFreeFactorizationDiagram.map k))
+          (1 : ULift.{max u v} R) = eR.symm r := by
+        dsimp [finiteFreeFactorizationDiagram, k]
+        change m (1 : ULift.{max u v} R) = eR.symm r
+        simp [m, eR]
+      simp only [ModuleCat.hom_comp, Functor.const_obj_map] at hk
+      change (ConcreteCategory.hom (t.ι.app (point x)))
+          ((ConcreteCategory.hom (finiteFreeFactorizationDiagram.map k))
+            (1 : ULift.{max u v} R)) =
+        (ConcreteCategory.hom (t.ι.app (point (r • x))))
+          (1 : ULift.{max u v} R) at hk
+      rw [hkm] at hk
+      calc
+        (ConcreteCategory.hom (t.ι.app (point (r • x))))
+              (1 : ULift.{max u v} R) =
+            (ConcreteCategory.hom (t.ι.app (point x))) (eR.symm r) := hk.symm
+        _ = (ConcreteCategory.hom (t.ι.app (point x)))
+              (r • (1 : ULift.{max u v} R)) := by rw [hr]
+        _ = r • (ConcreteCategory.hom (t.ι.app (point x)))
+              (1 : ULift.{max u v} R) := by
+          change (ConcreteCategory.hom
+              (t.ι.app (finiteFreeFactorizationPoint (R := R) (M := M) x)))
+                (r • (1 : ULift.{max u v} R)) =
+            r • (ConcreteCategory.hom
+              (t.ι.app (finiteFreeFactorizationPoint (R := R) (M := M) x)))
+                (1 : ULift.{max u v} R)
+          exact (ConcreteCategory.hom
+            (t.ι.app (finiteFreeFactorizationPoint (R := R) (M := M) x))).map_smul
+            r (1 : ULift.{max u v} R) }
+  exact g
+
 private def finiteFreeFactorization_isColimit
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
@@ -475,82 +642,15 @@ private def finiteFreeFactorization_isColimit
   let I := CostructuredArrow D X
   let c := finiteFreeFactorizationCocone (R := R) (M := M)
   change IsColimit c
-  let Y : P.FullSubcategory :=
-    { obj := ModuleCat.of R (ULift.{max u v} R)
-      property := by exact ⟨inferInstance, inferInstance⟩ }
   let eR : ULift.{max u v} R ≃ₗ[R] R := ULift.moduleEquiv
-  let point (x : X) : I :=
-    CostructuredArrow.mk (Y := Y) (ModuleCat.ofHom
-      ((LinearMap.toSpanSingleton R X x).comp eR.toLinearMap) : D.obj Y ⟶ X)
+  let point (x : X) : I := finiteFreeFactorizationPoint (R := R) (M := M) x
   refine {
     desc := fun t => ?_
     fac := ?_
     uniq := ?_ }
-  · let g : X →ₗ[R] t.pt := {
-      toFun := fun x => (t.ι.app (point x)) (1 : ULift.{max u v} R)
-      map_add' := by
-        /- Prior attempt:
-        intro x y
-        let Z : P.FullSubcategory :=
-            { obj := ModuleCat.of R
-                ((ULift.{max u v} R) × (ULift.{max u v} R))
-              property := by
-                exact ⟨Module.Free.prod R _ _, Module.Finite.prod⟩ }
-        let q : D.obj Z ⟶ X := ModuleCat.ofHom
-          (LinearMap.coprod (point x).hom.hom (point y).hom.hom)
-        let z : I := CostructuredArrow.mk (Y := Z) q
-        let d : ULift.{max u v} R →ₗ[R]
-            (ULift.{max u v} R) × (ULift.{max u v} R) :=
-          LinearMap.prod LinearMap.id LinearMap.id
-        let k : point (x + y) ⟶ z := CostructuredArrow.homMk
-          (P.homMk (ModuleCat.ofHom d)) (by
-            apply ModuleCat.hom_ext
-            apply LinearMap.ext
-            intro r
-            dsimp [point, q, d]
-            change (eR r) • x + (eR r) • y = (eR r) • (x + y)
-            simp [smul_add])
-        let kx : point x ⟶ z := CostructuredArrow.homMk
-          (P.homMk (ModuleCat.ofHom (LinearMap.inl R _ _)))
-        let ky : point y ⟶ z := CostructuredArrow.homMk
-          (P.homMk (ModuleCat.ofHom (LinearMap.inr R _ _)))
-        have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
-          (congrArg ModuleCat.Hom.hom (c.ι.naturality k))
-        have hkx := congrArg (fun m => m (1 : ULift.{max u v} R))
-          (congrArg ModuleCat.Hom.hom (c.ι.naturality kx))
-        have hky := congrArg (fun m => m (1 : ULift.{max u v} R))
-          (congrArg ModuleCat.Hom.hom (c.ι.naturality ky))
-        simpa [point, z, q, d, LinearMap.coprod_apply, LinearMap.inl_apply,
-          LinearMap.inr_apply, LinearMap.comp_apply, add_comm, add_left_comm,
-          add_assoc] using (hk.symm.trans (hkx.trans hky.symm))
-        -/
-        sorry
-      map_smul' := by
-        /- Prior attempt:
-        intro r x
-        let m : ULift.{max u v} R →ₗ[R] ULift.{max u v} R :=
-          { toFun := fun a => eR.symm (r * eR a)
-            map_add' := by intro a b; simp [mul_add]
-            map_smul' := by intro s a; simp [smul_eq_mul, mul_assoc, mul_comm] }
-        let k : point (r • x) ⟶ point x := CostructuredArrow.homMk
-          (P.homMk (ModuleCat.ofHom m)) (by
-            apply ModuleCat.hom_ext
-            apply LinearMap.ext
-            intro a
-            simp [point, m, LinearMap.comp_apply, eR, smul_eq_mul, mul_assoc,
-              mul_comm])
-        have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
-          (congrArg ModuleCat.Hom.hom (c.ι.naturality k))
-        have hr : eR.symm r = r • (1 : ULift.{max u v} R) := by
-          rw [← eR.symm.map_smul, smul_eq_mul, mul_one]
-          simp [eR]
-        simpa [point, m, LinearMap.comp_apply, hr, smul_eq_mul] using hk.symm
-        -/
-        sorry
-      }
-    exact ModuleCat.ofHom g
+  · exact ModuleCat.ofHom
+      (finiteFreeFactorizationDescLinear (R := R) (M := M) t)
   · intro t j
-    /- Prior attempt:
     apply ModuleCat.hom_ext
     apply LinearMap.ext
     intro x
@@ -561,23 +661,58 @@ private def finiteFreeFactorization_isColimit
         apply ModuleCat.hom_ext
         apply LinearMap.ext
         intro r
-        simp [point, LinearMap.comp_apply, LinearMap.toSpanSingleton_apply])
+        dsimp [point, finiteFreeFactorizationPoint] at r ⊢
+        change (j.hom.hom) (p r) =
+          (LinearMap.toSpanSingleton R (ULift.{u} M) (j.hom.hom x)).comp
+            eR.toLinearMap r
+        change (j.hom.hom) ((eR r) • x) = (eR r) • (j.hom.hom x)
+        exact (j.hom.hom).map_smul (eR r) x)
     have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
-      (congrArg ModuleCat.Hom.hom (c.ι.naturality k))
-    simpa [point, LinearMap.comp_apply, LinearMap.toSpanSingleton_apply] using hk.symm
-    -/
-    sorry
+      (congrArg ModuleCat.Hom.hom (t.ι.naturality k))
+    dsimp [finiteFreeFactorizationDiagram, CostructuredArrow.proj, D, P] at x
+    have hkp : (ConcreteCategory.hom (finiteFreeFactorizationDiagram.map k))
+        (1 : ULift.{max u v} R) = x := by
+      dsimp [k, p, point, finiteFreeFactorizationPoint,
+        finiteFreeFactorizationDiagram]
+      change p (1 : ULift.{max u v} R) = x
+      dsimp [p]
+      change (eR (1 : ULift.{max u v} R)) • x = x
+      simp [eR]
+    simp only [ModuleCat.hom_comp, Functor.const_obj_map] at hk
+    change (ConcreteCategory.hom (t.ι.app j))
+        ((ConcreteCategory.hom (finiteFreeFactorizationDiagram.map k))
+          (1 : ULift.{max u v} R)) =
+      (ConcreteCategory.hom
+        (t.ι.app (point (j.hom.hom x))))
+        (1 : ULift.{max u v} R) at hk
+    rw [hkp] at hk
+    change (ConcreteCategory.hom
+        (t.ι.app (point (j.hom.hom x))))
+        (1 : ULift.{max u v} R) =
+      (ConcreteCategory.hom (t.ι.app j)) x
+    exact hk.symm
   · intro t f hf
-    /- Prior attempt:
     apply ModuleCat.hom_ext
     apply LinearMap.ext
     intro x
     let k := point x
+    change ULift.{u} M at x
     have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
       (congrArg ModuleCat.Hom.hom (hf k))
-    simpa [point, LinearMap.comp_apply] using hk
-    -/
-    sorry
+    have hcp : (ConcreteCategory.hom (c.ι.app k))
+        (1 : ULift.{max u v} R) = x := by
+      change (LinearMap.toSpanSingleton R (ULift.{u} M) x).comp
+          eR.toLinearMap (1 : ULift.{max u v} R) = x
+      change (eR (1 : ULift.{max u v} R)) • x = x
+      simp [eR]
+    simp only [ModuleCat.hom_comp] at hk
+    change (ConcreteCategory.hom f)
+        ((ConcreteCategory.hom (c.ι.app k)) (1 : ULift.{max u v} R)) =
+      (ConcreteCategory.hom (t.ι.app k)) (1 : ULift.{max u v} R) at hk
+    rw [hcp] at hk
+    change (ConcreteCategory.hom f) x =
+      (ConcreteCategory.hom (t.ι.app (point x))) (1 : ULift.{max u v} R)
+    exact hk
 
 /- The preliminary assertion in Lazard's proof that every module is a
    filtered colimit of finitely presented modules is already represented by

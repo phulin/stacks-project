@@ -49,13 +49,17 @@ noncomputable instance topCatSheaf_hasFiniteColimits
     {C : Type u} [Category.{v} C] [HasFiniteColimits C]
     (X : TopCat.{w})
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    HasFiniteColimits (TopCat.Sheaf C X) := by sorry
+    HasFiniteColimits (TopCat.Sheaf C X) := by
+  change HasFiniteColimits (CategoryTheory.Sheaf
+    (Opens.grothendieckTopology X) C)
+  infer_instance
 def closedSubsetInclusion {X : TopCat.{w}} (Z : Set X) : TopCat.of Z ⟶ X :=
   TopCat.ofHom ⟨Subtype.val, continuous_subtype_val⟩
 
 /-- The subtype inclusion is a closed embedding when the subset is closed. -/
 theorem closedSubsetInclusion_isClosedEmbedding {X : TopCat.{w}} {Z : Set X}
-    (hZ : IsClosed Z) : IsClosedEmbedding (closedSubsetInclusion Z) := by sorry
+    (hZ : IsClosed Z) : IsClosedEmbedding (closedSubsetInclusion Z) := by
+  exact hZ.isClosedEmbedding_subtypeVal
 abbrev closedSubsetPushforward {C : Type u} [Category.{v} C]
     {X : TopCat.{w}} (Z : Set X) :
     TopCat.Sheaf C (TopCat.of Z) ⥤ TopCat.Sheaf C X :=
@@ -90,13 +94,102 @@ noncomputable def closedSubsetPushforward_stalkIso
     TopCat.Presheaf.stalk (C := C) (X := X)
         ((closedSubsetPushforward (C := C) Z).obj F).presheaf
         (closedSubsetInclusion Z z) ≅
-      TopCat.Presheaf.stalk (C := C) (X := TopCat.of Z) F.presheaf z := by sorry
+      TopCat.Presheaf.stalk (C := C) (X := TopCat.of Z) F.presheaf z := by
+  let hIso : IsIso (TopCat.Presheaf.stalkPushforward C
+      (closedSubsetInclusion Z) F.presheaf z) :=
+    TopCat.Presheaf.stalkPushforward.stalkPushforward_iso_of_isInducing
+      C hZ.isClosedEmbedding_subtypeVal.isInducing F.presheaf z
+  change ((TopCat.Presheaf.pushforward C
+      (closedSubsetInclusion Z)).obj F.presheaf).stalk (closedSubsetInclusion Z z) ≅
+    F.presheaf.stalk z
+  exact @asIso _ _ _ _ (TopCat.Presheaf.stalkPushforward C
+    (closedSubsetInclusion Z) F.presheaf z) hIso
 theorem closedSubsetPushforward_stalkIso_terminal_of_not_mem
     {C : Type u} [Category.{w} C] [HasColimits C] [HasTerminal C]
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (F : TopCat.Sheaf C (TopCat.of Z)) {x : X} (hx : x ∉ Z) :
     Nonempty (TopCat.Presheaf.stalk (C := C) (X := X)
-      ((closedSubsetPushforward (C := C) Z).obj F).presheaf x ≅ (⊤_ C)) := by sorry
+      ((closedSubsetPushforward (C := C) Z).obj F).presheaf x ≅ (⊤_ C)) := by
+  let P : TopCat.Presheaf C X :=
+    ((closedSubsetPushforward (C := C) Z).obj F).presheaf
+  have h1 : ∃ U : OpenNhds x,
+      (Opens.map (closedSubsetInclusion Z)).obj U.1 = ⊥ := by
+    rcases mem_nhds_iff.mp (hZ.compl_mem_nhds hx) with ⟨U, hU, hUo, hxU⟩
+    let U' : OpenNhds x := ⟨⟨U, hUo⟩, hxU⟩
+    refine ⟨U', ?_⟩
+    ext z
+    change (z : X) ∈ U ↔ z ∈ (⊥ : Opens (TopCat.of Z))
+    constructor
+    · intro hz
+      exact (hU hz) z.property
+    · intro hz
+      exact hz.elim
+  let c : Cocone ((OpenNhds.inclusion x).op ⋙ P) :=
+    { pt := ⊤_ C
+      ι :=
+        { app := fun _ => terminal.from _
+          naturality := fun _ _ _ => terminalIsTerminal.hom_ext _ _ } }
+  rcases h1 with ⟨U, hU⟩
+  have hUt : IsTerminal (P.obj (op U.1)) := by
+    change IsTerminal (F.presheaf.obj (op ((Opens.map
+      (closedSubsetInclusion Z)).obj U.1)))
+    rw [hU]
+    exact F.isTerminalOfEmpty
+  have hUt' : IsTerminal (((OpenNhds.inclusion x).op ⋙ P).obj (op U)) := by
+    change IsTerminal (P.obj (op U.1))
+    exact hUt
+  let e : ((OpenNhds.inclusion x).op ⋙ P).obj (op U) ≅ (⊤_ C) :=
+    hUt'.uniqueUpToIso terminalIsTerminal
+  have hUdis : ∀ z : Z, (z : X) ∉ U.1 := by
+    intro z hz
+    have hz' : z ∈ (Opens.map (closedSubsetInclusion Z)).obj U.1 := by
+      change (z : X) ∈ U.1
+      exact hz
+    rw [hU] at hz'
+    exact hz'.elim
+  have hc : IsColimit c := by
+    refine
+      { desc := fun d => e.inv ≫ d.ι.app (op U)
+        fac := fun d V => by
+          change _ = d.ι.app (op V.unop)
+          simp only [← d.w (homOfLE <| @inf_le_left _ _ U V.unop).op,
+            ← d.w (homOfLE <| @inf_le_right _ _ U V.unop).op, ← Category.assoc]
+          have hWt : IsTerminal
+              (((OpenNhds.inclusion x).op ⋙ P).obj (op (U ⊓ V.unop))) := by
+            change IsTerminal
+              (F.presheaf.obj (op ((Opens.map (closedSubsetInclusion Z)).obj
+                (U.1 ⊓ V.unop.1))))
+            apply F.isTerminalOfEqEmpty
+            ext z
+            change ((z : X) ∈ U.1 ∧ (z : X) ∈ V.unop.1) ↔ False
+            constructor
+            · intro hz
+              exact hUdis z hz.1
+            · intro hz
+              exact hz.elim
+          have hm :
+              (c.ι.app V ≫ e.inv) ≫
+                  ((OpenNhds.inclusion x).op ⋙ P).map
+                    (homOfLE <| @inf_le_left _ _ U V.unop).op =
+                ((OpenNhds.inclusion x).op ⋙ P).map
+                (homOfLE <| @inf_le_right _ _ U V.unop).op :=
+            hWt.hom_ext _ _
+          change
+            ((c.ι.app V ≫ e.inv) ≫
+                ((OpenNhds.inclusion x).op ⋙ P).map
+                  (homOfLE <| @inf_le_left _ _ U V.unop).op) ≫
+                d.ι.app (op (U ⊓ V.unop)) =
+              ((OpenNhds.inclusion x).op ⋙ P).map
+                (homOfLE <| @inf_le_right _ _ U V.unop).op ≫
+                d.ι.app (op (U ⊓ V.unop))
+          rw [hm]
+        uniq := fun d f H => by
+          rw [← cancel_epi e.hom]
+          let j : (OpenNhds x)ᵒᵖ := Opposite.op U
+          have Hj : c.ι.app j ≫ f = d.ι.app j := H j
+          have he : c.ι.app j = e.hom := terminalIsTerminal.hom_ext _ _
+          simpa [he, Category.assoc] using Hj }
+  exact ⟨colimit.isoColimitCocone ⟨_, hc⟩⟩
 theorem closedSubsetSetPushforward_stalk_equiv_punit_of_not_mem
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (F : Sh.{w, w} (TopCat.of Z)) {x : X} (hx : x ∉ Z) :

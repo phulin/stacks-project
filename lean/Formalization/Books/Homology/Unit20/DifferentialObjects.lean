@@ -321,8 +321,9 @@ theorem plainDifferentialShortExact_homology_long_exact
       · have h1 : (n + 1) % 3 = 1 := by omega
         have h2 : (n + 1 + 1) % 3 = 2 := by omega
         have hn0 : (n + 1) % 3 ≠ 0 := by omega
-        simp only [differential, dif_pos h0, dif_neg hn0, dif_pos h1]
-        simp [b, f]
+        simp only [differential, *]
+        dsimp [b, f]
+        simp_all
         have hδ : δ ≫ hf = 0 := by
           dsimp [δ, hf]
           exact hT.δ_comp PUnit.unit PUnit.unit (by rfl)
@@ -332,15 +333,17 @@ theorem plainDifferentialShortExact_homology_long_exact
         · have h2 : (n + 1) % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 ≠ 0 := by omega
           have hn1 : (n + 1) % 3 ≠ 1 := by omega
-          simp only [differential, dif_neg h0, dif_pos h1, dif_neg hn0, dif_neg hn1]
-          simp [f, g]
+          simp only [differential, *]
+          dsimp [f, g]
+          simp_all
           have hfg : hf ≫ hg = 0 := by sorry
           rw [← Category.assoc, ← Category.assoc, hfg]
           simp
         · have h2 : n % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 = 0 := by omega
-          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0]
-          simp [g, b]
+          simp only [differential, *]
+          dsimp [g, b]
+          simp_all
           have hgd : hg ≫ δ = 0 := by
             dsimp [hg, δ]
             exact hT.comp_δ PUnit.unit PUnit.unit (by rfl)
@@ -350,21 +353,21 @@ theorem plainDifferentialShortExact_homology_long_exact
       dsimp [L]
       by_cases h0 : n % 3 = 0
       · have h1 : (n + 1) % 3 = 1 := by omega
-        simp only [differential, dif_pos h0, dif_neg (by omega : (n + 1) % 3 ≠ 0),
-          dif_pos h1]
-        simp [b, f]
+        simp [differential, *]
+        dsimp [b, f]
+        simp_all
         exact sorry
       · by_cases h1 : n % 3 = 1
         · have h2 : (n + 1) % 3 = 2 := by omega
-          simp only [differential, dif_neg h0, dif_pos h1,
-            dif_neg (by omega : (n + 1) % 3 ≠ 0),
-            dif_neg (by omega : (n + 1) % 3 ≠ 1)]
-          simp [f, g]
+          simp [differential, *]
+          dsimp [f, g]
+          simp_all
           exact sorry
         · have h2 : n % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 = 0 := by omega
-          simp only [differential, dif_neg h0, dif_neg h1, dif_pos hn0]
-          simp [g, b]
+          simp [differential, *]
+          dsimp [g, b]
+          simp_all
           exact sorry
   exact sorry
 

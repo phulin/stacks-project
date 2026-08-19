@@ -1,7 +1,7 @@
 import Formalization.Books.Algebra.Unit104.CohenMacaulayRings
 import Formalization.Books.Algebra.Unit110.RegularRingsAndGlobalDimension
-import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Topology.Unit10.KrullDimension
+import Formalization.Books.Topology.Unit11.CodimensionAndCatenary
 import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.RegularLocalRing.Polynomial
 import Mathlib.RingTheory.Spectrum.Maximal.Localization
@@ -123,8 +123,8 @@ theorem dimension_closed_point_finite_type_field
 
 /-! ## Cohen--Macaulay finite-type algebras -/
 
-/- The first form of the final lemma is indexed by `Fin (d + 1)`, which is a
-   finite presentation of the source's `T₀, ..., T_d`. -/
+/- The first form of the final lemma indexes the source's `T₀, ..., T_d`
+   by the finite type `Fin (d + 1)`. -/
 def HasDisjointEquidimensionalDecomposition
     (S : Type u) [CommRing S] : Prop :=
   ∃ d : ℕ, ringKrullDim S = d ∧
@@ -148,13 +148,15 @@ def HasDimensionProductDecomposition
           ∀ m : MaximalSpectrum (R i),
             m.asIdeal.height = (i.1 : ℕ∞)
 
-/-- A finite-type Cohen--Macaulay algebra over a field decomposes into open
-and closed equidimensional pieces, equivalently into ring factors whose
-maximal ideals have the corresponding heights. -/
+/-- A nontrivial finite-type Cohen--Macaulay algebra over a field decomposes
+into open and closed equidimensional pieces, equivalently into ring factors
+whose maximal ideals have the corresponding heights. -/
 theorem disjoint_decomposition_CM_algebra
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    [Algebra.FiniteType k S] [IsNoetherianRing S]
-    (hS : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S) :
+    [Algebra.FiniteType k S] [Nontrivial S]
+    (hS :
+      letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+      Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S) :
     HasDisjointEquidimensionalDecomposition S ∧
       (HasDisjointEquidimensionalDecomposition S ↔
         HasDimensionProductDecomposition S) := by

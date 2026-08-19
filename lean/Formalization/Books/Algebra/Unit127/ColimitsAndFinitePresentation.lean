@@ -9,6 +9,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Map
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.IntegralClosure.Algebra.Defs
 import Mathlib.RingTheory.FiniteType
+import Mathlib.RingTheory.IntegralClosure.IsIntegral.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.RingHom.EssFiniteType
@@ -2344,12 +2345,367 @@ theorem limitNoCondition
   exact ⟨finiteTypeApproximationConstruction f⟩
 
 
+private def finiteIntegralIndex {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) :=
+  {X : Finset R × Finset S //
+    ∀ x ∈ X.2, ∃ p : Polynomial R, p.Monic ∧ Polynomial.eval₂ f x p = 0 ∧
+      ∀ n ∈ p.support, p.coeff n ∈ X.1}
+
+private local instance finiteIntegralIndexPreorder
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    Preorder (finiteIntegralIndex f) where
+  le X Y := X.1 ≤ Y.1
+  le_refl _ := le_rfl
+  le_trans _ _ _ hXY hYZ := le_trans hXY hYZ
+
+private theorem finiteIntegralIndex_directed
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    : IsDirectedSet (finiteIntegralIndex f) := by
+  classical
+  refine ⟨⟨(∅, ∅), by simp⟩, ⟨fun X Y => ?_⟩⟩
+  let Z : finiteIntegralIndex f :=
+    ⟨(X.1.1 ∪ Y.1.1, X.1.2 ∪ Y.1.2), by
+      intro x hx
+      rcases Finset.mem_union.mp hx with hx | hx
+      · obtain ⟨p, hp, hpx, hcoeff⟩ := X.2 x hx
+        exact ⟨p, hp, hpx, fun n hn => Finset.mem_union_left _ (hcoeff n hn)⟩
+      · obtain ⟨p, hp, hpx, hcoeff⟩ := Y.2 x hx
+        exact ⟨p, hp, hpx, fun n hn => Finset.mem_union_right _ (hcoeff n hn)⟩⟩
+  exact ⟨Z, ⟨Finset.subset_union_left, Finset.subset_union_left⟩,
+    ⟨Finset.subset_union_right, Finset.subset_union_right⟩⟩
+
+private local instance finiteIntegralIndexCategory
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    Category (finiteIntegralIndex f) := Preorder.smallCategory _
+
+private def finiteIntegralSourceIndex
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+  finiteIntegralIndex f ⥤ Finset R where
+  obj X := X.1.1
+  map h := homOfLE h.down.down.1
+  map_id _ := rfl
+  map_comp := by intro X Y Z hXY hYZ; apply Subsingleton.elim
+
+private def finiteIntegralTargetIndex
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    finiteIntegralIndex f ⥤ Finset S := by
+  classical
+  exact {
+    obj := fun X => X.1.2 ∪ X.1.1.image f
+    map := fun {X Y} h => homOfLE (by
+      intro z hz
+      rcases Finset.mem_union.mp hz with hz | hz
+      · exact Finset.mem_union_left _ (h.down.down.2 hz)
+      · rcases Finset.mem_image.mp hz with ⟨x, hx, rfl⟩
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨x, h.down.down.1 hx, rfl⟩))
+    map_id := by intro X; rfl
+    map_comp := by intro X Y Z hXY hYZ; apply Subsingleton.elim }
+
+private theorem finiteIntegralSourceIndex_final
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    : Functor.Final (finiteIntegralSourceIndex f) := by
+  let hI := finiteIntegralIndex_directed f
+  let _ : Nonempty (finiteIntegralIndex f) := hI.1
+  let _ : IsDirectedOrder (finiteIntegralIndex f) := hI.2
+  let _ : IsFiltered (finiteIntegralIndex f) := inferInstance
+  apply Functor.final_of_exists_of_isFiltered
+  · intro X
+    refine ⟨⟨(X, ∅), by simp⟩, ⟨homOfLE ?_⟩⟩
+    change X ⊆ X
+    exact le_rfl
+  · intro X Y s s'
+    refine ⟨Y, homOfLE le_rfl, ?_⟩
+    apply Subsingleton.elim
+
+private theorem finiteIntegralTargetIndex_final_aux
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    [Algebra R S] [Algebra.IsIntegral R S]
+    (hf : algebraMap R S = f) :
+    Functor.Final (finiteIntegralTargetIndex f) := by
+  classical
+  let hI := finiteIntegralIndex_directed f
+  let _ : Nonempty (finiteIntegralIndex f) := hI.1
+  let _ : IsDirectedOrder (finiteIntegralIndex f) := hI.2
+  let _ : IsFiltered (finiteIntegralIndex f) := inferInstance
+  let p : ∀ x : S, Polynomial R :=
+    fun x => Classical.choose (Algebra.IsIntegral.isIntegral (R := R) x)
+  have hp : ∀ x : S, (p x).Monic ∧ Polynomial.eval₂ f x (p x) = 0 := by
+    intro x
+    simpa [p, hf] using (Classical.choose_spec
+      (Algebra.IsIntegral.isIntegral (R := R) x))
+  apply Functor.final_of_exists_of_isFiltered
+  · intro X
+    let E : Finset R := X.biUnion (fun x => (p x).support.image (p x).coeff)
+    have hE : ∀ x ∈ X, ∀ n ∈ (p x).support, (p x).coeff n ∈ E := by
+      intro x hx n hn
+      exact Finset.mem_biUnion.mpr ⟨x, hx,
+        Finset.mem_image.mpr ⟨n, hn, rfl⟩⟩
+    let Y : finiteIntegralIndex f :=
+      ⟨(E, X), fun x hx => ⟨p x, (hp x).1, (hp x).2, hE x hx⟩⟩
+    refine ⟨Y, ⟨homOfLE ?_⟩⟩
+    change X ⊆ X ∪ E.image f
+    exact Finset.subset_union_left
+  · intro X Y s s'
+    refine ⟨Y, homOfLE le_rfl, ?_⟩
+    apply Subsingleton.elim
+
+private theorem finiteIntegralTargetIndex_final
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (hIntegral : letI : Algebra R S := f.toAlgebra; Algebra.IsIntegral R S) :
+    Functor.Final (finiteIntegralTargetIndex f) := by
+  let hI : @Algebra.IsIntegral R S _ _ f.toAlgebra := hIntegral
+  exact @finiteIntegralTargetIndex_final_aux R S _ _ f f.toAlgebra hI rfl
+
+private def finiteIntegralSourceDiagram
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    RingSystem (finiteIntegralIndex f) :=
+  finiteIntegralSourceIndex f ⋙ finiteSubsetSubringDiagram
+
+private def finiteIntegralTargetDiagram
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    RingSystem (finiteIntegralIndex f) :=
+  finiteIntegralTargetIndex f ⋙ finiteSubsetSubringDiagram
+
+private def finiteIntegralSourceCocone
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    Cocone (finiteIntegralSourceDiagram f) :=
+  (finiteSubsetSubringCocone (T := R)).whisker (finiteIntegralSourceIndex f)
+
+private def finiteIntegralTargetCocone
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    Cocone (finiteIntegralTargetDiagram f) :=
+  (finiteSubsetSubringCocone (T := S)).whisker (finiteIntegralTargetIndex f)
+
+private def finiteIntegralSourceCocone_isColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    IsColimit (finiteIntegralSourceCocone f) := by
+  let _ : Functor.Final (finiteIntegralSourceIndex f) :=
+    finiteIntegralSourceIndex_final f
+  exact (Functor.Final.isColimitWhiskerEquiv
+    (finiteIntegralSourceIndex f) (finiteSubsetSubringCocone (T := R))).symm
+    (finiteSubsetSubringCocone_isColimit (T := R))
+
+private def finiteIntegralTargetCocone_isColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (hIntegral : letI : Algebra R S := f.toAlgebra; Algebra.IsIntegral R S) :
+    IsColimit (finiteIntegralTargetCocone f) := by
+  let _ : Functor.Final (finiteIntegralTargetIndex f) :=
+    finiteIntegralTargetIndex_final f hIntegral
+  exact (Functor.Final.isColimitWhiskerEquiv
+    (finiteIntegralTargetIndex f) (finiteSubsetSubringCocone (T := S))).symm
+    (finiteSubsetSubringCocone_isColimit (T := S))
+
+private def finiteIntegralStageMap
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (X : finiteIntegralIndex f) :
+    (finiteIntegralSourceDiagram f).obj X ⟶
+      (finiteIntegralTargetDiagram f).obj X := by
+  classical
+  exact CommRingCat.ofHom <| RingHom.codRestrict
+    (f.comp (Subring.subtype _)) _ (by
+      intro x
+      have h : Subring.closure (X.1.1 : Set R) ≤
+          (Subring.closure ((X.1.2 ∪ X.1.1.image f : Finset S) : Set S)).comap f := by
+        apply Subring.closure_le.2
+        intro y hy
+        apply Subring.subset_closure
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨y, hy, rfl⟩)
+      apply h
+      change x.1 ∈ Subring.closure (X.1.1 : Set R)
+      exact x.property)
+
+private def finiteIntegralDiagramMap
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    finiteIntegralSourceDiagram f ⟶ finiteIntegralTargetDiagram f := by
+  exact {
+    app := finiteIntegralStageMap f
+    naturality := by intro X Y h; rfl }
+
+private theorem finiteIntegralDiagramMap_fac
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (X : finiteIntegralIndex f) :
+    (finiteIntegralSourceCocone f).ι.app X ≫ CommRingCat.ofHom f =
+      (finiteIntegralDiagramMap f).app X ≫ (finiteIntegralTargetCocone f).ι.app X := by
+  rfl
+
+private def finiteIntegralRingMapColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (hIntegral : letI : Algebra R S := f.toAlgebra; Algebra.IsIntegral R S) :
+    DirectedRingMapColimit f := by
+  exact {
+    index := finiteIntegralIndex f
+    directed := finiteIntegralIndex_directed f
+    sourceDiagram := finiteIntegralSourceDiagram f
+    targetDiagram := finiteIntegralTargetDiagram f
+    map := finiteIntegralDiagramMap f
+    sourceCocone := finiteIntegralSourceCocone f
+    sourceIsColimit := finiteIntegralSourceCocone_isColimit f
+    targetCocone := finiteIntegralTargetCocone f
+    targetIsColimit := finiteIntegralTargetCocone_isColimit f hIntegral
+    colimitMap := CommRingCat.ofHom f
+    map_fac := finiteIntegralDiagramMap_fac f
+    sourceIso := Iso.refl _
+    targetIso := Iso.refl _
+    colimitMap_comm := rfl }
+
+private theorem finiteIntegralStageMap_generators_integral
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (X : finiteIntegralIndex f) (A : Subring R) (B : Subring S)
+    (g : A →+* B) (e : X.1.2 ↪ B)
+    (he : ∀ z, (Subring.subtype B) (e z) = z)
+    [Algebra A B]
+    (hA : A = Subring.closure (X.1.1 : Set R))
+    (hAlg : algebraMap A B = g)
+    (hg : (Subring.subtype B).comp g =
+      f.comp (Subring.subtype A)) :
+    ∀ y ∈ ((X.1.2.attach.map e : Finset B) : Set B), IsIntegral A y := by
+  classical
+  intro y hy
+  rcases Finset.mem_map.mp hy with ⟨z, hz, rfl⟩
+  obtain ⟨p, hp, hpx, hcoeff⟩ := X.2 z.1 z.2
+  let C : Subring R := Subring.closure (p.coeffs : Set R)
+  have hCA : C ≤ A := by
+    rw [hA]
+    apply Subring.closure_le.2
+    intro r hr
+    rcases Polynomial.mem_coeffs_iff.mp hr with ⟨n, hn, rfl⟩
+    by_cases hn0 : p.coeff n = 0
+    · exact hn0 ▸ Subring.zero_mem _
+    · exact Subring.subset_closure (hcoeff n hn)
+  let q : Polynomial A := p.restriction.map (Subring.inclusion hCA)
+  refine ⟨q, ?_, ?_⟩
+  · exact Polynomial.Monic.map (Subring.inclusion hCA)
+      (Polynomial.monic_restriction.mpr hp)
+  · apply Subtype.ext
+    rw [hAlg]
+    change (Subring.subtype B) (Polynomial.eval₂ g (e z) q) = 0
+    rw [Polynomial.hom_eval₂]
+    rw [Polynomial.eval₂_map]
+    have hmaps : ((Subring.subtype B).comp g).comp
+          (Subring.inclusion hCA) = f.comp (Subring.subtype C) := by
+      rw [hg]
+      ext x
+      rfl
+    rw [hmaps, ← Polynomial.eval₂_restriction]
+    simpa [he z] using hpx
+
+private theorem finiteIntegralStageMap_adjoin_eq_top
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (X : finiteIntegralIndex f) (A : Subring R) (B : Subring S)
+    (e : X.1.2 ↪ B) (he : ∀ z, (Subring.subtype B) (e z) = z) [Algebra A B]
+    (hA : A = Subring.closure (X.1.1 : Set R))
+    (hB : B = Subring.closure
+      ((X.1.2 : Set S) ∪ f '' (X.1.1 : Set R)))
+    (hAlg : algebraMap A B =
+      RingHom.codRestrict (f.comp (Subring.subtype A)) B (by
+        intro x
+        have h : A ≤
+            (Subring.closure ((X.1.2 : Set S) ∪ f '' (X.1.1 : Set R))).comap f := by
+          rw [hA]
+          apply Subring.closure_le.2
+          intro y hy
+          apply Subring.subset_closure
+          exact Set.mem_union_right _ ⟨y, hy, rfl⟩
+        rw [hB]
+        exact h x.property)) :
+    Algebra.adjoin A ((X.1.2.attach.map e : Finset B) : Set B) = ⊤ := by
+  classical
+  apply top_unique
+  let C := (Algebra.adjoin A
+    ((X.1.2.attach.map e : Finset B) : Set B)).toSubring.map
+      (Subring.subtype B)
+  have hBC : B ≤ C := by
+    rw [hB]
+    apply Subring.closure_le.2
+    intro y hy
+    rcases hy with hy | ⟨x, hx, rfl⟩
+    · let yB : B := ⟨y, by
+        rw [hB]
+        exact Subring.subset_closure (Set.mem_union_left _ hy)⟩
+      apply Subring.mem_map.mpr
+      refine ⟨yB, ?_, rfl⟩
+      apply Algebra.subset_adjoin
+      exact Finset.mem_map.mpr
+        ⟨⟨y, hy⟩, Finset.mem_attach _ ⟨y, hy⟩, by
+          apply Subtype.ext
+          simpa [yB] using he ⟨y, hy⟩⟩
+    ·
+      let a : A := ⟨x, by rw [hA]; exact Subring.subset_closure hx⟩
+      apply Subring.mem_map.mpr
+      refine ⟨algebraMap A B a, ?_, ?_⟩
+      · exact Subalgebra.algebraMap_mem
+          (Algebra.adjoin A ((X.1.2.attach.map e : Finset B) : Set B)) a
+      · change (Subring.subtype B) (algebraMap A B a) = f x
+        rw [hAlg]
+        rfl
+  intro y hy
+  obtain ⟨z, hz, hzy⟩ := Subring.mem_map.mp (hBC y.property)
+  have hzy' : z = y := Subtype.ext hzy
+  simpa [hzy'] using hz
+
+private def finiteIntegralStageMap_finite
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (X : finiteIntegralIndex f) :
+    ((finiteIntegralStageMap f X).hom).Finite := by
+  classical
+  let A : Subring R := Subring.closure (X.1.1 : Set R)
+  let B : Subring S :=
+    Subring.closure ((X.1.2 ∪ X.1.1.image f : Finset S) : Set S)
+  let g : A →+* B := RingHom.codRestrict
+    (f.comp (Subring.subtype _)) B (by
+      intro x
+      have h : A ≤ B.comap f := by
+        apply Subring.closure_le.2
+        intro y hy
+        apply Subring.subset_closure
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨y, hy, rfl⟩)
+      exact h x.property)
+  have hEq : (finiteIntegralStageMap f X).hom = g := by
+    ext x
+    rfl
+  rw [hEq]
+  let _ : Algebra A B := g.toAlgebra
+  let e : X.1.2 ↪ B := {
+    toFun := fun x =>
+      ⟨x.1, Subring.subset_closure (Finset.mem_union_left _ x.2)⟩
+    inj' := by
+      intro x y h
+      apply Subtype.ext
+      exact congrArg (fun z : B => (z : S)) h }
+  let s : Finset B := X.1.2.attach.map e
+  have hB : B = Subring.closure
+      ((X.1.2 : Set S) ∪ f '' (X.1.1 : Set R)) := by
+    change Subring.closure ((X.1.2 ∪ X.1.1.image f : Finset S) : Set S) = _
+    congr 1
+    ext y
+    simp
+  have hsint : ∀ y ∈ (s : Set B), IsIntegral A y :=
+    finiteIntegralStageMap_generators_integral f X A B g e (fun z => rfl) rfl rfl rfl
+  have hs : Module.Finite A (Algebra.adjoin A (s : Set B)) :=
+    Algebra.finite_adjoin_of_finite_of_isIntegral s.finite_toSet hsint
+  have hadjoin : Algebra.adjoin A (s : Set B) = ⊤ :=
+    finiteIntegralStageMap_adjoin_eq_top f X A B e (fun z => rfl) rfl hB rfl
+  rw [hadjoin] at hs
+  have hfin : Module.Finite A B :=
+    (Module.Finite.equiv_iff
+      (Subalgebra.topEquiv (R := A) (A := B)).toLinearEquiv).mp hs
+  change Module.Finite A B
+  exact hfin
+
 /-- The nonlocal approximation for an integral ring map. -/
 theorem limitIntegral
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hIntegral : letI : Algebra R S := f.toAlgebra; Algebra.IsIntegral R S) :
     Nonempty (DirectedIntegralApproximation f) := by
-  sorry
+  let D := finiteIntegralRingMapColimit f hIntegral
+  refine ⟨{
+    colimit := D
+    sourceFiniteType := ?_
+    targetFinite := ?_ }⟩
+  · intro X
+    exact finiteTypeSubringClosure X.1.1
+  · intro X
+    exact finiteIntegralStageMap_finite f X
 
 /-- The nonlocal finite-type approximation with quotient transition maps. -/
 theorem limitFiniteType

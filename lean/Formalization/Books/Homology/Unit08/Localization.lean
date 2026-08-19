@@ -56,7 +56,7 @@ theorem localization_preadditive_left
         f + g = (eX.inv ≫ u ≫ eY.hom) +
             (eX.inv ≫ v ≫ eY.hom) := by simp [u, v, Category.assoc]
         _ = eX.inv ≫ (u + v) ≫ eY.hom := by
-          simp only [Preadditive.comp_add, Preadditive.add_comp, Category.assoc]
+          simp only [Preadditive.comp_add, Preadditive.add_comp]
         _ = eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
           rw [hu, hv, ← MorphismProperty.LeftFraction₂.map_add]
     let q := CategoryTheory.Localization.preadditive L W
@@ -68,7 +68,7 @@ theorem localization_preadditive_left
         f + g = (eX.inv ≫ u ≫ eY.hom) +
             (eX.inv ≫ v ≫ eY.hom) := by simp [u, v, Category.assoc]
         _ = eX.inv ≫ (u + v) ≫ eY.hom := by
-          simp only [Preadditive.comp_add, Preadditive.add_comp, Category.assoc]
+          simp only [Preadditive.comp_add, Preadditive.add_comp]
         _ = eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
           rw [hu, hv, ← MorphismProperty.LeftFraction₂.map_add]
     exact hfp.trans hq.symm

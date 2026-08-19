@@ -5,8 +5,6 @@ import Mathlib.Algebra.Field.ULift
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.TensorProduct.Basic
 
-set_option linter.style.haveILetI false
-
 /-!
 # Commutative Algebra, Chapter 49: Geometrically integral algebras
 
@@ -88,9 +86,9 @@ private theorem isDomain_tensorProduct_of_isGeometricallyIntegral
     (h : IsGeometricallyIntegral.{u, v, w} k S) :
     IsDomain (K ⊗[k] S) := by
   let K' := ULift.{w, z} K
-  letI : Field K' := inferInstance
-  letI : Algebra k K' := inferInstance
-  letI : IsDomain (K' ⊗[k] S) := by sorry
+  let : Field K' := inferInstance
+  let : Algebra k K' := inferInstance
+  let : IsDomain (K' ⊗[k] S) := by sorry
   let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
     Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
       (AlgEquiv.refl : S ≃ₐ[k] S)
@@ -102,9 +100,9 @@ private theorem isReduced_tensorProduct_of_isGeometricallyIntegral
     (h : IsGeometricallyIntegral.{u, v, w} k S) :
     IsReduced (K ⊗[k] S) := by
   let K' := ULift.{w, z} K
-  letI : Field K' := inferInstance
-  letI : Algebra k K' := inferInstance
-  letI : IsDomain (K' ⊗[k] S) := by sorry
+  let : Field K' := inferInstance
+  let : Algebra k K' := inferInstance
+  let : IsDomain (K' ⊗[k] S) := by sorry
   let e : K' ⊗[k] S ≃ₐ[k] K ⊗[k] S :=
     Algebra.TensorProduct.congr (ULift.algEquiv (R := k))
       (AlgEquiv.refl : S ≃ₐ[k] S)
@@ -120,13 +118,13 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
   · intro h
     constructor
     · intro K _ _
-      letI : IsDomain (K ⊗[k] S) :=
+      let : IsDomain (K ⊗[k] S) :=
         isDomain_tensorProduct_of_isGeometricallyIntegral h
       infer_instance
     · intro K _ _
       exact isReduced_tensorProduct_of_isGeometricallyIntegral h
   · rintro ⟨hirr, hred⟩ K _ _
-    letI : IsReduced (K ⊗[k] S) :=
+    let : IsReduced (K ⊗[k] S) :=
       isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
         (k := k) (R := K) (S := S) inferInstance hred
     have hp : (nilradical (K ⊗[k] S)).IsPrime :=
@@ -134,7 +132,7 @@ theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyRe
         (irreducibleSpace_tensorProduct_of_isGeometricallyIrreducible
           (R := K) (S := S) hirr)
     rw [nilradical_eq_zero] at hp
-    letI : (⊥ : Ideal (K ⊗[k] S)).IsPrime := hp
+    let : (⊥ : Ideal (K ⊗[k] S)).IsPrime := hp
     exact IsDomain.of_bot_isPrime _
 
 /-- Geometric integrality can be tested after finite field extensions and

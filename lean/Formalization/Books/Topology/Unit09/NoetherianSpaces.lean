@@ -60,6 +60,201 @@ theorem noetherianSpace_finite_irreducibleComponents [NoetherianSpace X] :
     (irreducibleComponents X).Finite := by
   exact NoetherianSpace.finite_irreducibleComponents
 
+/-! ## Ambient components of closed subspaces -/
+
+/- A maximal irreducible closed subset of a closed subset, viewed in the
+   ambient space.  This is the form used by codimension arguments. -/
+def IsAmbientIrreducibleComponent (F : Set X)
+    (Y : TopologicalSpace.IrreducibleCloseds X) : Prop :=
+  (Y : Set X) ⊆ F ∧
+    ∀ Z : TopologicalSpace.IrreducibleCloseds X,
+      (Z : Set X) ⊆ F → (Y : Set X) ⊆ Z → Z = Y
+
+/- The irreducibility predicate is unchanged when a set is viewed through a
+   subtype inclusion.  This auxiliary statement lets the component API below
+   use the canonical subspace `irreducibleComponents`. -/
+theorem isIrreducible_subtype_preimage_of_isIrreducible
+    {F Z : Set X} (hZ : IsIrreducible Z) (hZF : Z ⊆ F) :
+    IsIrreducible ((Subtype.val : F → X) ⁻¹' Z) := by
+  refine ⟨?_, ?_⟩
+  · obtain ⟨x, hx⟩ := hZ.nonempty
+    exact ⟨⟨x, hZF hx⟩, hx⟩
+  · intro U V hU hV hUZ hVZ
+    rcases isOpen_induced_iff.mp hU with ⟨U', hU', rfl⟩
+    rcases isOpen_induced_iff.mp hV with ⟨V', hV', rfl⟩
+    have hZU : (Z ∩ U').Nonempty := by
+      rcases hUZ with ⟨x, hx⟩
+      exact ⟨x.1, hx.1, hx.2⟩
+    have hZV : (Z ∩ V').Nonempty := by
+      rcases hVZ with ⟨x, hx⟩
+      exact ⟨x.1, hx.1, hx.2⟩
+    obtain ⟨x, hxZ, hxUV⟩ := hZ.isPreirreducible U' V' hU' hV' hZU hZV
+    exact ⟨⟨x, hZF hxZ⟩, hxZ, hxUV⟩
+
+/- The canonical ambient irreducible closed associated to a subspace
+   component. -/
+def ambientIrreducibleClosedOfComponent {F : Set X} (hF : IsClosed F)
+    (C : irreducibleComponents F) :
+    TopologicalSpace.IrreducibleCloseds X :=
+  ⟨(Subtype.val : F → X) '' (C : Set F),
+    C.2.1.image _ continuous_subtype_val.continuousOn,
+    hF.isClosedEmbedding_subtypeVal.isClosed_iff_image_isClosed
+      (s := (C : Set F)).mp
+      (isClosed_of_mem_irreducibleComponents (C : Set F) C.2)⟩
+
+@[simp]
+theorem coe_ambientIrreducibleClosedOfComponent {F : Set X} (hF : IsClosed F)
+    (C : irreducibleComponents F) :
+    (ambientIrreducibleClosedOfComponent hF C : Set X) =
+      (Subtype.val : F → X) '' (C : Set F) :=
+  rfl
+
+theorem ambientIrreducibleClosedOfComponent_isAmbient {F : Set X} (hF : IsClosed F)
+    (C : irreducibleComponents F) :
+    IsAmbientIrreducibleComponent F
+      (ambientIrreducibleClosedOfComponent hF C) := by
+  refine ⟨?_, ?_⟩
+  · rintro x ⟨y, hy, rfl⟩
+    exact y.property
+  · intro Z hZF hCZ
+    have hpre : IsIrreducible ((Subtype.val : F → X) ⁻¹' (Z : Set X)) :=
+      isIrreducible_subtype_preimage_of_isIrreducible Z.isIrreducible hZF
+    have hsub : (C : Set F) ⊆ (Subtype.val : F → X) ⁻¹' (Z : Set X) := by
+      intro y hy
+      exact hCZ ⟨y, hy, rfl⟩
+    have hEq : (Subtype.val : F → X) ⁻¹' (Z : Set X) = (C : Set F) :=
+      (hsub.antisymm (C.2.2 hpre hsub)).symm
+    have hZrange : (Z : Set X) ⊆ Set.range (Subtype.val : F → X) := by
+      intro x hx
+      exact ⟨⟨x, hZF hx⟩, rfl⟩
+    apply TopologicalSpace.IrreducibleCloseds.ext
+    calc
+      (Z : Set X) = (Subtype.val : F → X) ''
+          ((Subtype.val : F → X) ⁻¹' (Z : Set X)) :=
+        (Set.image_preimage_eq_of_subset hZrange).symm
+      _ = (Subtype.val : F → X) '' (C : Set F) := by rw [hEq]
+      _ = (ambientIrreducibleClosedOfComponent hF C : Set X) := rfl
+
+/- This is the actual bridge from subspace components to maximal ambient
+   irreducible closed subsets. -/
+theorem ambientIrreducibleComponents_eq_range {F : Set X} (hF : IsClosed F) :
+    {Y : TopologicalSpace.IrreducibleCloseds X |
+      IsAmbientIrreducibleComponent F Y} =
+      Set.range (fun C : irreducibleComponents F =>
+        ambientIrreducibleClosedOfComponent hF C) := by
+  ext Y
+  constructor
+  · intro hY
+    let D : Set F := (Subtype.val : F → X) ⁻¹' (Y : Set X)
+    have hD : IsIrreducible D :=
+      isIrreducible_subtype_preimage_of_isIrreducible Y.isIrreducible hY.1
+    obtain ⟨C, hC, hDC⟩ :=
+      exists_mem_irreducibleComponents_subset_of_isIrreducible D hD
+    let C' : irreducibleComponents F := ⟨C, hC⟩
+    have hYsub : (Y : Set X) ⊆
+        (ambientIrreducibleClosedOfComponent hF C' : Set X) := by
+      intro x hx
+      have hYrange : (Y : Set X) ⊆ Set.range (Subtype.val : F → X) := by
+        intro y hy
+        exact ⟨⟨y, hY.1 hy⟩, rfl⟩
+      have hx' : x ∈ (Subtype.val : F → X) '' D := by
+        exact (Set.image_preimage_eq_of_subset hYrange).symm ▸ hx
+      rcases hx' with ⟨y, hy, rfl⟩
+      exact ⟨y, hDC hy, rfl⟩
+    have hEq : ambientIrreducibleClosedOfComponent hF C' = Y := by
+      exact hY.2 _ (ambientIrreducibleClosedOfComponent_isAmbient hF C').1 hYsub
+    exact ⟨C', hEq⟩
+  · rintro ⟨C, rfl⟩
+    exact ambientIrreducibleClosedOfComponent_isAmbient hF C
+
+theorem noetherianSpace_finite_ambientIrreducibleComponents
+    [NoetherianSpace X] (F : Set X) (hF : IsClosed F) :
+    ({Y : TopologicalSpace.IrreducibleCloseds X |
+      IsAmbientIrreducibleComponent F Y}).Finite := by
+  rw [ambientIrreducibleComponents_eq_range hF]
+  have hC : (irreducibleComponents F).Finite :=
+    noetherianSpace_finite_irreducibleComponents (X := F)
+  exact @Set.finite_range _ _
+    (fun C : irreducibleComponents F =>
+      ambientIrreducibleClosedOfComponent hF C) hC.fintype.finite
+
+theorem ambientIrreducibleComponents_cover {F : Set X} (hF : IsClosed F) :
+    ⋃₀ ((fun Y : TopologicalSpace.IrreducibleCloseds X => (Y : Set X)) ''
+      {Y | IsAmbientIrreducibleComponent F Y}) = F := by
+  ext x
+  constructor
+  · intro hx
+    rcases Set.mem_sUnion.mp hx with ⟨S, ⟨Y, hY, rfl⟩, hxS⟩
+    exact hY.1 hxS
+  · intro hx
+    let xF : F := ⟨x, hx⟩
+    have hxC : xF ∈ ⋃₀ (irreducibleComponents F) := by
+      rw [sUnion_irreducibleComponents]
+      trivial
+    rcases Set.mem_sUnion.mp hxC with ⟨C, hC, hxC⟩
+    let C' : irreducibleComponents F := ⟨C, hC⟩
+    apply Set.mem_sUnion.mpr
+    refine ⟨(ambientIrreducibleClosedOfComponent hF C' : Set X), ?_, ?_⟩
+    · exact ⟨ambientIrreducibleClosedOfComponent hF C',
+        ambientIrreducibleClosedOfComponent_isAmbient hF C', rfl⟩
+    · exact ⟨xF, hxC, rfl⟩
+
+theorem exists_ambientIrreducibleComponent_mem_of_mem
+    [NoetherianSpace X] {F : Set X} (hF : IsClosed F) {x : X} (hx : x ∈ F) :
+    ∃ Y : TopologicalSpace.IrreducibleCloseds X,
+      IsAmbientIrreducibleComponent F Y ∧ x ∈ Y := by
+  let xF : F := ⟨x, hx⟩
+  let C : irreducibleComponents F :=
+    ⟨irreducibleComponent xF, irreducibleComponent_mem_irreducibleComponents xF⟩
+  refine ⟨ambientIrreducibleClosedOfComponent hF C,
+    ambientIrreducibleClosedOfComponent_isAmbient hF C, ?_⟩
+  exact ⟨xF, mem_irreducibleComponent, rfl⟩
+
+theorem exists_point_mem_ambientIrreducibleComponent_only
+    [NoetherianSpace X] {F : Set X} (hF : IsClosed F)
+    (Y : TopologicalSpace.IrreducibleCloseds X)
+    (hY : IsAmbientIrreducibleComponent F Y) :
+    ∃ x : X, x ∈ Y ∧
+      ∀ Z : TopologicalSpace.IrreducibleCloseds X,
+        IsAmbientIrreducibleComponent F Z → x ∈ Z → Z = Y := by
+  classical
+  have hfinite :
+      ({Z : TopologicalSpace.IrreducibleCloseds X |
+        IsAmbientIrreducibleComponent F Z}).Finite :=
+    noetherianSpace_finite_ambientIrreducibleComponents F hF
+  let S : Set (Set X) :=
+    (fun Z : TopologicalSpace.IrreducibleCloseds X => (Z : Set X)) ''
+      ({Z | IsAmbientIrreducibleComponent F Z} \ {Y})
+  have hSfinite : S.Finite := by
+    exact hfinite.sdiff.image _
+  by_contra hcontra
+  have hbad : ∀ x, x ∈ Y →
+      ∃ Z, IsAmbientIrreducibleComponent F Z ∧ Z ≠ Y ∧ x ∈ Z := by
+    intro x hx
+    by_contra hno
+    apply hcontra
+    refine ⟨x, hx, ?_⟩
+    intro Z hZ hxZ
+    by_contra hne
+    exact hno ⟨Z, hZ, hne, hxZ⟩
+  have hcover : (Y : Set X) ⊆ ⋃₀ S := by
+    intro x hx
+    obtain ⟨Z, hZ, hne, hxZ⟩ := hbad x hx
+    apply Set.mem_sUnion.mpr
+    exact ⟨(Z : Set X), ⟨Z, ⟨hZ, hne⟩, rfl⟩, hxZ⟩
+  have hSclosed : ∀ W ∈ hSfinite.toFinset, IsClosed W := by
+    intro W hW
+    have hW' : W ∈ S := hSfinite.mem_toFinset.mp hW
+    rcases hW' with ⟨Z, hZ, rfl⟩
+    exact Z.isClosed
+  obtain ⟨W, hW, hYW⟩ :=
+    isIrreducible_iff_sUnion_isClosed.mp Y.isIrreducible hSfinite.toFinset
+      hSclosed (hSfinite.coe_toFinset.symm ▸ hcover)
+  have hW' : W ∈ S := hSfinite.mem_toFinset.mp hW
+  rcases hW' with ⟨Z, hZ, rfl⟩
+  have hZambient : IsAmbientIrreducibleComponent F Z := hZ.1
+  exact hZ.2 (hY.2 Z hZambient.1 hYW)
+
 theorem noetherianSpace_exists_isOpen_nonempty_subset_irreducibleComponent
     [NoetherianSpace X] (Z : Set X) (hZ : Z ∈ irreducibleComponents X) :
     ∃ U : Set X, IsOpen U ∧ U.Nonempty ∧ U ⊆ Z := by

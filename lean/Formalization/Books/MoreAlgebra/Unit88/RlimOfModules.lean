@@ -27,6 +27,7 @@ open CategoryTheory.Pretriangulated
 open CategoryTheory.Triangulated
 open Formalization.Books.MoreAlgebra.Unit87
 open Formalization.Books.Derived.Unit30
+open Formalization.Books.Derived.Unit34
 open scoped BigOperators CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe u v w z
@@ -159,11 +160,6 @@ noncomputable abbrev derivedLimitFunctorModules
     ModuleInverseSystem.{u, v} A ⥤ ModuleCat.{v} (inverseLimitRing A) :=
   by
     sorry
-/-
-  letI := moduleInverseSystemHasInjectiveResolutionsExplicit (A := A)
-  letI := inverseLimitModuleFunctorAdditive (A := A)
-  (inverseLimitModuleFunctor.{u, v} A).rightDerived p
--/
 
 /-- The `p`-th derived inverse limit of a module system. -/
 noncomputable abbrev derivedLimitModule
@@ -251,17 +247,16 @@ def IsTwoTermModuleRlimRepresentation
           (M.obj (Opposite.op n))),
       K.d 0 1 ≫ e₁.hom = e₀.hom ≫ moduleInverseLimitDifferenceMap A M
 
-/-
 theorem exists_moduleLimit_rightDerivedFunctor
     (A : RingInverseSystem.{u}) :
     letI : (inverseLimitModuleFunctor.{u, v} A).Additive :=
       inverseLimitModuleFunctorAdditive (A := A)
     ∃ RF : DerivedModuleInverseSystem.{u, v} A ⥤
-        DerivedCategory (ModuleCat (inverseLimitRing A)),
-      IsUnboundedRightDerivedFunctor (inverseLimitModuleFunctor.{u, v} A) RF := by
-  dsimp
+        DerivedCategory (ModuleCat.{v} (inverseLimitRing A)),
+      @IsUnboundedRightDerivedFunctor _ _ _ _ _ _ _ _
+        (inverseLimitModuleFunctor.{u, v} A)
+        (by sorry) RF := by
   sorry
--/
 
 /-- A chosen derived inverse-limit functor. -/
 noncomputable def moduleRlimFunctor (A : RingInverseSystem.{u}) :
@@ -292,7 +287,6 @@ theorem moduleRlim_MittagLeffler_is_rightAcyclic
     IsRightAcyclicForModuleLimit A M := by
   sorry
 
-/-
 theorem moduleRlim_two_term_representation
     (A : RingInverseSystem.{u}) (M : ModuleInverseSystem.{u, v} A)
     [HasProduct (fun n : ℕ =>
@@ -302,7 +296,7 @@ theorem moduleRlim_two_term_representation
       IsTwoTermModuleRlimRepresentation A M K ∧
         Nonempty
           ((moduleDerivedQuotient A).obj K ≅
-            moduleRlimFunctor A
+            (moduleRlimFunctor A).obj
               ((DerivedCategory.singleFunctor (ModuleInverseSystem A) 0).obj M)) := by
   sorry
 
@@ -324,9 +318,9 @@ theorem moduleRlim_of_rightAcyclic_terms
     (hK : ∀ p : ℤ, IsRightAcyclicForModuleLimit A (K.X p)) :
     Nonempty
       ((moduleDerivedQuotient A).obj
-        ((inverseLimitModuleFunctor.{u, v} A).mapHomologicalComplex
-          (ComplexShape.up ℤ)).obj K ≅
-        moduleRlimFunctor A ((moduleSystemDerivedQuotient A).obj K)) := by
+        (((inverseLimitModuleFunctor.{u, v} A).mapHomologicalComplex
+          (ComplexShape.up ℤ)).obj K) ≅
+        (moduleRlimFunctor A).obj ((moduleSystemDerivedQuotient A).obj K)) := by
   sorry
 
 /-- The global-sections description of the module limit in the source's
@@ -352,9 +346,8 @@ theorem moduleSystem_chaoticSite_identification
 noncomputable def moduleCohomologySystem
     (A : RingInverseSystem.{u})
     (K : CochainComplex (ModuleInverseSystem.{u, v} A) ℤ) (p : ℤ) :
-    ModuleInverseSystem.{u, v} A :=
-  (HomologicalComplex.homologyFunctor (ModuleInverseSystem.{u, v} A)
-      (ComplexShape.up ℤ) p).obj K
+    ModuleInverseSystem.{u, v} A := by
+  sorry
 
 /-- The short exact cohomology window for the derived inverse limit of a
 complex of module systems. -/
@@ -363,7 +356,7 @@ def ModuleRlimCohomologyExactSequence
     (K : CochainComplex (ModuleInverseSystem.{u, v} A) ℤ)
     (L : DerivedCategory (ModuleCat (inverseLimitRing A))) (p : ℤ)
     (_hL : Nonempty
-      (L ≅ moduleRlimFunctor A ((moduleSystemDerivedQuotient A).obj K))) : Prop :=
+      (L ≅ (moduleRlimFunctor A).obj ((moduleSystemDerivedQuotient A).obj K))) : Prop :=
   ∃ α : firstDerivedLimitModule A (moduleCohomologySystem A K (p - 1)) ⟶
       (DerivedCategory.homologyFunctor (ModuleCat (inverseLimitRing A)) p).obj L,
     ∃ β : (DerivedCategory.homologyFunctor (ModuleCat (inverseLimitRing A)) p).obj L ⟶
@@ -382,7 +375,7 @@ theorem moduleRlim_break_long_exact_sequence
     (K : CochainComplex (ModuleInverseSystem.{u, v} A) ℤ)
     (L : DerivedCategory (ModuleCat (inverseLimitRing A)))
     (hL : Nonempty
-      (L ≅ moduleRlimFunctor A ((moduleSystemDerivedQuotient A).obj K)))
+      (L ≅ (moduleRlimFunctor A).obj ((moduleSystemDerivedQuotient A).obj K)))
     (p : ℤ) : ModuleRlimCohomologyExactSequence A K L p hL := by
   sorry
 
@@ -390,8 +383,8 @@ theorem moduleRlim_break_long_exact_sequence
 `A_(n+1) → A_n`. -/
 structure DerivedModuleStageRestrictionData
     (A : RingInverseSystem.{u}) (n : ℕ) where
-  functor : DerivedCategory (ModuleCat (A.obj (Opposite.op n))) ⥤
-    DerivedCategory (ModuleCat (A.obj (Opposite.op (n + 1))))
+  functor : DerivedCategory (ModuleCat.{v} (A.obj (Opposite.op n))) ⥤
+    DerivedCategory (ModuleCat.{v} (A.obj (Opposite.op (n + 1))))
 
 theorem exists_derivedModuleStageRestrictionData
     (A : RingInverseSystem.{u}) (n : ℕ) :
@@ -407,7 +400,7 @@ noncomputable def derivedModuleStageRestriction
 /-- An inverse system of derived objects over the varying rings `A_n`, with
 the transition map viewed over `A_(n+1)`. -/
 structure DerivedModuleStageSystem (A : RingInverseSystem.{u}) where
-  stage : ∀ n : ℕ, DerivedCategory (ModuleCat (A.obj (Opposite.op n)))
+  stage : ∀ n : ℕ, DerivedCategory (ModuleCat.{v} (A.obj (Opposite.op n)))
   transition : ∀ n : ℕ,
     stage (n + 1) ⟶ (derivedModuleStageRestriction A n).obj (stage n)
 
@@ -418,7 +411,7 @@ structure DerivedModuleStageEvaluationData
     (A : RingInverseSystem.{u}) where
   functor : ∀ n : ℕ,
     DerivedModuleInverseSystem.{u, v} A ⥤
-      DerivedCategory (ModuleCat (A.obj (Opposite.op n)))
+    DerivedCategory (ModuleCat.{v} (A.obj (Opposite.op n)))
   transition : ∀ (n : ℕ) (K : DerivedModuleInverseSystem.{u, v} A),
     (functor (n + 1)).obj K ⟶
       (derivedModuleStageRestriction A n).obj ((functor n).obj K)
@@ -623,7 +616,7 @@ noncomputable def moduleRlimPresentedDerivedLimit
 theorem moduleRlim_is_presented_as_derived_limit
     (A : RingInverseSystem.{u}) (K : DerivedModuleInverseSystem.{u, v} A) :
     Nonempty
-      (moduleRlimFunctor A K ≅ moduleRlimPresentedDerivedLimit A K) := by
+      ((moduleRlimFunctor A).obj K ≅ moduleRlimPresentedDerivedLimit A K) := by
   sorry
 
 /-- The canonical triangle `Rlim → ∏ Kₙ → ∏ Kₙ → Rlim[1]` for the chosen
@@ -647,8 +640,8 @@ varying-ring inverse-limit functor above because the source uses both
 categories. -/
 structure FixedModuleInverseLimitDerivedData (A : RingInverseSystem.{u}) where
   firstDerived :
-    (ℕᵒᵖ ⥤ ModuleCat (inverseLimitRing A)) ⥤
-      ModuleCat (inverseLimitRing A)
+    (ℕᵒᵖ ⥤ ModuleCat.{v} (inverseLimitRing A)) ⥤
+      ModuleCat.{v} (inverseLimitRing A)
 
 theorem exists_fixedModuleInverseLimitDerivedData
     (A : RingInverseSystem.{u}) :
@@ -711,11 +704,8 @@ def derivedTensorLeft
     (T : (DerivedModuleInverseSystem.{u, v} A ×
       DerivedModuleInverseSystem.{u, v} A) ⥤ DerivedModuleInverseSystem.{u, v} A)
     (K : DerivedModuleInverseSystem.{u, v} A) :
-    DerivedModuleInverseSystem.{u, v} A ⥤ DerivedModuleInverseSystem.{u, v} A where
-  obj L := T.obj (K, L)
-  map f := T.map (𝟙 K, f)
-  map_id := by intro L; simp
-  map_comp := by intro L M N f g; simp
+    DerivedModuleInverseSystem.{u, v} A ⥤ DerivedModuleInverseSystem.{u, v} A := by
+  sorry
 
 /-- The derived tensor product with a fixed second variable. -/
 def derivedTensorRight
@@ -723,11 +713,8 @@ def derivedTensorRight
     (T : (DerivedModuleInverseSystem.{u, v} A ×
       DerivedModuleInverseSystem.{u, v} A) ⥤ DerivedModuleInverseSystem.{u, v} A)
     (L : DerivedModuleInverseSystem.{u, v} A) :
-    DerivedModuleInverseSystem.{u, v} A ⥤ DerivedModuleInverseSystem.{u, v} A where
-  obj K := T.obj (K, L)
-  map f := T.map (f, 𝟙 L)
-  map_id := by intro K; simp
-  map_comp := by intro K M N f g; simp
+    DerivedModuleInverseSystem.{u, v} A ⥤ DerivedModuleInverseSystem.{u, v} A := by
+  sorry
 
 /-- Exactness in each variable of a derived tensor product. -/
 def IsExactDerivedTensorProduct
@@ -783,20 +770,15 @@ theorem derivedTensorProductSystem_is_exact
 /-- The diagonal, or constant-system, functor. -/
 noncomputable def diagonalDerivedFunctor
     (A : RingInverseSystem.{u}) :
-    DerivedModuleInverseSystem.{u, v} A ⥤ ModuleDerivedInverseSystem.{u, v} A where
-  obj K := Functor.const (ℕᵒᵖ) K
-  map f :=
-    { app := fun _ => f
-      naturality := by intros; simp }
-  map_id := by intro K; rfl
-  map_comp := by intro K L M f g; rfl
+    DerivedModuleInverseSystem.{u, v} A ⥤ ModuleDerivedInverseSystem.{u, v} A := by
+  sorry
 
 /-- Data for the exact functor `Rlim(- ⊗ᴸ Eₙ)` attached to a chosen lift of
 an inverse system of derived modules. -/
 structure DerivedLimitTensorFunctorData
     (A : RingInverseSystem.{u}) (E : ModuleDerivedInverseSystem.{u, v} A) where
-  functor : DerivedCategory (ModuleCat (inverseLimitRing A)) ⥤
-    DerivedCategory (ModuleCat (inverseLimitRing A))
+  functor : DerivedCategory (ModuleCat.{v} (inverseLimitRing A)) ⥤
+    DerivedCategory (ModuleCat.{v} (inverseLimitRing A))
   commShift : functor.CommShift ℤ
   exact : ∀ T : Triangle (DerivedCategory (ModuleCat (inverseLimitRing A))),
     T ∈ distTriang (DerivedCategory (ModuleCat (inverseLimitRing A))) →
@@ -842,9 +824,8 @@ noncomputable def tensorDerivedInverseSystem
     (A : RingInverseSystem.{u})
     (K : DerivedCategory (ModuleCat (inverseLimitRing A)))
     (E : ModuleDerivedInverseSystem.{u, v} A) :
-    ModuleDerivedInverseSystem.{u, v} A :=
-  (derivedTensorProductSystemFunctor A).obj
-    ((diagonalDerivedFunctor A).obj K, E)
+    ModuleDerivedInverseSystem.{u, v} A := by
+  sorry
 
 /-- The tensor version of pro-isomorphism invariance of `Rlim`. -/
 theorem tensor_Rlim_pro_equal
@@ -862,5 +843,4 @@ theorem tensor_Rlim_pro_equal
         moduleDerivedLimit A (tensorDerivedInverseSystem A K D)) := by
   sorry
 
--/
 end Formalization.Books.MoreAlgebra.Unit88

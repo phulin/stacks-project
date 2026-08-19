@@ -371,6 +371,8 @@ noncomputable abbrev derivedCohomologyLeftObject
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (M : Derived A) : Derived B' :=
@@ -392,6 +394,10 @@ noncomputable abbrev derivedCohomologySourceObject
 identity.  The fields identify the models with the actual derived-category
 cohomology objects and record that the right-hand model is scalar extension
 of the original `A ⊗[R] B`-module. -/
+noncomputable local instance moduleCatHasDerivedCategoryForBaseChange
+    (T : Type u) [Ring T] : HasDerivedCategory.{w} (ModuleCat.{u} T) := by
+  sorry
+
 structure DerivedCohomologyBaseChange
     {R A B R' A' B' : Type u}
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
@@ -408,9 +414,22 @@ structure DerivedCohomologyBaseChange
   left : ℤ → Derived A ⥤ ModuleCat.{u} (A' ⊗[R'] B')
   source : ℤ → Derived A ⥤ ModuleCat.{u} (A ⊗[R] B)
   right : ℤ → Derived A ⥤ ModuleCat.{u} (A' ⊗[R'] B')
-  left_underlying : True
-  source_underlying : True
-  right_baseChange : True
+  left_underlying : ∀ (i : ℤ) (M : Derived A),
+    Nonempty ((ModuleCat.restrictScalars
+        (Algebra.TensorProduct.includeRight.toRingHom : B' →+* (A' ⊗[R'] B'))).obj
+      ((left i).obj M) ≅
+      (derivedCohomologyFunctor (R := B') i).obj
+        (derivedCohomologyLeftObject (R := R) (A := A) (B := B)
+          (R' := R') (A' := A') (B' := B') S M))
+  source_underlying : ∀ (i : ℤ) (M : Derived A),
+    Nonempty ((ModuleCat.restrictScalars
+        (Algebra.TensorProduct.includeRight.toRingHom : B →+* (A ⊗[R] B))).obj
+      ((source i).obj M) ≅
+      (derivedCohomologyFunctor (R := B) i).obj
+        (derivedCohomologySourceObject (R := R) (A := A) (B := B) M))
+  right_baseChange : ∀ (i : ℤ) (M : Derived A),
+    Nonempty ((ModuleCat.extendScalars S.baseMap).obj ((source i).obj M) ≅
+      (right i).obj M)
 
 /-- The source's cohomology isomorphism after flat base change. -/
 theorem derivedCohomology_flat_baseChange
@@ -424,6 +443,8 @@ theorem derivedCohomology_flat_baseChange
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))
@@ -447,6 +468,8 @@ theorem existsDerivedCohomologyBaseChange
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
     [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A' ⊗[R'] B'))]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] B))]
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))

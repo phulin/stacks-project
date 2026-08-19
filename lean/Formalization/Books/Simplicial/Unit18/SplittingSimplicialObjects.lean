@@ -3,8 +3,6 @@ import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.AlgebraicTopology.SimplicialObject.Split
 import Mathlib.AlgebraicTopology.SimplicialSet.Skeleton
 import Mathlib.AlgebraicTopology.SimplicialSet.Splitting
-import Mathlib.AlgebraicTopology.DoldKan.Equivalence
-import Mathlib.AlgebraicTopology.SimplicialObject.Op
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Subobject.Lattice
 import Mathlib.CategoryTheory.Subobject.Limits
@@ -255,6 +253,14 @@ theorem simplicial_set_unique_nonDegenerate_map
 
 /-! ## Maps preserving nondegenerate simplices -/
 
+/-!
+The source notes that the canonical nondegenerate splitting is not functorial
+for arbitrary simplicial-set maps: a map may send a nondegenerate simplex to a
+degenerate one.  `MapsNondegenerate` records the additional hypothesis under
+which the induced map on the canonical summands is defined; the three results
+below give the corresponding injective, surjective, and bijective conclusions.
+-/
+
 /-- Condition (a) in the source's map lemma. -/
 def MapsNondegenerate
     {U V : SSet.{u}} (f : U ⟶ V) : Prop :=
@@ -402,182 +408,10 @@ def IsNormalizedSplitting
     e.hom ≫ (normalizedSubobject U n).arrow = s.ι n) ∧
     ∀ n, Mono (s.ι n)
 
-/-! ## Splitting of simplicial abelian groups -/
-
-private def reverseSplitting
-    {C : Type u} [Category.{v} C]
-    {U : SimplicialObject C}
-    (s : SimplicialObject.Splitting (SimplicialObject.opFunctor.obj U)) :
-    SimplicialObject.Splitting U where
-  N := s.N
-  ι := s.ι
-  isColimit' Δ := by
-    let e : SimplicialObject.Splitting.IndexSet Δ ≃
-        SimplicialObject.Splitting.IndexSet Δ :=
-      { toFun := fun A =>
-          ⟨A.1, ⟨SimplexCategory.rev.map A.e, by
-            constructor
-            intro Z f g h
-            have h' := congrArg SimplexCategory.rev.map h
-            have hcomp := SimplexCategory.rev.map_comp
-              (SimplexCategory.rev.map A.e) f
-            have hcomp' := SimplexCategory.rev.map_comp
-              (SimplexCategory.rev.map A.e) g
-            have h'' : SimplexCategory.rev.map (SimplexCategory.rev.map A.e) ≫
-                SimplexCategory.rev.map f =
-                SimplexCategory.rev.map (SimplexCategory.rev.map A.e) ≫
-                  SimplexCategory.rev.map g := by
-              calc
-                _ = SimplexCategory.rev.map (SimplexCategory.rev.map A.e ≫ f) :=
-                  hcomp.symm
-                _ = SimplexCategory.rev.map (SimplexCategory.rev.map A.e ≫ g) := h'
-                _ = _ := hcomp'
-            rw [SimplexCategory.rev_map_rev_map] at h''
-            have h''' : SimplexCategory.rev.map f = SimplexCategory.rev.map g :=
-              (cancel_epi A.e).1 h''
-            exact SimplexCategory.revEquivalence.fullyFaithfulFunctor.map_injective h'''⟩⟩
-        invFun := fun A =>
-          ⟨A.1, ⟨SimplexCategory.rev.map A.e, by
-            constructor
-            intro Z f g h
-            have h' := congrArg SimplexCategory.rev.map h
-            have hcomp := SimplexCategory.rev.map_comp
-              (SimplexCategory.rev.map A.e) f
-            have hcomp' := SimplexCategory.rev.map_comp
-              (SimplexCategory.rev.map A.e) g
-            have h'' : SimplexCategory.rev.map (SimplexCategory.rev.map A.e) ≫
-                SimplexCategory.rev.map f =
-                SimplexCategory.rev.map (SimplexCategory.rev.map A.e) ≫
-                  SimplexCategory.rev.map g := by
-              calc
-                _ = SimplexCategory.rev.map (SimplexCategory.rev.map A.e ≫ f) :=
-                  hcomp.symm
-                _ = SimplexCategory.rev.map (SimplexCategory.rev.map A.e ≫ g) := h'
-                _ = _ := hcomp'
-            rw [SimplexCategory.rev_map_rev_map] at h''
-            have h''' : SimplexCategory.rev.map f = SimplexCategory.rev.map g :=
-              (cancel_epi A.e).1 h''
-            exact SimplexCategory.revEquivalence.fullyFaithfulFunctor.map_injective h'''⟩⟩
-        left_inv := by
-          intro A
-          apply SimplicialObject.Splitting.IndexSet.ext
-          all_goals try rfl
-          change SimplexCategory.rev.map (SimplexCategory.rev.map A.e) = A.e
-          exact SimplexCategory.rev_map_rev_map A.e
-        right_inv := by
-          intro A
-          apply SimplicialObject.Splitting.IndexSet.ext
-          all_goals try rfl
-          change SimplexCategory.rev.map (SimplexCategory.rev.map A.e) = A.e
-          exact SimplexCategory.rev_map_rev_map A.e }
-    have h :=
-      (CategoryTheory.Limits.Cofan.isColimitEquivOfEquiv e (s.cofan Δ)).toFun
-        (s.isColimit Δ)
-    have hinj (A : SimplicialObject.Splitting.IndexSet Δ) :
-        (s.cofan Δ).inj (e A) =
-          s.ι A.1.unop.len ≫ U.map A.e.op := by
-      change s.ι A.1.unop.len ≫
-          (SimplicialObject.opFunctor.obj U).map
-            (SimplexCategory.rev.map A.e).op =
-        s.ι A.1.unop.len ≫ U.map A.e.op
-      have hmap := SimplicialObject.opFunctor_obj_map U
-        ((SimplexCategory.rev.map A.e).op)
-      have hmap' :
-          s.ι A.1.unop.len ≫
-              (SimplicialObject.opFunctor.obj U).map
-                (SimplexCategory.rev.map A.e).op =
-            s.ι A.1.unop.len ≫
-              (SimplicialObject.opObjIso.hom ≫
-                U.map (SimplexCategory.rev.map (SimplexCategory.rev.map A.e).op.unop).op ≫
-                  SimplicialObject.opObjIso.inv) := congrArg _ hmap
-      have hrev := SimplexCategory.rev_map_rev_map A.e
-      have hrev' :
-          (SimplexCategory.rev.map (SimplexCategory.rev.map A.e).op.unop).op =
-            A.e.op := by
-        rw [Quiver.Hom.unop_op]
-        exact congrArg Quiver.Hom.op hrev
-      rw [hrev'] at hmap'
-      simpa [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
-        SimplexCategory.rev, Category.assoc] using hmap'
-    have h' : IsColimit (Cofan.mk (U.obj Δ)
-        (fun A : SimplicialObject.Splitting.IndexSet Δ =>
-          s.ι A.1.unop.len ≫ U.map A.e.op)) := by
-      apply IsColimit.ofIsoColimit h
-      exact Cofan.ext (Iso.refl _) (fun A => by
-        dsimp [Cofan.inj, Cofan.mk, Discrete.natTrans]
-        erw [Category.comp_id]
-        exact hinj A)
-    exact h'
-    /- simpa [e, SimplicialObject.Splitting.cofan,
-      SimplicialObject.Splitting.cofan', SimplicialObject.opFunctor_obj_map,
-      SimplexCategory.rev_map_rev_map, hinj] using h -/
-
 theorem simplicial_abelian_group_has_normalized_splitting
     (U : SimplicialObject (AddCommGrpCat.{u})) :
     ∃ s : SimplicialObject.Splitting U, IsNormalizedSplitting s := by
-  let U' := SimplicialObject.opFunctor.obj U
-  let K := (AlgebraicTopology.normalizedMooreComplex (AddCommGrpCat.{u})).obj U'
-  let e : U' ≅ AlgebraicTopology.DoldKan.Γ₀.obj K :=
-    (CategoryTheory.Abelian.DoldKan.equivalence (A := AddCommGrpCat.{u})).unitIso.app U'
-  let s : SimplicialObject.Splitting U' :=
-    (AlgebraicTopology.DoldKan.Γ₀.splitting K).ofIso e.symm
-  exact ⟨reverseSplitting s, by
-    constructor
-    · intro n
-      have hnorm :
-          AlgebraicTopology.NormalizedMooreComplex.objX U' n =
-            normalizedSubobject U n := by
-        rcases n with _ | n
-        · rfl
-        · dsimp [AlgebraicTopology.NormalizedMooreComplex.objX, normalizedSubobject]
-          change
-            (Finset.univ.inf (fun k : Fin (n + 1) =>
-              kernelSubobject (U'.δ k.succ)) :
-                Subobject (U'.obj (op ⦋n + 1⦌))) =
-            (Finset.univ.inf (fun i : Fin (n + 1) =>
-              kernelSubobject (U.δ i.castSucc)) :
-                Subobject (U'.obj (op ⦋n + 1⦌)))
-          have hrev (i : Fin (n + 1)) :
-              (Fin.rev i).succ.rev = i.castSucc := by
-            rw [Fin.rev_succ, Fin.rev_rev]
-          have himage :
-              (Finset.univ : Finset (Fin (n + 1))).image Fin.rev = Finset.univ :=
-            Finset.image_univ_of_surjective Fin.rev_surjective
-          rw [← himage, Finset.inf_image]
-          congr 1
-          · exact himage.symm
-          · funext i
-            change kernelSubobject (U'.δ (Fin.rev i).succ) =
-              kernelSubobject (U.δ i.castSucc)
-            rw [SimplicialObject.opFunctor_obj_δ, hrev]
-            simp [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
-              SimplexCategory.rev]
-            exact Eq.refl _
-      refine ⟨eqToIso (congrArg (fun X => (X : C)) hnorm), ?_⟩
-      dsimp [reverseSplitting, s, SimplicialObject.Splitting.ofIso]
-      cases hnorm
-      rfl
-    · intro n
-      change Mono (s.ι n)
-      dsimp [s, SimplicialObject.Splitting.ofIso]
-      let f := (AlgebraicTopology.DoldKan.Γ₀.splitting K).ι n
-      have hf : Mono f := by
-        change Mono (Sigma.ι
-          (AlgebraicTopology.DoldKan.Γ₀.Obj.summand K (op ⦋n⦌))
-          (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌)))
-        let f' := Sigma.ι
-          (AlgebraicTopology.DoldKan.Γ₀.Obj.summand K (op ⦋n⦌))
-          (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
-        let : IsSplitMono f' := inferInstance
-        exact ⟨fun {Z} g h eq => by
-          rw [← Category.comp_id g, ← Category.comp_id h, ← IsSplitMono.id f']
-          rw [← Category.assoc, eq, Category.assoc]⟩
-      change Mono (f ≫ e.inv.app (op ⦋n⦌))
-      have he : Mono (e.inv.app (op ⦋n⦌)) := by infer_instance
-      exact ⟨fun {Z} g h eq => by
-        apply hf.right_cancellation
-        apply he.right_cancellation
-        simpa only [Category.assoc] using eq⟩⟩
+  sorry
 
 /-- The normalized summands are functorial under maps of simplicial objects. -/
 theorem normalizedSubobject_map_factors

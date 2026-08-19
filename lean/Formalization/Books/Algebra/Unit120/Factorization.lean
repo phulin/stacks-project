@@ -784,7 +784,7 @@ private theorem localized_ideal_is_free_rank_one
    earlier chapter's basic-open cover and fixed-rank predicates. -/
 theorem product_ideals_principal_is_finite_locally_free_rank_one
     {A : Type u} [CommRing A]
-    (I J : Ideal A) (hI : I ≠ ⊥) (hJ : J ≠ ⊥)
+    (I J : Ideal A) (_hI : I ≠ ⊥) (_hJ : J ≠ ⊥)
     {f : A} (hprod : I * J = Ideal.span ({f} : Set A))
     (hf : IsRegular f) :
     Module.Finite A (I : Type u) ∧

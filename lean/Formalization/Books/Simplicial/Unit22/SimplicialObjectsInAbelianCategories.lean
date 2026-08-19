@@ -828,7 +828,7 @@ theorem concentratedTruncated_hom_equiv_out
       by_cases hX : X = T
       · subst X
         rw [app_top]
-        simp
+        simpa using hm'
       · rw [app_zero _ hX, alpha_app_zero α hX]
     right_inv := by
       intro f
@@ -1275,7 +1275,7 @@ theorem eilenbergMacLane_degree_formula
         _ = eqToHom (topObjValueEq hleft).symm ≫
             (eqToHom (topObjValueEq hleft) ≫
               Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m) := by
-              simp
+              simp only [eqToHom_trans, eqToHom_refl, Category.id_comp, eqToHom_trans_assoc]
         _ = eqToHom (topObjValueEq hleft).symm ≫ s.ι.app Xa := by
           simp only [hm_reassoc]
     exact { desc := desc, fac := fac, uniq := uniq }

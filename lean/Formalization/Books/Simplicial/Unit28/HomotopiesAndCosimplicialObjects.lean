@@ -566,7 +566,7 @@ theorem compareHomotopies
         rw [hindex]
         dsimp [hh]
         rw [hinv n i, hinv (n + 1) i.castSucc]
-        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
+        simp [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
           congrArg (fun q => q.unop) (H.degeneracy_of_le i j hij)
     have hnat : ∀ {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
         (α : (interval : SSet.{0}) _⦋m⦌),

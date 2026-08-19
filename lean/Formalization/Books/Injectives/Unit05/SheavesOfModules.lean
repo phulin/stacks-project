@@ -283,7 +283,11 @@ theorem skyscraperProduct_injective (X : RingedSpace.{v})
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x))
     (hI : ∀ x : X, Injective (I x)) :
     Injective (skyscraperProduct X I) := by
-  sorry
+  have hSkyscraper : ∀ x : X, Injective (moduleSkyscraperSheaf X x (I x)) :=
+    fun x => moduleSkyscraper_injective X x (I x) (hI x)
+  exact @Formalization.Books.Homology.Unit27.product_injective
+    (Mod X.structureSheaf) inferInstance inferInstance X
+    (fun x : X => moduleSkyscraperSheaf X x (I x)) inferInstance hSkyscraper
 
 /-- The source's canonical map from a sheaf to the product of the chosen
 injective stalk modules. -/
@@ -301,7 +305,12 @@ theorem stalkwiseProductMap_component (X : RingedSpace.{v})
     stalkwiseProductMap X F D ≫
         Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x =
       stalkSkyscraperHomEquiv X x F (D.I x) (D.j x) := by
-  sorry
+  change (Pi.lift (fun x : X =>
+      stalkSkyscraperHomEquiv X x F (D.I x) (D.j x))) ≫
+        Pi.π (fun x : X => moduleSkyscraperSheaf X x (D.I x)) x =
+      stalkSkyscraperHomEquiv X x F (D.I x) (D.j x)
+  rw [limit.lift_π]
+  rfl
 
 /-- The canonical stalkwise map is a monomorphism. -/
 theorem stalkwiseProductMap_mono (X : RingedSpace.{v})

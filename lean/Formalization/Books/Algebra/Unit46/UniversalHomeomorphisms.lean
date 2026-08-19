@@ -193,6 +193,91 @@ theorem tensorProduct_spectrum_homeomorph_of_isPurelyInseparable
 
 /-- The source's powers-field criterion: every element has a positive power in
     the base field exactly in the classified cases. -/
+/- Proof roadmap (`fieldPowerProperty_iff_classification`).
+
+The statement is the trichotomy in `books/algebra.tex`, Lemma
+`lemma-powers-field`; in particular, the last alternative really requires both
+fields to be algebraic over `ZMod p`, rather than algebraicity of `k' / k`.
+
+* First turn `hpow : fieldPowerProperty` into
+  `halg : Algebra.IsAlgebraic k k'`.  For `x : k'`, unpack
+  `hpow x` as `⟨n, hn, a, ha⟩`; `x ^ n` is integral because `ha` identifies it
+  with `algebraMap k k' a`, and `IsIntegral.of_pow hn` then makes `x`
+  integral.  The relevant declaration is in
+  `Mathlib/RingTheory/IntegralClosure/IsIntegral/Basic.lean`.
+* Split on surjectivity of `algebraMap k k'`.  The surjective case is the first
+  disjunct.  Otherwise inspect `separableClosure k k'`.
+  `separableClosure.eq_bot_iff` in
+  `Mathlib/FieldTheory/PurelyInseparable/Basic.lean`, instantiated using
+  `halg`, closes the purely inseparable case.  In the other case choose
+  `x : k'` in `separableClosure k k' \ ⊥`; use
+  `mem_separableClosure_iff` for `IsSeparable k x` and the description of
+  membership in `⊥` to record `x ∉ (algebraMap k k').range`.
+* Formalize the conjugates argument from the source for this `x`.  Put
+  `Kx := k⟨x⟩` and `Ω := AlgebraicClosure k`.  Give `Kx` its finite-dimensional
+  instance with `IntermediateField.adjoin.finiteDimensional`.  Since `x` is
+  separable and not in the base, its minimal polynomial has degree greater
+  than one.  Use `IntermediateField.card_algHom_adjoin_integral` (and
+  `IntermediateField.fintypeOfAlgHomAdjoinIntegral` when converting
+  `Nat.card` to `Fintype.card`) from
+  `Mathlib/FieldTheory/IntermediateField/Adjoin/Basic.lean`, together with the
+  splitting instance for `AlgebraicClosure k` from
+  `Mathlib/FieldTheory/IsAlgClosed/AlgebraicClosure.lean`, to choose distinct
+  `σ τ : Kx →ₐ[k] Ω` with different values on
+  `AdjoinSimple.gen k x`.
+* For every `a : k`, apply `hpow (x + algebraMap k k' a)`.  The two embeddings
+  fix `k`, so their values have equal positive powers.  Their denominator is
+  nonzero because `x` is not in the base.  Thus
+  `ζ a := σ(x + a) / τ(x + a)` satisfies a positive power equal to one;
+  `IsAlgebraic.of_pow` from
+  `Mathlib/RingTheory/Algebraic/Basic.lean` makes every `ζ a` algebraic over
+  any chosen prime subfield.  Distinctness of `σ` and `τ` also gives
+  `ζ a ≠ 1`.  With `ζ := ζ 0` and `ζ' := ζ 1`, use
+  `τ(x) = (1 - ζ') / (ζ' - ζ)` and then
+  `( ζ a - 1) * a = (ζ - ζ a) * τ(x)`.  Closure of algebraic
+  elements under `add`, `sub`, `mul`, and `inv` is provided by the
+  `IsAlgebraic` lemmas in
+  `Mathlib/RingTheory/Algebraic/Integral.lean`.  Reflect algebraicity along the
+  injective tower map `IsScalarTower.toAlgHom` using
+  `Algebra.IsAlgebraic.of_injective`; this proves that `k` is algebraic over
+  the selected prime subfield.
+* Use `CharP.exists' k` from `Mathlib/Algebra/CharP/Defs.lean`.  In the
+  positive-characteristic branch unpack `p`, install the returned
+  `CharP k p`, transport it to `k'` with `Algebra.charP_iff k k' p`, and
+  install `ZMod.algebra k p` and `ZMod.algebra k' p`.  The preceding
+  conjugates argument with prime subfield `ZMod p` gives algebraicity of `k`;
+  combine it with `halg` using `Algebra.IsAlgebraic.trans` from
+  `Mathlib/RingTheory/Algebraic/Integral.lean` to get algebraicity of `k'`.
+  Package these two instances with the explicit `CharP` witnesses required by
+  `isAlgebraicOverPrimeField`.
+* The characteristic-zero branch must be eliminated, not silently folded into
+  the algebraic alternative.  Apply the same construction over `ℚ`.  All
+  `ζ a` for `a : ℚ` lie in the fixed intermediate field
+  `N := IntermediateField.adjoin ℚ {ζ, ζ'}`.  Give `N` a
+  `FiniteDimensional ℚ N` instance via
+  `IntermediateField.finiteDimensional_adjoin` and hence a `NumberField N`
+  instance.  A positive-power-equals-one element defines a unit of the ring
+  of integers of `N` (use `IsIntegral.of_pow` for integrality and
+  `Units.mkOfMulEqOne` for the inverse), lying in
+  `NumberField.Units.torsion N`.  That subgroup is finite
+  by the instance in
+  `Mathlib/NumberTheory/NumberField/Units/Basic.lean`.  The identity defining
+  `ζ a` shows that `a ↦ ζ a` is injective: equality for two parameters
+  forces `ζ a = 1`.  `Finite.of_injective` would then make `ℚ` finite, the
+  required contradiction.  Add the two focused AlgebraicClosure and
+  NumberField imports when implementing this step.
+* For the reverse implication, split the classification.  Surjectivity uses
+  exponent `1`.  In the purely inseparable branch install the explicit
+  `CharP` witnesses, `ExpChar k p := ExpChar.prime hp`, and the
+  `IsPurelyInseparable` instance, then use `IsPurelyInseparable.pow_mem k p x`
+  and positivity of `p ^ n`.  In the algebraic-over-`ZMod p` branch, for each
+  nonzero `x : k'` put `E := (ZMod p)⟨x⟩`.  The instance
+  `IntermediateField.adjoin.finiteDimensional` and
+  `Module.finite_of_finite (ZMod p)` make `E` finite.  Apply
+  `isOfFinOrder_of_finite` to the unit defined by the nonzero generator and
+  `IsOfFinOrder.exists_pow_eq_one`; coercing back gives `x ^ n = 1`, which is
+  in `(algebraMap k k').range`.  Handle `x = 0` with exponent `1`.
+-/
 theorem fieldPowerProperty_iff_classification
     {k k' : Type*} [Field k] [Field k'] [Algebra k k'] :
     fieldPowerProperty (k := k) (k' := k') ↔
@@ -350,6 +435,98 @@ private theorem range_of_sq_cube_of_field
 
 /-- The square-and-cube criterion gives a universal homeomorphism with
     residue-field isomorphisms. -/
+/- Proof roadmap (`twoThreeGenerated_locallyNilpotentKernel`).
+
+The hypotheses match `books/algebra.tex`, Lemma `lemma-2-3-ring-map`.
+In particular, `locallyNilpotentKernel` is the elementwise condition needed
+here: turn it into `RingHom.ker f ≤ nilradical R` with
+`mem_nilradical`, and recover the elementwise condition after base change by
+the same lemma in the reverse direction.
+
+1. Install `f.toAlgebra`, set
+   `U := {x : S | x ^ 2 ∈ f.range ∧ x ^ 3 ∈ f.range}`, and unfold
+   `hgen` to `hgen' : Algebra.adjoin R U = ⊤`.  Prove
+   `hint : Algebra.IsIntegral R S`: each generator is integral by
+   `IsIntegral.of_pow (n := 2)` and `isIntegral_algebraMap`, and
+   `Algebra.IsIntegral.adjoin` makes `Algebra.adjoin R U` integral.  Transport
+   along `hgen'` as in the proof scaffold below, then package this as
+   `hfint : f.IsIntegral`.
+2. Prove surjectivity of `PrimeSpectrum.comap f`.  Let
+   `hker' : RingHom.ker f ≤ nilradical R`.  The quotient map has bijective
+   comap by
+   `PrimeSpectrum.comap_quotientMk_bijective_of_le_nilradical hker'`, while
+   `hfint.kerLift.comap_surjective f.kerLift_injective` supplies primes above
+   the quotient; compose the two surjections.
+3. Prove `hresSurj : ∀ q, Function.Surjective (residueFieldMap f q)`.
+   For fixed `q`, abbreviate
+   `K := (PrimeSpectrum.comap f q).asIdeal.ResidueField`,
+   `L := q.asIdeal.ResidueField`, and `hq := residueFieldMap f q`, with
+   `Algebra K L := hq.toAlgebra`.  Use `Algebra.adjoin_induction` on
+   `hgen'` to show `algebraMap S L s ∈ hq.range` for every `s : S`.
+   The generator case is exactly `range_of_sq_cube_of_field hq`; obtain its
+   two range witnesses via `Ideal.ResidueField.map_algebraMap`.  The scalar,
+   addition, and multiplication cases use closure of `RingHom.range`.
+   Finally write an arbitrary `z : L` as a quotient with
+   `IsFractionRing.div_surjective`, lift numerator and denominator through
+   `Ideal.Quotient.mk_surjective`, and divide their two preimages.  Since a
+   nonzero ring hom between fields is injective, set
+   `hres q := ⟨RingHom.injective _, hresSurj q⟩`.
+4. Prove injectivity of `PrimeSpectrum.comap f`.  Given `q`, `q'` with the
+   same contraction `I`, form the residue-field equivalences
+   `e₁ : I.ResidueField ≃+* q.asIdeal.ResidueField` and
+   `e₂ : I.ResidueField ≃+* q'.asIdeal.ResidueField` using
+   `RingEquiv.ofBijective` and step 3, and put `e := e₁.symm.trans e₂`.
+   By another `Algebra.adjoin_induction`, prove
+   `e (algebraMap S _ s) = algebraMap S _ s` for every `s : S`.  For a
+   generator, its two images have equal squares and equal cubes because both
+   powers come from `R`.  The elementary field calculation already expanded
+   in the scaffold below proves equality: split on the second image being
+   zero; otherwise use
+   `(alpha - beta) * beta ^ 2 = alpha ^ 3 - beta ^ 3` and cancel
+   `beta ^ 2`.  Then use
+   `Ideal.algebraMap_residueField_eq_zero` in both directions to get
+   `q.asIdeal = q'.asIdeal`, followed by `PrimeSpectrum.ext`.
+5. Assemble
+   `hhome : IsHomeomorph (PrimeSpectrum.comap f)` with
+   `isHomeomorph_iff_continuous_isClosedMap_bijective.mpr`.  Its three inputs
+   are `PrimeSpectrum.continuous_comap f`,
+   `PrimeSpectrum.isClosedMap_comap_of_isIntegral f hfint`, and the
+   injectivity/surjectivity from steps 2 and 4.  This is the missing terminal
+   assembly after the scaffold below.
+6. For a base ring `R' : Type*` and `g : R →+* R'`, install
+   `g.toAlgebra` and abbreviate
+   `bc : R' →+* S ⊗[R] R' := baseChangeRingMap f g` and
+   `a : S →+* S ⊗[R] R' := baseChangeAlgebraMap f g`.  Let
+   `U' := {z | z ^ 2 ∈ bc.range ∧ z ^ 3 ∈ bc.range}`.  Prove
+   `a.comp f = bc.comp g` using
+   `Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap`.  Induction on
+   `hgen'` then shows every `a s` lies in `Algebra.adjoin R' U'`: for a
+   generator, map its square/cube witnesses across the displayed composite;
+   base scalars lie in the adjoin automatically.  Finish with
+   `TensorProduct.induction_on`: a pure tensor is
+   `a s * bc r'`, hence belongs to the adjoin.  This proves
+   `twoThreeGenerated bc` after unfolding `generatedBy`.
+7. For the base-changed kernel, do not try to tensor the elementwise
+   nilpotence witness directly.  Apply
+   `Formalization.Books.Algebra.Unit30.spectrum_surjective_radical_ideal_conditions_baseChange`
+   from `Formalization/Books/Algebra/Unit30/MoreOnImages.lean` to
+   `hhome.surjective` and `g`.  It gives surjectivity of comap for
+   `algebraMap R' (R' ⊗[R] S)`.  Transport this through
+   `e : (R' ⊗[R] S) ≃+* (S ⊗[R] R') :=
+     (Algebra.TensorProduct.comm R R' S).toRingEquiv`; prove
+   `e.toRingHom.comp (algebraMap R' (R' ⊗[R] S)) = bc` by extensionality
+   and `simp [baseChangeRingMap]`.  Surjectivity of `PrimeSpectrum.comap bc`
+   makes its range dense, so
+   `PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical bc` gives
+   `RingHom.ker bc ≤ nilradical R'`.  Apply `mem_nilradical.1` pointwise to
+   obtain `locallyNilpotentKernel bc`.
+
+Known dead ends: `surjective_locallyNilpotentKernel` is unusable because `f`
+need not be surjective, and `twoThreeGenerated f` does not imply
+`powerSurjective f` (the positive-power property is not preserved by the
+algebra-generation operations in characteristic zero).  The direct spectrum
+and residue-field route above is therefore necessary.
+-/
 theorem twoThreeGenerated_locallyNilpotentKernel
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hgen : twoThreeGenerated f) (hker : locallyNilpotentKernel f) :
@@ -359,7 +536,8 @@ theorem twoThreeGenerated_locallyNilpotentKernel
           twoThreeGenerated (baseChangeRingMap f g) ∧
             locallyNilpotentKernel (baseChangeRingMap f g) := by
   sorry
-/-
+/- Existing proof scaffold for roadmap steps 1--4; it deliberately stops
+before the homeomorphism assembly and the base-change argument.
   letI : Algebra R S := f.toAlgebra
   let U : Set S := {x : S | x ^ 2 ∈ f.range ∧ x ^ 3 ∈ f.range}
   have hgen' : Algebra.adjoin R U = ⊤ := by

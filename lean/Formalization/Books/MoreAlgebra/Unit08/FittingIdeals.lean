@@ -539,7 +539,7 @@ private theorem minorIdeal_append_identity_le
               ((rows.orderIsoOfFin hrows).strictMono hij)
         | right j =>
             simp only [erows, Fin.addCases_left, Fin.addCases_right]
-            apply Fin.lt_iff_val_lt_val.mpr
+            apply Fin.lt_def.mpr
             change ((rows.orderIsoOfFin hrows i : Fin n).val) < n + j.val
             have hi := ((rows.orderIsoOfFin hrows i : Fin n)).isLt
             omega
@@ -547,7 +547,7 @@ private theorem minorIdeal_append_identity_le
         induction j using Fin.addCases with
         | left j =>
             exfalso
-            have hij' := Fin.lt_iff_val_lt_val.mp hij
+            have hij' := Fin.lt_def.mp hij
             simp only [Fin.val_natAdd, Fin.val_castAdd] at hij'
             have hi := i.isLt
             have hj := j.isLt
@@ -567,7 +567,7 @@ private theorem minorIdeal_append_identity_le
               ((cols.orderIsoOfFin hcols).strictMono hij)
         | right j =>
             simp only [ecols0, Fin.addCases_left, Fin.addCases_right]
-            apply Fin.lt_iff_val_lt_val.mpr
+            apply Fin.lt_def.mpr
             change ((cols.orderIsoOfFin hcols i : Fin m).val) < m + j.val
             have hi := ((cols.orderIsoOfFin hcols i : Fin m)).isLt
             omega
@@ -575,7 +575,7 @@ private theorem minorIdeal_append_identity_le
         induction j using Fin.addCases with
         | left j =>
             exfalso
-            have hij' := Fin.lt_iff_val_lt_val.mp hij
+            have hij' := Fin.lt_def.mp hij
             simp only [Fin.val_natAdd, Fin.val_castAdd] at hij'
             have hi := i.isLt
             have hj := j.isLt
@@ -633,22 +633,18 @@ private theorem minorIdeal_append_identity_le
         induction j using Fin.addCases with
         | left j =>
             simp only [Matrix.submatrix_apply]
-            simp [erows, ecols, ecols0, Matrix.reindex_apply,
-              Equiv.trans_apply, Equiv.cast]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply]
         | right j =>
             simp only [Matrix.submatrix_apply]
-            simp [erows, ecols, ecols0, Matrix.reindex_apply,
-              Equiv.trans_apply, Equiv.cast]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply]
     | right i =>
         induction j using Fin.addCases with
         | left j =>
             simp only [Matrix.submatrix_apply]
-            simp [erows, ecols, ecols0, Matrix.reindex_apply,
-              Equiv.trans_apply, Equiv.cast]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply]
         | right j =>
             simp only [Matrix.submatrix_apply]
-            simp [erows, ecols, ecols0, Matrix.reindex_apply,
-              Equiv.trans_apply, Equiv.cast]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply]
   rw [hsub, Matrix.det_reindex_self]
   rw [Matrix.det_fromBlocks_zero₂₁]
   simp
@@ -674,7 +670,7 @@ private theorem fittingIdealOfSurjection_stabilize_ge
     change p (oldCol j ∘ Fin.castAdd t) = 0
     have hcol : oldCol j ∘ Fin.castAdd t = (z j).1 := by
       funext i
-      simp [oldCol, Function.comp_def]
+      simp [oldCol]
     rw [hcol]
     exact (z j).property
   have hstd : ∀ j, stdCol j ∈ LinearMap.ker (stabilize p t) := by
@@ -683,7 +679,7 @@ private theorem fittingIdealOfSurjection_stabilize_ge
     change p (stdCol j ∘ Fin.castAdd t) = 0
     have hcol : stdCol j ∘ Fin.castAdd t = 0 := by
       funext i
-      simp [stdCol, Function.comp_def]
+      simp [stdCol]
     rw [hcol]
     simp
   let z'' : Fin (n - k + t) → LinearMap.ker (stabilize p t) :=
@@ -707,18 +703,18 @@ private theorem fittingIdealOfSurjection_stabilize_ge
         cases j with
         | inl j =>
             simp [relationMatrix, z', z'', oldCol, ecols, stabilize,
-            Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+            Equiv.trans_apply, Equiv.cast]
         | inr j =>
             simp [relationMatrix, z', z'', stdCol, ecols, stabilize,
-            Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+            Equiv.trans_apply, Equiv.cast]
     | right i =>
         cases j with
         | inl j =>
             simp [relationMatrix, z', z'', oldCol, ecols, stabilize,
-              Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+              Equiv.trans_apply, Equiv.cast]
         | inr j =>
             simp [relationMatrix, z', z'', stdCol, ecols, stabilize,
-              Equiv.trans_apply, Equiv.cast, Fin.cast_cast, Matrix.one_apply,
+              Equiv.trans_apply, Equiv.cast, Matrix.one_apply,
               Pi.single_apply]
   calc
     minorIdeal (relationMatrix p z) (n - k) ≤

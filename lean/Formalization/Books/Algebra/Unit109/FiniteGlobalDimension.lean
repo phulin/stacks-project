@@ -1,10 +1,14 @@
 import Formalization.Books.Algebra.Unit09.Localization
 import Formalization.Books.Algebra.Unit71.ExtGroups
+import Formalization.Books.Algebra.Unit72.Depth
 import Formalization.Books.Algebra.Unit85.ProjectiveModulesLocalRing
+import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Module.Projective
+import Mathlib.LinearAlgebra.Finsupp.Pi
 import Mathlib.RingTheory.LocalProperties.ProjectiveDimension
+import Mathlib.RingTheory.Regular.ProjectiveDimension
 
 /-!
 # Commutative Algebra, Chapter 109: Rings of finite global dimension
@@ -20,8 +24,12 @@ namespace Formalization.Books.Algebra.Unit109
 
 open CategoryTheory
 open CategoryTheory.Limits
+open Module
 open Formalization.Books.Algebra.Unit71
 open Formalization.Books.Algebra.Unit09
+open Formalization.Books.Algebra.Unit72
+open Formalization.Books.Algebra.Unit102
+open scoped TensorProduct
 
 universe u v
 
@@ -931,6 +939,696 @@ theorem projective_dimension_resolution_criteria_noetherian_local
   · exact hAG.symm
   · exact False.elim h
 
+/-! ## Minimal finite free resolutions and depth -/
+
+private theorem localDepth_eq_of_linearEquiv
+    {R M N : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (e : M ≃ₗ[R] N) :
+    localDepth R M = localDepth R N := by
+  unfold localDepth
+  rw [depth_eq_sSup_weaklyRegular, depth_eq_sSup_weaklyRegular]
+  congr 1
+  ext n
+  constructor
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.map_smul r x)).mp hreg
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.symm.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.symm.map_smul r x)).mp hreg
+
+private theorem localDepth_fin_succ_ge
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (k : ℕ) :
+    localDepth R (Fin k.succ → R) ≥ localDepth R R := by
+  induction k with
+  | zero =>
+      exact le_of_eq (localDepth_eq_of_linearEquiv
+        (LinearEquiv.piUnique R (fun _ : Fin 1 => R))).symm
+  | succ k ih =>
+      let e : (R × (Fin k.succ → R)) ≃ₗ[R] (Fin k.succ.succ → R) :=
+        Fin.consLinearEquiv R (fun _ : Fin k.succ.succ => R)
+      let f := e.toLinearMap.comp (LinearMap.inl R R (Fin k.succ → R))
+      let g := (LinearMap.snd R R (Fin k.succ → R)).comp e.symm.toLinearMap
+      have hf : Function.Injective f :=
+        e.injective.comp LinearMap.inl_injective
+      have hfg : Function.Exact f g :=
+        (LinearEquiv.conj_exact_iff_exact
+          (LinearMap.inl R R (Fin k.succ → R))
+          (LinearMap.snd R R (Fin k.succ → R)) e).2 Function.Exact.inl_snd
+      have hsnd : Function.Surjective
+          (LinearMap.snd R R (Fin k.succ → R)) := LinearMap.snd_surjective
+      have hg : Function.Surjective g := hsnd.comp e.symm.surjective
+      have hseq := localDepth_shortExact f g hf hfg hg
+      simpa [ih] using hseq.1
+
+/-- A coordinate minimal finite free resolution of `M` of exact length `d`.
+
+Besides exactness at the positive terms, the augmentation condition records
+exactness at degree zero.  Minimality is the basis-independent local
+condition in coordinates: every differential matrix has entries in the
+maximal ideal.  The last nonzero term makes the displayed length exact. -/
+structure MinimalFiniteFreeResolution
+    (R M : Type u) [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M] (d : ℕ) where
+  complex : FiniteFreeComplex R d
+  augmentation : (Fin (complex.termRank 0) → R) →ₗ[R] M
+  augmentation_surjective : Function.Surjective augmentation
+  augmentation_exact : Function.Exact (complex.differential 0) augmentation
+  exact : complex.IsExact
+  minimal : complex.MatrixEntriesInIdeal (IsLocalRing.maximalIdeal R)
+  last_nonzero : complex.termRank d ≠ 0
+
+/-- The depth information carried by a minimal finite free resolution. -/
+structure MinimalFiniteFreeResolutionDepthInterface
+    (R M : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] (d : ℕ) where
+  resolution : MinimalFiniteFreeResolution R M d
+  depth_lower : localDepth R M ≥ localDepth R R - d
+
+private theorem exists_minimal_finite_free_cover
+    {R M : Type u} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] :
+    ∃ (n : ℕ) (f : (Fin n → R) →ₗ[R] M),
+      Function.Surjective f ∧
+        LinearMap.ker f ≤
+          IsLocalRing.maximalIdeal R • (⊤ : Submodule R (Fin n → R)) := by
+  classical
+  let k := IsLocalRing.ResidueField R
+  let ι := Module.Free.ChooseBasisIndex k (k ⊗[R] M)
+  let : Fintype ι := Fintype.ofFinite ι
+  let b : Basis (Fin (Fintype.card ι)) k (k ⊗[R] M) :=
+    (Module.Free.chooseBasis k (k ⊗[R] M)).reindex (Fintype.equivFin ι)
+  have hmk : Function.Surjective (TensorProduct.mk R k M 1) :=
+    TensorProduct.mk_surjective R M k Quotient.mk_surjective
+  choose v hv using fun i : Fin (Fintype.card ι) => hmk (b i)
+  let f : (Fin (Fintype.card ι) → R) →ₗ[R] M :=
+    Fintype.linearCombination R v
+  have hf : Function.Surjective f := by
+    rw [← LinearMap.range_eq_top, Fintype.range_linearCombination]
+    exact IsLocalRing.span_eq_top_of_tmul_eq_basis v b (fun i => by
+      simpa using hv i)
+  have hbbij : Function.Bijective (Fintype.linearCombination k b) := by
+    have heq : Fintype.linearCombination k b = b.equivFun.symm.toLinearMap := by
+      ext x
+      simp [Fintype.linearCombination_apply]
+    rw [heq]
+    exact b.equivFun.symm.bijective
+  have hvbij : Function.Bijective
+      (Fintype.linearCombination k (TensorProduct.mk R k M 1 ∘ v)) := by
+    simpa [Function.comp_def, hv] using hbbij
+  let e : k ⊗[R] (Fin (Fintype.card ι) → R) ≃ₗ[k]
+      (Fin (Fintype.card ι) → k) :=
+    TensorProduct.piScalarRight R k k (Fin (Fintype.card ι))
+  have hcomp :
+      (f.baseChange k).comp e.symm.toLinearMap =
+        Fintype.linearCombination k (TensorProduct.mk R k M 1 ∘ v) := by
+    apply LinearMap.pi_ext
+    intro i r
+    simp [e, f, LinearMap.baseChange_tmul,
+      Fintype.linearCombination_apply_single, Function.comp_def]
+    rw [TensorProduct.smul_tmul', Algebra.smul_def, mul_one]
+    change r ⊗ₜ[R] v i = r ⊗ₜ[R] v i
+    rfl
+  have hbasebij : Function.Bijective (f.baseChange k) := by
+    have hcompbij : Function.Bijective
+        ((f.baseChange k).comp e.symm.toLinearMap) := by
+      rw [hcomp]
+      exact hvbij
+    exact (Function.Bijective.of_comp_iff (f.baseChange k) e.symm.bijective).mp
+      hcompbij
+  refine ⟨Fintype.card ι, f, hf, ?_⟩
+  intro x hx
+  rw [← LinearMap.ker_tensorProductMk]
+  apply hbasebij.1
+  change (f.baseChange k) (1 ⊗ₜ[R] x) = (f.baseChange k) 0
+  rw [LinearMap.baseChange_tmul]
+  simp [LinearMap.mem_ker.mp hx]
+
+private noncomputable def prependMinimalFiniteFreeResolution
+    {R M : Type u} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M]
+    (d n : ℕ) (f : (Fin n → R) →ₗ[R] M)
+    (hf : Function.Surjective f)
+    (hmin : LinearMap.ker f ≤
+      IsLocalRing.maximalIdeal R • (⊤ : Submodule R (Fin n → R)))
+    (D : MinimalFiniteFreeResolution R (LinearMap.ker f) d) :
+    MinimalFiniteFreeResolution R M (d + 1) := by
+  let r : ℕ → ℕ
+    | 0 => n
+    | i + 1 => D.complex.termRank i
+  let δ : ∀ i : ℕ, (Fin (r (i + 1)) → R) →ₗ[R] (Fin (r i) → R)
+    | 0 => (LinearMap.ker f).subtype.comp D.augmentation
+    | i + 1 => D.complex.differential i
+  let C : FiniteFreeComplex R (d + 1) :=
+    { termRank := r
+      termRank_zero := by
+        intro i hi
+        cases i with
+        | zero => omega
+        | succ i =>
+          simpa [r] using D.complex.termRank_zero i (by omega)
+      differential := δ
+      differential_zero := by
+        intro i hi
+        cases i with
+        | zero => omega
+        | succ i =>
+          simpa [δ] using D.complex.differential_zero i (by omega)
+      differential_comp := by
+        intro i
+        cases i with
+        | zero =>
+          simpa [δ, r, LinearMap.comp_assoc] using congrArg
+            (fun g => (LinearMap.ker f).subtype.comp g)
+            D.augmentation_exact.linearMap_comp_eq_zero
+        | succ i =>
+          simpa [δ] using D.complex.differential_comp i }
+  have hCexact : C.IsExact := by
+    intro i
+    cases d with
+    | zero =>
+      by_cases hi0 : i = 0
+      · subst i
+        simp [FiniteFreeComplex.IsExactAt]
+      · by_cases hi1 : i = 1
+        · subst i
+          have hDinj : Function.Injective D.augmentation := by
+            rw [← LinearMap.ker_eq_bot]
+            have hDexact := D.augmentation_exact
+            rw [LinearMap.exact_iff] at hDexact
+            rw [hDexact]
+            exact LinearMap.range_eq_bot.mpr
+              (D.complex.differential_zero 0 (by omega))
+          simpa [FiniteFreeComplex.IsExactAt, C, δ, r,
+            FiniteFreeComplex.previousDifferential] using
+              Subtype.val_injective.comp hDinj
+        · simp [FiniteFreeComplex.IsExactAt, hi0, hi1]
+    | succ d =>
+      cases i with
+      | zero => simp [FiniteFreeComplex.IsExactAt]
+      | succ j =>
+        by_cases hjL : j = d + 1
+        · subst j
+          have hDex := D.exact (d + 1)
+          rw [FiniteFreeComplex.IsExactAt, dif_neg (by omega : d + 1 ≠ 0),
+            dif_pos rfl] at hDex
+          simpa [FiniteFreeComplex.IsExactAt, C, δ, r,
+            FiniteFreeComplex.previousDifferential] using hDex
+        · by_cases hjLt : j < d + 1
+          · cases j with
+            | zero =>
+              have h := (Subtype.val_injective : Function.Injective
+                ((LinearMap.ker f).subtype : LinearMap.ker f → Fin n → R))
+              have hexact := (Function.Injective.comp_exact_iff_exact
+                (f := D.complex.differential 0) (g := D.augmentation)
+                (i := (LinearMap.ker f).subtype) h).mpr
+                  D.augmentation_exact
+              simpa [FiniteFreeComplex.IsExactAt, C, δ, r,
+                FiniteFreeComplex.previousDifferential] using hexact
+            | succ j =>
+              have hDex := D.exact (j + 1)
+              rw [FiniteFreeComplex.IsExactAt, dif_neg (by omega : j + 1 ≠ 0),
+                dif_neg (by omega : j + 1 ≠ d + 1), dif_pos (by omega)] at hDex
+              rw [FiniteFreeComplex.IsExactAt, dif_neg (by omega : j + 2 ≠ 0),
+                dif_neg (by omega : j + 2 ≠ d + 2), dif_pos (by omega)]
+              simpa [FiniteFreeComplex.IsExactAt, C, δ, r,
+                FiniteFreeComplex.previousDifferential] using hDex
+          · rw [FiniteFreeComplex.IsExactAt, dif_neg (by omega : j + 1 ≠ 0),
+              dif_neg (by omega : j + 1 ≠ d + 2), dif_neg (by omega : ¬j + 1 < d + 2)]
+            trivial
+  refine
+    { complex := C
+      augmentation := f
+      augmentation_surjective := hf
+      augmentation_exact := by
+        rw [LinearMap.exact_iff]
+        change LinearMap.ker f =
+          LinearMap.range ((LinearMap.ker f).subtype.comp D.augmentation)
+        rw [LinearMap.range_comp,
+          LinearMap.range_eq_top.mpr D.augmentation_surjective,
+          Submodule.map_top, Submodule.range_subtype]
+      exact := hCexact
+      minimal := by
+        intro i hi a b
+        cases i with
+        | zero =>
+          let p : (Fin n → R) →ₗ[R] R := LinearMap.proj a
+          have hp : Function.Surjective p := by
+            intro x
+            exact ⟨Pi.single a x, by simp [p]⟩
+          have hx : ((D.augmentation (Pi.single b 1) : LinearMap.ker f) :
+              Fin n → R) ∈
+              IsLocalRing.maximalIdeal R • (⊤ : Submodule R (Fin n → R)) :=
+            hmin (D.augmentation (Pi.single b 1)).property
+          have hxmap : p (D.augmentation (Pi.single b 1)) ∈
+              Submodule.map p (IsLocalRing.maximalIdeal R •
+                (⊤ : Submodule R (Fin n → R))) :=
+            Submodule.mem_map_of_mem hx
+          rw [Submodule.map_smul'', Submodule.map_top,
+            LinearMap.range_eq_top.mpr hp] at hxmap
+          have hentry : ((LinearMap.toMatrix'
+              ((LinearMap.ker f).subtype.comp D.augmentation)) a b : R) ∈
+              IsLocalRing.maximalIdeal R := by
+            simpa [p, Ideal.smul_eq_mul] using hxmap
+          simpa [C, δ, r] using hentry
+        | succ i =>
+          simpa [C, δ, r] using D.minimal i (by omega) a b
+      last_nonzero := by
+        simpa [C, r] using D.last_nonzero }
+
+/-- A nonzero finite module of exact finite projective dimension over a
+Noetherian local ring has a minimal coordinate finite free resolution of
+that exact length. -/
+theorem exists_minimalFiniteFreeResolution
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
+    (d : ℕ) (hM : HasProjectiveDimensionExactly (ModuleCat.of R M) d) :
+    Nonempty (MinimalFiniteFreeResolution R M d) := by
+  induction d generalizing M with
+  | zero =>
+      have hproj : Module.Projective R M :=
+        (projective_dimension_zero_iff_projective (ModuleCat.of R M)).mp hM
+      let hfree : Module.Free R M :=
+        Formalization.Books.Algebra.Unit85.projective_free_over_local_ring hproj
+      let : Module.Free R M := hfree
+      let ι := Module.Free.ChooseBasisIndex R M
+      let b₀ : Basis ι R M := Module.Free.chooseBasis R M
+      let : Fintype ι := Fintype.ofFinite ι
+      let b : Basis (Fin (Fintype.card ι)) R M :=
+        b₀.reindex (Fintype.equivFin ι)
+      let e : (Fin (Fintype.card ι) → R) ≃ₗ[R] M := b.equivFun.symm
+      let C : FiniteFreeComplex R 0 :=
+        { termRank := fun i => if i = 0 then Fintype.card ι else 0
+          termRank_zero := by
+            intro i hi
+            simp [show i ≠ 0 by omega]
+          differential := fun _ => 0
+          differential_zero := by intro i hi; rfl
+          differential_comp := by intro i; rfl }
+      refine ⟨{
+        complex := C
+        augmentation := e.toLinearMap
+        augmentation_surjective := e.surjective
+        augmentation_exact := by
+          simpa [C] using
+            (LinearMap.exact_zero_iff_injective (Fin 0 → R) e.toLinearMap).mpr
+              e.injective
+        exact := by
+          intro i
+          simp [FiniteFreeComplex.IsExactAt]
+        minimal := by
+          intro i hi
+          omega
+        last_nonzero := ?_ }⟩
+      intro hcard
+      have hcard' : Fintype.card ι = 0 := by
+        simp [C] at hcard
+      have hdom : Subsingleton (Fin (Fintype.card ι) → R) := by
+        rw [hcard']
+        infer_instance
+      have hMsub : Subsingleton M := by
+        constructor
+        intro x y
+        obtain ⟨x', rfl⟩ := e.surjective x
+        obtain ⟨y', rfl⟩ := e.surjective y
+        exact congrArg e (hdom.elim x' y')
+      exact not_subsingleton_iff_nontrivial.mpr inferInstance hMsub
+  | succ d ih =>
+      obtain ⟨n, f, hf, hmin⟩ := exists_minimal_finite_free_cover (R := R) (M := M)
+      let K : Type u := LinearMap.ker f
+      let : IsNoetherian R (Fin n → R) :=
+        isNoetherian_of_isNoetherianRing_of_finite R (Fin n → R)
+      let : IsNoetherian R K :=
+        isNoetherian_of_submodule_of_noetherian R (Fin n → R) (LinearMap.ker f)
+          inferInstance
+      let : Module.Finite R K := inferInstance
+      have hKnontrivial : Nontrivial K := by
+        apply not_subsingleton_iff_nontrivial.mp
+        intro hKsub
+        have hfinj : Function.Injective f := by
+          rw [← LinearMap.ker_eq_bot, ← Submodule.subsingleton_iff_eq_bot]
+          exact hKsub
+        let e : (Fin n → R) ≃ₗ[R] M := LinearEquiv.ofBijective f ⟨hfinj, hf⟩
+        have hprojF : CategoryTheory.Projective (ModuleCat.of R (Fin n → R)) := by
+          exact (IsProjective.iff_projective _).mp inferInstance
+        have hprojM : CategoryTheory.Projective (ModuleCat.of R M) := by
+          exact CategoryTheory.Projective.of_iso e.toModuleIso hprojF
+        exact hM.2 0 (by omega)
+          ((CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero
+            (ModuleCat.of R M)).mp hprojM)
+      let : Nontrivial K := hKnontrivial
+      let S := ShortComplex.moduleCatMk (LinearMap.ker f).subtype f
+        f.exact_subtype_ker_map.linearMap_comp_eq_zero
+      have hS : S.ShortExact :=
+        ModuleCat.shortComplex_shortExact S f.exact_subtype_ker_map
+          Subtype.val_injective hf
+      have hprojF : CategoryTheory.Projective S.X₂ := by
+        dsimp [S]
+        exact (IsProjective.iff_projective _).mp inferInstance
+      have hFbound (q : ℕ) (hq : 1 ≤ q) :
+          CategoryTheory.HasProjectiveDimensionLT S.X₂ q := by
+        exact hasProjectiveDimensionLT_of_ge_explicit S.X₂ 1 q hq
+          (CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hprojF)
+      have hKbound : CategoryTheory.HasProjectiveDimensionLE S.X₁ d := by
+        exact hS.hasProjectiveDimensionLT_X₁ (d + 1) (hFbound (d + 1) (by omega)) hM.1
+      change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R K) d at hKbound
+      have hKexact : HasProjectiveDimensionExactly (ModuleCat.of R K) d := by
+        refine ⟨?_, ?_⟩
+        · exact hKbound
+        · intro q hqd hq
+          have hq' : CategoryTheory.HasProjectiveDimensionLE S.X₁ q := by
+            change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R K) q
+            exact hq
+          have hMbound : CategoryTheory.HasProjectiveDimensionLE S.X₃ (q + 1) :=
+            hS.hasProjectiveDimensionLT_X₃ (q + 1) hq'
+              (hFbound (q + 2) (by omega))
+          change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) (q + 1) at hMbound
+          exact hM.2 (q + 1) (by omega) hMbound
+      obtain ⟨D⟩ := ih hKexact
+      exact ⟨prependMinimalFiniteFreeResolution d n f hf hmin D⟩
+
+/-- The minimal resolution can be chosen together with the depth inequality
+obtained by breaking it into short exact sequences. -/
+theorem exists_minimalFiniteFreeResolutionDepthInterface
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
+    (d : ℕ) (hM : HasProjectiveDimensionExactly (ModuleCat.of R M) d) :
+    Nonempty (MinimalFiniteFreeResolutionDepthInterface R M d) := by
+  induction d generalizing M with
+  | zero =>
+      obtain ⟨F⟩ := exists_minimalFiniteFreeResolution 0 hM
+      have hfinj : Function.Injective F.augmentation := by
+        have hexact := F.augmentation_exact
+        rw [F.complex.differential_zero 0 (by omega)] at hexact
+        exact (LinearMap.exact_zero_iff_injective
+          (Fin (F.complex.termRank 1) → R) F.augmentation).mp hexact
+      let e : (Fin (F.complex.termRank 0) → R) ≃ₗ[R] M :=
+        LinearEquiv.ofBijective F.augmentation ⟨hfinj, F.augmentation_surjective⟩
+      obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero F.last_nonzero
+      have hfree := localDepth_fin_succ_ge (R := R) k
+      have heq : localDepth R (Fin (F.complex.termRank 0) → R) = localDepth R M :=
+        localDepth_eq_of_linearEquiv e
+      refine ⟨{ resolution := F, depth_lower := ?_ }⟩
+      rw [← hk] at hfree
+      rw [heq] at hfree
+      simpa using hfree
+  | succ d ih =>
+      obtain ⟨n, f, hf, hmin⟩ := exists_minimal_finite_free_cover (R := R) (M := M)
+      let K : Type u := LinearMap.ker f
+      let : IsNoetherian R (Fin n → R) :=
+        isNoetherian_of_isNoetherianRing_of_finite R (Fin n → R)
+      let : IsNoetherian R K :=
+        isNoetherian_of_submodule_of_noetherian R (Fin n → R) (LinearMap.ker f)
+          inferInstance
+      let : Module.Finite R K := inferInstance
+      have hKnontrivial : Nontrivial K := by
+        apply not_subsingleton_iff_nontrivial.mp
+        intro hKsub
+        have hfinj : Function.Injective f := by
+          rw [← LinearMap.ker_eq_bot, ← Submodule.subsingleton_iff_eq_bot]
+          exact hKsub
+        let e : (Fin n → R) ≃ₗ[R] M := LinearEquiv.ofBijective f ⟨hfinj, hf⟩
+        have hprojF : CategoryTheory.Projective (ModuleCat.of R (Fin n → R)) :=
+          (IsProjective.iff_projective _).mp inferInstance
+        have hprojM : CategoryTheory.Projective (ModuleCat.of R M) :=
+          CategoryTheory.Projective.of_iso e.toModuleIso hprojF
+        exact hM.2 0 (by omega)
+          ((CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero
+            (ModuleCat.of R M)).mp hprojM)
+      let : Nontrivial K := hKnontrivial
+      let S := ShortComplex.moduleCatMk (LinearMap.ker f).subtype f
+        f.exact_subtype_ker_map.linearMap_comp_eq_zero
+      have hS : S.ShortExact :=
+        ModuleCat.shortComplex_shortExact S f.exact_subtype_ker_map
+          Subtype.val_injective hf
+      have hprojF : CategoryTheory.Projective S.X₂ := by
+        dsimp [S]
+        exact (IsProjective.iff_projective _).mp inferInstance
+      have hFbound (q : ℕ) (hq : 1 ≤ q) :
+          CategoryTheory.HasProjectiveDimensionLT S.X₂ q :=
+        hasProjectiveDimensionLT_of_ge_explicit S.X₂ 1 q hq
+          (CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hprojF)
+      have hKbound : CategoryTheory.HasProjectiveDimensionLE S.X₁ d :=
+        hS.hasProjectiveDimensionLT_X₁ (d + 1) (hFbound (d + 1) (by omega)) hM.1
+      change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R K) d at hKbound
+      have hKexact : HasProjectiveDimensionExactly (ModuleCat.of R K) d := by
+        refine ⟨hKbound, ?_⟩
+        intro q hqd hq
+        have hq' : CategoryTheory.HasProjectiveDimensionLE S.X₁ q := by
+          change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R K) q
+          exact hq
+        have hMbound : CategoryTheory.HasProjectiveDimensionLE S.X₃ (q + 1) :=
+          hS.hasProjectiveDimensionLT_X₃ (q + 1) hq' (hFbound (q + 2) (by omega))
+        change CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) (q + 1) at hMbound
+        exact hM.2 (q + 1) (by omega) hMbound
+      obtain ⟨D⟩ := ih hKexact
+      have hn : n ≠ 0 := by
+        intro hn
+        have hdom : Subsingleton (Fin n → R) := by
+          rw [hn]
+          infer_instance
+        have hMsub : Subsingleton M := by
+          constructor
+          intro x y
+          obtain ⟨x', rfl⟩ := hf x
+          obtain ⟨y', rfl⟩ := hf y
+          exact congrArg f (hdom.elim x' y')
+        exact not_subsingleton_iff_nontrivial.mpr inferInstance hMsub
+      obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero hn
+      have hfree : localDepth R (Fin n → R) ≥ localDepth R R := by
+        rw [hk]
+        exact localDepth_fin_succ_ge (R := R) k
+      let : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn⟩⟩
+      let : Nontrivial (Fin n → R) := inferInstance
+      have hseq := localDepth_shortExact (LinearMap.ker f).subtype f
+        Subtype.val_injective f.exact_subtype_ker_map hf
+      have hsub : localDepth R R - (d + 1 : ℕ) ≤ localDepth R R := tsub_le_self
+      have hsubK : localDepth R R - (d + 1 : ℕ) ≤ localDepth R K - 1 := by
+        calc
+          localDepth R R - (d + 1 : ℕ) = (localDepth R R - d) - 1 := by
+            rw [← tsub_add_eq_tsub_tsub]
+            norm_num
+          _ ≤ localDepth R K - 1 := tsub_le_tsub_right D.depth_lower 1
+      refine ⟨{
+        resolution := prependMinimalFiniteFreeResolution d n f hf hmin D.resolution
+        depth_lower := ?_ }⟩
+      exact (le_min (hsub.trans hfree) hsubK).trans hseq.2.1
+
+/-- The exact length of a minimal finite free resolution is bounded by the
+depth of the local ring. -/
+theorem MinimalFiniteFreeResolution.length_le_localDepth
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] {d : ℕ}
+    (F : MinimalFiniteFreeResolution R M d) :
+    (d : ℕ∞) ≤ localDepth R R := by
+  cases d with
+  | zero => simp
+  | succ d =>
+      let φ := F.complex.previousDifferential (d + 1) (by omega)
+      have hφinj : Function.Injective φ := by
+        have hexact := F.exact (d + 1)
+        rw [FiniteFreeComplex.IsExactAt, dif_neg (by omega : d + 1 ≠ 0),
+          dif_pos rfl] at hexact
+        exact hexact.2
+      have hφne : φ ≠ 0 := by
+        intro hφ
+        let b : Fin (F.complex.termRank (d + 1)) :=
+          ⟨0, Nat.pos_of_ne_zero F.last_nonzero⟩
+        have hb : (Pi.single b (1 : R) :
+            Fin (F.complex.termRank (d + 1)) → R) ≠ 0 := by
+          intro h
+          have h' := congrFun h b
+          simp at h'
+        apply hb
+        apply hφinj
+        simp [hφ]
+      have hrank : rank φ ≠ 0 := by
+        intro h
+        exact hφne ((rank_eq_zero_iff φ).mp h)
+      let : Nonempty (Fin (rank φ)) := ⟨⟨0, Nat.pos_of_ne_zero hrank⟩⟩
+      have hentries (a : Fin (F.complex.termRank d))
+          (b : Fin (F.complex.termRank (d + 1))) :
+          (LinearMap.toMatrix' φ) a b ∈ IsLocalRing.maximalIdeal R := by
+        simpa [φ, FiniteFreeComplex.previousDifferential] using
+          F.minimal d (by omega) a b
+      have hrankIdeal : rankIdeal φ ≤ IsLocalRing.maximalIdeal R := by
+        rw [rankIdeal]
+        apply Ideal.span_le.2
+        rintro x ⟨p, rfl⟩
+        change ((LinearMap.toMatrix' φ).submatrix p.1 p.2).det ∈
+          IsLocalRing.maximalIdeal R
+        rw [← IsLocalRing.residue_eq_zero_iff]
+        rw [RingHom.map_det]
+        have hmatrix :
+            (IsLocalRing.residue R).mapMatrix
+                ((LinearMap.toMatrix' φ).submatrix p.1 p.2) = 0 := by
+          ext a b
+          simp only [RingHom.mapMatrix_apply, Matrix.zero_apply]
+          change IsLocalRing.residue R
+            ((LinearMap.toMatrix' φ) (p.1 a) (p.2 b)) = 0
+          rw [IsLocalRing.residue_eq_zero_iff]
+          exact hentries (p.1 a) (p.2 b)
+        rw [hmatrix]
+        simp
+      have hconditions := (proposition_what_exact F.complex).mp F.exact
+      have hideal := hconditions.2 (d + 1) (by omega) (by omega)
+      have hregular : ContainsRegularSequence (rankIdeal φ) (d + 1) := by
+        rcases hideal with htop | hregular
+        · exfalso
+          apply (IsLocalRing.maximalIdeal.isMaximal R).ne_top
+          apply top_unique
+          rw [← htop]
+          exact hrankIdeal
+        · exact hregular
+      rcases hregular with ⟨xs, hxslen, hxsideal, hxsreg⟩
+      have hxsmax : ∀ x ∈ xs, x ∈ IsLocalRing.maximalIdeal R := by
+        intro x hx
+        exact hrankIdeal (hxsideal x hx)
+      rw [localDepth, depth]
+      split_ifs with htop
+      · exact False.elim
+          ((smul_top_ne_top_of_le_ring_jacobson
+            (IsLocalRing.maximalIdeal R) R
+            (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))) htop)
+      · apply le_sSup
+        exact ⟨xs, by simp [hxslen], hxsmax, hxsreg⟩
+
+private theorem projectiveDimension_eq_of_exact
+    {R : Type u} [Ring R] (M : ModuleCat.{u} R) [Nontrivial M]
+    (d : ℕ) (hM : HasProjectiveDimensionExactly M d) :
+    CategoryTheory.projectiveDimension M = (d : WithBot ℕ∞) := by
+  apply le_antisymm
+  · exact (CategoryTheory.projectiveDimension_le_iff M d).2 hM.1
+  · rw [CategoryTheory.projectiveDimension_ge_iff]
+    intro hlt
+    cases d with
+    | zero =>
+        rw [CategoryTheory.hasProjectiveDimensionLT_zero_iff_isZero] at hlt
+        have hsub : Subsingleton M := ModuleCat.isZero_iff_subsingleton.mp hlt
+        exact not_subsingleton_iff_nontrivial.mpr inferInstance hsub
+    | succ d =>
+        exact hM.2 d (by omega) hlt
+
+/-- At depth zero, finite projective dimension is exactly the local depth of
+the ring.  This is the base equality supplied by the checked minimal
+finite-free resolution/depth interface. -/
+theorem auslander_buchsbaum_depth_zero
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
+    (hpd : HasFiniteProjectiveDimension (ModuleCat.of R M))
+    (hdepth : localDepth R M = 0) :
+    ((localDepth R R : ℕ∞) : WithBot ℕ∞) =
+      CategoryTheory.projectiveDimension (ModuleCat.of R M) := by
+  classical
+  have hbounds : ∃ d : ℕ,
+      CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) d :=
+    (hasFiniteProjectiveDimension_iff_exists_projective_dimension_bound
+      (ModuleCat.of R M)).mp hpd
+  let d := Nat.find hbounds
+  have hd : CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) d :=
+    Nat.find_spec hbounds
+  have hexact : HasProjectiveDimensionExactly (ModuleCat.of R M) d := by
+    refine ⟨hd, ?_⟩
+    intro e he hbound
+    exact (not_le_of_gt he) (Nat.find_min' hbounds hbound)
+  obtain ⟨F⟩ := exists_minimalFiniteFreeResolutionDepthInterface d hexact
+  have hle : localDepth R R ≤ (d : ℕ∞) := by
+    apply (tsub_eq_zero_iff_le).mp
+    apply le_zero_iff.mp
+    simpa [hdepth] using F.depth_lower
+  have heq : localDepth R R = (d : ℕ∞) :=
+    le_antisymm hle F.resolution.length_le_localDepth
+  rw [heq, projectiveDimension_eq_of_exact (ModuleCat.of R M) d hexact]
+  rfl
+
+private theorem auslander_buchsbaum_of_depth_eq_nat
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
+    (e : ℕ) (hdepth : localDepth R M = (e : ℕ∞))
+    (hpd : HasFiniteProjectiveDimension (ModuleCat.of R M)) :
+    ((localDepth R R : ℕ∞) : WithBot ℕ∞) =
+      CategoryTheory.projectiveDimension (ModuleCat.of R M) +
+        ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
+  induction e generalizing M with
+  | zero =>
+      have hbase := auslander_buchsbaum_depth_zero (R := R) (M := M) hpd
+        (by simpa using hdepth)
+      simpa [hdepth] using hbase
+  | succ e ih =>
+      obtain ⟨ys, hysreg, hysdepth⟩ :=
+        regular_sequence_extend_to_localDepth (R := R) (M := M) []
+          (RingTheory.Sequence.IsRegular.nil R M)
+      simp only [List.nil_append] at hysreg hysdepth
+      have hyslen : ys.length = e + 1 := by
+        have hlen : (ys.length : ℕ∞) = (e + 1 : ℕ∞) := by
+          calc
+            (ys.length : ℕ∞) = localDepth R M := by simpa using hysdepth.symm
+            _ = (e + 1 : ℕ∞) := hdepth
+        exact_mod_cast hlen
+      cases ys with
+      | nil => simp at hyslen
+      | cons x xs =>
+          have hxreg : IsSMulRegular M x :=
+            (RingTheory.Sequence.isRegular_cons_iff M x xs).mp hysreg |>.1
+          have hxmax : x ∈ IsLocalRing.maximalIdeal R := by
+            by_contra hx
+            have hxunit : IsUnit x := IsLocalRing.notMem_maximalIdeal.mp hx
+            have hxideal : x ∈ Ideal.ofList (x :: xs) := Ideal.subset_span (by simp)
+            have htop : Ideal.ofList (x :: xs) = ⊤ :=
+              Ideal.eq_top_of_isUnit_mem _ hxideal hxunit
+            apply hysreg.top_ne_smul
+            simp [htop]
+          let Q : Type u := QuotSMulTop x M
+          let : Module.Finite R Q := inferInstance
+          let : Nontrivial Q := nontrivial_quotSMulTop_of_mem_maximalIdeal M hxmax
+          have hdepthQ : localDepth R Q = (e : ℕ∞) := by
+            have hdrop := localDepth_drops_by_one (R := R) (M := M) x hxmax hxreg
+            rw [hdrop, hdepth]
+            rw [← ENat.natCast_one]
+            rw [← ENat.natCast_sub]
+            simp
+          have hpdeq : CategoryTheory.projectiveDimension (ModuleCat.of R Q) =
+              CategoryTheory.projectiveDimension (ModuleCat.of R M) + 1 := by
+            exact ModuleCat.projectiveDimension_quotSMulTop_eq_succ_of_isSMulRegular
+              (ModuleCat.of R M) x hxreg hxmax
+          have hpdQ : HasFiniteProjectiveDimension (ModuleCat.of R Q) := by
+            rw [hasFiniteProjectiveDimension_iff_projectiveDimension_ne_top, hpdeq]
+            have hpne :=
+              (hasFiniteProjectiveDimension_iff_projectiveDimension_ne_top
+                (ModuleCat.of R M)).mp hpd
+            generalize hp : CategoryTheory.projectiveDimension (ModuleCat.of R M) = p at hpne ⊢
+            cases p with
+            | bot => simp
+            | coe p =>
+              cases p with
+              | top => simp at hpne
+              | coe p =>
+                intro htop
+                change ((((p : ℕ∞) + 1 : ℕ∞)) : WithBot ℕ∞) = ⊤ at htop
+                have htop' : (p : ℕ∞) + 1 = ⊤ := WithBot.coe_eq_top.mp htop
+                rw [← ENat.natCast_one, ← Nat.cast_add] at htop'
+                exact ENat.natCast_ne_top (p + 1) htop'
+          have hIH := ih (M := Q) hdepthQ hpdQ
+          rw [hpdeq, hdepthQ] at hIH
+          simpa [hdepth, Nat.cast_add, add_assoc, add_comm] using hIH
+
+/-- Auslander--Buchsbaum, exposed in Chapter 109 through the minimal finite
+free resolution/depth interface needed by the later chapter. -/
+theorem auslander_buchsbaum_of_finite_projective_dimension
+    {R M : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
+    (hpd : HasFiniteProjectiveDimension (ModuleCat.of R M)) :
+    ((localDepth R R : ℕ∞) : WithBot ℕ∞) =
+      CategoryTheory.projectiveDimension (ModuleCat.of R M) +
+        ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
+  obtain ⟨e, hdepth, _, _⟩ := localDepth_eq_min_ext (R := R) (M := M)
+  exact auslander_buchsbaum_of_depth_eq_nat e hdepth hpd
+
 /-! ## Ext characterization and short exact sequences -/
 
 /-- Vanishing of all Ext groups in degrees strictly above n. -/
@@ -1106,10 +1804,10 @@ theorem finite_global_dimension_criterion {R : Type u} [CommRing R] (n : ℕ) :
     exact (by
         let M₀ : Type u := M
         let hWO := exists_wellFoundedLT M₀
-        letI : AddCommGroup M₀ := inferInstance
-        letI : Module R M₀ := inferInstance
-        letI : LinearOrder M₀ := hWO.choose
-        letI : WellFoundedLT M₀ := hWO.choose_spec
+        let : AddCommGroup M₀ := inferInstance
+        let : Module R M₀ := inferInstance
+        let : LinearOrder M₀ := hWO.choose
+        let : WellFoundedLT M₀ := hWO.choose_spec
         let stage : M₀ → Submodule R M₀ :=
           fun e => Submodule.span R (Set.Iic e)
         let F : WellOrderedSubmoduleFiltration R M₀ M₀ :=
@@ -1154,8 +1852,6 @@ theorem finite_global_dimension_criterion {R : Type u} [CommRing R] (n : ℕ) :
                   change a ∈ (⨆ e' : {e' : M₀ // e' < e}, F.stage e'.1)
                   exact hpred
                 exact ⟨0, by
-                  change g 0 = (F.predecessor e).mkQ
-                    ⟨a, Submodule.subset_span ha⟩
                   rw [show g 0 = 0 by simp [g]]
                   exact (Submodule.Quotient.mk_eq_zero
                     (p := F.predecessor e)).mpr hprede |>.symm⟩
@@ -1170,7 +1866,6 @@ theorem finite_global_dimension_criterion {R : Type u} [CommRing R] (n : ℕ) :
               obtain ⟨ra, hra⟩ := hpa
               obtain ⟨rb, hrb⟩ := hpb
               refine ⟨ra + rb, ?_⟩
-              change g (ra + rb) = (F.predecessor e).mkQ ⟨a + b, _⟩
               calc
                 g (ra + rb) = g ra + g rb := map_add g ra rb
                 _ = (F.predecessor e).mkQ ⟨a, ha⟩ +
@@ -1190,7 +1885,7 @@ theorem finite_global_dimension_criterion {R : Type u} [CommRing R] (n : ℕ) :
                     ⟨a, ha⟩).symm
           obtain ⟨r, hr⟩ := hs z.1 z.2
           exact ⟨r, hr⟩
-        letI : CategoryTheory.HasProjectiveDimensionLE
+        let : CategoryTheory.HasProjectiveDimensionLE
             (ModuleCat.of R (R ⧸ LinearMap.ker g)) n := h (LinearMap.ker g)
         let eQ := LinearMap.quotKerEquivOfSurjective g hg
         let eQ' : (ModuleCat.of R (R ⧸ LinearMap.ker g) : Type u) ≃ₗ[R]
@@ -1247,8 +1942,8 @@ theorem localize_projective_dimension {R M : Type u} [CommRing R]
       (HasGlobalDimensionLE R n → HasGlobalDimensionLE (Localization S) n) := by
   constructor
   · intro h
-    letI : CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := h
-    letI : CategoryTheory.HasProjectiveDimensionLE
+    let : CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := h
+    let : CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.localizedModule (ModuleCat.of R M) S) n :=
       ModuleCat.localizedModule_hasProjectiveDimensionLE n S (ModuleCat.of R M)
     let e : (ModuleCat.localizedModule (ModuleCat.of R M) S : Type u) ≃ₗ[Localization S]
@@ -1256,13 +1951,13 @@ theorem localize_projective_dimension {R M : Type u} [CommRing R]
       Shrink.linearEquiv (Localization S) (LocalizedModule S M)
     exact ModuleCat.hasProjectiveDimensionLE_of_linearEquiv e n
   · intro h M'
-    letI : Module R (M' : Type u) :=
+    let : Module R (M' : Type u) :=
       Module.compHom (M' : Type u) (algebraMap R (Localization S))
-    letI : IsScalarTower R (Localization S) (M' : Type u) :=
+    let : IsScalarTower R (Localization S) (M' : Type u) :=
       IsScalarTower.of_compHom R (Localization S) (M' : Type u)
-    letI : CategoryTheory.HasProjectiveDimensionLE
+    let : CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.of R (M' : Type u)) n := h (ModuleCat.of R (M' : Type u))
-    letI : IsLocalizedModule S
+    let : IsLocalizedModule S
         (LinearMap.id : (M' : Type u) →ₗ[R] (M' : Type u)) :=
       isLocalizedModule_id S (M' : Type u) (Localization S)
     let e₀ : LocalizedModule S (M' : Type u) ≃ₗ[R] (M' : Type u) :=
@@ -1274,7 +1969,7 @@ theorem localize_projective_dimension {R M : Type u} [CommRing R]
       (Shrink.linearEquiv R (LocalizedModule S (M' : Type u))).trans e₀
     let e : (ModuleCat.localizedModule (ModuleCat.of R (M' : Type u)) S : Type u) ≃ₗ[Localization S]
         (M' : Type u) := e₁.extendScalarsOfIsLocalization S (Localization S)
-    letI : CategoryTheory.HasProjectiveDimensionLE
+    let : CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.localizedModule (ModuleCat.of R (M' : Type u)) S) n :=
       ModuleCat.localizedModule_hasProjectiveDimensionLE n S
         (ModuleCat.of R (M' : Type u))

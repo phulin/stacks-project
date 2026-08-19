@@ -308,46 +308,46 @@ def deRhamWedgeWithDifferential
 def deRhamGammaPureFormula
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
     (p : ℕ) (ω : Fin p → deRhamTerm A B 1) : deRhamTerm A B (p + 1) :=
-  ∑ i : Fin p, (-1 : A) ^ (i.1 + 1) •
+  ∑ i : Fin p, (-1 : A) ^ i.1 •
     deRhamWedgeWithDifferential (A := A) (B := B) p ω i
 
 private theorem deRhamGamma_sum_smul
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
     (p : ℕ) [DecidableEq (Fin p)] (ω : Fin p → deRhamTerm A B 1)
     (i : Fin p) (c : A) (x : deRhamTerm A B 1) :
-    (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+    (∑ j : Fin p, (-1 : A) ^ j.1 •
       (c • deRhamWedgeWithDifferential (A := A) (B := B) p
         (Function.update ω i x) j)) =
-      c • (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+      c • (∑ j : Fin p, (-1 : A) ^ j.1 •
         deRhamWedgeWithDifferential (A := A) (B := B) p
           (Function.update ω i x) j) := by
   calc
-    (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+    (∑ j : Fin p, (-1 : A) ^ j.1 •
         (c • deRhamWedgeWithDifferential (A := A) (B := B) p
           (Function.update ω i x) j)) =
-      ∑ j : Fin p, c • ((-1 : A) ^ (j.1 + 1) •
+      ∑ j : Fin p, c • ((-1 : A) ^ j.1 •
         deRhamWedgeWithDifferential (A := A) (B := B) p
           (Function.update ω i x) j) := by
         apply Finset.sum_congr rfl
         intro j hj
         calc
-          (-1 : A) ^ (j.1 + 1) •
+          (-1 : A) ^ j.1 •
               (c • deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j) =
-            ((-1 : A) ^ (j.1 + 1) * c) •
+            ((-1 : A) ^ j.1 * c) •
               deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j := smul_smul _ _ _
-          _ = (c * (-1 : A) ^ (j.1 + 1)) •
+          _ = (c * (-1 : A) ^ j.1) •
               deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j := by rw [mul_comm]
-          _ = c • ((-1 : A) ^ (j.1 + 1) •
+          _ = c • ((-1 : A) ^ j.1 •
               deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j) := (smul_smul _ _ _).symm
-    _ = c • (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+    _ = c • (∑ j : Fin p, (-1 : A) ^ j.1 •
           deRhamWedgeWithDifferential (A := A) (B := B) p
             (Function.update ω i x) j) := by
       exact (Finset.smul_sum (r := c)
-        (f := fun j : Fin p => (-1 : A) ^ (j.1 + 1) •
+        (f := fun j : Fin p => (-1 : A) ^ j.1 •
           deRhamWedgeWithDifferential (A := A) (B := B) p
             (Function.update ω i x) j) (s := Finset.univ)).symm
 
@@ -748,55 +748,55 @@ theorem deRhamGamma_exists
           by_cases h : k = i <;> simp [Function.update, h]
         simp only [deRhamGammaPureFormula]
         calc
-          (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+          (∑ j : Fin p, (-1 : A) ^ j.1 •
               deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i (x + y)) j) =
-            ∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+            ∑ j : Fin p, (-1 : A) ^ j.1 •
               (deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j +
                deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i y) j) := by
               apply Finset.sum_congr rfl
               intro j hj
-              apply congrArg (fun z => (-1 : A) ^ (j.1 + 1) • z)
+              apply congrArg (fun z => (-1 : A) ^ j.1 • z)
               rw [update_eq_update, update_eq_update, update_eq_update]
               exact diff_add p ω i x y j
-          _ = (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+          _ = (∑ j : Fin p, (-1 : A) ^ j.1 •
                 deRhamWedgeWithDifferential (A := A) (B := B) p
                   (Function.update ω i x) j) +
-              ∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+              ∑ j : Fin p, (-1 : A) ^ j.1 •
                 deRhamWedgeWithDifferential (A := A) (B := B) p
                   (Function.update ω i y) j := by
             calc
-              (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+              (∑ j : Fin p, (-1 : A) ^ j.1 •
                   (deRhamWedgeWithDifferential (A := A) (B := B) p
                     (Function.update ω i x) j +
                    deRhamWedgeWithDifferential (A := A) (B := B) p
                     (Function.update ω i y) j)) =
-                ∑ j : Fin p, ((-1 : A) ^ (j.1 + 1) •
+                ∑ j : Fin p, ((-1 : A) ^ j.1 •
                   deRhamWedgeWithDifferential (A := A) (B := B) p
                     (Function.update ω i x) j +
-                  (-1 : A) ^ (j.1 + 1) •
+                  (-1 : A) ^ j.1 •
                     deRhamWedgeWithDifferential (A := A) (B := B) p
                       (Function.update ω i y) j) := by
                     apply Finset.sum_congr rfl
                     intro j hj
-                    exact smul_add_term ((-1 : A) ^ (j.1 + 1))
+                    exact smul_add_term ((-1 : A) ^ j.1)
                       (deRhamWedgeWithDifferential (A := A) (B := B) p
                         (Function.update ω i x) j)
                       (deRhamWedgeWithDifferential (A := A) (B := B) p
                         (Function.update ω i y) j)
-              _ = (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+              _ = (∑ j : Fin p, (-1 : A) ^ j.1 •
                     deRhamWedgeWithDifferential (A := A) (B := B) p
                       (Function.update ω i x) j) +
-                  ∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+                  ∑ j : Fin p, (-1 : A) ^ j.1 •
                     deRhamWedgeWithDifferential (A := A) (B := B) p
                       (Function.update ω i y) j := by
                     exact finset_sum_add
-                      (fun j : Fin p => (-1 : A) ^ (j.1 + 1) •
+                      (fun j : Fin p => (-1 : A) ^ j.1 •
                         deRhamWedgeWithDifferential (A := A) (B := B) p
                           (Function.update ω i x) j)
-                      (fun j : Fin p => (-1 : A) ^ (j.1 + 1) •
+                      (fun j : Fin p => (-1 : A) ^ j.1 •
                         deRhamWedgeWithDifferential (A := A) (B := B) p
                           (Function.update ω i y) j)
       map_update_smul' := by
@@ -810,18 +810,18 @@ theorem deRhamGamma_exists
           by_cases h : k = i <;> simp [Function.update, h]
         simp only [deRhamGammaPureFormula]
         calc
-          (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+          (∑ j : Fin p, (-1 : A) ^ j.1 •
               deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i (c • x)) j) =
-            ∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+            ∑ j : Fin p, (-1 : A) ^ j.1 •
               (c • deRhamWedgeWithDifferential (A := A) (B := B) p
                 (Function.update ω i x) j) := by
               apply Finset.sum_congr rfl
               intro j hj
-              apply congrArg (fun z => (-1 : A) ^ (j.1 + 1) • z)
+              apply congrArg (fun z => (-1 : A) ^ j.1 • z)
               rw [update_eq_update, update_eq_update]
               exact diff_smul p ω i c x j
-          _ = c • (∑ j : Fin p, (-1 : A) ^ (j.1 + 1) •
+          _ = c • (∑ j : Fin p, (-1 : A) ^ j.1 •
                 deRhamWedgeWithDifferential (A := A) (B := B) p
                   (Function.update ω i x) j) := by
             exact deRhamGamma_sum_smul (A := A) (B := B) p ω i c x }

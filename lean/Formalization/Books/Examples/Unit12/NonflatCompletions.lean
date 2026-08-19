@@ -11,7 +11,9 @@ import Mathlib.RingTheory.IntegralClosure.IsIntegral.AlmostIntegral
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.PDeriv
 import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.Data.Finsupp.Encodable
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Valuation.ValuationRing
 import Mathlib.LinearAlgebra.TensorProduct.Pi
@@ -434,10 +436,177 @@ def noncoherentExampleIdeal (k : Type u) [CommRing k] :
     Ideal (noncoherentExampleRing k) :=
   Ideal.span {noncoherentExampleY k, noncoherentExampleZ k}
 
+private def noncoherentExampleEval (k : Type u) [CommRing k] :
+    MvPolynomial NoncoherentExampleVariables k →+*
+      MvPolynomial (ℕ × Bool) k :=
+  MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* MvPolynomial (ℕ × Bool) k) (fun i =>
+    match i with
+    | Sum.inl _ => 0
+    | Sum.inr j => MvPolynomial.X j)
+
+private def noncoherentExampleRelVec (k : Type u) [CommRing k] (n : ℕ) :
+    Fin 2 → MvPolynomial (ℕ × Bool) k :=
+  ![MvPolynomial.X (n, false), MvPolynomial.X (n, true)]
+
+private def noncoherentExamplePDerivEval (k : Type u) [CommRing k]
+    (p : MvPolynomial NoncoherentExampleVariables k) :
+    Fin 2 → MvPolynomial (ℕ × Bool) k :=
+  fun i => noncoherentExampleEval k (MvPolynomial.pderiv (Sum.inl i) p)
+
+private def noncoherentExampleQuotientEval (k : Type u) [CommRing k] :
+    noncoherentExampleRing k →+* MvPolynomial (ℕ × Bool) k :=
+  Ideal.Quotient.lift (noncoherentExampleRelationsIdeal k)
+    (noncoherentExampleEval k) (by
+      intro p hp
+      induction hp using Submodule.span_induction with
+      | mem p hp =>
+          obtain ⟨n, rfl⟩ := hp
+          simp [noncoherentExampleEval, noncoherentExampleRelation,
+            noncoherentExampleAVar, noncoherentExampleBVar,
+            noncoherentExampleYVar, noncoherentExampleZVar]
+      | zero => simp
+      | add p q _ _ hp hq => simpa [map_add] using congrArg₂ (· + ·) hp hq
+      | smul p q _ hq => simpa [map_mul] using congrArg (fun x =>
+          (noncoherentExampleEval k p) * x) hq)
+
+private lemma noncoherentExample_relationSpan_not_fg
+    (k : Type u) [Field k] :
+    ¬ (Submodule.span (MvPolynomial (ℕ × Bool) k)
+      (Set.range (noncoherentExampleRelVec k))).FG := by
+  classical
+  intro hfg
+  obtain ⟨s, hs⟩ := hfg
+  let t : Finset ℕ := s.biUnion (fun v =>
+    (Finset.univ : Finset (Fin 2)).biUnion (fun i =>
+      (v i).vars.image Prod.fst))
+  let n := t.sum id + 1
+  have hn : n ∉ t := by
+    intro hnt
+    have hle : n ≤ t.sum id := by
+      simpa using (Finset.single_le_sum (fun _ _ => Nat.zero_le _) hnt :
+        id n ≤ ∑ x ∈ t, id x)
+    have : t.sum id + 1 ≤ t.sum id := by simpa [n] using hle
+    exact (Nat.not_succ_le_self (t.sum id)) this
+  let ev : MvPolynomial (ℕ × Bool) k →+* MvPolynomial (Fin 2) k :=
+    MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* MvPolynomial (Fin 2) k)
+      (fun w => if w.1 = n then MvPolynomial.X (if w.2 then 1 else 0) else 0)
+  have hcc : ∀ v ∈ Submodule.span (MvPolynomial (ℕ × Bool) k)
+      (Set.range (noncoherentExampleRelVec k)), ∀ i,
+      MvPolynomial.constantCoeff (v i) = 0 := by
+    intro v hv
+    induction hv using Submodule.span_induction with
+    | mem v hv =>
+        obtain ⟨m, rfl⟩ := hv
+        intro i
+        fin_cases i <;> simp [noncoherentExampleRelVec]
+    | zero => intro i; simp
+    | add v w hv hw ihv ihw =>
+        intro i
+        simpa using congrArg₂ (· + ·) (ihv i) (ihw i)
+    | smul a v hv ih =>
+        intro i
+        simpa [smul_eq_mul] using congrArg (fun x =>
+          MvPolynomial.constantCoeff a * x) (ih i)
+  have hspan : ∀ v ∈ Submodule.span (MvPolynomial (ℕ × Bool) k)
+      (s : Set (Fin 2 → MvPolynomial (ℕ × Bool) k)), ∀ i,
+      ev (v i) = 0 := by
+    intro v hv
+    induction hv using Submodule.span_induction with
+    | mem v hv =>
+        intro i
+        have hvi : v ∈ Submodule.span (MvPolynomial (ℕ × Bool) k)
+            (Set.range (noncoherentExampleRelVec k)) := by
+          rw [← hs]
+          exact Submodule.subset_span hv
+        have hvars : ∀ w ∈ (v i).vars, w.1 ≠ n := by
+          intro w hw hwn
+          apply hn
+          apply Finset.mem_biUnion.mpr ⟨v, hv, ?_⟩
+          apply Finset.mem_biUnion.mpr ⟨i, Finset.mem_univ _, ?_⟩
+          exact Finset.mem_image.mpr ⟨w, hw, hwn⟩
+        rw [show ev (v i) = MvPolynomial.eval₂Hom
+          (MvPolynomial.C : k →+* MvPolynomial (Fin 2) k)
+          (fun w => if w.1 = n then MvPolynomial.X (if w.2 then 1 else 0) else 0) (v i) by rfl]
+        rw [MvPolynomial.eval₂Hom_eq_constantCoeff_of_vars]
+        · simpa [hcc v hvi i]
+        · intro w hw
+          simp [hvars w hw]
+    | zero => intro i; simp [ev]
+    | add v w hv hw ihv ihw =>
+        intro i
+        simpa [ev] using congrArg₂ (· + ·) (ihv i) (ihw i)
+    | smul a v hv ih =>
+        intro i
+        simpa [ev, smul_eq_mul] using congrArg (fun x => ev a * x) (ih i)
+  have htarget : noncoherentExampleRelVec k n ∈
+      Submodule.span (MvPolynomial (ℕ × Bool) k)
+        (Set.range (noncoherentExampleRelVec k)) := Submodule.subset_span
+    (show noncoherentExampleRelVec k n ∈ Set.range
+      (noncoherentExampleRelVec k) from ⟨n, rfl⟩)
+  rw [← hs] at htarget
+  have hz := hspan _ htarget 0
+  have hnz : ev (noncoherentExampleRelVec k n 0) ≠ 0 := by
+    simp [ev, noncoherentExampleRelVec]
+  exact hnz hz
+
+private lemma noncoherentExample_pderiv_eval_relations
+    (k : Type u) [Field k] :
+    ∀ p ∈ noncoherentExampleRelationsIdeal k,
+      noncoherentExamplePDerivEval k p ∈
+          Submodule.span (MvPolynomial (ℕ × Bool) k)
+            (Set.range (noncoherentExampleRelVec k)) ∧
+        noncoherentExampleEval k p = 0 := by
+  intro p hp
+  induction hp using Submodule.span_induction with
+  | mem p hp =>
+      obtain ⟨n, rfl⟩ := hp
+      constructor
+      · apply Submodule.subset_span
+        exact ⟨n, by
+          funext i
+          fin_cases i <;>
+            simp [noncoherentExamplePDerivEval, noncoherentExampleRelation,
+              noncoherentExampleEval, noncoherentExampleRelVec,
+              noncoherentExampleAVar, noncoherentExampleBVar,
+              noncoherentExampleYVar, noncoherentExampleZVar]⟩
+      · simp [noncoherentExampleEval, noncoherentExampleRelation,
+          noncoherentExampleAVar, noncoherentExampleBVar,
+          noncoherentExampleYVar, noncoherentExampleZVar]
+  | zero =>
+      constructor
+      · have hz : noncoherentExamplePDerivEval k (0 :
+            MvPolynomial NoncoherentExampleVariables k) = 0 := by
+          funext i
+          simp [noncoherentExamplePDerivEval]
+        rw [hz]
+        exact Submodule.zero_mem _
+      · simp [noncoherentExampleEval]
+  | add p q _ _ hp hq =>
+      have hadd : noncoherentExamplePDerivEval k (p + q) =
+          noncoherentExamplePDerivEval k p + noncoherentExamplePDerivEval k q := by
+        funext i
+        simp [noncoherentExamplePDerivEval]
+      exact ⟨by rw [hadd]; exact add_mem hp.1 hq.1,
+        by simpa using congrArg₂ (· + ·) hp.2 hq.2⟩
+  | smul p q _ hq =>
+      have hprod : noncoherentExamplePDerivEval k (p * q) =
+          (noncoherentExampleEval k p) • noncoherentExamplePDerivEval k q := by
+        funext i
+        simp only [noncoherentExamplePDerivEval, MvPolynomial.pderiv_mul,
+          map_add, map_mul, Pi.smul_apply, smul_eq_mul]
+        rw [hq.2]
+        simp
+      refine ⟨?_, by simpa [map_mul, hq.2]⟩
+      change noncoherentExamplePDerivEval k (p * q) ∈ _
+      rw [hprod]
+      exact Submodule.smul_mem _ _ hq.1
+
 theorem noncoherentExample_countable
     (k : Type u) [Field k] [Countable k] :
     Countable (noncoherentExampleRing k) := by
-  sorry
+  letI : Countable (MvPolynomial NoncoherentExampleVariables k) :=
+    Countable.of_equiv _ AddMonoidAlgebra.coeffEquiv.symm
+  exact Ideal.Quotient.mk_surjective.countable
 
 instance noncoherentExample_countable_inst
     (k : Type u) [Field k] [Countable k] :
@@ -448,12 +617,176 @@ theorem noncoherentExample_ideal_not_finitePresented
     (k : Type u) [Field k] [Countable k] :
     ¬ Module.FinitePresentation (noncoherentExampleRing k)
         (noncoherentExampleIdeal k) := by
-  sorry
+  classical
+  let A := noncoherentExampleRing k
+  let S := MvPolynomial (ℕ × Bool) k
+  let I := noncoherentExampleIdeal k
+  let L : Submodule S (Fin 2 → S) :=
+    Submodule.span S (Set.range (noncoherentExampleRelVec k))
+  have hL : ¬ L.FG := by
+    simpa [L] using noncoherentExample_relationSpan_not_fg k
+  let y : A := noncoherentExampleY k
+  let z : A := noncoherentExampleZ k
+  let l : (Fin 2 → A) →ₗ[A] (I : Type u) :=
+    { toFun := fun v =>
+        ⟨v 0 * y + v 1 * z, by
+          apply I.add_mem
+          · exact I.mul_mem_left _ (by
+              exact Ideal.subset_span (by simp [I, y]))
+          · exact I.mul_mem_left _ (by
+              exact Ideal.subset_span (by simp [I, z]))⟩
+      map_add' := by
+        intro v w
+        apply Subtype.ext
+        change (v 0 + w 0) * y + (v 1 + w 1) * z =
+          (v 0 * y + v 1 * z) + (w 0 * y + w 1 * z)
+        rw [add_mul, add_mul]
+        ac_rfl
+      map_smul' := by
+        intro a v
+        apply Subtype.ext
+        simp [smul_eq_mul, mul_add, mul_assoc] }
+  have hl : Function.Surjective l := by
+    have hmem : ∀ (q : A) (hq : q ∈ I), ∃ v, l v = ⟨q, hq⟩ := by
+      intro q hq
+      induction hq using Submodule.span_induction with
+    | mem x hx =>
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx
+        rcases hx with rfl | rfl
+        · refine ⟨fun i => if i = 0 then 1 else 0, ?_⟩
+          apply Subtype.ext
+          simp [l, y]
+        · refine ⟨fun i => if i = 1 then 1 else 0, ?_⟩
+          apply Subtype.ext
+          simp [l, z]
+    | zero => exact ⟨0, by simp [l]⟩
+    | add x x' hx hx' ih ih' =>
+        obtain ⟨v, hv⟩ := ih
+        obtain ⟨w, hw⟩ := ih'
+        refine ⟨v + w, ?_⟩
+        calc
+          l (v + w) = l v + l w := l.map_add _ _
+          _ = ⟨x, hx⟩ + ⟨x', hx'⟩ := congrArg₂ (· + ·) hv hw
+          _ = ⟨x + x', _⟩ := by rfl
+    | smul a x hx ih =>
+        obtain ⟨v, hv⟩ := ih
+        refine ⟨a • v, ?_⟩
+        calc
+          l (a • v) = a • l v := l.map_smul _ _
+          _ = a • ⟨x, hx⟩ := congrArg (fun q => a • q) hv
+          _ = ⟨a • x, _⟩ := by rfl
+    intro x
+    exact hmem (x : A) x.property
+  intro hfp
+  have hK : (LinearMap.ker l).FG :=
+    Module.FinitePresentation.fg_ker l hl
+  obtain ⟨t, ht⟩ := hK
+  letI : Module A S := Module.compHom S (noncoherentExampleQuotientEval k)
+  let ρ := noncoherentExampleQuotientEval k
+  let θ : (Fin 2 → A) →ₗ[A] (Fin 2 → S) :=
+    { toFun := fun v i => ρ (v i)
+      map_add' := by
+        intro v w
+        funext i
+        simp
+      map_smul' := by
+        intro a v
+        funext i
+        simp only [Pi.smul_apply]
+        change ρ (a * v i) = ρ a * ρ (v i)
+        exact map_mul ρ a (v i) }
+  let avec (n : ℕ) : Fin 2 → A :=
+    ![Ideal.Quotient.mk (noncoherentExampleRelationsIdeal k)
+        (MvPolynomial.X (noncoherentExampleAVar n)),
+      Ideal.Quotient.mk (noncoherentExampleRelationsIdeal k)
+        (MvPolynomial.X (noncoherentExampleBVar n))]
+  have havecKer (n : ℕ) : avec n ∈ LinearMap.ker l := by
+    rw [LinearMap.mem_ker]
+    apply Subtype.ext
+    change (Ideal.Quotient.mk (noncoherentExampleRelationsIdeal k)
+          (MvPolynomial.X (noncoherentExampleAVar n))) * y +
+        (Ideal.Quotient.mk (noncoherentExampleRelationsIdeal k)
+          (MvPolynomial.X (noncoherentExampleBVar n))) * z = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span ⟨n, rfl⟩
+  have hθavec (n : ℕ) : θ (avec n) = noncoherentExampleRelVec k n := by
+    funext i
+    fin_cases i <;>
+      simp [θ, avec, ρ, noncoherentExampleQuotientEval,
+        noncoherentExampleEval, noncoherentExampleAVar,
+        noncoherentExampleBVar, noncoherentExampleRelVec]
+  have himage : ∀ v ∈ LinearMap.ker l, θ v ∈ L := by
+    intro v hv
+    obtain ⟨C, hC⟩ := Ideal.Quotient.mk_surjective (v 0)
+    obtain ⟨D, hD⟩ := Ideal.Quotient.mk_surjective (v 1)
+    let q := C * MvPolynomial.X noncoherentExampleYVar +
+      D * MvPolynomial.X noncoherentExampleZVar
+    have hq0 : Ideal.Quotient.mk (noncoherentExampleRelationsIdeal k) q = 0 := by
+      have hv0 : l v = 0 := hv
+      have hv1 : v 0 * y + v 1 * z = 0 := by
+        simpa [l] using congrArg Subtype.val hv0
+      rw [← hC, ← hD] at hv1
+      simpa [q, y, z, noncoherentExampleY, noncoherentExampleZ] using hv1
+    have hq : q ∈ noncoherentExampleRelationsIdeal k :=
+      Ideal.Quotient.eq_zero_iff_mem.mp hq0
+    have hd := (noncoherentExample_pderiv_eval_relations k q hq).1
+    have heq : θ v = noncoherentExamplePDerivEval k q := by
+      funext i
+      fin_cases i
+      · change ρ (v 0) =
+          noncoherentExampleEval k (MvPolynomial.pderiv
+            (Sum.inl 0) q)
+        rw [← hC]
+        simp [ρ, q, noncoherentExamplePDerivEval,
+          noncoherentExampleQuotientEval, noncoherentExampleEval,
+          noncoherentExampleYVar, noncoherentExampleZVar]
+      · change ρ (v 1) =
+          noncoherentExampleEval k (MvPolynomial.pderiv
+            (Sum.inl 1) q)
+        rw [← hD]
+        simp [ρ, q, noncoherentExamplePDerivEval,
+          noncoherentExampleQuotientEval, noncoherentExampleEval,
+          noncoherentExampleYVar, noncoherentExampleZVar]
+    rw [heq]
+    exact hd
+  have hmap : ∀ v ∈ Submodule.span A (t : Set (Fin 2 → A)),
+      θ v ∈ Submodule.span S (t.image θ : Set (Fin 2 → S)) := by
+    intro v hv
+    induction hv using Submodule.span_induction with
+    | mem v hv =>
+        exact Submodule.subset_span (Finset.mem_image.mpr ⟨v, hv, rfl⟩)
+    | zero => exact Submodule.zero_mem _
+    | add v w hv hw ihv ihw =>
+        rw [θ.map_add]
+        exact Submodule.add_mem _ ihv ihw
+    | smul a v hv ih =>
+        rw [θ.map_smul]
+        change ρ a • θ v ∈ _
+        exact Submodule.smul_mem _ _ ih
+  have hLfg : L.FG := by
+    refine ⟨t.image θ, ?_⟩
+    apply le_antisymm
+    · apply Submodule.span_le.mpr
+      rintro w hw
+      obtain ⟨v, hv, rfl⟩ := Finset.mem_image.mp hw
+      apply himage v
+      rw [← ht]
+      exact Submodule.subset_span hv
+    · apply Submodule.span_le.mpr
+      rintro w ⟨n, rfl⟩
+      rw [← hθavec n]
+      apply hmap
+      rw [ht]
+      exact havecKer n
+  exact hL hLfg
 
 theorem noncoherentExample_not_coherent
     (k : Type u) [Field k] [Countable k] :
     ¬ IsCoherent (noncoherentExampleRing k) := by
-  sorry
+  intro h
+  exact noncoherentExample_ideal_not_finitePresented k
+    (h (noncoherentExampleIdeal k) (by
+      exact Submodule.fg_span (by simp [noncoherentExampleIdeal])))
 
 theorem noncoherentExample_powerSeries_not_flat
     (k : Type u) [Field k] [Countable k] :
@@ -477,7 +810,357 @@ def IsPowerSeriesCompletion (R : Type u) [CommRing R] : Prop :=
 
 theorem powerSeries_is_completion (R : Type u) [CommRing R] :
     IsPowerSeriesCompletion R := by
-  sorry
+  let e := MvPolynomial.uniqueAlgEquiv R Unit
+  have hI : (MvPolynomial.idealOfVars Unit R).map e.toRingEquiv =
+      polynomialXIdeal R := by
+    rw [MvPolynomial.idealOfVars, Ideal.map_span]
+    congr 1
+    ext p
+    constructor
+    · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
+      simp [polynomialXIdeal, e]
+    · intro hp
+      simp only [Set.mem_singleton_iff] at hp
+      subst p
+      exact ⟨MvPolynomial.X default, ⟨default, rfl⟩, by simp [e]⟩
+  let q (n : ℕ) :
+      (MvPolynomial Unit R ⧸ (MvPolynomial.idealOfVars Unit R) ^ n) ≃ₐ[R]
+        (Polynomial R ⧸ (polynomialXIdeal R) ^ n) :=
+    Ideal.quotientEquivAlg _ _ e (by
+      rw [← hI, ← Ideal.map_pow]
+      rfl)
+  let f (n : ℕ) :
+      AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R) →ₐ[R]
+        Polynomial R ⧸ (polynomialXIdeal R) ^ n :=
+    (q n).toAlgHom.comp
+      ((AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n).restrictScalars R)
+  have hq : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp (q n).toAlgHom =
+        (q m).toAlgHom.comp
+          (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)) := by
+    intro m n hle
+    ext x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [q]
+  have heval : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp
+          ((AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n).restrictScalars R) =
+        (AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) m).restrictScalars R := by
+    intro m n hle
+    ext x
+    let hn :
+        (MvPolynomial.idealOfVars Unit R) ^ n • (⊤ : Ideal (MvPolynomial Unit R)) =
+          (MvPolynomial.idealOfVars Unit R) ^ n := by
+      ext y
+      simp
+    let hm :
+        (MvPolynomial.idealOfVars Unit R) ^ m • (⊤ : Ideal (MvPolynomial Unit R)) =
+          (MvPolynomial.idealOfVars Unit R) ^ m := by
+      ext y
+      simp
+    have hpow :
+        (MvPolynomial.idealOfVars Unit R) ^ n • (⊤ : Ideal (MvPolynomial Unit R)) ≤
+          (MvPolynomial.idealOfVars Unit R) ^ m • (⊤ : Ideal (MvPolynomial Unit R)) := by
+      simpa only [smul_eq_mul, Ideal.mul_top] using
+        (Ideal.pow_le_pow_right hle :
+          (MvPolynomial.idealOfVars Unit R) ^ n ≤
+            (MvPolynomial.idealOfVars Unit R) ^ m)
+    have hmap :
+        ((Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm).symm.toAlgHom).comp
+            ((Ideal.Quotient.factorₐ (MvPolynomial Unit R)
+              (Ideal.pow_le_pow_right hle)).comp
+              (Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hn).toAlgHom) =
+          Ideal.Quotient.factorₐ (MvPolynomial Unit R) hpow := by
+      ext y
+      obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+      simp [hn, hm]
+    have htrans :
+        Ideal.Quotient.factorₐ (MvPolynomial Unit R) hpow
+            (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+              (MvPolynomial Unit R) n x) =
+            AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+              (MvPolynomial Unit R) m x := by
+      change Ideal.Quotient.factorₐ (MvPolynomial Unit R) hpow (x.val n) = x.val m
+      exact AdicCompletion.transitionMap_comp_eval_apply
+        (I := MvPolynomial.idealOfVars Unit R) (M := MvPolynomial Unit R) hle x
+    have hraw := congrArg (fun g ↦
+      g (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+        (MvPolynomial Unit R) n x)) hmap
+    rw [htrans] at hraw
+    have hstd := congrArg (fun y ↦
+      Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm y) hraw
+    change (Ideal.Quotient.factorₐ (MvPolynomial Unit R)
+      (Ideal.pow_le_pow_right hle))
+          (Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hn
+            (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+              (MvPolynomial Unit R) n x)) =
+      Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm
+        (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+          (MvPolynomial Unit R) m x)
+    convert hstd using 1
+    let z : MvPolynomial Unit R ⧸ (MvPolynomial.idealOfVars Unit R) ^ m :=
+      (Ideal.Quotient.factorₐ (MvPolynomial Unit R)
+        (Ideal.pow_le_pow_right hle))
+        ((Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hn)
+          (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+            (MvPolynomial Unit R) n x))
+    have hcancel :
+        (Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm)
+            ((((Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm).symm.toAlgHom).comp
+              ((Ideal.Quotient.factorₐ (MvPolynomial Unit R)
+                (Ideal.pow_le_pow_right hle)).comp
+                (Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hn).toAlgHom))
+              (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
+                (MvPolynomial Unit R) n x)) = z := by
+      change (Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm)
+          ((Ideal.quotientEquivAlgOfEq (MvPolynomial Unit R) hm).symm z) = z
+      exact AlgEquiv.apply_symm_apply _ _
+    simpa only [z, AlgHom.comp_apply] using hcancel.symm
+  have hf : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp (f n) = f m := by
+    intro m n hle
+    change (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp
+          ((q n).toAlgHom.comp
+            ((AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n).restrictScalars R)) =
+      (q m).toAlgHom.comp
+        ((AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) m).restrictScalars R)
+    rw [← AlgHom.comp_assoc, hq hle, AlgHom.comp_assoc, heval hle]
+  have evalCompat (A : Type u) [CommRing A] (I : Ideal A) :
+      ∀ {m n : ℕ} (hle : m ≤ n),
+        (Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+            (AdicCompletion.evalₐ I n) = AdicCompletion.evalₐ I m := by
+    intro m n hle
+    ext x
+    let hn : I ^ n • (⊤ : Ideal A) = I ^ n := by
+      ext y
+      simp
+    let hm : I ^ m • (⊤ : Ideal A) = I ^ m := by
+      ext y
+      simp
+    have hpow : I ^ n • (⊤ : Ideal A) ≤ I ^ m • (⊤ : Ideal A) := by
+      simpa only [smul_eq_mul, Ideal.mul_top] using
+        (Ideal.pow_le_pow_right hle : I ^ n ≤ I ^ m)
+    have hmap :
+        ((Ideal.quotientEquivAlgOfEq A hm).symm.toAlgHom).comp
+            ((Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+              (Ideal.quotientEquivAlgOfEq A hn).toAlgHom) =
+          Ideal.Quotient.factorₐ A hpow := by
+      ext y
+      obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+      simp [hn, hm]
+    have htrans :
+        Ideal.Quotient.factorₐ A hpow (AdicCompletion.eval I A n x) =
+          AdicCompletion.eval I A m x := by
+      change Ideal.Quotient.factorₐ A hpow (x.val n) = x.val m
+      exact AdicCompletion.transitionMap_comp_eval_apply (I := I) (M := A) hle x
+    have hraw := congrArg (fun g ↦ g (AdicCompletion.eval I A n x)) hmap
+    rw [htrans] at hraw
+    have hstd := congrArg (fun y ↦ Ideal.quotientEquivAlgOfEq A hm y) hraw
+    let z : A ⧸ I ^ m :=
+      Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)
+        (Ideal.quotientEquivAlgOfEq A hn (AdicCompletion.eval I A n x))
+    have hcancel :
+        Ideal.quotientEquivAlgOfEq A hm
+            ((((Ideal.quotientEquivAlgOfEq A hm).symm.toAlgHom).comp
+              ((Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+                (Ideal.quotientEquivAlgOfEq A hn).toAlgHom))
+              (AdicCompletion.eval I A n x)) = z := by
+      change Ideal.quotientEquivAlgOfEq A hm
+          ((Ideal.quotientEquivAlgOfEq A hm).symm z) = z
+      exact AlgEquiv.apply_symm_apply _ _
+    change Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)
+          (Ideal.quotientEquivAlgOfEq A hn (AdicCompletion.eval I A n x)) =
+      Ideal.quotientEquivAlgOfEq A hm (AdicCompletion.eval I A m x)
+    calc
+      _ = Ideal.quotientEquivAlgOfEq A hm
+          ((((Ideal.quotientEquivAlgOfEq A hm).symm.toAlgHom).comp
+            ((Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+              (Ideal.quotientEquivAlgOfEq A hn).toAlgHom))
+            (AdicCompletion.eval I A n x)) := by
+            simpa only [z, AlgHom.comp_apply] using hcancel.symm
+      _ = _ := hstd
+  let qinv (n : ℕ) := (q n).symm
+  let g (n : ℕ) :
+      AdicCompletion (polynomialXIdeal R) (Polynomial R) →ₐ[R]
+        MvPolynomial Unit R ⧸ (MvPolynomial.idealOfVars Unit R) ^ n :=
+    (qinv n).toAlgHom.comp
+      ((AdicCompletion.evalₐ (polynomialXIdeal R) n).restrictScalars R)
+  have hqinv : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp
+          (qinv n).toAlgHom =
+        (qinv m).toAlgHom.comp
+          (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)) := by
+    intro m n hle
+    ext x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [f, qinv, q]
+  have hg : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp (g n) = g m := by
+    intro m n hle
+    change (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp
+          ((qinv n).toAlgHom.comp
+            ((AdicCompletion.evalₐ (polynomialXIdeal R) n).restrictScalars R)) =
+      (qinv m).toAlgHom.comp
+        ((AdicCompletion.evalₐ (polynomialXIdeal R) m).restrictScalars R)
+    rw [← AlgHom.comp_assoc, hqinv hle, AlgHom.comp_assoc]
+    have hpoly := evalCompat (Polynomial R) (polynomialXIdeal R) hle
+    have hpolyR :
+        (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp
+            ((AdicCompletion.evalₐ (polynomialXIdeal R) n).restrictScalars R) =
+          (AdicCompletion.evalₐ (polynomialXIdeal R) m).restrictScalars R := by
+      ext x
+      change (Ideal.Quotient.factorₐ (Polynomial R)
+        (Ideal.pow_le_pow_right hle))
+          (AdicCompletion.evalₐ (polynomialXIdeal R) n x) =
+        AdicCompletion.evalₐ (polynomialXIdeal R) m x
+      exact congrArg (fun h => h x) hpoly
+    rw [hpolyR]
+  let F := AdicCompletion.liftAlgHom (polynomialXIdeal R) f hf
+  let G := AdicCompletion.liftAlgHom (MvPolynomial.idealOfVars Unit R) g hg
+  have hGF : G.comp F = AlgHom.id R _ := by
+    apply AlgHom.ext
+    intro x
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    change (AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n)
+        (AdicCompletion.liftAlgHom (MvPolynomial.idealOfVars Unit R) g hg
+          (AdicCompletion.liftAlgHom (polynomialXIdeal R) f hf x)) =
+      AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n x
+    rw [AdicCompletion.evalₐ_liftAlgHom]
+    change (qinv n)
+        (AdicCompletion.evalₐ (polynomialXIdeal R) n
+          (AdicCompletion.liftAlgHom (polynomialXIdeal R) f hf x)) =
+      AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n x
+    rw [AdicCompletion.evalₐ_liftAlgHom]
+    change (q n).symm ((q n)
+        (AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n x)) = _
+    exact (q n).symm_apply_apply _
+  have hFG : F.comp G = AlgHom.id R _ := by
+    apply AlgHom.ext
+    intro x
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    change (AdicCompletion.evalₐ (polynomialXIdeal R) n)
+        (AdicCompletion.liftAlgHom (polynomialXIdeal R) f hf
+          (AdicCompletion.liftAlgHom (MvPolynomial.idealOfVars Unit R) g hg x)) =
+      AdicCompletion.evalₐ (polynomialXIdeal R) n x
+    rw [AdicCompletion.evalₐ_liftAlgHom]
+    change (q n)
+        (AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n
+          (AdicCompletion.liftAlgHom (MvPolynomial.idealOfVars Unit R) g hg x)) =
+      AdicCompletion.evalₐ (polynomialXIdeal R) n x
+    rw [AdicCompletion.evalₐ_liftAlgHom]
+    change (q n) ((q n).symm
+        (AdicCompletion.evalₐ (polynomialXIdeal R) n x)) = _
+    exact (q n).apply_symm_apply _
+  let E :
+      AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R) ≃ₐ[R]
+        AdicCompletion (polynomialXIdeal R) (Polynomial R) :=
+    AlgEquiv.ofAlgHom F G hFG hGF
+  have hE (a : MvPolynomial Unit R) :
+      E (algebraMap (MvPolynomial Unit R)
+          (AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R)) a) =
+        algebraMap (Polynomial R)
+          (AdicCompletion (polynomialXIdeal R) (Polynomial R)) (e a) := by
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    change (q n)
+        (AdicCompletion.evalₐ (MvPolynomial.idealOfVars Unit R) n
+          (algebraMap (MvPolynomial Unit R)
+            (AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R)) a)) =
+      AdicCompletion.evalₐ (polynomialXIdeal R) n
+        (algebraMap (Polynomial R)
+          (AdicCompletion (polynomialXIdeal R) (Polynomial R)) (e a))
+    simp [E, F, q, AdicCompletion.algebraMap_apply]
+  have hcoe (p : Polynomial R) :
+      algebraMap (Polynomial R) (PowerSeries R) p =
+        algebraMap (MvPolynomial Unit R) (PowerSeries R) (e.symm p) := by
+    let lhs : Polynomial R →ₐ[R] PowerSeries R :=
+      Polynomial.coeToPowerSeries.algHom R
+    let rhs : Polynomial R →ₐ[R] PowerSeries R :=
+      (MvPolynomial.coeToMvPowerSeries.algHom R).comp e.symm.toAlgHom
+    have heq : lhs = rhs := by
+      apply Polynomial.algHom_ext
+      simp [lhs, rhs, e, Polynomial.coeToPowerSeries.algHom,
+        MvPolynomial.coeToMvPowerSeries.algHom, PowerSeries.X_apply]
+    exact congrArg (fun h => h p) heq
+  have hG (p : Polynomial R) :
+      G (algebraMap (Polynomial R)
+          (AdicCompletion (polynomialXIdeal R) (Polynomial R)) p) =
+        algebraMap (MvPolynomial Unit R)
+          (AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R))
+          (e.symm p) := by
+    have hp : E (algebraMap (MvPolynomial Unit R)
+          (AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R))
+          (e.symm p)) =
+        algebraMap (Polynomial R)
+          (AdicCompletion (polynomialXIdeal R) (Polynomial R)) p := by
+      simpa using hE (e.symm p)
+    rw [← hp]
+    have hx := congrArg (fun h => h
+      (algebraMap (MvPolynomial Unit R)
+        (AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R))
+        (e.symm p))) hGF
+    simpa [E, AlgHom.comp_apply] using hx
+  let P := MvPowerSeries.toAdicCompletionAlgEquiv Unit R
+  let H : PowerSeries R →ₐ[Polynomial R] polynomialRingCompletion R :=
+    { toFun := fun x => E (P x)
+      map_one' := by simp [E, P]
+      map_mul' := by intro x y; simp [E, P]
+      map_zero' := by simp [E, P]
+      map_add' := by intro x y; simp [E, P]
+      commutes' := by
+        intro p
+        rw [hcoe, P.commutes, hE]
+        simp }
+  let Hinv : polynomialRingCompletion R →ₐ[Polynomial R] PowerSeries R :=
+    { toFun := fun x => P.symm (G x)
+      map_one' := by
+        change P.symm (G 1) = 1
+        rw [map_one]
+        exact P.symm.map_one
+      map_mul' := by
+        intro x y
+        change P.symm (G (x * y)) = P.symm (G x) * P.symm (G y)
+        rw [map_mul]
+        exact P.symm.map_mul _ _
+      map_zero' := by
+        change P.symm (G 0) = 0
+        rw [map_zero]
+        exact P.symm.map_zero
+      map_add' := by
+        intro x y
+        change P.symm (G (x + y)) = P.symm (G x) + P.symm (G y)
+        rw [map_add]
+        exact P.symm.map_add _ _
+      commutes' := by
+        intro p
+        change P.symm (G (algebraMap (Polynomial R)
+          (AdicCompletion (polynomialXIdeal R) (Polynomial R)) p)) =
+          algebraMap (Polynomial R) (PowerSeries R) p
+        rw [hG, ← P.commutes, hcoe]
+        exact P.symm_apply_apply _ }
+  have hGF_apply (x :
+      AdicCompletion (MvPolynomial.idealOfVars Unit R) (MvPolynomial Unit R)) :
+      G (F x) = x := by
+    have hx := congrArg (fun h => h x) hGF
+    simpa [AlgHom.comp_apply] using hx
+  have hFG_apply (x :
+      AdicCompletion (polynomialXIdeal R) (Polynomial R)) :
+      F (G x) = x := by
+    have hx := congrArg (fun h => h x) hFG
+    simpa [AlgHom.comp_apply] using hx
+  exact ⟨AlgEquiv.ofAlgHom H Hinv (by
+    apply AlgHom.ext
+    intro x
+    change E (P (P.symm (G x))) = x
+    change F (P (P.symm (G x))) = x
+    rw [P.apply_symm_apply, hFG_apply]) (by
+    apply AlgHom.ext
+    intro x
+    change P.symm (G (E (P x))) = x
+    change P.symm (G (F (P x))) = x
+    rw [hGF_apply, P.symm_apply_apply])⟩
 
 theorem completion_polynomial_ring_not_flat :
     ∃ (R : Type u) (_ : CommRing R),

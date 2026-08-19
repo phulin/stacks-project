@@ -478,7 +478,7 @@ theorem coSpecial_triangle_two_out_of_three
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
   sorry
-/-
+/- Prior attempt:
   let Top : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T')
   let phop : Topp ⟶ Top := (triangleOpEquivalence C).functor.map (Opposite.op φ)
@@ -506,7 +506,7 @@ theorem coSpecial_triangle_isIso₂
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
   sorry
-/-
+/- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -534,7 +534,7 @@ theorem coSpecial_triangle_isIso₁
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
   sorry
-/-
+/- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ :=
@@ -570,7 +570,7 @@ set_option maxHeartbeats 1000000 in
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
   sorry
-/-
+/- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
   change SpecialTriangle Top

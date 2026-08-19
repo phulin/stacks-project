@@ -195,7 +195,7 @@ theorem affineBlowup_map_ideal_eq_span
     exact Ideal.mem_map_of_mem _ ha
 
 theorem affineBlowup_localization_equiv
-    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ha : a ∈ I) :
+    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ : a ∈ I) :
     Nonempty
       (Localization.Away (algebraMap R (affineBlowup I a) a) ≃+*
         Localization.Away a) := by
@@ -239,7 +239,7 @@ def baseChangeTorsionIdeal
 denominator's power torsion. -/
 theorem affineBlowup_baseChange
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
-    (f : R →+* S) (I : Ideal R) {a : R} (_ha : a ∈ I) :
+    (f : R →+* S) (I : Ideal R) {a : R} (_ : a ∈ I) :
     letI : Algebra R S := f.toAlgebra
     Nonempty
       ((S ⊗[R] affineBlowup I a) ⧸ baseChangeTorsionIdeal f I a ≃+*

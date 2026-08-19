@@ -2006,14 +2006,17 @@ theorem cardinality_target_le_source_of_epimorphism
         rw [Submodule.Quotient.nontrivial_iff]
         intro htop
         apply h
+        change Function.Surjective (Algebra.linearMap R S)
         rw [← LinearMap.range_eq_top]
-        exact htop
+        simpa [R'] using htop
       let : Nontrivial (S ⧸ R') := hnontrivial
+      let : Nontrivial ((S ⧸ R') ⊗[R] (S ⧸ R')) :=
+        nontrivial_tensorProduct_of_finite_ring R (S ⧸ R')
       have hsub : Subsingleton ((S ⧸ R') ⊗[R] (S ⧸ R')) := by
         refine subsingleton_of_forall_eq 0 fun y ↦ ?_
         induction y with
         | zero => rfl
-        | add a b e₁ e₂ => rw [e₁, zero_add]
+        | add a b e₁ e₂ => rwa [e₁, zero_add]
         | tmul x y =>
           obtain ⟨x, rfl⟩ := R'.mkQ_surjective x
           obtain ⟨y, rfl⟩ := R'.mkQ_surjective y

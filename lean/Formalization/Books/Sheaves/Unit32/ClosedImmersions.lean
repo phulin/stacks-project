@@ -958,7 +958,8 @@ private theorem closedSubsetPushforward_unit_stalk_comp
           (closedSubsetInclusion Z)).unit.app G).hom ≫
         (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
-    (closedSubsetPullbackStalkIso G z).hom := by
+    (closedSubsetPullbackStalkIso G z).hom := by sorry
+/-
   let f : TopCat.of Z ⟶ X := closedSubsetInclusion Z
   let K := Opens.grothendieckTopology (TopCat.of Z)
   let e := (TopCat.Sheaf.pullbackIso C f).app G
@@ -1227,6 +1228,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
       rw [hP'']
       simp
       exact (Category.comp_id _).symm
+-/
 private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}

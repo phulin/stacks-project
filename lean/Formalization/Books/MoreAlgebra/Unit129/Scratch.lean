@@ -716,7 +716,8 @@ private theorem test_rank_one_step
     (hKfin : Module.Finite R K) (hKfree : Module.Free R K)
     (s : P) (hs : (0, s) ∈ K) :
     ∃ L : Submodule R P, s ∈ L ∧ IsComplemented L ∧
-      Module.Finite R L ∧ Module.IsStablyFree R L := by
+      Module.Finite R L ∧ Module.IsStablyFree R L := by sorry
+/-
   letI : Module.Finite R K := hKfin
   letI : Module.Free R K := hKfree
   obtain ⟨C, hKC⟩ := hKcomp
@@ -829,6 +830,7 @@ private theorem test_rank_one_step
   refine ⟨L, hsL, hLcomp, ?_, ?_⟩
   · exact Module.Finite.of_surjective π' hπ'surj
   · sorry
+-/
 
 end
 

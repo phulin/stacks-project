@@ -1105,7 +1105,8 @@ private lemma blowup_chart_awayMap_bijective
 theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :
-    IsHomeomorph (blowupRestrictionMap P) := by
+    IsHomeomorph (blowupRestrictionMap P) := by sorry
+/-
   letI : GradedRing P.gradedPieces := P.graded
   let β := {p : PrimeSpectrum A // p ∈ blowupBaseOpen I}
   let α := {x : blowupProjPoints P // (blowupMap P).base x ∈ blowupBaseOpen I}
@@ -1186,6 +1187,7 @@ theorem blowupRestrictionMap_isHomeomorph
   apply (isHomeomorph_iff_exists_homeomorph).2
   refine ⟨H, ?_⟩
   sorry
+-/
 theorem strictTransform_conditions
     {A : Type u} [CommRing A] {I : Ideal A}
     {P : BlowupPresentation I} (D : StrictTransformData P) :

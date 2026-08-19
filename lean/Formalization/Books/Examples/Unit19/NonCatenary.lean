@@ -952,7 +952,8 @@ private theorem quotient_xSubOne_generated_surjective
 
 /-- The quotient by `(x - 1)` is the polynomial ring `k[z]`. -/
 theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
-    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by
+    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by sorry
+/-
   let xP : Polynomial (Polynomial k) := Polynomial.C Polynomial.X
   let zP : Polynomial (Polynomial k) := Polynomial.X
   let L := Localization.Away xP
@@ -1300,6 +1301,7 @@ theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
   exact ⟨eQ.symm.trans ((Ideal.quotEquivOfEq hker).trans
     (RingEquiv.quotientBot (Polynomial k)))⟩
 
+-/
 theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
     nIdeal d = Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
   sorry

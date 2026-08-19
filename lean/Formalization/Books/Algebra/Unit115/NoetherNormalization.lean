@@ -221,6 +221,107 @@ theorem exists_lastVariableWeights
     ∃ e : Fin n → ℕ, multiIndexDominates N (lastVariableWeight e) := by
   sorry
 
+private theorem helper_monomial_substitution_natDegree
+    {R : Type u} [CommRing R] [Nontrivial R] {n : ℕ}
+    (N : Finset (Fin (n + 1) →₀ ℕ)) (e : Fin n → ℕ)
+    (he : multiIndexDominates N (lastVariableWeight e))
+    (ν : Fin (n + 1) →₀ ℕ) (a : R) (ha : a ≠ 0) :
+    (noetherPolynomialSubstitution (MvPolynomial.monomial ν a) e).natDegree =
+      weightedMultiIndex (lastVariableWeight e) ν := by
+  rw [noetherPolynomialSubstitution, MvPolynomial.eval₂Hom_monomial]
+  have hlead (i : Fin n) :
+      ((Polynomial.C (MvPolynomial.X (R := R) i) + Polynomial.X ^ e i) ^ ν i.castSucc).leadingCoeff = 1 := by
+    have hei : 0 < e i := by
+      simpa [lastVariableWeight] using he.1 i.castSucc
+    change Polynomial.Monic ((Polynomial.C (MvPolynomial.X (R := R) i) +
+      Polynomial.X ^ e i) ^ ν i.castSucc)
+    simpa [add_comm] using
+      (Polynomial.monic_X_pow_add_C (MvPolynomial.X (R := R) i)
+        (Nat.ne_of_gt hei)).pow (ν i.castSucc)
+  have hdeg (i : Fin n) :
+      ((Polynomial.C (MvPolynomial.X (R := R) i) + Polynomial.X ^ e i) ^
+        ν i.castSucc).natDegree = ν i.castSucc * e i := by
+    rw [show Polynomial.C (MvPolynomial.X (R := R) i) + Polynomial.X ^ e i =
+      Polynomial.X ^ e i + Polynomial.C (MvPolynomial.X (R := R) i) by rw [add_comm]]
+    rw [(Polynomial.monic_X_pow_add_C (MvPolynomial.X (R := R) i)
+      (by exact Nat.ne_of_gt (by simpa [lastVariableWeight] using he.1 i.castSucc))).natDegree_pow]
+    simp
+  have hνprod :
+      ν.prod (fun i k => (lastVariableSubstitution (R := R) n e i) ^ k) =
+        ∏ i : Fin (n + 1),
+          (lastVariableSubstitution (R := R) n e i) ^ ν i := by
+    apply Finsupp.prod_fintype
+    intro i
+    simp
+  have hprod_lc :
+      (∏ i : Fin (n + 1),
+        (lastVariableSubstitution (R := R) n e i) ^ ν i).leadingCoeff = 1 := by
+    rw [Polynomial.leadingCoeff_prod']
+    · rw [Fin.prod_univ_castSucc]
+      simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+      simp [hlead]
+    · rw [Fin.prod_univ_castSucc]
+      simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+      simp [hlead]
+  have hprod :
+      (∏ i : Fin (n + 1),
+        (lastVariableSubstitution (R := R) n e i) ^ ν i).natDegree =
+          ∑ i : Fin (n + 1),
+            ((lastVariableSubstitution (R := R) n e i) ^ ν i).natDegree := by
+    apply Polynomial.natDegree_prod'
+    rw [Fin.prod_univ_castSucc]
+    simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+    simp [hlead]
+  simp only [hνprod]
+  rw [Polynomial.natDegree_mul' (by rw [hprod_lc]; simp [ha])]
+  rw [hprod]
+  rw [Fin.sum_univ_castSucc]
+  simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+  simp_rw [hdeg]
+  simp [weightedMultiIndex, lastVariableWeight, Fin.sum_univ_castSucc,
+    add_assoc, add_comm, add_left_comm]
+  apply Finset.sum_congr rfl
+  intro i hi
+  rw [Nat.mul_comm]
+
+private theorem helper_monomial_substitution_leadingCoeff
+    {R : Type u} [CommRing R] [Nontrivial R] {n : ℕ}
+    (N : Finset (Fin (n + 1) →₀ ℕ)) (e : Fin n → ℕ)
+    (he : multiIndexDominates N (lastVariableWeight e))
+    (ν : Fin (n + 1) →₀ ℕ) (a : R) (ha : a ≠ 0) :
+    (noetherPolynomialSubstitution (MvPolynomial.monomial ν a) e).leadingCoeff =
+      MvPolynomial.C a := by
+  rw [noetherPolynomialSubstitution, MvPolynomial.eval₂Hom_monomial]
+  have hlead (i : Fin n) :
+      ((Polynomial.C (MvPolynomial.X (R := R) i) + Polynomial.X ^ e i) ^ ν i.castSucc).leadingCoeff = 1 := by
+    have hei : 0 < e i := by
+      simpa [lastVariableWeight] using he.1 i.castSucc
+    change Polynomial.Monic ((Polynomial.C (MvPolynomial.X (R := R) i) +
+      Polynomial.X ^ e i) ^ ν i.castSucc)
+    simpa [add_comm] using
+      (Polynomial.monic_X_pow_add_C (MvPolynomial.X (R := R) i)
+        (Nat.ne_of_gt hei)).pow (ν i.castSucc)
+  have hνprod :
+      ν.prod (fun i k => (lastVariableSubstitution (R := R) n e i) ^ k) =
+        ∏ i : Fin (n + 1),
+          (lastVariableSubstitution (R := R) n e i) ^ ν i := by
+    apply Finsupp.prod_fintype
+    intro i
+    simp
+  have hprod_lc :
+      (∏ i : Fin (n + 1),
+        (lastVariableSubstitution (R := R) n e i) ^ ν i).leadingCoeff = 1 := by
+    rw [Polynomial.leadingCoeff_prod']
+    · rw [Fin.prod_univ_castSucc]
+      simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+      simp [hlead]
+    · rw [Fin.prod_univ_castSucc]
+      simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
+      simp [hlead]
+  simp only [hνprod]
+  rw [Polynomial.leadingCoeff_mul' (by rw [hprod_lc]; simp [ha])]
+  simp [hprod_lc]
+
 /-- After a sufficiently separated substitution, the resulting polynomial has
 positive degree and scalar leading coefficient equal to a nonzero coefficient
 of the original polynomial. -/
@@ -235,7 +336,128 @@ theorem helper_polynomial_leading_term
         (noetherPolynomialSubstitution g e).natDegree = d ∧
           (noetherPolynomialSubstitution g e).leadingCoeff =
             MvPolynomial.C a := by
-  sorry
+  have hnontrivial (a : R) (ha : a ≠ 0) : Nontrivial R :=
+    ⟨⟨0, a, ha.symm⟩⟩
+  have hsub (ν : Fin (n + 1) →₀ ℕ) (a : R) (ha : a ≠ 0) :
+      (noetherPolynomialSubstitution (MvPolynomial.monomial ν a) e).natDegree =
+        weightedMultiIndex (lastVariableWeight e) ν := by
+    exact @helper_monomial_substitution_natDegree R _ (hnontrivial a ha) n
+      g.support e he ν a ha
+  have hsubLC (ν : Fin (n + 1) →₀ ℕ) (a : R) (ha : a ≠ 0) :
+      (noetherPolynomialSubstitution (MvPolynomial.monomial ν a) e).leadingCoeff =
+        MvPolynomial.C a := by
+    exact @helper_monomial_substitution_leadingCoeff R _ (hnontrivial a ha) n
+      g.support e he ν a ha
+  have hg0 : g ≠ 0 := by
+    intro hz
+    apply hg
+    exact ⟨0, by simp [hz]⟩
+  have hsupp : g.support.Nonempty := MvPolynomial.support_nonempty.mpr hg0
+  obtain ⟨ν, hν, hνmax⟩ := Finset.exists_max_image g.support
+    (fun μ => weightedMultiIndex (lastVariableWeight e) μ) hsupp
+  have hdpos : 0 < weightedMultiIndex (lastVariableWeight e) ν := by
+    by_contra hnot
+    have hd0 : weightedMultiIndex (lastVariableWeight e) ν = 0 :=
+      Nat.eq_zero_of_not_pos hnot
+    have hzero (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) :
+        weightedMultiIndex (lastVariableWeight e) μ = 0 := by
+      apply Nat.eq_zero_of_le_zero
+      simpa [hd0] using hνmax μ hμ
+    have hμzero (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) : μ = 0 := by
+      ext i
+      have hterm_all :
+          ∀ i : Fin (n + 1), lastVariableWeight e i * μ i = 0 := by
+        intro i
+        exact
+          (Finset.sum_eq_zero_iff_of_nonneg
+            (f := fun j : Fin (n + 1) => lastVariableWeight e j * μ j)
+            (s := Finset.univ) (fun _ _ => Nat.zero_le _)).mp
+            (by simpa [weightedMultiIndex] using hzero μ hμ) i (by simp)
+      rcases Nat.mul_eq_zero.mp (hterm_all i) with hw | hμi
+      · exact False.elim (Nat.ne_of_gt (he.1 i) hw)
+      · exact hμi
+    have hsupp_sub : g.support ⊆ ({0} : Finset (Fin (n + 1) →₀ ℕ)) := by
+      intro μ hμ
+      simpa using hμzero μ hμ
+    have hgconst : g = MvPolynomial.C (g.coeff 0) := by
+      apply MvPolynomial.ext
+      intro μ
+      by_cases hμ : μ = 0
+      · subst μ
+        simp
+      · have hc : g.coeff μ = 0 := by
+          by_contra hc
+          exact hμ (Finset.mem_singleton.mp
+            (hsupp_sub (MvPolynomial.mem_support_iff.mpr hc)))
+        rw [hc]
+        simp [Ne.symm hμ]
+    exact hg ⟨g.coeff 0, hgconst.symm⟩
+  let T : (Fin (n + 1) →₀ ℕ) → Polynomial (MvPolynomial (Fin n) R) :=
+    fun μ => noetherPolynomialSubstitution (MvPolynomial.monomial μ (g.coeff μ)) e
+  have hTLC (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) :
+      (T μ).leadingCoeff = MvPolynomial.C (g.coeff μ) := by
+    simpa [T] using hsubLC μ (g.coeff μ) (MvPolynomial.mem_support_iff.mp hμ)
+  have hTdeg (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) :
+      (T μ).natDegree = weightedMultiIndex (lastVariableWeight e) μ := by
+    simpa [T] using hsub μ (g.coeff μ) (MvPolynomial.mem_support_iff.mp hμ)
+  have hTne (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) : T μ ≠ 0 := by
+    intro hz
+    have hlcz : (T μ).leadingCoeff = 0 := by
+      simpa [hz] using congrArg Polynomial.leadingCoeff hz
+    have hc : MvPolynomial.C (g.coeff μ) = 0 := (hTLC μ hμ).symm.trans hlcz
+    exact (MvPolynomial.C_ne_zero.mpr (MvPolynomial.mem_support_iff.mp hμ)) hc
+  have hνdeg : (T ν).degree ≠ ⊥ := by
+    exact Polynomial.degree_ne_bot.mpr (hTne ν hν)
+  have hdeg_lt {μ : Fin (n + 1) →₀ ℕ} (hμ : μ ∈ g.support)
+      (hμν : μ ≠ ν) : (T μ).degree < (T ν).degree := by
+    have hweight : weightedMultiIndex (lastVariableWeight e) μ <
+        weightedMultiIndex (lastVariableWeight e) ν := by
+      exact Nat.lt_of_le_of_ne (hνmax μ hμ)
+        (by
+          intro heq
+          have hsep : weightedMultiIndex (lastVariableWeight e) μ =
+              weightedMultiIndex (lastVariableWeight e) ν ↔ μ = ν :=
+            (helper_multiIndex_separation g.support (lastVariableWeight e) he) hμ hν
+          exact hμν (hsep.mp heq))
+    calc
+      (T μ).degree = (T μ).natDegree :=
+        Polynomial.degree_eq_natDegree (hTne μ hμ)
+      _ < (T ν).natDegree := by
+        rw [hTdeg μ hμ, hTdeg ν hν]
+        exact WithBot.coe_lt_coe.mpr hweight
+      _ = (T ν).degree := (Polynomial.degree_eq_natDegree (hTne ν hν)).symm
+  have hsum_degree {s : Finset (Fin (n + 1) →₀ ℕ)}
+      (hs : ∀ μ ∈ s, (T μ).degree < (T ν).degree) :
+      (Finset.sum s T).degree < (T ν).degree := by
+    induction s using Finset.induction_on with
+    | empty => exact bot_lt_iff_ne_bot.mpr hνdeg
+    | @insert μ s hμs ih =>
+        rw [Finset.sum_insert hμs]
+        apply (Polynomial.degree_add_le _ _).trans_lt
+        exact max_lt (hs μ (by simp))
+          (ih (fun x hx => hs x (by simp [hx])))
+  have htail : (Finset.sum (g.support \ {ν}) T).degree < (T ν).degree := by
+    apply hsum_degree
+    intro μ hμ
+    have hμ' : μ ∈ g.support ∧ μ ∉ ({ν} : Finset (Fin (n + 1) →₀ ℕ)) :=
+      Finset.mem_sdiff.mp hμ
+    exact hdeg_lt hμ'.1 (by
+      intro h
+      exact hμ'.2 (Finset.mem_singleton.mpr h))
+  have hsum : noetherPolynomialSubstitution g e = Finset.sum g.support T := by
+    rw [noetherPolynomialSubstitution, ← g.support_sum_monomial_coeff, map_sum]
+    simp [T, noetherPolynomialSubstitution]
+  have hLCsum :
+      (Finset.sum g.support T).leadingCoeff = (T ν).leadingCoeff := by
+    rw [Finset.sum_eq_add_sum_sdiff_singleton_of_mem hν T]
+    simpa [add_comm] using Polynomial.leadingCoeff_add_of_degree_lt htail
+  refine ⟨weightedMultiIndex (lastVariableWeight e) ν, g.coeff ν, hdpos,
+    MvPolynomial.mem_support_iff.mp hν, ν, hν, rfl, ?_, ?_⟩
+  · rw [hsum, Finset.sum_eq_add_sum_sdiff_singleton_of_mem hν T, add_comm]
+    rw [Polynomial.natDegree_add_eq_right_of_degree_lt htail]
+    exact hTdeg ν hν
+  · rw [hsum, hLCsum]
+    exact hTLC ν hν
 
 /-! ## Polynomial quotients and one relation -/
 

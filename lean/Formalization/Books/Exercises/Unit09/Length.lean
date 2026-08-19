@@ -440,6 +440,397 @@ theorem planeEquationQuotient_composition_series (k : Type u) [Field k] :
         _ = 0 := by ring
     apply hCunit.mul_left_cancel
     simpa only [mul_zero] using hzero
+  let R := planePolynomialRing k
+  let x₀ : R := MvPolynomial.X (0 : Fin 2)
+  let y₀ : R := MvPolynomial.X (1 : Fin 2)
+  let K : Ideal R := Ideal.span {x₀ ^ 3 + x₀ ^ 2 * y₀ ^ 2, y₀ ^ 3}
+  let b : Fin 9 → R :=
+    ![1, x₀, x₀ ^ 2, y₀, x₀ * y₀, x₀ ^ 2 * y₀, y₀ ^ 2,
+      x₀ * y₀ ^ 2, x₀ ^ 2 * y₀ ^ 2]
+  have hxrel : x₀ ^ 3 + x₀ ^ 2 * y₀ ^ 2 ∈ K := by
+    exact Ideal.subset_span (by simp [K])
+  have hyrel : y₀ ^ 3 ∈ K := by
+    exact Ideal.subset_span (by simp [K])
+  have hKpow : (planeOriginIdeal k) ^ 5 ≤ K := by
+    rw [MvPolynomial.pow_idealOfVars_eq_span]
+    apply Ideal.span_le.2
+    rintro _ ⟨m, hm, rfl⟩
+    change MvPolynomial.monomial m 1 ∈ K
+    change Finsupp.degree m = 5 at hm
+    have hmdeg : m 0 + m 1 = 5 := by
+      simpa [Finsupp.degree_eq_sum, Fin.sum_univ_two] using hm
+    have hmform : m = Finsupp.single 0 (m 0) + Finsupp.single 1 (m 1) := by
+      ext i
+      fin_cases i <;> simp
+    by_cases hmy : 3 ≤ m 1
+    · have hle : Finsupp.single 1 3 ≤ m := by
+        intro i
+        fin_cases i <;> simp [hmy]
+      have hadd : m - Finsupp.single 1 3 + Finsupp.single 1 3 = m :=
+        tsub_add_cancel_of_le hle
+      rw [← hadd, MvPolynomial.monomial_add_single]
+      simpa only [map_one, mul_one, ← MvPolynomial.X_pow_eq_monomial] using
+        K.mul_mem_left _ hyrel
+    · have hmy' : m 1 ≤ 2 := by omega
+      have hmx : 3 ≤ m 0 := by omega
+      have hle : Finsupp.single 0 3 ≤ m := by
+        intro i
+        fin_cases i <;> simp [hmx]
+      have hm0 : m 0 = 5 - m 1 := by omega
+      have hbase : x₀ ^ (m 0) * y₀ ^ (m 1) = MvPolynomial.monomial m 1 := by
+        have hmon : MvPolynomial.monomial m 1 =
+            x₀ ^ (m 0) * y₀ ^ (m 1) := by
+          calc
+            MvPolynomial.monomial m 1 =
+                MvPolynomial.monomial (Finsupp.single 0 (m 0)) 1 *
+                  MvPolynomial.X 1 ^ (m 1) := by
+              conv_lhs => rw [hmform, MvPolynomial.monomial_add_single]
+            _ = x₀ ^ (m 0) * y₀ ^ (m 1) := by
+              rw [← MvPolynomial.X_pow_eq_monomial]
+        exact hmon.symm
+      rw [← hbase]
+      change x₀ ^ m 0 * y₀ ^ m 1 ∈ K
+      interval_cases hmy'' : m 1
+      · have hm0' : m 0 = 5 := by omega
+        have h₁ : x₀ ^ 5 + x₀ ^ 4 * y₀ ^ 2 ∈ K := by
+          convert K.mul_mem_left (x₀ ^ 2) hxrel using 1 <;> ring
+        have h₂ : x₀ ^ 4 * y₀ ^ 2 + x₀ ^ 3 * y₀ ^ 4 ∈ K := by
+          convert K.mul_mem_left (x₀ * y₀ ^ 2) hxrel using 1 <;> ring
+        have h₃ : x₀ ^ 3 * y₀ ^ 4 ∈ K := by
+          convert K.mul_mem_left (x₀ ^ 3 * y₀) hyrel using 1 <;> ring
+        have := K.sub_mem h₁ h₂
+        have hgoal := K.add_mem (by convert this using 1 <;> ring) h₃
+        have hfinal : x₀ ^ 5 ∈ K := by
+          convert hgoal using 1 <;> ring
+        simpa [hm0', hmy''] using hfinal
+      · have hm0' : m 0 = 4 := by omega
+        have h₁ : x₀ ^ 4 * y₀ + x₀ ^ 3 * y₀ ^ 3 ∈ K := by
+          convert K.mul_mem_left (x₀ * y₀) hxrel using 1 <;> ring
+        have h₂ : x₀ ^ 3 * y₀ ^ 3 ∈ K := by
+          convert K.mul_mem_left (x₀ ^ 3) hyrel using 1 <;> ring
+        have hgoal := K.sub_mem (by convert h₁ using 1 <;> ring) h₂
+        have hfinal : x₀ ^ 4 * y₀ ∈ K := by
+          convert hgoal using 1 <;> ring
+        simpa [hm0', hmy''] using hfinal
+      · have hm0' : m 0 = 3 := by omega
+        have h₁ : x₀ ^ 3 * y₀ ^ 2 + x₀ ^ 2 * y₀ ^ 4 ∈ K := by
+          convert K.mul_mem_left (y₀ ^ 2) hxrel using 1 <;> ring
+        have h₂ : x₀ ^ 2 * y₀ ^ 4 ∈ K := by
+          convert K.mul_mem_left (x₀ ^ 2 * y₀) hyrel using 1 <;> ring
+        have hgoal := K.sub_mem (by convert h₁ using 1 <;> ring) h₂
+        have hfinal : x₀ ^ 3 * y₀ ^ 2 ∈ K := by
+          convert hgoal using 1 <;> ring
+        simpa [hm0', hmy''] using hfinal
+  have hnormal : ∀ p : R, ∃ c : Fin 9 → k,
+      p - ∑ i, c i • b i ∈ K := by
+    let W : Submodule k R := Submodule.span k (Set.range b) ⊔ K.restrictScalars k
+    have hB (i : Fin 9) : b i ∈ W :=
+      Submodule.mem_sup_left (Submodule.subset_span ⟨i, rfl⟩)
+    have hK (z : R) (hz : z ∈ K) : z ∈ W := Submodule.mem_sup_right hz
+    have hkx3 : x₀ ^ 3 ∈ W := by
+      have h := hK (x₀ ^ 3 + x₀ ^ 2 * y₀ ^ 2) hxrel
+      have hh := W.sub_mem h (hB 8)
+      convert hh using 1 <;> simp [b] <;> ring
+    have hkx3y : x₀ ^ 3 * y₀ ∈ W := by
+      have h₁ : x₀ ^ 3 * y₀ + x₀ ^ 2 * y₀ ^ 3 ∈ K := by
+        convert K.mul_mem_left y₀ hxrel using 1 <;> ring
+      have h₂ : x₀ ^ 2 * y₀ ^ 3 ∈ K := K.mul_mem_left (x₀ ^ 2) hyrel
+      have hh := W.sub_mem (hK _ h₁) (hK _ h₂)
+      convert hh using 1 <;> ring
+    have hkx3y2 : x₀ ^ 3 * y₀ ^ 2 ∈ W := by
+      have h₁ : x₀ ^ 3 * y₀ ^ 2 + x₀ ^ 2 * y₀ ^ 4 ∈ K := by
+        convert K.mul_mem_left (y₀ ^ 2) hxrel using 1 <;> ring
+      have h₂ : x₀ ^ 2 * y₀ ^ 4 ∈ K := by
+        have hh := K.mul_mem_left (x₀ ^ 2 * y₀) hyrel
+        convert hh using 1 <;> ring
+      have hh := W.sub_mem (hK _ h₁) (hK _ h₂)
+      convert hh using 1 <;> ring
+    have hkx2y3 : x₀ ^ 2 * y₀ ^ 3 ∈ W := by
+      have hh := K.mul_mem_left (x₀ ^ 2) hyrel
+      exact hK _ hh
+    have hky3 : y₀ ^ 3 ∈ W := hK _ hyrel
+    have hkxy3 : x₀ * y₀ ^ 3 ∈ W := by
+      have hh := K.mul_mem_left x₀ hyrel
+      exact hK _ hh
+    have hBmul : ∀ i j, b i * MvPolynomial.X j ∈ W := by
+      intro i j
+      fin_cases i
+      · fin_cases j
+        · convert hB 1 using 1 <;> simp [b, x₀] <;> ring
+        · convert hB 3 using 1 <;> simp [b, y₀] <;> ring
+      · fin_cases j
+        · convert hB 2 using 1 <;> simp [b, x₀] <;> ring
+        · convert hB 4 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hkx3 using 1 <;> simp [b, x₀] <;> ring
+        · convert hB 5 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hB 4 using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hB 6 using 1 <;> simp [b, y₀] <;> ring
+      · fin_cases j
+        · convert hB 5 using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hB 7 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hkx3y using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hB 8 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hB 7 using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hky3 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hB 8 using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hkxy3 using 1 <;> simp [b, x₀, y₀] <;> ring
+      · fin_cases j
+        · convert hkx3y2 using 1 <;> simp [b, x₀, y₀] <;> ring
+        · convert hkx2y3 using 1 <;> simp [b, x₀, y₀] <;> ring
+    have hmul : ∀ {p : R} (j : Fin 2), p ∈ W →
+        p * MvPolynomial.X j ∈ W := by
+      intro p j hp
+      rcases Submodule.mem_sup.mp hp with ⟨u, hu, v, hv, rfl⟩
+      have hu' : u * MvPolynomial.X j ∈ W := by
+        refine Submodule.span_induction (p := fun z _ => z * MvPolynomial.X j ∈ W)
+          ?_ ?_ ?_ ?_ hu
+        · intro z hz
+          rcases hz with ⟨i, rfl⟩
+          exact hBmul i j
+        · simp [W]
+        · intro z z' hz hz' hzz hzz'
+          simpa [add_mul] using W.add_mem hzz hzz'
+        · intro a z hz hzz
+          simpa [smul_eq_mul, mul_assoc] using W.smul_mem a hzz
+      have hv' : v * MvPolynomial.X j ∈ W := by
+        have hvK : v ∈ K := hv
+        have hmulK : v * MvPolynomial.X j ∈ K := by
+          have hh := Ideal.mul_mem_left K (MvPolynomial.X j) hvK
+          convert hh using 1 <;> ring
+        exact hK _ hmulK
+      simpa [add_mul] using W.add_mem hu' hv'
+    have hWmem : ∀ p : R, p ∈ W := by
+      intro p
+      induction p using MvPolynomial.induction_on with
+      | C a =>
+          have h := W.smul_mem a (hB 0)
+          have hac : (MvPolynomial.C a : R) = algebraMap k R a :=
+            (congrArg (fun f : k →+* R => f a)
+              (MvPolynomial.algebraMap_eq k (Fin 2))).symm
+          rw [hac]
+          simpa [b, Algebra.smul_def] using h
+      | add p q hp hq => exact W.add_mem hp hq
+      | mul_X p j hp => exact hmul j hp
+    have hW : W = ⊤ := by
+      apply top_unique
+      intro p _
+      exact hWmem p
+    intro p
+    have hp : p ∈ W := by rw [hW]; trivial
+    rcases Submodule.mem_sup.mp hp with ⟨u, hu, v, hv, rfl⟩
+    rcases (Submodule.mem_span_range_iff_exists_fun k).mp hu with ⟨c, hc⟩
+    refine ⟨c, ?_⟩
+    have hv' : v ∈ K := hv
+    rw [hc]
+    convert hv' using 1 <;> ring
+  let Q₀ := R ⧸ K
+  let r₀ : R →+* Q₀ := Ideal.Quotient.mk K
+  have hzero : ∀ c : Fin 9 → k,
+      (∑ i, c i • b i) ∈ K → ∀ i, c i = 0 := by
+    intro c hc i
+    rcases (Ideal.mem_span_pair.mp hc) with ⟨p, q, hpq⟩
+    let e : Fin 9 → Fin 2 →₀ ℕ :=
+      ![0, Finsupp.single 0 1, Finsupp.single 0 2, Finsupp.single 1 1,
+        Finsupp.single 0 1 + Finsupp.single 1 1,
+        Finsupp.single 0 2 + Finsupp.single 1 1, Finsupp.single 1 2,
+        Finsupp.single 0 1 + Finsupp.single 1 2,
+        Finsupp.single 0 2 + Finsupp.single 1 2]
+    have hAlg : algebraMap k R = MvPolynomial.C :=
+      MvPolynomial.algebraMap_eq k (Fin 2)
+    have hCmul (m : Fin 2 →₀ ℕ) (a : k) (p : R) :
+        MvPolynomial.coeff m (MvPolynomial.C a * p) =
+          a * MvPolynomial.coeff m p :=
+      MvPolynomial.coeff_C_mul m a p
+    have hmon (m n : Fin 2 →₀ ℕ) (a : k) :
+        MvPolynomial.coeff m (MvPolynomial.monomial n a) =
+          if n = m then a else 0 :=
+      MvPolynomial.coeff_monomial m n a
+    have hX (j : Fin 2) :
+        (MvPolynomial.X j : R) = MvPolynomial.monomial (Finsupp.single j 1) 1 := by
+      rw [← MvPolynomial.X_pow_eq_monomial]
+      simp
+    have hxmon : x₀ = MvPolynomial.monomial (Finsupp.single 0 1) 1 := by
+      simpa [x₀] using hX 0
+    have hymon : y₀ = MvPolynomial.monomial (Finsupp.single 1 1) 1 := by
+      simpa [y₀] using hX 1
+    have hpow0 : x₀ ^ 2 = MvPolynomial.monomial (Finsupp.single 0 2) 1 := by
+      rw [hxmon, MvPolynomial.monomial_pow]
+      have hsum : (2 : ℕ) • Finsupp.single (0 : Fin 2) 1 =
+          Finsupp.single 0 2 := by
+        ext j
+        fin_cases j <;> simp
+      rw [hsum]
+      simp
+    have hpow1 : y₀ ^ 2 = MvPolynomial.monomial (Finsupp.single 1 2) 1 := by
+      rw [hymon, MvPolynomial.monomial_pow]
+      have hsum : (2 : ℕ) • Finsupp.single (1 : Fin 2) 1 =
+          Finsupp.single 1 2 := by
+        ext j
+        fin_cases j <;> simp
+      rw [hsum]
+      simp
+    have hmul01 : x₀ * y₀ =
+        MvPolynomial.monomial (Finsupp.single 0 1 + Finsupp.single 1 1) 1 := by
+      rw [hxmon, hymon, MvPolynomial.monomial_mul]
+      simp
+    have hmul21 : x₀ ^ 2 * y₀ =
+        MvPolynomial.monomial (Finsupp.single 0 2 + Finsupp.single 1 1) 1 := by
+      rw [hpow0, hymon, MvPolynomial.monomial_mul]
+      simp
+    have hmul12 : x₀ * y₀ ^ 2 =
+        MvPolynomial.monomial (Finsupp.single 0 1 + Finsupp.single 1 2) 1 := by
+      rw [hxmon, hpow1, MvPolynomial.monomial_mul]
+      simp
+    have hmul22 : x₀ ^ 2 * y₀ ^ 2 =
+        MvPolynomial.monomial (Finsupp.single 0 2 + Finsupp.single 1 2) 1 := by
+      rw [hpow0, hpow1, MvPolynomial.monomial_mul]
+      simp
+    have hbmon : ∀ j : Fin 9, b j = MvPolynomial.monomial (e j) 1 := by
+      intro j
+      fin_cases j
+      · simp [b, e]
+      · simpa [b, e] using hxmon
+      · simpa [b, e] using hpow0
+      · simpa [b, e] using hymon
+      · simpa [b, e] using hmul01
+      · simpa [b, e] using hmul21
+      · simpa [b, e] using hpow1
+      · simpa [b, e] using hmul12
+      · simpa [b, e] using hmul22
+    have hR : ∀ j : Fin 9,
+        MvPolynomial.coeff (e j) (∑ i, c i • b i) = c j := by
+      intro j
+      have hsum (m : Fin 2 →₀ ℕ) :
+          MvPolynomial.coeff m (∑ i, c i • b i) =
+            ∑ i, c i * MvPolynomial.coeff m (b i) := by
+        simp only [Algebra.smul_def, hAlg]
+        let L : R →+ k :=
+          { toFun := MvPolynomial.coeff m
+            map_zero' := MvPolynomial.coeff_zero m
+            map_add' := by
+              intro z w
+              exact MvPolynomial.coeff_add m z w }
+        change L (∑ i, MvPolynomial.C (c i) * b i) = _
+        rw [map_sum]
+        change (∑ i, MvPolynomial.coeff m (MvPolynomial.C (c i) * b i)) = _
+        simp_rw [hCmul]
+      rw [hsum]
+      simp_rw [hbmon, hmon]
+      fin_cases j <;>
+        simp [e, Fin.sum_univ_succ, Finsupp.ext_iff]
+    have hR0 : MvPolynomial.coeff (0 : Fin 2 →₀ ℕ) (∑ i, c i • b i) = c 0 := by
+      simpa [e] using hR 0
+    have hR1 : MvPolynomial.coeff (Finsupp.single 0 1) (∑ i, c i • b i) = c 1 := by
+      simpa [e] using hR 1
+    have hR2 : MvPolynomial.coeff (Finsupp.single 0 2) (∑ i, c i • b i) = c 2 := by
+      simpa [e] using hR 2
+    have hR3 : MvPolynomial.coeff (Finsupp.single 1 1) (∑ i, c i • b i) = c 3 := by
+      simpa [e] using hR 3
+    have hR4 : MvPolynomial.coeff (Finsupp.single 0 1 + Finsupp.single 1 1)
+        (∑ i, c i • b i) = c 4 := by
+      simpa [e] using hR 4
+    have hR5 : MvPolynomial.coeff (Finsupp.single 0 2 + Finsupp.single 1 1)
+        (∑ i, c i • b i) = c 5 := by
+      simpa [e] using hR 5
+    have hR6 : MvPolynomial.coeff (Finsupp.single 1 2) (∑ i, c i • b i) = c 6 := by
+      simpa [e] using hR 6
+    have hR7 : MvPolynomial.coeff (Finsupp.single 0 1 + Finsupp.single 1 2)
+        (∑ i, c i • b i) = c 7 := by
+      simpa [e] using hR 7
+    have hR8 : MvPolynomial.coeff (Finsupp.single 0 2 + Finsupp.single 1 2)
+        (∑ i, c i • b i) = c 8 := by
+      simpa [e] using hR 8
+    fin_cases i
+    · have h := congrArg (MvPolynomial.coeff (0 : Fin 2 →₀ ℕ)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      repeat rw [MvPolynomial.coeff_add] at h
+      rw [hR0] at h
+      simp_rw [MvPolynomial.X_pow_eq_monomial] at h
+      simp [MvPolynomial.coeff_mul_monomial'] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa using h
+    · have h := congrArg (MvPolynomial.coeff (Finsupp.single 0 1)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR1] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff (Finsupp.single 0 2)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR2] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff (Finsupp.single 1 1)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR3] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff
+          (Finsupp.single 0 1 + Finsupp.single 1 1)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR4] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff
+          (Finsupp.single 0 2 + Finsupp.single 1 1)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR5] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff (Finsupp.single 1 2)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR6] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (MvPolynomial.coeff
+          (Finsupp.single 0 1 + Finsupp.single 1 2)) hpq
+      rw [MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      rw [hR7] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] using h
+    · have h := congrArg (fun z : R =>
+          MvPolynomial.coeff (Finsupp.single 0 2 + Finsupp.single 1 2) z -
+            MvPolynomial.coeff (Finsupp.single 0 3) z) hpq
+      rw [MvPolynomial.coeff_add, MvPolynomial.coeff_add] at h
+      rw [mul_add] at h
+      simp_rw [MvPolynomial.coeff_add] at h
+      simp [b, x₀, y₀, MvPolynomial.coeff_add, MvPolynomial.coeff_mul_monomial',
+        MvPolynomial.X_pow_eq_monomial, Fin.sum_univ_succ] at h
+      simpa using h
   sorry
 
 /-- The local intersection quotient has length nine. -/

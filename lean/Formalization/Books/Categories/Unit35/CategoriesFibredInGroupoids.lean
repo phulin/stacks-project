@@ -2149,9 +2149,176 @@ theorem fibredInGroupoids_of_isEquivalenceOverFunctor
     (over : G ⋙ p' = p)
     (hG : IsEquivalenceOverFunctor p p' G)
     (hp' : p'.IsFibredInGroupoids) :
-    p.IsFibredInGroupoids ∧
+      p.IsFibredInGroupoids ∧
       ∀ U : C, (fibreFunctor p p' G over U).IsEquivalence := by
-  sorry
+  classical
+  have hGeq : G.IsEquivalence :=
+    isEquivalence_of_isEquivalenceOverFunctor p p' G hG
+  let _ : G.IsEquivalence := hGeq
+  let _ : G.Full := hGeq.full
+  let _ : G.Faithful := hGeq.faithful
+  rcases hG with ⟨K, hGK, hKp, ⟨unit, unitOver, hunit⟩,
+    ⟨counit, counitOver, hcounit⟩⟩
+  have hp : p.IsFibredInGroupoids := by
+    constructor
+    · intro V U f x hx
+      have hx' : p'.obj (G.obj x) = U := by
+        exact (congrArg (fun H : S ⥤ C => H.obj x) over).trans hx
+      obtain ⟨y, φ, hφ⟩ := hp'.exists_lift f hx'
+      let _ : p'.IsHomLift f φ := hφ
+      let hy : p.obj (K.obj y) = V :=
+        (congrArg (fun H : S' ⥤ C => H.obj y) hKp).trans
+          (CategoryTheory.IsHomLift.domain_eq p' f φ)
+      let χ : K.obj y ⟶ x := K.map φ ≫ unit.hom.app x
+      refine ⟨K.obj y, χ, ?_⟩
+      apply CategoryTheory.IsHomLift.of_fac' p f χ hy hx
+      have hKφ := Functor.congr_hom hKp φ
+      have hunit := hunit x
+      have hφ' := CategoryTheory.IsHomLift.fac' p' f φ
+      have hχbase : p.map χ =
+          eqToHom hy ≫ f ≫ eqToHom hx.symm := by
+        dsimp [χ]
+        rw [Functor.map_comp, hunit]
+        have hKφ' : p.map (K.map φ) =
+            eqToHom (congrArg (fun H : S' ⥤ C => H.obj y) hKp) ≫
+              p'.map φ ≫
+                eqToHom (congrArg (fun H : S' ⥤ C => H.obj (G.obj x)) hKp).symm := by
+          simpa only [Functor.comp_map] using hKφ
+        rw [hKφ']
+        rw [hφ']
+        simp [hy, hx', Category.assoc, eqToHom_trans]
+      exact hχbase
+    · intro x y z φ ψ f hcomp
+      let hx : p'.obj (G.obj x) = p.obj x :=
+        congrArg (fun H : S ⥤ C => H.obj x) over
+      let hy : p'.obj (G.obj y) = p.obj y :=
+        congrArg (fun H : S ⥤ C => H.obj y) over
+      let hz : p'.obj (G.obj z) = p.obj z :=
+        congrArg (fun H : S ⥤ C => H.obj z) over
+      let f' : p'.obj (G.obj z) ⟶ p'.obj (G.obj y) :=
+        eqToHom hz ≫ f ≫ eqToHom hy.symm
+      have hbase : f' ≫ p'.map (G.map φ) = p'.map (G.map ψ) := by
+        have hφ' := Functor.congr_hom over φ
+        have hψ' := Functor.congr_hom over ψ
+        have hφmap : p'.map (G.map φ) =
+            eqToHom hy ≫ p.map φ ≫ eqToHom hx.symm := by
+          simpa only [Functor.comp_map] using hφ'
+        have hψmap : p'.map (G.map ψ) =
+            eqToHom hz ≫ p.map ψ ≫ eqToHom hx.symm := by
+          simpa only [Functor.comp_map] using hψ'
+        rw [hφmap, hψmap]
+        change (eqToHom hz ≫ f ≫ eqToHom hy.symm) ≫
+            (eqToHom hy ≫ p.map φ ≫ eqToHom hx.symm) =
+          eqToHom hz ≫ p.map ψ ≫ eqToHom hx.symm
+        simp [hcomp, Category.assoc]
+        rw [← Category.assoc f (p.map φ) (eqToHom hx.symm)]
+        rw [hcomp]
+      obtain ⟨χ', hχ', hχunique⟩ := hp'.unique_lift (G.map φ) (G.map ψ) hbase
+      obtain ⟨χ, hχmap⟩ := hGeq.full.map_surjective χ'
+      refine ⟨χ, ?_, ?_⟩
+      · refine ⟨?_, ?_⟩
+        · have hχmapbase : p.map χ = f := by
+            have hχlift : p'.IsHomLift f' (G.map χ) := by
+              rw [hχmap]
+              exact hχ'.1
+            let _ : p'.IsHomLift f' (G.map χ) := hχlift
+            have hχ'base := CategoryTheory.IsHomLift.eq_of_isHomLift
+              p' f' (G.map χ)
+            have hχover := Functor.congr_hom over χ
+            have hχover' : p'.map (G.map χ) =
+                eqToHom hz ≫ p.map χ ≫ eqToHom hy.symm := by
+              simpa only [Functor.comp_map] using hχover
+            have hEq : eqToHom hz ≫ f ≫ eqToHom hy.symm =
+                eqToHom hz ≫ p.map χ ≫ eqToHom hy.symm := by
+              calc
+                eqToHom hz ≫ f ≫ eqToHom hy.symm = f' := by rfl
+                _ = p'.map (G.map χ) := hχ'base
+                _ = eqToHom hz ≫ p.map χ ≫ eqToHom hy.symm := hχover'
+            apply (cancel_epi (eqToHom hz)).1
+            apply (cancel_mono (eqToHom hy.symm)).1
+            simpa only [Category.assoc] using hEq.symm
+          exact CategoryTheory.IsHomLift.of_fac' p f χ rfl rfl (by
+          simpa using hχmapbase)
+        · apply hGeq.faithful.map_injective
+          rw [Functor.map_comp, hχmap]
+          exact hχ'.2
+      · intro χ₀ hχ₀
+        have hχ₀map : G.map χ₀ = χ' := by
+          let _ : p.IsHomLift f χ₀ := hχ₀.1
+          have hχ₀base : p'.map (G.map χ₀) = f' := by
+            have hχ₀p := CategoryTheory.IsHomLift.eq_of_isHomLift p f χ₀
+            have hχ₀over := Functor.congr_hom over χ₀
+            have hχ₀over' : p'.map (G.map χ₀) =
+                eqToHom hz ≫ p.map χ₀ ≫ eqToHom hy.symm := by
+              simpa only [Functor.comp_map] using hχ₀over
+            dsimp [f']
+            rw [hχ₀over', hχ₀p]
+          have hχ₀lift : p'.IsHomLift f' (G.map χ₀) := by
+            apply CategoryTheory.IsHomLift.of_fac' p' f' (G.map χ₀) rfl rfl
+            simpa using hχ₀base
+          have hχ₀comp : G.map χ₀ ≫ G.map φ = G.map ψ := by
+            simpa only [Functor.map_comp] using congrArg G.map hχ₀.2
+          exact hχunique (G.map χ₀) ⟨hχ₀lift, hχ₀comp⟩
+        apply hGeq.faithful.map_injective
+        exact hχ₀map.trans hχmap.symm
+  refine ⟨hp, ?_⟩
+  let _ : p.IsFibredInGroupoids := hp
+  intro U
+  have hp'group : IsGroupoid (Functor.Fiber p' U) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres p').mp hp' |>.1 U
+  have hGff : Nonempty G.FullyFaithful :=
+    ⟨Functor.FullyFaithful.ofFullyFaithful G⟩
+  let hFiberFF : (fibreFunctor p p' G over U).FullyFaithful :=
+    Classical.choice
+      ((fibredInGroupoids_fullyFaithful_iff_fibrewise
+        p p' G over hp hp').mp hGff U)
+  let _ : (fibreFunctor p p' G over U).FullyFaithful := hFiberFF
+  let _ : (fibreFunctor p p' G over U).Full := hFiberFF.full
+  let _ : (fibreFunctor p p' G over U).Faithful := hFiberFF.faithful
+  have hFiberEss : (fibreFunctor p p' G over U).EssSurj := by
+    constructor
+    intro y
+    obtain ⟨x, ⟨e⟩⟩ := Functor.EssSurj.mem_essImage G y.1
+    let hx : p'.obj (G.obj x) = p.obj x :=
+      congrArg (fun K : S ⥤ C => K.obj x) over
+    let f : U ⟶ p.obj x :=
+      eqToHom y.2.symm ≫ p'.map e.inv ≫ eqToHom hx
+    let _ : IsIso f := by
+      dsimp [f]
+      infer_instance
+    obtain ⟨x', φ, hφ⟩ := hp.exists_lift f rfl
+    let _ : p.IsHomLift f φ := hφ
+    have hdom : p.obj x' = U :=
+      CategoryTheory.IsHomLift.domain_eq p f φ
+    have hφmap : p.map φ = eqToHom hdom ≫ f := by
+      simpa using CategoryTheory.IsHomLift.fac' p f φ
+    let _ : IsIso (p.map φ) := by
+      rw [hφmap]
+      infer_instance
+    let _ : p.IsStronglyCartesian (p.map φ) φ :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian p hp φ
+    let _ : IsIso φ :=
+      Functor.IsStronglyCartesian.isIso_of_base_isIso p (p.map φ) φ
+    let hx' : p'.obj (G.obj x') = p.obj x' :=
+      congrArg (fun K : S ⥤ C => K.obj x') over
+    let hxU : p'.obj (G.obj x') = U := hx'.trans hdom
+    let xU : Functor.Fiber p U := ⟨x', hdom⟩
+    let k : (fibreFunctor p p' G over U).obj xU ⟶ y := by
+      refine ⟨G.map φ ≫ e.hom, ?_⟩
+      apply CategoryTheory.IsHomLift.of_fac' p' (𝟙 U)
+        (G.map φ ≫ e.hom) hxU y.2
+      have hGφ : p'.map (G.map φ) =
+          eqToHom hx' ≫ p.map φ ≫ eqToHom hx.symm :=
+        Functor.congr_hom over φ
+      rw [Functor.map_comp, hGφ, hφmap]
+      dsimp [f, hxU]
+      simp [Category.assoc]
+    let _ : IsIso k := hp'group.all_isIso k
+    exact ⟨xU, ⟨asIso k⟩⟩
+  exact {
+    faithful := hFiberFF.faithful
+    full := hFiberFF.full
+    essSurj := hFiberEss }
 
 /-! ## The amelioration factorization -/
 

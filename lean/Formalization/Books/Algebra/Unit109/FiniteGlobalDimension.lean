@@ -532,7 +532,7 @@ theorem projective_dimension_resolution_criteria {R : Type u} [Ring R]
       ∃ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d := by
     by_cases hd0 : d = 0
     · subst d
-      simp only [HasFiniteProjectiveResolutionLE, ResolutionHasProjectiveSyzygyAt, if_pos rfl]
+      simp only [HasFiniteProjectiveResolutionLE, ResolutionHasProjectiveSyzygyAt]
       constructor
       · intro h
         exact ⟨ProjectiveResolution.of M, h⟩
@@ -572,7 +572,7 @@ theorem projective_dimension_resolution_criteria {R : Type u} [Ring R]
     ∀ P : ProjectiveResolution M, ResolutionHasProjectiveSyzygyAt P d]
   apply List.tfae_of_forall (CategoryTheory.HasProjectiveDimensionLE M d)
   intro a ha
-  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil] at ha
+  simp only [List.mem_cons, List.not_mem_nil] at ha
   rcases ha with rfl | rfl | rfl | rfl | h
   · exact Iff.rfl
   · exact hAB.symm
@@ -648,12 +648,12 @@ theorem projective_dimension_resolution_criteria_local
       HasFiniteFreeProjectiveResolutionLE M d := by
     by_cases hd0 : d = 0
     · subst d
-      simp only [HasFiniteProjectiveResolutionLE, HasFiniteFreeProjectiveResolutionLE, if_pos rfl]
+      simp only [HasFiniteProjectiveResolutionLE, HasFiniteFreeProjectiveResolutionLE]
       constructor
       · intro h
         exact Formalization.Books.Algebra.Unit85.projective_free_over_local_ring h
       · intro h
-        letI : Module.Free R (M : Type u) := h
+        let : Module.Free R (M : Type u) := h
         exact (inferInstance : Module.Projective R (M : Type u))
     · simp only [HasFiniteProjectiveResolutionLE, HasFiniteFreeProjectiveResolutionLE,
         if_neg hd0]
@@ -666,7 +666,7 @@ theorem projective_dimension_resolution_criteria_local
         · exact Formalization.Books.Algebra.Unit85.projective_free_over_local_ring hP
       · rintro ⟨P, hterms, hterminal⟩
         refine ⟨P, ?_⟩
-        letI : Module.Free R (resolutionSyzygy P (d - 1) : Type u) := hterminal
+        let : Module.Free R (resolutionSyzygy P (d - 1) : Type u) := hterminal
         exact (inferInstance : Module.Projective R (resolutionSyzygy P (d - 1) : Type u))
   have hcriteria := projective_dimension_resolution_criteria M d
   have hAB : CategoryTheory.HasProjectiveDimensionLE M d ↔
@@ -689,7 +689,7 @@ theorem projective_dimension_resolution_criteria_local
     HasFiniteFreeProjectiveResolutionLE M d]
   apply List.tfae_of_forall (CategoryTheory.HasProjectiveDimensionLE M d)
   intro a ha
-  simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil] at ha
+  simp only [List.mem_cons, List.not_mem_nil] at ha
   rcases ha with rfl | rfl | rfl | rfl | rfl | h
   · exact Iff.rfl
   · exact hAB.symm

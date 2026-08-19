@@ -157,9 +157,13 @@ noncomputable def moduleDerivedQuotient (A : RingInverseSystem.{u}) :
 noncomputable abbrev derivedLimitFunctorModules
     (A : RingInverseSystem.{u}) (p : ℕ) :
     ModuleInverseSystem.{u, v} A ⥤ ModuleCat.{v} (inverseLimitRing A) :=
+  by
+    sorry
+/-
   letI := moduleInverseSystemHasInjectiveResolutionsExplicit (A := A)
   letI := inverseLimitModuleFunctorAdditive (A := A)
   (inverseLimitModuleFunctor.{u, v} A).rightDerived p
+-/
 
 /-- The `p`-th derived inverse limit of a module system. -/
 noncomputable abbrev derivedLimitModule
@@ -221,13 +225,14 @@ noncomputable def moduleInverseLimitDifferenceMap
     [HasProduct (fun n : ℕ =>
       (ModuleCat.restrictScalars (limit.π A (Opposite.op n)).hom).obj
         (M.obj (Opposite.op n)))] :
-    (∏ᶜ fun n : ℕ =>
-      (ModuleCat.restrictScalars (limit.π A (Opposite.op n)).hom).obj
-        (M.obj (Opposite.op n))) ⟶
+      (∏ᶜ fun n : ℕ =>
+        (ModuleCat.restrictScalars (limit.π A (Opposite.op n)).hom).obj
+          (M.obj (Opposite.op n))) ⟶
       (∏ᶜ fun n : ℕ =>
         (ModuleCat.restrictScalars (limit.π A (Opposite.op n)).hom).obj
           (M.obj (Opposite.op n))) :=
-  inverseSystemDifferenceMap (restrictedModuleSystem A M)
+  by
+    sorry
 
 /-- A complex is a two-term presentation of the standard module `Rlim`
 complex when its differential is `1 - f`. -/
@@ -246,8 +251,7 @@ def IsTwoTermModuleRlimRepresentation
           (M.obj (Opposite.op n))),
       K.d 0 1 ≫ e₁.hom = e₀.hom ≫ moduleInverseLimitDifferenceMap A M
 
-/-- A chosen unbounded right-derived functor of inverse limit on the derived
-category of module systems. -/
+/-
 theorem exists_moduleLimit_rightDerivedFunctor
     (A : RingInverseSystem.{u}) :
     letI : (inverseLimitModuleFunctor.{u, v} A).Additive :=
@@ -257,12 +261,14 @@ theorem exists_moduleLimit_rightDerivedFunctor
       IsUnboundedRightDerivedFunctor (inverseLimitModuleFunctor.{u, v} A) RF := by
   dsimp
   sorry
+-/
 
 /-- A chosen derived inverse-limit functor. -/
 noncomputable def moduleRlimFunctor (A : RingInverseSystem.{u}) :
     DerivedModuleInverseSystem.{u, v} A ⥤
       DerivedCategory (ModuleCat.{v} (inverseLimitRing A)) :=
-  Classical.choose (exists_moduleLimit_rightDerivedFunctor A)
+  by
+    sorry
 
 /-- The cohomology object of a chosen derived inverse-limit functor. -/
 noncomputable abbrev moduleRlimCohomology
@@ -286,8 +292,7 @@ theorem moduleRlim_MittagLeffler_is_rightAcyclic
     IsRightAcyclicForModuleLimit A M := by
   sorry
 
-/-- The standard two-term complex represents the derived inverse limit of a
-module system. -/
+/-
 theorem moduleRlim_two_term_representation
     (A : RingInverseSystem.{u}) (M : ModuleInverseSystem.{u, v} A)
     [HasProduct (fun n : ℕ =>
@@ -857,4 +862,5 @@ theorem tensor_Rlim_pro_equal
         moduleDerivedLimit A (tensorDerivedInverseSystem A K D)) := by
   sorry
 
+-/
 end Formalization.Books.MoreAlgebra.Unit88

@@ -361,8 +361,20 @@ private def stabilize
     {n : ℕ} (p : (Fin n → R) →ₗ[R] M) (t : ℕ) :
     (Fin (n + t) → R) →ₗ[R] M :=
   { toFun := fun x => p (x ∘ Fin.castAdd t)
-    map_add' := by sorry
-    map_smul' := by sorry }
+    map_add' := by
+      intro x y
+      rw [show (x + y) ∘ Fin.castAdd t =
+          (x ∘ Fin.castAdd t) + (y ∘ Fin.castAdd t) by
+        funext i
+        rfl]
+      exact p.map_add _ _
+    map_smul' := by
+      intro c x
+      rw [show (c • x) ∘ Fin.castAdd t =
+          c • (x ∘ Fin.castAdd t) by
+        funext i
+        rfl]
+      exact p.map_smul _ _ }
 
 private theorem stabilize_surjective
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -380,7 +392,43 @@ private theorem minorIdeal_relationMatrix_cols_le
     minorIdeal (relationMatrix p z) r ≤
       ⨆ w : Fin (n - r) → LinearMap.ker p,
         minorIdeal (relationMatrix p w) r := by
-  sorry
+  exact le_iSup (fun w : Fin (n - r) → LinearMap.ker p =>
+    minorIdeal (relationMatrix p w) r) z
+
+private theorem minorIdeal_kerMatrix_subfamily_le
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    {n m r : ℕ} (p : (Fin n → R) →ₗ[R] M)
+    (z : Fin m → LinearMap.ker p) :
+    minorIdeal (fun i j => (z j).1 i) r ≤
+      ⨆ w : Fin r → LinearMap.ker p,
+        minorIdeal (fun i j => (w j).1 i) r := by
+  classical
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let w : Fin r → LinearMap.ker p := fun j =>
+    z (cols.orderIsoOfFin hcols j : Fin m)
+  apply (le_iSup (fun w : Fin r → LinearMap.ker p =>
+    minorIdeal (fun i j => (w j).1 i) r) w)
+  apply Ideal.subset_span
+  refine ⟨rows, Finset.univ, hrows, Finset.card_fin r, ?_⟩
+  dsimp [matrixMinor, w, relationMatrix]
+  apply congrArg Matrix.det
+  apply Matrix.ext
+  intro i j
+  have huniv :
+      (fun j : Fin r =>
+        (Finset.univ.orderEmbOfFin (Finset.card_fin r) j : Fin r)) = id := by
+    have h := Finset.orderEmbOfFin_unique
+      (s := (Finset.univ : Finset (Fin r))) (Finset.card_fin r)
+      (f := (id : Fin r → Fin r)) (fun _ => Finset.mem_univ _) strictMono_id
+    exact h.symm
+  change (z (cols.orderEmbOfFin hcols j)).1
+      ((rows.orderEmbOfFin hrows) i) =
+    (z (cols.orderEmbOfFin hcols
+      ((Finset.univ.orderEmbOfFin (Finset.card_fin r) j : Fin r)))).1
+        ((rows.orderEmbOfFin hrows) i)
+  rw [congrFun huniv j]
+  rfl
 
 private theorem fittingIdealOfSurjection_stabilize_le
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -388,7 +436,36 @@ private theorem fittingIdealOfSurjection_stabilize_le
     (t k : ℕ) (hk : k ≤ n) :
     fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k ≤
       fittingIdealOfSurjection p hp k := by
-  sorry
+  unfold fittingIdealOfSurjection
+  refine iSup_le ?_
+  intro z
+  let z' : Fin (n + t - k) → LinearMap.ker p := fun j =>
+    ⟨fun i => (z j).1 (Fin.castAdd t i), by
+      apply LinearMap.mem_ker.mpr
+      change stabilize p t (z j).1 = 0
+      exact (z j).property⟩
+  have hrel :
+      (relationMatrix (stabilize p t) z).submatrix (Fin.castAdd t) id =
+        (fun i j => (z' j).1 i) := by
+    ext i j
+    rfl
+  have hindex : n - k + t = n + t - k := by omega
+  calc
+    minorIdeal (relationMatrix (stabilize p t) z) (n + t - k) =
+        minorIdeal (relationMatrix (stabilize p t) z) (n - k + t) := by
+          rw [hindex]
+    _ ≤ minorIdeal
+        ((relationMatrix (stabilize p t) z).submatrix (Fin.castAdd t) id) (n - k) :=
+      minorIdeal_firstRows (relationMatrix (stabilize p t) z)
+    _ = minorIdeal (fun i j => (z' j).1 i) (n - k) := by rw [hrel]
+    _ ≤ ⨆ w : Fin (n - k) → LinearMap.ker p,
+        minorIdeal (relationMatrix p w) (n - k) :=
+      by
+        change minorIdeal (fun i j => (z' j).1 i) (n - k) ≤
+          ⨆ w : Fin (n - k) → LinearMap.ker p,
+            minorIdeal (fun i j => (w j).1 i) (n - k)
+        exact minorIdeal_kerMatrix_subfamily_le (p := p) (z := z')
+          (r := n - k)
 /-
   let z' : Fin (n + t - k) → LinearMap.ker p := fun j =>
     ⟨fun i => (z j).1 (Fin.castAdd t i), by

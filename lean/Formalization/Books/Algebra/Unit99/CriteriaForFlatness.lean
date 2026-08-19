@@ -67,7 +67,7 @@ theorem grothendieck
     (hf : IsSMulRegular
       (S ⧸ ((IsLocalRing.maximalIdeal R).map (algebraMap R S) : Submodule S S)) f) :
     Module.Flat R
-        (S ⧸ ((IsLocalRing.maximalIdeal R).map (algebraMap R S) : Submodule S S)) ∧
+        (S ⧸ (Ideal.span ({f} : Set S) : Submodule S S)) ∧
       IsSMulRegular S f := by
   sorry
 

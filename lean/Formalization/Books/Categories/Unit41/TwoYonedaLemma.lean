@@ -926,7 +926,19 @@ theorem twoYoneda_groupoid_equivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     (twoYonedaEvaluationCore p U).IsEquivalence := by
-  sorry
+  let hAll : ∀ G : twoYonedaGroupoidMorphismCategory p U,
+      (twoYonedaPreservesCartesian p U) G := by
+    intro G
+    exact twoYonedaGroupoidMorphism_preservesCartesian p U G
+  let I := (twoYonedaPreservesCartesian p U).ι
+  letI : I.EssSurj := by
+    constructor
+    intro G
+    exact ⟨⟨G, hAll G⟩, ⟨Iso.refl G⟩⟩
+  letI : I.IsEquivalence := {}
+  letI : (I ⋙ twoYonedaEvaluationCore p U).IsEquivalence :=
+    twoYoneda_fibred_equivalence p U
+  exact Functor.isEquivalence_of_comp_left I (twoYonedaEvaluationCore p U)
 
 /-! ## The alternative presheaf construction -/
 
@@ -1028,7 +1040,91 @@ theorem twoYonedaHomPresheaf_map_id
     (p : S ⥤ C) (U : C) :
     (twoYonedaGroupoidRestriction p (𝟙 U)).toCatHom =
       𝟙 (Cat.of (twoYonedaGroupoidMorphismCategory p U)) := by
-  sorry
+  apply Cat.Hom.ext
+  let hobj : ∀ G : twoYonedaGroupoidMorphismCategory p U,
+      (twoYonedaGroupoidRestriction p (𝟙 U)).obj G = G := by
+    intro G
+    apply Subtype.ext
+    let hobj' : ∀ X : Over U,
+        G.1.obj ((Over.map (𝟙 U)).obj X) = G.1.obj X := by
+      intro X
+      exact congrArg (fun F => G.1.obj (F.obj X)) (Over.mapId_eq U)
+    exact CategoryTheory.Functor.ext hobj' (by
+      intro X Y f
+      change G.1.map ((Over.map (𝟙 U)).map f) = _
+      change G.1.map ((Over.map (𝟙 U)).map f) =
+        eqToHom _ ≫ G.1.map f ≫ eqToHom _
+      exact Functor.congr_hom
+        (congrArg (fun F => F ⋙ G.1) (Over.mapId_eq U)) f)
+  apply CategoryTheory.Functor.hext hobj
+  intro G H η
+  change
+    (twoYonedaGroupoidRestriction p (𝟙 U)).map η ≍
+      (𝟭 (twoYonedaGroupoidMorphismCategory p U)).map η
+  simp [twoYonedaGroupoidRestriction, twoYonedaGroupoidRestrictionMap,
+    twoYonedaGroupoidRestrictionObj]
+  rw [Subtype.heq_iff_coe_heq]
+  · change (Over.map (𝟙 U)).whiskerLeft η.1 ≍ η.1
+    have hleft :
+        Functor.whiskerLeft (𝟭 (Over U)) (η.1 : G.1 ⟶ H.1) = η.1 := by
+      rfl
+    simpa [hleft] using congr_arg_heq
+      (α := Over U ⥤ Over U)
+      (β := fun F => F ⋙ G.1 ⟶ F ⋙ H.1)
+      (fun F => Functor.whiskerLeft F (η.1 : G.1 ⟶ H.1))
+      (Over.mapId_eq U)
+  · exact congrArg₂
+      (fun A B : twoYonedaGroupoidMorphismCategory p U => A.1 ⟶ B.1)
+      (hobj G) (hobj H)
+  · have hG :
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget U) (Over.forget U)
+          ((twoYonedaGroupoidRestriction p (𝟙 U)).obj G).1
+          ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1
+          (𝟙 (Over.forget U))) ≍
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget U) (Over.forget U)
+          G.1
+          ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1
+          (𝟙 (Over.forget U))) := by
+      exact congr_arg_heq
+        (α := twoYonedaGroupoidMorphismCategory p U)
+        (β := fun K =>
+          (K.1 ⟶ ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1) → Prop)
+        (fun K =>
+          @Functor.IsHomLift _ _ _ _
+            (twoYonedaPostcompositionGeneral p)
+            (Over.forget U) (Over.forget U)
+            K.1
+            ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1
+            (𝟙 (Over.forget U)))
+        (hobj G)
+    have hH :
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget U) (Over.forget U)
+          G.1
+          ((twoYonedaGroupoidRestriction p (𝟙 U)).obj H).1
+          (𝟙 (Over.forget U))) ≍
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget U) (Over.forget U)
+          G.1 H.1
+          (𝟙 (Over.forget U))) := by
+      exact congr_arg_heq
+        (α := twoYonedaGroupoidMorphismCategory p U)
+        (β := fun K =>
+          (G.1 ⟶ K.1) → Prop)
+        (fun K =>
+          @Functor.IsHomLift _ _ _ _
+            (twoYonedaPostcompositionGeneral p)
+            (Over.forget U) (Over.forget U)
+            G.1 K.1
+            (𝟙 (Over.forget U)))
+        (hobj H)
+    exact hG.trans hH
 
 theorem twoYonedaHomPresheaf_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -1037,7 +1133,111 @@ theorem twoYonedaHomPresheaf_map_comp
     (twoYonedaGroupoidRestriction p (f ≫ g).unop).toCatHom =
       (twoYonedaGroupoidRestriction p f.unop).toCatHom ≫
         (twoYonedaGroupoidRestriction p g.unop).toCatHom := by
-  sorry
+  let hobj : ∀ G : twoYonedaGroupoidMorphismCategory p X.unop,
+      (twoYonedaGroupoidRestriction p (f ≫ g).unop).obj G =
+        (twoYonedaGroupoidRestriction p f.unop ⋙
+          twoYonedaGroupoidRestriction p g.unop).obj G := by
+    intro G
+    apply Subtype.ext
+    change Over.map (g.unop ≫ f.unop) ⋙ G.1 =
+      Over.map g.unop ⋙ Over.map f.unop ⋙ G.1
+    rw [Over.mapComp_eq]
+    simp [Functor.assoc]
+  apply Cat.Hom.ext
+  refine CategoryTheory.Functor.hext hobj ?_
+  intro G H η
+  change
+    (⟨(Over.map (g.unop ≫ f.unop)).whiskerLeft (η.1 : G.1 ⟶ H.1), _⟩ :
+        (twoYonedaGroupoidRestriction p (f ≫ g).unop).obj G ⟶
+          (twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H) ≍
+      (⟨(Over.map g.unop).whiskerLeft
+          ((Over.map f.unop).whiskerLeft (η.1 : G.1 ⟶ H.1)), _⟩ :
+        (twoYonedaGroupoidRestriction p f.unop ⋙
+          twoYonedaGroupoidRestriction p g.unop).obj G ⟶
+        (twoYonedaGroupoidRestriction p f.unop ⋙
+          twoYonedaGroupoidRestriction p g.unop).obj H)
+  rw [Subtype.heq_iff_coe_heq]
+  · change
+      (Over.map (g.unop ≫ f.unop)).whiskerLeft (η.1 : G.1 ⟶ H.1) ≍
+        (Over.map g.unop).whiskerLeft
+          ((Over.map f.unop).whiskerLeft (η.1 : G.1 ⟶ H.1))
+    have hwhisker :
+        ∀ {K L : Over (unop Z) ⥤ Over (unop X)},
+          K = L →
+          Functor.whiskerLeft K (η.1 : G.1 ⟶ H.1) ≍
+            Functor.whiskerLeft L (η.1 : G.1 ⟶ H.1) := by
+      intro K L h
+      cases h
+      rfl
+    have hassoc :
+        (Over.map g.unop ⋙ Over.map f.unop).whiskerLeft
+            (η.1 : G.1 ⟶ H.1) ≍
+          (Over.map g.unop).whiskerLeft
+            ((Over.map f.unop).whiskerLeft (η.1 : G.1 ⟶ H.1)) := by
+      apply heq_of_eq
+      rw [Functor.whiskerLeft_twice]
+      ext Q <;> simp
+    exact (hwhisker (Over.mapComp_eq g.unop f.unop)).trans hassoc
+  · exact congrArg₂
+      (fun A B : twoYonedaGroupoidMorphismCategory p Z.unop => A.1 ⟶ B.1)
+      (hobj G) (hobj H)
+  · have hG :
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget (unop Z)) (Over.forget (unop Z))
+          ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj G).1
+          ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H).1
+          (𝟙 (Over.forget (unop Z)))) ≍
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget (unop Z)) (Over.forget (unop Z))
+          ((twoYonedaGroupoidRestriction p f.unop ⋙
+            twoYonedaGroupoidRestriction p g.unop).obj G).1
+          ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H).1
+          (𝟙 (Over.forget (unop Z)))) := by
+      exact congr_arg_heq
+        (α := twoYonedaGroupoidMorphismCategory p Z.unop)
+        (β := fun K =>
+          (K.1 ⟶ ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H).1) → Prop)
+        (fun K =>
+          @Functor.IsHomLift _ _ _ _
+            (twoYonedaPostcompositionGeneral p)
+            (Over.forget (unop Z)) (Over.forget (unop Z))
+            K.1
+            ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H).1
+            (𝟙 (Over.forget (unop Z))))
+        (hobj G)
+    have hH :
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget (unop Z)) (Over.forget (unop Z))
+          ((twoYonedaGroupoidRestriction p f.unop ⋙
+            twoYonedaGroupoidRestriction p g.unop).obj G).1
+          ((twoYonedaGroupoidRestriction p (f ≫ g).unop).obj H).1
+          (𝟙 (Over.forget (unop Z)))) ≍
+        (@Functor.IsHomLift _ _ _ _
+          (twoYonedaPostcompositionGeneral p)
+          (Over.forget (unop Z)) (Over.forget (unop Z))
+          ((twoYonedaGroupoidRestriction p f.unop ⋙
+            twoYonedaGroupoidRestriction p g.unop).obj G).1
+          ((twoYonedaGroupoidRestriction p f.unop ⋙
+            twoYonedaGroupoidRestriction p g.unop).obj H).1
+          (𝟙 (Over.forget (unop Z)))) := by
+      exact congr_arg_heq
+        (α := twoYonedaGroupoidMorphismCategory p Z.unop)
+        (β := fun K =>
+          (((twoYonedaGroupoidRestriction p f.unop ⋙
+            twoYonedaGroupoidRestriction p g.unop).obj G).1 ⟶ K.1) → Prop)
+        (fun K =>
+          @Functor.IsHomLift _ _ _ _
+            (twoYonedaPostcompositionGeneral p)
+            (Over.forget (unop Z)) (Over.forget (unop Z))
+            ((twoYonedaGroupoidRestriction p f.unop ⋙
+              twoYonedaGroupoidRestriction p g.unop).obj G).1
+            K.1
+            (𝟙 (Over.forget (unop Z))))
+        (hobj H)
+    exact hG.trans hH
 
 /-- The contravariant functor of categories of slice morphisms appearing in
 the alternative proof. -/
@@ -1121,7 +1321,100 @@ theorem twoYonedaAssociatedFunctorMap_map_id
     (X : twoYonedaAssociatedCategory p) :
     twoYonedaAssociatedFunctorMap p (𝟙 X) =
       𝟙 (twoYonedaAssociatedFunctorObj p X) := by
-  sorry
+  let hF := twoYonedaHomPresheaf_map_id p X.base
+  let A : Over X.base :=
+    (Over.map (𝟙 X.base)).obj (Over.mk (𝟙 X.base))
+  let B : Over X.base := Over.mk (𝟙 X.base)
+  let k : A ⟶ B := Over.homMk (𝟙 X.base) (by simp [A, B])
+  have hA : A = B := by
+    dsimp [A, B]
+    exact congrArg (fun F => F.obj (Over.mk (𝟙 X.base)))
+      (Over.mapId_eq X.base)
+  have hk : k = eqToHom hA := by
+    dsimp [k]
+    ext
+    simp [A, B, hA]
+  let e :
+      (twoYonedaHomPresheaf p).map (𝟙 (op X.base)) =
+        𝟙 ((twoYonedaHomPresheaf p).obj (op X.base)) :=
+    (twoYonedaHomPresheaf p).map_id (op X.base)
+  have hmapId :
+      (splitFibredPseudofunctor (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
+          { as := op X.base } = eqToIso e := by
+    rw [CategoryTheory.Functor.toPseudofunctor'_mapId]
+  have e' :
+      (splitFibredPseudofunctor (groupoidPresheafToCat (twoYonedaHomPresheaf p))).map
+          (𝟙 { as := op X.base }) =
+        𝟙 ((splitFibredPseudofunctor (groupoidPresheafToCat (twoYonedaHomPresheaf p))).obj
+          { as := op X.base }) := by
+    change (groupoidPresheafToCat (twoYonedaHomPresheaf p)).map
+          (𝟙 (op X.base)) = _
+    exact (groupoidPresheafToCat (twoYonedaHomPresheaf p)).map_id _
+  dsimp [twoYonedaAssociatedFunctorMap, twoYonedaAssociatedFunctorObj,
+    twoYonedaEvaluationCore, twoYonedaEvaluationCoreMap]
+  let X0 := twoYonedaEvaluationCoreObj p X.base X.fiber
+  let X1 := twoYonedaEvaluationCoreObj p X.base
+    ((twoYonedaGroupoidRestriction p (𝟙 X.base)).obj X.fiber)
+  change
+    Fiber.fiberInclusion.map
+        (⟨((eqToHom e'.symm).toNatTrans.app X.fiber).1.app
+            (Over.mk (𝟙 X.base)), _⟩ : X0 ⟶ X1) ≫
+      X.fiber.1.map k = 𝟙 X0.1
+  have hmapk : X.fiber.1.map k = X.fiber.1.map (eqToHom hA) :=
+    congrArg (fun m => X.fiber.1.map m) hk
+  rw [hmapk]
+  change
+    Fiber.fiberInclusion.map
+        (⟨((eqToHom e'.symm).toNatTrans.app X.fiber).1.app
+            (Over.mk (𝟙 X.base)), _⟩ : X0 ⟶ X1) ≫
+      X.fiber.1.map (eqToHom hA) = 𝟙 X0.1
+  have hmap_eqToHom : ∀ {A B : Over X.base} (h : A = B),
+      X.fiber.1.map (eqToHom h) =
+        eqToHom (congrArg (fun T => X.fiber.1.obj T) h) := by
+    intro A B h
+    cases h
+    simp
+  rw [hmap_eqToHom hA]
+  change
+    ((eqToHom e'.symm).toNatTrans.app X.fiber).1.app
+        (Over.mk (𝟙 X.base)) ≫
+      eqToHom (congrArg (fun T => X.fiber.1.obj T) hA) = 𝟙 X0.1
+  let hobj : X.fiber =
+      (twoYonedaGroupoidRestriction p (𝟙 X.base)).obj X.fiber :=
+    congrArg (fun z => z.toFunctor.obj X.fiber) e'.symm
+  have hm := CategoryTheory.eqToHom_map
+    (Functor.Fiber.fiberInclusion :
+      twoYonedaGroupoidMorphismCategory p X.base ⥤ (Over X.base ⥤ S)) hobj
+  have hfirst :
+      ((eqToHom e'.symm).toNatTrans.app X.fiber).1.app
+          (Over.mk (𝟙 X.base)) =
+        (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+          (Over.mk (𝟙 X.base)) := by
+    rw [CategoryTheory.Cat.eqToHom_app]
+    dsimp [Functor.Fiber.fiberInclusion]
+    change
+      (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+          (Over.mk (𝟙 X.base)) =
+        (Functor.Fiber.fiberInclusion.map (eqToHom hobj)).app
+          (Over.mk (𝟙 X.base))
+    rfl
+  rw [hfirst, hm]
+  rw [CategoryTheory.eqToHom_app]
+  have h1 : X0.1 = X1.1 := by
+    change X.fiber.1.obj (Over.mk (𝟙 X.base)) =
+      ((twoYonedaGroupoidRestriction p (𝟙 X.base)).obj X.fiber).1.obj
+        (Over.mk (𝟙 X.base))
+    exact congrArg (fun G => G.1.obj (Over.mk (𝟙 X.base))) hobj
+  have h2 : X1.1 = X0.1 := by
+    change ((twoYonedaGroupoidRestriction p (𝟙 X.base)).obj X.fiber).1.obj
+        (Over.mk (𝟙 X.base)) = X.fiber.1.obj (Over.mk (𝟙 X.base))
+    exact congrArg (fun T => X.fiber.1.obj T) hA
+  change eqToHom h1 ≫ eqToHom h2 = 𝟙 X0.1
+  rw [CategoryTheory.eqToHom_trans]
+  have hproof : h1.trans h2 = (rfl : X0.1 = X0.1) :=
+    Subsingleton.elim _ _
+  rw [hproof]
+  simp
 
 theorem twoYonedaAssociatedFunctorMap_map_comp
     {C : Type uC} [Category.{vC} C]

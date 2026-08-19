@@ -296,16 +296,16 @@ theorem ordinal_module_colimit_ι_mono
     (hF : ∀ {i j : Set.Iio α} (f : i ⟶ j), Mono (F.map f)) :
     ∀ i : Set.Iio α, Mono (colimit.ι F i) := by
   intro i
-  letI : Nonempty (Set.Iio α) := ⟨i⟩
-  letI : IsFiltered (Set.Iio α) := by infer_instance
-  letI : Nonempty α.ToType :=
+  let : Nonempty (Set.Iio α) := ⟨i⟩
+  let : IsFiltered (Set.Iio α) := by infer_instance
+  let : Nonempty α.ToType :=
     ⟨Ordinal.ToType.mk (o := α) i⟩
-  letI : IsFiltered α.ToType := by infer_instance
-  letI : PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) :=
+  let : IsFiltered α.ToType := by infer_instance
+  let : PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) :=
     ModuleCat.FilteredColimits.forget_preservesFilteredColimits
-  letI : PreservesColimitsOfShape α.ToType (forget (ModuleCat.{u} R)) :=
+  let : PreservesColimitsOfShape α.ToType (forget (ModuleCat.{u} R)) :=
     PreservesFilteredColimitsOfSize.preserves_filtered_colimits.{u, u} _
-  letI : PreservesColimitsOfShape (Set.Iio α) (forget (ModuleCat.{u} R)) :=
+  let : PreservesColimitsOfShape (Set.Iio α) (forget (ModuleCat.{u} R)) :=
     preservesColimitsOfShape_of_equiv
       (Ordinal.ToType.mk (o := α)).equivalence.symm _
   rw [ModuleCat.mono_iff_injective]

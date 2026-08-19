@@ -7,6 +7,7 @@ import Mathlib.RingTheory.Extension.Presentation.Basic
 import Mathlib.RingTheory.Kaehler.JacobiZariski
 import Mathlib.RingTheory.Localization.Basic
 import Mathlib.LinearAlgebra.Basis.Basic
+import Mathlib.RingTheory.TensorProduct.Free
 
 /-!
 # Commutative Algebra, Chapter 134: The naive cotangent complex
@@ -1306,7 +1307,143 @@ private theorem two_term_homotopy_cancellation_of_split
     (hchain₁ : H.dA ∘ₗ i₁ = i₀ ∘ₗ dX)
     (hchain₀ : p₀ ∘ₗ H.dA = dX ∘ₗ p₁) :
     Nonempty (TwoTermSum X₁ B₀ ≃ₗ[R] TwoTermSum B₁ X₀) := by
-  sorry
+  let φ₁ := H.φ₁ ∘ₗ i₁
+  let φ₀ := H.φ₀ ∘ₗ i₀
+  let ψ₁ := p₁ ∘ₗ H.ψ₁
+  let ψ₀ := p₀ ∘ₗ H.ψ₀
+  let hA := p₁ ∘ₗ H.hA ∘ₗ i₀
+  let hB := H.hB + H.φ₁ ∘ₗ k ∘ₗ H.ψ₀
+  apply two_term_homotopy_cancellation
+    { dA := dX
+      dB := H.dB
+      φ₁ := φ₁
+      φ₀ := φ₀
+      ψ₁ := ψ₁
+      ψ₀ := ψ₀
+      hA := hA
+      hB := hB
+      φ_chain := by
+        apply LinearMap.ext
+        intro x
+        have hx := DFunLike.congr_fun hchain₁ x
+        have hc := DFunLike.congr_fun H.φ_chain (i₁ x)
+        have hx' : H.dA (i₁ x) = i₀ (dX x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hx
+        have hc' : H.φ₀ (H.dA (i₁ x)) = H.dB (H.φ₁ (i₁ x)) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hc
+        change H.φ₀ (i₀ (dX x)) = H.dB (H.φ₁ (i₁ x))
+        rw [← hx']
+        exact hc'
+      ψ_chain := by
+        apply LinearMap.ext
+        intro x
+        have hx := DFunLike.congr_fun hchain₀ (H.ψ₁ x)
+        have hc := DFunLike.congr_fun H.ψ_chain x
+        have hx' : p₀ (H.dA (H.ψ₁ x)) = dX (p₁ (H.ψ₁ x)) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hx
+        have hc' : H.ψ₀ (H.dB x) = H.dA (H.ψ₁ x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hc
+        change p₀ (H.ψ₀ (H.dB x)) = dX (p₁ (H.ψ₁ x))
+        rw [hc']
+        exact hx'
+      left_one := by
+        apply LinearMap.ext
+        intro x
+        have hpi := DFunLike.congr_fun hpi₁ x
+        have hi := DFunLike.congr_fun hchain₁ x
+        have hc := DFunLike.congr_fun H.left_one (i₁ x)
+        have hp := congrArg p₁ hc
+        have hpi' : p₁ (i₁ x) = x := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hpi
+        have hi' : H.dA (i₁ x) = i₀ (dX x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hi
+        have hp' :
+            p₁ (i₁ x) - p₁ (H.ψ₁ (H.φ₁ (i₁ x))) =
+              p₁ (H.hA (H.dA (i₁ x))) := by
+          simpa only [LinearMap.coe_comp, Function.comp_apply,
+            LinearMap.sub_apply, LinearMap.id_apply, map_sub] using hp
+        rw [hpi', hi'] at hp'
+        simpa [φ₁, ψ₁, hA, LinearMap.coe_comp, Function.comp_apply] using hp'
+      left_zero := by
+        apply LinearMap.ext
+        intro x
+        have hpi := DFunLike.congr_fun hpi₀ x
+        have hc := DFunLike.congr_fun H.left_zero (i₀ x)
+        have hp := congrArg p₀ hc
+        have hd := DFunLike.congr_fun hchain₀ (H.hA (i₀ x))
+        have hpi' : p₀ (i₀ x) = x := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hpi
+        have hd' : p₀ (H.dA (H.hA (i₀ x))) =
+            dX (p₁ (H.hA (i₀ x))) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hd
+        have hp' :
+            p₀ (i₀ x) - p₀ (H.ψ₀ (H.φ₀ (i₀ x))) =
+              p₀ (H.dA (H.hA (i₀ x))) := by
+          simpa only [LinearMap.coe_comp, Function.comp_apply,
+            LinearMap.sub_apply, LinearMap.id_apply, map_sub] using hp
+        rw [hpi', hd'] at hp'
+        simpa [ψ₀, φ₀, hA, LinearMap.coe_comp, Function.comp_apply] using hp'
+      right_one := by
+        apply LinearMap.ext
+        intro x
+        have hi := DFunLike.congr_fun hi₁ (H.ψ₁ x)
+        have hc := DFunLike.congr_fun H.right_one x
+        have hk := DFunLike.congr_fun H.ψ_chain x
+        have hi' : H.ψ₁ x - i₁ (p₁ (H.ψ₁ x)) =
+            k (H.dA (H.ψ₁ x)) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hi
+        have hi'' : i₁ (p₁ (H.ψ₁ x)) =
+            H.ψ₁ x - k (H.dA (H.ψ₁ x)) := by
+          calc
+            i₁ (p₁ (H.ψ₁ x)) = H.ψ₁ x -
+                (H.ψ₁ x - i₁ (p₁ (H.ψ₁ x))) := by abel
+            _ = H.ψ₁ x - k (H.dA (H.ψ₁ x)) := by rw [hi']
+        have hk' : H.dA (H.ψ₁ x) = H.ψ₀ (H.dB x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hk.symm
+        have hc' : x - H.φ₁ (H.ψ₁ x) = H.hB (H.dB x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hc
+        change x - H.φ₁ (i₁ (p₁ (H.ψ₁ x))) =
+          H.hB (H.dB x) + H.φ₁ (k (H.ψ₀ (H.dB x)))
+        calc
+          x - H.φ₁ (i₁ (p₁ (H.ψ₁ x))) =
+              x - H.φ₁ (H.ψ₁ x - k (H.dA (H.ψ₁ x))) := by rw [hi'']
+          _ = (x - H.φ₁ (H.ψ₁ x)) + H.φ₁ (k (H.dA (H.ψ₁ x))) := by
+            rw [map_sub]
+            abel
+          _ = H.hB (H.dB x) + H.φ₁ (k (H.dA (H.ψ₁ x))) := by rw [hc']
+          _ = H.hB (H.dB x) + H.φ₁ (k (H.ψ₀ (H.dB x))) := by rw [hk']
+      right_zero := by
+        apply LinearMap.ext
+        intro x
+        have hi := DFunLike.congr_fun hi₀ (H.ψ₀ x)
+        have hc := DFunLike.congr_fun H.right_zero x
+        have hi' : H.ψ₀ x - i₀ (p₀ (H.ψ₀ x)) =
+            H.dA (k (H.ψ₀ x)) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hi
+        have hi'' : i₀ (p₀ (H.ψ₀ x)) =
+            H.ψ₀ x - H.dA (k (H.ψ₀ x)) := by
+          calc
+            i₀ (p₀ (H.ψ₀ x)) = H.ψ₀ x -
+                (H.ψ₀ x - i₀ (p₀ (H.ψ₀ x))) := by abel
+            _ = H.ψ₀ x - H.dA (k (H.ψ₀ x)) := by rw [hi']
+        have hc' : x - H.φ₀ (H.ψ₀ x) = H.dB (H.hB x) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hc
+        have hk := DFunLike.congr_fun H.φ_chain (k (H.ψ₀ x))
+        have hk' : H.φ₀ (H.dA (k (H.ψ₀ x))) =
+            H.dB (H.φ₁ (k (H.ψ₀ x))) := by
+          simpa [LinearMap.coe_comp, Function.comp_apply] using hk
+        change x - H.φ₀ (i₀ (p₀ (H.ψ₀ x))) =
+          H.dB (H.hB x + H.φ₁ (k (H.ψ₀ x)))
+        calc
+          x - H.φ₀ (i₀ (p₀ (H.ψ₀ x))) =
+              x - H.φ₀ (H.ψ₀ x - H.dA (k (H.ψ₀ x))) := by rw [hi'']
+          _ = (x - H.φ₀ (H.ψ₀ x)) +
+              H.φ₀ (H.dA (k (H.ψ₀ x))) := by
+            rw [map_sub]
+            abel
+          _ = H.dB (H.hB x) + H.dB (H.φ₁ (k (H.ψ₀ x))) := by rw [hc', hk']
+          _ = H.dB (H.hB x + H.φ₁ (k (H.ψ₀ x))) := by rw [map_add]
+        }
 /-
   let φ₁ := H.φ₁ ∘ₗ i₁
   let φ₀ := H.φ₀ ∘ₗ i₀
@@ -1409,7 +1546,187 @@ theorem conormal_module_equiv
     (P : Presentation R S (Fin n)) (Q : Presentation R S (Fin m)) :
     Nonempty (TwoTermSum P.toExtension.Cotangent (Fin m →₀ S) ≃ₗ[S]
       TwoTermSum Q.toExtension.Cotangent (Fin n →₀ S)) := by
-  sorry
+  let f : P.Hom Q := Algebra.Generators.defaultHom P Q
+  let g : Q.Hom P := Algebra.Generators.defaultHom Q P
+  let eP : P.toExtension.CotangentSpace ≃ₗ[S] (Fin n →₀ S) :=
+    P.cotangentSpaceBasis.repr
+  let eQ : Q.toExtension.CotangentSpace ≃ₗ[S] (Fin m →₀ S) :=
+    Q.cotangentSpaceBasis.repr
+  let dA : P.toExtension.Cotangent →ₗ[S] (Fin n →₀ S) :=
+    eP.toLinearMap ∘ₗ P.toExtension.cotangentComplex
+  let dB : Q.toExtension.Cotangent →ₗ[S] (Fin m →₀ S) :=
+    eQ.toLinearMap ∘ₗ Q.toExtension.cotangentComplex
+  let phi₁ : P.toExtension.Cotangent →ₗ[S] Q.toExtension.Cotangent :=
+    Algebra.Extension.Cotangent.map f.toExtensionHom
+  let phi₀ : (Fin n →₀ S) →ₗ[S] (Fin m →₀ S) :=
+    eQ.toLinearMap ∘ₗ
+      Algebra.Extension.CotangentSpace.map f.toExtensionHom ∘ₗ eP.symm.toLinearMap
+  let psi₁ : Q.toExtension.Cotangent →ₗ[S] P.toExtension.Cotangent :=
+    Algebra.Extension.Cotangent.map g.toExtensionHom
+  let psi₀ : (Fin m →₀ S) →ₗ[S] (Fin n →₀ S) :=
+    eP.toLinearMap ∘ₗ
+      Algebra.Extension.CotangentSpace.map g.toExtensionHom ∘ₗ eQ.symm.toLinearMap
+  let hA : (Fin n →₀ S) →ₗ[S] P.toExtension.Cotangent :=
+    (Algebra.Extension.Hom.sub
+      (Algebra.Generators.Hom.id P).toExtensionHom
+      (g.comp f).toExtensionHom) ∘ₗ eP.symm.toLinearMap
+  let hB : (Fin m →₀ S) →ₗ[S] Q.toExtension.Cotangent :=
+    (Algebra.Extension.Hom.sub
+      (Algebra.Generators.Hom.id Q).toExtensionHom
+      (f.comp g).toExtensionHom) ∘ₗ eQ.symm.toLinearMap
+  apply two_term_homotopy_cancellation
+    { dA := dA
+      dB := dB
+      φ₁ := phi₁
+      φ₀ := phi₀
+      ψ₁ := psi₁
+      ψ₀ := psi₀
+      hA := hA
+      hB := hB
+      φ_chain := by
+        apply LinearMap.ext
+        intro x
+        change eQ (Algebra.Extension.CotangentSpace.map f.toExtensionHom
+          (eP.symm (eP (P.toExtension.cotangentComplex x)))) =
+          eQ (Q.toExtension.cotangentComplex
+            (Algebra.Extension.Cotangent.map f.toExtensionHom x))
+        rw [eP.symm_apply_apply]
+        have hx := DFunLike.congr_fun
+          (Algebra.Extension.CotangentSpace.map_comp_cotangentComplex
+            f.toExtensionHom) x
+        exact congrArg (fun y => eQ y) (by
+          simpa only [LinearMap.coe_comp, Function.comp_apply,
+            LinearMap.coe_restrictScalars] using hx)
+      ψ_chain := by
+        apply LinearMap.ext
+        intro x
+        change eP (Algebra.Extension.CotangentSpace.map g.toExtensionHom
+          (eQ.symm (eQ (Q.toExtension.cotangentComplex x)))) =
+          eP (P.toExtension.cotangentComplex
+            (Algebra.Extension.Cotangent.map g.toExtensionHom x))
+        rw [eQ.symm_apply_apply]
+        have hx := DFunLike.congr_fun
+          (Algebra.Extension.CotangentSpace.map_comp_cotangentComplex
+            g.toExtensionHom) x
+        exact congrArg (fun y => eP y) (by
+          simpa only [LinearMap.coe_comp, Function.comp_apply,
+            LinearMap.coe_restrictScalars] using hx)
+      left_one := by
+        apply LinearMap.ext
+        intro x
+        change x - Algebra.Extension.Cotangent.map g.toExtensionHom
+            (Algebra.Extension.Cotangent.map f.toExtensionHom x) =
+          (Algebra.Extension.Hom.sub
+            (Algebra.Generators.Hom.id P).toExtensionHom
+            (g.comp f).toExtensionHom)
+            (eP.symm (eP (P.toExtension.cotangentComplex x)))
+        rw [eP.symm_apply_apply]
+        simpa [f, g, Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.Cotangent.map_comp] using
+          DFunLike.congr_fun
+            (Algebra.Extension.Cotangent.map_sub_map
+              (Algebra.Generators.Hom.id P).toExtensionHom
+              (g.comp f).toExtensionHom) x
+      left_zero := by
+        apply LinearMap.ext
+        intro x
+        apply eP.symm.injective
+        simp only [psi₀, phi₀, hA, dA, LinearMap.sub_apply,
+          LinearMap.id_apply, map_sub]
+        have hcancel :
+            (eP.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map g.toExtensionHom ∘ₗ
+              eQ.symm.toLinearMap ∘ₗ eQ.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map f.toExtensionHom ∘ₗ
+              eP.symm.toLinearMap) =
+            (eP.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map g.toExtensionHom ∘ₗ
+              Algebra.Extension.CotangentSpace.map f.toExtensionHom ∘ₗ
+              eP.symm.toLinearMap) := by
+          apply LinearMap.ext
+          intro y
+          simp [LinearMap.coe_comp, Function.comp_apply]
+        simp only [LinearMap.comp_assoc]
+        rw [hcancel]
+        simp only [LinearMap.coe_comp, Function.comp_apply]
+        change eP.symm x -
+            eP.symm (eP (Algebra.Extension.CotangentSpace.map g.toExtensionHom
+              (Algebra.Extension.CotangentSpace.map f.toExtensionHom (eP.symm x)))) =
+          eP.symm (eP ((Algebra.Generators.toExtension P).cotangentComplex
+            ((Algebra.Generators.Hom.id P).toExtensionHom.sub
+              (g.comp f).toExtensionHom (eP.symm x))))
+        rw [eP.symm_apply_apply]
+        rw [eP.symm_apply_apply]
+        have hx := DFunLike.congr_fun
+          (Algebra.Extension.CotangentSpace.map_sub_map
+            (Algebra.Generators.Hom.id P).toExtensionHom
+            (g.comp f).toExtensionHom) (eP.symm x)
+        simp only [Algebra.Generators.Hom.toExtensionHom_id,
+          Algebra.Generators.Hom.toExtensionHom_comp] at hx
+        rw [Algebra.Extension.CotangentSpace.map_id,
+          Algebra.Extension.CotangentSpace.map_comp] at hx
+        simpa only [LinearMap.coe_comp, Function.comp_apply,
+          LinearMap.coe_restrictScalars, LinearMap.sub_apply,
+          LinearMap.id_apply, Algebra.Generators.Hom.toExtensionHom_id,
+          Algebra.Generators.Hom.toExtensionHom_comp] using hx
+      right_one := by
+        apply LinearMap.ext
+        intro x
+        change x - Algebra.Extension.Cotangent.map f.toExtensionHom
+            (Algebra.Extension.Cotangent.map g.toExtensionHom x) =
+          (Algebra.Extension.Hom.sub
+            (Algebra.Generators.Hom.id Q).toExtensionHom
+            (f.comp g).toExtensionHom)
+            (eQ.symm (eQ (Q.toExtension.cotangentComplex x)))
+        rw [eQ.symm_apply_apply]
+        simpa [f, g, Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.Cotangent.map_comp] using
+          DFunLike.congr_fun
+            (Algebra.Extension.Cotangent.map_sub_map
+              (Algebra.Generators.Hom.id Q).toExtensionHom
+              (f.comp g).toExtensionHom) x
+      right_zero := by
+        apply LinearMap.ext
+        intro x
+        apply eQ.symm.injective
+        simp only [psi₀, phi₀, hB, dB, LinearMap.sub_apply,
+          LinearMap.id_apply, map_sub]
+        have hcancel :
+            (eQ.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map f.toExtensionHom ∘ₗ
+              eP.symm.toLinearMap ∘ₗ eP.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map g.toExtensionHom ∘ₗ
+              eQ.symm.toLinearMap) =
+            (eQ.toLinearMap ∘ₗ
+                Algebra.Extension.CotangentSpace.map f.toExtensionHom ∘ₗ
+              Algebra.Extension.CotangentSpace.map g.toExtensionHom ∘ₗ
+              eQ.symm.toLinearMap) := by
+          apply LinearMap.ext
+          intro y
+          simp [LinearMap.coe_comp, Function.comp_apply]
+        simp only [LinearMap.comp_assoc]
+        rw [hcancel]
+        simp only [LinearMap.coe_comp, Function.comp_apply]
+        change eQ.symm x -
+            eQ.symm (eQ (Algebra.Extension.CotangentSpace.map f.toExtensionHom
+              (Algebra.Extension.CotangentSpace.map g.toExtensionHom (eQ.symm x)))) =
+          eQ.symm (eQ ((Algebra.Generators.toExtension Q).cotangentComplex
+            ((Algebra.Generators.Hom.id Q).toExtensionHom.sub
+              (f.comp g).toExtensionHom (eQ.symm x))))
+        rw [eQ.symm_apply_apply]
+        rw [eQ.symm_apply_apply]
+        have hx := DFunLike.congr_fun
+          (Algebra.Extension.CotangentSpace.map_sub_map
+            (Algebra.Generators.Hom.id Q).toExtensionHom
+            (f.comp g).toExtensionHom) (eQ.symm x)
+        simp only [Algebra.Generators.Hom.toExtensionHom_id,
+          Algebra.Generators.Hom.toExtensionHom_comp] at hx
+        rw [Algebra.Extension.CotangentSpace.map_id,
+          Algebra.Extension.CotangentSpace.map_comp] at hx
+        simpa only [LinearMap.coe_comp, Function.comp_apply,
+          LinearMap.coe_restrictScalars, LinearMap.sub_apply,
+          LinearMap.id_apply, Algebra.Generators.Hom.toExtensionHom_id,
+          Algebra.Generators.Hom.toExtensionHom_comp] using hx }
 /-
   let f : P.Hom Q := Algebra.Generators.defaultHom P Q
   let g : Q.Hom P := Algebra.Generators.defaultHom Q P
@@ -1601,7 +1918,262 @@ theorem conormal_module_equiv_localized
         ((Localization.Away g) ⊗[S] P.toExtension.Cotangent)
         (Fin m →₀ (Localization.Away g)) ≃ₗ[Localization.Away g]
       TwoTermSum Q.toExtension.Cotangent (Fin n →₀ (Localization.Away g))) := by
-  sorry
+  let T := Localization.Away g
+  let L := Algebra.Generators.localizationAway T g
+  let P' := L.comp P
+  obtain ⟨f, hf⟩ := P.algebraMap_surjective g
+  let rel : P'.Ring :=
+    MvPolynomial.rename Sum.inr f * MvPolynomial.X (Sum.inl ()) - 1
+  let x : P'.toExtension.Cotangent :=
+    Algebra.Extension.Cotangent.mk ⟨
+      rel,
+      by
+        change rel ∈ P'.ker
+        dsimp [P', rel]
+        rw [Algebra.Generators.comp_localizationAway_ker g P f hf]
+        exact Ideal.mem_sup_right (Ideal.subset_span (by simp))⟩
+  have hx : Algebra.Extension.Cotangent.map
+      (L.ofComp P).toExtensionHom x =
+      Algebra.Generators.cMulXSubOneCotangent T g := by
+    rw [Algebra.Generators.cMulXSubOneCotangent_eq]
+    simp only [x, Algebra.Extension.Cotangent.map_mk]
+    rw [Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem]
+    change (L.ofComp P).toAlgHom rel -
+        (C g * X () - 1 : L.Ring) ∈ L.ker ^ 2
+    dsimp [rel]
+    rw [map_sub, map_mul, Algebra.Generators.toAlgHom_ofComp_rename]
+    simp [hf]
+  let eC : P'.toExtension.Cotangent ≃ₗ[T]
+      T ⊗[S] P.toExtension.Cotangent × L.toExtension.Cotangent :=
+    Algebra.Generators.cotangentCompLocalizationAwayEquiv g P hx
+  let eS : P'.toExtension.CotangentSpace ≃ₗ[T]
+      L.toExtension.CotangentSpace × (T ⊗[S] P.toExtension.CotangentSpace) :=
+    Algebra.Generators.CotangentSpace.compEquiv L P
+  let eFun : (Unit →₀ T) ≃ₗ[T] Unit → T :=
+    Finsupp.linearEquivFunOnFinite T T Unit
+  let A := Algebra.SubmersivePresentation.localizationAway T g
+  have haux (y : A.toExtension.Cotangent) :
+      A.cotangentComplexAux y =
+        eFun (A.cotangentSpaceBasis.repr (A.toExtension.cotangentComplex y)) := by
+    ext u
+    simp [A, eFun, Algebra.PreSubmersivePresentation.cotangentComplexAux,
+      Finsupp.lcomapDomain, Finsupp.comapDomain]
+  have hsurjA : Function.Surjective A.toExtension.cotangentComplex := by
+    intro y
+    obtain ⟨z, hz⟩ :=
+      Algebra.SubmersivePresentation.cotangentComplexAux_surjective A
+        (eFun (A.cotangentSpaceBasis.repr y))
+    refine ⟨z, ?_⟩
+    apply A.cotangentSpaceBasis.repr.injective
+    rw [haux z] at hz
+    exact eFun.injective hz
+  have hComp : A.toExtension.cotangentComplex = L.toExtension.cotangentComplex := by
+    rfl
+  have hsurj : Function.Surjective L.toExtension.cotangentComplex := by
+    rw [← hComp]
+    exact hsurjA
+  have hinj : Function.Injective L.toExtension.cotangentComplex := by
+    rw [← hComp]
+    exact Algebra.SubmersivePresentation.cotangentComplex_injective A
+  let eD : L.toExtension.Cotangent ≃ₗ[T] L.toExtension.CotangentSpace :=
+    LinearEquiv.ofBijective L.toExtension.cotangentComplex ⟨hinj, hsurj⟩
+  let heD : eD.toLinearMap = L.toExtension.cotangentComplex := by
+    rfl
+  let f' : P'.Hom Q := Algebra.Generators.defaultHom P' Q
+  let g' : Q.Hom P' := Algebra.Generators.defaultHom Q P'
+  let H : TwoTermHomotopyData T P'.toExtension.Cotangent
+      P'.toExtension.CotangentSpace Q.toExtension.Cotangent
+      Q.toExtension.CotangentSpace :=
+    { dA := P'.toExtension.cotangentComplex
+      dB := Q.toExtension.cotangentComplex
+      φ₁ := Algebra.Extension.Cotangent.map f'.toExtensionHom
+      φ₀ := Algebra.Extension.CotangentSpace.map f'.toExtensionHom
+      ψ₁ := Algebra.Extension.Cotangent.map g'.toExtensionHom
+      ψ₀ := Algebra.Extension.CotangentSpace.map g'.toExtensionHom
+      hA := Algebra.Extension.Hom.sub
+        (Algebra.Generators.Hom.id P').toExtensionHom
+        (g'.comp f').toExtensionHom
+      hB := Algebra.Extension.Hom.sub
+        (Algebra.Generators.Hom.id Q).toExtensionHom
+        (f'.comp g').toExtensionHom
+      φ_chain := by exact
+        Algebra.Extension.CotangentSpace.map_comp_cotangentComplex f'.toExtensionHom
+      ψ_chain := by exact
+        Algebra.Extension.CotangentSpace.map_comp_cotangentComplex g'.toExtensionHom
+      left_one := by
+        simpa [f', g', Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.Cotangent.map_comp] using
+          (Algebra.Extension.Cotangent.map_sub_map
+            (Algebra.Generators.Hom.id P').toExtensionHom
+            (g'.comp f').toExtensionHom)
+      left_zero := by
+        simpa [f', g', Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.CotangentSpace.map_comp] using
+          (Algebra.Extension.CotangentSpace.map_sub_map
+            (Algebra.Generators.Hom.id P').toExtensionHom
+            (g'.comp f').toExtensionHom)
+      right_one := by
+        simpa [f', g', Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.Cotangent.map_comp] using
+          (Algebra.Extension.Cotangent.map_sub_map
+            (Algebra.Generators.Hom.id Q).toExtensionHom
+            (f'.comp g').toExtensionHom)
+      right_zero := by
+        simpa [f', g', Algebra.Generators.Hom.toExtensionHom_comp,
+          Algebra.Extension.CotangentSpace.map_comp] using
+          (Algebra.Extension.CotangentSpace.map_sub_map
+            (Algebra.Generators.Hom.id Q).toExtensionHom
+            (f'.comp g').toExtensionHom) }
+  let X1 := T ⊗[S] P.toExtension.Cotangent
+  let X0 := T ⊗[S] P.toExtension.CotangentSpace
+  let dX : X1 →ₗ[T] X0 := P.toExtension.cotangentComplex.baseChange T
+  let i₁ : X1 →ₗ[T] P'.toExtension.Cotangent :=
+    eC.symm.toLinearMap ∘ₗ LinearMap.inl T X1 L.toExtension.Cotangent
+  let i₀ : X0 →ₗ[T] P'.toExtension.CotangentSpace :=
+    eS.symm.toLinearMap ∘ₗ LinearMap.inr T L.toExtension.CotangentSpace X0
+  have hchain₁ : H.dA ∘ₗ i₁ = i₀ ∘ₗ dX := by
+    apply LinearMap.ext
+    intro z
+    change H.dA (eC.symm (LinearMap.inl T X1 L.toExtension.Cotangent z)) =
+      eS.symm (LinearMap.inr T L.toExtension.CotangentSpace X0 (dX z))
+    have hc := DFunLike.congr_fun
+      (Algebra.Generators.cotangentCompLocalizationAwayEquiv_symm_comp_inl g P hx) z
+    have hs := DFunLike.congr_fun
+      (Algebra.Generators.CotangentSpace.compEquiv_symm_inr L P) (dX z)
+    change eC.symm (z, 0) =
+      LinearMap.liftBaseChange T
+        (Algebra.Extension.Cotangent.map (L.toComp P).toExtensionHom) z at hc
+    change eS.symm (0, dX z) =
+      LinearMap.liftBaseChange T
+        (Algebra.Extension.CotangentSpace.map (L.toComp P).toExtensionHom) (dX z) at hs
+    change H.dA (eC.symm (z, 0)) = eS.symm (0, dX z)
+    rw [hc, hs]
+    change P'.toExtension.cotangentComplex
+      (LinearMap.liftBaseChange T
+        (Algebra.Extension.Cotangent.map (L.toComp P).toExtensionHom) z) = _
+    have hh := DFunLike.congr_fun
+      (Algebra.Generators.H1Cotangent.map_comp_cotangentComplex_baseChange L P) z
+    simpa [dX, LinearMap.coe_comp, Function.comp_apply] using hh.symm
+  let p₁ : P'.toExtension.Cotangent →ₗ[T] X1 :=
+    LinearMap.fst T X1 L.toExtension.Cotangent ∘ₗ eC.toLinearMap
+  let pRaw : P'.toExtension.CotangentSpace →ₗ[T] X0 :=
+    LinearMap.snd T L.toExtension.CotangentSpace X0 ∘ₗ eS.toLinearMap
+  let k : P'.toExtension.CotangentSpace →ₗ[T] P'.toExtension.Cotangent :=
+    eC.symm.toLinearMap ∘ₗ LinearMap.inr T X1 L.toExtension.Cotangent ∘ₗ
+      eD.symm.toLinearMap ∘ₗ
+      LinearMap.fst T L.toExtension.CotangentSpace X0 ∘ₗ eS.toLinearMap
+  let p₀ : P'.toExtension.CotangentSpace →ₗ[T] X0 :=
+    pRaw - pRaw ∘ₗ H.dA ∘ₗ k
+  have hfirst :
+      LinearMap.fst T L.toExtension.CotangentSpace X0 ∘ₗ eS.toLinearMap ∘ₗ H.dA =
+        eD.toLinearMap ∘ₗ
+          LinearMap.snd T X1 L.toExtension.Cotangent ∘ₗ eC.toLinearMap := by
+    apply LinearMap.ext
+    intro z
+    change (eS (P'.toExtension.cotangentComplex z)).1 = eD (eC z).2
+    have hfst := DFunLike.congr_fun
+      (Algebra.Generators.CotangentSpace.fst_compEquiv L P)
+      (P'.toExtension.cotangentComplex z)
+    have hsnd :=
+      Algebra.Generators.snd_cotangentCompLocalizationAwayEquiv g P hx z
+    change (eS (P'.toExtension.cotangentComplex z)).1 =
+      Algebra.Extension.CotangentSpace.map (L.ofComp P).toExtensionHom
+        (P'.toExtension.cotangentComplex z) at hfst
+    change (eC z).2 =
+      Algebra.Extension.Cotangent.map (L.ofComp P).toExtensionHom z at hsnd
+    rw [hfst, hsnd]
+    rw [Algebra.Extension.CotangentSpace.map_cotangentComplex]
+    rw [← heD]
+    rfl
+  have hpi₁ : p₁ ∘ₗ i₁ = LinearMap.id := by
+    apply LinearMap.ext
+    intro z
+    simp [p₁, i₁, LinearMap.coe_comp, Function.comp_apply]
+  have hpi₀ : p₀ ∘ₗ i₀ = LinearMap.id := by
+    apply LinearMap.ext
+    intro z
+    have hz : eC.symm (0, 0) = 0 := by
+      apply eC.injective
+      simp
+    simp [p₀, pRaw, k, i₀, hz, LinearMap.coe_comp, Function.comp_apply]
+  have hi₁ : LinearMap.id - i₁ ∘ₗ p₁ = k ∘ₗ H.dA := by
+    apply LinearMap.ext
+    intro z
+    apply eC.injective
+    change eC (z - eC.symm ((eC z).1, 0)) =
+      eC (k (P'.toExtension.cotangentComplex z))
+    rw [map_sub, eC.apply_symm_apply]
+    apply Prod.ext
+    · simp [k, LinearMap.coe_comp, Function.comp_apply]
+    · simp [k, LinearMap.coe_comp, Function.comp_apply]
+      have hf := DFunLike.congr_fun hfirst z
+      change (eS (H.dA z)).1 = eD (eC z).2 at hf
+      rw [hf]
+      simp
+  have hi₀ : LinearMap.id - i₀ ∘ₗ p₀ = H.dA ∘ₗ k := by
+    apply LinearMap.ext
+    intro z
+    apply eS.injective
+    change eS (z - i₀ (p₀ z)) = eS (H.dA (k z))
+    rw [map_sub]
+    have hi₀eval : eS (i₀ (p₀ z)) = (0, p₀ z) := by
+      simp [i₀, LinearMap.coe_comp, Function.comp_apply]
+    rw [hi₀eval]
+    apply Prod.ext
+    · change (eS z).1 - 0 = (eS (H.dA (k z))).1
+      have hf := DFunLike.congr_fun hfirst (k z)
+      simpa [k, LinearMap.coe_comp, Function.comp_apply] using hf.symm
+    ·
+      change (eS z - (0, p₀ z)).2 = (eS (H.dA (k z))).2
+      simp only [Prod.snd_sub]
+      simp only [p₀, LinearMap.sub_apply, LinearMap.coe_comp, Function.comp_apply,
+        pRaw]
+      change (eS z).2 - ((eS z).2 - (eS (H.dA (k z))).2) =
+        (eS (H.dA (k z))).2
+      abel
+  obtain ⟨e⟩ := two_term_homotopy_cancellation_of_split (R := T) H dX i₁ i₀ p₁ p₀ k
+    hpi₁ hpi₀ hi₁ hi₀ hchain₁ (by
+      apply LinearMap.ext
+      intro z
+      have hkD : k (H.dA z) = eC.symm (0, (eC z).2) := by
+        apply eC.injective
+        have hf := DFunLike.congr_fun hfirst z
+        change (eS (H.dA z)).1 = eD (eC z).2 at hf
+        simp [k, LinearMap.coe_comp, Function.comp_apply, hf]
+      have hsplit : z = eC.symm ((eC z).1, 0) + eC.symm (0, (eC z).2) := by
+        apply eC.injective
+        simp
+      have hleft := DFunLike.congr_fun hchain₁ ((eC z).1)
+      have hraw : pRaw (H.dA z) =
+          dX ((eC z).1) + pRaw (H.dA (eC.symm (0, (eC z).2))) := by
+        have hleft' : H.dA (eC.symm ((eC z).1, 0)) =
+            eS.symm (0, dX ((eC z).1)) := by
+          change H.dA (eC.symm ((eC z).1, 0)) =
+              eS.symm (0, dX ((eC z).1)) at hleft
+          exact hleft
+        calc
+          pRaw (H.dA z) =
+              pRaw (H.dA (eC.symm ((eC z).1, 0)) +
+                H.dA (eC.symm (0, (eC z).2))) := by
+            conv_lhs => rw [hsplit]
+            rw [map_add]
+          _ = pRaw (H.dA (eC.symm ((eC z).1, 0))) +
+                pRaw (H.dA (eC.symm (0, (eC z).2))) := by rw [map_add]
+          _ = dX ((eC z).1) +
+                pRaw (H.dA (eC.symm (0, (eC z).2))) := by
+            rw [hleft']
+            simp [pRaw, LinearMap.coe_comp, Function.comp_apply]
+      simp only [p₀, p₁, LinearMap.coe_comp, Function.comp_apply,
+        LinearMap.sub_apply]
+      rw [hkD, hraw]
+      abel)
+  let eQbase : Q.toExtension.CotangentSpace ≃ₗ[T] (Fin m →₀ T) :=
+    Q.cotangentSpaceBasis.repr
+  let ePbase : (T ⊗[S] P.toExtension.CotangentSpace) ≃ₗ[T] (Fin n →₀ T) :=
+    (Algebra.TensorProduct.basis T P.cotangentSpaceBasis).repr
+  exact ⟨((LinearEquiv.prodCongr (LinearEquiv.refl T X1) eQbase.symm).trans e).trans
+    (LinearEquiv.prodCongr
+    (LinearEquiv.refl T Q.toExtension.Cotangent) ePbase)⟩
 /-
   let T := Localization.Away g
   let L := Algebra.Generators.localizationAway T g

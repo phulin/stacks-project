@@ -359,8 +359,6 @@ theorem which_elements_split [Module.FinitePresentation R M]
     (∃ f : R, f ∉ x.asIdeal ∧ IsLocalizedDirectSummand f s) ↔
       LinearIndependent (residueField x)
         (fun i => fibreToV x (fibreClass x (s i))) := by
-  sorry
-/-
   constructor
   · intro h
     obtain ⟨d, hd, g, hg⟩ := smul_left_inverse_of_directSummand x s h
@@ -411,9 +409,10 @@ theorem which_elements_split [Module.FinitePresentation R M]
           (d * if i = j then 1 else 0)) =
           algebraMap R (residueField x) d * c i := by
       rw [Finset.sum_eq_single i]
-      · simp
+      · simp only [if_pos, mul_one]
+        exact mul_comm _ _
       · intro j hj hji
-        simp
+        simp [Ne.symm hji]
       · intro hi
         exact (hi (Finset.mem_univ i)).elim
     have hci : algebraMap R (residueField x) d * c i = 0 := by
@@ -466,7 +465,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       (fun φ : M →ₗ[R] R => Submodule.span K {flip a φ}) htop
     obtain ⟨T, hT⟩ := hfin
     let T₀ := {φ : M →ₗ[R] R // φ ∈ T}
-    letI : Fintype T₀ := Fintype.ofFinite T₀
+    let : Fintype T₀ := Fintype.ofFinite T₀
     let mat : (T₀ → K) →ₗ[K] (Fin r → K) :=
       { toFun := fun c i => ∑ φ : T₀, c φ * a i φ
         map_add' := by
@@ -493,9 +492,10 @@ theorem which_elements_split [Module.FinitePresentation R M]
       ext i
       simp only [mat, LinearMap.coe_mk, AddHom.coe_mk]
       rw [Finset.sum_eq_single φ]
-      · simp
+      · simp only [if_pos, one_mul]
+        rfl
       · intro ψ hψ hψφ
-        simp
+        simp [hψφ]
       · intro hnot
         exact (hnot (Finset.mem_univ φ)).elim
     have hsurj : Function.Surjective mat := by
@@ -526,12 +526,12 @@ theorem which_elements_split [Module.FinitePresentation R M]
       have hsingle : e i j = if i = j then 1 else 0 := by
         by_cases hij : i = j
         · subst j
-          simp
-        · simp [e]
+          simp only [e, Pi.single_apply, if_pos]
+        · simp only [e, Pi.single_apply, if_neg hij, if_neg (Ne.symm hij)]
       calc
         algebraMap R K (A i j) =
             ∑ φ : T₀, (algebraMap R K) (c i φ) * a j (φ : M →ₗ[R] R) := by
-              simp [A, ψ]
+              simp [A, ψ, a, Algebra.smul_def, map_sum]
         _ = e i j := hq''
         _ = if i = j then 1 else 0 := hsingle
     have hdet : algebraMap R K A.det = 1 := by
@@ -544,8 +544,8 @@ theorem which_elements_split [Module.FinitePresentation R M]
           ext i j
           rw [hA]
           by_cases hij : i = j
-          · subst j; simp
-          · simp
+          · subst j; rfl
+          · rfl
         _ = 1 := Matrix.det_one
     have hdet_not_mem : A.det ∉ x.asIdeal := by
       intro hdet_mem
@@ -557,11 +557,15 @@ theorem which_elements_split [Module.FinitePresentation R M]
         map_add' := by
           intro m n
           ext i
-          simp
+          simp only [map_add, mul_add, Finset.sum_add_distrib, Pi.add_apply]
         map_smul' := by
           intro r₀ m
           ext i
-          simp }
+          simp only [map_smul, Pi.smul_apply, smul_eq_mul, RingHom.id_apply]
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro k hk
+          ring }
     let eF : (Fin r →₀ R) ≃ₗ[R] (Fin r → R) :=
       Finsupp.linearEquivFunOnFinite R R (Fin r)
     let g : M →ₗ[R] (Fin r →₀ R) := eF.symm.toLinearMap.comp gFun
@@ -571,8 +575,8 @@ theorem which_elements_split [Module.FinitePresentation R M]
       have hone : (1 : Matrix (Fin r) (Fin r) R) i j =
           if i = j then 1 else 0 := by
           by_cases hij : i = j
-          · subst j; simp
-          · simp
+          · subst j; rfl
+          · rfl
       simpa [Matrix.mul_apply, smul_eq_mul, hone] using h
     have hg : g.comp (Finsupp.linearCombination R s) = A.det • LinearMap.id := by
       apply LinearMap.ext
@@ -594,12 +598,13 @@ theorem which_elements_split [Module.FinitePresentation R M]
           rw [hadj i j]
         _ = A.det * z i := by
           rw [Finset.sum_eq_single i]
-          · simp
+          · simp only [if_pos, mul_one]
+            exact mul_comm _ _
           · intro j hj hji
-            simp
+            simp only [if_neg (Ne.symm hji), mul_zero]
           · intro hi
             exact (hi (Finset.mem_univ i)).elim
-    exact ⟨A.det, hdet_not_mem, directSummand_of_smul_left_inverse A.det s g hg⟩ -/
+    exact ⟨A.det, hdet_not_mem, directSummand_of_smul_left_inverse A.det s g hg⟩
 
 /-! ## The dependence locus and prescribed values -/
 

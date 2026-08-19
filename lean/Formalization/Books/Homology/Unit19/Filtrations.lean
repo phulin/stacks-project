@@ -4224,7 +4224,7 @@ theorem gradedPieceFunctor_is_additive {C : Type u} [Category.{v} C] [Abelian C]
     apply (cancel_mono (B.filtration.obj p).arrow).mp
     simp only [Subobject.factorThru_arrow, Preadditive.add_comp]
     change (A.filtration.obj p).arrow ≫ (f.hom + g.hom) = _
-    simp [Preadditive.comp_add, Category.assoc]
+    simp [Preadditive.comp_add]
   let : Epi (gradedPieceπ A p) := by
     change Epi (cokernel.π _)
     infer_instance
@@ -4278,7 +4278,7 @@ theorem associatedGraded_is_additive {C : Type u} [Category.{v} C] [Abelian C] :
   rw [he.map_add]
   change gradedPieceMap (f + g) p =
     gradedPieceMap f p + gradedPieceMap g p
-  letI : (gradedPieceFunctor (C := C) p).Additive :=
+  let : (gradedPieceFunctor (C := C) p).Additive :=
     gradedPieceFunctor_is_additive p
   exact Functor.map_add (F := gradedPieceFunctor (C := C) p) (f := f) (g := g)
 
@@ -4324,7 +4324,7 @@ def filteredSubobjectShortExact {C : Type u} [Category.{v} C] [Abelian C]
       change X.arrow ≫ cokernel.π X.arrow = 0
       exact cokernel.condition _
     rw [hzero]
-    letI : (gradedPieceFunctor (C := C) p).Additive :=
+    let : (gradedPieceFunctor (C := C) p).Additive :=
       gradedPieceFunctor_is_additive p
     change (gradedPieceFunctor (C := C) p).map (0 :
       inducedFilteredObject A X ⟶ quotientFilteredObject A (cokernel.π X.arrow)) = 0

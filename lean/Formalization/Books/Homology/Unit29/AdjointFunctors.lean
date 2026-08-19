@@ -460,50 +460,78 @@ theorem adjoint_functorial_injective_embeddings
     (hReflectsZero : ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀)
     (hFunctorial : HasFunctorialInjectiveEmbeddings (C := A)) :
     HasFunctorialInjectiveEmbeddings (C := B) := by
-  /-
-  Prior attempt: the checked functor construction is retained, but its
-  naturality and arrow-category coercions do not compile with the current API.
   haveI : PreservesMonomorphisms v := hMono
   haveI : Functor.Faithful v :=
     (adjoint_faithful_iff_reflects_zero u v hAdj hMono).2 hReflectsZero
   haveI : PreservesMonomorphisms u :=
     Functor.preservesMonomorphisms_of_adjunction hAdj
+  have hExact : IsExact v :=
+    (adjoint_preserve_injectives u v hAdj).1.1 hMono
+  letI : Functor.PreservesInjectiveObjects u :=
+    (adjoint_preserve_injectives u v hAdj).2.1 hExact
   obtain ⟨J, hJleft, hJmono, hJinjective⟩ := hFunctorial
   let e : (J ⋙ Arrow.leftFunc) ≅ 𝟭 A := eqToIso hJleft
+  let j : (J ⋙ Arrow.leftFunc) ⟶ (J ⋙ Arrow.rightFunc) :=
+    Functor.whiskerLeft J Arrow.leftToRight
   let J' : B ⥤ Arrow B := {
     obj X := Arrow.mk
       (hAdj.unit.app X ≫
-        u.map (e.inv.app (v.obj X) ≫ (J.obj (v.obj X)).hom))
+        u.map (e.inv.app (v.obj X) ≫ j.app (v.obj X)))
     map {X Y} f := Arrow.homMk f
-      (u.map (J.map (v.map f)).right) (by
+      (u.map ((J ⋙ Arrow.rightFunc).map (v.map f))) (by
         have hinside :
-            v.map f ≫ (e.inv.app (v.obj Y) ≫ (J.obj (v.obj Y)).hom) =
-              (e.inv.app (v.obj X) ≫ (J.obj (v.obj X)).hom) ≫
-                (J.map (v.map f)).right := by
-          rw [← Category.assoc, e.inv.naturality]
-          simp only [Functor.comp_map, Functor.id_map, Category.assoc]
-          rw [(J.map (v.map f)).w]
-        simp only [Category.assoc]
-        rw [hAdj.unit.naturality, ← u.map_comp, ← u.map_comp, hinside])
+            v.map f ≫ (e.inv.app (v.obj Y) ≫ j.app (v.obj Y)) =
+              (e.inv.app (v.obj X) ≫ j.app (v.obj X)) ≫
+                (J ⋙ Arrow.rightFunc).map (v.map f) := by
+          have he : v.map f ≫ e.inv.app (v.obj Y) =
+              e.inv.app (v.obj X) ≫
+                (J ⋙ Arrow.leftFunc).map (v.map f) := by
+            simpa only [Functor.id_map] using e.inv.naturality (v.map f)
+          have hleft :
+              (J ⋙ Arrow.leftFunc).map (v.map f) ≫ j.app (v.obj Y) =
+                j.app (v.obj X) ≫ (J ⋙ Arrow.rightFunc).map (v.map f) :=
+            j.naturality (v.map f)
+          rw [← Category.assoc, he, Category.assoc, hleft]
+          simp only [Category.assoc]
+        change f ≫ (hAdj.unit.app Y ≫
+            u.map (e.inv.app (v.obj Y) ≫ j.app (v.obj Y))) =
+          (hAdj.unit.app X ≫
+            u.map (e.inv.app (v.obj X) ≫ j.app (v.obj X))) ≫
+            u.map ((J ⋙ Arrow.rightFunc).map (v.map f))
+        have hunit : f ≫ hAdj.unit.app Y =
+            hAdj.unit.app X ≫ u.map (v.map f) := by
+          simpa only [Functor.comp_map, Functor.id_map] using
+            hAdj.unit.naturality f
+        rw [← Category.assoc, hunit]
+        simp only [Functor.comp_map, ← u.map_comp, Category.assoc]
+        rw [hinside]
+        simp only [Functor.comp_map, Category.assoc])
     map_id X := by
       apply Arrow.hom_ext <;> simp
     map_comp f g := by
       apply Arrow.hom_ext <;> simp
   }
+  let hobj (X : B) : (J' ⋙ Arrow.leftFunc).obj X = X := by
+    change X = X
+    rfl
   have hJ'left : J' ⋙ Arrow.leftFunc = 𝟭 B := by
-    apply Functor.ext <;> simp [J']
+    apply CategoryTheory.Functor.hext hobj
+    intro X Y f
+    dsimp [J', Arrow.leftFunc, CategoryTheory.Functor.comp, Comma.fst]
+    rfl
   have hJ'mono : ∀ X : B, Mono (J'.obj X).hom := by
     intro X
-    dsimp [J']
     letI : Mono (J.obj (v.obj X)).hom := hJmono _
+    letI : Mono (j.app (v.obj X)) := by
+      dsimp [j, Functor.whiskerLeft, Arrow.leftToRight]
+      exact hJmono _
+    dsimp [J']
     infer_instance
   have hJ'injective : ∀ X : B, Injective (J'.obj X).right := by
     intro X
     dsimp [J']
     exact Functor.injective_obj_of_injective u (hJinjective (v.obj X))
   exact ⟨J', hJ'left, hJ'mono, hJ'injective⟩
-  -/
-  sorry
 
 /-! ### A partially defined left adjoint -/
 
@@ -525,6 +553,43 @@ theorem left_adjoint_of_quotient_generators
       ∃ Q : A,
         Nonempty ((u ⋙ coyoneda.obj (Opposite.op P)).CorepresentableBy Q)) :
     ∃ v : B ⥤ A, Nonempty (v ⊣ u) := by
-  sorry
+  have hdef (P : B) (hP : P ∈ Pset) :
+      u.leftAdjointObjIsDefined P := by
+    rw [Functor.leftAdjointObjIsDefined_iff]
+    obtain ⟨Q, hQ⟩ := hRepresentable P hP
+    rcases hQ with ⟨hQ⟩
+    exact hQ.isCorepresentable
+  have hAll : ∀ B₀ : B, u.leftAdjointObjIsDefined B₀ := by
+    intro B₀
+    obtain ⟨P₁, hP₁, p₁, hp₁⟩ := hQuotient B₀
+    obtain ⟨P₂, hP₂, p₂, hp₂⟩ := hQuotient (kernel p₁)
+    let g : P₂ ⟶ P₁ := p₂ ≫ kernel.ι p₁
+    have hg : g ≫ p₁ = 0 := by
+      simp [g]
+    letI : Epi p₁ := hp₁
+    letI : Epi p₂ := hp₂
+    have hc : IsColimit (CokernelCofork.ofπ p₁ hg) :=
+      CokernelCofork.IsColimit.ofπ' p₁ hg (by
+        intro Z k hk
+        have hk' : kernel.ι p₁ ≫ k = 0 := by
+          apply (cancel_epi p₂).1
+          simpa [g, Category.assoc] using hk
+        exact ⟨Abelian.epiDesc p₁ k hk', Abelian.comp_epiDesc p₁ k hk'⟩)
+    exact Functor.leftAdjointObjIsDefined_of_isColimit hc (by
+      intro j
+      cases j
+      · exact hdef P₂ hP₂
+      · exact hdef P₁ hP₁)
+  have htop : u.leftAdjointObjIsDefined = ⊤ := by
+    funext B₀
+    apply propext
+    constructor
+    · intro _
+      trivial
+    · intro _
+      exact hAll B₀
+  letI : u.IsRightAdjoint :=
+    Functor.isRightAdjoint_of_leftAdjointObjIsDefined_eq_top htop
+  exact Functor.IsRightAdjoint.exists_leftAdjoint
 
 end Formalization.Books.Homology.Unit29

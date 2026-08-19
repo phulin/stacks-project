@@ -656,7 +656,58 @@ theorem submodule_baseChange_ideal_pow
     (I ^ n • (⊤ : Submodule A M)).baseChange B =
       (I.map (algebraMap A B)) ^ n •
         (⊤ : Submodule B (B ⊗[A] M)) := by
-  sorry
+  rw [Submodule.baseChange_eq_span, Submodule.map_smul'']
+  let P : Submodule B (B ⊗[A] M) :=
+    Submodule.span B (↑(I ^ n • Submodule.map ((TensorProduct.mk A B M) 1) ⊤) :
+      Set (B ⊗[A] M))
+  change P = (I.map (algebraMap A B)) ^ n • (⊤ : Submodule B (B ⊗[A] M))
+  apply le_antisymm
+  · change Submodule.span B _ ≤ _
+    rw [Submodule.span_le]
+    intro x hx
+    refine Submodule.smul_induction_on hx ?_ ?_
+    · intro a ha y hy
+      rcases hy with ⟨m, hm, hmy⟩
+      rw [← hmy, ← algebraMap_smul B a]
+      have ha' : algebraMap A B a ∈ (I.map (algebraMap A B)) ^ n := by
+        rw [← Ideal.map_pow]
+        exact Ideal.mem_map_of_mem (algebraMap A B) ha
+      exact Submodule.smul_mem_smul ha' Submodule.mem_top
+    · intro x y hx hy
+      exact add_mem hx hy
+  · apply Submodule.smul_le.mpr
+    intro b hb x hx
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | tmul c m =>
+        rw [TensorProduct.tmul_eq_smul_one_tmul, ← smul_assoc]
+        have hgen (b : B) (hb : b ∈ (I.map (algebraMap A B)) ^ n) :
+            b • ((1 : B) ⊗ₜ[A] m) ∈ P := by
+          rw [← Ideal.map_pow] at hb
+          rw [Ideal.map] at hb
+          induction hb using Submodule.span_induction with
+          | mem b hb =>
+              rcases hb with ⟨a, ha, rfl⟩
+              change (algebraMap A B a) • ((1 : B) ⊗ₜ[A] m) ∈
+                Submodule.span B (↑(I ^ n • Submodule.map ((TensorProduct.mk A B M) 1) ⊤) :
+                  Set (B ⊗[A] M))
+              rw [algebraMap_smul B a]
+              apply Submodule.subset_span
+              exact Submodule.smul_mem_smul ha
+                ⟨m, Submodule.mem_top, rfl⟩
+          | zero => simp
+          | add b₁ b₂ _ _ ih₁ ih₂ =>
+              rw [add_smul]
+              exact add_mem ih₁ ih₂
+          | smul d b _ ih =>
+              rw [smul_assoc]
+              exact P.smul_mem d ih
+        have hbc : b * c ∈ (I.map (algebraMap A B)) ^ n :=
+          Ideal.mul_mem_right c ((I.map (algebraMap A B)) ^ n) hb
+        exact hgen (b * c) hbc
+    | add x y hpx hpy =>
+        rw [smul_add]
+        exact add_mem (hpx Submodule.mem_top) (hpy Submodule.mem_top)
 
 /-- Flat base change commutes with the preimage of an ideal-power submodule.
 This is the source's displayed kernel/preimage identity, with the tensor

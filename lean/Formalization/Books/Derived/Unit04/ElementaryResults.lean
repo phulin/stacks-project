@@ -691,8 +691,8 @@ and third components is zero. -/
 theorem triangle_middle_composite_zero
     {T : Triangle C} (hT : T ∈ distTriang C)
     (φ ψ : T ⟶ T)
-    (hφ₁ : φ.hom₁ = 0) (hφ₃ : φ.hom₃ = 0)
-    (hψ₁ : ψ.hom₁ = 0) (hψ₃ : ψ.hom₃ = 0) :
+    (_hφ₁ : φ.hom₁ = 0) (hφ₃ : φ.hom₃ = 0)
+    (hψ₁ : ψ.hom₁ = 0) (_hψ₃ : ψ.hom₃ = 0) :
     φ.hom₂ ≫ ψ.hom₂ = 0 := by
   have hψ : T.mor₁ ≫ ψ.hom₂ = 0 := by
     rw [ψ.comm₁, hψ₁, zero_comp]
@@ -750,7 +750,7 @@ theorem exists_idempotent_triangle_endomorphism
     simp only [comp_sub, sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id]
   have hbq' : b' ≫ q = b' + d + d := by
     dsimp [q]
-    simp only [comp_sub, add_comp, comp_add, Category.id_comp, Category.comp_id]
+    simp only [comp_sub, comp_add, Category.comp_id]
     rw [hbase]
     abel
   have hxkd : b' ≫ (q ≫ d) = b' ≫ d := by
@@ -758,7 +758,7 @@ theorem exists_idempotent_triangle_endomorphism
       b' ≫ (q ≫ d) = (b' ≫ q) ≫ d := by simp only [Category.assoc]
       _ = (b' + d + d) ≫ d := by rw [hbq']
       _ = b' ≫ d := by
-        simp only [add_comp, hdd, comp_zero, add_zero]
+        simp only [add_comp, hdd, add_zero]
   have hqdb : (q ≫ d) ≫ b' = b' ≫ d := by
     calc
       (q ≫ d) ≫ b' = q ≫ (d ≫ b') := by simp only [Category.assoc]
@@ -776,7 +776,7 @@ theorem exists_idempotent_triangle_endomorphism
       show k ≫ b' = (q ≫ d) ≫ b' by rfl, hqdb]
     change d - b' ≫ d - b' ≫ d + q ≫ d = 0
     dsimp [q]
-    simp only [sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id]
+    simp only [sub_comp, add_comp, Category.id_comp]
     abel
   let b : T.obj₂ ⟶ T.obj₂ := b' - k
   have hb : b ≫ b = b := by
@@ -788,7 +788,7 @@ theorem exists_idempotent_triangle_endomorphism
         abel
       _ = b' + d - b' ≫ k - k ≫ b' := by
         rw [hkk]
-        simp only [add_zero, zero_add]
+        simp only [add_zero]
       _ = b' - k := by
         calc
           b' + d - b' ≫ k - k ≫ b' =
@@ -803,7 +803,7 @@ theorem exists_idempotent_triangle_endomorphism
       simp only [comp_sub, sub_comp, add_comp, comp_add, Category.id_comp, Category.comp_id,
         hb'₁]
     rw [← Category.assoc, hq₁, Category.assoc, hd₁]
-    simp only [comp_zero, zero_add, add_zero, sub_self]
+    simp only [comp_zero]
   have hk₂ : k ≫ T.mor₂ = 0 := by
     change (q ≫ d) ≫ T.mor₂ = 0
     rw [Category.assoc, hd₂, comp_zero]

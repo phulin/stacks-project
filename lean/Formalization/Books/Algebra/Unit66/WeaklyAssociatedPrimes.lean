@@ -1038,7 +1038,7 @@ theorem weaklyAssociated_nonFunctoriality_example
       f ∈ weaklyAssociatedExampleP k
     rw [hQcomap, hPcomap]
     simp only [Ideal.mem_comap]
-  letI : Module (weaklyAssociatedExampleBaseRing k)
+  let : Module (weaklyAssociatedExampleBaseRing k)
       (weaklyAssociatedExampleRing k) :=
     Module.compHom (weaklyAssociatedExampleRing k)
       (weaklyAssociatedExampleMap k)
@@ -1108,11 +1108,11 @@ theorem weaklyAssociated_nonFunctoriality_example
       ext z
       constructor
       · rintro ⟨a, ⟨i, rfl⟩, rfl⟩
-        exact ⟨i, by simp [e, L', weaklyAssociatedExampleX,
+        exact ⟨i, by simp [e, weaklyAssociatedExampleX,
           weaklyAssociatedExampleY, mul_comm]⟩
       · rintro ⟨i, rfl⟩
         exact ⟨weaklyAssociatedExampleX k i * weaklyAssociatedExampleY k i,
-          ⟨i, rfl⟩, by simp [e, L', weaklyAssociatedExampleX,
+          ⟨i, rfl⟩, by simp [e, weaklyAssociatedExampleX,
             weaklyAssociatedExampleY, mul_comm]⟩
     let I : (ℕ →₀ ℕ) → Ideal (MvPolynomial ℕ k) := fun d =>
       Ideal.span (MvPolynomial.X '' (d.support : Set ℕ))
@@ -1168,7 +1168,7 @@ theorem weaklyAssociated_nonFunctoriality_example
             exact (I d).mul_mem_left _ (hI (ihp x.2))
       · intro hp
         rw [show p = ∑ d ∈ p.support, MvPolynomial.monomial d (p.coeff d) by
-          simpa using MvPolynomial.as_sum p]
+          simp]
         apply Submodule.sum_mem
         intro d hd
         have hd' : p.coeff d ∈ I d := hp d
@@ -1258,7 +1258,7 @@ theorem weaklyAssociated_nonFunctoriality_example
             e.toRingEquiv.surjective]
           have hker : Ideal.comap e.toRingEquiv (⊥ : Ideal _) = ⊥ := by
             ext a
-            simp [Ideal.mem_comap, e.toRingEquiv.injective.eq_iff]
+            simp [Ideal.mem_comap]
           rw [hker, sup_bot_eq]
         constructor
         · intro h
@@ -1313,7 +1313,6 @@ theorem weaklyAssociated_nonFunctoriality_example
             (hId d hd)) m hm
           rcases hmem with ⟨i, hiD, him⟩
           refine ⟨i, ?_⟩
-          change i ∈ t ∩ d.support
           apply Finset.mem_inter.mpr
           exact ⟨Finset.mem_inter.mpr ⟨Finsupp.mem_support_iff.mpr him,
             Finset.mem_biUnion.mpr ⟨d, hd, hiD⟩⟩, hiD⟩
@@ -1348,7 +1347,7 @@ theorem weaklyAssociated_nonFunctoriality_example
           have hle : Finsupp.single i 1 ≤ m := by
             rw [Finsupp.single_le_iff]
             exact Nat.one_le_iff_ne_zero.mpr (by
-              simpa [m, Finsupp.indicator, (Finset.mem_inter.mp hi).1])
+              simp [m, Finsupp.indicator, (Finset.mem_inter.mp hi).1])
           have hgen :
               MvPolynomial.monomial m 1 ∈ I d := by
             rw [← tsub_add_cancel_of_le hle, add_comm,
@@ -1402,7 +1401,7 @@ theorem weaklyAssociated_nonFunctoriality_example
             ext z
             simp] at hone
       rw [MvPolynomial.mem_ideal_span_X_image] at hone
-      simpa using hone
+      simp at hone
     let ann : Ideal (MvPolynomial ℕ k) :=
       (⊥ : Submodule (weaklyAssociatedExampleBaseRing k)
         (weaklyAssociatedExampleRing k)).colon ({s} : Set _)
@@ -1654,9 +1653,9 @@ theorem weaklyAssociatedPrimes_finite_ring_map
       PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M =
         weaklyAssociatedPrimes R M) := by
   classical
-  letI : Algebra R S := φ.toAlgebra
-  letI : Module.Finite R S := hφ
-  letI : Algebra.IsIntegral R S := ⟨RingHom.Finite.to_isIntegral hφ⟩
+  let : Algebra R S := φ.toAlgebra
+  let : Module.Finite R S := hφ
+  let : Algebra.IsIntegral R S := ⟨RingHom.Finite.to_isIntegral hφ⟩
   let : Module R M := Module.compHom M φ
   apply le_antisymm
   · rintro p ⟨q, hq, rfl⟩
@@ -1689,8 +1688,8 @@ theorem weaklyAssociatedPrimes_finite_ring_map
     have hnotle : ∀ Q ∈ T, ¬ q.asIdeal ≤ Q := by
       intro Q hQT hle
       have hQprime : Q.IsPrime := hQT.1.1
-      letI : q.asIdeal.IsPrime := q.2
-      letI : Q.IsPrime := hQprime
+      let : q.asIdeal.IsPrime := q.2
+      let : Q.IsPrime := hQprime
       have hlt : q.asIdeal < Q := lt_of_le_of_ne hle hQT.2.symm
       have hcomaplt : q.asIdeal.comap (algebraMap R S) <
           Q.comap (algebraMap R S) :=
@@ -1779,7 +1778,7 @@ theorem weaklyAssociatedPrimes_finite_ring_map
         (IsLocalizedModule.mk'_smul_mk' A f (t : S) m (1 : U) s).symm
     have hqz : q.asIdeal ∈
         ((⊥ : Submodule S M).colon ({z} : Set M)).minimalPrimes := by
-      letI : q.asIdeal.IsPrime := q.2
+      let : q.asIdeal.IsPrime := q.2
       have hIleq :
           (⊥ : Submodule S M).colon ({z} : Set M) ≤ q.asIdeal := by
         intro r hr
@@ -1789,7 +1788,7 @@ theorem weaklyAssociatedPrimes_finite_ring_map
           rw [IsLocalizedModule.mk'_smul_mk' A f r z (1 : U) s]
           have hr0 : r • z = 0 := by
             simpa [Submodule.mem_colon_singleton, Submodule.mem_bot] using hr
-          simpa [hr0]
+          simp [hr0]
         by_contra hrq
         have hru : IsUnit (algebraMap S A r) :=
           IsLocalization.map_units (R := S) (S := A) (M := U) ⟨r, hrq⟩
@@ -1800,8 +1799,7 @@ theorem weaklyAssociatedPrimes_finite_ring_map
         apply (IsUnit.smul_eq_zero hru).mp
         simpa [hzloc, mul_comm] using hloc
       refine ⟨⟨q.2, hIleq⟩, ?_⟩
-      intro Q hQ hQle
-      intro r hr
+      intro Q hQ hQle r hr
       have hrrad : algebraMap S A r ∈ J'.radical := by
         rw [hmrad'']
         rw [← Localization.AtPrime.map_eq_maximalIdeal (I := q.asIdeal)]
@@ -1819,12 +1817,11 @@ theorem weaklyAssociatedPrimes_finite_ring_map
         change ((a : S) * r ^ d) • ((t : S) • m) = 0
         rw [smul_smul]
         have ha' : (a : S) • (r ^ d • m) = 0 := by
-          change (a : S) • (r ^ d • m) = 0
           exact ha
         calc
           ((a : S) * r ^ d * (t : S)) • m =
               (t : S) • ((a : S) • (r ^ d • m)) := by
-                simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]
+                simp [smul_smul, mul_comm]
           _ = 0 := by rw [ha']; simp)
       have hanot : (a : S) ∉ Q := by
         intro haQ
@@ -1843,10 +1840,10 @@ theorem weaklyAssociatedPrimes_finite_ring_map
       rw [hK]
       exact Ideal.comap_mono hqz.1.2
     have hpmin : q.asIdeal.comap φ ∈ K.minimalPrimes := by
-      letI : q.asIdeal.IsPrime := q.2
+      let : q.asIdeal.IsPrime := q.2
       refine ⟨⟨Ideal.comap_isPrime φ q.asIdeal, hKle⟩, ?_⟩
       intro P hP hPle
-      letI : P.IsPrime := hP.1
+      let : P.IsPrime := hP.1
       let I' : Ideal S :=
         (⊥ : Submodule S M).colon ({z} : Set M)
       have hKalg : K = I'.comap (algebraMap R S) := by
@@ -1860,7 +1857,7 @@ theorem weaklyAssociatedPrimes_finite_ring_map
         exact hP.2
       obtain ⟨Q, hIQ, hQprime, hQover⟩ :=
         Ideal.exists_ideal_over_prime_of_isIntegral P I' hI'comap
-      letI : Q.IsPrime := hQprime
+      let : Q.IsPrime := hQprime
       have hQle : Q.comap (algebraMap R S) ≤
           q.asIdeal.comap φ := by
         rw [hQover]
@@ -1868,7 +1865,7 @@ theorem weaklyAssociatedPrimes_finite_ring_map
       obtain ⟨Q', hQQ', hQ'prime, hQ'over⟩ :=
         Ideal.exists_ideal_over_prime_of_isIntegral
           (q.asIdeal.comap φ) Q hQle
-      letI : Q'.IsPrime := hQ'prime
+      let : Q'.IsPrime := hQ'prime
       have hQ'mem : Q' ∈ T ∨ Q' = q.asIdeal := by
         by_cases hQ'eq : Q' = q.asIdeal
         · exact Or.inr hQ'eq

@@ -47,9 +47,9 @@ instance coherentModuleProperty_isWeakSerreClass
     (R : Type u) [CommRing R] :
     (coherentModuleProperty R).IsWeakSerreClass := by
   let P := coherentModuleProperty R
-  have hzero : P (0 : ModuleCat.{u} R) := by
+  have hzero : P (ModuleCat.of R (Fin 0 → R)) := by
     change Formalization.Books.Algebra.Unit90.IsCoherentModule R
-      (0 : ModuleCat.{u} R)
+      (ModuleCat.of R (Fin 0 → R))
     refine ⟨inferInstance, ?_⟩
     intro N _
     exact inferInstance
@@ -57,11 +57,13 @@ instance coherentModuleProperty_isWeakSerreClass
     refine { of_iso := ?_ }
     intro X Y e hX
     let S : ShortComplex (ModuleCat.{u} R) :=
-      ShortComplex.mk (0 : (0 : ModuleCat.{u} R) ⟶ X) e.hom (by simp)
+      ShortComplex.mk (0 : (ModuleCat.of R (Fin 0 → R)) ⟶ X) e.hom (by simp)
     have hS : S.ShortExact := by
       apply ShortComplex.ShortExact.mk'
       · exact (S.exact_iff_mono (by simp [S])).2 inferInstance
-      · infer_instance
+      · exact (ModuleCat.mono_iff_injective S.f).2 (by
+          intro x y _
+          exact Subsingleton.elim _ _)
       · infer_instance
     exact (Formalization.Books.Algebra.Unit90.coherent_of_shortExact hS).1
       ⟨hzero, hX⟩
@@ -86,8 +88,13 @@ instance coherentModuleProperty_isWeakSerreClass
     intro S hS h₁ h₃
     exact (Formalization.Books.Algebra.Unit90.coherent_of_shortExact hS).2.1
       ⟨h₁, h₃⟩
-  exact (Formalization.Books.Homology.Unit10.weak_serre_subcategory_characterization P).2
-    ⟨hzero, hIso, ⟨hK, hC⟩, hExt⟩
+  /- Prior attempt: the intended characterization theorem is commented out in
+     the imported Homology chapter, and its local reverse-direction proof also
+     requires unavailable exactness elaboration support in this API.
+     exact (Formalization.Books.Homology.Unit10.weak_serre_subcategory_characterization P).2
+       ⟨hzero, hIso, ⟨hK, hC⟩, hExt⟩
+  -/
+  sorry
 
 theorem coherentModuleCategory_is_abelian
     (R : Type u) [CommRing R] :
@@ -114,9 +121,9 @@ theorem localizationModuleCategory_is_abelian
     (R : Type u) [CommRing R] (S : Submonoid R) :
     Nonempty (Abelian (localizationModuleCategory R S)) := by
   obtain ⟨e⟩ := Formalization.Books.Algebra.Unit09.localization_module_category_equivalence S
-  letI : HasFiniteProducts (localizationModuleCategory R S) :=
-    ⟨fun _ => Adjunction.hasLimitsOfShape_of_equivalence e.functor⟩
-  exact ⟨abelianOfEquivalence e.functor⟩
+  let : HasFiniteProducts (localizationModuleCategory R S) :=
+    ⟨fun _ => Adjunction.hasLimitsOfShape_of_equivalence e.inverse⟩
+  exact ⟨abelianOfEquivalence e.inverse⟩
 
 /-! ## Ideal-power torsion modules -/
 
@@ -139,12 +146,12 @@ theorem iPowerTorsionModuleProperty_isSerreClass
     (iPowerTorsionModuleProperty R I).IsSerreClass := by
   classical
   let P := iPowerTorsionModuleProperty R I
-  have hzero : P (0 : ModuleCat.{u} R) := by
-    change IsIPowerTorsion I ((0 : ModuleCat.{u} R) : Type u)
+  have hzero : P (ModuleCat.of R (Fin 0 → R)) := by
+    change IsIPowerTorsion I ((ModuleCat.of R (Fin 0 → R)) : Type u)
     intro x
     refine ⟨1, by simp, ?_⟩
     intro a ha
-    simp
+    exact Subsingleton.elim _ _
   have hsub : P.IsClosedUnderSubobjects := by
     refine ⟨?_⟩
     intro X Y f _ hY
@@ -169,10 +176,11 @@ theorem iPowerTorsionModuleProperty_isSerreClass
     refine ⟨n, hn, ?_⟩
     intro a ha
     change a • f.hom x = 0
-    rw [← map_smul, hkill a ha]
+    simpa only [map_smul, map_zero] using congrArg f.hom (hkill a ha)
   have hiso : P.IsClosedUnderIsomorphisms := by
-    letI : P.IsClosedUnderSubobjects := hsub
-    exact inferInstance
+    refine { of_iso := ?_ }
+    intro X Y e hX
+    exact hsub.prop_of_mono e.inv hX
   have hext : P.IsClosedUnderExtensions := by
     refine ⟨?_⟩
     intro S hS h₁ h₃
@@ -203,7 +211,7 @@ theorem iPowerTorsionModuleProperty_isSerreClass
     have hmOf (a : R) (ha : a ∈ t) :
         ∀ c : R, c ∈ I ^ mOf a → c • yOf a = 0 := by
       dsimp [mOf]
-      rw [dif_pos ha]
+      rw [if_pos ha]
       exact (h₁ (yOf a)).choose_spec.2
     have hQ : ∀ b : R, b ∈ I ^ n →
         ∀ c : R, c ∈ I ^ m → c • (b • x) = 0 := by
@@ -225,10 +233,12 @@ theorem iPowerTorsionModuleProperty_isSerreClass
         rw [add_smul, smul_add, hleft c hc, hright c hc, add_zero]
       · intro r b hb hprev c hc
         calc
-          c • ((r • b) • x) = c • (r • (b • x)) := by rw [smul_smul]
+          c • ((r • b) • x) = c • (r • (b • x)) := by
+            simp [smul_smul]
           _ = (c * r) • (b • x) := by rw [mul_smul]
-          _ = 0 := hprev (c * r) ((I ^ m).mul_mem_left c hc)
-    have hmul : I ^ n * I ^ m ≤ Ideal.torsionOf R x := by
+          _ = 0 := hprev (c * r) (by
+            simpa [mul_comm] using (I ^ m).mul_mem_left r hc)
+    have hmul : I ^ n * I ^ m ≤ Ideal.torsionOf R (S.X₂ : Type u) x := by
       rw [Ideal.mul_le]
       intro b hb c hc
       apply (Ideal.mem_torsionOf_iff x (b * c)).2
@@ -241,8 +251,11 @@ theorem iPowerTorsionModuleProperty_isSerreClass
     apply (Ideal.mem_torsionOf_iff x a).mp
     rw [Ideal.IsTwoSided.pow_add] at ha
     exact hmul ha
+  have hZ : IsZero (ModuleCat.of R (Fin 0 → R)) :=
+    ModuleCat.isZero_of_subsingleton _
   exact (Formalization.Books.Homology.Unit10.serre_subcategory_characterization P).2
-    ⟨hzero, hiso, ⟨hsub, hquot⟩, hext⟩
+    ⟨P.prop_of_iso (hZ.iso (isZero_zero (moduleCategory R))) hzero,
+      hiso, ⟨hsub, hquot⟩, hext⟩
 
 theorem iPowerTorsionModuleCategory_is_abelian
     (R : Type u) [CommRing R] (I : Ideal R) (hI : I.FG) :

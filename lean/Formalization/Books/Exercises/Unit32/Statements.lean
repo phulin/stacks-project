@@ -548,12 +548,85 @@ theorem realConstantToOriginSkyscraper_stalk_surjective :
     ∀ x : realLine, Function.Surjective
       ((TopCat.Presheaf.stalkFunctor (Type 0) x).map
         realConstantToOriginSkyscraper.hom) := by
-  sorry
+  classical
+  intro x
+  by_cases hx : x = realOrigin
+  · subst x
+    let g :
+        realConstantZModTwo ⟶ (skyscraperSheafFunctor realOrigin).obj (ZMod 2) :=
+      by simpa [realOriginSkyscraper, skyscraperSheafFunctor] using
+        realConstantToOriginSkyscraper
+    have hcomp :=
+      (stalkSkyscraperSheafAdjunction realOrigin).homEquiv_counit
+        (C := TopCat.Sheaf (Type 0) realLine) (D := Type 0)
+        realConstantZModTwo (ZMod 2) g
+    have hmap :
+        TypeCat.ofHom realConstantZModTwoStalkMap =
+          ((TopCat.Sheaf.forget (Type 0) realLine ⋙
+            TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).map g) ≫
+            (stalkSkyscraperSheafAdjunction realOrigin).counit.app (ZMod 2) := by
+      rw [← hcomp]
+      dsimp [g, realConstantToOriginSkyscraper, realOriginSkyscraper,
+        skyscraperSheafFunctor]
+      exact (Equiv.apply_symm_apply _ _).symm
+    have hfun :
+        realConstantZModTwoStalkMap =
+          (ConcreteCategory.hom
+              ((stalkSkyscraperSheafAdjunction realOrigin).counit.app (ZMod 2))) ∘
+            (ConcreteCategory.hom
+              ((TopCat.Sheaf.forget (Type 0) realLine ⋙
+                TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).map g)) := by
+      funext z
+      change ((TopCat.Sheaf.forget (Type 0) realLine ⋙
+          TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).obj
+          realConstantZModTwo) at z
+      have hz := ConcreteCategory.congr_hom hmap z
+      change realConstantZModTwoStalkMap z =
+        (((TopCat.Sheaf.forget (Type 0) realLine ⋙
+          TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).map g ≫
+          (stalkSkyscraperSheafAdjunction realOrigin).counit.app (ZMod 2)) z) at hz
+      rw [CategoryTheory.comp_apply] at hz
+      exact hz
+    have hc : Function.Injective
+        (ConcreteCategory.hom
+          ((stalkSkyscraperSheafAdjunction realOrigin).counit.app (ZMod 2))) := by
+      change Function.Injective (ConcreteCategory.hom
+        ((skyscraperPresheafStalkOfSpecializes realOrigin (ZMod 2)
+          specializes_rfl).hom))
+      exact ((type_isIso_iff_bijective _).mp (by infer_instance)).1
+    have hsurj :
+        Function.Surjective
+          (ConcreteCategory.hom
+              ((stalkSkyscraperSheafAdjunction realOrigin).counit.app (ZMod 2)) ∘
+            ConcreteCategory.hom
+              ((TopCat.Sheaf.forget (Type 0) realLine ⋙
+                TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).map g)) := by
+      rw [← hfun]
+      exact (constantSheafStalkEquiv (X := realLine) (ZMod 2) realOrigin).symm.surjective
+    have hfg : Function.Surjective
+        (ConcreteCategory.hom
+          ((TopCat.Sheaf.forget (Type 0) realLine ⋙
+            TopCat.Presheaf.stalkFunctor (Type 0) realOrigin).map g)) :=
+      hsurj.of_comp_left hc
+    dsimp [g, realConstantToOriginSkyscraper, realOriginSkyscraper,
+      skyscraperSheafFunctor] at hfg ⊢
+    exact hfg
+  · have hspec : ¬ realOrigin ⤳ x := by
+      intro h
+      exact hx ((specializes_iff_eq (x := realOrigin) (y := x)).mp h).symm
+    let e := skyscraperPresheafStalkOfNotSpecializes realOrigin (ZMod 2) hspec
+    have he : Function.Injective (ConcreteCategory.hom e.hom) :=
+      ((type_isIso_iff_bijective _).mp (by infer_instance)).1
+    intro z
+    refine ⟨(constantSheafStalkEquiv (X := realLine) (ZMod 2) x) (0 : ZMod 2), ?_⟩
+    apply he
+    exact Subsingleton.elim _ _
 
 /-- The canonical stalk-surjective map is an epimorphism of sheaves. -/
 theorem realConstantToOriginSkyscraper_is_epi :
     Epi realConstantToOriginSkyscraper := by
-  sorry
+  exact (sheaf_epi_iff_stalk_surjective realConstantToOriginSkyscraper).2
+    realConstantToOriginSkyscraper_stalk_surjective
 
 /-- The set-valued kernel is the equalizer used in the example. -/
 theorem realKernel_is_equalizer :
@@ -565,7 +638,311 @@ theorem realKernel_is_equalizer :
 sheaf. -/
 theorem realIdealSheaf_is_ideal :
     IsIdealSheafIn realRingConstantZModTwo realIdealSheaf := by
-  sorry
+  classical
+  unfold IsIdealSheafIn
+  let J := Opens.grothendieckTopology realLine
+  letI : PreservesLimits commRingToAddCommGrp := by
+    change PreservesLimits
+      (forget₂ CommRingCat RingCat ⋙ forget₂ RingCat AddCommGrpCat)
+    infer_instance
+  letI : J.HasSheafCompose commRingToAddCommGrp :=
+    CategoryTheory.hasSheafCompose_of_preservesLimitsOfSize (J := J)
+      (F := commRingToAddCommGrp)
+  letI : J.WEqualsLocallyBijective CommRingCat := inferInstance
+  letI : J.WEqualsLocallyBijective AddCommGrpCat := inferInstance
+  letI : J.PreservesSheafification commRingToAddCommGrp :=
+    { le := by
+        intro P Q f hf
+        rw [J.W_iff_isLocallyBijective (A := CommRingCat) f] at hf
+        change J.W (Functor.whiskerRight f commRingToAddCommGrp)
+        rw [J.W_iff_isLocallyBijective (A := AddCommGrpCat)]
+        constructor
+        · refine { equalizerSieve_mem := ?_ }
+          intro X x y h
+          change (ConcreteCategory.hom (f.app X)) x =
+            (ConcreteCategory.hom (f.app X)) y at h
+          exact hf.1.equalizerSieve_mem x y h
+        · refine { imageSieve_mem := ?_ }
+          intro X x
+          have heq :
+              Presheaf.imageSieve (Functor.whiskerRight f commRingToAddCommGrp) x =
+                Presheaf.imageSieve f x := by
+            ext Y g
+            change (∃ t, (ConcreteCategory.hom (f.app (op Y))) t =
+                (ConcreteCategory.hom (Q.map g.op)) x) ↔
+              ∃ t, (ConcreteCategory.hom (f.app (op Y))) t =
+                (ConcreteCategory.hom (Q.map g.op)) x
+            rfl
+          rw [heq]
+          exact hf.2.imageSieve_mem x }
+  let e :=
+    ((CategoryTheory.constantCommuteCompose J commRingToAddCommGrp).app
+      (CommRingCat.of (ZMod 2))).symm
+  let hmono : Mono realIdealSheafInclusion := by
+    constructor
+    intro Z f g h
+    apply limit.hom_ext
+    intro j
+    rcases j with (_ | _)
+    · exact h
+    · rw [← limit.w
+        (parallelPair realAbelianConstantToOriginSkyscraper
+          realAbelianConstantToOriginSkyscraperZero)
+        WalkingParallelPairHom.left]
+      have hh := congrArg (fun k => k ≫
+          (parallelPair realAbelianConstantToOriginSkyscraper
+            realAbelianConstantToOriginSkyscraperZero).map
+            WalkingParallelPairHom.left) h
+      rw [Category.assoc, Category.assoc] at hh
+      exact hh
+  let hpmono : Mono realIdealSheafInclusion.hom :=
+    (CategoryTheory.Sheaf.Hom.mono_iff_presheaf_mono
+      (Opens.grothendieckTopology realLine) AddCommGrpCat
+      realIdealSheafInclusion).1 hmono
+  let hemono : Mono e.hom.hom :=
+    (CategoryTheory.Sheaf.Hom.mono_iff_presheaf_mono J AddCommGrpCat e.hom).1
+      (by infer_instance)
+  let hcomp : Mono (realIdealSheafInclusion.hom ≫ e.hom.hom) :=
+    mono_comp' hpmono hemono
+  refine ⟨realIdealSheafInclusion.hom ≫ e.hom.hom, hcomp, ?_⟩
+  intro U
+  have hUall := (CategoryTheory.NatTrans.mono_iff_mono_app
+    (realIdealSheafInclusion.hom ≫ e.hom.hom)).1 hcomp
+  have hU := hUall (op U)
+  let RSk :=
+    (skyscraperSheafFunctor realOrigin (C := CommRingCat)).obj
+      (CommRingCat.of (ZMod 2))
+  let rTopIso : RSk.presheaf.obj (op (⊤ : Opens realLine)) ≅
+      CommRingCat.of (ZMod 2) := by
+    dsimp [RSk]
+    change (if realOrigin ∈ (⊤ : Opens realLine) then CommRingCat.of (ZMod 2)
+      else terminal CommRingCat) ≅ CommRingCat.of (ZMod 2)
+    exact eqToIso (if_pos (by simp))
+  let q : realRingConstantZModTwo ⟶ RSk := by
+    classical
+    exact
+      ((CategoryTheory.constantSheafAdj J CommRingCat
+        (isTerminalTop : IsTerminal (⊤ : Opens realLine))).homEquiv
+        (CommRingCat.of (ZMod 2)) RSk).symm
+        (rTopIso.inv ≫
+          (CategoryTheory.sheafSectionsNatIsoEvaluation J CommRingCat
+            (X := (⊤ : Opens realLine))).inv.app RSk)
+  let zIso : AddCommGrpCat.of (ZMod 2) ≅
+      commRingToAddCommGrp.obj (CommRingCat.of (ZMod 2)) := by
+    refine ⟨AddCommGrpCat.ofHom (AddMonoidHom.id (ZMod 2)),
+      AddCommGrpCat.ofHom (AddMonoidHom.id (ZMod 2)), ?_, ?_⟩
+    · ext
+      rfl
+    · ext
+      rfl
+  let aIsoP : realAbelianOriginSkyscraper.presheaf ≅
+      ((CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk).obj := by
+    refine NatIso.ofComponents (fun V => ?_) (fun {V W} f => ?_)
+    ·
+      dsimp [CategoryTheory.ObjectProperty.lift, CategoryTheory.sheafCompose,
+        RSk, realAbelianOriginSkyscraper, skyscraperSheaf, skyscraperPresheaf]
+      by_cases h : realOrigin ∈ V.unop
+      · have hA : (if realOrigin ∈ V.unop then AddCommGrpCat.of (ZMod 2)
+            else ⊤_ AddCommGrpCat) = AddCommGrpCat.of (ZMod 2) := if_pos h
+        have hR : (((skyscraperSheafFunctor realOrigin (C := CommRingCat)).obj
+            (CommRingCat.of (ZMod 2))).obj.obj V) = CommRingCat.of (ZMod 2) := by
+          dsimp [skyscraperSheafFunctor, skyscraperSheaf, skyscraperPresheaf]
+          simp [h]
+        exact eqToIso hA ≪≫ zIso ≪≫
+          (eqToIso (congrArg commRingToAddCommGrp.obj hR)).symm
+      · simpa [h, RSk, realAbelianOriginSkyscraper,
+          CategoryTheory.sheafCompose, skyscraperSheafFunctor,
+          skyscraperSheaf, skyscraperPresheaf] using
+          (terminalIsTerminal : IsTerminal (⊤_ AddCommGrpCat)).uniqueUpToIso
+            (IsTerminal.isTerminalObj commRingToAddCommGrp
+              (⊤_ CommRingCat)
+              (terminalIsTerminal : IsTerminal (⊤_ CommRingCat)))
+    · by_cases hV : realOrigin ∈ V.unop
+      · by_cases hW : realOrigin ∈ W.unop
+        · simp [hV, hW, RSk, realAbelianOriginSkyscraper,
+            CategoryTheory.sheafCompose, skyscraperSheafFunctor,
+            skyscraperSheaf, skyscraperPresheaf, skyscraperPresheaf_map,
+            eqToHom_trans, eqToIso.hom, eqToHom_map]
+          split_ifs with hV'
+          · ext x
+            simp [ConcreteCategory.comp_apply, type_eqToHom_concrete_apply,
+              eqToIso, eqToHom_trans]
+          · exact (hV' hV).elim
+        · simp [hV, hW, RSk, realAbelianOriginSkyscraper,
+            CategoryTheory.sheafCompose, skyscraperSheafFunctor,
+            skyscraperSheaf, skyscraperPresheaf, skyscraperPresheaf_map,
+            eqToHom_trans, eqToIso.hom, eqToHom_map, zIso]
+          have hTW : IsTerminal
+              (((CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk).obj.obj W) := by
+            dsimp [CategoryTheory.sheafCompose, RSk, skyscraperSheafFunctor,
+              skyscraperSheaf, skyscraperPresheaf]
+            rw [if_neg hW]
+            exact IsTerminal.isTerminalObj commRingToAddCommGrp
+              (⊤_ CommRingCat)
+              (terminalIsTerminal : IsTerminal (⊤_ CommRingCat))
+          exact hTW.hom_ext _ _
+      · by_cases hW : realOrigin ∈ W.unop
+        · exact (hV (leOfHom f.unop hW)).elim
+        · simp [hV, hW, RSk, realAbelianOriginSkyscraper,
+            CategoryTheory.sheafCompose, skyscraperSheafFunctor,
+            skyscraperSheaf, skyscraperPresheaf, skyscraperPresheaf_map,
+            eqToHom_trans, eqToIso.hom, eqToHom_map, zIso]
+          have hTW : IsTerminal
+              (((CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk).obj.obj W) := by
+            dsimp [CategoryTheory.sheafCompose, RSk, skyscraperSheafFunctor,
+              skyscraperSheaf, skyscraperPresheaf]
+            rw [if_neg hW]
+            exact IsTerminal.isTerminalObj commRingToAddCommGrp
+              (⊤_ CommRingCat)
+              (terminalIsTerminal : IsTerminal (⊤_ CommRingCat))
+          exact hTW.hom_ext _ _
+  let aIso : realAbelianOriginSkyscraper ≅
+      (CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk :=
+    (CategoryTheory.fullyFaithfulSheafToPresheaf J AddCommGrpCat).preimageIso aIsoP
+  let qAdd : realAbelianConstantZModTwo ⟶ realAbelianOriginSkyscraper :=
+    e.hom ≫
+      (CategoryTheory.sheafCompose J commRingToAddCommGrp).map q ≫
+      aIso.inv
+  have hqAdd : qAdd = realAbelianConstantToOriginSkyscraper := by
+    let adjA := CategoryTheory.constantSheafAdj J AddCommGrpCat
+      (isTerminalTop : IsTerminal (⊤ : Opens realLine))
+    let adjR := CategoryTheory.constantSheafAdj J CommRingCat
+      (isTerminalTop : IsTerminal (⊤ : Opens realLine))
+    let tR : CommRingCat.of (ZMod 2) ⟶ RSk.presheaf.obj
+        (op (⊤ : Opens realLine)) :=
+      rTopIso.inv ≫
+        (CategoryTheory.sheafSectionsNatIsoEvaluation J CommRingCat
+          (X := (⊤ : Opens realLine))).inv.app RSk
+    let c := CategoryTheory.constantCommuteCompose J commRingToAddCommGrp
+    have hqdecomp : q =
+        (CategoryTheory.constantSheaf J CommRingCat).map tR ≫
+          adjR.counit.app RSk := by
+      change ((adjR.homEquiv (CommRingCat.of (ZMod 2)) RSk).symm tR) = _
+      exact adjR.homEquiv_counit (CommRingCat.of (ZMod 2)) RSk tR
+    have hc_naturality := c.hom.naturality tR
+    have hc_naturality' :
+        (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              ((CategoryTheory.constantSheaf J CommRingCat).map tR) ≫
+            c.hom.app (RSk.presheaf.obj (op (⊤ : Opens realLine))) =
+          c.hom.app (CommRingCat.of (ZMod 2)) ≫
+            ((commRingToAddCommGrp ⋙ CategoryTheory.constantSheaf J AddCommGrpCat).map
+              tR) := by
+      simpa only [Functor.comp_map] using hc_naturality
+    have hc_naturality'' :
+        (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              ((CategoryTheory.constantSheaf J CommRingCat).map tR) ≫
+            (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).hom =
+          (c.app (CommRingCat.of (ZMod 2))).hom ≫
+            ((commRingToAddCommGrp ⋙ CategoryTheory.constantSheaf J AddCommGrpCat).map
+              tR) := by
+      exact hc_naturality'
+    have htransport :
+        (c.app (CommRingCat.of (ZMod 2))).inv ≫
+            (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              ((CategoryTheory.constantSheaf J CommRingCat).map tR) =
+          ((commRingToAddCommGrp ⋙ CategoryTheory.constantSheaf J AddCommGrpCat).map
+              tR) ≫
+            (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).inv := by
+      apply (cancel_mono
+        (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).hom).1
+      simpa only [Category.assoc, Iso.inv_hom_id, Iso.inv_hom_id_assoc,
+        Category.comp_id] using
+        congrArg (fun k =>
+          (c.app (CommRingCat.of (ZMod 2))).inv ≫ k) hc_naturality''
+    have hcounit :
+        (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).inv ≫
+            (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              (adjR.counit.app RSk) =
+          adjA.counit.app
+            ((CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk) := by
+      rw [← CategoryTheory.constantSheafAdj_counit_w
+        (J := J) (U := commRingToAddCommGrp) (F := RSk)
+        (hT := (isTerminalTop : IsTerminal (⊤ : Opens realLine)))]
+      change (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).inv ≫
+          (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).hom ≫ _ = _
+      exact (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).inv_hom_id_assoc _
+    let tA : AddCommGrpCat.of (ZMod 2) ⟶
+        ((CategoryTheory.sheafSections J AddCommGrpCat).obj
+          (op (⊤ : Opens realLine))).obj realAbelianOriginSkyscraper :=
+      realOriginSkyscraperTopSectionsIso.inv ≫
+        (CategoryTheory.sheafSectionsNatIsoEvaluation J AddCommGrpCat
+          (X := (⊤ : Opens realLine))).inv.app
+          realAbelianOriginSkyscraper
+    have htopObj : realAbelianOriginSkyscraper.presheaf.obj
+        (op (⊤ : Opens realLine)) = AddCommGrpCat.of (ZMod 2) := by
+      dsimp [realAbelianOriginSkyscraper, skyscraperSheaf,
+        skyscraperPresheaf]
+      simp
+    have htopIso : realOriginSkyscraperTopSectionsIso = eqToIso htopObj := by
+      apply Iso.ext
+      cases htopObj
+      simp [realOriginSkyscraperTopSectionsIso, eqToIso]
+    have hsection :
+        ((commRingToAddCommGrp.map tR) ≫
+        ((CategoryTheory.sheafSections J AddCommGrpCat).obj
+            (op (⊤ : Opens realLine))).map aIso.inv) = tA := by
+      dsimp [aIso]
+      change (commRingToAddCommGrp.map tR) ≫
+          (aIsoP.app (op (⊤ : Opens realLine))).inv = tA
+      dsimp [tA]
+      rw [htopIso]
+      dsimp [aIsoP, tA, tR, NatIso.ofComponents]
+      ext x
+      have h : realOrigin ∈ (⊤ : Opens realLine) := by simp
+      have h' : realOrigin ∈ (op (⊤ : Opens realLine)).unop := h
+      simp only [dif_pos h']
+      simp [rTopIso, zIso, realOriginSkyscraperTopSectionsIso,
+        realAbelianOriginSkyscraper, CategoryTheory.sheafCompose,
+        CategoryTheory.comp_apply, ConcreteCategory.comp_apply,
+        type_eqToHom_concrete_apply,
+        eqToIso, eqToIso_refl, eqToHom_refl, eqToHom_trans,
+        eqToHom_trans_assoc, eqToHom_map, Category.id_comp, Category.comp_id]
+    rw [show realAbelianConstantToOriginSkyscraper =
+      (adjA.homEquiv (AddCommGrpCat.of (ZMod 2))
+        realAbelianOriginSkyscraper).symm tA by
+      rfl]
+    rw [show qAdd =
+      (adjA.homEquiv (AddCommGrpCat.of (ZMod 2))
+        realAbelianOriginSkyscraper).symm
+        ((commRingToAddCommGrp.map tR) ≫
+          ((CategoryTheory.sheafSections J AddCommGrpCat).obj
+            (op (⊤ : Opens realLine))).map aIso.inv) by
+      change (c.app (CommRingCat.of (ZMod 2))).inv ≫
+          (CategoryTheory.sheafCompose J commRingToAddCommGrp).map q ≫ aIso.inv = _
+      calc
+        _ = (c.app (CommRingCat.of (ZMod 2))).inv ≫
+            (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              ((CategoryTheory.constantSheaf J CommRingCat).map tR ≫
+                adjR.counit.app RSk) ≫ aIso.inv := by
+          rw [show q =
+            (CategoryTheory.constantSheaf J CommRingCat).map tR ≫
+              adjR.counit.app RSk from hqdecomp]
+        _ = (c.app (CommRingCat.of (ZMod 2))).inv ≫
+            ((CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+                ((CategoryTheory.constantSheaf J CommRingCat).map tR) ≫
+              (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+                (adjR.counit.app RSk)) ≫ aIso.inv := by
+          rw [Functor.map_comp]
+        _ = ((commRingToAddCommGrp ⋙ CategoryTheory.constantSheaf J AddCommGrpCat).map tR ≫
+              (c.app (RSk.presheaf.obj (op (⊤ : Opens realLine)))).inv) ≫
+            (CategoryTheory.sheafCompose J commRingToAddCommGrp).map
+              (adjR.counit.app RSk) ≫ aIso.inv := by
+          simp only [Category.assoc]
+          rw [htransport]
+        _ = (commRingToAddCommGrp ⋙ CategoryTheory.constantSheaf J AddCommGrpCat).map tR ≫
+            adjA.counit.app ((CategoryTheory.sheafCompose J commRingToAddCommGrp).obj RSk) ≫
+              aIso.inv := by
+          rw [Category.assoc, hcounit]
+        _ = (adjA.homEquiv (AddCommGrpCat.of (ZMod 2))
+            realAbelianOriginSkyscraper).symm
+              ((commRingToAddCommGrp.map tR) ≫
+                ((CategoryTheory.sheafSections J AddCommGrpCat).obj
+                  (op (⊤ : Opens realLine))).map aIso.inv) := by
+          rw [CategoryTheory.Adjunction.homEquiv_counit]
+          simp]
+    exact congrArg
+      ((adjA.homEquiv (AddCommGrpCat.of (ZMod 2))
+        realAbelianOriginSkyscraper).symm) hsection
 
 /-- The real-line ideal sheaf is not locally generated by sections. -/
 theorem realIdealSheaf_not_locally_generated :

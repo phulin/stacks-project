@@ -4148,7 +4148,45 @@ theorem gradedPiece_map_id {C : Type u} [Category.{v} C] [Abelian C]
 theorem gradedPiece_map_comp {C : Type u} [Category.{v} C] [Abelian C]
     {A B D : FilteredObject C} (f : A ⟶ B) (g : B ⟶ D) (p : ℤ) :
     gradedPieceMap (f ≫ g) p = gradedPieceMap f p ≫ gradedPieceMap g p := by
-  sorry
+  have hπ {E F : FilteredObject C} (h : E ⟶ F) :
+      gradedPieceπ E p ≫ gradedPieceMap h p =
+        (F.filtration.obj p).factorThru
+            ((E.filtration.obj p).arrow ≫ h.hom) (h.map_filtration p) ≫
+          gradedPieceπ F p := by
+    dsimp [gradedPieceMap, gradedPieceπ]
+    change cokernel.π _ ≫ cokernel.desc _ _ _ = _ ≫ cokernel.π _
+    simp
+  have hfg :
+      (D.filtration.obj p).factorThru
+          ((A.filtration.obj p).arrow ≫ (f ≫ g).hom)
+          ((f ≫ g).map_filtration p) =
+        (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) ≫
+          (D.filtration.obj p).factorThru
+            ((B.filtration.obj p).arrow ≫ g.hom) (g.map_filtration p) := by
+    apply (cancel_mono (D.filtration.obj p).arrow).mp
+    simp [Category.assoc]
+  let : Epi (gradedPieceπ A p) := by
+    change Epi (cokernel.π _)
+    infer_instance
+  apply (cancel_epi (gradedPieceπ A p)).mp
+  calc
+    gradedPieceπ A p ≫ gradedPieceMap (f ≫ g) p =
+        (D.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ (f ≫ g).hom)
+            ((f ≫ g).map_filtration p) ≫ gradedPieceπ D p := hπ (f ≫ g)
+    _ = ((B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) ≫
+          (D.filtration.obj p).factorThru
+            ((B.filtration.obj p).arrow ≫ g.hom) (g.map_filtration p)) ≫
+          gradedPieceπ D p := by rw [hfg]
+    _ = (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) ≫
+          (gradedPieceπ B p ≫ gradedPieceMap g p) := by rw [hπ g, Category.assoc]
+    _ = (gradedPieceπ A p ≫ gradedPieceMap f p) ≫
+          gradedPieceMap g p := by rw [hπ f, ← Category.assoc]
+    _ = gradedPieceπ A p ≫ (gradedPieceMap f p ≫ gradedPieceMap g p) :=
+      Category.assoc _ _ _
 
 /-- The associated-graded-piece functor. -/
 def gradedPieceFunctor {C : Type u} [Category.{v} C] [Abelian C] (p : ℤ) :
@@ -4165,7 +4203,52 @@ def gradedPieceFunctor {C : Type u} [Category.{v} C] [Abelian C] (p : ℤ) :
 theorem gradedPieceFunctor_is_additive {C : Type u} [Category.{v} C] [Abelian C]
     (p : ℤ) :
     (gradedPieceFunctor (C := C) p).Additive := by
-  sorry
+  constructor
+  intro A B f g
+  have hπ {E F : FilteredObject C} (h : E ⟶ F) :
+      gradedPieceπ E p ≫ gradedPieceMap h p =
+        (F.filtration.obj p).factorThru
+            ((E.filtration.obj p).arrow ≫ h.hom) (h.map_filtration p) ≫
+          gradedPieceπ F p := by
+    dsimp [gradedPieceMap, gradedPieceπ]
+    change cokernel.π _ ≫ cokernel.desc _ _ _ = _ ≫ cokernel.π _
+    simp
+  have hadd :
+      (B.filtration.obj p).factorThru
+          ((A.filtration.obj p).arrow ≫ (f + g).hom)
+          ((f + g).map_filtration p) =
+        (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) +
+          (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ g.hom) (g.map_filtration p) := by
+    apply (cancel_mono (B.filtration.obj p).arrow).mp
+    simp only [Subobject.factorThru_arrow, Preadditive.add_comp]
+    change (A.filtration.obj p).arrow ≫ (f.hom + g.hom) = _
+    simp [Preadditive.comp_add, Category.assoc]
+  let : Epi (gradedPieceπ A p) := by
+    change Epi (cokernel.π _)
+    infer_instance
+  apply (cancel_epi (gradedPieceπ A p)).mp
+  calc
+    gradedPieceπ A p ≫ gradedPieceMap (f + g) p =
+        (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ (f + g).hom)
+            ((f + g).map_filtration p) ≫ gradedPieceπ B p := hπ (f + g)
+    _ = ((B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) +
+          (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ g.hom) (g.map_filtration p)) ≫
+          gradedPieceπ B p := by rw [hadd]
+    _ = (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ f.hom) (f.map_filtration p) ≫
+          gradedPieceπ B p +
+        (B.filtration.obj p).factorThru
+            ((A.filtration.obj p).arrow ≫ g.hom) (g.map_filtration p) ≫
+          gradedPieceπ B p := by rw [Preadditive.add_comp]
+    _ = (gradedPieceπ A p ≫ gradedPieceMap f p) +
+          (gradedPieceπ A p ≫ gradedPieceMap g p) := by rw [hπ f, hπ g]
+    _ = gradedPieceπ A p ≫ (gradedPieceMap f p + gradedPieceMap g p) :=
+      by rw [Preadditive.comp_add]
 
 /-- The full associated graded functor, valued in Mathlib's graded objects. -/
 def associatedGraded {C : Type u} [Category.{v} C] [Abelian C] :
@@ -4184,7 +4267,20 @@ def associatedGraded {C : Type u} [Category.{v} C] [Abelian C] :
 
 theorem associatedGraded_is_additive {C : Type u} [Category.{v} C] [Abelian C] :
     (associatedGraded (C := C)).Additive := by
-  sorry
+  let e : GradedObject ℤ C ≌ (Discrete ℤ ⥤ C) :=
+    piEquivalenceFunctorDiscrete ℤ C
+  have he : e.functor.Additive :=
+    e.fullyFaithfulFunctor.additive_ofFullyFaithful
+  refine ⟨?_⟩
+  intro A B f g
+  apply e.fullyFaithfulFunctor.map_injective
+  ext ⟨p⟩
+  rw [he.map_add]
+  change gradedPieceMap (f + g) p =
+    gradedPieceMap f p + gradedPieceMap g p
+  letI : (gradedPieceFunctor (C := C) p).Additive :=
+    gradedPieceFunctor_is_additive p
+  exact Functor.map_add (F := gradedPieceFunctor (C := C) p) (f := f) (g := g)
 
 theorem associatedGraded_piece {C : Type u} [Category.{v} C] [Abelian C]
     (A : FilteredObject C) (p : ℤ) :
@@ -4220,7 +4316,19 @@ def filteredSubobjectShortExact {C : Type u} [Category.{v} C] [Abelian C]
   ShortComplex.mk
     (gradedPieceMap (C := C) (inducedFilteredHom A X) p)
     (gradedPieceMap (C := C)
-      (quotientFilteredHom A (cokernel.π X.arrow)) p) (by sorry)
+      (quotientFilteredHom A (cokernel.π X.arrow)) p) (by
+    rw [← gradedPiece_map_comp]
+    have hzero :
+        inducedFilteredHom A X ≫ quotientFilteredHom A (cokernel.π X.arrow) = 0 := by
+      apply FilteredHom.ext _ _
+      change X.arrow ≫ cokernel.π X.arrow = 0
+      exact cokernel.condition _
+    rw [hzero]
+    letI : (gradedPieceFunctor (C := C) p).Additive :=
+      gradedPieceFunctor_is_additive p
+    change (gradedPieceFunctor (C := C) p).map (0 :
+      inducedFilteredObject A X ⟶ quotientFilteredObject A (cokernel.π X.arrow)) = 0
+    exact Functor.map_zero (F := gradedPieceFunctor (C := C) p) _ _)
 
 theorem graded_piece_subobject_short_exact {C : Type u} [Category.{v} C]
     [Abelian C] (A : FilteredObject C) (X : Subobject A.carrier) (p : ℤ) :

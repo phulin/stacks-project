@@ -284,8 +284,7 @@ private noncomputable def cechNerveMapOfZero {C : Type u} [Category.{v} C]
                   (SimplexCategory.mk 0) x.unop i).op ≫ d.1) ≫ f =
                   ε.app x
                 rw [Category.assoc, hε0.symm]
-                simpa [q] using
-                  ε.naturality q.op)
+                simp)
           naturality := by
             intro x y q
             dsimp
@@ -296,7 +295,7 @@ private noncomputable def cechNerveMapOfZero {C : Type u} [Category.{v} C]
                 SimplexCategory.const_comp]
               simp only [Quiver.Hom.unop_op]
             · simp only [Category.assoc, WidePullback.lift_base]
-              simpa using A.hom.naturality q }
+              simp }
       right := 𝟙 X
       w := by
         ext x
@@ -342,7 +341,7 @@ private noncomputable def cechNerveZeroOfMap {C : Type u} [Category.{v} C]
       change A.left.map (SimplexCategory.δ (0 : Fin 2)).op ≫
           A.hom.app (op (SimplexCategory.mk 0)) =
         A.hom.app (op (SimplexCategory.mk 1))
-      simpa using h₀A
+      simp
     have h₁A' :
         (cechNerve f h).map (SimplexCategory.δ (1 : Fin 2)).op ≫
             A.hom.app (op (SimplexCategory.mk 0)) =
@@ -350,7 +349,7 @@ private noncomputable def cechNerveZeroOfMap {C : Type u} [Category.{v} C]
       change A.left.map (SimplexCategory.δ (1 : Fin 2)).op ≫
           A.hom.app (op (SimplexCategory.mk 0)) =
         A.hom.app (op (SimplexCategory.mk 1))
-      simpa using h₁A
+      simp
     dsimp [r₁, r₀]
     rw [Category.assoc, hp₀, Category.assoc, hp₀]
     exact h₀A'.trans h₁A'.symm
@@ -370,12 +369,12 @@ private noncomputable def cechNerveZeroOfMap {C : Type u} [Category.{v} C]
       (V.map (SimplexCategory.δ (0 : Fin 2)).op ≫
         g.app (op (SimplexCategory.mk 0))) ≫ p₀ ≫ f =
       g.app (op (SimplexCategory.mk 1)) ≫ r₁ ≫ f := by
-    simpa [r₁, Category.assoc] using h0'
+    simp [r₁, Category.assoc]
   have h1'' :
       (V.map (SimplexCategory.δ (1 : Fin 2)).op ≫
         g.app (op (SimplexCategory.mk 0))) ≫ p₀ ≫ f =
       g.app (op (SimplexCategory.mk 1)) ≫ r₀ ≫ f := by
-    simpa [r₀, Category.assoc] using h1'
+    simp [r₀, Category.assoc]
   simpa only [SimplicialObject.δ, Category.assoc] using
     h0''.trans (hπ'.trans h1''.symm)
 

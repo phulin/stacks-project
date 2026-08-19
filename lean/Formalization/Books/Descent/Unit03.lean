@@ -1023,8 +1023,15 @@ theorem descentCosimplicialModule_functorial
     (D : DescentDatum (R := R) (A := A) (N := N))
     (D' : DescentDatum (R := R) (A := A) (N := N'))
     (f : DescentDatumHom D D') :
-    Nonempty (descentCosimplicialModule D ⟶ descentCosimplicialModule D') :=
-  ⟨descentCosimplicialModuleHom D D' f⟩
+    ∃ hom : descentCosimplicialModule D ⟶ descentCosimplicialModule D',
+      ∀ n, hom.app (SimplexCategory.mk n) =
+        ModuleCat.ofHom (descentTermMap f.hom n
+          ⟨n, Nat.lt_succ_self n⟩) := by
+  exact ⟨descentCosimplicialModuleHom D D' f,
+    fun n => by
+      simpa [descentCosimplicialModuleHom] using
+        (descentCosimplicialModuleHomData D D' f).app_formula
+          (SimplexCategory.mk n)⟩
 
 def DescentCosimplicialModulePresentation
     (D : DescentDatum (R := R) (A := A) (N := N))
@@ -1384,14 +1391,12 @@ theorem baseChangedDescentComparison_tmul
 def BaseChangedDescentDataEffective
     (R A R' : Type u) [CommRing R] [CommRing A] [CommRing R']
     [Algebra R A] [Algebra R R'] [Module.FaithfullyFlat R R'] : Prop :=
-  let A₀ := TensorProduct R R' A
-  letI : Algebra R' A₀ := Algebra.TensorProduct.leftAlgebra
-  ∃ (A' : Type u) (_ : CommRing A') (_ : Algebra R' A'),
-    ∃ _ : A' ≃ₐ[R'] A₀,
-      ∀ (N' : Type u) (_ : AddCommGroup N') (_ : Module R' N')
-        (_ : Module A' N') (_ : IsScalarTower R' A' N'),
-        ∀ D' : DescentDatum (R := R') (A := A') (N := N'),
-          DescentDatum.IsEffective.{u, u, u, u} D'
+  let A' := TensorProduct R R' A
+  letI : Algebra R' A' := Algebra.TensorProduct.leftAlgebra
+  ∀ (N' : Type u) (_ : AddCommGroup N') (_ : Module R' N')
+    (_ : Module A' N') (_ : IsScalarTower R' A' N'),
+    ∀ D' : DescentDatum (R := R') (A := A') (N := N'),
+      DescentDatum.IsEffective.{u, u, u, u} D'
 
 /-- Every descent datum for the base-changed algebra `R' ⊗[R] A` is effective.
 This is the hypothesis in the source's faithfully-flat base-change lemma. -/
@@ -1434,6 +1439,7 @@ theorem recognize_effective_descent_isomorphism
 
 theorem descent_effective_after_baseChange
     (D : DescentDatum (R := R) (A := A) (N := N))
+    [Module.FaithfullyFlat R A]
     (R' : Type u) [CommRing R'] [Algebra R R'] [Module.FaithfullyFlat R R']
     (h : BaseChangedDescentDataEffective R A R') : D.IsEffective := by
   sorry
@@ -1458,7 +1464,7 @@ noncomputable def canonicalDescentDataFunctor (R A : Type u) [CommRing R] [CommR
 
 def DescentModulesEquivalence (R A : Type u) [CommRing R] [CommRing A]
     (f : R →+* A) : Prop :=
-  Nonempty (ModuleCat.{u, u} R ≌ DescentCoalgebraCategory R A f)
+  (canonicalDescentDataFunctor R A f).IsEquivalence
 
 theorem effective_descent_for_modules (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [Module.FaithfullyFlat R A] {N : Type v} [AddCommGroup N]
@@ -1486,14 +1492,15 @@ def descentInverseModuleObject {R A N : Type u} [CommRing R] [CommRing A]
     [Algebra R A] [AddCommGroup N] [Module R N] [Module A N]
     [IsScalarTower R A N]
     (D : DescentDatum (R := R) (A := A) (N := N)) : ModuleCat R :=
-  ModuleCat.of R (descentH0 D)
+  ModuleCat.of R (descentInverseModule D)
 
 theorem effective_descent_modules_inverse
     (R A : Type u) [CommRing R] [CommRing A] [Algebra R A]
     [Module.FaithfullyFlat R A] {N : Type u} [AddCommGroup N]
     [Module R N] [Module A N] [IsScalarTower R A N]
     (D : DescentDatum (R := R) (A := A) (N := N)) :
-    descentInverseModule D = descentH0 D := rfl
+    Function.Bijective (descentCanonicalMap D) := by
+  sorry
 
 /-- The three clauses of the source's effective-descent proposition.  The
 categorical equivalence is expressed using Mathlib's Eilenberg--Moore
@@ -1508,7 +1515,7 @@ theorem proposition_descent_module (R A : Type u)
       (∀ (N : Type u) (_ : AddCommGroup N) (_ : Module R N) (_ : Module A N)
         (_ : IsScalarTower R A N)
         (D : DescentDatum (R := R) (A := A) (N := N)),
-        descentInverseModule D = descentH0 D) := by
+        Function.Bijective (descentCanonicalMap D)) := by
   sorry
 
 /- In the source proof of the proposition, the final invariant element is
@@ -1674,10 +1681,7 @@ theorem relativeTensorCosimplicialAlgebra_homotopy_equivalence_of_section
 theorem cartesian_modules_homotopy_invariant
     {X Y : CosimplicialObject CommRingCat.{u}}
     (e : CosimplicialHomotopyEquivalence X Y) :
-    (∀ M : CosimplicialModuleData X, CartesianCosimplicialModule M →
-      ∃ N : CosimplicialModuleData Y, CartesianCosimplicialModule N) ∧
-    (∀ N : CosimplicialModuleData Y, CartesianCosimplicialModule N →
-      ∃ M : CosimplicialModuleData X, CartesianCosimplicialModule M) := by
+    Nonempty (CartesianModuleCategory X ≌ CartesianModuleCategory Y) := by
   sorry
 
 theorem descent_data_cartesian_equivalence (R A : Type u)

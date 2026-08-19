@@ -75,12 +75,12 @@ lemma obj_liftIndex (S : Type u) (A₀ : S → A) (n k : ℕ)
   | succ k ih => exact ih
 
 /-- All object codes appearing at a finite stage of the construction. -/
-def Code (S : Type u) (A₀ : S → A) :=
+abbrev Code (S : Type u) (A₀ : S → A) :=
   Σ n : ℕ, (stages S A₀ n).ι
 
 /-- The ambient object represented by a closure code. -/
-def realize (S : Type u) (A₀ : S → A) : Code S A₀ → A
-  | ⟨n, i⟩ => (stages S A₀ n).obj i
+abbrev realize (S : Type u) (A₀ : S → A) (i : Code S A₀) : A :=
+  (stages S A₀ i.1).obj i.2
 
 /-- Regard a code from stage `n` as a code from stage `n + k`. -/
 def liftCode (S : Type u) (A₀ : S → A) {n : ℕ}
@@ -159,20 +159,108 @@ def commonHom (S : Type u) (A₀ : S → A) {n m : ℕ}
       (stages S A₀ (n + m)).obj (commonRight S A₀ j) :=
   eqToHom (obj_commonLeft S A₀ i) ≫ f ≫ eqToHom (obj_commonRight S A₀ j).symm
 
+lemma toCommon_comp_commonHom (S : Type u) (A₀ : S → A)
+    {X Y : Code S A₀} (f : realize S A₀ X ⟶ realize S A₀ Y)
+    {W : A} (g : W ⟶ realize S A₀ X) (hg : g ≫ f = 0) :
+    (g ≫ eqToHom (obj_commonLeft S A₀ X.2).symm) ≫ commonHom S A₀ f = 0 := by
+  rcases X with ⟨n, i⟩
+  rcases Y with ⟨m, j⟩
+  simpa [commonHom, Category.assoc, zero_comp] using
+    (reassoc_of% hg) (eqToHom (obj_commonRight S A₀ j).symm)
+
+lemma commonHom_comp_fromCommon (S : Type u) (A₀ : S → A)
+    {X Y : Code S A₀} (f : realize S A₀ X ⟶ realize S A₀ Y)
+    {W : A} (g : realize S A₀ Y ⟶ W) (hg : f ≫ g = 0) :
+    commonHom S A₀ f ≫ (eqToHom (obj_commonRight S A₀ Y.2) ≫ g) = 0 := by
+  rcases X with ⟨n, i⟩
+  rcases Y with ⟨m, j⟩
+  simpa [commonHom, Category.assoc, comp_zero] using
+    congrArg (fun q ↦ eqToHom (obj_commonLeft (m := m) S A₀ i) ≫ q) hg
+
 /-- A code for the kernel of an ambient morphism between represented objects. -/
-def kernelCode (S : Type u) (A₀ : S → A) :
+abbrev kernelCode (S : Type u) (A₀ : S → A) :
     {i j : Code S A₀} → (realize S A₀ i ⟶ realize S A₀ j) → Code S A₀
   | ⟨n, i⟩, ⟨m, j⟩, f =>
       ⟨n + m + 1, StepIndex.kernel _ _ (commonHom S A₀ f)⟩
 
 /-- A code for the cokernel of an ambient morphism between represented objects. -/
-def cokernelCode (S : Type u) (A₀ : S → A) :
+abbrev cokernelCode (S : Type u) (A₀ : S → A) :
     {i j : Code S A₀} → (realize S A₀ i ⟶ realize S A₀ j) → Code S A₀
   | ⟨n, i⟩, ⟨m, j⟩, f =>
       ⟨n + m + 1, StepIndex.cokernel _ _ (commonHom S A₀ f)⟩
 
+@[simp]
+lemma realize_kernelCode (S : Type u) (A₀ : S → A) {i j : Code S A₀}
+    (f : realize S A₀ i ⟶ realize S A₀ j) :
+    realize S A₀ (kernelCode S A₀ f) = kernel (commonHom S A₀ f) := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  rfl
+
+@[simp]
+lemma realize_cokernelCode (S : Type u) (A₀ : S → A) {i j : Code S A₀}
+    (f : realize S A₀ i ⟶ realize S A₀ j) :
+    realize S A₀ (cokernelCode S A₀ f) = cokernel (commonHom S A₀ f) := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  rfl
+
+/-- The represented kernel object identified with the ambient kernel. -/
+def kernelIso (S : Type u) (A₀ : S → A) {i j : Code S A₀}
+    (f : realize S A₀ i ⟶ realize S A₀ j) :
+    realize S A₀ (kernelCode S A₀ f) ≅ kernel (commonHom S A₀ f) :=
+  eqToIso (realize_kernelCode S A₀ f)
+
+/-- The represented cokernel object identified with the ambient cokernel. -/
+def cokernelIso (S : Type u) (A₀ : S → A) {i j : Code S A₀}
+    (f : realize S A₀ i ⟶ realize S A₀ j) :
+    realize S A₀ (cokernelCode S A₀ f) ≅ cokernel (commonHom S A₀ f) :=
+  eqToIso (realize_cokernelCode S A₀ f)
+
+/-- The canonical kernel arrow from a generated kernel to the original source. -/
+abbrev kernelArrow (S : Type u) (A₀ : S → A) :
+    {i j : Code S A₀} → (f : realize S A₀ i ⟶ realize S A₀ j) →
+      realize S A₀ (kernelCode S A₀ f) ⟶ realize S A₀ i
+  | ⟨n, i⟩, ⟨m, j⟩, f =>
+      (kernelIso S A₀ f).hom ≫ kernel.ι (commonHom S A₀ f) ≫
+        eqToHom (obj_commonLeft S A₀ i)
+
+lemma kernelArrow_condition (S : Type u) (A₀ : S → A)
+    {i j : Code S A₀} (f : realize S A₀ i ⟶ realize S A₀ j) :
+    kernelArrow S A₀ f ≫ f = 0 := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  change ((kernelIso S A₀ f).hom ≫ kernel.ι (commonHom S A₀ f) ≫
+    eqToHom (obj_commonLeft S A₀ i)) ≫ f = 0
+  rw [← cancel_mono (eqToHom (obj_commonRight S A₀ j).symm)]
+  have h := congrArg (fun q ↦ (kernelIso S A₀ f).hom ≫ q)
+    (kernel.condition (commonHom S A₀ f))
+  rw [comp_zero] at h
+  simpa only [commonHom, Category.assoc, zero_comp, comp_zero] using h
+
+/-- The canonical cokernel arrow from the original target to a generated cokernel. -/
+abbrev cokernelArrow (S : Type u) (A₀ : S → A) :
+    {i j : Code S A₀} → (f : realize S A₀ i ⟶ realize S A₀ j) →
+      realize S A₀ j ⟶ realize S A₀ (cokernelCode S A₀ f)
+  | ⟨n, i⟩, ⟨m, j⟩, f =>
+      eqToHom (obj_commonRight S A₀ j).symm ≫ cokernel.π (commonHom S A₀ f) ≫
+        (cokernelIso S A₀ f).inv
+
+lemma cokernelArrow_condition (S : Type u) (A₀ : S → A)
+    {i j : Code S A₀} (f : realize S A₀ i ⟶ realize S A₀ j) :
+    f ≫ cokernelArrow S A₀ f = 0 := by
+  rcases i with ⟨n, i⟩
+  rcases j with ⟨m, j⟩
+  change f ≫ (eqToHom (obj_commonRight S A₀ j).symm ≫
+    cokernel.π (commonHom S A₀ f) ≫ (cokernelIso S A₀ f).inv) = 0
+  rw [← cancel_epi (eqToHom (obj_commonLeft S A₀ i))]
+  have h := congrArg (fun q ↦ q ≫ (cokernelIso S A₀ f).inv)
+    (cokernel.condition (commonHom S A₀ f))
+  rw [zero_comp] at h
+  simpa only [commonHom, Category.assoc, zero_comp, comp_zero] using h
+
 /-- A code for a chosen ambient injective object under a represented object. -/
-def injectiveCode (S : Type u) (A₀ : S → A) : Code S A₀ → Code S A₀
+abbrev injectiveCode (S : Type u) (A₀ : S → A) : Code S A₀ → Code S A₀
   | ⟨n, i⟩ => ⟨n + 1, StepIndex.injective i⟩
 
 @[simp]
@@ -267,6 +355,114 @@ instance closureHasBinaryProducts : HasBinaryProducts (Closure S A₀) :=
 
 instance closureHasFiniteProducts : HasFiniteProducts (Closure S A₀) :=
   hasFiniteProducts_of_has_binary_and_terminal
+
+/-- The selected kernel fork of a morphism in the closure. -/
+abbrev closureKernelFork {X Y : Closure S A₀} (f : X ⟶ Y) : KernelFork f :=
+  KernelFork.ofι (InducedCategory.homMk (kernelArrow S A₀ f.hom)) (by
+    apply InducedCategory.hom_ext
+    exact kernelArrow_condition S A₀ f.hom)
+
+/-- The selected kernel fork is limiting. -/
+def closureKernelForkIsLimit {X Y : Closure S A₀} (f : X ⟶ Y) :
+    IsLimit (closureKernelFork S A₀ f) := by
+  rcases X with ⟨n, i⟩
+  rcases Y with ⟨m, j⟩
+  have sourceCondition (s : KernelFork f) : s.ι.hom ≫ f.hom = 0 := by
+    have hs : (inclusion S A₀).map (s.ι ≫ f) =
+        (inclusion S A₀).map 0 :=
+      congrArg (fun q ↦ (inclusion S A₀).map q) s.condition
+    rw [Functor.map_comp, Functor.map_zero] at hs
+    change s.ι.hom ≫ f.hom = 0 at hs
+    exact hs
+  let liftObj (s : KernelFork f) :
+      realize S A₀ s.pt ⟶ realize S A₀ (kernelCode S A₀ f.hom) :=
+    kernel.lift (commonHom S A₀ f.hom)
+      (s.ι.hom ≫ eqToHom (obj_commonLeft S A₀ i).symm)
+      (toCommon_comp_commonHom S A₀ f.hom s.ι.hom (sourceCondition s)) ≫
+        (kernelIso S A₀ f.hom).inv
+  have liftFac (s : KernelFork f) : liftObj s ≫ kernelArrow S A₀ f.hom = s.ι.hom := by
+    dsimp [liftObj, kernelArrow]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    have hl := kernel.lift_ι (commonHom S A₀ f.hom)
+      ((Fork.ι s).hom ≫ eqToHom (obj_commonLeft S A₀ i).symm)
+      (toCommon_comp_commonHom S A₀ f.hom (Fork.ι s).hom (sourceCondition s))
+    rw [← Category.assoc, hl]
+    simp
+  refine isLimitAux _ (fun s ↦ InducedCategory.homMk (liftObj s)) (fun s ↦ ?_)
+      (fun s m hm ↦ ?_)
+  · apply InducedCategory.hom_ext
+    exact liftFac s
+  ·
+    apply InducedCategory.hom_ext
+    rw [← cancel_mono (kernelIso S A₀ f.hom).hom]
+    apply Fork.IsLimit.hom_ext (kernelIsKernel (commonHom S A₀ f.hom))
+    have hm' : m.hom ≫ kernelArrow S A₀ f.hom = s.ι.hom := by
+      have h := congrArg (fun q ↦ (inclusion S A₀).map q) hm
+      change m.hom ≫ kernelArrow S A₀ f.hom = s.ι.hom at h
+      exact h
+    rw [← cancel_mono (eqToHom (obj_commonLeft S A₀ i))]
+    simpa [kernelArrow, liftObj, Category.assoc]
+      using hm'.trans (liftFac s).symm
+
+instance closureHasKernel {X Y : Closure S A₀} (f : X ⟶ Y) : HasKernel f :=
+  ⟨closureKernelFork S A₀ f, closureKernelForkIsLimit S A₀ f⟩
+
+instance closureHasKernels : HasKernels (Closure S A₀) :=
+  ⟨fun f ↦ closureHasKernel S A₀ f⟩
+
+/-- The selected cokernel cofork of a morphism in the closure. -/
+abbrev closureCokernelCofork {X Y : Closure S A₀} (f : X ⟶ Y) : CokernelCofork f :=
+  CokernelCofork.ofπ (InducedCategory.homMk (cokernelArrow S A₀ f.hom)) (by
+    apply InducedCategory.hom_ext
+    exact cokernelArrow_condition S A₀ f.hom)
+
+/-- The selected cokernel cofork is colimiting. -/
+def closureCokernelCoforkIsColimit {X Y : Closure S A₀} (f : X ⟶ Y) :
+    IsColimit (closureCokernelCofork S A₀ f) := by
+  rcases X with ⟨n, i⟩
+  rcases Y with ⟨m, j⟩
+  have targetCondition (s : CokernelCofork f) : f.hom ≫ s.π.hom = 0 := by
+    have hs : (inclusion S A₀).map (f ≫ s.π) =
+        (inclusion S A₀).map 0 :=
+      congrArg (fun q ↦ (inclusion S A₀).map q) s.condition
+    rw [Functor.map_comp, Functor.map_zero] at hs
+    change f.hom ≫ s.π.hom = 0 at hs
+    exact hs
+  let descObj (s : CokernelCofork f) :
+      realize S A₀ (cokernelCode S A₀ f.hom) ⟶ realize S A₀ s.pt :=
+    (cokernelIso S A₀ f.hom).hom ≫ cokernel.desc (commonHom S A₀ f.hom)
+      (eqToHom (obj_commonRight S A₀ j) ≫ s.π.hom)
+      (commonHom_comp_fromCommon S A₀ f.hom s.π.hom (targetCondition s))
+  have descFac (s : CokernelCofork f) :
+      cokernelArrow S A₀ f.hom ≫ descObj s = s.π.hom := by
+    dsimp [descObj, cokernelArrow]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    have hd := cokernel.π_desc (commonHom S A₀ f.hom)
+      (eqToHom (obj_commonRight S A₀ j) ≫ (Cofork.π s).hom)
+      (commonHom_comp_fromCommon S A₀ f.hom (Cofork.π s).hom (targetCondition s))
+    rw [hd]
+    simp
+  refine isColimitAux _ (fun s ↦ InducedCategory.homMk (descObj s)) (fun s ↦ ?_)
+      (fun s m hm ↦ ?_)
+  · apply InducedCategory.hom_ext
+    exact descFac s
+  ·
+    apply InducedCategory.hom_ext
+    rw [← cancel_epi (cokernelIso S A₀ f.hom).inv]
+    apply Cofork.IsColimit.hom_ext (cokernelIsCokernel (commonHom S A₀ f.hom))
+    have hm' : cokernelArrow S A₀ f.hom ≫ m.hom = s.π.hom := by
+      have h := congrArg (fun q ↦ (inclusion S A₀).map q) hm
+      change cokernelArrow S A₀ f.hom ≫ m.hom = s.π.hom at h
+      exact h
+    rw [← cancel_epi (eqToHom (obj_commonRight S A₀ j).symm)]
+    simpa [cokernelArrow, descObj, Category.assoc]
+      using hm'.trans (descFac s).symm
+
+instance closureHasCokernel {X Y : Closure S A₀} (f : X ⟶ Y) : HasCokernel f :=
+  ⟨closureCokernelCofork S A₀ f, closureCokernelCoforkIsColimit S A₀ f⟩
+
+instance closureHasCokernels : HasCokernels (Closure S A₀) :=
+  ⟨fun f ↦ closureHasCokernel S A₀ f⟩
 
 end CategoryStructure
 

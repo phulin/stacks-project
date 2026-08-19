@@ -1393,7 +1393,11 @@ theorem doldKanChainMap_id
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℕ) (X : SimplexCategory) :
     doldKanChainMap (𝟙 A) X = 𝟙 (doldKanDegree A X) := by
-  sorry
+  classical
+  apply Sigma.hom_ext
+  intro a
+  simp [doldKanChainMap]
+  simp only [doldKanDegree, Category.id_comp, Category.comp_id]
 
 theorem doldKanChainMap_comp
     {C : Type u} [Category.{v} C] [Abelian C]

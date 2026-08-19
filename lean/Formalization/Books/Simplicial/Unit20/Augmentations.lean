@@ -36,7 +36,73 @@ abbrev AugmentationZeroData {C : Type u} [Category.{v} C]
 theorem augmentation_hom_equiv {C : Type u} [Category.{v} C]
     (U : SimplicialObject C) (X : C) :
     Nonempty (Augmentation U X ≃ AugmentationZeroData U X) := by
-  sorry
+  refine ⟨{
+    toFun := fun ε => ⟨ε.app (op (SimplexCategory.mk 0)), by
+      have h0 := ε.naturality (SimplexCategory.δ (0 : Fin 2)).op
+      have h1 := ε.naturality (SimplexCategory.δ (1 : Fin 2)).op
+      have h0' : U.map (SimplexCategory.δ (0 : Fin 2)).op ≫
+          ε.app (op (SimplexCategory.mk 0)) =
+          ε.app (op (SimplexCategory.mk 1)) ≫ 𝟙 X := by
+        exact h0
+      have h1' : U.map (SimplexCategory.δ (1 : Fin 2)).op ≫
+          ε.app (op (SimplexCategory.mk 0)) =
+          ε.app (op (SimplexCategory.mk 1)) ≫ 𝟙 X := by
+        exact h1
+      exact (by
+        simpa only [SimplicialObject.δ, Category.comp_id] using h0'.trans h1'.symm)⟩
+    invFun := fun d =>
+      (SimplicialObject.augment U X d.1 (by
+        intro n g₁ g₂
+        rw [SimplexCategory.eq_const_of_zero g₁,
+          SimplexCategory.eq_const_of_zero g₂]
+        rcases le_total (g₁.toOrderHom 0) (g₂.toOrderHom 0) with h | h
+        · let e := SimplexCategory.mkOfLe (g₁.toOrderHom 0) (g₂.toOrderHom 0) h
+          have he0 : SimplexCategory.δ (0 : Fin 2) ≫ e =
+              SimplexCategory.const _ _ (g₂.toOrderHom 0) := by
+            apply SimplexCategory.Hom.ext_zero_left
+            rfl
+          have he1 : SimplexCategory.δ (1 : Fin 2) ≫ e =
+              SimplexCategory.const _ _ (g₁.toOrderHom 0) := by
+            apply SimplexCategory.Hom.ext_zero_left
+            rfl
+          rw [← he1, ← he0]
+          have hd := d.2
+          change U.map (SimplexCategory.δ (0 : Fin 2)).op ≫ d.1 =
+            U.map (SimplexCategory.δ (1 : Fin 2)).op ≫ d.1 at hd
+          simpa only [op_comp, U.map_comp, Category.assoc] using
+            (congrArg (fun k => U.map e.op ≫ k) hd.symm)
+        · let e := SimplexCategory.mkOfLe (g₂.toOrderHom 0) (g₁.toOrderHom 0) h
+          have he0 : SimplexCategory.δ (0 : Fin 2) ≫ e =
+              SimplexCategory.const _ _ (g₁.toOrderHom 0) := by
+            apply SimplexCategory.Hom.ext_zero_left
+            rfl
+          have he1 : SimplexCategory.δ (1 : Fin 2) ≫ e =
+              SimplexCategory.const _ _ (g₂.toOrderHom 0) := by
+            apply SimplexCategory.Hom.ext_zero_left
+            rfl
+          rw [← he0, ← he1]
+          have hd := d.2
+          change U.map (SimplexCategory.δ (0 : Fin 2)).op ≫ d.1 =
+            U.map (SimplexCategory.δ (1 : Fin 2)).op ≫ d.1 at hd
+          simpa only [op_comp, U.map_comp, Category.assoc] using
+            congrArg (fun k => U.map e.op ≫ k) hd)).hom
+    left_inv := by
+      intro ε
+      apply SimplicialObject.hom_ext
+      intro n
+      change U.map (SimplexCategory.const ⦋0⦌ n.unop 0).op ≫
+          ε.app (op (SimplexCategory.mk 0)) = ε.app n
+      have h := ε.naturality (SimplexCategory.const ⦋0⦌ n.unop 0).op
+      change U.map (SimplexCategory.const ⦋0⦌ n.unop 0).op ≫
+          ε.app (op (SimplexCategory.mk 0)) = ε.app n ≫ 𝟙 X at h
+      rw [← Category.comp_id (ε.app n)]
+      exact h
+    right_inv := by
+      intro d
+      apply Subtype.ext
+      dsimp
+      exact SimplicialObject.augment_hom_zero U X d.1 _
+  }⟩
 
 /-- The degree-zero component of an augmentation. -/
 def augmentationAtZero {C : Type u} [Category.{v} C]
@@ -114,7 +180,8 @@ theorem cechNerve_one_simplex_compatibility {C : Type u} [Category.{v} C]
     (hg : V.δ (0 : Fin 2) ≫ g₀ ≫ f = V.δ (1 : Fin 2) ≫ g₀ ≫ f) :
     cechNerveCoordinate V g₀ 1 (0 : Fin 2) ≫ f =
       cechNerveCoordinate V g₀ 1 (1 : Fin 2) ≫ f := by
-  sorry
+  simpa [cechNerveCoordinate, SimplexCategory.δ_one_eq_const,
+    SimplexCategory.δ_zero_eq_const, SimplicialObject.δ, Category.assoc] using hg.symm
 
 /-- The general adjacent-coordinate equality used in the source's
 construction of a map into the iterated fibre product. -/
@@ -125,7 +192,11 @@ theorem cechNerveCoordinate_adjacent {C : Type u} [Category.{v} C]
     {n : ℕ} (i : Fin n) :
     cechNerveCoordinate V g₀ n (Fin.castSucc i) ≫ f =
       cechNerveCoordinate V g₀ n i.succ ≫ f := by
-  sorry
+  simp only [cechNerveCoordinate]
+  have h := congrArg (fun k => V.map (SimplexCategory.mkOfSucc i).op ≫ k) hg
+  simpa only [SimplicialObject.δ, ← V.map_comp_assoc, ← op_comp,
+    SimplexCategory.δ_zero_mkOfSucc, SimplexCategory.δ_one_mkOfSucc,
+    Category.assoc] using h.symm
 
 /-- The degree-zero maps satisfying the relation in the source's displayed
 hom-set formula. -/

@@ -1855,7 +1855,7 @@ total degree and evaluation gives nondegenerate opposite-degree pairings. -/
 theorem graded_left_dual_finite_and_nondegenerate
     (F : Type u) [Field F]
     {V W : GradedVectorSpace F} [ExactPairing V W] :
-    Module.Finite F (⨁ n, (V n : Type u)) ∧
+      Module.Finite F (⨁ n, (V n : Type u)) ∧
       Nonempty (GradedNondegeneratePairing F V W) := by
   sorry
 

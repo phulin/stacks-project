@@ -2198,7 +2198,71 @@ private theorem prodComponent₁.projective {R₁ R₂ : Type u} [CommRing R₁]
     Module.Projective R₁
       (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
         (M := P.presentation.module)) := by
-  sorry
+  let F := Fin P.presentation.rank → (R₁ × R₂)
+  let eF : prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₁]
+      (Fin P.presentation.rank → R₁) :=
+    { toFun := fun x i => ((x : F) i).1
+      invFun := fun x =>
+        ⟨fun i => (x i, (0 : R₂)), by
+          refine ⟨fun i => (x i, (0 : R₂)), ?_⟩
+          funext i
+          change (((1 : R₁), (0 : R₂)) : R₁ × R₂) • (x i, (0 : R₂)) =
+            (x i, (0 : R₂))
+          simp
+        ⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        funext i
+        rcases x.property with ⟨y, hy⟩
+        have hi := congrFun hy i
+        calc
+          (((x : F) i).1, (0 : R₂)) =
+              (((prodEnd₁ y) i).1, (0 : R₂)) := by
+            exact congrArg (fun z : R₁ × R₂ => (z.1, (0 : R₂))) hi.symm
+          _ = (prodEnd₁ y) i := by
+            rw [prodEnd₁, LinearMap.lsmul_apply, prodIdem₁, Pi.smul_apply]
+            ext <;> simp
+          _ = (x : F) i := hi
+      right_inv := by
+        intro x
+        rfl
+      map_add' := by
+        intro x y
+        funext i
+        rfl
+      map_smul' := by
+        intro r x
+        funext i
+        change (((r, (0 : R₂)) : R₁ × R₂) • (x : F) i).1 =
+          r • ((x : F) i).1
+        simp }
+  letI : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
+    Module.Projective.of_equiv' eF.symm
+  let q : F →ₗ[R₁ × R₂] P.presentation.module :=
+    Submodule.mkQ P.presentation.relations
+  obtain ⟨i, hi⟩ :=
+    (Module.Projective.iff_split_of_projective q
+      (Submodule.mkQ_surjective _)).mp P.projective
+  let q₁ := prodComponentMap₁ q
+  let i₁ := prodComponentMap₁ i
+  have hq₁ : Function.Surjective q₁ := by
+    intro x
+    rcases x.property with ⟨y, hy⟩
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ y
+    refine ⟨⟨prodEnd₁ z, ⟨z, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    dsimp [q₁, prodComponentMap₁]
+    rw [← hy]
+    simpa only [prodEnd₁, prodIdem₁, LinearMap.lsmul_apply] using
+      q.map_smul (prodIdem₁ (R₁ := R₁) (R₂ := R₂)) z
+  apply Module.Projective.of_split i₁ q₁
+  apply LinearMap.ext
+  intro x
+  apply Subtype.ext
+  have h := LinearMap.congr_fun hi (x : P.presentation.module)
+  simpa [q₁, i₁, prodComponentMap₁] using h
 /-
   let F := Fin P.presentation.rank → (R₁ × R₂)
   let eF : prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₁]
@@ -2263,7 +2327,70 @@ private theorem prodComponent₂.projective {R₁ R₂ : Type u} [CommRing R₁]
     Module.Projective R₂
       (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
         (M := P.presentation.module)) := by
-  sorry
+  let F := Fin P.presentation.rank → (R₁ × R₂)
+  let eF : prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₂]
+      (Fin P.presentation.rank → R₂) :=
+    { toFun := fun x i => ((x : F) i).2
+      invFun := fun x =>
+        ⟨fun i => ((0 : R₁), x i), by
+          refine ⟨fun i => ((0 : R₁), x i), ?_⟩
+          funext i
+          change (((0 : R₁), (1 : R₂)) : R₁ × R₂) • ((0 : R₁), x i) =
+            ((0 : R₁), x i)
+          simp
+        ⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        funext i
+        rcases x.property with ⟨y, hy⟩
+        have hi := congrFun hy i
+        calc
+          (0, ((x : F) i).2) = (0, ((prodEnd₂ y) i).2) := by
+            exact congrArg (fun z : R₁ × R₂ => ((0 : R₁), z.2)) hi.symm
+          _ = (prodEnd₂ y) i := by
+            rw [prodEnd₂, LinearMap.lsmul_apply, prodIdem₂, Pi.smul_apply]
+            ext <;> simp
+          _ = (x : F) i := hi
+      right_inv := by
+        intro x
+        rfl
+      map_add' := by
+        intro x y
+        funext i
+        rfl
+      map_smul' := by
+        intro r x
+        funext i
+        change ((((0 : R₁), r) : R₁ × R₂) • ((x : F) i)).2 =
+          r • ((x : F) i).2
+        simp }
+  letI : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
+    Module.Projective.of_equiv' eF.symm
+  let q : F →ₗ[R₁ × R₂] P.presentation.module :=
+    Submodule.mkQ P.presentation.relations
+  obtain ⟨i, hi⟩ :=
+    (Module.Projective.iff_split_of_projective q
+      (Submodule.mkQ_surjective _)).mp P.projective
+  let q₂ := prodComponentMap₂ q
+  let i₂ := prodComponentMap₂ i
+  have hq₂ : Function.Surjective q₂ := by
+    intro x
+    rcases x.property with ⟨y, hy⟩
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ y
+    refine ⟨⟨prodEnd₂ z, ⟨z, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    dsimp [q₂, prodComponentMap₂]
+    rw [← hy]
+    simpa only [prodEnd₂, prodIdem₂, LinearMap.lsmul_apply] using
+      q.map_smul (prodIdem₂ (R₁ := R₁) (R₂ := R₂)) z
+  apply Module.Projective.of_split i₂ q₂
+  apply LinearMap.ext
+  intro x
+  apply Subtype.ext
+  have h := LinearMap.congr_fun hi (x : P.presentation.module)
+  simpa [q₂, i₂, prodComponentMap₂] using h
 /-
   let F := Fin P.presentation.rank → (R₁ × R₂)
   let eF : prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₂]

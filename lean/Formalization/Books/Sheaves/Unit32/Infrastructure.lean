@@ -702,14 +702,66 @@ theorem closedAlgebraicSheafDirectImage_stalk_outside
     (F : TopCat.Sheaf C (closedSubspace Z)) (x : X) (hx : x ∉ Z) :
     Nonempty (((closedAlgebraicSheafDirectImage C Z hZ).obj F).presheaf.stalk x ≅
       (⊤_ C)) := by
-  sorry
+  exact closedSheafDirectImage_stalkIso_terminal_of_not_mem hZ F hx
 
 /-- The generic closed direct image is fully faithful. -/
 theorem closedAlgebraicSheafDirectImage_fullFaithful
     (C : Type u) [Category.{v} C] [HasTerminal C]
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     Nonempty (closedAlgebraicSheafDirectImage C Z hZ).FullyFaithful := by
-  sorry
+  let f₀ : Opens X ⥤ Opens (closedSubspace Z) := Opens.map (closedInclusion Z)
+  let : f₀.IsCoverDense (Opens.grothendieckTopology (closedSubspace Z)) := by
+    apply (TopCat.Opens.coverDense_iff_isBasis f₀).2
+    rw [Opens.isBasis_iff_nbhd]
+    intro U z hz
+    rcases isOpen_induced_iff.mp U.2 with ⟨V, hV, hVU⟩
+    let V' : Opens X := ⟨V, hV⟩
+    have hmap : f₀.obj V' = U := by
+      ext w
+      change (w : X) ∈ V ↔ w ∈ U
+      exact Set.ext_iff.mp hVU w
+    refine ⟨f₀.obj V', ⟨V', rfl⟩, ?_, le_of_eq hmap⟩
+    rw [hmap]
+    exact hz
+  let : f₀.IsLocallyFull (Opens.grothendieckTopology (closedSubspace Z)) := by
+    constructor
+    intro U V i
+    apply GrothendieckTopology.covering_of_eq_top
+    ext W q
+    constructor
+    · intro h
+      trivial
+    · intro hq
+      rcases isOpen_induced_iff.mp W.2 with ⟨W', hW', hWW'⟩
+      let W₀ : Opens X := ⟨W', hW'⟩
+      let A : Opens X := (W₀ ⊓ U) ⊓ V
+      have hWWz (z : Z) : (z : X) ∈ W' ↔ z ∈ W := by
+        change z ∈ Subtype.val ⁻¹' W' ↔ z ∈ W.carrier
+        rw [hWW']
+      have hA : f₀.obj A = W := by
+        ext z
+        change (((z : X) ∈ W' ∧ (z : X) ∈ U) ∧ (z : X) ∈ V) ↔ z ∈ W
+        constructor
+        · intro hz
+          exact (hWWz z).mp hz.1.1
+        · intro hz
+          exact ⟨⟨(hWWz z).mpr hz, q.le hz⟩, i.le (q.le hz)⟩
+      let j : A ⟶ U := homOfLE (inf_le_left.trans inf_le_right)
+      let l : A ⟶ V := homOfLE inf_le_right
+      have hl : f₀.map l = f₀.map j ≫ i := Subsingleton.elim _ _
+      have hj : f₀.imageSieve i j := ⟨l, hl⟩
+      refine ⟨A, j, eqToHom hA.symm, hj, ?_⟩
+      exact Subsingleton.elim _ _
+  let : f₀.IsContinuous (Opens.grothendieckTopology X)
+      (Opens.grothendieckTopology (closedSubspace Z)) := by
+    apply Functor.isContinuous_of_coverPreserving
+    · exact compatiblePreserving_opens_map (closedInclusion Z)
+    · exact coverPreserving_opens_map (closedInclusion Z)
+  change Nonempty
+    (f₀.sheafPushforwardContinuous C
+      (Opens.grothendieckTopology X)
+      (Opens.grothendieckTopology (closedSubspace Z))).FullyFaithful
+  exact ⟨Functor.FullyFaithful.ofFullyFaithful _⟩
 
 /-- The generic essential image is characterized by final stalks off the closed subset. -/
 theorem closedAlgebraicSheafDirectImage_essentialImage
@@ -725,7 +777,9 @@ theorem closedAlgebraicSheafDirectImage_essentialImage
 theorem closedSetSheafDirectImage_not_right_exact {X : TopCat.{v}} (Z : Set X)
     (hclosed : IsClosed Z) (hZ : ∃ x : X, x ∉ Z) :
     ¬ PreservesFiniteColimits (closedSheafDirectImage (Type v) Z hclosed) := by
-  sorry
+  rcases hZ with ⟨x, hx⟩
+  exact Formalization.Books.Sheaves.Unit32.closedSubsetSetPushforward_not_rightExact
+    hclosed x hx
 
 end
 

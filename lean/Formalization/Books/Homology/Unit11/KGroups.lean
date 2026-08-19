@@ -864,6 +864,105 @@ private theorem freeAbelianGroup_list_perm_of_sum_eq
   rw [freeAbelianGroup_list_count, freeAbelianGroup_list_count] at hc
   exact_mod_cast hc
 
+private theorem shortComplex_biproduct_exact_pos
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    {S : ShortComplex D} (hS : S.ShortExact) :
+    let U : ShortComplex D :=
+      ShortComplex.mk
+        (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g)
+        (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂)) (by
+          simp [biprod.lift_eq, biprod.desc_eq, S.zero])
+    U.Exact := by
+  dsimp
+  let U : ShortComplex D :=
+    ShortComplex.mk
+      (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g)
+      (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂)) (by
+        simp [biprod.lift_eq, biprod.desc_eq, S.zero])
+  have hk : IsLimit (KernelFork.ofι
+      (biprod.inr : S.X₃ ⟶ U.X₂) (by
+        change biprod.inr ≫ biprod.desc S.f (0 : S.X₃ ⟶ S.X₂) = 0
+        simp)) := by
+    letI : Mono S.f := hS.mono_f
+    apply KernelFork.IsLimit.ofι' biprod.inr
+    intro A k hk
+    have hz : k ≫ biprod.fst ≫ S.f = 0 := by
+      simpa [U, biprod.desc_eq, Category.assoc] using hk
+    have hz' : k ≫ biprod.fst = 0 := by
+      apply (cancel_mono S.f).1
+      simpa [Category.assoc] using hz
+    refine ⟨k ≫ biprod.snd, ?_⟩
+    apply biprod.hom_ext
+    · rw [Category.assoc, biprod.inr_fst, comp_zero, hz']
+    · simp
+  have hU : U.Exact := by
+    rw [ShortComplex.exact_iff_kernel_ι_comp_cokernel_π_zero]
+    let e := hk.conePointUniqueUpToIso (kernelIsKernel U.g)
+    have he : e.hom ≫ kernel.ι U.g = biprod.inr := by
+      exact IsLimit.conePointUniqueUpToIso_hom_comp hk (kernelIsKernel U.g)
+        WalkingParallelPair.zero
+    apply (cancel_epi e.hom).1
+    rw [← Category.assoc, he]
+    have hz : S.g ≫ biprod.inr ≫ cokernel.π U.f = 0 := by
+      simpa [U, biprod.lift_eq, Category.assoc] using cokernel.condition U.f
+    letI : Epi S.g := hS.epi_g
+    apply (cancel_epi S.g).1
+    simpa [Category.assoc] using hz
+  exact hU
+
+private theorem shortComplex_biproduct_exact_neg
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    {S : ShortComplex D} (hS : S.ShortExact) :
+    let U : ShortComplex D :=
+      ShortComplex.mk
+        (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂))
+        (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g) (by
+          simp [biprod.lift_eq, biprod.desc_eq, S.zero])
+    U.Exact := by
+  dsimp
+  let U : ShortComplex D :=
+    ShortComplex.mk
+      (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂))
+      (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g) (by
+        simp [biprod.lift_eq, biprod.desc_eq, S.zero])
+  letI : Mono S.f := hS.mono_f
+  have hk : IsLimit (KernelFork.ofι
+      (S.f : S.X₁ ⟶ U.X₂) (by
+        change S.f ≫ biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g = 0
+        simp [biprod.lift_eq, S.zero])) := by
+    apply KernelFork.IsLimit.ofι'
+    intro A k hk
+    have hz : k ≫ S.g = 0 := by
+      have hz' := congrArg (fun z => z ≫ biprod.snd) hk
+      simpa [U, biprod.lift_snd, Category.assoc] using hz'
+    exact (KernelFork.IsLimit.lift' (hS.exact.fIsKernel) k hz).2 ▸
+      ⟨(KernelFork.IsLimit.lift' (hS.exact.fIsKernel) k hz).1, rfl⟩
+  have hU : U.Exact := by
+    rw [ShortComplex.exact_iff_kernel_ι_comp_cokernel_π_zero]
+    let e := hk.conePointUniqueUpToIso (kernelIsKernel U.g)
+    have he : e.hom ≫ kernel.ι U.g = S.f := by
+      exact IsLimit.conePointUniqueUpToIso_hom_comp hk (kernelIsKernel U.g)
+        WalkingParallelPair.zero
+    apply (cancel_epi e.hom).1
+    simp only [← Category.assoc, he, zero_comp]
+    rw [comp_zero]
+    have hz := congrArg (fun z => biprod.inl ≫ z) (cokernel.condition U.f)
+    simpa only [U, Category.assoc, biprod.inl_desc_assoc, comp_zero, zero_comp] using hz
+  exact hU
+
+private theorem shortComplex_biproduct_homology_isZero
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    [HasFiniteBiproducts D] [HasFiniteBiproducts (ShortComplex D)]
+    {J : Type*} [Fintype J] (F : J → ShortComplex D)
+    (hF : ∀ j, (F j).Exact) :
+    IsZero (⨁ fun j => (F j).homology) := by
+  have hsum : IsZero (⨁ fun j => (ShortComplex.homologyFunctor D).obj (F j)) := by
+    apply IsLimit.isZero_pt (biproduct.isLimit _)
+    rw [Functor.isZero_iff]
+    intro j
+    exact (ShortComplex.exact_iff_isZero_homology (F j.as)).1 (hF j.as)
+  exact hsum.of_iso (Functor.mapBiproduct (ShortComplex.homologyFunctor D) F).symm
+
 /-- The source's characterization of the kernel of the inclusion map: its
 elements are differences of the two homology objects of a periodic complex
 which becomes exact in the Serre quotient. -/

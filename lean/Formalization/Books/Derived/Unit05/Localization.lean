@@ -172,12 +172,12 @@ theorem localization_pretriangulated_exists_unique :
   let P₀ : Pretriangulated S.Localization :=
     CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
   have hP₀ : IsLocalizationPretriangulatedStructure (S := S) P₀ := by
-    change (letI : Pretriangulated S.Localization := P₀; Functor.IsTriangulated S.Q)
+    change (let : Pretriangulated S.Localization := P₀; Functor.IsTriangulated S.Q)
     let : Pretriangulated S.Localization := P₀
     infer_instance
   refine ⟨P₀, hP₀, ?_⟩
   intro P hP
-  change (letI : Pretriangulated S.Localization := P; Functor.IsTriangulated S.Q) at hP
+  change (let : Pretriangulated S.Localization := P; Functor.IsTriangulated S.Q) at hP
   let : Pretriangulated S.Localization := P
   change Functor.IsTriangulated S.Q at hP
   let : Functor.IsTriangulated S.Q := hP

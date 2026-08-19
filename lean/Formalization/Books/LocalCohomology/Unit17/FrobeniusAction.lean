@@ -77,7 +77,113 @@ theorem independent_iff_cotangent_has_basis
       ∃ b : Module.Basis (Fin xs.length) (A ⧸ Ideal.ofList xs)
           (Ideal.Cotangent (Ideal.ofList xs)),
         ∀ i, b i = conormalGenerator xs i := by
-  sorry
+  classical
+  let I : Ideal A := Ideal.ofList xs
+  let v : Fin xs.length → I.Cotangent := fun i => conormalGenerator xs i
+  have hxi (i : Fin xs.length) : xs.get i ∈ I := by
+    change xs.get i ∈ Ideal.ofList xs
+    apply Ideal.subset_span
+    exact xs.get_mem i
+  have hsum_conormal (c : Fin xs.length → A) :
+      I.toCotangent ⟨∑ i, c i * xs.get i,
+        I.sum_mem fun i _ => I.mul_mem_left (c i) (hxi i)⟩ =
+        ∑ i, (Ideal.Quotient.mk I (c i)) • v i := by
+    have heq : (⟨∑ i, c i * xs.get i,
+        I.sum_mem fun i _ => I.mul_mem_left (c i) (hxi i)⟩ : I) =
+        ∑ i, (⟨c i * xs.get i, I.mul_mem_left (c i) (hxi i)⟩ : I) := by
+      ext
+      simp
+    rw [heq, map_sum]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rfl
+  have hgen : I = Ideal.span (Set.range (fun i : Fin xs.length => xs.get i)) := by
+    change Ideal.span {x : A | x ∈ xs} = _
+    congr 1
+    ext x
+    constructor
+    · intro hx
+      rcases List.mem_iff_get.mp hx with ⟨i, hi⟩
+      exact ⟨i, hi⟩
+    · rintro ⟨i, rfl⟩
+      exact xs.get_mem i
+  have hspan : Submodule.span (A ⧸ I) (Set.range v) = ⊤ := by
+    refine top_unique ?_
+    intro z hz
+    obtain ⟨y, rfl⟩ := I.toCotangent_surjective z
+    rcases ofList_rep xs (c := y.1) y.2 with ⟨c, hc⟩
+    have hy : y = ⟨∑ i, c i * xs.get i, hc ▸ y.2⟩ := Subtype.ext hc.symm
+    rw [hy]
+    rw [hsum_conormal]
+    apply Submodule.sum_mem
+    intro i hi
+    have hmem : (Ideal.Quotient.mk I (c i)) • v i ∈
+        Submodule.span (A ⧸ I) (Set.range v) :=
+      Submodule.smul_mem _ _ (Submodule.subset_span ⟨i, rfl⟩)
+    simpa [v, conormalGenerator] using hmem
+  have hli : LinearIndependent (A ⧸ I) v ↔ independent xs := by
+    constructor
+    · intro hv a ha i
+      have hrel : (∑ j, (Ideal.Quotient.mk I (a j)) • v j) = 0 := by
+        rw [← hsum_conormal a]
+        rw [Ideal.toCotangent_eq_zero]
+        change (∑ j, a j * xs.get j) ∈ I ^ 2
+        rw [ha]
+        exact (I ^ 2).zero_mem
+      have hzero := (Fintype.linearIndependent_iff.mp hv)
+        (fun j => Ideal.Quotient.mk I (a j)) hrel i
+      exact (Ideal.Quotient.eq_zero_iff_mem).mp hzero
+    · intro hi
+      rw [Fintype.linearIndependent_iff]
+      intro c hc i
+      let a : Fin xs.length → A := fun j => Classical.choose
+        (Ideal.Quotient.mk_surjective (c j))
+      have ha (j : Fin xs.length) : Ideal.Quotient.mk I (a j) = c j := by
+        exact Classical.choose_spec (Ideal.Quotient.mk_surjective (c j))
+      have hrel : I.toCotangent
+          ⟨∑ j, a j * xs.get j, I.sum_mem fun j _ =>
+            I.mul_mem_left (a j) (hxi j)⟩ = 0 := by
+        rw [hsum_conormal a]
+        simpa [ha] using hc
+      have hsquare : (∑ j, a j * xs.get j) ∈ I ^ 2 := by
+        exact I.mem_toCotangent_ker.mp hrel
+      have hmem : (∑ j, a j * xs.get j) ∈
+          I • Submodule.span A (Set.range (fun j : Fin xs.length => xs.get j)) := by
+        simpa [hgen, pow_two, smul_eq_mul] using hsquare
+      rcases (Submodule.mem_ideal_smul_span_iff_exists_sum I
+        (fun j : Fin xs.length => xs.get j) _).mp hmem with ⟨q, hq, hqsum⟩
+      have hqsum' : (∑ j, q j * xs.get j) = ∑ j, a j * xs.get j := by
+        simpa [Finsupp.sum_fintype] using hqsum
+      have hzero : (∑ j, (a j - q j) * xs.get j) = 0 := by
+        calc
+          (∑ j, (a j - q j) * xs.get j) =
+              ∑ j, (a j * xs.get j - q j * xs.get j) := by
+                apply Finset.sum_congr rfl
+                intro j hj
+                ring
+          _ = (∑ j, a j * xs.get j) - ∑ j, q j * xs.get j := by
+            rw [Finset.sum_sub_distrib]
+          _ = 0 := by rw [hqsum']; exact sub_self _
+      have hcoeff := hi (fun j => a j - q j) hzero i
+      have hqi : q i ∈ I := hq i
+      have hai : a i ∈ I := by
+        simpa [sub_eq_add_neg, add_comm] using I.add_mem hcoeff hqi
+      rw [← (Ideal.Quotient.eq_zero_iff_mem).mpr hai, ha]
+  constructor
+  · intro hi
+    let b : Module.Basis (Fin xs.length) (A ⧸ I) I.Cotangent :=
+      Module.Basis.mk (hli.mpr hi) (by simpa [hspan])
+    refine ⟨b, ?_⟩
+    intro i
+    exact Module.Basis.mk_apply _ _ i
+  · rintro ⟨b, hb⟩
+    apply hli.mp
+    change LinearIndependent (A ⧸ I) v
+    change LinearIndependent (A ⧸ Ideal.ofList xs)
+      (fun i => conormalGenerator xs i)
+    have heq : (fun i => conormalGenerator xs i) = b :=
+      funext fun i => (hb i).symm
+    exact heq ▸ b.linearIndependent
 
 private theorem independent_append_mul_factor_pullback
     {A : Type*} [CommRing A] (xs : List A) (f g : A)
@@ -447,8 +553,6 @@ theorem independent_multiplication_exact
         (∀ x : A,
           v (Ideal.Quotient.mk (Ideal.ofList (xs ++ [f * g])) x) =
             Ideal.Quotient.mk (Ideal.ofList (xs ++ [f])) x) := by
-  sorry
-  /-
   classical
   let Ig : Ideal A := Ideal.ofList (xs ++ [g])
   let Ifg : Ideal A := Ideal.ofList (xs ++ [f * g])
@@ -525,11 +629,11 @@ theorem independent_multiplication_exact
       rw [Submodule.liftQ_apply]
       change Ideal.Quotient.mk If (f * x) = 0
       rw [Ideal.Quotient.eq_zero_iff_mem]
-      exact Ideal.mul_mem_left If f
-        (Ideal.mem_sup_right (by
-          rw [show If = Ideal.ofList xs ⊔ Ideal.span {f} by
-            simp [If, Ideal.ofList_append]]
-          exact Ideal.subset_span (Set.mem_singleton f)))
+      have hfIf : f ∈ If := by
+        rw [show If = Ideal.ofList xs ⊔ Ideal.span {f} by
+          simp [If, Ideal.ofList_append]]
+        exact Ideal.mem_sup_right (Ideal.subset_span (Set.mem_singleton f))
+      exact Ideal.mul_mem_right _ If hfIf
     · intro y hy
       obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective y
       change Ideal.Quotient.mk If x = 0 at hy
@@ -559,7 +663,6 @@ theorem independent_multiplication_exact
     rw [← Ideal.Quotient.mk_eq_mk]
     rw [Submodule.liftQ_apply]
     exact Ideal.Quotient.mk_eq_mk x
-  -/
 
 /-- Length additivity for the independent product replacement in Lemma 2. -/
 theorem independent_length_mul
@@ -570,7 +673,9 @@ theorem independent_length_mul
     Module.length A (A ⧸ Ideal.ofList (xs ++ [f * g])) =
       Module.length A (A ⧸ Ideal.ofList (xs ++ [f])) +
         Module.length A (A ⧸ Ideal.ofList (xs ++ [g])) := by
-  sorry
+  rcases independent_multiplication_exact xs f g h with
+    ⟨u, v, hu, hv, hexact, -, -⟩
+  simpa [add_comm] using Module.length_eq_add_of_exact u v hu hv hexact
 
 /-- The list of powers appearing in Lemma 3. -/
 def powerList {A : Type*} [CommRing A] (xs : List A)

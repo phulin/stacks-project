@@ -745,23 +745,83 @@ theorem isOpen_DPlus (G : GradedRingData S) {f : S}
   exact ProjectiveSpectrum.isOpen_basicOpen _
 
 theorem DPlus_mul (G : GradedRingData S) (f g : S)
-    (hf : ∃ d : ℕ, 0 < d ∧ f ∈ G.component d)
-    (hg : ∃ d : ℕ, 0 < d ∧ g ∈ G.component d) :
+    (_hf : ∃ d : ℕ, 0 < d ∧ f ∈ G.component d)
+    (_hg : ∃ d : ℕ, 0 < d ∧ g ∈ G.component d) :
     DPlus G (f * g) = DPlus G f ∩ DPlus G g := by
-  sorry
+  ext p
+  simp only [mem_DPlus, Set.mem_inter_iff]
+  constructor
+  · intro h
+    constructor <;> intro h'
+    · exact h (p.asHomogeneousIdeal.toIdeal.mul_mem_right g h')
+    · exact h (p.asHomogeneousIdeal.toIdeal.mul_mem_left f h')
+  · rintro ⟨hf', hg'⟩ hfg
+    exact (p.isPrime.2 hfg).elim hf' hg'
 
 theorem DOnProj_eq_DPlus_union_components (G : GradedRingData S) (g : S) :
     DOnProj G g =
       DOnProj G (GradedRing.proj G.component 0 g) ∪
         ⋃ d : {d : ℕ // 0 < d},
           DPlus G (GradedRing.proj G.component d.1 g) := by
-  sorry
+  ext p
+  simp only [DOnProj, Set.mem_union, Set.mem_iUnion, mem_DPlus]
+  change g ∉ p.asHomogeneousIdeal.toIdeal ↔
+    (GradedRing.proj G.component 0 g) ∉ p.asHomogeneousIdeal.toIdeal ∨
+      ∃ d : {d : ℕ // 0 < d},
+        (GradedRing.proj G.component d.1 g) ∉ p.asHomogeneousIdeal.toIdeal
+  have hp : p.asHomogeneousIdeal.toIdeal.IsHomogeneous G.component :=
+    p.asHomogeneousIdeal.isHomogeneous
+  have hcomp : g ∈ p.asHomogeneousIdeal.toIdeal ↔
+      ∀ n : ℕ, GradedRing.proj G.component n g ∈ p.asHomogeneousIdeal.toIdeal := by
+    simpa only [GradedRing.proj_apply] using hp.mem_iff
+  constructor
+  · intro hg
+    by_cases h0 : GradedRing.proj G.component 0 g ∈ p.asHomogeneousIdeal.toIdeal
+    · right
+      by_contra hnone
+      apply hg
+      apply hcomp.mpr
+      intro n
+      cases n with
+      | zero => exact h0
+      | succ n =>
+          by_contra hn
+          exact hnone ⟨⟨n + 1, Nat.zero_lt_succ n⟩, hn⟩
+    · exact Or.inl h0
+  · rintro (h0 | ⟨d, hd⟩) hg
+    · apply h0
+      exact (hcomp.mp hg) 0
+    · have hdm : GradedRing.proj G.component d.val g ∈
+          p.asHomogeneousIdeal.toIdeal := (hcomp.mp hg) d.val
+      exact hd hdm
 
 theorem DOnProj_degree_zero_eq_iUnion_DPlus (G : GradedRingData S) (g₀ : S)
-    (hg₀ : g₀ ∈ G.component 0) :
+    (_hg₀ : g₀ ∈ G.component 0) :
     DOnProj G g₀ =
       ⋃ x : positiveHomogeneousElements G, DPlus G (g₀ * (x.2 : S)) := by
-  sorry
+  ext p
+  simp only [DOnProj, Set.mem_iUnion, mem_DPlus]
+  have hex : ∃ x : positiveHomogeneousElements G,
+      (x.2 : S) ∉ p.asHomogeneousIdeal := by
+    by_contra h
+    apply p.not_irrelevant_le
+    rw [HomogeneousIdeal.irrelevant_le]
+    intro d hd y hy
+    by_contra hxp
+    let x : positiveHomogeneousElements G := ⟨⟨d, hd⟩, ⟨y, hy⟩⟩
+    have hxp' : (x.2 : S) ∉ p.asHomogeneousIdeal := by
+      simpa [x] using hxp
+    exact h ⟨x, hxp'⟩
+  constructor
+  · intro hg
+    obtain ⟨x, hx⟩ := hex
+    refine ⟨x, ?_⟩
+    intro hprod
+    exact (p.isPrime.2 hprod).elim hg hx
+  · rintro ⟨x, hx⟩ hg
+    apply hx
+    have hm := p.asHomogeneousIdeal.toIdeal.mul_mem_right (x.2 : S) hg
+    simpa using hm
 
 theorem isTopologicalBasis_DPlus (G : GradedRingData S) :
     TopologicalSpace.IsTopologicalBasis

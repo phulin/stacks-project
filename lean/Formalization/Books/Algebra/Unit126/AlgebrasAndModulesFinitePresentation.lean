@@ -632,7 +632,105 @@ theorem finite_type_mod_nilpotent {R S : Type*} [CommRing R] [CommRing S]
       Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
     RingHom.FiniteType (algebraMap (R ⧸ I) (S ⧸ I.map (algebraMap R S))) →
       RingHom.FiniteType f := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  let J : Ideal S := I.map (algebraMap R S)
+  let π : S →ₐ[R] (S ⧸ J) := Ideal.Quotient.mkₐ R J
+  intro h
+  change Algebra.FiniteType R S
+  let q : R →+* (S ⧸ J) := (Ideal.Quotient.mk J).comp f
+  have hq : RingHom.FiniteType q := by
+    have hmk : RingHom.FiniteType (Ideal.Quotient.mk I) :=
+      RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective
+    have hcomp : RingHom.FiniteType
+        ((algebraMap (R ⧸ I) (S ⧸ J)).comp (Ideal.Quotient.mk I)) :=
+      (show RingHom.FiniteType (algebraMap (R ⧸ I) (S ⧸ J)) from h).comp hmk
+    convert hcomp using 1
+    ext r
+    rfl
+  letI : Algebra R (S ⧸ J) := q.toAlgebra
+  have hq' : Algebra.FiniteType R (S ⧸ J) := hq
+  obtain ⟨s, hs⟩ := hq'.out
+  classical
+  let lift : (S ⧸ J) → S := fun x => (Ideal.Quotient.mk_surjective x).choose
+  have hlift (x : S ⧸ J) : Ideal.Quotient.mk J (lift x) = x :=
+    (Ideal.Quotient.mk_surjective x).choose_spec
+  let T : Set S := lift '' (s : Set (S ⧸ J))
+  let A : Subalgebra R S := Algebra.adjoin R T
+  have hT : T.Finite := s.finite_toSet.image lift
+  have hπ : Function.Surjective (π.comp A.val) := by
+    apply (AlgHom.range_eq_top _).mp
+    apply Algebra.eq_top_iff.mpr
+    intro x
+    have hle : Algebra.adjoin R (s : Set (S ⧸ J)) ≤ (π.comp A.val).range := by
+      apply Algebra.adjoin_le
+      intro y hy
+      exact ⟨⟨lift y, Algebra.subset_adjoin ⟨y, hy, rfl⟩⟩, by
+        simpa [π] using hlift y⟩
+    exact hle (by rw [hs]; trivial)
+  have hbase : ∀ x : S, ∃ a : A, x - a.1 ∈ J := by
+    intro x
+    obtain ⟨a, ha⟩ := hπ (π x)
+    refine ⟨a, ?_⟩
+    have hz : π (x - a.1) = 0 := by
+      simpa [map_sub, Function.comp_apply] using sub_eq_zero.mpr ha.symm
+    simpa [π] using Ideal.Quotient.eq_zero_iff_mem.mp hz
+  obtain ⟨N, hIN⟩ := hI
+  have hN : J ^ N = ⊥ := by
+    change (Ideal.map (algebraMap R S) I) ^ N = ⊥
+    rw [← Ideal.map_pow, hIN]
+    simp
+  have hdecomp (n : ℕ) (x : S) (hx : x ∈ J ^ n) :
+      ∃ a : A, a.1 ∈ J ^ n ∧ x - a.1 ∈ J ^ (n + 1) := by
+    have hx' : x ∈ Ideal.map (algebraMap R S) (I ^ n) := by
+      simpa [J, Ideal.map_pow] using hx
+    rw [Ideal.map] at hx'
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx'
+    · rintro y ⟨r, hr, rfl⟩
+      let a : A := ⟨algebraMap R S r, A.algebraMap_mem r⟩
+      refine ⟨a, ?_, ?_⟩
+      · rw [← Ideal.map_pow]
+        exact Ideal.mem_map_of_mem _ hr
+      · simp [a]
+    · exact ⟨0, Ideal.zero_mem _, by simp⟩
+    · rintro x y _ _ ⟨a, ha, hxa⟩ ⟨b, hb, hyb⟩
+      refine ⟨a + b, add_mem ha hb, ?_⟩
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using add_mem hxa hyb
+    · rintro c x _ ⟨a, ha, hxa⟩
+      obtain ⟨b, hb⟩ := hbase c
+      refine ⟨b * a, ?_, ?_⟩
+      · exact Ideal.mul_mem_left _ _ ha
+      · have h₁ : c * (x - a.1) ∈ J ^ (n + 1) :=
+          Ideal.mul_mem_left _ _ hxa
+        have h₂ : (c - b.1) * a.1 ∈ J ^ (n + 1) := by
+          have := Ideal.mul_mem_mul hb ha
+          simpa [pow_succ', mul_comm] using this
+        have hres := add_mem h₁ h₂
+        change c * x - b.1 * a.1 ∈ J ^ (n + 1)
+        convert hres using 1
+        ring
+  have hgen : ∀ n : ℕ, ∀ x : S, ∃ a : A, x - a.1 ∈ J ^ n := by
+    intro n
+    induction n with
+    | zero => intro x; exact ⟨0, by simp⟩
+    | succ n ih =>
+      intro x
+      obtain ⟨a, ha⟩ := ih x
+      obtain ⟨b, hb, hxb⟩ := hdecomp n (x - a.1) ha
+      refine ⟨a + b, ?_⟩
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hxb
+  have hAtop : A = ⊤ := by
+    apply top_unique
+    intro x hx
+    obtain ⟨a, ha⟩ := hgen N x
+    have hzero : x - a.1 = 0 := by simpa [hN] using ha
+    have hxa : x = a.1 := sub_eq_zero.mp hzero
+    rw [hxa]
+    exact a.property
+  have hAfinite : Algebra.FiniteType R A := Algebra.FiniteType.adjoin_of_finite hT
+  apply hAfinite.of_surjective A.val
+  intro x
+  have hx : x ∈ A := by rw [hAtop]; trivial
+  exact ⟨⟨x, hx⟩, rfl⟩
 
 /-- Surjectivity lifts across a locally nilpotent thickening. -/
 theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing S]

@@ -3452,7 +3452,7 @@ private def gradedScale (G : GradedRingData S) : S →+* Polynomial S :=
 
 private theorem gradedScale_coe (G : GradedRingData S) {d : ℕ}
     (x : G.component d) : gradedScale G (x : S) = Polynomial.monomial d (x : S) := by
-  simp [gradedScale, DirectSum.decomposeRingEquiv, DirectSum.decompose_coe]
+  simp [gradedScale, DirectSum.decomposeRingEquiv]
   rfl
 
 private theorem gradedScale_coeff (G : GradedRingData S) (x : S) (d : ℕ) :
@@ -3491,8 +3491,8 @@ theorem integralClosure_is_graded
           gradedScale H (f x)
         change Polynomial.map f.toRingHom (gradedScale G (x : R)) =
           gradedScale H (f x)
-        rw [gradedScale_coe G x, Polynomial.map_monomial]
-        rw [gradedScale_coe H ⟨f x, f.map_mem x.property⟩]
+        rw [gradedScale_coe G x, Polynomial.map_monomial,
+          gradedScale_coe H ⟨f x, f.map_mem x.property⟩]
         rfl
     | add x y hx hy =>
         simp only [RingHom.coe_comp, Function.comp_apply, map_add, hx, hy]

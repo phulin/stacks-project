@@ -21,9 +21,11 @@ namespace Formalization.Books.Flat.Unit08
 open CategoryTheory
 open Formalization.Books.Algebra.Unit82
 open Formalization.Books.Algebra.Unit88
+open Formalization.Books.Algebra.Unit89
 open Formalization.Books.Algebra.Unit96
 open Formalization.Books.Algebra.Unit97
 open Formalization.Books.MoreAlgebra.Unit28
+open TensorProduct
 open scoped DirectSum TensorProduct
 
 universe u v w z
@@ -36,7 +38,7 @@ private theorem mittagLeffler_of_universallyInjective
     (f : M →ₗ[R] N) (hf : universallyInjective f)
     (hN : IsMittagLefflerModule (ModuleCat.of R N)) :
     IsMittagLefflerModule (ModuleCat.of R M) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   let q : N →ₗ[R] (N ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
   have hshort : Function.Injective f ∧ Function.Exact f q ∧
       Function.Surjective q := by
@@ -55,7 +57,7 @@ private theorem mittagLeffler_of_split
     (hs : s.comp f = LinearMap.id)
     (hN : IsMittagLefflerModule (ModuleCat.of R N)) :
     IsMittagLefflerModule (ModuleCat.of R M) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   let q : N →ₗ[R] (N ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
   have hinj : Function.Injective f := by
     intro x y hxy
@@ -79,7 +81,7 @@ private theorem range_rTensor_smul_top
     (J : Ideal R) :
     LinearMap.range ((J • (⊤ : Submodule R N)).subtype.rTensor Q) =
       J • (⊤ : Submodule R (N ⊗[R] Q)) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   apply le_antisymm
   · rintro z ⟨y, rfl⟩
     induction y using TensorProduct.induction_on with
@@ -116,7 +118,7 @@ private theorem hausdorff_of_associatedPrimes
     (hJ : ∀ q ∈ _root_.associatedPrimes S M,
       J + q ≠ (⊤ : Ideal S)) :
     IsHausdorff J M := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   rw [isHausdorff_iff]
   intro x hx
   have hxinf : x ∈ (⨅ n : ℕ, J ^ n • (⊤ : Submodule S M)) := by
@@ -152,7 +154,7 @@ private theorem finite_tensorProduct_left
     [Module.Finite S N] [Module.Finite R Q] :
     letI : Module S (N ⊗[R] Q) := TensorProduct.leftModule
     Module.Finite S (N ⊗[R] Q) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   letI : Module S (N ⊗[R] Q) := TensorProduct.leftModule
   classical
   obtain ⟨s, hs⟩ := (inferInstance : Module.Finite S N).fg_top
@@ -202,7 +204,7 @@ theorem completedDirectSum_flat_and_mittagLeffler
     Module.Flat R (completion I (⨁ _ : A, R)) ∧
       IsMittagLefflerModule
         (ModuleCat.of R (completion I (⨁ _ : A, R))) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   refine ⟨completedDirectSum_flat I A, ?_⟩
   apply mittagLeffler_of_universallyInjective
     (completedDirectSumToProduct I A)
@@ -223,7 +225,7 @@ theorem completion_flat_and_mittagLeffler_of_flat_of_projective_mod
       (M ⧸ (I • (⊤ : Submodule R M)))] :
       Module.Flat R (completion I M) ∧
       IsMittagLefflerModule (ModuleCat.of R (completion I M)) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   let F : Type max u v := M →₀ R
   let g : F →ₗ[R] M := Finsupp.linearCombination R (id : M → M)
   have hg : Function.Surjective g := by
@@ -269,7 +271,7 @@ theorem universallyInjective_to_completion
       ∀ q ∈ _root_.associatedPrimes S (N ⊗[R] Q),
         I.map f + q ≠ (⊤ : Ideal S)) →
       universallyInjective (AdicCompletion.of I N) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   letI : Algebra R S := f.toAlgebra
   letI : Module R N := Module.compHom N f
   letI : IsScalarTower R S N := SMul.comp.isScalarTower f
@@ -365,7 +367,7 @@ theorem universallyInjective_to_completion_of_flat
             (N ⊗[R] (q.comap f).ResidueField) →
           I.map f + q ≠ (⊤ : Ideal S)) →
       universallyInjective (AdicCompletion.of I N) := by sorry
-/-
+/- Prior attempt (retained for reference; the declaration above uses `sorry`):
   letI : Algebra R S := f.toAlgebra
   letI : Module R N := Module.compHom N f
   letI : IsScalarTower R S N := SMul.comp.isScalarTower f

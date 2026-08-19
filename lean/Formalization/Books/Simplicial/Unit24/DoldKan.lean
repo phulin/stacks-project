@@ -98,7 +98,35 @@ theorem exact_faithful_essentially_surjective_quasi_inverse
     (hN : exactFunctor A B N) (hS : exactFunctor B A S)
     (g : S ⋙ N ≅ 𝟭 B) (hfaithful : N.Faithful) (hessentiallySurjective : S.EssSurj) :
     N.IsEquivalence ∧ S.IsEquivalence := by
-  sorry
+  let _ := hN
+  let _ := hS
+  let _ : N.Faithful := hfaithful
+  have hNfull : N.Full := by
+    constructor
+    intro X Y f
+    obtain ⟨X', ⟨eX⟩⟩ := hessentiallySurjective.mem_essImage X
+    obtain ⟨Y', ⟨eY⟩⟩ := hessentiallySurjective.mem_essImage Y
+    let h : X' ⟶ Y' :=
+      (g.app X').inv ≫ N.map eX.hom ≫ f ≫ N.map eY.inv ≫ (g.app Y').hom
+    refine ⟨eX.inv ≫ S.map h ≫ eY.hom, ?_⟩
+    have hmap : N.map (S.map h) =
+        (g.app X').hom ≫ h ≫ (g.app Y').inv := by
+      apply (cancel_mono (g.app Y').hom).1
+      simpa using (g.hom.naturality h)
+    simp only [Functor.map_comp]
+    rw [hmap]
+    simp [h]
+  have hNess : N.EssSurj := by
+    constructor
+    intro Y
+    exact ⟨S.obj Y, ⟨g.app Y⟩⟩
+  have hNeq : N.IsEquivalence :=
+    { faithful := hfaithful, full := hNfull, essSurj := hNess }
+  let _ : N.IsEquivalence := hNeq
+  have hSNeq : (S ⋙ N).IsEquivalence :=
+    (Functor.isEquivalence_iff_of_iso g).2 inferInstance
+  let _ : (S ⋙ N).IsEquivalence := hSNeq
+  exact ⟨hNeq, Functor.isEquivalence_of_comp_right S N⟩
 
 /-! ## The reverse construction -/
 
@@ -154,7 +182,7 @@ theorem doldKanComponentMap_same_degree
     (hdegree : a.1.1 = b.1.1)
     (hcomp : HEq b.2.1 (f ≫ a.2.1)) :
     doldKanComponentMap A f a b = eqToHom (congrArg A.X hdegree) := by
-  sorry
+  simp [doldKanComponentMap, hdegree, hcomp]
 
 theorem doldKanComponentMap_drop_degree
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -165,7 +193,7 @@ theorem doldKanComponentMap_drop_degree
       (b.2.1 ≫ SimplexCategory.δ (Fin.last (b.1.1 + 1)))) :
     doldKanComponentMap A f a b =
       (-1 : ℤ) ^ a.1.1 • A.d a.1.1 b.1.1 := by
-  sorry
+  simp [doldKanComponentMap, hdegree, hcomp]
 
 theorem doldKanComponentMap_zero_of_other_case
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -174,7 +202,7 @@ theorem doldKanComponentMap_zero_of_other_case
     (hdegree : a.1.1 ≠ b.1.1)
     (hdrop : a.1.1 ≠ b.1.1 + 1) :
     doldKanComponentMap A f a b = 0 := by
-  sorry
+  simp [doldKanComponentMap, hdegree, hdrop]
 
 /-- The map induced by `f : X ⟶ Y`, from the `Y`-degree to the `X`-degree. -/
 noncomputable def doldKanMap

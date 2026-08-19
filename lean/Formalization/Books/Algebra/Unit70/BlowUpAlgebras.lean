@@ -1457,7 +1457,7 @@ theorem affineBlowup_isDomain
 /-- The blowup map is dominant when the chosen denominator avoids every
 minimal prime. -/
 theorem affineBlowup_denseRange
-    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I)
+    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ha : a ∈ I)
     (hmin : ∀ p : MinimalPrimeSpectrum R, a ∉ p.1.asIdeal) :
     DenseRange (PrimeSpectrum.comap (algebraMap R (affineBlowup I a))) := by
   rw [PrimeSpectrum.denseRange_comap_iff_minimalPrimes]
@@ -1488,10 +1488,8 @@ theorem affineBlowup_denseRange
       (algebraMap R (affineBlowup I a) x) =
       algebraMap R (Localization.Away a) x by
     exact IsScalarTower.algebraMap_apply R (affineBlowup I a) (Localization.Away a) x]
-  change algebraMap R (Localization.Away a) x ∈ q ↔
-    x ∈ p
   change algebraMap R (Localization.Away a) x ∈
-      p.map (algebraMap R (Localization.Away a)) ↔ x ∈ p
+    p.map (algebraMap R (Localization.Away a)) ↔ x ∈ p
   rw [IsLocalization.algebraMap_mem_map_algebraMap_iff
     (M := Submonoid.powers a)]
   constructor

@@ -102,7 +102,9 @@ theorem standardResolutionDegree_comp {A : Type uA} {S : Type uS}
     (i j : StandardResolutionIndex) :
     standardResolutionDegree T (standardResolutionIndexAdd i j) =
       standardResolutionDegree T i ⋙ standardResolutionDegree T j := by
-  sorry
+  cases i <;> cases j <;>
+    simp only [standardResolutionIndexAdd, standardResolutionDegree,
+      godementDegree_add, Functor.id_comp, Functor.comp_id]
 
 /-- The degreewise boundary maps, including the degree-zero counit. -/
 def standardResolutionBoundary {A : Type uA} {S : Type uS}
@@ -152,7 +154,24 @@ theorem standardResolution_godementEquations
     (T : StandardResolutionSituation A S) :
     GodementEquations (standardResolutionBase T)
       (standardResolutionCounit T) (standardResolutionComultiplication T) := by
-  sorry
+  refine { left_unit := ?_, right_unit := ?_, coassoc := ?_ }
+  · dsimp [standardResolutionBase, standardResolutionCounit,
+      standardResolutionComultiplication]
+    ext X
+    simp
+    rw [← T.U.map_comp, T.adjunction.right_triangle_components]
+    simp
+  · dsimp [standardResolutionBase, standardResolutionCounit,
+      standardResolutionComultiplication]
+    ext X
+    simp
+  · dsimp [standardResolutionBase, standardResolutionCounit,
+      standardResolutionComultiplication]
+    ext X
+    simp
+    rw [← T.U.map_comp, ← T.U.map_comp]
+    exact congrArg T.U.map
+      (T.adjunction.unit_naturality (T.adjunction.unit.app (T.V.obj X)))
 
 /-- The chosen simplicial object supplied by the standard-resolution
 construction. -/
@@ -254,7 +273,24 @@ noncomputable def standardResolutionOuterRawAugmentation
     (T : StandardResolutionSituation A S) :
     standardResolutionOuterObject T ⟶
       (SimplicialObject.const (A ⥤ S)).obj (𝟭 A ⋙ T.V) := by
-  sorry
+  refine { app := fun n => (Functor.whiskerRight
+      ((standardResolutionAugmentation T).app n) T.V), naturality := ?_ }
+  intro n m f
+  dsimp [standardResolutionOuterObject]
+  simp
+  have h0 := (standardResolutionAugmentation T).naturality f
+  have hconst : ((SimplicialObject.const (A ⥤ A)).obj (𝟭 A)).map f =
+      𝟙 (𝟭 A) := by
+    simp
+  rw [hconst] at h0
+  have h := congrArg (fun k => Functor.whiskerRight k T.V) h0
+  rw [Functor.whiskerRight_comp, Functor.whiskerRight_comp] at h
+  have hid : Functor.whiskerRight (𝟙 (𝟭 A)) T.V =
+      𝟙 (𝟭 A ⋙ T.V) := by
+    ext X
+    simp
+  rw [hid] at h
+  exact h
 
 abbrev standardResolutionOuterAugmentation
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
@@ -275,7 +311,24 @@ noncomputable def standardResolutionInnerRawAugmentation
     (T : StandardResolutionSituation A S) :
     standardResolutionInnerObject T ⟶
       (SimplicialObject.const (S ⥤ A)).obj (T.U ⋙ 𝟭 A) := by
-  sorry
+  refine { app := fun n => (Functor.whiskerLeft T.U
+      ((standardResolutionAugmentation T).app n)), naturality := ?_ }
+  intro n m f
+  dsimp [standardResolutionInnerObject]
+  simp
+  have h0 := (standardResolutionAugmentation T).naturality f
+  have hconst : ((SimplicialObject.const (A ⥤ A)).obj (𝟭 A)).map f =
+      𝟙 (𝟭 A) := by
+    simp
+  rw [hconst] at h0
+  have h := congrArg (fun k => Functor.whiskerLeft T.U k) h0
+  rw [Functor.whiskerLeft_comp, Functor.whiskerLeft_comp] at h
+  have hid : Functor.whiskerLeft T.U (𝟙 (𝟭 A)) =
+      𝟙 (T.U ⋙ 𝟭 A) := by
+    ext X
+    simp
+  rw [hid] at h
+  exact h
 
 abbrev standardResolutionInnerAugmentation
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]

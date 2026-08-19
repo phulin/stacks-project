@@ -412,21 +412,13 @@ def doubleComplexFirstWeakConvergenceData
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C] (A : DoubleComplex C)
     (L : FilteredComplexLimitData (doubleComplexFirstFilteredTotal A)) : Prop :=
-  Nonempty
-    (filteredComplexAssociatedGradedCohomology
-        (doubleComplexFirstFilteredTotal A) ≅
-      fun pq => filteredComplexLimitPage
-        (doubleComplexFirstFilteredTotal A) L pq.1 pq.2)
+  FilteredComplexLimitEquationsHold (doubleComplexFirstFilteredTotal A) L
 
 def doubleComplexSecondWeakConvergenceData
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C] (A : DoubleComplex C)
     (L : FilteredComplexLimitData (doubleComplexSecondFilteredTotal A)) : Prop :=
-  Nonempty
-    (filteredComplexAssociatedGradedCohomology
-        (doubleComplexSecondFilteredTotal A) ≅
-      fun pq => filteredComplexLimitPage
-        (doubleComplexSecondFilteredTotal A) L pq.1 pq.2)
+  FilteredComplexLimitEquationsHold (doubleComplexSecondFilteredTotal A) L
 
 theorem doubleComplex_first_weak_convergence_iff
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -441,6 +433,32 @@ theorem doubleComplex_second_weak_convergence_iff
     doubleComplexSecondWeaklyConverges A ↔
       ∃ L, doubleComplexSecondWeakConvergenceData A L := by
   rfl
+
+theorem doubleComplex_first_weak_convergence_comparison
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C] (A : DoubleComplex C)
+    (L : FilteredComplexLimitData (doubleComplexFirstFilteredTotal A))
+    (hL : doubleComplexFirstWeakConvergenceData A L) :
+    Nonempty
+      (filteredComplexAssociatedGradedCohomology
+          (doubleComplexFirstFilteredTotal A) ≅
+        fun pq => filteredComplexLimitPage
+          (doubleComplexFirstFilteredTotal A) L pq.1 pq.2) := by
+  exact filteredComplex_limit_equations_give_associated_graded_iso
+    (doubleComplexFirstFilteredTotal A) L hL
+
+theorem doubleComplex_second_weak_convergence_comparison
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C] (A : DoubleComplex C)
+    (L : FilteredComplexLimitData (doubleComplexSecondFilteredTotal A))
+    (hL : doubleComplexSecondWeakConvergenceData A L) :
+    Nonempty
+      (filteredComplexAssociatedGradedCohomology
+          (doubleComplexSecondFilteredTotal A) ≅
+        fun pq => filteredComplexLimitPage
+          (doubleComplexSecondFilteredTotal A) L pq.1 pq.2) := by
+  exact filteredComplex_limit_equations_give_associated_graded_iso
+    (doubleComplexSecondFilteredTotal A) L hL
 
 /-! ## Finite diagonals and the first-quadrant consequence -/
 

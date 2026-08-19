@@ -283,6 +283,19 @@ structure MorphismOfThickenings
   /-- The induced map `(f')^* J → I` from the commutative square. -/
   pullbackKernelMap :
     f'.modulePullback.obj t.hom.kernel.carrier ⟶ i.hom.kernel.carrier
+  /-- The first-order comparison between the two module realizations of the
+  base kernel.  The module pullback and direct-image functors are explicit
+  interfaces above, so their compatibility with the commutative square is
+  recorded here rather than inferred from the ring-level data alone. -/
+  firstOrder_pullbackKernel_iso :
+    ∀ (_hi : FirstOrderThickening i) (_ht : FirstOrderThickening t),
+      Nonempty
+        ((SheafOfModules.toSheaf Y.structureSheaf).obj
+            (f'.modulePullback.obj t.hom.kernel.carrier) ≅
+          (SheafOfModules.toSheaf Y.structureSheaf).obj
+            (i.hom.moduleDirectImage.obj
+              (f.modulePullback.obj
+                (t.hom.modulePullback.obj t.hom.kernel.carrier))))
 
 /-! The inverse-image ideal and the two module sheaves in the source's
 notation are now determined by the corresponding interfaces on the vertical
@@ -365,7 +378,7 @@ theorem pullbackKernel_iso_basePullbackKernel_of_firstOrder
       ((SheafOfModules.toSheaf Y.structureSheaf).obj m.pullbackKernel ≅
         (SheafOfModules.toSheaf Y.structureSheaf).obj
           m.basePullbackKernel) := by
-  sorry
+  exact m.firstOrder_pullbackKernel_iso _hi _ht
 
 /-! The inverse-image and tensor-pullback maps appearing in the source are
 the two fields below; strictness is the local-surjectivity condition on the

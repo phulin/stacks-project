@@ -181,9 +181,11 @@ abbrev localizationModuleProperty (R : Type u) [CommRing R] (S : Submonoid R) :
 abbrev localizationModuleCategory (R : Type u) [CommRing R] (S : Submonoid R) :=
   (localizationModuleProperty R S).FullSubcategory
 
-instance localizationModuleProperty_isSerreClass
+/- The localization property is closed under exact five-term sequences, but
+   not under arbitrary ambient subobjects. -/
+instance localizationModuleProperty_isWeakSerreClass
     (R : Type u) [CommRing R] (S : Submonoid R) :
-    (localizationModuleProperty R S).IsSerreClass := by
+    (localizationModuleProperty R S).IsWeakSerreClass := by
   sorry
 
 theorem localizationModuleCategory_is_abelian

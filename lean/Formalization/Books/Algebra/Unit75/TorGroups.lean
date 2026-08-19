@@ -18,6 +18,8 @@ import Mathlib.Tactic.Ring
 import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Noetherian.Basic
+import Mathlib.RingTheory.Regular.Category
+import Mathlib.RingTheory.Regular.RegularSequence
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Formalization.Books.Algebra.Unit71.ExtGroups
 
@@ -2096,6 +2098,203 @@ theorem tor_one_ideal_quotient_kernel {R : Type u} [CommRing R]
     intro r
     ext x
     exact (ec.map_smul r x).symm))
+
+/-- If a sequence is weakly regular both on the ring and on a module, then
+`Tor₁(M, R/(x))` vanishes.  This is the degree-one consequence of the Koszul
+resolution associated to the regular sequence. -/
+theorem tor_one_quotient_isZero_of_isWeaklyRegular
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (xs : List R) (hR : RingTheory.Sequence.IsWeaklyRegular R xs)
+    (hM : RingTheory.Sequence.IsWeaklyRegular M xs) :
+    IsZero (Tor (ModuleCat.of R M)
+      (ModuleCat.of R (R ⧸ Ideal.ofList xs)) 1) := by
+  classical
+  induction xs using List.reverseRecOn with
+  | nil =>
+      obtain ⟨e⟩ := tor_one_ideal_quotient_kernel
+        (ModuleCat.of R M) (Ideal.ofList [])
+      apply (Iso.isZero_iff e).2
+      change IsZero (ModuleCat.of R
+        (LinearMap.ker (idealTensorActionMap (Ideal.ofList [])
+          (ModuleCat.of R M))))
+      have hzero (z : TensorProduct R (Ideal.ofList [] : Ideal R) M) : z = 0 := by
+        induction z using TensorProduct.induction_on with
+        | zero => rfl
+        | add z w hz hw => simp [hz, hw]
+        | tmul a m =>
+            have ha : a = 0 := by
+              apply Subtype.ext
+              simpa using a.property
+            simp [ha]
+      let : Subsingleton
+          (LinearMap.ker (idealTensorActionMap (Ideal.ofList [])
+            (ModuleCat.of R M))) :=
+        ⟨fun x y => by
+          apply Subtype.ext
+          rw [hzero x.1, hzero y.1]⟩
+      exact ModuleCat.isZero_of_subsingleton _
+  | append_singleton xs r ih =>
+      let I : Ideal R := Ideal.ofList xs
+      let A : ModuleCat.{u} R := ModuleCat.of R (R ⧸ I)
+      let C : ShortComplex (ModuleCat.{u} R) := A.smulShortComplex r
+      have hRsplit :=
+        (RingTheory.Sequence.isWeaklyRegular_append_iff R xs [r]).mp hR
+      have hMsplit :=
+        (RingTheory.Sequence.isWeaklyRegular_append_iff M xs [r]).mp hM
+      have hRr : IsSMulRegular (R ⧸ I) r := by
+        have hItop : I • (⊤ : Submodule R R) = I := by
+          simp
+        have hr :=
+          (RingTheory.Sequence.isWeaklyRegular_singleton_iff
+            (R ⧸ (I • (⊤ : Submodule R R))) r).mp hRsplit.2
+        rw [hItop] at hr
+        exact hr
+      have hMr : IsSMulRegular
+          (M ⧸ (I • (⊤ : Submodule R M))) r :=
+        (RingTheory.Sequence.isWeaklyRegular_singleton_iff
+          (M ⧸ (I • (⊤ : Submodule R M))) r).mp hMsplit.2
+      have hC : C.ShortExact := hRr.smulShortComplex_shortExact
+      let E : TensorProduct R M (R ⧸ I) ≃ₗ[R]
+          M ⧸ (I • (⊤ : Submodule R M)) :=
+        TensorProduct.tensorQuotEquivQuotSMul M I
+      let qmul : (R ⧸ I) →ₗ[R] (R ⧸ I) :=
+        LinearMap.lsmul R (R ⧸ I) r
+      have hcomm (z : TensorProduct R M (R ⧸ I)) :
+          E (tensorByMap (ModuleCat.of R M) (ModuleCat.ofHom qmul) z) =
+            r • E z := by
+        induction z using TensorProduct.induction_on with
+        | zero =>
+            change E (LinearMap.lTensor M qmul 0) = r • E 0
+            rw [map_zero, E.map_zero, smul_zero]
+        | add z w hz hw =>
+            change E (LinearMap.lTensor M qmul (z + w)) = r • E (z + w)
+            change E (LinearMap.lTensor M qmul z) = r • E z at hz
+            change E (LinearMap.lTensor M qmul w) = r • E w at hw
+            rw [map_add, E.map_add, map_add, smul_add, hz, hw]
+        | tmul m a =>
+            induction a using Submodule.Quotient.induction_on with
+            | _ a =>
+                change E (m ⊗ₜ[R] Submodule.Quotient.mk (r * a)) =
+                  r • E (m ⊗ₜ[R] Submodule.Quotient.mk a)
+                change Submodule.Quotient.mk ((r * a) • m) =
+                  r • Submodule.Quotient.mk (a • m)
+                calc
+                  Submodule.Quotient.mk ((r * a) • m) =
+                      Submodule.Quotient.mk (r • (a • m)) := by
+                    rw [smul_smul]
+                  _ = r • Submodule.Quotient.mk (a • m) :=
+                    Submodule.Quotient.mk_smul
+                      (I • (⊤ : Submodule R M)) r (a • m)
+      have htensor' : Function.Injective
+          (tensorByMap (ModuleCat.of R M) (ModuleCat.ofHom qmul)) := by
+        intro z w hzw
+        apply E.injective
+        apply hMr
+        change r • E z = r • E w
+        rw [← hcomm z, ← hcomm w, hzw]
+      have htensor : Function.Injective
+          (tensorByMap (ModuleCat.of R M) C.f) := by
+        dsimp only [C, ModuleCat.smulShortComplex, A]
+        exact htensor'
+      let hseq := Classical.choice
+        (exists_tor_long_exact_sequence (ModuleCat.of R M) C hC)
+      have hzeroA : IsZero (Tor (ModuleCat.of R M) C.X₂ 1) := by
+        change IsZero (Tor (ModuleCat.of R M)
+          (ModuleCat.of R (R ⧸ I)) 1)
+        simpa [I] using ih hRsplit.1 hMsplit.1
+      have hmap₂_zero : hseq.map₂ = 0 := by
+        have hc : ModuleCat.ofHom hseq.map₂ = 0 := hzeroA.eq_of_src _ _
+        exact congrArg (fun f => f.hom) hc
+      have hconnecting : Function.Injective hseq.connecting := by
+        apply (LinearMap.exact_zero_iff_injective
+          (Tor (ModuleCat.of R M) C.X₂ 1) hseq.connecting).mp
+        simpa [hmap₂_zero] using hseq.exact₂
+      have hzeroC : IsZero (Tor (ModuleCat.of R M) C.X₃ 1) := by
+        let : Subsingleton (Tor (ModuleCat.of R M) C.X₃ 1) :=
+          ⟨fun z w => by
+            apply hconnecting
+            have hz : hseq.connecting z = 0 := by
+              apply htensor
+              simpa using hseq.exact₃.apply_apply_eq_zero z
+            have hw : hseq.connecting w = 0 := by
+              apply htensor
+              simpa using hseq.exact₃.apply_apply_eq_zero w
+            rw [hz, hw]⟩
+        exact ModuleCat.isZero_of_subsingleton _
+      have hsmul (K : Ideal R) :
+          K • (⊤ : Submodule R R) = K := by
+        simp
+      have hJ : (Ideal.ofList (xs ++ [r]) : Submodule R R) =
+          Ideal.ofList (r :: xs) • (⊤ : Submodule R R) := by
+        rw [hsmul]
+        simp [sup_comm]
+      let eI : (R ⧸ (I • (⊤ : Submodule R R))) ≃ₗ[R] (R ⧸ I) :=
+        Submodule.quotEquivOfEq _ _ (hsmul I)
+      let e : ModuleCat.of R (R ⧸ Ideal.ofList (xs ++ [r])) ≅ C.X₃ :=
+        (Submodule.quotEquivOfEq _ _ hJ ≪≫ₗ
+          Submodule.quotOfListConsSMulTopEquivQuotSMulTopOuter R r xs ≪≫ₗ
+          QuotSMulTop.congr (r := r) eI).toModuleIso
+      let eTor : Tor (ModuleCat.of R M)
+            (ModuleCat.of R (R ⧸ Ideal.ofList (xs ++ [r]))) 1 ≅
+          Tor (ModuleCat.of R M) C.X₃ 1 :=
+        { hom := torMapSecond (ModuleCat.of R M) _ _ e.hom 1
+          inv := torMapSecond (ModuleCat.of R M) _ _ e.inv 1
+          hom_inv_id := by
+            rw [← torMapSecond_comp, e.hom_inv_id, torMapSecond_id]
+          inv_hom_id := by
+            rw [← torMapSecond_comp, e.inv_hom_id, torMapSecond_id] }
+      exact (Iso.isZero_iff eTor).2 hzeroC
+
+/-- A regular sequence and its image under a ring map give Tor-one vanishing
+after quotient by the ideal generated by the sequence.  The `List.ofFn`
+form matches regular systems of parameters used by the later local flatness
+criterion. -/
+theorem tor_one_span_range_isZero_of_isRegular
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (d : ℕ) (x : Fin d → R)
+    (hx : RingTheory.Sequence.IsRegular R (List.ofFn x))
+    (hfx : RingTheory.Sequence.IsRegular S
+      (List.ofFn (fun i => f (x i)))) :
+    IsZero (Tor
+      ((ModuleCat.restrictScalars f).obj (ModuleCat.of S S))
+      (ModuleCat.of R (R ⧸ Ideal.span (Set.range x))) 1) := by
+  let : Algebra R S := f.toAlgebra
+  have hS : RingTheory.Sequence.IsWeaklyRegular S (List.ofFn x) := by
+    apply (RingTheory.Sequence.isWeaklyRegular_map_algebraMap_iff
+      (S := S) (M := S) (List.ofFn x)).mp
+    simpa only [show algebraMap R S = f by rfl, List.map_ofFn,
+      Function.comp_def] using hfx.toIsWeaklyRegular
+  have hI : Ideal.ofList (List.ofFn x) = Ideal.span (Set.range x) := by
+    apply congrArg Ideal.span
+    ext r
+    simp
+  have hzero := tor_one_quotient_isZero_of_isWeaklyRegular
+    (M := S) (List.ofFn x) hx.toIsWeaklyRegular hS
+  let eM : ModuleCat.of R S ≅
+      (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) :=
+    ({ toFun := id
+       invFun := id
+       left_inv := fun _ => rfl
+       right_inv := fun _ => rfl
+       map_add' := fun _ _ => rfl
+       map_smul' := fun _ _ => rfl } :
+      S ≃ₗ[R] ((ModuleCat.restrictScalars f).obj
+        (ModuleCat.of S S) : Type u)).toModuleIso
+  let eTor : Tor (ModuleCat.of R S)
+        (ModuleCat.of R (R ⧸ Ideal.span (Set.range x))) 1 ≅
+      Tor ((ModuleCat.restrictScalars f).obj (ModuleCat.of S S))
+        (ModuleCat.of R (R ⧸ Ideal.span (Set.range x))) 1 :=
+    { hom := torMapFirst (N := ModuleCat.of R
+          (R ⧸ Ideal.span (Set.range x))) eM.hom 1
+      inv := torMapFirst (N := ModuleCat.of R
+          (R ⧸ Ideal.span (Set.range x))) eM.inv 1
+      hom_inv_id := by
+        rw [← torMapFirst_comp, eM.hom_inv_id, torMapFirst_id]
+      inv_hom_id := by
+        rw [← torMapFirst_comp, eM.inv_hom_id, torMapFirst_id] }
+  apply (Iso.isZero_iff eTor).mp
+  rw [hI] at hzero
+  exact hzero
 
 /- The switch map in the proof of symmetry can genuinely be nontrivial. -/
 def tensorSwitch {k V : Type u} [CommRing k]

@@ -31,7 +31,17 @@ theorem dimension_le_of_goingUp_or_goingDown
     (Algebra.HasGoingUp R S ∨ Algebra.HasGoingDown R S) →
       Function.Surjective (PrimeSpectrum.comap f) →
         ringKrullDim R ≤ ringKrullDim S := by
-  sorry
+  intro h hsurj
+  haveI : Algebra R S := f.toAlgebra
+  rw [← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim,
+    ← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim]
+  apply Formalization.Books.Topology.Unit19.topologicalKrullDim_le_of_surjective_of_specializing_or_generalizing
+    (PrimeSpectrum.comap f) (PrimeSpectrum.continuous_comap f) hsurj
+  cases h with
+  | inl h =>
+    exact Or.inl (Algebra.HasGoingUp.iff_specializingMap_primeSpectrumComap.mp h)
+  | inr h =>
+    exact Or.inr (Algebra.HasGoingDown.iff_generalizingMap_primeSpectrumComap.mp h)
 
 /-- Under going up, the contraction of a maximal ideal is maximal. -/
 theorem isMaximal_comap_of_goingUp
@@ -39,7 +49,26 @@ theorem isMaximal_comap_of_goingUp
     letI : Algebra R S := f.toAlgebra
     Algebra.HasGoingUp R S →
       ∀ q : Ideal S, q.IsMaximal → (q.comap f).IsMaximal := by
-  sorry
+  intro h q hq
+  haveI : Algebra R S := f.toAlgebra
+  haveI : Algebra.HasGoingUp R S := h
+  haveI : q.IsMaximal := hq
+  refine ⟨⟨Ideal.comap_ne_top (f := f) hq.ne_top, ?_⟩⟩
+  intro J hJ
+  apply Ideal.maximal_of_no_maximal ?_ J hJ
+  intro m hm hmax
+  haveI : m.IsMaximal := hmax
+  obtain ⟨Q, hqQ, hQ, hQover⟩ :=
+    Ideal.exists_ideal_ge_liesOver_of_le (P := q)
+      (p := q.comap f) (q := m) hm.le
+  by_cases hQtop : Q = ⊤
+  · exact hQtop
+  · have hqQeq : q = Q := hq.eq_of_le hQtop hqQ
+    have hcontra : q.comap f = m := by
+      calc
+        q.comap f = Q.comap f := congrArg (fun I : Ideal S => I.comap f) hqQeq
+        _ = m := hQover.over.symm
+    exact (hm.ne hcontra).elim
 
 /-! ## Integral extensions -/
 
@@ -52,8 +81,8 @@ theorem integral_ringKrullDim_le_and_closedPoint_map
       ∀ q : PrimeSpectrum S, q.asIdeal.IsMaximal →
         (q.asIdeal.comap f).IsMaximal := by
   constructor
-  · let _ : Algebra R S := f.toAlgebra
-    let _ : Algebra.IsIntegral R S := ⟨hf⟩
+  · haveI : Algebra R S := f.toAlgebra
+    haveI : Algebra.IsIntegral R S := ⟨hf⟩
     change Order.krullDim (PrimeSpectrum S) ≤ Order.krullDim (PrimeSpectrum R)
     apply Order.krullDim_le_of_strictMono (PrimeSpectrum.comap f)
     intro q q' hqq'
@@ -69,7 +98,13 @@ theorem integral_subring_ringKrullDim_eq
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hinj : Function.Injective f) (hf : f.IsIntegral) :
     ringKrullDim R = ringKrullDim S := by
-  sorry
+  apply le_antisymm
+  · let _ : Algebra R S := f.toAlgebra
+    let _ : Algebra.IsIntegral R S := ⟨hf⟩
+    apply dimension_le_of_goingUp_or_goingDown f
+    · exact Or.inl inferInstance
+    · exact hf.comap_surjective hinj
+  · exact (integral_ringKrullDim_le_and_closedPoint_map f hf).1
 
 /-! ## The local ring of a fibre -/
 
@@ -116,7 +151,7 @@ noncomputable abbrev tensorFibrePrime
     (hq : PrimeSpectrum.comap f q = p) :
     letI : Algebra R S := f.toAlgebra
     PrimeSpectrum (p.asIdeal.Fiber S) := by
-  letI : Algebra R S := f.toAlgebra
+  let _ : Algebra R S := f.toAlgebra
   exact PrimeSpectrum.preimageEquivFiber R S p ⟨q, by
     simpa [RingHom.algebraMap_toAlgebra] using hq⟩
 
@@ -185,7 +220,33 @@ theorem localRingOfFibre_equiv_tensor_fibre
     (hq : PrimeSpectrum.comap f q = p) :
     Nonempty
       (localRingOfFibre f p q hq ≃+* tensorLocalRingOfFibre f p q hq) := by
-  sorry
+  haveI : Algebra R S := f.toAlgebra
+  have hq' : PrimeSpectrum.comap (algebraMap R S) q = p := by
+    simpa [RingHom.algebraMap_toAlgebra] using hq
+  have hqF :
+      (tensorFibrePrime f p q hq).asIdeal.comap
+          Algebra.TensorProduct.includeRight = q.asIdeal := by
+    have hleft :=
+      (PrimeSpectrum.preimageEquivFiber R S p).left_inv
+        (⟨q, hq'⟩ : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p})
+    have hleft' := congrArg
+      (fun z : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p} => z.1.asIdeal) hleft
+    change
+      (PrimeSpectrum.preimageEquivFiber R S p
+        (⟨q, hq'⟩ : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p})).asIdeal.comap
+          Algebra.TensorProduct.includeRight = q.asIdeal at hleft'
+    change
+      (PrimeSpectrum.preimageEquivFiber R S p
+        (⟨q, hq'⟩ : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p})).asIdeal.comap
+          Algebra.TensorProduct.includeRight = q.asIdeal
+    exact hleft'
+  haveI : Algebra (Localization.AtPrime p.asIdeal)
+      (Localization.AtPrime
+        ((tensorFibrePrime f p q hq).asIdeal.comap Algebra.TensorProduct.includeRight)) :=
+    Localization.AtPrime.algebraOfLiesOver p.asIdeal _
+  let e := Ideal.Fiber.localizationAlgEquivQuotient
+    p.asIdeal (tensorFibrePrime f p q hq).asIdeal
+  exact ⟨e.symm.toRingEquiv⟩
 
 /-! ## Dimension of a base, fibre, and total ring -/
 

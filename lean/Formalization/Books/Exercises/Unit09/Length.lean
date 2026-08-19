@@ -161,7 +161,39 @@ abbrev planeOriginIdeal (k : Type u) [Field k] : Ideal (planePolynomialRing k) :
    This is the only extra interface needed to instantiate the canonical
    localization-at-a-prime construction below. -/
 instance planeOriginIdeal_isPrime (k : Type u) [Field k] :
-    (planeOriginIdeal k).IsPrime := by sorry
+    (planeOriginIdeal k).IsPrime := by
+  change (MvPolynomial.idealOfVars (Fin 2) k).IsPrime
+  apply Ideal.isPrime_iff.mpr
+  constructor
+  · intro h
+    have hmem : (1 : MvPolynomial (Fin 2) k) ∈ MvPolynomial.idealOfVars (Fin 2) k := by
+      simpa [h]
+    have hmem' : (1 : MvPolynomial (Fin 2) k) ∈
+        MvPolynomial.idealOfVars (Fin 2) k ^ 1 := by simpa using hmem
+    rw [MvPolynomial.mem_pow_idealOfVars_iff' 1] at hmem'
+    have hz := hmem' 0 (by simp)
+    simpa using hz
+  · intro p q hpq
+    have hmem_iff (r : MvPolynomial (Fin 2) k) :
+        r ∈ MvPolynomial.idealOfVars (Fin 2) k ↔
+          ∀ x, Finsupp.degree x < 1 → MvPolynomial.coeff x r = 0 := by
+      simpa only [pow_one] using (MvPolynomial.mem_pow_idealOfVars_iff' 1 r)
+    have hpq' := (hmem_iff (p * q)).mp hpq
+    by_cases hp : MvPolynomial.coeff 0 p = 0
+    · left
+      apply (hmem_iff p).mpr
+      intro x hx
+      have hx0 : x = 0 := (Finsupp.degree_eq_zero_iff x).mp (by omega)
+      simpa [hx0] using hp
+    · right
+      apply (hmem_iff q).mpr
+      intro x hx
+      have hx0 : x = 0 := (Finsupp.degree_eq_zero_iff x).mp (by omega)
+      subst x
+      have hprod := hpq' 0 (by simp)
+      have hprod' : MvPolynomial.coeff 0 p * MvPolynomial.coeff 0 q = 0 := by
+        simpa [MvPolynomial.coeff_mul] using hprod
+      simpa using (mul_eq_zero.mp hprod').resolve_left hp
 abbrev planeLocalRing (k : Type u) [Field k] :=
   Localization.AtPrime (planeOriginIdeal k)
 
@@ -199,4 +231,7 @@ theorem planeEquationQuotient_composition_series (k : Type u) [Field k] :
     ∃ s : CompositionSeries (Submodule (planeLocalRing k) (planeEquationQuotient k)),
       s.head = ⊥ ∧ s.last = ⊤ ∧ s.length = 9 := by sorry
 theorem local_plane_equation_quotient_length (k : Type u) [Field k] :
-    Module.length (planeLocalRing k) (planeEquationQuotient k) = 9 := by sorry
+    Module.length (planeLocalRing k) (planeEquationQuotient k) = 9 := by
+  obtain ⟨s, hs, ht, hlen⟩ := planeEquationQuotient_composition_series k
+  rw [← Module.length_compositionSeries s hs ht, hlen]
+  norm_num

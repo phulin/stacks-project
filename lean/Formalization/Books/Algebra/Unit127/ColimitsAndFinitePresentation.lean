@@ -2643,7 +2643,7 @@ private theorem finiteIntegralStageMap_adjoin_eq_top
   have hzy' : z = y := Subtype.ext hzy
   simpa [hzy'] using hz
 
-private def finiteIntegralStageMap_finite
+private theorem finiteIntegralStageMap_finite
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (X : finiteIntegralIndex f) :
     ((finiteIntegralStageMap f X).hom).Finite := by

@@ -1,10 +1,17 @@
 import Formalization.Books.MoreAlgebra.Unit05.FibreProductsOfRingsI
 import Mathlib.Algebra.Category.ModuleCat.Projective
 import Mathlib.Algebra.DualNumber
+import Mathlib.Algebra.Field.ULift
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.AlgebraicGeometry.Spec
 import Mathlib.CategoryTheory.Limits.Types.Pushouts
+import Mathlib.LinearAlgebra.TensorProduct.Prod
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.EquationalCriterion
+import Mathlib.RingTheory.Flat.Stability
+import Mathlib.RingTheory.Flat.Tensor
+import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Mathlib.RingTheory.IntegralClosure.IsIntegralClosure.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 
@@ -997,6 +1004,62 @@ noncomputable def fibreProductModule_rightAdjoint
 
 /-- The source's assertion that applying the gluing functor to the right
 adjoint recovers a module triple, expressed by a natural isomorphism. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.4).
+
+* Work objectwise with `X = (N, M', φ)`, put
+  `Bp := fibreProductRing D`, `J := RingHom.ker (fibreProductToB D)`,
+  `I := fibreProductIdeal D`, and
+  `L := (fibreProductModuleRightAdjoint D).obj X`.  Use
+  `moduleFiberProduct_compatiblePairEquiv` and
+  `moduleFiberProduct_pair_is_compatible` from
+  `Unit05/FibreProductsOfRingsI.lean` to reason about `L` as compatible
+  pairs.  Do not unfold `moduleFiberProductAdjunctionData`: it is selected by
+  `Classical.choice` and is opaque.
+* Let `p : L → N` be `pullback.fst (moduleFiberLeftMap _ X)
+  (moduleFiberRightMap _ X)`.  Its underlying function is
+  `fibreProductModule_leftProjection D X`, hence it is surjective by
+  `fibreProductModule_leftProjection_surjective`.  Its kernel consists of
+  pairs `(0, m')` with `m'` in `I • ⊤`.  Prove this in both directions by
+  changing the compatibility equation to
+  `X.obj.hom (1 ⊗ₜ 0) = 1 ⊗ₜ m'`; identify the latter kernel with
+  `I • ⊤` using `TensorProduct.quotTensorEquivQuotSMul` and
+  `TensorProduct.quotTensorEquivQuotSMul_comp_mk` from
+  `Mathlib/LinearAlgebra/TensorProduct/Quotient.lean`.
+* Show `J • ⊤ = LinearMap.ker p`.  The nontrivial inclusion uses the chosen
+  bijection `fibreProduct_kernel_equiv D : J ≃ I` and its computation rule
+  `fibreProduct_kernel_equiv_apply`: write an element of `I • ⊤` as a
+  finite sum of `i • m'`, lift each `i` to `j : J`, and use that the
+  image of the second projection `L → M'` generates `M'`.  Prove the latter
+  first from generation modulo `I • ⊤` and the bijection between `ker p`
+  and `I • ⊤`.  This is observations (4)--(7) in the source proof.
+* The quotient description now gives a `B`-linear equivalence
+  `(ModuleCat.extendScalars (fibreProductToB D)).obj L ≃ X.obj.left`.
+  Build it from `TensorProduct.quotTensorEquivQuotSMul L J`, the quotient
+  equivalence induced by `J • ⊤ = ker p`, and the first isomorphism theorem
+  for the surjective linear map `p`.
+* For the right component, define
+  `γ : (ModuleCat.extendScalars (fibreProductToA' D)).obj L ⟶ X.obj.right`
+  from the second pullback projection via
+  `ModuleCat.extendRestrictScalarsAdj`.  Surjectivity follows because the
+  image of `L → M'` generates `M'`; for injectivity reduce an element of
+  `ker γ` modulo `I`.  Right exactness
+  `lTensor_exact` and `LinearMap.lTensor_surjective` from
+  `Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean` say that the
+  remaining element is a sum of `l ⊗ 1` and `n ⊗ i`.  Replace each
+  `i : I` by its `j : J` preimage and use `J • L = ker p`; the sum is
+  `l ⊗ 1` and `γ` sends it to the same `l`, so it is zero.
+* Turn the two bijective component maps into module isomorphisms with
+  `ConcreteCategory.isIso_iff_bijective` (or
+  `LinearEquiv.toModuleIso`).  Assemble an isomorphism in the comma category
+  with `Comma.isoMk`, then lift it through the iso-property full subcategory
+  with `ObjectProperty.isoMk`.  The maps are defined from the two pullback
+  projections, so naturality is exactly
+  `moduleFiberLeftMap_naturality`,
+  `moduleFiberRightMap_naturality`, and the defining equations of
+  `moduleFiberProductMap` in `Unit05/FibreProductsOfRingsI.lean`.
+  `NatIso.ofComponents` gives the required natural isomorphism.
+-/
 theorem fibreProductModule_composition_isIdentity
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) :
@@ -1082,22 +1145,41 @@ noncomputable def fibreProductModuleAdjunctionMap
   (fibreProductModule_rightAdjoint D).unit.app L'
 
 /-- The adjunction map is surjective. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.5, surjectivity).
+
+* Put `J := RingHom.ker (fibreProductToB D)` and
+  `I := fibreProductIdeal D`.  For a compatible pair in the target, first
+  lift its left coordinate to `l : L'`.  The needed quotient description
+  `L' ⊗[Bp] B ≃ L'/(J • ⊤)` is
+  `TensorProduct.quotTensorEquivQuotSMul L' J`; alternatively use
+  `TensorProduct.mk_surjective Bp L' B
+  (fibreProduct_toB_surjective D)` and then quotient by the ambiguity.
+  Subtract `fibreProductModuleAdjunctionMap D L' l`; it remains to lift a
+  compatible pair of the form `(0, z)`.
+* Compatibility says that `z` is in the kernel of base change
+  `A' ⊗[Bp] L' → A ⊗[Bp] L'`.  Apply right exactness `lTensor_exact` to
+  `I.subtype` and the quotient map `A' → A`
+  (whose quotient model is again
+  `TensorProduct.quotTensorEquivQuotSMul`) to write `z` as a finite sum
+  of terms coming from `L' ⊗[Bp] I`.
+* For every `i : I`, choose `j : J` with
+  `fibreProduct_kernel_equiv D j = i`; rewrite the value in `A'` using
+  `fibreProduct_kernel_equiv_apply`.  The source element `j • l` has zero
+  left coordinate and the required right coordinate.  Add these preimages,
+  transport back through
+  `moduleFiberProduct_compatiblePairEquiv (fibreProductRingSquare D) _`,
+  and finish by extensionality of the two pullback projections.
+
+The later `fibreProduct_exact_sequence` packages the same diagram, but it is
+declared after this theorem; using it here would violate source chronology.
+-/
 theorem fibreProductModuleAdjunctionMap_surjective
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) (L' : ModuleCat.{u} (fibreProductRing D)) :
     Function.Surjective (fun x => fibreProductModuleAdjunctionMap D L' x) := by
   sorry
 
-/-- The displayed adjunction map is not injective for arbitrary pullback
-diagrams.  The source's concrete witness is
-`B' = k[x, y]/(xy)`, `A' = B'/(x)`, `B = B'/(y)`,
-`A = B'/(x, y)`, and `L' = B'/(x - y)`. -/
-theorem fibreProductModuleAdjunctionMap_not_injective_in_general :
-    ¬ (∀ {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
-        (D : FibreProductSituation A A' B)
-        (L' : ModuleCat.{u} (fibreProductRing D)),
-        Function.Injective (fun x => fibreProductModuleAdjunctionMap D L' x)) := by
-  sorry
 /-! ## The concrete non-injectivity example -/
 
 /-- The polynomial ring `k[x,y]` used in the source's example. -/
@@ -1384,7 +1466,75 @@ theorem fibreProductExample_x_nonzero_maps_zero (k : Type u) [Field k] :
   · rw [hclass, map_smul]
     exact htarget _
 
+/-- The compatible-pair adjunction map is not injective for arbitrary
+commutative ring squares.  The source's concrete witness is the square above:
+`B' = k[x, y]/(xy)`, `A' = B'/(x)`, `B = B'/(y)`,
+`A = B'/(x, y)`, and `L' = B'/(x - y)`.
+
+This statement is deliberately made at the `RingSquare` interface used by the
+adjunction: the concrete square has lower-right ring `B'`, whereas the
+specialized `FibreProductSituation` interface replaces it by a chosen
+`RingHom.pullback` model.  No transport across an unrecorded ring equivalence
+is therefore required. -/
+theorem fibreProductModuleAdjunctionMap_not_injective_in_general :
+    ¬ (∀ {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B]
+        [CommRing B'] (D : RingSquare R R' B B') (L' : ModuleCat.{u} B'),
+        Function.Injective (fun x =>
+          (moduleFiberProductAdjunctionData D).adjunction.unit.app L' x)) := by
+  /-
+  Proof roadmap.
+
+  Take `k := ULift.{u} ℚ` (the instance in
+  `Mathlib/Algebra/Field/ULift.lean` supplies a field in the fixed universe
+  `Type u`) and specialize the negated universal claim to
+  `fibreProductExampleRingSquare k` and
+  `fibreProductExampleModule k`.  From
+  `fibreProductExample_x_nonzero_maps_zero k` obtain `hx : x ≠ 0` and
+  `hmap : unit.app _ x = 0`.  If the specialized unit were injective, apply
+  it to the equality `hmap.trans (map_zero _).symm`; this gives `x = 0`,
+  contradicting `hx`.
+
+  The theorem is intentionally below the witness and quantifies over
+  `RingSquare`.  The previous formulation quantified over
+  `FibreProductSituation`, whose lower-right ring is the chosen subtype
+  `RingHom.pullback`; the concrete witness instead has lower-right ring
+  `k[x,y]/(xy)`.  Reusing the witness there would require an unrecorded ring
+  equivalence and transport of the module and adjunction, so that route is a
+  known dead end.
+  -/
+  sorry
+
 /-- The compatible-pair pullback is functorial for morphisms of triples. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.6).
+
+* Convert the target element with
+  `moduleFiberProduct_compatiblePairEquiv (fibreProductRingSquare D) Y`
+  to a compatible pair `(x₂, y₂)`.  Choose `x₁` with
+  `f.hom.left x₁ = x₂` using `hN`.
+* The element
+  `X.obj.hom (1 ⊗ₜ[B] x₁)` lies in the `A`-base change of `X.obj.right`.
+  Use
+  `TensorProduct.mk_surjective A' (X.obj.right : Type u) A
+  D.fromA'_surjective` to choose `y₁` mapping to it.  Then `(x₁,y₁)` is
+  compatible and maps to `(x₂,y₂')` for some `y₂'`.
+* Compatibility of `(x₂,y₂)` and `(x₂,y₂')`, together with the comma
+  relation `f.hom.w`, shows `δ := y₂ - y₂'` maps to zero in
+  `A ⊗[A'] Y.obj.right`; hence `δ ∈ fibreProductIdeal D • ⊤`.  Prove this
+  kernel statement through
+  `TensorProduct.quotTensorEquivQuotSMul` from
+  `Mathlib/LinearAlgebra/TensorProduct/Quotient.lean`.
+* Write `δ = ∑ i_j • z_j` with `i_j : fibreProductIdeal D`.  Lift every
+  `z_j` through `hM'`; then `∑ i_j • z'_j` is still in
+  `fibreProductIdeal D • ⊤`, so `(0, ∑ i_j • z'_j)` is a compatible pair
+  in `X` and maps to `(0,δ)`.  Add it to `(x₁,y₁)`.
+* Return to the categorical pullback with the inverse of
+  `moduleFiberProduct_compatiblePairEquiv`.  To identify its image under
+  `(fibreProductModuleRightAdjoint D).map f`, apply
+  `Concrete.pullbackEquiv` and use
+  `moduleFiberProductMap`, `pullback.lift_fst`, and
+  `pullback.lift_snd` from `Unit05/FibreProductsOfRingsI.lean`.
+-/
 theorem fibreProductModule_map_surjective
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B)
@@ -1396,6 +1546,37 @@ theorem fibreProductModule_map_surjective
 
 /-- Finite modules on the two upper corners give a finite compatible-pair
 module over the pullback ring. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.7).
+
+* Write `L := (fibreProductModuleRightAdjoint D).obj X`,
+  `N := X.obj.left`, and `Mp := X.obj.right`.  Extract finite generating
+  sets using `Module.Finite.fg_top` (equivalently
+  `Module.Finite.exists_fin'`) from
+  `Mathlib/RingTheory/Finiteness/Basic.lean`.
+* Lift the chosen generators of `N` to elements `u_i : L` with
+  `fibreProductModule_leftProjection_surjective D X`.
+  For each chosen generator of `Mp`, use the right isomorphism in
+  `fibreProductModule_recovery D X`.  Its inverse lands in
+  `A' ⊗[fibreProductRing D] L`; induction with
+  `TensorProduct.induction_on` expresses the finitely many inverses using
+  finitely many pure tensors.  Collect their second factors as a finite family
+  `v_j : L`.  The images of the `v_j` generate `Mp` over `A'`.
+* Let `S` be the `fibreProductRing D`-span of the `u_i` and `v_j`.
+  For `ξ : L`, first match its left coordinate by a combination of the
+  `u_i`; lift the coefficients from `B` with
+  `fibreProduct_toB_surjective D`.  The remaining compatible pair has first
+  coordinate zero, hence second coordinate in
+  `fibreProductIdeal D • ⊤`.
+* Express that second coordinate as `∑ i_j • image(v_j)`.  Lift each
+  `i_j : fibreProductIdeal D` to
+  `s_j : RingHom.ker (fibreProductToB D)` through
+  `fibreProduct_kernel_equiv D`, and rewrite its `A'` coordinate with
+  `fibreProduct_kernel_equiv_apply`.  Then the remaining element is exactly
+  `∑ (s_j : fibreProductRing D) • v_j`, so `ξ ∈ S`.
+* Conclude `S = ⊤` by `eq_top_iff`; the finite union of the two finite
+  families supplies `Module.Finite` via `Module.finite_def`.
+-/
 theorem fibreProduct_finite_module
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B)
@@ -1424,14 +1605,130 @@ def fibreProductExactRight
     (D : FibreProductSituation A A' B) : B × A' → A :=
   fun x => D.toA x.1 - D.fromA' x.2
 
+/-- The source object in the `B'`-linear short exact sequence. -/
+noncomputable abbrev fibreProductExactSource
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) : ModuleCat.{u} (fibreProductRing D) :=
+  ModuleCat.of (fibreProductRing D) (fibreProductRing D)
+
+/-- The middle object `B ⊕ A'`, with the componentwise `B'`-module
+structure induced by the two pullback projections. -/
+noncomputable def fibreProductExactMiddle
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) : ModuleCat.{u} (fibreProductRing D) :=
+  letI : Module (fibreProductRing D) B :=
+    Module.compHom B (fibreProductToB D)
+  letI : Module (fibreProductRing D) A' :=
+    Module.compHom A' (fibreProductToA' D)
+  ModuleCat.of (fibreProductRing D) (B × A')
+
+/-- The target `A`, regarded as a `B'`-module through `B' → B → A`. -/
+noncomputable def fibreProductExactTarget
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) : ModuleCat.{u} (fibreProductRing D) :=
+  letI : Module (fibreProductRing D) A :=
+    Module.compHom A (D.toA.comp (fibreProductToB D))
+  ModuleCat.of (fibreProductRing D) A
+
+/-- The first map in the short exact sequence, bundled as a `B'`-linear map.
+This is the interface needed to tensor the sequence in the flatness proof. -/
+noncomputable def fibreProductExactLeftLinear
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) :
+    fibreProductExactSource D ⟶ fibreProductExactMiddle D :=
+  ConcreteCategory.ofHom (C := ModuleCat (fibreProductRing D))
+    { toFun := fibreProductExactLeft D
+      map_add' := by
+        intro x y
+        change (fibreProductExactLeft D (x + y) : B × A') =
+          ((fibreProductExactLeft D x).1 + (fibreProductExactLeft D y).1,
+            (fibreProductExactLeft D x).2 + (fibreProductExactLeft D y).2)
+        ext <;> rfl
+      map_smul' := by
+        intro r x
+        change (fibreProductExactLeft D (r * x) : B × A') =
+          (fibreProductToB D r * (fibreProductExactLeft D x).1,
+            fibreProductToA' D r * (fibreProductExactLeft D x).2)
+        ext <;> rfl }
+
+/-- The second map in the short exact sequence, bundled as a `B'`-linear map. -/
+noncomputable def fibreProductExactRightLinear
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) :
+    fibreProductExactMiddle D ⟶ fibreProductExactTarget D :=
+  ConcreteCategory.ofHom (C := ModuleCat (fibreProductRing D))
+    { toFun := fun x =>
+        show (fibreProductExactTarget D : Type u) from
+          D.toA x.1 - D.fromA' x.2
+      map_add' := by
+        intro x y
+        change B × A' at x y
+        change D.toA (x.1 + y.1) - D.fromA' (x.2 + y.2) =
+          (D.toA x.1 - D.fromA' x.2) + (D.toA y.1 - D.fromA' y.2)
+        simp only [map_add]
+        abel
+      map_smul' := by
+        intro r x
+        change B × A' at x
+        change D.toA (fibreProductToB D r * x.1) -
+            D.fromA' (fibreProductToA' D r * x.2) =
+          D.toA (fibreProductToB D r) *
+            (D.toA x.1 - D.fromA' x.2)
+        rw [map_mul, map_mul]
+        have hr := RingSquare.comm_apply (fibreProductRingSquare D) r
+        change D.toA (fibreProductToB D r) =
+          D.fromA' (fibreProductToA' D r) at hr
+        rw [← hr, mul_sub] }
+
+@[simp]
+theorem fibreProductExactLeftLinear_apply
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) (x : fibreProductRing D) :
+    fibreProductExactLeftLinear D x = fibreProductExactLeft D x := rfl
+
+@[simp]
+theorem fibreProductExactRightLinear_apply
+    {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
+    (D : FibreProductSituation A A' B) (x : B × A') :
+    fibreProductExactRightLinear D x = fibreProductExactRight D x := by
+  change D.toA x.1 - D.fromA' x.2 = D.toA x.1 - D.fromA' x.2
+  rfl
+
 /-- Exactness, injectivity on the left, and surjectivity on the right of the
-source's short exact sequence. -/
+source's short exact sequence, at the `B'`-linear interface required by
+`Module.Flat.lTensor_exact`. -/
+/-
+Proof roadmap.
+
+The new bundled maps are definitionally the displayed functions by
+`fibreProductExactLeftLinear_apply` and
+`fibreProductExactRightLinear_apply`.
+
+* Injectivity: if the two coordinates of
+  `fibreProductExactLeftLinear D x` and
+  `fibreProductExactLeftLinear D y` agree, use `Subtype.ext` followed by
+  `Prod.ext`; the two coordinate equalities are exactly the goal.
+* Exactness: apply `LinearMap.exact_of_comp_of_mem_range` from
+  `Mathlib/Algebra/Exact/Basic.lean`.  The composite is zero by
+  `RingSquare.comm_apply (fibreProductRingSquare D)`.  Conversely, if
+  `D.toA b - D.fromA' a' = 0`, use `sub_eq_zero.mp` to form the pullback
+  element `x : fibreProductRing D := ⟨(b,a'), equality⟩`; then
+  `fibreProductExactLeftLinear D x = (b,a')`.
+* Surjectivity: for `a : A`, choose `a' : A'` with
+  `D.fromA' a' = -a` using `D.fromA'_surjective (-a)`.  The pair
+  `(0,a')` maps to `a`; finish with `map_zero` and `sub_neg_eq_add`.
+
+Keep the result in terms of the linear maps.  Reverting it to the old plain
+function interface prevents its use by `Module.Flat.lTensor_exact` and
+`lTensor_exact`.
+-/
 theorem fibreProduct_exact_sequence
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) :
-    Function.Injective (fibreProductExactLeft D) ∧
-      Function.Exact (fibreProductExactLeft D) (fibreProductExactRight D) ∧
-      Function.Surjective (fibreProductExactRight D) := by
+    Function.Injective (fibreProductExactLeftLinear D) ∧
+      Function.Exact (fibreProductExactLeftLinear D)
+        (fibreProductExactRightLinear D) ∧
+      Function.Surjective (fibreProductExactRightLinear D) := by
   sorry
 
 /-- The full subcategory of module triples whose two displayed components are
@@ -1465,6 +1762,63 @@ abbrev fibreProductFlatModuleCategory
 
 /-- If both components of a triple are flat, its compatible-pair module is
 flat over the pullback ring. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.8(1)).
+
+Let `Bp := fibreProductRing D`, `J := RingHom.ker (fibreProductToB D)`,
+`I := fibreProductIdeal D`, and
+`L := (fibreProductModuleRightAdjoint D).obj X`.
+
+* Apply `Module.Flat.iff_lTensor_injective'` from
+  `Mathlib/RingTheory/Flat/Tensor.lean`.  For an ideal `q : Ideal Bp`,
+  the goal is injectivity of `q.subtype.lTensor L`.
+* First record the two recovery identifications supplied by
+  `fibreProductModule_recovery D X`: `L/JL ≃ₗ[B] X.obj.left` and
+  `A' ⊗[Bp] L ≃ₗ[A'] X.obj.right`.  Also construct the multiplication map
+  `J ⊗[Bp] L →ₗ[Bp] L`.  Using
+  `fibreProduct_kernel_equiv`/`fibreProduct_kernel_equiv_apply`, tensor
+  associativity, and the right recovery equivalence, identify it with
+  `I.subtype.lTensor X.obj.right`.  It is injective by
+  `Module.Flat.lTensor_preserves_injective_linearMap` for the flat
+  `A'`-module `X.obj.right`.
+* Put `qJ := q ⊓ J`.  The quotient `q/qJ` is killed by `J`, hence is a
+  `B = Bp/J`-module.  Tensor the exact pair
+  `qJ.subtype → q → q/qJ` with `L` using the right-exact theorem
+  `lTensor_exact` and `LinearMap.lTensor_surjective` from
+  `Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean`.
+  Via `TensorProduct.quotTensorEquivQuotSMul L J` and the left recovery
+  equivalence, flatness of `X.obj.left` over `B` shows that a kernel
+  element comes from `qJ ⊗ L`.  Thus it suffices to handle `q ≤ J`.
+* For `q ≤ J`, let `q''` be its `A'`-saturation after transporting
+  `J ≃ I`; concretely it is the preimage in `J` of the `A'`-submodule
+  spanned by the image of `q`.  Then `q''/q` is killed by `J`.  Establish
+  the local change-of-rings claim that
+  `(Submodule.inclusion hqq'').lTensor L : q ⊗ L → q'' ⊗ L` is injective
+  whenever
+  `J ⊗ L → L` is injective, `L/(J • ⊤)` is flat over `Bp/J`, and
+  `q''/q` is killed by `J`.  For the proof, use
+  `LinearMap.exact_subtype_mkQ`, `Submodule.mkQ_surjective`, and
+  `lTensor_exact` for the submodule
+  `q.comap q''.subtype : Submodule Bp q''`; transport its subtype back to
+  `Submodule.inclusion hqq''`.  Identify tensors of the quotient with
+  tensors over `Bp/J` by
+  `TensorProduct.quotTensorEquivQuotSMul`, and apply
+  `Module.Flat.lTensor_preserves_injective_linearMap` to the recovered
+  left component `X.obj.left`; injectivity of `J ⊗ L → L` removes the
+  remaining lift.  This is the source's change-of-rings/Tor-vanishing
+  step, and both hypotheses are essential.  Replace `q` by `q''`.
+* Now `q` is an `A'`-submodule of `I`.  Identify
+  `q ⊗[Bp] L` with `q ⊗[A'] X.obj.right`; under this equivalence the map
+  to `L` followed by the right pullback projection is
+  `q.subtype.lTensor X.obj.right`, injective by flatness over `A'`.
+  Hence the original map is injective.
+
+Universe note: all rings, ideals, and modules here live in `Type u`, so use
+`iff_lTensor_injective'` (the unrestricted-ideal version) without an
+`ULift`.  Do not invoke `Module.Flat.lTensor_exact` with tensor factor `L`
+in the saturation step: flatness of `L` is the conclusion and that would be
+circular.
+-/
 theorem fibreProduct_flat_module
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B)
@@ -1479,6 +1833,37 @@ theorem fibreProduct_flat_module
 
 /-- For a flat pullback module, the adjunction map back to the compatible-pair
 module is an isomorphism. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.8(2)).
+
+* Let `f := fibreProductExactLeftLinear D` and
+  `g := fibreProductExactRightLinear D`.  From
+  `fibreProduct_exact_sequence D` obtain injectivity of `f`, exactness
+  `Function.Exact f g`, and surjectivity of `g`.
+* Tensor on the left by `L'`.  Flatness gives injectivity of
+  `f.lTensor L'` via
+  `Module.Flat.lTensor_preserves_injective_linearMap`; exactness follows
+  from `Module.Flat.lTensor_exact`.  (The non-flat right-exact theorem
+  `lTensor_exact` plus `LinearMap.lTensor_surjective` is also available.)
+* Conjugate this tensored sequence by:
+  `TensorProduct.lid (fibreProductRing D) L'` for the source,
+  `TensorProduct.prodRight` from
+  `Mathlib/LinearAlgebra/TensorProduct/Prod.lean` followed by
+  `TensorProduct.comm` for the middle, and the standard
+  `ModuleCat.extendScalarsComp` isomorphisms for the target.  Under these
+  equivalences, `f.lTensor L'` is the pair of base-change maps appearing in
+  `fibreProductModuleAdjunctionMap D L'`, while `g.lTensor L'` is the
+  difference of the two maps to the common `A`-base change.
+* Use `moduleFiberProduct_compatiblePairEquiv` to identify the target of the
+  adjunction map with the kernel of that difference.  Exactness makes the
+  adjunction map surjective; injectivity of `f.lTensor L'` makes it
+  injective.  Prove equality of the conjugated maps on pure tensors with
+  `TensorProduct.ext'`, `TensorProduct.prodRight_tmul`,
+  `ModuleCat.extendScalarsComp_hom_app_one_tmul`, and
+  `ModuleCat.extendRestrictScalarsAdj_unit_app_apply`.
+* Apply `ConcreteCategory.isIso_iff_bijective` to the resulting bijectivity
+  of the `ModuleCat` morphism.
+-/
 theorem fibreProduct_flat_module_recovery
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B)
@@ -1499,17 +1884,57 @@ noncomputable def fibreProduct_flat_module_recoveryIso
   exact asIso (fibreProductModuleAdjunctionMap D L')
 
 /-- Flat modules over the pullback ring are equivalent to flat module triples. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.8(3)).
+
+* Define the forward functor with
+  `(fibreProductFlatGluingProperty D).lift
+    ((fibreProductFlatModuleProperty D).ι ⋙ fibreProductModuleFunctor D) _`.
+  For an object `L'`, turn its property into a local
+  `Module.Flat (fibreProductRing D) L'` instance.  Each component is an
+  extension of scalars, so `Module.Flat.baseChange` from
+  `Mathlib/RingTheory/Flat/Stability.lean` proves the two required flatness
+  statements (use `Module.Flat.of_linearEquiv` if unfolding
+  `ModuleCat.extendScalars` leaves a definitional mismatch).
+* Define the inverse with
+  `(fibreProductFlatModuleProperty D).lift
+    ((fibreProductFlatGluingProperty D).ι ⋙
+      fibreProductModuleRightAdjoint D) _`.
+  Install the two conjuncts of the source object's property as local
+  `Module.Flat` instances and apply `fibreProduct_flat_module D X`.
+* Lift `fibreProduct_flat_module_recoveryIso D L'` to an isomorphism in the
+  flat full subcategory using `ObjectProperty.isoMk`; these components form
+  the unit natural isomorphism.  Lift
+  `fibreProductModule_composition_iso D` similarly for the counit.  Prove
+  naturality after applying the faithful inclusions; it then reduces to
+  naturality of the underlying adjunction unit and of
+  `fibreProductModule_composition_iso D`.
+* Assemble `e` with `CategoryTheory.Equivalence.mk forward inverse unitIso
+  counitIso`.  Return the subtype witness together with
+  `⟨Iso.refl _⟩`: by construction
+  `e.functor ⋙ (fibreProductFlatGluingProperty D).ι` is definitionally the
+  requested restricted `fibreProductModuleFunctor D`.
+
+The last functor-identification is part of the repaired interface; an
+unrelated abstract equivalence between the two full subcategories would not
+formalize the book's base-change equivalence.
+-/
 theorem fibreProduct_flat_module_equivalence_exists
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) :
-    Nonempty (fibreProductFlatModuleCategory D ≌ fibreProductFlatGluingCategory D) := by
+    Nonempty
+      {e : fibreProductFlatModuleCategory D ≌ fibreProductFlatGluingCategory D //
+        Nonempty
+          (e.functor ⋙ (fibreProductFlatGluingProperty D).ι ≅
+            (fibreProductFlatModuleProperty D).ι ⋙
+              fibreProductModuleFunctor D)} := by
   sorry
 
 noncomputable def fibreProduct_flat_module_equivalence
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) :
     fibreProductFlatModuleCategory D ≌ fibreProductFlatGluingCategory D :=
-  Classical.choice (fibreProduct_flat_module_equivalence_exists D)
+  (Classical.choice (fibreProduct_flat_module_equivalence_exists D)).1
 
 /-! ## Finite projective modules -/
 
@@ -1549,12 +1974,76 @@ abbrev fibreProductFiniteProjectiveGluingCategory
 
 /-- Finite projective modules over the pullback ring are equivalent to triples
 with finite projective components. -/
+/-
+Proof roadmap (Stacks, Lemma 15.6.9).
+
+First prove that the compatible-pair module of a finite-projective triple is
+finite projective.
+
+* From the two projectivity hypotheses get component flatness through the
+  instance `Module.Flat.of_projective`; apply
+  `fibreProduct_flat_module D X`.  Finiteness is exactly
+  `fibreProduct_finite_module D X`.
+* A finite flat module is not directly an instance of `Module.Projective`
+  in this Mathlib version.  Prove finite presentation as in the source.
+  Choose a finite free surjection
+  `p : (Fin n → fibreProductRing D) →ₗ[fibreProductRing D] L` using
+  `Module.Finite.exists_fin'`, and put `Kp := LinearMap.ker p`.
+* Base-change `p` to `B` and `A'`, then conjugate the targets by the two
+  isomorphisms `fibreProductModule_recovery D X`.  Call the resulting
+  kernels `KB` and `KA'`.  Because `N` and `M'` are projective, the
+  surjections split by `Module.projective_lifting_property`; their kernels
+  are ranges of idempotents on finite free modules.  They are finite by
+  `Module.Finite.range` (or by
+  `Module.Finite.exists_comp_eq_id_of_projective`) from
+  `Mathlib/RingTheory/Finiteness/Projective.lean`.
+* The comparison over `A` makes `(KB, KA')` an object of
+  `fibreProductModuleGluingCategory D`.  Exactness after base change uses
+  component projectivity through `Module.Flat.lTensor_exact`.  Construct a
+  `fibreProductRing D`-linear equivalence
+  `Kp ≃ₗ[fibreProductRing D]
+    (fibreProductModuleRightAdjoint D).obj kernelTriple` by mapping a kernel
+  element to its two base changes.  Prove inverse laws with
+  `moduleFiberProduct_compatiblePairEquiv` and the exactness of the two
+  base-changed kernel sequences.
+* Apply `fibreProduct_finite_module D kernelTriple` to obtain finiteness of
+  the right-hand side and transport it across the linear equivalence with
+  `Module.Finite.equiv`.  Thus `Kp` is finitely generated.
+  `Module.FinitePresentation.fg_ker_iff p p_surjective` from
+  `Mathlib/Algebra/Module/FinitePresentation.lean` now gives
+  `Module.FinitePresentation (fibreProductRing D) L`.
+  Finish with `Module.Flat.projective_of_finitePresentation` from
+  `Mathlib/RingTheory/Flat/EquationalCriterion.lean`.
+
+Then build the categorical equivalence.
+
+* Lift `fibreProductModuleFunctor D` to the finite-projective full
+  subcategories.  Finiteness of each base change is
+  `Module.Finite.base_change`; projectivity follows from
+  `Module.Projective.tensorProduct` after unfolding
+  `ModuleCat.extendScalars` (the scalar ring is projective over itself).
+* Lift `fibreProductModuleRightAdjoint D` using the finite-projective result
+  above.  Lift `fibreProduct_flat_module_recoveryIso` for the unit and
+  `fibreProductModule_composition_iso D` for the counit with
+  `ObjectProperty.isoMk`, then use `CategoryTheory.Equivalence.mk`.
+* Package the equivalence with the required `Nonempty` functor isomorphism.
+  As in the flat case it is `⟨Iso.refl _⟩` because the forward functor was
+  defined with `ObjectProperty.lift`.
+
+Do not replace the finite-presentation argument by “finite + flat implies
+projective”: that implication is the missing step here, and Mathlib only
+provides the finitely-presented-flat theorem named above.
+-/
 theorem fibreProduct_finite_projective_equivalence_exists
     {A A' B : Type u} [CommRing A] [CommRing A'] [CommRing B]
     (D : FibreProductSituation A A' B) :
     Nonempty
-      (fibreProductFiniteProjectiveModuleCategory D ≌
-        fibreProductFiniteProjectiveGluingCategory D) := by
+      {e : fibreProductFiniteProjectiveModuleCategory D ≌
+          fibreProductFiniteProjectiveGluingCategory D //
+        Nonempty
+          (e.functor ⋙ (fibreProductFiniteProjectiveGluingProperty D).ι ≅
+            (fibreProductFiniteProjectiveProperty D).ι ⋙
+              fibreProductModuleFunctor D)} := by
   sorry
 
 noncomputable def fibreProduct_finite_projective_equivalence
@@ -1562,7 +2051,7 @@ noncomputable def fibreProduct_finite_projective_equivalence
     (D : FibreProductSituation A A' B) :
     fibreProductFiniteProjectiveModuleCategory D ≌
       fibreProductFiniteProjectiveGluingCategory D :=
-  Classical.choice (fibreProduct_finite_projective_equivalence_exists D)
+  (Classical.choice (fibreProduct_finite_projective_equivalence_exists D)).1
 
 end
 

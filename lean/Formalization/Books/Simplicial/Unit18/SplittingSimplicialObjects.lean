@@ -44,7 +44,7 @@ def IsSubobjectSplitting
   ∀ n, Mono (s.ι n)
 
 /-- A simplicial object is split in the source's subobject sense. -/
-abbrev IsSplit {C : Type u} [Category.{v} C] [HasFiniteCoproducts C]
+abbrev IsSplit {C : Type u} [Category.{v} C]
     (U : SimplicialObject C) : Prop :=
   Nonempty {s : SimplicialObject.Splitting U // IsSubobjectSplitting s}
 
@@ -91,7 +91,7 @@ def truncatedSplittingCofan
 
 /-- The source's coproduct decomposition for an `r`-truncated simplicial object. -/
 structure TruncatedSplitting
-    {C : Type u} [Category.{v} C] [HasFiniteCoproducts C] (r : ℕ)
+    {C : Type u} [Category.{v} C] (r : ℕ)
     (U : SimplicialObject.Truncated C r) where
   /-- The nondegenerate summand in each degree at most `r`. -/
   N : (n : ℕ) → n ≤ r → C
@@ -106,13 +106,13 @@ structure TruncatedSplitting
 
 /-- An `r`-truncated simplicial object is split when it has a truncated splitting. -/
 abbrev IsTruncatedSplit
-    {C : Type u} [Category.{v} C] [HasFiniteCoproducts C] (r : ℕ)
+    {C : Type u} [Category.{v} C] (r : ℕ)
     (U : SimplicialObject.Truncated C r) : Prop :=
   Nonempty (TruncatedSplitting r U)
 
 /-- The source's coproduct decomposition is the colimit cofan of a splitting. -/
 def splitting_decomposition_is_colimit
-    {C : Type u} [Category.{v} C] [HasFiniteCoproducts C]
+    {C : Type u} [Category.{v} C]
     {U : SimplicialObject C}
     (s : SimplicialObject.Splitting U) (n : ℕ) :
     IsColimit (s.cofan (op ⦋n⦌)) :=
@@ -551,7 +551,7 @@ theorem simplicial_abelian_group_has_normalized_splitting
               kernelSubobject (U.δ i.castSucc)
             rw [SimplicialObject.opFunctor_obj_δ, hrev]
             simp [SimplicialObject.opObjIso, SimplicialObject.opFunctor,
-              SimplexCategory.rev, Category.assoc]
+              SimplexCategory.rev]
             exact Eq.refl _
       sorry
     · intro n
@@ -565,7 +565,7 @@ theorem simplicial_abelian_group_has_normalized_splitting
         let f' := Sigma.ι
           (AlgebraicTopology.DoldKan.Γ₀.Obj.summand K (op ⦋n⦌))
           (SimplicialObject.Splitting.IndexSet.id (op ⦋n⦌))
-        letI : IsSplitMono f' := inferInstance
+        let : IsSplitMono f' := inferInstance
         exact ⟨fun {Z} g h eq => by
           rw [← Category.comp_id g, ← Category.comp_id h, ← IsSplitMono.id f']
           rw [← Category.assoc, eq, Category.assoc]⟩

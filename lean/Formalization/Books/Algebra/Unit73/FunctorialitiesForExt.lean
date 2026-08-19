@@ -588,11 +588,6 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
         ((extendRestrictScalarsCochainAdj f).unit.app
           (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as).f 0 =
           ModuleCat.ExtendRestrictScalarsAdj.Unit.map f := by
-      change
-        ((extendRestrictScalarsCochainAdj f).unit.app
-          (CategoryTheory.Quotient.as
-            (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M))).f 0 =
-          ModuleCat.ExtendRestrictScalarsAdj.Unit.map f
       ext m
       rfl
     have hcu :

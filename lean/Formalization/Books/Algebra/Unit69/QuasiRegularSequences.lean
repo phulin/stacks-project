@@ -25,7 +25,7 @@ presentation of `I ^ n M / I ^ (n + 1) M`.
 
 namespace Formalization.Books.Algebra.Unit69
 
-open scoped DirectSum TensorProduct
+open scoped DirectSum Pointwise TensorProduct
 
 noncomputable section
 
@@ -908,6 +908,73 @@ theorem isMQuasiRegular_iff_of_perm
   sorry
 
 /- The regular-sequence comparison from Lemma 69.3. -/
+private theorem regular_single_power_coeff_relation
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (a : R) (n : ℕ) (ha : IsSMulRegular M a) (m : M)
+    (hm : a ^ n • m ∈ a ^ (n + 1) • (⊤ : Submodule R M)) :
+    m ∈ a • (⊤ : Submodule R M) := by
+  obtain ⟨z, _, hz⟩ :=
+    (Submodule.mem_smul_pointwise_iff_exists (a ^ n • m) (a ^ (n + 1))
+      (⊤ : Submodule R M)).mp hm
+  have hcancel : m = a • z := by
+    apply ha.pow n
+    change a ^ n • m = a ^ n • (a • z)
+    rw [← hz, pow_succ, mul_smul]
+  rw [hcancel]
+  exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+    ⟨z, Submodule.mem_top, rfl⟩
+
+private theorem quasiRegularCanonicalMap_finsupp
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R)
+    (c : (Fin f.length →₀ ℕ) →₀
+      (M ⧸ (Ideal.ofList f • (⊤ : Submodule R M)))) :
+    quasiRegularCanonicalMap R M f
+        ((quasiRegularSourceFinsuppEquiv R M f).symm c) =
+      c.sum (fun d m =>
+        DirectSum.lof (R ⧸ Ideal.ofList f) ℕ
+          (fun n => quasiRegularPiece R M (Ideal.ofList f) n)
+          (quasiRegularDegree d)
+          (quasiRegularMonomialMapQuotient R M f d m)) := by
+  classical
+  induction c using Finsupp.induction with
+  | zero => simp
+  | @single_add d m c hd hm ih =>
+      rw [LinearEquiv.map_add, map_add, ih]
+      rw [Finsupp.sum_add_index] <;> simp
+      rw [quasiRegularSourceFinsuppEquiv_symm_single]
+      induction m using Submodule.Quotient.induction_on with
+      | _ m =>
+          rw [quasiRegularCanonicalMap_monomial]
+
+private theorem quasiRegularCanonicalMap_component_finsupp
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R)
+    (c : (Fin f.length →₀ ℕ) →₀
+      (M ⧸ (Ideal.ofList f • (⊤ : Submodule R M)))) (n : ℕ) :
+    (DirectSum.component (R ⧸ Ideal.ofList f) ℕ
+        (fun n => quasiRegularPiece R M (Ideal.ofList f) n) n)
+        (quasiRegularCanonicalMap R M f
+          ((quasiRegularSourceFinsuppEquiv R M f).symm c)) =
+      (DirectSum.component (R ⧸ Ideal.ofList f) ℕ
+        (fun n => quasiRegularPiece R M (Ideal.ofList f) n) n)
+        (∑ d ∈ c.support.filter (fun d => quasiRegularDegree d = n),
+          DirectSum.lof (R ⧸ Ideal.ofList f) ℕ
+            (fun n => quasiRegularPiece R M (Ideal.ofList f) n)
+            (quasiRegularDegree d)
+            (quasiRegularMonomialMapQuotient R M f d (c d))) := by
+  classical
+  rw [quasiRegularCanonicalMap_finsupp, Finsupp.sum]
+  rw [map_sum, map_sum]
+  symm
+  apply Finset.sum_subset
+    (Finset.filter_subset (fun d => quasiRegularDegree d = n) c.support)
+  · intro d hd hdn
+    simp only [DirectSum.component.of]
+    split_ifs with h
+    · exact False.elim (hdn (Finset.mem_filter.mpr ⟨hd, h⟩))
+    · simp
+
 theorem isMQuasiRegular_of_isRegular
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     {f : List R} (hf : RingTheory.Sequence.IsRegular M f) :

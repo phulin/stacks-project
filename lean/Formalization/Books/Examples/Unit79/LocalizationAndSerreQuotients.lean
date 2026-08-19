@@ -3,6 +3,7 @@ import Mathlib.Algebra.Category.FGModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Module.Torsion.Basic
+import Mathlib.CategoryTheory.Abelian.SerreClass.Bousfield
 import Mathlib.CategoryTheory.Abelian.SerreClass.Localization
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.RingTheory.Localization.BaseChange
@@ -57,7 +58,22 @@ theorem sTorsionModuleProperty_iff (A : Type u) [CommRing A] (S : Submonoid A)
 instance sTorsionModuleProperty_isSerreClass (A : Type u) [CommRing A]
     (S : Submonoid A) :
     (sTorsionModuleProperty A S).IsSerreClass := by
-  sorry
+  have hzero (M : moduleCategory A) :
+      IsZero ((ModuleCat.localizedModuleFunctor S).obj M) ↔
+        Module.IsTorsion' (M : Type u) S := by
+    change IsZero (M.localizedModule S) ↔ Module.IsTorsion' (M : Type u) S
+    rw [ModuleCat.isZero_iff_subsingleton]
+    change Subsingleton (Shrink.{u} (LocalizedModule S (M : Type u))) ↔ _
+    exact (Equiv.subsingleton_congr (equivShrink (LocalizedModule S (M : Type u)))).symm.trans
+      (by simpa [Module.IsTorsion'] using
+        (LocalizedModule.subsingleton_iff (S := S) (M := (M : Type u))))
+  have hP : sTorsionModuleProperty A S =
+      ObjectProperty.inverseImage (IsZero (C := ModuleCat (Localization S)))
+        (ModuleCat.localizedModuleFunctor S) := by
+    ext M
+    exact (hzero M).symm
+  rw [hP]
+  infer_instance
 
 /-- The category obtained by inverting the isomorphisms modulo `S`-torsion. -/
 abbrev sTorsionSerreQuotient (A : Type u) [CommRing A] (S : Submonoid A) :=
@@ -103,7 +119,12 @@ theorem moduleLocalizationFunctor_obj_isZero_iff (A : Type u) [CommRing A]
     (S : Submonoid A) (M : moduleCategory A) :
     IsZero ((moduleLocalizationFunctor A S).obj M) ↔
       sTorsionModuleProperty A S M := by
-  sorry
+  change IsZero (M.localizedModule S) ↔ Module.IsTorsion' (M : Type u) S
+  rw [ModuleCat.isZero_iff_subsingleton]
+  change Subsingleton (Shrink.{u} (LocalizedModule S (M : Type u))) ↔ _
+  exact (Equiv.subsingleton_congr (equivShrink (LocalizedModule S (M : Type u)))).symm.trans
+    (by simpa [Module.IsTorsion'] using
+      (LocalizedModule.subsingleton_iff (S := S) (M := (M : Type u))))
 
 /- The proposition-level interface records that the canonical functor is a
    localization for the Serre quotient. -/
@@ -111,7 +132,190 @@ theorem moduleLocalizationFunctor_isLocalization (A : Type u) [CommRing A]
     (S : Submonoid A) :
     (moduleLocalizationFunctor A S).IsLocalization
       (sTorsionModuleProperty A S).isoModSerre := by
-  sorry
+  let adj : moduleLocalizationFunctor A S ⊣
+      ModuleCat.restrictScalars (algebraMap A (Localization S)) :=
+    Adjunction.mkOfHomEquiv {
+      homEquiv := fun X Y => by
+        change (X.localizedModule S ⟶ Y) ≃
+          (X ⟶ (ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y)
+        letI : IsScalarTower A (Localization S) (X.localizedModule S) := by
+          infer_instance
+        letI : Module A (Y : Type u) :=
+          Module.compHom (Y : Type u) (algebraMap A (Localization S))
+        letI : IsScalarTower A (Localization S) (Y : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) (Y : Type u)
+        letI : IsLocalizedModule S
+            (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u)) :=
+          isLocalizedModule_id S (Y : Type u) (Localization S)
+        refine Equiv.mk
+          (fun f => ModuleCat.ofHom
+            ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)))
+          (fun g => by
+            exact ModuleCat.ofHom
+              (IsLocalizedModule.mapExtendScalars S
+                (X.localizedModuleMkLinearMap S)
+                (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u))
+                (Localization S) g.hom))
+          (by
+            intro f
+            apply ModuleCat.hom_ext
+            let L : (X.localizedModule S : Type u) →ₗ[Localization S] (Y : Type u) :=
+              IsLocalizedModule.mapExtendScalars S
+                (X.localizedModuleMkLinearMap S)
+                (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u))
+                (Localization S)
+                ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S))
+            change L = f.hom
+            have h : L.restrictScalars A = f.hom.restrictScalars A := by
+              apply IsLocalizedModule.linearMap_ext S (X.localizedModuleMkLinearMap S)
+                (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u))
+                (g := L.restrictScalars A) (g' := f.hom.restrictScalars A)
+              ext x
+              change
+                (IsLocalizedModule.map S (X.localizedModuleMkLinearMap S)
+                    (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u))
+                    ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)))
+                  ((X.localizedModuleMkLinearMap S) x) =
+                  ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)) x
+              rw [IsLocalizedModule.map_apply]
+              rfl
+            apply LinearMap.ext
+            intro x
+            exact LinearMap.congr_fun h x)
+          (by
+            intro g
+            apply ModuleCat.hom_ext
+            ext x
+            let g' : (X : Type u) →ₗ[A] (Y : Type u) :=
+              { toFun := g.hom
+                map_add' := by intro x y; exact g.hom.map_add x y
+                map_smul' := by
+                  intro c x
+                  exact g.hom.map_smul c x }
+            change
+              (IsLocalizedModule.map S (X.localizedModuleMkLinearMap S)
+                  (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u)) g')
+                ((X.localizedModuleMkLinearMap S) x) = g.hom x
+            rw [IsLocalizedModule.map_apply]
+            rfl)
+      homEquiv_naturality_left_symm := by
+        intros X' X Y f g
+        letI : Module A (X'.localizedModule S : Type u) :=
+          by infer_instance
+        letI : Module A (Y : Type u) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        letI : IsScalarTower A (Localization S) (X'.localizedModule S : Type u) :=
+          by infer_instance
+        letI : IsScalarTower A (Localization S) (Y : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        letI : IsLocalizedModule S (LinearMap.id : (Y : Type u) →ₗ[A] (Y : Type u)) :=
+          isLocalizedModule_id S (Y : Type u) (Localization S)
+        letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+          ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y).isModule
+        letI : IsScalarTower A (Localization S)
+            ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        letI : IsLocalizedModule S
+            (LinearMap.id :
+              ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) →ₗ[A]
+                ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u)) :=
+          isLocalizedModule_id S (Y : Type u) (Localization S)
+        dsimp only [Equiv.symm, Equiv.mk, id]
+        dsimp [moduleLocalizationFunctor, ModuleCat.localizedModuleFunctor]
+        apply ModuleCat.hom_ext
+        ext x
+        change
+          (IsLocalizedModule.mapExtendScalars S (X'.localizedModuleMkLinearMap S)
+              LinearMap.id (Localization S) (ModuleCat.Hom.hom (f ≫ g))) x =
+            (ModuleCat.Hom.hom
+              (ModuleCat.localizedModuleMap S f ≫
+                ModuleCat.ofHom
+                  (IsLocalizedModule.mapExtendScalars S (X.localizedModuleMkLinearMap S)
+                    LinearMap.id (Localization S) (ModuleCat.Hom.hom g)))) x
+        simp [ModuleCat.localizedModuleMap, IsLocalizedModule.mapExtendScalars,
+          LinearMap.extendScalarsOfIsLocalizationEquiv, IsLocalizedModule.map_comp',
+          ModuleCat.localizedModuleFunctor]
+        rw [IsLocalizedModule.map_comp' S (X'.localizedModuleMkLinearMap S)
+          (X.localizedModuleMkLinearMap S)
+          (LinearMap.id :
+            ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) →ₗ[A]
+              ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u))
+          (ModuleCat.Hom.hom f) (ModuleCat.Hom.hom g)]
+        change
+          _ = (LinearMap.extendScalarsOfIsLocalization S (Localization S) _)
+            ((LinearMap.extendScalarsOfIsLocalization S (Localization S) _) x)
+        rfl
+      homEquiv_naturality_right := by
+        intros X Y Y' f g
+        letI : Module A ((moduleLocalizationFunctor A S).obj X : Type u) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        letI : IsScalarTower A (Localization S)
+            ((moduleLocalizationFunctor A S).obj X : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        letI : Module A ((ModuleCat.localizedModuleFunctor S).obj X : Type u) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        letI : Module A (Y : Type u) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        letI : Module A (Y' : Type u) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        letI : IsScalarTower A (Localization S)
+            ((ModuleCat.localizedModuleFunctor S).obj X : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        letI : IsScalarTower A (Localization S) (Y : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        letI : IsScalarTower A (Localization S) (Y' : Type u) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        dsimp only [Equiv.symm, Equiv.mk, id]
+        dsimp [moduleLocalizationFunctor, ModuleCat.localizedModuleFunctor]
+        apply ModuleCat.hom_ext
+        ext x
+        change
+          (ModuleCat.Hom.hom (f ≫ g)).restrictScalars A
+              ((X.localizedModuleMkLinearMap S) x) =
+            (ModuleCat.Hom.hom g)
+              ((ModuleCat.Hom.hom f).restrictScalars A
+                ((X.localizedModuleMkLinearMap S) x))
+        rfl
+    }
+  let _ : (ModuleCat.restrictScalars (algebraMap A (Localization S))).Full := ⟨by
+    intro X Y f
+    letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u) :=
+      ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X).isModule
+    letI : Module A ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+      ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y).isModule
+    letI : IsScalarTower A (Localization S)
+        ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u) :=
+      IsScalarTower.of_compHom A (Localization S) _
+    letI : IsScalarTower A (Localization S)
+        ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u) :=
+      IsScalarTower.of_compHom A (Localization S) _
+    refine ⟨ModuleCat.ofHom
+      (LinearMap.extendScalarsOfIsLocalization
+        (M := ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj X : Type u))
+        (N := ((ModuleCat.restrictScalars (algebraMap A (Localization S))).obj Y : Type u))
+        S (Localization S) f.hom), ?_⟩
+    ext x
+    rfl⟩
+  let _ : PreservesFiniteLimits (moduleLocalizationFunctor A S) :=
+    (moduleLocalizationFunctor_isExact A S).1
+  let _ : PreservesFiniteColimits (moduleLocalizationFunctor A S) :=
+    (moduleLocalizationFunctor_isExact A S).2
+  have hL := Abelian.isLocalization_isoModSerre_kernel_of_leftAdjoint adj
+  have hP : (moduleLocalizationFunctor A S).kernel = sTorsionModuleProperty A S := by
+    ext M
+    change IsZero ((moduleLocalizationFunctor A S).obj M) ↔ _
+    exact moduleLocalizationFunctor_obj_isZero_iff A S M
+  have hW : (moduleLocalizationFunctor A S).kernel.isoModSerre =
+      (sTorsionModuleProperty A S).isoModSerre := by
+    ext X Y f
+    change
+      ((moduleLocalizationFunctor A S).kernel (kernel f) ∧
+        (moduleLocalizationFunctor A S).kernel (cokernel f)) ↔
+      ((sTorsionModuleProperty A S) (kernel f) ∧
+        (sTorsionModuleProperty A S) (cokernel f))
+    rw [hP]
+  rw [hW] at hL
+  exact hL
 
 /-- The canonical equivalence `Mod_A / T ≌ Mod_{S⁻¹A}`. -/
 noncomputable def moduleLocalizationSerreQuotientEquivalence
@@ -207,7 +411,16 @@ def finitelyGeneratedTorsionModuleProperty (A : Type u) [CommRing A] :
 instance finitelyGeneratedTorsionModuleProperty_isSerreClass
     (A : Type u) [CommRing A] [IsNoetherianRing A] :
     (finitelyGeneratedTorsionModuleProperty A).IsSerreClass := by
-  sorry
+  change (ObjectProperty.inverseImage
+      (torsionModuleProperty A) (finitelyGeneratedModuleInclusion A)).IsSerreClass
+  let _ : (torsionModuleProperty A).IsSerreClass := torsionModuleProperty_isSerreClass A
+  let _ : PreservesFiniteLimits (finitelyGeneratedModuleInclusion A) := by
+    change PreservesFiniteLimits (forget₂ (FGModuleCat A) (ModuleCat A))
+    infer_instance
+  let _ : PreservesFiniteColimits (finitelyGeneratedModuleInclusion A) := by
+    change PreservesFiniteColimits (forget₂ (FGModuleCat A) (ModuleCat A))
+    infer_instance
+  infer_instance
 
 abbrev finitelyGeneratedTorsionSerreQuotient
     (A : Type u) [CommRing A] [IsNoetherianRing A] :=

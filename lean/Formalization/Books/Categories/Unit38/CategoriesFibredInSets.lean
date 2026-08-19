@@ -1594,12 +1594,150 @@ theorem sliceProjection_isFibredInSets
     IsCategoryFibredInSets (Over.forget X) := by
   sorry
 
+/-- The direct Grothendieck-construction form of the Yoneda comparison from
+the slice `C/X` to the category attached to the representable presheaf. -/
+def sliceToRepresentablePresheafCategory
+    {C : Type uC} [Category.{vC} C] (X : C) :
+    Functor (Over X) (setPresheafCategory (representablePresheaf X)) where
+  obj Y := ⟨Y.left, Discrete.mk Y.hom⟩
+  map {Y Z} f := setPresheafHomOf (representablePresheaf X) f.left (Over.w f)
+  map_id Y := setPresheafHom_ext _ rfl
+  map_comp f g := setPresheafHom_ext _ rfl
+
+/-- The inverse Yoneda comparison sends `(U, u : U ⟶ X)` to the object
+`u` of the slice. -/
+def representablePresheafCategoryToSlice
+    {C : Type uC} [Category.{vC} C] (X : C) :
+    Functor (setPresheafCategory (representablePresheaf X)) (Over X) where
+  obj Y := Over.mk (setPresheafObjectValue (representablePresheaf X) Y)
+  map {Y Z} f := Over.homMk f.base
+    (setPresheafHom_fibre_condition (representablePresheaf X) f)
+  map_id Y := by
+    apply Over.OverMorphism.ext
+    rfl
+  map_comp f g := by
+    apply Over.OverMorphism.ext
+    rfl
+
+@[simp]
+theorem sliceToRepresentablePresheafCategory_obj_base
+    {C : Type uC} [Category.{vC} C] (X : C) (Y : Over X) :
+    ((sliceToRepresentablePresheafCategory X).obj Y).base = Y.left :=
+  rfl
+
+@[simp]
+theorem representablePresheafCategoryToSlice_obj_left
+    {C : Type uC} [Category.{vC} C] (X : C)
+    (Y : setPresheafCategory (representablePresheaf X)) :
+    ((representablePresheafCategoryToSlice X).obj Y).left = Y.base :=
+  rfl
+
+/-- The slice-to-representable comparison followed by its inverse is
+vertically naturally isomorphic to the identity. -/
+def sliceRepresentableComparisonCompIso
+    {C : Type uC} [Category.{vC} C] (X : C) :
+    sliceToRepresentablePresheafCategory X ⋙
+        representablePresheafCategoryToSlice X ≅
+      Functor.id (Over X) :=
+  NatIso.ofComponents (fun Y => by
+    let hom : (sliceToRepresentablePresheafCategory X ⋙
+        representablePresheafCategoryToSlice X).obj Y ⟶ Y :=
+      Over.homMk (𝟙 Y.left) (by
+        change 𝟙 Y.left ≫ Y.hom = Y.hom
+        simp)
+    let inv : Y ⟶ (sliceToRepresentablePresheafCategory X ⋙
+        representablePresheafCategoryToSlice X).obj Y :=
+      Over.homMk (𝟙 Y.left) (by
+        change 𝟙 Y.left ≫ Y.hom = Y.hom
+        simp)
+    exact
+      { hom := hom
+        inv := inv
+        hom_inv_id := by
+          apply Over.OverMorphism.ext
+          change 𝟙 Y.left ≫ 𝟙 Y.left = 𝟙 Y.left
+          simp
+        inv_hom_id := by
+          apply Over.OverMorphism.ext
+          change 𝟙 Y.left ≫ 𝟙 Y.left = 𝟙 Y.left
+          simp })
+    (fun f => by
+      apply Over.OverMorphism.ext
+      change f.left ≫ 𝟙 _ = 𝟙 _ ≫ f.left
+      simp)
+
+/-- The inverse comparison followed by the slice-to-representable functor is
+vertically naturally isomorphic to the identity. -/
+def sliceRepresentableComparisonInvCompIso
+    {C : Type uC} [Category.{vC} C] (X : C) :
+    representablePresheafCategoryToSlice X ⋙
+        sliceToRepresentablePresheafCategory X ≅
+      Functor.id (setPresheafCategory (representablePresheaf X)) :=
+  NatIso.ofComponents (fun Y => by
+    let hom : (representablePresheafCategoryToSlice X ⋙
+        sliceToRepresentablePresheafCategory X).obj Y ⟶ Y :=
+      setPresheafHomOf (representablePresheaf X) (𝟙 Y.base) (by
+        change 𝟙 Y.base ≫ setPresheafObjectValue
+          (representablePresheaf X) Y =
+            setPresheafObjectValue (representablePresheaf X) Y
+        simp)
+    let inv : Y ⟶ (representablePresheafCategoryToSlice X ⋙
+        sliceToRepresentablePresheafCategory X).obj Y :=
+      setPresheafHomOf (representablePresheaf X) (𝟙 Y.base) (by
+        change 𝟙 Y.base ≫ setPresheafObjectValue
+          (representablePresheaf X) Y =
+            setPresheafObjectValue (representablePresheaf X) Y
+        simp)
+    exact
+      { hom := hom
+        inv := inv
+        hom_inv_id := setPresheafHom_ext _ (by
+          change (𝟙 Y.base) ≫ (𝟙 Y.base) = 𝟙 Y.base
+          simp)
+        inv_hom_id := setPresheafHom_ext _ (by
+          change (𝟙 Y.base) ≫ (𝟙 Y.base) = 𝟙 Y.base
+          simp) })
+    (fun f => setPresheafHom_ext _ (by
+      change f.base ≫ 𝟙 _ = 𝟙 _ ≫ f.base
+      simp))
+
 /-- The representable presheaf corresponds to the slice category `C/X`. -/
 theorem representable_presheaf_slice_equivalence
     {C : Type uC} [Category.{vC} C] (X : C) :
     IsFibredEquivalenceOver (Over.forget X)
       (setPresheafProjection (representablePresheaf X)) := by
-  sorry
+  let A := sliceToRepresentablePresheafCategory X
+  let B := representablePresheafCategoryToSlice X
+  let eAB := sliceRepresentableComparisonCompIso X
+  let eBA := sliceRepresentableComparisonInvCompIso X
+  have hA : A ⋙ setPresheafProjection (representablePresheaf X) =
+      Over.forget X := rfl
+  have hB : B ⋙ Over.forget X =
+      setPresheafProjection (representablePresheaf X) := rfl
+  have hpSet : (setPresheafProjection
+      (representablePresheaf X)).IsFibredInGroupoids :=
+    setPresheaf_category_isFibredInGroupoids _
+  have hEquivOver : IsEquivalenceOverFunctor (Over.forget X)
+      (setPresheafProjection (representablePresheaf X)) A := by
+    refine ⟨B, hA, hB, ⟨eAB, rfl, ?_⟩, ⟨eBA, rfl, ?_⟩⟩
+    · intro Y
+      rfl
+    · intro Y
+      rfl
+  have hpSlice : (Over.forget X).IsFibredInGroupoids :=
+    (fibredInGroupoids_of_isEquivalenceOverFunctor
+      (Over.forget X) (setPresheafProjection (representablePresheaf X))
+      A hA hEquivOver hpSet).1
+  refine ⟨A, B, hA, hB, ?_, ?_, ⟨eAB, rfl, ?_⟩,
+    ⟨eBA, rfl, ?_⟩⟩
+  · intro Y Z f _
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian _ hpSet _
+  · intro Y Z f _
+    exact fibredInGroupoids_all_morphisms_stronglyCartesian _ hpSlice _
+  · intro Y
+    rfl
+  · intro Y
+    rfl
 
 end
 

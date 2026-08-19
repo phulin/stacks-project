@@ -2246,7 +2246,88 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
     (d : BasisModuleFMapBelowData f Bᵧ G F) :
     ∃! ψ : RingedSpaceModuleFMap f G F,
       ∀ (j : κ) (s : G.val.presheaf.obj (op (Bᵧ j))),
-        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by sorry
+        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by
+  let T := (ringedSpaceModulePushforward f).obj F
+  let φAdd : (basisModuleRestriction Bᵧ G.val).presheaf ⟶
+      (basisModuleRestriction Bᵧ T.val).presheaf :=
+    { app := fun U =>
+        AddCommGrpCat.ofHom (AddMonoidHom.mk' (d.map U.unop) (by
+          intro s₁ s₂
+          exact d.map_add U.unop s₁ s₂))
+      naturality := by
+        intro U V h
+        ext s
+        change d.map V.unop
+              (G.val.presheaf.map (homOfLE h.unop.hom.le).op s) =
+          F.val.presheaf.map
+              (((Opens.map f.continuous).map
+                (homOfLE h.unop.hom.le)).op) (d.map U.unop s)
+        exact congrFun (d.compatible h.unop.hom.le) s }
+  let φ : basisModuleRestriction Bᵧ G.val ⟶
+      basisModuleRestriction Bᵧ T.val :=
+    PresheafOfModules.homMk φAdd
+      (by
+        intro U r s
+        let targetModule : Module (Y.structureSheaf.1.obj (op (Bᵧ U.unop)))
+            (F.val.presheaf.obj
+              (op ((Opens.map f.continuous).obj (Bᵧ U.unop)))) :=
+          (basisModuleRestriction Bᵧ T.val).obj U |>.isModule
+        letI := targetModule
+        let sourceModule : Module (Y.structureSheaf.1.obj (op (Bᵧ U.unop)))
+            (G.val.presheaf.obj (op (Bᵧ U.unop))) :=
+          (basisModuleRestriction Bᵧ G.val).obj U |>.isModule
+        letI := sourceModule
+        let r' : Y.structureSheaf.1.obj (op (Bᵧ U.unop)) := r
+        let s' : G.val.presheaf.obj (op (Bᵧ U.unop)) := s
+        change d.map U.unop (r' • s) =
+          r' • (d.map U.unop s : (basisModuleRestriction Bᵧ T.val).obj U)
+        change d.map U.unop (r' • s') = r' • d.map U.unop s'
+        dsimp [T, ringedSpaceModulePushforward, φAdd, targetModule, sourceModule]
+        letI : Module
+            (((algebraicSheafPushforward RingCat f.continuous).obj X.structureSheaf).obj.obj
+              (op (Bᵧ U.unop)))
+            (F.val.presheaf.obj
+              (op ((Opens.map f.continuous).obj (Bᵧ U.unop)))) := by
+          change Module
+            (X.structureSheaf.1.obj
+              (op ((Opens.map f.continuous).obj (Bᵧ U.unop))))
+            (F.val.presheaf.obj
+              (op ((Opens.map f.continuous).obj (Bᵧ U.unop))))
+          infer_instance
+        have h_id :
+            X.structureSheaf.1.map
+                (homOfLE (le_refl ((Opens.map f.continuous).obj (Bᵧ U.unop)))).op =
+              𝟙 _ := by
+          rw [show homOfLE
+              (le_refl ((Opens.map f.continuous).obj (Bᵧ U.unop))) = 𝟙 _ by
+            subsingleton]
+          exact X.structureSheaf.1.map_id _
+        have hmap :
+            f.sharp.hom.app (op (Bᵧ U.unop)) ≫
+                X.structureSheaf.1.map
+                  (homOfLE (le_refl ((Opens.map f.continuous).obj (Bᵧ U.unop)))).op =
+              f.sharp.hom.app (op (Bᵧ U.unop)) := by
+          rw [h_id]
+          exact Category.comp_id _
+        change d.map U.unop (r' • s') =
+          (f.sharp.hom.app (op (Bᵧ U.unop))).hom r' • d.map U.unop s'
+        have hlin := d.linear U.unop r' s'
+        simp only [ringedSpaceBasisScalarMap] at hlin
+        rw [hmap] at hlin
+        exact hlin)
+  obtain ⟨ψ, hψ, huniq⟩ := basisFMapModule_below_unique f F G Bᵧ hBᵧ φ
+  refine ⟨ψ, ?_, ?_⟩
+  · intro j s
+    have hj := congrArg (fun q => (q.app (op (show basisIndex Bᵧ from j))).hom s) hψ
+    change (ψ.val.app (op (Bᵧ j))).hom s = d.map j s at hj
+    exact hj
+  · intro ψ' hψ'
+    apply huniq ψ'
+    ext U s
+    change (ψ'.val.app (op (Bᵧ U.unop))).hom s =
+      (φ.app U).hom s
+    change (ψ'.val.app (op (Bᵧ U.unop))).hom s = d.map U.unop s
+    exact hψ' U.unop s
 /-
   let T := (ringedSpaceModulePushforward f).obj F
   let φAdd : (basisModuleRestriction Bᵧ G.val).presheaf ⟶

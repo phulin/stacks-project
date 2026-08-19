@@ -313,7 +313,170 @@ theorem sheafModuleCokernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X
       cokernel (sheafModuleSectionsMap O φ U)) := by
   exact ⟨PreservesCokernel.iso (PresheafOfModules.evaluation O.obj (op U)) φ.val⟩
 
-set_option backward.isDefEq.respectTransparency false in
+private lemma sheafModuleCokernel_stalk_hπ {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
+    {F G : Mod O} (φ : F ⟶ G)
+    (adj : PresheafOfModules.sheafification (𝟙 O.obj) ⊣
+      SheafOfModules.forget O ⋙
+        PresheafOfModules.restrictScalars (𝟙 O.obj))
+    (hadj : adj = PresheafOfModules.sheafificationAdjunction (𝟙 O.obj))
+    (eG : (PresheafOfModules.sheafification (𝟙 O.obj)).obj G.val ≅ G)
+    (heG : eG.hom = adj.counit.app G)
+    (m : cokernel ((PresheafOfModules.sheafification (𝟙 O.obj)).map φ.val) ≅
+      cokernel φ)
+    (e : sheafModuleCokernel O φ ≅ sheafModuleCokernelSheafification O φ)
+    (he : e =
+      (PreservesCokernel.iso (PresheafOfModules.sheafification (𝟙 O.obj)) φ.val ≪≫ m).symm)
+    (hproj :
+      ((PresheafOfModules.sheafification (𝟙 O.obj)).map (cokernel.π φ.val) ≫
+          (PreservesCokernel.iso (PresheafOfModules.sheafification (𝟙 O.obj))
+            φ.val).hom) ≫ m.hom =
+        eG.hom ≫ cokernel.π φ) :
+    (PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            (adj.unit.app (cokernel φ.val)) ≫
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O).map e.inv) =
+      (PresheafOfModules.toPresheaf O.obj).map
+        ((SheafOfModules.forget O).map (cokernel.π φ)) := by
+  let L := PresheafOfModules.sheafification (𝟙 O.obj)
+  have hπMid :
+      (cokernel.π φ.val ≫ adj.unit.app (cokernel φ.val)) ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv =
+        adj.unit.app G.val ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+            (eG.hom ≫ cokernel.π φ) := by
+    have hu := adj.unit.naturality (cokernel.π φ.val)
+    have hu' :
+        cokernel.π φ.val ≫ adj.unit.app (cokernel φ.val) =
+          adj.unit.app G.val ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+              (L.map (cokernel.π φ.val)) := by
+      simpa only [Functor.id_map, Functor.comp_map] using hu
+    have he :
+        L.map (cokernel.π φ.val) ≫ e.inv =
+          (L.map (cokernel.π φ.val) ≫ (PreservesCokernel.iso L φ.val).hom) ≫
+            m.hom := by
+      rw [he]
+      dsimp [L]
+      simp only [Iso.symm_inv, Iso.trans_hom, Category.assoc]
+    have hright := congrArg
+      (SheafOfModules.forget O ⋙
+        PresheafOfModules.restrictScalars (𝟙 O.obj)).map hproj
+    calc
+      (cokernel.π φ.val ≫ adj.unit.app (cokernel φ.val)) ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv =
+          (adj.unit.app G.val ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+              (L.map (cokernel.π φ.val))) ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv := by
+        exact congrArg (fun q => q ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv) hu'
+      _ = adj.unit.app G.val ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+            (L.map (cokernel.π φ.val) ≫ e.inv) := by
+        simp only [Category.assoc, Functor.map_comp]
+      _ = adj.unit.app G.val ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+          ((L.map (cokernel.π φ.val) ≫ (PreservesCokernel.iso L φ.val).hom) ≫
+            m.hom) := by rw [he]
+      _ = adj.unit.app G.val ≫
+          (SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+            (eG.hom ≫ cokernel.π φ) := by
+        rw [hright]
+  have hπMidP := congrArg (PresheafOfModules.toPresheaf O.obj).map hπMid
+  have hRestrE :
+      (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv) =
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O).map e.inv) := by
+    rfl
+  have hRestrComp :
+      (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O ⋙
+            PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+            (eG.hom ≫ cokernel.π φ)) =
+        (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map eG.hom ≫
+              (SheafOfModules.forget O).map (cokernel.π φ)) := by
+    rfl
+  have hGunitAdd :
+      (PresheafOfModules.toPresheaf O.obj).map
+            (adj.unit.app G.val) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map eG.hom) =
+        𝟙 ((PresheafOfModules.toPresheaf O.obj).obj
+          ((SheafOfModules.forget O).obj G)) := by
+    cases hadj
+    rw [heG]
+    rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+    change toSheafify (Opens.grothendieckTopology X)
+        ((PresheafOfModules.toPresheaf O.obj).obj G.val) ≫
+      (CategoryTheory.sheafToPresheaf
+          (Opens.grothendieckTopology X) AddCommGrpCat).map
+        ((SheafOfModules.toSheaf O).map
+          ((PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).counit.app G)) = 𝟙 _
+    rw [PresheafOfModules.toSheaf_map_sheafificationAdjunction_counit_app]
+    change toSheafify (Opens.grothendieckTopology X)
+        ((PresheafOfModules.toPresheaf O.obj).obj G.val) ≫
+      ((CategoryTheory.sheafificationAdjunction
+          (Opens.grothendieckTopology X) AddCommGrpCat).counit.app
+        ((SheafOfModules.toSheaf O).obj G)).hom = 𝟙 _
+    rw [CategoryTheory.sheafificationAdjunction_counit_app_val]
+    exact CategoryTheory.toSheafify_sheafifyLift _ _ _
+  have hRight :
+      (PresheafOfModules.toPresheaf O.obj).map
+          (adj.unit.app G.val ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map
+              (eG.hom ≫ cokernel.π φ)) =
+        ((PresheafOfModules.toPresheaf O.obj).map (adj.unit.app G.val) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map eG.hom)) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map (cokernel.π φ)) := by
+    rw [Functor.map_comp]
+    rw [hRestrComp]
+    simp only [Functor.map_comp, Category.assoc]
+    rfl
+  have hFinalAdd :
+      (((PresheafOfModules.toPresheaf O.obj).map (adj.unit.app G.val) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map eG.hom)) ≫
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O).map (cokernel.π φ))) =
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O).map (cokernel.π φ)) := by
+    have h := congrArg
+      (fun q => q ≫
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((SheafOfModules.forget O).map (cokernel.π φ))) hGunitAdd
+    exact h.trans (Category.id_comp _)
+  have hπLeft :
+      (PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val) ≫
+            (PresheafOfModules.toPresheaf O.obj).map
+              (adj.unit.app (cokernel φ.val)) ≫
+          (PresheafOfModules.toPresheaf O.obj).map
+            ((SheafOfModules.forget O).map e.inv) =
+        (PresheafOfModules.toPresheaf O.obj).map
+          ((cokernel.π φ.val ≫ adj.unit.app (cokernel φ.val)) ≫
+            (SheafOfModules.forget O ⋙
+              PresheafOfModules.restrictScalars (𝟙 O.obj)).map e.inv) := by
+    simp only [Functor.map_comp, Category.assoc]
+    rw [hRestrE]
+    rfl
+  exact hπLeft.trans (hπMidP.trans (hRight.trans hFinalAdd))
+
 theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (sheafModuleCokernel O φ) ≅
@@ -353,11 +516,12 @@ theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     infer_instance
   let eF : L.obj F.val ≅ F := @asIso _ _ _ _ (adj.counit.app F) hF
   let eG : L.obj G.val ≅ G := @asIso _ _ _ _ (adj.counit.app G) hG
+  have hNat : L.map φ.val ≫ eG.hom = eF.hom ≫ φ := by
+    change L.map φ.val ≫ (adj.counit.app G) = (adj.counit.app F) ≫ φ
+    exact adj.counit.naturality φ
+  let m := cokernel.mapIso (L.map φ.val) φ eF eG hNat
   let e : sheafModuleCokernel O φ ≅ sheafModuleCokernelSheafification O φ :=
-    (PreservesCokernel.iso L φ.val ≪≫
-      cokernel.mapIso (L.map φ.val) φ eF eG (by
-        change L.map φ.val ≫ (adj.counit.app G) = (adj.counit.app F) ≫ φ
-        exact adj.counit.naturality φ)).symm
+    (PreservesCokernel.iso L φ.val ≪≫ m).symm
   let u := CategoryTheory.toSheafify (Opens.grothendieckTopology X)
     (sheafModuleCokernelPresheaf O φ).presheaf
   letI : IsIso (stalk.map u) := by
@@ -454,69 +618,12 @@ theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
   have hproj :
       (L.map (cokernel.π φ.val) ≫
           (PreservesCokernel.iso L φ.val).hom) ≫
-        (cokernel.mapIso (L.map φ.val) φ eF eG (by
-          change L.map φ.val ≫ eG.hom = eF.hom ≫ φ
-          dsimp [eF, eG]
-          exact adj.counit.naturality φ)).hom =
+        m.hom =
       eG.hom ≫ cokernel.π φ := by
+    dsimp [m]
     rw [PreservesCokernel.π_iso_hom]
     simp [cokernel.map]
-  have hπ :
-      (PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val) ≫
-          (PresheafOfModules.toPresheaf O.obj).map
-            (adj.unit.app (cokernel φ.val)) ≫
-        (PresheafOfModules.toPresheaf O.obj).map
-          ((SheafOfModules.forget O).map e.inv) =
-      (PresheafOfModules.toPresheaf O.obj).map
-        ((SheafOfModules.forget O).map (cokernel.π φ)) := by
-    rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
-    have hs := CategoryTheory.toSheafify_naturality
-      (J := Opens.grothendieckTopology X)
-      ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val))
-    change (PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val) ≫
-        toSheafify (Opens.grothendieckTopology X)
-          ((PresheafOfModules.toPresheaf O.obj).obj (cokernel φ.val)) ≫
-        (PresheafOfModules.toPresheaf O.obj).map
-          ((SheafOfModules.forget O).map e.inv) =
-      (PresheafOfModules.toPresheaf O.obj).map
-        ((SheafOfModules.forget O).map (cokernel.π φ))
-    rw [← Category.assoc, hs]
-    have hprojAdd := congrArg (fun q =>
-      (CategoryTheory.sheafToPresheaf (Opens.grothendieckTopology X) AddCommGrpCat).map
-        ((SheafOfModules.toSheaf O).map q)) hproj
-    have hGunit :
-        (PresheafOfModules.toPresheaf O.obj).map
-              (adj.unit.app G.val) ≫
-            (PresheafOfModules.toPresheaf O.obj).map
-              ((SheafOfModules.forget O).map eG.hom) =
-          𝟙 ((PresheafOfModules.toPresheaf O.obj).obj G.val) := by
-      rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
-      dsimp [eG]
-      change toSheafify (Opens.grothendieckTopology X)
-          ((PresheafOfModules.toPresheaf O.obj).obj G.val) ≫
-        (CategoryTheory.sheafToPresheaf
-            (Opens.grothendieckTopology X) AddCommGrpCat).map
-          ((SheafOfModules.toSheaf O).map (adj.counit.app G)) = 𝟙 _
-      rw [PresheafOfModules.toSheaf_map_sheafificationAdjunction_counit_app]
-      change toSheafify (Opens.grothendieckTopology X)
-          ((PresheafOfModules.toPresheaf O.obj).obj G.val) ≫
-        ((CategoryTheory.sheafificationAdjunction
-            (Opens.grothendieckTopology X) AddCommGrpCat).counit.app
-          ((SheafOfModules.toSheaf O).obj G)).hom = 𝟙 _
-      rw [CategoryTheory.sheafificationAdjunction_counit_app_val]
-      exact CategoryTheory.toSheafify_sheafifyLift _ _ _
-    ext U z
-    dsimp [e, adj, L]
-    convert congrArg (fun q =>
-      (q.app U)
-        ((toSheafify (Opens.grothendieckTopology X)
-          ((PresheafOfModules.toPresheaf O.obj).obj G.val)).app U z)) hprojAdd using 1 <;>
-      try rfl
-    · have h := congrArg (fun q =>
-          ((PresheafOfModules.toPresheaf O.obj).map
-            ((SheafOfModules.forget O).map (cokernel.π φ))).app U
-            ((q.app U) z)) hGunit
-      convert h.symm using 1 <;> rfl
+  have hπ := sheafModuleCokernel_stalk_hπ O φ adj rfl eG rfl m e rfl hproj
   have comm3 :
       ePair.inv.app WalkingParallelPair.one ≫ cTargetAdd.ι.app WalkingParallelPair.one =
         cStalk'.ι.app WalkingParallelPair.one := by
@@ -535,27 +642,43 @@ theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
       ext z
       rfl
     rw [hleft]
-    rw [← Functor.map_comp, ← Functor.map_comp]
     have hπStalk := congrArg stalk.map hπ
-    convert hπStalk.symm using 1
-    · rfl
-    · rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
-      congr 1
+    rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app] at hπStalk
+    simp only [Functor.map_comp] at hπStalk
+    exact hπStalk.symm.trans (congrArg
+      (fun q => stalk.map ((PresheafOfModules.toPresheaf O.obj).map
+        (cokernel.π φ.val)) ≫ q) (stalk.map_comp _ _))
+  let pointIso : ((Cocone.precompose ePair.inv).obj cTargetAdd).pt ≅ cStalk'.pt :=
+    Iso.refl _
   let w : (Cocone.precompose ePair.inv).obj cTargetAdd ≅ cStalk' :=
-    Cocone.ext (Iso.refl _) (by
+    Cocone.ext pointIso (by
       intro j
       cases j
-      · simp [Cocone.precompose, ePair, cTargetAdd]
-      · exact comm3)
+      · simp [cTargetAdd, cStalk']
+      · dsimp [Cocone.precompose, pointIso]
+        exact comm3)
   have hAdd : IsColimit cTargetAdd := by
     exact (IsColimit.equivOfNatIsoOfIso ePair cTargetAdd cStalk' w).symm hcStalk'
+  let cTargetComp :=
+    (sheafModuleStalkFunctor O x ⋙ forgetStalk).mapCocone
+      (CokernelCofork.ofπ (cokernel.π φ) (cokernel.condition φ))
+  let targetIso : cTargetComp ≅ cTargetAdd :=
+    Cocone.ext (Iso.refl _) (by
+      intro j
+      rfl)
+  have hComp : IsColimit cTargetComp := by
+    exact hAdd.ofIsoColimit targetIso.symm
   letI : PreservesColimit (parallelPair φ 0)
       (sheafModuleStalkFunctor O x ⋙ forgetStalk) := by
-    apply preservesColimit_of_preserves_colimit_cocone (cokernelIsCokernel φ)
-    exact hAdd
+    exact preservesColimit_of_preserves_colimit_cocone
+      (K := parallelPair φ 0)
+      (F := sheafModuleStalkFunctor O x ⋙ forgetStalk)
+      (cokernelIsCokernel φ) hComp
   letI : PreservesColimit (parallelPair φ 0) (sheafModuleStalkFunctor O x) := by
-    apply preservesColimit_of_reflects_of_preserves
-      (sheafModuleStalkFunctor O x) forgetStalk
+    exact preservesColimit_of_reflects_of_preserves
+      (K := parallelPair φ 0)
+      (F := sheafModuleStalkFunctor O x)
+      (G := forgetStalk)
   exact PreservesCokernel.iso (sheafModuleStalkFunctor O x) φ
 
 theorem sheafModuleCokernel_universal {X : TopCat.{v}} (O : RingSheaf.{v, v} X)

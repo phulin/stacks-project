@@ -1378,6 +1378,88 @@ theorem setPresheafProjection_isFibredEquivalenceOver_of_iso
     intro X
     rfl
 
+/-- The functor on CoGrothendieck constructions induced by a natural
+transformation can be an equivalence over the base only when that natural
+transformation is an isomorphism. -/
+theorem isIso_of_setPresheafCategoryMap_isEquivalenceOverFunctor
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (α : NatTrans F G)
+    (hα : IsEquivalenceOverFunctor (setPresheafProjection F)
+      (setPresheafProjection G) (setPresheafCategoryMap α)) :
+    ∀ U, IsIso (α.app U) := by
+  classical
+  have hEq : (setPresheafCategoryMap α).IsEquivalence :=
+    isEquivalence_of_isEquivalenceOverFunctor _ _ _ hα
+  let _ : (setPresheafCategoryMap α).IsEquivalence := hEq
+  let _ : (setPresheafCategoryMap α).Full := hEq.full
+  rcases hα with
+    ⟨K, _hαbase, hKbase, _unit, ⟨counit, counitOver, hcounit⟩⟩
+  intro U
+  rw [CategoryTheory.isIso_iff_bijective]
+  constructor
+  · intro x x' hxx'
+    let X : setPresheafCategory F := ⟨U.unop, Discrete.mk x⟩
+    let X' : setPresheafCategory F := ⟨U.unop, Discrete.mk x'⟩
+    let k : (setPresheafCategoryMap α).obj X ⟶
+        (setPresheafCategoryMap α).obj X' :=
+      setPresheafHomOf G (𝟙 U.unop) (by
+        change G.map (𝟙 U.unop).op (α.app U x') = α.app U x
+        simpa using hxx'.symm)
+    obtain ⟨f, hf⟩ := (setPresheafCategoryMap α).map_surjective k
+    have hfbase : f.base = 𝟙 U.unop := by
+      exact congrArg Pseudofunctor.CoGrothendieck.Hom.base hf
+    have hfvalue := setPresheafHom_fibre_condition F f
+    rw [hfbase] at hfvalue
+    change F.map (𝟙 U.unop).op x' = x at hfvalue
+    simpa using hfvalue.symm
+  · intro y
+    let Y : setPresheafCategory G := ⟨U.unop, Discrete.mk y⟩
+    let Z := K.obj Y
+    let hZ : Z.base = U.unop := Functor.congr_obj hKbase Y
+    let x : F.obj U :=
+      F.map (eqToHom hZ.symm).op (setPresheafObjectValue F Z)
+    refine ⟨x, ?_⟩
+    let c := counit.hom.app Y
+    have hcbase : c.base = eqToHom hZ := by
+      have hc := hcounit Y
+      change c.base = eqToHom
+        (congrArg (fun L : Functor (setPresheafCategory G) C => L.obj Y)
+          counitOver) at hc
+      simpa [c, hZ, setPresheafCategoryMap] using hc
+    have hcvalue := setPresheafHom_fibre_condition G c
+    rw [hcbase] at hcvalue
+    change G.map (eqToHom hZ).op y =
+      α.app (Opposite.op Z.base) (setPresheafObjectValue F Z) at hcvalue
+    have hn := congrFun
+      (congrArg (fun k => k.hom) (α.naturality (eqToHom hZ.symm).op))
+        (setPresheafObjectValue F Z)
+    have hn' : α.app U
+        (F.map (eqToHom hZ.symm).op (setPresheafObjectValue F Z)) =
+      G.map (eqToHom hZ.symm).op
+        (α.app (Opposite.op Z.base) (setPresheafObjectValue F Z)) := by
+      simpa using hn
+    change α.app U
+        (F.map (eqToHom hZ.symm).op (setPresheafObjectValue F Z)) = y
+    rw [hn', ← hcvalue]
+    simpa using congrArg (fun k => k y)
+      (G.map_comp (eqToHom hZ).op (eqToHom hZ.symm).op)
+
+/-- A specified equivalence-over-base structure on the CoGrothendieck map of
+a natural transformation recovers a natural presheaf isomorphism. -/
+theorem setPresheaf_iso_of_categoryMap_isEquivalenceOverFunctor
+    {C : Type uC} [Category.{vC} C]
+    {F G : Functor Cᵒᵖ (Type uS)} (α : NatTrans F G)
+    (hα : IsEquivalenceOverFunctor (setPresheafProjection F)
+      (setPresheafProjection G) (setPresheafCategoryMap α)) :
+    Nonempty (F ≅ G) := by
+  have hi := isIso_of_setPresheafCategoryMap_isEquivalenceOverFunctor α hα
+  let component (U : Cᵒᵖ) : F.obj U ≅ G.obj U := by
+    let _ : IsIso (α.app U) := hi U
+    exact asIso (α.app U)
+  refine ⟨NatIso.ofComponents component (fun {U V} f => ?_)⟩
+  change F.map f ≫ α.app V = α.app U ≫ G.map f
+  exact α.naturality f
+
 @[simp]
 theorem setPresheaf_id_base
     {C : Type uC} [Category.{vC} C]

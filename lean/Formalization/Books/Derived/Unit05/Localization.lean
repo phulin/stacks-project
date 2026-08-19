@@ -181,7 +181,7 @@ theorem exactFunctorMorphismProperty_saturated
       simp only [Triangle.mk_mor₂] at hi
       simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at eq
       rw [← sub_eq_zero, ← sub_comp, hi]
-      simpa only [Category.assoc, eq, comp_zero]
+      simp only [Category.assoc, eq, comp_zero]
   have hright : W.HasRightCalculusOfFractions := by
     refine { id_mem := ?_, comp_mem := ?_, exists_rightFraction := ?_, ext := ?_ }
     · intro X
@@ -232,7 +232,7 @@ theorem exactFunctorMorphismProperty_saturated
       have eq := comp_distTriang_mor_zero₁₂ _ hT'
       simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at hq eq
       rw [← sub_eq_zero, ← comp_sub, hq]
-      simpa only [← Category.assoc, eq, zero_comp]
+      simp only [← Category.assoc, eq, zero_comp]
   have hsat : SaturatedMultiplicativeSystem W := by
     refine ⟨⟨hleft, hright⟩, ?_⟩
     intro X Y Z T f g h hfg hgh
@@ -240,8 +240,8 @@ theorem exactFunctorMorphismProperty_saturated
     change IsIso (F.map (g ≫ h)) at hgh
     change IsIso (F.map g)
     rw [F.map_comp] at hfg hgh
-    letI := hfg
-    letI := hgh
+    let := hfg
+    let := hgh
     exact isIso_of_adjacent_composites (F.map f) (F.map g) (F.map h)
   have hshift : W.IsCompatibleWithShift ℤ := by
     refine ⟨?_⟩
@@ -250,33 +250,33 @@ theorem exactFunctorMorphismProperty_saturated
     change IsIso (F.map ((shiftFunctor C n).map f)) ↔ IsIso (F.map f)
     constructor
     · intro hf
-      letI : IsIso (F.map ((shiftFunctor C n).map f)) := hf
-      haveI : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
-      haveI : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
-      haveI : IsIso (F.map ((shiftFunctor C n).map f) ≫
+      let : IsIso (F.map ((shiftFunctor C n).map f)) := hf
+      have : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
+      have : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
+      have : IsIso (F.map ((shiftFunctor C n).map f) ≫
           (F.commShiftIso n).hom.app Y) := inferInstance
-      haveI : IsIso ((shiftFunctor C n ⋙ F).map f) := by
+      have : IsIso ((shiftFunctor C n ⋙ F).map f) := by
         change IsIso (F.map ((shiftFunctor C n).map f))
         infer_instance
-      haveI : IsIso ((F.commShiftIso n).hom.app X ≫
+      have : IsIso ((F.commShiftIso n).hom.app X ≫
           (shiftFunctor D n).map (F.map f)) := by
         change IsIso ((F.commShiftIso n).hom.app X ≫ (F ⋙ shiftFunctor D n).map f)
         rw [← (F.commShiftIso n).hom.naturality f]
         infer_instance
-      haveI : IsIso ((shiftFunctor D n).map (F.map f)) :=
+      have : IsIso ((shiftFunctor D n).map (F.map f)) :=
         IsIso.of_isIso_comp_left
           ((F.commShiftIso n).hom.app X) ((shiftFunctor D n).map (F.map f))
       exact isIso_of_reflects_iso (F.map f) (shiftFunctor D n)
     · intro hf
-      letI : IsIso (F.map f) := hf
-      haveI : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
-      haveI : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
-      haveI : IsIso ((F.commShiftIso n).hom.app X ≫
+      let : IsIso (F.map f) := hf
+      have : IsIso ((F.commShiftIso n).hom.app X) := inferInstance
+      have : IsIso ((F.commShiftIso n).hom.app Y) := inferInstance
+      have : IsIso ((F.commShiftIso n).hom.app X ≫
           (shiftFunctor D n).map (F.map f)) := inferInstance
-      haveI : IsIso ((F ⋙ shiftFunctor D n).map f) := by
+      have : IsIso ((F ⋙ shiftFunctor D n).map f) := by
         change IsIso ((shiftFunctor D n).map (F.map f))
         infer_instance
-      haveI : IsIso (F.map ((shiftFunctor C n).map f) ≫
+      have : IsIso (F.map ((shiftFunctor C n).map f) ≫
           (F.commShiftIso n).hom.app Y) := by
         change IsIso ((shiftFunctor C n ⋙ F).map f ≫
           (F.commShiftIso n).hom.app Y)
@@ -284,7 +284,7 @@ theorem exactFunctorMorphismProperty_saturated
         infer_instance
       exact IsIso.of_isIso_comp_right
         (F.map ((shiftFunctor C n).map f)) ((F.commShiftIso n).hom.app Y)
-  letI : W.IsCompatibleWithShift ℤ := hshift
+  let : W.IsCompatibleWithShift ℤ := hshift
   have hcompat : CompatibleWithTriangulation W := by
     refine ⟨?_⟩
     intro T₁ T₂ hT₁ hT₂ a b ha hb comm
@@ -318,7 +318,7 @@ theorem homologicalFunctorMorphismProperty_saturated
     (H : C ⥤ A) [H.IsHomological] :
     SaturatedMultiplicativeSystem (homologicalFunctorMorphismProperty H) ∧
       CompatibleWithTriangulation (homologicalFunctorMorphismProperty H) := by
-  letI : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
+  let : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
   let W := homologicalFunctorMorphismProperty H
   let P := H.homologicalKernel
   have hW_trW : W = P.trW := by
@@ -335,8 +335,8 @@ theorem homologicalFunctorMorphismProperty_saturated
     · intro X Y Z f g hf hg
       change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (f ≫ g))
       intro i
-      haveI := hf i
-      haveI := hg i
+      have := hf i
+      have := hg i
       rw [Functor.map_comp]
       infer_instance
     · intro X Y φ
@@ -376,7 +376,7 @@ theorem homologicalFunctorMorphismProperty_saturated
       simp only [Triangle.mk_mor₂] at hi
       simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at eq
       rw [← sub_eq_zero, ← sub_comp, hi]
-      simpa only [Category.assoc, eq, comp_zero]
+      simp only [Category.assoc, eq, comp_zero]
   have hright : W.HasRightCalculusOfFractions := by
     refine { id_mem := ?_, comp_mem := ?_, exists_rightFraction := ?_, ext := ?_ }
     · intro X
@@ -386,8 +386,8 @@ theorem homologicalFunctorMorphismProperty_saturated
     · intro X Y Z f g hf hg
       change ∀ i : ℤ, IsIso ((homologicalDegree H i).map (f ≫ g))
       intro i
-      haveI := hf i
-      haveI := hg i
+      have := hf i
+      have := hg i
       rw [Functor.map_comp]
       infer_instance
     · intro X Y φ
@@ -424,7 +424,7 @@ theorem homologicalFunctorMorphismProperty_saturated
       have eq := comp_distTriang_mor_zero₁₂ _ hT'
       simp only [Triangle.mk_mor₁, Triangle.mk_mor₂] at hq eq
       rw [← sub_eq_zero, ← comp_sub, hq]
-      simpa only [← Category.assoc, eq, zero_comp]
+      simp only [← Category.assoc, eq, zero_comp]
   have hsat : SaturatedMultiplicativeSystem W := by
     refine ⟨⟨hleft, hright⟩, ?_⟩
     intro X Y Z T f g h hfg hgh
@@ -435,8 +435,8 @@ theorem homologicalFunctorMorphismProperty_saturated
     have hfg' := hfg i
     have hgh' := hgh i
     rw [Functor.map_comp] at hfg' hgh'
-    letI := hfg'
-    letI := hgh'
+    let := hfg'
+    let := hgh'
     exact isIso_of_adjacent_composites
       ((homologicalDegree H i).map f)
       ((homologicalDegree H i).map g)
@@ -540,14 +540,15 @@ def IsExactLocalizationFactor {D : Type*} [Category* D]
     letI : F.CommShift ℤ := hF
     F.IsTriangulated
 
+omit [RightMultiplicativeSystem S] in
 theorem homological_localizationFactor_isHomological
     {A : Type*} [Category* A] [Abelian A]
     (H : C ⥤ A) [H.IsHomological] (hH : S.IsInvertedBy H) :
     (localizationFactor (S := S) H hH).IsHomological := by
-  letI : Pretriangulated S.Localization :=
+  let : Pretriangulated S.Localization :=
     CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
-  letI : S.Q.IsTriangulated := localizationFunctor_exact (S := S)
-  letI : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
+  let : S.Q.IsTriangulated := localizationFunctor_exact (S := S)
+  let : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
   apply Functor.isHomological_of_localization S.Q (localizationFactor (S := S) H hH) H
   exact eqToIso (localizationFactor_fac (S := S) H hH)
 

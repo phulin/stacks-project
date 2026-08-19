@@ -73,7 +73,29 @@ theorem principal_quotient_length_additive
           Module.length R (R ⧸ Ideal.span ({a * b} : Set R)) =
             Module.length R (R ⧸ Ideal.span ({a} : Set R)) +
               Module.length R (R ⧸ Ideal.span ({b} : Set R)) := by
-  sorry
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  have hfa : principalQuotientHasFiniteLength R a :=
+    isFiniteLength_quotient_span_singleton R ha
+  have hfb : principalQuotientHasFiniteLength R b :=
+    isFiniteLength_quotient_span_singleton R hb
+  have hab : principalQuotientHasFiniteLength R (a * b) :=
+    isFiniteLength_quotient_span_singleton R ((mul_mem_nonZeroDivisors).2 ⟨ha, hb⟩)
+  refine ⟨hfa, hfb, hab, ?_⟩
+  have hlen := Module.length_eq_add_of_exact
+    (Ideal.mulQuot b (Ideal.span ({a} : Set R)))
+    (Ideal.quotOfMul b (Ideal.span ({a} : Set R)))
+    (Ideal.mulQuot_injective (Ideal.span ({a} : Set R)) hb)
+    (Ideal.quotOfMul_surjective (Ideal.span ({a} : Set R)))
+    (Ideal.exact_mulQuot_quotOfMul (Ideal.span ({a} : Set R)))
+  have hideal : (({b} : Set R) • Ideal.span ({a} : Set R)) =
+      Ideal.span ({b * a} : Set R) := by
+    simp [← Ideal.submodule_span_eq, Submodule.set_smul_span]
+  have hsmul : (({b} : Set R) • Ideal.span ({a} : Set R)) =
+      b • Ideal.span ({a} : Set R) :=
+    Submodule.singleton_set_smul (Ideal.span ({a} : Set R)) b
+  rw [hsmul] at hideal
+  rw [hideal, mul_comm] at hlen
+  exact hlen
 
 /- The dimension hypothesis is supplied as a source-facing equality.  The
    canonical fraction-field API needs the corresponding `KrullDimLE 1`
@@ -106,7 +128,28 @@ theorem orderOfVanishing_fractionUnit
     orderOfVanishing hnoetherian hdim
         (fractionUnit (R := R) (K := K) x y hx hy) =
       (principalQuotientLength R x : ℤ) - principalQuotientLength R y := by
-  sorry
+  let _ : IsNoetherianRing R := hnoetherian
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  change WithZero.log
+      (Ring.ordFrac R (algebraMap R K x / algebraMap R K y)) =
+    (principalQuotientLength R x : ℤ) - principalQuotientLength R y
+  rw [← IsFractionRing.mk'_eq_div (A := R) ⟨y, hy⟩]
+  rw [Ring.ordFrac_eq_div (R := R) ⟨x, hx⟩ ⟨y, hy⟩]
+  have hox : Ring.ord R x = (Ring.ord R x).toNat :=
+    (ENat.natCast_toNat (Ring.ord_ne_top hx)).symm
+  have hoy : Ring.ord R y = (Ring.ord R y).toNat :=
+    (ENat.natCast_toNat (Ring.ord_ne_top hy)).symm
+  have hcx := Ring.ordMonoidWithZeroHom_eq_coe (R := R) hx hox
+  have hcy := Ring.ordMonoidWithZeroHom_eq_coe (R := R) hy hoy
+  have hnx : Ring.ordMonoidWithZeroHom R x ≠ 0 := by
+    rw [hcx]
+    exact WithZero.exp_ne_zero
+  have hny : Ring.ordMonoidWithZeroHom R y ≠ 0 := by
+    rw [hcy]
+    exact WithZero.exp_ne_zero
+  rw [WithZero.log_div hnx hny]
+  rw [hcx, hcy]
+  rfl
 
 @[simp]
 theorem orderOfVanishing_mul
@@ -117,7 +160,18 @@ theorem orderOfVanishing_mul
     orderOfVanishing hnoetherian hdim (x * y) =
       orderOfVanishing hnoetherian hdim x +
         orderOfVanishing hnoetherian hdim y := by
-  sorry
+  let _ : IsNoetherianRing R := hnoetherian
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  change WithZero.log (Ring.ordFrac R ((x * y : Kˣ) : K)) =
+    WithZero.log (Ring.ordFrac R (x : K)) +
+      WithZero.log (Ring.ordFrac R (y : K))
+  rw [Units.val_mul]
+  rw [map_mul]
+  have hnx : Ring.ordFrac R (x : K) ≠ 0 :=
+    (IsUnit.map (Ring.ordFrac R) x.isUnit).ne_zero
+  have hny : Ring.ordFrac R (y : K) ≠ 0 :=
+    (IsUnit.map (Ring.ordFrac R) y.isUnit).ne_zero
+  rw [WithZero.log_mul hnx hny]
 
 /-! ## Lattices and their finite colengths -/
 
@@ -143,7 +197,10 @@ theorem lattice_free_over_dvr
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (M : Submodule R V)
     (hM : IsLattice R K V M) : Module.Free R (M : Type v) := by
-  sorry
+  let _ : Module.Finite R (M : Type v) := hM.1
+  let _ : Module.IsTorsionFree R V :=
+    Module.IsTorsionFree.trans_faithfulSMul R K V
+  exact Module.free_of_finite_type_torsion_free'
 
 abbrev latticeQuotient
     (R : Type u) {V : Type v} [CommRing R]

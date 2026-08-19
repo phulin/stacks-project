@@ -440,7 +440,9 @@ theorem exampleIdeal_not_finitely_generated : ¬ exampleIdeal.FG := by
 /-- The ideal `I` is not invertible as an `A`-module. -/
 theorem exampleIdeal_not_invertible :
     ¬ Module.Invertible exampleAlgebra exampleIdeal := by
-  sorry
+  intro h
+  letI : Module.Invertible exampleAlgebra exampleIdeal := h
+  exact exampleIdeal_not_finitely_generated (Module.Finite.iff_fg.mp inferInstance)
 
 /-! ## The local computations -/
 
@@ -468,7 +470,164 @@ theorem exampleAlgebraAtBasePrime_equiv_symmetricAlgebra
     Nonempty
       (exampleAlgebraAtBasePrime p ≃ₐ[exampleBaseRingAtPrime p]
         SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) := by
-  sorry
+  refine ⟨?_⟩
+  let fA : exampleAlgebra →ₐ[exampleBaseRing]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    SymmetricAlgebra.lift
+      (((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).restrictScalars
+          exampleBaseRing).comp (LocalizedModule.mkLinearMap p.primeCompl ExampleModule))
+  let hunit : ∀ y : Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl,
+      IsUnit (fA y.1) := by
+    rintro ⟨_, ⟨s, hs, rfl⟩⟩
+    rw [fA.commutes]
+    have hmap : algebraMap exampleBaseRing
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) =
+        (algebraMap (exampleBaseRingAtPrime p)
+          (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))).comp
+            (algebraMap exampleBaseRing (exampleBaseRingAtPrime p)) :=
+      IsScalarTower.algebraMap_eq _ _ _
+    rw [hmap]
+    simpa only [RingHom.comp_apply] using
+      IsUnit.map (algebraMap (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)))
+        (IsLocalization.map_units (S := exampleBaseRingAtPrime p) ⟨s, hs⟩)
+  let f0 : exampleAlgebraAtBasePrime p →ₐ[exampleBaseRing]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    IsLocalization.liftAlgHom hunit
+  let f : exampleAlgebraAtBasePrime p →ₐ[exampleBaseRingAtPrime p]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    f0.extendScalarsOfIsLocalization (exampleBaseRingAtPrime p) p.primeCompl
+  let gA : ExampleModule →ₗ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    ((Algebra.linearMap exampleAlgebra (exampleAlgebraAtBasePrime p)).restrictScalars
+        exampleBaseRing).comp (SymmetricAlgebra.ι exampleBaseRing ExampleModule)
+  let hEnd : ∀ s : p.primeCompl,
+      IsUnit (algebraMap exampleBaseRing
+        (Module.End exampleBaseRing (exampleAlgebraAtBasePrime p)) s) := by
+    intro s
+    have hsA : IsUnit (algebraMap exampleBaseRing
+        (exampleAlgebraAtBasePrime p) s) := by
+      have hmap : algebraMap exampleBaseRing (exampleAlgebraAtBasePrime p) =
+          (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)).comp
+            (algebraMap exampleBaseRing exampleAlgebra) :=
+        IsScalarTower.algebraMap_eq _ _ _
+      rw [hmap]
+      simpa only [RingHom.comp_apply] using
+        (IsLocalization.map_units (S := exampleAlgebraAtBasePrime p)
+          (⟨algebraMap exampleBaseRing exampleAlgebra s,
+            (show algebraMap exampleBaseRing exampleAlgebra s ∈
+              Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl from
+              ⟨s, s.2, rfl⟩)⟩ :
+            Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl))
+    rw [Module.End.isUnit_iff]
+    constructor
+    · rintro a b (e : s • a = s • b)
+      simp_rw [Submonoid.smul_def, Algebra.smul_def] at e
+      exact hsA.mul_left_cancel e
+    · intro a
+      refine ⟨((hsA.unit⁻¹ : (exampleAlgebraAtBasePrime p)ˣ) :
+          exampleAlgebraAtBasePrime p) * a, ?_⟩
+      rw [Module.algebraMap_end_apply, Algebra.smul_def, ← mul_assoc,
+        IsUnit.mul_val_inv, one_mul]
+  let hR : exampleModuleAtPrime p →ₗ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    IsLocalizedModule.lift p.primeCompl
+      (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) gA hEnd
+  let hRp : exampleModuleAtPrime p →ₗ[exampleBaseRingAtPrime p]
+      exampleAlgebraAtBasePrime p :=
+    hR.extendScalarsOfIsLocalization p.primeCompl (exampleBaseRingAtPrime p)
+  let g : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] exampleAlgebraAtBasePrime p :=
+    SymmetricAlgebra.lift hRp
+  let aMap : exampleAlgebra →ₐ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    IsScalarTower.toAlgHom exampleBaseRing exampleAlgebra (exampleAlgebraAtBasePrime p)
+  have hfA : f.toRingHom.comp (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)) =
+      fA.toRingHom := by
+    change f0.toRingHom.comp (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)) =
+      fA.toRingHom
+    exact IsLocalization.lift_comp hunit
+  have hcomp : (g.restrictScalars exampleBaseRing).comp fA = aMap := by
+    apply SymmetricAlgebra.algHom_ext
+    ext m
+    simp [g, hRp, fA]
+    change hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m) =
+      aMap (SymmetricAlgebra.ι exampleBaseRing ExampleModule m)
+    rw [IsLocalizedModule.lift_apply]
+    rfl
+  have hlin :
+      (f.toLinearMap.comp hRp).restrictScalars exampleBaseRing =
+        (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).restrictScalars
+          exampleBaseRing := by
+    have hEndSym : ∀ s : p.primeCompl,
+        IsUnit (algebraMap exampleBaseRing
+          (Module.End exampleBaseRing
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))) s) := by
+      intro s
+      have hs : IsUnit (algebraMap exampleBaseRing
+          (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) s) := by
+        have hmap : algebraMap exampleBaseRing
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) =
+            (algebraMap (exampleBaseRingAtPrime p)
+              (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))).comp
+                (algebraMap exampleBaseRing (exampleBaseRingAtPrime p)) :=
+          IsScalarTower.algebraMap_eq _ _ _
+        rw [hmap]
+        simpa only [RingHom.comp_apply] using
+          IsUnit.map (algebraMap (exampleBaseRingAtPrime p)
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)))
+            (IsLocalization.map_units (S := exampleBaseRingAtPrime p) s)
+      rw [Module.End.isUnit_iff]
+      constructor
+      · rintro a b (e : s • a = s • b)
+        simp_rw [Submonoid.smul_def, Algebra.smul_def] at e
+        exact hs.mul_left_cancel e
+      · intro a
+        refine ⟨((hs.unit⁻¹ :
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))ˣ) :
+            SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) * a, ?_⟩
+        rw [Module.algebraMap_end_apply, Algebra.smul_def, ← mul_assoc,
+          IsUnit.mul_val_inv, one_mul]
+    apply IsLocalizedModule.ext p.primeCompl
+      (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) hEndSym
+    ext m
+    simp [f, hRp, hR, gA, fA]
+    change f0 (hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)) =
+      (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
+        (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)
+    rw [IsLocalizedModule.lift_apply]
+    have hfAm := congrArg
+      (fun k => k (SymmetricAlgebra.ι exampleBaseRing ExampleModule m)) hfA
+    simpa [gA, f, fA] using hfAm
+  have hgf : (g.comp f).toRingHom =
+      (AlgHom.id (exampleBaseRingAtPrime p) (exampleAlgebraAtBasePrime p)).toRingHom := by
+    apply IsLocalization.ringHom_ext
+      (Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl)
+    apply RingHom.ext
+    intro a
+    change g (f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a)) =
+      aMap a
+    have hfa : f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a) = fA a :=
+      congrArg (fun k => k a) hfA
+    calc
+      g (f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a)) = g (fA a) :=
+        congrArg g hfa
+      _ = aMap a := congrArg (fun k => k a) hcomp
+  have hfg : f.comp g =
+      AlgHom.id (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) := by
+    apply SymmetricAlgebra.algHom_ext
+    ext m
+    change f (g (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) m)) = _
+    rw [SymmetricAlgebra.lift_ι_apply]
+    exact congrArg (fun k => k m) hlin
+  refine AlgEquiv.ofBijective f ?_
+  constructor
+  · intro x y hxy
+    calc
+      x = g (f x) := (congrArg (fun k => k x) hgf).symm
+      _ = g (f y) := congrArg g hxy
+      _ = y := congrArg (fun k => k y) hgf
+  · intro y
+    refine ⟨g y, ?_⟩
+    simpa using congrArg (fun k => k y) hfg
 
 /-- The one-variable symmetric algebra is a polynomial ring. -/
 noncomputable def symmetricAlgebraSelfPolynomialEquiv
@@ -483,14 +642,395 @@ theorem exampleAlgebraAtBasePrime_equiv_polynomial
     Nonempty
       (exampleAlgebraAtBasePrime p ≃ₐ[exampleBaseRingAtPrime p]
         Polynomial (exampleBaseRingAtPrime p)) := by
-  sorry
+  obtain ⟨eA⟩ := exampleAlgebraAtBasePrime_equiv_symmetricAlgebra p
+  obtain ⟨eM⟩ := exampleModule_localized_equiv p
+  let seHom : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p) :=
+    SymmetricAlgebra.lift
+      ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p)).comp
+        eM.toLinearMap)
+  let seInv : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    SymmetricAlgebra.lift
+      ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).comp
+        eM.symm.toLinearMap)
+  have hse1 : seInv.comp seHom =
+      AlgHom.id (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) := by
+    apply SymmetricAlgebra.algHom_ext
+    apply LinearMap.ext
+    intro m
+    simp [seHom, seInv]
+  have hse2 : seHom.comp seInv =
+      AlgHom.id (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p)) := by
+    apply SymmetricAlgebra.algHom_ext
+    apply LinearMap.ext
+    intro m
+    simp [seHom, seInv]
+  let se : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) ≃ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p) :=
+    AlgEquiv.ofBijective seHom (by
+      constructor
+      · intro x y hxy
+        calc
+          x = seInv (seHom x) := (congrArg (fun k => k x) hse1).symm
+          _ = seInv (seHom y) := congrArg seInv hxy
+          _ = y := congrArg (fun k => k y) hse1
+      · intro y
+        refine ⟨seInv y, ?_⟩
+        exact congrArg (fun k => k y) hse2)
+  exact ⟨eA.trans (se.trans (symmetricAlgebraSelfPolynomialEquiv
+    (exampleBaseRingAtPrime p)))⟩
 
 /-- At a base prime, `Iₚ` is generated by a regular element `T`. -/
 theorem exampleIdealAtBasePrime_isPrincipal_regular
     (p : Ideal exampleBaseRing) [p.IsPrime] :
     ∃ T : exampleAlgebraAtBasePrime p,
       exampleIdealAtBasePrime p = Ideal.span {T} ∧ IsRegular T := by
-  sorry
+  obtain ⟨eM⟩ := exampleModule_localized_equiv p
+  let gA : ExampleModule →ₗ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    ((Algebra.linearMap exampleAlgebra (exampleAlgebraAtBasePrime p)).restrictScalars
+        exampleBaseRing).comp (SymmetricAlgebra.ι exampleBaseRing ExampleModule)
+  let hEnd : ∀ s : p.primeCompl,
+      IsUnit (algebraMap exampleBaseRing
+        (Module.End exampleBaseRing (exampleAlgebraAtBasePrime p)) s) := by
+    intro s
+    have hsA : IsUnit (algebraMap exampleBaseRing
+        (exampleAlgebraAtBasePrime p) s) := by
+      have hmap : algebraMap exampleBaseRing (exampleAlgebraAtBasePrime p) =
+          (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)).comp
+            (algebraMap exampleBaseRing exampleAlgebra) :=
+        IsScalarTower.algebraMap_eq _ _ _
+      rw [hmap]
+      simpa only [RingHom.comp_apply] using
+        (IsLocalization.map_units (S := exampleAlgebraAtBasePrime p)
+          (⟨algebraMap exampleBaseRing exampleAlgebra s,
+            (show algebraMap exampleBaseRing exampleAlgebra s ∈
+              Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl from
+              ⟨s, s.2, rfl⟩)⟩ :
+            Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl))
+    rw [Module.End.isUnit_iff]
+    constructor
+    · rintro a b (e : s • a = s • b)
+      simp_rw [Submonoid.smul_def, Algebra.smul_def] at e
+      exact hsA.mul_left_cancel e
+    · intro a
+      refine ⟨((hsA.unit⁻¹ : (exampleAlgebraAtBasePrime p)ˣ) :
+          exampleAlgebraAtBasePrime p) * a, ?_⟩
+      rw [Module.algebraMap_end_apply, Algebra.smul_def, ← mul_assoc,
+        IsUnit.mul_val_inv, one_mul]
+  let hR : exampleModuleAtPrime p →ₗ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    IsLocalizedModule.lift p.primeCompl
+      (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) gA hEnd
+  let hRp : exampleModuleAtPrime p →ₗ[exampleBaseRingAtPrime p]
+      exampleAlgebraAtBasePrime p :=
+    hR.extendScalarsOfIsLocalization p.primeCompl (exampleBaseRingAtPrime p)
+  let T : exampleAlgebraAtBasePrime p := hRp (eM.symm 1)
+  have hmk (m : ExampleModule) :
+      hRp (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m) = gA m := by
+    change hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m) = gA m
+    rw [IsLocalizedModule.lift_apply]
+  have hgen (m : ExampleModule) : gA m ∈ Ideal.span ({T} : Set _ ) := by
+    let x : exampleModuleAtPrime p := LocalizedModule.mkLinearMap p.primeCompl ExampleModule m
+    have hx : x = eM x • eM.symm 1 := by
+      apply eM.injective
+      simp
+    have hgx : gA m = (algebraMap (exampleBaseRingAtPrime p)
+        (exampleAlgebraAtBasePrime p) (eM x)) * T := by
+      calc
+        gA m = hRp x := (hmk m).symm
+        _ = hRp (eM x • eM.symm 1) := congrArg hRp hx
+        _ = (algebraMap (exampleBaseRingAtPrime p)
+            (exampleAlgebraAtBasePrime p) (eM x)) * T := by
+          rw [map_smul]
+          simp [T, Algebra.smul_def]
+    rw [hgx]
+    exact (Ideal.span ({T} : Set _)).mul_mem_left _ (Ideal.subset_span (by simp))
+  have hIdeal : exampleIdealAtBasePrime p = Ideal.span (Set.range gA) := by
+    rw [exampleIdealAtBasePrime, exampleIdeal, Ideal.map_span]
+    congr 1
+    ext x
+    constructor
+    · rintro ⟨_, ⟨m, rfl⟩, rfl⟩
+      exact ⟨m, rfl⟩
+    · rintro ⟨m, rfl⟩
+      exact ⟨SymmetricAlgebra.ι exampleBaseRing ExampleModule m,
+        ⟨m, rfl⟩, rfl⟩
+  have hspan : Ideal.span (Set.range gA) = Ideal.span ({T} : Set _) := by
+    apply le_antisymm
+    · rw [Ideal.span_le]
+      intro x hx
+      rcases hx with ⟨m, rfl⟩
+      exact hgen m
+    · rw [Ideal.span_le]
+      intro x hx
+      rcases hx with rfl
+      change hRp (eM.symm (1 : exampleBaseRingAtPrime p)) ∈
+        Ideal.span (Set.range gA)
+      induction eM.symm (1 : exampleBaseRingAtPrime p) using
+          LocalizedModule.induction_on with
+      | h m s =>
+          have hIso :
+              (IsLocalizedModule.iso p.primeCompl
+                (LocalizedModule.mkLinearMap p.primeCompl ExampleModule)).symm
+                  (LocalizedModule.mk m s) = LocalizedModule.mk m s := by
+            apply IsLocalizedModule.iso_symm_apply'
+            change (s : exampleBaseRing) • LocalizedModule.mk m s =
+              LocalizedModule.mk m 1
+            rw [LocalizedModule.smul'_mk]
+            apply LocalizedModule.mk_eq.mpr
+            refine ⟨1, ?_⟩
+            simp [Submonoid.smul_def]
+          change hR (LocalizedModule.mk m s) ∈ Ideal.span (Set.range gA)
+          simp only [hR, IsLocalizedModule.lift]
+          simp only [LinearMap.coe_comp, Function.comp_apply]
+          change (LocalizedModule.lift p.primeCompl gA hEnd)
+              ((IsLocalizedModule.iso p.primeCompl
+                (LocalizedModule.mkLinearMap p.primeCompl ExampleModule)).symm
+                  (LocalizedModule.mk m s)) ∈ Ideal.span (Set.range gA)
+          rw [hIso]
+          rw [LocalizedModule.lift_mk]
+          have hsA : IsUnit (algebraMap exampleBaseRing
+              (exampleAlgebraAtBasePrime p) s) := by
+            have hmap : algebraMap exampleBaseRing (exampleAlgebraAtBasePrime p) =
+                (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)).comp
+                  (algebraMap exampleBaseRing exampleAlgebra) :=
+              IsScalarTower.algebraMap_eq _ _ _
+            rw [hmap]
+            simpa only [RingHom.comp_apply] using
+              (IsLocalization.map_units (S := exampleAlgebraAtBasePrime p)
+                (⟨algebraMap exampleBaseRing exampleAlgebra s,
+                  (show algebraMap exampleBaseRing exampleAlgebra s ∈
+                    Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl from
+                    ⟨s, s.2, rfl⟩)⟩ :
+                  Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl))
+          have hscalar : (hEnd s).unit⁻¹.val (gA m) =
+              ((hsA.unit⁻¹ : (exampleAlgebraAtBasePrime p)ˣ) :
+                exampleAlgebraAtBasePrime p) * gA m := by
+            apply (Module.End.algebraMap_isUnit_inv_apply_eq_iff
+              exampleBaseRing (hEnd s)
+              (gA m) (((hsA.unit⁻¹ : (exampleAlgebraAtBasePrime p)ˣ) :
+                exampleAlgebraAtBasePrime p) * gA m)).2
+            rw [Algebra.smul_def, ← mul_assoc,
+              hsA.mul_val_inv, one_mul]
+          rw [hscalar]
+          exact (Ideal.span (Set.range gA)).mul_mem_left _
+            (Ideal.subset_span ⟨m, rfl⟩)
+  let fA : exampleAlgebra →ₐ[exampleBaseRing]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    SymmetricAlgebra.lift
+      (((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).restrictScalars
+          exampleBaseRing).comp (LocalizedModule.mkLinearMap p.primeCompl ExampleModule))
+  let hunit : ∀ y : Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl,
+      IsUnit (fA y.1) := by
+    rintro ⟨_, ⟨s, hs, rfl⟩⟩
+    rw [fA.commutes]
+    have hmap : algebraMap exampleBaseRing
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) =
+        (algebraMap (exampleBaseRingAtPrime p)
+          (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))).comp
+            (algebraMap exampleBaseRing (exampleBaseRingAtPrime p)) :=
+      IsScalarTower.algebraMap_eq _ _ _
+    rw [hmap]
+    simpa only [RingHom.comp_apply] using
+      IsUnit.map (algebraMap (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)))
+        (IsLocalization.map_units (S := exampleBaseRingAtPrime p) ⟨s, hs⟩)
+  let f0 : exampleAlgebraAtBasePrime p →ₐ[exampleBaseRing]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    IsLocalization.liftAlgHom hunit
+  let f : exampleAlgebraAtBasePrime p →ₐ[exampleBaseRingAtPrime p]
+      SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) :=
+    f0.extendScalarsOfIsLocalization (exampleBaseRingAtPrime p) p.primeCompl
+  let g : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] exampleAlgebraAtBasePrime p :=
+    SymmetricAlgebra.lift hRp
+  let aMap : exampleAlgebra →ₐ[exampleBaseRing] exampleAlgebraAtBasePrime p :=
+    IsScalarTower.toAlgHom exampleBaseRing exampleAlgebra (exampleAlgebraAtBasePrime p)
+  have hfA : f.toRingHom.comp (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)) =
+      fA.toRingHom := by
+    change f0.toRingHom.comp (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)) =
+      fA.toRingHom
+    exact IsLocalization.lift_comp hunit
+  have hcomp : (g.restrictScalars exampleBaseRing).comp fA = aMap := by
+    apply SymmetricAlgebra.algHom_ext
+    ext m
+    simp [g, hRp, fA]
+    change hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m) =
+      aMap (SymmetricAlgebra.ι exampleBaseRing ExampleModule m)
+    rw [IsLocalizedModule.lift_apply]
+    rfl
+  have hgf : (g.comp f).toRingHom =
+      (AlgHom.id (exampleBaseRingAtPrime p) (exampleAlgebraAtBasePrime p)).toRingHom := by
+    apply IsLocalization.ringHom_ext
+      (Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl)
+    apply RingHom.ext
+    intro a
+    change g (f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a)) =
+      aMap a
+    have hfa : f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a) = fA a :=
+      congrArg (fun k => k a) hfA
+    calc
+      g (f (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p) a)) = g (fA a) :=
+        congrArg g hfa
+      _ = aMap a := congrArg (fun k => k a) hcomp
+  have hf_inj : Function.Injective f := by
+    intro x y hxy
+    calc
+      x = g (f x) := (congrArg (fun k => k x) hgf).symm
+      _ = g (f y) := congrArg g hxy
+      _ = y := congrArg (fun k => k y) hgf
+  have hlin :
+      (f.toLinearMap.comp hRp).restrictScalars exampleBaseRing =
+        (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).restrictScalars
+          exampleBaseRing := by
+    have hEndSym : ∀ s : p.primeCompl,
+        IsUnit (algebraMap exampleBaseRing
+          (Module.End exampleBaseRing
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))) s) := by
+      intro s
+      have hs : IsUnit (algebraMap exampleBaseRing
+          (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) s) := by
+        have hmap : algebraMap exampleBaseRing
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) =
+            (algebraMap (exampleBaseRingAtPrime p)
+              (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))).comp
+                (algebraMap exampleBaseRing (exampleBaseRingAtPrime p)) :=
+          IsScalarTower.algebraMap_eq _ _ _
+        rw [hmap]
+        simpa only [RingHom.comp_apply] using
+          IsUnit.map (algebraMap (exampleBaseRingAtPrime p)
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)))
+            (IsLocalization.map_units (S := exampleBaseRingAtPrime p) s)
+      rw [Module.End.isUnit_iff]
+      constructor
+      · rintro a b (e : s • a = s • b)
+        simp_rw [Submonoid.smul_def, Algebra.smul_def] at e
+        exact hs.mul_left_cancel e
+      · intro a
+        refine ⟨((hs.unit⁻¹ :
+            (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))ˣ) :
+            SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) * a, ?_⟩
+        rw [Module.algebraMap_end_apply, Algebra.smul_def, ← mul_assoc,
+          IsUnit.mul_val_inv, one_mul]
+    apply IsLocalizedModule.ext p.primeCompl
+      (LocalizedModule.mkLinearMap p.primeCompl ExampleModule) hEndSym
+    ext m
+    simp [f, hRp, hR, gA, fA]
+    change f0 (hR (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)) =
+      (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
+        (LocalizedModule.mkLinearMap p.primeCompl ExampleModule m)
+    rw [IsLocalizedModule.lift_apply]
+    have hfAm := congrArg
+      (fun k => k (SymmetricAlgebra.ι exampleBaseRing ExampleModule m)) hfA
+    simpa [gA, f, f0, fA] using hfAm
+  have hT : f T =
+      (SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
+        (eM.symm 1) := by
+    have hm := congrArg
+      (fun k => k (eM.symm (1 : exampleBaseRingAtPrime p))) hlin
+    simpa [T, f] using hm
+  let seHom : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p)
+        (exampleBaseRingAtPrime p) :=
+    SymmetricAlgebra.lift
+      ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p)).comp
+        eM.toLinearMap)
+  let seInv : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p) →ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p)
+        (exampleModuleAtPrime p) :=
+    SymmetricAlgebra.lift
+      ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)).comp
+        eM.symm.toLinearMap)
+  have hse1 : seInv.comp seHom =
+      AlgHom.id (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p)) := by
+    apply SymmetricAlgebra.algHom_ext
+    apply LinearMap.ext
+    intro m
+    simp [seHom, seInv]
+  have hse2 : seHom.comp seInv =
+      AlgHom.id (exampleBaseRingAtPrime p)
+        (SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p)) := by
+    apply SymmetricAlgebra.algHom_ext
+    apply LinearMap.ext
+    intro m
+    simp [seHom, seInv]
+  let se : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) ≃ₐ[
+      exampleBaseRingAtPrime p] SymmetricAlgebra (exampleBaseRingAtPrime p)
+        (exampleBaseRingAtPrime p) :=
+    AlgEquiv.ofBijective seHom (by
+      constructor
+      · intro x y hxy
+        calc
+          x = seInv (seHom x) := (congrArg (fun k => k x) hse1).symm
+          _ = seInv (seHom y) := congrArg seInv hxy
+          _ = y := congrArg (fun k => k y) hse1
+      · intro y
+        refine ⟨seInv y, ?_⟩
+        exact congrArg (fun k => k y) hse2)
+  let E : SymmetricAlgebra (exampleBaseRingAtPrime p) (exampleModuleAtPrime p) ≃ₐ[
+      exampleBaseRingAtPrime p] Polynomial (exampleBaseRingAtPrime p) :=
+    se.trans (symmetricAlgebraSelfPolynomialEquiv (exampleBaseRingAtPrime p))
+  have hsegen : se ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+      (exampleModuleAtPrime p)) (eM.symm 1)) =
+        SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleBaseRingAtPrime p) 1 := by
+    change seHom ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+      (exampleModuleAtPrime p)) (eM.symm 1)) = _
+    simp [seHom]
+  have hEgen : E ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+      (exampleModuleAtPrime p)) (eM.symm 1)) =
+        Polynomial.X := by
+    rw [show E ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+        (exampleModuleAtPrime p)) (eM.symm 1)) =
+          symmetricAlgebraSelfPolynomialEquiv (exampleBaseRingAtPrime p)
+            (se ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+              (exampleModuleAtPrime p)) (eM.symm 1)) :
+              SymmetricAlgebra (exampleBaseRingAtPrime p)
+                (exampleBaseRingAtPrime p) ) by rfl]
+    rw [hsegen]
+    have heq : SymmetricAlgebra.equivMvPolynomial
+        (Module.Basis.singleton Unit (exampleBaseRingAtPrime p))
+        (SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+          (exampleBaseRingAtPrime p) 1) = MvPolynomial.X () := by
+      simpa using SymmetricAlgebra.equivMvPolynomial_ι_apply
+        (Module.Basis.singleton Unit (exampleBaseRingAtPrime p)) ()
+    change MvPolynomial.uniqueAlgEquiv (exampleBaseRingAtPrime p) Unit
+      (SymmetricAlgebra.equivMvPolynomial
+        (Module.Basis.singleton Unit (exampleBaseRingAtPrime p))
+        (SymmetricAlgebra.ι (exampleBaseRingAtPrime p)
+          (exampleBaseRingAtPrime p) 1)) = Polynomial.X
+    rw [heq]
+    change MvPolynomial.eval₂ Polynomial.C (fun _ : Unit => Polynomial.X)
+      (MvPolynomial.X ()) = Polynomial.X
+    rw [MvPolynomial.eval₂_X]
+  have hreg0 : IsRegular
+      ((SymmetricAlgebra.ι (exampleBaseRingAtPrime p) (exampleModuleAtPrime p))
+        (eM.symm 1)) := by
+    have hX : IsRegular (Polynomial.X : Polynomial (exampleBaseRingAtPrime p)) :=
+      Polynomial.isRegular_X
+    constructor
+    · intro a b hab
+      apply E.injective
+      apply hX.left
+      simpa [map_mul, hEgen, mul_comm] using congrArg E hab
+    · intro a b hab
+      apply E.injective
+      apply hX.right
+      simpa [map_mul, hEgen, mul_comm] using congrArg E hab
+  have hregT : IsRegular T := by
+    constructor
+    · intro a b hab
+      apply hf_inj
+      apply hreg0.left
+      simpa only [map_mul, hT] using congrArg f hab
+    · intro a b hab
+      apply hf_inj
+      apply hreg0.right
+      simpa only [map_mul, hT] using congrArg f hab
+  refine ⟨T, hIdeal.trans hspan, ?_⟩
+  exact hregT
 
 /-- The localization of `I` at a prime ideal `q` of `A`. -/
 def exampleIdealAtPrime (q : Ideal exampleAlgebra) [q.IsPrime] :

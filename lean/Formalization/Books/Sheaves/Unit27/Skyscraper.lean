@@ -1970,6 +1970,21 @@ noncomputable abbrev moduleStalkSkyscraperHomEquiv {X : TopCat.{v}}
       (F ⟶ (moduleSkyscraperSheafFunctor O x).obj A) :=
   (moduleStalkSkyscraperAdjunction O x).homEquiv F A
 
+/-! The Hom equivalence is compatible with taking the stalk of the resulting
+module morphism. -/
+
+theorem moduleStalkSkyscraperHomEquiv_counit {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) (F : Mod O)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    (φ : (moduleStalkFunctor O x).obj F ⟶ A) :
+    φ =
+      (moduleStalkFunctor O x).map
+          ((moduleStalkSkyscraperHomEquiv O x F A) φ) ≫
+        (moduleStalkSkyscraperAdjunction O x).counit.app A := by
+  simpa only [Equiv.symm_apply_apply] using
+    (moduleStalkSkyscraperAdjunction O x).homEquiv_counit F A
+      ((moduleStalkSkyscraperHomEquiv O x F A) φ)
+
 end
 
 end Formalization.Books.Sheaves.Unit27

@@ -1301,7 +1301,7 @@ theorem eilenbergMacLane_map_formula
 theorem coskeleton_degree_formula
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : C) (k n : ℕ) :
-    Nonempty ((truncatedCoskeletonObject A k).obj (op ⦋n⦌) ≅
+      Nonempty ((truncatedCoskeletonObject A k).obj (op ⦋n⦌) ≅
       coskeletonDegreeDirectSum A k n) := by
   sorry
 

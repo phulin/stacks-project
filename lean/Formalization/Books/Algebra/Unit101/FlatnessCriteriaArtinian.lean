@@ -830,7 +830,61 @@ theorem lift_flatness
     (hbase :
       letI : Algebra R R' := φ.toAlgebra
       Module.Flat R' (R' ⊗[R] M)) :
-    Module.Flat R M := by sorry
+    Module.Flat R M := by
+  let J : ℕ → Ideal R := fun n =>
+    Nat.rec I (fun _ Jn => prepareIdeal φ Jn) n
+  have hflatJ : ∀ n : ℕ,
+      let Jn : Ideal R := J n
+      letI : Module (R ⧸ Jn) (M ⧸ (Jn • (⊤ : Submodule R M))) :=
+        Submodule.Quotient.module _
+      Module.Flat (R ⧸ Jn) (M ⧸ (Jn • (⊤ : Submodule R M))) := by
+    intro n
+    induction n with
+    | zero => simpa [J] using hflat
+    | succ n ih =>
+        simpa [J] using prepare_lift_flatness (R := R) (R' := R')
+          (M := M) φ (J n) ih hbase
+  have hmapJ : ∀ n : ℕ,
+      Ideal.map φ (J n) ≤ (Ideal.map φ I) ^ (2 ^ n) := by
+    intro n
+    induction n with
+    | zero => simp [J]
+    | succ n ih =>
+        change Ideal.map φ (prepareIdeal φ (J n)) ≤
+          (Ideal.map φ I) ^ (2 ^ (n + 1))
+        calc
+          Ideal.map φ (prepareIdeal φ (J n)) ≤
+              Ideal.map φ ((J n) ^ 2) := by
+            exact Ideal.map_comap_le
+          _ = (Ideal.map φ (J n)) ^ 2 := by
+            rw [Ideal.map_pow]
+          _ ≤ ((Ideal.map φ I) ^ (2 ^ n)) ^ 2 :=
+            Ideal.mul_mono ih ih
+          _ = (Ideal.map φ I) ^ (2 ^ (n + 1)) := by
+            rw [← pow_mul, pow_succ]
+            simp [Nat.mul_comm]
+  obtain ⟨n, hn⟩ := hI
+  have hpow : n ≤ 2 ^ n := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        calc
+          n + 1 ≤ 2 ^ n + 1 := Nat.succ_le_succ ih
+          _ ≤ 2 ^ n + 2 ^ n := by
+            exact Nat.add_le_add_left (Nat.one_le_pow (by omega)) _
+          _ = 2 ^ (n + 1) := by simp [pow_succ, mul_two]
+  have hmapI : (Ideal.map φ I) ^ n = ⊥ := by
+    rw [← Ideal.map_pow, hn]
+    simp
+  have hmapJn : Ideal.map φ (J n) = ⊥ := by
+    apply le_antisymm
+    · exact (hmapJ n).trans ((Ideal.pow_le_pow_right hpow).trans_eq hmapI)
+    · exact bot_le
+  have hJn : J n = ⊥ :=
+    (Ideal.map_eq_bot_iff_of_injective hφ).mp hmapJn
+  have hJn_sq : (J n) ^ 2 = ⊥ := by simp [hJn]
+  exact square_zero_flatness_of_base_change φ hφ (J n) hJn_sq
+    (hflatJ n) hbase
 /-
   let J : ℕ → Ideal R := fun n =>
     Nat.rec I (fun _ Jn => prepareIdeal φ Jn) n
@@ -937,7 +991,20 @@ theorem descent_flatness_injective_map_artinian_rings
     (hflat :
       letI : Algebra R S := φ.toAlgebra
       Module.Flat S (S ⊗[R] M)) :
-    Module.Flat R M := by sorry
+    Module.Flat R M := by
+  let J : Ideal R := Ring.jacobson R
+  have hJ : IsNilpotent J := by
+    simpa [J, Ideal.jacobson_bot] using
+      (IsArtinianRing.isNilpotent_jacobson_bot (R := R))
+  have hflatbar : Module.Flat (R ⧸ J)
+      (M ⧸ (J • (⊤ : Submodule R M))) := by
+    let _ : IsSemisimpleRing (R ⧸ J) := inferInstance
+    let _ : Module.Projective (R ⧸ J)
+        (M ⧸ (J • (⊤ : Submodule R M))) :=
+      Module.projective_of_isSemisimpleRing (R ⧸ J)
+        (M ⧸ (J • (⊤ : Submodule R M)))
+    exact Module.Flat.of_projective
+  exact lift_flatness φ J hJ hφ hflatbar hflat
 /-
   let J : Ideal R := Ring.jacobson R
   have hJ : IsNilpotent J := by
@@ -982,7 +1049,303 @@ theorem criterion_flatness_fibre_nilpotent
       ∀ q : PrimeSpectrum S,
         nontrivialFibreAt (M := M) g q →
           RingHom.Flat
-            ((algebraMap S (Localization.AtPrime q.asIdeal)).comp f) := by sorry
+            ((algebraMap S (Localization.AtPrime q.asIdeal)).comp f) := by
+  letI : Algebra R S := f.toAlgebra
+  letI : Module S M := Module.compHom M g
+  letI : Module R M := Module.compHom M h
+  have hcomm (r : R) : g (f r) = h r := by
+    exact congrArg (fun k : R →+* S' => k r) comm
+  letI : IsScalarTower R S M :=
+    IsScalarTower.of_algebraMap_smul (fun r m => by
+      change g (f r) • m = h r • m
+      rw [hcomm])
+  let J : Ideal S := Ideal.map f I
+  have hmem (a : I) : f (a : R) ∈ J := by
+    change f (a : R) ∈ Ideal.map f I
+    exact Ideal.mem_map_of_mem f a.property
+  have hmem_mul (r : R) (a : I) : f (r * (a : R)) ∈ J := by
+    change f (r * (a : R)) ∈ Ideal.map f I
+    exact Ideal.mem_map_of_mem f (I.mul_mem_left r a.property)
+  change Module.Flat (S ⧸ J) (M ⧸ (J • (⊤ : Submodule S M))) at hflat_fibre
+  change Module.Flat R M at hflat_base
+  have hJ : IsNilpotent J := by
+    obtain ⟨n, hn⟩ := hI
+    refine ⟨n, ?_⟩
+    rw [← Ideal.map_pow, hn]
+    simp
+  let AmapI := Formalization.Books.Algebra.Unit75.idealTensorActionMap I
+      (ModuleCat.of R M)
+  let gI : TensorProduct R (I : Type u) M →ₗ[R] M :=
+    (TensorProduct.lid R M).toLinearMap.comp (I.subtype.rTensor M)
+  have hIinj : Function.Injective (I.subtype.rTensor M) :=
+    (Module.Flat.iff_rTensor_injective'.mp hflat_base I)
+  have hgI : Function.Injective gI :=
+    (TensorProduct.lid R M).injective.comp hIinj
+  have hAmapI : Function.Injective AmapI := by
+    have hEq : AmapI = gI := by
+      apply LinearMap.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp [AmapI, gI]
+      | add x y hx hy => simp [AmapI, gI, hx, hy]
+      | tmul a m => rfl
+    rw [hEq]
+    exact hgI
+  let T := TensorProduct S (J : Type u) M
+  letI : Module R T := Module.compHom T f
+  have hsc (r s : R) (x : T) : r • s • x = s • r • x := by
+    rw [smul_smul, smul_smul, mul_comm]
+  letI : Module R (M →ₗ[R] T) :=
+    { smul := fun r k =>
+        { toFun := fun m => r • k m
+          map_add' := by intro x y; simp [smul_add]
+          map_smul' := by
+            intro s x
+            change r • k (s • x) = s • r • k x
+            rw [k.map_smul]
+            exact hsc r s (k x) }
+      one_smul := by
+        intro k
+        ext x
+        change (1 : R) • k x = k x
+        exact one_smul R (k x)
+      mul_smul := by
+        intro r s k
+        ext x
+        change (r * s) • k x = r • s • k x
+        rw [smul_smul]
+      smul_add := by
+        intro r k l
+        ext x
+        change r • (k x + l x) = r • k x + r • l x
+        rw [smul_add]
+      smul_zero := by
+        intro r
+        ext x
+        change r • (0 : T) = 0
+        exact smul_zero r
+      add_smul := by
+        intro r s k
+        ext x
+        change (r + s) • k x = r • k x + s • k x
+        exact add_smul r s (k x)
+      zero_smul := by
+        intro k
+        ext x
+        change (0 : R) • k x = 0
+        exact zero_smul R (k x) }
+  let K : TensorProduct R (I : Type u) M →ₗ[R] T :=
+    TensorProduct.lift (R := R) (R₂ := R) (σ₁₂ := RingHom.id R)
+      (M := (I : Type u)) (N := M) (P₂ := T)
+      { toFun := fun a =>
+          { toFun := fun m =>
+              TensorProduct.tmul S
+                (⟨f (a : R), hmem a⟩ : J) m
+            map_add' := by
+              intro m n
+              rw [TensorProduct.tmul_add]
+            map_smul' := by
+              intro r m
+              change TensorProduct.tmul S
+                  (⟨f (a : R), hmem a⟩ : J)
+                  (h r • m) =
+                TensorProduct.tmul S
+                  (f r • (⟨f (a : R), hmem a⟩ : J)) m
+              rw [← hcomm r]
+              change TensorProduct.tmul S
+                  (⟨f (a : R), hmem a⟩ : J)
+                  ((f r) • m) =
+                TensorProduct.tmul S
+                  ((f r) • (⟨f (a : R), hmem a⟩ : J)) m
+              exact TensorProduct.tmul_smul (f r)
+                (⟨f (a : R), hmem a⟩ : J) m }
+        map_add' := by
+          intro a b
+          ext m
+          change TensorProduct.tmul S
+              (⟨f (a + b),
+                hmem (a + b)⟩ : J) m =
+            TensorProduct.tmul S
+              (⟨f a, hmem a⟩ : J) m +
+              TensorProduct.tmul S
+                (⟨f b, hmem b⟩ : J) m
+          rw [map_add, add_tmul]
+        map_smul' := by
+          intro r a
+          ext m
+          change TensorProduct.tmul S
+              (⟨f (r * (a : R)),
+                hmem_mul r a⟩ : J) m =
+            (f r) • TensorProduct.tmul S
+              (⟨f (a : R), hmem a⟩ : J) m
+          rw [map_mul, TensorProduct.smul_tmul]
+          rfl }
+  have hKsurj : Function.Surjective K := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => exact ⟨0, by simp [K]⟩
+    | add x y hx hy =>
+        obtain ⟨x', hx'⟩ := hx
+        obtain ⟨y', hy'⟩ := hy
+        refine ⟨x' + y', ?_⟩
+        simp [map_add, hx', hy']
+    | tmul a m =>
+        have hspan : ∀ (a : S) (ha : a ∈ J), ∀ m : M,
+            ∃ u : TensorProduct R (I : Type u) M,
+              TensorProduct.tmul S (⟨a, ha⟩ : J) m = K u := by
+          intro a ha
+          change a ∈ Submodule.span S (f '' (I : Set R)) at ha
+          refine Submodule.span_induction
+            (p := fun a ha => ∀ m : M,
+              ∃ u : TensorProduct R (I : Type u) M,
+                TensorProduct.tmul S (⟨a, ha⟩ : J) m = K u) ?_ ?_ ?_ ?_ ha
+          · intro a ha m
+            rcases ha with ⟨b, hb, rfl⟩
+            exact ⟨TensorProduct.tmul R (⟨b, hb⟩ : I) m, by simp [K]⟩
+          · intro m
+            exact ⟨0, by rw [TensorProduct.zero_tmul, map_zero]⟩
+          · intro x y _ _ hx hy m
+            obtain ⟨u, hu⟩ := hx m
+            obtain ⟨v, hv⟩ := hy m
+            exact ⟨u + v, by
+              rw [TensorProduct.add_tmul, map_add, hu, hv]⟩
+          · intro s x _ hx m
+            obtain ⟨u, hu⟩ := hx (s • m)
+            refine ⟨u, ?_⟩
+            change TensorProduct.tmul S (s • x) m = K u
+            exact (TensorProduct.tmul_smul (R := S) s (x : J) m).symm.trans hu
+        obtain ⟨u, hu⟩ := hspan (a : S) a.property m
+        exact ⟨u, hu.symm⟩
+  letI : IsScalarTower R S T :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  letI : LinearMap.CompatibleSMul T M R S :=
+    ⟨fun F r x => by
+      rw [← IsScalarTower.algebraMap_smul S r x,
+        ← IsScalarTower.algebraMap_smul S r (F x), F.map_smul]⟩
+  let AmapJ := Formalization.Books.Algebra.Unit75.idealTensorActionMap J
+      (ModuleCat.of S M)
+  have hKaction :
+      (AmapJ.restrictScalars R).comp K = AmapI := by
+    apply LinearMap.ext
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp [AmapI, AmapJ, K]
+    | add x y hx hy => simp [map_add, hx, hy]
+    | tmul a m =>
+        simp [AmapI, AmapJ, K, hcomm]
+  have hAmapJ : Function.Injective AmapJ := by
+    intro x y hxy
+    obtain ⟨x', rfl⟩ := hKsurj x
+    obtain ⟨y', rfl⟩ := hKsurj y
+    have hxy' := hxy
+    change (AmapJ.restrictScalars R) (K x') =
+      (AmapJ.restrictScalars R) (K y') at hxy'
+    rw [hKaction, hKaction]
+    have hxyI : x' = y' := hAmapI hxy'
+    simpa [hxyI]
+  have hTorJ0 : IsZero
+      (Formalization.Books.Algebra.Unit75.Tor
+        (ModuleCat.of S M) (ModuleCat.of S (S ⧸ J)) 1) := by
+    obtain ⟨eTor⟩ :=
+      Formalization.Books.Algebra.Unit75.tor_one_ideal_quotient_kernel
+        (ModuleCat.of S M) J
+    let _ : Subsingleton (LinearMap.ker AmapJ) :=
+      ⟨fun x y => Subtype.ext (hAmapJ (x.property.trans y.property.symm))⟩
+    have hkernel : IsZero
+        (Formalization.Books.Algebra.Unit75.idealTensorActionKernel J
+          (ModuleCat.of S M)) := by
+      change IsZero (ModuleCat.of S (LinearMap.ker AmapJ))
+      apply ModuleCat.isZero_of_subsingleton
+    exact (Iso.isZero_iff eTor).2 hkernel
+  have hTorJ : IsZero
+      (Formalization.Books.Algebra.Unit75.Tor
+        (ModuleCat.of S (S ⧸ J)) (ModuleCat.of S M) 1) :=
+    (Iso.isZero_iff
+      (Formalization.Books.Algebra.Unit75.torLeftRightIso
+        (ModuleCat.of S (S ⧸ J)) (ModuleCat.of S M) 1)).2 hTorJ0
+  have hflatS : Module.Flat S M :=
+    (Formalization.Books.Algebra.Unit99.what_does_it_mean
+      J hflat_fibre hTorJ).2.2 hJ
+  constructor
+  · exact hflatS
+  · intro q hq
+    let Tq := Localization.AtPrime q.asIdeal
+    let Mq := LocalizedModule q.asIdeal.primeCompl M
+    let Kq := q.asIdeal.ResidueField
+    change Nontrivial (M ⊗[S] Kq) at hq
+    letI : Algebra R Tq := ((algebraMap S Tq).comp f).toAlgebra
+    letI : IsScalarTower R S Tq :=
+      IsScalarTower.of_algebraMap_eq' (R := R) (S := S) (A := Tq) (by
+        ext r
+        rfl)
+    letI : Module R Mq := Module.compHom Mq (algebraMap R Tq)
+    letI : IsScalarTower R Tq Mq :=
+      IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+    have hflatRq : Module.Flat R Mq := by
+      rw [Module.Flat.iff_lTensor_injectiveₛ]
+      simp_rw [← TensorProduct.AlgebraTensorModule.coe_lTensor (A := S)]
+      intro P _ _ N
+      let gLoc : M →ₗ[S] Mq := LocalizedModule.mkLinearMap
+        q.asIdeal.primeCompl M
+      have hF : Function.Injective
+          (TensorProduct.AlgebraTensorModule.lTensor S M N.subtype) :=
+        (Module.Flat.iff_lTensor_injectiveₛ.mp hflat_base) N
+      have hmap := IsLocalizedModule.map_injective
+        (S := q.asIdeal.primeCompl)
+        (f := TensorProduct.AlgebraTensorModule.rTensor R N gLoc)
+        (g := TensorProduct.AlgebraTensorModule.rTensor R P gLoc)
+        (TensorProduct.AlgebraTensorModule.lTensor S M N.subtype) hF
+      simpa [IsLocalizedModule.map_lTensor] using hmap
+    have hflatT : Module.Flat Tq Mq := by
+      change Module.Flat (Localization.AtPrime q.asIdeal)
+        (LocalizedModule q.asIdeal.primeCompl M)
+      infer_instance
+    have hfiber : Nontrivial (Kq ⊗[Tq] Mq) := by
+      let eLoc : Mq ≃ₗ[Tq] Tq ⊗[S] M :=
+        LocalizedModule.equivTensorProduct q.asIdeal.primeCompl M
+      let e1 := TensorProduct.congr (LinearEquiv.refl Tq Kq) eLoc
+      let e2 :=
+        (TensorProduct.AlgebraTensorModule.cancelBaseChange
+          S Tq Kq Kq M).restrictScalars Tq
+      let e : Kq ⊗[Tq] Mq ≃ₗ[Tq] Kq ⊗[S] M := e1 ≪≫ₗ e2
+      letI : Nontrivial (Kq ⊗[S] M) :=
+        (TensorProduct.comm S Kq M).toEquiv.nontrivial
+      exact e.toEquiv.symm.nontrivial
+    have hfaithful : Module.FaithfullyFlat Tq Mq := by
+      apply (Module.FaithfullyFlat.iff_flat_and_proper_ideal Tq Mq).2
+      refine ⟨hflatT, ?_⟩
+      intro L hL htop
+      let m := IsLocalRing.maximalIdeal Tq
+      have hm_top : m • (⊤ : Submodule Tq Mq) = ⊤ := by
+        apply top_unique
+        calc
+          (⊤ : Submodule Tq Mq) = L • ⊤ := htop.symm
+          _ ≤ m • ⊤ :=
+            Submodule.smul_mono (IsLocalRing.le_maximalIdeal hL) le_rfl
+      have hzero : ∀ z : Kq ⊗[Tq] Mq, z = 0 := by
+        intro z
+        induction z using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp [hx, hy]
+        | tmul k x =>
+            have hx : x ∈ m • (⊤ : Submodule Tq Mq) := by
+              rw [hm_top]
+              exact Submodule.mem_top
+            refine Submodule.smul_induction_on hx ?_ ?_
+            · intro r hr y _
+              rw [← TensorProduct.tmul_smul]
+              simp [IsLocalRing.ResidueField.algebraMap_eq,
+                IsLocalRing.residue_eq_zero_iff, hr]
+            · intro y z hy hz
+              simp [TensorProduct.tmul_add, hy, hz]
+      letI : Subsingleton (Kq ⊗[Tq] Mq) :=
+        ⟨fun x y => by rw [hzero x, hzero y]⟩
+      exact not_subsingleton _ hfiber
+    have hflat : Module.Flat R Tq :=
+      Formalization.Books.Algebra.Unit39.flat_permanence hflatRq hfaithful
+    change RingHom.Flat ((algebraMap S Tq).comp f)
+    exact (Formalization.Books.Algebra.Unit39.ringHom_flat_iff_module_flat
+      ((algebraMap S Tq).comp f)).2 hflat
 /-
   letI : Algebra R S := f.toAlgebra
   letI : Module S M := Module.compHom M g

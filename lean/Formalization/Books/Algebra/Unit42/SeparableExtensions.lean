@@ -749,14 +749,14 @@ theorem FinitePthRootTower.exists_baseChangeTower
     ∃ tower : FinitePthRootBaseChangeTower k K p hp, tower.base = base := by
   classical
   let B := finitePthRootFieldAtLevel base
-  letI : FiniteDimensional k B := base.finite_dimensional
-  letI : IsPurelyInseparable k B := base.purely_inseparable
-  letI : Algebra.EssFiniteType k B := inferInstance
+  let : FiniteDimensional k B := base.finite_dimensional
+  let : IsPurelyInseparable k B := base.purely_inseparable
+  let : Algebra.EssFiniteType k B := inferInstance
   obtain ⟨s, hs⟩ := IntermediateField.fg_top k B
   let lift (a : B) : perfectClosure K (AlgebraicClosure K) := by
     refine ⟨pthRootClosureMap k K (a : AlgebraicClosure k), ?_⟩
-    letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
-    letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+    let : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+    let : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
     obtain ⟨n, b, hb⟩ := IsPurelyInseparable.pow_mem
       (F := k) (E := B) (q := p) (x := a)
     apply (mem_perfectClosure_iff_pow_mem p).2

@@ -1299,20 +1299,52 @@ theorem infiniteVariableSeries_not_mem_extendedMaximalIdeal :
 theorem infinitePolynomial_maximalIdeal_not_extended :
     ¬ Formalization.Books.Examples.Unit07.maximalIdealIsExtended
         (infinitePolynomialMaximalIdeal k) := by
-  sorry
+  intro h
+  change (infinitePolynomialMaximalIdeal k).map
+      (algebraMap (infinitePolynomialRing k)
+        (AdicCompletion (infinitePolynomialMaximalIdeal k) (infinitePolynomialRing k))) =
+    completionMaximalIdeal (infinitePolynomialMaximalIdeal k) at h
+  exact infiniteVariableSeries_not_mem_extendedMaximalIdeal k
+    (h ▸ infiniteVariableSeries_mem_completionMaximalIdeal k)
 
 /-- The series lies in `K₁`. -/
 theorem infiniteVariableSeries_mem_completionKernel_one :
     infiniteVariableSeries k ∈
       Formalization.Books.Examples.Unit07.completionKernel
         (infinitePolynomialMaximalIdeal k) 1 := by
-  sorry
+  change AdicCompletion.evalₐ (infinitePolynomialMaximalIdeal k) 1
+      (infiniteVariableSeries k) = 0
+  rw [infiniteVariableSeries_coordinate]
+  rw [Ideal.Quotient.eq_zero_iff_mem]
+  simp [infiniteVariableSeriesPartial]
+  change MvPolynomial.X 0 ∈ MvPolynomial.idealOfVars ℕ k
+  exact Ideal.subset_span ⟨0, rfl⟩
 
 theorem infiniteVariableSeries_not_mem_completionMaximalIdeal_sq :
     infiniteVariableSeries k ∉
       Formalization.Books.Examples.Unit07.completionMaximalIdeal
         (infinitePolynomialMaximalIdeal k) ^ 2 := by
-  sorry
+  intro h
+  have hker : infiniteVariableSeries k ∈
+      completionKernel (infinitePolynomialMaximalIdeal k) 2 :=
+    completionMaximalIdeal_pow_le_kernel
+      (infinitePolynomialMaximalIdeal k) 2 h
+  have heval : AdicCompletion.evalₐ (infinitePolynomialMaximalIdeal k) 2
+      (infiniteVariableSeries k) = 0 :=
+    RingHom.mem_ker.mp hker
+  rw [infiniteVariableSeries_coordinate] at heval
+  rw [Ideal.Quotient.eq_zero_iff_mem] at heval
+  let d : ℕ →₀ ℕ := Finsupp.single 0 1
+  have hd : Finsupp.degree d < 2 := by simp [d]
+  have hc :=
+    (MvPolynomial.mem_pow_idealOfVars_iff' 2 _).mp heval d hd
+  rw [infiniteVariableSeriesPartial, MvPolynomial.coeff_sum] at hc
+  simp only [Finset.sum_range_succ, Finset.sum_range_zero, zero_add] at hc
+  have hEq : ¬(Finsupp.single 1 2 = Finsupp.single 0 1) := by
+    intro hEq
+    have hEq' := congrArg (fun p : ℕ →₀ ℕ => p 0) hEq
+    simp at hEq'
+  simp [MvPolynomial.coeff_X_pow, d, hEq] at hc
 
 theorem infinitePolynomial_completion_not_complete_as_completionModule :
     ¬ Formalization.Books.Examples.Unit07.completionIsCompleteAsCompletionModule

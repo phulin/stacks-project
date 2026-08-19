@@ -2824,18 +2824,83 @@ theorem matrixProduct_components_are_prime
     (matrixProductRankTwoComponentIdeal (k := k)).IsPrime ∧
       (matrixProductRankOneComponentIdeal (k := k)).IsPrime ∧
       (matrixProductRankZeroComponentIdeal (k := k)).IsPrime := by
-  sorry
+  have hmin := matrixProduct_minimalPrime_components k
+  have htwo : matrixProductRankTwoComponentIdeal (k := k) ∈
+      (matrixProductIdeal (k := k)).minimalPrimes := by
+    rw [hmin]
+    simp
+  have hone : matrixProductRankOneComponentIdeal (k := k) ∈
+      (matrixProductIdeal (k := k)).minimalPrimes := by
+    rw [hmin]
+    simp
+  have hzero : matrixProductRankZeroComponentIdeal (k := k) ∈
+      (matrixProductIdeal (k := k)).minimalPrimes := by
+    rw [hmin]
+    simp
+  exact ⟨htwo.isPrime, hone.isPrime, hzero.isPrime⟩
 
 theorem matrixProduct_determinantal_component
     (k : Type u) [Field k] :
     matrixProductDeterminantalIdeal (k := k) =
       matrixProductRankOneComponentIdeal (k := k) := by
-  sorry
+  rw [matrixProductDeterminantalIdeal, matrixProductRankOneComponentIdeal,
+    matrixProductIdeal, Ideal.span_union]
 
 theorem matrixProduct_zero_rank_cases
     {k : Type u} [Field k] (X Y : Matrix2 k) (hXY : X * Y = 0) :
     (X.rank = 2 ∧ Y = 0) ∨ (X.rank = 1 ∧ X.det = 0 ∧ Y.det = 0) ∨ X = 0 := by
-  sorry
+  have hzero : ∀ A : Matrix2 k, A.rank = 0 → A = 0 := by
+    intro A hA
+    have hrange : LinearMap.range A.mulVecLin = ⊥ := by
+      apply Submodule.finrank_eq_zero.mp
+      exact hA
+    have hlin : A.mulVecLin = 0 := LinearMap.range_eq_bot.mp hrange
+    ext i j
+    have hh := congrArg (fun f => f (Pi.single j 1) i) hlin
+    simpa [Matrix.mulVecLin_apply, Matrix.mulVec_single_one] using hh
+  by_cases hX0 : X = 0
+  · exact Or.inr (Or.inr hX0)
+  have hXpos : 0 < X.rank := by
+    by_contra h
+    apply hX0
+    exact hzero X (Nat.eq_zero_of_not_pos h)
+  have hsum : X.rank + Y.rank ≤ 2 := by
+    simpa using Matrix.rank_add_rank_le_card_of_mul_eq_zero hXY
+  have hXle : X.rank ≤ 2 := (Nat.le_add_right _ _).trans hsum
+  have hcases : X.rank = 1 ∨ X.rank = 2 := by
+    obtain ⟨n, hn⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hXpos)
+    have hnle : n ≤ 1 := Nat.le_of_succ_le_succ (hn ▸ hXle)
+    by_cases hn0 : n = 0
+    · left
+      simp [hn, hn0]
+    · right
+      have hn1 : 1 ≤ n := Nat.one_le_iff_ne_zero.mpr hn0
+      have hn_eq : n = 1 := Nat.le_antisymm hnle hn1
+      simp [hn, hn_eq]
+  rcases hcases with hXone | hXtwo
+  · have hYdet : Y.det = 0 := by
+      by_contra hYdet
+      have hYr : Y.rank = 2 := by
+        simpa using Matrix.rank_of_det_ne_zero hYdet
+      have hsum' := hsum
+      rw [hXone, hYr] at hsum'
+      have hbad : 1 + 2 ≤ 2 := hsum'
+      exact (by decide : ¬ (1 + 2 ≤ 2)) hbad
+    have hXdet : X.det = 0 := by
+      by_contra hXdet
+      have hXr : X.rank = 2 := by
+        simpa using Matrix.rank_of_det_ne_zero hXdet
+      have hbad : (1 : Nat) = 2 := hXone.symm.trans hXr
+      exact (by decide : (1 : Nat) ≠ 2) hbad
+    exact Or.inr (Or.inl ⟨hXone, hXdet, hYdet⟩)
+  · have hYrank : Y.rank = 0 := by
+      have hsum' := hsum
+      rw [hXtwo] at hsum'
+      have heq : 2 + Y.rank = 2 := Nat.le_antisymm hsum' (Nat.le_add_right _ _)
+      have heq' : 2 + Y.rank = 2 + 0 := by simpa using heq
+      exact Nat.add_left_cancel heq'
+    have hYzero : Y = 0 := hzero Y hYrank
+    exact Or.inl ⟨hXtwo, hYzero⟩
 
 theorem matrixProduct_rank_normal_forms
     {k : Type u} [Field k] (X : Matrix2 k) :

@@ -73,7 +73,134 @@ theorem graded_injective_iff_strict_monomorphism
     {A B : FilteredObject C} (α : A ⟶ B)
     (hfiniteA : A.IsFinite) (hfiniteB : B.IsFinite) :
     GradedInjectiveMorphism α ↔ StrictMonomorphism α := by
-  sorry
+  rw [GradedInjectiveMorphism, StrictMonomorphism]
+  have strict_to_graded :
+      ∀ {X Y : FilteredObject C} (f : X ⟶ Y),
+        Mono f → Strict f → ∀ p : ℤ, Mono (gradedPieceMap f p) := by
+    intro X Y f hmono hs p
+    letI : Mono f := hmono
+    have hS := graded_piece_kernel_exact f p hs
+    have hK : IsZero (filteredKernel f) :=
+      KernelFork.IsLimit.isZero_of_mono (filteredKernelFork_isLimit f)
+    let e := hK.iso (zeroFilteredObject_isZero (C := C))
+    have eC : (filteredKernel f).carrier ≅
+        (zeroFilteredObject (C := C)).carrier :=
+      { hom := e.hom.hom
+        inv := e.inv.hom
+        hom_inv_id := by
+          have h := congrArg FilteredHom.hom e.hom_inv_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h
+        inv_hom_id := by
+          have h := congrArg FilteredHom.hom e.inv_hom_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h }
+    have hKC : IsZero (filteredKernel f).carrier :=
+      IsZero.of_iso (isZero_zero C) eC
+    have hstep : IsZero ((filteredKernel f).filtration.obj p : C) :=
+      IsZero.of_mono ((filteredKernel f).filtration.obj p).arrow hKC
+    have hpiece : IsZero (gradedPiece (filteredKernel f) p) := by
+      let j := (filteredKernel f).filtration.obj (p + 1)
+      let k := (filteredKernel f).filtration.obj p
+      letI : Epi (Subobject.ofLE j k
+          ((filteredKernel f).filtration.antitone (by omega))) := hstep.epi _
+      exact isZero_cokernel_of_epi _
+    have hfzero : gradedPieceMap (filteredKernelι f) p = 0 :=
+      hpiece.eq_zero_of_src _
+    exact ((filteredKernelGradedShortComplex f p).exact_iff_mono hfzero).mp hS
+  constructor
+  · intro h
+    have hKιmono : Mono (filteredKernelι α) := by
+      apply (filtered_mono_iff_underlying_mono (filteredKernelι α)).2
+      change Mono (Subobject.mk (kernel.ι α.hom)).arrow
+      infer_instance
+    have hKιstrict : Strict (filteredKernelι α) := by
+      exact strict_induced_iff (Subobject.mk (kernel.ι α.hom))
+    have hKιgraded : ∀ p : ℤ,
+        Mono (gradedPieceMap (filteredKernelι α) p) :=
+      strict_to_graded (filteredKernelι α) hKιmono hKιstrict
+    have hKfinite : (filteredKernel α).IsFinite := by
+      rcases hfiniteA with ⟨n, m, hn, hm⟩
+      refine ⟨n, m, ?_, ?_⟩
+      · dsimp [filteredKernel, inducedFilteredObject, inducedFiltration]
+        change (Subobject.pullback (Subobject.mk (kernel.ι α.hom)).arrow).obj
+          (A.filtration.obj n) = ⊤
+        rw [hn]
+        exact Subobject.pullback_top _
+      · dsimp [filteredKernel, inducedFilteredObject, inducedFiltration]
+        change (Subobject.pullback (Subobject.mk (kernel.ι α.hom)).arrow).obj
+          (A.filtration.obj m) = ⊥
+        rw [hm]
+        apply le_antisymm
+        · apply Subobject.le_of_factors
+          apply (Subobject.bot_factors_iff_zero _).2
+          apply (cancel_mono (Subobject.mk (kernel.ι α.hom)).arrow).1
+          rw [← (Subobject.isPullback (Subobject.mk (kernel.ι α.hom)).arrow
+            (⊥ : Subobject A.carrier)).w]
+          simp
+        · exact bot_le
+    have hKgrzero : ∀ p : ℤ, IsZero (gradedPiece (filteredKernel α) p) := by
+      intro p
+      have hzero : gradedPieceMap (filteredKernelι α) p = 0 := by
+        apply (cancel_mono (gradedPieceMap α p)).1
+        rw [zero_comp]
+        change gradedPieceMap (filteredKernelι α) p ≫ gradedPieceMap α p = 0
+        exact (filteredKernelGradedShortComplex α p).zero
+      letI : Mono (gradedPieceMap (filteredKernelι α) p) := hKιgraded p
+      exact IsZero.of_mono_eq_zero _ hzero
+    let Z := zeroFilteredObject (C := C)
+    let f : Z ⟶ filteredKernel α := 0
+    let g : filteredKernel α ⟶ Z := 0
+    have hfg : f ≫ g = 0 := by simp [f, g]
+    have hZfinite : Z.IsFinite := by
+      refine ⟨0, 0, ?_, ?_⟩
+      · change Subobject.mk (𝟙 Z.carrier) = ⊤
+        exact Subobject.mk_eq_top_of_isIso _
+      · change Subobject.mk (𝟙 Z.carrier) = ⊥
+        apply (Subobject.mk_eq_bot_iff_zero).2
+        exact (isZero_zero C).eq_of_src _ _
+    have hgradedZ : ∀ p : ℤ,
+        (gradedPieceComplex f g hfg p).Exact := by
+      intro p
+      have hmapf : gradedPieceMap f p = 0 := by
+        letI : (gradedPieceFunctor (C := C) p).Additive :=
+          gradedPieceFunctor_is_additive p
+        change (gradedPieceFunctor (C := C) p).map f = 0
+        exact (gradedPieceFunctor (C := C) p).map_zero Z (filteredKernel α)
+      have hm : Mono (gradedPieceMap g p) := (hKgrzero p).mono _
+      exact ((gradedPieceComplex f g hfg p).exact_iff_mono hmapf).2 hm
+    have hzero_exact :=
+      (filtered_acyclic f g hfg hZfinite hKfinite hZfinite hgradedZ).2.2.2.2.2
+    have hmono_g : Mono g.hom := by
+      have hzcomp : f.hom ≫ g.hom = 0 := by
+        have h := congrArg FilteredHom.hom hfg
+        have hz : FilteredHom.hom (0 : Z ⟶ Z) = 0 := rfl
+        simpa only [filteredHom_comp_hom, hz] using h
+      apply ((ShortComplex.mk f.hom g.hom hzcomp).exact_iff_mono (by
+        change f.hom = 0
+        change (0 : Z.carrier ⟶ (filteredKernel α).carrier) = 0
+        rfl)).1
+      exact hzero_exact
+    have hKcarrier : IsZero (filteredKernel α).carrier :=
+      IsZero.of_mono g.hom (isZero_zero C)
+    have hkernel : IsZero (kernel α.hom) :=
+      IsZero.of_iso hKcarrier (Subobject.underlyingIso (kernel.ι α.hom)).symm
+    have hmono : Mono α := by
+      apply (filtered_mono_iff_underlying_mono α).2
+      exact (mono_iff_isZero_kernel α.hom).2 hkernel
+    have hKgradedComplex : ∀ p : ℤ,
+        (gradedPieceComplex (filteredKernelι α) α (filteredKernelι_comp α) p).Exact := by
+      intro p
+      have hzero : gradedPieceMap (filteredKernelι α) p = 0 := by
+        apply (cancel_mono (gradedPieceMap α p)).1
+        rw [zero_comp]
+        change gradedPieceMap (filteredKernelι α) p ≫ gradedPieceMap α p = 0
+        exact (filteredKernelGradedShortComplex α p).zero
+      exact (ShortComplex.exact_iff_mono _ hzero).2 (h p)
+    have hstrict_exact :=
+      filtered_acyclic (filteredKernelι α) α (filteredKernelι_comp α)
+        hKfinite hfiniteA hfiniteB hKgradedComplex
+    exact ⟨hmono, hstrict_exact.2.2.2.2.1⟩
+  · rintro ⟨hmono, hs⟩ p
+    exact strict_to_graded α hmono hs p
 
 /-- A finite filtered object whose graded pieces are injective. -/
 def IsFilteredInjective

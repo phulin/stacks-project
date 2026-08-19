@@ -836,7 +836,7 @@ theorem ass_reverse_functoriality_example
     intro hzero
     have hmem : (1 : P) ∈ I := Ideal.Quotient.eq_zero_iff_mem.mp hzero
     have : hev 1 = 0 := hIker hmem
-    simpa using this
+    simp at this
   have hnonempty : (associatedPrimes k Q).Nonempty := by
     apply Set.nonempty_iff_ne_empty.mpr
     intro h
@@ -877,7 +877,7 @@ theorem ass_reverse_functoriality_example
             ∃ i : ℕ, Finsupp.single i 2 ≤ d) := by
           intro hall
           exact hf ((hIcrit f).mpr hall)
-        push_neg at hnot
+        push Not at hnot
         obtain ⟨d, hd, hnone⟩ := hnot
         obtain ⟨i, hi⟩ := d.support.exists_notMem
         have he : Finsupp.single i 1 + d ∈
@@ -893,14 +893,14 @@ theorem ass_reverse_functoriality_example
             by_contra hdi
             exact hi (Finsupp.mem_support_iff.mpr hdi)
           have := hj i
-          simp [Finsupp.single_apply, hdi] at this
+          simp [hdi] at this
         · apply hnone j
           intro l
           by_cases hlj : j = l
           · subst l
             have h := hj j
-            simpa [Finsupp.single_apply, hji] using h
-          · simp [Finsupp.single_apply, hlj]
+            simpa [hji] using h
+          · simp [hlj]
       have hmzero : Ideal.Quotient.mk I f = 0 :=
         Ideal.Quotient.eq_zero_iff_mem.mpr hfI
       apply p.isPrime.ne_top
@@ -923,7 +923,7 @@ theorem ass_functorial_eq_of_noetherian
     (letI : Module R M := Module.compHom M φ;
       PrimeSpectrum.comap φ '' associatedPrimes S M =
         associatedPrimes R M) := by
-  letI : Module R M := Module.compHom M φ
+  let : Module R M := Module.compHom M φ
   change PrimeSpectrum.comap φ '' associatedPrimes S M = associatedPrimes R M
   apply Set.Subset.antisymm (ass_functorial φ)
   intro p hp
@@ -993,7 +993,7 @@ theorem ass_quotient_ring
     (letI : Module R M := Module.compHom M (Ideal.Quotient.mk I);
       PrimeSpectrum.comap (Ideal.Quotient.mk I) ''
           associatedPrimes (R ⧸ I) M = associatedPrimes R M) := by
-  letI : Module R M := Module.compHom M (Ideal.Quotient.mk I)
+  let : Module R M := Module.compHom M (Ideal.Quotient.mk I)
   change PrimeSpectrum.comap (Ideal.Quotient.mk I) ''
       associatedPrimes (R ⧸ I) M = associatedPrimes R M
   apply Set.Subset.antisymm (ass_functorial (Ideal.Quotient.mk I))

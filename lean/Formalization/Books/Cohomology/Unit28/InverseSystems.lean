@@ -182,12 +182,24 @@ def cohomologyBoundary
   H.delta (adicPowerShortComplex S (n : ℕ) m n.2 h)
     (adicPowerShortComplex_shortExact S (n : ℕ) m n.2 h) p
 
+/-! ## Graded compatibility needed by the source arguments -/
+
 /-- The degree-`p` family `H^p(X,I^n F_{n+1})`. -/
 abbrev powerCohomologyModuleFamily
     {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
     (H : SheafCohomologicalDeltaFunctor A X)
     (S : IAdicSheafSystem A X I) (p : ℕ) : ℕ → ModuleCat.{v} A :=
   fun n => (H.functor p).obj (S.power n n le_rfl)
+
+/- The boundary map at the matching stage has the target used by the
+   degree-indexed power cohomology family. -/
+def cohomologyBoundaryAtStage
+    {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
+    (H : SheafCohomologicalDeltaFunctor A X)
+    (S : IAdicSheafSystem A X I) (n : ℕ+) (p : ℕ) :
+    (cohomologySystem H S p).obj (op n) ⟶
+      powerCohomologyModuleFamily H S (p + 1) (n : ℕ) :=
+  cohomologyBoundary H S n (n : ℕ) le_rfl p
 
 /-- The `m`-th image in the source's definition of the stable `N_n`. -/
 def powerCohomologyImage
@@ -240,6 +252,53 @@ def GradedModuleHasACC
   exact IsNoetherian (associatedGradedRing I)
     (DirectSum ℕ (fun n => (N n : Type v)))
 
+/- A graded action on a family of submodules must be the restriction of the
+   action on its ambient family.  An unrelated `DirectSum.Gmodule` instance
+   is not enough for the graded-submodule arguments in the source proofs. -/
+def GradedSubmoduleActionCompatible
+    {A : Type v} [CommRing A] (I : Ideal A)
+    (P : ℕ → ModuleCat.{v} A)
+    (N : ∀ n, Submodule A ((P n : Type v)))
+    (hP : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (P n : Type v)))
+    (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (N n : Type v))) : Prop := by
+  classical
+  letI : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (P n : Type v)) := hP
+  letI : GradedMonoid.GSMul (associatedGradedRingPiece I)
+      (fun n => (P n : Type v)) := hP.toGdistribMulAction.toGMulAction.toGSMul
+  letI : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (N n : Type v)) := hN
+  letI : GradedMonoid.GSMul (associatedGradedRingPiece I)
+      (fun n => (N n : Type v)) := hN.toGdistribMulAction.toGMulAction.toGSMul
+  exact ∀ (k n : ℕ) (a : associatedGradedRingPiece I k) (x : N n),
+    ((@GradedMonoid.GSMul.smul ℕ ℕ (fun n => associatedGradedRingPiece I n)
+      (fun n => (N n : Type v)) _ _ k n a x : N (k + n)) : P (k + n)) =
+      @GradedMonoid.GSMul.smul ℕ ℕ (fun n => associatedGradedRingPiece I n)
+        (fun n => (P n : Type v)) _ _ k n a (x : P n)
+
+/- The direct sum of the component images of the boundary maps must be a
+   graded submodule of the ambient power-cohomology family. -/
+def GradedBoundaryImageCompatible
+    {A : Type v} [CommRing A] (I : Ideal A)
+    (M : InverseSystem ℕ+ (ModuleCat.{v} A))
+    (P : ℕ → ModuleCat.{v} A)
+    (δ : ∀ n : ℕ+, M.obj (op n) ⟶ P (n : ℕ))
+    (hP : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (P n : Type v))) : Prop := by
+  classical
+  letI : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => (P n : Type v)) := hP
+  letI : GradedMonoid.GSMul (associatedGradedRingPiece I)
+      (fun n => (P n : Type v)) := hP.toGdistribMulAction.toGMulAction.toGSMul
+  exact ∀ (k : ℕ) (n : ℕ+) (a : associatedGradedRingPiece I k)
+    (x : P (n : ℕ)),
+    x ∈ LinearMap.range (δ n).hom →
+      (@GradedMonoid.GSMul.smul ℕ ℕ (fun n => associatedGradedRingPiece I n)
+        (fun n => (P n : Type v)) _ _ k (n : ℕ) a x) ∈ LinearMap.range
+        (δ ⟨k + (n : ℕ), Nat.add_pos_right k n.2⟩).hom
+
 /-! ## The inverse-limit filtration and topology -/
 
 /-- The kernel filtration `F^n = Ker(M → H^p(X,F_n))` on an inverse limit. -/
@@ -262,6 +321,32 @@ def inverseSystemLimitFiltrationAt
     (M : InverseSystem ℕ+ (ModuleCat.{v} A)) (n : ℕ) :
     Submodule A ((InverseSystemLimit M : ModuleCat.{v} A) : Type v) :=
   if h : 0 < n then inverseSystemLimitFiltration (M := M) ⟨n, h⟩ else ⊤
+
+/- The image of the `n`th filtration piece in the next cohomology stage. -/
+def inverseSystemLimitFiltrationImage
+    {A : Type v} [CommRing A]
+    (M : InverseSystem ℕ+ (ModuleCat.{v} A)) (n : ℕ) :
+    Submodule A ((M.obj (op (positiveStage n)) : Type v)) :=
+  LinearMap.range (((limit.π M (op (positiveStage n))).hom.comp
+    (inverseSystemLimitFiltrationAt M n).subtype))
+
+/- The submodule called `E_n` in the topology proof. -/
+def powerCohomologyFiltrationSubmodule
+    {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
+    (H : SheafCohomologicalDeltaFunctor A X)
+    (S : IAdicSheafSystem A X I) (p n : ℕ) :
+    Submodule A ((powerCohomologyModuleFamily H S p n : Type v)) :=
+  (inverseSystemLimitFiltrationImage (cohomologySystem H S p) n).comap
+    (((H.functor p).map (S.powerToStage n n le_rfl)).hom)
+
+/- The corresponding `E_n` after restricting to the stable `N_n`. -/
+def stablePowerCohomologyFiltrationSubmodule
+    {A : Type v} [CommRing A] {X : TopCat.{v}} {I : Ideal A}
+    (H : SheafCohomologicalDeltaFunctor A X)
+    (S : IAdicSheafSystem A X I) (p n : ℕ) :
+    Submodule A ((stablePowerCohomologyModuleFamily H S p n : Type v)) :=
+  (powerCohomologyFiltrationSubmodule H S p n).comap
+    (stablePowerCohomologySubmodule H S p n).subtype
 
 /-- The limit topology induced by the discrete topologies on all stages. -/
 @[instance_reducible]
@@ -305,6 +390,10 @@ theorem lemma_ML_general
     (S : IAdicSheafSystem A X I) (p : ℕ)
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => (powerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hBoundary : GradedBoundaryImageCompatible I
+      (cohomologySystem H S p)
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => cohomologyBoundaryAtStage H S n p) hN)
     (hACC : GradedModuleHasACC I
       (powerCohomologyModuleFamily H S (p + 1)) hN) :
     cohomologySystemIsMittagLeffler H S p := by
@@ -317,6 +406,10 @@ theorem lemma_ML_general_stable_image
     (S : IAdicSheafSystem A X I) (p : ℕ)
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => (powerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hBoundary : GradedBoundaryImageCompatible I
+      (cohomologySystem H S p)
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => cohomologyBoundaryAtStage H S n p) hN)
     (hACC : GradedModuleHasACC I
       (powerCohomologyModuleFamily H S (p + 1)) hN) :
     cohomologySystemHasUniformStableImage H S p := by
@@ -330,6 +423,16 @@ theorem lemma_ML_general_better
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n =>
         (stablePowerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hP : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (powerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hStableCompatible : GradedSubmoduleActionCompatible I
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => stablePowerCohomologySubmodule H S (p + 1) n) hP hN)
+    (hBoundary : GradedBoundaryImageCompatible I
+      (cohomologySystem H S p)
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => cohomologyBoundaryAtStage H S n p) hP)
     (hACC : GradedModuleHasACC I
       (stablePowerCohomologyModuleFamily H S (p + 1)) hN) :
     cohomologySystemIsMittagLeffler H S p := by
@@ -343,6 +446,16 @@ theorem lemma_ML_general_better_stable_image
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n =>
         (stablePowerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hP : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (powerCohomologyModuleFamily H S (p + 1) n : Type v)))
+    (hStableCompatible : GradedSubmoduleActionCompatible I
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => stablePowerCohomologySubmodule H S (p + 1) n) hP hN)
+    (hBoundary : GradedBoundaryImageCompatible I
+      (cohomologySystem H S p)
+      (powerCohomologyModuleFamily H S (p + 1))
+      (fun n => cohomologyBoundaryAtStage H S n p) hP)
     (hACC : GradedModuleHasACC I
       (stablePowerCohomologyModuleFamily H S (p + 1)) hN) :
     cohomologySystemHasUniformStableImage H S p := by
@@ -359,6 +472,12 @@ theorem lemma_topology_I_adic_general
     (S : IAdicSheafSystem A X I) (p : ℕ) (hI : I.FG)
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => (powerCohomologyModuleFamily H S p n : Type v)))
+    (hE : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (powerCohomologyFiltrationSubmodule H S p n : Type v)))
+    (hECompatible : GradedSubmoduleActionCompatible I
+      (powerCohomologyModuleFamily H S p)
+      (fun n => powerCohomologyFiltrationSubmodule H S p n) hN hE)
     (hACC : GradedModuleHasACC I
       (powerCohomologyModuleFamily H S p) hN) :
     inverseSystemLimitTopology (cohomologySystem H S p) =
@@ -372,6 +491,12 @@ theorem lemma_topology_I_adic_general_uniform_bound
     (S : IAdicSheafSystem A X I) (p : ℕ) (hI : I.FG)
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => (powerCohomologyModuleFamily H S p n : Type v)))
+    (hE : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (powerCohomologyFiltrationSubmodule H S p n : Type v)))
+    (hECompatible : GradedSubmoduleActionCompatible I
+      (powerCohomologyModuleFamily H S p)
+      (fun n => powerCohomologyFiltrationSubmodule H S p n) hN hE)
     (hACC : GradedModuleHasACC I
       (powerCohomologyModuleFamily H S p) hN) :
     inverseSystemLimitHasUniformAdicBound I (cohomologySystem H S p) := by
@@ -385,6 +510,12 @@ theorem lemma_topology_I_adic_general_better
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n =>
         (stablePowerCohomologyModuleFamily H S p n : Type v)))
+    (hE : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (stablePowerCohomologyFiltrationSubmodule H S p n : Type v)))
+    (hECompatible : GradedSubmoduleActionCompatible I
+      (stablePowerCohomologyModuleFamily H S p)
+      (fun n => stablePowerCohomologyFiltrationSubmodule H S p n) hN hE)
     (hACC : GradedModuleHasACC I
       (stablePowerCohomologyModuleFamily H S p) hN) :
     inverseSystemLimitTopology (cohomologySystem H S p) =
@@ -399,6 +530,12 @@ theorem lemma_topology_I_adic_general_better_uniform_bound
     (hN : DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n =>
         (stablePowerCohomologyModuleFamily H S p n : Type v)))
+    (hE : DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n =>
+        (stablePowerCohomologyFiltrationSubmodule H S p n : Type v)))
+    (hECompatible : GradedSubmoduleActionCompatible I
+      (stablePowerCohomologyModuleFamily H S p)
+      (fun n => stablePowerCohomologyFiltrationSubmodule H S p n) hN hE)
     (hACC : GradedModuleHasACC I
       (stablePowerCohomologyModuleFamily H S p) hN) :
     inverseSystemLimitHasUniformAdicBound I (cohomologySystem H S p) := by

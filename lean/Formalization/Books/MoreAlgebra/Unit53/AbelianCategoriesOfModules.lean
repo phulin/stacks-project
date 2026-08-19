@@ -105,14 +105,14 @@ instance coherentModuleProperty_isWeakSerreClass
     let K := kernel f₃
     let u := cokernel.desc f₀ f₁ (hS.toIsComplex.zero 0)
     let v := kernel.lift f₃ f₂ (hS.toIsComplex.zero 2)
-    letI : P.IsClosedUnderKernels := hK
-    letI : P.IsClosedUnderCokernels := hC
+    let : P.IsClosedUnderKernels := hK
+    let : P.IsClosedUnderCokernels := hC
     have hQ : P Q := by
       exact P.prop_cokernel f₀ h₀ h₁
     have hK' : P K := by
       exact P.prop_kernel f₃ h₃ h₄
-    letI : Epi (cokernel.π f₀) := by infer_instance
-    letI : Mono (kernel.ι f₃) := by infer_instance
+    let : Epi (cokernel.π f₀) := by infer_instance
+    let : Mono (kernel.ι f₃) := by infer_instance
     let T₁ : ShortComplex (moduleCategory R) := ShortComplex.mk u f₂ (by
       apply (cancel_epi (cokernel.π f₀)).1
       dsimp [u]
@@ -123,13 +123,13 @@ instance coherentModuleProperty_isWeakSerreClass
         (cokernel.π f₀) (𝟙 _) (𝟙 _)
         (by dsimp [T₁, u]; simp [f₁])
         (by dsimp [T₁]; simp [f₂])
-      letI : Epi φ.τ₁ := by
+      let : Epi φ.τ₁ := by
         change Epi (cokernel.π f₀)
         infer_instance
-      letI : IsIso φ.τ₂ := by
+      let : IsIso φ.τ₂ := by
         change IsIso (𝟙 _)
         infer_instance
-      letI : Mono φ.τ₃ := by
+      let : Mono φ.τ₃ := by
         change Mono (𝟙 _)
         infer_instance
       exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).1 (hS.exact 1)
@@ -146,20 +146,20 @@ instance coherentModuleProperty_isWeakSerreClass
         (𝟙 _) (𝟙 _) (kernel.ι f₃)
         (by dsimp [T, T₁]; simp)
         (by dsimp [T, T₁, v]; simp)
-      letI : Epi φ.τ₁ := by
+      let : Epi φ.τ₁ := by
         change Epi (𝟙 _)
         infer_instance
-      letI : IsIso φ.τ₂ := by
+      let : IsIso φ.τ₂ := by
         change IsIso (𝟙 _)
         infer_instance
-      letI : Mono φ.τ₃ := by
+      let : Mono φ.τ₃ := by
         change Mono (kernel.ι f₃)
         infer_instance
       exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).2 hT₁
-    letI : Mono u := by
+    let : Mono u := by
       dsimp [u]
       exact (hS.exact 0).mono_cokernelDesc
-    letI : Epi v := by
+    let : Epi v := by
       dsimp [v]
       exact (hS.exact 2).epi_kernelLift
     exact hExt.prop_X₂_of_shortExact
@@ -332,40 +332,40 @@ theorem iPowerTorsionModuleCategory_is_abelian
   let hSerre : (iPowerTorsionModuleProperty R I).IsSerreClass :=
     iPowerTorsionModuleProperty_isSerreClass R I hI
   let P : ObjectProperty (moduleCategory R) := iPowerTorsionModuleProperty R I
-  letI : P.IsSerreClass := hSerre
-  letI : P.IsClosedUnderSubobjects := hSerre.toIsClosedUnderSubobjects
-  letI : P.IsClosedUnderQuotients := hSerre.toIsClosedUnderQuotients
-  letI : P.IsClosedUnderExtensions := hSerre.toIsClosedUnderExtensions
-  letI : P.IsClosedUnderKernels := by
+  let : P.IsSerreClass := hSerre
+  let : P.IsClosedUnderSubobjects := hSerre.toIsClosedUnderSubobjects
+  let : P.IsClosedUnderQuotients := hSerre.toIsClosedUnderQuotients
+  let : P.IsClosedUnderExtensions := hSerre.toIsClosedUnderExtensions
+  let : P.IsClosedUnderKernels := by
     refine ⟨?_⟩
     intro Z hZ
     rcases hZ with ⟨f, k, hk, hXY⟩
-    letI : Mono (ModuleCat.kernelCone f).ι := by
+    let : Mono (ModuleCat.kernelCone f).ι := by
       apply (ModuleCat.mono_iff_injective _).2
       intro x y hxy
       exact Subtype.ext hxy
     exact P.prop_of_iso
       (IsLimit.conePointUniqueUpToIso (ModuleCat.kernelIsLimit f) hk)
       (P.prop_of_mono (ModuleCat.kernelCone f).ι hXY.1)
-  letI : P.IsClosedUnderCokernels := by
+  let : P.IsClosedUnderCokernels := by
     refine ⟨?_⟩
     intro Z hZ
     rcases hZ with ⟨f, k, hk, hXY⟩
-    letI : Epi (ModuleCat.cokernelCocone f).π := by
+    let : Epi (ModuleCat.cokernelCocone f).π := by
       apply (ModuleCat.epi_iff_surjective _).2
       change Function.Surjective (LinearMap.range f.hom).mkQ
       exact (LinearMap.range f.hom).mkQ_surjective
     exact P.prop_of_iso
       (IsColimit.coconePointUniqueUpToIso (ModuleCat.cokernelIsColimit f) hk)
       (P.prop_of_epi (ModuleCat.cokernelCocone f).π hXY.2)
-  letI : P.IsClosedUnderBinaryProducts := by
+  let : P.IsClosedUnderBinaryProducts := by
     apply ObjectProperty.IsClosedUnderLimitsOfShape.mk'
     rintro X ⟨F, hF⟩
     exact P.prop_of_iso
       (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
         (limit.isLimit F) (diagramIsoPair F).symm)
       (P.prop_biprod (hF ⟨WalkingPair.left⟩) (hF ⟨WalkingPair.right⟩))
-  letI : P.IsClosedUnderFiniteProducts := ObjectProperty.IsClosedUnderFiniteProducts.mk'
+  let : P.IsClosedUnderFiniteProducts := ObjectProperty.IsClosedUnderFiniteProducts.mk'
   exact ⟨inferInstance⟩
 
 /-! ## Torsion modules -/
@@ -389,7 +389,7 @@ instance torsionModuleProperty_isSerreClass
     unfold Module.IsTorsion
     intro x
     refine ⟨1, ?_⟩
-    simp only [Submonoid.smul_def, one_smul]
+    simp only [one_smul]
     exact Subsingleton.elim _ _
   have hsub : P.IsClosedUnderSubobjects := by
     refine ⟨?_⟩

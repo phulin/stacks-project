@@ -345,11 +345,11 @@ theorem finite_generation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.Finite R (M : Type w),
-      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
+      ∀ (A : Type (max v w)) (Q : A → ModuleCat.{max u z} R),
         Function.Surjective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{max u v w} R) (A : Type (max u v w)),
+      ∀ (Q : ModuleCat.{max u z} R) (A : Type (max v w)),
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
-      ∀ (A : Type (max u v w)),
+      ∀ (A : Type (max v w)),
         Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
   classical
@@ -377,8 +377,8 @@ theorem finite_generation_tensor_iff
           _ = f (∑ i, c i • Pi.single i (1 : R)) := congrArg f hc'
           _ = ∑ i, c i • g i := by simp [g]
       have hdecomp (a : A)
-          (x : TensorProduct R (M : Type w) (Q a : Type (max u v w))) :
-          ∃ q : Fin n → (Q a : Type (max u v w)),
+          (x : TensorProduct R (M : Type w) (Q a : Type (max u z))) :
+          ∃ q : Fin n → (Q a : Type (max u z)),
             x = ∑ i, g i ⊗ₜ[R] q i := by
         induction x using TensorProduct.induction_on with
         | zero =>
@@ -402,7 +402,7 @@ theorem finite_generation_tensor_iff
       intro y
       choose q hq using fun a => hdecomp a (y a)
       let t : TensorProduct R (M : Type w)
-          (∀ a, (Q a : Type (max u v w))) :=
+          (∀ a, (Q a : Type (max u z))) :=
         ∑ i, g i ⊗ₜ[R] (fun a => q a i)
       refine ⟨t, ?_⟩
       ext a
@@ -412,8 +412,8 @@ theorem finite_generation_tensor_iff
     exact h A (fun _ => Q)
   tfae_have 3 → 4 := by
     intro h A y
-    let U := ULift.{max u v w} R
-    let Q : ModuleCat.{max u v w} R := ModuleCat.of R U
+    let U := ULift.{max u z} R
+    let Q : ModuleCat.{max u z} R := ModuleCat.of R U
     let eU : TensorProduct R (M : Type w) U ≃ₗ[R] (M : Type w) :=
       (TensorProduct.congr (LinearEquiv.refl R (M : Type w))
         (ULift.moduleEquiv (R := R) (M := R))).trans
@@ -442,7 +442,7 @@ theorem finite_generation_tensor_iff
   tfae_have 4 → 1 := by
     intro h
     ·
-      have hrepr {A : Type (max u v w)}
+      have hrepr {A : Type (max v w)}
           (x : TensorProduct R (M : Type w) (A → R)) :
           ∃ k, ∃ (m : Fin k → (M : Type w)),
             ∃ (q : Fin k → (A → R)),
@@ -463,7 +463,7 @@ theorem finite_generation_tensor_iff
             rw [map_add, hx, hy]
             ext y
             simp [Fin.sum_univ_add]
-      let A := ULift.{max u v w} (M : Type w)
+      let A := ULift.{v} (M : Type w)
       obtain ⟨x, hx⟩ := h A (fun y : A => y.down)
       obtain ⟨k, m, q, hq⟩ := hrepr x
       refine Module.Finite.of_surjective (Fintype.linearCombination R m) ?_
@@ -478,11 +478,11 @@ theorem finite_presentation_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       Module.FinitePresentation R (M : Type w),
-      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
+      ∀ (A : Type (max v w)) (Q : A → ModuleCat.{max u z} R),
         Function.Bijective (productTensorMap M Q),
-      ∀ (Q : ModuleCat.{max u v w} R) (A : Type (max u v w)),
+      ∀ (Q : ModuleCat.{max u z} R) (A : Type (max v w)),
         Function.Bijective (productTensorMap M (fun _ : A => Q)),
-      ∀ (A : Type (max u v w)),
+      ∀ (A : Type (max v w)),
         Function.Bijective (tensorModulePowerMap M (A := A))
     ] := by
   sorry
@@ -508,7 +508,7 @@ theorem mittagLeffler_tensor_iff
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     List.TFAE [
       IsMittagLefflerModule M,
-      ∀ (A : Type (max u v w)) (Q : A → ModuleCat.{max u v w} R),
+      ∀ (A : Type (max v w)) (Q : A → ModuleCat.{max u z} R),
         Function.Injective (productTensorMap M Q)
     ] := by
   sorry

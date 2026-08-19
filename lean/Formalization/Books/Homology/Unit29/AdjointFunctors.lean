@@ -456,7 +456,7 @@ theorem adjoint_functorial_injective_embeddings
     {B : Type u₂} [Category.{v₂} B] [Abelian B]
     (u : A ⥤ B) (v : B ⥤ A) [u.Additive] [v.Additive]
     (hAdj : v ⊣ u) (hMono : PreservesMonomorphisms v)
-    (_hEnough : EnoughInjectives A)
+    (_ : EnoughInjectives A)
     (hReflectsZero : ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀)
     (hFunctorial : HasFunctorialInjectiveEmbeddings (C := A)) :
     HasFunctorialInjectiveEmbeddings (C := B) := by

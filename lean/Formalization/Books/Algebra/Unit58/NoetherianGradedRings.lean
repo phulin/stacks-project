@@ -562,7 +562,9 @@ theorem isNumericalPolynomial_of_sub
     simp [integerBinomial, hn]
     abel_nf
     -/
-    sorry
+    rw [hfirst]
+    simp [integerBinomial, hn]
+    abel
   refine ⟨r + 1, b, ?_⟩
   filter_upwards [Filter.Ici_mem_atTop N] with n hn
   obtain ⟨_, hn0⟩ := hN n hn

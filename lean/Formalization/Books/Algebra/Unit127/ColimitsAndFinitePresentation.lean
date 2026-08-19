@@ -1316,6 +1316,66 @@ def baseChangeRingHomOfCompatible
           congrArg (fun q : R →+* S' => q r) compat.symm }
   exact (Algebra.TensorProduct.lift hs hk (fun _ _ => Commute.all _ _)).toRingHom
 
+private theorem baseChangeRingHomOfCompatible_includeLeft
+    {R S R' S' : Type u} [CommRing R] [CommRing S] [CommRing R'] [CommRing S']
+    (f : R →+* S) (g : R →+* R') (h : S →+* S') (k : R' →+* S')
+    (compat : h.comp f = k.comp g) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    letI : Algebra R S' := (h.comp f).toAlgebra
+    letI : Algebra R' S' := k.toAlgebra
+    ∀ a : S,
+      baseChangeRingHomOfCompatible f g h k compat
+        (Algebra.TensorProduct.includeLeftRingHom a) = h a := by
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  letI : Algebra R S' := (h.comp f).toAlgebra
+  letI : Algebra R' S' := k.toAlgebra
+  intro a
+  let hs : S →ₐ[R] S' :=
+    { toRingHom := h
+      commutes' := fun r => rfl }
+  let hk : R' →ₐ[R] S' :=
+    { toRingHom := k
+      commutes' := fun r => by
+        change k (g r) = h (f r)
+        simpa [RingHom.comp_apply] using
+          congrArg (fun q : R →+* S' => q r) compat.symm }
+  change (Algebra.TensorProduct.lift hs hk _) _ = _
+  exact congrArg (fun q => q a)
+    (Algebra.TensorProduct.lift_comp_includeLeft
+      (f := hs) (g := hk) (fun _ _ => Commute.all _ _))
+
+private theorem baseChangeRingHomOfCompatible_includeRight
+    {R S R' S' : Type u} [CommRing R] [CommRing S] [CommRing R'] [CommRing S']
+    (f : R →+* S) (g : R →+* R') (h : S →+* S') (k : R' →+* S')
+    (compat : h.comp f = k.comp g) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    letI : Algebra R S' := (h.comp f).toAlgebra
+    letI : Algebra R' S' := k.toAlgebra
+    ∀ b : R',
+      baseChangeRingHomOfCompatible f g h k compat
+        (Algebra.TensorProduct.includeRight.toRingHom b) = k b := by
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  letI : Algebra R S' := (h.comp f).toAlgebra
+  letI : Algebra R' S' := k.toAlgebra
+  intro b
+  let hs : S →ₐ[R] S' :=
+    { toRingHom := h
+      commutes' := fun r => rfl }
+  let hk : R' →ₐ[R] S' :=
+    { toRingHom := k
+      commutes' := fun r => by
+        change k (g r) = h (f r)
+        simpa [RingHom.comp_apply] using
+          congrArg (fun q : R →+* S' => q r) compat.symm }
+  change (Algebra.TensorProduct.lift hs hk _) _ = _
+  exact congrArg (fun q => q b)
+    (Algebra.TensorProduct.lift_comp_includeRight
+      (f := hs) (g := hk) (fun _ _ => Commute.all _ _))
+
 /-- A finitely presented algebra over a specified commutative ring. -/
 structure FpAlgebraOver (A : Type u) [CommRing A] where
   carrier : Type u
@@ -2174,6 +2234,542 @@ private def finiteTypeTargetIndex
     map_id := by intro X; rfl
     map_comp := by intro X Y Z hXY hYZ; rfl }
 
+private theorem finiteTypeCoverBySourceElements
+    {R S : Type u} [CommRing R] [CommRing S]
+    [DecidableEq R] [DecidableEq S] (f : R →+* S)
+    (G : Finset S)
+    (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤)
+    (x : S) :
+    ∃ E : Finset R,
+      x ∈ Subring.closure ((G ∪ E.image f : Finset S) : Set S) := by
+  letI : Algebra R S := f.toAlgebra
+  have hx : x ∈ Algebra.adjoin R (G : Set S) := by
+    rw [hG]
+    trivial
+  refine Algebra.adjoin_induction ?_ ?_ ?_ ?_ hx
+  · intro y hy
+    exact ⟨∅, Subring.subset_closure (Finset.mem_union_left _ hy)⟩
+  · intro r
+    refine ⟨{r}, ?_⟩
+    apply Subring.subset_closure
+    exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨r, by simp, rfl⟩)
+  · intro y z hy hz hy' hz'
+    obtain ⟨E, hE⟩ := hy'
+    obtain ⟨F, hF⟩ := hz'
+    refine ⟨E ∪ F, add_mem ?_ ?_⟩
+    · have hsub :
+          ((G ∪ E.image f : Finset S) : Set S) ⊆
+            ((G ∪ (E ∪ F).image f : Finset S) : Set S) := by
+        intro w hw
+        rcases Finset.mem_union.mp hw with hw | hw
+        · exact Finset.mem_union_left _ hw
+        · rcases Finset.mem_image.mp hw with ⟨r, hr, rfl⟩
+          exact Finset.mem_union_right _
+            (Finset.mem_image.mpr ⟨r, Finset.mem_union_left _ hr, rfl⟩)
+      exact (Subring.closure_mono hsub) hE
+    · have hsub :
+          ((G ∪ F.image f : Finset S) : Set S) ⊆
+            ((G ∪ (E ∪ F).image f : Finset S) : Set S) := by
+        intro w hw
+        rcases Finset.mem_union.mp hw with hw | hw
+        · exact Finset.mem_union_left _ hw
+        · rcases Finset.mem_image.mp hw with ⟨r, hr, rfl⟩
+          exact Finset.mem_union_right _
+            (Finset.mem_image.mpr ⟨r, Finset.mem_union_right _ hr, rfl⟩)
+      exact (Subring.closure_mono hsub) hF
+  · intro y z hy hz hy' hz'
+    obtain ⟨E, hE⟩ := hy'
+    obtain ⟨F, hF⟩ := hz'
+    refine ⟨E ∪ F, mul_mem ?_ ?_⟩
+    · have hsub :
+          ((G ∪ E.image f : Finset S) : Set S) ⊆
+            ((G ∪ (E ∪ F).image f : Finset S) : Set S) := by
+        intro w hw
+        rcases Finset.mem_union.mp hw with hw | hw
+        · exact Finset.mem_union_left _ hw
+        · rcases Finset.mem_image.mp hw with ⟨r, hr, rfl⟩
+          exact Finset.mem_union_right _
+            (Finset.mem_image.mpr ⟨r, Finset.mem_union_left _ hr, rfl⟩)
+      exact (Subring.closure_mono hsub) hE
+    · have hsub :
+          ((G ∪ F.image f : Finset S) : Set S) ⊆
+            ((G ∪ (E ∪ F).image f : Finset S) : Set S) := by
+        intro w hw
+        rcases Finset.mem_union.mp hw with hw | hw
+        · exact Finset.mem_union_left _ hw
+        · rcases Finset.mem_image.mp hw with ⟨r, hr, rfl⟩
+          exact Finset.mem_union_right _
+            (Finset.mem_image.mpr ⟨r, Finset.mem_union_right _ hr, rfl⟩)
+      exact (Subring.closure_mono hsub) hF
+
+private def finiteSetIndexDirected {R : Type u} [CommRing R] :
+    IsDirectedSet (Finset R) := by
+  classical
+  refine ⟨⟨∅⟩, ⟨?_⟩⟩
+  intro E F
+  exact ⟨E ∪ F, Finset.subset_union_left, Finset.subset_union_right⟩
+
+private def finiteTypeFixedTargetIndex
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) : Finset R ⥤ Finset S := by
+  classical
+  exact {
+    obj := fun E => G ∪ E.image f
+    map := fun {E F} h => homOfLE (by
+      intro z hz
+      rcases Finset.mem_union.mp hz with hz | hz
+      · exact Finset.mem_union_left _ hz
+      · rcases Finset.mem_image.mp hz with ⟨x, hx, rfl⟩
+        exact Finset.mem_union_right _
+          (Finset.mem_image.mpr ⟨x, h.down.down hx, rfl⟩))
+    map_id := by intro E; rfl
+    map_comp := by intro E F G hEF hFG; rfl }
+
+private theorem finiteTypeFixedTargetSet_mono
+    {R S : Type u} [CommRing R] [CommRing S]
+    [DecidableEq R] [DecidableEq S] (f : R →+* S) (G : Finset S)
+    {E F : Finset R} (hEF : E ⊆ F) :
+    ((G ∪ E.image f : Finset S) : Set S) ⊆
+      ((G ∪ F.image f : Finset S) : Set S) := by
+  intro z hz
+  rcases Finset.mem_union.mp hz with hz | hz
+  · exact Finset.mem_union_left _ hz
+  · rcases Finset.mem_image.mp hz with ⟨x, hx, rfl⟩
+    exact Finset.mem_union_right _
+      (Finset.mem_image.mpr ⟨x, hEF hx, rfl⟩)
+
+private def finiteTypeFixedTargetDiagram
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) : RingSystem (Finset R) :=
+  finiteTypeFixedTargetIndex f G ⋙ finiteSubsetSubringDiagram
+
+private def finiteTypeFixedTargetCocone
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) : Cocone (finiteTypeFixedTargetDiagram f G) :=
+  (finiteSubsetSubringCocone (T := S)).whisker
+    (finiteTypeFixedTargetIndex f G)
+
+private def finiteTypeFixedTargetCocone_isColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S)
+    (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤) :
+    IsColimit (finiteTypeFixedTargetCocone f G) := by
+  classical
+  let e : S → Finset R := fun x =>
+    Classical.choose (finiteTypeCoverBySourceElements f G hG x)
+  have he : ∀ x : S, x ∈ Subring.closure
+      ((G ∪ (e x).image f : Finset S) : Set S) := by
+    intro x
+    simpa [e] using (Classical.choose_spec
+      (finiteTypeCoverBySourceElements f G hG x))
+  let transport : ∀ {E F : Finset R} (hEF : E ⊆ F) {x : S}
+      (hx : x ∈ Subring.closure
+        ((G ∪ E.image f : Finset S) : Set S)),
+      ∀ s : Cocone (finiteTypeFixedTargetDiagram f G),
+        (s.ι.app F).hom ⟨x, Subring.closure_mono
+          (finiteTypeFixedTargetSet_mono f G hEF) hx⟩ =
+          (s.ι.app E).hom ⟨x, hx⟩ := by
+    intro E F hEF x hx s
+    have h := congrArg (fun k => k.hom
+        (⟨x, hx⟩ : (finiteTypeFixedTargetDiagram f G).obj E))
+      (s.ι.naturality (homOfLE hEF))
+    change (s.ι.app F).hom ⟨x, Subring.closure_mono
+        (finiteTypeFixedTargetSet_mono f G hEF) hx⟩ =
+      (s.ι.app E).hom ⟨x, hx⟩ at h
+    exact h
+  let desc : ∀ s : Cocone (finiteTypeFixedTargetDiagram f G),
+      CommRingCat.of S ⟶ s.pt := by
+    intro s
+    exact CommRingCat.ofHom {
+      toFun := fun x => (s.ι.app (e x)).hom ⟨x, he x⟩
+      map_one' := by
+        have h1 : (⟨1, he 1⟩ :
+            (finiteTypeFixedTargetDiagram f G).obj (e 1)) = 1 := by
+          apply Subtype.ext
+          rfl
+        rw [h1]
+        exact (s.ι.app (e 1)).hom.map_one
+      map_zero' := by
+        have h0 : (⟨0, he 0⟩ :
+            (finiteTypeFixedTargetDiagram f G).obj (e 0)) = 0 := by
+          apply Subtype.ext
+          rfl
+        rw [h0]
+        exact (s.ι.app (e 0)).hom.map_zero
+      map_add' := by
+        intro x y
+        let q : ∀ E : Finset R,
+            (finiteTypeFixedTargetDiagram f G).obj E →+* (s.pt : Type u) :=
+          fun E => (s.ι.app E).hom
+        let H := e x ∪ e y ∪ e (x + y)
+        have hxH : e x ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_left _ (Finset.mem_union_left _ hz)
+        have hyH : e y ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_left _ (Finset.mem_union_right _ hz)
+        have hxyH : e (x + y) ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_right _ hz
+        have hxH' : x ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hxH) (he x)
+        have hyH' : y ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hyH) (he y)
+        have hxyH' : x + y ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          add_mem hxH' hyH'
+        have hx := transport hxH (he x) s
+        have hy := transport hyH (he y) s
+        have hxy := transport hxyH (he (x + y)) s
+        have hxq : q H ⟨x, hxH'⟩ = q (e x) ⟨x, he x⟩ := by
+          simpa [q] using hx
+        have hyq : q H ⟨y, hyH'⟩ = q (e y) ⟨y, he y⟩ := by
+          simpa [q] using hy
+        have hxyq : q H ⟨x + y, hxyH'⟩ =
+            q (e (x + y)) ⟨x + y, he (x + y)⟩ := by
+          simpa [q] using hxy
+        have hsum : (⟨x + y, hxyH'⟩ :
+            (finiteTypeFixedTargetDiagram f G).obj H) =
+            (⟨x, hxH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) +
+              (⟨y, hyH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) := by
+          rfl
+        change q (e (x + y)) ⟨x + y, he (x + y)⟩ =
+          q (e x) ⟨x, he x⟩ + q (e y) ⟨y, he y⟩
+        calc
+          q (e (x + y)) ⟨x + y, he (x + y)⟩ =
+              q H ⟨x + y, hxyH'⟩ := hxyq.symm
+          _ = q H
+              ((⟨x, hxH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) +
+                (⟨y, hyH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H)) := by
+            rw [hsum]
+          _ = q H ⟨x, hxH'⟩ + q H ⟨y, hyH'⟩ := (q H).map_add _ _
+          _ = _ := by
+            rw [hxq, hyq]
+      map_mul' := by
+        intro x y
+        let q : ∀ E : Finset R,
+            (finiteTypeFixedTargetDiagram f G).obj E →+* (s.pt : Type u) :=
+          fun E => (s.ι.app E).hom
+        let H := e x ∪ e y ∪ e (x * y)
+        have hxH : e x ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_left _ (Finset.mem_union_left _ hz)
+        have hyH : e y ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_left _ (Finset.mem_union_right _ hz)
+        have hxyH : e (x * y) ⊆ H := by
+          intro z hz
+          exact Finset.mem_union_right _ hz
+        have hxH' : x ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hxH) (he x)
+        have hyH' : y ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hyH) (he y)
+        have hxyH' : x * y ∈ Subring.closure
+            ((G ∪ H.image f : Finset S) : Set S) :=
+          mul_mem hxH' hyH'
+        have hx := transport hxH (he x) s
+        have hy := transport hyH (he y) s
+        have hxy := transport hxyH (he (x * y)) s
+        have hxq : q H ⟨x, hxH'⟩ = q (e x) ⟨x, he x⟩ := by
+          simpa [q] using hx
+        have hyq : q H ⟨y, hyH'⟩ = q (e y) ⟨y, he y⟩ := by
+          simpa [q] using hy
+        have hxyq : q H ⟨x * y, hxyH'⟩ =
+            q (e (x * y)) ⟨x * y, he (x * y)⟩ := by
+          simpa [q] using hxy
+        have hprod : (⟨x * y, hxyH'⟩ :
+            (finiteTypeFixedTargetDiagram f G).obj H) =
+            (⟨x, hxH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) *
+              (⟨y, hyH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) := by
+          rfl
+        change q (e (x * y)) ⟨x * y, he (x * y)⟩ =
+          q (e x) ⟨x, he x⟩ * q (e y) ⟨y, he y⟩
+        calc
+          q (e (x * y)) ⟨x * y, he (x * y)⟩ =
+              q H ⟨x * y, hxyH'⟩ := hxyq.symm
+          _ = q H
+              ((⟨x, hxH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H) *
+                (⟨y, hyH'⟩ : (finiteTypeFixedTargetDiagram f G).obj H)) := by
+            rw [hprod]
+          _ = q H ⟨x, hxH'⟩ * q H ⟨y, hyH'⟩ := (q H).map_mul _ _
+          _ = _ := by
+            rw [hxq, hyq] }
+  refine { desc := desc, fac := ?_, uniq := ?_ }
+  · intro s E
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    dsimp [finiteTypeFixedTargetDiagram, finiteTypeFixedTargetIndex,
+      finiteSubsetSubringDiagram] at x
+    let xS : S := x.1
+    let H := E ∪ e xS
+    have hEH : E ⊆ H := by
+      intro z hz
+      exact Finset.mem_union_left _ hz
+    have hexH : e x ⊆ H := by
+      intro z hz
+      exact Finset.mem_union_right _ hz
+    have hE := transport hEH x.property s
+    have hex := transport hexH (he xS) s
+    change (s.ι.app (e xS)).hom ⟨xS, he xS⟩ =
+      (s.ι.app E).hom ⟨xS, x.property⟩
+    exact hex.symm.trans hE
+  · intro s m hm
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    have h := congrArg (fun k => k.hom
+        (⟨x, he x⟩ : (finiteTypeFixedTargetDiagram f G).obj (e x)))
+      (hm (e x))
+    change m.hom x = (desc s).hom x at h
+    exact h
+
+private theorem finiteTypeFixedStageClosure
+    {R S : Type u} [CommRing R] [CommRing S]
+    [DecidableEq R] [DecidableEq S] (f : R →+* S)
+    (G : Finset S) (E : Finset R) :
+    Subring.closure (E : Set R) ≤
+      (Subring.closure ((G ∪ E.image f : Finset S) : Set S)).comap f := by
+  classical
+  apply Subring.closure_le.2
+  intro x hx
+  exact Subring.subset_closure
+    (Finset.mem_union_right _ (Finset.mem_image.mpr ⟨x, hx, rfl⟩))
+
+private def finiteTypeFixedDiagramMapApp
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) (E : Finset R) :
+    (finiteSubsetSubringDiagram (T := R)).obj E ⟶
+      (finiteTypeFixedTargetDiagram f G).obj E := by
+  classical
+  exact CommRingCat.ofHom
+    (finiteTypeStageMapData f E (G ∪ E.image f)
+      (finiteTypeFixedStageClosure f G E))
+
+private def finiteTypeFixedDiagramMap
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) :
+    finiteSubsetSubringDiagram (T := R) ⟶ finiteTypeFixedTargetDiagram f G := by
+  exact {
+    app := finiteTypeFixedDiagramMapApp f G
+    naturality := by
+      intro E F hEF
+      rfl }
+
+private theorem finiteTypeFixedDiagramMap_fac
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) (E : Finset R) :
+    (finiteSubsetSubringCocone (T := R)).ι.app E ≫ CommRingCat.ofHom f =
+      (finiteTypeFixedDiagramMap f G).app E ≫
+        (finiteTypeFixedTargetCocone f G).ι.app E := by
+  rfl
+
+private def finiteTypeFixedRingMapColimit
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S)
+    (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤) :
+    DirectedRingMapColimit f := by
+  classical
+  exact {
+    index := Finset R
+    directed := finiteSetIndexDirected
+    sourceDiagram := finiteSubsetSubringDiagram
+    targetDiagram := finiteTypeFixedTargetDiagram f G
+    map := finiteTypeFixedDiagramMap f G
+    sourceCocone := finiteSubsetSubringCocone
+    sourceIsColimit := finiteSubsetSubringCocone_isColimit
+    targetCocone := finiteTypeFixedTargetCocone f G
+    targetIsColimit := finiteTypeFixedTargetCocone_isColimit f G hG
+    colimitMap := CommRingCat.ofHom f
+    map_fac := finiteTypeFixedDiagramMap_fac f G
+    sourceIso := Iso.refl _
+    targetIso := Iso.refl _
+    colimitMap_comm := rfl }
+
+private theorem finiteTypeFixedRingMapColimit_sourceFiniteType
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤) :
+    (finiteTypeFixedRingMapColimit f G hG).sourceStagesFiniteTypeOverInt := by
+  intro E
+  exact finiteTypeSubringClosure E
+
+private theorem finiteTypeFixedRingMapColimit_targetFiniteType
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S) (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤) :
+    (finiteTypeFixedRingMapColimit f G hG).targetStagesFiniteTypeOverSource := by
+  classical
+  intro E
+  exact finiteTypeStageMap f E (G ∪ E.image f)
+    (finiteTypeFixedStageClosure f G E)
+
+private theorem surjective_of_subringClosure
+    {A T : Type u} [CommRing A] [CommRing T] (G : Set T)
+    (m : A →+* Subring.closure G)
+    (hgen : ∀ y (hy : y ∈ G),
+      ∃ a, m a = ⟨y, Subring.subset_closure hy⟩) :
+    Function.Surjective m := by
+  intro x
+  refine Subring.closure_induction
+    (p := fun y hy => ∃ a, m a = ⟨y, hy⟩) ?_ ?_ ?_ ?_ ?_ ?_ x.property
+  · intro y hy
+    exact hgen y hy
+  · refine ⟨0, ?_⟩
+    calc
+      m 0 = 0 := map_zero m
+      _ = ⟨0, Subring.zero_mem _⟩ := rfl
+  · refine ⟨1, ?_⟩
+    calc
+      m 1 = 1 := map_one m
+      _ = ⟨1, Subring.one_mem _⟩ := rfl
+  · intro y z hy hz hyy hzz
+    rcases hyy with ⟨a, ha⟩
+    rcases hzz with ⟨b, hb⟩
+    refine ⟨a + b, ?_⟩
+    calc
+      m (a + b) = m a + m b := map_add m a b
+      _ = (⟨y, hy⟩ : Subring.closure G) + ⟨z, hz⟩ := by rw [ha, hb]
+      _ = ⟨y + z, add_mem hy hz⟩ := rfl
+  · intro y hy hyy
+    rcases hyy with ⟨a, ha⟩
+    refine ⟨-a, ?_⟩
+    calc
+      m (-a) = -m a := map_neg m a
+      _ = -(⟨y, hy⟩ : Subring.closure G) := by rw [ha]
+      _ = ⟨-y, neg_mem hy⟩ := rfl
+  · intro y z hy hz hyy hzz
+    rcases hyy with ⟨a, ha⟩
+    rcases hzz with ⟨b, hb⟩
+    refine ⟨a * b, ?_⟩
+    calc
+      m (a * b) = m a * m b := map_mul m a b
+      _ = (⟨y, hy⟩ : Subring.closure G) * ⟨z, hz⟩ := by rw [ha, hb]
+      _ = ⟨y * z, mul_mem hy hz⟩ := rfl
+
+private def finiteTypeFixedTransitionMap
+    {R S : Type u} [CommRing R] [CommRing S] [DecidableEq R] [DecidableEq S]
+    (f : R →+* S)
+    (G : Finset S) {E F : Finset R} (hEF : E ⊆ F) :
+    let fi := finiteTypeStageMapData f E (G ∪ E.image f)
+      (finiteTypeFixedStageClosure f G E)
+    let rEF := Subring.inclusion (Subring.closure_mono hEF)
+    let s := Subring.inclusion
+      (Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hEF))
+    let fj := finiteTypeStageMapData f F (G ∪ F.image f)
+      (finiteTypeFixedStageClosure f G F)
+    letI : Algebra (Subring.closure (E : Set R))
+        (Subring.closure ((G ∪ E.image f : Finset S) : Set S)) := fi.toAlgebra
+    letI : Algebra (Subring.closure (E : Set R))
+        (Subring.closure (F : Set R)) := rEF.toAlgebra
+    letI : Algebra (Subring.closure (E : Set R))
+        (Subring.closure ((G ∪ F.image f : Finset S) : Set S)) :=
+      (s.comp fi).toAlgebra
+    letI : Algebra (Subring.closure (F : Set R))
+        (Subring.closure ((G ∪ F.image f : Finset S) : Set S)) := fj.toAlgebra
+    (Subring.closure ((G ∪ E.image f : Finset S) : Set S) ⊗[
+      Subring.closure (E : Set R)] Subring.closure (F : Set R)) →+*
+      Subring.closure ((G ∪ F.image f : Finset S) : Set S) := by
+  let fi := finiteTypeStageMapData f E (G ∪ E.image f)
+    (finiteTypeFixedStageClosure f G E)
+  let rEF := Subring.inclusion (Subring.closure_mono hEF)
+  let s := Subring.inclusion
+    (Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hEF))
+  let fj := finiteTypeStageMapData f F (G ∪ F.image f)
+    (finiteTypeFixedStageClosure f G F)
+  have compat : s.comp fi = fj.comp rEF := by
+    ext y
+    rfl
+  exact baseChangeRingHomOfCompatible fi rEF s fj compat
+
+private theorem finiteTypeFixedTransition_surjective_aux
+    {R S : Type u} [CommRing R] [CommRing S] [DecidableEq R] [DecidableEq S]
+    (f : R →+* S)
+    (G : Finset S)
+    {E F : Finset R} (hEF : E ⊆ F) :
+    Function.Surjective
+      (finiteTypeFixedTransitionMap f G hEF) := by
+  classical
+  let m := finiteTypeFixedTransitionMap f G hEF
+  intro x
+  change Subring.closure ((G ∪ F.image f : Finset S) : Set S) at x
+  let fi := finiteTypeStageMapData f E (G ∪ E.image f)
+    (finiteTypeFixedStageClosure f G E)
+  let rEF := Subring.inclusion (Subring.closure_mono hEF)
+  let s := Subring.inclusion
+    (Subring.closure_mono (finiteTypeFixedTargetSet_mono f G hEF))
+  let fj := finiteTypeStageMapData f F (G ∪ F.image f)
+    (finiteTypeFixedStageClosure f G F)
+  have compat : s.comp fi = fj.comp rEF := by
+    ext y
+    rfl
+  letI : Algebra (Subring.closure (E : Set R))
+      (Subring.closure ((G ∪ E.image f : Finset S) : Set S)) :=
+    fi.toAlgebra
+  letI : Algebra (Subring.closure (E : Set R))
+      (Subring.closure (F : Set R)) :=
+    (Subring.inclusion (Subring.closure_mono hEF)).toAlgebra
+  letI : Algebra (Subring.closure (E : Set R))
+      (Subring.closure ((G ∪ F.image f : Finset S) : Set S)) :=
+    (s.comp fi).toAlgebra
+  letI : Algebra (Subring.closure (F : Set R))
+      (Subring.closure ((G ∪ F.image f : Finset S) : Set S)) :=
+    fj.toAlgebra
+  have hgen : ∀ y (hy : y ∈ (G ∪ F.image f : Finset S)),
+      ∃ a, m a = ⟨y, Subring.subset_closure hy⟩ := by
+    intro y hy
+    rcases Finset.mem_union.mp hy with hy | hy
+    · refine ⟨Algebra.TensorProduct.includeLeftRingHom
+          (R := Subring.closure (E : Set R))
+          (A := Subring.closure ((G ∪ E.image f : Finset S) : Set S))
+          (B := Subring.closure (F : Set R))
+          ⟨y, Subring.subset_closure (Finset.mem_union_left _ hy)⟩, ?_⟩
+      calc
+        m (Algebra.TensorProduct.includeLeftRingHom
+            (R := Subring.closure (E : Set R))
+            (A := Subring.closure ((G ∪ E.image f : Finset S) : Set S))
+            (B := Subring.closure (F : Set R))
+            ⟨y, Subring.subset_closure (Finset.mem_union_left _ hy)⟩) =
+            s ⟨y, Subring.subset_closure (Finset.mem_union_left _ hy)⟩ := by
+              simpa only [m, finiteTypeFixedTransitionMap] using
+                (baseChangeRingHomOfCompatible_includeLeft fi rEF s fj compat
+                  ⟨y, Subring.subset_closure (Finset.mem_union_left _ hy)⟩)
+        _ = ⟨y, Subring.subset_closure (Finset.mem_union_left _ hy)⟩ := rfl
+    · rcases Finset.mem_image.mp hy with ⟨r, hr, rfl⟩
+      refine ⟨(Algebra.TensorProduct.includeRight
+          (R := Subring.closure (E : Set R))
+          (A := Subring.closure ((G ∪ E.image f : Finset S) : Set S))
+          (B := Subring.closure (F : Set R))).toRingHom
+          ⟨r, Subring.subset_closure hr⟩, ?_⟩
+      calc
+        m ((Algebra.TensorProduct.includeRight
+            (R := Subring.closure (E : Set R))
+            (A := Subring.closure ((G ∪ E.image f : Finset S) : Set S))
+            (B := Subring.closure (F : Set R))).toRingHom
+            ⟨r, Subring.subset_closure hr⟩) =
+            fj ⟨r, Subring.subset_closure hr⟩ := by
+              simpa only [m, finiteTypeFixedTransitionMap] using
+                (baseChangeRingHomOfCompatible_includeRight fi rEF s fj compat
+                  ⟨r, Subring.subset_closure hr⟩)
+        _ = ⟨f r, Subring.subset_closure
+          (Finset.mem_union_right _ (Finset.mem_image.mpr ⟨r, hr, rfl⟩))⟩ := rfl
+  exact (surjective_of_subringClosure
+    ((G ∪ F.image f : Finset S) : Set S) m hgen) x
+
+private theorem finiteTypeFixedTransition_surjective
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (G : Finset S)
+    (hG : @Algebra.adjoin R S _ _ f.toAlgebra (G : Set S) = ⊤)
+    {E F : Finset R} (hEF : E ⊆ F) :
+    Function.Surjective
+      ((finiteTypeFixedRingMapColimit f G hG).transitionBaseChange hEF) := by
+  classical
+  let D := finiteTypeFixedRingMapColimit f G hG
+  change Function.Surjective (D.transitionBaseChange hEF)
+  exact finiteTypeFixedTransition_surjective_aux f G hEF
+
 private theorem finiteTypeIndex_directed
     {R S : Type u} [CommRing R] [CommRing S] :
     IsDirectedSet (Finset R × Finset S) := by
@@ -2712,7 +3308,19 @@ theorem limitFiniteType
     {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
     (hS : f.FiniteType) :
     Nonempty (DirectedFiniteTypeWithQuotient f) := by
-  sorry
+  classical
+  letI : Algebra R S := f.toAlgebra
+  change Algebra.FiniteType R S at hS
+  obtain ⟨G, hG⟩ := hS.out
+  let D := finiteTypeFixedRingMapColimit f G hG
+  refine ⟨{
+    base := {
+      colimit := D
+      sourceFiniteType := finiteTypeFixedRingMapColimit_sourceFiniteType f G hG
+      targetFiniteType := finiteTypeFixedRingMapColimit_targetFiniteType f G hG }
+    transitionQuotient := ?_ }⟩
+  intro E F hEF
+  exact finiteTypeFixedTransition_surjective f G hG hEF
 
 /-- The nonlocal finite-presentation approximation with isomorphic transition
 maps. -/

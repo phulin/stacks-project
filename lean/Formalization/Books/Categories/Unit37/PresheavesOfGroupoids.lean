@@ -224,7 +224,8 @@ def IsSplitCategoryFibredInGroupoids
   p.IsFibredInGroupoids ∧
     ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG}),
       (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
-        IsomorphicOverBase p (groupoidPresheafProjection F)
+        Formalization.Books.Categories.Unit36.IsomorphicOverBase p
+          (groupoidPresheafProjection F)
 
 theorem groupoidPresheafProjection_isSplit
     (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vG, uG})

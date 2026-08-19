@@ -493,7 +493,165 @@ private theorem fittingIdealOfSurjection_stabilize_le
 private theorem minorIdeal_identity_top
     {R : Type*} [CommRing R] (t : ℕ) :
     minorIdeal (1 : Matrix (Fin t) (Fin t) R) t = ⊤ := by
-  sorry
+  apply (Ideal.eq_top_iff_one _).mpr
+  apply Ideal.subset_span
+  refine ⟨Finset.univ, Finset.univ, Finset.card_fin t, Finset.card_fin t, ?_⟩
+  have h : (fun i : Fin t =>
+      (Finset.univ.orderEmbOfFin (Finset.card_fin t) i : Fin t)) = id := by
+    have h := Finset.orderEmbOfFin_unique
+      (s := (Finset.univ : Finset (Fin t))) (Finset.card_fin t)
+      (f := (id : Fin t → Fin t)) (fun _ => Finset.mem_univ _) strictMono_id
+    exact h.symm
+  dsimp [matrixMinor]
+  rw [h]
+  simp
+
+private theorem minorIdeal_append_identity_le
+    {R : Type*} [CommRing R] {n m r t l : ℕ} (hcast : m + t = l)
+    (A : Matrix (Fin n) (Fin m) R) :
+    minorIdeal A r ≤
+      minorIdeal
+        (Matrix.reindex finSumFinEquiv
+          (finSumFinEquiv.trans (Equiv.cast (congrArg Fin hcast)))
+          (Matrix.fromBlocks A
+            (0 : Matrix (Fin n) (Fin t) R)
+            (0 : Matrix (Fin t) (Fin m) R)
+            (1 : Matrix (Fin t) (Fin t) R))) (r + t) := by
+  classical
+  subst l
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let erows : Fin (r + t) → Fin (n + t) :=
+    Fin.addCases (fun i => Fin.castAdd t (rows.orderIsoOfFin hrows i))
+      (fun j => Fin.natAdd n j)
+  let ecols0 : Fin (r + t) → Fin (m + t) :=
+    Fin.addCases (fun i => Fin.castAdd t (cols.orderIsoOfFin hcols i))
+      (fun j => Fin.natAdd m j)
+  let ecols : Fin (r + t) → Fin (m + t) := ecols0
+  have herows : StrictMono erows := by
+    intro i j hij
+    induction i using Fin.addCases with
+    | left i =>
+        induction j using Fin.addCases with
+        | left j =>
+            simp only [erows, Fin.addCases_left]
+            exact Fin.strictMono_castAdd t
+              ((rows.orderIsoOfFin hrows).strictMono hij)
+        | right j =>
+            simp only [erows, Fin.addCases_left, Fin.addCases_right]
+            apply Fin.lt_iff_val_lt_val.mpr
+            change ((rows.orderIsoOfFin hrows i : Fin n).val) < n + j.val
+            have hi := ((rows.orderIsoOfFin hrows i : Fin n)).isLt
+            omega
+    | right i =>
+        induction j using Fin.addCases with
+        | left j =>
+            exfalso
+            have hij' := Fin.lt_iff_val_lt_val.mp hij
+            simp only [Fin.val_natAdd, Fin.val_castAdd] at hij'
+            have hi := i.isLt
+            have hj := j.isLt
+            omega
+        | right j =>
+            simp only [erows, Fin.addCases_right]
+            exact Fin.strictMono_natAdd n
+              ((Fin.natAdd_lt_natAdd_iff r).mp hij)
+  have hecols0 : StrictMono ecols0 := by
+    intro i j hij
+    induction i using Fin.addCases with
+    | left i =>
+        induction j using Fin.addCases with
+        | left j =>
+            simp only [ecols0, Fin.addCases_left]
+            exact Fin.strictMono_castAdd t
+              ((cols.orderIsoOfFin hcols).strictMono hij)
+        | right j =>
+            simp only [ecols0, Fin.addCases_left, Fin.addCases_right]
+            apply Fin.lt_iff_val_lt_val.mpr
+            change ((cols.orderIsoOfFin hcols i : Fin m).val) < m + j.val
+            have hi := ((cols.orderIsoOfFin hcols i : Fin m)).isLt
+            omega
+    | right i =>
+        induction j using Fin.addCases with
+        | left j =>
+            exfalso
+            have hij' := Fin.lt_iff_val_lt_val.mp hij
+            simp only [Fin.val_natAdd, Fin.val_castAdd] at hij'
+            have hi := i.isLt
+            have hj := j.isLt
+            omega
+        | right j =>
+            simp only [ecols0, Fin.addCases_right]
+            exact Fin.strictMono_natAdd m
+              ((Fin.natAdd_lt_natAdd_iff r).mp hij)
+  have hecols : StrictMono ecols := by
+    exact hecols0
+  let rows' : Finset (Fin (n + t)) :=
+    Finset.univ.map ⟨erows, herows.injective⟩
+  let cols' : Finset (Fin (m + t)) :=
+    Finset.univ.map ⟨ecols, hecols.injective⟩
+  have hrows' : rows'.card = r + t := by
+    simp [rows']
+  have hcols' : cols'.card = r + t := by
+    simp [cols']
+  have hrow : (fun i : Fin (r + t) =>
+      (rows'.orderEmbOfFin hrows' i : Fin (n + t))) = erows := by
+    have h := Finset.orderEmbOfFin_unique hrows'
+      (f := erows) (fun i => Finset.mem_map.mpr ⟨i, Finset.mem_univ _, rfl⟩)
+      herows
+    exact h.symm
+  have hcol : (fun i : Fin (r + t) =>
+      (cols'.orderEmbOfFin hcols' i : Fin (m + t))) = ecols := by
+    have h := Finset.orderEmbOfFin_unique hcols'
+      (f := ecols) (fun i => Finset.mem_map.mpr ⟨i, Finset.mem_univ _, rfl⟩)
+      hecols
+    exact h.symm
+  apply Ideal.subset_span
+  refine ⟨rows', cols', hrows', hcols', ?_⟩
+  dsimp [matrixMinor]
+  rw [hrow, hcol]
+  have hsub :
+      ((Matrix.fromBlocks A
+            (0 : Matrix (Fin n) (Fin t) R)
+            (0 : Matrix (Fin t) (Fin m) R)
+            (1 : Matrix (Fin t) (Fin t) R)).submatrix
+          finSumFinEquiv.symm
+            finSumFinEquiv.symm).submatrix erows ecols =
+        Matrix.reindex finSumFinEquiv finSumFinEquiv
+          (Matrix.fromBlocks
+            (show Matrix (Fin r) (Fin r) R from
+              A.submatrix
+                (fun i : Fin r => (rows.orderEmbOfFin hrows i : Fin n))
+                (fun j : Fin r => (cols.orderEmbOfFin hcols j : Fin m)))
+            (0 : Matrix (Fin r) (Fin t) R)
+            (0 : Matrix (Fin t) (Fin r) R)
+            (1 : Matrix (Fin t) (Fin t) R)) := by
+    apply Matrix.ext
+    intro i j
+    induction i using Fin.addCases with
+    | left i =>
+        induction j using Fin.addCases with
+        | left j =>
+            simp only [Matrix.submatrix_apply]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply,
+              Equiv.trans_apply, Equiv.cast]
+        | right j =>
+            simp only [Matrix.submatrix_apply]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply,
+              Equiv.trans_apply, Equiv.cast]
+    | right i =>
+        induction j using Fin.addCases with
+        | left j =>
+            simp only [Matrix.submatrix_apply]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply,
+              Equiv.trans_apply, Equiv.cast]
+        | right j =>
+            simp only [Matrix.submatrix_apply]
+            simp [erows, ecols, ecols0, Matrix.reindex_apply,
+              Equiv.trans_apply, Equiv.cast]
+  rw [hsub, Matrix.det_reindex_self]
+  rw [Matrix.det_fromBlocks_zero₂₁]
+  simp
 
 private theorem fittingIdealOfSurjection_stabilize_ge
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
@@ -501,7 +659,88 @@ private theorem fittingIdealOfSurjection_stabilize_ge
     (t k : ℕ) (hk : k ≤ n) :
     fittingIdealOfSurjection p hp k ≤
       fittingIdealOfSurjection (stabilize p t) (stabilize_surjective p hp t) k := by
-  sorry
+  classical
+  have hindex : n - k + t = n + t - k := by omega
+  unfold fittingIdealOfSurjection
+  refine iSup_le ?_
+  intro z
+  let oldCol : Fin (n - k) → Fin (n + t) → R := fun j =>
+    Fin.addCases (z j).1 (fun _ : Fin t => 0)
+  let stdCol : Fin t → Fin (n + t) → R := fun j =>
+    Fin.addCases (fun _ : Fin n => 0) (Pi.single j 1)
+  have hold : ∀ j, oldCol j ∈ LinearMap.ker (stabilize p t) := by
+    intro j
+    apply LinearMap.mem_ker.mpr
+    change p (oldCol j ∘ Fin.castAdd t) = 0
+    have hcol : oldCol j ∘ Fin.castAdd t = (z j).1 := by
+      funext i
+      simp [oldCol, Function.comp_def]
+    rw [hcol]
+    exact (z j).property
+  have hstd : ∀ j, stdCol j ∈ LinearMap.ker (stabilize p t) := by
+    intro j
+    apply LinearMap.mem_ker.mpr
+    change p (stdCol j ∘ Fin.castAdd t) = 0
+    have hcol : stdCol j ∘ Fin.castAdd t = 0 := by
+      funext i
+      simp [stdCol, Function.comp_def]
+    rw [hcol]
+    simp
+  let z'' : Fin (n - k + t) → LinearMap.ker (stabilize p t) :=
+    Fin.addCases (fun j => ⟨oldCol j, hold j⟩)
+      (fun j => ⟨stdCol j, hstd j⟩)
+  let ecols : Fin (n - k) ⊕ Fin t ≃ Fin (n + t - k) :=
+    finSumFinEquiv.trans (Equiv.cast (congrArg Fin hindex))
+  let z' : Fin (n + t - k) → LinearMap.ker (stabilize p t) := fun j =>
+    z'' (finSumFinEquiv (ecols.symm j))
+  have hrel : relationMatrix (stabilize p t) z' =
+      Matrix.reindex finSumFinEquiv ecols
+        (Matrix.fromBlocks (relationMatrix p z)
+          (0 : Matrix (Fin n) (Fin t) R)
+          (0 : Matrix (Fin t) (Fin (n - k)) R)
+          (1 : Matrix (Fin t) (Fin t) R)) := by
+    apply Matrix.ext
+    intro i j
+    obtain ⟨j, rfl⟩ := ecols.surjective j
+    induction i using Fin.addCases with
+    | left i =>
+        cases j with
+        | inl j =>
+            simp [relationMatrix, z', z'', oldCol, ecols, stabilize,
+            Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+        | inr j =>
+            simp [relationMatrix, z', z'', stdCol, ecols, stabilize,
+            Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+    | right i =>
+        cases j with
+        | inl j =>
+            simp [relationMatrix, z', z'', oldCol, ecols, stabilize,
+              Equiv.trans_apply, Equiv.cast, Fin.cast_cast]
+        | inr j =>
+            simp [relationMatrix, z', z'', stdCol, ecols, stabilize,
+              Equiv.trans_apply, Equiv.cast, Fin.cast_cast, Matrix.one_apply,
+              Pi.single_apply]
+  calc
+    minorIdeal (relationMatrix p z) (n - k) ≤
+        minorIdeal (relationMatrix p z) (n - k) := le_rfl
+    _ ≤ minorIdeal
+        (Matrix.reindex finSumFinEquiv ecols
+          (Matrix.fromBlocks (relationMatrix p z)
+            (0 : Matrix (Fin n) (Fin t) R)
+            (0 : Matrix (Fin t) (Fin (n - k)) R)
+            (1 : Matrix (Fin t) (Fin t) R))) (n - k + t) :=
+      (by
+        simpa [ecols] using
+          (minorIdeal_append_identity_le (R := R) (n := n) (m := n - k)
+            (r := n - k) (t := t) (l := n + t - k) hindex
+            (relationMatrix p z)))
+    _ = minorIdeal (relationMatrix (stabilize p t) z') (n + t - k) := by
+      rw [hrel]
+      rw [hindex]
+    _ ≤ fittingIdealOfSurjection (stabilize p t)
+        (stabilize_surjective p hp t) k :=
+      le_iSup (fun w : Fin (n + t - k) → LinearMap.ker (stabilize p t) =>
+        minorIdeal (relationMatrix (stabilize p t) w) (n + t - k)) z'
 
 private theorem fittingIdealOfSurjection_factor
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

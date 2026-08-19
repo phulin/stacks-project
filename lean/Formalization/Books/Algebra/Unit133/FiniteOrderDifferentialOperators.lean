@@ -2463,7 +2463,9 @@ end PrincipalPartsFunctorialityComposition
 
 section PrincipalPartsBaseChange
 
-variable {A A' B M : Type*}
+universe uA uA' uB uM
+
+variable {A : Type uA} {A' : Type uA'} {B : Type uB} {M : Type uM}
   [CommRing A] [CommRing A'] [CommRing B]
   [Algebra A A'] [Algebra A B]
   [AddCommGroup M] [Module B M] [Module A M] [IsScalarTower A B M]
@@ -2474,8 +2476,8 @@ structures are explicit parameters because Mathlib deliberately does not
 install all tensor-product algebra actions globally.
 -/
 structure PrincipalPartsBaseChangeData (k : ℕ) where
-  B' : Type u'
-  M' : Type u'
+  B' : Type (max uB uA')
+  M' : Type (max uM uA')
   [commRing_B' : CommRing B']
   [algebra_A'_B' : Algebra A' B']
   [addCommGroup_M' : AddCommGroup M']

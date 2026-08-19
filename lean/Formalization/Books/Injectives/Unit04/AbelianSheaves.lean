@@ -170,14 +170,282 @@ theorem abelianSheafSkyscraperProduct_pointwise_formula
     Nonempty
       ((abelianSheafSkyscraperProduct A).presheaf.obj (op U) ≅
         abelianSheafPointwiseProductObject A U) := by
-  sorry
+  classical
+  let D : Discrete X ⥤ TopCat.Sheaf AddCommGrpCat.{v} X :=
+    Discrete.functor (fun x : X => (abelianSkyscraperSheafFunctor x).obj (A x))
+  let F : TopCat.Sheaf AddCommGrpCat.{v} X ⥤
+      TopCat.Presheaf AddCommGrpCat.{v} X :=
+    TopCat.Sheaf.forget AddCommGrpCat.{v} X
+  let G : TopCat.Presheaf AddCommGrpCat.{v} X ⥤ AddCommGrpCat.{v} :=
+    (evaluation (Opens X)ᵒᵖ AddCommGrpCat.{v}).obj (op U)
+  have hPreservesD : PreservesLimit D F :=
+    preservesLimit_of_createsLimit_and_hasLimit D F
+  have hPreservesDG : PreservesLimit (D ⋙ F) G :=
+    evaluation_preservesLimit (D ⋙ F) (op U)
+  have hF : IsLimit (F.mapCone (limit.cone D)) :=
+    @isLimitOfPreserves _ _ _ _ _ _ _ F _ (limit.isLimit D) hPreservesD
+  have hG : IsLimit (G.mapCone (F.mapCone (limit.cone D))) :=
+    @isLimitOfPreserves _ _ _ _ _ _ _ G _ hF hPreservesDG
+  let B : X → AddCommGrpCat.{v} :=
+    fun x => G.obj (F.obj (D.obj (Discrete.mk x)))
+  have hB (x : X) (hx : x ∈ U) : B x = A x := by
+    change (if x ∈ U then A x else ⊤_ AddCommGrpCat) = A x
+    rw [if_pos hx]
+  have hB0 (x : X) (hx : ¬x ∈ U) : B x = ⊤_ AddCommGrpCat := by
+    change (if x ∈ U then A x else ⊤_ AddCommGrpCat) = ⊤_ AddCommGrpCat
+    rw [if_neg hx]
+  let P : AddCommGrpCat.{v} := abelianSheafPointwiseProductObject A U
+  let q (x : X) (hx : x ∈ U) : P ⟶ A x :=
+    AddCommGrpCat.ofHom {
+      toFun := fun s => s ⟨x, hx⟩
+      map_zero' := by simp
+      map_add' := by simp }
+  let p (x : X) : P ⟶ B x :=
+    if hx : x ∈ U then
+      q x hx ≫ eqToHom (hB x hx).symm
+    else
+      terminal.from P ≫ eqToHom (hB0 x hx).symm
+  let E : Discrete X ⥤ AddCommGrpCat.{v} := (D ⋙ F) ⋙ G
+  let cU : Cone E :=
+    { pt := P
+      π :=
+        { app := fun j => p j.as
+          naturality := by
+            intro U V i
+            let e : U = V := Discrete.ext i.down.down
+            have hf : i = eqToHom e := Subsingleton.elim _ _
+            rw [hf]
+            cases e
+            simp [E, p] } }
+  have hcU : IsLimit cU := by
+    let l (s : Cone E) : s.pt ⟶ P :=
+      AddCommGrpCat.ofHom {
+        toFun := fun z x =>
+          ConcreteCategory.hom
+            (s.π.app (Discrete.mk x.1) ≫ eqToHom (hB x.1 x.2)) z
+        map_zero' := by
+          apply funext
+          intro x
+          simp
+        map_add' := by
+          intro a b
+          apply funext
+          intro x
+          simp }
+    refine { lift := fun s => l s, fac := ?_, uniq := ?_ }
+    · rintro s ⟨j⟩
+      by_cases hj : j ∈ U
+      · let e : B j ≅ A j := eqToIso (hB j hj)
+        apply (cancel_mono e.hom).1
+        change (l s ≫ p j) ≫ e.hom =
+          s.π.app (Discrete.mk j) ≫ e.hom
+        simp [p, e, hj, Category.assoc]
+        apply AddCommGrpCat.hom_ext
+        ext z
+        change ConcreteCategory.hom
+            (s.π.app (Discrete.mk j) ≫ eqToHom (hB j hj)) z =
+          ConcreteCategory.hom
+            (s.π.app (Discrete.mk j) ≫ eqToHom (hB j hj)) z
+        rfl
+      · have hterm : IsTerminal (B j) :=
+          IsTerminal.ofIso terminalIsTerminal (eqToIso (hB0 j hj).symm)
+        exact hterm.hom_ext _ _
+    · intro s m hm
+      apply AddCommGrpCat.hom_ext
+      ext z
+      apply funext
+      intro x
+      have hx0 := congrArg
+        (fun f : s.pt ⟶ B x.1 => f ≫ eqToHom (hB x.1 x.2))
+        (hm (Discrete.mk x.1))
+      have hx2 := hx0
+      simp [cU, p, Category.assoc] at hx2
+      have hx1 := congrArg
+        (fun f : s.pt ⟶ A x.1 => ConcreteCategory.hom f z) hx2
+      change (ConcreteCategory.hom m z) x =
+        ConcreteCategory.hom (eqToHom (hB x.1 x.2))
+          (ConcreteCategory.hom (s.π.app (Discrete.mk x.1)) z)
+      exact hx1
+  exact ⟨hG.conePointUniqueUpToIso hcU⟩
 
 /-! The pointwise product sheaf is the product of the skyscraper sheaves. -/
 theorem abelianSheafPointwiseProduct_skyscraperProduct_iso
     {X : TopCat.{v}} (A : X → AddCommGrpCat.{v}) :
     Nonempty (abelianSheafPointwiseProduct A ≅
       abelianSheafSkyscraperProduct A) := by
-  sorry
+  classical
+  let D₀ : Discrete X ⥤ TopCat.Sheaf AddCommGrpCat.{v} X :=
+    Discrete.functor (fun x : X => (abelianSkyscraperSheafFunctor x).obj (A x))
+  let F : TopCat.Sheaf AddCommGrpCat.{v} X ⥤
+      TopCat.Presheaf AddCommGrpCat.{v} X :=
+    TopCat.Sheaf.forget AddCommGrpCat.{v} X
+  let D : Discrete X ⥤ TopCat.Presheaf AddCommGrpCat.{v} X := D₀ ⋙ F
+  let P : TopCat.Presheaf AddCommGrpCat.{v} X :=
+    abelianSheafPointwiseProductPresheaf A
+  let B (x : X) (U : Opens X) : AddCommGrpCat.{v} :=
+    (D.obj (Discrete.mk x)).obj (op U)
+  have hB (x : X) (U : Opens X) (hx : x ∈ U) : B x U = A x := by
+    change (if x ∈ U then A x else ⊤_ AddCommGrpCat) = A x
+    rw [if_pos hx]
+  have hB0 (x : X) (U : Opens X) (hx : ¬x ∈ U) :
+      B x U = ⊤_ AddCommGrpCat := by
+    change (if x ∈ U then A x else ⊤_ AddCommGrpCat) = ⊤_ AddCommGrpCat
+    rw [if_neg hx]
+  have hmapB (x : X) {U V : (Opens X)ᵒᵖ} (i : U ⟶ V)
+      (hxU : x ∈ U.unop) (hxV : x ∈ V.unop) :
+      (D.obj (Discrete.mk x)).map i ≫ eqToHom (hB x V.unop hxV) =
+        eqToHom (hB x U.unop hxU) := by
+    have hUobj :
+        (if h : x ∈ U.unop then A x else ⊤_ AddCommGrpCat) = A x := by
+      change (D.obj (Discrete.mk x)).obj U = A x
+      exact hB x U.unop hxU
+    have hVobj :
+        (if h : x ∈ V.unop then A x else ⊤_ AddCommGrpCat) = A x := by
+      change (D.obj (Discrete.mk x)).obj V = A x
+      exact hB x V.unop hxV
+    have hh :
+        (skyscraperPresheaf x (A x)).map i ≫ eqToHom hVobj =
+          eqToHom hUobj := by
+      dsimp [skyscraperPresheaf]
+      rw [dif_pos hxV]
+      simp only [eqToHom_trans]
+    have hbase :
+        (D.obj (Discrete.mk x)).map i ≫ eqToHom hVobj =
+          eqToHom hUobj := by
+      change (skyscraperPresheaf x (A x)).map i ≫ eqToHom hVobj =
+        eqToHom hUobj
+      exact hh
+    have hVeq : hVobj = hB x V.unop hxV := Subsingleton.elim _ _
+    have hUeq : hUobj = hB x U.unop hxU := Subsingleton.elim _ _
+    rw [hVeq, hUeq] at hbase
+    exact hbase
+  let q (x : X) (U : (Opens X)ᵒᵖ) (hx : x ∈ U.unop) :
+      P.obj U ⟶ A x :=
+    AddCommGrpCat.ofHom {
+      toFun := fun s => s ⟨x, hx⟩
+      map_zero' := by simp
+      map_add' := by simp }
+  have hq (x : X) {U V : (Opens X)ᵒᵖ} (i : U ⟶ V)
+      (hxU : x ∈ U.unop) (hxV : x ∈ V.unop) :
+      P.map i ≫ q x V hxV = q x U hxU := by
+    apply AddCommGrpCat.hom_ext
+    ext s
+    dsimp [q, P, abelianSheafPointwiseProductPresheaf]
+    change s (i.unop ⟨x, hxV⟩) = s ⟨x, hxU⟩
+    congr 1
+  let p (x : X) (U : (Opens X)ᵒᵖ) : P.obj U ⟶ B x U.unop :=
+    if hx : x ∈ U.unop then
+      q x U hx ≫ eqToHom (hB x U.unop hx).symm
+    else
+      terminal.from (P.obj U) ≫ eqToHom (hB0 x U.unop hx).symm
+  let hpNat (x : X) : P ⟶ D.obj (Discrete.mk x) :=
+    { app := fun U => p x U
+      naturality := by
+        intro U V i
+        by_cases hxV : x ∈ V.unop
+        · have hxU : x ∈ U.unop := i.unop.le hxV
+          let eV : B x V.unop ≅ A x := eqToIso (hB x V.unop hxV)
+          apply (cancel_mono eV.hom).1
+          simp [p, hxU, hxV, eV, Category.assoc]
+          rw [hmapB x i hxU hxV]
+          rw [← hq x i hxU hxV]
+          simp
+        · have hterm : IsTerminal (B x V.unop) :=
+              IsTerminal.ofIso terminalIsTerminal (eqToIso (hB0 x V.unop hxV).symm)
+          exact hterm.hom_ext _ _ }
+  let G : (Opens X)ᵒᵖ →
+      (TopCat.Presheaf AddCommGrpCat.{v} X ⥤ AddCommGrpCat.{v}) :=
+    fun U => (evaluation (Opens X)ᵒᵖ AddCommGrpCat.{v}).obj U
+  let E (U : (Opens X)ᵒᵖ) : Discrete X ⥤ AddCommGrpCat.{v} := D ⋙ G U
+  let cP : Cone D :=
+    { pt := P
+      π :=
+        { app := fun j => hpNat j.as
+          naturality := by
+            intro i j f
+            let e : i = j := Discrete.ext f.down.down
+            have hf : f = eqToHom e := Subsingleton.elim _ _
+            rw [hf]
+            cases e
+            rfl } }
+  let cU (U : (Opens X)ᵒᵖ) : Cone (E U) := (G U).mapCone cP
+  have hcU (U : (Opens X)ᵒᵖ) : IsLimit (cU U) := by
+    have hBE (x : X) (hx : x ∈ U.unop) :
+        (E U).obj (Discrete.mk x) = A x := by
+      change B x U.unop = A x
+      exact hB x U.unop hx
+    have hBE0 (x : X) (hx : ¬x ∈ U.unop) :
+        (E U).obj (Discrete.mk x) = ⊤_ AddCommGrpCat := by
+      change B x U.unop = ⊤_ AddCommGrpCat
+      exact hB0 x U.unop hx
+    let l (s : Cone (E U)) : s.pt ⟶ P.obj U :=
+      AddCommGrpCat.ofHom {
+        toFun := fun z y =>
+          ConcreteCategory.hom
+            (s.π.app (Discrete.mk y.1) ≫ eqToHom (hBE y.1 y.2)) z
+        map_zero' := by
+          apply funext
+          intro y
+          simp
+        map_add' := by
+          intro a b
+          apply funext
+          intro y
+          simp }
+    have hfac (s : Cone (E U)) (j : X) (hj : j ∈ U.unop) :
+        (l s ≫ (cU U).π.app (Discrete.mk j)) ≫ eqToHom (hBE j hj) =
+          s.π.app (Discrete.mk j) ≫ eqToHom (hBE j hj) := by
+      dsimp [cU, G, cP, hpNat]
+      simp only [p, dif_pos hj]
+      have hEq : hB j U.unop hj = hBE j hj := Subsingleton.elim _ _
+      rw [hEq]
+      simp only [Category.assoc, eqToHom_trans, eqToHom_refl, Category.comp_id]
+      apply AddCommGrpCat.hom_ext
+      ext z
+      rfl
+    refine { lift := fun s => l s, fac := ?_, uniq := ?_ }
+    · rintro s ⟨j⟩
+      by_cases hj : j ∈ U.unop
+      · let e : (E U).obj (Discrete.mk j) ≅ A j := eqToIso (hBE j hj)
+        apply (cancel_mono e.hom).1
+        simpa [e] using hfac s j hj
+      · have hterm : IsTerminal ((E U).obj (Discrete.mk j)) :=
+          IsTerminal.ofIso terminalIsTerminal (eqToIso (hBE0 j hj).symm)
+        exact hterm.hom_ext _ _
+    · intro s m hm
+      apply AddCommGrpCat.hom_ext
+      ext z
+      apply funext
+      intro y
+      have hy0 := congrArg
+        (fun f : s.pt ⟶ (E U).obj (Discrete.mk y.1) =>
+          f ≫ eqToHom (hBE y.1 y.2))
+        (hm (Discrete.mk y.1))
+      dsimp [cU, G, cP, hpNat] at hy0
+      simp only [p, dif_pos y.2] at hy0
+      have hEq : hB y.1 U.unop y.2 = hBE y.1 y.2 := Subsingleton.elim _ _
+      rw [hEq] at hy0
+      simp [Category.assoc] at hy0
+      have hy2 := congrArg
+        (fun f : s.pt ⟶ A y.1 => ConcreteCategory.hom f z) hy0
+      change (ConcreteCategory.hom m z) y =
+        ConcreteCategory.hom (eqToHom (hBE y.1 y.2))
+          (ConcreteCategory.hom (s.π.app (Discrete.mk y.1)) z)
+      change (ConcreteCategory.hom m z) y =
+        ConcreteCategory.hom (eqToHom (hBE y.1 y.2))
+          (ConcreteCategory.hom (s.π.app (Discrete.mk y.1)) z) at hy2
+      exact hy2
+  have hcP : IsLimit cP := by
+    apply evaluationJointlyReflectsLimits cP
+    intro U
+    exact hcU U
+  have hPreservesD₀ : PreservesLimit D₀ F :=
+    preservesLimit_of_createsLimit_and_hasLimit D₀ F
+  have hlim : IsLimit (F.mapCone (limit.cone D₀)) :=
+    @isLimitOfPreserves _ _ _ _ _ _ _ F _ (limit.isLimit D₀) hPreservesD₀
+  let ePresheaf : P ≅ F.obj (limit D₀) :=
+    (hlim.conePointUniqueUpToIso hcP).symm
+  exact ⟨ObjectProperty.isoMk (P := TopCat.Presheaf.IsSheaf) ePresheaf⟩
 
 /-! The pointwise description of the selected injective product. -/
 theorem abelianSheafInjectiveProduct_pointwise_formula
@@ -238,14 +506,20 @@ theorem abelianSkyscraperSheaf_injective
     {X : TopCat.{v}} (x : X) (I : AddCommGrpCat.{v})
     (hI : Injective I) :
     Injective ((abelianSkyscraperSheafFunctor x).obj I) := by
-  sorry
+  exact (abelianStalkSkyscraperAdjunction x).map_injective I hI
 
 /-! The pointwise product of injective fibres is injective. -/
 theorem abelianSheafPointwiseProduct_injective
     {X : TopCat.{v}} (A : X → AddCommGrpCat.{v})
     (hA : ∀ x : X, Injective (A x)) :
     Injective (abelianSheafPointwiseProduct A) := by
-  sorry
+  rcases abelianSheafPointwiseProduct_skyscraperProduct_iso A with ⟨e⟩
+  apply Injective.of_iso e.symm
+  simpa [abelianSheafSkyscraperProduct] using
+    (@product_injective
+      (TopCat.Sheaf AddCommGrpCat.{v} X) _ _ X
+      (fun x : X => (abelianSkyscraperSheafFunctor x).obj (A x)) _
+      (fun x => abelianSkyscraperSheaf_injective x (A x) (hA x)))
 
 /-! The product of skyscrapers with injective fibres is injective. -/
 theorem abelianSheafSkyscraperProduct_injective

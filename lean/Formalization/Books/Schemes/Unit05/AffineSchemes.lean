@@ -75,7 +75,12 @@ theorem standardOpen_isUnit_of_subset {R : Type u} [CommRing R] (f g : R)
 theorem standardOpen_pow_eq_mul_of_subset {R : Type u} [CommRing R] (f g : R)
     (h : standardOpen g ≤ standardOpen f) :
     ∃ e : ℕ, 1 ≤ e ∧ ∃ a : R, g ^ e = a * f := by
-  sorry
+  obtain ⟨n, a, ha⟩ :=
+    (IsLocalization.Away.algebraMap_isUnit_iff (R := R) (S := Localization.Away g)
+      (x := g) (y := f)).mp (standardOpen_isUnit_of_subset f g h)
+  refine ⟨n + 1, Nat.succ_le_succ (Nat.zero_le n), a * g, ?_⟩
+  rw [pow_succ, ha]
+  ac_rfl
 
 /-- The canonical map `R_f → R_g` when `D(g) ⊆ D(f)`. -/
 noncomputable def standardOpenLocalizationMap {R : Type u} [CommRing R] (f g : R)
@@ -98,7 +103,49 @@ theorem exists_standardOpenSemilinearModuleMap {R M : Type u} [CommRing R]
       ∀ m : M,
         φ (LocalizedModule.mkLinearMap (Submonoid.powers f) M m) =
           LocalizedModule.mkLinearMap (Submonoid.powers g) M m := by
-  sorry
+  letI : Module (Localization.Away f) (LocalizedModule.Away g M) :=
+    Module.compHom (LocalizedModule.Away g M) (standardOpenLocalizationMap f g h)
+  letI : IsScalarTower R (Localization.Away f) (LocalizedModule.Away g M) :=
+    IsScalarTower.of_algebraMap_smul fun r x => by
+      change standardOpenLocalizationMap f g h (algebraMap R (Localization.Away f) r) • x = r • x
+      rw [standardOpenLocalizationMap_algebraMap]
+      exact IsScalarTower.algebraMap_smul (R := R) (A := Localization.Away g) r x
+  let hunit : IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away g M)) f) := by
+    rw [Module.End.isUnit_iff]
+    let A := Localization.Away g
+    let N := LocalizedModule.Away g M
+    have hfA : IsUnit (algebraMap A (Module.End A N)
+        (algebraMap R A f)) :=
+      (standardOpen_isUnit_of_subset f g h).map
+        (algebraMap A (Module.End A N))
+    have hfun : (algebraMap R (Module.End R N) f : N → N) =
+        (algebraMap A (Module.End A N) (algebraMap R A f) : N → N) := by
+      funext x
+      simp [Module.algebraMap_end_apply]
+    rw [hfun]
+    exact (Module.End.isUnit_iff _).mp hfA
+  let hunitPowers : ∀ s : Submonoid.powers f,
+      IsUnit (algebraMap R (Module.End R (LocalizedModule.Away g M)) s) := by
+    rintro ⟨_, n, rfl⟩
+    change IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away g M)) (f ^ n))
+    simpa only [map_pow] using hunit.pow n
+  let ψ := LocalizedModule.lift (Submonoid.powers f)
+    (LocalizedModule.mkLinearMap (Submonoid.powers g) M) hunitPowers
+  let ψ' := ψ.extendScalarsOfIsLocalization (Submonoid.powers f) (Localization.Away f)
+  let φ : LocalizedModule.Away f M →ₛₗ[standardOpenLocalizationMap f g h]
+      LocalizedModule.Away g M :=
+    { toFun := ψ'
+      map_add' := ψ'.map_add
+      map_smul' := fun a m => by
+        change ψ' (a • m) = standardOpenLocalizationMap f g h a • ψ' m
+        exact ψ'.map_smul a m }
+  refine ⟨φ, ?_⟩
+  intro m
+  exact DFunLike.congr_fun
+    (LocalizedModule.lift_comp (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) M) hunitPowers) m
 
 /-- The canonical semilinear map `M_f → M_g` attached to `D(g) ⊆ D(f)`. -/
 noncomputable def standardOpenSemilinearModuleLocalizationMap {R M : Type u}
@@ -149,7 +196,9 @@ theorem standardOpenLocalizationMap_comp_of_subset {R : Type u} [CommRing R]
     standardOpenLocalizationMap f k (hgk.trans hfg) =
       (standardOpenLocalizationMap g k hgk).comp
         (standardOpenLocalizationMap f g hfg) := by
-  sorry
+  apply IsLocalization.ringHom_ext (Submonoid.powers f)
+  ext a
+  simp [RingHom.comp_apply]
 
 /-- The canonical localized-module map attached to a standard-open inclusion. -/
 noncomputable def standardOpenModuleLocalizationMap {R M : Type u} [CommRing R]
@@ -196,7 +245,42 @@ theorem standardOpenModuleLocalizationMap_comp_of_subset {R M : Type u}
     standardOpenModuleLocalizationMap (R := R) (M := M) f k (hgk.trans hfg) =
       (standardOpenModuleLocalizationMap (R := R) (M := M) g k hgk).comp
         (standardOpenModuleLocalizationMap (R := R) (M := M) f g hfg) := by
-  sorry
+  let hunit : IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away k M)) f) := by
+    rw [Module.End.isUnit_iff]
+    let A := Localization.Away k
+    let N := LocalizedModule.Away k M
+    have hfA : IsUnit (algebraMap A (Module.End A N)
+        (algebraMap R A f)) :=
+      (standardOpen_isUnit_of_subset f k (hgk.trans hfg)).map
+        (algebraMap A (Module.End A N))
+    have hfun : (algebraMap R (Module.End R N) f : N → N) =
+        (algebraMap A (Module.End A N) (algebraMap R A f) : N → N) := by
+      funext x
+      simp [Module.algebraMap_end_apply]
+    rw [hfun]
+    exact (Module.End.isUnit_iff _).mp hfA
+  let hunitPowers : ∀ s : Submonoid.powers f,
+      IsUnit (algebraMap R (Module.End R (LocalizedModule.Away k M)) s) := by
+    rintro ⟨_, n, rfl⟩
+    change IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away k M)) (f ^ n))
+    simpa only [map_pow] using hunit.pow n
+  let l := LocalizedModule.lift (Submonoid.powers f)
+    (LocalizedModule.mkLinearMap (Submonoid.powers k) M) hunitPowers
+  have hleft : l =
+      standardOpenModuleLocalizationMap (R := R) (M := M) f k (hgk.trans hfg) := by
+    apply LocalizedModule.lift_unique (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers k) M) hunitPowers
+    exact standardOpenModuleLocalizationMap_comp (R := R) (M := M) f k (hgk.trans hfg)
+  have hright : l =
+      (standardOpenModuleLocalizationMap (R := R) (M := M) g k hgk).comp
+        (standardOpenModuleLocalizationMap (R := R) (M := M) f g hfg) := by
+    apply LocalizedModule.lift_unique (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers k) M) hunitPowers
+    rw [LinearMap.comp_assoc, standardOpenModuleLocalizationMap_comp,
+      standardOpenModuleLocalizationMap_comp]
+  exact hleft.symm.trans hright
 
 theorem standardOpenLocalizationMap_inverse_of_open_eq {R : Type u} [CommRing R]
     (f g : R) (h : standardOpen f = standardOpen g) :

@@ -51,21 +51,6 @@ def IsGeometricallyReduced (k : Type u) (S : Type v) [Field k] [CommRing S]
   ∀ (K : Type u) [Field K] [Algebra k K],
     IsReduced (K ⊗[k] S)
 
-/- The introductory reduction to an algebraic closure is recorded here. The
-   finite purely inseparable sufficiency statement follows the reusable
-   separable-extension reducedness result below. -/
-
-/-- Reducedness after tensoring with an algebraic closure is enough to imply
-geometric reducedness. -/
-theorem isGeometricallyReduced_of_isReduced_algebraicClosure
-    {k : Type u} {S : Type v} {Ω : Type w}
-    [Field k] [CommRing S] [Field Ω]
-    [Algebra k S] [Algebra k Ω]
-    [Algebra.IsAlgebraic k Ω] [IsAlgClosed Ω]
-    (hS : IsReduced S) (hΩ : IsReduced (Ω ⊗[k] S)) :
-    IsGeometricallyReduced k S := by
-  sorry
-
 /-! ## Elementary permanence properties -/
 
 /-- Geometric reducedness descends to every `k`-subalgebra. -/
@@ -875,6 +860,26 @@ theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
       hR'L Function.injective_id
   have hRS : IsReduced (R' ⊗[k] S') := isReduced_of_injective n hn
   exact hnot' hRS
+
+/- The introductory reduction to an algebraic closure is recorded here. The
+   finite purely inseparable sufficiency statement follows the reusable
+   separable-extension reducedness result above. -/
+
+/-- Reducedness after tensoring with an algebraic closure is enough to imply
+geometric reducedness. -/
+theorem isGeometricallyReduced_of_isReduced_algebraicClosure
+    {k : Type u} {S : Type v} {Ω : Type w}
+    [Field k] [CommRing S] [Field Ω]
+    [Algebra k S] [Algebra k Ω]
+    [Algebra.IsAlgebraic k Ω] [IsAlgClosed Ω]
+    (hS : IsReduced S) (hΩ : IsReduced (Ω ⊗[k] S)) :
+    IsGeometricallyReduced k S := by
+  apply isGeometricallyReduced_of_finitePurelyInseparable_baseChanges hS
+  intro k' _ _ _ _
+  let _ : IsReduced (Ω ⊗[k] S) := hΩ
+  exact isReduced_of_injective
+    (Algebra.TensorProduct.map (IsAlgClosed.lift : k' →ₐ[k] Ω) 1)
+    (Module.Flat.rTensor_preserves_injective_linearMap _ (RingHom.injective _))
 
 /-- The minimal-prime criterion for geometric reducedness. -/
 theorem isGeometricallyReduced_of_minimalPrime_localizations

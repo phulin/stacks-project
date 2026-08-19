@@ -64,7 +64,23 @@ theorem filteredStepDifferential_squared
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (p : ℤ) :
     filteredStepDifferential K p ≫ filteredStepDifferential K p = 0 := by
-  sorry
+  apply (cancel_mono (K.carrier.filtration.obj p).arrow).1
+  simp only [Formalization.Books.Homology.Unit20.filteredStepDifferential,
+    Category.assoc, Subobject.factorThru_arrow]
+  rw [← Category.assoc, Subobject.factorThru_arrow]
+  have h0 := congrArg FilteredHom.hom K.d_squared
+  have h1 : FilteredHom.hom K.d ≫ FilteredHom.hom K.d =
+      FilteredHom.hom (0 : K.carrier ⟶ K.carrier) := by
+    simpa only [filteredHom_comp_hom] using h0
+  have hz : FilteredHom.hom (0 : K.carrier ⟶ K.carrier) = 0 := by
+    rfl
+  have h : FilteredHom.hom K.d ≫ FilteredHom.hom K.d = 0 := h1.trans hz
+  simp only [zero_comp]
+  change ((K.carrier.filtration.obj p).arrow ≫
+    Formalization.Books.Homology.Unit20.filteredDifferentialUnderlying K) ≫
+    Formalization.Books.Homology.Unit20.filteredDifferentialUnderlying K = 0
+  rw [Category.assoc, h]
+  simp
 
 def filteredDifferentialStepObject {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
@@ -158,7 +174,12 @@ theorem filteredDifferentialAssociatedGradedMap_squared
     (K : FilteredDifferentialObject C) :
     filteredDifferentialAssociatedGradedMap K ≫
         filteredDifferentialAssociatedGradedMap K = 0 := by
-  sorry
+  change (associatedGraded (C := C)).map K.d ≫
+      (associatedGraded (C := C)).map K.d = 0
+  rw [← (associatedGraded (C := C)).map_comp]
+  rw [K.d_squared]
+  letI := associatedGraded_is_additive (C := C)
+  simp
 
 /-- The differential object `(gr(K), gr(d))`. -/
 def filteredDifferentialAssociatedGradedObject {C : Type u}
@@ -270,7 +291,200 @@ theorem filteredDifferential_page_subobjects_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (r : ℕ) :
     Nonempty (FilteredDifferentialPageSubobjectData K r) := by
-  sorry
+  let hF10 : ∀ p : ℤ,
+      K.carrier.filtration.obj (p + 1) ≤ K.carrier.filtration.obj p :=
+    fun p => K.carrier.filtration.antitone (by omega)
+  let hB1 : ∀ p : ℤ,
+      K.carrier.filtration.obj (p + 1) ≤ filteredDifferentialBPlus K r p :=
+    fun p => show K.carrier.filtration.obj (p + 1) ≤
+        filteredDifferentialBPlus K r p from le_sup_right
+  let hZ1 : ∀ p : ℤ,
+      K.carrier.filtration.obj (p + 1) ≤ filteredDifferentialZPlus K r p :=
+    fun p => show K.carrier.filtration.obj (p + 1) ≤
+        filteredDifferentialZPlus K r p from le_sup_right
+  let hB0 : ∀ p : ℤ,
+      filteredDifferentialBPlus K r p ≤ K.carrier.filtration.obj p := by
+    intro p
+    apply sup_le
+    · exact inf_le_right
+    · exact K.carrier.filtration.antitone (by omega)
+  let hZ0 : ∀ p : ℤ,
+      filteredDifferentialZPlus K r p ≤ K.carrier.filtration.obj p := by
+    intro p
+    apply sup_le
+    · exact inf_le_right
+    · exact K.carrier.filtration.antitone (by omega)
+  let bObj : GradedObject ℤ C := fun p =>
+    cokernel (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+      (filteredDifferentialBPlus K r p) (hB1 p))
+  let zObj : GradedObject ℤ C := fun p =>
+    cokernel (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+      (filteredDifferentialZPlus K r p) (hZ1 p))
+  let bMap : bObj ⟶
+      filteredDifferentialE₀Object K := fun p =>
+    cokernel.map
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (filteredDifferentialBPlus K r p) (hB1 p))
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (K.carrier.filtration.obj p) (hF10 p))
+      (𝟙 (K.carrier.filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredDifferentialBPlus K r p)
+        (K.carrier.filtration.obj p) (hB0 p))
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialBPlus K r p)
+            (K.carrier.filtration.obj p)
+            (hB1 p) (hB0 p)))
+  have hbMap_mono : ∀ p : ℤ, Mono (bMap p) := by
+    intro p
+    apply Abelian.mono_cokernel_map_of_isPullback
+    apply IsPullback.of_vert_isIso_mono
+    exact ⟨by
+      simpa only [Category.id_comp] using
+        (Subobject.ofLE_comp_ofLE
+          (K.carrier.filtration.obj (p + 1))
+          (filteredDifferentialBPlus K r p)
+          (K.carrier.filtration.obj p)
+          le_sup_right (hB0 p))⟩
+  letI : Mono bMap := ⟨by
+    intro X f g h
+    apply GradedObject.hom_ext
+    intro p
+    apply (cancel_mono (bMap p)).1
+    exact congrFun h p⟩
+  let zMap : zObj ⟶
+      filteredDifferentialE₀Object K := fun p =>
+    cokernel.map
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (filteredDifferentialZPlus K r p) (hZ1 p))
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (K.carrier.filtration.obj p) (hF10 p))
+      (𝟙 (K.carrier.filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredDifferentialZPlus K r p)
+        (K.carrier.filtration.obj p) (hZ0 p))
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialZPlus K r p)
+            (K.carrier.filtration.obj p)
+            (hZ1 p) (hZ0 p)))
+  have hzMap_mono : ∀ p : ℤ, Mono (zMap p) := by
+    intro p
+    apply Abelian.mono_cokernel_map_of_isPullback
+    apply IsPullback.of_vert_isIso_mono
+    exact ⟨by
+      simpa only [Category.id_comp] using
+        (Subobject.ofLE_comp_ofLE
+          (K.carrier.filtration.obj (p + 1))
+          (filteredDifferentialZPlus K r p)
+          (K.carrier.filtration.obj p)
+          le_sup_right (hZ0 p))⟩
+  letI : Mono zMap := ⟨by
+    intro X f g h
+    apply GradedObject.hom_ext
+    intro p
+    apply (cancel_mono (zMap p)).1
+    exact congrFun h p⟩
+  let bzMap : bObj ⟶ zObj := fun p =>
+    cokernel.map
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (filteredDifferentialBPlus K r p) (hB1 p))
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (filteredDifferentialZPlus K r p) (hZ1 p))
+      (𝟙 (K.carrier.filtration.obj (p + 1) : C))
+      (Subobject.ofLE (filteredDifferentialBPlus K r p)
+        (filteredDifferentialZPlus K r p) (by
+          exact Formalization.Books.Homology.Unit20.filteredDifferential_boundary_le_cycle
+            K p r))
+      (by
+        simpa only [Category.id_comp] using
+          (Subobject.ofLE_comp_ofLE
+            (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialBPlus K r p)
+            (filteredDifferentialZPlus K r p)
+            (hB1 p) (by
+              exact Formalization.Books.Homology.Unit20.filteredDifferential_boundary_le_cycle
+                K p r)))
+  have hBZ : Subobject.mk bMap ≤ Subobject.mk zMap := by
+    apply Subobject.mk_le_mk_of_comm bzMap
+    apply GradedObject.hom_ext
+    intro p
+    apply (cancel_epi (cokernel.π
+      (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+        (filteredDifferentialBPlus K r p) (hB1 p)))).1
+    dsimp only [CategoryStruct.comp]
+    have hbzπ : cokernel.π
+          (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialBPlus K r p) (hB1 p)) ≫ bzMap p =
+        Subobject.ofLE (filteredDifferentialBPlus K r p)
+          (filteredDifferentialZPlus K r p)
+          (Formalization.Books.Homology.Unit20.filteredDifferential_boundary_le_cycle
+            K p r) ≫
+          cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialZPlus K r p) (hZ1 p)) := by
+      dsimp [bObj, zObj, bzMap]
+      exact cokernel.π_desc _ _ _
+    have hzπ : cokernel.π
+          (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialZPlus K r p) (hZ1 p)) ≫ zMap p =
+        Subobject.ofLE (filteredDifferentialZPlus K r p)
+          (K.carrier.filtration.obj p) (hZ0 p) ≫
+          cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (K.carrier.filtration.obj p) (hF10 p)) := by
+      dsimp [bObj, zObj, filteredDifferentialE₀Object, zMap]
+      exact cokernel.π_desc _ _ _
+    have hbπ : cokernel.π
+          (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (filteredDifferentialBPlus K r p) (hB1 p)) ≫ bMap p =
+        Subobject.ofLE (filteredDifferentialBPlus K r p)
+          (K.carrier.filtration.obj p) (hB0 p) ≫
+          cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (K.carrier.filtration.obj p) (hF10 p)) := by
+      dsimp [bObj, filteredDifferentialE₀Object, bMap]
+      exact cokernel.π_desc _ _ _
+    rw [← Category.assoc, hbzπ, Category.assoc, hzπ, hbπ]
+    have hfinal :
+        Subobject.ofLE (filteredDifferentialBPlus K r p)
+            (filteredDifferentialZPlus K r p)
+            (Formalization.Books.Homology.Unit20.filteredDifferential_boundary_le_cycle
+              K p r) ≫
+          Subobject.ofLE (filteredDifferentialZPlus K r p)
+            (K.carrier.filtration.obj p) (hZ0 p) ≫
+          cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (K.carrier.filtration.obj p) (hF10 p)) =
+        Subobject.ofLE (filteredDifferentialBPlus K r p)
+          (K.carrier.filtration.obj p) (hB0 p) ≫
+          cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
+            (K.carrier.filtration.obj p) (hF10 p)) := by
+      rw [← Category.assoc, Subobject.ofLE_comp_ofLE]
+    simpa [filteredDifferentialE₀Object, filteredDifferentialAssociatedGraded,
+      associatedGraded, gradedPiece] using hfinal
+  exact ⟨{
+    B := Subobject.mk bMap
+    Z := Subobject.mk zMap
+    B_le_Z := hBZ
+    B_component := fun p => ⟨by
+      let e : (Subobject.mk bMap : GradedObject ℤ C) p ≅ bObj p := {
+        hom := (Subobject.underlyingIso bMap).hom p
+        inv := (Subobject.underlyingIso bMap).inv p
+        hom_inv_id := congrFun (Subobject.underlyingIso bMap).hom_inv_id p
+        inv_hom_id := congrFun (Subobject.underlyingIso bMap).inv_hom_id p
+      }
+      simpa [bObj, filteredDifferentialB,
+        Formalization.Books.Homology.Unit20.subquotientObject] using e⟩
+    Z_component := fun p => ⟨by
+      let e : (Subobject.mk zMap : GradedObject ℤ C) p ≅ zObj p := {
+        hom := (Subobject.underlyingIso zMap).hom p
+        inv := (Subobject.underlyingIso zMap).inv p
+        hom_inv_id := congrFun (Subobject.underlyingIso zMap).hom_inv_id p
+        inv_hom_id := congrFun (Subobject.underlyingIso zMap).inv_hom_id p
+      }
+      simpa [zObj, filteredDifferentialZ,
+        Formalization.Books.Homology.Unit20.subquotientObject] using e⟩
+  }⟩
 
 abbrev filteredDifferentialPage {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) (r : ℕ) (p : ℤ) : C :=

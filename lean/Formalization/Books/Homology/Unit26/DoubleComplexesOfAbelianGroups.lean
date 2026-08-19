@@ -301,11 +301,38 @@ noncomputable def productTotalDifferential
             eqToHom (by
               simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm])))
 
+private noncomputable def rightResolutionProductTotalMapComponent
+    {M : AbelianGroupCochainComplex}
+    (R : RightDoubleComplexResolution M) (n : ℤ) :
+    M.X n ⟶ productTotalTerm R.doubleComplex n := by
+  unfold productTotalTerm
+  exact Pi.lift (fun p => by
+    classical
+    by_cases hp : p = 0
+    · subst p
+      exact R.augmentation.f n ≫ eqToHom (by
+        dsimp [column]
+        simp)
+    · exact 0)
+
+private theorem rightResolutionProductTotalMapComponent_π
+    {M : AbelianGroupCochainComplex}
+    (R : RightDoubleComplexResolution M) (n p : ℤ) :
+    rightResolutionProductTotalMapComponent R n ≫
+        Pi.π (fun r : ℤ => R.doubleComplex.obj r (n - r)) p =
+      (if hp : p = 0 then
+        hp ▸ R.augmentation.f n ≫ eqToHom (by
+          dsimp [column]
+          simp)
+      else 0) := by
+  classical
+  change (Pi.lift _ ≫ Pi.π _ p) = _
+  rw [Pi.lift_π]
+
 /-- The product-total differential squares to zero. -/
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
-  /- Prior attempt (coordinator diagnostics retained for context):
   unfold productTotalDifferential productTotalTerm
   apply Pi.hom_ext
   intro p
@@ -314,24 +341,6 @@ theorem productTotalDifferential_comp_zero
   simp only [← Category.assoc, Pi.lift_π]
   simp only [Preadditive.add_comp, Linear.units_smul_comp, smul_add, smul_smul,
     Category.assoc]
-  /- Prior attempt:
-  have h11 :
-      A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
-          eqToHom (by congr 1 <;> ring) ≫
-        A.d1 (p - 1) (n + 1 - (p - 1)) ≫
-          eqToHom (by congr 1 <;> ring) = 0 := by
-    have hnat := eqToHom_naturality (fun q : ℤ =>
-      A.d1 (p - 1) q)
-      (show n - (p - 1 - 1) = n + 1 - (p - 1) by ring)
-    try rw [show p - 1 - 1 + 1 = p - 1 by ring]
-    rw [← hnat]
-    have hp : p - 1 - 1 + 1 = p - 1 := by ring
-    have hn : n - (p - 1 - 1) = n + 1 - (p - 1) := by ring
-    simpa [Category.assoc, hp, hn, sub_eq_add_neg, add_assoc, add_comm,
-      add_left_comm] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
-        (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
-  -/
   have h11 :
       A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
           eqToHom (by congr 1 <;> ring) ≫
@@ -356,29 +365,22 @@ theorem productTotalDifferential_comp_zero
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d2_sq p (n - p))
-  /- Prior attempt (coordinator diagnostics in the remaining component proof):
   have hcomm :
-      A.d1 (p - 1) (n - (p - 1)) ≫
-          eqToHom (by congr 1 <;> ring) ≫
-        A.d2 p (n + 1 - p) ≫
-          eqToHom (by congr 1 <;> ring) =
-      A.d2 (p - 1) (n - (p - 1)) ≫
-          eqToHom (by congr 1 <;> ring) ≫
-          A.d1 (p - 1) (n + 1 - (p - 1)) ≫
-          eqToHom (by congr 1 <;> ring) := by
-    /- Prior attempt (coordinator diagnostics at the naturality rewrites):
-    simp_rw [← eqToHom_naturality_assoc
-      (fun q : ℤ => A.d2 p q)
+      totalD1Component A n (p - 1) ≫
+          totalD2Component A (n + 1) p =
+      totalD2Component A n (p - 1) ≫
+          totalD1Component A (n + 1) (p - 1) := by
+    dsimp [totalD1Component, totalD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 p q)
       (show n - (p - 1) = n + 1 - p by ring)]
-    erw [← eqToHom_naturality_assoc
+    rw [← eqToHom_naturality_assoc
       (fun q : ℤ => A.d1 (p - 1) q)
       (show n - (p - 1) + 1 = n + 1 - (p - 1) by
         congr 1 <;> ring)]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.comm (p - 1) (n - (p - 1))).symm
-    -/
-    sorry
   have h11' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫
           A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
@@ -392,18 +394,11 @@ theorem productTotalDifferential_comp_zero
       Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
           A.d2 p (n - p) ≫
           eqToHom (by congr 1 <;> ring) ≫
-          A.d2 p (n + 1 - p) = 0 := by
-    /- Prior attempt (the component equality loses the final `eqToHom`):
-    change Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
-        (totalD2Component A n p ≫ totalD2Component A (n + 1) p) = 0
-    rw [h22, comp_zero]
-
-    A second attempt exposed the same transport mismatch:
-    simpa [totalD2Component, Category.assoc] using
+          A.d2 p (n + 1 - p) ≫
+          eqToHom (by congr 1 <;> ring) = 0 := by
+    simpa only [totalD2Component, Category.assoc, comp_zero] using
       congrArg (fun f =>
         Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫ f) h22
-    -/
-    sorry
   have hcomm' :
       Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
           A.d1 (p - 1) (n - (p - 1)) ≫
@@ -418,12 +413,7 @@ theorem productTotalDifferential_comp_zero
     simpa [totalD1Component, totalD2Component, Category.assoc] using
       congrArg (fun f =>
         Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫ f) hcomm
-  /- Prior attempt (the summand rewrite did not match under the signed sum):
-  rw [h11', hcomm', h22']
-  -/
-  -/
-  -/
-  sorry
+  simp [h11', hcomm', h22', Int.negOnePow_succ]
 
 /-- The product total cochain complex associated to a double complex. -/
 noncomputable def productTotalComplex
@@ -460,24 +450,96 @@ noncomputable def rightResolutionTotalMap
       ring) ≫
       Sigma.ι (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0
   comm' n m hnm := by
-    sorry
+    classical
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    cases hnm'
+    simp only [totalComplex, dif_pos, totalDifferential, Sigma.ι_desc,
+      Category.assoc, Preadditive.comp_add, Linear.comp_units_smul,
+      Int.negOnePow_zero, one_smul]
+    have haug_d := congrArg (fun f => f.f n) R.augmentation_d
+    simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d
+    have hhor :
+        R.augmentation.f n ≫
+            eqToHom (by dsimp [column]; congr 1; ring) ≫
+            totalD1Component R.doubleComplex n 0 ≫
+            Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) (0 + 1) = 0 := by
+      dsimp [totalD1Component]
+      simp only [Category.assoc]
+      change R.augmentation.f n ≫
+        eqToHom (by dsimp [column]; congr 1; ring) ≫
+          (columnMap R.doubleComplex 0).f (n - 0) ≫
+          eqToHom (by dsimp [column]; congr 1; ring) ≫
+          Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) (0 + 1) = 0
+      rw [← eqToHom_naturality_assoc
+        (fun q : ℤ => (columnMap R.doubleComplex 0).f q)
+        (show n = n - 0 by ring)]
+      rw [← Category.assoc, haug_d, zero_comp]
+    have hcomm := R.augmentation.comm n (n + 1)
+    have hcolumn :
+        R.augmentation.f n ≫
+            eqToHom (by dsimp [column]; congr 1; ring) ≫
+            (column R.doubleComplex 0).d (n - 0) (n - 0 + 1) ≫
+            eqToHom (by dsimp [column]; congr 1; ring) ≫
+            Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) 0 =
+          M.d n (n + 1) ≫ R.augmentation.f (n + 1) ≫
+            eqToHom (by
+              change R.doubleComplex.obj 0 (n + 1) =
+                R.doubleComplex.obj 0 (n + 1 - 0)
+              congr 1
+              ring) ≫
+            Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) 0 := by
+      rw [← eqToHom_naturality_assoc
+        (fun q : ℤ => (column R.doubleComplex 0).d q (q + 1))
+        (show n = n - 0 by ring)]
+      rw [← Category.assoc, hcomm]
+      simp [Category.assoc]
+    have hvert :
+        R.augmentation.f n ≫
+            eqToHom (by dsimp [column]; congr 1; ring) ≫
+            totalD2Component R.doubleComplex n 0 ≫
+            Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) 0 =
+          M.d n (n + 1) ≫ R.augmentation.f (n + 1) ≫
+            eqToHom (by
+              change R.doubleComplex.obj 0 (n + 1) =
+                R.doubleComplex.obj 0 (n + 1 - 0)
+              congr 1
+              ring) ≫
+            Sigma.ι (fun r : ℤ => R.doubleComplex.obj r (n + 1 - r)) 0 := by
+      simpa [totalD2Component, column, Category.assoc] using hcolumn
+    rw [hhor, hvert]
+    simp
 
 /-- The map from a right resolution into its product total complex. -/
 noncomputable def rightResolutionProductTotalMap
     {M : AbelianGroupCochainComplex}
-    (R : RightDoubleComplexResolution M) :
+  (R : RightDoubleComplexResolution M) :
     M ⟶ productTotalComplex R.doubleComplex where
   f n := by
-    classical
-    refine Pi.lift (fun p => ?_)
-    by_cases hp : p = 0
-    · subst p
-      exact R.augmentation.f n ≫ eqToHom (by
-        dsimp [column]
-        simp)
-    · exact 0
+    change M.X n ⟶ ∏ᶜ fun p : ℤ => R.doubleComplex.obj p (n - p)
+    exact rightResolutionProductTotalMapComponent R n
   comm' n m hnm := by
-    sorry
+    classical
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    subst m
+    change rightResolutionProductTotalMapComponent R n ≫
+        (if h : n + 1 = n + 1 then h ▸ productTotalDifferential R.doubleComplex n else 0) =
+      M.d n (n + 1) ≫ rightResolutionProductTotalMapComponent R (n + 1)
+    apply Pi.hom_ext
+    intro p
+    split_ifs with h
+    · cases h
+      change (rightResolutionProductTotalMapComponent R n ≫
+        (Pi.lift _ ≫
+          Pi.π (fun q : ℤ => R.doubleComplex.obj q (n + 1 - q)) p)) =
+        (M.d n (n + 1) ≫ rightResolutionProductTotalMapComponent R (n + 1)) ≫
+          Pi.π (fun q : ℤ => R.doubleComplex.obj q (n + 1 - q)) p
+      rw [Pi.lift_π]
+      rw [Preadditive.comp_add, Linear.comp_units_smul]
+      simp only [Category.assoc]
+    · exact (h rfl).elim
 
 /-- The map from the coproduct total complex of a left resolution to its
 resolved complex. -/

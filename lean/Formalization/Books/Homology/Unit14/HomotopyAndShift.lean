@@ -1151,7 +1151,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
               ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))
             have hfr : S.f.f (i + (-1 : ℤ)) ≫ (s (i + (-1 : ℤ))).r =
                 𝟙 (S.X₁.X (i + (-1 : ℤ))) := by
-              convert (s (i + (-1 : ℤ))).f_r using 1 <;> rfl
+              convert (s (i + (-1 : ℤ))).f_r using 1; rfl
             have hcomm_fd :
                 (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
                     S.X₂.d i (i + (-1 : ℤ)) =
@@ -1185,7 +1185,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
                 S.X₃.d i (i + (-1 : ℤ)) ≫
                   termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
             have hsg : (s' i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
-              convert (s' i).s_g using 1 <;> rfl
+              convert (s' i).s_g using 1; rfl
             have hcomm_dg :
                 ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ)) =
                   ((s' i).s ≫ S.g.f i) ≫ S.X₃.d i (i + (-1 : ℤ)) := by
@@ -1230,7 +1230,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
             rw [hcancel]
           erw [Preadditive.sub_comp]
           erw [neg_sub]
-          abel
+          abel_nf
           set_option backward.isDefEq.respectTransparency false in
             simp [Mathlib.Tactic.Abel.termg] }
   refine ⟨H, ?_⟩

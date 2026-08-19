@@ -4026,8 +4026,7 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
           Polynomial.C (4 * r)) =
       (Polynomial.aeval affineA P : Polynomial ℚ)
     rw [Polynomial.aeval_subalgebra_coe]
-    simp only [P, qP, d, c, r, alpha, Polynomial.aeval_def, Polynomial.eval₂_pow,
-      Polynomial.eval₂_X, Polynomial.eval₂_C, Polynomial.eval₂_ofNat, map_add, map_sub,
+    simp only [P, qP, d, c, r, alpha, Polynomial.aeval_def, map_add, map_sub,
       map_mul, map_pow, map_ofNat, map_one]
     simp only [← Polynomial.C_eq_algebraMap]
     ring

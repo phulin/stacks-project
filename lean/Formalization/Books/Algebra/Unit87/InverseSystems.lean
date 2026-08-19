@@ -1,7 +1,10 @@
 import Formalization.Books.Algebra.Unit86.MittagLefflerSystems
 import Mathlib.Algebra.Category.ModuleCat.Limits
+import Mathlib.Algebra.Category.ModuleCat.Monoidal.Basic
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Data.PNat.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Pi
+import Mathlib.LinearAlgebra.TensorProduct.RightExactness
 
 /-!
 # Commutative Algebra, Chapter 87: Inverse systems
@@ -18,6 +21,7 @@ namespace Formalization.Books.Algebra.Unit87
 open CategoryTheory
 open CategoryTheory.Limits
 open Formalization.Books.Categories.Unit21
+open scoped TensorProduct
 
 universe u w
 
@@ -359,6 +363,539 @@ theorem inverse_limit_shortExact_of_mittagLeffler
       change (S.g.app i) ((sE i).1) = sC.val i
       exact (sE i).2
     rw [hπB, hfiber, hπC]
+
+/-! ## Tensor products and inverse limits -/
+
+/-- Tensoring a finite-rank free module on the left is canonically a finite
+product. -/
+noncomputable def finiteFreeTensorEquiv
+    {R : Type u} [CommRing R] (n : ℕ) (M : ModuleCat.{u} R) :
+    ((MonoidalCategory.tensorLeft (ModuleCat.of R (Fin n → R))).obj M : Type u) ≃ₗ[R]
+      (Fin n → M) :=
+  (TensorProduct.comm R (Fin n → R) M).trans
+    (TensorProduct.piScalarRight R R M (Fin n))
+
+@[simp] theorem finiteFreeTensorEquiv_map
+    {R : Type u} [CommRing R] (n : ℕ) {M N : ModuleCat.{u} R}
+    (f : M ⟶ N) (x : (Fin n → R) ⊗[R] M) :
+    finiteFreeTensorEquiv n N (f.hom.lTensor (Fin n → R) x) =
+      fun k => f (finiteFreeTensorEquiv n M x k) := by
+  induction x with
+  | zero =>
+      ext k
+      simp
+  | tmul p m =>
+      ext k
+      change p k • f m = f (p k • m)
+      exact (map_smul f.hom (p k) m).symm
+  | add x y hx hy =>
+      ext k
+      simpa using congrFun (congrArg₂ (· + ·) hx hy) k
+
+@[simp] theorem finiteFreeTensorEquiv_tensorLeft_map
+    {R : Type u} [CommRing R] (n : ℕ) {M N : ModuleCat.{u} R}
+    (f : M ⟶ N)
+    (x : (MonoidalCategory.tensorLeft
+      (ModuleCat.of R (Fin n → R))).obj M) :
+    finiteFreeTensorEquiv n N
+        ((MonoidalCategory.tensorLeft
+          (ModuleCat.of R (Fin n → R))).map f x) =
+      fun k => f (finiteFreeTensorEquiv n M x k) :=
+  finiteFreeTensorEquiv_map n f x
+
+/-- The canonical comparison from a finite free module tensored with a limit
+to the limit of the stagewise tensor products is bijective. -/
+theorem finiteFreeTensor_limitPost_bijective
+    {R : Type u} [CommRing R] {I : Type w} [Preorder I] [UnivLE.{w, u}]
+    (F : InverseSystem I (ModuleCat.{u} R)) (n : ℕ) :
+    Function.Bijective (limit.post F
+      (MonoidalCategory.tensorLeft (ModuleCat.of R (Fin n → R)))) := by
+  let P : ModuleCat.{u} R := ModuleCat.of R (Fin n → R)
+  let G : InverseSystem I (ModuleCat.{u} R) :=
+    F ⋙ MonoidalCategory.tensorLeft P
+  let hF : IsLimit ((CategoryTheory.forget (ModuleCat.{u} R)).mapCone
+      (limit.cone F)) :=
+    isLimitOfPreserves (CategoryTheory.forget (ModuleCat.{u} R)) (limit.isLimit F)
+  let hG : IsLimit ((CategoryTheory.forget (ModuleCat.{u} R)).mapCone
+      (limit.cone G)) :=
+    isLimitOfPreserves (CategoryTheory.forget (ModuleCat.{u} R)) (limit.isLimit G)
+  let eF := Types.isLimitEquivSections hF
+  let eG := Types.isLimitEquivSections hG
+  constructor
+  · intro x y hxy
+    apply (finiteFreeTensorEquiv n (limit F)).injective
+    funext k
+    apply Concrete.limit_ext F
+    intro i
+    have hi := congrArg (fun z => (limit.π G i) z) hxy
+    have hpostx :
+        (limit.π G i) ((limit.post F (MonoidalCategory.tensorLeft P)) x) =
+          ((MonoidalCategory.tensorLeft P).map (limit.π F i)) x := by
+      exact congrArg (fun q => q x)
+        (limit.post_π F (MonoidalCategory.tensorLeft P) i)
+    have hposty :
+        (limit.π G i) ((limit.post F (MonoidalCategory.tensorLeft P)) y) =
+          ((MonoidalCategory.tensorLeft P).map (limit.π F i)) y := by
+      exact congrArg (fun q => q y)
+        (limit.post_π F (MonoidalCategory.tensorLeft P) i)
+    change (limit.π G i)
+        ((limit.post F (MonoidalCategory.tensorLeft P)) x) =
+      (limit.π G i)
+        ((limit.post F (MonoidalCategory.tensorLeft P)) y) at hi
+    rw [hpostx, hposty] at hi
+    change (limit.π F i).hom.lTensor (Fin n → R) x =
+      (limit.π F i).hom.lTensor (Fin n → R) y at hi
+    have hi' := congrArg (fun z => finiteFreeTensorEquiv n (F.obj i) z k) hi
+    simpa only [finiteFreeTensorEquiv_map] using hi'
+  · intro z
+    let sG : (G ⋙ CategoryTheory.forget (ModuleCat.{u} R)).sections := eG z
+    let s : Fin n → (F ⋙ CategoryTheory.forget (ModuleCat.{u} R)).sections :=
+      fun k => ⟨fun i => finiteFreeTensorEquiv n (F.obj i) (sG.val i) k, by
+        intro i j f
+        have hf := congrArg
+          (fun t => finiteFreeTensorEquiv n (F.obj j) t k) (sG.property f)
+        change finiteFreeTensorEquiv n (F.obj j)
+            ((F.map f).hom.lTensor (Fin n → R) (sG.val i)) k =
+          finiteFreeTensorEquiv n (F.obj j) (sG.val j) k at hf
+        change (F.map f)
+            (finiteFreeTensorEquiv n (F.obj i) (sG.val i) k) =
+          finiteFreeTensorEquiv n (F.obj j) (sG.val j) k
+        simpa only [finiteFreeTensorEquiv_map] using hf⟩
+    let x : (MonoidalCategory.tensorLeft P).obj (limit F) :=
+      (finiteFreeTensorEquiv n (limit F)).symm (fun k => eF.symm (s k))
+    refine ⟨x, ?_⟩
+    apply Concrete.limit_ext G
+    intro i
+    apply (finiteFreeTensorEquiv n (F.obj i)).injective
+    funext k
+    have hpost :
+        (limit.π G i) ((limit.post F (MonoidalCategory.tensorLeft P)) x) =
+          ((MonoidalCategory.tensorLeft P).map (limit.π F i)) x := by
+      exact congrArg (fun q => q x)
+        (limit.post_π F (MonoidalCategory.tensorLeft P) i)
+    have hπF : (limit.π F i) (eF.symm (s k)) = (s k).val i := by
+      simpa [eF] using Types.isLimitEquivSections_symm_apply hF (s k) i
+    have hπG : sG.val i = (limit.π G i) z := by
+      exact Types.isLimitEquivSections_apply hG i z
+    rw [hpost]
+    change finiteFreeTensorEquiv n (F.obj i)
+        ((limit.π F i).hom.lTensor (Fin n → R) x) k =
+      finiteFreeTensorEquiv n (F.obj i) ((limit.π G i) z) k
+    rw [show finiteFreeTensorEquiv n (F.obj i)
+        ((limit.π F i).hom.lTensor (Fin n → R) x) k =
+          (limit.π F i) (finiteFreeTensorEquiv n (limit F) x k) by
+      exact congrFun (finiteFreeTensorEquiv_map n (limit.π F i) x) k]
+    rw [show finiteFreeTensorEquiv n (limit F) x = fun k => eF.symm (s k) by
+      simp [x], hπF]
+    change finiteFreeTensorEquiv n (F.obj i) (sG.val i) k =
+      finiteFreeTensorEquiv n (F.obj i) ((limit.π G i) z) k
+    rw [hπG]
+
+/-- For a finite presentation matrix `d`, this is the inverse system of
+kernels of `d ⊗ 1` at the stages of `F`. -/
+def tensorPresentationKernelSystem
+    {R : Type u} [CommRing R] {I : Type w} [Preorder I]
+    {m n : ℕ} (d : (Fin m → R) →ₗ[R] (Fin n → R))
+    (F : InverseSystem I (ModuleCat.{u} R)) : InverseSystem I (Type u) where
+  obj i := LinearMap.ker (d.rTensor (F.obj i))
+  map {i j} f := ↾(fun x =>
+    (⟨(F.map f).hom.lTensor (Fin m → R) x.1, by
+      change d.rTensor (F.obj j)
+        ((F.map f).hom.lTensor (Fin m → R) x.1) = 0
+      rw [← LinearMap.comp_apply, LinearMap.rTensor_comp_lTensor,
+        ← LinearMap.lTensor_comp_rTensor, LinearMap.comp_apply, x.2, map_zero]
+    ⟩ : LinearMap.ker (d.rTensor (F.obj j))))
+  map_id := by
+    intro i
+    ext x
+    change (F.map (𝟙 i)).hom.lTensor (Fin m → R) x = x
+    simp
+  map_comp := by
+    intro i j k f g
+    ext x
+    change (F.map (f ≫ g)).hom.lTensor (Fin m → R) x =
+      (F.map g).hom.lTensor (Fin m → R)
+        ((F.map f).hom.lTensor (Fin m → R) x)
+    rw [F.map_comp]
+    exact LinearMap.lTensor_comp_apply (Fin m → R) _ _ x.1
+
+/-- For an inverse sequence, surjectivity of the successive transition maps
+implies surjectivity of every transition map. -/
+theorem inverseSystem_map_surjective_of_successive
+    {R : Type u} [Ring R] (F : InverseSystem ℕ (ModuleCat.{u} R))
+    (hsurj : ∀ n : ℕ,
+      Function.Surjective (F.map (opHomOfLE (Nat.le_succ n)))) :
+    ∀ ⦃i j : ℕᵒᵖ⦄ (f : i ⟶ j), Function.Surjective (F.map f) := by
+  have hgeneral : ∀ (i j : ℕ) (h : j ≤ i),
+      Function.Surjective (F.map (opHomOfLE h)) := by
+    intro i
+    induction i with
+    | zero =>
+        intro j h
+        have hj : j = 0 := Nat.eq_zero_of_le_zero h
+        subst j
+        have hf : opHomOfLE h = 𝟙 (Opposite.op 0) := Subsingleton.elim _ _
+        rw [hf, F.map_id]
+        exact Function.surjective_id
+    | succ i ih =>
+        intro j h
+        rcases eq_or_lt_of_le h with rfl | hj
+        · have hf : opHomOfLE h = 𝟙 (Opposite.op (i + 1)) :=
+            Subsingleton.elim _ _
+          rw [hf, F.map_id]
+          exact Function.surjective_id
+        · have hji : j ≤ i := Nat.le_of_lt_succ hj
+          have hcomp : F.map (opHomOfLE h) =
+              F.map (opHomOfLE (Nat.le_succ i)) ≫ F.map (opHomOfLE hji) := by
+            rw [← F.map_comp]
+            congr 1
+          rw [hcomp]
+          exact (ih j hji).comp (hsurj i)
+  intro i j f
+  let h : j.unop ≤ i.unop := le_of_op_hom f
+  have hf : f = opHomOfLE h := Subsingleton.elim _ _
+  rw [hf]
+  exact hgeneral i.unop j.unop h
+
+/-- Tensoring a countable inverse limit by a module with a chosen finite
+presentation commutes with the limit when the transition maps are surjective
+and the inverse system of relation kernels is Mittag--Leffler.  The latter is
+the `Tor₁` obstruction in applications. -/
+theorem tensor_inverseSystemLimit_iso_of_finitePresentation
+    {R : Type u} [CommRing R] {I : Type w} [Preorder I] [Countable I]
+    [UnivLE.{w, u}]
+    (hI : IsDirectedSet I) (F : InverseSystem I (ModuleCat.{u} R))
+    (Q : ModuleCat.{u} R) {m n : ℕ}
+    (d : (Fin m → R) →ₗ[R] (Fin n → R))
+    (q : (Fin n → R) →ₗ[R] Q)
+    (hexact : Function.Exact d q) (hq : Function.Surjective q)
+    (hsurj : ∀ ⦃i j : Iᵒᵖ⦄ (f : i ⟶ j),
+      Function.Surjective (F.map f))
+    (hML : (tensorPresentationKernelSystem d F).IsMittagLeffler) :
+    Nonempty ((MonoidalCategory.tensorLeft Q).obj (InverseSystemLimit F) ≅
+      (InverseSystemLimit
+        (F ⋙ MonoidalCategory.tensorLeft Q) : ModuleCat.{u} R)) := by
+  let : Nonempty I := hI.1
+  let : IsDirectedOrder I := hI.2
+  let : IsFiltered I := isFiltered_of_directed_le_nonempty I
+  let : IsCofiltered Iᵒᵖ := isCofiltered_op_of_isFiltered I
+  let Pm : ModuleCat.{u} R := ModuleCat.of R (Fin m → R)
+  let Pn : ModuleCat.{u} R := ModuleCat.of R (Fin n → R)
+  let Gm : InverseSystem I (ModuleCat.{u} R) :=
+    F ⋙ MonoidalCategory.tensorLeft Pm
+  let Gn : InverseSystem I (ModuleCat.{u} R) :=
+    F ⋙ MonoidalCategory.tensorLeft Pn
+  let GQ : InverseSystem I (ModuleCat.{u} R) :=
+    F ⋙ MonoidalCategory.tensorLeft Q
+  let cQ := limit.post F (MonoidalCategory.tensorLeft Q)
+  have hfree_m := finiteFreeTensor_limitPost_bijective F m
+  have hfree_n := finiteFreeTensor_limitPost_bijective F n
+  have hcQ_surjective : Function.Surjective cQ := by
+    intro x
+    let E : Iᵒᵖ ⥤ Type u :=
+      { obj := fun i => {y : (Fin n → R) ⊗[R] F.obj i //
+            q.rTensor (F.obj i) y = (limit.π GQ i) x}
+        map := fun {i j} f => ↾(fun y =>
+          (⟨(F.map f).hom.lTensor (Fin n → R) y.1, by
+            rw [← LinearMap.comp_apply, LinearMap.rTensor_comp_lTensor,
+              ← LinearMap.lTensor_comp_rTensor, LinearMap.comp_apply, y.2]
+            have hx := congrArg (fun a => a x) (limit.w GQ f)
+            change (F.map f).hom.lTensor Q ((limit.π GQ i) x) =
+              (limit.π GQ j) x at hx
+            exact hx
+          ⟩ : {y : (Fin n → R) ⊗[R] F.obj j //
+            q.rTensor (F.obj j) y = (limit.π GQ j) x}))
+        map_id := by
+          intro i
+          ext y
+          change (F.map (𝟙 i)).hom.lTensor (Fin n → R) y = y
+          simp
+        map_comp := by
+          intro i j k f g
+          ext y
+          change (F.map (f ≫ g)).hom.lTensor (Fin n → R) y =
+            (F.map g).hom.lTensor (Fin n → R)
+              ((F.map f).hom.lTensor (Fin n → R) y)
+          rw [F.map_comp]
+          exact LinearMap.lTensor_comp_apply (Fin n → R) _ _ y.1 }
+    have hEne : ∀ i : Iᵒᵖ, Nonempty (E.obj i) := by
+      intro i
+      obtain ⟨y, hy⟩ := LinearMap.rTensor_surjective (F.obj i) hq
+        ((limit.π GQ i) x)
+      exact ⟨⟨y, hy⟩⟩
+    have hEsur : ∀ ⦃i j : Iᵒᵖ⦄ (f : i ⟶ j),
+        Function.Surjective (E.map f) := by
+      intro i j f yj
+      obtain ⟨yi, hyi⟩ := LinearMap.rTensor_surjective (F.obj i) hq
+        ((limit.π GQ i) x)
+      have hdiff : q.rTensor (F.obj j)
+          (yj.1 - (F.map f).hom.lTensor (Fin n → R) yi) = 0 := by
+        rw [map_sub, yj.2]
+        rw [← LinearMap.comp_apply, LinearMap.rTensor_comp_lTensor,
+          ← LinearMap.lTensor_comp_rTensor, LinearMap.comp_apply, hyi]
+        have hx := congrArg (fun a => a x) (limit.w GQ f)
+        change (F.map f).hom.lTensor Q ((limit.π GQ i) x) =
+          (limit.π GQ j) x at hx
+        exact sub_eq_zero.mpr hx.symm
+      have hexj := rTensor_exact (F.obj j) hexact hq
+      obtain ⟨zj, hzj⟩ := (hexj _).mp hdiff
+      obtain ⟨zi, hzi⟩ := LinearMap.lTensor_surjective (Fin m → R)
+        (hsurj f) zj
+      let yi' : E.obj i :=
+        ⟨yi + d.rTensor (F.obj i) zi, by
+          rw [map_add, hyi]
+          have hz : q.rTensor (F.obj i) (d.rTensor (F.obj i) zi) = 0 :=
+            (rTensor_exact (F.obj i) hexact hq _).mpr ⟨zi, rfl⟩
+          rw [hz, add_zero]
+        ⟩
+      refine ⟨yi', ?_⟩
+      apply Subtype.ext
+      change (F.map f).hom.lTensor (Fin n → R) yi'.1 = yj.1
+      dsimp [yi']
+      rw [map_add]
+      have hcomm : (F.map f).hom.lTensor (Fin n → R)
+          (d.rTensor (F.obj i) zi) =
+          d.rTensor (F.obj j)
+            ((F.map f).hom.lTensor (Fin m → R) zi) := by
+        rw [← LinearMap.comp_apply, LinearMap.lTensor_comp_rTensor,
+          ← LinearMap.rTensor_comp_lTensor, LinearMap.comp_apply]
+      rw [hcomm, hzi, hzj]
+      abel
+    have hEML : E.IsMittagLeffler :=
+      Functor.isMittagLeffler_of_surjective E hEsur
+    obtain ⟨sE, hsE⟩ :=
+      Formalization.Books.Algebra.Unit86.nonempty_limit_of_countable_mittagLeffler
+        hI E hEML hEne
+    let hGn : IsLimit ((CategoryTheory.forget (ModuleCat.{u} R)).mapCone
+        (limit.cone Gn)) :=
+      isLimitOfPreserves (CategoryTheory.forget (ModuleCat.{u} R)) (limit.isLimit Gn)
+    let sGn : (Gn ⋙ CategoryTheory.forget (ModuleCat.{u} R)).sections :=
+      ⟨fun i => (sE i).1, by
+        intro i j f
+        exact congrArg Subtype.val (hsE f)⟩
+    let yn : (limit Gn : ModuleCat.{u} R) :=
+      (Types.isLimitEquivSections hGn).symm sGn
+    obtain ⟨y, hy⟩ := hfree_n.2 yn
+    refine ⟨q.rTensor (limit F : ModuleCat.{u} R) y, ?_⟩
+    apply Concrete.limit_ext GQ
+    intro i
+    have hyn : (limit.π Gn i) yn = (sE i).1 := by
+      simpa [yn, sGn] using
+        Types.isLimitEquivSections_symm_apply hGn sGn i
+    have hyi := congrArg (fun a => (limit.π Gn i) a) hy
+    change (limit.π Gn i)
+        ((limit.post F (MonoidalCategory.tensorLeft Pn)) y) =
+      (limit.π Gn i) yn at hyi
+    have hpostn : (limit.π Gn i)
+        ((limit.post F (MonoidalCategory.tensorLeft Pn)) y) =
+          ((MonoidalCategory.tensorLeft Pn).map (limit.π F i)) y := by
+      exact congrArg (fun a => a y)
+        (limit.post_π F (MonoidalCategory.tensorLeft Pn) i)
+    rw [hpostn] at hyi
+    change (limit.π GQ i)
+        (cQ (q.rTensor (limit F : ModuleCat.{u} R) y)) =
+      (limit.π GQ i) x
+    have hcpost : (limit.π GQ i)
+        (cQ (q.rTensor (limit F : ModuleCat.{u} R) y)) =
+        ((MonoidalCategory.tensorLeft Q).map (limit.π F i))
+          (q.rTensor (limit F : ModuleCat.{u} R) y) := by
+      exact congrArg
+        (fun a => a (q.rTensor (limit F : ModuleCat.{u} R) y))
+        (limit.post_π F (MonoidalCategory.tensorLeft Q) i)
+    rw [hcpost]
+    change (limit.π F i).hom.lTensor Q
+        (q.rTensor (limit F : ModuleCat.{u} R) y) =
+      (limit.π GQ i) x
+    rw [← LinearMap.comp_apply, LinearMap.lTensor_comp_rTensor,
+      ← LinearMap.rTensor_comp_lTensor, LinearMap.comp_apply]
+    change q.rTensor (F.obj i)
+        ((MonoidalCategory.tensorLeft Pn).map (limit.π F i) y) =
+      (limit.π GQ i) x
+    rw [hyi, hyn]
+    exact (sE i).2
+  have hcQ_injective : Function.Injective cQ := by
+    suffices hzero : ∀ z, cQ z = 0 → z = 0 by
+      intro z z' hzz'
+      apply sub_eq_zero.mp
+      apply hzero (z - z')
+      rw [map_sub, hzz', sub_self]
+    intro z hz
+    obtain ⟨y, hy⟩ := LinearMap.rTensor_surjective
+      (limit F : ModuleCat.{u} R) hq z
+    have hrel : ∀ i : Iᵒᵖ, q.rTensor (F.obj i)
+        ((limit.π F i).hom.lTensor (Fin n → R) y) = 0 := by
+      intro i
+      have hi := congrArg (fun a => (limit.π GQ i) a) hz
+      have hpostQ : (limit.π GQ i) (cQ z) =
+          ((MonoidalCategory.tensorLeft Q).map (limit.π F i)) z := by
+        exact congrArg (fun a => a z)
+          (limit.post_π F (MonoidalCategory.tensorLeft Q) i)
+      rw [hpostQ] at hi
+      rw [map_zero] at hi
+      change (limit.π F i).hom.lTensor Q z = 0 at hi
+      have hi' : (limit.π F i).hom.lTensor Q z = 0 := hi
+      rw [← hy] at hi'
+      rw [← LinearMap.comp_apply, LinearMap.lTensor_comp_rTensor,
+        ← LinearMap.rTensor_comp_lTensor, LinearMap.comp_apply] at hi'
+      exact hi'
+    let E : Iᵒᵖ ⥤ Type u :=
+      { obj := fun i => {a : (Fin m → R) ⊗[R] F.obj i //
+            d.rTensor (F.obj i) a =
+              (limit.π F i).hom.lTensor (Fin n → R) y}
+        map := fun {i j} f => ↾(fun a =>
+          (⟨(F.map f).hom.lTensor (Fin m → R) a.1, by
+            rw [← LinearMap.comp_apply, LinearMap.rTensor_comp_lTensor,
+              ← LinearMap.lTensor_comp_rTensor, LinearMap.comp_apply, a.2]
+            rw [← LinearMap.lTensor_comp_apply]
+            have hw := congrArg ModuleCat.Hom.hom (limit.w F f)
+            exact congrArg (fun p => p.lTensor (Fin n → R) y) hw
+          ⟩ : {a : (Fin m → R) ⊗[R] F.obj j //
+            d.rTensor (F.obj j) a =
+              (limit.π F j).hom.lTensor (Fin n → R) y}))
+        map_id := by
+          intro i
+          ext a
+          change (F.map (𝟙 i)).hom.lTensor (Fin m → R) a = a
+          simp
+        map_comp := by
+          intro i j k f g
+          ext a
+          change (F.map (f ≫ g)).hom.lTensor (Fin m → R) a =
+            (F.map g).hom.lTensor (Fin m → R)
+              ((F.map f).hom.lTensor (Fin m → R) a)
+          rw [F.map_comp]
+          exact LinearMap.lTensor_comp_apply (Fin m → R) _ _ a.1 }
+    have hEne : ∀ i : Iᵒᵖ, Nonempty (E.obj i) := by
+      intro i
+      obtain ⟨a, ha⟩ :=
+        ((rTensor_exact (F.obj i) hexact hq) _).mp (hrel i)
+      exact ⟨⟨a, ha⟩⟩
+    have hEML : E.IsMittagLeffler := by
+      intro j
+      obtain ⟨i, f, hf⟩ := hML j
+      refine ⟨i, f, ?_⟩
+      intro k g
+      rintro _ ⟨eᵢ, rfl⟩
+      obtain ⟨l, a, b, hab⟩ := IsCofiltered.cospan f g
+      obtain ⟨eₗ⟩ := hEne l
+      let aᵢ : (tensorPresentationKernelSystem d F).obj i :=
+        ⟨eᵢ.1 - (E.map a eₗ).1, by
+          change d.rTensor (F.obj i) (eᵢ.1 - (E.map a eₗ).1) = 0
+          rw [map_sub, eᵢ.2, (E.map a eₗ).2, sub_self]
+        ⟩
+      obtain ⟨aₖ, haₖ⟩ := hf g ⟨aᵢ, rfl⟩
+      let eₖ : E.obj k :=
+        ⟨(E.map b eₗ).1 + aₖ.1, by
+          rw [map_add, (E.map b eₗ).2, aₖ.2, add_zero]
+        ⟩
+      refine ⟨eₖ, ?_⟩
+      apply Subtype.ext
+      change (F.map g).hom.lTensor (Fin m → R) eₖ.1 =
+        (F.map f).hom.lTensor (Fin m → R) eᵢ.1
+      dsimp [eₖ]
+      rw [map_add]
+      have hga : (F.map g).hom.lTensor (Fin m → R) (E.map b eₗ).1 =
+          (F.map f).hom.lTensor (Fin m → R) (E.map a eₗ).1 := by
+        change (F.map g).hom.lTensor (Fin m → R)
+            ((F.map b).hom.lTensor (Fin m → R) eₗ.1) =
+          (F.map f).hom.lTensor (Fin m → R)
+            ((F.map a).hom.lTensor (Fin m → R) eₗ.1)
+        rw [← LinearMap.lTensor_comp_apply, ← LinearMap.lTensor_comp_apply]
+        have hmaps : F.map b ≫ F.map g = F.map a ≫ F.map f := by
+          rw [← F.map_comp, ← F.map_comp, hab]
+        exact congrArg (fun p => p.lTensor (Fin m → R) eₗ.1)
+          (congrArg ModuleCat.Hom.hom hmaps)
+      have haₖ' : (F.map g).hom.lTensor (Fin m → R) aₖ.1 =
+          (F.map f).hom.lTensor (Fin m → R) aᵢ.1 :=
+        congrArg Subtype.val haₖ
+      rw [hga, haₖ']
+      dsimp [aᵢ]
+      rw [map_sub]
+      abel
+    obtain ⟨sE, hsE⟩ :=
+      Formalization.Books.Algebra.Unit86.nonempty_limit_of_countable_mittagLeffler
+        hI E hEML hEne
+    let hGm : IsLimit ((CategoryTheory.forget (ModuleCat.{u} R)).mapCone
+        (limit.cone Gm)) :=
+      isLimitOfPreserves (CategoryTheory.forget (ModuleCat.{u} R)) (limit.isLimit Gm)
+    let sGm : (Gm ⋙ CategoryTheory.forget (ModuleCat.{u} R)).sections :=
+      ⟨fun i => (sE i).1, by
+        intro i j f
+        exact congrArg Subtype.val (hsE f)⟩
+    let ym : (limit Gm : ModuleCat.{u} R) :=
+      (Types.isLimitEquivSections hGm).symm sGm
+    obtain ⟨a, ha⟩ := hfree_m.2 ym
+    have hdy : d.rTensor (limit F : ModuleCat.{u} R) a = y := by
+      apply hfree_n.1
+      apply Concrete.limit_ext Gn
+      intro i
+      have hym : (limit.π Gm i) ym = (sE i).1 := by
+        simpa [ym, sGm] using
+          Types.isLimitEquivSections_symm_apply hGm sGm i
+      have hai := congrArg (fun t => (limit.π Gm i) t) ha
+      change (limit.π Gm i)
+          ((limit.post F (MonoidalCategory.tensorLeft Pm)) a) =
+        (limit.π Gm i) ym at hai
+      have hpostm : (limit.π Gm i)
+          ((limit.post F (MonoidalCategory.tensorLeft Pm)) a) =
+            ((MonoidalCategory.tensorLeft Pm).map (limit.π F i)) a := by
+        exact congrArg (fun p => p a)
+          (limit.post_π F (MonoidalCategory.tensorLeft Pm) i)
+      rw [hpostm] at hai
+      have hpostn_left : (limit.π Gn i)
+          ((limit.post F (MonoidalCategory.tensorLeft Pn))
+            (d.rTensor (limit F : ModuleCat.{u} R) a)) =
+        ((MonoidalCategory.tensorLeft Pn).map (limit.π F i))
+          (d.rTensor (limit F : ModuleCat.{u} R) a) := by
+        exact congrArg (fun p => p (d.rTensor (limit F : ModuleCat.{u} R) a))
+          (limit.post_π F (MonoidalCategory.tensorLeft Pn) i)
+      have hpostn_right : (limit.π Gn i)
+          ((limit.post F (MonoidalCategory.tensorLeft Pn)) y) =
+        ((MonoidalCategory.tensorLeft Pn).map (limit.π F i)) y := by
+        exact congrArg (fun p => p y)
+          (limit.post_π F (MonoidalCategory.tensorLeft Pn) i)
+      rw [hpostn_left, hpostn_right]
+      have hai' : (limit.π F i).hom.lTensor (Fin m → R) a =
+          (sE i).1 := by
+        change (limit.π F i).hom.lTensor (Fin m → R) a =
+          (limit.π Gm i) ym at hai
+        rw [hym] at hai
+        exact hai
+      change (limit.π F i).hom.lTensor (Fin n → R)
+          (d.rTensor (limit F : ModuleCat.{u} R) a) =
+        (limit.π F i).hom.lTensor (Fin n → R) y
+      rw [← LinearMap.comp_apply, LinearMap.lTensor_comp_rTensor,
+        ← LinearMap.rTensor_comp_lTensor, LinearMap.comp_apply, hai']
+      exact (sE i).2
+    rw [← hy, ← hdy]
+    exact (rTensor_exact (limit F : ModuleCat.{u} R) hexact hq _).mpr
+      ⟨a, rfl⟩
+  have hcQ_bijective : Function.Bijective cQ :=
+    ⟨hcQ_injective, hcQ_surjective⟩
+  have : IsIso cQ :=
+    (ConcreteCategory.isIso_iff_bijective cQ).2 hcQ_bijective
+  exact ⟨asIso cQ⟩
+
+/-- The `ℕ`-indexed form of
+`tensor_inverseSystemLimit_iso_of_finitePresentation`, with surjectivity
+assumed only for the displayed successive transition maps. -/
+theorem tensor_inverseSystemLimit_iso_of_finitePresentation_of_surjective
+    {R : Type u} [CommRing R]
+    (F : InverseSystem ℕ (ModuleCat.{u} R)) (Q : ModuleCat.{u} R)
+    {m n : ℕ} (d : (Fin m → R) →ₗ[R] (Fin n → R))
+    (q : (Fin n → R) →ₗ[R] Q)
+    (hexact : Function.Exact d q) (hq : Function.Surjective q)
+    (hsurj : ∀ k : ℕ,
+      Function.Surjective (F.map (opHomOfLE (Nat.le_succ k))))
+    (hML : (tensorPresentationKernelSystem d F).IsMittagLeffler) :
+    Nonempty ((MonoidalCategory.tensorLeft Q).obj (InverseSystemLimit F) ≅
+      (InverseSystemLimit
+        (F ⋙ MonoidalCategory.tensorLeft Q) : ModuleCat.{u} R)) := by
+  apply tensor_inverseSystemLimit_iso_of_finitePresentation
+    (⟨inferInstance, inferInstance⟩ : IsDirectedSet ℕ)
+    F Q d q hexact hq
+  · exact inverseSystem_map_surjective_of_successive F hsurj
+  · exact hML
 
 end
 

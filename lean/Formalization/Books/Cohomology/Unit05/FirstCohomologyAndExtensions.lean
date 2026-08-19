@@ -208,7 +208,87 @@ theorem exists_ringedSpaceModule_quotient_section
     ∃ t : ringedSpaceStructureSheafModule X ⟶
       ringedSpaceModuleInjectiveQuotient X F,
       ringedSpaceModuleQuotientSectionConnectingClass X F t = ξ := by
-  sorry
+  let D := ringedSpaceModuleCohomologyDeltaFunctor X
+  let E := ringedSpaceModuleInjectiveQuotientExtension X F
+  let S := E.toShortComplex
+  let hS := E.toShortComplex_shortExact
+  letI : Injective (ringedSpaceModuleInjectiveObject X F) :=
+    ringedSpaceModuleInjectiveObject_injective X F
+  have hzero : IsZero ((D.functor 1).obj
+      (ringedSpaceModuleInjectiveObject X F)) := by
+    change IsZero (((ringedSpaceModuleCohomologyDeltaFunctor X).functor 1).obj
+      (ringedSpaceModuleInjectiveObject X F))
+    rw [ringedSpaceModuleCohomologyDeltaFunctor_functor X 1]
+    exact higherRightDerivedFunctor_obj_isZero_of_injective
+      (ringedSpaceModuleGlobalSections X)
+      (ringedSpaceModuleGlobalSections_isLeftExact X)
+      1 (by omega) (ringedSpaceModuleInjectiveObject X F)
+  have hmap : (D.functor 1).map S.f = 0 := by
+    change (D.functor 1).map (ringedSpaceModuleInjectiveEmbedding X F) = 0
+    exact hzero.eq_of_tgt _ _
+  have hδepi : Epi (D.delta S hS 0) := by
+    let T := ShortComplex.mk (D.delta S hS 0) ((D.functor 1).map S.f)
+      ((D.exact S hS).at_left 0).zero
+    have hT : T.Exact := (D.exact S hS).at_left 0 |>.exact
+    exact (T.exact_iff_epi hmap).1 hT
+  have hsurj : Function.Surjective (D.delta S hS 0).hom :=
+    (ModuleCat.epi_iff_surjective _).1 hδepi
+  let ξ' := ((ringedSpaceModuleCohomologyFunctorIso X 1).inv.app F).hom ξ
+  obtain ⟨z, hz⟩ := hsurj ξ'
+  change (D.functor 0).obj
+      (ringedSpaceModuleInjectiveQuotient X F) at z
+  let zq := z
+  let y := ((ringedSpaceModuleGlobalSectionsIso X).hom.app
+    (ringedSpaceModuleInjectiveQuotient X F)).hom zq
+  let y0 : ((ringedSpaceModuleInjectiveQuotient X F).val.presheaf.obj
+      (op (⊤ : Opens X.carrier)) : Type v) := by
+    change ((ringedSpaceModuleInjectiveQuotient X F).val.presheaf.obj
+      (op (⊤ : Opens X.carrier)) : Type v)
+    exact y
+  let s : (ringedSpaceModuleInjectiveQuotient X F).sections :=
+    ⟨fun V => (ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map
+        (homOfLE (show V.unop ≤ (⊤ : Opens X.carrier) from le_top)).op y0, by
+      intro V W f
+      change (ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map f
+          ((ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map
+            (homOfLE (show V.unop ≤ (⊤ : Opens X.carrier) from le_top)).op y0) =
+        (ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map
+          (homOfLE (show W.unop ≤ (⊤ : Opens X.carrier) from le_top)).op y0
+      rw [← ConcreteCategory.comp_apply, ←
+        (ringedSpaceModuleInjectiveQuotient X F).val.presheaf.map_comp]
+      congr 1⟩
+  let t := (ringedSpaceModuleQuotientSectionEquiv X F).symm s
+  refine ⟨t, ?_⟩
+  have hvalue : ringedSpaceModuleQuotientSectionValue X F t = y := by
+    change t.val.app (op (⊤ : Opens X.carrier))
+      (1 : X.structureSheaf.obj.obj (op (⊤ : Opens X.carrier))) = y
+    rw [← SheafOfModules.unitHomEquiv_apply_coe
+      (ringedSpaceModuleInjectiveQuotient X F) t
+      (op (⊤ : Opens X.carrier))]
+    have ht : (ringedSpaceModuleInjectiveQuotient X F).unitHomEquiv t = s := by
+      change (ringedSpaceModuleQuotientSectionEquiv X F)
+        ((ringedSpaceModuleQuotientSectionEquiv X F).symm s) = s
+      exact (ringedSpaceModuleQuotientSectionEquiv X F).apply_symm_apply s
+    rw [ht]
+    simp [s, y0, y] <;> rfl
+  have hinput :
+      ((ringedSpaceModuleGlobalSectionsIso X).inv.app
+        (ringedSpaceModuleInjectiveQuotient X F)).hom
+        (ringedSpaceModuleQuotientSectionValue X F t) = z := by
+    rw [hvalue]
+    simp [y, zq]
+  have hz' : (D.delta S hS 0).hom
+      (((ringedSpaceModuleGlobalSectionsIso X).inv.app
+        (ringedSpaceModuleInjectiveQuotient X F)).hom
+        (ringedSpaceModuleQuotientSectionValue X F t)) = ξ' := by
+    rw [hinput, hz]
+  have hfinal := congrArg
+    (fun w => ((ringedSpaceModuleCohomologyFunctorIso X 1).hom.app F).hom w) hz'
+  have hξ : ((ringedSpaceModuleCohomologyFunctorIso X 1).hom.app F).hom ξ' = ξ := by
+    dsimp [ξ']
+    simp
+  rw [hξ] at hfinal
+  simpa [D, S, E, hS, ringedSpaceModuleQuotientSectionConnectingClass] using hfinal
 
 /-- The pullback extension obtained from a section `t : O_X ⟶ Q`. -/
 noncomputable def ringedSpaceModulePullbackExtension
@@ -285,6 +365,111 @@ theorem ringedSpaceModulePullbackExtension_maps_to_section_class
         (ringedSpaceModuleExtensionClassOfExtension X F
           (ringedSpaceModulePullbackExtension X F t)) =
       ringedSpaceModuleQuotientSectionConnectingClass X F t := by
-  sorry
+  rw [ringedSpaceModuleExtToH1_extension]
+  let D := ringedSpaceModuleCohomologyDeltaFunctor X
+  let P := ringedSpaceModulePullbackExtension X F t
+  let B := ringedSpaceModuleInjectiveQuotientExtension X F
+  let m := ringedSpaceModulePullbackExtensionMorphism X F t
+  let φ : (ringedSpaceModulePullbackExtension X F t).toShortComplex ⟶
+      (ringedSpaceModuleInjectiveQuotientExtension X F).toShortComplex :=
+    { τ₁ := m.left
+      τ₂ := m.middle
+      τ₃ := m.right
+      comm₁₂ := m.comm_left.symm
+      comm₂₃ := m.comm_right }
+  let hP := (ringedSpaceModulePullbackExtension X F t).toShortComplex_shortExact
+  let hB := (ringedSpaceModuleInjectiveQuotientExtension X F).toShortComplex_shortExact
+  let u := ((ringedSpaceModuleGlobalSectionsIso X).inv.app
+    (ringedSpaceStructureSheafModule X)).hom
+    (ringedSpaceModuleGlobalUnitSection X)
+  have hX₃ : (ringedSpaceModulePullbackExtension X F t).toShortComplex.X₃ =
+      ringedSpaceStructureSheafModule X := by rfl
+  let uP : ((D.functor 0).obj
+      (ringedSpaceModulePullbackExtension X F t).toShortComplex.X₃ : Type v) :=
+    cast (congrArg (fun Z => ((D.functor 0).obj Z : Type v)) hX₃.symm) u
+  have hn := D.natural hP hB φ 0
+  have hnat := congrArg (fun q => q.hom uP) hn
+  have hmap :
+      ((D.functor 0).map t).hom u =
+        ((ringedSpaceModuleGlobalSectionsIso X).inv.app
+          (ringedSpaceModuleInjectiveQuotient X F)).hom
+          (ringedSpaceModuleQuotientSectionValue X F t) := by
+    let η := ringedSpaceModuleGlobalSectionsIso X
+    let O := ringedSpaceStructureSheafModule X
+    let Q := ringedSpaceModuleInjectiveQuotient X F
+    have hunit : (η.hom.app O).hom u =
+        ringedSpaceModuleGlobalUnitSection X := by
+      simp [η, O, u]
+    have hi := congrArg (fun q => q.hom u)
+      ((ringedSpaceModuleGlobalSectionsIso X).hom.naturality t)
+    have hi' : (η.hom.app Q).hom (((D.functor 0).map t).hom u) =
+        ((ringedSpaceModuleGlobalSections X).map t).hom
+          ((η.hom.app O).hom u) := by
+      change (η.hom.app Q).hom (((D.functor 0).map t).hom u) =
+        ((ringedSpaceModuleGlobalSections X).map t).hom
+          ((η.hom.app O).hom u) at hi
+      exact hi
+    calc
+      ((D.functor 0).map t).hom u =
+          (η.inv.app Q).hom ((η.hom.app Q).hom
+            (((D.functor 0).map t).hom u)) := by simp
+      _ = (η.inv.app Q).hom
+          (((ringedSpaceModuleGlobalSections X).map t).hom
+            ((η.hom.app O).hom u)) := by rw [hi']
+      _ = (η.inv.app Q).hom
+          (ringedSpaceModuleQuotientSectionValue X F t) := by
+        rw [hunit]
+        rfl
+      _ = ((ringedSpaceModuleGlobalSectionsIso X).inv.app Q).hom
+          (ringedSpaceModuleQuotientSectionValue X F t) := by rfl
+  have hmapP :
+      ((D.functor 0).map φ.τ₃).hom uP =
+        ((ringedSpaceModuleGlobalSectionsIso X).inv.app
+          (ringedSpaceModuleInjectiveQuotient X F)).hom
+          (ringedSpaceModuleQuotientSectionValue X F t) := by
+    have huP_t : ((D.functor 0).map φ.τ₃).hom uP =
+        ((D.functor 0).map t).hom u := by
+      dsimp [φ, m, ringedSpaceModulePullbackExtensionMorphism,
+        pullbackExtensionMorphism, uP, hX₃]
+      rfl
+    rw [huP_t]
+    exact hmap
+  have hfinal :
+      ringedSpaceModuleExtensionImageOfOne X F P =
+        ringedSpaceModuleQuotientSectionConnectingClass X F t := by
+    have huP : uP = u := by
+      dsimp [uP]
+      rfl
+    have hnat' : ((D.functor 1).map φ.τ₁).hom
+          ((D.delta (ringedSpaceModulePullbackExtension X F t).toShortComplex
+            hP 0).hom uP) =
+        (D.delta (ringedSpaceModuleInjectiveQuotientExtension X F).toShortComplex
+          hB 0).hom (((D.functor 0).map φ.τ₃).hom uP) := by
+      simpa [Category.assoc, Function.comp_def] using hnat
+    rw [hmapP, huP] at hnat'
+    have hleft : ((D.functor 1).map φ.τ₁).hom
+          ((D.delta (ringedSpaceModulePullbackExtension X F t).toShortComplex
+            hP 0).hom u) =
+        (D.delta (ringedSpaceModulePullbackExtension X F t).toShortComplex
+          hP 0).hom u := by
+      dsimp [φ, m, ringedSpaceModulePullbackExtensionMorphism,
+        pullbackExtensionMorphism, ringedSpaceModulePullbackExtension,
+        Extension.toShortComplex]
+      have hid := congrArg (fun q => q.hom) ((D.functor 1).map_id F)
+      rw [hid]
+      rfl
+    rw [hleft] at hnat'
+    have hnat'' := congrArg
+      (fun w => ((ringedSpaceModuleCohomologyFunctorIso X 1).hom.app F).hom w)
+      hnat'
+    simpa [D, P, B, hP, hB, u, ringedSpaceModuleExtensionImageOfOne,
+      ringedSpaceModuleQuotientSectionConnectingClass,
+      ringedSpaceModuleGlobalSectionsIso,
+      ringedSpaceModuleQuotientSectionValue, φ, m,
+      ringedSpaceModulePullbackExtensionMorphism,
+      pullbackExtensionMorphism, ringedSpaceModulePullbackExtension,
+      Extension.toShortComplex, ringedSpaceModuleFirstCohomology,
+      ringedSpaceModuleCohomologyObject, LinearMap.id_apply] using hnat''
+  exact hfinal
 
 end Formalization.Books.Cohomology.Unit05

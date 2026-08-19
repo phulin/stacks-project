@@ -52,7 +52,131 @@ theorem helper_multiIndex_separation
     ∀ ⦃ν ν' : Fin n →₀ ℕ⦄,
       ν ∈ N → ν' ∈ N →
         (weightedMultiIndex e ν = weightedMultiIndex e ν' ↔ ν = ν') := by
-  sorry
+  classical
+  have hsplit (i : Fin n) (f : Fin n → ℕ) :
+      (∑ j, f j) =
+        (∑ j ∈ Finset.univ.filter (fun j => j < i), f j) +
+          (∑ j ∈ Finset.univ.filter (fun j => ¬ j < i), f j) := by
+    rw [Finset.sum_filter_add_sum_filter_not]
+  have hsplit2 (i : Fin n) (f : Fin n → ℕ) :
+      (∑ j, f j) =
+        (∑ j ∈ Finset.univ.filter (fun j => j < i), f j) + f i +
+          (∑ j ∈ Finset.univ.filter (fun j => i < j), f j) := by
+    rw [hsplit]
+    have hi : i ∈ Finset.univ.filter (fun j : Fin n => ¬ j < i) := by simp
+    have hs :
+        (∑ j ∈ Finset.univ.filter (fun j : Fin n => ¬ j < i), f j) =
+          f i +
+            (∑ j ∈ (Finset.univ.filter (fun j : Fin n => ¬ j < i)).erase i, f j) := by
+      rw [add_comm]
+      exact (Finset.sum_erase_add _ _ hi).symm
+    rw [hs]
+    have heq :
+        (∑ j ∈ (Finset.univ.filter (fun j : Fin n => ¬ j < i)).erase i, f j) =
+          (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), f j) := by
+      apply Finset.sum_congr
+      · ext j
+        simp only [Finset.mem_erase, Finset.mem_filter, Finset.mem_univ, true_and]
+        omega
+      · intro j hj
+        rfl
+    rw [heq]
+    ac_rfl
+  have hsumfilter (i : Fin n) (f : Fin n → ℕ) :
+      (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), f j) =
+        ∑ j, if i < j then f j else 0 := by
+    rw [Finset.sum_filter]
+  have hdiff_comm (a b : ℕ) : natDifference a b = natDifference b a := by
+    simp [natDifference]
+    split_ifs <;> omega
+  have hmul {a b c : ℕ} (h : a ≤ b) :
+      c * b = c * (b - a) + c * a := by
+    rw [← Nat.mul_add, Nat.sub_add_cancel h]
+  have htail_aux (i : Fin n) (u v : Fin n →₀ ℕ) :
+      (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * u j) ≤
+        (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * v j) +
+          ∑ j, if i < j then e j * natDifference (u j) (v j) else 0 := by
+    calc
+      (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * u j) ≤
+          ∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j),
+            (e j * v j + e j * natDifference (u j) (v j)) := by
+        apply Finset.sum_le_sum
+        intro j hj
+        have hc : u j ≤ v j + natDifference (u j) (v j) := by
+          simp [natDifference]
+          split_ifs <;> omega
+        have hm := Nat.mul_le_mul_left (e j) hc
+        simpa [Nat.mul_add] using hm
+      _ = (∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * v j) +
+          ∑ j, if i < j then e j * natDifference (u j) (v j) else 0 := by
+        rw [Finset.sum_add_distrib]
+        congr 1
+        exact hsumfilter i (fun j => e j * natDifference (u j) (v j))
+  intro ν ν' hν hν'
+  constructor
+  · intro hsum
+    by_contra hne
+    let D : Finset (Fin n) := Finset.univ.filter (fun i => ν i ≠ ν' i)
+    have hD : D.Nonempty := by
+      by_contra hD
+      apply hne
+      ext i
+      by_contra hdiff
+      have hiD : i ∈ D := by simp [D, hdiff]
+      have heq : D = ∅ := Finset.not_nonempty_iff_eq_empty.mp hD
+      rw [heq] at hiD
+      simp at hiD
+    let i : Fin n := D.min' hD
+    have hiD : i ∈ D := by exact D.min'_mem hD
+    have hi_ne : ν i ≠ ν' i := by simpa [D] using hiD
+    have hbefore : ∀ j : Fin n, j < i → ν j = ν' j := by
+      intro j hji
+      by_contra hjne
+      have hjD : j ∈ D := by simp [D, hjne]
+      have hle : i ≤ j := D.min'_le j hjD
+      omega
+    let B : ℕ := ∑ j ∈ Finset.univ.filter (fun j : Fin n => j < i), e j * ν j
+    let B' : ℕ := ∑ j ∈ Finset.univ.filter (fun j : Fin n => j < i), e j * ν' j
+    let T : ℕ := ∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * ν j
+    let T' : ℕ := ∑ j ∈ Finset.univ.filter (fun j : Fin n => i < j), e j * ν' j
+    have hB : B = B' := by
+      apply Finset.sum_congr
+      · rfl
+      · intro j hj
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
+        simp [hbefore j hj]
+    have hmid : e i * ν i + T = e i * ν' i + T' := by
+      dsimp [B, B', T, T'] at *
+      have hp := hsplit2 i (fun j => e j * ν j)
+      have hp' := hsplit2 i (fun j => e j * ν' j)
+      simp only [weightedMultiIndex] at hsum
+      omega
+    have hdom := he hν hν' hi_ne
+    by_cases hle : ν i ≤ ν' i
+    · have hlt : ν i < ν' i := lt_of_le_of_ne hle hi_ne
+      have hm := hmul (c := e i) hle
+      have hrel : T = T' + e i * (ν' i - ν i) := by
+        omega
+      have htail := htail_aux i ν ν'
+      have hndi : natDifference (ν i) (ν' i) = ν' i - ν i := by
+        simp [natDifference, hle]
+      rw [hndi] at hdom
+      omega
+    · have hle' : ν' i ≤ ν i := Nat.le_of_lt (lt_of_not_ge hle)
+      have hm := hmul (c := e i) hle'
+      have hrel : T' = T + e i * (ν i - ν' i) := by
+        omega
+      have htail := htail_aux i ν' ν
+      have htail' :
+          T' ≤ T + ∑ j, if i < j then e j * natDifference (ν j) (ν' j) else 0 := by
+        simpa only [hdiff_comm] using htail
+      have hndi : natDifference (ν i) (ν' i) = ν i - ν' i := by
+        simp [natDifference, hle]
+      rw [hndi] at hdom
+      omega
+  · intro h
+    subst ν'
+    rfl
 
 /-- The substitution used in the polynomial helper lemma.  The last variable
 is retained as the polynomial variable and each earlier variable is shifted

@@ -69,7 +69,7 @@ private theorem algebra_isSeparable_of_isSeparableExtension_of_isAlgebraic
 theorem perfectField_iff_all_field_extensions_separable
     {k : Type u} [Field k] :
     PerfectField k ↔
-      ∀ (K : Type*) [Field K] [Algebra k K],
+      ∀ (K : Type u) [Field K] [Algebra k K],
         IsSeparableExtension k K := by
   constructor
   · intro hk K _ _

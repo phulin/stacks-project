@@ -2371,6 +2371,7 @@ structure PrincipalPartsFunctorialityComposition
     (G.f.comp F.f)
   map_eq : ∀ k x, composed.map k x = G.map k (F.map k x)
 
+omit [IsScalarTower A B M] [IsScalarTower A' B' M'] [IsScalarTower A'' B'' M''] in
 theorem principalParts_functoriality_composition_exists
     (F : PrincipalPartsFunctoriality
       (A := A) (A' := A') (B := B) (B' := B') (M := M) (M' := M'))

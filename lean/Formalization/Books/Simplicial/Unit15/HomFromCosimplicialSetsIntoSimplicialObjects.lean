@@ -631,11 +631,94 @@ noncomputable def simplexHomProduct_truncated_hom_equiv
           W.map (SimplexCategory.Truncated.Hom.tr α
             (by simp) Y.unop.property).op ≫ f)
       naturality := by
-        sorry }
+        intro Y Z φ
+        let := hX (SimplexCategory.mk k ⟶ Y.unop.obj)
+        let := hX (SimplexCategory.mk k ⟶ Z.unop.obj)
+        change
+          W.map φ ≫
+              Pi.lift (fun α : SimplexCategory.mk k ⟶ Z.unop.obj =>
+                W.map (SimplexCategory.Truncated.Hom.tr α (by simp)
+                  Z.unop.property).op ≫ f) =
+            Pi.lift (fun α : SimplexCategory.mk k ⟶ Y.unop.obj =>
+                W.map (SimplexCategory.Truncated.Hom.tr α (by simp)
+                  Y.unop.property).op ≫ f) ≫
+              Pi.map' (fun α => α ≫ φ.unop.hom) (fun _ => 𝟙 X)
+        apply Pi.hom_ext
+        intro α
+        simp [Pi.map'_comp_π, Category.assoc]
+        rw [← Category.assoc, ← W.map_comp]
+        congr 1 }
   left_inv := by
-    sorry
+    intro γ
+    apply NatTrans.ext
+    funext Y
+    dsimp
+    letI := hX (SimplexCategory.mk k ⟶ Y.unop.obj)
+    letI := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    let p :
+        ((SimplicialObject.truncation (C := C) k).obj
+          (simplexHomProduct X k hX)).obj
+            (op (⟨SimplexCategory.mk k, le_rfl⟩ : SimplexCategory.Truncated k)) ⟶ X := by
+      change
+        (∏ᶜ fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk k) => X) ⟶ X
+      exact Pi.π _ (𝟙 (SimplexCategory.mk k))
+    apply Pi.hom_ext
+    intro α
+    rw [Pi.lift_π]
+    change
+      W.map (SimplexCategory.Truncated.Hom.tr α (by simp)
+          Y.unop.property).op ≫
+          γ.app (op (⟨SimplexCategory.mk k, le_rfl⟩ :
+            SimplexCategory.Truncated k)) ≫ p =
+        γ.app (op (⟨Y.unop.obj, Y.unop.property⟩ : SimplexCategory.Truncated k)) ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop.obj) => X) α
+    have h := congrArg
+      (fun q => q ≫ p)
+      (γ.naturality (SimplexCategory.Truncated.Hom.tr α (by simp)
+        Y.unop.property).op)
+    calc
+      _ = (γ.app (op (⟨Y.unop.obj, Y.unop.property⟩ : SimplexCategory.Truncated k)) ≫
+          ((SimplicialObject.truncation (C := C) k).obj
+            (simplexHomProduct X k hX)).map
+              (SimplexCategory.Truncated.Hom.tr α (by simp)
+                Y.unop.property).op) ≫ p := by
+        rw [← Category.assoc]
+        exact h
+      _ = γ.app (op (⟨Y.unop.obj, Y.unop.property⟩ : SimplexCategory.Truncated k)) ≫
+          (((SimplicialObject.truncation (C := C) k).obj
+              (simplexHomProduct X k hX)).map
+              (SimplexCategory.Truncated.Hom.tr α (by simp)
+                Y.unop.property).op ≫ p) := by
+        simp only [Category.assoc]
+      _ = γ.app (op (⟨Y.unop.obj, Y.unop.property⟩ : SimplexCategory.Truncated k)) ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop.obj) => X) α := by
+        congr 1
+        dsimp [p, SimplicialObject.truncation, simplexHomProduct,
+          simplexHomProductMapAt, simplexHomProductObjectAt]
+        change
+          Pi.map'
+              (f := fun _ : (SimplexCategory.mk k ⟶ Y.unop.obj) => X)
+              (g := fun _ : SimplexCategory.mk k ⟶ SimplexCategory.mk k => X)
+              (fun β : SimplexCategory.mk k ⟶ SimplexCategory.mk k =>
+                β ≫ (SimplexCategory.Truncated.Hom.tr α (by simp)
+                  Y.unop.property).hom)
+              (fun _ => 𝟙 X) ≫
+              Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk k) => X)
+                (𝟙 (SimplexCategory.mk k)) =
+            Pi.π (fun _ : (SimplexCategory.mk k ⟶ Y.unop.obj) => X) α
+        rw [Pi.map'_comp_π]
+        simp
   right_inv := by
-    sorry
+    intro f
+    let := hX (SimplexCategory.mk k ⟶ SimplexCategory.mk k)
+    change
+      (Pi.lift (fun α : SimplexCategory.mk k ⟶ SimplexCategory.mk k =>
+        W.map (SimplexCategory.Truncated.Hom.tr α (by simp)
+          (by simp)).op ≫ f)) ≫
+          Pi.π (fun _ : (SimplexCategory.mk k ⟶ SimplexCategory.mk k) => X)
+            (𝟙 (SimplexCategory.mk k)) = f
+    rw [Pi.lift_π]
+    simp
 
 /-! ## Identification with the source's `C[k]` notation -/
 
@@ -661,6 +744,6 @@ theorem simplexHomProduct_is_hom
           (Formalization.Books.Simplicial.Unit05.simplex_cosimplicial_set k)
           ((SimplicialObject.const C).obj X)
           (simplex_cosimplicial_set_finite_nonempty k)) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 end Formalization.Books.Simplicial.Unit15

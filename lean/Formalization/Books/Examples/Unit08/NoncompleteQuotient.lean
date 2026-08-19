@@ -78,17 +78,33 @@ def wElement (k : Type u) [Field k] (i : ℕ+) : NoncompleteQuotientRing k :=
 /-- The defining relation `zᵢt = xⁱwᵢ` in the quotient. -/
 theorem zElement_mul_tElement (k : Type u) [Field k] (i : ℕ+) :
     zElement k i * tElement k = xElement k ^ (i : ℕ) * wElement k i := by
-  sorry
+  change Ideal.Quotient.mk (noncompleteQuotientRelationIdeal k)
+      (MvPolynomial.X (.z i) * MvPolynomial.X .t) =
+    Ideal.Quotient.mk (noncompleteQuotientRelationIdeal k)
+      (MvPolynomial.X .x ^ (i : ℕ) * MvPolynomial.X (.w i))
+  apply (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).2
+  exact Ideal.subset_span (Set.mem_union_left _ ⟨i, rfl⟩)
 
 /-- The defining relation `zᵢwⱼ = 0` in the quotient. -/
 theorem zElement_mul_wElement (k : Type u) [Field k] (i j : ℕ+) :
     zElement k i * wElement k j = 0 := by
-  sorry
+  change Ideal.Quotient.mk (noncompleteQuotientRelationIdeal k)
+      (MvPolynomial.X (.z i) * MvPolynomial.X (.w j)) = 0
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  apply Ideal.subset_span
+  exact Set.mem_union_right _ ⟨(i, j), rfl⟩
 
 /-- The further relation `zᵢzⱼt = 0` noted in the source. -/
 theorem zElement_mul_zElement_mul_tElement (k : Type u) [Field k] (i j : ℕ+) :
     zElement k i * zElement k j * tElement k = 0 := by
-  sorry
+  calc
+    zElement k i * zElement k j * tElement k =
+        zElement k i * (xElement k ^ (j : ℕ) * wElement k j) := by
+      rw [mul_assoc, zElement_mul_tElement]
+    _ = xElement k ^ (j : ℕ) * (zElement k i * wElement k j) := by
+      ac_rfl
+    _ = 0 := by
+      rw [zElement_mul_wElement, mul_zero]
 
 /-- A reduced coefficient monomial has no `x`, `zᵢt`, `zᵢwⱼ`, or `wᵢwⱼ` factor.
 

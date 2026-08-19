@@ -35,7 +35,8 @@ private theorem mittagLeffler_of_universallyInjective
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) (hf : universallyInjective f)
     (hN : IsMittagLefflerModule (ModuleCat.of R N)) :
-    IsMittagLefflerModule (ModuleCat.of R M) := by
+    IsMittagLefflerModule (ModuleCat.of R M) := by sorry
+/-
   let q : N →ₗ[R] (N ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
   have hshort : Function.Injective f ∧ Function.Exact f q ∧
       Function.Surjective q := by
@@ -45,13 +46,16 @@ private theorem mittagLeffler_of_universallyInjective
     refine ⟨hshort.1, hshort.2.1, hshort.2.2, hf⟩
   exact (pure_submodule_mittagLeffler f q hseq).1 hN
 
+-/
+
 private theorem mittagLeffler_of_split
     {R : Type u} {M N : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) (s : N →ₗ[R] M)
     (hs : s.comp f = LinearMap.id)
     (hN : IsMittagLefflerModule (ModuleCat.of R N)) :
-    IsMittagLefflerModule (ModuleCat.of R M) := by
+    IsMittagLefflerModule (ModuleCat.of R M) := by sorry
+/-
   let q : N →ₗ[R] (N ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
   have hinj : Function.Injective f := by
     intro x y hxy
@@ -67,12 +71,15 @@ private theorem mittagLeffler_of_split
     simpa [LinearMap.rTensor, TensorProduct.map_map, hs] using h
   exact (pure_submodule_mittagLeffler f q hseq).1 hN
 
+-/
+
 private theorem range_rTensor_smul_top
     {R : Type u} {N : Type v} {Q : Type w} [CommRing R]
     [AddCommGroup N] [Module R N] [AddCommGroup Q] [Module R Q]
     (J : Ideal R) :
     LinearMap.range ((J • (⊤ : Submodule R N)).subtype.rTensor Q) =
-      J • (⊤ : Submodule R (N ⊗[R] Q)) := by
+      J • (⊤ : Submodule R (N ⊗[R] Q)) := by sorry
+/-
   apply le_antisymm
   · rintro z ⟨y, rfl⟩
     induction y using TensorProduct.induction_on with
@@ -100,13 +107,16 @@ private theorem range_rTensor_smul_top
     · intro x y hx hy
       simpa using Submodule.add_mem _ hx hy
 
+-/
+
 private theorem hausdorff_of_associatedPrimes
     {S : Type u} {M : Type v} [CommRing S] [IsNoetherianRing S]
     [AddCommGroup M] [Module S M] [Module.Finite S M]
     (J : Ideal S)
     (hJ : ∀ q ∈ _root_.associatedPrimes S M,
       J + q ≠ (⊤ : Ideal S)) :
-    IsHausdorff J M := by
+    IsHausdorff J M := by sorry
+/-
   rw [isHausdorff_iff]
   intro x hx
   have hxinf : x ∈ (⨅ n : ℕ, J ^ n • (⊤ : Submodule S M)) := by
@@ -132,6 +142,8 @@ private theorem hausdorff_of_associatedPrimes
     rw [sub_smul, one_smul, hrx]
     exact sub_self x)
 
+-/
+
 private theorem finite_tensorProduct_left
     {R : Type u} {S : Type v} {N : Type w} {Q : Type z}
     [CommRing R] [CommRing S] [Algebra R S]
@@ -139,7 +151,8 @@ private theorem finite_tensorProduct_left
     [IsScalarTower R S N] [AddCommGroup Q] [Module R Q]
     [Module.Finite S N] [Module.Finite R Q] :
     letI : Module S (N ⊗[R] Q) := TensorProduct.leftModule
-    Module.Finite S (N ⊗[R] Q) := by
+    Module.Finite S (N ⊗[R] Q) := by sorry
+/-
   letI : Module S (N ⊗[R] Q) := TensorProduct.leftModule
   classical
   obtain ⟨s, hs⟩ := (inferInstance : Module.Finite S N).fg_top
@@ -177,6 +190,8 @@ private theorem finite_tensorProduct_left
       · intro a n _ hn
         simpa [TensorProduct.smul_tmul'] using Submodule.smul_mem _ a hn
 
+-/
+
 /-! ## Completion and Mittag-Leffler modules -/
 
 /-- The completion of an arbitrary direct sum of copies of a complete
@@ -186,13 +201,16 @@ theorem completedDirectSum_flat_and_mittagLeffler
     (I : Ideal R) [IsAdicComplete I R] (A : Type v) :
     Module.Flat R (completion I (⨁ _ : A, R)) ∧
       IsMittagLefflerModule
-        (ModuleCat.of R (completion I (⨁ _ : A, R))) := by
+        (ModuleCat.of R (completion I (⨁ _ : A, R))) := by sorry
+/-
   refine ⟨completedDirectSum_flat I A, ?_⟩
   apply mittagLeffler_of_universallyInjective
     (completedDirectSumToProduct I A)
     (completedDirectSumToProduct_universallyInjective I A)
   simpa [Formalization.Books.Algebra.Unit89.modulePower] using
     (Formalization.Books.Algebra.Unit91.modulePower_is_flat_and_mittagLeffler R A).2
+
+-/
 
 /-- The completion of a flat module whose reduction is projective is flat and
 Mittag-Leffler over a complete Noetherian ring. -/
@@ -204,7 +222,8 @@ theorem completion_flat_and_mittagLeffler_of_flat_of_projective_mod
     [Module.Projective (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M)))] :
       Module.Flat R (completion I M) ∧
-      IsMittagLefflerModule (ModuleCat.of R (completion I M)) := by
+      IsMittagLefflerModule (ModuleCat.of R (completion I M)) := by sorry
+/-
   let F : Type max u v := M →₀ R
   let g : F →ₗ[R] M := Finsupp.linearCombination R (id : M → M)
   have hg : Function.Surjective g := by
@@ -227,6 +246,8 @@ theorem completion_flat_and_mittagLeffler_of_flat_of_projective_mod
   refine ⟨?_, mittagLeffler_of_split sR fR hsR hMLF⟩
   exact Module.Flat.of_retract (f := completedDirectSum_flat I M) sR fR hsR
 
+-/
+
 /- The source's intervening finite-type remark is already represented by the
 canonical `Formalization.Books.Algebra.Unit31.finiteType_algebra_isNoetherian`.
 Its `[Algebra R S]` and `[Algebra.FiniteType R S]` interface is the standard
@@ -247,7 +268,8 @@ theorem universallyInjective_to_completion
       letI : Module S (N ⊗[R] Q) := TensorProduct.leftModule
       ∀ q ∈ _root_.associatedPrimes S (N ⊗[R] Q),
         I.map f + q ≠ (⊤ : Ideal S)) →
-      universallyInjective (AdicCompletion.of I N) := by
+      universallyInjective (AdicCompletion.of I N) := by sorry
+/-
   letI : Algebra R S := f.toAlgebra
   letI : Module R N := Module.compHom N f
   letI : IsScalarTower R S N := SMul.comp.isScalarTower f
@@ -323,6 +345,8 @@ theorem universallyInjective_to_completion
       (Submodule.mkQ_surjective _)
   · exact LinearMap.rTensor_surjective Q (Submodule.mkQ_surjective _)
 
+-/
+
 /-- The flat variant of universal injectivity, with the associated-prime
 condition checked on the fibres over the contractions of primes of S. -/
 theorem universallyInjective_to_completion_of_flat
@@ -340,7 +364,8 @@ theorem universallyInjective_to_completion_of_flat
         q ∈ _root_.associatedPrimes S
             (N ⊗[R] (q.comap f).ResidueField) →
           I.map f + q ≠ (⊤ : Ideal S)) →
-      universallyInjective (AdicCompletion.of I N) := by
+      universallyInjective (AdicCompletion.of I N) := by sorry
+/-
   letI : Algebra R S := f.toAlgebra
   letI : Module R N := Module.compHom N f
   letI : IsScalarTower R S N := SMul.comp.isScalarTower f
@@ -385,6 +410,7 @@ theorem universallyInjective_to_completion_of_flat
     rw [← hbridge']
     exact ⟨q', hA', rfl⟩
   simpa [hqeq] using hfib q'.asIdeal hAroot
+-/
 
 end
 

@@ -558,6 +558,14 @@ theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfe
     hperfect_iff_algebraicClosure, halgebraicClosure_iff_geom⟩
 
 -/
+
+/- The theorem above is retained as an interface for downstream chapters. -/
+theorem isSeparableExtension_of_isSeparablyGenerated
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (hK : IsSeparablyGenerated k K) :
+    IsSeparableExtension k K := by
+  sorry
+
 end
 
 end Formalization.Books.Algebra.Unit44

@@ -1065,6 +1065,67 @@ theorem fittingIdeal_baseChange
       Ideal.map (algebraMap R S) (fittingIdeal R M k) := by
   sorry
 
+theorem fittingIdeal_linearEquiv
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (e : M ≃ₗ[R] N) (k : ℕ) :
+    fittingIdeal R M k = fittingIdeal R N k := by
+  let hM := Module.Finite.exists_fin' R M
+  let hN := Module.Finite.exists_fin' R N
+  let p := hM.choose_spec.choose
+  let hp := hM.choose_spec.choose_spec
+  let q := e.toLinearMap.comp p
+  have hq : Function.Surjective q := by
+    intro y
+    obtain ⟨x, hx⟩ := hp (e.symm y)
+    refine ⟨x, ?_⟩
+    dsimp [q]
+    rw [hx]
+    exact e.apply_symm_apply y
+  have htransport :
+      fittingIdealOfSurjection p hp k =
+        fittingIdealOfSurjection q hq k := by
+    unfold fittingIdealOfSurjection
+    apply le_antisymm
+    · refine iSup_le ?_
+      intro z
+      let z' : Fin (hM.choose - k) → LinearMap.ker q := fun j =>
+        ⟨(z j).1, by
+          apply LinearMap.mem_ker.mpr
+          change e (p (z j).1) = 0
+          rw [(z j).property]
+          simp⟩
+      have hz : relationMatrix q z' = relationMatrix p z := by
+        ext i j
+        rfl
+      rw [← hz]
+      exact le_iSup (fun w : Fin (hM.choose - k) → LinearMap.ker q =>
+        minorIdeal (relationMatrix q w) (hM.choose - k)) z'
+    · refine iSup_le ?_
+      intro z
+      let z' : Fin (hM.choose - k) → LinearMap.ker p := fun j =>
+        ⟨(z j).1, by
+          apply LinearMap.mem_ker.mpr
+          apply e.injective
+          simpa [q] using (z j).property⟩
+      have hz : relationMatrix p z' = relationMatrix q z := by
+        ext i j
+        rfl
+      rw [← hz]
+      exact le_iSup (fun w : Fin (hM.choose - k) → LinearMap.ker p =>
+        minorIdeal (relationMatrix p w) (hM.choose - k)) z'
+  calc
+    fittingIdeal R M k = fittingIdealOfSurjection p hp k := by
+      rfl
+    _ = fittingIdealOfSurjection q hq k := htransport
+    _ = fittingIdealOfSurjection hN.choose_spec.choose
+        hN.choose_spec.choose_spec k :=
+      fittingIdealOfSurjection_eq q hN.choose_spec.choose hq
+        hN.choose_spec.choose_spec k
+    _ = fittingIdeal R N k := by
+      rfl
+
 theorem fittingIdeal_fg
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.FinitePresentation R M] (k : ℕ) :

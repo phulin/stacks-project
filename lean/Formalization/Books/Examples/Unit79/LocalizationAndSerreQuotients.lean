@@ -26,7 +26,7 @@ explicit and use those existing constructions.
 
 noncomputable section
 
-universe u
+universe u v w
 
 open CategoryTheory
 open CategoryTheory.Limits
@@ -488,9 +488,203 @@ noncomputable def finitelyGeneratedQuotientToModuleQuotient
 theorem finitelyGeneratedQuotientToModuleQuotient_full
     (A : Type u) [CommRing A] [IsNoetherianRing A] :
     (finitelyGeneratedQuotientToModuleQuotient A).Full := by
-  sorry
-  /- Original proof attempt:
   let L := (finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q
+  have : L.EssSurj := Localization.essSurj L
+    (finitelyGeneratedTorsionModuleProperty A).isoModSerre
+  let F := finitelyGeneratedModuleInclusion A ⋙
+    (torsionModuleProperty A).isoModSerre.Q
+  let e : F ≅ L ⋙ finitelyGeneratedQuotientToModuleQuotient A :=
+    (Localization.fac F (finitelyGeneratedQuotientFunctor_isInvertedBy A) L).symm
+  refine (finitelyGeneratedQuotientToModuleQuotient A).full_of_comp_essSurj L
+    (fun X₁ X₂ φ ↦ ?_)
+  obtain ⟨φ', hφ'⟩ : ∃ φ', φ = e.inv.app X₁ ≫ φ' ≫ e.hom.app X₂ :=
+    ⟨e.hom.app X₁ ≫ φ ≫ e.inv.app X₂, by
+      simp [dsimp% e.inv_hom_id_app_assoc, dsimp% e.inv_hom_id_app]⟩
+  obtain ⟨f, hf⟩ := Localization.exists_leftFraction
+    (torsionModuleProperty A).isoModSerre.Q
+    (torsionModuleProperty A).isoModSerre φ'
+  let B : moduleCategory A :=
+    (finitelyGeneratedModuleInclusion A).obj X₁ ⊞
+      (finitelyGeneratedModuleInclusion A).obj X₂
+  let h : B ⟶ f.Y' := biprod.desc f.f f.s
+  let _ : Module.Finite A ((finitelyGeneratedModuleInclusion A).obj X₁ : Type u) := by
+    exact X₁.property
+  let _ : Module.Finite A ((finitelyGeneratedModuleInclusion A).obj X₂ : Type u) := by
+    exact X₂.property
+  let _ : Module.Finite A
+      (B : Type u) := by
+    apply (Module.Finite.equiv_iff
+      (ModuleCat.biprodIsoProd
+        ((finitelyGeneratedModuleInclusion A).obj X₁)
+        ((finitelyGeneratedModuleInclusion A).obj X₂)).toLinearEquiv).2
+    exact Module.Finite.prod
+  let Z : finitelyGeneratedModuleCategory A :=
+    ⟨(Abelian.image (C := moduleCategory A) h : moduleCategory A), by
+      change ModuleCat.isFG A (Abelian.image (C := moduleCategory A) h)
+      simpa only [ModuleCat.isFG] using
+        (Module.Finite.of_surjective
+          (Abelian.factorThruImage h).hom
+          ((ModuleCat.epi_iff_surjective _).1 inferInstance))⟩
+  let f' : (finitelyGeneratedModuleInclusion A).obj X₁ ⟶
+      (finitelyGeneratedModuleInclusion A).obj Z :=
+    by
+      dsimp [Z]
+      change _ ⟶ (Abelian.image (C := moduleCategory A) h : moduleCategory A)
+      exact biprod.inl ≫ Abelian.factorThruImage h
+  let s' : (finitelyGeneratedModuleInclusion A).obj X₂ ⟶
+      (finitelyGeneratedModuleInclusion A).obj Z :=
+    by
+      dsimp [Z]
+      change _ ⟶ (Abelian.image (C := moduleCategory A) h : moduleCategory A)
+      exact biprod.inr ≫ Abelian.factorThruImage h
+  let ffg : X₁ ⟶ Z :=
+    ObjectProperty.homMk (P := finitelyGeneratedModuleProperty A)
+      (X := X₁) (Y := Z) f'
+  let sfg : X₂ ⟶ Z :=
+    ObjectProperty.homMk (P := finitelyGeneratedModuleProperty A)
+      (X := X₂) (Y := Z) s'
+  dsimp [Z] at f' s'
+  let _ : PreservesFiniteLimits (finitelyGeneratedModuleInclusion A) := by
+    change PreservesFiniteLimits (forget₂ (FGModuleCat A) (ModuleCat A))
+    infer_instance
+  let _ : PreservesFiniteColimits (finitelyGeneratedModuleInclusion A) := by
+    change PreservesFiniteColimits (forget₂ (FGModuleCat A) (ModuleCat A))
+    infer_instance
+  have hf' : f.f = f' ≫ Abelian.image.ι (C := moduleCategory A) h := by
+    change f.f = (biprod.inl ≫ Abelian.factorThruImage h) ≫
+      Abelian.image.ι (C := moduleCategory A) h
+    rw [Category.assoc, Abelian.image.fac, biprod.inl_desc]
+  have hs' : f.s = s' ≫ Abelian.image.ι (C := moduleCategory A) h := by
+    change f.s = (biprod.inr ≫ Abelian.factorThruImage h) ≫
+      Abelian.image.ι (C := moduleCategory A) h
+    rw [Category.assoc, Abelian.image.fac, biprod.inr_desc]
+  let i : (finitelyGeneratedModuleInclusion A).obj Z ⟶ f.Y' := by
+    dsimp [Z]
+    exact Abelian.image.ι (C := moduleCategory A) h
+  have hfi : f.f = f' ≫ i := by
+    change f.f = f' ≫ Abelian.image.ι (C := moduleCategory A) h
+    exact hf'
+  have hsi : f.s = s' ≫ i := by
+    change f.s = s' ≫ Abelian.image.ι (C := moduleCategory A) h
+    exact hs'
+  let q := cokernel.map f.s (Abelian.image.ι (C := moduleCategory A) h) s' (𝟙 _)
+    (by rw [hs']; rfl)
+  have _ : Epi q := by
+    have hfac : cokernel.π f.s ≫ q =
+        cokernel.π (Abelian.image.ι (C := moduleCategory A) h) := by
+      dsimp [q]
+      simp
+    exact epi_of_epi_fac hfac
+  have hfs : (torsionModuleProperty A) (cokernel f.s) :=
+    ((torsionModuleProperty A).isoModSerre_iff f.s).mp f.hs |>.2
+  have hq : (torsionModuleProperty A)
+      (cokernel (Abelian.image.ι (C := moduleCategory A) h)) := by
+    exact (torsionModuleProperty A).prop_of_epi q hfs
+  have hi : (torsionModuleProperty A).isoModSerre
+      (Abelian.image.ι (C := moduleCategory A) h) := by
+    rw [(torsionModuleProperty A).isoModSerre_iff_of_mono]
+    exact hq
+  have hi' : (torsionModuleProperty A).isoModSerre i := by
+    change (torsionModuleProperty A).isoModSerre
+      (Abelian.image.ι (C := moduleCategory A) h)
+    exact hi
+  have hs'_all : (torsionModuleProperty A).isoModSerre s' := by
+    apply MorphismProperty.of_postcomp
+      (W := (torsionModuleProperty A).isoModSerre)
+      (W' := (torsionModuleProperty A).isoModSerre) s'
+      (Abelian.image.ι (C := moduleCategory A) h) hi
+    rw [← hs']
+    exact f.hs
+  have hs'_map : (torsionModuleProperty A).isoModSerre
+      ((finitelyGeneratedModuleInclusion A).map sfg) := by
+    change (torsionModuleProperty A).isoModSerre s'
+    exact hs'_all
+  have hs'_fg : (finitelyGeneratedTorsionModuleProperty A).isoModSerre sfg := by
+    rw [ObjectProperty.isoModSerre_iff]
+    constructor
+    · change (torsionModuleProperty A)
+        ((finitelyGeneratedModuleInclusion A).obj (kernel sfg))
+      exact (torsionModuleProperty A).prop_of_iso
+        (PreservesKernel.iso (finitelyGeneratedModuleInclusion A) sfg).symm
+        ((hs'_map.1))
+    · change (torsionModuleProperty A)
+        ((finitelyGeneratedModuleInclusion A).obj (cokernel sfg))
+      exact (torsionModuleProperty A).prop_of_iso
+        (PreservesCokernel.iso (finitelyGeneratedModuleInclusion A) sfg).symm
+        ((hs'_map.2))
+  let g : (finitelyGeneratedTorsionModuleProperty A).isoModSerre.LeftFraction X₁ X₂ :=
+    { Y' := Z
+      f := ffg
+      s := sfg
+      hs := hs'_fg }
+  have := Localization.inverts L _ _ g.hs
+  refine ⟨g.map L (Localization.inverts _ _), ?_⟩
+  rw [← cancel_mono ((finitelyGeneratedQuotientToModuleQuotient A).map
+      (L.map g.s)), ← Functor.map_comp,
+    MorphismProperty.LeftFraction.map_comp_map_s]
+  let _ : IsIso ((torsionModuleProperty A).isoModSerre.Q.map s') :=
+    Localization.inverts (torsionModuleProperty A).isoModSerre.Q
+      (torsionModuleProperty A).isoModSerre s' hs'_all
+  let _ : IsIso ((torsionModuleProperty A).isoModSerre.Q.map
+      (Abelian.image.ι (C := moduleCategory A) h)) :=
+    Localization.inverts (torsionModuleProperty A).isoModSerre.Q
+      (torsionModuleProperty A).isoModSerre _ hi
+  let _ : IsIso ((torsionModuleProperty A).isoModSerre.Q.map i) :=
+    Localization.inverts (torsionModuleProperty A).isoModSerre.Q
+      (torsionModuleProperty A).isoModSerre i hi'
+  let _ : IsIso ((torsionModuleProperty A).isoModSerre.Q.map f.s) :=
+    Localization.inverts (torsionModuleProperty A).isoModSerre.Q
+      (torsionModuleProperty A).isoModSerre _ f.hs
+  have hfmap : f.map (torsionModuleProperty A).isoModSerre.Q
+      (Localization.inverts _ _) =
+      (torsionModuleProperty A).isoModSerre.Q.map f' ≫
+        inv ((torsionModuleProperty A).isoModSerre.Q.map s') := by
+    rw [← cancel_mono ((torsionModuleProperty A).isoModSerre.Q.map f.s)]
+    rw [MorphismProperty.LeftFraction.map_comp_map_s, hfi, hsi]
+    simp only [Functor.map_comp]
+    simp
+  rw [hφ', hf, hfmap]
+  dsimp [g]
+  have hffg : F.map ffg = (torsionModuleProperty A).isoModSerre.Q.map f' := by
+    change (torsionModuleProperty A).isoModSerre.Q.map f' =
+      (torsionModuleProperty A).isoModSerre.Q.map f'
+    rfl
+  have hsfg_map : F.map sfg = (torsionModuleProperty A).isoModSerre.Q.map s' := by
+    change (torsionModuleProperty A).isoModSerre.Q.map s' =
+      (torsionModuleProperty A).isoModSerre.Q.map s'
+    rfl
+  have hnatf : F.map ffg ≫ e.hom.app Z =
+      e.hom.app X₁ ≫ (finitelyGeneratedQuotientToModuleQuotient A).map
+        (L.map ffg) := by
+    simpa only [Functor.comp_map] using e.hom.naturality ffg
+  have hnats : F.map sfg ≫ e.hom.app Z =
+      e.hom.app X₂ ≫ (finitelyGeneratedQuotientToModuleQuotient A).map
+        (L.map sfg) := by
+    simpa only [Functor.comp_map] using e.hom.naturality sfg
+  calc
+    (finitelyGeneratedQuotientToModuleQuotient A).map (L.map ffg) =
+        e.inv.app X₁ ≫ e.hom.app X₁ ≫
+          (finitelyGeneratedQuotientToModuleQuotient A).map (L.map ffg) := by
+      simp
+    _ = e.inv.app X₁ ≫ F.map ffg ≫ e.hom.app Z := by
+      rw [← hnatf]
+    _ = e.inv.app X₁ ≫
+        (torsionModuleProperty A).isoModSerre.Q.map f' ≫ e.hom.app Z := by
+      rw [hffg]
+    _ = (e.inv.app X₁ ≫
+        ((torsionModuleProperty A).isoModSerre.Q.map f' ≫
+          inv ((torsionModuleProperty A).isoModSerre.Q.map s')) ≫
+        e.hom.app X₂ ≫
+      (finitelyGeneratedQuotientToModuleQuotient A).map (L.map sfg)) := by
+      simp only [Category.assoc, ← hnats, hsfg_map, IsIso.inv_hom_id_assoc]
+    _ = (e.inv.app X₁ ≫
+        ((torsionModuleProperty A).isoModSerre.Q.map f' ≫
+          inv ((torsionModuleProperty A).isoModSerre.Q.map s')) ≫
+        e.hom.app X₂) ≫
+      (finitelyGeneratedQuotientToModuleQuotient A).map (L.map sfg) := by
+      simp only [Category.assoc]
+  /- Original proof attempt:
+  let L := finitelyGeneratedQuotientToModuleQuotient A
   have : L.EssSurj := Localization.essSurj L
     (finitelyGeneratedTorsionModuleProperty A).isoModSerre
   let F := finitelyGeneratedModuleInclusion A ⋙
@@ -690,8 +884,6 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
     Nonempty
       (finitelyGeneratedTorsionSerreQuotient A ≌
         finiteDimensionalVectorSpaceCategory K) := by
-  sorry
-  /- Original proof attempt:
   let r : FractionRing A ≃+* K := (FractionRing.algEquiv A K).toRingEquiv
   let r' : Localization (nonZeroDivisors A) ≃+* K :=
     (FractionRing.algEquiv A K).toRingEquiv
@@ -701,8 +893,15 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
   let _ : (moduleLocalizationFunctor A (nonZeroDivisors A)).IsLocalization
       ((torsionModuleProperty A).isoModSerre) :=
     moduleLocalizationFunctor_isLocalization A (nonZeroDivisors A)
+  let ε : (torsionModuleProperty A).isoModSerre.Q ⋙ e.functor ≅
+      moduleLocalizationFunctor A (nonZeroDivisors A) :=
+    Localization.compUniqFunctor
+      (torsionModuleProperty A).isoModSerre.Q
+      (moduleLocalizationFunctor A (nonZeroDivisors A))
+      (torsionModuleProperty A).isoModSerre
   let H : finitelyGeneratedTorsionSerreQuotient A ⥤ ModuleCat.{u} K :=
     finitelyGeneratedQuotientToModuleQuotient A ⋙ e.functor ⋙ R.functor
+  let L := finitelyGeneratedQuotientToModuleQuotient A
   have hfinite (X : finitelyGeneratedTorsionSerreQuotient A) :
       ModuleCat.isFG K (H.obj X) := by
     let Lfg := (finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q
@@ -867,73 +1066,108 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
   haveI : (finitelyGeneratedQuotientToModuleQuotient A).Faithful := hfaith
   haveI : (finitelyGeneratedQuotientToModuleQuotient A).Full :=
     finitelyGeneratedQuotientToModuleQuotient_full A
-  let _ : (finitelyGeneratedQuotientToModuleQuotient A).FullyFaithful :=
+  letI : (finitelyGeneratedQuotientToModuleQuotient A).FullyFaithful :=
     Functor.FullyFaithful.ofFullyFaithful _
-  let _ : H.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful H
+  letI : H.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful H
   haveI : F.EssSurj := by
     refine ⟨fun Y ↦ ?_⟩
     letI : Module A (Y : Type u) := Module.compHom _ (algebraMap A K)
     letI : IsScalarTower A K (Y : Type u) :=
       ⟨fun a k y => by
-        change (algebraMap A K a * k) • y = _
-        rw [smul_smul]⟩
+        rw [Algebra.smul_def]
+        change (algebraMap A K a * k) • y =
+          (algebraMap A K a) • (k • y)
+        exact (smul_smul (algebraMap A K a) k y).symm⟩
+    letI : Algebra (FractionRing A) K := r.toRingHom.toAlgebra
+    letI : Module (FractionRing A) (Y : Type u) :=
+      Module.compHom _ r.toRingHom
+    letI : IsScalarTower (FractionRing A) K (Y : Type u) :=
+      ⟨fun x k y => by
+        change (r x * k) • y = (r x) • k • y
+        exact (smul_smul (r x) k y).symm⟩
+    letI : IsScalarTower A (FractionRing A) (Y : Type u) :=
+      ⟨fun a x y => by
+        rw [Algebra.smul_def]
+        rw [← smul_smul]
+        change r (algebraMap A (FractionRing A) a) • (r x • y) =
+          (algebraMap A K a) • (r x • y)
+        rw [show r (algebraMap A (FractionRing A) a) = algebraMap A K a by
+          exact (FractionRing.algEquiv A K).commutes a]⟩
     obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' K (Y : Type u)
+    let v : Fin n → (Y : Type u) := fun i => f (Pi.single i 1)
     let P : Submodule A (Y : Type u) :=
-      Submodule.span A (Set.range f)
+      Submodule.span A (Set.range v)
     letI : Module.Finite A P :=
-      Module.Finite.span_of_finite A (Set.finite_range f)
+      Module.Finite.span_of_finite A (Set.finite_range v)
     let M : finitelyGeneratedModuleCategory A :=
       ⟨ModuleCat.of A P, by change Module.Finite A P; infer_instance⟩
     let inclP : P →ₗ[A] (Y : Type u) := P.subtype
     letI : IsLocalizedModule (nonZeroDivisors A) inclP := by
-      let hspan : Submodule.span K (Set.range f) = ⊤ := by
-        rw [← LinearMap.range_eq_top]
-        exact hf
+      let hspan : Submodule.span K (Set.range v) = ⊤ := by
+        apply (span_range_eq_top_iff_surjective_fintypeLinearCombination
+          (R := K) (v := v)).2
+        intro y
+        obtain ⟨x, rfl⟩ := hf y
+        refine ⟨x, ?_⟩
+        rw [Fintype.linearCombination_apply]
+        dsimp [v]
+        simp_rw [← map_smul f]
+        rw [← map_sum]
+        congr 1
+        ext i
+        simp [Pi.single_apply]
       constructor
       · exact (isLocalizedModule_id (nonZeroDivisors A) (Y : Type u) K).map_units
       · intro y
         obtain ⟨t, ht⟩ :=
           multiple_mem_span_of_mem_localization_span
             (M := nonZeroDivisors A) (R := A) (R' := K)
-            (Set.range f) y (by rw [hspan]; trivial)
-        exact ⟨⟨t • y, ht⟩, t, rfl⟩
+            (Set.range v) y (by rw [hspan]; trivial)
+        refine ⟨⟨⟨t • y, ht⟩, t⟩, ?_⟩
+        rfl
       · intro x₁ x₂ h
         refine ⟨1, ?_⟩
+        simp only [one_smul]
         apply Subtype.ext
+        change (x₁ : (Y : Type u)) = (x₂ : (Y : Type u))
         exact h
     let eP : (LocalizedModule (nonZeroDivisors A) (P : Type u)) ≃ₗ[
         FractionRing A] (Y : Type u) :=
       LinearEquiv.extendScalarsOfIsLocalization (nonZeroDivisors A) (FractionRing A)
         (IsLocalizedModule.iso (nonZeroDivisors A) inclP)
-    let W : ModuleCat (FractionRing A) :=
-      ModuleCat.of (FractionRing A) (LocalizedModule (nonZeroDivisors A) (P : Type u))
-    let eW : e.functor.obj (L.obj M) ≅ W := by
-      apply LinearEquiv.toModuleIso
-      exact
-        (Shrink.linearEquiv (FractionRing A)
-          (LocalizedModule (nonZeroDivisors A) (P : Type u))).trans eP
-    let J : R.functor.obj W ≅ Y.obj := by
-      apply LinearEquiv.toModuleIso
-      let j : (R.functor.obj W : Type u) ≃ₗ[K] (Y : Type u) :=
-        { toFun := id
-          invFun := id
-          left_inv := by intro x; rfl
-          right_inv := by intro x; rfl
-          map_add' := by intro x y; rfl
-          map_smul' := by
-            intro k x
-            change (r.symm k : FractionRing A) • x = k • x
-            rw [Algebra.smul_def, Algebra.smul_def]
-            simp }
-      exact j
-    let iY : H.obj (L.obj M) ≅ Y.obj :=
-      R.mapIso eW ≪≫ J
-    refine ⟨L.obj M, ⟨?__⟩⟩
-    exact (ModuleCat.isFG K).isoMk iY (by infer_instance)
-  let _ : F.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful F
-  letI : F.IsEquivalence := by infer_instance
+    let W : ModuleCat (Localization (nonZeroDivisors A)) :=
+      ModuleCat.of (Localization (nonZeroDivisors A))
+        (LocalizedModule (nonZeroDivisors A) (P : Type u))
+    let F' := finitelyGeneratedModuleInclusion A ⋙
+      (torsionModuleProperty A).isoModSerre.Q
+    let η : F' ≅ (finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q ⋙ L :=
+      (Localization.fac F' (finitelyGeneratedQuotientFunctor_isInvertedBy A)
+        (finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q).symm
+    let eW : e.functor.obj
+        (L.obj ((finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q.obj M)) ≅ W := by
+      exact (e.functor.mapIso (η.app M)).symm ≪≫
+        ε.app ((finitelyGeneratedModuleInclusion A).obj M) ≪≫
+        LinearEquiv.toModuleIso
+          (Shrink.linearEquiv (Localization (nonZeroDivisors A))
+            (LocalizedModule (nonZeroDivisors A) (P : Type u)))
+    let pIso : W ≅ ModuleCat.of (FractionRing A) (Y : Type u) :=
+      LinearEquiv.toModuleIso eP
+    let J : R.functor.obj W ≅
+        R.functor.obj (ModuleCat.of (FractionRing A) (Y : Type u)) :=
+      R.functor.mapIso pIso
+    let J₀ : R.functor.obj (ModuleCat.of (FractionRing A) (Y : Type u)) ≅ Y.obj := by
+      exact R.counitIso.app Y.obj
+    let iY : H.obj ((finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q.obj M) ≅
+        Y.obj :=
+      R.functor.mapIso eW ≪≫ J ≪≫ J₀
+    refine ⟨(finitelyGeneratedTorsionModuleProperty A).isoModSerre.Q.obj M, ⟨?__⟩⟩
+    exact (ModuleCat.isFG K).isoMk iY
+  letI : F.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful F
+  letI : F.IsEquivalence :=
+    { faithful := inferInstance
+      full := inferInstance
+      essSurj := inferInstance }
   exact ⟨F.asEquivalence⟩
-  -/
 
 /- The source's canonical choice of the field of fractions is Mathlib's
    `FractionRing`; the preceding theorem also permits any equivalent model. -/
@@ -1090,10 +1324,282 @@ noncomputable def abelianGroupToRationalVectorSpace :
     (ModuleCat.restrictScalarsEquivalenceOfRingEquiv
       (integerFractionRingEquivRationals)).symm.functor
 
+private theorem localizedModuleFunctor_adjunction_univ
+    (A : Type w) [CommRing A] [Small.{v} A] (S : Submonoid A) :
+    let L : ModuleCat.{v} A ⥤ ModuleCat.{v} (Localization S) :=
+      ModuleCat.localizedModuleFunctor S
+    let R : ModuleCat.{v} (Localization S) ⥤ ModuleCat.{v} A :=
+      ModuleCat.restrictScalars (algebraMap A (Localization S))
+    ∃ (adj : L ⊣ R), R.Full := by
+  let L : ModuleCat.{v} A ⥤ ModuleCat.{v} (Localization S) :=
+    ModuleCat.localizedModuleFunctor S
+  let R : ModuleCat.{v} (Localization S) ⥤ ModuleCat.{v} A :=
+    ModuleCat.restrictScalars (algebraMap A (Localization S))
+  let adj : L ⊣ R :=
+    Adjunction.mkOfHomEquiv {
+      homEquiv := fun X Y => by
+        change (X.localizedModule S ⟶ Y) ≃ (X ⟶ R.obj Y)
+        letI : IsScalarTower A (Localization S) (X.localizedModule S) := by
+          infer_instance
+        letI : Module A (Y : Type v) :=
+          Module.compHom (Y : Type v) (algebraMap A (Localization S))
+        letI : IsScalarTower A (Localization S) (Y : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) (Y : Type v)
+        letI : IsLocalizedModule S
+            (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v)) :=
+          isLocalizedModule_id S (Y : Type v) (Localization S)
+        refine Equiv.mk
+          (fun f => ModuleCat.ofHom
+            ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)))
+          (fun g => ModuleCat.ofHom
+            (IsLocalizedModule.mapExtendScalars S
+              (X.localizedModuleMkLinearMap S)
+              (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v))
+              (Localization S) g.hom))
+          (by
+            intro f
+            apply ModuleCat.hom_ext
+            let L' : (X.localizedModule S : Type v) →ₗ[Localization S] (Y : Type v) :=
+              IsLocalizedModule.mapExtendScalars S
+                (X.localizedModuleMkLinearMap S)
+                (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v))
+                (Localization S)
+                ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S))
+            change L' = f.hom
+            have h : L'.restrictScalars A = f.hom.restrictScalars A := by
+              apply IsLocalizedModule.linearMap_ext S (X.localizedModuleMkLinearMap S)
+                (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v))
+                (g := L'.restrictScalars A) (g' := f.hom.restrictScalars A)
+              ext x
+              change
+                (IsLocalizedModule.map S (X.localizedModuleMkLinearMap S)
+                    (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v))
+                    ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)))
+                  ((X.localizedModuleMkLinearMap S) x) =
+                  ((f.hom.restrictScalars A).comp (X.localizedModuleMkLinearMap S)) x
+              rw [IsLocalizedModule.map_apply]
+              rfl
+            apply LinearMap.ext
+            intro x
+            exact LinearMap.congr_fun h x)
+          (by
+            intro g
+            apply ModuleCat.hom_ext
+            ext x
+            let g' : (X : Type v) →ₗ[A] (Y : Type v) :=
+              { toFun := g.hom
+                map_add' := by intro x y; exact g.hom.map_add x y
+                map_smul' := by
+                  intro c x
+                  exact g.hom.map_smul c x }
+            change
+              (IsLocalizedModule.map S (X.localizedModuleMkLinearMap S)
+                  (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v)) g')
+                ((X.localizedModuleMkLinearMap S) x) = g.hom x
+            rw [IsLocalizedModule.map_apply]
+            rfl)
+      homEquiv_naturality_left_symm := by
+        intros X' X Y f g
+        let : Module A (X'.localizedModule S : Type v) :=
+          by infer_instance
+        let : Module A (Y : Type v) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        let : IsScalarTower A (Localization S) (X'.localizedModule S : Type v) :=
+          by infer_instance
+        let : IsScalarTower A (Localization S) (Y : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        let : IsLocalizedModule S (LinearMap.id : (Y : Type v) →ₗ[A] (Y : Type v)) :=
+          isLocalizedModule_id S (Y : Type v) (Localization S)
+        let : Module A (R.obj Y : Type v) := (R.obj Y).isModule
+        let : IsScalarTower A (Localization S) (R.obj Y : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        let : IsLocalizedModule S
+            (LinearMap.id : (R.obj Y : Type v) →ₗ[A] (R.obj Y : Type v)) :=
+          isLocalizedModule_id S (Y : Type v) (Localization S)
+        dsimp only [Equiv.symm, Equiv.mk, id]
+        dsimp [R, L, ModuleCat.localizedModuleFunctor]
+        apply ModuleCat.hom_ext
+        ext x
+        change
+          (IsLocalizedModule.mapExtendScalars S (X'.localizedModuleMkLinearMap S)
+              LinearMap.id (Localization S) (ModuleCat.Hom.hom (f ≫ g))) x =
+            (ModuleCat.Hom.hom
+              (ModuleCat.localizedModuleMap S f ≫
+                ModuleCat.ofHom
+                  (IsLocalizedModule.mapExtendScalars S
+                    (X.localizedModuleMkLinearMap S) LinearMap.id
+                    (Localization S) (ModuleCat.Hom.hom g)))) x
+        simp [ModuleCat.localizedModuleMap, IsLocalizedModule.mapExtendScalars,
+          LinearMap.extendScalarsOfIsLocalizationEquiv]
+        rw [IsLocalizedModule.map_comp' S (X'.localizedModuleMkLinearMap S)
+          (X.localizedModuleMkLinearMap S) (LinearMap.id :
+            (R.obj Y : Type v) →ₗ[A] (R.obj Y : Type v))
+          (ModuleCat.Hom.hom f) (ModuleCat.Hom.hom g)]
+        change
+          _ = (LinearMap.extendScalarsOfIsLocalization S (Localization S) _)
+            ((LinearMap.extendScalarsOfIsLocalization S (Localization S) _) x)
+        rfl
+      homEquiv_naturality_right := by
+        intros X Y Y' f g
+        let : Module A (L.obj X : Type v) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        let : Module A (Y : Type v) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        let : Module A (Y' : Type v) :=
+          Module.compHom _ (algebraMap A (Localization S))
+        let : IsScalarTower A (Localization S) (L.obj X : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        let : IsScalarTower A (Localization S) (Y : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        let : IsScalarTower A (Localization S) (Y' : Type v) :=
+          IsScalarTower.of_compHom A (Localization S) _
+        dsimp only [Equiv.symm, Equiv.mk, id]
+        dsimp [R, L, ModuleCat.localizedModuleFunctor]
+        apply ModuleCat.hom_ext
+        ext x
+        change
+          (ModuleCat.Hom.hom (f ≫ g)).restrictScalars A
+              ((X.localizedModuleMkLinearMap S) x) =
+            (ModuleCat.Hom.hom g)
+              ((ModuleCat.Hom.hom f).restrictScalars A
+                ((X.localizedModuleMkLinearMap S) x))
+        rfl
+    }
+  refine ⟨adj, ?_⟩
+  constructor
+  intro X Y f
+  let : Module A (R.obj X : Type v) := (R.obj X).isModule
+  let : Module A (R.obj Y : Type v) := (R.obj Y).isModule
+  let : IsScalarTower A (Localization S) (R.obj X : Type v) :=
+    IsScalarTower.of_compHom A (Localization S) _
+  let : IsScalarTower A (Localization S) (R.obj Y : Type v) :=
+    IsScalarTower.of_compHom A (Localization S) _
+  refine ⟨ModuleCat.ofHom
+    (LinearMap.extendScalarsOfIsLocalization
+      (M := (R.obj X : Type v)) (N := (R.obj Y : Type v))
+      S (Localization S) f.hom), ?_⟩
+  ext x
+  rfl
+
 theorem abelianGroupToRationalVectorSpace_isLocalization :
     abelianGroupToRationalVectorSpace.{u}.IsLocalization
       abelianGroupTorsionProperty.{u}.isoModSerre := by
-  sorry
+  let S : Submonoid ℤ := nonZeroDivisors ℤ
+  let L : ModuleCat.{u} ℤ ⥤ ModuleCat.{u} (Localization S) :=
+    ModuleCat.localizedModuleFunctor.{u} S
+  let R₀ : ModuleCat.{u} (Localization S) ⥤ ModuleCat.{u} ℤ :=
+    ModuleCat.restrictScalars (algebraMap ℤ (Localization S))
+  obtain ⟨adjL, hFull⟩ :=
+    localizedModuleFunctor_adjunction_univ.{u, 0} ℤ S
+  letI : R₀.Full := hFull
+  let e := zModuleToAbelianGroupEquivalence.{u}
+  let F := e.inverse ⋙ L
+  let adjF := e.symm.toAdjunction.comp adjL
+  let _ : PreservesFiniteLimits F := comp_preservesFiniteLimits _ _
+  let _ : PreservesFiniteColimits F := comp_preservesFiniteColimits _ _
+  have hzero (G : AddCommGrpCat.{u}) :
+      IsZero (F.obj G) ↔ Module.IsTorsion ℤ (G : Type u) := by
+    change IsZero (L.obj (e.inverse.obj G)) ↔ Module.IsTorsion ℤ (G : Type u)
+    change IsZero (ModuleCat.localizedModule
+      (e.inverse.obj G) S) ↔ Module.IsTorsion ℤ (G : Type u)
+    rw [ModuleCat.isZero_iff_subsingleton]
+    change Subsingleton (Shrink.{u} (LocalizedModule S (e.inverse.obj G : Type u))) ↔ _
+    have hlocal : Subsingleton (LocalizedModule S (e.inverse.obj G : Type u)) ↔
+        Module.IsTorsion ℤ (e.inverse.obj G : Type u) := by
+      rw [LocalizedModule.subsingleton_iff]
+      constructor
+      · intro h x
+        obtain ⟨r, hr, hx⟩ := @h x
+        refine ⟨⟨r, hr⟩, ?_⟩
+        simpa only [Submonoid.smul_def] using hx
+      · intro h x
+        obtain ⟨a, ha⟩ := @h x
+        exact ⟨a, a.property, by simpa only [Submonoid.smul_def] using ha⟩
+    let E : (forget₂ (ModuleCat.{u} ℤ) AddCommGrpCat.{u}).obj
+        (e.inverse.obj G) ≅ G := e.counitIso.app G
+    let N : ModuleCat.{u} ℤ := ModuleCat.of ℤ (G : Type u)
+    let j : (forget₂ (ModuleCat.{u} ℤ) AddCommGrpCat.{u}).obj N ≅ G := Iso.refl _
+    obtain ⟨a, ha⟩ :=
+      (ModuleCat.forget₂_addCommGroup_full.map_surjective (E.hom ≫ j.inv))
+    obtain ⟨b, hb⟩ :=
+      (ModuleCat.forget₂_addCommGroup_full.map_surjective (j.hom ≫ E.inv))
+    have hab : a ≫ b = 𝟙 _ := by
+      apply (forget₂ (ModuleCat.{u} ℤ) AddCommGrpCat.{u}).map_injective
+      rw [Functor.map_comp, ha, hb]
+      simp
+      ext x
+      rfl
+    have hba : b ≫ a = 𝟙 _ := by
+      apply (forget₂ (ModuleCat.{u} ℤ) AddCommGrpCat.{u}).map_injective
+      rw [Functor.map_comp, hb, ha]
+      simp
+      ext x
+      rfl
+    have hab_apply (x : e.inverse.obj G) : b.hom (a.hom x) = x := by
+      have h := congrArg (fun f : (e.inverse.obj G) ⟶ e.inverse.obj G => f.hom x) hab
+      simpa using h
+    have hba_apply (x : N) : a.hom (b.hom x) = x := by
+      have h := congrArg (fun f : N ⟶ N => f.hom x) hba
+      simpa using h
+    have htorsion : Module.IsTorsion ℤ (e.inverse.obj G : Type u) ↔
+        Module.IsTorsion ℤ (N : Type u) := by
+      constructor
+      · intro h x
+        obtain ⟨c, hc⟩ := @h (b.hom x)
+        refine ⟨c, ?_⟩
+        have hc' : AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ))
+            (b.hom x) = 0 := hc
+        have ha_smul : AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) x =
+            a.hom (AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) (b.hom x)) := by
+          have h1 : AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom (b.hom x)) =
+              a.hom (AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) (b.hom x)) := by
+            have hnat := congrArg (fun f => f (b.hom x)) (ModuleCat.smul_naturality a (c : ℤ))
+            change AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom (b.hom x)) =
+              a.hom (AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) (b.hom x)) at hnat
+            exact hnat
+          exact (congrArg (fun y => AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) y)
+            (hba_apply x).symm).trans h1
+        change AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) x = 0
+        rw [ha_smul, hc', a.hom.map_zero]
+      · intro h x
+        obtain ⟨c, hc⟩ := @h (a.hom x)
+        refine ⟨c, ?_⟩
+        have hc' : AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom x) = 0 := hc
+        have hb_smul : AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) x =
+            b.hom (AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom x)) := by
+          have h1 : AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) (b.hom (a.hom x)) =
+              b.hom (AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom x)) := by
+            have hnat := congrArg (fun f => f (a.hom x)) (ModuleCat.smul_naturality b (c : ℤ))
+            change AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) (b.hom (a.hom x)) =
+              b.hom (AddCommGrpCat.Hom.hom (N.smul (c : ℤ)) (a.hom x)) at hnat
+            exact hnat
+          exact (congrArg (fun y => AddCommGrpCat.Hom.hom
+            ((e.inverse.obj G).smul (c : ℤ)) y) (hab_apply x).symm).trans h1
+        change AddCommGrpCat.Hom.hom ((e.inverse.obj G).smul (c : ℤ)) x = 0
+        rw [hb_smul, hc', b.hom.map_zero]
+    exact (Equiv.subsingleton_congr (equivShrink (LocalizedModule S
+      (e.inverse.obj G : Type u)))).symm.trans (hlocal.trans htorsion)
+  have hP : abelianGroupTorsionProperty.{u} = F.kernel := by
+    ext G
+    exact (hzero G).symm
+  have hIso : abelianGroupTorsionProperty.{u}.isoModSerre =
+      F.kernel.isoModSerre := by
+    ext X Y f
+    change
+      (abelianGroupTorsionProperty.{u} (kernel f) ∧
+        abelianGroupTorsionProperty.{u} (cokernel f)) ↔
+      (F.kernel (kernel f) ∧ F.kernel (cokernel f))
+    rw [hP]
+  letI : F.IsLocalization F.kernel.isoModSerre :=
+    Abelian.isLocalization_isoModSerre_kernel_of_leftAdjoint adjF
+  have hF : F.IsLocalization abelianGroupTorsionProperty.{u}.isoModSerre := by
+    rw [hIso]
+    exact inferInstance
+  letI : F.IsLocalization abelianGroupTorsionProperty.{u}.isoModSerre := hF
+  change (F ⋙ (ModuleCat.restrictScalarsEquivalenceOfRingEquiv
+      (integerFractionRingEquivRationals)).symm.functor).IsLocalization
+    abelianGroupTorsionProperty.{u}.isoModSerre
+  exact inferInstance
 
 /-- The Serre quotient of abelian groups by torsion groups is rational vector spaces. -/
 noncomputable def quotientAbelianGroupsByTorsionGroupsEquivalence :

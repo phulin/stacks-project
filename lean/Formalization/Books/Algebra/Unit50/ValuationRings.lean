@@ -804,7 +804,9 @@ theorem ideals_equiv_valueGroupIdeals
         change (((OrderDual.ofDual γ.toMul : H) :
           (ValueGroupWithZero (A := A) (K := K))ˣ) :
             ValueGroupWithZero (A := A) (K := K)) ≠ 0
-        exact Units.ne_zero _
+        exact Units.ne_zero
+          ((OrderDual.ofDual γ.toMul : H) :
+            (ValueGroupWithZero (A := A) (K := K))ˣ)
       exact htv0 (by simpa using hz)
     obtain ⟨x, hx⟩ := hv.exists_of_le_one (by
       rw [hz]
@@ -860,11 +862,14 @@ theorem ideals_equiv_valueGroupIdeals
     ⟨{γ | 0 ≤ γ ∧ cutIdeal γ ≤ I}, by
       constructor
       · intro γ hγ
+        change 0 ≤ γ ∧ cutIdeal γ ≤ I at hγ
         exact hγ.1
       · intro γ hγ δ hδ
+        change 0 ≤ γ ∧ cutIdeal γ ≤ I at hγ
+        change 0 ≤ δ ∧ cutIdeal δ ≤ I
         exact ⟨hγ.1.trans hδ, fun x hx => hx.trans (htoValue_le hδ)⟩⟩
   let invFun : ValueGroupIdeal (ValueGroup (A := A) (K := K)) → Ideal A := fun S =>
-    { carrier := {x | x = 0 ∨ ∃ γ, γ ∈ S ∧ x ∈ cutIdeal γ}
+    { carrier := {x | x = 0 ∨ ∃ γ, γ ∈ S.1 ∧ x ∈ cutIdeal γ}
       zero_mem' := Or.inl rfl
       add_mem' := by
         intro x y hx hy
@@ -883,14 +888,16 @@ theorem ideals_equiv_valueGroupIdeals
   have heFun_order (I J : Ideal A) : I ≤ J ↔ eFun I ≤ eFun J := by
     constructor
     · intro hIJ γ hγ
+      change 0 ≤ γ ∧ cutIdeal γ ≤ I at hγ
       exact ⟨hγ.1, hγ.2.trans hIJ⟩
     · intro hIJ x hx
       by_cases hx0 : x = 0
       · subst x
         exact J.zero_mem
-      · have hγI : val ⟨x, hx0⟩ ∈ eFun I :=
+      · have hγI : val ⟨x, hx0⟩ ∈ (eFun I).1 :=
           ⟨hval_nonneg hx0, hcut_mem_of_mem I hx0 hx⟩
         have hγJ := hIJ hγI
+        change 0 ≤ val ⟨x, hx0⟩ ∧ cutIdeal (val ⟨x, hx0⟩) ≤ J at hγJ
         exact hγJ.2 (by
           change (ValuationRing.valuation A K) (algebraMap A K x) ≤
             toValue (val ⟨x, hx0⟩)
@@ -899,7 +906,7 @@ theorem ideals_equiv_valueGroupIdeals
       eFun (invFun S) = S := by
     apply Subtype.ext
     ext γ
-    change (0 ≤ γ ∧ cutIdeal γ ≤ invFun S) ↔ γ ∈ S
+    change (0 ≤ γ ∧ cutIdeal γ ≤ invFun S) ↔ γ ∈ S.1
     constructor
     · intro hγ
       obtain ⟨x, hx0, hxval⟩ := hexists hγ.1
@@ -907,7 +914,7 @@ theorem ideals_equiv_valueGroupIdeals
         change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ
         rw [← hxval, htoValue_val hx0]
       have hxinv := hγ.2 hxcut
-      change x = 0 ∨ ∃ δ, δ ∈ S ∧ x ∈ cutIdeal δ at hxinv
+      change x = 0 ∨ ∃ δ, δ ∈ S.1 ∧ x ∈ cutIdeal δ at hxinv
       rcases hxinv with hxzero | ⟨δ, hδ, hxδ⟩
       · exact (hx0 hxzero).elim
       · apply S.2.2 δ hδ γ
@@ -918,7 +925,7 @@ theorem ideals_equiv_valueGroupIdeals
       exact Or.inr ⟨γ, hγ, hx⟩
   have heFun_invFun (I : Ideal A) : invFun (eFun I) = I := by
     ext x
-    change (x = 0 ∨ ∃ γ, γ ∈ eFun I ∧ x ∈ cutIdeal γ) ↔ x ∈ I
+    change (x = 0 ∨ ∃ γ, γ ∈ (eFun I).1 ∧ x ∈ cutIdeal γ) ↔ x ∈ I
     constructor
     · intro hx
       rcases hx with hxzero | ⟨γ, hγ, hxcut⟩
@@ -927,7 +934,7 @@ theorem ideals_equiv_valueGroupIdeals
     · intro hx
       by_cases hx0 : x = 0
       · exact Or.inl hx0
-      · refine Or.inr ⟨val ⟨x, hx0⟩, ?_, ?_⟩
+        · refine Or.inr ⟨val ⟨x, hx0⟩, ?_, ?_⟩
         · exact ⟨hval_nonneg hx0, hcut_mem_of_mem I hx0 hx⟩
         · change (ValuationRing.valuation A K) (algebraMap A K x) ≤
             toValue (val ⟨x, hx0⟩)

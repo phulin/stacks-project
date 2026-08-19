@@ -562,7 +562,8 @@ theorem exists_associatedSheafFunctor
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     ∃ F : ModuleCat R ⥤ Mod X.structureSheaf,
-      IsAssociatedSheafFunctor α F := by
+      IsAssociatedSheafFunctor α F ∧
+        PreservesColimitsOfSize.{v, v} F := by
   sorry
 
 /-- The associated-sheaf construction is functorial in `M`. -/
@@ -575,7 +576,7 @@ theorem associatedSheafFunctor_obj
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     Nonempty ((associatedSheafFunctor α).obj M ≅ associatedSheafModule α M) := by
-  exact (Classical.choose_spec (exists_associatedSheafFunctor α)) M
+  exact (Classical.choose_spec (exists_associatedSheafFunctor α)).1 M
 
 /-- The stalk construction attached to the associated-sheaf functor. -/
 noncomputable def associatedSheafStalkFunctor
@@ -616,7 +617,7 @@ theorem associatedSheafFunctor_preserves_colimits
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     PreservesColimitsOfSize.{v, v} (associatedSheafFunctor α) := by
-  sorry
+  exact (Classical.choose_spec (exists_associatedSheafFunctor α)).2
 
 theorem associatedSheafQCohFunctor_preserves_colimits
     {X : RingedSpace.{v}} {R : Type v} [Ring R]

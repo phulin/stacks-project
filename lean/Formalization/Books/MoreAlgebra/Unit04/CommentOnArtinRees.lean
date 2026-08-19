@@ -83,6 +83,7 @@ theorem approximate_complex_preimage
     (f : L →ₗ[A] M) (g : M →ₗ[A] N)
     (f' : L →ₗ[A] M) (g' : M →ₗ[A] N)
     (hS : Function.Exact f g)
+    (hS' : g'.comp f' = 0)
     (hc_f : ArtinReesWorks I f c)
     (hc_g : ArtinReesWorks I g c)
     (hf : LinearMap.CongruentModulo

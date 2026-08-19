@@ -786,6 +786,331 @@ private lemma pushout_inr_cokernel
   exact ⟨(ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S').mp hS',
     (ModuleCat.epi_iff_surjective _).mp (epi_of_isColimit_cofork hcπ)⟩
 
+private lemma universallyExact_factor_finiteFree_of_universes
+    {R : Type u} {M₁ M₂ : Type w} [CommRing R]
+    [AddCommGroup M₁] [Module R M₁]
+    [AddCommGroup M₂] [Module R M₂]
+    {f₁ : M₁ →ₗ[R] M₂}
+    (h : universallyInjective f₁)
+    {n m : ℕ}
+    (a : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
+    (u : (Fin n →₀ R) →ₗ[R] M₁)
+    (v : (Fin m →₀ R) →ₗ[R] M₂)
+    (ha : v.comp a = f₁.comp u) :
+    ∃ w : (Fin m →₀ R) →ₗ[R] M₁, w.comp a = u := by
+  let A : (Fin m →₀ R) →ₗ[R] (Fin n →₀ R) :=
+    Finsupp.linearCombination R (fun j =>
+      ∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1)
+  let Q₀ : Type u := (Fin n →₀ R) ⧸ LinearMap.range A
+  let Q : Type (max u w) := ULift.{w} Q₀
+  let q₀ : (Fin n →₀ R) →ₗ[R] Q₀ := Submodule.mkQ _
+  let eQ : Q₀ ≃ₗ[R] Q := ULift.moduleEquiv.symm
+  let q : (Fin n →₀ R) →ₗ[R] Q := eQ.toLinearMap.comp q₀
+  let tx : M₁ ⊗[R] Q :=
+    ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] q (Finsupp.single i 1)
+  have htx : (f₁.rTensor Q) tx = 0 := by
+    dsimp [tx]
+    simp only [map_sum, LinearMap.rTensor_tmul]
+    have ha' (i : Fin n) :
+        f₁ (u (Finsupp.single i 1)) = v (a (Finsupp.single i 1)) := by
+      simpa [LinearMap.comp_apply] using
+        (LinearMap.congr_fun ha (Finsupp.single i 1)).symm
+    simp_rw [ha']
+    classical
+    have ha_basis (i : Fin n) :
+        a (Finsupp.single i 1) =
+          ∑ j, (a (Finsupp.single i 1)) j • Finsupp.single j 1 := by
+      ext j
+      simp
+    calc
+      _ = ∑ i, v (∑ j, (a (Finsupp.single i 1)) j •
+          Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact congrArg (fun z => v z ⊗ₜ[R] q (Finsupp.single i 1)) (ha_basis i)
+      _ = ∑ i, ∑ j, (a (Finsupp.single i 1)) j •
+          (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) := by
+        simp_rw [map_sum, TensorProduct.sum_tmul, map_smul, TensorProduct.smul_tmul,
+          TensorProduct.tmul_smul]
+      _ = ∑ j, ∑ i, (a (Finsupp.single i 1)) j •
+          (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) := by
+        exact Finset.sum_comm
+      _ = 0 := by
+        apply Finset.sum_eq_zero
+        intro j hj
+        change ∑ i, (a (Finsupp.single i 1)) j •
+            (v (Finsupp.single j 1) ⊗ₜ[R] q (Finsupp.single i 1)) = 0
+        simp_rw [← TensorProduct.tmul_smul]
+        rw [← TensorProduct.tmul_sum]
+        simp_rw [← map_smul]
+        rw [← map_sum]
+        rw [show (∑ i, (a (Finsupp.single i 1)) j • Finsupp.single i 1) =
+            A (Finsupp.single j 1) by
+              simp [A, Finsupp.linearCombination_single]]
+        have hq₀ : q₀ (A (Finsupp.single j 1)) = 0 := by
+          apply (Submodule.Quotient.mk_eq_zero (LinearMap.range A)).2
+          exact ⟨Finsupp.single j 1, rfl⟩
+        have hq : q (A (Finsupp.single j 1)) = 0 := by
+          simp [q, hq₀]
+        simpa [q, Submodule.mkQ_apply] using
+          congrArg (fun z => v (Finsupp.single j 1) ⊗ₜ[R] z) hq
+  have hQ : Function.Injective (f₁.rTensor Q) := h Q
+  have htx0 : tx = 0 := hQ (by simpa using htx)
+  let t0 : M₁ ⊗[R] (Fin n →₀ R) :=
+    ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] Finsupp.single i 1
+  have ht0 : (LinearMap.lTensor M₁ q) t0 = tx := by
+    dsimp [t0, tx]
+    simp only [map_sum, LinearMap.lTensor_tmul]
+  have ht0zero : (LinearMap.lTensor M₁ q) t0 = 0 := ht0.trans htx0
+  have hqsurj : Function.Surjective q := by
+    intro y
+    obtain ⟨y₀, hy₀⟩ := eQ.surjective y
+    obtain ⟨x, hx⟩ := Submodule.mkQ_surjective _ y₀
+    refine ⟨x, ?_⟩
+    calc
+      q x = eQ (q₀ x) := rfl
+      _ = eQ y₀ := congrArg eQ hx
+      _ = y := hy₀
+  have hqker : LinearMap.ker q = LinearMap.ker q₀ := by
+    apply le_antisymm
+    · intro x hx
+      apply LinearMap.mem_ker.mpr
+      apply eQ.injective
+      simpa [q] using LinearMap.mem_ker.mp hx
+    · intro x hx
+      apply LinearMap.mem_ker.mpr
+      simp [q, LinearMap.mem_ker.mp hx]
+  have hqexact : Function.Exact A q := by
+    apply LinearMap.exact_iff.mpr
+    rw [hqker]
+    exact (LinearMap.exact_iff.mp A.exact_map_mkQ_range)
+  have hex : Function.Exact (LinearMap.lTensor M₁ A) (LinearMap.lTensor M₁ q) :=
+    _root_.lTensor_exact M₁ hqexact hqsurj
+  have hrange : t0 ∈ LinearMap.range (LinearMap.lTensor M₁ A) := by
+    rw [← hex.linearMap_ker_eq]
+    exact ht0zero
+  obtain ⟨t, ht⟩ := hrange
+  have hcontract (z : M₁ ⊗[R] (Fin m →₀ R))
+    (b : (Fin m →₀ R) →ₗ[R] R) :
+      TensorProduct.rid R M₁ (LinearMap.lTensor M₁ b z) =
+        ∑ j, b (Finsupp.single j 1) •
+            TensorProduct.rid R M₁
+            (LinearMap.lTensor M₁
+              (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) z) := by
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul x y =>
+        simp only [TensorProduct.rid_tmul, LinearMap.lTensor_tmul]
+        have hy : y = ∑ j, y j • Finsupp.single j 1 := by
+          ext j
+          simp
+        rw [hy]
+        have hb : b (∑ j, y j • Finsupp.single j 1) =
+            ∑ j, y j • b (Finsupp.single j 1) := by
+          simp only [map_sum, map_smul]
+        have hl (j : Fin m) :
+            (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R)
+              (∑ k, y k • Finsupp.single k 1) = y j := by
+          change (∑ k, y k • Finsupp.single k 1) j = y j
+          simp
+        rw [hb]
+        simp_rw [hl]
+        rw [Finset.sum_smul]
+        apply Finset.sum_congr rfl
+        intro j hj
+        simp [smul_smul, mul_comm]
+    | add x y hx hy =>
+        simp only [map_add, hx, hy,
+          Finset.sum_add_distrib, smul_add]
+  let w : (Fin m →₀ R) →ₗ[R] M₁ :=
+    Finsupp.linearCombination R (fun j =>
+      TensorProduct.rid R M₁
+        (LinearMap.lTensor M₁
+          (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t))
+  have hcoord (i : Fin n) : w (a (Finsupp.single i 1)) =
+      u (Finsupp.single i 1) := by
+    have hc := hcontract t
+      ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+    have hleft : TensorProduct.rid R M₁
+        (LinearMap.lTensor M₁
+          ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A) t) =
+        u (Finsupp.single i 1) := by
+      rw [LinearMap.lTensor_comp_apply, ht]
+      dsimp [t0]
+      simp [Finsupp.single_apply]
+    have hcoeff (j : Fin m) :
+        ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+            (Finsupp.single j 1) = (a (Finsupp.single i 1)) j := by
+      simp [LinearMap.comp_apply, A, Finsupp.linearCombination_single,
+        Finsupp.single_apply]
+    have ha_exp : a (Finsupp.single i 1) =
+        ∑ j, (a (Finsupp.single i 1)) j • Finsupp.single j 1 := by
+      ext j
+      simp
+    calc
+      w (a (Finsupp.single i 1)) =
+          ∑ j, (a (Finsupp.single i 1)) j •
+            TensorProduct.rid R M₁
+              (LinearMap.lTensor M₁
+                (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t) := by
+        rw [ha_exp]
+        simp only [map_sum, map_smul]
+        simp [w, Finsupp.linearCombination_single]
+      _ = ∑ j, ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+          (Finsupp.single j 1) •
+          TensorProduct.rid R M₁
+            (LinearMap.lTensor M₁
+              (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t) := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        rw [hcoeff]
+      _ = TensorProduct.rid R M₁
+          (LinearMap.lTensor M₁
+            ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A) t) := hc.symm
+      _ = u (Finsupp.single i 1) := hleft
+  refine ⟨w, ?_⟩
+  apply Finsupp.lhom_ext'
+  intro i
+  apply LinearMap.ext
+  intro c
+  change w (a (Finsupp.single i c)) = u (Finsupp.single i c)
+  rw [← Finsupp.smul_single_one]
+  simp only [map_smul]
+  rw [hcoord]
+
+private lemma section_of_universallyExact_of_finitePresentation
+    {R : Type u} {M₁ M₂ M₃ : Type w} [CommRing R]
+    [AddCommGroup M₁] [Module R M₁]
+    [AddCommGroup M₂] [Module R M₂]
+    [AddCommGroup M₃] [Module R M₃]
+    [Module.FinitePresentation R M₃]
+    (f₁ : M₁ →ₗ[R] M₂) (f₂ : M₂ →ₗ[R] M₃)
+    (hshort : Function.Injective f₁ ∧ Function.Exact f₁ f₂ ∧
+      Function.Surjective f₂)
+    (hue : universallyExact f₁ f₂) :
+    ∃ s : M₃ →ₗ[R] M₂, f₂.comp s = LinearMap.id := by
+  obtain ⟨n, m, p₀, q₀, hp₀, hpq₀⟩ :=
+    Module.FinitePresentation.exists_fin' R M₃
+  classical
+  let eₙ : (Fin n →₀ R) ≃ₗ[R] (Fin n → R) :=
+    Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let eₘ : (Fin m →₀ R) ≃ₗ[R] (Fin m → R) :=
+    Finsupp.linearEquivFunOnFinite R R (Fin m)
+  let p : (Fin n →₀ R) →ₗ[R] M₃ := p₀.comp eₙ.toLinearMap
+  let q : (Fin m →₀ R) →ₗ[R] (Fin n →₀ R) :=
+    eₙ.symm.toLinearMap.comp (q₀.comp eₘ.toLinearMap)
+  have hp : Function.Surjective p := by
+    intro x
+    obtain ⟨y, hy⟩ := hp₀ x
+    refine ⟨eₙ.symm y, ?_⟩
+    simpa [p] using hy
+  have hpq : Function.Exact q p := by
+    intro x
+    constructor
+    · intro hx
+      have hx' : p₀ (eₙ x) = 0 := by
+        simpa [p] using hx
+      obtain ⟨y, hy⟩ := (hpq₀ (eₙ x)).mp hx'
+      refine ⟨eₘ.symm y, ?_⟩
+      apply eₙ.injective
+      simp [q, hy]
+    · rintro ⟨y, rfl⟩
+      have hz := congrArg (fun z => z (eₘ y)) hpq₀.comp_eq_zero
+      simpa [p, q] using hz
+  let choose (i : Fin n) : M₂ :=
+    (hshort.2.2 (p (Finsupp.single i 1))).choose
+  have choose_spec (i : Fin n) :
+      f₂ (choose i) = p (Finsupp.single i 1) :=
+    (hshort.2.2 (p (Finsupp.single i 1))).choose_spec
+  let v : (Fin n →₀ R) →ₗ[R] M₂ :=
+    Finsupp.linearCombination R choose
+  have hv : f₂.comp v = p := by
+    apply Finsupp.lhom_ext'
+    intro i
+    apply LinearMap.ext
+    intro c
+    change f₂ (v (Finsupp.single i c)) = p (Finsupp.single i c)
+    rw [← Finsupp.smul_single_one]
+    simp only [map_smul]
+    simp only [v, Finsupp.linearCombination_single, one_smul]
+    rw [choose_spec]
+  have hvqzero (i : Fin m) :
+      f₂ (v (q (Finsupp.single i 1))) = 0 := by
+    rw [← LinearMap.comp_apply, hv]
+    have hzero := congrArg (fun z => z (Finsupp.single i 1)) hpq.comp_eq_zero
+    simpa [LinearMap.comp_apply] using hzero
+  have humem (i : Fin m) : v (q (Finsupp.single i 1)) ∈ LinearMap.range f₁ :=
+    (hshort.2.1 _).mp (hvqzero i)
+  let choose' (i : Fin m) : M₁ := (humem i).choose
+  have choose'_spec (i : Fin m) :
+      f₁ (choose' i) = v (q (Finsupp.single i 1)) :=
+    (humem i).choose_spec
+  let u : (Fin m →₀ R) →ₗ[R] M₁ :=
+    Finsupp.linearCombination R choose'
+  have hu : f₁.comp u = v.comp q := by
+    apply Finsupp.lhom_ext'
+    intro i
+    apply LinearMap.ext
+    intro c
+    change f₁ (u (Finsupp.single i c)) = v (q (Finsupp.single i c))
+    rw [← Finsupp.smul_single_one]
+    simp only [map_smul]
+    simp only [u, Finsupp.linearCombination_single, one_smul]
+    rw [choose'_spec]
+  obtain ⟨w, hw⟩ :=
+    universallyExact_factor_finiteFree_of_universes hue.2.2.2 q u v hu.symm
+  let s₀ : (Fin n →₀ R) →ₗ[R] M₂ := v - f₁.comp w
+  have hs₀ : f₂.comp s₀ = p := by
+    apply LinearMap.ext
+    intro x
+    have hcomp := congrArg (fun z => z (w x)) hshort.2.1.comp_eq_zero
+    have hvx := congrArg (fun z => z x) hv
+    have hcomp' : f₂ (f₁ (w x)) = 0 := by
+      simpa [Function.comp_apply] using hcomp
+    change f₂ (v x - f₁ (w x)) = p x
+    rw [map_sub, hcomp', sub_zero]
+    exact hvx
+  have hs₀q : s₀.comp q = 0 := by
+    apply LinearMap.ext
+    intro x
+    have hux := congrArg (fun z => z x) hu
+    have hwx := congrArg (fun z => z x) hw
+    change v (q x) - f₁ (w (q x)) = 0
+    have hux' : f₁ (u x) = v (q x) := by
+      change f₁ (u x) = v (q x) at hux
+      exact hux
+    have hwx' : w (q x) = u x := by
+      change w (q x) = u x at hwx
+      exact hwx
+    rw [hwx', ← hux']
+    simp
+  have hker : LinearMap.ker p ≤ LinearMap.ker s₀ := by
+    rw [LinearMap.exact_iff.mp hpq]
+    intro x hx
+    obtain ⟨y, rfl⟩ := hx
+    apply LinearMap.mem_ker.mpr
+    have hs₀qx := congrArg (fun z => z y) hs₀q
+    simpa [LinearMap.comp_apply] using hs₀qx
+  let e := p.quotKerEquivOfSurjective hp
+  let s : M₃ →ₗ[R] M₂ :=
+    (LinearMap.ker p).liftQ s₀ hker |>.comp e.symm.toLinearMap
+  have hsp : s.comp p = s₀ := by
+    apply LinearMap.ext
+    intro x
+    simp [s, e]
+  refine ⟨s, ?_⟩
+  apply LinearMap.ext
+  intro x
+  obtain ⟨y, hy⟩ := hp x
+  rw [← hy]
+  have hspx := congrArg (fun z => z y) hsp
+  have hs₀x := congrArg (fun z => z y) hs₀
+  calc
+    f₂ (s (p y)) = f₂ (s₀ y) := by
+      simpa [LinearMap.comp_apply] using congrArg f₂ hspx
+    _ = p y := by
+      simpa [LinearMap.comp_apply] using hs₀x
+
 theorem dominates_iff_factors_of_finitelyPresented_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -795,7 +1120,90 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
     (h : Module.FinitePresentation R
       (N ⧸ LinearMap.range f)) :
     dominates g f ↔ ∃ h' : N →ₗ[R] N', g = h'.comp f := by
-  sorry
+  symm
+  constructor
+  · rintro ⟨h', rfl⟩
+    intro Q _ _
+    intro x hx
+    apply LinearMap.mem_ker.mpr
+    have hx0 := LinearMap.mem_ker.mp hx
+    rw [LinearMap.rTensor_comp, LinearMap.comp_apply, hx0]
+    simp
+  · intro hd
+    have : Module.FinitePresentation R
+        (N ⧸ LinearMap.range f) := h
+    let ff := ModuleCat.ofHom f
+    let gg := ModuleCat.ofHom g
+    let p := pushout ff gg
+    let inl : N →ₗ[R] (p : Type w) := (pushout.inl ff gg).hom
+    let inr : N' →ₗ[R] (p : Type w) := (pushout.inr ff gg).hom
+    let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
+    let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
+      (pushout.desc (ModuleCat.ofHom q) 0 (by
+        ext x
+        change Submodule.Quotient.mk (f x) = 0
+        apply (Submodule.Quotient.mk_eq_zero _).2
+        exact LinearMap.mem_range_self f x)).hom
+    have hc : Function.Exact inr π ∧ Function.Surjective π := by
+      simpa [ff, gg, p, inr, q, π] using pushout_inr_cokernel f g
+    have hu : universallyInjective inr := by
+      simpa [ff, gg, p, inr] using
+        (dominates_iff_pushout_inr_universallyInjective f g).1 hd
+    have hinj : Function.Injective inr :=
+      injective_of_universallyInjective hu
+    have huniv : universallyExact inr π :=
+      ⟨hinj, hc.1, hc.2, hu⟩
+    obtain ⟨s, hs⟩ :=
+      section_of_universallyExact_of_finitePresentation inr π
+        ⟨hinj, hc.1, hc.2⟩ huniv
+    have hker : LinearMap.ker π = LinearMap.range inr :=
+      LinearMap.exact_iff.mp hc.1
+    let t : (p : Type w) →ₗ[R] (p : Type w) := LinearMap.id - s.comp π
+    have ht (x : (p : Type w)) : t x ∈ LinearMap.range inr := by
+      rw [← hker]
+      apply LinearMap.mem_ker.mpr
+      dsimp [t]
+      rw [map_sub]
+      have hsx := congrArg (fun z => z (π x)) hs
+      have hsx' : π (s (π x)) = π x := by
+        simpa [LinearMap.comp_apply] using hsx
+      rw [hsx', sub_self]
+    let tr : (p : Type w) →ₗ[R] LinearMap.range inr :=
+      t.codRestrict _ ht
+    let e : N' ≃ₗ[R] LinearMap.range inr :=
+      LinearEquiv.ofBijective inr.rangeRestrict
+        ⟨by
+          intro x y hxy
+          apply hinj
+          exact congrArg Subtype.val hxy,
+          LinearMap.surjective_rangeRestrict _⟩
+    let r : (p : Type w) →ₗ[R] N' := e.symm.toLinearMap.comp tr
+    have hr : r.comp inr = LinearMap.id := by
+      ext x
+      change e.symm (tr (inr x)) = x
+      apply e.injective
+      rw [e.apply_symm_apply]
+      apply Subtype.ext
+      change t (inr x) = inr x
+      have hπinr : π (inr x) = 0 := by
+        change (pushout.inr ff gg ≫
+          pushout.desc (ModuleCat.ofHom q) 0 _).hom x = 0
+        rw [pushout.inr_desc]
+        simp
+      simp [t, hπinr]
+    refine ⟨r.comp inl, ?_⟩
+    apply LinearMap.ext
+    intro x
+    change g x = r (inl (f x))
+    have hcond := congrArg ModuleCat.Hom.hom
+      (pushout.condition (f := ff) (g := gg))
+    have hcond' : inl (f x) = inr (g x) := by
+      have hx := congrArg (fun z => z x) hcond
+      change inl (f x) = inr (g x) at hx
+      exact hx
+    rw [hcond']
+    have hr' := congrArg (fun z => z (g x)) hr
+    simpa [LinearMap.comp_apply] using hr'.symm
 /-
   constructor
   · rintro ⟨h', rfl⟩
@@ -913,7 +1321,95 @@ theorem isMittagLefflerModule_of_flat_of_dualSystem
     (hfinite : ∀ i, Module.Finite R (P.diag.obj i))
     (hdual : (homInverseSystem P.diag (ModuleCat.of R R)).IsMittagLeffler) :
     IsMittagLefflerModule M := by
-  sorry
+  have hcond3 :
+      ∀ i : I, ∃ (j : I) (hij : i ≤ j),
+      ∀ (k : I) (hik : i ≤ k),
+          ∃ h : (P.diag.obj k : Type w) →ₗ[R] (P.diag.obj j : Type w),
+            directedMap P.diag hij = h.comp (directedMap P.diag hik) := by
+    intro i
+    obtain ⟨jop, f, hf⟩ :=
+      (Functor.isMittagLeffler_iff_subset_range_comp
+        (homInverseSystem P.diag (ModuleCat.of R R))).mp hdual (Opposite.op i)
+    let hij : i ≤ jop.unop := le_of_op_hom f
+    refine ⟨jop.unop, hij, ?_⟩
+    intro k hik
+    obtain ⟨l, hjl, hkl⟩ := directed_of (· ≤ ·) jop.unop k
+    let gl := (homOfLE hjl).op
+    let u : (P.diag.obj i : Type w) →ₗ[R] (P.diag.obj jop.unop : Type w) :=
+      directedMap P.diag hij
+    let vl : (P.diag.obj i : Type w) →ₗ[R] (P.diag.obj l : Type w) :=
+      directedMap P.diag (hik.trans hkl)
+    have hfactor (lam : (P.diag.obj jop.unop : Type w) →ₗ[R] R) :
+        ∃ μ : (P.diag.obj l : Type w) →ₗ[R] R, μ.comp vl = lam.comp u := by
+      have hmem : lam.comp u ∈ Set.range
+          (fun φ : (P.diag.obj jop.unop : Type w) →ₗ[R] R =>
+            φ.comp (P.diag.map f.unop).hom) := by
+        refine ⟨lam, ?_⟩
+        change lam.comp (P.diag.map f.unop).hom = lam.comp u
+        congr 1
+      have hmem' : lam.comp u ∈ Set.range
+          ⇑(ConcreteCategory.hom
+            ((homInverseSystem P.diag (ModuleCat.of R R)).map f)) := by
+        change ∃ y : (P.diag.obj jop.unop : Type w) →ₗ[R] R,
+          y.comp (P.diag.map f.unop).hom = lam.comp u
+        exact hmem
+      obtain ⟨μ, hμ⟩ := hf gl hmem'
+      have hμ' : μ.comp (P.diag.map (gl ≫ f).unop).hom = lam.comp u := by
+        change (ConcreteCategory.hom
+          ((homInverseSystem P.diag (ModuleCat.of R R)).map (gl ≫ f))) μ = lam.comp u
+        exact hμ
+      have hproof : (gl ≫ f).unop = homOfLE (hik.trans hkl) :=
+        Subsingleton.elim _ _
+      have hmap' := congrArg P.diag.map hproof
+      refine ⟨μ, ?_⟩
+      rw [hmap'] at hμ'
+      simpa [vl, u, directedMap] using hμ'
+    letI : Module.Free R (P.diag.obj jop.unop : Type w) := hfree jop.unop
+    letI : Module.Finite R (P.diag.obj jop.unop : Type w) := hfinite jop.unop
+    let ι := Module.Free.ChooseBasisIndex R (P.diag.obj jop.unop : Type w)
+    let b : Module.Basis ι R (P.diag.obj jop.unop : Type w) :=
+      Module.Free.chooseBasis R (P.diag.obj jop.unop : Type w)
+    let μ : ι → (P.diag.obj l : Type w) →ₗ[R] R :=
+      fun a => (hfactor (b.coord a)).choose
+    let c : (P.diag.obj l : Type w) →ₗ[R] (ι → R) :=
+      LinearMap.pi μ
+    let h : (P.diag.obj l : Type w) →ₗ[R] (P.diag.obj jop.unop : Type w) :=
+      b.repr.symm.toLinearMap.comp
+        ((Finsupp.linearEquivFunOnFinite R R ι).symm.toLinearMap.comp c)
+    have hcomp : u = h.comp vl := by
+      apply LinearMap.ext
+      intro x
+      apply b.repr.injective
+      ext a
+      have ha := (hfactor (b.coord a)).choose_spec
+      have ha' := congrArg (fun z => z x) ha
+      simpa [h, c, μ] using ha'.symm
+    let h' : (P.diag.obj k : Type w) →ₗ[R] (P.diag.obj jop.unop : Type w) :=
+      h.comp (directedMap P.diag hkl)
+    refine ⟨h', ?_⟩
+    apply LinearMap.ext
+    intro x
+    have hmap : P.diag.map (homOfLE (hik.trans hkl)) =
+        P.diag.map (homOfLE hik) ≫ P.diag.map (homOfLE hkl) := by
+      rw [← P.diag.map_comp]
+      congr 1
+    have hmap' := congrArg ModuleCat.Hom.hom hmap
+    have hvl := congrArg (fun z => z x) hmap'
+    have hvl' : vl x = (directedMap P.diag hkl) ((directedMap P.diag hik) x) := by
+      simpa [vl, directedMap, ModuleCat.hom_comp, LinearMap.comp_apply] using hvl
+    have hc : u x = h (vl x) := by
+      simpa [LinearMap.comp_apply] using congrArg (fun z => z x) hcomp
+    rw [hvl'] at hc
+    simpa [h', u, vl, LinearMap.comp_apply] using hc
+  have hfp : ∀ i, Module.FinitePresentation R (P.diag.obj i) := by
+    intro i
+    letI : Module.Free R (P.diag.obj i : Type w) := hfree i
+    letI : Module.Finite R (P.diag.obj i : Type w) := hfinite i
+    letI : Module.Projective R (P.diag.obj i : Type w) := Module.Projective.of_free
+    exact Module.finitePresentation_of_projective R (P.diag.obj i : Type w)
+  have h13 := (mittagLeffler_characterization.{u, v, w, u} P hfp).out 0 2
+  change MLModuleCondition M
+  exact h13.mpr hcond3
 /-
   have hcond3 :
       ∀ i : I, ∃ (j : I) (hij : i ≤ j),
@@ -980,7 +1476,7 @@ theorem isMittagLefflerModule_iff_finiteFreeTest
     {R : Type u} [CommRing R] (M : ModuleCat.{w} R) :
     IsMittagLefflerModule M ↔
       ∀ (F : ModuleCat.{w} R), Module.Free R F → Module.Finite R F →
-        ∀ f : (F : Type w) →ₗ[R] (M : Type w),
+      ∀ f : (F : Type w) →ₗ[R] (M : Type w),
             ∃ Q : ModuleCat.{w} R, Module.FinitePresentation R Q ∧
             ∃ g : (F : Type w) →ₗ[R] (Q : Type w), mutuallyDominates g f := by
   sorry

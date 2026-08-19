@@ -272,6 +272,54 @@ theorem noRationalSection_has_no_open_section :
 /-! ## Exercise `exercise-has-rational-section` -/
 
 /-- The conic with nonzero polynomial coefficients has a rational section. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. First isolate the only genuinely geometric input as a private polynomial
+   lemma
+   `tsen_conic_polynomial_solution (A B C) (hA) (hB) (hC)`, returning
+   `X Y Z : noSectionBaseRing` with `Z ≠ 0` and
+   `A * Z ^ 2 + B * X ^ 2 + C * Y ^ 2 = 0`.  Prove it by the dimension-count
+   argument in the exercise: first transport `A`, `B`, and `C` through the
+   `MvPolynomial (Fin 1) ℂ ≃ₐ[ℂ] Polynomial ℂ` equivalence used later in
+   this file; for sufficiently large `d`, write `X`, `Y`, and `Z` with
+   `d + 1` unknown complex coefficients and equate the at most
+   `2 * d + max (e A).natDegree (max (e B).natDegree (e C).natDegree) + 1`
+   coefficients.  Encode those homogeneous quadrics as a finite family in
+   `MvPolynomial (Fin (3 * (d + 1))) ℂ`.  If their only common zero were
+   the origin, `MvPolynomial.vanishingIdeal_zeroLocus_eq_radical` from
+   `Mathlib/RingTheory/Nullstellensatz.lean` would identify their radical
+   with the coordinate maximal ideal.  Krull's height bound
+   `Ideal.height_le_card_of_mem_minimalPrimes_span_finset` from
+   `Mathlib/RingTheory/Ideal/KrullsHeightTheorem.lean`, together with the
+   polynomial-ring dimension computation in
+   `Mathlib/RingTheory/KrullDimension/Polynomial.lean`, contradicts the
+   strict inequality between the number of equations and `3 * (d + 1)`.
+   Use `Polynomial.toFinsupp`/`Polynomial.ofFinsupp` from
+   `Mathlib/Algebra/Polynomial/Coeff.lean` to turn the resulting nonzero
+   coefficient vector into `X`, `Y`, and `Z`.  There is no packaged Tsen
+   lemma, so these ideal-height steps belong in the private helper.  If its
+   first homogeneous point has `Z = 0`, use the usual line through that
+   smooth conic point over the infinite field
+   `FractionRing (Polynomial ℂ)`, then clear denominators with
+   `IsFractionRing.div_surjective`, to obtain one with `Z ≠ 0`.
+2. Put `L := Localization.Away Z`.  The image of `Z` in `L` is a unit by
+   `IsLocalization.Away.algebraMap_isUnit` in
+   `Mathlib/RingTheory/Localization/Away/Basic.lean`.  Send variables `0,1,2`
+   of `complexPolynomialRing 3` to `X / Z`, `Y / Z`, and the image of
+   `MvPolynomial.X 0`, respectively, using `MvPolynomial.eval₂Hom`.  The
+   polynomial identity from step 1 shows that
+   `rationalSectionPolynomialRing A B C` maps to zero, so factor this map
+   through `rationalSectionRing A B C` with `Ideal.Quotient.lift` and
+   `Ideal.Quotient.lift_mk`.
+3. Apply `AlgebraicGeometry.Spec.map` to the lifted ring map and precompose
+   with `(basicOpenIsoSpecAway Z).hom`.  Assemble `HasOpenSection` with the
+   open `PrimeSpectrum.basicOpen Z`; its nonemptiness follows from `Z ≠ 0`
+   and the zero prime of the domain `noSectionBaseRing`.  Prove the section
+   equation exactly as in `noSection_has_nonempty_open_section` above, using
+   `basicOpenIsoSpecAway_hom_SpecMap` from
+   `Mathlib/AlgebraicGeometry/Restrict.lean` and `Spec.map_comp`.
+-/
 theorem rationalSection_has_open_section
     (A B C : noSectionBaseRing)
     (hA : A ≠ 0) (hB : B ≠ 0) (hC : C ≠ 0) :
@@ -537,177 +585,94 @@ theorem noSectionCurve_has_no_open_section :
 /-! ## Exercise `exercise-no-section-surface` -/
 
 /-- The eight-variable cubic surface example has no rational section. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Reuse the generic-point construction in
+   `noSectionCurve_has_no_open_section` above verbatim with
+   `noSectionSurfaceBase`.  From a hypothetical open section obtain
+   `q : noSectionSurfaceRing →+* noSectionSurfaceBase.functionField`, then
+   `f := q.comp (quotientMap noSectionSurfaceIdeal)`, and prove
+   `f noSectionSurfaceRelation = 0`.  The comparison of the base maps uses
+   `Scheme.ΓSpecIso_inv_naturality`, `Scheme.restrictFunctorΓ`,
+   `TopCat.Presheaf.germ_res'`, and
+   `functionField_isFractionRing_of_affine`, all already used by the curve
+   proof in this file.
+2. Instantiate the base-ring equivalence at universe `0` as
+   `noSectionSurfaceBaseRing ≃ₐ[ℂ] Polynomial (Polynomial ℂ)` using
+   `MvPolynomial.finSuccEquiv`, `MvPolynomial.isEmptyAlgEquiv`, and
+   `Polynomial.mapAlgEquiv` from `Mathlib/Algebra/MvPolynomial/Equiv.lean`.
+   Lift the induced injection to
+   `ℓ : noSectionSurfaceBase.functionField →+*
+     FractionRing (Polynomial (Polynomial ℂ))`
+   with `IsFractionRing.lift`.  Use `IsFractionRing.lift_algebraMap` to show
+   that base variables `8` and `9` map to the outer variable `S` and the
+   constant inner variable `T`.
+3. Add a private arithmetic lemma for the `3 × 3` diagonal cubic form:
+   after eight applications of `IsFractionRing.div_surjective`, multiply by
+   the cube of a common nonzero denominator and obtain in
+   `Polynomial (Polynomial ℂ)` an equation
+   `d^3 + S*p00^3 + S^2*p10^3 + T*p01^3 + ... + S^2*T^2*p22^3 = 0`
+   with `d ≠ 0`.  Rule this out by the lexicographic leading term: outer
+   `Polynomial.natDegree_pow` and `natDegree_mul` separate the three
+   exponents modulo `3`; when outer degrees tie, apply the same argument to
+   `Polynomial.leadingCoeff` in the inner polynomial.  The one-variable
+   pattern is the proved helper `polynomial_cubic_no_solution` above; the
+   required degree and leading-coefficient lemmas are in
+   `Mathlib/Algebra/Polynomial/Degree/Operations.lean`.
+4. Apply that arithmetic lemma to `congrArg ℓ` of the relation from step 1.
+   Expanding only `noSectionSurfaceRelation`, `map_add`, `map_mul`, and
+   `map_pow` gives its nine inputs in the required order and closes the
+   contradiction.
+
+The former block-commented attempt duplicated the entire generic-point
+scaffold and stopped exactly before step 3.  Repeating that scaffold does not
+address the blocker; the missing deliverable is the two-variable diagonal
+cubic lemma.
+-/
 theorem noSectionSurface_has_no_open_section :
     ¬ HasOpenSection noSectionSurfaceMorphism := by
   sorry
-/-
-  intro h
-  obtain ⟨U, hU, σ, hσ⟩ := h
-  let x := genericPoint noSectionSurfaceBase
-  have hxU : x ∈ U := by
-    exact ((genericPoint_spec noSectionSurfaceBase).mem_open_set_iff U.isOpen).mpr
-      (by simpa using hU)
-  let hUN : Nonempty U := ⟨⟨x, hxU⟩⟩
-  let htop : Nonempty (⊤ : Opens noSectionSurfaceBase) := ⟨⟨x, trivial⟩⟩
-  let τ : Γ(openSubscheme noSectionSurfaceBase U, ⊤) ⟶
-      Γ(noSectionSurfaceBase, U) :=
-    (Scheme.restrictFunctorΓ (X := noSectionSurfaceBase)).hom.app (op U)
-  let q : noSectionSurfaceRing →+* noSectionSurfaceBase.functionField :=
-    ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
-      σ.appTop ≫ τ ≫
-      @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN).hom
-  let f : noSectionSurfacePolynomialRing →+* noSectionSurfaceBase.functionField :=
-    q.comp (quotientMap noSectionSurfaceIdeal)
-  have hrel : f noSectionSurfaceRelation = 0 := by
-    change q (quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation) = 0
-    have hzero : quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation = 0 := by
-      exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self _)
-    calc
-      q (quotientMap noSectionSurfaceIdeal noSectionSurfaceRelation) = q 0 := by rw [hzero]
-      _ = 0 := q.map_zero
-  have hcomp : noSectionSurfaceMorphism.appTop ≫ σ.appTop =
-      (openSubschemeInclusion noSectionSurfaceBase U).appTop := by
-    simpa only [Scheme.Hom.comp_appTop] using
-      congrArg (fun f : openSubscheme noSectionSurfaceBase U ⟶ noSectionSurfaceBase =>
-        f.appTop) hσ
-  let b : noSectionSurfaceBaseRing →+* noSectionSurfaceBase.functionField :=
-    ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-      @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
-        (⊤ : Opens noSectionSurfaceBase) htop).hom
-  let alg : Algebra (CommRingCat.of noSectionSurfaceBaseRing)
-      noSectionSurfaceBase.functionField := RingHom.toAlgebra b
-  let fr : IsFractionRing (CommRingCat.of noSectionSurfaceBaseRing)
-      noSectionSurfaceBase.functionField :=
-    AlgebraicGeometry.functionField_isFractionRing_of_affine
-      (CommRingCat.of noSectionSurfaceBaseRing)
-  have hbase : q.comp noSectionSurfaceBaseToSource = b := by
-    change (CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
-        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
-        σ.appTop ≫ τ ≫
-        @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN).hom =
-      ((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-        @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
-          (⊤ : Opens noSectionSurfaceBase) htop).hom
-    have hcat0 : CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
-          (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv =
-        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-          noSectionSurfaceMorphism.appTop :=
-      Scheme.ΓSpecIso_inv_naturality
-        (f := CommRingCat.ofHom noSectionSurfaceBaseToSource)
-    have hcat : CommRingCat.ofHom noSectionSurfaceBaseToSource ≫
-          (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceRing)).inv ≫
-          σ.appTop ≫ τ ≫
-          @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
-        (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-          @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
-            (⊤ : Opens noSectionSurfaceBase) htop := by
-      simp only [← Category.assoc]
-      rw [hcat0]
-      have hpost :
-          ((noSectionSurfaceMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
-              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
-            ((openSubschemeInclusion noSectionSurfaceBase U).appTop ≫ τ) ≫
-              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN := by
-        rw [hcomp]
-      calc
-        (((Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-            noSectionSurfaceMorphism.appTop) ≫ σ.appTop ≫ τ) ≫
-              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN =
-            (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-              (((noSectionSurfaceMorphism.appTop ≫ σ.appTop) ≫ τ) ≫
-                @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN) := by
-                  simp only [Category.assoc]
-        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-              (((openSubschemeInclusion noSectionSurfaceBase U).appTop ≫ τ) ≫
-                @Scheme.germToFunctionField noSectionSurfaceBase inferInstance U hUN) := by
-                  rw [hpost]
-        _ = (Scheme.ΓSpecIso (CommRingCat.of noSectionSurfaceBaseRing)).inv ≫
-              @Scheme.germToFunctionField noSectionSurfaceBase inferInstance
-                (⊤ : Opens noSectionSurfaceBase) htop := by
-                  simp [τ]
-                  erw [← Functor.map_comp]
-                  simp only [Functor.map_comp, Category.assoc, TopCat.Presheaf.germ_res']
-    simpa only using congrArg CommRingCat.Hom.hom hcat
-  have hmap : f.comp noSectionSurfaceBaseMap = b := by
-    simpa [f, noSectionSurfaceBaseToSource, RingHom.comp_assoc] using hbase
-  let e0 : MvPolynomial (Fin 0) ℂ ≃ₐ[ℂ] ℂ :=
-    MvPolynomial.isEmptyAlgEquiv ℂ (Fin 0)
-  let e1 : MvPolynomial (Fin 1) ℂ ≃ₐ[ℂ] Polynomial ℂ :=
-    (MvPolynomial.finSuccEquiv ℂ 0).trans (Polynomial.mapAlgEquiv e0)
-  let e : noSectionSurfaceBaseRing ≃ₐ[ℂ] Polynomial (Polynomial ℂ) :=
-    (MvPolynomial.finSuccEquiv ℂ 1).trans (Polynomial.mapAlgEquiv e1)
-  let eg : noSectionSurfaceBaseRing →+* FractionRing (Polynomial (Polynomial ℂ)) :=
-    (algebraMap (Polynomial (Polynomial ℂ))
-      (FractionRing (Polynomial (Polynomial ℂ)))).comp e.toRingHom
-  have heg : Function.Injective eg := by
-    exact (IsFractionRing.injective (Polynomial (Polynomial ℂ))
-      (FractionRing (Polynomial (Polynomial ℂ)))).comp e.injective
-  let ℓ : noSectionSurfaceBase.functionField →+*
-      FractionRing (Polynomial (Polynomial ℂ)) :=
-    @IsFractionRing.lift (CommRingCat.of noSectionSurfaceBaseRing) inferInstance
-      noSectionSurfaceBase.functionField inferInstance
-      (FractionRing (Polynomial (Polynomial ℂ))) inferInstance alg fr eg heg
-  have hX8 := congrArg (fun g : noSectionSurfaceBaseRing →+*
-      noSectionSurfaceBase.functionField => g (MvPolynomial.X 0)) hmap
-  have hX8' : f (MvPolynomial.X 8) = b (MvPolynomial.X 0) := by
-    simpa [noSectionSurfaceBaseMap] using hX8
-  have hX9 := congrArg (fun g : noSectionSurfaceBaseRing →+*
-      noSectionSurfaceBase.functionField => g (MvPolynomial.X 1)) hmap
-  have hX9' : f (MvPolynomial.X 9) = b (MvPolynomial.X 1) := by
-    change f (Fin.cases (MvPolynomial.X 8) (fun _ => MvPolynomial.X 9) 1) =
-      b (MvPolynomial.X 1) at hX9
-    have hidx : Fin.cases (MvPolynomial.X 8) (fun _ => MvPolynomial.X 9) 1 =
-        MvPolynomial.X 9 := by
-      congr 1
-      decide
-    rw [hidx] at hX9
-    exact hX9
-  let S : FractionRing (Polynomial (Polynomial ℂ)) :=
-    algebraMap (Polynomial (Polynomial ℂ))
-      (FractionRing (Polynomial (Polynomial ℂ))) Polynomial.X
-  let T : FractionRing (Polynomial (Polynomial ℂ)) :=
-    algebraMap (Polynomial (Polynomial ℂ))
-      (FractionRing (Polynomial (Polynomial ℂ)))
-      (algebraMap (Polynomial ℂ) (Polynomial (Polynomial ℂ)) Polynomial.X)
-  have hℓX8 : ℓ (f (MvPolynomial.X 8)) = S := by
-    rw [hX8']
-    change ℓ (algebraMap (CommRingCat.of noSectionSurfaceBaseRing)
-      noSectionSurfaceBase.functionField (MvPolynomial.X 0)) = _
-    have h := IsFractionRing.lift_algebraMap
-      (A := CommRingCat.of noSectionSurfaceBaseRing)
-      (K := noSectionSurfaceBase.functionField)
-      (L := FractionRing (Polynomial (Polynomial ℂ))) (g := eg) heg (MvPolynomial.X 0)
-    rw [h]
-    simp [eg, e, e1, e0, S]
-  have hℓX9 : ℓ (f (MvPolynomial.X 9)) = T := by
-    rw [hX9']
-    change ℓ (algebraMap (CommRingCat.of noSectionSurfaceBaseRing)
-      noSectionSurfaceBase.functionField (MvPolynomial.X 1)) = _
-    have h := IsFractionRing.lift_algebraMap
-      (A := CommRingCat.of noSectionSurfaceBaseRing)
-      (K := noSectionSurfaceBase.functionField)
-      (L := FractionRing (Polynomial (Polynomial ℂ))) (g := eg) heg (MvPolynomial.X 1)
-    rw [h]
-    simp [eg, e, e1, e0, T]
-  have heq :
-      1 + S * (ℓ (f (MvPolynomial.X 0))) ^ 3 + S ^ 2 *
-          (ℓ (f (MvPolynomial.X 1))) ^ 3 +
-        T * (ℓ (f (MvPolynomial.X 2))) ^ 3 +
-        S * T * (ℓ (f (MvPolynomial.X 3))) ^ 3 +
-        S ^ 2 * T * (ℓ (f (MvPolynomial.X 4))) ^ 3 +
-        T ^ 2 * (ℓ (f (MvPolynomial.X 5))) ^ 3 +
-        S * T ^ 2 * (ℓ (f (MvPolynomial.X 6))) ^ 3 +
-        S ^ 2 * T ^ 2 * (ℓ (f (MvPolynomial.X 7))) ^ 3 = 0 := by
-    have h' := congrArg ℓ hrel
-    simpa [noSectionSurfaceRelation, map_add, map_mul, map_pow, hℓX8, hℓX9,
-      S, T] using h'
-  sorry
--/
 
 /-! ## Exercise `exercise-for-number-theorists` -/
 
 /-- A closed subscheme of the displayed localization has a finite
 surjective map to `Spec(ℤ)`. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Use the monic polynomial `P = X ^ 2 - C 3 * X + 1 : Polynomial ℤ`
+   and put `B := AdjoinRoot P`.  For `r := AdjoinRoot.root P`,
+   `AdjoinRoot.eval₂_root` gives `r ^ 2 - 3 * r + 1 = 0`.  Consequently
+   `r`, `r - 1`, and `2 * r - 1` are units, with respective inverses
+   `3 - r`, `r - 2`, and `2 * r - 5` (the last two products reduce to `1`
+   using the displayed quadratic relation).
+2. Identify `numberTheoryPolynomialRing = MvPolynomial (Fin 1) ℤ` with
+   `Polynomial ℤ` via `MvPolynomial.finSuccEquiv` followed by
+   `MvPolynomial.isEmptyAlgEquiv`, both from
+   `Mathlib/Algebra/MvPolynomial/Equiv.lean`.  Compose this equivalence with
+   `AdjoinRoot.mk P` to get a surjective map
+   `g : numberTheoryPolynomialRing →+* B` sending `numberTheoryX` to `r`.
+   Step 1 makes `g numberTheoryInvertingElement` a unit, so
+   `IsLocalization.Away.lift` produces
+   `ψ : numberTheoryLocalizationRing →+* B`.  Prove `ψ` surjective
+   from `AdjoinRoot.mk_surjective` and `IsLocalization.Away.lift_eq`.
+3. Take `Z := affineScheme B` and
+   `i := Spec.map (CommRingCat.ofHom ψ)`.  Its closed-immersion instance is
+   `IsClosedImmersion.spec_of_surjective` from
+   `Mathlib/AlgebraicGeometry/Morphisms/ClosedImmersion.lean`.
+   `P.monic.finite_adjoinRoot` from `Mathlib/RingTheory/AdjoinRoot.lean`
+   supplies `Module.Finite ℤ B`; convert it to finiteness of the composite
+   with `AlgebraicGeometry.IsFinite.SpecMap_iff` from
+   `Mathlib/AlgebraicGeometry/Morphisms/Finite.lean`.
+4. The map `algebraMap ℤ B` is injective by
+   `AdjoinRoot.of.injective_of_degree_ne_zero`; with the finite-module
+   instance, `PrimeSpectrum.comap_surjective_iff_injective_of_finite` from
+   `Mathlib/RingTheory/Flat/Rank.lean` gives surjectivity on underlying
+   spectra.  Finally normalize the composite with `Spec.map_comp` and the
+   defining equation for the localization lift, then package the two facts
+   as `IsFiniteSurjective`.
+-/
 theorem exists_numberTheory_finite_surjective_closed_subscheme :
     ∃ (Z : Scheme.{0}) (i : Z ⟶ numberTheoryScheme),
       IsClosedImmersion i ∧
@@ -718,6 +683,34 @@ theorem exists_numberTheory_finite_surjective_closed_subscheme :
 
 /-- The finite-field variant has a finite surjective closed subscheme over
 the polynomial base. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Let `R := finiteFieldPolynomialRing p`, `t := MvPolynomial.X 0 : R`, and
+   `P := X ^ 2 - C t * X + 1 : Polynomial R`.  With
+   `B := AdjoinRoot P` and `r := AdjoinRoot.root P`, the relation
+   `r ^ 2 - algebraMap R B t * r + 1 = 0` shows that `r` is a unit with
+   inverse `algebraMap R B t - r`; hence `r - t` is a unit, and
+   `t * r - 1 = r ^ 2` is a unit.
+2. Define `g : finiteFieldTwoVariableRing p →+* B` by
+   `MvPolynomial.eval₂Hom`, sending variable `0` to `r` and variable `1`
+   to `algebraMap R B t`.  The three unit calculations show that
+   `g (finiteFieldInvertingElement p)` is a unit, so lift to
+   `ψ : finiteFieldLocalizationRing p →+* B` with
+   `IsLocalization.Away.lift`.  Prove `ψ` surjective using
+   `AdjoinRoot.mk_surjective`: coefficients in `R` come from variable `1`
+   through `polynomialBaseMap`, while `r` comes from variable `0`.
+3. Set `Z := affineScheme B` and `i := Spec.map (CommRingCat.ofHom ψ)`.
+   Apply `IsClosedImmersion.spec_of_surjective` to step 2.  The polynomial is
+   monic, so `P.monic.finite_adjoinRoot` gives finiteness over `R`, and
+   `AlgebraicGeometry.IsFinite.SpecMap_iff` transfers it to
+   `i ≫ finiteFieldMorphism p` after `Spec.map_comp` normalization.
+4. `[Fact p.Prime]` makes `R` a domain.  Use
+   `AdjoinRoot.of.injective_of_degree_ne_zero` and then
+   `PrimeSpectrum.comap_surjective_iff_injective_of_finite` (files and
+   universe `0` as in the preceding roadmap) for surjectivity of the
+   composite.  Package the result as `IsFiniteSurjective`.
+-/
 theorem exists_finiteField_finite_surjective_closed_subscheme
     (p : ℕ) [Fact p.Prime] :
     ∃ (Z : Scheme.{0}) (i : Z ⟶ finiteFieldScheme p),
@@ -730,6 +723,18 @@ theorem exists_finiteField_finite_surjective_closed_subscheme
 /-- The two preceding exercises have the source's common geometric
 interpretation: a finite surjective base change admits a section after base
 change. -/
+/-
+Proof roadmap for the normal `prove` stage.  This is purely categorical and
+does not depend on either construction above.  Unpack `hlift` as
+`⟨S', g, i, hg, hi⟩`, return the same `S'`, `g`, and `hg`, and define
+`s : S' ⟶ pullback f g := pullback.lift i (𝟙 S')` using `hi` (after
+rewriting `𝟙 S' ≫ g` to `g`).  The second projection equation
+`pullback.lift_snd` from
+`Mathlib/CategoryTheory/Limits/Shapes/Pullback/HasPullback.lean`
+is exactly `s ≫ pullback.snd f g = 𝟙 S'`, so `⟨s, ...⟩` is the
+required `HasSection`.  Keep all schemes at the theorem's explicit universe
+`Scheme.{u}`; no universe lift is needed.
+-/
 theorem finite_surjective_lift_interprets_as_base_change_section
     {X S : Scheme.{u}} (f : X ⟶ S)
     (hlift : ∃ (S' : Scheme.{u}) (g : S' ⟶ S) (i : S' ⟶ X),
@@ -742,6 +747,61 @@ theorem finite_surjective_lift_interprets_as_base_change_section
 /-- Some polynomial localization over `ℂ[t]` admits no finite surjective
 closed subscheme over the base, while its defining polynomial has no factor
 `t - α`. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Use `noQuasiSectionCandidate` as the witness.  For each `α : ℂ`, apply
+   the evaluation homomorphism which sends variable `1` to `α` and leaves
+   variable `0` free.  If `noQuasiSectionLinearFactor α` divided the
+   candidate, its evaluation would be zero, whereas the displayed product
+   evaluates to `(α * X - 2) * (X - α + 3) ≠ 0` in `Polynomial ℂ`.
+   Build the homomorphism with `MvPolynomial.eval₂Hom` and the
+   `MvPolynomial (Fin 1) ℂ ≃ₐ[ℂ] Polynomial ℂ` equivalence from
+   `Mathlib/Algebra/MvPolynomial/Equiv.lean`; finish nonvanishing with the
+   domain instance and coefficient comparison.
+2. Isolate the hard part as a private ring-theoretic lemma with the following
+   interface: for every commutative `noSectionBaseRing`-algebra `D` which is
+   finite as a module and whose algebra map is injective, there is no `x : D`
+   for which the image of
+   `(noQuasiSectionX * noQuasiSectionT - 2) *
+    (noQuasiSectionX - noQuasiSectionT + 3)` is a unit.  Use lying over
+   (`Algebra.IsIntegral.comap_surjective` in
+   `Mathlib/RingTheory/Spectrum/Prime/Topology.lean`) to choose a prime of
+   `D` over `(0)` and quotient by a minimal prime below it.  The resulting
+   domain `D'` is still finite and faithful over `A := Polynomial ℂ`, and
+   `Module.free_of_finite_type_torsion_free` from
+   `Mathlib/LinearAlgebra/FreeModule/PID.lean` makes it finite free of some
+   positive rank `n`.
+
+   For a finite basis `b` of `D'`, let `M := Algebra.leftMulMatrix b x`.
+   Since each factor is a unit, the determinants of
+   `t • M - 2 • 1` and `M - (t - 3) • 1` are units of `ℂ[t]`, hence
+   nonzero constants by `Polynomial.isUnit_iff` in
+   `Mathlib/Algebra/Polynomial/Degree/Units.lean`; call them `c` and `d`.
+   Specialize the matrices at each of the two real roots `β₊`, `β₋` of
+   `T ^ 2 - 3*T - 2`.  Since `β * (β - 3) = 2`,
+   `Matrix.det_smul` gives `c = β ^ n * d` at either root.  Thus
+   `β₊ ^ n = β₋ ^ n`; but `n > 0` and the roots have unequal absolute
+   values (one lies in `(3, 4)`, the other in `(-1, 0)`), a contradiction.
+   This determinant argument is the substantive proof obligation; it avoids
+   developing normalization and valuations.
+3. Given a forbidden `Z` and `i`,
+   `i.isAffine_surjective_of_isAffine` from
+   `Mathlib/AlgebraicGeometry/Morphisms/ClosedImmersion.lean` makes `Z`
+   affine and makes `i.appTop` surjective.  Conjugate by `Scheme.isoSpec Z`
+   to set `D := Γ(Z, ⊤)`.  The finite composite supplies
+   `Module.Finite noSectionBaseRing D` through `Scheme.Hom.finite_appTop`;
+   its topological surjectivity and
+   `PrimeSpectrum.comap_surjective_iff_injective_of_finite` make the base
+   algebra map injective.  Since the localization map sends the candidate
+   to a unit and `i.appTop` preserves units, step 2 yields the contradiction.
+
+Do not try to deduce the contradiction merely because the two displayed
+factors are units: finite faithful `ℂ[t]`-algebras can have nonconstant
+units (the quadratic `AdjoinRoot` construction in the finite-field roadmap
+is the model counterexample).  The determinant comparison at both roots is
+essential.
+-/
 theorem exists_noQuasiSection_polynomial :
     ∃ f : noQuasiSectionPolynomialRing,
       (∀ α : ℂ, ¬ noQuasiSectionLinearFactor α ∣ f) ∧
@@ -751,26 +811,56 @@ theorem exists_noQuasiSection_polynomial :
   sorry
 
 /-! The source proposes a particular candidate with the qualification “I
-think”.  It is retained as a separate theorem interface rather than silently
-upgrading that suggestion to an established fact. -/
+think”.  The proposition is named below without upgrading the suggestion to
+an additional theorem. -/
 
-/-- The candidate suggested parenthetically by the source has the claimed
-non-quasi-section property. -/
-theorem noQuasiSection_candidate_works :
+/-- The unproved property which the source suggests for its parenthetical
+candidate.  The exercise only asks for existence of some polynomial. -/
+def NoQuasiSectionCandidateWorks : Prop :=
     (∀ α : ℂ,
       ¬ noQuasiSectionLinearFactor α ∣ noQuasiSectionCandidate) ∧
       ¬ ∃ (Z : Scheme.{0})
           (i : Z ⟶ noQuasiSectionSource noQuasiSectionCandidate),
         IsClosedImmersion i ∧
           IsFiniteSurjective
-            (i ≫ noQuasiSectionMorphism noQuasiSectionCandidate) := by
-  sorry
+            (i ≫ noQuasiSectionMorphism noQuasiSectionCandidate)
 
 /-! ## Exercise `exercise-finite` -/
 
 /-- A finite-type algebra which factors through a closed subscheme of a
 projective space is finite, under the Noetherian hypothesis used in the
 source's hint. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Add the focused imports
+   `Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Proper` and
+   `Mathlib.AlgebraicGeometry.Morphisms.Proper`.  Prove a local helper
+   `projectiveSpaceStructureMap_isProper (A) (n) :
+     IsProper (projectiveSpaceStructureMap A n)`.  Unfold the definition in
+   `Unit34/Core.lean`: `Proj.toSpecZero` is proper by the instance in
+   `Mathlib/AlgebraicGeometry/ProjectiveSpectrum/Proper.lean`.  The remaining
+   `Spec.map` is induced by `A → (projectiveSpaceGrading n) 0`; rewrite
+   `MvPolynomial.homogeneousSubmodule_zero` from
+   `Mathlib/RingTheory/MvPolynomial/Homogeneous.lean` to identify this map
+   with an isomorphism, hence a proper morphism.
+2. Unpack `hfactor` as `⟨n, i, hi, hcomp⟩`.  A closed immersion is finite
+   by `IsClosedImmersion.iff_isFinite_and_mono` in
+   `Mathlib/AlgebraicGeometry/Morphisms/Finite.lean`, and therefore proper.
+   Install `hi` as the local `IsClosedImmersion i` instance, compose this
+   with step 1, and rewrite by `hcomp` to obtain
+   `IsProper (affineSchemeMap f)`.
+3. Any morphism between the two affine schemes here is `IsAffineHom`.
+   Apply `AlgebraicGeometry.IsFinite.iff_isProper_and_isAffineHom` from
+   `Mathlib/AlgebraicGeometry/Morphisms/Proper.lean`, then translate
+   `IsFinite (affineSchemeMap f)` to `RingHom.Finite f` with
+   `AlgebraicGeometry.IsFinite.SpecMap_iff`.
+
+The factorization equation has the correct contravariant orientation and is
+the hypothesis actually used.  `hfiniteType` and `[IsNoetherianRing A]`
+match the textbook's hinted proof but are redundant for the shorter
+proper-plus-affine argument; do not change or manufacture either hypothesis.
+-/
 theorem finite_of_projective_factorization
     {A B : Type u} [CommRing A] [CommRing B] [IsNoetherianRing A]
     (f : A →+* B) (hfiniteType : RingHom.FiniteType f)
@@ -785,6 +875,63 @@ theorem finite_of_projective_factorization
 
 /-- A morphism between projective varieties over an algebraically closed field
 with finite closed-point fibres is finite. -/
+/-
+Proof roadmap for the normal `prove` stage.
+
+1. Unpack `hX` and `hY`.  The projective presentations and the properness
+   helper from `finite_of_projective_factorization` make `pX` and `pY`
+   proper and make `pY` separated.  Rewrite `hbase` so that
+   `f ≫ pY = pX`; then `AlgebraicGeometry.IsProper.of_comp` from
+   `Mathlib/AlgebraicGeometry/Morphisms/Proper.lean` gives `IsProper f`.
+   Likewise `locallyOfFiniteType_of_comp` from
+   `Mathlib/AlgebraicGeometry/Morphisms/FiniteType.lean` and
+   `QuasiCompact.of_comp` from
+   `Mathlib/AlgebraicGeometry/Morphisms/QuasiSeparated.lean` supply the two
+   components of finite type for `f`.
+2. Prove a private closed-fibre bridge: for a finite-type morphism between
+   these projective `k`-varieties, finiteness of the inverse image of every
+   closed point implies finiteness over every scheme point.  Argue by
+   contradiction: a positive-dimensional component of a nonclosed fibre has
+   closure in `X` whose image contains a nonempty open of its closure in
+   `Y`; since finite-type schemes over the algebraically closed field `k`
+   are Jacobson, that open contains a closed point, where the fibre is still
+   positive-dimensional and hence has infinitely many closed points.  The
+   relevant Jacobson and closed-point results are in
+   `Mathlib/RingTheory/Spectrum/Prime/Jacobson.lean`; fibre dimension
+   machinery is in `Mathlib/AlgebraicGeometry/Morphisms/QuasiFinite.lean`.
+   This bridge is not currently packaged under a single Mathlib declaration.
+3. With step 2, use
+   `AlgebraicGeometry.locallyQuasiFinite_iff_finite_preimage_singleton` from
+   `Mathlib/AlgebraicGeometry/Morphisms/QuasiFinite.lean` to obtain
+   `LocallyQuasiFinite f` (instantiate its required `LocallyOfFiniteType` and
+   `QuasiCompact` instances from step 1).
+4. Formalize the source's local reduction as a private helper saying that a
+   proper, locally quasi-finite, finite-type morphism with a projective
+   closed-immersion presentation is finite.  Over an affine open of `Y`, use
+   the finite fibre to choose an affine projective chart containing it;
+   properness makes the image of the complementary closed set closed, so
+   shrink the base until the whole inverse image lies in that chart.  The
+   restricted source is then affine and its map has the projective closed
+   factorization required by `finite_of_projective_factorization`.  The
+   coordinate ring of the affine base is Noetherian because the base is
+   finite type over the field `k`; install that instance and the induced
+   `RingHom.FiniteType` instance, apply the preceding theorem, and glue with
+   the target-local characterization of `IsFinite` in
+   `Mathlib/AlgebraicGeometry/Morphisms/Finite.lean`.
+5. The relative closed immersion used in step 4 comes from the closed
+   immersion in `hX`: pair it with `f` to map into
+   `projectiveSpace k n ×_{affineScheme k} Y`.  Use stability of
+   `IsClosedImmersion` under base change from
+   `Mathlib/AlgebraicGeometry/Morphisms/ClosedImmersion.lean` and `hbase` to
+   identify the second projection with `f`.  `hY` supplies separatedness, so
+   the necessary graph is a closed immersion.
+
+The assumptions are sound and match the exercise: `hfib` deliberately only
+quantifies over closed points.  Applying
+`locallyQuasiFinite_iff_finite_preimage_singleton` directly to `hfib` is a
+dead end because that lemma quantifies over all scheme points; step 2 is the
+required missing argument.
+-/
 theorem finite_morphism_of_projective_varieties
     (k : Type u) [Field k] [IsAlgClosed k]
     (X Y : Scheme.{u})

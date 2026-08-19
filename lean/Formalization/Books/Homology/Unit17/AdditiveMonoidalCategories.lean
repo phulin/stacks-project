@@ -1844,7 +1844,7 @@ theorem graded_koszul_braiding_exists
 written as bilinear maps between opposite degrees, with injectivity in both
 arguments. -/
 structure GradedNondegeneratePairing (F : Type u) [Field F]
-    (V W : GradedVectorSpace F) [MonoidalCategory (GradedVectorSpace F)]
+    (V W : GradedVectorSpace F)
     [ExactPairing V W] where
   pairing : ∀ n : ℤ, (W (-n) : Type u) →ₗ[F] Module.Dual F (V n : Type u)
   left_nondegenerate : ∀ n, Function.Injective (pairing n)
@@ -1853,7 +1853,7 @@ structure GradedNondegeneratePairing (F : Type u) [Field F]
 /-- If a graded vector space has a left dual, then it is finite-dimensional in
 total degree and evaluation gives nondegenerate opposite-degree pairings. -/
 theorem graded_left_dual_finite_and_nondegenerate
-    (F : Type u) [Field F] [MonoidalCategory (GradedVectorSpace F)]
+    (F : Type u) [Field F]
     {V W : GradedVectorSpace F} [ExactPairing V W] :
     Module.Finite F (⨁ n, (V n : Type u)) ∧
       Nonempty (GradedNondegeneratePairing F V W) := by

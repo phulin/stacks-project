@@ -209,6 +209,65 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
     (hF : IsQuotientInverseSystem I F) :
     (∀ n : ℕ+, Nonempty (LimitQuotientPresentation I F n)) ∧
       IsAdicComplete I (inverseLimitModule F) := by
+  /-
+  Proof roadmap (Stacks, Algebra, Lemma `limit-complete`).
+
+  The existing `QuotientStep` API identifies only successive maps.  In
+  particular, neither `hF` nor `limit_complete_pre` currently supplies the two
+  facts needed to use `Submodule.quotEquivOfEq`: surjectivity of `limit.π` and
+  `ker (limit.π F (op n)).hom = I ^ n • ⊤`.  Prove those facts as follows.
+
+  1. First extract from `s : QuotientStep I F k` that the successive map is
+     surjective, using `s.transition_eq`, `Submodule.mkQ_surjective`, and
+     an explicit preimage through `s.equivalence.inv` (the equality follows by
+     `Iso.inv_hom_id_apply`).  Extend this to every transition by induction on
+     `PNat` and `transitionMap_comp` from
+     `Formalization/Books/Algebra/Unit87/InverseSystems.lean`.
+
+  2. Add a local helper saying that every projection of a `NaturalInverseSystem`
+     with surjective transitions is surjective.  For a prescribed element at
+     stage `n`, use the functor of its compatible fibres and apply
+     `Functor.isMittagLeffler_of_surjective` together with
+     `Formalization.Books.Algebra.Unit86.nonempty_limit_of_countable_mittagLeffler`
+     from `Unit86/MittagLefflerSystems.lean`.  Turn the resulting section into an
+     element of the chosen module limit with `Types.isLimitEquivSections` and
+     `isLimitOfPreserves (forget (ModuleCat.{w} A)) (limit.isLimit F)`.  This
+     avoids the dead end of trying to apply
+     `Types.surjective_π_app_zero_of_surjective_map`, which is specialized to an
+     `ℕ`-system and only its zeroth projection.
+
+  3. Put `L := inverseLimitModule F`, `p n := (limit.π F (op n)).hom`, and
+     `K n := LinearMap.ker (p n)`.  The same calculation already used in the
+     second branch below gives `I ^ n • (⊤ : Submodule A L) ≤ K n`.  The missing
+     reverse inclusion is the kernel argument from the source.  Form
+       `Q n := (K n : Type w) ⧸
+         (I ^ n • (⊤ : Submodule A L)).comap (K n).subtype`.
+     The denominator is the subtype form of `K n ⊓ I ^ n • ⊤`.
+     From a lift through the quotient description at step `n`, prove that
+     `K (n + 1) + I ^ n • ⊤` maps onto `K n`; after quotienting this gives
+     surjective successive maps `Q (n + 1) ⟶ Q n`.  Package these maps as a
+     type-valued inverse system (or a `ModuleCat` system) and use the helper in
+     step 2 for its projections.
+
+  4. A compatible family in the `Q n` maps coordinatewise to an element
+     `z : AdicCompletion I L`: choose representatives in `K n`, package them
+     with `AdicCompletion.AdicCauchySequence.mk`, and apply
+     `AdicCompletion.mk`; compatibility is precisely congruence modulo
+     `I ^ n • ⊤`.  By `limit_complete_pre I hI F`
+     and `isAdicComplete_iff_completion_map_bijective` from
+     `Formalization/Books/Algebra/Unit96/Completion.lean`, write
+     `z = AdicCompletion.of I L y`.  At coordinate `n`, the representative lies
+     in `K n` and `I ^ n • ⊤ ≤ K n`, hence `p n y = 0`.  Then
+     `Concrete.limit_ext F` gives `y = 0`, so `z = 0` and every `Q n` is zero
+     because its limit projection is surjective.  Thus `K n ≤ I ^ n • ⊤`.
+
+  5. For each `n`, factor `p n` through `Submodule.liftQ`.  The kernel equality
+     from step 4 and projection surjectivity from step 2 make the factor map
+     bijective; package it with `LinearEquiv.ofBijective`.  Its defining
+     equation with `Submodule.mkQ` is exactly `LimitQuotientPresentation.projection_eq`
+     after `ModuleCat.hom_ext`.  Return this presentation in the first branch;
+     retain the already completed `limit_complete_pre` argument in the second.
+  -/
   constructor
   · sorry
   · apply limit_complete_pre I hI F
@@ -310,6 +369,100 @@ theorem finiteness_graded {A : Type u} [CommRing A] [IsNoetherianRing A]
         ∀ n : ℕ+,
           Nonempty
             (GradedQuotientPresentation G I 𝓝 (F.grading n) (n : ℕ)) := by
+  /-
+  Proof roadmap (Stacks, Algebra, Lemma `finiteness-graded`).
+
+  The graded-step interface is mathematically sufficient, but it does not yet
+  expose a common graded source, homogeneous lifts through a quotient, or the
+  degree-stabilization lemma.  Construct those locally; taking the ungraded
+  inverse limit as `N` is a dead end (for example it is a power-series module
+  and need not carry an internal direct-sum grading).
+
+  1. Use `hfinite 1` and `Module.Finite.exists_fin` to choose finitely many
+     generators of stage `1`.  Replace them by their finitely many homogeneous
+     pieces using `DirectSum.sum_support_decompose` for `(F.grading 1).component`,
+     exactly as in the private helper `graded_finite_homogeneous_generators` in
+     `Formalization/Books/Algebra/Unit56/GradedRings.lean`.  Record the resulting
+     number `r`, degrees `d : Fin r → ℤ`, and homogeneous generators `x 1 i`.
+     Treat `r = 0` separately: graded Nakayama makes every stage zero and the
+     zero graded module supplies the conclusion.
+
+  2. For `s : GradedQuotientStep G I F n`, prove that its quotient projection
+     is surjective on every homogeneous component.  Given a homogeneous target,
+     lift it with `s.equivalence.toLinearEquiv.symm` and
+     `Submodule.mkQ_surjective`, decompose an arbitrary source lift, and use
+     uniqueness of `DirectSum.decompose` plus `s.projection_isGraded` to retain
+     only the requested component.  Recursively choose homogeneous
+     `x (n + 1) i` lifting `x n i` with `PNat.recOn`.  Successive compatibility
+     extends to all transitions by `transitionMap_comp` (or via
+     `inverseLimitFamilies_iff_successiveCompatibleFamilies` in
+     `Unit87/InverseSystems.lean`).
+
+  3. Prove by induction on `n - m` that for `m ≤ n` the transition
+     `F_n ⟶ F_m` is surjective with kernel
+       `I ^ (m : ℕ) • (⊤ : Submodule A (F.system.obj (op n)))`.
+     The successor case uses `GradedQuotientStep.transition_eq`,
+     `Submodule.Quotient.mk_eq_zero`, `Submodule.map_smul''`, and the nesting
+     `I ^ (m + 1) ≤ I ^ m`.  This is the precise bridge absent from `hF`.
+     It implies that the lifts `x n i` generate stage `n` modulo
+     `I • ⊤`, hence modulo `irrelevantIdeal G • ⊤` by `hI`.  With the local
+     instance `letI := hfinite n`, apply `graded_nakayama_generators` from
+     `Unit56/GradedRings.lean` to show that the `x n i` generate `F_n`.
+
+  4. Use the compatible families `x n i` and
+     `(inverseLimitModule_equiv_families F.system).symm` to obtain
+       `ξ i : inverseLimitModule F.system`
+     with `(limit.π F.system (op n)).hom (ξ i) = x n i`; verify the equation
+     with `Types.isLimitEquivSections_apply`.  Let `L := inverseLimitModule
+     F.system` and `Nsub := Submodule.span A (Set.range ξ) ≤ L`.  This choice is
+     universe-critical: `L : ModuleCat.{w} A`, so the subtype `Nsub` is still
+     `Type w`.  A tempting free presentation `Fin r → A` lives in universe `u`
+     and cannot produce the required `ModuleCat.{w} A` when `u` and `w` are
+     unrelated.
+
+  5. Establish the low-degree lemma: if `e < min_i(d i) + m`, then the
+     degree-`e` part of `I ^ m • F_n` is zero.  Decompose coefficients using
+     `Ideal.IsHomogeneous.mem_iff` (with powers obtained inductively from
+     `hIhom.mul`), use `hI : I ≤ irrelevantIdeal G`, and
+     `HomogeneousIdeal.mem_irrelevant_iff` to see that every nonzero homogeneous
+     factor from `I` has degree at least one; then use the homogeneous
+     generators from step 3.  Consequently the transition map identifies the
+     degree-`e` pieces of stages `n` and `m` once `m ≤ n` and
+     `e < min_i(d i) + m`.
+
+  6. Grade `Nsub` by compatible homogeneous families: its degree-`e`
+     `AddSubgroup` consists of the `z : Nsub` such that every coordinate
+     `(limit.π F.system (op n)).hom z` lies in `(F.grading n).component e`.
+     Existence of a finite homogeneous decomposition follows by
+     `Submodule.span_induction` on the generators `ξ i`, decomposing each scalar
+     with `DirectSum.sum_support_decompose G.component`.  Uniqueness follows
+     coordinatewise from the stage decompositions and then from
+     `Concrete.limit_ext F.system`.  Scalar compatibility is coordinatewise
+     `F.grading n |>.gradedSMul.smul_mem`.  These facts give
+       `𝓝 : GradedModuleData G Nsub`.
+     Set `N := ModuleCat.of A Nsub`; the equality defining `Nsub` as the span of
+     the finite set `Set.range ξ` directly supplies `Module.Finite A Nsub`
+     (`Module.Finite` is `Submodule.FG` for `⊤`).
+
+  7. Restrict each limit projection to
+     `p n : Nsub →ₗ[A] F.system.obj (op n)`.
+     It is graded by the definition in step 6 and surjective because the
+     coordinates `x n i` generate stage `n`.  Its kernel is exactly
+     `I ^ n • (⊤ : Submodule A Nsub)`: power annihilation gives
+     `I ^ n • ⊤ ≤ LinearMap.ker (p n)`; for the reverse inclusion, decompose a
+     kernel element into finitely many homogeneous pieces, choose a stage above
+     all of their stabilization bounds from step 5, lift the resulting
+     `I ^ n`-multiples using the generators `ξ i`, and use the eventual
+     component isomorphisms plus `Concrete.limit_ext F.system`.
+
+     Factor `p n` through `Submodule.liftQ` and use
+     `LinearEquiv.ofBijective` to obtain the required equivalence.
+     Transport the stage grading back along that equivalence to define the
+     quotient grading; the equation with the factored `p n` proves
+     `projection_isGraded`, while the map and its inverse preserve components
+     by construction.  These fields assemble
+     `GradedQuotientPresentation G I 𝓝 (F.grading n) n`.
+  -/
   sorry
 
 /-! ## The Daniel--Litt comparison -/
@@ -545,6 +698,93 @@ theorem daniel_litt {A : Type u} [CommRing A]
       ∀ n : ℕ+, ∀ x : 𝓜.component d,
         (limit.π (gradedComponentSystem G F d) (Opposite.op n)).hom (e x) =
           componentAddHom G 𝓜 (F.grading n) (φ.map n) (φ.isGraded n) d x := by
+  /-
+  Proof roadmap (Stacks, Algebra, Lemma `daniel-litt`).
+
+  `inducedTensorLimitMap_projection` controls the ungraded coordinates, but
+  there is presently no grading on `ringCompletion I`, no inclusion from a
+  component limit into `inverseLimitModule F.system`, and no theorem saying
+  that completion preserves a fixed low degree.  Thus `hφ.injective` or
+  `hφ.surjective` cannot be applied directly to the displayed component goal.
+  Supply the following local bridges.
+
+  1. For fixed `d`, form a cone on `gradedComponentSystem G F d` with point
+     `AddCommGrpCat.of (𝓜.component d)` and legs
+       `componentAddHom G 𝓜 (F.grading n) (φ.map n) (φ.isGraded n) d`.
+     Here the cone and its limit must be instantiated in
+     `AddCommGrpCat.{max u w}`, matching `M`, `F.system`, and the tensor source;
+     do not let Lean infer a fresh smaller universe.
+     Naturality is `φ.compatible` restricted to components.  Let
+       `η d : 𝓜.component d →+ gradedComponentLimit G F d`
+     be `(limit.lift _ cone).hom`; `limit.lift_π` gives exactly the coordinate
+     equation required in the conclusion.  It remains to prove `η d`
+     bijective and use `AddEquiv.ofBijective`.
+
+  2. Prove the pure-tensor coordinate formula
+       `completionTensorCoordinate I n (hF n) (φ.map n)
+          (x ⊗ₜ[A] (1 : ringCompletion I)) = φ.map n x`.
+     This unfolds `completionTensorCoordinate` and uses
+     `AdicCompletion.evalₐ_of`/`map_one`.  Together with
+     `inducedTensorLimitMap_projection` and `Concrete.limit_ext F.system`, it
+     says that `η d x = 0` forces
+       `inducedTensorLimitMap G I F hF 𝓜 φ (x ⊗ₜ 1) = 0`.
+
+  3. Establish the low-degree completion lemma used in both directions.  From
+     `hIhom`, obtain homogeneity of `I ^ n` inductively with
+     `Ideal.IsHomogeneous.mul`; from `hI` and
+     `HomogeneousIdeal.mem_irrelevant_iff`, prove that `I ^ n` has zero
+     homogeneous components in degrees `< n`.  It follows that representatives
+     of `AdicCompletion.evalₐ I n f'` have canonical, stage-independent
+     components in degrees `< n`.  Package this as a truncation statement: for
+     any finite bound `b` and `f' : ringCompletion I`, choose homogeneous
+     `f_j ∈ G.component j` for `0 ≤ j ≤ b` and a tail `g'` such that
+       `f' = (∑ j ≤ b, AdicCompletion.of I A f_j) + g'`,
+     and every quotient representative of `g'` has zero components through
+     degree `b`.  Use `AdicCompletion.evalₐ_mk`, `AdicCompletion.evalₐ_of`, and
+     `AdicCompletion.ext_evalₐ` from
+     `Mathlib/RingTheory/AdicCompletion/Algebra.lean`; no existing declaration
+     currently combines these with `G` and `hIhom`.
+
+  4. Injectivity of `η d`: after step 2 and `hφ.injective`, one has
+     `x ⊗ₜ 1 = 0`.  Prove the finite-witness lemma for this tensor equality:
+     there is a finitely generated graded submodule `M' ≤ M`, generated by
+     finitely many homogeneous elements of degrees `d_i`, containing `x`, in
+     which the same equality already holds in `M' ⊗[A] ringCompletion I`.
+     Obtain it by expanding the finite tensor relation and decomposing its
+     finitely many module entries with `DirectSum.sum_support_decompose` (the
+     finite-sum API is `TensorProduct.exists_sum_tmul_eq` in
+     `Mathlib/LinearAlgebra/TensorProduct/Finiteness.lean`, if that focused
+     import is added).  Choose `n > d - min_i d_i`; apply
+     `id ⊗ AdicCompletion.evalₐ I n` and
+     `TensorProduct.tensorQuotEquivQuotSMul M' (I ^ n)` from the focused module
+     `Mathlib/LinearAlgebra/TensorProduct/Quotient.lean`, which identifies
+     `M' ⊗[A] (A ⧸ I ^ n)` with `M' ⧸ I ^ n • ⊤`.  Step 3 says the degree-`d`
+     part of the quotient map is injective, so `x = 0`.  The finite submodule is
+     essential; attempting this directly in possibly unbounded-below `M` is a
+     known dead end.
+
+  5. For surjectivity, turn
+     `y : gradedComponentLimit G F d` into an element of the full module limit:
+     its coordinates are the subtype values of
+     `(limit.π (gradedComponentSystem G F d) (op n)).hom y`.  Their
+     compatibility defines an `inverseLimitFamilies F.system`; apply
+     `(inverseLimitModule_equiv_families F.system).symm` from
+     `Unit87/InverseSystems.lean`.  Use `hφ.surjective` to write this element as
+     the image of `z : M ⊗[A] ringCompletion I`.  Express `z` as a finite sum
+     `∑ i, x_i ⊗ₜ f'_i`, and decompose the finitely many `x_i` so they are
+     homogeneous of degrees `d_i`.
+
+  6. Apply the truncation lemma of step 3 to every `f'_i`, with bound at least
+     `d - d_i`.  Terms of coefficient degree `< d - d_i` map to components
+     below `d`; each tail maps to zero in every component of degree at most
+     `d`; and terms above the bound cannot contribute to degree `d`.  Since the
+     image of `z` is the pure degree-`d` family `y`, uniqueness of the stagewise
+     graded decompositions leaves
+       `x := ∑ i, f_{i, d-d_i} • x_i ∈ 𝓜.component d`
+     with `η d x = y`.  This proves surjectivity, and
+     `AddEquiv.ofBijective (η d) ⟨injective, surjective⟩` finishes while
+     `limit.lift_π` supplies the requested coordinate identity.
+  -/
   sorry
 
 end

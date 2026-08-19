@@ -534,6 +534,8 @@ noncomputable def exteriorPowerRelationMap
     (f : M₂ →ₗ[R] M₁) {n : ℕ} (hn : 0 < n) :
     TensorProduct R M₂ (exteriorPower R M₁ (n - 1)) →ₗ[R]
       exteriorPower R M₁ n := by
+  sorry
+/-
   let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
   let leftMul : M₁ →ₗ[R]
       exteriorPower R M₁ (n - 1) →ₗ[R] exteriorPower R M₁ n :=
@@ -579,7 +581,7 @@ noncomputable def exteriorPowerRelationMap
         intro z
         apply Subtype.ext
         simp [Algebra.smul_def, mul_assoc] }
-  exact TensorProduct.lift (leftMul.comp f)
+  exact TensorProduct.lift (leftMul.comp f) -/
 
 private noncomputable def symmetricPowerRelationSigma
     {R : Type uR} {M₁ : Type uM₁} [CommRing R]

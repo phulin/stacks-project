@@ -752,7 +752,36 @@ theorem isUniversallyCatenary_localization
     (R : Type u) [CommRing R] (S : Submonoid R)
     (hR : IsUniversallyCatenary R) :
     IsUniversallyCatenary (Localization S) := by
-  sorry
+  rw [IsUniversallyCatenary] at hR ⊢
+  refine ⟨IsLocalization.isNoetherianRing S (Localization S) hR.1, ?_⟩
+  intro T _ _ _
+  let _ : Algebra R T :=
+    ((algebraMap (Localization S) T).comp (algebraMap R (Localization S))).toAlgebra
+  have hTower : IsScalarTower R (Localization S) T :=
+    IsScalarTower.of_algebraMap_eq' (by
+      change ((algebraMap (Localization S) T).comp (algebraMap R (Localization S))) =
+        ((algebraMap (Localization S) T).comp (algebraMap R (Localization S)))
+      rfl)
+  have hEssLoc : Algebra.EssFiniteType R (Localization S) :=
+    Algebra.EssFiniteType.of_isLocalization (R := R) (S := Localization S) S
+  have hEssT : Algebra.EssFiniteType (Localization S) T :=
+    Algebra.EssFiniteType.of_finiteType (R := Localization S) (S := T)
+  have hEss : Algebra.EssFiniteType R T :=
+    @Algebra.EssFiniteType.comp R (Localization S) T _ _ _ _ _ _ hTower hEssLoc hEssT
+  rw [Algebra.essFiniteType_iff_exists_subalgebra] at hEss
+  obtain ⟨T₀, M, hT₀, hloc⟩ := hEss
+  let _ : Algebra.FiniteType R T₀ := hT₀
+  have hcat₀ : IsCatenaryRing T₀ := hR.2 T₀
+  have hcatloc : IsCatenaryRing (Localization M) :=
+    isCatenaryRing_localization T₀ M hcat₀
+  let _ : IsLocalization M T := hloc
+  let e : Localization M ≃+* T :=
+    (IsLocalization.algEquiv M (Localization M) T).toRingEquiv
+  have hglobalLoc : IsGlobalCatenary (PrimeSpectrum (Localization M)) :=
+    (isGlobalCatenary_iff_isCatenaryRing _).mpr hcatloc
+  have hglobalT : IsGlobalCatenary (PrimeSpectrum T) :=
+    isGlobalCatenary_of_orderIso (PrimeSpectrum.comapEquiv e) hglobalLoc
+  exact (isGlobalCatenary_iff_isCatenaryRing _).mp hglobalT
 
 theorem isUniversallyCatenary_of_essFiniteType
     (A : Type u) (B : Type v) [CommRing A] [CommRing B]

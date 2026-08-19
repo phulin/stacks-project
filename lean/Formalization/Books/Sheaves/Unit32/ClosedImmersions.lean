@@ -259,8 +259,7 @@ private theorem closedSubsetPushforward_counit_isIso_of_category
             F.presheaf).app (op ((Opens.map f).obj V)) ≫
           F.presheaf.map (homOfLE hV).op ≫ F.presheaf.germ U z hxU := by
       rw [← Category.assoc, hnat']
-      simp only [Category.assoc, ← Functor.map_comp, Iso.inv_hom_id,
-        Functor.map_id, Category.comp_id]
+      simp only [Category.assoc]
     rw [hnat'']
     have htri' :
         ((TopCat.Presheaf.pullbackPushforwardAdjunction C f).unit.app
@@ -924,7 +923,6 @@ private theorem stalkPushforward_map_naturality
           TopCat.Presheaf.stalkPushforward C f Q x := by
         convert congrArg (fun k =>
           k ≫ TopCat.Presheaf.stalkPushforward C f Q x) hmap' using 1
-        all_goals (simp only [TopCat.Presheaf.pushforward] ; rfl)
       _ = ((TopCat.Presheaf.pushforward C f).map φ).app (op U) ≫
           Q.germ ((Opens.map f).obj U) x hxU := by
         simpa only [Category.assoc] using congrArg
@@ -1297,15 +1295,11 @@ private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     · let z : Z := ⟨x, hx⟩
       let eStalk := closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z
-      haveI : IsIso eStalk.hom := eStalk.isIso_hom
       have hcomp : IsIso
           ((TopCat.Presheaf.stalkFunctor C (closedSubsetInclusion Z z)).map
               (adj.unit.app G).hom ≫ eStalk.hom) := by
         rw [closedSubsetPushforward_unit_stalk_comp (C := C) hZ G z]
         exact (closedSubsetPullbackStalkIso G z).isIso_hom
-      letI : IsIso
-          ((TopCat.Presheaf.stalkFunctor C (closedSubsetInclusion Z z)).map
-              (adj.unit.app G).hom ≫ eStalk.hom) := hcomp
       exact @IsIso.of_isIso_comp_right _ _ _ _ _
         ((TopCat.Presheaf.stalkFunctor C (closedSubsetInclusion Z z)).map
           (adj.unit.app G).hom) eStalk.hom eStalk.isIso_hom hcomp
@@ -1313,8 +1307,6 @@ private theorem closedSubsetPushforward_mem_essImage_iff_of_category
       let F := (TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G
       rcases closedSubsetPushforward_stalkIso_terminal_of_not_mem
           (C := C) hZ F hx with ⟨eF⟩
-      letI : IsIso eG.hom := eG.isIso_hom
-      letI : IsIso eF.inv := eF.isIso_inv
       have hm :
           (TopCat.Presheaf.stalkFunctor C x).map (adj.unit.app G).hom =
             eG.hom ≫ eF.inv := by
@@ -1463,18 +1455,20 @@ theorem closedSubsetSetPushforward_not_rightExact
     (x : X) (hx : x ∉ Z) :
     ¬ IsRightExact (closedSubsetSetPushforward Z) := by
   intro hF
-  letI : PreservesFiniteColimits (closedSubsetSetPushforward Z) := hF
   let A := singletonSheaf (TopCat.of Z)
   let F := closedSubsetSetPushforward Z
-  letI : PreservesColimit (pair A A) F := by infer_instance
+  let hFpair : PreservesColimit (pair A A) F :=
+    (hF.preservesFiniteColimits (Discrete WalkingPair)).preservesColimit
   let e : F.obj (A ⨿ A) ≅ F.obj A ⨿ F.obj A :=
-    (PreservesColimitPair.iso F A A).symm
+    (@PreservesColimitPair.iso _ _ _ _ F A A _ _ hFpair).symm
   let S := TopCat.Sheaf.forget (Type w) X ⋙
     TopCat.Presheaf.stalkFunctor (Type w) x
-  letI : PreservesColimit (pair (F.obj A) (F.obj A)) S := by infer_instance
+  let hSpair : PreservesColimit (pair (F.obj A) (F.obj A)) S := by
+    infer_instance
   let e' : S.obj (F.obj (A ⨿ A)) ≅
       S.obj (F.obj A) ⊕ S.obj (F.obj A) :=
-    S.mapIso e ≪≫ (PreservesColimitPair.iso S (F.obj A) (F.obj A)).symm ≪≫
+    S.mapIso e ≪≫
+      (@PreservesColimitPair.iso _ _ _ _ S (F.obj A) (F.obj A) _ _ hSpair).symm ≪≫
       Types.binaryCoproductIso _ _
   exact closedSubsetSetPushforward_stalk_twoPoint_mismatch hZ x hx
     ⟨by

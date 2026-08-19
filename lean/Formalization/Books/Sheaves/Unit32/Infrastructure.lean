@@ -775,7 +775,10 @@ theorem closedAlgebraicSheafDirectImage_essentialImage
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (G : TopCat.Sheaf C X) :
     (∃ F, Nonempty ((closedAlgebraicSheafDirectImage C Z hZ).obj F ≅ G)) ↔
       ClosedFinalStalkCondition C Z hZ G := by
-  sorry
+  change (Formalization.Books.Sheaves.Unit32.closedSubsetPushforward
+      (C := C) Z).essImage G ↔ _
+  exact Formalization.Books.Sheaves.Unit32.closedSubsetPushforward_mem_essImage_iff
+    (C := C) hZ G
 
 /-! ## Exactness warning -/
 

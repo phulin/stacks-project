@@ -653,7 +653,7 @@ theorem pthRootLevel_mono
     by its algebraicity and its two `p^n`-power properties. -/
 theorem pthRootLevel_unique_up_to_unique_algEquiv
     {k : Type u} {L : Type v} [Field k] [Field L] (p : ℕ) [Fact p.Prime] [CharP k p]
-    [Algebra k L] (n : ℕ) (hn : 0 < n) [Algebra.IsAlgebraic k L]
+    [Algebra k L] (n : ℕ) [Algebra.IsAlgebraic k L]
     (hroot : ∀ x : k, ∃ y : L,
       y ^ (p ^ n) = algebraMap k L x)
     (hbase : ∀ y : L, ∃ x : k,
@@ -681,7 +681,7 @@ theorem pthRootLevel_unique_up_to_unique_algEquiv
       map_one' := by
         apply FaithfulSMul.algebraMap_injective k L
         rw [← Classical.choose_spec (hbase 1)]
-        simp [hp0]
+        simp
       map_mul' := by
         intro y z
         apply FaithfulSMul.algebraMap_injective k L
@@ -716,7 +716,7 @@ theorem pthRootLevel_unique_up_to_unique_algEquiv
         change (PerfectClosure.mk k p (n, 1)) ^ (p ^ n) =
           (1 : PerfectClosure k p) ^ (p ^ n)
         rw [hmk, map_one]
-        simp [hp0]
+        simp
       map_mul' := by
         intro x y
         apply Subtype.ext

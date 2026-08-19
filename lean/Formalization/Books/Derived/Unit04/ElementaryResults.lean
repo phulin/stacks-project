@@ -75,8 +75,7 @@ theorem triangle_morphism_isIso₃
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
-  /- exact isIso₃_of_isIso₁₂ φ hT hT' h₁ h₂ -/
+  exact isIso₃_of_isIso₁₂ φ hT hT' h₁ h₂
 
 /-- The middle component of a triangle morphism is an isomorphism when the
 first and third components are. -/
@@ -84,8 +83,7 @@ theorem triangle_morphism_isIso₂
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  sorry
-  /- exact isIso₂_of_isIso₁₃ φ hT hT' h₁ h₃ -/
+  exact isIso₂_of_isIso₁₃ φ hT hT' h₁ h₃
 
 /-- The first component of a triangle morphism is an isomorphism when the
 second and third components are. -/
@@ -93,8 +91,7 @@ theorem triangle_morphism_isIso₁
     {T T' : Triangle C} (φ : T ⟶ T')
     (hT : T ∈ distTriang C) (hT' : T' ∈ distTriang C)
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  sorry
-  /- exact isIso₁_of_isIso₂₃ φ hT hT' h₂ h₃ -/
+  exact isIso₁_of_isIso₂₃ φ hT hT' h₂ h₃
 
 /-! ### The representable long exact sequence -/
 
@@ -471,13 +468,46 @@ theorem special_triangle_isIso₁
     change Function.Bijective (fun x : W ⟶ T.obj₁ => x ≫ φ.hom₁) at hb
     exact hb)
 
+private theorem special_triangle_isIso₁_apply
+    {D : Type*} [Category D] [AdditiveCategory D]
+    [HasShift D ℤ] [∀ n : ℤ, (shiftFunctor D n).Additive]
+    [Pretriangulated D] {S S' : Triangle D} (hS : SpecialTriangle S)
+    (hS' : SpecialTriangle S') (ψ : S ⟶ S') (h₂ : IsIso ψ.hom₂)
+    (h₃ : IsIso ψ.hom₃) : IsIso ψ.hom₁ := by
+  exact special_triangle_isIso₁ hS hS' ψ h₂ h₃
+
 set_option maxHeartbeats 1000000 in
 /-- The dual two-out-of-three statement for co-special triangles. -/
 theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    { hom₁ := φ.hom₃.op
+      hom₂ := φ.hom₂.op
+      hom₃ := φ.hom₁.op
+      comm₁ := Quiver.Hom.unop_inj φ.comm₂.symm
+      comm₂ := Quiver.Hom.unop_inj φ.comm₁.symm
+      comm₃ := by
+        dsimp [Top, Topp, triangleOpEquivalence, TriangleOpEquivalence.functor]
+        rw [Category.assoc, ← Functor.map_comp, ← op_comp, ← φ.comm₃, op_comp,
+          Functor.map_comp, opShiftFunctorEquivalence_counitIso_inv_naturality_assoc]
+        dsimp
+        rfl }
+  have h2op : IsIso phop.hom₂ := by
+    change IsIso (φ.hom₂.op : Topp.obj₂ ⟶ Top.obj₂)
+    exact (isIso_op_iff φ.hom₂).2 h₂
+  have h3op : IsIso phop.hom₃ := by
+    change IsIso (φ.hom₁.op : Topp.obj₃ ⟶ Top.obj₃)
+    exact (isIso_op_iff φ.hom₁).2 h₁
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  refine (isIso_op_iff φ.hom₃).1 ?_
+  exact special_triangle_isIso₁_apply hTopp hTop phop h2op h3op
 /- Prior attempt:
   let Top : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T)
   let Topp : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T')

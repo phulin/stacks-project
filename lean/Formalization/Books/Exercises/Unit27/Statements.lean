@@ -1,4 +1,5 @@
 import Formalization.Books.Exercises.Unit27.Core
+import Mathlib.AlgebraicGeometry.Morphisms.IsIso
 import Mathlib.RingTheory.Ideal.Maximal
 import Mathlib.RingTheory.MvPolynomial.Ideal
 
@@ -442,10 +443,130 @@ noncomputable def oneVariableDegreeZeroEquiv (A : Type u) [CommRing A] :
     (oneVariablePolynomialGrading A 0) ≃+* A :=
   (oneVariableDegreeZeroEquivData A).1
 
+private lemma oneVariable_adjoin_X (A : Type u) [CommRing A] :
+    Algebra.adjoin (oneVariablePolynomialGrading A 0)
+        ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A)) = ⊤ := by
+  apply top_unique
+  intro p hp
+  clear hp
+  induction p using MvPolynomial.induction_on with
+  | C a =>
+      change (algebraMap (oneVariablePolynomialGrading A 0)
+        (oneVariablePolynomialRing A) ⟨MvPolynomial.C a,
+          MvPolynomial.isHomogeneous_C _ _⟩) ∈ _
+      exact Subalgebra.algebraMap_mem _ _
+  | add p q hp hq =>
+      exact Subalgebra.add_mem _ hp hq
+  | mul_X p i hp =>
+      apply Subalgebra.mul_mem _ hp
+      exact Algebra.subset_adjoin (by simpa using congrArg MvPolynomial.X (Fin.eq_zero i))
+
+private lemma oneVariable_homogeneous_one_mem_span_X
+    (A : Type u) [CommRing A] {p : oneVariablePolynomialRing A}
+    (hp : p ∈ oneVariablePolynomialGrading A 1) :
+    p ∈ Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A)) := by
+  change p ∈ MvPolynomial.homogeneousSubmodule (Fin 1) A 1 at hp
+  rw [MvPolynomial.homogeneousSubmodule_one_eq_span_X] at hp
+  induction hp using Submodule.span_induction with
+  | mem p hp =>
+      rcases hp with ⟨i, rfl⟩
+      exact Ideal.subset_span (by simpa using congrArg MvPolynomial.X (Fin.eq_zero i))
+  | zero => exact (Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A))).zero_mem
+  | add p q hp hq hpp hqq =>
+      exact (Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A))).add_mem hpp hqq
+  | smul r p hp hpp =>
+      simpa [Algebra.smul_def] using
+        (Ideal.mul_mem_left (Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A)))
+          (MvPolynomial.C r) hpp)
+
+private lemma oneVariable_irrelevant_le_span_X (A : Type u) [CommRing A]
+    [GradedRing (oneVariablePolynomialGrading A)] :
+    (HomogeneousIdeal.irrelevant (oneVariablePolynomialGrading A)).toIdeal ≤
+      Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A)) := by
+  rw [HomogeneousIdeal.toIdeal_irrelevant_le]
+  intro n hn p hp
+  cases n with
+  | zero => omega
+  | succ n =>
+      have hp' : p ∈
+          (MvPolynomial.homogeneousSubmodule (Fin 1) A 1) ^ (n + 1) := by
+        rw [MvPolynomial.homogeneousSubmodule_one_pow]
+        exact hp
+      rw [pow_succ] at hp'
+      refine Submodule.mul_induction_on hp' ?_ ?_
+      · intro q hq r hr
+        exact (Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A))).mul_mem_left
+          q (oneVariable_homogeneous_one_mem_span_X A hr)
+      · intro x y hx hy
+        exact (Ideal.span ({MvPolynomial.X 0} : Set (oneVariablePolynomialRing A))).add_mem hx hy
+
+private lemma oneVariable_fromZeroRingHom_bijective (A : Type u) [CommRing A]
+    [GradedRing (oneVariablePolynomialGrading A)] :
+    Function.Bijective
+      (HomogeneousLocalization.fromZeroRingHom (oneVariablePolynomialGrading A)
+        (Submonoid.powers (MvPolynomial.X 0))) := by
+  classical
+  constructor
+  · intro p q hpq
+    apply Subtype.ext
+    have hloc := congrArg HomogeneousLocalization.val hpq
+    change Localization.mk (p : oneVariablePolynomialRing A) (1 : Submonoid.powers
+      (MvPolynomial.X (R := A) (σ := Fin 1) 0)) =
+        Localization.mk (q : oneVariablePolynomialRing A) (1 : Submonoid.powers
+          (MvPolynomial.X (R := A) (σ := Fin 1) 0)) at hloc
+    rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists] at hloc
+    rcases hloc with ⟨c, hc⟩
+    obtain ⟨n, hn⟩ := (Submonoid.mem_powers_iff (c : oneVariablePolynomialRing A)
+      (MvPolynomial.X (R := A) (σ := Fin 1) 0)).mp c.property
+    apply (MvPolynomial.isRegular_X_pow n).left
+    simpa [← hn] using hc
+  · intro z
+    let v : Unit → oneVariablePolynomialRing A := fun _ => MvPolynomial.X 0
+    let hf : v Unit.unit ∈ oneVariablePolynomialGrading A 1 :=
+      MvPolynomial.isHomogeneous_X A 0
+    have hadj : Algebra.adjoin (oneVariablePolynomialGrading A 0) (Set.range v) = ⊤ := by
+      simpa [v] using oneVariable_adjoin_X A
+    have hspan :
+        Submodule.span (oneVariablePolynomialGrading A 0)
+            { (HomogeneousLocalization.Away.mk (oneVariablePolynomialGrading A)
+                hf a (∏ i : Unit, v i ^ ai i)
+                (hai ▸ SetLike.prod_pow_mem_graded _ _ _ _ fun _ _ ↦ hf)) |
+                (a : ℕ) (ai : Unit → ℕ)
+                  (hai : ∑ i, ai i • 1 = a • 1) } = ⊤ := by
+      exact HomogeneousLocalization.Away.span_mk_prod_pow_eq_top hf v hadj
+        (fun _ : Unit ↦ 1) (fun _ ↦ hf)
+    have hz : z ∈
+        Submodule.span (oneVariablePolynomialGrading A 0)
+            { (HomogeneousLocalization.Away.mk (oneVariablePolynomialGrading A)
+                hf a (∏ i : Unit, v i ^ ai i)
+                (hai ▸ SetLike.prod_pow_mem_graded _ _ _ _ fun _ _ ↦ hf)) |
+                (a : ℕ) (ai : Unit → ℕ)
+                  (hai : ∑ i, ai i • 1 = a • 1) } := by
+      rw [hspan]
+      trivial
+    induction hz using Submodule.span_induction with
+    | mem z hz =>
+        rcases hz with ⟨a, ai, hai, rfl⟩
+        have hai' : ai Unit.unit = a := by simpa using hai
+        refine ⟨1, ?_⟩
+        apply HomogeneousLocalization.val_injective
+        simp [HomogeneousLocalization.fromZeroRingHom,
+          HomogeneousLocalization.Away.val_mk, v, hai']
+    | zero => exact ⟨0, map_zero _⟩
+    | add x y hx hy hxp hyp =>
+        rcases hxp with ⟨p, rfl⟩
+        rcases hyp with ⟨q, rfl⟩
+        exact ⟨p + q, map_add _ _ _⟩
+    | smul r x hx hxp =>
+        rcases hxp with ⟨p, rfl⟩
+        exact ⟨r * p, by simp [Algebra.smul_def, HomogeneousLocalization.algebraMap_eq,
+          HomogeneousLocalization.fromZeroRingHom]⟩
+
 theorem oneVariableDegreeZeroEquiv_spec (A : Type u) [CommRing A] (a : A) :
     (((oneVariableDegreeZeroEquiv A).symm a : oneVariablePolynomialGrading A 0) :
         oneVariablePolynomialRing A) =
-      MvPolynomial.C a := by sorry
+      MvPolynomial.C a := by
+  exact (oneVariableDegreeZeroEquivData A).2 a
 noncomputable def oneVariableProjScheme (A : Type u) [CommRing A] : Scheme :=
   letI : GradedAlgebra (oneVariablePolynomialGrading A) := MvPolynomial.gradedAlgebra
   AlgebraicGeometry.«Proj» (oneVariablePolynomialGrading A)
@@ -456,12 +577,89 @@ noncomputable def oneVariableProjToSpec (A : Type u) [CommRing A] :
   AlgebraicGeometry.Proj.toSpecZero (oneVariablePolynomialGrading A) ≫
     Spec.map (CommRingCat.ofHom (oneVariableDegreeZeroEquiv A).symm.toRingHom)
 
+private theorem oneVariable_projToSpec_isHomeomorph (A : Type u) [CommRing A] :
+    IsHomeomorph (oneVariableProjToSpec A).base := by
+  letI : GradedAlgebra (oneVariablePolynomialGrading A) := MvPolynomial.gradedAlgebra
+  change IsHomeomorph
+    ((AlgebraicGeometry.Proj.toSpecZero (oneVariablePolynomialGrading A) ≫
+      Spec.map (CommRingCat.ofHom (oneVariableDegreeZeroEquiv A).symm.toRingHom)).base)
+  let f : oneVariablePolynomialRing A := MvPolynomial.X 0
+  have hf : f ∈ oneVariablePolynomialGrading A 1 := MvPolynomial.isHomogeneous_X A 0
+  have hirr :
+      (HomogeneousIdeal.irrelevant (oneVariablePolynomialGrading A)).toIdeal ≤
+        Ideal.span ({f} : Set (oneVariablePolynomialRing A)) := by
+    simpa [f] using oneVariable_irrelevant_le_span_X A
+  have htop : AlgebraicGeometry.Proj.basicOpen
+      (oneVariablePolynomialGrading A) f = ⊤ := by
+    have h := AlgebraicGeometry.Proj.iSup_basicOpen_eq_top
+      (𝒜 := oneVariablePolynomialGrading A) (fun _ : Unit => f) (by
+        simpa using hirr)
+    simpa using h
+  let hm : (0 : ℕ) < 1 := by omega
+  let away := AlgebraicGeometry.Proj.awayι
+      (oneVariablePolynomialGrading A) f hf hm
+  have haway_range : away.opensRange = ⊤ := by
+    dsimp [away]
+    rw [AlgebraicGeometry.Proj.opensRange_awayι, htop]
+  have haway_surj : Function.Surjective away.base := by
+    intro x
+    have hx : x ∈ (away.opensRange : Set _) := by
+      rw [haway_range]
+      trivial
+    rw [Scheme.Hom.coe_opensRange] at hx
+    exact hx
+  letI : IsIso away :=
+    (isIso_iff_isOpenImmersion_and_surjective away).2
+      ⟨inferInstance, ⟨haway_surj⟩⟩
+  have haway : IsHomeomorph away.base := by
+    exact away.homeomorph.isHomeomorph
+  have hmap0 : IsHomeomorph
+      (Spec.map (CommRingCat.ofHom
+        (HomogeneousLocalization.fromZeroRingHom (oneVariablePolynomialGrading A)
+          (Submonoid.powers f)))).base := by
+    change IsHomeomorph (PrimeSpectrum.comap
+      (HomogeneousLocalization.fromZeroRingHom (oneVariablePolynomialGrading A)
+        (Submonoid.powers f)))
+    simpa [f] using
+      (PrimeSpectrum.isHomeomorph_comap_of_bijective
+        (oneVariable_fromZeroRingHom_bijective A))
+  have hcomp : IsHomeomorph
+      ((away ≫ AlgebraicGeometry.Proj.toSpecZero
+        (oneVariablePolynomialGrading A)).base) := by
+    rw [show away = AlgebraicGeometry.Proj.awayι
+        (oneVariablePolynomialGrading A) f hf hm from rfl]
+    rw [AlgebraicGeometry.Proj.awayι_toSpecZero]
+    exact hmap0
+  have hto : IsHomeomorph
+      (AlgebraicGeometry.Proj.toSpecZero (oneVariablePolynomialGrading A)).base := by
+    apply (isHomeomorph_iff_exists_homeomorph).2
+    refine ⟨haway.homeomorph.symm.trans hcomp.homeomorph, ?_⟩
+    funext x
+    change (AlgebraicGeometry.Proj.toSpecZero
+        (oneVariablePolynomialGrading A)).base
+      (away.base (haway.homeomorph.symm x)) = _
+    congr 1
+    exact haway.homeomorph.apply_symm_apply x
+  have hmap : IsHomeomorph
+      (Spec.map (CommRingCat.ofHom
+        (oneVariableDegreeZeroEquiv A).symm.toRingHom)).base := by
+    change IsHomeomorph (PrimeSpectrum.comap
+      (oneVariableDegreeZeroEquiv A).symm.toRingHom)
+    exact
+      (PrimeSpectrum.homeomorphOfRingEquiv
+        (oneVariableDegreeZeroEquiv A).symm).symm.isHomeomorph
+  simpa only [Scheme.Hom.comp_base, TopCat.coe_comp] using IsHomeomorph.comp hmap hto
+
 theorem oneVariableProjToSpec_bijective (A : Type u) [CommRing A] :
-    Function.Bijective (oneVariableProjToSpec A).base := by sorry
+    Function.Bijective (oneVariableProjToSpec A).base := by
+  exact (oneVariable_projToSpec_isHomeomorph A).bijective
 theorem oneVariableProjToSpec_isHomeomorph (A : Type u) [CommRing A] :
-    IsHomeomorph (oneVariableProjToSpec A).base := by sorry
+    IsHomeomorph (oneVariableProjToSpec A).base := by
+  simpa [oneVariableProjToSpec] using oneVariable_projToSpec_isHomeomorph A
 theorem blowupBaseOpen_isOpen {A : Type u} [CommRing A] (I : Ideal A) :
-    IsOpen (blowupBaseOpen I) := by sorry
+    IsOpen (blowupBaseOpen I) := by
+  change IsOpen ((PrimeSpectrum.zeroLocus (I : Set A))ᶜ)
+  exact ((PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨(I : Set A), rfl⟩).isOpen_compl
 theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :

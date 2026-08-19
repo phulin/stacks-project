@@ -1346,26 +1346,68 @@ noncomputable abbrev sheafModuleRingedSpacePullback
 theorem sheafModuleRingedSpacePushforward_isLeftExact
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
     IsLeftExact (sheafModuleRingedSpacePushforward f) := by
-  sorry
+  change PreservesFiniteLimits (sheafModuleRingedSpacePushforward f)
+  refine ⟨fun {J} _ => ⟨fun {K} => ⟨fun {c} hc => ?_⟩⟩⟩
+  let hlim : IsLimit ((SheafOfModules.forget Y.structureSheaf).mapCone
+      ((sheafModuleRingedSpacePushforward f).mapCone c)) := by
+    apply PresheafOfModules.evaluationJointlyReflectsLimits
+    intro V
+    let hK := isLimitOfPreserves
+      (SheafOfModules.evaluation X.structureSheaf
+        (op ((Opens.map f.continuous).obj V.unop))) hc
+    exact Classical.choice ((ModuleCat.preservesLimit_restrictScalars
+      (f.sharp.hom.app V).hom
+      (K ⋙ SheafOfModules.evaluation X.structureSheaf
+        (op ((Opens.map f.continuous).obj V.unop)))).preserves hK)
+  refine ⟨IsLimit.ofFaithful (SheafOfModules.forget Y.structureSheaf) hlim ?_ ?_⟩
+  · intro s
+    exact (SheafOfModules.fullyFaithfulForget Y.structureSheaf).preimage
+      (hlim.lift ((SheafOfModules.forget Y.structureSheaf).mapCone s))
+  · intro s
+    rfl
 
 theorem sheafModuleRingedSpacePushforward_preserves_all_limits
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
     PreservesLimitsOfSize.{v, v} (sheafModuleRingedSpacePushforward f) := by
-  sorry
+  refine ⟨fun {J} _ => ⟨fun {K} => ⟨fun {c} hc => ?_⟩⟩⟩
+  let hlim : IsLimit ((SheafOfModules.forget Y.structureSheaf).mapCone
+      ((sheafModuleRingedSpacePushforward f).mapCone c)) := by
+    apply PresheafOfModules.evaluationJointlyReflectsLimits
+    intro V
+    let hK := isLimitOfPreserves
+      (SheafOfModules.evaluation X.structureSheaf
+        (op ((Opens.map f.continuous).obj V.unop))) hc
+    exact Classical.choice ((ModuleCat.preservesLimit_restrictScalars
+      (f.sharp.hom.app V).hom
+      (K ⋙ SheafOfModules.evaluation X.structureSheaf
+        (op ((Opens.map f.continuous).obj V.unop)))).preserves hK)
+  refine ⟨IsLimit.ofFaithful (SheafOfModules.forget Y.structureSheaf) hlim ?_ ?_⟩
+  · intro s
+    exact (SheafOfModules.fullyFaithfulForget Y.structureSheaf).preimage
+      (hlim.lift ((SheafOfModules.forget Y.structureSheaf).mapCone s))
+  · intro s
+    rfl
 
 theorem sheafModuleRingedSpacePullback_isRightExact
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     IsRightExact (sheafModuleRingedSpacePullback f) := by
-  sorry
+  change PreservesFiniteColimits (sheafModuleRingedSpacePullback f)
+  let h : PreservesColimitsOfSize.{v, v} (sheafModuleRingedSpacePullback f) :=
+    (ringedSpaceModuleAdjunction f).leftAdjoint_preservesColimits
+  exact {
+    preservesFiniteColimits := fun J _ _ =>
+      PreservesColimitsOfSize.preservesFiniteColimits
+        (sheafModuleRingedSpacePullback f) |>.preservesFiniteColimits J
+  }
 
 theorem sheafModuleRingedSpacePullback_preserves_all_colimits
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     PreservesColimitsOfSize.{v, v} (sheafModuleRingedSpacePullback f) := by
-  sorry
+  exact (ringedSpaceModuleAdjunction f).leftAdjoint_preservesColimits
 
 theorem abelianSheafPullback_isExact {X Y : TopCat.{v}} (f : X ⟶ Y) :
     IsExact (abelianSheafPullback f) := by

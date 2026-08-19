@@ -617,7 +617,7 @@ private theorem exists_parameter_of_ringKrullDim_eq
 
 private theorem ringKrullDim_eq_iff_parameter_minimal
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
-    [Nontrivial R] (n : ℕ) :
+    (n : ℕ) :
     ringKrullDim R = n ↔
       HasIdealOfDefinitionGeneratedBy R n ∧
         ∀ m : ℕ, m < n → ¬ HasIdealOfDefinitionGeneratedBy R m := by

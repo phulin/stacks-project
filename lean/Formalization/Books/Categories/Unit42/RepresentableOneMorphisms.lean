@@ -121,7 +121,6 @@ theorem slicePullbackLeft_isFibredInGroupoids
     (F : FibredMorphism p q) (U : C)
     (G : FibredMorphism (Over.forget U) q) :
     (slicePullbackLeft F U G).IsFibredInGroupoids := by
-  exact sorry
   /- have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
     letI : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
@@ -280,6 +279,28 @@ theorem slicePullbackLeft_isFibredInGroupoids
     intro ζ g τ hτ
     let : (slicePullbackBase F U G).IsHomLift
         (g ≫ f) τ := hτ
+    have hζbase : (Over.forget U).obj ζ.obj.obj.left =
+        (slicePullbackBase F U G).obj ζ := rfl
+    have hcmap : (Over.forget U).map c =
+        eqToHom hdomA ≫ f := by
+      have hfac := CategoryTheory.IsHomLift.fac'
+        (Over.forget U) f c
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) f c = hdomA := Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) f c = rfl := Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      simpa only [Over.forget_map, Category.assoc, eqToHom_refl,
+        Category.comp_id] using hfac
+    have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
+      have hcancel : eqToHom hdomA.symm ≫ eqToHom hdomA =
+          𝟙 (p.obj x') := by
+        have heq : hdomA.symm.trans hdomA =
+            (rfl : p.obj x' = p.obj x') := Subsingleton.elim _ _
+        rw [eqToHom_trans, heq, eqToHom_refl]
+      rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
+      rw [hcancel]
+      simp only [Category.assoc, Category.id_comp, Category.comp_id]
     have hτA : (Over.forget U).IsHomLift
         (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c)
           τ.hom.hom.left := by
@@ -383,6 +404,16 @@ theorem slicePullbackLeft_isFibredInGroupoids
         exact (CategoryTheory.eqToHom_comp_heq _ hζbase).trans
           (CategoryTheory.comp_eqToHom_heq _ (rfl))
       exact hfac'.trans hright
+    have hcancel : eqToHom hdomA.symm ≫ eqToHom hdomA =
+        𝟙 (p.obj x') := by
+      have heq : hdomA.symm.trans hdomA =
+          (rfl : p.obj x' = p.obj x') := Subsingleton.elim _ _
+      rw [eqToHom_trans, heq, eqToHom_refl]
+    have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
+      rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
+      rw [hcancel]
+      simp only [Category.assoc, Category.id_comp, Category.comp_id]
+    have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := hcmap
     let : (Over.forget U).IsStronglyCartesian
         ((Over.forget U).map c) c := hc'
     obtain ⟨χleft, ⟨hχleft, hχleftfac⟩, hχleftuniq⟩ :=
@@ -395,6 +426,8 @@ theorem slicePullbackLeft_isFibredInGroupoids
     rcases ζ.property with ⟨V, hζA, hζX, hζhom⟩
     let hζP : p.obj ζ.obj.obj.right =
         (Over.forget U).obj ζ.obj.obj.left := hζX.trans hζA.symm
+    have hζPbase : p.obj ζ.obj.obj.right =
+        (slicePullbackBase F U G).obj ζ := hζP.trans hζbase.symm
     subst V
     let hFζ := congrArg (fun K : X ⥤ C => K.obj ζ.obj.obj.right) F.over
     let hFxτ := congrArg (fun K : X ⥤ C => K.obj ξ.obj.obj.right) F.over
@@ -424,21 +457,24 @@ theorem slicePullbackLeft_isFibredInGroupoids
       rw [← q.map_comp, ← q.map_comp]
       exact congrArg q.map τ.hom.hom.w
     rw [hGτmap, hmapξ, hζmap, hFτmap] at hτwmap
+    have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := hcmap
+    have hζPbase : p.obj ζ.obj.obj.right =
+        (slicePullbackBase F U G).obj ζ := hζP.trans hζbase.symm
     let hcodξ' : (Over.forget U).obj ξ.obj.obj.left =
         q.obj (F.functor.obj ξ.obj.obj.right) :=
       hcodG.symm.trans hcodξ.symm
     have hτwmap' :
         g ≫ f ≫ eqToHom hcodξ' =
-          eqToHom hζP.symm ≫ p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm := by
+          eqToHom hζPbase.symm ≫ p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm := by
       rw [hτAmap] at hτwmap
-      rw [hcmap'] at hτwmap
+      rw [hcmap] at hτwmap
       rw [hgf] at hτwmap
       apply (cancel_epi (eqToHom hGτL)).1
       simp only [Category.assoc] at hτwmap ⊢
       simpa [hcodξ', hζcod, hGζ, hGτL, hGτR,
         eqToHom_trans] using hτwmap
     let gX : p.obj ζ.obj.obj.right ⟶ p.obj x' :=
-      eqToHom hζP ≫ g
+      eqToHom hζPbase ≫ g
     have hτmap : p.map τ.hom.hom.right = gX ≫ fX := by
       apply (cancel_epi (eqToHom hζP.symm)).1
       apply (cancel_mono (eqToHom hFxτ.symm)).1
@@ -448,7 +484,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
     have hτX : p.IsHomLift (gX ≫ fX) τ.hom.hom.right := by
       apply CategoryTheory.IsHomLift.of_fac' p (gX ≫ fX)
         τ.hom.hom.right rfl rfl
-      exact hτmap.symm
+      exact hτmap
     let : p.IsHomLift (gX ≫ fX) τ.hom.hom.right := hτX
     obtain ⟨χright, ⟨hχright, hχrightfac⟩, hχrightuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property
@@ -460,22 +496,45 @@ theorem slicePullbackLeft_isFibredInGroupoids
       exact Functor.congr_hom F.over χright
     have hχrightmap : gX = p.map χright :=
       CategoryTheory.IsHomLift.eq_of_isHomLift p gX χright
+    have hgXtailF :
+        eqToHom hζP.symm ≫ gX ≫ eqToHom hFx'.symm =
+          gOver ≫ eqToHom hFx'.symm := by
+      calc
+        eqToHom hζP.symm ≫ gX ≫ eqToHom hFx'.symm =
+            (eqToHom hζP.symm ≫ gX) ≫ eqToHom hFx'.symm := by
+              simp only [Category.assoc]
+        _ = gOver ≫ eqToHom hFx'.symm := by rw [hgX]
+    have hrightcomp_path :
+        eqToHom hζcod.symm ≫ eqToHom hFζ ≫ gX ≫
+            eqToHom hFx'.symm =
+          eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm := by
+      calc
+        eqToHom hζcod.symm ≫ eqToHom hFζ ≫ gX ≫
+              eqToHom hFx'.symm =
+            (eqToHom hζcod.symm ≫ eqToHom hFζ) ≫ gX ≫
+              eqToHom hFx'.symm := by simp only [Category.assoc]
+        _ = (eqToHom hGζ ≫ eqToHom hζP.symm) ≫ gX ≫
+              eqToHom hFx'.symm := by rw [hrightpath]
+        _ = eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => eqToHom hGζ ≫ k) hgXtailF
     let gY : (Over.forget U).obj ζ.obj.obj.left ⟶
         q.obj (F.functor.obj x') :=
-      g ≫ eqToHom hFx'.symm
+      gOver ≫ eqToHom hFx'.symm
     have hrightcomp : q.IsHomLift gY
         (ζ.obj.obj.hom ≫ F.functor.map χright) := by
       apply CategoryTheory.IsHomLift.of_fac' q gY
         (ζ.obj.obj.hom ≫ F.functor.map χright) hGζ rfl
-      rw [Functor.map_comp, hζmap, hFmapχright, hχrightmap]
-      simp [gY, hζcod, hζP, Category.assoc]
+      rw [Functor.map_comp, hζmap, hFmapχright, ← hχrightmap]
+      simpa [gY] using hrightcomp_path
+    let hGη :=
+      congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left) G.over
     have hGχleftmap : q.map (G.functor.map χleft) =
         eqToHom hGζ ≫ (Over.forget U).map χleft ≫
-          eqToHom (congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left)
-            G.over).symm := by
+          eqToHom hGη.symm := by
       exact Functor.congr_hom G.over χleft
     have hχleftmap : (Over.forget U).map χleft =
-        g ≫ eqToHom hdomA.symm := by
+        gOver ≫ eqToHom hdomA.symm := by
       let : (Over.forget U).IsHomLift
           (g ≫ eqToHom hdomA.symm) χleft := hχleft
       have hfac := CategoryTheory.IsHomLift.fac'
@@ -490,19 +549,28 @@ theorem slicePullbackLeft_isFibredInGroupoids
       have hfac' : (Over.forget U).map χleft =
           eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl) := by
         simpa only [Over.forget_map, Category.assoc] using hfac
-      have hright : eqToHom hζbase ≫
-          ((g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl)) =
-            g ≫ eqToHom hdomA.symm := by
-        apply eq_of_heq
-        exact (CategoryTheory.eqToHom_comp_heq _ hζbase).trans
-          (CategoryTheory.comp_eqToHom_heq _ (rfl))
-      exact hfac'.trans hright
+      simpa [gOver, Category.assoc] using hfac'
+    have hχleftmapOver : (Over.forget U).map χleft =
+        gOver ≫ eqToHom hdomA.symm := by
+      exact hχleftmap
     have hleftcomp : q.IsHomLift gY
         (G.functor.map χleft ≫ χ) := by
       apply CategoryTheory.IsHomLift.of_fac' q gY
         (G.functor.map χleft ≫ χ) hGζ rfl
-      rw [Functor.map_comp, hGχleftmap, hχmap, hχleftmap]
-      simp [gY, hsource, hdomA, hFx', Category.assoc]
+      rw [Functor.map_comp, hGχleftmap, ← hχmap, hχleftmapOver]
+      simp [gY, gOver, hsource, hdomA, hFx', Category.assoc]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
+      apply (cancel_epi (eqToHom hGζ)).1
+      simp only [Category.assoc, eqToHom_trans]
     let : q.IsHomLift gY (G.functor.map χleft ≫ χ) := hleftcomp
     let : q.IsHomLift gY (ζ.obj.obj.hom ≫ F.functor.map χright) := hrightcomp
     have hκw : G.functor.map χleft ≫ χ =
@@ -537,7 +605,8 @@ theorem slicePullbackLeft_isFibredInGroupoids
         (slicePullbackBase F U G) g κ rfl hdomA
       dsimp [slicePullbackBase, verticalIsoCommaBase, κ,
         ObjectProperty.homMk]
-      exact hχleftmap
+      change (Over.forget U).map χleft = _
+      simpa [Category.assoc, hζbase] using hχleftmap
     have hκfac : κ ≫ φ = τ := by
       apply ObjectProperty.hom_ext
       apply ObjectProperty.hom_ext
@@ -549,22 +618,71 @@ theorem slicePullbackLeft_isFibredInGroupoids
     intro m hm
     rcases hm with ⟨hmBase, hmFac⟩
     let : (slicePullbackBase F U G).IsHomLift g m := hmBase
-    have hmLeft : (Over.forget U).IsHomLift g m.hom.hom.left := by
+    have hmLeft : (Over.forget U).IsHomLift
+        (g ≫ eqToHom hdomA.symm) m.hom.hom.left := by
       apply CategoryTheory.IsHomLift.of_fac'
-        (Over.forget U) g m.hom.hom.left rfl rfl
+        (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left hζbase rfl
       have hfac := CategoryTheory.IsHomLift.fac'
         (slicePullbackBase F U G) g m
-      dsimp [slicePullbackBase, verticalIsoCommaBase] at hfac
-      exact hfac
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (slicePullbackBase F U G) g m = rfl :=
+        Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (slicePullbackBase F U G) g m = hdomA :=
+        Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      dsimp [slicePullbackBase, verticalIsoCommaBase, isoCommaLeft] at hfac
+      change Over.Hom.left m.hom.hom.left = _ at hfac
+      trace_state
+      change Over.Hom.left m.hom.hom.left = _
+      rw [hfac]
+      apply eq_of_heq
+      have hleft :
+          eqToHom (rfl : (slicePullbackBase F U G).obj ζ =
+            (slicePullbackBase F U G).obj ζ) ≫ g ≫ eqToHom hdomA.symm ≍
+            g ≫ eqToHom hdomA.symm := by
+        simpa only [Category.assoc] using
+          CategoryTheory.eqToHom_comp_heq (g ≫ eqToHom hdomA.symm)
+            (rfl : (slicePullbackBase F U G).obj ζ =
+              (slicePullbackBase F U G).obj ζ)
+      have hright :
+          eqToHom hζbase ≫ g ≫ eqToHom hdomA.symm ≫ eqToHom (rfl) ≍
+            g ≫ eqToHom hdomA.symm := by
+        have hright0 :
+            (eqToHom hζbase ≫ g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl) ≍
+              eqToHom hζbase ≫ g ≫ eqToHom hdomA.symm :=
+          (CategoryTheory.comp_eqToHom_heq
+            (eqToHom hζbase ≫ g ≫ eqToHom hdomA.symm)
+            (rfl : (Over.forget U).obj η.obj.obj.left =
+              (Over.forget U).obj η.obj.obj.left)).symm
+        have hright1 :
+            eqToHom hζbase ≫ g ≫ eqToHom hdomA.symm ≍
+              g ≫ eqToHom hdomA.symm :=
+          CategoryTheory.eqToHom_comp_heq (g ≫ eqToHom hdomA.symm) hζbase
+        simpa only [Category.assoc] using hright0.trans hright1
+      simpa only [Category.assoc] using hleft.trans hright.symm
     have hmLeftFac : m.hom.hom.left ≫ c = τ.hom.hom.left := by
       have hh := congrArg (fun k => k.hom.hom.left) hmFac
       simpa [φ, ObjectProperty.homMk] using hh
     have hmLeftEq : m.hom.hom.left = χleft :=
       hχleftuniq m.hom.hom.left ⟨hmLeft, hmLeftFac⟩
-    have hmLeftMap : (Over.forget U).map m.hom.hom.left = g := by
-      let : (Over.forget U).IsHomLift g m.hom.hom.left := hmLeft
-      simpa using CategoryTheory.IsHomLift.fac'
-        (Over.forget U) g m.hom.hom.left
+    have hmLeftMap : (Over.forget U).map m.hom.hom.left =
+        gOver ≫ eqToHom hdomA.symm := by
+      let : (Over.forget U).IsHomLift
+          (g ≫ eqToHom hdomA.symm) m.hom.hom.left := hmLeft
+      have hfac := CategoryTheory.IsHomLift.fac'
+        (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left = hζbase :=
+        Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left = rfl :=
+        Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      have hfac' : (Over.forget U).map m.hom.hom.left =
+          eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl) := by
+        simpa only [Over.forget_map, Category.assoc] using hfac
+      simpa [gOver, Category.assoc] using hfac'
     have hGmmap : q.map (G.functor.map m.hom.hom.left) =
         eqToHom hGζ ≫ (Over.forget U).map m.hom.hom.left ≫
           eqToHom (congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left)
@@ -578,15 +696,15 @@ theorem slicePullbackLeft_isFibredInGroupoids
           q.map ζ.obj.obj.hom ≫ q.map (F.functor.map m.hom.hom.right) := by
       rw [← q.map_comp, ← q.map_comp]
       exact congrArg q.map m.hom.hom.w
-    rw [hGmmap, hχmap, hζmap, hmFmap, hmLeftMap] at hmWmap
+    rw [hGmmap, ← hχmap, hζmap, hmFmap, hmLeftMap] at hmWmap
     have hmWmap' :
-        eqToHom hGζ ≫ g ≫ eqToHom hTarget =
+        eqToHom hGζ ≫ gOver ≫ eqToHom hTarget =
           eqToHom hζcod.symm ≫ eqToHom hFζ ≫
             p.map m.hom.hom.right ≫ eqToHom hFx'.symm := by
       simpa [hsource, hTarget, hζcod, hζP, Category.assoc] using hmWmap
     have hmXMap : p.map m.hom.hom.right = gX := by
+      apply (cancel_epi (eqToHom hζP.symm)).1
       apply (cancel_epi (eqToHom hGζ)).1
-      apply (cancel_epi (eqToHom hζP)).1
       apply (cancel_mono (eqToHom hFx'.symm)).1
       simp [gX, gY, hTarget, hζcod, Category.assoc]
       rw [← hmWmap']
@@ -599,6 +717,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       simpa [φ, ObjectProperty.homMk] using hh
     have hmRightEq : m.hom.hom.right = χright :=
       hχrightuniq m.hom.hom.right ⟨hmRight, hmRightFac⟩
+    apply ObjectProperty.hom_ext
     apply ObjectProperty.hom_ext
     apply Comma.hom_ext
     · simpa [κ, ObjectProperty.homMk] using hmLeftEq
@@ -678,13 +797,12 @@ theorem slicePullbackLeft_isFibredInGroupoids
 
   -/ /- prior attempt: the active construction below did not elaborate; it is
      retained verbatim for later repair. -/
-  /-
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
-    letI : p.IsFibered :=
+    let hpFiber : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
-    letI : q.IsFibered :=
+    let hqFiber : q.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.2
-    letI : (Over.forget U).IsFibered :=
+    let hOverFiber : (Over.forget U).IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres
         (Over.forget U)).mp (sliceProjection_isFibredInGroupoids U) |>.2
     refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
@@ -695,7 +813,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
     change p.obj ξ.obj.obj.right = (Over.forget U).obj ξ.obj.obj.left at hX
     let fX : R ⟶ p.obj ξ.obj.obj.right := f ≫ eqToHom hX.symm
     obtain ⟨x', b, hb⟩ :=
-      (fibred_category_iff_exists_stronglyCartesian p).mp (inferInstance)
+      (fibred_category_iff_exists_stronglyCartesian p).mp hpFiber
         ξ.obj.obj.right R fX
     let : p.IsStronglyCartesian fX b := hb
     let : p.IsHomLift fX b := by infer_instance
@@ -711,7 +829,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
         (F.functor.map b) := hFstrong
     obtain ⟨a', c, hc⟩ :=
       (fibred_category_iff_exists_stronglyCartesian (Over.forget U)).mp
-        (inferInstance) ξ.obj.obj.left _ f
+        hOverFiber ξ.obj.obj.left _ f
     let : (Over.forget U).IsStronglyCartesian f c := hc
     let : (Over.forget U).IsHomLift f c := by infer_instance
     have hdomA : (Over.forget U).obj a' = p.obj x' :=
@@ -773,12 +891,15 @@ theorem slicePullbackLeft_isFibredInGroupoids
     have hfactor : q.map (G.functor.map c ≫ ξ.obj.obj.hom) =
         eqToHom hsource ≫ q.map (F.functor.map b) := by
       rw [Functor.map_comp, hGcmap, hmapξ, hFmap, ← hBmap]
-      dsimp [hsource, hcodξ]
-      have hGa_eq : hGa = hdomG := Subsingleton.elim _ _
-      have hsource_eq : hsource = hGa.trans hFx'.symm :=
-        Subsingleton.elim _ _
-      rw [hsource_eq, hGa_eq]
-      simp [fX, Category.assoc, eqToHom_trans]
+      have hleft : eqToHom hGa =
+          eqToHom hsource ≫ eqToHom hFx' := by
+        rw [eqToHom_trans]
+      have hright : eqToHom hcodG.symm ≫ eqToHom hcodξ.symm =
+          eqToHom hX.symm ≫ eqToHom hFx.symm := by
+        rw [eqToHom_trans, eqToHom_trans]
+      rw [hleft]
+      simp only [fX, Category.assoc]
+      rw [hright]
     obtain ⟨χ, ⟨hχ, hχeq⟩, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property q
         (q.map (F.functor.map b)) (F.functor.map b)
@@ -797,7 +918,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
         (Functor.Fiber q (q.obj (F.functor.obj x'))) :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1 _
     have hχiso : IsIso χ := by
-      haveI : IsGroupoid
+      have hqGroup : IsGroupoid
           (Functor.Fiber q (q.obj (F.functor.obj x'))) := hgroup
       let k := Functor.Fiber.homMk q (q.obj (F.functor.obj x')) χ
       let _ : IsIso k := hgroup.all_isIso k
@@ -835,26 +956,118 @@ theorem slicePullbackLeft_isFibredInGroupoids
     intro ζ g τ hτ
     let : (slicePullbackBase F U G).IsHomLift
         (g ≫ f) τ := hτ
+    have hζbase : (Over.forget U).obj ζ.obj.obj.left =
+        (slicePullbackBase F U G).obj ζ := rfl
+    have hcmap : (Over.forget U).map c =
+        eqToHom hdomA ≫ f := by
+      have hfac := CategoryTheory.IsHomLift.fac'
+        (Over.forget U) f c
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) f c = hdomA := Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) f c = rfl := Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      simpa only [Over.forget_map, Category.assoc, eqToHom_refl,
+        Category.comp_id] using hfac
     have hτA : (Over.forget U).IsHomLift
         (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c)
           τ.hom.hom.left := by
+      have hτmap :
+          g ≫ f = (slicePullbackBase F U G).map τ :=
+        CategoryTheory.IsHomLift.eq_of_isHomLift
+          (slicePullbackBase F U G) (g ≫ f) τ
+      dsimp [slicePullbackBase, verticalIsoCommaBase] at hτmap
+      have hτmap' := Eq.symm hτmap
+      change (Over.forget U).map τ.hom.hom.left = g ≫ f at hτmap'
+      have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := by
+        have hfac := CategoryTheory.IsHomLift.fac'
+          (Over.forget U) f c
+        have hdom : CategoryTheory.IsHomLift.domain_eq
+            (Over.forget U) f c = hdomA := Subsingleton.elim _ _
+        have hcod : CategoryTheory.IsHomLift.codomain_eq
+            (Over.forget U) f c = rfl := Subsingleton.elim _ _
+        rw [hdom, hcod] at hfac
+        simpa only [Over.forget_map, eqToHom_refl, Category.comp_id,
+          Category.id_comp] using hfac
+      have hcancel : eqToHom hdomA.symm ≫ eqToHom hdomA =
+          𝟙 (p.obj x') := by
+        have heq : hdomA.symm.trans hdomA =
+            (rfl : p.obj x' = p.obj x') := Subsingleton.elim _ _
+        rw [eqToHom_trans, heq, eqToHom_refl]
+      have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
+        rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
+        rw [hcancel]
+        simp only [Category.assoc, Category.id_comp, Category.comp_id]
+      have htransport :
+          eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm ≫
+            (Over.forget U).map c) ≫ eqToHom (rfl) = g ≫ f := by
+        rw [hcmap', hgf]
+        have hout : eqToHom hζbase ≫
+            ((g ≫ f) ≫ eqToHom (rfl)) = g ≫ f := by
+          apply eq_of_heq
+          exact (CategoryTheory.eqToHom_comp_heq
+            ((g ≫ f) ≫ eqToHom (rfl)) hζbase).trans
+            (CategoryTheory.comp_eqToHom_heq (g ≫ f) (rfl))
+        simpa only [Category.assoc] using hout
       apply CategoryTheory.IsHomLift.of_fac'
         (Over.forget U) (g ≫ eqToHom hdomA.symm ≫
-          (Over.forget U).map c) τ.hom.hom.left rfl rfl
-      have hfac := CategoryTheory.IsHomLift.fac'
-        (slicePullbackBase F U G)
-          (g ≫ f) τ
-      dsimp [slicePullbackBase, verticalIsoCommaBase] at hfac
-      change (Over.forget U).map τ.hom.hom.left = _ at hfac
-      simpa [Category.assoc, eqToHom_trans] using hfac
+          (Over.forget U).map c) τ.hom.hom.left hζbase rfl
+      change (Over.forget U).map τ.hom.hom.left =
+        eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm ≫
+          (Over.forget U).map c) ≫ eqToHom (rfl)
+      rw [htransport]
+      exact hτmap'
     let : (Over.forget U).IsHomLift
         (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c)
           τ.hom.hom.left := hτA
+    have hgf : g ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f = g ≫ f := by
+      have hcancel : eqToHom hdomA.symm ≫ eqToHom hdomA =
+          𝟙 (p.obj x') := by
+        have heq : hdomA.symm.trans hdomA =
+            (rfl : p.obj x' = p.obj x') := Subsingleton.elim _ _
+        rw [eqToHom_trans, heq, eqToHom_refl]
+      rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
+      rw [hcancel]
+      simp only [Category.assoc, Category.id_comp, Category.comp_id]
+    let gOver : (Over.forget U).obj ζ.obj.obj.left ⟶ p.obj x' :=
+      eqToHom hζbase ≫ g
+    have hgfOver :
+        gOver ≫ eqToHom hdomA.symm ≫ eqToHom hdomA ≫ f =
+          gOver ≫ f := by
+      have hcancel : eqToHom hdomA.symm ≫ eqToHom hdomA =
+          𝟙 (p.obj x') := by
+        have heq : hdomA.symm.trans hdomA =
+            (rfl : p.obj x' = p.obj x') := Subsingleton.elim _ _
+        rw [eqToHom_trans, heq, eqToHom_refl]
+      rw [← Category.assoc (eqToHom hdomA.symm) (eqToHom hdomA) f]
+      rw [hcancel]
+      simp only [Category.assoc, Category.id_comp, Category.comp_id]
     have hτAmap : (Over.forget U).map τ.hom.hom.left =
-        g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c := by
-      simpa using CategoryTheory.IsHomLift.fac'
+        gOver ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c := by
+      have hfac := CategoryTheory.IsHomLift.fac'
         (Over.forget U) (g ≫ eqToHom hdomA.symm ≫
           (Over.forget U).map c) τ.hom.hom.left
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm ≫
+            (Over.forget U).map c) τ.hom.hom.left = rfl :=
+        Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm ≫
+            (Over.forget U).map c) τ.hom.hom.left = rfl :=
+        Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      have hfac' : (Over.forget U).map τ.hom.hom.left =
+          eqToHom hζbase ≫
+            (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c) ≫
+              eqToHom (rfl) := by
+        simpa only [Over.forget_map, Category.assoc] using hfac
+      have hright : eqToHom hζbase ≫
+          ((g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c) ≫
+            eqToHom (rfl)) =
+            gOver ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c := by
+        dsimp [gOver]
+        simp [Category.assoc]
+      exact hfac'.trans hright
     let : (Over.forget U).IsStronglyCartesian
         ((Over.forget U).map c) c := hc'
     obtain ⟨χleft, ⟨hχleft, hχleftfac⟩, hχleftuniq⟩ :=
@@ -871,9 +1084,14 @@ theorem slicePullbackLeft_isFibredInGroupoids
     let hFζ := congrArg (fun K : X ⥤ C => K.obj ζ.obj.obj.right) F.over
     let hFxτ := congrArg (fun K : X ⥤ C => K.obj ξ.obj.obj.right) F.over
     let hGζ := congrArg (fun K : Over U ⥤ C => K.obj ζ.obj.obj.left) G.over
+    have hGζ0 : (Over.forget U).obj ζ.obj.obj.left =
+        q.obj (G.functor.obj ζ.obj.obj.left) := by
+      exact hGζ.symm
     let hζcod : q.obj (F.functor.obj ζ.obj.obj.right) =
         q.obj (G.functor.obj ζ.obj.obj.left) :=
-      hFζ.trans hζP.trans hGζ.symm
+      hFζ.trans (hζP.trans hGζ0)
+    have hζPbase : p.obj ζ.obj.obj.right =
+        (slicePullbackBase F U G).obj ζ := hζP.trans hζbase
     have hζmap : q.map ζ.obj.obj.hom = eqToHom hζcod.symm := by
       let _ : q.IsHomLift (𝟙 ((Over.forget U).obj ζ.obj.obj.left))
           ζ.obj.obj.hom := hζhom
@@ -883,6 +1101,16 @@ theorem slicePullbackLeft_isFibredInGroupoids
         eqToHom_trans] using h
     let hGτL := congrArg (fun K : Over U ⥤ C => K.obj ζ.obj.obj.left) G.over
     let hGτR := hcodG
+    have hrightpath : eqToHom hζcod.symm ≫ eqToHom hFζ =
+        eqToHom hGτL ≫ eqToHom hζP.symm := by
+      calc
+        eqToHom hζcod.symm ≫ eqToHom hFζ =
+            eqToHom (hζcod.symm.trans hFζ) := by rw [eqToHom_trans]
+        _ = eqToHom (hGτL.trans hζP.symm) := by
+          apply congrArg eqToHom
+          apply Subsingleton.elim
+        _ = eqToHom hGτL ≫ eqToHom hζP.symm := by
+          rw [eqToHom_trans]
     have hGτmap : q.map (G.functor.map τ.hom.hom.left) =
         eqToHom hGτL ≫ (Over.forget U).map τ.hom.hom.left ≫
           eqToHom hGτR.symm := by
@@ -896,25 +1124,103 @@ theorem slicePullbackLeft_isFibredInGroupoids
       rw [← q.map_comp, ← q.map_comp]
       exact congrArg q.map τ.hom.hom.w
     rw [hGτmap, hmapξ, hζmap, hFτmap] at hτwmap
-    let hGτL' := hGτL
+    let hcodξ' : (Over.forget U).obj ξ.obj.obj.left =
+        q.obj (F.functor.obj ξ.obj.obj.right) :=
+      hcodG.symm.trans hcodξ.symm
+    have hleftpath : eqToHom hGτR.symm ≫ eqToHom hcodξ.symm =
+        eqToHom hcodξ' := by
+      calc
+        eqToHom hGτR.symm ≫ eqToHom hcodξ.symm =
+            eqToHom (hGτR.symm.trans hcodξ.symm) := by rw [eqToHom_trans]
+        _ = eqToHom hcodξ' := by
+          apply congrArg eqToHom
+          apply Subsingleton.elim
+    have hleftpath' :
+        gOver ≫ f ≫ eqToHom hGτR.symm ≫ eqToHom hcodξ.symm =
+          gOver ≫ f ≫ eqToHom hcodξ' := by
+      calc
+        gOver ≫ f ≫ eqToHom hGτR.symm ≫ eqToHom hcodξ.symm =
+            (gOver ≫ f) ≫
+              (eqToHom hGτR.symm ≫ eqToHom hcodξ.symm) := by
+                simp only [Category.assoc]
+        _ = (gOver ≫ f) ≫ eqToHom hcodξ' := by rw [hleftpath]
+        _ = gOver ≫ f ≫ eqToHom hcodξ' := by
+          simp only [Category.assoc]
+    have hrightpath' :
+        eqToHom hζcod.symm ≫ eqToHom hFζ ≫ p.map τ.hom.hom.right ≫
+            eqToHom hFxτ.symm =
+          eqToHom hGτL ≫ eqToHom hζP.symm ≫ p.map τ.hom.hom.right ≫
+            eqToHom hFxτ.symm := by
+      rw [← Category.assoc (eqToHom hζcod.symm) (eqToHom hFζ)
+        (p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm)]
+      rw [hrightpath]
+      simp only [Category.assoc]
     have hτwmap' :
-        g ≫ f ≫ eqToHom hcodξ.symm =
+        gOver ≫ f ≫ eqToHom hcodξ' =
           eqToHom hζP.symm ≫ p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm := by
       rw [hτAmap] at hτwmap
-      simp [Category.assoc] at hτwmap ⊢
-      exact hτwmap
+      rw [hcmap] at hτwmap
+      rw [hgfOver] at hτwmap
+      apply (cancel_epi (eqToHom hGτL)).1
+      simp only [Category.assoc] at hτwmap ⊢
+      rw [hleftpath', hrightpath'] at hτwmap
+      simpa using hτwmap
     let gX : p.obj ζ.obj.obj.right ⟶ p.obj x' :=
-      eqToHom hζP ≫ g
+      eqToHom hζPbase ≫ g
+    have hcodξpath : eqToHom hcodξ' ≫ eqToHom hFxτ =
+        eqToHom hX.symm := by
+      calc
+        eqToHom hcodξ' ≫ eqToHom hFxτ =
+            eqToHom (hcodξ'.trans hFxτ) := by rw [eqToHom_trans]
+        _ = eqToHom hX.symm := by
+          apply congrArg eqToHom
+          apply Subsingleton.elim
+    have hgX : eqToHom hζP.symm ≫ gX = gOver := by
+      dsimp [gX, gOver]
+      calc
+        eqToHom hζP.symm ≫ (eqToHom hζPbase ≫ g) =
+            (eqToHom hζP.symm ≫ eqToHom hζPbase) ≫ g := by
+              simp only [Category.assoc]
+        _ = eqToHom (hζP.symm.trans hζPbase) ≫ g := by
+          rw [eqToHom_trans]
+        _ = eqToHom hζbase ≫ g := by
+          apply congrArg (fun e => eqToHom e ≫ g)
+          apply Subsingleton.elim
+    have hgXtail :
+        eqToHom hζP.symm ≫ gX ≫ fX ≫ eqToHom hFxτ.symm =
+          gOver ≫ fX ≫ eqToHom hFxτ.symm := by
+      calc
+        eqToHom hζP.symm ≫ gX ≫ fX ≫ eqToHom hFxτ.symm =
+            (eqToHom hζP.symm ≫ gX) ≫ fX ≫
+              eqToHom hFxτ.symm := by
+                simp only [Category.assoc]
+        _ = gOver ≫ fX ≫ eqToHom hFxτ.symm := by rw [hgX]
+    have hcodξpath' : eqToHom hcodξ' =
+        eqToHom hX.symm ≫ eqToHom hFxτ.symm := by
+      apply (cancel_mono (eqToHom hFxτ)).1
+      rw [hcodξpath]
+      simp only [Category.assoc, eqToHom_trans]
+    have hfpath :
+        gOver ≫ f ≫ eqToHom hcodξ' =
+          gOver ≫ fX ≫ eqToHom hFxτ.symm := by
+      calc
+        gOver ≫ f ≫ eqToHom hcodξ' =
+            gOver ≫ f ≫
+              (eqToHom hX.symm ≫ eqToHom hFxτ.symm) := by
+                rw [hcodξpath']
+        _ = gOver ≫ fX ≫ eqToHom hFxτ.symm := by
+          simp only [fX, Category.assoc]
     have hτmap : p.map τ.hom.hom.right = gX ≫ fX := by
       apply (cancel_epi (eqToHom hζP.symm)).1
       apply (cancel_mono (eqToHom hFxτ.symm)).1
-      simp [gX, fX, Category.assoc]
+      simp only [Category.assoc]
       rw [← hτwmap']
-      simp [Category.assoc]
+      rw [hgXtail]
+      exact hfpath
     have hτX : p.IsHomLift (gX ≫ fX) τ.hom.hom.right := by
       apply CategoryTheory.IsHomLift.of_fac' p (gX ≫ fX)
         τ.hom.hom.right rfl rfl
-      exact hτmap.symm
+      simpa only [eqToHom_refl, Category.id_comp, Category.comp_id] using hτmap
     let : p.IsHomLift (gX ≫ fX) τ.hom.hom.right := hτX
     obtain ⟨χright, ⟨hχright, hχrightfac⟩, hχrightuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property
@@ -926,30 +1232,87 @@ theorem slicePullbackLeft_isFibredInGroupoids
       exact Functor.congr_hom F.over χright
     have hχrightmap : gX = p.map χright :=
       CategoryTheory.IsHomLift.eq_of_isHomLift p gX χright
+    have hgXtailF :
+        eqToHom hζP.symm ≫ gX ≫ eqToHom hFx'.symm =
+          gOver ≫ eqToHom hFx'.symm := by
+      calc
+        eqToHom hζP.symm ≫ gX ≫ eqToHom hFx'.symm =
+            (eqToHom hζP.symm ≫ gX) ≫ eqToHom hFx'.symm := by
+              simp only [Category.assoc]
+        _ = gOver ≫ eqToHom hFx'.symm := by rw [hgX]
+    have hrightcomp_path :
+        eqToHom hζcod.symm ≫ eqToHom hFζ ≫ gX ≫
+            eqToHom hFx'.symm =
+          eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm := by
+      calc
+        eqToHom hζcod.symm ≫ eqToHom hFζ ≫ gX ≫
+              eqToHom hFx'.symm =
+            (eqToHom hζcod.symm ≫ eqToHom hFζ) ≫ gX ≫
+              eqToHom hFx'.symm := by simp only [Category.assoc]
+        _ = (eqToHom hGζ ≫ eqToHom hζP.symm) ≫ gX ≫
+              eqToHom hFx'.symm := by rw [hrightpath]
+        _ = eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => eqToHom hGζ ≫ k) hgXtailF
     let gY : (Over.forget U).obj ζ.obj.obj.left ⟶
         q.obj (F.functor.obj x') :=
-      g ≫ eqToHom hFx'.symm
+      gOver ≫ eqToHom hFx'.symm
     have hrightcomp : q.IsHomLift gY
         (ζ.obj.obj.hom ≫ F.functor.map χright) := by
       apply CategoryTheory.IsHomLift.of_fac' q gY
-        (ζ.obj.obj.hom ≫ F.functor.map χright) hGζ hTarget
-      rw [Functor.map_comp, hζmap, hFmapχright, hχrightmap]
-      simp [gY, hζcod, hζP, Category.assoc]
+        (ζ.obj.obj.hom ≫ F.functor.map χright) hGζ rfl
+      rw [Functor.map_comp, hζmap, hFmapχright, ← hχrightmap]
+      simpa [gY] using hrightcomp_path
+    let hGη :=
+      congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left) G.over
     have hGχleftmap : q.map (G.functor.map χleft) =
         eqToHom hGζ ≫ (Over.forget U).map χleft ≫
-          eqToHom (congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left)
-            G.over).symm := by
+          eqToHom hGη.symm := by
       exact Functor.congr_hom G.over χleft
     have hχleftmap : (Over.forget U).map χleft =
-        g ≫ eqToHom hdomA.symm := by
-      simpa using CategoryTheory.IsHomLift.fac'
+        gOver ≫ eqToHom hdomA.symm := by
+      let : (Over.forget U).IsHomLift
+          (g ≫ eqToHom hdomA.symm) χleft := hχleft
+      have hfac := CategoryTheory.IsHomLift.fac'
         (Over.forget U) (g ≫ eqToHom hdomA.symm) χleft
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) χleft = hζbase :=
+        Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) χleft = rfl :=
+        Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      have hfac' : (Over.forget U).map χleft =
+          eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl) := by
+        simpa only [Over.forget_map, Category.assoc] using hfac
+      simpa [gOver, Category.assoc] using hfac'
+    have hχleftmapOver : (Over.forget U).map χleft =
+        gOver ≫ eqToHom hdomA.symm := by
+      exact hχleftmap
     have hleftcomp : q.IsHomLift gY
         (G.functor.map χleft ≫ χ) := by
       apply CategoryTheory.IsHomLift.of_fac' q gY
-        (G.functor.map χleft ≫ χ) hGζ hTarget
-      rw [Functor.map_comp, hGχleftmap, hχmap, hχleftmap]
-      simp [gY, hsource, hdomA, hFx', Category.assoc]
+        (G.functor.map χleft ≫ χ) hGζ rfl
+      rw [Functor.map_comp, hGχleftmap, ← hχmap, hχleftmapOver]
+      have hpath :
+          gOver ≫ eqToHom hdomA.symm ≫ eqToHom hGη.symm ≫
+              eqToHom hsource =
+            gOver ≫ eqToHom hFx'.symm := by
+        calc
+          gOver ≫ eqToHom hdomA.symm ≫ eqToHom hGη.symm ≫
+                eqToHom hsource =
+              gOver ≫ (eqToHom hdomA.symm ≫ eqToHom hGη.symm) ≫
+                eqToHom hsource := by simp only [Category.assoc]
+          _ = gOver ≫ eqToHom (hdomA.symm.trans hGη.symm) ≫
+                eqToHom hsource := by rw [eqToHom_trans]
+          _ = gOver ≫ eqToHom ((hdomA.symm.trans hGη.symm).trans hsource) := by
+            rw [eqToHom_trans]
+          _ = gOver ≫ eqToHom hFx'.symm := by
+            apply congrArg (fun e => gOver ≫ eqToHom e)
+            apply Subsingleton.elim
+      simp only [gY, Category.assoc, eqToHom_refl, Category.comp_id]
+      simpa only [Category.assoc] using
+        congrArg (fun k => eqToHom hGζ ≫ k) hpath
     let : q.IsHomLift gY (G.functor.map χleft ≫ χ) := hleftcomp
     let : q.IsHomLift gY (ζ.obj.obj.hom ≫ F.functor.map χright) := hrightcomp
     have hκw : G.functor.map χleft ≫ χ =
@@ -981,38 +1344,58 @@ theorem slicePullbackLeft_isFibredInGroupoids
             w := hκw })
     have hκbase : (slicePullbackBase F U G).IsHomLift g κ := by
       apply CategoryTheory.IsHomLift.of_fac'
-        (slicePullbackBase F U G) g κ rfl rfl
-      have hfac := CategoryTheory.IsHomLift.fac'
-        (Over.forget U) g χleft
+        (slicePullbackBase F U G) g κ rfl hdomA
       dsimp [slicePullbackBase, verticalIsoCommaBase, κ,
-        ObjectProperty.homMk]
-      exact hfac
+        ObjectProperty.homMk, isoCommaLeft]
+      change (Over.forget U).map χleft = _
+      rw [hχleftmap]
+      dsimp [gOver]
+      cases hζbase
+      simp only [Category.assoc]
+      congr 1 <;> apply Subsingleton.elim
     have hκfac : κ ≫ φ = τ := by
+      apply ObjectProperty.hom_ext
       apply ObjectProperty.hom_ext
       apply Comma.hom_ext
       · dsimp [κ, φ, ObjectProperty.homMk]
         exact hχleftfac
       · dsimp [κ, φ, ObjectProperty.homMk]
         exact hχrightfac
+    refine ⟨κ, ⟨hκbase, hκfac⟩, ?_⟩
     intro m hm
     rcases hm with ⟨hmBase, hmFac⟩
     let : (slicePullbackBase F U G).IsHomLift g m := hmBase
-    have hmLeft : (Over.forget U).IsHomLift g m.hom.hom.left := by
+    have hmLeft : (Over.forget U).IsHomLift
+        (g ≫ eqToHom hdomA.symm) m.hom.hom.left := by
       apply CategoryTheory.IsHomLift.of_fac'
-        (Over.forget U) g m.hom.hom.left rfl rfl
+        (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left hζbase rfl
       have hfac := CategoryTheory.IsHomLift.fac'
         (slicePullbackBase F U G) g m
-      dsimp [slicePullbackBase, verticalIsoCommaBase] at hfac
+      dsimp [Functor.comp, slicePullbackBase, verticalIsoCommaBase,
+        isoCommaLeft, Comma.fst] at hfac
       exact hfac
     have hmLeftFac : m.hom.hom.left ≫ c = τ.hom.hom.left := by
       have hh := congrArg (fun k => k.hom.hom.left) hmFac
       simpa [φ, ObjectProperty.homMk] using hh
     have hmLeftEq : m.hom.hom.left = χleft :=
       hχleftuniq m.hom.hom.left ⟨hmLeft, hmLeftFac⟩
-    have hmLeftMap : (Over.forget U).map m.hom.hom.left = g := by
-      let : (Over.forget U).IsHomLift g m.hom.hom.left := hmLeft
-      simpa using CategoryTheory.IsHomLift.fac'
-        (Over.forget U) g m.hom.hom.left
+    have hmLeftMap : (Over.forget U).map m.hom.hom.left =
+        gOver ≫ eqToHom hdomA.symm := by
+      let : (Over.forget U).IsHomLift
+          (g ≫ eqToHom hdomA.symm) m.hom.hom.left := hmLeft
+      have hfac := CategoryTheory.IsHomLift.fac'
+        (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left
+      have hdom : CategoryTheory.IsHomLift.domain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left = hζbase :=
+        Subsingleton.elim _ _
+      have hcod : CategoryTheory.IsHomLift.codomain_eq
+          (Over.forget U) (g ≫ eqToHom hdomA.symm) m.hom.hom.left = rfl :=
+        Subsingleton.elim _ _
+      rw [hdom, hcod] at hfac
+      have hfac' : (Over.forget U).map m.hom.hom.left =
+          eqToHom hζbase ≫ (g ≫ eqToHom hdomA.symm) ≫ eqToHom (rfl) := by
+        simpa only [Over.forget_map, Category.assoc] using hfac
+      simpa [gOver, Category.assoc] using hfac'
     have hGmmap : q.map (G.functor.map m.hom.hom.left) =
         eqToHom hGζ ≫ (Over.forget U).map m.hom.hom.left ≫
           eqToHom (congrArg (fun K : Over U ⥤ C => K.obj η.obj.obj.left)
@@ -1026,19 +1409,63 @@ theorem slicePullbackLeft_isFibredInGroupoids
           q.map ζ.obj.obj.hom ≫ q.map (F.functor.map m.hom.hom.right) := by
       rw [← q.map_comp, ← q.map_comp]
       exact congrArg q.map m.hom.hom.w
-    rw [hGmmap, hχmap, hζmap, hmFmap, hmLeftMap] at hmWmap
+    rw [hGmmap, ← hχmap, hζmap, hmFmap, hmLeftMap] at hmWmap
+    have hmPath :
+        gOver ≫ eqToHom hdomA.symm ≫ eqToHom hGη.symm ≫
+            eqToHom hsource =
+          gOver ≫ eqToHom hFx'.symm := by
+      calc
+        gOver ≫ eqToHom hdomA.symm ≫ eqToHom hGη.symm ≫
+              eqToHom hsource =
+            gOver ≫ (eqToHom hdomA.symm ≫ eqToHom hGη.symm) ≫
+              eqToHom hsource := by simp only [Category.assoc]
+        _ = gOver ≫ eqToHom (hdomA.symm.trans hGη.symm) ≫
+              eqToHom hsource := by rw [eqToHom_trans]
+        _ = gOver ≫ eqToHom ((hdomA.symm.trans hGη.symm).trans hsource) := by
+          rw [eqToHom_trans]
+        _ = gOver ≫ eqToHom hFx'.symm := by
+          apply congrArg (fun e => gOver ≫ eqToHom e)
+          apply Subsingleton.elim
     have hmWmap' :
-        eqToHom hGζ ≫ g ≫ eqToHom hTarget =
+        eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm =
           eqToHom hζcod.symm ≫ eqToHom hFζ ≫
             p.map m.hom.hom.right ≫ eqToHom hFx'.symm := by
-      simpa [hsource, hTarget, hζcod, hζP, Category.assoc] using hmWmap
+      calc
+        eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm =
+            eqToHom hGζ ≫
+              (gOver ≫ eqToHom hdomA.symm ≫ eqToHom hGη.symm ≫
+                eqToHom hsource) := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => eqToHom hGζ ≫ k) hmPath.symm
+        _ = eqToHom hζcod.symm ≫ eqToHom hFζ ≫
+              p.map m.hom.hom.right ≫ eqToHom hFx'.symm := by
+          simpa only [Category.assoc] using hmWmap
     have hmXMap : p.map m.hom.hom.right = gX := by
+      apply (cancel_epi (eqToHom hζP.symm)).1
       apply (cancel_epi (eqToHom hGζ)).1
-      apply (cancel_epi (eqToHom hζP)).1
       apply (cancel_mono (eqToHom hFx'.symm)).1
-      simp [gX, gY, hTarget, hζcod, Category.assoc]
-      rw [← hmWmap']
-      simp [Category.assoc]
+      calc
+        (eqToHom hGζ ≫ eqToHom hζP.symm ≫ p.map m.hom.hom.right) ≫
+              eqToHom hFx'.symm =
+            (eqToHom hGζ ≫ eqToHom hζP.symm) ≫
+              (p.map m.hom.hom.right ≫ eqToHom hFx'.symm) := by
+          simp only [Category.assoc]
+        _ = (eqToHom hζcod.symm ≫ eqToHom hFζ) ≫
+              (p.map m.hom.hom.right ≫ eqToHom hFx'.symm) := by
+          rw [← hrightpath]
+        _ = eqToHom hζcod.symm ≫ eqToHom hFζ ≫
+              p.map m.hom.hom.right ≫ eqToHom hFx'.symm := by
+          simp only [Category.assoc]
+        _ = eqToHom hGζ ≫ gOver ≫ eqToHom hFx'.symm :=
+          hmWmap'.symm
+        _ = (eqToHom hGζ ≫ (eqToHom hζP.symm ≫ gX)) ≫
+              eqToHom hFx'.symm := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => eqToHom hGζ ≫ k ≫ eqToHom hFx'.symm)
+              hgX.symm
+        _ = (eqToHom hGζ ≫ eqToHom hζP.symm ≫ gX) ≫
+              eqToHom hFx'.symm := by
+          simp only [Category.assoc]
     have hmRight : p.IsHomLift gX m.hom.hom.right := by
       rw [← hmXMap]
       infer_instance
@@ -1047,6 +1474,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       simpa [φ, ObjectProperty.homMk] using hh
     have hmRightEq : m.hom.hom.right = χright :=
       hχrightuniq m.hom.hom.right ⟨hmRight, hmRightFac⟩
+    apply ObjectProperty.hom_ext
     apply ObjectProperty.hom_ext
     apply Comma.hom_ext
     · simpa [κ, ObjectProperty.homMk] using hmLeftEq
@@ -1137,7 +1565,6 @@ theorem slicePullbackLeft_isFibredInGroupoids
   letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
-  -/
 
 /- The source's definition of a representable 1-morphism. -/
 def IsRepresentableFibredMorphism

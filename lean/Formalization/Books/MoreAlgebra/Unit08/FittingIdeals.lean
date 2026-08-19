@@ -456,7 +456,25 @@ theorem exists_fittingIdeal_eq_top
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     ∃ t : ℕ, fittingIdeal R M t = ⊤ := by
-  sorry
+  have minorIdeal_zero
+      {n m : ℕ} (A : Matrix (Fin n) (Fin m) R) : minorIdeal A 0 = ⊤ := by
+    apply (Ideal.eq_top_iff_one _).mpr
+    apply Ideal.subset_span
+    refine ⟨∅, ∅, by simp, by simp, ?_⟩
+    simp [matrixMinor]
+  let h := Module.Finite.exists_fin' R M
+  refine ⟨h.choose, ?_⟩
+  unfold fittingIdeal
+  dsimp
+  change fittingIdealOfSurjection h.choose_spec.choose h.choose_spec.choose_spec h.choose = ⊤
+  unfold fittingIdealOfSurjection
+  apply top_unique
+  let z0 : Fin (h.choose - h.choose) → LinearMap.ker h.choose_spec.choose :=
+    fun i => Fin.elim0 ((Nat.sub_self h.choose) ▸ i)
+  refine le_iSup_of_le z0 ?_
+  have hz : minorIdeal (relationMatrix h.choose_spec.choose z0) (h.choose - h.choose) = ⊤ := by
+    simpa only [Nat.sub_self] using (minorIdeal_zero (relationMatrix h.choose_spec.choose z0))
+  rw [hz]
 
 /-! ## Basic properties -/
 
@@ -465,7 +483,24 @@ theorem fittingIdeal_eq_top_of_surjective
     [Module.Finite R M] {n : ℕ}
     (p : (Fin n → R) →ₗ[R] M) (hp : Function.Surjective p) :
     fittingIdeal R M n = ⊤ := by
-  sorry
+  have minorIdeal_zero
+      {n m : ℕ} (A : Matrix (Fin n) (Fin m) R) : minorIdeal A 0 = ⊤ := by
+    apply (Ideal.eq_top_iff_one _).mpr
+    apply Ideal.subset_span
+    refine ⟨∅, ∅, by simp, by simp, ?_⟩
+    simp [matrixMinor]
+  let h := Module.Finite.exists_fin' R M
+  unfold fittingIdeal
+  dsimp
+  rw [← fittingIdealOfSurjection_eq p h.choose_spec.choose hp h.choose_spec.choose_spec n]
+  unfold fittingIdealOfSurjection
+  apply top_unique
+  let z0 : Fin (n - n) → LinearMap.ker p :=
+    fun i => Fin.elim0 ((Nat.sub_self n) ▸ i)
+  refine le_iSup_of_le z0 ?_
+  have hz : minorIdeal (relationMatrix p z0) (n - n) = ⊤ := by
+    simpa only [Nat.sub_self] using (minorIdeal_zero (relationMatrix p z0))
+  rw [hz]
 
 theorem fittingIdeal_prod_zero
     {R M N : Type*} [CommRing R]

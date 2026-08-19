@@ -833,7 +833,39 @@ theorem quotientKernel_is_smallest (P : ObjectProperty C)
     instance is part of the source's target class even though this last
     elementwise step only uses strict fullness and saturation.
   -/
-  sorry
+  refine ⟨?_, ?_, ?_⟩
+  · let : AdditiveCategory (quotientCategory P) := {}
+    have hK := exactFunctorKernel_properties (F := quotientFunctor P)
+    have heq : exactFunctorKernel (quotientFunctor P) = quotientKernel P := by
+      ext Z
+      exact quotientFunctor_kernel_iff P Z
+    rw [← heq]
+    exact hK
+  · intro Z hZ
+    refine ⟨0, ⟨Z, hZ, ⟨?_⟩⟩⟩
+    refine
+      { hom := biprod.fst
+        inv := biprod.inl
+        hom_inv_id := ?_
+        inv_hom_id := ?_ }
+    · rw [← biprod.total]
+      have hsnd : (biprod.snd : Z ⊞ (0 : C) ⟶ (0 : C)) = 0 :=
+        Subsingleton.elim _ _
+      simp [hsnd]
+    · simp
+  · intro Q hPQ hQiso hQtri hQsat
+    letI : Q.IsClosedUnderIsomorphisms := hQiso
+    letI : Q.IsTriangulated := hQtri
+    intro Z hZ
+    obtain ⟨Z', hZZ'⟩ := hZ
+    have hPisoQ : P.isoClosure ≤ Q :=
+      (ObjectProperty.isoClosure_le_iff (P := P) (Q := Q)).2 hPQ
+    have hQsum : Q (Z ⊞ Z') := hPisoQ _ hZZ'
+    have hQsum' : Q.isoClosure (Z ⊞ Z') :=
+      Q.le_isoClosure _ hQsum
+    have hQparts := hQsat hQsum'
+    rw [ObjectProperty.isoClosure_eq_self] at hQparts
+    exact hQparts.1
 /-
   refine ⟨?_, ?_, ?_⟩
   · have hK := exactFunctorKernel_properties (F := quotientFunctor P)

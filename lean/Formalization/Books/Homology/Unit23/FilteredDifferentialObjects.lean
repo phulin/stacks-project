@@ -178,7 +178,7 @@ theorem filteredDifferentialAssociatedGradedMap_squared
       (associatedGraded (C := C)).map K.d = 0
   rw [← (associatedGraded (C := C)).map_comp]
   rw [K.d_squared]
-  letI := associatedGraded_is_additive (C := C)
+  let := associatedGraded_is_additive (C := C)
   simp
 
 /-- The differential object `(gr(K), gr(d))`. -/
@@ -348,7 +348,7 @@ theorem filteredDifferential_page_subobjects_exists
           (filteredDifferentialBPlus K r p)
           (K.carrier.filtration.obj p)
           le_sup_right (hB0 p))⟩
-  letI : Mono bMap := ⟨by
+  have : Mono bMap := ⟨by
     intro X f g h
     apply GradedObject.hom_ext
     intro p
@@ -382,7 +382,7 @@ theorem filteredDifferential_page_subobjects_exists
           (filteredDifferentialZPlus K r p)
           (K.carrier.filtration.obj p)
           le_sup_right (hZ0 p))⟩
-  letI : Mono zMap := ⟨by
+  have : Mono zMap := ⟨by
     intro X f g h
     apply GradedObject.hom_ext
     intro p
@@ -460,8 +460,7 @@ theorem filteredDifferential_page_subobjects_exists
           cokernel.π (Subobject.ofLE (K.carrier.filtration.obj (p + 1))
             (K.carrier.filtration.obj p) (hF10 p)) := by
       rw [← Category.assoc, Subobject.ofLE_comp_ofLE]
-    simpa [filteredDifferentialE₀Object, filteredDifferentialAssociatedGraded,
-      associatedGraded, gradedPiece] using hfinal
+    exact hfinal
   exact ⟨{
     B := Subobject.mk bMap
     Z := Subobject.mk zMap

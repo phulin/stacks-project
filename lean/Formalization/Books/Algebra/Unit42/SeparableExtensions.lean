@@ -1593,25 +1593,18 @@ private theorem adjoin_membership_transport
     exact U.mul_mem hx hy
   · exact hz
 
-private structure PerfectClosureFiniteTypeSetup
-    (k K P Q : Type*) [Field k] [Field K] [Field P] [Field Q]
-    [Algebra k K] [Algebra P Q] [Algebra K Q] where
-  M : IntermediateField P Q
-  M_eq : M = IntermediateField.adjoin P (range (algebraMap K Q))
-  sK : Finset K
-  hsK : IntermediateField.adjoin k (sK : Set K) = ⊤
-  u : Finset M
-  hu : IsTranscendenceBasis P (fun z : u => (z : M))
-  hsep : Algebra.IsSeparable
-    (IntermediateField.adjoin P (range fun z : u => (z : M))) M
-
 private theorem perfectClosureFiniteTypeSetup
     {k K P Q : Type*} [Field k] [Field K] [Field P] [Field Q]
     [Algebra k K] [Algebra k P] [Algebra P Q] [Algebra K Q]
     [Algebra.EssFiniteType k K] [PerfectField P]
     (hcomm : ∀ y : k, algebraMap K Q (algebraMap k K y) =
       algebraMap P Q (algebraMap k P y)) :
-    Nonempty (PerfectClosureFiniteTypeSetup k K P Q) := by
+    ∃ (M : IntermediateField P Q) (sK : Finset K) (u : Finset M),
+      M = IntermediateField.adjoin P (range (algebraMap K Q)) ∧
+      IntermediateField.adjoin k (sK : Set K) = ⊤ ∧
+      IsTranscendenceBasis P (fun z : u => (z : M)) ∧
+      Algebra.IsSeparable
+        (IntermediateField.adjoin P (range fun z : u => (z : M))) M := by
   classical
   let M : IntermediateField P Q :=
     IntermediateField.adjoin P (range (algebraMap K Q))
@@ -1666,7 +1659,7 @@ private theorem perfectClosureFiniteTypeSetup
     exact ⟨sQ, hAM⟩
   obtain ⟨u, hu, hsep⟩ :=
     exists_isTranscendenceBasis_and_isSeparable_of_perfectField P M
-  refine ⟨⟨M, rfl, sK, hsK, u, hu, ?_⟩⟩
+  refine ⟨M, sK, u, rfl, hsK, hu, ?_⟩
   have hrange : range (fun z : u => (z : M)) = (u : Set M) := by
     simpa using (Subtype.range_val (p := fun z : M => z ∈ u))
   rw [hrange]
@@ -1701,7 +1694,7 @@ theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
         exact ((pthRootClosureMap k K).commutes b).symm)
   letI : Algebra P Q := RingHom.toAlgebra pToQ
   letI : PerfectField P := inferInstance
-  obtain ⟨⟨M, hM, sK, hsK, u, hu, hsep⟩⟩ :=
+  obtain ⟨M, sK, u, hM, hsK, hu, hsep⟩ :=
     perfectClosureFiniteTypeSetup (k := k) (K := K) (P := P) (Q := Q) (by
       intro y
       apply Subtype.ext

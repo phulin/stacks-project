@@ -719,7 +719,42 @@ theorem IsomorphicOverBase.transportPullbackChoice
     have hQcomp := Functor.congr_hom (Q.comp_eq g f) (forwardMap φ)
     rw [hQcomp]
     rw [pullbackFunctor_map_eq g ((P.pullbackFunctor f).map φ)]
-    /- prior attempt: the final rewrite did not close the remaining equality. -/
+    /-
+    Remaining proof roadmap (the pointwise transport calculation above is the
+    known dead end):
+
+    * Bundle `forwardFiber`/`forwardMap` into a functor
+      `E U : Functor.Fiber p U ⥤ Functor.Fiber (G ⋙ p) U`, and bundle
+      `transportedFiber` with morphism map `fun φ => ⟨G.map φ.1, ...⟩`
+      into `D U` in the other direction.  Their functor laws reduce, after
+      `Functor.Fiber.hom_ext`, to `F.map_id`, `F.map_comp`, `G.map_id`, and
+      `G.map_comp`.
+    * Strengthen `backward_forward` to the bundled equality
+      `D U ⋙ E U = 𝟙 (Functor.Fiber (G ⋙ p) U)`.  Use
+      `CategoryTheory.Functor.ext`; its object equations are the existing
+      `backward_forward`, and its morphism equation is exactly
+      `Functor.congr_hom hGF φ.1`, followed by
+      `Functor.Fiber.hom_ext`.  Equality proofs occurring in the induced
+      `eqToHom`s can be identified with `Subsingleton.elim`.
+    * Package `pullbackFunctor_map_eq` as a functor equality, for every
+      `f : R ⟶ S`,
+      `P.pullbackFunctor f = E S ⋙ Q.choice.pullbackFunctor f ⋙ D R`.
+      The object part is `rfl`; the morphism part is
+      `pullbackFunctor_map_eq f φ` after `Functor.Fiber.hom_ext`.
+    * Replace this entire pointwise `hcomp` branch by rewriting both sides
+      with that factorization.  Rewrite the middle term using `Q.comp_eq g f`,
+      cancel `D V ⋙ E V` with the bundled inverse equality, and finish
+      using `Functor.assoc`.  This avoids comparing the composite equality
+      used by `hobj` with the separate `kX`/`kY` transports.
+
+    The reusable declarations used here are `CategoryTheory.Functor.ext` and
+    `Functor.Fiber.hom_ext`, together with `eqToHom_map`; the cartesian
+    factorization facts used earlier are in
+    `Mathlib/CategoryTheory/FiberedCategory/Cartesian.lean`.  Do not resume the
+    direct `rw [hforward]` approach: after expanding `Functor.map_comp` it
+    leaves precisely the incompatible-looking `hobj` versus `kX`/`kY`
+    transport paths seen in the timed-out attempt.
+    -/
     sorry
   refine ⟨{
     choice := P
@@ -861,22 +896,81 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
       IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
   /-
-  Proof roadmap:
+  Proof roadmap.  All `Cat` values in this theorem must be
+  `Cat.{vS, uS}`; this is what the six explicit universe arguments on
+  `IsSplitFibredCategory` fix.
 
-  * Forward: unpack the strict over-base isomorphism with a
-    `splitFibredProjection F`. Transport its canonical cartesian lifts back
-    along the inverse functor. Strict inverse equations, rather than merely
-    natural isomorphisms, make the transported identity and composite
-    pullback functors literally equal.
-  * Reverse: use the fibres of `p` as the values of a functor
-    `Cᵒᵖ ⟶ Cat`. Its arrow maps are `P.pullbackFunctor`; `P.IsUnital`
-    supplies `map_id`, and `isStrictPullbackChoice P` supplies `map_comp`.
-    Construct the two Grothendieck-comparison functors and prove their strict
-    inverse equations by strongly-cartesian factorization uniqueness.
+  Forward direction:
 
-  The missing library bridge is transport of a `PullbackChoice` across
-  `IsomorphicOverBase` with computation lemmas strong enough to yield
-  equality of bundled functors, not only a natural isomorphism.
+  1. Unpack splitness as `⟨_, F, hF⟩`, with
+     `F : Cᵒᵖ ⥤ Cat.{vS, uS}` and
+     `hF : IsomorphicOverBase p (splitFibredProjection F)`.
+  2. Build a `StrictPullbackChoice` for `splitFibredProjection F`.  For
+     `x : Functor.Fiber (splitFibredProjection F) U`, eliminate the proof
+     `x.2` so that `x.1` is literally `⟨U, a⟩`, then take
+     `splitFibredCartesianDomain F f a` and
+     `splitFibredCartesianLift F f a`.  Strong cartesianness is exactly
+     `splitFibredCartesianLift_isStronglyCartesian` (this file), whose
+     underlying Mathlib result is
+     `Pseudofunctor.CoGrothendieck.isStronglyCartesian_homCartesianLift` in
+     `Mathlib/CategoryTheory/FiberedCategory/Grothendieck.lean`.
+  3. Prove the bundled identity equation from `F.map_id`, and the bundled
+     composition equation from `splitRestriction_comp F g f`.  Use
+     `CategoryTheory.Functor.ext`, `Functor.Fiber.hom_ext`, and
+     `Pseudofunctor.CoGrothendieck.Hom.ext`; normalize the dependent object
+     transports with `eqToHom_map` and `Subsingleton.elim`.  The same object
+     equations give `PullbackChoice.IsUnital`.
+  4. Apply `IsomorphicOverBase.transportPullbackChoice hF` to this choice,
+     extract the transported `StrictPullbackChoice`, and return its `choice`,
+     `unital`, and `strict` fields.  The transport theorem immediately above
+     is therefore the only remaining prerequisite for this direction.
+
+  Reverse direction:
+
+  1. From `⟨P, hunit, hcomp⟩`, first derive
+     `hid U : P.pullbackFunctor (𝟙 U) =
+       𝟙 (Functor.Fiber p U)`.  `hunit` alone only fixes objects and
+     does not fix the morphism action.  Use both hypotheses: let
+     `T := P.pullbackFunctor (𝟙 U)`, obtain
+     `α : 𝟙 _ ≅ T` from `pullback_identity_iso p P U`, and give `T`
+     a faithful instance with `Functor.Faithful.of_iso α`.  Apply
+     `Functor.congr_hom` to
+     `show T = T ⋙ T by simpa using hcomp (𝟙 U) (𝟙 U)`
+     and cancel `T.map`; use `hunit U` for the object equations in
+     `CategoryTheory.Functor.ext`.  `pullback_identity_iso` and the definition
+     of `PullbackChoice.IsUnital` are in
+     `Formalization/Books/Categories/Unit33/FibredCategories.lean`.
+  2. Define `F : Cᵒᵖ ⥤ Cat.{vS, uS}` by
+     `F.obj U := Cat.of (Functor.Fiber p U.unop)` and
+     `F.map f := (P.pullbackFunctor f.unop).toCatHom`.  Its `map_id` is
+     `congrArg Functor.toCatHom (hid U.unop)`.  For `map_comp`, first rewrite
+     with `unop_comp`, then use
+     `congrArg Functor.toCatHom (hcomp g.unop f.unop)` (with the arguments in
+     this order).
+  3. Define `toGroth : S ⥤ splitFibredCategory F` by
+     `x ↦ ⟨p.obj x, ⟨x, rfl⟩⟩`.  For `φ : x ⟶ y`, its base is
+     `p.map φ`; its fibre arrow is the map to
+     `P.pullback (p.map φ) ⟨y, rfl⟩` supplied by
+     `Functor.IsStronglyCartesian.map` for
+     `P.pullbackMap (p.map φ) ⟨y, rfl⟩`.  Prove the functor laws with
+     `Pseudofunctor.CoGrothendieck.Hom.ext` and
+     `Functor.IsStronglyCartesian.ext` after postcomposing with that
+     pullback map.
+  4. Define `fromGroth` on an object `X` by `X.fiber.1`; send a
+     CoGrothendieck morphism `k` to
+     `k.fiber.1 ≫ P.pullbackMap k.base _`.  Its functor laws follow from
+     `Pseudofunctor.CoGrothendieck.comp_fiber`, the `hid`/`hcomp` equations
+     used to build `F`, and `Functor.IsStronglyCartesian.fac`.
+  5. Prove the strict triangle equations required by `IsomorphicOverBase`.
+     `toGroth ⋙ fromGroth = 𝟙 S` is objectwise `rfl`, and its map
+     equation is `Functor.IsStronglyCartesian.fac`.  For
+     `fromGroth ⋙ toGroth = 𝟙 (splitFibredCategory F)`, use
+     `CategoryTheory.Functor.ext`; the object equality comes from
+     `X.fiber.2`, and the morphism equality uses
+     `Pseudofunctor.CoGrothendieck.Hom.ext` plus cartesian uniqueness.  The
+     two over-base equations are proved by `CategoryTheory.Functor.hext` and
+     `CategoryTheory.IsHomLift.fac`.  Assemble the `IsomorphicOverBase`
+     witness `hIso` and return `⟨inferInstance, F, hIso⟩`.
   -/
   sorry
 
@@ -1214,15 +1308,51 @@ theorem strictificationProjection_coGrothendieck_presentation
       IsomorphicOverBase (strictificationProjection P)
         (splitFibredProjection F) := by
   /-
-  The proof constructs the restriction functors on the fibres of
-  `strictificationProjection P` from `strictificationReindexObject` and the
-  strongly-cartesian comparison map between
-  `P.pullback (g ≫ A.f) A.x` and `P.pullback A.f A.x`.  The identity and
-  composition equalities are proved by `StrictificationHom.ext` and the
-  uniqueness part of `Functor.IsStronglyCartesian`.  These equalities make
-  the fibre assignment an ordinary functor `Cᵒᵖ ⥤ Cat`; the comparison with
-  `Pseudofunctor.CoGrothendieck` is then given objectwise by the displayed
-  `(V, A)` data and on morphisms by the same comparison maps.
+  Proof roadmap: reuse the reverse implication of
+  `isSplitFibredCategory_iff_exists_strictPullbackChoice` instead of building
+  the CoGrothendieck comparison a second time.
+
+  1. Put `q := strictificationProjection P`.  Construct a
+     `PullbackChoice q` whose chosen object over `W`, for
+     `g : W ⟶ V` and `A : Functor.Fiber q V`, is
+     `strictificationReindexObject A.1 g` (first eliminate `A.2`, or compose
+     with its `eqToHom`, so that the displayed arrow has codomain `A.1.V`).
+  2. Use the cartesian arrow already constructed inside
+     `strictificationProjection_isFibered`: its underlying
+     `StrictificationHom.hom` is
+     `Functor.IsStronglyCartesian.map p A.1.f
+       (P.pullbackMap A.1.f A.1.x) rfl
+       (P.pullbackMap (g ≫ A.1.f) A.1.x)`.
+     `Functor.IsStronglyCartesian.fac` shows its base is `g`; the
+     `hκstrong` argument in `strictificationProjection_isFibered` proves it
+     strongly cartesian for `q`.  The declarations `map`, `fac`, and `ext`
+     are in `Mathlib/CategoryTheory/FiberedCategory/Cartesian.lean`.
+  3. Prove a local computation lemma for the resulting pullback functor:
+     after postcomposing its map with the chosen cartesian arrow, it equals
+     the original fibre morphism followed by that arrow.  This is the same
+     `Functor.IsStronglyCartesian.fac` calculation as `pullbackMap_fac` in
+     `IsomorphicOverBase.transportPullbackChoice` above.
+  4. The unital object equation follows by cases on `A.1` from reindexing by
+     `𝟙 A.1.V`.  For composition, use
+     `strictificationReindexObject_comp`.  Upgrade these object equations to
+     the bundled equations
+     `Q.pullbackFunctor (𝟙 V) = 𝟙 _` and
+     `Q.pullbackFunctor (g ≫ f) =
+       Q.pullbackFunctor f ⋙ Q.pullbackFunctor g` with
+     `CategoryTheory.Functor.ext`, then
+     `Functor.Fiber.hom_ext` and `StrictificationHom.ext`; close the morphism
+     equations by the local computation lemma and
+     `Functor.IsStronglyCartesian.ext`.
+  5. Apply the reverse implication of
+     `isSplitFibredCategory_iff_exists_strictPullbackChoice q` to this
+     unital strict choice and return the second component of the resulting
+     `IsSplitFibredCategory q`.
+
+  Universe check: `StrictificationObject p P` lives in
+  `Type (max (max uC vC) uS)` and its homs live in `Type vS`; therefore the
+  criterion produces exactly
+  `F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS}` required here.  No
+  resizing or change to the theorem statement is needed.
   -/
   sorry
 

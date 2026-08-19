@@ -1,6 +1,7 @@
 import Formalization.Books.Simplicial.Unit07.FibreProducts
 import Formalization.Books.Simplicial.Unit13.ProductsWithSimplicialSets
 import Mathlib.AlgebraicTopology.SimplicialSet.Dimension
+import Mathlib.CategoryTheory.Functor.KanExtension.Pointwise
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.Data.Countable.Basic
@@ -260,6 +261,55 @@ private noncomputable def elementsConeHomEquiv
         Sigma.desc b = b u
       exact Sigma.ι_desc b u }
 
+private def elementsNatCompatibleFamilyEquiv
+    {C : Type u} [Category.{v} C]
+    (U : SSet.{w}) (W V : SimplicialObject C) :
+    (CategoryOfElements.π U ⋙ W ⟶ CategoryOfElements.π U ⋙ V) ≃
+      Unit13.CompatibleFamily U W V where
+  toFun α :=
+    ⟨fun n u => α.app (Functor.elementsMk U (op (SimplexCategory.mk n)) u), by
+      intro m n φ u
+      exact α.naturality (CategoryOfElements.homMk
+        (Functor.elementsMk U (op (SimplexCategory.mk n)) u)
+        (Functor.elementsMk U (op (SimplexCategory.mk m)) (U.map φ.op u))
+        φ.op rfl)⟩
+  invFun f :=
+    { app := fun e => f.1 e.1.unop.len e.2
+      naturality := by
+        rintro ⟨X, u⟩ ⟨Y, v⟩ g
+        cases X with
+        | op X =>
+          cases X with
+          | mk m =>
+            cases Y with
+            | op Y =>
+              cases Y with
+              | mk n =>
+                change W.map g.val ≫ f.1 n v = f.1 m u ≫ V.map g.val
+                simpa [g.property] using f.2 g.val.unop u }
+  left_inv := by
+    intro α
+    ext e
+    rcases e with ⟨X, u⟩
+    cases X with
+    | op X =>
+      cases X with
+      | mk n => rfl
+  right_inv := by
+    intro f
+    apply Subtype.ext
+    funext n u
+    rfl
+
+private noncomputable def elementsNatHomEquiv
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (W V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
+    (CategoryOfElements.π U ⋙ W ⟶ CategoryOfElements.π U ⋙ V) ≃
+      (Unit13.simplicialSetProduct U W hU ⟶ V) :=
+  (elementsNatCompatibleFamilyEquiv U W V).trans
+    (Unit13.finiteSimplicialSetProduct_hom_equiv U W hU V).symm
+
 private theorem homZero_map_apply
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     (U : SSet.{w}) (V : SimplicialObject C)
@@ -379,14 +429,13 @@ The first existence lemma in the source uses countable limits.  The finite
 version is stated separately below because it is the one used to construct
 the full simplicial Hom object.
 -/
-theorem homZero_isRepresentable_countable
+private noncomputable def homZeroRepresentableByLimit
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
-    [HasCountableLimits C]
     (U : SSet.{w}) (V : SimplicialObject C)
-    (hU : Unit13.FiniteNonemptySimplicialSet U) :
-    (homZeroFunctor U V hU).IsRepresentable := by
-  let : HasLimit (simplicialSetElementsDiagram U V) :=
-    hasLimit_simplicialSetElementsDiagram U V hU
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    [HasLimit (simplicialSetElementsDiagram U V)] :
+    (homZeroFunctor U V hU).RepresentableBy
+      (limit (simplicialSetElementsDiagram U V)) := by
   let D := simplicialSetElementsDiagram U V
   let L := limit D
   let coneEquiv {X : C} :
@@ -436,7 +485,96 @@ theorem homZero_isRepresentable_countable
           (homZeroFunctor U V hU).map f.op (h (X := X') g)
         rw [homZero_map_apply]
         exact hcomp }
-  exact ⟨L, ⟨R⟩⟩
+  exact R
+
+private theorem homZero_isRepresentable_of_hasLimit
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    [HasLimit (simplicialSetElementsDiagram U V)] :
+    (homZeroFunctor U V hU).IsRepresentable :=
+  (homZeroRepresentableByLimit U V hU).isRepresentable
+
+theorem homZero_isRepresentable_countable
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasCountableLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
+    (homZeroFunctor U V hU).IsRepresentable := by
+  let : HasLimit (simplicialSetElementsDiagram U V) :=
+    hasLimit_simplicialSetElementsDiagram U V hU
+  exact homZero_isRepresentable_of_hasLimit U V hU
+
+private theorem hasLimit_simplicialSetElementsDiagram_finite
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hUdeg : EventuallyDegenerate U) :
+    HasLimit (simplicialSetElementsDiagram U V) := by
+  rcases hUdeg with ⟨d, hd⟩
+  let : U.HasDimensionLT d := hd
+  let : ∀ X : SimplexCategoryᵒᵖ, Finite (U.obj X) := fun X => by
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  let : ∀ a b : U.Elements, Finite (a ⟶ b) := fun a b => by
+    change Finite {f : a.1 ⟶ b.1 // _}
+    let : Finite (a.1 ⟶ b.1) :=
+      Finite.of_equiv _ (opEquiv a.1 b.1).symm
+    apply Finite.of_injective Subtype.val
+    exact Subtype.val_injective
+  let : Finite (SimplexCategory.Truncated (d * d)) := by
+    let f : SimplexCategory.Truncated (d * d) → Fin (d * d + 1) :=
+      fun X => ⟨X.obj.len, Nat.lt_succ_of_le X.property⟩
+    apply Finite.of_injective f
+    intro X Y h
+    cases X with
+    | mk X hX =>
+      cases Y with
+      | mk Y hY =>
+        apply ObjectProperty.FullSubcategory.ext
+        exact SimplexCategory.ext (congrArg Fin.val h)
+  let : Finite ((SimplexCategory.Truncated (d * d))ᵒᵖ) := by
+    apply Finite.of_injective (fun X => X.unop)
+    intro X Y h
+    exact congrArg op h
+  let : Finite (Unit11.boundedElements U d) := by
+    let f : Unit11.boundedElements U d →
+        Σ X : (SimplexCategory.Truncated (d * d))ᵒᵖ,
+          U.obj (op X.unop.obj) :=
+      fun e => ⟨op ⟨e.obj.1.unop, Nat.le_of_lt_succ e.property⟩, e.obj.2⟩
+    apply Finite.of_injective f
+    intro X Y h
+    apply ObjectProperty.FullSubcategory.ext
+    exact congrArg
+      (fun z => (⟨op z.1.unop.obj, z.2⟩ : U.Elements)) h
+  let : ∀ a b : Unit11.boundedElements U d, Finite (a ⟶ b) := fun a b => by
+    apply Finite.of_injective (fun f => f.hom)
+    intro f g h
+    apply ObjectProperty.hom_ext
+    exact h
+  let : Finite (ULiftHom.{w} (Unit11.boundedElements U d)) :=
+    Finite.of_equiv _ ULiftHom.objEquiv
+  let : ∀ a b : ULiftHom.{w} (Unit11.boundedElements U d),
+      Finite (a ⟶ b) := fun a b => by
+    change Finite (ULift.{w} (a.objDown ⟶ b.objDown))
+    infer_instance
+  let : FinCategory (ULiftHom.{w} (Unit11.boundedElements U d)) :=
+    { fintypeObj := Fintype.ofFinite _
+      fintypeHom := fun a b => Fintype.ofFinite _ }
+  let e := (ULiftHom.equiv (C := Unit11.boundedElements U d)).symm
+  let : HasLimit
+      (e.functor ⋙ Unit11.boundedElementsInclusion U d ⋙
+        simplicialSetElementsDiagram U V) := by
+    infer_instance
+  let : HasLimit
+      (Unit11.boundedElementsInclusion U d ⋙
+        simplicialSetElementsDiagram U V) :=
+    hasLimit_of_equivalence_comp e
+  let : (Unit11.boundedElementsInclusion U d).Initial :=
+    Unit11.boundedElementsInclusion_initial U d
+  let : HasLimit (simplicialSetElementsDiagram U V) :=
+    Functor.Initial.hasLimit_of_comp (Unit11.boundedElementsInclusion U d)
+  infer_instance
 
 theorem homZero_isRepresentable_finite
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -445,7 +583,9 @@ theorem homZero_isRepresentable_finite
     (hU : Unit13.FiniteNonemptySimplicialSet U)
     (hUdeg : EventuallyDegenerate U) :
     (homZeroFunctor U V hU).IsRepresentable := by
-  sorry
+  let : HasLimit (simplicialSetElementsDiagram U V) :=
+    hasLimit_simplicialSetElementsDiagram_finite U V hU hUdeg
+  exact homZero_isRepresentable_of_hasLimit U V hU
 
 /-! ## The Hom object and its universal property -/
 
@@ -456,14 +596,257 @@ def IsHomObject
     (hU : Unit13.FiniteNonemptySimplicialSet U) : Prop :=
   Nonempty ((homFunctor U V hU).RepresentableBy H)
 
+private def productElementsToStructuredArrow
+    (U : SSet.{w}) (n : ℕ) :
+    (U ⊗ (Δ[n] : SSet.{w})).Elements ⥤
+      StructuredArrow (op (SimplexCategory.mk n)) (CategoryOfElements.π U) where
+  obj e := StructuredArrow.mk (Y := Functor.elementsMk U e.1 e.2.1)
+    (SSet.stdSimplex.objEquiv.{w} e.2.2).op
+  map {e e'} g := StructuredArrow.homMk
+    (CategoryOfElements.homMk _ _ g.val (by
+      have hg := g.property
+      change (U.map g.val e.2.1,
+        (Δ[n] : SSet.{w}).map g.val e.2.2) = e'.2 at hg
+      exact congrArg Prod.fst hg)) (by
+        apply Quiver.Hom.unop_inj
+        have hg := g.property
+        change (U.map g.val e.2.1,
+          (Δ[n] : SSet.{w}).map g.val e.2.2) = e'.2 at hg
+        have hs := congrArg Prod.snd hg
+        change g.val.unop ≫ SSet.stdSimplex.objEquiv.{w} e.2.2 =
+          SSet.stdSimplex.objEquiv.{w} e'.2.2
+        simpa [SSet.stdSimplex.map_apply] using
+          congrArg SSet.stdSimplex.objEquiv.{w} hs)
+
+private def structuredArrowToProductElements
+    (U : SSet.{w}) (n : ℕ) :
+    StructuredArrow (op (SimplexCategory.mk n)) (CategoryOfElements.π U) ⥤
+      (U ⊗ (Δ[n] : SSet.{w})).Elements where
+  obj e := Functor.elementsMk (U ⊗ (Δ[n] : SSet.{w})) e.right.1
+    (e.right.2, SSet.stdSimplex.objEquiv.{w}.symm e.hom.unop)
+  map {e e'} g := CategoryOfElements.homMk _ _ g.right.val (by
+    change (U.map g.right.val e.right.2,
+      (Δ[n] : SSet.{w}).map g.right.val
+        (SSet.stdSimplex.objEquiv.{w}.symm e.hom.unop)) =
+      (e'.right.2, SSet.stdSimplex.objEquiv.{w}.symm e'.hom.unop)
+    apply Prod.ext
+    · exact g.right.property
+    · change (Δ[n] : SSet.{w}).map g.right.val
+          (SSet.stdSimplex.objEquiv.{w}.symm e.hom.unop) =
+        SSet.stdSimplex.objEquiv.{w}.symm e'.hom.unop
+      apply SSet.stdSimplex.objEquiv.{w}.injective
+      change g.right.val.unop ≫ e.hom.unop = e'.hom.unop
+      exact congrArg Quiver.Hom.unop g.w)
+
+private def productElementsStructuredArrowEquivalence
+    (U : SSet.{w}) (n : ℕ) :
+    (U ⊗ (Δ[n] : SSet.{w})).Elements ≌
+      StructuredArrow (op (SimplexCategory.mk n)) (CategoryOfElements.π U) where
+  functor := productElementsToStructuredArrow U n
+  inverse := structuredArrowToProductElements U n
+  unitIso := NatIso.ofComponents (fun e =>
+    CategoryOfElements.isoMk _ _ (Iso.refl _) (by
+      change (U.map (𝟙 e.1) e.2.1,
+        (Δ[n] : SSet.{w}).map (𝟙 e.1) e.2.2) =
+          (e.2.1, SSet.stdSimplex.objEquiv.{w}.symm
+            (SSet.stdSimplex.objEquiv.{w} e.2.2))
+      simp)) (by
+      intro e e' f
+      apply CategoryOfElements.ext
+      rfl)
+  counitIso := NatIso.ofComponents (fun e =>
+    StructuredArrow.isoMk
+      (CategoryOfElements.isoMk _ _ (Iso.refl _) (by
+        change U.map (𝟙 e.right.1) e.right.2 = e.right.2
+        simp)) (by
+          change (SSet.stdSimplex.objEquiv.{w}
+              (SSet.stdSimplex.objEquiv.{w}.symm e.hom.unop)).op ≫
+            𝟙 e.right.1 = e.hom
+          exact Category.comp_id _)) (by
+        intro e e' f
+        apply StructuredArrow.hom_ext
+        apply CategoryOfElements.ext
+        rfl)
+
+private theorem finiteNonempty_product_standardSimplex_aux
+    (U : SSet.{w}) (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (n : ℕ) :
+    Unit13.FiniteNonemptySimplicialSet
+      (U ⊗ (Δ[n] : SSet.{w})) := by
+  intro k
+  let hΔ : Unit13.FiniteNonemptySimplicialSet (Δ[n] : SSet.{w}) :=
+    Unit13.standardSimplex_finite_nonempty n
+  let : Finite (U.obj (op (SimplexCategory.mk k))) := (hU k).1
+  let : Nonempty (U.obj (op (SimplexCategory.mk k))) := (hU k).2
+  let : Finite ((Δ[n] : SSet.{w}).obj (op (SimplexCategory.mk k))) :=
+    (hΔ k).1
+  let : Nonempty ((Δ[n] : SSet.{w}).obj (op (SimplexCategory.mk k))) :=
+    (hΔ k).2
+  change Finite
+      (U.obj (op (SimplexCategory.mk k)) ×
+        (Δ[n] : SSet.{w}).obj (op (SimplexCategory.mk k))) ∧
+    Nonempty
+      (U.obj (op (SimplexCategory.mk k)) ×
+        (Δ[n] : SSet.{w}).obj (op (SimplexCategory.mk k)))
+  constructor <;> infer_instance
+
+private theorem eventuallyDegenerate_product_standardSimplex_aux
+    (U : SSet.{w}) (hUdeg : EventuallyDegenerate U) (n : ℕ) :
+    EventuallyDegenerate (U ⊗ (Δ[n] : SSet.{w})) := by
+  rcases hUdeg with ⟨d, hd⟩
+  let : U.HasDimensionLT d := hd
+  let : U.HasDimensionLE d := inferInstance
+  refine ⟨d + n + 1, ?_⟩
+  exact Unit11.product_hasDimensionLE U (Δ[n] : SSet.{w}) d n
+
+private theorem hasPointwiseRightKanExtension_elements
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hUdeg : EventuallyDegenerate U) :
+    (CategoryOfElements.π U).HasPointwiseRightKanExtension
+      (CategoryOfElements.π U ⋙ V) := by
+  rintro ⟨Y⟩
+  rcases Y with ⟨n⟩
+  let : HasLimit
+      (simplicialSetElementsDiagram (U ⊗ (Δ[n] : SSet.{w})) V) :=
+    hasLimit_simplicialSetElementsDiagram_finite
+      (U ⊗ (Δ[n] : SSet.{w})) V
+      (finiteNonempty_product_standardSimplex_aux U hU n)
+      (eventuallyDegenerate_product_standardSimplex_aux U hUdeg n)
+  let e := productElementsStructuredArrowEquivalence U n
+  have : HasLimit
+      (e.functor ⋙
+        StructuredArrow.proj (op (SimplexCategory.mk n))
+          (CategoryOfElements.π U) ⋙
+        CategoryOfElements.π U ⋙ V) := by
+    change HasLimit
+      (simplicialSetElementsDiagram (U ⊗ (Δ[n] : SSet.{w})) V)
+    infer_instance
+  exact hasLimit_of_equivalence_comp e
+
+private def elementsWhiskerLeft
+    {C : Type u} [Category.{v} C]
+    (U : SSet.{w}) {W W' : SimplicialObject C} (f : W ⟶ W') :
+    CategoryOfElements.π U ⋙ W ⟶ CategoryOfElements.π U ⋙ W' where
+  app e := f.app e.1
+  naturality _ _ g := f.naturality g.val
+
+private theorem elementsNatHomEquiv_whiskerLeft
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {W W' : SimplicialObject C} (f : W ⟶ W')
+    (α : CategoryOfElements.π U ⋙ W' ⟶
+      CategoryOfElements.π U ⋙ V) :
+    elementsNatHomEquiv U W V hU
+        (elementsWhiskerLeft U f ≫ α) =
+      (productWithSimplicialSetBy U hU).map f ≫
+        elementsNatHomEquiv U W' V hU α := by
+  let qW := Unit13.finiteSimplicialSetProduct_hom_equiv U W hU V
+  let qW' := Unit13.finiteSimplicialSetProduct_hom_equiv U W' hU V
+  let p := elementsNatCompatibleFamilyEquiv U W' V
+  let γ := elementsNatHomEquiv U W' V hU α
+  have hγ : qW' γ = p α := by
+    exact qW'.apply_symm_apply (p α)
+  apply qW.injective
+  change qW (qW.symm ((elementsNatCompatibleFamilyEquiv U W V)
+      (elementsWhiskerLeft U f ≫ α))) =
+    qW ((productWithSimplicialSetBy U hU).map f ≫ γ)
+  rw [qW.apply_symm_apply]
+  apply Subtype.ext
+  funext n z
+  let hW := Unit13.degreewiseCoproductInstance U W hU
+  let hW' := Unit13.degreewiseCoproductInstance U W' hU
+  let _ := Unit13.degreewiseCoproductInstanceAt hW (op (SimplexCategory.mk n))
+  let _ := Unit13.degreewiseCoproductInstanceAt hW' (op (SimplexCategory.mk n))
+  have hγz := congrArg (fun k : Unit13.CompatibleFamily U W' V => k.1 n z) hγ
+  change
+    f.app (op (SimplexCategory.mk n)) ≫
+        α.app (Functor.elementsMk U (op (SimplexCategory.mk n)) z) =
+      Sigma.ι (fun _ : U _⦋n⦌ => W.obj (op (SimplexCategory.mk n))) z ≫
+        (((productWithSimplicialSetBy U hU).map f).app
+          (op (SimplexCategory.mk n)) ≫ γ.app (op (SimplexCategory.mk n)))
+  dsimp [qW', p, Unit13.finiteSimplicialSetProduct_hom_equiv,
+    Unit13.simplicialSetProduct_hom_equiv,
+    elementsNatCompatibleFamilyEquiv] at hγz
+  change Sigma.ι (fun _ : U _⦋n⦌ => W'.obj (op (SimplexCategory.mk n))) z ≫
+      γ.app (op (SimplexCategory.mk n)) =
+    α.app (Functor.elementsMk U (op (SimplexCategory.mk n)) z) at hγz
+  calc
+    _ = f.app (op (SimplexCategory.mk n)) ≫
+        (Sigma.ι (fun _ : U _⦋n⦌ => W'.obj (op (SimplexCategory.mk n))) z ≫
+          γ.app (op (SimplexCategory.mk n))) := by
+      exact congrArg (fun k => f.app (op (SimplexCategory.mk n)) ≫ k) hγz.symm
+    _ = (f.app (op (SimplexCategory.mk n)) ≫
+        Sigma.ι (fun _ : U _⦋n⦌ => W'.obj (op (SimplexCategory.mk n))) z) ≫
+          γ.app (op (SimplexCategory.mk n)) := (Category.assoc _ _ _).symm
+    _ = (Sigma.ι (fun _ : U _⦋n⦌ => W.obj (op (SimplexCategory.mk n))) z ≫
+        ((productWithSimplicialSetBy U hU).map f).app
+          (op (SimplexCategory.mk n))) ≫ γ.app (op (SimplexCategory.mk n)) := by
+      congr 1
+      change f.app (op (SimplexCategory.mk n)) ≫
+          Sigma.ι (fun _ : U _⦋n⦌ => W'.obj (op (SimplexCategory.mk n))) z =
+        Sigma.ι (fun _ : U _⦋n⦌ => W.obj (op (SimplexCategory.mk n))) z ≫
+          Sigma.desc (fun z => f.app (op (SimplexCategory.mk n)) ≫
+            Sigma.ι (fun _ : U _⦋n⦌ => W'.obj (op (SimplexCategory.mk n))) z)
+      rw [Sigma.ι_desc]
+    _ = _ := Category.assoc _ _ _
+
+private noncomputable def homPointwise
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hUdeg : EventuallyDegenerate U) : SimplicialObject C := by
+  let π := CategoryOfElements.π U
+  let F := π ⋙ V
+  let : π.HasPointwiseRightKanExtension F :=
+    hasPointwiseRightKanExtension_elements U V hU hUdeg
+  exact π.pointwiseRightKanExtension F
+
+private noncomputable def homPointwiseRepresentableBy
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hUdeg : EventuallyDegenerate U) :
+    (homFunctor U V hU).RepresentableBy
+      (homPointwise U V hU hUdeg) := by
+  let π := CategoryOfElements.π U
+  let F := π ⋙ V
+  let : π.HasPointwiseRightKanExtension F :=
+    hasPointwiseRightKanExtension_elements U V hU hUdeg
+  let H := π.pointwiseRightKanExtension F
+  let ε := π.pointwiseRightKanExtensionCounit F
+  let k {W : SimplicialObject C} :=
+    H.homEquivOfIsRightKanExtension ε W
+  let q {W : SimplicialObject C} := elementsNatHomEquiv U W V hU
+  let h {W : SimplicialObject C} := (k (W := W)).trans (q (W := W))
+  let R : (homFunctor U V hU).RepresentableBy H :=
+    { homEquiv := fun {W} => h (W := W)
+      homEquiv_comp := by
+        intro W W' f g
+        change h (W := W) (f ≫ g) =
+          (productWithSimplicialSetBy U hU).map f ≫ h (W := W') g
+        have hk : k (W := W) (f ≫ g) =
+            elementsWhiskerLeft U f ≫ k (W := W') g := by
+          ext e
+          dsimp [k, Functor.homEquivOfIsRightKanExtension, elementsWhiskerLeft]
+          exact Category.assoc _ _ _
+        dsimp only [h, Equiv.trans_apply]
+        rw [hk, elementsNatHomEquiv_whiskerLeft U V hU f] }
+  exact R
+
 theorem hom_isRepresentable
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     [HasFiniteLimits C]
     (U : SSet.{w}) (V : SimplicialObject C)
     (hU : Unit13.FiniteNonemptySimplicialSet U)
     (hUdeg : EventuallyDegenerate U) :
-    (homFunctor U V hU).IsRepresentable := by
-  sorry
+    (homFunctor U V hU).IsRepresentable :=
+  (homPointwiseRepresentableBy U V hU hUdeg).isRepresentable
 
 /-- The chosen representing object for `Hom(U,V)`. -/
 noncomputable def hom
@@ -483,7 +866,9 @@ theorem hom_isHomObject
     (hU : Unit13.FiniteNonemptySimplicialSet U)
     (hUdeg : EventuallyDegenerate U) :
     IsHomObject U V (hom U V hU hUdeg) hU := by
-  sorry
+  let : (homFunctor U V hU).IsRepresentable :=
+    hom_isRepresentable U V hU hUdeg
+  exact ⟨(homFunctor U V hU).representableBy⟩
 
 /-- The source's functorial universal-property bijection. -/
 noncomputable def productWithSimplicialSetMapSecond
@@ -513,9 +898,7 @@ noncomputable def homHomEquiv
     (hUdeg : EventuallyDegenerate U) (W : SimplicialObject C) :
     (W ⟶ hom U V hU hUdeg) ≃
       (Unit13.simplicialSetProduct U W hU ⟶ V) := by
-  letI : (homFunctor U V hU).IsRepresentable :=
-    hom_isRepresentable U V hU hUdeg
-  exact sorry
+  exact (homRepresentableBy U V hU hUdeg).homEquiv
 
 theorem homHomEquiv_comp
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -528,7 +911,11 @@ theorem homHomEquiv_comp
     homHomEquiv U V hU hUdeg W (f ≫ g) =
       productWithSimplicialSetMapSecond U hU f ≫
         homHomEquiv U V hU hUdeg W' g := by
-  sorry
+  change (homRepresentableBy U V hU hUdeg).homEquiv (f ≫ g) =
+    productWithSimplicialSetMapSecond U hU f ≫
+      (homRepresentableBy U V hU hUdeg).homEquiv g
+  rw [(homRepresentableBy U V hU hUdeg).homEquiv_comp]
+  rfl
 
 /-! ## The induced simplicial maps and the expected degree formula -/
 
@@ -549,12 +936,12 @@ theorem finiteNonempty_product_standardSimplex
     (n : ℕ) :
     Unit13.FiniteNonemptySimplicialSet
       (U ⊗ (Δ[n] : SSet.{w})) := by
-  sorry
+  exact finiteNonempty_product_standardSimplex_aux U hU n
 
 theorem eventuallyDegenerate_product_standardSimplex
     (U : SSet.{w}) (hUdeg : EventuallyDegenerate U) (n : ℕ) :
     EventuallyDegenerate (U ⊗ (Δ[n] : SSet.{w})) := by
-  sorry
+  exact eventuallyDegenerate_product_standardSimplex_aux U hUdeg n
 
 noncomputable def homZeroFinite
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -605,7 +992,32 @@ theorem hom_obj_iso_exists
         homZeroFinite (U ⊗ (Δ[n] : SSet.{w})) V
           (finiteNonempty_product_standardSimplex U hU n)
           (eventuallyDegenerate_product_standardSimplex U hUdeg n)) := by
-  sorry
+  let P := U ⊗ (Δ[n] : SSet.{w})
+  let hP := finiteNonempty_product_standardSimplex U hU n
+  let hPdeg := eventuallyDegenerate_product_standardSimplex U hUdeg n
+  let : HasLimit (simplicialSetElementsDiagram P V) :=
+    hasLimit_simplicialSetElementsDiagram_finite P V hP hPdeg
+  let π := CategoryOfElements.π U
+  let F := π ⋙ V
+  let : π.HasPointwiseRightKanExtension F :=
+    hasPointwiseRightKanExtension_elements U V hU hUdeg
+  let : (homFunctor U V hU).IsRepresentable :=
+    hom_isRepresentable U V hU hUdeg
+  let eH : homPointwise U V hU hUdeg ≅ hom U V hU hUdeg :=
+    (homPointwiseRepresentableBy U V hU hUdeg).isoReprX
+  let : (homZeroFunctor P V hP).IsRepresentable :=
+    homZero_isRepresentable_finite P V hP hPdeg
+  let e0 : limit (simplicialSetElementsDiagram P V) ≅
+      homZeroFinite P V hP hPdeg :=
+    (homZeroRepresentableByLimit P V hP).isoReprX
+  let e := productElementsStructuredArrowEquivalence U n
+  let eLim : limit (simplicialSetElementsDiagram P V) ≅
+      limit (StructuredArrow.proj (op (SimplexCategory.mk n)) π ⋙ F) :=
+    HasLimit.isoOfEquivalence e (Iso.refl _)
+  refine ⟨eH.symm.app (op (SimplexCategory.mk n)) ≪≫ ?_ ≪≫ e0⟩
+  change limit (StructuredArrow.proj (op (SimplexCategory.mk n)) π ⋙ F) ≅
+    limit (simplicialSetElementsDiagram P V)
+  exact eLim.symm
 
 noncomputable def hom_obj_iso
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

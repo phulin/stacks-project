@@ -81,9 +81,7 @@ theorem isGeometricallyIrreducible_iff_unique_minimalPrime
           (@nilradical_le_prime _ _ p.asIdeal hp.isPrime)
       · rw [le_sInf_iff]
         intro q hq
-        letI : q.IsPrime := hq
-        obtain ⟨r, hr, hrq⟩ := Ideal.exists_minimalPrimes_le
-          (I := (⊥ : Ideal (K ⊗[k] S))) (J := q) bot_le
+        obtain ⟨r, hr, hrq⟩ := @Ideal.exists_minimalPrimes_le _ _ _ q hq bot_le
         exact (hunique r hr).symm ▸ hrq
     rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
     rw [hnil]

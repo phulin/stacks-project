@@ -498,6 +498,7 @@ theorem injectiveModule_isInjective
     (R : Sheaf J RingCat.{u})
     [HasWeakSheafify J AddCommGrpCat.{u}]
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (hR : IsPointwiseCommutativeRingedSite R)
     (D : SheafDualData R) (F : SheafOfModules.{u} R) :
     Injective (injectiveModule R D F) := by
   sorry
@@ -536,7 +537,8 @@ theorem exists_sheafDualData
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u})
     [HasSheafify J AddCommGrpCat.{u}]
-    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (hR : IsPointwiseCommutativeRingedSite R) :
     Nonempty (SheafDualData R) := by
   sorry
 
@@ -545,7 +547,8 @@ theorem sheavesOfModules_have_functorial_injective_embeddings
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u})
     [HasSheafify J AddCommGrpCat.{u}]
-    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (hR : IsPointwiseCommutativeRingedSite R) :
     HasFunctorialInjectiveEmbeddings (C := SheafOfModules.{u} R) := by
   sorry
 

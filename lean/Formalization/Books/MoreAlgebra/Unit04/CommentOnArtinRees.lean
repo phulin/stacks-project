@@ -498,7 +498,7 @@ theorem associatedGraded_cokernel_piece_equiv
           exact hxq
         exact hxqpre
       exact hxq'
-  dsimp only [associatedGradedModulePiece, gradedCokernelPiece, submoduleQuotient,
+  dsimp only [associatedGradedModulePiece, gradedCokernelPiece,
     gradedCokernelDenominator]
   change Nonempty ((P' ⧸ Q'.comap P'.subtype) ≃ₗ[R] (P ⧸ D.comap P.subtype))
   refine ⟨?_⟩

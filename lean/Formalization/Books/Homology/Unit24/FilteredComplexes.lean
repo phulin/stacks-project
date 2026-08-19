@@ -407,7 +407,9 @@ structure FilteredComplexPageDifferentials {C : Type u} [Category.{v} C]
     filteredComplexPageClass K (r + 1 : ℕ) p q z ≫ differential r p q =
       filteredComplexPageClass K (r + 1 : ℕ) (p + r + 1) (q - r) zNext
   lift_exists : ∀ (r : ℕ) (p q : ℤ) {T : C}
-    (z : T ⟶ (filteredComplexCyclePlus K (r + 1 : ℕ) p q : C)), ∃ zNext,
+    (z : T ⟶ (filteredComplexCyclePlus K (r + 1 : ℕ) p q : C))
+    (_hcore : (filteredComplexCycleCore K (r + 1 : ℕ) p q).Factors
+      (z ≫ (filteredComplexCyclePlus K (r + 1 : ℕ) p q).arrow)), ∃ zNext,
       (zNext ≫
           (filteredComplexCyclePlus K (r + 1 : ℕ) (p + r + 1) (q - r)).arrow =
         z ≫ (filteredComplexCyclePlus K (r + 1 : ℕ) p q).arrow ≫
@@ -416,7 +418,6 @@ structure FilteredComplexPageDifferentials {C : Type u} [Category.{v} C]
               (by omega))) ∧
         filteredComplexPageClass K (r + 1 : ℕ) p q z ≫ differential r p q =
           filteredComplexPageClass K (r + 1 : ℕ) (p + r + 1) (q - r) zNext
-
 theorem filteredComplex_page_differentials_exists
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
     Nonempty (FilteredComplexPageDifferentials K) := by

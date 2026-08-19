@@ -1783,7 +1783,211 @@ theorem colimit_projective_dimension
     (hF : ∀ e : E,
       CategoryTheory.HasProjectiveDimensionLE (F.successiveQuotient e) n) :
     CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := by
-  sorry
+  induction n with
+  | zero =>
+      let Q : E → Type u := fun e => (F.stage e : Type u) ⧸ F.predecessor e
+      let q : ∀ e : E, (F.stage e : Type u) →ₗ[R] Q e :=
+        fun e => (F.predecessor e).mkQ
+      have hproj : ∀ e : E, CategoryTheory.Projective (ModuleCat.of R (Q e)) := by
+        intro e
+        change CategoryTheory.Projective (F.successiveQuotient e)
+        exact (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero _).mpr (hF e)
+      have hprojM : ∀ e : E, Module.Projective R (Q e) := by
+        intro e
+        exact (IsProjective.iff_projective (ModuleCat.of R (Q e) : Type u)).mpr (hproj e)
+      let s : ∀ e : E, Q e →ₗ[R] (F.stage e : Type u) := fun e =>
+        Classical.choose (Module.projective_lifting_property (R := R) (P := Q e)
+          (M := (F.stage e : Type u)) (N := Q e) (q e) (LinearMap.id) 
+          (by
+            letI : Module.Projective R (Q e) := hprojM e
+            exact (Submodule.mkQ_surjective (F.predecessor e))))
+      have hs : ∀ e : E, (q e).comp (s e) = LinearMap.id := by
+        intro e
+        exact Classical.choose_spec (Module.projective_lifting_property (R := R) (P := Q e)
+          (M := (F.stage e : Type u)) (N := Q e) (q e) (LinearMap.id)
+          (by
+            letI : Module.Projective R (Q e) := hprojM e
+            exact Submodule.mkQ_surjective (F.predecessor e)))
+      let p : ∀ e : E, Submodule R M := fun e =>
+        Submodule.map (F.stage e).subtype (LinearMap.range (s e))
+      have hp : ∀ e : E, Module.Projective R (p e : Type u) := by
+        intro e
+        let es : Q e ≃ₗ[R] LinearMap.range (s e) :=
+          LinearEquiv.ofInjective (s e) (by
+            intro x y hxy
+            have := congrArg (q e) hxy
+            calc
+              x = (q e) (s e x) := by
+                rw [← LinearMap.comp_apply, hs e]
+                rfl
+              _ = (q e) (s e y) := this
+              _ = y := by
+                rw [← LinearMap.comp_apply, hs e]
+                rfl)
+        let ep : LinearMap.range (s e) ≃ₗ[R] p e :=
+          Submodule.equivMapOfInjective (F.stage e).subtype
+            (F.stage e).subtype_injective _
+        letI : Module.Projective R (Q e) := hprojM e
+        exact Module.Projective.of_equiv' (es.trans ep)
+      have hdir : ∀ e : E,
+          Directed (· ≤ ·) (fun e' : {e' : E // e' < e} => F.stage e'.1) := by
+        intro e a b
+        refine ⟨⟨max a.1 b.1, max_lt a.2 b.2⟩, ?_, ?_⟩
+        · exact F.monotone (le_max_left _ _)
+        · exact F.monotone (le_max_right _ _)
+      have hstage : ∀ e : E, F.stage e ≤ ⨆ e, p e := by
+        intro e
+        induction e using WellFoundedLT.induction with
+        | ind e ih =>
+            intro x hx
+            let xe : F.stage e := ⟨x, hx⟩
+            let z : Q e := q e xe
+            let y : F.stage e := s e z
+            have hy : (y : M) ∈ ⨆ e, p e := by
+              apply Submodule.mem_iSup_of_mem e
+              exact Submodule.mem_map_of_mem ⟨z, rfl⟩
+            have hq : q e (xe - y) = 0 := by
+              rw [map_sub]
+              change q e xe - q e (s e z) = 0
+              have hzs : q e (s e z) = z := by
+                have := congrArg (fun f : Q e →ₗ[R] Q e => f z) (hs e)
+                simpa [LinearMap.comp_apply] using this
+              rw [show q e xe = z by rfl, hzs, sub_self]
+            have hpred : xe - y ∈ F.predecessor e := by
+              have hk : xe - y ∈ LinearMap.ker (q e) := by
+                exact (LinearMap.mem_ker).mpr hq
+              change xe - y ∈ LinearMap.ker ((F.predecessor e).mkQ) at hk
+              rw [Submodule.ker_mkQ] at hk
+              exact hk
+            change (F.stage e).subtype (xe - y) ∈
+                (⨆ e' : {e' : E // e' < e}, F.stage e'.1)
+              at hpred
+            by_cases hne : Nonempty {e' : E // e' < e}
+            · letI := hne
+              obtain ⟨e', he'⟩ :=
+                (Submodule.mem_iSup_of_directed _ (hdir e)).mp hpred
+              have hi := ih e' e'.property
+              have hxy : x - (y : M) ∈ ⨆ e, p e := by
+                exact hi he'
+              have hadd : x - (y : M) + (y : M) ∈ ⨆ e, p e := add_mem hxy hy
+              simpa only [sub_add_cancel] using hadd
+            · have hzero : (x - (y : M)) = 0 := by
+                letI : IsEmpty {e' : E // e' < e} := ⟨fun e' => hne ⟨e'⟩⟩
+                change (F.stage e).subtype (xe - y) ∈
+                  (⨆ e' : {e' : E // e' < e}, F.stage e'.1) at hpred
+                have : (F.stage e).subtype (xe - y) = 0 := by
+                  rw [iSup_of_empty] at hpred
+                  simpa using hpred
+                exact this
+              rw [sub_eq_zero.mp hzero]
+              exact hy
+      have htop : (⨆ e, p e) = (⊤ : Submodule R M) := by
+        apply le_antisymm
+        · exact le_top
+        · rw [← F.exhaustive]
+          exact iSup_le hstage
+      let sectionLift := s
+      have hsectionLift : ∀ e : E,
+          (q e).comp (sectionLift e) = LinearMap.id := by
+        intro e
+        simpa [sectionLift] using hs e
+      have hind : iSupIndep p := by
+        rw [iSupIndep_iff_finsetSum_eq_zero_imp_eq_zero]
+        intro t v hv hsum i hi
+        have hzero : ∀ s : Finset E,
+            (∀ j ∈ s, v j ∈ p j) →
+              ((∑ j ∈ s, v j) = 0) → ∀ j ∈ s, v j = 0 := by
+          intro s
+          refine Finset.strongInductionOn s ?_
+          intro s ih hs hsum' j hj
+          let m : E := s.max' ⟨j, hj⟩
+          have hm : m ∈ s := s.max'_mem ⟨j, hj⟩
+          have hle : ∀ k ∈ s, k ≤ m := by
+            intro k hk
+            simpa [m] using s.le_max' k hk
+          have hmem_stage : ∀ k ∈ s, v k ∈ F.stage k := by
+            intro k hk
+            rcases (Submodule.mem_map.mp (hs k hk)) with ⟨w, hw, hwv⟩
+            rw [← hwv]
+            exact w.property
+          have hmem_m : ∀ k ∈ s, v k ∈ F.stage m := by
+            intro k hk
+            exact F.monotone (hle k hk) (hmem_stage k hk)
+          have hsum_mem : (∑ k ∈ s, v k) ∈ F.stage m := by
+            exact Submodule.sum_mem _ (fun k hk => hmem_m k hk)
+          let vm : ∀ k : E, k ∈ s → F.stage m := fun k hk =>
+            ⟨v k, hmem_m k hk⟩
+          have hsum_stage :
+              (∑ k ∈ s.attach, vm k.1 k.2) = ⟨∑ k ∈ s, v k, hsum_mem⟩ := by
+            apply Subtype.ext
+            rw [Finset.sum_attach]
+          have hqsum : (∑ k ∈ s.attach, q m (vm k.1 k.2)) = 0 := by
+            have h := congrArg (q m) hsum_stage
+            rw [map_sum, hsum'] at h
+            simpa using h
+          have hqpred : ∀ k ∈ s.attach, k.1 ≠ m →
+              q m (vm k.1 k.2) = 0 := by
+            intro k hk hkm
+            have hlt : k.1 < m := lt_of_le_of_ne (hle k.1 k.2) hkm
+            have hpred : vm k.1 k.2 ∈ F.predecessor m := by
+              change (F.stage m).subtype (vm k.1 k.2) ∈
+                (⨆ e' : {e' : E // e' < m}, F.stage e'.1)
+              apply Submodule.mem_iSup_of_mem ⟨k.1, hlt⟩
+              exact hmem_stage k.1 k.2
+            apply (LinearMap.mem_ker).mp
+            change vm k.1 k.2 ∈ LinearMap.ker ((F.predecessor m).mkQ)
+            rw [Submodule.ker_mkQ]
+            exact hpred
+          have hqmax : q m (vm m hm) = 0 := by
+            have h := hqsum
+            rw [Finset.sum_eq_single (⟨m, hm⟩ : s.attach)] at h
+            · simpa using h
+            · intro k hk hkm
+              exact hqpred k hk (fun h => hkm (Subtype.ext h))
+            · intro hnot
+              exact (hnot (by simp)).elim
+          have hvm : v m = 0 := by
+            rcases (Submodule.mem_map.mp (hs m hm)) with ⟨w, hw, hwv⟩
+            rcases hw with ⟨z, hzw⟩
+            have hvm_sub : vm m hm = sectionLift m z := by
+              apply Subtype.ext
+              change v m = (sectionLift m z : M)
+              exact hwv.symm.trans ((congrArg (F.stage m).subtype hzw).symm)
+            have hqz := congrArg (q m) hvm_sub
+            have hq_lift : q m (sectionLift m z) = z := by
+              have h := congrArg (fun f : Q m →ₗ[R] Q m => f z) (hsectionLift m)
+              simpa [LinearMap.comp_apply] using h
+            rw [hqmax, hq_lift] at hqz
+            exact hqz.symm
+          have hrest : ∀ k ∈ s.erase m, v k = 0 := by
+            apply ih (s.erase m)
+            · exact Finset.erase_ssubset hm
+            · intro k hk
+              exact hs k (Finset.mem_of_mem_erase hk)
+            · have hsum_erase := hsum'
+              rw [← Finset.sum_erase_add _ _ hm, hvm, add_zero] at hsum_erase
+              exact hsum_erase
+          by_cases hje : j = m
+          · subst j
+            exact hvm
+          · exact hrest j (Finset.mem_erase.mpr ⟨hje, hj⟩)
+        exact hzero t hv hsum i hi
+      let hInternal : DirectSum.IsInternal p :=
+        DirectSum.isInternal_submodule_of_iSupIndep_of_iSup_eq_top hind htop
+      let e : (⨁ e, (p e : Type u)) ≃ₗ[R] M :=
+        LinearEquiv.ofBijective (DirectSum.coeLinearMap p) hInternal
+      have hprojDS : Module.Projective R (⨁ e, (p e : Type u)) := by
+        apply Module.Projective.directSum_iff.mpr
+        intro e
+        exact hp e
+      have hprojM : Module.Projective R M := by
+        exact @Module.Projective.of_equiv' R _ M _ _ (⨁ e, (p e : Type u)) _ _
+          hprojDS e.symm
+      have hprojCat : CategoryTheory.Projective (ModuleCat.of R M) :=
+        (IsProjective.iff_projective (ModuleCat.of R M : Type u)).mp hprojM
+      exact (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero _).mp hprojCat
+  | succ n ih =>
+      sorry
 
 /-! ## Finite and cyclic modules -/
 

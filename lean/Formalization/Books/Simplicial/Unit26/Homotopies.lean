@@ -562,7 +562,7 @@ private lemma homotopyDegreewiseComponent_succ
     homotopyDegreewiseComponent H n i.succ = H.h i ≫ V.δ i.succ := by
   cases i using Fin.lastCases with
   | last =>
-      simpa [homotopyDegreewiseComponent] using (H.h_last_comp_δ_last n).symm
+      simp [homotopyDegreewiseComponent]
   | cast i =>
       cases n with
       | zero => exact Fin.elim0 i

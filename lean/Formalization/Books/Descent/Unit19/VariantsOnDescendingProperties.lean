@@ -1,5 +1,4 @@
 import Mathlib.AlgebraicGeometry.Morphisms.Flat
-import Mathlib.AlgebraicGeometry.Properties
 import Formalization.Books.Descent.Unit19.Core
 
 universe u

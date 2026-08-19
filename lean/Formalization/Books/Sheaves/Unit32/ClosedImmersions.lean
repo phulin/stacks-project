@@ -453,8 +453,8 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
   let : IsIso adj.counit := closedSubsetSet_inverseImage_pushforward_counit_isIso hZ
   let hff : (closedSubsetSetPushforward Z).FullyFaithful :=
     adj.fullyFaithfulROfIsIsoCounit
-  letI : (closedSubsetSetPushforward Z).Full := hff.full
-  letI : (closedSubsetSetPushforward Z).Faithful := hff.faithful
+  let : (closedSubsetSetPushforward Z).Full := hff.full
+  let : (closedSubsetSetPushforward Z).Faithful := hff.faithful
   rw [← adj.isIso_unit_app_iff_mem_essImage]
   rw [TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso]
   constructor
@@ -522,7 +522,7 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
             (CategoryTheory.toSheafify
               (Opens.grothendieckTopology (TopCat.of Z))
               ((pullbackPresheaf f).obj G.1))) hU₂)
-      letI : IsIso e₂.hom := e₂.isIso_hom
+      let : IsIso e₂.hom := e₂.isIso_hom
       have hpush_map {P Q : TopCat.Presheaf (Type w) (TopCat.of Z)}
           (φ : P ⟶ Q) :
           (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
@@ -590,7 +590,7 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
                 TopCat.Presheaf.stalkPushforward (Type w) f Q z := by
               convert congrArg (fun k =>
                 k ≫ TopCat.Presheaf.stalkPushforward (Type w) f Q z) hmap' using 1
-              all_goals (simp only [TopCat.Presheaf.pushforward] <;> rfl)
+              all_goals (simp only [TopCat.Presheaf.pushforward] ; rfl)
             _ = ((TopCat.Presheaf.pushforward (Type w) f).map φ).app (op U) ≫
                 Q.germ ((Opens.map f).obj U) z hxU := by
               exact congrArg
@@ -638,7 +638,7 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
           TopCat.Presheaf.pullback, pullbackPresheaf,
           Adjunction.comp_unit_app, pullbackPresheafStalkIso,
           TopCat.Presheaf.stalkPullbackIso,
-          TopCat.Presheaf.stalkPullbackHom, Category.assoc]
+          TopCat.Presheaf.stalkPullbackHom]
         have hnat :
             (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
                 ((TopCat.Presheaf.pushforward (Type w) f).map
@@ -655,22 +655,6 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
                 (CategoryTheory.toSheafify
                   (Opens.grothendieckTopology (TopCat.of Z))
                   (f₀.op.lan.obj G.obj)) := by
-          change
-            (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
-                ((TopCat.Presheaf.pushforward (Type w) f).map
-                  (CategoryTheory.toSheafify
-                    (Opens.grothendieckTopology (TopCat.of Z))
-                    (f₀.op.lan.obj G.obj))) ≫
-              TopCat.Presheaf.stalkPushforward (Type w) f
-                (((presheafToSheaf
-                  (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
-                    (f₀.op.lan.obj G.obj)).obj) z =
-            TopCat.Presheaf.stalkPushforward (Type w) f
-                (f₀.op.lan.obj G.obj) z ≫
-              (TopCat.Presheaf.stalkFunctor (Type w) z).map
-                (CategoryTheory.toSheafify
-                  (Opens.grothendieckTopology (TopCat.of Z))
-                  (f₀.op.lan.obj G.obj))
           exact hpush_map (P := f₀.op.lan.obj G.obj)
             (Q := ((presheafToSheaf
               (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
@@ -702,14 +686,14 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
         have hnat' := congrArg (fun q =>
           (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
               ((Opens.map f).op.lanUnit.app G.obj) ≫ q) hnat
-        convert hnat' using 1 <;> rfl
-      letI : IsIso
+        convert hnat' using 1 ; rfl
+      let : IsIso
           ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
             ((closedSubsetSetPushforward Z).map (e₀.hom.app G)).hom) := by
-        letI : IsIso (e₀.hom.app G) := (e₀.app G).isIso_hom
-        letI : IsIso ((closedSubsetSetPushforward Z).map (e₀.hom.app G)) := by
+        let : IsIso (e₀.hom.app G) := (e₀.app G).isIso_hom
+        let : IsIso ((closedSubsetSetPushforward Z).map (e₀.hom.app G)) := by
           exact Functor.map_isIso _ _
-        letI : IsIso (((closedSubsetSetPushforward Z).map
+        let : IsIso (((closedSubsetSetPushforward Z).map
             (e₀.hom.app G)).hom) :=
           (TopCat.Sheaf.forget (Type w) X).map_isIso
             ((closedSubsetSetPushforward Z).map (e₀.hom.app G))
@@ -732,10 +716,10 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
         exact congrArg
           (fun q => (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map q)
           hunit_hom
-      letI : IsIso
+      let : IsIso
           ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
               (adj₂.unit.app G).hom ≫ ePush₂.hom) := by
-        letI : IsIso e₂.hom := e₂.isIso_hom
+        let : IsIso e₂.hom := e₂.isIso_hom
         rw [hunit₂]
         exact e₂.isIso_hom
       have hIsoAdj₂ : IsIso
@@ -747,16 +731,16 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
           exact ePush₂.eq_comp_inv.mpr hunit₂
         rw [hf]
         exact (e₂.trans ePush₂.symm).isIso_hom
-      letI : IsIso ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+      let : IsIso ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
           (adj₂.unit.app G).hom) := by
         exact hIsoAdj₂
-      letI : IsIso ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
+      let : IsIso ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
           (adj.unit.app G).hom ≫
         (TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
           ((closedSubsetSetPushforward Z).map (e₀.hom.app G)).hom) := by
         rw [hcomp]
         exact hIsoAdj₂
-      letI : IsIso
+      let : IsIso
           ((TopCat.Presheaf.stalkFunctor (Type w) (f z)).map
             ((closedSubsetSetPushforward Z).map (e₀.hom.app G)).hom) := by
         infer_instance

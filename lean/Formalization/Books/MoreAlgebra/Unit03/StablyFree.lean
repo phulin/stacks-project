@@ -230,20 +230,20 @@ theorem exists_finite_stablyFree_lift
         Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
   classical
   let A := R ⧸ I
-  letI : Module.IsStablyFree A E := ‹StablyFree A E›
+  let : Module.IsStablyFree A E := ‹StablyFree A E›
   obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hENfree⟩ :=
     Module.IsStablyFree.exist_free_prod A E
-  letI : AddCommGroup N := hNadd
-  letI : Module A N := hNmod
-  letI : Module.Finite A N := hNfin
-  letI : Module.Free A N := hNfree
+  let : AddCommGroup N := hNadd
+  let : Module A N := hNmod
+  let : Module.Finite A N := hNfin
+  let : Module.Free A N := hNfree
   let ιN := Module.Free.ChooseBasisIndex A N
-  letI : Fintype ιN := Module.Free.ChooseBasisIndex.fintype A N
+  let : Fintype ιN := Module.Free.ChooseBasisIndex.fintype A N
   let eN : N ≃ₗ[A] (Fin (Fintype.card ιN) → A) :=
     (Module.Free.chooseBasis A N).reindex (Fintype.equivFin ιN) |>.equivFun
-  letI : Module.Free A (E × N) := hENfree
+  let : Module.Free A (E × N) := hENfree
   let ιF := Module.Free.ChooseBasisIndex A (E × N)
-  letI : Fintype ιF := Module.Free.ChooseBasisIndex.fintype A (E × N)
+  let : Fintype ιF := Module.Free.ChooseBasisIndex.fintype A (E × N)
   let eF : (E × N) ≃ₗ[A] (Fin (Fintype.card ιF) → A) :=
     (Module.Free.chooseBasis A (E × N)).reindex (Fintype.equivFin ιF) |>.equivFun
   let n := Fintype.card ιN
@@ -366,7 +366,7 @@ theorem exists_finite_stablyFree_lift
           exact zero_add y
       right_inv := by
         intro x
-        simp [i', hi']
+        simp [i']
       map_add' := by
         rintro ⟨x₁, y₁⟩ ⟨x₂, y₂⟩
         change (x₁ : F) + (x₂ : F) + i' (y₁ + y₂) =
@@ -377,18 +377,17 @@ theorem exists_finite_stablyFree_lift
         intro r x
         change r • (x.1 : F) + i' (r • x.2) = r • ((x.1 : F) + i' x.2)
         rw [map_smul, smul_add] }
-  letI : Module.Finite R (K × G) := Module.Finite.equiv eK.symm
-  letI : Module.Finite R K := by
+  let : Module.Finite R (K × G) := Module.Finite.equiv eK.symm
+  let : Module.Finite R K := by
     apply Module.Finite.of_surjective (LinearMap.fst R K G)
     intro x
     exact ⟨(x, 0), rfl⟩
-  letI : Module R E := Module.compHom E (Ideal.Quotient.mk I)
-  letI : IsScalarTower R A E :=
+  let : Module R E := Module.compHom E (Ideal.Quotient.mk I)
+  let : IsScalarTower R A E :=
     ⟨fun r a x => by
-      change (r • a) • x = r • (a • x)
       change ((I.mkQ r) * a) • x = (I.mkQ r) • (a • x)
       rw [mul_smul]⟩
-  letI : Module.Free R (K × G) := Module.Free.of_equiv eK.symm
+  let : Module.Free R (K × G) := Module.Free.of_equiv eK.symm
   have hstable : StablyFree R K := Module.IsStablyFree.of_free_prod R K G
   let IK : Submodule R K := I • (⊤ : Submodule R K)
   let fbar : Fbar →ₗ[A] E :=
@@ -431,7 +430,7 @@ theorem exists_finite_stablyFree_lift
     intro x
     apply Subtype.ext
     simp only [LinearMap.comp_apply, LinearMap.id_apply]
-    simp [ret, eK, x.property]
+    simp [ret, eK]
   have hret_mem {x : F} (hx : x ∈ I • (⊤ : Submodule R F)) :
       ret x ∈ IK := by
     refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
@@ -534,9 +533,9 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
   let eQ : (R ⧸ I) ⊗[R] M ≃ₗ[R ⧸ I] Q :=
     (TensorProduct.quotTensorEquivQuotSMul M I).extendScalarsOfSurjective
       Ideal.Quotient.mk_surjective
-  letI : Module.FinitePresentation (R ⧸ I) Q :=
+  let : Module.FinitePresentation (R ⧸ I) Q :=
     Module.finitePresentation_of_projective (R ⧸ I) Q
-  letI : Module.Flat (R ⧸ I) Q := inferInstance
+  let : Module.Flat (R ⧸ I) Q := inferInstance
   have hQrank (m : Ideal R) (hm : m.IsPrime) (hIm : I ≤ m) :
       Module.rankAtStalk Q
           ⟨m.map (Ideal.Quotient.mk I),
@@ -639,7 +638,7 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
     refine ⟨?_, ?_⟩
     · intro x y hxy
       apply hleft_bij.1
-      simpa [LinearMap.comp_apply, hxy]
+      simp [LinearMap.comp_apply, hxy]
     · intro y
       obtain ⟨x, hx⟩ := hright_surj y
       exact ⟨ψ x, by simpa [LinearMap.comp_apply] using hx⟩

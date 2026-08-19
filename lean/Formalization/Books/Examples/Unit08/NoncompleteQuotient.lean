@@ -162,6 +162,113 @@ theorem mem_noncompleteQuotientXIdealPow_iff
     f ∈ noncompleteQuotientXIdealPow k n ↔ ∀ i < n, coeff i = 0 := by
   sorry
 
+private theorem canonicalNoncompleteQuotientFiniteExpansion_sub
+    {k : Type u} [Field k] {f g : NoncompleteQuotientRing k}
+    {p q : ℕ → NoncompleteQuotientPolynomial k}
+    (hp : HasCanonicalNoncompleteQuotientFiniteExpansion f p)
+    (hq : HasCanonicalNoncompleteQuotientFiniteExpansion g q) :
+    HasCanonicalNoncompleteQuotientFiniteExpansion (f - g) (fun i => p i - q i) := by
+  classical
+  rcases hp with ⟨hp, ⟨sp, hsp, hvp⟩⟩
+  rcases hq with ⟨hq, ⟨sq, hsq, hvq⟩⟩
+  have hred : ∀ i, IsReducedNoncompleteQuotientCoefficient (p i - q i) := by
+    intro i m hm
+    have hcoeff : MvPolynomial.coeff m (p i - q i) ≠ 0 :=
+      MvPolynomial.mem_support_iff.mp hm
+    have hor : MvPolynomial.coeff m (p i) ≠ 0 ∨
+        MvPolynomial.coeff m (q i) ≠ 0 := by
+      by_contra h
+      have hp0 : MvPolynomial.coeff m (p i) = 0 := by
+        by_contra hp0
+        exact h (Or.inl hp0)
+      have hq0 : MvPolynomial.coeff m (q i) = 0 := by
+        by_contra hq0
+        exact h (Or.inr hq0)
+      apply hcoeff
+      simp [MvPolynomial.coeff_sub, hp0, hq0]
+    rcases hor with hp0 | hq0
+    · exact hp i m ((MvPolynomial.mem_support_iff).mpr hp0)
+    · exact hq i m ((MvPolynomial.mem_support_iff).mpr hq0)
+  let d : ℕ → NoncompleteQuotientPolynomial k := fun i => p i - q i
+  let u : Finset ℕ := sp ∪ sq
+  let sd : Finset ℕ := u.filter (fun i => d i ≠ 0)
+  refine ⟨hred, ⟨sd, ?_, ?_⟩⟩
+  · intro i
+    constructor
+    · intro hdi
+      change i ∈ u.filter (fun i => d i ≠ 0)
+      apply Finset.mem_filter.mpr
+      refine ⟨?_, hdi⟩
+      have hor : p i ≠ 0 ∨ q i ≠ 0 := by
+        by_contra h
+        have hp0 : p i = 0 := by
+          by_contra hp0
+          exact h (Or.inl hp0)
+        have hq0 : q i = 0 := by
+          by_contra hq0
+          exact h (Or.inr hq0)
+        exact hdi (by simp [d, hp0, hq0])
+      rcases hor with hp0 | hq0
+      · exact Finset.mem_union_left _ ((hsp i).mp hp0)
+      · exact Finset.mem_union_right _ ((hsq i).mp hq0)
+    · intro hi
+      change i ∈ u.filter (fun i => d i ≠ 0) at hi
+      exact (Finset.mem_filter.mp hi).2
+  · rcases hvp with rfl
+    rcases hvq with rfl
+    let P : ℕ → NoncompleteQuotientRing k :=
+      fun i => quotientOfPolynomial (p i) * xElement k ^ i
+    let Q : ℕ → NoncompleteQuotientRing k :=
+      fun i => quotientOfPolynomial (q i) * xElement k ^ i
+    let D : ℕ → NoncompleteQuotientRing k :=
+      fun i => quotientOfPolynomial (d i) * xElement k ^ i
+    let u : Finset ℕ := sp ∪ sq
+    have hpu : ∑ i ∈ u, P i = ∑ i ∈ sp, P i := by
+      symm
+      apply Finset.sum_subset Finset.subset_union_left
+      intro i hi hnot
+      have hp0 : p i = 0 := by
+        apply Classical.byContradiction
+        intro hp0
+        exact hnot ((hsp i).mp hp0)
+      simp [P, quotientOfPolynomial, hp0]
+    have hqu : ∑ i ∈ u, Q i = ∑ i ∈ sq, Q i := by
+      symm
+      apply Finset.sum_subset Finset.subset_union_right
+      intro i hi hnot
+      have hq0 : q i = 0 := by
+        apply Classical.byContradiction
+        intro hq0
+        exact hnot ((hsq i).mp hq0)
+      simp [Q, quotientOfPolynomial, hq0]
+    have hdu : sd ⊆ u := by
+      change u.filter (fun i => d i ≠ 0) ⊆ u
+      exact Finset.filter_subset _ _
+    have hdu' : ∑ i ∈ u, D i = ∑ i ∈ sd, D i := by
+      symm
+      apply Finset.sum_subset hdu
+      intro i hi hnot
+      have hdi : d i = 0 := by
+        by_contra hdi
+        exact hnot (Finset.mem_filter.mpr ⟨hi, hdi⟩)
+      simp [D, quotientOfPolynomial, hdi]
+    simp only [noncompleteQuotientFiniteExpansionValue]
+    symm
+    change (∑ i ∈ sd, D i) = (∑ i ∈ sp, P i) - ∑ i ∈ sq, Q i
+    have hD : ∀ i, D i = P i - Q i := by
+      intro i
+      simp only [D, P, Q, quotientOfPolynomial]
+      rw [map_sub]
+      ring
+    rw [← hdu']
+    calc
+      (∑ i ∈ u, D i) = ∑ i ∈ u, (P i - Q i) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact hD i
+      _ = (∑ i ∈ u, P i) - ∑ i ∈ u, Q i := by rw [Finset.sum_sub_distrib]
+      _ = (∑ i ∈ sp, P i) - ∑ i ∈ sq, Q i := by rw [hpu, hqu]
+
 /-- The element `x` is a nonzerodivisor. -/
 theorem noncompleteQuotientX_isRegular (k : Type u) [Field k] :
     IsRegular (xElement k) := by
@@ -236,12 +343,133 @@ def HasCanonicalNoncompleteQuotientInfiniteExpansion
         Ideal.Quotient.mk (noncompleteQuotientXIdeal k ^ n)
           (noncompleteQuotientFinitePartialSum coeff n)
 
+private theorem canonicalNoncompleteQuotientFiniteExpansion_partialSum
+    {k : Type u} [Field k]
+    (coeff : ℕ → NoncompleteQuotientPolynomial k)
+    (hcoeff : ∀ i, IsReducedNoncompleteQuotientCoefficient (coeff i))
+    (n : ℕ) :
+    HasCanonicalNoncompleteQuotientFiniteExpansion
+      (noncompleteQuotientFinitePartialSum coeff n)
+      (fun i => if i < n then coeff i else 0) := by
+  classical
+  let r : ℕ → NoncompleteQuotientPolynomial k := fun i =>
+    if i < n then coeff i else 0
+  let s : Finset ℕ := (Finset.range n).filter (fun i => coeff i ≠ 0)
+  have hred : ∀ i, IsReducedNoncompleteQuotientCoefficient (r i) := by
+    intro i
+    by_cases hi : i < n
+    · simpa [r, hi] using hcoeff i
+    · simp [r, hi, IsReducedNoncompleteQuotientCoefficient]
+  refine ⟨hred, ⟨s, ?_, ?_⟩⟩
+  · intro i
+    constructor
+    · intro hi
+      have hin : i < n := by
+        by_contra hin
+        exact hi (by simp [r, hin])
+      apply Finset.mem_filter.mpr
+      exact ⟨Finset.mem_range.mpr hin, by simpa [r, hin] using hi⟩
+    · intro hi
+      have hi' := Finset.mem_filter.mp hi
+      have hin : i < n := Finset.mem_range.mp hi'.1
+      simpa [r, hin] using hi'.2
+  · simp only [noncompleteQuotientFiniteExpansionValue,
+      noncompleteQuotientFinitePartialSum]
+    let T : ℕ → NoncompleteQuotientRing k :=
+      fun i => quotientOfPolynomial (coeff i) * xElement k ^ i
+    have hs : s ⊆ Finset.range n := Finset.filter_subset _ _
+    have hsum : (∑ i ∈ s, quotientOfPolynomial (r i) * xElement k ^ i) =
+        ∑ i ∈ Finset.range n, T i := by
+      calc
+        (∑ i ∈ s, quotientOfPolynomial (r i) * xElement k ^ i) =
+            ∑ i ∈ s, T i := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              have hi' := Finset.mem_filter.mp hi
+              have hin : i < n := Finset.mem_range.mp hi'.1
+              simp [T, r, hin]
+        _ = ∑ i ∈ Finset.range n, T i := by
+          apply Finset.sum_subset hs
+          intro i hi hnot
+          have hi0 : coeff i = 0 := by
+            by_contra hi0
+            exact hnot (Finset.mem_filter.mpr ⟨hi, hi0⟩)
+          simp [T, quotientOfPolynomial, hi0]
+    simpa [T] using hsum.symm
+
 /-- Every completed element has a unique infinite expansion in canonical form. -/
 theorem existsUnique_canonicalNoncompleteQuotientInfiniteExpansion
     {k : Type u} [Field k] (f : NoncompleteQuotientCompletion k) :
     ∃! coeff : ℕ → NoncompleteQuotientPolynomial k,
       HasCanonicalNoncompleteQuotientInfiniteExpansion f coeff := by
-  sorry
+  classical
+  refine AdicCompletion.induction_on (I := noncompleteQuotientXIdeal k)
+    (M := NoncompleteQuotientRing k)
+    (p := fun f => ∃! coeff, HasCanonicalNoncompleteQuotientInfiniteExpansion f coeff)
+    f ?_
+  intro a
+  let cAt : ℕ → ℕ → NoncompleteQuotientPolynomial k := fun n =>
+    (existsUnique_canonicalNoncompleteQuotientFiniteExpansion (a n)).choose
+  have hcAt (n : ℕ) :
+      HasCanonicalNoncompleteQuotientFiniteExpansion (a n) (cAt n) := by
+    exact (existsUnique_canonicalNoncompleteQuotientFiniteExpansion (a n)).choose_spec.1
+  have smulTop_le (I : Ideal (NoncompleteQuotientRing k)) :
+      (I • (⊤ : Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k))) ≤
+        (I : Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) := by
+    refine Submodule.smul_le.2 ?_
+    intro r hr x hx
+    simpa [smul_eq_mul] using I.mul_mem_right x hr
+  have hcoeffEq {m n : ℕ} (hmn : m ≤ n) (i : ℕ) (hi : i < m) :
+      cAt m i = cAt n i := by
+    have hs : a m ≡ a n [SMOD
+        noncompleteQuotientXIdeal k ^ m •
+          (⊤ : Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k))] :=
+      a.property hmn
+    have hmem : a m - a n ∈ noncompleteQuotientXIdeal k ^ m :=
+      smulTop_le _ (SModEq.sub_mem.mp hs)
+    have hdiff := canonicalNoncompleteQuotientFiniteExpansion_sub (hcAt m) (hcAt n)
+    have hz := (mem_noncompleteQuotientXIdealPow_iff hdiff m).mp hmem i hi
+    exact sub_eq_zero.mp hz
+  let coeff : ℕ → NoncompleteQuotientPolynomial k := fun i => cAt (i + 1) i
+  have hcoeff (i : ℕ) :
+      IsReducedNoncompleteQuotientCoefficient (coeff i) := by
+    exact (hcAt (i + 1)).1 i
+  have hcanonical :
+      HasCanonicalNoncompleteQuotientInfiniteExpansion
+        (AdicCompletion.mk (noncompleteQuotientXIdeal k) (NoncompleteQuotientRing k) a)
+        coeff := by
+    refine ⟨hcoeff, ?_⟩
+    intro n
+    rw [AdicCompletion.evalₐ_mk]
+    have hpart := canonicalNoncompleteQuotientFiniteExpansion_partialSum coeff hcoeff n
+    have hdiff := canonicalNoncompleteQuotientFiniteExpansion_sub (hcAt n) hpart
+    have hmem : a n - noncompleteQuotientFinitePartialSum coeff n ∈
+        noncompleteQuotientXIdeal k ^ n := by
+      have hz := (mem_noncompleteQuotientXIdealPow_iff hdiff n).2
+      apply hz
+      intro i hi
+      dsimp [coeff]
+      rw [if_pos hi]
+      exact sub_eq_zero.mpr
+        (hcoeffEq (Nat.succ_le_of_lt hi) i (Nat.lt_succ_self i)).symm
+    exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).2 hmem
+  refine ⟨coeff, hcanonical, ?_⟩
+  intro q hq
+  funext i
+  let n := i + 1
+  have hpart := canonicalNoncompleteQuotientFiniteExpansion_partialSum q hq.1 n
+  have hdiff := canonicalNoncompleteQuotientFiniteExpansion_sub (hcAt n) hpart
+  have hmem : a n - noncompleteQuotientFinitePartialSum q n ∈
+      noncompleteQuotientXIdeal k ^ n := by
+    apply (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mp
+    simpa only [AdicCompletion.evalₐ_mk] using hq.2 n
+  have hz := (mem_noncompleteQuotientXIdealPow_iff hdiff n).mp hmem i (by
+    dsimp [n]
+    omega)
+  dsimp [n] at hz
+  rw [if_pos (by omega)] at hz
+  dsimp [coeff] at ⊢
+  exact (sub_eq_zero.mp hz).symm
 
 /-- The finite partial sums defining `Σ i≥1, xⁱwᵢ`. -/
 def noncompleteQuotientBadPartialSum (k : Type u) [Field k] (n : ℕ) :
@@ -254,7 +482,25 @@ theorem noncompleteQuotientBadPartialSum_isAdicCauchy
     (k : Type u) [Field k] :
     AdicCompletion.IsAdicCauchy (noncompleteQuotientXIdeal k) (NoncompleteQuotientRing k)
       (noncompleteQuotientBadPartialSum k) := by
-  sorry
+  rw [AdicCompletion.isAdicCauchy_iff]
+  intro n
+  rw [show noncompleteQuotientBadPartialSum k (n + 1) =
+      noncompleteQuotientBadPartialSum k n +
+        xElement k ^ (n + 1) * wElement k ⟨n + 1, Nat.succ_pos n⟩ by
+    simp [noncompleteQuotientBadPartialSum, Finset.sum_range_succ]]
+  rw [SModEq.sub_mem]
+  have hpow : xElement k ^ n ∈ noncompleteQuotientXIdeal k ^ n :=
+    Ideal.pow_mem_pow (Ideal.mem_span_singleton_self _) n
+  have hterm : xElement k ^ (n + 1) * wElement k ⟨n + 1, Nat.succ_pos n⟩ ∈
+      noncompleteQuotientXIdeal k ^ n • (⊤ : Submodule (NoncompleteQuotientRing k)
+        (NoncompleteQuotientRing k)) := by
+    rw [show xElement k ^ (n + 1) * wElement k ⟨n + 1, Nat.succ_pos n⟩ =
+        xElement k ^ n • (xElement k * wElement k ⟨n + 1, Nat.succ_pos n⟩) by
+      simp [pow_succ, mul_assoc]]
+    exact Submodule.smul_mem_smul hpow Submodule.mem_top
+  have hneg := (noncompleteQuotientXIdeal k ^ n •
+    (⊤ : Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k))).neg_mem hterm
+  simpa [sub_eq_add_neg, neg_add, add_assoc] using hneg
 
 /-- The Cauchy sequence of partial sums as a Mathlib adic Cauchy sequence. -/
 def noncompleteQuotientBadCauchySequence (k : Type u) [Field k] :
@@ -279,7 +525,67 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
     (k : Type u) [Field k] :
     HasCanonicalNoncompleteQuotientInfiniteExpansion
       (noncompleteQuotientBadElement k) (noncompleteQuotientBadCoefficient k) := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · intro i
+    by_cases hi : i = 0
+    · simp [noncompleteQuotientBadCoefficient, hi,
+        IsReducedNoncompleteQuotientCoefficient]
+    · rw [noncompleteQuotientBadCoefficient, dif_neg hi]
+      rw [IsReducedNoncompleteQuotientCoefficient, MvPolynomial.support_X]
+      intro m hm
+      simp only [Finset.mem_singleton] at hm
+      subst m
+      simp [IsReducedNoncompleteQuotientMonomial]
+  · intro n
+    rw [noncompleteQuotientBadElement, AdicCompletion.evalₐ_mk]
+    simp only [noncompleteQuotientBadCauchySequence, Subtype.coe_mk]
+    rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+    classical
+    have hsum : ∀ m : ℕ,
+        noncompleteQuotientBadPartialSum k m =
+          noncompleteQuotientFinitePartialSum (noncompleteQuotientBadCoefficient k) m +
+            if h : m = 0 then 0
+            else xElement k ^ m * wElement k ⟨m, Nat.pos_of_ne_zero h⟩ := by
+      intro m
+      induction m with
+      | zero =>
+          simp [noncompleteQuotientBadPartialSum, noncompleteQuotientFinitePartialSum]
+      | succ m ih =>
+          by_cases hm : m = 0
+          · subst m
+            simp [noncompleteQuotientBadPartialSum, noncompleteQuotientFinitePartialSum,
+              noncompleteQuotientBadCoefficient, Finset.sum_range_succ, quotientOfPolynomial,
+              xElement, wElement, quotientVariable]
+          · have hbad : noncompleteQuotientBadPartialSum k (m + 1) =
+                noncompleteQuotientBadPartialSum k m +
+                  xElement k ^ (m + 1) * wElement k ⟨m + 1, Nat.succ_pos m⟩ := by
+                simp [noncompleteQuotientBadPartialSum, Finset.sum_range_succ]
+            have hfin : noncompleteQuotientFinitePartialSum
+                (noncompleteQuotientBadCoefficient k) (m + 1) =
+                noncompleteQuotientFinitePartialSum
+                    (noncompleteQuotientBadCoefficient k) m +
+                  quotientOfPolynomial (noncompleteQuotientBadCoefficient k m) *
+                    xElement k ^ m := by
+              simp [noncompleteQuotientFinitePartialSum, Finset.sum_range_succ]
+            rw [hbad, hfin, ih, dif_neg hm, dif_neg (Nat.succ_ne_zero m),
+              noncompleteQuotientBadCoefficient, dif_neg hm]
+            rw [show quotientOfPolynomial
+                (MvPolynomial.X (.w ⟨m, Nat.pos_of_ne_zero hm⟩)) =
+                  wElement k ⟨m, Nat.pos_of_ne_zero hm⟩ by rfl]
+            ac_rfl
+    rw [hsum n]
+    by_cases hn : n = 0
+    · simp [hn]
+    · rw [dif_neg hn]
+      simp only [sub_eq_add_neg, add_assoc, add_neg_cancel_left, zero_add]
+      have hpow : xElement k ^ n ∈ noncompleteQuotientXIdeal k ^ n :=
+        Ideal.pow_mem_pow (Ideal.mem_span_singleton_self _) n
+      have hmem : xElement k ^ n * wElement k ⟨n, Nat.pos_of_ne_zero hn⟩ ∈
+          noncompleteQuotientXIdeal k ^ n := by
+        have h := (noncompleteQuotientXIdeal k ^ n).mul_mem_left
+          (wElement k ⟨n, Nat.pos_of_ne_zero hn⟩) hpow
+        simpa [mul_comm] using h
+      convert hmem using 1 <;> ring
 
 /-- Each summand `xⁱwᵢ` belongs to `(t)`, by the relation `zᵢt = xⁱwᵢ`. -/
 theorem noncompleteQuotientX_pow_mul_w_mem_t (k : Type u) [Field k] (i : ℕ+) :

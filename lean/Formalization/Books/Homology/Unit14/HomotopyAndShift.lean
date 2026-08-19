@@ -1595,7 +1595,8 @@ theorem termwiseSplitConnectingMap_exists
       convert (s (n + 1)).r_f using 1
       all_goals rfl
     have hfr₂ : S.f.f (n + 1 + 1) ≫ (s (n + 1 + 1)).r = 𝟙 _ := by
-      convert (s (n + 1 + 1)).f_r using 1; rfl
+      convert (s (n + 1 + 1)).f_r using 1
+      rfl
     have hR :
         (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
           (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫

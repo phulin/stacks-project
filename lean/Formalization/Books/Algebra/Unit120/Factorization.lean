@@ -24,7 +24,7 @@ Mathlib's `IsDedekindDomain` class.
 namespace Formalization.Books.Algebra.Unit120
 
 open Set
-open scoped Polynomial
+open scoped Polynomial BigOperators
 
 universe u v
 
@@ -478,7 +478,7 @@ theorem ufd_is_normal_domain
     {R : Type u} [CommRing R] [IsDomain R]
     [UniqueFactorizationMonoid R] :
     Formalization.Books.Algebra.Unit37.IsNormalDomain R := by
-  sorry
+  exact ⟨inferInstance, inferInstance⟩
 
 /-! ## Principal ideal and Dedekind domains -/
 
@@ -486,13 +486,298 @@ theorem principal_ideal_domain_is_ufd
     {R : Type u} [CommRing R] [IsDomain R]
     [IsPrincipalIdealRing R] :
     UniqueFactorizationMonoid R := by
-  sorry
+  infer_instance
 
 theorem principal_ideal_domain_is_dedekind
     {R : Type u} [CommRing R] [IsDomain R]
     [IsPrincipalIdealRing R] :
     IsDedekindDomain R := by
-  sorry
+  infer_instance
+
+private theorem finite_ideal_of_product_principal
+    {A : Type u} [CommRing A]
+    (I J : Ideal A) {f : A}
+    (hprod : I * J = Ideal.span ({f} : Set A)) (hf : IsRegular f) :
+    ∃ T : Finset A, (T : Set A) ⊆ I ∧
+      I = Submodule.span A (T : Set A) := by
+  classical
+  have hfmem : f ∈ I * J := by
+    rw [hprod]
+    exact Ideal.mem_span_singleton_self f
+  obtain ⟨T, T', hT, hT', hfspan⟩ :=
+    Submodule.mem_span_mul_finite_of_mem_mul hfmem
+  obtain ⟨U, hU, hfU⟩ := Submodule.mem_span_finite_of_mem_span hfspan
+  have hqdata (q : A) (hq : q ∈ U) :
+      ∃ t ∈ T, ∃ u ∈ T', t * u = q := by
+    obtain ⟨t, ht, u, hu, htu⟩ := Set.mem_mul.mp (hU hq)
+    exact ⟨t, ht, u, hu, htu⟩
+  choose t ht u hu htu using hqdata
+  obtain ⟨c, hc, hcf⟩ :=
+    (Submodule.mem_span_finset (R := A) (s := U)).mp hfU
+  have hcf' : ∑ q ∈ U, c q * q = f := by
+    simpa [smul_eq_mul] using hcf
+  let t0 : A → A := fun q => if hq : q ∈ U then t q hq else 0
+  have hspan : I ≤ Submodule.span A (T : Set A) := by
+    intro x hx
+    have hxd (q : A) (hq : q ∈ U) :
+        ∃ d : A, d * f = x * u q hq := by
+      have hxu : x * u q hq ∈ I * J :=
+        Ideal.mul_mem_mul hx (hT' (hu q hq))
+      obtain ⟨d, hd⟩ := Ideal.mem_span_singleton'.mp (hprod ▸ hxu)
+      exact ⟨d, hd⟩
+    choose d hd using hxd
+    let d0 : A → A := fun q => if hq : q ∈ U then d q hq else 0
+    have hxf : x * f =
+        (∑ q ∈ U, (c q * d0 q * t0 q)) * f := by
+      calc
+        x * f = x * (∑ q ∈ U, c q * q) := by rw [hcf']
+        _ = ∑ q ∈ U, x * (c q * q) := by rw [Finset.mul_sum]
+        _ = ∑ q ∈ U,
+            (c q * d0 q * t0 q) * f := by
+          apply Finset.sum_congr rfl
+          intro q hq
+          calc
+            x * (c q * q) = c q * (x * q) := by ac_rfl
+            _ = c q * (x * (t q hq * u q hq)) := by rw [htu q hq]
+            _ = c q * (t q hq * (x * u q hq)) := by ac_rfl
+            _ = c q * (t q hq * (d q hq * f)) := by rw [hd q hq]
+            _ = (c q * d q hq * t q hq) * f := by ac_rfl
+            _ = (c q * d0 q * t0 q) * f := by
+              simp [d0, t0, hq]
+        _ = (∑ q ∈ U,
+            c q * d0 q * t0 q) * f := by
+          rw [Finset.sum_mul]
+    have hxsum : x =
+        ∑ q ∈ U, c q * d0 q * t0 q :=
+      hf.right hxf
+    rw [hxsum]
+    exact Submodule.sum_mem _ fun q hq => by
+      simpa [smul_eq_mul, t0, hq] using
+        (Submodule.smul_mem (Submodule.span A (T : Set A))
+          (c q * d0 q) (Submodule.subset_span (ht q hq)))
+  refine ⟨T, hT, le_antisymm hspan (Submodule.span_le.mpr hT)⟩
+
+private theorem product_coefficients_span_top
+    {A : Type u} [CommRing A]
+    (I J : Ideal A) {f : A}
+    (hprod : I * J = Ideal.span ({f} : Set A)) (hf : IsRegular f) :
+    Ideal.span {a : A | ∃ x ∈ I, ∃ y ∈ J, x * y = a * f} = ⊤ := by
+  classical
+  have hfmem : f ∈ I * J := by
+    rw [hprod]
+    exact Ideal.mem_span_singleton_self f
+  obtain ⟨T, T', hT, hT', hfspan⟩ :=
+    Submodule.mem_span_mul_finite_of_mem_mul hfmem
+  obtain ⟨U, hU, hfU⟩ := Submodule.mem_span_finite_of_mem_span hfspan
+  have hqdata (q : A) (hq : q ∈ U) :
+      ∃ t ∈ T, ∃ u ∈ T', ∃ b : A, t * u = q ∧ t * u = b * f := by
+    obtain ⟨t, ht, u, hu, htu⟩ := Set.mem_mul.mp (hU hq)
+    have hqu : t * u ∈ I * J := Ideal.mul_mem_mul (hT ht) (hT' hu)
+    obtain ⟨b, hb⟩ := Ideal.mem_span_singleton'.mp (hprod ▸ hqu)
+    exact ⟨t, ht, u, hu, b, htu, hb.symm⟩
+  choose t ht u hu b htu hb using hqdata
+  obtain ⟨c, hc, hcf⟩ :=
+    (Submodule.mem_span_finset (R := A) (s := U)).mp hfU
+  have hcf' : ∑ q ∈ U, c q * q = f := by
+    simpa [smul_eq_mul] using hcf
+  let b0 : A → A := fun q => if hq : q ∈ U then b q hq else 0
+  have hsum : (∑ q ∈ U, c q * b0 q) * f = f := by
+    calc
+      (∑ q ∈ U, c q * b0 q) * f =
+          ∑ q ∈ U, c q * (b0 q * f) := by
+            rw [Finset.sum_mul]
+            apply Finset.sum_congr rfl
+            intro q hq
+            ac_rfl
+      _ = ∑ q ∈ U, c q * q := by
+        apply Finset.sum_congr rfl
+        intro q hq
+        have hqb : q = b q hq * f :=
+          (htu q hq).symm.trans (hb q hq)
+        have hb0 : b0 q = b q hq := by
+          dsimp [b0]
+          rw [dif_pos hq]
+        calc
+          c q * (b0 q * f) = c q * (b q hq * f) := by rw [hb0]
+          _ = c q * q := congrArg (fun z => c q * z) hqb.symm
+      _ = f := hcf'
+  have hone : ∑ q ∈ U, c q * b0 q = 1 := by
+    apply hf.right
+    simpa using hsum
+  have h1 : (1 : A) ∈ Ideal.span
+      {a : A | ∃ x ∈ I, ∃ y ∈ J, x * y = a * f} := by
+    rw [← hone]
+    exact Submodule.sum_mem _ fun q hq =>
+      Submodule.smul_mem _ (c q) (by
+        have hb0 : b0 q = b q hq := by
+          dsimp [b0]
+          rw [dif_pos hq]
+        rw [hb0]
+        exact Submodule.subset_span
+          (⟨t q hq, hT (ht q hq), u q hq, hT' (hu q hq), hb q hq⟩ :
+            b q hq ∈ {a : A | ∃ x ∈ I, ∃ y ∈ J, x * y = a * f}))
+  apply top_unique
+  intro a ha
+  rw [← mul_one a]
+  exact (Ideal.span _).mul_mem_left a h1
+
+private theorem localized_ideal_is_span_singleton
+    {A : Type u} [CommRing A]
+    (I J : Ideal A) {f a x y : A}
+    (hprod : I * J = Ideal.span ({f} : Set A))
+    (hf : IsRegular f) (hx : x ∈ I) (hy : y ∈ J)
+    (hxy : x * y = a * f) :
+    (I : Submodule A A).localized' (Localization.Away a)
+        (Submonoid.powers a) (LocalizedModule.mkLinearMap (Submonoid.powers a) A) =
+      Submodule.span (Localization.Away a)
+        ({algebraMap A (Localization.Away a) x} : Set (Localization.Away a)) := by
+  rw [← Submodule.span_eq I, Submodule.localized'_span]
+  apply Submodule.span_eq_span
+  · rintro _ ⟨z, hz, rfl⟩
+    apply Submodule.mem_span_singleton.mpr
+    have hfreq : IsRegular (algebraMap A (Localization.Away a) f) :=
+      Submonoid.LocalizationMap.map_isRegular
+        (IsLocalization.toLocalizationMap (Submonoid.powers a)
+          (Localization.Away a)) hf
+    let s : Submonoid.powers a := ⟨a, by exact ⟨1, by simp⟩⟩
+    have hau : IsUnit (algebraMap A (Localization.Away a) a) :=
+      IsLocalization.map_units (R := A) (S := Localization.Away a)
+        (M := Submonoid.powers a) s
+    have hxyreg : IsRegular
+        (algebraMap A (Localization.Away a) x *
+          algebraMap A (Localization.Away a) y) := by
+      rw [← map_mul, hxy, map_mul]
+      exact (IsUnit.isRegular hau).mul hfreq
+    have hyreg : IsRegular (algebraMap A (Localization.Away a) y) :=
+      hxyreg.of_mul_right
+    have hzy : (z : A) * y ∈ I * J := Ideal.mul_mem_mul hz hy
+    have hzy' : (z : A) * y ∈ Ideal.span ({f} : Set A) := hprod ▸ hzy
+    obtain ⟨b, hb⟩ := Ideal.mem_span_singleton'.mp hzy'
+    have hcancel : algebraMap A (Localization.Away a) a *
+          algebraMap A (Localization.Away a) z =
+        algebraMap A (Localization.Away a) b *
+          algebraMap A (Localization.Away a) x := by
+      apply hyreg.right
+      change (algebraMap A (Localization.Away a) a *
+          algebraMap A (Localization.Away a) z) *
+            algebraMap A (Localization.Away a) y =
+        (algebraMap A (Localization.Away a) b *
+          algebraMap A (Localization.Away a) x) *
+            algebraMap A (Localization.Away a) y
+      calc
+        (algebraMap A (Localization.Away a) a *
+            algebraMap A (Localization.Away a) z) *
+              algebraMap A (Localization.Away a) y =
+            algebraMap A (Localization.Away a) a *
+              algebraMap A (Localization.Away a) (z * y) := by
+                rw [mul_assoc, ← map_mul]
+        _ = algebraMap A (Localization.Away a) a *
+              algebraMap A (Localization.Away a) (b * f) := by rw [hb]
+        _ = algebraMap A (Localization.Away a) a *
+              (algebraMap A (Localization.Away a) b *
+                algebraMap A (Localization.Away a) f) := by rw [map_mul]
+        _ = algebraMap A (Localization.Away a) b *
+              (algebraMap A (Localization.Away a) a *
+                algebraMap A (Localization.Away a) f) := by ac_rfl
+        _ = algebraMap A (Localization.Away a) b *
+              algebraMap A (Localization.Away a) (a * f) := by rw [map_mul]
+        _ = algebraMap A (Localization.Away a) b *
+              algebraMap A (Localization.Away a) (x * y) := by rw [hxy]
+        _ = (algebraMap A (Localization.Away a) b *
+              algebraMap A (Localization.Away a) x) *
+                algebraMap A (Localization.Away a) y := by
+                  rw [map_mul, mul_assoc]
+    have hloc : IsLocalization.mk' (Localization.Away a) (b * x) s =
+        algebraMap A (Localization.Away a) z := by
+      apply IsLocalization.mk'_eq_iff_eq_mul.mpr
+      simpa [s, map_mul, mul_comm] using hcancel.symm
+    have hloc'' : IsLocalization.mk' (Localization.Away a) (b * x) s =
+        IsLocalization.mk' (Localization.Away a) z (1 : Submonoid.powers a) := by
+      simpa only [IsLocalization.mk'_one] using hloc
+    have hloc' : IsLocalizedModule.mk'
+        (LocalizedModule.mkLinearMap (Submonoid.powers a) A) (b * x) s =
+        LocalizedModule.mkLinearMap (Submonoid.powers a) A z := by
+      rw [← IsLocalizedModule.mk'_one (Submonoid.powers a)
+        (LocalizedModule.mkLinearMap (Submonoid.powers a) A) z]
+      apply (IsLocalizedModule.mk'_eq_mk'_iff (S := Submonoid.powers a)
+        (f := LocalizedModule.mkLinearMap (Submonoid.powers a) A) (b * x) z s 1).2
+      obtain ⟨c, hc⟩ :=
+        (IsLocalization.eq (M := Submonoid.powers a)
+          (S := Localization.Away a)).mp hloc''
+      refine ⟨c, ?_⟩
+      simpa [Submonoid.smul_def] using hc.symm
+    have hsmul : IsLocalization.mk' (Localization.Away a) b s •
+        algebraMap A (Localization.Away a) x =
+        IsLocalizedModule.mk' (LocalizedModule.mkLinearMap (Submonoid.powers a) A)
+          (b * x) s := by
+      change IsLocalization.mk' (Localization.Away a) b s •
+        LocalizedModule.mkLinearMap (Submonoid.powers a) A x = _
+      rw [← IsLocalizedModule.mk'_one (Submonoid.powers a)
+        (LocalizedModule.mkLinearMap (Submonoid.powers a) A) x]
+      simpa using (IsLocalizedModule.mk'_smul_mk' (Localization.Away a)
+        (LocalizedModule.mkLinearMap (Submonoid.powers a) A) b x s 1)
+    refine ⟨IsLocalization.mk' (Localization.Away a) b s, ?_⟩
+    exact hsmul.trans hloc'
+  · intro q hq
+    rcases hq with rfl
+    exact Submodule.subset_span ⟨x, hx, rfl⟩
+
+private theorem localized_ideal_is_free_rank_one
+    {A : Type u} [CommRing A]
+    (I J : Ideal A) {f a x y : A}
+    (hprod : I * J = Ideal.span ({f} : Set A))
+    (hf : IsRegular f) (hx : x ∈ I) (hy : y ∈ J)
+    (hxy : x * y = a * f) :
+    Module.Finite (Localization.Away a)
+        (LocalizedModule.Away a (I : Type u)) ∧
+      Module.Free (Localization.Away a)
+        (LocalizedModule.Away a (I : Type u)) ∧
+      Nonempty
+        (LocalizedModule.Away a (I : Type u) ≃ₗ[Localization.Away a]
+          (Fin 1 →₀ Localization.Away a)) := by
+  classical
+  let S := Localization.Away a
+  let p := Submonoid.powers a
+  let g : S := algebraMap A S x
+  have hau : IsUnit (algebraMap A S a) :=
+    IsLocalization.map_units (R := A) (S := S) (M := p)
+      ⟨a, by exact ⟨1, by simp⟩⟩
+  have hfreq : IsRegular (algebraMap A S f) :=
+    Submonoid.LocalizationMap.map_isRegular
+      (IsLocalization.toLocalizationMap p S) hf
+  have hxyreg : IsRegular (algebraMap A S x * algebraMap A S y) := by
+    rw [← map_mul, hxy, map_mul]
+    exact (IsUnit.isRegular hau).mul hfreq
+  have hxreg : IsRegular g := hxyreg.of_mul_left
+  have hloc := localized_ideal_is_span_singleton I J hprod hf hx hy hxy
+  let P : Submodule S S := Submodule.span S ({g} : Set S)
+  have hlocP :
+      (I : Submodule A A).localized' S p
+          (LocalizedModule.mkLinearMap p A) = P := by
+    simpa [P, S, p, g] using hloc
+  let l : S →ₗ[S] P :=
+    (LinearMap.toSpanSingleton S S g).codRestrict P (fun z =>
+      Submodule.smul_mem P z (Submodule.subset_span (by simp)))
+  have linj : Function.Injective l := by
+    intro r s hrs
+    apply hxreg.right
+    exact congrArg Subtype.val hrs
+  have lsurj : Function.Surjective l := by
+    intro z
+    obtain ⟨r, hr⟩ := Submodule.mem_span_singleton.mp z.property
+    refine ⟨r, Subtype.ext ?_⟩
+    exact hr
+  let eSpan : S ≃ₗ[S] P := LinearEquiv.ofBijective l ⟨linj, lsurj⟩
+  have eLoc : P ≃ₗ[S] LocalizedModule p (I : Type u) := by
+    rw [← hlocP]
+    simpa [S, p] using
+      (Submodule.localizedEquiv p (I : Submodule A A))
+  let eRank : LocalizedModule p (I : Type u) ≃ₗ[S] (Fin 1 →₀ S) :=
+    eLoc.symm.trans (eSpan.symm.trans
+      (Finsupp.uniqueLinearEquiv S S (0 : Fin 1)).symm)
+  refine ⟨?_, ?_, ⟨eRank⟩⟩
+  · exact Module.Finite.of_surjective eRank.symm.toLinearMap eRank.symm.surjective
+  · exact Module.Free.of_equiv' (P := Fin 1 →₀ S) inferInstance eRank.symm
 
 /- The source's “finitely locally free of rank 1” is expressed with the
    earlier chapter's basic-open cover and fixed-rank predicates. -/
@@ -511,7 +796,50 @@ theorem product_ideals_principal_is_finite_locally_free_rank_one
                 (I : Type u) 1 ∧
                 Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank A
                   (J : Type u) 1 := by
-  sorry
+  classical
+  let S : Set A := {a : A | ∃ x ∈ I, ∃ y ∈ J, x * y = a * f}
+  have hS : Ideal.span S = ⊤ := by
+    simpa [S] using product_coefficients_span_top I J hprod hf
+  obtain ⟨TI, hTI, hspanI⟩ := finite_ideal_of_product_principal I J hprod hf
+  have hprodJ : J * I = Ideal.span ({f} : Set A) := by
+    simpa [mul_comm] using hprod
+  obtain ⟨TJ, hTJ, hspanJ⟩ :=
+    finite_ideal_of_product_principal J I hprodJ hf
+  have hfinI : Module.Finite A (I : Type u) := by
+    apply Module.Finite.of_fg
+    exact ⟨TI, hspanI.symm⟩
+  have hfinJ : Module.Finite A (J : Type u) := by
+    apply Module.Finite.of_fg
+    exact ⟨TJ, hspanJ.symm⟩
+  have hflfI : Formalization.Books.Algebra.Unit78.FiniteLocallyFree A
+      (I : Type u) := by
+    refine ⟨S, hS, ?_⟩
+    intro a ha
+    rcases ha with ⟨x, hx, y, hy, hxy⟩
+    have hlocal := localized_ideal_is_free_rank_one I J hprod hf hx hy hxy
+    exact ⟨hlocal.1, hlocal.2.1⟩
+  have hflfJ : Formalization.Books.Algebra.Unit78.FiniteLocallyFree A
+      (J : Type u) := by
+    refine ⟨S, hS, ?_⟩
+    intro a ha
+    rcases ha with ⟨x, hx, y, hy, hxy⟩
+    have hxy' : y * x = a * f := by simpa [mul_comm] using hxy
+    have hlocal := localized_ideal_is_free_rank_one J I hprodJ hf hy hx hxy'
+    exact ⟨hlocal.1, hlocal.2.1⟩
+  have hrankI : Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank A
+      (I : Type u) 1 := by
+    refine ⟨S, hS, ?_⟩
+    intro a ha
+    rcases ha with ⟨x, hx, y, hy, hxy⟩
+    exact (localized_ideal_is_free_rank_one I J hprod hf hx hy hxy).2.2
+  have hrankJ : Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank A
+      (J : Type u) 1 := by
+    refine ⟨S, hS, ?_⟩
+    intro a ha
+    rcases ha with ⟨x, hx, y, hy, hxy⟩
+    have hxy' : y * x = a * f := by simpa [mul_comm] using hxy
+    exact (localized_ideal_is_free_rank_one J I hprodJ hf hy hx hxy').2.2
+  exact ⟨hfinI, hfinJ, hflfI, hflfJ, hrankI, hrankJ⟩
 
 /- The first condition in the source's Dedekind-domain definition is
    represented by `IsDedekindDomain`; the second uses the canonical DVR

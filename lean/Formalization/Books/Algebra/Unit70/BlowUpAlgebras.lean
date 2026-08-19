@@ -1460,7 +1460,49 @@ theorem affineBlowup_denseRange
     {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I)
     (hmin : ∀ p : MinimalPrimeSpectrum R, a ∉ p.1.asIdeal) :
     DenseRange (PrimeSpectrum.comap (algebraMap R (affineBlowup I a))) := by
-  sorry
+  rw [PrimeSpectrum.denseRange_comap_iff_minimalPrimes]
+  intro p hp
+  have hdisj : Disjoint (Submonoid.powers a : Set R) p := by
+    rw [Set.disjoint_left]
+    intro x hx hxp
+    rcases (Submonoid.mem_powers_iff _ _).mp hx with ⟨n, rfl⟩
+    exact hmin ⟨⟨p, hp.isPrime⟩, hp⟩ (hp.isPrime.mem_of_pow_mem n hxp)
+  let q : Ideal (Localization.Away a) :=
+    p.map (algebraMap R (Localization.Away a))
+  have hqprime : q.IsPrime := by
+    dsimp [q]
+    exact IsLocalization.isPrime_of_isPrime_disjoint (Submonoid.powers a)
+      (Localization.Away a) p hp.isPrime hdisj
+  let q' : Ideal (affineBlowup I a) :=
+    q.comap (algebraMap (affineBlowup I a) (Localization.Away a))
+  have hq'prime : q'.IsPrime := by
+    dsimp [q']
+    exact hqprime.comap _
+  refine ⟨⟨q', hq'prime⟩, ?_⟩
+  apply PrimeSpectrum.ext
+  ext x
+  change algebraMap R (affineBlowup I a) x ∈ q' ↔ x ∈ p
+  change algebraMap (affineBlowup I a) (Localization.Away a)
+      (algebraMap R (affineBlowup I a) x) ∈ q ↔ x ∈ p
+  rw [show algebraMap (affineBlowup I a) (Localization.Away a)
+      (algebraMap R (affineBlowup I a) x) =
+      algebraMap R (Localization.Away a) x by
+    exact IsScalarTower.algebraMap_apply R (affineBlowup I a) (Localization.Away a) x]
+  change algebraMap R (Localization.Away a) x ∈ q ↔
+    x ∈ p
+  change algebraMap R (Localization.Away a) x ∈
+      p.map (algebraMap R (Localization.Away a)) ↔ x ∈ p
+  rw [IsLocalization.algebraMap_mem_map_algebraMap_iff
+    (M := Submonoid.powers a)]
+  constructor
+  · rintro ⟨s, hs, hsx⟩
+    rcases (Submonoid.mem_powers_iff _ _).mp hs with ⟨n, rfl⟩
+    rcases hp.isPrime.mem_or_mem hsx with hpow | hx
+    · exact (hmin ⟨⟨p, hp.isPrime⟩, hp⟩
+        (hp.isPrime.mem_of_pow_mem n hpow)).elim
+    · exact hx
+  · intro hx
+    exact ⟨1, by simp, by simpa using hx⟩
 
 /-! ## Valuation rings as directed colimits of affine blowups -/
 

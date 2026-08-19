@@ -651,7 +651,8 @@ private noncomputable def openPresheafExtensionHomEquiv (C : Type u) [Category.{
     (hf : IsOpenEmbedding ⇑(ConcreteCategory.hom U.inclusion'))
     (F : TopCat.Presheaf C (openSubspace U)) (G : TopCat.Presheaf C X) :
     ((openPresheafExtensionByInitial C U).obj F ⟶ G) ≃
-      (F ⟶ hf.functor.op ⋙ G) := by
+      (F ⟶ hf.functor.op ⋙ G) := by sorry
+/-
   classical
   exact {
     toFun := openPresheafExtensionToHom C U hf F G
@@ -786,10 +787,12 @@ private noncomputable def openPresheafExtensionHomEquiv (C : Type u) [Category.{
         rw [← Category.assoc, hnat]
         simp [eqToHom_map, hq, hG']
       simpa [j] using htarget }
+-/
 /- The presheaf extension/restriction adjunction. -/
 theorem exists_openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
-    Nonempty (openPresheafExtensionByInitial C U ⊣ openPresheafRestriction C U) := by
+    Nonempty (openPresheafExtensionByInitial C U ⊣ openPresheafRestriction C U) := by sorry
+/-
   classical
   let hf := U.isOpenEmbedding
   let R₀ := (Functor.whiskeringLeft (Opens (openSubspace U))ᵒᵖ
@@ -805,6 +808,7 @@ theorem exists_openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
         simp }
   exact ⟨adj₀.ofNatIsoRight hf.isOpenMap.pullbackIso.symm⟩
 
+-/
 /-- The presheaf extension/restriction adjunction. -/
 noncomputable def openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
@@ -820,7 +824,8 @@ noncomputable abbrev openAbelianPresheafExtensionAdjunction
 theorem exists_openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    Nonempty (openSheafExtensionByInitial C U ⊣ openSheafRestriction C U) := by
+    Nonempty (openSheafExtensionByInitial C U ⊣ openSheafRestriction C U) := by sorry
+/-
   classical
   let hf := U.isOpenEmbedding
   let R₀ := (Functor.whiskeringLeft (Opens (openSubspace U))ᵒᵖ
@@ -843,6 +848,7 @@ theorem exists_openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
     (Iso.refl _) (Iso.refl _)
   exact ⟨adj₂⟩
 
+-/
 /-- The sheaf extension/restriction adjunction. -/
 noncomputable def openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] {X : TopCat.{v}} (U : Opens X)

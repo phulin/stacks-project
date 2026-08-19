@@ -2282,12 +2282,12 @@ private theorem exists_pullback_of_epi {C : Type u} [Category.{v} C]
     let F := Subobject.imageFactorisation q
       ((Subobject.pullback q).obj P)
     let hpb := Subobject.isPullback q P
-    letI : Epi hpb.cone.fst :=
+    let : Epi hpb.cone.fst :=
       Abelian.epi_fst_of_isLimit P.arrow q (s := hpb.cone) hpb.isLimit
-    letI : Epi (Subobject.pullbackπ q P) := by
+    let : Epi (Subobject.pullbackπ q P) := by
       change Epi hpb.cone.fst
       infer_instance
-    letI : Epi F.F.e := by
+    let : Epi F.F.e := by
       exact (strongEpi_of_strongEpiMonoFactorisation
         (Abelian.imageStrongEpiMonoFactorisation
           (((Subobject.pullback q).obj P).arrow ≫ q))
@@ -2300,10 +2300,10 @@ private theorem exists_pullback_of_epi {C : Type u} [Category.{v} C]
       have hle : imageSubobject (F.F.e ≫ F.F.m) ≤
           imageSubobject F.F.m :=
         Limits.imageSubobject_comp_le F.F.e F.F.m
-      letI : Epi (Subobject.ofLE (imageSubobject (F.F.e ≫ F.F.m))
+      let : Epi (Subobject.ofLE (imageSubobject (F.F.e ≫ F.F.m))
           (imageSubobject F.F.m) hle) :=
         Limits.imageSubobject_comp_le_epi_of_epi F.F.e F.F.m
-      letI : IsIso (Subobject.ofLE (imageSubobject (F.F.e ≫ F.F.m))
+      let : IsIso (Subobject.ofLE (imageSubobject (F.F.e ≫ F.F.m))
           (imageSubobject F.F.m) hle) :=
         isIso_of_mono_of_epi _
       exact Subobject.eq_of_comm (asIso
@@ -2322,12 +2322,12 @@ private theorem exists_pullback_of_epi {C : Type u} [Category.{v} C]
         _ = imageSubobject P.arrow := by
           let hle := Limits.imageSubobject_comp_le
             (Subobject.pullbackπ q P) P.arrow
-          letI : Epi (Subobject.ofLE
+          let : Epi (Subobject.ofLE
               (imageSubobject ((Subobject.pullbackπ q P) ≫ P.arrow))
               (imageSubobject P.arrow) hle) :=
             Limits.imageSubobject_comp_le_epi_of_epi
               (Subobject.pullbackπ q P) P.arrow
-          letI : IsIso (Subobject.ofLE
+          let : IsIso (Subobject.ofLE
               (imageSubobject ((Subobject.pullbackπ q P) ≫ P.arrow))
               (imageSubobject P.arrow) hle) :=
             isIso_of_mono_of_epi _
@@ -2364,11 +2364,11 @@ private theorem exists_inf_pullback_eq_exists_inf_ab {C : Type u}
     Subobject.isoOfMkEqMk F.F.m
       ((Subobject.«exists» q).obj P).arrow (by
         simpa only [Subobject.mk_arrow] using hF)
-  letI : Epi F.F.e := by
+  let : Epi F.F.e := by
     exact (strongEpi_of_strongEpiMonoFactorisation
       (Abelian.imageStrongEpiMonoFactorisation (P.arrow ≫ q))
       F.isImage).epi
-  letI : Epi eF.hom := by
+  let : Epi eF.hom := by
     dsimp [eF]
     infer_instance
   have heF_arrow : eF.hom ≫ ((Subobject.«exists» q).obj P).arrow = F.F.m := by
@@ -2410,8 +2410,8 @@ private theorem exists_inf_pullback_eq_exists_inf_ab {C : Type u}
       (Subobject.isPullback q Q).paste_horiz_iff] using
       (Subobject.inf_isPullback P ((Subobject.pullback q).obj Q)).flip
   have hφepi : Epi φ := by
-    letI : Epi (F.F.e ≫ eF.hom) := by infer_instance
-    letI : Epi hφ.cone.fst :=
+    let : Epi (F.F.e ≫ eF.hom) := by infer_instance
+    let : Epi hφ.cone.fst :=
       Abelian.epi_fst_of_isLimit
         (Subobject.ofLE _ _
           (Subobject.inf_le_left ((Subobject.«exists» q).obj P) Q))
@@ -2419,7 +2419,7 @@ private theorem exists_inf_pullback_eq_exists_inf_ab {C : Type u}
         (s := hφ.cone) hφ.isLimit
     change Epi hφ.cone.fst
     infer_instance
-  letI : Epi φ := hφepi
+  let : Epi φ := hφepi
   let H : StrongEpiMonoFactorisation
       ((P ⊓ (Subobject.pullback q).obj Q).arrow ≫ q) :=
     { I := (((Subobject.«exists» q).obj P ⊓ Q : Subobject T) : C)
@@ -3189,18 +3189,18 @@ private theorem exists_top_eq_imageSubobject {C : Type u}
     simp
   have heq : imageSubobject (F.F.e ≫ F.F.m) =
       imageSubobject F.F.m := by
-    letI : Epi F.F.e :=
+    let hE : Epi F.F.e :=
       (strongEpi_of_strongEpiMonoFactorisation
         (Abelian.imageStrongEpiMonoFactorisation
           ((⊤ : Subobject X).arrow ≫ q)) F.isImage).epi
     have hle : imageSubobject (F.F.e ≫ F.F.m) ≤
         imageSubobject F.F.m :=
       Limits.imageSubobject_comp_le F.F.e F.F.m
-    letI : Epi (Subobject.ofLE
+    let hE' : Epi (Subobject.ofLE
         (imageSubobject (F.F.e ≫ F.F.m))
         (imageSubobject F.F.m) hle) :=
       Limits.imageSubobject_comp_le_epi_of_epi F.F.e F.F.m
-    letI : IsIso (Subobject.ofLE
+    let hIso : IsIso (Subobject.ofLE
         (imageSubobject (F.F.e ≫ F.F.m))
         (imageSubobject F.F.m) hle) :=
       isIso_of_mono_of_epi _
@@ -3314,7 +3314,7 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
     let sndE : (filteredBiproduct B D).carrier ⟶ D.carrier := by
       change B.carrier ⊞ D.carrier ⟶ D.carrier
       exact biprod.snd
-    letI : Mono j := by
+    let : Mono j := by
       change Mono (biprod.inr : D.carrier ⟶ B.carrier ⊞ D.carrier)
       infer_instance
     let J : Subobject (filteredBiproduct B D).carrier := Subobject.mk j
@@ -3328,7 +3328,7 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
         (Subobject.underlyingIso j).inv ≫ J.arrow = j := by
       dsimp [J]
       apply (cancel_epi (Subobject.underlyingIso j).hom).mp
-      simp [Category.assoc, Subobject.underlyingIso_hom_comp_eq_mk]
+      simp [Subobject.underlyingIso_hom_comp_eq_mk]
     have hJarrow' : J.arrow =
         (Subobject.underlyingIso j).hom ≫ j := by
       dsimp [J]
@@ -3415,7 +3415,7 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
             Category.assoc _ _ _
           _ = z ≫ (biprod.snd ≫ (biprod.inr ≫ biprod.fst)) := by
             rw [Category.assoc]
-          _ = 0 := by simp [biprod.inr_fst]
+          _ = 0 := by simp
           _ = z ≫ biprod.fst := hz.symm
       · change (z ≫ biprod.snd ≫ biprod.inr) ≫ biprod.snd =
           z ≫ biprod.snd
@@ -3711,9 +3711,9 @@ theorem filtered_pushout_preserves_strict {C : Type u} [Category.{v} C]
       rw [hd_inr_hom]
       change inrF.hom ≫ π.hom = inrF.hom ≫ π.hom
       simp
-  letI : IsIso e := by
+  let : IsIso e := by
     exact ⟨⟨d, hed, hde⟩⟩
-  letI : IsIso e.hom := by
+  let : IsIso e.hom := by
     refine ⟨⟨d.hom, ?_, ?_⟩⟩
     · exact congrArg FilteredHom.hom hed
     · exact congrArg FilteredHom.hom hde

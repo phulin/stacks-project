@@ -364,7 +364,28 @@ theorem concentratedTruncatedObject_map_of_ne_id
     (A : C) (k : ℕ) {X : (SimplexCategory.Truncated k)ᵒᵖ}
     (f : X ⟶ X) (hf : f ≠ 𝟙 X) :
     (concentratedTruncatedObject A k).map f = 0 := by
-  sorry
+  change concentratedTruncatedMap A k f = 0
+  unfold concentratedTruncatedMap
+  have hcast_zero : ∀ {B : C} (h : B = A) (p : (A ⟶ A) = (B ⟶ B)),
+      cast p (0 : A ⟶ A) = 0 := by
+    intro B h p
+    subst B
+    cases p
+    rfl
+  have hcast_zero_zero : ∀ {B : C} (h : B = 0)
+      (p : ((0 : C) ⟶ (0 : C)) = (B ⟶ B)),
+      cast p (0 : (0 : C) ⟶ (0 : C)) = 0 := by
+    intro B h p
+    subst B
+    cases p
+    rfl
+  by_cases hX : X.unop.obj.len = k
+  · simp only [dif_pos rfl, dif_pos hX, dif_neg hf]
+    exact hcast_zero (B := concentratedTruncatedValue A k X.unop)
+      (by simp [concentratedTruncatedValue, hX]) _
+  · simp only [dif_pos rfl, dif_neg hX]
+    exact hcast_zero_zero (B := concentratedTruncatedValue A k X.unop)
+      (by simp [concentratedTruncatedValue, hX]) _
 
 /-! ## Mapping descriptions and the two Kan extensions -/
 
@@ -395,7 +416,209 @@ theorem concentratedTruncated_hom_equiv_in
     Nonempty ((concentratedTruncatedObject A k ⟶ V) ≃
       {f : A ⟶ V.obj (op (topTruncatedSimplex k)) //
         truncatedIncomingCondition A k V f}) := by
-  sorry
+  classical
+  let U := concentratedTruncatedObject A k
+  let T := op (topTruncatedSimplex k)
+  have obj_eq_of_len_eq {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (h : P.unop.obj.len = Q.unop.obj.len) : P = Q := by
+    apply Opposite.unop_injective
+    apply ObjectProperty.FullSubcategory.ext
+    exact SimplexCategory.ext h
+  have U_obj_eq_zero {X : (SimplexCategory.Truncated k)ᵒᵖ} (hX : X ≠ T) :
+      U.obj X = 0 := by
+    have hlen : X.unop.obj.len ≠ k := by
+      intro h
+      apply hX
+      apply obj_eq_of_len_eq
+      simpa [T, topTruncatedSimplex] using h
+    simp [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen]
+  have U_map_zero_of_src {X Y : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hX : X ≠ T) (q : X ⟶ Y) : U.map q = 0 := by
+    have hI : IsZero (U.obj X) := by
+      simpa only [U_obj_eq_zero hX] using (isZero_zero C)
+    exact hI.eq_of_src _ _
+  have U_map_zero_of_tgt {X Y : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hY : Y ≠ T) (q : X ⟶ Y) : U.map q = 0 := by
+    have hI : IsZero (U.obj Y) := by
+      simpa only [U_obj_eq_zero hY] using (isZero_zero C)
+    exact hI.eq_of_tgt _ _
+  have eTop : U.obj T = A := by
+    simpa [U, T] using concentratedTruncatedObject_top A k
+  let app (g : A ⟶ V.obj T) (X : (SimplexCategory.Truncated k)ᵒᵖ) :
+      U.obj X ⟶ V.obj X :=
+    if hX : X = T then
+      eqToHom ((congrArg U.obj hX).trans eTop) ≫
+        g ≫ eqToHom (congrArg V.obj hX.symm)
+    else 0
+  have app_top (g : A ⟶ V.obj T) : app g T = eqToHom eTop ≫ g := by
+    dsimp [app]
+    simp
+  have app_zero (g : A ⟶ V.obj T) {X : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hX : X ≠ T) : app g X = 0 := by
+    simp [app, hX]
+  have incoming_any (g : A ⟶ V.obj T)
+      (hg : truncatedIncomingCondition A k V g)
+      {Y : (SimplexCategory.Truncated k)ᵒᵖ} (hY : Y ≠ T) (q : T ⟶ Y) :
+      g ≫ V.map q = 0 := by
+    let Z := Y.unop
+    let j := Z.obj.len
+    have hjle : j ≤ k := Z.property
+    have hjlt : j < k := by
+      apply lt_of_le_of_ne hjle
+      intro h
+      apply hY
+      apply obj_eq_of_len_eq
+      simpa [T, Z, j, topTruncatedSimplex] using h
+    let Z' : SimplexCategory.Truncated k :=
+      ⟨⦋j⦌, by simpa [j] using hjle⟩
+    have e : Z' = Y.unop := by
+      apply ObjectProperty.FullSubcategory.ext
+      exact SimplexCategory.ext (by simp [Z', Z, j])
+    let eop : op Z' = Y := congrArg op e
+    let q' : T ⟶ op Z' := q ≫ eqToHom eop.symm
+    let φ : ⦋j⦌ ⟶ ⦋k⦌ := q'.unop.hom
+    have hq' : q' =
+        (SimplexCategory.Truncated.Hom.tr φ
+          (ha := by simpa [j] using hjle) (hb := by simp)).op := by
+      apply Quiver.Hom.unop_inj
+      apply ObjectProperty.hom_ext
+      rfl
+    have hq : q = q' ≫ eqToHom eop := by
+      dsimp [q']
+      simp
+    rw [hq, hq', V.map_comp, ← Category.assoc]
+    rw [hg hjlt φ]
+    simp
+  have top_end_zero (g : A ⟶ V.obj T)
+      (hg : truncatedIncomingCondition A k V g)
+      {q : T ⟶ T} (hq : q ≠ 𝟙 T) : g ≫ V.map q = 0 := by
+    cases k with
+    | zero =>
+        have hi : Function.Injective q.unop.hom.toOrderHom := by
+          intro x y hxy
+          exact (Fin.eq_zero x).trans (Fin.eq_zero y).symm
+        have hmono : Mono q.unop.hom :=
+          (SimplexCategory.mono_iff_injective).mpr hi
+        have hqbase : q.unop.hom = 𝟙 _ :=
+          SimplexCategory.eq_id_of_mono _
+        exfalso
+        apply hq
+        apply Quiver.Hom.unop_inj
+        apply ObjectProperty.hom_ext
+        exact hqbase
+    | succ k =>
+        by_cases hs : Function.Surjective q.unop.hom.toOrderHom
+        · by_cases hi : Function.Injective q.unop.hom.toOrderHom
+          · have hmono : Mono q.unop.hom :=
+              (SimplexCategory.mono_iff_injective).mpr hi
+            have hqbase : q.unop.hom = 𝟙 _ :=
+              SimplexCategory.eq_id_of_mono _
+            exfalso
+            apply hq
+            apply Quiver.Hom.unop_inj
+            apply ObjectProperty.hom_ext
+            exact hqbase
+          · obtain ⟨i, θ, hfac⟩ :=
+              SimplexCategory.eq_σ_comp_of_not_injective q.unop.hom hi
+            change ⦋k⦌ ⟶ ⦋k + 1⦌ at θ
+            let σ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+              (SimplexCategory.σ i)
+                (ha := by simp) (hb := by simp)
+            let θ' := SimplexCategory.Truncated.Hom.tr (n := k + 1) θ
+                (ha := by simp) (hb := by simp)
+            have hfac' : q = θ'.op ≫ σ'.op := by
+              apply Quiver.Hom.unop_inj
+              apply ObjectProperty.hom_ext
+              exact hfac
+            rw [hfac', V.map_comp, ← Category.assoc]
+            rw [hg (by simpa using Nat.lt_succ_self k) θ]
+            simp
+        · obtain ⟨i, θ, hfac⟩ :=
+            SimplexCategory.eq_comp_δ_of_not_surjective q.unop.hom hs
+          change ⦋k + 1⦌ ⟶ ⦋k⦌ at θ
+          dsimp [T, topTruncatedSimplex] at q
+          let θ' := SimplexCategory.Truncated.Hom.tr (n := k + 1) θ
+              (ha := by simp) (hb := by simp)
+          let δ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+              (SimplexCategory.δ i)
+                (ha := by simp) (hb := by simp)
+          have hfac' : q = δ'.op ≫ θ'.op := by
+            apply Quiver.Hom.unop_inj
+            apply ObjectProperty.hom_ext
+            exact hfac
+          rw [hfac', V.map_comp, ← Category.assoc]
+          rw [hg (by simpa using Nat.lt_succ_self k) (SimplexCategory.δ i)]
+          simp
+  let nat_of_app (g : A ⟶ V.obj T)
+      (hg : truncatedIncomingCondition A k V g) : U ⟶ V :=
+    { app := app g
+      naturality := by
+        intro X Y q
+        by_cases hX : X = T
+        · subst X
+          by_cases hY : Y = T
+          · subst Y
+            by_cases hq : q = 𝟙 T
+            · subst q
+              rw [U.map_id, app_top]
+              simp
+            · rw [concentratedTruncatedObject_map_of_ne_id A k q hq,
+                app_top]
+              simp only [zero_comp]
+              rw [Category.assoc, top_end_zero g hg hq]
+              simp
+          · rw [U_map_zero_of_tgt hY, app_zero g hY, app_top]
+            simp only [zero_comp]
+            rw [Category.assoc, incoming_any g hg hY q]
+            simp
+        · by_cases hY : Y = T
+          · rw [U_map_zero_of_src hX, app_zero g hX]
+            simp
+          · rw [U_map_zero_of_src hX, app_zero g hX,
+              app_zero g hY]
+            simp }
+  have alpha_app_zero (α : U ⟶ V)
+      {X : (SimplexCategory.Truncated k)ᵒᵖ} (hX : X ≠ T) : α.app X = 0 := by
+    have hI : IsZero (U.obj X) := by
+      simpa only [U_obj_eq_zero hX] using (isZero_zero C)
+    exact hI.eq_of_src _ _
+  refine ⟨{
+    toFun := fun α =>
+      ⟨eqToHom eTop.symm ≫ α.app T, by
+        intro j hj φ
+        let q := (SimplexCategory.Truncated.Hom.tr φ
+          (ha := by simpa using Nat.le_of_lt hj) (hb := by simp)).op
+        have hq : T ≠ op (⟨⦋j⦌, by simpa using Nat.le_of_lt hj⟩ :
+            SimplexCategory.Truncated k) := by
+          intro h
+          apply Nat.ne_of_lt hj
+          have := congrArg (fun Z => Z.unop.obj.len) h
+          simpa [T, topTruncatedSimplex] using this.symm
+        have hnat := α.naturality q
+        have hq' : op (⟨⦋j⦌, by simpa using Nat.le_of_lt hj⟩ :
+            SimplexCategory.Truncated k) ≠ T := hq.symm
+        rw [U_map_zero_of_tgt hq'] at hnat
+        simpa [q, Category.assoc] using
+          congrArg (fun z => eqToHom eTop.symm ≫ z) hnat.symm⟩
+    invFun := fun f => nat_of_app f.1 f.2
+    left_inv := by
+      intro α
+      apply NatTrans.ext
+      funext X
+      dsimp [nat_of_app]
+      change app (eqToHom eTop.symm ≫ α.app T) X = α.app X
+      by_cases hX : X = T
+      · subst X
+        rw [app_top]
+        simp
+      · rw [app_zero _ hX, alpha_app_zero α hX]
+    right_inv := by
+      intro f
+      apply Subtype.ext
+      dsimp [nat_of_app]
+      change eqToHom eTop.symm ≫ app f.1 T = f.1
+      rw [app_top]
+      simp }⟩
 
 theorem concentratedTruncated_hom_equiv_out
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -403,7 +626,209 @@ theorem concentratedTruncated_hom_equiv_out
     Nonempty ((V ⟶ concentratedTruncatedObject A k) ≃
       {f : V.obj (op (topTruncatedSimplex k)) ⟶ A //
         truncatedOutgoingCondition A k V f}) := by
-  sorry
+  classical
+  let U := concentratedTruncatedObject A k
+  let T := op (topTruncatedSimplex k)
+  have obj_eq_of_len_eq {P Q : (SimplexCategory.Truncated k)ᵒᵖ}
+      (h : P.unop.obj.len = Q.unop.obj.len) : P = Q := by
+    apply Opposite.unop_injective
+    apply ObjectProperty.FullSubcategory.ext
+    exact SimplexCategory.ext h
+  have U_obj_eq_zero {X : (SimplexCategory.Truncated k)ᵒᵖ} (hX : X ≠ T) :
+      U.obj X = 0 := by
+    have hlen : X.unop.obj.len ≠ k := by
+      intro h
+      apply hX
+      apply obj_eq_of_len_eq
+      simpa [T, topTruncatedSimplex] using h
+    simp [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen]
+  have U_map_zero_of_src {X Y : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hX : X ≠ T) (q : X ⟶ Y) : U.map q = 0 := by
+    have hI : IsZero (U.obj X) := by
+      simpa only [U_obj_eq_zero hX] using (isZero_zero C)
+    exact hI.eq_of_src _ _
+  have U_map_zero_of_tgt {X Y : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hY : Y ≠ T) (q : X ⟶ Y) : U.map q = 0 := by
+    have hI : IsZero (U.obj Y) := by
+      simpa only [U_obj_eq_zero hY] using (isZero_zero C)
+    exact hI.eq_of_tgt _ _
+  have eTop : U.obj T = A := by
+    simpa [U, T] using concentratedTruncatedObject_top A k
+  let app (g : V.obj T ⟶ A) (X : (SimplexCategory.Truncated k)ᵒᵖ) :
+      V.obj X ⟶ U.obj X :=
+    if hX : X = T then
+      eqToHom (congrArg V.obj hX) ≫ g ≫
+        eqToHom ((congrArg U.obj hX).trans eTop).symm
+    else 0
+  have app_top (g : V.obj T ⟶ A) :
+      app g T = g ≫ eqToHom eTop.symm := by
+    dsimp [app]
+    simp
+  have app_zero (g : V.obj T ⟶ A) {X : (SimplexCategory.Truncated k)ᵒᵖ}
+      (hX : X ≠ T) : app g X = 0 := by
+    simp [app, hX]
+  have outgoing_any (g : V.obj T ⟶ A)
+      (hg : truncatedOutgoingCondition A k V g)
+      {X : (SimplexCategory.Truncated k)ᵒᵖ} (hX : X ≠ T) (q : X ⟶ T) :
+      V.map q ≫ g = 0 := by
+    let Z := X.unop
+    let j := Z.obj.len
+    have hjle : j ≤ k := Z.property
+    have hjlt : j < k := by
+      apply lt_of_le_of_ne hjle
+      intro h
+      apply hX
+      apply obj_eq_of_len_eq
+      simpa [T, Z, j, topTruncatedSimplex] using h
+    let Z' : SimplexCategory.Truncated k :=
+      ⟨⦋j⦌, by simpa [j] using hjle⟩
+    have e : Z' = X.unop := by
+      apply ObjectProperty.FullSubcategory.ext
+      exact SimplexCategory.ext (by simp [Z', Z, j])
+    let eop : op Z' = X := congrArg op e
+    let q' : op Z' ⟶ T := eqToHom eop.symm ≫ q
+    let φ : ⦋k⦌ ⟶ ⦋j⦌ := q'.unop.hom
+    have hq' : q' =
+        (SimplexCategory.Truncated.Hom.tr φ
+          (ha := by simp) (hb := by simpa [j] using hjle)).op := by
+      apply Quiver.Hom.unop_inj
+      apply ObjectProperty.hom_ext
+      rfl
+    have hq : q = eqToHom eop ≫ q' := by
+      dsimp [q']
+      simp
+    rw [hq, V.map_comp, Category.assoc, hq']
+    rw [hg hjlt φ]
+    simp
+  have top_end_zero (g : V.obj T ⟶ A)
+      (hg : truncatedOutgoingCondition A k V g)
+      {q : T ⟶ T} (hq : q ≠ 𝟙 T) : V.map q ≫ g = 0 := by
+    cases k with
+    | zero =>
+        have hi : Function.Injective q.unop.hom.toOrderHom := by
+          intro x y hxy
+          exact (Fin.eq_zero x).trans (Fin.eq_zero y).symm
+        have hmono : Mono q.unop.hom :=
+          (SimplexCategory.mono_iff_injective).mpr hi
+        have hqbase : q.unop.hom = 𝟙 _ :=
+          SimplexCategory.eq_id_of_mono _
+        exfalso
+        apply hq
+        apply Quiver.Hom.unop_inj
+        apply ObjectProperty.hom_ext
+        exact hqbase
+    | succ k =>
+        by_cases hs : Function.Surjective q.unop.hom.toOrderHom
+        · by_cases hi : Function.Injective q.unop.hom.toOrderHom
+          · have hmono : Mono q.unop.hom :=
+              (SimplexCategory.mono_iff_injective).mpr hi
+            have hqbase : q.unop.hom = 𝟙 _ :=
+              SimplexCategory.eq_id_of_mono _
+            exfalso
+            apply hq
+            apply Quiver.Hom.unop_inj
+            apply ObjectProperty.hom_ext
+            exact hqbase
+          · obtain ⟨i, θ, hfac⟩ :=
+              SimplexCategory.eq_σ_comp_of_not_injective q.unop.hom hi
+            change ⦋k⦌ ⟶ ⦋k + 1⦌ at θ
+            let σ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+              (SimplexCategory.σ i) (ha := by simp) (hb := by simp)
+            let θ' := SimplexCategory.Truncated.Hom.tr (n := k + 1) θ
+              (ha := by simp) (hb := by simp)
+            have hfac' : q = θ'.op ≫ σ'.op := by
+              apply Quiver.Hom.unop_inj
+              apply ObjectProperty.hom_ext
+              exact hfac
+            rw [hfac', V.map_comp, Category.assoc]
+            rw [hg (by simpa using Nat.lt_succ_self k) (SimplexCategory.σ i)]
+            simp
+        · obtain ⟨i, θ, hfac⟩ :=
+            SimplexCategory.eq_comp_δ_of_not_surjective q.unop.hom hs
+          change ⦋k + 1⦌ ⟶ ⦋k⦌ at θ
+          dsimp [T, topTruncatedSimplex] at q
+          let θ' := SimplexCategory.Truncated.Hom.tr (n := k + 1) θ
+            (ha := by simp) (hb := by simp)
+          let δ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+            (SimplexCategory.δ i) (ha := by simp) (hb := by simp)
+          have hfac' : q = δ'.op ≫ θ'.op := by
+            apply Quiver.Hom.unop_inj
+            apply ObjectProperty.hom_ext
+            exact hfac
+          rw [hfac', V.map_comp, Category.assoc]
+          rw [hg (by simpa using Nat.lt_succ_self k) θ]
+          simp
+  let nat_of_app (g : V.obj T ⟶ A)
+      (hg : truncatedOutgoingCondition A k V g) : V ⟶ U :=
+    { app := app g
+      naturality := by
+        intro X Y q
+        by_cases hX : X = T
+        · subst X
+          by_cases hY : Y = T
+          · subst Y
+            by_cases hq : q = 𝟙 T
+            · subst q
+              rw [V.map_id, app_top, U.map_id]
+              simp
+            · rw [app_top, concentratedTruncatedObject_map_of_ne_id A k q hq]
+              simp only [comp_zero]
+              rw [← Category.assoc, top_end_zero g hg hq]
+              simp
+          · rw [app_zero g hY, U_map_zero_of_tgt hY]
+            simp
+        · by_cases hY : Y = T
+          · subst Y
+            rw [app_zero g hX, app_top]
+            simp only [zero_comp]
+            rw [← Category.assoc, outgoing_any g hg hX q]
+            simp
+          · rw [app_zero g hX, app_zero g hY]
+            simp }
+  have alpha_app_zero (α : V ⟶ U)
+      {X : (SimplexCategory.Truncated k)ᵒᵖ} (hX : X ≠ T) : α.app X = 0 := by
+    have hI : IsZero (U.obj X) := by
+      simpa only [U_obj_eq_zero hX] using (isZero_zero C)
+    exact hI.eq_of_tgt _ _
+  refine ⟨{
+    toFun := fun α =>
+      ⟨α.app T ≫ eqToHom eTop, by
+        intro j hj φ
+        let q := (SimplexCategory.Truncated.Hom.tr (n := k) φ
+          (ha := by simp) (hb := by simpa using Nat.le_of_lt hj)).op
+        have hq : op (⟨⦋j⦌, by simpa using Nat.le_of_lt hj⟩ :
+            SimplexCategory.Truncated k) ≠ T := by
+          intro h
+          apply Nat.ne_of_lt hj
+          have hlen := congrArg (fun Z => Z.unop.obj.len) h
+          simpa [T, topTruncatedSimplex] using hlen
+        have hαzero : α.app (op (⟨⦋j⦌, by simpa using Nat.le_of_lt hj⟩ :
+            SimplexCategory.Truncated k)) = 0 := alpha_app_zero α hq
+        have hnat := α.naturality q
+        have hnat' : V.map q ≫ α.app T = 0 := by
+          simpa only [hαzero, zero_comp] using hnat
+        dsimp [q] at hnat'
+        simpa only [Category.assoc, zero_comp] using
+          congrArg (fun z => z ≫ eqToHom eTop) hnat'⟩
+    invFun := fun f => nat_of_app f.1 f.2
+    left_inv := by
+      intro α
+      apply NatTrans.ext
+      funext X
+      dsimp [nat_of_app]
+      change app (α.app T ≫ eqToHom eTop) X = α.app X
+      by_cases hX : X = T
+      · subst X
+        rw [app_top]
+        simp
+      · rw [app_zero _ hX, alpha_app_zero α hX]
+    right_inv := by
+      intro f
+      apply Subtype.ext
+      dsimp [nat_of_app]
+      change app f.1 T ≫ eqToHom eTop = f.1
+      rw [app_top]
+      simp }⟩
 
 noncomputable def truncatedCoskeletonObject
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -486,7 +911,372 @@ theorem eilenbergMacLane_degree_formula
     (A : C) (k n : ℕ) :
     Nonempty ((eilenbergMacLaneObject A k).obj (op ⦋n⦌) ≅
       eilenbergMacLaneDegreeDirectSum A k n) := by
-  sorry
+  classical
+  let U : SimplicialObject.Truncated C k := concentratedTruncatedObject A k
+  let I := Unit21.leftSkeletonIndex k n
+  let D := Unit21.leftSkeletonDiagram k n U
+  let E : C := ∐ (fun _ : SurjectiveSimplexIndex n k => A)
+  have eTop : U.obj (op (topTruncatedSimplex k)) = A := by
+    simpa [U] using concentratedTruncatedObject_top A k
+  have topObjEq {X : I} (hX : X.left = op (topTruncatedSimplex k)) :
+      X.left.unop = topTruncatedSimplex k := by
+    simpa using congrArg Opposite.unop hX
+  let topMap : ∀ {X : I}, X.left = op (topTruncatedSimplex k) →
+      (⦋n⦌ ⟶ ⦋k⦌) := fun {X} hX => by
+    exact X.hom.unop ≫
+      eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+        (topObjEq hX))
+  have topObjValueEq {X : I} (hX : X.left = op (topTruncatedSimplex k)) :
+      D.obj X = A := by
+    have hx : X.left.unop.obj.len = k := by
+      rw [topObjEq hX]
+    change U.obj X.left = A
+    simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hx]
+  let leg : ∀ X : I, D.obj X ⟶ E := fun X => by
+    by_cases hX : X.left = op (topTruncatedSimplex k)
+    · by_cases hα : Epi (topMap hX)
+      · let α : SurjectiveSimplexIndex n k := ⟨topMap hX, hα⟩
+        exact eqToHom (topObjValueEq hX) ≫
+          Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) α
+      · exact 0
+    · exact 0
+  have map_zero_of_nontrivial {X Y : I} (f : X ⟶ Y)
+      (hXY : X.left = Y.left) (hf : f.left ≠ eqToHom hXY) : D.map f = 0 := by
+    let q := eqToHom hXY.symm ≫ f.left
+    have hq : q ≠ 𝟙 Y.left := by
+      intro hq
+      apply hf
+      calc
+        f.left = 𝟙 _ ≫ f.left := by simp
+        _ = (eqToHom hXY ≫ eqToHom hXY.symm) ≫ f.left := by simp
+        _ = eqToHom hXY ≫ q := by simp [q, Category.assoc]
+        _ = eqToHom hXY ≫ 𝟙 _ := by rw [hq]
+        _ = _ := by simp
+    change U.map f.left = 0
+    have hfac : f.left = eqToHom hXY ≫ q := by simp [q]
+    rw [hfac, U.map_comp, concentratedTruncatedObject_map_of_ne_id A k q hq]
+    simp
+  let c : Cocone D := Cocone.mk E
+    { app := fun X => leg X
+      naturality := by
+        intro X Y f
+        by_cases hX : X.left = op (topTruncatedSimplex k)
+        · by_cases hY : Y.left = op (topTruncatedSimplex k)
+          · have hrel :
+                topMap hX =
+                  topMap hY ≫
+                    (eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq (X := Y) hY)).symm ≫
+                     f.left.unop.hom ≫
+                     eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq (X := X) hX))) := by
+              have hbase : Y.hom.unop ≫ f.left.unop.hom = X.hom.unop := by
+                simpa using congrArg Quiver.Hom.unop f.w
+              simpa [topMap, Category.assoc] using
+                congrArg (fun z => z ≫
+                  eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                    (topObjEq (X := X) hX))) hbase.symm
+            by_cases hαX : Epi (topMap hX)
+            · let q : ⦋k⦌ ⟶ ⦋k⦌ :=
+                eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                  (topObjEq (X := Y) hY)).symm ≫
+                f.left.unop.hom ≫
+                eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                  (topObjEq (X := X) hX))
+              have hq : Epi q := by
+                letI : Epi (topMap hX) := hαX
+                have hfac : topMap hY ≫ q = topMap hX := by
+                  simpa [q] using hrel.symm
+                exact epi_of_epi_fac hfac
+              have hqid : q = 𝟙 _ := SimplexCategory.eq_id_of_epi q
+              have hXY : X.left = Y.left := hX.trans hY.symm
+              have hflbase :
+                  f.left.unop.hom =
+                    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq (X := Y) hY)) ≫
+                    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq (X := X) hX)).symm := by
+                calc
+                  f.left.unop.hom =
+                      𝟙 _ ≫ f.left.unop.hom ≫ 𝟙 _ := by simp
+                  _ = (eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                        (topObjEq (X := Y) hY)) ≫
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq (X := Y) hY)).symm) ≫
+                        f.left.unop.hom ≫
+                        (eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq (X := X) hX)) ≫
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq (X := X) hX)).symm) := by simp
+                  _ = eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                        (topObjEq (X := Y) hY)) ≫ q ≫
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq (X := X) hX)).symm := by simp [q, Category.assoc]
+                  _ = eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                        (topObjEq (X := Y) hY)) ≫ 𝟙 _ ≫
+                        eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                          (topObjEq (X := X) hX)).symm := by rw [hqid]
+                  _ = _ := by simp
+              have hfl : f.left = eqToHom hXY := by
+                apply Quiver.Hom.unop_inj
+                apply ObjectProperty.hom_ext
+                simpa using hflbase
+              have hobj : X = Y := by
+                apply CostructuredArrow.obj_ext X Y hXY
+                simpa [hfl] using f.w
+              subst Y
+              have hf : f = 𝟙 X := by
+                apply CostructuredArrow.ext
+                simpa using hfl
+              subst f
+              simp [leg, hX, hY]
+            · by_cases hαY : Epi (topMap hY)
+              · have hfl_ne : f.left ≠ eqToHom (by
+                    exact hX.trans hY.symm) := by
+                  intro hfl
+                  have heq : topMap hX = topMap hY := by
+                    simpa [hfl] using hrel
+                  apply hαX
+                  simpa [heq] using hαY
+                have hzero := map_zero_of_nontrivial f
+                  (hX.trans hY.symm) hfl_ne
+                simp [leg, hX, hY, hαX, hαY, hzero]
+              · simp [leg, hX, hY, hαX, hαY]
+          · by_cases hαX : Epi (topMap hX)
+            · have hbase : Y.hom.unop ≫ f.left.unop.hom = X.hom.unop := by
+                simpa using congrArg Quiver.Hom.unop f.w
+              let q := f.left.unop.hom ≫
+                eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                  (topObjEq (X := X) hX))
+              have hfac : Y.hom.unop ≫ q = topMap hX := by
+                dsimp [q]
+                simpa [topMap, Category.assoc] using
+                  congrArg (fun z => z ≫
+                    eqToHom (congrArg (fun Z : SimplexCategory.Truncated k => Z.obj)
+                      (topObjEq (X := X) hX))) hbase
+              letI : Epi (topMap hX) := hαX
+              have hq : Epi q := epi_of_epi_fac hfac
+              have hle : k ≤ Y.left.unop.obj.len := SimplexCategory.le_of_epi q
+              have hlt : Y.left.unop.obj.len < k := by
+                apply lt_of_le_of_ne Y.left.unop.property
+                intro hlen
+                apply hY
+                apply Opposite.unop_injective
+                apply ObjectProperty.FullSubcategory.ext
+                exact SimplexCategory.ext hlen
+              exact (Nat.not_lt_of_ge hle hlt).elim
+            · simp [leg, hX, hY, hαX]
+        · by_cases hY : Y.left = op (topTruncatedSimplex k)
+          · have hI : IsZero (D.obj X) := by
+              change IsZero (U.obj X.left)
+              have hlen : X.left.unop.obj.len ≠ k := by
+                intro hlen
+                apply hX
+                apply Opposite.unop_injective
+                apply ObjectProperty.FullSubcategory.ext
+                exact SimplexCategory.ext hlen
+              simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen] using
+                (isZero_zero C)
+            exact hI.eq_of_src _ _
+          · simp [leg, hX, hY, U, D]
+    }
+  have cocone_ι_zero {s : Cocone D} {X : I}
+      (hX : X.left = op (topTruncatedSimplex k))
+      (hα : ¬Epi (topMap hX)) : s.ι.app X = 0 := by
+    cases k with
+    | zero =>
+        exfalso
+        apply hα
+        rw [SimplexCategory.epi_iff_surjective]
+        intro y
+        exact ⟨0, (Fin.eq_zero _).trans (Fin.eq_zero _).symm⟩
+    | succ k =>
+        have hns : ¬Function.Surjective (topMap hX).toOrderHom := by
+          intro hs
+          apply hα
+          exact SimplexCategory.epi_iff_surjective.mpr hs
+        obtain ⟨i, θ, hfac⟩ :=
+          SimplexCategory.eq_comp_δ_of_not_surjective (topMap hX) hns
+        let δ' := SimplexCategory.Truncated.Hom.tr (n := k + 1)
+          (SimplexCategory.δ i) (ha := by simp) (hb := by simp)
+        let Yleft : (SimplexCategory.Truncated (k + 1))ᵒᵖ :=
+          op ⟨⦋k⦌, by simp⟩
+        let Yhom : (Unit21.leftSkeletonInclusion (k + 1)).obj Yleft ⟶ op ⦋n⦌ := by
+          exact eqToHom (by rfl) ≫ θ.op
+        let Y : I := CostructuredArrow.mk Yhom
+        let q : X.left ⟶ Y.left := eqToHom hX ≫ δ'.op
+        let f : X ⟶ Y := CostructuredArrow.homMk q (by
+          apply Quiver.Hom.unop_inj
+          dsimp [q, Y, Yhom, Yleft, δ']
+          have htop : X.hom.unop ≫
+              eqToHom (congrArg (fun Z : SimplexCategory.Truncated (k + 1) => Z.obj)
+                (topObjEq hX)) = θ ≫ SimplexCategory.δ i := by
+            simpa [topMap] using hfac
+          have hbase : θ ≫ SimplexCategory.δ i ≫
+              eqToHom (congrArg (fun Z : SimplexCategory.Truncated (k + 1) => Z.obj)
+                (topObjEq hX)).symm = X.hom.unop := by
+            rw [← Category.assoc, ← htop]
+            simp
+          simpa [Category.assoc] using hbase)
+        have hzero : D.map f = 0 := by
+          have hI : IsZero (D.obj Y) := by
+            change IsZero (U.obj Y.left)
+            simpa [Y, Yleft, U, concentratedTruncatedObject, concentratedTruncatedValue] using
+              (isZero_zero C)
+          exact hI.eq_of_tgt _ _
+        have hnat := s.ι.naturality f
+        simpa [hzero] using hnat.symm
+  have hc : IsColimit c := by
+    let Xα (α : SurjectiveSimplexIndex n k) : I := by
+      let a : (SimplexCategory.Truncated k)ᵒᵖ := op (topTruncatedSimplex k)
+      let h : (Unit21.leftSkeletonInclusion k).obj a ⟶ op ⦋n⦌ := by
+        exact eqToHom (by rfl) ≫ α.1.op
+      exact CostructuredArrow.mk h
+    let desc (s : Cocone D) : E ⟶ s.pt :=
+      (coproductIsCoproduct (fun _ : SurjectiveSimplexIndex n k => A)).desc
+        (Cocone.mk s.pt
+          { app := fun α =>
+              eqToHom (topObjValueEq (X := Xα α.as) (by simp [Xα])).symm ≫
+                s.ι.app (Xα α.as)
+            naturality := by
+              intro α β f
+              cases α with
+              | mk a =>
+                cases β with
+                | mk b =>
+                  have hab : a = b := Discrete.eq_of_hom f
+                  subst b
+                  simp })
+    let fac : ∀ (s : Cocone D) (X : I), leg X ≫ desc s = s.ι.app X := by
+      intro s X
+      by_cases hX : X.left = op (topTruncatedSimplex k)
+      · by_cases hαX : Epi (topMap hX)
+        · let α : SurjectiveSimplexIndex n k := ⟨topMap hX, hαX⟩
+          have hXZ : X = Xα α := by
+            have hleft : X.left = (Xα α).left := by
+              simpa [Xα] using hX
+            apply CostructuredArrow.obj_ext X (Xα α) hleft
+            apply Quiver.Hom.unop_inj
+            dsimp [Xα, α, topMap]
+            simp [Category.assoc]
+          rw [hXZ]
+          have hleft : (Xα α).left = op (topTruncatedSimplex k) := by
+            simp [Xα]
+          have hmap : topMap hleft = α.1 := by
+            simp [topMap, Xα, α, Category.assoc]
+          have hα' : Epi (topMap hleft) := by
+            rw [hmap]
+            exact α.2
+          have hleg : leg (Xα α) =
+              eqToHom (topObjValueEq hleft) ≫
+                Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) α := by
+            dsimp [leg]
+            rw [dif_pos hleft, dif_pos hα']
+            simp [hmap]
+          change leg (Xα α) ≫ desc s = s.ι.app (Xα α)
+          rw [hleg]
+          have hdesc :
+              Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) α ≫ desc s =
+                eqToHom (topObjValueEq hleft).symm ≫ s.ι.app (Xα α) := by
+            simpa [desc, Xα, α] using
+              (coproductIsCoproduct (fun _ : SurjectiveSimplexIndex n k => A)).fac
+                (Cocone.mk s.pt
+                  { app := fun β =>
+                      eqToHom (topObjValueEq (X := Xα β.as) (by simp [Xα])).symm ≫
+                        s.ι.app (Xα β.as)
+                    naturality := by
+                      intro β γ f
+                      cases β with
+                      | mk b =>
+                        cases γ with
+                        | mk c =>
+                          have hbc : b = c := Discrete.eq_of_hom f
+                          subst c
+                          simp }) ⟨α⟩
+          rw [Category.assoc, hdesc]
+          simp
+        · have hs := cocone_ι_zero (s := s) hX hαX
+          simp [c, leg, desc, hX, hαX, hs]
+      · have hI : IsZero (D.obj X) := by
+          change IsZero (U.obj X.left)
+          have hlen : X.left.unop.obj.len ≠ k := by
+            intro hlen
+            apply hX
+            apply Opposite.unop_injective
+            apply ObjectProperty.FullSubcategory.ext
+            exact SimplexCategory.ext hlen
+          simpa [U, concentratedTruncatedObject, concentratedTruncatedValue, hlen] using
+            (isZero_zero C)
+        exact hI.eq_of_src _ _
+    let uniq : ∀ (s : Cocone D) (m : E ⟶ s.pt),
+        (∀ X, leg X ≫ m = s.ι.app X) → m = desc s := by
+      intro s m hm
+      apply (coproductIsCoproduct (fun _ : SurjectiveSimplexIndex n k => A)).hom_ext
+      intro α
+      let a : SurjectiveSimplexIndex n k := α.as
+      let Xa : I := Xα a
+      have hleft : Xa.left = op (topTruncatedSimplex k) := by
+        simp [Xa, Xα]
+      have hmap : topMap hleft = a.1 := by
+        simp [topMap, Xa, Xα, a, Category.assoc]
+      have hα : Epi (topMap hleft) := by
+        rw [hmap]
+        exact a.2
+      have hleg : leg Xa =
+          eqToHom (topObjValueEq hleft) ≫
+            Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a := by
+        dsimp [leg]
+        rw [dif_pos hleft, dif_pos hα]
+        simp [hmap]
+      have hm' := hm Xa
+      change leg Xa ≫ m = s.ι.app Xa at hm'
+      rw [hleg] at hm'
+      have hdesc :
+          Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ desc s =
+            eqToHom (topObjValueEq hleft).symm ≫ s.ι.app Xa := by
+        simpa [desc, Xa, Xα, a] using
+          (coproductIsCoproduct (fun _ : SurjectiveSimplexIndex n k => A)).fac
+            (Cocone.mk s.pt
+              { app := fun β =>
+                  eqToHom (topObjValueEq (X := Xα β.as) (by simp [Xα])).symm ≫
+                    s.ι.app (Xα β.as)
+                naturality := by
+                  intro β γ f
+                  cases β with
+                  | mk b =>
+                    cases γ with
+                    | mk c =>
+                      have hbc : b = c := Discrete.eq_of_hom f
+                      subst c
+                      simp }) ⟨a⟩
+      change Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m =
+        Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ desc s
+      rw [hdesc]
+      have hm_reassoc :
+          eqToHom (topObjValueEq hleft) ≫
+              Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m =
+            s.ι.app Xa := by
+        simpa [Category.assoc] using hm'
+      calc
+        Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m =
+            𝟙 _ ≫ Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m := by simp
+        _ = (eqToHom (topObjValueEq hleft).symm ≫
+              eqToHom (topObjValueEq hleft)) ≫
+            Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m := by simp
+        _ = eqToHom (topObjValueEq hleft).symm ≫
+            (eqToHom (topObjValueEq hleft) ≫
+              Sigma.ι (fun _ : SurjectiveSimplexIndex n k => A) a ≫ m) := by
+              simp [Category.assoc]
+        _ = eqToHom (topObjValueEq hleft).symm ≫ s.ι.app Xa := by
+          rw [hm_reassoc]
+    exact { desc := desc, fac := fac, uniq := uniq }
+  let hD := Unit21.has_left_skeleton_colimit_of_has_finite_colimits k n U
+  letI := hD
+  let eColim : E ≅ Unit21.leftSkeletonColimit k n U hD :=
+    hc.coconePointUniqueUpToIso (colimit.isColimit D)
+  let eKan :=
+    (Unit21.leftAdjoint_obj_iso_colimit k n U hD).some
+  exact ⟨eKan ≪≫ eColim.symm⟩
 
 theorem eilenbergMacLane_map_formula
     {C : Type u} [Category.{v} C] [Abelian C]

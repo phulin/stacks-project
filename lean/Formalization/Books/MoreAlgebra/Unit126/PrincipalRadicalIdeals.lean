@@ -10,6 +10,7 @@ import Formalization.Books.Algebra.Unit105.CatenaryRings
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.RingTheory.Ideal.MinimalPrime.Noetherian
 import Mathlib.RingTheory.Ideal.Quotient.Nilpotent
+import Mathlib.Algebra.Module.SnakeLemma
 
 /-!
 This file records the definitions and theorem interfaces in the source chapter.
@@ -649,6 +650,187 @@ theorem lemma_minprimespoly
   have hBfin : IsFiniteLength S B :=
     Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
       I hIdef ⟨1, by simpa [pow_one] using hkillB⟩
+  let t : S := xS ^ k
+  let uS : S →ₗ[S] S := LinearMap.mulLeft S t
+  let uM : M →ₗ[S] M :=
+    { toFun := fun m => t • m
+      map_add' := by intro m n; simp
+      map_smul' := by
+        intro r m
+        simp [smul_smul, mul_comm] }
+  have hIrangeS : LinearMap.range uS = I := by
+    ext z
+    constructor
+    · rintro ⟨y, rfl⟩
+      apply Ideal.mem_span_singleton'.mpr
+      exact ⟨y, by simp [uS, t, mul_comm]⟩
+    · intro hz
+      obtain ⟨y, hy⟩ := Ideal.mem_span_singleton'.mp (by simpa [I] using hz)
+      refine ⟨y, ?_⟩
+      simpa [uS, t, mul_comm] using hy
+  have hIrangeM : LinearMap.range uM = N := by
+    apply le_antisymm
+    · rintro z ⟨m, rfl⟩
+      exact Submodule.smul_mem_smul (by simpa [I, t]) Submodule.mem_top
+    · refine Submodule.smul_le.mpr ?_
+      intro r hr m hm
+      obtain ⟨y, hy⟩ := Ideal.mem_span_singleton'.mp (by simpa [I] using hr)
+      refine ⟨y • m, ?_⟩
+      change t • (y • m) = r • m
+      simpa [smul_smul, mul_comm, mul_left_comm, mul_assoc] using
+        congrArg (fun z : S => z • m) hy
+  let q : M →ₗ[S] Q := (LinearMap.range f).mkQ
+  have hq : Function.Surjective q := Submodule.mkQ_surjective _
+  have hqexact : Function.Exact f q := LinearMap.exact_map_mkQ_range f
+  have h1 : f.comp uS = uM.comp f := by
+    apply LinearMap.ext
+    intro z
+    funext p
+    change Ideal.Quotient.mk p.1 (t * z) =
+      Ideal.Quotient.mk p.1 t * Ideal.Quotient.mk p.1 z
+    simp
+  have h2 : q.comp uM = (0 : Q →ₗ[S] Q).comp q := by
+    apply LinearMap.ext
+    intro m
+    have htann : t ∈ Module.annihilator S Q := hIann (by simpa [I, t])
+    rw [Module.mem_annihilator] at htann
+    change q (t • m) = 0
+    rw [q.map_smul]
+    exact htann (q m)
+  have huM : Function.Injective uM := by
+    intro m n hmn
+    funext p
+    letI : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
+    have htp : Ideal.Quotient.mk p.1 t ≠ 0 := by
+      intro hzero
+      apply hminS p.1 p.2
+      rw [Ideal.Quotient.eq_zero_iff_mem] at hzero
+      exact (Ideal.IsMinimalPrime.isPrime p.2).mem_of_pow_mem k (by simpa [t] using hzero)
+    have hmul := congrFun hmn p
+    change t • m p = t • n p at hmul
+    have hmul' : Ideal.Quotient.mk p.1 t * m p =
+        Ideal.Quotient.mk p.1 t * n p := by
+      change Ideal.Quotient.mk p.1 t * m p =
+        Ideal.Quotient.mk p.1 t * n p at hmul
+      exact hmul
+    exact (mul_eq_mul_left_iff.mp hmul').resolve_right htp
+  have hπ1 : Function.Exact uS I.mkQ := by
+    rw [LinearMap.exact_iff, Submodule.ker_mkQ, hIrangeS]
+  have hπ2 : Function.Exact uM N.mkQ := by
+    apply LinearMap.exact_iff.mpr
+    rw [Submodule.ker_mkQ, hIrangeM]
+  have hIker : I ≤ LinearMap.ker (N.mkQ.comp f) := by
+    intro z hz
+    rw [LinearMap.mem_ker]
+    change N.mkQ (f z) = 0
+    rw [N.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    have hfz : f z = z • f 1 := by simpa using f.map_smul z (1 : S)
+    rw [hfz]
+    exact Submodule.smul_mem_smul hz Submodule.mem_top
+  let G : A →ₗ[S] B := I.liftQ (N.mkQ.comp f) hIker
+  have hG : G.comp I.mkQ = N.mkQ.comp f := by
+    rw [Submodule.liftQ_mkQ]
+  let δ : Q →ₗ[S] A :=
+    SnakeLemma.δ uS uM (0 : Q →ₗ[S] Q) f q hqexact
+      f q hqexact h1 h2 (Function.surjInv hq) (Function.comp_surjInv hq)
+      (Function.invFun f) (Function.invFun_comp hf)
+      (LinearMap.id : Q →ₗ[S] Q) (by
+        rw [LinearMap.exact_iff]
+        ext z
+        simp) I.mkQ hπ1
+  have hsnake : Function.Exact
+      δ G := by
+    apply SnakeLemma.exact_δ_left uS uM (0 : Q →ₗ[S] Q) f q hqexact
+      f q hqexact h1 h2 (Function.surjInv hq) (Function.comp_surjInv hq)
+      (Function.invFun f) (Function.invFun_comp hf)
+      (LinearMap.id : Q →ₗ[S] Q) (by
+        rw [LinearMap.exact_iff]
+        simp) I.mkQ hπ1 N.mkQ hπ2 G
+    simpa [G] using hG
+    exact Submodule.mkQ_surjective _
+  have hzero_uM : Function.Exact (0 : S →ₗ[S] M) uM := by
+    rw [LinearMap.exact_iff, LinearMap.ker_eq_bot.mpr huM]
+    simp
+  have hδexact : Function.Exact (0 : S →ₗ[S] Q) δ := by
+    apply SnakeLemma.exact_δ_right uS uM (0 : Q →ₗ[S] Q) f q hqexact
+      f q hqexact h1 h2 (Function.surjInv hq) (Function.comp_surjInv hq)
+      (Function.invFun f) (Function.invFun_comp hf)
+      (0 : S →ₗ[S] M) hzero_uM (LinearMap.id : Q →ₗ[S] Q) (by
+        rw [LinearMap.exact_iff]
+        ext z
+        simp) I.mkQ hπ1 (0 : S →ₗ[S] Q) (by simp)
+      (by intro z w h; exact h)
+  have hδinj : Function.Injective δ := by
+    apply LinearMap.ker_eq_bot.mp
+    simpa using LinearMap.exact_iff.mp hδexact
+  let Gcod : A →ₗ[S] LinearMap.range G :=
+    G.codRestrict (LinearMap.range G) (LinearMap.mem_range_self G)
+  have hGcod : Function.Surjective Gcod := by
+    intro y
+    rcases y.property with ⟨z, hz⟩
+    exact ⟨z, Subtype.ext hz⟩
+  have hδGcod : Function.Exact δ Gcod := by
+    rw [LinearMap.exact_iff, LinearMap.ker_codRestrict]
+    exact LinearMap.exact_iff.mp hsnake
+  have hAlen : Module.length S A =
+      Module.length S Q + Module.length S (LinearMap.range G) :=
+    Module.length_eq_add_of_exact δ Gcod hδinj hGcod hδGcod
+  have hNker : N ≤ LinearMap.ker q := by
+    refine Submodule.smul_le.mpr ?_
+    intro z hz m hm
+    rw [LinearMap.mem_ker]
+    change q (z • m) = 0
+    rw [q.map_smul]
+    have hzann : z ∈ Module.annihilator S Q := hIann hz
+    rw [Module.mem_annihilator] at hzann
+    exact hzann (q m)
+  let qbar : B →ₗ[S] Q := N.liftQ q hNker
+  have hqbar : Function.Surjective qbar := by
+    intro y
+    obtain ⟨m, hm⟩ := hq y
+    refine ⟨N.mkQ m, ?_⟩
+    change q m = y
+    exact hm
+  have hGzero : qbar.comp G = 0 := by
+    apply LinearMap.ext
+    intro y
+    refine Submodule.Quotient.induction_on (p := I) y ?_
+    intro z
+    change q (f z) = 0
+    change Submodule.Quotient.mk (p := LinearMap.range f) (f z) = 0
+    rw [Submodule.Quotient.mk_eq_zero]
+    exact LinearMap.mem_range_self f z
+  have hcomp : qbar.comp (LinearMap.range G).subtype = 0 := by
+    apply LinearMap.ext
+    intro y
+    rcases y.property with ⟨z, hz⟩
+    change qbar (y : B) = 0
+    rw [← hz]
+    exact DFunLike.congr_fun hGzero z
+  have hGBexact : Function.Exact (LinearMap.range G).subtype qbar := by
+    apply LinearMap.exact_of_comp_of_mem_range hcomp
+    intro y hy
+    refine Submodule.Quotient.induction_on (p := N) y ?_ hy
+    intro m hm
+    have hqm : q m = 0 := by
+      change q m = 0 at hm
+      exact hm
+    have hmrange : m ∈ LinearMap.range f := by
+      rw [← LinearMap.exact_iff.mp hqexact]
+      exact hqm
+    obtain ⟨z, rfl⟩ := hmrange
+    refine ⟨Gcod (I.mkQ z), ?_⟩
+    change G (I.mkQ z) = N.mkQ (f z)
+    exact DFunLike.congr_fun hG z
+  have hBlen : Module.length S B =
+      Module.length S (LinearMap.range G) + Module.length S Q :=
+    Module.length_eq_add_of_exact (LinearMap.range G).subtype qbar
+      (Submodule.subtype_injective _) hqbar hGBexact
+  have hlenAB : Module.length S A = Module.length S B := by
+    calc
+      Module.length S A = Module.length S Q + Module.length S (LinearMap.range G) := hAlen
+      _ = Module.length S (LinearMap.range G) + Module.length S Q := add_comm _ _
+      _ = Module.length S B := hBlen.symm
   sorry
 
 /-! ## Extending a parameter sequence -/

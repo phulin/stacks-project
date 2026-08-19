@@ -1154,7 +1154,7 @@ private theorem left_adjoint_isoClosure_eq_right_orthogonal
         change 𝟙 (A⟦(1 : ℤ)⟧) ≫ (shiftFunctor C (1 : ℤ)).map f = 0
         simp [hf])
     have horthP := orthogonal_triangulated P hstable
-    letI : (leftOrthogonal P).IsTriangulated := horthP.2.2.2
+    let : (leftOrthogonal P).IsTriangulated := horthP.2.2.2
     have hAshift : (leftOrthogonal P).IsStableUnderShift ℤ := by
       infer_instance
     have hq0 : q = 0 := by
@@ -1254,10 +1254,10 @@ theorem right_admissible_iff_decomposition
         (∀ X : C, HasRightDecomposition P X) := by
   constructor
   · rintro ⟨hstrict, htri, hP⟩
-    letI := htri
+    let := htri
     exact ⟨hstrict, htri, (right_adjoint_iff_decomposition P).1 hP⟩
   · rintro ⟨hstrict, htri, hdec⟩
-    letI := htri
+    let := htri
     exact ⟨hstrict, htri, (right_adjoint_iff_decomposition P).2 hdec⟩
 
 /-- Left admissibility can equivalently be expressed by decompositions. -/
@@ -1268,10 +1268,10 @@ theorem left_admissible_iff_decomposition
         (∀ X : C, HasLeftDecomposition P X) := by
   constructor
   · rintro ⟨hstrict, htri, hP⟩
-    letI := htri
+    let := htri
     exact ⟨hstrict, htri, (left_adjoint_iff_decomposition P).1 hP⟩
   · rintro ⟨hstrict, htri, hdec⟩
-    letI := htri
+    let := htri
     exact ⟨hstrict, htri, (left_adjoint_iff_decomposition P).2 hdec⟩
 
 /-! ## Canonicality of the right-adjoint triangle -/

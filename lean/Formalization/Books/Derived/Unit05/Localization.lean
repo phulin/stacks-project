@@ -165,6 +165,7 @@ def IsLocalizationPretriangulatedStructure
   letI : Pretriangulated S.Localization := P
   Functor.IsTriangulated S.Q
 
+omit [RightMultiplicativeSystem S] in
 theorem localization_pretriangulated_exists_unique :
     ∃! P : Pretriangulated S.Localization,
       IsLocalizationPretriangulatedStructure (S := S) P := by
@@ -172,15 +173,15 @@ theorem localization_pretriangulated_exists_unique :
     CategoryTheory.Triangulated.Localization.pretriangulated S.Q S
   have hP₀ : IsLocalizationPretriangulatedStructure (S := S) P₀ := by
     change (letI : Pretriangulated S.Localization := P₀; Functor.IsTriangulated S.Q)
-    letI : Pretriangulated S.Localization := P₀
+    let : Pretriangulated S.Localization := P₀
     infer_instance
   refine ⟨P₀, hP₀, ?_⟩
   intro P hP
   change (letI : Pretriangulated S.Localization := P; Functor.IsTriangulated S.Q) at hP
-  letI : Pretriangulated S.Localization := P
+  let : Pretriangulated S.Localization := P
   change Functor.IsTriangulated S.Q at hP
-  letI : Functor.IsTriangulated S.Q := hP
-  letI : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
+  let : Functor.IsTriangulated S.Q := hP
+  let : S.Q.mapArrow.EssSurj := Localization.essSurj_mapArrow S.Q S
   have hPdist : P.distinguishedTriangles = S.Q.essImageDistTriang := by
     ext T
     exact Functor.distTriang_iff S.Q T

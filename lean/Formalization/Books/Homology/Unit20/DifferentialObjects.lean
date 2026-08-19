@@ -118,10 +118,10 @@ private noncomputable def plainDifferentialLeftHomologyData
   let k : Abelian.image d ⟶ kernel d :=
     kernel.lift d (Abelian.image.ι d) (by
       apply (cancel_epi (Abelian.factorThruImage d)).1
-      simp only [← Category.assoc, Abelian.image.fac, hd, comp_zero, zero_comp])
+      simp only [← Category.assoc, Abelian.image.fac, hd, comp_zero])
   have hk : k₀ = Abelian.factorThruImage d ≫ k := by
     apply (cancel_mono (kernel.ι d)).1
-    simp [k, k₀, Category.assoc, Abelian.image.fac]
+    simp [k, k₀, Category.assoc]
   let π : kernel d ⟶ cokernel k := cokernel.π k
   have wπ : k₀ ≫ π = 0 := by
     rw [hk, Category.assoc, cokernel.condition, comp_zero]
@@ -191,7 +191,7 @@ theorem plainDifferentialObject_abelian {C : Type u} [Category.{v} C]
     { full := inferInstance
       faithful := inferInstance
       essSurj := inferInstance }
-  letI : Preadditive (PlainDifferentialObject C) :=
+  let : Preadditive (PlainDifferentialObject C) :=
     Preadditive.ofFullyFaithful (Functor.FullyFaithful.ofFullyFaithful F)
   let _ : HasFiniteProducts (PlainDifferentialObject C) :=
     ⟨fun n => Adjunction.hasLimitsOfShape_of_equivalence F⟩
@@ -321,8 +321,7 @@ theorem plainDifferentialShortExact_homology_long_exact
       · have h1 : (n + 1) % 3 = 1 := by omega
         have h2 : (n + 1 + 1) % 3 = 2 := by omega
         have hn0 : (n + 1) % 3 ≠ 0 := by omega
-        simp only [differential, dif_pos h0, dif_neg hn0, dif_pos h1,
-          if_pos h0, if_neg hn0, if_pos h1]
+        simp only [differential, dif_pos h0, dif_neg hn0, dif_pos h1]
         simp [b, f]
         have hδ : δ ≫ hf = 0 := by
           dsimp [δ, hf]
@@ -333,8 +332,7 @@ theorem plainDifferentialShortExact_homology_long_exact
         · have h2 : (n + 1) % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 ≠ 0 := by omega
           have hn1 : (n + 1) % 3 ≠ 1 := by omega
-          simp only [differential, dif_neg h0, dif_pos h1, dif_neg hn0, dif_neg hn1,
-            dif_pos h2]
+          simp only [differential, dif_neg h0, dif_pos h1, dif_neg hn0, dif_neg hn1]
           simp [f, g]
           have hfg : hf ≫ hg = 0 := by sorry
           rw [← Category.assoc, ← Category.assoc, hfg]
@@ -353,7 +351,7 @@ theorem plainDifferentialShortExact_homology_long_exact
       by_cases h0 : n % 3 = 0
       · have h1 : (n + 1) % 3 = 1 := by omega
         simp only [differential, dif_pos h0, dif_neg (by omega : (n + 1) % 3 ≠ 0),
-          dif_pos h1, if_neg (by omega : (n + 1) % 3 ≠ 0), if_pos h1]
+          dif_pos h1]
         simp [b, f]
         exact sorry
       · by_cases h1 : n % 3 = 1

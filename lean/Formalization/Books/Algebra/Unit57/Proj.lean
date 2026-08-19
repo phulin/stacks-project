@@ -826,7 +826,165 @@ theorem DOnProj_degree_zero_eq_iUnion_DPlus (G : GradedRingData S) (g₀ : S)
 theorem isTopologicalBasis_DPlus (G : GradedRingData S) :
     TopologicalSpace.IsTopologicalBasis
       (Set.range (fun x : positiveHomogeneousElements G => DPlus G (x.2 : S))) := by
-  sorry
+  apply TopologicalSpace.IsTopologicalBasis.isTopologicalBasis_of_exists_subset
+    (ProjectiveSpectrum.isTopologicalBasis_basic_opens G.component)
+  · rintro _ ⟨x, rfl⟩
+    exact isOpen_DPlus G ⟨x.1.1, x.1.2, x.2.2⟩
+  · rintro U ⟨g, rfl⟩ p hp
+    change g ∉ p.asHomogeneousIdeal.toIdeal at hp
+    have hp' : p ∈ DOnProj G g := hp
+    rw [DOnProj_eq_DPlus_union_components] at hp'
+    simp only [Set.mem_union, Set.mem_iUnion] at hp'
+    rcases hp' with hp0 | ⟨i, hi⟩
+    · have hp0' : p ∈ DOnProj G (GradedRing.proj G.component 0 g) := hp0
+      rw [DOnProj_degree_zero_eq_iUnion_DPlus G
+        (GradedRing.proj G.component 0 g) (SetLike.coe_mem _)] at hp0'
+      simp only [Set.mem_iUnion] at hp0'
+      obtain ⟨x, hx⟩ := hp0'
+      have hproj0 : GradedRing.proj G.component 0 g ∈ G.component 0 := SetLike.coe_mem _
+      let y : positiveHomogeneousElements G :=
+        ⟨x.1, ⟨GradedRing.proj G.component 0 g * (x.2 : S),
+          by
+            convert SetLike.mul_mem_graded hproj0 x.2.2 using 1
+            simp⟩⟩
+      refine ⟨DPlus G (y.2 : S), ⟨y, rfl⟩, ?_, ?_⟩
+      · simpa [y] using hx
+      · intro q hq
+        change g ∉ q.asHomogeneousIdeal.toIdeal
+        intro hg
+        apply hq
+        exact q.asHomogeneousIdeal.toIdeal.mul_mem_right (x.2 : S)
+          ((q.asHomogeneousIdeal.isHomogeneous.mem_iff.mp hg) 0)
+    · let x : positiveHomogeneousElements G :=
+        ⟨i, ⟨GradedRing.proj G.component i.1 g, SetLike.coe_mem _⟩⟩
+      refine ⟨DPlus G (x.2 : S), ⟨x, rfl⟩, hi, ?_⟩
+      intro q hq
+      change g ∉ q.asHomogeneousIdeal.toIdeal
+      intro hg
+      apply hq
+      exact (q.asHomogeneousIdeal.isHomogeneous.mem_iff.mp hg) i.1
+
+private def naturalLocalizationComponent (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) (z : ℤ) :
+    AddSubgroup (Localization (Submonoid.powers f)) where
+  carrier := {x | ∃ (n k : ℕ) (a : S), a ∈ G.component k ∧
+      (k : ℤ) - (n : ℤ) * d = z ∧
+      x = Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩} ∪
+      {0}
+  zero_mem' := Set.mem_union_right _ (Set.mem_singleton 0)
+  add_mem' := by
+    rintro x y (⟨n, k, a, ha, hka, rfl⟩ | rfl) (⟨m, l, b, hb, hlb, rfl⟩ | rfl)
+    · let K := k + m * d
+      have hdegZ : (l : ℤ) + (n : ℤ) * d = (k : ℤ) + (m : ℤ) * d := by
+        linarith
+      have hdeg : l + n * d = k + m * d := by exact_mod_cast hdegZ
+      have hK : a * f ^ m + b * f ^ n ∈ G.component K := by
+        have ha' : a * f ^ m ∈ G.component (k + m * d) := by
+          simpa [smul_eq_mul, add_comm, add_left_comm, add_assoc] using
+            SetLike.mul_mem_graded ha (SetLike.pow_mem_graded m hf)
+        have hb' : b * f ^ n ∈ G.component (l + n * d) := by
+          simpa [smul_eq_mul, add_comm, add_left_comm, add_assoc] using
+            SetLike.mul_mem_graded hb (SetLike.pow_mem_graded n hf)
+        have hsum : a * f ^ m + b * f ^ n ∈ G.component (k + m * d) := by
+          have hb'' : b * f ^ n ∈ G.component (k + m * d) := hdeg ▸ hb'
+          exact (G.component (k + m * d)).add_mem ha' hb''
+        simpa [K] using hsum
+      apply Set.mem_union_left {0}
+      refine ⟨n + m, K, a * f ^ m + b * f ^ n, hK, ?_, ?_⟩
+      · dsimp [K]
+        have hdegZ' : (k : ℤ) + (m : ℤ) * d - ((n + m : ℕ) : ℤ) * d =
+            (k : ℤ) - (n : ℤ) * d := by
+          push_cast
+          ring
+        exact hdegZ'.trans hka
+      · rw [Localization.add_mk]
+        simp [pow_add, mul_add, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm,
+          mul_assoc]
+    · simpa using (Set.mem_union_left {0}
+        ⟨n, k, a, ha, hka, rfl⟩ :
+          Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩ ∈
+            {x | ∃ (n k : ℕ) (a : S), a ∈ G.component k ∧
+              (k : ℤ) - (n : ℤ) * d = z ∧
+              x = Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩} ∪ {0})
+    · simpa using (Set.mem_union_left {0}
+        ⟨m, l, b, hb, hlb, rfl⟩ :
+          Localization.mk b ⟨f ^ m, (Submonoid.mem_powers_iff _ _).mpr ⟨m, rfl⟩⟩ ∈
+            {x | ∃ (n k : ℕ) (a : S), a ∈ G.component k ∧
+              (k : ℤ) - (n : ℤ) * d = z ∧
+              x = Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩} ∪ {0})
+    · simpa using (Set.mem_union_right _ (Set.mem_singleton (0 : Localization (Submonoid.powers f))))
+  neg_mem' := by
+    rintro x (⟨n, k, a, ha, hka, rfl⟩ | rfl)
+    · apply Set.mem_union_left {0}
+      refine ⟨n, k, -a, (G.component k).neg_mem ha, hka, ?_⟩
+      rw [Localization.neg_mk]
+    · simp
+
+private lemma naturalLocalizationComponent_graded (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) :
+    SetLike.GradedMonoid (naturalLocalizationComponent G hf) := by
+  refine { one_mem := ?_, mul_mem := ?_ }
+  · apply Set.mem_union_left {0}
+    refine ⟨0, 0, 1, SetLike.one_mem_graded _, by simp, ?_⟩
+    simp
+  · intro i j x y hx hy
+    rcases hx with (⟨n, k, a, ha, hka, rfl⟩ | rfl)
+    · rcases hy with (⟨m, l, b, hb, hlb, rfl⟩ | rfl)
+      · apply Set.mem_union_left {0}
+        refine ⟨n + m, k + l, a * b,
+          SetLike.mul_mem_graded ha hb, ?_, ?_⟩
+        · push_cast
+          linarith
+        · rw [Localization.mk_mul]
+          simp [pow_add, mul_comm]
+      · simp
+    · simp
+
+private lemma naturalLocalizationComponent_iSup_eq_top (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) :
+    ⨆ z : ℤ, naturalLocalizationComponent G hf z = ⊤ := by
+  classical
+  apply le_antisymm le_top
+  intro x hx
+  refine Localization.induction_on x ?_
+  rintro ⟨s, ⟨t, ht⟩⟩
+  obtain ⟨n, rfl⟩ := ht
+  let P := ⨆ z : ℤ, naturalLocalizationComponent G hf z
+  change Localization.mk s ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩ ∈ P
+  rw [← DirectSum.sum_support_decompose G.component s, Localization.mk_sum]
+  apply P.sum_mem
+  intro i hi
+  apply le_iSup (fun z : ℤ => naturalLocalizationComponent G hf z)
+    ((i : ℤ) - (n : ℤ) * d)
+  apply Set.mem_union_left {0}
+  exact ⟨n, i, GradedRing.proj G.component i s, SetLike.coe_mem _, by rfl, by
+    simp⟩
+
+private lemma naturalLocalizationComponent_exists_fraction (G : GradedRingData S)
+    {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d) {z : ℤ}
+    {x : Localization (Submonoid.powers f)}
+    (hx : x ∈ naturalLocalizationComponent G hf z) :
+    ∃ (n k : ℕ) (a : S), a ∈ G.component k ∧
+      (k : ℤ) - (n : ℤ) * d = z ∧
+      x = Localization.mk a ⟨f ^ n, (Submonoid.mem_powers_iff _ _).mpr ⟨n, rfl⟩⟩ := by
+  rcases hx with (⟨n, k, a, ha, hka, hax⟩ | rfl)
+  · exact ⟨n, k, a, ha, hka, hax⟩
+  · cases z with
+    | ofNat q =>
+        refine ⟨0, q, 0, (G.component q).zero_mem, by simp, ?_⟩
+        rw [Localization.mk_zero]
+    | negSucc q =>
+        let n : ℕ := q + 1
+        let k : ℕ := n * (d - 1)
+        refine ⟨n, k, 0, (G.component k).zero_mem, ?_, ?_⟩
+        · dsimp [n, k]
+          push_cast
+          have hd' : 1 ≤ d := hd
+          rw [Nat.cast_sub hd']
+          ring_nf
+          simp [Int.negSucc_eq]
+          ring
+        · rw [Localization.mk_zero]
 
 /-- The natural Z-grading of the ordinary localization in a projective chart. -/
 theorem exists_natural_localization_z_grading (G : GradedRingData S)

@@ -927,7 +927,6 @@ theorem universallyExact_prod
       induction t using TensorProduct.induction_on with
       | zero =>
         change (0, 0) = (0, 0)
-        rfl
       | add x y hx hy => simp only [map_add, hx, hy]
       | tmul x q => rfl
     apply e₁.injective
@@ -1083,13 +1082,71 @@ theorem integerPowerClass_killed_by_section
     (s : integerCokernel →ₗ[ℤ] integerDirectProduct)
     (hs : integerProductToCokernel.comp s = LinearMap.id) :
     s integerPowerClass = 0 := by
-  sorry
+  funext k
+  by_contra hk
+  have htwo : ∀ n : ℕ, n < 2 ^ n := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        calc
+          n + 1 ≤ 2 ^ n := by omega
+          _ < 2 ^ (n + 1) := by
+            rw [pow_succ]
+            have hpos : 0 < 2 ^ n := by positivity
+            omega
+  let n : ℕ := Int.natAbs (s integerPowerClass k) + 1
+  have hn : 1 ≤ n := by
+    dsimp [n]
+    omega
+  obtain ⟨y, hy⟩ := integerPowerClass_divisible n hn
+  have hy' := congrArg s hy
+  have hcoord := congrFun hy' k
+  have hdiv : (2 : ℤ) ^ n ∣ s integerPowerClass k := by
+    refine ⟨s y k, ?_⟩
+    simpa [Pi.smul_apply] using hcoord.symm
+  have hdiv' : 2 ^ n ∣ Int.natAbs (s integerPowerClass k) := by
+    simpa using (Int.natAbs_dvd_natAbs.mpr hdiv)
+  have hle : 2 ^ n ≤ Int.natAbs (s integerPowerClass k) :=
+    Nat.le_of_dvd (Int.natAbs_pos.mpr hk) hdiv'
+  have hlt : Int.natAbs (s integerPowerClass k) < 2 ^ n := by
+    dsimp [n]
+    exact Nat.lt_of_lt_of_le (by omega) (htwo _)
+  exact (Nat.not_lt_of_ge hle) hlt
 
 /-- The integer universally exact sequence does not split. -/
 theorem integerDirectSumToProduct_not_split :
     ¬ ∃ s : integerCokernel →ₗ[ℤ] integerDirectProduct,
       integerProductToCokernel.comp s = LinearMap.id := by
-  sorry
+  rintro ⟨s, hs⟩
+  have hs0 := integerPowerClass_killed_by_section s hs
+  have hclass : integerPowerClass = 0 := by
+    have h := congrArg (fun g => g integerPowerClass) hs
+    rw [LinearMap.comp_apply, hs0] at h
+    simpa using h.symm
+  change integerProductToCokernel integerPowerSequence = 0 at hclass
+  obtain ⟨z, hz⟩ :=
+    (Submodule.Quotient.mk_eq_zero (LinearMap.range integerDirectSumToProduct)).mp
+      hclass
+  have hcoord (n : ℕ) (hn : n ∉ z.support) :
+      (0 : ℤ) = (2 : ℤ) ^ (n + 1) := by
+    have hz' := congrFun hz n
+    have hz0 : z n = 0 := by
+      by_contra hz0
+      exact hn (Finsupp.mem_support_iff.mpr hz0)
+    simpa [integerDirectSumToProduct, hz0, integerPowerSequence] using hz'.symm
+  by_cases hsupport : z.support.Nonempty
+  · let n : ℕ := z.support.max' hsupport + 1
+    have hn : n ∉ z.support := by
+      intro hn
+      have hle := Finset.le_max' z.support n hn
+      dsimp [n] at hle
+      omega
+    have h := hcoord n hn
+    exact (pow_ne_zero _ (by norm_num : (2 : ℤ) ≠ 0)) h.symm
+  · have hzsupport : z.support = ∅ := Finset.not_nonempty_iff_eq_empty.mp hsupport
+    have h := hcoord 0 (by simp [hzsupport])
+    norm_num at h
 
 /-- Taking a direct sum with a non-flat split sequence preserves universal
 exactness and produces a universally exact nonsplit sequence with no flat term. -/
@@ -1113,7 +1170,32 @@ theorem universallyExact_directSum_with_nonflat_split
       ¬ Module.Flat R (M₁ × M) ∧
         ¬ Module.Flat R (M₂ × (M × M)) ∧
         ¬ Module.Flat R (M₃ × M) := by
-  sorry
+  refine ⟨universallyExact_prod f₁ f₂
+      (splitSequenceInjection (R := R) (M := M))
+      (splitSequenceProjection (R := R) (M := M)) h
+      (splitSequence_universallyExact (R := R) (M := M)), ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rintro ⟨s, hs⟩
+    apply hnonsplit
+    let i : M₃ →ₗ[R] M₃ × M := LinearMap.inl R M₃ M
+    let p : M₂ × (M × M) →ₗ[R] M₂ := LinearMap.fst R M₂ (M × M)
+    refine ⟨(p.comp s).comp i, ?_⟩
+    apply LinearMap.ext
+    intro x
+    have h := congrArg (fun g => g (i x)) hs
+    simpa [i, p, LinearMap.comp_apply, splitSequenceProjection] using
+      congrArg Prod.fst h
+  · intro hprod
+    exact hM (Module.Flat.of_retract (f := hprod)
+      (LinearMap.inr R M₁ M) (LinearMap.snd R M₁ M) rfl)
+  · intro hprod
+    have hprod' : Module.Flat R (M × M) :=
+      Module.Flat.of_retract (f := hprod)
+        (LinearMap.inr R M₂ (M × M)) (LinearMap.snd R M₂ (M × M)) rfl
+    exact (splitSequence_nonflat hM).2.1 hprod'
+  · intro hprod
+    exact hM (Module.Flat.of_retract (f := hprod)
+      (LinearMap.inr R M₃ M) (LinearMap.snd R M₃ M) rfl)
 
 /-! ## Universal injectivity over an algebra and at stalks -/
 
@@ -1189,7 +1271,420 @@ theorem universallyInjective_iff_check_stalks
     (universallyInjectiveAsAlgebra (R := R) (A := A) f ↔
       ∀ (q : Ideal A) [q.IsMaximal],
         universallyInjectiveAtPrimeOver (R := R) (A := A) q f) := by
-  sorry
+  letI : Module R M := Module.restrictScalars R A M
+  letI : Module R N := Module.restrictScalars R A N
+  letI : IsScalarTower R A M := IsScalarTower.of_compHom R A M
+  letI : IsScalarTower R A N := IsScalarTower.of_compHom R A N
+  have hprime :
+      universallyInjectiveAsAlgebra (R := R) (A := A) f ↔
+        ∀ (q : Ideal A) [q.IsPrime],
+          universallyInjectiveLocalizedAsAlgebra
+            (R := R) (A := A) q.primeCompl f := by
+    constructor
+    · intro hf q
+      dsimp [universallyInjectiveLocalizedAsAlgebra, universallyInjectiveAsAlgebra,
+        universallyInjectiveOver]
+      intro _ Q _ _
+      letI : Module R (LocalizedModule q.primeCompl M) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)
+      letI : Module R (LocalizedModule q.primeCompl N) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)
+      letI : SMul R (LocalizedModule q.primeCompl M) :=
+        (Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)).toSMul
+      letI : SMul R (LocalizedModule q.primeCompl N) :=
+        (Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)).toSMul
+      letI : IsScalarTower R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M) :=
+        IsScalarTower.of_compHom R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)
+      letI : IsScalarTower R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N) :=
+        IsScalarTower.of_compHom R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)
+      letI : IsScalarTower R A (LocalizedModule q.primeCompl M) := by
+        apply IsScalarTower.of_algebraMap_smul
+        intro r x
+        rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization q.primeCompl)
+          (algebraMap R A r) x]
+        change _ = (algebraMap R (Localization q.primeCompl) r) • x
+        congr 1
+      letI : IsScalarTower R A (LocalizedModule q.primeCompl N) := by
+        apply IsScalarTower.of_algebraMap_smul
+        intro r x
+        rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization q.primeCompl)
+          (algebraMap R A r) x]
+        congr 1
+      let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q f
+      have hF : Function.Injective F := by
+        change Function.Injective ((f.restrictScalars R).rTensor Q)
+        exact hf Q
+      let gM : M →ₗ[A] LocalizedModule q.primeCompl M :=
+        LocalizedModule.mkLinearMap q.primeCompl M
+      let gN : N →ₗ[A] LocalizedModule q.primeCompl N :=
+        LocalizedModule.mkLinearMap q.primeCompl N
+      let gMQ : M ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl M ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gM
+      let gNQ : N ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl N ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gN
+      have hmap :
+          IsLocalizedModule.map q.primeCompl gMQ gNQ F =
+            TensorProduct.AlgebraTensorModule.rTensor R Q
+              (LocalizedModule.map q.primeCompl f) := by
+        apply IsLocalizedModule.linearMap_ext q.primeCompl gMQ gNQ
+        dsimp [gMQ, gNQ, F]
+        rw [IsLocalizedModule.map_comp]
+        apply LinearMap.ext
+        intro t
+        induction t using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            have hmk : LocalizedModule.map q.primeCompl f (gM x) = gN (f x) := by
+              dsimp [gM, gN, LocalizedModule.mkLinearMap]
+              exact LocalizedModule.map_mk q.primeCompl f x 1
+            change gN (f x) ⊗ₜ[R] y = LocalizedModule.map q.primeCompl f (gM x) ⊗ₜ[R] y
+            rw [hmk]
+      change Function.Injective
+        (TensorProduct.AlgebraTensorModule.rTensor R Q
+          (LocalizedModule.map q.primeCompl f))
+      have hinj := IsLocalizedModule.map_injective q.primeCompl gMQ gNQ F hF
+      rw [hmap] at hinj
+      exact hinj
+    · intro h
+      dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+      intro Q _ _
+      let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q f
+      refine injective_of_isLocalized_maximal
+        (Mₚ := fun q _ ↦
+          LocalizedModule q.primeCompl M ⊗[R] Q)
+        (f := fun q _ ↦
+          TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.mkLinearMap q.primeCompl M))
+        (Nₚ := fun q _ ↦
+          LocalizedModule q.primeCompl N ⊗[R] Q)
+        (g := fun q _ ↦
+          TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.mkLinearMap q.primeCompl N)) F ?_
+      intro q hq
+      let mM₀ : Module R (LocalizedModule q.primeCompl M) := inferInstance
+      let mN₀ : Module R (LocalizedModule q.primeCompl N) := inferInstance
+      let mM₁ : Module R (LocalizedModule q.primeCompl M) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)
+      let mN₁ : Module R (LocalizedModule q.primeCompl N) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)
+      let lF : @LinearMap R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl N) _ _ mM₁ mN₁ :=
+        @LinearMap.mk R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl N) _ _ mM₁ mN₁
+          { toFun := LocalizedModule.map q.primeCompl f
+            map_add' := by intro x y; exact map_add _ _ _ }
+          (by
+            intro r x
+            calc
+              LocalizedModule.map q.primeCompl f
+                  (@SMul.smul R (LocalizedModule q.primeCompl M) mM₁.toSMul r x) =
+                  LocalizedModule.map q.primeCompl f
+                    ((algebraMap R (Localization q.primeCompl) r) • x) := by rfl
+              _ = (algebraMap R (Localization q.primeCompl) r) •
+                  LocalizedModule.map q.primeCompl f x := by
+                rw [map_smul]
+              _ = @SMul.smul R (LocalizedModule q.primeCompl N) mN₁.toSMul r
+                  (LocalizedModule.map q.primeCompl f x) := by rfl)
+      letI : Module R (LocalizedModule q.primeCompl M) := mM₀
+      letI : Module R (LocalizedModule q.primeCompl N) := mN₀
+      have hsmulM (r : R) (x : LocalizedModule q.primeCompl M) :
+          @SMul.smul R (LocalizedModule q.primeCompl M) mM₀.toSMul r x =
+            @SMul.smul R (LocalizedModule q.primeCompl M) mM₁.toSMul r x := by
+        calc
+          @SMul.smul R (LocalizedModule q.primeCompl M) mM₀.toSMul r x =
+              (algebraMap R (Localization q.primeCompl) r) • x := by
+            symm
+            exact IsScalarTower.algebraMap_smul (R := R)
+              (A := Localization q.primeCompl) r x
+          _ = @SMul.smul R (LocalizedModule q.primeCompl M) mM₁.toSMul r x := by
+            rfl
+      have hsmulN (r : R) (x : LocalizedModule q.primeCompl N) :
+          @SMul.smul R (LocalizedModule q.primeCompl N) mN₀.toSMul r x =
+            @SMul.smul R (LocalizedModule q.primeCompl N) mN₁.toSMul r x := by
+        calc
+          @SMul.smul R (LocalizedModule q.primeCompl N) mN₀.toSMul r x =
+              (algebraMap R (Localization q.primeCompl) r) • x := by
+            symm
+            exact IsScalarTower.algebraMap_smul (R := R)
+              (A := Localization q.primeCompl) r x
+          _ = @SMul.smul R (LocalizedModule q.primeCompl N) mN₁.toSMul r x := by
+            rfl
+      let lM : @LinearMap R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl M) _ _ mM₀ mM₁ :=
+        @LinearMap.mk R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl M) _ _ mM₀ mM₁
+          { toFun := id
+            map_add' := by intro x y; rfl }
+          (by intro r x; exact hsmulM r x)
+      let lN : @LinearMap R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl N) (LocalizedModule q.primeCompl N) _ _ mN₀ mN₁ :=
+        @LinearMap.mk R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl N) (LocalizedModule q.primeCompl N) _ _ mN₀ mN₁
+          { toFun := id
+            map_add' := by intro x y; rfl }
+          (by intro r x; exact hsmulN r x)
+      let lMInv : @LinearMap R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl M) _ _ mM₁ mM₀ :=
+        @LinearMap.mk R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl M) _ _ mM₁ mM₀
+          { toFun := id
+            map_add' := by intro x y; rfl }
+          (by intro r x; exact (hsmulM r x).symm)
+      let lNInv : @LinearMap R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl N) (LocalizedModule q.primeCompl N) _ _ mN₁ mN₀ :=
+        @LinearMap.mk R R _ _ (RingHom.id R)
+          (LocalizedModule q.primeCompl N) (LocalizedModule q.primeCompl N) _ _ mN₁ mN₀
+          { toFun := id
+            map_add' := by intro x y; rfl }
+          (by intro r x; exact (hsmulN r x).symm)
+      let eMQ := @TensorProduct.map R R _ _ (RingHom.id R)
+        (LocalizedModule q.primeCompl M) Q (LocalizedModule q.primeCompl M) Q
+        _ _ _ _ mM₀ inferInstance mM₁ inferInstance lM (LinearMap.id : Q →ₗ[R] Q)
+      let eNQ := @TensorProduct.map R R _ _ (RingHom.id R)
+        (LocalizedModule q.primeCompl N) Q (LocalizedModule q.primeCompl N) Q
+        _ _ _ _ mN₀ inferInstance mN₁ inferInstance lN (LinearMap.id : Q →ₗ[R] Q)
+      let eMQInv := @TensorProduct.map R R _ _ (RingHom.id R)
+        (LocalizedModule q.primeCompl M) Q (LocalizedModule q.primeCompl M) Q
+        _ _ _ _ mM₁ inferInstance mM₀ inferInstance lMInv (LinearMap.id : Q →ₗ[R] Q)
+      let eNQInv := @TensorProduct.map R R _ _ (RingHom.id R)
+        (LocalizedModule q.primeCompl N) Q (LocalizedModule q.primeCompl N) Q
+        _ _ _ _ mN₁ inferInstance mN₀ inferInstance lNInv (LinearMap.id : Q →ₗ[R] Q)
+      let lFQ := @LinearMap.rTensor R _ Q
+        (LocalizedModule q.primeCompl M) (LocalizedModule q.primeCompl N)
+        _ _ _ inferInstance mM₁ mN₁ lF
+      have hlM : lMInv.comp lM = LinearMap.id := by
+        apply LinearMap.ext
+        intro x
+        rfl
+      have heMQ : Function.Injective eMQ := by
+        intro x y hxy
+        have hxy' := congrArg eMQInv hxy
+        simpa [eMQ, eMQInv, TensorProduct.map_map, hlM] using hxy'
+      let gM : M →ₗ[A] LocalizedModule q.primeCompl M :=
+        LocalizedModule.mkLinearMap q.primeCompl M
+      let gN : N →ₗ[A] LocalizedModule q.primeCompl N :=
+        LocalizedModule.mkLinearMap q.primeCompl N
+      let gMQ : M ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl M ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gM
+      let gNQ : N ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl N ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gN
+      have hmap :
+          IsLocalizedModule.map q.primeCompl gMQ gNQ F =
+            TensorProduct.AlgebraTensorModule.rTensor R Q
+              (LocalizedModule.map q.primeCompl f) := by
+        apply IsLocalizedModule.linearMap_ext q.primeCompl gMQ gNQ
+        dsimp [gMQ, gNQ, F]
+        rw [IsLocalizedModule.map_comp]
+        apply LinearMap.ext
+        intro t
+        induction t using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            have hmk : LocalizedModule.map q.primeCompl f (gM x) = gN (f x) := by
+              dsimp [gM, gN, LocalizedModule.mkLinearMap]
+              exact LocalizedModule.map_mk q.primeCompl f x 1
+            change gN (f x) ⊗ₜ[R] y = LocalizedModule.map q.primeCompl f (gM x) ⊗ₜ[R] y
+            rw [hmk]
+      have hq'_prime := h q
+      dsimp [universallyInjectiveLocalizedAsAlgebra, universallyInjectiveAsAlgebra,
+        universallyInjectiveOver] at hq'_prime
+      have hq''_prime := hq'_prime Q
+      have htransport (x : LocalizedModule q.primeCompl M ⊗[R] Q) :
+          eNQ ((TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.map q.primeCompl f)) x) =
+            lFQ (eMQ x) := by
+        induction x using TensorProduct.induction_on with
+        | zero => simp only [map_zero]
+        | add x y hx hy => simpa only [map_add, hx, hy]
+        | tmul x y => simp [eMQ, eNQ, lFQ, lF, lM, lN]
+      have hqL : Function.Injective lFQ := by
+        intro x y hxy
+        apply hq''_prime
+        calc
+          _ = lFQ x := by
+            clear hxy
+            induction x using TensorProduct.induction_on with
+            | zero => simp [lFQ, lF]
+            | add x y hx hy => simp only [map_add, hx, hy]
+            | tmul x y => simp [lFQ, lF]
+          _ = lFQ y := hxy
+          _ = _ := by
+            clear hxy
+            induction y using TensorProduct.induction_on with
+            | zero => simp [lFQ, lF]
+            | add x y hx hy => simp only [map_add, hx, hy]
+            | tmul x y => simp [lFQ, lF]
+      have hqF : Function.Injective
+          (TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.map q.primeCompl f)) := by
+        intro x y hxy
+        apply heMQ
+        apply hqL
+        rw [← htransport x, ← htransport y, hxy]
+      rw [hmap]
+      exact hqF
+  have hmax :
+      universallyInjectiveAsAlgebra (R := R) (A := A) f ↔
+        ∀ (q : Ideal A) [q.IsMaximal],
+          universallyInjectiveLocalizedAsAlgebra
+            (R := R) (A := A) q.primeCompl f := by
+    constructor
+    · intro hf q
+      dsimp [universallyInjectiveLocalizedAsAlgebra, universallyInjectiveAsAlgebra,
+        universallyInjectiveOver]
+      intro _ Q _ _
+      let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q f
+      have hF : Function.Injective F := by
+        change Function.Injective ((f.restrictScalars R).rTensor Q)
+        exact hf Q
+      letI : Module R (LocalizedModule q.primeCompl M) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)
+      letI : Module R (LocalizedModule q.primeCompl N) :=
+        Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)
+      letI : SMul R (LocalizedModule q.primeCompl M) :=
+        (Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)).toSMul
+      letI : SMul R (LocalizedModule q.primeCompl N) :=
+        (Module.restrictScalars R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)).toSMul
+      letI : IsScalarTower R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M) :=
+        IsScalarTower.of_compHom R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl M)
+      letI : IsScalarTower R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N) :=
+        IsScalarTower.of_compHom R (Localization q.primeCompl)
+          (LocalizedModule q.primeCompl N)
+      letI : IsScalarTower R A (LocalizedModule q.primeCompl M) := by
+        apply IsScalarTower.of_algebraMap_smul
+        intro r x
+        rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization q.primeCompl)
+          (algebraMap R A r) x]
+        congr 1
+      letI : IsScalarTower R A (LocalizedModule q.primeCompl N) := by
+        apply IsScalarTower.of_algebraMap_smul
+        intro r x
+        rw [← IsScalarTower.algebraMap_smul (R := A) (A := Localization q.primeCompl)
+          (algebraMap R A r) x]
+        congr 1
+      let gM : M →ₗ[A] LocalizedModule q.primeCompl M :=
+        LocalizedModule.mkLinearMap q.primeCompl M
+      let gN : N →ₗ[A] LocalizedModule q.primeCompl N :=
+        LocalizedModule.mkLinearMap q.primeCompl N
+      let gMQ : M ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl M ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gM
+      let gNQ : N ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl N ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gN
+      have hmap :
+          IsLocalizedModule.map q.primeCompl gMQ gNQ F =
+            TensorProduct.AlgebraTensorModule.rTensor R Q
+              (LocalizedModule.map q.primeCompl f) := by
+        apply IsLocalizedModule.linearMap_ext q.primeCompl gMQ gNQ
+        dsimp [gMQ, gNQ, F]
+        rw [IsLocalizedModule.map_comp]
+        apply LinearMap.ext
+        intro t
+        induction t using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            have hmk : LocalizedModule.map q.primeCompl f (gM x) = gN (f x) := by
+              dsimp [gM, gN, LocalizedModule.mkLinearMap]
+              exact LocalizedModule.map_mk q.primeCompl f x 1
+            change gN (f x) ⊗ₜ[R] y = LocalizedModule.map q.primeCompl f (gM x) ⊗ₜ[R] y
+            rw [hmk]
+      have hmapR :
+          (IsLocalizedModule.map q.primeCompl gMQ gNQ F).restrictScalars R =
+            LinearMap.rTensor Q
+              ((LocalizedModule.map q.primeCompl f).restrictScalars R) := by
+        rw [hmap]
+        rfl
+      have hinj := IsLocalizedModule.map_injective q.primeCompl gMQ gNQ F hF
+      have hinjR : Function.Injective
+          ((IsLocalizedModule.map q.primeCompl gMQ gNQ F).restrictScalars R) := by
+        intro x y hxy
+        exact hinj hxy
+      rw [hmapR] at hinjR
+      exact hinjR
+    · intro h
+      dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
+      intro Q _ _
+      let F : (M ⊗[R] Q) →ₗ[A] (N ⊗[R] Q) :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q f
+      refine injective_of_isLocalized_maximal
+        (Mₚ := fun q _ ↦
+          LocalizedModule q.primeCompl M ⊗[R] Q)
+        (f := fun q _ ↦
+          TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.mkLinearMap q.primeCompl M))
+        (Nₚ := fun q _ ↦
+          LocalizedModule q.primeCompl N ⊗[R] Q)
+        (g := fun q _ ↦
+          TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.mkLinearMap q.primeCompl N)) F ?_
+      intro q hq
+      let gM : M →ₗ[A] LocalizedModule q.primeCompl M :=
+        LocalizedModule.mkLinearMap q.primeCompl M
+      let gN : N →ₗ[A] LocalizedModule q.primeCompl N :=
+        LocalizedModule.mkLinearMap q.primeCompl N
+      let gMQ : M ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl M ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gM
+      let gNQ : N ⊗[R] Q →ₗ[A]
+          LocalizedModule q.primeCompl N ⊗[R] Q :=
+        TensorProduct.AlgebraTensorModule.rTensor R Q gN
+      have hmap :
+          IsLocalizedModule.map q.primeCompl gMQ gNQ F =
+            TensorProduct.AlgebraTensorModule.rTensor R Q
+              (LocalizedModule.map q.primeCompl f) := by
+        apply IsLocalizedModule.linearMap_ext q.primeCompl gMQ gNQ
+        dsimp [gMQ, gNQ, F]
+        rw [IsLocalizedModule.map_comp]
+        apply LinearMap.ext
+        intro t
+        induction t using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp only [map_add, hx, hy]
+        | tmul x y =>
+            have hmk : LocalizedModule.map q.primeCompl f (gM x) = gN (f x) := by
+              dsimp [gM, gN, LocalizedModule.mkLinearMap]
+              exact LocalizedModule.map_mk q.primeCompl f x 1
+            change gN (f x) ⊗ₜ[R] y = LocalizedModule.map q.primeCompl f (gM x) ⊗ₜ[R] y
+            rw [hmk]
+      have hq' := h q
+      dsimp [universallyInjectiveLocalizedAsAlgebra, universallyInjectiveAsAlgebra,
+        universallyInjectiveOver] at hq'
+      have hq'' := hq' Q
+      have hqF : Function.Injective
+          (TensorProduct.AlgebraTensorModule.rTensor R Q
+            (LocalizedModule.map q.primeCompl f)) := by
+        simpa only [TensorProduct.AlgebraTensorModule.coe_rTensor] using hq''
+      rw [hmap]
+      exact hqF
+  exact ⟨hprime, hmax, sorry, sorry⟩
 
 /-! ## Localization and the finitely generated ideal criterion -/
 

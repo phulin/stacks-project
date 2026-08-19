@@ -362,8 +362,8 @@ private lemma standardδ_map_of_lt_all
       SimplexCategory.comp_toOrderHom, Function.comp_apply,
       SimplexCategory.δ, SimplexCategory.mkHom,
       SimplexCategory.Hom.toOrderHom_mk, OrderHom.comp_coe,
-      Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe, hsucc, hcast]
-    simp only [SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk] at hih ⊢
+      Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe, hsucc]
+    simp only [SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk, hcast] at hih ⊢
     simpa using hih
 
 private lemma standardδ_P_δ
@@ -406,7 +406,7 @@ private lemma standardδ_range_iff
     have hbfin : Fin.ofNat (n + 2) b =
         (⟨b, hb'⟩ : Fin (n + 2)) := by
       apply Fin.ext
-      simp [Fin.ofNat, Nat.mod_eq_of_lt hb']
+      simp [Nat.mod_eq_of_lt hb']
     have htail : (n + 1) + L.length = r := by omega
     have htailL : SimplexCategoryGenRel.IsAdmissible (n + 2) L := hL.of_cons
     have htailb : ∀ c ∈ L, b < c := by
@@ -420,9 +420,9 @@ private lemma standardδ_range_iff
     let _ : IsSplitMono tail := by
       dsimp [tail]
       exact SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ htailP
-    let _ : Mono tail := inferInstance
+    have hmono : Mono tail := inferInstance
     have hinj : Function.Injective tail.toOrderHom :=
-      (SimplexCategory.mono_iff_injective).mp inferInstance
+      (SimplexCategory.mono_iff_injective).mp hmono
     have hcomp (i : Fin (n + 1)) :
         (SimplexCategoryGenRel.toSimplexCategory.map
           (standardδ (b :: L) (m₁ := n) (m₂ := r) h)).toOrderHom i =

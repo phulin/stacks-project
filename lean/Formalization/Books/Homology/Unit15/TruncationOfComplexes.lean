@@ -2099,17 +2099,24 @@ noncomputable def canonicalTruncLEι (K : CochainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncLE_boundary (K : CochainComplex C ℤ) (n : ℤ)
     [∀ i, K.HasHomology i] :
     Nonempty ((canonicalTruncLE K n).X n ≅ K.cycles n) := by
-  sorry
+  exact ⟨CochainComplex.truncLEXIsoCycles K n⟩
 
 theorem canonicalTruncLE_homology_below (K : CochainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i ≤ n) :
     QuasiIsoAt (canonicalTruncLEι K n) i := by
-  sorry
+  exact CochainComplex.quasiIsoAt_ιTruncLE K n i h
 
 theorem canonicalTruncLE_homology_above (K : CochainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : n < i) :
     IsZero ((canonicalTruncLE K n).homology i) := by
-  sorry
+  change IsZero ((HomologicalComplex.truncLE K
+    (ComplexShape.embeddingUpIntLE n)).homology i)
+  exact (HomologicalComplex.exactAt_of_isSupported
+    (HomologicalComplex.truncLE K (ComplexShape.embeddingUpIntLE n))
+    (ComplexShape.embeddingUpIntLE n) i (by
+      intro k hk
+      dsimp [ComplexShape.embeddingUpIntLE, ComplexShape.Embedding.mk'] at hk
+      omega)).isZero_homology
 
 /-! ### The fourth numbered item: canonical `τ ≥ n` -/
 
@@ -2126,7 +2133,7 @@ noncomputable def canonicalTruncGEπ (K : CochainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncGE_boundary (K : CochainComplex C ℤ) (n : ℤ)
     [∀ i, K.HasHomology i] :
     Nonempty ((canonicalTruncGE K n).X n ≅ K.opcycles n) := by
-  sorry
+  exact ⟨CochainComplex.truncGEXIsoOpcycles K n⟩
 
 theorem canonicalTruncGE_homology_above (K : CochainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : n ≤ i) :

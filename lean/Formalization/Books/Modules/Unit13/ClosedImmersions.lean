@@ -70,7 +70,7 @@ def IsLocallyCokernelOfQuasiCoherentModules {X : RingedSpace.{v}}
     ∃ A B : Mod (ringedOpenSubspace X U).structureSheaf,
       IsQuasiCoherent A ∧ IsQuasiCoherent B ∧
         ∃ φ : A ⟶ B,
-          Nonempty (cokernel φ ≅
+        Nonempty (cokernel φ ≅
             (openModuleRestrictionFunctor X U).obj F)
 
 /-- Pushforward along a closed immersion is locally a cokernel of

@@ -6351,34 +6351,77 @@ private theorem no_positive_cycle
     (hBentry : ∀ i j, B i j = -((D.a i j : ℤ) : ℝ))
     (hk : 3 ≤ k)
     (hcycle : ∀ i, 0 < D.a (e i) (e (if h : i.val + 1 = k then ⟨0, by omega⟩ else
-      ⟨i.val + 1, by omega⟩))) : False := by sorry
-/-
+      ⟨i.val + 1, by omega⟩))) : False := by
   classical
-  let next : Fin k → Fin k := fun i => if i.val + 1 = k then 0 else
+  let next : Fin k → Fin k := fun i => if h : i.val + 1 = k then (⟨0, by omega⟩ : Fin k) else
     ⟨i.val + 1, by omega⟩
-  let prev : Fin k → Fin k := fun i => if i = 0 then Fin.last k else
+  let prev : Fin k → Fin k := fun i => if h : i.val = 0 then (⟨k - 1, by omega⟩ : Fin k) else
     ⟨i.val - 1, by omega⟩
   have hnext : ∀ i, next i ≠ i := by
     intro i
-    dsimp [next]
-    split <;> omega
+    by_cases hi : i.val + 1 = k
+    · have hi0 : i.val ≠ 0 := by omega
+      intro hEq
+      apply hi0
+      have hv := congrArg Fin.val hEq
+      simpa [next, hi] using hv.symm
+    · intro hEq
+      have hv := congrArg Fin.val hEq
+      simp [next, hi] at hv
   have hprev : ∀ i, prev i ≠ i := by
     intro i
-    dsimp [prev]
-    split <;> omega
+    by_cases hi : i.val = 0
+    · intro hEq
+      have hv := congrArg Fin.val hEq
+      simp [prev, hi] at hv
+      omega
+    · intro hEq
+      have hv := congrArg Fin.val hEq
+      simp [prev, hi] at hv
+      omega
   have hnextprev : ∀ i, next (prev i) = i := by
     intro i
-    dsimp [next, prev]
-    split <;> apply Fin.ext <;> omega
+    by_cases hi : i.val = 0
+    · have hwrap : (k - 1) + 1 = k := by omega
+      apply Fin.ext
+      simp [next, prev, hi, hwrap]
+    · have hnot : i.val - 1 + 1 ≠ k := by omega
+      have hi1 : 1 ≤ i.val := by omega
+      apply Fin.ext
+      simp [next, prev, hi, hnot]
+      omega
   have hprevnext : ∀ i, prev (next i) = i := by
     intro i
-    dsimp [next, prev]
-    split <;> apply Fin.ext <;> omega
+    by_cases hi : i.val + 1 = k
+    · have hilast : i.val = k - 1 := by omega
+      apply Fin.ext
+      simp [next, prev, hi]
+      omega
+    · have hnot : i.val + 1 ≠ 0 := by omega
+      apply Fin.ext
+      simp [next, prev, hi, hnot]
   have hne_next_prev : ∀ i, next i ≠ prev i := by
     intro i h
-    have h' := congrArg prev h
-    rw [hprevnext, hnextprev] at h'
-    exact hprev i h'.symm
+    by_cases hn : i.val + 1 = k
+    · have hi : i.val = k - 1 := by omega
+      have hp : i.val ≠ 0 := by omega
+      have hnext_val : (next i).val = 0 := by simp [next, hn]
+      have hprev_val : (prev i).val = i.val - 1 := by simp [prev, hp]
+      have hv := congrArg Fin.val h
+      rw [hnext_val, hprev_val, hi] at hv
+      omega
+    · by_cases hp : i.val = 0
+      · have hv := congrArg Fin.val h
+        have hnext_val : (next i).val = i.val + 1 := by simp [next, hn]
+        have hprev_val : (prev i).val = k - 1 := by simp [prev, hp]
+        rw [hnext_val, hprev_val] at hv
+        omega
+      · have hi1 : 1 ≤ i.val := by omega
+        have hv := congrArg Fin.val h
+        have hnext_val : (next i).val = i.val + 1 := by simp [next, hn]
+        have hprev_val : (prev i).val = i.val - 1 := by simp [prev, hp]
+        rw [hnext_val, hprev_val] at hv
+        omega
   have hcycle' : ∀ i, 0 < D.a (e i) (e (next i)) := by
     intro i
     simpa [next] using hcycle i
@@ -6401,14 +6444,14 @@ private theorem no_positive_cycle
         exact (Finset.mem_erase.mp (Finset.mem_erase.mp (Finset.mem_erase.mp hj).2).2).1
       have hej : e i ≠ e j := by
         intro h
-        exact hji (he h)
+        exact hji (he h).symm
       have hnon : 0 ≤ D.a (e i) (e j) := hoff _ _ hej
       exact neg_nonpos.mpr (by exact_mod_cast hnon)
     have hmem_next : next i ∈ (Finset.univ.erase i) := by
       simp [hnext i]
     have hmem_prev : prev i ∈ (Finset.univ.erase i).erase (next i) := by
       rw [Finset.mem_erase]
-      exact ⟨hne_next_prev i, by simp [hprev i]⟩
+      exact ⟨(hne_next_prev i).symm, by simp [hprev i]⟩
     have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin k)))
       (a := i) (f := f i) (Finset.mem_univ _)
     have hs2 := Finset.sum_erase_add
@@ -6433,22 +6476,21 @@ private theorem no_positive_cycle
     simp [x] at h0
   have hq := Matrix.PosDef.dotProduct_mulVec_pos (hB.submatrix he) hx
   have hq' : 0 < ∑ i : Fin k, ∑ j : Fin k, f i j := by
-    simpa [x, f, B, hBentry, Matrix.submatrix, dotProduct, Matrix.mulVec] using hq
+    simpa [x, f, hBentry, Matrix.submatrix, dotProduct, Matrix.mulVec] using hq
   have hsum : (∑ i : Fin k, ∑ j : Fin k, f i j) ≤
       ∑ i : Fin k, (2 * (D.w (e i) : ℝ) - D.a (e i) (e (next i)) -
         D.a (e i) (e (prev i))) := by
     exact Finset.sum_le_sum (fun i hi => hinner i)
   have hsum_next : (∑ i : Fin k, (D.w (e i) : ℝ)) ≤
-      ∑ i : Fin k, D.a (e i) (e (next i)) := by
+      ∑ i : Fin k, (D.a (e i) (e (next i)) : ℝ) := by
     exact Finset.sum_le_sum (fun i hi => hlower _ _ (hcycle' i))
   have hsum_prev : (∑ i : Fin k, (D.w (e i) : ℝ)) ≤
-      ∑ i : Fin k, D.a (e i) (e (prev i)) := by
+      ∑ i : Fin k, (D.a (e i) (e (prev i)) : ℝ) := by
     exact Finset.sum_le_sum (fun i hi => hlower _ _ (hcycle_prev i))
   rw [Finset.sum_sub_distrib, Finset.sum_sub_distrib] at hsum
-  simp only [Finset.sum_mul, mul_sum] at hsum
+  rw [← Finset.mul_sum] at hsum
   nlinarith
 
- -/
 
 private theorem long_edge_ratio
     {t : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)
@@ -6459,8 +6501,7 @@ private theorem long_edge_ratio
     (i j : Fin t) (hij : 0 < D.a i j)
     (hdivi : D.w i ∣ D.a i j) (hdivj : D.w j ∣ D.a i j) :
     ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
-      D.a i j = q * D.w j ∧ p * q < 4 := by sorry
-/-
+      D.a i j = q * D.w j ∧ p * q < 4 := by
   let p : ℤ := D.a i j / D.w i
   let q : ℤ := D.a i j / D.w j
   have hp : 0 < p := by
@@ -6501,7 +6542,6 @@ private theorem long_edge_ratio
     nlinarith [hdet', hsqR, hwpqR]
   exact ⟨p, q, hp, hq, hpa, hqa, by exact_mod_cast hpqR⟩
 
- -/
 
 private theorem long_window_ratio_cases
     {t : ℕ} (D : LocalNumericalData t) (B : Matrix (Fin t) (Fin t) ℝ)

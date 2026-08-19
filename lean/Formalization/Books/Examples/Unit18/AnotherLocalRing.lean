@@ -326,8 +326,6 @@ abbrev FpTranscendentalField (p : ℕ) [Fact p.Prime] :=
 theorem FpTranscendentalField_infiniteDegree (p : ℕ) [Fact p.Prime] :
     InfiniteDegreeOverPowers (FpTranscendentalField p) p := by
   intro hfinite
-  letI : Module.Finite (pPowerSubfield (FpTranscendentalField p) p)
-      (FpTranscendentalField p) := hfinite
   let hli₀ : LinearIndependent (MvPolynomial ℕ (ZMod p))
       (KaehlerDifferential.mvPolynomialBasis (ZMod p) ℕ) :=
     (KaehlerDifferential.mvPolynomialBasis (ZMod p) ℕ).linearIndependent
@@ -410,7 +408,24 @@ theorem FpTranscendentalField_infiniteDegree (p : ℕ) [Fact p.Prime] :
           (MvPolynomial.X i))))
     rw [heq]
     exact hli₁
-  exact (Module.Finite.not_linearIndependent_of_infinite
+  let hfiniteType : Algebra.FiniteType (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p) :=
+    ⟨Subalgebra.fg_of_submodule_fg hfinite.1⟩
+  let hess : Algebra.EssFiniteType (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p) :=
+    @Algebra.EssFiniteType.of_finiteType
+      (pPowerSubfield (FpTranscendentalField p) p) (FpTranscendentalField p)
+      _ _ _ hfiniteType
+  let hfiniteOmega : Module.Finite (FpTranscendentalField p)
+      (KaehlerDifferential (pPowerSubfield (FpTranscendentalField p) p)
+        (FpTranscendentalField p)) :=
+    @KaehlerDifferential.finite
+      (pPowerSubfield (FpTranscendentalField p) p) (FpTranscendentalField p)
+      _ _ _ hess
+  exact (@Module.Finite.not_linearIndependent_of_infinite
+    (R := FpTranscendentalField p)
+    (M := KaehlerDifferential (pPowerSubfield (FpTranscendentalField p) p)
+      (FpTranscendentalField p)) _ _ _ hfiniteOmega _ (ι := ℕ) _
     (fun i : ℕ => KaehlerDifferential.D (pPowerSubfield (FpTranscendentalField p) p)
       (FpTranscendentalField p)
       (algebraMap (MvPolynomial ℕ (ZMod p)) (FpTranscendentalField p)

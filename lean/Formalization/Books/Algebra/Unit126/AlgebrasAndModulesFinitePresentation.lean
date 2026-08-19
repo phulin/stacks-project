@@ -632,7 +632,7 @@ theorem finite_type_mod_nilpotent {R S : Type*} [CommRing R] [CommRing S]
       Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
     RingHom.FiniteType (algebraMap (R ⧸ I) (S ⧸ I.map (algebraMap R S))) →
       RingHom.FiniteType f := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   let J : Ideal S := I.map (algebraMap R S)
   let π : S →ₐ[R] (S ⧸ J) := Ideal.Quotient.mkₐ R J
   intro h
@@ -647,7 +647,7 @@ theorem finite_type_mod_nilpotent {R S : Type*} [CommRing R] [CommRing S]
     convert hcomp using 1
     ext r
     rfl
-  letI : Algebra R (S ⧸ J) := q.toAlgebra
+  let : Algebra R (S ⧸ J) := q.toAlgebra
   have hq' : Algebra.FiniteType R (S ⧸ J) := hq
   obtain ⟨s, hs⟩ := hq'.out
   classical

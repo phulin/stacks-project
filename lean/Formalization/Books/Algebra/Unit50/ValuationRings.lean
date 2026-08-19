@@ -3,7 +3,10 @@ import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.Algebra.Order.GroupWithZero.Range
 import Mathlib.Algebra.Order.Group.Units
 import Mathlib.Algebra.Order.Monoid.Submonoid
+import Mathlib.GroupTheory.ArchimedeanDensely
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
+import Mathlib.RingTheory.Valuation.Discrete.Basic
+import Mathlib.RingTheory.Valuation.Discrete.IsDiscreteValuationRing
 import Mathlib.RingTheory.Valuation.LocalSubring
 import Mathlib.RingTheory.Valuation.ValuationSubring
 
@@ -302,7 +305,8 @@ theorem localization_valuationRing
     (S : Submonoid A) (hS : S ≤ nonZeroDivisors A) :
     letI : IsDomain (Localization S) := IsLocalization.isDomain_localization hS
     ValuationRing (Localization S) := by
-  sorry
+  let hDomain : IsDomain (Localization S) := IsLocalization.isDomain_localization hS
+  exact { toPreValuationRing := localization_preValuationRing S }
 
 /-- The pullback of a valuation ring in a residue field along the residue map.
 This is the ring denoted `C` in the source. -/
@@ -317,7 +321,54 @@ theorem residueFieldPullback_isValuationRing
     {L : Type u} [Field L] (A' : ValuationSubring L)
     (A : ValuationSubring (IsLocalRing.ResidueField A')) :
     ValuationRing (residueFieldPullback A' A) := by
-  sorry
+  have hC : ∀ c : A', c ∈ residueFieldPullback A' A ∨
+      ∃ d : residueFieldPullback A' A, (c : A') * d = 1 := by
+    intro c
+    by_cases hc : IsUnit c
+    · let d : A' := (hc.unit⁻¹ : A'ˣ)
+      have hd : c * d = 1 := by
+        calc
+          c * d = (hc.unit : A') * (hc.unit⁻¹ : A'ˣ) := by rw [hc.unit_spec]
+          _ = 1 := hc.unit.val_inv
+      have hresd : IsLocalRing.residue A' d =
+          (IsLocalRing.residue A' c)⁻¹ := by
+        apply eq_inv_of_mul_eq_one_left
+        rw [← map_mul, mul_comm, hd, map_one]
+      obtain h | h := A.mem_or_inv_mem (IsLocalRing.residue A' c)
+      · left
+        exact h
+      · right
+        refine ⟨⟨d, ?_⟩, hd⟩
+        change IsLocalRing.residue A' d ∈ A.toSubring
+        rw [hresd]
+        exact h
+    · left
+      have hzero : IsLocalRing.residue A' c = 0 := by
+        rw [IsLocalRing.residue_eq_zero_iff, IsLocalRing.mem_maximalIdeal,
+          mem_nonunits_iff]
+        exact hc
+      change IsLocalRing.residue A' c ∈ A.toSubring
+      rw [hzero]
+      exact A.zero_mem
+  refine { cond' := ?_ }
+  intro x y
+  obtain ⟨c, hc | hc⟩ := ValuationRing.cond (x : A') (y : A')
+  · obtain h | ⟨d, hd⟩ := hC c
+    · exact ⟨⟨c, h⟩, Or.inl (Subtype.ext hc)⟩
+    · refine ⟨d, Or.inr ?_⟩
+      apply Subtype.ext
+      calc
+        (y : A') * d = ((x : A') * c) * d := by rw [hc]
+        _ = (x : A') * (c * d) := by rw [mul_assoc]
+        _ = x := by rw [hd, mul_one]
+  · obtain h | ⟨d, hd⟩ := hC c
+    · exact ⟨⟨c, h⟩, Or.inr (Subtype.ext hc)⟩
+    · refine ⟨d, Or.inl ?_⟩
+      apply Subtype.ext
+      calc
+        (x : A') * d = ((y : A') * c) * d := by rw [hc]
+        _ = (y : A') * (c * d) := by rw [mul_assoc]
+        _ = y := by rw [hd, mul_one]
 
 /-! ## Separation by valuation rings -/
 
@@ -379,6 +430,92 @@ abbrev fractionFieldValuation
     {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K] :=
   ValuationRing.valuation A K
 
+private theorem nonempty_orderAddEquiv_int
+    {G : Type*} [AddCommGroup G] [LinearOrder G] [IsOrderedAddMonoid G]
+    [hN : Nontrivial G] [hC : IsAddCyclic G] :
+    Nonempty (G ≃+o ℤ) :=
+  (LinearOrderedAddCommGroup.isAddCyclic_iff_nonempty_equiv_int
+    (A := G)).mp hC
+
+private theorem valueGroup_int_of_isDiscreteValuationRing
+    {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
+    {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K]
+    [hD : IsDiscreteValuationRing A] :
+    Nonempty (ValueGroup (A := A) (K := K) ≃+ ℤ) := by
+  let v : Valuation K (ValuationRing.ValueGroup A K) :=
+    ValuationRing.valuation A K
+  let w := (IsDiscreteValuationRing.maximalIdeal A).valuation K
+  have hsub : v.valuationSubring = w.valuationSubring := by
+    ext x
+    constructor
+    · intro hx
+      change v x ≤ 1 at hx
+      change w x ≤ 1
+      obtain ⟨a, ha⟩ := (ValuationRing.mem_integer_iff A K x).mp hx
+      rw [← ha]
+      exact IsDedekindDomain.HeightOneSpectrum.valuation_le_one
+        (IsDiscreteValuationRing.maximalIdeal A) a
+    · intro hx
+      change w x ≤ 1 at hx
+      have hx' : x ∈ w.valuationSubring.toSubring := hx
+      rw [← IsDiscreteValuationRing.map_algebraMap_eq_valuationSubring] at hx'
+      obtain ⟨a, -, ha⟩ := Subring.mem_map.mp hx'
+      change v x ≤ 1
+      rw [← ha]
+      exact (ValuationRing.mem_integer_iff A K _).mpr ⟨a, rfl⟩
+  have hvw : v.IsEquiv w :=
+    (Valuation.isEquiv_iff_valuationSubring v w).mpr hsub
+  let G := MonoidWithZeroHom.valueGroup (.ofClass v)
+  let H := MonoidWithZeroHom.valueGroup (.ofClass w)
+  let eg : G ≃* H :=
+    ((WithZero.unitsWithZeroEquiv (α := G)).symm.trans
+      hvw.orderMonoidIso.unitsCongr.toMulEquiv).trans
+      (WithZero.unitsWithZeroEquiv (α := H))
+  have hcycH : IsCyclic H := inferInstance
+  have hnontrivH : Nontrivial H := by
+    rw [Subgroup.nontrivial_iff_exists_ne_one]
+    let g := Valuation.IsRankOneDiscrete.generator' w
+    exact ⟨(g : H), ⟨g.property, ne_of_lt
+      (Valuation.IsRankOneDiscrete.generator'_lt_one w)⟩⟩
+  have hcycG : IsCyclic G := eg.isCyclic.mpr hcycH
+  have hnontrivG : Nontrivial G := eg.toEquiv.nontrivial
+  have hcycDual : IsCyclic (OrderDual G) := by
+    rcases hcycG with ⟨g, hg⟩
+    exact ⟨g, hg⟩
+  have hnontrivDual : Nontrivial (Additive (OrderDual G)) := hnontrivG
+  have hAddCyc : IsAddCyclic (Additive (OrderDual G)) :=
+    isAddCyclic_additive_iff.mpr hcycDual
+  exact ⟨(nonempty_orderAddEquiv_int (G := Additive (OrderDual G))
+    (hN := hnontrivDual) (hC := hAddCyc)).some.toAddEquiv⟩
+
+private theorem isDiscreteValuationRing_of_valueGroup_cyclic
+    {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
+    {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K]
+    [hC : IsCyclic (MonoidWithZeroHom.valueGroup
+      (.ofClass (ValuationRing.valuation A K)))]
+    [hN : Nontrivial (MonoidWithZeroHom.valueGroup
+      (.ofClass (ValuationRing.valuation A K)))] :
+    IsDiscreteValuationRing A := by
+  let v := ValuationRing.valuation A K
+  have hDvrSub : IsDiscreteValuationRing v.valuationSubring :=
+    Valuation.valuationSubring_isDiscreteValuationRing v
+  let f : v.integer →+* v.valuationSubring :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      map_one' := rfl
+      map_mul' := by intros; rfl
+      map_zero' := rfl
+      map_add' := by intros; rfl }
+  have hf : Function.Bijective f := by
+    constructor
+    · intro x y hxy
+      exact Subtype.ext (congrArg Subtype.val hxy)
+    · intro y
+      exact ⟨⟨y.1, y.2⟩, rfl⟩
+  let ef : v.integer ≃+* v.valuationSubring := RingEquiv.ofBijective f hf
+  exact @IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing
+    v.valuationSubring A (v.valuationSubring ≃+* A) _ _ _ _ hDvrSub _ _
+      (ef.symm.trans (ValuationRing.equivInteger A K).symm)
+
 /-- A valuation ring is discrete exactly when its nonzero value group is
 ordered-additively isomorphic to the integers. -/
 theorem isDiscreteValuationRing_iff_valueGroup_int
@@ -386,7 +523,34 @@ theorem isDiscreteValuationRing_iff_valueGroup_int
     {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K] :
     IsDiscreteValuationRing A ↔
       Nonempty (ValueGroup (A := A) (K := K) ≃+ ℤ) := by
-  sorry
+  constructor
+  · intro hD
+    exact valueGroup_int_of_isDiscreteValuationRing (A := A) (K := K) (hD := hD)
+  · rintro ⟨e⟩
+    let G := MonoidWithZeroHom.valueGroup
+      (ValuationRing.valuation A K).toMonoidWithZeroHom
+    have hneValue : Nontrivial (Additive (OrderDual G)) := e.toEquiv.nontrivial
+    have hAddCyc : IsAddCyclic (Additive (OrderDual G)) :=
+      isAddCyclic_of_surjective e.symm e.symm.surjective
+    have hcycDual : IsCyclic (OrderDual G) :=
+      isAddCyclic_additive_iff.mp hAddCyc
+    have hcycG : IsCyclic G := by
+      rcases hcycDual with ⟨g, hg⟩
+      exact ⟨g, hg⟩
+    have hnontrivG : Nontrivial G := hneValue
+    let v := ValuationRing.valuation A K
+    have hvhom : (ValuationRing.valuation A K).toMonoidWithZeroHom =
+        MonoidWithZeroHom.ofClass v := by
+      ext x
+      rfl
+    have hcycV : IsCyclic (MonoidWithZeroHom.valueGroup (.ofClass v)) := by
+      rw [← hvhom]
+      exact hcycG
+    have hnontrivV : Nontrivial (MonoidWithZeroHom.valueGroup (.ofClass v)) := by
+      rw [← hvhom]
+      exact hnontrivG
+    exact isDiscreteValuationRing_of_valueGroup_cyclic (A := A) (K := K)
+      (hC := hcycV) (hN := hnontrivV)
 
 /-- For a discrete value group, the order-preserving normalization with the
 usual order on the integers is unique. -/
@@ -396,7 +560,24 @@ theorem valueGroup_int_orderIso_unique
     [IsDiscreteValuationRing A] :
     Nonempty (ValueGroup (A := A) (K := K) ≃+o ℤ) ∧
       ∀ e₁ e₂ : ValueGroup (A := A) (K := K) ≃+o ℤ, e₁ = e₂ := by
-  sorry
+  constructor
+  · let e : ValueGroup (A := A) (K := K) ≃+ ℤ :=
+      ((isDiscreteValuationRing_iff_valueGroup_int (A := A) (K := K)).mp
+        (inferInstance : IsDiscreteValuationRing A)).some
+    have hnontriv : Nontrivial (ValueGroup (A := A) (K := K)) := e.toEquiv.nontrivial
+    have hAddCyc : IsAddCyclic (ValueGroup (A := A) (K := K)) := by
+      exact isAddCyclic_of_surjective e.symm e.symm.surjective
+    exact ⟨(nonempty_orderAddEquiv_int (G := ValueGroup (A := A) (K := K))
+      (hN := hnontriv) (hC := hAddCyc)).some⟩
+  · intro h e₂
+    have hf : h.symm.trans e₂ = OrderAddMonoidIso.refl ℤ :=
+      Subsingleton.elim _ _
+    have hcomp := congrArg (fun e : ℤ ≃+o ℤ => h.trans e) hf
+    calc
+      h = h.trans (h.symm.trans e₂) := hcomp.symm
+      _ = e₂ := by
+        ext x
+        simp
 
 /- The source fixes the order-preserving normalization of an isomorphism with
    `ℤ`; the ordered-additive-isomorphism API records that normalization. -/

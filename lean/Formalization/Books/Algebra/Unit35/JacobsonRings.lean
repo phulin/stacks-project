@@ -2510,7 +2510,227 @@ theorem matrixPair_closedPoints_are_product_zero_solutions
     (k : Type u) [Field k] (hk : IsAlgClosed k) :
     Nonempty
       (closedPoints (PrimeSpectrum (MatrixPairRing k)) ≃ MatrixPairSolution k) := by
-  sorry
+  classical
+  let I : Ideal (MatrixPairPolynomial k) := matrixProductIdeal (k := k)
+  let mk : MatrixPairPolynomial k →+* MatrixPairRing k := Ideal.Quotient.mk I
+  let P : closedPoints (PrimeSpectrum (MatrixPairRing k)) →
+      Ideal (MatrixPairPolynomial k) := fun q =>
+    Ideal.comap mk q.1.asIdeal
+  have hPmax (q : closedPoints (PrimeSpectrum (MatrixPairRing k))) :
+      (P q).IsMaximal := by
+    have hqmax : q.1.asIdeal.IsMaximal :=
+      (PrimeSpectrum.isClosed_singleton_iff_isMaximal q.1).mp
+        (mem_closedPoints_iff.mp q.2)
+    let : q.1.asIdeal.IsMaximal := hqmax
+    dsimp [P]
+    exact Ideal.comap_isMaximal_of_surjective mk Ideal.Quotient.mk_surjective
+  let x : closedPoints (PrimeSpectrum (MatrixPairRing k)) → Fin 8 → k := fun q =>
+    Classical.choose
+      (MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k (hPmax q))
+  have hx (q : closedPoints (PrimeSpectrum (MatrixPairRing k))) :
+      P q = MvPolynomial.vanishingIdeal k ({x q} : Set (Fin 8 → k)) :=
+    Classical.choose_spec
+      (MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k (hPmax q))
+  have hIP (q : closedPoints (PrimeSpectrum (MatrixPairRing k))) : I ≤ P q := by
+    intro r hr
+    change mk r ∈ q.1.asIdeal
+    rw [Ideal.Quotient.eq_zero_iff_mem.mpr hr]
+    exact q.1.asIdeal.zero_mem
+  let idxX : Fin 2 → Fin 2 → Fin 8 :=
+    Fin.cases (fun j => Fin.cases 0 (fun _ => 1) j)
+      (fun _ => fun j => Fin.cases 2 (fun _ => 3) j)
+  let idxY : Fin 2 → Fin 2 → Fin 8 :=
+    Fin.cases (fun j => Fin.cases 4 (fun _ => 5) j)
+      (fun _ => fun j => Fin.cases 6 (fun _ => 7) j)
+  have hX00 : idxX 0 0 = 0 := by decide
+  have hX01 : idxX 0 1 = 1 := by decide
+  have hX10 : idxX 1 0 = 2 := by decide
+  have hX11 : idxX 1 1 = 3 := by decide
+  have hY00 : idxY 0 0 = 4 := by decide
+  have hY01 : idxY 0 1 = 5 := by decide
+  have hY10 : idxY 1 0 = 6 := by decide
+  have hY11 : idxY 1 1 = 7 := by decide
+  have hcoord : ∀ a b : Fin 8 → k,
+      MvPolynomial.vanishingIdeal k ({a} : Set (Fin 8 → k)) =
+        MvPolynomial.vanishingIdeal k ({b} : Set (Fin 8 → k)) → a = b := by
+    intro a b hab
+    funext i
+    let p := MvPolynomial.X i - MvPolynomial.C (a i)
+    have hpb : p ∈ MvPolynomial.vanishingIdeal k ({b} : Set (Fin 8 → k)) := by
+      rw [← hab, MvPolynomial.mem_vanishingIdeal_singleton_iff]
+      simp [p]
+    rw [MvPolynomial.mem_vanishingIdeal_singleton_iff] at hpb
+    exact (sub_eq_zero.mp (by simpa [p] using hpb)).symm
+  let f : closedPoints (PrimeSpectrum (MatrixPairRing k)) → MatrixPairSolution k :=
+    fun q =>
+      let Xq : Matrix2 k := fun i j => x q (idxX i j)
+      let Yq : Matrix2 k := fun i j => x q (idxY i j)
+      ⟨(Xq, Yq), by
+        have h00 : x q (idxX 0 0) * x q (idxY 0 0) +
+            x q (idxX 0 1) * x q (idxY 1 0) = 0 := by
+          have hp : matrixPairX11 (k := k) * matrixPairY11 (k := k) +
+              matrixPairX12 (k := k) * matrixPairY21 (k := k) ∈ P q := by
+            apply hIP q
+            exact Ideal.subset_span (by simp [matrixPairProductEquations])
+          rw [hx q] at hp
+          have heval := (MvPolynomial.mem_vanishingIdeal_singleton_iff (x q)
+            (matrixPairX11 (k := k) * matrixPairY11 (k := k) +
+              matrixPairX12 (k := k) * matrixPairY21 (k := k))).mp hp
+          simpa [matrixPairX11, matrixPairX12, matrixPairY11, matrixPairY21,
+            matrixPairVariable, idxX, idxY, hX00, hX01, hY00, hY10] using heval
+        have h01 : x q (idxX 0 0) * x q (idxY 0 1) +
+            x q (idxX 0 1) * x q (idxY 1 1) = 0 := by
+          have hp : matrixPairX11 (k := k) * matrixPairY12 (k := k) +
+              matrixPairX12 (k := k) * matrixPairY22 (k := k) ∈ P q := by
+            apply hIP q
+            exact Ideal.subset_span (by simp [matrixPairProductEquations])
+          rw [hx q] at hp
+          have heval := (MvPolynomial.mem_vanishingIdeal_singleton_iff (x q)
+            (matrixPairX11 (k := k) * matrixPairY12 (k := k) +
+              matrixPairX12 (k := k) * matrixPairY22 (k := k))).mp hp
+          simpa [matrixPairX11, matrixPairX12, matrixPairY12, matrixPairY22,
+            matrixPairVariable, idxX, idxY, hX00, hX01, hY01, hY11] using heval
+        have h10 : x q (idxX 1 0) * x q (idxY 0 0) +
+            x q (idxX 1 1) * x q (idxY 1 0) = 0 := by
+          have hp : matrixPairX21 (k := k) * matrixPairY11 (k := k) +
+              matrixPairX22 (k := k) * matrixPairY21 (k := k) ∈ P q := by
+            apply hIP q
+            exact Ideal.subset_span (by simp [matrixPairProductEquations])
+          rw [hx q] at hp
+          have heval := (MvPolynomial.mem_vanishingIdeal_singleton_iff (x q)
+            (matrixPairX21 (k := k) * matrixPairY11 (k := k) +
+              matrixPairX22 (k := k) * matrixPairY21 (k := k))).mp hp
+          simpa [matrixPairX21, matrixPairX22, matrixPairY11, matrixPairY21,
+            matrixPairVariable, idxX, idxY, hX10, hX11, hY00, hY10] using heval
+        have h11 : x q (idxX 1 0) * x q (idxY 0 1) +
+            x q (idxX 1 1) * x q (idxY 1 1) = 0 := by
+          have hp : matrixPairX21 (k := k) * matrixPairY12 (k := k) +
+              matrixPairX22 (k := k) * matrixPairY22 (k := k) ∈ P q := by
+            apply hIP q
+            exact Ideal.subset_span (by simp [matrixPairProductEquations])
+          rw [hx q] at hp
+          have heval := (MvPolynomial.mem_vanishingIdeal_singleton_iff (x q)
+            (matrixPairX21 (k := k) * matrixPairY12 (k := k) +
+              matrixPairX22 (k := k) * matrixPairY22 (k := k))).mp hp
+          simpa [matrixPairX21, matrixPairX22, matrixPairY12, matrixPairY22,
+            matrixPairVariable, idxX, idxY, hX10, hX11, hY01, hY11] using heval
+        ext i j
+        fin_cases i <;> fin_cases j
+        · change (Xq * Yq) 0 0 = 0
+          simpa [Matrix.mul_apply] using h00
+        · change (Xq * Yq) 0 1 = 0
+          simpa [Matrix.mul_apply] using h01
+        · change (Xq * Yq) 1 0 = 0
+          simpa [Matrix.mul_apply] using h10
+        · change (Xq * Yq) 1 1 = 0
+          simpa [Matrix.mul_apply] using h11⟩
+  have hf_inj : Function.Injective f := by
+    intro q r hqr
+    have hxr : x q = x r := by
+      funext i
+      fin_cases i
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.1 0 0) hqr
+        simpa [f, idxX, idxY, hX00, hY00] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.1 0 1) hqr
+        simpa [f, idxX, idxY, hX01, hY01] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.1 1 0) hqr
+        simpa [f, idxX, idxY, hX10, hY10] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.1 1 1) hqr
+        simpa [f, idxX, idxY, hX11, hY11] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.2 0 0) hqr
+        simpa [f, idxX, idxY, hX00, hY00] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.2 0 1) hqr
+        simpa [f, idxX, idxY, hX01, hY01] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.2 1 0) hqr
+        simpa [f, idxX, idxY, hX10, hY10] using hh
+      · have hh := congrArg (fun z : MatrixPairSolution k => z.1.2 1 1) hqr
+        simpa [f, idxX, idxY, hX11, hY11] using hh
+    apply Subtype.ext
+    apply PrimeSpectrum.ext
+    apply Ideal.comap_injective_of_surjective mk Ideal.Quotient.mk_surjective
+    change P q = P r
+    rw [hx q, hx r, hxr]
+  have hf_surj : Function.Surjective f := by
+    intro z
+    let zfun : Fin 8 → k :=
+      ![z.1.1 0 0, z.1.1 0 1, z.1.1 1 0, z.1.1 1 1,
+        z.1.2 0 0, z.1.2 0 1, z.1.2 1 0, z.1.2 1 1]
+    let J : Ideal (MatrixPairPolynomial k) :=
+      MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 8 → k))
+    have hIJ : I ≤ J := by
+      change matrixProductIdeal (k := k) ≤ J
+      rw [matrixProductIdeal]
+      apply Ideal.span_le.mpr
+      intro p hp
+      rw [matrixPairProductEquations] at hp
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+      rcases hp with rfl | rfl | rfl | rfl
+      · change matrixPairX11 (k := k) * matrixPairY11 (k := k) +
+          matrixPairX12 (k := k) * matrixPairY21 (k := k) ∈ J
+        change matrixPairX11 (k := k) * matrixPairY11 (k := k) +
+          matrixPairX12 (k := k) * matrixPairY21 (k := k) ∈
+          MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 8 → k))
+        rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+        simpa [matrixPairX11, matrixPairX12, matrixPairY11, matrixPairY21,
+          matrixPairVariable, zfun, Matrix.mul_apply] using
+          congrArg (fun M : Matrix2 k => M 0 0) z.2
+      · change matrixPairX11 (k := k) * matrixPairY12 (k := k) +
+          matrixPairX12 (k := k) * matrixPairY22 (k := k) ∈ J
+        change matrixPairX11 (k := k) * matrixPairY12 (k := k) +
+          matrixPairX12 (k := k) * matrixPairY22 (k := k) ∈
+          MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 8 → k))
+        rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+        simpa [matrixPairX11, matrixPairX12, matrixPairY12, matrixPairY22,
+          matrixPairVariable, zfun, Matrix.mul_apply] using
+          congrArg (fun M : Matrix2 k => M 0 1) z.2
+      · change matrixPairX21 (k := k) * matrixPairY11 (k := k) +
+          matrixPairX22 (k := k) * matrixPairY21 (k := k) ∈ J
+        change matrixPairX21 (k := k) * matrixPairY11 (k := k) +
+          matrixPairX22 (k := k) * matrixPairY21 (k := k) ∈
+          MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 8 → k))
+        rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+        simpa [matrixPairX21, matrixPairX22, matrixPairY11, matrixPairY21,
+          matrixPairVariable, zfun, Matrix.mul_apply] using
+          congrArg (fun M : Matrix2 k => M 1 0) z.2
+      · change matrixPairX21 (k := k) * matrixPairY12 (k := k) +
+          matrixPairX22 (k := k) * matrixPairY22 (k := k) ∈ J
+        change matrixPairX21 (k := k) * matrixPairY12 (k := k) +
+          matrixPairX22 (k := k) * matrixPairY22 (k := k) ∈
+          MvPolynomial.vanishingIdeal k ({zfun} : Set (Fin 8 → k))
+        rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+        simpa [matrixPairX21, matrixPairX22, matrixPairY12, matrixPairY22,
+          matrixPairVariable, zfun, Matrix.mul_apply] using
+          congrArg (fun M : Matrix2 k => M 1 1) z.2
+    let qIdeal : Ideal (MatrixPairRing k) := Ideal.map mk J
+    have hker : RingHom.ker mk ≤ J := by
+      rw [Ideal.mk_ker]
+      exact hIJ
+    let : J.IsMaximal := inferInstance
+    have hqmax : qIdeal.IsMaximal := by
+      dsimp [qIdeal]
+      exact Ideal.IsMaximal.map_of_surjective_of_ker_le
+        Ideal.Quotient.mk_surjective hker
+    let q : closedPoints (PrimeSpectrum (MatrixPairRing k)) :=
+      ⟨⟨qIdeal, hqmax.isPrime⟩,
+        mem_closedPoints_iff.mpr
+          ((PrimeSpectrum.isClosed_singleton_iff_isMaximal _).mpr hqmax)⟩
+    refine ⟨q, ?_⟩
+    have hPq : P q = J := by
+      change Ideal.comap mk (Ideal.map mk J) = J
+      rw [Ideal.comap_map_of_surjective mk Ideal.Quotient.mk_surjective,
+        ← RingHom.ker_eq_comap_bot, sup_eq_left.mpr hker]
+    have hxx : x q = zfun := by
+      apply hcoord (x q) zfun
+      exact (hx q).symm.trans (hPq.trans rfl)
+    apply Subtype.ext
+    apply Prod.ext
+    · funext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [f, zfun, hxx, hX00, hX01, hX10, hX11]
+    · funext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [f, zfun, hxx, hY00, hY01, hY10, hY11]
+  exact ⟨Equiv.ofBijective f ⟨hf_inj, hf_surj⟩⟩
 
 def matrixPairDetX {k : Type u} [Field k] : MatrixPairPolynomial k :=
   matrixPairX11 (k := k) * matrixPairX22 (k := k) -
@@ -2546,7 +2766,20 @@ theorem matrixProduct_equations_are_matrix_product_entries
       (X 0 0 * Y 0 1 + X 0 1 * Y 1 1 = 0) ∧
       (X 1 0 * Y 0 0 + X 1 1 * Y 1 0 = 0) ∧
       (X 1 0 * Y 0 1 + X 1 1 * Y 1 1 = 0) := by
-  sorry
+  constructor
+  · intro h
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · simpa [Matrix.mul_apply] using congrArg (fun M : Matrix2 k => M 0 0) h
+    · simpa [Matrix.mul_apply] using congrArg (fun M : Matrix2 k => M 0 1) h
+    · simpa [Matrix.mul_apply] using congrArg (fun M : Matrix2 k => M 1 0) h
+    · simpa [Matrix.mul_apply] using congrArg (fun M : Matrix2 k => M 1 1) h
+  · rintro ⟨h00, h01, h10, h11⟩
+    ext i j
+    fin_cases i <;> fin_cases j
+    · simpa [Matrix.mul_apply] using h00
+    · simpa [Matrix.mul_apply] using h01
+    · simpa [Matrix.mul_apply] using h10
+    · simpa [Matrix.mul_apply] using h11
 
 def matrixPairAction {k : Type u} [Field k]
     (g : Matrix.GeneralLinearGroup (Fin 2) k ×
@@ -2560,14 +2793,14 @@ def matrixPairAction {k : Type u} [Field k]
 
 theorem matrixPairAction_one (k : Type u) [Field k] (P : Matrix2 k × Matrix2 k) :
     matrixPairAction (1, 1, 1) P = P := by
-  sorry
+  simp [matrixPairAction]
 
 theorem matrixPairAction_mul (k : Type u) [Field k]
     (g h : Matrix.GeneralLinearGroup (Fin 2) k ×
       Matrix.GeneralLinearGroup (Fin 2) k × Matrix.GeneralLinearGroup (Fin 2) k)
     (P : Matrix2 k × Matrix2 k) :
     matrixPairAction (g * h) P = matrixPairAction g (matrixPairAction h P) := by
-  sorry
+  simp [matrixPairAction, mul_assoc]
 
 instance matrixPairAction_mulAction {k : Type u} [Field k] :
     MulAction

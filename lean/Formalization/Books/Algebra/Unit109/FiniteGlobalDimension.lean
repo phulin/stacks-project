@@ -1779,7 +1779,7 @@ theorem colimit_projective_dimension
       CategoryTheory.HasProjectiveDimensionLE (F.successiveQuotient e) n) :
     CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := by
   sorry
-/-
+/- Prior attempt:
   induction n with
   | zero =>
       let Q : E → Type u := fun e => (F.stage e : Type u) ⧸ F.predecessor e
@@ -1927,8 +1927,17 @@ theorem colimit_projective_dimension
               apply Subtype.ext
               simpa using hsum'
             have h := congrArg (q m) hsum_stage
-            rw [hsum_zero] at h
-            simpa using h
+            have hqzero : q m (⟨∑ k ∈ s, v k, hsum_mem⟩ : F.stage m) = 0 := by
+              calc
+                q m (⟨∑ k ∈ s, v k, hsum_mem⟩ : F.stage m) =
+                    q m (0 : F.stage m) := congrArg (q m) hsum_zero
+                _ = 0 := map_zero _
+            calc
+              (∑ k ∈ s.attach, q m (vm k.1 k.2)) =
+                  q m (∑ k ∈ s.attach, vm k.1 k.2) := by
+                    simpa only [map_sum]
+              _ = q m (⟨∑ k ∈ s, v k, hsum_mem⟩ : F.stage m) := h
+              _ = 0 := hqzero
           have hqpred : ∀ k ∈ s.attach, k.1 ≠ m →
               q m (vm k.1 k.2) = 0 := by
             intro k hk hkm
@@ -1944,7 +1953,7 @@ theorem colimit_projective_dimension
             exact hpred
           have hqmax : q m (vm m hm) = 0 := by
             have h := hqsum
-            rw [Finset.sum_eq_single (⟨m, hm⟩ : s.attach)] at h
+            rw [Finset.sum_eq_single (⟨m, hm⟩ : ↥s)] at h
             · simpa using h
             · intro k hk hkm
               exact hqpred k hk (fun h => hkm (Subtype.ext h))
@@ -1961,11 +1970,14 @@ theorem colimit_projective_dimension
             have hq_lift : q m (sectionLift m z) = z := by
               have h := congrArg (fun f : Q m →ₗ[R] Q m => f z) (hsectionLift m)
               simpa [LinearMap.comp_apply] using h
-            rw [hqmax, hq_lift] at hqz
-            exact hqz.symm
+            have hz : z = 0 := by
+              rw [hqmax, hq_lift] at hqz
+              exact hqz.symm
+            change (vm m hm : M) = 0
+            rw [hvm_sub, hz]
+            simp
           have hrest : ∀ k ∈ s.erase m, v k = 0 := by
-            apply ih (s.erase m)
-            · exact Finset.erase_ssubset hm
+            refine ih (s.erase m) (Finset.erase_ssubset hm) ?_ ?_
             · intro k hk
               exact hs k (Finset.mem_of_mem_erase hk)
             · have hsum_erase := hsum'

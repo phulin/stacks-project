@@ -403,7 +403,7 @@ theorem left_dual_biproduct
           (pX := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
           (iY := (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)) (by simp) (by simp)
-      simp [MonoidalCategory.tensorHom_def, Category.assoc] at h11
+      simp [MonoidalCategory.tensorHom_def] at h11
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h11
       
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
@@ -498,7 +498,7 @@ theorem left_dual_biproduct
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
-      simp [MonoidalCategory.tensorHom_def, Category.assoc] at h22
+      simp [MonoidalCategory.tensorHom_def] at h22
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h22
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
         MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]

@@ -581,8 +581,7 @@ theorem inverseSystemLimit_mittagLeffler_quotient
   intro i
   obtain ⟨c, f, hf⟩ := hML' i
   refine ⟨c, f, ?_⟩
-  intro k g
-  intro z hz
+  intro k g z hz
   obtain ⟨z_c, rfl⟩ := hz
   obtain ⟨b_c, hb_c⟩ := hsurj c z_c
   have hb_range :
@@ -869,7 +868,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
           e.hom ≫ q = biprod.fst ∧ biprod.inl ≫ e.hom = j ∧
             biprod.inr ≫ e.hom = kernel.ι (q ≫ j) := by
     intro X Y j q h
-    letI : Mono j := ⟨fun a b hab => by
+    let : Mono j := ⟨fun a b hab => by
       rw [← Category.comp_id a, ← Category.comp_id b, ← h,
         ← Category.assoc, ← Category.assoc, hab]⟩
     have he : (q ≫ j) ≫ (q ≫ j) = q ≫ j := by
@@ -931,8 +930,8 @@ theorem essentiallyConstant_iff_biproduct_decomposition
   constructor
   · intro hF
     rcases hF with ⟨hI, hF⟩
-    letI : Nonempty ℕ+ := hI.1
-    letI : IsDirectedOrder ℕ+ := hI.2
+    let : Nonempty ℕ+ := hI.1
+    let : IsDirectedOrder ℕ+ := hI.2
     obtain ⟨c, hcLim, hc⟩ := essentiallyConstantPro_hasLimit hF
     rcases hc with ⟨i, r, hr, hfactor⟩
     let hcl : IsLimit c := Classical.choice hcLim
@@ -1042,7 +1041,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
         simp [e, ιj', he₀inr j' hij']
       have hzcomp : z h ≫ ιj = ιj' ≫ transitionMap F h := by
         simp only [z, dif_pos hij, ιj, ιj', Category.assoc]
-        simp [Category.assoc]
+        simp
         rw [kernel.lift_ι]
       apply (cancel_mono (e j hij).hom).1
       simp only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
@@ -1050,7 +1049,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
       · conv_lhs => rw [← Category.assoc]
         conv_rhs => rw [← Category.assoc]
         rw [heq_inl', hl h, biprod.inl_map]
-        simp only [Category.id_comp, Category.assoc]
+        simp only [Category.id_comp]
         rw [heq_inl]
       · conv_lhs => rw [← Category.assoc]
         conv_rhs => rw [← Category.assoc]
@@ -1072,7 +1071,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
           dsimp [transitionMap, q, l, j']
           rw [← hg, hfg, hf]
           simp
-        letI : Mono (l j') := ⟨fun a b hab => by
+        let : Mono (l j') := ⟨fun a b hab => by
           calc
             a = a ≫ 𝟙 _ := by simp
             _ = a ≫ (l j' ≫ q j' hij'') := by rw [hsplit]
@@ -1089,7 +1088,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
             kernel.ι (q j' hij'' ≫ l j')
         have hzcomp' : z hj' ≫ ιj = ιj' ≫ transitionMap F hj' := by
           simp only [z, dif_pos hij, ιj, ιj', Category.assoc]
-          simp [Category.assoc]
+          simp
           rw [kernel.lift_ι]
         apply (cancel_mono ιj).1
         rw [hzcomp', hfg']
@@ -1102,8 +1101,8 @@ theorem essentiallyConstant_iff_biproduct_decomposition
         rw [dif_neg hij]
   · intro hdecomp
     rcases hdecomp with ⟨i, Z, e, z, hcompat, hzero⟩
-    letI : Nonempty ℕ+ := ⟨i⟩
-    letI : IsDirectedOrder ℕ+ := inferInstance
+    let : Nonempty ℕ+ := ⟨i⟩
+    let : IsDirectedOrder ℕ+ := inferInstance
     let l : ∀ j : ℕ+, inverseSystemLimit F ⟶ F.obj (Opposite.op j) :=
       fun j => if hij : i ≤ j then
         biprod.inl ≫ (e j hij).hom
@@ -1116,7 +1115,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
       calc
         (e j' hij').hom ≫ transitionMap F h =
             ((e j' hij').hom ≫ transitionMap F h) ≫
-              (e j hij).inv ≫ (e j hij).hom := by simp [Category.assoc]
+              (e j hij).inv ≫ (e j hij).hom := by simp
         _ = biprod.map (𝟙 _) (z h) ≫ (e j hij).hom := by
           have hh := congrArg (fun u => u ≫ (e j hij).hom)
             (hcompat hij hij' h)
@@ -1129,7 +1128,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
         dsimp [l]
         rw [dif_pos hj', dif_pos hj]
         rw [Category.assoc, hcompat' hj hj' h]
-        simp [Category.assoc]
+        simp
       · by_cases hj' : i ≤ j'
         · have hji : j ≤ i := le_of_not_ge hj
           dsimp [l]
@@ -1233,7 +1232,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
         _ = (e k hik).inv ≫
               (biprod.fst ≫ biprod.inl ≫ (e a hia).hom) := by rw [heq]
         _ = (e k hik).inv ≫ biprod.fst ≫ biprod.inl ≫ (e a hia).hom := by
-              simp only [Category.assoc]
+              rfl
     · intro j
       let j₀ : ℕ+ := j.unop
       by_cases hij : i ≤ j₀
@@ -1285,12 +1284,12 @@ theorem essentiallyConstant_iff_biproduct_decomposition
             (e k (hij.trans (hab.trans hbk))).inv ≫ biprod.fst ≫
               biprod.inl ≫ (e i le_rfl).hom := by
           change transitionMap F hik = _
-          convert hfac' using 1 <;> apply Subsingleton.elim
+          convert hfac' using 1
         have hmapg : F.map hg =
             (e k (hij.trans (hab.trans hbk))).inv ≫ biprod.fst ≫
               biprod.inl ≫ (e j₀ hij).hom := by
           change transitionMap F hbj = _
-          convert hfac using 1 <;> apply Subsingleton.elim
+          convert hfac using 1
         rw [hmap]
         rw [hmapg]
         simp [Category.assoc]
@@ -1313,7 +1312,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
             (e k (hib.trans hbk)).inv ≫ biprod.fst ≫ biprod.inl ≫
               (e i le_rfl).hom := by
           change transitionMap F hik = _
-          convert hfac using 1 <;> apply Subsingleton.elim
+          convert hfac using 1
         rw [hmap]
         rw [hmapfac]
         simp only [Category.assoc, Iso.hom_inv_id_assoc]
@@ -1327,8 +1326,8 @@ theorem essentiallyConstant_isMittagLeffler
     (hF : IsEssentiallyConstant F) :
     IsMittagLeffler F := by
   rcases hF with ⟨hI, hF⟩
-  letI : Nonempty ℕ+ := hI.1
-  letI : IsDirectedOrder ℕ+ := hI.2
+  let : Nonempty ℕ+ := hI.1
+  let : IsDirectedOrder ℕ+ := hI.2
   rcases hF with ⟨c, i, r, hr, hfactor⟩
   have image_eq_of_factor : ∀ {X X' Y : C} (f : X ⟶ Y) (g : X' ⟶ Y)
       (a : X ⟶ X') (b : X' ⟶ X), a ≫ g = f → b ≫ f = g →
@@ -1495,7 +1494,8 @@ theorem mittagLeffler_iff_of_essentiallyConstant_quotient
               have hn := congrArg
                 (fun q => q ≫ (e j hij).inv ≫ biprod.snd)
                 (S.g.naturality (opHomOfLE h))
-              simpa [Category.assoc] using hn
+              simp only [Category.assoc] at hn
+              exact hn
       _ = S.g.app (Opposite.op j') ≫ (e j' hij').inv ≫
           biprod.snd ≫ z h := by
             rw [hq']
@@ -1636,7 +1636,7 @@ theorem mittagLeffler_iff_of_essentiallyConstant_quotient
         have hfg : (S.g.app (Opposite.op k))
             ((S.f.app (Opposite.op k)) a_k) = 0 := by
           simpa using hz'
-        simpa [ConcreteCategory.comp_apply, hfg]
+        simp [hfg]
       have hb₀'' := hb₀'
       have hf₀'' := hf₀'
       simp only [ConcreteCategory.comp_apply] at hb₀'' hf₀''
@@ -1840,9 +1840,10 @@ theorem mittagLeffler_iff_of_essentiallyConstant_quotient
             ((biprod.inl : inverseSystemLimit S.X₃ ⟶
               inverseSystemLimit S.X₃ ⊞ Z t) q))
           (e t hit).hom_inv_id
-        simpa [ConcreteCategory.comp_apply] using hh
+        simp only [ConcreteCategory.comp_apply] at hh
+        exact hh
       have hinv0 : (e t hit).inv (0 : S.X₃.obj (Opposite.op t)) = 0 := by
-        simpa only [map_zero]
+        simp only [map_zero]
       rw [hinv, hinv0] at hqzero'
       simpa only [map_zero] using hqzero'
     have hq : q = 0 := by
@@ -1893,7 +1894,7 @@ theorem mittagLeffler_iff_of_essentiallyConstant_quotient
       have hz := congrArg (fun q => q.app (Opposite.op c)) S.zero
       simp only [NatTrans.comp_app] at hz
       have hz' := congrArg (fun q => q a_c) hz
-      simpa [ConcreteCategory.comp_apply, hfg]
+      simp [hfg]
     obtain ⟨yₗ, hyₗ, heqₗ⟩ := hc l hcl
       ((S.f.app (Opposite.op c)) a_c) hstable_c
     have hmapzero :
@@ -2078,7 +2079,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
     exact Fork.IsLimit.mono (HomologicalComplex.cyclesIsKernel (K.obj i) n (n + 1)
       ((ComplexShape.up ℤ).next_eq'
         (by simp [ComplexShape.up, ComplexShape.up'])))
-  letI : ∀ n : ℤ, Mono (ι n) := hιMono
+  let : ∀ n : ℤ, Mono (ι n) := hιMono
   let rI : ∀ n : ℤ, I n ⟶ Z n := fun n =>
     image.lift
       { I := Z n
@@ -2086,9 +2087,9 @@ theorem inverseSystem_cohomology_zero_iso_limit
         e := q n
         fac := hqι n }
   have heIr (n : ℤ) : eI n ≫ rI n = q n := by
-    simpa [eI, rI] using
-      (image.fac_lift (f := d n)
-        ({ I := Z n, m := ι n, e := q n, fac := hqι n } : MonoFactorisation (d n)))
+    dsimp [eI, rI]
+    exact image.fac_lift (f := d n)
+      ({ I := Z n, m := ι n, e := q n, fac := hqι n } : MonoFactorisation (d n))
   have hrIm (n : ℤ) : rI n ≫ ι n = mI n := by
     simpa [rI, mI] using
       (image.lift_fac (f := d n)
@@ -2133,7 +2134,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
   have hSZI (n : ℤ) : (SZI n).Exact := by
     rw [inverseSystem_exact_iff_pointwise]
     intro i
-    letI : Mono ((ι (n - 1)).app i) := by
+    let : Mono ((ι (n - 1)).app i) := by
       dsimp [ι]
       exact Fork.IsLimit.mono (HomologicalComplex.cyclesIsKernel (K.obj i) (n - 1) n
         ((ComplexShape.up ℤ).next_eq'
@@ -2295,7 +2296,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
   have hT₀ : T₀.Exact := by
     have h := hlimC₀.exact' 0 1 2 (by omega) (by omega) (by omega)
     dsimp [C₀] at h
-    convert h using 1 <;> congr 1
+    convert h using 1 ; congr 1
   let Tq : ShortComplex AddCommGrpCat :=
     ShortComplex.mk (inverseSystemLimitMap (q 0))
       (inverseSystemLimitMap (π 0)) hlimqπ
@@ -2368,7 +2369,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 (eqToHom hobj ≫ (limit.π K i).f 1 ≫ eqToHom hobj_i₁) =
               (eqToHom (by rfl) ≫ (limit.π K i).f 0) ≫
                 (K.obj i).d 0 1 ≫ eqToHom hobj_i₁ := by
-            simp [hobj, hobj_i₁]
+            simp
           rw [hdπ]
           let hobj₀ : (inverseSystemLimit K).X 0 = (limit K).X 0 := by
             rfl
@@ -2458,7 +2459,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 (limit.π K i).f 0 := by
-          simp [hobj]
+          simp
         have hπ :
             eA₀.hom ≫ limit.π (A 0) i = (limit.π K i).f 0 := by
           dsimp [eA₀, A]
@@ -2493,7 +2494,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 (limit.π K i).f 0 := by
-          simp [hobj]
+          simp
         have hπinv :
             eA₀.inv ≫ (limit.π K i).f 0 = limit.π (A 0) i := by
           dsimp [eA₀, A]
@@ -2518,7 +2519,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 eqToHom hobj₀ ≫ (limit.π K i).f 0 := by
-          simp [hobj, hobj₀]
+          simp
         have hstage :
             eZinv ≫
                 ((inverseSystemLimit K).iCycles 0 ≫
@@ -3284,7 +3285,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
           rw [hprefixY]
           rw [← hyPrime]
           rw [prefixMap_d p n hpn yPrime]
-          simp [zPrime, hyPrime]
+          simp [zPrime]
           exact sub_self _
         have hd_diff :
             (inverseSystemLimit (ordinalPrefixSystem K b)).d p n diff = dY - dZ := by

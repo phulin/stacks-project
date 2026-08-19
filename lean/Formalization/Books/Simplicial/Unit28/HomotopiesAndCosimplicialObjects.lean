@@ -570,7 +570,7 @@ theorem compareHomotopies
                 simp
               have hα' :
                   (interval : SSet.{0}).map (𝟙 (SimplexCategory.mk n)).op α = α := by
-                simpa only [op_id] using hα
+                simp
               rw [hα']
             · cases m with
               | zero =>

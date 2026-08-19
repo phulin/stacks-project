@@ -801,7 +801,9 @@ private lemma sourceT_quotient_isEisenstein :
     apply hbnot
     exact (Ideal.mem_span_singleton (x := bS) (y := q0)).mpr hbdiv
 instance sourceRing_isDomain : IsDomain sourceRing := by sorry
-instance planeCurveRing_isDomain : IsDomain planeCurveRing := by sorry
+instance planeCurveRing_isDomain : IsDomain planeCurveRing := by
+  exact (Ideal.Quotient.isDomain_iff_prime (I := Ideal.span {planeRelation})).mpr
+    planeIdeal_isPrime
 
 private abbrev quadraticAuxiliaryRing :=
   Polynomial ℚ ⧸ Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)}

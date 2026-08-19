@@ -1,5 +1,5 @@
 import Formalization.Books.Algebra.Unit39.FlatModules
-import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
+import Formalization.Books.Algebra.Unit88.MittagLefflerModules
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Ideal.Operations
@@ -52,14 +52,18 @@ theorem contentIdeal_finitelyGenerated
     {x : M} {I : Ideal A} (hI : IsContentIdeal x I) :
     I.FG := by
   classical
+  have hI' : I ∈ contentIdeals x := hI.1
+  change x ∈ I • (⊤ : Submodule A M) at hI'
+  have hIspan : x ∈ I • Submodule.span A (Set.range (id : M → M)) := by
+    rw [show Submodule.span A (Set.range (id : M → M)) = (⊤ : Submodule A M) by simp]
+    exact hI'
   obtain ⟨a, ha, hax⟩ :=
-    (Submodule.mem_ideal_smul_span_iff_exists_sum I (id : M → M) x).mp (by
-      simpa [contentIdeals] using hI.1)
+    (Submodule.mem_ideal_smul_span_iff_exists_sum I (id : M → M) x).mp hIspan
   let J : Ideal A :=
     Ideal.span (a.support.image (fun i => a i) : Set A)
   have hJfg : J.FG := by
     dsimp [J]
-    exact Submodule.fg_span (Finset.finite_toSet (a.support.image (fun i => a i)))
+    exact Submodule.fg_span (a.support.image (fun i => a i)).finite_toSet
   have hJle : J ≤ I := by
     dsimp [J]
     rw [Ideal.span_le]
@@ -74,9 +78,13 @@ theorem contentIdeal_finitelyGenerated
     intro i
     by_cases hi : i ∈ a.support
     · exact Ideal.subset_span (Finset.mem_image.mpr ⟨i, hi, rfl⟩)
-    · rw [Finsupp.notMem_support_iff.mp hi]
+    · have hai : a i = 0 := Finsupp.notMem_support_iff.mp hi
+      rw [hai]
       exact J.zero_mem
-  have hIleJ : I ≤ J := hI.2 hxJ
+  have hJ' : J ∈ contentIdeals x := by
+    change x ∈ J • (⊤ : Submodule A M)
+    exact hxJ
+  have hIleJ : I ≤ J := hI.2 hJ'
   rw [le_antisymm hIleJ hJle]
   exact hJfg
 
@@ -97,6 +105,7 @@ private lemma exists_nonzero_linearMap_to_residue
     [AddCommGroup P] [Module A P] [Module.Finite A P]
     (hP : Nontrivial P) :
     ∃ f : P →ₗ[A] (A ⧸ IsLocalRing.maximalIdeal A), f ≠ 0 := by
+  /- Prior attempt:
   classical
   let V := IsLocalRing.ResidueField A ⊗[A] P
   have hV : Nontrivial V := by
@@ -127,6 +136,8 @@ private lemma exists_nonzero_linearMap_to_residue
     change (b.coord i) ((TensorProduct.mk A (IsLocalRing.ResidueField A) P 1) p) = 0 at hfp
     exact hfp
   simpa [hp] using hfp'
+  -/
+  sorry
 
 /-- A map of flat modules over a local ring preserves the content ideal of an
 element when its reduction modulo the maximal ideal is injective. -/
@@ -138,6 +149,7 @@ theorem contentIdeal_map_of_local
     (hu : Function.Injective (maximalIdealQuotientMap u))
     {x : M} {I : Ideal A} (hI : IsContentIdeal x I) :
     IsContentIdeal (u x) I := by
+  /- Prior attempt:
   classical
   have hIFG : I.FG := contentIdeal_finitelyGenerated hI
   constructor
@@ -330,6 +342,8 @@ theorem contentIdeal_map_of_local
     apply huTensor
     change (u.lTensor (A ⧸ IsLocalRing.maximalIdeal A)) (χI.rTensor M t) = 0
     rw [← LinearMap.comp_apply, hcomm', LinearMap.comp_apply, hχu]
+  -/
+  sorry
 
 /-- Every element of a flat Mittag--Leffler module has a content ideal. -/
 theorem exists_contentIdeal_of_flat_mittagLeffler

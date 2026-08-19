@@ -940,7 +940,7 @@ theorem universallyExact_prod
       induction t using TensorProduct.induction_on with
       | zero =>
         change (0, 0) = (0, 0)
-        rfl
+        simp
       | add x y hx hy => simp only [map_add, hx, hy]
       | tmul x q => rfl
     apply e₁.injective

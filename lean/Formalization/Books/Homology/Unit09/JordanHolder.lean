@@ -278,17 +278,17 @@ theorem isArtinianObject_iff_of_shortExact
     exact ⟨isArtinianObject_of_shortExact_subobject S hS h₂,
       isArtinianObject_of_shortExact_quotient S hS h₂⟩
   · rintro ⟨h₁, h₃⟩
-    letI : Mono S.f := hS.mono_f
-    letI : Epi S.g := hS.epi_g
-    letI : Mono S.g.op := by infer_instance
-    letI : IsArtinianObject S.X₁ := h₁
-    letI : IsArtinianObject S.X₃ := h₃
+    let : Mono S.f := hS.mono_f
+    let : Epi S.g := hS.epi_g
+    let : Mono S.g.op := by infer_instance
+    let : IsArtinianObject S.X₁ := h₁
+    let : IsArtinianObject S.X₃ := h₃
     let K : Subobject S.X₂ := Subobject.mk S.f
     let f₁ : Subobject (K : C) → Subobject S.X₂ := (Subobject.map K.arrow).obj
     let f₂ : Subobject S.X₂ → Subobject (K : C) := (Subobject.pullback K.arrow).obj
     let eK : Subobject (K : C) ≃o Subobject S.X₁ :=
       Subobject.mapIsoToOrderIso (Subobject.underlyingIso S.f)
-    letI : WellFoundedLT (Subobject (K : C)) :=
+    let : WellFoundedLT (Subobject (K : C)) :=
       eK.toOrderEmbedding.wellFoundedLT
     let e₂ := Abelian.subobjectIsoSubobjectOp S.X₂
     let e₃ := Abelian.subobjectIsoSubobjectOp S.X₃
@@ -319,7 +319,7 @@ theorem isArtinianObject_iff_of_shortExact
       { choice := fun x _ => f₂ x
         gc := (Subobject.mapPullbackAdj K.arrow).gc
         u_l_le := fun x => by
-          exact le_of_eq (by simpa [f₁, f₂] using Subobject.pullback_map_self K.arrow x)
+          exact le_of_eq (by simp [f₁, f₂])
         choice_eq := fun _ _ => rfl }
     have hfg : ∀ a, f₁ (f₂ a) = a ⊓ K := by
       intro a
@@ -359,7 +359,7 @@ theorem isArtinianObject_iff_of_shortExact
         e₂ a ⊔ OrderDual.toDual (Subobject.mk S.g.op)
       exact sup_comm _ _
     apply (isArtinianObject_iff_not_strictAnti S.X₂).2
-    letI : WellFoundedLT (Subobject S.X₂) :=
+    let : WellFoundedLT (Subobject S.X₂) :=
       wellFounded_lt_exact_sequence K f₁ f₂ g₁ g₂ gci gi hfg hgg
     exact fun chain => not_strictAnti_of_wellFoundedLT chain
 
@@ -714,10 +714,10 @@ theorem finite_length_iff
       Nonempty (FiniteLengthFiltration A) := by
   constructor
   · rintro ⟨hA, hN⟩
-    letI : IsArtinianObject A := hA
-    letI : IsNoetherianObject A := hN
-    letI : WellFoundedLT (Subobject A) := inferInstance
-    letI : WellFoundedGT (Subobject A) := inferInstance
+    let : IsArtinianObject A := hA
+    let : IsNoetherianObject A := hN
+    let : WellFoundedLT (Subobject A) := inferInstance
+    let : WellFoundedGT (Subobject A) := inferInstance
     obtain ⟨a, ha, n, hn, hstep⟩ :=
       exists_covBy_seq_of_wellFoundedLT_wellFoundedGT_of_le
         (α := Subobject A) (x := (⊥ : Subobject A)) (y := (⊤ : Subobject A)) bot_le
@@ -731,8 +731,8 @@ theorem finite_length_iff
       dsimp [series]
       simpa using hstep i i.isLt
     refine ⟨⟨series, ?_, ?_, ?_⟩⟩
-    · simpa [series, RelSeries.head, ha]
-    · simpa [series, RelSeries.last, hn]
+    · simp [series, RelSeries.head, ha]
+    · simp [series, RelSeries.last, hn]
     · intro i
       exact (simple_subobjectQuotient_iff_covBy
         (le_of_lt (by simpa using series.step i))).mpr (hcov i)
@@ -825,7 +825,7 @@ theorem finite_length_iff
             have hSlen : S.length = n := by
               change F.series.length = n
               exact hlen
-            simp [prevF, prevSeries, prevComp, hSlen, hn]
+            simp [prevF, prevSeries, prevComp, hSlen]
             exact Nat.pred_lt (by simpa using Nat.ne_of_gt hnpos)
           obtain ⟨hPArt, hPNoeth⟩ := ih _ hprev_len prevF rfl
           have hPtop : IsCoatom P := by
@@ -863,7 +863,7 @@ theorem finite_length_iff
             change Simple (subobjectQuotient P Q hPQ)
             apply (simple_subobjectQuotient_iff_covBy hPQ).mpr
             exact hQtop ▸ hPtop.covBy_top
-          letI : Simple T.X₃ := hsimpleQ
+          let : Simple T.X₃ := hsimpleQ
           have hQArt : IsArtinianObject T.X₃ := by
             rw [isArtinianObject_iff_not_strictAnti]
             intro f hanti

@@ -10,6 +10,8 @@ import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.Data.Rat.Sqrt
 import Mathlib.Algebra.Polynomial.Eval.Irreducible
+import Mathlib.Tactic.NormNum.IsSquare
+import Mathlib.FieldTheory.KummerPolynomial
 
 /-!
 # Exercises, Chapter 19: Fraction fields
@@ -24,14 +26,102 @@ namespace Formalization.Books.Exercises.Unit19
 noncomputable section
 
 private lemma quadratic_plus_twenty_four_irreducible :
-    Irreducible (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) := by sorry
-private lemma no_rat_square_24 (z : ℚ) : z ^ 2 ≠ 24 := by sorry
+    Irreducible (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) := by
+  convert X_pow_sub_C_irreducible_of_prime (K := ℚ) Nat.prime_two (a := (-24 : ℚ)) ?_ using 1
+  · simp
+  intro z hz
+  exact not_isSquare_of_neg (x := (-24 : ℚ)) (by norm_num)
+    ⟨z, by simpa [pow_two] using hz.symm⟩
+private lemma no_rat_square_24 (z : ℚ) : z ^ 2 ≠ 24 := by
+  intro h
+  have hs : IsSquare (24 : ℚ) := ⟨z, by simpa [pow_two] using h.symm⟩
+  exact (by norm_num : ¬ IsSquare (24 : ℚ)) hs
 private lemma monic_quadratic_eq {p : Polynomial ℚ} (hm : p.Monic)
     (hnd : p.natDegree = 2) :
     p = Polynomial.X ^ 2 + Polynomial.C (p.coeff 1) * Polynomial.X +
-      Polynomial.C (p.coeff 0) := by sorry
+      Polynomial.C (p.coeff 0) := by
+  ext n
+  rcases n with (_ | _ | _ | n)
+  · simp
+  · simp
+  · have hp2 : p.coeff 2 = 1 := by
+      simpa [hnd] using hm.coeff_natDegree
+    simp [hp2]
+  · have hp : p.coeff (n + 3) = 0 := by
+      apply Polynomial.coeff_eq_zero_of_natDegree_lt
+      omega
+    simp [hp]
 private lemma quartic_plus_144_irreducible :
-    Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by sorry
+    Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by
+  have hm : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).Monic := by
+    exact Polynomial.monic_X_pow_add_C (a := (144 : ℚ)) (by norm_num)
+  have hnd : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).natDegree = 4 := by
+    rw [Polynomial.natDegree_add_C, Polynomial.natDegree_X_pow]
+  have hone : Polynomial.X ^ 4 + Polynomial.C (144 : ℚ) ≠ 1 := by
+    intro h
+    have := congrArg Polynomial.natDegree h
+    rw [hnd] at this
+    norm_num at this
+  rw [hm.irreducible_iff_lt_natDegree_lt hone]
+  intro q hq hqdeg hqdiv
+  simp only [Finset.mem_Ioc] at hqdeg
+  have hqpos : 0 < q.natDegree := hqdeg.1
+  have hqle : q.natDegree ≤ 2 := by
+    rw [hnd] at hqdeg
+    omega
+  rcases (show q.natDegree = 1 ∨ q.natDegree = 2 by omega) with hq1 | hq2
+  · have hqform : q = Polynomial.X + Polynomial.C (q.coeff 0) :=
+      hq.eq_X_add_C (by omega)
+    rw [hqform, ← sub_neg_eq_add, ← Polynomial.C_neg] at hqdiv
+    rw [Polynomial.dvd_iff_isRoot] at hqdiv
+    simp [Polynomial.IsRoot] at hqdiv
+    nlinarith [sq_nonneg ((q.coeff 0) ^ 2)]
+  · obtain ⟨r, hqr⟩ := hqdiv
+    have hprod : (q * r).Monic := by rw [← hqr]; exact hm
+    have hr : r.Monic := hq.of_mul_monic_left hprod
+    have hrd : r.natDegree = 2 := by
+      have hdeg := congrArg Polynomial.natDegree hqr
+      rw [hnd, Polynomial.natDegree_mul hq.ne_zero hr.ne_zero] at hdeg
+      omega
+    rw [monic_quadratic_eq hq hq2, monic_quadratic_eq hr hrd] at hqr
+    have h0 := congrArg (fun f : Polynomial ℚ => f.coeff 0) hqr
+    have h1 := congrArg (fun f : Polynomial ℚ => f.coeff 1) hqr
+    have h2 := congrArg (fun f : Polynomial ℚ => f.coeff 2) hqr
+    have h3 := congrArg (fun f : Polynomial ℚ => f.coeff 3) hqr
+    rw [Polynomial.mul_coeff_zero] at h0
+    rw [Polynomial.mul_coeff_one] at h1
+    rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk] at h2 h3
+    simp at h0 h1
+    norm_num [Finset.sum_range_succ, Polynomial.coeff_X, Polynomial.coeff_C] at h2 h3
+    have h0' : (144 : ℚ) = q.coeff 0 * r.coeff 0 := h0
+    have h1' : (0 : ℚ) = q.coeff 0 * r.coeff 1 + q.coeff 1 * r.coeff 0 := h1
+    have h2' : (0 : ℚ) = q.coeff 0 + q.coeff 1 * r.coeff 1 + r.coeff 0 := h2
+    have h3' : (0 : ℚ) = q.coeff 1 + r.coeff 1 := h3
+    have hr1 : r.coeff 1 = -q.coeff 1 := by linarith [h3']
+    have hfac : q.coeff 1 * (r.coeff 0 - q.coeff 0) = 0 := by
+      calc
+        q.coeff 1 * (r.coeff 0 - q.coeff 0) =
+            q.coeff 0 * (-q.coeff 1) + q.coeff 1 * r.coeff 0 := by ring
+        _ = 0 := by rw [← hr1]; exact h1'.symm
+    rcases mul_eq_zero.mp hfac with hqa | hdiff
+    · have hrd0 : r.coeff 0 = -q.coeff 0 := by
+        nlinarith [h2', hr1, hqa]
+      rw [hrd0] at h0'
+      nlinarith [h0', sq_nonneg (q.coeff 0)]
+    · have hrd0 : r.coeff 0 = q.coeff 0 := sub_eq_zero.mp hdiff
+      rw [hrd0] at h0'
+      have hpm : (q.coeff 0 - 12) * (q.coeff 0 + 12) = 0 := by
+        nlinarith [h0']
+      rcases mul_eq_zero.mp hpm with hplus | hminus
+      · have hq0 : q.coeff 0 = 12 := by linarith
+        have h2'' := h2'
+        rw [hr1, hq0, hrd0] at h2''
+        apply no_rat_square_24 (q.coeff 1)
+        nlinarith [h2'']
+      · have hq0 : q.coeff 0 = -12 := by linarith
+        have h2'' := h2'
+        rw [hr1, hq0, hrd0] at h2''
+        nlinarith [h2'', sq_nonneg (q.coeff 1)]
 private def planeFirstPolynomial : Polynomial ℚ :=
   (Polynomial.X - Polynomial.C (1 : ℚ)) *
     (Polynomial.X - Polynomial.C (2 : ℚ)) *

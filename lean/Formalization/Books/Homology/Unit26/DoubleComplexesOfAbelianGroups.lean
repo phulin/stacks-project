@@ -533,9 +533,8 @@ private theorem productTotalDifferential_π
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
-  sorry
-  /- Original proof attempt:
-  apply Pi.hom_ext
+  apply (Pi.hom_ext
+    (productTotalDifferential A n ≫ productTotalDifferential A (n + 1)) 0)
   intro p
   change productTotalDifferential A n ≫
       (productTotalDifferential A (n + 1) ≫
@@ -557,7 +556,8 @@ theorem productTotalDifferential_comp_zero
               Pi.π (fun r : ℤ => A.obj r (n + 1 - r)) q =
             Pi.π (fun r : ℤ => A.obj r (n + 1 - r)) q := by
         apply eq_of_heq
-        exact eqToHom_comp_heq (R.augmentation.f (n + 1)) _
+        exact eqToHom_comp_heq
+          (Pi.π (fun r : ℤ => A.obj r (n + 1 - r)) q) _
       rw [Category.assoc, hπ]
       exact productTotalDifferential_π A n q
     have h11 :
@@ -565,12 +565,11 @@ theorem productTotalDifferential_comp_zero
             productTotalD1Object A (n + 1) (p - 1) = 0 := by
       dsimp [productTotalD1Component, productTotalD1Term,
         productTotalD1Object]
-      simp [Category.assoc, sub_add_cancel]
+      simp [Category.assoc]
       have hs := congrArg (fun f =>
           Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫ f ≫
-            eqToHom (by
-              change A.obj (p - 1 - 1 + 1 + 1) (n - (p - 1 - 1)) =
-                A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1))
+            eqToHom (show A.obj (p - 1 - 1 + 1 + 1) (n - (p - 1 - 1)) =
+                A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) by
               congr 1 <;> ring))
         (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
       convert hs using 1
@@ -581,15 +580,14 @@ theorem productTotalDifferential_comp_zero
         have ht' := heq_comp_left_fixed
           (Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫
             A.d1 (p - 1 - 1) (n - (p - 1 - 1)))
-          (by congr 1 <;> ring) ht
+          (by congr 1) ht
         let g : A.obj (p - 1 + 1) (n + 1 - (p - 1)) ⟶
             A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) :=
-          eqToHom (by
-            change A.obj (p - 1 + 1) (n + 1 - (p - 1)) =
-              A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1))
-            congr 1 <;> ring)
+          eqToHom (show A.obj (p - 1 + 1) (n + 1 - (p - 1)) =
+              A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) by
+            congr 1; ring)
         have ht''' := heq_comp_transport' ht' (HEq.rfl : g ≍ g)
-          rfl (by congr 1 <;> ring) rfl
+          rfl (by congr 1) rfl
         simpa [g, Category.assoc, eqToHom_trans] using ht'''
       · simp
     have h22 :
@@ -610,20 +608,18 @@ theorem productTotalDifferential_comp_zero
             productTotalD2Object A (n + 1) p =
         productTotalD2Component A n (p - 1) ≫
             productTotalD1Object A (n + 1) (p - 1) ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                A.obj p (n + 1 + 1 - p)
+            eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring) := by
       dsimp [productTotalD1Component, productTotalD1Term,
         productTotalD2Component, productTotalD2Term,
         productTotalD1Object, productTotalD2Object]
-      simp [Category.assoc, sub_add_cancel]
+      simp [Category.assoc]
       have hs := congrArg (fun f =>
           eqToHom (productTotalTerm_eq A n) ≫
             Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫ f ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n - (p - 1) + 1) =
-                A.obj p (n + 1 + 1 - p)
+            eqToHom (show A.obj (p - 1 + 1) (n - (p - 1) + 1) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring))
         (A.comm (p - 1) (n - (p - 1))).symm
       convert hs using 1
@@ -634,12 +630,11 @@ theorem productTotalDifferential_comp_zero
           (eqToHom (productTotalTerm_eq A n) ≫
             Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
             A.d1 (p - 1) (n - (p - 1)))
-          (by congr 1 <;> ring) ht
+          (by congr 1) ht
         have ht'' := heq_comp_right_fixed rfl ht'
-          (eqToHom (by
-            change A.obj p (n + 1 - p + 1) =
-              A.obj p (n + 1 + 1 - p)
-            congr 1 <;> ring))
+          (eqToHom (show A.obj p (n + 1 - p + 1) =
+              A.obj p (n + 1 + 1 - p) by
+            congr 1; ring))
         apply eq_of_heq
         simpa [Category.assoc, eqToHom_trans] using ht''
       · simp only [Category.assoc]
@@ -649,22 +644,20 @@ theorem productTotalDifferential_comp_zero
           (eqToHom (productTotalTerm_eq A n) ≫
             Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
             A.d2 (p - 1) (n - (p - 1)))
-          (by congr 1 <;> ring) ht
+          (by congr 1) ht
         let g : A.obj (p - 1 + 1) (n + 1 - (p - 1)) ⟶
             A.obj p (n + 1 + 1 - p) :=
-          eqToHom (by
-            change A.obj (p - 1 + 1) (n + 1 - (p - 1)) =
-              A.obj p (n + 1 + 1 - p)
+          eqToHom (show A.obj (p - 1 + 1) (n + 1 - (p - 1)) =
+              A.obj p (n + 1 + 1 - p) by
             congr 1 <;> ring)
         have ht''' := heq_comp_transport' ht' (HEq.rfl : g ≍ g)
-          rfl (by congr 1 <;> ring) rfl
+          rfl (by congr 1) rfl
         simpa [g, Category.assoc, eqToHom_trans] using ht'''
     have h11' :
         productTotalD1Component A n (p - 1) ≫
             productTotalD1Object A (n + 1) (p - 1) ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                A.obj p (n + 1 + 1 - p)
+            eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring) = 0 := by
       rw [← Category.assoc, h11, zero_comp]
     have h22' :
@@ -675,29 +668,25 @@ theorem productTotalDifferential_comp_zero
             productTotalD2Object A (n + 1) p =
           productTotalD2Component A n (p - 1) ≫
             productTotalD1Object A (n + 1) (p - 1) ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                A.obj p (n + 1 + 1 - p)
+            eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring) := hcomm
     have hsplit1 :
         productTotalDifferentialComponent A n (p - 1) ≫
             productTotalD1Object A (n + 1) (p - 1) ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                A.obj p (n + 1 + 1 - p)
+            eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring) =
           productTotalD1Component A n (p - 1) ≫
               productTotalD1Object A (n + 1) (p - 1) ≫
-              eqToHom (by
-                change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                  A.obj p (n + 1 + 1 - p)
+              eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                  A.obj p (n + 1 + 1 - p) by
                 congr 1 <;> ring) +
             (p - 1).negOnePow •
               (productTotalD2Component A n (p - 1) ≫
                 productTotalD1Object A (n + 1) (p - 1) ≫
-                eqToHom (by
-                  change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                    A.obj p (n + 1 + 1 - p)
+                eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                    A.obj p (n + 1 + 1 - p) by
                   congr 1 <;> ring)) := by
       dsimp [productTotalDifferentialComponent, productTotalD1Component,
         productTotalD2Component]
@@ -723,13 +712,12 @@ theorem productTotalDifferential_comp_zero
       simpa [hq] using hD]
     rw [Preadditive.comp_add]
     rw [← Category.assoc, Pi.lift_π]
-    simp [Category.assoc]
+    simp
     change
       productTotalDifferentialComponent A n (p - 1) ≫
-          productTotalD1Object A (n + 1) (p - 1) ≫
-            eqToHom (by
-              change A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
-                A.obj p (n + 1 + 1 - p)
+            productTotalD1Object A (n + 1) (p - 1) ≫
+            eqToHom (show A.obj (p - 1 + 1) (n + 1 + 1 - (p - 1 + 1)) =
+                A.obj p (n + 1 + 1 - p) by
               congr 1 <;> ring) +
         p.negOnePow •
           (productTotalDifferentialComponent A n p ≫
@@ -746,7 +734,6 @@ theorem productTotalDifferential_comp_zero
   symm
   apply heq_of_eq
   exact zero_comp
-  -/
 
 noncomputable def productTotalComplex
     (A : DoubleComplex AddCommGrpCat.{u}) : AbelianGroupCochainComplex where

@@ -103,9 +103,9 @@ theorem exists_standardOpenSemilinearModuleMap {R M : Type u} [CommRing R]
       ∀ m : M,
         φ (LocalizedModule.mkLinearMap (Submonoid.powers f) M m) =
           LocalizedModule.mkLinearMap (Submonoid.powers g) M m := by
-  letI : Module (Localization.Away f) (LocalizedModule.Away g M) :=
+  let : Module (Localization.Away f) (LocalizedModule.Away g M) :=
     Module.compHom (LocalizedModule.Away g M) (standardOpenLocalizationMap f g h)
-  letI : IsScalarTower R (Localization.Away f) (LocalizedModule.Away g M) :=
+  let : IsScalarTower R (Localization.Away f) (LocalizedModule.Away g M) :=
     IsScalarTower.of_algebraMap_smul fun r x => by
       change standardOpenLocalizationMap f g h (algebraMap R (Localization.Away f) r) • x = r • x
       rw [standardOpenLocalizationMap_algebraMap]

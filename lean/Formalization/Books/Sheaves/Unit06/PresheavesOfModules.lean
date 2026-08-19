@@ -176,25 +176,128 @@ later consumer of that construction.  It is the missing computational API
 for Mathlib's abstract left-adjoint implementation of presheaf pullback.
 -/
 
-/- The sectionwise comparison is the shared prerequisite for localization
-   in Modules 27 and for the counterexample in Sheaves 20.
+/-!
+The sectionwise comparison is the shared prerequisite for localization in
+Modules 27 and for the counterexample in Sheaves 20.  It is important that
+the comparison is made as an isomorphism of presheaves of modules: choosing
+an isomorphism separately at each open does not provide the compatibility
+with restriction maps needed by either application.
+-/
 
-   Proof roadmap:
+/-- The sectionwise extension-of-scalars object at an open. -/
+noncomputable abbrev sectionwiseExtensionOfScalarsSection
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    (U : (Opens X)ᵒᵖ) : ModuleCat (O'.obj U) :=
+  (ModuleCat.extendScalars (α.app U).hom).obj
+    (ModuleCat.of (O.obj U) (G.obj U))
 
-   1. Define restriction maps on the presheaf
-      `U ↦ extendScalars (α.app U).hom (G.obj U)` by transposing the obvious
-      restricted-scalar maps through `ModuleCat.extendRestrictScalarsAdj`.
-   2. Prove identity and composition after applying the adjunction's
-      `homEquiv`; there the equations reduce to the functoriality of `G` and
-      the naturality square for `α`.
-   3. Show this explicit presheaf functor is left adjoint to
-      `restrictionOfScalars α`, pointwise and naturally.
-   4. Use uniqueness of left adjoints to compare it with
-      `changeOfRingsCore α`; evaluate that natural isomorphism at `G` and `U`.
+/-- Existence of the restriction map for the sectionwise extension.
 
-   The construction should eventually be promoted to a natural isomorphism
-   of functors.  This objectwise statement is the smallest stable interface
-   needed by the current downstream chapters. -/
+The map is obtained by transposing the unit of
+`ModuleCat.extendRestrictScalarsAdj` through the naturality square of `α`.
+The explicit construction is intentionally hidden behind this interface;
+the presheaf and all of its coherence data use one fixed map for each arrow.
+-/
+theorem sectionwiseExtensionOfScalarsMap_exists
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    Nonempty
+      (sectionwiseExtensionOfScalarsSection α G U ⟶
+        (ModuleCat.restrictScalars (O'.map i).hom).obj
+          (sectionwiseExtensionOfScalarsSection α G V)) := by
+  sorry
+
+/-- The chosen restriction map on sectionwise extensions of scalars. -/
+noncomputable def sectionwiseExtensionOfScalarsMap
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    sectionwiseExtensionOfScalarsSection α G U ⟶
+      (ModuleCat.restrictScalars (O'.map i).hom).obj
+        (sectionwiseExtensionOfScalarsSection α G V) :=
+  Classical.choice (sectionwiseExtensionOfScalarsMap_exists α G i)
+
+/-- Identity coherence for the sectionwise extension restriction maps. -/
+theorem sectionwiseExtensionOfScalarsMap_id
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) (U : (Opens X)ᵒᵖ) :
+    sectionwiseExtensionOfScalarsMap α G (𝟙 U) =
+      (ModuleCat.restrictScalarsId' (O'.map (𝟙 U)).hom
+        (congrArg CommRingCat.Hom.hom (O'.map_id U))).inv.app _ := by
+  sorry
+
+/-- Composition coherence for the sectionwise extension restriction maps. -/
+theorem sectionwiseExtensionOfScalarsMap_comp
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V W : (Opens X)ᵒᵖ} (i : U ⟶ V) (j : V ⟶ W) :
+    sectionwiseExtensionOfScalarsMap α G (i ≫ j) =
+      sectionwiseExtensionOfScalarsMap α G i ≫
+        (ModuleCat.restrictScalars (O'.map i).hom).map
+          (sectionwiseExtensionOfScalarsMap α G j) ≫
+        (ModuleCat.restrictScalarsComp' (O'.map i).hom (O'.map j).hom
+          (O'.map (i ≫ j)).hom
+          (congrArg CommRingCat.Hom.hom (O'.map_comp i j))).inv.app _ := by
+  sorry
+
+/-- The presheaf whose sections are the explicit sectionwise extensions of scalars. -/
+noncomputable def sectionwiseExtensionOfScalars
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) :
+    CommRingPresheafModule O' where
+  obj U := sectionwiseExtensionOfScalarsSection α G U
+  map i := sectionwiseExtensionOfScalarsMap α G i
+  map_id U := sectionwiseExtensionOfScalarsMap_id α G U
+  map_comp i j := sectionwiseExtensionOfScalarsMap_comp α G i j
+
+/-- A single sectionwise comparison, natural in the open, with `changeOfRingsCore`. -/
+theorem tensorProductPresheaf_sectionwiseIso_exists
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) :
+    Nonempty
+      (sectionwiseExtensionOfScalars α G ≅
+        tensorProductPresheaf
+          (commRingPresheafMorphismToRingPresheaf α) G) := by
+  sorry
+
+/-- The coherent sectionwise extension-of-scalars comparison. -/
+noncomputable def tensorProductPresheaf_sectionwiseIso
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) :
+    sectionwiseExtensionOfScalars α G ≅
+      tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G :=
+  Classical.choice (tensorProductPresheaf_sectionwiseIso_exists α G)
+
+/-- The commutative restriction square for the sectionwise comparison. -/
+theorem tensorProductPresheaf_sectionwiseIso_naturality
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : (Opens X)ᵒᵖ} (i : U ⟶ V) :
+    sectionwiseExtensionOfScalarsMap α G i ≫
+        (ModuleCat.restrictScalars (O'.map i).hom).map
+          ((tensorProductPresheaf_sectionwiseIso α G).hom.app V) =
+      (tensorProductPresheaf_sectionwiseIso α G).hom.app U ≫
+        ((changeOfRingsCore
+          (commRingPresheafMorphismToRingPresheaf α)).obj G).map i := by
+  exact (tensorProductPresheaf_sectionwiseIso α G).hom.naturality i
+
+/-- The same commutative square written for the inclusion of opens `V ≤ U`. -/
+theorem tensorProductPresheaf_sectionwiseIso_naturality_of_le
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O)
+    {U V : Opens X} (h : V ≤ U) :
+    sectionwiseExtensionOfScalarsMap α G (homOfLE h).op ≫
+        (ModuleCat.restrictScalars (O'.map (homOfLE h).op).hom).map
+          ((tensorProductPresheaf_sectionwiseIso α G).hom.app (op V)) =
+      (tensorProductPresheaf_sectionwiseIso α G).hom.app (op U) ≫
+        ((changeOfRingsCore
+          (commRingPresheafMorphismToRingPresheaf α)).obj G).map
+          (homOfLE h).op := by
+  exact tensorProductPresheaf_sectionwiseIso_naturality α G (homOfLE h).op
+
+/-- The old objectwise interface, obtained from the coherent comparison. -/
 theorem tensorProductPresheaf_obj_iso
     {X : TopCat.{w}} {O O' : CommRingPresheaf X}
     (α : O ⟶ O') (G : CommRingPresheafModule O) (U : (Opens X)ᵒᵖ) :
@@ -204,7 +307,21 @@ theorem tensorProductPresheaf_obj_iso
         ModuleCat.of (O'.obj U)
           ((tensorProductPresheaf
             (commRingPresheafMorphismToRingPresheaf α) G).obj U)) := by
-  sorry
+  let e := tensorProductPresheaf_sectionwiseIso α G
+  exact ⟨
+    { hom := e.hom.app U
+      inv := e.inv.app U
+      hom_inv_id := by
+        change e.hom.app U ≫ e.inv.app U =
+          𝟙 ((sectionwiseExtensionOfScalars α G).obj U)
+        simpa only [PresheafOfModules.comp_app, PresheafOfModules.id_app] using
+          congrArg (fun f => f.app U) e.hom_inv_id
+      inv_hom_id := by
+        change e.inv.app U ≫ e.hom.app U =
+          𝟙 ((tensorProductPresheaf
+            (commRingPresheafMorphismToRingPresheaf α) G).obj U)
+        simpa only [PresheafOfModules.comp_app, PresheafOfModules.id_app] using
+          congrArg (fun f => f.app U) e.inv_hom_id }⟩
 
 /-- Change of rings for presheaves of modules commutes with passage to a
 stalk.  The source writes the left side in the symmetric order
@@ -222,9 +339,8 @@ Proof roadmap:
    `O'.stalk x`, and `F.stalk x`; transport the resulting isomorphism through
    the canonical `ModuleCat` stalk actions and verify `O'.stalk x`-linearity.
 
-The current blocker is the sectionwise lemma above: the public
-`PresheafOfModules.pullback` API exposes only its adjunction, not an
-objectwise extension-of-scalars model or its restriction-map coherence.
+The remaining proof uses this coherent sectionwise comparison to commute
+extension of scalars with the filtered colimit defining a stalk.
 -/
 theorem tensorProductPresheaf_stalk_iso
     {X : TopCat.{w}} {O O' : CommRingPresheaf X}

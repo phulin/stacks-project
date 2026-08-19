@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.FieldTheory.IsSepClosed
@@ -25,6 +26,7 @@ section `Henselian local rings`.
 namespace Formalization.Books.Algebra.Unit153
 
 open CategoryTheory
+open Formalization.Books.Algebra.Unit84
 open Polynomial
 open Set
 open scoped TensorProduct
@@ -108,7 +110,7 @@ def MonicDegreeFactorizationLift
       residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
         ∃ g h : Polynomial R,
           f = g * h ∧ residuePolynomial R g = g₀ ∧
-            residuePolynomial R h = h₀ ∧ g.degree = g₀.degree
+            residuePolynomial R h = h₀ ∧ g.natDegree = g₀.natDegree
 
 /-- The unrestricted factorization characterization. -/
 def FactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
@@ -127,23 +129,25 @@ def DegreeFactorizationLift
       residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
         ∃ g h : Polynomial R,
           f = g * h ∧ residuePolynomial R g = g₀ ∧
-            residuePolynomial R h = h₀ ∧ g.degree = g₀.degree
+            residuePolynomial R h = h₀ ∧ g.natDegree = g₀.natDegree
 
 /-- Existence of an étale retraction over a point with the same residue field. -/
 def EtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
-  ∀ {A : Type u} [CommRing A] [Algebra R A]
-    (_hA : Prop) (q : PrimeSpectrum A)
+  ∀ {A : Type u} [CommRing A] [Algebra R A] [Algebra.Etale R A]
+    (q : PrimeSpectrum A)
     (_hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
-    (_hqResidue : q.asIdeal.ResidueField = IsLocalRing.ResidueField R),
+    (_hqResidue : Nonempty
+      (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)),
     Nonempty (A →ₐ[R] R)
 
 /-- The unique étale retraction characterization. -/
 def UniqueEtaleRetractionProperty
     (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
-  ∀ {A : Type u} [CommRing A] [Algebra R A]
-    (_hA : Prop) (q : PrimeSpectrum A)
+  ∀ {A : Type u} [CommRing A] [Algebra R A] [Algebra.Etale R A]
+    (q : PrimeSpectrum A)
     (_hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
-    (_hqResidue : q.asIdeal.ResidueField = IsLocalRing.ResidueField R),
+    (_hqResidue : Nonempty
+      (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)),
     ∃! f : A →ₐ[R] R,
       PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q
 
@@ -482,14 +486,11 @@ theorem strictly_henselian_solution_bijection
     Function.Bijective (polynomialSystemMap φ n P) := by
   sorry
 
-/-! ## Countably generated Mittag--Leffler modules -/
+/-! The source uses the Mittag--Leffler predicate developed earlier.  The
+following definition records its finite-presentation/tensor-kernel interface
+locally because the canonical earlier file currently has an unrelated build
+failure outside this chapter's allowed edit boundary. -/
 
-/-- Countable generation by a spanning set. -/
-def CountablyGeneratedModule
-    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M] : Prop :=
-  ∃ s : Set M, s.Countable ∧ Submodule.span R s = ⊤
-
-/-- Tensor-kernel domination of linear maps. -/
 def TensorKernelDominates
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -499,7 +500,6 @@ def TensorKernelDominates
   ∀ (Q : Type (max u w)) [AddCommGroup Q] [Module R Q],
     LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q)
 
-/-- Mutual tensor-kernel domination. -/
 def MutuallyTensorKernelDominates
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -508,8 +508,6 @@ def MutuallyTensorKernelDominates
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
   TensorKernelDominates g f ∧ TensorKernelDominates f g
 
-/-- The finitely-presented factorization formulation of a Mittag--Leffler module.
-This is the module-level interface used by the source's preceding chapter. -/
 def MittagLefflerModule
     (R : Type u) [CommRing R] (M : ModuleCat.{w} R) : Prop :=
   ∀ (P : ModuleCat.{w} R), Module.FinitePresentation R P →
@@ -521,7 +519,7 @@ def MittagLefflerModule
 theorem henselian_countable_mittag_leffler
     {R M : Type u} [CommRing R] [HenselianLocalRing R]
     [AddCommGroup M] [Module R M]
-    (hcountable : CountablyGeneratedModule R M)
+    (hcountable : Module.IsCountablyGenerated R M)
     (hML : MittagLefflerModule R (ModuleCat.of R M)) :
     ∃ (I : Type u) (N : I → ModuleCat R),
       (∀ i, Module.FinitePresentation R (N i)) ∧

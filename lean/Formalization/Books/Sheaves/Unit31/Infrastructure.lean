@@ -382,7 +382,6 @@ theorem constantAddCommGrpSheaf_stalk_map_eq_zero_of_isZero
   apply (cancel_epi
     ((TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map η)).1
   rw [← Functor.map_comp]
-  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat.{v} x).map q = 0
   apply TopCat.Presheaf.stalk_hom_ext P
   intro U hxU
   let W := U ⊓ V
@@ -1254,7 +1253,7 @@ private noncomputable def openPresheafExtensionHomEquiv (C : Type u) [Category.{
     (F : TopCat.Presheaf C (openSubspace U)) (G : TopCat.Presheaf C X) :
     ((openPresheafExtensionByInitial C U).obj F ⟶ G) ≃
       (F ⟶ hf.functor.op ⋙ G) := by sorry
-/-
+/- Prior attempt (does not compile; retained for reference):
   classical
   exact {
     toFun := openPresheafExtensionToHom C U hf F G

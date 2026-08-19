@@ -82,7 +82,15 @@ noncomputable def abelianSheafGlobalSections (X : TopCat.{v}) :
   categorical form of the source's left-exact global-sections functor. -/
 theorem abelianSheafGlobalSections_isLeftExact (X : TopCat.{v}) :
     IsLeftExact (abelianSheafGlobalSections X) := by
-  sorry
+  change PreservesFiniteLimits
+    (TopCat.Sheaf.forget AddCommGrpCat X ⋙
+      (evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj (op (⊤ : Opens X)))
+  let hForget : PreservesFiniteLimits (TopCat.Sheaf.forget AddCommGrpCat X) :=
+    PreservesLimitsOfSize.preservesFiniteLimits.{v, v} _
+  let hEval : PreservesFiniteLimits
+      ((evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj (op (⊤ : Opens X))) :=
+    PreservesLimitsOfSize.preservesFiniteLimits.{v, v} _
+  exact comp_preservesFiniteLimits _ _
 
 /-- The `i`th cohomology functor of abelian sheaves on `X`.
 
@@ -136,7 +144,8 @@ noncomputable def abelianSheafPushforward {X Y : TopCat.{v}} (f : X ⟶ Y) :
 theorem abelianSheafPushforward_isLeftExact {X Y : TopCat.{v}}
     (f : X ⟶ Y) :
     IsLeftExact (abelianSheafPushforward f) := by
-  sorry
+  change PreservesFiniteLimits (TopCat.Sheaf.pushforward AddCommGrpCat f)
+  exact PreservesLimitsOfSize.preservesFiniteLimits.{v, v} _
 
 /-- The `i`th higher direct image of an abelian sheaf. -/
 noncomputable def abelianSheafHigherDirectImage
@@ -191,7 +200,9 @@ noncomputable def ringedSpaceModuleGlobalSections (X : RingedSpace.{v}) :
 /- The source's module-valued global sections are again left exact. -/
 theorem ringedSpaceModuleGlobalSections_isLeftExact (X : RingedSpace.{v}) :
     IsLeftExact (ringedSpaceModuleGlobalSections X) := by
-  sorry
+  change PreservesFiniteLimits
+    (SheafOfModules.evaluation X.structureSheaf (op (⊤ : Opens X.carrier)))
+  exact PreservesLimitsOfSize.preservesFiniteLimits.{v, v} _
 
 /-- The `i`th cohomology functor of modules on `X`. -/
 noncomputable def ringedSpaceModuleCohomology (X : RingedSpace.{v}) (i : ℤ) :

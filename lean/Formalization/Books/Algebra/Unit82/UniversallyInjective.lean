@@ -927,6 +927,7 @@ theorem universallyExact_prod
       induction t using TensorProduct.induction_on with
       | zero =>
         change (0, 0) = (0, 0)
+        rfl
       | add x y hx hy => simp only [map_add, hx, hy]
       | tmul x q => rfl
     apply e₁.injective
@@ -1042,9 +1043,9 @@ theorem integerDirectSumToProduct_flat_terms :
   exact ⟨hflat₁, hflat₂, hends.2⟩
 
 /-- The power class is divisible by every positive power of two. -/
-theorem integerPowerClass_divisible (n : ℕ) (hn : 1 ≤ n) :
+theorem integerPowerClass_divisible (n : ℕ) (_hn : 1 ≤ n) :
     ∃ y : integerCokernel, (2 : ℤ) ^ n • y = integerPowerClass := by
-  have _hn0 : n ≠ 0 := Nat.ne_of_gt hn
+  have _hn0 : n ≠ 0 := Nat.ne_of_gt _hn
   let y : integerDirectProduct := fun k => (2 : ℤ) ^ (k + 1 - n)
   let d : integerDirectProduct :=
     integerPowerSequence - (2 : ℤ) ^ n • y
@@ -1080,9 +1081,9 @@ theorem integerPowerClass_divisible (n : ℕ) (hn : 1 ≤ n) :
 /-- Every section of the quotient map kills the power class. -/
 theorem integerPowerClass_killed_by_section
     (s : integerCokernel →ₗ[ℤ] integerDirectProduct)
-    (hs : integerProductToCokernel.comp s = LinearMap.id) :
+    (_hs : integerProductToCokernel.comp s = LinearMap.id) :
     s integerPowerClass = 0 := by
-  have _ := hs
+  have _ := _hs
   funext k
   by_contra hk
   have htwo : ∀ n : ℕ, n < 2 ^ n := by
@@ -1159,8 +1160,8 @@ theorem universallyExact_directSum_with_nonflat_split
     [AddCommGroup M] [Module R M]
     (f₁ : M₁ →ₗ[R] M₂) (f₂ : M₂ →ₗ[R] M₃)
     (h : universallyExact f₁ f₂)
-    (hflat₁ : Module.Flat R M₁) (hflat₂ : Module.Flat R M₂)
-    (hflat₃ : Module.Flat R M₃) (hM : ¬ Module.Flat R M)
+    (_hflat₁ : Module.Flat R M₁) (_hflat₂ : Module.Flat R M₂)
+    (_hflat₃ : Module.Flat R M₃) (hM : ¬ Module.Flat R M)
     (hnonsplit : ¬ ∃ s : M₃ →ₗ[R] M₂, f₂.comp s = LinearMap.id) :
     universallyExact
         (f₁.prodMap (splitSequenceInjection (R := R) (M := M)))
@@ -1171,9 +1172,9 @@ theorem universallyExact_directSum_with_nonflat_split
       ¬ Module.Flat R (M₁ × M) ∧
         ¬ Module.Flat R (M₂ × (M × M)) ∧
         ¬ Module.Flat R (M₃ × M) := by
-  have _ := hflat₁
-  have _ := hflat₂
-  have _ := hflat₃
+  have _ := _hflat₁
+  have _ := _hflat₂
+  have _ := _hflat₃
   refine ⟨universallyExact_prod f₁ f₂
       (splitSequenceInjection (R := R) (M := M))
       (splitSequenceProjection (R := R) (M := M)) h
@@ -1954,7 +1955,6 @@ theorem universallyInjective_iff_check_stalks
         | tmul x y =>
             simp only [e, eN, IsLocalization.moduleTensorEquiv,
               TensorProduct.equivOfCompatibleSMul,
-              TensorProduct.mapOfCompatibleSMul_tmul,
               LinearMap.rTensor_tmul]
             rfl
       intro x y hxy
@@ -2287,9 +2287,9 @@ theorem universallyInjective_localize
     have hinj := IsLocalizedModule.map_injective S' gMQ gNQ F hF
     rw [hmap] at hinj
     exact hinj
-  · letI : Algebra R (Localization S') :=
+  · let : Algebra R (Localization S') :=
       ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
-    letI : Algebra (Localization S) (Localization S') :=
+    let : Algebra (Localization S) (Localization S') :=
       (localizationRingHom S S' hS).toAlgebra
     dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
     intro Q _ _
@@ -2467,7 +2467,6 @@ theorem universallyInjective_localize
         | tmul x y =>
             simp only [e, eN, IsLocalization.moduleTensorEquiv,
               TensorProduct.equivOfCompatibleSMul,
-              TensorProduct.mapOfCompatibleSMul_tmul,
               LinearMap.rTensor_tmul]
             rfl
       calc
@@ -2501,9 +2500,9 @@ theorem universallyInjective_localize_iff
   let _ : IsScalarTower R A N := IsScalarTower.of_compHom R A N
   constructor
   · intro hf
-    letI : Algebra R (Localization S') :=
+    let : Algebra R (Localization S') :=
       ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
-    letI : Algebra (Localization S) (Localization S') :=
+    let : Algebra (Localization S) (Localization S') :=
       (localizationRingHom S S' hS).toAlgebra
     dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
     intro Q _ _
@@ -2571,7 +2570,6 @@ theorem universallyInjective_localize_iff
         | tmul x y =>
             simp only [e, eN, IsLocalization.moduleTensorEquiv,
               TensorProduct.equivOfCompatibleSMul,
-              TensorProduct.mapOfCompatibleSMul_tmul,
               LinearMap.rTensor_tmul]
             rfl
       calc
@@ -2581,9 +2579,9 @@ theorem universallyInjective_localize_iff
         _ = (LinearMap.rTensor Q gR) (e y) := hcomm y
     exact hq
   · intro hP
-    letI : Algebra R (Localization S') :=
+    let : Algebra R (Localization S') :=
       ((algebraMap A (Localization S')).comp (algebraMap R A)).toAlgebra
-    letI : Algebra (Localization S) (Localization S') :=
+    let : Algebra (Localization S) (Localization S') :=
       (localizationRingHom S S' hS).toAlgebra
     dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver] at hP
     dsimp [universallyInjectiveAsAlgebra, universallyInjectiveOver]
@@ -2785,8 +2783,7 @@ theorem universallyInjective_into_flat_iff
       | add x y hx hy => simp only [map_add, hx, hy]
       | tmul x y =>
           obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
-          simp only [eM, eN, LinearMap.comp_apply, LinearMap.rTensor_tmul,
-            LinearEquiv.trans_apply, TensorProduct.comm_tmul]
+          simp only [eM, eN, LinearMap.comp_apply, LinearMap.rTensor_tmul]
           change (TensorProduct.quotTensorEquivQuotSMul N I)
               ((Ideal.Quotient.mk I) r ⊗ₜ[R] f x) =
             (quotientMapByIdeal I f)

@@ -1730,17 +1730,109 @@ private theorem moduleFiberProduct_hcompat
             ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] x))) at hx
     exact hx.symm
   · intro h
-    apply ModuleCat.hom_ext
-    ext x
-    induction x using TensorProduct.induction_on with
-    | zero =>
-      -- Prior attempt: simp
-      sorry
-    | add x y hx hy =>
-      -- Prior attempt: simp [hx, hy]
-      sorry
-    | tmul r y =>
-      sorry
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro y
+    have hmap :
+        (ModuleCat.extendRestrictScalarsAdj D.s).homEquiv _ _
+            ((moduleBaseChangeComparison D).hom.app L ≫
+              (ModuleCat.extendScalars D.t).map q) =
+          (ModuleCat.extendRestrictScalarsAdj D.s).homEquiv _ _
+            ((ModuleCat.extendScalars D.s).map p ≫
+              moduleGluingComparison D X) := by
+      apply ModuleCat.ExtendScalars.hom_ext
+      intro l
+      have hleft :
+          ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv L
+              X.obj.left p ≫ moduleFiberLeftMap D X) l =
+            X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+              (p ((1 : B) ⊗ₜ[B', D.u] l))) := by
+        dsimp [moduleFiberLeftMap]
+        simp [ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
+          ModuleCat.restrictScalarsComp'App_inv_apply]
+        rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+        rfl
+      have hright :
+          ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv L
+              X.obj.right q ≫ moduleFiberRightMap D X) l =
+            (1 : R) ⊗ₜ[R', D.t]
+              (q ((1 : R') ⊗ₜ[B', D.v] l)) := by
+        dsimp [moduleFiberRightMap]
+        simp [ModuleCat.extendRestrictScalarsAdj_homEquiv_apply]
+        rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+        rfl
+      have hdesired :
+          X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+            (p ((1 : B) ⊗ₜ[B', D.u] l))) =
+            (1 : R) ⊗ₜ[R', D.t]
+              (q ((1 : R') ⊗ₜ[B', D.v] l)) := by
+        rw [← hleft, ← hright]
+        exact congrArg (fun k => k l) h
+      let z0 : (ModuleCat.extendScalars (D.s.comp D.u)).obj L :=
+        ((1 : R) ⊗ₜ[B'] l)
+      let z : (ModuleCat.extendScalars D.u ⋙ ModuleCat.extendScalars D.s).obj L :=
+        (ModuleCat.extendScalarsComp D.u D.s).hom.app L z0
+      have hcancel :
+          (ModuleCat.extendScalarsComp D.u D.s).inv.app L
+              ((ModuleCat.extendScalarsComp D.u D.s).hom.app L z0) = z0 := by
+        simp
+      have heq {f g : B' →+* R} (hfg : f = g) :
+          ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) hfg)).app L).hom
+              ((1 : R) ⊗ₜ[B', f] l) =
+            (1 : R) ⊗ₜ[B', g] l := by
+        subst g
+        rfl
+      have heq' :
+          ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) D.comm)).app L).hom z0 =
+            (1 : R) ⊗ₜ[B', D.t.comp D.v] l := by
+        dsimp [z0]
+        exact heq D.comm
+      have hbase_z :
+          (moduleBaseChangeComparison D).hom.app L z =
+            (ModuleCat.extendScalarsComp D.v D.t).hom.app L
+              ((1 : R) ⊗ₜ[B', D.t.comp D.v] l) := by
+        dsimp [z, moduleBaseChangeComparison]
+        rw [hcancel]
+        dsimp [z0]
+        rw [heq']
+        rfl
+      have hF :
+          ((moduleBaseChangeComparison D).hom.app L ≫
+            (ModuleCat.extendScalars D.t).map q).hom z =
+            ((ModuleCat.extendScalars D.s).map p ≫
+              moduleGluingComparison D X).hom z := by
+        simp only [ModuleCat.hom_comp, LinearMap.comp_apply]
+        rw [hbase_z]
+        dsimp [z]
+        have hvt := ModuleCat.extendScalarsComp_hom_app_one_tmul D.v D.t L l
+        erw [hvt]
+        dsimp [z0]
+        have hut := ModuleCat.extendScalarsComp_hom_app_one_tmul D.u D.s L l
+        rw [hut]
+        change
+          ((ModuleCat.extendScalars D.t).map q).hom'
+              ((1 : R) ⊗ₜ[R', D.t]
+                ((1 : R') ⊗ₜ[B', D.v] l)) =
+            X.obj.hom.hom'
+              (((ModuleCat.extendScalars D.s).map p).hom'
+                ((1 : R) ⊗ₜ[B, D.s]
+                  ((1 : B) ⊗ₜ[B', D.u] l)))
+        exact hdesired.symm
+      change
+        ((moduleBaseChangeComparison D).hom.app L ≫
+          (ModuleCat.extendScalars D.t).map q).hom
+            ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] l)) =
+          ((ModuleCat.extendScalars D.s).map p ≫
+            moduleGluingComparison D X).hom
+            ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] l))
+      have hz : z =
+          ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] l) :
+            (ModuleCat.extendScalars D.u ⋙ ModuleCat.extendScalars D.s).obj L) := by
+        dsimp [z, z0]
+        exact ModuleCat.extendScalarsComp_hom_app_one_tmul D.u D.s L l
+      rw [← hz]
+      exact hF
+    have hmap_y := congrArg (fun k => k y) hmap
+    exact hmap_y
 
 /-- The source's module functor has the compatible-pair fibre product as a
 right adjoint. -/
@@ -1748,7 +1840,123 @@ theorem moduleFiberProduct_rightAdjoint_exists
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') :
     Nonempty (ModuleFiberProductAdjunctionData D) := by
-  sorry
+  let e : ∀ (L : ModuleCat B') (X : ModuleGluingCategory D),
+      ((moduleBaseChange D).obj L ⟶ X) ≃
+        (L ⟶ (moduleFiberProductRightAdjointCanonical D).obj X) :=
+    fun L X =>
+      { toFun := fun f =>
+          pullback.lift
+            ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ f.hom.left)
+            ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ f.hom.right)
+            ((moduleFiberProduct_hcompat D L X _ _).mp f.hom.w.symm)
+        invFun := fun g =>
+          ObjectProperty.homMk
+            { left := ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm
+                (g ≫ pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X))
+              right := ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm
+                (g ≫ pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X))
+              w := by
+                change L ⟶ moduleFiberProduct D X at g
+                symm
+                apply (moduleFiberProduct_hcompat D L X _ _).mpr
+                simp only [Equiv.apply_symm_apply]
+                change
+                  (g ≫ pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) ≫
+                      moduleFiberLeftMap D X =
+                    (g ≫ pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) ≫
+                      moduleFiberRightMap D X
+                simp only [Category.assoc]
+                rw [pullback.condition] }
+        left_inv := by
+          intro f
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext
+          · change ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm
+                (((pullback.lift _ _ _) ≫
+                  pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X))) =
+              f.hom.left
+            rw [pullback.lift_fst]
+            exact ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm_apply_apply _
+          · change ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm
+                (((pullback.lift _ _ _) ≫
+                  pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X))) =
+              f.hom.right
+            rw [pullback.lift_snd]
+            exact ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm_apply_apply _
+        right_inv := by
+          intro g
+          apply pullback.hom_ext
+          · change
+              (pullback.lift _ _ _) ≫
+                  pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X) =
+                g ≫ pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X)
+            rw [pullback.lift_fst]
+            exact ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).apply_symm_apply _
+          · change
+              (pullback.lift _ _ _) ≫
+                  pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X) =
+                g ≫ pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X)
+            rw [pullback.lift_snd]
+            exact ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).apply_symm_apply _ }
+  have e_toFun (L : ModuleCat B') (X : ModuleGluingCategory D)
+      (f : (moduleBaseChange D).obj L ⟶ X) :
+      e L X f =
+        pullback.lift
+          ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ f.hom.left)
+          ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ f.hom.right)
+          ((moduleFiberProduct_hcompat D L X _ _).mp f.hom.w.symm) := rfl
+  let adj : moduleBaseChangeFunctor D ⊣ moduleFiberProductRightAdjointCanonical D :=
+    Adjunction.mkOfHomEquiv
+      { homEquiv := fun L X => e L X
+        homEquiv_naturality_left_symm := by
+          intro L' L X f g
+          change L ⟶ moduleFiberProduct D X at g
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext
+          · change
+              ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm
+                  ((f ≫ g) ≫
+                    pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) =
+                (ModuleCat.extendScalars D.u).map f ≫
+                  ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm
+                    (g ≫ pullback.fst (moduleFiberLeftMap D X)
+                      (moduleFiberRightMap D X))
+            rw [Category.assoc]
+            rw [(ModuleCat.extendRestrictScalarsAdj D.u).homEquiv_naturality_left_symm]
+          · change
+              ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm
+                  ((f ≫ g) ≫
+                    pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) =
+                (ModuleCat.extendScalars D.v).map f ≫
+                  ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm
+                    (g ≫ pullback.snd (moduleFiberLeftMap D X)
+                      (moduleFiberRightMap D X))
+            rw [Category.assoc]
+            rw [(ModuleCat.extendRestrictScalarsAdj D.v).homEquiv_naturality_left_symm]
+        homEquiv_naturality_right := by
+          intro L X Y f g
+          apply pullback.hom_ext
+          · rw [e_toFun, e_toFun]
+            dsimp [moduleFiberProductRightAdjointCanonical]
+            simp only [moduleFiberProductMap, pullback.lift_fst, pullback.lift_fst_assoc,
+              Category.assoc]
+            change
+              (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _
+                  (f.hom.left ≫ g.hom.left) =
+                (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ f.hom.left ≫
+                  (ModuleCat.restrictScalars D.u).map g.hom.left
+            erw [(ModuleCat.extendRestrictScalarsAdj D.u).homEquiv_naturality_right]
+          · rw [e_toFun, e_toFun]
+            dsimp [moduleFiberProductRightAdjointCanonical]
+            simp only [moduleFiberProductMap, pullback.lift_snd, pullback.lift_snd_assoc,
+              Category.assoc]
+            change
+              (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _
+                  (f.hom.right ≫ g.hom.right) =
+                (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ f.hom.right ≫
+                  (ModuleCat.restrictScalars D.v).map g.hom.right
+            erw [(ModuleCat.extendRestrictScalarsAdj D.v).homEquiv_naturality_right] }
+  exact ⟨{ adjunction := adj }⟩
 
 noncomputable def moduleFiberProductAdjunctionData
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']

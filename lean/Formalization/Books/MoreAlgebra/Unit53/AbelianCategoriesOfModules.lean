@@ -186,7 +186,89 @@ abbrev localizationModuleCategory (R : Type u) [CommRing R] (S : Submonoid R) :=
 instance localizationModuleProperty_isWeakSerreClass
     (R : Type u) [CommRing R] (S : Submonoid R) :
     (localizationModuleProperty R S).IsWeakSerreClass := by
-  sorry
+  let P := localizationModuleProperty R S
+  refine @CategoryTheory.ObjectProperty.IsWeakSerreClass.mk _ _ _ P ?_ ?_
+  · refine ⟨ModuleCat.of R (Fin 0 → R), ?_⟩
+    intro s
+    constructor
+    · intro x y hxy
+      exact Subsingleton.elim _ _
+    · intro y
+      exact ⟨0, Subsingleton.elim _ _⟩
+  · intro T hT h₀ h₁ h₃ h₄
+    change (∀ s : S, Function.Bijective
+      (fun x : (T.obj' 0 : Type u) => (s : R) • x)) at h₀
+    change (∀ s : S, Function.Bijective
+      (fun x : (T.obj' 1 : Type u) => (s : R) • x)) at h₁
+    change (∀ s : S, Function.Bijective
+      (fun x : (T.obj' 3 : Type u) => (s : R) • x)) at h₃
+    change (∀ s : S, Function.Bijective
+      (fun x : (T.obj' 4 : Type u) => (s : R) • x)) at h₄
+    change ∀ s : S, Function.Bijective
+      (fun x : (T.obj' 2 : Type u) => (s : R) • x)
+    intro s
+    let f₀ := T.map' 0 1
+    let f₁ := T.map' 1 2
+    let f₂ := T.map' 2 3
+    let f₃ := T.map' 3 4
+    have h₀' : Function.Exact f₀.hom f₁.hom := by
+      rw [LinearMap.exact_iff]
+      exact (ShortComplex.moduleCat_exact_iff_range_eq_ker
+        (T.sc (hT.toIsComplex) 0)).1 (hT.exact 0) |>.symm
+    have h₁' : Function.Exact f₁.hom f₂.hom := by
+      rw [LinearMap.exact_iff]
+      exact (ShortComplex.moduleCat_exact_iff_range_eq_ker
+        (T.sc (hT.toIsComplex) 1)).1 (hT.exact 1) |>.symm
+    have h₂' : Function.Exact f₂.hom f₃.hom := by
+      rw [LinearMap.exact_iff]
+      exact (ShortComplex.moduleCat_exact_iff_range_eq_ker
+        (T.sc (hT.toIsComplex) 2)).1 (hT.exact 2) |>.symm
+    constructor
+    · intro x y hxy
+      change (s : R) • x = (s : R) • y at hxy
+      have hf₂ : f₂.hom x = f₂.hom y := by
+        apply (h₃ s).1
+        change (s : R) • f₂.hom x = (s : R) • f₂.hom y
+        rw [← map_smul, ← map_smul, hxy]
+      have hdiff : f₂.hom (x - y) = 0 := by
+        rw [map_sub, hf₂, sub_self]
+      obtain ⟨z, hz⟩ := (h₁' (x - y)).mp hdiff
+      have hf₁ : f₁.hom ((s : R) • z) = 0 := by
+        rw [map_smul, hz, smul_sub, hxy, sub_self]
+      obtain ⟨w, hw⟩ := (h₀' ((s : R) • z)).mp hf₁
+      obtain ⟨v, hv⟩ := (h₀ s).2 w
+      change (s : R) • v = w at hv
+      have hz' : f₀.hom v = z := by
+        apply (h₁ s).1
+        change (s : R) • f₀.hom v = (s : R) • z
+        rw [← map_smul, hv, hw]
+      apply sub_eq_zero.mp
+      rw [← hz, ← hz']
+      exact congrArg (fun q => q v) (hT.toIsComplex.zero 0)
+    · intro x
+      obtain ⟨y, hy⟩ := (h₃ s).2 (f₂.hom x)
+      change (s : R) • y = f₂.hom x at hy
+      have hf₃ : f₃.hom y = 0 := by
+        apply (h₄ s).1
+        change (s : R) • f₃.hom y = (s : R) • 0
+        simp only [smul_zero]
+        rw [← map_smul, hy]
+        change f₃.hom (f₂.hom x) = 0
+        exact congrArg (fun q => q x) (hT.toIsComplex.zero 2)
+      obtain ⟨z, hz⟩ := (h₂' y).mp hf₃
+      have hf₂ : f₂.hom ((s : R) • z - x) = 0 := by
+        rw [map_sub, map_smul, hz, hy, sub_self]
+      obtain ⟨w, hw⟩ := (h₁' ((s : R) • z - x)).mp hf₂
+      obtain ⟨v, hv⟩ := (h₁ s).2 w
+      change (s : R) • v = w at hv
+      refine ⟨z - f₁.hom v, ?_⟩
+      change (s : R) • (z - f₁.hom v) = x
+      calc
+        (s : R) • (z - f₁.hom v) =
+            (s : R) • z - f₁.hom ((s : R) • v) := by
+          rw [smul_sub, map_smul]
+        _ = (s : R) • z - f₁.hom w := by rw [hv]
+        _ = x := by rw [hw, sub_sub_cancel]
 
 theorem localizationModuleCategory_is_abelian
     (R : Type u) [CommRing R] (S : Submonoid R) :
@@ -458,7 +540,27 @@ instance torsionModuleProperty_isSerreClass
 theorem torsionModuleCategory_is_abelian
     (R : Type u) [CommRing R] :
     Nonempty (Abelian (torsionModuleCategory R)) := by
-  exact ⟨by sorry⟩
+  let hSerre : (torsionModuleProperty R).IsSerreClass :=
+    torsionModuleProperty_isSerreClass R
+  let P : ObjectProperty (moduleCategory R) := torsionModuleProperty R
+  let : P.IsSerreClass := hSerre
+  let : P.IsClosedUnderKernels := inferInstance
+  let : P.IsClosedUnderCokernels := inferInstance
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        intro j hj
+        obtain ⟨F, hF⟩ := hj
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF ⟨WalkingPair.left⟩) (hF ⟨WalkingPair.right⟩)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' _ _ P inferInstance inferInstance hBin
+  let : Abelian P.FullSubcategory :=
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      _ _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  exact ⟨inferInstance⟩
 
 /-! ## Finitely generated modules and the non-Noetherian obstruction -/
 
@@ -481,12 +583,56 @@ finitely generated module category. -/
 theorem idealQuotientMap_has_no_kernel
     (R : Type u) [CommRing R] (I : Ideal R) (hI : ¬ I.FG) :
     ¬ HasKernel (idealQuotientMap R I) := by
-  sorry
+  intro hK
+  letI := hK
+  let f := idealQuotientMap R I
+  let k : kernel f ⟶ FGModuleCat.of R R := kernel.ι f
+  have hrange : LinearMap.range k.hom.hom = I := by
+    apply le_antisymm
+    · rintro x ⟨y, rfl⟩
+      have hx : (Ideal.Quotient.mkₐ R I) (k.hom.hom y) = 0 := by
+        have h := congrArg (fun q => q.hom y) (kernel.condition f)
+        change f.hom (k.hom y) = 0 at h
+        change f.hom (k.hom y) = 0
+        exact h
+      exact Ideal.Quotient.eq_zero_iff_mem.mp hx
+    · intro x hx
+      let q : FGModuleCat.of R R ⟶ FGModuleCat.of R R :=
+        FGModuleCat.ofHom (LinearMap.toSpanSingleton R R x)
+      have hq : q ≫ f = 0 := by
+        apply FGModuleCat.hom_ext
+        apply LinearMap.ext
+        intro y
+        change (Ideal.Quotient.mkₐ R I) (y • x) = 0
+        rw [Ideal.Quotient.mkₐ_eq_mk, Ideal.Quotient.eq_zero_iff_mem]
+        simpa [smul_eq_mul] using I.mul_mem_left y hx
+      let l := kernel.lift f q hq
+      have hl := kernel.lift_ι f q hq
+      have hx' : k.hom.hom (l.hom.hom 1) = x := by
+        have hval := congrArg (fun m => m.hom.hom 1) hl
+        change k.hom.hom (l.hom.hom 1) = q.hom.hom 1 at hval
+        calc
+          k.hom.hom (l.hom.hom 1) = q.hom.hom 1 := hval
+          _ = x := by
+            change (LinearMap.toSpanSingleton R R x) 1 = x
+            exact LinearMap.toSpanSingleton_apply_one R R x
+      exact ⟨l.hom.hom 1, hx'⟩
+  apply hI
+  rw [← hrange]
+  exact Submodule.fg_range _
 
 theorem finitelyGeneratedModuleCategory_not_abelian_of_not_noetherian
     (R : Type u) [CommRing R] (hR : ¬ IsNoetherianRing R) :
     ¬ Nonempty (Abelian (finitelyGeneratedModuleCategory R)) := by
-  sorry
+  classical
+  intro hA
+  rcases hA with ⟨hA⟩
+  letI := hA
+  apply hR
+  rw [isNoetherianRing_iff_ideal_fg]
+  intro I
+  by_contra hI
+  exact (idealQuotientMap_has_no_kernel R I hI) inferInstance
 
 /-! ## The Noetherian case -/
 

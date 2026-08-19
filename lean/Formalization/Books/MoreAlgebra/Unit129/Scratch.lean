@@ -716,121 +716,49 @@ private theorem test_rank_one_step
     (hKfin : Module.Finite R K) (hKfree : Module.Free R K)
     (s : P) (hs : (0, s) ∈ K) :
     ∃ L : Submodule R P, s ∈ L ∧ IsComplemented L ∧
-      Module.Finite R L ∧ Module.IsStablyFree R L := by sorry
-/-
-  letI : Module.Finite R K := hKfin
-  letI : Module.Free R K := hKfree
-  obtain ⟨C, hKC⟩ := hKcomp
-  let projC : (R × P) →ₗ[R] C := C.projectionOnto K hKC.symm
-  letI : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
-    apply LinearMap.ext
-    intro c
-    exact C.projectionOnto_apply_left hKC.symm c)
-  have hCP : HasInfiniteMaximalRank R C :=
-    test_complement_infinite hP K C hKC
-  let eKC : (K × C) ≃ₗ[R] (R × P) :=
-    Submodule.prodEquivOfIsCompl K C hKC
-  let π : (R × P) →ₗ[R] C :=
-    (LinearMap.snd R K C).comp eKC.symm.toLinearMap
-  let inrP : P →ₗ[R] (R × P) := LinearMap.inr R R P
-  let t : C := π (1, 0)
-  let MC : Submodule R C := LinearMap.range (π.comp inrP)
-  have hπsurj : Function.Surjective π := by
-    intro c
-    refine ⟨eKC (0, c), ?_⟩
-    simp [π, eKC]
-  have hgenC : Submodule.span R ({t} : Set C) ⊔ MC = ⊤ := by
-    apply top_unique
-    intro c _
-    obtain ⟨⟨a, p⟩, hp⟩ := hπsurj c
-    have hsplit (a : R) (p : P) :
-        π (a, p) = a • t + π (0, p) := by
-      rw [show (a, p) = a • (1, 0) + (0, p) by ext <;> simp,
-        map_add, map_smul]
-    rw [← hp, hsplit]
-    apply Submodule.add_mem
-    · exact Submodule.smul_mem _ a
-        (Submodule.mem_sup_left (Submodule.subset_span (Set.mem_singleton t)))
-    · apply Submodule.mem_sup_right
-      exact ⟨p, by simp [MC, inrP]⟩
-  obtain ⟨mc, hmc, hU, ⟨eU⟩⟩ :=
-    test_good_element hR hCP t MC hgenC
-  obtain ⟨p, hp⟩ := hmc
-  let y : C := t + mc
-  let U : Submodule R C := Submodule.span R ({y} : Set C)
-  have hU' : IsComplemented U := by simpa [U, y] using hU
-  have hπone : π (1, p) = y := by
-    have hp' : π (0, p) = mc := by simpa [inrP] using hp
-    calc
-      π (1, p) = π ((1, 0) + (0, p)) := by congr 1 <;> ext <;> simp
-      _ = π (1, 0) + π (0, p) := map_add π (1, 0) (0, p)
-      _ = t + mc := by rw [hp']
-      _ = y := rfl
-  obtain ⟨C₂, hUC₂⟩ := hU'
-  let proj₂ : C →ₗ[R] C₂ := C₂.projectionOnto U hUC₂.symm
-  let π' : P →ₗ[R] C₂ := proj₂.comp (π.comp inrP)
-  have hπ'surj : Function.Surjective π' := by
-    intro z
-    obtain ⟨⟨a, p₀⟩, hp₀⟩ := hπsurj (z : C)
-    have hsplit (a : R) (p : P) :
-        π (a, p) = a • t + π (0, p) := by
-      rw [show (a, p) = a • (1, 0) + (0, p) by ext <;> simp,
-        map_add, map_smul]
-    have heq : (z : C) = a • y + π (0, p₀ - a • p) := by
-      have hp' : π (0, p) = mc := by simpa [inrP] using hp
-      rw [← hp₀, hsplit]
-      dsimp [y]
-      have hpairs : (0, p₀ - a • p) = (0, p₀) - a • (0, p) := by
-        ext <;> simp
-      have hdiff := congrArg π hpairs
-      rw [map_sub, map_smul, hp'] at hdiff
-      rw [hdiff]
-      abel
-    have hy0 : proj₂ y = 0 :=
-      C₂.projectionOnto_apply_of_mem_right hUC₂.symm
-        (Submodule.subset_span (Set.mem_singleton y))
-    have hproj2 (z : C₂) : proj₂ (z : C) = z :=
-      C₂.projectionOnto_apply_left hUC₂.symm z
-    refine ⟨p₀ - a • p, ?_⟩
-    change proj₂ (π (0, p₀ - a • p)) = z
-    rw [← hproj2 z, heq, map_add, map_smul, hy0]
-    simp
-  letI : Module.Projective R C₂ := Module.Projective.of_split C₂.subtype proj₂ (by
-    apply LinearMap.ext
-    intro z
-    exact C₂.projectionOnto_apply_left hUC₂.symm z)
-  obtain ⟨g, hg⟩ := Module.projective_lifting_property
-    π' (LinearMap.id : C₂ →ₗ[R] C₂) hπ'surj
-  let L : Submodule R P := LinearMap.ker π'
-  let fL : P →ₗ[R] L :=
-    (LinearMap.id - g.comp π').codRestrict L (by
-      intro q
-      apply LinearMap.mem_ker.mpr
-      simp only [LinearMap.id_apply, LinearMap.sub_apply, LinearMap.comp_apply]
-      rw [map_sub]
-      have hh : π' (g (π' q)) = π' q := by
-        have hh0 := congrArg (fun f : C₂ →ₗ[R] C₂ => f (π' q)) hg
-        simpa only [LinearMap.comp_apply, LinearMap.id_apply] using hh0
-      rw [hh]
-      simp)
-  have hfL : ∀ z : L, fL z = z := by
-    intro z
-    apply Subtype.ext
-    change (z : P) - g (π' z) = (z : P)
-    rw [LinearMap.mem_ker.mp z.property]
-    simp
-  have hLcomp : IsComplemented L :=
-    ⟨LinearMap.ker fL, LinearMap.isCompl_of_proj hfL⟩
-  have hsL : s ∈ L := by
-    apply LinearMap.mem_ker.mpr
-    have hπs : π (0, s) = 0 := by
-      change (eKC.symm (0, s)).2 = 0
-      exact (Submodule.prodEquivOfIsCompl_symm_apply_snd_eq_zero K C hKC).mpr hs
-    simp [π', inrP, hπs]
-  refine ⟨L, hsL, hLcomp, ?_, ?_⟩
-  · exact Module.Finite.of_surjective π' hπ'surj
-  · sorry
--/
+      Module.Finite R L ∧ Module.IsStablyFree R L := by
+  /-
+  Proof roadmap (the production proof is `bass_rank_one_step` in
+  `Formalization/Books/MoreAlgebra/Unit129/BigProjectiveFree.lean`):
+
+  1. Install `hKfin` and `hKfree` as instances.  The latter supplies
+     `Module.IsStablyFree R K` by the instance in
+     `Mathlib/Algebra/Module/StablyFree/Basic.lean`.  The production lemma is
+     stated with this weaker stably-free hypothesis, so its construction can
+     then be ported verbatim; it is `private`, hence cannot simply be called
+     from this scratch module.
+  2. Choose `C` with `hKC : IsCompl K C`.  Use
+     `Module.Projective.of_split`, `C.projectionOnto K hKC.symm`, and
+     `test_complement_infinite hP K C hKC` to make `C` projective and retain
+     `HasInfiniteMaximalRank R C`.  With
+     `eKC := Submodule.prodEquivOfIsCompl K C hKC`, define the projection
+     `π : R × P →ₗ[R] C`, `t := π (1, 0)`, and
+     `MC := LinearMap.range (π.comp (LinearMap.inr R R P))`.
+  3. Prove `span R {t} ⊔ MC = ⊤` from the surjectivity of `π`, then apply
+     `test_good_element hR ...` to obtain `p : P` for which
+     `y = π (1, p)` spans a complemented copy `U` of `R`.  Choose its
+     complement `C₂`, form the surjection
+     `π' : P →ₗ[R] C₂`, and split it with
+     `Module.projective_lifting_property`.
+  4. Put `L := LinearMap.ker π'`.  The idempotent
+     `id - g.comp π'` gives `IsComplemented L` via
+     `LinearMap.isCompl_of_proj`; the hypothesis `hs` and
+     `Submodule.prodEquivOfIsCompl_symm_apply_snd_eq_zero` give `s ∈ L`.
+  5. Do not try to obtain finiteness from
+     `Module.Finite.of_surjective π' hπ'surj`: its source is `P`, for which no
+     finite-generation hypothesis exists.  Instead copy the final assembly
+     of `bass_rank_one_step`: construct
+     `eα : (R × L) ≃ₗ[R] K × U` from the decompositions
+     `R × P ≃ K × (U × C₂)` and the shear `(r,l) ↦ (r,l + r • p)`.
+     Since `U ≃ₗ[R] R`, `K` is finite and stably free, and `eα` is an
+     equivalence, `R × L` is finite and stably free.  Projecting
+     `R × L →ₗ[R] L` proves `Module.Finite R L`; finally use
+     `Module.IsStablyFree.exist_free_prod`, the product reassociations
+     `LinearEquiv.prodAssoc`/`prodComm`, and
+     `Module.IsStablyFree.of_free_prod` to cancel the free `R` factor and
+     obtain `Module.IsStablyFree R L`.
+  -/
+  sorry
 
 end
 

@@ -1647,6 +1647,121 @@ theorem countable_free
     (hPgen : Formalization.Books.Algebra.Unit84.Module.IsCountablyGenerated R P)
     (hP : HasInfiniteMaximalRank R P) :
     Module.Free R P := by
+  /-
+  Proof roadmap.  Both interfaces in the statement are already the right
+  ones: `Module.IsCountablyGenerated` in
+  `Formalization/Books/Algebra/Unit84/TransfiniteDevissage.lean` is the
+  existence of a countable spanning set, and `HasInfiniteMaximalRank` above
+  uses the canonical `LocalizedModule` over `Localization.AtPrime` with the
+  cardinal inequality `aleph0 ≤ Module.rank`.  In particular, do not replace
+  the latter by a finite-rank predicate.
+
+  The shortest assembly is through
+  `Formalization.Books.Algebra.Unit85.
+    free_of_countablyGenerated_of_free_direct_summand_property` from
+  `Formalization/Books/Algebra/Unit85/ProjectiveModulesLocalRing.lean`:
+
+  1. Start with `classical` and apply that theorem to `hPgen`.  Its property
+     introduces `N N' : Type v`, module structures on both, finite/free
+     instances on `N'`, an equivalence `e : P ≃ₗ[R] N × N'`, and `x : N`.
+     Define
+       `iN := e.symm.toLinearMap.comp (LinearMap.inl R N N')` and
+       `pN := (LinearMap.fst R N N').comp e.toLinearMap`.
+     The identity `pN.comp iN = LinearMap.id` lets
+     `Module.Projective.of_split iN pN` install `Module.Projective R N`.
+
+  2. Prove a reusable local/private claim saying that removal of a finite
+     direct factor preserves `HasInfiniteMaximalRank`.  Its useful interface
+     is, schematically,
+       `rank_of_equiv_finite_right (hM : HasInfiniteMaximalRank R M)
+          [Module.Projective R A] [Module.Finite R B]
+          (eM : M ≃ₗ[R] A × B) : HasInfiniteMaximalRank R A`.
+     (The ambient `M`, retained factor `A`, and finite factor `B` are all in
+     `Type v` here.)  This is the general ambient version of
+     `bass_complement_infinite` above.  At a maximal ideal `m`, set
+       `S := m.asIdeal.primeCompl` and
+       `L := Localization.AtPrime m.asIdeal`.
+     If the localized rank of `N` were below `Cardinal.aleph0`, use
+     `Formalization.Books.Algebra.Unit85.
+       projective_free_over_local_ring` and
+     `Module.rank_lt_aleph0_iff` to make `LocalizedModule S N` finite.
+     `Module.Finite.of_isLocalizedModule` makes the localization of `N'`
+     finite.  Combine them with
+     `IsLocalizedModule.linearEquiv ... |>.extendScalarsOfIsLocalization S L`
+     for the product, and transport across `e` with
+     `IsLocalizedModule.mapEquiv`, exactly as in
+     `bass_complement_infinite`.  This would make `LocalizedModule S P`
+     finite, contradicting `hP m` via `Module.rank_lt_aleph0`.  Record the
+     resulting claim as `hNrank : HasInfiniteMaximalRank R N`.
+
+  3. Apply `element_in_free_summand hR hNrank x`.  This gives a submodule
+     `A : Submodule R N` containing `x`, a complement `C` with
+     `hAC : IsCompl A C`, `Module.Finite R A`, and
+     `Module.IsStablyFree R A`.  Make `C` projective using
+     `C.projectionOnto A hAC.symm` and `Module.Projective.of_split`.  To retain
+     `C` while discarding the finite factor `A`, apply step 2 to
+       `(Submodule.prodEquivOfIsCompl A C hAC).symm.trans
+          (LinearEquiv.prodComm R A C) : N ≃ₗ[R] C × A`.
+     This gives `hCrank : HasInfiniteMaximalRank R C`.
+
+  4. Establish the following finite-rank splitting claim by induction on
+     `n`, generalizing the ambient module `C`; it is the missing bridge from
+     stably free to free:
+       `∀ (n : ℕ) (C : Type v) [AddCommGroup C] [Module R C]
+          [Module.Projective R C], HasInfiniteMaximalRank R C →
+          ∃ G : Submodule R C, IsComplemented G ∧
+            Nonempty ((Fin n →₀ R) ≃ₗ[R] G)`.
+     For `n = 0`, take `G = ⊥`, use `isCompl_bot_top` and
+     `LinearEquiv.ofSubsingleton`.  For `n + 1`, apply
+     `trick_to_find_good_element hR hCrank 0 ⊤ (by simp)` to split a
+     complemented rank-one submodule `U` with `eU : R ≃ₗ[R] U`.
+     Choose its complement `D`; make `D` projective and give it infinite
+     maximal rank by step 2 applied to
+       `(Submodule.prodEquivOfIsCompl U D hUD).symm.trans
+          (LinearEquiv.prodComm R U D) : C ≃ₗ[R] D × U`
+     (the finiteness of `U` is transported along `eU`).  Apply the induction
+     hypothesis inside `D`.  Combine the two nested decompositions using
+     `Submodule.prodEquivOfIsCompl`, `LinearEquiv.prodAssoc`, and the explicit
+     `Finsupp.cons`/`Finsupp.tail` equivalence already used in the successor
+     branch of `bass_finite_summand`.  Define the new summand and its
+     complement as the images of the two coordinate ranges; transport
+     `LinearMap.isCompl_range_inl_inr` with
+     `Submodule.disjoint_map` and `Submodule.codisjoint_map`.
+
+  5. Extract the stabilizer supplied by
+     `Module.IsStablyFree.exist_free_prod R A`:
+       `T : Type u`, its additive/module/finite/free structures, and
+       `Module.Free R (A × T)`.
+     This universe is important: `T` is in the ring universe `u`, while the
+     submodules of `N` are in `v`; linear equivalences and linear maps allow
+     these different module universes, so no `ULift` of `N` or strengthening
+     of the theorem statement is needed.  Put
+       `ι := Module.Free.ChooseBasisIndex R T` and
+       `n := Fintype.card ι`.
+     The instance `Module.Free.ChooseBasisIndex.fintype`,
+     `(Module.Free.chooseBasis R T).repr`, and
+     `Finsupp.domLCongr (Fintype.equivFin ι)` give
+       `eT : T ≃ₗ[R] Fin n →₀ R`.
+     Apply step 4 and compose `eT` with its equivalence to obtain a
+     complemented `G ≤ C` and `eTG : T ≃ₗ[R] G`.
+
+  6. If `D` complements `G` in `C`, form the concrete nested decomposition
+       `eNested : ((A × G) × D) ≃ₗ[R] N`
+     by composing `LinearEquiv.prodAssoc`,
+     `(LinearEquiv.refl R A).prodCongr
+       (Submodule.prodEquivOfIsCompl G D hGD)`, and
+     `Submodule.prodEquivOfIsCompl A C hAC`.  Let `Q` be the range of
+     `eNested.toLinearMap.comp (LinearMap.inl R (A × G) D)`.
+     Its complementary range is obtained from `LinearMap.inr`; again use
+     `LinearMap.isCompl_range_inl_inr`, `Submodule.disjoint_map`, and
+     `Submodule.codisjoint_map`.  The element `(⟨x, hxA⟩, 0)` proves `x ∈ Q`.
+     Finally,
+       `(LinearEquiv.refl R A).prodCongr eTG : A × T ≃ₗ[R] A × G`
+     followed by `LinearEquiv.ofInjective` for the range map transports the
+     free instance on `A × T` to `Module.Free R Q` via
+     `Module.Free.of_equiv`.  Return `Q`, its membership, complement, and
+     free instance to the Unit85 theorem, which concludes `Module.Free R P`.
+  -/
   sorry
 
 end

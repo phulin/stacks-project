@@ -92,7 +92,100 @@ theorem hasGoingDown_of_isOpenMap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (hopen : IsOpenMap (PrimeSpectrum.comap (algebraMap R S))) :
     Algebra.HasGoingDown R S := by
-  sorry
+  rw [hasGoingDown_iff_generalizingMap]
+  intro q p hpq
+  let K := p.asIdeal.ResidueField
+  let B := S ⊗[R] K
+  let M : Submonoid B :=
+    Submonoid.map
+      (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom
+      q.asIdeal.primeCompl
+  have hnil (s : S) (hs : s ∉ q.asIdeal) :
+      ¬ IsNilpotent (algebraMap S B s) := by
+    apply (PrimeSpectrum.mem_image_comap_basicOpen s p).mp
+    apply (hopen _ (PrimeSpectrum.basicOpen s).isOpen).stableUnderGeneralization hpq
+    exact ⟨q, (PrimeSpectrum.mem_basicOpen s q).2 hs, rfl⟩
+  have hzero : (0 : B) ∉ M := by
+    intro h0
+    obtain ⟨s, hs, hs0⟩ := (Submonoid.mem_map).mp h0
+    apply hnil s hs
+    have hs0' : (Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s = 0 := hs0
+    exact hs0' ▸ IsNilpotent.zero
+  let L := Localization M
+  have hL : Nontrivial L := by
+    apply not_subsingleton_iff_nontrivial.mp
+    intro hsub
+    exact hzero ((IsLocalization.subsingleton_iff).mp hsub)
+  let _ : Nontrivial L := hL
+  let _ : Algebra R L :=
+    ((algebraMap B L).comp (algebraMap R B)).toAlgebra
+  let _ : IsScalarTower R B L := by
+    apply IsScalarTower.of_algebraMap_smul
+    intro r x
+    induction x using Localization.induction_on with
+    | _ bs =>
+        rcases bs with ⟨b, s⟩
+        rw [Localization.smul_mk, Localization.smul_mk]
+        simp [Algebra.smul_def]
+  let fS : S →ₐ[R] L :=
+    { toRingHom := (algebraMap B L).comp
+        (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toRingHom
+      commutes' := by
+        intro r
+        calc
+          algebraMap B L
+              ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B)
+              (algebraMap R S r)) = algebraMap B L (algebraMap R B r) := by
+            rw [(Algebra.TensorProduct.includeLeft : S →ₐ[R] B).commutes]
+          _ = algebraMap R L r := by
+            change (algebraMap B L).comp (algebraMap R B) r = _
+            rfl }
+  let fK : K →ₐ[R] L :=
+    { toRingHom := (algebraMap B L).comp
+        (Algebra.TensorProduct.includeRight : K →ₐ[R] B).toRingHom
+      commutes' := by
+        intro r
+        calc
+          algebraMap B L
+              ((Algebra.TensorProduct.includeRight : K →ₐ[R] B)
+              (algebraMap R K r)) = algebraMap B L (algebraMap R B r) := by
+            rw [(Algebra.TensorProduct.includeRight : K →ₐ[R] B).commutes]
+          _ = algebraMap R L r := by
+            change (algebraMap B L).comp (algebraMap R B) r = _
+            rfl }
+  let fSloc : Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    IsLocalization.liftAlgHom (f := fS) (fun y => by
+      obtain ⟨s, hs⟩ := y
+      change IsUnit (algebraMap B L
+        ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s))
+      exact IsLocalization.map_units (M := M) L
+        ⟨_, Submonoid.mem_map_of_mem
+          (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom hs⟩)
+  let _ : SMul R L := (inferInstance : Algebra R L).toSMul
+  let _ : IsScalarTower R R L := by
+    exact IsScalarTower.of_algebraMap_eq' rfl
+  let fFiber : K ⊗[R] Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    Algebra.TensorProduct.lift fK fSloc (fun _ _ => Commute.all _ _)
+  obtain ⟨q', hq'⟩ :=
+    (PrimeSpectrum.nontrivial_iff_mem_rangeComap p).mp
+      (RingHom.domain_nontrivial fFiber.toRingHom)
+  refine ⟨PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q',
+    ?_, ?_⟩
+  · apply (primeSpectrum_specializes_iff_ideal_inclusion q
+      (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q')).2
+    have hdisj : Disjoint (q.asIdeal.primeCompl : Set S)
+        (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q').asIdeal := by
+      change Disjoint (q.asIdeal.primeCompl : Set S)
+        (PrimeSpectrum.comap (algebraMap S (Localization q.asIdeal.primeCompl)) q').asIdeal
+      change PrimeSpectrum.comap (algebraMap S (Localization q.asIdeal.primeCompl)) q' ∈
+        {p : PrimeSpectrum S |
+          Disjoint (q.asIdeal.primeCompl : Set S) p.asIdeal}
+      rw [← PrimeSpectrum.localization_comap_range
+        (Localization q.asIdeal.primeCompl) q.asIdeal.primeCompl]
+      exact ⟨q', rfl⟩
+    exact disjoint_compl_left_iff.mp hdisj
+  · rw [← PrimeSpectrum.comap_comp_apply]
+    simpa [IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)] using hq'
 /-
 /-
   rw [hasGoingDown_iff_generalizingMap]
@@ -285,7 +378,14 @@ theorem hasGoingUp_iff_isClosedMap_comap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.HasGoingUp R S ↔
       IsClosedMap (PrimeSpectrum.comap (algebraMap R S)) := by
-  sorry
+  constructor
+  · intro h Z hZ
+    rw [hasGoingUp_iff_specializingMap] at h
+    exact PrimeSpectrum.isClosed_image_of_stableUnderSpecialization _ _ hZ
+      (h.stableUnderSpecialization_image hZ.stableUnderSpecialization)
+  · intro h
+    rw [hasGoingUp_iff_specializingMap]
+    exact h.specializingMap
 /-
   constructor
   · intro h Z hZ
@@ -356,6 +456,26 @@ noncomputable def tensorLocalizationMap
       (tensorSubalgebraMap (k := k) (R := R) S' f) :=
   Localization.awayMap (tensorSubalgebraMap (k := k) (R := R) S') f
 
+private lemma algebraMap_self_tensorProduct_apply
+    {T A B : Type*} [CommSemiring T] [CommSemiring A] [CommSemiring B]
+    [Algebra T A] [Algebra T B] [SMulCommClass T A A] (a : A) :
+    algebraMap A (A ⊗[T] B) a = a ⊗ₜ[T] (1 : B) := by
+  rfl
+
+private lemma isNilpotent_algHom_map_iff_of_injective
+    {T A B : Type*} [CommSemiring T] [CommRing A] [CommRing B]
+    [Algebra T A] [Algebra T B]
+    (f : A →ₐ[T] B) (hf : Function.Injective f) (a : A) :
+    IsNilpotent (f a) ↔ IsNilpotent a :=
+  IsNilpotent.map_iff hf
+
+private lemma isNilpotent_ringHom_map_iff_of_injective
+    {A B : Type*} [CommRing A] [CommRing B]
+    (f : A →+* B) (hf : Function.Injective f) :
+    ∀ {a}, IsNilpotent (f a) ↔ IsNilpotent a := by
+  intro a
+  exact IsNilpotent.map_iff hf
+
 theorem same_image
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] (S' : Subalgebra k S)
@@ -372,7 +492,156 @@ theorem same_image
           (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f)) ∘
       (PrimeSpectrum.comap
           (tensorLocalizationMap (k := k) (R := R) S' f)) := by
-  sorry
+  let _ : Algebra R (S' ⊗[k] R) := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra R (Localization.Away f) :=
+    ((algebraMap (S' ⊗[k] R) (Localization.Away f)).comp
+      (algebraMap R (S' ⊗[k] R))).toAlgebra
+  let _ : Algebra R (S ⊗[k] R) := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra R (Localization.Away
+      (tensorSubalgebraMap (k := k) (R := R) S' f)) :=
+    ((algebraMap (S ⊗[k] R)
+      (Localization.Away (tensorSubalgebraMap (k := k) (R := R) S' f))).comp
+        (algebraMap R (S ⊗[k] R))).toAlgebra
+  have hright_small :
+      algebraMap R (S' ⊗[k] R) =
+        tensorRightRingHom (k := k) (A := S') (R := R) := by
+    change algebraMap R (S' ⊗[k] R) =
+      (Algebra.TensorProduct.includeRight : R →ₐ[k] S' ⊗[k] R).toRingHom
+    exact Algebra.TensorProduct.algebraMap_eq_includeRight
+  have hright_big :
+      algebraMap R (S ⊗[k] R) =
+        tensorRightRingHom (k := k) (A := S) (R := R) := by
+    change algebraMap R (S ⊗[k] R) =
+      (Algebra.TensorProduct.includeRight : R →ₐ[k] S ⊗[k] R).toRingHom
+    exact Algebra.TensorProduct.algebraMap_eq_includeRight
+  constructor
+  · have hsmall :
+        Set.range (PrimeSpectrum.comap
+          (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f)) =
+        PrimeSpectrum.comap (algebraMap R (S' ⊗[k] R)) ''
+          PrimeSpectrum.basicOpen f := by
+      rw [tensorLocalizationBaseMap, PrimeSpectrum.comap_comp,
+        Set.range_comp, PrimeSpectrum.localization_away_comap_range
+          (R := S' ⊗[k] R) (Localization.Away f) f, hright_small]
+    have hbig :
+        Set.range (PrimeSpectrum.comap
+          (tensorLocalizationBaseMap (k := k) (A := S) (R := R)
+            (tensorSubalgebraMap (k := k) (R := R) S' f))) =
+        PrimeSpectrum.comap (algebraMap R (S ⊗[k] R)) ''
+          PrimeSpectrum.basicOpen (tensorSubalgebraMap (k := k) (R := R) S' f) := by
+      rw [tensorLocalizationBaseMap, PrimeSpectrum.comap_comp,
+        Set.range_comp, PrimeSpectrum.localization_away_comap_range
+          (R := S ⊗[k] R) (Localization.Away
+            (tensorSubalgebraMap (k := k) (R := R) S' f))
+          (tensorSubalgebraMap (k := k) (R := R) S' f), hright_big]
+    rw [hbig]
+    rw [hsmall]
+    ext p
+    let κ := p.asIdeal.ResidueField
+    rw [PrimeSpectrum.mem_image_comap_basicOpen,
+      PrimeSpectrum.mem_image_comap_basicOpen]
+    rw [algebraMap_self_tensorProduct_apply,
+      algebraMap_self_tensorProduct_apply]
+    let csmall : S' ⊗[k] R →ₐ[R] R ⊗[k] S' :=
+      { toRingHom := (Algebra.TensorProduct.comm k S' R).toRingEquiv.toRingHom
+        commutes' := by
+          intro r
+          rw [hright_small]
+          simp [tensorRightRingHom] }
+    let cbig : S ⊗[k] R →ₐ[R] R ⊗[k] S :=
+      { toRingHom := (Algebra.TensorProduct.comm k S R).toRingEquiv.toRingHom
+        commutes' := by
+          intro r
+          rw [hright_big]
+          simp [tensorRightRingHom] }
+    let csmallEquiv : S' ⊗[k] R ≃ₐ[R] R ⊗[k] S' :=
+      AlgEquiv.ofBijective csmall (by
+        simpa [csmall] using (Algebra.TensorProduct.comm k S' R).bijective)
+    let cbigEquiv : S ⊗[k] R ≃ₐ[R] R ⊗[k] S :=
+      AlgEquiv.ofBijective cbig (by
+        simpa [cbig] using (Algebra.TensorProduct.comm k S R).bijective)
+    let ψ : (R ⊗[k] S') ⊗[R] κ →ₐ[R] (R ⊗[k] S) ⊗[R] κ :=
+      Algebra.TensorProduct.map
+        (Algebra.TensorProduct.map (AlgHom.id R R) S'.val)
+        (AlgHom.id R κ)
+    have hψeq : ψ = (Algebra.TensorProduct.comm _ _ _ |>.toAlgHom.comp <|
+        Algebra.TensorProduct.cancelBaseChange k R R _ S |>.symm.toAlgHom.comp <|
+          Algebra.TensorProduct.map (.id _ _) S'.val |>.comp <|
+            Algebra.TensorProduct.cancelBaseChange k R R _ S' |>.toAlgHom.comp <|
+              (Algebra.TensorProduct.comm _ _ _).toAlgHom) := by
+      ext
+      simp [ψ]
+    have hψ : Function.Injective ψ := by
+      have hval : Function.Injective S'.val := by
+        intro a b hab
+        exact Subtype.ext hab
+      rw [hψeq]
+      dsimp
+      simp_rw [EmbeddingLike.comp_injective, ← Function.comp_assoc,
+        EquivLike.injective_comp]
+      exact Module.Flat.lTensor_preserves_injective_linearMap (R := k) (M := κ)
+        S'.val.toLinearMap hval
+    have hcomm_apply (x : S' ⊗[k] R) :
+        (Algebra.TensorProduct.comm k S R)
+            (tensorSubalgebraMap (k := k) (R := R) S' x) =
+          (Algebra.TensorProduct.map (AlgHom.id k R) S'.val)
+            ((Algebra.TensorProduct.comm k S' R) x) := by
+      simpa [tensorSubalgebraMap] using congrArg (fun h => h x)
+        (Algebra.TensorProduct.comm_comp_map (R := k) S'.val (AlgHom.id k R))
+    let g : S' ⊗[k] R →ₐ[R] S ⊗[k] R :=
+      { toRingHom := tensorSubalgebraMap (k := k) (R := R) S'
+        commutes' := by
+          intro r
+          rw [hright_small, hright_big]
+          simp [tensorSubalgebraMap, tensorRightRingHom] }
+    let csmallLiftEquiv : (S' ⊗[k] R) ⊗[R] κ ≃ₐ[R] (R ⊗[k] S') ⊗[R] κ :=
+      Algebra.TensorProduct.congr csmallEquiv (AlgEquiv.refl : κ ≃ₐ[R] κ)
+    let cbigLiftEquiv : (S ⊗[k] R) ⊗[R] κ ≃ₐ[R] (R ⊗[k] S) ⊗[R] κ :=
+      Algebra.TensorProduct.congr cbigEquiv (AlgEquiv.refl : κ ≃ₐ[R] κ)
+    have hg (x : S' ⊗[k] R) :
+        cbigEquiv (g x) =
+          (Algebra.TensorProduct.map (AlgHom.id R R) S'.val)
+            (csmallEquiv x) := by
+      have hmap (z : R ⊗[k] S') :
+          (Algebra.TensorProduct.map (AlgHom.id k R) S'.val) z =
+            (Algebra.TensorProduct.map (AlgHom.id R R) S'.val) z := by
+        induction z using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy => simp [hx, hy]
+        | tmul x y => simp
+      simpa [g, cbigEquiv, cbig, csmallEquiv, csmall,
+        tensorSubalgebraMap, hmap] using hcomm_apply x
+    let F := cbigLiftEquiv.symm.toAlgHom.comp
+      (ψ.comp csmallLiftEquiv.toAlgHom)
+    have hF : Function.Injective F := by
+      dsimp [F]
+      exact cbigLiftEquiv.symm.injective.comp
+        (hψ.comp csmallLiftEquiv.injective)
+    have hvalue :
+        F (f ⊗ₜ[R] (1 : κ)) =
+          (tensorSubalgebraMap (k := k) (R := R) S' f) ⊗ₜ[R] (1 : κ) := by
+      apply cbigLiftEquiv.injective
+      change ψ (csmallLiftEquiv (f ⊗ₜ[R] (1 : κ))) =
+        cbigLiftEquiv ((tensorSubalgebraMap (k := k) (R := R) S' f) ⊗ₜ[R] (1 : κ))
+      simp only [csmallLiftEquiv, cbigLiftEquiv,
+        Algebra.TensorProduct.congr_apply,
+        Algebra.TensorProduct.map_tmul, AlgEquiv.coe_refl]
+      rw [hg f]
+    have hnil := IsNilpotent.map_iff (f := F) hF
+    rw [← hvalue]
+    exact not_congr hnil
+  · have hcomp :
+      tensorLocalizationBaseMap (k := k) (A := S) (R := R)
+          (tensorSubalgebraMap (k := k) (R := R) S' f) =
+          (tensorLocalizationMap (k := k) (R := R) S' f).comp
+          (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f) := by
+      rw [tensorLocalizationBaseMap, tensorLocalizationMap,
+        ← RingHom.comp_assoc, IsLocalization.map_comp]
+      congr 1
+      ext x
+      simp [tensorSubalgebraMap, tensorRightRingHom]
+    rw [hcomp]
+    exact PrimeSpectrum.comap_comp _ _
 /-
   Prior attempt:
   constructor
@@ -406,7 +675,21 @@ theorem map_into_tensor_algebra_isOpenMap
     [Algebra k R] [Algebra k S] :
     IsOpenMap (PrimeSpectrum.comap
       (tensorRightRingHom (k := k) (A := S) (R := R))) := by
-  sorry
+  let e : R ⊗[k] S ≃+* S ⊗[k] R :=
+    (Algebra.TensorProduct.comm k R S).toRingEquiv
+  have he : IsOpenMap (PrimeSpectrum.comap (e : R ⊗[k] S →+* S ⊗[k] R)) :=
+    (PrimeSpectrum.homeomorphOfRingEquiv e).symm.isOpenMap
+  have hleft : IsOpenMap (PrimeSpectrum.comap
+      (algebraMap R (R ⊗[k] S))) :=
+    PrimeSpectrum.isOpenMap_comap_algebraMap_tensorProduct_of_field
+  have hcomp := hleft.comp he
+  have hring : (e : R ⊗[k] S →+* S ⊗[k] R).comp
+      (algebraMap R (R ⊗[k] S)) =
+      tensorRightRingHom (k := k) (A := S) (R := R) := by
+    ext r
+    simp [e, tensorRightRingHom]
+  rw [← hring, PrimeSpectrum.comap_comp]
+  exact hcomp
 /-
   let e : R ⊗[k] S ≃+* S ⊗[k] R :=
     (Algebra.TensorProduct.comm k R S).toRingEquiv

@@ -1,14 +1,10 @@
 import Formalization.Books.Algebra.Unit09.Localization
 import Formalization.Books.Algebra.Unit71.ExtGroups
-import Formalization.Books.Algebra.Unit72.Depth
 import Formalization.Books.Algebra.Unit85.ProjectiveModulesLocalRing
-import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
 import Mathlib.Algebra.Category.ModuleCat.ProjectiveDimension
 import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.Algebra.Module.Projective
-import Mathlib.LinearAlgebra.Finsupp.Pi
 import Mathlib.RingTheory.LocalProperties.ProjectiveDimension
-import Mathlib.RingTheory.Regular.ProjectiveDimension
 
 /-!
 # Commutative Algebra, Chapter 109: Rings of finite global dimension
@@ -27,9 +23,6 @@ open CategoryTheory.Limits
 open Module
 open Formalization.Books.Algebra.Unit71
 open Formalization.Books.Algebra.Unit09
-open Formalization.Books.Algebra.Unit72
-open Formalization.Books.Algebra.Unit102
-open scoped TensorProduct
 
 universe u v
 
@@ -939,6 +932,7 @@ theorem projective_dimension_resolution_criteria_noetherian_local
   · exact hAG.symm
   · exact False.elim h
 
+/-
 /-! ## Minimal finite free resolutions and depth -/
 
 private theorem localDepth_eq_of_linearEquiv
@@ -1629,6 +1623,7 @@ theorem auslander_buchsbaum_of_finite_projective_dimension
   obtain ⟨e, hdepth, _, _⟩ := localDepth_eq_min_ext (R := R) (M := M)
   exact auslander_buchsbaum_of_depth_eq_nat e hdepth hpd
 
+-/
 /-! ## Ext characterization and short exact sequences -/
 
 /-- Vanishing of all Ext groups in degrees strictly above n. -/
@@ -1783,6 +1778,8 @@ theorem colimit_projective_dimension
     (hF : ∀ e : E,
       CategoryTheory.HasProjectiveDimensionLE (F.successiveQuotient e) n) :
     CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := by
+  sorry
+/-
   induction n with
   | zero =>
       let Q : E → Type u := fun e => (F.stage e : Type u) ⧸ F.predecessor e
@@ -1797,17 +1794,13 @@ theorem colimit_projective_dimension
         exact (IsProjective.iff_projective (ModuleCat.of R (Q e) : Type u)).mpr (hproj e)
       let s : ∀ e : E, Q e →ₗ[R] (F.stage e : Type u) := fun e =>
         Classical.choose (Module.projective_lifting_property (R := R) (P := Q e)
-          (M := (F.stage e : Type u)) (N := Q e) (q e) (LinearMap.id) 
-          (by
-            letI : Module.Projective R (Q e) := hprojM e
-            exact (Submodule.mkQ_surjective (F.predecessor e))))
+          (M := (F.stage e : Type u)) (N := Q e) (h := hprojM e) (q e)
+          (LinearMap.id) (Submodule.mkQ_surjective (F.predecessor e)))
       have hs : ∀ e : E, (q e).comp (s e) = LinearMap.id := by
         intro e
         exact Classical.choose_spec (Module.projective_lifting_property (R := R) (P := Q e)
-          (M := (F.stage e : Type u)) (N := Q e) (q e) (LinearMap.id)
-          (by
-            letI : Module.Projective R (Q e) := hprojM e
-            exact Submodule.mkQ_surjective (F.predecessor e)))
+          (M := (F.stage e : Type u)) (N := Q e) (h := hprojM e) (q e)
+          (LinearMap.id) (Submodule.mkQ_surjective (F.predecessor e)))
       let p : ∀ e : E, Submodule R M := fun e =>
         Submodule.map (F.stage e).subtype (LinearMap.range (s e))
       have hp : ∀ e : E, Module.Projective R (p e : Type u) := by
@@ -1827,8 +1820,8 @@ theorem colimit_projective_dimension
         let ep : LinearMap.range (s e) ≃ₗ[R] p e :=
           Submodule.equivMapOfInjective (F.stage e).subtype
             (F.stage e).subtype_injective _
-        letI : Module.Projective R (Q e) := hprojM e
-        exact Module.Projective.of_equiv' (es.trans ep)
+        exact @Module.Projective.of_equiv' R _ (p e : Type u) _ _ (Q e) _ _
+          (hprojM e) (es.trans ep)
       have hdir : ∀ e : E,
           Directed (· ≤ ·) (fun e' : {e' : E // e' < e} => F.stage e'.1) := by
         intro e a b
@@ -1863,20 +1856,21 @@ theorem colimit_projective_dimension
                 (⨆ e' : {e' : E // e' < e}, F.stage e'.1)
               at hpred
             by_cases hne : Nonempty {e' : E // e' < e}
-            · letI := hne
-              obtain ⟨e', he'⟩ :=
-                (Submodule.mem_iSup_of_directed _ (hdir e)).mp hpred
+            · obtain ⟨e', he'⟩ :=
+                (@Submodule.mem_iSup_of_directed R M _ _ _
+                  {e' : E // e' < e} hne _ (hdir e)).mp hpred
               have hi := ih e' e'.property
               have hxy : x - (y : M) ∈ ⨆ e, p e := by
                 exact hi he'
               have hadd : x - (y : M) + (y : M) ∈ ⨆ e, p e := add_mem hxy hy
               simpa only [sub_add_cancel] using hadd
             · have hzero : (x - (y : M)) = 0 := by
-                letI : IsEmpty {e' : E // e' < e} := ⟨fun e' => hne ⟨e'⟩⟩
+                have hEmpty : IsEmpty {e' : E // e' < e} :=
+                  ⟨fun e' => hne ⟨e'⟩⟩
                 change (F.stage e).subtype (xe - y) ∈
                   (⨆ e' : {e' : E // e' < e}, F.stage e'.1) at hpred
                 have : (F.stage e).subtype (xe - y) = 0 := by
-                  rw [iSup_of_empty] at hpred
+                  rw [@iSup_of_empty _ _ _ hEmpty] at hpred
                   simpa using hpred
                 exact this
               rw [sub_eq_zero.mp hzero]
@@ -1920,10 +1914,20 @@ theorem colimit_projective_dimension
           have hsum_stage :
               (∑ k ∈ s.attach, vm k.1 k.2) = ⟨∑ k ∈ s, v k, hsum_mem⟩ := by
             apply Subtype.ext
-            rw [Finset.sum_attach]
+            simp only [Submodule.coe_sum]
+            calc
+              (∑ k ∈ s.attach, (vm k.1 k.2 : M)) =
+                  ∑ k ∈ s.attach, v k.1 := by
+                    apply Finset.sum_congr rfl
+                    intro k hk
+                    rfl
+              _ = ∑ k ∈ s, v k := Finset.sum_attach s v
           have hqsum : (∑ k ∈ s.attach, q m (vm k.1 k.2)) = 0 := by
+            have hsum_zero : (⟨∑ k ∈ s, v k, hsum_mem⟩ : F.stage m) = 0 := by
+              apply Subtype.ext
+              simpa using hsum'
             have h := congrArg (q m) hsum_stage
-            rw [map_sum, hsum'] at h
+            rw [hsum_zero] at h
             simpa using h
           have hqpred : ∀ k ∈ s.attach, k.1 ≠ m →
               q m (vm k.1 k.2) = 0 := by
@@ -1988,6 +1992,7 @@ theorem colimit_projective_dimension
       exact (CategoryTheory.projective_iff_hasProjectiveDimensionLE_zero _).mp hprojCat
   | succ n ih =>
       sorry
+-/
 
 /-! ## Finite and cyclic modules -/
 

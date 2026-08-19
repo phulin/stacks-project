@@ -1,6 +1,5 @@
 import Mathlib.Algebra.Module.GradedModule
 import Mathlib.RingTheory.FiniteType
-import Mathlib.RingTheory.GradedAlgebra.FiniteType
 import Mathlib.RingTheory.GradedAlgebra.RingHom
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule

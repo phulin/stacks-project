@@ -1464,7 +1464,8 @@ theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]
   letI : T'.Faithful := by
     constructor
     intro X Y f g h
-    exact T.map_injective h
+    apply T.map_injective
+    exact h
   exact CategoryTheory.Functor.reflects_exact_of_faithful T' _ hST
 
 /-- The standard-open section maps of associated module sheaves are functorial. -/

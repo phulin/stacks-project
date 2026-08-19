@@ -304,7 +304,7 @@ private theorem sheafPullbackCompIso_assoc_app (C : Type u) [Category.{v} C]
         (eqToIso hgh) (eqToIso hfg) (eqToIso hfull') (eqToIso hfull)
         (by
           ext X
-          simp [Category.assoc, eqToHom_map])
+          simp [eqToHom_map])
     have hgh_id : eqToHom hgh = 𝟙 _ := by cases hgh; rfl
     have hfg_id : eqToHom hfg = 𝟙 _ := by cases hfg; rfl
     have hfull_id : eqToHom hfull = 𝟙 _ := by cases hfull; rfl

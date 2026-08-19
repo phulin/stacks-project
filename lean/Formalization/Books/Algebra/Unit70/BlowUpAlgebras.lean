@@ -599,46 +599,7 @@ structure PolynomialReesPresentation (R : Type u) [CommRing R] (n : ℕ) where
 /-- The polynomial Rees algebra is presented by the `2 × 2` relations. -/
 theorem polynomial_rees_presentation
     (R : Type u) [CommRing R] (n : ℕ) :
-    Nonempty (PolynomialReesPresentation R n) := by
-  classical
-  let P := polynomialRing R n
-  let T := MvPolynomial (Fin n) P
-  let I := polynomialVariableIdeal R n
-  let eval : T →ₐ[P] _ :=
-    MvPolynomial.aeval (fun i => polynomialReesVariable R n i)
-  have hrel : polynomialReesRelationIdeal R n ≤ RingHom.ker eval.toRingHom := by
-    apply Ideal.span_le.2
-    rintro z ⟨⟨i, j⟩, rfl⟩
-    change eval (MvPolynomial.C (MvPolynomial.X i) * MvPolynomial.X j -
-      MvPolynomial.C (MvPolynomial.X j) * MvPolynomial.X i) = 0
-    have hCi : eval (MvPolynomial.C (MvPolynomial.X i)) =
-        algebraMap P (reesAlgebra I) (MvPolynomial.X i) := by
-      change eval (algebraMap P T (MvPolynomial.X i)) = _
-      exact eval.commutes _
-    have hCj : eval (MvPolynomial.C (MvPolynomial.X j)) =
-        algebraMap P (reesAlgebra I) (MvPolynomial.X j) := by
-      change eval (algebraMap P T (MvPolynomial.X j)) = _
-      exact eval.commutes _
-    have hXi : eval (MvPolynomial.X i) = polynomialReesVariable R n i := by
-      exact MvPolynomial.aeval_X (fun i => polynomialReesVariable R n i) i
-    have hXj : eval (MvPolynomial.X j) = polynomialReesVariable R n j := by
-      exact MvPolynomial.aeval_X (fun i => polynomialReesVariable R n i) j
-    rw [map_sub, map_mul, map_mul, hCi, hXj, hCj, hXi]
-    apply Subtype.ext
-    simp [polynomialReesVariable, reesDegreeOneElement,
-      reesElement]
-    rw [show (algebraMap P (polynomialRing R n)) (MvPolynomial.X i) *
-          MvPolynomial.X j =
-        (algebraMap P (polynomialRing R n)) (MvPolynomial.X j) *
-          MvPolynomial.X i by
-            change MvPolynomial.X j * MvPolynomial.X i =
-              MvPolynomial.X i * MvPolynomial.X j
-            ring]
-    simp
-  let qmap : T ⧸ polynomialReesRelationIdeal R n →ₐ[P] reesAlgebra I :=
-    Ideal.Quotient.liftₐ (polynomialReesRelationIdeal R n) eval
-      (fun z hz => hrel hz)
-  sorry
+    Nonempty (PolynomialReesPresentation R n) := by sorry
 
 /-- A multi-index and its total degree. -/
 abbrev multiIndex (n : ℕ) := Fin n →₀ ℕ

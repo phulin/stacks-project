@@ -1165,7 +1165,13 @@ theorem graded_hilbert_function_length_numerical
     [IsArtinianRing (degreeZeroSubring G)]
     (hdegree : GeneratedInDegreeOne G) :
     IsNumericalPolynomial (degreeZeroHilbertFunctionLength G 𝓜 hS) := by
-  sorry
+  rcases graded_hilbert_polynomial G 𝓜 hS hdegree with ⟨r, a, ha⟩
+  refine ⟨r, fun i => kPrimeZeroLength (R := degreeZeroSubring G) (a i), ?_⟩
+  filter_upwards [ha] with n hn
+  change kPrimeZeroLength (R := degreeZeroSubring G)
+      (noetherianGradedHilbertFunction G 𝓜 hS n) = _
+  rw [hn]
+  simp only [map_sum, map_zsmul]
 
 theorem field_kprimeZero_length_eq_finrank
     {k : Type u} [Field k] {N : Type v}

@@ -408,13 +408,29 @@ theorem dimension_eq_localization_add_quotient
     ringKrullDim R =
       ringKrullDim (Localization.AtPrime p.asIdeal) +
         ringKrullDim (R ⧸ p.asIdeal) := by
-  sorry
+  apply Formalization.Books.Algebra.Unit103.ringKrullDim_eq_localization_add_quotientDim
+    (M := R) hR ?_ p
+  ext q
+  rw [Module.mem_support_iff]
+  constructor
+  · intro _
+    trivial
+  · intro _
+    rw [← not_subsingleton_iff_nontrivial]
+    intro hs
+    rcases (LocalizedModule.subsingleton_iff.mp hs) (1 : R) with ⟨s, hs, hzero⟩
+    have hz : s = 0 := by
+      simp only [smul_eq_mul, mul_one] at hzero
+      exact hzero
+    apply hs
+    rw [hz]
+    exact Ideal.zero_mem _
 
 theorem isCohenMacaulayLocalRing_localization
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     (hR : IsCohenMacaulayLocalRing R) (p : PrimeSpectrum R) :
     IsCohenMacaulayLocalRing (Localization.AtPrime p.asIdeal) := by
-  sorry
+  exact Formalization.Books.Algebra.Unit103.isCohenMacaulay_localize hR p
 
 /- A global Cohen-Macaulay ring is one whose local rings at all primes are
    Cohen-Macaulay. -/
@@ -427,7 +443,63 @@ theorem isCohenMacaulayRing_mPolynomial
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     (hR : IsCohenMacaulayRing R) (n : ℕ) :
     IsCohenMacaulayRing (MvPolynomial (Fin n) R) := by
-  sorry
+  unfold IsCohenMacaulayRing
+  intro q
+  have hpoly :=
+    Formalization.Books.Algebra.Unit103.isCohenMacaulayModule_polynomialModuleExtension
+      (R := R) (M := R) hR n q
+  let e₀ :
+      (MvPolynomial (Fin n) R ⊗[R] R) ≃ₗ[MvPolynomial (Fin n) R]
+        MvPolynomial (Fin n) R :=
+    TensorProduct.AlgebraTensorModule.rid R (MvPolynomial (Fin n) R)
+      (MvPolynomial (Fin n) R)
+  let e₁ :
+      LocalizedModule.AtPrime q.asIdeal
+          (MvPolynomial (Fin n) R ⊗[R] R) ≃ₗ[MvPolynomial (Fin n) R]
+        LocalizedModule.AtPrime q.asIdeal (MvPolynomial (Fin n) R) :=
+    LinearEquiv.ofBijective
+      (IsLocalizedModule.map q.asIdeal.primeCompl
+        (LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+          (MvPolynomial (Fin n) R ⊗[R] R))
+        (LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+          (MvPolynomial (Fin n) R)) e₀.toLinearMap)
+      ⟨IsLocalizedModule.map_injective q.asIdeal.primeCompl
+          (f := LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+            (MvPolynomial (Fin n) R ⊗[R] R))
+          (g := LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+            (MvPolynomial (Fin n) R)) e₀.toLinearMap e₀.injective,
+        IsLocalizedModule.map_surjective q.asIdeal.primeCompl
+          (f := LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+            (MvPolynomial (Fin n) R ⊗[R] R))
+          (g := LocalizedModule.mkLinearMap q.asIdeal.primeCompl
+            (MvPolynomial (Fin n) R)) e₀.toLinearMap e₀.surjective⟩
+  let e₂ :
+      LocalizedModule.AtPrime q.asIdeal
+          (MvPolynomial (Fin n) R ⊗[R] R) ≃ₗ[Localization.AtPrime q.asIdeal]
+        LocalizedModule.AtPrime q.asIdeal (MvPolynomial (Fin n) R) :=
+    e₁.extendScalarsOfIsLocalization q.asIdeal.primeCompl
+      (Localization.AtPrime q.asIdeal)
+  exact (isCohenMacaulay_linearEquiv e₂).mp hpoly
+
+private theorem localDepth_eq_of_linearEquiv
+    {R M N : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N] [Module.Finite R N]
+    (e : M ≃ₗ[R] N) :
+    localDepth R M = localDepth R N := by
+  unfold localDepth
+  rw [depth_eq_sSup_weaklyRegular, depth_eq_sSup_weaklyRegular]
+  congr 1
+  ext n
+  constructor
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.map_smul r x)).mp hreg
+  · rintro ⟨rs, rfl, hmem, hreg⟩
+    refine ⟨rs, rfl, hmem, ?_⟩
+    exact (e.symm.toAddEquiv.isWeaklyRegular_congr
+      (List.forall₂_same.mpr fun r _ x => e.symm.map_smul r x)).mp hreg
 
 /-! ## Dimension shift and MCM resolutions -/
 
@@ -448,7 +520,136 @@ theorem dimension_shift_in_exact_sequence
             ((localDepth R M : ℕ∞) : WithBot ℕ∞)) ∧
           ((localDepth R M : ℕ∞) : WithBot ℕ∞) =
             (((d : ℕ∞) : WithBot ℕ∞))) := by
-  sorry
+  have hRdim :
+      ((localDepth R R : ℕ∞) : WithBot ℕ∞) = ringKrullDim R := by
+    exact hR.trans (Module.supportDim_self_eq_ringKrullDim R)
+  have hfree : ∀ k : ℕ, localDepth R (Fin k.succ → R) = localDepth R R := by
+    intro k
+    induction k with
+    | zero =>
+        exact localDepth_eq_of_linearEquiv
+          (LinearEquiv.piUnique R (fun _ : Fin 1 => R))
+    | succ k ih =>
+        let e : (R × (Fin k.succ → R)) ≃ₗ[R] (Fin k.succ.succ → R) :=
+          Fin.consLinearEquiv R (fun _ : Fin k.succ.succ => R)
+        let f₀ := e.toLinearMap.comp (LinearMap.inl R R (Fin k.succ → R))
+        let g₀ := (LinearMap.snd R R (Fin k.succ → R)).comp e.symm.toLinearMap
+        have hf₀ : Function.Injective f₀ := by
+          have hinj : Function.Injective
+              (LinearMap.inl R R (Fin k.succ → R)) := LinearMap.inl_injective
+          exact e.injective.comp hinj
+        have hfg₀ : Function.Exact f₀ g₀ := by
+          exact (LinearEquiv.conj_exact_iff_exact
+            (LinearMap.inl R R (Fin k.succ → R))
+            (LinearMap.snd R R (Fin k.succ → R)) e).2
+            Function.Exact.inl_snd
+        have hg₀ : Function.Surjective g₀ := by
+          have hsurj : Function.Surjective
+              (LinearMap.snd R R (Fin k.succ → R)) := LinearMap.snd_surjective
+          exact hsurj.comp e.symm.surjective
+        have hseq := localDepth_shortExact f₀ g₀ hf₀ hfg₀ hg₀
+        have hge :
+            localDepth R (Fin k.succ.succ → R) ≥ localDepth R R := by
+          simpa [ih] using hseq.1
+        have hle :
+            ((localDepth R (Fin k.succ.succ → R) : ℕ∞) : WithBot ℕ∞) ≤
+              ((localDepth R R : ℕ∞) : WithBot ℕ∞) := by
+          calc
+            ((localDepth R (Fin k.succ.succ → R) : ℕ∞) : WithBot ℕ∞) ≤
+                Module.supportDim R (Fin k.succ.succ → R) :=
+              supportDim_ge_localDepth
+            _ ≤ ringKrullDim R :=
+              Module.supportDim_le_ringKrullDim R (Fin k.succ.succ → R)
+            _ = ((localDepth R R : ℕ∞) : WithBot ℕ∞) := hRdim.symm
+        exact le_antisymm (WithBot.coe_le_coe.mp hle) hge
+  by_cases hMsub : Subsingleton M
+  · exact Or.inl hMsub
+  · letI : Nontrivial M := not_subsingleton_iff_nontrivial.mp hMsub
+    have hn : 0 < n := by
+      by_contra hn
+      have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
+      have hFsub : Subsingleton (Fin n → R) := by
+        rw [hn0]
+        infer_instance
+      apply hMsub
+      constructor
+      intro x y
+      obtain ⟨x', hx'⟩ := hg x
+      obtain ⟨y', hy'⟩ := hg y
+      calc
+        x = g x' := hx'.symm
+        _ = g y' := congrArg g (hFsub.elim x' y')
+        _ = y := hy'
+    letI : Inhabited (Fin n) := ⟨⟨0, hn⟩⟩
+    letI : Nontrivial (Fin n → R) := Pi.nontrivial
+    have hn1 : 1 ≤ n := hn
+    have hfree_n : localDepth R (Fin n → R) = localDepth R R := by
+      have h := hfree (n - 1)
+      change localDepth R (Fin (n - 1 + 1) → R) = localDepth R R at h
+      rw [Nat.sub_add_cancel hn1] at h
+      exact h
+    have hfree_raw : localDepth R (Fin n → R) = (d : ℕ∞) := by
+      apply WithBot.coe_injective
+      calc
+        ((localDepth R (Fin n → R) : ℕ∞) : WithBot ℕ∞) =
+            ((localDepth R R : ℕ∞) : WithBot ℕ∞) := congrArg (fun x : ℕ∞ => (x : WithBot ℕ∞)) hfree_n
+        _ = ringKrullDim R := hRdim
+        _ = ((d : ℕ∞) : WithBot ℕ∞) := hdim
+    have hMle_raw : localDepth R M ≤ (d : ℕ∞) := by
+      apply WithBot.coe_le_coe.mp
+      calc
+        ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ Module.supportDim R M :=
+          supportDim_ge_localDepth
+        _ ≤ ringKrullDim R := Module.supportDim_le_ringKrullDim R M
+        _ = ((d : ℕ∞) : WithBot ℕ∞) := hdim
+    by_cases hKsub : Subsingleton K
+    · letI : Subsingleton K := hKsub
+      have hKdepth : localDepth R K = ⊤ := by
+        exact depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) K
+      have hMdepth : localDepth R M < ⊤ := by
+        apply depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) M
+        exact smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+          (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
+      exact Or.inr (Or.inl (by
+        rw [hKdepth]
+        exact WithBot.coe_lt_coe.mpr hMdepth))
+    · letI : Nontrivial K := not_subsingleton_iff_nontrivial.mp hKsub
+      have hseq := localDepth_shortExact f g hf hfg hg
+      rcases lt_or_ge (localDepth R M) (localDepth R K) with hMK | hKM
+      · exact Or.inr (Or.inl (WithBot.coe_lt_coe.mpr hMK))
+      · have hKM' : localDepth R K ≤ localDepth R M := hKM
+        have hFM : localDepth R M ≤ localDepth R (Fin n → R) := by
+          rw [hfree_raw]
+          exact hMle_raw
+        have hKF : localDepth R K ≤ localDepth R (Fin n → R) := by
+          have := hseq.1
+          simpa [min_eq_left hKM'] using this
+        have hFK : localDepth R (Fin n → R) ≤ localDepth R K := by
+          by_contra hFK'
+          have hKF' : localDepth R K < localDepth R (Fin n → R) :=
+            lt_of_not_ge hFK'
+          have hFtop : localDepth R (Fin n → R) < ⊤ := by
+            rw [hfree_raw]
+            exact WithTop.coe_lt_top d
+          have hMtop : localDepth R M < ⊤ := lt_of_le_of_lt hFM hFtop
+          have hKM1 : localDepth R K < localDepth R M + 1 := by
+            exact (ENat.lt_add_one_iff (n := localDepth R M)
+              (m := localDepth R K) (ne_of_lt hMtop)).2 hKM'
+          have hmin : localDepth R K <
+              min (localDepth R (Fin n → R)) (localDepth R M + 1) :=
+            lt_min hKF' hKM1
+          exact (not_lt_of_ge hseq.2.2) hmin
+        have hK_eq_F : localDepth R K = localDepth R (Fin n → R) :=
+          le_antisymm hKF hFK
+        have hF_eq_M : localDepth R (Fin n → R) = localDepth R M := by
+          apply le_antisymm
+          · simpa [hK_eq_F] using hKM'
+          · exact hFM
+        have hK_eq_M : localDepth R K = localDepth R M := hK_eq_F.trans hF_eq_M
+        have hM_eq_d : localDepth R M = (d : ℕ∞) := hF_eq_M.symm.trans hfree_raw
+        exact Or.inr (Or.inr ⟨
+          congrArg (fun x : ℕ∞ => (x : WithBot ℕ∞)) hK_eq_M,
+          congrArg (fun x : ℕ∞ => (x : WithBot ℕ∞)) hM_eq_d⟩)
 
 /- A finite prefix of the canonical exact resolution of `M`.  The terms
    indexed below `n` are the finite free modules F_0,...,F_(n-1), while the

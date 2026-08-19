@@ -1,6 +1,7 @@
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
 import Mathlib.FieldTheory.PurelyInseparable.Tower
+import Mathlib.FieldTheory.PurelyInseparable.Exponent
 import Mathlib.FieldTheory.Separable
 import Mathlib.FieldTheory.SeparableClosure
 import Mathlib.FieldTheory.PrimitiveElement
@@ -1325,6 +1326,43 @@ theorem finrank_separableClosure_lt_of_lt
     Field.finInsepDegree F L < Module.finrank S L := by
   change Module.finrank (separableClosure F L) L < Module.finrank S L
   exact IntermediateField.finrank_lt_of_gt hS
+
+/-- A proper purely inseparable extension in positive characteristic contains
+an element whose p-th power, but not the element itself, belongs to the base.
+This is the exponent-one step used in the strict descent argument. -/
+theorem exists_not_mem_and_pow_mem_of_lt_of_isPurelyInseparable
+    {F : Type u} {L : Type v} [Field F] [Field L] [Algebra F L]
+    (p : ℕ) [Fact p.Prime] [CharP F p] [CharP L p]
+    (S : IntermediateField F L) (hS : S < ⊤)
+    [IsPurelyInseparable S L] :
+    ∃ x : L, x ∉ S ∧ x ^ p ∈ S := by
+  obtain ⟨a, _, ha⟩ := Set.exists_of_ssubset hS
+  have ha' : a ∉ S := ha
+  let n := IsPurelyInseparable.elemExponent S a
+  have hn : 0 < n := by
+    by_contra hn
+    have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
+    have hmem : a ^ p ^ n ∈ (algebraMap S L).range :=
+      IsPurelyInseparable.elemExponent_def' S p a
+    rw [hn0, pow_zero, pow_one] at hmem
+    obtain ⟨b, hb⟩ := hmem
+    exact ha' (hb ▸ b.property)
+  let x : L := a ^ p ^ (n - 1)
+  refine ⟨x, ?_, ?_⟩
+  · intro hx
+    have hx' : x ∈ (algebraMap S L).range := ⟨⟨x, hx⟩, rfl⟩
+    exact (IsPurelyInseparable.elemExponent_min' (K := S) (L := L) p
+      (Nat.sub_lt hn Nat.one_pos)) hx'
+  · have hpow : x ^ p = a ^ p ^ n := by
+      dsimp [x]
+      rw [← pow_mul]
+      congr 1
+      rw [← pow_succ]
+      congr
+      omega
+    rw [hpow]
+    obtain ⟨b, hb⟩ := IsPurelyInseparable.elemExponent_def' S p a
+    exact hb ▸ b.property
 
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is

@@ -1,6 +1,6 @@
-import Formalization.Books.Algebra.Unit90.CoherentRings
 import Formalization.Books.Algebra.Unit81.CharacterizingFlatness
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
+import Formalization.Books.Algebra.Unit89.InterchangingDirectProductsWithTensor
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.LinearAlgebra.Contraction
@@ -735,6 +735,166 @@ theorem flat_isMittagLeffler_iff_minimal_tensor_submodule
     exact isMittagLefflerModule_of_flat_of_dualSystem P hflat
       (fun i => s.free i) (fun i => s.finite i) hdual
 
+private theorem modulePower_is_flat_of_isNoetherianRing
+    (R : Type u) [CommRing R] [IsNoetherianRing R] (A : Type v) :
+    Module.Flat R (modulePower R A) := by
+  let A' : Type (max u v) := ULift.{u} A
+  have hflat' : Module.Flat R (modulePower R A') := by
+    rw [Module.Flat.iff_rTensor_injective]
+    intro I hI
+    let P : ModuleCat.{u} R := ModuleCat.of R (I : Type u)
+    letI : Module.Finite R (I : Type u) := Module.Finite.of_fg hI
+    have hP : Module.FinitePresentation R (P : Type u) :=
+      Module.finitePresentation_of_finite R (I : Type u)
+    have hcrit :
+        Module.FinitePresentation R (P : Type u) ↔
+          ∀ B : Type (max u v), Function.Bijective
+            (tensorModulePowerMap P (A := B)) :=
+      (finite_presentation_tensor_iff.{u, v, u, u} P).out 0 3
+        (a := Module.FinitePresentation R (P : Type u))
+        (b := ∀ B : Type (max u v), Function.Bijective
+          (tensorModulePowerMap P (A := B)))
+    have hbij : Function.Bijective
+        (tensorModulePowerMap P (A := A')) := hcrit.mp hP A'
+    have hnat
+        (z : TensorProduct R (I : Type u) (modulePower R A')) (a : A') :
+        (TensorProduct.lid R (modulePower R A'))
+            (I.subtype.rTensor (modulePower R A') z) a =
+          I.subtype ((tensorModulePowerMap P (A := A') z) a) := by
+      induction z using TensorProduct.induction_on with
+      | zero => simp
+      | tmul i q => simp [tensorModulePowerMap, productTensorMap, mul_comm]
+      | add x y hx hy => simp [map_add, hx, hy]
+    intro x y hxy
+    apply hbij.1
+    funext a
+    apply I.subtype_injective
+    have hxy' :
+        (TensorProduct.lid R (modulePower R A'))
+            (I.subtype.rTensor (modulePower R A') x) =
+          (TensorProduct.lid R (modulePower R A'))
+            (I.subtype.rTensor (modulePower R A') y) :=
+      congrArg (TensorProduct.lid R (modulePower R A')) hxy
+    have hcoord := congrFun hxy' a
+    rw [hnat x a, hnat y a] at hcoord
+    exact hcoord
+  letI : Module.Flat R (modulePower R A') := hflat'
+  exact Module.Flat.of_linearEquiv
+    (LinearEquiv.piCongrLeft (R := R) (φ := fun _ : A => R)
+      (Equiv.ulift : A' ≃ A)).symm
+
+private theorem isMittagLefflerModule_of_linearEquiv
+    {R : Type u} [CommRing R] {M N : Type v}
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    (e : M ≃ₗ[R] N)
+    (hM : IsMittagLefflerModule (ModuleCat.of R M)) :
+    IsMittagLefflerModule (ModuleCat.of R N) := by
+  intro P hP f
+  obtain ⟨Q, hQ, g, hmut⟩ := hM P hP (e.symm.toLinearMap.comp f)
+  refine ⟨Q, hQ, g, ?_⟩
+  constructor
+  · intro X _ _ z hz
+    apply hmut.1 X
+    apply LinearMap.mem_ker.mpr
+    rw [LinearMap.rTensor_comp_apply]
+    simp [LinearMap.mem_ker.mp hz]
+  · intro X _ _ z hz
+    have hz' := hmut.2 X (LinearMap.mem_ker.mpr hz)
+    apply LinearMap.mem_ker.mpr
+    apply (LinearEquiv.rTensor X e.symm).injective
+    have hz'' : (e.symm.toLinearMap.rTensor X) ((f.rTensor X) z) = 0 := by
+      rw [← LinearMap.rTensor_comp_apply]
+      exact LinearMap.mem_ker.mp hz'
+    exact hz''
+
+private theorem modulePower_is_mittagLeffler_sameUniverse
+    (R : Type u) [CommRing R] [IsNoetherianRing R] (A : Type u) :
+    IsMittagLefflerModule (ModuleCat.of R (modulePower R A)) := by
+  have hflat : Module.Flat R (modulePower R A) :=
+    modulePower_is_flat_of_isNoetherianRing R A
+  apply (flat_isMittagLeffler_iff_minimal_tensor_submodule hflat).mpr
+  intro F _ _ hfree hfinite x
+  letI : Module.Free R F := hfree
+  letI : Module.Finite R F := hfinite
+  letI : Module.Projective R F := Module.Projective.of_free
+  have hFfp : Module.FinitePresentation R F :=
+    Module.finitePresentation_of_projective R F
+  have hcritF :
+      Module.FinitePresentation R F ↔
+        ∀ B : Type u, Function.Bijective
+          (tensorModulePowerMap (ModuleCat.of R F) (A := B)) :=
+    (finite_presentation_tensor_iff.{u, u, u, u} (ModuleCat.of R F)).out 0 3
+      (a := Module.FinitePresentation R F)
+      (b := ∀ B : Type u, Function.Bijective
+        (tensorModulePowerMap (ModuleCat.of R F) (A := B)))
+  have hbijF : Function.Bijective
+      (tensorModulePowerMap (ModuleCat.of R F) (A := A)) := hcritF.mp hFfp A
+  have hnat (G : Submodule R F)
+      (y : TensorProduct R (G : Type u) (modulePower R A)) :
+      tensorModulePowerMap (ModuleCat.of R F) (A := A)
+          (G.subtype.rTensor (modulePower R A) y) =
+        fun a => G.subtype
+          (tensorModulePowerMap (ModuleCat.of R G) (A := A) y a) := by
+    induction y using TensorProduct.induction_on with
+    | zero => ext a; simp
+    | tmul g q => ext a; simp [tensorModulePowerMap, productTensorMap]
+    | add y z hy hz => ext a; simp [map_add, hy, hz]
+  let coords : A → F := fun a =>
+    tensorModulePowerMap (ModuleCat.of R F) (A := A) x a
+  have hcontains (G : Submodule R F) :
+      tensorProductContains G x ↔ ∀ a, coords a ∈ G := by
+    constructor
+    · rintro ⟨y, hy⟩ a
+      have hya := congrFun (hnat G y) a
+      rw [hy] at hya
+      have hcoords : coords a = G.subtype
+          (tensorModulePowerMap (ModuleCat.of R G) (A := A) y a) := by
+        simpa [coords] using hya
+      rw [hcoords]
+      exact (tensorModulePowerMap (ModuleCat.of R G) (A := A) y a).property
+    · intro hG
+      have hGfinite : Module.Finite R (G : Type u) := by
+        letI : Module.Finite R F := hfinite
+        have hFnoeth : IsNoetherian R F :=
+          isNoetherian_of_isNoetherianRing_of_finite R F
+        have hGnoeth : IsNoetherian R (G : Type u) :=
+          isNoetherian_of_submodule_of_noetherian R F G hFnoeth
+        exact ⟨hGnoeth.noetherian ⊤⟩
+      letI : Module.Finite R (G : Type u) := hGfinite
+      have hGfp : Module.FinitePresentation R (G : Type u) :=
+        Module.finitePresentation_of_finite R (G : Type u)
+      have hcritG :
+          Module.FinitePresentation R (G : Type u) ↔
+            ∀ B : Type u, Function.Bijective
+              (tensorModulePowerMap (ModuleCat.of R G) (A := B)) :=
+        (finite_presentation_tensor_iff.{u, u, u, u} (ModuleCat.of R G)).out 0 3
+          (a := Module.FinitePresentation R (G : Type u))
+          (b := ∀ B : Type u, Function.Bijective
+            (tensorModulePowerMap (ModuleCat.of R G) (A := B)))
+      have hbijG : Function.Bijective
+          (tensorModulePowerMap (ModuleCat.of R G) (A := A)) := hcritG.mp hGfp A
+      let coordsG : A → G := fun a => ⟨coords a, hG a⟩
+      obtain ⟨y, hy⟩ := hbijG.2 coordsG
+      refine ⟨y, ?_⟩
+      apply hbijF.1
+      funext a
+      calc
+        tensorModulePowerMap (ModuleCat.of R F) (A := A)
+              (G.subtype.rTensor (modulePower R A) y) a =
+            G.subtype (tensorModulePowerMap (ModuleCat.of R G) (A := A) y a) :=
+          congrFun (hnat G y) a
+        _ = coords a := by rw [congrFun hy a]; rfl
+  let F' : Submodule R F := Submodule.span R (Set.range coords)
+  refine ⟨F', ?_⟩
+  constructor
+  · apply (hcontains F').mpr
+    intro a
+    exact Submodule.subset_span ⟨a, rfl⟩
+  · intro G hG
+    apply Submodule.span_le.mpr
+    rintro _ ⟨a, rfl⟩
+    exact (hcontains G).mp hG a
+
 /-! ## Products and power series -/
 
 /-- A product of copies of a Noetherian ring is flat and Mittag-Leffler. -/
@@ -742,7 +902,37 @@ theorem modulePower_is_flat_and_mittagLeffler
     (R : Type u) [CommRing R] [IsNoetherianRing R] (A : Type v) :
     Module.Flat R (modulePower R A) ∧
       IsMittagLefflerModule (ModuleCat.of R (modulePower R A)) := by
-  sorry
+  have hflat : Module.Flat R (modulePower R A) :=
+    modulePower_is_flat_of_isNoetherianRing R A
+  let S : Type (max u v) := ULift.{v} R
+  let A' : Type (max u v) := ULift.{u} A
+  let f : R →+* S := (ULift.ringEquiv : S ≃+* R).symm.toRingHom
+  letI : Module R S := Module.compHom S f
+  letI : IsNoetherianRing S :=
+    isNoetherianRing_of_ringEquiv R (ULift.ringEquiv : S ≃+* R).symm
+  let eRS : R ≃ₗ[R] S :=
+    (ULift.moduleEquiv (R := R) (M := R)).symm
+  letI : Module.Free R S :=
+    Module.Free.of_equiv' (R := R) (P := R) (N := S)
+      inferInstance eRS
+  have hS : IsMittagLefflerModule (ModuleCat.of R S) := by
+    exact isMittagLefflerModule_of_free (ModuleCat.of R S) inferInstance
+  have hflatS : Module.Flat S (modulePower S A') :=
+    modulePower_is_flat_of_isNoetherianRing S A'
+  have hML' : IsMittagLefflerModule
+      ((ModuleCat.restrictScalars f).obj (ModuleCat.of S (modulePower S A'))) :=
+    flat_mittagLeffler_of_mittagLeffler_restrictScalars f
+      (ModuleCat.of S (modulePower S A')) hS hflatS
+      (modulePower_is_mittagLeffler_sameUniverse S A')
+  let eIndex : (modulePower S A') ≃ₗ[R] (A → S) :=
+    LinearEquiv.piCongrLeft (R := R) (φ := fun _ : A => S)
+      (Equiv.ulift : A' ≃ A)
+  let ePoint : (A → S) ≃ₗ[R] (A → R) :=
+    LinearEquiv.piCongrRight (fun _ => (ULift.moduleEquiv (R := R) (M := R)))
+  have hML : IsMittagLefflerModule (ModuleCat.of R (modulePower R A)) := by
+    apply isMittagLefflerModule_of_linearEquiv (eIndex.trans ePoint)
+    exact hML'
+  exact ⟨hflat, hML⟩
 
 /-- Multivariate formal power series over a Noetherian ring are flat and
 Mittag-Leffler as modules over the coefficient ring. -/
@@ -752,7 +942,9 @@ theorem mvPowerSeries_is_flat_and_mittagLeffler
     Module.Flat R (MvPowerSeries (Fin n) R) ∧
       IsMittagLefflerModule
         (ModuleCat.of R (MvPowerSeries (Fin n) R)) := by
-  sorry
+  change Module.Flat R ((Fin n →₀ ℕ) → R) ∧
+    IsMittagLefflerModule (ModuleCat.of R ((Fin n →₀ ℕ) → R))
+  exact modulePower_is_flat_and_mittagLeffler R (Fin n →₀ ℕ)
 
 /-! ## Non-examples -/
 
@@ -762,7 +954,12 @@ theorem mvPowerSeries_is_flat_and_mittagLeffler
 /-- The rational numbers are not a Mittag-Leffler `ℤ`-module. -/
 theorem rationalModule_not_mittagLeffler :
     ¬ IsMittagLefflerModule rationalModule := by
-  sorry
+  intro hML
+  have hinj : ∀ (A : Type) (Q : A → ModuleCat ℤ),
+      Function.Injective (productTensorMap rationalModule Q) :=
+    (mittagLeffler_tensor_iff rationalModule).out 0 1 |>.mp hML
+  exact rationalQuotientTensorMap_not_injective
+    (hinj ℕ+ integerQuotientFamily)
 
 /-- A flat, countably generated, non-projective module is not Mittag-Leffler.
 This is the implication used in the second non-example. -/

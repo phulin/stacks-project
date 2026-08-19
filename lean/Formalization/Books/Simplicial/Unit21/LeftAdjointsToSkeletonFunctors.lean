@@ -341,7 +341,61 @@ theorem simplicialSetLeftAdjoint_high_degenerate
     (m n : ℕ) (U : SimplicialObject.Truncated (Type u) m) (h : m < n) :
     ∀ x : ((simplicialSetLeftAdjoint m).obj U) _⦋n⦌,
       x ∈ ((simplicialSetLeftAdjoint m).obj U).degenerate n := by
-  sorry
+  intro x
+  rw [SSet.mem_degenerate_iff]
+  let hcol : HasColimit (leftSkeletonDiagram m n U) :=
+    has_left_skeleton_colimit_of_has_finite_colimits m n U
+  let _ : HasColimit (leftSkeletonDiagram m n U) := hcol
+  let e : ((simplicialSetLeftAdjoint m).obj U).obj
+      (op (SimplexCategory.mk n)) ≅ leftSkeletonColimit m n U hcol :=
+    Functor.leftKanExtensionObjIsoColimit (leftSkeletonInclusion m) U
+      (op (SimplexCategory.mk n))
+  obtain ⟨A, y, hy⟩ := Types.jointly_surjective' (e.hom x)
+  let f : SimplexCategory.mk n ⟶ A.left.unop.obj := A.hom.unop
+  let f' := factorThruImage f
+  let r := (image f).len
+  have hr : r < n := by
+    have hle : r ≤ A.left.unop.obj.len := SimplexCategory.len_le_of_mono (image.ι f)
+    exact lt_of_le_of_lt (le_trans hle A.left.unop.property) h
+  have hxe : e.hom x =
+      e.hom (((simplicialSetLeftAdjoint m).obj U).map A.hom
+        (((leftAdjointUnit m U).app A.left) y)) := by
+    rw [← hy]
+    have hι :=
+      Functor.leftKanExtensionUnit_leftKanExtension_map_leftKanExtensionObjIsoColimit_hom
+        (leftSkeletonInclusion m) U (op (SimplexCategory.mk n)) A
+    exact (congrArg (fun q => q y) (congrArg ConcreteCategory.hom hι)).symm
+  have hx : x = ((simplicialSetLeftAdjoint m).obj U).map A.hom
+      (((leftAdjointUnit m U).app A.left) y) := by
+    exact (ConcreteCategory.bijective_of_isIso e.hom).1 hxe
+  have hI : image f = SimplexCategory.mk r := by
+    apply SimplexCategory.ext
+    rfl
+  let eI : image f ≅ SimplexCategory.mk r := eqToIso hI
+  let g : SimplexCategory.mk n ⟶ SimplexCategory.mk r := f' ≫ eI.hom
+  refine ⟨r, hr, g, inferInstance, ?_⟩
+  let y' : ((simplicialSetLeftAdjoint m).obj U).obj (op (image f)) := by
+    exact ((simplicialSetLeftAdjoint m).obj U).map (image.ι f).op
+      (((leftAdjointUnit m U).app A.left) y)
+  refine ⟨((simplicialSetLeftAdjoint m).obj U).map eI.inv.op y', ?_⟩
+  rw [hx]
+  calc
+    ((simplicialSetLeftAdjoint m).obj U).map g.op
+          (((simplicialSetLeftAdjoint m).obj U).map eI.inv.op y') =
+        ((simplicialSetLeftAdjoint m).obj U).map (g ≫ eI.inv).op y' := by
+      simp only [op_comp, Functor.map_comp, comp_apply]
+    _ = ((simplicialSetLeftAdjoint m).obj U).map f'.op y' := by
+      simp [g, Category.assoc]
+    _ = ((simplicialSetLeftAdjoint m).obj U).map (f' ≫ image.ι f).op
+          (((leftAdjointUnit m U).app A.left) y) := by
+      simp only [y', op_comp, Functor.map_comp]
+      rfl
+    _ = ((simplicialSetLeftAdjoint m).obj U).map f.op
+          (((leftAdjointUnit m U).app A.left) y) := by
+      rw [image.fac]
+    _ = ((simplicialSetLeftAdjoint m).obj U).map A.hom
+          (((leftAdjointUnit m U).app A.left) y) := by
+      simp [f]
 
 /-- The simplicial-set counit identifies `iₙ!skₙU` with the earlier skeleton. -/
 theorem simplicialSetLeftAdjoint_identifies_skeleton
@@ -351,7 +405,119 @@ theorem simplicialSetLeftAdjoint_identifies_skeleton
         (Unit18.simplicialSetNSkeleton U n : SSet),
       e.hom ≫ Unit18.simplicialSetNSkeletonInclusion U n =
         simplicialSetLeftAdjointCounit U n := by
-  sorry
+  let c := simplicialSetLeftAdjointCounit U n
+  let B := Unit18.simplicialSetNSkeleton U n
+  have hciso : IsIso ((SimplicialObject.truncation (C := Type u) n).map c) := by
+    apply @isIso_of_hom_comp_eq_id _ _ _ _ (leftAdjointUnit n
+      ((SimplicialObject.truncation (C := Type u) n).obj U))
+      (leftAdjoint_unit_is_iso n _)
+    change (leftAdjunction (C := Type u) n).unit.app _ ≫
+      (SimplicialObject.truncation (C := Type u) n).map
+        ((leftAdjunction (C := Type u) n).counit.app U) = _
+    exact (leftAdjunction (C := Type u) n).right_triangle_components U
+  have hc_bij : ∀ {d : ℕ}, d ≤ n →
+      Function.Bijective (c.app (op ⦋d⦌)) := by
+    intro d hd
+    change Function.Bijective
+      (((SimplicialObject.truncation (C := Type u) n).map c).app
+        (op ⟨SimplexCategory.mk d, hd⟩))
+    rw [← isIso_iff_bijective]
+    infer_instance
+  have h_range : SSet.Subcomplex.range c ≤ B := by
+    rw [SSet.Subcomplex.le_iff_contains_nonDegenerate]
+    intro d x hx
+    obtain ⟨z, hz⟩ := hx
+    have hzn : z ∈ ((simplicialSetLeftAdjoint n).obj
+        ((SimplicialObject.truncation (C := Type u) n).obj U)).nonDegenerate d := by
+      by_contra hzd
+      have hdeg := SSet.degenerate_app_apply
+        ((SSet.mem_degenerate_iff_notMem_nonDegenerate _ z).mpr hzd) c
+      rw [hz] at hdeg
+      exact x.property hdeg
+    have hd : d ≤ n := by
+      by_contra! hdn
+      exact hzn (simplicialSetLeftAdjoint_high_degenerate n d
+        ((SimplicialObject.truncation (C := Type u) n).obj U) hdn z)
+    rw [Unit18.simplicial_set_n_skeleton_agrees_below U n d hd]
+    trivial
+  let p : (simplicialSetLeftAdjoint n).obj
+      ((SimplicialObject.truncation (C := Type u) n).obj U) ⟶ (B : SSet) :=
+    SSet.Subcomplex.lift c h_range
+  have hp_bij_low : ∀ {d : ℕ}, d ≤ n →
+      Function.Bijective (p.app (op ⦋d⦌)) := by
+    intro d hd
+    have hc := hc_bij hd
+    constructor
+    · intro x y hxy
+      apply hc.1
+      simpa [p] using congrArg Subtype.val hxy
+    · intro y
+      obtain ⟨x, hx⟩ := hc.2 y.1
+      refine ⟨x, Subtype.ext ?_⟩
+      simpa [p] using hx
+  have hp_nd : Unit18.MapsNondegenerate p := by
+    intro d x hx
+    rw [SSet.mem_nonDegenerate_iff_notMem_degenerate]
+    intro hpx
+    rw [SSet.mem_degenerate_iff] at hpx
+    obtain ⟨k, hk, g, hg, z, hz⟩ := hpx
+    have hd : d ≤ n := by
+      by_contra! hdn
+      exact hx (simplicialSetLeftAdjoint_high_degenerate n d
+        ((SimplicialObject.truncation (C := Type u) n).obj U) hdn x)
+    have hkd : k ≤ n := le_trans (Nat.le_of_lt hk) hd
+    obtain ⟨w, hw⟩ := hp_bij_low hkd |>.2 z
+    have h_eq : p.app (op ⦋d⦌) (((simplicialSetLeftAdjoint n).obj
+        ((SimplicialObject.truncation (C := Type u) n).obj U)).map g.op w) =
+        p.app (op ⦋d⦌) x := by
+      rw [NatTrans.naturality_apply, hw, hz]
+    have : ((simplicialSetLeftAdjoint n).obj
+        ((SimplicialObject.truncation (C := Type u) n).obj U)).map g.op w = x := by
+      exact (hp_bij_low hd).1 h_eq
+    exact hx ⟨k, hk, g, w, this⟩
+  have hp_bij : ∀ d, Function.Bijective (p.app (op ⦋d⦌)) := by
+    apply Unit18.simplicial_set_map_bijective_of_nonDegenerate p hp_nd
+    intro d
+    constructor
+    · intro x y hxy
+      exact Subtype.ext ((hp_bij_low (by
+        by_contra! hd
+        exact x.property (simplicialSetLeftAdjoint_high_degenerate n d _ hd x.1))).1
+        (congrArg Subtype.val hxy))
+    · intro y
+      have hndU : (y.1 : U _⦋d⦌) ∈ U.nonDegenerate d :=
+        (SSet.Subcomplex.mem_nonDegenerate_iff B y.1).mp y.property
+      let hndU' : U.nonDegenerate d := ⟨y.1, hndU⟩
+      have hskel : (y.1 : U _⦋d⦌) ∈ B.obj (op ⦋d⦌) := y.1.property
+      have hdlt : d < n + 1 := by
+        apply (SSet.mem_skeleton_obj_iff_of_nonDegenerate
+          (X := U) hndU' (n + 1)).mp
+        simpa [B, Unit18.simplicialSetNSkeleton] using hskel
+      have hd : d ≤ n := by omega
+      obtain ⟨x, hx⟩ := (hp_bij_low hd).2 y.1
+      have hxnd : x ∈ ((simplicialSetLeftAdjoint n).obj
+          ((SimplicialObject.truncation (C := Type u) n).obj U)).nonDegenerate d := by
+        by_contra hxn
+        have hdeg := SSet.degenerate_app_apply
+          ((SSet.mem_degenerate_iff_notMem_nonDegenerate _ x).mpr hxn) p
+        rw [hx] at hdeg
+        exact y.property hdeg
+      refine ⟨⟨x, hxnd⟩, ?_⟩
+      apply Subtype.ext
+      exact hx
+  have hp_iso : IsIso p := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro d
+    induction d using Opposite.rec with
+    | _ d =>
+      induction d using SimplexCategory.rec with
+      | _ d =>
+        rw [isIso_iff_bijective]
+        exact hp_bij d
+  refine ⟨@asIso _ _ _ _ p hp_iso, ?_⟩
+  simpa [p, c, simplicialSetLeftAdjointCounit, leftAdjointCounit,
+    Unit18.simplicialSetNSkeletonInclusion, B] using
+    SSet.Subcomplex.lift_ι c h_range
 
 /-- The source's `iₙ!skₙ` notation as an endofunctor on simplicial sets. -/
 noncomputable def sourceSimplicialSetSkeleton (n : ℕ) :
@@ -368,7 +534,58 @@ noncomputable def boundaryViaLeftAdjoint (n : ℕ) (_hn : 0 < n) : SSet.{u} :=
 theorem boundaryViaLeftAdjoint_iso_boundary
     (n : ℕ) (hn : 0 < n) :
     Nonempty (boundaryViaLeftAdjoint n hn ≅ (∂Δ[n] : SSet.{u})) := by
-  sorry
+  obtain ⟨e, he⟩ := simplicialSetLeftAdjoint_identifies_skeleton
+    (Δ[n] : SSet.{u}) (n - 1)
+  have hB : Unit18.simplicialSetNSkeleton (Δ[n] : SSet.{u}) (n - 1) =
+      (∂Δ[n] : (Δ[n] : SSet.{u}).Subcomplex) := by
+    have hsub : Unit18.simplicialSetNSkeleton (Δ[n] : SSet.{u}) (n - 1) ≤
+        (∂Δ[n] : (Δ[n] : SSet.{u}).Subcomplex) := by
+      rw [SSet.stdSimplex.le_boundary_iff]
+      intro htop
+      have hx : SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk n)) ∈
+          (Unit18.simplicialSetNSkeleton (Δ[n] : SSet.{u}) (n - 1)).obj
+            (op ⦋n⦌) := by
+        rw [htop]
+        trivial
+      have hnd0 : SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk n)) ∈
+          (Δ[n] : SSet.{u}).nonDegenerate n := by
+        rw [SSet.stdSimplex.nonDegenerate_top_dim]
+        simp
+      let hnd : (Δ[n] : SSet.{u}).nonDegenerate n :=
+        ⟨SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk n)), hnd0⟩
+      have hn' : 1 ≤ n := by omega
+      have hs : hnd.1 ∈
+          ((Δ[n] : SSet.{u}).skeleton n).obj (op ⦋n⦌) := by
+        simpa [hnd, Unit18.simplicialSetNSkeleton,
+          Nat.sub_add_cancel hn'] using hx
+      have hdim := (SSet.mem_skeleton_obj_iff_of_nonDegenerate
+        (X := (Δ[n] : SSet.{u})) hnd n).mp hs
+      omega
+    apply le_antisymm hsub
+    rw [SSet.boundary_eq_iSup]
+    apply iSup_le
+    intro i
+    let e₀ : {x : Fin (n + 1) // x ≠ i} ≃
+        {x : Fin (n + 1) // x ∈ ({i}ᶜ : Finset (Fin (n + 1)))} :=
+      { toFun := fun x => ⟨x.1, by
+            simpa only [Finset.mem_compl, Finset.mem_singleton] using x.2⟩
+        invFun := fun x => ⟨x.1, by
+            simpa only [Finset.mem_compl, Finset.mem_singleton] using x.2⟩
+        left_inv := by intro x; rfl
+        right_inv := by intro x; rfl }
+    let e₁ : {x : Fin (n + 1) // x ≠ i} ≃o
+        {x : Fin (n + 1) // x ∈ ({i}ᶜ : Finset (Fin (n + 1)))} :=
+      e₀.toOrderIso (by intro a b h; exact h) (by intro a b h; exact h)
+    let ei : Fin ((n - 1) + 1) ≃o ({i}ᶜ : Finset (Fin (n + 1))) :=
+      (Fin.castOrderIso (by omega)).trans ((finSuccAboveOrderIso i).trans e₁)
+    rw [SSet.stdSimplex.face_eq_ofSimplex ({i}ᶜ) (n - 1) ei]
+    change SSet.Subcomplex.ofSimplex _ ≤
+      (Δ[n] : SSet.{u}).skeleton ((n - 1) + 1)
+    apply SSet.ofSimplex_le_skeleton
+    omega
+  let e' : boundaryViaLeftAdjoint n hn ≅ (∂Δ[n] : SSet.{u}) := by
+    simpa only [boundaryViaLeftAdjoint] using e ≪≫ SSet.Subcomplex.eqToIso hB
+  exact ⟨e'⟩
 
 /-! ## Attaching one simplex -/
 
@@ -411,7 +628,9 @@ theorem simplexMapOfSimplex_unique (V : SSet.{u}) (n : ℕ) (x : V _⦋n⦌) :
 /-- The degree-zero boundary is the initial (empty) simplicial set. -/
 theorem boundary_zero_is_empty :
     Nonempty ((∂Δ[0] : SSet.{u}) ≅ initial SSet.{u}) := by
-  sorry
+  rw [SSet.boundary_zero]
+  exact ⟨(SSet.Subcomplex.isInitialBot (X := (Δ[0] : SSet.{u}))).uniqueUpToIso
+    (initialIsInitial)⟩
 
 /-- A new simplex gives the source's pushout square. -/
 theorem glue_simplex

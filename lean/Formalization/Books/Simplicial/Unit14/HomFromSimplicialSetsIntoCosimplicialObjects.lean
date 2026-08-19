@@ -380,7 +380,16 @@ theorem homPostcomp_comp
     (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPostcomp U f hU ≫ homPostcomp U g hU =
       homPostcomp U (f ≫ g) hU := by
-  sorry
+  ext X
+  dsimp [homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.len).1
+  change
+    (CategoryTheory.Limits.Pi.map (fun _ : U.obj (op X) => f.app X)) ≫
+        CategoryTheory.Limits.Pi.map (fun _ : U.obj (op X) => g.app X) =
+      CategoryTheory.Limits.Pi.map (fun _ : U.obj (op X) => f.app X ≫ g.app X)
+  ext u
+  simp [Category.assoc]
 
 theorem homPrecomp_postcomp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
@@ -390,6 +399,18 @@ theorem homPrecomp_postcomp
     (hU' : Unit13.FiniteNonemptySimplicialSet U') :
     homPrecomp f V hU hU' ≫ homPostcomp U' g hU' =
       homPostcomp U g hU ≫ homPrecomp f V' hU hU' := by
-  sorry
+  ext X
+  dsimp [homPrecomp, homPrecompApp, homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.len).1
+  let _ : Finite (U'.obj (op X)) := by
+    simpa only [SimplexCategory.mk_len] using (hU' X.len).1
+  change
+    (Pi.map' (f.app (op X)) (fun _ : U'.obj (op X) => 𝟙 (V.obj X))) ≫
+        CategoryTheory.Limits.Pi.map (fun _ : U'.obj (op X) => g.app X) =
+      CategoryTheory.Limits.Pi.map (fun _ : U.obj (op X) => g.app X) ≫
+        Pi.map' (f.app (op X)) (fun _ : U'.obj (op X) => 𝟙 (V'.obj X))
+  ext u
+  simp [Pi.map'_comp_π, Category.assoc]
 
 end Formalization.Books.Simplicial.Unit14

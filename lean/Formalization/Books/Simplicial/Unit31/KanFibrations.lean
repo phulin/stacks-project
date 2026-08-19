@@ -52,7 +52,30 @@ abbrev KanComplex (X : SSet.{u}) : Prop :=
 /-- Every positive-dimensional horn has a vertex. -/
 theorem horn_nonempty (n : ℕ) (hn : 1 ≤ n) (k : Fin (n + 1)) :
     Nonempty ((SSet.horn n k : SSet.{u}) _⦋0⦌) := by
-  sorry
+  obtain _ | n := n
+  · omega
+  obtain _ | n := n
+  · fin_cases k
+    · refine ⟨⟨SSet.stdSimplex.objEquiv.symm (⦋0⦌.const ⦋1⦌ 0), ?_⟩⟩
+      rw [SSet.mem_horn_iff, SSet.stdSimplex.coe_asOrderHom_objEquiv_symm]
+      intro h
+      rw [Set.eq_univ_iff_forall] at h
+      have h1 := h (1 : Fin 2)
+      simp at h1
+      change (0 : Fin 2) = 1 at h1
+      exact Fin.zero_ne_one h1
+    · refine ⟨⟨SSet.stdSimplex.objEquiv.symm (⦋0⦌.const ⦋1⦌ 1), ?_⟩⟩
+      rw [SSet.mem_horn_iff, SSet.stdSimplex.coe_asOrderHom_objEquiv_symm]
+      intro h
+      rw [Set.eq_univ_iff_forall] at h
+      have h0 := h (0 : Fin 2)
+      simp at h0
+      change (1 : Fin 2) = 0 at h0
+      omega
+  · have htop := SSet.horn_obj_zero n k
+    refine ⟨⟨SSet.stdSimplex.objEquiv.symm (⦋0⦌.const ⦋n + 2⦌ 0), ?_⟩⟩
+    rw [htop]
+    simp
 
 /-! The source's observation about the empty simplicial set is the vacuous
 lifting property.  We retain it as a theorem interface; the implication from
@@ -61,13 +84,44 @@ classes already present in Chapter 30 and Mathlib's model-category API. -/
 
 theorem empty_to_kanFibration {Y : SSet.{u}} (f : (⊥_ SSet.{u}) ⟶ Y) :
     KanFibration f := by
-  sorry
+  change HomotopicalAlgebra.Fibration f
+  rw [SSet.modelCategoryQuillen.fibration_iff]
+  intro A B i hi
+  simp only [SSet.modelCategoryQuillen.J,
+    CategoryTheory.MorphismProperty.iSup_iff] at hi
+  obtain ⟨n, ⟨k⟩⟩ := hi
+  refine ⟨fun {a} {b} sq => ?_⟩
+  let x := (horn_nonempty (n + 1) (by omega) k).some
+  let y := a.app (op ⦋0⦌) x
+  let z₀ : (Δ[1] : SSet.{u}) _⦋0⦌ := SSet.stdSimplex.obj₀Equiv.symm 0
+  let z₁ : (Δ[1] : SSet.{u}) _⦋0⦌ := SSet.stdSimplex.obj₀Equiv.symm 1
+  have hconst : SSet.const (X := ⊥_ SSet.{u}) z₀ = SSet.const z₁ :=
+    initialIsInitial.hom_ext _ _
+  have hval := ConcreteCategory.congr_hom (congr_app hconst (op ⦋0⦌)) y
+  have h01 : (0 : Fin 2) = 1 := by
+    have hval' := congrArg SSet.stdSimplex.obj₀Equiv hval
+    change (0 : Fin 2) = 1 at hval'
+    exact hval'
+  exact (Fin.zero_ne_one h01).elim
 
 theorem trivialKanFibration_kanFibration
     {X Y : SSet.{u}} (f : X ⟶ Y)
     (hf : Formalization.Books.Simplicial.Unit30.TrivialKanFibration f) :
     KanFibration f := by
-  sorry
+  change HomotopicalAlgebra.Fibration f
+  rw [SSet.modelCategoryQuillen.fibration_iff]
+  intro A B i hi
+  simp only [SSet.modelCategoryQuillen.J,
+    CategoryTheory.MorphismProperty.iSup_iff] at hi
+  obtain ⟨n, ⟨k⟩⟩ := hi
+  refine ⟨fun {a} {b} sq => ?_⟩
+  obtain ⟨l, hl, hr⟩ :=
+    Formalization.Books.Simplicial.Unit30.trivialKanFibration_lift f hf
+      (SSet.horn (n + 1) k).ι
+      (by
+        intro d
+        exact Subtype.val_injective) a b sq.w
+  exact ⟨⟨{ l := l, fac_left := hl, fac_right := hr }⟩⟩
 
 /-! ## Closure properties -/
 

@@ -514,7 +514,7 @@ theorem module_is_alpha_small
 interface `HasIdealExtension`. -/
 theorem baer_criterion {R : Type u} [Ring R] (Q : ModuleCat.{u} R) :
     Injective Q ↔ Formalization.Books.MoreAlgebra.Unit55.HasIdealExtension Q := by
-  sorry
+  exact (Formalization.Books.MoreAlgebra.Unit55.injective_iff_baer_criterion Q).out 0 2
 
 /-- The module pushout attached to an ideal map `φ : I → M`. -/
 noncomputable def idealPushout
@@ -544,7 +544,11 @@ theorem idealPushout_inclusion_mono
     {R : Type u} [Ring R] (I : Ideal R) (M : ModuleCat.{u} R)
     (φ : ModuleCat.of R I ⟶ M) :
     Mono (idealPushout_inclusion I M φ) := by
-  sorry
+  change Mono (pushout.inr (ModuleCat.ofHom I.subtype) φ)
+  letI : Mono (ModuleCat.ofHom I.subtype) := by
+    rw [ModuleCat.mono_iff_injective]
+    exact Subtype.val_injective
+  infer_instance
 
 /-! ## The huge pushout and its functorial iteration -/
 
@@ -601,7 +605,15 @@ theorem baerStep_ideal_extension
     ∃ ψ : ModuleCat.of R R ⟶ baerStep R M,
       ModuleCat.ofHom I.subtype ≫ ψ =
         φ ≫ (baerStepEmbedding R).app M := by
-  sorry
+  have hs : φ ≫ ((toZeroArrowFunctor R).obj M).hom = 0 := by
+    change φ ≫ 0 = 0
+    simp
+  obtain ⟨ψ, hψ, _⟩ :=
+    SmallObject.ιFunctorObj_extension
+      (idealInclusionFamily (R := R))
+      (πX := ((toZeroArrowFunctor R).obj M).hom)
+      φ 0 ⟨hs.trans (by simp)⟩
+  exact ⟨ψ, hψ⟩
 
 /-- The map into the huge pushout is monomorphic. -/
 theorem baerStepEmbedding_mono

@@ -1558,6 +1558,31 @@ natural isomorphisms rather than strict equalities of functors over `C`. -/
 abbrev CategoriesFibredInSetsOverCategory (C : Cat.{v, u}) :=
   CategoriesFibredInSetsOver C
 
+/-- The set-valued presheaf of objects of the fibres, with restriction maps
+given by a chosen cartesian pullback.  Discreteness turns the pseudofunctor's
+unit and composition isomorphisms into literal equalities of functions. -/
+noncomputable def fibredInSetsFibrePresheaf
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) : Functor Cᵒᵖ (Type uS) where
+  obj U := Functor.Fiber p U.unop
+  map {U V} f := TypeCat.ofHom (P.pullbackFunctor f.unop).obj
+  map_id U := by
+    apply TypeCat.Hom.ext
+    apply TypeCat.Fun.ext
+    funext x
+    let e := Classical.choose (pullback_identity_iso p P U.unop)
+    exact (hp U.unop).eq_of_hom (e.hom.app x) |>.symm
+  map_comp {U V W} f g := by
+    apply TypeCat.Hom.ext
+    apply TypeCat.Fun.ext
+    funext x
+    let e := Classical.choose
+      (pullback_composition_iso p P g.unop f.unop)
+    exact (hp W.unop).eq_of_hom (e.hom.app x)
+
 /-- Every object of the fixed-base 2-category is fibred-equivalent over `C` to
 the CoGrothendieck category of a set-valued presheaf.  This is the
 fixed-base replacement for an ordinary categorical equivalence whose
@@ -1626,7 +1651,12 @@ theorem fibredInSets_object_presheaf_exists
     (p : S ⥤ C) (hp : IsCategoryFibredInSets p) :
     ∃ F : Cᵒᵖ ⥤ Type uS,
       ∀ U : C, Nonempty (F.obj (Opposite.op U) ≃ Functor.Fiber p U) := by
-  sorry
+  have h := (isCategoryFibredInSets_iff_isFibered_and_discreteFibres p).mp hp
+  letI : p.IsFibered := h.1
+  let P := PullbackChoice.default p
+  refine ⟨fibredInSetsFibrePresheaf p h.2 P, ?_⟩
+  intro U
+  exact ⟨Equiv.refl _⟩
 
 noncomputable def fibredInSetsObjectPresheaf
     {S : Type uS} [Category.{vS} S]

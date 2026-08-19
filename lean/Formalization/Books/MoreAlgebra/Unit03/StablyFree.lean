@@ -576,7 +576,7 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
     apply (IsLocallyConstant.iff_exists_open _).2
     intro p
     obtain ⟨m, hm, hpm⟩ := p.asIdeal.exists_le_maximal p.isPrime.ne_top
-    letI : m.IsMaximal := hm
+    let : m.IsMaximal := hm
     have hIm : I ≤ m := hI.trans (Ring.jacobson_le_of_isMaximal m)
     let qm : PrimeSpectrum (R ⧸ I) :=
       ⟨m.map (Ideal.Quotient.mk I),
@@ -599,7 +599,7 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
         ((PrimeSpectrum.le_iff_specializes p ⟨m, hm.isPrime⟩).mp hpm) hmO
     · intro q hqO
       obtain ⟨n, hn, hqn⟩ := q.asIdeal.exists_le_maximal q.isPrime.ne_top
-      letI : n.IsMaximal := hn
+      let : n.IsMaximal := hn
       have hIn : I ≤ n := hI.trans (Ring.jacobson_le_of_isMaximal n)
       let qn : PrimeSpectrum (R ⧸ I) :=
         ⟨n.map (Ideal.Quotient.mk I),
@@ -750,12 +750,12 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
     exact hcr (hJs (Ideal.subset_span hfreec))
   have hfp : Module.FinitePresentation R (M : Type u) :=
     Module.FinitePresentation.of_localizationSpan s hs (fun g => by
-      letI : Module.Free (Localization.Away g.1)
+      let : Module.Free (Localization.Away g.1)
           (LocalizedModule.Away g.1 (M : Type u)) := g.2
-      letI : Module.Projective (Localization.Away g.1)
+      let : Module.Projective (Localization.Away g.1)
           (LocalizedModule.Away g.1 (M : Type u)) := Module.Projective.of_free
       exact Module.finitePresentation_of_projective _ _)
-  letI : Module.FinitePresentation R (M : Type u) := hfp
+  let : Module.FinitePresentation R (M : Type u) := hfp
   exact Module.Flat.projective_of_finitePresentation
 
 /-! ## Uniqueness of finite-projective lifts -/

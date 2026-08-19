@@ -1021,7 +1021,6 @@ theorem isFibredEquivalenceOver_trans
         (Functor.congr_hom hG (eHK.hom.app (F.obj x)))
     rw [hGmap]
     change 𝟙 ((G ⋙ p).obj (K.obj (H.obj (F.obj x)))) ≫ _ = _
-    simp only [Category.id_comp]
     rw [overHKv, overFGv]
     simp
   · have overB : (B ⋙ A) ⋙ r = (𝟭 U) ⋙ r := by
@@ -1049,7 +1048,6 @@ theorem isFibredEquivalenceOver_trans
         (Functor.congr_hom hH (eGF.hom.app (K.obj x)))
     rw [hHmap]
     change 𝟙 ((H ⋙ r).obj (F.obj (G.obj (K.obj x)))) ≫ _ = _
-    simp only [Category.id_comp]
     rw [overGFv, overKHv]
     simp
 

@@ -1139,7 +1139,16 @@ noncomputable def glueingSectionRestrict
 theorem glueingSectionRestrict_id
     (D : SetSheafGlueingData U) (W : Opens X) (s : GlueingSection D W) :
     glueingSectionRestrict D (le_refl W) s = s := by
-  sorry
+  have section_ext (a b : GlueingSection D W) (hab : a.value = b.value) : a = b := by
+    cases a with
+    | mk av ap =>
+      cases b with
+      | mk bv bp =>
+        cases hab
+        rfl
+  apply section_ext
+  funext i
+  simp [glueingSectionRestrict, glueingSectionRestrictValue]
 
 /-- The composition law for the sectionwise restriction maps. -/
 theorem glueingSectionRestrict_comp

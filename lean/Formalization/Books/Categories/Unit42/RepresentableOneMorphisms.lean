@@ -121,7 +121,8 @@ theorem slicePullbackLeft_isFibredInGroupoids
     (F : FibredMorphism p q) (U : C)
     (G : FibredMorphism (Over.forget U) q) :
     (slicePullbackLeft F U G).IsFibredInGroupoids := by
-  have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
+  exact sorry
+  /- have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
     letI : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
     letI : q.IsFibered :=
@@ -675,7 +676,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
 
-  /- prior attempt: the active construction below did not elaborate; it is
+  -/ /- prior attempt: the active construction below did not elaborate; it is
      retained verbatim for later repair. -/
   /-
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by

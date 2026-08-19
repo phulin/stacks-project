@@ -1,5 +1,6 @@
 import Mathlib.CategoryTheory.Localization.Triangulated
 import Mathlib.CategoryTheory.Triangulated.HomologicalFunctor
+import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
 import Formalization.Books.Categories.Unit27.Localization
 import Formalization.Books.Derived.Unit04.ElementaryResults
 
@@ -313,6 +314,8 @@ variable {C A : Type*} [Category* C] [Category* A]
 def homologicalFunctorMorphismProperty (H : C ⥤ A) : MorphismProperty C :=
   fun _ _ f => ∀ i : ℤ, IsIso ((homologicalDegree H i).map f)
 
+set_option backward.isDefEq.respectTransparency.types false in
+set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
 theorem homologicalFunctorMorphismProperty_saturated
     (H : C ⥤ A) [H.IsHomological] :
@@ -441,8 +444,189 @@ theorem homologicalFunctorMorphismProperty_saturated
       ((homologicalDegree H i).map f)
       ((homologicalDegree H i).map g)
       ((homologicalDegree H i).map h)
+  have hshift : W.IsCompatibleWithShift ℤ := by
+    refine ⟨?_⟩
+    intro n
+    ext X Y f
+    change (∀ i : ℤ, IsIso ((H.shift i).map ((shiftFunctor C n).map f))) ↔
+      ∀ i : ℤ, IsIso ((H.shift i).map f)
+    constructor
+    · intro hf i
+      let j : ℤ := i - n
+      have hj : IsIso ((H.shift j).map ((shiftFunctor C n).map f)) := hf j
+      letI := hj
+      let e := H.shiftIso n j i (by dsimp [j]; abel)
+      have he : IsIso ((shiftFunctor C n ⋙ H.shift j).map f ≫ e.hom.app Y) := by
+        change IsIso ((H.shift j).map ((shiftFunctor C n).map f) ≫ e.hom.app Y)
+        infer_instance
+      have he' := he
+      rw [e.hom.naturality f] at he'
+      letI := he'
+      exact IsIso.of_isIso_comp_left (e.hom.app X) ((H.shift i).map f)
+    · intro hf i
+      have hi : IsIso ((H.shift (n + i)).map f) := hf (n + i)
+      letI := hi
+      let e := H.shiftIso n i (n + i) rfl
+      have he : IsIso (e.hom.app X ≫ (H.shift (n + i)).map f) := by
+        infer_instance
+      have he' := he
+      rw [← e.hom.naturality f] at he'
+      have he'' : IsIso ((H.shift i).map ((shiftFunctor C n).map f) ≫ e.hom.app Y) := by
+        change IsIso ((shiftFunctor C n ⋙ H.shift i).map f ≫ e.hom.app Y)
+        exact he'
+      letI := he''
+      exact IsIso.of_isIso_comp_right
+        ((H.shift i).map ((shiftFunctor C n).map f)) (e.hom.app Y)
+  let : W.IsCompatibleWithShift ℤ := hshift
   have hcompat : CompatibleWithTriangulation W := by
-    sorry
+    refine ⟨?_⟩
+    intro T₁ T₂ hT₁ hT₂ a b ha hb comm
+    change (∀ i : ℤ, IsIso ((H.shift i).map a)) at ha
+    change (∀ i : ℤ, IsIso ((H.shift i).map b)) at hb
+    obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
+      T₁ T₂ hT₁ hT₂ a b comm
+    refine ⟨c, ?_, hc₂, hc₃⟩
+    change ∀ i : ℤ, IsIso ((H.shift i).map c)
+    intro i
+    let φ : T₁ ⟶ T₂ := Triangle.homMk T₁ T₂ a b c comm hc₂ hc₃
+    let R₁ := H.homologySequenceComposableArrows₅ T₁ i (i + 1) rfl
+    let R₂ := H.homologySequenceComposableArrows₅ T₂ i (i + 1) rfl
+    have h₁₀ : R₁.obj' 0 = (H.shift i).obj T₁.obj₁ := by rfl
+    have h₁₁ : R₁.obj' 1 = (H.shift i).obj T₁.obj₂ := by rfl
+    have h₁₂ : R₁.obj' 2 = (H.shift i).obj T₁.obj₃ := by rfl
+    have h₁₃ : R₁.obj' 3 = (H.shift (i + 1)).obj T₁.obj₁ := by rfl
+    have h₁₄ : R₁.obj' 4 = (H.shift (i + 1)).obj T₁.obj₂ := by rfl
+    have h₁₅ : R₁.obj' 5 = (H.shift (i + 1)).obj T₁.obj₃ := by rfl
+    have h₂₀ : R₂.obj' 0 = (H.shift i).obj T₂.obj₁ := by rfl
+    have h₂₁ : R₂.obj' 1 = (H.shift i).obj T₂.obj₂ := by rfl
+    have h₂₂ : R₂.obj' 2 = (H.shift i).obj T₂.obj₃ := by rfl
+    have h₂₃ : R₂.obj' 3 = (H.shift (i + 1)).obj T₂.obj₁ := by rfl
+    have h₂₄ : R₂.obj' 4 = (H.shift (i + 1)).obj T₂.obj₂ := by rfl
+    have h₂₅ : R₂.obj' 5 = (H.shift (i + 1)).obj T₂.obj₃ := by rfl
+    have hm₁₀ : R₁.map' 0 1 =
+        eqToHom h₁₀ ≫ (H.shift i).map T₁.mor₁ ≫ eqToHom h₁₁.symm := by
+      dsimp [R₁, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₁₁ : R₁.map' 1 2 =
+        eqToHom h₁₁ ≫ (H.shift i).map T₁.mor₂ ≫ eqToHom h₁₂.symm := by
+      dsimp [R₁, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₁₂ : R₁.map' 2 3 =
+        eqToHom h₁₂ ≫ H.homologySequenceδ T₁ i (i + 1) rfl ≫ eqToHom h₁₃.symm := by
+      dsimp [R₁, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₁₃ : R₁.map' 3 4 =
+        eqToHom h₁₃ ≫ (H.shift (i + 1)).map T₁.mor₁ ≫ eqToHom h₁₄.symm := by
+      dsimp [R₁, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₁₄ : R₁.map' 4 5 =
+        eqToHom h₁₄ ≫ (H.shift (i + 1)).map T₁.mor₂ ≫ eqToHom h₁₅.symm := by
+      dsimp [R₁, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₂₀ : R₂.map' 0 1 =
+        eqToHom h₂₀ ≫ (H.shift i).map T₂.mor₁ ≫ eqToHom h₂₁.symm := by
+      dsimp [R₂, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₂₁ : R₂.map' 1 2 =
+        eqToHom h₂₁ ≫ (H.shift i).map T₂.mor₂ ≫ eqToHom h₂₂.symm := by
+      dsimp [R₂, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₂₂ : R₂.map' 2 3 =
+        eqToHom h₂₂ ≫ H.homologySequenceδ T₂ i (i + 1) rfl ≫ eqToHom h₂₃.symm := by
+      dsimp [R₂, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₂₃ : R₂.map' 3 4 =
+        eqToHom h₂₃ ≫ (H.shift (i + 1)).map T₂.mor₁ ≫ eqToHom h₂₄.symm := by
+      dsimp [R₂, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    have hm₂₄ : R₂.map' 4 5 =
+        eqToHom h₂₄ ≫ (H.shift (i + 1)).map T₂.mor₂ ≫ eqToHom h₂₅.symm := by
+      dsimp [R₂, Functor.homologySequenceComposableArrows₅,
+        ComposableArrows.map', ComposableArrows.precomp,
+        ComposableArrows.Precomp.map, ComposableArrows.Precomp.obj]
+      simp only [Category.id_comp, Category.comp_id]
+    let ψ : R₁ ⟶ R₂ := ComposableArrows.homMk₅
+      (eqToHom h₁₀ ≫ (H.shift i).map a ≫ eqToHom h₂₀.symm)
+      (eqToHom h₁₁ ≫ (H.shift i).map b ≫ eqToHom h₂₁.symm)
+      (eqToHom h₁₂ ≫ (H.shift i).map c ≫ eqToHom h₂₂.symm)
+      (eqToHom h₁₃ ≫ (H.shift (i + 1)).map a ≫ eqToHom h₂₃.symm)
+      (eqToHom h₁₄ ≫ (H.shift (i + 1)).map b ≫ eqToHom h₂₄.symm)
+      (eqToHom h₁₅ ≫ (H.shift (i + 1)).map c ≫ eqToHom h₂₅.symm)
+      (by
+        rw [hm₁₀, hm₂₀]
+        simpa only [eqToHom_trans, eqToHom_refl, Category.id_comp,
+          Category.comp_id, Category.assoc, Functor.map_comp] using
+          congrArg ((H.shift i).map) comm)
+      (by
+        rw [hm₁₁, hm₂₁]
+        simpa only [eqToHom_trans, eqToHom_refl, Category.id_comp,
+          Category.comp_id, Category.assoc, Functor.map_comp] using
+          congrArg ((H.shift i).map) hc₂)
+      (by
+        rw [hm₁₂, hm₂₂]
+        simpa [φ, eqToHom_trans, eqToHom_refl, Category.id_comp, Category.comp_id,
+          Category.assoc] using
+          (H.homologySequenceδ_naturality T₁ T₂ φ i (i + 1) rfl).symm)
+      (by
+        rw [hm₁₃, hm₂₃]
+        simpa only [eqToHom_trans, eqToHom_refl, Category.id_comp,
+          Category.comp_id, Category.assoc, Functor.map_comp] using
+          congrArg ((H.shift (i + 1)).map) comm)
+      (by
+        rw [hm₁₄, hm₂₄]
+        simpa only [eqToHom_trans, eqToHom_refl, Category.id_comp,
+          Category.comp_id, Category.assoc, Functor.map_comp] using
+          congrArg ((H.shift (i + 1)).map) hc₂)
+    have hR₁ : R₁.Exact := by
+      exact H.homologySequenceComposableArrows₅_exact T₁ hT₁ i (i + 1) rfl
+    have hR₂ : R₂.Exact := by
+      exact H.homologySequenceComposableArrows₅_exact T₂ hT₂ i (i + 1) rfl
+    have hψ := CategoryTheory.Abelian.isIso_of_epi_of_isIso_of_isIso_of_mono'
+      (n := 5) (k := 0) (by norm_num) hR₁ hR₂ ψ 0 1 2 3 4 rfl rfl rfl rfl rfl
+      (by
+      letI := ha i
+      dsimp [ψ]
+      infer_instance)
+      (by
+      letI := hb i
+      dsimp [ψ]
+      infer_instance)
+      (by
+      letI := ha (i + 1)
+      dsimp [ψ]
+      infer_instance)
+      (by
+      letI := hb (i + 1)
+      dsimp [ψ]
+      infer_instance)
+    have hcomp : IsIso
+        (eqToHom h₁₂ ≫ (H.shift i).map c ≫ eqToHom h₂₂.symm) := by
+      simpa only [ψ, ComposableArrows.homMk₅_app_two] using hψ
+    letI := hcomp
+    have hmid : IsIso
+        ((H.shift i).map c ≫ eqToHom h₂₂.symm) :=
+      IsIso.of_isIso_comp_left (eqToHom h₁₂)
+        ((H.shift i).map c ≫ eqToHom h₂₂.symm)
+    letI := hmid
+    exact IsIso.of_isIso_comp_right ((H.shift i).map c) (eqToHom h₂₂.symm)
   exact ⟨by simpa [W] using hsat, by simpa [W] using hcompat⟩
 end HomologicalFunctorLocalization
 

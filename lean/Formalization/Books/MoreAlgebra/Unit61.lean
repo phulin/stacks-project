@@ -308,6 +308,8 @@ structure FlatBaseChangeSquare
   baseMap : (A ⊗[R] B) →+* (A' ⊗[R'] B')
   commutesA : aToA'.comp (algebraMap R A) = r'ToA'.comp (algebraMap R R')
   commutesB : bToB'.comp (algebraMap R B) = r'ToB'.comp (algebraMap R R')
+  r'ToA'_algebraMap : r'ToA' = algebraMap R' A'
+  r'ToB'_algebraMap : r'ToB' = algebraMap R' B'
   aBase_left : aBase.comp
       (Algebra.TensorProduct.includeLeftRingHom : A →+* (A ⊗[R] R')) = aToA'
   aBase_right : aBase.comp

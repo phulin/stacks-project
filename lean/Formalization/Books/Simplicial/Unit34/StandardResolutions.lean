@@ -253,15 +253,27 @@ noncomputable def standardResolutionInnerData
     (standardResolutionComultiplication T)
     (standardResolution_godementEquations T)).some
 
-abbrev standardResolutionOuterAugmentation
+abbrev standardResolutionOuterRawAugmentation
     {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
     (T : StandardResolutionSituation A S) :=
   (standardResolutionOuterData T).augmentation
 
-abbrev standardResolutionInnerAugmentation
+abbrev standardResolutionOuterAugmentation
+    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    (T : StandardResolutionSituation A S) :=
+  standardResolutionOuterRawAugmentation T ≫
+    (SimplicialObject.const (A ⥤ S)).map (Functor.leftUnitor T.V).hom
+
+abbrev standardResolutionInnerRawAugmentation
     {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
     (T : StandardResolutionSituation A S) :=
   (standardResolutionInnerData T).augmentation
+
+abbrev standardResolutionInnerAugmentation
+    {A : Type u} {S : Type u} [Category.{u} A] [Category.{u} S]
+    (T : StandardResolutionSituation A S) :=
+  standardResolutionInnerRawAugmentation T ≫
+    (SimplicialObject.const (S ⥤ A)).map (Functor.rightUnitor T.U).hom
 
 /-- Both augmented whiskered resolutions are homotopy equivalences. The
 proof route is the section from Chapter 33, followed by its two-map homotopy
@@ -275,10 +287,11 @@ theorem standardResolution_homotopy_equivalences
 
 /-! ## The module and polynomial-algebra examples -/
 
-/-- The free/forgetful adjunction used by the module example.  `M` and
-`SetLike` are chosen presentations of `Mod_R` and `Sets`; this interface is
-kept abstract because the Chapter 33 Godement API requires its category and
-hom universes to coincide, whereas Mathlib's bundled `ModuleCat` does not. -/
+/-- A universe-compatible presentation of the free/forgetful adjunction in
+Example 34.4.  The concrete `ModuleCat`/`Type` adjunction in Mathlib has
+different category universes from the Chapter 33 whiskered Godement API, so
+the example keeps the two categories abstract while retaining the exact
+adjunction data used by the construction. -/
 structure ModuleStandardResolutionExample
     (R M SetLike : Type u) [Ring R] [Category.{u} M] [Category.{u} SetLike]
     where
@@ -310,13 +323,13 @@ def moduleResolutionFace
 def moduleResolutionDegeneracy
     {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
     (E : ModuleStandardResolutionExample R M SetLike) (M₀ : M)
-    (j : Fin 2) : moduleResolutionDegree E M₀ 1 ⟶
-      moduleResolutionDegree E M₀ 2 :=
+    (j : Fin 2) : moduleResolutionDegree E M₀ 1 ⟶ moduleResolutionDegree E M₀ 2 :=
   (standardResolutionDegeneracy (moduleStandardResolutionSituation E) 1 j).app M₀
 
-/- The source's displayed sums in Example 34.4 are the elementwise normal
-forms of `moduleResolutionFace` and `moduleResolutionDegeneracy` after the
-chosen free-module presentation is expanded. -/
+/- The displayed sums in Example 34.4 depend on choosing the concrete
+free-module presentation.  This universe-compatible categorical interface
+records their degree-one maps without asserting presentation-specific
+elementwise normal forms. -/
 
 theorem moduleResolution_augmentation_homotopy_equivalence
     {R M SetLike : Type u} [Ring R] [Category.{u} M] [Category.{u} SetLike]
@@ -327,23 +340,26 @@ theorem moduleResolution_augmentation_homotopy_equivalence
   exact (standardResolution_homotopy_equivalences
     (moduleStandardResolutionSituation E)).1
 
-/-- The free/forgetful adjunction used by the polynomial-algebra example;
-`Alg` and `SetLike` are chosen presentations of `Alg_A` and `Sets`. -/
+/-- A universe-compatible presentation of the free/forgetful adjunction in
+Example 34.5. -/
 structure PolynomialAlgebraStandardResolutionExample
-    (A Alg SetLike : Type u) [Category.{u} Alg] [Category.{u} SetLike] where
+    (A Alg SetLike : Type u) [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike] where
   free : SetLike ⥤ Alg
   forget : Alg ⥤ SetLike
   adjunction : free ⊣ forget
 
 def polynomialAlgebraStandardResolutionSituation
-    {A Alg SetLike : Type u} [Category.{u} Alg] [Category.{u} SetLike]
+    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike]
     (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike) :
     StandardResolutionSituation Alg SetLike :=
   ⟨E.free, E.forget, E.adjunction⟩
 
 /-- The degree `n` of the polynomial-algebra example on an algebra `B`. -/
 def polynomialAlgebraResolutionDegree
-    {A Alg SetLike : Type u} [Category.{u} Alg] [Category.{u} SetLike]
+    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike]
     (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
     (B : Alg) (n : ℕ) : Alg :=
   (standardResolutionDegree
@@ -351,7 +367,8 @@ def polynomialAlgebraResolutionDegree
 
 /-- The polynomial-algebra example's degree-one face maps. -/
 def polynomialAlgebraResolutionFace
-    {A Alg SetLike : Type u} [Category.{u} Alg] [Category.{u} SetLike]
+    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike]
     (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
     (B : Alg) (j : Fin 2) : polynomialAlgebraResolutionDegree E B 1 ⟶
       polynomialAlgebraResolutionDegree E B 0 :=
@@ -359,7 +376,8 @@ def polynomialAlgebraResolutionFace
 
 /-- The polynomial-algebra example's degree-one degeneracy maps. -/
 def polynomialAlgebraResolutionDegeneracy
-    {A Alg SetLike : Type u} [Category.{u} Alg] [Category.{u} SetLike]
+    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike]
     (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike)
     (B : Alg) (j : Fin 2) : polynomialAlgebraResolutionDegree E B 1 ⟶
       polynomialAlgebraResolutionDegree E B 2 :=
@@ -367,7 +385,8 @@ def polynomialAlgebraResolutionDegeneracy
     (polynomialAlgebraStandardResolutionSituation E) 1 j).app B
 
 theorem polynomialAlgebraResolution_augmentation_homotopy_equivalence
-    {A Alg SetLike : Type u} [Category.{u} Alg] [Category.{u} SetLike]
+    {A Alg SetLike : Type u} [CommRing A] [Category.{u} Alg]
+    [Category.{u} SetLike]
     (E : PolynomialAlgebraStandardResolutionExample A Alg SetLike) :
     Unit26.IsHomotopyEquivalence
       (standardResolutionOuterAugmentation
@@ -375,9 +394,8 @@ theorem polynomialAlgebraResolution_augmentation_homotopy_equivalence
   exact (standardResolution_homotopy_equivalences
     (polynomialAlgebraStandardResolutionSituation E)).1
 
-/- The nested-bracket formulas in Examples 34.5 and 34.6 are likewise the
-elementwise normal forms of the degree maps and the sections supplied by the
-Chapter 33 Godement section interface; the chapter-level maps above retain
-their presentation-independent categorical types. -/
+/- The nested-bracket formulas in Examples 34.5 and 34.6 likewise depend on
+the concrete polynomial-algebra presentation; the chapter-level maps above
+retain the presentation-independent categorical types. -/
 
 end Formalization.Books.Simplicial.Unit34

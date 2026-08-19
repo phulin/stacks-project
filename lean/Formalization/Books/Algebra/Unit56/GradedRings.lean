@@ -3452,8 +3452,7 @@ private def gradedScale (G : GradedRingData S) : S →+* Polynomial S :=
 
 private theorem gradedScale_coe (G : GradedRingData S) {d : ℕ}
     (x : G.component d) : gradedScale G (x : S) = Polynomial.monomial d (x : S) := by
-  simp [gradedScale, DirectSum.decomposeRingEquiv, DirectSum.decompose_coe,
-    DirectSum.toSemiring_of]
+  simp [gradedScale, DirectSum.decomposeRingEquiv, DirectSum.decompose_coe]
   rfl
 
 private theorem gradedScale_coeff (G : GradedRingData S) (x : S) (d : ℕ) :
@@ -3477,7 +3476,7 @@ theorem integralClosure_is_graded
     (f : GradedRingMap G H) :
     let A : Algebra R S := f.toRingHom.toAlgebra
     @IsGradedSubalgebra R S _ _ H A (@integralClosure R S _ _ A) := by
-  letI : Algebra R S := f.toRingHom.toAlgebra
+  let : Algebra R S := f.toRingHom.toAlgebra
   dsimp
   have hcompat :
       (Polynomial.mapRingHom f.toRingHom).comp (gradedScale G) =
@@ -3523,7 +3522,7 @@ theorem integralClosure_is_directSumOfHomogeneousComponents
     (f : GradedRingMap G H) :
     let A : Algebra R S := f.toRingHom.toAlgebra
     @IsDirectSumOfHomogeneousComponents R S _ _ H A (@integralClosure R S _ _ A) := by
-  letI : Algebra R S := f.toRingHom.toAlgebra
+  let : Algebra R S := f.toRingHom.toAlgebra
   dsimp
   apply (isGradedSubalgebra_iff_directSumOfHomogeneousComponents
     H (integralClosure R S)).mp

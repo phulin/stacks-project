@@ -339,14 +339,45 @@ theorem homPrecomp_comp
     (h₃ : FiniteNonemptyCosimplicialSet U₃) :
     homPrecomp g V h₃ h₂ ≫ homPrecomp f V h₂ h₁ =
       homPrecomp (f ≫ g) V h₃ h₁ := by
-  sorry
+  ext X
+  dsimp [homPrecomp, homPrecompApp, homObjectAt]
+  let _ : Finite (U₁.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (h₁ X.unop.len).1
+  let _ : Finite (U₂.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (h₂ X.unop.len).1
+  let _ : Finite (U₃.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (h₃ X.unop.len).1
+  change
+    (Pi.map'
+      (f := fun _ : U₃.obj X.unop => V.obj X)
+      (g := fun _ : U₂.obj X.unop => V.obj X)
+      (g.app X.unop) (fun _ => 𝟙 (V.obj X))) ≫
+        (Pi.map'
+          (f := fun _ : U₂.obj X.unop => V.obj X)
+          (g := fun _ : U₁.obj X.unop => V.obj X)
+          (f.app X.unop) (fun _ => 𝟙 (V.obj X))) =
+      Pi.map'
+        (f := fun _ : U₃.obj X.unop => V.obj X)
+        (g := fun _ : U₁.obj X.unop => V.obj X)
+        ((f ≫ g).app X.unop) (fun _ => 𝟙 (V.obj X))
+  rw [Pi.map'_comp_map']
+  apply Pi.map'_eq
+  · intro x
+    simp
+  · funext x
+    change g.app X.unop (f.app X.unop x) = (f ≫ g).app X.unop x
+    rfl
 
 theorem homPostcomp_id
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : CosimplicialObject (Type u)) {V : SimplicialObject C}
     (hU : FiniteNonemptyCosimplicialSet U) :
     homPostcomp U (𝟙 V) hU = 𝟙 (hom U V hU) := by
-  sorry
+  ext X
+  dsimp [hom, homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  simp only [CategoryTheory.Limits.Pi.map_id]
 
 theorem homPostcomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
@@ -355,7 +386,17 @@ theorem homPostcomp_comp
     (hU : FiniteNonemptyCosimplicialSet U) :
     homPostcomp U f hU ≫ homPostcomp U g hU =
       homPostcomp U (f ≫ g) hU := by
-  sorry
+  ext X
+  dsimp [hom, homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  change
+    CategoryTheory.Limits.Pi.map (fun _ : U.obj X.unop => f.app X) ≫
+        CategoryTheory.Limits.Pi.map (fun _ : U.obj X.unop => g.app X) =
+      CategoryTheory.Limits.Pi.map (fun _ : U.obj X.unop => (f ≫ g).app X)
+  rw [CategoryTheory.Limits.Pi.map_comp_map]
+  ext u
+  simp [CategoryTheory.Limits.Pi.map_π]
 
 theorem homPrecomp_postcomp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
@@ -366,7 +407,27 @@ theorem homPrecomp_postcomp
     (hU' : FiniteNonemptyCosimplicialSet U') :
     homPrecomp f V hU hU' ≫ homPostcomp U' g hU' =
       homPostcomp U g hU ≫ homPrecomp f V' hU hU' := by
-  sorry
+  ext X
+  dsimp [hom, homPrecomp, homPrecompApp, homPostcomp, homPostcompApp, homObjectAt]
+  let _ : Finite (U.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  let _ : Finite (U'.obj X.unop) := by
+    simpa only [SimplexCategory.mk_len] using (hU' X.unop.len).1
+  change
+    (Pi.map'
+      (f := fun _ : U.obj X.unop => V.obj X)
+      (g := fun _ : U'.obj X.unop => V.obj X)
+      (f.app X.unop) (fun _ => 𝟙 (V.obj X))) ≫
+        CategoryTheory.Limits.Pi.map
+          (fun _ : U'.obj X.unop => g.app X) =
+      CategoryTheory.Limits.Pi.map
+          (fun _ : U.obj X.unop => g.app X) ≫
+        (Pi.map'
+          (f := fun _ : U.obj X.unop => V'.obj X)
+          (g := fun _ : U'.obj X.unop => V'.obj X)
+          (f.app X.unop) (fun _ => 𝟙 (V'.obj X)))
+  ext u
+  simp [Pi.map'_comp_π, CategoryTheory.Limits.Pi.map_π, Category.assoc]
 
 /-! ## The representable special case -/
 

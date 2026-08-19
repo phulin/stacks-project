@@ -1874,7 +1874,7 @@ theorem productZero_minimalPrimes_are_the_two_axes
     rw [Set.mem_insert_iff, Set.mem_singleton_iff]
     have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ p := by
       apply hp.le
-      exact Ideal.subset_span (by simp [productZeroRelationIdeal])
+      exact Ideal.subset_span (by simp)
     rcases hp.isPrime.mem_or_mem hprod with h₀ | h₁
     · left
       apply le_antisymm
@@ -1932,7 +1932,7 @@ theorem productZero_minimalPrimes_are_the_two_axes
             (MvPolynomial.X (R := k) 1) (Ideal.mem_span_singleton_self _)
       · intro q hq hqle
         have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ q := by
-          exact hq.2 (Ideal.subset_span (by simp [productZeroRelationIdeal]))
+          exact hq.2 (Ideal.subset_span (by simp))
         rcases hq.1.mem_or_mem hprod with h₀ | h₁
         · exact q.span_singleton_le_iff_mem.mpr h₀
         · have hnot : MvPolynomial.X (R := k) 1 ∉ productZeroXAxisIdeal k := by
@@ -1940,7 +1940,7 @@ theorem productZero_minimalPrimes_are_the_two_axes
             rw [productZeroXAxisIdeal, Ideal.mem_span_singleton'] at h
             obtain ⟨a, ha⟩ := h
             have he := congrArg (MvPolynomial.aeval (R := k) (![0, 1] : Fin 2 → k)) ha
-            simpa using he
+            simp at he
           exact False.elim (hnot (hqle h₁))
     · refine ⟨?_, ?_⟩
       · refine ⟨Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime, ?_⟩
@@ -1953,14 +1953,14 @@ theorem productZero_minimalPrimes_are_the_two_axes
             (MvPolynomial.X (R := k) 0) (Ideal.mem_span_singleton_self _)
       · intro q hq hqle
         have hprod : MvPolynomial.X (R := k) 0 * MvPolynomial.X (R := k) 1 ∈ q := by
-          exact hq.2 (Ideal.subset_span (by simp [productZeroRelationIdeal]))
+          exact hq.2 (Ideal.subset_span (by simp))
         rcases hq.1.mem_or_mem hprod with h₀ | h₁
         · have hnot : MvPolynomial.X (R := k) 0 ∉ productZeroYAxisIdeal k := by
             intro h
             rw [productZeroYAxisIdeal, Ideal.mem_span_singleton'] at h
             obtain ⟨a, ha⟩ := h
             have he := congrArg (MvPolynomial.aeval (R := k) (![1, 0] : Fin 2 → k)) ha
-            simpa using he
+            simp at he
           exact False.elim (hnot (hqle h₀))
         · exact q.span_singleton_le_iff_mem.mpr h₁
 

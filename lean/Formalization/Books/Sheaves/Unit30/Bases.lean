@@ -1813,6 +1813,8 @@ structure BasisModuleFMapBelowData {X Y : RingedSpace.{v}} {κ : Type v}
     map j' ∘ G.val.presheaf.map (homOfLE h).op =
       F.val.presheaf.map (((Opens.map f.continuous).map
         (homOfLE h)).op) ∘ map j
+  map_add : ∀ (j : κ) (s₁ s₂ : G.val.presheaf.obj (op (Bᵧ j))),
+    map j (s₁ + s₂) = map j s₁ + map j s₂
   linear : ∀ (j : κ) (r : Y.structureSheaf.1.obj (op (Bᵧ j)))
     (s : G.val.presheaf.obj (op (Bᵧ j))),
     map j (r • s) =
@@ -2032,6 +2034,10 @@ structure BasisModuleFMapAboveBelowData {X Y : RingedSpace.{v}}
     (s : G.val.presheaf.obj (op (Bᵧ j))),
     F.val.presheaf.map (homOfLE hii').op (app i j hij s) =
       app i' j' hi'j' (G.val.presheaf.map (homOfLE hjj').op s)
+  map_add : ∀ (i : ι) (j : κ)
+    (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
+    (s₁ s₂ : G.val.presheaf.obj (op (Bᵧ j))),
+    app i j hij (s₁ + s₂) = app i j hij s₁ + app i j hij s₂
   linear : ∀ (i : ι) (j : κ)
     (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
     (r : Y.structureSheaf.1.obj (op (Bᵧ j)))

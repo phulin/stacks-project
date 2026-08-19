@@ -1218,6 +1218,25 @@ theorem finite_flat_local_is_free
     Module.Free R M :=
   Module.free_of_flat_of_isLocalRing
 
+/- The quotient criterion is the Jacobson-radical globalization used when a
+finite flat module is known to be projective on `V(I)`.  Its conclusion is
+packaged as `FiniteProjective`, so callers get both the finite and projective
+parts needed by the local-projectivity API.  In particular, this interface
+does not attempt to obtain a specialization witness from
+`IsOpen.stableUnderGeneralization`; the rank function is globalized through
+the finite-flat quotient criterion itself. -/
+
+/-- A finite flat module whose reduction modulo a Jacobson-radical ideal is
+projective is finite projective. -/
+theorem finite_projective_of_finite_flat_of_quotient_projective
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] [Module.Flat R M] (I : Ideal R)
+    (hI : I ≤ Ring.jacobson R)
+    (hMbar : Module.Projective (R ⧸ I)
+      (M ⧸ (I • (⊤ : Submodule R M)))) :
+    FiniteProjective R M := by
+  sorry
+
 /-- Finite projectivity descends and ascends along a flat local map of local rings. -/
 theorem finite_projective_descends
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]

@@ -38,6 +38,56 @@ abbrev fiberRing
   letI : Algebra R S := f.toAlgebra
   p.asIdeal.Fiber S
 
+/- The mixed-base tensor product in the module depth formula is finite over
+   `S`: choose finite generators of the left module over `S` and of the
+   right module over `R`, and use their pure tensors as `S`-generators. -/
+theorem finite_tensorProduct_of_finite
+    {R S : Type u} {M N : Type v} [CommRing R] [CommRing S]
+    [Algebra R S]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module S N] [Module.Finite S N]
+    [Module R N] [IsScalarTower R S N] [SMulCommClass R S N] :
+    Module.Finite S (TensorProduct R N M) := by
+  obtain ⟨n, s, hs⟩ := Module.Finite.exists_fin (R := S) (M := N)
+  obtain ⟨m, t, ht⟩ := Module.Finite.exists_fin (R := R) (M := M)
+  let U : Submodule S (TensorProduct R N M) :=
+    Submodule.span S (Set.range fun ij : Fin n × Fin m => s ij.1 ⊗ₜ[R] t ij.2)
+  have hU : U = ⊤ := by
+    apply top_unique
+    intro x hx
+    refine TensorProduct.induction_on x (U.zero_mem) ?_ ?_
+    · intro x y
+      have hx : x ∈ Submodule.span S (Set.range s) := by
+        rw [hs]
+        exact Submodule.mem_top
+      refine Submodule.span_induction (R := S) (M := N)
+        (p := fun x _ => ∀ y : M, x ⊗ₜ[R] y ∈ U) ?_ ?_ ?_ ?_ hx y
+      · rintro x ⟨i, rfl⟩ y
+        have hy : y ∈ Submodule.span R (Set.range t) := by
+          rw [ht]
+          exact Submodule.mem_top
+        refine Submodule.span_induction (R := R) (M := M)
+          (p := fun y _ => s i ⊗ₜ[R] y ∈ U) ?_ ?_ ?_ ?_ hy
+        · rintro y ⟨j, rfl⟩
+          exact Submodule.subset_span ⟨(i, j), rfl⟩
+        · simpa only [TensorProduct.tmul_zero] using U.zero_mem
+        · intro y₁ y₂ hy₁ hy₂ h₁ h₂
+          simpa only [TensorProduct.tmul_add] using U.add_mem h₁ h₂
+        · intro r y hy h
+          simpa only [TensorProduct.tmul_smul, IsScalarTower.algebraMap_smul S] using
+            U.smul_mem (algebraMap R S r) h
+      · intro y
+        simpa only [TensorProduct.zero_tmul] using U.zero_mem
+      · intro x₁ x₂ hx₁ hx₂ h₁ h₂ y
+        simpa only [TensorProduct.add_tmul] using U.add_mem (h₁ y) (h₂ y)
+      · intro r x hx h y
+        simpa only [TensorProduct.smul_tmul'] using U.smul_mem r (h y)
+    · intro x y hx hy
+      exact U.add_mem hx hy
+  refine ⟨?_⟩
+  rw [← hU]
+  exact Submodule.fg_span (Set.finite_range _)
+
 /-! ## Ascending depth -/
 
 /-- The source's module form of the depth formula.  The tensor product is
@@ -65,7 +115,7 @@ theorem depth_tensorProduct_eq_add
     letI : IsScalarTower R S (TensorProduct R N M) :=
       TensorProduct.isScalarTower_left
     letI : Module.Finite S (TensorProduct R N M) :=
-      Module.Finite.of_restrictScalars_finite R S (TensorProduct R N M)
+      finite_tensorProduct_of_finite
     localDepth S (TensorProduct R N M) =
       localDepth R M + depth (Ideal.map f (IsLocalRing.maximalIdeal R)) N := by
   sorry

@@ -6355,4 +6355,520 @@ theorem long_configurations_occur_in_genus_one (k : ℕ) (hk : 6 ≤ k) :
       OccursInGenusOne (isDn : LocalNumericalData k → Prop) := by
   sorry
 
+/-!
+## Classification when every index is a `(-2)`-index
+
+The proper-subgraph predicates above deliberately retain only the local
+`m`, `a`, and `w` data.  For the full singular configurations we also record
+the genus coordinates, so that the result can be consumed directly by the
+genus-one classification in the next chapter.
+-/
+namespace AllMinusTwoConfiguration
+
+def ambientGenusAt {T : NumericalType} {k : ℕ} (h : T.n = k) : Fin k → ℤ :=
+  h ▸ T.g
+
+def realizesTypePattern {k : ℕ} (T : NumericalType) (h : T.n = k)
+    (mBase : Fin k → ℤ) (aBase : Matrix (Fin k) (Fin k) ℤ)
+    (wBase gBase : Fin k → ℤ) : Prop :=
+  ∃ m w : ℤ, 0 < m ∧ 0 < w ∧
+    (ambientDataAt h).m = scalarVector mBase m ∧
+      (ambientDataAt h).a = scalarMatrix aBase w ∧
+        (ambientDataAt h).w = scalarVector wBase w ∧
+          ambientGenusAt h = gBase
+
+def hasTypePattern {k : ℕ} (T : NumericalType)
+    (mBase : Fin k → ℤ) (aBase : Matrix (Fin k) (Fin k) ℤ)
+    (wBase gBase : Fin k → ℤ) : Prop :=
+  ∃ h : T.n = k, realizesTypePattern T h mBase aBase wBase gBase
+
+def pathMatrixByEdge (k : ℕ) (diagonal edge : Fin k → ℤ) :
+    Matrix (Fin k) (Fin k) ℤ :=
+  fun i j =>
+    if i = j then diagonal i
+    else if i.val + 1 = j.val then edge i
+    else if j.val + 1 = i.val then edge j
+    else 0
+
+def cycleMatrix (k : ℕ) (diagonal edge wrap : ℤ) :
+    Matrix (Fin k) (Fin k) ℤ :=
+  fun i j =>
+    if i = j then diagonal
+    else if i.val + 1 = j.val ∨ j.val + 1 = i.val then edge
+    else if (i.val = 0 ∧ j.val + 1 = k) ∨
+        (j.val = 0 ∧ i.val + 1 = k) then wrap
+    else 0
+
+def branchPathMatrix (k center leaf₁ leaf₂ : ℕ)
+    (diagonal pathEdge : Fin k → ℤ) (leafEdge : ℤ) :
+    Matrix (Fin k) (Fin k) ℤ :=
+  fun i j =>
+    if i = j then diagonal i
+    else if i.val + 1 = j.val ∧ j.val ≤ center then pathEdge i
+    else if j.val + 1 = i.val ∧ i.val ≤ center then pathEdge j
+    else if (i.val = center ∧ j.val = leaf₁) ∨
+        (i.val = leaf₁ ∧ j.val = center) then leafEdge
+    else if (i.val = center ∧ j.val = leaf₂) ∨
+        (i.val = leaf₂ ∧ j.val = center) then leafEdge
+    else 0
+
+def starMatrixByEdge (k center : ℕ) (diagonal edge : Fin k → ℤ) :
+    Matrix (Fin k) (Fin k) ℤ :=
+  fun i j =>
+    if i = j then diagonal i
+    else if i.val = center then edge j
+    else if j.val = center then edge i
+    else 0
+
+def undirectedEdgeMatrix (k : ℕ) (edges : ℕ → ℕ → Prop)
+    (diagonal edge : ℤ) : Matrix (Fin k) (Fin k) ℤ := by
+  classical
+  exact fun i j => if i = j then diagonal else if edges i.val j.val then edge else 0
+
+def negativeTwoDiagonal {k : ℕ} (wBase : Fin k → ℤ) : Fin k → ℤ :=
+  fun i => -2 * wBase i
+
+def zeroGenusVector {k : ℕ} : Fin k → ℤ :=
+  constantVector 0
+
+/-! The twenty-three full finite configurations with at least two indices. -/
+def IsTwoCycle (T : NumericalType) : Prop :=
+  hasTypePattern (k := 2) T
+    (constantVector 1)
+    (cycleMatrix 2 (-2) 2 2)
+    (constantVector 1)
+    zeroGenusVector
+
+def IsUp4 (T : NumericalType) : Prop :=
+  hasTypePattern (k := 2) T
+    (fun i => if i.val = 0 then 2 else 1)
+    (pathMatrixByEdge 2 (fun i => if i.val = 0 then -2 else -8) (fun _ => 4))
+    (fun i => if i.val = 0 then 1 else 4)
+    zeroGenusVector
+
+def IsThreeCycle (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (constantVector 1)
+    (cycleMatrix 3 (-2) 1 1)
+    (constantVector 1)
+    zeroGenusVector
+
+def IsEqualUp3 (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (fun i => if i.val = 1 then 2 else 1)
+    (pathMatrixByEdge 3
+      (fun i => if i.val = 2 then -6 else -2)
+      (fun i => if i.val = 0 then 1 else 3))
+    (fun i => if i.val = 2 then 3 else 1)
+    zeroGenusVector
+
+def IsEqualDown3 (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (fun i => if i.val = 2 then 3 else if i.val = 1 then 2 else 1)
+    (pathMatrixByEdge 3
+      (fun i => if i.val = 2 then -2 else -6)
+      (fun _ => 3))
+    (fun i => if i.val = 2 then 1 else 3)
+    zeroGenusVector
+
+def IsUpUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (fun i => if i.val < 2 then 2 else 1)
+    (pathMatrixByEdge 3
+      (fun i => if i.val = 0 then -2 else if i.val = 1 then -4 else -8)
+      (fun i => if i.val = 0 then 2 else 4))
+    (fun i => if i.val = 0 then 1 else if i.val = 1 then 2 else 4)
+    zeroGenusVector
+
+def IsUpDown (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (constantVector 1)
+    (pathMatrixByEdge 3
+      (fun i => if i.val = 1 then -4 else -2)
+      (fun _ => 2))
+    (fun i => if i.val = 1 then 2 else 1)
+    zeroGenusVector
+
+def IsDownUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 3) T
+    (fun i => if i.val = 1 then 2 else 1)
+    (pathMatrixByEdge 3
+      (fun i => if i.val = 1 then -2 else -4)
+      (fun _ => 2))
+    (fun i => if i.val = 1 then 1 else 2)
+    zeroGenusVector
+
+def IsFourCycle (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (constantVector 1)
+    (cycleMatrix 4 (-2) 1 1)
+    (constantVector 1)
+    zeroGenusVector
+
+def IsUpEqualUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (fun i => if i.val < 3 then 2 else 1)
+    (pathMatrixByEdge 4
+      (fun i => if i.val = 0 then -2 else if i.val < 3 then -4 else -8)
+      (fun i => if i.val < 2 then 2 else 4))
+    (fun i => if i.val = 0 then 1 else if i.val < 3 then 2 else 4)
+    zeroGenusVector
+
+def IsUpEqualDown (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (constantVector 1)
+    (pathMatrixByEdge 4
+      (fun i => if i.val = 0 ∨ i.val = 3 then -2 else -4)
+      (fun _ => 2))
+    (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
+    zeroGenusVector
+
+def IsDownEqualUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
+    (pathMatrixByEdge 4
+      (fun i => if i.val = 0 ∨ i.val = 3 then -4 else -2)
+      (fun i => if i.val = 0 ∨ i.val = 2 then 2 else 1))
+    (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)
+    zeroGenusVector
+
+def IsTripleWithUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (fun i => if i.val = 0 then 2 else 1)
+    (starMatrixByEdge 4 0
+      (fun i => if i.val = 3 then -4 else -2)
+      (fun i => if i.val = 3 then 2 else 1))
+    (fun i => if i.val = 3 then 2 else 1)
+    zeroGenusVector
+
+def IsTripleWithDown (T : NumericalType) : Prop :=
+  hasTypePattern (k := 4) T
+    (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)
+    (starMatrixByEdge 4 0
+      (fun i => if i.val = 3 then -2 else -4)
+      (fun _ => 2))
+    (fun i => if i.val = 3 then 1 else 2)
+    zeroGenusVector
+
+def IsFiveCycle (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (constantVector 1)
+    (cycleMatrix 5 (-2) 1 1)
+    (constantVector 1)
+    zeroGenusVector
+
+def IsEqualEqualUpEqual (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i =>
+      if i.val = 0 ∨ i.val = 4 then 1
+      else if i.val = 1 ∨ i.val = 3 then 2
+      else 3)
+    (pathMatrixByEdge 5
+      (fun i => if i.val < 3 then -2 else -4)
+      (fun i => if i.val < 2 then 1 else 2))
+    (fun i => if i.val < 3 then 1 else 2)
+    zeroGenusVector
+
+def IsEqualEqualDownEqual (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val = 4 then 2 else i.val + 1)
+    (pathMatrixByEdge 5
+      (fun i => if i.val < 3 then -4 else -2)
+      (fun i => if i.val < 3 then 2 else 1))
+    (fun i => if i.val < 3 then 2 else 1)
+    zeroGenusVector
+
+def IsUpEqualEqualUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val < 4 then 2 else 1)
+    (pathMatrixByEdge 5
+      (fun i => if i.val = 0 then -2 else if i.val < 4 then -4 else -8)
+      (fun i => if i.val < 3 then 2 else 4))
+    (fun i => if i.val = 0 then 1 else if i.val < 4 then 2 else 4)
+    zeroGenusVector
+
+def IsUpEqualEqualDown (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (constantVector 1)
+    (pathMatrixByEdge 5
+      (fun i => if i.val = 0 ∨ i.val = 4 then -2 else -4)
+      (fun _ => 2))
+    (fun i => if i.val = 0 ∨ i.val = 4 then 1 else 2)
+    zeroGenusVector
+
+def IsDownEqualEqualUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val = 0 ∨ i.val = 4 then 1 else 2)
+    (pathMatrixByEdge 5
+      (fun i => if i.val = 0 ∨ i.val = 4 then -4 else -2)
+      (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1))
+    (fun i => if i.val = 0 ∨ i.val = 4 then 2 else 1)
+    zeroGenusVector
+
+def IsQuadruple (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val = 0 then 2 else 1)
+    (starMatrix 5 0 (constantVector (-2)) 1)
+    (constantVector 1)
+    zeroGenusVector
+
+def IsTripleExtendedUp (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val = 0 then 1 else if i.val < 3 then 2 else 1)
+    (branchPathMatrix 5 2 3 4
+      (fun i => if i.val = 0 then -4 else -2)
+      (fun i => if i.val = 0 then 2 else 1)
+      1)
+    (fun i => if i.val = 0 then 2 else 1)
+    zeroGenusVector
+
+def IsTripleExtendedDown (T : NumericalType) : Prop :=
+  hasTypePattern (k := 5) T
+    (fun i => if i.val < 3 then 2 else 1)
+    (branchPathMatrix 5 2 3 4
+      (fun i => if i.val = 0 then -2 else -4)
+      (fun _ => 2)
+      2)
+    (fun i => if i.val = 0 then 1 else 2)
+    zeroGenusVector
+
+def IsFinite (T : NumericalType) : Prop :=
+  IsTwoCycle T ∨
+    IsUp4 T ∨
+      IsThreeCycle T ∨
+        IsEqualUp3 T ∨
+          IsEqualDown3 T ∨
+            IsUpUp T ∨
+              IsUpDown T ∨
+                IsDownUp T ∨
+                  IsFourCycle T ∨
+                    IsUpEqualUp T ∨
+                      IsUpEqualDown T ∨
+                        IsDownEqualUp T ∨
+                          IsTripleWithUp T ∨
+                            IsTripleWithDown T ∨
+                              IsFiveCycle T ∨
+                                IsEqualEqualUpEqual T ∨
+                                  IsEqualEqualDownEqual T ∨
+                                    IsUpEqualEqualUp T ∨
+                                      IsUpEqualEqualDown T ∨
+                                        IsDownEqualEqualUp T ∨
+                                          IsQuadruple T ∨
+                                            IsTripleExtendedUp T ∨
+                                              IsTripleExtendedDown T
+
+/-! The six unbounded cycle, path, and branch families. -/
+def nCycleM (k : ℕ) : Fin k → ℤ :=
+  constantVector 1
+
+def nCycleW (k : ℕ) : Fin k → ℤ :=
+  constantVector 1
+
+def nCycleA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  cycleMatrix k (-2) 1 1
+
+def upChainEqualUpM (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val + 1 = k then 1 else 2
+
+def upChainEqualUpW (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 then 1 else if i.val + 1 = k then 4 else 2
+
+def upChainEqualUpA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  pathMatrixByEdge k
+    (negativeTwoDiagonal (upChainEqualUpW k))
+    (fun i => if i.val + 2 = k then 4 else 2)
+
+def upChainEqualDownM (k : ℕ) : Fin k → ℤ :=
+  constantVector 1
+
+def upChainEqualDownW (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 ∨ i.val + 1 = k then 1 else 2
+
+def upChainEqualDownA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  pathMatrixByEdge k (negativeTwoDiagonal (upChainEqualDownW k)) (fun _ => 1)
+
+def downChainEqualUpM (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 ∨ i.val + 1 = k then 1 else 2
+
+def downChainEqualUpW (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 ∨ i.val + 1 = k then 2 else 1
+
+def downChainEqualUpA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  pathMatrixByEdge k
+    (negativeTwoDiagonal (downChainEqualUpW k))
+    (fun i => if i.val = 0 ∨ i.val + 2 = k then 2 else 1)
+
+def dnExtendedUpM (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 ∨ i.val + 2 ≥ k then 1 else 2
+
+def dnExtendedUpW (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 then 2 else 1
+
+def dnExtendedUpA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  branchPathMatrix k (k - 3) (k - 2) (k - 1)
+    (negativeTwoDiagonal (dnExtendedUpW k))
+    (fun i => if i.val = 0 then 2 else 1)
+    1
+
+def dnExtendedDownM (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val + 2 ≥ k then 1 else 2
+
+def dnExtendedDownW (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val = 0 then 1 else 2
+
+def dnExtendedDownA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
+  branchPathMatrix k (k - 3) (k - 2) (k - 1)
+    (negativeTwoDiagonal (dnExtendedDownW k))
+    (fun _ => 2)
+    2
+
+def IsNCycle (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (nCycleM k) (nCycleA k) (nCycleW k) zeroGenusVector
+
+def IsUpChainEqualUp (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (upChainEqualUpM k) (upChainEqualUpA k) (upChainEqualUpW k)
+      zeroGenusVector
+
+def IsUpChainEqualDown (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (upChainEqualDownM k) (upChainEqualDownA k) (upChainEqualDownW k)
+      zeroGenusVector
+
+def IsDownChainEqualUp (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (downChainEqualUpM k) (downChainEqualUpA k) (downChainEqualUpW k)
+      zeroGenusVector
+
+def IsDnExtendedUp (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (dnExtendedUpM k) (dnExtendedUpA k) (dnExtendedUpW k)
+      zeroGenusVector
+
+def IsDnExtendedDown (T : NumericalType) : Prop :=
+  ∃ k : ℕ, 6 ≤ k ∧
+    hasTypePattern (k := k) T
+      (dnExtendedDownM k) (dnExtendedDownA k) (dnExtendedDownW k)
+      zeroGenusVector
+
+def IsUnbounded (T : NumericalType) : Prop :=
+  IsNCycle T ∨
+    IsUpChainEqualUp T ∨
+      IsUpChainEqualDown T ∨
+        IsDownChainEqualUp T ∨
+          IsDnExtendedUp T ∨
+            IsDnExtendedDown T
+
+/-! The double/triple family, separated out for convenient elimination. -/
+def doubleTripleM (k : ℕ) : Fin k → ℤ :=
+  fun i => if i.val < 2 ∨ i.val + 2 ≥ k then 1 else 2
+
+def doubleTripleW (k : ℕ) : Fin k → ℤ :=
+  constantVector 1
+
+def IsDoubleTriple (T : NumericalType) : Prop :=
+  ∃ t : ℕ, 4 ≤ t ∧
+    hasTypePattern (k := t + 2) T
+      (doubleTripleM (t + 2)) (doubleTripleMatrix t) (doubleTripleW (t + 2))
+      zeroGenusVector
+
+/-! The three completed exceptional configurations. -/
+def e6CompletedMatrix : Matrix (Fin 7) (Fin 7) ℤ :=
+  undirectedEdgeMatrix 7
+    (fun i j =>
+      (i = 0 ∧ j = 1) ∨ (i = 1 ∧ j = 0) ∨
+      (i = 1 ∧ j = 2) ∨ (i = 2 ∧ j = 1) ∨
+      (i = 2 ∧ j = 4) ∨ (i = 4 ∧ j = 2) ∨
+      (i = 2 ∧ j = 6) ∨ (i = 6 ∧ j = 2) ∨
+      (i = 3 ∧ j = 4) ∨ (i = 4 ∧ j = 3) ∨
+      (i = 5 ∧ j = 6) ∨ (i = 6 ∧ j = 5))
+    (-2) 1
+
+def e7CompletedMatrix : Matrix (Fin 8) (Fin 8) ℤ :=
+  undirectedEdgeMatrix 8
+    (fun i j =>
+      (i = 0 ∧ j = 1) ∨ (i = 1 ∧ j = 0) ∨
+      (i = 1 ∧ j = 2) ∨ (i = 2 ∧ j = 1) ∨
+      (i = 2 ∧ j = 3) ∨ (i = 3 ∧ j = 2) ∨
+      (i = 3 ∧ j = 4) ∨ (i = 4 ∧ j = 3) ∨
+      (i = 3 ∧ j = 7) ∨ (i = 7 ∧ j = 3) ∨
+      (i = 4 ∧ j = 5) ∨ (i = 5 ∧ j = 4) ∨
+      (i = 5 ∧ j = 6) ∨ (i = 6 ∧ j = 5))
+    (-2) 1
+
+def e8CompletedMatrix : Matrix (Fin 9) (Fin 9) ℤ :=
+  undirectedEdgeMatrix 9
+    (fun i j =>
+      (i = 0 ∧ j = 1) ∨ (i = 1 ∧ j = 0) ∨
+      (i = 1 ∧ j = 2) ∨ (i = 2 ∧ j = 1) ∨
+      (i = 2 ∧ j = 3) ∨ (i = 3 ∧ j = 2) ∨
+      (i = 3 ∧ j = 4) ∨ (i = 4 ∧ j = 3) ∨
+      (i = 4 ∧ j = 5) ∨ (i = 5 ∧ j = 4) ∨
+      (i = 5 ∧ j = 6) ∨ (i = 6 ∧ j = 5) ∨
+      (i = 5 ∧ j = 8) ∨ (i = 8 ∧ j = 5) ∨
+      (i = 6 ∧ j = 7) ∨ (i = 7 ∧ j = 6))
+    (-2) 1
+
+def IsE6Completed (T : NumericalType) : Prop :=
+  hasTypePattern (k := 7) T
+    (fun i =>
+      if i.val = 0 ∨ i.val = 3 ∨ i.val = 5 then 1
+      else if i.val = 1 ∨ i.val = 4 ∨ i.val = 6 then 2
+      else 3)
+    e6CompletedMatrix
+    (constantVector 1)
+    zeroGenusVector
+
+def IsE7Completed (T : NumericalType) : Prop :=
+  hasTypePattern (k := 8) T
+    (fun i =>
+      if i.val = 0 ∨ i.val = 6 then 1
+      else if i.val = 1 ∨ i.val = 5 ∨ i.val = 7 then 2
+      else if i.val = 2 ∨ i.val = 4 then 3
+      else 4)
+    e7CompletedMatrix
+    (constantVector 1)
+    zeroGenusVector
+
+def IsE8Completed (T : NumericalType) : Prop :=
+  hasTypePattern (k := 9) T
+    (fun i =>
+      if i.val = 0 then 1
+      else if i.val = 1 ∨ i.val = 7 then 2
+      else if i.val = 2 ∨ i.val = 8 then 3
+      else if i.val = 3 then 4
+      else if i.val = 4 then 5
+      else if i.val = 6 then 4 else 6)
+    e8CompletedMatrix
+    (constantVector 1)
+    zeroGenusVector
+
+def IsCompleted (T : NumericalType) : Prop :=
+  IsE6Completed T ∨ IsE7Completed T ∨ IsE8Completed T
+
+def IsNormalForm (T : NumericalType) : Prop :=
+  IsFinite T ∨ IsUnbounded T ∨ IsDoubleTriple T ∨ IsCompleted T
+
+end AllMinusTwoConfiguration
+
+/-!
+Every connected numerical type all of whose indices are `(-2)`-indices is,
+up to simultaneous reordering of all four coordinates, one of the full
+finite, unbounded, double/triple, or completed configurations above.
+
+Connectedness is part of the structure `NumericalType`.  The orientation of
+`EquivalentNumericalType` agrees with the normal-form theorem in Unit 6.
+-/
+theorem all_minus_two_classification (T : NumericalType)
+    (hall : ∀ i, IsMinusTwoIndex T i) :
+    ∃ T' : NumericalType, EquivalentNumericalType T T' ∧
+      AllMinusTwoConfiguration.IsNormalForm T' := by
+  sorry
+
 end Formalization.Books.Models.Unit05

@@ -540,7 +540,7 @@ theorem simple_invert
     let u := (TopCat.Presheaf.stalkFunctor CommRingCat x).map
       (CategoryTheory.toSheafify (Opens.grothendieckTopology X)
         (localizedRingPresheaf S))
-    letI : IsIso u :=
+    let : IsIso u :=
       TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
         x CommRingCat (localizedRingPresheaf S)
     exact ⟨(asIso u).symm ≪≫ e⟩

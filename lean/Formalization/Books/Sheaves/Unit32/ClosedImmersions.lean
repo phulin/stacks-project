@@ -1444,13 +1444,47 @@ theorem closedSubsetSetPushforward_stalk_twoPoint_mismatch
     ¬ Nonempty
       ((((closedSubsetSetPushforward Z).obj (twoPointSheaf (TopCat.of Z))).presheaf.stalk x) ≃
         (((closedSubsetSetPushforward Z).obj (singletonSheaf (TopCat.of Z))).presheaf.stalk x) ⊕
-          (((closedSubsetSetPushforward Z).obj (singletonSheaf (TopCat.of Z))).presheaf.stalk x)) := by sorry
+          (((closedSubsetSetPushforward Z).obj (singletonSheaf (TopCat.of Z))).presheaf.stalk x)) := by
+  rintro ⟨e⟩
+  rcases closedSubsetSetPushforward_stalk_equiv_punit_of_not_mem hZ
+      (twoPointSheaf (TopCat.of Z)) hx with ⟨e₀⟩
+  rcases closedSubsetSetPushforward_stalk_equiv_punit_of_not_mem hZ
+      (singletonSheaf (TopCat.of Z)) hx with ⟨e₁⟩
+  let e' : PUnit ≃ (PUnit ⊕ PUnit) :=
+    e₀.symm.trans (e.trans (Equiv.sumCongr e₁ e₁))
+  obtain ⟨a, ha⟩ := e'.surjective (Sum.inl PUnit.unit)
+  obtain ⟨b, hb⟩ := e'.surjective (Sum.inr PUnit.unit)
+  have hab : a = b := Subsingleton.elim _ _
+  have h : (Sum.inl PUnit.unit : PUnit ⊕ PUnit) = Sum.inr PUnit.unit := by
+    rw [← ha, ← hb, hab]
+  exact Sum.inl_ne_inr h
 theorem closedSubsetSetPushforward_not_rightExact
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (x : X) (hx : x ∉ Z) :
-    ¬ IsRightExact (closedSubsetSetPushforward Z) := by sorry
+    ¬ IsRightExact (closedSubsetSetPushforward Z) := by
+  intro hF
+  letI : PreservesFiniteColimits (closedSubsetSetPushforward Z) := hF
+  let A := singletonSheaf (TopCat.of Z)
+  let F := closedSubsetSetPushforward Z
+  letI : PreservesColimit (pair A A) F := by infer_instance
+  let e : F.obj (A ⨿ A) ≅ F.obj A ⨿ F.obj A :=
+    (PreservesColimitPair.iso F A A).symm
+  let S := TopCat.Sheaf.forget (Type w) X ⋙
+    TopCat.Presheaf.stalkFunctor (Type w) x
+  letI : PreservesColimit (pair (F.obj A) (F.obj A)) S := by infer_instance
+  let e' : S.obj (F.obj (A ⨿ A)) ≅
+      S.obj (F.obj A) ⊕ S.obj (F.obj A) :=
+    S.mapIso e ≪≫ (PreservesColimitPair.iso S (F.obj A) (F.obj A)).symm ≪≫
+      Types.binaryCoproductIso _ _
+  exact closedSubsetSetPushforward_stalk_twoPoint_mismatch hZ x hx
+    ⟨by
+      change S.obj (F.obj (A ⨿ A)) ≃ S.obj (F.obj A) ⊕ S.obj (F.obj A)
+      exact e'.toEquiv⟩
 theorem closedSubsetSetPushforward_no_rightAdjoint
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (x : X) (hx : x ∉ Z) :
     ¬ ∃ (R : Sh.{w, w} X ⥤ Sh.{w, w} (TopCat.of Z)),
-      Nonempty (closedSubsetSetPushforward Z ⊣ R) := by sorry
+      Nonempty (closedSubsetSetPushforward Z ⊣ R) := by
+  rintro ⟨R, ⟨hAdj⟩⟩
+  exact closedSubsetSetPushforward_not_rightExact hZ x hx
+    (Formalization.Books.Categories.Unit24.left_adjoint_is_right_exact hAdj)

@@ -681,7 +681,11 @@ theorem closedAbelianSheafDirectImage_essentialImage {X : TopCat.{v}} (Z : Set X
     (G : TopCat.Sheaf (AddCommGrpCat.{v}) X) :
     (∃ F, Nonempty ((closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).obj F ≅ G)) ↔
       ClosedZeroStalkCondition Z hZ G := by
-  sorry
+  change (Formalization.Books.Sheaves.Unit32.closedSubsetAbelianPushforward Z).essImage G ↔ _
+  simpa [CategoryTheory.Functor.essImage, ClosedZeroStalkCondition,
+    Formalization.Books.Sheaves.Unit32.closedSubsetAbelian_zeroStalkCondition] using
+    (Formalization.Books.Sheaves.Unit32.closedSubsetAbelianPushforward_mem_essImage_iff
+      hZ G)
 
 /-! ## Category-valued algebraic structures -/
 

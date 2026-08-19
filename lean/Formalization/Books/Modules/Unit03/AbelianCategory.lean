@@ -81,7 +81,8 @@ theorem sheafModuleSectionsMap_add {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ ψ : F ⟶ G) (U : Opens X) :
     sheafModuleSectionsMap O (φ + ψ) U =
       sheafModuleSectionsMap O φ U + sheafModuleSectionsMap O ψ U := by
-  sorry
+  change (φ + ψ).val.app (op U) = φ.val.app (op U) + ψ.val.app (op U)
+  rfl
 
 /-- The project additive-category interface for sheaves of modules. -/
 noncomputable instance sheafModule_additiveCategory {X : TopCat.{v}}
@@ -188,7 +189,10 @@ theorem sheafModuleKernel_universal {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
 theorem sheafModuleKernel_factorization {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G H : Mod O} (φ : F ⟶ G) (α : H ⟶ F) (hα : α ≫ φ = 0) :
     ∃! β : H ⟶ sheafModuleKernel O φ, β ≫ kernel.ι φ = α := by
-  sorry
+  refine ⟨kernel.lift φ α hα, kernel.lift_ι φ α hα, ?_⟩
+  intro β hβ
+  apply (cancel_mono (kernel.ι φ)).1
+  rw [hβ, kernel.lift_ι]
 
 theorem sheafModuleKernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :
@@ -200,6 +204,19 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (sheafModuleKernel O φ) ≅
       kernel ((sheafModuleStalkFunctor O x).map φ)) := by
+  /-
+  Prior attempt:
+  letI : PreservesFiniteLimits
+      (sheafModuleStalkFunctor O x ⋙
+        forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
+          AddCommGrpCat) := by
+    change PreservesFiniteLimits
+      (SheafOfModules.toSheaf O ⋙
+        (TopCat.Sheaf.forget AddCommGrpCat X ⋙
+          TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x))
+    infer_instance
+  exact ⟨PreservesKernel.iso (sheafModuleStalkFunctor O x) φ⟩
+  -/
   sorry
 
 noncomputable abbrev sheafModuleCokernel {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
@@ -220,7 +237,23 @@ theorem sheafModuleCokernel_sheafification_iso {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {F G : Mod O} (φ : F ⟶ G) :
     Nonempty (sheafModuleCokernel O φ ≅
       sheafModuleCokernelSheafification O φ) := by
-  sorry
+  let L := PresheafOfModules.sheafification (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let adj := PresheafOfModules.sheafificationAdjunction
+    (R₀ := O.obj) (R := O) (𝟙 O.obj)
+  let hF : IsIso (adj.counit.app F) := by
+    change IsIso ((PresheafOfModules.sheafificationAdjunction
+      (R₀ := O.obj) (R := O) (𝟙 O.obj)).counit.app F)
+    infer_instance
+  let hG : IsIso (adj.counit.app G) := by
+    change IsIso ((PresheafOfModules.sheafificationAdjunction
+      (R₀ := O.obj) (R := O) (𝟙 O.obj)).counit.app G)
+    infer_instance
+  let eF : L.obj F.val ≅ F := @asIso _ _ _ _ (adj.counit.app F) hF
+  let eG : L.obj G.val ≅ G := @asIso _ _ _ _ (adj.counit.app G) hG
+  refine ⟨(PreservesCokernel.iso L φ.val ≪≫
+    cokernel.mapIso (L.map φ.val) φ eF eG ?_).symm⟩
+  change L.map φ.val ≫ (adj.counit.app G) = (adj.counit.app F) ≫ φ
+  exact adj.counit.naturality φ
 
 theorem sheafModuleCokernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :

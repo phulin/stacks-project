@@ -830,14 +830,59 @@ theorem operations_monotone_localization
     (hS : MultiplicativeSystem S) (hT : MultiplicativeSystem T)
     (hST : S ≤ T) :
     localizationKernel S ≤ localizationKernel T := by
-  sorry
+  letI : LeftMultiplicativeSystem S := hS.1
+  letI : RightMultiplicativeSystem S := hS.2
+  letI : LeftMultiplicativeSystem T := hT.1
+  letI : RightMultiplicativeSystem T := hT.2
+  intro Z hZ
+  let hInv : S.IsInvertedBy T.Q := by
+    intro X Y f hf
+    exact MorphismProperty.Q_inverts T f (hST _ hf)
+  let F := localizationFactor (S := S) T.Q hInv
+  have hfac : S.Q ⋙ F = T.Q :=
+    localizationFactor_fac (S := S) T.Q hInv
+  have hobj : F.obj (S.Q.obj (0 : C)) = T.Q.obj (0 : C) := by
+    exact congrArg (fun K : C ⥤ T.Localization => K.obj (0 : C)) hfac
+  have eS : S.Q.obj (0 : C) ≅ (0 : S.Localization) :=
+    IsZero.iso (S.Q.map_isZero (isZero_zero C)) (isZero_zero _)
+  have eT : T.Q.obj (0 : C) ≅ (0 : T.Localization) :=
+    IsZero.iso (T.Q.map_isZero (isZero_zero C)) (isZero_zero _)
+  letI : F.PreservesZeroMorphisms :=
+    Functor.preservesZeroMorphisms_of_map_zero_object
+      (F.mapIso eS.symm ≪≫ eqToIso hobj ≪≫ eT)
+  change IsZero (T.Q.obj Z)
+  rw [← hfac]
+  exact F.map_isZero hZ
 
 /-- The first composite is the saturation of a multiplicative system. -/
 theorem operations_morphismProperty_saturation
     {S : MorphismProperty C} [CategoryTheory.IsTriangulated C]
     [CompatibleWithTriangulation S] (hS : MultiplicativeSystem S) :
     subcategoryOperation (localizationKernel S) = saturationClosure S := by
-  sorry
+  letI : LeftMultiplicativeSystem S := hS.1
+  letI : RightMultiplicativeSystem S := hS.2
+  calc
+    subcategoryOperation (localizationKernel S) = invertedByLocalization S := by
+      ext X Y f
+      constructor
+      · intro hf
+        change quotientMorphismProperty (localizationKernel S) f at hf
+        obtain ⟨Z, g, h, hT, hZ⟩ := hf
+        change IsIso (S.Q.map f)
+        have hTQ : S.Q.mapTriangle.obj (Triangle.mk f g h) ∈ distTriang _ :=
+          S.Q.map_distinguished _ hT
+        apply (Triangle.isZero₃_iff_isIso₁ _ hTQ).1
+        obtain ⟨Z', hZ', ⟨e⟩⟩ := hZ
+        simpa using hZ'.of_iso (S.Q.mapIso e)
+      · intro hf
+        change IsIso (S.Q.map f) at hf
+        obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle f
+        refine ⟨Z, g, h, hT, ⟨Z, ?_, ⟨Iso.refl _⟩⟩⟩
+        change IsZero (S.Q.obj Z)
+        apply Triangle.isZero₃_of_isIso₁ _
+          (S.Q.map_distinguished _ hT)
+        exact hf
+    _ = saturationClosure S := invertedByLocalization_eq_saturationClosure hS
 
 end Operations
 

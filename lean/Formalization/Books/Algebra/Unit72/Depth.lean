@@ -1,7 +1,7 @@
-import Formalization.Books.Algebra.Unit60
-import Formalization.Books.Algebra.Unit63
-import Formalization.Books.Algebra.Unit68
-import Formalization.Books.Algebra.Unit71
+import Formalization.Books.Algebra.Unit60.Dimension
+import Formalization.Books.Algebra.Unit63.AssociatedPrimes
+import Formalization.Books.Algebra.Unit68.RegularSequences
+import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Jacobson.Ideal
 import Mathlib.RingTheory.Depth.Rees
@@ -196,7 +196,7 @@ theorem depth_eq_sSup_weaklyRegular
           intro x hx
           exact (Submodule.mem_smul_pointwise_iff_exists x (1 - f)
             (⊤ : Submodule R M)).mpr ⟨x, Submodule.mem_top, by
-              simpa [sub_smul, hfm]⟩
+              simp [sub_smul, hfm]⟩
         have hsub : Subsingleton (QuotSMulTop (1 - f) M) := by
           apply not_nontrivial_iff_subsingleton.mp
           intro hnon
@@ -212,7 +212,7 @@ theorem depth_eq_sSup_weaklyRegular
               refine ⟨?_, ?_⟩
               · intro x y _
                 exact Subsingleton.elim _ _
-              · letI : Subsingleton (QuotSMulTop r N) := by
+              · let : Subsingleton (QuotSMulTop r N) := by
                   constructor
                   intro x y
                   exact Subsingleton.elim _ _
@@ -279,7 +279,7 @@ theorem supportDim_ge_localDepth
           _ ≤ Module.supportDim R
                 (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) +
                 ((rs.length : ℕ∞) : WithBot ℕ∞) := by
-            letI : Nontrivial (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) :=
+            let : Nontrivial (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) :=
               hreg.quot_ofList_smul_nontrivial ⊤
             have hqne : Module.supportDim R
                 (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) ≠ ⊥ :=
@@ -289,7 +289,7 @@ theorem supportDim_ge_localDepth
               cases hq : Module.supportDim R
                   (M ⧸ (Ideal.ofList rs • (⊤ : Submodule R M))) with
               | bot => exact (hqne hq).elim
-              | coe q => simp [hq]
+              | coe q => simp
             exact add_le_add_left hqzero
               ((rs.length : ℕ∞) : WithBot ℕ∞)
           _ = Module.supportDim R M :=
@@ -308,7 +308,7 @@ theorem depth_lt_top_of_noetherian
   unfold depth
   rw [dif_neg hIM]
   let Q := M ⧸ (I • (⊤ : Submodule R M))
-  letI : Nontrivial Q := Submodule.Quotient.nontrivial_iff.mpr hIM
+  let : Nontrivial Q := Submodule.Quotient.nontrivial_iff.mpr hIM
   obtain ⟨p, hp⟩ := Module.nonempty_support_of_nontrivial (R := R) (M := Q)
   change p ∈ Module.support R (M ⧸ (I • (⊤ : Submodule R M))) at hp
   rw [Module.support_quotient] at hp
@@ -317,7 +317,7 @@ theorem depth_lt_top_of_noetherian
     exact hp.2
   let S := Localization.AtPrime p.asIdeal
   let N := LocalizedModule.AtPrime p.asIdeal M
-  letI : Nontrivial N := Module.mem_support_iff.mp hpM
+  let : Nontrivial N := Module.mem_support_iff.mp hpM
   cases hdimS : ringKrullDim S with
   | bot =>
       have hle : Module.supportDim S N ≤ (⊥ : WithBot ℕ∞) := by
@@ -352,7 +352,7 @@ theorem depth_lt_top_of_noetherian
       have hqne : Module.supportDim S
           (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
             (⊤ : Submodule S N))) ≠ ⊥ := by
-        letI := hqnon
+        let := hqnon
         exact Module.supportDim_ne_bot_of_nontrivial S _
       have hqzero : (0 : WithBot ℕ∞) ≤ Module.supportDim S
           (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
@@ -361,7 +361,7 @@ theorem depth_lt_top_of_noetherian
             (N ⧸ (Ideal.ofList (rs.map (algebraMap R S)) •
               (⊤ : Submodule S N))) with
         | bot => exact (hqne hq).elim
-        | coe q => simp [hq]
+        | coe q => simp
       have hlenbot : ((rs.length : ℕ∞) : WithBot ℕ∞) ≤
           Module.supportDim S N := by
         calc
@@ -415,7 +415,7 @@ theorem localDepth_eq_min_ext
       n = (rs.length : ℕ∞) ∧
         (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
           RingTheory.Sequence.IsRegular M rs} := by
-    letI : Nonempty {n : ℕ∞ | ∃ rs : List R,
+    let : Nonempty {n : ℕ∞ | ∃ rs : List R,
         n = (rs.length : ℕ∞) ∧
           (∀ r ∈ rs, r ∈ IsLocalRing.maximalIdeal R) ∧
             RingTheory.Sequence.IsRegular M rs} :=
@@ -469,7 +469,8 @@ theorem localDepth_eq_min_ext
     have hleNat : ys.length ≤ rs.length := by
       exact_mod_cast hle'
     have hcontra : rs.length + 1 ≤ rs.length := by
-      simpa [hyslen] using hleNat
+      rw [hyslen] at hleNat
+      exact hleNat
     exact (Nat.not_succ_le_self rs.length) hcontra
   refine ⟨rs.length, hlen, not_subsingleton_iff_nontrivial.mp hnot, ?_⟩
   intro j hj

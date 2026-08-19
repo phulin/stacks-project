@@ -1780,7 +1780,148 @@ theorem morphisms_equivalent_fibred_groupoids
     (hφ : Nonempty (overFunctor φ.underlying).IsEquivalence)
     (hψ : Nonempty (overFunctor ψ.underlying).IsEquivalence) :
     (prePostcompositionFunctor φ ψ).IsEquivalence := by
-  sorry
+  obtain ⟨φi, ⟨eφL⟩, ⟨eφR⟩⟩ :=
+    equivalence_fibredInGroupoids_is_equivalence_over hX₁ hX₂ φ hφ
+  obtain ⟨ψi, ⟨eψL⟩, ⟨eψR⟩⟩ :=
+    equivalence_fibredInGroupoids_is_equivalence_over hX₃ hX₄ ψ hψ
+  let Q : FibredCategoryOverHom X₁ X₄ ⥤
+      FibredCategoryOverHom X₂ X₃ := {
+    obj := fun α => FibredCategoryOverHom.comp φi
+      (FibredCategoryOverHom.comp α ψi)
+    map := fun η => fibredWhiskerLeft φi (fibredWhiskerRight η ψi)
+    map_id := by
+      intro α
+      rw [show fibredWhiskerRight (𝟙 α) ψi =
+          𝟙 (FibredCategoryOverHom.comp α ψi) by
+        exact @Bicategory.id_whiskerRight (FibredCategoryOver C) _
+          X₁ X₄ X₃ α ψi]
+      exact @Bicategory.whiskerLeft_id (FibredCategoryOver C) _
+        X₂ X₁ X₃ φi (FibredCategoryOverHom.comp α ψi)
+    map_comp := by
+      intro α β γ η θ
+      apply OverNatTrans.ext
+      change
+        (fibredWhiskerLeft φi (fibredWhiskerRight (η ≫ θ) ψi)).toNatTrans =
+          (fibredWhiskerLeft φi (fibredWhiskerRight η ψi)).toNatTrans ≫
+            (fibredWhiskerLeft φi (fibredWhiskerRight θ ψi)).toNatTrans
+      rw [show fibredWhiskerRight (η ≫ θ) ψi =
+          fibredOverNatTransComp (fibredWhiskerRight η ψi)
+            (fibredWhiskerRight θ ψi) by
+        apply OverNatTrans.ext
+        exact congrArg (fun q => q.toNatTrans)
+          (Bicategory.comp_whiskerRight (B := FibredCategoryOver C)
+            η θ ψi)]
+      rfl }
+  let toHomIso {U V : FibredCategoryOver C}
+      {F G : FibredCategoryOverHom U V}
+      (e : @Iso _ (Bicategory.homCategory (B := FibredCategoryOver C) U V)
+        F G) : F ≅ G := {
+    hom := e.hom
+    inv := e.inv
+    hom_inv_id := by
+      apply OverNatTrans.ext
+      exact congrArg (fun q => q.toNatTrans) e.hom_inv_id
+    inv_hom_id := by
+      apply OverNatTrans.ext
+      exact congrArg (fun q => q.toNatTrans) e.inv_hom_id }
+  let P := prePostcompositionFunctor φ ψ
+  let unitComponent (α : FibredCategoryOverHom X₂ X₃) :
+      α ≅ (P ⋙ Q).obj α := by
+    change α ≅ FibredCategoryOverHom.comp φi
+      (FibredCategoryOverHom.comp
+        (FibredCategoryOverHom.comp φ
+          (FibredCategoryOverHom.comp α ψ)) ψi)
+    let lastB := Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
+      ((Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
+          (Bicategory.associator (B := FibredCategoryOver C)
+            α ψ ψi).symm) ≪≫
+        (Bicategory.associator (B := FibredCategoryOver C)
+          φ (FibredCategoryOverHom.comp α ψ) ψi).symm)
+    let last := toHomIso lastB
+    let preB :=
+        ((Bicategory.leftUnitor (B := FibredCategoryOver C) α).symm ≪≫
+          Bicategory.whiskerLeftIso (B := FibredCategoryOver C)
+            (FibredCategoryOverHom.id X₂)
+            (Bicategory.rightUnitor (B := FibredCategoryOver C) α).symm) ≪≫
+        Bicategory.whiskerRightIso (B := FibredCategoryOver C) eφR.symm
+          (FibredCategoryOverHom.comp α (FibredCategoryOverHom.id X₃)) ≪≫
+        Bicategory.associator (B := FibredCategoryOver C) φi φ
+          (FibredCategoryOverHom.comp α (FibredCategoryOverHom.id X₃)) ≪≫
+        Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
+          (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
+            (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) α
+              eψL.symm))
+    let pre :
+        α ≅ FibredCategoryOverHom.comp φi
+          (FibredCategoryOverHom.comp φ
+            (FibredCategoryOverHom.comp α
+              (FibredCategoryOverHom.comp ψ ψi))) := by
+      convert toHomIso preB using 1 <;>
+        apply FibredCategoryOverHom.ext <;> rfl
+    convert pre ≪≫ last using 1 <;>
+      apply FibredCategoryOverHom.ext <;> rfl
+  let unit : 𝟭 (FibredCategoryOverHom X₂ X₃) ≅ P ⋙ Q :=
+    NatIso.ofComponents unitComponent (by
+      intro α β η
+      dsimp [unitComponent, P, Q, prePostcompositionFunctor, toHomIso]
+      simp [fibredWhiskerLeft, fibredWhiskerRight,
+        fibredOverNatTransComp, fibredCategoryOverHomCategory,
+        overWhiskerLeft, overWhiskerRight,
+        overHomCategory, fibredHomIsoOfUnderlying,
+        overNatIsoOfUnderlying, Functor.whiskerLeft,
+        Functor.whiskerRight, Functor.comp, Category.assoc,
+        NatTrans.comp_app, Bicategory.Strict.assoc,
+        Bicategory.Strict.id_comp, Bicategory.Strict.comp_id])
+  let counitComponent (β : FibredCategoryOverHom X₁ X₄) :
+      β ≅ (Q ⋙ P).obj β := by
+    change β ≅ FibredCategoryOverHom.comp φ
+      (FibredCategoryOverHom.comp
+        (FibredCategoryOverHom.comp φi
+          (FibredCategoryOverHom.comp β ψi)) ψ)
+    let preB :=
+        ((Bicategory.leftUnitor (B := FibredCategoryOver C) β).symm ≪≫
+          Bicategory.whiskerLeftIso (B := FibredCategoryOver C)
+            (FibredCategoryOverHom.id X₁)
+            (Bicategory.rightUnitor (B := FibredCategoryOver C) β).symm) ≪≫
+        Bicategory.whiskerRightIso (B := FibredCategoryOver C) eφL.symm
+          (FibredCategoryOverHom.comp β (FibredCategoryOverHom.id X₄)) ≪≫
+        Bicategory.associator (B := FibredCategoryOver C) φ φi
+          (FibredCategoryOverHom.comp β (FibredCategoryOverHom.id X₄)) ≪≫
+        Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
+          (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
+            (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) β
+              eψR.symm))
+    let lastB := Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φ
+      ((Bicategory.whiskerLeftIso (B := FibredCategoryOver C) φi
+          (Bicategory.associator (B := FibredCategoryOver C)
+            β ψi ψ).symm) ≪≫
+        (Bicategory.associator (B := FibredCategoryOver C)
+          φi (FibredCategoryOverHom.comp β ψi) ψ).symm)
+    let pre := toHomIso preB
+    let last := toHomIso lastB
+    convert pre ≪≫ last using 1 <;>
+      apply FibredCategoryOverHom.ext <;> rfl
+  let counit : Q ⋙ P ≅ 𝟭 (FibredCategoryOverHom X₁ X₄) :=
+    NatIso.ofComponents (fun β => (counitComponent β).symm) (by
+      intro α β η
+      have hforward : η ≫ (counitComponent β).hom =
+          (counitComponent α).hom ≫ (Q ⋙ P).map η := by
+        apply OverNatTrans.ext
+        dsimp [counitComponent, P, Q, prePostcompositionFunctor, toHomIso]
+        simp [fibredWhiskerLeft, fibredWhiskerRight,
+          fibredOverNatTransComp, fibredCategoryOverHomCategory,
+          overWhiskerLeft, overWhiskerRight,
+          overHomCategory, fibredHomIsoOfUnderlying,
+          overNatIsoOfUnderlying, Functor.whiskerLeft,
+          Functor.whiskerRight, Functor.comp, Category.assoc,
+          NatTrans.comp_app, Bicategory.Strict.assoc,
+          Bicategory.Strict.id_comp, Bicategory.Strict.comp_id]
+      apply (cancel_mono (counitComponent β).hom).1
+      simp only [Iso.symm_hom, Category.assoc, Iso.inv_hom_id_assoc,
+        Iso.inv_hom_id, Functor.id_map, Category.comp_id]
+      rw [hforward]
+      simp)
+  exact Functor.IsEquivalence.mk' Q unit counit
 
 /-! ## Inertia, slices, composites, and fibre products -/
 

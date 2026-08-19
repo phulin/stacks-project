@@ -21,7 +21,7 @@ theorem isSetoid_iff_isGroupoid_and_hom_subsingleton
     intro X Y
     constructor
     intro f g
-    letI : IsIso g := hgroup.all_isIso g
+    let : IsIso g := hgroup.all_isIso g
     apply (cancel_mono (inv g)).1
     rw [hid X (f ≫ inv g)]
     simp
@@ -72,7 +72,7 @@ theorem object_classes_are_discrete
     apply setoidObjectClasses_eq_iff.mpr
     have hXY : Nonempty (X ⟶ Y) := by
       exact leOfHom f
-    letI : IsGroupoid C := hC.1
+    let : IsGroupoid C := hC.1
     exact ⟨asIso (Classical.choice hXY)⟩
 
 theorem skeleton_equivalence
@@ -81,7 +81,7 @@ theorem skeleton_equivalence
       IsDiscrete (Skeleton C) := by
   have hhom : ∀ X Y : C, Subsingleton (X ⟶ Y) :=
     (isSetoid_iff_isGroupoid_and_hom_subsingleton.mp hC).2
-  letI : IsGroupoid C := hC.1
+  let : IsGroupoid C := hC.1
   refine ⟨⟨skeletonEquivalence C⟩, ?_⟩
   apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
   intro X Y f

@@ -1583,6 +1583,26 @@ noncomputable def fibredInSetsFibrePresheaf
       (pullback_composition_iso p P g.unop f.unop)
     exact (hp W.unop).eq_of_hom (e.hom.app x)
 
+@[simp]
+theorem fibredInSetsFibrePresheaf_obj
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) (U : C) :
+    (fibredInSetsFibrePresheaf p hp P).obj (Opposite.op U) =
+      Functor.Fiber p U := rfl
+
+@[simp]
+theorem fibredInSetsFibrePresheaf_map_apply
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) {V U : C} (f : V ⟶ U)
+    (x : Functor.Fiber p U) :
+    (fibredInSetsFibrePresheaf p hp P).map f.op x = P.pullback f x := rfl
+
 /-- A morphism is precisely the witness that its source is the chosen
 pullback of its target along its image in the base. -/
 theorem fibredInSets_pullback_eq
@@ -1642,6 +1662,15 @@ theorem fibredInSetsToFibrePresheafCategory_map_base
     (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
     (P : PullbackChoice p) {x y : S} (f : x ⟶ y) :
     ((fibredInSetsToFibrePresheafCategory p hp P).map f).base = p.map f := rfl
+
+theorem fibredInSetsToFibrePresheafCategory_over
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : Functor S C) [p.IsFibered]
+    (hp : ∀ U : C, IsDiscrete (Functor.Fiber p U))
+    (P : PullbackChoice p) :
+    fibredInSetsToFibrePresheafCategory p hp P ⋙
+      setPresheafProjection (fibredInSetsFibrePresheaf p hp P) = p := rfl
 
 /-- A fibred category with discrete fibres is faithful over its base. -/
 theorem fibredInSets_faithful

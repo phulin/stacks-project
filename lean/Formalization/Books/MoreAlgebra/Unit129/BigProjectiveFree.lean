@@ -384,6 +384,131 @@ theorem element_projective
   refine ⟨Fintype.card S, K, ?_, hKcomp, hKfin, hKfree⟩
   exact ⟨⟨c, hcA⟩, hTa⟩
 
+private theorem element_projective_aux
+    {R : Type u} {P : Type v} [CommRing R]
+    [AddCommGroup P] [Module R P] [Module.Projective R P]
+    (s : P) :
+    ∃ n : ℕ, ∃ K : Submodule R ((Fin n →₀ R) × P),
+      (0, s) ∈ K ∧ IsComplemented K ∧
+        Module.Finite R K ∧ Module.Free R K := by
+  classical
+  let L : Type (max u v) := P →₀ R
+  let j : L →ₗ[R] P := Finsupp.linearCombination R (id : P → P)
+  obtain ⟨i, hi⟩ := (inferInstance : Module.Projective R P).out
+  have hji : ∀ p : P, j (i p) = p := hi
+  let b : Module.Basis P R L := Finsupp.basisSingleOne
+  let c : L := i s
+  let d : P →₀ R := b.repr c
+  let S : Set P := d.support
+  letI : Finite S := Finite.of_injective
+    (fun x : S => (⟨x.1, x.2⟩ : d.support))
+    (by intro x y hxy; exact Subtype.ext (congrArg Subtype.val hxy))
+  letI : Fintype S := Fintype.ofFinite S
+  let A : Submodule R L := Submodule.span R (b '' S)
+  let B : Submodule R L := Submodule.span R (b '' Sᶜ)
+  have hAB : IsCompl A B := by
+    exact b.linearIndependent.isCompl_span_image (Module.Basis.span_eq b)
+      isCompl_compl
+  let v : S → A := fun x =>
+    ⟨b x, Submodule.subset_span ⟨x, x.2, rfl⟩⟩
+  let bA : Module.Basis S R A := Module.Basis.mk (v := v) (by
+    apply LinearIndependent.of_comp A.subtype
+    change LinearIndependent R (fun x : S => b (x : P))
+    exact b.linearIndependent.comp (fun x : S => (x : P)) Subtype.val_injective) (by
+    intro y hy
+    have hy' : (y : L) ∈ Submodule.span R (b '' S) := y.property
+    refine Submodule.span_induction (p := fun z hz =>
+      (⟨z, hz⟩ : A) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ hy'
+    · rintro z ⟨x, hx, rfl⟩
+      exact Submodule.subset_span ⟨⟨x, hx⟩, rfl⟩
+    · exact Submodule.zero_mem _
+    · intro z w hz hw hz' hw'
+      exact Submodule.add_mem _ hz' hw'
+    · intro a z hz hz'
+      exact Submodule.smul_mem _ a hz')
+  have hcA : c ∈ A := by
+    have hc : d.sum (fun k a => a • b k) = c := by
+      simpa only [d, Finsupp.linearCombination_apply] using b.linearCombination_repr c
+    rw [← hc]
+    change d.sum (fun k a => a • b k) ∈ A
+    apply Submodule.sum_mem
+    intro k hk
+    exact Submodule.smul_mem A (d k)
+      (Submodule.subset_span ⟨k, hk, rfl⟩)
+  let eFin : S ≃ Fin (Fintype.card S) := Fintype.equivFin S
+  let eA : A ≃ₗ[R] (Fin (Fintype.card S) →₀ R) :=
+    bA.repr.trans (Finsupp.mapDomain.linearEquiv R R eFin)
+  let pA : L →ₗ[R] A := A.projectionOnto B hAB
+  let u : A →ₗ[R] A := pA.comp (i.comp (j.comp A.subtype))
+  let T : A →ₗ[R] A × P :=
+    { toFun := fun a => (a - u a, j a)
+      map_add' := by
+        intro a a'
+        ext x <;> simp [u] <;> abel
+      map_smul' := by
+        intro r a
+        ext x <;> simp [u, smul_sub] }
+  let r : (A × P) →ₗ[R] A :=
+    LinearMap.fst R A P + pA.comp (i.comp (LinearMap.snd R A P))
+  have hrT : r.comp T = LinearMap.id := by
+    apply LinearMap.ext
+    intro a
+    change (a - pA (i (j a))) + pA (i (j a)) = a
+    abel
+  let eAmbient : (A × P) ≃ₗ[R] (Fin (Fintype.card S) →₀ R) × P :=
+    eA.prodCongr (LinearEquiv.refl R P)
+  let T' : A →ₗ[R] ((Fin (Fintype.card S) →₀ R) × P) :=
+    eAmbient.toLinearMap.comp T
+  let r' : ((Fin (Fintype.card S) →₀ R) × P) →ₗ[R] A :=
+    r.comp eAmbient.symm.toLinearMap
+  have hrT' : r'.comp T' = LinearMap.id := by
+    apply LinearMap.ext
+    intro a
+    simpa [r', T', eAmbient] using LinearMap.congr_fun hrT a
+  let K : Submodule R ((Fin (Fintype.card S) →₀ R) × P) := LinearMap.range T'
+  let T'K : A →ₗ[R] K := T'.codRestrict K (fun a => ⟨a, rfl⟩)
+  have hT'inj : Function.Injective T' := by
+    intro a a' haa'
+    have h₁ := congrArg r' haa'
+    have h₂ : r' (T' a) = a := LinearMap.congr_fun hrT' a
+    have h₃ : r' (T' a') = a' := LinearMap.congr_fun hrT' a'
+    exact h₂.symm.trans (h₁.trans h₃)
+  have hT'Ksurj : Function.Surjective T'K := by
+    intro x
+    rcases x.property with ⟨a, ha⟩
+    exact ⟨a, Subtype.ext ha⟩
+  have hT'Kinj : Function.Injective T'K := by
+    intro a a' haa'
+    apply hT'inj
+    exact congrArg Subtype.val haa'
+  let eK : A ≃ₗ[R] K := LinearEquiv.ofBijective T'K ⟨hT'Kinj, hT'Ksurj⟩
+  let fK : ((Fin (Fintype.card S) →₀ R) × P) →ₗ[R] K :=
+    (T'.comp r').codRestrict K (fun x => ⟨r' x, rfl⟩)
+  have hfK : ∀ x : K, fK x = x := by
+    intro x
+    rcases x.property with ⟨a, ha⟩
+    apply Subtype.ext
+    change T' (r' (x : (Fin (Fintype.card S) →₀ R) × P)) = x
+    rw [← ha]
+    rw [LinearMap.congr_fun hrT' a]
+  have hKcomp : IsComplemented K :=
+    ⟨LinearMap.ker fK, LinearMap.isCompl_of_proj hfK⟩
+  letI : Module.Finite R A := Module.Finite.of_basis bA
+  letI : Module.Free R A := Module.Free.of_basis bA
+  have hKfin : Module.Finite R K := Module.Finite.equiv eK
+  have hKfree : Module.Free R K := Module.Free.of_equiv eK
+  have hTa : T' ⟨c, hcA⟩ = (0, s) := by
+    apply eAmbient.injective
+    apply Prod.ext
+    · apply Subtype.ext
+      change (⟨c, hcA⟩ - pA (i (j ⟨c, hcA⟩)) : L) = 0
+      rw [hji, Submodule.projectionOnto_apply_of_mem_left hAB hcA]
+      simp
+    · change j ⟨c, hcA⟩ = s
+      exact hji s
+  refine ⟨Fintype.card S, K, ?_, hKcomp, hKfin, hKfree⟩
+  exact ⟨⟨c, hcA⟩, hTa⟩
+
 /-! ## Finding a unimodular element -/
 
 /-- If `s` together with a submodule `M` generates `P`, one can adjust `s` by

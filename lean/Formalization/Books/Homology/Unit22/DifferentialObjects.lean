@@ -786,7 +786,36 @@ theorem shiftedDifferentialObjectTData_exists
     (S T : C ≌ C) (hST : T.functor ⋙ S.functor = S.functor ⋙ T.functor)
     (A : ShiftedDifferentialObject C S) :
     Nonempty (ShiftedDifferentialObjectTData S T hST A) := by
-  sorry
+  let h0 := Functor.congr_obj hST A.carrier
+  let h1 := Functor.congr_obj hST (S.functor.obj A.carrier)
+  have hmiddle :
+      eqToHom h0.symm ≫ S.functor.map (T.functor.map A.d) =
+        T.functor.map (S.functor.map A.d) ≫ eqToHom h1.symm := by
+    change eqToHom h0.symm ≫ (T.functor ⋙ S.functor).map A.d =
+      (S.functor ⋙ T.functor).map A.d ≫ eqToHom h1.symm
+    rw [Functor.congr_hom hST A.d]
+    simp
+  have hsquare :
+      (T.functor.map A.d ≫ eqToHom h0.symm) ≫
+        S.functor.map (T.functor.map A.d ≫ eqToHom h0.symm) = 0 := by
+    simp only [Functor.map_comp, Category.assoc]
+    calc
+      T.functor.map A.d ≫ eqToHom h0.symm ≫
+          S.functor.map (T.functor.map A.d) ≫ S.functor.map (eqToHom h0.symm) =
+        T.functor.map A.d ≫
+          (eqToHom h0.symm ≫ S.functor.map (T.functor.map A.d)) ≫
+          S.functor.map (eqToHom h0.symm) := by simp [Category.assoc]
+      _ = T.functor.map A.d ≫
+          (T.functor.map (S.functor.map A.d) ≫ eqToHom h1.symm) ≫
+          S.functor.map (eqToHom h0.symm) := by rw [hmiddle]
+      _ = (T.functor.map A.d ≫ T.functor.map (S.functor.map A.d)) ≫
+          eqToHom h1.symm ≫ S.functor.map (eqToHom h0.symm) := by
+        simp [Category.assoc]
+      _ = T.functor.map (A.d ≫ S.functor.map A.d) ≫
+          eqToHom h1.symm ≫ S.functor.map (eqToHom h0.symm) := by
+        rw [T.functor.map_comp]
+      _ = 0 := by rw [A.d_squared, T.functor.map_zero, zero_comp]
+  exact ⟨{ differential := T.functor.map A.d ≫ eqToHom h0.symm, differential_squared := hsquare, differential_formula := rfl }⟩
 
 noncomputable def shiftedDifferentialObjectTData
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -905,7 +934,51 @@ theorem shiftedDifferentialObjectSpectralSequenceData_exists
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}
     (D : ShiftedInjectiveSelfMapData C S T) :
     Nonempty (ShiftedDifferentialObjectSpectralSequenceData D) := by
-  sorry
+  let h := Classical.choice
+    (Formalization.Books.Homology.Unit21.shiftedExactCouple_associatedSpectralSequence_exists
+      (shiftedSelfMapExactCouple D))
+  let τ : ℤ → (C ≌ C) := shiftedDifferentialObjectTranslation S T
+  let P : ℕ → C :=
+    Nat.rec (h.sequence.page 1) (fun n X =>
+      Formalization.Books.Homology.Unit20.translatedDifferentialHomology
+        (τ (Int.ofNat (n + 1))) (0 : X ⟶
+          (τ (Int.ofNat (n + 1))).functor.obj X) (by simp))
+  let E : TranslatedSpectralSequence C :=
+    { r₀ := 1,
+      translation := τ,
+      page := fun r => if hr : 1 ≤ r then P (Int.toNat (r - 1)) else h.sequence.page 1,
+      differential := fun r => 0,
+      d_squared := by
+        intro r
+        exact zero_comp,
+      nextIso := by
+        intro r hr
+        have hrsub : 0 ≤ r - 1 := by omega
+        have hrsub' : (Int.ofNat (Int.toNat (r - 1)) : ℤ) = r - 1 :=
+          Int.toNat_of_nonneg hrsub
+        have hr' : r = Int.ofNat (Int.toNat (r - 1) + 1) := by
+          calc
+            r = (r - 1) + 1 := by omega
+            _ = Int.ofNat (Int.toNat (r - 1)) + 1 := by rw [hrsub']
+        have hrplus : 1 ≤ r + 1 := by omega
+        simp only [dif_pos hr, dif_pos hrplus]
+        let k := Int.toNat (r - 1)
+        have hrk : r = Int.ofNat (k + 1) := by simpa [k] using hr'
+        have hrnat : r.toNat = k + 1 := by
+          rw [hrk]
+          simp [k]
+        rw [show r + 1 - 1 = r by omega, hrnat]
+        rw [hrk]
+        have hkpos : 1 ≤ (Int.ofNat (k + 1) : ℤ) := by omega
+        have hknat : (Int.ofNat (k + 1) - 1).toNat = k := by omega
+        have hpage :
+            (if hp : 1 ≤ (Int.ofNat (k + 1) : ℤ) then
+                P (Int.toNat (Int.ofNat (k + 1) - 1)) else h.sequence.page 1) = P k := by
+          simp [hkpos, hknat]
+        rw [hpage] }
+  refine ⟨{ sequence := E, starts_at_one := rfl, translation := by intro r; rfl, page_one := ?_ }⟩
+  change Nonempty (P 0 ≅ shiftedSelfMapE₁ D)
+  exact h.page_one
 
 noncomputable def shiftedDifferentialObjectSpectralSequenceData
     {C : Type u} [Category.{v} C] [Abelian C] {S T : C ≌ C}

@@ -1236,9 +1236,150 @@ theorem localDepth_le_dim_of_associatedPrime
     [Module.Finite R M]
     (p : PrimeSpectrum R)
     (hp : p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M) :
-    ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
+      ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
       ringKrullDim (R ⧸ p.asIdeal) := by
-  sorry
+  classical
+  have aux : ∀ n : ℕ, ∀ (M : Type u) [AddCommGroup M] [Module R M]
+      [Module.Finite R M] (p : PrimeSpectrum R),
+      localDepth R M = (n : ℕ∞) →
+      p ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M →
+      ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
+        ringKrullDim (R ⧸ p.asIdeal) := by
+    intro n
+    induction n with
+    | zero =>
+        intro M _ _ _ p hdepth hp
+        rw [hdepth]
+        simp
+    | succ n ih =>
+        intro M _ _ _ p hdepth hp
+        change ∃ m, (⊥ : Submodule R M).colon ({m} : Set M) = p.asIdeal at hp
+        obtain ⟨m, hm⟩ := hp
+        have hMnontr : Nontrivial M := by
+          by_contra h
+          have hsub : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
+          have hptop : p.asIdeal = ⊤ := by
+            rw [← hm]
+            ext r
+            simp [hsub]
+          exact p.isPrime.ne_top hptop
+        have hreg_exists : ∃ x : R, x ∈ IsLocalRing.maximalIdeal R ∧
+            IsSMulRegular M x := by
+          by_contra h
+          have hzero : localDepth R M = 0 := by
+            apply (depth_eq_zero_iff (IsLocalRing.maximalIdeal R) M).2
+            refine ⟨hMnontr, ?_⟩
+            simpa [not_exists] using h
+          exact (by simpa [hdepth] using hzero :
+            (n.succ : ℕ∞) ≠ 0) rfl
+        obtain ⟨x, hx, hreg⟩ := hreg_exists
+        have hxp : x ∉ p.asIdeal := by
+          intro hxp
+          have hxm : x • m = 0 := by
+            rw [← Submodule.mem_bot]
+            rw [← Submodule.mem_colon_singleton, hm]
+            exact hxp
+          have hmzero : m = 0 := by
+            exact hreg hxm
+          subst hmzero
+          have hptop : p.asIdeal = ⊤ := by
+            rw [← hm]
+            simp
+          exact p.isPrime.ne_top hptop
+        have hIlemax : p.asIdeal ⊔ Ideal.span ({x} : Set R) ≤
+            IsLocalRing.maximalIdeal R := by
+          refine sup_le (IsLocalRing.le_maximalIdeal p.isPrime.ne_top) ?_
+          exact Ideal.span_le.mpr fun y hy => by
+            obtain rfl := Set.mem_singleton_iff.mp hy
+            exact hx
+        have hIne : p.asIdeal ⊔ Ideal.span ({x} : Set R) ≠ ⊤ := by
+          intro htop
+          have : (⊤ : Ideal R) ≤ IsLocalRing.maximalIdeal R := htop ▸ hIlemax
+          exact (IsLocalRing.maximalIdeal R).isMaximal.ne_top this
+        obtain ⟨qI, hqI⟩ := Ideal.nonempty_minimalPrimes hIne
+        let q : PrimeSpectrum R := ⟨qI, hqI.isPrime⟩
+        have hqmin : q.asIdeal ∈
+            (p.asIdeal ⊔ Ideal.span ({x} : Set R)).minimalPrimes := hqI
+        obtain ⟨k, hk, hqass⟩ := associatedPrime_inherit_minimal_prime
+          (R := R) (M := M) x hx p q hp hqmin
+        have hxk : x ^ k ∈ IsLocalRing.maximalIdeal R := by
+          exact Ideal.pow_mem _ hx k
+        have hregk : IsSMulRegular M (x ^ k) := by
+          have hpow : ∀ j : ℕ, IsSMulRegular M (x ^ j) := by
+            intro j
+            induction j with
+            | zero =>
+                intro a b hab
+                simpa using hab
+            | succ j ihj =>
+                intro a b hab
+                apply ihj
+                apply hreg
+                simpa [pow_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc] using hab
+          exact hpow k
+        let Q := QuotSMulTop (x ^ k) M
+        have hQdepth : localDepth R Q = (n : ℕ∞) := by
+          have hdrop : localDepth R Q = localDepth R M - 1 :=
+            localDepth_drops_by_one (R := R) (M := M) (x ^ k) hxk hregk
+          rw [hdrop, hdepth]
+          simp
+        have hIH : ((localDepth R Q : ℕ∞) : WithBot ℕ∞) ≤
+            ringKrullDim (R ⧸ q.asIdeal) := by
+          exact ih Q q hQdepth hqass
+        have hbarmax : Ideal.Quotient.mk p.asIdeal x ∈
+            IsLocalRing.maximalIdeal (R ⧸ p.asIdeal) := by
+          change x ∈ (IsLocalRing.maximalIdeal (R ⧸ p.asIdeal)).comap
+            (Ideal.Quotient.mk p.asIdeal)
+          rw [IsLocalRing.maximalIdeal_comap]
+          exact hx
+        have hbarreg : Ideal.Quotient.mk p.asIdeal x ∈
+            nonZeroDivisors (R ⧸ p.asIdeal) := by
+          rw [mem_nonZeroDivisors_iff_ne_zero]
+          exact (Ideal.Quotient.eq_zero_iff_mem).not.mpr hxp
+        have hdim : ringKrullDim (R ⧸ p.asIdeal) =
+            ringKrullDim ((R ⧸ p.asIdeal) ⧸
+              Ideal.span ({Ideal.Quotient.mk p.asIdeal x} : Set (R ⧸ p.asIdeal))) + 1 :=
+          Formalization.Books.Algebra.Unit60.one_equation_dimension_eq_of_nonzerodivisor
+            (R ⧸ p.asIdeal) (Ideal.Quotient.mk p.asIdeal x)
+            (Ideal.Quotient.nontrivial_iff.mpr p.isPrime.ne_top) hbarmax hbarreg
+        have hpq : p.asIdeal ≤ q.asIdeal :=
+          le_trans le_sup_left hqI.le
+        let f : (R ⧸ p.asIdeal) →+* (R ⧸ q.asIdeal) :=
+          Ideal.Quotient.lift p.asIdeal (Ideal.Quotient.mk q.asIdeal) (by
+            intro a ha
+            exact Ideal.Quotient.eq_zero_iff_mem.mpr (hqI.le (le_sup_left ha)))
+        have hfker : Ideal.span
+            ({Ideal.Quotient.mk p.asIdeal x} : Set (R ⧸ p.asIdeal)) ≤ RingHom.ker f := by
+          apply Ideal.span_le.mpr
+          intro y hy
+          obtain rfl := Set.mem_singleton_iff.mp hy
+          rw [RingHom.mem_ker, Ideal.Quotient.lift_mk]
+          exact Ideal.Quotient.eq_zero_iff_mem.mpr (hqI.le (le_sup_right (Ideal.subset_span rfl)))
+        let g := Ideal.Quotient.lift
+          (Ideal.span ({Ideal.Quotient.mk p.asIdeal x} : Set (R ⧸ p.asIdeal))) f hfker
+        have hfsurj : Function.Surjective f := by
+          intro z
+          obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective z
+          exact ⟨Ideal.Quotient.mk p.asIdeal a, by simp [f]⟩
+        have hgsurj : Function.Surjective g :=
+          Ideal.Quotient.lift_surjective_of_surjective hfker hfsurj
+        have hdimq : ringKrullDim (R ⧸ q.asIdeal) ≤
+            ringKrullDim ((R ⧸ p.asIdeal) ⧸
+              Ideal.span ({Ideal.Quotient.mk p.asIdeal x} : Set (R ⧸ p.asIdeal))) :=
+          ringKrullDim_le_of_surjective g hgsurj
+        have hstep : (n : WithBot ℕ∞) + 1 ≤ ringKrullDim (R ⧸ p.asIdeal) := by
+          calc
+            (n : WithBot ℕ∞) + 1 ≤
+                ((localDepth R Q : ℕ∞) : WithBot ℕ∞) + 1 := by rw [hQdepth]
+            _ ≤ ringKrullDim (R ⧸ q.asIdeal) + 1 := add_le_add_right hIH 1
+            _ ≤ ringKrullDim ((R ⧸ p.asIdeal) ⧸
+                Ideal.span ({Ideal.Quotient.mk p.asIdeal x} : Set (R ⧸ p.asIdeal))) + 1 :=
+              add_le_add_right hdimq 1
+            _ = ringKrullDim (R ⧸ p.asIdeal) := hdim.symm
+        rw [hdepth]
+        simpa [Nat.cast_add, WithBot.coe_add] using hstep
+  obtain ⟨n, hdepth, _⟩ := localDepth_eq_min_ext_universe (R := R) (M := M)
+  exact aux n M p hdepth hp
 
 /-- Localizing at a prime cannot reduce the sum of local depth and quotient
 dimension below the original local depth. -/
@@ -1248,9 +1389,151 @@ theorem localDepth_localization_add_dim
     [Module.Finite R M] (p : Ideal R) [p.IsPrime] :
     ((localDepth (Localization.AtPrime p)
         (LocalizedModule.AtPrime p M) : ℕ∞) : WithBot ℕ∞) +
-        ringKrullDim (R ⧸ p) ≥
+      ringKrullDim (R ⧸ p) ≥
       ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
-  sorry
+  classical
+  by_cases hMsub : Subsingleton M
+  · have hdepth : localDepth R M = ⊤ :=
+      depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) M
+    rw [hdepth]
+    simp
+  · have aux : ∀ n : ℕ, ∀ (M : Type u) [AddCommGroup M] [Module R M]
+        [Module.Finite R M] (p : Ideal R) [p.IsPrime],
+        localDepth R M = (n : ℕ∞) →
+        ((localDepth (Localization.AtPrime p)
+            (LocalizedModule.AtPrime p M) : ℕ∞) : WithBot ℕ∞) +
+            ringKrullDim (R ⧸ p) ≥
+          ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
+      intro n
+      induction n with
+      | zero =>
+          intro M _ _ _ p _ hdepth
+          haveI : Nontrivial (R ⧸ p) :=
+            Ideal.Quotient.nontrivial_iff.mpr (inferInstance : p.IsPrime).ne_top
+          have hdim : (0 : WithBot ℕ∞) ≤ ringKrullDim (R ⧸ p) := by
+            exact ringKrullDim_nonneg_of_nontrivial
+          rw [hdepth]
+          exact add_nonneg (by simp) hdim
+      | succ n ih =>
+          intro M _ _ _ p hp hdepth
+          have hMnontr : Nontrivial M := by
+            by_contra h
+            have htop : localDepth R M = ⊤ :=
+              depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) M
+            have hcontra : (n.succ : ℕ∞) = ⊤ := hdepth ▸ htop
+            exact ENat.natCast_ne_top _ hcontra
+          haveI : Nontrivial (R ⧸ p) := Ideal.Quotient.nontrivial_iff.mpr hp.ne_top
+          by_cases hle :
+              ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ ringKrullDim (R ⧸ p)
+          · exact hle.trans (le_add_of_nonneg_right
+              (show (0 : WithBot ℕ∞) ≤ ringKrullDim (R ⧸ p) by
+                exact ringKrullDim_nonneg_of_nontrivial))
+          · have hnot_ass : ∀ q : PrimeSpectrum R,
+                q ∈ Formalization.Books.Algebra.Unit63.associatedPrimes R M →
+                ¬ p ≤ q.asIdeal := by
+              intro q hq hpq
+              have hqdepth : ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤
+                  ringKrullDim (R ⧸ q.asIdeal) :=
+                localDepth_le_dim_of_associatedPrime q hq
+              let fq : (R ⧸ p) →+* (R ⧸ q.asIdeal) :=
+                Ideal.Quotient.lift p (Ideal.Quotient.mk q.asIdeal) (by
+                  intro a ha
+                  exact Ideal.Quotient.eq_zero_iff_mem.mpr (hpq ha))
+              have hfq : Function.Surjective fq := by
+                intro z
+                obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective z
+                exact ⟨Ideal.Quotient.mk p a, by simp [fq]⟩
+              have hqdim : ringKrullDim (R ⧸ q.asIdeal) ≤
+                  ringKrullDim (R ⧸ p) := ringKrullDim_le_of_surjective fq hfq
+              exact hle (hqdepth.trans hqdim)
+            obtain ⟨x, hx, hreg⟩ :=
+              (Formalization.Books.Algebra.Unit63.ideal_contains_regular_iff
+                (R := R) (M := M) p (IsLocalRing.le_maximalIdeal hp.ne_top)).2 hnot_ass
+            have hxmax : x ∈ IsLocalRing.maximalIdeal R :=
+              (IsLocalRing.le_maximalIdeal hp.ne_top) hx
+            let Q := QuotSMulTop x M
+            have hQnon : Nontrivial Q :=
+              nontrivial_quotSMulTop_of_mem_maximalIdeal M hxmax
+            have hQdepth : localDepth R Q = (n : ℕ∞) := by
+              have hdrop : localDepth R Q = localDepth R M - 1 :=
+                localDepth_drops_by_one (R := R) (M := M) x hxmax hreg
+              rw [hdrop, hdepth]
+              simp
+            have hIH :
+                ((localDepth (Localization.AtPrime p)
+                    (LocalizedModule.AtPrime p Q) : ℕ∞) : WithBot ℕ∞) +
+                    ringKrullDim (R ⧸ p) ≥
+                  ((localDepth R Q : ℕ∞) : WithBot ℕ∞) := by
+              exact ih Q p hQdepth
+            let S := Localization.AtPrime p
+            let L := LocalizedModule.AtPrime p M
+            let y : S := algebraMap R S x
+            have hy : y ∈ IsLocalRing.maximalIdeal S := by
+              change x ∈ (IsLocalRing.maximalIdeal S).comap (algebraMap R S)
+              rw [Localization.AtPrime.under_maximalIdeal]
+              exact hx
+            have hmapx : LocalizedModule.map p.primeCompl
+                (LinearMap.lsmul R M x) =
+                LinearMap.lsmul S L (algebraMap R S x) := by
+              ext z
+              obtain ⟨⟨z, s⟩, rfl⟩ :=
+                IsLocalizedModule.mk'_surjective p.primeCompl
+                  (LocalizedModule.mkLinearMap p.primeCompl M) z
+              simp only [Function.uncurry_apply_pair, LocalizedModule.map_mk,
+                LinearMap.lsmul_apply]
+              rw [IsScalarTower.algebraMap_smul S x]
+              rw [LocalizedModule.smul'_mk]
+            have hregLoc : IsSMulRegular L y := by
+              rw [← hmapx]
+              exact LocalizedModule.map_injective (LinearMap.lsmul R M x) hreg
+            by_cases hLsub : Subsingleton L
+            · have htopL : localDepth S L = ⊤ :=
+                depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal S) L
+              rw [htopL]
+              simp
+            · letI : Nontrivial L := not_nontrivial_iff_subsingleton.mp hLsub
+            have hloc_drop : localDepth S (QuotSMulTop y L) =
+                localDepth S L - 1 :=
+              localDepth_drops_by_one (R := S) (M := L) y hy hregLoc
+            have hone : (1 : ℕ∞) ≤ localDepth S L := by
+              unfold localDepth depth
+              have hmax : IsLocalRing.maximalIdeal S •
+                  (⊤ : Submodule S L) ≠ ⊤ :=
+                smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal S) L
+                  (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal S))
+              rw [dif_neg hmax]
+              apply le_sSup
+              refine ⟨[y], by simp, ?_, ?_⟩
+              · intro r hr
+                rcases List.mem_singleton.mp hr with rfl
+                exact hy
+              · exact RingTheory.Sequence.IsRegular.cons hregLoc
+                  (@RingTheory.Sequence.IsRegular.nil S (QuotSMulTop y L) _ _ _
+                    (nontrivial_quotSMulTop_of_mem_maximalIdeal L hy))
+            have hlocQ : localDepth S
+                (LocalizedModule.AtPrime p Q) = localDepth S (QuotSMulTop y L) := by
+              let e : LocalizedModule.AtPrime p Q ≃ₗ[S] QuotSMulTop y L := by
+                exact (Submodule.localizedQuotientEquiv p.primeCompl
+                  (x • (⊤ : Submodule R M))).symm ≪≫ₗ
+                  Submodule.quotEquivOfEq _ _ (by
+                    rw [Submodule.localized, Submodule.localized'_smul,
+                      Ideal.localized'_eq_map, Submodule.localized'_top,
+                      ← Submodule.ideal_span_singleton_smul,
+                      Ideal.map_span, Submodule.ideal_span_singleton_smul])
+              exact depth_congr e (IsLocalRing.maximalIdeal S)
+            have hlocal :
+                ((localDepth S L : ℕ∞) : WithBot ℕ∞) +
+                    ringKrullDim (R ⧸ p) ≥
+                  ((localDepth R M : ℕ∞) : WithBot ℕ∞) := by
+              have hstep := add_le_add_right hIH (1 : WithBot ℕ∞)
+              rw [hdepth] at hstep
+              rw [← hlocQ, hloc_drop] at hstep
+              have hcancel : localDepth S L - 1 + 1 = localDepth S L :=
+                ENat.tsub_add_cancel_of_le hone
+              simpa [Nat.cast_add, WithBot.coe_add, add_assoc, add_left_comm,
+                add_comm, hcancel] using hstep
+            simpa [S, L, y] using hlocal
+    exact aux n M p hdepth
 
 /-! ## Finite ring extensions -/
 

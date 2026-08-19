@@ -117,6 +117,84 @@ instance finitelyPresentedFilteredColimitIndexFiltered
     (C : FinitelyPresentedFilteredColimit N) : IsFiltered C.index :=
   C.indexFiltered
 
+/-- The underlying colimit witness in a finitely presented filtered-colimit
+presentation also gives the corresponding colimit in modules. -/
+noncomputable def FinitelyPresentedFilteredColimit.isColimit
+    {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
+    (C : FinitelyPresentedFilteredColimit N) :
+    IsColimit ({ pt := N, ι := C.ι } : Cocone C.diag) := by
+  let c : Cocone C.diag := { pt := N, ι := C.ι }
+  refine
+    { desc := fun s => ModuleCat.ofHom
+        { toFun := C.underlyingIsColimit.desc
+            ((forget (ModuleCat.{max u w} R)).mapCocone s)
+          map_add' := ?_
+          map_smul' := ?_ }
+      fac := ?_
+      uniq := ?_ }
+  · intro x y
+    let d := C.underlyingIsColimit.desc
+      ((forget (ModuleCat.{max u w} R)).mapCocone s)
+    have hfac (i : C.index) (z : C.diag.obj i) :
+        d ((C.ι.app i).hom z) = (s.ι.app i).hom z := by
+      have hf := congrArg (fun f => f z) (C.underlyingIsColimit.fac
+        ((forget (ModuleCat.{max u w} R)).mapCocone s) i)
+      change d ((C.ι.app i).hom z) = (s.ι.app i).hom z at hf
+      exact hf
+    obtain ⟨i, xi, hxi⟩ :=
+      Types.jointly_surjective_of_isColimit C.underlyingIsColimit x
+    obtain ⟨j, yj, hyj⟩ :=
+      Types.jointly_surjective_of_isColimit C.underlyingIsColimit y
+    obtain ⟨k, a, b, _⟩ := IsFilteredOrEmpty.cocone_objs i j
+    have hxi' : (C.ι.app k).hom ((C.diag.map a).hom xi) = x := by
+      rw [← hxi]
+      have hn := congrArg ModuleCat.Hom.hom (C.ι.naturality a)
+      have hn' := congrArg (fun f => f xi) hn
+      change (C.ι.app k).hom ((C.diag.map a).hom xi) =
+        (C.ι.app i).hom xi at hn'
+      exact hn'
+    have hyj' : (C.ι.app k).hom ((C.diag.map b).hom yj) = y := by
+      rw [← hyj]
+      have hn := congrArg ModuleCat.Hom.hom (C.ι.naturality b)
+      have hn' := congrArg (fun f => f yj) hn
+      change (C.ι.app k).hom ((C.diag.map b).hom yj) =
+        (C.ι.app j).hom yj at hn'
+      exact hn'
+    rw [← hxi', ← hyj', ← map_add]
+    change d ((C.ι.app k).hom
+      ((C.diag.map a).hom xi + (C.diag.map b).hom yj)) =
+      d ((C.ι.app k).hom ((C.diag.map a).hom xi)) +
+        d ((C.ι.app k).hom ((C.diag.map b).hom yj))
+    rw [hfac, hfac, hfac, map_add]
+  · intro r x
+    let d := C.underlyingIsColimit.desc
+      ((forget (ModuleCat.{max u w} R)).mapCocone s)
+    have hfac (i : C.index) (z : C.diag.obj i) :
+        d ((C.ι.app i).hom z) = (s.ι.app i).hom z := by
+      have hf := congrArg (fun f => f z) (C.underlyingIsColimit.fac
+        ((forget (ModuleCat.{max u w} R)).mapCocone s) i)
+      change d ((C.ι.app i).hom z) = (s.ι.app i).hom z at hf
+      exact hf
+    obtain ⟨i, xi, hxi⟩ :=
+      Types.jointly_surjective_of_isColimit C.underlyingIsColimit x
+    rw [← hxi, ← map_smul]
+    change d ((C.ι.app i).hom (r • xi)) =
+      r • d ((C.ι.app i).hom xi)
+    rw [hfac, hfac, map_smul]
+  · intro s i
+    ext x
+    simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
+      congrArg (fun f => f x)
+        (C.underlyingIsColimit.fac
+          ((forget (ModuleCat.{max u w} R)).mapCocone s) i)
+  · intro s m hm
+    apply ModuleCat.hom_ext
+    apply C.underlyingIsColimit.hom_ext
+    intro i
+    ext x
+    have hi := congrArg ModuleCat.Hom.hom (hm i)
+    exact congrArg (fun f => f x) hi
+
 /-- Every module is a filtered colimit of finitely presented modules in a
 universe containing both the ring and the module. -/
 theorem exists_finitelyPresentedFilteredColimit
@@ -402,6 +480,168 @@ lemma finitelyPresentedFilteredColimit_tensor_rep
       rw [LinearMap.lTensor_comp] at ha hb
       rw [← ha, ← hb]
       simp only [LinearMap.comp_apply]
+
+/-- A tensor represented at one stage of a filtered-colimit presentation and
+vanishing in the colimit already vanishes after one transition.  This is the
+element-level, universe-polymorphic form of the fact that tensor products
+commute with filtered colimits. -/
+lemma finitelyPresentedFilteredColimit_tensor_eventually_zero
+    {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
+    {Q : ModuleCat.{max u w} R} (C : FinitelyPresentedFilteredColimit Q)
+    {i : C.index} (x : TensorProduct R P (C.diag.obj i : Type (max u w))) :
+    (C.ι.app i).hom.lTensor P x = 0 →
+      ∃ (j : C.index) (h : i ⟶ j),
+        (C.diag.map h).hom.lTensor P x = 0 := by
+  classical
+  let D : CategoryTheory.Functor C.index (ModuleCat.{max u w} R) :=
+    { obj := fun i => ModuleCat.of R
+          (TensorProduct R P (C.diag.obj i : Type (max u w)))
+      map := fun h => ModuleCat.ofHom ((C.diag.map h).hom.lTensor P)
+      map_id := by
+        intro i
+        apply ModuleCat.hom_ext
+        apply TensorProduct.ext'
+        intro p q
+        simp
+      map_comp := by
+        intro i j k f g
+        apply ModuleCat.hom_ext
+        apply TensorProduct.ext'
+        intro p q
+        simp }
+  let c : Cocone D :=
+    { pt := ModuleCat.of R (TensorProduct R P (Q : Type (max u w)))
+      ι :=
+        { app := fun i => ModuleCat.ofHom ((C.ι.app i).hom.lTensor P)
+          naturality := by
+            intro i j h
+            apply ModuleCat.hom_ext
+            apply TensorProduct.ext'
+            intro p q
+            have hn := congrArg ModuleCat.Hom.hom (C.ι.naturality h)
+            have hn' := congrArg (fun f => f q) hn
+            change (C.ι.app j).hom ((C.diag.map h).hom q) =
+              (C.ι.app i).hom q at hn'
+            change p ⊗ₜ[R] (C.ι.app j).hom ((C.diag.map h).hom q) =
+              p ⊗ₜ[R] (C.ι.app i).hom q
+            exact congrArg (fun z => p ⊗ₜ[R] z) hn' } }
+  have hc : IsColimit c := by
+    let hC := C.isColimit
+    refine
+      { desc := fun s => ?_
+        fac := ?_
+        uniq := ?_ }
+    · let sp (p : P) : Cocone C.diag :=
+        { pt := s.pt
+          ι :=
+            { app := fun i => ModuleCat.ofHom <|
+                (s.ι.app i).hom.comp ((TensorProduct.mk R P
+                  (C.diag.obj i : Type (max u w))) p)
+              naturality := by
+                intro i j h
+                apply ModuleCat.hom_ext
+                ext q
+                have hn := congrArg ModuleCat.Hom.hom (s.ι.naturality h)
+                have hn' := congrArg (fun f => f (p ⊗ₜ[R] q)) hn
+                change (s.ι.app j).hom
+                    (p ⊗ₜ[R] (C.diag.map h).hom q) =
+                  (s.ι.app i).hom (p ⊗ₜ[R] q) at hn'
+                exact hn' } }
+      let g (p : P) : (Q : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) :=
+        (hC.desc (sp p)).hom
+      have g_rep (p : P) (i : C.index) (q : C.diag.obj i) :
+          g p ((C.ι.app i).hom q) = (s.ι.app i).hom (p ⊗ₜ[R] q) := by
+        have hf := congrArg ModuleCat.Hom.hom (hC.fac (sp p) i)
+        exact congrArg (fun f => f q) hf
+      let bil : P →ₗ[R] (Q : Type (max u w)) →ₗ[R] (s.pt : Type (max u w)) :=
+        { toFun := g
+          map_add' := by
+            intro p p'
+            apply LinearMap.ext
+            intro q
+            obtain ⟨i, qi, hqi⟩ :=
+              Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
+            rw [← hqi]
+            change g (p + p') ((C.ι.app i).hom qi) =
+              (g p + g p') ((C.ι.app i).hom qi)
+            rw [g_rep, LinearMap.add_apply, g_rep, g_rep,
+              TensorProduct.add_tmul, map_add]
+          map_smul' := by
+            intro r p
+            apply LinearMap.ext
+            intro q
+            obtain ⟨i, qi, hqi⟩ :=
+              Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
+            rw [← hqi]
+            change g (r • p) ((C.ι.app i).hom qi) =
+              (r • g p) ((C.ι.app i).hom qi)
+            rw [g_rep, LinearMap.smul_apply, g_rep,
+              TensorProduct.smul_tmul, TensorProduct.tmul_smul,
+              map_smul] }
+      exact ModuleCat.ofHom (TensorProduct.lift bil)
+    · intro s i
+      apply ModuleCat.hom_ext
+      apply TensorProduct.ext'
+      intro p q
+      let sp : Cocone C.diag :=
+        { pt := s.pt
+          ι :=
+            { app := fun k => ModuleCat.ofHom <|
+                (s.ι.app k).hom.comp ((TensorProduct.mk R P
+                  (C.diag.obj k : Type (max u w))) p)
+              naturality := by
+                intro k l h
+                apply ModuleCat.hom_ext
+                ext q
+                have hn := congrArg ModuleCat.Hom.hom (s.ι.naturality h)
+                have hn' := congrArg (fun f => f (p ⊗ₜ[R] q)) hn
+                change (s.ι.app l).hom
+                    (p ⊗ₜ[R] (C.diag.map h).hom q) =
+                  (s.ι.app k).hom (p ⊗ₜ[R] q) at hn'
+                exact hn' } }
+      change (C.isColimit.desc sp).hom ((C.ι.app i).hom q) =
+        (s.ι.app i).hom (p ⊗ₜ[R] q)
+      have hf := congrArg ModuleCat.Hom.hom (C.isColimit.fac sp i)
+      exact congrArg (fun f => f q) hf
+    · intro s m hm
+      apply ModuleCat.hom_ext
+      apply TensorProduct.ext'
+      intro p q
+      obtain ⟨i, qi, hqi⟩ :=
+        Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
+      rw [← hqi]
+      let sp : Cocone C.diag :=
+        { pt := s.pt
+          ι :=
+            { app := fun k => ModuleCat.ofHom <|
+                (s.ι.app k).hom.comp ((TensorProduct.mk R P
+                  (C.diag.obj k : Type (max u w))) p)
+              naturality := by
+                intro k l h
+                apply ModuleCat.hom_ext
+                ext q
+                have hn := congrArg ModuleCat.Hom.hom (s.ι.naturality h)
+                have hn' := congrArg (fun f => f (p ⊗ₜ[R] q)) hn
+                change (s.ι.app l).hom
+                    (p ⊗ₜ[R] (C.diag.map h).hom q) =
+                  (s.ι.app k).hom (p ⊗ₜ[R] q) at hn'
+                exact hn' } }
+      change m (p ⊗ₜ[R] (C.ι.app i).hom qi) =
+        (C.isColimit.desc sp).hom ((C.ι.app i).hom qi)
+      have hi := congrArg ModuleCat.Hom.hom (hm i)
+      have hi' := congrArg (fun f => f (p ⊗ₜ[R] qi)) hi
+      have hf := congrArg ModuleCat.Hom.hom (C.isColimit.fac sp i)
+      have hf' := congrArg (fun f => f qi) hf
+      exact hi'.trans hf'.symm
+  intro hx
+  have hc' := isColimitOfPreserves
+    (forget (ModuleCat.{max u w} R)) hc
+  have hx' :
+      (((forget (ModuleCat.{max u w} R)).mapCocone c).ι.app i) x = 0 := hx
+  obtain ⟨j, h, hh⟩ :=
+    (Types.FilteredColimit.isColimit_eq_iff' hc' x 0).1
+      (hx'.trans (by simp))
+  exact ⟨j, h, by simpa [D] using hh⟩
 
 /-- An element represented at a stage and vanishing in the filtered colimit
 already vanishes after a transition to some later stage. -/

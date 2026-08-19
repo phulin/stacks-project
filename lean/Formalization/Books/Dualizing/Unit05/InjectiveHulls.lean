@@ -685,17 +685,47 @@ theorem injective_hull_extend_isIso_of_isIso
     (hf : InjectiveHull f) (hg : InjectiveHull g)
     (φ : M ⟶ N) [IsIso φ] (ψ : E ⟶ E')
     (hψ : f ≫ ψ = φ ≫ g) : IsIso ψ := by
-  sorry
+  have hφess : EssentialExtension φ := by
+    unfold EssentialExtension
+    refine ⟨inferInstance, ?_⟩
+    intro P hP
+    simpa [(Subobject.isIso_iff_mk_eq_top φ).mp inferInstance] using hP
+  exact injective_hull_extend_isIso_of_essential hf hg φ hφess ψ hψ
 
 /-- An injective module containing the source splits off the hull. -/
 theorem injective_hull_split
     {R : Type u} [Ring R] {M E I : ModuleCat.{v} R}
-    {f : M ⟶ E} {h : M ⟶ I}
+      {f : M ⟶ E} {h : M ⟶ I}
     (hf : InjectiveHull f) (hh : Mono h)
     (hI : CategoryTheory.Injective I) :
     ∃ (I' : ModuleCat.{v} R) (e : I ≅ E ⊞ I'),
       h ≫ e.hom ≫ biprod.fst = f := by
-  sorry
+  have hid : InjectiveHull (𝟙 I) := by
+    refine ⟨?_, hI⟩
+    unfold EssentialExtension
+    refine ⟨inferInstance, ?_⟩
+    intro P hP
+    simpa [(Subobject.isIso_iff_mk_eq_top (𝟙 I)).mp inferInstance] using hP
+  obtain ⟨α, hα⟩ := injective_hull_extend hf hid h
+  have hαmono : Mono α := injective_hull_extend_mono hf hid h hh α hα
+  let ρ : I ⟶ E :=
+    @Injective.factorThru (ModuleCat.{v} R) _ E E I hf.2 (𝟙 E) α hαmono
+  have hρα : α ≫ ρ = 𝟙 E := by
+    change α ≫
+        @Injective.factorThru (ModuleCat.{v} R) _ E E I hf.2 (𝟙 E) α hαmono = 𝟙 E
+    exact @Injective.comp_factorThru (ModuleCat.{v} R) _ E E I hf.2 (𝟙 E) α hαmono
+  have h_eq : h = f ≫ α := by
+    simpa using hα.symm
+  let S : ShortComplex (ModuleCat.{v} R) :=
+    ShortComplex.mk α (cokernel.π α) (by simp)
+  have hS : S.Exact := by
+    dsimp [S]
+    exact ShortComplex.exact_cokernel α
+  let s : S.Splitting :=
+    ShortComplex.Splitting.ofExactOfRetraction S hS ρ hρα (by infer_instance)
+  refine ⟨cokernel α, s.isoBinaryBiproduct, ?_⟩
+  change h ≫ biprod.lift ρ (cokernel.π α) ≫ biprod.fst = f
+  rw [biprod.lift_fst, h_eq, Category.assoc, hρα, Category.comp_id]
 
 /-- Injective hulls of a fixed module are isomorphic. -/
 theorem injective_hull_unique_up_to_iso
@@ -703,7 +733,10 @@ theorem injective_hull_unique_up_to_iso
     {f : M ⟶ E} {g : M ⟶ E'}
     (hf : InjectiveHull f) (hg : InjectiveHull g) :
     Nonempty (E ≅ E') := by
-  sorry
+  obtain ⟨ψ, hψ⟩ := injective_hull_extend hf hg (𝟙 M)
+  letI : IsIso ψ :=
+    injective_hull_extend_isIso_of_isIso hf hg (𝟙 M) ψ hψ
+  exact ⟨asIso ψ⟩
 
 /-! The domain example uses the standard fraction-field embedding. -/
 
@@ -719,7 +752,99 @@ theorem fractionField_is_injective_hull
     {R K : Type u} [CommRing R] [IsDomain R] [Field K] [Algebra R K]
     [IsFractionRing R K] :
     InjectiveHull (fractionFieldModuleMap (R := R) (K := K)) := by
-  sorry
+  have hKinj : Module.Injective R K := by
+    apply Module.Baer.injective
+    intro I g
+    by_cases hI : I = ⊥
+    · refine ⟨0, ?_⟩
+      intro r hr
+      have hr0 : r = 0 := by simpa [hI] using hr
+      subst r
+      symm
+      change g ⟨0, hr⟩ = (0 : K)
+      exact g.map_zero
+    · obtain ⟨a, haI, ha0⟩ := I.ne_bot_iff.mp hI
+      have haK : algebraMap R K a ≠ 0 := by
+        intro haK
+        apply ha0
+        exact (IsFractionRing.injective R K) (by simpa using haK)
+      let x : K := g ⟨a, haI⟩ / algebraMap R K a
+      refine ⟨LinearMap.toSpanSingleton R K x, ?_⟩
+      intro r hr
+      have hgr : algebraMap R K a * g ⟨r, hr⟩ =
+          algebraMap R K r * g ⟨a, haI⟩ := by
+        calc
+          algebraMap R K a * g ⟨r, hr⟩ =
+              g (a • (⟨r, hr⟩ : I)) := by
+                rw [map_smul, Algebra.smul_def]
+          _ = g (r • (⟨a, haI⟩ : I)) := by
+                congr 1
+                ext
+                simp [mul_comm]
+          _ = algebraMap R K r * g ⟨a, haI⟩ := by
+                rw [map_smul, Algebra.smul_def]
+      apply (mul_left_cancel₀ haK)
+      change algebraMap R K a * (r • x) =
+        algebraMap R K a * g ⟨r, hr⟩
+      rw [Algebra.smul_def]
+      dsimp [x]
+      calc
+        algebraMap R K a *
+              (algebraMap R K r * (g ⟨a, haI⟩ / algebraMap R K a)) =
+            algebraMap R K r *
+              (algebraMap R K a * (g ⟨a, haI⟩ / algebraMap R K a)) := by
+                ac_rfl
+        _ = algebraMap R K r * g ⟨a, haI⟩ := by
+                rw [mul_div_cancel₀ _ haK]
+        _ = algebraMap R K a * g ⟨r, hr⟩ := hgr.symm
+  let S : Submodule R K := LinearMap.range (Algebra.linearMap R K)
+  have hS : EssentialSubmodule S := by
+    apply (essentialSubmodule_iff_smul S).2
+    intro y hy
+    obtain ⟨a, b, hb, hyab⟩ := IsFractionRing.div_surjective R y
+    have hbK : algebraMap R K b ≠ 0 := by
+      intro hbK
+      apply (mem_nonZeroDivisors_iff_ne_zero.mp hb)
+      exact (IsFractionRing.injective R K) (by simpa using hbK)
+    refine ⟨b, ?_, ?_⟩
+    · refine ⟨a, ?_⟩
+      change algebraMap R K a = b • y
+      rw [← hyab, Algebra.smul_def, mul_div_cancel₀ _ hbK]
+    · rw [Algebra.smul_def, ← hyab, mul_div_cancel₀ _ hbK]
+      intro haK
+      apply hy
+      rw [← hyab, haK, zero_div]
+  have hmono : Mono (fractionFieldModuleMap (R := R) (K := K)) := by
+    apply (ModuleCat.mono_iff_injective _).mpr
+    change Function.Injective (Algebra.linearMap R K)
+    exact IsFractionRing.injective R K
+  letI : Mono (fractionFieldModuleMap (R := R) (K := K)) := hmono
+  letI : Mono (ModuleCat.ofHom S.subtype) :=
+    ConcreteCategory.mono_of_injective _ Subtype.val_injective
+  let e : R ≃ₗ[R] S :=
+    LinearEquiv.ofBijective (Algebra.linearMap R K).rangeRestrict
+      ⟨(LinearMap.injective_rangeRestrict_iff (Algebra.linearMap R K)).2
+          (IsFractionRing.injective R K),
+        (Algebra.linearMap R K).surjective_rangeRestrict⟩
+  have heq : e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype =
+      fractionFieldModuleMap (R := R) (K := K) := by
+    apply ModuleCat.hom_ext
+    rfl
+  have hmk :
+      Subobject.mk (fractionFieldModuleMap (R := R) (K := K)) =
+        Subobject.mk (ModuleCat.ofHom S.subtype) :=
+    Subobject.mk_eq_mk_of_comm (fractionFieldModuleMap (R := R) (K := K))
+      (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+  have hEss : EssentialExtension (fractionFieldModuleMap (R := R) (K := K)) := by
+    unfold EssentialExtension
+    have hsub := (essentialSubmodule_iff_essentialExtension S).1 hS
+    unfold EssentialExtension at hsub
+    refine ⟨hmono, ?_⟩
+    exact fun P hP => by
+      rw [hmk]
+      exact hsub.2 P hP
+  letI : Module.Injective R K := hKinj
+  exact ⟨hEss, Module.injective_object_of_injective_module R K⟩
 
 /-! ## Indecomposable injectives -/
 

@@ -545,13 +545,13 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
     · refine { map_add := ?_ }
       intro X Y f g
       apply ModuleCat.hom_ext
-      ext x n
+      ext x
       rfl
-    · letI lin : CategoryTheory.Linear ℤ (ModuleCat ℤ) := ModuleCat.instLinear
+    · let lin : CategoryTheory.Linear ℤ (ModuleCat ℤ) := ModuleCat.instLinear
       refine { map_smul := ?_ }
       intro X Y f r
-      letI : Module ℤ (X ⟶ Y) := lin.homModule X Y
-      letI : SMul ℤ (X ⟶ Y) :=
+      let : Module ℤ (X ⟶ Y) := lin.homModule X Y
+      let : SMul ℤ (X ⟶ Y) :=
         (lin.homModule X Y).toDistribMulAction.toDistribSMul.toSMul
       let zf : X ⟶ Y :=
         @SMul.smul ℤ (X ⟶ Y) ModuleCat.instSMulIntHom r f
@@ -580,7 +580,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
         map_id := by
           intro M
           apply ModuleCat.hom_ext
-          ext x n
+          ext x
           simp
         map_comp := by
           intro M N P f g
@@ -608,9 +608,9 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
         (ModuleCat.piIsoPi (fun _ : ℕ => M)).trans (eqToIso (hobj M)))
         (by
           intro X Y f
-          letI : Module ℤ (ℕ → (X : Type)) :=
+          let : Module ℤ (ℕ → (X : Type)) :=
             Pi.module ℕ (fun _ => (X : Type)) ℤ
-          letI : Module ℤ (ℕ → (Y : Type)) :=
+          let : Module ℤ (ℕ → (Y : Type)) :=
             Pi.module ℕ (fun _ => (Y : Type)) ℤ
           let k :
               @ModuleCat.of ℤ Int.instRing (ℕ → (X : Type)) Pi.addCommGroup
@@ -676,7 +676,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
             H.map f ≫ ((ModuleCat.piIsoPi (fun _ : ℕ => Y)).trans
                 (eqToIso (hobj Y))).hom =
                 H.map f ≫ (ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom ≫
-                  eqToHom (hobj Y) := by simp [Iso.trans_hom, Category.assoc]
+                  eqToHom (hobj Y) := by simp [Iso.trans_hom]
             _ = (ModuleCat.piIsoPi (fun _ : ℕ => X)).hom ≫ k ≫
                 eqToHom (hobj Y) := by
               rw [← Category.assoc, hp]
@@ -687,7 +687,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
               simp only [Category.assoc, eqToIso.hom, eqToHom_trans,
                 eqToHom_refl, Category.comp_id]
           )
-    letI := hH
+    let := hH
     exact preservesFiniteColimits_of_natIso q
   · have hnotSums : ¬ CommutesWithDirectSums infiniteProductFunctor := by
       classical
@@ -695,7 +695,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
       unfold CommutesWithDirectSums at hSums
       let Z : ℕ → ModuleCat ℤ := fun _ => ModuleCat.of ℤ ℤ
       let W : ℕ → ModuleCat ℤ := fun _ => infiniteProductFunctor.obj (ModuleCat.of ℤ ℤ)
-      letI : IsIso (sigmaComparison infiniteProductFunctor Z) := hSums ℕ Z
+      let : IsIso (sigmaComparison infiniteProductFunctor Z) := hSums ℕ Z
       let e := ModuleCat.coprodIsoDirectSum Z
       let x : infiniteProductFunctor.obj (∐ Z) := fun n => (Sigma.ι Z n).hom 1
       have hx : ∃ y : (∐ W : ModuleCat ℤ),
@@ -755,7 +755,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
         have heW := congrArg (fun f : (∐ W : ModuleCat ℤ) ⟶ (∐ W : ModuleCat ℤ) =>
           f.hom y) eW.hom_inv_id
         change eW.inv.hom (eW.hom.hom y) = y at heW
-        simpa [y'] using heW
+        simp [y']
       have hq : (Sigma.desc q).hom y = 0 := by
         rw [← hyrep]
         have hzero : y' i = 0 → (eW.inv ≫ Sigma.desc q).hom y' = 0 := by
@@ -808,7 +808,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
           (DirectSum.component ℤ ℕ (fun j => (Z j : Type)) i)
             (e.hom.hom ((Sigma.ι Z i).hom 1)) by rfl]
         rw [hι']
-        simp [DirectSum.component.of]
+        simp
       exact one_ne_zero (hcalc.symm.trans hxi)
     refine ⟨hnotSums, ?_⟩
     intro hIso
@@ -817,10 +817,10 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
       tensorProductFunctor_commutes_with_direct_sums N
     have hSumsF : CommutesWithDirectSums infiniteProductFunctor := by
       intro ι M
-      letI : IsIso (sigmaComparison (tensorProductFunctor N) M) := hSumsN ι M
-      letI : PreservesColimit (Discrete.functor M) (tensorProductFunctor N) :=
+      let : IsIso (sigmaComparison (tensorProductFunctor N) M) := hSumsN ι M
+      let : PreservesColimit (Discrete.functor M) (tensorProductFunctor N) :=
         PreservesCoproduct.of_iso_comparison (tensorProductFunctor N) M
-      letI : PreservesColimit (Discrete.functor M) infiniteProductFunctor :=
+      let : PreservesColimit (Discrete.functor M) infiniteProductFunctor :=
         preservesColimit_of_natIso _ eIso.symm
       infer_instance
     exact hnotSums hSumsF

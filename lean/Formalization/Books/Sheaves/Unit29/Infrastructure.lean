@@ -402,11 +402,17 @@ private theorem coverPresheaf_stalk_subsingleton
     {A B : Opens cofiniteCounterexampleSpace} (x : cofiniteCounterexampleSpace) :
     Subsingleton ((TopCat.Presheaf.stalkFunctor (Type v) x).obj
       (coverPresheaf A B)) := by
-  /- Prior attempt:
-  dsimp [TopCat.Presheaf.stalk, coverPresheaf]
-  infer_instance
-  -/
-  sorry
+  constructor
+  intro a b
+  dsimp [TopCat.Presheaf.stalk, TopCat.Presheaf.stalkFunctor] at a b
+  obtain ⟨U, zU, rfl⟩ := Types.jointly_surjective' a
+  obtain ⟨V, zV, rfl⟩ := Types.jointly_surjective' b
+  let iU : (unop U ⊓ unop V) ⟶ unop U := OpenNhds.infLELeft _ _
+  let iV : (unop U ⊓ unop V) ⟶ unop V := OpenNhds.infLERight _ _
+  apply Types.colimit_sound' iU.op iV.op
+  apply Subtype.ext
+  funext y
+  exact Subsingleton.elim _ _
 
 private theorem coverPresheaf_stalk_nonempty
     {A B : Opens cofiniteCounterexampleSpace}
@@ -435,23 +441,55 @@ private noncomputable abbrev terminalSheaf (X : TopCat.{v}) : TopCat.Sheaf (Type
 private theorem terminalSheaf_stalk_subsingleton (X : TopCat.{v}) (x : X) :
     Subsingleton ((TopCat.Presheaf.stalkFunctor (Type v) x).obj
       (terminalSheaf X).presheaf) := by
-  /- Prior attempt:
-  dsimp [terminalSheaf, TopCat.Presheaf.stalk]
-  infer_instance
-  -/
-  sorry
+  have hsec : ∀ U : Opens X,
+      Subsingleton ((terminalSheaf X).presheaf.obj (op U)) := by
+    intro U
+    let F := Functor.empty.{0} (TopCat.Sheaf (Type v) X)
+    let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+    let e' := ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapIso e
+    let e'' := e' ≪≫ limitObjIsoLimitCompEvaluation
+      (F ⋙ TopCat.Sheaf.forget (Type v) X) (op U)
+    let G := F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+    let ht : IsTerminal (limit G) :=
+      (isLimitEquivIsTerminalOfIsEmpty (Type v)
+        (limit.cone G)).toFun (limit.isLimit G)
+    let hu : Unique (limit G) := (Types.isTerminalEquivUnique _).toFun ht
+    refine ⟨fun a b => ?_⟩
+    have hab : e''.hom a = e''.hom b := (hu.uniq _).trans (hu.uniq _).symm
+    rw [← Iso.hom_inv_id_apply e'' a, ← Iso.hom_inv_id_apply e'' b]
+    exact congrArg (fun z => e''.inv z) hab
+  constructor
+  intro a b
+  dsimp [TopCat.Presheaf.stalk, TopCat.Presheaf.stalkFunctor] at a b
+  obtain ⟨U, aU, rfl⟩ := Types.jointly_surjective' a
+  obtain ⟨V, bV, rfl⟩ := Types.jointly_surjective' b
+  let W := unop U ⊓ unop V
+  let iU : W ⟶ unop U := OpenNhds.infLELeft _ _
+  let iV : W ⟶ unop V := OpenNhds.infLERight _ _
+  letI : Subsingleton ((terminalSheaf X).presheaf.obj (op W.1)) := hsec W.1
+  apply Types.colimit_sound' iU.op iV.op
+  exact Subsingleton.elim _ _
 
 private theorem terminalSheaf_stalk_nonempty (X : TopCat.{v}) (x : X) :
     Nonempty ((TopCat.Presheaf.stalkFunctor (Type v) x).obj
       (terminalSheaf X).presheaf) := by
-  /- Prior attempt:
-  let hu : Unique ((terminalSheaf X).presheaf.obj (op (⊤ : Opens X))) :=
-    (Types.isTerminalEquivUnique _).toFun
-      (TopCat.Sheaf.isTerminalOfEmpty (terminalSheaf X))
-  let z : (terminalSheaf X).presheaf.obj (op (⊤ : Opens X)) := hu.default
-  exact ⟨(terminalSheaf X).presheaf.germ (⊤ : Opens X) x (by simp) z⟩
-  -/
-  sorry
+  let U : Opens X := ⊤
+  let F := Functor.empty.{0} (TopCat.Sheaf (Type v) X)
+  let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+  let e' := ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapIso e
+  let e'' := e' ≪≫ limitObjIsoLimitCompEvaluation
+    (F ⋙ TopCat.Sheaf.forget (Type v) X) (op U)
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+    (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+  let ht : IsTerminal (limit G) :=
+    (isLimitEquivIsTerminalOfIsEmpty (Type v)
+      (limit.cone G)).toFun (limit.isLimit G)
+  let hu : Unique (limit G) := (Types.isTerminalEquivUnique _).toFun ht
+  let z : (terminalSheaf X).presheaf.obj (op U) := e''.inv hu.default
+  exact ⟨(terminalSheaf X).presheaf.germ U x (by
+    change x ∈ (⊤ : Opens X)
+    trivial) z⟩
 
 private noncomputable def terminalSheaf_isTerminal (X : TopCat.{v}) :
     IsTerminal (terminalSheaf X) :=
@@ -521,11 +559,21 @@ theorem sheafificationDoesNotPreserveAllLimits :
           (Opens.grothendieckTopology X) (Type v)) := by
   refine ⟨cofiniteCounterexampleSpace, ?_⟩
   intro h
+  let L := CategoryTheory.presheafToSheaf
+    (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)
+  letI : HasLimits (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
+    sheaf_has_limits
+  letI : PreservesLimits L := h
   let J := Discrete (ULift.{v} ℕ)
+  letI : HasLimitsOfShape J (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace) :=
+    HasLimits.has_limits_of_shape J
   let F : J ⥤ TopCat.Presheaf (Type v) cofiniteCounterexampleSpace :=
     Discrete.functor (fun n =>
       coverPresheaf (cofiniteCounterexampleOpenA n.down)
         (cofiniteCounterexampleOpenB n.down))
+  letI : HasLimit (F ⋙ L) :=
+    (inferInstance : HasLimitsOfShape J
+      (TopCat.Sheaf (Type v) cofiniteCounterexampleSpace)).has_limit (F ⋙ L)
   let Q := limit F
   let x₀ := cofiniteCounterexamplePoint 0
   have hQempty : IsEmpty (Q.stalk x₀) := by
@@ -544,7 +592,6 @@ theorem sheafificationDoesNotPreserveAllLimits :
         (eU.hom zU)
       simpa [F, j, coverPresheaf, coverPrelocalPredicate] using y.property
     exact cofiniteCounterexampleNoCover x₀ hxV hUV
-  /- Prior attempt:
   let T := terminalSheaf cofiniteCounterexampleSpace
   let e : ∀ j : J, L.obj (F.obj j) ≅ T := fun j =>
     coverPresheaf_sheafification_to_terminal_iso
@@ -552,18 +599,23 @@ theorem sheafificationDoesNotPreserveAllLimits :
   let c : Cone (F ⋙ L) :=
     { pt := T
       π := Discrete.natTrans (fun j => (e j).inv) }
-  let q : T ⟶ limit (F ⋙ L) := limit.lift (F ⋙ L) c
+  let cLim : LimitCone (F ⋙ L) := getLimitCone (F ⋙ L)
+  let q : T ⟶ cLim.cone.pt := cLim.isLimit.lift c
   have htarget : Nonempty
-      (TopCat.Presheaf.stalk ((limit (F ⋙ L)).1) x₀) := by
+      (TopCat.Presheaf.stalk cLim.cone.pt.1 x₀) := by
     let zT := Classical.choice (terminalSheaf_stalk_nonempty cofiniteCounterexampleSpace x₀)
     exact ⟨(TopCat.Presheaf.stalkFunctor (Type v) x₀).map q.1 zT⟩
   let eLim := preservesLimitIso L F
+  let u := (TopCat.Presheaf.stalkFunctor (Type v) x₀).map
+    (CategoryTheory.toSheafify
+      (Opens.grothendieckTopology cofiniteCounterexampleSpace) Q)
   let m := (TopCat.Presheaf.stalkFunctor (Type v) x₀).map eLim.hom.1
+  haveI : IsIso u := by infer_instance
   haveI : IsIso m := by infer_instance
+  let um := u ≫ m
+  haveI : IsIso um := by infer_instance
   rcases htarget with ⟨y⟩
-  exact hQempty.false (inv m y)
-  -/
-  sorry
+  exact hQempty.false (inv um y)
 
 /-! ## Stalks -/
 

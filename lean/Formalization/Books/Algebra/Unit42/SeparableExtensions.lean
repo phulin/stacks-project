@@ -554,18 +554,18 @@ private theorem exists_finite_pth_root_tower_of_uniform
         rintro _ ⟨a, rfl⟩
         exact Algebra.IsIntegral.isIntegral _
       have hfinalfinite : FiniteDimensional F final := by
-        letI : FiniteDimensional F L := tower.finite_dimensional
-        letI : FiniteDimensional F R := hRfinite
+        let : FiniteDimensional F L := tower.finite_dimensional
+        let : FiniteDimensional F R := hRfinite
         exact inferInstance
-      letI : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
+      let : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
       have hRpure : IsPurelyInseparable F R := by
         rw [IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem F
           (AlgebraicClosure F) p]
         rintro _ ⟨a, rfl⟩
         let aL : L := ⟨a, htower (a : AlgebraicClosure F) a.property⟩
-        letI : Field L := inferInstance
-        letI : Algebra F L := inferInstance
-        letI : IsPurelyInseparable F L := tower.purely_inseparable
+        let : Field L := inferInstance
+        let : Algebra F L := inferInstance
+        let : IsPurelyInseparable F L := tower.purely_inseparable
         obtain ⟨m, b, hb⟩ := IsPurelyInseparable.pow_mem (F := F) (E := L)
           (q := p) (x := aL)
         refine ⟨m + 1, b, ?_⟩
@@ -573,8 +573,8 @@ private theorem exists_finite_pth_root_tower_of_uniform
           pthRootInAlgebraicClosureOfElement_pow F p hp (a : AlgebraicClosure F)]
         simpa [aL] using congrArg Subtype.val hb
       have hfinalpure : IsPurelyInseparable F final := by
-        letI : IsPurelyInseparable F L := tower.purely_inseparable
-        letI : IsPurelyInseparable F R := hRpure
+        let : IsPurelyInseparable F L := tower.purely_inseparable
+        let : IsPurelyInseparable F R := hRpure
         exact inferInstance
       let newLevel : ℕ → IntermediateField F (AlgebraicClosure F) :=
         fun i => if i ≤ tower.length then tower.level i else final

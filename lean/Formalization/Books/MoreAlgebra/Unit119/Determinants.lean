@@ -50,7 +50,7 @@ abbrev componentProductRing
 
 abbrev componentProductModule
     (S : Fin n → CommRingCat.{u})
-    (P : ∀ i, ModuleCat.{u} (S i)) := ∀ i, (P i : Type u)
+    (P : ∀ i, ModuleCat.{v} (S i)) := ∀ i, (P i : Type v)
 
 /-- The product decomposition used in the source's first construction.
 
@@ -58,11 +58,11 @@ The module equivalence is interpreted with the scalar action transported
 along `ringEquiv`; each component has the indicated finite locally free rank.
 -/
 structure RankProductDecomposition
-    (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] where
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M] where
   t : ℕ
   componentRing : Fin (t + 1) → CommRingCat.{u}
   ringEquiv : R ≃+* componentProductRing componentRing
-  componentModule : ∀ i, ModuleCat.{u} (componentRing i)
+  componentModule : ∀ i, ModuleCat.{v} (componentRing i)
   componentRank : ∀ i,
     Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank
       (componentRing i) (componentModule i) i
@@ -74,13 +74,13 @@ structure RankProductDecomposition
 
 /-- The product of the top exterior powers in a rank decomposition. -/
 abbrev rankProductDeterminant
-    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
-    (D : RankProductDecomposition R M) : Type u :=
+    {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
+    (D : RankProductDecomposition R M) : Type max u v :=
   ∀ i, exteriorPower (D.componentRing i) (D.componentModule i) i
 
 /-- Every finite projective module admits the source's rank-product decomposition. -/
 theorem exists_rankProductDecomposition
-    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Module.Projective R M] :
     Nonempty (RankProductDecomposition R M) := by
   sorry
@@ -119,7 +119,7 @@ theorem mem_determinantModule_iff
 /-- The intrinsic determinant line agrees with the product construction in a
 rank decomposition. -/
 theorem determinantModule_equiv_rankProduct
-    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     (D : RankProductDecomposition R M) :
     letI : Module R (rankProductDeterminant D) :=
       Module.compHom _ D.ringEquiv.toRingHom

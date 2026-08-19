@@ -462,19 +462,19 @@ theorem quotientDifferentialMap_exists
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) :
     Nonempty (QuotientDifferentialMapData α) := by
-  exact sorry
-  /- let q := cokernel.π α.hom.hom
+  let q := cokernel.π α.hom.hom
   let dQ : cokernel α.hom.hom ⟶ cokernel α.hom.hom :=
     cokernel.desc α.hom.hom (A.d ≫ q) (by
       rw [← Category.assoc, ← α.hom.comm, Category.assoc, cokernel.condition,
         comp_zero])
   have hq : q ≫ dQ = A.d ≫ q := by
     dsimp [dQ]
-    exact sorry
+    exact cokernel.π_desc _ _ _
   refine ⟨{ differential := dQ, square_zero := ?_, induced := hq }⟩
   apply (cancel_epi q).1
   rw [← Category.assoc, hq, Category.assoc, hq, ← Category.assoc,
-    A.d_squared, zero_comp] -/
+    A.d_squared]
+  simp
 
 noncomputable def quotientDifferentialMapData
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -509,7 +509,12 @@ def differentialSelfMapShortExact
          comm := (quotientDifferentialMapData α).induced.symm }
   complex := cokernel.condition _
   exact := by
-    exact sorry
+    refine { exact := ?_, mono_f := α.injective, epi_g := ?_ }
+    · apply ShortComplex.exact_of_g_is_cokernel
+        (ShortComplex.mk α.hom.hom (cokernel.π α.hom.hom) (cokernel.condition _))
+      exact cokernelIsCokernel _
+    · change Epi (cokernel.π α.hom.hom)
+      infer_instance
 
 theorem differentialSelfMap_exactCouple_exists
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -517,7 +522,92 @@ theorem differentialSelfMap_exactCouple_exists
     (α : PlainDifferentialInjectiveEndomorphism A) :
     Nonempty (ExactCouple C (plainDifferentialHomology A)
       (plainDifferentialHomology (quotientDifferentialObject α))) := by
-  sorry
+  let S := differentialSelfMapShortExact α
+  let F := plainDifferentialObjectFunctor (C := C)
+  let T : ShortComplex (HomologicalComplex C (ComplexShape.refl PUnit.{1})) :=
+    ShortComplex.mk (F.map S.f) (F.map S.g) (by
+      apply HomologicalComplex.hom_ext
+      intro i
+      cases i
+      dsimp [F, plainDifferentialObjectFunctor, S]
+      exact S.complex)
+  have hMono : Mono T.f := by
+    dsimp [T]
+    apply HomologicalComplex.mono_of_mono_f
+    intro i
+    cases i
+    exact S.exact.mono_f
+  have hEpi : Epi T.g := by
+    dsimp [T]
+    apply HomologicalComplex.epi_of_epi_f
+    intro i
+    cases i
+    exact S.exact.epi_g
+  have hExact : T.Exact :=
+    HomologicalComplex.exact_of_degreewise_exact T (fun i => by
+      cases i
+      change (ShortComplex.mk S.f.hom S.g.hom S.complex).Exact
+      exact S.exact.exact)
+  have hT : T.ShortExact := { mono_f := hMono, epi_g := hEpi, exact := hExact }
+  let eA := plainDifferentialHomologyIso A
+  let eQ := plainDifferentialHomologyIso (quotientDifferentialObject α)
+  let δ := hT.δ PUnit.unit PUnit.unit (by rfl)
+  let hf := HomologicalComplex.homologyMap T.f PUnit.unit
+  let hg := HomologicalComplex.homologyMap T.g PUnit.unit
+  let alpha : plainDifferentialHomology A ⟶ plainDifferentialHomology A :=
+    eA.inv ≫ hf ≫ eA.hom
+  let f : plainDifferentialHomology (quotientDifferentialObject α) ⟶
+      plainDifferentialHomology A :=
+    eQ.inv ≫ δ ≫ eA.hom
+  let g : plainDifferentialHomology A ⟶
+      plainDifferentialHomology (quotientDifferentialObject α) :=
+    eA.inv ≫ hg ≫ eQ.hom
+  have hδ : δ ≫ hf = 0 := by
+    dsimp [δ, hf]
+    exact hT.δ_comp PUnit.unit PUnit.unit (by rfl)
+  have hfg : hf ≫ hg = 0 := by
+    rw [← HomologicalComplex.homologyMap_comp, T.zero,
+      HomologicalComplex.homologyMap_zero]
+  have hgd : hg ≫ δ = 0 := by
+    dsimp [hg, δ]
+    exact hT.comp_δ PUnit.unit PUnit.unit (by rfl)
+  have hαg : alpha ≫ g = 0 := by
+    simp only [alpha, g, Category.assoc, Iso.hom_inv_id_assoc]
+    rw [← Category.assoc hf hg eQ.hom, hfg, zero_comp]
+    simp
+  have hgf : g ≫ f = 0 := by
+    simp only [g, f, Category.assoc, Iso.hom_inv_id_assoc]
+    rw [← Category.assoc hg δ eA.hom, hgd, zero_comp]
+    simp
+  have hfa : f ≫ alpha = 0 := by
+    simp only [f, alpha, Category.assoc, Iso.hom_inv_id_assoc]
+    rw [← Category.assoc δ hf eA.hom, hδ, zero_comp]
+    simp
+  let D : ExactCouple C (plainDifferentialHomology A)
+      (plainDifferentialHomology (quotientDifferentialObject α)) :=
+    { alpha := alpha, f := f, g := g, alpha_g := hαg, g_f := hgf,
+      f_alpha := hfa, exact_alpha_g := by
+        refine ShortComplex.exact_of_iso
+          (ShortComplex.isoMk
+            (S₁ := ShortComplex.mk hf hg hfg)
+            (S₂ := ShortComplex.mk alpha g hαg)
+            eA eA eQ (by simp [alpha]) (by simp [g])) ?_
+        simpa using hT.homology_exact₂ PUnit.unit
+      exact_g_f := by
+        refine ShortComplex.exact_of_iso
+          (ShortComplex.isoMk
+            (S₁ := ShortComplex.mk hg δ hgd)
+            (S₂ := ShortComplex.mk g f hgf)
+            eA eQ eA (by simp [g]) (by simp [f])) ?_
+        simpa using hT.homology_exact₃ PUnit.unit PUnit.unit (by rfl)
+      exact_f_alpha := by
+        refine ShortComplex.exact_of_iso
+          (ShortComplex.isoMk
+            (S₁ := ShortComplex.mk δ hf hδ)
+            (S₂ := ShortComplex.mk f alpha hfa)
+            eQ eA eA (by simp [f]) (by simp [alpha])) ?_
+        simpa using hT.homology_exact₁ PUnit.unit PUnit.unit (by rfl) }
+  exact ⟨D⟩
 
 noncomputable def differentialSelfMapExactCouple
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -539,7 +629,7 @@ theorem differentialSelfMap_E1
     (α : PlainDifferentialInjectiveEndomorphism A) :
     Nonempty (plainPageObject (differentialSelfMapAssociatedSpectralSequence α) 1 ≅
       plainDifferentialHomology (quotientDifferentialObject α)) := by
-  sorry
+  exact exactCouple_associated_page_one (differentialSelfMapExactCouple α)
 
 /-- The separately numbered zeroth page in the self-map example. -/
 abbrev differentialSelfMapE₀

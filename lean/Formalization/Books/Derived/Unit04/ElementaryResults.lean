@@ -482,7 +482,32 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
+  letI : AdditiveCategory Cᵒᵖ :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have h2op : IsIso phop.hom₂ := by
+    change IsIso (φ.hom₂.op : Topp.obj₂ ⟶ Top.obj₂)
+    exact (isIso_op_iff φ.hom₂).2 h₂
+  have h3op : IsIso phop.hom₃ := by
+    change IsIso (φ.hom₁.op : Topp.obj₃ ⟶ Top.obj₃)
+    exact (isIso_op_iff φ.hom₁).2 h₁
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  have h1op : IsIso phop.hom₁ :=
+    special_triangle_isIso₁ (C := Cᵒᵖ) (T := Topp) (T' := Top)
+      hTopp hTop phop h2op h3op
+  have h1op' : IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁) := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁) at h1op
+    exact h1op
+  let _ : IsIso φ.hom₃.op := h1op'
+  exact isIso_of_op φ.hom₃
 /-
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
@@ -538,7 +563,27 @@ theorem coSpecial_triangle_isIso₂
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  sorry
+  letI : AdditiveCategory Cᵒᵖ :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  have h1op : IsIso phop.hom₃ := by
+    change IsIso (φ.hom₁.op : Topp.obj₃ ⟶ Top.obj₃)
+    exact (isIso_op_iff φ.hom₁).2 h₁
+  have h3op : IsIso phop.hom₁ := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁)
+    exact (isIso_op_iff φ.hom₃).2 h₃
+  refine (isIso_op_iff φ.hom₂).1 ?_
+  exact special_triangle_isIso₂ (C := Cᵒᵖ) (T := Topp) (T' := Top)
+    hTopp hTop phop h3op h1op
 /- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
@@ -566,7 +611,27 @@ theorem coSpecial_triangle_isIso₁
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  sorry
+  letI : AdditiveCategory Cᵒᵖ :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  have h2op : IsIso phop.hom₂ := by
+    change IsIso (φ.hom₂.op : Topp.obj₂ ⟶ Top.obj₂)
+    exact (isIso_op_iff φ.hom₂).2 h₂
+  have h3op : IsIso phop.hom₁ := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁)
+    exact (isIso_op_iff φ.hom₃).2 h₃
+  refine (isIso_op_iff φ.hom₁).1 ?_
+  exact special_triangle_two_out_of_three (C := Cᵒᵖ) (T := Topp) (T' := Top)
+    hTopp hTop phop h3op h2op
 /- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)
@@ -602,7 +667,15 @@ set_option maxHeartbeats 1000000 in
 /-- Every distinguished triangle is co-special. -/
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
-  sorry
+  letI : AdditiveCategory Cᵒᵖ :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  letI : Pretriangulated Cᵒᵖ := inferInstance
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  change SpecialTriangle Top
+  have hTop : Top ∈ distTriang Cᵒᵖ := op_distinguished T hT
+  exact distinguished_triangle_special (C := Cᵒᵖ) Top hTop
 /- Prior attempt:
   let Top : Triangle Cᵒᵖ :=
     (triangleOpEquivalence C).functor.obj (Opposite.op T)

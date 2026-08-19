@@ -507,8 +507,6 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     let T := D.target M N' i
     letI : Module R' (restrictedExt f M N' i) := T.module
     IsIso (D.map M N' i) := by
-  sorry
-/-
   dsimp
   let D := canonicalExtChangeOfRingsData f
   let T := D.target M N' i
@@ -590,6 +588,11 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
         ((extendRestrictScalarsCochainAdj f).unit.app
           (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as).f 0 =
           ModuleCat.ExtendRestrictScalarsAdj.Unit.map f := by
+      change
+        ((extendRestrictScalarsCochainAdj f).unit.app
+          (CategoryTheory.Quotient.as
+            (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M))).f 0 =
+          ModuleCat.ExtendRestrictScalarsAdj.Unit.map f
       ext m
       rfl
     have hcu :
@@ -599,7 +602,8 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
             (ModuleCat.restrictScalars f) (ComplexShape.up ℤ) 0).inv.app
               (extendedModule f M) =
         ((extendRestrictScalarsCochainAdj f).unit.app
-          (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+          (CategoryTheory.Quotient.as
+            (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M))) ≫
           ((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
             ((HomologicalComplex.singleMapHomologicalComplex
               (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M) := by
@@ -708,7 +712,7 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
         set_option backward.isDefEq.respectTransparency.types false in
         set_option backward.isDefEq.respectTransparency false in
           rw [← Category.assoc, heF_unit, heG_F]
-        simp only [Category.assoc]
+        try simp only [Category.assoc]
         rw [← Category.assoc
           (F.map ((DerivedCategory.singleFunctor (ModuleCat R) 0).map
             (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)))
@@ -718,11 +722,19 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
                 (extendedModule f M)))) _]
         set_option backward.isDefEq.respectTransparency false in
           rw [hcuF]
-        set_option backward.isDefEq.respectTransparency false in
-          rw [← F.map_comp]
-        nth_rewrite 2 [← Category.assoc]
-        set_option backward.isDefEq.respectTransparency false in
-          rw [← F.map_comp]
+        simp only [Category.assoc]
+        rw [← F.map_comp
+          (DerivedCategory.Q.map
+            (((ModuleCat.restrictScalars f).mapHomologicalComplex
+              (ComplexShape.up ℤ)).map
+              ((HomologicalComplex.singleMapHomologicalComplex
+                (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)))
+          ((CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+              (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+              (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+              (extendedModule f M)))]
+        rw [hcatG]
       _ = _ := hh'
   have hright (x : restrictedExt f M N' i) :
       (ConcreteCategory.hom (D.map M N' i)) (inv x) = x := by
@@ -761,8 +773,10 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
       rw [← Category.assoc, ← hn, Category.assoc, ht]
       simp
     simp only [CategoryTheory.Abelian.Ext.mk₀_hom,
-      CategoryTheory.ShiftedHom.mk₀_comp,
+      CategoryTheory.ShiftedHom.mk₀_comp, CategoryTheory.ShiftedHom.comp_mk₀,
       CategoryTheory.ShiftedHom.map, Category.assoc]
+    rw [CategoryTheory.Abelian.Ext.comp_hom,
+      CategoryTheory.Abelian.Ext.mapExactFunctor_hom]
     let eG := (ModuleCat.restrictScalars f).mapDerivedCategorySingleFunctor 0
     let X₀ := (DerivedCategory.singleFunctor (ModuleCat R) 0).obj M
     let Y₀ := (shiftFunctor (DerivedCategory (ModuleCat R')) (i : ℤ)).obj
@@ -816,13 +830,21 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
         ((DerivedCategory.singleFunctor (ModuleCat R') 0).obj N') ≫
         (shiftFunctor (DerivedCategory (ModuleCat R)) (i : ℤ)).map
           (eG.hom.app N')) hh'
-    simpa [h₀, heG_inv] using hh''.symm
+    simpa [h₀, heG_inv, Category.assoc, Functor.map_comp,
+      Functor.commShiftIso_hom_naturality,
+      Functor.commShiftIso_inv_naturality,
+      Functor.commShiftIso_comp_hom_app,
+      Functor.commShiftIso_comp_inv_app,
+      Functor.mapDerivedCategoryFactors_inv_app_mapDerivedCategorySingleFunctor_hom_app,
+      Functor.mapDerivedCategorySingleFunctor_inv_app_mapDerivedCategoryFactors_hom_app,
+      Iso.inv_hom_id_app, Iso.hom_inv_id_app, Category.comp_id]
+      using hh''.symm
   constructor
   · intro x y h
     have := congrArg inv h
     rw [hleft x, hleft y] at this
     exact this
   · intro x
-    exact ⟨inv x, hright x⟩ -/
+    exact ⟨inv x, hright x⟩
 
 end Formalization.Books.Algebra.Unit73

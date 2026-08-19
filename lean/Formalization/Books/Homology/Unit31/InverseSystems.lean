@@ -1119,7 +1119,7 @@ theorem essentiallyConstant_iff_biproduct_decomposition
         _ = biprod.map (𝟙 _) (z h) ≫ (e j hij).hom := by
           have hh := congrArg (fun u => u ≫ (e j hij).hom)
             (hcompat hij hij' h)
-          simpa only [Category.assoc, Iso.inv_hom_id, Category.comp_id] using hh
+          simpa only [Category.assoc, Iso.inv_hom_id] using hh
     have hl : ∀ {j j' : ℕ+} (h : j ≤ j'),
         l j' ≫ transitionMap F h = l j := by
       intro j j' h
@@ -2345,7 +2345,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
           apply (cancel_mono eA₁.hom).1
           apply limit.hom_ext
           intro i
-          simp only [Category.assoc, inverseSystemLimitMap]
+          simp only [Category.assoc]
           let hobj : (inverseSystemLimit K).X 1 = (limit K).X 1 := by
             rfl
           let hobj_i₁ : (K.obj i).X 1 = (A 1).obj i := by
@@ -2398,7 +2398,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
               (limit K).d 0 1 ≫ (limit.π K i).f 1 =
                 (limit.π K i).f 0 ≫ (K.obj i).d 0 1 :=
             ((limit.π K i).comm' 0 1
-              (by simp [ComplexShape.up, ComplexShape.up'])).symm
+              (by simp)).symm
           rw [← Category.assoc ((limit K).d 0 1) ((limit.π K i).f 1)
             (eqToHom hobj_i₁), hcomm]
           rw [Category.assoc]
@@ -2449,8 +2449,9 @@ theorem inverseSystem_cohomology_zero_iso_limit
         simp only [Category.assoc, Category.id_comp]
         apply limit.hom_ext
         intro i
-        simp only [Category.assoc, inverseSystemLimitMap, limMap_π,
+        simp only [Category.assoc, inverseSystemLimitMap,
           Iso.inv_hom_id_assoc]
+        simp only [limMap_π]
         rw [← Category.assoc, limit.lift_π]
         dsimp [η, ι]
         have hobj : inverseSystemLimit K = limit K := by rfl
@@ -2797,7 +2798,6 @@ theorem acyclic_limit_of_ordinal_inverse_system
                 apply ConcreteCategory.hom_ext _ _
                 change ∀ k : ℤ, _
                 intro k
-                simp only [Functor.const_obj_map, ConcreteCategory.comp_apply]
                 change k • z c.unop = (F.map f).hom (k • z b.unop)
                 rw [map_zsmul, hz f] } }
     let liftElement : ∀ (t : Ordinal)

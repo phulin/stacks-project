@@ -968,7 +968,36 @@ theorem FinitePthRootTower.exists_baseChangeTower
     (K := K) p hp ∅
   exact ⟨tower, hbase⟩
 
-set_option maxHeartbeats 0 in
+private theorem adjoin_eq_top_of_le_adjoin
+    {K : Type u} {L : Type v} {B : Type*}
+    [Field K] [Field L] [Field B] [Algebra K L]
+    (T : IntermediateField K L) [Algebra B T]
+    (E : IntermediateField B T) (s : Set L)
+    (hs : s ⊆ T) (hT : T ≤ IntermediateField.adjoin K s)
+    (hgen : ∀ x (hx : x ∈ s),
+      (⟨x, hs hx⟩ : T) ∈
+        IntermediateField.adjoin E (Set.range (algebraMap K T))) :
+    IntermediateField.adjoin E (Set.range (algebraMap K T)) = ⊤ := by
+  let H : IntermediateField K L := IntermediateField.adjoin K s
+  have hHT : H = T := le_antisymm
+    (IntermediateField.adjoin_le_iff.mpr hs) hT
+  apply top_unique
+  intro q _
+  have hq : (q : L) ∈ H := hHT.symm ▸ q.property
+  apply IntermediateField.adjoin_induction (F := K) (s := s)
+    (p := fun x hx ↦ (⟨x, (IntermediateField.adjoin_le_iff.mpr hs) hx⟩ : T) ∈
+      IntermediateField.adjoin E (Set.range (algebraMap K T)))
+  · exact hgen
+  · intro x
+    exact IntermediateField.subset_adjoin E _ ⟨x, rfl⟩
+  · intro x y _ _ hx hy
+    exact (IntermediateField.adjoin E (Set.range (algebraMap K T))).add_mem hx hy
+  · intro x _ hx
+    exact (IntermediateField.adjoin E (Set.range (algebraMap K T))).inv_mem hx
+  · intro x y _ _ hx hy
+    exact (IntermediateField.adjoin E (Set.range (algebraMap K T))).mul_mem hx hy
+  · exact hq
+
 /-- A finite family in a rational-function field acquires p-th roots in one
 finite paired purely inseparable tower. -/
 theorem exists_tower_pth_roots_adjoin_finset
@@ -1054,11 +1083,10 @@ theorem exists_tower_pth_roots_adjoin_finset
         · exact ha)
   let A : IntermediateField E T :=
     IntermediateField.adjoin E (Set.range (algebraMap K T))
-  let H : IntermediateField K (AlgebraicClosure K) := IntermediateField.adjoin K
-    ((pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
-      ((↑) '' (topRoots : Set (perfectClosure K (AlgebraicClosure K)))))
-  have hHle : H ≤ T := by
-    apply IntermediateField.adjoin_le_iff.mpr
+  let roots : Set (AlgebraicClosure K) :=
+    (pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
+      ((↑) '' (topRoots : Set (perfectClosure K (AlgebraicClosure K))))
+  have hroots : roots ⊆ T := by
     rintro a (ha | ha)
     · obtain ⟨b, hb, rfl⟩ := ha
       let b' : B := ⟨b, hb⟩
@@ -1066,32 +1094,27 @@ theorem exists_tower_pth_roots_adjoin_finset
       exact (tower.baseToTop b').property
     · obtain ⟨w, hw, rfl⟩ := ha
       exact htop w hw
-  have hHT : H = T := le_antisymm hHle htop_le
-  have hgenerate : A = ⊤ := by
-    apply top_unique
-    intro q _
-    have hq : (q : AlgebraicClosure K) ∈ H := hHT.symm ▸ q.property
-    apply IntermediateField.adjoin_induction (F := K)
-      (s := (pthRootClosureMap k K '' (B : Set (AlgebraicClosure k))) ∪
-        ((↑) '' (topRoots : Set (perfectClosure K (AlgebraicClosure K)))))
-      (p := fun a ha ↦ (⟨a, hHle ha⟩ : T) ∈ A)
-    · intro a ha
-      rcases ha with ⟨b, hb, rfl⟩ | ⟨w, hw, rfl⟩
-      · let b' : B := ⟨b, hb⟩
-        have hbT : tower.baseToTop b' ∈ E := E.algebraMap_mem b'
-        exact A.algebraMap_mem ⟨tower.baseToTop b', hbT⟩
-      · obtain ⟨i, _, hi⟩ := Finset.mem_image.mp hw
-        have hzi : z i ∈ E := IntermediateField.subset_adjoin B _ ⟨i, rfl⟩
-        apply hi ▸ A.algebraMap_mem ⟨z i, hzi⟩
-    · intro a
-      exact IntermediateField.subset_adjoin E _ ⟨a, rfl⟩
-    · intro a b _ _ ha hb
-      exact A.add_mem ha hb
-    · intro a _ ha
-      exact A.inv_mem ha
-    · intro a b _ _ ha hb
-      exact A.mul_mem ha hb
-    · exact hq
+  have hgenerate : A = ⊤ := adjoin_eq_top_of_le_adjoin T E roots hroots htop_le (by
+    intro a ha
+    rcases ha with ⟨b, hb, rfl⟩ | ⟨w, hw, rfl⟩
+    · let b' : B := ⟨b, hb⟩
+      have hbT : tower.baseToTop b' ∈ E := E.algebraMap_mem b'
+      have heq : (⟨pthRootClosureMap k K b, hroots (Or.inl ⟨b, hb, rfl⟩)⟩ : T) =
+          tower.baseToTop b' := by
+        apply Subtype.ext
+        exact (tower.baseToTop_apply b').symm
+      rw [heq]
+      exact A.algebraMap_mem ⟨tower.baseToTop b', hbT⟩
+    · obtain ⟨i, _, hi⟩ := Finset.mem_image.mp hw
+      have hzi : z i ∈ E := IntermediateField.subset_adjoin B _ ⟨i, rfl⟩
+      have heq : (⟨(w : AlgebraicClosure K), hroots (Or.inr ⟨w, hw, rfl⟩)⟩ : T) =
+          z i := by
+        apply Subtype.ext
+        change (w : AlgebraicClosure K) = (topRoot i : AlgebraicClosure K)
+        exact congrArg (fun q : perfectClosure K (AlgebraicClosure K) ↦
+          (q : AlgebraicClosure K)) hi.symm
+      rw [heq]
+      exact A.algebraMap_mem ⟨z i, hzi⟩)
   let tower' : FinitePthRootBaseChangeTower k K p hp :=
     { base := tower.base
       top := tower.top

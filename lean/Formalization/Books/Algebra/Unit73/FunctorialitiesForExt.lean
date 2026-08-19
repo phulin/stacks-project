@@ -696,13 +696,140 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     have heG_F := congrArg F.map heG_inv'
     set_option backward.isDefEq.respectTransparency false in
       rw [Functor.map_comp] at heG_F
+    have hcatG' :
+        DerivedCategory.Q.map
+              (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) ≫
+            (CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+                (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+                (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M)) =
+          (CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+              (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+              (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+            (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).obj
+              (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+          G.map (DerivedCategory.Q.map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) := by
+      change
+        DerivedCategory.Q.map
+              (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app _ =
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app _ ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategory.map
+              (DerivedCategory.Q.map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))
+      exact (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.naturality _
+    have hmapcomp {X Y Z : DerivedCategory (ModuleCat R)}
+        (a : X ⟶ Y) (b : Y ⟶ Z) :
+        F.map a ≫ F.map b = F.map (a ≫ b) := by
+      rw [F.map_comp]
+    have hmapcomp_adj :
+        F.map
+              (DerivedCategory.Q.map
+                ((extendRestrictScalarsCochainAdj f).unit.app
+                  (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as)) ≫
+            F.map
+              (DerivedCategory.Q.map
+                (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                  ((HomologicalComplex.singleMapHomologicalComplex
+                    (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))) =
+          F.map
+            (DerivedCategory.Q.map
+                ((extendRestrictScalarsCochainAdj f).unit.app
+                  (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+              DerivedCategory.Q.map
+                (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                  ((HomologicalComplex.singleMapHomologicalComplex
+                    (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))) := by
+      rw [F.map_comp]
+    have hcompConcrete :
+        F.map
+              (DerivedCategory.Q.map
+                  ((extendRestrictScalarsCochainAdj f).unit.app
+                    (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+                DerivedCategory.Q.map
+                  (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                    ((HomologicalComplex.singleMapHomologicalComplex
+                      (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))) ≫
+            F.map
+              ((CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+                  (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+                  (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+                ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                  (extendedModule f M))) =
+          F.map
+            ((DerivedCategory.Q.map
+                ((extendRestrictScalarsCochainAdj f).unit.app
+                  (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+              DerivedCategory.Q.map
+                (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                  ((HomologicalComplex.singleMapHomologicalComplex
+                    (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))) ≫
+            (CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+                (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+                (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+          ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M))) := by
+      exact hmapcomp _ _
+    have hassocConcrete := congrArg F.map
+      (Category.assoc
+        (DerivedCategory.Q.map
+          ((extendRestrictScalarsCochainAdj f).unit.app
+            (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as))
+        (DerivedCategory.Q.map
+          (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)))
+        ((CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+            (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+            (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+          ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+            (extendedModule f M))))
+    have hcatG_prefix := congrArg F.map
+      (congrArg
+        (fun k =>
+          DerivedCategory.Q.map
+              ((extendRestrictScalarsCochainAdj f).unit.app
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫ k)
+        hcatG')
+    have heF_factor_G := congrArg G.map heF_factor
+    set_option backward.isDefEq.respectTransparency false in
+      rw [Functor.map_comp] at heF_factor_G
+    have heF_factor' :
+        (ModuleCat.extendScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R) (ComplexShape.up ℤ) 0).obj M) ≫
+            eF.hom.app M =
+          DerivedCategory.Q.map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M) := by
+      set_option backward.isDefEq.respectTransparency false in
+        simpa only [Functor.mapCochainComplexSingleFunctor, Functor.comp_obj] using heF_factor
+    have heF_factor_G' := congrArg G.map heF_factor'
+    set_option backward.isDefEq.respectTransparency false in
+      rw [Functor.map_comp] at heF_factor_G'
+    have hfactorF_prefix := congrArg F.map
+      (congrArg
+        (fun k =>
+          DerivedCategory.Q.map
+              ((extendRestrictScalarsCochainAdj f).unit.app
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+            ((CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+                (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+                (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+              (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).obj
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫ k))
+        heF_factor_G'.symm)
     calc
       _ = _ := by
-        /- Prior attempt:
-        set_option backward.isDefEq.respectTransparency.types false in
-        set_option backward.isDefEq.respectTransparency false in
-          rw [← Category.assoc, heF_unit, heG_F]
-        try simp only [Category.assoc]
+        rw [← Category.assoc, heF_unit, heG_F]
+        simp only [Category.assoc]
         rw [← Category.assoc
           (F.map ((DerivedCategory.singleFunctor (ModuleCat R) 0).map
             (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)))
@@ -713,13 +840,28 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
         set_option backward.isDefEq.respectTransparency false in
           rw [hcuF]
         set_option backward.isDefEq.respectTransparency false in
-          rw [Category.assoc]
-        nth_rewrite 3 [← Category.assoc]
-        rw [← F.map_comp]
+          simp only [Category.assoc]
         set_option backward.isDefEq.respectTransparency false in
-          rw [congrArg F.map hcatG']
-        -/
-        sorry
+          rw [← Category.assoc
+            (F.map (DerivedCategory.Q.map
+              ((extendRestrictScalarsCochainAdj f).unit.app
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as)))
+            (F.map (DerivedCategory.Q.map
+              (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)))) _]
+        set_option backward.isDefEq.respectTransparency false in
+          rw [hmapcomp_adj]
+        set_option backward.isDefEq.respectTransparency false in
+          nth_rewrite 2 [← Category.assoc]
+        set_option backward.isDefEq.respectTransparency false in
+          rw [hcompConcrete]
+        set_option backward.isDefEq.respectTransparency false in
+          rw [hassocConcrete]
+        set_option backward.isDefEq.respectTransparency false in
+          rw [hcatG_prefix]
+        set_option backward.isDefEq.respectTransparency false in
+          rw [hfactorF_prefix]
       _ = _ := hh'
   have hright (x : restrictedExt f M N' i) :
       (ConcreteCategory.hom (D.map M N' i)) (inv x) = x := by
@@ -763,6 +905,7 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     rw [CategoryTheory.Abelian.Ext.comp_hom,
       CategoryTheory.Abelian.Ext.mapExactFunctor_hom]
     let eG := (ModuleCat.restrictScalars f).mapDerivedCategorySingleFunctor 0
+    let eF := (ModuleCat.extendScalars f).mapDerivedCategorySingleFunctor 0
     let X₀ := (DerivedCategory.singleFunctor (ModuleCat R) 0).obj M
     let Y₀ := (shiftFunctor (DerivedCategory (ModuleCat R')) (i : ℤ)).obj
       ((DerivedCategory.singleFunctor (ModuleCat R') 0).obj N')
@@ -810,24 +953,209 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
             ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj N')
       set_option backward.isDefEq.respectTransparency false in
         simp [← heG_factor, Category.assoc, Iso.hom_inv_id_app, Category.comp_id]
+    have heF_factor :
+        (ModuleCat.extendScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R) (ComplexShape.up ℤ) 0).obj M) ≫
+            eF.hom.app M =
+          DerivedCategory.Q.map
+            ((Functor.mapCochainComplexSingleFunctor
+              (ModuleCat.extendScalars f) 0).hom.app M) := by
+      simpa [eF, Functor.mapCochainComplexSingleFunctor] using
+        (Functor.mapDerivedCategoryFactors_inv_app_mapDerivedCategorySingleFunctor_hom_app
+          (F := ModuleCat.extendScalars f) M)
+    have heF_factor' :
+        (ModuleCat.extendScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R) (ComplexShape.up ℤ) 0).obj M) ≫
+            eF.hom.app M =
+          DerivedCategory.Q.map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M) := by
+      set_option backward.isDefEq.respectTransparency false in
+        simpa only [Functor.mapCochainComplexSingleFunctor, Functor.comp_obj] using heF_factor
+    have heF_factor_inv :
+        DerivedCategory.Q.map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M) ≫
+          eF.inv.app M =
+        (ModuleCat.extendScalars f).mapDerivedCategoryFactors.inv.app
+          ((HomologicalComplex.single (ModuleCat R) (ComplexShape.up ℤ) 0).obj M) := by
+      have h := (congrArg (fun k => k ≫ eF.inv.app M) heF_factor').symm
+      set_option backward.defeqAttrib.useBackward true in
+        set_option backward.isDefEq.respectTransparency false in
+          rw [Category.comp_id] at h
+      exact h
     have hh'' := congrArg (fun k =>
       k ≫ (Functor.commShiftIso G (i : ℤ)).hom.app
         ((DerivedCategory.singleFunctor (ModuleCat R') 0).obj N') ≫
         (shiftFunctor (DerivedCategory (ModuleCat R)) (i : ℤ)).map
           (eG.hom.app N')) hh'
-    /- Prior attempt:
+    have hunit0 :
+        ((extendRestrictScalarsCochainAdj f).unit.app
+          (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as).f 0 =
+          ModuleCat.ExtendRestrictScalarsAdj.Unit.map f := by
+      ext m
+      rfl
+    have hcu :
+        (CochainComplex.singleFunctor (ModuleCat R) 0).map
+            (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f) ≫
+          (HomologicalComplex.singleMapHomologicalComplex
+            (ModuleCat.restrictScalars f) (ComplexShape.up ℤ) 0).inv.app
+              (extendedModule f M) =
+        ((extendRestrictScalarsCochainAdj f).unit.app
+          (CategoryTheory.Quotient.as
+            (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M))) ≫
+          ((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M) := by
+      apply HomologicalComplex.hom_ext
+      intro j
+      by_cases hj : j = 0
+      · subst j
+        simpa [hunit0, HomologicalComplex.singleMapHomologicalComplex]
+      · apply (HomologicalComplex.isZero_single_obj_X
+          (ComplexShape.up ℤ) 0 M j hj).eq_of_src
+    have hsingle_unit :
+        (DerivedCategory.singleFunctor (ModuleCat R) 0).map
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map (X := M) f) =
+          DerivedCategory.Q.map
+            ((CochainComplex.singleFunctor (ModuleCat R) 0).map
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map (X := M) f)) := by
+      rfl
+    have hcu' := congrArg DerivedCategory.Q.map hcu
+    set_option backward.isDefEq.respectTransparency false in
+      rw [Functor.map_comp, Functor.map_comp] at hcu'
+    rw [← hsingle_unit] at hcu'
+    have hcatG :
+        DerivedCategory.Q.map
+              (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M)) =
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).obj
+              (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+            G.map (DerivedCategory.Q.map
+              ((HomologicalComplex.singleMapHomologicalComplex
+                (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) := by
+      change
+        DerivedCategory.Q.map
+              (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app _ =
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app _ ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategory.map
+              (DerivedCategory.Q.map
+                ((HomologicalComplex.singleMapHomologicalComplex
+                  (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M))
+      exact (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.naturality _
+    have heG_factor_ext :
+        eG.inv.app (extendedModule f M) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.hom.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M)) =
+          DerivedCategory.Q.map
+            ((Functor.mapCochainComplexSingleFunctor
+              (ModuleCat.restrictScalars f) 0).inv.app (extendedModule f M)) := by
+      simpa [eG, Functor.mapCochainComplexSingleFunctor] using
+        (Functor.mapDerivedCategorySingleFunctor_inv_app_mapDerivedCategoryFactors_hom_app
+          (F := ModuleCat.restrictScalars f) (X := extendedModule f M))
+    have heG_inv_ext :
+        eG.inv.app (extendedModule f M) =
+          DerivedCategory.Q.map
+              ((Functor.mapCochainComplexSingleFunctor
+                (ModuleCat.restrictScalars f) 0).inv.app (extendedModule f M)) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M)) := by
+      change eG.inv.app (extendedModule f M) =
+        DerivedCategory.Q.map
+            ((Functor.mapCochainComplexSingleFunctor
+              (ModuleCat.restrictScalars f) 0).inv.app (extendedModule f M)) ≫
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+              (extendedModule f M))
+      set_option backward.isDefEq.respectTransparency false in
+        simp [← heG_factor_ext, Category.assoc, Iso.hom_inv_id_app, Category.comp_id]
+    have heG_inv_ext' :
+        eG.inv.app (extendedModule f M) =
+          DerivedCategory.Q.map
+              ((HomologicalComplex.singleMapHomologicalComplex
+                (ModuleCat.restrictScalars f) (ComplexShape.up ℤ) 0).inv.app
+                (extendedModule f M)) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+                (extendedModule f M)) := by
+      set_option backward.defeqAttrib.useBackward true in
+        set_option backward.isDefEq.respectTransparency.types false in
+          set_option backward.isDefEq.respectTransparency false in
+            simpa [Functor.mapCochainComplexSingleFunctor] using heG_inv_ext
+    have hprefix :
+        (DerivedCategory.singleFunctor (ModuleCat R) 0).map
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f) ≫
+            ((ModuleCat.restrictScalars f).mapDerivedCategorySingleFunctor 0).inv.app
+              (extendedModule f M) =
+          DerivedCategory.Q.map
+              ((extendRestrictScalarsCochainAdj f).unit.app
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+              (((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).obj
+                (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as) ≫
+            G.map (DerivedCategory.Q.map
+              ((HomologicalComplex.singleMapHomologicalComplex
+                (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)) := by
+      change
+        (DerivedCategory.singleFunctor (ModuleCat R) 0).map
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f) ≫
+            eG.inv.app (extendedModule f M) = _
+      rw [heG_inv_ext']
+      set_option backward.isDefEq.respectTransparency false in
+        rw [← Category.assoc
+          ((DerivedCategory.singleFunctor (ModuleCat R) 0).map
+            (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f))
+          (DerivedCategory.Q.map
+            ((HomologicalComplex.singleMapHomologicalComplex
+              (ModuleCat.restrictScalars f) (ComplexShape.up ℤ) 0).inv.app
+              (extendedModule f M)))
+          ((ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+              (extendedModule f M)))]
+      set_option backward.isDefEq.respectTransparency false in
+        rw [hcu']
+      set_option backward.isDefEq.respectTransparency false in
+        rw [Category.assoc
+          (DerivedCategory.Q.map
+            ((extendRestrictScalarsCochainAdj f).unit.app
+              (((HomotopyCategory.singleFunctors (ModuleCat R)).functor 0).obj M).as))
+          (DerivedCategory.Q.map
+            (((ModuleCat.restrictScalars f).mapHomologicalComplex (ComplexShape.up ℤ)).map
+              ((HomologicalComplex.singleMapHomologicalComplex
+                (ModuleCat.extendScalars f) (ComplexShape.up ℤ) 0).hom.app M)))
+          ((ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+              (extendedModule f M)))]
+      set_option backward.isDefEq.respectTransparency false in
+        rw [hcatG]
+    rw [← Category.assoc]
+    rw [hprefix]
     have hcancel :
         h₀ ≫ (Functor.commShiftIso G (i : ℤ)).hom.app
             ((DerivedCategory.singleFunctor (ModuleCat R') 0).obj N') ≫
           (shiftFunctor (DerivedCategory (ModuleCat R)) (i : ℤ)).map
             (eG.hom.app N') = CategoryTheory.Abelian.Ext.hom x := by
       dsimp [h₀]
-      rw [Category.assoc, Iso.inv_hom_id_app, Category.comp_id,
-        ← Functor.map_comp, Iso.inv_hom_id_app, Functor.map_id,
-        Category.comp_id]
-      simp only [Category.assoc, Category.comp_id]
-    simpa [hcancel, heG_inv, eG, Category.assoc, Functor.map_comp,
-      ← Functor.map_comp_assoc, Iso.inv_hom_id_app_assoc,
+      simp [Category.assoc, Functor.map_comp,
+        Functor.commShiftIso_inv_naturality,
+        Functor.commShiftIso_hom_naturality,
+        Iso.inv_hom_id_app, Iso.hom_inv_id_app]
+    have hfinal := hh''.symm.trans hcancel
+    dsimp [h₀] at hfinal
+    set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+        simpa only [heG_inv, eG, eF, heF_factor, heF_factor_inv, Category.assoc, Functor.map_comp,
+      Iso.inv_hom_id_app_assoc,
       Functor.map_id, Functor.comp_obj,
       Functor.commShiftIso_hom_naturality,
       Functor.commShiftIso_inv_naturality,
@@ -835,10 +1163,11 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
       Functor.commShiftIso_comp_inv_app,
       Functor.mapDerivedCategoryFactors_inv_app_mapDerivedCategorySingleFunctor_hom_app,
       Functor.mapDerivedCategorySingleFunctor_inv_app_mapDerivedCategoryFactors_hom_app,
-      Iso.inv_hom_id_app, Iso.hom_inv_id_app, Category.comp_id]
-      using hh''.symm
-    -/
-    sorry
+      Iso.inv_hom_id_app, Iso.hom_inv_id_app, Category.comp_id,
+      CategoryTheory.ShiftedHom.comp, CategoryTheory.ShiftedHom.mk₀,
+      CategoryTheory.ShiftedHom.map,
+          CategoryTheory.Abelian.Ext.mk₀_hom]
+          using hfinal
   constructor
   · intro x y h
     have := congrArg inv h

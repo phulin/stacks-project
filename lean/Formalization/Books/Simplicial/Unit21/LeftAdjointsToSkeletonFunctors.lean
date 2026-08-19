@@ -640,7 +640,7 @@ theorem glue_simplex
       f ≫ i = (SSet.boundary n).ι ≫ simplexMapOfSimplex V n x ∧
       IsPushout (SSet.boundary n).ι f
         (simplexMapOfSimplex V n x) i := by
-  letI : Mono i := h.mono_i
+  let _ : Mono i := h.mono_i
   have hx_nd : x ∈ V.nonDegenerate n := by
     rw [SSet.mem_nonDegenerate_iff_notMem_degenerate]
     intro hxdeg
@@ -661,8 +661,6 @@ theorem glue_simplex
     rw [SSet.Subcomplex.range_comp, SSet.Subcomplex.image_le_iff]
     rw [show SSet.Subcomplex.range (SSet.boundary n).ι = SSet.boundary n from
       CategoryTheory.Subfunctor.range_ι _]
-    change (SSet.boundary n) ≤
-      (SSet.Subcomplex.range i).preimage (simplexMapOfSimplex V n x)
     rw [SSet.Subcomplex.le_iff_contains_nonDegenerate]
     intro d y hy
     let y' : (SSet.boundary n : SSet.{u}).nonDegenerate d :=
@@ -686,10 +684,10 @@ theorem glue_simplex
     have ht : inv (SSet.Subcomplex.toRange i) ≫ i =
         (SSet.Subcomplex.range i).ι := by
       apply (cancel_epi (SSet.Subcomplex.toRange i)).1
-      simp [Category.assoc]
+      simp
     calc
       q ≫ inv (SSet.Subcomplex.toRange i) ≫ i = q ≫
-          (inv (SSet.Subcomplex.toRange i) ≫ i) := by simp only [Category.assoc]
+          (inv (SSet.Subcomplex.toRange i) ≫ i) := by rfl
       _ = p := by rw [ht, SSet.Subcomplex.lift_ι]
   refine ⟨f, hf, ?_⟩
   refine { w := by simpa [p] using hf.symm, isColimit' := ⟨evaluationJointlyReflectsColimits _
@@ -741,7 +739,7 @@ theorem glue_simplex
           exact (h.new_not_in_range ⟨a, by
             simpa [simplexMap_app] using hab⟩).elim
     · ext y
-      simp only [Set.mem_union, Set.mem_range, Set.mem_univ, iff_true]
+      simp only [Set.mem_univ, iff_true]
       by_cases hy : y ∈ Set.range (i.app (op ⦋d⦌))
       · exact Or.inl hy
       · obtain ⟨m, g, hg, z, hz⟩ := V.exists_nonDegenerate y
@@ -794,10 +792,15 @@ theorem glue_simplex
                     (simplexMapOfSimplex V n x).app (op ⦋d⦌)
                       (SSet.stdSimplex.objEquiv.symm r₂) := hab
                 _ = V.map r₂.op x := simplexMap_app d r₂)
-      simpa [hr]
+      simp [hr]
     )⟩ }
 
-/-- A finite inclusion is obtained by adjoining finitely many simplices. -/
+/-- A finite inclusion is obtained by adjoining finitely many simplices.
+
+For an arbitrary categorical monomorphism the filtration has endpoint
+isomorphisms rather than literal endpoint equalities.  The latter are the
+source's subset convention, which is not available for arbitrary `SSet`
+objects. -/
 theorem finite_simplicial_set_filtration
     {U V : SSet.{u}} (i : U ⟶ V) [Mono i]
     (hU : ∀ n, Finite (U _⦋n⦌) ∧ Nonempty (U _⦋n⦌))
@@ -806,14 +809,13 @@ theorem finite_simplicial_set_filtration
     ∃ (r : ℕ) (W : Fin (r + 1) → SSet.{u})
       (f : ∀ j : Fin r, W j.castSucc ⟶ W j.succ)
       (g : ∀ j : Fin (r + 1), W j ⟶ V),
-      W 0 = U ∧ W ⟨r, Nat.lt_succ_self r⟩ = V ∧
-      (∀ h₀ : W 0 = U, g 0 = eqToHom h₀ ≫ i) ∧
-      (∀ hᵣ : W ⟨r, Nat.lt_succ_self r⟩ = V,
-        g ⟨r, Nat.lt_succ_self r⟩ = eqToHom hᵣ) ∧
-      (∀ j, f j ≫ g j.succ = g j.castSucc) ∧
-      (∀ j, Mono (f j)) ∧
-      (∀ j, ∃ (n : ℕ) (x : (W j.succ) _⦋n⦌),
-        SimplexAttachment (f j) n x) := by
+      ∃ (e₀ : W 0 ≅ U) (eᵣ : W ⟨r, Nat.lt_succ_self r⟩ ≅ V),
+        g 0 = e₀.hom ≫ i ∧
+        g ⟨r, Nat.lt_succ_self r⟩ = eᵣ.hom ∧
+        (∀ j, f j ≫ g j.succ = g j.castSucc) ∧
+        (∀ j, Mono (f j)) ∧
+        (∀ j, ∃ (n : ℕ) (x : (W j.succ) _⦋n⦌),
+          SimplexAttachment (f j) n x) := by
   sorry
 
 /-! ## The abelian-category consequence -/

@@ -67,12 +67,14 @@ noncomputable def thickeningIdeal {X X' : RingedSpace.{v}}
     infer_instance
 
 /-- A morphism of ringed spaces is a thickening when its space map is a
-homeomorphism, its structure-sheaf map is an epimorphism, and its kernel ideal
-is locally nilpotent. -/
+homeomorphism, its structure-sheaf map and its associated module map are
+epimorphisms, and its kernel ideal is locally nilpotent. -/
 structure IsThickening {X X' : RingedSpace.{v}}
     (i : RingedSpaceHom X X') : Prop where
   underlying_homeomorph : IsHomeomorph i.continuous.hom
   structureSheaf_epi : Epi i.sharp
+  structureSheaf_module_epi :
+    Epi (SheafOfModules.unitToPushforwardObjUnit i.sharp)
   kernel_locallyNilpotent : IsLocallyNilpotentIdeal (thickeningIdeal i)
 
 /-- A first-order thickening is a thickening whose kernel ideal has square zero. -/

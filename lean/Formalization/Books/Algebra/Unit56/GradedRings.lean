@@ -4,6 +4,7 @@ import Mathlib.RingTheory.GradedAlgebra.RingHom
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
 import Mathlib.RingTheory.IntegralClosure.Algebra.Basic
+import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 
 /-!
@@ -3411,25 +3412,117 @@ def IsDirectSumOfHomogeneousComponents (G : GradedRingData S) [Algebra R S]
 theorem isGradedSubalgebra_iff_directSumOfHomogeneousComponents
     (G : GradedRingData S) [Algebra R S] (T : Subalgebra R S) :
     IsGradedSubalgebra G T ↔ IsDirectSumOfHomogeneousComponents G T := by
-  sorry
+  classical
+  constructor
+  · intro h x
+    constructor
+    · intro hx d
+      exact h d x hx
+    · intro hx
+      rw [← DirectSum.sum_support_decompose G.component x]
+      exact T.sum_mem (fun d _ => hx d)
+  · intro h d x hx
+    exact (h x).1 hx d
 
 /-- Mathlib's graded ring homomorphism, with the component families supplied by the wrappers. -/
 abbrev GradedRingMap (G : GradedRingData R) (H : GradedRingData S) :=
   G.component →+*ᵍ H.component
+
+private def gradedScaleComponent (G : GradedRingData S) (d : ℕ) :
+    G.component d →+ Polynomial S where
+  toFun x := Polynomial.monomial d (x : S)
+  map_zero' := by simp
+  map_add' x y := by simp
+
+private def gradedScale (G : GradedRingData S) : S →+* Polynomial S :=
+  RingHom.comp (DirectSum.toSemiring (fun d => gradedScaleComponent G d)
+      (by simp [gradedScaleComponent])
+      (by
+        intro i j x y
+        change Polynomial.monomial (i + j)
+            (↑(@GradedMonoid.GMul.mul ℕ (fun d => G.component d)
+              inferInstance inferInstance i j x y) : S) =
+          Polynomial.monomial i (x : S) * Polynomial.monomial j (y : S)
+        rw [SetLike.coe_gMul, ← Polynomial.C_mul_X_pow_eq_monomial,
+          ← Polynomial.C_mul_X_pow_eq_monomial,
+          ← Polynomial.C_mul_X_pow_eq_monomial, Polynomial.C_mul, pow_add]
+        ac_rfl))
+    (DirectSum.decomposeRingEquiv G.component).toRingHom
+
+private theorem gradedScale_coe (G : GradedRingData S) {d : ℕ}
+    (x : G.component d) : gradedScale G (x : S) = Polynomial.monomial d (x : S) := by
+  simp [gradedScale, DirectSum.decomposeRingEquiv, DirectSum.decompose_coe,
+    DirectSum.toSemiring_of]
+  rfl
+
+private theorem gradedScale_coeff (G : GradedRingData S) (x : S) (d : ℕ) :
+    (gradedScale G x).coeff d = (DirectSum.decompose G.component x d : S) := by
+  induction x using DirectSum.Decomposition.inductionOn
+    (ℳ := G.component) with
+  | zero => simp [gradedScale]
+  | @homogeneous i x =>
+      rw [gradedScale_coe G x]
+      by_cases h : i = d
+      · subst d
+        simp
+      · simp [Polynomial.coeff_monomial, DirectSum.of_apply, h]
+  | add x y hx hy =>
+      rw [map_add, Polynomial.coeff_add, DirectSum.decompose_add]
+      exact congrArg₂ (· + ·) hx hy
 
 theorem integralClosure_is_graded
     (G : GradedRingData R) (H : GradedRingData S)
     (f : GradedRingMap G H) :
     let A : Algebra R S := f.toRingHom.toAlgebra
     @IsGradedSubalgebra R S _ _ H A (@integralClosure R S _ _ A) := by
-  sorry
+  letI : Algebra R S := f.toRingHom.toAlgebra
+  dsimp
+  have hcompat :
+      (Polynomial.mapRingHom f.toRingHom).comp (gradedScale G) =
+        (gradedScale H).comp f.toRingHom := by
+    apply RingHom.ext
+    intro x
+    induction x using DirectSum.Decomposition.inductionOn
+      (ℳ := G.component) with
+    | zero => simp
+    | @homogeneous d x =>
+        change Polynomial.mapRingHom f.toRingHom (gradedScale G (x : R)) =
+          gradedScale H (f x)
+        change Polynomial.map f.toRingHom (gradedScale G (x : R)) =
+          gradedScale H (f x)
+        rw [gradedScale_coe G x, Polynomial.map_monomial]
+        rw [gradedScale_coe H ⟨f x, f.map_mem x.property⟩]
+        rfl
+    | add x y hx hy =>
+        simp only [RingHom.coe_comp, Function.comp_apply, map_add, hx, hy]
+  intro d x hx
+  rw [mem_integralClosure_iff] at hx ⊢
+  obtain ⟨p, hp, hpx⟩ := hx
+  letI : Algebra (Polynomial R) (Polynomial S) :=
+    (Polynomial.mapRingHom (algebraMap R S)).toAlgebra
+  have hscaled : IsIntegral (Polynomial R) (gradedScale H x) := by
+    refine ⟨p.map (gradedScale G), hp.map _, ?_⟩
+    have heval := Polynomial.map_aeval_eq_aeval_map
+      (φ := gradedScale G) (ψ := gradedScale H) hcompat p x
+    change Polynomial.aeval (gradedScale H x) (p.map (gradedScale G)) = 0
+    have hpx' : Polynomial.aeval x p = 0 := by
+      simpa [Polynomial.aeval_def] using hpx
+    rw [← heval, hpx']
+    exact (gradedScale H).map_zero
+  have hcoeff := Polynomial.isIntegral_iff_isIntegral_coeff.mp hscaled d
+  rw [gradedScale_coeff H x d] at hcoeff
+  exact hcoeff
 
 theorem integralClosure_is_directSumOfHomogeneousComponents
     (G : GradedRingData R) (H : GradedRingData S)
     (f : GradedRingMap G H) :
     let A : Algebra R S := f.toRingHom.toAlgebra
     @IsDirectSumOfHomogeneousComponents R S _ _ H A (@integralClosure R S _ _ A) := by
-  sorry
+  letI : Algebra R S := f.toRingHom.toAlgebra
+  dsimp
+  apply (isGradedSubalgebra_iff_directSumOfHomogeneousComponents
+    H (integralClosure R S)).mp
+  exact integralClosure_is_graded G H f
 
 end
 

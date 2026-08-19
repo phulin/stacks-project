@@ -1193,10 +1193,368 @@ theorem deRhamExteriorPowerTensorMap_kernel_span
 theorem deRhamGamma_factors_through_exteriorPower
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)
     (_hp : 2 ≤ p) :
-    (deRhamDifferential (A := A) (B := B) p).comp
+      (deRhamDifferential (A := A) (B := B) p).comp
         (deRhamExteriorPowerTensorMap (A := A) (B := B) p) =
       deRhamGamma (A := A) (B := B) p := by
-  sorry
+  classical
+  apply PiTensorProduct.ext_of_span_eq_top
+    (g := fun _ (z : B × (Fin 1 → B)) =>
+      deRhamGenerator (A := A) (B := B) 1 z.1 z.2)
+  · intro i
+    exact deRhamGenerators_span (A := A) (B := B) 1
+  · intro z
+    change deRhamDifferential (A := A) (B := B) p
+        (deRhamExteriorPowerTensorMap (A := A) (B := B) p
+          (PiTensorProduct.tprod A
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (z i).1 (z i).2))) =
+      deRhamGamma (A := A) (B := B) p
+        (PiTensorProduct.tprod A
+          (fun i => deRhamGenerator (A := A) (B := B) 1
+            (z i).1 (z i).2))
+    rw [deRhamExteriorPowerTensorMap_on_pure_tensor,
+      deRhamGamma_on_pure_tensor]
+    have coe_cast : ∀ {r s : ℕ} (h : r = s) (x : deRhamTerm A B r),
+        ((cast (congrArg (fun k => (deRhamTerm A B k : Type _)) h) x :
+          deRhamTerm A B s) :
+          ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+        (x : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro r s h x
+      cases h
+      rfl
+    have pure_succ_coe : ∀ (n : ℕ)
+        (ω : Fin (n + 1) → deRhamTerm A B 1),
+        ((deRhamPureWedgeTerms (A := A) (B := B) (n + 1) ω :
+            deRhamTerm A B (n + 1)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          ((deRhamWedge (A := A) (B := B) 1 n (ω 0)
+            (deRhamPureWedgeTerms (A := A) (B := B) n
+              (Matrix.vecTail ω)) :
+              deRhamTerm A B (1 + n)) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n ω
+      simp only [deRhamPureWedgeTerms]
+      apply coe_cast (Nat.add_comm 1 n)
+    have pure_gen_coe : ∀ (n : ℕ) (u : Fin n → B) (v : Fin n → B),
+        ((deRhamPureWedgeTerms (A := A) (B := B) n
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) :
+            deRhamTerm A B n) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          ((deRhamGenerator (A := A) (B := B) n (∏ i, u i) v :
+            deRhamTerm A B n) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n
+      induction n with
+      | zero =>
+          intro u v
+          simp [deRhamPureWedgeTerms, deRhamGenerator,
+            exteriorPower.ιMulti]
+      | succ n ih =>
+          intro u v
+          rw [pure_succ_coe]
+          rw [show Matrix.vecTail
+              (fun i : Fin (n + 1) =>
+                deRhamGenerator (A := A) (B := B) 1
+                  (u i) (fun _ => v i)) =
+              (fun i => deRhamGenerator (A := A) (B := B) 1
+                (u i.succ) (fun _ => v i.succ)) by
+                funext i
+                rfl]
+          change
+            ((deRhamGenerator (A := A) (B := B) 1 (u 0)
+                (fun _ => v 0) :
+                deRhamTerm A B 1) :
+                ExteriorAlgebra B (ModuleOfDifferentials A B)) *
+              (((deRhamPureWedgeTerms (A := A) (B := B) n
+                  (fun i => deRhamGenerator (A := A) (B := B) 1
+                    (u i.succ) (fun _ => v i.succ)) :
+                  deRhamTerm A B n) :
+                  ExteriorAlgebra B (ModuleOfDifferentials A B))) = _
+          rw [ih]
+          simp [deRhamGenerator, exteriorPower.ιMulti,
+            Fin.prod_univ_succ, smul_smul, Matrix.vecTail]
+          rw [mul_comm]
+          congr 1
+    have pure_gen : ∀ (n : ℕ) (u : Fin n → B) (v : Fin n → B),
+        deRhamPureWedgeTerms (A := A) (B := B) n
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) =
+          deRhamGenerator (A := A) (B := B) n (∏ i, u i) v := by
+      intro n u v
+      apply Subtype.ext
+      exact pure_gen_coe n u v
+    have wedge_coe : ∀ (r s : ℕ) (u : deRhamTerm A B r)
+        (v : deRhamTerm A B s),
+        ((deRhamWedge (A := A) (B := B) r s u v :
+            deRhamTerm A B (r + s)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (u : ExteriorAlgebra B (ModuleOfDifferentials A B)) *
+            (v : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro r s u v
+      rfl
+    have diff_zero_coe : ∀ (n : ℕ)
+        (ω : Fin (n + 1) → deRhamTerm A B 1),
+        (deRhamWedgeWithDifferential (A := A) (B := B) (n + 1) ω 0 :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamWedge (A := A) (B := B) 2 n
+            (deRhamDifferential (A := A) (B := B) 1 (ω 0))
+            (deRhamPureWedgeTerms (A := A) (B := B) n
+              (Matrix.vecTail ω)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n ω
+      simp only [deRhamWedgeWithDifferential]
+      apply coe_cast (Nat.add_comm 2 n)
+    have diff_succ_coe : ∀ (n : ℕ)
+        (ω : Fin (n + 1) → deRhamTerm A B 1) (j : Fin n),
+        (deRhamWedgeWithDifferential (A := A) (B := B) (n + 1) ω j.succ :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamWedge (A := A) (B := B) 1 (n + 1) (ω 0)
+            (deRhamWedgeWithDifferential (A := A) (B := B) n
+              (Matrix.vecTail ω) j) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n ω j
+      simp only [deRhamWedgeWithDifferential]
+      exact congrArg (fun x =>
+          (x : ExteriorAlgebra B (ModuleOfDifferentials A B)))
+        (coe_cast (by simp [Nat.add_left_comm]) _)
+    have gamma_succ_coe : ∀ (n : ℕ)
+        (ω : Fin (n + 1) → deRhamTerm A B 1),
+        (deRhamGammaPureFormula (A := A) (B := B) (n + 1) ω :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamWedgeWithDifferential (A := A) (B := B) (n + 1) ω 0 :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) -
+          (deRhamWedge (A := A) (B := B) 1 (n + 1) (ω 0)
+            (deRhamGammaPureFormula (A := A) (B := B) n
+              (Matrix.vecTail ω)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n ω
+      simp only [deRhamGammaPureFormula, Fin.sum_univ_succ]
+      simp [pow_succ, neg_smul]
+      simp_rw [diff_succ_coe, wedge_coe]
+      abel
+    have generator_step_coe : ∀ (n : ℕ) (u : Fin (n + 1) → B)
+        (v : Fin (n + 1) → B),
+        ((deRhamDifferentialGenerator (A := A) (B := B) (n + 1)
+            (∏ i, u i) v :
+            deRhamTerm A B (n + 2)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) 0 :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) -
+          (deRhamWedge (A := A) (B := B) 1 (n + 1)
+            (deRhamGenerator (A := A) (B := B) 1 (u 0)
+              (fun _ => v 0))
+            (deRhamDifferentialGenerator (A := A) (B := B) n
+              (∏ i : Fin n, u i.succ) (fun i => v i.succ)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n u v
+      have hprod :
+          universalDifferential A B (∏ i : Fin (n + 1), u i) =
+            u 0 • universalDifferential A B (∏ i : Fin n, u i.succ) +
+              (∏ i : Fin n, u i.succ) • universalDifferential A B (u 0) := by
+        rw [Fin.prod_univ_succ]
+        exact (universalDifferential A B).leibniz (u 0)
+          (∏ i : Fin n, u i.succ)
+      have htail :
+          Matrix.vecTail (fun i : Fin (n + 1) =>
+            deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) =
+            (fun i : Fin n => deRhamGenerator (A := A) (B := B) 1
+              (u i.succ) (fun _ => v i.succ)) := by
+        funext i
+        rfl
+      rw [diff_zero_coe, deRhamDifferential_on_generator 1 (by omega)]
+      rw [wedge_coe, htail, pure_gen_coe]
+      rw [wedge_coe]
+      simp only [deRhamDifferentialGenerator, deRhamGenerator]
+      have hvec :
+          ((Fin.cons ((universalDifferentialLinearMap A B)
+              (∏ i : Fin (n + 1), u i))
+            (fun i : Fin (n + 1) => (universalDifferentialLinearMap A B)
+              (v i)) :
+              Fin (n + 1 + 1) → ModuleOfDifferentials A B)) =
+          ((Fin.cons
+            (u 0 • (universalDifferentialLinearMap A B)
+                (∏ i : Fin n, u i.succ) +
+              (∏ i : Fin n, u i.succ) • (universalDifferentialLinearMap A B)
+                (u 0))
+            (fun i : Fin (n + 1) => (universalDifferentialLinearMap A B)
+              (v i)) :
+              Fin (n + 1 + 1) → ModuleOfDifferentials A B)) := by
+        funext i
+        refine Fin.cases ?_ (fun j => rfl) i
+        exact hprod
+      rw [hvec]
+      have hcoe : ∀ (m : ℕ) (w : Fin m → ModuleOfDifferentials A B),
+          ((exteriorPower.ιMulti B m w : deRhamTerm A B m) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            ExteriorAlgebra.ιMulti B m w := by
+        intro m w
+        rfl
+      have hcoe_smul : ∀ (m : ℕ) (c : B)
+          (w : Fin m → ModuleOfDifferentials A B),
+          ((c • (exteriorPower.ιMulti B m w) : deRhamTerm A B m) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            c • ExteriorAlgebra.ιMulti B m w := by
+        intro m c w
+        rfl
+      calc
+        _ = ExteriorAlgebra.ιMulti B (n + 1 + 1)
+            (Fin.cons
+              (u 0 • (universalDifferentialLinearMap A B)
+                  (∏ i : Fin n, u i.succ) +
+                (∏ i : Fin n, u i.succ) • (universalDifferentialLinearMap A B)
+                  (u 0))
+              (fun i : Fin (n + 1) => (universalDifferentialLinearMap A B)
+                (v i))) := by rfl
+        _ = _ := by
+          simp only [hcoe, hcoe_smul]
+          simp only [ExteriorAlgebra.ιMulti_succ_apply]
+          simp only [Fin.cons_zero, Matrix.vecTail]
+          simp only [ExteriorAlgebra.ιMulti_zero_apply, mul_one]
+          rw [map_add, map_smul, map_smul]
+          simp only [Function.comp_def, Function.comp_apply, Fin.cons_succ]
+          simp only [Algebra.smul_def]
+          have hswap (r : ExteriorAlgebra B (ModuleOfDifferentials A B)) :
+              (ExteriorAlgebra.ι B)
+                  (universalDifferentialLinearMap A B (∏ i : Fin n, u i.succ)) *
+                ((ExteriorAlgebra.ι B)
+                    (universalDifferentialLinearMap A B (v 0)) * r) =
+              -((ExteriorAlgebra.ι B)
+                  (universalDifferentialLinearMap A B (v 0)) *
+                (ExteriorAlgebra.ι B)
+                  (universalDifferentialLinearMap A B (∏ i : Fin n, u i.succ))) * r := by
+            rw [← mul_assoc, exterior_generator_swap
+              (R := B) (M := ModuleOfDifferentials A B)
+              (universalDifferentialLinearMap A B (∏ i : Fin n, u i.succ))
+              (universalDifferentialLinearMap A B (v 0))]
+            simp only [neg_mul]
+          rw [add_mul]
+          simp only [mul_assoc]
+          rw [hswap]
+          let S : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            algebraMap B (ExteriorAlgebra B (ModuleOfDifferentials A B)) (u 0)
+          let T : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            algebraMap B (ExteriorAlgebra B (ModuleOfDifferentials A B))
+              (∏ i : Fin n, u i.succ)
+          let a : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            ExteriorAlgebra.ι B
+              (universalDifferentialLinearMap A B (∏ i : Fin n, u i.succ))
+          let b : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            ExteriorAlgebra.ι B (universalDifferentialLinearMap A B (u 0))
+          let c : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            ExteriorAlgebra.ι B (universalDifferentialLinearMap A B (v 0))
+          let r : ExteriorAlgebra B (ModuleOfDifferentials A B) :=
+            ExteriorAlgebra.ιMulti B n
+              (fun i => universalDifferentialLinearMap A B (v i.succ))
+          change S * (-(c * a) * r) + T * (b * (c * r)) =
+            b * (c * (T * r)) - S * (c * (a * r))
+          have hfirst : S * (-(c * a) * r) = -(S * (c * (a * r))) := by
+            simp only [neg_mul, mul_neg, mul_assoc]
+          have hsecond : T * (b * (c * r)) = b * (c * (T * r)) := by
+            calc
+              T * (b * (c * r)) = (T * b) * (c * r) :=
+                (mul_assoc _ _ _).symm
+              _ = (b * T) * (c * r) := by rw [Algebra.commutes]
+              _ = b * (T * (c * r)) := mul_assoc _ _ _
+              _ = b * (c * (T * r)) := by
+                congr 1
+                calc
+                  T * (c * r) = (T * c) * r := (mul_assoc _ _ _).symm
+                  _ = (c * T) * r := by rw [Algebra.commutes]
+                  _ = c * (T * r) := mul_assoc _ _ _
+          rw [hfirst, hsecond]
+          simp only [sub_eq_add_neg]
+          abel
+    have gamma_one_coe (ω : Fin 1 → deRhamTerm A B 1) :
+        (deRhamGammaPureFormula (A := A) (B := B) 1 ω :
+          ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamWedgeWithDifferential (A := A) (B := B) 1 ω 0 :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      simp only [deRhamGammaPureFormula, Fin.sum_univ_succ]
+      simp
+    have base : ∀ (u : Fin 1 → B) (v : Fin 1 → B),
+        ((deRhamDifferentialGenerator (A := A) (B := B) 1
+            (∏ i, u i) v : deRhamTerm A B 2) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamGammaPureFormula (A := A) (B := B) 1
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro u v
+      let ω : Fin 1 → deRhamTerm A B 1 :=
+        fun i => deRhamGenerator (A := A) (B := B) 1
+          (u i) (fun _ => v i)
+      rw [show (fun i => deRhamGenerator (A := A) (B := B) 1
+            (u i) (fun _ => v i)) = ω by rfl]
+      rw [gamma_one_coe, diff_zero_coe]
+      rw [deRhamDifferential_on_generator 1 (by omega), wedge_coe]
+      simp [deRhamPureWedgeTerms, deRhamDifferentialGenerator,
+        ExteriorAlgebra.ιMulti_succ_apply, Matrix.vecTail]
+    have generator_formula : ∀ (n : ℕ) (u : Fin n → B) (v : Fin n → B),
+        1 ≤ n →
+        ((deRhamDifferential (A := A) (B := B) n
+            (deRhamPureWedgeTerms (A := A) (B := B) n
+              (fun i => deRhamGenerator (A := A) (B := B) 1
+                (u i) (fun _ => v i))) :
+            deRhamTerm A B (n + 1)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamGammaPureFormula (A := A) (B := B) n
+            (fun i => deRhamGenerator (A := A) (B := B) 1
+              (u i) (fun _ => v i)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+      intro n
+      induction n with
+      | zero =>
+          intro u v hn
+          omega
+      | succ n ih =>
+          intro u v hn
+          by_cases h : n = 0
+          · subst n
+            rw [pure_gen, deRhamDifferential_on_generator 1 (by omega)]
+            exact base u v
+          · have hn' : 1 ≤ n := by omega
+            have ihterm :
+                deRhamGammaPureFormula (A := A) (B := B) n
+                    (fun i => deRhamGenerator (A := A) (B := B) 1
+                      (u i.succ) (fun _ => v i.succ)) =
+                  deRhamDifferentialGenerator (A := A) (B := B) n
+                    (∏ i : Fin n, u i.succ) (fun i => v i.succ) := by
+              apply Subtype.ext
+              have hih := ih (fun i => u i.succ) (fun i => v i.succ) hn'
+              rw [pure_gen, deRhamDifferential_on_generator n hn'] at hih
+              exact hih.symm
+            rw [pure_gen, deRhamDifferential_on_generator (n + 1) (by omega)]
+            rw [gamma_succ_coe n]
+            rw [show Matrix.vecTail (fun i : Fin (n + 1) =>
+                deRhamGenerator (A := A) (B := B) 1
+                  (u i) (fun _ => v i)) =
+                (fun i : Fin n => deRhamGenerator (A := A) (B := B) 1
+                  (u i.succ) (fun _ => v i.succ)) by
+              funext i
+              rfl]
+            rw [ihterm]
+            exact generator_step_coe n u v
+    apply Subtype.ext
+    let u : Fin p → B := fun i => (z i).1
+    let v : Fin p → B := fun i => (z i).2 0
+    have hz : (fun i => deRhamGenerator (A := A) (B := B) 1
+        (z i).1 (z i).2) =
+        (fun i => deRhamGenerator (A := A) (B := B) 1
+          (u i) (fun _ => v i)) := by
+      funext i
+      have hzi : (z i).2 = fun _ => (z i).2 0 := by
+        funext j
+        exact congrArg (fun k => (z i).2 k) (Fin.eq_zero j)
+      change deRhamGenerator (A := A) (B := B) 1 (z i).1 (z i).2 =
+        deRhamGenerator (A := A) (B := B) 1 (z i).1 (fun _ => (z i).2 0)
+      rw [hzi]
+    rw [hz]
+    have hp1 : 1 ≤ p := by omega
+    simpa [u, v] using (generator_formula p u v hp1)
 
 /-! ## The de Rham complex -/
 

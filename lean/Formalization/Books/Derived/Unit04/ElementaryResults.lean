@@ -99,9 +99,9 @@ theorem triangle_morphism_isIso₁
 triangle.  The three zero equations are included explicitly because
 `ShortComplex.mk` records the zero-composite proof at each position. -/
 def RepresentableLongExact
-    {E : Type*} [Category* E] [Preadditive E] [HasZeroObject E]
+    {E : Type*} [Category* E] [Preadditive E]
     [HasShift E ℤ] [∀ n : ℤ, (shiftFunctor E n).Additive]
-    [Pretriangulated E] (W : E) (T : Triangle E) : Prop :=
+    (W : E) (T : Triangle E) : Prop :=
   let F := preadditiveCoyoneda.obj (Opposite.op W)
   ∀ n : ℤ,
     ∃ h₁₂ : (F.shift n).map T.mor₁ ≫ (F.shift n).map T.mor₂ = 0,
@@ -118,22 +118,23 @@ def RepresentableLongExact
 
 /-- A triangle is special when every representable long sequence is exact. -/
 def SpecialTriangle
-    {E : Type*} [Category* E] [Preadditive E] [HasZeroObject E]
+    {E : Type*} [Category* E] [Preadditive E]
     [HasShift E ℤ] [∀ n : ℤ, (shiftFunctor E n).Additive]
-    [Pretriangulated E] (T : Triangle E) : Prop :=
+    (T : Triangle E) : Prop :=
   ∀ W : E, RepresentableLongExact W T
 
 /-- The dual co-special condition, transported through the canonical opposite
 triangle equivalence. -/
 def CoSpecialTriangle
-    {E : Type*} [Category* E] [Preadditive E] [HasZeroObject E]
+    {E : Type*} [Category* E] [Preadditive E]
     [HasShift E ℤ] [∀ n : ℤ, (shiftFunctor E n).Additive]
-    [Pretriangulated E] (T : Triangle E) : Prop :=
+    (T : Triangle E) : Prop :=
   SpecialTriangle ((triangleOpEquivalence E).functor.obj (Opposite.op T))
 
+omit [Pretriangulated C] in
 /-- Specialness is invariant under a triangle morphism when any two component
 maps are isomorphisms. -/
-theorem special_triangle_two_out_of_three
+lemma special_triangle_two_out_of_three
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
@@ -238,9 +239,10 @@ theorem special_triangle_two_out_of_three
     change Function.Bijective (fun x : W ⟶ T.obj₃ => x ≫ φ.hom₃) at hb
     exact hb)
 
+omit [Pretriangulated C] in
 /-- The middle component of a special-triangle morphism is an isomorphism when
 the first and third components are. -/
-theorem special_triangle_isIso₂
+lemma special_triangle_isIso₂
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
@@ -353,9 +355,10 @@ theorem special_triangle_isIso₂
     change Function.Bijective (fun x : W ⟶ T.obj₂ => x ≫ φ.hom₂) at hb
     exact hb)
 
+omit [Pretriangulated C] in
 /-- The first component of a special-triangle morphism is an isomorphism when
 the second and third components are. -/
-theorem special_triangle_isIso₁
+lemma special_triangle_isIso₁
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
@@ -979,13 +982,13 @@ theorem split_triangle_biproduct_iso
     apply biprod.hom_ext'
     · apply biprod.hom_ext
       · simp only [biprod.inl_desc_assoc, Category.assoc, biprod.lift_fst, hf₁,
-          biprod.inl_fst, Category.id_comp, Category.comp_id]
+          biprod.inl_fst, Category.comp_id]
       · simp only [biprod.inl_desc_assoc, Category.assoc, biprod.lift_snd,
-          comp_distTriang_mor_zero₁₂ T hT, zero_comp, biprod.inl_snd,
+          comp_distTriang_mor_zero₁₂ T hT, biprod.inl_snd,
           Category.id_comp]
     · apply biprod.hom_ext
       · simp only [biprod.inr_desc_assoc, Category.assoc, biprod.lift_fst, hsf,
-          biprod.inr_fst, Category.id_comp, Category.comp_id]
+          biprod.inr_fst, Category.comp_id]
       · simp only [biprod.inr_desc_assoc, Category.assoc, biprod.lift_snd, hs,
           biprod.inr_snd, Category.id_comp]
   have hrd : r ≫ d = 𝟙 _ := by
@@ -1055,15 +1058,29 @@ theorem shift_coproduct_comparison_isIso
   sorry
 
 /-- Products of distinguished triangles are distinguished. -/
+/- The source assumes only the three products.  This wrapper installs the
+   shifted first product supplied by the preceding shift lemma before using
+   Mathlib's canonical product triangle. -/
+def productTriangleOf
+    {J : Type w} (T : J → Triangle C)
+    [HasProduct (fun j => (T j).obj₁)]
+    [HasProduct (fun j => (T j).obj₂)]
+    [HasProduct (fun j => (T j).obj₃)] : Triangle C := by
+  letI : HasProduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧) :=
+    shift_has_product (fun j => (T j).obj₁)
+  exact productTriangle T
+
 theorem product_of_distinguished_triangles
     {J : Type w} (T : J → Triangle C)
     (hT : ∀ j, T j ∈ distTriang C)
     [HasProduct (fun j => (T j).obj₁)]
     [HasProduct (fun j => (T j).obj₂)]
-    [HasProduct (fun j => (T j).obj₃)]
-    [HasProduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧)] :
-    productTriangle T ∈ distTriang C :=
-  productTriangle_distinguished T hT
+    [HasProduct (fun j => (T j).obj₃)] :
+    productTriangleOf T ∈ distTriang C := by
+  let hshift : HasProduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧) :=
+    shift_has_product (fun j => (T j).obj₁)
+  simpa [productTriangleOf] using
+    @productTriangle_distinguished C _ _ _ _ _ _ J T hT _ _ _ hshift
 
 /-- The canonical coproduct triangle, with the third map transported across
 the shift--coproduct comparison. -/
@@ -1071,9 +1088,10 @@ def coproductTriangle
     {J : Type w} (T : J → Triangle C)
     [HasCoproduct (fun j => (T j).obj₁)]
     [HasCoproduct (fun j => (T j).obj₂)]
-    [HasCoproduct (fun j => (T j).obj₃)]
-    [HasCoproduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧)] : Triangle C :=
-  Triangle.mk
+    [HasCoproduct (fun j => (T j).obj₃)] : Triangle C := by
+  letI : HasCoproduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧) :=
+    shift_has_coproduct (fun j => (T j).obj₁)
+  exact Triangle.mk
     (Limits.Sigma.map fun j => (T j).mor₁)
     (Limits.Sigma.map fun j => (T j).mor₂)
     ((Limits.Sigma.map fun j => (T j).mor₃) ≫
@@ -1085,8 +1103,7 @@ theorem coproduct_of_distinguished_triangles
     (hT : ∀ j, T j ∈ distTriang C)
     [HasCoproduct (fun j => (T j).obj₁)]
     [HasCoproduct (fun j => (T j).obj₂)]
-    [HasCoproduct (fun j => (T j).obj₃)]
-    [HasCoproduct (fun j => (T j).obj₁⟦(1 : ℤ)⟧)] :
+    [HasCoproduct (fun j => (T j).obj₃)] :
     coproductTriangle T ∈ distTriang C := by
   sorry
 

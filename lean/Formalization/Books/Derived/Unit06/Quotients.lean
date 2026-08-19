@@ -438,7 +438,7 @@ theorem quotientMorphismProperty_isSaturated_iff
     have hf : W (0 : (0 : C) ⟶ R) := by
       change P.isoClosure.trW (0 : (0 : C) ⟶ R)
       exact ⟨R, 𝟙 R, 0, contractible_distinguished₁ R, hR⟩
-    letI : IsIso (W.Q.map (0 : (0 : C) ⟶ R)) :=
+    let : IsIso (W.Q.map (0 : (0 : C) ⟶ R)) :=
       MorphismProperty.Q_inverts W _ hf
     exact (W.Q.map_isZero (isZero_zero C)).of_iso
       ((asIso (W.Q.map (0 : (0 : C) ⟶ R))).symm)
@@ -461,13 +461,13 @@ theorem quotientMorphismProperty_isSaturated_iff
   · intro hSat
     refine ⟨(quotientMorphismProperty_isMultiplicative P).1, ?_⟩
     intro X Y Z T f g h hfg hgh
-    letI : IsIso (W.Q.map f ≫ W.Q.map g) := by
+    let : IsIso (W.Q.map f ≫ W.Q.map g) := by
       rw [← W.Q.map_comp]
       exact MorphismProperty.Q_inverts W _ hfg
-    letI : IsIso (W.Q.map g ≫ W.Q.map h) := by
+    let : IsIso (W.Q.map g ≫ W.Q.map h) := by
       rw [← W.Q.map_comp]
       exact MorphismProperty.Q_inverts W _ hgh
-    letI : IsIso (W.Q.map g) := by
+    let : IsIso (W.Q.map g) := by
       apply isIso_of_adjacent_composites (W.Q.map f) (W.Q.map g) (W.Q.map h)
     obtain ⟨K, u, v, hT⟩ := distinguished_cocone_triangle g
     have hTQ : W.Q.mapTriangle.obj (Triangle.mk g u v) ∈ distTriang _ :=
@@ -640,7 +640,7 @@ theorem quotient_universal_property
     (hH : P ≤ homologicalFunctorKernel H) :
     ∃! H' : quotientCategory P ⥤ A,
       quotientFunctor P ⋙ H' = H ∧ H'.IsHomological := by
-  letI : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
+  let : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
   let hInv : (quotientMorphismProperty P).IsInvertedBy H := by
     intro X Y f hf
     change P.isoClosure.trW f at hf

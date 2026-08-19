@@ -224,15 +224,15 @@ theorem complex_exact_mod
        letI := C.rModule ((0 : Fin (e + 1)).castSucc)
        letI := C.scalarTower ((0 : Fin (e + 1)).castSucc)
        letI := C.rModule ((0 : Fin (e + 1)).succ)
-       letI := C.scalarTower ((0 : Fin (e + 1)).succ)
+       let := C.scalarTower ((0 : Fin (e + 1)).succ)
        Module.Flat R
          (C.term 0 ⧸ LinearMap.range ((C.differential 0).hom.restrictScalars R))) := by
   induction e with
   | zero =>
-    letI := C.rModule ((0 : Fin 1).castSucc)
-    letI := C.scalarTower ((0 : Fin 1).castSucc)
-    letI := C.rModule ((0 : Fin 1).succ)
-    letI := C.scalarTower ((0 : Fin 1).succ)
+    let := C.rModule ((0 : Fin 1).castSucc)
+    let := C.scalarTower ((0 : Fin 1).castSucc)
+    let := C.rModule ((0 : Fin 1).succ)
+    let := C.scalarTower ((0 : Fin 1).succ)
     have hmem {X : Type u} [AddCommGroup X] [Module S X] [Module R X]
         [IsScalarTower R S X] (x : X)
         (hx : x ∈ ((IsLocalRing.maximalIdeal R).map (algebraMap R S) •
@@ -250,16 +250,13 @@ theorem complex_exact_mod
         smul_mem' := by
           intro c a ha y
           have hca : (c • a) • y = a • (c • y) := by
-            calc
-              (c • a) • y = c • (a • y) := by rw [smul_assoc]
-              _ = a • (c • y) := by rw [smul_comm]
+            rw [smul_assoc, smul_comm]
           rw [hca]
           exact ha (c • y)
       }
       have hK : (IsLocalRing.maximalIdeal R).map (algebraMap R S) ≤ K := by
         rw [Ideal.map_le_iff_le_comap]
-        intro r hr
-        intro y
+        intro r hr y
         simpa [Algebra.smul_def] using
           Submodule.smul_mem_smul hr (by simp : y ∈ (⊤ : Submodule R X))
       refine Submodule.smul_induction_on hx ?_ ?_
@@ -283,7 +280,7 @@ theorem complex_exact_mod
         simpa [add_smul] using
           ((IsLocalRing.maximalIdeal R).map (algebraMap R S) •
             (⊤ : Submodule S X)).add_mem ha hb
-    letI : LinearMap.CompatibleSMul
+    let : LinearMap.CompatibleSMul
         (C.term ((0 : Fin 1).succ) : Type u)
         (C.term ((0 : Fin 1).castSucc) : Type u) R S := ⟨by
       intro r s x
@@ -366,8 +363,7 @@ theorem complex_exact_mod
       }
       have hK : (IsLocalRing.maximalIdeal R).map (algebraMap R S) ≤ K := by
         rw [Ideal.map_le_iff_le_comap]
-        intro r hr
-        intro y
+        intro r hr y
         simpa [Algebra.smul_def] using
           Submodule.smul_mem_smul hr (by simp : y ∈ (⊤ : Submodule R X))
       refine Submodule.smul_induction_on hx ?_ ?_
@@ -395,20 +391,20 @@ theorem complex_exact_mod
     | zero =>
       let k : Fin 1 := ⟨0, by omega⟩
       let i : Fin 2 := k.castSucc
-      letI := C.rModule i.castSucc
-      letI := C.scalarTower i.castSucc
-      letI := C.rModule i.succ
-      letI := C.scalarTower i.succ
+      let := C.rModule i.castSucc
+      let := C.scalarTower i.castSucc
+      let := C.rModule i.succ
+      let := C.scalarTower i.succ
       have hlast : IsZero (C.term k.succ.succ) := by
         simpa [k] using C.last_is_zero
-      letI : Subsingleton (C.term k.succ.succ : Type u) := by
+      let : Subsingleton (C.term k.succ.succ : Type u) := by
         apply (ModuleCat.isZero_iff_subsingleton).mp
         exact hlast
-      letI : Subsingleton
+      let : Subsingleton
           (C.term (⟨1, by omega⟩ : Fin 2).succ : Type u) := by
         apply (ModuleCat.isZero_iff_subsingleton).mp
         simpa using C.last_is_zero
-      haveI : Subsingleton (C.quotientTerm
+      have : Subsingleton (C.quotientTerm
           ((IsLocalRing.maximalIdeal R).map (algebraMap R S)) k.succ.succ : Type u) := by
         constructor
         intro x y
@@ -430,7 +426,7 @@ theorem complex_exact_mod
           rw [← hz, hz0]
           simp
         exact sub_eq_zero.mp hxy0
-      letI : LinearMap.CompatibleSMul
+      let : LinearMap.CompatibleSMul
           (C.term i.succ : Type u) (C.term i.castSucc : Type u) R S := ⟨by
         intro r s x
         exact r.map_smul_of_tower s x⟩
@@ -497,7 +493,7 @@ theorem complex_exact_mod
         · intro hx
           have hy0 : y = 0 := h.1 (by simpa using hx)
           refine ⟨0, ?_⟩
-          simpa [hy0]
+          simp [hy0]
         · rintro ⟨z, hz⟩
           have hz0 : z = 0 := Subsingleton.elim _ _
           rw [← hz, hz0]
@@ -505,15 +501,15 @@ theorem complex_exact_mod
     | succ m =>
       let k : Fin (m + 2) := ⟨m + 1, by omega⟩
       let a : Fin (m + 3) := k.castSucc
-      letI := C.rModule a.castSucc
-      letI := C.scalarTower a.castSucc
-      letI := C.rModule a.succ
-      letI := C.scalarTower a.succ
+      let := C.rModule a.castSucc
+      let := C.scalarTower a.castSucc
+      let := C.rModule a.succ
+      let := C.scalarTower a.succ
       have hlast : IsZero (C.term k.succ.succ) := by
         simpa [k] using C.last_is_zero
-      letI : Subsingleton (C.term k.succ.succ : Type u) := by
+      let : Subsingleton (C.term k.succ.succ : Type u) := by
         exact (ModuleCat.isZero_iff_subsingleton).mp hlast
-      haveI : Subsingleton (C.quotientTerm
+      have : Subsingleton (C.quotientTerm
           ((IsLocalRing.maximalIdeal R).map (algebraMap R S)) k.succ.succ : Type u) := by
         constructor
         intro x y
@@ -535,7 +531,7 @@ theorem complex_exact_mod
           rw [← hz, hz0]
           simp
         exact sub_eq_zero.mp hxy0
-      letI : LinearMap.CompatibleSMul
+      let : LinearMap.CompatibleSMul
           (C.term a.succ : Type u) (C.term a.castSucc : Type u) R S := ⟨by
         intro r s x
         exact r.map_smul_of_tower s x⟩
@@ -596,10 +592,10 @@ theorem complex_exact_mod
           (C.quotientDifferential
             ((IsLocalRing.maximalIdeal R).map (algebraMap R S)) b.succ) := by
         simpa [a, b, k] using htopinj
-      letI := C.rModule b.succ.castSucc
-      letI := C.scalarTower b.succ.castSucc
-      letI := C.rModule b.succ.succ
-      letI := C.scalarTower b.succ.succ
+      let := C.rModule b.succ.castSucc
+      let := C.scalarTower b.succ.castSucc
+      let := C.rModule b.succ.succ
+      let := C.scalarTower b.succ.succ
       have hB : Function.Injective
           ((C.differential b.succ).hom.restrictScalars R) ∧
           Module.Flat R
@@ -619,7 +615,7 @@ theorem complex_exact_mod
           exact ⟨y, rfl⟩
       let eQ := (quotientRestrictScalarsEquiv pS).trans
         (Submodule.quotEquivOfEq (pS.restrictScalars R) pR hp.symm)
-      letI : Module.Flat R
+      let : Module.Flat R
           ((C.term b.succ.castSucc : Type u) ⧸ pR) := hB.2
       have hflatQ : Module.Flat R
           ((C.term b.succ.castSucc : Type u) ⧸ pS) :=
@@ -643,14 +639,14 @@ theorem complex_exact_mod
         intro i
         induction i using Fin.reverseInduction with
         | last =>
-          letI := C.rModule (Fin.last (m + 1)).castSucc.castSucc
-          letI := C.scalarTower (Fin.last (m + 1)).castSucc.castSucc
-          letI := C.rModule (Fin.last (m + 1)).castSucc.succ
-          letI := C.scalarTower (Fin.last (m + 1)).castSucc.succ
+          let := C.rModule (Fin.last (m + 1)).castSucc.castSucc
+          let := C.scalarTower (Fin.last (m + 1)).castSucc.castSucc
+          let := C.rModule (Fin.last (m + 1)).castSucc.succ
+          let := C.scalarTower (Fin.last (m + 1)).castSucc.succ
           have ht : (Fin.last (m + 1)).castSucc = b.succ := by
             apply Fin.ext
             simp [b]
-          letI : Subsingleton
+          let : Subsingleton
               (C.term (Fin.last (m + 1)).succ.succ : Type u) := by
             apply (ModuleCat.isZero_iff_subsingleton).mp
             have heq : (Fin.last (m + 1)).succ.succ =
@@ -672,18 +668,18 @@ theorem complex_exact_mod
           · intro hy
             have hy0 : y = 0 := hinj (by simpa using hy)
             refine ⟨0, ?_⟩
-            simpa [hy0]
+            simp [hy0]
           · rintro ⟨z, hz⟩
             have hz0 : z = 0 := Subsingleton.elim _ _
             rw [← hz, hz0]
             simp
         | cast i ih =>
-          letI := C.rModule i.castSucc.castSucc.castSucc
-          letI := C.scalarTower i.castSucc.castSucc.castSucc
-          letI := C.rModule i.castSucc.castSucc.succ
-          letI := C.scalarTower i.castSucc.castSucc.succ
-          letI := C.rModule i.succ.castSucc.castSucc
-          letI := C.scalarTower i.succ.castSucc.castSucc
+          let := C.rModule i.castSucc.castSucc.castSucc
+          let := C.scalarTower i.castSucc.castSucc.castSucc
+          let := C.rModule i.castSucc.castSucc.succ
+          let := C.scalarTower i.castSucc.castSucc.succ
+          let := C.rModule i.succ.castSucc.castSucc
+          let := C.scalarTower i.succ.castSucc.castSucc
           let pS : Submodule S (C.term i.succ.castSucc.castSucc : Type u) :=
             LinearMap.range (C.differential i.succ.castSucc).hom
           let qmap : ((C.term i.succ.castSucc.castSucc : Type u) ⧸ pS) →ₗ[S]
@@ -694,7 +690,7 @@ theorem complex_exact_mod
               have hc := congrArg (fun f => f.hom y)
                 (C.isComplex i.castSucc)
               simpa [LinearMap.comp_apply] using hc)
-          letI : LinearMap.CompatibleSMul
+          let : LinearMap.CompatibleSMul
               ((C.term i.succ.castSucc.castSucc : Type u) ⧸ pS)
               (C.term i.castSucc.castSucc.castSucc : Type u) R S := ⟨by
             intro r s x
@@ -703,7 +699,7 @@ theorem complex_exact_mod
               ((C.term i.succ.castSucc.castSucc : Type u) ⧸ pS) →ₗ[R]
                 (C.term i.castSucc.castSucc.castSucc : Type u) :=
             LinearMap.restrictScalars R qmap
-          letI : Module.Finite S (C.term i.succ.castSucc.castSucc : Type u) :=
+          let : Module.Finite S (C.term i.succ.castSucc.castSucc : Type u) :=
             C.finite i.succ.castSucc.castSucc
           have hu : Function.Injective
               ((IsLocalRing.maximalIdeal R •
@@ -827,7 +823,7 @@ theorem complex_exact_mod
                                   (((x - y) -
                                     (C.differential i.succ.castSucc).hom z) +
                                     (C.differential i.succ.castSucc).hom z) := by
-                              congr 1 <;> abel
+                              congr 1; abel
                             _ = Submodule.Quotient.mk
                                   ((x - y) -
                                     (C.differential i.succ.castSucc).hom z) +
@@ -886,16 +882,16 @@ theorem complex_exact_mod
         apply Fin.ext
         simp
       cases hidx
-      letI := C.rModule (0 : Fin (m + 4))
-      letI := C.scalarTower (0 : Fin (m + 4))
-      letI := C.rModule (0 : Fin (m + 3)).succ
-      letI := C.scalarTower (0 : Fin (m + 3)).succ
-      letI := C.rModule (0 : Fin (m + 3)).castSucc
-      letI := C.scalarTower (0 : Fin (m + 3)).castSucc
-      letI := C.rModule (Fin.castSucc (0 : Fin (m + 2))).castSucc
-      letI := C.scalarTower (Fin.castSucc (0 : Fin (m + 2))).castSucc
-      letI := C.rModule (Fin.castSucc (0 : Fin (m + 2))).succ
-      letI := C.scalarTower (Fin.castSucc (0 : Fin (m + 2))).succ
+      let := C.rModule (0 : Fin (m + 4))
+      let := C.scalarTower (0 : Fin (m + 4))
+      let := C.rModule (0 : Fin (m + 3)).succ
+      let := C.scalarTower (0 : Fin (m + 3)).succ
+      let := C.rModule (0 : Fin (m + 3)).castSucc
+      let := C.scalarTower (0 : Fin (m + 3)).castSucc
+      let := C.rModule (Fin.castSucc (0 : Fin (m + 2))).castSucc
+      let := C.scalarTower (Fin.castSucc (0 : Fin (m + 2))).castSucc
+      let := C.rModule (Fin.castSucc (0 : Fin (m + 2))).succ
+      let := C.scalarTower (Fin.castSucc (0 : Fin (m + 2))).succ
       let pS0 : Submodule S
           (C.term (Fin.castSucc (0 : Fin (m + 2))).castSucc : Type u) :=
         LinearMap.range
@@ -924,7 +920,7 @@ theorem complex_exact_mod
         (Submodule.quotEquivOfEq (pS0.restrictScalars R)
           (LinearMap.range
             ((C.differential (0 : Fin (m + 3))).hom.restrictScalars R)) hp0.symm)
-      letI : Module.Flat R
+      let : Module.Flat R
           ((C.term (Fin.castSucc (0 : Fin (m + 2))).castSucc : Type u) ⧸ pS0) := by
         simpa [pS0] using (hrec (0 : Fin (m + 2))).1
       have hflat0 : Module.Flat R
@@ -932,7 +928,7 @@ theorem complex_exact_mod
             LinearMap.range
               ((C.differential (0 : Fin (m + 3))).hom.restrictScalars R)) :=
         Module.Flat.of_linearEquiv eQ0.symm
-      letI : Subsingleton
+      let : Subsingleton
           (C.term ((⟨m + 2, by omega⟩ : Fin (m + 3)).succ) : Type u) := by
         apply (ModuleCat.isZero_iff_subsingleton).mp
         have heq : (⟨m + 2, by omega⟩ : Fin (m + 3)).succ =
@@ -994,7 +990,7 @@ theorem prepare_local_criterion_flatness
       have hq2 : qMapInv ≫ qMap = 𝟙 _ := by
         dsimp [qMap, qMapInv]
         rw [← torMapSecond_comp, eQ.hom_inv_id, torMapSecond_id]
-      haveI : IsIso qMap := ⟨⟨qMapInv, hq1, hq2⟩⟩
+      have : IsIso qMap := ⟨⟨qMapInv, hq1, hq2⟩⟩
       have hquotSym : IsZero (tor (R := R) M (M' ⧸ N') 1) :=
         IsZero.of_iso hTorI' (asIso qMap).symm
       have hiSym : IsZero (tor (R := R) M (N' : Type u) 1) :=
@@ -1017,11 +1013,11 @@ theorem prepare_local_criterion_flatness
         simpa [S] using hiSym
       have hzero3 : IsZero (Tor (ModuleCat.of R M) S.X₃ 1) := by
         simpa [S] using hquotSym
-      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₁ 1) :=
+      have : Subsingleton (Tor (ModuleCat.of R M) S.X₁ 1) :=
         (ModuleCat.isZero_iff_subsingleton).mp hzero1
-      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₃ 1) :=
+      have : Subsingleton (Tor (ModuleCat.of R M) S.X₃ 1) :=
         (ModuleCat.isZero_iff_subsingleton).mp hzero3
-      haveI : Subsingleton (Tor (ModuleCat.of R M) S.X₂ 1) := by
+      have : Subsingleton (Tor (ModuleCat.of R M) S.X₂ 1) := by
         constructor
         intro x y
         have hxker : hseq.map₂ x = 0 := Subsingleton.elim _ _
@@ -1070,8 +1066,8 @@ theorem local_criterion_flatness
       rw [← h]
       exact Ideal.pow_le_self (R := R) (I := m) (n := n) hn.ne'
     let A := R ⧸ m ^ n
-    letI : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hpowne
-    letI : IsLocalRing A := IsLocalRing.of_surjective'
+    let : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hpowne
+    let : IsLocalRing A := IsLocalRing.of_surjective'
       (Ideal.Quotient.mk (m ^ n)) Ideal.Quotient.mk_surjective
     have hmax : (m.map (Ideal.Quotient.mk (m ^ n))) =
         IsLocalRing.maximalIdeal A :=
@@ -1081,7 +1077,7 @@ theorem local_criterion_flatness
       refine ⟨n, ?_⟩
       rw [← hmax, ← Ideal.map_pow, Ideal.zero_eq_bot,
         Ideal.map_eq_bot_iff_le_ker, Ideal.mk_ker]
-    letI : IsArtinianRing A :=
+    let : IsArtinianRing A :=
       (isArtinianRing_iff_isNilpotent_maximalIdeal A).2 hnil
     have hArt : IsArtinian R A :=
       isArtinian_of_surjective_algebraMap (R := A) (S := R) (M := A) (by
@@ -1108,7 +1104,7 @@ theorem local_criterion_flatness
     exact Ideal.Quotient.factor_surjective
       (S := m ^ n) (T := I ⊔ m ^ n) le_sup_right
   let eBI := TensorProduct.AlgebraTensorModule.cancelBaseChange R S S M I
-  letI : Module.Finite R I := inferInstance
+  let : Module.Finite R I := inferInstance
   have hbase : Module.Finite S (TensorProduct R S I) :=
     Module.Finite.base_change R S I
   have hprod : Module.Finite S ((TensorProduct R S I) ⊗[S] M) :=
@@ -1120,8 +1116,8 @@ theorem local_criterion_flatness
       { toFun := fun m =>
           { toFun := fun a => (a : R) • m
             map_add' := by intro x y; simp [add_smul]
-            map_smul' := by intro r x; simp [smul_smul, mul_comm] }
-        map_add' := by intro x y; ext a; simp [add_smul]
+            map_smul' := by intro r x; simp [smul_smul] }
+        map_add' := by intro x y; ext a; simp
         map_smul' := by intro r m; ext a; simp [smul_smul, mul_comm] }
   have hactinj_of_tor (J : Ideal R)
       (hzero : IsZero (tor (R := R) M (R ⧸ J) 1)) :
@@ -1163,7 +1159,7 @@ theorem local_criterion_flatness
       exact hz
     have hzzero :
         (TensorProduct.comm R M J) (x - y) = 0 := by
-      letI : Subsingleton
+      let : Subsingleton
           (LinearMap.ker (idealTensorActionMap J (ModuleCat.of R M))) :=
         (ModuleCat.isZero_iff_subsingleton).mp hzK
       have hz' :
@@ -1190,8 +1186,8 @@ theorem local_criterion_flatness
     { toFun := fun m =>
         { toFun := fun a => (a : R) • m
           map_add' := by intro x y; simp [add_smul]
-          map_smul' := by intro r x; simp [smul_smul, mul_comm] }
-      map_add' := by intro x y; ext a; simp [add_smul]
+          map_smul' := by intro r x; simp [smul_smul] }
+      map_add' := by intro x y; ext a; simp
       map_smul' := by
         intro s m
         apply LinearMap.ext
@@ -1206,8 +1202,8 @@ theorem local_criterion_flatness
   let u : (M ⊗[R] I) →ₗ[S] M :=
     TensorProduct.AlgebraTensorModule.lift b
   let K : Submodule S (M ⊗[R] I) := LinearMap.ker u
-  letI : Module.Finite S (M ⊗[R] I) := hfiniteTensor
-  letI : Module.Finite S K := Module.Finite.of_injective K.subtype Subtype.val_injective
+  let : Module.Finite S (M ⊗[R] I) := hfiniteTensor
+  let : Module.Finite S K := Module.Finite.of_injective K.subtype Subtype.val_injective
   have huact : u.restrictScalars R = act I := by
     apply LinearMap.ext
     intro z
@@ -1239,8 +1235,8 @@ theorem local_criterion_flatness
     let f : A →ₗ[R] I × J :=
       { toFun := fun a =>
           (⟨a.1, a.2.1⟩, ⟨-a.1, J.neg_mem a.2.2⟩)
-        map_add' := by intro x y; ext <;> simp <;> abel
-        map_smul' := by intro r x; ext <;> simp [mul_add] }
+        map_add' := by intro x y; ext <;> simp; abel
+        map_smul' := by intro r x; ext <;> simp }
     let g : I × J →ₗ[R] L :=
       { toFun := fun z =>
           ⟨(z.1 : R) + z.2,

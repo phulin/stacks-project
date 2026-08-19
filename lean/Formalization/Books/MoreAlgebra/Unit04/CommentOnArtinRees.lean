@@ -498,10 +498,12 @@ theorem associatedGraded_cokernel_piece_equiv
           exact hxq
         exact hxqpre
       exact hxq'
-  change Nonempty (P ⧸ D.comap P.subtype ≃ₗ[R] P' ⧸ Q'.comap P'.subtype)
+  dsimp only [associatedGradedModulePiece, gradedCokernelPiece, submoduleQuotient,
+    gradedCokernelDenominator]
+  change Nonempty ((P' ⧸ Q'.comap P'.subtype) ≃ₗ[R] (P ⧸ D.comap P.subtype))
   refine ⟨?_⟩
-  exact (Submodule.quotEquivOfEq (D.comap P.subtype) (LinearMap.ker v) hker.symm).trans
-    (v.quotKerEquivOfSurjective hv)
+  exact ((Submodule.quotEquivOfEq (D.comap P.subtype) (LinearMap.ker v) hker.symm).trans
+    (v.quotKerEquivOfSurjective hv)).symm
 
 /-- The intersection inclusion used to compare the degreewise cokernel
 quotients of two congruent maps. -/

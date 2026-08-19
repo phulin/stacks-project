@@ -1345,71 +1345,39 @@ theorem radicial_baseChange
     let qF : F →ₐ[k] Q := Algebra.TensorProduct.lift qKAlg qLAlg hcomm
     have hqF (x : S ⊗[R] R') :
         qF (dmap x) = algebraMap (S ⊗[R] R') Q x := by
-      refine TensorProduct.induction_on x ?_ ?_ ?_
-      · simp
-      · intro s r'
-        have hqFs : qF (smapAlg s) =
-            algebraMap (S ⊗[R] R') Q (a s) := by
-          change qF (1 ⊗ₜ[k] algebraMap S L s) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qL, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              qS.asIdeal q.asIdeal a rfl s)
-        have hqFr : qF (rmapAlg r') =
-            algebraMap (S ⊗[R] R') Q (bc r') := by
-          change qF (algebraMap R' K r' ⊗ₜ[k] 1) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qK, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              p'.asIdeal q.asIdeal bc rfl r')
-        rw [show dmap (s ⊗ₜ[R] r') = smapAlg s * rmapAlg r' by rfl,
-          map_mul, hqFs, hqFr]
-        rw [← map_mul]
-        congr 1
-        simp [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
-          RingHom.algebraMap_toAlgebra,
-          Algebra.TensorProduct.tmul_mul_tmul]
-      · intro x y hx hy
-        simp only [map_add, hx, hy, map_add]
-    have hqFalg (y : K) : qF (algebraMap K F y) = qK y := by
-      change qF ((Algebra.TensorProduct.includeLeft : K →ₐ[k] F) y) = qK y
-      change (Algebra.TensorProduct.lift qKAlg qLAlg hcomm)
-          ((Algebra.TensorProduct.includeLeft : K →ₐ[k] F) y) = qK y
-      change ((Algebra.TensorProduct.lift qKAlg qLAlg hcomm).comp
-          (Algebra.TensorProduct.includeLeft : K →ₐ[k] F)) y = qKAlg y
-      rw [Algebra.TensorProduct.lift_comp_includeLeft]
-    have hqF (x : S ⊗[R] R') :
-        qF (dmap x) = algebraMap (S ⊗[R] R') Q x := by
-      refine TensorProduct.induction_on x ?_ ?_ ?_
-      · simp
-      · intro s r'
-        have hqFs : qF (smapAlg s) =
-            algebraMap (S ⊗[R] R') Q (a s) := by
-          change qF (1 ⊗ₜ[k] algebraMap S L s) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qL, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              qS.asIdeal q.asIdeal a rfl s)
-        have hqFr : qF (rmapAlg r') =
-            algebraMap (S ⊗[R] R') Q (bc r') := by
-          change qF (algebraMap R' K r' ⊗ₜ[k] 1) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qK, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              p'.asIdeal q.asIdeal bc rfl r')
-        rw [show dmap (s ⊗ₜ[R] r') = smapAlg s * rmapAlg r' by rfl,
-          map_mul, hqFs, hqFr]
-        rw [← map_mul]
-        congr 1
-        simp [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
-          RingHom.algebraMap_toAlgebra,
-          Algebra.TensorProduct.tmul_mul_tmul]
-      · intro x y hx hy
-        simp only [map_add, hx, hy, map_add]
+      have heq : qF.toRingHom.comp dmap.toRingHom =
+          algebraMap (S ⊗[R] R') Q := by
+        apply Algebra.TensorProduct.ringHom_ext
+        · ext s
+          change qF (dmap (Algebra.TensorProduct.includeLeftRingHom s)) = _
+          change qF (dmap (s ⊗ₜ[R] (1 : R'))) = _
+          rw [show dmap (s ⊗ₜ[R] (1 : R')) = smapAlg s * rmapAlg 1 by rfl]
+          simp only [map_one, mul_one]
+          have hqFs : qF (smapAlg s) =
+              algebraMap (S ⊗[R] R') Q (a s) := by
+            change qF (1 ⊗ₜ[k] algebraMap S L s) = _
+            dsimp [qF]
+            rw [Algebra.TensorProduct.lift_tmul]
+            simpa [qKAlg, qLAlg, qL, Q] using
+              (Ideal.ResidueField.map_algebraMap
+                qS.asIdeal q.asIdeal a rfl s)
+          simpa [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
+            RingHom.algebraMap_toAlgebra] using hqFs
+        · ext r'
+          change qF (dmap (Algebra.TensorProduct.includeRight r')) = _
+          change qF (dmap ((1 : S) ⊗ₜ[R] r')) = _
+          rw [show dmap ((1 : S) ⊗ₜ[R] r') = smapAlg 1 * rmapAlg r' by rfl]
+          simp only [map_one, one_mul]
+          have hqFr : qF (rmapAlg r') =
+              algebraMap (S ⊗[R] R') Q (bc r') := by
+            change qF (algebraMap R' K r' ⊗ₜ[k] 1) = _
+            dsimp [qF]
+            rw [Algebra.TensorProduct.lift_tmul]
+            simpa [qKAlg, qLAlg, qK, Q] using
+              (Ideal.ResidueField.map_algebraMap
+                p'.asIdeal q.asIdeal bc rfl r')
+          simpa [bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra] using hqFr
+      exact congrArg (fun h : (S ⊗[R] R') →+* Q => h x) heq
     have hqS' : qS.asIdeal = q'.asIdeal.comap a := by
       have h := congrArg PrimeSpectrum.asIdeal hqS
       simpa [qS] using h
@@ -1464,38 +1432,43 @@ theorem radicial_baseChange
     let qF' : F →ₐ[k] Q' := Algebra.TensorProduct.lift qKAlg' qLAlg' hcomm'
     have hqF' (x : S ⊗[R] R') :
         qF' (dmap x) = algebraMap (S ⊗[R] R') Q' x := by
-      refine TensorProduct.induction_on x ?_ ?_ ?_
-      · simp
-      · intro s r'
-        have hqFs' : qF' (smapAlg s) =
-            algebraMap (S ⊗[R] R') Q' (a s) := by
-          change qF' (1 ⊗ₜ[k] algebraMap S L s) = _
-          dsimp [qF']
-          rw [Algebra.TensorProduct.lift_tmul]
-          change qKAlg' 1 * qLAlg' (algebraMap S L s) = _
-          rw [map_one, one_mul]
-          change qL' (algebraMap S L s) = _
-          exact Ideal.ResidueField.map_algebraMap
-            qS.asIdeal q'.asIdeal a hqS' s
-        have hqFr' : qF' (rmapAlg r') =
-            algebraMap (S ⊗[R] R') Q' (bc r') := by
-          change qF' (algebraMap R' K r' ⊗ₜ[k] 1) = _
-          dsimp [qF']
-          rw [Algebra.TensorProduct.lift_tmul]
-          change qKAlg' (algebraMap R' K r') * qLAlg' 1 = _
-          rw [map_one, mul_one]
-          change qK' (algebraMap R' K r') = _
-          exact Ideal.ResidueField.map_algebraMap
-            p'.asIdeal q'.asIdeal bc hp' r'
-        rw [show dmap (s ⊗ₜ[R] r') = smapAlg s * rmapAlg r' by rfl,
-          map_mul, hqFs', hqFr']
-        rw [← map_mul]
-        congr 1
-        simp [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
-          RingHom.algebraMap_toAlgebra,
-          Algebra.TensorProduct.tmul_mul_tmul]
-      · intro x y hx hy
-        simp only [map_add, hx, hy, map_add]
+      have heq : qF'.toRingHom.comp dmap.toRingHom =
+          algebraMap (S ⊗[R] R') Q' := by
+        apply Algebra.TensorProduct.ringHom_ext
+        · ext s
+          change qF' (dmap (Algebra.TensorProduct.includeLeftRingHom s)) = _
+          change qF' (dmap (s ⊗ₜ[R] (1 : R'))) = _
+          rw [show dmap (s ⊗ₜ[R] (1 : R')) = smapAlg s * rmapAlg 1 by rfl]
+          simp only [map_one, mul_one]
+          have hqFs' : qF' (smapAlg s) =
+              algebraMap (S ⊗[R] R') Q' (a s) := by
+            change qF' (1 ⊗ₜ[k] algebraMap S L s) = _
+            dsimp [qF']
+            rw [Algebra.TensorProduct.lift_tmul]
+            change qKAlg' 1 * qLAlg' (algebraMap S L s) = _
+            rw [map_one, one_mul]
+            change qL' (algebraMap S L s) = _
+            exact Ideal.ResidueField.map_algebraMap
+              qS.asIdeal q'.asIdeal a hqS' s
+          simpa [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
+            RingHom.algebraMap_toAlgebra] using hqFs'
+        · ext r'
+          change qF' (dmap (Algebra.TensorProduct.includeRight r')) = _
+          change qF' (dmap ((1 : S) ⊗ₜ[R] r')) = _
+          rw [show dmap ((1 : S) ⊗ₜ[R] r') = smapAlg 1 * rmapAlg r' by rfl]
+          simp only [map_one, one_mul]
+          have hqFr' : qF' (rmapAlg r') =
+              algebraMap (S ⊗[R] R') Q' (bc r') := by
+            change qF' (algebraMap R' K r' ⊗ₜ[k] 1) = _
+            dsimp [qF']
+            rw [Algebra.TensorProduct.lift_tmul]
+            change qKAlg' (algebraMap R' K r') * qLAlg' 1 = _
+            rw [map_one, mul_one]
+            change qK' (algebraMap R' K r') = _
+            exact Ideal.ResidueField.map_algebraMap
+              p'.asIdeal q'.asIdeal bc hp' r'
+          simpa [bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra] using hqFr'
+      exact congrArg (fun h : (S ⊗[R] R') →+* Q' => h x) heq
     have hqFalg (y : K) : qF (algebraMap K F y) = qK y := by
       change qF ((Algebra.TensorProduct.includeLeft : K →ₐ[k] F) y) = qK y
       change (Algebra.TensorProduct.lift qKAlg qLAlg hcomm)
@@ -1708,34 +1681,39 @@ theorem radicial_baseChange
     let qF : F →ₐ[k] Q := Algebra.TensorProduct.lift qKAlg qLAlg hcomm
     have hqF (x : S ⊗[R] R') :
         qF (dmap x) = algebraMap (S ⊗[R] R') Q x := by
-      refine TensorProduct.induction_on x ?_ ?_ ?_
-      · simp
-      · intro s r'
-        have hqFs : qF (smapAlg s) =
-            algebraMap (S ⊗[R] R') Q (a s) := by
-          change qF (1 ⊗ₜ[k] algebraMap S L s) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qL, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              qS.asIdeal q.asIdeal a rfl s)
-        have hqFr : qF (rmapAlg r') =
-            algebraMap (S ⊗[R] R') Q (bc r') := by
-          change qF (algebraMap R' K r' ⊗ₜ[k] 1) = _
-          dsimp [qF]
-          rw [Algebra.TensorProduct.lift_tmul]
-          simpa [qKAlg, qLAlg, qK, Q] using
-            (Ideal.ResidueField.map_algebraMap
-              p'.asIdeal q.asIdeal bc rfl r')
-        rw [show dmap (s ⊗ₜ[R] r') = smapAlg s * rmapAlg r' by rfl,
-          map_mul, hqFs, hqFr]
-        rw [← map_mul]
-        congr 1
-        simp [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
-          RingHom.algebraMap_toAlgebra,
-          Algebra.TensorProduct.tmul_mul_tmul]
-      · intro x y hx hy
-        simp only [map_add, hx, hy, map_add]
+      have heq : qF.toRingHom.comp dmap.toRingHom =
+          algebraMap (S ⊗[R] R') Q := by
+        apply Algebra.TensorProduct.ringHom_ext
+        · ext s
+          change qF (dmap (Algebra.TensorProduct.includeLeftRingHom s)) = _
+          change qF (dmap (s ⊗ₜ[R] (1 : R'))) = _
+          rw [show dmap (s ⊗ₜ[R] (1 : R')) = smapAlg s * rmapAlg 1 by rfl]
+          simp only [map_one, mul_one]
+          have hqFs : qF (smapAlg s) =
+              algebraMap (S ⊗[R] R') Q (a s) := by
+            change qF (1 ⊗ₜ[k] algebraMap S L s) = _
+            dsimp [qF]
+            rw [Algebra.TensorProduct.lift_tmul]
+            simpa [qKAlg, qLAlg, qL, Q] using
+              (Ideal.ResidueField.map_algebraMap
+                qS.asIdeal q.asIdeal a rfl s)
+          simpa [a, baseChangeAlgebraMap, bc, baseChangeRingMap,
+            RingHom.algebraMap_toAlgebra] using hqFs
+        · ext r'
+          change qF (dmap (Algebra.TensorProduct.includeRight r')) = _
+          change qF (dmap ((1 : S) ⊗ₜ[R] r')) = _
+          rw [show dmap ((1 : S) ⊗ₜ[R] r') = smapAlg 1 * rmapAlg r' by rfl]
+          simp only [map_one, one_mul]
+          have hqFr : qF (rmapAlg r') =
+              algebraMap (S ⊗[R] R') Q (bc r') := by
+            change qF (algebraMap R' K r' ⊗ₜ[k] 1) = _
+            dsimp [qF]
+            rw [Algebra.TensorProduct.lift_tmul]
+            simpa [qKAlg, qLAlg, qK, Q] using
+              (Ideal.ResidueField.map_algebraMap
+                p'.asIdeal q.asIdeal bc rfl r')
+          simpa [bc, baseChangeRingMap, RingHom.algebraMap_toAlgebra] using hqFr
+      exact congrArg (fun h : (S ⊗[R] R') →+* Q => h x) heq
     have hqFalg (y : K) : qF (algebraMap K F y) = qK y := by
       change qF ((Algebra.TensorProduct.includeLeft : K →ₐ[k] F) y) = qK y
       change (Algebra.TensorProduct.lift qKAlg qLAlg hcomm)
@@ -2234,10 +2212,6 @@ theorem universallyBijective
           locallyNilpotentKernel (baseChangeRingMap f g) ∧
             universallyBijectiveGenerated (baseChangeRingMap f g) := by
   letI : Algebra R S := f.toAlgebra
-  let U : Set S := {x : S | ∃ n : ℕ, 0 < n ∧ ∃ P : Polynomial R,
-    P.map f = (Polynomial.X - Polynomial.C x) ^ n}
-  have hgen' : Algebra.adjoin R U = ⊤ := by
-    simpa [U, universallyBijectiveGenerated, generatedBy] using hgen
   have hint : f.IsIntegral := universallyBijective_integral f hgen
   have hinj : Function.Injective (PrimeSpectrum.comap f) :=
     universallyBijective_comap_injective f hgen

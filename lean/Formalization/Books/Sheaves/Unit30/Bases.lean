@@ -893,8 +893,7 @@ theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
 theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) (x : X) :
     Nonempty ((basisSheafExtension B hB P).presheaf.stalk x ≃ basisStalk B P.1 x) := by
-  exact sorry
-  /- let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   let E := basisSheafExtension B hB P
   let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
@@ -923,7 +922,6 @@ theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
   let fIso : colimit (F ⋙ G) ≅ colimit G :=
     Functor.Final.colimitIso F G
   exact ⟨(cIso ≪≫ fIso).symm.toEquiv⟩
-  -/
 
 /-! ## Category-valued structures on a basis -/
 
@@ -1319,8 +1317,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
             (basisModuleExtension B hB O F hF)) ≅
         basisModuleStalkObject B hB F x) := by
   exact sorry
-  /-
-  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  /- let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   let : IsCofiltered (basisNeighborhoodIndex B x) :=
     isCofiltered_of_isFiltered_op (basisNeighborhoodIndex B x)
@@ -1527,7 +1524,8 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         simpa only [Iso.trans_hom, Iso.symm_hom, Category.assoc] using hcomp'
       have hcQR :=
         HasColimit.isoOfNatIso_ι_hom
-          (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op).isoWhiskerLeft qr) k
+          (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op)
+            .isoWhiskerLeft qr) k
       have hcQR' := congrArg
         (fun q => (ConcreteCategory.hom q) ((ConcreteCategory.hom (qK.inv.app k)) m₂)) hcQR
       have hcQR'' :
@@ -1548,6 +1546,9 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
             simpa using hcQR'
           _ = _ := by
             simp [qK, qr, m₂]
+      change (ConcreteCategory.hom (colimit.ι Mdiag k)) m₁ =
+        (ConcreteCategory.hom aIso.hom)
+          ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂)
       change (ConcreteCategory.hom (colimit.ι Mdiag k)) m₁ =
         (ConcreteCategory.hom aIso.hom)
           ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂)
@@ -1584,8 +1585,7 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     (O : RingSheaf.{v, v} X) :
     Nonempty (Mod O ≌ BasisModuleSheafCategory B O) := by
   exact sorry
-  /-
-  let R : Mod O ⥤ BasisModuleSheafCategory B O := {
+  /- let R : Mod O ⥤ BasisModuleSheafCategory B O := {
     obj M := ⟨basisModuleRestriction B M.val, by
       change Presheaf.IsSheaf (basisTopology B)
         ((basisModuleRestriction B M.val).presheaf ⋙

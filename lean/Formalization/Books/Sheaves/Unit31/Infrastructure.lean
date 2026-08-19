@@ -383,8 +383,7 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
       apply NatTrans.ext'
       funext V
       by_cases hV : V.unop ≤ U
-      · change _ = 𝟙 _
-        simp [hV]
+      · simp [hV]
         change eqToHom _ ≫ 𝟙 _ ≫ eqToHom _ = 𝟙 _
         simp
       · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅
@@ -637,7 +636,7 @@ private noncomputable def openPresheafExtensionFromHom (C : Type u) [Category.{v
             G.map (hf.functor.map ((Opens.map (openInclusion U)).map i.unop)).op) ≫
           eqToHom hG' = _
       rw [hmap]
-      simp [j, f, Category.assoc, Functor.map_comp, eqToHom_map, eqToHom_refl]
+      simp [j, f, Category.assoc, Functor.map_comp, eqToHom_map, Category.comp_id]
     · let e :
           ((openPresheafExtensionByInitial C U).obj F).obj V ≅
             (⊥_ C) := eqToIso
@@ -1025,7 +1024,8 @@ theorem openAbelianSheafExtension_counit_stalk_map_compatibility
   let : IsIso m := openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
   let e₂ := (openSheafRestrictionStalkIso AddCommGrpCat U ⟨x, hx⟩).app F
   refine ⟨asIso m ≪≫ e₂.symm, e₂, ?_⟩
-  simp [m, Category.assoc]
+  change m ≫ e₂.inv ≫ e₂.hom = m
+  simp
 
 /-- The module-valued open subspace of a ringed space. -/
 def ringedOpenSubspace (X : RingedSpace.{v}) (U : Opens X.carrier) : RingedSpace.{v} where

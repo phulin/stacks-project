@@ -1866,14 +1866,10 @@ private noncomputable def stupidTruncLETransition (K : CochainComplex C ℤ)
             HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
           rfl
         rw [hstupid_a, hstupid_b_inv]
-        simp [HomologicalComplex.restrictionXIso,
-          HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
-          Category.assoc]
+        simp only [Category.assoc]
       rw [htr k, htr l, hd₁ k l]
       rw [hd₀ k l]
-      simp [HomologicalComplex.stupidTruncXIso,
-        HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
-        Category.assoc, HomologicalComplex.restriction]
+      simp only [Category.assoc, Iso.inv_hom_id_assoc]
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (ComplexShape.embeddingUpIntLE (n - 1)) j (by
           intro k hk

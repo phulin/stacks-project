@@ -34,9 +34,17 @@ def simplicialHomSet
   obj X := U.obj X.unop ⟶ V.obj X
   map f := ↾fun g => U.map f.unop ≫ g ≫ V.map f
   map_id := by
-    sorry
+    intro X
+    ext f
+    change U.map (𝟙 X).unop ≫ f ≫ V.map (𝟙 X) = f
+    simp only [unop_id, U.map_id, V.map_id, Category.id_comp, Category.comp_id]
   map_comp := by
-    sorry
+    intro X Y Z f g
+    ext h
+    change
+      U.map (f ≫ g).unop ≫ h ≫ V.map (f ≫ g) =
+        U.map g.unop ≫ (U.map f.unop ≫ h ≫ V.map f) ≫ V.map g
+    simp only [unop_comp, U.map_comp, V.map_comp, Category.assoc]
 
 theorem simplicialHomSet_obj
     {C : Type w} [Category.{v} C]
@@ -104,9 +112,23 @@ noncomputable def hom
   obj X := homObjectAt U V hU X.unop
   map := fun {X Y} f => homMapAt U V hU f.unop
   map_id := by
-    sorry
+    intro X
+    dsimp [homMapAt, homObjectAt]
+    let _ : Finite (U.obj (unop X)) := by
+      simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+    ext u
+    simp [Pi.map'_comp_π, U.map_id]
   map_comp := by
-    sorry
+    intro X Y Z f g
+    dsimp [homMapAt, homObjectAt]
+    let _ : Finite (U.obj (unop X)) := by
+      simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+    let _ : Finite (U.obj (unop Y)) := by
+      simpa only [SimplexCategory.mk_len] using (hU Y.unop.len).1
+    let _ : Finite (U.obj (unop Z)) := by
+      simpa only [SimplexCategory.mk_len] using (hU Z.unop.len).1
+    ext u
+    simp [Pi.map'_comp_π, Category.assoc, U.map_comp]
 
 theorem hom_obj
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]

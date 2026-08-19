@@ -2258,6 +2258,343 @@ theorem amelioration_unique
       IsEquivalenceOverFunctor (overFunctor D.g.underlying)
         (overFunctor D.f.underlying) (overFunctor h.underlying) ∧
       Nonempty (FibredCategoryOverHom.comp D.b h ≅ D.a) := by
+  classical
+  obtain ⟨bi, ⟨ebL⟩, ⟨ebR⟩⟩ := D.b_equivalence_over_C
+  let h0 := FibredCategoryOverHom.comp bi D.a
+  let eba : FibredCategoryOverHom.comp D.b h0 ≅ D.a :=
+    (Bicategory.associator (B := FibredCategoryOver C) D.b bi D.a).symm ≪≫
+      Bicategory.whiskerRightIso (B := FibredCategoryOver C) ebL D.a ≪≫
+      Bicategory.leftUnitor (B := FibredCategoryOver C) D.a
+  obtain ⟨φ, hφ⟩ := D.left_triangle
+  obtain ⟨ψ, hψ⟩ := D.right_triangle
+  let _ : IsIso φ := hφ
+  let _ : IsIso ψ := hψ
+  let eφ := asIso φ
+  let eψ := asIso ψ
+  let eF := eφ ≪≫ eψ.symm
+  let eH :=
+    Bicategory.associator (B := FibredCategoryOver C) bi D.a D.f ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) bi eF ≪≫
+      (Bicategory.associator (B := FibredCategoryOver C) bi D.b D.g).symm ≪≫
+      Bicategory.whiskerRightIso (B := FibredCategoryOver C) ebR D.g ≪≫
+      Bicategory.leftUnitor (B := FibredCategoryOver C) D.g
+  let eH' := underlyingIsoOfFibredHomIso eH
+  let p := overFunctor D.f.underlying
+  let q := overFunctor D.g.underlying
+  let H := overFunctor h0.underlying
+  change H ⋙ p ≅ q at eH'
+  let hp := D.f_groupoid_fibred_over_Y
+  let y (z : X''.underlying.left) :=
+    Classical.choose (hp.exists_lift (eH'.inv.app z) rfl)
+  let i (z : X''.underlying.left) : y z ⟶ H.obj z :=
+    Classical.choose (Classical.choose_spec (hp.exists_lift (eH'.inv.app z) rfl))
+  have hi (z : X''.underlying.left) :
+      p.IsHomLift (eH'.inv.app z) (i z) :=
+    Classical.choose_spec (Classical.choose_spec (hp.exists_lift (eH'.inv.app z) rfl))
+  let hdom (z : X''.underlying.left) : p.obj (y z) = q.obj z := by
+    let _ : p.IsHomLift (eH'.inv.app z) (i z) := hi z
+    exact CategoryTheory.IsHomLift.domain_eq p (eH'.inv.app z) (i z)
+  let basef {z₁ z₂ : X''.underlying.left} (f : z₁ ⟶ z₂) :
+      p.obj (y z₁) ⟶ p.obj (y z₂) :=
+    eqToHom (hdom z₁) ≫ q.map f ≫ eqToHom (hdom z₂).symm
+  have hbase {z₁ z₂ : X''.underlying.left} (f : z₁ ⟶ z₂) :
+      basef f ≫ p.map (i z₂) = p.map (i z₁ ≫ H.map f) := by
+    let _ : p.IsHomLift (eH'.inv.app z₁) (i z₁) := hi z₁
+    let _ : p.IsHomLift (eH'.inv.app z₂) (i z₂) := hi z₂
+    rw [Functor.map_comp]
+    rw [CategoryTheory.IsHomLift.fac' p (eH'.inv.app z₂) (i z₂)]
+    rw [CategoryTheory.IsHomLift.fac' p (eH'.inv.app z₁) (i z₁)]
+    simp [basef, Category.assoc]
+  let m {z₁ z₂ : X''.underlying.left} (f : z₁ ⟶ z₂) : y z₁ ⟶ y z₂ :=
+    Classical.choose ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)
+  have hm {z₁ z₂ : X''.underlying.left} (f : z₁ ⟶ z₂) :
+      p.IsHomLift (basef f) (m f) :=
+    (Classical.choose_spec ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)).1
+  have hmf {z₁ z₂ : X''.underlying.left} (f : z₁ ⟶ z₂) :
+      m f ≫ i z₂ = i z₁ ≫ H.map f :=
+    (Classical.choose_spec ((hp.unique_lift (i z₂) (i z₁ ≫ H.map f) (hbase f)).exists)).2
+  let K : X''.underlying.left ⥤ X'.underlying.left := {
+    obj := y
+    map := m
+    map_id := by
+      intro z
+      apply (hp.unique_lift (i z) (i z) (f := 𝟙 _) (by simp)).unique
+      · refine ⟨?_, ?_⟩
+        · simpa [basef] using hm (𝟙 z)
+        · simpa using hmf (𝟙 z)
+      · exact ⟨inferInstance, by simp⟩
+    map_comp := by
+      intro z₁ z₂ z₃ f g
+      apply (hp.unique_lift (i z₃) (i z₁ ≫ H.map (f ≫ g))
+        (f := basef (f ≫ g)) (hbase (f ≫ g))).unique
+      · refine ⟨?_, ?_⟩
+        · exact hm (f ≫ g)
+        · exact hmf (f ≫ g)
+      · let _ : p.IsHomLift (basef f) (m f) := hm f
+        let _ : p.IsHomLift (basef g) (m g) := hm g
+        have hcomp : p.IsHomLift (basef f ≫ basef g) (m f ≫ m g) := inferInstance
+        refine ⟨?_, ?_⟩
+        · simpa [basef, Category.assoc] using hcomp
+        · rw [Category.assoc, hmf g, ← Category.assoc, hmf f, Category.assoc,
+            ← Functor.map_comp]
+  }
+  have hKp : K ⋙ p = q := by
+    refine CategoryTheory.Functor.ext (fun z => ?_) (fun z₁ z₂ f => ?_)
+    · exact hdom z
+    · let _ : p.IsHomLift (basef f) (m f) := hm f
+      simpa [K, basef, Category.assoc] using
+        (CategoryTheory.IsHomLift.fac' p (basef f) (m f))
+  have hi_iso (z : X''.underlying.left) : IsIso (i z) := by
+    let _ : p.IsHomLift (eH'.inv.app z) (i z) := hi z
+    let _ : p.IsStronglyCartesian (p.map (i z)) (i z) :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian p hp (i z)
+    let _ : IsIso (p.map (i z)) := by
+      rw [CategoryTheory.IsHomLift.fac' p (eH'.inv.app z) (i z)]
+      infer_instance
+    exact stronglyCartesian_of_base_isIso p (p.map (i z)) (i z)
+  let η : K ≅ H := NatIso.ofComponents (fun z => by
+    let _ : IsIso (i z) := hi_iso z
+    exact asIso (i z)) (by
+      intro z₁ z₂ f
+      exact hmf f)
+  have hKbase :
+      K ⋙ structureFunctor X'.underlying =
+        structureFunctor X''.underlying := by
+    calc
+      K ⋙ structureFunctor X'.underlying =
+          K ⋙ p ⋙ structureFunctor Y.underlying := by
+            simpa only [Functor.assoc] using
+              congrArg (fun R : X'.underlying.left ⥤ C =>
+                K ⋙ R) (overFunctor_comm D.f.underlying).symm
+      _ = q ⋙ structureFunctor Y.underlying := by
+        simpa only [Functor.assoc] using
+          congrArg (fun R : X''.underlying.left ⥤ Y.underlying.left =>
+            R ⋙ structureFunctor Y.underlying) hKp
+      _ = structureFunctor X''.underlying := overFunctor_comm D.g.underlying
+  let Kover : CategoryOverHom X''.underlying X'.underlying :=
+    ⟨Over.homMk (Cat.Hom.ofFunctor K)
+      (by
+        apply Cat.Hom.ext
+        simpa only [Cat.Hom.toFunctor, Cat.Hom.comp_toFunctor] using hKbase)⟩
+  let Kfib : FibredCategoryOverHom X'' X' :=
+    { underlying := Kover
+      preserves := by
+        intro a b φ hφ
+        let eia : y a ≅ H.obj a :=
+          { hom := i a, inv := inv (i a)
+            hom_inv_id := by simp, inv_hom_id := by simp }
+        let eib : H.obj b ≅ y b :=
+          { hom := inv (i b), inv := i b
+            hom_inv_id := by simp, inv_hom_id := by simp }
+        let _ : (structureFunctor X'.underlying).IsStronglyCartesian
+            ((structureFunctor X'.underlying).map (i a)) (i a) := by
+          let _ : (structureFunctor X'.underlying).IsHomLift
+              ((structureFunctor X'.underlying).map (i a)) (i a) :=
+            Functor.IsHomLift.map (i a)
+          exact iso_is_stronglyCartesian
+            (structureFunctor X'.underlying) ((structureFunctor X'.underlying).map (i a)) eia
+        let _ : (structureFunctor X'.underlying).IsStronglyCartesian
+            ((structureFunctor X'.underlying).map (inv (i b))) (inv (i b)) := by
+          let _ : (structureFunctor X'.underlying).IsHomLift
+              ((structureFunctor X'.underlying).map (inv (i b))) (inv (i b)) :=
+            Functor.IsHomLift.map (inv (i b))
+          exact iso_is_stronglyCartesian
+            (structureFunctor X'.underlying) ((structureFunctor X'.underlying).map (inv (i b))) eib
+        let _ : (structureFunctor X'.underlying).IsStronglyCartesian
+            ((structureFunctor X'.underlying).map (H.map φ)) (H.map φ) :=
+          h0.preserves φ hφ
+        change (structureFunctor X'.underlying).IsStronglyCartesian
+          ((structureFunctor X'.underlying).map (K.map φ)) (K.map φ)
+        have heq : K.map φ =
+            i a ≫ H.map φ ≫ inv (i b) := by
+          calc
+            K.map φ = (K.map φ ≫ i b) ≫ inv (i b) := by simp [Category.assoc]
+            _ = (i a ≫ H.map φ) ≫ inv (i b) := by rw [hmf φ]
+            _ = i a ≫ H.map φ ≫ inv (i b) := by simp [Category.assoc]
+        rw [heq]
+        simpa only [Functor.map_comp] using
+          (inferInstance :
+            (structureFunctor X'.underlying).IsStronglyCartesian
+              ((structureFunctor X'.underlying).map (i a) ≫
+                (structureFunctor X'.underlying).map (H.map φ) ≫
+                (structureFunctor X'.underlying).map (inv (i b)))
+              (i a ≫ H.map φ ≫ inv (i b))) }
+  obtain ⟨ai, ⟨eaL⟩, ⟨eaR⟩⟩ := D.a_equivalence_over_C
+  let k0 := FibredCategoryOverHom.comp ai D.b
+  let eKfib : D.f ≅ FibredCategoryOverHom.comp k0 D.g :=
+    (Bicategory.leftUnitor (B := FibredCategoryOver C) D.f).symm ≪≫
+      Bicategory.whiskerRightIso (B := FibredCategoryOver C) eaR.symm D.f ≪≫
+      Bicategory.associator (B := FibredCategoryOver C) ai D.a D.f ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) ai eF ≪≫
+      (Bicategory.associator (B := FibredCategoryOver C) ai D.b D.g).symm
+  let eK' := underlyingIsoOfFibredHomIso eKfib
+  let K0 := overFunctor k0.underlying
+  change p ≅ K0 ⋙ q at eK'
+  let unit0 :
+      FibredCategoryOverHom.comp h0 k0 ≅ FibredCategoryOverHom.id X'' :=
+    Bicategory.associator (B := FibredCategoryOver C) bi D.a k0 ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) bi
+        (Bicategory.associator (B := FibredCategoryOver C) D.a ai D.b).symm ≪≫
+      (Bicategory.associator (B := FibredCategoryOver C) bi
+        (FibredCategoryOverHom.comp D.a ai) D.b).symm ≪≫
+      Bicategory.whiskerRightIso (B := FibredCategoryOver C)
+        (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) bi eaL) D.b ≪≫
+      Bicategory.associator (B := FibredCategoryOver C) bi
+        (FibredCategoryOverHom.id X) D.b ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) bi
+        (Bicategory.leftUnitor (B := FibredCategoryOver C) D.b) ≪≫ ebR
+  let counit0 :
+      FibredCategoryOverHom.comp k0 h0 ≅ FibredCategoryOverHom.id X' :=
+    Bicategory.associator (B := FibredCategoryOver C) ai D.b h0 ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) ai
+        (Bicategory.associator (B := FibredCategoryOver C) D.b bi D.a).symm ≪≫
+      (Bicategory.associator (B := FibredCategoryOver C) ai
+        (FibredCategoryOverHom.comp D.b bi) D.a).symm ≪≫
+      Bicategory.whiskerRightIso (B := FibredCategoryOver C)
+        (Bicategory.whiskerLeftIso (B := FibredCategoryOver C) ai ebL) D.a ≪≫
+      Bicategory.associator (B := FibredCategoryOver C) ai
+        (FibredCategoryOverHom.id X) D.a ≪≫
+      Bicategory.whiskerLeftIso (B := FibredCategoryOver C) ai
+        (Bicategory.leftUnitor (B := FibredCategoryOver C) D.a) ≪≫ eaR
+  let unit0' := underlyingIsoOfFibredHomIso unit0
+  let counit0' := underlyingIsoOfFibredHomIso counit0
+  change H ⋙ K0 ≅ 𝟭 X''.underlying.left at unit0'
+  change K0 ⋙ H ≅ 𝟭 X'.underlying.left at counit0'
+  let hp2 := D.g_groupoid_fibred_over_Y
+  let einv := eK'.symm
+  let y2 (z : X'.underlying.left) :=
+    Classical.choose (hp2.exists_lift (einv.inv.app z) rfl)
+  let i2 (z : X'.underlying.left) : y2 z ⟶ K0.obj z :=
+    Classical.choose (Classical.choose_spec (hp2.exists_lift (einv.inv.app z) rfl))
+  have hi2 (z : X'.underlying.left) :
+      q.IsHomLift (einv.inv.app z) (i2 z) :=
+    Classical.choose_spec (Classical.choose_spec (hp2.exists_lift (einv.inv.app z) rfl))
+  let hdom2 (z : X'.underlying.left) : q.obj (y2 z) = p.obj z := by
+    let _ : q.IsHomLift (einv.inv.app z) (i2 z) := hi2 z
+    exact CategoryTheory.IsHomLift.domain_eq q (einv.inv.app z) (i2 z)
+  let basef2 {z₁ z₂ : X'.underlying.left} (f : z₁ ⟶ z₂) :
+      q.obj (y2 z₁) ⟶ q.obj (y2 z₂) :=
+    eqToHom (hdom2 z₁) ≫ p.map f ≫ eqToHom (hdom2 z₂).symm
+  have hbase2 {z₁ z₂ : X'.underlying.left} (f : z₁ ⟶ z₂) :
+      basef2 f ≫ q.map (i2 z₂) = q.map (i2 z₁ ≫ K0.map f) := by
+    let _ : q.IsHomLift (einv.inv.app z₁) (i2 z₁) := hi2 z₁
+    let _ : q.IsHomLift (einv.inv.app z₂) (i2 z₂) := hi2 z₂
+    rw [Functor.map_comp]
+    rw [CategoryTheory.IsHomLift.fac' q (einv.inv.app z₂) (i2 z₂)]
+    rw [CategoryTheory.IsHomLift.fac' q (einv.inv.app z₁) (i2 z₁)]
+    simp [basef2, Category.assoc]
+  let m2 {z₁ z₂ : X'.underlying.left} (f : z₁ ⟶ z₂) : y2 z₁ ⟶ y2 z₂ :=
+    Classical.choose ((hp2.unique_lift (i2 z₂) (i2 z₁ ≫ K0.map f) (hbase2 f)).exists)
+  have hm2 {z₁ z₂ : X'.underlying.left} (f : z₁ ⟶ z₂) :
+      q.IsHomLift (basef2 f) (m2 f) :=
+    (Classical.choose_spec ((hp2.unique_lift (i2 z₂) (i2 z₁ ≫ K0.map f) (hbase2 f)).exists)).1
+  have hmf2 {z₁ z₂ : X'.underlying.left} (f : z₁ ⟶ z₂) :
+      m2 f ≫ i2 z₂ = i2 z₁ ≫ K0.map f :=
+    (Classical.choose_spec ((hp2.unique_lift (i2 z₂) (i2 z₁ ≫ K0.map f) (hbase2 f)).exists)).2
+  let L : X'.underlying.left ⥤ X''.underlying.left := {
+    obj := y2
+    map := m2
+    map_id := by
+      intro z
+      apply (hp2.unique_lift (i2 z) (i2 z) (f := 𝟙 _) (by simp)).unique
+      · refine ⟨?_, ?_⟩
+        · simpa [basef2] using hm2 (𝟙 z)
+        · simpa using hmf2 (𝟙 z)
+      · exact ⟨inferInstance, by simp⟩
+    map_comp := by
+      intro z₁ z₂ z₃ f g
+      apply (hp2.unique_lift (i2 z₃) (i2 z₁ ≫ K0.map (f ≫ g))
+        (f := basef2 (f ≫ g)) (hbase2 (f ≫ g))).unique
+      · refine ⟨?_, ?_⟩
+        · exact hm2 (f ≫ g)
+        · exact hmf2 (f ≫ g)
+      · let _ : q.IsHomLift (basef2 f) (m2 f) := hm2 f
+        let _ : q.IsHomLift (basef2 g) (m2 g) := hm2 g
+        have hcomp : q.IsHomLift (basef2 f ≫ basef2 g) (m2 f ≫ m2 g) := inferInstance
+        refine ⟨?_, ?_⟩
+        · simpa [basef2, Category.assoc] using hcomp
+        · rw [Category.assoc, hmf2 g, ← Category.assoc, hmf2 f, Category.assoc,
+            ← Functor.map_comp]
+  }
+  have hLq : L ⋙ q = p := by
+    refine CategoryTheory.Functor.ext (fun z => ?_) (fun z₁ z₂ f => ?_)
+    · exact hdom2 z
+    · let _ : q.IsHomLift (basef2 f) (m2 f) := hm2 f
+      simpa [L, basef2, Category.assoc] using
+        (CategoryTheory.IsHomLift.fac' q (basef2 f) (m2 f))
+  have hi2_iso (z : X'.underlying.left) : IsIso (i2 z) := by
+    let _ : q.IsHomLift (einv.inv.app z) (i2 z) := hi2 z
+    let _ : q.IsStronglyCartesian (q.map (i2 z)) (i2 z) :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian q hp2 (i2 z)
+    let _ : IsIso (q.map (i2 z)) := by
+      rw [CategoryTheory.IsHomLift.fac' q (einv.inv.app z) (i2 z)]
+      infer_instance
+    exact stronglyCartesian_of_base_isIso q (q.map (i2 z)) (i2 z)
+  let η2 : L ≅ K0 := NatIso.ofComponents (fun z => by
+    let _ : IsIso (i2 z) := hi2_iso z
+    exact asIso (i2 z)) (by
+      intro z₁ z₂ f
+      exact hmf2 f)
+  have hηover (z : X''.underlying.left) :
+      (structureFunctor X'.underlying).map (η.hom.app z) =
+        overIdentityComponent Kover h0.underlying z := by
+    dsimp [overIdentityComponent, Kover, overFunctor]
+    change (structureFunctor X'.underlying).map (i z) = _
+    have hfac := CategoryTheory.IsHomLift.fac' p (eH'.inv.app z) (i z)
+    have hfi := Functor.congr_hom (overFunctor_comm D.f.underlying) (i z)
+    have hE := eH.inv.over z
+    change (structureFunctor Y.underlying).map (eH'.inv.app z) =
+      overIdentityComponent
+        D.g.underlying (FibredCategoryOverHom.comp h0 D.f).underlying z at hE
+    have hHbase : H ⋙ structureFunctor X'.underlying = structureFunctor X''.underlying := by
+      simpa only [H] using (overFunctor_comm h0.underlying)
+    have hbase_eq :
+        (structureFunctor X'.underlying).obj (K.obj z) =
+          (structureFunctor X'.underlying).obj (H.obj z) := by
+      exact
+        (congrArg (fun K : X''.underlying.left ⥤ C => K.obj z) hKbase).trans
+          (congrArg (fun K : X''.underlying.left ⥤ C => K.obj z) hHbase).symm
+    change (structureFunctor X'.underlying).map (i z) = eqToHom hbase_eq
+    have hfi_heq :
+        (structureFunctor X'.underlying).map (i z) ≍
+          (structureFunctor Y.underlying).map (p.map (i z)) := by
+      have hh :=
+        (conj_eqToHom_iff_heq
+          ((overFunctor D.f.underlying ⋙ structureFunctor Y.underlying).map (i z))
+          ((structureFunctor X'.underlying).map (i z))
+          (Functor.congr_obj (overFunctor_comm D.f.underlying) (y z))
+          (Functor.congr_obj (overFunctor_comm D.f.underlying) (H.obj z))).1 hfi
+      simpa only [p, Functor.comp_map] using hh.symm
+    have hfac_heq :
+        (structureFunctor Y.underlying).map (p.map (i z)) ≍
+          (structureFunctor Y.underlying).map (eH'.inv.app z) := by
+      rw [hfac]
+      simp [Functor.map_comp, eqToHom_map]
+    have hE_heq :
+        (structureFunctor Y.underlying).map (eH'.inv.app z) ≍
+          𝟙 ((structureFunctor Y.underlying).obj (q.obj z)) := by
+      rw [hE]
+      exact eqToHom_heq_id_dom _ _ _
+    have hKq :
+        (structureFunctor X'.underlying).obj (K.obj z) =
+          (structureFunctor Y.underlying).obj (q.obj z) := by
+      exact
+        (congrArg (fun K : X''.underlying.left ⥤ C => K.obj z) hKbase).trans
+          (congrArg (fun K : X''.underlying.left ⥤ C => K.obj z)
+            (overFunctor_comm D.g.underlying)).symm
+    have hbase_heq :
+        (structureFunctor X'.underlying).map (i z) ≍
+          𝟙 ((structureFunctor X'.underlying).obj (K.obj z)) := by
+      exact
+        hfi_heq.trans (hfac_heq.trans
+          (hE_heq.trans
+            ((eqToHom_heq_id_cod _ _ hKq).symm.trans
+              (eqToHom_heq_id_dom _ _ hKq))))
+    simpa using
+      (conj_eqToHom_iff_heq
+        ((structureFunctor X'.underlying).map (i z))
+        (𝟙 ((structureFunctor X'.underlying).obj (K.obj z))) rfl hbase_eq.symm).2
+        hbase_heq
   sorry
 
 /- Proof roadmap: apply `amelioration_unique`, retain its comparison functor

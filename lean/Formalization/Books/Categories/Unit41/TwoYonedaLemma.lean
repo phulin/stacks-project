@@ -1449,7 +1449,7 @@ theorem twoYonedaAssociatedFunctorMap_map_comp
     (Over.map g.base).map kf ≫ kg
   have hkcomp : kcomp = eqToHom hAB ≫ kfg := by
     ext
-    simp [kcomp, kfg, hAB, hOver, kf, kg, uX]
+    simp [kcomp, kfg, kf, kg, uX]
   have hmapcomp :
       (Z.fiber.1).map (eqToHom hAB) ≫ (Z.fiber.1).map kfg =
         (Z.fiber.1).map (eqToHom hAB ≫ kfg) :=
@@ -1675,7 +1675,7 @@ theorem twoYonedaAssociatedFunctor_over
 /- The source identifies the fiber of the associated construction with the
    chosen value of the presheaf.  In the CoGrothendieck construction this is
    the `HasFibers.Fib` category, namely the value of the presheaf itself. -/
-def twoYonedaAssociatedFiberFunctor
+private def twoYonedaAssociatedFiberFunctor
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
@@ -1683,7 +1683,7 @@ def twoYonedaAssociatedFiberFunctor
   twoYonedaEvaluationCore p U
 
 /-- The fiberwise functor in the alternative proof is an equivalence. -/
-theorem twoYonedaAssociatedFiberFunctor_isEquivalence
+private theorem twoYonedaAssociatedFiberFunctor_isEquivalence
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
@@ -1777,7 +1777,7 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
                 (Over.mk (𝟙 U)) =
             ((eqToHom e'.symm).toNatTrans.app H).1.app
               (Over.mk (𝟙 U)) := by
-        simpa only [hmapId, CategoryTheory.eqToIso.inv]
+        simp only [hmapId, CategoryTheory.eqToIso.inv]
       have hcancel :
           ((splitFibredPseudofunctor
             (groupoidPresheafToCat (twoYonedaHomPresheaf p))).mapId
@@ -1803,8 +1803,7 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
       simp [j, F, fibreFunctor, twoYonedaAssociatedFiberFunctor,
         twoYonedaAssociatedFunctor, twoYonedaAssociatedFunctorMap,
         Functor.Fiber.fiberInclusion,
-        twoYonedaEvaluationCore, twoYonedaEvaluationCoreMap,
-        e']
+        twoYonedaEvaluationCore, twoYonedaEvaluationCoreMap]
       simp [Functor.Fiber.inducedFunctor]
       have hcomp_app : ∀ {G H K :
           (splitFibredPseudofunctor
@@ -1815,7 +1814,7 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
             α.1.app (Over.mk (𝟙 U)) ≫ β.1.app (Over.mk (𝟙 U)) := by
         intro G H K α β
         rfl
-      simp [Pseudofunctor.CoGrothendieck.ι, e', hcomp_app]
+      simp [Pseudofunctor.CoGrothendieck.ι, hcomp_app]
       have hcancel' := congrArg
         (fun t => φ.1.app (Over.mk (𝟙 U)) ≫ t) hcancel
       have hcancel'' :

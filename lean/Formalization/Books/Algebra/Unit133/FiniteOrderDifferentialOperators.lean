@@ -2379,7 +2379,76 @@ theorem principalParts_functoriality_composition_exists
     Nonempty (PrincipalPartsFunctorialityComposition
       (A := A) (A' := A') (A'' := A'') (B := B) (B' := B') (B'' := B'')
       (M := M) (M' := M') (M'' := M'') F G) := by
-  sorry
+  classical
+  have hcomm :
+      (algebraMap A'' B'').comp (algebraMap A A'') =
+        (algebraMap B B'').comp (algebraMap A B) := by
+    ext a
+    change algebraMap A'' B'' (algebraMap A A'' a) =
+      algebraMap B B'' (algebraMap A B a)
+    calc
+      algebraMap A'' B'' (algebraMap A A'' a) =
+          algebraMap A'' B'' (algebraMap A' A'' (algebraMap A A' a)) := by
+        rw [IsScalarTower.algebraMap_apply A A' A'' a]
+      _ = algebraMap B' B'' (algebraMap A' B' (algebraMap A A' a)) :=
+        DFunLike.congr_fun G.commutes (algebraMap A A' a)
+      _ = algebraMap B' B'' (algebraMap B B' (algebraMap A B a)) := by
+        exact congrArg (algebraMap B' B'') (DFunLike.congr_fun F.commutes a)
+      _ = algebraMap B B'' (algebraMap A B a) := by
+        rw [IsScalarTower.algebraMap_apply B B' B'' (algebraMap A B a)]
+  have hf : ∀ (b : B) (m : M),
+      (G.f.comp F.f) (b • m) =
+        algebraMap B B'' b • (G.f.comp F.f) m := by
+    intro b m
+    change G.f (F.f (b • m)) = algebraMap B B'' b • G.f (F.f m)
+    calc
+      G.f (F.f (b • m)) =
+          G.f (algebraMap B B' b • F.f m) :=
+        congrArg G.f (F.f_smul b m)
+      _ = algebraMap B' B'' (algebraMap B B' b) • G.f (F.f m) :=
+        G.f_smul (algebraMap B B' b) (F.f m)
+      _ = algebraMap B B'' b • G.f (F.f m) := by
+        rw [IsScalarTower.algebraMap_apply B B' B'' b]
+  refine ⟨{
+    composed := {
+      f := G.f.comp F.f
+      f_smul := hf
+      commutes := hcomm
+      map := fun k => (G.map k).comp (F.map k)
+      map_zero := by
+        intro k
+        change G.map k (F.map k 0) = 0
+        rw [F.map_zero, G.map_zero]
+      map_add := by
+        intro k x y
+        change G.map k (F.map k (x + y)) =
+          G.map k (F.map k x) + G.map k (F.map k y)
+        rw [F.map_add, G.map_add]
+      map_smul := by
+        intro k b x
+        change G.map k (F.map k (b • x)) =
+          algebraMap B B'' b • G.map k (F.map k x)
+        rw [F.map_smul, G.map_smul]
+        rw [IsScalarTower.algebraMap_apply B B' B'' b]
+      map_generator := by
+        intro k m
+        change G.map k (F.map k
+          (principalPartsGenerator (R := A) (S := B) k m)) =
+          principalPartsGenerator (R := A'') (S := B'') k (G.f (F.f m))
+        rw [F.map_generator, G.map_generator]
+      map_transition := by
+        intro k x
+        change G.map k (F.map k
+            (principalPartsTransition (R := A) (S := B) k x)) =
+          principalPartsTransition (R := A'') (S := B'') k
+            (G.map (k + 1) (F.map (k + 1) x))
+        rw [F.map_transition, G.map_transition]
+    }
+    f_eq := rfl
+    map_eq := by
+      intro k x
+      rfl
+  }⟩
 
 omit [IsScalarTower A' B' M'] [IsScalarTower A A' A'']
   [IsScalarTower B B' B''] in

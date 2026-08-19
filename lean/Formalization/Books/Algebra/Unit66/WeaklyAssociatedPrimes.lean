@@ -2,6 +2,9 @@ import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit63
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
+import Mathlib.RingTheory.Ideal.GoingUp
+import Mathlib.RingTheory.QuasiFinite.Basic
+import Mathlib.RingTheory.LocalProperties.Submodule
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.MvPolynomial.Ideal
@@ -1129,11 +1132,31 @@ theorem associated_weaklyAssociated_functorial_eq_of_noetherian
       PrimeSpectrum.comap φ ''
             Formalization.Books.Algebra.Unit63.associatedPrimes S M =
           Formalization.Books.Algebra.Unit63.associatedPrimes R M ∧
-        Formalization.Books.Algebra.Unit63.associatedPrimes R M =
+      Formalization.Books.Algebra.Unit63.associatedPrimes R M =
           weaklyAssociatedPrimes R M ∧
         weaklyAssociatedPrimes R M =
           PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M) := by
-  sorry
+  let : Module R M := Module.compHom M φ
+  have hchain := associated_weaklyAssociated_functorial_chain
+    (R := R) (S := S) (M := M) φ
+  have hS := associatedPrimes_eq_weaklyAssociatedPrimes_of_noetherian
+      (R := S) (M := M)
+  rcases hchain with ⟨h₁, h₂, h₃⟩
+  have hSimage : PrimeSpectrum.comap φ ''
+      Formalization.Books.Algebra.Unit63.associatedPrimes S M =
+      PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M :=
+    congrArg (fun T : Set (PrimeSpectrum S) => PrimeSpectrum.comap φ '' T) hS
+  have h₃' : weaklyAssociatedPrimes R M ⊆
+      PrimeSpectrum.comap φ ''
+        Formalization.Books.Algebra.Unit63.associatedPrimes S M :=
+    h₃.trans_eq hSimage.symm
+  have h₄ : PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M ⊆
+      Formalization.Books.Algebra.Unit63.associatedPrimes R M := by
+    rw [← hSimage]
+    exact h₁
+  exact ⟨le_antisymm h₁ (h₂.trans h₃'),
+    le_antisymm h₂ (h₃'.trans h₁),
+    le_antisymm h₃ (h₄.trans h₂)⟩
 
 /-! ## Finite maps, quotients, and localization -/
 
@@ -1146,7 +1169,242 @@ theorem weaklyAssociatedPrimes_finite_ring_map
     (letI : Module R M := Module.compHom M φ;
       PrimeSpectrum.comap φ '' weaklyAssociatedPrimes S M =
         weaklyAssociatedPrimes R M) := by
-  sorry
+  classical
+  letI : Algebra R S := φ.toAlgebra
+  letI : Module.Finite R S := hφ
+  letI : Algebra.IsIntegral R S := ⟨RingHom.Finite.to_isIntegral hφ⟩
+  let : Module R M := Module.compHom M φ
+  apply le_antisymm
+  · rintro p ⟨q, hq, rfl⟩
+    change ∃ m : M,
+      (q.asIdeal.comap φ) ∈
+        ((⊥ : Submodule R M).colon ({m} : Set M)).minimalPrimes
+    change ∃ m : M,
+      q.asIdeal ∈
+        ((⊥ : Submodule S M).colon ({m} : Set M)).minimalPrimes at hq
+    rcases hq with ⟨m, hq⟩
+    let I : Ideal S :=
+      (⊥ : Submodule S M).colon ({m} : Set M)
+    let J : Ideal R :=
+      (⊥ : Submodule R M).colon ({m} : Set M)
+    have hJ : J = I.comap φ := by
+      ext r
+      simp only [J, I, Ideal.mem_comap, Submodule.mem_colon_singleton,
+        Submodule.mem_bot]
+      change r • m = 0 ↔ φ r • m = 0
+      rfl
+    have hfin : (q.asIdeal.comap φ).primesOver S |>.Finite := by
+      simpa [Ideal.under_def] using
+        (Algebra.QuasiFinite.finite_primesOver
+          (R := R) (S := S) (q.asIdeal.comap φ))
+    let T : Set (Ideal S) :=
+      {Q | Q ∈ (q.asIdeal.comap φ).primesOver S ∧ Q ≠ q.asIdeal}
+    have hT : T.Finite := hfin.subset (by
+      intro Q hQ
+      exact hQ.1)
+    have hnotle : ∀ Q ∈ T, ¬ q.asIdeal ≤ Q := by
+      intro Q hQT hle
+      have hQprime : Q.IsPrime := hQT.1.1
+      letI : q.asIdeal.IsPrime := q.2
+      letI : Q.IsPrime := hQprime
+      have hlt : q.asIdeal < Q := lt_of_le_of_ne hle hQT.2.symm
+      have hcomaplt : q.asIdeal.comap (algebraMap R S) <
+          Q.comap (algebraMap R S) :=
+        Ideal.IsIntegral.comap_lt_comap hlt
+      have hqover : q.asIdeal.comap (algebraMap R S) =
+          q.asIdeal.comap φ := rfl
+      have hQover : Q.comap (algebraMap R S) =
+          q.asIdeal.comap φ := by
+        simpa [Ideal.under_def] using hQT.1.2.over.symm
+      exact (ne_of_lt hcomaplt) (hqover.trans hQover.symm)
+    have hqnotunion : ¬ ((q.asIdeal : Set S) ⊆
+        ⋃ Q ∈ T, (Q : Set S)) := by
+      intro hsub
+      rcases (Ideal.subset_union_prime_finite hT q.asIdeal q.asIdeal
+        (f := fun Q : Ideal S => Q)
+        (by
+          intro Q hQ _ _
+          exact hQ.1.1)).mp hsub with ⟨Q, hQT, hle⟩
+      exact hnotle Q hQT hle
+    obtain ⟨x, hxq, hxT⟩ := Set.not_subset.mp hqnotunion
+    have hxnot : ∀ Q ∈ T, x ∉ Q := by
+      intro Q hQ hx
+      exact hxT (Set.mem_iUnion₂.mpr ⟨Q, hQ, hx⟩)
+    let A := Localization.AtPrime q.asIdeal
+    let U := q.asIdeal.primeCompl
+    let f := LocalizedModule.mkLinearMap U M
+    have hqweak : q ∈ weaklyAssociatedPrimes S M := by
+      change ∃ m, q.asIdeal ∈
+        ((⊥ : Submodule S M).colon ({m} : Set M)).minimalPrimes
+      exact ⟨m, hq⟩
+    obtain ⟨m', hmrad⟩ :=
+      ((weaklyAssociated_local (M := M) q).out 0 2).mp hqweak
+    have hmrad' :
+        ((⊥ : Submodule A (LocalizedModule.AtPrime q.asIdeal M)).colon
+          ({m'} : Set _)).radical = IsLocalRing.maximalIdeal A := by
+      simpa [A, IsLocalRing.closedPoint] using hmrad
+    have hm'ne : m' ≠ 0 := by
+      intro hm'zero
+      have hJtop :
+          (⊥ : Submodule A (LocalizedModule.AtPrime q.asIdeal M)).colon
+            ({m'} : Set _) = ⊤ := by
+        simp [hm'zero]
+      have hmaxtop : IsLocalRing.maximalIdeal A = ⊤ := by
+        rw [← hmrad', hJtop, Ideal.radical_top]
+      exact ((IsLocalRing.maximalIdeal.isMaximal A).ne_top hmaxtop).elim
+    rcases IsLocalizedModule.mk'_surjective U f m' with ⟨⟨m, s⟩, rfl⟩
+    let J' : Ideal A :=
+      (⊥ : Submodule A (LocalizedModule.AtPrime q.asIdeal M)).colon
+        ({IsLocalizedModule.mk' f m s} : Set _)
+    have hmrad'' : J'.radical = IsLocalRing.maximalIdeal A := by
+      simpa [J', Function.uncurry] using hmrad'
+    have hxmax : algebraMap S A x ∈ IsLocalRing.maximalIdeal A := by
+      rw [← Localization.AtPrime.map_eq_maximalIdeal (I := q.asIdeal)]
+      exact Ideal.mem_map_of_mem (algebraMap S A) hxq
+    have hxrad : algebraMap S A x ∈ J'.radical := by
+      change algebraMap S A x ∈
+        ((⊥ : Submodule A (LocalizedModule.AtPrime q.asIdeal M)).colon
+          ({IsLocalizedModule.mk' f m s} : Set _)).radical
+      rw [hmrad'']
+      exact hxmax
+    obtain ⟨n, hn⟩ := Ideal.mem_radical_iff.mp hxrad
+    rw [Submodule.mem_colon_singleton] at hn
+    rw [Submodule.mem_bot, ← map_pow] at hn
+    rw [← IsLocalization.mk'_one (M := U) A (x ^ n)] at hn
+    rw [IsLocalizedModule.mk'_smul_mk' A f (x ^ n) m (1 : U) s] at hn
+    obtain ⟨t, ht⟩ :=
+      (IsLocalizedModule.mk'_eq_zero' f ((1 : U) * s)).mp hn
+    let z : M := (t : S) • m
+    have hz : z ≠ 0 := by
+      intro hz
+      apply hm'ne
+      apply (IsLocalizedModule.mk'_eq_zero' f s).mpr
+      exact ⟨t, hz⟩
+    have hxz : x ^ n • z = 0 := by
+      change x ^ n • ((t : S) • m) = 0
+      rw [smul_smul]
+      have ht' : (t : S) • (x ^ n • m) = 0 := by
+        change (t : S) • (x ^ n • m) = 0 at ht
+        exact ht
+      simpa [smul_smul, mul_comm] using ht'
+    have hzloc :
+        IsLocalizedModule.mk' f z s =
+          (t : S) • IsLocalizedModule.mk' f m s := by
+      dsimp [z]
+      simpa [IsLocalization.mk'_one] using
+        (IsLocalizedModule.mk'_smul_mk' A f (t : S) m (1 : U) s).symm
+    have hqz : q.asIdeal ∈
+        ((⊥ : Submodule S M).colon ({z} : Set M)).minimalPrimes := by
+      letI : q.asIdeal.IsPrime := q.2
+      have hIleq :
+          (⊥ : Submodule S M).colon ({z} : Set M) ≤ q.asIdeal := by
+        intro r hr
+        have hloc : algebraMap S A r •
+            IsLocalizedModule.mk' f z s = 0 := by
+          rw [← IsLocalization.mk'_one (M := U) A r]
+          rw [IsLocalizedModule.mk'_smul_mk' A f r z (1 : U) s]
+          have hr0 : r • z = 0 := by
+            simpa [Submodule.mem_colon_singleton, Submodule.mem_bot] using hr
+          simpa [hr0]
+        by_contra hrq
+        have hru : IsUnit (algebraMap S A r) :=
+          IsLocalization.map_units (R := S) (S := A) (M := U) ⟨r, hrq⟩
+        have htu : IsUnit (algebraMap S A (t : S)) :=
+          IsLocalization.map_units (R := S) (S := A) (M := U) t
+        apply hm'ne
+        apply (IsUnit.smul_eq_zero htu).mp
+        apply (IsUnit.smul_eq_zero hru).mp
+        simpa [hzloc, mul_comm] using hloc
+      refine ⟨⟨q.2, hIleq⟩, ?_⟩
+      intro Q hQ hQle
+      intro r hr
+      have hrrad : algebraMap S A r ∈ J'.radical := by
+        rw [hmrad'']
+        rw [← Localization.AtPrime.map_eq_maximalIdeal (I := q.asIdeal)]
+        exact Ideal.mem_map_of_mem (algebraMap S A) hr
+      obtain ⟨d, hd⟩ := Ideal.mem_radical_iff.mp hrrad
+      rw [Submodule.mem_colon_singleton] at hd
+      rw [Submodule.mem_bot, ← map_pow] at hd
+      rw [← IsLocalization.mk'_one (M := U) A (r ^ d)] at hd
+      rw [IsLocalizedModule.mk'_smul_mk' A f (r ^ d) m (1 : U) s] at hd
+      obtain ⟨a, ha⟩ :=
+        (IsLocalizedModule.mk'_eq_zero' f ((1 : U) * s)).mp hd
+      have har : (a : S) * r ^ d ∈ Q := hQ.2 (by
+        rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+        change ((a : S) * r ^ d) • z = 0
+        change ((a : S) * r ^ d) • ((t : S) • m) = 0
+        rw [smul_smul]
+        have ha' : (a : S) • (r ^ d • m) = 0 := by
+          change (a : S) • (r ^ d • m) = 0
+          exact ha
+        calc
+          ((a : S) * r ^ d * (t : S)) • m =
+              (t : S) • ((a : S) • (r ^ d • m)) := by
+                simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]
+          _ = 0 := by rw [ha']; simp)
+      have hanot : (a : S) ∉ Q := by
+        intro haQ
+        exact a.2 (hQle haQ)
+      exact hQ.1.mem_of_pow_mem d ((hQ.1.mem_or_mem har).resolve_left hanot)
+    let K : Ideal R :=
+      (⊥ : Submodule R M).colon ({z} : Set M)
+    have hK : K =
+        ((⊥ : Submodule S M).colon ({z} : Set M)).comap φ := by
+      ext r
+      simp only [K, Ideal.mem_comap, Submodule.mem_colon_singleton,
+        Submodule.mem_bot]
+      change r • z = 0 ↔ φ r • z = 0
+      rfl
+    have hKle : K ≤ q.asIdeal.comap φ := by
+      rw [hK]
+      exact Ideal.comap_mono hqz.1.2
+    have hpmin : q.asIdeal.comap φ ∈ K.minimalPrimes := by
+      letI : q.asIdeal.IsPrime := q.2
+      refine ⟨⟨Ideal.comap_isPrime φ q.asIdeal, hKle⟩, ?_⟩
+      intro P hP hPle
+      letI : P.IsPrime := hP.1
+      let I' : Ideal S :=
+        (⊥ : Submodule S M).colon ({z} : Set M)
+      have hKalg : K = I'.comap (algebraMap R S) := by
+        ext r
+        simp only [K, I', Ideal.mem_comap, Submodule.mem_colon_singleton,
+          Submodule.mem_bot]
+        change r • z = 0 ↔ algebraMap R S r • z = 0
+        rfl
+      have hI'comap : I'.comap (algebraMap R S) ≤ P := by
+        rw [← hKalg]
+        exact hP.2
+      obtain ⟨Q, hIQ, hQprime, hQover⟩ :=
+        Ideal.exists_ideal_over_prime_of_isIntegral P I' hI'comap
+      letI : Q.IsPrime := hQprime
+      have hQle : Q.comap (algebraMap R S) ≤
+          q.asIdeal.comap φ := by
+        rw [hQover]
+        exact hPle
+      obtain ⟨Q', hQQ', hQ'prime, hQ'over⟩ :=
+        Ideal.exists_ideal_over_prime_of_isIntegral
+          (q.asIdeal.comap φ) Q hQle
+      letI : Q'.IsPrime := hQ'prime
+      have hQ'mem : Q' ∈ T ∨ Q' = q.asIdeal := by
+        by_cases hQ'eq : Q' = q.asIdeal
+        · exact Or.inr hQ'eq
+        · exact Or.inl ⟨⟨hQ'prime, ⟨hQ'over.symm⟩⟩, hQ'eq⟩
+      rcases hQ'mem with hQ'T | rfl
+      · have hxI' : x ^ n ∈ I' := by
+          simpa [I', Submodule.mem_colon_singleton, Submodule.mem_bot] using hxz
+        have hxQ' : x ^ n ∈ Q' := hQQ' (hIQ hxI')
+        exact False.elim ((hxnot Q' hQ'T)
+          (hQ'prime.mem_of_pow_mem n hxQ'))
+      · have hqleQ : q.asIdeal ≤ Q := hqz.2
+            ⟨hQprime, hIQ⟩ hQQ'
+        have hQeq : Q = q.asIdeal := le_antisymm hQQ' hqleQ
+        have hPeq : q.asIdeal.comap φ = P := by
+          have h := hQover
+          rw [hQeq] at h
+          exact h
+        exact hPeq.le
+    exact ⟨z, by simpa [K] using hpmin⟩
+  · exact weaklyAssociatedPrimes_reverse_functorial φ
 
 /-- Passing from `R` to `R/I` preserves weakly associated primes via the
 canonical injection of spectra. -/

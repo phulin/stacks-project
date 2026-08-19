@@ -93,9 +93,9 @@ def mutuallyDominates
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
   dominates g f ∧ dominates f g
 
-/-- Tensor-kernel inclusion only needs to be tested on finitely presented
-modules. -/
-private structure GeneralFilteredColimit
+/-- A filtered presentation of a module by finitely presented modules, with
+the colimit also witnessed after forgetting to types. -/
+structure FinitelyPresentedFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) where
   index : Type (max u w)
   [indexCategory : Category.{max u w} index]
@@ -107,19 +107,21 @@ private structure GeneralFilteredColimit
       { pt := N, ι := ι })
   finitelyPresented : ∀ i, Module.FinitePresentation R (diag.obj i)
 
-private local instance generalFilteredColimitIndexCategory
+instance finitelyPresentedFilteredColimitIndexCategory
     {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
-    (C : GeneralFilteredColimit N) : Category.{max u w} C.index :=
+    (C : FinitelyPresentedFilteredColimit N) : Category.{max u w} C.index :=
   C.indexCategory
 
-private local instance generalFilteredColimitIndexFiltered
+instance finitelyPresentedFilteredColimitIndexFiltered
     {R : Type u} [CommRing R] {N : ModuleCat.{max u w} R}
-    (C : GeneralFilteredColimit N) : IsFiltered C.index :=
+    (C : FinitelyPresentedFilteredColimit N) : IsFiltered C.index :=
   C.indexFiltered
 
-private theorem exists_generalFilteredColimit
+/-- Every module is a filtered colimit of finitely presented modules in a
+universe containing both the ring and the module. -/
+theorem exists_finitelyPresentedFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{max u w} R) :
-    Nonempty (GeneralFilteredColimit N) := by
+    Nonempty (FinitelyPresentedFilteredColimit N) := by
   classical
   let M := (N : Type (max u w))
   let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
@@ -344,9 +346,11 @@ private theorem exists_generalFilteredColimit
       · exact Submodule.mkQ_surjective _
       · rw [Submodule.ker_mkQ]
         exact Submodule.fg_span a.2.1.finite_toSet }⟩
-private lemma tensor_rep
+/-- Every tensor with the colimit module is represented at one stage of a
+finitely presented filtered-colimit presentation. -/
+lemma finitelyPresentedFilteredColimit_tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
-    {Q : ModuleCat.{max u w} R} (C : GeneralFilteredColimit Q) :
+    {Q : ModuleCat.{max u w} R} (C : FinitelyPresentedFilteredColimit Q) :
     ∀ x : TensorProduct R P (Q : Type (max u w)),
         ∃ (i : C.index) (y : TensorProduct R P
           (C.diag.obj i : Type (max u w))),
@@ -399,9 +403,11 @@ private lemma tensor_rep
       rw [← ha, ← hb]
       simp only [LinearMap.comp_apply]
 
-private lemma eventually_zero
+/-- An element represented at a stage and vanishing in the filtered colimit
+already vanishes after a transition to some later stage. -/
+lemma finitelyPresentedFilteredColimit_eventually_zero
     {R : Type u} [CommRing R] {Q : ModuleCat.{max u w} R}
-    (C : GeneralFilteredColimit Q) {i : C.index} (x : C.diag.obj i) :
+    (C : FinitelyPresentedFilteredColimit Q) {i : C.index} (x : C.diag.obj i) :
     (C.ι.app i).hom x = 0 →
       ∃ (j : C.index) (h : i ⟶ j),
         (C.diag.map h).hom x = 0 := by

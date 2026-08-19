@@ -260,18 +260,36 @@ noncomputable def simplicialSetProduct_hom_equiv
           Sigma.ι (fun _ : U _⦋n⦌ => V.obj (op (SimplexCategory.mk n))) u ≫
             γ.app (op (SimplexCategory.mk n)),
         by
-          sorry⟩
+          intro m n φ u
+          simpa [Category.assoc, simplicialSetProductOf] using
+            congrArg
+              (fun k =>
+                let _ := h n
+                Sigma.ι (fun _ : U _⦋n⦌ => V.obj (op (SimplexCategory.mk n))) u ≫ k)
+              (γ.naturality φ.op)⟩
     invFun := fun f =>
       { app := fun X =>
           let _ : HasCoproduct (fun _ : U.obj X => V.obj X) :=
             degreewiseCoproductInstanceAt h X
           Sigma.desc (fun u => f.1 X.unop.len u)
         naturality := by
-          sorry }
+          intro X Y g
+          apply Sigma.hom_ext
+          intro u
+          simpa [simplicialSetProductOf, Category.assoc] using
+            f.property g.unop u }
     left_inv := by
-      sorry
+      intro γ
+      apply NatTrans.ext
+      funext X
+      apply Sigma.hom_ext
+      intro u
+      simp [simplicialSetProductOf, Category.assoc]
     right_inv := by
-      sorry }
+      intro f
+      apply Subtype.ext
+      funext n u
+      simp [simplicialSetProductOf, Category.assoc] }
 
 theorem exists_simplicialSetProduct_hom_equiv
     {C : Type u} [Category.{v} C]

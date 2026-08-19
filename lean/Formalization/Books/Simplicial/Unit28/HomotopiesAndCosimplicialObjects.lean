@@ -566,7 +566,7 @@ theorem compareHomotopies
         rw [hindex]
         dsimp [hh]
         rw [hinv n i, hinv (n + 1) i.castSucc]
-        simp [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
+        simpa [SimplicialObject.σ, oppositeCosimplicialObject, op_comp] using
           congrArg (fun q => q.unop) (H.degeneracy_of_le i j hij)
     have hnat : ∀ {n m : ℕ} (f : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
         (α : (interval : SSet.{0}) _⦋m⦌),
@@ -752,7 +752,11 @@ theorem map_homotopic
     Homotopic
       (((CosimplicialObject.whiskering C D).obj F).map a)
       (((CosimplicialObject.whiskering C D).obj F).map b) := by
-  sorry
+  apply eqvGen_map
+    (fun q : U ⟶ V => ((CosimplicialObject.whiskering C D).obj F).map q)
+    (a := a) (b := b) _ H
+  rintro q r ⟨K⟩
+  exact ⟨mapDegreewiseHomotopy K F⟩
 
 /- The componentwise construction also gives the original cylinder notion
    whenever both source and target categories have finite products. -/
@@ -770,36 +774,16 @@ theorem map_cylinderHomotopy
 
 def contravariantSimplicialObject
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
-    (F : C ⥤ Dᵒᵖ) (U : CosimplicialObject C) : SimplicialObject D where
-  obj X := unop (F.obj (U.obj X.unop))
-  map f := (F.map (U.map f.unop)).unop
-  map_id X := by
-    change
-      (F.map (U.map (𝟙 X.unop))).unop =
-        𝟙 (unop (F.obj (U.obj X.unop)))
-    rw [U.map_id, F.map_id]
-    rfl
-  map_comp := by
-    intro X Y Z f g
-    change
-      (F.map (U.map (g.unop ≫ f.unop))).unop =
-        (F.map (U.map f.unop)).unop ≫
-          (F.map (U.map g.unop)).unop
-    rw [U.map_comp, F.map_comp, unop_comp]
+    (F : C ⥤ Dᵒᵖ) (U : CosimplicialObject C) : SimplicialObject D :=
+  ((SimplicialObject.whiskering Cᵒᵖ D).obj F.leftOp).obj
+    (oppositeCosimplicialObject U)
 
 def contravariantSimplicialMap
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     {U V : CosimplicialObject C} (F : C ⥤ Dᵒᵖ) (a : U ⟶ V) :
-    contravariantSimplicialObject F V ⟶ contravariantSimplicialObject F U where
-  app X := (F.map (a.app X.unop)).unop
-  naturality X Y f := by
-    change
-      (F.map (V.map f.unop)).unop ≫ (F.map (a.app Y.unop)).unop =
-        (F.map (a.app X.unop)).unop ≫ (F.map (U.map f.unop)).unop
-    have h := congrArg F.map (a.naturality f.unop)
-    simpa only [Functor.map_comp, unop_comp] using
-      congrArg (fun k => k.unop) h.symm
-
+    contravariantSimplicialObject F V ⟶ contravariantSimplicialObject F U :=
+  ((SimplicialObject.whiskering Cᵒᵖ D).obj F.leftOp).map
+    (oppositeCosimplicialMap a)
 def contravariantCosimplicialObject
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     (F : C ⥤ Dᵒᵖ) (U : SimplicialObject C) : CosimplicialObject D where
@@ -842,6 +826,22 @@ lemma functorialHomotopy
       (((SimplicialObject.whiskering D D').obj F).map b) := by
   exact Formalization.Books.Simplicial.Unit26.map_homotopic H F
 
+private theorem mapSimplicialHomotopic
+    {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : Formalization.Books.Simplicial.Unit26.Homotopic a b)
+    (F : CategoryTheory.Functor C D) :
+    Formalization.Books.Simplicial.Unit26.Homotopic
+      (((SimplicialObject.whiskering C D).obj F).map a)
+      (((SimplicialObject.whiskering C D).obj F).map b) := by
+  apply eqvGen_map
+    (fun q : U ⟶ V => ((SimplicialObject.whiskering C D).obj F).map q)
+    (a := a) (b := b) _ H
+  rintro q r ⟨K⟩
+  exact ⟨Formalization.Books.Simplicial.Unit26.degreewiseHomotopyToHomotopy
+    (Formalization.Books.Simplicial.Unit26.mapDegreewiseHomotopy
+      (Formalization.Books.Simplicial.Unit26.homotopyToDegreewiseHomotopy K) F)⟩
+
 theorem functorialCosimplicialHomotopy
     {C : Type u} [Category.{v} C] {C' : Type u'} [Category.{v'} C']
     {U V : CosimplicialObject C} {a b : U ⟶ V} (H : Homotopic a b)
@@ -858,7 +858,17 @@ theorem functorialContravariantSimplicialHomotopy
     Homotopic
       (contravariantCosimplicialMap F a)
       (contravariantCosimplicialMap F b) := by
-  sorry
+  apply eqvGen_map (fun q : U ⟶ V => contravariantCosimplicialMap F q)
+    (a := a) (b := b) _ H
+  rintro q r ⟨K⟩
+  let KD := Formalization.Books.Simplicial.Unit26.homotopyToDegreewiseHomotopy K
+  let KF := Formalization.Books.Simplicial.Unit26.mapDegreewiseHomotopy KD F
+  have Kop : Nonempty (Formalization.Books.Simplicial.Unit26.DegreewiseHomotopy
+      (oppositeCosimplicialMap (contravariantCosimplicialMap F q))
+      (oppositeCosimplicialMap (contravariantCosimplicialMap F r))) := by
+    simpa [contravariantCosimplicialMap, contravariantCosimplicialObject,
+      oppositeCosimplicialMap, oppositeCosimplicialObject, KF, KD] using ⟨KF⟩
+  exact (compareHomotopies).2 Kop
 
 theorem functorialContravariantCosimplicialHomotopy
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
@@ -867,7 +877,16 @@ theorem functorialContravariantCosimplicialHomotopy
     Formalization.Books.Simplicial.Unit26.Homotopic
       (contravariantSimplicialMap F a)
       (contravariantSimplicialMap F b) := by
-  sorry
+  apply eqvGen_map (fun q : U ⟶ V => contravariantSimplicialMap F q)
+    (a := a) (b := b) _ H
+  rintro q r ⟨K⟩
+  rcases (compareHomotopies (a := q) (b := r)).1 ⟨K⟩ with ⟨Kop⟩
+  let KF := Formalization.Books.Simplicial.Unit26.mapDegreewiseHomotopy Kop F.leftOp
+  have Kcontra : Formalization.Books.Simplicial.Unit26.DegreewiseHomotopy
+      (contravariantSimplicialMap F q) (contravariantSimplicialMap F r) := by
+    simpa [contravariantSimplicialMap, contravariantSimplicialObject,
+      oppositeCosimplicialMap, oppositeCosimplicialObject, KF] using KF
+  exact ⟨Formalization.Books.Simplicial.Unit26.degreewiseHomotopyToHomotopy Kcontra⟩
 
 /-! ## Homotopy equivalences -/
 

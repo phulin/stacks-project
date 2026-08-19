@@ -2457,7 +2457,6 @@ theorem kGroups_prod
       Nonempty (KPrimeZero (R₁ × R₂) ≃+
         (KPrimeZero R₁ × KPrimeZero R₂)) := by
   sorry
-
 private theorem kPrimeZeroClass_eq_length_smul_artinian_local
     (R : Type u) [CommRing R] [IsArtinianRing R] [IsLocalRing R]
     {M : Type u} [AddCommGroup M] [Module R M] [Module.Finite R M] :

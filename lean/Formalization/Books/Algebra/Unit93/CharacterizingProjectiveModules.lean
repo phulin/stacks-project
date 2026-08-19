@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
 import Formalization.Books.Algebra.Unit92.CountablyGeneratedMittagLeffler
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.RingTheory.Noetherian.Basic
@@ -18,7 +19,7 @@ open Formalization.Books.Algebra.Unit84
 open Formalization.Books.Algebra.Unit88
 open scoped DirectSum TensorProduct
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -117,7 +118,7 @@ theorem projectivity_characterization
 /-- A universally injective map into a flat Mittag--Leffler module descends
 projectivity to a countable direct sum of modules. -/
 theorem projective_of_universallyInjective_of_directSumOfCountablyGenerated
-    {R : Type u} {M N : Type v} [CommRing R]
+    {R : Type u} {M : Type v} {N : Type w} [CommRing R]
     [AddCommGroup M] [Module R M]
     [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) (hf : universallyInjective f)
@@ -134,7 +135,7 @@ theorem projective_of_universallyInjective_to_mvPowerSeries
     {R : Type u} {M : Type v} [CommRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M]
     (hM : IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M))
-    {n : ℕ} (f : M →ₗ[R] MvPowerSeries (Fin n) R)
+    {n : ℕ} (hn : 0 < n) (f : M →ₗ[R] MvPowerSeries (Fin n) R)
     (hf : universallyInjective f) :
     Module.Projective R M := by
   sorry

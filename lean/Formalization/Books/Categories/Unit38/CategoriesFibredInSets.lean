@@ -1300,7 +1300,7 @@ theorem setPresheaf_fibre_is_discrete
   rcases Y with ⟨⟨Y, y⟩, hY⟩
   cases hX
   cases hY
-  letI : (setPresheafProjection F).IsHomLift (𝟙 _) f.val := f.2
+  let : (setPresheafProjection F).IsHomLift (𝟙 _) f.val := f.2
   have hbase := CategoryTheory.IsHomLift.eq_of_isHomLift
     (setPresheafProjection F) (𝟙 _) f.val
   change (𝟙 _) = f.val.base at hbase

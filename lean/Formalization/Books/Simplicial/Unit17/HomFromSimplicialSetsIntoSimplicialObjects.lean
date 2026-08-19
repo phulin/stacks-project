@@ -3,6 +3,7 @@ import Formalization.Books.Simplicial.Unit13.ProductsWithSimplicialSets
 import Mathlib.AlgebraicTopology.SimplicialSet.Dimension
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.CategoryTheory.Yoneda
+import Mathlib.Data.Countable.Basic
 
 /-!
 # Simplicial Methods, Chapter 17: Hom from simplicial sets into simplicial objects
@@ -55,7 +56,7 @@ noncomputable def homFunctor
 
 theorem homFunctor_obj
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
-    (U : SSet.{w}) (V : SimplicialObject C)
+    (U : SSet.{w})
     (hU : Unit13.FiniteNonemptySimplicialSet U)
     (W : SimplicialObject C) :
     (homFunctor U V hU).obj (op W) =
@@ -80,6 +81,305 @@ theorem homZeroFunctor_obj
       (Unit13.simplicialSetProduct U
         ((SimplicialObject.const C).obj X) hU ⟶ V) := by
   rfl
+
+private noncomputable def simplicialSetElementsDiagram
+    {C : Type u} [Category.{v} C]
+    (U : SSet.{w}) (V : SimplicialObject C) : U.Elements ⥤ C where
+  obj e := V.obj e.1
+  map f := V.map f.1
+  map_id := by
+    intro e
+    simp
+  map_comp := by
+    intro e₁ e₂ e₃ f g
+    simp
+
+private theorem hasLimit_simplicialSetElementsDiagram
+    {C : Type u} [Category.{v} C] [HasCountableLimits C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
+    HasLimit (simplicialSetElementsDiagram U V) := by
+  letI : ∀ X : SimplexCategoryᵒᵖ, Finite (U.obj X) := by
+    intro X
+    simpa only [SimplexCategory.mk_len] using (hU X.unop.len).1
+  letI : Countable SimplexCategory :=
+    Function.Injective.countable (f := SimplexCategory.len) (by
+      intro X Y h
+      cases X
+      cases Y
+      cases h
+      rfl)
+  letI : Countable SimplexCategoryᵒᵖ :=
+    Countable.of_equiv SimplexCategory Opposite.equivToOpposite
+  letI : CountableCategory U.Elements := by
+    constructor
+    · change Countable (Σ X : SimplexCategoryᵒᵖ, U.obj X)
+      infer_instance
+    · intro e e'
+      change Countable {f : e.1 ⟶ e'.1 // _}
+      letI : Countable (e.1 ⟶ e'.1) :=
+        Countable.of_equiv _ (opEquiv e.1 e'.1).symm
+      infer_instance
+  infer_instance
+
+private theorem simplicialSetProduct_injection_map
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (X : C) (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {Z Z' : SimplexCategoryᵒᵖ} (f : Z ⟶ Z') (u : U.obj Z) :
+    (let h := Unit13.degreewiseCoproductInstance U
+      ((SimplicialObject.const C).obj X) hU
+     let _ := Unit13.degreewiseCoproductInstanceAt h Z
+     let _ := Unit13.degreewiseCoproductInstanceAt h Z'
+     Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+       (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map f) =
+      (let h := Unit13.degreewiseCoproductInstance U
+        ((SimplicialObject.const C).obj X) hU
+       let _ := Unit13.degreewiseCoproductInstanceAt h Z'
+       Sigma.ι (fun _ : U.obj Z' => ((SimplicialObject.const C).obj X).obj Z')
+         (U.map f u)) := by
+  dsimp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+  rw [Sigma.ι_desc]
+  have hi := Sigma.ι_desc
+    (fun u : U.obj Z => f ≫
+      Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) u
+  simpa [Category.assoc] using congrArg (fun k => k ≫ γ.app Z) hi
+
+private noncomputable def homToElementsCone
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) {X : C}
+    (γ : Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU ⟶ V) :
+    ((Functor.const U.Elements).obj X ⟶ simplicialSetElementsDiagram U V) := by
+  let h : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+  exact
+    { app := fun e =>
+        let _ := Unit13.degreewiseCoproductInstanceAt h e.1
+        Sigma.ι (fun _ : U.obj e.1 => ((SimplicialObject.const C).obj X).obj e.1) e.2 ≫
+          γ.app e.1
+      naturality := by
+        intro e e' f
+        rcases e with ⟨Z, u⟩
+        rcases e' with ⟨Z', u'⟩
+        let fbase : Z ⟶ Z' := f.1
+        have hf : U.map fbase u = u' := f.2
+        let i :
+            X ⟶ (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).obj Z := by
+          dsimp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+          exact Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u
+        let i' :
+            X ⟶ (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).obj Z' := by
+          dsimp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+          exact Sigma.ι (fun _ : U.obj Z' => ((SimplicialObject.const C).obj X).obj Z') u'
+        change 𝟙 X ≫ (i' ≫ γ.app Z') = (i ≫ γ.app Z) ≫ V.map fbase
+        simp only [Category.id_comp]
+        have hi : i ≫
+              (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase = i' := by
+          dsimp [i, i', Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+          simp [Category.assoc, hf]
+        calc
+          i' ≫ γ.app Z' = (i ≫
+              (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase) ≫
+              γ.app Z' := by rw [hi]
+          _ = i ≫ ((Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase ≫
+              γ.app Z') := by simp only [Category.assoc]
+          _ = i ≫ (γ.app Z ≫ V.map fbase) := by rw [γ.naturality]
+          _ = (i ≫ γ.app Z) ≫ V.map fbase := by simp only [Category.assoc] }
+
+private noncomputable def elementsConeToHom
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) {X : C}
+    (α : (Functor.const U.Elements).obj X ⟶ simplicialSetElementsDiagram U V) :
+    Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU ⟶ V := by
+  let h : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+  exact
+    { app := fun Z =>
+        let _ := Unit13.degreewiseCoproductInstanceAt h Z
+        let a : ∀ u : U.obj Z, X ⟶ V.obj Z := fun u =>
+          show X ⟶ V.obj Z from α.app (Functor.elementsMk U Z u)
+        Sigma.desc a
+      naturality := by
+        intro Z Z' f
+        let _ := Unit13.degreewiseCoproductInstanceAt h Z
+        let _ := Unit13.degreewiseCoproductInstanceAt h Z'
+        apply Sigma.hom_ext
+        intro u
+        let fbase : Z ⟶ Z' := f
+        let aZ : ∀ u : U.obj Z, X ⟶ V.obj Z := fun u => by
+          change X ⟶ V.obj Z
+          exact α.app (Functor.elementsMk U Z u)
+        let aZ' : ∀ u : U.obj Z', X ⟶ V.obj Z' := fun u => by
+          change X ⟶ V.obj Z'
+          exact α.app (Functor.elementsMk U Z' u)
+        let i :
+            X ⟶ (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).obj Z := by
+          dsimp [Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+          exact Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u
+        change i ≫
+            (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU).map fbase ≫
+              Sigma.desc aZ' = i ≫ Sigma.desc aZ ≫ V.map fbase
+        dsimp [i, Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+        simp only [Sigma.ι_desc, Category.id_comp, Category.assoc]
+        simpa [aZ, aZ', simplicialSetElementsDiagram, Category.assoc] using
+            congrArg (fun k => (𝟙 X) ≫ k)
+            (α.naturality (CategoryOfElements.homMk
+              (Functor.elementsMk U Z u)
+              (Functor.elementsMk U Z' (U.map fbase u)) fbase rfl))
+          }
+
+private noncomputable def elementsConeHomEquiv
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U) {X : C} :
+    ((Functor.const U.Elements).obj X ⟶ simplicialSetElementsDiagram U V) ≃
+      (Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X) hU ⟶ V) :=
+  { toFun := elementsConeToHom U V hU
+    invFun := homToElementsCone U V hU
+    left_inv := by
+      intro α
+      ext e
+      change (Σ Z : SimplexCategoryᵒᵖ, U.obj Z) at e
+      rcases e with ⟨Z, u⟩
+      let h : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+        Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+      let _ := Unit13.degreewiseCoproductInstanceAt h Z
+      dsimp only [elementsConeToHom, homToElementsCone]
+      let a : ∀ u : U.obj Z, ((SimplicialObject.const C).obj X).obj Z ⟶ V.obj Z := fun u => by
+        change ((SimplicialObject.const C).obj X).obj Z ⟶ V.obj Z
+        exact α.app (Functor.elementsMk U Z u)
+      change Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        Sigma.desc a = a u
+      exact Sigma.ι_desc a u
+    right_inv := by
+      intro γ
+      ext Z
+      let h : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+        Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+      let _ := Unit13.degreewiseCoproductInstanceAt h Z
+      apply Sigma.hom_ext
+      intro u
+      dsimp only [elementsConeToHom, homToElementsCone]
+      let b : ∀ u : U.obj Z, ((SimplicialObject.const C).obj X).obj Z ⟶ V.obj Z := fun u =>
+        Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫ γ.app Z
+      change Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        Sigma.desc b = b u
+      exact Sigma.ι_desc b u }
+
+private theorem homZero_map_apply
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {X X' : C} (f : X ⟶ X')
+    (γ : Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X') hU ⟶ V) :
+    (homZeroFunctor U V hU).map f.op γ =
+      (productWithSimplicialSetBy U hU).map
+          ((SimplicialObject.const C).map f) ≫ γ := by
+  rfl
+
+private theorem productWithSimplicialSet_injection_map_second
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w})
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {X X' : C} (f : X ⟶ X') {Z : SimplexCategoryᵒᵖ} (u : U.obj Z) :
+    (let hX := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+     let hX' := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+     let _ := Unit13.degreewiseCoproductInstanceAt hX Z
+     let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+     Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+       ((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z) =
+      (let hX' := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+       let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+       f ≫ Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) := by
+  let hX : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+  let hX' : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X') :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+  let _ := Unit13.degreewiseCoproductInstanceAt hX Z
+  let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+  change
+    Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+      Sigma.desc (fun u => f ≫
+        Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) =
+    f ≫ Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u
+  exact Sigma.ι_desc _ _
+
+private theorem productWithSimplicialSet_injection_map_second_comp
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {X X' : C} (f : X ⟶ X') {Z : SimplexCategoryᵒᵖ} (u : U.obj Z)
+    (γ : Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X') hU ⟶ V) :
+    (let hX := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+     let hX' := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+     let _ := Unit13.degreewiseCoproductInstanceAt hX Z
+     let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+     Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+       (((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z ≫
+         γ.app Z)) =
+      (let hX' := Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+       let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+       f ≫ (Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u ≫
+         γ.app Z)) := by
+  let hX : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+  let hX' : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X') :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+  let _ := Unit13.degreewiseCoproductInstanceAt hX Z
+  let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+  change
+    Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        (((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z ≫
+          γ.app Z) =
+      f ≫ (Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u ≫
+        γ.app Z)
+  calc
+    _ = (Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        ((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z) ≫
+        γ.app Z := (Category.assoc _ _ _).symm
+    _ = (f ≫ Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) ≫
+        γ.app Z := by
+      exact congrArg (fun k => k ≫ γ.app Z)
+        (productWithSimplicialSet_injection_map_second U hU f u)
+    _ = _ := Category.assoc _ _ _
+
+private theorem homToElementsCone_map
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SSet.{w}) (V : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {X X' : C} (f : X ⟶ X')
+    (γ : Unit13.simplicialSetProduct U ((SimplicialObject.const C).obj X') hU ⟶ V) :
+    homToElementsCone U V hU
+        ((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f) ≫ γ) =
+      (Functor.const U.Elements).map f ≫ homToElementsCone U V hU γ := by
+  ext e
+  change (Σ Z : SimplexCategoryᵒᵖ, U.obj Z) at e
+  rcases e with ⟨Z, u⟩
+  have he : Functor.elementsMk U Z u = ⟨Z, u⟩ := by rfl
+  rw [← he]
+  simp only [NatTrans.comp_app]
+  let hX : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X) :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X) hU
+  let hX' : Unit13.HasDegreewiseCoproducts U ((SimplicialObject.const C).obj X') :=
+    Unit13.degreewiseCoproductInstance U ((SimplicialObject.const C).obj X') hU
+  let _ := Unit13.degreewiseCoproductInstanceAt hX Z
+  let _ := Unit13.degreewiseCoproductInstanceAt hX' Z
+  change
+    Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        (((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z ≫
+          γ.app Z) =
+      f ≫ (Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u ≫
+        γ.app Z)
+  calc
+    _ = (Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X).obj Z) u ≫
+        ((productWithSimplicialSetBy U hU).map ((SimplicialObject.const C).map f)).app Z) ≫
+        γ.app Z := (Category.assoc _ _ _).symm
+    _ = (f ≫ Sigma.ι (fun _ : U.obj Z => ((SimplicialObject.const C).obj X').obj Z) u) ≫
+        γ.app Z := by
+      exact congrArg (fun k => k ≫ γ.app Z)
+        (productWithSimplicialSet_injection_map_second U hU f u)
+    _ = _ := Category.assoc _ _ _
 
 /-
 The first existence lemma in the source uses countable limits.  The finite

@@ -4,6 +4,7 @@ import Mathlib.LinearAlgebra.Isomorphisms
 import Mathlib.LinearAlgebra.TensorProduct.Tower
 import Mathlib.RingTheory.Filtration
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.Equalizer
 import Formalization.Books.Algebra.Unit150.FormallyEtaleMaps
 
 /-!
@@ -93,7 +94,144 @@ theorem approximate_complex_preimage
     ∀ n ≥ c,
       Submodule.comap g' (I ^ n • (⊤ : Submodule A N)) ≤
         LinearMap.range f' ⊔ I ^ (n - c) • (⊤ : Submodule A M) := by
-  sorry
+  have hdiff_g (x : M) : g' x - g x ∈ I ^ (c + 1) • (⊤ : Submodule A N) := by
+    have h := congrArg (fun k : M →ₗ[A] N ⧸ (I ^ (c + 1) • (⊤ : Submodule A N)) => k x)
+      (show (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g' =
+        (I ^ (c + 1) • (⊤ : Submodule A N)).mkQ.comp g from hg)
+    exact (Submodule.Quotient.eq _).mp h
+  have hdiff_f (x : L) : f' x - f x ∈ I ^ (c + 1) • (⊤ : Submodule A M) := by
+    have h := congrArg (fun k : L →ₗ[A] M ⧸ (I ^ (c + 1) • (⊤ : Submodule A M)) => k x)
+      (show (I ^ (c + 1) • (⊤ : Submodule A M)).mkQ.comp f' =
+        (I ^ (c + 1) • (⊤ : Submodule A M)).mkQ.comp f from hf)
+    exact (Submodule.Quotient.eq _).mp h
+  have hdiff_pow (r : ℕ) (a : M) (ha : a ∈ I ^ r • (⊤ : Submodule A M)) :
+      g' a - g a ∈ I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+    refine Submodule.smul_induction_on ha ?_ ?_
+    · intro s hs x hx
+      rw [map_smul, map_smul, ← smul_sub]
+      have hmem : s • (g' x - g x) ∈ I ^ r • (I ^ (c + 1) • (⊤ : Submodule A N)) :=
+        Submodule.smul_mem_smul hs (hdiff_g x)
+      have hpow : I ^ r • (I ^ (c + 1) • (⊤ : Submodule A N)) =
+          I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+        rw [← Submodule.smul_assoc]
+        have hprod : I ^ r • I ^ (c + 1) = I ^ (r + c + 1) := by
+          change I ^ r * I ^ (c + 1) = I ^ (r + c + 1)
+          exact (I.pow_add (m := r) (n := c + 1) (by omega)).symm
+        rw [hprod]
+      exact hpow ▸ hmem
+    · intro x y hx hy
+      rw [map_add, map_add]
+      convert add_mem hx hy using 1 ; abel
+  have hdiff_f_pow (r : ℕ) (a : L) (ha : a ∈ I ^ r • (⊤ : Submodule A L)) :
+      f' a - f a ∈ I ^ (r + c + 1) • (⊤ : Submodule A M) := by
+    refine Submodule.smul_induction_on ha ?_ ?_
+    · intro s hs x hx
+      rw [map_smul, map_smul, ← smul_sub]
+      have hmem : s • (f' x - f x) ∈ I ^ r • (I ^ (c + 1) • (⊤ : Submodule A M)) :=
+        Submodule.smul_mem_smul hs (hdiff_f x)
+      have hpow : I ^ r • (I ^ (c + 1) • (⊤ : Submodule A M)) =
+          I ^ (r + c + 1) • (⊤ : Submodule A M) := by
+        rw [← Submodule.smul_assoc]
+        have hprod : I ^ r • I ^ (c + 1) = I ^ (r + c + 1) := by
+          change I ^ r * I ^ (c + 1) = I ^ (r + c + 1)
+          exact (I.pow_add (m := r) (n := c + 1) (by omega)).symm
+        rw [hprod]
+      exact hpow ▸ hmem
+    · intro x y hx hy
+      rw [map_add, map_add]
+      convert add_mem hx hy using 1 ; abel
+  intro n hn
+  let k := n - c
+  have hstep : ∀ q r : ℕ, q + r = k → ∀ a : M,
+      a ∈ I ^ r • (⊤ : Submodule A M) →
+      g' a ∈ I ^ n • (⊤ : Submodule A N) →
+      a ∈ LinearMap.range f' ⊔ I ^ k • (⊤ : Submodule A M) := by
+    intro q
+    induction q with
+    | zero =>
+        intro r hr a haP haG
+        have hrk : r = k := by omega
+        exact (show I ^ k • (⊤ : Submodule A M) ≤
+            LinearMap.range f' ⊔ I ^ k • (⊤ : Submodule A M) from le_sup_right) (hrk ▸ haP)
+    | succ q ih =>
+        intro r hr a haP haG
+        have hrk : r < k := by omega
+        have hrpow : I ^ (r + 1) • (⊤ : Submodule A M) ≤
+            I ^ r • (⊤ : Submodule A M) := by
+          exact Submodule.smul_mono
+            (Ideal.pow_le_pow_right (show r ≤ r + 1 by omega)) le_rfl
+        have hdiff : g' a - g a ∈ I ^ (r + c + 1) • (⊤ : Submodule A N) :=
+          hdiff_pow r a haP
+        have hpow : I ^ n • (⊤ : Submodule A N) ≤
+            I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+          exact Submodule.smul_mono
+            (Ideal.pow_le_pow_right (by omega)) le_rfl
+        have hga : g a ∈ I ^ (r + c + 1) • (⊤ : Submodule A N) := by
+          have hsub := sub_mem (hpow haG) hdiff
+          convert hsub using 1 ; abel
+        have har := hc_g (r + c + 1) (by omega)
+        have hgm : g a ∈ LinearMap.range g ⊓ I ^ (r + c + 1) •
+            (⊤ : Submodule A N) := ⟨⟨a, rfl⟩, hga⟩
+        rcases har hgm with ⟨y, hy, hgy⟩
+        have hy' : y ∈ I ^ (r + 1) • (⊤ : Submodule A M) := by
+          have he : r + c + 1 - c = r + 1 := by omega
+          simpa [he] using hy
+        have hker : a - y ∈ LinearMap.ker g := by
+          rw [LinearMap.mem_ker]
+          rw [map_sub, hgy, sub_self]
+        have hrange : a - y ∈ LinearMap.range f := by
+          rw [← hS.linearMap_ker_eq]
+          exact hker
+        rcases hrange with ⟨b₀, hb₀⟩
+        have hfbmem : f b₀ ∈ I ^ r • (⊤ : Submodule A M) := by
+          have hmem : a - y ∈ I ^ r • (⊤ : Submodule A M) :=
+            sub_mem haP (hrpow hy')
+          simpa [hb₀] using hmem
+        have hgood : ∃ b : L, f b = a - y ∧
+            f' b - f b ∈ I ^ (r + 1) • (⊤ : Submodule A M) := by
+          by_cases hrc : c ≤ r
+          · have harf := hc_f r hrc
+            have hfm : f b₀ ∈ LinearMap.range f ⊓ I ^ r •
+                (⊤ : Submodule A M) := ⟨⟨b₀, rfl⟩, by simpa [hb₀] using hfbmem⟩
+            rcases harf hfm with ⟨b, hb, hfb⟩
+            refine ⟨b, hfb.trans hb₀, ?_⟩
+            have hfd := hdiff_f_pow (r - c) b hb
+            have he : r - c + c + 1 = r + 1 := by
+              rw [Nat.sub_add_cancel hrc]
+            simpa [he] using hfd
+          · refine ⟨b₀, hb₀, ?_⟩
+            exact (Submodule.smul_mono
+              (Ideal.pow_le_pow_right (by omega)) le_rfl) (hdiff_f b₀)
+        rcases hgood with ⟨b, hfb, hfdiff⟩
+        have ha2 : a - f' b ∈ I ^ (r + 1) • (⊤ : Submodule A M) := by
+          have htmp := sub_mem hy' hfdiff
+          have haeq : a = f b + y := by
+            rw [hfb]
+            abel
+          rw [haeq]
+          convert htmp using 1 ; abel
+        have hga2 : g' (a - f' b) ∈ I ^ n • (⊤ : Submodule A N) := by
+          have hzero : g' (f' b) = 0 := by
+            have h := congrArg (fun k : L →ₗ[A] N => k b) hS'
+            simpa using h
+          have hga2eq : g' (a - f' b) = g' a := by
+            rw [map_sub, hzero, sub_zero]
+          rw [hga2eq]
+          exact haG
+        have hi := ih (r + 1) (by omega) (a - f' b) ha2 hga2
+        have hfb' : f' b ∈ LinearMap.range f' := ⟨b, rfl⟩
+        have heq : a = f' b + (a - f' b) := by abel
+        rw [heq]
+        have hfbSup : f' b ∈ LinearMap.range f' ⊔ I ^ k •
+            (⊤ : Submodule A M) :=
+          (show LinearMap.range f' ≤ LinearMap.range f' ⊔ I ^ k •
+            (⊤ : Submodule A M) from le_sup_left) hfb'
+        exact add_mem hfbSup hi
+  intro a ha
+  have ha0 : a ∈ I ^ 0 • (⊤ : Submodule A M) := by
+    rw [Submodule.pow_zero, Ideal.one_eq_top, Submodule.top_smul]
+    exact Submodule.mem_top
+  exact hstep k 0 (by omega) a ha0 ha
 
 /-- The approximate-complex lemma.  The source's assertion that `S` is a
 complex is implied by its stronger exactness hypothesis; the complex
@@ -720,9 +858,34 @@ theorem flat_baseChange_preimage
     (I : Ideal A) (f : M →ₗ[A] N) (n : ℕ) :
     Submodule.comap (LinearMap.baseChange B f)
         ((I.map (algebraMap A B)) ^ n •
-          (⊤ : Submodule B (B ⊗[A] N))) =
+      (⊤ : Submodule B (B ⊗[A] N))) =
       (Submodule.comap f (I ^ n • (⊤ : Submodule A N))).baseChange B := by
-  sorry
+  rw [← submodule_baseChange_ideal_pow I n]
+  let Q : Submodule A N := I ^ n • (⊤ : Submodule A N)
+  let P : Submodule A M := Submodule.comap f Q
+  change Submodule.comap (LinearMap.baseChange B f) (Q.baseChange B) = P.baseChange B
+  have hkerQ : LinearMap.ker (Q.mkQ.baseChange B) = Q.baseChange B := by
+    change LinearMap.ker (TensorProduct.AlgebraTensorModule.lTensor B B Q.mkQ) =
+      LinearMap.range (TensorProduct.AlgebraTensorModule.lTensor B B Q.subtype)
+    have h := Module.Flat.ker_lTensor_eq B B Q.mkQ
+    rw [Submodule.ker_mkQ] at h
+    exact h
+  ext x
+  change LinearMap.baseChange B f x ∈ Q.baseChange B ↔ x ∈ P.baseChange B
+  rw [← hkerQ]
+  change (Q.mkQ.baseChange B) (LinearMap.baseChange B f x) = 0 ↔ _
+  rw [← LinearMap.comp_apply, ← LinearMap.baseChange_comp]
+  have hP : LinearMap.ker (Q.mkQ.comp f) = P := by
+    rw [LinearMap.ker_comp, Submodule.ker_mkQ]
+  have hkerP : LinearMap.ker (LinearMap.baseChange B (Q.mkQ.comp f)) = P.baseChange B := by
+    change LinearMap.ker (TensorProduct.AlgebraTensorModule.lTensor B B
+      (Q.mkQ.comp f)) =
+      LinearMap.range (TensorProduct.AlgebraTensorModule.lTensor B B P.subtype)
+    have h := Module.Flat.ker_lTensor_eq B B (Q.mkQ.comp f)
+    rw [hP] at h
+    exact h
+  rw [← hkerP]
+  rfl
 
 /-- A working Artin-Rees exponent remains valid after flat extension of the
 Noetherian base ring.  `LinearMap.baseChange B f` uses the canonically

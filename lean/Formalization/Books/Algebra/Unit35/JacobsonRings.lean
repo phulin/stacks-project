@@ -2911,7 +2911,106 @@ theorem matrixProduct_rank_normal_forms
       ∃ g₁ g₂ : Matrix.GeneralLinearGroup (Fin 2) k,
         (g₁ : Matrix2 k) * X * (↑(g₂⁻¹) : Matrix2 k) =
           Matrix.diagonal (fun i : Fin 2 => if i = 0 then 1 else 0)) := by
-  sorry
+  constructor
+  · intro hX
+    obtain ⟨V, U, e, hV, hU, hVU⟩ := Matrix.exists_rank_normal_form X
+    let v := Matrix.GeneralLinearGroup.mk'' V ((Matrix.isUnit_iff_isUnit_det V).mp hV)
+    let u := Matrix.GeneralLinearGroup.mk'' U ((Matrix.isUnit_iff_isUnit_det U).mp hU)
+    refine ⟨v, u⁻¹, ?_⟩
+    have hv : (v : Matrix2 k) = V := by simp [v]
+    have hu : (u : Matrix2 k) = U := by simp [u]
+    rw [hv, show (↑((u⁻¹)⁻¹) : Matrix2 k) = U by simp [hu], hVU]
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      rcases h : e i with a | b
+      · simp [h, Matrix.fromBlocks]
+      · have hb := b.isLt
+        simp [hX] at hb
+    · rcases hi : e i with a | b
+      · rcases hj : e j with c | d
+        · have hac : a ≠ c := by
+            intro hac
+            apply hij
+            apply e.injective
+            rw [hi, hj, hac]
+          simp [hi, hj, Matrix.fromBlocks, hac, hij]
+        · have hd := d.isLt
+          simp [hX] at hd
+      · have hb := b.isLt
+        simp [hX] at hb
+  · intro hX
+    obtain ⟨V, U, e, hV, hU, hVU⟩ := Matrix.exists_rank_normal_form X
+    let v := Matrix.GeneralLinearGroup.mk'' V ((Matrix.isUnit_iff_isUnit_det V).mp hV)
+    let u := Matrix.GeneralLinearGroup.mk'' U ((Matrix.isUnit_iff_isUnit_det U).mp hU)
+    let S : Matrix2 k := !![0, 1; 1, 0]
+    have hS : S.det ≠ 0 := by
+      simp [S, Matrix.det_fin_two]
+    let s := Matrix.GeneralLinearGroup.mkOfDetNeZero S hS
+    have hv : (v : Matrix2 k) = V := by simp [v]
+    have hu : (u : Matrix2 k) = U := by simp [u]
+    have hs : (s : Matrix2 k) = S := by simp [s]
+    let zl : Fin (Matrix.rank X) := ⟨0, by omega⟩
+    let zr : Fin (Fintype.card (Fin 2) - Matrix.rank X) := ⟨0, by simp [hX]⟩
+    have hleft (a : Fin (Matrix.rank X)) : a = zl := by
+      apply Fin.ext
+      have ha := a.isLt
+      have hz := zl.isLt
+      omega
+    have hright (b : Fin (Fintype.card (Fin 2) - Matrix.rank X)) : b = zr := by
+      apply Fin.ext
+      have hb := b.isLt
+      have hz := zr.isLt
+      simp [hX] at hb
+      omega
+    have hcoord : e 0 = Sum.inl zl ∨ e 0 = Sum.inr zr := by
+      rcases h : e 0 with a | b
+      · left
+        simp [hleft a]
+      · right
+        simp [hright b]
+    by_cases h0 : e 0 = Sum.inl zl
+    · refine ⟨v, u⁻¹, ?_⟩
+      rw [hv, show (↑((u⁻¹)⁻¹) : Matrix2 k) = U by simp [hu], hVU]
+      have hother : e 1 = Sum.inr zr := by
+        rcases h : e 1 with a | b
+        · have ha := hleft a
+          exfalso
+          have heq : e 0 = e 1 := by rw [h0, h, ha]
+          have hbad : (0 : Fin 2) = 1 := e.injective heq
+          exact Fin.zero_ne_one hbad
+        · simp [hright b]
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [Matrix.submatrix, Matrix.fromBlocks, h0, hother]
+    · have h1 : e 0 = Sum.inr zr :=
+        hcoord.resolve_left h0
+      refine ⟨s * v, (u * s)⁻¹, ?_⟩
+      rw [show (↑(s * v) : Matrix2 k) = S * V by simp [hs, hv],
+        show (↑(((u * s)⁻¹)⁻¹) : Matrix2 k) = U * S by
+          simp [hs, hu]]
+      rw [show S * V * X * (U * S) = S * (V * X * U) * S by
+        simp only [mul_assoc], hVU]
+      have hother : e 1 = Sum.inl zl := by
+        rcases h : e 1 with a | b
+        · simp [hleft a]
+        · have hb := hright b
+          exfalso
+          have heq : e 0 = e 1 := by rw [h1, h, hb]
+          have hbad : (0 : Fin 2) = 1 := e.injective heq
+          exact Fin.zero_ne_one hbad
+      have he : (e : Fin 2 → (Fin (Matrix.rank X) ⊕
+          Fin (Fintype.card (Fin 2) - Matrix.rank X))) =
+          fun i => if i = 0 then Sum.inr zr else Sum.inl zl := by
+        funext i
+        fin_cases i
+        · simpa using h1
+        · simpa using hother
+      rw [he]
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [S, Matrix.mul_apply, Fin.sum_univ_two, Matrix.submatrix,
+          Matrix.fromBlocks, Matrix.vecHead, Matrix.vecTail]
 
 abbrev MatrixTriplePolynomial (k : Type u) [CommSemiring k] :=
   MvPolynomial (Fin 12) k
@@ -2935,12 +3034,40 @@ abbrev GeneralLinearTripleCoordinateRing (k : Type u) [Field k] :=
 theorem generalLinearTripleCoordinateRing_isDomain
     (k : Type u) [Field k] :
     IsDomain (GeneralLinearTripleCoordinateRing k) := by
-  sorry
+  apply IsLocalization.isDomain_localization
+  intro z hz
+  rcases hz with ⟨m, rfl⟩
+  apply mem_nonZeroDivisors_of_ne_zero
+  apply pow_ne_zero
+  have hX : matrixTripleDetX (k := k) ≠ 0 := by
+    intro h
+    have he := congrArg
+      (MvPolynomial.eval₂Hom (RingHom.id k)
+        (fun i : Fin 12 => if i = 0 then 1 else if i = 3 then 1 else 0)) h
+    simp [matrixTripleDetX] at he
+  have hY : matrixTripleDetY (k := k) ≠ 0 := by
+    intro h
+    have he := congrArg
+      (MvPolynomial.eval₂Hom (RingHom.id k)
+        (fun i : Fin 12 => if i = 4 then 1 else if i = 7 then 1 else 0)) h
+    simp [matrixTripleDetY] at he
+  have hZ : matrixTripleDetZ (k := k) ≠ 0 := by
+    intro h
+    have he := congrArg
+      (MvPolynomial.eval₂Hom (RingHom.id k)
+        (fun i : Fin 12 => if i = 8 then 1 else if i = 11 then 1 else 0)) h
+    simp [matrixTripleDetZ] at he
+  exact mul_ne_zero (mul_ne_zero hX hY) hZ
 
 theorem generalLinearTriple_spectrum_isIrreducible
     (k : Type u) [Field k] :
     IsIrreducible (Set.univ : Set (PrimeSpectrum (GeneralLinearTripleCoordinateRing k))) := by
-  sorry
+  let hD : IsDomain (GeneralLinearTripleCoordinateRing k) :=
+    generalLinearTripleCoordinateRing_isDomain k
+  let hI : IrreducibleSpace (PrimeSpectrum (GeneralLinearTripleCoordinateRing k)) :=
+    @PrimeSpectrum.irreducibleSpace (GeneralLinearTripleCoordinateRing k) _ hD
+  exact @IrreducibleSpace.isIrreducible_univ
+    (PrimeSpectrum (GeneralLinearTripleCoordinateRing k)) _ hI
 
 /-! ## Idempotent matrices -/
 
@@ -2993,7 +3120,114 @@ theorem idempotent_matrix_conjugate_to_diagonal
       T.rank = r.1 ∧
       matrixConjugation n g T =
         Matrix.diagonal (fun i : Fin n => if i.1 < r.1 then 1 else 0) := by
-  sorry
+  let L : (Fin n → k) →ₗ[k] (Fin n → k) := T.mulVecLin
+  have hL : IsIdempotentElem L := by
+    change L.comp L = L
+    change T.mulVecLin.comp T.mulVecLin = T.mulVecLin
+    rw [← Matrix.mulVecLin_mul]
+    exact congrArg Matrix.mulVecLin hT
+  have hcomp : IsCompl (LinearMap.range L) (LinearMap.ker L) :=
+    LinearMap.IsIdempotentElem.isCompl hL
+  let r : Fin (n + 1) :=
+    ⟨Matrix.rank T, Nat.succ_le_succ (Matrix.rank_le_width T)⟩
+  have hrank : Module.finrank k (LinearMap.range L) = Matrix.rank T := by
+    rfl
+  have hr : Module.finrank k (LinearMap.range L) = r.1 := by
+    exact hrank.trans (by rfl)
+  let br0 := Module.Basis.ofVectorSpace k (LinearMap.range L)
+  let er : Module.Basis.ofVectorSpaceIndex k (LinearMap.range L) ≃ Fin r.1 :=
+    Finite.equivFinOfCardEq ((Module.finrank_eq_nat_card_basis br0).symm.trans hr)
+  let br := br0.reindex er
+  let bk0 := Module.Basis.ofVectorSpace k (LinearMap.ker L)
+  let s := Module.finrank k (LinearMap.ker L)
+  let eks : Module.Basis.ofVectorSpaceIndex k (LinearMap.ker L) ≃ Fin s :=
+    Finite.equivFinOfCardEq (Module.finrank_eq_nat_card_basis bk0).symm
+  let bk := bk0.reindex eks
+  let bprod : Module.Basis (Fin r.1 ⊕ Fin s) k
+      (LinearMap.range L × LinearMap.ker L) := br.prod bk
+  let b : Module.Basis (Fin r.1 ⊕ Fin s) k (Fin n → k) :=
+    bprod.map (Submodule.prodEquivOfIsCompl (LinearMap.range L) (LinearMap.ker L) hcomp)
+  have hrs : r.1 + s = n := by
+    simpa [r, s, L, Matrix.rank] using
+      (LinearMap.finrank_range_add_finrank_ker L)
+  let eb : (Fin r.1 ⊕ Fin s) ≃ Fin n :=
+    (finSumFinEquiv (m := r.1) (n := s)).trans (finCongr hrs)
+  let bfin : Module.Basis (Fin n) k (Fin n → k) := b.reindex eb
+  let bstd := Pi.basisFun k (Fin n)
+  let e : (Fin n → k) ≃ₗ[k] (Fin n → k) :=
+    bfin.equiv bstd (Equiv.refl _)
+  have hb_inl (j : Fin r.1) : b (Sum.inl j) ∈ LinearMap.range L := by
+    apply (Submodule.prodEquivOfIsCompl_symm_apply_snd_eq_zero
+      (p := LinearMap.range L) (q := LinearMap.ker L) hcomp).mp
+    simp [b, bprod]
+  have hb_inr (j : Fin s) : b (Sum.inr j) ∈ LinearMap.ker L := by
+    apply (Submodule.prodEquivOfIsCompl_symm_apply_fst_eq_zero
+      (p := LinearMap.range L) (q := LinearMap.ker L) hcomp).mp
+    simp [b, bprod]
+  have hproj : LinearMap.IsProj (LinearMap.range L) L :=
+    (LinearMap.isProj_range_iff_isIdempotentElem L).mpr hL
+  have hL_inl (j : Fin r.1) : L (b (Sum.inl j)) = b (Sum.inl j) :=
+    hproj.map_id _ (hb_inl j)
+  have hL_inr (j : Fin s) : L (b (Sum.inr j)) = 0 :=
+    LinearMap.mem_ker.mp (hb_inr j)
+  have he_symm (i : Fin n) : e.symm (bstd i) = bfin i := by
+    apply e.injective
+    simp [e]
+  have he_inl (j : Fin r.1) :
+      e (b (Sum.inl j)) = bstd (eb (Sum.inl j)) := by
+    rw [show b (Sum.inl j) = bfin (eb (Sum.inl j)) by simp [bfin]]
+    simp [e]
+  have he_inr (j : Fin s) :
+      e (b (Sum.inr j)) = bstd (eb (Sum.inr j)) := by
+    rw [show b (Sum.inr j) = bfin (eb (Sum.inr j)) by simp [bfin]]
+    simp [e]
+  have hdiag :
+      e.toLinearMap.comp (L.comp e.symm.toLinearMap) =
+        Matrix.toLin' (Matrix.diagonal
+          (fun i : Fin n => if i.1 < r.1 then (1 : k) else 0)) := by
+    apply bstd.ext
+    intro i
+    change e (L (e.symm (bstd i))) =
+      Matrix.toLin' (Matrix.diagonal
+        (fun i : Fin n => if i.1 < r.1 then (1 : k) else 0)) (bstd i)
+    rw [he_symm]
+    rcases h : eb.symm i with j | j
+    · have hi : i = eb (Sum.inl j) := by
+        rw [← eb.apply_symm_apply i, h]
+      rw [show bfin i = b (Sum.inl j) by simp [bfin, h], hL_inl,
+        he_inl, hi]
+      simp [bstd, Matrix.toLin'_apply', eb]
+    · have hi : i = eb (Sum.inr j) := by
+        rw [← eb.apply_symm_apply i, h]
+      rw [show bfin i = b (Sum.inr j) by simp [bfin, h], hL_inr, hi]
+      simp [bstd, Matrix.toLin'_apply', eb]
+  let ge : LinearMap.GeneralLinearGroup k (Fin n → k) :=
+    LinearMap.GeneralLinearGroup.ofLinearEquiv e
+  let g : Matrix.GeneralLinearGroup (Fin n) k :=
+    (Matrix.GeneralLinearGroup.toLin' bstd).symm ge
+  have hge : Matrix.GeneralLinearGroup.toLin' bstd g = ge := by
+    exact (Matrix.GeneralLinearGroup.toLin' bstd).apply_symm_apply ge
+  have hg : Matrix.toLin' (g : Matrix (Fin n) (Fin n) k) = e.toLinearMap := by
+    change (Matrix.GeneralLinearGroup.toLin' bstd g :
+      (Fin n → k) →ₗ[k] (Fin n → k)) = e.toLinearMap
+    rw [hge]
+    rfl
+  have hginv : Matrix.toLin' (↑(g⁻¹) : Matrix (Fin n) (Fin n) k) =
+      e.symm.toLinearMap := by
+    change (Matrix.GeneralLinearGroup.toLin' bstd (g⁻¹) :
+      (Fin n → k) →ₗ[k] (Fin n → k)) = e.symm.toLinearMap
+    rw [map_inv, hge]
+    rfl
+  refine ⟨r, g, by rfl, ?_⟩
+  apply Matrix.toLin'.injective
+  change ((g : Matrix (Fin n) (Fin n) k) * T *
+    (↑(g⁻¹) : Matrix (Fin n) (Fin n) k)).mulVecLin = _
+  rw [Matrix.mulVecLin_mul, Matrix.mulVecLin_mul]
+  change ((Matrix.toLin' (g : Matrix (Fin n) (Fin n) k)).comp
+      (Matrix.toLin' T)).comp
+      (Matrix.toLin' (↑(g⁻¹) : Matrix (Fin n) (Fin n) k)) = _
+  rw [hg, hginv, LinearMap.comp_assoc]
+  simpa [L, Matrix.toLin'_apply'] using hdiag
 
 theorem idempotent_matrix_rank_orbits_are_components
     (k : Type u) [Field k] (n : ℕ) :

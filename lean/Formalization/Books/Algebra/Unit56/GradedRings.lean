@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Module.GradedModule
 import Mathlib.RingTheory.FiniteType
+import Mathlib.RingTheory.GradedAlgebra.FiniteType
 import Mathlib.RingTheory.GradedAlgebra.RingHom
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
@@ -1480,7 +1481,7 @@ private lemma graded_finite_homogeneous_generators
     apply Submodule.span_le.2
     rintro y ⟨i, rfl⟩
     rw [← DirectSum.sum_support_decompose 𝓜.component (s i)]
-    apply Submodule.sum_mem
+    apply (Algebra.adjoin (degreeZeroSubring G) (s : Set S)).sum_mem
     intro j hj
     apply Submodule.subset_span
     refine ⟨e ⟨i, ⟨j, hj⟩⟩, ?_⟩
@@ -2144,7 +2145,61 @@ theorem graded_nakayama_surjective
     (hquot : Function.Surjective
       ((irrelevantIdeal G • (⊤ : Submodule S M)).mkQ.comp f)) :
     Function.Surjective f := by
-  sorry
+  let I : Submodule S M := irrelevantIdeal G • (⊤ : Submodule S M)
+  have hmap (y : N) (d : ℤ) :
+      (DirectSum.decompose 𝓜.component (f y) d : M) =
+        f (DirectSum.decompose 𝓝.component y d : N) := by
+    induction y using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓝.component) with
+    | zero => simp
+    | add y z hy hz =>
+        rw [map_add, DirectSum.decompose_add, DirectSum.add_apply]
+        change
+          ((DirectSum.decompose 𝓜.component (f y) d : M) +
+            (DirectSum.decompose 𝓜.component (f z) d : M)) =
+          f (DirectSum.decompose 𝓝.component (y + z) d : N)
+        rw [DirectSum.decompose_add, DirectSum.add_apply]
+        change
+          ((DirectSum.decompose 𝓜.component (f y) d : M) +
+            (DirectSum.decompose 𝓜.component (f z) d : M)) =
+          f ((DirectSum.decompose 𝓝.component y d : N) +
+            (DirectSum.decompose 𝓝.component z d : N))
+        rw [hy, hz, map_add]
+    | @homogeneous d' y =>
+        by_cases hdeg : d' = d
+        · subst d'
+          rw [DirectSum.decompose_of_mem_same 𝓝.component y.property,
+            DirectSum.decompose_of_mem_same 𝓜.component (hf d y y.property)]
+        · rw [DirectSum.decompose_of_mem_ne 𝓝.component y.property hdeg,
+            DirectSum.decompose_of_mem_ne 𝓜.component (hf d' y y.property) hdeg]
+          simp
+  have hN : IsGradedSubmodule G 𝓜 (LinearMap.range f) := by
+    change ∀ (d : ℤ) ⦃y : M⦄, y ∈ LinearMap.range f →
+      (DirectSum.decompose 𝓜.component y d : M) ∈ LinearMap.range f
+    intro d y hy
+    rcases hy with ⟨z, rfl⟩
+    rw [hmap]
+    exact ⟨DirectSum.decompose 𝓝.component z d, rfl⟩
+  have htop : IsGradedSubmodule G 𝓜 (⊤ : Submodule S M) := by
+    intro d y hy
+    trivial
+  have hM : (⊤ : Submodule S M) = LinearMap.range f ⊔ I := by
+    apply le_antisymm
+    · intro y hy
+      obtain ⟨z, hz⟩ := hquot (I.mkQ y)
+      change I.mkQ (f z) = I.mkQ y at hz
+      have hzero : I.mkQ (y - f z) = 0 := by
+        rw [map_sub, hz]
+        exact sub_self _
+      have hmem : y - f z ∈ I := by
+        change Submodule.Quotient.mk (y - f z) = 0 at hzero
+        exact (Submodule.Quotient.mk_eq_zero I).mp hzero
+      refine Submodule.mem_sup.mpr ⟨f z, ⟨z, rfl⟩, y - f z, hmem, ?_⟩
+      abel
+    · exact sup_le le_top le_top
+  have hrange : LinearMap.range f = (⊤ : Submodule S M) :=
+    graded_nakayama_submodule G 𝓜 (LinearMap.range f) ⊤ hN htop hM
+  exact LinearMap.range_eq_top.mp hrange
 
 theorem graded_nakayama_generators
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)
@@ -2155,7 +2210,114 @@ theorem graded_nakayama_generators
           (Set.range (fun i =>
             (irrelevantIdeal G • (⊤ : Submodule S M)).mkQ (x i))) = ⊤) :
     Submodule.span S (Set.range x) = ⊤ := by
-  sorry
+  classical
+  rcases hx with ⟨d, hxd, hquot⟩
+  let I : Submodule S M := irrelevantIdeal G • (⊤ : Submodule S M)
+  let P : Submodule S M := Submodule.span S (Set.range x)
+  let _ : DirectSum.Decomposition (ringModuleComponent G) :=
+    (ringAsGradedModule G).decomposition
+  have hproj : ∀ (i : ℤ) (a : ringModuleComponent G i), 0 ≤ i →
+      ∀ (k : ℤ) (y : M),
+        (DirectSum.decompose 𝓜.component ((a : S) • y) k : M) =
+          (a : S) •
+            (DirectSum.decompose 𝓜.component y (k - (i.toNat : ℤ)) : M) := by
+    intro i a hi k y
+    have ha : (a : S) ∈ G.component i.toNat := by
+      rw [← ringModuleComponent_of_nonnegative G hi]
+      exact a.property
+    induction y using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓜.component) with
+    | zero => simp
+    | add y z hy hz =>
+        rw [smul_add, DirectSum.decompose_add, DirectSum.add_apply]
+        rw [DirectSum.decompose_add, DirectSum.add_apply]
+        change
+          ((DirectSum.decompose 𝓜.component ((a : S) • y) k : M) +
+            (DirectSum.decompose 𝓜.component ((a : S) • z) k : M)) =
+          (a : S) •
+            ((DirectSum.decompose 𝓜.component y (k - (i.toNat : ℤ)) : M) +
+              (DirectSum.decompose 𝓜.component z (k - (i.toNat : ℤ)) : M))
+        rw [hy, hz, smul_add]
+    | @homogeneous j y =>
+        have hmul := 𝓜.gradedSMul.smul_mem ha y.property
+        have hmul' : (a : S) • (y : M) ∈
+            𝓜.component ((i.toNat : ℤ) + j) := by
+          change (a : S) • (y : M) ∈
+            𝓜.component ((i.toNat : ℤ) + j) at hmul
+          exact hmul
+        by_cases hdeg : (i.toNat : ℤ) + j = k
+        · have hjeq : (i.toNat : ℤ) + j - (i.toNat : ℤ) = j := by omega
+          rw [← hdeg, DirectSum.decompose_of_mem_same 𝓜.component hmul',
+            hjeq, DirectSum.decompose_of_mem_same 𝓜.component y.property]
+        · have hjeq : j ≠ k - (i.toNat : ℤ) := by omega
+          rw [DirectSum.decompose_of_mem_ne 𝓜.component hmul' hdeg,
+            DirectSum.decompose_of_mem_ne 𝓜.component y.property hjeq]
+          simp
+  have hspan_homogeneous : ∀ (y : M), y ∈ P → ∀ k : ℤ,
+      (DirectSum.decompose 𝓜.component y k : M) ∈ P := by
+    intro y hy
+    refine Submodule.span_induction (p := fun y _ => ∀ k : ℤ,
+        (DirectSum.decompose 𝓜.component y k : M) ∈ P) ?_ ?_ ?_ ?_ hy
+    · rintro z ⟨i, rfl⟩ k
+      by_cases hdeg : d i = k
+      · rw [← hdeg, DirectSum.decompose_of_mem_same 𝓜.component (hxd i)]
+        exact Submodule.subset_span ⟨i, rfl⟩
+      · rw [DirectSum.decompose_of_mem_ne 𝓜.component (hxd i) hdeg]
+        exact P.zero_mem
+    · intro k
+      simp
+    · intro y z _ _ hy hz k
+      rw [DirectSum.decompose_add, DirectSum.add_apply]
+      change
+        (DirectSum.decompose 𝓜.component y k : M) +
+            (DirectSum.decompose 𝓜.component z k : M) ∈ P
+      exact P.add_mem (hy k) (hz k)
+    · intro a y _ hy k
+      induction a using DirectSum.Decomposition.inductionOn
+          (ℳ := ringModuleComponent G) with
+      | zero => simp
+      | add a b ha hb =>
+          rw [add_smul, DirectSum.decompose_add, DirectSum.add_apply]
+          change
+            (DirectSum.decompose 𝓜.component (a • y) k : M) +
+                (DirectSum.decompose 𝓜.component (b • y) k : M) ∈ P
+          exact P.add_mem ha hb
+      | @homogeneous i a =>
+          by_cases hi : i < 0
+          · have ha0 : (a : S) = 0 := by
+              have ha' : (a : S) ∈ (⊥ : AddSubgroup S) := by
+                rw [← ringModuleComponent_of_negative G hi]
+                exact a.property
+              simpa using ha'
+            simp [ha0]
+          · have hi' : 0 ≤ i := le_of_not_gt hi
+            rw [hproj i a hi' k y]
+            exact P.smul_mem (a : S) (hy (k - (i.toNat : ℤ)))
+  have hN : IsGradedSubmodule G 𝓜 P := by
+    change ∀ (k : ℤ) ⦃y : M⦄, y ∈ P →
+      (DirectSum.decompose 𝓜.component y k : M) ∈ P
+    intro k y hy
+    exact hspan_homogeneous y hy k
+  have htop : IsGradedSubmodule G 𝓜 (⊤ : Submodule S M) := by
+    intro k y hy
+    trivial
+  have hmaptop : Submodule.map I.mkQ P = (⊤ : Submodule S (M ⧸ I)) := by
+    rw [Submodule.map_span]
+    have hset : I.mkQ '' Set.range x =
+        Set.range (fun i => I.mkQ (x i)) := by
+      ext y
+      constructor
+      · rintro ⟨z, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨x i, ⟨i, rfl⟩, rfl⟩
+    rw [hset]
+    simpa [I] using hquot
+  have hsup : I ⊔ P = (⊤ : Submodule S M) :=
+    (Submodule.map_mkQ_eq_top I P).mp hmaptop
+  have hM : (⊤ : Submodule S M) = P ⊔ I := by
+    simpa [sup_comm] using hsup.symm
+  exact graded_nakayama_submodule G 𝓜 P ⊤ hN htop hM
 
 /-! ## Veronese constructions -/
 
@@ -2182,7 +2344,28 @@ theorem veroneseModule_is_graded_module
     Nonempty (DirectSum.Gmodule
       (fun n : ℕ => G.component (n * d))
       (fun n : ℤ => 𝓜.component (n * (d : ℤ)))) := by
-  sorry
+  let _ : AddAction ℕ ℤ :=
+    { vadd := fun n m => (n : ℤ) + m
+      add_vadd := by
+        intro n m z
+        change ((n + m : ℕ) : ℤ) + z = (n : ℤ) + ((m : ℤ) + z)
+        simp only [Int.natCast_add, add_assoc]
+      zero_vadd := by
+        intro z
+        change (0 : ℤ) + z = z
+        exact zero_add z }
+  let _ : SetLike.GradedSMul
+      (fun n : ℕ => G.component (n * d))
+      (fun n : ℤ => 𝓜.component (n * (d : ℤ))) :=
+    { smul_mem := by
+        intro i j a x ha hx
+        have h := 𝓜.gradedSMul.smul_mem ha hx
+        change a • x ∈ 𝓜.component ((i + (j : ℤ)) * (d : ℤ))
+        change a • x ∈ 𝓜.component ((i * d : ℕ) + (j * (d : ℤ))) at h
+        simpa [Nat.cast_mul, add_mul] using h }
+  exact ⟨SetLike.gmodule
+    (fun n : ℕ => G.component (n * d))
+    (fun n : ℤ => 𝓜.component (n * (d : ℤ)))⟩
 
 noncomputable instance veroneseModuleGmodule
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (d : ℕ) :
@@ -2214,7 +2397,618 @@ theorem veronese_generated_in_degree_one
     (hS : Algebra.FiniteType (degreeZeroSubring G) S) :
     ∃ m : ℕ, 0 < m ∧ ∀ d : ℕ, 0 < d → m ∣ d →
       VeroneseGeneratedInDegreeOne G d := by
-  sorry
+  classical
+  obtain ⟨F, hF⟩ := hS.out
+  let ι₀ := Σ (x : F), (DirectSum.decompose G.component (x : S)).support
+  let x₀ : ι₀ → S := fun i =>
+    (DirectSum.decompose G.component (i.1 : S) i.2 : S)
+  let s : Finset S :=
+    (Finset.univ.image x₀).filter (fun z => ∃ n ≠ 0, z ∈ G.component n)
+  have hsgen : Algebra.adjoin (degreeZeroSubring G) (s : Set S) = ⊤ := by
+    apply top_unique
+    rw [← hF]
+    apply Algebra.adjoin_le
+    intro z hz
+    rw [← DirectSum.sum_support_decompose G.component (z : S)]
+    apply (Algebra.adjoin (degreeZeroSubring G) (s : Set S)).sum_mem
+    intro n hn
+    by_cases hn0 : n = 0
+    · subst n
+      have hz0 : (DirectSum.decompose G.component (z : S) 0 : S) ∈
+          degreeZeroSubring G :=
+        (DirectSum.decompose G.component (z : S) 0).property
+      exact (Algebra.adjoin (degreeZeroSubring G) (s : Set S)).algebraMap_mem
+        ⟨_, hz0⟩
+    · have hmem : x₀ ⟨⟨z, hz⟩, ⟨n, hn⟩⟩ ∈ s := by
+        refine Finset.mem_filter.mpr ⟨?_, ?_⟩
+        · exact Finset.mem_image.mpr
+            ⟨⟨⟨z, hz⟩, ⟨n, hn⟩⟩, Finset.mem_univ _, rfl⟩
+        · exact ⟨n, hn0, (DirectSum.decompose G.component (z : S) n).property⟩
+      exact Algebra.subset_adjoin hmem
+  have hshom : ∀ i : s, ∃ n : ℕ, n ≠ 0 ∧
+      (i : S) ∈ G.component n := by
+    intro i
+    exact (Finset.mem_filter.mp i.2).2
+  have hq : ∀ i : s, ∃ n : ℕ, n ≠ 0 ∧
+      (i : S) ∈ G.component n := by
+    intro i
+    exact hshom i
+  choose q hq0 hqmem using hq
+  let r : ℕ := s.card + 1
+  let m : ℕ := ∏ i : s, q i
+  let monomial : (s → ℕ) → S := fun e =>
+    ∏ i : s, (i : S) ^ e i
+  let deg : (s → ℕ) → ℕ := fun e => ∑ i : s, q i * e i
+  let Q : Submodule (degreeZeroSubring G) S :=
+    Submodule.span (degreeZeroSubring G) (Set.range monomial)
+  have hmpos : 0 < m := by
+    dsimp [m]
+    exact Finset.prod_pos (fun i _ => Nat.pos_of_ne_zero (hq0 i))
+  have hmono (e : s → ℕ) :
+      monomial e ∈ G.component (deg e) := by
+    dsimp [monomial, deg]
+    simpa [mul_comm] using
+      (SetLike.prod_pow_mem_graded G.component q (fun i : s => (i : S)) e
+        (F := Finset.univ) (by
+          intro i hi
+          exact hqmem i))
+  have hqdiv (i : s) : q i ∣ m := by
+    dsimp [m]
+    exact Finset.dvd_prod_of_mem (fun j : s => q j) (Finset.mem_univ i)
+  have hextract (E : s → ℕ) (hE : r * m ≤ deg E) :
+      ∃ i : s, ∃ c : ℕ, m = q i * c ∧ c ≤ E i := by
+    by_cases h : ∃ i : s, m ≤ q i * E i
+    · rcases h with ⟨i, hi⟩
+      rcases hqdiv i with ⟨c, hc⟩
+      refine ⟨i, c, hc, ?_⟩
+      apply le_of_mul_le_mul_left
+        (show q i * c ≤ q i * E i by simpa [hc] using hi)
+      exact Nat.pos_of_ne_zero (hq0 i)
+    · have hlt : ∀ i : s, q i * E i < m := by
+        intro i
+        exact lt_of_not_ge (fun hi => h ⟨i, hi⟩)
+      have hsum : deg E ≤ s.card * (m - 1) := by
+        dsimp [deg]
+        calc
+          _ ≤ ∑ i : s, (m - 1) := by
+            exact Finset.sum_le_sum (fun i _ => Nat.le_pred_of_lt (hlt i))
+          _ = s.card * (m - 1) := by simp
+      have hbound : s.card * (m - 1) < r * m := by
+        dsimp [r]
+        calc
+          _ ≤ s.card * m := by
+            have hsub : m - 1 < m := Nat.sub_lt hmpos (by omega)
+            exact Nat.mul_le_mul_left _ hsub.le
+          _ < s.card * m + m := by omega
+          _ = (s.card + 1) * m := by simp [Nat.add_mul]
+      omega
+  have hdeg_add (E F : s → ℕ) :
+      deg (fun i => E i + F i) = deg E + deg F := by
+    dsimp [deg]
+    simp [Nat.mul_add, Finset.sum_add_distrib, add_assoc]
+  have hsplit (E : s → ℕ) (hE : r * m ≤ deg E) :
+      ∃ A B : s → ℕ,
+        (∀ i, A i + B i = E i) ∧ deg A = m ∧ deg B = deg E - m := by
+    rcases hextract E hE with ⟨i, c, hmc, hci⟩
+    let A : s → ℕ := fun j => if j = i then c else 0
+    let B : s → ℕ := fun j => E j - A j
+    have hAle : ∀ j, A j ≤ E j := by
+      intro j
+      by_cases hji : j = i
+      · subst j
+        simpa [A] using hci
+      · simp [A, hji]
+    have hsum : ∀ j, A j + B j = E j := by
+      intro j
+      exact Nat.add_sub_of_le (hAle j)
+    have hdegA : deg A = m := by
+      dsimp [deg, A]
+      rw [Finset.sum_eq_single_of_mem i (by simp)]
+      · simpa using hmc.symm
+      · intro j hj hji
+        simp [hji]
+    have hdegrel : deg E = deg A + deg B := by
+      rw [← hdeg_add A B]
+      congr 1
+      funext j
+      exact (hsum j).symm
+    refine ⟨A, B, hsum, hdegA, ?_⟩
+    omega
+  have hfactor (n : ℕ) (hn : 2 ≤ n) (E : s → ℕ)
+      (hE : deg E = n * (r * m)) :
+      ∃ A B : s → ℕ,
+        (∀ i, A i + B i = E i) ∧ deg A = r * m ∧
+          deg B = (n - 1) * (r * m) := by
+    have haux : ∀ k N : ℕ, ∀ E : s → ℕ,
+        k ≤ r → r + k ≤ N → deg E = N * m →
+          ∃ A B : s → ℕ,
+            (∀ i, A i + B i = E i) ∧ deg A = k * m ∧
+              deg B = (N - k) * m := by
+      intro k
+      induction k with
+      | zero =>
+          intro N E hk hN hE'
+          refine ⟨fun _ => 0, E, ?_, ?_, ?_⟩
+          · intro i
+            simp
+          · simp [deg]
+          · simpa using hE'
+      | succ k ih =>
+          intro N E hk hN hE'
+          have hNk : r ≤ N := by omega
+          have hsplit' := hsplit E (by
+            have hmul : r * m ≤ N * m := Nat.mul_le_mul_right m hNk
+            simpa [hE'] using hmul)
+          rcases hsplit' with ⟨C, D, hCD, hCdeg, hDdeg⟩
+          have hNminus : r + k ≤ N - 1 := by omega
+          have hDdeg' : deg D = (N - 1) * m := by
+            rw [hDdeg, hE']
+            rw [Nat.sub_mul]
+            simp
+          rcases ih (N - 1) D (Nat.le_of_succ_le hk) hNminus hDdeg' with
+            ⟨A, B, hAB, hAdeg, hBdeg⟩
+          have hBdeg' : deg B = (N - (k + 1)) * m := by
+            simpa [Nat.sub_sub, add_comm] using hBdeg
+          let A' : s → ℕ := fun i => C i + A i
+          refine ⟨A', B, ?_, ?_, hBdeg'⟩
+          · intro i
+            dsimp [A']
+            calc
+              C i + A i + B i = C i + (A i + B i) := by rw [add_assoc]
+              _ = C i + D i := by rw [hAB i]
+              _ = E i := hCD i
+          · dsimp [A']
+            rw [hdeg_add, hCdeg, hAdeg]
+            rw [Nat.add_mul, Nat.one_mul, add_comm]
+    have hnr : 2 * r ≤ n * r := Nat.mul_le_mul_right r hn
+    rcases haux r (n * r) E (le_rfl) (by simpa [two_mul] using hnr) (by
+      simpa [Nat.mul_assoc] using hE) with ⟨A, B, hAB, hAdeg, hBdeg⟩
+    refine ⟨A, B, hAB, hAdeg, ?_⟩
+    rw [hBdeg]
+    calc
+      (n * r - r) * m = (n * r) * m - r * m := by rw [Nat.sub_mul]
+      _ = n * (r * m) - r * m := by simp [Nat.mul_assoc]
+      _ = (n - 1) * (r * m) := by
+        simpa only [one_mul] using (Nat.sub_mul n 1 (r * m)).symm
+  have hfactor_mult (t n : ℕ) (ht : t ≠ 0) (hn : 2 ≤ n) (E : s → ℕ)
+      (hE : deg E = n * (t * (r * m))) :
+      ∃ A B : s → ℕ,
+        (∀ i, A i + B i = E i) ∧ deg A = t * (r * m) ∧
+          deg B = (n - 1) * (t * (r * m)) := by
+    have htpos : 0 < t := Nat.pos_of_ne_zero ht
+    have htr : r ≤ t * r := by
+      have ht1 : 1 ≤ t := Nat.one_le_iff_ne_zero.mpr ht
+      simpa using (Nat.mul_le_mul_right r ht1)
+    have haux : ∀ k N : ℕ, ∀ E : s → ℕ,
+        k ≤ t * r → t * r + k ≤ N → deg E = N * m →
+          ∃ A B : s → ℕ,
+            (∀ i, A i + B i = E i) ∧ deg A = k * m ∧
+              deg B = (N - k) * m := by
+      intro k
+      induction k with
+      | zero =>
+          intro N E hk hN hE'
+          refine ⟨fun _ => 0, E, ?_, ?_, ?_⟩
+          · intro i
+            simp
+          · simp [deg]
+          · simpa using hE'
+      | succ k ih =>
+          intro N E hk hN hE'
+          have hNk : r ≤ N := by
+            apply le_trans htr
+            omega
+          have hsplit' := hsplit E (by
+            have hmul : r * m ≤ N * m := Nat.mul_le_mul_right m hNk
+            simpa [hE'] using hmul)
+          rcases hsplit' with ⟨C, D, hCD, hCdeg, hDdeg⟩
+          have hNminus : t * r + k ≤ N - 1 := by omega
+          have hDdeg' : deg D = (N - 1) * m := by
+            rw [hDdeg, hE']
+            rw [Nat.sub_mul]
+            simp
+          rcases ih (N - 1) D (Nat.le_of_succ_le hk) hNminus hDdeg' with
+            ⟨A, B, hAB, hAdeg, hBdeg⟩
+          have hBdeg' : deg B = (N - (k + 1)) * m := by
+            simpa [Nat.sub_sub, add_comm] using hBdeg
+          let A' : s → ℕ := fun i => C i + A i
+          refine ⟨A', B, ?_, ?_, hBdeg'⟩
+          · intro i
+            dsimp [A']
+            calc
+              C i + A i + B i = C i + (A i + B i) := by rw [add_assoc]
+              _ = C i + D i := by rw [hAB i]
+              _ = E i := hCD i
+          · dsimp [A']
+            rw [hdeg_add, hCdeg, hAdeg]
+            rw [Nat.add_mul, Nat.one_mul, add_comm]
+    have hnr : 2 * (t * r) ≤ n * (t * r) := Nat.mul_le_mul_right (t * r) hn
+    rcases haux (t * r) (n * (t * r)) E (le_rfl) (by
+      simpa only [two_mul] using hnr) (by
+      simpa only [Nat.mul_assoc] using hE) with
+      ⟨A, B, hAB, hAdeg, hBdeg⟩
+    refine ⟨A, B, hAB, ?_, ?_⟩
+    · simpa only [Nat.mul_assoc] using hAdeg
+    · rw [hBdeg]
+      calc
+        (n * (t * r) - t * r) * m = n * (t * r * m) - t * r * m := by
+          rw [Nat.sub_mul]
+          simp only [Nat.mul_assoc]
+        _ = n * (t * (r * m)) - t * (r * m) := by
+          simp only [Nat.mul_assoc]
+        _ = (n - 1) * (t * (r * m)) := by
+          simpa only [one_mul] using (Nat.sub_mul n 1 (t * (r * m))).symm
+  have hmonmul (e f : s → ℕ) :
+      monomial e * monomial f = monomial (fun i => e i + f i) := by
+    dsimp [monomial]
+    rw [← Finset.prod_mul_distrib]
+    congr 1
+    funext i
+    exact (pow_add (i : S) (e i) (f i)).symm
+  have hQmul : ∀ {a b : S}, a ∈ Q → b ∈ Q → a * b ∈ Q := by
+    intro a b ha hb
+    refine Submodule.span_induction
+      (p := fun a _ => ∀ b : S, b ∈ Q → a * b ∈ Q) ?_ ?_ ?_ ?_ ha b hb
+    · intro a ha b hb
+      rcases ha with ⟨e, rfl⟩
+      refine Submodule.span_induction
+        (p := fun b _ => monomial e * b ∈ Q) ?_ ?_ ?_ ?_ hb
+      · intro b hb
+        rcases hb with ⟨f, rfl⟩
+        rw [hmonmul]
+        exact Submodule.subset_span ⟨fun i => e i + f i, rfl⟩
+      · simp
+      · intro b c _ _ hb hc
+        rw [mul_add]
+        exact Q.add_mem hb hc
+      · intro t b _ hb
+        change monomial e * ((t : S) * b) ∈ Q
+        have h := Q.smul_mem t hb
+        change (t : S) * (monomial e * b) ∈ Q at h
+        convert h using 1 <;> ring
+    · simp
+    · intro a b _ _ ha hb c hc
+      rw [add_mul]
+      exact Q.add_mem (ha c hc) (hb c hc)
+    · intro t a _ ha b hb
+      change ((t : S) * a) * b ∈ Q
+      have h := Q.smul_mem t (ha b hb)
+      change (t : S) * (a * b) ∈ Q at h
+      convert h using 1 <;> ring
+  have hsQ : ∀ z : S, z ∈ s → z ∈ Q := by
+    intro z hz
+    let i : s := ⟨z, hz⟩
+    let e : s → ℕ := fun j => if j = i then 1 else 0
+    have he : monomial e = z := by
+      dsimp [monomial, e]
+      rw [Finset.prod_eq_single_of_mem i (by simp) (by
+        intro j hj hji
+        simp [hji])]
+      simp [i]
+    rw [← he]
+    exact Submodule.subset_span ⟨e, rfl⟩
+  have hQtop : Q = (⊤ : Submodule (degreeZeroSubring G) S) := by
+    apply top_unique
+    intro z hz
+    have hz' : z ∈ Algebra.adjoin (degreeZeroSubring G) (s : Set S) := by
+      rw [hsgen]
+      trivial
+    refine Algebra.adjoin_induction (s := (s : Set S))
+      (p := fun y _ => y ∈ Q) ?_ ?_ ?_ ?_ hz'
+    · intro z hz
+      exact hsQ z hz
+    · intro t
+      change (t : S) ∈ Q
+      have h1 : (1 : S) ∈ Q := by
+        apply Submodule.subset_span
+        exact ⟨fun _ => 0, by simp [monomial]⟩
+      have h := Q.smul_mem t h1
+      change (t : S) * 1 ∈ Q at h
+      simpa using h
+    · intro a b _ _ ha hb
+      exact Q.add_mem ha hb
+    · intro a b _ _ ha hb
+      exact hQmul ha hb
+  refine ⟨r * m, Nat.mul_pos (by dsimp [r]; omega) hmpos, ?_⟩
+  intro d hd hdiv
+  let T : Subring (veroneseRing G d) :=
+    Subring.closure
+      (Set.range (veroneseDegreeZeroMap G d) ∪
+        Set.range (veroneseDegreeOneMap G d))
+  change T = (⊤ : Subring (veroneseRing G d))
+  rcases hdiv with ⟨t, hdt⟩
+  have ht : t ≠ 0 := by
+    intro ht0
+    subst t
+    simp at hdt
+    omega
+  have subtype_cast :
+      ∀ {p q : S → Prop} (h : p = q) (x : S) (hp : p x),
+        cast (congrArg (fun r : S → Prop => Subtype r) h)
+            (⟨x, hp⟩ : Subtype p) = ⟨x, h ▸ hp⟩ := by
+    intro p q h x hp
+    cases h
+    rfl
+  have hmonoT : ∀ k : ℕ, ∀ e : s → ℕ, ∀ hdeg : deg e = k * d,
+      DirectSum.of _ k ⟨monomial e, by
+        simpa only [hdeg] using hmono e⟩ ∈ T := by
+    intro k
+    induction k using Nat.strong_induction_on with
+    | h k ih =>
+        intro e hdeg
+        have hmem : monomial e ∈ G.component (k * d) := by
+          simpa [hdeg] using hmono e
+        by_cases hk0 : k = 0
+        · subst k
+          have hz : monomial e ∈ degreeZeroSubring G := by
+            change monomial e ∈ G.component 0
+            simpa only [zero_mul] using hmem
+          apply Subring.subset_closure
+          exact Or.inl ⟨⟨monomial e, hz⟩, rfl⟩
+        · by_cases hk1 : k = 1
+          · subst k
+            apply Subring.subset_closure
+            exact Or.inr ⟨⟨monomial e, by simpa using hmem⟩, rfl⟩
+          · have hk2 : 2 ≤ k := by omega
+            have he' : deg e = k * (t * (r * m)) := by
+              calc
+                deg e = k * d := hdeg
+                _ = k * ((r * m) * t) := by rw [hdt]
+                _ = k * (t * (r * m)) := by rw [Nat.mul_comm (r * m) t]
+            rcases hfactor_mult t k ht hk2 e he' with
+              ⟨A, B, hAB, hAdeg, hBdeg⟩
+            have hAdeg' : deg A = d := by
+              calc
+                deg A = t * (r * m) := hAdeg
+                _ = (r * m) * t := Nat.mul_comm _ _
+                _ = d := hdt.symm
+            have hBdeg' : deg B = (k - 1) * d := by
+              calc
+                deg B = (k - 1) * (t * (r * m)) := hBdeg
+                _ = (k - 1) * ((r * m) * t) := by
+                  rw [Nat.mul_comm (r * m) t]
+                _ = (k - 1) * d := by rw [hdt.symm]
+            have hAcomp : monomial A ∈ G.component d := by
+              simpa [hAdeg'] using hmono A
+            have hBcomp : monomial B ∈ G.component ((k - 1) * d) := by
+              simpa [hBdeg'] using hmono B
+            have hBin :
+                DirectSum.of _ (k - 1) ⟨monomial B, hBcomp⟩ ∈ T :=
+              ih (k - 1) (by omega) B hBdeg'
+            let a : G.component (1 * d) :=
+              ⟨monomial A, by simpa only [one_mul] using hAcomp⟩
+            let b : G.component ((k - 1) * d) := ⟨monomial B, hBcomp⟩
+            have hAin : DirectSum.of _ 1 a ∈ T := by
+              apply Subring.subset_closure
+              exact Or.inr ⟨⟨monomial A, by simpa only [one_mul] using hAcomp⟩, rfl⟩
+            have hprod : monomial A * monomial B = monomial e := by
+              rw [hmonmul]
+              congr 1
+              funext i
+              exact hAB i
+            have hindex : 1 + (k - 1) = k := by omega
+            have hmem' : monomial e ∈ G.component ((1 + (k - 1)) * d) := by
+              simpa only [hindex] using hmem
+            have hmul :
+                DirectSum.of (fun n : ℕ => G.component (n * d)) 1 a *
+                    DirectSum.of (fun n : ℕ => G.component (n * d)) (k - 1) b =
+                  DirectSum.of (fun n : ℕ => G.component (n * d)) k
+                    ⟨monomial e, hmem⟩ := by
+              rw [DirectSum.of_mul_of]
+              have hgmul :
+                  @GradedMonoid.GMul.mul ℕ
+                    (fun n : ℕ => G.component (n * d)) _ _ _ _ a b =
+                    (⟨monomial e, hmem'⟩ : G.component ((1 + (k - 1)) * d)) := by
+                apply Subtype.ext
+                change monomial A * monomial B = monomial e
+                exact hprod
+              rw [hgmul]
+              apply DirectSum.of_eq_of_gradedMonoid_eq
+              apply Sigma.ext hindex
+              have hset :
+                  G.component ((1 + (k - 1)) * d) = G.component (k * d) :=
+                congrArg (fun n : ℕ => G.component (n * d)) hindex
+              have hset' :
+                  (fun x : S => x ∈ G.component ((1 + (k - 1)) * d)) =
+                    (fun x : S => x ∈ G.component (k * d)) := by
+                exact congrArg
+                  (fun H : AddSubgroup S => fun x : S => x ∈ H) hset
+              have htypes :
+                  (G.component ((1 + (k - 1)) * d) : Type v) =
+                    (G.component (k * d) : Type v) := by
+                exact congrArg (fun p : S → Prop => Subtype p) hset'
+              have hmemA : monomial e ∈ G.component ((1 + (k - 1)) * d) :=
+                Eq.mpr (congrFun hset' (monomial e)) hmem
+              have hproof :
+                  hmem' = hmemA := Subsingleton.elim _ _
+              have hcast :
+                  cast htypes
+                      (⟨monomial e, hmem'⟩ : G.component ((1 + (k - 1)) * d)) =
+                    (⟨monomial e, hmem⟩ : G.component (k * d)) := by
+                calc
+                  cast htypes
+                      (⟨monomial e, hmem'⟩ : G.component ((1 + (k - 1)) * d)) =
+                      cast htypes
+                        (⟨monomial e, hmemA⟩ :
+                          G.component ((1 + (k - 1)) * d)) := by rw [hproof]
+                  _ = ⟨monomial e, Eq.mp (congrFun hset' (monomial e)) hmemA⟩ :=
+                    subtype_cast hset' (monomial e) hmemA
+                  _ = ⟨monomial e, hmem⟩ := by
+                    apply Subtype.ext
+                    rfl
+              exact heq_of_cast_eq htypes hcast
+            rw [← hmul]
+            exact T.mul_mem hAin hBin
+  let lift : S → ℕ → veroneseRing G d := fun z k =>
+    DirectSum.of _ k ⟨(DirectSum.decompose G.component z (k * d) : S),
+      (DirectSum.decompose G.component z (k * d)).property⟩
+  have hprojT : ∀ z : S, z ∈ Q → ∀ k : ℕ, lift z k ∈ T := by
+    intro z hz
+    refine Submodule.span_induction
+      (p := fun z _ => ∀ k : ℕ, lift z k ∈ T)
+      (mem := by
+        intro w hw k
+        rcases hw with ⟨e, rfl⟩
+        by_cases hzero : monomial e = 0
+        · simp [lift, hzero]
+        · by_cases hdeg : deg e = k * d
+          · have h := hmonoT k e hdeg
+            change DirectSum.of _ k ⟨
+              (DirectSum.decompose G.component (monomial e) (k * d) : S),
+              (DirectSum.decompose G.component (monomial e) (k * d)).property⟩ ∈ T
+            have hdecomp :
+                (DirectSum.decompose G.component (monomial e) (k * d) : S) =
+                  monomial e := by
+              rw [← hdeg, DirectSum.decompose_of_mem_same G.component (hmono e)]
+            have hmem' : monomial e ∈ G.component (k * d) := by
+              simpa only [hdeg] using hmono e
+            have hsub :
+                (⟨(DirectSum.decompose G.component (monomial e) (k * d) : S),
+                  (DirectSum.decompose G.component (monomial e) (k * d)).property⟩ :
+                    G.component (k * d)) = ⟨monomial e, hmem'⟩ := by
+              apply Subtype.ext
+              exact hdecomp
+            rw [hsub]
+            exact h
+          · have h := hmono e
+            change DirectSum.of _ k ⟨
+              (DirectSum.decompose G.component (monomial e) (k * d) : S),
+              (DirectSum.decompose G.component (monomial e) (k * d)).property⟩ ∈ T
+            have hdecomp :
+                (DirectSum.decompose G.component (monomial e) (k * d) : S) = 0 := by
+              rw [DirectSum.decompose_of_mem_ne G.component h hdeg]
+            have hsub :
+                (⟨(DirectSum.decompose G.component (monomial e) (k * d) : S),
+                  (DirectSum.decompose G.component (monomial e) (k * d)).property⟩ :
+                    G.component (k * d)) = 0 := by
+              apply Subtype.ext
+              exact hdecomp
+            rw [hsub]
+            simp)
+      (zero := by
+        intro k
+        simp [lift])
+      (add := by
+        intro a b _ _ ha hb k
+        have h := T.add_mem (ha k) (hb k)
+        simpa [lift, DirectSum.decompose_add, DirectSum.add_apply] using h)
+      (smul := by
+        intro c a _ ha k
+        have hc0 : (c : S) ∈ G.component 0 := by
+          change (c : S) ∈ G.component 0
+          exact c.property
+        have hc : (c : S) ∈ G.component (0 * d) := by
+          simpa only [zero_mul] using hc0
+        have hcT : DirectSum.of _ 0 ⟨(c : S), hc⟩ ∈ T := by
+          apply Subring.subset_closure
+          exact Or.inl ⟨c, rfl⟩
+        have h := T.mul_mem hcT (ha k)
+        have hdecomp :=
+          DirectSum.coe_decompose_mul_of_left_mem_zero G.component
+            (a_mem := hc0) (b := a) (j := k * d)
+        change lift ((c : S) * a) k ∈ T
+        have hprodmem :
+            (c : S) * (DirectSum.decompose G.component a (k * d) : S) ∈
+              G.component (k * d) := by
+          rw [← hdecomp]
+          exact (DirectSum.decompose G.component ((c : S) * a) (k * d)).property
+        have hindex0 : 0 + k = k := Nat.zero_add k
+        have hset :
+            G.component ((0 + k) * d) = G.component (k * d) :=
+          congrArg (fun n : ℕ => G.component (n * d)) hindex0
+        have hset' :
+            (fun x : S => x ∈ G.component ((0 + k) * d)) =
+              (fun x : S => x ∈ G.component (k * d)) := by
+          exact congrArg
+            (fun H : AddSubgroup S => fun x : S => x ∈ H) hset
+        have hleftmem :
+            (c : S) * (DirectSum.decompose G.component a (k * d) : S) ∈
+              G.component ((0 + k) * d) :=
+          Eq.mpr (congrFun hset' ((c : S) *
+            (DirectSum.decompose G.component a (k * d) : S))) hprodmem
+        have hgmul :
+            @GradedMonoid.GMul.mul ℕ
+                (fun n : ℕ => G.component (n * d)) _ _ _ _
+                ⟨(c : S), hc⟩
+                ⟨DirectSum.decompose G.component a (k * d),
+                  (DirectSum.decompose G.component a (k * d)).property⟩ =
+              ⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+                hleftmem⟩ := by
+          apply Subtype.ext
+          rfl
+        rw [DirectSum.of_mul_of, hgmul] at h
+        change DirectSum.of (fun n : ℕ => G.component (n * d)) (0 + k)
+          ⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+            hleftmem⟩ ∈ T at h
+        have hzero :
+              DirectSum.of (fun n : ℕ => G.component (n * d)) (0 + k)
+                ⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+                  hleftmem⟩ =
+              DirectSum.of (fun n : ℕ => G.component (n * d)) k
+                ⟨DirectSum.decompose G.component ((c : S) * a) (k * d),
+                  (DirectSum.decompose G.component ((c : S) * a) (k * d)).property⟩ := by
+          apply DirectSum.of_eq_of_gradedMonoid_eq
+          apply Sigma.ext hindex0
+          have htypes :
+              (G.component ((0 + k) * d) : Type v) =
+                (G.component (k * d) : Type v) := by
+            exact congrArg (fun p : S → Prop => Subtype p) hset'
+          have hcast :
+              cast htypes
+                  (⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+                    hleftmem⟩ :
+                    G.component ((0 + k) * d)) =
+                  (⟨DirectSum.decompose G.component ((c : S) * a) (k * d),
+                  (DirectSum.decompose G.component ((c : S) * a) (k * d)).property⟩ :
+                  G.component (k * d)) := by
+            calc
+                  cast htypes
+                      (⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+                    hleftmem⟩ : G.component ((0 + k) * d)) =
+                  ⟨(c : S) * (DirectSum.decompose G.component a (k * d) : S),
+                    Eq.mp (congrFun hset' ((c : S) *
+                      (DirectSum.decompose G.component a (k * d) : S))) hleftmem⟩ :=
+                subtype_cast hset' ((c : S) *
+                  (DirectSum.decompose G.component a (k * d) : S)) hleftmem
+              _ =
+                  ⟨DirectSum.decompose G.component ((c : S) * a) (k * d),
+                    (DirectSum.decompose G.component ((c : S) * a) (k * d)).property⟩ := by
+                apply Subtype.ext
+                exact hdecomp.symm
+          exact heq_of_cast_eq htypes hcast
+        rw [hzero] at h
+        simpa [lift] using h)
+      hz
+  have hcompT : ∀ k : ℕ, ∀ y : G.component (k * d),
+      DirectSum.of _ k y ∈ T := by
+    intro k y
+    have hyQ : (y : S) ∈ Q := by
+      rw [hQtop]
+      trivial
+    have h := hprojT (y : S) hyQ k
+    change DirectSum.of _ k ⟨
+      (DirectSum.decompose G.component (y : S) (k * d) : S),
+      (DirectSum.decompose G.component (y : S) (k * d)).property⟩ ∈ T at h
+    have hdecomp :
+        (DirectSum.decompose G.component (y : S) (k * d) : S) = (y : S) :=
+      DirectSum.decompose_of_mem_same G.component y.property
+    have hsub :
+        (⟨(DirectSum.decompose G.component (y : S) (k * d) : S),
+          (DirectSum.decompose G.component (y : S) (k * d)).property⟩ :
+          G.component (k * d)) = y := by
+      apply Subtype.ext
+      change (DirectSum.decompose G.component (y : S) (k * d) : S) = (y : S)
+      simpa using hdecomp
+    rw [hsub] at h
+    exact h
+  apply top_unique
+  intro z hz
+  refine DirectSum.induction_on z ?_ ?_ ?_
+  · exact T.zero_mem
+  · intro k y
+    exact hcompT k y
+  · intro x y hx hy
+    exact T.add_mem hx hy
 
 /-! ## Integral closure -/
 

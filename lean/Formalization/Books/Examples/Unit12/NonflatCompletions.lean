@@ -1972,27 +1972,268 @@ theorem almostIntegralPrincipalQuotientMap_injective
     (R : Type u) [CommRing R] [IsDomain R]
     (hflat : Module.Flat (Polynomial R) (PowerSeries R)) (a b : R) :
     Function.Injective (almostIntegralPrincipalQuotientMap R a b) := by
-  sorry
+  have hff : RingHom.FaithfullyFlat
+      (almostIntegralPolynomialLocalizationMap R) :=
+    almostIntegralPolynomialLocalization_faithfullyFlat R hflat
+  have hcomap (I : Ideal (almostIntegralPolynomialLocalization R)) :
+      (I.map (almostIntegralPolynomialLocalizationMap R)).comap
+        (almostIntegralPolynomialLocalizationMap R) = I := by
+    exact @Ideal.comap_map_eq_self_of_faithfullyFlat
+      (almostIntegralPolynomialLocalization R) (PowerSeries R)
+      _ _ _ hff I
+  intro x y hxy
+  obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+  change (Ideal.Quotient.mk (almostIntegralPowerSeriesPrincipalIdeal R a b))
+      (almostIntegralPolynomialLocalizationMap R x) =
+    (Ideal.Quotient.mk (almostIntegralPowerSeriesPrincipalIdeal R a b))
+      (almostIntegralPolynomialLocalizationMap R y) at hxy
+  apply (Ideal.Quotient.mk_eq_mk_iff_sub_mem x y).mpr
+  have hmem : almostIntegralPolynomialLocalizationMap R (x - y) ∈
+      almostIntegralPowerSeriesPrincipalIdeal R a b := by
+    rw [← Ideal.Quotient.eq_zero_iff_mem]
+    rw [map_sub, map_sub]
+    exact sub_eq_zero.mpr hxy
+  have hmem' : x - y ∈
+      (almostIntegralPowerSeriesPrincipalIdeal R a b).comap
+        (almostIntegralPolynomialLocalizationMap R) := hmem
+  rw [hcomap] at hmem'
+  exact hmem'
 
 theorem flat_powerSeries_normal_iff_completelyNormal
     (R K : Type u) [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K]
     (hflat : Module.Flat (Polynomial R) (PowerSeries R)) :
     IsIntegrallyClosed R ↔ IsCompletelyNormal R K := by
-  sorry
+  constructor
+  · intro hnormal x hx
+    by_cases hx0 : x = 0
+    · exact ⟨0, by simp [hx0]⟩
+    rcases hx with ⟨r, hr, hrpow⟩
+    rw [mem_nonZeroDivisors_iff_ne_zero] at hr
+    obtain ⟨a, b, hb, hx⟩ := IsFractionRing.div_surjective R x
+    have hbne : b ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hb
+    have hbK : algebraMap R K b ≠ 0 := by
+      intro h
+      apply hbne
+      apply (IsFractionRing.injective R K)
+      simpa using h
+    have hα : algebraMap R K a = x * algebraMap R K b := by
+      calc
+        algebraMap R K a =
+            (algebraMap R K a / algebraMap R K b) * algebraMap R K b :=
+          (div_mul_cancel₀ _ hbK).symm
+        _ = x * algebraMap R K b := by rw [hx]
+    have hpow : ∀ n : ℕ, 1 ≤ n → ∃ c : R,
+        algebraMap R K c = algebraMap R K r * x ^ n := by
+      intro n hn
+      obtain ⟨c, hc⟩ := hrpow n
+      refine ⟨c, ?_⟩
+      simpa [Algebra.smul_def] using hc
+    let d : AlmostIntegralSeriesData R K x r :=
+      Classical.choice (exists_almostIntegralSeriesData R K x r hr hpow)
+    have hF := almostIntegralSeries_factorization R K x r a b d hbne hα
+    let p : Polynomial R := Polynomial.C a * Polynomial.X - Polynomial.C b
+    let q : Polynomial R := Polynomial.C (-r * b)
+    let J : Ideal (almostIntegralPolynomialLocalization R) :=
+      Ideal.map (algebraMap (Polynomial R)
+        (almostIntegralPolynomialLocalization R)) (Ideal.span {p})
+    have hpmap : (almostIntegralPolynomialLocalizationMap R)
+        (algebraMap (Polynomial R)
+          (almostIntegralPolynomialLocalization R) p) =
+        PowerSeries.C a * PowerSeries.X - PowerSeries.C b := by
+      rw [almostIntegralPolynomialLocalizationMap, IsLocalization.lift_eq]
+      simp [p, map_sub, map_mul]
+    have hqmap : (almostIntegralPolynomialLocalizationMap R)
+        (algebraMap (Polynomial R)
+          (almostIntegralPolynomialLocalization R) q) =
+        PowerSeries.C (-r * b) := by
+      rw [almostIntegralPolynomialLocalizationMap, IsLocalization.lift_eq]
+      simp [q]
+    have hpL : algebraMap (Polynomial R)
+        (almostIntegralPolynomialLocalization R) p ∈ J := by
+      exact Ideal.mem_map_of_mem _ (Ideal.mem_span_singleton_self p)
+    have hpB : (almostIntegralPolynomialLocalizationMap R)
+        (algebraMap (Polynomial R)
+          (almostIntegralPolynomialLocalization R) p) ∈
+        almostIntegralPowerSeriesPrincipalIdeal R a b := by
+      exact Ideal.mem_map_of_mem _ hpL
+    have hqB : PowerSeries.C (-r * b) ∈
+        almostIntegralPowerSeriesPrincipalIdeal R a b := by
+      rw [← hF, ← hpmap]
+      simpa [mul_comm] using
+        (almostIntegralPowerSeriesPrincipalIdeal R a b).mul_mem_left
+          (almostIntegralSeries d) hpB
+    have hqL : Ideal.Quotient.mk (almostIntegralLocalizedPrincipalIdeal R a b)
+        (algebraMap (Polynomial R)
+          (almostIntegralPolynomialLocalization R) q) = 0 := by
+      apply (almostIntegralPrincipalQuotientMap_injective R hflat a b)
+      change (almostIntegralPrincipalQuotientMap R a b)
+          (Ideal.Quotient.mk (almostIntegralLocalizedPrincipalIdeal R a b)
+            (algebraMap (Polynomial R)
+              (almostIntegralPolynomialLocalization R) q)) =
+        (almostIntegralPrincipalQuotientMap R a b) 0
+      rw [show (almostIntegralPrincipalQuotientMap R a b)
+          (Ideal.Quotient.mk (almostIntegralLocalizedPrincipalIdeal R a b)
+            (algebraMap (Polynomial R)
+              (almostIntegralPolynomialLocalization R) q)) =
+          (Ideal.Quotient.mk (almostIntegralPowerSeriesPrincipalIdeal R a b))
+            ((almostIntegralPolynomialLocalizationMap R)
+              (algebraMap (Polynomial R)
+                (almostIntegralPolynomialLocalization R) q) : PowerSeries R) by
+            rfl]
+      rw [hqmap]
+      simpa using Ideal.Quotient.eq_zero_iff_mem.mpr hqB
+    have hqLmem : algebraMap (Polynomial R)
+        (almostIntegralPolynomialLocalization R) q ∈ J := by
+      simpa [J, almostIntegralLocalizedPrincipalIdeal,
+        almostIntegralPrincipalPolynomial, p] using
+        (Ideal.Quotient.eq_zero_iff_mem.mp hqL)
+    obtain ⟨m, hm, hmq⟩ :=
+      (IsLocalization.algebraMap_mem_map_algebraMap_iff
+        (M := almostIntegralDenominatorSubmonoid R)
+        (S := almostIntegralPolynomialLocalization R)
+        (Ideal.span {p}) q).mp (by simpa [J] using hqLmem)
+    have hmcc : Polynomial.constantCoeff (m : Polynomial R) = 1 := by
+      have hm' := hm
+      change Polynomial.constantCoeff (m : Polynomial R) ∈
+        Submonoid.powers (1 : R) at hm'
+      rcases (Submonoid.mem_powers_iff _ _).mp hm' with ⟨n, hn⟩
+      rw [← hn]
+      simp
+    obtain ⟨t, ht⟩ := (Ideal.mem_span_singleton.mp hmq)
+    have hax : algebraMap R K a * x⁻¹ = algebraMap R K b := by
+      calc
+        algebraMap R K a * x⁻¹ =
+            (x * algebraMap R K b) * x⁻¹ := by rw [hα]
+        _ = algebraMap R K b := by field_simp
+    let ev : Polynomial R →+* K :=
+      Polynomial.eval₂RingHom (algebraMap R K) x⁻¹
+    have hev_p : ev p = 0 := by
+      simp [ev, p, hax]
+    have hrK : algebraMap R K r ≠ 0 := by
+      intro h
+      apply hr
+      apply (IsFractionRing.injective R K)
+      simpa using h
+    have hqev : ev q ≠ 0 := by
+      simpa [ev, q] using neg_ne_zero.mpr (mul_ne_zero hrK hbK)
+    have hev_eq := congrArg ev ht
+    have hprod : ev m * ev q = 0 := by
+      simpa [hev_p] using hev_eq.symm
+    have hev_m : ev m = 0 :=
+      (mul_eq_zero.mp hprod).resolve_right hqev
+    letI : Invertible x := invertibleOfNonzero hx0
+    letI : Invertible x⁻¹ := invertibleOfNonzero (inv_ne_zero hx0)
+    have hrootrev : Polynomial.eval₂ (algebraMap R K)
+        (⅟ (x⁻¹)) (Polynomial.reverse m) = 0 := by
+      exact (Polynomial.eval₂_reverse_eq_zero_iff
+        (algebraMap R K) (x⁻¹) m).2 hev_m
+    have hrootrev' : Polynomial.eval₂ (algebraMap R K)
+        x (Polynomial.reverse m) = 0 := by
+      simpa using hrootrev
+    have hmonic : (Polynomial.reverse m).Monic := by
+      rw [Polynomial.Monic.def, Polynomial.reverse_leadingCoeff,
+        Polynomial.trailingCoeff_eq_coeff_zero]
+      · simpa [Polynomial.constantCoeff] using hmcc
+      · simpa [Polynomial.constantCoeff] using
+          (show Polynomial.constantCoeff m ≠ 0 by
+            rw [hmcc]
+            exact one_ne_zero)
+    have hIntegral : IsIntegral R x :=
+      ⟨Polynomial.reverse m, hmonic, hrootrev'⟩
+    exact (isIntegrallyClosedIn_iff.mp
+      ((isIntegrallyClosed_iff_isIntegrallyClosedIn K).mp hnormal)).2 hIntegral
+  · intro hcomplete
+    rw [isIntegrallyClosed_iff_isIntegrallyClosedIn K]
+    rw [isIntegrallyClosedIn_iff]
+    refine ⟨IsFractionRing.injective R K, ?_⟩
+    intro x hx
+    exact hcomplete hx.isAlmostIntegral
 
 theorem valuationRing_dimension_gt_one_not_completelyNormal
     (R : Type u) [CommRing R] [IsDomain R] [ValuationRing R]
     (hdim : ¬ Ring.KrullDimLE 1 R) :
     ¬ IsCompletelyNormal R (FractionRing R) := by
-  sorry
+  intro hcomplete
+  have hnot : ¬ (∀ I : Ideal R, I ≠ ⊥ → I.IsPrime → I.IsMaximal) := by
+    intro h
+    apply hdim
+    exact (Ring.krullDimLE_one_iff_of_noZeroDivisors).mpr h
+  push_neg at hnot
+  obtain ⟨P, hPbot, hPprime, hPmax⟩ := hnot
+  have hPle : P ≤ IsLocalRing.maximalIdeal R := by
+    exact IsLocalRing.le_maximalIdeal_of_isPrime P
+  have hPne : P ≠ IsLocalRing.maximalIdeal R := by
+    intro hP
+    apply hPmax
+    rw [hP]
+    exact IsLocalRing.maximalIdeal.isMaximal R
+  have hnotle : ¬ IsLocalRing.maximalIdeal R ≤ P := by
+    intro h
+    exact hPne (le_antisymm hPle h)
+  obtain ⟨x, hxP, hx0⟩ : ∃ x : R, x ∈ P ∧ x ≠ 0 := by
+    by_contra h
+    apply hPbot
+    apply le_antisymm
+    · intro z hz
+      by_contra hz0
+      exact h ⟨z, hz, hz0⟩
+    · exact bot_le
+  obtain ⟨y, hyMax, hyP⟩ :
+      ∃ y : R, y ∈ IsLocalRing.maximalIdeal R ∧ y ∉ P := by
+    by_contra h
+    apply hnotle
+    intro y hy
+    by_contra hyP'
+    exact h ⟨y, hy, hyP'⟩
+  have hy0 : y ≠ 0 := by
+    intro hy
+    apply hyP
+    simpa [hy]
+  have hAI : IsAlmostIntegral R
+      ((algebraMap R (FractionRing R) y)⁻¹) := by
+    refine ⟨x, mem_nonZeroDivisors_iff_ne_zero.mpr hx0, ?_⟩
+    intro n
+    have hynotP : y ^ n ∉ P := by
+      intro hyn
+      exact hyP (hPprime.mem_of_pow_mem n hyn)
+    have hdiv : y ^ n ∣ x := by
+      rcases ValuationRing.dvd_total (R := R) x (y ^ n) with h | h
+      · exfalso
+        apply hynotP
+        obtain ⟨c, hc⟩ := h
+        rw [hc]
+        simpa [mul_comm] using P.mul_mem_left c hxP
+      · exact h
+    obtain ⟨c, hc⟩ := hdiv
+    refine ⟨c, ?_⟩
+    rw [Algebra.smul_def]
+    have hyK : algebraMap R (FractionRing R) y ≠ 0 := by
+      exact IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
+        (mem_nonZeroDivisors_iff_ne_zero.mpr hy0)
+    rw [← one_div, div_pow]
+    simp only [one_pow, one_div]
+    field_simp [hyK]
+    rw [← map_pow, ← map_mul, hc]
+    simp [map_mul, mul_comm]
+  obtain ⟨z, hz⟩ := hcomplete hAI
+  have hyz : y * z = 1 := by
+    apply IsFractionRing.injective R (FractionRing R)
+    rw [map_mul, hz]
+    simp [hy0]
+  exact (IsLocalRing.notMem_maximalIdeal.mpr (IsUnit.of_mul_eq_one z hyz)) hyMax
 
 theorem valuationRing_dimension_gt_one_not_flat_over_polynomial
     (R : Type u) [CommRing R] [IsDomain R] [ValuationRing R]
     (hdim : ¬ Ring.KrullDimLE 1 R) :
     Module.Flat R (PowerSeries R) ∧
       ¬ Module.Flat (Polynomial R) (PowerSeries R) := by
-  sorry
+  refine ⟨valuationRing_powerSeries_flat R, ?_⟩
+  intro hflat
+  apply valuationRing_dimension_gt_one_not_completelyNormal R hdim
+  exact (flat_powerSeries_normal_iff_completelyNormal R (FractionRing R) hflat).mp
+    (valuationRing_is_normal R)
 
 /-! ## The nonflat localized completion
 

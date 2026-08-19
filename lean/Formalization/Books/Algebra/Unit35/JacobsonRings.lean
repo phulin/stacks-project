@@ -1468,13 +1468,64 @@ theorem finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
         letI : Algebra p.ResidueField q.asIdeal.ResidueField :=
           residueFieldAlgebraOfMap p q.asIdeal φ rfl
         Module.Finite p.ResidueField q.asIdeal.ResidueField) := by
-  sorry
+  refine ⟨hφ.isJacobsonRing, ?_, ?_⟩
+  · intro q
+    let p : Ideal R := q.asIdeal.comap φ
+    let f : R ⧸ p →+* S ⧸ q.asIdeal :=
+      Ideal.quotientMap q.asIdeal φ le_rfl
+    have hcomp : ((Ideal.Quotient.mk q.asIdeal).comp φ).FiniteType :=
+      RingHom.FiniteType.comp
+        (RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective) hφ
+    have hfac : f.comp (Ideal.Quotient.mk p) =
+        (Ideal.Quotient.mk q.asIdeal).comp φ := by
+      simpa [f] using (Ideal.quotientMap_comp_mk (f := φ) (H := le_rfl))
+    have hf : f.FiniteType := by
+      exact RingHom.FiniteType.of_comp_finiteType
+        (f := Ideal.Quotient.mk p) (g := f) (hfac ▸ hcomp)
+    letI : Field (S ⧸ q.asIdeal) :=
+      (Ideal.Quotient.maximal_ideal_iff_isField_quotient q.asIdeal).mp q.2 |>.toField
+    letI : Algebra (R ⧸ p) (S ⧸ q.asIdeal) := f.toAlgebra
+    letI : Algebra.FiniteType (R ⧸ p) (S ⧸ q.asIdeal) := hf
+    have hinj : Function.Injective (algebraMap (R ⧸ p) (S ⧸ q.asIdeal)) := by
+      rw [RingHom.algebraMap_toAlgebra]
+      simpa [p, f] using (Ideal.quotientMap_injective (I := q.asIdeal) (f := φ))
+    have hfield := jacobson_subring_of_finiteType_field
+      (R := R ⧸ p) (K := S ⧸ q.asIdeal) hinj
+    simpa [p] using Ideal.Quotient.maximal_of_isField p hfield.1
+  · intro q
+    let p := q.asIdeal.comap φ
+    letI : p.IsPrime := Ideal.comap_isPrime φ q.asIdeal
+    letI : Algebra p.ResidueField q.asIdeal.ResidueField :=
+      residueFieldAlgebraOfMap p q.asIdeal φ rfl
+    have hcomp :
+        ((algebraMap S q.asIdeal.ResidueField).comp φ).FiniteType :=
+      RingHom.FiniteType.comp
+        (RingHom.FiniteType.of_finite
+          (RingHom.finite_algebraMap.mpr inferInstance)) hφ
+    have hfac :
+        (Ideal.ResidueField.map p q.asIdeal φ rfl).comp
+            (algebraMap R p.ResidueField) =
+          (algebraMap S q.asIdeal.ResidueField).comp φ := by
+      ext r
+      exact Ideal.ResidueField.map_algebraMap p q.asIdeal φ rfl r
+    have hft :
+        (Ideal.ResidueField.map p q.asIdeal φ rfl).FiniteType := by
+      exact RingHom.FiniteType.of_comp_finiteType
+        (f := algebraMap R p.ResidueField)
+        (g := Ideal.ResidueField.map p q.asIdeal φ rfl) (hfac ▸ hcomp)
+    have hft' : Algebra.FiniteType p.ResidueField q.asIdeal.ResidueField :=
+      RingHom.finiteType_algebraMap.mp (by
+        change (Ideal.ResidueField.map p q.asIdeal φ rfl).FiniteType
+        exact hft)
+    exact @finite_of_finite_type_of_isJacobsonRing
+      p.ResidueField q.asIdeal.ResidueField _ _ _ _ hft'
 
 theorem finiteType_algebra_over_integers_isJacobson
     {A : Type u} [CommRing A] [Algebra ℤ A]
     [Algebra.FiniteType ℤ A] :
     IsJacobsonRing A := by
-  sorry
+  letI : IsJacobsonRing ℤ := integer_isJacobson
+  exact isJacobsonRing_of_finiteType (A := ℤ) (B := A)
 
 /-! ## Constructible images and closed points -/
 
@@ -1492,7 +1543,8 @@ theorem finiteType_constructible_image_isConstructible
     (φ : R →+* S) (hφ : RingHom.FiniteType φ)
     {E : Set (PrimeSpectrum S)} (hE : IsConstructible E) :
     IsConstructible (PrimeSpectrum.comap φ '' E) := by
-  sorry
+  exact PrimeSpectrum.isConstructible_comap_image
+    (RingHom.FinitePresentation.of_finiteType.mp hφ) hE
 
 theorem jacobson_constructible_image_closedPoint_formula
     {R S : Type u} [CommRing R] [CommRing S]
@@ -1510,7 +1562,259 @@ theorem jacobson_constructible_image_closedPoint_formula
               (closure ({ξ} : Set (PrimeSpectrum R)) ∩
                 (PrimeSpectrum.comap φ ''
                   (E ∩ closedPoints (PrimeSpectrum S)))) := by
-  sorry
+  let F : Set (PrimeSpectrum R) := PrimeSpectrum.comap φ '' E
+  let G : Set (PrimeSpectrum R) :=
+    PrimeSpectrum.comap φ '' (E ∩ closedPoints (PrimeSpectrum S))
+  have hpres := finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
+    φ hφ
+  have hmax : ∀ q : MaximalSpectrum S, (q.asIdeal.comap φ).IsMaximal :=
+    hpres.2.1
+  have hEjac := Formalization.Books.Topology.Unit18.jacobsonSpace_of_isConstructible
+    (X := PrimeSpectrum S) hE
+  letI : JacobsonSpace E := hEjac.1
+  let g : E → F := fun z =>
+    ⟨PrimeSpectrum.comap φ z.1, ⟨z.1, z.2, rfl⟩⟩
+  have hg : Continuous g := by
+    apply Continuous.subtype_mk
+    exact PrimeSpectrum.continuous_comap φ |>.comp continuous_subtype_val
+  have hclosed : closedPointsOfSubset F = G := by
+    apply Set.Subset.antisymm
+    · intro x hx
+      change ∃ y : closedPoints F, (y.1 : PrimeSpectrum R) = x at hx
+      rcases hx with ⟨y, rfl⟩
+      obtain ⟨q, hqE, hq⟩ := y.1.2
+      let A : Set E := g ⁻¹' ({(y.1 : F)} : Set F)
+      have hAne : A.Nonempty := by
+        refine ⟨⟨q, hqE⟩, ?_⟩
+        exact Set.mem_singleton_iff.mpr (by
+          apply Subtype.ext
+          exact hq)
+      have hyclosedF : IsClosed ({(y.1 : F)} : Set F) :=
+        mem_closedPoints_iff.mp y.2
+      have hAclosed : IsClosed A := by
+        exact hyclosedF.preimage hg
+      obtain ⟨z, hzA, hzclosed⟩ := nonempty_inter_closedPoints hAne
+        hAclosed.isLocallyClosed
+      have hzSclosed : IsClosed ({(z : PrimeSpectrum S)} : Set (PrimeSpectrum S)) :=
+        hEjac.2 z hzclosed
+      have hzG : PrimeSpectrum.comap φ (z : PrimeSpectrum S) ∈ G := by
+        refine ⟨(z : PrimeSpectrum S), ?_, rfl⟩
+        exact ⟨z.property, mem_closedPoints_iff.mpr hzSclosed⟩
+      have hzx : PrimeSpectrum.comap φ (z : PrimeSpectrum S) = (y.1 : PrimeSpectrum R) := by
+        change g z ∈ ({(y.1 : F)} : Set F) at hzA
+        exact congrArg Subtype.val (Set.mem_singleton_iff.mp hzA)
+      simpa [hzx] using hzG
+    · intro x hxG
+      change ∃ q : PrimeSpectrum S, q ∈ E ∩ closedPoints (PrimeSpectrum S) ∧
+        PrimeSpectrum.comap φ q = x at hxG
+      obtain ⟨q, ⟨hqE, hqclosed⟩, hqeq⟩ := hxG
+      have hqmax : q.asIdeal.IsMaximal :=
+        (PrimeSpectrum.isClosed_singleton_iff_isMaximal q).mp
+          (mem_closedPoints_iff.mp hqclosed)
+      let qM : MaximalSpectrum S := ⟨q, hqmax⟩
+      have hxclosed : IsClosed ({PrimeSpectrum.comap φ q} : Set (PrimeSpectrum R)) := by
+        exact (PrimeSpectrum.isClosed_singleton_iff_isMaximal (PrimeSpectrum.comap φ q)).mpr
+          (hmax qM)
+      refine ⟨⟨⟨PrimeSpectrum.comap φ q, ⟨q, hqE, rfl⟩⟩, ?_⟩, hqeq⟩
+      exact preimage_closedPoints_subset Subtype.val_injective continuous_subtype_val
+        (mem_closedPoints_iff.mpr hxclosed)
+  have hpart : G = closedPointPart F := by
+    apply Set.Subset.antisymm
+    · intro x hxG
+      change ∃ q : PrimeSpectrum S, q ∈ E ∩ closedPoints (PrimeSpectrum S) ∧
+        PrimeSpectrum.comap φ q = x at hxG
+      obtain ⟨q, ⟨hqE, hqclosed⟩, hqeq⟩ := hxG
+      have hqmax : q.asIdeal.IsMaximal :=
+        (PrimeSpectrum.isClosed_singleton_iff_isMaximal q).mp
+          (mem_closedPoints_iff.mp hqclosed)
+      let qM : MaximalSpectrum S := ⟨q, hqmax⟩
+      refine ⟨?_, ?_⟩
+      · exact hqeq ▸ ⟨q, hqE, rfl⟩
+      · exact hqeq ▸ mem_closedPoints_iff.mpr
+          ((PrimeSpectrum.isClosed_singleton_iff_isMaximal (PrimeSpectrum.comap φ q)).mpr
+            (hmax qM))
+    · intro x hx
+      change x ∈ F ∩ closedPoints (PrimeSpectrum R) at hx
+      rcases hx with ⟨hxF, hxclosed⟩
+      have hxsub : (⟨x, hxF⟩ : F) ∈ closedPoints F :=
+        preimage_closedPoints_subset Subtype.val_injective continuous_subtype_val
+          (mem_closedPoints_iff.mpr hxclosed)
+      have hxsub' : x ∈ closedPointsOfSubset F := by
+        change ∃ y : closedPoints F, (y.1 : PrimeSpectrum R) = x
+        exact ⟨⟨⟨x, hxF⟩, hxsub⟩, rfl⟩
+      rw [hclosed] at hxsub'
+      exact hxsub'
+  refine ⟨?_, ?_, ?_⟩
+  · exact hclosed
+  · exact hpart
+  · intro ξ
+    constructor
+    · intro hξ
+      obtain ⟨U, hUopen, hUdense, hUF⟩ :=
+        Formalization.Books.Algebra.Unit30.image_constructible_contains_open_dense_subset_of_finiteType
+          φ hφ hE hξ
+      apply Set.Subset.antisymm
+      · intro x hxC
+        by_contra hxnot
+        obtain ⟨O, hOopen, hOU⟩ := IsInducing.subtypeVal.isOpen_iff.mp hUopen
+        let V : Set (closure ({ξ} : Set (PrimeSpectrum R))) :=
+          (Subtype.val : closure ({ξ} : Set (PrimeSpectrum R)) → PrimeSpectrum R) ⁻¹'
+            (closure (closure ({ξ} : Set (PrimeSpectrum R)) ∩ G))ᶜ
+        have hVopen : IsOpen V := by
+          exact isClosed_closure.isOpen_compl.preimage continuous_subtype_val
+        have hxV : (⟨x, hxC⟩ : closure ({ξ} : Set (PrimeSpectrum R))) ∈ V := by
+          exact hxnot
+        obtain ⟨y, hyV, hyU⟩ := hUdense.inter_open_nonempty V hVopen ⟨_, hxV⟩
+        let W : Set (PrimeSpectrum R) :=
+          closure ({ξ} : Set (PrimeSpectrum R)) ∩ O ∩
+            (closure (closure ({ξ} : Set (PrimeSpectrum R)) ∩ G))ᶜ
+        have hWne : W.Nonempty := by
+          refine ⟨(y : PrimeSpectrum R), ?_⟩
+          refine ⟨⟨y.property, ?_⟩, ?_⟩
+          · have : y ∈
+                (Subtype.val : closure ({ξ} : Set (PrimeSpectrum R)) → PrimeSpectrum R) ⁻¹' O :=
+              hOU.symm ▸ hyU
+            exact this
+          · simpa [V] using hyV
+        have hWloc : IsLocallyClosed W := by
+          dsimp [W]
+          exact (isClosed_closure.isLocallyClosed.inter hOopen.isLocallyClosed).inter
+            isClosed_closure.isOpen_compl.isLocallyClosed
+        obtain ⟨z, hzW, hzclosed⟩ := nonempty_inter_closedPoints hWne hWloc
+        rcases hzW with ⟨⟨hzC, hzO⟩, hznot⟩
+        have hzU : (⟨z, hzC⟩ : closure ({ξ} : Set (PrimeSpectrum R))) ∈ U := by
+          have hzO' : (⟨z, hzC⟩ : closure ({ξ} : Set (PrimeSpectrum R))) ∈
+              (Subtype.val : closure ({ξ} : Set (PrimeSpectrum R)) → PrimeSpectrum R) ⁻¹' O :=
+            hzO
+          exact hOU ▸ hzO'
+        have hzF : z ∈ F := hUF ⟨⟨z, hzC⟩, hzU, rfl⟩
+        have hzsub : (⟨z, hzF⟩ : F) ∈ closedPoints F :=
+          preimage_closedPoints_subset Subtype.val_injective continuous_subtype_val
+            (mem_closedPoints_iff.mpr hzclosed)
+        have hzclosedOfSubset : z ∈ closedPointsOfSubset F := by
+          change ∃ y : closedPoints F, (y.1 : PrimeSpectrum R) = z
+          exact ⟨⟨⟨z, hzF⟩, hzsub⟩, rfl⟩
+        have hzG : z ∈ G := by rw [← hclosed]; exact hzclosedOfSubset
+        exact hznot (subset_closure ⟨hzC, hzG⟩)
+      · exact closure_minimal inter_subset_left isClosed_closure
+    · intro hξdense
+      change closure ({ξ} : Set (PrimeSpectrum R)) =
+        closure (closure ({ξ} : Set (PrimeSpectrum R)) ∩ G) at hξdense
+      obtain ⟨T, hTcomm, ψ, hψfp, hψrange⟩ :=
+        Formalization.Books.Algebra.Unit29.exists_finitePresentation_ringHom_of_isConstructible
+          hE
+      letI : CommRing T := hTcomm
+      let hψft : RingHom.FiniteType ψ := RingHom.FiniteType.of_finitePresentation hψfp
+      letI : IsJacobsonRing T := hψft.isJacobsonRing
+      have hEclosed : E ∩ closedPoints (PrimeSpectrum S) =
+          PrimeSpectrum.comap ψ '' closedPoints (PrimeSpectrum T) := by
+        apply Set.Subset.antisymm
+        · intro x hx
+          obtain ⟨t, ht⟩ : ∃ t : PrimeSpectrum T,
+              PrimeSpectrum.comap ψ t = x := by
+            have hxrange : x ∈ Set.range (PrimeSpectrum.comap ψ) := by
+              rw [hψrange]
+              exact hx.1
+            exact hxrange
+          let A : Set (PrimeSpectrum T) :=
+            (PrimeSpectrum.comap ψ ⁻¹' ({x} : Set (PrimeSpectrum S)))
+          have hAne : A.Nonempty := ⟨t, ht⟩
+          have hAclosed : IsClosed A := by
+            exact (mem_closedPoints_iff.mp hx.2).preimage
+              (PrimeSpectrum.continuous_comap ψ)
+          obtain ⟨u, huA, huclosed⟩ := nonempty_inter_closedPoints hAne
+            hAclosed.isLocallyClosed
+          have hux : PrimeSpectrum.comap ψ u = x := by
+            exact Set.mem_singleton_iff.mp huA
+          exact ⟨u, mem_closedPoints_iff.mpr (mem_closedPoints_iff.mp huclosed), hux⟩
+        · intro x hx
+          change ∃ t : PrimeSpectrum T, t ∈ closedPoints (PrimeSpectrum T) ∧
+            PrimeSpectrum.comap ψ t = x at hx
+          obtain ⟨t, htclosed, htx⟩ := hx
+          have htmax : t.asIdeal.IsMaximal :=
+            (PrimeSpectrum.isClosed_singleton_iff_isMaximal t).mp
+              (mem_closedPoints_iff.mp htclosed)
+          let tM : MaximalSpectrum T := ⟨t, htmax⟩
+          refine ⟨?_, ?_⟩
+          · rw [← hψrange]
+            exact ⟨t, htx⟩
+          · rw [← htx]
+            exact mem_closedPoints_iff.mpr
+              ((PrimeSpectrum.isClosed_singleton_iff_isMaximal
+                (PrimeSpectrum.comap ψ t)).mpr
+                ((finiteType_map_preserves_jacobson_closedPoints_and_residue_finiteness
+                  ψ hψft).2.1 tM))
+      have hGθ : G = PrimeSpectrum.comap (ψ.comp φ) '' closedPoints (PrimeSpectrum T) := by
+        dsimp [G]
+        rw [hEclosed, ← Set.image_comp, ← PrimeSpectrum.comap_comp]
+      let θ : R →+* T := ψ.comp φ
+      have hθ : θ = ψ.comp φ := rfl
+      let p : Ideal R := ξ.asIdeal
+      let f : R ⧸ p →+* T ⧸ p.map θ :=
+        Ideal.quotientMap (p.map θ) θ Ideal.le_comap_map
+      have hf_inj : Function.Injective f := by
+        apply (injective_iff_map_eq_zero f).2
+        intro a ha
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective a
+        by_contra hr
+        have hξcl : ξ ∈ closure (closure ({ξ} : Set (PrimeSpectrum R)) ∩ G) := by
+          rw [← hξdense]
+          exact subset_closure (mem_singleton ξ)
+        have hrp : r ∉ p := by
+          intro hrp
+          apply hr
+          exact Ideal.Quotient.eq_zero_iff_mem.mpr hrp
+        obtain ⟨y, hybasic, hyCG⟩ := mem_closure_iff.mp hξcl
+          (PrimeSpectrum.basicOpen r : Set (PrimeSpectrum R))
+          PrimeSpectrum.isOpen_basicOpen
+          ((PrimeSpectrum.mem_basicOpen r ξ).mpr (by simpa [p] using hrp))
+        have hyθ : y ∈ PrimeSpectrum.comap θ '' closedPoints (PrimeSpectrum T) := by
+          rw [← hGθ]
+          exact hyCG.2
+        obtain ⟨t, htclosed, hty⟩ := hyθ
+        have hyt : ξ.asIdeal ≤ (PrimeSpectrum.comap θ t).asIdeal := by
+          have hξy : ξ.asIdeal ≤ y.asIdeal :=
+            (PrimeSpectrum.asIdeal_le_asIdeal ξ y).mpr
+              ((PrimeSpectrum.le_iff_mem_closure ξ y).mpr hyCG.1)
+          simpa [hty] using hξy
+          
+        have hry : r ∉ y.asIdeal := (PrimeSpectrum.mem_basicOpen r y).mp hybasic
+        have hrt : r ∉ (PrimeSpectrum.comap θ t).asIdeal := by
+          intro hrt
+          apply hry
+          simpa [hty] using hrt
+        have hmaple : p.map θ ≤ t.asIdeal := by
+          apply Ideal.map_le_iff_le_comap.mpr
+          simpa [p, PrimeSpectrum.comap_asIdeal] using hyt
+        have hθr : θ r ∈ p.map θ := by
+          rw [Ideal.quotientMap_mk, Ideal.Quotient.eq_zero_iff_mem] at ha
+          exact ha
+        apply hrt
+        change θ r ∈ t.asIdeal
+        exact hmaple hθr
+      obtain ⟨q, hq⟩ :=
+        ((Formalization.Books.Algebra.Unit30.domain_injective_dense_spectrum_image_conditions
+          f).out 0 2).mp hf_inj
+      let qT : PrimeSpectrum T :=
+        PrimeSpectrum.comap (Ideal.Quotient.mk (p.map θ)) q
+      have hqTcomap : PrimeSpectrum.comap θ qT = ξ := by
+        apply PrimeSpectrum.ext
+        change Ideal.comap θ
+            (Ideal.comap (Ideal.Quotient.mk (p.map θ)) q.asIdeal) = ξ.asIdeal
+        rw [Ideal.comap_comap]
+        have hcomp :
+            (f.comp (Ideal.Quotient.mk p)) =
+              (Ideal.Quotient.mk (p.map θ)).comp θ := by
+          exact Ideal.quotientMap_comp_mk (f := θ) (H := Ideal.le_comap_map)
+        rw [← hcomp]
+        rw [← Ideal.comap_comap, hq]
+        rw [← RingHom.ker_eq_comap_bot, Ideal.mk_ker]
+      change ξ ∈ F
+      refine ⟨PrimeSpectrum.comap ψ qT, ?_, ?_⟩
+      · rw [← hψrange]
+        exact ⟨qT, rfl⟩
+      · rw [← PrimeSpectrum.comap_comp_apply]
+        exact hqTcomap
 
 theorem noetherian_jacobson_constructible_correspondence_diagram
     {R S : Type u} [CommRing R] [CommRing S]

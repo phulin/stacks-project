@@ -532,10 +532,9 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     [AddCommGroup M] [Module A M] (f : R →+* A)
     (hf : RingHom.FinitePresentation f) :
     RelativelyFinitelyPresented f M ↔ Module.FinitePresentation A M := by
-  sorry
-  /- Original proof attempt:
   let : Algebra R A := f.toAlgebra
-  letI : Algebra.FiniteType R A := hf
+  let : Algebra.FiniteType R A :=
+    RingHom.FiniteType.of_finitePresentation hf
   constructor
   · intro hM
     exact relativelyFinitelyPresented.finitePresentation f hM
@@ -543,9 +542,10 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     have hfp : Algebra.FinitePresentation R A := hf
     obtain ⟨n, α, hα, hker⟩ := hfp.out
     refine ⟨n, α, hα, ?_⟩
-    exact moduleFinitePresentation_of_surjective_of_fg_ker
-      α.toRingHom hα hker hM
-  -/
+    apply moduleFinitePresentation_of_surjective_of_fg_ker
+    · exact hα
+    · exact hker
+    · exact hM
 
 /-- `A` is relatively finitely presented over `R` exactly when the algebra
 map `R → A` is finitely presented. -/

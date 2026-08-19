@@ -2109,10 +2109,10 @@ private theorem universallyBijective_comap_injective
     ((m.comp (algebraMap K T)).comp (algebraMap R K)).toAlgebra
   have hscalar (r : R) :
       hq (algebraMap R K r) = algebraMap S L (f r) := by
-    simp [I, K, L, hq]
+    simp [K, L, hq]
   have hscalar' (r : R) :
       hq' (algebraMap R K r) = algebraMap S L' (f r) := by
-    simp [I, K, L', hq']
+    simp [K, L', hq']
   let φ : S →+* Q := jL.comp (algebraMap S L)
   let ψ : S →+* Q := jL'.comp (algebraMap S L')
   have hφ (r : R) : φ (f r) = algebraMap R Q r := by
@@ -2172,7 +2172,11 @@ private theorem universallyBijective_comap_injective
           rw [← hmap x]
           change jL (algebraMap S L x) = 0
           rw [hzero, map_zero]
-        simpa [ψ] using hz'
+        calc
+          jL' (algebraMap S L' x) = 0 := by
+            change ψ x = 0
+            exact hz'
+          _ = jL' 0 := (map_zero jL').symm
       exact Ideal.algebraMap_residueField_eq_zero.mp hz
     · intro hx
       have hzero : algebraMap S L' (x) = 0 :=
@@ -2183,7 +2187,11 @@ private theorem universallyBijective_comap_injective
           rw [hmap x]
           change jL' (algebraMap S L' x) = 0
           rw [hzero, map_zero]
-        simpa [φ] using hz'
+        calc
+          jL (algebraMap S L x) = 0 := by
+            change φ x = 0
+            exact hz'
+          _ = jL 0 := (map_zero jL).symm
       exact Ideal.algebraMap_residueField_eq_zero.mp hz
   exact PrimeSpectrum.ext hqeq
 

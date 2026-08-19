@@ -7,6 +7,7 @@ import Mathlib.RingTheory.Polynomial.Eisenstein.Basic
 import Mathlib.RingTheory.Polynomial.UniqueFactorization
 import Mathlib.RingTheory.Polynomial.GaussLemma
 import Mathlib.RingTheory.Polynomial.IsIntegral
+import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.Data.Rat.Sqrt
 import Mathlib.Algebra.Polynomial.Eval.Irreducible
 
@@ -664,6 +665,336 @@ private lemma sourceSPolynomial_span_isPrime :
   rw [← hmap]
   let : sourceBaseIdeal.IsPrime := sourceBaseIdeal_isPrime
   exact Ideal.map_isPrime_of_surjective sourceBaseReindex.surjective (by simp)
+
+private abbrev sourceInnerPrime : Ideal (Polynomial ℚ) :=
+  Ideal.span {Polynomial.X - Polynomial.C (-1 : ℚ)}
+
+private abbrev sourceCoefficientPrime : Ideal (Polynomial (Polynomial ℚ)) :=
+  Ideal.map (Polynomial.C : Polynomial ℚ →+* Polynomial (Polynomial ℚ)) sourceInnerPrime
+
+private lemma sourceInnerPrime_isPrime : sourceInnerPrime.IsPrime := by
+  apply Ideal.isPrime_span_singleton_of_prime
+  exact Polynomial.prime_X_sub_C (-1 : ℚ)
+
+private lemma sourceCoefficientPrime_isPrime : sourceCoefficientPrime.IsPrime := by
+  rw [sourceCoefficientPrime, Ideal.isPrime_map_C_iff_isPrime]
+  exact sourceInnerPrime_isPrime
+
+private noncomputable def sourceInnerQuotientEquiv :
+    (Polynomial ℚ ⧸ sourceInnerPrime) ≃+* ℚ :=
+  Polynomial.quotientSpanXSubCAlgEquiv (-1 : ℚ)
+
+private noncomputable def sourceCoefficientQuotientEquiv :
+    Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) ≃+* Polynomial ℚ :=
+  Polynomial.mapEquiv sourceInnerQuotientEquiv
+
+private noncomputable def sourcePolynomialQuotientEquiv :
+    Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) ≃+*
+      Polynomial (Polynomial ℚ) ⧸ sourceCoefficientPrime :=
+  Ideal.polynomialQuotientEquivQuotientPolynomial sourceInnerPrime
+
+private lemma sourceSPolynomial_mod_inner_map :
+    sourceCoefficientQuotientEquiv
+        (sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)) =
+      Polynomial.X ^ 2 + Polynomial.C (24 : ℚ) := by
+  have hX : sourceInnerQuotientEquiv
+      (Ideal.Quotient.mk sourceInnerPrime Polynomial.X) = (-1 : ℚ) := by
+    change Polynomial.quotientSpanXSubCAlgEquiv (-1 : ℚ)
+      (Ideal.Quotient.mk sourceInnerPrime Polynomial.X) = _
+    rw [Polynomial.quotientSpanXSubCAlgEquiv_mk]
+    simp
+  have hC (n : ℚ) : sourceInnerQuotientEquiv
+      (Ideal.Quotient.mk sourceInnerPrime (Polynomial.C n)) = n := by
+    change Polynomial.quotientSpanXSubCAlgEquiv (-1 : ℚ)
+      (Ideal.Quotient.mk sourceInnerPrime (Polynomial.C n)) = _
+    rw [Polynomial.quotientSpanXSubCAlgEquiv_mk]
+    simp
+  change Polynomial.map (sourceInnerQuotientEquiv :
+      (Polynomial ℚ ⧸ sourceInnerPrime) →+* ℚ)
+    (sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)) = _
+  rw [Polynomial.map_map]
+  simp [sourceSPolynomial, sourceBaseRelation, hX, hC]
+  norm_num [Polynomial.C_ofNat, ← Polynomial.C_mul]
+
+private lemma sourceBasePlusCoefficientPrime_isPrime :
+    (Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))) ⊔
+        sourceCoefficientPrime |>.IsPrime := by
+  let gq : Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) :=
+    sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)
+  have hquad :
+      (Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)} :
+        Ideal (Polynomial ℚ)).IsPrime := by
+    have hi := quadratic_plus_twenty_four_irreducible
+    exact (Ideal.span_singleton_prime hi.ne_zero).mpr
+      (UniqueFactorizationMonoid.irreducible_iff_prime.mp hi)
+  have hmap_coeff :
+      Ideal.map (sourceCoefficientQuotientEquiv :
+        Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+*
+          Polynomial ℚ) (Ideal.span {gq}) =
+        Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)} := by
+    rw [Ideal.map_span, Set.image_singleton]
+    change Ideal.span ({sourceCoefficientQuotientEquiv gq} : Set (Polynomial ℚ)) = _
+    rw [sourceSPolynomial_mod_inner_map]
+  have hprime_gq : (Ideal.span {gq} :
+      Ideal (Polynomial (Polynomial ℚ ⧸ sourceInnerPrime))).IsPrime := by
+    have hc := hquad.comap (sourceCoefficientQuotientEquiv :
+      Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+* Polynomial ℚ)
+    have hcomap : Ideal.comap (sourceCoefficientQuotientEquiv :
+        Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+* Polynomial ℚ)
+        (Ideal.span {Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)}) =
+      Ideal.span {gq} := by
+      rw [← hmap_coeff]
+      rw [Ideal.comap_map_of_surjective
+        (sourceCoefficientQuotientEquiv :
+          Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+* Polynomial ℚ)
+        sourceCoefficientQuotientEquiv.surjective]
+      apply sup_eq_left.mpr
+      intro x hx
+      change sourceCoefficientQuotientEquiv x = 0 at hx
+      have hx' : sourceCoefficientQuotientEquiv x =
+          sourceCoefficientQuotientEquiv 0 :=
+        hx.trans (map_zero sourceCoefficientQuotientEquiv).symm
+      have : x = 0 := sourceCoefficientQuotientEquiv.injective hx'
+      simp [this]
+    rw [hcomap] at hc
+    exact hc
+  have hmap_quotient :
+      Ideal.map (sourcePolynomialQuotientEquiv :
+        Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+*
+          Polynomial (Polynomial ℚ) ⧸ sourceCoefficientPrime)
+        (Ideal.span {gq}) =
+      Ideal.span {Ideal.Quotient.mk sourceCoefficientPrime sourceSPolynomial} := by
+    rw [Ideal.map_span, Set.image_singleton]
+    change Ideal.span ({sourcePolynomialQuotientEquiv gq} :
+      Set (Polynomial (Polynomial ℚ) ⧸ sourceCoefficientPrime)) = _
+    simp [sourcePolynomialQuotientEquiv, gq]
+  have hprime_quotient :
+      (Ideal.span {Ideal.Quotient.mk sourceCoefficientPrime sourceSPolynomial} :
+        Ideal (Polynomial (Polynomial ℚ) ⧸ sourceCoefficientPrime)).IsPrime := by
+    rw [← hmap_quotient]
+    letI : (Ideal.span {gq} :
+        Ideal (Polynomial (Polynomial ℚ ⧸ sourceInnerPrime))).IsPrime := hprime_gq
+    exact Ideal.map_isPrime_of_surjective
+      sourcePolynomialQuotientEquiv.surjective (by simp)
+  have hmap_prime :
+      (Ideal.map (Ideal.Quotient.mk sourceCoefficientPrime)
+        (Ideal.span {sourceSPolynomial})).IsPrime := by
+    have hspan : Ideal.map (Ideal.Quotient.mk sourceCoefficientPrime)
+        (Ideal.span {sourceSPolynomial}) =
+        Ideal.span {Ideal.Quotient.mk sourceCoefficientPrime sourceSPolynomial} := by
+      rw [Ideal.map_span, Set.image_singleton]
+    rw [hspan]
+    exact hprime_quotient
+  have hc := hmap_prime.comap
+    (Ideal.Quotient.mk sourceCoefficientPrime)
+  have hcomap : Ideal.comap (Ideal.Quotient.mk sourceCoefficientPrime)
+      (Ideal.map (Ideal.Quotient.mk sourceCoefficientPrime)
+        (Ideal.span {sourceSPolynomial})) =
+      (Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))) ⊔
+        sourceCoefficientPrime := by
+    rw [Ideal.comap_map_of_surjective (Ideal.Quotient.mk sourceCoefficientPrime)
+      Ideal.Quotient.mk_surjective]
+    congr 1
+    ext x
+    change (Ideal.Quotient.mk sourceCoefficientPrime) x = 0 ↔
+      x ∈ sourceCoefficientPrime
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+  rw [hcomap] at hc
+  exact hc
+
+private lemma sourceT_quotient_isEisenstein :
+    (sourceTPolynomial.map
+      (Ideal.Quotient.mk (Ideal.span {sourceSPolynomial}))).IsEisensteinAt
+      (Ideal.span {Ideal.Quotient.mk (Ideal.span {sourceSPolynomial})
+        (Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)))}) := by
+  let D := Polynomial (Polynomial ℚ)
+  let I : Ideal D := Ideal.span {sourceSPolynomial}
+  letI : CommSemiring (D ⧸ I) := Ideal.Quotient.commSemiring I
+  letI : Semiring (D ⧸ I) := (inferInstance : CommSemiring (D ⧸ I)).toSemiring
+  let q : D →+* D ⧸ I := Ideal.Quotient.mk I
+  let u : D ⧸ I := q (Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)))
+  let P : Ideal (D ⧸ I) := Ideal.span {u}
+  have hP : P.IsPrime := by
+    have hmap : Ideal.map q sourceCoefficientPrime = P := by
+      rw [sourceCoefficientPrime, Ideal.map_span, Set.image_singleton,
+        Ideal.map_span, Set.image_singleton]
+    have hprimeI : (I ⊔ sourceCoefficientPrime).IsPrime := by
+      simpa [I] using sourceBasePlusCoefficientPrime_isPrime
+    letI : (I ⊔ sourceCoefficientPrime).IsPrime := hprimeI
+    have hprimeMap := Ideal.isPrime_map_quotientMk_of_isPrime
+      (p := I ⊔ sourceCoefficientPrime)
+      (show I ≤ I ⊔ sourceCoefficientPrime by exact le_sup_left)
+    have hzero : Ideal.map q I = (⊥ : Ideal (D ⧸ I)) := by
+      apply le_antisymm
+      · rw [Ideal.map_le_iff_le_comap]
+        intro x hx
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr hx
+      · exact bot_le
+    have hmap_sup : Ideal.map q (I ⊔ sourceCoefficientPrime) = P := by
+      rw [Ideal.map_sup, hzero, bot_sup_eq, hmap]
+    rw [hmap_sup] at hprimeMap
+    exact hprimeMap
+  have hsourceMon : sourceTPolynomial.Monic := by
+    dsimp [sourceTPolynomial]
+    rw [← Polynomial.C_mul, ← Polynomial.C_mul]
+    exact Polynomial.monic_X_pow_sub_C _ (by norm_num)
+  have hmon : (sourceTPolynomial.map q).Monic := hsourceMon.map q
+  have hIne : I ≠ ⊤ := by
+    change Ideal.span {sourceSPolynomial} ≠ ⊤
+    exact sourceSPolynomial_span_isPrime.ne_top
+  letI : IsDomain (D ⧸ I) := by
+    rw [Ideal.Quotient.isDomain_iff_prime]
+    simpa [I] using sourceSPolynomial_span_isPrime
+  letI : Nontrivial (D ⧸ I) := by
+    constructor
+    refine ⟨0, 1, ?_⟩
+    intro h01
+    apply hIne
+    apply top_unique
+    have h1 : (1 : D) ∈ I := by
+      apply Ideal.Quotient.eq_zero_iff_mem.mp
+      rw [map_one q]
+      exact h01.symm
+    intro x hx
+    simpa using I.mul_mem_left x h1
+  have hmapT : sourceTPolynomial.map q =
+      Polynomial.X ^ 2 - Polynomial.C
+        (q (Polynomial.C
+          ((Polynomial.X + Polynomial.C (1 : ℚ)) *
+            (Polynomial.X + Polynomial.C (2 : ℚ)) *
+            (Polynomial.X + Polynomial.C (3 : ℚ))))) := by
+    simp [sourceTPolynomial, ← Polynomial.C_mul]
+  have hdeg : (sourceTPolynomial.map q).natDegree = 2 := by
+    convert hsourceMon.natDegree_map q using 1
+    · dsimp [sourceTPolynomial]
+      rw [← Polynomial.C_mul, ← Polynomial.C_mul]
+      rw [Polynomial.natDegree_X_pow_sub_C]
+  apply Polynomial.Monic.isEisensteinAt_of_mem_of_notMem hmon hP.ne_top
+  · intro n hn
+    have hn' : n = 0 ∨ n = 1 := by
+      have hn0 : n < (sourceTPolynomial.map q).natDegree := by
+        simpa [q] using hn
+      rw [hdeg] at hn0
+      have : n < 2 := hn0
+      omega
+    rcases hn' with rfl | rfl
+    · apply Ideal.mem_span_singleton.mpr
+      refine ⟨-q (Polynomial.C
+          ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+            (Polynomial.X + Polynomial.C (3 : ℚ)))), ?_⟩
+      rw [hmapT]
+      simp only [Polynomial.coeff_sub, Polynomial.coeff_X_pow,
+        Polynomial.coeff_C]
+      norm_num
+      simp [q, Polynomial.C_mul, Polynomial.C_add, Polynomial.C_sub]
+      ring
+    · change (sourceTPolynomial.map q).coeff 1 ∈ P
+      rw [hmapT]
+      simp only [Polynomial.coeff_sub, Polynomial.coeff_X_pow,
+        Polynomial.coeff_C]
+      norm_num
+  · intro h
+    change (sourceTPolynomial.map q).coeff 0 ∈ P ^ 2 at h
+    rw [hmapT] at h
+    simp only [Polynomial.coeff_sub, Polynomial.coeff_X_pow,
+      Polynomial.coeff_C] at h
+    let v : D ⧸ I := q (Polynomial.C
+      ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+        (Polynomial.X + Polynomial.C (3 : ℚ))))
+    have hq2 : q (Polynomial.C (Polynomial.C (2 : ℚ))) =
+        (2 : D ⧸ I) := by
+      rw [show (Polynomial.C (Polynomial.C (2 : ℚ)) : D) = 2 by norm_num]
+      exact map_natCast q 2
+    have hq3 : q (Polynomial.C (Polynomial.C (3 : ℚ))) =
+        (3 : D ⧸ I) := by
+      rw [show (Polynomial.C (Polynomial.C (3 : ℚ)) : D) = 3 by norm_num]
+      exact map_natCast q 3
+    have hq4 : q (Polynomial.C (Polynomial.C (4 : ℚ))) =
+        (4 : D ⧸ I) := by
+      rw [show (Polynomial.C (Polynomial.C (4 : ℚ)) : D) = 4 by norm_num]
+      exact map_natCast q 4
+    have hfactor : q (Polynomial.C
+        ((Polynomial.X + Polynomial.C (1 : ℚ)) *
+          (Polynomial.X + Polynomial.C (2 : ℚ)) *
+          (Polynomial.X + Polynomial.C (3 : ℚ)))) = u * v := by
+      simp [u, v, q, Polynomial.C_mul, Polynomial.C_sub]
+      ring
+    have hv : v - 2 ∈ P := by
+      apply Ideal.mem_span_singleton.mpr
+      refine ⟨q (Polynomial.C (Polynomial.X + Polynomial.C (4 : ℚ))), ?_⟩
+      change v - (2 : D ⧸ I) =
+        u * q (Polynomial.C (Polynomial.X + Polynomial.C (4 : ℚ)))
+      calc
+        v - (2 : D ⧸ I) = q (Polynomial.C
+            ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+              (Polynomial.X + Polynomial.C (3 : ℚ)))) -
+            q (Polynomial.C (Polynomial.C (2 : ℚ))) := by rw [hq2]
+        _ = q (Polynomial.C
+            ((Polynomial.X + Polynomial.C (2 : ℚ)) *
+              (Polynomial.X + Polynomial.C (3 : ℚ))) -
+            Polynomial.C (Polynomial.C (2 : ℚ))) := by rw [map_sub]
+        _ = q (Polynomial.C
+            ((Polynomial.X - Polynomial.C (-1 : ℚ)) *
+              (Polynomial.X + Polynomial.C (4 : ℚ)))) := by
+          congr 1
+          simp only [Polynomial.C_sub]
+          ring
+        _ = q (Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ))) *
+            q (Polynomial.C (Polynomial.X + Polynomial.C (4 : ℚ))) := by
+          rw [← Polynomial.C_mul, map_mul]
+        _ = u * q (Polynomial.C (Polynomial.X + Polynomial.C (4 : ℚ))) := by rfl
+    have hprod : u * v ∈ P ^ 2 := by
+      rw [← hfactor]
+      simpa using (P ^ 2).neg_mem h
+    have hu_mem : u ∈ P := Ideal.subset_span (Set.mem_singleton u)
+    letI : P.IsTwoSided :=
+      ⟨fun {a} b ha => by simpa [mul_comm] using P.mul_mem_left b ha⟩
+    have hmul : u * (v - 2) ∈ P ^ 2 := by
+      change u * (v - 2) ∈ P * P
+      exact Ideal.mul_mem_mul hu_mem hv
+    have hdiff := (P ^ 2).sub_mem hprod hmul
+    have htwo : (2 : D ⧸ I) * u ∈ P ^ 2 := by
+      convert hdiff using 1 <;> ring
+    have hu2 : u ∈ P ^ 2 := by
+      convert (P ^ 2).mul_mem_left (1 / 2 : D ⧸ I) htwo using 1 <;> ring
+    have hu0 : u ≠ 0 := by
+      intro hu
+      have hmem : Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)) ∈ I := by
+        apply Ideal.Quotient.eq_zero_iff_mem.mp
+        simpa [u] using hu
+      change Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)) ∈
+        Ideal.span {sourceSPolynomial} at hmem
+      have hdiv : sourceSPolynomial ∣
+          Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)) :=
+        Ideal.mem_span_singleton.mp hmem
+      have htarget : Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)) ≠ 0 := by
+        intro hz
+        have hz' := congrArg
+          (fun p : Polynomial (Polynomial ℚ) => p.coeff 0) hz
+        have hz'' := congrArg (fun p : Polynomial ℚ => p.coeff 1) hz'
+        norm_num [Polynomial.coeff_one] at hz''
+      have hdeg := Polynomial.natDegree_le_of_dvd hdiv htarget
+      have hsdeg : sourceSPolynomial.natDegree = 2 := by
+        simp [sourceSPolynomial]
+      rw [hsdeg] at hdeg
+      simp at hdeg
+    have hdiv : u ^ 2 ∣ u := by
+      have hu2' : u ∈ (Ideal.span {u} : Ideal (D ⧸ I)) ^ 2 := by
+        simpa [P] using hu2
+      rw [Ideal.span_singleton_pow] at hu2'
+      exact Ideal.mem_span_singleton.mp hu2'
+    obtain ⟨c, huc⟩ := hdiv
+    have hzero : u * (1 - u * c) = 0 := by
+      calc
+        u * (1 - u * c) = u - u ^ 2 * c := by ring
+        _ = 0 := sub_eq_zero.mpr huc
+    have hrest : 1 - u * c = 0 :=
+      (mul_eq_zero.mp hzero).resolve_left hu0
+    have hunit : IsUnit u := by
+      apply isUnit_iff_exists_inv.mpr
+      exact ⟨c, (sub_eq_zero.mp hrest).symm⟩
+    apply hP.ne_top
+    simpa [P] using Ideal.span_singleton_eq_top.mpr hunit
 
 /-! ## Exercise `find-fraction-field` -/
 

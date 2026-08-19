@@ -2034,15 +2034,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           rw [Category.assoc, Sigma.ι_desc]
           rw [Linear.comp_units_smul]
           simp only [smul_smul]
-          rw [← Category.assoc, eqToHom_trans]
-          have hsign :
-              totalizationShiftSign p (n + (a + b) - p) a b *
-                  totalizationShiftSign (p - a + a)
-                    (n + (a + b) - (p - a + a)) a b = 1 := by
-            dsimp [totalizationShiftSign]
-            rw [show (p - a + a) * b = p * b by ring_nf]
-            exact Int.units_mul_self _
-          rw [hsign, one_smul]
+          simp
           rw [← eqToHom_naturality
             (fun t : ℤ => Sigma.ι (fun p : ℤ => A.obj p (n + (a + b) - p)) t)
             (show p = p - a + a by ring_nf)]
@@ -2055,7 +2047,7 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
           rw [Category.assoc, Sigma.ι_desc]
           rw [Linear.comp_units_smul]
           simp only [smul_smul]
-          rw [← Category.assoc, eqToHom_trans]
+          simp
           rw [← eqToHom_naturality
             (fun t : ℤ => Sigma.ι
               (fun r : ℤ => (doubleComplexShift A a b).obj r (n - r)) t)
@@ -2290,10 +2282,23 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
         case e'_1 => simp [doubleComplexShift]
         case e'_2 => simp [Category.assoc, doubleComplexShift]
         case e'_3 =>
-          simp
-          simp [doubleComplexShift]
-          apply congrArg (fun f => A.d1 p (n + (a + b) - p) ≫ f)
-          simpa [Category.assoc, doubleComplexShift, eqToHom_trans] using hq
+          simp only [Category.assoc]
+          apply CategoryTheory.heq_comp (eq1 := rfl) (eq2 := rfl)
+          case eq3 => rfl
+          case H1 => rfl
+          case H2 =>
+            have hi :
+                Sigma.ι (fun r : ℤ =>
+                  (doubleComplexShift A a b).obj r (n + 1 - r)) (p + 1 - a) ≍
+                  Sigma.ι (fun r : ℤ =>
+                    (doubleComplexShift A a b).obj r (n + 1 - r)) (p - a + 1) := by
+              have hq' := heq_of_eq hq
+              simpa only [CategoryTheory.eqToHom_comp_heq_iff,
+                CategoryTheory.heq_eqToHom_comp_iff] using hq'
+            rw [CategoryTheory.eqToHom_comp_heq_iff]
+            rw [← Category.assoc, eqToHom_trans]
+            rw [CategoryTheory.heq_eqToHom_comp_iff]
+            simpa [doubleComplexShift] using hi
       have hshift_d2_left_unfolded :
           A.obj p (n + (a + b) - p) =
             A.obj (p - a + a) (n - (p - a) + b) := by

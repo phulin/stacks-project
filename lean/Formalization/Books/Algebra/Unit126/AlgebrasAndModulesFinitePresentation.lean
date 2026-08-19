@@ -1107,8 +1107,8 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
   have hfpp : RingHom.FinitePresentation f.toRingHom :=
     RingHom.FinitePresentation.of_comp_finiteType (algebraMap R S)
       (g := f.toRingHom) hcomp hfinite
-  letI : Algebra S S' := f.toRingHom.toAlgebra
-  letI : Algebra.FinitePresentation S S' := hfpp
+  let _ : Algebra S S' := f.toRingHom.toAlgebra
+  let _ : Algebra.FinitePresentation S S' := hfpp
   have hker : (RingHom.ker f.toRingHom).FG := by
     have hker' :=
       Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId S S') hsurj
@@ -1171,7 +1171,7 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
           induction y using TensorProduct.induction_on with
           | zero => simp [lA]
           | add y z ihy ihz => simp [lA, ihy, ihz, mul_add]
-          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm]
         refine ⟨TensorProduct.map (LinearMap.id : I →ₗ[R] I)
             (LinearMap.mulLeft R c) ihx.choose, ?_⟩
         rw [hmul, ihx.choose_spec]
@@ -1181,9 +1181,11 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
     intro x y hxy
     have hlt : Function.Injective (I.subtype.rTensor B) :=
       Module.Flat.iff_rTensor_injective'.mp hflat I
-    have hxy' : (TensorProduct.lid R B).toLinearMap (I.subtype.rTensor B x) =
-        (TensorProduct.lid R B).toLinearMap (I.subtype.rTensor B y) := by
-      simpa only [lB, LinearMap.comp_apply,
+    have hxy' : ((TensorProduct.lid R B).toLinearMap.comp
+          (I.subtype.rTensor B)) x =
+        ((TensorProduct.lid R B).toLinearMap.comp
+          (I.subtype.rTensor B)) y := by
+      simpa only [lB,
         ← LinearMap.lid_comp_rTensor (R := R) (M := B) I.subtype] using hxy
     exact hlt ((TensorProduct.lid R B).injective hxy')
   let Klin : Submodule R A := LinearMap.ker Flin
@@ -1199,7 +1201,7 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
         | tmul y z =>
             simp only [lA, lB, LinearMap.lTensor_tmul, TensorProduct.lift.tmul,
               LinearMap.comp_apply, LinearMap.lsmul_apply, Flin]
-            simp [Algebra.smul_def, map_mul, hFA, mul_comm, mul_left_comm, mul_assoc]
+            simp [Algebra.smul_def, map_mul, hFA, mul_comm]
             rfl
       rw [hcomm]
       change F x = 0 at hx
@@ -1247,7 +1249,7 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
       q.primeCompl.le_comap_map) = _
     rw [IsLocalization.ker_map B f.toRingHom rfl]
   obtain ⟨t, htfin, htspan⟩ := Submodule.fg_def.mp hker
-  letI : Fintype t := htfin.fintype
+  let _ : Fintype t := htfin.fintype
   choose s hs using fun x : t => by
     have hxK : algebraMap S A (x : S) ∈ K := by
       rw [hKmap]
@@ -1287,7 +1289,7 @@ theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
   have haway_inj :
       Function.Injective (localizedRingHom f.toRingHom (Submonoid.powers g)) := by
     let L := Localization (Submonoid.powers g)
-    letI : Algebra S L := by
+    let _ : Algebra S L := by
       dsimp [L]
       infer_instance
     let L' := Localization ((Submonoid.powers g).map f.toRingHom)
@@ -1368,8 +1370,8 @@ theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Typ
   have hfpp : RingHom.FinitePresentation f.toRingHom :=
     RingHom.FinitePresentation.of_comp_finiteType (algebraMap R S)
       (g := f.toRingHom) hcomp hfinite
-  letI : Algebra S S' := f.toRingHom.toAlgebra
-  letI : Algebra.FinitePresentation S S' := hfpp
+  let _ : Algebra S S' := f.toRingHom.toAlgebra
+  let _ : Algebra.FinitePresentation S S' := hfpp
   have hker : (RingHom.ker f.toRingHom).FG := by
     have hker' :=
       Algebra.FinitePresentation.ker_fG_of_surjective (Algebra.ofId S S') hsurj
@@ -1409,7 +1411,7 @@ theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Typ
           induction y using TensorProduct.induction_on with
           | zero => simp [lA]
           | add y z ihy ihz => simp [lA, ihy, ihz, mul_add]
-          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+          | tmul y z => simp [lA, Algebra.smul_def, mul_assoc, mul_comm]
         refine ⟨TensorProduct.map (LinearMap.id : I →ₗ[R] I)
             (LinearMap.mulLeft R c) ihx.choose, ?_⟩
         rw [hmul, ihx.choose_spec]
@@ -1418,9 +1420,11 @@ theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Typ
     intro x y hxy
     have hlt : Function.Injective (I.subtype.rTensor S') :=
       Module.Flat.iff_rTensor_injective'.mp hflat I
-    have hxy' : (TensorProduct.lid R S').toLinearMap (I.subtype.rTensor S' x) =
-        (TensorProduct.lid R S').toLinearMap (I.subtype.rTensor S' y) := by
-      simpa only [lB, LinearMap.comp_apply,
+    have hxy' : ((TensorProduct.lid R S').toLinearMap.comp
+          (I.subtype.rTensor S')) x =
+        ((TensorProduct.lid R S').toLinearMap.comp
+          (I.subtype.rTensor S')) y := by
+      simpa only [lB,
         ← LinearMap.lid_comp_rTensor (R := R) (M := S') I.subtype] using hxy
     exact hlt ((TensorProduct.lid R S').injective hxy')
   let Flin : S →ₗ[R] S' :=
@@ -1441,8 +1445,7 @@ theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Typ
         | tmul y z =>
             simp only [lA, lB, LinearMap.lTensor_tmul, TensorProduct.lift.tmul,
               LinearMap.comp_apply, LinearMap.lsmul_apply, Flin]
-            simp [Algebra.smul_def, map_mul, f.commutes, mul_comm, mul_left_comm,
-              mul_assoc]
+            simp [Algebra.smul_def, map_mul, f.commutes, mul_comm]
       rw [hcomm]
       change f x = 0 at hx
       rw [hy, hx]

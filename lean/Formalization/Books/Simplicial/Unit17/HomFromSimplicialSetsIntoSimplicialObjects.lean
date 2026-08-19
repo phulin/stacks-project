@@ -1,8 +1,10 @@
 import Formalization.Books.Simplicial.Unit07.FibreProducts
 import Formalization.Books.Simplicial.Unit13.ProductsWithSimplicialSets
 import Mathlib.AlgebraicTopology.SimplicialSet.Dimension
+import Mathlib.AlgebraicTopology.SimplicialSet.FiniteColimits
 import Mathlib.CategoryTheory.Functor.KanExtension.Pointwise
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
+import Mathlib.CategoryTheory.Limits.Types.Pushouts
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.Data.Countable.Basic
 
@@ -1160,7 +1162,41 @@ theorem finiteNonempty_pushout
     (hV : Unit13.FiniteNonemptySimplicialSet V)
     (hW : Unit13.FiniteNonemptySimplicialSet W) :
     Unit13.FiniteNonemptySimplicialSet (pushout a b) := by
-  sorry
+  intro n
+  let X : SimplexCategoryᵒᵖ := op (SimplexCategory.mk n)
+  let e := pushoutObjIso a b X
+  letI : Finite (V.obj X) := by simpa [X] using (hV n).1
+  letI : Finite (W.obj X) := by simpa [X] using (hW n).1
+  letI : Fintype (V.obj X) := Fintype.ofFinite _
+  letI : Fintype (W.obj X) := Fintype.ofFinite _
+  letI : Nonempty (V.obj X) := by simpa [X] using (hV n).2
+  letI : Nonempty (W.obj X) := by simpa [X] using (hW n).2
+  have hfin : Finite (pushout (a.app X) (b.app X)) := by
+    let f : V.obj X ⊕ W.obj X → pushout (a.app X) (b.app X) :=
+      Sum.elim (pushout.inl (a.app X) (b.app X))
+        (pushout.inr (a.app X) (b.app X))
+    apply Finite.of_surjective f
+    intro x
+    obtain ⟨j, y, hy⟩ :=
+      Types.jointly_surjective_of_isColimit
+        (pushout.isColimit (a.app X) (b.app X)) x
+    obtain (_ | _ | _) := j
+    · refine ⟨Sum.inl ((a.app X) y), ?_⟩
+      change (pushout.inl (a.app X) (b.app X)) ((a.app X) y) = x
+      have hz := congrArg (fun k => k y)
+        (PushoutCocone.condition_zero (pushout.cocone (a.app X) (b.app X)))
+      exact hz.symm.trans hy
+    · exact ⟨Sum.inl y, hy⟩
+    · exact ⟨Sum.inr y, hy⟩
+  letI : Finite (pushout (a.app X) (b.app X)) := hfin
+  have hne : Nonempty (pushout (a.app X) (b.app X)) :=
+    Nonempty.map (pushout.inl (a.app X) (b.app X)) inferInstance
+  constructor
+  · exact Finite.of_injective (f := e.hom) (by
+      intro x y h
+      have h' := congrArg (fun z => e.inv z) h
+      simpa using h')
+  · exact Nonempty.map e.inv hne
 
 theorem eventuallyDegenerate_pushout
     {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
@@ -1168,7 +1204,812 @@ theorem eventuallyDegenerate_pushout
     (hVdeg : EventuallyDegenerate V)
     (hWdeg : EventuallyDegenerate W) :
     EventuallyDegenerate (pushout a b) := by
-  sorry
+  rcases hUdeg with ⟨dU, hdU⟩
+  rcases hVdeg with ⟨dV, hdV⟩
+  rcases hWdeg with ⟨dW, hdW⟩
+  let d := max dU (max dV dW)
+  letI : U.HasDimensionLT dU := hdU
+  letI : V.HasDimensionLT dV := hdV
+  letI : W.HasDimensionLT dW := hdW
+  have hU' : U.HasDimensionLT d :=
+    SSet.hasDimensionLT_of_le U dU d (Nat.le_max_left _ _)
+  have hV' : V.HasDimensionLT d :=
+    SSet.hasDimensionLT_of_le V dV d
+      (le_trans (Nat.le_max_left _ _) (Nat.le_max_right _ _))
+  have hW' : W.HasDimensionLT d :=
+    SSet.hasDimensionLT_of_le W dW d
+      (le_trans (Nat.le_max_right _ _) (Nat.le_max_right _ _))
+  exact ⟨d, SSet.hasDimensionLT_of_isColimit (pushout.isColimit a b) (by
+    rintro (_ | _ | _)
+    · exact hU'
+    · exact hV'
+    · exact hW')⟩
+
+private theorem homPrecomp_homHomEquiv
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    {U V : SSet.{w}} (a : U ⟶ V)
+    (T : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hV : Unit13.FiniteNonemptySimplicialSet V)
+    (hUdeg : EventuallyDegenerate U)
+    (hVdeg : EventuallyDegenerate V)
+    (Z : SimplicialObject C)
+    (f : Z ⟶ hom V T hV hVdeg) :
+    homHomEquiv U T hU hUdeg Z
+        (f ≫ homPrecomp a T hU hV hUdeg hVdeg) =
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk a :
+            (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨V, hV⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫
+        homHomEquiv V T hV hVdeg Z f := by
+  let U₀ : Unit13.FSSets.{w} := ⟨U, hU⟩
+  let V₀ : Unit13.FSSets.{w} := ⟨V, hV⟩
+  let a₀ : U₀ ⟶ V₀ := ObjectProperty.homMk a
+  change homHomEquiv U T hU hUdeg Z
+      (f ≫ homPrecomp a T hU hV hUdeg hVdeg) =
+    Unit13.productWithSimplicialSetMap a₀ (𝟙 Z) ≫
+      homHomEquiv V T hV hVdeg Z f
+  rw [homHomEquiv_comp]
+  dsimp [homPrecomp, productWithSimplicialSetMapSecond]
+  rw [Equiv.apply_symm_apply]
+  have hprod :
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (𝟙 U) : U₀ ⟶ U₀) f ≫
+        Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk a : U₀ ⟶ V₀) (𝟙 _) =
+      Unit13.productWithSimplicialSetMap (ObjectProperty.homMk a : U₀ ⟶ V₀) f := by
+    ext X
+    let hUZ : Unit13.HasDegreewiseCoproducts U Z :=
+      Unit13.degreewiseCoproductInstance U Z hU
+    let hUH : Unit13.HasDegreewiseCoproducts U (hom V T hV hVdeg) :=
+      Unit13.degreewiseCoproductInstance U (hom V T hV hVdeg) hU
+    let hVH : Unit13.HasDegreewiseCoproducts V (hom V T hV hVdeg) :=
+      Unit13.degreewiseCoproductInstance V (hom V T hV hVdeg) hV
+    let _ : HasCoproduct (fun _ : U.obj X => Z.obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hUZ X
+    let _ : HasCoproduct (fun _ : U.obj X => (hom V T hV hVdeg).obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hUH X
+    let _ : HasCoproduct (fun _ : V.obj X => (hom V T hV hVdeg).obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hVH X
+    simp [Unit13.productWithSimplicialSetMap, ObjectProperty.homMk]
+    apply Sigma.hom_ext
+    intro u
+    change
+      Sigma.ι (fun _ : U.obj X => Z.obj X) u ≫
+        (Sigma.desc (fun u => f.app X ≫ Sigma.ι
+          (fun _ : U.obj X => (hom V T hV hVdeg).obj X)
+          ((ConcreteCategory.hom (𝟙 (U.obj X))) u)) ≫
+          Sigma.desc (fun u => 𝟙 _ ≫ Sigma.ι
+            (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
+            ((ConcreteCategory.hom (a.app X)) u))) =
+      Sigma.ι (fun _ : U.obj X => Z.obj X) u ≫
+        Sigma.desc (fun u => f.app X ≫ Sigma.ι
+          (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
+          ((ConcreteCategory.hom (a.app X)) u))
+    rw [← Category.assoc, Sigma.ι_desc]
+    simp [Category.assoc, Sigma.ι_desc]
+  have hprod' :
+      Unit13.productWithSimplicialSetMap (ObjectProperty.homMk a : U₀ ⟶ V₀) (𝟙 Z) ≫
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (𝟙 V) : V₀ ⟶ V₀) f =
+        Unit13.productWithSimplicialSetMap (ObjectProperty.homMk a : U₀ ⟶ V₀) f := by
+    ext X
+    let hUZ : Unit13.HasDegreewiseCoproducts U Z :=
+      Unit13.degreewiseCoproductInstance U Z hU
+    let hVZ : Unit13.HasDegreewiseCoproducts V Z :=
+      Unit13.degreewiseCoproductInstance V Z hV
+    let hVH : Unit13.HasDegreewiseCoproducts V (hom V T hV hVdeg) :=
+      Unit13.degreewiseCoproductInstance V (hom V T hV hVdeg) hV
+    let _ : HasCoproduct (fun _ : U.obj X => Z.obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hUZ X
+    let _ : HasCoproduct (fun _ : V.obj X => Z.obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hVZ X
+    let _ : HasCoproduct (fun _ : V.obj X => (hom V T hV hVdeg).obj X) :=
+      Unit13.degreewiseCoproductInstanceAt hVH X
+    simp [Unit13.productWithSimplicialSetMap, ObjectProperty.homMk]
+    apply Sigma.hom_ext
+    intro u
+    change
+      Sigma.ι (fun _ : U.obj X => Z.obj X) u ≫
+        (Sigma.desc (fun u => 𝟙 _ ≫ Sigma.ι
+          (fun _ : V.obj X => Z.obj X) ((ConcreteCategory.hom (a.app X)) u)) ≫
+          Sigma.desc (fun u => f.app X ≫ Sigma.ι
+            (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
+            ((ConcreteCategory.hom (𝟙 (V.obj X))) u))) =
+      Sigma.ι (fun _ : U.obj X => Z.obj X) u ≫
+        Sigma.desc (fun u => f.app X ≫ Sigma.ι
+          (fun _ : V.obj X => (hom V T hV hVdeg).obj X)
+          ((ConcreteCategory.hom (a.app X)) u))
+    rw [← Category.assoc, Sigma.ι_desc]
+    simp [Category.assoc, Sigma.ι_desc]
+  have hhom0 :
+      homHomEquiv V T hV hVdeg Z f =
+        productWithSimplicialSetMapSecond V hV f ≫
+          homHomEquiv V T hV hVdeg (hom V T hV hVdeg) (𝟙 _) := by
+    rw [← homHomEquiv_comp]
+    simp
+  have hhom :
+      homHomEquiv V T hV hVdeg Z f =
+        Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (𝟙 V) : V₀ ⟶ V₀) f ≫
+          homHomEquiv V T hV hVdeg (hom V T hV hVdeg) (𝟙 _) := by
+    simpa [productWithSimplicialSetMapSecond] using hhom0
+  have hprod'_a₀ :
+      Unit13.productWithSimplicialSetMap a₀ (𝟙 Z) ≫
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (𝟙 V) : V₀ ⟶ V₀) f =
+        Unit13.productWithSimplicialSetMap a₀ f := by
+    simpa [a₀] using hprod'
+  rw [← Category.assoc, hprod, hhom]
+  rw [← Category.assoc, hprod'_a₀]
+
+private theorem productWithSimplicialSetMap_comp
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {A B D : Unit13.FSSets.{w}}
+    {Z Z' Z'' : SimplicialObject C}
+    (f : A ⟶ B) (g : B ⟶ D)
+    (r : Z ⟶ Z') (s : Z' ⟶ Z'') :
+    Unit13.productWithSimplicialSetMap f r ≫
+        Unit13.productWithSimplicialSetMap g s =
+      Unit13.productWithSimplicialSetMap (f ≫ g) (r ≫ s) := by
+  ext X
+  let hA : Unit13.HasDegreewiseCoproducts A.obj Z :=
+    Unit13.degreewiseCoproductInstance A.obj Z A.property
+  let hB : Unit13.HasDegreewiseCoproducts B.obj Z' :=
+    Unit13.degreewiseCoproductInstance B.obj Z' B.property
+  let hD : Unit13.HasDegreewiseCoproducts D.obj Z'' :=
+    Unit13.degreewiseCoproductInstance D.obj Z'' D.property
+  let _ : HasCoproduct (fun _ : A.obj.obj X => Z.obj X) :=
+    Unit13.degreewiseCoproductInstanceAt hA X
+  let _ : HasCoproduct (fun _ : B.obj.obj X => Z'.obj X) :=
+    Unit13.degreewiseCoproductInstanceAt hB X
+  let _ : HasCoproduct (fun _ : D.obj.obj X => Z''.obj X) :=
+    Unit13.degreewiseCoproductInstanceAt hD X
+  simp [Unit13.productWithSimplicialSetMap]
+  apply Sigma.hom_ext
+  intro u
+  have hdesc :
+      Sigma.desc (fun u => r.app X ≫ Sigma.ι
+          (fun _ : B.1.obj X => Z'.obj X)
+          ((ConcreteCategory.hom (f.hom.app X)) u)) ≫
+        Sigma.desc (fun u => s.app X ≫ Sigma.ι
+          (fun _ : D.1.obj X => Z''.obj X)
+          ((ConcreteCategory.hom (g.hom.app X)) u)) =
+      Sigma.desc (fun u => (r.app X ≫ s.app X) ≫ Sigma.ι
+          (fun _ : D.1.obj X => Z''.obj X)
+          ((ConcreteCategory.hom (g.hom.app X))
+            ((ConcreteCategory.hom (f.hom.app X)) u))) := by
+    apply Sigma.hom_ext
+    intro u
+    simp [Category.assoc]
+  convert congrArg
+      (fun k => Sigma.ι (fun _ : A.obj.obj X => Z.obj X) u ≫ k) hdesc using 1 <;>
+    rfl
+
+private theorem productWithSimplicialSetMap_pushout_condition
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    (Z : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hV : Unit13.FiniteNonemptySimplicialSet V)
+    (hW : Unit13.FiniteNonemptySimplicialSet W)
+    (hP : Unit13.FiniteNonemptySimplicialSet (pushout a b)) :
+    let U₀ : Unit13.FSSets.{w} := ⟨U, hU⟩
+    let V₀ : Unit13.FSSets.{w} := ⟨V, hV⟩
+    let W₀ : Unit13.FSSets.{w} := ⟨W, hW⟩
+    let P₀ : Unit13.FSSets.{w} := ⟨pushout a b, hP⟩
+    let a₀ : U₀ ⟶ V₀ := ObjectProperty.homMk a
+    let b₀ : U₀ ⟶ W₀ := ObjectProperty.homMk b
+    let inl₀ : V₀ ⟶ P₀ := ObjectProperty.homMk (pushout.inl a b)
+    let inr₀ : W₀ ⟶ P₀ := ObjectProperty.homMk (pushout.inr a b)
+    Unit13.productWithSimplicialSetMap a₀ (𝟙 Z) ≫
+          Unit13.productWithSimplicialSetMap inl₀ (𝟙 Z) =
+      Unit13.productWithSimplicialSetMap b₀ (𝟙 Z) ≫
+          Unit13.productWithSimplicialSetMap inr₀ (𝟙 Z) := by
+  dsimp
+  have hleft := productWithSimplicialSetMap_comp
+    (A := (⟨U, hU⟩ : Unit13.FSSets.{w}))
+    (B := (⟨V, hV⟩ : Unit13.FSSets.{w}))
+    (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+    (ObjectProperty.homMk a) (ObjectProperty.homMk (pushout.inl a b))
+    (𝟙 Z) (𝟙 Z)
+  have hright := productWithSimplicialSetMap_comp
+    (A := (⟨U, hU⟩ : Unit13.FSSets.{w}))
+    (B := (⟨W, hW⟩ : Unit13.FSSets.{w}))
+    (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+    (ObjectProperty.homMk b) (ObjectProperty.homMk (pushout.inr a b))
+    (𝟙 Z) (𝟙 Z)
+  rw [hleft, hright]
+  congr 1
+  have h := congrArg
+    (fun k : U ⟶ pushout a b =>
+      (ObjectProperty.homMk k :
+        (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶
+          (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})))
+    (pushout.condition (f := a) (g := b))
+  exact h
+
+private noncomputable def pushoutFunctionDescData
+    {S X Y : Type w}
+    (f : S ⟶ X) (g : S ⟶ Y) (c : (span f g).CoconeTypes) :
+    {q : pushout f g → c.pt // ∀ k : WalkingSpan,
+      q ∘ ((Functor.coconeTypesEquiv (span f g)).symm (pushout.cocone f g)).ι k =
+        c.ι k} := by
+  let F := span f g
+  let c₀ : F.CoconeTypes :=
+    (Functor.coconeTypesEquiv F).symm (pushout.cocone f g)
+  have hc₀ : c₀.IsColimit := by
+    apply (Functor.CoconeTypes.isColimit_iff c₀).2
+    exact ⟨pushout.isColimit f g⟩
+  exact ⟨Classical.choose (hc₀.exists_desc c),
+    Classical.choose_spec (hc₀.exists_desc c)⟩
+
+private noncomputable def pushoutFunctionDesc
+    {S X Y : Type w}
+    (f : S ⟶ X) (g : S ⟶ Y) (c : (span f g).CoconeTypes) :
+    pushout f g → c.pt :=
+  (pushoutFunctionDescData f g c).1
+
+private theorem pushoutFunctionDesc_inl
+    {S X Y : Type w}
+    (f : S ⟶ X) (g : S ⟶ Y) (c : (span f g).CoconeTypes) (x : X) :
+    pushoutFunctionDesc f g c (pushout.inl f g x) = c.ι WalkingSpan.left x := by
+  exact congr_fun ((pushoutFunctionDescData f g c).2 WalkingSpan.left) x
+
+private theorem pushoutFunctionDesc_inr
+    {S X Y : Type w}
+    (f : S ⟶ X) (g : S ⟶ Y) (c : (span f g).CoconeTypes) (y : Y) :
+    pushoutFunctionDesc f g c (pushout.inr f g y) = c.ι WalkingSpan.right y := by
+  exact congr_fun ((pushoutFunctionDescData f g c).2 WalkingSpan.right) y
+
+private noncomputable def compatibleFamily_pushout
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    {Z Q : SimplicialObject C}
+    (f : Unit13.CompatibleFamily V Z Q)
+    (g : Unit13.CompatibleFamily W Z Q)
+    (h : ∀ n : ℕ, ∀ u : U _⦋n⦌,
+      f.1 n ((a.app (op (SimplexCategory.mk n))) u) =
+        g.1 n ((b.app (op (SimplexCategory.mk n))) u)) :
+    Unit13.CompatibleFamily (pushout a b) Z Q := by
+  refine ⟨fun n p => ?_, ?_⟩
+  · let X : SimplexCategoryᵒᵖ := op (SimplexCategory.mk n)
+    let e := pushoutObjIso a b X
+    let cX : (span (a.app X) (b.app X)).CoconeTypes :=
+      { pt := Z.obj X ⟶ Q.obj X
+        ι := fun k => match k with
+          | none => fun u => f.1 n ((a.app X) u)
+          | some WalkingPair.left => f.1 n
+          | some WalkingPair.right => g.1 n
+        ι_naturality := by
+          intro j j' φ
+          rcases j with _ | (_ | _)
+          · rcases j' with _ | (_ | _)
+            · have hφ : φ = 𝟙 _ := Subsingleton.elim _ _
+              subst φ
+              rfl
+            · have hφ : φ = WalkingSpan.Hom.fst := Subsingleton.elim _ _
+              subst φ
+              rfl
+            · have hφ : φ = WalkingSpan.Hom.snd := Subsingleton.elim _ _
+              subst φ
+              funext u
+              exact (h n u).symm
+          · rcases j' with _ | (_ | _)
+            · exact nomatch φ
+            · have hφ : φ = 𝟙 _ := Subsingleton.elim _ _
+              subst φ
+              rfl
+            · exact nomatch φ
+          · rcases j' with _ | (_ | _)
+            · exact nomatch φ
+            · exact nomatch φ
+            · have hφ : φ = 𝟙 _ := Subsingleton.elim _ _
+              subst φ
+              rfl }
+    exact pushoutFunctionDesc (a.app X) (b.app X) cX (e.hom p)
+  · intro m n φ p
+    let X : SimplexCategoryᵒᵖ := op (SimplexCategory.mk n)
+    let Y : SimplexCategoryᵒᵖ := op (SimplexCategory.mk m)
+    let eX := pushoutObjIso a b X
+    let eY := pushoutObjIso a b Y
+    letI : HasPushout (a.app X) (b.app X) := inferInstance
+    letI : HasPushout (a.app Y) (b.app Y) := inferInstance
+    have hq : a.app X ≫ V.map φ.op = U.map φ.op ≫ a.app Y :=
+      (a.naturality φ.op).symm
+    have hq' : b.app X ≫ W.map φ.op = U.map φ.op ≫ b.app Y :=
+      (b.naturality φ.op).symm
+    let q : pushout (a.app X) (b.app X) ⟶ pushout (a.app Y) (b.app Y) :=
+      pushout.map (a.app X) (b.app X) (a.app Y) (b.app Y)
+        (V.map φ.op) (W.map φ.op) (U.map φ.op) hq hq'
+    let cX : (span (a.app X) (b.app X)).CoconeTypes :=
+      { pt := Z.obj X ⟶ Q.obj X
+        ι := fun k => match k with
+          | none => fun u => f.1 n ((a.app X) u)
+          | some WalkingPair.left => f.1 n
+          | some WalkingPair.right => g.1 n
+        ι_naturality := by
+          intro j j' ψ
+          rcases j with _ | (_ | _)
+          · rcases j' with _ | (_ | _)
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · have hψ : ψ = WalkingSpan.Hom.fst := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · have hψ : ψ = WalkingSpan.Hom.snd := Subsingleton.elim _ _
+              subst ψ
+              funext u
+              exact (h n u).symm
+          · rcases j' with _ | (_ | _)
+            · exact nomatch ψ
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · exact nomatch ψ
+          · rcases j' with _ | (_ | _)
+            · exact nomatch ψ
+            · exact nomatch ψ
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl }
+    let cY : (span (a.app Y) (b.app Y)).CoconeTypes :=
+      { pt := Z.obj Y ⟶ Q.obj Y
+        ι := fun k => match k with
+          | none => fun u => f.1 m ((a.app Y) u)
+          | some WalkingPair.left => f.1 m
+          | some WalkingPair.right => g.1 m
+        ι_naturality := by
+          intro j j' ψ
+          rcases j with _ | (_ | _)
+          · rcases j' with _ | (_ | _)
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · have hψ : ψ = WalkingSpan.Hom.fst := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · have hψ : ψ = WalkingSpan.Hom.snd := Subsingleton.elim _ _
+              subst ψ
+              funext u
+              exact (h m u).symm
+          · rcases j' with _ | (_ | _)
+            · exact nomatch ψ
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl
+            · exact nomatch ψ
+          · rcases j' with _ | (_ | _)
+            · exact nomatch ψ
+            · exact nomatch ψ
+            · have hψ : ψ = 𝟙 _ := Subsingleton.elim _ _
+              subst ψ
+              rfl }
+    let kX := pushoutFunctionDesc (a.app X) (b.app X) cX
+    let kY := pushoutFunctionDesc (a.app Y) (b.app Y) cY
+    have hkX_inl (v : V.obj X) :
+        kX (pushout.inl (a.app X) (b.app X) v) = f.1 n v := by
+      simpa [kX, cX] using pushoutFunctionDesc_inl (a.app X) (b.app X) cX v
+    have hkX_inr (v : W.obj X) :
+        kX (pushout.inr (a.app X) (b.app X) v) = g.1 n v := by
+      simpa [kX, cX] using pushoutFunctionDesc_inr (a.app X) (b.app X) cX v
+    have hkY_inl (v : V.obj Y) :
+        kY (pushout.inl (a.app Y) (b.app Y) v) = f.1 m v := by
+      simpa [kY, cY] using pushoutFunctionDesc_inl (a.app Y) (b.app Y) cY v
+    have hkY_inr (v : W.obj Y) :
+        kY (pushout.inr (a.app Y) (b.app Y) v) = g.1 m v := by
+      simpa [kY, cY] using pushoutFunctionDesc_inr (a.app Y) (b.app Y) cY v
+    have hq_inl (v : V.obj X) :
+        q (pushout.inl (a.app X) (b.app X) v) =
+          pushout.inl (a.app Y) (b.app Y) (V.map φ.op v) := by
+      have hq_inl' :
+          pushout.inl (a.app X) (b.app X) ≫ q =
+            V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y) := by
+        have hdesc :
+            a.app X ≫ (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y)) =
+              b.app X ≫ (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) := by
+          calc
+            a.app X ≫ (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y)) =
+                (a.app X ≫ V.map φ.op) ≫ pushout.inl (a.app Y) (b.app Y) := by simp only [Category.assoc]
+            _ = (U.map φ.op ≫ a.app Y) ≫ pushout.inl (a.app Y) (b.app Y) := by rw [hq]
+            _ = U.map φ.op ≫ (a.app Y ≫ pushout.inl (a.app Y) (b.app Y)) := by simp only [Category.assoc]
+            _ = U.map φ.op ≫ (b.app Y ≫ pushout.inr (a.app Y) (b.app Y)) := by rw [pushout.condition]
+            _ = (U.map φ.op ≫ b.app Y) ≫ pushout.inr (a.app Y) (b.app Y) := by simp only [Category.assoc]
+            _ = (b.app X ≫ W.map φ.op) ≫ pushout.inr (a.app Y) (b.app Y) := by rw [hq']
+            _ = b.app X ≫ (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) := by simp only [Category.assoc]
+        change pushout.inl (a.app X) (b.app X) ≫
+            pushout.desc (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y))
+              (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) _ = _
+        exact pushout.inl_desc _ _ hdesc
+      simpa only [CategoryTheory.comp_apply] using congrArg (fun k => k v) hq_inl'
+    have hq_inr (v : W.obj X) :
+        q (pushout.inr (a.app X) (b.app X) v) =
+          pushout.inr (a.app Y) (b.app Y) (W.map φ.op v) := by
+      have hq_inr' :
+          pushout.inr (a.app X) (b.app X) ≫ q =
+            W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y) := by
+        have hdesc :
+            a.app X ≫ (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y)) =
+              b.app X ≫ (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) := by
+          calc
+            a.app X ≫ (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y)) =
+                (a.app X ≫ V.map φ.op) ≫ pushout.inl (a.app Y) (b.app Y) := by simp only [Category.assoc]
+            _ = (U.map φ.op ≫ a.app Y) ≫ pushout.inl (a.app Y) (b.app Y) := by rw [hq]
+            _ = U.map φ.op ≫ (a.app Y ≫ pushout.inl (a.app Y) (b.app Y)) := by simp only [Category.assoc]
+            _ = U.map φ.op ≫ (b.app Y ≫ pushout.inr (a.app Y) (b.app Y)) := by rw [pushout.condition]
+            _ = (U.map φ.op ≫ b.app Y) ≫ pushout.inr (a.app Y) (b.app Y) := by simp only [Category.assoc]
+            _ = (b.app X ≫ W.map φ.op) ≫ pushout.inr (a.app Y) (b.app Y) := by rw [hq']
+            _ = b.app X ≫ (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) := by simp only [Category.assoc]
+        change pushout.inr (a.app X) (b.app X) ≫
+            pushout.desc (V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y))
+              (W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y)) _ = _
+        exact pushout.inr_desc _ _ hdesc
+      simpa only [CategoryTheory.comp_apply] using congrArg (fun k => k v) hq_inr'
+    have hfamily : ∀ z : pushout (a.app X) (b.app X),
+        Z.map φ.op ≫ kY (q z) = kX z ≫ Q.map φ.op := by
+      intro z
+      obtain ⟨j, y, hy⟩ :=
+        Types.jointly_surjective_of_isColimit (pushout.isColimit (a.app X) (b.app X)) z
+      obtain (_ | _ | _) := j
+      · rw [← hy]
+        rw [PushoutCocone.condition_zero]
+        change U.obj X at y
+        change Z.map φ.op ≫ kY (q (pushout.inl (a.app X) (b.app X) ((a.app X) y))) =
+          kX (pushout.inl (a.app X) (b.app X) ((a.app X) y)) ≫ Q.map φ.op
+        rw [hkX_inl, hq_inl, hkY_inl]
+        exact f.property φ ((a.app X) y)
+      · rw [← hy]
+        change V.obj X at y
+        change Z.map φ.op ≫ kY (q (pushout.inl (a.app X) (b.app X) y)) =
+          kX (pushout.inl (a.app X) (b.app X) y) ≫ Q.map φ.op
+        rw [hkX_inl, hq_inl, hkY_inl]
+        exact f.property φ y
+      · rw [← hy]
+        change W.obj X at y
+        change Z.map φ.op ≫ kY (q (pushout.inr (a.app X) (b.app X) y)) =
+          kX (pushout.inr (a.app X) (b.app X) y) ≫ Q.map φ.op
+        rw [hkX_inr, hq_inr, hkY_inr]
+        exact g.property φ y
+    have hqcat_inl :
+        pushout.inl (a.app X) (b.app X) ≫ q =
+          V.map φ.op ≫ pushout.inl (a.app Y) (b.app Y) := by
+      apply ConcreteCategory.hom_ext
+      intro v
+      exact hq_inl v
+    have hqcat_inr :
+        pushout.inr (a.app X) (b.app X) ≫ q =
+          W.map φ.op ≫ pushout.inr (a.app Y) (b.app Y) := by
+      apply ConcreteCategory.hom_ext
+      intro v
+      exact hq_inr v
+    have hecat :
+        eX.inv ≫ (pushout a b).map φ.op ≫ eY.hom = q := by
+      apply pushout.hom_ext
+      · dsimp [X, Y]
+        rw [← Category.assoc, inl_comp_pushoutObjIso_inv]
+        rw [← (pushout.inl a b).naturality_assoc φ.op]
+        rw [inl_comp_pushoutObjIso_hom]
+        exact hqcat_inl.symm
+      · dsimp [X, Y]
+        rw [← Category.assoc, inr_comp_pushoutObjIso_inv]
+        rw [← (pushout.inr a b).naturality_assoc φ.op]
+        rw [inr_comp_pushoutObjIso_hom]
+        exact hqcat_inr.symm
+    have he := ConcreteCategory.congr_hom hecat (eX.hom p)
+    change eY.hom ((pushout a b).map φ.op (eX.inv (eX.hom p))) = q (eX.hom p) at he
+    rw [eX.hom_inv_id_apply] at he
+    change Z.map φ.op ≫ kY (eY.hom ((pushout a b).map φ.op p)) =
+      kX (eX.hom p) ≫ Q.map φ.op
+    rw [he]
+    exact hfamily (eX.hom p)
+
+private theorem finiteProductMap_family_apply
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V : SSet.{w}} (a : U ⟶ V)
+    (Z T : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hV : Unit13.FiniteNonemptySimplicialSet V)
+    {n : ℕ} (u : U _⦋n⦌)
+    (γ : Unit13.simplicialSetProduct V Z hV ⟶ T) :
+    ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z hU T).1
+      (Unit13.productWithSimplicialSetMap
+        (ObjectProperty.homMk a :
+          (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶
+            (⟨V, hV⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫ γ)).1 n u =
+      ((Unit13.finiteSimplicialSetProduct_hom_equiv V Z hV T).1 γ).1 n
+        ((a.app (op (SimplexCategory.mk n))) u) := by
+  dsimp [Unit13.finiteSimplicialSetProduct_hom_equiv,
+    Unit13.simplicialSetProduct_hom_equiv]
+  simp [Unit13.productWithSimplicialSetMap,
+    Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf]
+
+private theorem finiteProductMap_second_family_apply
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U : SSet.{w}} (Z Z' T : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (r : Z ⟶ Z') (n : ℕ) (u : U _⦋n⦌)
+    (γ : Unit13.simplicialSetProduct U Z' hU ⟶ T) :
+    ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z hU T).1
+      (Unit13.productWithSimplicialSetMap
+        (ObjectProperty.homMk (𝟙 U) :
+          (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶ (⟨U, hU⟩ : Unit13.FSSets.{w})) r ≫ γ)).1 n u =
+      r.app (op (SimplexCategory.mk n)) ≫
+        ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z' hU T).1 γ).1 n u := by
+  dsimp [Unit13.finiteSimplicialSetProduct_hom_equiv,
+    Unit13.simplicialSetProduct_hom_equiv]
+  simp [Unit13.productWithSimplicialSetMap,
+    Unit13.simplicialSetProduct, Unit13.simplicialSetProductOf, Category.assoc]
+
+private theorem compatibleFamily_pushout_inl
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    {Z Q : SimplicialObject C}
+    (f : Unit13.CompatibleFamily V Z Q)
+    (g : Unit13.CompatibleFamily W Z Q)
+    (h : ∀ n : ℕ, ∀ u : U _⦋n⦌,
+      f.1 n ((a.app (op (SimplexCategory.mk n))) u) =
+        g.1 n ((b.app (op (SimplexCategory.mk n))) u))
+    {n : ℕ} (v : V _⦋n⦌) :
+    (compatibleFamily_pushout a b f g h).1 n
+        ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) = f.1 n v := by
+  dsimp [compatibleFamily_pushout]
+  have hi :
+      (pushoutObjIso a b (op (SimplexCategory.mk n))).hom
+          ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) =
+        pushout.inl (a.app (op (SimplexCategory.mk n)))
+          (b.app (op (SimplexCategory.mk n))) v := by
+    simpa only [CategoryTheory.comp_apply] using
+      congrArg (fun k => k v)
+        (inl_comp_pushoutObjIso_hom a b (op (SimplexCategory.mk n)))
+  rw [hi, pushoutFunctionDesc_inl]
+
+private theorem compatibleFamily_pushout_inr
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    {Z Q : SimplicialObject C}
+    (f : Unit13.CompatibleFamily V Z Q)
+    (g : Unit13.CompatibleFamily W Z Q)
+    (h : ∀ n : ℕ, ∀ u : U _⦋n⦌,
+      f.1 n ((a.app (op (SimplexCategory.mk n))) u) =
+        g.1 n ((b.app (op (SimplexCategory.mk n))) u))
+    {n : ℕ} (v : W _⦋n⦌) :
+    (compatibleFamily_pushout a b f g h).1 n
+        ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) = g.1 n v := by
+  dsimp [compatibleFamily_pushout]
+  have hi :
+      (pushoutObjIso a b (op (SimplexCategory.mk n))).hom
+          ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) =
+        pushout.inr (a.app (op (SimplexCategory.mk n)))
+          (b.app (op (SimplexCategory.mk n))) v := by
+    simpa only [CategoryTheory.comp_apply] using
+      congrArg (fun k => k v)
+        (inr_comp_pushoutObjIso_hom a b (op (SimplexCategory.mk n)))
+  rw [hi, pushoutFunctionDesc_inr]
+
+private noncomputable def homFibreProduct_to_pushout_data
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    (T : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hV : Unit13.FiniteNonemptySimplicialSet V)
+    (hW : Unit13.FiniteNonemptySimplicialSet W)
+    (hUdeg : EventuallyDegenerate U)
+    (hVdeg : EventuallyDegenerate V)
+    (hWdeg : EventuallyDegenerate W)
+    (Z : SimplicialObject C)
+    (s : Z ⟶ homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg) :
+    {γ : Unit13.simplicialSetProduct (pushout a b) Z
+          (finiteNonempty_pushout a b hU hV hW) ⟶ T //
+      Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inl a b) :
+              (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+            (𝟙 Z) ≫ γ =
+          homHomEquiv V T hV hVdeg Z
+            (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) ∧
+      Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inr a b) :
+              (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+            (𝟙 Z) ≫ γ =
+          homHomEquiv W T hW hWdeg Z
+            (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg)} := by
+  let fV : Unit13.CompatibleFamily V Z T :=
+    (Unit13.finiteSimplicialSetProduct_hom_equiv V Z hV T).1
+      (homHomEquiv V T hV hVdeg Z
+        (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))
+  let gW : Unit13.CompatibleFamily W Z T :=
+    (Unit13.finiteSimplicialSetProduct_hom_equiv W Z hW T).1
+      (homHomEquiv W T hW hWdeg Z
+        (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))
+  have hcompat : ∀ n : ℕ, ∀ u : U _⦋n⦌,
+      fV.1 n ((a.app (op (SimplexCategory.mk n))) u) =
+        gW.1 n ((b.app (op (SimplexCategory.mk n))) u) := by
+    intro n u
+    have hcond := (homFibreProduct_isPullback a b T hU hV hW hUdeg hVdeg hWdeg).w
+    have hs :
+        s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg ≫
+            homPrecomp a T hU hV hUdeg hVdeg =
+          s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg ≫
+            homPrecomp b T hU hW hUdeg hWdeg := by
+      calc
+        _ = s ≫ (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg ≫
+              homPrecomp a T hU hV hUdeg hVdeg) := by rfl
+        _ = s ≫ (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg ≫
+              homPrecomp b T hU hW hUdeg hWdeg) := congrArg (fun k => s ≫ k) hcond
+        _ = _ := by rfl
+    have hfamily := congrArg (fun k => homHomEquiv U T hU hUdeg Z k) hs
+    have hmap :
+        Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk a :
+              (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨V, hV⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫
+            homHomEquiv V T hV hVdeg Z
+              (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) =
+          Unit13.productWithSimplicialSetMap
+              (ObjectProperty.homMk b :
+                (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶
+                  (⟨W, hW⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫
+            homHomEquiv W T hW hWdeg Z
+              (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg) := by
+      rw [← homPrecomp_homHomEquiv a T hU hV hUdeg hVdeg Z
+        (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg)]
+      rw [← homPrecomp_homHomEquiv b T hU hW hUdeg hWdeg Z
+        (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg)]
+      simpa only [Category.assoc] using hfamily
+    have hpoint := congrArg
+      (fun k => ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z hU T).1 k).1 n u) hmap
+    calc
+      fV.1 n ((a.app (op (SimplexCategory.mk n))) u) =
+          ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z hU T).1
+            (Unit13.productWithSimplicialSetMap
+              (ObjectProperty.homMk a :
+                (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶ (⟨V, hV⟩ : Unit13.FSSets.{w}))
+              (𝟙 Z) ≫ homHomEquiv V T hV hVdeg Z
+                (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))).1 n u := by
+        symm
+        exact finiteProductMap_family_apply a Z T hU hV u
+          (homHomEquiv V T hV hVdeg Z
+            (s ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))
+      _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv U Z hU T).1
+            (Unit13.productWithSimplicialSetMap
+              (ObjectProperty.homMk b :
+                (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶ (⟨W, hW⟩ : Unit13.FSSets.{w}))
+              (𝟙 Z) ≫ homHomEquiv W T hW hWdeg Z
+                (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))).1 n u := hpoint
+      _ = gW.1 n ((b.app (op (SimplexCategory.mk n))) u) := by
+        exact finiteProductMap_family_apply b Z T hU hW u
+          (homHomEquiv W T hW hWdeg Z
+            (s ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))
+  let K := compatibleFamily_pushout a b fV gW hcompat
+  let γ := (Unit13.finiteSimplicialSetProduct_hom_equiv
+    (pushout a b) Z (finiteNonempty_pushout a b hU hV hW) T).symm K
+  refine ⟨γ, ?_, ?_⟩
+  · apply (Unit13.finiteSimplicialSetProduct_hom_equiv V Z hV T).injective
+    apply Subtype.ext
+    funext n v
+    have hmap := finiteProductMap_family_apply (pushout.inl a b) Z T hV
+      (finiteNonempty_pushout a b hU hV hW) v γ
+    have hK : (Unit13.finiteSimplicialSetProduct_hom_equiv
+          (pushout a b) Z (finiteNonempty_pushout a b hU hV hW) T).1 γ = K := by
+      dsimp [γ]
+      exact Equiv.apply_symm_apply _ _
+    calc
+      _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) Z (finiteNonempty_pushout a b hU hV hW) T).1 γ).1 n
+            ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) := hmap
+      _ = K.1 n ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) := by rw [hK]
+      _ = fV.1 n v := compatibleFamily_pushout_inl a b fV gW hcompat v
+      _ = _ := by rfl
+  · apply (Unit13.finiteSimplicialSetProduct_hom_equiv W Z hW T).injective
+    apply Subtype.ext
+    funext n v
+    have hmap := finiteProductMap_family_apply (pushout.inr a b) Z T hW
+      (finiteNonempty_pushout a b hU hV hW) v γ
+    have hK : (Unit13.finiteSimplicialSetProduct_hom_equiv
+          (pushout a b) Z (finiteNonempty_pushout a b hU hV hW) T).1 γ = K := by
+      dsimp [γ]
+      exact Equiv.apply_symm_apply _ _
+    calc
+      _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) Z (finiteNonempty_pushout a b hU hV hW) T).1 γ).1 n
+            ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) := hmap
+      _ = K.1 n ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) := by rw [hK]
+      _ = gW.1 n v := compatibleFamily_pushout_inr a b fV gW hcompat v
+      _ = _ := by rfl
+
+private noncomputable def pushout_to_homFibreProduct_data
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    [HasFiniteLimits C]
+    {U V W : SSet.{w}} (a : U ⟶ V) (b : U ⟶ W)
+    (T : SimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hV : Unit13.FiniteNonemptySimplicialSet V)
+    (hW : Unit13.FiniteNonemptySimplicialSet W)
+    (hUdeg : EventuallyDegenerate U)
+    (hVdeg : EventuallyDegenerate V)
+    (hWdeg : EventuallyDegenerate W)
+    (Z : SimplicialObject C)
+    (γ : Unit13.simplicialSetProduct (pushout a b) Z
+      (finiteNonempty_pushout a b hU hV hW) ⟶ T) :
+    {lift : Z ⟶ homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg //
+      lift ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg =
+          (homHomEquiv V T hV hVdeg Z).symm
+            (Unit13.productWithSimplicialSetMap
+              (ObjectProperty.homMk (pushout.inl a b) :
+                (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                  (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+              (𝟙 Z) ≫ γ) ∧
+      lift ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg =
+          (homHomEquiv W T hW hWdeg Z).symm
+            (Unit13.productWithSimplicialSetMap
+              (ObjectProperty.homMk (pushout.inr a b) :
+                (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                  (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+              (𝟙 Z) ≫ γ)} := by
+  let fVmap : Unit13.simplicialSetProduct V Z hV ⟶ T :=
+    Unit13.productWithSimplicialSetMap
+      (ObjectProperty.homMk (pushout.inl a b) :
+        (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+          (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+      (𝟙 Z) ≫ γ
+  let gWmap : Unit13.simplicialSetProduct W Z hW ⟶ T :=
+    Unit13.productWithSimplicialSetMap
+      (ObjectProperty.homMk (pushout.inr a b) :
+        (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+          (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+      (𝟙 Z) ≫ γ
+  let sV : Z ⟶ hom V T hV hVdeg := (homHomEquiv V T hV hVdeg Z).symm fVmap
+  let sW : Z ⟶ hom W T hW hWdeg := (homHomEquiv W T hW hWdeg Z).symm gWmap
+  have hcompat :
+      sV ≫ homPrecomp a T hU hV hUdeg hVdeg =
+        sW ≫ homPrecomp b T hU hW hUdeg hWdeg := by
+    apply (homHomEquiv U T hU hUdeg Z).injective
+    rw [homPrecomp_homHomEquiv a T hU hV hUdeg hVdeg Z sV]
+    rw [homPrecomp_homHomEquiv b T hU hW hUdeg hWdeg Z sW]
+    have hsV : homHomEquiv V T hV hVdeg Z sV = fVmap := by
+      dsimp [sV]
+      exact Equiv.apply_symm_apply _ _
+    have hsW : homHomEquiv W T hW hWdeg Z sW = gWmap := by
+      dsimp [sW]
+      exact Equiv.apply_symm_apply _ _
+    rw [hsV, hsW]
+    change
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk a :
+            (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶ (⟨V, hV⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫ fVmap =
+        Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk b :
+            (⟨U, hU⟩ : Unit13.FSSets.{w}) ⟶ (⟨W, hW⟩ : Unit13.FSSets.{w})) (𝟙 Z) ≫ gWmap
+    have hpush := productWithSimplicialSetMap_pushout_condition
+      a b Z hU hV hW (finiteNonempty_pushout a b hU hV hW)
+    dsimp at hpush
+    rw [show fVmap =
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+          (𝟙 Z) ≫ γ by rfl]
+    rw [show gWmap =
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, finiteNonempty_pushout a b hU hV hW⟩ : Unit13.FSSets.{w}))
+          (𝟙 Z) ≫ γ by rfl]
+    rw [← Category.assoc, ← Category.assoc, hpush]
+  let hex : ∃! lift : Z ⟶ homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg,
+      lift ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg = sV ∧
+        lift ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg = sW :=
+    Unit07.simplicialFibreProduct_universal_property
+      (homPrecomp a T hU hV hUdeg hVdeg)
+      (homPrecomp b T hU hW hUdeg hWdeg)
+      (homPrecomp_hasDegreewiseFibreProducts a b T hU hV hW
+        hUdeg hVdeg hWdeg)
+      Z sV sW hcompat
+  exact ⟨Classical.choose hex, (Classical.choose_spec hex).1⟩
 
 /-- Existence of the source's canonical isomorphism of representing objects. -/
 theorem hom_fibreProduct_iso_exists
@@ -1187,7 +2028,415 @@ theorem hom_fibreProduct_iso_exists
         hom (pushout a b) T
           (finiteNonempty_pushout a b hU hV hW)
           (eventuallyDegenerate_pushout a b hUdeg hVdeg hWdeg)) := by
-  sorry
+  let hP := finiteNonempty_pushout a b hU hV hW
+  let hPdeg := eventuallyDegenerate_pushout a b hUdeg hVdeg hWdeg
+  let HP := homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg
+  let H := hom (pushout a b) T hP hPdeg
+  let F0 := homFibreProduct_to_pushout_data a b T hU hV hW hUdeg hVdeg hWdeg
+    HP (𝟙 HP)
+  let γ0 := homHomEquiv (pushout a b) T hP hPdeg H (𝟙 H)
+  let G0 := pushout_to_homFibreProduct_data a b T hU hV hW hUdeg hVdeg hWdeg H γ0
+  let i : HP ⟶ H :=
+    (homHomEquiv (pushout a b) T hP hPdeg HP).symm F0.1
+  let j : H ⟶ HP := G0.1
+  have hi_repr :
+      homHomEquiv (pushout a b) T hP hPdeg HP i = F0.1 := by
+    dsimp [i]
+    exact Equiv.apply_symm_apply _ _
+  have hF : F0.1 =
+      productWithSimplicialSetMapSecond (pushout a b) hP i ≫ γ0 := by
+    calc
+      F0.1 = homHomEquiv (pushout a b) T hP hPdeg HP i := hi_repr.symm
+      _ = homHomEquiv (pushout a b) T hP hPdeg HP (i ≫ 𝟙 H) := by simp
+      _ = productWithSimplicialSetMapSecond (pushout a b) hP i ≫ γ0 := by
+        rw [homHomEquiv_comp]
+  have hprod_inl :
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫
+        productWithSimplicialSetMapSecond (pushout a b) hP i =
+      productWithSimplicialSetMapSecond V hV i ≫
+        Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) := by
+    have hl := productWithSimplicialSetMap_comp
+      (A := (⟨V, hV⟩ : Unit13.FSSets.{w}))
+      (B := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (ObjectProperty.homMk (pushout.inl a b))
+      (ObjectProperty.homMk (𝟙 (pushout a b))) (𝟙 HP) i
+    have hr := productWithSimplicialSetMap_comp
+      (A := (⟨V, hV⟩ : Unit13.FSSets.{w}))
+      (B := (⟨V, hV⟩ : Unit13.FSSets.{w}))
+      (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (ObjectProperty.homMk (𝟙 V)) (ObjectProperty.homMk (pushout.inl a b)) i (𝟙 H)
+    dsimp [productWithSimplicialSetMapSecond]
+    rw [hl, hr]
+    have hleft :
+        (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) ≫
+          ObjectProperty.homMk (𝟙 (pushout a b)) =
+        (ObjectProperty.homMk (pushout.inl a b) :
+          (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+            (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) := by
+      ext X
+      simp
+    have hright :
+        (ObjectProperty.homMk (𝟙 V) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶ (⟨V, hV⟩ : Unit13.FSSets.{w})) ≫
+          (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) =
+        (ObjectProperty.homMk (pushout.inl a b) :
+          (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+            (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) := by
+      ext X
+      simp
+    have hf :
+        (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) ≫
+          ObjectProperty.homMk (𝟙 (pushout a b)) =
+        (ObjectProperty.homMk (𝟙 V) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶ (⟨V, hV⟩ : Unit13.FSSets.{w})) ≫
+          (ObjectProperty.homMk (pushout.inl a b) :
+            (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) :=
+      hleft.trans hright.symm
+    have hz : (𝟙 HP ≫ i) = (i ≫ 𝟙 H) := by simp
+    exact congrArg₂ (fun f r => Unit13.productWithSimplicialSetMap f r) hf hz
+  have hprod_inr :
+      Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫
+        productWithSimplicialSetMapSecond (pushout a b) hP i =
+      productWithSimplicialSetMapSecond W hW i ≫
+        Unit13.productWithSimplicialSetMap
+          (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) := by
+    have hl := productWithSimplicialSetMap_comp
+      (A := (⟨W, hW⟩ : Unit13.FSSets.{w}))
+      (B := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (ObjectProperty.homMk (pushout.inr a b))
+      (ObjectProperty.homMk (𝟙 (pushout a b))) (𝟙 HP) i
+    have hr := productWithSimplicialSetMap_comp
+      (A := (⟨W, hW⟩ : Unit13.FSSets.{w}))
+      (B := (⟨W, hW⟩ : Unit13.FSSets.{w}))
+      (D := (⟨pushout a b, hP⟩ : Unit13.FSSets.{w}))
+      (ObjectProperty.homMk (𝟙 W)) (ObjectProperty.homMk (pushout.inr a b)) i (𝟙 H)
+    dsimp [productWithSimplicialSetMapSecond]
+    rw [hl, hr]
+    have hleft :
+        (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) ≫
+          ObjectProperty.homMk (𝟙 (pushout a b)) =
+        (ObjectProperty.homMk (pushout.inr a b) :
+          (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+            (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) := by
+      ext X
+      simp
+    have hright :
+        (ObjectProperty.homMk (𝟙 W) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶ (⟨W, hW⟩ : Unit13.FSSets.{w})) ≫
+          (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) =
+        (ObjectProperty.homMk (pushout.inr a b) :
+          (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+            (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) := by
+      ext X
+      simp
+    have hf :
+        (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) ≫
+          ObjectProperty.homMk (𝟙 (pushout a b)) =
+        (ObjectProperty.homMk (𝟙 W) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶ (⟨W, hW⟩ : Unit13.FSSets.{w})) ≫
+          (ObjectProperty.homMk (pushout.inr a b) :
+            (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+              (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) :=
+      hleft.trans hright.symm
+    have hz : (𝟙 HP ≫ i) = (i ≫ 𝟙 H) := by simp
+    exact congrArg₂ (fun f r => Unit13.productWithSimplicialSetMap f r) hf hz
+  refine ⟨{ hom := i, inv := j, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
+  · apply (homFibreProduct_isPullback a b T hU hV hW hUdeg hVdeg hWdeg).hom_ext
+    · rw [Category.assoc, G0.2.1]
+      apply (homHomEquiv V T hV hVdeg HP).injective
+      rw [homHomEquiv_comp, Equiv.apply_symm_apply]
+      calc
+        productWithSimplicialSetMapSecond V hV i ≫
+              Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inl a b) :
+                  (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 =
+            Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inl a b) :
+                  (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫
+              productWithSimplicialSetMapSecond (pushout a b) hP i ≫ γ0 := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => k ≫ γ0) hprod_inl.symm
+        _ = Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inl a b) :
+                  (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1 := by
+          rw [hF]
+        _ = homHomEquiv V T hV hVdeg HP
+              (𝟙 (homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg) ≫
+                homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) := by
+          simpa [HP] using F0.2.1
+    · rw [Category.assoc, G0.2.2]
+      apply (homHomEquiv W T hW hWdeg HP).injective
+      rw [homHomEquiv_comp, Equiv.apply_symm_apply]
+      calc
+        productWithSimplicialSetMapSecond W hW i ≫
+              Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inr a b) :
+                  (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 =
+            Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inr a b) :
+                  (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫
+              productWithSimplicialSetMapSecond (pushout a b) hP i ≫ γ0 := by
+          simpa only [Category.assoc] using
+            congrArg (fun k => k ≫ γ0) hprod_inr.symm
+        _ = Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inr a b) :
+                  (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1 := by
+          rw [hF]
+        _ = homHomEquiv W T hW hWdeg HP
+              (𝟙 (homFibreProduct a b T hU hV hW hUdeg hVdeg hWdeg) ≫
+                homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg) := by
+          simpa [HP] using F0.2.2
+  · apply (homHomEquiv (pushout a b) T hP hPdeg H).injective
+    rw [homHomEquiv_comp, hi_repr]
+    apply (Unit13.finiteSimplicialSetProduct_hom_equiv
+      (pushout a b) H hP T).injective
+    apply Subtype.ext
+    funext n p
+    have hsecondP := finiteProductMap_second_family_apply H HP T hP j n p F0.1
+    apply Eq.trans hsecondP
+    have hF0V :
+        Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inl a b) :
+              (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1 =
+          homHomEquiv V T hV hVdeg HP
+            (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) := by
+      simpa [HP, Category.id_comp] using F0.2.1
+    have hF0W :
+        Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inr a b) :
+              (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1 =
+          homHomEquiv W T hW hWdeg HP
+            (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg) := by
+      simpa [HP, Category.id_comp] using F0.2.2
+    have hG0V :
+        homHomEquiv V T hV hVdeg H
+            (j ≫ homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) =
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inl a b) :
+              (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 := by
+      rw [G0.2.1]
+      exact Equiv.apply_symm_apply _ _
+    have hG0W :
+        homHomEquiv W T hW hWdeg H
+            (j ≫ homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg) =
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inr a b) :
+              (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 := by
+      rw [G0.2.2]
+      exact Equiv.apply_symm_apply _ _
+    have hcompV :
+        productWithSimplicialSetMapSecond V hV j ≫
+            homHomEquiv V T hV hVdeg HP
+              (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg) =
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inl a b) :
+              (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 := by
+      rw [← homHomEquiv_comp]
+      exact hG0V
+    have hcompW :
+        productWithSimplicialSetMapSecond W hW j ≫
+            homHomEquiv W T hW hWdeg HP
+              (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg) =
+          Unit13.productWithSimplicialSetMap
+            (ObjectProperty.homMk (pushout.inr a b) :
+              (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0 := by
+      rw [← homHomEquiv_comp]
+      exact hG0W
+    have hinl : ∀ v : V _⦋n⦌,
+        j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv
+                (pushout a b) HP hP T).1 F0.1).1 n
+                ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) =
+          ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) H hP T).1 γ0).1 n
+              ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) := by
+      intro v
+      have hmapF := finiteProductMap_family_apply (pushout.inl a b) HP T hV hP v F0.1
+      have hsecondV := finiteProductMap_second_family_apply H HP T hV j n v
+        (homHomEquiv V T hV hVdeg HP
+          (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))
+      have hpoint := congrArg
+        (fun k =>
+          ((Unit13.finiteSimplicialSetProduct_hom_equiv V H hV T).1 k).1 n v)
+        hcompV
+      calc
+        j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv
+                (pushout a b) HP hP T).1 F0.1).1 n
+                ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) =
+            j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv V HP hV T).1
+                (Unit13.productWithSimplicialSetMap
+                  (ObjectProperty.homMk (pushout.inl a b) :
+                    (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                      (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1)).1 n v := by
+          rw [hmapF]
+        _ = j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv V HP hV T).1
+                (homHomEquiv V T hV hVdeg HP
+                  (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))).1 n v := by
+          rw [hF0V]
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv V H hV T).1
+              (productWithSimplicialSetMapSecond V hV j ≫
+                homHomEquiv V T hV hVdeg HP
+                  (homFibreProductFst a b T hU hV hW hUdeg hVdeg hWdeg))).1 n v := by
+          exact hsecondV.symm
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv V H hV T).1
+              (Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inl a b) :
+                  (⟨V, hV⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0)).1 n v := hpoint
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) H hP T).1 γ0).1 n
+              ((pushout.inl a b).app (op (SimplexCategory.mk n)) v) := by
+          exact finiteProductMap_family_apply (pushout.inl a b) H T hV hP v γ0
+    have hinr : ∀ v : W _⦋n⦌,
+        j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv
+                (pushout a b) HP hP T).1 F0.1).1 n
+                ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) =
+          ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) H hP T).1 γ0).1 n
+              ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) := by
+      intro v
+      have hmapF := finiteProductMap_family_apply (pushout.inr a b) HP T hW hP v F0.1
+      have hsecondW := finiteProductMap_second_family_apply H HP T hW j n v
+        (homHomEquiv W T hW hWdeg HP
+          (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))
+      have hpoint := congrArg
+        (fun k =>
+          ((Unit13.finiteSimplicialSetProduct_hom_equiv W H hW T).1 k).1 n v)
+        hcompW
+      calc
+        j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv
+                (pushout a b) HP hP T).1 F0.1).1 n
+                ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) =
+            j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv W HP hW T).1
+                (Unit13.productWithSimplicialSetMap
+                  (ObjectProperty.homMk (pushout.inr a b) :
+                    (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                      (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 HP) ≫ F0.1)).1 n v := by
+          rw [hmapF]
+        _ = j.app (op (SimplexCategory.mk n)) ≫
+              ((Unit13.finiteSimplicialSetProduct_hom_equiv W HP hW T).1
+                (homHomEquiv W T hW hWdeg HP
+                  (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))).1 n v := by
+          rw [hF0W]
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv W H hW T).1
+              (productWithSimplicialSetMapSecond W hW j ≫
+                homHomEquiv W T hW hWdeg HP
+                  (homFibreProductSnd a b T hU hV hW hUdeg hVdeg hWdeg))).1 n v := by
+          exact hsecondW.symm
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv W H hW T).1
+              (Unit13.productWithSimplicialSetMap
+                (ObjectProperty.homMk (pushout.inr a b) :
+                  (⟨W, hW⟩ : Unit13.FSSets.{w}) ⟶
+                    (⟨pushout a b, hP⟩ : Unit13.FSSets.{w})) (𝟙 H) ≫ γ0)).1 n v := hpoint
+        _ = ((Unit13.finiteSimplicialSetProduct_hom_equiv
+            (pushout a b) H hP T).1 γ0).1 n
+              ((pushout.inr a b).app (op (SimplexCategory.mk n)) v) := by
+          exact finiteProductMap_family_apply (pushout.inr a b) H T hW hP v γ0
+    let X : SimplexCategoryᵒᵖ := op (SimplexCategory.mk n)
+    let e := pushoutObjIso a b X
+    let q : pushout (a.app X) (b.app X) := e.hom p
+    obtain ⟨k, y, hy⟩ :=
+      Types.jointly_surjective_of_isColimit
+        (pushout.isColimit (a.app X) (b.app X)) q
+    obtain (_ | _ | _) := k
+    ·
+      change U.obj X at y
+      have hz := congrArg (fun k => k y)
+        (PushoutCocone.condition_zero (pushout.cocone (a.app X) (b.app X)))
+      have hp : (pushout.inl a b).app X ((a.app X) y) = p := by
+        let e' := pushoutObjIso a b X
+        have hhy : ((pushout.cocone (a.app X) (b.app X)).ι.app WalkingSpan.left)
+              ((a.app X) y) = q := by
+          exact hz.symm.trans hy
+        have hhom : (pushoutObjIso a b X).hom
+              ((pushout.inl a b).app X ((a.app X) y)) =
+            pushout.inl (a.app X) (b.app X) ((a.app X) y) := by
+          simpa only [CategoryTheory.comp_apply] using
+            congrArg (fun k => k ((a.app X) y)) (inl_comp_pushoutObjIso_hom a b X)
+        have hh : e'.hom ((pushout.inl a b).app X ((a.app X) y)) = e'.hom p := by
+          simpa [e', q] using hhom.trans hhy
+        have hh' := congrArg (fun z => e'.inv z) hh
+        simpa [e'] using hh'
+      rw [← hp]
+      exact hinl _
+    ·
+      change V.obj X at y
+      have hp : (pushout.inl a b).app X y = p := by
+        let e' := pushoutObjIso a b X
+        have hhy : pushout.inl (a.app X) (b.app X) y = q := by
+          change pushout.inl (a.app X) (b.app X) y = q at hy
+          exact hy
+        have hhom : (pushoutObjIso a b X).hom ((pushout.inl a b).app X y) =
+            pushout.inl (a.app X) (b.app X) y := by
+          simpa only [CategoryTheory.comp_apply] using
+            congrArg (fun k => k y) (inl_comp_pushoutObjIso_hom a b X)
+        have hh : e'.hom ((pushout.inl a b).app X y) = e'.hom p := by
+          simpa [e', q] using hhom.trans hhy
+        have hh' := congrArg (fun z => e'.inv z) hh
+        simpa [e'] using hh'
+      rw [← hp]
+      exact hinl y
+    ·
+      change W.obj X at y
+      have hp : (pushout.inr a b).app X y = p := by
+        let e' := pushoutObjIso a b X
+        have hhy : pushout.inr (a.app X) (b.app X) y = q := by
+          change pushout.inr (a.app X) (b.app X) y = q at hy
+          exact hy
+        have hhom : (pushoutObjIso a b X).hom ((pushout.inr a b).app X y) =
+            pushout.inr (a.app X) (b.app X) y := by
+          simpa only [CategoryTheory.comp_apply] using
+            congrArg (fun k => k y) (inr_comp_pushoutObjIso_hom a b X)
+        have hh : e'.hom ((pushout.inr a b).app X y) = e'.hom p := by
+          simpa [e', q] using hhom.trans hhy
+        have hh' := congrArg (fun z => e'.inv z) hh
+        simpa [e'] using hh'
+      rw [← hp]
+      exact hinr y
 
 /-- The source's fibre-product identity, expressed by the canonical isomorphism of representing objects. -/
 noncomputable def hom_fibreProduct_iso

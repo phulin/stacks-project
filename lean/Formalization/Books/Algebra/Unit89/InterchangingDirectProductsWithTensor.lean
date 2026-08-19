@@ -356,7 +356,7 @@ theorem finite_generation_tensor_iff
   tfae_have 1 → 2 := by
     intro h A Q
     ·
-      letI : Module.Finite R (M : Type w) := h
+      let : Module.Finite R (M : Type w) := h
       obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R (M : Type w)
       let g : Fin n → (M : Type w) := fun i => f (Pi.single i 1)
       have hgen : ∀ m : (M : Type w), ∃ c : Fin n → R,
@@ -370,7 +370,7 @@ theorem finite_generation_tensor_iff
               apply Finset.sum_congr rfl
               intro i hi
               ext j
-              by_cases hij : i = j <;> simp [Pi.single_apply, hij]
+              by_cases hij : i = j <;> simp [hij]
         refine ⟨c, ?_⟩
         calc
           m = f c := hc.symm

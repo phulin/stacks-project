@@ -522,7 +522,7 @@ noncomputable def shiftedExactCoupleDerivedA {C : Type u} [Category.{v} C]
 theorem shiftedExactCoupleDerived_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {S T : C ≌ C} {A E : C} (D : ShiftedExactCouple C S T A E) :
-    Nonempty (ShiftedExactCouple C (T.trans S) T
+    Nonempty (ShiftedExactCouple C (S.trans T) T
       (shiftedExactCoupleDerivedA D) (shiftedExactCoupleDerivedE D)) := by
   sorry
 
@@ -530,7 +530,7 @@ theorem shiftedExactCoupleDerived_exists
 noncomputable def shiftedExactCoupleDerived
     {C : Type u} [Category.{v} C] [Abelian C]
     {S T : C ≌ C} {A E : C} (D : ShiftedExactCouple C S T A E) :
-    ShiftedExactCouple C (T.trans S) T
+    ShiftedExactCouple C (S.trans T) T
       (shiftedExactCoupleDerivedA D) (shiftedExactCoupleDerivedE D) :=
   Classical.choice (shiftedExactCoupleDerived_exists D)
 
@@ -551,7 +551,7 @@ abbrev shiftedExactCoupleDerivedG {C : Type u} [Category.{v} C]
     [Abelian C] {S T : C ≌ C} {A E : C}
     (D : ShiftedExactCouple C S T A E) :
     shiftedExactCoupleDerivedA D ⟶
-      (T.trans S).functor.obj (shiftedExactCoupleDerivedE D) :=
+      (S.trans T).functor.obj (shiftedExactCoupleDerivedE D) :=
   (shiftedExactCoupleDerived D).g
 
 theorem shiftedExactCoupleDerived_is_exact
@@ -560,7 +560,7 @@ theorem shiftedExactCoupleDerived_is_exact
     ExactFiveTerm (T.functor.map (shiftedExactCoupleDerived D).f)
       (shiftedExactCoupleDerived D).Talpha
       (shiftedExactCoupleDerived D).g
-      ((T.trans S).functor.map (shiftedExactCoupleDerived D).f) :=
+      ((S.trans T).functor.map (shiftedExactCoupleDerived D).f) :=
   (shiftedExactCoupleDerived D).exact
 
 /-- `Ker(d) = f⁻¹(Ker(g)) = f⁻¹(Im(T alpha))`. -/
@@ -648,9 +648,9 @@ abbrev TranslatedSpectralSequence (C : Type u) [Category.{v} C]
 
 /-- The translation `T^(r-1) S` used on page `r` for `r ≥ 1`. -/
 def shiftedExactCoupleTranslation {C : Type u} [Category.{v} C]
-    (S T : C ≌ C) (r : ℤ) : C ≌ C :=
+  (S T : C ≌ C) (r : ℤ) : C ≌ C :=
   if 1 ≤ r then
-    (shiftedEquivalenceIterate T (Int.toNat (r - 1))).trans S
+    S.trans (shiftedEquivalenceIterate T (Int.toNat (r - 1)))
   else S
 
 /-- A translated spectral sequence associated to a shifted exact couple. -/
@@ -679,7 +679,7 @@ theorem shiftedExactCouple_translation_formula
     {C : Type u} [Category.{v} C]
     (S T : C ≌ C) (r : ℤ) (hr : 1 ≤ r) :
     shiftedExactCoupleTranslation S T r =
-      (shiftedEquivalenceIterate T (Int.toNat (r - 1))).trans S := by
+      S.trans (shiftedEquivalenceIterate T (Int.toNat (r - 1))) := by
   simp [shiftedExactCoupleTranslation, hr]
 
 end Formalization.Books.Homology.Unit21

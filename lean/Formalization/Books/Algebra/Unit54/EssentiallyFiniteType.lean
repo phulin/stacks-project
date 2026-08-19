@@ -202,7 +202,8 @@ theorem finiteType_iff_finiteType_residue
       (RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective) hf
   · intro hf
     obtain ⟨n, a, ha⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp hf
-    choose b hb using fun i : Fin n => Ideal.Quotient.mk_surjective (a (MvPolynomial.X i))
+    choose b hb using fun i : Fin n =>
+      Ideal.Quotient.mk_surjective (a (MvPolynomial.X i))
     let p : MvPolynomial (Fin n) R →ₐ[R] S := MvPolynomial.aeval b
     let q : S →ₐ[R] S ⧸ m :=
       { toRingHom := Ideal.Quotient.mk m
@@ -316,7 +317,103 @@ theorem essFiniteType_iff_essFiniteType_residue
     change Algebra.EssFiniteType R (S ⧸ m) at hq
     rw [Algebra.essFiniteType_iff_exists_subalgebra] at hq
     rcases hq with ⟨A, M, hA, hloc⟩
-    sorry
+    obtain ⟨n, a, ha⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp hA
+    choose b hb using fun i : Fin n =>
+      Ideal.Quotient.mk_surjective (a (MvPolynomial.X i)).1
+    let p : MvPolynomial (Fin n) R →ₐ[R] S := MvPolynomial.aeval b
+    let q : S →ₐ[R] S ⧸ m :=
+      { toRingHom := Ideal.Quotient.mk m
+        commutes' := by
+          intro r
+          rfl }
+    have hp : q.comp p = A.val.comp a := by
+      apply MvPolynomial.algHom_ext
+      intro i
+      simpa [AlgHom.comp_apply, q, p] using hb i
+    let I : Ideal (MvPolynomial (Fin n) R) :=
+      (IsLocalRing.maximalIdeal S).comap p.toRingHom
+    have hpunit (x : I.primeCompl) : IsUnit (p.toRingHom x) := by
+      apply IsLocalRing.notMem_maximalIdeal.mp
+      intro hx
+      exact x.2 hx
+    have hm : m = IsLocalRing.maximalIdeal S :=
+      IsLocalRing.eq_maximalIdeal (inferInstance : m.IsMaximal)
+    let h : Localization I.primeCompl →+* S :=
+      IsLocalization.lift (M := I.primeCompl) (g := p.toRingHom) hpunit
+    have hcomp : h.comp (algebraMap _ _) = p.toRingHom := by
+      exact IsLocalization.lift_comp hpunit
+    have hqunit (x : I.primeCompl) :
+        IsUnit ((Ideal.Quotient.mk m).comp p.toRingHom x) := by
+      change IsUnit ((Ideal.Quotient.mk m) (p.toRingHom x))
+      exact IsUnit.map (Ideal.Quotient.mk m) (hpunit x)
+    let hr : Localization I.primeCompl →+* S ⧸ m :=
+      IsLocalization.lift (M := I.primeCompl)
+        (g := (Ideal.Quotient.mk m).comp p.toRingHom) hqunit
+    have hqr : hr = (Ideal.Quotient.mk m).comp h := by
+      apply IsLocalization.lift_unique hqunit
+      intro x
+      exact congrArg (Ideal.Quotient.mk m) (RingHom.congr_fun hcomp x)
+    have hsurj : Function.Surjective hr := by
+      intro z
+      obtain ⟨⟨x, u⟩, hz⟩ := IsLocalization.surj M z
+      obtain ⟨x', hx'⟩ := ha x
+      obtain ⟨u', hu'⟩ := ha u
+      have hpuq : q (p u') = algebraMap A (S ⧸ m) u := by
+        have hpuq' := DFunLike.congr_fun hp u'
+        change q (p u') = A.val (a u') at hpuq'
+        rw [hpuq']
+        rw [hu']
+        rfl
+      have huI : u' ∉ I := by
+        intro huI
+        have huI' : p.toRingHom u' ∈ IsLocalRing.maximalIdeal S := huI
+        rw [← hm] at huI'
+        have hz0 : q (p u') = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr huI'
+        have hu0 : IsUnit (0 : S ⧸ m) := by
+          rw [← hz0, hpuq]
+          exact hloc.map_units (S ⧸ m) u
+        exact not_isUnit_zero hu0
+      let v : Localization I.primeCompl :=
+        IsLocalization.mk' _ x' ⟨u', show u' ∈ I.primeCompl from huI⟩
+      have hv : hr v = z := by
+        apply (IsLocalization.lift_mk'_spec hqunit x' z
+          ⟨u', show u' ∈ I.primeCompl from huI⟩).mpr
+        change q (p x') = q (p u') * z
+        calc
+          q (p x') = A.val (a x') := DFunLike.congr_fun hp x'
+          _ = q (p u') * z := by
+            rw [hx', hpuq]
+            simpa [mul_comm] using hz.symm
+      exact ⟨v, hv⟩
+    have hhfin : RingHom.Finite h := by
+      apply (finite_iff_finite_residue h m).mpr
+      rw [← hqr]
+      exact RingHom.Finite.of_surjective _ hsurj
+    have hhloc : RingHom.EssFiniteType h :=
+      RingHom.FiniteType.essFiniteType hhfin.to_finiteType
+    have hP : RingHom.FiniteType (algebraMap R (MvPolynomial (Fin n) R)) := by
+      rw [RingHom.finiteType_algebraMap]
+      infer_instance
+    have hLoc : RingHom.EssFiniteType
+        ((algebraMap (MvPolynomial (Fin n) R) (Localization I.primeCompl)).comp
+          (algebraMap R (MvPolynomial (Fin n) R))) :=
+      RingHom.EssFiniteType.comp
+        (RingHom.FiniteType.essFiniteType hP)
+        (by
+          rw [RingHom.essFiniteType_algebraMap]
+          exact Algebra.EssFiniteType.of_isLocalization
+            (R := MvPolynomial (Fin n) R) (S := Localization I.primeCompl) I.primeCompl)
+    have htotal := RingHom.EssFiniteType.comp hLoc hhloc
+    have hpcomp : p.toRingHom.comp (algebraMap R (MvPolynomial (Fin n) R)) = f := by
+      ext r
+      change p (algebraMap R (MvPolynomial (Fin n) R) r) = algebraMap R S r
+      exact p.commutes r
+    have htotal' : RingHom.EssFiniteType
+        ((h.comp (algebraMap (MvPolynomial (Fin n) R) (Localization I.primeCompl))).comp
+          (algebraMap R (MvPolynomial (Fin n) R))) := by
+      simpa only [RingHom.comp_assoc] using htotal
+    rw [hcomp, hpcomp] at htotal'
+    exact htotal'
 
 /-! ## Localization at a closed point of the special fibre -/
 

@@ -42,7 +42,22 @@ theorem quasiRegularMonomialCoefficient_mem
     {R : Type u} [CommRing R] (f : List R) (d : Fin f.length →₀ ℕ) :
     quasiRegularMonomialCoefficient f d ∈
       (Ideal.ofList f) ^ quasiRegularDegree d := by
-  sorry
+  classical
+  let I := Ideal.ofList f
+  have hgen : ∀ i : Fin f.length, f.get i ∈ I := by
+    intro i
+    exact Ideal.subset_span (by simp)
+  have hprod : ∀ s : Finset (Fin f.length),
+      s.prod (fun i => f.get i ^ d i) ∈ I ^ s.sum (fun i => d i) := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty => simp
+    | @insert a s ha ih =>
+      rw [Finset.prod_insert ha, Finset.sum_insert ha]
+      have hh := Ideal.mul_mem_mul (Ideal.pow_mem_pow (hgen a) (d a)) ih
+      simpa [Ideal.IsTwoSided.pow_add] using hh
+  simpa [quasiRegularMonomialCoefficient, quasiRegularDegree, Finsupp.prod,
+    Finsupp.sum, I] using (hprod d.support)
 
 /-- The `n`-th associated graded piece of a module for an ideal. -/
 abbrev quasiRegularPiece
@@ -86,7 +101,16 @@ theorem quasiRegularMonomialMapRaw_ker
     (f : List R) (d : Fin f.length →₀ ℕ) :
     Ideal.ofList f • (⊤ : Submodule R M) ≤
       LinearMap.ker (quasiRegularMonomialMapRaw R M f d) := by
-  sorry
+  intro x hx
+  refine Submodule.smul_induction_on hx ?_ ?_
+  · intro r hr m hm
+    change quasiRegularMonomialMapRaw R M f d (r • m) = 0
+    simp only [quasiRegularMonomialMapRaw, LinearMap.comp_apply, Submodule.mkQ_apply]
+    rw [Submodule.Quotient.mk_eq_zero, map_smul]
+    exact Submodule.smul_mem_smul hr Submodule.mem_top
+  · intro x y hx hy
+    change quasiRegularMonomialMapRaw R M f d (x + y) = 0
+    rw [(quasiRegularMonomialMapRaw R M f d).map_add, hx, hy, add_zero]
 
 /-- The raw map is semilinear for the quotient map on scalars. -/
 theorem quasiRegularMonomialMapRaw_map_smul_quotient
@@ -95,7 +119,7 @@ theorem quasiRegularMonomialMapRaw_map_smul_quotient
     quasiRegularMonomialMapRaw R M f d (r • m) =
       Ideal.Quotient.mk (Ideal.ofList f) r •
         quasiRegularMonomialMapRaw R M f d m := by
-  sorry
+  simp [quasiRegularMonomialMapRaw]
 
 /- The quotient of a semilinear map by `I` is linear over `R ⧸ I`.  The statement is
    isolated because Mathlib exposes the quotient map naturally as a semilinear map. -/
@@ -170,7 +194,11 @@ theorem quasiRegularPolynomialMap_add
     (m₁ m₂ : M ⧸ (Ideal.ofList f • (⊤ : Submodule R M))) :
     quasiRegularPolynomialMap R M f (m₁ + m₂) =
       quasiRegularPolynomialMap R M f m₁ + quasiRegularPolynomialMap R M f m₂ := by
-  sorry
+  apply LinearMap.ext
+  intro p
+  dsimp [quasiRegularPolynomialMap]
+  simp_rw [map_add, LinearMap.toSpanSingleton_add]
+  exact Finsupp.sum_add
 
 theorem quasiRegularPolynomialMap_smul
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]

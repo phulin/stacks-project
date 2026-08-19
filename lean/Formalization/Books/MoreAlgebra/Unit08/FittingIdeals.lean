@@ -744,7 +744,157 @@ private theorem fittingIdealOfSurjection_factor
     (hp : Function.Surjective p) (hq : Function.Surjective q)
     (u : (Fin n → R) →ₗ[R] (Fin n → R)) (hu : q.comp u = p) (k : ℕ) :
     fittingIdealOfSurjection p hp k ≤ fittingIdealOfSurjection q hq k := by
-  sorry
+  classical
+  obtain ⟨v, hv⟩ := Module.projective_lifting_property p q hp
+  let split : (Fin (n + n) → R) ≃ₗ[R]
+      ((Fin n → R) × (Fin n → R)) :=
+    { toFun := fun x => (x ∘ Fin.castAdd n, x ∘ Fin.natAdd n)
+      invFun := fun x => Fin.addCases x.1 x.2
+      left_inv := by
+        intro x
+        funext i
+        exact Fin.addCases_castAdd_natAdd x i
+      right_inv := by
+        rintro ⟨x, y⟩
+        apply Prod.ext
+        · funext i
+          simp [Function.comp_def, Fin.addCases_left]
+        · funext i
+          change Fin.addCases x y (Fin.natAdd n i) = y i
+          rw [Fin.addCases_right]
+      map_add' := by
+        intro x y
+        apply Prod.ext <;> funext i <;> simp [Function.comp_def]
+      map_smul' := by
+        intro c x
+        apply Prod.ext <;> funext i <;> simp [Function.comp_def] }
+  let Cprod : ((Fin n → R) × (Fin n → R)) →ₗ[R]
+      ((Fin n → R) × (Fin n → R)) :=
+    LinearMap.prod
+      ((u.comp (LinearMap.fst R (Fin n → R) (Fin n → R))) +
+        (LinearMap.snd R (Fin n → R) (Fin n → R)) -
+        ((u.comp v).comp (LinearMap.snd R (Fin n → R) (Fin n → R))))
+      ((LinearMap.fst R (Fin n → R) (Fin n → R)) -
+        (v.comp (LinearMap.snd R (Fin n → R) (Fin n → R))))
+  let Dprod : ((Fin n → R) × (Fin n → R)) →ₗ[R]
+      ((Fin n → R) × (Fin n → R)) :=
+    LinearMap.prod
+      ((v.comp (LinearMap.fst R (Fin n → R) (Fin n → R))) +
+        (LinearMap.snd R (Fin n → R) (Fin n → R)) -
+        ((v.comp u).comp (LinearMap.snd R (Fin n → R) (Fin n → R))))
+      ((LinearMap.fst R (Fin n → R) (Fin n → R)) -
+        (u.comp (LinearMap.snd R (Fin n → R) (Fin n → R))))
+  have hDCprod : Dprod.comp Cprod =
+      LinearMap.id := by
+    ext ⟨x, y⟩ <;>
+      simp [Cprod, Dprod, LinearMap.comp_apply, sub_eq_add_neg,
+        add_assoc, add_comm, add_left_comm]
+    <;> abel
+  let C : (Fin (n + n) → R) →ₗ[R] (Fin (n + n) → R) :=
+    split.symm.toLinearMap.comp (Cprod.comp split.toLinearMap)
+  let D : (Fin (n + n) → R) →ₗ[R] (Fin (n + n) → R) :=
+    split.symm.toLinearMap.comp (Dprod.comp split.toLinearMap)
+  have hDC : D.comp C = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    simp only [LinearMap.comp_apply, LinearMap.id_apply]
+    apply split.injective
+    calc
+      split (D (C x)) = Dprod (split (C x)) := by
+        change split (split.symm (Dprod (split (C x)))) = _
+        exact split.apply_symm_apply _
+      _ = Dprod (Cprod (split x)) := by
+        congr 1
+        change split (split.symm (Cprod (split x))) = _
+        exact split.apply_symm_apply _
+      _ = split x := by
+        rw [← LinearMap.comp_apply, hDCprod]
+        rfl
+  have hCfirst (x : Fin (n + n) → R) :
+      (C x) ∘ Fin.castAdd n =
+        u (x ∘ Fin.castAdd n) + x ∘ Fin.natAdd n -
+          u (v (x ∘ Fin.natAdd n)) := by
+    funext i
+    simp [C, Cprod, split, Function.comp_def, Fin.addCases_left]
+  have hfactor : stabilize p n = (stabilize q n).comp C := by
+    apply LinearMap.ext
+    intro x
+    change p (x ∘ Fin.castAdd n) = q ((C x) ∘ Fin.castAdd n)
+    rw [hCfirst]
+    simp only [map_sub, map_add]
+    have hu' (x : Fin n → R) : q (u x) = p x := by
+      simpa [LinearMap.comp_apply] using congrArg (fun f : (Fin n → R) →ₗ[R] M => f x) hu
+    have hv' (x : Fin n → R) : p (v x) = q x := by
+      simpa [LinearMap.comp_apply] using congrArg (fun f : (Fin n → R) →ₗ[R] M => f x) hv
+    rw [hu', hu', hv']
+    abel
+  have hDC_apply (x : Fin (n + n) → R) : D (C x) = x := by
+    rw [← LinearMap.comp_apply, hDC]
+    rfl
+  have hstable :
+      fittingIdealOfSurjection (stabilize p n)
+          (stabilize_surjective p hp n) k ≤
+        fittingIdealOfSurjection (stabilize q n)
+          (stabilize_surjective q hq n) k := by
+    unfold fittingIdealOfSurjection
+    refine iSup_le ?_
+    intro z
+    let w : Fin (n + n - k) → LinearMap.ker (stabilize q n) := fun j =>
+      ⟨C (z j).1, by
+        apply LinearMap.mem_ker.mpr
+        have hmap : (stabilize q n) (C (z j).1) =
+            (stabilize p n) (z j).1 := by
+          simpa [LinearMap.comp_apply] using
+            congrArg (fun f : (Fin (n + n) → R) →ₗ[R] M => f (z j).1)
+              hfactor.symm
+        rw [hmap]
+        exact (z j).property⟩
+    have hrel :
+        relationMatrix (stabilize p n) z =
+          LinearMap.toMatrix' D * relationMatrix (stabilize q n) w := by
+      apply Matrix.ext
+      intro i j
+      change (z j).1 i =
+        Matrix.mulVec (LinearMap.toMatrix' D) (C (z j).1) i
+      rw [LinearMap.toMatrix'_mulVec, hDC_apply]
+    calc
+      minorIdeal (relationMatrix (stabilize p n) z) (n + n - k) ≤
+          minorIdeal (relationMatrix (stabilize q n) w) (n + n - k) := by
+        rw [hrel]
+        exact minorIdeal_left_mul (n := n + n) (m := n + n - k)
+          (r := n + n - k) (LinearMap.toMatrix' D)
+          (relationMatrix (stabilize q n) w)
+      _ ≤ ⨆ y : Fin (n + n - k) → LinearMap.ker (stabilize q n),
+          minorIdeal (relationMatrix (stabilize q n) y) (n + n - k) :=
+        le_iSup (fun y : Fin (n + n - k) → LinearMap.ker (stabilize q n) =>
+          minorIdeal (relationMatrix (stabilize q n) y) (n + n - k)) w
+  have minorIdeal_zero
+      {r m : ℕ} (A : Matrix (Fin r) (Fin m) R) : minorIdeal A 0 = ⊤ := by
+    apply (Ideal.eq_top_iff_one _).mpr
+    apply Ideal.subset_span
+    refine ⟨∅, ∅, by simp, by simp, ?_⟩
+    simp [matrixMinor]
+  have fittingIdeal_zero_of_le
+      {r : ℕ} (a : (Fin r → R) →ₗ[R] M)
+      (ha : Function.Surjective a) (hrk : r ≤ k) :
+      fittingIdealOfSurjection a ha k = ⊤ := by
+    apply le_antisymm le_top
+    unfold fittingIdealOfSurjection
+    have hsub : r - k = 0 := Nat.sub_eq_zero_of_le hrk
+    let z0 : Fin (r - k) → LinearMap.ker a := fun i => Fin.elim0 (hsub ▸ i)
+    have hz : minorIdeal (relationMatrix a z0) (r - k) = ⊤ := by
+      simpa [hsub] using minorIdeal_zero (relationMatrix a z0)
+    calc
+      ⊤ = minorIdeal (relationMatrix a z0) (r - k) := hz.symm
+      _ ≤ ⨆ z : Fin (r - k) → LinearMap.ker a,
+          minorIdeal (relationMatrix a z) (r - k) :=
+        le_iSup (fun z : Fin (r - k) → LinearMap.ker a =>
+          minorIdeal (relationMatrix a z) (r - k)) z0
+  by_cases hk : k ≤ n
+  · exact (fittingIdealOfSurjection_stabilize_ge p hp n k hk).trans
+      (hstable.trans (fittingIdealOfSurjection_stabilize_le q hq n k hk))
+  · have hnk : n ≤ k := Nat.le_of_not_ge hk
+    rw [fittingIdeal_zero_of_le p hp hnk, fittingIdeal_zero_of_le q hq hnk]
 
 /-- Independence of the Fitting ideal from the chosen finite-free surjection. -/
 theorem fittingIdealOfSurjection_eq

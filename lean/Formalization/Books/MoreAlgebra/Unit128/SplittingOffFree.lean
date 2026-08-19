@@ -161,7 +161,7 @@ private theorem map_finsupp_linearCombination {A P Q : Type u} {ι : Type v} [Co
     q (Finsupp.linearCombination A v c) =
       Finsupp.linearCombination A (fun i => q (v i)) c := by
   classical
-  letI : Fintype ι := Fintype.ofFinite ι
+  let : Fintype ι := Fintype.ofFinite ι
   rw [finsupp_linearCombination_eq_sum, finsupp_linearCombination_eq_sum]
   simp [map_sum, map_smul]
 

@@ -2141,6 +2141,81 @@ theorem isEquivalence_of_isEquivalenceOverFunctor
     ⟨counit, _counitOver, _hcounit⟩⟩
   exact Functor.IsEquivalence.mk' k unit.symm counit
 
+/-- A fully faithful functor over the base reflects strongly Cartesian
+arrows.  This formulation is universe-polymorphic and does not require the
+two total categories to live in the same universe. -/
+theorem isStronglyCartesian_of_map_fullyFaithful
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (p : Functor A D) (q : Functor B D) (F : Functor A B)
+    (over : F ⋙ q = p) [F.Full] [F.Faithful]
+    {x y : A} (f : x ⟶ y)
+    (hf : q.IsStronglyCartesian (q.map (F.map f)) (F.map f)) :
+    p.IsStronglyCartesian (p.map f) f := by
+  let _ : q.IsStronglyCartesian (q.map (F.map f)) (F.map f) := hf
+  constructor
+  intro z g k hk
+  let hx : q.obj (F.obj x) = p.obj x := Functor.congr_obj over x
+  let hy : q.obj (F.obj y) = p.obj y := Functor.congr_obj over y
+  let hz : q.obj (F.obj z) = p.obj z := Functor.congr_obj over z
+  let g' : q.obj (F.obj z) ⟶ q.obj (F.obj x) :=
+    eqToHom hz ≫ g ≫ eqToHom hx.symm
+  have hFf : q.map (F.map f) =
+      eqToHom hx ≫ p.map f ≫ eqToHom hy.symm :=
+    Functor.congr_hom over f
+  have hFk : q.map (F.map k) =
+      eqToHom hz ≫ p.map k ≫ eqToHom hy.symm :=
+    Functor.congr_hom over k
+  have hkmap : p.map k = g ≫ p.map f :=
+    (CategoryTheory.IsHomLift.eq_of_isHomLift p (g ≫ p.map f) k).symm
+  have hfactor : q.map (F.map k) = g' ≫ q.map (F.map f) := by
+    rw [hFk, hFf, hkmap]
+    dsimp [g']
+    simp [Category.assoc]
+  let _ : q.IsHomLift (q.map (F.map k)) (F.map k) := Functor.IsHomLift.map _
+  obtain ⟨l', ⟨hl', hl'comp⟩, hl'unique⟩ :=
+    Functor.IsStronglyCartesian.universal_property q
+      (q.map (F.map f)) (F.map f) g' (q.map (F.map k)) hfactor (F.map k)
+  obtain ⟨l, hl⟩ := F.map_surjective l'
+  have hlmap : p.map l = g := by
+    have hFl : q.map (F.map l) =
+        eqToHom hz ≫ p.map l ≫ eqToHom hx.symm :=
+      Functor.congr_hom over l
+    have hlift : q.map l' = g' :=
+      (CategoryTheory.IsHomLift.eq_of_isHomLift q g' l').symm
+    apply (cancel_epi (eqToHom hz)).1
+    apply (cancel_mono (eqToHom hx.symm)).1
+    calc
+      (eqToHom hz ≫ p.map l) ≫ eqToHom hx.symm =
+          q.map (F.map l) := by
+            simpa only [Category.assoc] using hFl.symm
+      _ = q.map l' := by rw [hl]
+      _ = g' := hlift
+      _ = (eqToHom hz ≫ g) ≫ eqToHom hx.symm := by
+        dsimp [g']
+        simp only [Category.assoc]
+  have hlift : p.IsHomLift g l := by
+    apply CategoryTheory.IsHomLift.of_fac' p g l rfl rfl
+    simpa using hlmap
+  refine ⟨l, ⟨hlift, ?_⟩, ?_⟩
+  · apply F.map_injective
+    simpa [Functor.map_comp, hl] using hl'comp
+  · intro m hm
+    apply F.map_injective
+    rw [hl]
+    apply hl'unique (F.map m)
+    constructor
+    · let _ : p.IsHomLift g m := hm.1
+      have hFm : q.map (F.map m) =
+          eqToHom hz ≫ p.map m ≫ eqToHom hx.symm :=
+        Functor.congr_hom over m
+      have hmmap : p.map m = g :=
+        (CategoryTheory.IsHomLift.eq_of_isHomLift p g m).symm
+      have hFmlift : q.map (F.map m) = g' := by
+        rw [hFm, hmmap]
+      apply CategoryTheory.IsHomLift.of_fac' q g' (F.map m) rfl rfl
+      simpa using hFmlift
+    · simpa [Functor.map_comp, hl] using congrArg F.map hm.2
+
 /-- An equivalence over a common base transports the fibred-in-groupoids
 structure, and induces an equivalence on every fibre.  In particular, the
 last conjunct packages the fibre functor's full-faithfulness and essential

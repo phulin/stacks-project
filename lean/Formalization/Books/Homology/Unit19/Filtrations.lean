@@ -4141,7 +4141,6 @@ theorem gradedPiece_map_id {C : Type u} [Category.{v} C] [Abelian C]
     infer_instance
   apply (cancel_epi (gradedPieceπ A p)).mp
   simp only [Category.comp_id]
-  change gradedPieceπ A p ≫ gradedPieceMap (𝟙 A) p = gradedPieceπ A p
   dsimp [gradedPieceMap, gradedPieceπ]
   change cokernel.π _ ≫ cokernel.desc _ _ _ = cokernel.π _
   simp

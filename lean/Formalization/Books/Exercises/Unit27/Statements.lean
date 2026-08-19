@@ -309,9 +309,8 @@ theorem projToPrimeSpectrum_inducing
   · rintro ⟨s, rfl⟩
     refine ⟨PrimeSpectrum.zeroLocus s, ?_, ?_⟩
     · exact (PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨s, rfl⟩
-    simp [AlgebraicGeometry.Proj.toSpecZero,
-      AlgebraicGeometry.Proj.basicOpenToSpec,
-      ProjectiveSpectrum.Proj.toSpec]
+    ext x
+    rfl
   · rintro ⟨t, ht, h⟩
     obtain ⟨s, rfl⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus _).1 ht
     exact ⟨s, h.symm⟩
@@ -662,9 +661,7 @@ theorem oneVariableDegreeZeroEquiv_exists (A : Type u) [CommRing A] :
     have hdeg : (p : oneVariablePolynomialRing A).totalDegree = 0 :=
       (MvPolynomial.totalDegree_zero_iff_isHomogeneous (Fin 1)).mpr hp
     rw [MvPolynomial.totalDegree_eq_zero_iff_eq_C.mp hdeg]
-    simp [AlgebraicGeometry.Proj.toSpecZero,
-      AlgebraicGeometry.Proj.basicOpenToSpec,
-      ProjectiveSpectrum.Proj.toSpec]
+    congr 1
   have hφ : Function.Bijective φ := by
     constructor
     · intro p q hpq
@@ -1110,7 +1107,7 @@ theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :
     IsHomeomorph (blowupRestrictionMap P) := by
-  /-
+  /- prior attempt (retained for review):
   letI : GradedRing P.gradedPieces := P.graded
   let β := {p : PrimeSpectrum A // p ∈ blowupBaseOpen I}
   let α := {x : blowupProjPoints P // (blowupMap P).base x ∈ blowupBaseOpen I}

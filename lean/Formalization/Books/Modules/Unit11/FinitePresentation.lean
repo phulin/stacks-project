@@ -71,26 +71,133 @@ def HasExactFinitePresentationOn {X : RingedSpace.{v}}
     (e : ((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ),
     (ShortComplex.mk φ (cokernel.π φ ≫ e.inv) (by simp)).Exact
 
+private noncomputable def freeEquivIso {Y : RingedSpace.{v}}
+    {α β : Type v} (e : α ≃ β) :
+    (SheafOfModules.free (R := Y.structureSheaf) α : Mod Y.structureSheaf) ≅
+      SheafOfModules.free (R := Y.structureSheaf) β where
+  hom := SheafOfModules.freeMap e
+  inv := SheafOfModules.freeMap e.symm
+  hom_inv_id := by
+    apply (SheafOfModules.freeHomEquiv _).injective
+    ext i
+    simp only [SheafOfModules.freeHomEquiv_comp_apply,
+      SheafOfModules.freeHomEquiv_freeMap, Function.comp_apply,
+      SheafOfModules.sectionMap_freeMap_freeSection, Equiv.symm_apply_apply]
+  inv_hom_id := by
+    apply (SheafOfModules.freeHomEquiv _).injective
+    ext i
+    simp only [SheafOfModules.freeHomEquiv_comp_apply,
+      SheafOfModules.freeHomEquiv_freeMap, Function.comp_apply,
+      SheafOfModules.sectionMap_freeMap_freeSection, Equiv.apply_symm_apply]
+
+private theorem finitePresentation_of_hasFinitePresentationOn
+    {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier)
+    (h : HasFinitePresentationOn F U) :
+    ∃ P : ((openModuleRestrictionFunctor X U).obj F).Presentation, P.IsFinite := by
+  rcases h with ⟨m, n, φ, ⟨e⟩⟩
+  let g := cokernel.π φ ≫ e.inv
+  have hg : φ ≫ g = 0 := by simp [g]
+  have hcolim : IsColimit (CokernelCofork.ofπ g hg) := by
+    exact IsColimit.ofIsoColimit (cokernelIsCokernel φ) (Cofork.ext e.symm)
+  let P := SheafOfModules.presentationOfIsCokernelFree φ g hg hcolim
+  refine ⟨P, ?_⟩
+  constructor
+  · constructor
+    change Finite (ULift (Fin n))
+    infer_instance
+  · constructor
+    change Finite (ULift (Fin m))
+    infer_instance
+
+private theorem hasFinitePresentationOn_of_finitePresentation
+    {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier)
+    (h : ∃ P : ((openModuleRestrictionFunctor X U).obj F).Presentation, P.IsFinite) :
+    HasFinitePresentationOn F U := by
+  rcases h with ⟨P, hP⟩
+  let hr : Finite P.relations.I := hP.isFiniteType_relations.finite
+  let hg' : Finite P.generators.I := hP.isFiniteType_generators.finite
+  let fr : Fintype P.relations.I := @Fintype.ofFinite _ hr
+  let fg : Fintype P.generators.I := @Fintype.ofFinite _ hg'
+  let er : P.relations.I ≃ ULift (Fin (@Fintype.card _ fr)) :=
+    (@Fintype.equivFin _ fr).trans Equiv.ulift.symm
+  let eg : P.generators.I ≃ ULift (Fin (@Fintype.card _ fg)) :=
+    (@Fintype.equivFin _ fg).trans Equiv.ulift.symm
+  let ir := freeEquivIso (Y := ringedOpenSubspace X U) er
+  let ig := freeEquivIso (Y := ringedOpenSubspace X U) eg
+  let f := (SheafOfModules.freeHomEquiv _).symm P.relations.s ≫
+    kernel.ι P.generators.π
+  let φ := ir.inv ≫ f ≫ ig.hom
+  let g := ig.inv ≫ P.generators.π
+  have hg : φ ≫ g = 0 := by
+    simp [φ, g, f]
+  have hcolim : IsColimit (CokernelCofork.ofπ g hg) := by
+    apply Cofork.isColimitOfIsos
+      (CokernelCofork.ofπ P.generators.π (by simp)) P.isColimit
+      (CokernelCofork.ofπ g hg) ir ig (Iso.refl _)
+  have he : Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ) := by
+    let e : ((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ :=
+      hcolim.coconePointUniqueUpToIso (colimit.isColimit _)
+    exact ⟨e⟩
+  exact ⟨@Fintype.card _ fr, @Fintype.card _ fg, φ, he⟩
+
 /-- Finite presentation is equivalent to the source's local finite-cokernel
 formulation. -/
 theorem isFinitePresentation_iff_locallyFinitePresentation
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
     IsFinitePresentation F ↔ LocallyFinitePresentation F := by
-  sorry
+  constructor
+  · intro hF x
+    rcases hF with ⟨⟨q, hq⟩⟩
+    have hcover : IsOpenCover q.X :=
+      (Opens.coversTop_iff X.carrier q.X).mp q.coversTop
+    obtain ⟨i, hxi⟩ := hcover.exists_mem x
+    refine ⟨q.X i, hxi, ?_⟩
+    exact hasFinitePresentationOn_of_finitePresentation F (q.X i)
+      ⟨q.presentation i, hq.isFinite_presentation i⟩
+  · intro hF
+    choose U hxU hP using hF
+    choose P hPfin using fun x ↦
+      finitePresentation_of_hasFinitePresentationOn F (U x) (hP x)
+    let q : SheafOfModules.QuasicoherentData.{v, v} F :=
+      { I := X.carrier
+        X := U
+        coversTop := (Opens.coversTop_iff X.carrier U).mpr (by
+          apply TopologicalSpace.IsOpenCover.mk
+          ext x
+          constructor
+          · intro
+            trivial
+          · intro _
+            exact (le_iSup U x) (hxU x))
+        presentation := P }
+    refine { exists_quasicoherentData := ?_ }
+    refine ⟨q.shrink, ?_⟩
+    constructor
+    intro i
+    exact hPfin i.2.choose
 
 /-- The finite-cokernel and finite-generators-and-relations descriptions on
 an open are equivalent. -/
 theorem hasFinitePresentationOn_iff_hasFiniteGeneratorsAndRelationsOn
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier) :
     HasFinitePresentationOn F U ↔ HasFiniteGeneratorsAndRelationsOn F U := by
-  sorry
+  constructor
+  · exact finitePresentation_of_hasFinitePresentationOn F U
+  · rintro ⟨P, hP⟩
+    exact hasFinitePresentationOn_of_finitePresentation F U ⟨P, hP⟩
 
 /-- The displayed finite-cokernel sequence is exact, and conversely an exact
 sequence of this form supplies the displayed cokernel presentation. -/
 theorem hasFinitePresentationOn_iff_hasExactFinitePresentationOn
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier) :
     HasFinitePresentationOn F U ↔ HasExactFinitePresentationOn F U := by
-  sorry
+  constructor
+  · rintro ⟨m, n, φ, ⟨e⟩⟩
+    refine ⟨m, n, φ, e, ?_⟩
+    apply ShortComplex.exact_of_g_is_cokernel
+    exact IsColimit.ofIsoColimit (cokernelIsCokernel φ) (Cofork.ext e.symm)
+  · rintro ⟨m, n, φ, e, _⟩
+    exact ⟨m, n, φ, ⟨e⟩⟩
 
 /-! The two clauses in the source's explanation are represented by the finite
 generators and finite relations in `SheafOfModules.Presentation.IsFinite`;
@@ -104,7 +211,11 @@ theorem finitePresentation_hasLocalFiniteGeneratorsAndRelations
     (hF : IsFinitePresentation F) :
     ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧
       HasFiniteGeneratorsAndRelationsOn F U := by
-  sorry
+  intro x
+  obtain ⟨U, hx, hU⟩ :=
+    (isFinitePresentation_iff_locallyFinitePresentation F).mp hF x
+  exact ⟨U, hx,
+    (hasFinitePresentationOn_iff_hasFiniteGeneratorsAndRelationsOn F U).mp hU⟩
 
 /-! ## Lemma `lemma-finite-presentation-quasi-coherent` -/
 

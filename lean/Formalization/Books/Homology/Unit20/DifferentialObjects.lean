@@ -739,7 +739,7 @@ private theorem selfMapAlphaPow_mono
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) :
     ∀ n, Mono (selfMapAlphaPow α n) := by
-  letI : Mono α.hom.hom := α.injective
+  let _ : Mono α.hom.hom := α.injective
   intro n
   induction n with
   | zero =>
@@ -800,19 +800,17 @@ theorem selfMap_boundary_preimage_le_cycle_preimage
     change B ≤ Z
     have hI : I.arrow ≫ A.d = 0 := by
       let F := Subobject.imageFactorisation A.d (⊤ : Subobject A.carrier)
-      haveI : Epi F.F.e := by
+      have hEpiF : Epi F.F.e := by
         let eIso := IsImage.isoExt F.isImage
           (Image.isImage ((⊤ : Subobject A.carrier).arrow ≫ A.d))
         have hcomp : F.F.e ≫ eIso.hom =
             Limits.factorThruImage ((⊤ : Subobject A.carrier).arrow ≫ A.d) := by
-          simpa [eIso] using
-            (IsImage.e_isoExt_hom F.isImage
-              (Image.isImage ((⊤ : Subobject A.carrier).arrow ≫ A.d)))
-        haveI : Epi (F.F.e ≫ eIso.hom) := by
+          simp [eIso]
+        have hEpiComp : Epi (F.F.e ≫ eIso.hom) := by
           rw [hcomp]
           infer_instance
-        exact (epi_comp_iff_of_isIso F.F.e eIso.hom).1 inferInstance
-      apply (cancel_epi F.F.e).1
+        exact (epi_comp_iff_of_isIso F.F.e eIso.hom).1 hEpiComp
+      apply hEpiF.left_cancellation
       change F.F.e ≫ F.F.m ≫ A.d = F.F.e ≫ 0
       rw [← Category.assoc, F.F.fac]
       simp [A.d_squared]
@@ -833,7 +831,7 @@ theorem selfMap_boundary_preimage_le_cycle_preimage
               rw [I.factorThru_arrow]
         _ = 0 := by rw [Category.assoc, hI, comp_zero]
     have hzero : B.arrow ≫ A.d = 0 := by
-      letI : Mono (selfMapAlphaPow α (r - 1)) :=
+      let _ : Mono (selfMapAlphaPow α (r - 1)) :=
         selfMapAlphaPow_mono α (r - 1)
       apply (cancel_mono (selfMapAlphaPow α (r - 1))).1
       simpa using hcomp

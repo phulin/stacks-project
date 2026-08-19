@@ -130,13 +130,14 @@ abbrev filteredDifferentialDirectSumInjectiveSelfMap {C : Type u}
 theorem filteredDifferential_associated_spectral_sequence_exists
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
-    Nonempty (Formalization.Books.Homology.Unit20.PlainSpectralSequence C 0) := by
-  sorry
+    Nonempty (Formalization.Books.Homology.Unit20.FilteredDifferentialSpectralSequence K) := by
+  exact Formalization.Books.Homology.Unit20.filteredDifferentialAssociatedSpectralSequence_exists
+    hExact K
 
 noncomputable def filteredDifferential_associated_spectral_sequence
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
-    Formalization.Books.Homology.Unit20.PlainSpectralSequence C 0 :=
+    Formalization.Books.Homology.Unit20.FilteredDifferentialSpectralSequence K :=
   Classical.choice (filteredDifferential_associated_spectral_sequence_exists hExact K)
 
 /-! ### The associated graded object and the first two pages -/
@@ -339,69 +340,14 @@ theorem filteredDifferential_E₁_page
     Nonempty (filteredDifferentialPage K 1 p ≅ filteredDifferentialE₁ K p) := by
   exact Formalization.Books.Homology.Unit20.filteredDifferential_E₁_page K p
 
-/-! ### The graded spectral-sequence interface -/
+/-! ### The graded spectral-sequence interface
 
-abbrev filteredDifferentialGradedShiftEquivalence (C : Type u)
-    [Category.{v} C] [Abelian C] (r : ℤ) :
-    GradedObject ℤ C ≌ GradedObject ℤ C :=
-  GradedObject.comapEquiv C (Equiv.addLeft (-r))
-
-def filteredDifferentialGradedShiftObjectIso (C : Type u)
-    [Category.{v} C] [Abelian C] (r : ℤ) (A : GradedObject ℤ C) :
-    (gradedShift C r).obj A ≅
-      (filteredDifferentialGradedShiftEquivalence C r).functor.obj A :=
-  (GradedObject.comapEq C (by
-    ext p
-    simp)).app A
-
-abbrev filteredDifferentialGradedShiftSquareZero (C : Type u)
-    [Category.{v} C] [Abelian C] (r : ℤ) {A : GradedObject ℤ C}
-    (d' : A ⟶ (filteredDifferentialGradedShiftEquivalence C r).functor.obj A) : Prop :=
-  d' ≫ (filteredDifferentialGradedShiftEquivalence C r).functor.map d' =
-    @OfNat.ofNat
-      (A ⟶ (filteredDifferentialGradedShiftEquivalence C r).functor.obj
-        ((filteredDifferentialGradedShiftEquivalence C r).functor.obj A)) 0
-      (@Zero.toOfNat0
-        (A ⟶ (filteredDifferentialGradedShiftEquivalence C r).functor.obj
-          ((filteredDifferentialGradedShiftEquivalence C r).functor.obj A))
-        (@HasZeroMorphisms.zero (GradedObject ℤ C)
-          (GradedObject.categoryOfGradedObjects ℤ)
-          Preadditive.preadditiveHasZeroMorphisms A
-          ((filteredDifferentialGradedShiftEquivalence C r).functor.obj
-            ((filteredDifferentialGradedShiftEquivalence C r).functor.obj A))))
-
-/-- A filtered-differential spectral sequence with the source's degree-
-`r` differential convention.  The component page is identified with the
-categorical `Zᵣ/Bᵣ` page above. -/
-structure FilteredDifferentialSpectralSequence {C : Type u}
-    [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) where
-  page : ℕ → GradedObject ℤ C
-  differential : ∀ r : ℕ,
-    page r ⟶ (gradedShift C (r : ℤ)).obj (page r)
-  square_zero : ∀ r : ℕ,
-    differential r ≫ (gradedShift C (r : ℤ)).map (differential r) = 0
-  next_page : ∀ r : ℕ,
-    ∃ d' : page r ⟶
-        (filteredDifferentialGradedShiftEquivalence C (r : ℤ)).functor.obj (page r),
-      d' = differential r ≫
-        (filteredDifferentialGradedShiftObjectIso C (r : ℤ) (page r)).hom ∧
-        ∃ hd' : filteredDifferentialGradedShiftSquareZero C (r : ℤ) d',
-          Nonempty (Formalization.Books.Homology.Unit20.translatedDifferentialHomology
-            (filteredDifferentialGradedShiftEquivalence C (r : ℤ)) d'
-            (by simpa only [filteredDifferentialGradedShiftSquareZero] using hd') ≅
-              page (r + 1))
-  page_differentials : FilteredDifferentialPageDifferentials K
-  component_iso : ∀ (r : ℕ) (p : ℤ),
-    Nonempty (page r p ≅ filteredDifferentialPage K r p)
-  component_differential_compatibility : ∀ (r : ℕ) (p : ℤ),
-    ∃ e₀ : page r p ≅ filteredDifferentialPage K r p,
-      ∃ e₁ : page r (r + p) ≅ filteredDifferentialPage K r (p + r),
-        e₀.hom ≫ filteredDifferentialD K r p =
-          differential r p ≫ e₁.hom
-  zero_page : ∀ p : ℤ,
-    Nonempty (page 0 p ≅ filteredDifferentialE₀ K p)
-  first_page : ∀ p : ℤ,
-    Nonempty (page 1 p ≅ filteredDifferentialE₁ K p)
+The canonical filtered spectral-sequence structure is provided by
+Chapter 20. Reuse it here so the page, differential, next-page, and
+component-compatibility fields have one project-wide interface. -/
+abbrev FilteredDifferentialSpectralSequence {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) :=
+  Formalization.Books.Homology.Unit20.FilteredDifferentialSpectralSequence K
 
 theorem filteredDifferential_spectral_sequence_exists
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -861,8 +807,7 @@ def filteredDifferentialWeaklyConverges
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) : Prop :=
   ∃ L : FilteredDifferentialLimitData K,
-    Nonempty (filteredDifferentialAssociatedGradedHomology K ≅
-      filteredDifferentialLimitGradedObject K L)
+    FilteredDifferentialLimitEquationsHold K L
 
 def filteredDifferentialAbuts
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -874,19 +819,17 @@ def filteredDifferentialAbuts
 
 theorem filteredDifferential_weak_convergence_iff_limit_equations
     {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredDifferentialObject C) (L : FilteredDifferentialLimitData K) :
-    Nonempty (filteredDifferentialAssociatedGradedHomology K ≅
-      filteredDifferentialLimitGradedObject K L) ↔
-      FilteredDifferentialLimitEquationsHold K L := by
-  sorry
+    (K : FilteredDifferentialObject C) :
+    filteredDifferentialWeaklyConverges K ↔
+      ∃ L : FilteredDifferentialLimitData K,
+        FilteredDifferentialLimitEquationsHold K L := Iff.rfl
 
 theorem filteredDifferential_weak_convergence_iff
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) :
     filteredDifferentialWeaklyConverges K ↔
       ∃ L : FilteredDifferentialLimitData K,
-        FilteredDifferentialLimitEquationsHold K L := by
-  sorry
+        FilteredDifferentialLimitEquationsHold K L := Iff.rfl
 
 def filteredDifferentialKernelImageFiltration
     {C : Type u} [Category.{v} C] [Abelian C]

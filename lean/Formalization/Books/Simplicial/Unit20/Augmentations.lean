@@ -165,12 +165,15 @@ def cechNerveCoordinate {C : Type u} [Category.{v} C]
       (SimplexCategory.mk n) i).op ≫ g₀
 
 /-- The two degree-one coordinates are the two face composites in the
-source's displayed compatibility diagram. -/
+source's displayed compatibility diagram.  The index is reversed because
+`SimplexCategory.δ i` omits vertex `i`. -/
 theorem cechNerveCoordinate_one_faces {C : Type u} [Category.{v} C]
     (V : SimplicialObject C)
     {Y : C} (g₀ : V.obj (op (SimplexCategory.mk 0)) ⟶ Y) (i : Fin 2) :
-    cechNerveCoordinate V g₀ 1 i = V.δ i ≫ g₀ := by
-  sorry
+    cechNerveCoordinate V g₀ 1 i = V.δ (1 - i) ≫ g₀ := by
+  fin_cases i <;>
+    simp [cechNerveCoordinate, SimplicialObject.δ,
+      SimplexCategory.δ_zero_eq_const, SimplexCategory.δ_one_eq_const]
 
 /-- The degree-one compatibility diagram forces the two coordinate maps to
 have the same composite with `f`. -/

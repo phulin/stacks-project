@@ -7,6 +7,7 @@ import Mathlib.FieldTheory.SeparablyGenerated
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
+import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
 import Mathlib.RingTheory.EssentialFiniteness
 
 /-!
@@ -526,6 +527,46 @@ theorem exists_uniform_pow_mem_of_finset
   rw [← pow_mul, ← pow_add]
   congr 2
   omega
+
+/-- Finitely many elements of a rational function field can be represented
+with numerators and denominators involving only finitely many coefficients of
+the ground field. -/
+theorem exists_finite_coefficients_reprField
+    {k : Type u} {K : Type v} {ι : Type*}
+    [Field k] [Field K] [Algebra k K]
+    (x : ι → K) (hx : AlgebraicIndependent k x)
+    (c : Finset (IntermediateField.adjoin k (Set.range x))) :
+    ∃ (num den : IntermediateField.adjoin k (Set.range x) → MvPolynomial ι k)
+      (s : Finset k),
+      ∀ a ∈ c,
+        hx.reprField a * algebraMap (MvPolynomial ι k)
+            (FractionRing (MvPolynomial ι k)) (den a) =
+          algebraMap (MvPolynomial ι k)
+            (FractionRing (MvPolynomial ι k)) (num a) ∧
+        den a ≠ 0 ∧
+        (∀ m ∈ (num a).support, MvPolynomial.coeff m (num a) ∈ s) ∧
+        ∀ m ∈ (den a).support, MvPolynomial.coeff m (den a) ∈ s := by
+  classical
+  choose q hq using fun a : IntermediateField.adjoin k (Set.range x) =>
+    IsLocalization.surj (nonZeroDivisors (MvPolynomial ι k)) (hx.reprField a)
+  let num : IntermediateField.adjoin k (Set.range x) → MvPolynomial ι k :=
+    fun a => (q a).1
+  let den : IntermediateField.adjoin k (Set.range x) → MvPolynomial ι k :=
+    fun a => (q a).2.1
+  let coeffs : MvPolynomial ι k → Finset k := fun f =>
+    f.support.image fun m => MvPolynomial.coeff m f
+  let s : Finset k := c.biUnion fun a => coeffs (num a) ∪ coeffs (den a)
+  refine ⟨num, den, s, ?_⟩
+  intro a ha
+  refine ⟨hq a, nonZeroDivisors.ne_zero (q a).2.2, ?_, ?_⟩
+  · intro m hm
+    apply Finset.mem_biUnion.mpr
+    refine ⟨a, ha, Finset.mem_union_left _ ?_⟩
+    exact Finset.mem_image.mpr ⟨m, hm, rfl⟩
+  · intro m hm
+    apply Finset.mem_biUnion.mpr
+    refine ⟨a, ha, Finset.mem_union_right _ ?_⟩
+    exact Finset.mem_image.mpr ⟨m, hm, rfl⟩
 
 private theorem exists_finite_pth_root_tower_of_uniform
     {F : Type u} [Field F] (n : ℕ) (s : Finset (AlgebraicClosure F))

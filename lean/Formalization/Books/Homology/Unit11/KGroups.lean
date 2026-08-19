@@ -256,7 +256,7 @@ noncomputable def serreSubcategoryExactFunctor
           (P.prop_biprod (hF _) (hF _)))
   have hFinite : P.IsClosedUnderFiniteProducts :=
     @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-  letI : Abelian P.FullSubcategory :=
+  let : Abelian P.FullSubcategory :=
     @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
       C _ P inferInstance inferInstance inferInstance inferInstance hFinite
   refine ⟨P.ι, ?_⟩
@@ -395,7 +395,7 @@ private theorem shortExact_iso_of_iso₁₂
 private theorem serre_shortExact_lift
     (P : ObjectProperty C) [P.IsSerreClass]
     (S : ShortComplex (serreQuotient P)) (hS : S.ShortExact) :
-    ∃ (T : ShortComplex C) (_hT : T.ShortExact),
+    ∃ (T : ShortComplex C) (_ : T.ShortExact),
       Nonempty (T.map (serreQuotientFunctor P) ≅ S) := by
   let : Abelian (serreQuotient P) := serreQuotientAbelian P
   let : PreservesFiniteLimits (serreQuotientExactFunctor P).obj :=
@@ -556,7 +556,7 @@ private theorem kZero_serre_range_of_quotient_zero
     have hzero : qR (KZero.classOf T.X₂ - KZero.classOf T.X₁ -
         KZero.classOf T.X₃) = 0 := by
       rw [map_sub, map_sub, hTrel]
-      simp only [map_add, sub_eq_add_neg]
+      simp only [map_add]
       abel
     change qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
         r.sequence.X₂)) -

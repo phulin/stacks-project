@@ -5,6 +5,7 @@ import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit75.TorGroups
+import Formalization.Books.Algebra.Unit76.FunctorialitiesForTor
 import Formalization.Books.MoreAlgebra.Unit60.DerivedBaseChange
 
 /-!
@@ -237,6 +238,28 @@ theorem polynomialComparisonMap_not_isIso
   sorry
 
 /-! ## Flat base change for Tor -/
+
+/- The first change-of-rings arrow used in the source's flat-base-change
+   proof is already available from Algebra, Chapter 76.  Exposing it here
+   keeps the Unit 61 statement tied to the canonical resolution-based `Tor`
+   objects rather than to the auxiliary tensor-module package below. -/
+noncomputable def canonicalTorFlatBaseChangeMap
+    {R R' A B : Type u} [CommRing R] [CommRing R'] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (g : R →+* R') (i : ℕ) :
+    (ModuleCat.extendScalars g).obj
+        (Tor (ModuleCat.of R A) (ModuleCat.of R B) i) ⟶
+      Tor ((ModuleCat.extendScalars g).obj (ModuleCat.of R A))
+        ((ModuleCat.extendScalars g).obj (ModuleCat.of R B)) i :=
+  Formalization.Books.Algebra.Unit76.torFlatBaseChangeMap g
+    (ModuleCat.of R A) (ModuleCat.of R B) i
+
+theorem canonicalTorFlatBaseChangeMap_isIso
+    {R R' A B : Type u} [CommRing R] [CommRing R'] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (g : R →+* R') (hflat : RingHom.Flat g)
+    (i : ℕ) :
+    IsIso (canonicalTorFlatBaseChangeMap (A := A) (B := B) g i) := by
+  exact Formalization.Books.Algebra.Unit76.flat_base_change_tor g hflat
+    (ModuleCat.of R A) (ModuleCat.of R B) i
 
 /-- The canonical map from the base ring to the tensor product of two
 algebras. -/

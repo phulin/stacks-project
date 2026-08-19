@@ -455,18 +455,18 @@ theorem homologicalFunctorMorphismProperty_saturated
     · intro hf i
       let j : ℤ := i - n
       have hj : IsIso ((H.shift j).map ((shiftFunctor C n).map f)) := hf j
-      letI := hj
+      let := hj
       let e := H.shiftIso n j i (by dsimp [j]; abel)
       have he : IsIso ((shiftFunctor C n ⋙ H.shift j).map f ≫ e.hom.app Y) := by
         change IsIso ((H.shift j).map ((shiftFunctor C n).map f) ≫ e.hom.app Y)
         infer_instance
       have he' := he
       rw [e.hom.naturality f] at he'
-      letI := he'
+      let := he'
       exact IsIso.of_isIso_comp_left (e.hom.app X) ((H.shift i).map f)
     · intro hf i
       have hi : IsIso ((H.shift (n + i)).map f) := hf (n + i)
-      letI := hi
+      let := hi
       let e := H.shiftIso n i (n + i) rfl
       have he : IsIso (e.hom.app X ≫ (H.shift (n + i)).map f) := by
         infer_instance
@@ -475,7 +475,7 @@ theorem homologicalFunctorMorphismProperty_saturated
       have he'' : IsIso ((H.shift i).map ((shiftFunctor C n).map f) ≫ e.hom.app Y) := by
         change IsIso ((shiftFunctor C n ⋙ H.shift i).map f ≫ e.hom.app Y)
         exact he'
-      letI := he''
+      let := he''
       exact IsIso.of_isIso_comp_right
         ((H.shift i).map ((shiftFunctor C n).map f)) (e.hom.app Y)
   let : W.IsCompatibleWithShift ℤ := hshift
@@ -603,11 +603,11 @@ theorem homologicalFunctorMorphismProperty_saturated
     have hψ := CategoryTheory.Abelian.isIso_of_epi_of_isIso_of_isIso_of_mono'
       (n := 5) (k := 0) (by norm_num) hR₁ hR₂ ψ 0 1 2 3 4 rfl rfl rfl rfl rfl
       (by
-      letI := ha i
+      let := ha i
       dsimp [ψ]
       infer_instance)
       (by
-      letI := hb i
+      let := hb i
       dsimp [ψ]
       infer_instance)
       (by

@@ -39,7 +39,23 @@ theorem tensorProductScalar_smulCommClass
       Formalization.Books.Algebra.Unit12.tensorProductBModule
         R A N A
     SMulCommClass S A (N ⊗[R] A) := by
-  sorry
+  letI : Module S (N ⊗[R] A) := TensorProduct.leftModule
+  letI : Module A (N ⊗[R] A) :=
+    Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
+  refine ⟨?_⟩
+  intro s a z
+  refine TensorProduct.induction_on z ?_ ?_ ?_
+  · simp
+  · intro n b
+    change s • (TensorProduct.comm R N A).symm
+        (a • (TensorProduct.comm R N A) (n ⊗ₜ[R] b)) =
+      (TensorProduct.comm R N A).symm
+        (a • (TensorProduct.comm R N A) ((s • n) ⊗ₜ[R] b))
+    simp only [TensorProduct.comm_tmul, TensorProduct.smul_tmul']
+    change s • (n ⊗ₜ[R] (a • b)) = (s • n) ⊗ₜ[R] (a • b)
+    rfl
+  · intro x y hx hy
+    simp [smul_add, hx, hy]
 
 /- Restriction of scalars along the displayed algebra map. -/
 theorem inducedModule_isScalarTower
@@ -47,7 +63,10 @@ theorem inducedModule_isScalarTower
     [AddCommGroup N] [Module S N] :
     letI : Module R N := Module.compHom N (algebraMap R S)
     IsScalarTower R S N := by
-  sorry
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  exact ⟨fun r s n => by
+    rw [Algebra.smul_def, mul_smul]
+    rfl⟩
 
 /- The transported `A`-action on `N ⊗[R] A` is compatible with the base
    `R`-action. -/
@@ -60,7 +79,22 @@ theorem tensorProductScalar_isScalarTower_right
       Formalization.Books.Algebra.Unit12.tensorProductBModule
         R A N A
     IsScalarTower R A (N ⊗[R] A) := by
-  sorry
+  letI : Module S (N ⊗[R] A) := TensorProduct.leftModule
+  letI : Module A (N ⊗[R] A) :=
+    Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
+  refine ⟨?_⟩
+  intro r a z
+  refine TensorProduct.induction_on z ?_ ?_ ?_
+  · simp
+  · intro n b
+    change (TensorProduct.comm R N A).symm
+        ((r • a) • (TensorProduct.comm R N A) (n ⊗ₜ[R] b)) =
+      r • (TensorProduct.comm R N A).symm
+        (a • (TensorProduct.comm R N A) (n ⊗ₜ[R] b))
+    simp [Algebra.smul_def, TensorProduct.smul_tmul']
+    rw [TensorProduct.smul_tmul, Algebra.smul_def, mul_assoc]
+  · intro x y hx hy
+    simp [smul_add, hx, hy]
 
 /- The canonical module structure on the base-changed module. -/
 @[instance_reducible] noncomputable def tensorProductScalarModule
@@ -91,7 +125,31 @@ theorem relativeFiber_isTorsionBySet
       TensorProduct.leftModule
     Module.IsTorsionBySet S (N ⊗[R] p.asIdeal.ResidueField)
       (p.asIdeal.map (algebraMap R S)) := by
-  sorry
+  letI : Module R N := Module.compHom N (algebraMap R S)
+  letI : IsScalarTower R S N :=
+    inducedModule_isScalarTower (R := R) (S := S) (N := N)
+  letI : Module S (N ⊗[R] p.asIdeal.ResidueField) :=
+    TensorProduct.leftModule
+  rw [Module.isTorsionBySet_iff_subseteq_ker_lsmul]
+  refine (Ideal.map_le_iff_le_comap).2 ?_
+  intro r hr
+  apply LinearMap.mem_ker.mpr
+  apply LinearMap.ext
+  intro x
+  refine TensorProduct.induction_on x ?_ ?_ ?_
+  · simp
+  · intro n k
+    change (algebraMap R S r) • (n ⊗ₜ[R] k) = 0
+    rw [TensorProduct.smul_tmul', IsScalarTower.algebraMap_smul S]
+    rw [TensorProduct.smul_tmul]
+    rw [← IsScalarTower.algebraMap_smul p.asIdeal.ResidueField,
+      Ideal.algebraMap_residueField_eq_zero.mpr hr, zero_smul]
+    simp
+  · intro x y hx hy
+    change (algebraMap R S r) • (x + y) = 0
+    change (algebraMap R S r) • x = 0 at hx
+    change (algebraMap R S r) • y = 0 at hy
+    simp [smul_add, hx, hy]
 
 @[instance_reducible] noncomputable def relativeFiberQuotientModule
     {R S N : Type*} [CommRing R] [CommRing S] [Algebra R S]

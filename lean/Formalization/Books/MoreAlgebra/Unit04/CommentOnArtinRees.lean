@@ -612,12 +612,12 @@ theorem approximate_complex_graded_denominator_eq
       (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) ≤
       I ^ (n + 1) • (⊤ : Submodule A N) ⊔
         (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) :=
-    sup_mono le_rfl hgg'
+    sup_le le_sup_left hgg'
   have hright : I ^ (n + 1) • (⊤ : Submodule A N) ⊔
       (LinearMap.range g' ⊓ I ^ n • (⊤ : Submodule A N)) ≤
       I ^ (n + 1) • (⊤ : Submodule A N) ⊔
         (LinearMap.range g ⊓ I ^ n • (⊤ : Submodule A N)) :=
-    sup_mono le_rfl hg'g
+    sup_le le_sup_left hg'g
   exact le_antisymm hleft hright
 
 /-- Congruent exact complexes have isomorphic associated graded cokernels as

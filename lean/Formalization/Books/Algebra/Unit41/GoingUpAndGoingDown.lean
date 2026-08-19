@@ -275,7 +275,7 @@ theorem same_image
   /- Prior attempt:
   constructor
   · ext p
-    simp [tensorLocalizationBaseMap, tensorLocalizationMap,
+    simp [tensorLocalizationBaseMap,
       tensorSubalgebraMap]
   · have hcomp :
       tensorLocalizationBaseMap (k := k) (A := S) (R := R)
@@ -343,7 +343,8 @@ theorem unique_prime_over_localize_below
     have hdisj : Disjoint (Ideal.span ({x} : Set S) : Set S) (M : Set S) := by
       rw [Set.disjoint_iff_forall_ne]
       intro y hyI z hyM hyz
-      obtain ⟨r, hr, hrz⟩ := (Submonoid.mem_map).mp hyM
+      obtain ⟨r, hr, hrz⟩ :=
+        (Submonoid.mem_map.mp (show z ∈ M from hyM))
       apply h
       let m : M := ⟨algebraMap R S r, ⟨r, hr, rfl⟩⟩
       refine ⟨m, ?_⟩

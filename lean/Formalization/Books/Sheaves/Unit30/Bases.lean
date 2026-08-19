@@ -1315,8 +1315,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         Nonempty ((ModuleCat.restrictScalars e.hom.hom).obj
           ((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj
         (basisModuleExtension B hB O F hF)) ≅
-        basisModuleStalkObject B hB F x) := by sorry
-/-
+        basisModuleStalkObject B hB F x) := by
   let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   let : IsCofiltered (basisNeighborhoodIndex B x) :=
@@ -1360,8 +1359,8 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
       sheafToPresheaf (basisTopology B) AddCommGrpCat).obj Gadd
   let q := (inducedFunctor B).sheafPushforwardContinuousCompSheafToPresheafIso
       AddCommGrpCat (basisTopology B) (Opens.grothendieckTopology X) |>.app Gadd
-  obtain ⟨r⟩ := basisModuleExtension_restriction_iso B hB O F hF
-  let rA := (PresheafOfModules.toPresheaf ((inducedFunctor B).op ⋙ O.1)).mapIso r
+  obtain ⟨rRestrict⟩ := basisModuleExtension_restriction_iso B hB O F hF
+  let rA := (PresheafOfModules.toPresheaf ((inducedFunctor B).op ⋙ O.1)).mapIso rRestrict
   let qr := q ≪≫ rA
   let qK :
       ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) ≅
@@ -1673,9 +1672,11 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         change (ConcreteCategory.hom ((cQ ≪≫ fQ).symm ≪≫ cQR).hom)
             ((ConcreteCategory.hom (colimit.ι Gaddx (K.obj k)))
               m₂m) = _
-        convert hcomp_map' using 1 <;>
-          simp only [Iso.trans_hom, Iso.symm_hom, Category.assoc,
-            ConcreteCategory.comp_apply, m₂m]
+        convert hcomp_map' using 1
+        all_goals
+          simp only [Iso.trans_hom, Iso.symm_hom, ConcreteCategory.comp_apply,
+            m₂m]
+          rfl
       have hcQR_map :=
         HasColimit.isoOfNatIso_ι_hom
           (Functor.isoWhiskerLeft
@@ -1727,26 +1728,28 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
                 ((ConcreteCategory.hom (qK.inv.app k))
                   m₂m)) := by
           rfl
-        _ = _ := hcQR_map''.symm
+        _ = _ := hcQR_map''
     have hbase :
         (ConcreteCategory.hom (colimit.ι Mdiag k)) (r₁ • m₁) =
           (ConcreteCategory.hom ha.hom)
             ((ConcreteCategory.hom
               ((colimit.cocone Gaddx).ι.app (K.obj k))) (rG • m₂)) := by
+      let m₂' : Gaddx.obj (K.obj k) := by
+        dsimp [Gaddx, K, idx, q, P]
+        exact (q.hom.app idx) ((qr.inv.app idx) (r₁ • m₁))
       have hqrs :
-          (ConcreteCategory.hom
-              ((colimit.cocone Gaddx).ι.app (K.obj k))) (rG • m₂) =
-            (ConcreteCategory.hom (q.hom.app idx))
-              ((ConcreteCategory.hom (qr.inv.app idx)) (r₁ • m₁)) := by
-        dsimp [m₂, rG, q, qr, rA]
-        have hqrsmul := (qr.inv.app idx).hom.map_smul r₁ m₁
-        simpa [Gaddx, Gadd] using congrArg
-          (fun z => (ConcreteCategory.hom (q.hom.app idx)) z) hqrsmul
+          rG • m₂ =
+            m₂' := by
+        dsimp [m₂, m₂', rG, q, qr, rA]
+        have hqrsmul := (rRestrict.inv.app idx).hom.map_smul r₁ m₁
+        change r₁ • ((rRestrict.inv.app idx).hom m₁) =
+          (rRestrict.inv.app idx).hom (r₁ • m₁)
+        exact hqrsmul.symm
       rw [hqrs]
+      dsimp [m₂']
       exact (hmap (r₁ • m₁)).symm
     exact hbase.trans hsmulG'.symm
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
--/
 
 /-- The category of sheaves of basis modules. -/
 abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}

@@ -667,8 +667,8 @@ theorem twoYonedaPullbackNatTrans_isOver
   dsimp [hη]
   rw [hfac']
   rw [hdom_eq', hcod_eq']
-  simp only [Category.assoc, Category.id_comp, Category.comp_id]
-  simp [Category.assoc]
+  simp only [Category.id_comp]
+  simp
   change eqToHom (hxf'.trans hyf'.symm) =
     eqToHom hxf' ≫ (𝟙 f.left ≫ eqToHom hyf'.symm)
   rw [Category.id_comp, CategoryTheory.eqToHom_trans]
@@ -696,7 +696,7 @@ theorem twoYonedaPullbackMorphismMap_map_id
   dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans]
   ext f
   dsimp [twoYonedaPullbackNatTransApp]
-  simp [Functor.Fiber.fiberInclusion, Functor.map_id]
+  simp [Functor.Fiber.fiberInclusion]
   change 𝟙 (Functor.Fiber.fiberInclusion.obj
       ((P.pullbackFunctor f.hom).obj x)) =
     𝟙 (Functor.Fiber.fiberInclusion.obj ((P.pullbackFunctor f.hom).obj x))
@@ -715,7 +715,7 @@ theorem twoYonedaPullbackMorphismMap_map_comp
   dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans]
   ext f
   dsimp [twoYonedaPullbackNatTransApp]
-  simp [Functor.Fiber.fiberInclusion, Functor.map_comp, NatTrans.comp_app]
+  simp [Functor.Fiber.fiberInclusion, Functor.map_comp]
   change Functor.Fiber.fiberInclusion.map
       (((P.pullbackFunctor f.hom).map η) ≫
         ((P.pullbackFunctor f.hom).map θ)) =

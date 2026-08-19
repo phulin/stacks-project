@@ -101,6 +101,37 @@ noncomputable def chainTorDifferential {R : Type u} [CommRing R]
     Tor (K.X i) M j ⟶ Tor (K.X (i - 1)) M j :=
   torMapFirst (N := M) (K.d i (i - 1)) j
 
+/- The double complex in the first example has the chain degree of `K` in
+   the first coordinate and the chosen free resolution degree in the second.
+   Its component comparison records the displayed tensor-product terms. -/
+structure TensorDoubleComplex
+    {R : Type u} [CommRing R] (K : ModuleChainComplexZ R)
+    {M : Mod R} (P : FreeResolution R M) where
+  obj : ℤ → ℕ → Mod R
+  horizontal : ∀ i : ℤ, ∀ j : ℕ, obj (i + 1) j ⟶ obj i j
+  vertical : ∀ i : ℤ, ∀ j : ℕ, obj i (j + 1) ⟶ obj i j
+  horizontal_squared : ∀ i : ℤ, ∀ j : ℕ,
+    horizontal (i + 1) j ≫ horizontal i j = 0
+  vertical_squared : ∀ i : ℤ, ∀ j : ℕ,
+    vertical i (j + 1) ≫ vertical i j = 0
+  commute : ∀ i : ℤ, ∀ j : ℕ,
+    horizontal i (j + 1) ≫ vertical i j =
+      vertical (i + 1) j ≫ horizontal i j
+  component : ∀ i : ℤ, ∀ j : ℕ,
+    Nonempty (obj i j ≅
+      MonoidalCategory.tensorObj (K.X i) (P.complex.X j))
+
+structure TensorDoubleComplexData
+    {R : Type u} [CommRing R] (K : ModuleChainComplexZ R) (M : Mod R) where
+  resolution : FreeResolution R M
+  doubleComplex : TensorDoubleComplex K resolution
+
+theorem tensor_double_complex_exists
+    {R : Type u} [CommRing R] [HasDerivedCategory.{w} (Mod R)]
+    (K : ModuleChainComplexZ R) (M : Mod R) :
+    Nonempty (TensorDoubleComplexData K M) := by
+  sorry
+
 /-! ## The first example: a bounded-below chain complex tensored with a module -/
 
 structure FirstChainTorSpectralSequenceData
@@ -108,6 +139,7 @@ structure FirstChainTorSpectralSequenceData
     [HasDerivedCategory.{w} (Mod R)]
     (K : ModuleChainComplexZ R) (M : Mod R)
     (hK : IsBoundedBelowChainComplex K) where
+  doubleComplex : TensorDoubleComplexData K M
   /-- The pages, with the source's homological bidegrees. -/
   page : ℕ → ℤ → ℤ → Mod R
   /-- The homological differential has bidegree `(r - 1, -r)`. -/
@@ -142,6 +174,7 @@ structure SecondChainTorSpectralSequenceData
     [HasDerivedCategory.{w} (Mod R)]
     (K : ModuleChainComplexZ R) (M : Mod R)
     (hK : IsBoundedBelowChainComplex K) where
+  doubleComplex : TensorDoubleComplexData K M
   page : ℕ → ℤ → ℤ → Mod R
   /-- The `d₁` in the source goes from the `i`th term to the `(i - 1)`st. -/
   differential : ∀ r : ℕ, ∀ i j : ℤ,
@@ -224,12 +257,59 @@ noncomputable def changeOfRingsAbutment
     AddCommGrpCat.{u} :=
   AddCommGrpCat.of (Tor M (restrictedModule f N) k : Type u)
 
+/- The displayed tensor identity in the change-of-rings construction is the
+   earlier chapter's canonical base-change/tensor-product isomorphism, with
+   its direction reversed to match the source. -/
+theorem change_of_rings_tensor_identity
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S)
+    (K : Formalization.Books.MoreAlgebra.Unit59.Comp R)
+    (L : Formalization.Books.MoreAlgebra.Unit59.Comp S) :
+    Nonempty
+      (baseChangeComplex f
+          (tensorProductComplex R K (restrictScalarsComplex f L)) ≅
+        tensorProductComplex S (baseChangeComplex f K) L) := by
+  rcases baseChange_tensorProduct_iso f K L with ⟨e⟩
+  exact ⟨e.symm⟩
+
+noncomputable def changeOfRingsResolutionComplex
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) {M : Mod R} (P : FreeResolution R M) :
+    ChainComplex (Mod S) ℕ :=
+  ((ModuleCat.extendScalars f).mapHomologicalComplex (ComplexShape.down ℕ)).obj
+    P.complex
+
+structure ChangeOfRingsResolutionData
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (M : Mod R) where
+  resolution : FreeResolution R M
+  scalarExtended : FreeResolution S (extendedModule f M)
+  comparison : Nonempty (scalarExtended.complex ≅
+    changeOfRingsResolutionComplex f resolution)
+
+theorem change_of_rings_resolution_data_exists
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (M : Mod R) :
+    Nonempty (ChangeOfRingsResolutionData f M) := by
+  sorry
+
+noncomputable def changeOfRingsResolutionData
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (M : Mod R) :
+    ChangeOfRingsResolutionData f M :=
+  Classical.choice (change_of_rings_resolution_data_exists f M)
+
 structure ChangeOfRingsTorSpectralSequenceData
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (M : Mod R) (N : Mod S) where
-  page : ℕ → ℕ → AddCommGrpCat.{u}
+  resolutionData : ChangeOfRingsResolutionData f M
+  /-- The canonical spectral-sequence object supplies all pages and
+      differentials, with the source's `d_r` bidegree. -/
+  spectralSequence :
+    CategoryTheory.E₂CohomologicalSpectralSequence (AddCommGrpCat.{u})
   e₂_page : ∀ n m : ℕ,
-    Nonempty (page n m ≅ changeOfRingsPage f M N n m)
+    Nonempty ((spectralSequence.page 2).X (n, m) ≅
+      changeOfRingsPage f M N n m)
   abutment : ℕ → AddCommGrpCat.{u}
   convergence : ∀ k : ℕ,
     Nonempty (abutment k ≅ changeOfRingsAbutment f M N k)
@@ -249,9 +329,8 @@ noncomputable def changeOfRingsTorSpectralSequenceData
 theorem change_of_rings_tor_e₂_page
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (M : Mod R) (N : Mod S) (n m : ℕ) :
-    Nonempty
-      ((changeOfRingsTorSpectralSequenceData f M N).page n m ≅
-        changeOfRingsPage f M N n m) := by
+    Nonempty (((changeOfRingsTorSpectralSequenceData f M N).spectralSequence.page 2).X
+      (n, m) ≅ changeOfRingsPage f M N n m) := by
   exact (changeOfRingsTorSpectralSequenceData f M N).e₂_page n m
 
 /-! ## The flat base-change example -/
@@ -285,6 +364,41 @@ def ModuleFlatOver
     (f : A →+* B) (M : Mod B) : Prop :=
   Module.Flat A ((ModuleCat.restrictScalars f).obj M : Type u)
 
+structure BaseChangeModuleIdentifications
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') (M N : Mod B) where
+  M_iso : Nonempty
+    ((ModuleCat.restrictScalars S.a'ToB').obj (baseChangedModule S M) ≅
+      baseChangedModuleOverA' S M)
+  N_iso : Nonempty
+    ((ModuleCat.restrictScalars S.a'ToB').obj (baseChangedModule S N) ≅
+      baseChangedModuleOverA' S N)
+
+noncomputable def flatBaseChangeResolutionComplex
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') {M : Mod B} (F : FreeResolution B M) :
+    ChainComplex (Mod B') ℕ :=
+  ((ModuleCat.extendScalars S.bToB').mapHomologicalComplex (ComplexShape.down ℕ)).obj
+    F.complex
+
+structure FlatBaseChangeResolutionData
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') (M : Mod B)
+    (hAB : RingHom.Flat S.aToB)
+    (hM : ModuleFlatOver S.aToB M) where
+  resolution : FreeResolution B M
+  baseChangedResolution : FreeResolution B' (baseChangedModule S M)
+  comparison : Nonempty (baseChangedResolution.complex ≅
+    flatBaseChangeResolutionComplex S resolution)
+
+theorem flat_base_change_resolution_data_exists
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') (M : Mod B)
+    (hAB : RingHom.Flat S.aToB)
+    (hM : ModuleFlatOver S.aToB M) :
+    Nonempty (FlatBaseChangeResolutionData S M hAB hM) := by
+  sorry
+
 noncomputable def flatBaseChangePage
     {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
     (S : BaseChangeSquare A B A' B') (M N : Mod B) (i j : ℕ) :
@@ -307,9 +421,15 @@ structure FlatBaseChangeTorSpectralSequenceData
     (hAB : RingHom.Flat S.aToB)
     (hM : ModuleFlatOver S.aToB M)
     (hN : ModuleFlatOver S.aToB N) where
-  page : ℕ → ℕ → AddCommGrpCat.{u}
+  resolutionData : FlatBaseChangeResolutionData S M hAB hM
+  moduleIdentifications : BaseChangeModuleIdentifications S M N
+  /-- The canonical `E₂` spectral sequence, whose `d_r` has bidegree
+      `(r, 1-r)`. -/
+  spectralSequence :
+    CategoryTheory.E₂CohomologicalSpectralSequence (AddCommGrpCat.{u})
   e₂_page : ∀ i j : ℕ,
-    Nonempty (page i j ≅ flatBaseChangePage S M N i j)
+    Nonempty ((spectralSequence.page 2).X (i, j) ≅
+      flatBaseChangePage S M N i j)
   abutment : ℕ → AddCommGrpCat.{u}
   convergence : ∀ k : ℕ,
     Nonempty (abutment k ≅ flatBaseChangeAbutment S M N k)
@@ -322,6 +442,25 @@ theorem flat_base_change_tor_spectral_sequence_exists
     (hN : ModuleFlatOver S.aToB N) :
     Nonempty (FlatBaseChangeTorSpectralSequenceData S M N hAB hM hN) := by
   sorry
+
+noncomputable def flatBaseChangeTorSpectralSequenceData
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') (M N : Mod B)
+    (hAB : RingHom.Flat S.aToB)
+    (hM : ModuleFlatOver S.aToB M)
+    (hN : ModuleFlatOver S.aToB N) :
+    FlatBaseChangeTorSpectralSequenceData S M N hAB hM hN :=
+  Classical.choice (flat_base_change_tor_spectral_sequence_exists S M N hAB hM hN)
+
+theorem flat_base_change_tor_e₂_page
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (S : BaseChangeSquare A B A' B') (M N : Mod B)
+    (hAB : RingHom.Flat S.aToB)
+    (hM : ModuleFlatOver S.aToB M)
+    (hN : ModuleFlatOver S.aToB N) (i j : ℕ) :
+    Nonempty (((flatBaseChangeTorSpectralSequenceData S M N hAB hM hN).spectralSequence.page 2).X
+      (i, j) ≅ flatBaseChangePage S M N i j) := by
+  exact (flatBaseChangeTorSpectralSequenceData S M N hAB hM hN).e₂_page i j
 
 /-! ## Derived-category Tor spectral sequences -/
 
@@ -361,13 +500,12 @@ noncomputable abbrev derivedTensorMinusMinus
 structure FirstDerivedTorSpectralSequenceData
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) where
-  page : ℕ → ℤ → ℤ → Mod R
-  differential : ∀ r : ℕ, ∀ p q : ℤ,
-    page r p q ⟶ page r (p + r) (q - r + 1)
-  differential_squared : ∀ r : ℕ, ∀ p q : ℤ,
-    differential r p q ≫ differential r (p + r) (q - r + 1) = 0
+  /-- The source's cohomological spectral sequence, including its
+      page-to-page quotient data and differentials. -/
+  spectralSequence :
+    CategoryTheory.E₂CohomologicalSpectralSequence (Mod R)
   e₂_page : ∀ p q : ℤ,
-    Nonempty (page 2 p q ≅
+    Nonempty ((spectralSequence.page 2).X (p, q) ≅
       (derivedCohomologyFunctor (Mod R) p).obj
         (derivedTensorMinusModule K (derivedCohomologyMinus L q)))
   abutment : ℤ → Mod R
@@ -379,13 +517,12 @@ structure FirstDerivedTorSpectralSequenceData
 structure SecondDerivedTorSpectralSequenceData
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) where
-  page : ℕ → ℤ → ℤ → Mod R
-  differential : ∀ r : ℕ, ∀ p q : ℤ,
-    page r p q ⟶ page r (p + r) (q - r + 1)
-  differential_squared : ∀ r : ℕ, ∀ p q : ℤ,
-    differential r p q ≫ differential r (p + r) (q - r + 1) = 0
+  /-- The second canonical cohomological spectral sequence for the same
+      total derived tensor product. -/
+  spectralSequence :
+    CategoryTheory.E₂CohomologicalSpectralSequence (Mod R)
   e₂_page : ∀ p q : ℤ,
-    Nonempty (page 2 p q ≅
+    Nonempty ((spectralSequence.page 2).X (p, q) ≅
       (derivedCohomologyFunctor (Mod R) p).obj
         (derivedTensorMinusModule L (derivedCohomologyMinus K q)))
   abutment : ℤ → Mod R
@@ -405,6 +542,36 @@ theorem second_derived_tor_spectral_sequence_exists
     [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) :
     Nonempty (SecondDerivedTorSpectralSequenceData K L) := by
   sorry
+
+noncomputable def firstDerivedTorSpectralSequenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) :
+    FirstDerivedTorSpectralSequenceData K L :=
+  Classical.choice (first_derived_tor_spectral_sequence_exists K L)
+
+noncomputable def secondDerivedTorSpectralSequenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) :
+    SecondDerivedTorSpectralSequenceData K L :=
+  Classical.choice (second_derived_tor_spectral_sequence_exists K L)
+
+theorem first_derived_tor_e₂_page
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) (p q : ℤ) :
+    Nonempty (((firstDerivedTorSpectralSequenceData K L).spectralSequence.page 2).X
+      (p, q) ≅
+      (derivedCohomologyFunctor (Mod R) p).obj
+        (derivedTensorMinusModule K (derivedCohomologyMinus L q))) := by
+  exact (firstDerivedTorSpectralSequenceData K L).e₂_page p q
+
+theorem second_derived_tor_e₂_page
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : DerivedDMinus R) (p q : ℤ) :
+    Nonempty (((secondDerivedTorSpectralSequenceData K L).spectralSequence.page 2).X
+      (p, q) ≅
+      (derivedCohomologyFunctor (Mod R) p).obj
+        (derivedTensorMinusModule L (derivedCohomologyMinus K q))) := by
+  exact (secondDerivedTorSpectralSequenceData K L).e₂_page p q
 
 /- The project already has the canonical bounded-above/projective
    replacement interface.  This predicate records the source's final

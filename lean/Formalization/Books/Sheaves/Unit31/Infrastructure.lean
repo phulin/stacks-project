@@ -130,6 +130,19 @@ theorem openAbelianSheaf_stalk_map_epi {X : TopCat.{v}}
   apply (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks f.hom).mp
   exact (TopCat.Sheaf.isLocallySurjective_iff_epi f).mpr inferInstance
 
+/-- An additive sheaf morphism is an epimorphism when all of its stalk maps
+are epimorphisms. -/
+theorem openAbelianSheaf_epi_of_stalk_map_epi {X : TopCat.{v}}
+    {F G : TopCat.Sheaf AddCommGrpCat.{v} X} (f : F ⟶ G)
+    (h : ∀ x : X,
+      Epi ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map f.hom)) :
+    Epi f := by
+  apply (TopCat.Sheaf.isLocallySurjective_iff_epi f).mp
+  apply (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks f.hom).mpr
+  intro x
+  rw [← AddCommGrpCat.epi_iff_surjective]
+  exact h x
+
 /-- Direct image is computed by inverse images of opens. -/
 @[simp] theorem openPresheafDirectImage_obj (C : Type u) [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X)
@@ -468,6 +481,38 @@ noncomputable abbrev openAbelianSheafExtensionAdjunction
     openAbelianSheafExtensionFunctor U ⊣
       openSheafRestriction AddCommGrpCat U :=
   openAlgebraicSheafExtensionAdjunction AddCommGrpCat U
+
+/-- The counit of open extension and restriction agrees on a stalk over the
+open with the canonical extension and restriction stalk identifications. -/
+theorem openAbelianSheafExtension_counit_stalk_map_compatibility
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
+    (F : TopCat.Sheaf AddCommGrpCat X) (x : X) (hx : x ∈ U) :
+    ∃ e₁ :
+        ((openAbelianSheafExtensionFunctor U).obj
+          ((openSheafRestriction AddCommGrpCat U).obj F)).presheaf.stalk x ≅
+          ((openSheafRestriction AddCommGrpCat U).obj F).presheaf.stalk
+            ⟨x, hx⟩,
+      ∃ e₂ :
+          ((openSheafRestriction AddCommGrpCat U).obj F).presheaf.stalk
+              ⟨x, hx⟩ ≅ F.presheaf.stalk ((openInclusion U) ⟨x, hx⟩),
+        e₁.hom ≫ e₂.hom =
+          (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+            ((openAbelianSheafExtensionAdjunction U).counit.app F).hom := by
+  sorry
+
+/-- In particular, the open-extension counit is an isomorphism on stalks over
+the open. -/
+theorem openAbelianSheafExtension_counit_stalk_map_isIso
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
+    (F : TopCat.Sheaf AddCommGrpCat X) (x : X) (hx : x ∈ U) :
+    IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      ((openAbelianSheafExtensionAdjunction U).counit.app F).hom) := by
+  rcases openAbelianSheafExtension_counit_stalk_map_compatibility U F x hx with
+    ⟨e₁, e₂, h⟩
+  rw [← h]
+  exact IsIso.comp_isIso' e₁.isIso_hom e₂.isIso_hom
 
 /-- The module-valued open subspace of a ringed space. -/
 def ringedOpenSubspace (X : RingedSpace.{v}) (U : Opens X.carrier) : RingedSpace.{v} where

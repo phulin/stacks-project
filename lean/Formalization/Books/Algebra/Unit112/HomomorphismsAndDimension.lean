@@ -31,7 +31,17 @@ theorem dimension_le_of_goingUp_or_goingDown
     (Algebra.HasGoingUp R S ∨ Algebra.HasGoingDown R S) →
       Function.Surjective (PrimeSpectrum.comap f) →
         ringKrullDim R ≤ ringKrullDim S := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  intro hmap hsurj
+  rw [← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim,
+    ← PrimeSpectrum.topologicalKrullDim_eq_ringKrullDim]
+  apply Formalization.Books.Topology.Unit19.topologicalKrullDim_le_of_surjective_of_specializing_or_generalizing
+    (PrimeSpectrum.comap f) (PrimeSpectrum.continuous_comap f) hsurj
+  rcases hmap with hgu | hgd
+  · exact Or.inl ((Formalization.Books.Algebra.Unit41.hasGoingUp_iff_specializingMap).mp
+      (show Algebra.HasGoingUp R S from hgu))
+  · exact Or.inr ((Formalization.Books.Algebra.Unit41.hasGoingDown_iff_generalizingMap).mp
+      (show Algebra.HasGoingDown R S from hgd))
 
 /-- Under going up, the contraction of a maximal ideal is maximal. -/
 theorem isMaximal_comap_of_goingUp
@@ -39,7 +49,30 @@ theorem isMaximal_comap_of_goingUp
     letI : Algebra R S := f.toAlgebra
     Algebra.HasGoingUp R S →
       ∀ q : Ideal S, q.IsMaximal → (q.comap f).IsMaximal := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  intro hgu q hq
+  let _ : Algebra.HasGoingUp R S := hgu
+  let _ : q.IsPrime := hq.isPrime
+  apply Ideal.isMaximal_def.mpr
+  constructor
+  · intro htop
+    have hmap : (q.comap f).map f ≤ q := by
+      rw [Ideal.map_le_iff_le_comap]
+    rw [htop, Ideal.map_top] at hmap
+    exact hq.ne_top (top_unique hmap)
+  · intro J hJ
+    by_contra hJtop
+    obtain ⟨m, hm, hJm⟩ := Ideal.exists_le_maximal J hJtop
+    have hpm : q.comap f < m := lt_of_lt_of_le hJ hJm
+    let _ : m.IsPrime := hm.isPrime
+    obtain ⟨Q, hqQ, hQprime, hQover⟩ :=
+      Algebra.HasGoingUp.exists_ideal_ge_liesOver_of_lt q hpm
+    have hqeqQ : q = Q := hq.eq_of_le hQprime.ne_top hqQ
+    have hQunder : m = Q.comap f := by
+      simpa [Ideal.under_def, RingHom.algebraMap_toAlgebra] using hQover.over
+    have heq : m = q.comap f := hQunder.trans
+      (congrArg (fun I : Ideal S => I.comap f) hqeqQ.symm)
+    exact hpm.ne heq.symm
 
 /-! ## Integral extensions -/
 
@@ -51,14 +84,34 @@ theorem integral_ringKrullDim_le_and_closedPoint_map
     ringKrullDim S ≤ ringKrullDim R ∧
       ∀ q : PrimeSpectrum S, q.asIdeal.IsMaximal →
         (q.asIdeal.comap f).IsMaximal := by
-  sorry
+  constructor
+  · let _ : Algebra R S := f.toAlgebra
+    let _ : Algebra.IsIntegral R S := ⟨hf⟩
+    change Order.krullDim (PrimeSpectrum S) ≤ Order.krullDim (PrimeSpectrum R)
+    apply Order.krullDim_le_of_strictMono (PrimeSpectrum.comap f)
+    intro q q' hqq'
+    change q.asIdeal.comap (algebraMap R S) < q'.asIdeal.comap (algebraMap R S)
+    have hideal : q.asIdeal < q'.asIdeal :=
+      (PrimeSpectrum.asIdeal_lt_asIdeal q q').mpr hqq'
+    exact Ideal.IsIntegral.comap_lt_comap hideal
+  · intro q hq
+    exact Ideal.isMaximal_comap_of_isIntegral_of_isMaximal' f hf q.asIdeal
 
 /-- An injective integral ring map preserves Krull dimension. -/
 theorem integral_subring_ringKrullDim_eq
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hinj : Function.Injective f) (hf : f.IsIntegral) :
     ringKrullDim R = ringKrullDim S := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.IsIntegral R S := ⟨hf⟩
+  have hgu : Algebra.HasGoingUp R S := by infer_instance
+  have hsurj : Function.Surjective (PrimeSpectrum.comap f) :=
+    Formalization.Books.Algebra.Unit36.primeSpectrum_comap_surjective_of_integral f hf hinj
+  have h₁ : ringKrullDim R ≤ ringKrullDim S :=
+    dimension_le_of_goingUp_or_goingDown f (Or.inl hgu) hsurj
+  have h₂ : ringKrullDim S ≤ ringKrullDim R :=
+    (integral_ringKrullDim_le_and_closedPoint_map f hf).1
+  exact le_antisymm h₁ h₂
 
 /-! ## The local ring of a fibre -/
 

@@ -57,14 +57,14 @@ theorem depth_eq_top_of_subsingleton
     {R : Type u} [CommRing R] (I : Ideal R) (M : Type v)
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Subsingleton M] :
     depth I M = ⊤ := by
-  sorry
+  simp [depth, Subsingleton.elim (I • (⊤ : Submodule R M)) (⊤ : Submodule R M)]
 
 /-- If the ideal is the whole ring, every finite module has infinite depth. -/
 theorem depth_top_ideal
     {R : Type u} (M : Type v) [CommRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     depth (⊤ : Ideal R) M = ⊤ := by
-  sorry
+  simp [depth]
 
 /-- Nakayama's consequence used in the source's explanation of the definition. -/
 theorem smul_top_ne_top_of_le_ring_jacobson
@@ -72,7 +72,19 @@ theorem smul_top_ne_top_of_le_ring_jacobson
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Nontrivial M]
     (hI : I ≤ Ideal.jacobson (⊥ : Ideal R)) :
     I • (⊤ : Submodule R M) ≠ ⊤ := by
-  sorry
+  intro htop
+  have htopbot : (⊤ : Submodule R M) = ⊥ :=
+    Submodule.eq_bot_of_le_smul_of_le_jacobson_bot I (⊤ : Submodule R M)
+      Module.Finite.fg_top htop.symm.le hI
+  have hsub : Subsingleton M := by
+    constructor
+    intro x y
+    have hx : x ∈ (⊥ : Submodule R M) := htopbot ▸ Submodule.mem_top
+    have hy : y ∈ (⊥ : Submodule R M) := htopbot ▸ Submodule.mem_top
+    have hx0 : x = 0 := by simpa using hx
+    have hy0 : y = 0 := by simpa using hy
+    exact hx0.trans hy0.symm
+  exact (not_nontrivial_iff_subsingleton.mpr hsub) (inferInstance : Nontrivial M)
 
 /-- A module has `I`-depth zero exactly when it is nonzero and `I` contains
 no module nonzerodivisor. -/
@@ -81,7 +93,72 @@ theorem depth_eq_zero_iff
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     depth I M = 0 ↔
       Nontrivial M ∧ ¬ ∃ f : R, f ∈ I ∧ IsSMulRegular M f := by
-  sorry
+  classical
+  by_cases htop : I • (⊤ : Submodule R M) = ⊤
+  · simp only [depth, dif_pos htop]
+    constructor
+    · intro hzero
+      exact (ENat.top_ne_zero hzero).elim
+    · rintro ⟨_, hno⟩
+      obtain ⟨f, hf, hfm⟩ :=
+        Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul I
+          (⊤ : Submodule R M) Module.Finite.fg_top htop.symm.le
+      have hg : 1 - f ∈ I := by
+        simpa only [neg_sub] using I.neg_mem hf
+      have hreg : IsSMulRegular M (1 - f) := by
+        intro x y hxy
+        simpa [sub_smul, hfm] using hxy
+      exact (hno ⟨1 - f, hg, hreg⟩).elim
+  · simp only [depth, dif_neg htop]
+    rw [ENat.sSup_eq_zero]
+    constructor
+    · intro hzero
+      have hnontr : Nontrivial M := by
+        by_contra h
+        have hsub : Subsingleton M := not_nontrivial_iff_subsingleton.mp h
+        have heq : I • (⊤ : Submodule R M) = ⊤ := by
+          apply le_antisymm le_top
+          intro x hx
+          have hx0 : x = 0 := hsub.elim x 0
+          rw [hx0]
+          exact (I • (⊤ : Submodule R M)).zero_mem
+        exact htop heq
+      refine ⟨hnontr, ?_⟩
+      rintro ⟨f, hf, hreg⟩
+      have hspan : Ideal.span ({f} : Set R) ≤ I :=
+        (Ideal.span_singleton_le_iff_mem (I := I)).mpr hf
+      have hfle' : Ideal.span ({f} : Set R) • (⊤ : Submodule R M) ≤
+          I • (⊤ : Submodule R M) := Submodule.smul_mono_left hspan
+      have hfle : f • (⊤ : Submodule R M) ≤ I • (⊤ : Submodule R M) := by
+        simpa only [Submodule.ideal_span_singleton_smul] using hfle'
+      have hfne : f • (⊤ : Submodule R M) ≠ ⊤ := by
+        intro hftop
+        apply htop
+        have htop_le : (⊤ : Submodule R M) ≤ I • (⊤ : Submodule R M) := by
+          calc
+            (⊤ : Submodule R M) = f • (⊤ : Submodule R M) := hftop.symm
+            _ ≤ I • (⊤ : Submodule R M) := hfle
+        exact top_unique htop_le
+      have hq : Nontrivial (QuotSMulTop f M) :=
+        Submodule.Quotient.nontrivial_iff.mpr hfne
+      have hseq : RingTheory.Sequence.IsRegular M [f] :=
+        RingTheory.Sequence.IsRegular.cons hreg
+          (RingTheory.Sequence.IsRegular.nil R (QuotSMulTop f M))
+      have hmem : (1 : ℕ∞) ∈ {n : ℕ∞ | ∃ rs : List R,
+          n = (rs.length : ℕ∞) ∧
+            (∀ r ∈ rs, r ∈ I) ∧ RingTheory.Sequence.IsRegular M rs} := by
+        exact ⟨[f], by simp, by simp [hf], hseq⟩
+      have hone := hzero 1 hmem
+      exact one_ne_zero hone
+    · rintro ⟨hnontr, hno⟩ a ha
+      rcases ha with ⟨rs, hlen, hmem, hreg⟩
+      cases rs with
+      | nil => simpa using hlen
+      | cons f rs =>
+          have hparts :=
+            (RingTheory.Sequence.isRegular_cons_iff M f rs).mp hreg
+          have hregf : IsSMulRegular M f := hparts.1
+          exact (hno ⟨f, hmem f (by simp), hregf⟩).elim
 
 /-! ## Basic properties -/
 

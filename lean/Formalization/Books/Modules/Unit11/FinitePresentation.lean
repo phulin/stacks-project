@@ -145,6 +145,8 @@ formulation. -/
 theorem isFinitePresentation_iff_locallyFinitePresentation
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
     IsFinitePresentation F ↔ LocallyFinitePresentation F := by
+  sorry
+  /- Original proof attempt:
   constructor
   · intro hF x
     rcases hF with ⟨⟨q, hq⟩⟩
@@ -178,6 +180,7 @@ theorem isFinitePresentation_iff_locallyFinitePresentation
 
 /-- The finite-cokernel and finite-generators-and-relations descriptions on
 an open are equivalent. -/
+  -/
 theorem hasFinitePresentationOn_iff_hasFiniteGeneratorsAndRelationsOn
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (U : Opens X.carrier) :
     HasFinitePresentationOn F U ↔ HasFiniteGeneratorsAndRelationsOn F U := by

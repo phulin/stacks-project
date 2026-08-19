@@ -435,8 +435,7 @@ theorem dominates_iff_pushout_inr_universallyInjective
       universallyInjective
         ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom) := by
   constructor
-  · intro hd Q _ _
-    intro x y hxy
+  · intro hd Q _ _ x y hxy
     apply sub_eq_zero.mp
     let p := pushout (ModuleCat.ofHom f) (ModuleCat.ofHom g)
     let d : M →ₗ[R]
@@ -726,12 +725,9 @@ private lemma pushout_inr_cokernel
       exact LinearMap.mem_range_self f x)).hom
   have hπinl : pushout.inl ff gg ≫ ModuleCat.ofHom π = ModuleCat.ofHom q := by
     dsimp [π]
-    change pushout.inl ff gg ≫ pushout.desc (ModuleCat.ofHom q) 0 _ =
-      ModuleCat.ofHom q
     rw [pushout.inl_desc]
   have hπinr : pushout.inr ff gg ≫ ModuleCat.ofHom π = 0 := by
     dsimp [π]
-    change pushout.inr ff gg ≫ pushout.desc (ModuleCat.ofHom q) 0 _ = 0
     rw [pushout.inr_desc]
   have hqcol := ModuleCat.cokernelIsColimit ff
   dsimp [ModuleCat.cokernelCocone] at hqcol
@@ -740,12 +736,11 @@ private lemma pushout_inr_cokernel
     obtain ⟨n, hn⟩ := Submodule.mkQ_surjective
       (LinearMap.range f) z
     refine ⟨(pushout.inl ff gg).hom n, ?_⟩
-    change π ((pushout.inl ff gg).hom n) = z
     change (pushout.inl ff gg ≫
       pushout.desc (ModuleCat.ofHom q) 0 _).hom n = z
     rw [pushout.inl_desc]
     simpa [q] using hn
-  letI : Epi (ModuleCat.ofHom π) :=
+  let _ : Epi (ModuleCat.ofHom π) :=
     (ModuleCat.epi_iff_surjective _).2 hπsurj
   let cπ : CokernelCofork (pushout.inr ff gg) :=
     CokernelCofork.ofπ (ModuleCat.ofHom π) (by

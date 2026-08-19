@@ -58,7 +58,58 @@ noncomputable abbrev canonicalExactSequenceRight {X : TopCat.{v}}
 /-- The consecutive maps in the canonical sequence compose to zero. -/
 theorem canonicalExactSequence_zero {X : TopCat.{v}} (U : Opens X) (F : Ab X) :
     canonicalExactSequenceLeft U F ≫ canonicalExactSequenceRight U F = 0 := by
-  sorry
+  have hcomp (x : X) :
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+          (canonicalExactSequenceLeft U F ≫ canonicalExactSequenceRight U F).hom = 0 := by
+    change (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+        ((canonicalExactSequenceLeft U F).hom ≫
+          (canonicalExactSequenceRight U F).hom) = 0
+    rw [Functor.map_comp]
+    by_cases hx : x ∈ U
+    · rcases closedAbelianSheafDirectImage_stalk_outside
+        (canonicalClosedSubset U) (canonicalClosedSubset_isClosed U)
+        ((closedAbelianSheafRestriction (canonicalClosedSubset U)
+          (canonicalClosedSubset_isClosed U)).obj F) x (by
+            simpa [canonicalClosedSubset] using hx) with ⟨e⟩
+      apply (cancel_mono e.hom).1
+      exact (isZero_zero AddCommGrpCat).eq_of_tgt _ _
+    · rcases openAlgebraicSheafExtension_stalk_initial AddCommGrpCat U
+        ((openSheafRestriction AddCommGrpCat U).obj F) x hx with ⟨e⟩
+      apply (cancel_epi e.inv).1
+      exact initialIsInitial.hom_ext _ _
+  have hzero (x : X) :
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+        ((0 : (openAbelianSheafExtensionFunctor U).obj
+          ((openSheafRestriction AddCommGrpCat U).obj F) ⟶
+          (closedSheafDirectImage AddCommGrpCat (canonicalClosedSubset U)
+            (canonicalClosedSubset_isClosed U)).obj
+            ((closedAbelianSheafRestriction (canonicalClosedSubset U)
+              (canonicalClosedSubset_isClosed U)).obj F)).hom) = 0 := by
+    change (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      (0 : ((openAbelianSheafExtensionFunctor U).obj
+        ((openSheafRestriction AddCommGrpCat U).obj F)).presheaf ⟶
+        ((closedSheafDirectImage AddCommGrpCat (canonicalClosedSubset U)
+          (canonicalClosedSubset_isClosed U)).obj
+          ((closedAbelianSheafRestriction (canonicalClosedSubset U)
+            (canonicalClosedSubset_isClosed U)).obj F)).presheaf) = 0
+    exact Functor.map_zero
+      (TopCat.Presheaf.stalkFunctor (C := AddCommGrpCat.{v}) (X := X) x)
+      ((openAbelianSheafExtensionFunctor U).obj
+        ((openSheafRestriction AddCommGrpCat U).obj F)).presheaf
+      ((closedSheafDirectImage AddCommGrpCat (canonicalClosedSubset U)
+        (canonicalClosedSubset_isClosed U)).obj
+        ((closedAbelianSheafRestriction (canonicalClosedSubset U)
+          (canonicalClosedSubset_isClosed U)).obj F)).presheaf
+  apply CategoryTheory.Sheaf.hom_ext
+  apply NatTrans.ext
+  funext V
+  apply ConcreteCategory.hom_ext
+  intro s
+  apply TopCat.Presheaf.section_ext _ _
+  intro x hx
+  rw [← TopCat.Presheaf.stalkFunctor_map_germ_apply,
+    ← TopCat.Presheaf.stalkFunctor_map_germ_apply]
+  rw [hcomp x, hzero x]
 
 /-- The short complex underlying the canonical sequence. -/
 noncomputable def canonicalExactSequence {X : TopCat.{v}} (U : Opens X) (F : Ab X) :

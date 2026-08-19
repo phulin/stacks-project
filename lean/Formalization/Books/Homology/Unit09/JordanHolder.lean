@@ -273,14 +273,143 @@ theorem isArtinianObject_iff_of_shortExact
     (S : ShortComplex C) (hS : S.ShortExact) :
     IsArtinianObject S.X₂ ↔
       IsArtinianObject S.X₁ ∧ IsArtinianObject S.X₃ := by
-  sorry
+  constructor
+  · intro h₂
+    exact ⟨isArtinianObject_of_shortExact_subobject S hS h₂,
+      isArtinianObject_of_shortExact_quotient S hS h₂⟩
+  · rintro ⟨h₁, h₃⟩
+    letI : Mono S.f := hS.mono_f
+    letI : Epi S.g := hS.epi_g
+    letI : Mono S.g.op := by infer_instance
+    letI : IsArtinianObject S.X₁ := h₁
+    letI : IsArtinianObject S.X₃ := h₃
+    let K : Subobject S.X₂ := Subobject.mk S.f
+    let f₁ : Subobject (K : C) → Subobject S.X₂ := (Subobject.map K.arrow).obj
+    let f₂ : Subobject S.X₂ → Subobject (K : C) := (Subobject.pullback K.arrow).obj
+    let eK : Subobject (K : C) ≃o Subobject S.X₁ :=
+      Subobject.mapIsoToOrderIso (Subobject.underlyingIso S.f)
+    letI : WellFoundedLT (Subobject (K : C)) :=
+      eK.toOrderEmbedding.wellFoundedLT
+    let e₂ := Abelian.subobjectIsoSubobjectOp S.X₂
+    let e₃ := Abelian.subobjectIsoSubobjectOp S.X₃
+    let g₁ : Subobject S.X₃ → Subobject S.X₂ :=
+      fun x => e₂.symm (OrderDual.toDual
+        ((Subobject.map S.g.op).obj (OrderDual.ofDual (e₃ x))))
+    let g₂ : Subobject S.X₂ → Subobject S.X₃ :=
+      fun x => e₃.symm (OrderDual.toDual
+        ((Subobject.pullback S.g.op).obj (OrderDual.ofDual (e₂ x))))
+    have hgconn : GaloisConnection g₂ g₁ := by
+      intro a b
+      dsimp [g₁, g₂]
+      conv_lhs => rw [← e₃.symm_apply_apply b]
+      conv_rhs => rw [← e₂.symm_apply_apply a]
+      rw [e₃.symm.le_iff_le, e₂.symm.le_iff_le]
+      exact ((Subobject.mapPullbackAdj S.g.op).gc
+        (show Subobject (Opposite.op S.X₃) from e₃ b)
+        (show Subobject (Opposite.op S.X₂) from e₂ a)).symm
+    have gi : GaloisInsertion g₂ g₁ := by
+      apply hgconn.toGaloisInsertion
+      intro x
+      apply le_of_eq
+      symm
+      apply e₃.injective
+      dsimp [g₁, g₂]
+      simp [Subobject.pullback_map_self]
+    have gci : GaloisCoinsertion f₁ f₂ :=
+      { choice := fun x _ => f₂ x
+        gc := (Subobject.mapPullbackAdj K.arrow).gc
+        u_l_le := fun x => by
+          exact le_of_eq (by simpa [f₁, f₂] using Subobject.pullback_map_self K.arrow x)
+        choice_eq := fun _ _ => rfl }
+    have hfg : ∀ a, f₁ (f₂ a) = a ⊓ K := by
+      intro a
+      dsimp [f₁, f₂, K]
+      rw [inf_comm]
+      exact (Subobject.inf_eq_map_pullback K a).symm
+    have hgg : ∀ a, g₁ (g₂ a) = a ⊔ K := by
+      have hK : e₂ K = OrderDual.toDual (Subobject.mk S.g.op) := by
+        change (cokernelOrderHom S.X₂) (Subobject.mk S.f) =
+          OrderDual.toDual (Subobject.mk S.g.op)
+        change OrderDual.toDual (Subobject.mk (cokernel.π S.f).op) =
+          OrderDual.toDual (Subobject.mk S.g.op)
+        change Subobject.mk (cokernel.π S.f).op = Subobject.mk S.g.op
+        let i : cokernel S.f ≅ S.X₃ :=
+          IsColimit.coconePointUniqueUpToIso (cokernelIsCokernel S.f)
+            hS.gIsCokernel
+        symm
+        apply Subobject.mk_eq_mk_of_comm S.g.op (cokernel.π S.f).op i.op
+        have hi : cokernel.π S.f ≫ i.hom = S.g := by
+          simpa using (IsColimit.comp_coconePointUniqueUpToIso_hom
+            (cokernelIsCokernel S.f) hS.gIsCokernel (.one))
+        simpa [Iso.op_hom] using congrArg Quiver.Hom.op hi
+      have hmap : ∀ q : Subobject (Opposite.op S.X₂),
+          (Subobject.map S.g.op).obj ((Subobject.pullback S.g.op).obj q) =
+            (Subobject.mk S.g.op) ⊓ q := by
+        intro q
+        change (Subobject.map S.g.op).obj ((Subobject.pullback S.g.op).obj q) =
+          (Subobject.inf.obj (Quotient.mk'' (MonoOver.mk S.g.op))).obj q
+        exact (Subobject.inf_eq_map_pullback' (MonoOver.mk S.g.op) q).symm
+      intro a
+      apply e₂.injective
+      dsimp [g₁, g₂]
+      simp [e₃.apply_symm_apply, e₂.apply_symm_apply]
+      rw [hmap]
+      rw [hK]
+      change (OrderDual.toDual (Subobject.mk S.g.op) ⊔ e₂ a) =
+        e₂ a ⊔ OrderDual.toDual (Subobject.mk S.g.op)
+      exact sup_comm _ _
+    apply (isArtinianObject_iff_not_strictAnti S.X₂).2
+    letI : WellFoundedLT (Subobject S.X₂) :=
+      wellFounded_lt_exact_sequence K f₁ f₂ g₁ g₂ gci gi hfg hgg
+    exact fun chain => not_strictAnti_of_wellFoundedLT chain
 
 theorem isNoetherianObject_iff_of_shortExact
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex C) (hS : S.ShortExact) :
     IsNoetherianObject S.X₂ ↔
       IsNoetherianObject S.X₁ ∧ IsNoetherianObject S.X₃ := by
-  sorry
+  constructor
+  · intro h₂
+    exact ⟨isNoetherianObject_of_shortExact_subobject S hS h₂,
+      isNoetherianObject_of_shortExact_quotient S hS h₂⟩
+  · rintro ⟨h₁, h₃⟩
+    have hA1 : IsArtinianObject (Opposite.op S.X₁) := by
+      rw [isArtinianObject_iff_not_strictAnti]
+      intro f hf
+      let e := Abelian.subobjectIsoSubobjectOp S.X₁
+      let g : ℕ → Subobject S.X₁ := fun n =>
+        e.symm (show (Subobject (Opposite.op S.X₁))ᵒᵈ from f n)
+      have hnot := (isNoetherianObject_iff_not_strictMono S.X₁).1 h₁
+      apply hnot g
+      intro a b hab
+      apply (e.symm.lt_iff_lt).2
+      change f b < f a
+      exact hf hab
+    have hA3 : IsArtinianObject (Opposite.op S.X₃) := by
+      rw [isArtinianObject_iff_not_strictAnti]
+      intro f hf
+      let e := Abelian.subobjectIsoSubobjectOp S.X₃
+      let g : ℕ → Subobject S.X₃ := fun n =>
+        e.symm (show (Subobject (Opposite.op S.X₃))ᵒᵈ from f n)
+      have hnot := (isNoetherianObject_iff_not_strictMono S.X₃).1 h₃
+      apply hnot g
+      intro a b hab
+      apply (e.symm.lt_iff_lt).2
+      change f b < f a
+      exact hf hab
+    have hA2 : IsArtinianObject (Opposite.op S.X₂) :=
+      (isArtinianObject_iff_of_shortExact S.op hS.op).2 ⟨hA3, hA1⟩
+    rw [isNoetherianObject_iff_not_strictMono]
+    intro f hf
+    let e := Abelian.subobjectIsoSubobjectOp S.X₂
+    let g : ℕ → Subobject (Opposite.op S.X₂) := fun n => e (f n)
+    have hnot :=
+      (isArtinianObject_iff_not_strictAnti (Opposite.op S.X₂)).1 hA2
+    apply hnot g
+    intro a b hab
+    change (e (f a) : (Subobject (Opposite.op S.X₂))ᵒᵈ) < e (f b)
+    apply (e.lt_iff_lt).mpr
+    exact hf hab
 
 /-! ## Finite-length filtrations -/
 
@@ -583,7 +712,204 @@ theorem finite_length_iff
     {C : Type u} [Category.{v} C] [Abelian C] (A : C) :
     IsArtinianObject A ∧ IsNoetherianObject A ↔
       Nonempty (FiniteLengthFiltration A) := by
-  sorry
+  constructor
+  · rintro ⟨hA, hN⟩
+    letI : IsArtinianObject A := hA
+    letI : IsNoetherianObject A := hN
+    letI : WellFoundedLT (Subobject A) := inferInstance
+    letI : WellFoundedGT (Subobject A) := inferInstance
+    obtain ⟨a, ha, n, hn, hstep⟩ :=
+      exists_covBy_seq_of_wellFoundedLT_wellFoundedGT_of_le
+        (α := Subobject A) (x := (⊥ : Subobject A)) (y := (⊤ : Subobject A)) bot_le
+    let series : RelSeries {(P, Q) : (Subobject A) × (Subobject A) | P < Q} :=
+      { length := n
+        toFun := fun i => a i
+        step := fun i => by
+          simpa using (hstep i i.isLt).1 }
+    have hcov (i : Fin series.length) :
+        series (Fin.castSucc i) ⋖ series i.succ := by
+      dsimp [series]
+      simpa using hstep i i.isLt
+    refine ⟨⟨series, ?_, ?_, ?_⟩⟩
+    · simpa [series, RelSeries.head, ha]
+    · simpa [series, RelSeries.last, hn]
+    · intro i
+      exact (simple_subobjectQuotient_iff_covBy
+        (le_of_lt (by simpa using series.step i))).mpr (hcov i)
+  · rintro ⟨F⟩
+    have hchain : ∀ {B : C}, FiniteLengthFiltration B →
+        IsArtinianObject B ∧ IsNoetherianObject B := by
+      intro B F
+      induction hlen : F.series.length using Nat.strong_induction_on generalizing B F with
+      | h n ih =>
+        by_cases hn : n = 0
+        · have hbot_top : (⊥ : Subobject B) = ⊤ := by
+            rw [← F.head_eq_bot, ← F.last_eq_top]
+            have hi : (0 : Fin (F.series.length + 1)) = Fin.last F.series.length := by
+              apply Fin.ext
+              simp [hlen, hn]
+            exact congrArg F.series hi
+          have hsub : Subsingleton (Subobject B) := by
+            constructor
+            intro P Q
+            apply le_antisymm
+            · calc
+                P ≤ (⊤ : Subobject B) := le_top
+                _ = ⊥ := hbot_top.symm
+                _ ≤ Q := bot_le
+            · calc
+                Q ≤ (⊤ : Subobject B) := le_top
+                _ = ⊥ := hbot_top.symm
+                _ ≤ P := bot_le
+          refine ⟨?_, ?_⟩
+          · rw [isArtinianObject_iff_not_strictAnti]
+            intro f hanti
+            have hlt : f 1 < f 0 := hanti (Nat.zero_lt_succ 0)
+            have heq : f 1 = f 0 := hsub.elim _ _
+            exact (ne_of_lt hlt) heq
+          · rw [isNoetherianObject_iff_not_strictMono]
+            intro f hmono
+            have hlt : f 0 < f 1 := hmono (Nat.zero_lt_succ 0)
+            have heq : f 0 = f 1 := hsub.elim _ _
+            exact (ne_of_lt hlt) heq
+        · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
+          let S := F.toCompositionSeries
+          let P : Subobject B := S.eraseLast.last
+          let eP := Subobject.subobjectOrderIso P
+          have hle (i : Fin (S.eraseLast.length + 1)) : S.eraseLast i ≤ P := by
+            exact (CompositionSeries.strictMono S.eraseLast).monotone (Fin.le_last i)
+          have hcov_subtype {x y : Subobject B} (hx : x ≤ P) (hy : y ≤ P)
+              (hxy : x ⋖ y) :
+              (⟨x, hx⟩ : Set.Iic P) ⋖ ⟨y, hy⟩ := by
+            apply covBy_iff_lt_and_eq_or_eq.mpr
+            refine ⟨hxy.1, ?_⟩
+            intro z hz₁ hz₂
+            have hz₁' : x ≤ z.1 := hz₁
+            have hz₂' : z.1 ≤ y := hz₂
+            rcases hxy.eq_or_eq hz₁' hz₂' with h | h
+            · exact Or.inl (Subtype.ext h)
+            · exact Or.inr (Subtype.ext h)
+          let prevComp : CompositionSeries (Subobject (P : C)) :=
+            { length := S.eraseLast.length
+              toFun := fun i => eP.symm ⟨S.eraseLast i, hle i⟩
+              step := fun i => by
+                change _ ⋖ _
+                apply (apply_covBy_apply_iff eP.symm).2
+                exact hcov_subtype (hle _) (hle _) (S.eraseLast.step i) }
+          let prevSeries : RelSeries
+              {(U, V) : (Subobject (P : C)) × (Subobject (P : C)) | U < V} :=
+            { length := prevComp.length
+              toFun := prevComp
+              step := fun i => (prevComp.step i).lt }
+          have hprev_head : prevSeries.head = ⊥ := by
+            apply eP.injective
+            simp only [prevSeries, prevComp, RelSeries.head, eP.apply_symm_apply, eP.map_bot]
+            apply Subtype.ext
+            change (S.eraseLast).head = (⊥ : Subobject B)
+            rw [RelSeries.head_eraseLast]
+            change F.series.head = (⊥ : Subobject B)
+            exact F.head_eq_bot
+          have hprev_last : prevSeries.last = ⊤ := by
+            apply eP.injective
+            simp only [prevSeries, prevComp, RelSeries.last, eP.apply_symm_apply, eP.map_top]
+            rfl
+          let prevF : FiniteLengthFiltration (P : C) :=
+            { series := prevSeries
+              head_eq_bot := hprev_head
+              last_eq_top := hprev_last
+              simple_factor := fun i =>
+                (simple_subobjectQuotient_iff_covBy
+                  (le_of_lt (by simpa using prevSeries.step i))).mpr
+                  (prevComp.step i) }
+          have hprev_len : prevF.series.length < n := by
+            have hSlen : S.length = n := by
+              change F.series.length = n
+              exact hlen
+            simp [prevF, prevSeries, prevComp, hSlen, hn]
+            exact Nat.pred_lt (by simpa using Nat.ne_of_gt hnpos)
+          obtain ⟨hPArt, hPNoeth⟩ := ih _ hprev_len prevF rfl
+          have hPtop : IsCoatom P := by
+            have hSlen : S.length = n := by
+              change F.series.length = n
+              exact hlen
+            have hS0 : S.length ≠ 0 := by simpa [hSlen] using hn
+            have hrel := S.eraseLast_last_rel_last hS0
+            change P ⋖ S.last at hrel
+            have hSl : S.last = (⊤ : Subobject B) := by
+              change F.series.last = (⊤ : Subobject B)
+              exact F.last_eq_top
+            rw [hSl] at hrel
+            have hrel' : P ⋖ (⊤ : Subobject B) := by
+              exact hrel
+            exact hrel'.isCoatom
+          let Q : Subobject B := Subobject.mk (𝟙 B)
+          have hQtop : Q = (⊤ : Subobject B) := by
+            dsimp [Q]
+            exact Subobject.mk_eq_top_of_isIso _
+          have hPQlt : P < Q := by rw [hQtop]; exact hPtop.lt_top
+          have hPQ : P ≤ Q := le_of_lt hPQlt
+          let T : ShortComplex C :=
+            ShortComplex.mk (Subobject.ofLE P Q hPQ)
+              (cokernel.π (Subobject.ofLE P Q hPQ))
+              (cokernel.condition (Subobject.ofLE P Q hPQ))
+          have hT : T.ShortExact := by
+            apply ShortComplex.ShortExact.mk'
+            · exact ShortComplex.exact_of_g_is_cokernel _
+                (cokernelIsCokernel (Subobject.ofLE P Q hPQ))
+            · infer_instance
+            · change Epi (coequalizer.π (Subobject.ofLE P Q hPQ) 0)
+              exact inferInstanceAs (Epi (coequalizer.π (Subobject.ofLE P Q hPQ) 0))
+          have hsimpleQ : Simple T.X₃ := by
+            change Simple (subobjectQuotient P Q hPQ)
+            apply (simple_subobjectQuotient_iff_covBy hPQ).mpr
+            exact hQtop ▸ hPtop.covBy_top
+          letI : Simple T.X₃ := hsimpleQ
+          have hQArt : IsArtinianObject T.X₃ := by
+            rw [isArtinianObject_iff_not_strictAnti]
+            intro f hanti
+            have h01 := hanti (Nat.zero_lt_succ 0)
+            rcases IsSimpleOrder.eq_bot_or_eq_top (f 0) with h0 | h0
+            · exact (not_lt_of_ge bot_le) (h0 ▸ h01)
+            · rcases IsSimpleOrder.eq_bot_or_eq_top (f 1) with h1 | h1
+              · have h12 := hanti (show 1 < 2 by decide)
+                exact (not_lt_of_ge bot_le) (h1 ▸ h12)
+              · exact (lt_irrefl _ (h1 ▸ h0 ▸ h01))
+          have hQNoeth : IsNoetherianObject T.X₃ := by
+            rw [isNoetherianObject_iff_not_strictMono]
+            intro f hmono
+            have h01 := hmono (Nat.zero_lt_succ 0)
+            rcases IsSimpleOrder.eq_bot_or_eq_top (f 1) with h1 | h1
+            · rcases IsSimpleOrder.eq_bot_or_eq_top (f 0) with h0 | h0
+              · exact (lt_irrefl _ (h0 ▸ h1 ▸ h01))
+              · exact (not_lt_of_ge bot_le) (h1 ▸ h0 ▸ h01)
+            · have h12 := hmono (show 1 < 2 by decide)
+              exact (not_lt_of_ge le_top) (h1 ▸ h12)
+          have hBArt : IsArtinianObject T.X₂ :=
+            (isArtinianObject_iff_of_shortExact T hT).2 ⟨hPArt, hQArt⟩
+          have hBNoeth : IsNoetherianObject T.X₂ :=
+            (isNoetherianObject_iff_of_shortExact T hT).2 ⟨hPNoeth, hQNoeth⟩
+          have hBArt' : IsArtinianObject B := by
+            rw [isArtinianObject_iff_not_strictAnti]
+            intro f hanti
+            let e := Subobject.mapIsoToOrderIso (Subobject.underlyingIso (𝟙 B))
+            let g : ℕ → Subobject T.X₂ := fun n => e.symm (f n)
+            have hnot := (isArtinianObject_iff_not_strictAnti T.X₂).1 hBArt
+            apply hnot g
+            intro a b hab
+            apply (e.symm.lt_iff_lt).2
+            exact hanti hab
+          have hBNoeth' : IsNoetherianObject B := by
+            rw [isNoetherianObject_iff_not_strictMono]
+            intro f hmono
+            let e := Subobject.mapIsoToOrderIso (Subobject.underlyingIso (𝟙 B))
+            let g : ℕ → Subobject T.X₂ := fun n => e.symm (f n)
+            have hnot := (isNoetherianObject_iff_not_strictMono T.X₂).1 hBNoeth
+            apply hnot g
+            intro a b hab
+            apply (e.symm.lt_iff_lt).2
+            exact hmono hab
+          exact ⟨hBArt', hBNoeth'⟩
+    exact hchain F
 
 /-! ## Jordan-Hölder uniqueness -/
 
@@ -594,6 +920,27 @@ theorem jordan_holder
     F.series.length = G.series.length ∧
       ∃ σ : Fin F.series.length ≃ Fin G.series.length,
         ∀ i, Nonempty (F.factor i ≅ G.factor (σ i)) := by
-  sorry
+  let SF := F.toCompositionSeries
+  let SG := G.toCompositionSeries
+  have hhead : SF.head = SG.head := by
+    change F.series.head = G.series.head
+    rw [F.head_eq_bot, G.head_eq_bot]
+  have hlast : SF.last = SG.last := by
+    change F.series.last = G.series.last
+    rw [F.last_eq_top, G.last_eq_top]
+  have heq : CompositionSeries.Equivalent SF SG :=
+    CompositionSeries.jordan_holder SF SG hhead hlast
+  refine ⟨CompositionSeries.Equivalent.length_eq heq, ?_⟩
+  refine ⟨heq.choose, ?_⟩
+  intro i
+  have hi := heq.choose_spec i
+  let hFi : F.series (Fin.castSucc i) ≤ F.series i.succ :=
+    le_of_lt (by simpa using F.series.step i)
+  let hGi : G.series (Fin.castSucc (heq.choose i)) ≤ G.series (heq.choose i).succ :=
+    le_of_lt (G.series.step (heq.choose i))
+  change Nonempty (subobjectQuotient (F.series (Fin.castSucc i)) (F.series i.succ) hFi ≅
+    subobjectQuotient (G.series (Fin.castSucc (heq.choose i)))
+      (G.series (heq.choose i).succ) hGi)
+  exact jordanHolderLattice_iso_subobjectQuotient hFi hGi hi
 
 end Formalization.Books.Homology.Unit09

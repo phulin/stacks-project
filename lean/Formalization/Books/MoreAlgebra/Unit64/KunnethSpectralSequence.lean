@@ -59,27 +59,43 @@ noncomputable def tensorFiltrationSummandMap
     MonoidalCategory.tensorObj
         ((K.X i).filtration.obj p : Mod R)
         ((L.X (n - i)).filtration.obj (p - i) : Mod R) ⟶
-      (tensorUnderlying K L).X n := by
-  sorry
+      ((tensorUnderlying K L).X n) := by
+  let f :
+      MonoidalCategory.tensorObj
+          ((K.X i).filtration.obj p : Mod R)
+          ((L.X (n - i)).filtration.obj (p - i) : Mod R) ⟶
+        MonoidalCategory.tensorObj
+          ((K.X i).carrier : Mod R)
+          ((L.X (n - i)).carrier : Mod R) :=
+    MonoidalCategoryStruct.tensorHom
+      ((K.X i).filtration.obj p).arrow
+      ((L.X (n - i)).filtration.obj (p - i)).arrow
+  exact f ≫
+    HomologicalComplex.ιMapBifunctor (forgetFiltered K) (forgetFiltered L)
+      (MonoidalCategory.curriedTensor (Mod R)) (.up ℤ) i (n - i) n h
 
 /-- The image subobject contributed by the summand with cochain degree `i`.
 The supremum over all `i` is the source's direct sum filtration. -/
 noncomputable def tensorFiltrationSummand
     {R : Type u} [CommRing R] (K L : FilteredComp R)
     (n p i : ℤ) : Subobject ((tensorUnderlying K L).X n) := by
-  sorry
+  exact Subobject.mk
+    (Abelian.image.ι (tensorFiltrationSummandMap K L n p i (by omega)))
 
 /-- The `p`th step of the decreasing filtration on the total tensor product. -/
 noncomputable def tensorFiltrationStep
     {R : Type u} [CommRing R] (K L : FilteredComp R)
     (n p : ℤ) : Subobject ((tensorUnderlying K L).X n) := by
-  sorry
+  exact sSup (Set.range (tensorFiltrationSummand K L n p))
 
 /-- The direct-sum formula for the tensor-product filtration. -/
 def TensorFiltrationFormula
     {R : Type u} [CommRing R] (T : FilteredComp R)
     (K L : FilteredComp R) : Prop := by
-  sorry
+  exact ∃ e : forgetFiltered T ≅ tensorUnderlying K L, ∀ n p : ℤ,
+    Nonempty
+      (Subobject.underlying.obj ((T.X n).filtration.obj p) ≅
+        Subobject.underlying.obj (tensorFiltrationStep K L n p))
 
 /-- A filtered total tensor product together with the source's filtration
 formula.  The underlying-complex isomorphism makes the construction usable
@@ -126,6 +142,14 @@ def FilteredComplexFlat
 def TensorProductFlat
     {R : Type u} [CommRing R] (K L : FilteredComp R) : Prop :=
   FilteredComplexFlat K ∧ FilteredComplexFlat L
+
+/- The K-flat hypotheses used for the derived tensor formula. -/
+def FilteredComplexKFlat
+    {R : Type u} [CommRing R] (K : FilteredComp R) : Prop :=
+  IsKFlat (forgetFiltered K) ∧
+    (∀ p : ℤ, IsKFlat (Formalization.Books.Homology.Unit24.filteredComplexFiltrationStep K p)) ∧
+    (∀ p : ℤ, IsKFlat
+      (Formalization.Books.Homology.Unit24.filteredComplexUnshiftedGradedPiece K p))
 
 /-- The associated-graded tensor-product summand. -/
 noncomputable abbrev gradedTensorSummand
@@ -205,12 +229,19 @@ noncomputable abbrev kunnethD₁Target
 
 /-- The canonical map from the two `d₁` target summands into the next direct
 sum page. -/
+theorem kunnethD₁TargetInclusion_exists
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
+    (p q i j : ℤ) (hij : i + j = p) :
+    Nonempty (kunnethD₁Target K L p q i j ⟶ kunnethE₁Term K L (p + 1) q) := by
+  sorry
+
 noncomputable def kunnethD₁TargetInclusion
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
     (p q i j : ℤ) (hij : i + j = p) :
     kunnethD₁Target K L p q i j ⟶ kunnethE₁Term K L (p + 1) q := by
-  sorry
+  exact Classical.choice (kunnethD₁TargetInclusion_exists K L p q i j hij)
 
 /-- A precise factorization statement for the source's description of `d₁`:
 the differential on the `(i,j)` summand factors through the two summands
@@ -223,7 +254,9 @@ def KunnethD₁Support
     ∃ f : derivedGradedTensorCohomology K L i j (p + q) ⟶
         kunnethD₁Target K L p q i j,
       f ≫ kunnethD₁TargetInclusion K L p q i j hij =
-        eqToHom (by congr 2 <;> omega) ≫
+        eqToHom (by
+          congr 2
+          omega) ≫
           Sigma.ι (fun a : ℤ => derivedGradedTensorCohomology K L a (p - a)
             (p + q)) i ≫ d
 
@@ -279,13 +312,19 @@ structure KunnethFilteredSpectralSequenceData
                 spectralSequence.page 1 (p + 1, q)) ≫ e'.hom)
   convergence : KunnethConvergenceHypotheses K L →
     Formalization.Books.Homology.Unit24.filteredComplexConverges (tensorFilteredComplex K L)
+  bounded : KunnethConvergenceHypotheses K L →
+    Formalization.Books.Homology.Unit24.filteredComplexBounded spectralSequence
+  cohomology_filtration_finite : KunnethConvergenceHypotheses K L →
+    Formalization.Books.Homology.Unit24.FilteredComplexCohomologyFiniteFiltration
+      (tensorFilteredComplex K L)
 
 /-- Existence of the filtered tensor-product spectral sequence under the flat
 term hypotheses. -/
 theorem kunneth_filtered_spectral_sequence_exists
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
-    (hflat : TensorProductFlat K L) :
+    (hflat : TensorProductFlat K L)
+    (hkflat : FilteredComplexKFlat K ∧ FilteredComplexKFlat L) :
     Nonempty (KunnethFilteredSpectralSequenceData K L) := by
   sorry
 
@@ -293,26 +332,29 @@ theorem kunneth_filtered_spectral_sequence_exists
 noncomputable def kunnethFilteredSpectralSequenceData
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
-    (hflat : TensorProductFlat K L) :
+    (hflat : TensorProductFlat K L)
+    (hkflat : FilteredComplexKFlat K ∧ FilteredComplexKFlat L) :
     KunnethFilteredSpectralSequenceData K L :=
-  Classical.choice (kunneth_filtered_spectral_sequence_exists K L hflat)
+  Classical.choice (kunneth_filtered_spectral_sequence_exists K L hflat hkflat)
 
 /-- The chosen filtered tensor-product spectral sequence. -/
 noncomputable abbrev kunnethFilteredSpectralSequence
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
-    (hflat : TensorProductFlat K L) :
+    (hflat : TensorProductFlat K L)
+    (hkflat : FilteredComplexKFlat K ∧ FilteredComplexKFlat L) :
     Formalization.Books.Homology.Unit24.FilteredComplexSpectralSequence (tensorFilteredComplex K L) :=
-  (kunnethFilteredSpectralSequenceData K L hflat).spectralSequence
+  (kunnethFilteredSpectralSequenceData K L hflat hkflat).spectralSequence
 
 /-- Its source's `E₁` page. -/
 theorem kunneth_filtered_spectral_sequence_e₁_page
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
-    (hflat : TensorProductFlat K L) (p q : ℤ) :
-    Nonempty ((kunnethFilteredSpectralSequence K L hflat).page 1 (p, q) ≅
+    (hflat : TensorProductFlat K L)
+    (hkflat : FilteredComplexKFlat K ∧ FilteredComplexKFlat L) (p q : ℤ) :
+    Nonempty ((kunnethFilteredSpectralSequence K L hflat hkflat).page 1 (p, q) ≅
       kunnethE₁Term K L p q) := by
-  exact (kunnethFilteredSpectralSequenceData K L hflat).e₁_page p q
+  exact (kunnethFilteredSpectralSequenceData K L hflat hkflat).e₁_page p q
 
 /-- The chosen spectral sequence converges whenever either source convergence
 alternative holds. -/
@@ -320,9 +362,10 @@ theorem kunneth_filtered_spectral_sequence_converges
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R)
     (hflat : TensorProductFlat K L)
+    (hkflat : FilteredComplexKFlat K ∧ FilteredComplexKFlat L)
     (hconv : KunnethConvergenceHypotheses K L) :
     Formalization.Books.Homology.Unit24.filteredComplexConverges (tensorFilteredComplex K L) := by
-  exact (kunnethFilteredSpectralSequenceData K L hflat).convergence hconv
+  exact (kunnethFilteredSpectralSequenceData K L hflat hkflat).convergence hconv
 
 /-! ## Filtered free resolutions -/
 
@@ -332,18 +375,24 @@ complex-level versions of the three quasi-isomorphisms in the source. -/
 noncomputable def filteredMapUnderlying
     {R : Type u} [CommRing R] {K L : FilteredComp R} (f : K ⟶ L) :
     forgetFiltered K ⟶ forgetFiltered L := by
+  refine { f := fun n => (f.f n).hom, comm' := ?_ }
+  intro n m hnm
   sorry
 
 noncomputable def filteredStepMap
     {R : Type u} [CommRing R] {K L : FilteredComp R} (f : K ⟶ L) (p : ℤ) :
     Formalization.Books.Homology.Unit20.filteredComplexStepComplex K p ⟶
       Formalization.Books.Homology.Unit20.filteredComplexStepComplex L p := by
+  refine { f := fun n => filtrationStepMap (f.f n) p, comm' := ?_ }
+  intro n m hnm
   sorry
 
 noncomputable def filteredGradedMap
     {R : Type u} [CommRing R] {K L : FilteredComp R} (f : K ⟶ L) (p : ℤ) :
     Formalization.Books.Homology.Unit24.filteredComplexUnshiftedGradedPiece K p ⟶
       Formalization.Books.Homology.Unit24.filteredComplexUnshiftedGradedPiece L p := by
+  refine { f := fun n => gradedPieceMap (f.f n) p, comm' := ?_ }
+  intro n m hnm
   sorry
 
 /-- A filtered complex with free terms, free filtration steps, and free graded
@@ -376,6 +425,38 @@ theorem exists_filteredFreeKFlatResolution
     Nonempty (FilteredFreeKFlatResolution K) := by
   sorry
 
+/-- The arbitrary-filtered-complex form of the source's proposition: a
+filtered representative of the derived tensor product, its spectral sequence,
+the `E₁` formula, and the eventual-filtration convergence assertion. -/
+structure DerivedKunnethFilteredData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R) where
+  complex : FilteredComp R
+  derivedTensorIso : Nonempty
+    ((derivedComplexQuotient R).obj (forgetFiltered complex) ≅
+      derivedTensor
+        ((derivedComplexQuotient R).obj (forgetFiltered K))
+        ((derivedComplexQuotient R).obj (forgetFiltered L)))
+  spectralSequence :
+    Formalization.Books.Homology.Unit24.FilteredComplexSpectralSequence complex
+  e₁_page : ∀ p q : ℤ,
+    Nonempty (spectralSequence.page 1 (p, q) ≅ kunnethE₁Term K L p q)
+  convergence : KunnethEventualFiltration K L →
+    Formalization.Books.Homology.Unit24.filteredComplexConverges complex
+  bounded : KunnethEventualFiltration K L →
+    Formalization.Books.Homology.Unit24.filteredComplexBounded spectralSequence
+  cohomology_filtration_finite : KunnethEventualFiltration K L →
+    Formalization.Books.Homology.Unit24.FilteredComplexCohomologyFiniteFiltration
+      complex
+
+/-- Existence of the filtered derived tensor product and its source `E₁`
+page, with the source's convergence hypotheses. -/
+theorem proposition_kunneth_filtered
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (Mod R)] (K L : FilteredComp R) :
+    Nonempty (DerivedKunnethFilteredData K L) := by
+  sorry
+
 /-! ## The bounded Künneth spectral sequence -/
 
 /-- Cohomology of a bounded derived object in degree `n`. -/
@@ -401,6 +482,20 @@ noncomputable abbrev boundedDerivedTensorCohomology
     [HasDerivedCategory.{w} (Mod R)]
     (K L : Formalization.Books.MoreAlgebra.Unit56.DBounded R) (n : ℤ) : Mod R :=
   (derivedCohomologyFunctor (Mod R) n).obj (boundedDerivedTensor K L)
+
+/-- A chosen zero object of the module category, used for negative Tor
+indices. -/
+noncomputable abbrev zeroMod
+    {R : Type u} [CommRing R] : Mod R := ModuleCat.of R (Fin 0 → R)
+
+/-- The natural-number-indexed Tor functor extended to an integer index by
+declaring its negative-index part to be zero. -/
+noncomputable def integerTor
+    {R : Type u} [CommRing R] (M N : Mod R) (n : ℤ) : Mod R :=
+  if _h : 0 ≤ n then
+    Formalization.Books.Algebra.Unit75.Tor M N n.toNat
+  else
+    zeroMod
 
 /-- The `E₂`-cohomological spectral sequence with the source's bidegree.
 The bidegree `(r,1-r)` is encoded by Mathlib's spectral-sequence shape. -/
@@ -435,9 +530,9 @@ structure BoundedKunnethSpectralSequenceData
   e₂_page : ∀ p q : ℤ,
     Nonempty ((spectralSequence.page 2).X (p, q) ≅
       ∐ fun ij : {x : ℤ × ℤ // x.1 + x.2 = q} =>
-        Formalization.Books.Algebra.Unit75.Tor
+        integerTor
           (boundedDerivedCohomology K ij.1.1)
-          (boundedDerivedCohomology L ij.1.2) (-p).toNat)
+          (boundedDerivedCohomology L ij.1.2) (-p))
   convergence : BoundedKunnethConvergence spectralSequence K L
 
 /-- Existence of the bounded Künneth spectral sequence. -/

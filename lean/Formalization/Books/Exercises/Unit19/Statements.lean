@@ -533,15 +533,13 @@ private lemma sourceBasePlusCoefficientPrime_isPrime :
           (sourcePolynomialQuotientEquiv :
             Polynomial (Polynomial ℚ ⧸ sourceInnerPrime) →+*
               Polynomial (Polynomial ℚ) ⧸ sourceCoefficientPrime)).IsPrime := by
-    letI := hprimeA
-    exact Ideal.map_isPrime_of_equiv sourcePolynomialQuotientEquiv
+    exact @Ideal.map_isPrime_of_equiv _ _ _ _ _ _ _ sourcePolynomialQuotientEquiv _ hprimeA
   have hrel :
       sourcePolynomialQuotientEquiv
           (sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)) =
         Ideal.Quotient.mk sourceCoefficientPrime sourceSPolynomial := by
-    simpa [sourcePolynomialQuotientEquiv, sourceCoefficientPrime] using
-      (Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
-        sourceInnerPrime sourceSPolynomial)
+    exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
+      sourceInnerPrime sourceSPolynomial
   have heq :
       (Ideal.span {sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)} :
         Ideal (Polynomial (Polynomial ℚ ⧸ sourceInnerPrime))).map
@@ -573,6 +571,8 @@ private lemma sourceBasePlusCoefficientPrime_isPrime :
       (H := hprimeMapped)
   rw [Ideal.comap_map_quotientMk] at hprimeSup
   simpa [sup_comm] using hprimeSup
+attribute [local instance] sourceSPolynomial_span_isPrime
+
 private lemma sourceT_quotient_isEisenstein :
     (sourceTPolynomial.map
       (Ideal.Quotient.mk (Ideal.span {sourceSPolynomial}))).IsEisensteinAt
@@ -589,20 +589,15 @@ private lemma sourceT_quotient_isEisenstein :
       (Ideal.span {Ideal.Quotient.mk (Ideal.span {sourceSPolynomial})
         (Polynomial.C (Polynomial.X - Polynomial.C (-1 : ℚ)))} :
         Ideal (Polynomial (Polynomial ℚ) ⧸ Ideal.span {sourceSPolynomial})).IsPrime := by
-    letI :
+    have hprimeSup :
         (Ideal.span {sourceSPolynomial} : Ideal (Polynomial (Polynomial ℚ))) ⊔
           sourceCoefficientPrime |>.IsPrime :=
       sourceBasePlusCoefficientPrime_isPrime
     have hp :=
-      Ideal.isPrime_map_quotientMk_of_isPrime
-        (I := Ideal.span {sourceSPolynomial})
-        (p := (Ideal.span {sourceSPolynomial} :
-          Ideal (Polynomial (Polynomial ℚ))) ⊔ sourceCoefficientPrime)
+      @Ideal.isPrime_map_quotientMk_of_isPrime _ _ _ _ _ hprimeSup
         le_sup_left
     simpa [Ideal.map_sup, Ideal.map_quotient_self, bot_sup_eq, hcoeff,
       Ideal.map_span] using hp
-  letI : (Ideal.span {sourceSPolynomial} :
-      Ideal (Polynomial (Polynomial ℚ))).IsPrime := sourceSPolynomial_span_isPrime
   have hTmonic : sourceTPolynomial.Monic := by
     rw [sourceTPolynomial, ← Polynomial.C_mul, ← Polynomial.C_mul]
     exact Polynomial.monic_X_pow_sub_C _ (by norm_num)
@@ -691,9 +686,8 @@ private lemma sourceT_quotient_isEisenstein :
         sourcePolynomialQuotientEquiv
             (sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)) =
           qI sourceSPolynomial := by
-      simpa [sourcePolynomialQuotientEquiv, sourceCoefficientPrime, qI] using
-        (Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
-          sourceInnerPrime sourceSPolynomial)
+      exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
+        sourceInnerPrime sourceSPolynomial
     have hmapJ :
         (Ideal.span {sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)} :
           Ideal (Polynomial (Polynomial ℚ ⧸ sourceInnerPrime))).map
@@ -741,13 +735,11 @@ private lemma sourceT_quotient_isEisenstein :
         (Ideal.symm_apply_mem_of_equiv_iff).2 hbA'
       have hbA' : braw.map (Ideal.Quotient.mk sourceInnerPrime) ∈
           Ideal.span {sourceSPolynomial.map (Ideal.Quotient.mk sourceInnerPrime)} := by
-        have hmap_mk :=
-          Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
-            sourceInnerPrime braw
         have hmap_mk' :
             sourcePolynomialQuotientEquiv
                 (braw.map (Ideal.Quotient.mk sourceInnerPrime)) = qI braw := by
-          simpa [sourcePolynomialQuotientEquiv, sourceCoefficientPrime, qI] using hmap_mk
+          exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk
+            sourceInnerPrime braw
         have hsymm :
             sourcePolynomialQuotientEquiv.symm (qI braw) =
               braw.map (Ideal.Quotient.mk sourceInnerPrime) := by

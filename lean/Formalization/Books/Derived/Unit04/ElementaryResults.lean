@@ -931,7 +931,10 @@ right inverse. -/
 theorem distinguished_triangle_second_right_inverse
     {T : Triangle C} (hT : T ∈ distTriang C) (hzero : T.mor₃ = 0) :
     ∃ s : T.obj₃ ⟶ T.obj₂, TriangleRightInverse T.mor₂ s := by
-  sorry
+  obtain ⟨e, _, he₂⟩ := exists_iso_binaryBiproduct_of_distTriang T hT hzero
+  refine ⟨biprod.inr ≫ e.inv, ?_⟩
+  dsimp [TriangleRightInverse]
+  simp only [Category.assoc, he₂, e.inv_hom_id_assoc, biprod.inr_snd]
 
 /-- A right inverse of the second map makes the biproduct comparison map an
 isomorphism. -/
@@ -939,7 +942,57 @@ theorem split_triangle_biproduct_iso
     {T : Triangle C} (hT : T ∈ distTriang C) (s : T.obj₃ ⟶ T.obj₂)
     (hs : TriangleRightInverse T.mor₂ s) :
     IsIso (biprod.desc T.mor₁ s) := by
-  sorry
+  change s ≫ T.mor₂ = 𝟙 T.obj₃ at hs
+  have hzero : T.mor₃ = 0 := by
+    calc
+      T.mor₃ = 𝟙 T.obj₃ ≫ T.mor₃ := by simp
+      _ = (s ≫ T.mor₂) ≫ T.mor₃ := by rw [hs]
+      _ = 0 := by rw [Category.assoc, comp_distTriang_mor_zero₂₃ T hT, comp_zero]
+  have hfactor : (𝟙 T.obj₂ - T.mor₂ ≫ s) ≫ T.mor₂ = 0 := by
+    rw [sub_comp, Category.id_comp, Category.assoc, hs, Category.comp_id, sub_self]
+  obtain ⟨f, hf⟩ := T.coyoneda_exact₂ hT (𝟙 T.obj₂ - T.mor₂ ≫ s) hfactor
+  have hmono : Mono T.mor₁ := T.mono₁ hT hzero
+  have hf₁ : T.mor₁ ≫ f = 𝟙 T.obj₁ := by
+    rw [← cancel_mono T.mor₁]
+    calc
+      (T.mor₁ ≫ f) ≫ T.mor₁ = T.mor₁ ≫ (f ≫ T.mor₁) := by simp [Category.assoc]
+      _ = T.mor₁ ≫ (𝟙 T.obj₂ - T.mor₂ ≫ s) := by rw [← hf]
+      _ = T.mor₁ := by
+        rw [comp_sub, Category.comp_id, ← Category.assoc,
+          show T.mor₁ ≫ T.mor₂ = 0 from comp_distTriang_mor_zero₁₂ T hT]
+        simp
+      _ = 𝟙 T.obj₁ ≫ T.mor₁ := by simp
+  have hsf : s ≫ f = 0 := by
+    rw [← cancel_mono T.mor₁]
+    calc
+      (s ≫ f) ≫ T.mor₁ = s ≫ (f ≫ T.mor₁) := by simp [Category.assoc]
+      _ = s ≫ (𝟙 T.obj₂ - T.mor₂ ≫ s) := by rw [← hf]
+      _ = 0 := by
+        rw [comp_sub, Category.comp_id, ← Category.assoc,
+          show s ≫ T.mor₂ = 𝟙 T.obj₃ from hs]
+        simp
+      _ = 0 ≫ T.mor₁ := by simp
+  let r : T.obj₂ ⟶ T.obj₁ ⊞ T.obj₃ := biprod.lift f T.mor₂
+  let d : T.obj₁ ⊞ T.obj₃ ⟶ T.obj₂ := biprod.desc T.mor₁ s
+  have hdr : d ≫ r = 𝟙 _ := by
+    dsimp [d, r]
+    apply biprod.hom_ext'
+    · apply biprod.hom_ext
+      · simp only [biprod.inl_desc_assoc, Category.assoc, biprod.lift_fst, hf₁,
+          biprod.inl_fst, Category.id_comp, Category.comp_id]
+      · simp only [biprod.inl_desc_assoc, Category.assoc, biprod.lift_snd,
+          comp_distTriang_mor_zero₁₂ T hT, zero_comp, biprod.inl_snd,
+          Category.id_comp]
+    · apply biprod.hom_ext
+      · simp only [biprod.inr_desc_assoc, Category.assoc, biprod.lift_fst, hsf,
+          biprod.inr_fst, Category.id_comp, Category.comp_id]
+      · simp only [biprod.inr_desc_assoc, Category.assoc, biprod.lift_snd, hs,
+          biprod.inr_snd, Category.id_comp]
+  have hrd : r ≫ d = 𝟙 _ := by
+    dsimp [r, d]
+    rw [biprod.lift_desc, ← hf]
+    simp
+  exact ⟨⟨r, hdr, hrd⟩⟩
 
 /-- The standard split triangle is distinguished. -/
 theorem split_triangle_distinguished (X Z : C) :

@@ -1455,7 +1455,6 @@ theorem exteriorPower_relation_range_eq_kernel
               exact Submodule.mem_top
             refine Submodule.span_induction (p := fun u _ => F u = 0) ?_ ?_ ?_ ?_ hu
             · rintro v ⟨r, rfl⟩
-              change F (exteriorPower.ιMulti R k r) = 0
               dsimp [F]
               change exteriorPowerQuotientMap (Nat.succ k) g
                 (exteriorPowerRelationMap f hn

@@ -2002,8 +2002,6 @@ structure TotalComplexShiftData [HasCountableCoproducts C]
 theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) :
     Nonempty (TotalComplexShiftData A a b) := by
-  sorry
-  /- Original proof attempt:
   classical
   have e_hom_obj (n p : ℤ) :
       A.obj p (n + (a + b) - p) =
@@ -2325,7 +2323,6 @@ theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
   dsimp [iso, e]
   rfl
 
-  -/
 
 noncomputable def totalComplexShiftData [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) : TotalComplexShiftData A a b :=
@@ -2368,7 +2365,45 @@ theorem totalMapComponent_comm [HasCountableCoproducts C]
     (hnm : ComplexShape.Rel (ComplexShape.up ℤ) n m) :
     totalMapComponent f n ≫ (totalComplex B).d n m =
       (totalComplex A).d n m ≫ totalMapComponent f m := by
-  sorry
+  have hnm' : n + 1 = m := by
+    simpa only [ComplexShape.up_Rel] using hnm
+  subst m
+  apply Sigma.hom_ext
+  intro p
+  simp [totalComplex, totalMapComponent, totalDifferential, Category.assoc]
+  have h1 :
+      f.f p (n - p) ≫ totalD1Component B n p ≫
+          Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) (p + 1) =
+        totalD1Component A n p ≫ f.f (p + 1) (n + 1 - (p + 1)) ≫
+          Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) (p + 1) := by
+    dsimp [totalD1Component]
+    simp only [Category.assoc]
+    conv_rhs =>
+      rw [← eqToHom_naturality_assoc
+        (fun q : ℤ => f.f (p + 1) q)
+        (show n - p = n + 1 - (p + 1) by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun k => k ≫ eqToHom (by congr 1 <;> ring) ≫
+        Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) (p + 1))
+        (f.comm1 p (n - p)).symm
+  have h2core :
+      f.f p (n - p) ≫ totalD2Component B n p ≫
+          Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) p =
+        totalD2Component A n p ≫ f.f p (n + 1 - p) ≫
+          Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) p := by
+    dsimp [totalD2Component]
+    simp only [Category.assoc]
+    conv_rhs =>
+      rw [← eqToHom_naturality_assoc
+        (fun q : ℤ => f.f p q)
+        (show n - p + 1 = n + 1 - p by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun k => k ≫ eqToHom (by congr 1 <;> ring) ≫
+        Sigma.ι (fun r : ℤ => B.obj r (n + 1 - r)) p)
+        (f.comm2 p (n - p)).symm
+  have h2 := congrArg (fun k => p.negOnePow • k) h2core
+  rw [h1]
+  simpa [Category.assoc, Linear.units_smul_comp] using h2
 
 def totalMap [HasCountableCoproducts C]
     {A B : DoubleComplex C} (f : DoubleComplexMap A B) :
@@ -2378,12 +2413,30 @@ def totalMap [HasCountableCoproducts C]
 
 theorem totalMap_id [HasCountableCoproducts C] (A : DoubleComplex C) :
     totalMap (𝟙 A) = 𝟙 (totalComplex A) := by
-  sorry
+  apply HomologicalComplex.Hom.ext
+  ext n
+  apply Sigma.hom_ext
+  intro p
+  simp only [totalMap, totalMapComponent, Sigma.ι_desc]
+  dsimp [totalComplex]
+  have h_id : (𝟙 A : DoubleComplexMap A A).f p (n - p) = 𝟙 _ := rfl
+  rw [h_id]
+  simp
 
 theorem totalMap_comp [HasCountableCoproducts C]
     {A B D : DoubleComplex C} (f : A ⟶ B) (g : B ⟶ D) :
     totalMap (f ≫ g) = totalMap f ≫ totalMap g := by
-  sorry
+  apply HomologicalComplex.Hom.ext
+  ext n
+  apply Sigma.hom_ext
+  intro p
+  simp [totalMap, totalMapComponent, totalComplex,
+    HomologicalComplex.comp_f, Category.assoc]
+  have hcomp :
+      (f ≫ g : DoubleComplexMap A D).f p (n - p) =
+        f.f p (n - p) ≫ g.f p (n - p) := rfl
+  rw [hcomp]
+  simp [Category.assoc]
 
 /-- Totalization is a functor on double complexes whenever the required
     countable coproducts exist. -/

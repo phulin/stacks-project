@@ -309,7 +309,9 @@ theorem projToPrimeSpectrum_inducing
   · rintro ⟨s, rfl⟩
     refine ⟨PrimeSpectrum.zeroLocus s, ?_, ?_⟩
     · exact (PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨s, rfl⟩
-    rfl
+    simp [AlgebraicGeometry.Proj.toSpecZero,
+      AlgebraicGeometry.Proj.basicOpenToSpec,
+      ProjectiveSpectrum.Proj.toSpec]
   · rintro ⟨t, ht, h⟩
     obtain ⟨s, rfl⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus _).1 ht
     exact ⟨s, h.symm⟩
@@ -660,7 +662,9 @@ theorem oneVariableDegreeZeroEquiv_exists (A : Type u) [CommRing A] :
     have hdeg : (p : oneVariablePolynomialRing A).totalDegree = 0 :=
       (MvPolynomial.totalDegree_zero_iff_isHomogeneous (Fin 1)).mpr hp
     rw [MvPolynomial.totalDegree_eq_zero_iff_eq_C.mp hdeg]
-    rfl
+    simp [AlgebraicGeometry.Proj.toSpecZero,
+      AlgebraicGeometry.Proj.basicOpenToSpec,
+      ProjectiveSpectrum.Proj.toSpec]
   have hφ : Function.Bijective φ := by
     constructor
     · intro p q hpq
@@ -1105,8 +1109,8 @@ private lemma blowup_chart_awayMap_bijective
 theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :
-    IsHomeomorph (blowupRestrictionMap P) := by sorry
-/-
+    IsHomeomorph (blowupRestrictionMap P) := by
+  /-
   letI : GradedRing P.gradedPieces := P.graded
   let β := {p : PrimeSpectrum A // p ∈ blowupBaseOpen I}
   let α := {x : blowupProjPoints P // (blowupMap P).base x ∈ blowupBaseOpen I}
@@ -1150,21 +1154,55 @@ theorem blowupRestrictionMap_isHomeomorph
   intro a
   let f : blowupAlgebra I := reesHomogeneousElement I 1
     (a := (a : A)) (by simpa using a.2)
+  have hbase (x : blowupProjPoints P) :
+      (a : A) ∈ ((blowupMap P).base x).asIdeal ↔
+          (P.degreeZeroEquiv.symm (a : A) : blowupAlgebra I) ∈
+          x.asHomogeneousIdeal := by
+    change (a : A) ∈
+        (PrimeSpectrum.comap P.degreeZeroEquiv.symm.toRingHom
+          ((AlgebraicGeometry.Proj.toSpecZero P.gradedPieces).base x)).asIdeal ↔ _
+    change (P.degreeZeroEquiv.symm (a : A) : P.gradedPieces 0) ∈
+        ((AlgebraicGeometry.Proj.toSpecZero P.gradedPieces).base x).asIdeal ↔ _
+    let x' : ((AlgebraicGeometry.«Proj» P.gradedPieces).toLocallyRingedSpace.toTopCat).carrier := x
+    let x₁ : {x : ProjectiveSpectrum P.gradedPieces //
+        x ∈ (ProjectiveSpectrum.basicOpen P.gradedPieces
+          (1 : blowupAlgebra I) : Set _)} :=
+      ⟨x', by rw [ProjectiveSpectrum.basicOpen_one]; trivial⟩
+    have hzero : ((AlgebraicGeometry.Proj.toSpecZero P.gradedPieces).base x').asIdeal =
+        Ideal.comap
+          (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+            (Submonoid.powers (1 : blowupAlgebra I)))
+          ((ProjectiveSpectrum.Proj.toSpec P.gradedPieces 1).base x₁).asIdeal := by
+      have ht := ProjectiveSpectrum.Proj.toSpec_base_apply_eq_comap
+        (𝒜 := P.gradedPieces) (f := (1 : blowupAlgebra I)) x₁
+      have ht' := congrArg
+        (fun q => Ideal.comap
+          (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
+            (Submonoid.powers (1 : blowupAlgebra I))) q.asIdeal) ht
+      simpa [AlgebraicGeometry.Proj.toSpecZero,
+        AlgebraicGeometry.Proj.basicOpenToSpec,
+        AlgebraicGeometry.Spec.map_base,
+        ProjectiveSpectrum.Proj.toSpec] using ht'
+    rw [hzero]
   have hf : f ∈ P.gradedPieces 1 := by
     rw [P.gradedPieces_spec]
     exact ⟨a.1, by simpa using a.2, by rfl⟩
   have hbij := blowup_chart_awayMap_bijective hf (by omega) a.1
     (by simpa using a.2) rfl
   let r := P.degreeZeroEquiv.symm (a : A)
-  let e : Localization.Away r ≃+*
+  let g0 : P.gradedPieces 0 →+*
       degreeZeroLocalization P.gradedPieces f :=
+    HomogeneousLocalization.fromZeroRingHom P.gradedPieces (Submonoid.powers f)
+  let e : Localization.Away r ≃+*
+      Localization.Away (g0 r) :=
     RingEquiv.ofBijective
       (Localization.awayMap
-        (HomogeneousLocalization.fromZeroRingHom P.gradedPieces
-          (Submonoid.powers f)) r) hbij
-  let s : Set (PrimeSpectrum A) :=
-    {p | e₀.symm p ∈ PrimeSpectrum.basicOpen r}
-  have hs : s ⊆ blowupBaseOpen I := by
+        g0 r) hbij
+  let s₀ : Set (PrimeSpectrum (P.gradedPieces 0)) :=
+    (PrimeSpectrum.basicOpen r : Set (PrimeSpectrum (P.gradedPieces 0)))
+  let sA : Set (PrimeSpectrum A) :=
+    {p : PrimeSpectrum A | e₀.symm p ∈ s₀}
+  have hs : sA ⊆ blowupBaseOpen I := by
     intro p hp
     change p ∉ PrimeSpectrum.zeroLocus (I : Set A)
     intro hpz
@@ -1176,18 +1214,33 @@ theorem blowupRestrictionMap_isHomeomorph
           p.asIdeal ↔ (a : A) ∉ p.asIdeal
       simp
     exact hmem.mp hp hpa
-  let hsub := localizationAwayComapSubtype_isHomeomorph (r : P.gradedPieces 0)
-  let htransport := homeomorphSubtypePreimage_isHomeomorph e₀ s
+  let hsub₀ := localizationAwayComapSubtype_isHomeomorph (r : P.gradedPieces 0)
+  let hsub₁ := localizationAwayComapSubtype_isHomeomorph (g0 r)
+  let htransport := homeomorphSubtypePreimage_isHomeomorph e₀ s₀
   let hnested := subtypeSubtype_isHomeomorph hs
-  let H : {x : blowupProjPoints P // x ∈ dPlus P.gradedPieces f} ≃ₜ
-      {x : α // x ∈ (U a).carrier} :=
-    (dPlusHomeomorph P.graded hf (by omega)).trans
-      ((PrimeSpectrum.homeomorphOfRingEquiv e).symm.trans
-        (hsub.homeomorph.trans (htransport.homeomorph.trans hnested.homeomorph)))
+  let c := dPlusHomeomorph P.graded hf (Nat.zero_lt_succ 0)
+  let sx : Set {x : blowupProjPoints P // x ∈ dPlus P.gradedPieces f} :=
+    c ⁻¹' (PrimeSpectrum.basicOpen (g0 r) : Set _)
+  let hc₀ := homeomorphSubtypePreimage_isHomeomorph c sx
+  let hc₁ : {x : {x : blowupProjPoints P // x ∈ dPlus P.gradedPieces f} //
+      x ∈ sx} ≃ₜ
+      {q : PrimeSpectrum (degreeZeroLocalization P.gradedPieces f) //
+        q ∈ PrimeSpectrum.basicOpen (g0 r)} :=
+    hc₀.homeomorph.trans
+      (Homeomorph.ofEqSubtypes (by
+        funext q
+        simp [sx]))
+  let Hchart : {x : {x : blowupProjPoints P // x ∈ dPlus P.gradedPieces f} //
+      x ∈ sx} ≃ₜ {p : β // p ∈ (U a).carrier} :=
+    hc₁.trans
+      (hsub₁.homeomorph.symm.trans
+        ((PrimeSpectrum.homeomorphOfRingEquiv e).symm.trans
+          (hsub₀.homeomorph.trans
+            (htransport.homeomorph.trans hnested.homeomorph))))
   apply (isHomeomorph_iff_exists_homeomorph).2
-  refine ⟨H, ?_⟩
   sorry
--/
+  -/
+  sorry
 theorem strictTransform_conditions
     {A : Type u} [CommRing A] {I : Ideal A}
     {P : BlowupPresentation I} (D : StrictTransformData P) :
@@ -1324,11 +1377,58 @@ noncomputable def twoVariableBlowupPresentation (k : Type u) [Field k] :
   Classical.choice (twoVariableBlowupPresentation_exists k)
 
 theorem twoVariableXIdeal_isPrime (k : Type u) [Field k] :
-    (twoVariableXIdeal k).IsPrime := by sorry
+    (twoVariableXIdeal k).IsPrime := by
+  rw [twoVariableXIdeal]
+  apply (Ideal.span_singleton_prime (MvPolynomial.X_ne_zero _)).2
+  exact MvPolynomial.X_prime
 theorem twoVariableYIdeal_isPrime (k : Type u) [Field k] :
-    (twoVariableYIdeal k).IsPrime := by sorry
+    (twoVariableYIdeal k).IsPrime := by
+  rw [twoVariableYIdeal]
+  apply (Ideal.span_singleton_prime (MvPolynomial.X_ne_zero _)).2
+  exact MvPolynomial.X_prime
 theorem twoVariableParabolaIdeal_isPrime (k : Type u) [Field k] :
-    (twoVariableParabolaIdeal k).IsPrime := by sorry
+    (twoVariableParabolaIdeal k).IsPrime := by
+  let e := MvPolynomial.finSuccEquiv k 1
+  let f : MvPolynomial (Fin 2) k :=
+    twoVariableX k - twoVariableY k ^ 2
+  let g : Polynomial (MvPolynomial (Fin 1) k) :=
+    Polynomial.X - Polynomial.C (MvPolynomial.X 0 ^ 2)
+  have hg : (Ideal.span {g}).IsPrime := by
+    change (Ideal.span {Polynomial.X -
+      Polynomial.C (MvPolynomial.X (0 : Fin 1) ^ 2)}).IsPrime
+    apply (Ideal.span_singleton_prime (Polynomial.X_sub_C_ne_zero _)).2
+    exact Polynomial.prime_X_sub_C _
+  letI : (Ideal.span {g}).IsPrime := hg
+  have hmap :
+      (Ideal.map (e.symm : Polynomial (MvPolynomial (Fin 1) k) →+*
+        MvPolynomial (Fin 2) k) (Ideal.span {g})).IsPrime := by
+    exact Ideal.map_isPrime_of_equiv e.symm
+  have heq :
+      Ideal.map (e.symm : Polynomial (MvPolynomial (Fin 1) k) →+*
+        MvPolynomial (Fin 2) k) (Ideal.span {g}) = Ideal.span {f} := by
+    have hterm : e.symm g = f := by
+      apply e.injective
+      change e (e.symm (Polynomial.X -
+          Polynomial.C (MvPolynomial.X (0 : Fin 1) ^ 2))) =
+        e (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2)
+      simp only [map_sub, map_pow, e.apply_symm_apply,
+        MvPolynomial.finSuccEquiv_X_zero, MvPolynomial.finSuccEquiv_X_succ]
+      · have he0 : e (MvPolynomial.X (0 : Fin 2)) = Polynomial.X := by
+          simpa [e] using (MvPolynomial.finSuccEquiv_X_zero (R := k) (n := 1))
+        have he1 : e (MvPolynomial.X (1 : Fin 2)) =
+            Polynomial.C (MvPolynomial.X (0 : Fin 1)) := by
+          simpa [e] using
+            (MvPolynomial.finSuccEquiv_X_succ (R := k) (n := 1)
+              (j := (0 : Fin 1)))
+        simp only [he0, he1]
+    rw [Ideal.map_span]
+    rw [Set.image_singleton]
+    change Ideal.span {e.symm g} = Ideal.span {f}
+    rw [hterm]
+  rw [twoVariableParabolaIdeal]
+  change (Ideal.span {f}).IsPrime
+  rw [← heq]
+  exact hmap
 theorem twoVariableXStrictTransformData_exists (k : Type u) [Field k] :
     Nonempty (PrimeStrictTransformData (twoVariableBlowupPresentation k)
       (twoVariableXIdeal k) (twoVariableXIdeal_isPrime k)) := by sorry

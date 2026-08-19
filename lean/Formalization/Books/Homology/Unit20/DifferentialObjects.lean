@@ -316,7 +316,6 @@ theorem plainDifferentialShortExact_homology_long_exact
   have hL : Nonempty (LongExactSequence L) := by
     refine ⟨{ differential := differential, complex := ?_, exact := ?_ }⟩
     · intro n
-      dsimp [L]
       by_cases h0 : n % 3 = 0
       · have h1 : (n + 1) % 3 = 1 := by omega
         have h2 : (n + 1 + 1) % 3 = 2 := by omega
@@ -336,7 +335,9 @@ theorem plainDifferentialShortExact_homology_long_exact
           simp only [differential, *]
           dsimp [f, g]
           simp_all
-          have hfg : hf ≫ hg = 0 := by sorry
+          have hfg : hf ≫ hg = 0 := by
+            rw [← HomologicalComplex.homologyMap_comp, T.zero,
+              HomologicalComplex.homologyMap_zero]
           rw [← Category.assoc, ← Category.assoc, hfg]
           simp
         · have h2 : n % 3 = 2 := by omega
@@ -353,23 +354,92 @@ theorem plainDifferentialShortExact_homology_long_exact
       dsimp [L]
       by_cases h0 : n % 3 = 0
       · have h1 : (n + 1) % 3 = 1 := by omega
-        simp [differential, *]
-        dsimp [b, f]
-        simp_all
-        exact sorry
+        have h2 : (n + 1 + 1) % 3 = 2 := by omega
+        have u0 : L n = plainDifferentialHomology D := by
+          dsimp [L]
+          rw [if_pos h0]
+        have u1 : L (n + 1) = plainDifferentialHomology A := by
+          dsimp [L]
+          rw [if_neg (by omega), if_pos h1]
+        have u2 : L (n + 1 + 1) = plainDifferentialHomology B := by
+          dsimp [L]
+          rw [if_neg (by omega), if_neg (by omega)]
+        have hn : 3 ∣ n := by omega
+        have hn1 : ¬3 ∣ n + 1 := by omega
+        have hn0' : n % 3 = 0 := by omega
+        have hn01 : n % 3 ≠ 1 := by omega
+        have hn10 : (n + 1) % 3 ≠ 0 := by omega
+        have hn11 : (n + 1) % 3 = 1 := by omega
+        have hn20 : (n + 1 + 1) % 3 ≠ 0 := by omega
+        have hn21 : (n + 1 + 1) % 3 ≠ 1 := by omega
+        refine ShortComplex.exact_of_iso
+          (ShortComplex.isoMk
+            (eD.trans (eqToIso u0.symm))
+            (eA.trans (eqToIso u1.symm))
+            (eB.trans (eqToIso u2.symm))
+            (by simp_all [differential, b, f, δ, hf, Category.assoc])
+            (by simp_all [differential, b, f, δ, hf, Category.assoc]))
+          (hT.homology_exact₁ PUnit.unit PUnit.unit (by rfl))
       · by_cases h1 : n % 3 = 1
         · have h2 : (n + 1) % 3 = 2 := by omega
-          simp [differential, *]
-          dsimp [f, g]
-          simp_all
-          exact sorry
+          have hn0' : n % 3 ≠ 0 := by omega
+          have hn01 : n % 3 = 1 := by omega
+          have hn10 : (n + 1) % 3 ≠ 0 := by omega
+          have hn11 : (n + 1) % 3 ≠ 1 := by
+            rw [h2]
+            norm_num
+          have hn20 : (n + 1 + 1) % 3 = 0 := by
+            norm_num [Int.add_emod, h2]
+          have hn21 : (n + 1 + 1) % 3 ≠ 1 := by
+            rw [hn20]
+            norm_num
+          have u0 : L n = plainDifferentialHomology A := by
+            dsimp [L]
+            rw [if_neg (by omega), if_pos h1]
+          have u1 : L (n + 1) = plainDifferentialHomology B := by
+            dsimp [L]
+            rw [if_neg (by omega), if_neg (by omega)]
+          have u2 : L (n + 1 + 1) = plainDifferentialHomology D := by
+            dsimp [L]
+            rw [if_pos (by norm_num [Int.add_emod, h2])]
+          have hn : ¬3 ∣ n := by omega
+          have hn1 : ¬3 ∣ n + 1 := by omega
+          refine ShortComplex.exact_of_iso
+            (ShortComplex.isoMk
+              (eA.trans (eqToIso u0.symm))
+              (eB.trans (eqToIso u1.symm))
+              (eD.trans (eqToIso u2.symm))
+              (by simp_all [differential, f, g, hf, hg, Category.assoc])
+              (by simp_all [differential, f, g, hf, hg, Category.assoc]))
+            (hT.homology_exact₂ PUnit.unit)
         · have h2 : n % 3 = 2 := by omega
           have hn0 : (n + 1) % 3 = 0 := by omega
-          simp [differential, *]
-          dsimp [g, b]
-          simp_all
-          exact sorry
-  exact sorry
+          have hn0' : n % 3 ≠ 0 := by omega
+          have hn01 : n % 3 ≠ 1 := by omega
+          have hn02 : n % 3 = 2 := by omega
+          have hn10 : (n + 1) % 3 = 0 := by omega
+          have hn20 : (n + 1 + 1) % 3 ≠ 0 := by omega
+          have hn21 : (n + 1 + 1) % 3 = 1 := by omega
+          have u0 : L n = plainDifferentialHomology B := by
+            dsimp [L]
+            rw [if_neg (by omega), if_neg (by omega)]
+          have u1 : L (n + 1) = plainDifferentialHomology D := by
+            dsimp [L]
+            rw [if_pos hn0]
+          have u2 : L (n + 1 + 1) = plainDifferentialHomology A := by
+            dsimp [L]
+            rw [if_neg (by omega), if_pos (by omega)]
+          have hn : ¬3 ∣ n := by omega
+          have hn1 : 3 ∣ n + 1 := by omega
+          refine ShortComplex.exact_of_iso
+            (ShortComplex.isoMk
+              (eB.trans (eqToIso u0.symm))
+              (eD.trans (eqToIso u1.symm))
+              (eA.trans (eqToIso u2.symm))
+              (by simp_all [differential, g, b, hg, δ, Category.assoc])
+              (by simp_all [differential, g, b, hg, δ, Category.assoc]))
+            (hT.homology_exact₃ PUnit.unit PUnit.unit (by rfl))
+  exact hL
 
 /-! ### The injective self-map example -/
 

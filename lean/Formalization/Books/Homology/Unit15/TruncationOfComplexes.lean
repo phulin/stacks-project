@@ -183,7 +183,7 @@ private noncomputable def stupidTruncLEι (K : ChainComplex C ℤ) (n : ℤ) :
           have hst : h.choose = t := by
             dsimp [chainLEEmbedding, ComplexShape.Embedding.mk'] at hp ⊢
             omega
-          simp only [hst]
+          simp [hst]
         · rename_i h
           exact (h ⟨t, rfl⟩).elim
       rw [hι k, hι l]
@@ -792,7 +792,8 @@ theorem stupidTruncGE_is_quotient (K : ChainComplex C ℤ) (n : ℤ) :
   · obtain ⟨k, hk⟩ := hi
     change Epi ((e.liftExtend φ hφ).f i)
     rw [e.epi_liftExtend_f_iff φ hφ hk]
-    dsimp [φ, HomologicalComplex.restrictionMap]
+    dsimp [φ, HomologicalComplex.restrictionMap, stupidTruncGE,
+      HomologicalComplex.stupidTrunc, HomologicalComplex.restriction] at *
     infer_instance
   · dsimp [p, stupidTruncGE, e]
     apply (HomologicalComplex.isZero_stupidTrunc_X K (chainGEEmbedding n) i ?_).epi
@@ -1269,11 +1270,328 @@ theorem stupidTruncGE_is_subcomplex (K : CochainComplex C ℤ) (n : ℤ) :
         intro k hk
         exact hi ⟨k, hk⟩)).mono
 
+private lemma embeddingUpIntGE_succ_eq (n i : ℤ) (k : ℕ)
+    (hk : (ComplexShape.embeddingUpIntGE (n + 1)).f k = i) :
+    (ComplexShape.embeddingUpIntGE n).f (k + 1) = i := by
+  dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk'] at hk ⊢
+  omega
+
+private lemma embeddingUpIntGE_zero (n : ℤ) :
+    (ComplexShape.embeddingUpIntGE n).f 0 = n := by
+  dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk']
+  omega
+
+private lemma embeddingUpIntGE_pred_eq (n : ℤ) (k : ℕ) (hk : 0 < k) :
+    (ComplexShape.embeddingUpIntGE (n + 1)).f (k - 1) =
+      (ComplexShape.embeddingUpIntGE n).f k := by
+  dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk']
+  omega
+
+private noncomputable def degreeConcentratedAtIso (A : C) (n : ℤ) :
+    (degreeConcentrated A n).X n ≅ A :=
+  eqToIso (by
+    simpa [degreeConcentrated] using
+      (Formalization.Books.Homology.Unit14.CochainComplex.concentrated_at
+        A (-n)))
+
+private noncomputable def stupidTruncGEπ_f (K : CochainComplex C ℤ) (n i : ℤ) :
+    (stupidTruncGE K n).X i ⟶ (degreeConcentrated (K.X n) n).X i := by
+  classical
+  change (HomologicalComplex.stupidTrunc K
+      (ComplexShape.embeddingUpIntGE n)).X i ⟶
+    (degreeConcentrated (K.X n) n).X i
+  have hzero : (ComplexShape.embeddingUpIntGE n).f 0 = n :=
+    embeddingUpIntGE_zero n
+  exact dite (i = n)
+    (fun hi => by
+      simpa [hi] using
+        ((K.stupidTruncXIso (ComplexShape.embeddingUpIntGE n) hzero).hom ≫
+          (degreeConcentratedAtIso (K.X n) n).inv))
+    (fun _ => 0)
+
+private noncomputable def stupidTruncGEπ (K : CochainComplex C ℤ) (n : ℤ) :
+    stupidTruncGE K n ⟶ degreeConcentrated (K.X n) n := by
+  refine { f := stupidTruncGEπ_f K n, comm' := ?_ }
+  intro i j hij
+  classical
+  change stupidTruncGEπ_f K n i ≫
+      (degreeConcentrated (K.X n) n).d i j =
+    (HomologicalComplex.stupidTrunc K
+      (ComplexShape.embeddingUpIntGE n)).d i j ≫
+      stupidTruncGEπ_f K n j
+  dsimp [stupidTruncGE] at *
+  by_cases hi : i = n
+  · have hj : j ≠ n := by
+      intro hj
+      have hij' := hij
+      rw [hi, hj] at hij'
+      simp only [ComplexShape.up_Rel] at hij'
+      omega
+    unfold stupidTruncGEπ_f
+    rw [dif_pos hi, dif_neg hj]
+    simp only [Function.id_def]
+    have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
+      have hz : IsZero ((degreeConcentrated (K.X n) n).X j) := by
+        change IsZero
+          ((Formalization.Books.Homology.Unit14.CochainComplex.concentrated
+            C (K.X n) (-n)).X j)
+        apply Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
+        simpa only [Int.neg_neg] using hj
+      exact hz.eq_of_tgt _ _
+    rw [hd]
+    simp
+  · unfold stupidTruncGEπ_f
+    rw [dif_neg hi]
+    by_cases hj : j = n
+    · have hlt : i < n := by
+        have hij' := hij
+        rw [hj] at hij'
+        simp only [ComplexShape.up_Rel] at hij'
+        omega
+      have hz : IsZero ((HomologicalComplex.stupidTrunc K
+          (ComplexShape.embeddingUpIntGE n)).X i) := by
+        apply HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntGE n) i
+        intro k hk
+        dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk'] at hk
+        omega
+      rw [dif_pos hj]
+      simp only [Function.id_def]
+      exact hz.eq_of_src _ _
+    · rw [dif_neg hj]
+      simp only [Function.id_def]
+      simp
+
+private noncomputable def stupidTruncGEStepφ (K : CochainComplex C ℤ) (n : ℤ) :
+    (stupidTruncGE K (n + 1)).restriction
+        (ComplexShape.embeddingUpIntGE n) ⟶
+      K.restriction (ComplexShape.embeddingUpIntGE n) :=
+  HomologicalComplex.restrictionMap
+    (stupidTruncι K (ComplexShape.embeddingUpIntGE (n + 1)))
+    (ComplexShape.embeddingUpIntGE n)
+
+private lemma stupidTruncGEStepφ_hasLift (K : CochainComplex C ℤ) (n : ℤ) :
+    (ComplexShape.embeddingUpIntGE n).HasLift (stupidTruncGEStepφ K n) := by
+  let φ := stupidTruncGEStepφ K n
+  have hφ : (ComplexShape.embeddingUpIntGE n).HasLift φ := by
+    intro j hj i' hi'
+    have hj0 : j = 0 := by
+      by_contra hne
+      have hpos : 0 < j := Nat.pos_of_ne_zero hne
+      have hcast : ((j - 1 : ℕ) : ℤ) + 1 = j := by
+        exact_mod_cast Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr hne)
+      apply hj.2 (j - 1)
+      dsimp [ComplexShape.embeddingUpIntGE,
+        ComplexShape.Embedding.mk']
+      simp only [ComplexShape.up_Rel]
+      omega
+    subst j
+    have hz : IsZero ((stupidTruncGE K (n + 1)).X n) := by
+      dsimp [stupidTruncGE]
+      apply HomologicalComplex.isZero_stupidTrunc_X K
+        (ComplexShape.embeddingUpIntGE (n + 1)) n
+      intro k hk
+      dsimp [ComplexShape.embeddingUpIntGE, ComplexShape.Embedding.mk'] at hk
+      omega
+    have hzA : IsZero ((stupidTruncGE K (n + 1)).X
+        ((ComplexShape.embeddingUpIntGE n).f 0)) := by
+      simpa [ComplexShape.embeddingUpIntGE,
+        ComplexShape.Embedding.mk'] using hz
+    dsimp [φ, stupidTruncGEStepφ, stupidTruncGE,
+      HomologicalComplex.restrictionMap, HomologicalComplex.restriction,
+      stupidTruncι, stupidTruncι_f]
+    have hnot : ¬ ∃ k, (ComplexShape.embeddingUpIntGE (n + 1)).f k =
+        (ComplexShape.embeddingUpIntGE n).f 0 := by
+      intro h
+      obtain ⟨k, hk⟩ := h
+      dsimp [ComplexShape.embeddingUpIntGE,
+        ComplexShape.Embedding.mk'] at hk
+      omega
+    rw [dif_neg hnot]
+    simp only [comp_zero]
+    rfl
+  exact hφ
+
+private noncomputable def stupidTruncGEStep (K : CochainComplex C ℤ) (n : ℤ) :
+    stupidTruncGE K (n + 1) ⟶ stupidTruncGE K n :=
+  (ComplexShape.embeddingUpIntGE n).liftExtend
+    (stupidTruncGEStepφ K n) (stupidTruncGEStepφ_hasLift K n)
+
+omit [Abelian C] in
+private lemma epi_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Epi e.inv := by
+  constructor
+  intro Z g h w
+  simpa only [Category.assoc, e.hom_inv_id_assoc] using
+    congrArg (fun t => e.hom ≫ t) w
+
+omit [Abelian C] in
+private lemma epi_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Epi e.hom := by
+  constructor
+  intro Z g h w
+  simpa only [Category.assoc, e.inv_hom_id_assoc] using
+    congrArg (fun t => e.inv ≫ t) w
+
+omit C [Category.{v} C] [Abelian C] in
+private lemma mono_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Mono e.inv := by
+  constructor
+  intro Z g h w
+  simpa only [Category.assoc, e.inv_hom_id, Category.comp_id] using
+    congrArg (fun t => t ≫ e.hom) w
+
+omit C [Category.{v} C] [Abelian C] in
+private lemma mono_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Mono e.hom := by
+  constructor
+  intro Z g h w
+  simpa only [Category.assoc, e.hom_inv_id, Category.comp_id] using
+    congrArg (fun t => t ≫ e.inv) w
+
 /-- The source's quotient identity for successive upper brutal truncations. -/
 theorem stupidTruncGE_quotient (K : CochainComplex C ℤ) (n : ℤ) :
     HasQuotientPresentation (stupidTruncGE K (n + 1)) (stupidTruncGE K n)
       (degreeConcentrated (K.X n) n) := by
-  sorry
+  classical
+  let f := stupidTruncGEStep K n
+  let p := stupidTruncGEπ K n
+  have hzero : f ≫ p = 0 := by
+    ext i
+    by_cases hi : i = n
+    · subst i
+      have hz := HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntGE (n + 1)) n (by
+            intro k hk
+            dsimp [ComplexShape.embeddingUpIntGE,
+              ComplexShape.Embedding.mk'] at hk
+            omega)
+      exact hz.eq_of_src _ _
+    · change (stupidTruncGEStep K n).f i ≫ stupidTruncGEπ_f K n i = 0
+      unfold stupidTruncGEπ_f
+      rw [dif_neg hi]
+      exact comp_zero
+  let S : ShortComplex (CochainComplex C ℤ) := ShortComplex.mk f p hzero
+  have hS : S.Exact := by
+    apply HomologicalComplex.exact_of_degreewise_exact S
+    intro i
+    have hzero_i : f.f i ≫ p.f i = 0 := by
+      simpa using congrArg (fun q => q.f i) hzero
+    change (ShortComplex.mk (f.f i) (p.f i) hzero_i).Exact
+    by_cases hi : i < n
+    · have hz : IsZero ((stupidTruncGE K n).X i) := by
+        apply HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntGE n) i
+        intro k hk
+        dsimp [ComplexShape.embeddingUpIntGE,
+          ComplexShape.Embedding.mk'] at hk
+        omega
+      exact ShortComplex.exact_of_isZero_X₂ _ hz
+    · by_cases hin : i = n
+      · subst i
+        have hfi : f.f n = 0 := by
+          change (stupidTruncGEStep K n).f n = 0
+          exact (HomologicalComplex.isZero_stupidTrunc_X K
+            (ComplexShape.embeddingUpIntGE (n + 1)) n (by
+              intro k hk
+              dsimp [ComplexShape.embeddingUpIntGE,
+                ComplexShape.Embedding.mk'] at hk
+              omega)).eq_of_src _ _
+        apply (ShortComplex.exact_iff_mono _ hfi).2
+        change Mono (stupidTruncGEπ_f K n n)
+        unfold stupidTruncGEπ_f
+        rw [dif_pos rfl]
+        change Mono (_ ≫ _)
+        exact mono_comp' (mono_iso_hom _) (mono_iso_inv _)
+      · have hqi : p.f i = 0 := by
+          change stupidTruncGEπ_f K n i = 0
+          unfold stupidTruncGEπ_f
+          rw [dif_neg hin]
+          rfl
+        apply (ShortComplex.exact_iff_epi _ hqi).2
+        have hi0 : ∃ k, (ComplexShape.embeddingUpIntGE n).f k = i := by
+          refine ⟨Int.toNat (i - n), ?_⟩
+          dsimp [ComplexShape.embeddingUpIntGE,
+            ComplexShape.Embedding.mk']
+          rw [Int.toNat_of_nonneg (by omega : 0 ≤ i - n)]
+          omega
+        dsimp [stupidTruncGEStep]
+        change Epi (((ComplexShape.embeddingUpIntGE n).liftExtend
+          (stupidTruncGEStepφ K n)
+          (stupidTruncGEStepφ_hasLift K n)).f i)
+        obtain ⟨k, hk⟩ := hi0
+        have hkpos : 0 < k := by
+          dsimp [ComplexShape.embeddingUpIntGE,
+            ComplexShape.Embedding.mk'] at hk
+          omega
+        have hk1 : ∃ l, (ComplexShape.embeddingUpIntGE (n + 1)).f l =
+            (ComplexShape.embeddingUpIntGE n).f k :=
+          ⟨k - 1, embeddingUpIntGE_pred_eq n k hkpos⟩
+        rw [(ComplexShape.embeddingUpIntGE n).epi_liftExtend_f_iff
+          (stupidTruncGEStepφ K n)
+          (stupidTruncGEStepφ_hasLift K n) hk]
+        dsimp [stupidTruncGEStepφ, HomologicalComplex.restrictionMap,
+          stupidTruncι, stupidTruncι_f]
+        rw [dif_pos hk1]
+        exact epi_iso_hom _
+  have hp : Epi p := by
+    apply HomologicalComplex.epi_of_epi_f
+    intro i
+    by_cases hi : i = n
+    · subst i
+      change Epi (stupidTruncGEπ_f K n n)
+      unfold stupidTruncGEπ_f
+      rw [dif_pos rfl]
+      change Epi (_ ≫ _)
+      exact epi_comp' (epi_iso_hom _) (epi_iso_inv _)
+    · change Epi (stupidTruncGEπ_f K n i)
+      unfold stupidTruncGEπ_f
+      rw [dif_neg hi]
+      change Epi (0 : (stupidTruncGE K n).X i ⟶
+        (degreeConcentrated (K.X n) n).X i)
+      apply (Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
+        (K.X n) (-n) i (by omega)).epi
+  refine ⟨f, ?_, ?_⟩
+  · apply HomologicalComplex.mono_of_mono_f
+    intro i
+    change Mono ((stupidTruncGEStep K n).f i)
+    by_cases hi : ∃ k, (ComplexShape.embeddingUpIntGE n).f k = i
+    · obtain ⟨k, hk⟩ := hi
+      by_cases hk0 : k = 0
+      · subst k
+        have hi_n : i = n := by
+          simpa only [embeddingUpIntGE_zero] using hk.symm
+        rw [hi_n]
+        have hm := (HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntGE (n + 1)) n (by
+            intro l hl
+            dsimp [ComplexShape.embeddingUpIntGE,
+              ComplexShape.Embedding.mk'] at hl
+            omega)).mono ((stupidTruncGEStep K n).f n)
+        exact hm
+      dsimp [stupidTruncGEStep]
+      change Mono (((ComplexShape.embeddingUpIntGE n).liftExtend
+        (stupidTruncGEStepφ K n)
+        (stupidTruncGEStepφ_hasLift K n)).f i)
+      rw [(ComplexShape.embeddingUpIntGE n).mono_liftExtend_f_iff
+        (stupidTruncGEStepφ K n)
+        (stupidTruncGEStepφ_hasLift K n) hk]
+      dsimp [stupidTruncGEStepφ, HomologicalComplex.restrictionMap,
+        stupidTruncι, stupidTruncι_f]
+      have hkpos : 0 < k := Nat.pos_of_ne_zero hk0
+      rw [dif_pos ⟨k - 1, embeddingUpIntGE_pred_eq n k
+        (Nat.pos_of_ne_zero hk0)⟩]
+      exact mono_iso_hom _
+    · dsimp [stupidTruncGEStep]
+      exact (HomologicalComplex.isZero_stupidTrunc_X K
+        (ComplexShape.embeddingUpIntGE (n + 1)) i (by
+          intro k hk
+          exact hi ⟨k + 1, by
+            dsimp [ComplexShape.embeddingUpIntGE,
+              ComplexShape.Embedding.mk'] at hk ⊢
+            omega⟩)).mono _
+  exact ⟨IsColimit.coconePointUniqueUpToIso
+    (cokernelIsCokernel f) hS.gIsCokernel⟩
 
 /-! ### The second numbered item: `σ ≤ n` -/
 
@@ -1282,20 +1600,497 @@ noncomputable def stupidTruncLE (K : CochainComplex C ℤ) (n : ℤ) :
     CochainComplex C ℤ :=
   HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntLE n)
 
+private noncomputable def stupidTruncLEπ_f (K : CochainComplex C ℤ) (n i : ℤ) :
+    K.X i ⟶ (stupidTruncLE K n).X i := by
+  classical
+  change K.X i ⟶
+    (HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntLE n)).X i
+  exact dite (∃ k, (ComplexShape.embeddingUpIntLE n).f k = i)
+    (fun hi => by
+      simpa [stupidTruncLE, HomologicalComplex.stupidTrunc, hi] using
+        ((K.restrictionXIso (ComplexShape.embeddingUpIntLE n)
+          hi.choose_spec).inv ≫
+          ((K.restriction (ComplexShape.embeddingUpIntLE n)).extendXIso
+            (ComplexShape.embeddingUpIntLE n) hi.choose_spec).inv))
+    (fun _ => 0)
+
+private noncomputable def stupidTruncLEπ (K : CochainComplex C ℤ) (n : ℤ) :
+    K ⟶ stupidTruncLE K n := by
+  refine { f := stupidTruncLEπ_f K n, comm' := ?_ }
+  intro i j hij
+  classical
+  change stupidTruncLEπ_f K n i ≫
+      (HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntLE n)).d i j =
+    K.d i j ≫ stupidTruncLEπ_f K n j
+  dsimp [stupidTruncLE] at *
+  by_cases hi : ∃ k, (ComplexShape.embeddingUpIntLE n).f k = i
+  · by_cases hj : ∃ k, (ComplexShape.embeddingUpIntLE n).f k = j
+    · obtain ⟨k, hk⟩ := hi
+      obtain ⟨l, hl⟩ := hj
+      have hki : ∃ t : ℕ, (ComplexShape.embeddingUpIntLE n).f t =
+          (ComplexShape.embeddingUpIntLE n).f k := ⟨k, rfl⟩
+      have hli : ∃ t : ℕ, (ComplexShape.embeddingUpIntLE n).f t =
+          (ComplexShape.embeddingUpIntLE n).f l := ⟨l, rfl⟩
+      rw [← hk, ← hl]
+      simp only [stupidTruncLEπ_f, dif_pos hki, dif_pos hli, Function.id_def]
+      change _ ≫ ((K.restriction (ComplexShape.embeddingUpIntLE n)).extend
+          (ComplexShape.embeddingUpIntLE n)).d _ _ = _
+      rw [HomologicalComplex.extend_d_eq
+        (K.restriction (ComplexShape.embeddingUpIntLE n))
+        (ComplexShape.embeddingUpIntLE n) hki.choose_spec hli.choose_spec,
+        HomologicalComplex.restriction_d_eq K
+          (ComplexShape.embeddingUpIntLE n) hki.choose_spec hli.choose_spec]
+      simp [Category.assoc] <;> congr 1
+    · have hz := HomologicalComplex.isZero_stupidTrunc_X K
+        (ComplexShape.embeddingUpIntLE n) j (by
+          intro k hk
+          exact hj ⟨k, hk⟩)
+      exact hz.eq_of_tgt _ _
+  · by_cases hj : ∃ k, (ComplexShape.embeddingUpIntLE n).f k = j
+    · obtain ⟨l, rfl⟩ := hj
+      obtain ⟨k, hk⟩ := (ComplexShape.embeddingUpIntLE n).mem_prev hij
+      exact (hi ⟨k, hk⟩).elim
+    · unfold stupidTruncLEπ_f
+      rw [dif_neg hi, dif_neg hj]
+      simp only [Function.id_def]
+      simp
+
 theorem stupidTruncLE_components (K : CochainComplex C ℤ) (n : ℤ) :
     IsStupidTruncationAtMost K (stupidTruncLE K n) n := by
-  sorry
+  constructor
+  · intro i hi
+    obtain ⟨k, hk⟩ : ∃ k : ℕ, (ComplexShape.embeddingUpIntLE n).f k = i := by
+      refine ⟨Int.toNat (n - i), ?_⟩
+      dsimp [ComplexShape.embeddingUpIntLE, ComplexShape.Embedding.mk']
+      rw [Int.toNat_of_nonneg (by omega : 0 ≤ n - i)]
+      omega
+    exact ⟨HomologicalComplex.stupidTruncXIso K
+      (ComplexShape.embeddingUpIntLE n) hk⟩
+  · intro i hi
+    apply HomologicalComplex.isZero_stupidTrunc_X K
+      (ComplexShape.embeddingUpIntLE n) i
+    intro k hk
+    dsimp [ComplexShape.embeddingUpIntLE, ComplexShape.Embedding.mk'] at hk
+    omega
 
 theorem stupidTruncLE_is_quotient (K : CochainComplex C ℤ) (n : ℤ) :
     HasEpimorphismOnto K (stupidTruncLE K n) := by
-  sorry
+  refine ⟨stupidTruncLEπ K n, ?_⟩
+  apply HomologicalComplex.epi_of_epi_f
+  intro i
+  by_cases hi : ∃ k, (ComplexShape.embeddingUpIntLE n).f k = i
+  · obtain ⟨k, hk⟩ := hi
+    change Epi (stupidTruncLEπ_f K n i)
+    unfold stupidTruncLEπ_f
+    rw [dif_pos ⟨k, hk⟩]
+    simp only [Function.id_def]
+    exact epi_comp' (epi_iso_inv _) (epi_iso_inv _)
+  · change Epi (stupidTruncLEπ_f K n i)
+    unfold stupidTruncLEπ_f
+    rw [dif_neg hi]
+    change Epi (0 : K.X i ⟶
+      (HomologicalComplex.stupidTrunc K (ComplexShape.embeddingUpIntLE n)).X i)
+    exact (HomologicalComplex.isZero_stupidTrunc_X K
+      (ComplexShape.embeddingUpIntLE n) i (by
+      intro k hk
+      exact hi ⟨k, hk⟩)).epi _
+
+private lemma embeddingUpIntLE_succ_eq (n i : ℤ) (k : ℕ)
+    (hk : (ComplexShape.embeddingUpIntLE (n - 1)).f k = i) :
+    (ComplexShape.embeddingUpIntLE n).f (k + 1) = i := by
+  dsimp [ComplexShape.embeddingUpIntLE, ComplexShape.Embedding.mk'] at hk ⊢
+  omega
+
+private noncomputable def stupidTruncLETransition_f (K : CochainComplex C ℤ)
+    (n i : ℤ) :
+    (stupidTruncLE K n).X i ⟶ (stupidTruncLE K (n - 1)).X i := by
+  classical
+  change (HomologicalComplex.stupidTrunc K
+      (ComplexShape.embeddingUpIntLE n)).X i ⟶
+    (HomologicalComplex.stupidTrunc K
+      (ComplexShape.embeddingUpIntLE (n - 1))).X i
+  exact dite (∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = i)
+    (fun hi =>
+      (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+        (embeddingUpIntLE_succ_eq n i hi.choose hi.choose_spec)).hom ≫
+        (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+          hi.choose_spec).inv)
+    (fun _ => (0 :
+      (HomologicalComplex.stupidTrunc K
+        (ComplexShape.embeddingUpIntLE n)).X i ⟶
+      (HomologicalComplex.stupidTrunc K
+        (ComplexShape.embeddingUpIntLE (n - 1))).X i))
+
+private noncomputable def stupidTruncLETransition (K : CochainComplex C ℤ)
+    (n : ℤ) :
+    stupidTruncLE K n ⟶ stupidTruncLE K (n - 1) := by
+  refine { f := stupidTruncLETransition_f K n, comm' := ?_ }
+  intro i j hij
+  classical
+  change stupidTruncLETransition_f K n i ≫
+      (HomologicalComplex.stupidTrunc K
+        (ComplexShape.embeddingUpIntLE (n - 1))).d i j =
+    (HomologicalComplex.stupidTrunc K
+      (ComplexShape.embeddingUpIntLE n)).d i j ≫
+      stupidTruncLETransition_f K n j
+  dsimp [stupidTruncLE] at *
+  by_cases hi : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = i
+  · by_cases hj : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = j
+    · obtain ⟨k, rfl⟩ := hi
+      obtain ⟨l, rfl⟩ := hj
+      have htr (t : ℕ) :
+          stupidTruncLETransition_f K n
+              ((ComplexShape.embeddingUpIntLE (n - 1)).f t) =
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+              (embeddingUpIntLE_succ_eq n _ t rfl)).hom ≫
+              (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+                (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                  (ComplexShape.embeddingUpIntLE (n - 1)).f t)).inv := by
+        dsimp [stupidTruncLETransition_f]
+        split
+        · rename_i h
+          have hp : (ComplexShape.embeddingUpIntLE (n - 1)).f h.choose =
+              (ComplexShape.embeddingUpIntLE (n - 1)).f t := h.choose_spec
+          change
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+                (embeddingUpIntLE_succ_eq n _ h.choose hp)).hom ≫
+              (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+                hp).inv = _
+          have hst : h.choose = t :=
+            (ComplexShape.embeddingUpIntLE (n - 1)).injective_f hp
+          simp [hst]
+        · rename_i h
+          exact (h ⟨t, rfl⟩).elim
+      have hd₁ (a b : ℕ) :
+          (HomologicalComplex.stupidTrunc K
+            (ComplexShape.embeddingUpIntLE (n - 1))).d
+              ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+              ((ComplexShape.embeddingUpIntLE (n - 1)).f b) =
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+              (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f a =
+                (ComplexShape.embeddingUpIntLE (n - 1)).f a)).hom ≫
+              K.d ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+                ((ComplexShape.embeddingUpIntLE (n - 1)).f b) ≫
+              (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+                (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f b =
+                  (ComplexShape.embeddingUpIntLE (n - 1)).f b)).inv := by
+        change ((K.restriction (ComplexShape.embeddingUpIntLE (n - 1))).extend
+          (ComplexShape.embeddingUpIntLE (n - 1))).d
+            ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+            ((ComplexShape.embeddingUpIntLE (n - 1)).f b) = _
+        dsimp [HomologicalComplex.stupidTrunc] at *
+        rw [HomologicalComplex.extend_d_eq
+          (K.restriction (ComplexShape.embeddingUpIntLE (n - 1)))
+          (ComplexShape.embeddingUpIntLE (n - 1)) rfl rfl,
+          HomologicalComplex.restriction_d_eq K
+            (ComplexShape.embeddingUpIntLE (n - 1)) rfl rfl]
+        have hstupid (t : ℕ) :
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+              (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                (ComplexShape.embeddingUpIntLE (n - 1)).f t)).hom =
+              ((K.restriction (ComplexShape.embeddingUpIntLE (n - 1))).extendXIso
+                (ComplexShape.embeddingUpIntLE (n - 1)) (rfl :
+                  (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                    (ComplexShape.embeddingUpIntLE (n - 1)).f t)).hom ≫
+                (K.restrictionXIso (ComplexShape.embeddingUpIntLE (n - 1))
+                  (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                    (ComplexShape.embeddingUpIntLE (n - 1)).f t)).hom := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        have hstupid_inv (t : ℕ) :
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE (n - 1))
+              (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                (ComplexShape.embeddingUpIntLE (n - 1)).f t)).inv =
+              (K.restrictionXIso (ComplexShape.embeddingUpIntLE (n - 1))
+                (rfl : (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                  (ComplexShape.embeddingUpIntLE (n - 1)).f t)).inv ≫
+                ((K.restriction (ComplexShape.embeddingUpIntLE (n - 1))).extendXIso
+                  (ComplexShape.embeddingUpIntLE (n - 1)) (rfl :
+                    (ComplexShape.embeddingUpIntLE (n - 1)).f t =
+                      (ComplexShape.embeddingUpIntLE (n - 1)).f t)).inv := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        rw [hstupid a, hstupid_inv b]
+        simp [Category.assoc]
+      have hd₀ (a b : ℕ) :
+          (HomologicalComplex.stupidTrunc K
+            (ComplexShape.embeddingUpIntLE n)).d
+              ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+              ((ComplexShape.embeddingUpIntLE (n - 1)).f b) =
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+              (embeddingUpIntLE_succ_eq n _ a rfl)).hom ≫
+              K.d ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+                ((ComplexShape.embeddingUpIntLE (n - 1)).f b) ≫
+              (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+                (embeddingUpIntLE_succ_eq n _ b rfl)).inv := by
+        change ((K.restriction (ComplexShape.embeddingUpIntLE n)).extend
+          (ComplexShape.embeddingUpIntLE n)).d
+            ((ComplexShape.embeddingUpIntLE (n - 1)).f a)
+            ((ComplexShape.embeddingUpIntLE (n - 1)).f b) = _
+        dsimp [HomologicalComplex.stupidTrunc] at *
+        rw [HomologicalComplex.extend_d_eq
+          (K.restriction (ComplexShape.embeddingUpIntLE n))
+          (ComplexShape.embeddingUpIntLE n)
+          (embeddingUpIntLE_succ_eq n _ a rfl)
+          (embeddingUpIntLE_succ_eq n _ b rfl),
+          HomologicalComplex.restriction_d_eq K
+            (ComplexShape.embeddingUpIntLE n)
+            (embeddingUpIntLE_succ_eq n _ a rfl)
+            (embeddingUpIntLE_succ_eq n _ b rfl)]
+        have hstupid_a :
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+              (embeddingUpIntLE_succ_eq n _ a rfl)).hom =
+              ((K.restriction (ComplexShape.embeddingUpIntLE n)).extendXIso
+                (ComplexShape.embeddingUpIntLE n)
+                (embeddingUpIntLE_succ_eq n _ a rfl)).hom ≫
+                (K.restrictionXIso (ComplexShape.embeddingUpIntLE n)
+                  (embeddingUpIntLE_succ_eq n _ a rfl)).hom := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        have hstupid_b_inv :
+            (K.stupidTruncXIso (ComplexShape.embeddingUpIntLE n)
+              (embeddingUpIntLE_succ_eq n _ b rfl)).inv =
+              (K.restrictionXIso (ComplexShape.embeddingUpIntLE n)
+                (embeddingUpIntLE_succ_eq n _ b rfl)).inv ≫
+                ((K.restriction (ComplexShape.embeddingUpIntLE n)).extendXIso
+                  (ComplexShape.embeddingUpIntLE n)
+                  (embeddingUpIntLE_succ_eq n _ b rfl)).inv := by
+          dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
+            HomologicalComplex.restrictionXIso,
+            HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
+          rfl
+        rw [hstupid_a, hstupid_b_inv]
+        simp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+          Iso.trans_inv, HomologicalComplex.restrictionXIso,
+          HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
+          Category.assoc]
+      rw [htr k, htr l, hd₁ k l]
+      rw [hd₀ k l]
+      simp [HomologicalComplex.stupidTruncXIso, Iso.trans_hom,
+        Iso.trans_inv, HomologicalComplex.restrictionXIso,
+        HomologicalComplex.extendXIso, CategoryTheory.eqToIso,
+        Category.assoc, HomologicalComplex.extend,
+        HomologicalComplex.restriction] <;> congr 1
+    · have hz := HomologicalComplex.isZero_stupidTrunc_X K
+        (ComplexShape.embeddingUpIntLE (n - 1)) j (by
+          intro k hk
+          exact hj ⟨k, hk⟩)
+      exact hz.eq_of_tgt _ _
+  · by_cases hj : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = j
+    · obtain ⟨l, rfl⟩ := hj
+      obtain ⟨k, hk⟩ := (ComplexShape.embeddingUpIntLE (n - 1)).mem_prev hij
+      exact (hi ⟨k, hk⟩).elim
+    · dsimp [stupidTruncLETransition_f, stupidTruncLE]
+      rw [dif_neg hi, dif_neg hj]
+      simp
 
 /-- The successive upper brutal truncation map is an epimorphism with the
 degree-`n` complex as its kernel. -/
 theorem stupidTruncLE_transition (K : CochainComplex C ℤ) (n : ℤ) :
     HasEpiKernelPresentation (stupidTruncLE K n) (stupidTruncLE K (n - 1))
       (degreeConcentrated (K.X n) n) := by
-  sorry
+  classical
+  let f := stupidTruncLETransition K n
+  let q_f : ∀ i : ℤ,
+      (degreeConcentrated (K.X n) n).X i ⟶ (stupidTruncLE K n).X i :=
+    fun i => by
+      change (degreeConcentrated (K.X n) n).X i ⟶
+        (HomologicalComplex.stupidTrunc K
+          (ComplexShape.embeddingUpIntLE n)).X i
+      have hzero : (ComplexShape.embeddingUpIntLE n).f 0 = n := by
+        dsimp [ComplexShape.embeddingUpIntLE,
+          ComplexShape.Embedding.mk']
+        omega
+      exact dite (i = n)
+        (fun hi => by
+          simpa [hi] using
+            ((degreeConcentratedAtIso (K.X n) n).hom ≫
+              (K.stupidTruncXIso
+                (ComplexShape.embeddingUpIntLE n) hzero).inv))
+        (fun _ => 0)
+  let q : degreeConcentrated (K.X n) n ⟶ stupidTruncLE K n := by
+    refine { f := q_f, comm' := ?_ }
+    intro i j hij
+    dsimp [q_f, stupidTruncLE]
+    by_cases hi : i = n
+    · have hj : j ≠ n := by
+        intro hj
+        have hij' := hij
+        rw [hi, hj] at hij'
+        simp only [ComplexShape.up_Rel] at hij'
+        omega
+      have hjlt : n < j := by
+        have hij' := hij
+        rw [hi] at hij'
+        simp only [ComplexShape.up_Rel] at hij'
+        omega
+      simp only [dif_pos hi, dif_neg hj]
+      have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
+        have hz : IsZero ((degreeConcentrated (K.X n) n).X j) := by
+          change IsZero
+            ((Formalization.Books.Homology.Unit14.CochainComplex.concentrated
+              C (K.X n) (-n)).X j)
+          apply Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
+          simpa only [Int.neg_neg] using hj
+        exact hz.eq_of_tgt _ _
+      rw [hd]
+      have hz : IsZero ((stupidTruncLE K n).X j) := by
+        apply HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntLE n) j
+        intro k hk
+        dsimp [ComplexShape.embeddingUpIntLE,
+          ComplexShape.Embedding.mk'] at hk
+        have hjle : j ≤ n := by
+          rw [← hk]
+          exact sub_le_self _ (by positivity)
+        exact (not_lt_of_ge hjle hjlt).elim
+      exact hz.eq_of_tgt _ _
+    · simp only [dif_neg hi]
+      by_cases hj : j = n
+      · have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
+          have hz : IsZero ((degreeConcentrated (K.X n) n).X i) := by
+            change IsZero
+              ((Formalization.Books.Homology.Unit14.CochainComplex.concentrated
+                C (K.X n) (-n)).X i)
+            apply Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
+            simpa only [Int.neg_neg] using hi
+          exact hz.eq_of_src _ _
+        simp only [dif_pos hj, hd, zero_comp, comp_zero]
+      · simp only [dif_neg hj, zero_comp, comp_zero]
+  have hzero : q ≫ f = 0 := by
+    ext i
+    by_cases hi : i = n
+    · subst i
+      change q_f n ≫ (stupidTruncLETransition K n).f n = 0
+      have hz := HomologicalComplex.isZero_stupidTrunc_X K
+          (ComplexShape.embeddingUpIntLE (n - 1)) n (by
+            intro k hk
+            dsimp [ComplexShape.embeddingUpIntLE,
+              ComplexShape.Embedding.mk'] at hk
+            omega)
+      exact hz.eq_of_tgt _ _
+    · change q_f i ≫ (stupidTruncLETransition K n).f i = 0
+      dsimp [q_f]
+      split
+      · rename_i h
+        exact (hi h).elim
+      · dsimp [stupidTruncLE]
+        simp
+        rfl
+  let S : ShortComplex (CochainComplex C ℤ) := ShortComplex.mk q f hzero
+  have hS : S.Exact := by
+    apply HomologicalComplex.exact_of_degreewise_exact S
+    intro i
+    have hzero_i : q.f i ≫ f.f i = 0 := by
+      simpa using congrArg (fun z => z.f i) hzero
+    change (ShortComplex.mk (q_f i) (f.f i) hzero_i).Exact
+    by_cases hi : i < n
+    · have hi1 : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = i := by
+        refine ⟨Int.toNat (n - 1 - i), ?_⟩
+        dsimp [ComplexShape.embeddingUpIntLE,
+          ComplexShape.Embedding.mk']
+        rw [Int.toNat_of_nonneg (by omega : 0 ≤ n - 1 - i)]
+        omega
+      apply (ShortComplex.exact_iff_mono _ (by
+        change q_f i = 0
+        simp only [q_f, dif_neg (by omega : i ≠ n)]
+        rfl)).2
+      change Mono (f.f i)
+      dsimp [f, stupidTruncLETransition]
+      change Mono (stupidTruncLETransition_f K n i)
+      unfold stupidTruncLETransition_f
+      rw [dif_pos hi1]
+      change Mono (_ ≫ _)
+      exact mono_comp' (mono_iso_hom _) (mono_iso_inv _)
+    · by_cases hin : i = n
+      · subst i
+        have hfi : f.f n = 0 := by
+          dsimp [f, stupidTruncLETransition, stupidTruncLETransition_f,
+            stupidTruncLE]
+          have hnot : ¬ ∃ k,
+              (ComplexShape.embeddingUpIntLE (n - 1)).f k = n := by
+            intro h
+            obtain ⟨k, hk⟩ := h
+            dsimp [ComplexShape.embeddingUpIntLE,
+              ComplexShape.Embedding.mk'] at hk
+            omega
+          rw [dif_neg hnot]
+          rfl
+        apply (ShortComplex.exact_iff_epi _ hfi).2
+        change Epi (q_f n)
+        simp only [q_f, dif_pos rfl]
+        change Epi (_ ≫ _)
+        exact epi_comp' (epi_iso_hom _) (epi_iso_inv _)
+      · have hz : IsZero ((stupidTruncLE K n).X i) := by
+          apply HomologicalComplex.isZero_stupidTrunc_X K
+            (ComplexShape.embeddingUpIntLE n) i
+          intro k hk
+          dsimp [ComplexShape.embeddingUpIntLE,
+            ComplexShape.Embedding.mk'] at hk
+          omega
+        exact ShortComplex.exact_of_isZero_X₂ _ hz
+  have hf : Epi f := by
+    apply HomologicalComplex.epi_of_epi_f
+    intro i
+    by_cases hi : ∃ k, (ComplexShape.embeddingUpIntLE (n - 1)).f k = i
+    · obtain ⟨k, hk⟩ := hi
+      dsimp [f, stupidTruncLETransition]
+      change Epi (stupidTruncLETransition_f K n i)
+      unfold stupidTruncLETransition_f
+      rw [dif_pos ⟨k, hk⟩]
+      change Epi (_ ≫ _)
+      exact epi_comp' (epi_iso_hom _) (epi_iso_inv _)
+    · dsimp [f, stupidTruncLETransition, stupidTruncLETransition_f,
+        stupidTruncLE]
+      rw [dif_neg hi]
+      exact (HomologicalComplex.isZero_stupidTrunc_X K
+        (ComplexShape.embeddingUpIntLE (n - 1)) i (by
+          intro k hk
+          exact hi ⟨k, hk⟩)).epi _
+  have hqmono : Mono q := by
+    apply HomologicalComplex.mono_of_mono_f
+    intro i
+    by_cases hi : i = n
+    · subst i
+      change Mono (q_f n)
+      unfold q_f
+      rw [dif_pos rfl]
+      change Mono (_ ≫ _)
+      exact mono_comp' (mono_iso_hom _) (mono_iso_inv _)
+    · have hz : IsZero ((degreeConcentrated (K.X n) n).X i) := by
+        change IsZero
+          ((Formalization.Books.Homology.Unit14.CochainComplex.concentrated
+            C (K.X n) (-n)).X i)
+        apply Formalization.Books.Homology.Unit14.CochainComplex.concentrated_isZero
+        simpa only [Int.neg_neg] using hi
+      change Mono (q_f i)
+      unfold q_f
+      rw [dif_neg hi]
+      exact hz.mono _
+  have hkepi : Epi (kernel.lift f q hzero) :=
+    S.exact_iff_epi_kernel_lift.1 hS
+  have hkmono : Mono (kernel.lift f q hzero) := by
+    constructor
+    intro Z a b hab
+    have hki : kernel.lift f q hzero ≫ kernel.ι f = q :=
+      kernel.lift_ι f q hzero
+    apply (cancel_mono q).1
+    calc
+      a ≫ q = a ≫ (kernel.lift f q hzero ≫ kernel.ι f) := by rw [hki]
+      _ = (a ≫ kernel.lift f q hzero) ≫ kernel.ι f := by
+        simp only [Category.assoc]
+      _ = (b ≫ kernel.lift f q hzero) ≫ kernel.ι f := by rw [hab]
+      _ = b ≫ (kernel.lift f q hzero ≫ kernel.ι f) := by
+        simp only [Category.assoc]
+      _ = b ≫ q := by rw [hki]
+  let : IsIso (kernel.lift f q hzero) := isIso_of_mono_of_epi _
+  exact ⟨f, hf, ⟨(asIso (kernel.lift f q hzero)).symm⟩⟩
 
 /-! ### The third numbered item: canonical `τ ≤ n` -/
 

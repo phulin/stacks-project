@@ -1929,7 +1929,9 @@ theorem completeAlgebra_limit_presentation {A : Type u} [CommRing A]
     Nonempty
       (B.obj ≃+*
         ((limit (cprimeQuotientSystem I B.obj) : CommRingCat.{u}) : Type u)) := by
-  sorry
+  let _ : IsAdicComplete (cprimeIdeal I B.obj) (B.obj : Type u) := B.property.1
+  obtain ⟨e⟩ := adicCompletion_is_powerQuotientLimit (cprimeIdeal I B.obj)
+  exact ⟨(AdicCompletion.ofAlgEquiv (cprimeIdeal I B.obj)).toRingEquiv.trans e⟩
 
 /-! ## Presentations by completed polynomial algebras -/
 
@@ -1943,7 +1945,93 @@ theorem adicCompletionAlgebra_property {A : Type u} [CommRing A]
     [IsNoetherianRing A] (I : Ideal A) (C : CommAlgCat A)
     (hC : Algebra.FiniteType A C) :
     CompleteAlgebraProperty I (adicCompletionAlgebra I C) := by
-  sorry
+  constructor
+  · let J : Ideal (C : Type u) := cprimeIdeal I C
+    let _ : IsNoetherianRing (C : Type u) :=
+      Algebra.FiniteType.isNoetherianRing A (C : Type u)
+    have hJ : J.FG := Ideal.FG.of_isNoetherianRing J
+    have hmap :
+        IsAdicComplete
+          (J.map (algebraMap (C : Type u) (AdicCompletion J (C : Type u))))
+          (AdicCompletion J (C : Type u)) :=
+      (IsAdicComplete.map_algebraMap_iff
+        (I := J) (M := AdicCompletion J (C : Type u))).mpr
+        (AdicCompletion.isAdicComplete hJ)
+    change IsAdicComplete
+      (Ideal.map (algebraMap A (AdicCompletion J (C : Type u))) I)
+      (AdicCompletion J (C : Type u))
+    have hAlg : algebraMap A (AdicCompletion J (C : Type u)) =
+        (algebraMap (C : Type u) (AdicCompletion J (C : Type u))).comp
+          (algebraMap A (C : Type u)) :=
+      (IsScalarTower.algebraMap_eq A (C : Type u)
+        (AdicCompletion J (C : Type u))).symm
+    rw [hAlg, ← Ideal.map_map]
+    exact hmap
+  · let J : Ideal (C : Type u) := cprimeIdeal I C
+    let _ : IsNoetherianRing (C : Type u) :=
+      Algebra.FiniteType.isNoetherianRing A (C : Type u)
+    have hJ : J.FG := Ideal.FG.of_isNoetherianRing J
+    let Q := AdicCompletion J (C : Type u)
+    let K : Ideal Q := Ideal.map (algebraMap A Q) I
+    let _ : Algebra (A ⧸ I) ((C : Type u) ⧸ J) :=
+      Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+    let _ : Algebra (A ⧸ I) (Q ⧸ K) :=
+      Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+    have hC' : RingHom.FiniteType (algebraMap A (C : Type u)) := by
+      rw [RingHom.finiteType_algebraMap]
+      exact hC
+    have hqC : RingHom.FiniteType
+        ((Ideal.Quotient.mk J).comp (algebraMap A (C : Type u))) :=
+      hC'.comp_surjective (fun x => Ideal.Quotient.mk_surjective x)
+    have hq' : RingHom.FiniteType
+        (algebraMap (A ⧸ I) ((C : Type u) ⧸ J)) := by
+      apply RingHom.FiniteType.of_comp_finiteType
+        (f := Ideal.Quotient.mk I)
+      convert hqC using 1
+      ext x
+      rfl
+    have hker : K = RingHom.ker (AdicCompletion.evalOneₐ J).toRingHom := by
+      rw [show RingHom.ker (AdicCompletion.evalOneₐ J).toRingHom =
+          J.map (algebraMap (C : Type u) Q) from
+        AdicCompletion.ker_evalOneₐ_eq_map J hJ]
+      change Ideal.map (algebraMap A Q) I =
+        J.map (algebraMap (C : Type u) Q)
+      dsimp [K, Q]
+      have hAlg : algebraMap A (AdicCompletion J (C : Type u)) =
+          (algebraMap (C : Type u) (AdicCompletion J (C : Type u))).comp
+            (algebraMap A (C : Type u)) :=
+        (IsScalarTower.algebraMap_eq A (C : Type u)
+          (AdicCompletion J (C : Type u))).symm
+      rw [hAlg, ← Ideal.map_map]
+      simpa [J, cprimeIdeal]
+    let e : (Q ⧸ K) ≃+* ((C : Type u) ⧸ J) :=
+      (Ideal.quotEquivOfEq hker).trans
+        (RingHom.quotientKerEquivOfSurjective
+          (f := (AdicCompletion.evalOneₐ J).toRingHom)
+          (AdicCompletion.evalOneₐ_surjective J))
+    have hq'' : RingHom.FiniteType
+        (e.symm.toRingHom.comp
+          (algebraMap (A ⧸ I) ((C : Type u) ⧸ J))) :=
+      hq'.comp_surjective e.symm.surjective
+    have heq : e.symm.toRingHom.comp
+          (algebraMap (A ⧸ I) ((C : Type u) ⧸ J)) =
+        algebraMap (A ⧸ I) (Q ⧸ K) := by
+      apply RingHom.ext
+      intro a
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective a
+      apply e.injective
+      simp only [RingHom.coe_comp, Function.comp_apply]
+      change e (e.symm
+          (algebraMap (A ⧸ I) ((C : Type u) ⧸ J)
+            (Ideal.Quotient.mk I a))) =
+        e (algebraMap (A ⧸ I) (Q ⧸ K) (Ideal.Quotient.mk I a))
+      rw [e.apply_symm_apply]
+      rfl
+    have hfinal : RingHom.FiniteType (algebraMap (A ⧸ I) (Q ⧸ K)) := by
+      rw [← heq]
+      exact hq''
+    change Algebra.FiniteType (A ⧸ I) (Q ⧸ K)
+    exact RingHom.finiteType_algebraMap.mp hfinal
 
 /-- A polynomial algebra in `r` variables over `A`. -/
 def polynomialAlgebra {A : Type u} [CommRing A] (r : ℕ) : CommAlgCat A :=
@@ -1957,7 +2045,9 @@ def polynomialCompletion {A : Type u} [CommRing A] (I : Ideal A) (r : ℕ) :
 theorem polynomialCompletion_property {A : Type u} [CommRing A]
     [IsNoetherianRing A] (I : Ideal A) (r : ℕ) :
     CompleteAlgebraProperty I (polynomialCompletion I r) := by
-  sorry
+  have h : Algebra.FiniteType A (MvPolynomial (Fin r) A) := by infer_instance
+  simpa [polynomialCompletion, adicCompletionAlgebra, polynomialAlgebra] using
+    adicCompletionAlgebra_property I (polynomialAlgebra r) h
 
 /-- Every complete algebra in `𝓒'` is a quotient of a completed polynomial algebra. -/
 theorem exists_polynomialCompletion_quotient {A : Type u} [CommRing A]

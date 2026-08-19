@@ -1193,15 +1193,7 @@ theorem setPresheaf_morphism_description
   refine ⟨setPresheafHom_fibre_condition F f, ?_⟩
   apply Pseudofunctor.CoGrothendieck.Hom.ext
   · rfl
-  · exact Subsingleton.elim _ _
-
-theorem setPresheafHom_ext
-    {C : Type uC} [Category.{vC} C]
-    (F : Cᵒᵖ ⥤ Type uS)
-    {X Y : setPresheafCategory F} {f g : X ⟶ Y}
-    (h : f.base = g.base) : f = g := by
-  apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
-  exact Subsingleton.elim _ _ -/
+  · exact Subsingleton.elim _ _ -/
 
 theorem setPresheafHom_ext
     {C : Type uC} [Category.{vC} C]

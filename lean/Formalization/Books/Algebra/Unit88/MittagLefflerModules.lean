@@ -105,6 +105,16 @@ private structure GeneralFilteredColimit
     IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.cocone)
   finitelyPresented : ∀ i, Module.FinitePresentation R (presentation.diag.obj i)
 
+private local instance generalFilteredColimitIndexCategory
+    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    (C : GeneralFilteredColimit N) : Category.{max u w} C.index :=
+  C.indexCategory
+
+private local instance generalFilteredColimitIndexFiltered
+    {R : Type u} [CommRing R] {N : ModuleCat.{w} R}
+    (C : GeneralFilteredColimit N) : IsFiltered C.index :=
+  C.indexFiltered
+
 private theorem exists_generalFilteredColimit
     {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
     Nonempty (GeneralFilteredColimit N) := by
@@ -338,7 +348,6 @@ private theorem exists_generalFilteredColimit
       · rw [Submodule.ker_mkQ]
       exact Submodule.fg_span a.2.1.finite_toSet }⟩
 -/
-/-
 private lemma tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
     {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
@@ -347,6 +356,7 @@ private lemma tensor_rep
           (C.presentation.diag.obj i : Type w)),
         (C.presentation.ι.app i).hom.lTensor P y = x := by
   sorry
+/-
   intro x
   induction x using TensorProduct.induction_on with
   | zero =>
@@ -379,13 +389,14 @@ private lemma tensor_rep
       rw [← ha, ← hb]
 -/
 
-/-
 private lemma eventually_zero
     {R : Type u} [CommRing R] {Q : ModuleCat.{w} R}
     (C : GeneralFilteredColimit Q) {i : C.index} (x : C.presentation.diag.obj i) :
     (C.presentation.ι.app i).hom x = 0 →
       ∃ (j : C.index) (h : i ⟶ j),
         (C.presentation.diag.map h).hom x = 0 := by
+  sorry
+/-
   intro hx
   obtain ⟨j, h, _, hh⟩ :=
     (Types.FilteredColimit.isColimit_eq_iff _ C.underlyingIsColimit).1
@@ -530,7 +541,6 @@ private lemma injective_of_universallyInjective
   simp [hxy]
 -/
 
-/-
 private lemma pushout_inr_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -542,12 +552,11 @@ private lemma pushout_inr_cokernel
     let p := pushout ff gg
     let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
     let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
-      (pushout.desc (ModuleCat.ofHom q) 0 (by
-        ext x
-        simp [q])).hom
+      (pushout.desc (ModuleCat.ofHom q) 0 (by sorry)).hom
     Function.Exact (ModuleCat.Hom.hom (pushout.inr ff gg)) π ∧
       Function.Surjective π := by
   sorry
+/-
   dsimp
   let ff := ModuleCat.ofHom f
   let gg := ModuleCat.ofHom g

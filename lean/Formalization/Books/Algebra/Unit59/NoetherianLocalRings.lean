@@ -1032,7 +1032,7 @@ theorem d_eq_idealCumulativeHilbertFunction_degree
     [Module.Finite R M] (hM : Nontrivial M) (I : Ideal R)
     (hI : IsIdealOfDefinition R I) :
     d R M = numericalPolynomialDegree (idealCumulativeHilbertFunctionInteger I M) := by
-  letI : Nontrivial M := hM
+  let : Nontrivial M := hM
   simp only [d, if_pos hM]
   exact (ideal_hilbert_function_degree_independent I
     (IsLocalRing.maximalIdeal R) hI (maximalIdeal_isIdealOfDefinition R)).2.symm

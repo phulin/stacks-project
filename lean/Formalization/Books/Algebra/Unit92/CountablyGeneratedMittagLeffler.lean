@@ -472,7 +472,7 @@ theorem exists_cofinal_monotone_sequence
     exact (hI.2.directed (s (n + 1)) (a n)).choose_spec.2
   refine ⟨a, ?_, ?_⟩
   · intro n
-    simpa [a] using hamono n
+    exact hamono n
   · intro i
     obtain ⟨n, hn⟩ := hs i
     subst i

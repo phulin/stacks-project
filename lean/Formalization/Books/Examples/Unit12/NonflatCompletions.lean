@@ -485,7 +485,9 @@ private lemma noncoherentExample_relationSpan_not_fg
     have hle : n ≤ t.sum id := by
       simpa using (Finset.single_le_sum (fun _ _ => Nat.zero_le _) hnt :
         id n ≤ ∑ x ∈ t, id x)
-    have : t.sum id + 1 ≤ t.sum id := by simpa [n] using hle
+    have : t.sum id + 1 ≤ t.sum id := by
+      change n ≤ t.sum id
+      exact hle
     exact (Nat.not_succ_le_self (t.sum id)) this
   let ev : MvPolynomial (ℕ × Bool) k →+* MvPolynomial (Fin 2) k :=
     MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* MvPolynomial (Fin 2) k)
@@ -528,7 +530,7 @@ private lemma noncoherentExample_relationSpan_not_fg
           (MvPolynomial.C : k →+* MvPolynomial (Fin 2) k)
           (fun w => if w.1 = n then MvPolynomial.X (if w.2 then 1 else 0) else 0) (v i) by rfl]
         rw [MvPolynomial.eval₂Hom_eq_constantCoeff_of_vars]
-        · simpa [hcc v hvi i]
+        · simp [hcc v hvi i]
         · intro w hw
           simp [hvars w hw]
     | zero => intro i; simp [ev]
@@ -596,7 +598,7 @@ private lemma noncoherentExample_pderiv_eval_relations
           map_add, map_mul, Pi.smul_apply, smul_eq_mul]
         rw [hq.2]
         simp
-      refine ⟨?_, by simpa [map_mul, hq.2]⟩
+      refine ⟨?_, by simp [map_mul, hq.2]⟩
       change noncoherentExamplePDerivEval k (p * q) ∈ _
       rw [hprod]
       exact Submodule.smul_mem _ _ hq.1
@@ -604,7 +606,7 @@ private lemma noncoherentExample_pderiv_eval_relations
 theorem noncoherentExample_countable
     (k : Type u) [Field k] [Countable k] :
     Countable (noncoherentExampleRing k) := by
-  letI : Countable (MvPolynomial NoncoherentExampleVariables k) :=
+  let : Countable (MvPolynomial NoncoherentExampleVariables k) :=
     Countable.of_equiv _ AddMonoidAlgebra.coeffEquiv.symm
   exact Ideal.Quotient.mk_surjective.countable
 
@@ -632,9 +634,9 @@ theorem noncoherentExample_ideal_not_finitePresented
         ⟨v 0 * y + v 1 * z, by
           apply I.add_mem
           · exact I.mul_mem_left _ (by
-              exact Ideal.subset_span (by simp [I, y]))
+              exact Ideal.subset_span (by simp [y]))
           · exact I.mul_mem_left _ (by
-              exact Ideal.subset_span (by simp [I, z]))⟩
+              exact Ideal.subset_span (by simp [z]))⟩
       map_add' := by
         intro v w
         apply Subtype.ext
@@ -681,7 +683,7 @@ theorem noncoherentExample_ideal_not_finitePresented
   have hK : (LinearMap.ker l).FG :=
     Module.FinitePresentation.fg_ker l hl
   obtain ⟨t, ht⟩ := hK
-  letI : Module A S := Module.compHom S (noncoherentExampleQuotientEval k)
+  let : Module A S := Module.compHom S (noncoherentExampleQuotientEval k)
   let ρ := noncoherentExampleQuotientEval k
   let θ : (Fin 2 → A) →ₗ[A] (Fin 2 → S) :=
     { toFun := fun v i => ρ (v i)
@@ -737,14 +739,14 @@ theorem noncoherentExample_ideal_not_finitePresented
           noncoherentExampleEval k (MvPolynomial.pderiv
             (Sum.inl 0) q)
         rw [← hC]
-        simp [ρ, q, noncoherentExamplePDerivEval,
+        simp [ρ, q,
           noncoherentExampleQuotientEval, noncoherentExampleEval,
           noncoherentExampleYVar, noncoherentExampleZVar]
       · change ρ (v 1) =
           noncoherentExampleEval k (MvPolynomial.pderiv
             (Sum.inl 1) q)
         rw [← hD]
-        simp [ρ, q, noncoherentExamplePDerivEval,
+        simp [ρ, q,
           noncoherentExampleQuotientEval, noncoherentExampleEval,
           noncoherentExampleYVar, noncoherentExampleZVar]
     rw [heq]
@@ -786,7 +788,7 @@ theorem noncoherentExample_not_coherent
   intro h
   exact noncoherentExample_ideal_not_finitePresented k
     (h (noncoherentExampleIdeal k) (by
-      exact Submodule.fg_span (by simp [noncoherentExampleIdeal])))
+      exact Submodule.fg_span (by simp)))
 
 theorem noncoherentExample_powerSeries_not_flat
     (k : Type u) [Field k] [Countable k] :
@@ -818,7 +820,7 @@ theorem powerSeries_is_completion (R : Type u) [CommRing R] :
     ext p
     constructor
     · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
-      simp [polynomialXIdeal, e]
+      simp [e]
     · intro hp
       simp only [Set.mem_singleton_iff] at hp
       subst p
@@ -873,7 +875,7 @@ theorem powerSeries_is_completion (R : Type u) [CommRing R] :
           Ideal.Quotient.factorₐ (MvPolynomial Unit R) hpow := by
       ext y
       obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
-      simp [hn, hm]
+      simp
     have htrans :
         Ideal.Quotient.factorₐ (MvPolynomial Unit R) hpow
             (AdicCompletion.eval (MvPolynomial.idealOfVars Unit R)
@@ -947,7 +949,7 @@ theorem powerSeries_is_completion (R : Type u) [CommRing R] :
           Ideal.Quotient.factorₐ A hpow := by
       ext y
       obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
-      simp [hn, hm]
+      simp
     have htrans :
         Ideal.Quotient.factorₐ A hpow (AdicCompletion.eval I A n x) =
           AdicCompletion.eval I A m x := by
@@ -993,7 +995,7 @@ theorem powerSeries_is_completion (R : Type u) [CommRing R] :
     intro m n hle
     ext x
     obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-    simp [f, qinv, q]
+    simp [qinv, q]
   have hg : ∀ {m n : ℕ} (hle : m ≤ n),
       (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hle)).comp (g n) = g m := by
     intro m n hle
@@ -1071,7 +1073,7 @@ theorem powerSeries_is_completion (R : Type u) [CommRing R] :
       AdicCompletion.evalₐ (polynomialXIdeal R) n
         (algebraMap (Polynomial R)
           (AdicCompletion (polynomialXIdeal R) (Polynomial R)) (e a))
-    simp [E, F, q, AdicCompletion.algebraMap_apply]
+    simp [q, AdicCompletion.algebraMap_apply]
   have hcoe (p : Polynomial R) :
       algebraMap (Polynomial R) (PowerSeries R) p =
         algebraMap (MvPolynomial Unit R) (PowerSeries R) (e.symm p) := by

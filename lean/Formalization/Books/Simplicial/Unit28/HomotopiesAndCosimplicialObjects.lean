@@ -915,13 +915,161 @@ noncomputable def splitPushoutSelfMap
     f.cechConerve ⟶ f.cechConerve :=
   Arrow.mapCechConerve (splitPushoutArrowHom f.hom s hs)
 
+noncomputable def splitPushoutHomotopyComponent
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)]
+    (n : ℕ) (α : (interval : SSet.{0}).obj (op (SimplexCategory.mk n))) :
+    widePushout f.left (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) ⟶
+      widePushout f.left (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) :=
+  WidePushout.desc (WidePushout.head _)
+    (fun i : Fin (n + 1) => if α i = 0 then
+      s ≫ WidePushout.head (B := f.left)
+        (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)
+      else WidePushout.ι (B := f.left)
+        (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) i)
+    (fun i : Fin (n + 1) => by
+      by_cases h : α i = 0
+      · rw [if_pos h, ← Category.assoc, hs, Category.id_comp]
+      · rw [if_neg h]
+        exact WidePushout.arrow_ι (B := f.left)
+          (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) i)
+
+theorem splitPushoutSelfMap_ι
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] (n : ℕ)
+    (i : Fin (n + 1)) :
+    WidePushout.ι (B := f.left) (objs := fun _ : Fin (n + 1) => f.right)
+        (fun _ => f.hom) i ≫ (splitPushoutSelfMap f s hs).app (SimplexCategory.mk n) =
+      (s ≫ f.hom) ≫ WidePushout.ι (B := f.left)
+        (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) i := by
+  dsimp [splitPushoutSelfMap, splitPushoutArrowHom, Arrow.mapCechConerve]
+  simp only [Arrow.homMk_right]
+  exact WidePushout.ι_desc (fun _ : Fin (n + 1) => f.hom)
+    ((𝟙 f.left) ≫ WidePushout.head (fun _ : Fin (n + 1) => f.hom))
+    (fun i => (s ≫ f.hom) ≫ WidePushout.ι (fun _ : Fin (n + 1) => f.hom) i) _ i
+
+theorem splitPushoutSelfMap_head
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] (X : SimplexCategory) :
+    WidePushout.head (B := f.left) (objs := fun _ : Fin (X.len + 1) => f.right)
+        (fun _ => f.hom) ≫ (splitPushoutSelfMap f s hs).app X =
+      WidePushout.head (B := f.left) (objs := fun _ : Fin (X.len + 1) => f.right)
+        (fun _ => f.hom) := by
+  dsimp [splitPushoutSelfMap, splitPushoutArrowHom, Arrow.mapCechConerve]
+  simp only [Arrow.homMk_left, Arrow.homMk_right]
+  exact (WidePushout.head_desc (fun _ : Fin (X.len + 1) => f.hom)
+    ((𝟙 f.left) ≫ WidePushout.head (fun _ : Fin (X.len + 1) => f.hom))
+    (fun i => (s ≫ f.hom) ≫ WidePushout.ι (fun _ : Fin (X.len + 1) => f.hom) i) _).trans
+      (Category.id_comp _)
+
+theorem splitPushoutHomotopyComponent_zero
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] (n : ℕ) :
+    splitPushoutHomotopyComponent f s hs n
+      (SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n))) =
+        (splitPushoutSelfMap f s hs).app (SimplexCategory.mk n) := by
+  apply WidePushout.hom_ext (fun _ : Fin (n + 1) => f.hom)
+  · intro i
+    dsimp [splitPushoutHomotopyComponent]
+    rw [WidePushout.ι_desc]
+    have hc : SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n)) i = 0 := rfl
+    rw [if_pos hc]
+    have hfirst : s ≫ WidePushout.head (B := f.left)
+        (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) =
+      (s ≫ f.hom) ≫ WidePushout.ι (B := f.left)
+        (objs := fun _ : Fin (n + 1) => f.right) (fun _ => f.hom) i := by
+      simpa [Category.assoc] using congrArg (fun k => s ≫ k)
+        (WidePushout.arrow_ι (fun _ : Fin (n + 1) => f.hom) i).symm
+    exact hfirst.trans (splitPushoutSelfMap_ι f s hs n i).symm
+  · dsimp [splitPushoutHomotopyComponent]
+    rw [WidePushout.head_desc]
+    exact splitPushoutSelfMap_head f s hs (SimplexCategory.mk n) |>.symm
+
+theorem splitPushoutHomotopyComponent_one
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] (n : ℕ) :
+    splitPushoutHomotopyComponent f s hs n
+      (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n))) =
+        (𝟙 f.cechConerve : f.cechConerve ⟶ f.cechConerve).app
+          (SimplexCategory.mk n) := by
+  apply WidePushout.hom_ext (fun _ : Fin (n + 1) => f.hom)
+  · intro i
+    dsimp [splitPushoutHomotopyComponent]
+    rw [WidePushout.ι_desc]
+    have hc : ¬ SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)) i = 0 := by
+      change ¬ (1 : Fin 2) = 0
+      simp
+    rw [if_neg hc]
+    change WidePushout.ι _ i = WidePushout.ι _ i ≫ 𝟙 _
+    simp
+  · dsimp [splitPushoutHomotopyComponent]
+    rw [WidePushout.head_desc]
+    change WidePushout.head _ = WidePushout.head _ ≫ 𝟙 _
+    simp
+
+noncomputable def splitPushoutDegreewiseHomotopy
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] :
+    DegreewiseHomotopy (splitPushoutSelfMap f s hs) (𝟙 f.cechConerve) where
+  h := splitPushoutHomotopyComponent f s hs
+  h_zero := splitPushoutHomotopyComponent_zero f s hs
+  h_one := splitPushoutHomotopyComponent_one f s hs
+  naturality := by
+    intro n m g α
+    apply WidePushout.hom_ext (fun _ : Fin (n + 1) => f.hom)
+    · intro i
+      dsimp [splitPushoutHomotopyComponent, Arrow.cechConerve]
+      simp only [← Category.assoc, WidePushout.ι_desc]
+      by_cases hα : α (g.toOrderHom i) = 0
+      · rw [if_pos hα]
+        have hα' : ((interval : SSet.{0}).map g.op α) i = 0 := hα
+        rw [if_pos hα']
+        simp only [Category.assoc, WidePushout.head_desc]
+      · rw [if_neg hα]
+        have hα' : ¬ ((interval : SSet.{0}).map g.op α) i = 0 := hα
+        rw [if_neg hα']
+        exact (WidePushout.ι_desc (fun _ : Fin (n + 1) => f.hom)
+          (WidePushout.head (fun _ : Fin (m + 1) => f.hom))
+          (fun i => WidePushout.ι (fun _ : Fin (m + 1) => f.hom) (g.toOrderHom i)) _ i).symm
+    · dsimp [splitPushoutHomotopyComponent, Arrow.cechConerve]
+      simp only [← Category.assoc, WidePushout.head_desc]
+
 theorem splitPushoutSelfMap_homotopic_identity
     {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
     (hs : f.hom ≫ s = 𝟙 f.left)
     [∀ n : ℕ, HasWidePushout f.left
       (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] :
     Homotopic (splitPushoutSelfMap f s hs) (𝟙 f.cechConerve) := by
-  sorry
+  exact homotopicOfHomotopy (splitPushoutDegreewiseHomotopy f s hs)
+
+noncomputable def splitPushoutRetraction
+    {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
+    (hs : f.hom ≫ s = 𝟙 f.left)
+    [∀ n : ℕ, HasWidePushout f.left
+      (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] :
+    f.cechConerve ⟶ (CosimplicialObject.const C).obj f.left where
+  app X := WidePushout.desc (𝟙 f.left) (fun _ => s) (fun _ => hs)
+  naturality X Y g := by
+    apply WidePushout.hom_ext (fun _ : Fin (X.len + 1) => f.hom)
+    · intro i
+      dsimp [Arrow.cechConerve]
+      simp only [← Category.assoc, WidePushout.ι_desc]
+      simp
+    · dsimp [Arrow.cechConerve]
+      simp only [← Category.assoc, WidePushout.head_desc]
+      simp
 
 theorem splitPushout_homotopy_equivalent_constant
     {C : Type u} [Category.{v} C] (f : Arrow C) (s : f.right ⟶ f.left)
@@ -930,7 +1078,37 @@ theorem splitPushout_homotopy_equivalent_constant
       (fun _ : Fin (n + 1) => f.right) (fun _ => f.hom)] :
     HomotopyEquivalent f.cechConerve
       ((CosimplicialObject.const C).obj f.left) := by
-  sorry
+  let a := splitPushoutRetraction f s hs
+  let b : (CosimplicialObject.const C).obj f.left ⟶ f.cechConerve :=
+    f.augmentedCechConerve.hom
+  refine ⟨a, b, ?_, ?_⟩
+  · have hba : b ≫ a = 𝟙 ((CosimplicialObject.const C).obj f.left) := by
+      ext X
+      dsimp [a, b, splitPushoutRetraction]
+      change WidePushout.head (fun _ : Fin (X.len + 1) => f.hom) ≫
+        WidePushout.desc (𝟙 f.left) (fun _ => s) _ = 𝟙 f.left
+      rw [WidePushout.head_desc]
+    rw [hba]
+    exact homotopic_refl _
+  · have hab : a ≫ b = splitPushoutSelfMap f s hs := by
+      ext X
+      apply WidePushout.hom_ext (fun _ : Fin (X.len + 1) => f.hom)
+      · intro i
+        dsimp [a, b, splitPushoutRetraction]
+        change WidePushout.ι (fun _ : Fin (X.len + 1) => f.hom) i ≫
+          (WidePushout.desc (𝟙 f.left) (fun _ => s) _ ≫
+            WidePushout.head (fun _ : Fin (X.len + 1) => f.hom)) = _
+        rw [← Category.assoc, WidePushout.ι_desc]
+        rw [splitPushoutSelfMap_ι]
+        simpa [Category.assoc] using congrArg (fun k => s ≫ k)
+          (WidePushout.arrow_ι (fun _ : Fin (X.len + 1) => f.hom) i).symm
+      · dsimp [a, b, splitPushoutRetraction]
+        change WidePushout.head (fun _ : Fin (X.len + 1) => f.hom) ≫
+          (WidePushout.desc (𝟙 f.left) (fun _ => s) _ ≫
+            WidePushout.head (fun _ : Fin (X.len + 1) => f.hom)) = _
+        rw [← Category.assoc, WidePushout.head_desc]
+        exact (Category.id_comp _).trans (splitPushoutSelfMap_head f s hs X).symm
+    exact hab.symm ▸ splitPushoutSelfMap_homotopic_identity f s hs
 
 /-! ## The cosimplicial Dold--Kan homotopy interfaces -/
 

@@ -913,7 +913,7 @@ theorem operations_subcategory_saturation
     (P : ObjectProperty C) [CategoryTheory.IsTriangulated C]
     [P.IsTriangulated] :
     localizationKernel (subcategoryOperation P) = quotientKernel P := by
-  sorry
+  ext Z; exact quotientFunctor_kernel_iff P Z
 
 /- The source warns that the two operations are not mutually inverse before
    saturation; the saturation statements above and below record the precise
@@ -927,7 +927,26 @@ theorem operations_restrict_to_saturated_inverse
     (hS : SaturatedMultiplicativeSystem S)
     (hP : IsStrictlyFullSaturatedPretriangulated P) :
     localizationOperation S = S ∧ quotientKernel P = P := by
-  sorry
+  refine ⟨invertedByLocalization_eq_of_saturated hS, ?_⟩
+  apply le_antisymm
+  · intro Z hZ
+    obtain ⟨Z', hZZ'⟩ := hZ
+    obtain ⟨hZ, _⟩ := hP.2.2 hZZ'
+    obtain ⟨W, hW, ⟨e'⟩⟩ := hZ
+    exact hP.1.of_iso e'.symm hW
+  · intro Z hZ
+    refine ⟨0, ?_⟩
+    refine ⟨Z, hZ, ⟨?_⟩⟩
+    refine
+      { hom := biprod.fst
+        inv := biprod.inl
+        hom_inv_id := ?_
+        inv_hom_id := ?_ }
+    · rw [← biprod.total]
+      have hsnd : (biprod.snd : Z ⊞ (0 : C) ⟶ (0 : C)) = 0 :=
+        Subsingleton.elim _ _
+      simp [hsnd]
+    · simp
 
 end Operations
 

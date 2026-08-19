@@ -386,6 +386,31 @@ theorem exactCouple_differential_rule
     {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
     ∀ n : ℕ, Nonempty (ExactCoupleDifferentialRule D n) := by
+  /-
+  Proof roadmap.
+
+  * Transport the rule already supplied by
+    `Formalization.Books.Homology.Unit20.exactCouple_differential_rule` in
+    `Unit20/ExactCouples.lean`; a direct `exact` cannot work because the two
+    chapters deliberately have distinct structure names.
+  * For fixed `n`, obtain an upstream rule `R` and rebuild the local structure
+    fieldwise as `ExactCoupleDifferentialRule.mk R.differential
+    R.differential_squared _`.  The two page-component types are
+    definitionally equal after proof irrelevance; a tactic trial confirms
+    that the two displayed fields elaborate without any cast.
+  * The cycle subobjects, powers of `alpha`, and class maps are likewise
+    definitionally the same in the two chapters.  Apply `R.rule x y` to the
+    given factorisation (use
+    `simpa [exactCoupleCycleSubobject, exactCoupleAlphaPow,
+    Formalization.Books.Homology.Unit20.exactCoupleCycleSubobject]`).  Reuse
+    its `yCycle` and both conclusions.  If simplification stops at the quotient
+    object, unfold both versions of `exactCouplePageClassOfCycle`; proof
+    irrelevance identifies their `exactCouple_boundary_le_cycle` arguments.
+  * Keep this fieldwise conversion as a local function so that
+    `exactCouple_associated_data_exists` below can convert the specific
+    upstream rule occurring in its compatibility equation, then return the
+    converted rule for every `n`.
+  -/
   sorry
 
 /-- The page identifications and differential compatibility for the associated
@@ -406,6 +431,31 @@ theorem exactCouple_associated_data_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
     Nonempty (ExactCoupleAssociatedData D) := by
+  /-
+  Proof roadmap.
+
+  * Obtain `⟨U⟩` from
+    `Formalization.Books.Homology.Unit20.exactCouple_associated_data_exists D`
+    (`Unit20/ExactCouples.lean`), instantiated as
+    `PlainSpectralSequence.{v, u, 0} C 1`.  Keep `U.sequence`; do not use the
+    separately chosen `exactCoupleAssociatedSpectralSequence`, because its
+    choice is not tied to `U.differential_compatibility`.
+  * Use `U.pageIso` fieldwise: Unit20 and Unit21 page components are
+    definitionally equal after proof irrelevance.  If elaboration exposes the
+    equality, use the already proved `exactCouplePageComponent_eq_unit20 D n`
+    and set `pageIso n := U.pageIso n ≪≫
+    (eqToIso (exactCouplePageComponent_eq_unit20 D n)).symm`.
+  * Set `differentialRule := exactCouple_differential_rule D`.  For
+    compatibility, obtain `⟨R₂₀, hR₂₀⟩ :=
+    U.differential_compatibility n` and convert this *same* `R₂₀` by the
+    fieldwise construction in the preceding roadmap.  Its differential is
+    definitionally `R₂₀.differential`, so `simpa` turns `hR₂₀` into exactly
+    `plainPageDifferential U.sequence (n + 1 : ℤ) ≫ (pageIso n).hom =
+    (pageIso n).hom ≫ R.differential`.  In the explicit-iso fallback,
+    conjugate the converted differential by that iso and cancel its inverse
+    and hom after reassociating `hR₂₀`.  Assemble the four structure fields and
+    wrap the result in `Nonempty`.
+  -/
   sorry
 
 noncomputable def exactCoupleAssociatedData
@@ -560,6 +610,57 @@ theorem shiftedExactCoupleDerived_exists
     {S T : C ≌ C} {A E : C} (D : ShiftedExactCouple C S T A E) :
     Nonempty (ShiftedExactCouple C (S.trans T) T
       (shiftedExactCoupleDerivedA D) (shiftedExactCoupleDerivedE D)) := by
+  /-
+  Proof roadmap.
+
+  The order `S.trans T` is intentional: by `Equivalence.trans` in
+  `Mathlib/CategoryTheory/Equivalence.lean` its functor is `S.functor ⋙
+  T.functor`, hence its value is the source's `TS`.  Do not apply
+  `Unit20.shiftedExactCouple_derived_exists`; that declaration concludes with
+  `T.trans S`, has unspecified `A'` and `E'`, and cannot be transported
+  without an extra commutation isomorphism.
+
+  * Abbreviate `d := shiftedExactCoupleDifferential D`,
+    `p := shiftedExactCouplePreviousDifferential D`, and
+    `b := kernel.lift d (Abelian.image.ι p)
+      (by simpa using shiftedExactCouple_differential_previous_comp D)`.
+    Then the required `E'` unfolds to `cokernel b`; write
+    `q := cokernel.π b : kernel d ⟶ E'`.  Write
+    `A' := Abelian.image D.Talpha` and `iA := Abelian.image.ι D.Talpha`.
+  * Extract the three zero composites and exactness witnesses from `D.exact`.
+    Define the restriction
+    `Talpha' : T.functor.obj A' ⟶ A'` by
+    `T.functor.map iA ≫ Abelian.factorThruImage D.Talpha`.  Define
+    `alpha' : A' ⟶ T.inverse.obj A'` by transporting `Talpha'` through
+    `T.unitIso`; the triangle identities prove
+    `Talpha' = T.functor.map alpha' ≫ T.counitIso.hom.app A'`.
+  * Construct `fCycle : kernel d ⟶ A'` with
+    `ShortComplex.Exact.isLimitImage` (`Mathlib/CategoryTheory/Abelian/Exact.lean`)
+    for the exact pair `(D.Talpha, D.g)`: its composite with `iA` is
+    `kernel.ι d ≫ D.f`.  Show `b ≫ fCycle = 0` after cancelling the
+    mono `iA`; unfold `p` and use the exact-couple zero composite
+    `D.g ≫ S.functor.map D.f = 0`.  Set
+    `f' := cokernel.desc b fCycle this`.
+  * For `g'`, first factor `T.functor.map D.g` through the kernel of
+    `(S.trans T).functor.map d`.  Use `Limits.PreservesKernel.iso` from
+    `Mathlib/CategoryTheory/Limits/Preserves/Shapes/Kernels.lean` to identify
+    that kernel with `(S.trans T).functor.obj (kernel d)`, then compose with
+    `(S.trans T).functor.map q`.  Call the resulting map
+    `g0 : T.functor.obj A ⟶ (S.trans T).functor.obj E'`.
+    Prove `kernel.ι D.Talpha ≫ g0 = 0`: exactness of
+    `(T.functor.map D.f, D.Talpha)` identifies this kernel with the image of
+    `T.functor.map D.f`, while `q` kills the transported image of `p`
+    (which is the image of `T.functor.map d`).  Descend `g0` through
+    `cokernel (kernel.ι D.Talpha)` and precompose with
+    `(Abelian.coimageIsoImage D.Talpha).inv` to obtain
+    `g' : A' ⟶ (S.trans T).functor.obj E'`.
+  * Prove the three image/kernel equalities for
+    `(T.functor.map f', Talpha', g', (S.trans T).functor.map f')` by the same
+    kernel/cokernel universal properties.  Convert them to exactness with
+    `ShortComplex.exact_iff_image_eq_kernel`; the required zero composites
+    are the equations used to define the descents.  Finally fill the five
+    fields of `Unit20.ShiftedExactCouple` and return it in `Nonempty`.
+  -/
   sorry
 
 /-- A chosen shifted derived exact couple. -/
@@ -608,6 +709,31 @@ theorem shiftedExactCouple_kernel_formula
       (Subobject.pullback D.f).obj (Subobject.mk (kernel.ι D.g)) =
         (Subobject.pullback D.f).obj
           ((Subobject.«exists» D.Talpha).obj ⊤) := by
+  /-
+  Proof roadmap.
+
+  * Prove the generic identity
+    `kernelSubobject (f ≫ g) =
+      (Subobject.pullback f).obj (kernelSubobject g)` by antisymmetry.
+    For the forward map use `kernel.lift g (kernel.ι (f ≫ g) ≫ f)` and
+    `Subobject.isPullback`; for the reverse map use the same pullback square,
+    `kernel.lift (f ≫ g)`, `Subobject.le_of_comm`, and
+    `Subobject.le_mk_of_comm`.  The needed API is in
+    `Mathlib/CategoryTheory/Subobject/Basic.lean` and
+    `Mathlib/CategoryTheory/Subobject/Limits.lean`.  Specialise to `D.f` and
+    `D.g`, then unfold `shiftedExactCoupleDifferential`.
+  * From `D.exact`, retain the middle exactness witness for the pair
+    `(D.Talpha, D.g)`.  Apply
+    `ShortComplex.exact_iff_image_eq_kernel` from
+    `Mathlib/CategoryTheory/Abelian/Exact.lean` to get
+    `imageSubobject D.Talpha = kernelSubobject D.g`.
+  * Identify `(Subobject.«exists» D.Talpha).obj ⊤` with
+    `imageSubobject D.Talpha`.  A robust proof uses
+    `Subobject.existsIsoImage`, `Subobject.imageSubobjectIso`, and
+    `Subobject.eq_of_comm`; do not rely on definitional reduction of the
+    chosen image factorisation.  Rewrite by the exactness equality and apply
+    congruence of `(Subobject.pullback D.f).obj` for the second conjunct.
+  -/
   sorry
 
 /-- `Im(d) = g(Im(f)) = g(Ker(alpha))` in the shifted setting. -/
@@ -618,6 +744,39 @@ theorem shiftedExactCouple_image_formula
         (Subobject.«exists» D.g).obj ((Subobject.«exists» D.f).obj ⊤) ∧
       (Subobject.«exists» D.g).obj ((Subobject.«exists» D.f).obj ⊤) =
         (Subobject.«exists» D.g).obj (Subobject.mk (kernel.ι D.alpha)) := by
+  /-
+  Proof roadmap.
+
+  * First prove/hoist the generic composition formula already established
+    inside `exactCouple_filtration` above:
+    `(Subobject.«exists» (a ≫ b)).obj P =
+      (Subobject.«exists» b).obj ((Subobject.«exists» a).obj P)`.
+    Its proof uses the adjunction `Subobject.existsPullbackAdj` and
+    `Subobject.pullback_comp` from
+    `Mathlib/CategoryTheory/Subobject/Basic.lean`.  Apply it to `D.f`, `D.g`,
+    and `P = ⊤`, then unfold `shiftedExactCoupleDifferential`; this is the
+    first conjunct.
+  * Extract the first exact pair `(T.functor.map D.f, D.Talpha)` from
+    `D.exact`.  Map that short complex by `T.inverse`.  Exactness is preserved
+    by `ShortComplex.Exact.map` in
+    `Mathlib/Algebra/Homology/ShortComplex/Exact.lean`.  Build a
+    `ShortComplex.isoMk` (from `.../ShortComplex/Basic.lean`) from the mapped
+    complex to `ShortComplex.mk D.f D.alpha _`.  Obtain its zero proof by
+    applying the faithful functor `T.functor` to `D.f ≫ D.alpha`, rewriting
+    with `D.Talpha_spec`, and using the zero composite
+    `T.functor.map D.f ≫ D.Talpha = 0`.  Use
+    `(T.unitIso.app E).symm`, `(T.unitIso.app A).symm`, and `Iso.refl _`;
+    `D.Talpha_spec`, naturality, and the equivalence triangle identities prove
+    its two commutative squares.
+  * Transfer exactness across that isomorphism with
+    `ShortComplex.exact_iff_of_iso`, then use
+    `ShortComplex.exact_iff_image_eq_kernel` to obtain
+    `imageSubobject D.f = kernelSubobject D.alpha`.  Rewrite
+    `imageSubobject D.f` as `(Subobject.«exists» D.f).obj ⊤` using the
+    `Subobject.existsIsoImage` argument from the kernel roadmap, and apply
+    congruence of `(Subobject.«exists» D.g).obj` to finish the second
+    conjunct.
+  -/
   sorry
 
 /-! ### Iterated shifts and the associated translated sequence -/
@@ -703,6 +862,33 @@ theorem shiftedExactCouple_associatedSpectralSequence_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {S T : C ≌ C} {A E : C} (D : ShiftedExactCouple C S T A E) :
     Nonempty (ShiftedExactCoupleAssociatedSpectralSequence (C := C) D) := by
+  /-
+  Proof roadmap.
+
+  The Unit20 existence theorem only fixes `r₀` and page one; it does not
+  constrain `sequence.translation`, so refining its witness cannot prove this
+  statement.  Construct the weak translated sequence required by this
+  structure directly.
+
+  * Let `τ r := shiftedExactCoupleTranslation S T r`.  Define pages for
+    natural offsets by
+    `P 0 := E` and
+    `P (n + 1) := Unit20.translatedDifferentialHomology
+      (τ (Int.ofNat (n + 1))) (0 : P n ⟶ (τ _).functor.obj (P n))
+      (by simp)`; this uses `translatedDifferentialHomology` from
+    `Unit20/SpectralSequences.lean`.
+  * Define `X.page r := if 1 ≤ r then P (Int.toNat (r - 1)) else E`,
+    `X.translation := τ`, and every `X.differential r := 0`.  The square-zero
+    field is `zero_comp`.
+  * For `X.nextIso r hr`, put `k := Int.toNat (r - 1)`.  Use
+    `Int.toNat_of_nonneg`, `r = Int.ofNat (k + 1)`, and `omega` to reduce
+    `X.page r` to `P k` and `X.page (r + 1)` to `P (k + 1)`.  After unfolding
+    the recursion for `P`, the required isomorphism is `Iso.refl _`.
+  * Package `X` with `starts_at_one := rfl`, `translation := fun r ↦ rfl`,
+    and `page_one := ⟨Iso.refl E⟩`.  The argument uses `D` only to choose
+    `S` and `T`, which is exactly all the present structure records; stronger
+    association data would require strengthening the interface first.
+  -/
   sorry
 
 noncomputable def shiftedExactCoupleAssociatedSpectralSequence

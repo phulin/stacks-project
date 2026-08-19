@@ -1467,6 +1467,9 @@ private def componentIso
     inv_hom_id := by
       exact congrArg (fun f => f.f n) e.inv_hom_id }
 
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.isDefEq.respectTransparency.types false in
 theorem sequence_maps_split
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {n : ℕ} (hn : 0 < n) (A : ComposableArrows (BookComplex C) (n - 1)) :
@@ -1479,8 +1482,7 @@ theorem sequence_maps_split
       ((∀ i : Fin ((n - 1) + 1), IsBoundedAbove (A.obj i)) →
         ∀ i : Fin ((n - 1) + 1), IsBoundedAbove (B.obj i)) ∧
       ((∀ i : Fin ((n - 1) + 1), IsBounded (A.obj i)) →
-        ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by sorry
-/-
+        ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by
   have aux : ∀ (m : ℕ) (A : ComposableArrows (BookComplex C) m),
       ∃ (B : ComposableArrows (BookComplex C) m) (φ : B ⟶ A),
         (∀ i : Fin m, termwiseSplitInjection (adjacentMap B i)) ∧
@@ -1510,8 +1512,7 @@ theorem sequence_maps_split
         exact h i
     | succ m ih =>
       intro A
-      let P : ComposableArrows (BookComplex C) m := A.δlast
-      obtain ⟨B₀, φ₀, hsplit₀, heq₀, hbelow₀, habove₀, hbounded₀⟩ := ih P
+      obtain ⟨B₀, φ₀, hsplit₀, heq₀, hbelow₀, habove₀, hbounded₀⟩ := ih A.δlast
       let u : B₀.right ⟶ A.obj (Fin.last (m + 1)) :=
         φ₀.app (Fin.last m) ≫ A.map' m (m + 1)
       obtain ⟨L', i, π, hiπ, hi, s, hsπ, hπs, hbelow, habove, hbounded⟩ :=
@@ -1565,28 +1566,24 @@ theorem sequence_maps_split
             exact (e (Fin.last (m + 1))).hom ≫ eqToHom hobj ≫ π)
           (fun j => by
             have hobj : obj j.castSucc = B₀.obj j := by simp [obj]
-            have hP : P.obj j = A.obj j.castSucc := by
-              change A.obj j.castSucc = A.obj j.castSucc
-              rfl
+            have hP : (A.δlast).obj j = A.obj j.castSucc := by rfl
             exact (e j.castSucc).hom ≫ eqToHom hobj ≫ φ₀.app j ≫ eqToHom hP)
           j
       have hB (j : ℕ) (hj : j < m + 1) :
           B.map' j (j + 1) ≫ (e ⟨j + 1, by omega⟩).hom =
             (e ⟨j, by omega⟩).hom ≫ mapSucc ⟨j, hj⟩ := by
         rw [he j hj]
-        simp [Category.assoc]
+        simp
       have ha_cast (i : Fin (m + 1)) :
           a i.castSucc =
-              (e i.castSucc).hom ≫ eqToHom (by simp [obj]) ≫ φ₀.app i ≫
-              eqToHom (by change A.obj i.castSucc = A.obj i.castSucc; rfl) := by
+              (e i.castSucc).hom ≫ eqToHom (by simp [obj]) ≫ φ₀.app i := by
         dsimp [a]
-        simp only [Fin.lastCases_castSucc]
+        simp only [Fin.lastCases_castSucc, Category.comp_id]
       have ha_cast_last :
           a (Fin.last m).castSucc =
             (e (Fin.last m).castSucc).hom ≫ eqToHom hobj0 ≫
-              φ₀.app (Fin.last m) ≫
-                eqToHom (by change A.obj _ = A.obj _; rfl) := by
-        convert ha_cast (Fin.last m) using 1 <;> congr 1
+              φ₀.app (Fin.last m) := by
+        simpa only [Fin.lastCases_castSucc, Category.comp_id] using ha_cast (Fin.last m)
       have ha_last :
           a (Fin.last (m + 1)) =
             (e (Fin.last (m + 1))).hom ≫
@@ -1599,9 +1596,8 @@ theorem sequence_maps_split
         rw [Fin.lastCases_castSucc]
       have ha_succ_cast (k : Fin m) :
           a k.castSucc.succ =
-            (e k.succ.castSucc).hom ≫ eqToHom (hobj_succ k) ≫ φ₀.app k.succ ≫
-              eqToHom (by change A.obj k.succ.castSucc = A.obj k.succ.castSucc; rfl) := by
-        simpa only [Fin.succ_castSucc] using ha_cast k.succ
+            (e k.succ.castSucc).hom ≫ eqToHom (hobj_succ k) ≫ φ₀.app k.succ := by
+        simpa only [Fin.succ_castSucc, Category.assoc, Category.comp_id] using ha_cast k.succ
       have ha_succ_last :
           a (Fin.last m).succ =
             (e (Fin.last (m + 1))).hom ≫
@@ -1635,7 +1631,9 @@ theorem sequence_maps_split
           simp only [Category.assoc]
           rw [← Category.assoc (mapSucc (Fin.last m)) (eqToHom hobjLast) π]
           rw [hmap_last']
-          simpa [u] using hpre
+          simp only [Category.assoc]
+          dsimp [u] at hpre ⊢
+          simpa [Category.assoc] using hpre
         · obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hlast
           subst i
           rw [ha_succ_cast k, ha_cast k.castSucc]
@@ -1644,11 +1642,16 @@ theorem sequence_maps_split
                 (e k.castSucc.castSucc).hom ≫ mapSucc k.castSucc := by
             convert hB k.castSucc.val (by omega) using 1 <;> congr 1
           simp only [Category.assoc]
-          rw [← Category.assoc (B.map' k.castSucc.val (k.castSucc.val + 1))
-            (e k.succ.castSucc).hom (eqToHom (hobj_succ k))]
+          rw [← Category.assoc]
           rw [hBk]
-          simp [mapSucc, P, Category.assoc]
-          simpa using ComposableArrows.naturality' φ₀ k.val (k.val + 1)
+          simp [mapSucc, Category.assoc]
+          have hobj0' : obj k.castSucc.castSucc = B₀.obj k.castSucc := by
+            change Fin.lastCases L' B₀.obj k.castSucc.castSucc = B₀.obj k.castSucc
+            rw [Fin.lastCases_castSucc]
+          apply (cancel_epi (eqToIso hobj0').hom).2
+          change B₀.map' k.val (k.val + 1) (by omega) (by omega) ≫ φ₀.app k.succ =
+            φ₀.app k.castSucc ≫ (A.δlast).map' k.val (k.val + 1) (by omega) (by omega)
+          exact ComposableArrows.naturality' φ₀ k.val (k.val + 1)
       have hmap : ∀ j : Fin (m + 1), ∀ z : ℤ,
           IsSplitMono ((mapSucc j).f z) := by
         intro j z
@@ -1702,14 +1705,17 @@ theorem sequence_maps_split
         intro K L e hL
         obtain ⟨p, q, hp, hq⟩ := hL
         refine ⟨p, q, ?_, ?_⟩
-        · exact (boundedBelow_of_iso e ⟨p, hp⟩).choose_spec
-        · exact (boundedAbove_of_iso e ⟨q, hq⟩).choose_spec
+        · rw [CochainComplex.isStrictlyGE_iff] at hp ⊢
+          intro z hz
+          exact IsZero.of_iso (hp z hz) (componentIso e z)
+        · rw [CochainComplex.isStrictlyLE_iff] at hq ⊢
+          intro z hz
+          exact IsZero.of_iso (hq z hz) (componentIso e z)
       let φ : B ⟶ A := ComposableArrows.homMk a (by
         intro j hj
         simpa using hnat ⟨j, hj⟩)
       refine ⟨B, φ, ?_, ?_, ?_, ?_, ?_⟩
-      · intro j
-        intro z
+      · intro j z
         let el := componentIso (e j.castSucc) z
         let er := componentIso (e j.succ) z
         have hsplit := splitMono_iso_conjugate el ((mapSucc j).f z) er (hmap j z)
@@ -1727,101 +1733,113 @@ theorem sequence_maps_split
                 (e j.castSucc).hom.f z ≫ (mapSucc j).f z := by
               simpa [el, er, componentIso] using hcomp'
             _ = (el.hom ≫ (mapSucc j).f z ≫ er.inv) ≫ er.hom := by
-              simp [el, er, componentIso, Category.assoc]
+              have her : (e j.succ).inv.f z ≫ (e j.succ).hom.f z = 𝟙 _ :=
+                congrArg (fun f => f.f z) (e j.succ).inv_hom_id
+              simp [el, er, componentIso, Category.assoc, her]
         change IsSplitMono ((B.map' j.val (j.val + 1)).f z)
         rw [heq]
         exact hsplit
       · intro j
         by_cases hlast : j.val = m + 1
-        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by simpa using hlast)
           rw [hj]
-          dsimp [φ, a]
-          apply HomologicalComplex.homotopyEquivalences.comp_mem
-          · apply HomologicalComplex.homotopyEquivalences.comp_mem
-            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
-            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
-          · exact hπ.homotopyEquivalences_hom
-        · obtain ⟨k, hk⟩ :=
-            (Fin.exists_castSucc_eq).2 (by
-              intro h
-              apply hlast
-              exact Fin.ext (by simpa [h] using congrArg Fin.val h))
+          simp only [φ, ComposableArrows.homMk]
+          dsimp [a]
+          rw [Fin.lastCases_last]
+          exact (HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ)).comp_mem
+            (e (Fin.last (m + 1))).hom (eqToHom hobjLast ≫ π)
+            (HomologicalComplex.homotopyEquivalences.of_isIso _)
+            ((HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ)).comp_mem
+              (eqToHom hobjLast) π
+              (HomologicalComplex.homotopyEquivalences.of_isIso _)
+              hπ.homotopyEquivalences_hom)
+        · have hjne : j ≠ Fin.last (m + 1) := by
+            intro h
+            apply hlast
+            simpa using congrArg Fin.val h
+          obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
           rw [← hk]
-          dsimp [φ, a]
-          apply HomologicalComplex.homotopyEquivalences.comp_mem
-          · apply HomologicalComplex.homotopyEquivalences.comp_mem
+          simp only [φ, ComposableArrows.homMk]
+          dsimp [a]
+          rw [Fin.lastCases_castSucc]
+          simp only [Category.comp_id]
+          apply (HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ)).comp_mem
+          · exact HomologicalComplex.homotopyEquivalences.of_isIso _
+          · apply (HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ)).comp_mem
             · exact HomologicalComplex.homotopyEquivalences.of_isIso _
-            · exact HomologicalComplex.homotopyEquivalences.of_isIso _
-          · exact heq₀ k
+            · exact heq₀ k
       · intro h j
         by_cases hlast : j.val = m + 1
-        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by simpa using hlast)
           rw [hj]
-          have hP : ∀ i : Fin (m + 1), IsBoundedBelow (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBoundedBelow ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           have hB₀ : IsBoundedBelow B₀.right := by
-            simpa [ComposableArrows.right] using hbelow₀ hP (Fin.last m)
+            change IsBoundedBelow (B₀.obj (Fin.last m))
+            exact hbelow₀ hP (Fin.last m)
           apply boundedBelow_of_iso (e (Fin.last (m + 1)))
           simpa [obj, Fin.succ_last] using hbelow ⟨hB₀, h (Fin.last (m + 1))⟩
         · have hjne : j ≠ Fin.last (m + 1) := by
             intro hj
             apply hlast
-            exact congrArg Fin.val hj
+            simpa using congrArg Fin.val hj
           obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
           rw [← hk]
-          have hP : ∀ i : Fin (m + 1), IsBoundedBelow (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBoundedBelow ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           apply boundedBelow_of_iso (e k.castSucc)
           simpa [obj] using hbelow₀ hP k
       · intro h j
         by_cases hlast : j.val = m + 1
-        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by simpa using hlast)
           rw [hj]
-          have hP : ∀ i : Fin (m + 1), IsBoundedAbove (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBoundedAbove ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           have hB₀ : IsBoundedAbove B₀.right := by
-            simpa [ComposableArrows.right] using habove₀ hP (Fin.last m)
+            change IsBoundedAbove (B₀.obj (Fin.last m))
+            exact habove₀ hP (Fin.last m)
           apply boundedAbove_of_iso (e (Fin.last (m + 1)))
           simpa [obj, Fin.succ_last] using habove ⟨hB₀, h (Fin.last (m + 1))⟩
         · have hjne : j ≠ Fin.last (m + 1) := by
             intro hj
             apply hlast
-            exact congrArg Fin.val hj
+            simpa using congrArg Fin.val hj
           obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
           rw [← hk]
-          have hP : ∀ i : Fin (m + 1), IsBoundedAbove (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBoundedAbove ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           apply boundedAbove_of_iso (e k.castSucc)
           simpa [obj] using habove₀ hP k
       · intro h j
         by_cases hlast : j.val = m + 1
-        · have hj : j = Fin.last (m + 1) := Fin.ext (by omega)
+        · have hj : j = Fin.last (m + 1) := Fin.ext (by simpa using hlast)
           rw [hj]
-          have hP : ∀ i : Fin (m + 1), IsBounded (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBounded ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           have hB₀ : IsBounded B₀.right := by
-            simpa [ComposableArrows.right] using hbounded₀ hP (Fin.last m)
+            change IsBounded (B₀.obj (Fin.last m))
+            exact hbounded₀ hP (Fin.last m)
           apply bounded_of_iso (e (Fin.last (m + 1)))
           simpa [obj, Fin.succ_last] using hbounded ⟨hB₀, h (Fin.last (m + 1))⟩
         · have hjne : j ≠ Fin.last (m + 1) := by
             intro hj
             apply hlast
-            exact congrArg Fin.val hj
+            simpa using congrArg Fin.val hj
           obtain ⟨k, hk⟩ := (Fin.exists_castSucc_eq).2 hjne
           rw [← hk]
-          have hP : ∀ i : Fin (m + 1), IsBounded (P.obj i) := by
+          have hP : ∀ i : Fin (m + 1), IsBounded ((A.δlast).obj i) := by
             intro i
-            simpa [P] using h i.castSucc
+            simpa using h i.castSucc
           apply bounded_of_iso (e k.castSucc)
           simpa [obj] using hbounded₀ hP k
-  simpa using aux (n - 1) A
+  have hpos : 1 ≤ n := Nat.succ_le_iff.mpr hn
+  simpa [Nat.sub_add_cancel hpos] using aux (n - 1) A
 
- -/
 /-! ## Rotation -/
 
 /-- The canonical inverse rotation of the associated termwise split triangle. -/
@@ -1838,12 +1856,61 @@ abbrev termwiseSplitInverseRotateh
   ((HomotopyCategory.quotient C (ComplexShape.up ℤ)).mapTriangle.obj
     (termwiseSplitInverseRotate S))
 
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.isDefEq.respectTransparency.types false in
 theorem rotate_triangle
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {A B D : BookComplex C} (S : TermwiseSplitExactSequence A B D) :
     Nonempty (termwiseSplitInverseRotateh S ≅
       coneTriangleh (termwiseSplitInverseRotate S).mor₁) := by
-  sorry
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  let T := termwiseSplitTriangle S
+  let T' := termwiseSplitInverseRotateh S
+  let f := (termwiseSplitInverseRotate S).mor₁
+  have hT : termwiseSplitTriangleh S ∈ distTriang (BookHomotopyCategory C) := by
+    rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+    exact ⟨termwiseSplitShortComplex S, S.splitting, ⟨Iso.refl _⟩⟩
+  have hTinv : (termwiseSplitTriangleh S).invRotate ∈
+      distTriang (BookHomotopyCategory C) :=
+    Pretriangulated.inv_rot_of_distTriang _ hT
+  have hT' : T' ∈ distTriang (BookHomotopyCategory C) := by
+    apply Pretriangulated.isomorphic_distinguished
+      _ hTinv _
+      ((q.mapTriangleInvRotateIso).app T).symm
+  have hf : coneTriangleh f ∈ distTriang (BookHomotopyCategory C) :=
+    HomotopyCategory.mappingCone_triangleh_distinguished f
+  have hcomm₁ : T'.mor₁ ≫ q.map (𝟙 _) = q.map (𝟙 _) ≫ (coneTriangleh f).mor₁ := by
+    change q.map f ≫ q.map (𝟙 _) = q.map (𝟙 _) ≫ q.map f
+    simp
+  obtain ⟨c, hc₂, hc₃⟩ :=
+    HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
+      T' (coneTriangleh f) hT' hf (q.map (𝟙 _)) (q.map (𝟙 _)) hcomm₁
+  let : IsIso (q.map (𝟙 (termwiseSplitInverseRotate S).obj₁)) := by
+    have hq : q.map (𝟙 (termwiseSplitInverseRotate S).obj₁) =
+        𝟙 (q.obj (termwiseSplitInverseRotate S).obj₁) := q.map_id _
+    simpa only [hq] using
+      (inferInstance : IsIso (𝟙 (q.obj (termwiseSplitInverseRotate S).obj₁)))
+  let : IsIso (q.map (𝟙 (termwiseSplitInverseRotate S).obj₂)) := by
+    have hq : q.map (𝟙 (termwiseSplitInverseRotate S).obj₂) =
+        𝟙 (q.obj (termwiseSplitInverseRotate S).obj₂) := q.map_id _
+    simpa only [hq] using
+      (inferInstance : IsIso (𝟙 (q.obj (termwiseSplitInverseRotate S).obj₂)))
+  let : IsIso c := by
+    apply isIso₃_of_isIso₁₂
+      (Triangle.homMk T' (coneTriangleh f) (q.map (𝟙 _)) (q.map (𝟙 _)) c
+        hcomm₁ hc₂ hc₃)
+      hT' hf
+      (by change IsIso (q.map (𝟙 _)); infer_instance)
+      (by change IsIso (q.map (𝟙 _)); infer_instance)
+  have hcomm₁' : T'.mor₁ ≫ 𝟙 T'.obj₂ =
+      𝟙 T'.obj₁ ≫ (coneTriangleh f).mor₁ := by
+    change T'.mor₁ ≫ 𝟙 (q.obj (termwiseSplitInverseRotate S).obj₂) =
+      𝟙 (q.obj (termwiseSplitInverseRotate S).obj₁) ≫ (coneTriangleh f).mor₁
+    simpa only [q.map_id, Category.comp_id, Category.id_comp] using hcomm₁
+  exact ⟨Triangle.isoMk _ _ (Iso.refl _) (Iso.refl _) (asIso c)
+    hcomm₁' hc₂ hc₃⟩
 
 noncomputable def coneTermwiseSplitSequence
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1863,11 +1930,57 @@ noncomputable def coneTermwiseSplitSequence
       CochainComplex.mappingCone.triangleRotateShortComplex] using
       (CochainComplex.mappingCone.triangleRotateShortComplexSplitting f n)
 
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.isDefEq.respectTransparency.types false in
 theorem rotate_cone
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {K L : BookComplex C} (f : K ⟶ L) :
     Nonempty (termwiseSplitTriangleh (coneTermwiseSplitSequence f) ≅
       (coneTriangleh f).rotate) := by
-  sorry
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  let S := coneTermwiseSplitSequence f
+  let T := termwiseSplitTriangleh S
+  let T' := (coneTriangleh f).rotate
+  have hT : T ∈ distTriang (BookHomotopyCategory C) := by
+    rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+    exact ⟨termwiseSplitShortComplex S, S.splitting, ⟨Iso.refl _⟩⟩
+  have hcone : coneTriangleh f ∈ distTriang (BookHomotopyCategory C) :=
+    HomotopyCategory.mappingCone_triangleh_distinguished f
+  have hT' : T' ∈ distTriang (BookHomotopyCategory C) :=
+    Pretriangulated.rot_of_distTriang _ hcone
+  have hcomm₁ : T.mor₁ ≫ q.map (𝟙 _) = q.map (𝟙 _) ≫ T'.mor₁ := by
+    change q.map S.f ≫ q.map (𝟙 _) = q.map (𝟙 _) ≫
+      q.map ((CochainComplex.mappingCone.triangle f).rotate.mor₁)
+    simp [S, coneTermwiseSplitSequence]
+  obtain ⟨c, hc₂, hc₃⟩ :=
+    HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
+      T T' hT hT' (q.map (𝟙 _)) (q.map (𝟙 _)) hcomm₁
+  let : IsIso (q.map
+      (𝟙 ((CochainComplex.mappingCone.triangle f).rotate.obj₁))) := by
+    have hq : q.map (𝟙 ((CochainComplex.mappingCone.triangle f).rotate.obj₁)) =
+        𝟙 (q.obj (CochainComplex.mappingCone.triangle f).rotate.obj₁) := q.map_id _
+    simpa only [hq] using
+      (inferInstance : IsIso
+        (𝟙 (q.obj (CochainComplex.mappingCone.triangle f).rotate.obj₁)))
+  let : IsIso (q.map
+      (𝟙 ((CochainComplex.mappingCone.triangle f).rotate.obj₂))) := by
+    have hq : q.map (𝟙 ((CochainComplex.mappingCone.triangle f).rotate.obj₂)) =
+        𝟙 (q.obj (CochainComplex.mappingCone.triangle f).rotate.obj₂) := q.map_id _
+    simpa only [hq] using
+      (inferInstance : IsIso
+        (𝟙 (q.obj (CochainComplex.mappingCone.triangle f).rotate.obj₂)))
+  let : IsIso c := by
+    apply isIso₃_of_isIso₁₂
+      (Triangle.homMk T T' (q.map (𝟙 _)) (q.map (𝟙 _)) c
+        hcomm₁ hc₂ hc₃)
+      hT hT'
+      (by change IsIso (q.map (𝟙 _)); infer_instance)
+      (by change IsIso (q.map (𝟙 _)); infer_instance)
+  have hcomm₁' : T.mor₁ ≫ 𝟙 T.obj₂ = 𝟙 T.obj₁ ≫ T'.mor₁ := by
+    simpa [T, T', S, q, termwiseSplitTriangleh, termwiseSplitTrianglehWith] using hcomm₁
+  exact ⟨Triangle.isoMk _ _ (Iso.refl _) (Iso.refl _) (asIso c)
+    hcomm₁' hc₂ hc₃⟩
 
 end Formalization.Books.Derived.Unit09

@@ -2270,7 +2270,7 @@ theorem universallyInjective_and_split_of_localization_maximal
     dsimp [q]
     rw [Submodule.ker_mkQ]
     exact Submodule.fg_range f
-  letI : Module.FinitePresentation R P :=
+  let : Module.FinitePresentation R P :=
     Module.finitePresentation_of_surjective q hq hqker
   have hex : Function.Exact f q := by
     dsimp [q]

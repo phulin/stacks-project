@@ -1,6 +1,6 @@
 import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
-import Formalization.Books.Algebra.Unit92.CountablyGeneratedMittagLeffler
 import Mathlib.Algebra.DirectSum.Module
+import Mathlib.Order.Filter.Cofinite
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.PowerSeries.Basic
 
@@ -33,7 +33,10 @@ theorem projective_of_flat_of_mittagLeffler_of_countablyGenerated
     (hML : IsMittagLefflerModule (ModuleCat.of R M))
     (hcountable : Module.IsCountablyGenerated R M) :
     Module.Projective R M := by
-  sorry
+  by_contra hprojective
+  exact
+    (Formalization.Books.Algebra.Unit91.flat_countablyGenerated_nonprojective_not_mittagLeffler
+      hflat hcountable hprojective) hML
 
 /-! ## The power-series warning -/
 
@@ -53,7 +56,31 @@ def integerPowerSeriesSubmodule (p : ℕ) : Submodule ℤ (PowerSeries ℤ) :=
 source. -/
 theorem integerPowerSeriesSubmodule_carrier (p : ℕ) (f : PowerSeries ℤ) :
     f ∈ integerPowerSeriesSubmodule p ↔ integerPowerSeriesCondition p f := by
-  sorry
+  let U : Submodule ℤ (PowerSeries ℤ) :=
+    { carrier := {f | integerPowerSeriesCondition p f}
+      zero_mem' := by
+        intro m _
+        exact Filter.Eventually.of_forall (fun i => by simp)
+      add_mem' := by
+        intro f g hf hg m hm
+        filter_upwards [hf m hm, hg m hm] with i hfi hgi
+        exact dvd_add hfi hgi
+      smul_mem' := by
+        intro c f hf m hm
+        filter_upwards [hf m hm] with i hi
+        change (p : ℤ) ^ m ∣ c * PowerSeries.coeff i f
+        exact dvd_mul_of_dvd_right hi c }
+  have hspan :
+      Submodule.span ℤ {f : PowerSeries ℤ | integerPowerSeriesCondition p f} = U := by
+    apply le_antisymm
+    · apply Submodule.span_le.2
+      intro x hx
+      exact hx
+    · intro x hx
+      exact Submodule.subset_span hx
+  change f ∈ Submodule.span ℤ {f : PowerSeries ℤ | integerPowerSeriesCondition p f} ↔ _
+  rw [hspan]
+  rfl
 
 /-- The power series with coefficients `aᵢ pⁱ` used to show that the witness
 submodule is uncountable. -/
@@ -63,7 +90,14 @@ def integerPowerSeriesWitness (p : ℕ) (a : ℕ → ℤ) : PowerSeries ℤ :=
 /-- Every displayed power series belongs to the source's submodule. -/
 theorem integerPowerSeriesWitness_mem (p : ℕ) (a : ℕ → ℤ) :
     integerPowerSeriesWitness p a ∈ integerPowerSeriesSubmodule p := by
-  sorry
+  rw [integerPowerSeriesSubmodule_carrier]
+  intro m hm
+  have hge : ∀ᶠ i in Filter.cofinite, m ≤ i := by
+    rw [Nat.cofinite_eq_atTop]
+    exact Filter.eventually_ge_atTop m
+  filter_upwards [hge] with i hi
+  rw [integerPowerSeriesWitness, PowerSeries.coeff_mk]
+  exact dvd_mul_of_dvd_right (pow_dvd_pow (p : ℤ) hi) _
 
 /-- For a prime `p`, the source's power-series submodule is uncountable. -/
 theorem integerPowerSeriesSubmodule_not_countable

@@ -39,27 +39,60 @@ theorem godementDegree_add {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (n m : ℕ) :
     godementDegree Y (n + m + 1) =
       godementDegree Y n ⋙ godementDegree Y m := by
-  sorry
+  change iteratedEndofunctor Y ((n + m + 1) + 1) =
+    iteratedEndofunctor Y (n + 1) ⋙ iteratedEndofunctor Y (m + 1)
+  induction n with
+  | zero =>
+    simp only [Nat.zero_add]
+    change iteratedEndofunctor Y (m + 1 + 1) =
+      (Y ⋙ 𝟭 C) ⋙ iteratedEndofunctor Y (m + 1)
+    change Y ⋙ iteratedEndofunctor Y (m + 1) =
+      (Y ⋙ 𝟭 C) ⋙ iteratedEndofunctor Y (m + 1)
+    rw [Functor.comp_id]
+  | succ n ih =>
+    have h : (n + 1 + m + 1) + 1 = (n + m + 1 + 1) + 1 := by omega
+    rw [h]
+    change Y ⋙ iteratedEndofunctor Y (n + m + 1 + 1) =
+      (Y ⋙ iteratedEndofunctor Y (n + 1)) ⋙
+        iteratedEndofunctor Y (m + 1)
+    rw [ih]
+    rfl
 
 theorem iteratedEndofunctor_add {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (a b : ℕ) :
     iteratedEndofunctor Y (a + b) =
       iteratedEndofunctor Y a ⋙ iteratedEndofunctor Y b := by
-  sorry
+  induction a with
+  | zero => simp [iteratedEndofunctor, Functor.id_comp]
+  | succ a ih =>
+    have hab : a + 1 + b = (a + b) + 1 := by omega
+    rw [hab]
+    simp only [iteratedEndofunctor]
+    rw [ih]
+    rfl
 
 theorem godementFace_domain_decomposition
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
     (n : ℕ) (j : Fin (n + 1)) :
     iteratedEndofunctor Y (n + 1) =
       iteratedEndofunctor Y j ⋙ Y ⋙ iteratedEndofunctor Y (n - j) := by
-  sorry
+  have h : n + 1 = (j : ℕ) + 1 + (n - (j : ℕ)) := by omega
+  conv_lhs =>
+    rw [h]
+  rw [iteratedEndofunctor_add Y ((j : ℕ) + 1) (n - (j : ℕ))]
+  rw [iteratedEndofunctor_add Y (j : ℕ) 1]
+  simp [iteratedEndofunctor, Functor.comp_id, Functor.assoc]
 
 theorem godementFace_codomain_decomposition
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
     (n : ℕ) (j : Fin (n + 1)) :
     iteratedEndofunctor Y n =
       iteratedEndofunctor Y j ⋙ 𝟭 C ⋙ iteratedEndofunctor Y (n - j) := by
-  sorry
+  have h : n = (j : ℕ) + (n - (j : ℕ)) := by omega
+  conv_lhs =>
+    rw [h]
+  rw [iteratedEndofunctor_add Y (j : ℕ) (n - (j : ℕ))]
+  rfl
 
 theorem godementDegeneracy_domain_decomposition
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)

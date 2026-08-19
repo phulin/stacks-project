@@ -113,10 +113,23 @@ def IsReducedNoncompleteQuotientMonomial
     (m .t = 0 ∨ ∀ i, m (.z i) = 0) ∧
     ∀ i, m (.z i) = 0 ∨ ∀ j, m (.w j) = 0
 
-/-- A coefficient polynomial in the source's canonical normal form. -/
+/-- The source's local coefficient restriction before degree-sensitive zero terms
+are removed. -/
 def IsReducedNoncompleteQuotientCoefficient
     {k : Type u} [Field k] (p : NoncompleteQuotientPolynomial k) : Prop :=
   ∀ m ∈ p.support, IsReducedNoncompleteQuotientMonomial m
+
+/-- A coefficient at degree `i` with no term killed by a defining relation.
+
+The relations imply `xⁱwᵢwⱼ = 0`; the index-sensitive side condition keeps
+such terms out of the coefficient at degree `i` while still allowing their
+nonzero degree-zero representatives when all `w` indices are larger. -/
+def IsCanonicalNoncompleteQuotientCoefficient
+    (i : ℕ) {k : Type u} [Field k] (p : NoncompleteQuotientPolynomial k) : Prop :=
+  ∀ m ∈ p.support,
+    IsReducedNoncompleteQuotientMonomial m ∧
+      ∀ j : ℕ+, (i < (j : ℕ)) ∨ m (.w j) = 0 ∨
+        (m (.w j) = 1 ∧ ∀ l : ℕ+, l ≠ j → m (.w l) = 0)
 
 /-- The value of a finite coefficient expansion in the quotient ring. -/
 def noncompleteQuotientFiniteExpansionValue
@@ -128,7 +141,7 @@ def noncompleteQuotientFiniteExpansionValue
 def HasCanonicalNoncompleteQuotientFiniteExpansion
     {k : Type u} [Field k] (f : NoncompleteQuotientRing k)
     (coeff : ℕ → NoncompleteQuotientPolynomial k) : Prop :=
-  (∀ i, IsReducedNoncompleteQuotientCoefficient (coeff i)) ∧
+  (∀ i, IsCanonicalNoncompleteQuotientCoefficient i (coeff i)) ∧
     ∃ s : Finset ℕ,
       (∀ i, coeff i ≠ 0 ↔ i ∈ s) ∧
         f = noncompleteQuotientFiniteExpansionValue coeff s
@@ -171,7 +184,7 @@ private theorem canonicalNoncompleteQuotientFiniteExpansion_sub
   classical
   rcases hp with ⟨hp, ⟨sp, hsp, hvp⟩⟩
   rcases hq with ⟨hq, ⟨sq, hsq, hvq⟩⟩
-  have hred : ∀ i, IsReducedNoncompleteQuotientCoefficient (p i - q i) := by
+  have hred : ∀ i, IsCanonicalNoncompleteQuotientCoefficient i (p i - q i) := by
     intro i m hm
     have hcoeff : MvPolynomial.coeff m (p i - q i) ≠ 0 :=
       MvPolynomial.mem_support_iff.mp hm
@@ -207,7 +220,7 @@ private theorem canonicalNoncompleteQuotientFiniteExpansion_sub
         have hq0 : q i = 0 := by
           by_contra hq0
           exact h (Or.inr hq0)
-        exact hdi (by simp [d, hp0, hq0])
+        exact hdi (by simp [hp0, hq0])
       rcases hor with hp0 | hq0
       · exact Finset.mem_union_left _ ((hsp i).mp hp0)
       · exact Finset.mem_union_right _ ((hsq i).mp hq0)
@@ -269,9 +282,9 @@ private theorem canonicalNoncompleteQuotientFiniteExpansion_sub
       _ = (∑ i ∈ u, P i) - ∑ i ∈ u, Q i := by rw [Finset.sum_sub_distrib]
       _ = (∑ i ∈ sp, P i) - ∑ i ∈ sq, Q i := by rw [hpu, hqu]
 
-/-- The element `x` is a nonzerodivisor. -/
-theorem noncompleteQuotientX_isRegular (k : Type u) [Field k] :
-    IsRegular (xElement k) := by
+/-- The element `x` is a zerodivisor: `xⁱwᵢwⱼ = 0`, while `wᵢwⱼ` survives. -/
+theorem noncompleteQuotientX_isNotRegular (k : Type u) [Field k] :
+    ¬ IsRegular (xElement k) := by
   sorry
 
 /-- The quotient ring is `(x)`-adically separated. -/
@@ -337,7 +350,7 @@ def noncompleteQuotientFinitePartialSum
 def HasCanonicalNoncompleteQuotientInfiniteExpansion
     {k : Type u} [Field k] (f : NoncompleteQuotientCompletion k)
     (coeff : ℕ → NoncompleteQuotientPolynomial k) : Prop :=
-  (∀ i, IsReducedNoncompleteQuotientCoefficient (coeff i)) ∧
+  (∀ i, IsCanonicalNoncompleteQuotientCoefficient i (coeff i)) ∧
     ∀ n,
       AdicCompletion.evalₐ (noncompleteQuotientXIdeal k) n f =
         Ideal.Quotient.mk (noncompleteQuotientXIdeal k ^ n)
@@ -346,7 +359,7 @@ def HasCanonicalNoncompleteQuotientInfiniteExpansion
 private theorem canonicalNoncompleteQuotientFiniteExpansion_partialSum
     {k : Type u} [Field k]
     (coeff : ℕ → NoncompleteQuotientPolynomial k)
-    (hcoeff : ∀ i, IsReducedNoncompleteQuotientCoefficient (coeff i))
+    (hcoeff : ∀ i, IsCanonicalNoncompleteQuotientCoefficient i (coeff i))
     (n : ℕ) :
     HasCanonicalNoncompleteQuotientFiniteExpansion
       (noncompleteQuotientFinitePartialSum coeff n)
@@ -355,18 +368,18 @@ private theorem canonicalNoncompleteQuotientFiniteExpansion_partialSum
   let r : ℕ → NoncompleteQuotientPolynomial k := fun i =>
     if i < n then coeff i else 0
   let s : Finset ℕ := (Finset.range n).filter (fun i => coeff i ≠ 0)
-  have hred : ∀ i, IsReducedNoncompleteQuotientCoefficient (r i) := by
+  have hred : ∀ i, IsCanonicalNoncompleteQuotientCoefficient i (r i) := by
     intro i
     by_cases hi : i < n
     · simpa [r, hi] using hcoeff i
-    · simp [r, hi, IsReducedNoncompleteQuotientCoefficient]
+    · simp [r, hi, IsCanonicalNoncompleteQuotientCoefficient]
   refine ⟨hred, ⟨s, ?_, ?_⟩⟩
   · intro i
     constructor
     · intro hi
       have hin : i < n := by
         by_contra hin
-        exact hi (by simp [r, hin])
+        exact hi (by simp [hin])
       apply Finset.mem_filter.mpr
       exact ⟨Finset.mem_range.mpr hin, by simpa [r, hin] using hi⟩
     · intro hi
@@ -432,7 +445,7 @@ theorem existsUnique_canonicalNoncompleteQuotientInfiniteExpansion
     exact sub_eq_zero.mp hz
   let coeff : ℕ → NoncompleteQuotientPolynomial k := fun i => cAt (i + 1) i
   have hcoeff (i : ℕ) :
-      IsReducedNoncompleteQuotientCoefficient (coeff i) := by
+      IsCanonicalNoncompleteQuotientCoefficient i (coeff i) := by
     exact (hcAt (i + 1)).1 i
   have hcanonical :
       HasCanonicalNoncompleteQuotientInfiniteExpansion
@@ -529,16 +542,43 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
   · intro i
     by_cases hi : i = 0
     · simp [noncompleteQuotientBadCoefficient, hi,
-        IsReducedNoncompleteQuotientCoefficient]
+        IsCanonicalNoncompleteQuotientCoefficient]
     · rw [noncompleteQuotientBadCoefficient, dif_neg hi]
-      rw [IsReducedNoncompleteQuotientCoefficient, MvPolynomial.support_X]
+      rw [IsCanonicalNoncompleteQuotientCoefficient, MvPolynomial.support_X]
       intro m hm
       simp only [Finset.mem_singleton] at hm
       subst m
-      simp [IsReducedNoncompleteQuotientMonomial]
+      constructor
+      · simp [IsReducedNoncompleteQuotientMonomial]
+      · intro j
+        by_cases hj : j = ⟨i, Nat.pos_of_ne_zero hi⟩
+        · subst j
+          right
+          right
+          constructor
+          · simp
+          · intro l hl
+            simp only [Finsupp.single_apply]
+            split
+            · rename_i hwl
+              exfalso
+              apply hl
+              cases hwl
+              rfl
+            · rfl
+        · have hne :
+              NoncompleteQuotientVariable.w ⟨i, Nat.pos_of_ne_zero hi⟩ ≠
+                NoncompleteQuotientVariable.w j := by
+            intro hwl
+            apply hj
+            cases hwl
+            rfl
+          right
+          left
+          simp [hne]
   · intro n
     rw [noncompleteQuotientBadElement, AdicCompletion.evalₐ_mk]
-    simp only [noncompleteQuotientBadCauchySequence, Subtype.coe_mk]
+    simp only [noncompleteQuotientBadCauchySequence]
     rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
     classical
     have hsum : ∀ m : ℕ,
@@ -554,7 +594,7 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
           by_cases hm : m = 0
           · subst m
             simp [noncompleteQuotientBadPartialSum, noncompleteQuotientFinitePartialSum,
-              noncompleteQuotientBadCoefficient, Finset.sum_range_succ, quotientOfPolynomial,
+              noncompleteQuotientBadCoefficient, quotientOfPolynomial,
               xElement, wElement, quotientVariable]
           · have hbad : noncompleteQuotientBadPartialSum k (m + 1) =
                 noncompleteQuotientBadPartialSum k m +
@@ -577,7 +617,7 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
     by_cases hn : n = 0
     · simp [hn]
     · rw [dif_neg hn]
-      simp only [sub_eq_add_neg, add_assoc, add_neg_cancel_left, zero_add]
+      simp only [sub_eq_add_neg, add_assoc]
       have hpow : xElement k ^ n ∈ noncompleteQuotientXIdeal k ^ n :=
         Ideal.pow_mem_pow (Ideal.mem_span_singleton_self _) n
       have hmem : xElement k ^ n * wElement k ⟨n, Nat.pos_of_ne_zero hn⟩ ∈
@@ -585,7 +625,8 @@ theorem noncompleteQuotientBadElement_has_infinite_expansion
         have h := (noncompleteQuotientXIdeal k ^ n).mul_mem_left
           (wElement k ⟨n, Nat.pos_of_ne_zero hn⟩) hpow
         simpa [mul_comm] using h
-      convert hmem using 1 <;> ring
+      convert hmem using 1
+      all_goals ring
 
 /-- Each summand `xⁱwᵢ` belongs to `(t)`, by the relation `zᵢt = xⁱwᵢ`. -/
 theorem noncompleteQuotientX_pow_mul_w_mem_t (k : Type u) [Field k] (i : ℕ+) :

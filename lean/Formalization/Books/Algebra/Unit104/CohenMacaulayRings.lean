@@ -564,7 +564,7 @@ theorem dimension_shift_in_exact_sequence
         exact le_antisymm (WithBot.coe_le_coe.mp hle) hge
   by_cases hMsub : Subsingleton M
   · exact Or.inl hMsub
-  · letI : Nontrivial M := not_subsingleton_iff_nontrivial.mp hMsub
+  · have hMnontr : Nontrivial M := not_subsingleton_iff_nontrivial.mp hMsub
     have hn : 0 < n := by
       by_contra hn
       have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
@@ -580,8 +580,12 @@ theorem dimension_shift_in_exact_sequence
         x = g x' := hx'.symm
         _ = g y' := congrArg g (hFsub.elim x' y')
         _ = y := hy'
-    letI : Inhabited (Fin n) := ⟨⟨0, hn⟩⟩
-    letI : Nontrivial (Fin n → R) := Pi.nontrivial
+    have hFnontr : Nontrivial (Fin n → R) := by
+      apply not_subsingleton_iff_nontrivial.mp
+      intro hsub
+      have hzero := congrFun
+        (hsub.elim (0 : Fin n → R) (fun _ => 1)) ⟨0, hn⟩
+      exact zero_ne_one hzero
     have hn1 : 1 ≤ n := hn
     have hfree_n : localDepth R (Fin n → R) = localDepth R R := by
       have h := hfree (n - 1)
@@ -599,22 +603,26 @@ theorem dimension_shift_in_exact_sequence
       apply WithBot.coe_le_coe.mp
       calc
         ((localDepth R M : ℕ∞) : WithBot ℕ∞) ≤ Module.supportDim R M :=
-          supportDim_ge_localDepth
+          @supportDim_ge_localDepth R M _ _ _ _ _ _ hMnontr
         _ ≤ ringKrullDim R := Module.supportDim_le_ringKrullDim R M
         _ = ((d : ℕ∞) : WithBot ℕ∞) := hdim
     by_cases hKsub : Subsingleton K
-    · letI : Subsingleton K := hKsub
-      have hKdepth : localDepth R K = ⊤ := by
-        exact depth_eq_top_of_subsingleton (IsLocalRing.maximalIdeal R) K
+    · have hKdepth : localDepth R K = ⊤ := by
+        exact @depth_eq_top_of_subsingleton R _ (IsLocalRing.maximalIdeal R) K
+          _ _ _ hKsub
       have hMdepth : localDepth R M < ⊤ := by
-        apply depth_lt_top_of_noetherian (IsLocalRing.maximalIdeal R) M
-        exact smul_top_ne_top_of_le_ring_jacobson (IsLocalRing.maximalIdeal R) M
+        apply @depth_lt_top_of_noetherian R _ (IsLocalRing.maximalIdeal R) M
+          _ _ _ _ hMnontr
+        exact @smul_top_ne_top_of_le_ring_jacobson R _
+          (IsLocalRing.maximalIdeal R) M _ _ _ hMnontr
           (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal R))
       exact Or.inr (Or.inl (by
         rw [hKdepth]
         exact WithBot.coe_lt_coe.mpr hMdepth))
-    · letI : Nontrivial K := not_subsingleton_iff_nontrivial.mp hKsub
-      have hseq := localDepth_shortExact f g hf hfg hg
+    · have hKnontr : Nontrivial K := not_subsingleton_iff_nontrivial.mp hKsub
+      have hseq := @localDepth_shortExact R K (Fin n → R) M
+        _ _ _ _ _ _ hKnontr _ _ _ hFnontr _ _ _ hMnontr
+        f g hf hfg hg
       rcases lt_or_ge (localDepth R M) (localDepth R K) with hMK | hKM
       · exact Or.inr (Or.inl (WithBot.coe_lt_coe.mpr hMK))
       · have hKM' : localDepth R K ≤ localDepth R M := hKM

@@ -212,7 +212,61 @@ theorem flatResolutionCounitApp_epi
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
     (F : SheafOfModules.{u} R) :
     Epi (flatResolutionCounitApp R F) := by
-  sorry
+  constructor
+  intro Z g h w
+  apply (SheafOfModules.forget R).map_injective
+  apply (cancel_epi (PresheafOfModules.fromFreeYonedaCoproduct F.val)).mp
+  let ff : F.val.freeYonedaCoproduct ⟶
+      (SheafOfModules.forget R ⋙ PresheafOfModules.restrictScalars (𝟙 R.obj)).obj F :=
+    PresheafOfModules.fromFreeYonedaCoproduct F.val
+  have hw := w
+  change
+    ((PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+      (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+        ff ≫ g) =
+      (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+        (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+          ff ≫ h at hw
+  have heqF :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F =
+        PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj) := by
+    apply Equiv.ext
+    intro k
+    exact PresheafOfModules.sheafificationAdjunction_homEquiv_apply
+      (𝟙 R.obj) k
+  have hcounit :
+      ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F).symm
+          ff =
+        (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+          ff := by
+    exact congrArg (fun e => e.symm
+      ff) heqF
+  have hwAdj :
+      ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F).symm
+          ff ≫ g =
+        ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F).symm
+          ff ≫ h := by
+    simpa only [hcounit] using hw
+  have hwAdj' := congrArg
+    ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+      F.val.freeYonedaCoproduct Z) hwAdj
+  rw [Adjunction.homEquiv_naturality_right] at hwAdj'
+  rw [Adjunction.homEquiv_naturality_right] at hwAdj'
+  have hcancel :=
+    ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+      F.val.freeYonedaCoproduct F).apply_symm_apply ff
+  simp only [hcancel] at hwAdj'
+  change F.val.fromFreeYonedaCoproduct ≫
+      (PresheafOfModules.restrictScalars (𝟙 R.obj)).map g.val =
+    F.val.fromFreeYonedaCoproduct ≫
+      (PresheafOfModules.restrictScalars (𝟙 R.obj)).map h.val
+  convert hwAdj' using 1 <;> rfl
 
 /-- Naturality of the free-resolution counit. -/
 theorem flatResolutionCounitApp_natural
@@ -223,7 +277,91 @@ theorem flatResolutionCounitApp_natural
     {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
     (flatResolutionFunctor R).map f ≫ flatResolutionCounitApp R G =
       flatResolutionCounitApp R F ≫ f := by
-  sorry
+  change (PresheafOfModules.sheafification (𝟙 R.obj)).map
+      (freeYonedaCoproductMap f.val) ≫
+      (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+        (P := G.val.freeYonedaCoproduct) (F := G) (𝟙 R.obj)).symm
+        (PresheafOfModules.fromFreeYonedaCoproduct G.val) =
+    (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+      (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+      (PresheafOfModules.fromFreeYonedaCoproduct F.val) ≫ f
+  have hfree :
+      freeYonedaCoproductMap f.val ≫
+        PresheafOfModules.fromFreeYonedaCoproduct G.val =
+      PresheafOfModules.fromFreeYonedaCoproduct F.val ≫ f.val := by
+    apply Sigma.hom_ext
+    intro m
+    change F.val.ιFreeYonedaCoproduct m ≫ freeYonedaCoproductMap f.val ≫
+        G.val.fromFreeYonedaCoproduct =
+      F.val.ιFreeYonedaCoproduct m ≫ F.val.fromFreeYonedaCoproduct ≫ f.val
+    rw [← Category.assoc, freeYonedaCoproductMap_ι,
+      G.val.ι_fromFreeYonedaCoproduct]
+    rw [← Category.assoc, F.val.ι_fromFreeYonedaCoproduct]
+    apply PresheafOfModules.freeYonedaEquiv.injective
+    rw [PresheafOfModules.freeYonedaEquiv_comp]
+    simp only [PresheafOfModules.Elements.fromFreeYoneda,
+      PresheafOfModules.freeYonedaEquiv]
+    calc
+      _ = (ConcreteCategory.hom (f.val.app m.fst)) m.snd :=
+        (PresheafOfModules.freeHomEquiv.trans yonedaEquiv).apply_symm_apply _
+      _ = _ := by
+        exact (congrArg (ConcreteCategory.hom (f.val.app m.fst))
+          ((PresheafOfModules.freeHomEquiv.trans yonedaEquiv).apply_symm_apply m.snd)).symm
+  have heq (P : PresheafOfModules R.obj) (H : SheafOfModules R) :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv P H =
+        PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := P) (F := H) (𝟙 R.obj) := by
+    apply Equiv.ext
+    intro g
+    exact PresheafOfModules.sheafificationAdjunction_homEquiv_apply (𝟙 R.obj) g
+  have heqG := heq G.val.freeYonedaCoproduct G
+  have heqF := heq F.val.freeYonedaCoproduct F
+  have hGmap :
+      ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          G.val.freeYonedaCoproduct G).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct G.val) =
+        (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := G.val.freeYonedaCoproduct) (F := G) (𝟙 R.obj)).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct G.val) := by
+    exact congrArg (fun e => e.symm
+      (PresheafOfModules.fromFreeYonedaCoproduct G.val)) heqG
+  have hFmap :
+      ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct F.val) =
+        (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct F.val) := by
+    rw [heqF]
+  have hAdj :=
+    CategoryTheory.Adjunction.homEquiv_naturality_right_square
+      (PresheafOfModules.sheafificationAdjunction (𝟙 R.obj))
+      (freeYonedaCoproductMap f.val)
+      (PresheafOfModules.fromFreeYonedaCoproduct G.val)
+      (PresheafOfModules.fromFreeYonedaCoproduct F.val)
+      f hfree
+  have hleft :
+      (PresheafOfModules.sheafification (𝟙 R.obj)).map
+          (freeYonedaCoproductMap f.val) ≫
+        (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := G.val.freeYonedaCoproduct) (F := G) (𝟙 R.obj)).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct G.val) =
+      (PresheafOfModules.sheafification (𝟙 R.obj)).map
+          (freeYonedaCoproductMap f.val) ≫
+        ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          G.val.freeYonedaCoproduct G).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct G.val) :=
+    congrArg (fun k => (PresheafOfModules.sheafification (𝟙 R.obj)).map
+      (freeYonedaCoproductMap f.val) ≫ k) hGmap.symm
+  have hright :
+      ((PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).homEquiv
+          F.val.freeYonedaCoproduct F).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct F.val) ≫ f =
+        (PresheafOfModules.sheafificationHomEquiv (R₀ := R.obj) (R := R)
+          (P := F.val.freeYonedaCoproduct) (F := F) (𝟙 R.obj)).symm
+          (PresheafOfModules.fromFreeYonedaCoproduct F.val) ≫ f :=
+    congrArg (fun k => k ≫ f) hFmap
+  exact hleft.trans (hAdj.trans hright)
 
 /- The flatness assertion for a module over a commutative ring, with the
    commutative structure required to have the same semiring as the ring

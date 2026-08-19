@@ -2047,7 +2047,7 @@ theorem exists_homogenization (R : Type u) (R' : Type a) (M : Type w)
     [CommRing R] [CommRing R'] [AddCommGroup M]
     [Algebra R R'] [Module R' M]
     [Algebra.FiniteType R R'] [Module.Finite R' M] :
-    Nonempty (HomogenizationWitness R R' M) := by
+    Nonempty (HomogenizationWitness.{u, max (max u a) w, w, a} R R' M) := by
   sorry
 
 end

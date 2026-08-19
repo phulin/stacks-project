@@ -1,6 +1,7 @@
 import Formalization.Books.Homology.Unit18.DoubleComplexes
 import Mathlib.Algebra.Category.Grp.AB
 import Mathlib.CategoryTheory.Limits.Shapes.Products
+import Mathlib.CategoryTheory.Preadditive.LiftToFinset
 
 /-!
 # Homological Algebra, Chapter 26: Double complexes of abelian groups
@@ -1275,6 +1276,108 @@ noncomputable def leftResolutionProductTotalMap
     simp
 
 /-! ## Quasi-isomorphism lemmas -/
+
+private theorem sigma_element_finite_support
+    {α : Type} [Countable α] (F : α → AddCommGrpCat.{u})
+    (x : sigmaObj (C := AddCommGrpCat) F) :
+    ∃ (S : Finset (Discrete α))
+      (y : sigmaObj (C := AddCommGrpCat) (fun i : S => F i.1.as)),
+    x = (CategoryTheory.Limits.CoproductsFromFiniteFiltered.finiteSubcoproductsCocone F).ι.app S y := by
+  classical
+  letI : PreservesFilteredColimitsOfSize.{0, 0} (forget AddCommGrpCat.{u}) :=
+    preservesFilteredColimitsOfSize_shrink (forget AddCommGrpCat.{u})
+  letI : IsFiltered (Finset (Discrete α)) := inferInstance
+  let G : Discrete α ⥤ AddCommGrpCat.{u} := Discrete.functor F
+  let H : Finset (Discrete α) ⥤ AddCommGrpCat.{u} :=
+    CategoryTheory.Limits.CoproductsFromFiniteFiltered.liftToFinsetObj G
+  let e : colimit H ≅ sigmaObj (C := AddCommGrpCat) F :=
+    IsColimit.coconePointUniqueUpToIso (colimit.isColimit H)
+      (CategoryTheory.Limits.CoproductsFromFiniteFiltered.isColimitFiniteSubproductsCocone F)
+  obtain ⟨S, y, hy⟩ := Concrete.colimit_exists_rep H (e.inv x)
+  refine ⟨S, y, ?_⟩
+  have hxy := congrArg (fun z => e.hom z) hy
+  have hleft : e.hom (e.inv x) = x := by
+    simpa using congrArg (fun f => f x) e.inv_hom_id
+  have hleg : (colimit.ι H S) ≫ e.hom =
+      (CategoryTheory.Limits.CoproductsFromFiniteFiltered.finiteSubcoproductsCocone F).ι.app S :=
+    IsColimit.comp_coconePointUniqueUpToIso_hom (colimit.isColimit H)
+      (CategoryTheory.Limits.CoproductsFromFiniteFiltered.isColimitFiniteSubproductsCocone F) S
+  have hright : e.hom ((colimit.ι H S) y) =
+      (CategoryTheory.Limits.CoproductsFromFiniteFiltered.finiteSubcoproductsCocone F).ι.app S y := by
+    rw [← ConcreteCategory.comp_apply, hleg]
+    rfl
+  rw [hleft, hright] at hxy
+  exact hxy.symm
+
+private theorem finite_sum_hom_apply
+    {α : Type} [Fintype α] {X Y : AddCommGrpCat.{u}}
+    (g : ∀ i : α, X ⟶ Y) (x : X) :
+    (∑ i : α, g i) x = ∑ i : α, g i x := by
+  classical
+  have hsum (s : Finset α) :
+      (∑ i ∈ s, g i) x = ∑ i ∈ s, g i x := by
+    induction s using Finset.induction_on with
+    | empty => simp
+    | @insert a s ha ih =>
+      simp only [Finset.sum_insert ha, AddCommGrpCat.hom_add_apply, ih]
+  simpa using hsum Finset.univ
+
+private theorem hom_finite_sum_apply
+    {α : Type} [Fintype α] {X Y : AddCommGrpCat.{u}}
+    (f : X ⟶ Y) (g : ∀ i : α, X) :
+    f (∑ i : α, g i) = ∑ i : α, f (g i) := by
+  classical
+  have hsum (s : Finset α) :
+      f (∑ i ∈ s, g i) = ∑ i ∈ s, f (g i) := by
+    induction s using Finset.induction_on with
+    | empty => simp
+    | @insert a s ha ih =>
+      simp only [Finset.sum_insert ha, map_add, ih]
+  simpa using hsum Finset.univ
+
+private theorem finite_coproduct_element_sum
+    {α : Type} [Fintype α] (F : α → AddCommGrpCat.{u})
+    (x : sigmaObj (C := AddCommGrpCat) F) :
+    ∃ y : ∀ i : α, F i, x = ∑ i : α, Sigma.ι F i (y i) := by
+  classical
+  refine ⟨fun i => ((biproduct.isoCoproduct F).inv ≫ biproduct.π F i) x, ?_⟩
+  have htotal := congrArg
+    (fun f : (⨁ F) ⟶ (⨁ F) => f ((biproduct.isoCoproduct F).inv x))
+    (biproduct.total (J := α) (f := F))
+  simp only [CategoryTheory.Functor.id_obj, Category.comp_id] at htotal
+  have htotal' :
+      (∑ j : α, biproduct.π F j ≫ biproduct.ι F j)
+          ((biproduct.isoCoproduct F).inv x) =
+        (biproduct.isoCoproduct F).inv x := by
+    simpa using htotal
+  calc
+    x = (biproduct.isoCoproduct F).hom ((biproduct.isoCoproduct F).inv x) := by
+      simpa using (congrArg (fun f => f x) (biproduct.isoCoproduct F).inv_hom_id).symm
+    _ = (biproduct.isoCoproduct F).hom
+        ((∑ j : α, biproduct.π F j ≫ biproduct.ι F j)
+          ((biproduct.isoCoproduct F).inv x)) := by rw [htotal']
+    _ = ∑ i : α, Sigma.ι F i
+        (((biproduct.isoCoproduct F).inv ≫ biproduct.π F i) x) := by
+      rw [biproduct.isoCoproduct_hom, htotal', biproduct.desc_eq]
+      rw [finite_sum_hom_apply]
+      simp only [ConcreteCategory.comp_apply, Category.assoc]
+
+private theorem sigma_element_finite_sum
+    {α : Type} [Countable α] (F : α → AddCommGrpCat.{u})
+    (x : sigmaObj (C := AddCommGrpCat) F) :
+    ∃ (S : Finset (Discrete α))
+      (y : ∀ i : S, F i.1.as),
+      x = ∑ i ∈ S.attach, Sigma.ι F i.1.as (y i) := by
+  classical
+  obtain ⟨S, y₀, hy₀⟩ := sigma_element_finite_support F x
+  obtain ⟨y, hy⟩ := finite_coproduct_element_sum
+    (fun i : S => F i.1.as) y₀
+  refine ⟨S, y, ?_⟩
+  rw [hy₀]
+  change (Sigma.desc (fun s : S => Sigma.ι F s.1.as)) y₀ = _
+  rw [hy, hom_finite_sum_apply]
+  simp only [← ConcreteCategory.comp_apply, Category.assoc, Sigma.ι_desc]
+  simpa only [Finset.univ_eq_attach]
 
 /-- A right resolution of complexes becomes a quasi-isomorphism after
 coproduct totalization. -/

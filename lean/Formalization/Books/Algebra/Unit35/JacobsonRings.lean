@@ -7,6 +7,7 @@ import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.LinearAlgebra.FreeAlgebra
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.DedekindDomain.Dvr
@@ -3092,9 +3093,346 @@ def idempotentMatrixIdeal {k : Type u} [Field k] (n : ℕ) :
 abbrev IdempotentMatrixRing (k : Type u) [Field k] (n : ℕ) :=
   IdempotentMatrixPolynomial k n ⧸ idempotentMatrixIdeal (k := k) n
 
+/- The coordinate ring used below is the usual localization presentation of
+`GL n`.  Keeping this presentation explicit makes the passage from a prime
+of the idempotent-matrix ring to the rank orbit over its fraction field a
+ring-theoretic statement. -/
+abbrev GeneralLinearPolynomial (k : Type u) [CommSemiring k] (n : ℕ) :=
+  MvPolynomial (Fin n × Fin n) k
+
+def genericGeneralLinearMatrix {k : Type u} [Field k] (n : ℕ) :
+    Matrix (Fin n) (Fin n) (GeneralLinearPolynomial k n) :=
+  fun i j => MvPolynomial.X (R := k) (i, j)
+
+def genericGeneralLinearDet {k : Type u} [Field k] (n : ℕ) :
+    GeneralLinearPolynomial k n :=
+  (genericGeneralLinearMatrix (k := k) n).det
+
+abbrev GeneralLinearCoordinateRing (k : Type u) [Field k] (n : ℕ) :=
+  Localization (Submonoid.powers (genericGeneralLinearDet (k := k) n))
+
+theorem genericGeneralLinearDet_ne_zero
+    (k : Type u) [Field k] (n : ℕ) :
+    genericGeneralLinearDet (k := k) n ≠ 0 := by
+  intro h
+  have he := congrArg
+    (MvPolynomial.eval₂Hom (RingHom.id k)
+      (fun ij : Fin n × Fin n => if ij.1 = ij.2 then 1 else 0)) h
+  change (MvPolynomial.eval₂Hom (RingHom.id k)
+      (fun ij : Fin n × Fin n => if ij.1 = ij.2 then 1 else 0))
+      (genericGeneralLinearMatrix n).det = 0 at he
+  rw [RingHom.map_det] at he
+  have hm : (genericGeneralLinearMatrix (k := k) n).map
+      (MvPolynomial.eval₂ (RingHom.id k)
+        (fun ij : Fin n × Fin n => if ij.1 = ij.2 then 1 else 0)) = 1 := by
+    ext i j
+    simp [genericGeneralLinearMatrix, Matrix.one_apply]
+  change ((genericGeneralLinearMatrix (k := k) n).map
+      (MvPolynomial.eval₂ (RingHom.id k)
+        (fun ij : Fin n × Fin n => if ij.1 = ij.2 then 1 else 0))).det = 0 at he
+  rw [hm] at he
+  simpa using he
+
+theorem generalLinearCoordinateRing_isDomain
+    (k : Type u) [Field k] (n : ℕ) :
+    IsDomain (GeneralLinearCoordinateRing k n) := by
+  apply IsLocalization.isDomain_localization
+  intro z hz
+  rcases hz with ⟨m, rfl⟩
+  exact mem_nonZeroDivisors_of_ne_zero
+    (pow_ne_zero m (genericGeneralLinearDet_ne_zero k n))
+
+def genericGeneralLinearElement (k : Type u) [Field k] (n : ℕ) :
+    Matrix.GeneralLinearGroup (Fin n) (GeneralLinearCoordinateRing k n) := by
+  let M : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n) :=
+    (genericGeneralLinearMatrix (k := k) n).map
+      (algebraMap (GeneralLinearPolynomial k n)
+        (GeneralLinearCoordinateRing k n))
+  have hdet : M.det = algebraMap (GeneralLinearPolynomial k n)
+      (GeneralLinearCoordinateRing k n) (genericGeneralLinearDet (k := k) n) := by
+    simpa [M, genericGeneralLinearDet] using
+      ((algebraMap (GeneralLinearPolynomial k n)
+        (GeneralLinearCoordinateRing k n)).map_det
+          (genericGeneralLinearMatrix (k := k) n)).symm
+  have hunit : IsUnit M.det := by
+    rw [hdet]
+    exact IsLocalization.map_units (GeneralLinearCoordinateRing k n)
+      ⟨genericGeneralLinearDet (k := k) n, Submonoid.mem_powers _⟩
+  exact Matrix.GeneralLinearGroup.mk'' M hunit
+
+def idempotentRankOrbitHom (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) :
+    IdempotentMatrixPolynomial k n →+* GeneralLinearCoordinateRing k n :=
+  MvPolynomial.eval₂Hom
+    (algebraMap k (GeneralLinearCoordinateRing k n))
+    (fun ij =>
+      let g := genericGeneralLinearElement k n
+      let D : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n) :=
+        Matrix.diagonal (fun i => if i.1 < r.1 then 1 else 0)
+      ((g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) * D *
+        (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n))) ij.1 ij.2)
+
+def idempotentRankOrbitPrime (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) :
+    Ideal (IdempotentMatrixPolynomial k n) :=
+  RingHom.ker (idempotentRankOrbitHom k n r)
+
+theorem idempotentRankOrbitPrime_isPrime
+    (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) :
+    (idempotentRankOrbitPrime k n r).IsPrime := by
+  letI : IsDomain (GeneralLinearCoordinateRing k n) :=
+    generalLinearCoordinateRing_isDomain k n
+  refine ⟨?_, ?_⟩
+  · intro htop
+    have hmem : (1 : IdempotentMatrixPolynomial k n) ∈
+        idempotentRankOrbitPrime k n r := by rw [htop]; simp
+    change idempotentRankOrbitHom k n r 1 = 0 at hmem
+    simpa using hmem
+  · intro a b hab
+    change idempotentRankOrbitHom k n r (a * b) = 0 at hab
+    rw [map_mul] at hab
+    rcases mul_eq_zero.mp hab with ha | hb
+    · left
+      exact ha
+    · right
+      exact hb
+
+theorem idempotentMatrixIdeal_le_rankOrbitPrime
+    (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) :
+    idempotentMatrixIdeal (k := k) n ≤ idempotentRankOrbitPrime k n r := by
+  classical
+  let g := genericGeneralLinearElement k n
+  let D : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n) :=
+    Matrix.diagonal (fun i => if i.1 < r.1 then 1 else 0)
+  let A : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n) :=
+    (g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) * D *
+      (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n))
+  have hD : D * D = D := by
+    simp [D, Matrix.diagonal_mul_diagonal]
+    omega
+  have hA : A * A = A := by
+    simp only [A]
+    rw [show
+      ((g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) * D *
+          (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n))) *
+        ((g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) * D *
+          (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n))) =
+        (g : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) *
+          (D * D) *
+          (↑(g⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) by
+      simp only [mul_assoc, ← Matrix.GeneralLinearGroup.coe_mul]; simp]
+    rw [hD]
+  rw [idempotentMatrixIdeal]
+  apply Ideal.span_le.mpr
+  intro p hp
+  obtain ⟨ij, rfl⟩ := hp
+  change idempotentRankOrbitHom k n r
+      ((∑ l : Fin n,
+        genericIdempotentMatrix n ij.1 l * genericIdempotentMatrix n l ij.2) -
+        genericIdempotentMatrix n ij.1 ij.2) = 0
+  simp only [map_sub, map_sum, map_mul, idempotentRankOrbitHom,
+    genericIdempotentMatrix, MvPolynomial.eval₂Hom_X']
+  change (A * A) ij.1 ij.2 - A ij.1 ij.2 = 0
+  rw [hA]
+  exact sub_self _
+
 def diagonalIdempotent {k : Type u} [Field k] (n r : ℕ) :
     Matrix (Fin n) (Fin n) k :=
   Matrix.diagonal (fun i : Fin n => if i.1 < r then 1 else 0)
+
+theorem diagonalIdempotent_charpoly
+    {k : Type u} [Field k] (n : ℕ) (r : Fin (n + 1)) :
+    (diagonalIdempotent (k := k) n r.1).charpoly =
+      (Polynomial.X - Polynomial.C 1) ^ r.1 * Polynomial.X ^ (n - r.1) := by
+  classical
+  rw [diagonalIdempotent, Matrix.charpoly_diagonal]
+  calc
+    (∏ i : Fin n, (Polynomial.X - Polynomial.C
+        (if i.1 < r.1 then (1 : k) else 0))) =
+        ∏ i : Fin n, if i.1 < r.1 then
+          (Polynomial.X - Polynomial.C (1 : k)) else Polynomial.X := by
+            apply Finset.prod_congr rfl
+            intro i _hi
+            split_ifs <;> simp_all
+    _ = (Polynomial.X - Polynomial.C 1) ^ r.1 *
+        Polynomial.X ^ (n - r.1) := by
+          have hlt : (Finset.univ.filter (fun i : Fin n => i.1 < r.1)).card = r.1 := by
+            simpa [Fin.card_filter_val_lt,
+              min_eq_right (Nat.le_of_lt_succ r.2)]
+          have hrn : r.1 ≤ n := Nat.le_of_lt_succ r.2
+          let e : Fin (n - r.1) ≃
+              ↥(Finset.univ.filter (fun i : Fin n => r.1 ≤ i.1)) :=
+            Equiv.ofBijective
+              (fun i => ⟨⟨r.1 + i.1, by omega⟩, by simp⟩)
+              ⟨(by
+                  intro i j hij
+                  apply Fin.ext
+                  have hval : r.1 + i.1 = r.1 + j.1 := by
+                    simpa using congrArg (fun x => x.1.1) hij
+                  exact Nat.add_left_cancel hval),
+                (by
+                  intro i
+                  have hi : r.1 ≤ i.1.1 := by
+                    simpa only [Finset.mem_filter, Finset.mem_univ, true_and] using i.2
+                  refine ⟨⟨i.1.1 - r.1, by omega⟩, ?_⟩
+                  apply Subtype.ext
+                  apply Fin.ext
+                  simp
+                  omega)⟩
+          have hge : (Finset.univ.filter (fun i : Fin n => r.1 ≤ i.1)).card =
+              n - r.1 := by
+            rw [← Fintype.card_coe]
+            exact (Fintype.card_congr e).symm.trans (Fintype.card_fin (n - r.1))
+          rw [Finset.prod_ite]
+          rw [Finset.prod_const, Finset.prod_const]
+          simp only [not_lt]
+          rw [hlt, hge]
+
+theorem diagonalIdempotent_charpoly_injective
+    {k : Type u} [Field k] (n : ℕ) : Function.Injective
+      (fun r : Fin (n + 1) => (diagonalIdempotent (k := k) n r.1).charpoly) := by
+  classical
+  intro r s hrs
+  change (diagonalIdempotent (k := k) n r.1).charpoly =
+    (diagonalIdempotent (k := k) n s.1).charpoly at hrs
+  rw [diagonalIdempotent_charpoly n r, diagonalIdempotent_charpoly n s] at hrs
+  apply Fin.ext
+  by_contra hne
+  have hcoeff0 (m : ℕ) :
+      (((Polynomial.X - (1 : Polynomial k)) ^ m).coeff 0) = (-1 : k) ^ m := by
+    induction m with
+    | zero => simp
+    | succ m ih =>
+        rw [pow_succ, Polynomial.coeff_mul]
+        simp [ih, pow_succ]
+  rcases lt_or_gt_of_ne hne with hrslt | hsrlt
+  · have hc := congrArg (fun p : Polynomial k => p.coeff (n - s.1)) hrs
+    have hrpow : n - s.1 < n - r.1 := by omega
+    have hleft : (((Polynomial.X - Polynomial.C (1 : k)) ^ r.1 *
+        Polynomial.X ^ (n - r.1)).coeff (n - s.1)) = 0 := by
+      rw [Polynomial.coeff_mul_X_pow']
+      simp [Nat.not_le.mpr hrpow]
+    have hright : (((Polynomial.X - Polynomial.C (1 : k)) ^ s.1 *
+        Polynomial.X ^ (n - s.1)).coeff (n - s.1)) = (-1 : k) ^ s.1 := by
+      rw [Polynomial.coeff_mul_X_pow']
+      simp [hcoeff0]
+    rw [hleft, hright] at hc
+    exact (pow_ne_zero s.1 (neg_ne_zero.mpr one_ne_zero)) hc.symm
+  · have hc := congrArg (fun p : Polynomial k => p.coeff (n - r.1)) hrs
+    have hspow : n - r.1 < n - s.1 := by omega
+    have hleft : (((Polynomial.X - Polynomial.C (1 : k)) ^ r.1 *
+        Polynomial.X ^ (n - r.1)).coeff (n - r.1)) = (-1 : k) ^ r.1 := by
+      rw [Polynomial.coeff_mul_X_pow']
+      simp [hcoeff0]
+    have hright : (((Polynomial.X - Polynomial.C (1 : k)) ^ s.1 *
+        Polynomial.X ^ (n - s.1)).coeff (n - r.1)) = 0 := by
+      rw [Polynomial.coeff_mul_X_pow']
+      simp [Nat.not_le.mpr hspow]
+    rw [hleft, hright] at hc
+    exact (pow_ne_zero r.1 (neg_ne_zero.mpr one_ne_zero)) hc
+
+def idempotentRankCharpolyRelation
+    (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) (j : ℕ) :
+    IdempotentMatrixPolynomial k n :=
+  (genericIdempotentMatrix (k := k) n).charpoly.coeff j -
+    MvPolynomial.C ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j)
+
+theorem idempotentRankOrbitHom_charpolyCoeff
+    (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) (j : ℕ) :
+    idempotentRankOrbitHom k n r
+        ((genericIdempotentMatrix (k := k) n).charpoly.coeff j) =
+      algebraMap k (GeneralLinearCoordinateRing k n)
+        ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j) := by
+  classical
+  let S := GeneralLinearCoordinateRing k n
+  let h := idempotentRankOrbitHom k n r
+  let G := genericGeneralLinearElement k n
+  let D : Matrix (Fin n) (Fin n) S :=
+    Matrix.diagonal (fun i : Fin n => if i.1 < r.1 then 1 else 0)
+  let A : Matrix (Fin n) (Fin n) S :=
+    (G : Matrix (Fin n) (Fin n) S) * D *
+      (↑(G⁻¹) : Matrix (Fin n) (Fin n) S)
+  have hmapMatrix :
+      (genericIdempotentMatrix (k := k) n).map h = A := by
+    ext i j
+    simp [genericIdempotentMatrix, h, idempotentRankOrbitHom, A, D, G]
+  have hconj : A.charpoly = D.charpoly := by
+    exact Matrix.charpoly_units_conj G D
+  let Dk := diagonalIdempotent (k := k) n r.1
+  have hDmap : Dk.map (algebraMap k S) = D := by
+    ext i j
+    by_cases hij : i = j
+    · subst j
+      simp [Dk, D, diagonalIdempotent]
+    · simp [Dk, D, diagonalIdempotent, Matrix.diagonal, hij]
+  have hcharMap : D.charpoly = Polynomial.map (algebraMap k S) Dk.charpoly := by
+    rw [← Matrix.charpoly_map Dk (algebraMap k S), hDmap]
+  calc
+    h ((genericIdempotentMatrix (k := k) n).charpoly.coeff j) =
+        (Polynomial.map h (genericIdempotentMatrix (k := k) n).charpoly).coeff j := by
+          simp
+    _ = ((genericIdempotentMatrix (k := k) n).map h).charpoly.coeff j := by
+          rw [Matrix.charpoly_map]
+    _ = A.charpoly.coeff j := by rw [hmapMatrix]
+    _ = D.charpoly.coeff j := by rw [hconj]
+    _ = (Polynomial.map (algebraMap k S) Dk.charpoly).coeff j := by rw [hcharMap]
+    _ = algebraMap k S (Dk.charpoly.coeff j) := by simp
+    _ = algebraMap k (GeneralLinearCoordinateRing k n)
+        ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j) := by rfl
+
+theorem idempotentRankCharpolyRelation_mem_rankOrbitPrime
+    (k : Type u) [Field k] (n : ℕ) (r : Fin (n + 1)) (j : ℕ) :
+    idempotentRankCharpolyRelation k n r j ∈ idempotentRankOrbitPrime k n r := by
+  let h := idempotentRankOrbitHom k n r
+  let S := GeneralLinearCoordinateRing k n
+  change h (idempotentRankCharpolyRelation k n r j) = 0
+  rw [idempotentRankCharpolyRelation, map_sub,
+    idempotentRankOrbitHom_charpolyCoeff]
+  rw [show h (MvPolynomial.C
+      ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j)) =
+      algebraMap k S ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j) by
+    simp [h, idempotentRankOrbitHom]
+    rfl]
+  exact sub_self _
+
+theorem idempotentRankOrbitPrime_le_iff
+    (k : Type u) [Field k] (n : ℕ) (r s : Fin (n + 1)) :
+    idempotentRankOrbitPrime k n r ≤ idempotentRankOrbitPrime k n s ↔ r = s := by
+  classical
+  constructor
+  · intro hrs
+    apply diagonalIdempotent_charpoly_injective (k := k) n
+    apply Polynomial.ext
+    intro j
+    have hmem := hrs (idempotentRankCharpolyRelation_mem_rankOrbitPrime k n r j)
+    change idempotentRankOrbitHom k n s
+      (idempotentRankCharpolyRelation k n r j) = 0 at hmem
+    rw [idempotentRankCharpolyRelation, map_sub,
+      idempotentRankOrbitHom_charpolyCoeff] at hmem
+    rw [show idempotentRankOrbitHom k n s (MvPolynomial.C
+        ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j)) =
+        algebraMap k (GeneralLinearCoordinateRing k n)
+          ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j) by
+      simp [idempotentRankOrbitHom]] at hmem
+    have hmap := (sub_eq_zero.mp hmem).symm
+    have hinjPoly : Function.Injective
+        (algebraMap (GeneralLinearPolynomial k n) (GeneralLinearCoordinateRing k n)) :=
+      IsLocalization.injective (GeneralLinearCoordinateRing k n)
+        (powers_le_nonZeroDivisors_of_noZeroDivisors
+          (genericGeneralLinearDet_ne_zero k n))
+    have hC : (MvPolynomial.C
+          ((diagonalIdempotent (k := k) n r.1).charpoly.coeff j) :
+          GeneralLinearPolynomial k n) =
+        (MvPolynomial.C
+          ((diagonalIdempotent (k := k) n s.1).charpoly.coeff j) :
+          GeneralLinearPolynomial k n) := by
+      apply hinjPoly
+      convert hmap using 1 <;>
+        rw [IsScalarTower.algebraMap_apply k (GeneralLinearPolynomial k n)
+          (GeneralLinearCoordinateRing k n)] <;> rfl
+    have hc := congrArg (MvPolynomial.constantCoeff :
+      GeneralLinearPolynomial k n →+* k) hC
+    simpa using hc
+  · rintro rfl
+    exact le_rfl
 
 def matrixConjugation {k : Type u} [Field k] (n : ℕ)
     (g : Matrix.GeneralLinearGroup (Fin n) k)
@@ -3229,11 +3567,254 @@ theorem idempotent_matrix_conjugate_to_diagonal
   rw [hg, hginv, LinearMap.comp_assoc]
   simpa [L, Matrix.toLin'_apply'] using hdiag
 
+theorem exists_rankOrbitPrime_le_of_prime_over_idempotentMatrixIdeal
+    (k : Type u) [Field k] (n : ℕ)
+    (p : Ideal (IdempotentMatrixPolynomial k n)) (hp : p.IsPrime)
+    (hIp : idempotentMatrixIdeal (k := k) n ≤ p) :
+    ∃ r : Fin (n + 1), idempotentRankOrbitPrime k n r ≤ p := by
+  classical
+  letI : p.IsPrime := hp
+  let K := p.ResidueField
+  let q : IdempotentMatrixPolynomial k n →+* K :=
+    algebraMap (IdempotentMatrixPolynomial k n) K
+  let E : Matrix (Fin n) (Fin n) K := fun i j =>
+    q (MvPolynomial.X (R := k) (i, j))
+  have hE : E * E = E := by
+    ext i j
+    have hrel :
+        (∑ l : Fin n,
+          genericIdempotentMatrix (k := k) n i l *
+            genericIdempotentMatrix (k := k) n l j) -
+            genericIdempotentMatrix (k := k) n i j ∈ p := by
+      apply hIp
+      apply Ideal.subset_span
+      exact ⟨(i, j), rfl⟩
+    have hz : q
+        ((∑ l : Fin n,
+          genericIdempotentMatrix (k := k) n i l *
+            genericIdempotentMatrix (k := k) n l j) -
+            genericIdempotentMatrix (k := k) n i j) = 0 :=
+      Ideal.algebraMap_residueField_eq_zero.mpr hrel
+    simp only [map_sub, map_sum, map_mul, genericIdempotentMatrix,
+      MvPolynomial.eval₂Hom_X'] at hz
+    change (E * E) i j - E i j = 0 at hz
+    exact sub_eq_zero.mp hz
+  obtain ⟨r, g, _hrank, hdiag⟩ :=
+    idempotent_matrix_conjugate_to_diagonal n E hE
+  let D : Matrix (Fin n) (Fin n) K :=
+    Matrix.diagonal (fun i => if i.1 < r.1 then 1 else 0)
+  have hdiag' :
+      (g : Matrix (Fin n) (Fin n) K) * E *
+        (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) = D := by
+    exact hdiag
+  have hEdiag : E =
+      (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) * D *
+        (g : Matrix (Fin n) (Fin n) K) := by
+    calc
+      E = (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) *
+          ((g : Matrix (Fin n) (Fin n) K) * E *
+            (↑(g⁻¹) : Matrix (Fin n) (Fin n) K)) *
+          (g : Matrix (Fin n) (Fin n) K) := by
+            simp only [mul_assoc, ← Matrix.GeneralLinearGroup.coe_mul]
+            simp
+      _ = (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) * D *
+          (g : Matrix (Fin n) (Fin n) K) := by rw [hdiag']
+  let evPoly : GeneralLinearPolynomial k n →+* K :=
+    MvPolynomial.eval₂Hom (q.comp (MvPolynomial.C : k →+* IdempotentMatrixPolynomial k n))
+      (fun ij => (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) ij.1 ij.2)
+  have hmatrixEval :
+      (genericGeneralLinearMatrix (k := k) n).map evPoly =
+        (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) := by
+    ext i j
+    simp [evPoly, genericGeneralLinearMatrix]
+  have hdetEval : evPoly (genericGeneralLinearDet (k := k) n) =
+      (↑(g⁻¹) : Matrix (Fin n) (Fin n) K).det := by
+    change evPoly (genericGeneralLinearMatrix (k := k) n).det = _
+    rw [RingHom.map_det]
+    change ((genericGeneralLinearMatrix (k := k) n).map evPoly).det = _
+    rw [hmatrixEval]
+  have hunit : ∀ y : Submonoid.powers (genericGeneralLinearDet (k := k) n),
+      IsUnit (evPoly y) := by
+    rintro ⟨_, m, rfl⟩
+    rw [map_pow, hdetEval]
+    exact (isUnit_iff_ne_zero.mpr (g⁻¹).det_ne_zero).pow m
+  let ev : GeneralLinearCoordinateRing k n →+* K :=
+    IsLocalization.lift hunit
+  let G := genericGeneralLinearElement k n
+  let Acoord : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n) :=
+    (G : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)) *
+      Matrix.diagonal (fun i : Fin n => if i.1 < r.1 then 1 else 0) *
+      (↑(G⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n))
+  have hG :
+      (G : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)).map ev =
+        (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) := by
+    ext i j
+    change ev (algebraMap (GeneralLinearPolynomial k n)
+      (GeneralLinearCoordinateRing k n)
+        (MvPolynomial.X (R := k) (i, j))) = _
+    rw [IsLocalization.lift_eq]
+    simp [evPoly]
+  have hGinv :
+      (↑(G⁻¹) : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)).map ev =
+        (g : Matrix (Fin n) (Fin n) K) := by
+    let H := (↑(G⁻¹) : Matrix (Fin n) (Fin n)
+      (GeneralLinearCoordinateRing k n)).map ev
+    have hHG : H * (↑(g⁻¹) : Matrix (Fin n) (Fin n) K) = 1 := by
+      rw [← hG]
+      change ((↑(G⁻¹) : Matrix (Fin n) (Fin n)
+          (GeneralLinearCoordinateRing k n)).map ev) *
+        ((G : Matrix (Fin n) (Fin n) (GeneralLinearCoordinateRing k n)).map ev) = 1
+      rw [← Matrix.map_mul]
+      change ((↑(G⁻¹ * G) : Matrix (Fin n) (Fin n)
+        (GeneralLinearCoordinateRing k n))).map ev = 1
+      simp
+    calc
+      H = H * 1 := by simp
+      _ = H * ((↑(g⁻¹) : Matrix (Fin n) (Fin n) K) *
+          (g : Matrix (Fin n) (Fin n) K)) := by simp
+      _ = (H * (↑(g⁻¹) : Matrix (Fin n) (Fin n) K)) *
+          (g : Matrix (Fin n) (Fin n) K) := by simp only [mul_assoc]
+      _ = (g : Matrix (Fin n) (Fin n) K) := by rw [hHG]; simp
+  have horbitEval :
+      Acoord.map ev = E := by
+    dsimp only [Acoord]
+    rw [Matrix.map_mul, Matrix.map_mul, hG, hGinv]
+    rw [show (Matrix.diagonal (fun i : Fin n => if i.1 < r.1 then
+        (1 : GeneralLinearCoordinateRing k n) else 0)).map ev = D by
+      ext i j
+      by_cases hij : i = j
+      · subst j
+        simp [D]
+      · simp [D, Matrix.diagonal, hij]]
+    exact hEdiag.symm
+  have hcomp : ev.comp (idempotentRankOrbitHom k n r) = q := by
+    apply MvPolynomial.ringHom_ext
+    · intro c
+      rw [RingHom.comp_apply]
+      calc
+        ev (idempotentRankOrbitHom k n r (MvPolynomial.C c)) =
+            ev (algebraMap (GeneralLinearPolynomial k n)
+              (GeneralLinearCoordinateRing k n) (MvPolynomial.C c)) := by
+                congr 1
+                simp [idempotentRankOrbitHom]
+                rw [IsScalarTower.algebraMap_apply k (GeneralLinearPolynomial k n)
+                  (GeneralLinearCoordinateRing k n)]
+                rfl
+        _ = evPoly (MvPolynomial.C c) := IsLocalization.lift_eq hunit _
+        _ = q (MvPolynomial.C c) := by simp [evPoly]
+    · intro ij
+      rw [RingHom.comp_apply]
+      have hX : idempotentRankOrbitHom k n r (MvPolynomial.X ij) =
+          Acoord ij.1 ij.2 := by
+        simp [idempotentRankOrbitHom, Acoord, G]
+      calc
+        ev (idempotentRankOrbitHom k n r (MvPolynomial.X ij)) =
+            (Acoord.map ev) ij.1 ij.2 := by rw [hX]; rfl
+        _ = E ij.1 ij.2 := congrArg (fun M => M ij.1 ij.2) horbitEval
+        _ = q (MvPolynomial.X ij) := rfl
+  refine ⟨r, ?_⟩
+  intro f hf
+  change idempotentRankOrbitHom k n r f = 0 at hf
+  have hz := congrArg ev hf
+  rw [map_zero, ← RingHom.comp_apply, hcomp] at hz
+  exact Ideal.algebraMap_residueField_eq_zero.mp hz
+
+theorem idempotentMatrix_minimalPrimes
+    (k : Type u) [Field k] (n : ℕ) :
+    (idempotentMatrixIdeal (k := k) n).minimalPrimes =
+      Set.range (idempotentRankOrbitPrime k n) := by
+  classical
+  ext p
+  constructor
+  · intro hp
+    obtain ⟨r, hrp⟩ :=
+      exists_rankOrbitPrime_le_of_prime_over_idempotentMatrixIdeal k n p
+        hp.isPrime hp.le
+    refine ⟨r, ?_⟩
+    apply le_antisymm
+    · exact hrp
+    · apply hp.2
+      · exact ⟨idempotentRankOrbitPrime_isPrime k n r,
+          idempotentMatrixIdeal_le_rankOrbitPrime k n r⟩
+      · exact hrp
+  · rintro ⟨r, rfl⟩
+    letI : (idempotentRankOrbitPrime k n r).IsPrime :=
+      idempotentRankOrbitPrime_isPrime k n r
+    obtain ⟨q, hq, hqr⟩ :=
+      Ideal.exists_minimalPrimes_le
+        (I := idempotentMatrixIdeal (k := k) n)
+        (idempotentMatrixIdeal_le_rankOrbitPrime k n r)
+    obtain ⟨s, hs⟩ :=
+      exists_rankOrbitPrime_le_of_prime_over_idempotentMatrixIdeal k n q
+        hq.isPrime hq.le
+    have hqs : q = idempotentRankOrbitPrime k n s := by
+      apply le_antisymm
+      · apply hq.2
+        · exact ⟨idempotentRankOrbitPrime_isPrime k n s,
+            idempotentMatrixIdeal_le_rankOrbitPrime k n s⟩
+        · exact hs
+      · exact hs
+    have hsr : s = r :=
+      (idempotentRankOrbitPrime_le_iff k n s r).mp (hqs ▸ hqr)
+    simpa [hqs, hsr] using hq
+
 theorem idempotent_matrix_rank_orbits_are_components
     (k : Type u) [Field k] (n : ℕ) :
     Nonempty (Fin (n + 1) ≃
       irreducibleComponents (PrimeSpectrum (IdempotentMatrixRing k n))) := by
-  sorry
+  classical
+  let I := idempotentMatrixIdeal (k := k) n
+  let f : minimalPrimes (IdempotentMatrixRing k n) → I.minimalPrimes := fun p =>
+    ⟨Ideal.comap (Ideal.Quotient.mk I) p.1, by
+      rw [Ideal.minimalPrimes_eq_comap]
+      exact ⟨p.1, p.2, rfl⟩⟩
+  have hf_inj : Function.Injective f := by
+    intro p q hpq
+    apply Subtype.ext
+    apply Ideal.comap_injective_of_surjective (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective
+    exact congrArg Subtype.val hpq
+  have hf_surj : Function.Surjective f := by
+    intro p
+    have hp : (p : Ideal (IdempotentMatrixPolynomial k n)) ∈ I.minimalPrimes := p.2
+    have hpimage : (p : Ideal (IdempotentMatrixPolynomial k n)) ∈
+        Ideal.comap (Ideal.Quotient.mk I) ''
+          minimalPrimes (IdempotentMatrixRing k n) := by
+      exact (congrArg
+        (fun s : Set (Ideal (IdempotentMatrixPolynomial k n)) =>
+          (p : Ideal (IdempotentMatrixPolynomial k n)) ∈ s)
+        (Ideal.minimalPrimes_eq_comap (I := I))).mp hp
+    obtain ⟨q, hq, hqp⟩ := hpimage
+    refine ⟨⟨q, hq⟩, ?_⟩
+    apply Subtype.ext
+    exact hqp
+  let eMin : minimalPrimes (IdempotentMatrixRing k n) ≃ I.minimalPrimes :=
+    Equiv.ofBijective f ⟨hf_inj, hf_surj⟩
+  have hrmin (r : Fin (n + 1)) : idempotentRankOrbitPrime k n r ∈ I.minimalPrimes := by
+    rw [show I = idempotentMatrixIdeal (k := k) n by rfl,
+      idempotentMatrix_minimalPrimes]
+    exact ⟨r, rfl⟩
+  let rankPrime : Fin (n + 1) → I.minimalPrimes := fun r =>
+    ⟨idempotentRankOrbitPrime k n r, hrmin r⟩
+  have hrankPrime_inj : Function.Injective rankPrime := by
+    intro r s hrs
+    apply (idempotentRankOrbitPrime_le_iff k n r s).mp
+    exact le_of_eq (congrArg Subtype.val hrs)
+  have hrankPrime_surj : Function.Surjective rankPrime := by
+    intro p
+    have hp : (p : Ideal (IdempotentMatrixPolynomial k n)) ∈
+        Set.range (idempotentRankOrbitPrime k n) := by
+      rw [← idempotentMatrix_minimalPrimes k n]
+      exact p.2
+    obtain ⟨r, hr⟩ := hp
+    refine ⟨r, ?_⟩
+    apply Subtype.ext
+    exact hr
+  let eRanks : Fin (n + 1) ≃ I.minimalPrimes :=
+    Equiv.ofBijective rankPrime ⟨hrankPrime_inj, hrankPrime_surj⟩
+  let eComponents :=
+    (minimalPrimes.equivIrreducibleComponents (IdempotentMatrixRing k n)).toEquiv
+  exact ⟨eRanks.trans eMin.symm |>.trans (eComponents.trans OrderDual.ofDual)⟩
 
 theorem idempotent_matrix_different_rank_orbits_disjoint
     {k : Type u} [Field k] (n r s : ℕ)

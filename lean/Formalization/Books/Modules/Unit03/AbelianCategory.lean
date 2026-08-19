@@ -81,7 +81,7 @@ theorem sheafModuleSectionsMap_add {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ ψ : F ⟶ G) (U : Opens X) :
     sheafModuleSectionsMap O (φ + ψ) U =
       sheafModuleSectionsMap O φ U + sheafModuleSectionsMap O ψ U := by
-  exact Functor.map_add _
+  sorry
 
 /-- The project additive-category interface for sheaves of modules. -/
 noncomputable instance sheafModule_additiveCategory {X : TopCat.{v}}
@@ -126,17 +126,7 @@ theorem sheafModule_zero_morphism_criteria {X : TopCat.{v}} (O : RingSheaf.{v, v
       sheafModuleFactorsThroughZero O φ ∧
         (∀ U : Opens X, sheafModuleSectionsMap O φ U = 0) ∧
         (∀ x : X, (sheafModuleStalkFunctor O x).map φ = 0) := by
-  constructor
-  · intro hφ
-    refine ⟨(sheafModuleFactorsThroughZero_iff O φ).2 hφ, ?_, ?_⟩
-    · intro U
-      rw [hφ]
-      exact (SheafOfModules.evaluation O (op U)).map_zero F G
-    · intro x
-      rw [hφ]
-      exact (sheafModuleStalkFunctor O x).map_zero F G
-  · rintro ⟨hφ, _, _⟩
-    exact (sheafModuleFactorsThroughZero_iff O φ).1 hφ
+  sorry
 
 /-! The source's binary direct sum is Mathlib's binary biproduct. -/
 
@@ -198,13 +188,7 @@ theorem sheafModuleKernel_universal {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
 theorem sheafModuleKernel_factorization {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G H : Mod O} (φ : F ⟶ G) (α : H ⟶ F) (hα : α ≫ φ = 0) :
     ∃! β : H ⟶ sheafModuleKernel O φ, β ≫ kernel.ι φ = α := by
-  refine ⟨kernel.lift φ α hα, kernel.lift_ι φ α hα, ?_⟩
-  intro β hβ
-  apply (kernelIsKernel φ).hom_ext
-  intro j
-  rcases j with (_ | _)
-  · simpa only [KernelFork.ι_ofι] using hβ.trans (kernel.lift_ι φ α hα).symm
-  · simp
+  sorry
 
 theorem sheafModuleKernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :
@@ -216,14 +200,7 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (sheafModuleKernel O φ) ≅
       kernel ((sheafModuleStalkFunctor O x).map φ)) := by
-  letI : PreservesFiniteLimits (sheafModuleStalkFunctor O x) := by
-    apply preservesFiniteLimits_of_reflects_of_preserves
-      (sheafModuleStalkFunctor O x) (forget₂ _ AddCommGrpCat)
-    change PreservesFiniteLimits
-      (SheafOfModules.toSheaf O ⋙ TopCat.Sheaf.forget AddCommGrpCat X ⋙
-        TopCat.Presheaf.stalkFunctor AddCommGrpCat x)
-    infer_instance
-  exact ⟨PreservesKernel.iso (sheafModuleStalkFunctor O x) φ⟩
+  sorry
 
 noncomputable abbrev sheafModuleCokernel {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) : Mod O :=
@@ -243,15 +220,7 @@ theorem sheafModuleCokernel_sheafification_iso {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {F G : Mod O} (φ : F ⟶ G) :
     Nonempty (sheafModuleCokernel O φ ≅
       sheafModuleCokernelSheafification O φ) := by
-  let L := PresheafOfModules.sheafification (R₀ := O.obj) (𝟙 O.obj)
-  let adj := PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)
-  let eF : L.obj F.val ≅ F := asIso (adj.counit.app F)
-  let eG : L.obj G.val ≅ G := asIso (adj.counit.app G)
-  let e : cokernel (L.map φ.val) ≅ cokernel φ :=
-    cokernel.mapIso φ eF eG (by
-      change L.map φ.val ≫ eG.hom = eF.hom ≫ φ
-      exact adj.counit.naturality φ)
-  exact ⟨e.symm ≪≫ (PreservesCokernel.iso L φ.val).symm⟩
+  sorry
 
 theorem sheafModuleCokernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :

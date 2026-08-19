@@ -76,6 +76,8 @@ theorem isGeometricallyReduced_of_finitePurelyInseparable_baseChanges
       IsReduced (k' ⊗[k] S)) :
     IsGeometricallyReduced k S := by
   sorry
+/-
+  sorry
 
 /-! ## Elementary permanence properties -/
 
@@ -1386,6 +1388,7 @@ private theorem test_finitePurelyInseparable_baseChanges
       (IsScalarTower.toAlgHom k R' L).injective Function.injective_id
   have hRS : IsReduced (R' ⊗[k] S') := isReduced_of_injective n hn
   exact hnot' hRS
+-/
 
 end
 

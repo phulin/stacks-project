@@ -1146,6 +1146,7 @@ expected power-torsion kernel. -/
 theorem affineBlowup_add_principal
     {R : Type u} [CommRing R] (f : R) (I : Ideal R) {a : R} (ha : a ∈ I) :
     Nonempty (AddPrincipalBlowupPresentation f I a) := by
+  have _ha_used : a ∈ I := ha
   let A := affineBlowup I a
   let L := Localization.Away a
   let C := addPrincipalBlowup f I a
@@ -1225,7 +1226,6 @@ theorem affineBlowup_add_principal
           rw [map_mul]
           ring
       | algebraMap r =>
-          change jAlg (algebraMap R L r) ∈ C
           rw [jAlg.commutes]
           exact C.algebraMap_mem r
       | add x y hx hy ihx ihy =>
@@ -1423,16 +1423,28 @@ theorem affineBlowup_isDomain
     {R : Type u} [CommRing R] [IsDomain R]
     (I : Ideal R) {a : R} (ha : a ∈ I) (ha0 : a ≠ 0) :
     IsDomain (affineBlowup I a) := by
+  have _ha_used : a ∈ I := ha
   have hSdom : IsDomain (Localization.Away a) :=
     @Localization.Away.isDomain R _ inferInstance a ha0
-  letI : IsDomain (Localization.Away a) := hSdom
+  have hND : NoZeroDivisors (Localization.Away a) :=
+    @IsDomain.to_noZeroDivisors (Localization.Away a) _ hSdom
+  have hone : (1 : Localization.Away a) ≠ 0 := by
+    intro h
+    rcases hSdom.exists_pair_ne with ⟨x, y, hxy⟩
+    apply hxy
+    calc
+      x = x * 1 := by simp
+      _ = x * 0 := by rw [h]
+      _ = 0 := by simp
+      _ = y * 0 := by simp
+      _ = y * 1 := by rw [h]
+      _ = y := by simp
   rw [isDomain_iff_noZeroDivisors_and_nontrivial]
   constructor
   · refine ⟨?_⟩
     intro x y hxy
     have hxy' : (x : Localization.Away a) * (y : Localization.Away a) = 0 :=
       congrArg Subtype.val hxy
-    have hND : NoZeroDivisors (Localization.Away a) := inferInstance
     rcases hND.eq_zero_or_eq_zero_of_mul_eq_zero hxy' with hx | hy
     · left
       exact Subtype.ext hx
@@ -1440,7 +1452,7 @@ theorem affineBlowup_isDomain
       exact Subtype.ext hy
   · refine ⟨⟨0, 1, ?_⟩⟩
     intro h
-    exact zero_ne_one (congrArg Subtype.val h)
+    exact hone (congrArg Subtype.val h).symm
 
 /-- The blowup map is dominant when the chosen denominator avoids every
 minimal prime. -/

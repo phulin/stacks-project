@@ -808,7 +808,10 @@ theorem closedSubsetAbelian_inverseImage_pushforward_counit_isIso
 noncomputable def closedSubsetAbelian_inverseImagePushforwardIso
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
     closedSubsetAbelianPushforward Z ⋙ closedSubsetAbelianPullback Z ≅
-      𝟭 (TopCat.Sheaf AddCommGrpCat.{w} (TopCat.of Z)) := by sorry
+      𝟭 (TopCat.Sheaf AddCommGrpCat.{w} (TopCat.of Z)) := by
+  let : IsIso (closedSubsetAbelianAdjunction Z |>.counit) :=
+    closedSubsetAbelian_inverseImage_pushforward_counit_isIso hZ
+  exact asIso (closedSubsetAbelianAdjunction Z |>.counit)
 abbrev closedSubsetAbelian_zeroStalkCondition
     {X : TopCat.{w}} (Z : Set X)
     (G : TopCat.Sheaf AddCommGrpCat.{w} X) : Prop :=
@@ -819,7 +822,10 @@ abbrev closedSubsetAbelian_zeroStalkCondition
 /-- Pushforward along a closed subset inclusion is fully faithful for abelian sheaves. -/
 theorem closedSubsetAbelianPushforward_fullyFaithful
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
-    Nonempty (closedSubsetAbelianPushforward Z).FullyFaithful := by sorry
+    Nonempty (closedSubsetAbelianPushforward Z).FullyFaithful := by
+  let : IsIso (closedSubsetAbelianAdjunction Z |>.counit) :=
+    closedSubsetAbelian_inverseImage_pushforward_counit_isIso hZ
+  exact ⟨closedSubsetAbelianAdjunction Z |>.fullyFaithfulROfIsIsoCounit⟩
 private noncomputable def closedSubsetPullbackStalkIso
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}
@@ -831,12 +837,22 @@ private noncomputable def closedSubsetPullbackStalkIso
     {X : TopCat.{w}} {Z : Set X}
     (G : TopCat.Sheaf C X) (z : Z) :
     G.presheaf.stalk (closedSubsetInclusion Z z) ≅
-      ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G).presheaf.stalk z := by sorry
+      ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G).presheaf.stalk z := by
+  let e := (TopCat.Sheaf.pullbackIso C (closedSubsetInclusion Z)).app G
+  let e' := (CategoryTheory.sheafToPresheaf
+    (Opens.grothendieckTopology (TopCat.of Z)) C).mapIso e
+  let P := (TopCat.Presheaf.pullback C (closedSubsetInclusion Z)).obj G.presheaf
+  let u := (TopCat.Presheaf.stalkFunctor C z).map
+    (CategoryTheory.toSheafify (Opens.grothendieckTopology (TopCat.of Z)) P)
+  let : IsIso u := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+    (X := TopCat.of Z) (p₀ := z) (C := C) P
+  exact (TopCat.Presheaf.stalkPullbackIso C (closedSubsetInclusion Z) G.presheaf z).trans <|
+    (asIso u).trans <| (TopCat.Presheaf.stalkFunctor C z).mapIso e'.symm
 private lemma category_comp_iso_inv_hom_cancel
     {C : Type u} [Category.{w} C]
     {A B D E F : C} (f : A ⟶ B) (g : B ⟶ D) (h : D ⟶ E)
     (e : F ≅ E) :
-    (f ≫ g ≫ h ≫ e.inv) ≫ e.hom = f ≫ g ≫ h := by sorry
+    (f ≫ g ≫ h ≫ e.inv) ≫ e.hom = f ≫ g ≫ h := by simp
 private theorem closedSubsetPushforward_unit_stalk_comp
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}

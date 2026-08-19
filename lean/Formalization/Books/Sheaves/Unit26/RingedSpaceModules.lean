@@ -203,6 +203,69 @@ theorem exists_ringedSpaceModulePullbackCompIso
         ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f) := by
   exact ⟨ringedSpaceModulePullbackCompIso f g⟩
 
+/-- Pullback of modules is compatible with a commuting square of ringed spaces.
+
+This is the form needed for restriction to an open: take `i` and `j` to be
+the two open-subspace inclusions, and `g` to be the induced morphism between
+the inverse-image opens.  The proof only uses the canonical comparison for
+pullback along a composite, so the square itself is the sole geometric input.
+-/
+theorem ringedSpaceModulePullback_restrict_square_iso
+    {X₀ X Y₀ Y : RingedSpace.{v}}
+    (i : RingedSpaceHom X₀ X) (f : RingedSpaceHom X Y)
+    (j : RingedSpaceHom Y₀ Y) (g : RingedSpaceHom X₀ Y₀)
+    [((SheafOfModules.pushforward (F := Opens.map i.continuous)
+      i.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [inst_if : ((SheafOfModules.pushforward.{v, v, v, v, v, v}
+      (F := Opens.map
+        (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f).continuous)
+      (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f).sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map j.continuous)
+      j.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map g.continuous)
+      g.sharp).IsRightAdjoint)]
+    [inst_gj : ((SheafOfModules.pushforward.{v, v, v, v, v, v}
+      (F := Opens.map
+        (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp g j).continuous)
+      (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp g j).sharp).IsRightAdjoint)]
+    (h : Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f =
+      Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp g j) :
+    Nonempty
+      (ringedSpaceModulePullback f ⋙ ringedSpaceModulePullback i ≅
+        ringedSpaceModulePullback j ⋙ ringedSpaceModulePullback g) := by
+  have he₁ : Nonempty
+      (ringedSpaceModulePullback
+          (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f) ≅
+        ringedSpaceModulePullback f ⋙ ringedSpaceModulePullback i) := by
+    exact @exists_ringedSpaceModulePullbackCompIso _ _ _ i f
+      inferInstance inferInstance inst_if
+  have he₂ : Nonempty
+      (ringedSpaceModulePullback
+          (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp g j) ≅
+        ringedSpaceModulePullback j ⋙ ringedSpaceModulePullback g) := by
+    exact @exists_ringedSpaceModulePullbackCompIso _ _ _ g j
+      inferInstance inferInstance inst_gj
+  let e₁ := Classical.choice he₁
+  let e₂ := Classical.choice he₂
+  let K := {k : RingedSpaceHom X₀ Y //
+    k = Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f}
+  let p₁ : K := ⟨Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f, rfl⟩
+  let p₂ : K := ⟨Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp g j, h.symm⟩
+  let P : K → (Mod Y.structureSheaf ⥤ Mod X₀.structureSheaf) := fun k =>
+    @ringedSpaceModulePullback X₀ Y k.1 (k.2.symm ▸ inst_if)
+  have hp : p₁ = p₂ := by
+    apply Subtype.ext
+    exact h
+  have hP : P p₁ = P p₂ := congrArg P hp
+  have e₂' :
+      ringedSpaceModulePullback
+          (Formalization.Books.Sheaves.Unit25.RingedSpaceHom.comp i f) ≅
+        ringedSpaceModulePullback j ⋙ ringedSpaceModulePullback g := by
+    simpa only [P, p₁, p₂, K] using (eqToIso hP ≪≫ e₂)
+  exact ⟨e₁.symm ≪≫ e₂'⟩
+
 /-- A module `f`-map, represented canonically as a map to the pushforward. -/
 abbrev RingedSpaceModuleFMap {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) (G : Mod Y.structureSheaf)

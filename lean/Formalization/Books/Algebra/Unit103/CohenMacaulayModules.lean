@@ -85,7 +85,8 @@ theorem supportCutDim_eq_supportDim_quotientByList
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     (xs : List R) :
     supportCutDim R M xs = Module.supportDim R (quotientByList M xs) := by
-  sorry
+  unfold supportCutDim Module.supportDim
+  rw [support_quotientByList]
 
 /- The displayed equivalence in the source: the dimension condition can be
    read either on the support intersection or on the corresponding quotient. -/
@@ -98,7 +99,7 @@ theorem isGoodElement_iff_quotient_supportDim
         ∀ i : Fin fs.length,
           Module.supportDim R (quotientByList M (g :: fs.take i.1)) =
             (((fs.length - i.1 - 1 : ℕ) : ℕ∞) : WithBot ℕ∞) := by
-  sorry
+  simp only [IsGoodElement, supportCutDim_eq_supportDim_quotientByList]
 
 /-! ## The good-element induction -/
 
@@ -130,7 +131,7 @@ theorem isCohenMacaulay_quotient_by_element
       (((d + 1 : ℕ) : ℕ∞) : WithBot ℕ∞))
     (hcut : supportCutDim R M [g] =
       (((d : ℕ∞) : WithBot ℕ∞))) :
-    IsSMulRegular M g ∧
+      IsSMulRegular M g ∧
       IsCohenMacaulay R (QuotSMulTop g M) ∧
       localDepth R (QuotSMulTop g M) = localDepth R M - 1 := by
   sorry

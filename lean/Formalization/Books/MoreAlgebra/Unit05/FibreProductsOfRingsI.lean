@@ -2022,7 +2022,30 @@ theorem moduleFiberProductHomPairEquiv_exists
           ((ModuleCat.extendScalars D.v).obj L ⟶
             moduleGluingRightObj (D := D) (X := X)) //
           p ∈ moduleCompatibleHomPairs D L X}) := by
-  sorry
+  let P :=
+    {p : ((ModuleCat.extendScalars D.u).obj L ⟶
+            moduleGluingLeftObj (D := D) (X := X)) ×
+        ((ModuleCat.extendScalars D.v).obj L ⟶
+          moduleGluingRightObj (D := D) (X := X)) //
+      p ∈ moduleCompatibleHomPairs D L X}
+  let e : ((moduleBaseChange D).obj L ⟶ X) ≃ P :=
+    { toFun := fun f =>
+        ⟨(f.hom.left, f.hom.right),
+          f.hom.w.symm⟩
+      invFun := fun p =>
+        ObjectProperty.homMk
+          { left := p.1.1
+            right := p.1.2
+            w := p.2.symm }
+      left_inv := by
+        intro f
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> rfl
+      right_inv := by
+        intro p
+        apply Subtype.ext
+        apply Prod.ext <;> rfl }
+  exact ⟨(moduleFiberProductHomEquiv D L X).symm.trans e⟩
 /- Prior attempt retained for later completion:
   have hcompat :
       ∀ (p : (ModuleCat.extendScalars D.u).obj L ⟶ X.obj.left)

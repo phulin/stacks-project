@@ -2,6 +2,7 @@ import Formalization.Books.Categories.Unit34.Inertia
 import Mathlib.Algebra.Group.Subgroup.Ker
 import Mathlib.CategoryTheory.Category.Preorder
 import Mathlib.CategoryTheory.FiberedCategory.Fiber
+import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 import Mathlib.CategoryTheory.Groupoid
 import Mathlib.CategoryTheory.Widesubcategory
 
@@ -37,6 +38,7 @@ open CategoryTheory.Bicategory
 open CategoryTheory.Functor
 open CategoryTheory.Limits
 open CategoryTheory.ObjectProperty
+open Opposite
 open Formalization.Books.Categories.Unit29
 open Formalization.Books.Categories.Unit30
 open Formalization.Books.Categories.Unit31
@@ -2186,7 +2188,7 @@ theorem fibredInGroupoids_of_isEquivalenceOverFunctor
           simpa only [Functor.comp_map] using hKφ
         rw [hKφ']
         rw [hφ']
-        simp [hy, hx', Category.assoc, eqToHom_trans]
+        simp [Category.assoc, eqToHom_trans]
       exact hχbase
     · intro x y z φ ψ f hcomp
       let hx : p'.obj (G.obj x) = p.obj x :=
@@ -2210,7 +2212,7 @@ theorem fibredInGroupoids_of_isEquivalenceOverFunctor
         change (eqToHom hz ≫ f ≫ eqToHom hy.symm) ≫
             (eqToHom hy ≫ p.map φ ≫ eqToHom hx.symm) =
           eqToHom hz ≫ p.map ψ ≫ eqToHom hx.symm
-        simp [hcomp, Category.assoc]
+        simp [Category.assoc]
         rw [← Category.assoc f (p.map φ) (eqToHom hx.symm)]
         rw [hcomp]
       obtain ⟨χ', hχ', hχunique⟩ := hp'.unique_lift (G.map φ) (G.map ψ) hbase
@@ -2812,6 +2814,398 @@ theorem amelioration_unique_when_strictly_commutative
             overFunctor D.a.underlying ⋙ overFunctor D.f.underlying,
           IsNatIsoOver (overFunctor D.f.underlying)
             (underlyingIsoOfFibredHomIso e) overY := by
+  sorry
+
+/-! ## Presheaves of categories -/
+
+/- A presheaf of categories is represented by the canonical pseudofunctor
+   from `Cᵒᵖ` to `Cat`.  The CoGrothendieck construction below is Mathlib's
+   source-faithful implementation of the displayed objects, morphisms, and
+   composition law. -/
+
+abbrev CategoryPresheaf (C : Type u') [Category.{v'} C] :=
+  PseudofunctorFromCategory Cᵒᵖ (Cat.{v', u'})
+
+abbrev categoryPresheafCategory
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) :=
+  Pseudofunctor.CoGrothendieck F
+
+abbrev categoryPresheafProjection
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) :
+    categoryPresheafCategory F ⥤ C :=
+  Pseudofunctor.CoGrothendieck.forget F
+
+abbrev categoryPresheafObject
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) :=
+  categoryPresheafCategory F
+
+abbrev categoryPresheafHom
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C)
+    {X Y : categoryPresheafCategory F} :=
+  Pseudofunctor.CoGrothendieck.Hom X Y
+
+abbrev categoryPresheafRestriction
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U) :
+    F.obj ⟨Opposite.op U⟩ ⥤ F.obj ⟨Opposite.op V⟩ :=
+  (F.map f.op.toLoc).toFunctor
+
+theorem categoryPresheafRestriction_comp
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
+    Nonempty (categoryPresheafRestriction F (g ≫ f) ≅
+      categoryPresheafRestriction F f ⋙ categoryPresheafRestriction F g) := by
+  sorry
+
+@[simp]
+theorem categoryPresheafProjection_obj
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) (X : categoryPresheafCategory F) :
+    (categoryPresheafProjection F).obj X = X.base :=
+  rfl
+
+@[simp]
+theorem categoryPresheafProjection_map
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C)
+    {X Y : categoryPresheafCategory F} (f : X ⟶ Y) :
+    (categoryPresheafProjection F).map f = f.base :=
+  rfl
+
+@[simp]
+theorem categoryPresheaf_id_base
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) (X : categoryPresheafCategory F) :
+    (𝟙 X : X ⟶ X).base = 𝟙 X.base :=
+  rfl
+
+@[simp]
+theorem categoryPresheaf_comp_base
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C)
+    {X Y Z : categoryPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (f ≫ g).base = f.base ≫ g.base :=
+  rfl
+
+theorem categoryPresheaf_comp_fiber
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C)
+    {X Y Z : categoryPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (f ≫ g).fiber =
+      f.fiber ≫
+        (F.map f.base.op.toLoc).toFunctor.map g.fiber ≫
+        (F.mapComp g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
+  rfl
+
+abbrev categoryPresheafCartesianDomain
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
+    (x : F.obj ⟨op U⟩) : categoryPresheafCategory F :=
+  Pseudofunctor.CoGrothendieck.domainCartesianLift x f
+
+abbrev categoryPresheafCartesianLift
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
+    (x : F.obj ⟨op U⟩) :
+    categoryPresheafCartesianDomain F f x ⟶
+      (⟨U, x⟩ : categoryPresheafCategory F) :=
+  Pseudofunctor.CoGrothendieck.cartesianLift x f
+
+theorem categoryPresheafCartesianLift_isHomLift
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
+    (x : F.obj ⟨op U⟩) :
+    (categoryPresheafProjection F).IsHomLift f
+      (categoryPresheafCartesianLift F f x) := by
+  infer_instance
+
+theorem categoryPresheafCartesianLift_isStronglyCartesian
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf C) {V U : C} (f : V ⟶ U)
+    (x : F.obj ⟨op U⟩) :
+    Functor.IsStronglyCartesian (categoryPresheafProjection F) f
+      (categoryPresheafCartesianLift F f x) := by
+  exact Pseudofunctor.CoGrothendieck.isStronglyCartesian_homCartesianLift
+    (F := F) x f
+
+theorem categoryPresheafProjection_isFibered
+    {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
+    (categoryPresheafProjection F).IsFibered := by
+  infer_instance
+
+def IsomorphicOverBase
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    (p : S ⥤ C) (q : T ⥤ C) : Prop :=
+  ∃ (F : S ⥤ T) (G : T ⥤ S),
+    F ⋙ q = p ∧ G ⋙ p = q ∧ F ⋙ G = 𝟭 S ∧ G ⋙ F = 𝟭 T
+
+def IsSplitFibredCategory
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) : Prop :=
+  p.IsFibered ∧
+    ∃ F : CategoryPresheaf C,
+      IsomorphicOverBase p (categoryPresheafProjection F)
+
+theorem categoryPresheafProjection_isSplit
+    {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
+    IsSplitFibredCategory (categoryPresheafProjection F) := by
+  constructor
+  · exact categoryPresheafProjection_isFibered F
+  · exact ⟨F, 𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _,
+      Functor.id_comp _, Functor.id_comp _⟩
+
+def isStrictPullbackChoice
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered]
+    (P : PullbackChoice p) : Prop :=
+  ∀ {W V U : C} (g : W ⟶ V) (f : V ⟶ U),
+    P.pullbackFunctor (g ≫ f) =
+      P.pullbackFunctor f ⋙ P.pullbackFunctor g
+
+theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] :
+    IsSplitFibredCategory p ↔
+      ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
+  sorry
+
+/- The explicit strictification category in the proof of the source's last
+   lemma.  Its objects are `(x, f : V ⟶ U)` with `x` in the fibre over `U`,
+   and its morphisms are the underlying arrows between the chosen pullbacks. -/
+
+structure CategoryPresheafStrictificationObject
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) where
+  V : C
+  U : C
+  f : V ⟶ U
+  x : Functor.Fiber p U
+
+def categoryPresheafStrictificationObjectOf
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) (x : S) :
+    CategoryPresheafStrictificationObject p P where
+  V := p.obj x
+  U := p.obj x
+  f := 𝟙 (p.obj x)
+  x := ⟨x, rfl⟩
+
+def categoryPresheafStrictificationReindexObject
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    {W : C} (A : CategoryPresheafStrictificationObject p P)
+    (g : W ⟶ A.V) : CategoryPresheafStrictificationObject p P where
+  V := W
+  U := A.U
+  f := g ≫ A.f
+  x := A.x
+
+theorem categoryPresheafStrictificationReindexObject_comp
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    {W V : C} (h : W ⟶ V)
+    (A : CategoryPresheafStrictificationObject p P) (g : V ⟶ A.V) :
+    categoryPresheafStrictificationReindexObject
+        (categoryPresheafStrictificationReindexObject A g) h =
+      categoryPresheafStrictificationReindexObject A (h ≫ g) := by
+  cases A
+  simp [categoryPresheafStrictificationReindexObject, Category.assoc]
+
+def categoryPresheafStrictificationPullback
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    (A : CategoryPresheafStrictificationObject p P) :
+    Functor.Fiber p A.V :=
+  P.pullback A.f A.x
+
+structure CategoryPresheafStrictificationHom
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p)
+    {A B : CategoryPresheafStrictificationObject p P} where
+  hom : (categoryPresheafStrictificationPullback A).1 ⟶
+    (categoryPresheafStrictificationPullback B).1
+
+def categoryPresheafStrictificationHomBase
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    {A B : CategoryPresheafStrictificationObject p P}
+    (f : CategoryPresheafStrictificationHom (A := A) (B := B) P) :
+      A.V ⟶ B.V :=
+  eqToHom (categoryPresheafStrictificationPullback A).2.symm ≫
+    p.map f.hom ≫ eqToHom (categoryPresheafStrictificationPullback B).2
+
+@[ext]
+theorem categoryPresheafStrictificationHom_ext
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    {A B : CategoryPresheafStrictificationObject p P}
+    {f g : CategoryPresheafStrictificationHom (A := A) (B := B) P}
+    (h : f.hom = g.hom) : f = g := by
+  cases f
+  cases g
+  cases h
+  rfl
+
+abbrev CategoryPresheafStrictificationCategory
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) :=
+  CategoryPresheafStrictificationObject p P
+
+instance categoryPresheafStrictificationCategory
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    Category (CategoryPresheafStrictificationCategory p P) where
+  Hom A B := CategoryPresheafStrictificationHom (A := A) (B := B) P
+  id A := { hom := 𝟙 (categoryPresheafStrictificationPullback A).1 }
+  comp f g := { hom := f.hom ≫ g.hom }
+  id_comp f := by
+    apply categoryPresheafStrictificationHom_ext
+    simp
+  comp_id f := by
+    apply categoryPresheafStrictificationHom_ext
+    simp
+  assoc f g h := by
+    apply categoryPresheafStrictificationHom_ext
+    simp [Category.assoc]
+
+def categoryPresheafStrictificationProjection
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    CategoryPresheafStrictificationCategory p P ⥤ C where
+  obj A := A.V
+  map f := categoryPresheafStrictificationHomBase f
+  map_id := by
+    intro A
+    change eqToHom _ ≫ p.map (𝟙 _) ≫ eqToHom _ = _
+    simp
+  map_comp := by
+    intro A B D f g
+    change eqToHom _ ≫ p.map (f.hom ≫ g.hom) ≫ eqToHom _ =
+      (eqToHom _ ≫ p.map f.hom ≫ eqToHom _) ≫
+        (eqToHom _ ≫ p.map g.hom ≫ eqToHom _)
+    simp [Functor.map_comp, Category.assoc]
+
+theorem categoryPresheafStrictificationProjection_isFibered
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    (categoryPresheafStrictificationProjection P).IsFibered := by
+  sorry
+
+theorem categoryPresheafStrictification_exists_equivalence
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
+    ∃ E : S ⥤ CategoryPresheafStrictificationCategory p P,
+      IsEquivalenceOverFunctor p
+        (categoryPresheafStrictificationProjection P) E ∧
+      ∀ x : S,
+        E.obj x = categoryPresheafStrictificationObjectOf P x := by
+  sorry
+
+theorem fibredCategory_isEquivalentTo_split
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibered] :
+    ∃ F : CategoryPresheaf C,
+      ∃ h : S ⥤ categoryPresheafCategory F,
+        IsEquivalenceOverFunctor p (categoryPresheafProjection F) h := by
+  sorry
+
+/-! ## Presheaves of groupoids -/
+
+structure GroupoidPresheaf
+    (C : Type u') [Category.{v'} C] where
+  value : CategoryPresheaf C
+  fibre_is_groupoid : ∀ U : C,
+    IsGroupoid (value.obj ⟨Opposite.op U⟩)
+
+abbrev groupoidPresheafCategory
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) :=
+  categoryPresheafCategory F.value
+
+abbrev groupoidPresheafProjection
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) :
+    groupoidPresheafCategory F ⥤ C :=
+  categoryPresheafProjection F.value
+
+abbrev groupoidPresheafRestriction
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U) :
+    F.value.obj ⟨Opposite.op U⟩ ⥤ F.value.obj ⟨Opposite.op V⟩ :=
+  categoryPresheafRestriction F.value f
+
+theorem groupoidPresheafRestriction_comp
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
+    Nonempty (groupoidPresheafRestriction F (g ≫ f) ≅
+      groupoidPresheafRestriction F f ⋙ groupoidPresheafRestriction F g) := by
+  exact categoryPresheafRestriction_comp F.value g f
+
+theorem groupoidPresheaf_fibre_is_groupoid
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) (U : C) :
+    IsGroupoid (Functor.Fiber (groupoidPresheafProjection F) U) := by
+  sorry
+
+theorem groupoidPresheafProjection_isFibredInGroupoids
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) :
+    (groupoidPresheafProjection F).IsFibredInGroupoids := by
+  apply (fibredInGroupoids_iff_fibred_groupoid_fibres
+    (groupoidPresheafProjection F)).mpr
+  exact ⟨groupoidPresheaf_fibre_is_groupoid F,
+    categoryPresheafProjection_isFibered F.value⟩
+
+theorem groupoidPresheaf_exists_lift
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U)
+    (x : F.value.obj ⟨op U⟩) :
+    ∃ y : groupoidPresheafCategory F,
+      ∃ φ : y ⟶ (⟨U, x⟩ : groupoidPresheafCategory F),
+        (groupoidPresheafProjection F).IsHomLift f φ := by
+  exact ⟨categoryPresheafCartesianDomain F.value f x,
+    categoryPresheafCartesianLift F.value f x,
+    categoryPresheafCartesianLift_isHomLift F.value f x⟩
+
+theorem groupoidPresheaf_unique_lift
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf C)
+    {x y z : groupoidPresheafCategory F} (φ : y ⟶ x) (ψ : z ⟶ x)
+    {f : (groupoidPresheafProjection F).obj z ⟶
+      (groupoidPresheafProjection F).obj y}
+    (h : f ≫ (groupoidPresheafProjection F).map φ =
+      (groupoidPresheafProjection F).map ψ) :
+    ∃! χ : z ⟶ y,
+      (groupoidPresheafProjection F).IsHomLift f χ ∧ χ ≫ φ = ψ := by
+  exact (groupoidPresheafProjection_isFibredInGroupoids F).unique_lift
+    φ ψ h
+
+def IsSplitCategoryFibredInGroupoids
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) : Prop :=
+  p.IsFibredInGroupoids ∧
+    ∃ F : GroupoidPresheaf C,
+      IsomorphicOverBase p (groupoidPresheafProjection F)
+
+theorem groupoidPresheafProjection_isSplit
+    {C : Type u'} [Category.{v'} C] (F : GroupoidPresheaf C) :
+    IsSplitCategoryFibredInGroupoids
+      (groupoidPresheafProjection F) := by
+  constructor
+  · exact groupoidPresheafProjection_isFibredInGroupoids F
+  · exact ⟨F, 𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _,
+      Functor.id_comp _, Functor.id_comp _⟩
+
+theorem fibredInGroupoids_isEquivalentTo_split
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] :
+    ∃ F : GroupoidPresheaf C,
+      ∃ h : S ⥤ groupoidPresheafCategory F,
+        IsEquivalenceOverFunctor p (groupoidPresheafProjection F) h := by
   sorry
 
 end

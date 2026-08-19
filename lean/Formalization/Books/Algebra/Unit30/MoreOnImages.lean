@@ -426,14 +426,14 @@ private theorem localizationAwayMulMap_finitePresentation_of_awayMap
     RingHom.FinitePresentation (localizationAwayMulMap φ f g) := by
   let A := Localization.Away (φ f)
   let T := Localization.Away (algebraMap S A g)
-  letI : SMul S A := (inferInstance : Algebra S A).toSMul
-  letI : SMul A T := (inferInstance : Algebra A T).toSMul
-  letI : Algebra S T :=
+  let : SMul S A := (inferInstance : Algebra S A).toSMul
+  let : SMul A T := (inferInstance : Algebra A T).toSMul
+  let : Algebra S T :=
     ((algebraMap A T).comp (algebraMap S A)).toAlgebra
-  letI : SMul S T := (inferInstance : Algebra S T).toSMul
-  letI : IsScalarTower S A T :=
+  let : SMul S T := (inferInstance : Algebra S T).toSMul
+  let : IsScalarTower S A T :=
     IsScalarTower.of_algebraMap_eq' rfl
-  letI : IsLocalization.Away (φ f * g) T :=
+  let : IsLocalization.Away (φ f * g) T :=
     IsLocalization.Away.mul' A T (φ f) g
   let e : T ≃ₐ[S] Localization.Away (φ f * g) :=
     IsLocalization.algEquiv (Submonoid.powers (φ f * g)) T
@@ -514,7 +514,7 @@ private theorem one_generator_local_fp_general
     (A := R) (K := K) (L := L)
     (fun _a _b h => hφ (IsFractionRing.injective S L h))
   let xL := algebraMap S L x
-  letI : Algebra K L := RingHom.toAlgebra γ
+  let : Algebra K L := RingHom.toAlgebra γ
   by_cases hxa : ∃ p : Polynomial K, p ≠ 0 ∧
       Polynomial.eval₂ γ xL p = 0
   · obtain ⟨m, hm, hmfp⟩ := one_generator_local_fp φ hφ x hev hxa
@@ -603,8 +603,8 @@ private theorem localizationAwayMulMap_comp_finitePresentation
     {R : Type u} {A S : Type v} [CommRing R] [CommRing A] [CommRing S]
     (φ : R →+* A) (ψ : A →+* S)
     (f : R) (g a : A) (b : S)
-    (hf : f ≠ 0) (hg : g ≠ 0) (ha : a ≠ 0) (hb : b ≠ 0)
-    (hφ : Function.Injective φ) (hψ : Function.Injective ψ)
+    (_hf : f ≠ 0) (_hg : g ≠ 0) (_ha : a ≠ 0) (_hb : b ≠ 0)
+    (_hφ : Function.Injective φ) (_hψ : Function.Injective ψ)
     (h₁ : RingHom.FinitePresentation (localizationAwayMulMap φ f g))
     (h₂ : RingHom.FinitePresentation (localizationAwayMulMap ψ a b)) :
     RingHom.FinitePresentation
@@ -627,32 +627,32 @@ private theorem localizationAwayMulMap_comp_finitePresentation
         (Submonoid.powers (algebraMap A A₂ (φ f * g))).le_comap_map) :=
     RingHom.finitePresentation_localizationPreserves.away
       (localizationAwayMulMap ψ a b) (algebraMap A A₂ (φ f * g)) T₂ T₃ h₂
-  letI : SMul A A₁ := (inferInstance : Algebra A A₁).toSMul
-  letI : SMul A₁ T₁ := (inferInstance : Algebra A₁ T₁).toSMul
-  letI : Algebra A T₁ :=
+  let : SMul A A₁ := (inferInstance : Algebra A A₁).toSMul
+  let : SMul A₁ T₁ := (inferInstance : Algebra A₁ T₁).toSMul
+  let : Algebra A T₁ :=
     ((algebraMap A₁ T₁).comp (algebraMap A A₁)).toAlgebra
-  letI : SMul A T₁ := (inferInstance : Algebra A T₁).toSMul
-  letI : IsScalarTower A A₁ T₁ := IsScalarTower.of_algebraMap_eq' rfl
-  letI : SMul A A₂ := (inferInstance : Algebra A A₂).toSMul
-  letI : SMul A₂ T₂ := (inferInstance : Algebra A₂ T₂).toSMul
-  letI : Algebra A T₂ :=
+  let : SMul A T₁ := (inferInstance : Algebra A T₁).toSMul
+  let : IsScalarTower A A₁ T₁ := IsScalarTower.of_algebraMap_eq' rfl
+  let : SMul A A₂ := (inferInstance : Algebra A A₂).toSMul
+  let : SMul A₂ T₂ := (inferInstance : Algebra A₂ T₂).toSMul
+  let : Algebra A T₂ :=
     ((algebraMap A₂ T₂).comp (algebraMap A A₂)).toAlgebra
-  letI : SMul A T₂ := (inferInstance : Algebra A T₂).toSMul
-  letI : IsScalarTower A A₂ T₂ := IsScalarTower.of_algebraMap_eq' rfl
-  letI : IsLocalization.Away (a * (φ f * g)) T₁ :=
+  let : SMul A T₂ := (inferInstance : Algebra A T₂).toSMul
+  let : IsScalarTower A A₂ T₂ := IsScalarTower.of_algebraMap_eq' rfl
+  let : IsLocalization.Away (a * (φ f * g)) T₁ :=
     IsLocalization.Away.mul A₁ T₁ (φ f * g) a
-  letI : IsLocalization.Away (a * (φ f * g)) T₂ :=
+  let : IsLocalization.Away (a * (φ f * g)) T₂ :=
     IsLocalization.Away.mul' A₂ T₂ a (φ f * g)
   let e₁₂ : T₁ ≃ₐ[A] T₂ :=
     IsLocalization.algEquiv (Submonoid.powers (a * (φ f * g))) T₁ T₂
   have he₁₂ : RingHom.FinitePresentation (e₁₂ : T₁ →+* T₂) :=
     RingHom.FinitePresentation.of_bijective e₁₂.bijective
-  letI : SMul S S₁ := (inferInstance : Algebra S S₁).toSMul
-  letI : SMul S₁ T₃ := (inferInstance : Algebra S₁ T₃).toSMul
-  letI : Algebra S T₃ :=
+  let : SMul S S₁ := (inferInstance : Algebra S S₁).toSMul
+  let : SMul S₁ T₃ := (inferInstance : Algebra S₁ T₃).toSMul
+  let : Algebra S T₃ :=
     ((algebraMap S₁ T₃).comp (algebraMap S S₁)).toAlgebra
-  letI : SMul S T₃ := (inferInstance : Algebra S T₃).toSMul
-  letI : IsScalarTower S S₁ T₃ := IsScalarTower.of_algebraMap_eq' rfl
+  let : SMul S T₃ := (inferInstance : Algebra S T₃).toSMul
+  let : IsScalarTower S S₁ T₃ := IsScalarTower.of_algebraMap_eq' rfl
   have hT₃ : (localizationAwayMulMap ψ a b)
       (algebraMap A A₂ (φ f * g)) =
       algebraMap S S₁ (ψ (φ f * g)) := by
@@ -671,11 +671,11 @@ private theorem localizationAwayMulMap_comp_finitePresentation
     rw [show algebraMap A A₂ (φ f * g) =
         algebraMap A A₂ (φ f) * algebraMap A A₂ g by rw [map_mul]]
     rw [map_mul, hψf, hψg, ψ.map_mul, ← map_mul]
-  letI : IsLocalization.Away
+  let : IsLocalization.Away
       (algebraMap S S₁ (ψ (φ f * g))) T₃ := by
     rw [← hT₃]
     infer_instance
-  letI : IsLocalization.Away
+  let : IsLocalization.Away
       ((ψ a * b) * ψ (φ f * g)) T₃ :=
     IsLocalization.Away.mul' S₁ T₃ (ψ a * b) (ψ (φ f * g))
   let P := Localization.Away ((ψ.comp φ) f * (ψ a * b * ψ g))

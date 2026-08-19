@@ -3713,7 +3713,7 @@ private def categoryPresheafStrictificationFunctor
         (𝟙 (p.obj Y)) uY
         (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Y)) xY)
         _ _ (p.map f) (p.map f) (by simp) (uX ≫ f) hsource_f) ≫ uY = _
-      simpa only using (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
+      exact (@Functor.IsStronglyCartesian.fac _ _ _ _ p _ _ _ _
         (𝟙 (p.obj Y)) uY
         (P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Y)) xY)
         (p.obj X) (Functor.Fiber.fiberInclusion.obj

@@ -46,7 +46,7 @@ theorem separablyClosed_tensorProduct_connected
 change has connected spectrum. -/
 def IsGeometricallyConnected (k : Type u) (S : Type v) [Field k]
     [CommRing S] [Algebra k S] : Prop :=
-  ∀ (K : Type w) [Field K] [Algebra k K],
+  ∀ (K : Type u) [Field K] [Algebra k K],
     ConnectedSpace (PrimeSpectrum (K ⊗[k] S))
 
 /-- Geometric connectedness can be tested after finite separable extensions of

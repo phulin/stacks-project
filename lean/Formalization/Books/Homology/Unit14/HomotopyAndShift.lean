@@ -1265,7 +1265,8 @@ theorem termwiseSplitConnectingMap_homotopy_components
     (δ : TermwiseSplitConnectingMap s)
     (δ' : TermwiseSplitConnectingMap s') :
     ∃ h : Homotopy δ.hom δ'.hom,
-      ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by sorry
+      ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by
+  exact termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
 
 end ChainComplex
 
@@ -1508,7 +1509,53 @@ theorem cochain_homotopy_shift_principal (a b : A ⟶ B) :
       Nonempty (AddTorsor
         (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B)
         (Homotopy a b)) := by
-  sorry
+  classical
+  by_cases hne : Nonempty (Homotopy a b)
+  · right
+    rcases hne with ⟨h₀⟩
+    let e := (cochain_homotopy_shift_self (a := a)).some
+    let f : Homotopy a b →
+        (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) :=
+      fun h' => e (h'.trans h₀.symm)
+    have hf : Function.Injective f := by
+      intro h₁ h₂ hh
+      have hh' : h₁.trans h₀.symm = h₂.trans h₀.symm := by
+        apply e.injective
+        simpa [f] using hh
+      ext i j
+      have hhij := congrArg (fun z => z.hom i j) hh'
+      dsimp [Homotopy.trans, Homotopy.symm] at hhij
+      exact add_right_cancel hhij
+    have hsurj : Function.Surjective f := by
+      intro c
+      refine ⟨(e.symm c).trans h₀, ?_⟩
+      change e (((e.symm c).trans h₀).trans h₀.symm) = c
+      have heq : ((e.symm c).trans h₀).trans h₀.symm = e.symm c := by
+        ext i j
+        simp [Homotopy.trans, Homotopy.symm, add_assoc]
+      rw [heq, e.apply_symm_apply]
+    let q : Homotopy a b ≃
+        (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) :=
+      Equiv.ofBijective f ⟨hf, hsurj⟩
+    let vadd : VAdd
+        (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B)
+        (Homotopy a b) :=
+      ⟨fun c h' => q.symm (c + q h')⟩
+    let vsub : VSub (A ⟶
+        (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B)
+        (Homotopy a b) :=
+      ⟨fun h₁ h₂ => q h₁ - q h₂⟩
+    let hQ : Nonempty (Homotopy a b) := ⟨h₀⟩
+    refine ⟨@Function.Injective.addTorsor _ _ _ inferInstance inferInstance
+      vadd vsub hQ f hf ?_ ?_⟩
+    · intro c h'
+      change f (vadd.vadd c h') = c + f h'
+      change q (q.symm (c + q h')) = c + q h'
+      exact q.apply_symm_apply _
+    · intro h₁ h₂
+      change vsub.vsub h₁ h₂ = f h₁ - f h₂
+      apply Eq.refl
+  · exact Or.inl ⟨fun x => hne ⟨x⟩⟩
 
 /-! ## Termwise split short exact sequences of cochain complexes -/
 
@@ -1536,7 +1583,48 @@ structure TermwiseSplitConnectingMap
 theorem termwiseSplitConnectingMap_exists
     {S : ShortComplex (CochainComplex C ℤ)} (s : TermwiseSplitting S) :
     Nonempty (TermwiseSplitConnectingMap s) := by
-  sorry
+  refine ⟨{ hom := { f := fun n => termwiseSplitConnectingFamily s n, comm' := ?_ }, hom_f := ?_ }⟩
+  · intro n m hnm
+    simp only [ComplexShape.up] at hnm
+    subst m
+    dsimp [termwiseSplitConnectingFamily, CochainComplex.shiftFunctor]
+    simp
+    rw [neg_eq_iff_add_eq_zero]
+    have hrf₁ : (s (n + 1)).r ≫ S.f.f (n + 1) =
+        𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s := by
+      convert (s (n + 1)).r_f using 1 <;> rfl
+    have hfr₂ : S.f.f (n + 1 + 1) ≫ (s (n + 1 + 1)).r = 𝟙 _ := by
+      convert (s (n + 1 + 1)).f_r using 1 <;> rfl
+    have hR :
+        (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
+          (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫
+            S.X₂.d (n + 1) (n + 1 + 1) ≫ (s (n + 1 + 1)).r := by
+      calc
+        (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) =
+            (s (n + 1)).r ≫ S.X₁.d (n + 1) (n + 1 + 1) ≫
+              (S.f.f (n + 1 + 1) ≫ (s (n + 1 + 1)).r) := by
+                have hh := congrArg (fun z => (s (n + 1)).r ≫
+                  S.X₁.d (n + 1) (n + 1 + 1) ≫ z) hfr₂.symm
+                rw [Category.comp_id] at hh
+                exact hh
+        _ = (s (n + 1)).r ≫
+              (S.X₁.d (n + 1) (n + 1 + 1) ≫ S.f.f (n + 1 + 1)) ≫
+                (s (n + 1 + 1)).r := by
+              simp only [Category.assoc]
+        _ = (s (n + 1)).r ≫
+              (S.f.f (n + 1) ≫ S.X₂.d (n + 1) (n + 1 + 1)) ≫
+                (s (n + 1 + 1)).r := by
+              rw [S.f.comm (n + 1) (n + 1 + 1)]
+        _ = ((s (n + 1)).r ≫ S.f.f (n + 1)) ≫
+              S.X₂.d (n + 1) (n + 1 + 1) ≫
+                (s (n + 1 + 1)).r := by
+              simp only [Category.assoc]
+        _ = (𝟙 _ - S.g.f (n + 1) ≫ (s (n + 1)).s) ≫
+              S.X₂.d (n + 1) (n + 1 + 1) ≫
+                (s (n + 1 + 1)).r := by rw [hrf₁]
+    rw [Category.assoc, Category.assoc, hR]
+  · intro n
+    rfl
 
 /-- The unique degreewise difference between two choices of section. -/
 def termwiseSplittingDifference
@@ -1566,7 +1654,27 @@ theorem termwiseSplitting_section_eq
     (s' n).s = (s n).s +
       termwiseSplittingDifference s s' n ≫
         (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f := by
-  sorry
+  have hterm :
+      (s' n).s ≫ (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫
+        (s n).s = (s n).s := by
+    rw [← Category.assoc, (s' n).s_g, Category.id_comp]
+  dsimp [termwiseSplittingDifference]
+  calc
+    (s' n).s = (s' n).s ≫ 𝟙 _ := by simp
+    _ = (s' n).s ≫ ((s n).r ≫ (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f +
+        (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫ (s n).s) := by
+      rw [← (s n).id]
+    _ = (s' n).s ≫ (s n).r ≫ (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f +
+        (s' n).s ≫ (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).g ≫ (s n).s := by
+      simp only [Preadditive.comp_add]
+    _ = (s n).s + (s' n).s ≫ (s n).r ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f := by
+      rw [hterm]
+      abel
+    _ = (s n).s + ((s' n).s ≫ (s n).r) ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).f := by
+      congr 1
+      exact Category.assoc' _ _ _
 
 theorem termwiseSplitting_projection_eq
     {S : ShortComplex (CochainComplex C ℤ)}

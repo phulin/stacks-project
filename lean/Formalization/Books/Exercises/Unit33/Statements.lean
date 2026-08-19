@@ -492,8 +492,8 @@ theorem exists_three_point_non_affine_scheme :
   have htransition : D.f i0 i1 ≫ e.hom = D.t i0 i1 ≫ D.f i1 i0 := by
     simp [e, D, CategoryTheory.GlueData.ofGlueData', D',
       CategoryTheory.GlueData'.f', i0, i1, hi01, hDV01, hDV10,
-      hU0, hU1, eqToHom_trans, Category.assoc]
-    congr 1
+      hU0, hU1, eqToHom_trans, Category.assoc] <;>
+      congr 1
   have hrestrict : D.f i0 i1 ≫ f0 = D.f i0 i1 ≫ f1 := by
     dsimp [f0, f1]
     rw [← D.glue_condition i0 i1]

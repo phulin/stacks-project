@@ -1,8 +1,4 @@
-/-
-PRIOR ATTEMPT: This file retained declarations from later Descent sections.
-They remain here for proof history but are not Chapter 19 content.
-
-import Formalization.Books.Descent.Unit19.SourceProperties
+import Formalization.Books.Descent.Unit19.Core
 import Mathlib.RingTheory.AlgebraicIndependent.Basic
 
 universe u
@@ -13,6 +9,19 @@ open AlgebraicGeometry
 namespace Formalization.Books.Descent.Unit19
 
 abbrev GermSchemeProperty := SchemeMorphismProperty
+
+def StableUnderEtalePrecomposition (P : SchemeMorphismProperty) : Prop :=
+  ∀ {X Y Z : Scheme.{u}} (f : X ⟶ Y) (g : Y ⟶ Z), Etale f → P g → P (f ≫ g)
+
+def EtaleLocalAtSourceAndTarget (P : SchemeMorphismProperty) : Prop :=
+  ∀ {X Y : Scheme.{u}} (f : X ⟶ Y),
+    P f ↔ ∀ x : X, ∃ (U V : Scheme.{u}) (a : U ⟶ X) (b : V ⟶ Y)
+      (h : U ⟶ V) (u : U), Etale a ∧ Etale b ∧
+        a ≫ f = h ≫ b ∧ a u = x ∧ P h
+
+def IsEtaleLocalOnSourceAndTarget (P : SchemeMorphismProperty) : Prop :=
+  StableUnderEtalePrecomposition P ∧
+    PreservedByBaseChange (@Etale) P ∧ EtaleLocalAtSourceAndTarget P
 
 def germPropertyOfSchemeProperty (P : SchemeMorphismProperty) :
     SchemeGerm.GermMorphismProperty :=
@@ -42,12 +51,25 @@ theorem local_germ_property_implies_global_property
     {X Y : Scheme.{u}} (f : X ⟶ Y) :
     P f ↔ ∀ x : X,
       germPropertyOfSchemeProperty P
-        (germOfSchemeHom f x) := by sorry
+        (germOfSchemeHom f x) := by
+  constructor
+  · intro hf x
+    exact ⟨germOfSchemeHom f x, rfl, hf⟩
+  · intro h
+    by_cases hX : Nonempty X
+    · obtain ⟨g, hg, hPg⟩ := h hX.some
+      rw [hg] at hPg
+      exact hPg
+    · have hlocal := (show IsEtaleLocalOnSourceAndTarget P from hP).2.2 f
+      apply hlocal.mpr
+      intro x
+      exact (hX ⟨x⟩).elim
 
 theorem flatAtPoint_isEtaleLocalOnSourceAndTarget :
     SchemeGerm.IsEtaleLocalOnGerms (fun {X Y} f => SchemeGerm.Hom.IsFlatAtPoint f) := by
   sorry
 
+/-
 noncomputable def fibreMap
     {U' U V' V : Scheme.{u}}
     (a : U' ⟶ U) (b : V' ⟶ V) (h' : U' ⟶ V') (h : U ⟶ V)

@@ -1,4 +1,14 @@
 import Formalization.Books.SpacesCohomology.Unit02.Core
+import Mathlib.AlgebraicGeometry.Fiber
+import Mathlib.AlgebraicGeometry.Morphisms.Etale
+import Mathlib.AlgebraicGeometry.Morphisms.Flat
+import Mathlib.AlgebraicGeometry.Morphisms.Smooth
+import Mathlib.AlgebraicGeometry.Properties
+import Mathlib.AlgebraicGeometry.Sites.Etale
+import Mathlib.AlgebraicGeometry.Sites.Fpqc
+import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.Regular.RegularSequence
+import Mathlib.RingTheory.RegularLocalRing.Defs
 
 /-!
 # Descent, Chapter 19: Variants on descending properties
@@ -10,6 +20,9 @@ regularity predicate because that interface does not yet provide one.
 -/
 
 universe u
+
+open CategoryTheory CategoryTheory.Limits
+open AlgebraicGeometry
 
 namespace Formalization.Books.Descent.Unit19
 
@@ -48,11 +61,6 @@ def IsSurjective {X Y : Space.{u}} (f : Hom X Y) : Prop :=
 
 end AlgebraicSpaceInterface
 
-/-
-PRIOR ATTEMPT: The declarations below were retained from a broader draft that
-also covered later sections of Descent. They are kept verbatim for proof
-history, but are not part of Chapter 19 and are intentionally commented out.
-
 /-! ## Topologies, covers, and pullbacks -/
 
 /-- The six topologies appearing in Chapter 19. -/
@@ -70,7 +78,7 @@ structure LocalCompleteIntersectionWitness (A : Type u) [CommRing A] where
   [regularR : IsRegularLocalRing R]
   generators : List R
   regular : RingTheory.Sequence.IsRegular R generators
-  quotientIso : Nonempty (A ≃+* (R ⧸ Ideal.ofList generators))
+  quotientIso : Nonempty (A ≃+* (R ⧸ (Ideal.ofList generators)))
 
 def IsLocallyCompleteIntersectionFibre {X Y : Scheme.{u}}
     (f : X ⟶ Y) (y : Y) : Prop :=
@@ -188,13 +196,34 @@ theorem isLocalOnTarget_of_affine_criterion
     (hbase : PreservedByBaseChange (coveringMorphismProperty τ) P)
     (hzariski : IsLocalOnTarget .zariski P)
     (haffine : AffineDescent P τ) : IsLocalOnTarget τ P := by
-  sorry
+  intro X Y f 𝒰
+  constructor
+  · intro hf i
+    have hcover : coveringMorphismProperty τ (𝒰.f i) := by
+      cases τ with
+      | fpqc =>
+          exact (Scheme.presieve₀_mem_precoverage_iff 𝒰.toPreZeroHypercover).mp 𝒰.mem₀.2 |>.2 i
+      | fppf =>
+          exact (Scheme.presieve₀_mem_precoverage_iff 𝒰.toPreZeroHypercover).mp 𝒰.mem₀ |>.2 i
+      | syntomic =>
+          exact (MorphismProperty.ofArrows_mem_precoverage (P := @IsSyntomic)
+            (Y := 𝒰.X) (f := 𝒰.f)).mp 𝒰.mem₀ i
+      | smooth =>
+          exact (MorphismProperty.ofArrows_mem_precoverage (P := @Smooth)
+            (Y := 𝒰.X) (f := 𝒰.f)).mp 𝒰.mem₀ i
+      | etale =>
+          exact (Scheme.presieve₀_mem_precoverage_iff 𝒰.toPreZeroHypercover).mp 𝒰.mem₀ |>.2 i
+      | zariski =>
+          exact (Scheme.presieve₀_mem_precoverage_iff 𝒰.toPreZeroHypercover).mp 𝒰.mem₀ |>.2 i
+    exact hbase f (𝒰.f i) hcover hf
+  · intro hi
+    sorry
 
 /-! ## Chosen representatives for scheme germs -/
 
 /-- A scheme together with its distinguished point. -/
 structure SchemeGerm where
-  carrier : Scheme.{u}
+  carrier : AlgebraicGeometry.Scheme.{u}
   point : carrier
 
 namespace SchemeGerm
@@ -277,4 +306,3 @@ noncomputable def Hom.residueFieldTranscendenceDegree
 end SchemeGerm
 
 end Formalization.Books.Descent.Unit19
--/

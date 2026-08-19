@@ -1,6 +1,7 @@
 import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
+import Formalization.Books.Algebra.Unit88.MittagLefflerModules
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.RingTheory.Etale.Finite
@@ -49,7 +50,7 @@ abbrev IsHenselian (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
 field. -/
 class StrictlyHenselianLocalRing (R : Type u) [CommRing R]
     extends HenselianLocalRing R where
-  separablyClosed : IsSepClosed (IsLocalRing.ResidueField R)
+  [separablyClosed : IsSepClosed (IsLocalRing.ResidueField R)]
 
 /-- Reduction of a polynomial to the residue field. -/
 def residuePolynomial (R : Type u) [CommRing R] [IsLocalRing R]
@@ -66,7 +67,7 @@ theorem residuePolynomial_derivative
     (R : Type u) [CommRing R] [IsLocalRing R] (f : Polynomial R) :
     (residuePolynomial R f).derivative =
       residuePolynomial R f.derivative := by
-  sorry
+  simp [residuePolynomial]
 
 /-- The root-lifting formulation of henselianity. -/
 def HenselianRootLifting (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
@@ -461,6 +462,26 @@ def PolynomialSystemSolutions
     (P : Fin n → MvPolynomial (Fin n) R) : Type u :=
   {x : Fin n → R // ∀ i, MvPolynomial.aeval x (P i) = 0}
 
+/- The map on solutions induced by a ring homomorphism. -/
+def polynomialSystemMap
+    {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (n : ℕ)
+    (P : Fin n → MvPolynomial (Fin n) R) :
+    PolynomialSystemSolutions R n P →
+      PolynomialSystemSolutions S n (fun i => MvPolynomial.map φ (P i)) :=
+  fun x => ⟨fun j => φ (x.1 j), by
+    intro i
+    change MvPolynomial.eval (fun j => φ (x.1 j))
+      (MvPolynomial.map φ (P i)) = 0
+    have hx : MvPolynomial.eval x.1 (P i) = 0 := by
+      simpa only [MvPolynomial.aeval_eq_eval] using x.2 i
+    calc
+      MvPolynomial.eval (fun j => φ (x.1 j))
+          (MvPolynomial.map φ (P i)) = φ (MvPolynomial.eval x.1 (P i)) := by
+            simpa only [Function.comp_def] using
+              (MvPolynomial.map_eval φ x.1 (P i)).symm
+      _ = 0 := by rw [hx, map_zero]⟩
+
 theorem strictly_henselian_solution_bijection
     {R S : Type u} [CommRing R] [CommRing S]
     [StrictlyHenselianLocalRing R] [StrictlyHenselianLocalRing S]
@@ -468,48 +489,20 @@ theorem strictly_henselian_solution_bijection
     (P : Fin n → MvPolynomial (Fin n) R)
     (hP : Algebra.Etale R
       (MvPolynomial (Fin n) R ⧸ Ideal.span (Set.range P))) :
-    Nonempty (PolynomialSystemSolutions R n P ≃
-      PolynomialSystemSolutions S n (fun i => MvPolynomial.map φ (P i))) := by
+    Function.Bijective (polynomialSystemMap φ n P) := by
   sorry
 
 /-! ## Countably generated Mittag--Leffler modules -/
 
-/- The earlier project chapters expose the module-theoretic predicate through
+/- The tensor-kernel criterion is provided by chapter 88's canonical
 the tensor-kernel criterion.  This local form keeps the chapter interface
-independent of later categorical packaging. -/
-def TensorKernelDominates
-    {R M N N' : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M]
-    [AddCommGroup N] [Module R N]
-    [AddCommGroup N'] [Module R N']
-    (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
-  ∀ (Q : Type u) [AddCommGroup Q] [Module R Q],
-    LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q)
-
-def TensorKernelMutuallyDominates
-    {R M N N' : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M]
-    [AddCommGroup N] [Module R N]
-    [AddCommGroup N'] [Module R N']
-    (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
-  TensorKernelDominates g f ∧ TensorKernelDominates f g
-
-/- The module-theoretic Mittag--Leffler hypothesis used by the source's
-countably generated splitting theorem. -/
-def ModuleMittagLefflerCondition
-    (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] : Prop :=
-  ∀ (P : Type u) [AddCommGroup P] [Module R P],
-    Module.FinitePresentation R P →
-      ∀ f : P →ₗ[R] M,
-        ∃ Q : Type u, ∃ (_ : AddCommGroup Q) (_ : Module R Q),
-          Module.FinitePresentation R Q ∧
-            ∃ g : P →ₗ[R] Q, TensorKernelMutuallyDominates g f
-
+Mittag--Leffler interface. -/
 theorem henselian_countable_mittag_leffler
-    {R : Type u} [CommRing R] [HenselianLocalRing R]
+    {R M : Type u} [CommRing R] [HenselianLocalRing R]
     [AddCommGroup M] [Module R M]
     (hcountable : Module.IsCountablyGenerated R M)
-    (hML : ModuleMittagLefflerCondition R M) :
+    (hML : Formalization.Books.Algebra.Unit88.IsMittagLefflerModule
+      (ModuleCat.of R M)) :
     ∃ (I : Type u) (N : I → ModuleCat R),
       (∀ i, Module.FinitePresentation R (N i)) ∧
         Nonempty ((M : Type u) ≃ₗ[R]

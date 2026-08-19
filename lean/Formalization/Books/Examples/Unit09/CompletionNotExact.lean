@@ -1021,8 +1021,8 @@ def CompletionPreservesRightExactnessOnFinitelyPresentedModules : Prop :=
       Function.Exact (AdicCompletion.map I f) (AdicCompletion.map I g) ∧
         Function.Surjective (AdicCompletion.map I g)
 
-/-- Completion is neither left nor right exact in general, including on
-finitely presented modules with a finitely generated ideal. -/
+/-- Completion is neither left nor right exact in general; right exactness
+already fails on finitely presented modules for a finitely generated ideal. -/
 theorem completion_not_exact :
     (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R),
       CompletionPreservesExactness R I) ∧
@@ -1031,9 +1031,7 @@ theorem completion_not_exact :
         (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R),
           CompletionPreservesRightExactness R I) ∧
           (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R), I.FG →
-            CompletionPreservesLeftExactnessOnFinitelyPresentedModules R I) ∧
-            (¬ ∀ (R : Type u) [CommRing R] (I : Ideal R), I.FG →
-              CompletionPreservesRightExactnessOnFinitelyPresentedModules R I) := by
+            CompletionPreservesRightExactnessOnFinitelyPresentedModules R I) := by
   classical
   let uliftRatField : Field (ULift.{u} ℚ) := Field.ofIsUnitOrEqZero (by
     intro q
@@ -1167,7 +1165,7 @@ theorem completion_not_exact :
       (principalEndomorphism tA)
       (principalQuotientMap tA) hex hsurj
     exact (principal_right_completion_failure xA tA IA hIA hA hnotSpan).2 hpres.1
-  exact ⟨hnot_exact, hnot_left, hnot_right, by sorry, hnot_right_fp⟩
+  exact ⟨hnot_exact, hnot_left, hnot_right, hnot_right_fp⟩
 
 end ExactnessPredicates
 

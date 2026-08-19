@@ -77,7 +77,9 @@ theorem valuationRing_isNormalDomain
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A] :
     Formalization.Books.Algebra.Unit37.IsNormalDomain A := by
   change IsDomain A ∧ IsIntegrallyClosed A
-  constructor <;> infer_instance
+  constructor
+  · infer_instance
+  · infer_instance
 
 /-- The `x` or `x⁻¹` property for a valuation subring of a field. -/
 theorem valuationSubring_mem_or_inv_mem {K : Type u} [Field K]

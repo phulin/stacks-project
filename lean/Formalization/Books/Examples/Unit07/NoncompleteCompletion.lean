@@ -851,8 +851,7 @@ theorem completion_is_completeAsCompletionModule_iff_kernel_eq_pow :
         (AdicCompletion.factor_eval_eq_evalₐ m z (by simp)).symm
       _ = 0 := by rw [hi]; simp
   constructor
-  · intro hcomplete
-    intro n hn
+  · intro hcomplete n hn
     apply le_antisymm
     · intro x hx
       classical
@@ -941,7 +940,7 @@ theorem completion_is_completeAsCompletionModule_iff_kernel_eq_pow :
           have h2' : (y n).1 - L ∈
               completionMaximalIdeal m ^ n := by
             simpa [smul_eq_mul, Ideal.mul_top] using h2
-          convert add_mem h1' h2' using 1 <;> abel
+          convert add_mem h1' h2' using 1; abel
         simpa [y] using hzero'
       have hL_kernel (k : ℕ) : L ∈ completionKernel m k := by
         have hconv := SModEq.sub_mem.mp (hL k)

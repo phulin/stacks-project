@@ -30,6 +30,33 @@ universe u
 
 namespace Formalization.Books.Injectives.Unit08
 
+/- The source's pointwise commutativity hypothesis, with the commutative
+   structure required to have the same semiring as the ring structure already
+   carried by `RingCat`. -/
+def IsPointwiseCommutativeRingedSite
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) : Prop :=
+  ∀ X : Cᵒᵖ, ∃ S : CommSemiring (R.obj.obj X),
+    S.toSemiring = (inferInstance : Semiring (R.obj.obj X))
+
+/- The source's pointwise flatness assertion for a module over a commutative
+   ring.  The module structure is already part of `ModuleCat`; this records the
+   commutative semiring required by Mathlib's flatness API. -/
+structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) where
+  commSemiring : CommSemiring (R : Type u)
+  commSemiring_toSemiring : commSemiring.toSemiring =
+    (inferInstance : Semiring (R : Type u))
+  module : @Module (R : Type u) (M : Type u) commSemiring.toSemiring
+    M.isAddCommGroup.toAddCommMonoid
+  module_compatibility : ∀ r m, module.smul r m = M.isModule.smul r m
+  flat : @Module.Flat (R : Type u) (M : Type u) commSemiring
+    M.isAddCommGroup.toAddCommMonoid module
+
+def IsSectionwiseFlatModule
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) (M : SheafOfModules.{u} R) : Prop :=
+  ∀ X : Cᵒᵖ, Nonempty (PointwiseFlatModule (R.obj.obj X) (M.val.obj X))
+
 /-! ## The injective abelian sheaf and the duality construction -/
 
 /--
@@ -59,6 +86,19 @@ structure SheafDualData
   /-- Naturality of evaluation. -/
   evaluation_naturality : ∀ {F G : SheafOfModules.{u} R} (f : F ⟶ G),
     f ≫ evaluation G = evaluation F ≫ dual.map (op (dual.map f.op))
+  /-- Exactness of the internal-Hom dual in the abelian sheaf-module category. -/
+  dual_isExact : ∀ [HasSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}], IsExact dual
+  /-- Evaluation is monic, as supplied by the chosen generating injective sheaf. -/
+  evaluation_mono : ∀ F : SheafOfModules.{u} R, Mono (evaluation F)
+  /-- The dual sends epimorphisms to monomorphisms in the weakly sheafified
+      module category. -/
+  dual_map_mono_of_epi : ∀ [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    {F G : SheafOfModules.{u} R} (f : F ⟶ G), Epi f → Mono (dual.map f.op)
+  /-- The dual of a sectionwise flat sheaf module is injective. -/
+  dual_of_sectionwiseFlat_isInjective : ∀ (M : SheafOfModules.{u} R),
+    IsSectionwiseFlatModule R M → Injective (dual.obj (op M))
 
 /-!
 The source calls the object below `SheafHom(F, J)`.  Mathlib currently exposes
@@ -363,32 +403,6 @@ theorem flatResolutionCounitApp_natural
     congrArg (fun k => k ≫ f) hFmap
   exact hleft.trans (hAdj.trans hright)
 
-/- The flatness assertion for a module over a commutative ring, with the
-   commutative structure required to have the same semiring as the ring
-   structure already carried by `RingCat`. -/
-def IsPointwiseCommutativeRingedSite
-    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
-    (R : Sheaf J RingCat.{u}) : Prop :=
-  ∀ X : Cᵒᵖ, ∃ S : CommSemiring (R.obj.obj X),
-    S.toSemiring = (inferInstance : Semiring (R.obj.obj X))
-
-structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) where
-  commSemiring : CommSemiring (R : Type u)
-  commSemiring_toSemiring : commSemiring.toSemiring = (inferInstance : Semiring (R : Type u))
-  module : @Module (R : Type u) (M : Type u) commSemiring.toSemiring
-    M.isAddCommGroup.toAddCommMonoid
-  module_compatibility : ∀ r m, module.smul r m = M.isModule.smul r m
-  flat : @Module.Flat (R : Type u) (M : Type u) commSemiring
-    M.isAddCommGroup.toAddCommMonoid module
-
-/- The source's flatness assertion, checked on every section.  The module
-   structure is already part of `SheafOfModules`; `PointwiseFlatModule` only
-   records the commutative semiring required by Mathlib's flatness API. -/
-def IsSectionwiseFlatModule
-    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
-    (R : Sheaf J RingCat.{u}) (M : SheafOfModules.{u} R) : Prop :=
-  ∀ X : Cᵒᵖ, Nonempty (PointwiseFlatModule (R.obj.obj X) (M.val.obj X))
-
 /-- The free resolution is flat. -/
 theorem flatResolution_isSectionwiseFlatModule
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
@@ -409,7 +423,7 @@ theorem sheafDual_isExact
     [HasSheafify J AddCommGrpCat.{u}]
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
     IsExact D.dual := by
-  sorry
+  exact D.dual_isExact
 
 /-- Evaluation into the double dual is a monomorphism. -/
 theorem evaluationMap_mono

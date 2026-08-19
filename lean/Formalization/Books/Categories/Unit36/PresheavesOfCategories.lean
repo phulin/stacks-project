@@ -219,6 +219,64 @@ def isStrictPullbackChoice
     P.pullbackFunctor (g ≫ f) =
       P.pullbackFunctor f ⋙ P.pullbackFunctor g
 
+/-- The data needed when a pullback choice is used as the ordinary
+presheaf underlying a CoGrothendieck construction.  The two last fields are
+deliberately equalities of bundled functors: natural isomorphisms are not
+enough for the strict split presentation used in this chapter. -/
+structure StrictPullbackChoice
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] where
+  choice : PullbackChoice p
+  unital : choice.IsUnital
+  strict : isStrictPullbackChoice choice
+  pullbackFunctor_id : ∀ (U : C),
+    choice.pullbackFunctor (𝟙 U) = 𝟭 (Functor.Fiber p U)
+  pullbackFunctor_comp : ∀ {W V U : C} (g : W ⟶ V) (f : V ⟶ U),
+    choice.pullbackFunctor (g ≫ f) =
+      choice.pullbackFunctor f ⋙ choice.pullbackFunctor g
+
+namespace StrictPullbackChoice
+
+variable {S C : Type*} [Category* S] [Category* C]
+variable {p : S ⥤ C} [p.IsFibered]
+
+@[simp]
+theorem id_eq (Q : StrictPullbackChoice (p := p)) (U : C) :
+    Q.choice.pullbackFunctor (𝟙 U) = 𝟭 (Functor.Fiber p U) :=
+  Q.pullbackFunctor_id U
+
+theorem comp_eq (Q : StrictPullbackChoice (p := p))
+    {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
+    Q.choice.pullbackFunctor (g ≫ f) =
+      Q.choice.pullbackFunctor f ⋙ Q.choice.pullbackFunctor g :=
+  Q.pullbackFunctor_comp g f
+
+end StrictPullbackChoice
+
+/-- Transport of a strict pullback choice along a strict isomorphism over the
+base.  The inverse functor transports the chosen cartesian arrows, while the
+strict triangle equations identify the resulting bundled pullback functors.
+The bundled identity and composition equations are part of the result so
+that callers do not have to weaken them to natural isomorphisms. -/
+theorem IsomorphicOverBase.transportPullbackChoice
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {q : T ⥤ C} [q.IsFibered]
+    (h : IsomorphicOverBase p q)
+    (Q : StrictPullbackChoice (p := q)) :
+    Nonempty (StrictPullbackChoice (p := p)) := by
+  /-
+  The construction is the strict transport of `Q` through the inverse
+  functor in `h`.  On a fibre object `x` over `U`, first send `x` through the
+  forward functor, apply `Q.choice.pullback`, and send the result back through
+  the inverse functor.  The inverse functor's preservation of strongly
+  cartesian arrows is proved from the strict inverse equations.  The two
+  computation fields follow by `Functor.ext` and the uniqueness of a
+  strongly cartesian factorization; the strict equations in `h` remove all
+  `eqToHom` transports.  This is the reusable bridge needed by both the
+  splitting criterion and the explicit strictification presentation.
+  -/
+  sorry
+
 theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
@@ -561,6 +619,36 @@ theorem strictificationProjection_isFibered
     exact StrictificationHom.ext hhom
   exact ⟨A, κ, hκstrong⟩
 
+/-- The strictification category is presented by the ordinary presheaf whose
+fibre over `V` is the category of strictification objects with first base
+object `V`.  Its restriction along `g : W ⟶ V` is the reindexing operation
+`(x, f) ↦ (x, g ≫ f)`; the morphism component is the unique strongly
+cartesian comparison supplied by `P`.  The resulting CoGrothendieck
+projection is strictly isomorphic over `C` to `strictificationProjection`.
+
+This is kept as a separate interface so the splitness theorem records the
+actual CoGrothendieck presentation, rather than only an abstract existence
+of a split object. -/
+theorem strictificationProjection_coGrothendieck_presentation
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
+      IsomorphicOverBase (strictificationProjection P)
+        (splitFibredProjection F) := by
+  /-
+  The proof constructs the restriction functors on the fibres of
+  `strictificationProjection P` from `strictificationReindexObject` and the
+  strongly-cartesian comparison map between
+  `P.pullback (g ≫ A.f) A.x` and `P.pullback A.f A.x`.  The identity and
+  composition equalities are proved by `StrictificationHom.ext` and the
+  uniqueness part of `Functor.IsStronglyCartesian`.  These equalities make
+  the fibre assignment an ordinary functor `Cᵒᵖ ⥤ Cat`; the comparison with
+  `Pseudofunctor.CoGrothendieck` is then given objectwise by the displayed
+  `(V, A)` data and on morphisms by the same comparison maps.
+  -/
+  sorry
+
 theorem strictificationProjection_isSplit
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
@@ -568,27 +656,9 @@ theorem strictificationProjection_isSplit
     IsSplitFibredCategory.{vC, uC, vS, max (max uC vC) uS, vS,
       max (max uC vC) uS}
       (strictificationProjection P) := by
-  /-
-  Proof roadmap:
-
-  1. Define reindexing along `g : V' ⟶ V` by
-     `(x, f : V ⟶ U) ↦ (x, g ≫ f : V' ⟶ U)` and define its action
-     on vertical morphisms using the unique strongly-cartesian comparison
-     between the chosen pullbacks.
-  2. Prove the identity and composition laws as literal equalities. The
-     object components reduce to category laws; the morphism components use
-     `Functor.IsStronglyCartesian.ext` against the same chosen pullback map.
-  3. Assemble these reindexing functors into an ordinary
-     `Cᵒᵖ ⟶ Cat.{vS, max (max uC vC) uS}`.
-  4. Build the strict over-base isomorphism from its CoGrothendieck category
-     to `StrictificationCategory p P`, checking the four functor equations
-     fieldwise.
-
-  `strictificationProjection_isFibered` already supplies the fibredness
-  conjunct. What remains is the explicit strictly functorial fibre
-  presentation in steps 1--4.
-  -/
-  sorry
+  constructor
+  · exact strictificationProjection_isFibered P
+  · exact strictificationProjection_coGrothendieck_presentation P
 
 theorem strictification_object_description
     {S C : Type*} [Category* S] [Category* C]

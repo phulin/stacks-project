@@ -1,4 +1,5 @@
 import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.Basic
+import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.EpiMono
 import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.NormalForms
 import Mathlib.AlgebraicTopology.SimplexCategory.ToMkOne
 import Mathlib.Algebra.BigOperators.Intervals
@@ -284,14 +285,573 @@ private lemma standardδ_simplicialInsert
       rw [hih, hδ]
       simp only [Category.assoc]
   -/
-  sorry
+  induction L generalizing n j with
+  | nil => simp [standardδ, SimplexCategoryGenRel.simplicialInsert]
+  | cons a L ih =>
+    simp only [SimplexCategoryGenRel.simplicialInsert]
+    split_ifs
+    · simp [standardδ]
+    · have : ∀ (j k : ℕ) (h : j < k + 1), Fin.ofNat (k + 1) j = j := by simp
+      have : a < n + 2 := by grind
+      have :
+          SimplexCategoryGenRel.δ (Fin.ofNat (n + 2) a) ≫
+              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) (j + 1)) =
+            SimplexCategoryGenRel.δ (Fin.ofNat (n + 2) j) ≫
+              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) a) := by
+        convert! SimplexCategoryGenRel.δ_comp_δ_nat (n := n) a j
+          (by grind) (by grind) (by grind) <;> grind
+      grind [standardδ]
+
+private lemma exists_normal_form_P_δ
+    {x y : SimplexCategoryGenRel} (f : x ⟶ y)
+    (hf : SimplexCategoryGenRel.faces.multiplicativeClosure' f) :
+    ∃ L : List ℕ, ∃ m : ℕ, ∃ r : ℕ,
+      ∃ h₁ : SimplexCategoryGenRel.mk r = y,
+      ∃ h₂ : x = SimplexCategoryGenRel.mk m,
+      ∃ h : m + L.length = r,
+      SimplexCategoryGenRel.IsAdmissible (m + 1) L ∧
+        f = eqToHom h₂ ≫ standardδ L (m₁ := m) (m₂ := r) h ≫
+          eqToHom h₁ := by
+  induction hf with
+  | id x =>
+    refine ⟨[], x.len, x.len, SimplexCategoryGenRel.ext (by simp),
+      (SimplexCategoryGenRel.ext (by simp)).symm, rfl, ?_⟩
+    refine ⟨SimplexCategoryGenRel.IsAdmissible.nil _, ?_⟩
+    simp [standardδ]
+  | of f hf =>
+    cases hf with
+    | @δ n i =>
+      refine ⟨[i.val], n, n + 1, rfl, rfl, by simp, ?_⟩
+      refine ⟨SimplexCategoryGenRel.IsAdmissible.singleton (by omega), ?_⟩
+      have hi : Fin.ofNat _ i.val = i := by
+        apply Fin.ext
+        simp [Fin.ofNat, Nat.mod_eq_of_lt i.isLt]
+      simp [standardδ, hi]
+  | of_comp f g hf hg ih =>
+    cases hf with
+    | @δ n i =>
+      obtain ⟨L, m, r, h₁, h₂, h, hL, e⟩ := ih
+      have hm : m = n + 1 := by
+        simpa only [SimplexCategoryGenRel.mk_len] using
+          (congrArg SimplexCategoryGenRel.len h₂).symm
+      subst m
+      subst r
+      refine ⟨SimplexCategoryGenRel.simplicialInsert i.val L, n,
+        n + 1 + L.length, h₁, rfl, by
+          rw [SimplexCategoryGenRel.simplicialInsert_length]
+          omega, ?_⟩
+      refine ⟨SimplexCategoryGenRel.simplicialInsert_isAdmissible _ L hL i.val
+        (by omega), ?_⟩
+      rw [e]
+      simp only [Category.assoc, eqToHom_refl, Category.id_comp]
+      have hi : Fin.ofNat _ i.val = i := by
+        apply Fin.ext
+        simp [Fin.ofNat, Nat.mod_eq_of_lt i.isLt]
+      have hδ : SimplexCategoryGenRel.δ i =
+          SimplexCategoryGenRel.δ (Fin.ofNat _ i.val) := by rw [hi]
+      rw [hδ]
+      have hs := congrArg (fun q => q ≫ eqToHom h₁)
+        (standardδ_simplicialInsert L hL i.val (by omega)).symm
+      simpa only [Category.assoc] using hs
+
+set_option backward.isDefEq.respectTransparency false in
+private lemma standardδ_map_of_lt_all
+    {n : ℕ} (L : List ℕ)
+    (hL : SimplexCategoryGenRel.IsAdmissible (n + 1) L)
+    {r : ℕ} (h : n + L.length = r)
+    (a : Fin (n + 1)) (ha : ∀ b ∈ L, a.val < b) :
+    ((SimplexCategoryGenRel.toSimplexCategory.map
+      (standardδ L (m₁ := n) (m₂ := r) h)).toOrderHom a).val =
+        a.val := by
+  induction L generalizing n r with
+  | nil =>
+    have hr : n = r := by simpa using h
+    subst r
+    simp [standardδ, SimplexCategoryGenRel.toSimplexCategory_obj_mk,
+      SimplexCategory.len_mk]
+  | cons b L ih =>
+    simp only [List.length_cons] at h
+    have hab : a.val < b := ha b (by simp)
+    have haL : ∀ c ∈ L, a.val < c := by
+      intro c hc
+      exact hab.trans (hL.head_lt c hc)
+    have hb : b ≤ n + 1 := by
+      simpa using hL.le 0 (by simp)
+    have hb' : b < n + 2 := by omega
+    have hia : Fin.ofNat (n + 2) a.val =
+        (⟨a.val, by omega⟩ : Fin (n + 2)) := by
+      apply Fin.ext
+      simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+    have hbfin : Fin.ofNat (n + 2) b =
+        (⟨b, hb'⟩ : Fin (n + 2)) := by
+      apply Fin.ext
+      simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+    have hsucc : (Fin.ofNat (n + 2) b).succAbove a = a.castSucc := by
+      rw [hbfin]
+      exact Fin.succAbove_of_castSucc_lt _ _
+        (by simpa only [Fin.lt_def, Fin.val_castSucc] using hab)
+    have hcast : a.castSucc = (⟨a.val, by omega⟩ : Fin (n + 2)) := by
+      apply Fin.ext
+      rfl
+    have hih := ih (n := n + 1) (r := r) (h := by omega) (hL := hL.of_cons)
+      (a := (⟨a.val, by omega⟩ : Fin (n + 2))) haL
+    simp only [SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk,
+      standardδ, Functor.map_comp,
+      SimplexCategoryGenRel.toSimplexCategory_map_δ,
+      SimplexCategory.comp_toOrderHom, Function.comp_apply,
+      SimplexCategory.δ, SimplexCategory.mkHom,
+      SimplexCategory.Hom.toOrderHom_mk, OrderHom.comp_coe,
+      Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe, hsucc, hia, hcast]
+    simp only [SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk] at hih ⊢
+    simpa using hih
+
+private lemma standardδ_P_δ
+    {n r : ℕ} (L : List ℕ)
+    (hL : SimplexCategoryGenRel.IsAdmissible (n + 1) L)
+    (h : n + L.length = r) :
+    SimplexCategoryGenRel.P_δ
+      (standardδ L (m₁ := n) (m₂ := r) h) := by
+  induction L generalizing n r with
+  | nil =>
+    have hr : n = r := by simpa using h
+    subst r
+    exact SimplexCategoryGenRel.P_δ.id_mem _
+  | cons b L ih =>
+    simp only [List.length_cons] at h
+    exact SimplexCategoryGenRel.P_δ.comp_mem _ _
+      (SimplexCategoryGenRel.P_δ.δ _) (ih (n := n + 1) (r := r)
+        (hL := hL.of_cons) (h := by omega))
+
+set_option backward.isDefEq.respectTransparency false in
+private lemma standardδ_range_iff
+    {n r : ℕ} (L : List ℕ)
+    (hL : SimplexCategoryGenRel.IsAdmissible (n + 1) L)
+    (h : n + L.length = r) (j : Fin (r + 1)) :
+    (∃ i : Fin (n + 1),
+      ((SimplexCategoryGenRel.toSimplexCategory.map
+        (standardδ L (m₁ := n) (m₂ := r) h)).toOrderHom i) = j) ↔
+      j.val ∉ L := by
+  induction L generalizing n r with
+  | nil =>
+    have hr : n = r := by simpa using h
+    subst r
+    simp [standardδ, SimplexCategoryGenRel.toSimplexCategory_obj_mk,
+      SimplexCategory.len_mk]
+  | cons b L ih =>
+    simp only [List.length_cons] at h
+    have hb : b ≤ n + 1 := by
+      simpa using hL.le 0 (by simp)
+    have hb' : b < n + 2 := by omega
+    have hbfin : Fin.ofNat (n + 2) b =
+        (⟨b, hb'⟩ : Fin (n + 2)) := by
+      apply Fin.ext
+      simp [Fin.ofNat, Nat.mod_eq_of_lt hb']
+    have htail : (n + 1) + L.length = r := by omega
+    have htailL : SimplexCategoryGenRel.IsAdmissible (n + 2) L := hL.of_cons
+    have htailb : ∀ c ∈ L, b < c := by
+      intro c hc
+      exact hL.head_lt c hc
+    have htailb' := standardδ_map_of_lt_all L htailL htail
+      (a := (⟨b, hb'⟩ : Fin (n + 2))) htailb
+    have htailP := standardδ_P_δ L htailL htail
+    let tail := SimplexCategoryGenRel.toSimplexCategory.map
+      (standardδ L (m₁ := n + 1) (m₂ := r) htail)
+    letI : IsSplitMono tail := by
+      dsimp [tail]
+      exact SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ htailP
+    haveI : Mono tail := inferInstance
+    have hinj : Function.Injective tail.toOrderHom :=
+      (SimplexCategory.mono_iff_injective).mp inferInstance
+    have hcomp (i : Fin (n + 1)) :
+        (SimplexCategoryGenRel.toSimplexCategory.map
+          (standardδ (b :: L) (m₁ := n) (m₂ := r) h)).toOrderHom i =
+          tail.toOrderHom ((Fin.ofNat (n + 2) b).succAbove i) := by
+      simp only [tail, standardδ, Functor.map_comp,
+        SimplexCategoryGenRel.toSimplexCategory_map_δ,
+        SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk,
+        SimplexCategory.comp_toOrderHom, Function.comp_apply,
+        SimplexCategory.δ, SimplexCategory.mkHom,
+        SimplexCategory.Hom.toOrderHom_mk, OrderHom.comp_coe,
+        Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe]
+    constructor
+    · rintro ⟨i, hi⟩ hj
+      rcases List.mem_cons.mp hj with hjb | hjL
+      · have hjb' : j = (⟨b, by omega⟩ : Fin (r + 1)) := by
+          apply Fin.ext
+          simpa [hjb] using congrArg Fin.val hi
+        have heq : tail.toOrderHom ((Fin.ofNat (n + 2) b).succAbove i) =
+            tail.toOrderHom (⟨b, by omega⟩ : Fin (n + 2)) := by
+          rw [← hcomp i, hi, hjb']
+          apply Fin.ext
+          simpa [tail] using htailb'.symm
+        have heq' := hinj heq
+        have heq'' : (Fin.ofNat (n + 2) b).succAbove i =
+            Fin.ofNat (n + 2) b := heq'.trans hbfin.symm
+        exact (Fin.succAbove_ne (Fin.ofNat (n + 2) b) i) heq''
+      · have hj' : j.val ∉ L := by
+          apply (ih (n := n + 1) (r := r) (hL := htailL) (h := htail) j).mp
+          refine ⟨(Fin.ofNat (n + 2) b).succAbove i, ?_⟩
+          exact (hcomp i).symm.trans hi
+        exact hj' hjL
+    · intro hj
+      have hjL : j.val ∉ L := by
+        intro hjL
+        exact hj (List.mem_cons.mpr (Or.inr hjL))
+      obtain ⟨t, ht⟩ :=
+        (ih (n := n + 1) (r := r) (hL := htailL) (h := htail) j).mpr hjL
+      have htne : t ≠ (⟨b, by omega⟩ : Fin (n + 2)) := by
+        intro htb
+        have hv := congrArg Fin.val ht
+        rw [htb, htailb'] at hv
+        exact hj (List.mem_cons.mpr (Or.inl hv.symm))
+      obtain ⟨i, hi⟩ := (Fin.exists_succAbove_eq_iff).mpr htne
+      refine ⟨i, ?_⟩
+      change tail.toOrderHom t = j at ht
+      have ht' := ht
+      rw [← hi] at ht'
+      have hc := hcomp i
+      rw [hbfin] at hc
+      exact hc.trans ht'
+
+private lemma standardδ_list_eq_of_map_eq
+    {n r : ℕ} {L K : List ℕ}
+    (hL : SimplexCategoryGenRel.IsAdmissible (n + 1) L)
+    (hK : SimplexCategoryGenRel.IsAdmissible (n + 1) K)
+    (hL' : n + L.length = r) (hK' : n + K.length = r)
+    (hmap : SimplexCategoryGenRel.toSimplexCategory.map
+        (standardδ L (m₁ := n) (m₂ := r) hL') =
+      SimplexCategoryGenRel.toSimplexCategory.map
+        (standardδ K (m₁ := n) (m₂ := r) hK')) :
+    L = K := by
+  apply hL.sortedLT.eq_of_mem_iff hK.sortedLT
+  intro j
+  constructor
+  · intro hjL
+    have hjbound : j < r + 1 := by
+      obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjL
+      have := hL.getElem_lt (k := k) (hk := by simpa using hk)
+      omega
+    let jf : Fin (r + 1) := ⟨j, hjbound⟩
+    have hnot : ¬ ∃ i : Fin (n + 1),
+        (SimplexCategoryGenRel.toSimplexCategory.map
+          (standardδ L (m₁ := n) (m₂ := r) hL')).toOrderHom i = jf := by
+      intro hrange
+      exact (standardδ_range_iff L hL hL' jf).mp hrange hjL
+    by_contra hjK
+    apply hnot
+    obtain ⟨i, hi⟩ := (standardδ_range_iff K hK hK' jf).mpr hjK
+    refine ⟨i, ?_⟩
+    simpa [hmap] using hi
+  · intro hjK
+    have hjbound : j < r + 1 := by
+      obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjK
+      have := hK.getElem_lt (k := k) (hk := by simpa using hk)
+      omega
+    let jf : Fin (r + 1) := ⟨j, hjbound⟩
+    have hnot : ¬ ∃ i : Fin (n + 1),
+        (SimplexCategoryGenRel.toSimplexCategory.map
+          (standardδ K (m₁ := n) (m₂ := r) hK')).toOrderHom i = jf := by
+      intro hrange
+      exact (standardδ_range_iff K hK hK' jf).mp hrange hjK
+    by_contra hjL
+    apply hnot
+    obtain ⟨i, hi⟩ := (standardδ_range_iff L hL hL' jf).mpr hjL
+    refine ⟨i, ?_⟩
+    simpa [hmap] using hi
+
+private lemma standardσ_list_eq_of_map_eq
+    {n r : ℕ} {L K : List ℕ}
+    (hL : SimplexCategoryGenRel.IsAdmissible n L)
+    (hK : SimplexCategoryGenRel.IsAdmissible n K)
+    (hL' : n + L.length = r) (hK' : n + K.length = r)
+    (hmap : SimplexCategoryGenRel.toSimplexCategory.map
+        (SimplexCategoryGenRel.standardσ L (m₁ := r) (m₂ := n) hL') =
+      SimplexCategoryGenRel.toSimplexCategory.map
+        (SimplexCategoryGenRel.standardσ K (m₁ := r) (m₂ := n) hK')) :
+    L = K := by
+  have hev (j : ℕ) (hj : j < r + 1) :
+      SimplexCategoryGenRel.simplicialEvalσ L j =
+        SimplexCategoryGenRel.simplicialEvalσ K j := by
+    calc
+      SimplexCategoryGenRel.simplicialEvalσ L j =
+          (SimplexCategoryGenRel.toSimplexCategory.map
+            (SimplexCategoryGenRel.standardσ L (m₁ := r) (m₂ := n) hL')).toOrderHom
+              ⟨j, hj⟩ :=
+        (SimplexCategoryGenRel.simplicialEvalσ_of_isAdmissible L r n hL hL' j hj).symm
+      _ = (SimplexCategoryGenRel.toSimplexCategory.map
+            (SimplexCategoryGenRel.standardσ K (m₁ := r) (m₂ := n) hK')).toOrderHom
+              ⟨j, hj⟩ := by rw [hmap]
+      _ = SimplexCategoryGenRel.simplicialEvalσ K j :=
+        SimplexCategoryGenRel.simplicialEvalσ_of_isAdmissible K r n hK hK' j hj
+  apply hL.sortedLT.eq_of_mem_iff hK.sortedLT
+  intro j
+  by_cases hj : j < r + 1
+  · by_cases hjr : j < r
+    · rw [SimplexCategoryGenRel.mem_isAdmissible_iff L hL j,
+        SimplexCategoryGenRel.mem_isAdmissible_iff K hK j]
+      have hjr' : j < n + L.length := by omega
+      have hjr'' : j < n + K.length := by omega
+      constructor <;> intro hval
+      · exact ⟨hjr'', by rw [← hev j hj, ← hev (j + 1) (by omega), hval.2]⟩
+      · exact ⟨hjr', by rw [hev j hj, hev (j + 1) (by omega), hval.2]⟩
+    · have hj_eq : j = r := by omega
+      have hjL : j ∉ L := by
+        intro hjL
+        obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjL
+        have := hL.getElem_lt (k := k) (hk := by simpa using hk)
+        omega
+      have hjK : j ∉ K := by
+        intro hjK
+        obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjK
+        have := hK.getElem_lt (k := k) (hk := by simpa using hk)
+        omega
+      exact iff_of_false hjL hjK
+  · have hjL : j ∉ L := by
+      intro hjL
+      obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjL
+      have := hL.getElem_lt (k := k) (hk := by simpa using hk)
+      omega
+    have hjK : j ∉ K := by
+      intro hjK
+      obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hjK
+      have := hK.getElem_lt (k := k) (hk := by simpa using hk)
+      omega
+    exact iff_of_false hjL hjK
+
+private lemma eq_of_P_σ_map_eq
+    {x y : SimplexCategoryGenRel} {f g : x ⟶ y}
+    (hf : SimplexCategoryGenRel.P_σ f)
+    (hg : SimplexCategoryGenRel.P_σ g)
+    (hmap : SimplexCategoryGenRel.toSimplexCategory.map f =
+      SimplexCategoryGenRel.toSimplexCategory.map g) :
+    f = g := by
+  obtain ⟨L, m, b, h₁, h₂, h, hL, hf⟩ :=
+    SimplexCategoryGenRel.exists_normal_form_P_σ f hf
+  subst y
+  subst x
+  obtain ⟨K, m', b', h₁', h₂', h', hK, hg⟩ :=
+    SimplexCategoryGenRel.exists_normal_form_P_σ g hg
+  have hm : m = m' := by
+    have := congrArg SimplexCategoryGenRel.len h₁'
+    simpa using this.symm
+  have hmb : m + b = m' + b' := by
+    have := congrArg SimplexCategoryGenRel.len h₂'
+    simpa using this
+  have hb : b = b' := by omega
+  subst m'
+  subst b'
+  rw [hf, hg] at hmap
+  have hL' : m + L.length = m + b := by omega
+  have hK' : m + K.length = m + b := by omega
+  have hmap' : SimplexCategoryGenRel.toSimplexCategory.map
+        (SimplexCategoryGenRel.standardσ L hL') =
+      SimplexCategoryGenRel.toSimplexCategory.map
+        (SimplexCategoryGenRel.standardσ K hK') := by
+    convert hmap using 1 <;> rfl
+  have hLK : L = K :=
+    standardσ_list_eq_of_map_eq hL hK hL' hK' hmap'
+  cases hLK
+  exact hf.trans hg.symm
+
+private lemma eq_of_P_δ_map_eq
+    {x y : SimplexCategoryGenRel} {f g : x ⟶ y}
+    (hf : SimplexCategoryGenRel.P_δ f)
+    (hg : SimplexCategoryGenRel.P_δ g)
+    (hmap : SimplexCategoryGenRel.toSimplexCategory.map f =
+      SimplexCategoryGenRel.toSimplexCategory.map g) :
+    f = g := by
+  have hf' : SimplexCategoryGenRel.faces.multiplicativeClosure' f := by
+    rw [← MorphismProperty.multiplicativeClosure_eq_multiplicativeClosure']
+    exact hf
+  obtain ⟨L, m, r, h₁, h₂, h, hL, hf⟩ :=
+    exists_normal_form_P_δ f hf'
+  subst y
+  subst x
+  have hg' : SimplexCategoryGenRel.faces.multiplicativeClosure' g := by
+    rw [← MorphismProperty.multiplicativeClosure_eq_multiplicativeClosure']
+    exact hg
+  obtain ⟨K, m', r', h₁', h₂', h', hK, hg⟩ :=
+    exists_normal_form_P_δ g hg'
+  have hr : r = r' := by
+    have := congrArg SimplexCategoryGenRel.len h₁'
+    simpa using this.symm
+  have hm : m = m' := by
+    have := congrArg SimplexCategoryGenRel.len h₂'
+    simpa using this
+  have hK₀ : m + K.length = r := by
+    omega
+  subst r'
+  subst m'
+  cases hr
+  simp only [eqToHom_refl, Category.id_comp, Category.comp_id] at hf hg
+  have hL' : m + L.length = m + K.length := h
+  have hK' : m + K.length = m + K.length := rfl
+  rw [hf, hg] at hmap
+  have hmap' : SimplexCategoryGenRel.toSimplexCategory.map
+        (standardδ L (m₁ := m) (m₂ := m + K.length) hL') =
+      SimplexCategoryGenRel.toSimplexCategory.map
+        (standardδ K (m₁ := m) (m₂ := m + K.length) hK') := by
+    convert hmap using 1 <;> rfl
+  have hLK : L = K :=
+    standardδ_list_eq_of_map_eq hL hK hL' hK' hmap'
+  cases hLK
+  exact hf.trans hg.symm
 
 theorem toSimplexCategory_is_equivalence :
     Functor.IsEquivalence SimplexCategoryGenRel.toSimplexCategory := by
   refine { faithful := ?_, full := ?_, essSurj := ?_ }
   · constructor
     intro X Y f g h
-    sorry
+    obtain ⟨z, e, m, he, hm, hfac⟩ :=
+      SimplexCategoryGenRel.exists_P_σ_P_δ_factorization f
+    obtain ⟨z', e', m', he', hm', hfac'⟩ :=
+      SimplexCategoryGenRel.exists_P_σ_P_δ_factorization g
+    letI : IsSplitEpi
+        (SimplexCategoryGenRel.toSimplexCategory.map e) :=
+      SimplexCategoryGenRel.isSplitEpi_toSimplexCategory_map_of_P_σ he
+    letI : Epi (SimplexCategoryGenRel.toSimplexCategory.map e) := inferInstance
+    letI : IsSplitMono
+        (SimplexCategoryGenRel.toSimplexCategory.map m) :=
+      SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ hm
+    letI : Mono (SimplexCategoryGenRel.toSimplexCategory.map m) := inferInstance
+    letI : IsSplitEpi
+        (SimplexCategoryGenRel.toSimplexCategory.map e') :=
+      SimplexCategoryGenRel.isSplitEpi_toSimplexCategory_map_of_P_σ he'
+    letI : Epi (SimplexCategoryGenRel.toSimplexCategory.map e') := inferInstance
+    letI : IsSplitMono
+        (SimplexCategoryGenRel.toSimplexCategory.map m') :=
+      SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ hm'
+    letI : Mono (SimplexCategoryGenRel.toSimplexCategory.map m') := inferInstance
+    have hfac_map :
+        SimplexCategoryGenRel.toSimplexCategory.map e ≫
+            SimplexCategoryGenRel.toSimplexCategory.map m =
+          SimplexCategoryGenRel.toSimplexCategory.map f := by
+      rw [← SimplexCategoryGenRel.toSimplexCategory.map_comp, hfac]
+    have hfac_map' :
+        SimplexCategoryGenRel.toSimplexCategory.map e' ≫
+            SimplexCategoryGenRel.toSimplexCategory.map m' =
+          SimplexCategoryGenRel.toSimplexCategory.map g := by
+      rw [← SimplexCategoryGenRel.toSimplexCategory.map_comp, hfac']
+    have himg : Limits.image
+        (SimplexCategoryGenRel.toSimplexCategory.map f) =
+      SimplexCategoryGenRel.toSimplexCategory.obj z :=
+      SimplexCategory.image_eq hfac_map
+    have himg' : Limits.image
+        (SimplexCategoryGenRel.toSimplexCategory.map g) =
+      SimplexCategoryGenRel.toSimplexCategory.obj z' :=
+      SimplexCategory.image_eq hfac_map'
+    have hz : z = z' := by
+      apply SimplexCategoryGenRel.ext
+      have hz_obj : SimplexCategoryGenRel.toSimplexCategory.obj z =
+          SimplexCategoryGenRel.toSimplexCategory.obj z' := by
+        calc
+          SimplexCategoryGenRel.toSimplexCategory.obj z =
+              Limits.image
+                (SimplexCategoryGenRel.toSimplexCategory.map f) := himg.symm
+          _ = Limits.image
+                (SimplexCategoryGenRel.toSimplexCategory.map g) := by rw [h]
+          _ = SimplexCategoryGenRel.toSimplexCategory.obj z' := himg'
+      have := congrArg SimplexCategory.len hz_obj
+      simpa only [SimplexCategoryGenRel.toSimplexCategory_len] using this
+    subst z'
+    let eI := SimplexCategoryGenRel.toSimplexCategory.map e ≫ eqToHom himg.symm
+    let eI' := SimplexCategoryGenRel.toSimplexCategory.map e' ≫
+      eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm
+    let iI := eqToHom himg ≫ SimplexCategoryGenRel.toSimplexCategory.map m
+    let iI' := Limits.image.eqToHom h ≫ eqToHom himg' ≫
+      SimplexCategoryGenRel.toSimplexCategory.map m'
+    letI : Epi eI := by
+      dsimp [eI]
+      infer_instance
+    letI : Mono iI := by
+      dsimp [iI]
+      infer_instance
+    letI : Epi eI' := by
+      dsimp [eI']
+      infer_instance
+    letI : Mono iI' := by
+      dsimp [iI']
+      infer_instance
+    have hfacI : eI ≫ iI =
+        SimplexCategoryGenRel.toSimplexCategory.map f := by
+      simpa [eI, iI, Category.assoc] using hfac_map
+    have hfacI' : eI' ≫ iI' =
+        SimplexCategoryGenRel.toSimplexCategory.map f := by
+      have ht : eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm ≫
+          Limits.image.eqToHom h ≫ eqToHom himg' = 𝟙 _ := by
+        apply SimplexCategory.eq_id_of_isIso
+      have htm : eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm ≫
+          Limits.image.eqToHom h ≫ eqToHom himg' ≫
+            SimplexCategoryGenRel.toSimplexCategory.map m' =
+          SimplexCategoryGenRel.toSimplexCategory.map m' := by
+        calc
+          eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm ≫
+                Limits.image.eqToHom h ≫ eqToHom himg' ≫
+              SimplexCategoryGenRel.toSimplexCategory.map m' =
+            (eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm ≫
+              Limits.image.eqToHom h ≫ eqToHom himg') ≫
+                SimplexCategoryGenRel.toSimplexCategory.map m' := by
+              simp only [Category.assoc]
+          _ = SimplexCategoryGenRel.toSimplexCategory.map m' := by
+            rw [ht, Category.id_comp]
+      have hcomp : eI' ≫ iI' =
+          SimplexCategoryGenRel.toSimplexCategory.map g := by
+        dsimp [eI', iI']
+        simp only [Category.assoc]
+        rw [htm]
+        exact hfac_map'
+      exact hcomp.trans h.symm
+    have he_factor := SimplexCategory.factorThruImage_eq hfacI
+    have he_factor' := SimplexCategory.factorThruImage_eq hfacI'
+    have heI_eq : eI = eI' := he_factor.symm.trans he_factor'
+    have he_map : SimplexCategoryGenRel.toSimplexCategory.map e =
+        SimplexCategoryGenRel.toSimplexCategory.map e' := by
+      have ht : eqToHom himg'.symm ≫ Limits.image.eqToHom h.symm ≫
+          eqToHom himg = 𝟙 _ := by
+        apply SimplexCategory.eq_id_of_isIso
+      have h' := congrArg (fun q => q ≫ eqToHom himg) heI_eq
+      simpa [eI, eI', Category.assoc, ht] using h'
+    have hm_factor := SimplexCategory.image_ι_eq hfacI
+    have hm_factor' := SimplexCategory.image_ι_eq hfacI'
+    have hmI_eq : iI = iI' := hm_factor.symm.trans hm_factor'
+    have hm_map : SimplexCategoryGenRel.toSimplexCategory.map m =
+        SimplexCategoryGenRel.toSimplexCategory.map m' := by
+      have ht : eqToHom himg.symm ≫ Limits.image.eqToHom h ≫
+          eqToHom himg' = 𝟙 _ := by
+        apply SimplexCategory.eq_id_of_isIso
+      have h' := congrArg (fun q => eqToHom himg.symm ≫ q) hmI_eq
+      have htm : eqToHom himg.symm ≫ Limits.image.eqToHom h ≫
+          eqToHom himg' ≫ SimplexCategoryGenRel.toSimplexCategory.map m' =
+        SimplexCategoryGenRel.toSimplexCategory.map m' := by
+        calc
+          eqToHom himg.symm ≫ Limits.image.eqToHom h ≫
+                eqToHom himg' ≫ SimplexCategoryGenRel.toSimplexCategory.map m' =
+            (eqToHom himg.symm ≫ Limits.image.eqToHom h ≫
+              eqToHom himg') ≫
+                SimplexCategoryGenRel.toSimplexCategory.map m' := by
+              simp only [Category.assoc]
+          _ = SimplexCategoryGenRel.toSimplexCategory.map m' := by
+            rw [ht, Category.id_comp]
+      dsimp [iI, iI'] at h'
+      rw [htm] at h'
+      have ht0 : eqToHom himg.symm ≫ eqToHom himg = 𝟙 _ := by
+        apply SimplexCategory.eq_id_of_isIso
+      have ht0m : eqToHom himg.symm ≫ eqToHom himg ≫
+          SimplexCategoryGenRel.toSimplexCategory.map m =
+        SimplexCategoryGenRel.toSimplexCategory.map m := by
+        calc
+          eqToHom himg.symm ≫ eqToHom himg ≫
+                SimplexCategoryGenRel.toSimplexCategory.map m =
+            (eqToHom himg.symm ≫ eqToHom himg) ≫
+                SimplexCategoryGenRel.toSimplexCategory.map m := by
+              simp only [Category.assoc]
+          _ = SimplexCategoryGenRel.toSimplexCategory.map m := by
+            rw [ht0, Category.id_comp]
+      rw [ht0m] at h'
+      exact h'
+    have he_eq := eq_of_P_σ_map_eq he he' he_map
+    have hm_eq := eq_of_P_δ_map_eq hm hm' hm_map
+    rw [hfac, hfac', he_eq, hm_eq]
   · constructor
     rintro ⟨n⟩ ⟨m⟩ f
     change (SimplexCategory.mk n ⟶ SimplexCategory.mk m) at f

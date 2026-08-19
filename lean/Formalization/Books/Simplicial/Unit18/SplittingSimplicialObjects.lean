@@ -408,6 +408,69 @@ def IsNormalizedSplitting
     e.hom ≫ (normalizedSubobject U n).arrow = s.ι n) ∧
     ∀ n, Mono (s.ι n)
 
+/-
+Shepherd audit (2026-08-19): the failed-run dossier counted six placeholders,
+but this source has seven active proof holes in the audited block: the two
+splitting-existence theorems, the three reflection theorems, the last-face
+factorization, and the n-skeleton theorem.  Their displayed interfaces agree
+with the source mathematics and their existing downstream uses, so no target
+type is weakened or changed below.  Each hole is intentionally retained for
+the normal proof stage.
+-/
+
+/-
+Proof roadmap for `simplicial_abelian_group_has_normalized_splitting`:
+
+* Take `s.N n := normalizedObject U n` and `s.ι n :=
+  (normalizedSubobject U n).arrow`; the second conjunct of
+  `IsNormalizedSplitting` is then inferred and the first uses `Iso.refl`.
+  Thus the only substantive field is `s.isColimit'`.
+* For `Δ`, reduce `Δ.unop` with `SimplexCategory.rec`, and for the resulting
+  degree `m` put
+
+    `q_m := Sigma.desc (fun A : SimplicialObject.Splitting.IndexSet (op ⦋m⦌) =>
+      (normalizedSubobject U A.1.unop.len).arrow ≫ U.map A.e.op)`.
+
+  `Cofan.isColimitOfIsIsoSigmaDesc` from
+  `Mathlib/CategoryTheory/Limits/Shapes/Products.lean` reduces the colimit
+  field to `IsIso q_m`; use `ConcreteCategory.isIso_iff_bijective` from
+  `Mathlib/CategoryTheory/ConcreteCategory/EpiMono.lean`.
+* Prove bijectivity by induction on `m`, formalizing the normalization
+  procedure in Stacks, Tag 017O: successively replace an `(m+1)`-simplex
+  `x` by `x - U.σ i (U.δ i.castSucc x)`, for `i = 0, ..., m`.
+  The identities needed to preserve the already killed faces and to split
+  off the new degeneracy are exactly
+  `SimplicialObject.δ_comp_σ_of_le`, `δ_comp_σ_self`, and
+  `δ_comp_σ_succ` in
+  `Mathlib/AlgebraicTopology/SimplicialObject/Basic.lean`.
+  The residual term lies in `normalizedObject U (m + 1)`; recursively expand
+  every lower-degree term.  Package the resulting finite family with the
+  biproduct projections and `Sigma.map`, rather than reasoning about an
+  opaque element of the chosen coproduct.
+* Identify the resulting strings of degeneracies with
+  `SimplicialObject.Splitting.IndexSet (op ⦋m + 1⦌)`: the composite simplex
+  map is epi by `SimplexCategory.epi_iff_surjective`, and equality of two
+  indices follows from `Splitting.IndexSet.ext`; the index interface and its
+  extensionality lemma are in
+  `Mathlib/AlgebraicTopology/SimplicialObject/Split.lean`.  Applying the same
+  face operators in reverse order recovers every coefficient, proving injectivity;
+  summing the reconstructed coefficients proves surjectivity.  Concretely,
+  package coefficient extraction as an additive inverse
+
+    `r_m : U _⦋m⦌ ⟶ ∐ A : Splitting.IndexSet (op ⦋m⦌),
+      normalizedObject U A.1.unop.len`.
+
+  Prove `q_m ≫ r_m = 𝟙 _` by `Sigma.hom_ext` and the reverse face calculation,
+  and prove `r_m ≫ q_m = 𝟙 _` by extensionality on the underlying abelian
+  group and the reconstruction formula.  These equations can alternatively
+  supply `IsIso q_m` directly, without converting through bijectivity.
+
+Do not rewrite this target using Mathlib's `NormalizedMooreComplex.objX`:
+that object kills the faces `i.succ`, whereas `normalizedSubobject` here
+kills `i.castSucc`.  Any reuse of the Dold--Kan projectors would first need
+an explicit reindexing through `SimplexCategory.rev` and is longer than the
+degree induction above.
+-/
 theorem simplicial_abelian_group_has_normalized_splitting
     (U : SimplicialObject (AddCommGrpCat.{u})) :
     ∃ s : SimplicialObject.Splitting U, IsNormalizedSplitting s := by
@@ -475,6 +538,53 @@ theorem normalizedSubobjectMap_comp
 
 /-! ## Splitting in an abelian category -/
 
+/-
+Proof roadmap for `abelian_category_has_normalized_splitting`:
+
+* Use the same candidate splitting as in the preceding AddCommGrp theorem.
+  For a fixed `Δ`, use `Cofan.isColimitOfIsIsoSigmaDesc` and call its
+  comparison morphism `q : (∐ A, normalizedObject U A.1.unop.len) ⟶ U.obj Δ`.
+  Apply `isIso_of_yoneda_map_bijective q` from
+  `Mathlib/CategoryTheory/Yoneda.lean`.
+* For each test object `T : C`, set
+  `F := preadditiveCoyoneda.obj (op T) : C ⥤ AddCommGrpCat.{v}` and
+  `UT := U ⋙ F`.  The focused prerequisites are
+  `Mathlib/CategoryTheory/Preadditive/Yoneda/Basic.lean` and
+  `Mathlib/CategoryTheory/Preadditive/AdditiveFunctor.lean`.
+  `F` is additive, hence preserves the finite biproduct indexed by
+  `Splitting.IndexSet Δ`; use `PreservesCoproduct.iso F` and
+  `sigmaComparison_map_desc` from
+  `Mathlib/CategoryTheory/Limits/Preserves/Shapes/Products.lean`.
+* Establish a local comparison iso, for every `n`,
+
+    `F.obj (normalizedObject U n) ≅ normalizedObject UT n`,
+
+  whose hom followed by the target normalized arrow is
+  `F.map (normalizedSubobject U n).arrow`.  For `n = 0` use the two top
+  subobjects.  For `n + 1`, use `finset_inf_factors`,
+  `kernelSubobject_factors`, and preservation of composition by `F` to
+  define the hom with `Subobject.factorThru`.  Define the inverse on a
+  normalized hom `T ⟶ U _⦋n+1⦌` by factoring it through
+  `normalizedSubobject U (n+1)`; additive preservation and cancellation by
+  the two mono arrows prove the inverse laws.  This is the categorical form
+  of `Hom(T, intersection of kernels) = intersection of kernels of Hom`;
+  the subobject factorization lemmas are in
+  `Mathlib/CategoryTheory/Subobject/Lattice.lean` and
+  `Mathlib/CategoryTheory/Subobject/Limits.lean`.
+* Apply `simplicial_abelian_group_has_normalized_splitting UT`.  Compose its
+  summand isos with the comparison isos above.  After this change of
+  summands, `F.map q` is the coproduct comparison morphism for the splitting
+  of `UT`, hence is an iso by `sT.isColimit Δ`,
+  `Cofan.nonempty_isColimit_iff_isIso_sigmaDesc`, `Sigma.map`, and
+  `sigmaComparison_map_desc`.
+* `ConcreteCategory.bijective_of_isIso (F.map q)` is definitionally the map
+  `h : T ⟶ domain(q) ↦ h ≫ q`.  Feed this bijectivity to
+  `isIso_of_yoneda_map_bijective`, then finish with
+  `Cofan.isColimitOfIsIsoSigmaDesc` and the reflexive summand isos.
+
+The universe of `UT` is `AddCommGrpCat.{v}` (not `{u}`), so instantiate the
+preceding theorem at `u := v`.  This avoids an unnecessary `ULift` layer.
+-/
 theorem abelian_category_has_normalized_splitting
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) :
@@ -483,6 +593,39 @@ theorem abelian_category_has_normalized_splitting
 
 /-! ## Normalization reflects mono, epi, and isomorphism -/
 
+/-
+Proof roadmap for `normalized_reflects_monomorphism`:
+
+* Choose normalized splittings `sU`, `sV` from
+  `abelian_category_has_normalized_splitting`, and choose their comparison
+  isos `eU n`, `eV n`.  Define
+
+    `q n := (eU n).hom ≫ normalizedSubobjectMap f n ≫ (eV n).inv`.
+
+  `normalizedSubobjectMap_arrow` and the two comparison equations give
+  `sU.ι n ≫ f.app (op ⦋n⦌) = q n ≫ sV.ι n`; package this as a
+  `SimplicialObject.Split.Hom`.
+* Fix `n` and abbreviate `I := Splitting.IndexSet (op ⦋n⦌)`.  Enable the
+  finite biproduct instance with
+  `letI := CategoryTheory.Abelian.hasFiniteBiproducts (C := C)`.  Let `aU`
+  and `aV` be the `IsColimit.coconePointUniqueUpToIso` isos from the
+  canonical `Sigma` cofans to `sU.cofan (op ⦋n⦌)` and
+  `sV.cofan (op ⦋n⦌)`.
+* Use `SimplicialObject.Split.cofan_inj_naturality_symm`,
+  `Sigma.ι_map`, and `IsColimit.comp_coconePointUniqueUpToIso_hom` to prove
+
+    `f.app (op ⦋n⦌) = aU.inv ≫ Sigma.map (fun A : I => q A.1.unop.len) ≫ aV.hom`.
+
+  The splitting naturality lemma is in
+  `Mathlib/AlgebraicTopology/SimplicialObject/Split.lean`; the unique-up-to-iso
+  declarations are in `Mathlib/CategoryTheory/Limits/IsLimit.lean`.
+
+* Each component of the `Sigma.map` is mono: install `hN k` locally, then
+  infer mono for its composites with the two isomorphisms.  The instance
+  `Sigma.map_mono` is in
+  `Mathlib/CategoryTheory/Limits/Shapes/Biproducts.lean`; the displayed
+  factorization then supplies the required `Mono` instance.
+-/
 theorem normalized_reflects_monomorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
@@ -490,6 +633,23 @@ theorem normalized_reflects_monomorphism
     ∀ n, Mono (f.app (op ⦋n⦌)) := by
   sorry
 
+/-
+Proof roadmap for `normalized_reflects_epimorphism`:
+
+Repeat the construction of `sU`, `sV`, `eU`, `eV`, `q`, and the comparison
+isos `aU`, `aV` from `normalized_reflects_monomorphism`.  The same summandwise
+calculation gives
+
+  `f.app (op ⦋n⦌) = aU.inv ≫ Sigma.map (fun A => q A.1.unop.len) ≫ aV.hom`.
+
+Install `hN k` at each component; composition with `(eU k).hom` and
+`(eV k).inv` makes every `q k` epi.  Use `Sigma.map_epi` from
+`Mathlib/CategoryTheory/Limits/Shapes/Products.lean` (only coproducts are
+needed for this direction), then infer epi for the composite with the two
+isos.  Keeping the identical `q` and identical orientation of `aU`, `aV`
+prevents the common dead end where `Sigma.map_epi` is applied to the inverse
+family.
+-/
 theorem normalized_reflects_epimorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
@@ -497,6 +657,17 @@ theorem normalized_reflects_epimorphism
     ∀ n, Epi (f.app (op ⦋n⦌)) := by
   sorry
 
+/-
+Proof roadmap for `normalized_reflects_isomorphism`:
+
+For each `k`, install `hN k` as a local `IsIso` instance and infer both
+`Mono (normalizedSubobjectMap f k)` and `Epi (normalizedSubobjectMap f k)`.
+Apply `normalized_reflects_monomorphism` and
+`normalized_reflects_epimorphism` to those two families.  At the requested
+degree `n`, install the resulting mono and epi propositions as instances and
+finish with `isIso_of_mono_of_epi (f.app (op ⦋n⦌))` from
+`Mathlib/CategoryTheory/Balanced.lean`; abelian categories are balanced.
+-/
 theorem normalized_reflects_isomorphism
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : SimplicialObject C} (f : U ⟶ V)
@@ -512,6 +683,32 @@ index `n + 1` below records its intended form
 `d^(n+1)_(n+1)(N(U_(n+1))) ⊆ N(U_n)`.
 -/
 
+/-
+Proof roadmap for `normalized_last_face_factors`:
+
+* Split on `n`.  Degree zero is `Subobject.top_factors`.
+* In the successor case `n = r + 1`, unfold both normalized subobjects and
+  apply `(Subobject.finset_inf_factors _).mpr`.  For
+  `i : Fin (r + 1)`, it remains to factor through
+  `kernelSubobject (U.δ i.castSucc)`; use `kernelSubobject_factors`.
+* Reassociate the composite and rewrite the two consecutive faces with
+  `SimplicialObject.δ_comp_δ'` from
+  `Mathlib/AlgebraicTopology/SimplicialObject/Basic.lean`, instantiated by
+
+    `i := i.castSucc : Fin (r + 2)`,
+    `j := Fin.last (r + 2) : Fin (r + 3)`.
+
+  The side condition `Fin.castSucc i.castSucc < Fin.last (r + 2)` is `simp`.
+  The right side starts with
+  `U.δ (Fin.castSucc i.castSucc)`, one of the faces killed by
+  `normalizedSubobject U (r + 2)`.
+* Insert its factorization using `Subobject.finset_inf_arrow_factors`, then
+  close with `kernelSubobject_arrow_comp`, `zero_comp`, and `comp_zero`.
+  The first lemma is in `Mathlib/CategoryTheory/Subobject/Lattice.lean` and
+  the kernel lemma is in `Mathlib/CategoryTheory/Subobject/Limits.lean`.
+  Be careful that `δ_comp_δ'`, not the similarly named cosimplicial lemma,
+  is selected; the required orientation is “last face, then face `i`”.
+-/
 theorem normalized_last_face_factors
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :
@@ -554,6 +751,79 @@ noncomputable def abelianNSkeletonSubobject
   Finset.univ.sup (fun a : boundedSimplexMapIndex n m =>
       imageSubobject (U.map a.2.op))
 
+/-
+Proof roadmap for `abelian_n_skeleton_subobject`:
+
+* First make the construction uniform in an arbitrary
+  `Δ : SimplexCategoryᵒᵖ`.  Use the finite index
+
+    `Σ i : Fin (n + 1), (Δ.unop ⟶ ⦋i.1⦌)`
+
+  and define `generator U n Δ` to be `Sigma.desc (fun a => U.map a.2.op)`.
+  Let `S Δ := imageSubobject (generator U n Δ)`.  At `Δ = op ⦋m⦌`, prove
+  `S Δ = abelianNSkeletonSubobject U n m`: one inequality uses
+  `imageSubobject_le` after factoring every coproduct injection through the
+  finite supremum, and the other uses `Finset.sup_le`,
+  `imageSubobject_comp_le`, and `Sigma.ι_desc`.
+* For `θ : Δ ⟶ Δ'`, send an index `a` to
+  `⟨a.1, θ.unop ≫ a.2⟩`.  `Sigma.map'` gives the map between generator
+  domains, and `U.map_comp` proves the square with right side `U.map θ`.
+  Apply `imageSubobjectMap` and `imageSubobjectMap_arrow` from
+  `Mathlib/CategoryTheory/Subobject/Limits.lean`.  These maps define a
+  simplicial object `U'`; prove `map_id` and `map_comp` by cancelling the mono
+  arrow of `S`, using only `imageSubobjectMap_arrow` and the functor laws of
+  `U`.  Define `i : U' ⟶ U` by `i.app Δ := (S Δ).arrow`; its naturality is
+  the same equation, and `NatTrans.mono_of_mono_app` from
+  `Mathlib/CategoryTheory/Functor/Category.lean` gives `Mono i`.
+* The required image equality follows from `imageSubobject_mono`,
+  `Subobject.mk_arrow`, and the specialization `S (op ⦋m⦌) = ...` above.
+  If `m ≤ n`, the generator indexed by
+  `⟨⟨m, Nat.lt_succ_of_le hm⟩, 𝟙 ⦋m⦌⟩` has image `⊤`; use
+  `Finset.le_sup (Finset.mem_univ _)`, `imageSubobject_mono`, and
+  `Subobject.top_eq_id` to prove the “agrees below” clause.  Consequently
+  `i.app (op ⦋m⦌)` is an iso in these degrees by
+  `Subobject.isIso_iff_mk_eq_top`.
+* For `m > n`, choose a normalized splitting `s'` of `U'`.  It suffices to
+  show `s'.N m` is zero and transport this through the iso in
+  `IsNormalizedSplitting`.  Define the projection onto the identity summand
+  by
+
+    `p := s'.desc (op ⦋m⦌) (fun A => if h : A.EqId then
+      eqToHom (by rw [(Splitting.IndexSet.eqId_iff_len_eq A).mp h]) else 0)`.
+
+  `s'.ι_desc` gives `s'.ι m ≫ p = 𝟙 _` and says every nonidentity summand
+  maps to zero.
+* Show `p = 0` after precomposition with the epi
+  `factorThruImageSubobject (generator U n (op ⦋m⦌))`.  On a generator
+  `a : [m] ⟶ [i]`, first establish the exact lift equation
+
+    `Sigma.ι (fun a => U.obj (op ⦋a.1.1⦌)) a ≫
+        factorThruImageSubobject (generator U n (op ⦋m⦌)) =
+      inv (i.app (op ⦋a.1.1⦌)) ≫ U'.map a.2.op`.
+
+  Here the component of `i` in degree `a.1.1 ≤ n` is an iso by the preceding
+  “agrees below” clause.  Prove the equation by cancelling the mono
+  `i.app (op ⦋m⦌)` and using `imageSubobject_arrow_comp`, naturality of `i`,
+  `Sigma.ι_desc`, and the inverse law.  Now factor `a.2` as
+  `factorThruImage a.2 ≫ image.ι a.2`.  Its epi part has target length at
+  most `i ≤ n < m`, so the corresponding index in the splitting of `U'` is
+  not `EqId` by `Splitting.IndexSet.eqId_iff_len_eq`.  Use
+  `s'.cofan_inj_epi_naturality`, `s'.hom_ext'`, and `s'.ι_desc` to show the
+  generator followed by `p` is zero; cancel the generator-image epi to get
+  `p = 0`.  Then `s'.ι m ≫ p = 𝟙` makes `s'.N m` a zero object, and
+  `Subobject.mk_eq_bot_iff_zero` (after transporting across the normalized
+  summand iso) yields `normalizedSubobject U' m = ⊥`.  The splitting lemmas
+  used in this step are all in
+  `Mathlib/AlgebraicTopology/SimplicialObject/Split.lean`, and
+  `Subobject.mk_eq_bot_iff_zero` is in
+  `Mathlib/CategoryTheory/Subobject/Lattice.lean`.
+
+Do not build `U'` only on the standard objects `op ⦋m⦌`; doing so creates
+avoidable `eqToHom` transports in both functor laws.  The arbitrary-`Δ`
+generator above makes composition strictly compatible with index
+precomposition.  Also do not import the later Unit21 skeleton functor: this
+lemma is its chronological input.
+-/
 theorem abelian_n_skeleton_subobject
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :

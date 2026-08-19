@@ -705,6 +705,637 @@ theorem fibredSetoid_twoFibreProduct_object_classes_equiv
               (overFunctor_comm G.underlying) U))) := by
   sorry
 
+/-! ## The fibred 2-Yoneda comparison
+
+The following reconstruction is the strict-over-base part of the fibred
+2-Yoneda argument.  It is kept here, before the representability chapter,
+because it only uses `Over` and the universe-polymorphic vertical-isomorphism
+interface from Unit 35.  In particular, it does not identify the two
+categories involved by choosing representatives of their objects.
+-/
+
+theorem slice_functor_over_base_isomorphic_to_map
+    {C : Type uC} [Category.{vC} C] {X Y : C}
+    (F : Over X ⥤ Over Y)
+    (hF : F ⋙ Over.forget Y = Over.forget X) :
+    ∃ f : X ⟶ Y, ∃ e : F ≅ Over.map f,
+      ∃ over : F ⋙ Over.forget Y = (Over.map f) ⋙ Over.forget Y,
+        IsNatIsoOver (Over.forget Y) e over := by
+  let hobj : ∀ U : Over X, (F.obj U).left = U.left := fun U =>
+    Functor.congr_obj hF U
+  let f : X ⟶ Y :=
+    eqToHom (hobj (Over.mk (𝟙 X))).symm ≫
+      (F.obj (Over.mk (𝟙 X))).hom
+  let eapp : ∀ U : Over X, F.obj U ≅ (Over.map f).obj U := fun U => by
+    refine Over.isoMk (eqToIso (hobj U)) ?_
+    let u : U ⟶ Over.mk (𝟙 X) := Over.homMk U.hom
+    have hu := Functor.congr_hom hF u
+    change (F.map u).left =
+      eqToHom (hobj U) ≫ u.left ≫
+        eqToHom (hobj (Over.mk (𝟙 X))).symm at hu
+    rw [← Over.w (F.map u), hu]
+    dsimp [f, u]
+    simp [Category.assoc]
+  let e : F ≅ Over.map f := NatIso.ofComponents eapp (by
+    intro U V k
+    apply (Over.forget Y).map_injective
+    have hk := Functor.congr_hom hF k
+    change (F.map k).left =
+      eqToHom (hobj U) ≫ k.left ≫ eqToHom (hobj V).symm at hk
+    change (F.map k).left ≫ eqToHom (hobj V) =
+      eqToHom (hobj U) ≫ k.left
+    rw [hk]
+    simp only [Category.assoc, eqToHom_trans, eqToHom_refl,
+      Category.comp_id])
+  let over : F ⋙ Over.forget Y = (Over.map f) ⋙ Over.forget Y :=
+    hF.trans (Over.mapForget_eq f).symm
+  refine ⟨f, e, over, ?_⟩
+  intro U
+  change (eapp U).hom.left =
+    eqToHom (congrArg (fun L : Over X ⥤ C => L.obj U) over)
+  dsimp [e, eapp, over, hobj]
+  simp
+
+/- A presentation stores both directions of an equivalence with a slice.  The
+   equations are retained explicitly: this is what lets the comparison below
+   remain universe-polymorphic and lets its verticality be checked rather than
+   inferred from an untyped equivalence. -/
+structure FibredSlicePresentation
+    {S : Type*} [Category* S] {C : Type*} [Category* C]
+    (p : S ⥤ C) where
+  representingObject : C
+  forward : S ⥤ Over representingObject
+  forward_over : forward ⋙ Over.forget representingObject = p
+  inverse : Over representingObject ⥤ S
+  inverse_over : inverse ⋙ p = Over.forget representingObject
+  unit : forward ⋙ inverse ≅ 𝟭 S
+  unit_over : (forward ⋙ inverse) ⋙ p = (𝟭 S) ⋙ p
+  unit_isOver : IsNatIsoOver p unit unit_over
+  counit : inverse ⋙ forward ≅ 𝟭 (Over representingObject)
+  counit_over : (inverse ⋙ forward) ⋙ Over.forget representingObject =
+    (𝟭 (Over representingObject)) ⋙ Over.forget representingObject
+  counit_isOver : IsNatIsoOver (Over.forget representingObject)
+    counit counit_over
+
+def fibredSlicePresentation_of_isEquivalenceOverFunctor
+    {S : Type*} [Category* S] {C : Type*} [Category* C]
+    {p : S ⥤ C} (X : C) (F : S ⥤ Over X)
+    (hF : IsEquivalenceOverFunctor p (Over.forget X) F) :
+    FibredSlicePresentation p := by
+  let G := Classical.choose hF
+  have hG := Classical.choose_spec hF
+  let unit := Classical.choose hG.2.2.1
+  have hunit := Classical.choose_spec hG.2.2.1
+  let unitOver := Classical.choose hunit
+  have hunitOver := Classical.choose_spec hunit
+  let counit := Classical.choose hG.2.2.2
+  have hcounit := Classical.choose_spec hG.2.2.2
+  let counitOver := Classical.choose hcounit
+  have hcounitOver := Classical.choose_spec hcounit
+  exact {
+    representingObject := X
+    forward := F
+    forward_over := hG.1
+    inverse := G
+    inverse_over := hG.2.1
+    unit := unit
+    unit_over := unitOver
+    unit_isOver := hunitOver
+    counit := counit
+    counit_over := counitOver
+    counit_isOver := hcounitOver }
+
+def fibredSliceLift
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (φ : P.representingObject ⟶ Q.representingObject) : S ⥤ T :=
+  P.forward ⋙ Over.map φ ⋙ Q.inverse
+
+theorem fibredSliceLift_over
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (φ : P.representingObject ⟶ Q.representingObject) :
+    fibredSliceLift P Q φ ⋙ q = p := by
+  calc
+    fibredSliceLift P Q φ ⋙ q =
+        P.forward ⋙ Over.map φ ⋙ (Q.inverse ⋙ q) := by
+      simp [fibredSliceLift, Functor.assoc]
+    _ = P.forward ⋙ Over.map φ ⋙ Over.forget Q.representingObject := by
+      rw [Q.inverse_over]
+    _ = P.forward ⋙ Over.forget P.representingObject := by
+      simpa [Functor.assoc] using congrArg
+        (fun K : Over P.representingObject ⥤ C => P.forward ⋙ K)
+        (Over.mapForget_eq φ)
+    _ = p := P.forward_over
+
+theorem fibredSliceLift_mapsStronglyCartesian
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (hq : q.IsFibredInGroupoids)
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (φ : P.representingObject ⟶ Q.representingObject) :
+    MapsStronglyCartesian p q (fibredSliceLift P Q φ) := by
+  intro a b ψ _hψ
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian q hq
+    ((fibredSliceLift P Q φ).map ψ)
+
+def FibredMorphismVerticalNatTrans
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    {F G : S ⥤ T} (F_over : F ⋙ q = p) (G_over : G ⋙ q = p)
+    (η : F ⟶ G) : Prop :=
+  ∀ Z : S,
+    q.map (η.app Z) =
+      eqToHom (congrArg (fun H : S ⥤ C => H.obj Z)
+        (F_over.trans G_over.symm))
+
+def FibredMorphismVerticalIsomorphismRelation
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    {F G : S ⥤ T} (F_over : F ⋙ q = p) (G_over : G ⋙ q = p) : Prop :=
+  ∃ η : F ⟶ G, FibredMorphismVerticalNatTrans F_over G_over η ∧ IsIso η
+
+theorem fibredMorphismVerticalNatTrans_comp
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    {F G H : S ⥤ T}
+    {F_over : F ⋙ q = p} {G_over : G ⋙ q = p} {H_over : H ⋙ q = p}
+    (η : F ⟶ G) (θ : G ⟶ H)
+    (hη : FibredMorphismVerticalNatTrans F_over G_over η)
+    (hθ : FibredMorphismVerticalNatTrans G_over H_over θ) :
+    FibredMorphismVerticalNatTrans F_over H_over (η ≫ θ) := by
+  intro Z
+  change q.map (η.app Z ≫ θ.app Z) = _
+  rw [Functor.map_comp, hη Z, hθ Z]
+  simp
+
+theorem fibredMorphismVerticalNatTrans_inv
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    {F G : S ⥤ T}
+    {F_over : F ⋙ q = p} {G_over : G ⋙ q = p}
+    (η : F ⟶ G) (hη : FibredMorphismVerticalNatTrans F_over G_over η)
+    [IsIso η] :
+    FibredMorphismVerticalNatTrans G_over F_over (inv η) := by
+  intro Z
+  apply (cancel_mono (q.map (η.app Z))).1
+  rw [← q.map_comp]
+  have hinv : (inv η).app Z ≫ η.app Z = 𝟙 _ := by
+    exact congrArg (fun τ => τ.app Z) (IsIso.inv_hom_id η)
+  rw [hinv, q.map_id, hη Z]
+  simp
+
+theorem fibred_isNatIsoOver_comp
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (q : B ⥤ D) {F G K : A ⥤ B}
+    (e : F ≅ G) (over : F ⋙ q = G ⋙ q)
+    (h : IsNatIsoOver q e over)
+    (e' : G ≅ K) (over' : G ⋙ q = K ⋙ q)
+    (h' : IsNatIsoOver q e' over') :
+    IsNatIsoOver q (e ≪≫ e') (over.trans over') := by
+  intro Z
+  change q.map (e.hom.app Z ≫ e'.hom.app Z) = _
+  rw [Functor.map_comp, h Z, h' Z]
+  simp only [eqToHom_trans]
+
+theorem fibred_isNatIsoOver_whiskerLeft
+    {A B D E : Type*} [Category* A] [Category* B]
+      [Category* D] [Category* E]
+    (q : B ⥤ D) {F G : A ⥤ B} (e : F ≅ G)
+    (over : F ⋙ q = G ⋙ q) (h : IsNatIsoOver q e over)
+    (L : E ⥤ A) :
+    IsNatIsoOver q (Functor.isoWhiskerLeft L e)
+      ((Functor.assoc L F q).trans
+        ((congrArg (fun K : A ⥤ D => L ⋙ K) over).trans
+          (Functor.assoc L G q).symm)) := by
+  intro Z
+  change q.map (e.hom.app (L.obj Z)) = _
+  simpa only [eqToHom_trans] using h (L.obj Z)
+
+theorem fibred_isNatIsoOver_whiskerRight
+    {A B D E : Type*} [Category* A] [Category* B]
+      [Category* D] [Category* E]
+    (q : B ⥤ D) {F G : A ⥤ B} (e : F ≅ G)
+    (over : F ⋙ q = G ⋙ q) (h : IsNatIsoOver q e over)
+    (L : B ⥤ E) (r : E ⥤ D) (L_over : L ⋙ r = q) :
+    IsNatIsoOver r (Functor.isoWhiskerRight e L)
+      ((Functor.assoc F L r).trans
+        (((congrArg (fun K : B ⥤ D => F ⋙ K) L_over).trans
+          (over.trans
+            (congrArg (fun K : B ⥤ D => G ⋙ K) L_over.symm))).trans
+          (Functor.assoc G L r).symm)) := by
+  intro Z
+  change r.map (L.map (e.hom.app Z)) = _
+  have hL := Functor.congr_hom L_over (e.hom.app Z)
+  change (L ⋙ r).map (e.hom.app Z) = _
+  rw [hL, h Z]
+  simp only [eqToHom_trans]
+
+theorem fibred_isNatIsoOver_symm
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (q : B ⥤ D) {F G : A ⥤ B} (e : F ≅ G)
+    (over : F ⋙ q = G ⋙ q) (h : IsNatIsoOver q e over) :
+    IsNatIsoOver q e.symm over.symm := by
+  intro Z
+  apply (cancel_mono (q.map (e.hom.app Z))).1
+  rw [← q.map_comp]
+  change q.map (e.inv.app Z ≫ e.hom.app Z) = _
+  have hinv : e.inv.app Z ≫ e.hom.app Z = 𝟙 _ := by
+    exact congrArg (fun τ => τ.app Z) e.inv_hom_id
+  rw [hinv, q.map_id, h Z]
+  simp
+
+theorem fibredSlicePresentation_lift_comparison
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (F : S ⥤ T) (F_over : F ⋙ q = p) :
+    ∃ φ : P.representingObject ⟶ Q.representingObject,
+      ∃ η : F ⟶ fibredSliceLift P Q φ,
+        FibredMorphismVerticalNatTrans F_over
+          (fibredSliceLift_over P Q φ) η ∧ IsIso η := by
+  let H : Over P.representingObject ⥤ Over Q.representingObject :=
+    P.inverse ⋙ F ⋙ Q.forward
+  have hH : H ⋙ Over.forget Q.representingObject =
+      Over.forget P.representingObject := by
+    dsimp [H]
+    calc
+      (P.inverse ⋙ F ⋙ Q.forward) ⋙
+          Over.forget Q.representingObject =
+          P.inverse ⋙ F ⋙ q := by
+            simpa [Functor.assoc] using congrArg
+              (fun K : T ⥤ C => (P.inverse ⋙ F) ⋙ K) Q.forward_over
+      _ = P.inverse ⋙ p := by
+        simpa [Functor.assoc] using congrArg
+          (fun K : S ⥤ C => P.inverse ⋙ K) F_over
+      _ = Over.forget P.representingObject := P.inverse_over
+  obtain ⟨φ, eH, _overH, heH⟩ :=
+    slice_functor_over_base_isomorphic_to_map H hH
+  let eP_over :
+      (P.forward ⋙ H) ⋙ Over.forget Q.representingObject =
+        (F ⋙ Q.forward) ⋙ Over.forget Q.representingObject := by
+    calc
+      (P.forward ⋙ H) ⋙ Over.forget Q.representingObject =
+          P.forward ⋙ (H ⋙ Over.forget Q.representingObject) := by
+            simp [Functor.assoc]
+      _ = P.forward ⋙ Over.forget P.representingObject := by
+            rw [hH]
+      _ = p := P.forward_over
+      _ = F ⋙ q := F_over.symm
+      _ = F ⋙ (Q.forward ⋙ Over.forget Q.representingObject) := by
+            rw [Q.forward_over]
+      _ = (F ⋙ Q.forward) ⋙ Over.forget Q.representingObject := by
+            simp [Functor.assoc]
+  let eP : P.forward ⋙ H ≅ F ⋙ Q.forward :=
+    (Functor.associator P.forward P.inverse (F ⋙ Q.forward)).symm ≪≫
+      Functor.isoWhiskerRight P.unit (F ⋙ Q.forward) ≪≫
+      Functor.leftUnitor (F ⋙ Q.forward)
+  have heP : IsNatIsoOver (Over.forget Q.representingObject)
+      eP eP_over := by
+    intro Z
+    dsimp [eP]
+    simp only [Category.id_comp, Category.comp_id, Category.assoc]
+    have hQmap := Functor.congr_hom Q.forward_over
+      (F.map (P.unit.hom.app Z))
+    have hFmap := Functor.congr_hom F_over (P.unit.hom.app Z)
+    calc
+      _ = (Q.forward ⋙ Over.forget Q.representingObject).map
+          (F.map (P.unit.hom.app Z)) := by
+            simpa only [Functor.comp_map, Functor.comp_obj,
+              Over.forget_map, Over.forget_obj] using
+              (Category.id_comp (Over.Hom.left
+                (Q.forward.map (F.map (P.unit.hom.app Z)))))
+      _ = _ := hQmap
+      _ = _ := by
+        have hFmap' : q.map (F.map (P.unit.hom.app Z)) =
+            eqToHom (congrArg (fun K : S ⥤ C => K.obj
+              ((P.forward ⋙ P.inverse).obj Z)) F_over) ≫
+              p.map (P.unit.hom.app Z) ≫
+              eqToHom (congrArg (fun K : S ⥤ C => K.obj Z) F_over).symm := by
+          simpa only [Functor.comp_map] using hFmap
+        rw [hFmap', P.unit_isOver Z]
+        simp only [eqToHom_trans]
+        rfl
+  let eFB : F ⋙ Q.forward ≅ P.forward ⋙ Over.map φ :=
+    eP.symm ≪≫ Functor.isoWhiskerLeft P.forward eH
+  let eFB_over :
+      (F ⋙ Q.forward) ⋙ Over.forget Q.representingObject =
+        (P.forward ⋙ Over.map φ) ⋙ Over.forget Q.representingObject := by
+    calc
+      (F ⋙ Q.forward) ⋙ Over.forget Q.representingObject = F ⋙ q := by
+        simp [Functor.assoc, Q.forward_over]
+      _ = p := F_over
+      _ = P.forward ⋙ Over.forget P.representingObject :=
+        P.forward_over.symm
+      _ = (P.forward ⋙ Over.map φ) ⋙
+          Over.forget Q.representingObject := by
+        symm
+        simpa [Functor.assoc] using congrArg
+          (fun K : Over P.representingObject ⥤ C => P.forward ⋙ K)
+          (Over.mapForget_eq φ)
+  have hePInv : IsNatIsoOver (Over.forget Q.representingObject)
+      eP.symm eP_over.symm :=
+    fibred_isNatIsoOver_symm (Over.forget Q.representingObject)
+      eP eP_over heP
+  have heHLeft : IsNatIsoOver (Over.forget Q.representingObject)
+      (Functor.isoWhiskerLeft P.forward eH) _ :=
+    fibred_isNatIsoOver_whiskerLeft
+      (Over.forget Q.representingObject) eH _overH heH P.forward
+  have heFB' := fibred_isNatIsoOver_comp
+    (Over.forget Q.representingObject) eP.symm eP_over.symm hePInv
+      (Functor.isoWhiskerLeft P.forward eH) _ heHLeft
+  have heFB : IsNatIsoOver (Over.forget Q.representingObject)
+      eFB eFB_over := by
+    simpa [eFB, eFB_over] using heFB'
+  let eF : F ≅ fibredSliceLift P Q φ := by
+    simpa [fibredSliceLift, Functor.assoc] using
+      (((Functor.rightUnitor F).symm ≪≫
+          Functor.isoWhiskerLeft F Q.unit.symm) ≪≫
+        (Functor.associator F Q.forward Q.inverse).symm) ≪≫
+          Functor.isoWhiskerRight eFB Q.inverse
+  let eRight_over : F ⋙ q = (F ⋙ 𝟭 T) ⋙ q := by
+    rw [Functor.assoc, Functor.id_comp]
+  have heRight : IsNatIsoOver q (Functor.rightUnitor F).symm
+      eRight_over := by
+    intro Z
+    simp [eRight_over]
+  have heQUnitInv : IsNatIsoOver q Q.unit.symm Q.unit_over.symm :=
+    fibred_isNatIsoOver_symm q Q.unit Q.unit_over Q.unit_isOver
+  let eQUnitLeft_over :
+      (F ⋙ 𝟭 T) ⋙ q = (F ⋙ (Q.forward ⋙ Q.inverse)) ⋙ q :=
+    (Functor.assoc F (𝟭 T) q).trans
+      ((congrArg (fun K : T ⥤ C => F ⋙ K) Q.unit_over.symm).trans
+        (Functor.assoc F (Q.forward ⋙ Q.inverse) q).symm)
+  have heQUnitLeft : IsNatIsoOver q
+      (Functor.isoWhiskerLeft F Q.unit.symm) eQUnitLeft_over :=
+    fibred_isNatIsoOver_whiskerLeft q Q.unit.symm Q.unit_over.symm
+      heQUnitInv F
+  let eAssoc_over :
+      (F ⋙ (Q.forward ⋙ Q.inverse)) ⋙ q =
+        ((F ⋙ Q.forward) ⋙ Q.inverse) ⋙ q := by
+    simp [Functor.assoc]
+  have heAssoc : IsNatIsoOver q
+      (Functor.associator F Q.forward Q.inverse).symm eAssoc_over := by
+    intro Z
+    simp [eAssoc_over]
+  have heFBRight : IsNatIsoOver q
+      (Functor.isoWhiskerRight eFB Q.inverse) _ :=
+    fibred_isNatIsoOver_whiskerRight
+      (Over.forget Q.representingObject) eFB eFB_over heFB
+      Q.inverse q Q.inverse_over
+  have heF' := fibred_isNatIsoOver_comp q
+    (Functor.rightUnitor F).symm eRight_over heRight
+      (Functor.isoWhiskerLeft F Q.unit.symm) _ heQUnitLeft
+  have heF'' := fibred_isNatIsoOver_comp q
+    ((Functor.rightUnitor F).symm ≪≫
+        Functor.isoWhiskerLeft F Q.unit.symm
+      ) (eRight_over.trans eQUnitLeft_over) heF'
+      (Functor.associator F Q.forward Q.inverse).symm eAssoc_over heAssoc
+  have heF''' := fibred_isNatIsoOver_comp q
+    (((Functor.rightUnitor F).symm ≪≫
+        Functor.isoWhiskerLeft F Q.unit.symm) ≪≫
+          (Functor.associator F Q.forward Q.inverse).symm)
+      ((eRight_over.trans eQUnitLeft_over).trans eAssoc_over) heF''
+      (Functor.isoWhiskerRight eFB Q.inverse) _ heFBRight
+  have heF : FibredMorphismVerticalNatTrans F_over
+      (fibredSliceLift_over P Q φ) eF.hom := by
+    intro Z
+    simpa [eF, fibredSliceLift, Functor.assoc] using heF''' Z
+  exact ⟨φ, eF.hom, heF, inferInstance⟩
+
+theorem fibredMorphismVerticalNatTrans_object_class_map_eq
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    {F G : S ⥤ T} (F_over : F ⋙ q = p) (G_over : G ⋙ q = p)
+    (η : F ⟶ G)
+    (hη : FibredMorphismVerticalNatTrans F_over G_over η)
+    (hq : q.IsFibredInGroupoids) (U : C) :
+    objectIsoClassMap (fibreFunctor p q F F_over U) =
+      objectIsoClassMap (fibreFunctor p q G G_over U) := by
+  let hqgroup : IsGroupoid (Functor.Fiber q U) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1 U
+  letI : IsGroupoid (Functor.Fiber q U) := hqgroup
+  funext x
+  refine Quotient.inductionOn x ?_
+  intro x
+  change ThinSkeleton.mk ((fibreFunctor p q F F_over U).obj x) =
+    ThinSkeleton.mk ((fibreFunctor p q G G_over U).obj x)
+  apply setoidObjectClasses_eq_iff.mpr
+  let hx : q.obj (F.obj x.1) = U :=
+    (congrArg (fun H : S ⥤ C => H.obj x.1) F_over).trans x.2
+  let hy : q.obj (G.obj x.1) = U :=
+    (congrArg (fun H : S ⥤ C => H.obj x.1) G_over).trans x.2
+  let k : (fibreFunctor p q F F_over U).obj x ⟶
+      (fibreFunctor p q G G_over U).obj x := by
+    refine ⟨η.app x.1, ?_⟩
+    apply CategoryTheory.IsHomLift.of_fac' q (𝟙 U) (η.app x.1) hx hy
+    simpa [hx, hy, eqToHom_trans] using hη x.1
+  exact ⟨asIso k⟩
+
+theorem slice_map_vertical_iso_unique
+    {C : Type*} [Category* C] {X Y : C}
+    {φ ψ : X ⟶ Y} (e : Over.map φ ≅ Over.map ψ)
+    (over : (Over.map φ) ⋙ Over.forget Y =
+      (Over.map ψ) ⋙ Over.forget Y)
+    (h : IsNatIsoOver (Over.forget Y) e over) :
+    φ = ψ := by
+  let u : Over X := Over.mk (𝟙 X)
+  have hleft : (e.hom.app u).left = 𝟙 X := by
+    have hv := h u
+    have heq : congrArg (fun L : Over X ⥤ C => L.obj u) over = rfl :=
+      Subsingleton.elim _ _
+    have hv' : (e.hom.app u).left =
+        eqToHom (congrArg (fun L : Over X ⥤ C => L.obj u) over) := by
+      simpa only [Functor.comp_obj, Over.forget_obj, Over.forget_map] using hv
+    have hid : eqToHom (congrArg (fun L : Over X ⥤ C => L.obj u) over) =
+        𝟙 X := by
+      apply CategoryTheory.eqToHom_refl
+    rw [hid] at hv'
+    simpa [u] using hv'
+  have hw := Over.w (e.hom.app u)
+  dsimp [u] at hw
+  rw [hleft] at hw
+  simpa only [Category.id_comp] using hw.symm
+
+theorem fibredSlicePresentation_isCategoryFibredInSetoids
+    {S C : Type*} [Category* S] [Category* C]
+    {q : S ⥤ C} (Q : FibredSlicePresentation q) :
+    IsCategoryFibredInSetoids q := by
+  let hQ : IsEquivalenceOverFunctor q
+      (Over.forget Q.representingObject) Q.forward :=
+    ⟨Q.inverse, Q.forward_over, Q.inverse_over,
+      ⟨Q.unit, Q.unit_over, Q.unit_isOver⟩,
+      ⟨Q.counit, Q.counit_over, Q.counit_isOver⟩⟩
+  exact (equivalence_to_fibredInSets_gives_setoidFibres
+    q (Over.forget Q.representingObject) Q.forward Q.forward_over hQ
+      (sliceProjection_isFibredInSets Q.representingObject)).1
+
+theorem fibredMorphismVerticalNatTrans_unique_of_setoid
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C} {F G : S ⥤ T}
+    (F_over : F ⋙ q = p) (G_over : G ⋙ q = p)
+    (hsetoid : ∀ U : C, IsSetoid (Functor.Fiber q U))
+    {η θ : F ⟶ G}
+    (hη : FibredMorphismVerticalNatTrans F_over G_over η)
+    (hθ : FibredMorphismVerticalNatTrans F_over G_over θ) :
+    η = θ := by
+  apply NatTrans.ext
+  funext Z
+  let hx : q.obj (F.obj Z) = p.obj Z :=
+    congrArg (fun H : S ⥤ C => H.obj Z) F_over
+  let hy : q.obj (G.obj Z) = p.obj Z :=
+    congrArg (fun H : S ⥤ C => H.obj Z) G_over
+  let η' : (Functor.Fiber.mk hx) ⟶ (Functor.Fiber.mk hy) :=
+    ⟨η.app Z, by
+      apply CategoryTheory.IsHomLift.of_fac' q (𝟙 (p.obj Z))
+        (η.app Z) hx hy
+      simpa [hx, hy, eqToHom_trans] using hη Z⟩
+  let θ' : (Functor.Fiber.mk hx) ⟶ (Functor.Fiber.mk hy) :=
+    ⟨θ.app Z, by
+      apply CategoryTheory.IsHomLift.of_fac' q (𝟙 (p.obj Z))
+        (θ.app Z) hx hy
+      simpa [hx, hy, eqToHom_trans] using hθ Z⟩
+  have hhom : Subsingleton
+      ((Functor.Fiber.mk hx) ⟶ (Functor.Fiber.mk hy)) :=
+    (isSetoid_iff_isGroupoid_and_hom_subsingleton.mp
+      (hsetoid (p.obj Z))).2 _ _
+  have hηθ : η' = θ' := hhom.elim _ _
+  exact congrArg (fun k => k.1) hηθ
+
+theorem fibredSlicePresentation_lift_exists_and_unique
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (hsetoid : ∀ U : C, IsSetoid (Functor.Fiber q U))
+    (φ : P.representingObject ⟶ Q.representingObject)
+    {F G : S ⥤ T} (F_over : F ⋙ q = p) (G_over : G ⋙ q = p)
+    (eF : F ≅ fibredSliceLift P Q φ)
+    (heF : FibredMorphismVerticalNatTrans F_over
+      (fibredSliceLift_over P Q φ) eF.hom)
+    (eG : G ≅ fibredSliceLift P Q φ)
+    (heG : FibredMorphismVerticalNatTrans G_over
+      (fibredSliceLift_over P Q φ) eG.hom) :
+    ∃! η : F ⟶ G,
+      FibredMorphismVerticalNatTrans F_over G_over η ∧ IsIso η := by
+  have heGinv : FibredMorphismVerticalNatTrans
+      (fibredSliceLift_over P Q φ) G_over eG.inv :=
+    by simpa using fibredMorphismVerticalNatTrans_inv eG.hom heG
+  let η : F ⟶ G := eF.hom ≫ eG.inv
+  have hη : FibredMorphismVerticalNatTrans F_over G_over η :=
+    fibredMorphismVerticalNatTrans_comp eF.hom eG.inv heF heGinv
+  refine ⟨η, ⟨hη, inferInstance⟩, ?_⟩
+  intro θ hθ
+  apply fibredMorphismVerticalNatTrans_unique_of_setoid
+    F_over G_over hsetoid hθ.1 hη
+
+structure FibredMorphismOverBase
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    (p : S ⥤ C) (q : T ⥤ C) where
+  functor : S ⥤ T
+  over : functor ⋙ q = p
+  preserves : MapsStronglyCartesian p q functor
+
+def fibredSliceLiftMorphism
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (hq : q.IsFibredInGroupoids)
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (φ : P.representingObject ⟶ Q.representingObject) :
+    FibredMorphismOverBase p q :=
+  { functor := fibredSliceLift P Q φ
+    over := fibredSliceLift_over P Q φ
+    preserves := fibredSliceLift_mapsStronglyCartesian hq P Q φ }
+
+theorem fibredSlicePresentation_representing_morphism_exists_and_unique
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (hq : q.IsFibredInGroupoids)
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (hsetoid : ∀ U : C, IsSetoid (Functor.Fiber q U))
+    (φ : P.representingObject ⟶ Q.representingObject) :
+    ∃ F : FibredMorphismOverBase p q,
+      ∀ G : FibredMorphismOverBase p q,
+        (∃ e : G.functor ≅ (fibredSliceLiftMorphism hq P Q φ).functor,
+          FibredMorphismVerticalNatTrans G.over
+            (fibredSliceLiftMorphism hq P Q φ).over e.hom) →
+          ∃! η : F.functor ⟶ G.functor,
+            FibredMorphismVerticalNatTrans F.over G.over η ∧ IsIso η := by
+  let F := fibredSliceLiftMorphism hq P Q φ
+  refine ⟨F, ?_⟩
+  intro G hG
+  obtain ⟨eG, heG⟩ := hG
+  let eF : F.functor ≅ (fibredSliceLiftMorphism hq P Q φ).functor :=
+    Iso.refl _
+  have heF : FibredMorphismVerticalNatTrans F.over F.over eF.hom := by
+    intro Z
+    simp [eF]
+  simpa [F] using
+    fibredSlicePresentation_lift_exists_and_unique P Q hsetoid φ
+      F.over G.over eF heF eG heG
+
+def FibredMorphismOverBaseVerticalIsoRelation
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (F G : FibredMorphismOverBase p q) : Prop :=
+  ∃ η : F.functor ⟶ G.functor,
+    FibredMorphismVerticalNatTrans F.over G.over η ∧ IsIso η
+
+abbrev FibredMorphismOverBaseClasses
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    (p : S ⥤ C) (q : T ⥤ C) :=
+  Quot (FibredMorphismOverBaseVerticalIsoRelation (p := p) (q := q))
+
+theorem fibredMorphismOverBaseVerticalIsoRelation_isEquivalence
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C} :
+    Equivalence
+      (FibredMorphismOverBaseVerticalIsoRelation (p := p) (q := q)) := by
+  constructor
+  · intro F
+    refine ⟨𝟙 F.functor, ?_, inferInstance⟩
+    intro Z
+    simp
+  · intro F G hFG
+    rcases hFG with ⟨η, hη, hηiso⟩
+    refine ⟨inv η, ?_, inferInstance⟩
+    exact fibredMorphismVerticalNatTrans_inv η hη
+  · intro F G H hFG hGH
+    rcases hFG with ⟨η, hη, hηiso⟩
+    rcases hGH with ⟨θ, hθ, hθiso⟩
+    refine ⟨η ≫ θ, ?_, inferInstance⟩
+    exact fibredMorphismVerticalNatTrans_comp η θ hη hθ
+
+theorem fibredSlicePresentation_class_is_represented_by_a_slice_morphism
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (hq : q.IsFibredInGroupoids)
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (F : FibredMorphismOverBase p q) :
+    ∃ φ : P.representingObject ⟶ Q.representingObject,
+      ∃ η : F.functor ⟶ (fibredSliceLift P Q φ),
+        FibredMorphismVerticalNatTrans F.over
+          (fibredSliceLift_over P Q φ) η ∧ IsIso η := by
+  exact fibredSlicePresentation_lift_comparison P Q F.functor F.over
+
+theorem fibredSlicePresentation_lift_object_class_map_eq
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (P : FibredSlicePresentation p) (Q : FibredSlicePresentation q)
+    (hq : q.IsFibredInGroupoids)
+    (φ : P.representingObject ⟶ Q.representingObject)
+    {F : S ⥤ T} (F_over : F ⋙ q = p)
+    (η : F ⟶ fibredSliceLift P Q φ)
+    (hη : FibredMorphismVerticalNatTrans F_over
+      (fibredSliceLift_over P Q φ) η) (U : C) :
+    objectIsoClassMap (fibreFunctor p q F F_over U) =
+      objectIsoClassMap
+        (fibreFunctor p q (fibredSliceLift P Q φ)
+          (fibredSliceLift_over P Q φ) U) := by
+  exact fibredMorphismVerticalNatTrans_object_class_map_eq
+    F_over (fibredSliceLift_over P Q φ) η hη hq U
+
 end
 
 end Formalization.Books.Categories.Unit39

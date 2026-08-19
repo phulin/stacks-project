@@ -942,7 +942,6 @@ private theorem stalkPushforward_map_naturality
     exact hφmap'
   rw [Category.assoc] at hleft hright
   exact hleft.trans hright.symm
-set_option backward.isDefEq.respectTransparency false in
 private theorem closedSubsetPushforward_unit_stalk_comp
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}
@@ -997,6 +996,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
     Functor.sheafPullbackConstruction.sheafPullback f₀ C
       (Opens.grothendieckTopology X)
       (Opens.grothendieckTopology (TopCat.of Z))
+  dsimp [TopCat.Sheaf] at L₂
   let Q : TopCat.Presheaf C (TopCat.of Z) :=
     ((CategoryTheory.presheafToSheaf K C).obj
       (f₀.op.lan.obj G₀.obj)).obj
@@ -1038,12 +1038,16 @@ private theorem closedSubsetPushforward_unit_stalk_comp
         (Opens.grothendieckTopology X)
         (Opens.grothendieckTopology (TopCat.of Z)))
       (comm1 := Iso.refl _) (comm2 := Iso.refl _) G₀
-    have hmapunit' :
-        (CategoryTheory.sheafToPresheaf
+    change (TopCat.Presheaf.stalkFunctor C (f z)).map
+        ((CategoryTheory.sheafToPresheaf
           (Opens.grothendieckTopology X) C).map
-            (adj₂.unit.app G₀) = adj₀.unit.app G₀.obj := by
-      simpa [adj₂, Iso.refl] using hmapunit
-    rw [hmapunit']
+          (adj₂.unit.app G₀)) ≫ ePushQ.hom = e₂.hom
+    rw [hmapunit]
+    simp [e₂, adj₀, f₀, f,
+      TopCat.Presheaf.pullbackPushforwardAdjunction,
+      TopCat.Presheaf.pullback, Adjunction.comp_unit_app,
+      TopCat.Presheaf.stalkPullbackIso,
+      TopCat.Presheaf.stalkPullbackHom]
     have hadj0 :
         adj₀.unit.app G₀.obj =
           (Opens.map f).op.lanUnit.app G₀.obj ≫
@@ -1060,10 +1064,24 @@ private theorem closedSubsetPushforward_unit_stalk_comp
       dsimp [P₂, f₀]
       simp [TopCat.Presheaf.stalkPullbackIso,
         TopCat.Presheaf.stalkPullbackHom,
-        TopCat.Presheaf.pullbackPushforwardAdjunction,
-        TopCat.Presheaf.pullback, f₀]
-    rw [hadj0]
-    simp only [Functor.map_comp, Category.assoc]
+      TopCat.Presheaf.pullbackPushforwardAdjunction,
+      TopCat.Presheaf.pullback, f₀]
+    dsimp [ePushQ, Q]
+    change
+      ((TopCat.Presheaf.stalkFunctor C (f z)).map
+            ((Opens.map f).op.lanUnit.app G₀.obj) ≫
+          (TopCat.Presheaf.stalkFunctor C (f z)).map
+            ((TopCat.Presheaf.pushforward C f).map
+              (CategoryTheory.toSheafify K P₂)) ≫
+          TopCat.Presheaf.stalkPushforward C f
+            ((CategoryTheory.presheafToSheaf K C).obj
+              (f₀.op.lan.obj G₀.obj)).obj z) =
+        ((TopCat.Presheaf.stalkFunctor C (f z)).map
+              ((Opens.map f).op.lanUnit.app G₀.obj) ≫
+            TopCat.Presheaf.stalkPushforward C f P₂ z) ≫
+          (@asIso _ _ _ _
+            ((TopCat.Presheaf.stalkFunctor C z).map
+              (CategoryTheory.toSheafify K P₂)) hU₂).hom
     calc
       _ = ((TopCat.Presheaf.stalkFunctor C (f z)).map
             ((Opens.map f).op.lanUnit.app G₀.obj) ≫

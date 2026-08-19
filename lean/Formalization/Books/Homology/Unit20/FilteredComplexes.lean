@@ -57,8 +57,7 @@ def filteredComplexD₀ {C : Type u} [Category.{v} C] [Abelian C]
     filteredComplexE₀ K p q ⟶ filteredComplexE₀ K p (q + 1) :=
   gradedPieceMap (C := C) (K.d (p + q) (p + q + 1)) p ≫
     eqToHom (by
-      congr 2
-      ring)
+      congr 2; ring)
 
 def filteredComplexE₁ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
@@ -201,7 +200,7 @@ noncomputable def filteredComplexStepFunctor
         (f.map_filtration p))
       (g := (B.filtration.obj p).arrow ≫ FilteredHom.hom g) (g.map_filtration p)
     rw [← Category.assoc, Subobject.factorThru_arrow] at h
-    simpa only [Category.assoc] using h
+    simp [Subobject.factorThru_arrow, Category.assoc]
 
 instance filteredComplexStepFunctor_preservesZeroMorphisms
     {C : Type u} [Category.{v} C] [Abelian C] (p : ℤ) :

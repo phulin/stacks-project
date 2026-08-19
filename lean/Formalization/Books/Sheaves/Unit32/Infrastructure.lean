@@ -1,4 +1,5 @@
 import Formalization.Books.Sheaves.Unit31.Infrastructure
+import Formalization.Books.Sheaves.Unit32.ClosedImmersions
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Category.Grp.Zero
 import Mathlib.Topology.Sheaves.Functors
@@ -507,22 +508,42 @@ def ClosedSingletonStalkCondition {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z
 theorem closedSetSheafDirectImage_fullFaithful {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) :
     Nonempty (closedSheafDirectImage (Type v) Z hZ).FullyFaithful := by
-  sorry
+  let : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction (Type v)
+      (closedInclusion Z)).counit) :=
+    closedSheafRestriction_directImage_counit_isIso hZ
+  exact ⟨(TopCat.Sheaf.pullbackPushforwardAdjunction (Type v)
+    (closedInclusion Z)).fullyFaithfulROfIsIsoCounit⟩
 
 /-- The essential image of a closed direct image is characterized by singleton stalks
 outside the closed subset. -/
 theorem closedSetSheafDirectImage_essentialImage {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z)
     (G : TopCat.Sheaf (Type v) X) :
-    (∃ F, Nonempty ((closedSheafDirectImage (Type v) Z hZ).obj F ≅ G)) ↔
+      (∃ F, Nonempty ((closedSheafDirectImage (Type v) Z hZ).obj F ≅ G)) ↔
       ClosedSingletonStalkCondition Z hZ G := by
-  sorry
+  have h' := Formalization.Books.Sheaves.Unit32.closedSubsetSetPushforward_mem_essImage_iff
+    (Z := Z) hZ G
+  change (Formalization.Books.Sheaves.Unit32.closedSubsetSetPushforward Z).essImage G ↔ _
+  constructor
+  · intro h
+    intro x hx
+    rcases h'.mp h x hx with ⟨e⟩
+    exact ⟨e.trans (Equiv.punitEquivPUnit.{v + 1, v})⟩
+  · intro h
+    apply h'.mpr
+    intro x hx
+    rcases h x hx with ⟨e⟩
+    exact ⟨e.trans (Equiv.punitEquivPUnit.{v, v + 1})⟩
 
 /-- Direct image along a closed inclusion is fully faithful on abelian sheaves. -/
 theorem closedAbelianSheafDirectImage_fullFaithful {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) :
     Nonempty (closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).FullyFaithful := by
-  sorry
+  let : IsIso ((TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+      (closedInclusion Z)).counit) :=
+    closedSheafRestriction_directImage_counit_isIso hZ
+  exact ⟨(TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat
+    (closedInclusion Z)).fullyFaithfulROfIsIsoCounit⟩
 
 /-- The abelian essential image is characterized by zero stalks off the closed subset. -/
 def ClosedZeroStalkCondition {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z)

@@ -934,7 +934,6 @@ private theorem closedSubsetPushforward_unit_stalk_comp
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
     (closedSubsetPullbackStalkIso G z).hom := by
-  sorry
   /- Prior attempt (retained after the stalk-comparison proof stopped elaborating):
   let f := closedSubsetInclusion Z
   let eP := closedSubsetPullbackStalkIso G z
@@ -1172,7 +1171,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                       ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
                         (op U) ≫ q) ≫
-                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW'
+                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW
                   calc
                     _ = ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
@@ -1184,18 +1183,25 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                             (op U) ≫
                           ((ObjectProperty.ι (Presheaf.IsSheaf K) ⋙
                               (Functor.whiskeringLeft (Opens ↑X)ᵒᵖ (Opens ↑Z)ᵒᵖ C).obj f₀.op).map
-                                (𝟙 ((presheafToSheaf K C).obj (f₀.op.lan.obj G₀.obj))) ≫
-                            𝟙 (f₀.op ⋙
-                              ((Functor.sheafPullbackConstruction.sheafPullback f₀ C J K).obj G₀).obj)).app
+                                (𝟙 ((presheafToSheaf K C).obj (f₀.op.lan.obj G₀.obj)))).app
+                            (op U) ≫
+                          (NatTrans.id (f₀.op ⋙
+                            ((Functor.sheafPullbackConstruction.sheafPullback f₀ C J K).obj G₀).obj)).app
                             (op U)) ≫
                           TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') =
                         ((((f₀.op.lanAdjunction C).comp
                               (sheafificationAdjunction K C)).unit.app G₀.obj).app
                             (op U) ≫ 𝟙 (F₀.obj.obj (op (f₀.obj U)))) ≫
                           TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU'
-                      convert hWg' using 1 <;> simp
+                      simpa only [F₀, Functor.sheafPullbackConstruction.sheafPullback,
+                        NatTrans.comp_app, Functor.id_obj] using hWg'
                     _ = _ := by
-                      simp [Category.assoc]
+                      simpa only [Category.assoc] using
+                        congrArg
+                          (fun q =>
+                            q ≫ TopCat.Presheaf.germ F₀.obj
+                              (f₀.obj U) z hU')
+                          (Category.comp_id _)
                     _ = _ := by
                       exact hcompunitUg
               _ = _ := by
@@ -1234,7 +1240,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                             (sheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))
                             (f₀.obj U) z hU) := by
                       /- Prior attempt:
-                      simpa [F₀, G₀] using hcompunitUg
+                      simpa only [F₀, G₀] using hcompunitUg
                       -/
                       sorry
                     _ = ((f₀.op.lanUnit.app G.presheaf).app (op U) ≫
@@ -1294,6 +1300,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
 
   The previous detailed attempt is retained below for future API work.
   -/
+-/
   let f := closedSubsetInclusion Z
   let eP := closedSubsetPullbackStalkIso G z
   let F := (TopCat.Sheaf.pullback C f).obj G
@@ -1530,7 +1537,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                       ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
                         (op U) ≫ q) ≫
-                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW'
+                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW
                   calc
                     _ = ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
@@ -1542,22 +1549,90 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                             (op U) ≫
                           ((ObjectProperty.ι (Presheaf.IsSheaf K) ⋙
                               (Functor.whiskeringLeft (Opens ↑X)ᵒᵖ (Opens ↑Z)ᵒᵖ C).obj f₀.op).map
-                                (𝟙 ((presheafToSheaf K C).obj (f₀.op.lan.obj G₀.obj))) ≫
-                            𝟙 (f₀.op ⋙
-                              ((Functor.sheafPullbackConstruction.sheafPullback f₀ C J K).obj G₀).obj)).app
+                                (𝟙 ((presheafToSheaf K C).obj (f₀.op.lan.obj G₀.obj)))).app
+                            (op U) ≫
+                          (NatTrans.id (f₀.op ⋙
+                            ((Functor.sheafPullbackConstruction.sheafPullback f₀ C J K).obj G₀).obj)).app
                             (op U)) ≫
                           TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') =
                         ((((f₀.op.lanAdjunction C).comp
                               (sheafificationAdjunction K C)).unit.app G₀.obj).app
                             (op U) ≫ 𝟙 (F₀.obj.obj (op (f₀.obj U)))) ≫
                           TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU'
-                      simpa only [Functor.id_obj] using hWg'
+                      simpa only [F₀, Functor.sheafPullbackConstruction.sheafPullback,
+                        NatTrans.comp_app, Functor.id_obj] using hWg'
                     _ = _ := by
+                      simpa only [Category.assoc] using
+                        congrArg
+                          (fun q =>
+                            q ≫ TopCat.Presheaf.germ F₀.obj
+                              (f₀.obj U) z hU')
+                          (Category.comp_id _)
+                    _ = _ := by
+                      simpa only [F₀] using hcompunitUg
+              _ = _ := by
+                have hpull :
+                    G.presheaf.germ U (f z) hU ≫
+                        (TopCat.Presheaf.stalkPullbackIso C f G.presheaf z).hom =
+                      (f₀.op.lanUnit.app G.presheaf).app (op U) ≫
+                        ((TopCat.Presheaf.pullback C f).obj G.presheaf).germ
+                          (f₀.obj U) z hU := by
+                  simpa [TopCat.Presheaf.stalkPullbackIso,
+                    TopCat.Presheaf.stalkPullbackHom, f₀] using
+                    (TopCat.Presheaf.germ_stalkPullbackHom C f G.presheaf z U hU)
+                have hsheaf := TopCat.Presheaf.stalkFunctor_map_germ
+                  (f₀.obj U) z hU
+                  (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))
+                dsimp [eP, closedSubsetPullbackStalkIso, eMapIso]
+                have hfinal :
+                    (((f₀.op.lanAdjunction C).comp
+                          (sheafificationAdjunction K C)).unit.app G₀.obj).app
+                          (op U) ≫
+                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' =
+                    ((G.presheaf.germ U (f z) hU ≫
+                        (TopCat.Presheaf.stalkPullbackIso C f G.presheaf z).hom) ≫
+                      (TopCat.Presheaf.stalkFunctor C z).map
+                        (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))) := by
+                  calc
+                    (((f₀.op.lanAdjunction C).comp
+                          (sheafificationAdjunction K C)).unit.app G₀.obj).app
+                          (op U) ≫
+                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' =
+                      ((f₀.op.lanUnit.app G.presheaf).app (op U) ≫
+                          (toSheafify K
+                            ((TopCat.Presheaf.pullback C f).obj G.presheaf)).app
+                            (op (f₀.obj U))) ≫
+                        TopCat.Presheaf.germ
+                          (sheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))
+                          (f₀.obj U) z hU := by
+                      simpa [F₀, G₀] using hcompunitUg
+                    _ = ((f₀.op.lanUnit.app G.presheaf).app (op U) ≫
+                          ((TopCat.Presheaf.pullback C f).obj G.presheaf).germ
+                            (f₀.obj U) z hU) ≫
+                        (TopCat.Presheaf.stalkFunctor C z).map
+                          (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf)) := by
+                      rw [← hsheaf]
                       simp [Category.assoc]
                     _ = _ := by
-                      simpa [F₀, sheafToPresheaf, Category.assoc,
-                        Category.id_comp, Category.comp_id] using hcompunitUg
-              _ = _ := by simp
+                      rw [← hpull]
+                      simp [Category.assoc]
+                rw [hfinal]
+                change
+                  (G.presheaf.germ U (f z) hU ≫
+                      (TopCat.Presheaf.stalkPullbackIso C f G.presheaf z).hom ≫
+                    (TopCat.Presheaf.stalkFunctor C z).map
+                      (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))) =
+                    ((G.presheaf.germ U (f z) hU ≫
+                        (TopCat.Presheaf.stalkPullbackIso C f G.presheaf z).hom ≫
+                      (TopCat.Presheaf.stalkFunctor C z).map
+                        (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf)) ≫
+                      eMapIso.inv) ≫ eMapIso.hom)
+                exact (category_comp_iso_inv_hom_cancel
+                  (G.presheaf.germ U (f z) hU)
+                  (TopCat.Presheaf.stalkPullbackIso C f G.presheaf z).hom
+                  ((TopCat.Presheaf.stalkFunctor C z).map
+                    (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf)))
+                  eMapIso).symm
   change m ≫ eS.hom = eP.hom
   exact hcomp
 
@@ -1831,7 +1906,6 @@ lemmas; see the TODO above).
   exact hcomp
 -/
 
- -/
 private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}

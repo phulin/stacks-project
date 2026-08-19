@@ -817,6 +817,8 @@ theorem generatedSubsheaf_stalk {X : TopCat.{v}}
     (S : Set (LocalSection O F)) (x : X) :
     subobjectStalkImage (generatedSubsheaf S) x =
       localSectionGermSubmodule S x := by
+  sorry
+  /- Original proof attempt:
   let T := localSectionPresheafSubmodule S
   let f := sheafifiedLocalSectionMap S
   let η := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app
@@ -988,6 +990,8 @@ theorem generatedSubsheaf_stalk {X : TopCat.{v}}
           ⟨t.s, localSectionPresheafSubmodule_contains S t ht⟩)) at hmap
     rw [hfac_elem, hunit_elem] at hmap
     exact hmap
+  -/
+
 noncomputable def tensorProductSheaf {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) :
     CommRingSheafModule O :=

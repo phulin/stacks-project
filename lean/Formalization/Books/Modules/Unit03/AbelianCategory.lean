@@ -210,13 +210,13 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (sheafModuleKernel O φ) ≅
       kernel ((sheafModuleStalkFunctor O x).map φ)) := by
-  letI : PreservesFilteredColimits (CategoryTheory.forget AddCommGrpCat) := by
+  let : PreservesFilteredColimits (CategoryTheory.forget AddCommGrpCat) := by
     infer_instance
-  letI : PreservesLimits (CategoryTheory.forget AddCommGrpCat) := by
+  let : PreservesLimits (CategoryTheory.forget AddCommGrpCat) := by
     infer_instance
-  letI : PreservesFiniteLimits (SheafOfModules.toSheaf O) := by
+  let : PreservesFiniteLimits (SheafOfModules.toSheaf O) := by
     infer_instance
-  letI : PreservesFiniteLimits
+  let : PreservesFiniteLimits
       (TopCat.Sheaf.forget AddCommGrpCat X ⋙
         TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x) := by
     have hH_homology :
@@ -238,7 +238,7 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
           TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x) _
     exact (TopCat.Sheaf.forget AddCommGrpCat X ⋙
       TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x).preservesFiniteLimits_of_preservesHomology
-  letI : PreservesFiniteLimits
+  let : PreservesFiniteLimits
       (sheafModuleStalkFunctor O x ⋙
         forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
           AddCommGrpCat) := by
@@ -247,9 +247,9 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
         (TopCat.Sheaf.forget AddCommGrpCat X ⋙
           TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x))
     refine ⟨fun J _ _ => ?_⟩
-    letI : PreservesLimitsOfShape J (SheafOfModules.toSheaf O) := by
+    let : PreservesLimitsOfShape J (SheafOfModules.toSheaf O) := by
       exact PreservesFiniteLimits.preservesFiniteLimits J
-    letI : PreservesLimitsOfShape J
+    let : PreservesLimitsOfShape J
         (TopCat.Sheaf.forget AddCommGrpCat X ⋙
           TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x) := by
       exact PreservesFiniteLimits.preservesFiniteLimits J
@@ -264,7 +264,7 @@ theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
       (TopCat.Sheaf.forget AddCommGrpCat X ⋙
         TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x)
       hF hG
-  letI : PreservesLimit (parallelPair φ 0) (sheafModuleStalkFunctor O x) := by
+  let : PreservesLimit (parallelPair φ 0) (sheafModuleStalkFunctor O x) := by
     apply preservesLimit_of_reflects_of_preserves
       (sheafModuleStalkFunctor O x)
       (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
@@ -361,7 +361,7 @@ private lemma sheafModuleCokernel_stalk_hπ {X : TopCat.{v}} (O : RingSheaf.{v, 
             m.hom := by
       rw [he]
       dsimp [L]
-      simp only [Iso.symm_inv, Iso.trans_hom, Category.assoc]
+      simp only [Category.assoc]
     have hright := congrArg
       (SheafOfModules.forget O ⋙
         PresheafOfModules.restrictScalars (𝟙 O.obj)).map hproj
@@ -494,7 +494,7 @@ theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
         (cokernelIsCokernel φ.val))
   let stalk :=
     TopCat.Presheaf.stalkFunctor (X := X) (C := AddCommGrpCat) x
-  letI : stalk.PreservesZeroMorphisms := by
+  let : stalk.PreservesZeroMorphisms := by
     refine { map_zero := ?_ }
     intro A B
     ext z
@@ -524,7 +524,7 @@ theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     (PreservesCokernel.iso L φ.val ≪≫ m).symm
   let u := CategoryTheory.toSheafify (Opens.grothendieckTopology X)
     (sheafModuleCokernelPresheaf O φ).presheaf
-  letI : IsIso (stalk.map u) := by
+  let : IsIso (stalk.map u) := by
     exact TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
       (p₀ := x) (C := AddCommGrpCat)
         (𝓕 := (sheafModuleCokernelPresheaf O φ).presheaf)

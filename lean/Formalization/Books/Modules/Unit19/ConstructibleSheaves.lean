@@ -866,6 +866,79 @@ theorem lemma_surjection {X : TopCat.{u}} (B : Set (Opens X))
     rfl
 
 /-- Every sheaf is a filtered colimit of finite coequalizer presentations. -/
+/-
+Proof roadmap (the missing boundary is the finite-support/coequalizer construction).
+
+1. Apply `lemma_surjection B hB F`, writing its source as `F₀` and its
+   locally-surjective map as `q : F₀ ⟶ F`.  By
+   `sheaf_epi_iff_surjective` (Sheaves/Unit16/ExactnessAndPoints.lean), `q`
+   is epi.  After the focused import `Mathlib.CategoryTheory.Sites.RegularEpi`,
+   the regular-epi instance for type-valued sheaves makes it an
+   `EffectiveEpi`.  Form its kernel pair `K := pullback q q`; then
+   `isColimitCoforkOfEffectiveEpi q _ (pullbackIsPullback q q)` identifies
+   `F` as the coequalizer of `pullback.fst q q` and `pullback.snd q q`.
+   Apply `lemma_surjection B hB K` and compose the resulting epi `r : F₁ ⟶ K`
+   with these projections.  A small categorical helper is needed here:
+   precomposing both legs of a coequalizer by an epi is again a coequalizer
+   (prove the universal property by `cancel_epi r`).  This gives an arbitrary
+   presentation `F₁ ⇉ F₀ ⟶ F` by `openExtensionCoproduct`s.
+
+2. Add the local finite-subcoproduct API before this theorem.  For a finite
+   subset `A₀ : Finset I`, define the subcoproduct indexed by
+   `{a // a ∈ A₀}` and its canonical map to `openExtensionCoproduct I U S`.
+   Provide (a) an `openExtensionCoproductReindexIso` for an equivalence of
+   index types and (b) injectivity on sections of the maps for
+   `A₀ ⊆ A₁`.  The latter is what permits the finite-subcoproduct diagram to
+   use the following result after proving, by the coproduct universal
+   property, that this diagram has colimit the full coproduct:
+   `directedColimitSectionsMap_bijective_of_quasiCompact_of_injective`
+   (Sheaves/Unit29/Infrastructure.lean).  Instantiate that result at
+   universe `v := u`, at each `V b`, with quasi-compactness
+   `hB_quasiCompact (V b) (V_mem b)`.  Do not apply it to an arbitrary
+   filtered category: its interface specifically expects a directed
+   preorder with injective transitions.  Prove transition injectivity on
+   stalks using `sheaf_injective_iff_stalk_injective`,
+   `sheafColimitStalkIso`, and the evident inclusion of the corresponding
+   finite sigma types.
+
+3. Package the resulting factorization as a helper with the following
+   boundary: for a morphism between two arbitrary `openExtensionCoproduct`s
+   and `B₀ : Finset J`, there are `A₀ : Finset I` and a morphism between the
+   two finite subcoproducts whose composite with the target inclusion is the
+   restriction of the original morphism.  To prove it, use
+   `openSetSheafExtensionHomEquiv`
+   (Sheaves/Unit31/Infrastructure.lean) on every `b ∈ B₀`.  A leg is then a
+   finite family (indexed by the finite type `T b`) of sections over `V b`;
+   the bijectivity from step 2 descends every section, and directedness plus
+   finiteness of `B₀` and all `T b` supplies one common `A₀`.  Apply this
+   helper to both parallel arrows and enlarge the two supports by union.
+
+4. Define `FiniteSubpresentationIndex` to consist of finite supports
+   `A₀, B₀` together with factorizations of both arrows.  Order it by support
+   inclusion (factorizations are unique because the inclusions are
+   sectionwise injective).  The empty supports give an object and unions give
+   upper bounds, hence its thin category is filtered.  At an index take the
+   coequalizer of the two finite factorizations.  Reindex the two finite
+   support types with `Fintype.equivFin` followed by the appropriate
+   `Equiv.ulift` equivalence (so the index is `ULift.{u} (Fin n)` exactly as in
+   `FiniteOpenCoequalizerPresentation`) and use
+   `coequalizerIsCoequalizer` to fill `isColimit`; this proves
+   `stagesInPresentation` without changing the definition above.
+
+5. The final missing helper is the universal-property statement that the
+   cocone from these finite coequalizers to the arbitrary coequalizer `F` is
+   colimiting.  Construct a map out of `F` by first gluing the compatible
+   maps out of all finite target subcoproducts; every target generator occurs
+   at the stage `(A₀, ∅)`, and every source relation occurs after step 3 at a
+   stage containing its finite support.  Uniqueness reduces in the same way
+   to finite supports.  Assemble `FilteredFiniteOpenCoequalizerColimit` with
+   this index and diagram, cocone point `F`, this `IsColimit`, and
+   `targetIso := Iso.refl F`.
+
+Known dead end: `lemma_surjection` plus `sheaf_epi_iff_surjective` only gives
+the arbitrary kernel-pair coequalizer.  It cannot produce the required finite
+stages until the quasi-compact finite-support helper in steps 2--3 exists.
+-/
 theorem lemma_filtered_colimit_constructibles {X : TopCat.{u}}
     (B : Set (Opens X)) (hB : Opens.IsBasis B)
     (hB_quasiCompact : ∀ U : Opens X, U ∈ B → IsCompact (U : Set X))
@@ -875,6 +948,95 @@ theorem lemma_filtered_colimit_constructibles {X : TopCat.{u}}
 
 /-- A finite coequalizer presentation descends from a spectral space to a
 finite sober space, with finite-stalk sheaf pullback. -/
+/-
+Proof roadmap (the missing boundary is descent of a finite presentation, not
+the existence of the inverse-limit presentation).
+
+1. Choose `P : FiniteOpenCoequalizerPresentation (quasiCompactOpenBasis X) F`
+   from `hF`, and choose
+   `D : DirectedFiniteSoberPresentation (X : Type u)` using
+   `spectralSpace_iff_directed_inverse_limit_finite_sober`
+   (Topology/Unit23/SpectralSpaces.lean).  Install `D.preorder`, `D.directed`,
+   and `D.nonempty`.  Add the focused import
+   `Formalization.Books.Topology.Unit24.LimitsOfSpectralSpaces`.  For the
+   diagram `D.diagram : D.indexᵒᵖ ⥤ TopCat.{u}`, build
+   `IsSpectralDiagram D.diagram` using `spectralSpace_of_finite_sober` on
+   objects and `isSpectralMap_of_continuous_of_finite_sober` on transitions;
+   then `spectralSpace_of_inverseLimit_spectralDiagram` supplies spectral
+   projections.
+
+2. The limit in `D` is only homeomorphic to `X`.  Set
+   `e := TopCat.isoOfHomeo D.homeomorph` and first transport `P` to the literal
+   limit along `e.inv`.  This requires a local
+   `FiniteOpenCoequalizerPresentation.transportIso` helper.  Its open sets
+   are transported by the homeomorphism, its two coproduct objects use the
+   open-extension base-change iso from step 3, and its coequalizer proof is
+   transported by `IsColimit.ofIsoColimit`.  At the end the required map is
+   `f := e.hom ≫ limit.π D.diagram i`; its spectrality is
+   `(spectralSpace_of_inverseLimit_spectralDiagram _ _).2 i` composed with
+   `D.homeomorph.isProperMap.isSpectralMap` via `IsSpectralMap.comp`.
+
+3. Add the essential sheaf API which is currently absent:
+   `pullbackOpenExtensionCoproductIso`.  For `g : X' ⟶ X`, a finite family
+   `U : Fin n → Opens X`, and `S : Fin n → Type u`, it must identify
+   the pullback of
+   `openExtensionCoproduct (ULift.{u} (Fin n))
+     (fun a => U a.down) (fun a => S a.down)` with the analogous coproduct on
+   the inverse-image opens `(Opens.map g).obj (U a)`.  Build it from the
+   extension-by-empty
+   adjunction `openSetSheafExtensionHomEquiv`, the pullback composition iso
+   `pullbackSheafCompIso` (Sheaves/Unit21/ContinuousMaps.lean), and
+   preservation of the finite coproduct by the left adjoint `pullbackSheaf`.
+   No such base-change declaration is presently available.
+
+4. Descend the finitely many quasi-compact opens `P.U a` and `P.V b`.
+   Transport them to the literal limit and apply
+   `inverseLimit_quasiCompactOpen_descends`
+   (Topology/Unit24/LimitsOfSpectralSpaces.lean).  Use cofilteredness and the
+   finiteness of `Fin P.n` and `Fin P.m` to replace the individual stages by
+   one `i : D.indexᵒᵖ`; pull the descended opens to that common stage.  Record
+   equalities saying their inverse images under `limit.π D.diagram i` are
+   exactly the opens in the transported presentation.
+
+5. Descend the two arrows after the opens.  Introduce a reusable
+   `openExtensionCoproductHomEquiv`: by
+   `openSetSheafExtensionHomEquiv`, `constantTypeSheafIso`
+   (Sheaves/Unit31/Infrastructure.lean), and
+   `CategoryTheory.constantSheafΓAdj`
+   (Mathlib/CategoryTheory/Sites/GlobalSections.lean), a map out of the finite source
+   coproduct is equivalent to the family, for `b : Fin P.m`, of functions
+   `P.T b` into sections of the target coproduct over `P.V b`.  For the
+   target coproduct at stage `i`, use
+   `computePullbackToSpectralLimitSections`
+   (Sheaves/Unit29/Infrastructure.lean).  Its source is a filtered colimit
+   over refinements `j ⟶ i`; `Types.jointly_surjective` descends each section.
+   Finiteness of `Fin P.m` and of every `P.T b` gives one common refinement
+   for every section in both arrows.  Reassemble the descended functions
+   with `openExtensionCoproductHomEquiv.symm` to obtain `left_i` and
+   `right_i`.
+
+6. Let `G := coequalizer left_i right_i`.  Use
+   `coequalizerIsCoequalizer` for its presentation.  The iso in step 3,
+   preservation of this coequalizer by the left adjoint `pullbackSheaf`, and
+   `P.isColimit.coconePointUniqueUpToIso` identify the pullback of `G` with
+   the transported `F`; compose with the equivalence from step 2 to obtain
+   `Nonempty ((pullbackSheaf f).obj G ≅ F)`.
+
+7. Prove the stalks of `G` finite through one local helper:
+   `openExtensionCoproduct_finite_stalk` for a finite index and finite values.
+   Use `sheafColimitStalkIso` (Sheaves/Unit29/Infrastructure.lean),
+   `openSetSheafExtension_stalk_empty`/`_stalk_iso`
+   (Sheaves/Unit31/Infrastructure.lean), and `constantSheafStalkEquiv`
+   (Sheaves/Unit11/Stalks.lean).  The coequalizer projection to `G` is epi,
+   hence stalk-surjective by `sheaf_epi_iff_surjective` and
+   `sheaf_surjective_iff_stalk_surjective`; `Finite.of_surjective` then gives
+   `Finite (G.presheaf.stalk y)`.
+
+Known dead end: `computePullbackToSpectralLimitSections` descends individual
+sections on a literal inverse limit; it does not by itself descend a sheaf
+morphism, a finite coproduct, or data across `D.homeomorph`.  Steps 2--5 are
+therefore required before it can be used.
+-/
 theorem lemma_constructible_comes_from_finite {X : TopCat.{u}}
     [SpectralSpace (X : Type u)]
     (F : TopCat.Sheaf (Type u) X)
@@ -903,6 +1065,94 @@ noncomputable def constructibleClosedPushforwardProduct
 
 /-- A sheaf with a finite presentation embeds, up to isomorphism, into a
 finite product of constant pushforwards from constructible-closed subsets. -/
+/-
+Proof roadmap (the missing boundary is a mono/product decomposition and its
+closed-subspace base change).
+
+1. Apply `lemma_constructible_comes_from_finite F hF` and install the returned
+   `Finite Y`, `QuasiSober Y`, and `T0Space Y` instances.  Write the result as
+   `f : X ⟶ Y`, `hf : IsSpectralMap f`, a finite-stalk sheaf `G`, and
+   `eFG : (pullbackSheaf f).obj G ≅ F`.  Choose `Fintype Y := Fintype.ofFinite Y`,
+   put `n := Fintype.card Y`, and enumerate the points with
+   `(Fintype.equivFin Y).symm : Fin n → Y`.
+
+2. First prove a finite-space helper returning an actual mono.  For `y : Y`,
+   the component
+   `(stalkSkyscraperSheafAdjunction y).unit.app G` maps `G` to the
+   skyscraper sheaf with value `G.presheaf.stalk y`
+   (Mathlib/Topology/Sheaves/Skyscraper.lean).  Use these as the legs of a
+   cone and `limit.lift` to obtain
+   `G ⟶ limit (Discrete.functor fun y =>
+     skyscraperSheaf y (G.presheaf.stalk y))`.
+   Prove it mono with `sheaf_mono_iff_injective`
+   (Sheaves/Unit16/ExactnessAndPoints.lean): equality after every projection
+   says that two sections have equal germs at every point, and
+   `TopCat.Presheaf.section_ext` (Mathlib/Topology/Sheaves/Stalks.lean)
+   finishes.  Finiteness of each value is exactly the returned stalk
+   hypothesis.
+
+3. Add the absent comparison
+   `skyscraperSheafClosureIso`.  For a finite sober space and `y : Y`, it
+   must identify `skyscraperSheaf y A` with
+   `(pushforwardSheaf (closedInclusion (closure {y}))).obj
+     (constantSheaf (closedSubspace (closure {y})) A)`.
+   Prove it sectionwise: an open meets `closure {y}` iff it contains `y`, and
+   every locally constant map from the nonempty open subspace of the
+   irreducible space `closure {y}` is constant.  The existing
+   `constantSheaf_sections_equiv` (Sheaves/Unit07/Sheaves.lean) and the
+   concrete formula for `pushforwardSheaf` provide the two section types.
+   Assemble these component isos into a diagram iso and then a limit iso.
+   This comparison is not definitionally true and has no current project API.
+
+4. Keep the embedding as a categorical mono while pulling it back.  The
+   sheaf pullback preserves finite limits (the instance for
+   `Functor.sheafPullback` is in
+   Mathlib/CategoryTheory/Sites/Pullback.lean), so `Functor.map_mono` applies;
+   `preservesLimitIso` commutes it with the finite discrete product.  Do not
+   try to pull back `IsSubsheaf` directly: that predicate is represented by
+   an existential `Subfunctor` and currently has no pullback interface.
+
+5. Add the second absent comparison, a closed-embedding base-change iso.  For
+   `Z : Set Y` closed and `A : Type u`, its exact target is
+   `(pullbackSheaf f).obj
+       ((pushforwardSheaf (closedInclusion Z)).obj
+         (constantSheaf (closedSubspace Z) A)) ≅
+     (pushforwardSheaf (closedInclusion (f ⁻¹' Z))).obj
+       (constantSheaf (closedSubspace (f ⁻¹' Z)) A)`.
+   Construct it from the cartesian square of subtype inclusions, the
+   pullback/pushforward adjunction, and a new `pullbackConstantSheafIso`
+   (obtained from `constantTypeSheafIso` and preservation of coproducts and
+   the terminal sheaf by pullback); no Beck--Chevalley declaration for this
+   square exists in the imported API.
+   Apply it to `Z = closure {y}` and assemble the finite component isos to
+   identify the pulled-back product with
+   `constructibleClosedPushforwardProduct n
+     (fun i => f ⁻¹' closure {(Fintype.equivFin Y).symm i})
+     (fun i => G.presheaf.stalk ((Fintype.equivFin Y).symm i))`.
+
+6. For these `Z i`, prove `IsConstructibleClosed (Z i)`.  A subset of the
+   finite space `Y` is compact; hence `closure {y}` is constructible (apply
+   `IsCompact.isConstructible` to its open complement and take complements).
+   Convert this with
+   `isConstructible_isOpen_isClosed_constructibleTopology`, and pull the
+   closed set back along the constructible-topology continuity supplied by
+   `(isSpectralMap_iff_continuous_constructibleTopology hf.continuous).mp hf`
+   (Topology/Unit23/SpectralSpaces.lean).  Set `S i` to the corresponding
+   stalk; its `Finite` instance is the finite-stalk hypothesis on `G`.
+
+7. Finally add `isSubsheaf_of_mono`: for a sheaf morphism `k : H ⟶ K` with
+   `[Mono k]`, take the range of each component of `k.hom` as a `Subfunctor`
+   of `K.presheaf`; `presheaf_mono_iff_injective` makes the induced map from
+   `H.presheaf` an isomorphism onto that range.  Together with the two sheaf
+   conditions this yields `IsSubsheaf H.presheaf K.presheaf`.  Take
+   `H := (pullbackSheaf f).obj G`, use `eFG.symm : F ≅ H`, and apply this
+   bridge to the mono assembled in steps 2--5.
+
+Known dead ends: the skyscraper/closure comparison and closed-subspace base
+change are mathematical constructions, not simplification lemmas; and an
+`IsSubsheaf` witness cannot be transported by `Functor.map` without first
+replacing it by a mono as in step 4.
+-/
 theorem lemma_constructible_in_constant {X : TopCat.{u}}
     [SpectralSpace (X : Type u)]
     (F : TopCat.Sheaf (Type u) X)

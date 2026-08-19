@@ -740,7 +740,7 @@ theorem relativelyFinitelyPresented_localize
     {R A M : Type*} [CommRing R] [CommRing A]
     [AddCommGroup M] [Module A M] (f : R)
     (h : Localization.Away f →+* A)
-    (hh : RingHom.FiniteType h) (g : A)
+    (_hh : RingHom.FiniteType h) (g : A)
     (hM : RelativelyFinitelyPresented h M) :
     RelativelyFinitelyPresented
       (((algebraMap A (Localization.Away g)).comp h).comp
@@ -806,14 +806,14 @@ theorem relativelyFinitelyPresented_localize
     rw [hp, mul_assoc, ← mul_pow, hqinv', one_pow, mul_one]
     exact ha.symm
   let : Algebra (MvPolynomial (Fin n) Rf) N := pN.toAlgebra
-  letI hAL : Module A L := inferInstance
-  letI hPMod : Module (MvPolynomial (Fin n) Rf) M := Module.compHom M α.toRingHom
-  letI hPL : Module (MvPolynomial (Fin n) Rf) L := Module.compHom L α.toRingHom
-  letI hASmul : SMul A L := hAL.toSMul
-  letI hPSmul : SMul (MvPolynomial (Fin n) Rf) L := hPL.toSMul
-  letI hPAM : @IsScalarTower (MvPolynomial (Fin n) Rf) A M _ _ hPMod.toSMul :=
+  let hAL : Module A L := inferInstance
+  let hPMod : Module (MvPolynomial (Fin n) Rf) M := Module.compHom M α.toRingHom
+  let hPL : Module (MvPolynomial (Fin n) Rf) L := Module.compHom L α.toRingHom
+  let hASmul : SMul A L := hAL.toSMul
+  let hPSmul : SMul (MvPolynomial (Fin n) Rf) L := hPL.toSMul
+  let hPAM : @IsScalarTower (MvPolynomial (Fin n) Rf) A M _ _ hPMod.toSMul :=
     IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
-  letI hPAL : @IsScalarTower (MvPolynomial (Fin n) Rf) A L _ hAL.toSMul hPL.toSMul :=
+  let hPAL : @IsScalarTower (MvPolynomial (Fin n) Rf) A L _ hAL.toSMul hPL.toSMul :=
     IsScalarTower.of_algebraMap_smul (by
       intro x y
       change (algebraMap (MvPolynomial (Fin n) Rf) A x) • y =
@@ -822,15 +822,15 @@ theorem relativelyFinitelyPresented_localize
   let f0 : M →ₗ[A] L := LocalizedModule.mkLinearMap (.powers g) M
   let f1 : M →ₗ[MvPolynomial (Fin n) Rf] L :=
     f0.restrictScalars (MvPolynomial (Fin n) Rf)
-  letI hlocA : IsLocalizedModule (.powers (α g')) f0 := by
+  let hlocA : IsLocalizedModule (.powers (α g')) f0 := by
     simpa only [hg'] using
       (inferInstance : IsLocalizedModule (.powers g) f0)
-  letI : IsLocalizedModule (.powers g') f1 := by
+  let : IsLocalizedModule (.powers g') f1 := by
     simpa only [f1] using
       (@IsLocalizedModule.restrictScalars_powers
         (MvPolynomial (Fin n) Rf) _ M _ A _ _ _ _ L _ hPL hAL hPAM hPAL g' f0 hlocA)
-  letI : Module (Localization.Away g') L := Module.compHom L q
-  letI : IsScalarTower (MvPolynomial (Fin n) Rf) (Localization.Away g') L :=
+  let : Module (Localization.Away g') L := Module.compHom L q
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) (Localization.Away g') L :=
     IsScalarTower.of_algebraMap_smul (by
       intro x y
       have hcomp : q.comp (algebraMap (MvPolynomial (Fin n) Rf)

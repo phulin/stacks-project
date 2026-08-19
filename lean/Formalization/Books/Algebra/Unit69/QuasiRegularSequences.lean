@@ -448,10 +448,68 @@ noncomputable def quasiRegularCanonicalEquiv
       quasiRegularTarget R M (Ideal.ofList f) :=
   LinearEquiv.ofBijective (quasiRegularCanonicalMap R M f) hf
 
+private noncomputable def quasiRegularPermFinEquiv
+    {R : Type u} [CommRing R] {f g : List R} (hfg : f.Perm g) :
+    Fin f.length ≃ Fin g.length :=
+  Equiv.ofBijective hfg.idxBij ⟨hfg.idxBij_injective, hfg.idxBij_surjective⟩
+
+private theorem quasiRegularMonomialCoefficient_perm
+    {R : Type u} [CommRing R] {f g : List R} (hfg : f.Perm g)
+    (d : Fin f.length →₀ ℕ) :
+    quasiRegularMonomialCoefficient g
+        (d.mapDomain (quasiRegularPermFinEquiv hfg)) =
+      quasiRegularMonomialCoefficient f d := by
+  classical
+  rw [quasiRegularMonomialCoefficient, quasiRegularMonomialCoefficient,
+    Finsupp.prod_mapDomain_index_inj (quasiRegularPermFinEquiv hfg).injective]
+  apply Finsupp.prod_congr
+  intro i hi
+  have hget := hfg.getElem_idxBij_eq_getElem i
+  simpa only [quasiRegularPermFinEquiv, Equiv.ofBijective_apply,
+    Fin.getElem_fin] using congrArg (fun z => z ^ d i) hget
+
 theorem isMQuasiRegular_iff_of_perm
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     {f g : List R} (hfg : f.Perm g) :
     IsMQuasiRegular R M f ↔ IsMQuasiRegular R M g := by
+  classical
+  have hI : Ideal.ofList f = Ideal.ofList g := by
+    apply le_antisymm
+    · apply Ideal.span_le.mpr
+      intro r hr
+      exact Ideal.subset_span (hfg.mem_iff.mp hr)
+    · apply Ideal.span_le.mpr
+      intro r hr
+      exact Ideal.subset_span (hfg.mem_iff.mpr hr)
+  rw [hI]
+  have hdegree (d : Fin f.length →₀ ℕ) :
+      quasiRegularDegree (d.mapDomain (quasiRegularPermFinEquiv hfg)) =
+        quasiRegularDegree d := by
+    simp [quasiRegularDegree,
+      Finsupp.sum_mapDomain_index_inj (quasiRegularPermFinEquiv hfg).injective]
+  have hraw (d : Fin f.length →₀ ℕ) (m : M) :
+      quasiRegularMonomialMapQuotient R M g
+          (d.mapDomain (quasiRegularPermFinEquiv hfg)) (Submodule.Quotient.mk m) =
+        quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m) := by
+    simp [quasiRegularMonomialMapQuotient, quotientSemilinearMapToLinear,
+      quasiRegularMonomialMapRaw, hdegree,
+      quasiRegularMonomialCoefficient_perm hfg d]
+  have hpoly (m : M ⧸ (Ideal.ofList g • (⊤ : Submodule R M)))
+      (p : MvPolynomial (Fin f.length) (R ⧸ Ideal.ofList g)) :
+      quasiRegularPolynomialMap R M g m
+          ((MvPolynomial.renameEquiv (R ⧸ Ideal.ofList g)
+            (quasiRegularPermFinEquiv hfg)) p) =
+        quasiRegularPolynomialMap R M f m p := by
+    apply (MvPolynomial.basisMonomials (Fin f.length) (R ⧸ Ideal.ofList g)).ext
+    intro d
+    change quasiRegularPolynomialMap R M g m
+          ((MvPolynomial.renameEquiv (R ⧸ Ideal.ofList g)
+            (quasiRegularPermFinEquiv hfg)) (MvPolynomial.monomial d 1)) =
+        quasiRegularPolynomialMap R M f m (MvPolynomial.monomial d 1)
+    rw [MvPolynomial.renameEquiv_apply, MvPolynomial.rename_monomial]
+    refine Submodule.Quotient.induction_on m ?_
+    intro m
+    simp [quasiRegularPolynomialMap, hdegree, hraw]
   sorry
 
 theorem isMQuasiRegular_of_isRegular
@@ -686,7 +744,13 @@ theorem quasiRegularSeparatedModule_is_torsion
     (I : Ideal R) :
     Module.IsTorsionBySet R (quasiRegularSeparatedModule (M := M) I)
       (Formalization.Books.Algebra.Unit51.powersIntersectionIdeal I) := by
-  sorry
+  rw [Module.isTorsionBySet_quotient_iff]
+  intro x r hr
+  change r • x ∈ Formalization.Books.Algebra.Unit51.powersIntersectionSubmodule
+    (M := M) I
+  rw [Submodule.mem_iInf]
+  intro n
+  exact Submodule.smul_mem_smul (Ideal.mem_iInf.mp hr n) Submodule.mem_top
 
 @[instance_reducible]
 noncomputable def quasiRegularSeparatedModuleModule

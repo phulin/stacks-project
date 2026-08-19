@@ -404,8 +404,7 @@ structure TermwiseSplitConnectingMap
 
 theorem termwiseSplitConnectingMap_exists
     {S : ShortComplex (ChainComplex C ℤ)} (s : TermwiseSplitting S) :
-    Nonempty (TermwiseSplitConnectingMap s) := by sorry
-/- prior attempt:
+    Nonempty (TermwiseSplitConnectingMap s) := by
   refine ⟨{ hom := { f := fun n => termwiseSplitConnectingFamily s n, comm' := ?_ }, hom_f := ?_ }⟩
   · intro n m hnm
     change m + 1 = n at hnm
@@ -785,7 +784,6 @@ theorem termwiseSplitConnectingMap_exists
     rfl
 
 /-- The unique degreewise difference between two choices of section. -/
- -/
 def termwiseSplittingDifference
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S) (n : ℤ) :
@@ -862,8 +860,7 @@ theorem termwiseSplitConnectingMap_induces_connecting
     ∃ e : ((shiftFunctor C (-1 : ℤ)).obj S.X₁).homology i ≅
         S.X₁.homology (i - 1),
       HomologicalComplex.homologyMap δ.hom i ≫ e.hom =
-      Formalization.Books.Homology.Unit13.chainConnectingMap hS i := by sorry
-/- prior attempt:
+      Formalization.Books.Homology.Unit13.chainConnectingMap hS i := by
   let T := chainShiftShortComplexFunctorIso (C := C) (-1 : ℤ) i
   set_option backward.defeqAttrib.useBackward true in
   set_option backward.isDefEq.respectTransparency false in
@@ -1136,7 +1133,106 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
             (fun z : S.X₃.X i ⟶ S.X₁.X (i + (-1 : ℤ)) => -z) ha
         set_option backward.isDefEq.respectTransparency false in
           conv_rhs => rw [hterm]
-        exact by sorry }
+        exact by
+          simp
+          erw [Category.comp_id]
+          erw [Preadditive.comp_add]
+          erw [Preadditive.comp_neg]
+          erw [Preadditive.comp_add]
+          erw [Preadditive.comp_neg]
+          have hAD :
+              ((s' i).s - (s i).s) ≫ S.X₂.d i (i + (-1 : ℤ)) ≫
+                  (s (i + (-1 : ℤ))).r =
+              ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ)) := by
+            rw [← hq i]
+            dsimp [termwiseSplittingDifference]
+            change (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                S.X₂.d i (i + (-1 : ℤ)) ≫ (s (i + (-1 : ℤ))).r =
+              ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))
+            have hfr : S.f.f (i + (-1 : ℤ)) ≫ (s (i + (-1 : ℤ))).r =
+                𝟙 (S.X₁.X (i + (-1 : ℤ))) := by
+              convert (s (i + (-1 : ℤ))).f_r using 1 <;> rfl
+            have hcomm_fd :
+                (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ)) =
+                  (((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))) ≫
+                    S.f.f (i + (-1 : ℤ)) := by
+              calc
+                (((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ)) =
+                  ((s' i).s ≫ (s i).r) ≫
+                    (S.f.f i ≫ S.X₂.d i (i + (-1 : ℤ))) :=
+                    Category.assoc _ _ _
+                _ = ((s' i).s ≫ (s i).r) ≫
+                    (S.X₁.d i (i + (-1 : ℤ)) ≫ S.f.f (i + (-1 : ℤ))) :=
+                  congrArg (fun z => ((s' i).s ≫ (s i).r) ≫ z)
+                    (S.f.comm i (i + (-1 : ℤ)))
+                _ = (((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ))) ≫
+                    S.f.f (i + (-1 : ℤ)) := (Category.assoc _ _ _).symm
+            have hAD' :
+                ((((s' i).s ≫ (s i).r) ≫ S.f.f i) ≫
+                    S.X₂.d i (i + (-1 : ℤ))) ≫ (s (i + (-1 : ℤ))).r =
+                  ((s' i).s ≫ (s i).r) ≫ S.X₁.d i (i + (-1 : ℤ)) := by
+              set_option backward.isDefEq.respectTransparency false in
+                erw [congrArg (fun z => z ≫ (s (i + (-1 : ℤ))).r) hcomm_fd]
+              erw [Category.assoc, hfr, Category.comp_id]
+            exact
+              (Category.assoc (((s' i).s ≫ (s i).r) ≫ S.f.f i)
+                (S.X₂.d i (i + (-1 : ℤ))) (s (i + (-1 : ℤ))).r).symm.trans hAD'
+          have hB :
+              (s' i).s ≫ S.X₂.d i (i + (-1 : ℤ)) ≫ S.g.f (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) =
+                S.X₃.d i (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+            have hsg : (s' i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+              convert (s' i).s_g using 1 <;> rfl
+            have hcomm_dg :
+                ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ)) =
+                  ((s' i).s ≫ S.g.f i) ≫ S.X₃.d i (i + (-1 : ℤ)) := by
+              calc
+                ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ)) =
+                  (s' i).s ≫
+                    (S.X₂.d i (i + (-1 : ℤ)) ≫ S.g.f (i + (-1 : ℤ))) :=
+                    Category.assoc _ _ _
+                _ = (s' i).s ≫
+                    (S.g.f i ≫ S.X₃.d i (i + (-1 : ℤ))) :=
+                  congrArg (fun z => (s' i).s ≫ z)
+                    (S.g.comm i (i + (-1 : ℤ))).symm
+                _ = ((s' i).s ≫ S.g.f i) ≫ S.X₃.d i (i + (-1 : ℤ)) :=
+                  (Category.assoc _ _ _).symm
+            have hB' :
+                (((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ))) ≫ S.g.f (i + (-1 : ℤ))) ≫
+                    termwiseSplittingDifference s s' (i + (-1 : ℤ)) =
+                  S.X₃.d i (i + (-1 : ℤ)) ≫
+                    termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+              set_option backward.isDefEq.respectTransparency false in
+                erw [congrArg
+                  (fun z => z ≫ termwiseSplittingDifference s s' (i + (-1 : ℤ)))
+                  hcomm_dg]
+              set_option backward.isDefEq.respectTransparency false in
+                erw [hsg, Category.id_comp]
+            exact
+              (Category.assoc ((s' i).s)
+                (S.X₂.d i (i + (-1 : ℤ)))
+                (S.g.f (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)))).symm.trans
+                ((Category.assoc ((s' i).s ≫ S.X₂.d i (i + (-1 : ℤ)))
+                  (S.g.f (i + (-1 : ℤ)))
+                  (termwiseSplittingDifference s s' (i + (-1 : ℤ)))).symm.trans hB')
+          erw [← hAD, hB]
+          have hcancel :
+              S.X₃.d i (i - 1) ≫ (s' (i - 1)).s ≫ (s (i - 1)).r =
+                  S.X₃.d i (i + (-1 : ℤ)) ≫
+                  termwiseSplittingDifference s s' (i + (-1 : ℤ)) := by
+            dsimp [termwiseSplittingDifference]
+            rfl
+          set_option backward.isDefEq.respectTransparency false in
+            rw [hcancel]
+          erw [Preadditive.sub_comp]
+          erw [neg_sub]
+          abel
+          set_option backward.isDefEq.respectTransparency false in
+            simp [Mathlib.Tactic.Abel.termg] }
   refine ⟨H, ?_⟩
   intro n
   dsimp [H, hhom, termwiseSplittingDifferenceShift, termwiseSplittingDifference]
@@ -1146,7 +1242,6 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
 homotopy. -/
- -/
 theorem termwiseSplitConnectingMap_homotopic
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S)
@@ -1156,8 +1251,7 @@ theorem termwiseSplitConnectingMap_homotopic
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₃ ⟶
           (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₁,
       (∀ n, h n = termwiseSplittingDifference s s' n) ∧
-        Nonempty (Homotopy δ.hom δ'.hom) := by sorry
-/-
+        Nonempty (Homotopy δ.hom δ'.hom) := by
   let h : ∀ n : ℤ,
       (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₃ ⟶
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₁ :=
@@ -1165,7 +1259,6 @@ theorem termwiseSplitConnectingMap_homotopic
   obtain ⟨H, _⟩ := termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
   exact ⟨h, (fun n => rfl), ⟨H⟩⟩
 
- -/
 theorem termwiseSplitConnectingMap_homotopy_components
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S)

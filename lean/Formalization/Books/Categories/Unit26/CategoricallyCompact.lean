@@ -1,6 +1,9 @@
 import Mathlib.CategoryTheory.Limits.Filtered
 import Mathlib.CategoryTheory.ObjectProperty.Ind
 import Mathlib.CategoryTheory.Presentable.Finite
+import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
+import Mathlib.Algebra.Module.FinitePresentation
 
 /-!
 # Categories, Chapter 26: Categorically compact objects
@@ -27,6 +30,254 @@ noncomputable section
 abbrev IsCategoricallyCompact {C : Type u} [Category.{v} C] (X : C) : Prop :=
   IsFinitelyPresentable.{v} X
 
+/-! ## Finitely presented modules -/
+
+/-- Finitely presented modules form an essentially small object property. -/
+theorem module_finitePresentation_essentiallySmall
+    (R : Type u) [Ring R] :
+    ObjectProperty.EssentiallySmall.{u}
+      (fun M : ModuleCat.{u} R => Module.FinitePresentation R (M : Type u)) := by
+  let X : (Σ n : ℕ, Submodule R (Fin n → R)) → ModuleCat.{u} R :=
+    fun i => ModuleCat.of R ((Fin i.1 → R) ⧸ i.2)
+  let Q : ObjectProperty (ModuleCat.{u} R) := ObjectProperty.ofObj X
+  have hQ : ObjectProperty.Small.{u} Q := by
+    dsimp [Q]
+    infer_instance
+  refine ⟨Q, hQ, ?_⟩
+  intro M hM
+  obtain ⟨n, K, e, hK⟩ := Module.FinitePresentation.exists_fin R (M : Type u)
+  refine ⟨X ⟨n, K⟩, ?_, ?_⟩
+  · exact ObjectProperty.ofObj_apply X ⟨n, K⟩
+  · exact ⟨e.toModuleIso⟩
+
+/-- Every module is an `ObjectProperty.ind` filtered colimit of finitely presented modules. -/
+theorem module_finitePresentation_ind
+    {R : Type u} [Ring R] (N : ModuleCat.{u} R) :
+    ObjectProperty.ind.{u}
+      (fun M : ModuleCat.{u} R => Module.FinitePresentation R (M : Type u)) N := by
+  classical
+  let M := (N : Type u)
+  let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
+    { toFun := fun s => ⟨s.1, hST s.2⟩
+      inj' := by
+        intro s t h
+        apply Subtype.ext
+        exact congrArg (fun z : T => (z : M)) h }
+  let extend (S T : Finset M) (hST : S ≤ T) :
+      (S →₀ R) →ₗ[R] (T →₀ R) :=
+    Finsupp.lmapDomain R R (embedding S T hST)
+  have extend_id (S : Finset M) (x : S →₀ R) :
+      extend S S le_rfl x = x := by
+    change Finsupp.mapDomain (embedding S S le_rfl) x = x
+    have he : (embedding S S le_rfl : S → S) = id := by
+      funext s
+      exact Subtype.ext rfl
+    rw [he, Finsupp.mapDomain_id]
+  have extend_comp (S T U : Finset M) (hST : S ≤ T) (hTU : T ≤ U)
+      (x : S →₀ R) :
+      extend T U hTU (extend S T hST x) = extend S U (hST.trans hTU) x := by
+    change Finsupp.mapDomain (embedding T U hTU)
+        (Finsupp.mapDomain (embedding S T hST) x) =
+      Finsupp.mapDomain (embedding S U (hST.trans hTU)) x
+    rw [← Finsupp.mapDomain_comp]
+    congr 1
+  let Index : Type u :=
+    Σ S : Finset M, {E : Finset (S →₀ R) //
+      ∀ e ∈ E, Finsupp.linearCombination R (fun s : S => (s : M)) e = 0}
+  let indexLE : Index → Index → Prop := fun a b =>
+    ∃ hST : a.1 ≤ b.1, ∀ e ∈ a.2.1,
+      extend a.1 b.1 hST e ∈ b.2.1
+  let : LE Index := ⟨indexLE⟩
+  let : Preorder Index := {
+    le_refl := by
+      intro a
+      refine ⟨le_rfl, ?_⟩
+      intro e he
+      simpa [extend_id] using he
+    le_trans := by
+      intro a b c hab hbc
+      rcases hab with ⟨habS, habE⟩
+      rcases hbc with ⟨hbcS, hbcE⟩
+      refine ⟨habS.trans hbcS, ?_⟩
+      intro e he
+      have he' := hbcE (extend a.1 b.1 habS e) (habE e he)
+      rw [extend_comp] at he'
+      exact he' }
+  have index_filtered : IsFiltered Index := by
+    let emptyIndex : Index := ⟨∅, ⟨∅, by simp⟩⟩
+    refine
+      { cocone_objs := ?_
+        cocone_maps := ?_
+        nonempty := ⟨emptyIndex⟩ }
+    · intro a b
+      let S : Finset M := a.1 ∪ b.1
+      have haS : a.1 ≤ S := by simp [S]
+      have hbS : b.1 ≤ S := by simp [S]
+      let Ea : Finset (S →₀ R) := a.2.1.image (extend a.1 S haS)
+      let Eb : Finset (S →₀ R) := b.2.1.image (extend b.1 S hbS)
+      let E : Finset (S →₀ R) := Ea ∪ Eb
+      have hrel : ∀ e ∈ E,
+          Finsupp.linearCombination R (fun s : S => (s : M)) e = 0 := by
+        intro e he
+        rcases Finset.mem_union.mp he with he | he
+        · rcases Finset.mem_image.mp he with ⟨e', he', rfl⟩
+          change Finsupp.linearCombination R (fun s : S => (s : M))
+              (Finsupp.mapDomain (embedding a.1 S haS) e') = 0
+          rw [Finsupp.linearCombination_mapDomain]
+          change Finsupp.linearCombination R (fun s : a.1 => (s : M)) e' = 0
+          exact a.2.2 e' he'
+        · rcases Finset.mem_image.mp he with ⟨e', he', rfl⟩
+          change Finsupp.linearCombination R (fun s : S => (s : M))
+              (Finsupp.mapDomain (embedding b.1 S hbS) e') = 0
+          rw [Finsupp.linearCombination_mapDomain]
+          change Finsupp.linearCombination R (fun s : b.1 => (s : M)) e' = 0
+          exact b.2.2 e' he'
+      let c : Index := ⟨S, ⟨E, hrel⟩⟩
+      have hac : a ≤ c := by
+        refine ⟨haS, ?_⟩
+        intro e he
+        exact Finset.mem_union_left _ (Finset.mem_image.mpr ⟨e, he, rfl⟩)
+      have hbc : b ≤ c := by
+        refine ⟨hbS, ?_⟩
+        intro e he
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨e, he, rfl⟩)
+      exact ⟨c, homOfLE hac, homOfLE hbc, trivial⟩
+    · intro X Y f g
+      exact ⟨Y, 𝟙 _, by subsingleton⟩
+  let stage (a : Index) : ModuleCat R :=
+    ModuleCat.of R ((a.1 →₀ R) ⧸ Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+  have span_extend {a b : Index} (h : a ≤ b) :
+      Submodule.span R (a.2.1 : Set (a.1 →₀ R)) ≤
+        Submodule.comap (extend a.1 b.1 h.choose)
+          (Submodule.span R (b.2.1 : Set (b.1 →₀ R))) := by
+    rcases h with ⟨hST, hE⟩
+    rw [Submodule.span_le]
+    intro e he
+    change extend a.1 b.1 hST e ∈
+      Submodule.span R (b.2.1 : Set (b.1 →₀ R))
+    exact Submodule.subset_span (hE e he)
+  let stageMap {a b : Index} (h : a ≤ b) : stage a ⟶ stage b :=
+    ModuleCat.ofHom <|
+      Submodule.mapQ (Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+        (Submodule.span R (b.2.1 : Set (b.1 →₀ R)))
+        (extend a.1 b.1 h.choose) (span_extend h)
+  let D : Index ⥤ ModuleCat R := {
+    obj := stage
+    map := fun {a b} f => stageMap (leOfHom f)
+    map_id := by
+      intro a
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+      let hS : a.1 ≤ a.1 := le_rfl
+      change Submodule.Quotient.mk (extend a.1 a.1 hS x) =
+        Submodule.Quotient.mk x
+      rw [extend_id]
+    map_comp := by
+      intro a b c f g
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+      let hf : a ≤ b := leOfHom f
+      let hg : b ≤ c := leOfHom g
+      let hfg : a ≤ c := leOfHom (f ≫ g)
+      change Submodule.Quotient.mk
+          (extend a.1 c.1 hfg.choose x) =
+        Submodule.Quotient.mk
+          (extend b.1 c.1 hg.choose
+            (extend a.1 b.1 hf.choose x))
+      rw [extend_comp] }
+  let stageToN (a : Index) : stage a ⟶ N :=
+    ModuleCat.ofHom <|
+      Submodule.liftQ _
+        (Finsupp.linearCombination R (fun s : a.1 => (s : M)))
+        (by
+          rw [Submodule.span_le]
+          intro e he
+          exact a.2.2 e he)
+  let c : Cocone D := {
+    pt := N
+    ι :=
+      { app := stageToN
+        naturality := by
+          intro a b f
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro x
+          obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+          let hf : a ≤ b := leOfHom f
+          change Finsupp.linearCombination R (fun s : b.1 => (s : M))
+              (Finsupp.mapDomain (embedding a.1 b.1 hf.choose) x) =
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) x
+          rw [Finsupp.linearCombination_mapDomain]
+          rfl } }
+  have hc : IsColimit ((forget (ModuleCat R)).mapCocone c) := by
+    apply Types.FilteredColimit.isColimitOf'
+    · intro x
+      let S : Finset M := {x}
+      let a : Index := ⟨S, ⟨∅, by simp⟩⟩
+      let q : S →₀ R := Finsupp.single ⟨x, by simp [S]⟩ 1
+      refine ⟨a, Submodule.Quotient.mk q, ?_⟩
+      change x = Finsupp.linearCombination R (fun s : S => (s : M)) q
+      simp [q, S]
+    · intro a x y hxy
+      obtain ⟨x', hx'⟩ := Submodule.mkQ_surjective
+        (Submodule.span R (a.2.1 : Set (a.1 →₀ R))) x
+      obtain ⟨y', hy'⟩ := Submodule.mkQ_surjective
+        (Submodule.span R (a.2.1 : Set (a.1 →₀ R))) y
+      have hxy' :
+          stageToN a (Submodule.Quotient.mk x') =
+            stageToN a (Submodule.Quotient.mk y') := by
+        rw [← hx', ← hy'] at hxy
+        simpa [c] using hxy
+      have hrel :
+          Finsupp.linearCombination R (fun s : a.1 => (s : M)) (x' - y') = 0 := by
+        have hxy'' :
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) x' =
+              Finsupp.linearCombination R (fun s : a.1 => (s : M)) y' := by
+          change Finsupp.linearCombination R (fun s : a.1 => (s : M)) x' =
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) y' at hxy'
+          exact hxy'
+        rw [map_sub]
+        exact sub_eq_zero.mpr hxy''
+      let E : Finset (a.1 →₀ R) := insert (x' - y') a.2.1
+      have hE : ∀ e ∈ E,
+          Finsupp.linearCombination R (fun s : a.1 => (s : M)) e = 0 := by
+        intro e he
+        rcases Finset.mem_insert.mp he with rfl | he
+        · exact hrel
+        · exact a.2.2 e he
+      let b : Index := ⟨a.1, ⟨E, hE⟩⟩
+      have hab : a ≤ b := by
+        refine ⟨le_rfl, ?_⟩
+        intro e he
+        rw [extend_id]
+        exact Finset.mem_insert_of_mem he
+      refine ⟨b, homOfLE hab, ?_⟩
+      rw [← hx', ← hy']
+      change Submodule.Quotient.mk (extend a.1 b.1 hab.choose x') =
+        Submodule.Quotient.mk (extend a.1 b.1 hab.choose y')
+      rw [extend_id]
+      rw [extend_id]
+      rw [← sub_eq_zero]
+      change (Submodule.mkQ _ x') - (Submodule.mkQ _ y') = 0
+      rw [← map_sub]
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      exact Submodule.subset_span (Finset.mem_insert_self _ _)
+  refine ⟨Index, inferInstance, index_filtered,
+    { diag := D
+      ι := c.ι
+      isColimit := isColimitOfReflects (forget (ModuleCat R)) hc }, ?_⟩
+  intro a
+  change Module.FinitePresentation R
+    ((a.1 →₀ R) ⧸ Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+  apply Module.finitePresentation_of_surjective (Submodule.mkQ _)
+  · exact Submodule.mkQ_surjective _
+  · rw [Submodule.ker_mkQ]
+    exact Submodule.fg_span a.2.1.finite_toSet
+
 /--
 An extension of a functor on a small full subcategory which commutes with
 filtered colimits.  The restriction is recorded up to natural isomorphism,
@@ -44,7 +295,7 @@ structure FilteredColimitExtension
   restrictionIso : P.ι ⋙ functor ≅ F'
 
 /--
-Every functor from a small full subcategory of categorically compact objects
+Every functor from an essentially small full subcategory of categorically compact objects
 which generates `C` under filtered colimits extends to a functor on `C` that
 commutes with filtered colimits of the source size.  Such an extension is unique up to the
 unique natural isomorphism compatible with the chosen restriction isomorphisms.
@@ -56,7 +307,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
     {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D]
     [HasFilteredColimits C] [HasFilteredColimitsOfSize.{v, v} D]
-    (P : ObjectProperty C) [ObjectProperty.Small.{v} P]
+    (P : ObjectProperty C) [ObjectProperty.EssentiallySmall.{v} P]
     (hcompact : ∀ X : C, P X → IsCategoricallyCompact X)
     (hgenerated : ∀ X : C, ObjectProperty.ind.{v} P X)
     (F' : P.FullSubcategory ⥤ D) :

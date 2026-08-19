@@ -39,8 +39,8 @@ theorem tensorProductScalar_smulCommClass
       Formalization.Books.Algebra.Unit12.tensorProductBModule
         R A N A
     SMulCommClass S A (N ⊗[R] A) := by
-  letI : Module S (N ⊗[R] A) := TensorProduct.leftModule
-  letI : Module A (N ⊗[R] A) :=
+  let : Module S (N ⊗[R] A) := TensorProduct.leftModule
+  let : Module A (N ⊗[R] A) :=
     Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
   refine ⟨?_⟩
   intro s a z
@@ -63,7 +63,7 @@ theorem inducedModule_isScalarTower
     [AddCommGroup N] [Module S N] :
     letI : Module R N := Module.compHom N (algebraMap R S)
     IsScalarTower R S N := by
-  letI : Module R N := Module.compHom N (algebraMap R S)
+  let : Module R N := Module.compHom N (algebraMap R S)
   exact ⟨fun r s n => by
     rw [Algebra.smul_def, mul_smul]
     rfl⟩
@@ -79,8 +79,8 @@ theorem tensorProductScalar_isScalarTower_right
       Formalization.Books.Algebra.Unit12.tensorProductBModule
         R A N A
     IsScalarTower R A (N ⊗[R] A) := by
-  letI : Module S (N ⊗[R] A) := TensorProduct.leftModule
-  letI : Module A (N ⊗[R] A) :=
+  let : Module S (N ⊗[R] A) := TensorProduct.leftModule
+  let : Module A (N ⊗[R] A) :=
     Formalization.Books.Algebra.Unit12.tensorProductBModule R A N A
   refine ⟨?_⟩
   intro r a z
@@ -125,10 +125,10 @@ theorem relativeFiber_isTorsionBySet
       TensorProduct.leftModule
     Module.IsTorsionBySet S (N ⊗[R] p.asIdeal.ResidueField)
       (p.asIdeal.map (algebraMap R S)) := by
-  letI : Module R N := Module.compHom N (algebraMap R S)
-  letI : IsScalarTower R S N :=
+  let : Module R N := Module.compHom N (algebraMap R S)
+  let : IsScalarTower R S N :=
     inducedModule_isScalarTower (R := R) (S := S) (N := N)
-  letI : Module S (N ⊗[R] p.asIdeal.ResidueField) :=
+  let : Module S (N ⊗[R] p.asIdeal.ResidueField) :=
     TensorProduct.leftModule
   rw [Module.isTorsionBySet_iff_subseteq_ker_lsmul]
   refine (Ideal.map_le_iff_le_comap).2 ?_

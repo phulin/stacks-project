@@ -1685,21 +1685,240 @@ theorem localization_m_embeds_in_powerSeries (d : PowerSeriesData k) :
       Function.Injective f ∧
         f.comp (algebraMap (R d) (Localization.AtPrime (mIdeal d))) =
           generatedRingInclusion d := by
-  sorry
+  have hunit : ∀ y : (mIdeal d).primeCompl,
+      IsUnit (generatedRingInclusion d y) := by
+    intro y
+    exact non_m_maps_to_powerSeries_unit d y.1 (show y.1 ∉ mIdeal d from y.2)
+  let f : Localization.AtPrime (mIdeal d) →+* PowerSeries k :=
+    IsLocalization.lift (M := (mIdeal d).primeCompl)
+      (g := generatedRingInclusion d) hunit
+  refine ⟨f, ?_, ?_⟩
+  · rw [IsLocalization.lift_injective_iff]
+    intro x y
+    constructor
+    · intro h
+      exact IsLocalization.eq_of_eq hunit h
+    · intro h
+      have hxy : x = y := by
+        apply Subtype.ext
+        exact h
+      exact congrArg (algebraMap (R d) (Localization.AtPrime (mIdeal d))) hxy
+  · exact IsLocalization.lift_comp hunit
 
 /-- `R_𝔪` is a discrete valuation ring with residue field `k`. -/
 theorem localization_m_is_dvr (d : PowerSeriesData k) :
     IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) := by
-  sorry
+  have hfactor : ∀ (n : ℕ) (r : R d),
+      generatedRingInclusion d r ≠ 0 →
+        PowerSeries.order (generatedRingInclusion d r) = n →
+          ∃ u : R d, r = xInGeneratedRing d ^ n * u ∧
+            PowerSeries.constantCoeff (generatedRingInclusion d u) ≠ 0 := by
+    intro n
+    induction n with
+    | zero =>
+        intro r hr horder
+        have hconst : PowerSeries.constantCoeff (generatedRingInclusion d r) ≠ 0 := by
+          intro hzero
+          have horder' := (PowerSeries.order_ne_zero_iff_constCoeff_eq_zero).2 hzero
+          rw [horder] at horder'
+          simp at horder'
+        exact ⟨r, by simp, hconst⟩
+    | succ n ih =>
+        intro r hr horder
+        have hconst : PowerSeries.constantCoeff (generatedRingInclusion d r) = 0 := by
+          apply (PowerSeries.order_ne_zero_iff_constCoeff_eq_zero).1
+          rw [horder]
+          simp
+        have hrmem : r ∈ mIdeal d := by
+          have h := generatedRing_sub_constantCoeff_mem_mIdeal d r.1 r.2
+          have hconst' : PowerSeries.constantCoeff (r : PowerSeries k) = 0 := hconst
+          rw [hconst', map_zero, sub_zero] at h
+          exact h
+        obtain ⟨u, hu⟩ := Ideal.mem_span_singleton'.mp
+          (show r ∈ Ideal.span {xInGeneratedRing d} from by
+            simpa [mIdeal] using hrmem)
+        have hru : r = xInGeneratedRing d * u := by
+          simpa [mul_comm] using hu.symm
+        have hu0 : generatedRingInclusion d u ≠ 0 := by
+          intro hzero
+          apply hr
+          simp [hru, hzero]
+        have horderu : PowerSeries.order (generatedRingInclusion d u) = n := by
+          have hmul := congrArg PowerSeries.order
+            (congrArg (fun z : R d => generatedRingInclusion d z) hru)
+          rw [map_mul, PowerSeries.order_mul] at hmul
+          have hxmap : generatedRingInclusion d (xInGeneratedRing d) =
+              PowerSeries.X := rfl
+          rw [hxmap, PowerSeries.order_X, horder] at hmul
+          rw [← PowerSeries.coe_toNat_order hu0] at hmul
+          have hmulNat : n + 1 =
+              1 + (generatedRingInclusion d u).order.toNat := by
+            exact_mod_cast hmul
+          have horderNat : (generatedRingInclusion d u).order.toNat = n := by
+            omega
+          rw [← horderNat]
+          exact (PowerSeries.coe_toNat_order hu0).symm
+        obtain ⟨v, hv, hvc⟩ := ih u hu0 horderu
+        refine ⟨v, ?_, hvc⟩
+        rw [hru, hv]
+        calc
+          xInGeneratedRing d * (xInGeneratedRing d ^ n * v) =
+              (xInGeneratedRing d ^ n * xInGeneratedRing d) * v := by ring
+          _ = xInGeneratedRing d ^ (n + 1) * v := by rw [pow_succ]
+  have hmapinj : Function.Injective
+      (algebraMap (R d) (Localization.AtPrime (mIdeal d))) := by
+    rw [IsLocalization.injective_iff_isRegular (mIdeal d).primeCompl]
+    intro y
+    refine ⟨?_, ?_⟩
+    · intro a b hab
+      change (↑y : R d) * a = ↑y * b at hab
+      apply sub_eq_zero.mp
+      apply (mem_nonZeroDivisors_iff.mp
+        ((mIdeal d).primeCompl_le_nonZeroDivisors y.2)).1
+      rw [mul_sub, hab, sub_self]
+    · intro a b hab
+      change a * (↑y : R d) = b * ↑y at hab
+      apply sub_eq_zero.mp
+      apply (mem_nonZeroDivisors_iff.mp
+        ((mIdeal d).primeCompl_le_nonZeroDivisors y.2)).2
+      rw [sub_mul, hab, sub_self]
+  have hfactorS : ∀ a : Localization.AtPrime (mIdeal d), a ≠ 0 →
+      ∃ n : ℕ, ∃ u : (Localization.AtPrime (mIdeal d))ˣ,
+        (algebraMap (R d) (Localization.AtPrime (mIdeal d))
+          (xInGeneratedRing d)) ^ n * (u : Localization.AtPrime (mIdeal d)) = a := by
+    intro a ha
+    obtain ⟨r, s, hrs⟩ :=
+      IsLocalization.exists_mk'_eq (mIdeal d).primeCompl a
+    have hmk : IsLocalization.mk' (Localization.AtPrime (mIdeal d)) r s ≠ 0 := by
+      simpa [hrs] using ha
+    have hr0 : r ≠ 0 := IsLocalization.ne_zero_of_mk'_ne_zero
+      (S := Localization.AtPrime (mIdeal d))
+      (M := (mIdeal d).primeCompl) hmk
+    have hgr0 : generatedRingInclusion d r ≠ 0 := by
+      intro h
+      apply hr0
+      apply Subtype.ext
+      exact h
+    obtain ⟨u, hru, huc⟩ := hfactor (generatedRingInclusion d r).order.toNat r
+      hgr0 (PowerSeries.coe_toNat_order hgr0).symm
+    have hum : u ∉ mIdeal d := by
+      intro hum
+      obtain ⟨v, hv⟩ := Ideal.mem_span_singleton'.mp
+        (show u ∈ Ideal.span {xInGeneratedRing d} from by
+          simpa [mIdeal] using hum)
+      apply huc
+      have hvu : u = v * xInGeneratedRing d := hv.symm
+      rw [hvu, map_mul]
+      have hxconst : PowerSeries.constantCoeff
+          (generatedRingInclusion d (xInGeneratedRing d)) = 0 := by
+        change PowerSeries.constantCoeff (PowerSeries.X : PowerSeries k) = 0
+        simp
+      rw [(PowerSeries.constantCoeff (R := k)).map_mul, hxconst, mul_zero]
+    have hvunit : IsUnit (IsLocalization.mk'
+        (Localization.AtPrime (mIdeal d)) u s) := by
+      rw [IsLocalization.mk'_eq_mul_mk'_one]
+      refine (IsLocalization.map_units _
+        (⟨u, hum⟩ : (mIdeal d).primeCompl)).mul ?_
+      refine isUnit_iff_exists_inv.mpr ⟨algebraMap (R d)
+        (Localization.AtPrime (mIdeal d)) s, ?_⟩
+      simpa [mul_comm] using
+        (IsLocalization.mk'_spec (S := Localization.AtPrime (mIdeal d))
+          (M := (mIdeal d).primeCompl) (1 : R d) s)
+    refine ⟨(generatedRingInclusion d r).order.toNat,
+      hvunit.unit, ?_⟩
+    calc
+      (algebraMap (R d) (Localization.AtPrime (mIdeal d))
+          (xInGeneratedRing d)) ^ (generatedRingInclusion d r).order.toNat *
+          IsLocalization.mk' (Localization.AtPrime (mIdeal d)) u s =
+          IsLocalization.mk' (Localization.AtPrime (mIdeal d))
+            (xInGeneratedRing d ^ (generatedRingInclusion d r).order.toNat * u) s := by
+        rw [← map_pow, IsLocalization.mul_mk'_eq_mk'_of_mul]
+      _ = IsLocalization.mk' (Localization.AtPrime (mIdeal d)) r s := by
+        exact congrArg (fun z : R d =>
+          IsLocalization.mk' (Localization.AtPrime (mIdeal d)) z s) hru.symm
+      _ = a := hrs
+  let p : Localization.AtPrime (mIdeal d) :=
+    algebraMap (R d) (Localization.AtPrime (mIdeal d)) (xInGeneratedRing d)
+  have hx0 : xInGeneratedRing d ≠ 0 := by
+    intro hx
+    apply PowerSeries.X_ne_zero (R := k)
+    simpa [xInGeneratedRing] using congrArg Subtype.val hx
+  have hp0 : p ≠ 0 := by
+    intro hp
+    apply hx0
+    apply hmapinj
+    simpa [p] using hp
+  have hpnu : ¬ IsUnit p := by
+    intro hpunit
+    obtain ⟨s, hs, hdiv⟩ :=
+      (IsLocalization.algebraMap_isUnit_iff
+        (S := Localization.AtPrime (mIdeal d))
+        (M := (mIdeal d).primeCompl)).mp (by simpa [p] using hpunit)
+    obtain ⟨v, hv⟩ := hdiv
+    apply hs
+    rw [hv]
+    exact (mIdeal d).mul_mem_right v (Ideal.subset_span (by simp [mIdeal]))
+  have hpprime : Prime p := by
+    refine ⟨hp0, hpnu, ?_⟩
+    intro a b hab
+    by_cases ha0 : a = 0
+    · left
+      simpa [ha0] using dvd_zero p
+    by_cases hb0 : b = 0
+    · right
+      simpa [hb0] using dvd_zero p
+    obtain ⟨na, ua, hfa⟩ := hfactorS a ha0
+    obtain ⟨nb, ub, hfb⟩ := hfactorS b hb0
+    have hfa' : p ^ na * (ua : Localization.AtPrime (mIdeal d)) = a := by
+      simpa [p] using hfa
+    have hfb' : p ^ nb * (ub : Localization.AtPrime (mIdeal d)) = b := by
+      simpa [p] using hfb
+    by_cases hna : na = 0
+    · by_cases hnb : nb = 0
+      · exfalso
+        apply hpnu
+        apply isUnit_of_dvd_unit hab
+        have haunit : IsUnit a := by
+          rw [← hfa', hna, pow_zero, one_mul]
+          exact ua.isUnit
+        have hbunit : IsUnit b := by
+          rw [← hfb', hnb, pow_zero, one_mul]
+          exact ub.isUnit
+        exact haunit.mul hbunit
+      · right
+        rw [← hfb']
+        exact dvd_mul_of_dvd_left (dvd_pow_self p hnb) _
+    · left
+      rw [← hfa']
+      exact dvd_mul_of_dvd_left (dvd_pow_self p hna) _
+  apply IsDiscreteValuationRing.ofHasUnitMulPowIrreducibleFactorization
+  refine ⟨p, hpprime.irreducible, ?_⟩
+  intro a ha
+  obtain ⟨n, u, hu⟩ := hfactorS a ha
+  refine ⟨n, ?_⟩
+  exact ⟨u, by simpa [p] using hu⟩
 
 theorem localization_m_is_noetherian_regular (d : PowerSeriesData k) :
     IsNoetherianRing (Localization.AtPrime (mIdeal d)) ∧
       IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := by
-  sorry
+  letI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+    localization_m_is_dvr d
+  letI : IsPrincipalIdealRing (Localization.AtPrime (mIdeal d)) :=
+    ((IsDiscreteValuationRing.iff_pid_with_one_nonzero_prime
+      (Localization.AtPrime (mIdeal d))).mp
+      (inferInstance : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)))).1
+  constructor
+  · rw [isNoetherianRing_iff_ideal_fg]
+    intro I
+    exact Submodule.IsPrincipal.fg (IsPrincipalIdealRing.principal I)
+  · infer_instance
 
 theorem localization_m_has_dimension_one (d : PowerSeriesData k) :
     ringKrullDim (Localization.AtPrime (mIdeal d)) = 1 := by
-  sorry
+  letI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+    localization_m_is_dvr d
+  exact IsDiscreteValuationRing.ringKrullDim_eq_one
+    (Localization.AtPrime (mIdeal d))
 
 theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
     Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mIdeal d)) ≃+* k) := by

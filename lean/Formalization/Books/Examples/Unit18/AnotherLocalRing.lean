@@ -706,13 +706,23 @@ theorem diagonalBlock_spec_left (f : TwoVariablePowerSeries k) (n i : ℕ) :
 
 theorem diagonalBlock_spec_right (f : TwoVariablePowerSeries k) (n j : ℕ) :
     PowerSeries.coeff j (diagonalBlock k f n).2 = coefficientXY k f n (n + j) := by
-  sorry
+  simp [diagonalBlock, PowerSeries.coeff_mk]
 
 theorem diagonalBlocks_unique (f : TwoVariablePowerSeries k) :
     ∃! blocks : ℕ → PowerSeries k × PowerSeries k,
       (∀ n i, PowerSeries.coeff i (blocks n).1 = coefficientXY k f (n + i) n) ∧
         ∀ n j, PowerSeries.coeff j (blocks n).2 = coefficientXY k f n (n + j) := by
-  sorry
+  refine ⟨diagonalBlock k f, ?_, ?_⟩
+  · exact ⟨diagonalBlock_spec_left k f, diagonalBlock_spec_right k f⟩
+  · intro blocks hblocks
+    funext n
+    apply Prod.ext
+    · apply PowerSeries.ext
+      intro i
+      exact (hblocks.1 n i).trans (diagonalBlock_spec_left k f n i).symm
+    · apply PowerSeries.ext
+      intro j
+      exact (hblocks.2 n j).trans (diagonalBlock_spec_right k f n j).symm
 
 /-- The coefficient selected by the diagonal expansion associated to a family
 of blocks. -/
@@ -726,7 +736,29 @@ def diagonalExpansionCoeff (blocks : ℕ → PowerSeries k × PowerSeries k)
 theorem diagonalExpansionCoeff_diagonalBlock (f : TwoVariablePowerSeries k)
     (d : Fin 2 →₀ ℕ) :
     diagonalExpansionCoeff k (diagonalBlock k f) d = MvPowerSeries.coeff d f := by
-  sorry
+  unfold diagonalExpansionCoeff
+  split_ifs with h
+  · rw [diagonalBlock_spec_right]
+    unfold coefficientXY
+    have hindex :
+        Finsupp.single (0 : Fin 2) (d 0) +
+            Finsupp.single (1 : Fin 2) (d 0 + (d 1 - d 0)) = d := by
+      ext i
+      fin_cases i
+      · simp
+      · simp [Nat.add_sub_of_le h]
+    rw [hindex]
+  · have h' : d 1 ≤ d 0 := by omega
+    rw [diagonalBlock_spec_left]
+    unfold coefficientXY
+    have hindex :
+        Finsupp.single (0 : Fin 2) (d 1 + (d 0 - d 1)) +
+            Finsupp.single (1 : Fin 2) (d 1) = d := by
+      ext i
+      fin_cases i
+      · simp [Nat.add_sub_of_le h']
+      · simp
+    rw [hindex]
 
 def diagonalExpansion (blocks : ℕ → PowerSeries k × PowerSeries k) :
     TwoVariablePowerSeries k :=
@@ -734,7 +766,8 @@ def diagonalExpansion (blocks : ℕ → PowerSeries k × PowerSeries k) :
 
 theorem diagonalExpansion_diagonalBlocks (f : TwoVariablePowerSeries k) :
     diagonalExpansion k (diagonalBlock k f) = f := by
-  sorry
+  funext d
+  exact diagonalExpansionCoeff_diagonalBlock k f d
 
 theorem aCondition_iff_diagonalBlocks (f : TwoVariablePowerSeries k) :
     ACondition k p f ↔

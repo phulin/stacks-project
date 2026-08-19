@@ -555,7 +555,56 @@ theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
     simp
 
 /- The source's displayed equality is represented by an equivalence of the
-   quotient type with the hom type in the base. -/
+   quotient type with the hom type in the base.
+
+   Interface audit: no coherence or fibred hypothesis is missing here.
+   `P.equivalence` preserves strongly cartesian arrows, while
+   `P.isEquivalence` supplies a strongly-cartesian-preserving inverse and
+   vertical unit and counit; similarly for `Q`.  Thus each presentation has
+   exactly the data required by the universe-polymorphic 2-Yoneda interface
+   in Unit 36.  The explicit `hp` and `hq` are book-facing hypotheses and are
+   not needed by that comparison.
+
+   Proof roadmap (the reusable declarations below are in
+   `Unit36/PresheavesOfCategories.lean`):
+
+   1. Before this theorem, add private fieldwise conversions between this
+      file's `FibredMorphism p q` and
+      `Unit36.FibredMorphism p q`.  They keep `functor`, `over`, and
+      `preserves` unchanged.  Prove both composites equal to the identity by
+      cases on the bundled morphism (proof irrelevance handles the Prop
+      field).  The construction is universe-polymorphic as written: use
+      `{S T C : Type*} [Category* S] [Category* T] [Category* C]`, with no
+      `ULift` or common-universe specialization.
+   2. Unpack `P.isEquivalence` as an inverse functor, its `over` and
+      cartesian-preservation proofs, and the vertical unit/counit witnesses.
+      Package these, together with the converted `P.equivalence`, as
+      `P36 : Unit36.FibredSlicePresentation p`; do the same for `Q36`.
+      `Unit36.IsFibredNatIsoOver` has the same component equation as
+      `IsNatIsoOver` (only its `over` and `e` arguments are ordered
+      differently), so each verticality field is discharged by `exact` after
+      unfolding or by `simpa [Unit36.IsFibredNatIsoOver, IsNatIsoOver]`.
+      Set the `representingObject` fields definitionally to those of `P` and
+      `Q` so that the final hom types need no transport.
+   3. Let `hmap φ := sliceMap_mapsStronglyCartesian φ`, and form
+      `E36 := Unit36.fibredSliceMorphismClassesEquiv P36 Q36 hmap`.
+      This is the already-proved equivalence from Unit 36 fibred-morphism
+      classes to `P.representingObject ⟶ Q.representingObject`.
+   4. Lift the conversions from step 1 through `Quot.map`.  Preservation of
+      the two relations reuses the same natural transformation: after
+      translating its endpoints, this file's `FibredMorphismNatTrans` and
+      `Unit36.FibredMorphismNatTrans` reduce to the same equation involving
+      `F.over.trans G.over.symm`.  Use `Quot.inductionOn` and the two
+      conversion-composite lemmas to prove that the resulting maps on
+      quotients are inverse, giving an equivalence `Eclasses` between the two
+      versions of `FibredMorphismsModuloTwoIsomorphism`.
+   5. Return `⟨Eclasses.trans E36⟩`.  Keep `hp` and `hq` unused; weakening the
+      presentations or adding another coherence assumption is unnecessary.
+
+   A direct `exact Unit36.fibredSliceMorphismClassesEquiv ...` is a dead end:
+   Unit 36 and this file currently declare distinct (though fieldwise
+   identical) bundled morphism and quotient types, so the explicit adapters
+   in steps 1 and 4 must precede reuse of that result. -/
 theorem representable_morphism_classes_equiv
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}
@@ -600,6 +649,52 @@ def FibredMorphismInducesRepresentingMorphismOnObjectClasses
       fibredMorphismObjectClassMap (sliceFibredMorphism φ) U ∘
         fibredMorphismObjectClassMap P.equivalence U
 
+/- Interface audit: the uniqueness conclusion is sound as stated.  Although
+   uniqueness of a vertical natural isomorphism needs thin target fibres,
+   this is not a missing hypothesis: `Q.isEquivalence` identifies `q` with a
+   slice, whose fibres are discrete, and hence makes every fibre of `q` a
+   setoid.  The `hp`/`hq` arguments are retained to match the surrounding
+   book interface.
+
+   Proof roadmap:
+
+   1. Reuse the private fieldwise morphism conversions and the presentations
+      `P36 : Unit36.FibredSlicePresentation p` and
+      `Q36 : Unit36.FibredSlicePresentation q` described in the roadmap for
+      `representable_morphism_classes_equiv`.  Also reuse
+      `hmap φ := sliceMap_mapsStronglyCartesian φ`.
+   2. Build
+      `hQ : IsFibredEquivalenceOver q
+        (Over.forget Q.representingObject)` with
+      `isFibredEquivalenceOver_iff_exists_fibredMorphism`, using
+      `Q.equivalence` and `Q.isEquivalence`.  Then set
+      `hqSetoid := isCategoryFibredInSetoids_of_fibredEquivalence_slice q
+        Q.representingObject hQ`.  For the exact thinness input expected by
+      Unit 36, define
+      `hhom U X Y :=
+        ((isSetoid_iff_isGroupoid_and_hom_subsingleton.mp
+          (hqSetoid.2 U)).2 X Y)`.
+      The setoid declarations used here are in
+      `Unit39/CategoriesFibredInSetoids.lean`.
+   3. Apply the existing theorem
+      `Unit36.fibredSlicePresentation_morphism_existsAndUnique
+        P36 Q36 hmap hhom φ`.  It returns a Unit 36 fibred morphism `F36`,
+      the required equality of fibrewise object-class maps, and the unique
+      vertical natural isomorphism to every other morphism inducing `φ`.
+   4. Convert `F36` back to this file's `FibredMorphism p q`.  For any local
+      `G`, convert it forward before applying the Unit 36 uniqueness clause.
+      The object-class premise transports by unfolding
+      `fibredMorphismObjectClassMap`, `objectIsoClassMap`, `fibreFunctor`, and
+      `Unit36.fibredMorphismObjectClassMap`: both sides are
+      `(ThinSkeleton.map _).obj`, and the fibre functors have identical
+      object and morphism fields.  Likewise, the returned
+      `Unit36.FibredMorphismNatTrans` is this file's
+      `FibredMorphismNatTrans` after unfolding, and the underlying functor
+      hom type is definitionally unchanged by the fieldwise conversion.
+   5. Assemble `⟨ofUnit36 F36, induced_map_equality, fun G hG => ...⟩`, using
+      the conversion-composite equality to transport the `∃!` witness and
+      its uniqueness equation.  No choice of cleavage and no additional
+      coherence law is required. -/
 theorem representable_morphism_exists_and_unique
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     {p : S ⥤ C} {q : T ⥤ C}

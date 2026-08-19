@@ -2026,10 +2026,12 @@ theorem isMittagLefflerModule_of_restrictScalars
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : RingHom.Finite f)
     (hfinitelyPresented : RingHom.FinitePresentation f)
-    (M : ModuleCat.{w} S)
+    (M : ModuleCat.{max v w} S)
     (hM : IsMittagLefflerModule (R := S) M) :
-    let : Module R (M : Type w) := Module.compHom (M : Type w) f
-    IsMittagLefflerModule (R := R) (ModuleCat.of R (M : Type w)) := by
+    let : Module R (M : Type (max v w)) :=
+      Module.compHom (M : Type (max v w)) f
+    IsMittagLefflerModule (R := R)
+      (ModuleCat.of R (M : Type (max v w))) := by
   sorry
 
 /-- For a finitely generated ideal, the Mittag-Leffler condition is unchanged

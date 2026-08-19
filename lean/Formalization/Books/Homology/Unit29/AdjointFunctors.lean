@@ -456,18 +456,18 @@ theorem adjoint_functorial_injective_embeddings
     {B : Type u₂} [Category.{v₂} B] [Abelian B]
     (u : A ⥤ B) (v : B ⥤ A) [u.Additive] [v.Additive]
     (hAdj : v ⊣ u) (hMono : PreservesMonomorphisms v)
-    (hEnough : EnoughInjectives A)
+    (_hEnough : EnoughInjectives A)
     (hReflectsZero : ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀)
     (hFunctorial : HasFunctorialInjectiveEmbeddings (C := A)) :
     HasFunctorialInjectiveEmbeddings (C := B) := by
-  haveI : PreservesMonomorphisms v := hMono
-  haveI : Functor.Faithful v :=
+  have : PreservesMonomorphisms v := hMono
+  have : Functor.Faithful v :=
     (adjoint_faithful_iff_reflects_zero u v hAdj hMono).2 hReflectsZero
-  haveI : PreservesMonomorphisms u :=
+  have : PreservesMonomorphisms u :=
     Functor.preservesMonomorphisms_of_adjunction hAdj
   have hExact : IsExact v :=
     (adjoint_preserve_injectives u v hAdj).1.1 hMono
-  letI : Functor.PreservesInjectiveObjects u :=
+  let : Functor.PreservesInjectiveObjects u :=
     (adjoint_preserve_injectives u v hAdj).2.1 hExact
   obtain ⟨J, hJleft, hJmono, hJinjective⟩ := hFunctorial
   let e : (J ⋙ Arrow.leftFunc) ≅ 𝟭 A := eqToIso hJleft
@@ -521,8 +521,8 @@ theorem adjoint_functorial_injective_embeddings
     rfl
   have hJ'mono : ∀ X : B, Mono (J'.obj X).hom := by
     intro X
-    letI : Mono (J.obj (v.obj X)).hom := hJmono _
-    letI : Mono (j.app (v.obj X)) := by
+    let : Mono (J.obj (v.obj X)).hom := hJmono _
+    let : Mono (j.app (v.obj X)) := by
       dsimp [j, Functor.whiskerLeft, Arrow.leftToRight]
       exact hJmono _
     dsimp [J']
@@ -566,8 +566,8 @@ theorem left_adjoint_of_quotient_generators
     let g : P₂ ⟶ P₁ := p₂ ≫ kernel.ι p₁
     have hg : g ≫ p₁ = 0 := by
       simp [g]
-    letI : Epi p₁ := hp₁
-    letI : Epi p₂ := hp₂
+    let : Epi p₁ := hp₁
+    let : Epi p₂ := hp₂
     have hc : IsColimit (CokernelCofork.ofπ p₁ hg) :=
       CokernelCofork.IsColimit.ofπ' p₁ hg (by
         intro Z k hk
@@ -588,7 +588,7 @@ theorem left_adjoint_of_quotient_generators
       trivial
     · intro _
       exact hAll B₀
-  letI : u.IsRightAdjoint :=
+  let : u.IsRightAdjoint :=
     Functor.isRightAdjoint_of_leftAdjointObjIsDefined_eq_top htop
   exact Functor.IsRightAdjoint.exists_leftAdjoint
 

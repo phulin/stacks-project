@@ -107,7 +107,22 @@ theorem mem_formalPowerSeriesSubmodule_iff (C : ConvergentPowerSeriesRing)
     (z : FormalLaurentSeries) :
     z ∈ formalPowerSeriesSubmodule C ↔
       ∃ f : FormalPowerSeries, formalPowerSeriesToLaurent f = z := by
-  sorry
+  constructor
+  · intro hz
+    refine Submodule.span_induction (fun x hx => ?_) ?_ ?_ ?_ hz
+    · rcases hx with ⟨f, rfl⟩
+      exact ⟨f, rfl⟩
+    · exact ⟨0, by simp⟩
+    · rintro x y _ _ ⟨f, rfl⟩ ⟨g, rfl⟩
+      exact ⟨f + g, by simp [formalPowerSeriesToLaurent]⟩
+    · rintro a x _ ⟨f, rfl⟩
+      refine ⟨C.expansion a * f, ?_⟩
+      change formalPowerSeriesToLaurent (C.expansion a * f) =
+        formalPowerSeriesToLaurent (C.expansion a) *
+          formalPowerSeriesToLaurent f
+      rw [map_mul]
+  · rintro ⟨f, rfl⟩
+    exact Submodule.subset_span ⟨f, rfl⟩
 
 /--
 The derivation and the sequence `f_n` used in the construction.  The basis
@@ -156,7 +171,8 @@ theorem ferrandRaynaudDifferential_infinite_dimensional
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :
     ¬ Module.Finite Δ.K (Ω[Δ.K⁄ℂ]) := by
-  sorry
+  rcases Δ.differential_basis with ⟨ι, hι, b, i₀, j, hj, hji, hbi₀, hbj⟩
+  exact Module.not_finite_of_infinite_basis b
 
 /-! ## The local ring `A` -/
 
@@ -259,7 +275,27 @@ def localCompletionX (C : ConvergentPowerSeriesRing)
 theorem localCompletion_x_mul_f_one_mem (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :
     C.x * Δ.f ⟨1, Nat.zero_lt_succ 0⟩ ∈ localCompletionSubalgebra C Δ := by
-  sorry
+  change Δ.derivation (C.x * Δ.f ⟨1, Nat.zero_lt_succ 0⟩) ∈
+    formalPowerSeriesSubmodule C
+  rw [Δ.derivation.leibniz, Δ.derivation_x]
+  have hdf := Δ.derivation_f (⟨1, by decide⟩ : PositiveNat)
+  rw [hdf]
+  simp
+  rw [Algebra.smul_def]
+  change (convergentToLaurent C C.x) * (convergentToLaurent C C.x)⁻¹ ∈
+    formalPowerSeriesSubmodule C
+  have hxl : convergentToLaurent C C.x ≠ 0 := by
+    change formalPowerSeriesToLaurent (C.expansion C.x) ≠ 0
+    rw [C.expansion_x]
+    intro h
+    have hc := congrArg (fun z : FormalLaurentSeries => z.coeff 1) h
+    simp [formalPowerSeriesToLaurent] at hc
+  have hone : convergentToLaurent C C.x * (convergentToLaurent C C.x)⁻¹ = 1 :=
+    mul_inv_cancel₀ hxl
+  rw [hone]
+  apply (mem_formalPowerSeriesSubmodule_iff C (1 : FormalLaurentSeries)).2
+  refine ⟨PowerSeries.C 1, ?_⟩
+  simp
 
 def localCompletionXFOne (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) : localCompletionRing C Δ :=
@@ -278,7 +314,30 @@ theorem localCompletion_x_pow_f_mem
     (Δ : FerrandRaynaudDifferentialData C)
     (n : PositiveNat) :
     C.x ^ (n : ℕ) * Δ.f n ∈ localCompletionSubalgebra C Δ := by
-  sorry
+  change Δ.derivation (C.x ^ (n : ℕ) * Δ.f n) ∈ formalPowerSeriesSubmodule C
+  rw [Δ.derivation.leibniz, Δ.derivation.leibniz_pow, Δ.derivation_x, Δ.derivation_f]
+  simp only [smul_zero, add_zero]
+  rw [Algebra.smul_def]
+  rw [map_pow]
+  change (convergentToLaurent C C.x) ^ (n : ℕ) *
+      (convergentToLaurent C C.x)⁻¹ ^ (n : ℕ) ∈ formalPowerSeriesSubmodule C
+  have hxl : convergentToLaurent C C.x ≠ 0 := by
+    change formalPowerSeriesToLaurent (C.expansion C.x) ≠ 0
+    rw [C.expansion_x]
+    intro h
+    have hc := congrArg (fun z : FormalLaurentSeries => z.coeff 1) h
+    simp [formalPowerSeriesToLaurent] at hc
+  have hp : (convergentToLaurent C C.x) ^ (n : ℕ) ≠ 0 :=
+    pow_ne_zero _ hxl
+  have hone :
+      (convergentToLaurent C C.x) ^ (n : ℕ) *
+        (convergentToLaurent C C.x)⁻¹ ^ (n : ℕ) = 1 := by
+    rw [inv_pow]
+    exact mul_inv_cancel₀ hp
+  rw [hone]
+  apply (mem_formalPowerSeriesSubmodule_iff C (1 : FormalLaurentSeries)).2
+  refine ⟨PowerSeries.C 1, ?_⟩
+  simp
 
 def localCompletionXPowF
     (C : ConvergentPowerSeriesRing)

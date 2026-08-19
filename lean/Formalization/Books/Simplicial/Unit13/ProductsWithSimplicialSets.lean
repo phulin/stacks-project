@@ -2,6 +2,7 @@ import Formalization.Books.Simplicial.Unit12.TruncatedSimplicialObjects
 import Formalization.Books.Simplicial.Unit11.SimplicialSets
 import Formalization.Books.Categories.Unit05.CoproductsOfPairs
 import Mathlib.CategoryTheory.Yoneda
+import Mathlib.CategoryTheory.Limits.Constructions.FiniteProductsOfBinaryProducts
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 
 /-!
@@ -26,6 +27,22 @@ universe v u w
 
 /-! ## The hypotheses and the degreewise coproducts -/
 
+private theorem hasCoproduct_fin_succ {C : Type u} [Category.{v} C]
+    [HasBinaryCoproducts C] :
+    ∀ (n : ℕ) (f : Fin (n + 1) → C), HasCoproduct f
+  | 0, f =>
+      HasColimit.mk ⟨Cofan.mk (f 0)
+          (fun j => eqToHom (congrArg f (Fin.eq_zero j))),
+        Cofan.IsColimit.mk _ (fun s => s.inj 0)
+          (fun s j => by
+            have hj : j = 0 := Fin.eq_zero j
+            subst hj
+            simp)
+          (fun s m hm => by simpa using hm 0)⟩
+  | n + 1, f =>
+      let _ := hasCoproduct_fin_succ n (fun i : Fin (n + 1) => f i.succ)
+      HasColimit.mk ⟨_, extendCofanIsColimit f (colimit.isColimit _) (colimit.isColimit _)⟩
+
 /-- Every degree of `U` is finite and nonempty. -/
 abbrev FiniteNonemptySimplicialSet (U : SSet.{w}) : Prop :=
   ∀ n : ℕ, Finite (U _⦋n⦌) ∧ Nonempty (U _⦋n⦌)
@@ -46,7 +63,15 @@ theorem hasCoproduct_of_finite_nonempty_of_hasBinaryCoproducts
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     {J : Type w} [Finite J] [Nonempty J] (F : J → C) :
     HasCoproduct F := by
-  sorry
+  rcases Finite.exists_equiv_fin J with ⟨n, ⟨e⟩⟩
+  have hn : n ≠ 0 := by
+    intro hn
+    let j : J := Classical.choice (inferInstance : Nonempty J)
+    exact Fin.elim0 (hn ▸ e j)
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn
+  let _ := hasCoproduct_fin_succ k (fun i : Fin (k + 1) => F (e.symm i))
+  exact hasCoproduct_of_equiv_of_iso (fun i : Fin (k + 1) => F (e.symm i)) F e
+    (fun x => by simpa using (Iso.refl (F x)))
 
 theorem degreewiseCoproductInstance
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

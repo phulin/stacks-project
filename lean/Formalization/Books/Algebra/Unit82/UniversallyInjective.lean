@@ -712,7 +712,115 @@ theorem flat_ends_of_universallyExact
     (f₁ : M₁ →ₗ[R] M₂) (f₂ : M₂ →ₗ[R] M₃)
     (h : universallyExact f₁ f₂) (hflat : Module.Flat R M₂) :
     Module.Flat R M₁ ∧ Module.Flat R M₃ := by
-  sorry
+  have hflat₁ : Module.Flat R M₁ := by
+    let _ : Module.Flat R M₂ := hflat
+    apply (Module.Flat.iff_rTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ i hi
+    have hiM₂ : Function.Injective (i.rTensor M₂) :=
+      Module.Flat.rTensor_preserves_injective_linearMap i hi
+    have hfN : Function.Injective (f₁.lTensor N) := by
+      rw [LinearMap.lTensor_inj_iff_rTensor_inj]
+      exact h.2.2.2 N
+    have hcomm :
+        (i.rTensor M₂).comp (f₁.lTensor N) =
+          (f₁.lTensor N').comp (i.rTensor M₁) := by
+      rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+    apply LinearMap.ker_eq_bot.mp
+    rw [eq_bot_iff]
+    intro x hx
+    change (i.rTensor M₁) x = 0 at hx
+    have hfx : (f₁.lTensor N) x = 0 := by
+      apply hiM₂
+      change ((i.rTensor M₂).comp (f₁.lTensor N)) x = 0
+      rw [hcomm, LinearMap.comp_apply, hx]
+      simp
+    have hx0 : x = 0 := hfN hfx
+    simpa using hx0
+  have hflat₃ : Module.Flat R M₃ := by
+    let _ : Module.Flat R M₁ := hflat₁
+    let _ : Module.Flat R M₂ := hflat
+    apply (Module.Flat.iff_lTensor_preserves_injective_linearMap).2
+    intro N N' _ _ _ _ i hi
+    have hiM₂ : Function.Injective (i.lTensor M₂) :=
+      Module.Flat.lTensor_preserves_injective_linearMap i hi
+    have hfN' : Function.Injective (f₁.rTensor N') := h.2.2.2 N'
+    have hrowN' : Function.Exact (f₁.rTensor N') (f₂.rTensor N') := by
+      exact (Formalization.Books.Algebra.Unit12.tensorProduct_right_exact
+        f₁ f₂ h.2.1 h.2.2.1).1
+    have hsurjN : Function.Surjective (f₂.rTensor N) :=
+      LinearMap.rTensor_surjective N h.2.2.1
+    let Q : Type u := N' ⧸ LinearMap.range i
+    let q : N' →ₗ[R] Q := (LinearMap.range i).mkQ
+    have hqi : Function.Exact i q := by
+      dsimp [q]
+      rw [LinearMap.exact_iff, Submodule.ker_mkQ]
+    have hv₁ : Function.Exact (i.lTensor M₁) (q.lTensor M₁) :=
+      Module.Flat.lTensor_exact M₁ hqi
+    have hcomm₂ :
+        (f₂.rTensor N').comp (i.lTensor M₂) =
+          (i.lTensor M₃).comp (f₂.rTensor N) := by
+      rw [LinearMap.lTensor_comp_rTensor, LinearMap.rTensor_comp_lTensor]
+    have hcomm₁ :
+        (f₁.rTensor N').comp (i.lTensor M₁) =
+          (i.lTensor M₂).comp (f₁.rTensor N) := by
+      rw [LinearMap.lTensor_comp_rTensor, LinearMap.rTensor_comp_lTensor]
+    have hcommq :
+        (f₁.rTensor Q).comp (q.lTensor M₁) =
+          (q.lTensor M₂).comp (f₁.rTensor N') := by
+      rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+    intro x y hxy
+    obtain ⟨x', hx'⟩ := hsurjN x
+    obtain ⟨y', hy'⟩ := hsurjN y
+    let d := x' - y'
+    have hd : (f₂.rTensor N) d = x - y := by
+      dsimp [d]
+      rw [map_sub, hx', hy']
+    have hzero₃ : (i.lTensor M₃) (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hzero₂ : (f₂.rTensor N') ((i.lTensor M₂) d) = 0 := by
+      calc
+        (f₂.rTensor N') ((i.lTensor M₂) d) =
+            (i.lTensor M₃) ((f₂.rTensor N) d) := by
+          have hc := congrArg (fun k => k d) hcomm₂
+          simpa only [LinearMap.comp_apply] using hc
+        _ = (i.lTensor M₃) (x - y) := by rw [hd]
+        _ = 0 := hzero₃
+    obtain ⟨z, hz⟩ := (hrowN' ((i.lTensor M₂) d)).mp hzero₂
+    have hqcomp : q.comp i = 0 := by
+      ext n
+      simpa [LinearMap.comp_apply] using
+        congrArg (fun k => k n) hqi.comp_eq_zero
+    have hqzero : (q.lTensor M₂) ((i.lTensor M₂) d) = 0 := by
+      change ((q.lTensor M₂).comp (i.lTensor M₂)) d = 0
+      rw [← LinearMap.lTensor_comp, hqcomp]
+      simp
+    have hzq : (q.lTensor M₁) z = 0 := by
+      have hfQ : Function.Injective (f₁.rTensor Q) := h.2.2.2 Q
+      apply hfQ
+      change ((f₁.rTensor Q).comp (q.lTensor M₁)) z = 0
+      rw [hcommq, LinearMap.comp_apply, hz, hqzero]
+    obtain ⟨t, ht⟩ := (hv₁ z).mp hzq
+    have hft : (f₁.rTensor N) t = d := by
+      apply hiM₂
+      have hc := congrArg (fun k => k t) hcomm₁
+      simp only [LinearMap.comp_apply] at hc
+      calc
+        (i.lTensor M₂) ((f₁.rTensor N) t) =
+            (f₁.rTensor N') ((i.lTensor M₁) t) := hc.symm
+        _ = (f₁.rTensor N') z := by rw [ht]
+        _ = (i.lTensor M₂) d := hz
+    have hfd : (f₂.rTensor N) ((f₁.rTensor N) t) = 0 := by
+      change ((f₂.rTensor N).comp (f₁.rTensor N)) t = 0
+      have hcomp : f₂.comp f₁ = 0 := by
+        ext m
+        simpa [LinearMap.comp_apply] using
+          congrArg (fun k => k m) h.2.1.comp_eq_zero
+      rw [← LinearMap.rTensor_comp, hcomp]
+      simp
+    have hd₀ : (f₂.rTensor N) d = 0 := by rw [← hft, hfd]
+    have hsub : x - y = 0 := by rw [← hd, hd₀]
+    exact sub_eq_zero.mp hsub
+  exact ⟨hflat₁, hflat₃⟩
 
 /-- Tensoring a universally injective map by an arbitrary module remains
 universally injective. -/
@@ -723,7 +831,22 @@ theorem universallyInjective_tensor
     [AddCommGroup Q] [Module R Q]
     (f : M →ₗ[R] N) (hf : universallyInjective f) :
     universallyInjective (f.rTensor Q) := by
-  sorry
+  intro S _ _
+  intro x y hxy
+  let eM := TensorProduct.assoc R M Q S
+  let eN := TensorProduct.assoc R N Q S
+  have hcomm : eN.toLinearMap.comp ((f.rTensor Q).rTensor S) =
+      (f.rTensor (Q ⊗[R] S)).comp eM.toLinearMap := by
+    apply TensorProduct.ext_threefold
+    intro m q s
+    rfl
+  apply eM.injective
+  apply hf (Q ⊗[R] S)
+  have hxy' := congrArg (fun z => eN z) hxy
+  have hx := congrArg (fun k => k x) hcomm
+  have hy := congrArg (fun k => k y) hcomm
+  simp only [LinearMap.comp_apply] at hx hy
+  exact hx.symm.trans (hxy'.trans hy)
 
 /-- A composite of universally injective maps is universally injective. -/
 theorem universallyInjective_comp
@@ -734,7 +857,12 @@ theorem universallyInjective_comp
     (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (hf : universallyInjective f) (hg : universallyInjective g) :
     universallyInjective (g.comp f) := by
-  sorry
+  intro Q _ _
+  intro x y hxy
+  apply hf Q
+  apply hg Q
+  rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q] at hxy
+  exact hxy
 
 /-- If a composite is universally injective, then its first factor is
 universally injective. -/
@@ -746,7 +874,11 @@ theorem universallyInjective_of_comp
     (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (hgf : universallyInjective (g.comp f)) :
     universallyInjective f := by
-  sorry
+  intro Q _ _
+  intro x y hxy
+  apply hgf Q
+  rw [LinearMap.rTensor_comp_apply Q, LinearMap.rTensor_comp_apply Q]
+  exact congrArg (fun z => (g.rTensor Q) z) hxy
 
 /-- Finite products of universally exact sequences are universally exact. -/
 theorem universallyExact_prod

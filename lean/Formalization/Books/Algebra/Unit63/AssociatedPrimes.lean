@@ -412,6 +412,7 @@ theorem ass_subset_ass_of_short_exact
     associatedPrimes R M' ⊆ associatedPrimes R M ∧
       associatedPrimes R M ⊆
         associatedPrimes R M' ∪ associatedPrimes R M'' := by
+  have _hg : Function.Surjective g := hg
   constructor
   · intro p hp
     change ∃ m, (⊥ : Submodule R M').colon ({m} : Set M') = p.asIdeal at hp

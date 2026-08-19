@@ -44,10 +44,11 @@ private theorem free_equiv_finsupp_nat
   let b := Module.Free.chooseBasis R F
   have hι : ¬ Finite (Module.Free.ChooseBasisIndex R F) := by
     intro hι
-    let hι := hι
+    let _ := hι
     exact hF (Module.Finite.of_basis b)
-  let _ : Infinite (Module.Free.ChooseBasisIndex R F) :=
+  have hι' : Infinite (Module.Free.ChooseBasisIndex R F) :=
     not_finite_iff_infinite.mp hι
+  let _ := hι'
   let c := Finsupp.basis (fun _ : ℕ => b)
   have hcard :
       Cardinal.mk (Σ _ : ℕ, Module.Free.ChooseBasisIndex R F) =

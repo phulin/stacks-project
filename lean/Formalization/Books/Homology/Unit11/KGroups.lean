@@ -871,19 +871,23 @@ private theorem shortComplex_biproduct_exact_pos
       ShortComplex.mk
         (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g)
         (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂)) (by
-          simp [biprod.lift_eq, biprod.desc_eq])
+          rw [biprod.lift_eq, biprod.desc_eq]
+          simp)
     U.Exact := by
   dsimp
   let U : ShortComplex D :=
     ShortComplex.mk
       (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g)
       (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂)) (by
-        simp [biprod.lift_eq, biprod.desc_eq])
+        rw [biprod.lift_eq, biprod.desc_eq]
+        simp)
   have hk : IsLimit (KernelFork.ofι
-      (biprod.inr : S.X₃ ⟶ U.X₂) (by
-        show biprod.inr ≫ biprod.desc S.f (0 : S.X₃ ⟶ S.X₂) = 0
-        simp)) := by
-    letI : Mono S.f := hS.mono_f
+        (biprod.inr : S.X₃ ⟶ U.X₂) (by
+        exact (by
+          rw [biprod.desc_eq]
+          simp :
+            biprod.inr ≫ biprod.desc S.f (0 : S.X₃ ⟶ S.X₂) = 0))) := by
+    let : Mono S.f := hS.mono_f
     apply KernelFork.IsLimit.ofι' biprod.inr
     intro A k hk
     have hz : k ≫ biprod.fst ≫ S.f = 0 := by
@@ -902,7 +906,8 @@ private theorem shortComplex_biproduct_exact_pos
       exact IsLimit.conePointUniqueUpToIso_hom_comp hk (kernelIsKernel U.g)
         WalkingParallelPair.zero
     apply (cancel_epi e.hom).1
-    rw [← Category.assoc, he]
+    simp only [← Category.assoc]
+    simp only [he]
     have hz : S.g ≫ biprod.inr ≫ cokernel.π U.f = 0 := by
       simpa [U, biprod.lift_eq, Category.assoc] using cokernel.condition U.f
     let : Epi S.g := hS.epi_g
@@ -917,19 +922,23 @@ private theorem shortComplex_biproduct_exact_neg
       ShortComplex.mk
         (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂))
         (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g) (by
-          simp [biprod.lift_eq, biprod.desc_eq])
+          rw [biprod.lift_eq, biprod.desc_eq]
+          simp)
     U.Exact := by
   dsimp
   let U : ShortComplex D :=
     ShortComplex.mk
       (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂))
       (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g) (by
-        simp [biprod.lift_eq, biprod.desc_eq])
+        rw [biprod.lift_eq, biprod.desc_eq]
+        simp)
   let : Mono S.f := hS.mono_f
   have hk : IsLimit (KernelFork.ofι
       (S.f : S.X₁ ⟶ U.X₂) (by
-        show S.f ≫ biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g = 0
-        simp [biprod.lift_eq])) := by
+        exact (by
+          rw [biprod.lift_eq]
+          simp :
+            S.f ≫ biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g = 0))) := by
     apply KernelFork.IsLimit.ofι'
     intro A k hk
     have hz : k ≫ S.g = 0 := by
@@ -944,10 +953,16 @@ private theorem shortComplex_biproduct_exact_neg
       exact IsLimit.conePointUniqueUpToIso_hom_comp hk (kernelIsKernel U.g)
         WalkingParallelPair.zero
     apply (cancel_epi e.hom).1
-    simp only [← Category.assoc, he]
-    rw [comp_zero]
     have hz := congrArg (fun z => biprod.inl ≫ z) (cokernel.condition U.f)
-    simpa only [U, Category.assoc, biprod.inl_desc_assoc, comp_zero, zero_comp] using hz
+    have hzero : S.f ≫ cokernel.π U.f = 0 := by
+      simpa only [U, Category.assoc, biprod.inl_desc_assoc, comp_zero, zero_comp] using hz
+    calc
+      e.hom ≫ kernel.ι U.g ≫ cokernel.π U.f =
+          (e.hom ≫ kernel.ι U.g) ≫ cokernel.π U.f := by
+        simp only [Category.assoc]
+      _ = S.f ≫ cokernel.π U.f := congrArg (fun z => z ≫ cokernel.π U.f) he
+      _ = 0 := hzero
+      _ = e.hom ≫ 0 := by simp
   exact hU
 
 private theorem shortComplex_biproduct_homology_isZero

@@ -371,8 +371,12 @@ structure FinitePthRootBaseChangeTower
     ((comparisonMap x : comparisonUpper) : AlgebraicClosure K) =
       algebraMap K (AlgebraicClosure K) (x : K)
   comparison_rank :
-    Module.finrank comparisonUpper (finitePthRootFieldAtLevel top) =
-      Module.finrank comparisonLower K
+    Module.finrank
+        (IntermediateField.adjoin comparisonUpper
+          (algebraMap K (finitePthRootFieldAtLevel top) ''
+            (separableClosure comparisonLower K : Set K)))
+        (finitePthRootFieldAtLevel top) ≤
+      Field.finInsepDegree comparisonLower K
   reflectsSeparableClosure : ∀ y : K,
     algebraMap K (finitePthRootFieldAtLevel top) y ∈
         IntermediateField.adjoin comparisonUpper
@@ -939,8 +943,24 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
         ((algebraMap K T).comp (⊤ : IntermediateField k K).val) ⊤ (fun _ ↦ trivial)
       comparisonMap_commutes := fun _ ↦ rfl
       comparison_rank := by
-        rw [IntermediateField.finrank_eq_one_iff_eq_top.mpr rfl,
-          IntermediateField.finrank_eq_one_iff_eq_top.mpr rfl]
+        rw [show IntermediateField.adjoin
+            (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop))
+              (algebraMap K T ''
+                (separableClosure (⊤ : IntermediateField k K) K : Set K)) = ⊤ by
+          apply top_unique
+          intro x _
+          exact (IntermediateField.adjoin
+            (⊤ : @IntermediateField B T _ _ (RingHom.toAlgebra baseToTop))
+              (algebraMap K T ''
+                (separableClosure (⊤ : IntermediateField k K) K : Set K))).algebraMap_mem
+            ⟨x, trivial⟩]
+        rw [IntermediateField.finrank_eq_one_iff_eq_top.mpr rfl]
+        letI : Module.Finite (⊤ : IntermediateField k K) K :=
+          Module.Finite.of_surjective
+            (Algebra.linearMap (⊤ : IntermediateField k K) K) (by
+              intro y
+              exact ⟨⟨y, trivial⟩, rfl⟩)
+        exact Nat.one_le_iff_ne_zero.mpr (NeZero.ne _)
       reflectsSeparableClosure := by
         intro y _
         apply mem_separableClosure_iff.mpr

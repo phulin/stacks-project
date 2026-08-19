@@ -4449,14 +4449,14 @@ private theorem covariant_boundary_ext_lift_of_zero
   have hq : E.inclusion ≫ q = S.f := by
     dsimp [q, u]
     calc
-      E.inclusion ≫
+          E.inclusion ≫
           (pushout.inr S.f E.inclusion ≫ e.hom.middle) ≫ biprod.fst =
           (E.inclusion ≫ pushout.inr S.f E.inclusion) ≫
-            e.hom.middle ≫ biprod.fst := by sorry
+            e.hom.middle ≫ biprod.fst := by exact ((Category.assoc E.inclusion (pushout.inr S.f E.inclusion ≫ e.hom.middle) biprod.fst).symm).trans ((congrArg (fun k => k ≫ biprod.fst) (Category.assoc E.inclusion (pushout.inr S.f E.inclusion) e.hom.middle).symm).trans (Category.assoc (E.inclusion ≫ pushout.inr S.f E.inclusion) e.hom.middle biprod.fst))
       _ = (S.f ≫ pushout.inl S.f E.inclusion) ≫
             e.hom.middle ≫ biprod.fst := by rw [pushout.condition.symm]
       _ = S.f ≫ (pushout.inl S.f E.inclusion ≫ e.hom.middle) ≫
-            biprod.fst := by sorry
+            biprod.fst := by exact (((Category.assoc S.f (pushout.inl S.f E.inclusion ≫ e.hom.middle) biprod.fst).symm).trans ((congrArg (fun k => k ≫ biprod.fst) (Category.assoc S.f (pushout.inl S.f E.inclusion) e.hom.middle).symm).trans (Category.assoc (S.f ≫ pushout.inl S.f E.inclusion) e.hom.middle biprod.fst))).symm
       _ = S.f ≫ (splitExtension S.X₂ N).inclusion ≫
             biprod.fst := by rw [he]
       _ = S.f := by simp [splitExtension]

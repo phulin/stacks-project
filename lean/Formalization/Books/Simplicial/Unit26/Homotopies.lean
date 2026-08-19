@@ -111,7 +111,86 @@ noncomputable def pointCylinder
 theorem pointCylinder_iso
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     (U : SimplicialObject C) : Nonempty (pointCylinder U ≅ U) := by
-  sorry
+  let α : pointCylinder U ⟶ U := {
+    app := fun X =>
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+      Sigma.desc (fun _ => 𝟙 (U.obj X))
+    naturality := by
+      intro X Y f
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj Y => U.obj Y) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) Y
+      change
+        Sigma.desc (fun z =>
+            U.map f ≫ Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj Y => U.obj Y)
+              ((Δ[0] : SSet.{u}).map f z)) ≫
+          Sigma.desc (fun _ => 𝟙 (U.obj Y)) =
+        Sigma.desc (fun _ => 𝟙 (U.obj X)) ≫ U.map f
+      apply Sigma.hom_ext
+      intro z
+      simp }
+  let β : U ⟶ pointCylinder U := {
+    app := fun X =>
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+      Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X)
+        (SSet.stdSimplex.const 0 0 X)
+    naturality := by
+      intro X Y f
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+      let _ : HasCoproduct
+          (fun _ : (Δ[0] : SSet.{u}).obj Y => U.obj Y) :=
+        Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) Y
+      change
+        U.map f ≫ Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj Y => U.obj Y)
+            (SSet.stdSimplex.const 0 0 Y) =
+          Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X)
+            (SSet.stdSimplex.const 0 0 X) ≫
+          Sigma.desc (fun z =>
+            U.map f ≫ Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj Y => U.obj Y)
+              ((Δ[0] : SSet.{u}).map f z))
+      have hc :
+          (Δ[0] : SSet.{u}).map f (SSet.stdSimplex.const 0 0 X) =
+            SSet.stdSimplex.const 0 0 Y := by
+        apply SSet.stdSimplex.objEquiv.injective
+        apply SimplexCategory.Hom.ext
+        rfl
+      rw [Sigma.ι_desc, hc] }
+  refine ⟨{ hom := α, inv := β, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
+  · apply NatTrans.ext
+    funext X
+    let _ : HasCoproduct
+        (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+      Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+    let _ : Subsingleton ((Δ[0] : SSet.{u}).obj X) := by
+      simpa only [SimplexCategory.mk_len] using pointSimplex_subsingleton X.unop.len
+    change
+      Sigma.desc (fun _ => 𝟙 (U.obj X)) ≫
+          Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X)
+            (SSet.stdSimplex.const 0 0 X) = 𝟙 _
+    apply Sigma.hom_ext
+    intro z
+    have hz : z = SSet.stdSimplex.const 0 0 X := Subsingleton.elim _ _
+    subst z
+    simp
+  · apply NatTrans.ext
+    funext X
+    let _ : HasCoproduct
+        (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X) :=
+      Unit13.degreewiseCoproductInstanceAt (pointCoproducts U) X
+    change
+      Sigma.ι (fun _ : (Δ[0] : SSet.{u}).obj X => U.obj X)
+          (SSet.stdSimplex.const 0 0 X) ≫
+        Sigma.desc (fun _ => 𝟙 (U.obj X)) = 𝟙 (U.obj X)
+    simp
 
 noncomputable def pointCylinderIso
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -260,7 +339,27 @@ theorem cylinderHomotopyComponent_zero
     {U V : SimplicialObject C} {a b : U ⟶ V}
     (H : CylinderHomotopy a b) (n : ℕ) :
     cylinderHomotopyComponent H n 0 = b.app (op (SimplexCategory.mk n)) := by
-  sorry
+  let _ : HasCoproduct
+      (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n))) :=
+    Unit13.degreewiseCoproductInstance (Δ[1] : SSet.{u}) U
+      (Unit13.standardSimplex_finite_nonempty 1) n
+  change Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+      U.obj (op (SimplexCategory.mk n))) (intervalSimplex n 0) ≫
+    H.h.app (op (SimplexCategory.mk n)) = _
+  have hindex :
+      intervalSimplex n 0 =
+        SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)) := by
+    apply SSet.stdSimplex.objEquiv.injective
+    ext j
+    simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply,
+      SSet.stdSimplex.objEquiv_toOrderHom_apply, SSet.stdSimplex.const]
+  rw [hindex]
+  have h := congrArg (fun k => k.app (op (SimplexCategory.mk n))) H.h₁
+  change
+      Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n)))
+        (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n))) ≫
+        H.h.app (op (SimplexCategory.mk n)) = _ at h
+  exact h
 
 theorem cylinderHomotopyComponent_last
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -268,14 +367,141 @@ theorem cylinderHomotopyComponent_last
     (H : CylinderHomotopy a b) (n : ℕ) :
     cylinderHomotopyComponent H n (Fin.last (n + 1)) =
       a.app (op (SimplexCategory.mk n)) := by
-  sorry
+  let _ : HasCoproduct
+      (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n))) :=
+    Unit13.degreewiseCoproductInstance (Δ[1] : SSet.{u}) U
+      (Unit13.standardSimplex_finite_nonempty 1) n
+  change Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+      U.obj (op (SimplexCategory.mk n))) (intervalSimplex n (Fin.last (n + 1))) ≫
+    H.h.app (op (SimplexCategory.mk n)) = _
+  have hindex :
+      intervalSimplex n (Fin.last (n + 1)) =
+        SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n)) := by
+    apply SSet.stdSimplex.objEquiv.injective
+    ext j
+    simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply,
+      SSet.stdSimplex.objEquiv_toOrderHom_apply, SSet.stdSimplex.const]
+  rw [hindex]
+  have h := congrArg (fun k => k.app (op (SimplexCategory.mk n))) H.h₀
+  change
+      Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n)))
+        (SSet.stdSimplex.const 1 0 (op (SimplexCategory.mk n))) ≫
+        H.h.app (op (SimplexCategory.mk n)) = _ at h
+  exact h
 
 theorem exists_cylinderHomotopy_to_degreewise
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     {U V : SimplicialObject C} {a b : U ⟶ V}
     (H : CylinderHomotopy a b) :
     Nonempty (DegreewiseHomotopy a b) := by
-  sorry
+  have component_naturality :
+      ∀ {m n} (f : SimplexCategory.mk m ⟶ SimplexCategory.mk n)
+        (i : Fin (n + 2)) (k : Fin (m + 2)),
+        (Δ[1] : SSet.{u}).map f.op (intervalSimplex n i) =
+          intervalSimplex m k →
+        U.map f.op ≫ cylinderHomotopyComponent H m k =
+          cylinderHomotopyComponent H n i ≫ V.map f.op := by
+    intro m n f i k hk
+    let _ : HasCoproduct
+        (fun _ : (Δ[1] : SSet.{u}) _⦋m⦌ =>
+          U.obj (op (SimplexCategory.mk m))) :=
+      Unit13.degreewiseCoproductInstance (Δ[1] : SSet.{u}) U
+        (Unit13.standardSimplex_finite_nonempty 1) m
+    let _ : HasCoproduct
+        (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+          U.obj (op (SimplexCategory.mk n))) :=
+      Unit13.degreewiseCoproductInstance (Δ[1] : SSet.{u}) U
+        (Unit13.standardSimplex_finite_nonempty 1) n
+    have hn := congrArg
+      (fun q =>
+        Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+            U.obj (op (SimplexCategory.mk n))) (intervalSimplex n i) ≫ q)
+      (H.h.naturality f.op)
+    dsimp [intervalCylinder, Unit13.simplicialSetProductOf] at hn
+    rw [← Category.assoc, Sigma.ι_desc, hk] at hn
+    dsimp [cylinderHomotopyComponent]
+    calc
+      U.map f.op ≫ Sigma.ι
+          (fun _ : (Δ[1] : SSet.{u}) _⦋m⦌ =>
+            U.obj (op (SimplexCategory.mk m))) (intervalSimplex m k) ≫
+          H.h.app (op (SimplexCategory.mk m)) =
+        (U.map f.op ≫ Sigma.ι
+          (fun _ : (Δ[1] : SSet.{u}) _⦋m⦌ =>
+            U.obj (op (SimplexCategory.mk m))) (intervalSimplex m k)) ≫
+          H.h.app (op (SimplexCategory.mk m)) := (Category.assoc _ _ _).symm
+      _ = Sigma.ι
+          (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+            U.obj (op (SimplexCategory.mk n))) (intervalSimplex n i) ≫
+          H.h.app (op (SimplexCategory.mk n)) ≫ V.map f.op := hn
+      _ = (Sigma.ι
+          (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+            U.obj (op (SimplexCategory.mk n))) (intervalSimplex n i) ≫
+          H.h.app (op (SimplexCategory.mk n))) ≫ V.map f.op :=
+        (Category.assoc _ _ _).symm
+  have face_gt_map :
+      ∀ {n : ℕ} (i : Fin (n + 3)) (j : Fin (n + 2))
+        (hji : j.castSucc < i),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.δ j).op
+            (intervalSimplex (n + 1) i) =
+          intervalSimplex n (i.pred (Fin.ne_zero_of_lt hji)) := by
+    intro n i j hji
+    simpa only [intervalSimplex, SimplicialObject.δ] using
+      SSet.stdSimplex.δ_objMk₁_of_lt i j hji
+  have face_le_map :
+      ∀ {n : ℕ} (i : Fin (n + 3)) (j : Fin (n + 2))
+        (hij : i ≤ j.castSucc),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.δ j).op
+            (intervalSimplex (n + 1) i) =
+          intervalSimplex n (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ))) := by
+    intro n i j hij
+    simpa only [intervalSimplex, SimplicialObject.δ] using
+      SSet.stdSimplex.δ_objMk₁_of_le i j hij
+  have degeneracy_gt_map :
+      ∀ {n : ℕ} (i : Fin (n + 2)) (j : Fin (n + 1))
+        (hji : j.castSucc < i),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.σ j).op
+            (intervalSimplex n i) =
+          intervalSimplex (n + 1) i.succ := by
+    intro n i j hji
+    simpa only [intervalSimplex, SimplicialObject.σ] using
+      SSet.stdSimplex.σ_objMk₁_of_lt i j hji
+  have degeneracy_le_map :
+      ∀ {n : ℕ} (i : Fin (n + 2)) (j : Fin (n + 1))
+        (hij : i ≤ j.castSucc),
+        (Δ[1] : SSet.{u}).map (SimplexCategory.σ j).op
+            (intervalSimplex n i) =
+          intervalSimplex (n + 1) i.castSucc := by
+    intro n i j hij
+    simpa only [intervalSimplex, SimplicialObject.σ] using
+      SSet.stdSimplex.σ_objMk₁_of_le i j hij
+  refine ⟨{
+    h := fun n i => cylinderHomotopyComponent H n i
+    h_zero := fun n => cylinderHomotopyComponent_zero H n
+    h_last := fun n => cylinderHomotopyComponent_last H n
+    face_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.pred (Fin.ne_zero_of_lt hji)) (face_gt_map i j hji)).symm
+    face_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ)))
+          (face_le_map i j hij)).symm
+    degeneracy_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.succ
+          (degeneracy_gt_map i j hji)).symm
+    degeneracy_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.castSucc
+          (degeneracy_le_map i j hij)).symm
+  }⟩
 
 noncomputable def cylinderHomotopy_to_degreewise
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

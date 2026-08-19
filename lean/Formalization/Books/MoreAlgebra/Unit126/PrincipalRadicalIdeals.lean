@@ -297,6 +297,217 @@ theorem lemma_polypoly
           _ = (Nat.succ n) * principalPowerQuotientLength x 1 := by
             simp [Nat.succ_mul]
 
+private lemma mem_sup_span_singleton
+    {S : Type*} [CommRing S] (p : Ideal S) (x z : S)
+    (hz : z ∈ p ⊔ Ideal.span ({x} : Set S)) :
+    ∃ y ∈ p, ∃ a : S, z = y + a * x := by
+  obtain ⟨y, hy, z', hz', rfl⟩ := Submodule.mem_sup.mp hz
+  obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hz'
+  exact ⟨y, hy, a, by simp [ha]⟩
+
+private lemma mem_sup_span_pow
+    {S : Type*} [CommRing S] (p : Ideal S) (x : S) (n : ℕ) (z : S)
+    (hz : x * z ∈ p ⊔ Ideal.span ({x ^ (n + 1)} : Set S)) :
+    ∃ y ∈ p, ∃ a : S, y + a * x ^ (n + 1) = x * z := by
+  obtain ⟨y, hy, z', hz', hsum⟩ := Submodule.mem_sup.mp hz
+  obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hz'
+  exact ⟨y, hy, a, by
+    calc
+      y + a * x ^ (n + 1) = y + z' := by rw [ha]
+      _ = x * z := hsum⟩
+
+private lemma length_sup_pow_succ_toNat
+    {S : Type*} [CommRing S] (p : Ideal S) (hp : p.IsPrime)
+    (x : S) (hxnot : x ∉ p) (n : ℕ) (hn : 0 < n)
+    (hfin : ∀ m : ℕ, 0 < m →
+      IsFiniteLength S (S ⧸ (p ⊔ Ideal.span ({x ^ m} : Set S)))) :
+    (Module.length S (S ⧸ (p ⊔ Ideal.span ({x ^ (n + 1)} : Set S)))).toNat =
+      (Module.length S (S ⧸ (p ⊔ Ideal.span ({x ^ n} : Set S)))).toNat +
+        (Module.length S (S ⧸ (p ⊔ Ideal.span ({x ^ 1} : Set S)))).toNat := by
+  let K : ℕ → Ideal S := fun m =>
+    p ⊔ Ideal.span ({x ^ m} : Set S)
+  have hker : K n ≤ LinearMap.ker
+      ((K (n + 1)).mkQ.comp (LinearMap.mulLeft S x)) := by
+    intro z hz
+    rw [LinearMap.mem_ker]
+    change (K (n + 1)).mkQ (x * z) = 0
+    rw [← LinearMap.mem_ker, Submodule.ker_mkQ]
+    obtain ⟨y, hy, z', hz', rfl⟩ := Submodule.mem_sup.mp hz
+    dsimp [K]
+    rw [mul_add]
+    apply Submodule.add_mem_sup
+    · exact p.mul_mem_left x hy
+    · obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hz'
+      change x * z' ∈ Ideal.span ({x ^ (n + 1)} : Set S)
+      rw [← ha]
+      simpa [pow_succ, mul_comm, mul_left_comm, mul_assoc] using
+        (Ideal.span ({x ^ (n + 1)} : Set S)).mul_mem_left a
+          (Ideal.subset_span (show x ^ (n + 1) ∈
+            ({x ^ (n + 1)} : Set S) by simp))
+  let f : S ⧸ K n →ₗ[S] S ⧸ K (n + 1) :=
+    (K n).liftQ ((K (n + 1)).mkQ.comp (LinearMap.mulLeft S x)) hker
+  have hle : K (n + 1) ≤ K 1 := by
+    apply sup_le
+    · exact le_sup_left
+    · apply Ideal.span_le.mpr
+      rintro z ⟨rfl⟩
+      dsimp [K]
+      apply Ideal.mem_sup_right
+      exact Ideal.mem_span_singleton'.mpr ⟨x ^ n, by
+        simp [pow_succ, mul_comm]⟩
+  have hgker : K (n + 1) ≤ LinearMap.ker (K 1).mkQ := by
+    simpa [Submodule.ker_mkQ] using hle
+  let g : S ⧸ K (n + 1) →ₗ[S] S ⧸ K 1 :=
+    (K (n + 1)).liftQ (K 1).mkQ hgker
+  have hf (z : S) : f ((K n).mkQ z) =
+      (K (n + 1)).mkQ (x * z) := by
+    change (((K n).liftQ
+      ((K (n + 1)).mkQ.comp (LinearMap.mulLeft S x)) hker).comp
+        (K n).mkQ) z = _
+    rw [Submodule.liftQ_mkQ]
+    rfl
+  have hg (z : S) : g ((K (n + 1)).mkQ z) = (K 1).mkQ z := by
+    change (((K (n + 1)).liftQ (K 1).mkQ hgker).comp
+      (K (n + 1)).mkQ) z = _
+    rw [Submodule.liftQ_mkQ]
+  have hex : Function.Exact f g := by
+    rw [LinearMap.exact_iff]
+    apply le_antisymm
+    · intro y hy'
+      refine Submodule.Quotient.induction_on (p := K (n + 1)) y ?_ hy'
+      intro z hz
+      rw [LinearMap.mem_ker] at hz
+      have hz' : g ((K (n + 1)).mkQ z) = 0 := by
+        simpa only [Submodule.mkQ_apply] using hz
+      rw [hg] at hz'
+      rw [← LinearMap.mem_ker, Submodule.ker_mkQ] at hz'
+      have hzsup : z ∈ K 1 := hz'
+      change z ∈ p ⊔ Ideal.span ({x ^ 1} : Set S) at hzsup
+      obtain ⟨y', hy', a, ha⟩ := mem_sup_span_singleton p (x ^ 1) z hzsup
+      refine ⟨(K n).mkQ a, ?_⟩
+      rw [hf]
+      rw [ha]
+      have hyzero : (K (n + 1)).mkQ y' = 0 := by
+        rw [← LinearMap.mem_ker, Submodule.ker_mkQ]
+        exact Ideal.mem_sup_left hy'
+      have hq : (K (n + 1)).mkQ (x * a) =
+          (K (n + 1)).mkQ (y' + a * x) := by
+        calc
+          (K (n + 1)).mkQ (x * a) = (K (n + 1)).mkQ (a * x) := by
+            rw [mul_comm]
+          _ = 0 + (K (n + 1)).mkQ (a * x) := by rw [zero_add]
+          _ = (K (n + 1)).mkQ (y' + a * x) := by
+            rw [(K (n + 1)).mkQ.map_add, hyzero, zero_add]
+      simpa only [Submodule.mkQ_apply, pow_one] using hq
+    · intro y
+      rintro ⟨z, rfl⟩
+      refine Submodule.Quotient.induction_on (p := K n) z ?_
+      intro a
+      rw [LinearMap.mem_ker]
+      change g (f ((K n).mkQ a)) = 0
+      rw [hf, hg]
+      rw [← LinearMap.mem_ker, Submodule.ker_mkQ]
+      apply Ideal.mem_sup_right
+      simpa [pow_one, mul_comm] using
+        (Ideal.mem_span_singleton'.mpr ⟨a, by simp [mul_comm]⟩ :
+          a * x ∈ Ideal.span ({x} : Set S))
+  have hf_inj : Function.Injective f := by
+    apply LinearMap.ker_eq_bot.mp
+    ext y
+    constructor
+    · intro hy'
+      refine Submodule.Quotient.induction_on (p := K n) y ?_ hy'
+      intro z hz
+      rw [LinearMap.mem_ker] at hz
+      have hz' : f ((K n).mkQ z) = 0 := by simpa using hz
+      rw [hf] at hz'
+      rw [← LinearMap.mem_ker, Submodule.ker_mkQ] at hz'
+      obtain ⟨y', hy', a, hsum⟩ := mem_sup_span_pow p x n z hz'
+      have hxmem : x * (z - a * x ^ n) ∈ p := by
+        rw [mul_sub, ← hsum]
+        simpa [pow_succ, mul_comm, mul_left_comm, mul_assoc] using hy'
+      have hdiff : z - a * x ^ n ∈ p :=
+        (hp.mul_mem_left_iff hxnot).mp (by simpa [mul_comm] using hxmem)
+      rw [Submodule.mem_bot, Submodule.Quotient.mk_eq_zero]
+      change z ∈ K n
+      rw [← sub_add_cancel z (a * x ^ n)]
+      change z - a * x ^ n + a * x ^ n ∈
+        p ⊔ Ideal.span ({x ^ n} : Set S)
+      exact (p ⊔ Ideal.span ({x ^ n} : Set S)).add_mem
+        (Ideal.mem_sup_left hdiff)
+        (Ideal.mem_sup_right (Ideal.mem_span_singleton'.mpr ⟨a, rfl⟩))
+    · intro hy'
+      rw [Submodule.mem_bot] at hy'
+      rw [hy']
+      simp
+  have hgsurj : Function.Surjective g := by
+    intro y
+    refine Submodule.Quotient.induction_on (p := K 1) y ?_
+    intro z
+    exact ⟨(K (n + 1)).mkQ z, rfl⟩
+  have hseq := Module.length_eq_add_of_exact f g hf_inj hgsurj hex
+  have hnat := congrArg ENat.toNat hseq
+  rw [ENat.toNat_add] at hnat
+  · simpa [K] using hnat
+  · exact Module.length_ne_top_iff.mpr (hfin n hn)
+  · exact Module.length_ne_top_iff.mpr (hfin 1 one_pos)
+
+private lemma quotient_length_toNat_le_of_surjective
+    {R S : Type*} [CommRing R] [CommRing S]
+    (f : R →+* S) (hf : Function.Surjective f) (x : R)
+    (hfin : IsFiniteLength R (R ⧸ Ideal.span ({x} : Set R))) :
+    (Module.length S (S ⧸ Ideal.span ({f x} : Set S))).toNat ≤
+      (Module.length R (R ⧸ Ideal.span ({x} : Set R))).toNat := by
+  letI : Module R (S ⧸ Ideal.span ({f x} : Set S)) :=
+    Module.compHom (S ⧸ Ideal.span ({f x} : Set S)) f
+  let v : R →ₗ[R] S ⧸ Ideal.span ({f x} : Set S) :=
+    { toFun := fun z => Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f z)
+      map_add' := by
+        intro a b
+        change Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f (a + b)) = _
+        simp
+      map_smul' := by
+        intro a b
+        change Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f (a * b)) =
+          Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f a) *
+            Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f b)
+        simp }
+  have hvker : Ideal.span ({x} : Set R) ≤ LinearMap.ker v := by
+    intro z hz
+    rw [LinearMap.mem_ker]
+    change Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f z) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hz
+    apply Ideal.mem_span_singleton'.mpr
+    refine ⟨f a, ?_⟩
+    rw [← ha]
+    simp [map_mul, mul_comm]
+  let q : R ⧸ Ideal.span ({x} : Set R) →ₗ[R]
+      S ⧸ Ideal.span ({f x} : Set S) :=
+    (Ideal.span ({x} : Set R)).liftQ v hvker
+  have hq : Function.Surjective q := by
+    intro y
+    refine Submodule.Quotient.induction_on
+      (p := Ideal.span ({f x} : Set S)) y ?_
+    intro z
+    obtain ⟨r, hr⟩ := hf z
+    refine ⟨(Ideal.span ({x} : Set R)).mkQ r, ?_⟩
+    change Ideal.Quotient.mk (Ideal.span ({f x} : Set S)) (f r) = _
+    rw [hr]
+    rfl
+  have hlen := Module.length_le_of_surjective q hq
+  have hlen' :
+      @Module.length R (S ⧸ Ideal.span ({f x} : Set S)) _ _
+        (Module.compHom (S ⧸ Ideal.span ({f x} : Set S)) f) ≤
+        Module.length R (R ⧸ Ideal.span ({x} : Set R)) := by
+    simpa [q] using hlen
+  have hlenS : Module.length S (S ⧸ Ideal.span ({f x} : Set S)) ≤
+      Module.length R (R ⧸ Ideal.span ({x} : Set R)) := by
+    rw [← Formalization.Books.Algebra.Unit52.length_eq_of_surjective_ringHom f hf]
+    exact hlen'
+  exact ENat.toNat_le_toNat hlenS
+    (Module.length_ne_top_iff.mpr hfin)
+
 /-! ## Minimal primes in dimension one -/
 
 /-- The number of minimal primes is bounded by the length of a principal
@@ -417,6 +628,59 @@ theorem lemma_minprimespoly
       simp only [pow_one]
       rw [Ideal.smul_top_eq_map]
       have hmapzero : I.map (algebraMap S Q') = ⊥ := by
+        rw [Ideal.map_eq_bot_iff_le_ker]
+        intro z hz
+        rw [RingHom.mem_ker]
+        change Ideal.Quotient.mk I z = 0
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        exact hz
+      rw [hmapzero]
+      rfl
+    exact Formalization.Books.Algebra.Unit59.finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
+      I hdef ⟨1, by simpa [Q', I, pow_one] using hkill⟩
+  have hfinR : IsFiniteLength R (R ⧸ Ideal.span ({x} : Set R)) := by
+    have hqdim : ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) = 0 := by
+      have h := one_equation_dimension_eq_of_not_mem_minimalPrimes
+        R hR x hx hmin
+      rw [hdim] at h
+      apply ENat.WithBot.add_one_cancel.mp
+      simpa [zero_add] using h.symm
+    let I : Ideal R := Ideal.span ({x} : Set R)
+    have hItop : I ≠ (⊤ : Ideal R) := by
+      intro htop
+      have h1 : (1 : R) ∈ IsLocalRing.maximalIdeal R := by
+        apply (show I ≤ IsLocalRing.maximalIdeal R from by
+          apply Ideal.span_le.mpr
+          simpa [I] using hx)
+        rw [htop]
+        exact Set.mem_univ 1
+      exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
+    let Q' := R ⧸ I
+    letI : Nontrivial Q' := Ideal.Quotient.nontrivial_iff.mpr hItop
+    letI : IsLocalRing Q' :=
+      IsLocalRing.of_surjective' (Ideal.Quotient.mk I)
+        Ideal.Quotient.mk_surjective
+    letI : IsLocalHom (Ideal.Quotient.mk I) :=
+      IsLocalHom.of_surjective (Ideal.Quotient.mk I)
+        Ideal.Quotient.mk_surjective
+    letI : Ring.KrullDimLE 0 Q' :=
+      (ringKrullDimZero_iff_ringKrullDim_eq_zero).mpr (by
+        simpa [Q', I] using hqdim)
+    have hrad : (⊥ : Ideal Q').radical = IsLocalRing.maximalIdeal Q' :=
+      Ring.KrullDimLE.radical_eq_maximalIdeal (⊥ : Ideal Q') bot_ne_top
+    have hdef : Formalization.Books.Algebra.Unit59.IsIdealOfDefinition R I := by
+      unfold Formalization.Books.Algebra.Unit59.IsIdealOfDefinition
+      calc
+        I.radical = Ideal.comap (Ideal.Quotient.mk I)
+            ((⊥ : Ideal Q').radical) := by
+          rw [Ideal.comap_radical, ← RingHom.ker_eq_comap_bot, Ideal.mk_ker]
+        _ = Ideal.comap (Ideal.Quotient.mk I)
+            (IsLocalRing.maximalIdeal Q') := by rw [hrad]
+        _ = IsLocalRing.maximalIdeal R := IsLocalRing.maximalIdeal_comap _
+    have hkill : I ^ 1 • (⊤ : Submodule R Q') = ⊥ := by
+      simp only [pow_one]
+      rw [Ideal.smul_top_eq_map]
+      have hmapzero : I.map (algebraMap R Q') = ⊥ := by
         rw [Ideal.map_eq_bot_iff_le_ker]
         intro z hz
         rw [RingHom.mem_ker]
@@ -831,7 +1095,233 @@ theorem lemma_minprimespoly
       Module.length S A = Module.length S Q + Module.length S (LinearMap.range G) := hAlen
       _ = Module.length S (LinearMap.range G) + Module.length S Q := add_comm _ _
       _ = Module.length S B := hBlen.symm
-  sorry
+  have hcomponent : ∀ p : P,
+      k ≤ (Module.length S (S ⧸ (p.1 ⊔ I))).toNat := by
+    intro p
+    let K : ℕ → Ideal S := fun n =>
+      p.1 ⊔ Ideal.span ({xS ^ n} : Set S)
+    have hKle : ∀ n : ℕ, 0 < n → K n ≤ IsLocalRing.maximalIdeal S := by
+      intro n hn
+      apply sup_le
+      · letI : p.1.IsPrime := Ideal.IsMinimalPrime.isPrime p.2
+        exact IsLocalRing.le_maximalIdeal_of_isPrime p.1
+      · apply Ideal.span_le.mpr
+        simpa [K] using Ideal.pow_mem_of_mem _ hxS n hn
+    have hfinK : ∀ n : ℕ, 0 < n →
+        IsFiniteLength S (S ⧸ K n) := by
+      intro n hn
+      let v : S ⧸ Ideal.span ({xS ^ n} : Set S) →ₗ[S] S ⧸ K n :=
+        (Ideal.span ({xS ^ n} : Set S)).liftQ
+          (K n).mkQ (by
+            intro z hz
+            rw [Submodule.ker_mkQ]
+            exact Ideal.mem_sup_right hz)
+      have hv : Function.Surjective v := by
+        intro y
+        refine Submodule.Quotient.induction_on (p := K n) y ?_
+        intro z
+        exact ⟨(Ideal.span ({xS ^ n} : Set S)).mkQ z, rfl⟩
+      exact IsFiniteLength.of_surjective (hfin_pow n hn) hv
+    have hstep : ∀ n : ℕ, 0 < n →
+        (Module.length S (S ⧸ K (n + 1))).toNat =
+          (Module.length S (S ⧸ K n)).toNat +
+            (Module.length S (S ⧸ K 1)).toNat := by
+      intro n hn
+      change (Module.length S
+          (S ⧸ (p.1 ⊔ Ideal.span ({xS ^ (n + 1)} : Set S)))).toNat =
+        (Module.length S
+          (S ⧸ (p.1 ⊔ Ideal.span ({xS ^ n} : Set S)))).toNat +
+          (Module.length S
+            (S ⧸ (p.1 ⊔ Ideal.span ({xS ^ 1} : Set S)))).toNat
+      apply length_sup_pow_succ_toNat
+        (p := p.1) (Ideal.IsMinimalPrime.isPrime p.2) xS
+          (hminS p.1 p.2) n hn
+      intro m hm
+      change IsFiniteLength S
+        (S ⧸ (p.1 ⊔ Ideal.span ({xS ^ m} : Set S)))
+      exact hfinK m hm
+    have hKtop : K 1 ≠ (⊤ : Ideal S) := by
+      intro htop
+      have h1 : (1 : S) ∈ IsLocalRing.maximalIdeal S := by
+        apply hKle 1 one_pos
+        rw [htop]
+        exact Set.mem_univ 1
+      exact (IsLocalRing.notMem_maximalIdeal.mpr isUnit_one) h1
+    letI : Nontrivial (S ⧸ K 1) := Ideal.Quotient.nontrivial_iff.mpr hKtop
+    have hbase : 1 ≤ (Module.length S (S ⧸ K 1)).toNat := by
+      have hpos : 0 < Module.length S (S ⧸ K 1) := Module.length_pos
+      exact ENat.toNat_pos (ne_of_gt hpos)
+        (Module.length_ne_top_iff.mpr (hfinK 1 one_pos))
+    have hind : ∀ n : ℕ, 0 < n →
+        n ≤ (Module.length S (S ⧸ K n)).toNat := by
+      intro n hn
+      induction n with
+      | zero => simp at hn
+      | succ n ih =>
+          by_cases hn0 : n = 0
+          · subst n
+            simpa [K] using hbase
+          · have hi := ih (Nat.pos_of_ne_zero hn0)
+            rw [hstep n (Nat.pos_of_ne_zero hn0)]
+            omega
+    simpa [K, I] using hind k hk
+  let cp0 : ∀ p : P, S ⧸ p.1 →ₗ[S] S ⧸ (p.1 ⊔ I) := fun p =>
+    p.1.liftQ (p.1 ⊔ I).mkQ (by
+      intro z hz
+      rw [Submodule.ker_mkQ]
+      exact Ideal.mem_sup_left hz)
+  let cp : M →ₗ[S] (∀ p : P, S ⧸ (p.1 ⊔ I)) :=
+    { toFun := fun m p => cp0 p (m p)
+      map_add' := by
+        intro m n
+        funext p
+        change cp0 p ((m + n) p) = cp0 p (m p) + cp0 p (n p)
+        exact (cp0 p).map_add _ _
+      map_smul' := by
+        intro r m
+        funext p
+        change cp0 p (r • m p) = r • cp0 p (m p)
+        exact (cp0 p).map_smul _ _ }
+  have hNcp : N ≤ LinearMap.ker cp := by
+    change I • (⊤ : Submodule S M) ≤ LinearMap.ker cp
+    refine Submodule.smul_le.mpr ?_
+    intro z hz m hm
+    rw [LinearMap.mem_ker]
+    funext p
+    change cp0 p (z • m p) = 0
+    refine Submodule.Quotient.induction_on (p := p.1) (m p) ?_
+    intro y
+    change Ideal.Quotient.mk (p.1 ⊔ I) (z * y) = 0
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    apply Ideal.mem_sup_right
+    simpa [mul_comm] using I.mul_mem_left y hz
+  let qcp : B →ₗ[S] (∀ p : P, S ⧸ (p.1 ⊔ I)) := N.liftQ cp hNcp
+  have hcp : Function.Surjective cp := by
+    intro y
+    choose s hs using fun p : P =>
+      (Ideal.Quotient.mk_surjective (I := p.1 ⊔ I) (y p))
+    let z : M := fun p => p.1.mkQ (s p)
+    refine ⟨z, ?_⟩
+    funext p
+    change cp0 p (p.1.mkQ (s p)) = y p
+    dsimp [cp0]
+    change (p.1 ⊔ I).mkQ (s p) = y p
+    exact hs p
+  have hqcp : Function.Surjective qcp := by
+    intro y
+    obtain ⟨m, hm⟩ := hcp y
+    refine ⟨N.mkQ m, ?_⟩
+    change cp m = y
+    exact hm
+  have hprodle :
+      Module.length S (∀ p : P, S ⧸ (p.1 ⊔ I)) ≤ Module.length S B := by
+    simpa [B] using Module.length_le_of_surjective qcp hqcp
+  have hfinCp : ∀ p : P, IsFiniteLength S (S ⧸ (p.1 ⊔ I)) := by
+    intro p
+    let v : A →ₗ[S] S ⧸ (p.1 ⊔ I) :=
+      I.liftQ (p.1 ⊔ I).mkQ (by
+        intro z hz
+        rw [Submodule.ker_mkQ]
+        exact Ideal.mem_sup_right hz)
+    have hv : Function.Surjective v := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := p.1 ⊔ I) y ?_
+      intro z
+      exact ⟨I.mkQ z, rfl⟩
+    exact IsFiniteLength.of_surjective hAfin hv
+  have hprodnat :
+      (Module.length S (∀ p : P, S ⧸ (p.1 ⊔ I))).toNat ≤
+        (Module.length S A).toNat := by
+    rw [hlenAB]
+    exact ENat.toNat_le_toNat hprodle
+      (Module.length_ne_top_iff.mpr hBfin)
+  rw [Module.length_pi_of_fintype] at hprodnat
+  have hsum : Nat.card P * k ≤
+      ∑ p : P, (Module.length S (S ⧸ (p.1 ⊔ I))).toNat := by
+    calc
+      Nat.card P * k = ∑ p : P, k := by
+        simp [Nat.card_eq_fintype_card]
+      _ ≤ ∑ p : P, (Module.length S (S ⧸ (p.1 ⊔ I))).toNat := by
+        exact Finset.sum_le_sum (fun p _ => hcomponent p)
+  have hprodnat' :
+      (∑ p : P, (Module.length S (S ⧸ (p.1 ⊔ I))).toNat) ≤
+        (Module.length S A).toNat := by
+    rw [ENat.toNat_sum] at hprodnat
+    · exact hprodnat
+    · intro p hp
+      exact Module.length_ne_top_iff.mpr (hfinCp p)
+  have hcardk : Nat.card P * k ≤ (Module.length S A).toNat :=
+    hsum.trans hprodnat'
+  have hAk : (Module.length S A).toNat =
+      principalPowerQuotientLength xS k := by
+    simp [A, I, principalPowerQuotientLength, idealQuotientLength,
+      Formalization.Books.Algebra.Unit59.moduleLengthNat]
+  have hcardk' : Nat.card P * k ≤
+      k * principalPowerQuotientLength xS 1 := by
+    calc
+      Nat.card P * k ≤ principalPowerQuotientLength xS k := by
+        simpa [hAk] using hcardk
+      _ ≤ k * principalPowerQuotientLength xS 1 := hSbound.1 k
+  have hcardS : Nat.card P ≤ principalPowerQuotientLength xS 1 := by
+    apply Nat.le_of_mul_le_mul_right
+    · simpa [Nat.mul_comm] using hcardk'
+    · exact hk
+  have hlenRSnat :
+      (Module.length S (S ⧸ Ideal.span ({xS} : Set S))).toNat ≤
+        (Module.length R (R ⧸ Ideal.span ({x} : Set R))).toNat := by
+    simpa [xS] using quotient_length_toNat_le_of_surjective
+      (Ideal.Quotient.mk (nilradical R)) Ideal.Quotient.mk_surjective x
+      hfinR
+  let fmin : P → {p : Ideal R // p ∈ (⊥ : Ideal R).minimalPrimes} := fun q =>
+    ⟨Ideal.comap (Ideal.Quotient.mk (nilradical R)) q.1, by
+      rw [show (⊥ : Ideal R).minimalPrimes = (nilradical R).minimalPrimes by
+        simpa [nilradical] using
+          (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm]
+      rw [Ideal.minimalPrimes_eq_comap]
+      exact ⟨q.1, by simpa [S] using q.2, rfl⟩⟩
+  have hfmin_inj : Function.Injective fmin := by
+    intro p q hpq
+    apply Subtype.ext
+    apply Ideal.comap_injective_of_surjective (Ideal.Quotient.mk (nilradical R))
+      Ideal.Quotient.mk_surjective
+    exact congrArg Subtype.val hpq
+  have hfmin_surj : Function.Surjective fmin := by
+    intro p
+    have hp : p.1 ∈ (nilradical R).minimalPrimes := by
+      have hbotmin :
+          (⊥ : Ideal R).minimalPrimes = (nilradical R).minimalPrimes := by
+        simpa [nilradical] using
+          (Ideal.radical_minimalPrimes (I := (⊥ : Ideal R))).symm
+      exact hbotmin ▸ p.2
+    have hpimage : p.1 ∈
+        Ideal.comap (Ideal.Quotient.mk (nilradical R)) ''
+          (⊥ : Ideal S).minimalPrimes := by
+      exact (congrArg (fun s : Set (Ideal R) => p.1 ∈ s)
+        (Ideal.minimalPrimes_eq_comap (I := nilradical R))).mp hp
+    obtain ⟨q, hq, hqp⟩ := hpimage
+    refine ⟨⟨q, hq⟩, ?_⟩
+    apply Subtype.ext
+    exact hqp
+  let eMin : P ≃ {p : Ideal R // p ∈ (⊥ : Ideal R).minimalPrimes} :=
+    Equiv.ofBijective fmin ⟨hfmin_inj, hfmin_surj⟩
+  have hcardR : Nat.card P ≤ principalPowerQuotientLength x 1 := by
+    calc
+      Nat.card P ≤ principalPowerQuotientLength xS 1 := hcardS
+      _ = (Module.length S (S ⧸ Ideal.span ({xS} : Set S))).toNat := by
+        change (Module.length S
+          (S ⧸ Ideal.span ({xS ^ 1} : Set S))).toNat =
+          (Module.length S (S ⧸ Ideal.span ({xS} : Set S))).toNat
+        rw [pow_one]
+      _ ≤ (Module.length R (R ⧸ Ideal.span ({x} : Set R))).toNat := hlenRSnat
+      _ = principalPowerQuotientLength x 1 := by
+        change (Module.length R
+          (R ⧸ Ideal.span ({x} : Set R))).toNat =
+          (Module.length R (R ⧸ Ideal.span ({x ^ 1} : Set R))).toNat
+        rw [pow_one]
+  calc
+    Nat.card {p : Ideal R // p ∈ (⊥ : Ideal R).minimalPrimes} = Nat.card P :=
+      (Nat.card_congr eMin).symm
+    _ ≤ principalPowerQuotientLength x 1 := hcardR
 
 /-! ## Extending a parameter sequence -/
 

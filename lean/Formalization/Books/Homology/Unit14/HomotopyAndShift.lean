@@ -1638,7 +1638,7 @@ theorem termwiseSplitConnectingMap_exists
     erw [← Category.assoc]
     erw [Preadditive.comp_sub]
     erw [Preadditive.sub_comp]
-    simp only [Category.comp_id]
+    erw [Category.comp_id]
     have hsg : (s n).s ≫ S.g.f n = 𝟙 _ := by
       convert (s n).s_g using 1
       rfl

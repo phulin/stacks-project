@@ -4,7 +4,9 @@ import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Finsupp.LSum
 import Mathlib.LinearAlgebra.Quotient.Basic
+import Mathlib.LinearAlgebra.DirectSum.TensorProduct
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Basis
 import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Ideal.Operations
@@ -146,6 +148,18 @@ def quasiRegularMonomialMapQuotient
     (quasiRegularMonomialMapRaw_ker R M f d)
   exact quotientSemilinearMapToLinear I hN gq
 
+theorem quasiRegularMonomialMapQuotient_mk
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (d : Fin f.length →₀ ℕ) (m : M) :
+    quasiRegularMonomialMapQuotient R M f d (Submodule.Quotient.mk m) =
+      Submodule.Quotient.mk
+        (⟨quasiRegularMonomialCoefficient f d • m,
+          Submodule.smul_mem_smul (quasiRegularMonomialCoefficient_mem f d)
+            (show m ∈ (⊤ : Submodule R M) from trivial)⟩ :
+          ↥((Ideal.ofList f) ^ quasiRegularDegree d •
+            (⊤ : Submodule R M))) := by
+  rfl
+
 /-- Coefficients from the arbitrary module act on every associated-graded piece through `R / I`. -/
 theorem quasiRegularMonomialMapQuotient_coeff_smul
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
@@ -211,6 +225,217 @@ def quasiRegularCanonicalMap
     quasiRegularSource R M f →ₗ[R ⧸ Ideal.ofList f]
       quasiRegularTarget R M (Ideal.ofList f) :=
   TensorProduct.lift (quasiRegularBilinearMap R M f)
+
+private theorem range_lTensor_idealPower_smul_top
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [Module.Flat R S]
+    (I : Ideal R) (n : ℕ) :
+    LinearMap.range
+        (TensorProduct.AlgebraTensorModule.lTensor S S
+          (I ^ n • (⊤ : Submodule R M)).subtype) =
+      (I.map (algebraMap R S)) ^ n •
+        (⊤ : Submodule S (S ⊗[R] M)) := by
+  rw [← Ideal.map_pow]
+  apply le_antisymm
+  · rintro _ ⟨x, rfl⟩
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | add x y hx hy => simpa using add_mem hx hy
+    | tmul s x =>
+        change s ⊗ₜ[R] (x : M) ∈
+          (I ^ n).map (algebraMap R S) •
+            (⊤ : Submodule S (S ⊗[R] M))
+        refine Submodule.smul_induction_on x.property ?_ ?_
+        · intro r hr m _
+          rw [TensorProduct.tmul_smul]
+          simpa [Algebra.smul_def] using
+            Submodule.smul_mem_smul
+              (Ideal.mem_map_of_mem (algebraMap R S) hr)
+              (show s ⊗ₜ[R] m ∈ (⊤ : Submodule S (S ⊗[R] M)) from trivial)
+        · intro x y hx hy
+          rw [TensorProduct.tmul_add]
+          exact add_mem hx hy
+  · intro x hx
+    refine Submodule.smul_induction_on hx ?_ ?_
+    · intro a ha z _
+      rw [Ideal.map] at ha
+      refine Submodule.span_induction (p := fun a : S => fun _ =>
+          ∀ z : S ⊗[R] M,
+            a • z ∈ LinearMap.range
+              (TensorProduct.AlgebraTensorModule.lTensor S S
+                (I ^ n • (⊤ : Submodule R M)).subtype))
+        ?_ ?_ ?_ ?_ ha z
+      · rintro _ ⟨r, hr, rfl⟩ z
+        induction z using TensorProduct.induction_on with
+        | zero => simp
+        | add x y hx hy =>
+            rw [smul_add]
+            exact add_mem hx hy
+        | tmul s m =>
+            refine ⟨s ⊗ₜ[R]
+              (⟨r • m, Submodule.smul_mem_smul hr trivial⟩ :
+                ↥(I ^ n • (⊤ : Submodule R M))), ?_⟩
+            simp
+      · intro z
+        simp
+      · intro a b _ _ ha hb z
+        rw [add_smul]
+        exact add_mem (ha z) (hb z)
+      · intro a b _ hb z
+        simpa [smul_smul] using
+          (LinearMap.range
+            (TensorProduct.AlgebraTensorModule.lTensor S S
+              (I ^ n • (⊤ : Submodule R M)).subtype)).smul_mem a (hb z)
+    · intro x y hx hy
+      exact add_mem hx hy
+
+theorem quasiRegularTensorQuotMapEquiv_symm_tmul_mk
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M]
+    (I : Ideal R) (s : S) (m : M) :
+    (TensorProduct.tensorQuotMapSMulEquivTensorQuot M S I).symm
+        (s ⊗ₜ[R] Submodule.Quotient.mk m) =
+      Submodule.Quotient.mk (s ⊗ₜ[R] m) := by
+  have hq :
+      (Ideal.qoutMapEquivTensorQout (I := I) S).symm
+          (s ⊗ₜ[R] (1 : R ⧸ I)) =
+        Ideal.Quotient.mk (I.map (algebraMap R S)) s := by
+    unfold Ideal.qoutMapEquivTensorQout
+    change
+      ((TensorProduct.tensorQuotEquivQuotSMul S I ≪≫ₗ
+          Submodule.quotEquivOfEq _ _ _ ≪≫ₗ
+          Submodule.Quotient.restrictScalarsEquiv R _) (s ⊗ₜ[R] 1)) = _
+    simp only [LinearEquiv.trans_apply]
+    rw [show (1 : R ⧸ I) = Ideal.Quotient.mk I 1 by rfl,
+      TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+    simp
+  simp [TensorProduct.tensorQuotMapSMulEquivTensorQuot, hq]
+  rw [← Submodule.Quotient.mk_smul]
+  congr 1
+  change s • (1 ⊗ₜ[R] m) = s ⊗ₜ[R] m
+  rw [TensorProduct.smul_tmul']
+  simp
+
+/-- Flat base change identifies each quotient in the ideal-power filtration with the
+corresponding quotient for the extended ideal. -/
+noncomputable def quasiRegularPieceBaseChangeEquiv
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M]
+    (hflat : RingHom.Flat (algebraMap R S)) (I : Ideal R) (n : ℕ) :
+    S ⊗[R] quasiRegularPiece R M I n ≃ₗ[S]
+      quasiRegularPiece S (S ⊗[R] M) (I.map (algebraMap R S)) n := by
+  letI : Module.Flat R S := RingHom.flat_algebraMap_iff.mp hflat
+  let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
+  let P' : Submodule S (S ⊗[R] M) :=
+    (I.map (algebraMap R S)) ^ n • (⊤ : Submodule S (S ⊗[R] M))
+  let g : S ⊗[R] P →ₗ[S] S ⊗[R] M :=
+    TensorProduct.AlgebraTensorModule.lTensor S S P.subtype
+  have hg : Function.Injective g :=
+    Module.Flat.lTensor_preserves_injective_linearMap P.subtype Subtype.val_injective
+  have hrange : LinearMap.range g = P' := by
+    simpa only [P, P', g] using range_lTensor_idealPower_smul_top (S := S) I n
+  let eP : S ⊗[R] P ≃ₗ[S] P' :=
+    (LinearEquiv.ofInjective g hg).trans
+      (LinearEquiv.ofEq (LinearMap.range g) P' hrange)
+  let eQ :
+      ((S ⊗[R] P) ⧸
+          (I.map (algebraMap R S) • (⊤ : Submodule S (S ⊗[R] P)))) ≃ₗ[S]
+        quasiRegularPiece S (S ⊗[R] M) (I.map (algebraMap R S)) n :=
+    Submodule.Quotient.equiv _ _ eP (by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr eP.surjective])
+  exact
+    (TensorProduct.tensorQuotMapSMulEquivTensorQuot P S I).symm ≪≫ₗ eQ
+
+theorem quasiRegularPieceBaseChangeEquiv_tmul_mk
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M]
+    (hflat : RingHom.Flat (algebraMap R S)) (I : Ideal R) (n : ℕ)
+    (s : S) (x : ↥(I ^ n • (⊤ : Submodule R M))) :
+    quasiRegularPieceBaseChangeEquiv hflat I n
+        (s ⊗ₜ[R] Submodule.Quotient.mk x) =
+      Submodule.Quotient.mk
+        (⟨s ⊗ₜ[R] (x : M), by
+          let : Module.Flat R S := RingHom.flat_algebraMap_iff.mp hflat
+          rw [← range_lTensor_idealPower_smul_top (S := S) I n]
+          exact ⟨s ⊗ₜ[R] x, rfl⟩⟩ :
+          ↥((I.map (algebraMap R S)) ^ n •
+            (⊤ : Submodule S (S ⊗[R] M)))) := by
+  have hq :
+      (Ideal.qoutMapEquivTensorQout (I := I) S).symm
+          (s ⊗ₜ[R] (1 : R ⧸ I)) =
+        Ideal.Quotient.mk (I.map (algebraMap R S)) s := by
+    unfold Ideal.qoutMapEquivTensorQout
+    change
+      ((TensorProduct.tensorQuotEquivQuotSMul S I ≪≫ₗ
+          Submodule.quotEquivOfEq _ _ _ ≪≫ₗ
+          Submodule.Quotient.restrictScalarsEquiv R _) (s ⊗ₜ[R] 1)) = _
+    simp only [LinearEquiv.trans_apply]
+    rw [show (1 : R ⧸ I) = Ideal.Quotient.mk I 1 by rfl,
+      TensorProduct.tensorQuotEquivQuotSMul_tmul_mk]
+    simp
+  simp [quasiRegularPieceBaseChangeEquiv,
+    TensorProduct.tensorQuotMapSMulEquivTensorQuot,
+    hq, Submodule.mapQ_apply]
+  rw [← Submodule.Quotient.mk_smul]
+  congr 1
+  apply Subtype.ext
+  change s • (1 ⊗ₜ[R] (x : M)) = s ⊗ₜ[R] (x : M)
+  rw [TensorProduct.smul_tmul']
+  simp
+
+private theorem quasiRegularPiece_cast_mk
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (I : Ideal R) {n' n : ℕ} (h : n' = n) (x : M)
+    (hx' : x ∈ I ^ n' • (⊤ : Submodule R M))
+    (hx : x ∈ I ^ n • (⊤ : Submodule R M)) :
+    (h ▸ (Submodule.Quotient.mk ⟨x, hx'⟩ : quasiRegularPiece R M I n')) =
+      (Submodule.Quotient.mk ⟨x, hx⟩ : quasiRegularPiece R M I n) := by
+  subst n
+  rfl
+
+private theorem directSum_lof_eq_of_cast
+    {R R' ι : Type*} [Semiring R] [Semiring R']
+    [DecidableEq ι]
+    (N : ι → Type*) [∀ i, AddCommMonoid (N i)]
+    [∀ i, Module R (N i)] [∀ i, Module R' (N i)]
+    {i' i : ι} (h : i' = i) (x : N i) (x' : N i')
+    (hx : h ▸ x' = x) :
+    DirectSum.lof R ι N i x = DirectSum.lof R' ι N i' x' := by
+  subst i
+  subst x
+  rfl
+
+/-- Monomial coordinates for the source of the quasi-regular canonical map. -/
+noncomputable def quasiRegularSourceFinsuppEquiv
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) :
+    quasiRegularSource R M f ≃ₗ[R ⧸ Ideal.ofList f]
+      ((Fin f.length →₀ ℕ) →₀
+        (M ⧸ (Ideal.ofList f • (⊤ : Submodule R M)))) :=
+  TensorProduct.equivFinsuppOfBasisRight
+    (MvPolynomial.basisMonomials (Fin f.length) (R ⧸ Ideal.ofList f))
+
+theorem quasiRegularSourceFinsuppEquiv_symm_single
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (d : Fin f.length →₀ ℕ)
+    (x : M ⧸ (Ideal.ofList f • (⊤ : Submodule R M))) :
+    (quasiRegularSourceFinsuppEquiv R M f).symm (Finsupp.single d x) =
+      x ⊗ₜ[R ⧸ Ideal.ofList f] MvPolynomial.monomial d 1 := by
+  simp [quasiRegularSourceFinsuppEquiv,
+    TensorProduct.equivFinsuppOfBasisRight_symm_apply,
+    MvPolynomial.coe_basisMonomials]
+
+theorem quasiRegularSourceFinsuppEquiv_tmul_monomial
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (d : Fin f.length →₀ ℕ)
+    (x : M ⧸ (Ideal.ofList f • (⊤ : Submodule R M))) :
+    quasiRegularSourceFinsuppEquiv R M f
+        (x ⊗ₜ[R ⧸ Ideal.ofList f] MvPolynomial.monomial d 1) =
+      Finsupp.single d x := by
+  apply (quasiRegularSourceFinsuppEquiv R M f).symm.injective
+  rw [LinearEquiv.symm_apply_apply]
+  exact (quasiRegularSourceFinsuppEquiv_symm_single R M f d x).symm
 
 theorem quasiRegularCanonicalMap_monomial
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
@@ -317,7 +542,170 @@ theorem isMQuasiRegular_of_flat_baseChange
     (hflat : RingHom.Flat (algebraMap R S)) (f : List R)
     (hf : IsMQuasiRegular R M f) :
     IsMQuasiRegular S (S ⊗[R] M) (f.map (algebraMap R S)) := by
-  sorry
+  let : Module.Flat R S := RingHom.flat_algebraMap_iff.mp hflat
+  let I : Ideal R := Ideal.ofList f
+  let fS : List S := f.map (algebraMap R S)
+  let J : Ideal S := Ideal.ofList fS
+  let A := M ⧸ (I • (⊤ : Submodule R M))
+  let A' := (S ⊗[R] M) ⧸ (J • (⊤ : Submodule S (S ⊗[R] M)))
+  have hJ : J = I.map (algebraMap R S) := by
+    simp [I, J, fS, Ideal.map_ofList]
+  have hJA :
+      J • (⊤ : Submodule S (S ⊗[R] M)) =
+        I.map (algebraMap R S) • (⊤ : Submodule S (S ⊗[R] M)) :=
+    congrArg (fun K : Ideal S => K • (⊤ : Submodule S (S ⊗[R] M))) hJ
+  let eA : A' ≃ₗ[S] S ⊗[R] A :=
+    (Submodule.quotEquivOfEq _ _ hJA).trans
+      (TensorProduct.tensorQuotMapSMulEquivTensorQuot M S I)
+  let eFin : Fin f.length ≃ Fin fS.length :=
+    finCongr (by simp [fS])
+  let eDeg : (Fin f.length →₀ ℕ) ≃ (Fin fS.length →₀ ℕ) :=
+    (Finsupp.domCongr eFin).toEquiv
+  have eDeg_degree (d : Fin f.length →₀ ℕ) :
+      quasiRegularDegree (eDeg d) = quasiRegularDegree d := by
+    simp [quasiRegularDegree, eDeg, eFin]
+  have eDeg_coefficient (d : Fin f.length →₀ ℕ) :
+      quasiRegularMonomialCoefficient fS (eDeg d) =
+        algebraMap R S (quasiRegularMonomialCoefficient f d) := by
+    simp [quasiRegularMonomialCoefficient, eDeg, eFin, fS]
+  let cR := quasiRegularSourceFinsuppEquiv R M f
+  let cS := quasiRegularSourceFinsuppEquiv S (S ⊗[R] M) fS
+  let eSource : S ⊗[R] quasiRegularSource R M f ≃ₗ[S]
+      quasiRegularSource S (S ⊗[R] M) fS :=
+    (cR.restrictScalars R).baseChange R S ≪≫ₗ
+      TensorProduct.finsuppRight R S S A (Fin f.length →₀ ℕ) ≪≫ₗ
+      Finsupp.lcongr eDeg eA.symm ≪≫ₗ
+      (cS.restrictScalars S).symm
+  let eIdeal (n : ℕ) :
+      quasiRegularPiece S (S ⊗[R] M) (I.map (algebraMap R S)) n ≃ₗ[S]
+        quasiRegularPiece S (S ⊗[R] M) J n := by
+    let P : Submodule S (S ⊗[R] M) :=
+      (I.map (algebraMap R S)) ^ n • (⊤ : Submodule S (S ⊗[R] M))
+    let P' : Submodule S (S ⊗[R] M) :=
+      J ^ n • (⊤ : Submodule S (S ⊗[R] M))
+    have hP : P = P' := by
+      change (I.map (algebraMap R S)) ^ n •
+          (⊤ : Submodule S (S ⊗[R] M)) =
+        J ^ n • (⊤ : Submodule S (S ⊗[R] M))
+      rw [hJ]
+    let eP : P ≃ₗ[S] P' := LinearEquiv.ofEq P P' hP
+    exact Submodule.Quotient.equiv _ _ eP (by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr eP.surjective, ← hJ])
+  let ePiece (n : ℕ) :
+      S ⊗[R] quasiRegularPiece R M I n ≃ₗ[S]
+        quasiRegularPiece S (S ⊗[R] M) J n :=
+    quasiRegularPieceBaseChangeEquiv (M := M) hflat I n ≪≫ₗ eIdeal n
+  let eTarget : S ⊗[R] quasiRegularTarget R M I ≃ₗ[S]
+      quasiRegularTarget S (S ⊗[R] M) J :=
+    TensorProduct.directSumRight R S S
+        (fun n => quasiRegularPiece R M I n) ≪≫ₗ
+      DirectSum.congrLinearEquiv ePiece
+  let u : quasiRegularSource R M f →ₗ[R] quasiRegularTarget R M I :=
+    (quasiRegularCanonicalMap R M f).restrictScalars R
+  let v : quasiRegularSource S (S ⊗[R] M) fS →ₗ[S]
+      quasiRegularTarget S (S ⊗[R] M) J :=
+    (quasiRegularCanonicalMap S (S ⊗[R] M) fS).restrictScalars S
+  have hcomm :
+      eTarget.toLinearMap.comp (u.baseChange S) =
+        v.comp eSource.toLinearMap := by
+    have heA (t : S) (m : M) :
+        eA.symm (t ⊗ₜ[R] Submodule.Quotient.mk m) =
+          Submodule.Quotient.mk (t ⊗ₜ[R] m) := by
+      simp only [eA, LinearEquiv.trans_symm, LinearEquiv.trans_apply]
+      rw [quasiRegularTensorQuotMapEquiv_symm_tmul_mk]
+      rfl
+    have hePiece_mk (n : ℕ) (t : S)
+        (x : ↥(I ^ n • (⊤ : Submodule R M))) :
+        ePiece n (t ⊗ₜ[R] Submodule.Quotient.mk x) =
+          Submodule.Quotient.mk
+            (⟨t ⊗ₜ[R] (x : M), by
+              rw [hJ, ← range_lTensor_idealPower_smul_top (S := S) I n]
+              exact ⟨t ⊗ₜ[R] x, rfl⟩⟩ :
+              ↥(J ^ n • (⊤ : Submodule S (S ⊗[R] M)))) := by
+      simp [ePiece, eIdeal, quasiRegularPieceBaseChangeEquiv_tmul_mk,
+        Submodule.Quotient.equiv_apply, Submodule.mapQ_apply]
+      congr 1
+    have hlof (t : S) (n : ℕ) (x : quasiRegularPiece R M I n) :
+        TensorProduct.directSumRight R S S
+            (fun n => quasiRegularPiece R M I n)
+            (t ⊗ₜ[R]
+              DirectSum.lof (R ⧸ I) ℕ
+                (fun n => quasiRegularPiece R M I n) n x) =
+          DirectSum.lof S ℕ
+            (fun n => S ⊗[R] quasiRegularPiece R M I n) n (t ⊗ₜ[R] x) := by
+      change
+        TensorProduct.directSumRight R S S
+            (fun n => quasiRegularPiece R M I n)
+            (t ⊗ₜ[R]
+              DirectSum.lof R ℕ
+                (fun n => quasiRegularPiece R M I n) n x) = _
+      rw [TensorProduct.directSumRight_tmul_lof]
+    apply TensorProduct.AlgebraTensorModule.ext
+    intro s z
+    let b := cR z
+    have hz : z = cR.symm b := by
+      exact (cR.symm_apply_apply z).symm
+    rw [hz]
+    clear hz
+    clear_value b
+    clear z
+    induction b using Finsupp.induction_linear with
+    | zero => simp
+    | add x y hx hy =>
+        simp only [map_add, TensorProduct.tmul_add, hx, hy]
+    | single d x =>
+        induction x using Submodule.Quotient.induction_on with
+        | _ m =>
+          simp [eTarget, eSource, u, v, cR, cS,
+            quasiRegularSourceFinsuppEquiv_symm_single,
+            quasiRegularSourceFinsuppEquiv_tmul_monomial,
+            quasiRegularCanonicalMap_monomial,
+            quasiRegularMonomialMapQuotient_mk,
+            DirectSum.coe_congrLinearEquiv, heA, hePiece_mk, hlof,
+            eDeg_coefficient, I, J, fS, A, A']
+          apply directSum_lof_eq_of_cast
+            (N := fun n => quasiRegularPiece S (S ⊗[R] M) J n)
+            (eDeg_degree d)
+          exact quasiRegularPiece_cast_mk J (eDeg_degree d)
+            (quasiRegularMonomialCoefficient f d • s ⊗ₜ[R] m) _ _
+  have hu : Function.Bijective u := by
+    change Function.Bijective (quasiRegularCanonicalMap R M f)
+    exact hf
+  have hubc : Function.Bijective (u.baseChange S) := by
+    constructor
+    · simpa only [LinearMap.baseChange_eq_ltensor] using
+        Module.Flat.lTensor_preserves_injective_linearMap u hu.1
+    · simpa only [LinearMap.baseChange_eq_ltensor] using
+        LinearMap.lTensor_surjective S hu.2
+  have hcomm_apply (x : S ⊗[R] quasiRegularSource R M f) :
+      eTarget (u.baseChange S x) = v (eSource x) := by
+    change eTarget.toLinearMap (u.baseChange S x) = v (eSource.toLinearMap x)
+    simpa only [LinearMap.comp_apply] using congrArg (fun g => g x) hcomm
+  have hv : Function.Bijective v := by
+    constructor
+    · intro x y hxy
+      apply eSource.symm.injective
+      apply hubc.1
+      apply eTarget.injective
+      calc
+        eTarget (u.baseChange S (eSource.symm x)) = v x := by
+          simpa using hcomm_apply (eSource.symm x)
+        _ = v y := hxy
+        _ = eTarget (u.baseChange S (eSource.symm y)) := by
+          simpa using (hcomm_apply (eSource.symm y)).symm
+    · intro y
+      obtain ⟨x, hx⟩ := hubc.2 (eTarget.symm y)
+      refine ⟨eSource x, ?_⟩
+      calc
+        v (eSource x) = eTarget (u.baseChange S x) := (hcomm_apply x).symm
+        _ = eTarget (eTarget.symm y) := congrArg eTarget hx
+        _ = y := eTarget.apply_symm_apply y
+  change Function.Bijective
+    (quasiRegularCanonicalMap S (S ⊗[R] M) fS)
+  change Function.Bijective
+    (quasiRegularCanonicalMap S (S ⊗[R] M) fS) at hv
+  exact hv
 
 theorem isMQuasiRegular_in_neighborhood
     {R M : Type*} [CommRing R] [IsNoetherianRing R]

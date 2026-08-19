@@ -1354,7 +1354,12 @@ theorem infinitePolynomial_completion_not_complete_as_completionModule :
 theorem infinitePolynomial_completion_not_complete_as_originalModule :
     ¬ Formalization.Books.Examples.Unit07.completionIsCompleteAsOriginalModule
         (infinitePolynomialMaximalIdeal k) := by
-  sorry
+  intro hcomplete
+  have hext := completion_original_complete_implies_extended
+    (infinitePolynomialMaximalIdeal k) hcomplete
+  apply infiniteVariableSeries_not_mem_extendedMaximalIdeal k
+  rw [hext]
+  exact infiniteVariableSeries_mem_completionMaximalIdeal k
 
 end InfinitePolynomialExample
 
@@ -1397,13 +1402,32 @@ noncomputable def zeroLocusKrullDimension {A : Type v} [CommRing A] (I : Ideal A
 
 theorem powerSumPolynomial_isHomogeneous (n d : ℕ) :
     MvPolynomial.IsHomogeneous (powerSumPolynomial k n d) d := by
-  sorry
+  classical
+  unfold powerSumPolynomial
+  apply MvPolynomial.IsHomogeneous.sum
+  intro i hi
+  exact MvPolynomial.isHomogeneous_X_pow i d
 
 theorem powerSumPolynomial_derivative_ideal (n d : ℕ) (hd : (d : k) ≠ 0) :
     polynomialDerivativeIdeal k (powerSumPolynomial k n d) =
       Ideal.span (Set.range (fun i : Fin n =>
         (d : k) • (MvPolynomial.X i : MvPolynomial (Fin n) k) ^ (d - 1))) := by
-  sorry
+  classical
+  unfold polynomialDerivativeIdeal powerSumPolynomial
+  have hderiv : (fun i : Fin n => MvPolynomial.pderiv i
+      (∑ j : Fin n, (MvPolynomial.X j : MvPolynomial (Fin n) k) ^ d)) =
+      (fun i : Fin n => (d : k) • (MvPolynomial.X i : MvPolynomial (Fin n) k) ^ (d - 1)) := by
+    funext i
+    by_cases hzero : (d : k) = 0
+    · exact (hd hzero).elim
+    simp only [map_sum, MvPolynomial.pderiv_pow, MvPolynomial.pderiv_X]
+    rw [Finset.sum_eq_single i]
+    · simp [Algebra.smul_def]
+    · intro j hj hji
+      simp [hji]
+    · intro hi
+      exact (hi (Finset.mem_univ i)).elim
+  rw [hderiv]
 
 theorem powerSumPolynomial_derivative_zeroLocus_is_singleton
     (n d : ℕ) (hn : 0 < n) (hd : (d : k) ≠ 0) (hd_gt : 1 < d) :

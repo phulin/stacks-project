@@ -352,11 +352,9 @@ private lemma tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
     {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
     ∀ x : TensorProduct R P (Q : Type w),
-      ∃ (i : C.index) (y : TensorProduct R P
+        ∃ (i : C.index) (y : TensorProduct R P
           (C.presentation.diag.obj i : Type w)),
         (C.presentation.ι.app i).hom.lTensor P y = x := by
-  sorry
-/-
   intro x
   induction x using TensorProduct.induction_on with
   | zero =>
@@ -365,7 +363,12 @@ private lemma tensor_rep
   | tmul p q =>
       obtain ⟨i, qi, hqi⟩ :=
         Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
-      exact ⟨i, p ⊗ₜ qi, by simp [hqi]⟩
+      refine ⟨i, p ⊗ₜ[R] qi, ?_⟩
+      have hqi' : (C.presentation.ι.app i).hom qi = q := by
+        change (ConcreteCategory.hom
+          (((forget (ModuleCat.{w} R)).mapCocone C.presentation.cocone).ι.app i)) qi = q
+        exact hqi
+      simp [hqi']
   | add x y hx hy =>
       obtain ⟨i, xi, hxi⟩ := hx
       obtain ⟨j, yj, hyj⟩ := hy
@@ -377,17 +380,19 @@ private lemma tensor_rep
       rw [map_add, ← hxi, ← hyj]
       have ha0 : (C.presentation.ι.app k).hom.comp
           (C.presentation.diag.map a).hom = (C.presentation.ι.app i).hom := by
-        simpa only [ModuleCat.comp_apply] using
-          congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)
+        ext v
+        simpa only [LinearMap.comp_apply] using congrFun
+          (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)) v
       have hb0 : (C.presentation.ι.app k).hom.comp
           (C.presentation.diag.map b).hom = (C.presentation.ι.app j).hom := by
-        simpa only [ModuleCat.comp_apply] using
-          congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)
+        ext v
+        simpa only [LinearMap.comp_apply] using congrFun
+          (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)) v
       have ha := congrArg (fun t => t.lTensor P) ha0
       have hb := congrArg (fun t => t.lTensor P) hb0
       rw [LinearMap.lTensor_comp] at ha hb
       rw [← ha, ← hb]
--/
+      simp only [LinearMap.comp_apply]
 
 private lemma eventually_zero
     {R : Type u} [CommRing R] {Q : ModuleCat.{w} R}
@@ -395,14 +400,11 @@ private lemma eventually_zero
     (C.presentation.ι.app i).hom x = 0 →
       ∃ (j : C.index) (h : i ⟶ j),
         (C.presentation.diag.map h).hom x = 0 := by
-  sorry
-/-
   intro hx
-  obtain ⟨j, h, _, hh⟩ :=
-    (Types.FilteredColimit.isColimit_eq_iff _ C.underlyingIsColimit).1
+  obtain ⟨j, h, hh⟩ :=
+    (Types.FilteredColimit.isColimit_eq_iff' C.underlyingIsColimit x 0).1
       (hx.trans (by simp))
   exact ⟨j, h, by simpa using hh⟩
--/
 
 theorem dominates_iff_finitelyPresented
     {R : Type u} [CommRing R] {M N N' : Type w}
@@ -415,47 +417,6 @@ theorem dominates_iff_finitelyPresented
         Module.FinitePresentation R Q →
           LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q) := by
   sorry
-/-
-  constructor
-  · intro h Q _ _ _
-    exact h Q
-  · intro h Q _ _ x hx
-    let C := (exists_generalFilteredColimit (ModuleCat.of R Q)).some
-    obtain ⟨i, y, hy⟩ := tensor_rep (P := M) C x
-    let z := (f.rTensor (C.presentation.diag.obj i : Type (max u w))) y
-    have hz : (C.presentation.ι.app i).hom z = 0 := by
-      have hc := LinearMap.lTensor_comp_rTensor f
-        (C.presentation.ι.app i).hom
-      have hc' := congrArg (fun t => t y) hc
-      rw [← hy, hx]
-      simpa [z] using hc'
-    obtain ⟨j, hij, hzj⟩ := eventually_zero C z hz
-    let yj := (C.presentation.diag.map hij).hom.lTensor M y
-    have hyj : (C.presentation.ι.app j).hom.lTensor M yj = x := by
-      have hc := congrArg (fun t => t.lTensor M)
-        (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality hij))
-      have hc' := congrArg (fun t => t y) hc
-      rw [LinearMap.lTensor_comp] at hc'
-      simpa [yj] using hc'.trans hy
-    have hfj : yj ∈ LinearMap.ker
-        (f.rTensor (C.presentation.diag.obj j : Type (max u w))) := by
-      apply LinearMap.mem_ker.mpr
-      have hc := LinearMap.rTensor_comp_lTensor f
-        (C.presentation.diag.map hij).hom
-      have hc' := congrArg (fun t => t y) hc
-      rw [LinearMap.comp_apply] at hc'
-      rw [← hc', hzj]
-      simp
-    have hgj := h (C.presentation.diag.obj j : Type (max u w))
-      (C.finitelyPresented j) hfj
-    apply LinearMap.mem_ker.mpr
-    have hc := LinearMap.lTensor_comp_rTensor g
-      (C.presentation.ι.app j).hom
-    have hc' := congrArg (fun t => t yj) hc
-    rw [← hyj, LinearMap.comp_apply] at hc'
-    rw [← hc', hgj]
-    simp
--/
 
 /-- Domination is equivalent to universal injectivity of the map from the
 second leg into the pushout. -/

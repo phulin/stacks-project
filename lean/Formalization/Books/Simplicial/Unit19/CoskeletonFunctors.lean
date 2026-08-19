@@ -627,7 +627,7 @@ private theorem compatibleBoundary_factor_eq {C : Type u} [Category.{v} C]
           simp [Category.assoc]
     rw [hξ, hφ, SimplexCategory.Truncated.Hom.tr_comp,
       SimplexCategory.Truncated.Hom.tr_comp]
-    simp only [op_comp, Functor.map_comp, Category.assoc]
+    simp only [op_comp, Functor.map_comp]
     have hq := q.2 i j hij
     simp only [truncatedFace] at hq
     have hrj :

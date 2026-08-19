@@ -79,7 +79,7 @@ theorem adicCompletion_isLocalRing [m.IsMaximal] :
       | zero =>
           rcases Ideal.Quotient.mk_surjective (x.val 0) with ⟨a, ha⟩
           rw [← ha]
-          haveI : Subsingleton (R ⧸ (m ^ 0 • ⊤ : Ideal R)) :=
+          have : Subsingleton (R ⧸ (m ^ 0 • ⊤ : Ideal R)) :=
             subsingleton_of_zero_eq_one (by
               change Ideal.Quotient.mk (m ^ 0 • ⊤) 0 =
                 Ideal.Quotient.mk (m ^ 0 • ⊤) 1
@@ -160,7 +160,7 @@ theorem adicCompletion_isLocalRing [m.IsMaximal] :
   have hne : (0 : AdicCompletion m R) ≠ 1 := by
     intro h
     have h' := congrArg (AdicCompletion.evalOneₐ m) h
-    simpa using h'
+    simp at h'
   refine { toNontrivial := ⟨⟨0, 1, hne⟩⟩, isUnit_or_isUnit_of_add_one := ?_ }
   intro a b hab
   by_cases ha : a ∈ completionMaximalIdeal m

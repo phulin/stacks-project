@@ -65,7 +65,27 @@ theorem affineMorphism_point_goes_to_corresponding_prime
     {X : LocallyRingedSpace.{u}} {Y : Scheme.{u}} [IsAffine Y]
     (f : X ⟶ Y.toLocallyRingedSpace) (x : X) :
     f.base x = (affineSchemePointEquiv Y).symm (affineMorphismPointPrime f x) := by
-  sorry
+  apply (affineSchemePointEquiv Y).injective
+  simp only [Equiv.apply_symm_apply]
+  unfold affineSchemePointEquiv
+  change (Y.isoSpec.hom (f.base x) : PrimeSpectrum _) = _
+  apply PrimeSpectrum.ext
+  ext a
+  change (Y.presheaf.Γgerm (f.base x)).hom a ∈ IsLocalRing.maximalIdeal _ ↔
+    ((locallyRingedSpaceGlobalMap f ≫ X.presheaf.germ ⊤ x trivial).hom) a ∈
+      IsLocalRing.maximalIdeal _
+  rw [← not_iff_not, IsLocalRing.notMem_maximalIdeal,
+    IsLocalRing.notMem_maximalIdeal]
+  change IsUnit ((ConcreteCategory.hom (Y.presheaf.Γgerm (f.base x))) a) ↔
+    IsUnit ((ConcreteCategory.hom (X.presheaf.germ ⊤ x trivial))
+      ((ConcreteCategory.hom (f.c.app (op ⊤))) a))
+  have h := AlgebraicGeometry.LocallyRingedSpace.stalkMap_germ_apply
+    f (⊤ : TopologicalSpace.Opens Y) x (by trivial) a
+  exact (isUnit_map_iff (f.stalkMap x).hom _).symm.trans
+    (eq_iff_iff.mp (by
+      convert congrArg (fun z => IsUnit z) h using 1
+      · simp [TopCat.Presheaf.Γgerm]
+      · exact Iff.rfl))
 
 /-! ## The basic open D(f) -/
 
@@ -80,13 +100,15 @@ theorem mem_locallyRingedSpaceBasicOpen_iff
     (X : LocallyRingedSpace.{u}) (f : locallyRingedSpaceGlobalSections X) (x : X) :
     x ∈ locallyRingedSpaceBasicOpen X f ↔
       X.presheaf.germ ⊤ x trivial f ∉ IsLocalRing.maximalIdeal (X.presheaf.stalk x) := by
-  sorry
+  change (∃ _ : x ∈ (⊤ : TopologicalSpace.Opens X),
+    IsUnit (X.presheaf.germ ⊤ x trivial f)) ↔ _
+  simp
 
 /-- The basic open is open. -/
 theorem locallyRingedSpaceBasicOpen_isOpen
     (X : LocallyRingedSpace.{u}) (f : locallyRingedSpaceGlobalSections X) :
     IsOpen (locallyRingedSpaceBasicOpen X f : Set X) := by
-  sorry
+  exact (locallyRingedSpaceBasicOpen X f).isOpen
 
 /-- Restriction of a global section to its basic open. -/
 def locallyRingedSpaceBasicOpen_restrictSection
@@ -99,7 +121,9 @@ def locallyRingedSpaceBasicOpen_restrictSection
 theorem locallyRingedSpaceBasicOpen_restrictSection_isUnit
     (X : LocallyRingedSpace.{u}) (f : locallyRingedSpaceGlobalSections X) :
     IsUnit (locallyRingedSpaceBasicOpen_restrictSection X f) := by
-  sorry
+  change IsUnit ((X.toRingedSpace.presheaf.map
+    (homOfLE (show X.toRingedSpace.basicOpen f ≤ ⊤ from le_top)).op) f)
+  exact X.toRingedSpace.isUnit_res_basicOpen f
 
 /-! ## Comparison with the standard open of an affine scheme -/
 

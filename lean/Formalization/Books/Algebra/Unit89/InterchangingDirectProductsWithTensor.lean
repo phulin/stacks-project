@@ -352,12 +352,10 @@ theorem finite_generation_tensor_iff
       ∀ (A : Type (max u v w)),
         Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
-  sorry
-/-
   classical
-  tfae_have 1 ↔ 2 := by
-    constructor
-    · intro h A Q
+  tfae_have 1 → 2 := by
+    intro h A Q
+    ·
       letI : Module.Finite R (M : Type w) := h
       obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R (M : Type w)
       let g : Fin n → (M : Type w) := fun i => f (Pi.single i 1)
@@ -378,8 +376,9 @@ theorem finite_generation_tensor_iff
           m = f c := hc.symm
           _ = f (∑ i, c i • Pi.single i (1 : R)) := congrArg f hc'
           _ = ∑ i, c i • g i := by simp [g]
-      have hdecomp (a : A) (x : TensorProduct R (M : Type w) (Q a : Type z)) :
-          ∃ q : Fin n → (Q a : Type z),
+      have hdecomp (a : A)
+          (x : TensorProduct R (M : Type w) (Q a : Type (max u v w))) :
+          ∃ q : Fin n → (Q a : Type (max u v w)),
             x = ∑ i, g i ⊗ₜ[R] q i := by
         induction x using TensorProduct.induction_on with
         | zero =>
@@ -391,7 +390,7 @@ theorem finite_generation_tensor_iff
             rw [hc, TensorProduct.sum_tmul]
             apply Finset.sum_congr rfl
             intro i hi
-            rw [TensorProduct.smul_tmul, ← TensorProduct.tmul_smul]
+            simp [TensorProduct.smul_tmul, TensorProduct.tmul_smul]
         | add x y hx hy =>
             obtain ⟨qx, hqx⟩ := hx
             obtain ⟨qy, hqy⟩ := hy
@@ -402,32 +401,51 @@ theorem finite_generation_tensor_iff
             rw [TensorProduct.tmul_add]
       intro y
       choose q hq using fun a => hdecomp a (y a)
-      let t : TensorProduct R (M : Type w) (∀ a, (Q a : Type z)) :=
+      let t : TensorProduct R (M : Type w)
+          (∀ a, (Q a : Type (max u v w))) :=
         ∑ i, g i ⊗ₜ[R] (fun a => q a i)
       refine ⟨t, ?_⟩
       ext a
       simpa [t, productTensorMap] using (hq a).symm
-  tfae_have 2 ↔ 3 := by
-    constructor
-    · intro h Q A
-      exact h A (fun _ => Q)
-    · intro h A Q
-      exact h Q A
-  tfae_have 3 ↔ 4 := by
-    constructor
-    · intro h A
-      simpa [tensorModulePowerMap] using
-        (LinearEquiv.surjective
-          (LinearEquiv.piCongrRight
-            (fun _ => TensorProduct.rid R (M : Type w)))).comp
-          (h (ModuleCat.of R R) A)
-    · intro h Q A
-      exact h (fun _ => Q)
-  tfae_have 4 ↔ 1 := by
-    constructor
-    · intro h
-      have hrepr (x : TensorProduct R (M : Type w) ((M : Type w) → R)) :
-          ∃ k (m : Fin k → (M : Type w)) (q : Fin k → ((M : Type w) → R)),
+  tfae_have 2 → 3 := by
+    intro h Q A
+    exact h A (fun _ => Q)
+  tfae_have 3 → 4 := by
+    intro h A y
+    let U := ULift.{max u v w} R
+    let Q : ModuleCat.{max u v w} R := ModuleCat.of R U
+    let eU : TensorProduct R (M : Type w) U ≃ₗ[R] (M : Type w) :=
+      (TensorProduct.congr (LinearEquiv.refl R (M : Type w))
+        (ULift.moduleEquiv (R := R) (M := R))).trans
+          (TensorProduct.rid R (M : Type w))
+    let ePi : (A → U) ≃ₗ[R] (A → R) :=
+      LinearEquiv.piCongrRight (fun _ => ULift.moduleEquiv)
+    let eSource : TensorProduct R (M : Type w) (A → U) ≃ₗ[R]
+        TensorProduct R (M : Type w) (A → R) :=
+      TensorProduct.congr (LinearEquiv.refl R (M : Type w)) ePi
+    let eTarget : (∀ _ : A, TensorProduct R (M : Type w) U) ≃ₗ[R]
+        (A → (M : Type w)) :=
+      LinearEquiv.piCongrRight (fun _ => eU)
+    obtain ⟨x, hx⟩ := h Q A (eTarget.symm y)
+    refine ⟨eSource x, ?_⟩
+    have hcomm : tensorModulePowerMap M (eSource x) =
+        eTarget (productTensorMap M (fun _ : A => Q) x) := by
+      clear hx y
+      induction x using TensorProduct.induction_on with
+      | zero => simp [eSource, eTarget]
+      | tmul m q =>
+          ext a
+          simp [eSource, eTarget, eU, ePi, Q, U,
+            tensorModulePowerMap_tmul, productTensorMap_tmul]
+      | add x y hx hy => simp [map_add, hx, hy]
+    rw [hcomm, hx, eTarget.apply_symm_apply]
+  tfae_have 4 → 1 := by
+    intro h
+    ·
+      have hrepr {A : Type (max u v w)}
+          (x : TensorProduct R (M : Type w) (A → R)) :
+          ∃ k, ∃ (m : Fin k → (M : Type w)),
+            ∃ (q : Fin k → (A → R)),
             tensorModulePowerMap M x = fun y => ∑ i, q i y • m i := by
         induction x using TensorProduct.induction_on with
         | zero =>
@@ -445,14 +463,15 @@ theorem finite_generation_tensor_iff
             rw [map_add, hx, hy]
             ext y
             simp [Fin.sum_univ_add]
-      obtain ⟨x, hx⟩ := h (M : Type w) (fun y => y)
+      let A := ULift.{max u v w} (M : Type w)
+      obtain ⟨x, hx⟩ := h A (fun y : A => y.down)
       obtain ⟨k, m, q, hq⟩ := hrepr x
       refine Module.Finite.of_surjective (Fintype.linearCombination R m) ?_
       intro y
-      refine ⟨fun i => q i y, ?_⟩
+      refine ⟨fun i => q i (ULift.up y), ?_⟩
       rw [Fintype.linearCombination_apply]
-      exact (congrFun (hx.symm.trans hq) y).symm
-  tfae_finish -/
+      exact (congrFun (hx.symm.trans hq) (ULift.up y)).symm
+  tfae_finish
 
 /-- The four equivalent criteria for finite presentation from Proposition 89.2. -/
 theorem finite_presentation_tensor_iff

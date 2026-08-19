@@ -1619,7 +1619,7 @@ theorem one_variable_polynomial_proj_homeomorph
     change φloc (Localization.mk (Polynomial.C a)
       (1 : Submonoid.powers (Polynomial.X : Polynomial R))) = a
     rw [Localization.mk_one_eq_algebraMap (M := Submonoid.powers Polynomial.X)]
-    simp [φloc, ev1, Localization.awayLift, IsLocalization.Away.lift]
+    simp [φloc, ev1, IsLocalization.Away.lift]
   have hψφ (z : homogeneousLocalizationAway G Polynomial.X) : ψ (φ z) = z := by
     obtain ⟨n, a, ha, rfl⟩ :=
       HomogeneousLocalization.Away.mk_surjective G.component hfX z
@@ -1635,7 +1635,7 @@ theorem one_variable_polynomial_proj_homeomorph
         Localization.mk (Polynomial.C b)
           (1 : Submonoid.powers (Polynomial.X : Polynomial R))
       rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists]
-      exact ⟨1, by simp [Submonoid.coe_mul]
+      exact ⟨1, by simp
         ⟩
     simpa [hz] using congrArg ψ (hφψ b)
   have hφsurj : Function.Surjective φ := by
@@ -1677,7 +1677,6 @@ theorem one_variable_polynomial_proj_homeomorph
       Polynomial.C r ∈ p.asHomogeneousIdeal.toIdeal
     have heR : eR.symm r = ψ r := by
       apply eR.injective
-      change eR (eR.symm r) = eR (ψ r)
       rw [eR.apply_symm_apply]
       change r = φ (ψ r)
       exact (hφψ r).symm

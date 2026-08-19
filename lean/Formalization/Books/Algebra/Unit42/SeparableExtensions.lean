@@ -504,6 +504,17 @@ noncomputable def finitePthRootBaseChangeAtLevel
     finitePthRootTopAtLevel_isPurelyInseparable tower
   exact { base := B, top := T, topSeparablyGenerated := hsep }
 
+/- A finite collection of elements in a relative perfect closure is already
+   contained in a finite succession of p-th-root layers.  The uniform exponent
+   in this helper is what lets the paired tower use the corrected level-wise
+   interface instead of pretending that one root layer suffices. -/
+private theorem exists_finite_pth_root_tower_of_uniform
+    {F : Type u} [Field F] (n : ℕ) (s : Finset (AlgebraicClosure F))
+    (hs : ∀ z ∈ s, z ^ (p ^ n) ∈ (algebraMap F (AlgebraicClosure F)).range) :
+    ∃ tower : FinitePthRootTower F p hp,
+      ∀ z ∈ s, z ∈ finitePthRootFieldAtLevel tower := by
+  sorry
+
 /- The coefficient-selection part is the positive-characteristic argument from
    the source.  Its finite output is exposed here so the construction above is
    reusable by later proof stages without introducing a perfect closure. -/

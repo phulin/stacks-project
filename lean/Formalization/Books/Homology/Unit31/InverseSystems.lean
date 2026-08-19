@@ -2219,7 +2219,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
     Formalization.Books.Algebra.Unit86.inverse_limit_shortExact_of_countable_mittagLeffler
       hI (SZI 0) hSZI₀'
       ((isMittagLeffler_iff_underlying (SZI 0).X₁).1 hZminus)
-  letI : Epi (inverseSystemLimitMap (eI 0)) := by
+  let : Epi (inverseSystemLimitMap (eI 0)) := by
     change Epi (limMap (SZI 0).g)
     exact hlimZI.epi_g
   have hSIZ₀' :
@@ -2236,16 +2236,15 @@ theorem inverseSystem_cohomology_zero_iso_limit
     Formalization.Books.Algebra.Unit86.inverse_limit_shortExact_of_countable_mittagLeffler
       hI (SIZ 0) hSIZ₀'
       ((isMittagLeffler_iff_underlying (SIZ 0).X₁).1 hI₀)
-  letI : Epi (inverseSystemLimitMap (π 0)) := by
+  let : Epi (inverseSystemLimitMap (π 0)) := by
     change Epi (limMap (SIZ 0).g)
     exact hlimIZ.epi_g
   have hzeroML : IsMittagLeffler (0 : NatInverseSystem AddCommGrpCat) := by
     apply (isMittagLeffler_iff_underlying _).2
     apply Functor.isMittagLeffler_of_surjective
-    intro i j f
-    intro y
+    intro i j f y
     refine ⟨0, ?_⟩
-    letI : Subsingleton ((0 : NatInverseSystem AddCommGrpCat).obj j) :=
+    let : Subsingleton ((0 : NatInverseSystem AddCommGrpCat).obj j) :=
       AddCommGrpCat.subsingleton_of_isZero (Functor.zero_obj j)
     apply Subsingleton.elim
   let C₀ : ComposableArrows (NatInverseSystem AddCommGrpCat) 3 :=
@@ -2296,7 +2295,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
   have hT₀ : T₀.Exact := by
     have h := hlimC₀.exact' 0 1 2 (by omega) (by omega) (by omega)
     dsimp [C₀] at h
-    convert h using 1 <;> congr 1 <;> simp [T₀, C₀]
+    convert h using 1 <;> congr 1
   let Tq : ShortComplex AddCommGrpCat :=
     ShortComplex.mk (inverseSystemLimitMap (q 0))
       (inverseSystemLimitMap (π 0)) hlimqπ
@@ -2345,7 +2344,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
           apply (cancel_mono eA₁.hom).1
           apply limit.hom_ext
           intro i
-          simp only [Category.assoc, inverseSystemLimitMap, limMap_π]
+          simp only [Category.assoc, inverseSystemLimitMap]
           let hobj : (inverseSystemLimit K).X 1 = (limit K).X 1 := by
             rfl
           let hobj_i₁ : (K.obj i).X 1 = (A 1).obj i := by
@@ -2369,9 +2368,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 (eqToHom hobj ≫ (limit.π K i).f 1 ≫ eqToHom hobj_i₁) =
               (eqToHom (by rfl) ≫ (limit.π K i).f 0) ≫
                 (K.obj i).d 0 1 ≫ eqToHom hobj_i₁ := by
-            simpa [hobj, hobj_i₁] using
-              (limit.π K i).comm' 0 1
-                (by simp [ComplexShape.up, ComplexShape.up'])
+            simp [hobj, hobj_i₁]
           rw [hdπ]
           let hobj₀ : (inverseSystemLimit K).X 0 = (limit K).X 0 := by
             rfl
@@ -2395,7 +2392,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
           have hπ₀' : eA₀.inv ≫ (limit.π K i).f 0 =
               eqToHom hobjA ≫ limit.π (A 0) i := by
             simpa [hobjA] using hπ₀raw
-          simp [hobj, hobj_i₁, hobj₀, hobj_i₀]
+          simp
           have hcomm :
               (limit K).d 0 1 ≫ (limit.π K i).f 1 =
                 (limit.π K i).f 0 ≫ (K.obj i).d 0 1 :=
@@ -2406,7 +2403,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
           rw [Category.assoc]
           rw [← Category.assoc eA₀.inv ((limit.π K i).f 0)
             ((K.obj i).d 0 1 ≫ eqToHom hobj_i₁), hπ₀']
-          simp [hobjA]
+          simp
           have hfactor :=
             congrArg (fun f =>
               f ≫ (K.obj i).d 0 1 ≫ eqToHom hobj_i₁)
@@ -2440,7 +2437,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
       hom_inv_id := by
         apply (cancel_mono ((inverseSystemLimit K).iCycles 0)).1
         dsimp [eZhom, eZinv]
-        simp only [Category.assoc, limit.lift_π]
+        simp only [Category.assoc]
         have hkernel :
             eZinv ≫ (inverseSystemLimit K).iCycles 0 =
               inverseSystemLimitMap (ι 0) ≫ eA₀.inv := by
@@ -2448,7 +2445,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
           exact Fork.IsLimit.lift_ι _
         rw [hkernel]
         apply (cancel_mono eA₀.hom).1
-        simp only [Category.assoc, Iso.inv_hom_id_assoc, Category.id_comp]
+        simp only [Category.assoc, Category.id_comp]
         apply limit.hom_ext
         intro i
         simp only [Category.assoc, inverseSystemLimitMap, limMap_π,
@@ -2461,7 +2458,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 (limit.π K i).f 0 := by
-          simpa [hobj] using HomologicalComplex.cyclesMap_i (limit.π K i) 0
+          simp [hobj]
         have hπ :
             eA₀.hom ≫ limit.π (A 0) i = (limit.π K i).f 0 := by
           dsimp [eA₀, A]
@@ -2496,7 +2493,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 (limit.π K i).f 0 := by
-          simpa [hobj] using HomologicalComplex.cyclesMap_i (limit.π K i) 0
+          simp [hobj]
         have hπinv :
             eA₀.inv ≫ (limit.π K i).f 0 = limit.π (A 0) i := by
           dsimp [eA₀, A]
@@ -2521,8 +2518,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 HomologicalComplex.iCycles (K.obj i) 0 =
               HomologicalComplex.iCycles (inverseSystemLimit K) 0 ≫
                 eqToHom hobj₀ ≫ (limit.π K i).f 0 := by
-          simpa [hobj, hobj₀] using
-            HomologicalComplex.cyclesMap_i (limit.π K i) 0
+          simp [hobj, hobj₀]
         have hstage :
             eZinv ≫
                 ((inverseSystemLimit K).iCycles 0 ≫
@@ -2542,7 +2538,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
                 eqToHom hobj_i₀.symm := by
           have h := congrArg (fun f => f ≫ eqToHom hobj_i₀.symm)
             (limMap_π (ι 0) i)
-          simpa [inverseSystemLimitMap] using h
+          simp [inverseSystemLimitMap]
         let hobj_Zi : (Z 0).obj i = HomologicalComplex.cycles (K.obj i) 0 := by rfl
         have hι :
             (ι 0).app i ≫ eqToHom hobj_i₀.symm =
@@ -2552,7 +2548,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
             HomologicalComplex.iCycles (K.obj i) 0 ≫
                 eqToHom hobj_i₀.symm =
               HomologicalComplex.iCycles (K.obj i) 0
-          simp [hobj_i₀]
+          simp
         have hι' :
             (ι 0).app i ≫ eqToHom hobj_i₀.symm =
               eqToHom hobj_Zi ≫ HomologicalComplex.iCycles (K.obj i) 0 := by
@@ -2629,7 +2625,7 @@ theorem inverseSystem_cohomology_zero_iso_limit
         HomologicalComplex.cyclesMap (limit.π K i) 0
     exact hnat
   let hhom := (inverseSystemLimit K).homologyIsCokernel (j := 0) (-1) (by
-    simpa using (CochainComplex.prev ℤ 0))
+    simp)
   let hqcol := hTq.gIsCokernel
   have hkill :
       HomologicalComplex.toCycles (inverseSystemLimit K) (-1) 0 ≫
@@ -2800,8 +2796,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
                 apply ConcreteCategory.hom_ext _ _
                 change ∀ k : ℤ, _
                 intro k
-                simp only [AddCommGrpCat.ofHom_apply, AddCommGrpCat.id_apply,
-                  Functor.const_obj_map, ConcreteCategory.comp_apply]
+                simp only [Functor.const_obj_map, ConcreteCategory.comp_apply]
                 change k • z c.unop = (F.map f).hom (k • z b.unop)
                 rw [map_zsmul, hz f] } }
     let liftElement : ∀ (t : Ordinal)
@@ -2822,7 +2817,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
       change (limit.π F (Opposite.op b)).hom
           ((liftElementMap t F z hz).hom 1) = z b
       rw [← ConcreteCategory.comp_apply, limit.lift_π]
-      simp only [AddCommGrpCat.hom_ofHom, one_zsmul]
+      simp only [AddCommGrpCat.hom_ofHom]
       change (1 : ℤ) • z b = z b
       simp
     have limit_element_ext : ∀ (t : Ordinal)
@@ -3140,13 +3135,6 @@ theorem acyclic_limit_of_ordinal_inverse_system
           ordinalPrefixMap K b n (xComponent b) := by
         apply limit_element_ext b.1 (ordinalPrefixComponent K b n) _ _
         intro c
-        change (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
-              ((preservesLimitIso
-                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
-                (ordinalPrefixSystem K b)).hom
-                ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) =
-            (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
-              (ordinalPrefixMap K b n (xComponent b))
         have hπn := preservesLimitIso_hom_π
           (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
           (ordinalPrefixSystem K b) (Opposite.op c)
@@ -3296,7 +3284,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
           rw [hprefixY]
           rw [← hyPrime]
           rw [prefixMap_d p n hpn yPrime]
-          simp [zPrime, eP, hyPrime]
+          simp [zPrime, hyPrime]
           exact sub_self _
         have hd_diff :
             (inverseSystemLimit (ordinalPrefixSystem K b)).d p n diff = dY - dZ := by
@@ -3314,11 +3302,6 @@ theorem acyclic_limit_of_ordinal_inverse_system
                 (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
                 (ordinalPrefixSystem K b)).hom) 0
         rw [map_sub, hsub]
-        change 0 =
-          (AddCommGrpCat.Hom.hom
-            (preservesLimitIso
-              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
-              (ordinalPrefixSystem K b)).hom) 0
         rw [map_zero]
       have hnextP : (ComplexShape.up ℤ).next p = n := by
         simp [p]
@@ -3479,7 +3462,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
             apply Subtype.ext
             exact congrArg (fun z : Set.Iio a => z.1) heq
           subst d
-          simpa using hgoodc.2 (f := (homOfLE le_rfl).op)
+          simp
         · let d' : Set.Iio (stageIn b c).1 := ⟨d.1, hlt⟩
           have hfc := hgoodc.2 (f :=
             (homOfLE (show stageIn (stageIn b c) d' ≤ stageIn b c from
@@ -3509,7 +3492,7 @@ theorem acyclic_limit_of_ordinal_inverse_system
       · have hf : f = (homOfLE le_rfl).op := by
           apply Subsingleton.elim
         rw [hf]
-        simpa using (hyGood b).2 (f := (homOfLE le_rfl).op)
+        simp
       · let c' : Set.Iio b.1 := ⟨c.1, hlt⟩
         have hc : stageIn b c' = c := by
           apply Subtype.ext

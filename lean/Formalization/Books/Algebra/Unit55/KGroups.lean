@@ -2237,7 +2237,7 @@ private theorem prodComponent₁.projective {R₁ R₂ : Type u} [CommRing R₁]
         change (((r, (0 : R₂)) : R₁ × R₂) • (x : F) i).1 =
           r • ((x : F) i).1
         simp }
-  letI : Module.Projective R₁
+  let hprojective : Module.Projective R₁
       (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
     Module.Projective.of_equiv' eF.symm
   let q : F →ₗ[R₁ × R₂] P.presentation.module :=
@@ -2257,7 +2257,7 @@ private theorem prodComponent₁.projective {R₁ R₂ : Type u} [CommRing R₁]
     rw [← hy]
     simpa only [prodEnd₁, prodIdem₁, LinearMap.lsmul_apply] using
       q.map_smul (prodIdem₁ (R₁ := R₁) (R₂ := R₂)) z
-  apply Module.Projective.of_split i₁ q₁
+  apply @Module.Projective.of_split R₁ _ _ _ _ _ _ _ hprojective i₁ q₁
   apply LinearMap.ext
   intro x
   apply Subtype.ext
@@ -2365,7 +2365,7 @@ private theorem prodComponent₂.projective {R₁ R₂ : Type u} [CommRing R₁]
         change ((((0 : R₁), r) : R₁ × R₂) • ((x : F) i)).2 =
           r • ((x : F) i).2
         simp }
-  letI : Module.Projective R₂
+  let hprojective : Module.Projective R₂
       (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
     Module.Projective.of_equiv' eF.symm
   let q : F →ₗ[R₁ × R₂] P.presentation.module :=
@@ -2385,7 +2385,7 @@ private theorem prodComponent₂.projective {R₁ R₂ : Type u} [CommRing R₁]
     rw [← hy]
     simpa only [prodEnd₂, prodIdem₂, LinearMap.lsmul_apply] using
       q.map_smul (prodIdem₂ (R₁ := R₁) (R₂ := R₂)) z
-  apply Module.Projective.of_split i₂ q₂
+  apply @Module.Projective.of_split R₂ _ _ _ _ _ _ _ hprojective i₂ q₂
   apply LinearMap.ext
   intro x
   apply Subtype.ext

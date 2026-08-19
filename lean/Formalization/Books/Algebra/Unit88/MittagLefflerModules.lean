@@ -380,14 +380,20 @@ private lemma tensor_rep
       rw [map_add, ← hxi, ← hyj]
       have ha0 : (C.presentation.ι.app k).hom.comp
           (C.presentation.diag.map a).hom = (C.presentation.ι.app i).hom := by
-        ext v
-        simpa only [LinearMap.comp_apply] using congrFun
-          (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)) v
+        apply LinearMap.ext
+        intro v
+        have hnat := congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)
+        dsimp at hnat
+        simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
+          congrArg (fun h => h v) hnat
       have hb0 : (C.presentation.ι.app k).hom.comp
           (C.presentation.diag.map b).hom = (C.presentation.ι.app j).hom := by
-        ext v
-        simpa only [LinearMap.comp_apply] using congrFun
-          (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)) v
+        apply LinearMap.ext
+        intro v
+        have hnat := congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)
+        dsimp at hnat
+        simpa only [ModuleCat.hom_comp, LinearMap.comp_apply] using
+          congrArg (fun h => h v) hnat
       have ha := congrArg (fun t => t.lTensor P) ha0
       have hb := congrArg (fun t => t.lTensor P) hb0
       rw [LinearMap.lTensor_comp] at ha hb

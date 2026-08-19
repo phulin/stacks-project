@@ -460,14 +460,12 @@ private def reverseSplitting
         left_inv := by
           intro A
           apply SimplicialObject.Splitting.IndexSet.ext
-          simp only [eqToHom_refl, Category.comp_id]
           all_goals try rfl
           change SimplexCategory.rev.map (SimplexCategory.rev.map A.e) = A.e
           exact SimplexCategory.rev_map_rev_map A.e
         right_inv := by
           intro A
           apply SimplicialObject.Splitting.IndexSet.ext
-          simp only [eqToHom_refl, Category.comp_id]
           all_goals try rfl
           change SimplexCategory.rev.map (SimplexCategory.rev.map A.e) = A.e
           exact SimplexCategory.rev_map_rev_map A.e }
@@ -535,8 +533,8 @@ theorem normalizedSubobject_map_factors
       (Subobject.finset_inf_arrow_factors Finset.univ
         (fun j : Fin (n + 1) => kernelSubobject (U.δ j.castSucc)) i (by simp))]
     simp only [Category.assoc]
-    simp only [← SimplicialObject.δ_def,
-      kernelSubobject_arrow_comp_assoc, zero_comp, comp_zero]
+    rw [← SimplicialObject.δ_def]
+    simp only [kernelSubobject_arrow_comp_assoc, zero_comp, comp_zero]
 
 noncomputable def normalizedSubobjectMap
     {C : Type u} [Category.{v} C] [Abelian C]

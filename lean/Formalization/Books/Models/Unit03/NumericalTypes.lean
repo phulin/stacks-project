@@ -2002,13 +2002,14 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     (hgenus : IsOfGenus T genusValue) (hminimal : IsMinimal T)
     (hn : 1 < T.n) :
     genusValue ≥ topologicalGenus T := by
-  /- Prior attempt (non-compiling proof retained for reference):
   classical
   let k : Fin T.n → ℤ := fun i => -Classical.choose (T.w_dvd i i)
   have hk_eq (i : Fin T.n) : T.a i i = -T.w i * k i := by
-    dsimp [k]
-    rw [Classical.choose_spec (T.w_dvd i i)]
-    ring
+    change T.a i i = -T.w i * -Classical.choose (T.w_dvd i i)
+    calc
+      T.a i i = T.w i * Classical.choose (T.w_dvd i i) :=
+        Classical.choose_spec (T.w_dvd i i)
+      _ = -T.w i * -Classical.choose (T.w_dvd i i) := by ring
   have hk_pos (i : Fin T.n) : 0 < k i := by
     have hai := diagonal_negative T genusValue hgenus hn i
     have hwi := T.w_pos i
@@ -2016,6 +2017,7 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     nlinarith
   have hk_ge_two (i : Fin T.n) (hgi : T.g i = 0) : 2 ≤ k i := by
     by_contra hnot
+    have hki_pos := hk_pos i
     have hki : k i = 1 := by omega
     apply hminimal
     refine ⟨i, hgi, ?_⟩
@@ -2041,18 +2043,26 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
         _ = 0 := T.row_sum i
     have hrowQ := congrArg (fun z : ℤ => (z : ℚ)) hrow
     push_cast at hrowQ
-    rw [hk_eq] at hrowQ
     have hrowQ' :
         (Finset.univ.erase i).sum
             (fun j => (T.a i j : ℚ) * (T.m j : ℚ)) =
           (T.w i : ℚ) * (k i : ℚ) * (T.m i : ℚ) := by
-      linarith
+      calc
+        (Finset.univ.erase i).sum
+              (fun j => (T.a i j : ℚ) * (T.m j : ℚ)) =
+            -((T.a i i : ℚ) * (T.m i : ℚ)) := by linarith
+        _ = (T.w i : ℚ) * (k i : ℚ) * (T.m i : ℚ) := by
+          rw [hk_eq]
+          push_cast
+          ring
     dsimp [f]
     calc
       (k i : ℚ) =
           ((T.w i : ℚ) * (k i : ℚ) * (T.m i : ℚ)) /
             ((T.w i : ℚ) * (T.m i : ℚ)) := by
-              field_simp
+              have hw : (0 : ℚ) < (T.w i : ℚ) := by exact_mod_cast T.w_pos i
+              have hm : (0 : ℚ) < (T.m i : ℚ) := by exact_mod_cast T.m_pos i
+              field_simp [ne_of_gt (mul_pos hw hm)]
       _ =
           ((Finset.univ.erase i).sum
             (fun j => (T.a i j : ℚ) * (T.m j : ℚ))) /
@@ -2060,7 +2070,8 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
       _ = (Finset.univ.erase i).sum (fun j =>
           (T.a i j : ℚ) * (T.m j : ℚ) /
             ((T.w i : ℚ) * (T.m i : ℚ))) := by
-              rw [Finset.sum_div]
+              simp only [div_eq_mul_inv]
+              rw [Finset.sum_mul]
 
   let P : Finset (Fin T.n × Fin T.n) := Finset.univ ×ˢ Finset.univ
   let D : Finset (Fin T.n × Fin T.n) :=
@@ -2159,10 +2170,9 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     have hc₂pos : 0 < c₂ := by nlinarith [hpos', T.w_pos p.2]
     have hprod : f p * f (p.2, p.1) = (c₁ : ℚ) * c₂ := by
       dsimp [f]
-      rw [hc₁, hc₂, T.a_symmetric p.2 p.1]
+      rw [hc₁, hc₂]
       push_cast
       field_simp
-      ring
     have hprod' : (1 : ℚ) ≤ f p * f (p.2, p.1) := by
       rw [hprod]
       have hc₁' : (1 : ℚ) ≤ c₁ := by exact_mod_cast (show (1 : ℤ) ≤ c₁ by omega)
@@ -2181,30 +2191,30 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
       (2 : ℚ) * (Upos.card : ℚ) ≤ D.sum f := by
     rw [hDpos]
     calc
-      (2 : ℚ) * (Upos.card : ℚ) = Upos.sum (fun _ => (2 : ℚ)) := by simp
+      (2 : ℚ) * (Upos.card : ℚ) = Upos.sum (fun _ => (2 : ℚ)) := by simp; ring
       _ ≤ Upos.sum (fun p => f p + f (p.2, p.1)) := by
         apply Finset.sum_le_sum
         intro p hp
         exact hpair p hp
 
-  let E : Finset (Fin T.n × Fin T.n) :=
-    U.filter (fun p => 0 < T.a p.1 p.2)
   have hcard : Upos.card = Fintype.card
       (Formalization.Books.Models.Unit02.positiveEdge T.a) := by
-    apply Finset.card_bij (fun e _ => e.1)
-    · intro e he
-      simp only [Upos, U, P, Finset.mem_filter]
-      exact ⟨by simp, e.2.1, e.2.2⟩
-    · intro e he e' he' heq
-      exact Subtype.ext heq
+    apply Finset.card_bij (s := Upos) (t := Finset.univ)
+      (fun p hp => ⟨p, by
+        have hpU : p ∈ U := (Finset.mem_filter.mp hp).1
+        have hlt : p.1 < p.2 := by
+          simpa [U, P] using (Finset.mem_filter.mp hpU).2
+        have hpos : 0 < T.a p.1 p.2 := (Finset.mem_filter.mp hp).2
+        exact ⟨hlt, hpos⟩⟩)
     · intro p hp
-      have hpU : p ∈ U := (Finset.mem_filter.mp hp).1
-      have hlt : p.1 < p.2 := by
-        simpa [U, P] using (Finset.mem_filter.mp hpU).2
-      have hpos : 0 < T.a p.1 p.2 := (Finset.mem_filter.mp hp).2
-      let e : Formalization.Books.Models.Unit02.positiveEdge T.a :=
-        ⟨p, ⟨hlt, hpos⟩⟩
-      exact ⟨e, by simp, rfl⟩
+      simp
+    · intro p hp q hq heq
+      exact congrArg (fun e : Formalization.Books.Models.Unit02.positiveEdge T.a => e.1) heq
+    · intro e he
+      refine ⟨e.1, ?_, rfl⟩
+      simp only [Upos, Finset.mem_filter]
+      refine ⟨?_, e.2.2⟩
+      simpa [U, P] using e.2.1
 
   have hsumk :
       (∑ i : Fin T.n, (k i : ℚ)) = D.sum f := by
@@ -2217,6 +2227,9 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
       _ = D.sum f := by
         dsimp [D, P]
         rw [Finset.sum_filter]
+        change (∑ i : Fin T.n, (Finset.univ.erase i).sum (fun j => f (i, j))) =
+          (Finset.univ ×ˢ Finset.univ).sum
+            (fun p => if p.1 ≠ p.2 then f p else 0)
         rw [Finset.sum_product]
         apply Finset.sum_congr rfl
         intro i hi
@@ -2243,7 +2256,7 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
           ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
     have hformula := genus_formula T
     rw [hgenus, genusExpression] at hformula
-    rw [← hformula]
+    rw [hformula]
     apply congrArg (fun x : ℚ => 1 + x)
     apply Finset.sum_congr rfl
     intro i hi
@@ -2255,13 +2268,14 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     by_cases hgi : T.g i = 0
     · have hki := hk_ge_two i hgi
       rw [hgi]
-      norm_num
-      exact_mod_cast hki
-    · have hgi' : 1 ≤ T.g i := by omega
-      have hkp := hk_pos i
-      exact_mod_cast (show (0 : ℤ) ≤ T.g i - 1 + k i / 2 by
-        have : (0 : ℚ) ≤ (T.g i : ℚ) - 1 := by exact_mod_cast (by omega : (0 : ℤ) ≤ T.g i - 1)
-        positivity)
+      have hkq : (2 : ℚ) ≤ (k i : ℚ) := by exact_mod_cast hki
+      linarith
+    · have hgnonneg := T.g_nonneg i
+      have hgi' : 1 ≤ T.g i := by omega
+      have hgq : (1 : ℚ) ≤ (T.g i : ℚ) := by exact_mod_cast hgi'
+      have hkq : (0 : ℚ) ≤ (k i : ℚ) := by
+        exact_mod_cast (le_of_lt (hk_pos i))
+      linarith
   have hp_nonneg (i : Fin T.n) :
       (1 : ℚ) ≤ (T.m i : ℚ) * (T.w i : ℚ) := by
     have hm := T.m_pos i
@@ -2273,15 +2287,30 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
       ∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
     have hg_sum : (-(T.n : ℚ)) ≤ ∑ i : Fin T.n, ((T.g i : ℚ) - 1) := by
       simp
-      have := Finset.sum_nonneg (fun i hi => T.g_nonneg i)
-      push_cast at this
+      have hgsum : (0 : ℤ) ≤ ∑ i : Fin T.n, T.g i :=
+        Finset.sum_nonneg (s := (Finset.univ : Finset (Fin T.n)))
+          (fun i hi => T.g_nonneg i)
+      have hgsumQ : (0 : ℚ) ≤ ∑ i : Fin T.n, (T.g i : ℚ) := by
+        exact_mod_cast hgsum
       linarith
     have hk_sum :
         (2 : ℚ) * (Fintype.card
           (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) ≤
         ∑ i : Fin T.n, (k i : ℚ) := hsumk_lower
+    have hk_sum' :
+        (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) ≤
+          ∑ i : Fin T.n, (k i : ℚ) / 2 := by
+      calc
+        (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) =
+            (2 : ℚ) * (Fintype.card
+              (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) / 2 := by ring
+        _ ≤ (∑ i : Fin T.n, (k i : ℚ)) / 2 := by
+          exact div_le_div_of_nonneg_right hk_sum (by norm_num)
+        _ = ∑ i : Fin T.n, (k i : ℚ) / 2 := by
+          simp only [div_eq_mul_inv]
+          rw [Finset.sum_mul]
     rw [Finset.sum_add_distrib]
-    linarith
+    linarith [hg_sum, hk_sum']
   have hsum_prod :
       (∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2)) ≤
       ∑ i : Fin T.n,
@@ -2300,8 +2329,6 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     linarith [hsum_b, hsum_prod]
   dsimp [topologicalGenus]
   exact_mod_cast hgenus_lower
-  -/
-  sorry
 
 /-! The combined bound stated before the two component lemmas. -/
 theorem minimal_genus_ge_max_one_topological_genus (T : NumericalType)

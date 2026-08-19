@@ -287,7 +287,7 @@ private lemma exists_normal_form_P_δ
       have hi : Fin.ofNat _ i.val = i := by
         apply Fin.ext
         simp [Fin.ofNat, Nat.mod_eq_of_lt i.isLt]
-      simp [standardδ, hi]
+      simp [standardδ]
   | of_comp f g hf hg ih =>
     cases hf with
     | @δ n i =>
@@ -304,7 +304,7 @@ private lemma exists_normal_form_P_δ
       refine ⟨SimplexCategoryGenRel.simplicialInsert_isAdmissible _ L hL i.val
         (by omega), ?_⟩
       rw [e]
-      simp only [Category.assoc, eqToHom_refl, Category.id_comp]
+      simp only [eqToHom_refl, Category.id_comp]
       have hi : Fin.ofNat _ i.val = i := by
         apply Fin.ext
         simp [Fin.ofNat, Nat.mod_eq_of_lt i.isLt]
@@ -342,7 +342,7 @@ private lemma standardδ_map_of_lt_all
     have hia : Fin.ofNat (n + 2) a.val =
         (⟨a.val, by omega⟩ : Fin (n + 2)) := by
       apply Fin.ext
-      simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+      simp [Fin.ofNat]
     have hbfin : Fin.ofNat (n + 2) b =
         (⟨b, hb'⟩ : Fin (n + 2)) := by
       apply Fin.ext
@@ -362,7 +362,7 @@ private lemma standardδ_map_of_lt_all
       SimplexCategory.comp_toOrderHom, Function.comp_apply,
       SimplexCategory.δ, SimplexCategory.mkHom,
       SimplexCategory.Hom.toOrderHom_mk, OrderHom.comp_coe,
-      Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe, hsucc, hia, hcast]
+      Fin.succAboveOrderEmb_apply, OrderEmbedding.toOrderHom_coe, hsucc, hcast]
     simp only [SimplexCategoryGenRel.toSimplexCategory_obj_mk, SimplexCategory.len_mk] at hih ⊢
     simpa using hih
 
@@ -417,10 +417,10 @@ private lemma standardδ_range_iff
     have htailP := standardδ_P_δ L htailL htail
     let tail := SimplexCategoryGenRel.toSimplexCategory.map
       (standardδ L (m₁ := n + 1) (m₂ := r) htail)
-    letI : IsSplitMono tail := by
+    let _ : IsSplitMono tail := by
       dsimp [tail]
       exact SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ htailP
-    haveI : Mono tail := inferInstance
+    let _ : Mono tail := inferInstance
     have hinj : Function.Injective tail.toOrderHom :=
       (SimplexCategory.mono_iff_injective).mp inferInstance
     have hcomp (i : Fin (n + 1)) :
@@ -439,7 +439,7 @@ private lemma standardδ_range_iff
       rcases List.mem_cons.mp hj with hjb | hjL
       · have hjb' : j = (⟨b, by omega⟩ : Fin (r + 1)) := by
           apply Fin.ext
-          simpa [hjb] using congrArg Fin.val hi
+          simp [hjb]
         have heq : tail.toOrderHom ((Fin.ofNat (n + 2) b).succAbove i) =
             tail.toOrderHom (⟨b, by omega⟩ : Fin (n + 2)) := by
           rw [← hcomp i, hi, hjb']
@@ -652,7 +652,7 @@ private lemma eq_of_P_δ_map_eq
         (standardδ L (m₁ := m) (m₂ := m + K.length) hL') =
       SimplexCategoryGenRel.toSimplexCategory.map
         (standardδ K (m₁ := m) (m₂ := m + K.length) hK') := by
-    convert hmap using 1 <;> rfl
+    convert hmap using 1
   have hLK : L = K :=
     standardδ_list_eq_of_map_eq hL hK hL' hK' hmap'
   cases hLK
@@ -667,22 +667,22 @@ theorem toSimplexCategory_is_equivalence :
       SimplexCategoryGenRel.exists_P_σ_P_δ_factorization f
     obtain ⟨z', e', m', he', hm', hfac'⟩ :=
       SimplexCategoryGenRel.exists_P_σ_P_δ_factorization g
-    letI : IsSplitEpi
+    let _ : IsSplitEpi
         (SimplexCategoryGenRel.toSimplexCategory.map e) :=
       SimplexCategoryGenRel.isSplitEpi_toSimplexCategory_map_of_P_σ he
-    letI : Epi (SimplexCategoryGenRel.toSimplexCategory.map e) := inferInstance
-    letI : IsSplitMono
+    let _ : Epi (SimplexCategoryGenRel.toSimplexCategory.map e) := inferInstance
+    let _ : IsSplitMono
         (SimplexCategoryGenRel.toSimplexCategory.map m) :=
       SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ hm
-    letI : Mono (SimplexCategoryGenRel.toSimplexCategory.map m) := inferInstance
-    letI : IsSplitEpi
+    let _ : Mono (SimplexCategoryGenRel.toSimplexCategory.map m) := inferInstance
+    let _ : IsSplitEpi
         (SimplexCategoryGenRel.toSimplexCategory.map e') :=
       SimplexCategoryGenRel.isSplitEpi_toSimplexCategory_map_of_P_σ he'
-    letI : Epi (SimplexCategoryGenRel.toSimplexCategory.map e') := inferInstance
-    letI : IsSplitMono
+    let _ : Epi (SimplexCategoryGenRel.toSimplexCategory.map e') := inferInstance
+    let _ : IsSplitMono
         (SimplexCategoryGenRel.toSimplexCategory.map m') :=
       SimplexCategoryGenRel.isSplitMono_toSimplexCategory_map_of_P_δ hm'
-    letI : Mono (SimplexCategoryGenRel.toSimplexCategory.map m') := inferInstance
+    let _ : Mono (SimplexCategoryGenRel.toSimplexCategory.map m') := inferInstance
     have hfac_map :
         SimplexCategoryGenRel.toSimplexCategory.map e ≫
             SimplexCategoryGenRel.toSimplexCategory.map m =
@@ -721,16 +721,16 @@ theorem toSimplexCategory_is_equivalence :
     let iI := eqToHom himg ≫ SimplexCategoryGenRel.toSimplexCategory.map m
     let iI' := Limits.image.eqToHom h ≫ eqToHom himg' ≫
       SimplexCategoryGenRel.toSimplexCategory.map m'
-    letI : Epi eI := by
+    let _ : Epi eI := by
       dsimp [eI]
       infer_instance
-    letI : Mono iI := by
+    let _ : Mono iI := by
       dsimp [iI]
       infer_instance
-    letI : Epi eI' := by
+    let _ : Epi eI' := by
       dsimp [eI']
       infer_instance
-    letI : Mono iI' := by
+    let _ : Mono iI' := by
       dsimp [iI']
       infer_instance
     have hfacI : eI ≫ iI =

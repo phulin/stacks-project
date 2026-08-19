@@ -78,7 +78,7 @@ instance noetherianInfiniteDimensionBlockIdeal_isPrime
       rw [MvPolynomial.mem_ideal_span_X_image]
       intro m hm
       by_contra hno
-      push_neg at hno
+      push Not at hno
       have hsub : (m.support : Set ℕ+) ⊆ Set.range f := by
         intro n hn
         by_contra hnr
@@ -215,7 +215,7 @@ instance noetherianInfiniteDimensionLocalizedBlockIdeal_isMaximal
     have hxn : x = n := by
       by_contra hxn
       apply hxcoeff
-      simp [Finsupp.single_apply, hxn]
+      simp [hxn]
     subst x
     by_cases hji : j = i
     · subst j
@@ -263,7 +263,6 @@ instance noetherianInfiniteDimensionLocalizedBlockIdeal_isMaximal
     have hbnot : b ∉ P := by
       intro hb
       apply hxnot
-      change IsLocalization.mk' A b t ∈ m
       rw [IsLocalization.mk'_mem_map_algebraMap_iff]
       exact ⟨1, M.one_mem, by simpa using hb⟩
     let s := b + noetherianInfiniteDimensionVariable k n ^ (b.totalDegree + 1)
@@ -298,7 +297,6 @@ theorem noetherianInfiniteDimension_isMaximal_iff
   let q : Ideal R := I.under R
   constructor
   · intro hI
-    letI := hI
     have hdisj : Disjoint (M : Set R) (q : Set R) := by
       rw [Set.disjoint_left]
       intro s hs hsq
@@ -312,7 +310,7 @@ theorem noetherianInfiniteDimension_isMaximal_iff
         p ∈ noetherianInfiniteDimensionBlockIdeal k i := by
       intro p hp
       by_contra h
-      push_neg at h
+      push Not at h
       apply Set.disjoint_left.mp hdisj
       · rw [noetherianInfiniteDimensionMultiplicativeSet_coe]
         simp only [Set.mem_iInter, Set.mem_compl_iff]
@@ -363,11 +361,11 @@ theorem noetherianInfiniteDimension_isMaximal_iff
       · exact ⟨1, by simp [hqzero]⟩
       · have hqexist : ∃ f : R, f ∈ q ∧ f ≠ 0 := by
           by_contra h
-          push_neg at h
+          push Not at h
           apply hqzero
           apply le_antisymm
           · intro p hp
-            simpa [h p hp]
+            simp [h p hp]
           · exact bot_le
         obtain ⟨f, hfq, hf0⟩ := hqexist
         let sf : Finset ℕ+ := (Finset.range (bound f : ℕ)).image
@@ -417,7 +415,7 @@ theorem noetherianInfiniteDimension_isMaximal_iff
             g ∈ noetherianInfiniteDimensionBlockIdeal k j := by
           intro g hgq
           by_contra hg
-          push_neg at hg
+          push Not at hg
           let L : ℕ+ := bound f + bound g + 1
           let n : ℕ+ := ⟨2 ^ ((L : ℕ) - 1), by positivity⟩
           have hpowL : 2 ^ ((L : ℕ) - 1) < 2 ^ (L : ℕ) := by
@@ -462,7 +460,7 @@ theorem noetherianInfiniteDimension_isMaximal_iff
             have hxn : x = n := by
               by_contra hxn
               apply hxs
-              simp [Finsupp.single_apply, hxn]
+              simp [hxn]
             exact hnj (hxn ▸ hx)
           have hsum_mem : f + noetherianInfiniteDimensionVariable k n ^
               (f.totalDegree + 1) * g ∈ M := by
@@ -493,11 +491,11 @@ theorem noetherianInfiniteDimension_isMaximal_iff
                   (noetherianInfiniteDimensionBlockIdeal k j).IsPrime).mul_notMem hXpow hgj
               intro hsum
               apply hprod
-              convert Ideal.sub_mem _ hsum hfj using 1 <;> ring
+              convert Ideal.sub_mem _ hsum hfj using 1; ring
             · have hfn : f ∉ noetherianInfiniteDimensionBlockIdeal k j := hfj
               change f ∉ Ideal.span (MvPolynomial.X '' noetherianInfiniteDimensionBlock j) at hfn
               rw [MvPolynomial.mem_ideal_span_X_image] at hfn
-              push_neg at hfn
+              push Not at hfn
               obtain ⟨m, hm, hmbad⟩ := hfn
               have hmprod : m ∉
                   (MvPolynomial.X n ^ (f.totalDegree + 1) * g).support := by
@@ -574,7 +572,7 @@ theorem noetherianInfiniteDimension_isMaximal_iff
         simp
       exact (inferInstance :
         (noetherianInfiniteDimensionBlockIdeal k i).IsPrime).ne_top hPtop
-    exact ⟨i, (show I.IsMaximal from inferInstance).eq_of_le hm_ne_top hIle⟩
+    exact ⟨i, hI.eq_of_le hm_ne_top hIle⟩
   · rintro ⟨i, rfl⟩
     infer_instance
 

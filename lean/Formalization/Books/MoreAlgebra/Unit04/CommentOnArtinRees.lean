@@ -490,19 +490,66 @@ theorem associatedGradedRing_gcommRing_exists
     Nonempty (DirectSum.GCommRing (associatedGradedRingPiece I)) := by
   exact Formalization.Books.Algebra.Unit150.associatedGradedRing_gcommRing_exists I
 
+@[instance_reducible]
 noncomputable instance associatedGradedRing_gcommRing
     {R : Type u} [CommRing R] (I : Ideal R) :
     DirectSum.GCommRing (associatedGradedRingPiece I) :=
-  Classical.choice (associatedGradedRing_gcommRing_exists I)
+  Formalization.Books.Algebra.Unit150.associatedGradedRing_gcommRingCanonical I
 
-/-- The canonical graded-module action of `Gr_I(A)` on `Gr_I(M)`. -/
+/-- The canonical graded-module action of `Gr_I(A)` on `Gr_I(M)`.
+
+This is exposed as reducible data, rather than extracted from a `Nonempty`
+witness, so later proofs can use the defining formula for homogeneous scalar
+multiplication.
+
+Proof roadmap:
+* In this file, first prove `associatedGraded_smul_mem` and its two successor
+  variants.  For representatives `a : I ^ n` and
+  `x : I ^ m • (top : Submodule R M)`, use
+  `Submodule.smul_mem_smul a.property x.property`, then normalize with
+  `Submodule.smul_assoc` and `Ideal.IsTwoSided.pow_add` to put
+  `(a : R) • (x : M)` in `I ^ (n + m) • top`.  The successor variants put the
+  result in `I ^ (n + m + 1) • top` when either representative lies in the
+  denominator.
+* Define a private bilinear map `associatedGradedModulePieceSMulMap I n m`
+  from `associatedGradedRingPiece I n` to linear maps from
+  `associatedGradedModulePiece I m` to the `(n + m)` piece.  Follow
+  `associatedGradedPieceMulMap` in
+  `Formalization/Books/Algebra/Unit150/FormallyEtaleMaps.lean`: start with
+  quotient representatives and descend both variables with
+  `LinearMap.liftQ₂` from
+  `Mathlib/LinearAlgebra/Quotient/Bilinear.lean`, discharging its two kernel
+  goals with the successor lemmas and `Submodule.Quotient.mk_eq_zero`.
+  Call the descended action `associatedGradedModulePieceSMul` and record its
+  quotient-representative formula as the simp lemma
+  `associatedGradedModulePieceSMul_mk_mk`, using `LinearMap.liftQ₂_mk`.
+* Fill the `DirectSum.Gmodule` fields with that descended action.  The four
+  additive laws are the linear-map laws.  For `one_smul` and `mul_smul`, use
+  `Sigma.ext` for the degree equalities `Nat.zero_add` and `Nat.add_assoc`,
+  then quotient-induct on all representatives.  Rewrite ring multiplication
+  with `Formalization.Books.Algebra.Unit150.associatedGradedPieceMul_mk_mk`
+  and the local action formula; finish with `one_smul`/`mul_smul` in `M` and
+  a local HEq lemma analogous to that file's `associatedGradedPiece_mk_heq`.
+  The explicit canonical ring instance immediately above is essential here;
+  extracting it with `Classical.choice` leaves its multiplication opaque.
+-/
+@[instance_reducible]
+noncomputable def associatedGradedModule_gmoduleCanonical
+    {R M : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (I : Ideal R) :
+    DirectSum.Gmodule (associatedGradedRingPiece I)
+      (fun n => associatedGradedModulePiece (M := M) I n) := by
+  sorry
+
+/-- Existence wrapper for the canonical graded-module structure. -/
 theorem associatedGradedModule_gmodule_exists
     {R M : Type*} [CommRing R]
     [AddCommGroup M] [Module R M]
     (I : Ideal R) :
     Nonempty (DirectSum.Gmodule (associatedGradedRingPiece I)
-      (fun n => associatedGradedModulePiece (M := M) I n)) := by
-  sorry
+      (fun n => associatedGradedModulePiece (M := M) I n)) :=
+  ⟨associatedGradedModule_gmoduleCanonical I⟩
 
 noncomputable instance associatedGradedModule_gmodule
     {R M : Type*} [CommRing R]
@@ -510,7 +557,7 @@ noncomputable instance associatedGradedModule_gmodule
     (I : Ideal R) :
     DirectSum.Gmodule (associatedGradedRingPiece I)
       (fun n => associatedGradedModulePiece (M := M) I n) :=
-  Classical.choice (associatedGradedModule_gmodule_exists I)
+  associatedGradedModule_gmoduleCanonical I
 
 /-- A graded linear equivalence between the direct-sum associated graded
 modules.  The linear equivalence is over `Gr_I(A)` and the two component
@@ -558,15 +605,18 @@ abbrev linearMapCokernel
     (g : M →ₗ[R] N) : Type _ :=
   N ⧸ LinearMap.range g
 
-/-- Degreewise form of the source's identity
-`Gr_I(Coker(g))_n = I^n N/(I^(n+1)N + g(M) ∩ I^nN)`. -/
-theorem associatedGraded_cokernel_piece_equiv
+/-- The canonical degreewise equivalence underlying the source's identity
+`Gr_I(Coker(g))_n = I^n N/(I^(n+1)N + g(M) ∩ I^nN)`.
+
+The equivalence is exposed as data so its quotient-map formula remains
+available when proving compatibility with the graded scalar action. -/
+noncomputable def associatedGradedCokernelPieceEquiv
     {R M N : Type*} [CommRing R]
     [AddCommGroup M] [Module R M]
     [AddCommGroup N] [Module R N]
     (I : Ideal R) (g : M →ₗ[R] N) (n : ℕ) :
-    Nonempty (associatedGradedModulePiece (M := linearMapCokernel g) I n ≃ₗ[R]
-      gradedCokernelPiece I g n) := by
+    associatedGradedModulePiece (M := linearMapCokernel g) I n ≃ₗ[R]
+      gradedCokernelPiece I g n := by
   classical
   let P : Submodule R N := I ^ n • (⊤ : Submodule R N)
   let Q : Submodule R N := I ^ (n + 1) • (⊤ : Submodule R N)
@@ -639,10 +689,19 @@ theorem associatedGraded_cokernel_piece_equiv
       exact hxq'
   dsimp only [associatedGradedModulePiece, gradedCokernelPiece,
     gradedCokernelDenominator]
-  change Nonempty ((P' ⧸ Q'.comap P'.subtype) ≃ₗ[R] (P ⧸ D.comap P.subtype))
-  refine ⟨?_⟩
+  change (P' ⧸ Q'.comap P'.subtype) ≃ₗ[R] (P ⧸ D.comap P.subtype)
   exact ((Submodule.quotEquivOfEq (D.comap P.subtype) (LinearMap.ker v) hker.symm).trans
     (v.quotKerEquivOfSurjective hv)).symm
+
+/-- Degreewise form of the source's associated-graded cokernel identity. -/
+theorem associatedGraded_cokernel_piece_equiv
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    (I : Ideal R) (g : M →ₗ[R] N) (n : ℕ) :
+    Nonempty (associatedGradedModulePiece (M := linearMapCokernel g) I n ≃ₗ[R]
+      gradedCokernelPiece I g n) :=
+  ⟨associatedGradedCokernelPieceEquiv I g n⟩
 
 /-- The intersection inclusion used to compare the degreewise cokernel
 quotients of two congruent maps. -/
@@ -760,7 +819,52 @@ theorem approximate_complex_graded_denominator_eq
   exact le_antisymm hleft hright
 
 /-- Congruent exact complexes have isomorphic associated graded cokernels as
-graded `Gr_I(A)`-modules. -/
+graded `Gr_I(A)`-modules.
+
+Proof roadmap:
+* No extra boundedness hypothesis is missing.  Obtain
+  `hc_g' : ArtinReesWorks I g' c` as the first projection of
+  `approximate_complex I c f g f' g' hS hS' hI hc_f hc_g hf hg`.  Then set
+  `hD n := approximate_complex_graded_denominator_eq I c g g' hc_g hc_g' hg n`.
+* For each `n`, put `P n := I ^ n • (top : Submodule A N)` and apply
+  `congrArg (fun D => D.comap (P n).subtype)` to `hD n`.  Feed the resulting
+  equality to `Submodule.quotEquivOfEq` (in
+  `Mathlib/LinearAlgebra/Quotient/Defs.lean`) to obtain the canonical identity
+  equivalence
+  `gradedCokernelPiece I g n ≃ₗ[A] gradedCokernelPiece I g' n`.
+  Compose it on the left with `associatedGradedCokernelPieceEquiv I g n` and
+  on the right with `(associatedGradedCokernelPieceEquiv I g' n).symm`; call
+  the result `ePiece n`.  Here the ambient-module universes agree because both
+  cokernels are quotients of the same `N`; instantiate the final structure
+  with `R := A`, `M := linearMapCokernel g`, and
+  `N := linearMapCokernel g'`.
+* Before assembling the direct sum, prove the homogeneous compatibility lemma
+  `ePiece_smul`: for `a : associatedGradedRingPiece I i` and
+  `x : associatedGradedModulePiece (M := linearMapCokernel g) I j`,
+  `ePiece (i + j) (GradedMonoid.GSMul.smul a x) =
+  GradedMonoid.GSMul.smul a (ePiece j x)`.  Quotient-induct on `a` and `x`;
+  use `associatedGradedModulePieceSMul_mk_mk`,
+  `Submodule.quotEquivOfEq_mk`, and first add the simp lemma
+  `associatedGradedCokernelPieceEquiv_mk` for the explicit equivalence above
+  (derive it from `LinearMap.quotKerEquivOfSurjective_apply_mk` in
+  `Mathlib/LinearAlgebra/Isomorphisms.lean`).  Both sides are the class of the
+  same scalar multiple in `I ^ (i + j) • top`.  Do not return to
+  `Classical.choice (associatedGraded_cokernel_piece_equiv ...)`: the old
+  `Nonempty` interface hides exactly this compatibility calculation.
+* Let the additive equivalence of direct sums be
+  `DirectSum.congrAddEquiv (fun n => (ePiece n).toAddEquiv)` from
+  `Mathlib/Algebra/DirectSum/Module.lean`, and promote it to a
+  `LinearEquiv` over `associatedGradedRing I`.  Prove `map_smul'` by
+  `DirectSum.induction_on` first on the scalar and then on the module element;
+  the homogeneous/homogeneous case reduces using
+  `DirectSum.Gmodule.of_smul_of`, `DirectSum.map_of`, and `ePiece_smul`, while
+  the zero and addition cases use the additive laws.
+* Use this promoted equivalence for `AssociatedGradedLinearEquiv.toLinearEquiv`.
+  Its `map_component'` is `DirectSum.map_of` with witness `ePiece n x`; the
+  inverse field uses `(ePiece n).symm` and the same lemma for the inverse
+  `DirectSum.congrAddEquiv`.  This completes the structure and hence its
+  `Nonempty` wrapper.
+-/
 theorem approximate_complex_graded
     {A L M N : Type*} [CommRing A]
     [AddCommGroup L] [Module A L]

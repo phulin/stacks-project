@@ -1,5 +1,5 @@
 import Formalization.Books.Dga.Unit14.GradedProjectiveModules
-import Formalization.Books.Dga.Unit17.InjectiveModules
+import Formalization.Books.MoreAlgebra.Unit55.InjectiveModules
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.CategoryTheory.Preadditive.Injective.Basic
 import Mathlib.CategoryTheory.Limits.Shapes.Products
@@ -162,6 +162,7 @@ def gradedCharacterDualOfLeft (M : GradedLeftModule (R := R) (A := A)) :
   one_action := by sorry
   mul_action := by sorry
 
+omit [DirectSum.GAlgebra R A] in
 /-- The source formula for the right action on the dual of a left module. -/
 theorem gradedLeftDualAction_apply
     (M : GradedLeftModule (R := R) (A := A))
@@ -187,6 +188,7 @@ def gradedCharacterDualOfRight (M : GradedRightModule (R := R) (A := A)) :
   one_action := by sorry
   mul_action := by sorry
 
+omit [DirectSum.GAlgebra R A] in
 /-- The source formula for the left action on the dual of a right module. -/
 theorem gradedRightDualAction_apply
     (M : GradedRightModule (R := R) (A := A))
@@ -219,7 +221,7 @@ def gradedCharacterDualOfRightMap
 
 /-- Exactness of the graded character dual, checked componentwise. -/
 def GradedCharacterDualExact : Prop :=
-  ∀ n : ℤ, IsExact (characterDualFunctor R)
+  ∀ _ : ℤ, IsExact (characterDualFunctor R)
 
 /-- The componentwise dual functor is exact. -/
 theorem gradedCharacterDual_exact : GradedCharacterDualExact (R := R) := by
@@ -470,6 +472,7 @@ noncomputable def gradedLeftShiftedFree
   one_action := by sorry
   mul_action := by sorry
 
+omit [DirectSum.GAlgebra R A] in
 theorem gradedLeftShiftedFree_component
     {ι : Type u} (degree : ι → ℤ) (n : ℤ) :
     (gradedLeftShiftedFree (R := R) (A := A) degree).component n =

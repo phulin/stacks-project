@@ -123,7 +123,8 @@ structure FirstChainTorSpectralSequenceData
       ∃ e₀ : page 2 i j ≅ torModuleZ (chainComplexHomology K i) M j,
       ∃ e₁ : page 2 (i + 1) (j - 2) ≅
           torModuleZ (chainComplexHomology K (i + 1)) M (j - 2),
-        e₀.hom ≫ φ = differential 2 i j ≫ e₁.hom
+        e₀.hom ≫ φ = differential 2 i j ≫
+          eqToHom (by congr 1 <;> omega) ≫ e₁.hom
   abutment : ℤ → Mod R
   convergence : ∀ n : ℤ,
     Nonempty (abutment n ≅ chainDerivedTensorHomology K M n)

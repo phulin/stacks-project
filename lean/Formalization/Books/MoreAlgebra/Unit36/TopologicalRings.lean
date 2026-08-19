@@ -145,7 +145,14 @@ theorem isPreAdicTopologicalRing_iff_preAdmissible_and_powers_open
         ∃ I : Ideal R,
           IsIdealOfDefinition R I ∧
             ∀ n : ℕ, 1 ≤ n → IsOpen ((I ^ n : Ideal R) : Set R) := by
-  sorry
+  constructor
+  · intro h
+    obtain ⟨I, hI, hopen⟩ :=
+      (isPreAdicTopologicalRing_iff_ideal_powers_open R).mp h
+    exact ⟨⟨I, hI⟩, ⟨I, hI, hopen⟩⟩
+  · rintro ⟨hpre, ⟨I, hI, hopen⟩⟩
+    exact (isPreAdicTopologicalRing_iff_ideal_powers_open R).mpr
+      ⟨I, hI, hopen⟩
 
 theorem isAdicTopologicalRing_iff_admissible_and_powers_open
     (R : Type u) [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
@@ -155,7 +162,14 @@ theorem isAdicTopologicalRing_iff_admissible_and_powers_open
         ∃ I : Ideal R,
           IsIdealOfDefinition R I ∧
             ∀ n : ℕ, 1 ≤ n → IsOpen ((I ^ n : Ideal R) : Set R) := by
-  sorry
+  constructor
+  · rintro ⟨hpre, hcomplete⟩
+    obtain ⟨hpreAdmissible, hI⟩ :=
+      (isPreAdicTopologicalRing_iff_preAdmissible_and_powers_open R).mp hpre
+    exact ⟨⟨hpreAdmissible, hcomplete⟩, hI⟩
+  · rintro ⟨⟨hpreAdmissible, hcomplete⟩, hI⟩
+    exact ⟨(isPreAdicTopologicalRing_iff_preAdmissible_and_powers_open R).mpr
+      ⟨hpreAdmissible, hI⟩, hcomplete⟩
 
 /-- The canonical Mathlib topology attached to an ideal on a ring. -/
 abbrev IAdicRingTopology (R : Type u) [CommRing R] (I : Ideal R) : TopologicalSpace R :=
@@ -178,7 +192,10 @@ theorem iAdicRingTopology_is_linear (R : Type u) [CommRing R] (I : Ideal R) :
 theorem iAdicRingTopology_powers_open (R : Type u) [CommRing R] (I : Ideal R) :
     ∀ n : ℕ, 1 ≤ n →
       @IsOpen R I.adicTopology ((I ^ n : Ideal R) : Set R) := by
-  sorry
+  let : TopologicalSpace R := I.adicTopology
+  intro n hn
+  exact (I ^ n).toAddSubgroup.isOpen_of_mem_nhds
+    (I.hasBasis_nhds_zero_adic.mem_iff.mpr ⟨n, trivial, subset_rfl⟩)
 
 theorem iAdicModuleTopology_hasBasis
     (R : Type u) [CommRing R] (I : Ideal R)

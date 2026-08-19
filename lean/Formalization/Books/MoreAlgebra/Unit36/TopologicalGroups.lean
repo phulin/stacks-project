@@ -545,10 +545,258 @@ theorem linearNeighborhoodBasis_completion_map
     let _ : Preorder B.Index := B.preorder
     ∃ (F : DiscreteInverseSystem B.Index)
       (c : M →ₜ+ inverseLimit F),
-      (∀ i : B.Index,
+        (∀ i : B.Index,
         Nonempty (F.diagram.obj (Opposite.op i) ≃ₜ+ (M ⧸ B.U i))) ∧
         (Function.Injective c ↔ T2Space M) ∧
-        (IsCompleteTopologicalAddGroup M ↔ Function.Bijective c) := by sorry
+        (IsCompleteTopologicalAddGroup M ↔ Function.Bijective c) := by
+  let _ : Preorder B.Index := B.preorder
+  dsimp
+  let qmap (i j : B.Index) (h : j ≤ i) :
+      (M ⧸ B.U i) →+ (M ⧸ B.U j) :=
+    QuotientAddGroup.lift (N := B.U i)
+      (QuotientAddGroup.mk' (N := B.U j))
+      (by
+        intro x hx
+        simpa using (B.antitone h hx))
+  let D₀ : (B.Index)ᵒᵖ ⥤ ModuleCat ℤ :=
+    { obj := fun i => ModuleCat.of ℤ (M ⧸ B.U i.unop)
+      map := fun {i j} f =>
+        ModuleCat.ofHom (qmap i.unop j.unop
+          (CategoryTheory.leOfHom f.unop)).toIntLinearMap
+      map_id := by
+        intro i
+        ext x
+        refine QuotientAddGroup.induction_on x ?_
+        intro y
+        rfl
+      map_comp := by
+        intro i j k f g
+        ext x
+        refine QuotientAddGroup.induction_on x ?_
+        intro y
+        rfl }
+  let D : (B.Index)ᵒᵖ ⥤ TopologicalAbelianGroupCat :=
+    D₀ ⋙ TopModuleCat.withModuleTopology ℤ
+  have hmod : ∀ i : B.Index, moduleTopology ℤ (M ⧸ B.U i) = ⊥ := by
+    intro i
+    let hdata := bottom_module_topology_data (M ⧸ B.U i)
+    have hle : moduleTopology ℤ (M ⧸ B.U i) ≤ hdata.topology := by
+      exact @moduleTopology_le ℤ _ (M ⧸ B.U i) _ _ hdata.topology
+        hdata.continuousSMul hdata.continuousAdd
+    exact le_antisymm hle bot_le
+  have hquot : ∀ i : B.Index,
+      QuotientAddGroup.instTopologicalSpace (B.U i) = ⊥ := by
+    intro i
+    exact (quotient_add_group_is_discrete_of_open (B.U i) (B.isOpen i)).eq_bot
+  have hdisc : ∀ i : (B.Index)ᵒᵖ, DiscreteTopology (D.obj i) := by
+    intro i
+    change @DiscreteTopology (M ⧸ B.U i.unop)
+      (moduleTopology ℤ (M ⧸ B.U i.unop))
+    rw [hmod]
+    exact discreteTopology_bot _
+  let qhom (i : B.Index) : TopModuleCat.of ℤ M ⟶ D.obj (Opposite.op i) := by
+    letI : TopologicalSpace (M ⧸ B.U i) := moduleTopology ℤ (M ⧸ B.U i)
+    letI : IsModuleTopology ℤ (M ⧸ B.U i) := ⟨rfl⟩
+    letI : ContinuousSMul ℤ (M ⧸ B.U i) := inferInstance
+    letI : IsTopologicalAddGroup (M ⧸ B.U i) :=
+      IsModuleTopology.topologicalAddGroup ℤ (M ⧸ B.U i)
+    dsimp [D, D₀, TopModuleCat.withModuleTopology]
+    exact TopModuleCat.ofHom
+      { toLinearMap := (QuotientAddGroup.mk' (N := B.U i)).toIntLinearMap
+        cont := by
+          rw [hmod i, ← hquot i]
+          exact continuous_quotient_mk' }
+  have hne : Nonempty B.Index := by
+    rcases B.fundamental.mem_iff.mp
+        (univ_mem : (Set.univ : Set M) ∈ nhds (0 : M)) with
+      ⟨i, hi, his⟩
+    exact ⟨i⟩
+  let F : DiscreteInverseSystem B.Index :=
+    { diagram := D
+      directed := B.directed
+      nonempty := hne
+      discrete := hdisc }
+  let cone : Cone F.diagram :=
+    { pt := TopModuleCat.of ℤ M
+      π :=
+        { app := fun i => qhom i.unop
+          naturality := by
+            intro i j f
+            ext x
+            simp [Functor.const_obj_map]
+            dsimp [qhom, F, D, D₀, qmap]
+            change QuotientAddGroup.mk' (N := B.U j.unop) x =
+              qmap i.unop j.unop (CategoryTheory.leOfHom f.unop)
+                (QuotientAddGroup.mk' (N := B.U i.unop) x)
+            simp [qmap] } }
+  let cLinear : TopModuleCat.of ℤ M ⟶ inverseLimit F :=
+    limit.lift F.diagram cone
+  let c : M →ₜ+ inverseLimit F := cLinear.hom
+  change M →ₜ+ (limit F.diagram).toModuleCat at c
+  have hq (i : B.Index) (x : M) :
+      (qhom i).hom x = QuotientAddGroup.mk' (N := B.U i) x := by
+    rfl
+  have hc_coord (i : B.Index) (x : M) :
+      (limit.π F.diagram (Opposite.op i)).hom (c x) =
+        QuotientAddGroup.mk' (N := B.U i) x := by
+    have hfac := limit.lift_π cone (Opposite.op i)
+    have hfac' := congrArg (fun q => q.hom x) hfac
+    change (limit.π F.diagram (Opposite.op i)).hom (cLinear.hom x) =
+      QuotientAddGroup.mk' (N := B.U i) x
+    dsimp [cLinear, cone] at hfac'
+    rw [hq] at hfac'
+    dsimp [cLinear, cone]
+    exact hfac'
+  have hequiv : ∀ i : B.Index,
+      Nonempty (F.diagram.obj (Opposite.op i) ≃ₜ+ (M ⧸ B.U i)) := by
+    intro i
+    let : DiscreteTopology (F.diagram.obj (Opposite.op i)) := hdisc _
+    let : DiscreteTopology (M ⧸ B.U i) :=
+      quotient_add_group_is_discrete_of_open (B.U i) (B.isOpen i)
+    exact ⟨{
+      toFun := id
+      invFun := id
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      continuous_toFun := continuous_of_discreteTopology
+      continuous_invFun := continuous_of_discreteTopology }⟩
+  refine ⟨F, c, hequiv, ?_, ?_⟩
+  · constructor
+    · intro hinj
+      have hT2limit : T2Space ((limit F.diagram).toModuleCat) :=
+        (inverseLimit_is_complete F).2
+      exact @T2Space.of_injective_continuous M ((limit F.diagram).toModuleCat)
+        _ _ hT2limit c hinj c.continuous
+    · intro hT2
+      let : T2Space M := hT2
+      intro x y hxy
+      have hzmem : ∀ i : B.Index, x - y ∈ B.U i := by
+        intro i
+        have hxi := hc_coord i x
+        have hyi := hc_coord i y
+        have hqxy : QuotientAddGroup.mk' (N := B.U i) x =
+            QuotientAddGroup.mk' (N := B.U i) y := by
+          have hpi := congrArg (fun z =>
+            (limit.π F.diagram (Opposite.op i)).hom z) hxy
+          exact hxi.symm.trans (hpi.trans hyi)
+        change (x : M ⧸ B.U i) = y at hqxy
+        exact QuotientAddGroup.eq_iff_sub_mem.mp hqxy
+      have hzclosure : (0 : M) ∈ closure ({x - y} : Set M) := by
+        exact (mem_closure_iff_nhds_basis (x := (0 : M))
+          (t := ({x - y} : Set M)) B.fundamental).2 (by
+            intro i hi
+            exact ⟨x - y, rfl, hzmem i⟩)
+      have hzsingleton : (0 : M) ∈ ({x - y} : Set M) :=
+        isClosed_singleton.closure_subset hzclosure
+      exact sub_eq_zero.mp (Set.mem_singleton_iff.mp hzsingleton).symm
+  have hdense : DenseRange c := by
+    change Dense (Set.range c)
+    rw [dense_iff_closure_eq]
+    ext z
+    constructor
+    · intro hz
+      trivial
+    · intro hz
+      change (limit F.diagram).toModuleCat at z
+      apply (mem_closure_iff_nhds_basis
+        ((inverseLimit_kernels_form_fundamental_system F).nhds_of_zero z)).2
+      intro i hi
+      obtain ⟨x, hx⟩ :=
+        (QuotientAddGroup.mk'_surjective (N := B.U i.unop))
+          ((limit.π F.diagram i).hom z)
+      refine ⟨c x, ⟨x, rfl⟩, ?_⟩
+      change c x - z ∈ inverseLimitKernel F i
+      change (limit.π F.diagram i).hom
+        ((c x : (limit F.diagram).toModuleCat) - z) = 0
+      rw [map_sub, hc_coord i.unop, hx]
+      exact sub_self _
+  have hpreimage (i : B.Index) :
+      c ⁻¹' (inverseLimitKernel F (Opposite.op i) : Set (inverseLimit F)) =
+        (B.U i : Set M) := by
+    ext x
+    change (limit.π F.diagram (Opposite.op i)).hom (c x) = 0 ↔
+      x ∈ B.U i
+    rw [hc_coord]
+    change QuotientAddGroup.mk' (N := B.U i) x =
+      QuotientAddGroup.mk' (N := B.U i) (0 : M) ↔ x ∈ B.U i
+    constructor
+    · intro h
+      have h' := QuotientAddGroup.eq_iff_sub_mem.mp h
+      simpa using h'
+    · intro h
+      apply QuotientAddGroup.eq_iff_sub_mem.mpr
+      simpa using h
+  have hind : Topology.IsInducing c := by
+    rw [IsTopologicalAddGroup.isInducing_iff_nhds_zero]
+    apply Filter.HasBasis.ext B.fundamental
+      ((inverseLimit_kernels_form_fundamental_system F).comap c)
+    · intro i hi
+      refine ⟨Opposite.op i, trivial, ?_⟩
+      rw [hpreimage]
+    · intro i hi
+      refine ⟨i.unop, trivial, ?_⟩
+      rw [hpreimage]
+  let : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  let : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  let : UniformSpace ((limit F.diagram).toModuleCat) :=
+    IsTopologicalAddGroup.rightUniformSpace ((limit F.diagram).toModuleCat)
+  let : IsUniformAddGroup ((limit F.diagram).toModuleCat) :=
+    isUniformAddGroup_of_addCommGroup
+  have huind : IsUniformInducing c :=
+    AddMonoidHom.isUniformInducing_of_isInducing hind
+  constructor
+  · rintro ⟨hcomplete, hT2⟩
+    let : CompleteSpace M := hcomplete
+    let : T2Space M := hT2
+    have hinj : Function.Injective c := by
+      intro x y hxy
+      have hzmem : ∀ i : B.Index, x - y ∈ B.U i := by
+        intro i
+        have hxi := hc_coord i x
+        have hyi := hc_coord i y
+        have hqxy : QuotientAddGroup.mk' (N := B.U i) x =
+            QuotientAddGroup.mk' (N := B.U i) y := by
+          have hpi := congrArg (fun z =>
+            (limit.π F.diagram (Opposite.op i)).hom z) hxy
+          exact hxi.symm.trans (hpi.trans hyi)
+        change (x : M ⧸ B.U i) = y at hqxy
+        exact QuotientAddGroup.eq_iff_sub_mem.mp hqxy
+      have hzclosure : (0 : M) ∈ closure ({x - y} : Set M) := by
+        exact (mem_closure_iff_nhds_basis (x := (0 : M))
+          (t := ({x - y} : Set M)) B.fundamental).2 (by
+            intro i hi
+            exact ⟨x - y, rfl, hzmem i⟩)
+      have hzsingleton : (0 : M) ∈ ({x - y} : Set M) :=
+        isClosed_singleton.closure_subset hzclosure
+      exact sub_eq_zero.mp (Set.mem_singleton_iff.mp hzsingleton).symm
+    have hrange : IsComplete (Set.range c) :=
+      (completeSpace_iff_isComplete_range huind).mp hcomplete
+    let : CompleteSpace ((limit F.diagram).toModuleCat) := (inverseLimit_is_complete F).1
+    let : T2Space ((limit F.diagram).toModuleCat) := (inverseLimit_is_complete F).2
+    have hclosed : IsClosed (Set.range c) := IsComplete.isClosed hrange
+    have hsurj : Function.Surjective c := by
+      intro y
+      have hy : y ∈ closure (Set.range c) := by
+        rw [hdense.closure_range]
+        exact Set.mem_univ y
+      exact hclosed.closure_subset hy
+    exact ⟨hinj, hsurj⟩
+  · intro hbij
+    have hT2limit : T2Space ((limit F.diagram).toModuleCat) :=
+      (inverseLimit_is_complete F).2
+    have hT2 : T2Space M :=
+      @T2Space.of_injective_continuous M ((limit F.diagram).toModuleCat)
+        _ _ hT2limit c hbij.1 c.continuous
+    let : T2Space M := hT2
+    have hcomplete : CompleteSpace M := by
+      apply (completeSpace_iff_isComplete_range huind).mpr
+      have hrange : Set.range c =
+          (Set.univ : Set ((limit F.diagram).toModuleCat)) := hbij.2.range_eq
+      rw [hrange]
+      exact (completeSpace_iff_isComplete_univ).mp
+        (inverseLimit_is_complete F).1
+    exact ⟨hcomplete, hT2⟩
 /-
   let _ : Preorder B.Index := B.preorder
   dsimp

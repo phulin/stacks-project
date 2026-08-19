@@ -2,6 +2,7 @@ import Mathlib.Algebra.Field.Rat
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Algebra.Regular.Basic
+import Mathlib.LinearAlgebra.FreeModule.PID
 import Mathlib.LinearAlgebra.SymmetricAlgebra.Basis
 import Mathlib.RingTheory.Ideal.Prime
 import Mathlib.RingTheory.Localization.Algebra
@@ -1021,24 +1022,385 @@ def exampleIdealAtPrime (q : Ideal exampleAlgebra) [q.IsPrime] :
 theorem exampleIdealAtPrime_isPrincipal
     (q : Ideal exampleAlgebra) [q.IsPrime] :
     (exampleIdealAtPrime q).IsPrincipal := by
-  sorry
+  let p : Ideal exampleBaseRing :=
+    q.comap (algebraMap exampleBaseRing exampleAlgebra)
+  let _ : p.IsPrime := by
+    dsimp [p]
+    exact Ideal.comap_isPrime (algebraMap exampleBaseRing exampleAlgebra) q
+  let hunit : ∀ s : Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl,
+      IsUnit (algebraMap exampleAlgebra (Localization q.primeCompl) s.1) := by
+    rintro ⟨_, ⟨r, hr, rfl⟩⟩
+    change IsUnit (algebraMap exampleAlgebra (Localization q.primeCompl)
+      (algebraMap exampleBaseRing exampleAlgebra r))
+    exact IsLocalization.map_units (S := Localization q.primeCompl)
+      (⟨algebraMap exampleBaseRing exampleAlgebra r,
+        by simpa [p] using hr⟩ : q.primeCompl)
+  let φ : exampleAlgebraAtBasePrime p →+* Localization q.primeCompl :=
+    IsLocalization.lift
+      (M := Algebra.algebraMapSubmonoid exampleAlgebra p.primeCompl)
+      (S := exampleAlgebraAtBasePrime p) hunit
+  have hφ : φ.comp (algebraMap exampleAlgebra (exampleAlgebraAtBasePrime p)) =
+      algebraMap exampleAlgebra (Localization q.primeCompl) := by
+    exact IsLocalization.lift_comp hunit
+  have hmap : (exampleIdealAtBasePrime p).map φ = exampleIdealAtPrime q := by
+    rw [exampleIdealAtBasePrime, exampleIdealAtPrime, Ideal.map_map, hφ]
+  obtain ⟨T, hT, hreg⟩ := exampleIdealAtBasePrime_isPrincipal_regular p
+  rw [← hmap]
+  exact (⟨⟨T, hT⟩⟩ : (exampleIdealAtBasePrime p).IsPrincipal).map_ringHom φ
 
 /-! ## The ring-theoretic properties of the example -/
 
 /-- The ring `A` is a domain. -/
 theorem exampleAlgebra_isDomain : IsDomain exampleAlgebra := by
-  sorry
+  have hcommon : ∀ (m n : ExampleModule), ∃ g : ExampleModule,
+      ∃ a b : exampleBaseRing, a • g = m ∧ b • g = n := by
+    intro m n
+    let N : Submodule exampleBaseRing exampleFractionRing :=
+      Submodule.span exampleBaseRing
+        ({(m : exampleFractionRing), (n : exampleFractionRing)} : Set _)
+    have hN_le : N ≤ exampleModule := by
+      change Submodule.span exampleBaseRing
+        ({(m : exampleFractionRing), (n : exampleFractionRing)} : Set _) ≤
+        exampleModule
+      refine Submodule.span_le.2 ?_
+      intro x hx
+      rcases hx with (rfl | rfl)
+      · exact m.property
+      · exact n.property
+    have hfg : N.FG := Submodule.fg_span (Set.toFinite _)
+    let _ : Module.Finite exampleBaseRing N := (Module.Finite.iff_fg).mpr hfg
+    let _ : Module.IsTorsionFree exampleBaseRing N :=
+      Module.IsTorsionFree.of_smul_eq_zero (fun r z hz => by
+        by_cases hr : r = 0
+        · exact Or.inl hr
+        · right
+          apply Subtype.ext
+          have hz' := congrArg Subtype.val hz
+          change (r : exampleBaseRing) • (z : exampleFractionRing) = 0 at hz'
+          rw [Algebra.smul_def] at hz'
+          have hr' : algebraMap exampleBaseRing exampleFractionRing r ≠ 0 := by
+            apply IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
+            exact mem_nonZeroDivisors_iff_ne_zero.mpr hr
+          exact (mul_eq_zero.mp hz').resolve_left hr')
+    have hfree : Module.Free exampleBaseRing N := by infer_instance
+    have hrank : Module.rank exampleBaseRing N ≤ 1 := by
+      calc
+        Module.rank exampleBaseRing N ≤ Module.rank exampleBaseRing exampleFractionRing :=
+          LinearMap.rank_le_of_injective N.subtype N.injective_subtype
+        _ = Module.rank exampleFractionRing exampleFractionRing :=
+          (IsFractionRing.rank_right_eq exampleBaseRing exampleFractionRing
+            exampleFractionRing).symm
+        _ = 1 := by simp
+    have hprincipal : (⊤ : Submodule exampleBaseRing N).IsPrincipal :=
+      (Module.rank_le_one_iff_top_isPrincipal).mp hrank
+    rcases hprincipal with ⟨⟨g₀, hg₀⟩⟩
+    let g : ExampleModule := ⟨g₀.1, hN_le g₀.2⟩
+    have hm : (⟨(m : exampleFractionRing), by
+        change (m : exampleFractionRing) ∈ Submodule.span exampleBaseRing
+          ({(m : exampleFractionRing), (n : exampleFractionRing)} : Set _)
+        apply Submodule.subset_span
+        simp⟩ : N) ∈
+        Submodule.span exampleBaseRing {g₀} := by
+      rw [← hg₀]
+      exact Submodule.mem_top
+    have hn : (⟨(n : exampleFractionRing), by
+        change (n : exampleFractionRing) ∈ Submodule.span exampleBaseRing
+          ({(m : exampleFractionRing), (n : exampleFractionRing)} : Set _)
+        apply Submodule.subset_span
+        simp⟩ : N) ∈
+        Submodule.span exampleBaseRing {g₀} := by
+      rw [← hg₀]
+      exact Submodule.mem_top
+    rcases Submodule.mem_span_singleton.mp hm with ⟨a, ha⟩
+    rcases Submodule.mem_span_singleton.mp hn with ⟨b, hb⟩
+    refine ⟨g, a, b, ?_, ?_⟩
+    · apply Subtype.ext
+      simpa [g] using congrArg Subtype.val ha
+    · apply Subtype.ext
+      simpa [g] using congrArg Subtype.val hb
+  have hmem : ∀ x : exampleAlgebra, ∃ g : ExampleModule,
+      x ∈ Algebra.adjoin exampleBaseRing
+        ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g} : Set exampleAlgebra) := by
+    intro x
+    induction x using SymmetricAlgebra.induction with
+    | algebraMap r =>
+        refine ⟨0, ?_⟩
+        exact (Algebra.adjoin exampleBaseRing _).algebraMap_mem r
+    | ι m =>
+        exact ⟨m, Algebra.subset_adjoin (by simp)⟩
+    | mul x y hx hy =>
+        obtain ⟨g₁, hx⟩ := hx
+        obtain ⟨g₂, hy⟩ := hy
+        obtain ⟨g, a, b, ha, hb⟩ := hcommon g₁ g₂
+        let S := Algebra.adjoin exampleBaseRing
+          ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g} : Set exampleAlgebra)
+        have h1 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁ ∈ S := by
+          rw [← ha, map_smul, Algebra.smul_def]
+          exact S.mul_mem (S.algebraMap_mem a) (Algebra.subset_adjoin (by simp))
+        have h2 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂ ∈ S := by
+          rw [← hb, map_smul, Algebra.smul_def]
+          exact S.mul_mem (S.algebraMap_mem b) (Algebra.subset_adjoin (by simp))
+        have hle1 : Algebra.adjoin exampleBaseRing
+            ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁} : Set exampleAlgebra) ≤ S :=
+          Algebra.adjoin_le (by simpa using h1)
+        have hle2 : Algebra.adjoin exampleBaseRing
+            ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂} : Set exampleAlgebra) ≤ S :=
+          Algebra.adjoin_le (by simpa using h2)
+        refine ⟨g, ?_⟩
+        change x * y ∈ S
+        exact S.mul_mem (hle1 hx) (hle2 hy)
+    | add x y hx hy =>
+        obtain ⟨g₁, hx⟩ := hx
+        obtain ⟨g₂, hy⟩ := hy
+        obtain ⟨g, a, b, ha, hb⟩ := hcommon g₁ g₂
+        let S := Algebra.adjoin exampleBaseRing
+          ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g} : Set exampleAlgebra)
+        have h1 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁ ∈ S := by
+          rw [← ha, map_smul, Algebra.smul_def]
+          exact S.mul_mem (S.algebraMap_mem a) (Algebra.subset_adjoin (by simp))
+        have h2 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂ ∈ S := by
+          rw [← hb, map_smul, Algebra.smul_def]
+          exact S.mul_mem (S.algebraMap_mem b) (Algebra.subset_adjoin (by simp))
+        have hle1 : Algebra.adjoin exampleBaseRing
+            ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁} : Set exampleAlgebra) ≤ S :=
+          Algebra.adjoin_le (by simpa using h1)
+        have hle2 : Algebra.adjoin exampleBaseRing
+            ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂} : Set exampleAlgebra) ≤ S :=
+          Algebra.adjoin_le (by simpa using h2)
+        refine ⟨g, ?_⟩
+        change x + y ∈ S
+        exact S.add_mem (hle1 hx) (hle2 hy)
+  have hsmul : ∀ (r : exampleBaseRing) (m : ExampleModule),
+      Polynomial.C ((r • m : ExampleModule) : exampleFractionRing) * Polynomial.X =
+        r • (Polynomial.C (m : exampleFractionRing) * Polynomial.X) := by
+    intro r m
+    have hcoe :
+        ((r • m : ExampleModule) : exampleFractionRing) =
+          r • (m : exampleFractionRing) := rfl
+    rw [hcoe]
+    conv_rhs =>
+      rw [← algebraMap_smul exampleFractionRing r, Algebra.smul_def]
+    conv_lhs => rw [Algebra.smul_def]
+    change Polynomial.C (algebraMap exampleBaseRing exampleFractionRing r *
+      (m : exampleFractionRing)) * Polynomial.X =
+      algebraMap exampleFractionRing (Polynomial exampleFractionRing)
+        (algebraMap exampleBaseRing exampleFractionRing r) *
+        (Polynomial.C (m : exampleFractionRing) * Polynomial.X)
+    rw [Polynomial.C_mul, ← Polynomial.C_eq_algebraMap]
+    ring
+  let f : ExampleModule →ₗ[exampleBaseRing] Polynomial exampleFractionRing :=
+    { toFun := fun m => Polynomial.C (m : exampleFractionRing) * Polynomial.X
+      map_add' := by
+        intro m n
+        change Polynomial.C ((m : exampleFractionRing) + (n : exampleFractionRing)) *
+            Polynomial.X =
+          Polynomial.C (m : exampleFractionRing) * Polynomial.X +
+            Polynomial.C (n : exampleFractionRing) * Polynomial.X
+        rw [Polynomial.C_add, add_mul]
+      map_smul' := by
+        intro r m
+        exact hsmul r m }
+  let F : exampleAlgebra →ₐ[exampleBaseRing] Polynomial exampleFractionRing :=
+    SymmetricAlgebra.lift f
+  have hFι (g : ExampleModule) :
+      F (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) =
+        Polynomial.C (g : exampleFractionRing) * Polynomial.X := by
+    change (SymmetricAlgebra.lift f)
+      (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) = _
+    rw [SymmetricAlgebra.lift_ι_apply]
+    rfl
+  have hFaeval (g : ExampleModule) (P : Polynomial exampleBaseRing) :
+      F (Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) P) =
+        Polynomial.aeval (F (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)) P := by
+    rw [Polynomial.aeval_algHom]
+    rfl
+  have hscale : ∀ (g : ExampleModule) (hg : g ≠ 0)
+      (P : Polynomial exampleBaseRing),
+      Polynomial.aeval
+          (Polynomial.C (g : exampleFractionRing) * Polynomial.X) P = 0 →
+        P = 0 := by
+    intro g hg P hP
+    have hgK : (g : exampleFractionRing) ≠ 0 := by
+      intro h
+      apply hg
+      apply Subtype.ext
+      exact h
+    let _ : Invertible (g : exampleFractionRing) := invertibleOfNonzero hgK
+    have hcomp :
+        (algebraMap exampleFractionRing (Polynomial exampleFractionRing)).comp
+            (algebraMap exampleBaseRing exampleFractionRing) =
+          algebraMap exampleBaseRing (Polynomial exampleFractionRing) := by
+      apply RingHom.ext
+      intro r
+      exact IsScalarTower.algebraMap_apply exampleBaseRing exampleFractionRing
+        (Polynomial exampleFractionRing) r
+    have hP' :
+        Polynomial.eval₂ (algebraMap exampleBaseRing (Polynomial exampleFractionRing))
+          (Polynomial.C (g : exampleFractionRing) * Polynomial.X) P = 0 := by
+      simpa [Polynomial.aeval_def] using hP
+    have hevalK :
+        Polynomial.aeval
+            (Polynomial.C (g : exampleFractionRing) * Polynomial.X)
+            (P.map (algebraMap exampleBaseRing exampleFractionRing)) = 0 := by
+      rw [Polynomial.aeval_def, Polynomial.eval₂_map, hcomp]
+      exact hP'
+    have heq :
+        Polynomial.aeval
+            (Polynomial.C (g : exampleFractionRing) * Polynomial.X) =
+          (Polynomial.algEquivCMulXAddC (g : exampleFractionRing) 0).toAlgHom := by
+      apply Polynomial.algHom_ext
+      simp [Polynomial.algEquivCMulXAddC]
+    have hzero :
+        (Polynomial.algEquivCMulXAddC (g : exampleFractionRing) 0).toAlgHom
+            (P.map (algebraMap exampleBaseRing exampleFractionRing)) = 0 := by
+      rw [← heq]
+      exact hevalK
+    have hmapzero : P.map (algebraMap exampleBaseRing exampleFractionRing) = 0 := by
+      apply (Polynomial.algEquivCMulXAddC (g : exampleFractionRing) 0).injective
+      simpa using hzero
+    exact (Polynomial.map_eq_zero_iff
+      (FaithfulSMul.algebraMap_injective exampleBaseRing exampleFractionRing)).mp hmapzero
+  have hF_inj : ∀ (g : ExampleModule) (P : Polynomial exampleBaseRing),
+      F (Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) P) = 0 →
+      Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) P = 0 := by
+    intro g P hP
+    have hEval :
+        Polynomial.aeval
+            (F (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)) P = 0 := by
+      rw [← hFaeval g P]
+      exact hP
+    by_cases hg : g = 0
+    · subst g
+      rw [hFι 0] at hEval
+      have hcoeffmap :
+          algebraMap exampleBaseRing (Polynomial exampleFractionRing) (P.coeff 0) = 0 := by
+        calc
+          algebraMap exampleBaseRing (Polynomial exampleFractionRing) (P.coeff 0) =
+              Polynomial.aeval (0 : Polynomial exampleFractionRing) P :=
+            Polynomial.coeff_zero_eq_aeval_zero' P
+          _ = 0 := by simpa using hEval
+      have hcoeff : P.coeff 0 = 0 :=
+        (FaithfulSMul.algebraMap_injective exampleBaseRing
+          (Polynomial exampleFractionRing)) (by simpa using hcoeffmap)
+      have hzero :
+          Polynomial.aeval (0 : exampleAlgebra) P = 0 := by
+        rw [← Polynomial.coeff_zero_eq_aeval_zero' (A := exampleAlgebra) P]
+        simp [hcoeff]
+      simpa using hzero
+    · rw [hFι] at hEval
+      have hPzero := hscale g hg P hEval
+      simp [hPzero]
+  refine (isDomain_iff_noZeroDivisors_and_nontrivial _).mpr ⟨?_, inferInstance⟩
+  refine ⟨?_⟩
+  intro x y hxy
+  by_cases hx0 : x = 0
+  · exact Or.inl hx0
+  by_cases hy0 : y = 0
+  · exact Or.inr hy0
+  obtain ⟨g₁, hx₁⟩ := hmem x
+  obtain ⟨g₂, hy₁⟩ := hmem y
+  obtain ⟨g, a, b, ha, hb⟩ := hcommon g₁ g₂
+  let S := Algebra.adjoin exampleBaseRing
+    ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g} : Set exampleAlgebra)
+  have h1 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁ ∈ S := by
+    rw [← ha, map_smul, Algebra.smul_def]
+    exact S.mul_mem (S.algebraMap_mem a) (Algebra.subset_adjoin (by simp))
+  have h2 : SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂ ∈ S := by
+    rw [← hb, map_smul, Algebra.smul_def]
+    exact S.mul_mem (S.algebraMap_mem b) (Algebra.subset_adjoin (by simp))
+  have hle1 : Algebra.adjoin exampleBaseRing
+      ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₁} : Set exampleAlgebra) ≤ S :=
+    Algebra.adjoin_le (by simpa using h1)
+  have hle2 : Algebra.adjoin exampleBaseRing
+      ({SymmetricAlgebra.ι exampleBaseRing ExampleModule g₂} : Set exampleAlgebra) ≤ S :=
+    Algebra.adjoin_le (by simpa using h2)
+  have hxS := hle1 hx₁
+  have hyS := hle2 hy₁
+  have hxrange : x ∈
+      (Polynomial.aeval (R := exampleBaseRing) (A := exampleAlgebra)
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)).range := by
+    rw [← Algebra.adjoin_singleton_eq_range_aeval (A := exampleAlgebra)
+      exampleBaseRing (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)]
+    exact hxS
+  have hyrange : y ∈
+      (Polynomial.aeval (R := exampleBaseRing) (A := exampleAlgebra)
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)).range := by
+    rw [← Algebra.adjoin_singleton_eq_range_aeval (A := exampleAlgebra)
+      exampleBaseRing (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)]
+    exact hyS
+  rcases hxrange with ⟨P, hPx⟩
+  rcases hyrange with ⟨Q, hQy⟩
+  have hFx : F x ≠ 0 := by
+    intro hFx
+    apply hx0
+    have hEval : F (Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) P) = 0 := by
+      change F ((Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)).toRingHom P) = 0
+      rw [hPx]
+      exact hFx
+    exact hPx.symm.trans (hF_inj g P hEval)
+  have hFy : F y ≠ 0 := by
+    intro hFy
+    apply hy0
+    have hEval : F (Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g) Q) = 0 := by
+      change F ((Polynomial.aeval
+        (SymmetricAlgebra.ι exampleBaseRing ExampleModule g)).toRingHom Q) = 0
+      rw [hQy]
+      exact hFy
+    exact hQy.symm.trans (hF_inj g Q hEval)
+  apply False.elim
+  have hFxy : F x * F y = 0 := by
+    calc
+      F x * F y = F (x * y) := (map_mul F x y).symm
+      _ = F 0 := by rw [hxy]
+      _ = 0 := map_zero F
+  exact (mul_eq_zero.mp hFxy).elim hFx hFy
 
 /-- Every prime stalk of `I` is generated by a nonzero element. -/
 theorem exampleIdealAtPrime_isPrincipal_nonzero
     (q : Ideal exampleAlgebra) [q.IsPrime] :
     ∃ f : Localization q.primeCompl,
       exampleIdealAtPrime q = Ideal.span {f} ∧ f ≠ 0 := by
-  sorry
+  obtain ⟨f, hf⟩ := exampleIdealAtPrime_isPrincipal q
+  refine ⟨f, hf, ?_⟩
+  intro hf0
+  have hI : ∃ a : exampleAlgebra, a ∈ exampleIdeal ∧ a ≠ 0 := by
+    by_contra h
+    apply exampleIdeal_ne_bot
+    apply le_antisymm
+    · intro a ha
+      have ha0 : a = 0 := by
+        by_contra ha0
+        exact h ⟨a, ha, ha0⟩
+      simpa [ha0]
+    · exact bot_le
+  obtain ⟨a, ha, ha0⟩ := hI
+  have hmem : algebraMap exampleAlgebra (Localization q.primeCompl) a ∈
+      exampleIdealAtPrime q :=
+    Ideal.mem_map_of_mem (algebraMap exampleAlgebra (Localization q.primeCompl)) ha
+  have hmap0 : algebraMap exampleAlgebra (Localization q.primeCompl) a = 0 := by
+    have hbot : exampleIdealAtPrime q = ⊥ := by
+      simpa [hf0] using hf
+    rw [hbot, Ideal.mem_bot] at hmem
+    exact hmem
+  let _ : IsDomain exampleAlgebra := exampleAlgebra_isDomain
+  have hinj : Function.Injective (algebraMap exampleAlgebra
+      (Localization q.primeCompl)) :=
+    IsLocalization.injective (Localization q.primeCompl)
+      q.primeCompl_le_nonZeroDivisors
+  exact ha0 (hinj (by simpa using hmap0))
 
 /-- The ring `A` is not Noetherian. -/
 theorem exampleAlgebra_not_noetherian : ¬ IsNoetherianRing exampleAlgebra := by
-  sorry
+  intro h
+  let _ : IsNoetherianRing exampleAlgebra := h
+  exact exampleIdeal_not_finitely_generated
+    (Ideal.fg_of_isNoetherianRing exampleIdeal)
 
 /-- Every prime localization of `A` is Noetherian. -/
 theorem exampleAlgebra_prime_localizations_noetherian :

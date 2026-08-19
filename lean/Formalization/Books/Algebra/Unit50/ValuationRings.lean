@@ -619,9 +619,12 @@ theorem fractionFieldValuation_map_add_le_max
     {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K]
     (a b : A) (hab : a + b ≠ 0) :
     fractionFieldValuation (A := A) (K := K) (algebraMap A K (a + b)) ≤
-      max (fractionFieldValuation (A := A) (K := K) (algebraMap A K a))
+        max (fractionFieldValuation (A := A) (K := K) (algebraMap A K a))
         (fractionFieldValuation (A := A) (K := K) (algebraMap A K b)) := by
-  sorry
+  have _ := hab
+  simpa only [map_add] using
+    (map_add_le_max (ValuationRing.valuation A K) (algebraMap A K a)
+      (algebraMap A K b))
 
 /-! ## Constructing valuation rings from ordered valuations -/
 
@@ -694,7 +697,301 @@ theorem ideals_equiv_valueGroupIdeals
     ∃ e : Ideal A ≃ ValueGroupIdeal (ValueGroup (A := A) (K := K)),
       (∀ I J : Ideal A, I ≤ J ↔ e I ≤ e J) ∧
         (∀ I : Ideal A, I.IsPrime ↔ ValueGroupIdeal.IsPrime (e I)) := by
-  sorry
+  let H := MonoidWithZeroHom.valueGroup
+    ((ValuationRing.valuation A K).toMonoidWithZeroHom)
+  let toValue : ValueGroup (A := A) (K := K) → ValueGroupWithZero (A := A) (K := K) :=
+    fun γ => (((OrderDual.ofDual γ.toMul : H) :
+      (ValueGroupWithZero (A := A) (K := K))ˣ))
+  let val : {x : A // x ≠ 0} → ValueGroup (A := A) (K := K) := fun x =>
+    Additive.ofMul (OrderDual.toDual
+      (⟨Units.mk0 ((ValuationRing.valuation A K) (algebraMap A K x.1)) (by
+          rw [(ValuationRing.valuation A K).ne_zero_iff]
+          exact IsFractionRing.to_map_eq_zero_iff.not.mpr x.2),
+        MonoidWithZeroHom.mem_valueGroup
+          ((ValuationRing.valuation A K).toMonoidWithZeroHom) ⟨algebraMap A K x.1, rfl⟩⟩))
+  let hv : (ValuationRing.valuation A K).Integers A :=
+    { hom_inj := IsFractionRing.injective A K
+      map_le_one := fun x => by
+        change (ValuationRing.valuation A K) (algebraMap A K x) ≤ 1
+        exact (ValuationRing.mem_integer_iff A K (algebraMap A K x)).mpr ⟨x, rfl⟩
+      exists_of_le_one := fun {r} h => by
+        apply (ValuationRing.mem_integer_iff A K r).mp
+        exact h }
+  have htoValue_nonneg {γ : ValueGroup (A := A) (K := K)} (hγ : 0 ≤ γ) :
+      toValue γ ≤ 1 := by
+    change (((OrderDual.ofDual γ.toMul : H) :
+        (ValueGroupWithZero (A := A) (K := K))ˣ)) ≤ 1
+    change (OrderDual.ofDual γ.toMul : H) ≤ 1 at hγ
+    exact hγ
+  have htoValue_le {γ δ : ValueGroup (A := A) (K := K)} (hγδ : γ ≤ δ) :
+      toValue δ ≤ toValue γ := by
+    change (((OrderDual.ofDual δ.toMul : H) :
+        (ValueGroupWithZero (A := A) (K := K))ˣ)) ≤
+      (((OrderDual.ofDual γ.toMul : H) :
+        (ValueGroupWithZero (A := A) (K := K))ˣ))
+    change (OrderDual.ofDual δ.toMul : H) ≤
+        (OrderDual.ofDual γ.toMul : H) at hγδ
+    exact hγδ
+  have htoValue_val {x : A} (hx : x ≠ 0) :
+      toValue (val ⟨x, hx⟩) =
+        (ValuationRing.valuation A K) (algebraMap A K x) := by
+    rfl
+  have hval_le {x y : A} (hx : x ≠ 0) (hy : y ≠ 0) :
+      val ⟨x, hx⟩ ≤ val ⟨y, hy⟩ ↔ x ∣ y := by
+    change
+      (ValuationRing.valuation A K) (algebraMap A K y) ≤
+        (ValuationRing.valuation A K) (algebraMap A K x) ↔ x ∣ y
+    exact (Valuation.Integers.dvd_iff_le hv (x := x) (y := y)).symm
+  have hval_zero {x : A} (hx : x ≠ 0) :
+      val ⟨x, hx⟩ = 0 ↔ IsUnit x := by
+    change
+      (⟨Units.mk0 ((ValuationRing.valuation A K) (algebraMap A K x)) (by
+          rw [(ValuationRing.valuation A K).ne_zero_iff]
+          exact IsFractionRing.to_map_eq_zero_iff.not.mpr hx),
+        MonoidWithZeroHom.mem_valueGroup
+          ((ValuationRing.valuation A K).toMonoidWithZeroHom) ⟨algebraMap A K x, rfl⟩⟩ :
+        MonoidWithZeroHom.valueGroup ((ValuationRing.valuation A K).toMonoidWithZeroHom)) = 1 ↔
+      IsUnit x
+    constructor
+    · intro h
+      have h' := congrArg Units.val (congrArg Subtype.val h)
+      have hvx : (ValuationRing.valuation A K) (algebraMap A K x) = 1 := by
+        simpa using h'
+      exact hv.isUnit_iff_valuation_eq_one.mpr hvx
+    · intro h
+      apply Subtype.ext
+      apply Units.ext
+      exact hv.isUnit_iff_valuation_eq_one.mp h
+  have hval_mul {x y : A} (hx : x ≠ 0) (hy : y ≠ 0) :
+      val ⟨x * y, mul_ne_zero hx hy⟩ = val ⟨x, hx⟩ + val ⟨y, hy⟩ := by
+    apply Additive.ofMul.injective
+    apply OrderDual.toDual.injective
+    apply Subtype.ext
+    ext
+    change
+      (ValuationRing.valuation A K) (algebraMap A K (x * y)) =
+        (ValuationRing.valuation A K) (algebraMap A K x) *
+          (ValuationRing.valuation A K) (algebraMap A K y)
+    rw [(algebraMap A K).map_mul, (ValuationRing.valuation A K).map_mul]
+  have hval_le_general' {x : A} (hx : x ≠ 0)
+      {γ : ValueGroup (A := A) (K := K)} :
+      γ ≤ val ⟨x, hx⟩ ↔
+        (ValuationRing.valuation A K) (algebraMap A K x) ≤
+          toValue γ := by
+    change
+      (OrderDual.ofDual (val ⟨x, hx⟩).toMul : H) ≤
+        (OrderDual.ofDual γ.toMul : H) ↔
+      (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ
+    change
+      (OrderDual.ofDual (val ⟨x, hx⟩).toMul : H) ≤
+        (OrderDual.ofDual γ.toMul : H) ↔
+      (Units.mk0 ((ValuationRing.valuation A K) (algebraMap A K x)) (by
+          rw [(ValuationRing.valuation A K).ne_zero_iff]
+          exact IsFractionRing.to_map_eq_zero_iff.not.mpr hx)) ≤
+        (((OrderDual.ofDual γ.toMul : H) :
+          (ValueGroupWithZero (A := A) (K := K))ˣ))
+    rw [← Units.val_le_val]
+    rfl
+  have hexists {γ : ValueGroup (A := A) (K := K)} (hγ : 0 ≤ γ) :
+      ∃ x : A, x ≠ 0 ∧ ∃ hx : x ≠ 0, val ⟨x, hx⟩ = γ := by
+    obtain ⟨z, hz⟩ : ∃ z : K, (ValuationRing.valuation A K) z = toValue γ := by
+      change ∃ z : K, Quotient.mk'' z = toValue γ
+      exact Quotient.mk_surjective _
+    have hz0 : z ≠ 0 := by
+      intro hzero
+      subst z
+      have htv0 : toValue γ ≠ 0 := by
+        change (((OrderDual.ofDual γ.toMul : H) :
+          (ValueGroupWithZero (A := A) (K := K))ˣ) :
+            ValueGroupWithZero (A := A) (K := K)) ≠ 0
+        exact Units.ne_zero _
+      exact htv0 (by simpa using hz)
+    obtain ⟨x, hx⟩ := hv.exists_of_le_one (by
+      rw [hz]
+      exact htoValue_nonneg hγ)
+    have hx0 : x ≠ 0 := by
+      intro hzero
+      apply hz0
+      rw [← hx, hzero, map_zero]
+    refine ⟨x, hx0, hx0, ?_⟩
+    apply Additive.toMul.injective
+    apply OrderDual.toDual.injective
+    apply Subtype.ext
+    apply Units.ext
+    change (ValuationRing.valuation A K) (algebraMap A K x) = toValue γ
+    rw [hx, hz]
+  let cutIdeal : ValueGroup (A := A) (K := K) → Ideal A := fun γ =>
+    { carrier := {x | (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ}
+      zero_mem' := by simp
+      add_mem' := by
+        intro x y hx hy
+        change (ValuationRing.valuation A K) (algebraMap A K (x + y)) ≤ toValue γ
+        rw [(algebraMap A K).map_add]
+        exact ((ValuationRing.valuation A K).map_add _ _).trans (max_le hx hy)
+      smul_mem' := by
+        intro r x hx
+        change (ValuationRing.valuation A K) (algebraMap A K (r * x)) ≤ toValue γ
+        rw [(algebraMap A K).map_mul, (ValuationRing.valuation A K).map_mul]
+        exact mul_le_of_le_one_of_le
+          ((ValuationRing.mem_integer_iff A K (algebraMap A K r)).mpr ⟨r, rfl⟩) hx }
+  have hcut_mono {γ δ : ValueGroup (A := A) (K := K)} (hγδ : γ ≤ δ) :
+      cutIdeal δ ≤ cutIdeal γ := by
+    intro x hx
+    change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue δ at hx
+    change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ
+    exact hx.trans (htoValue_le hγδ)
+  have hcut_mem_of_mem (I : Ideal A) {x : A} (hx0 : x ≠ 0) (hxI : x ∈ I) :
+      cutIdeal (val ⟨x, hx0⟩) ≤ I := by
+    intro y hy
+    by_cases hy0 : y = 0
+    · subst y
+      exact I.zero_mem
+    · change (ValuationRing.valuation A K) (algebraMap A K y) ≤
+        toValue (val ⟨x, hx0⟩) at hy
+      rw [htoValue_val hx0] at hy
+      exact I.mem_of_dvd (hv.dvd_of_le hy) hxI
+  have hval_nonneg {x : A} (hx0 : x ≠ 0) :
+      0 ≤ val ⟨x, hx0⟩ := by
+    have hone : val ⟨(1 : A), one_ne_zero⟩ = 0 :=
+      (hval_zero one_ne_zero).mpr isUnit_one
+    rw [← hone]
+    exact (hval_le one_ne_zero hx0).mpr (one_dvd x)
+  let eFun : Ideal A → ValueGroupIdeal (ValueGroup (A := A) (K := K)) := fun I =>
+    ⟨{γ | 0 ≤ γ ∧ cutIdeal γ ≤ I}, by
+      constructor
+      · intro γ hγ
+        exact hγ.1
+      · intro γ hγ δ hδ
+        exact ⟨hγ.1.trans hδ, fun x hx => hx.trans (htoValue_le hδ)⟩⟩
+  let invFun : ValueGroupIdeal (ValueGroup (A := A) (K := K)) → Ideal A := fun S =>
+    { carrier := {x | x = 0 ∨ ∃ γ, γ ∈ S ∧ x ∈ cutIdeal γ}
+      zero_mem' := Or.inl rfl
+      add_mem' := by
+        intro x y hx hy
+        rcases hx with rfl | ⟨γ, hγ, hx⟩
+        · simpa using hy
+        rcases hy with rfl | ⟨δ, hδ, hy⟩
+        · simpa using hx
+        rcases le_total γ δ with hγδ | hδγ
+        · exact Or.inr ⟨γ, hγ, (cutIdeal γ).add_mem hx ((hcut_mono hγδ) hy)⟩
+        · exact Or.inr ⟨δ, hδ, (cutIdeal δ).add_mem ((hcut_mono hδγ) hx) hy⟩
+      smul_mem' := by
+        intro r x hx
+        rcases hx with rfl | ⟨γ, hγ, hx⟩
+        · exact Or.inl (mul_zero r)
+        · exact Or.inr ⟨γ, hγ, (cutIdeal γ).smul_mem r hx⟩ }
+  have heFun_order (I J : Ideal A) : I ≤ J ↔ eFun I ≤ eFun J := by
+    constructor
+    · intro hIJ γ hγ
+      exact ⟨hγ.1, hγ.2.trans hIJ⟩
+    · intro hIJ x hx
+      by_cases hx0 : x = 0
+      · subst x
+        exact J.zero_mem
+      · have hγI : val ⟨x, hx0⟩ ∈ eFun I :=
+          ⟨hval_nonneg hx0, hcut_mem_of_mem I hx0 hx⟩
+        have hγJ := hIJ hγI
+        exact hγJ.2 (by
+          change (ValuationRing.valuation A K) (algebraMap A K x) ≤
+            toValue (val ⟨x, hx0⟩)
+          rw [htoValue_val hx0])
+  have hinv_eFun (S : ValueGroupIdeal (ValueGroup (A := A) (K := K))) :
+      eFun (invFun S) = S := by
+    apply Subtype.ext
+    ext γ
+    change (0 ≤ γ ∧ cutIdeal γ ≤ invFun S) ↔ γ ∈ S
+    constructor
+    · intro hγ
+      obtain ⟨x, hx0, hxval⟩ := hexists hγ.1
+      have hxcut : x ∈ cutIdeal γ := by
+        change (ValuationRing.valuation A K) (algebraMap A K x) ≤ toValue γ
+        rw [← hxval, htoValue_val hx0]
+      have hxinv := hγ.2 hxcut
+      change x = 0 ∨ ∃ δ, δ ∈ S ∧ x ∈ cutIdeal δ at hxinv
+      rcases hxinv with hxzero | ⟨δ, hδ, hxδ⟩
+      · exact (hx0 hxzero).elim
+      · apply S.2.2 δ hδ γ
+        exact (hval_le_general' hx0).mp hxδ |>.trans_eq hxval.symm
+    · intro hγ
+      refine ⟨S.2.1 γ hγ, ?_⟩
+      intro x hx
+      exact Or.inr ⟨γ, hγ, hx⟩
+  have heFun_invFun (I : Ideal A) : invFun (eFun I) = I := by
+    ext x
+    change (x = 0 ∨ ∃ γ, γ ∈ eFun I ∧ x ∈ cutIdeal γ) ↔ x ∈ I
+    constructor
+    · intro hx
+      rcases hx with hxzero | ⟨γ, hγ, hxcut⟩
+      · simpa [hxzero] using I.zero_mem
+      · exact hγ.2 hxcut
+    · intro hx
+      by_cases hx0 : x = 0
+      · exact Or.inl hx0
+      · refine Or.inr ⟨val ⟨x, hx0⟩, ?_, ?_⟩
+        · exact ⟨hval_nonneg hx0, hcut_mem_of_mem I hx0 hx⟩
+        · change (ValuationRing.valuation A K) (algebraMap A K x) ≤
+            toValue (val ⟨x, hx0⟩)
+          rw [htoValue_val hx0]
+  let e : Ideal A ≃ ValueGroupIdeal (ValueGroup (A := A) (K := K)) :=
+    { toFun := eFun
+      invFun := invFun
+      left_inv := heFun_invFun
+      right_inv := hinv_eFun }
+  refine ⟨e, ?_, ?_⟩
+  · intro I J
+    exact heFun_order I J
+  · intro I
+    constructor
+    · intro hI
+      change IsValueGroupPrimeIdeal (eFun I).1
+      constructor
+      · exact (eFun I).2
+      constructor
+      · intro hzero
+        apply hI.ne_top
+        apply Ideal.eq_top_iff_one.mpr
+        exact hzero.2 (by
+          change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ toValue 0
+          change (ValuationRing.valuation A K) (algebraMap A K (1 : A)) ≤ 1
+          simp)
+      · intro γ δ hγ hδ hsum
+        obtain ⟨x, hx0, hxval⟩ := hexists hγ
+        obtain ⟨y, hy0, hyval⟩ := hexists hδ
+        have hxycut : x * y ∈ cutIdeal (γ + δ) := by
+          change (ValuationRing.valuation A K) (algebraMap A K (x * y)) ≤ toValue (γ + δ)
+          rw [← htoValue_val (mul_ne_zero hx0 hy0), hval_mul hx0 hy0, hxval, hyval]
+        have hxyI := hsum.2 hxycut
+        rcases hI.2 hxyI with hxI | hyI
+        · exact Or.inl ⟨hγ, hcut_mem_of_mem I hx0 hxI⟩
+        · exact Or.inr ⟨hδ, hcut_mem_of_mem I hy0 hyI⟩
+    · intro hS
+      change I.IsPrime
+      refine ⟨?_, ?_⟩
+      · intro htop
+        apply hS.2.1
+        rw [htop]
+        exact ⟨zero_le, le_top⟩
+      · intro x y hxy
+        by_cases hx0 : x = 0
+        · exact Or.inl hx0
+        by_cases hy0 : y = 0
+        · exact Or.inr hy0
+        have hsum : val ⟨x, hx0⟩ + val ⟨y, hy0⟩ ∈ eFun I := by
+          refine ⟨add_nonneg (hval_nonneg hx0) (hval_nonneg hy0), ?_⟩
+          simpa [hval_mul hx0 hy0] using
+            (hcut_mem_of_mem I (mul_ne_zero hx0 hy0) hxy)
+        rcases hS.2.2 (val ⟨x, hx0⟩) (val ⟨y, hy0⟩)
+          (hval_nonneg hx0) (hval_nonneg hy0) hsum with hγ | hδ
+        · left
+          exact hγ.2 (by
+            change (ValuationRing.valuation A K) (algebraMap A K x) ≤
+              toValue (val ⟨x, hx0⟩)
+            rw [htoValue_val hx0])
+        · right
+          exact hδ.2 (by
+            change (ValuationRing.valuation A K) (algebraMap A K y) ≤
+              toValue (val ⟨y, hy0⟩)
+            rw [htoValue_val hy0])
 
 /-! ## Noetherian valuation rings -/
 
@@ -709,7 +1006,19 @@ theorem valuationRing_iff_local_and_fg_ideals_principal
 theorem valuationRing_isNoetherian_iff_isDiscreteValuationRing_or_isField
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A] :
     IsNoetherianRing A ↔ IsDiscreteValuationRing A ∨ IsField A := by
-  sorry
+  constructor
+  · intro hN
+    by_cases hF : IsField A
+    · exact Or.inr hF
+    · letI : IsNoetherianRing A := hN
+      exact Or.inl (((IsDiscreteValuationRing.TFAE A hF).out 1 0).mp
+        (inferInstance : ValuationRing A))
+  · rintro (hD | hF)
+    · letI : IsDiscreteValuationRing A := hD
+      infer_instance
+    · letI : IsField A := hF
+      letI := hF.toField
+      infer_instance
 
 end
 

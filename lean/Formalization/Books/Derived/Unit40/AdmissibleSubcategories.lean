@@ -148,7 +148,7 @@ theorem pre_prepare_adjoint_dual
       obtain ⟨q, hq⟩ := Triangle.yoneda_exact₃ T hT (f - g) hk
       let e := shiftEquiv C (1 : ℤ)
       let adj := e.toAdjunction
-      letI : e.functor.Additive := by
+      let : e.functor.Additive := by
         change (shiftFunctor C (1 : ℤ)).Additive
         infer_instance
       have hBshift : P (e.inverse.obj B) := by
@@ -174,7 +174,7 @@ theorem pre_prepare_adjoint_dual
   · intro h B hB f
     let e := shiftEquiv C (1 : ℤ)
     let adj := e.symm.toAdjunction
-    letI : e.symm.functor.Additive := by
+    let : e.symm.functor.Additive := by
       change (shiftFunctor C (-1 : ℤ)).Additive
       infer_instance
     let r : e.symm.functor.obj T.obj₃ ⟶ B := by
@@ -248,7 +248,7 @@ theorem orthogonal_triangulated
   constructor
   · refine ⟨?_, ?_, ?_⟩
     · rw [hright]
-      letI : P.IsStableUnderShift ℤ := hP'
+      let : P.IsStableUnderShift ℤ := hP'
       infer_instance
     · intro X Y hXY
       have hsum : rightOrthogonal P (X ⊞ Y) := by
@@ -267,11 +267,11 @@ theorem orthogonal_triangulated
         simpa only [Category.assoc, biprod.inr_snd, Category.comp_id, zero_comp] using
           congrArg (fun k => k ≫ biprod.snd) hf
     · rw [hright]
-      letI : P.IsStableUnderShift ℤ := hP'
+      let : P.IsStableUnderShift ℤ := hP'
       infer_instance
   · refine ⟨?_, ?_, ?_⟩
     · rw [hleft]
-      letI : P.IsStableUnderShift ℤ := hP'
+      let : P.IsStableUnderShift ℤ := hP'
       infer_instance
     · intro X Y hXY
       have hsum : leftOrthogonal P (X ⊞ Y) := by
@@ -290,7 +290,7 @@ theorem orthogonal_triangulated
         simpa only [biprod.inr_snd_assoc, Category.comp_id, comp_zero] using
           congrArg (fun k => biprod.inr ≫ k) hf
     · rw [hleft]
-      letI : P.IsStableUnderShift ℤ := hP'
+      let : P.IsStableUnderShift ℤ := hP'
       infer_instance
 
 /-! ## Closure of adjoint decompositions -/

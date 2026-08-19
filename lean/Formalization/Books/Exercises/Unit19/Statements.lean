@@ -113,8 +113,7 @@ private lemma quartic_plus_144_irreducible :
     have h1 := congrArg (fun u : Polynomial ℚ => u.coeff 1) hqr
     have h2 := congrArg (fun u : Polynomial ℚ => u.coeff 2) hqr
     have h3 := congrArg (fun u : Polynomial ℚ => u.coeff 3) hqr
-    simp only [p, Polynomial.coeff_add, Polynomial.coeff_C_mul,
-      Polynomial.coeff_C] at h0 h1 h2 h3
+    simp only [p, Polynomial.coeff_add, Polynomial.coeff_C_mul] at h0 h1 h2 h3
     norm_num at h0 h1 h2 h3
     by_cases ha : q.coeff 1 = 0
     · rw [ha] at h1 h2 h3
@@ -473,10 +472,7 @@ private lemma planeReindex_relation :
         (MvPolynomial.rename (Equiv.swap (0 : Fin 2) 1) planeRelation)) =
     planeYPolynomial
   rw [hrename]
-  simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_C,
-    Polynomial.map_mul, Polynomial.map_X]
-  simp [f, planeYPolynomial,
-    planeFirstPolynomial, planeSecondPolynomial]
+  simp [f, planeYPolynomial, planeFirstPolynomial, planeSecondPolynomial]
 
 private lemma planeYPolynomial_span_isPrime :
     (Ideal.span {planeYPolynomial} : Ideal (Polynomial (Polynomial ℚ))).IsPrime := by

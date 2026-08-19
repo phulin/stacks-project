@@ -1,4 +1,5 @@
 import Formalization.Books.Exercises.Unit27.Core
+import Mathlib.RingTheory.Ideal.Maximal
 import Mathlib.RingTheory.MvPolynomial.Ideal
 
 /-!
@@ -265,13 +266,116 @@ noncomputable def infinitePolynomialProj (k : Type u) [CommRing k] : Type u :=
   letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
   ProjectiveSpectrum (InfinitePolynomialGrading k)
 
+private theorem infinitePolynomialProj_not_quasiCompact_aux (k : Type u) [Field k]
+    [GradedAlgebra (InfinitePolynomialGrading k)] :
+    ¬ CompactSpace (ProjectiveSpectrum (InfinitePolynomialGrading k)) := by
+  have hcover :
+      (Set.univ : Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) =
+        ⋃ i : ℕ, (ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k)
+          (MvPolynomial.X i : MvPolynomial ℕ k) :
+            Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) := by
+    ext x
+    constructor
+    · intro _
+      by_contra hx
+      have hX : ∀ i : ℕ, MvPolynomial.X i ∈ x.asHomogeneousIdeal := by
+        intro i
+        by_contra hi
+        apply hx
+        exact Set.mem_iUnion.mpr ⟨i,
+          (ProjectiveSpectrum.mem_basicOpen (InfinitePolynomialGrading k)
+            (MvPolynomial.X i) x).2 hi⟩
+      apply x.not_irrelevant_le
+      rw [HomogeneousIdeal.irrelevant_le]
+      intro n hn y hy
+      have hyspan : y ∈
+          Ideal.span (MvPolynomial.X '' (Set.univ : Set ℕ)) := by
+        rw [MvPolynomial.mem_ideal_span_X_image]
+        intro m hm
+        have hhom : MvPolynomial.IsHomogeneous y n :=
+          (MvPolynomial.mem_homogeneousSubmodule n y).mp hy
+        have hmne : m ≠ 0 := by
+          intro hmzero
+          have hdeg := MvPolynomial.IsHomogeneous.degree_eq_sum_deg_support hhom hm
+          have : n = 0 := by simpa [hmzero] using hdeg
+          exact (Nat.ne_of_gt hn) this
+        obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hmne
+        exact ⟨i, Set.mem_univ i, Finsupp.mem_support_iff.mp hi⟩
+      apply (Ideal.span_le.2 ?_) hyspan
+      rintro _ ⟨i, -, rfl⟩
+      exact hX i
+    · intro _
+      exact Set.mem_univ _
+  intro hcompact
+  have hfinite : ∃ t : Finset ℕ,
+      (Set.univ : Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) ⊆
+        ⋃ i ∈ t, (ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k)
+          (MvPolynomial.X i) : Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) := by
+    exact (@isCompact_univ _ _ hcompact).elim_finite_subcover
+      (fun i : ℕ => (ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k)
+        (MvPolynomial.X i) : Set (ProjectiveSpectrum (InfinitePolynomialGrading k))))
+      (fun i => ProjectiveSpectrum.isOpen_basicOpen (InfinitePolynomialGrading k))
+      (by rw [hcover])
+  obtain ⟨t, ht⟩ := hfinite
+  obtain ⟨j, hj⟩ := t.exists_notMem
+  let J : Ideal (MvPolynomial ℕ k) :=
+    Ideal.span (MvPolynomial.X '' (t : Set ℕ))
+  have hdisj : Disjoint (J : Set (MvPolynomial ℕ k))
+      (Submonoid.powers (MvPolynomial.X j : MvPolynomial ℕ k) : Set (MvPolynomial ℕ k)) := by
+    refine Set.disjoint_right.mpr ?_
+    intro q hq hqpow
+    rcases (Submonoid.mem_powers_iff q (MvPolynomial.X j : MvPolynomial ℕ k)).mp hq with
+      ⟨n, rfl⟩
+    change MvPolynomial.X j ^ n ∈
+      Ideal.span (MvPolynomial.X '' (t : Set ℕ)) at hqpow
+    rw [MvPolynomial.mem_ideal_span_X_image] at hqpow
+    have hqpow' : ∃ i ∈ t, ¬ (Finsupp.single j n) i = 0 := by
+      simpa [MvPolynomial.support_X_pow] using hqpow
+    rcases hqpow' with ⟨i, hi, hsingle⟩
+    exact hj ((Finsupp.single_apply_ne_zero.mp hsingle).1 ▸ hi)
+  obtain ⟨p, hp, hJp, hpdisj⟩ :=
+    Ideal.exists_le_prime_disjoint (I := J)
+      (Submonoid.powers (MvPolynomial.X j : MvPolynomial ℕ k)) hdisj
+  let Q : HomogeneousIdeal (InfinitePolynomialGrading k) :=
+    p.homogeneousCore (InfinitePolynomialGrading k)
+  have hQp : Q.toIdeal.IsPrime := hp.homogeneousCore
+  have hQJ : ∀ i ∈ t, MvPolynomial.X i ∈ Q := by
+    intro i hi
+    apply Ideal.mem_homogeneousCore_of_homogeneous_of_mem
+    · exact ⟨1, (MvPolynomial.mem_homogeneousSubmodule 1 _).2
+        (MvPolynomial.isHomogeneous_X k i)⟩
+    · exact hJp (Ideal.subset_span ⟨i, hi, rfl⟩)
+  have hQj : MvPolynomial.X j ∉ Q := by
+    intro h
+    exact Set.disjoint_left.mp hpdisj
+      (Ideal.toIdeal_homogeneousCore_le (InfinitePolynomialGrading k) p h)
+      (Submonoid.mem_powers _)
+  let x : ProjectiveSpectrum (InfinitePolynomialGrading k) :=
+    ⟨Q, hQp, by
+      intro hIr
+      apply hQj
+      exact hIr (HomogeneousIdeal.mem_irrelevant_of_mem (InfinitePolynomialGrading k)
+        (by simp : 0 < (1 : ℕ))
+        ((MvPolynomial.mem_homogeneousSubmodule 1 _).2
+          (MvPolynomial.isHomogeneous_X k j)))⟩
+  have hxcover := ht (Set.mem_univ x)
+  simp only [Set.mem_iUnion] at hxcover
+  rcases hxcover with ⟨i, hi, hxi⟩
+  exact (ProjectiveSpectrum.mem_basicOpen (InfinitePolynomialGrading k)
+    (MvPolynomial.X i) x).1 hxi
+    (hQJ i hi)
 theorem infinitePolynomialProj_not_quasiCompact (k : Type u) [Field k] :
     letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
-    ¬ CompactSpace (ProjectiveSpectrum (InfinitePolynomialGrading k)) := by sorry
+    ¬ CompactSpace (ProjectiveSpectrum (InfinitePolynomialGrading k)) := by
+  exact @infinitePolynomialProj_not_quasiCompact_aux k _ MvPolynomial.gradedAlgebra
 theorem exists_homogeneousIdeal_eq_vPlus
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     (T : Set (ProjPoints 𝒜)) (hT : IsClosed T) :
-    ∃ I : HomogeneousIdeal 𝒜, T = vPlus 𝒜 I := by sorry
+    ∃ I : HomogeneousIdeal 𝒜, T = vPlus 𝒜 I := by
+  refine ⟨ProjectiveSpectrum.vanishingIdeal T, ?_⟩
+  change T = ProjectiveSpectrum.zeroLocus 𝒜
+    (ProjectiveSpectrum.vanishingIdeal T : Set R)
+  rw [ProjectiveSpectrum.zeroLocus_vanishingIdeal_eq_closure, hT.closure_eq]
 noncomputable def projToSpecZeroPointMap
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     ProjPoints 𝒜 → PrimeSpectrum (𝒜 0) :=
@@ -279,7 +383,8 @@ noncomputable def projToSpecZeroPointMap
 
 theorem projToSpecZeroPointMap_continuous
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
-    Continuous (projToSpecZeroPointMap 𝒜) := by sorry
+    Continuous (projToSpecZeroPointMap 𝒜) := by
+  exact (projToSpecZeroScheme 𝒜).continuous
 abbrev oneVariablePolynomialRing (A : Type u) [CommRing A] :=
   MvPolynomial (Fin 1) A
 
@@ -294,9 +399,38 @@ abbrev oneVariablePolynomialGrading (A : Type u) [CommRing A] :
 theorem oneVariableDegreeZeroEquiv_exists (A : Type u) [CommRing A] :
     Nonempty {
       e : (oneVariablePolynomialGrading A 0) ≃+* A //
-        ∀ a : A,
+      ∀ a : A,
           ((e.symm a : oneVariablePolynomialGrading A 0) :
-              oneVariablePolynomialRing A) = MvPolynomial.C a } := by sorry
+              oneVariablePolynomialRing A) = MvPolynomial.C a } := by
+  let φ : oneVariablePolynomialGrading A 0 →+* A :=
+    { toFun := fun p => MvPolynomial.constantCoeff (p : oneVariablePolynomialRing A)
+      map_one' := by simp
+      map_mul' := by intro p q; simp
+      map_zero' := by simp
+      map_add' := by intro p q; simp }
+  have hzero (p : oneVariablePolynomialGrading A 0) :
+      (p : oneVariablePolynomialRing A) = MvPolynomial.C (φ p) := by
+    have hp : MvPolynomial.IsHomogeneous
+        (p : oneVariablePolynomialRing A) 0 := p.property
+    have hdeg : (p : oneVariablePolynomialRing A).totalDegree = 0 :=
+      (MvPolynomial.totalDegree_zero_iff_isHomogeneous (Fin 1)).mpr hp
+    rw [MvPolynomial.totalDegree_eq_zero_iff_eq_C.mp hdeg]
+    rfl
+  have hφ : Function.Bijective φ := by
+    constructor
+    · intro p q hpq
+      apply Subtype.ext
+      rw [hzero p, hzero q, hpq]
+    · intro a
+      refine ⟨⟨MvPolynomial.C a, MvPolynomial.isHomogeneous_C (Fin 1) a⟩, ?_⟩
+      simp [φ]
+  let e : (oneVariablePolynomialGrading A 0) ≃+* A := RingEquiv.ofBijective φ hφ
+  refine ⟨⟨e, ?_⟩⟩
+  intro a
+  rw [hzero (e.symm a)]
+  change MvPolynomial.C (φ (e.symm a)) = MvPolynomial.C a
+  have hea : φ (e.symm a) = a := e.apply_symm_apply a
+  rw [hea]
 noncomputable def oneVariableDegreeZeroEquivData (A : Type u) [CommRing A] :
     {e : (oneVariablePolynomialGrading A 0) ≃+* A //
       ∀ a : A,

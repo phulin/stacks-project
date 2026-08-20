@@ -879,6 +879,12 @@ structure GradedShiftFamily (R : Type u) (C : Type v)
     GradedModuleShiftIso R
       (GradedCategory.hom X ((shift n).obj Y))
       (GradedCategory.hom X Y) n
+  hom_shift_comp : ∀ {X Y Z : C} (i j : ℤ)
+    (f : X ⟶ (shift i).obj Y) (g : Y ⟶ (shift j).obj Z),
+    (hom_shift X Z (i + j)).total
+        (f ≫ (shift i).map g ≫
+          eqToHom (congrArg (fun F : C ⥤ C => F.obj Z) (shift_comp i j))) =
+      (hom_shift X Y i).total f ≫ (hom_shift Y Z j).total g
   hom_shift_comp_pre : ∀ {X Y Z : C} (n : ℤ)
     (f : X ⟶ Y) (g : Y ⟶ (shift n).obj Z),
     (hom_shift X Z n).total (f ≫ g) =

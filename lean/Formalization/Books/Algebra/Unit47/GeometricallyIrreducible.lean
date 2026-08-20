@@ -228,7 +228,55 @@ theorem separablyClosed_tensorProduct_irreducible
      `irreducibleSpectrum_of_openMap_of_dense_irreducibleFiber` above), and
      use the nonempty fiber over a generic point to finish.
   -/
-  sorry
+  let f : PrimeSpectrum (R ⊗[k] S) → PrimeSpectrum R :=
+    PrimeSpectrum.comap (algebraMap R (R ⊗[k] S))
+  change InducesBijectionOnIrreducibleComponents f
+  have hcont : Continuous f := by
+    exact PrimeSpectrum.continuous_comap _
+  have hopen : IsOpenMap f := by
+    exact PrimeSpectrum.isOpenMap_comap_algebraMap_tensorProduct_of_field
+  have hfiber : ∀ p, IsPreirreducible (f ⁻¹' {p}) := by
+    intro p
+    let e : p.asIdeal.Fiber (R ⊗[k] S) ≃ₐ[p.asIdeal.ResidueField]
+        (p.asIdeal.ResidueField ⊗[k] S) :=
+      Algebra.TensorProduct.cancelBaseChange k R p.asIdeal.ResidueField
+        p.asIdeal.ResidueField S
+    have hspec : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.ResidueField ⊗[k] S)) :=
+      hS.irreducibleSpace_tensorProduct
+    have hspec' : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.Fiber (R ⊗[k] S))) := by
+      exact (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv).irreducibleSpace_iff.mpr
+        hspec
+    have hsubtype : IrreducibleSpace (f ⁻¹' {p}) := by
+      change IrreducibleSpace
+        (PrimeSpectrum.comap (algebraMap R (R ⊗[k] S)) ⁻¹' {p})
+      exact (PrimeSpectrum.preimageHomeomorphFiber R (R ⊗[k] S) p).irreducibleSpace_iff.mpr
+        hspec'
+    exact (isIrreducible_iff_irreducibleSpace.mpr hsubtype).isPreirreducible
+  have hsurj : Function.Surjective f := by
+    intro p
+    let e : p.asIdeal.Fiber (R ⊗[k] S) ≃ₐ[p.asIdeal.ResidueField]
+        (p.asIdeal.ResidueField ⊗[k] S) :=
+      Algebra.TensorProduct.cancelBaseChange k R p.asIdeal.ResidueField
+        p.asIdeal.ResidueField S
+    have hspec : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.ResidueField ⊗[k] S)) :=
+      hS.irreducibleSpace_tensorProduct
+    let q : PrimeSpectrum (p.asIdeal.Fiber (R ⊗[k] S)) :=
+      (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv).symm
+        (Classical.choice hspec.toNonempty)
+    let x : f ⁻¹' {p} := by
+      change PrimeSpectrum.comap (algebraMap R (R ⊗[k] S)) ⁻¹' {p}
+      exact (PrimeSpectrum.preimageHomeomorphFiber R (R ⊗[k] S) p).symm q
+    exact ⟨x.1, by
+      have hx := x.2
+      change f x.1 ∈ ({p} : Set (PrimeSpectrum R)) at hx
+      simpa using hx⟩
+  let e := irreducibleComponentsEquivOfIsPreirreducibleFiber f hcont hopen hfiber hsurj
+  refine ⟨e.symm.toEquiv, ?_⟩
+  intro C
+  rfl
 
 /-! ## Testing after field extensions -/
 
@@ -741,7 +789,55 @@ theorem geometricallyIrreducible_baseChange_components
     `Set.image_preimage_eq _ hsurj` (or the generated simp lemma) proves
     `f '' C.1 = (e C).1`.
   -/
-  sorry
+  let f : PrimeSpectrum (R ⊗[k] S) → PrimeSpectrum R :=
+    PrimeSpectrum.comap (algebraMap R (R ⊗[k] S))
+  change InducesBijectionOnIrreducibleComponents f
+  have hcont : Continuous f := by
+    exact PrimeSpectrum.continuous_comap _
+  have hopen : IsOpenMap f := by
+    exact PrimeSpectrum.isOpenMap_comap_algebraMap_tensorProduct_of_field
+  have hfiber : ∀ p, IsPreirreducible (f ⁻¹' {p}) := by
+    intro p
+    let e : p.asIdeal.Fiber (R ⊗[k] S) ≃ₐ[p.asIdeal.ResidueField]
+        (p.asIdeal.ResidueField ⊗[k] S) :=
+      Algebra.TensorProduct.cancelBaseChange k R p.asIdeal.ResidueField
+        p.asIdeal.ResidueField S
+    have hspec : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.ResidueField ⊗[k] S)) :=
+      hS.irreducibleSpace_tensorProduct
+    have hspec' : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.Fiber (R ⊗[k] S))) := by
+      exact (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv).irreducibleSpace_iff.mpr
+        hspec
+    have hsubtype : IrreducibleSpace (f ⁻¹' {p}) := by
+      change IrreducibleSpace
+        (PrimeSpectrum.comap (algebraMap R (R ⊗[k] S)) ⁻¹' {p})
+      exact (PrimeSpectrum.preimageHomeomorphFiber R (R ⊗[k] S) p).irreducibleSpace_iff.mpr
+        hspec'
+    exact (isIrreducible_iff_irreducibleSpace.mpr hsubtype).isPreirreducible
+  have hsurj : Function.Surjective f := by
+    intro p
+    let e : p.asIdeal.Fiber (R ⊗[k] S) ≃ₐ[p.asIdeal.ResidueField]
+        (p.asIdeal.ResidueField ⊗[k] S) :=
+      Algebra.TensorProduct.cancelBaseChange k R p.asIdeal.ResidueField
+        p.asIdeal.ResidueField S
+    have hspec : IrreducibleSpace
+        (PrimeSpectrum (p.asIdeal.ResidueField ⊗[k] S)) :=
+      hS.irreducibleSpace_tensorProduct
+    let q : PrimeSpectrum (p.asIdeal.Fiber (R ⊗[k] S)) :=
+      (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv).symm
+        (Classical.choice hspec.toNonempty)
+    let x : f ⁻¹' {p} := by
+      change PrimeSpectrum.comap (algebraMap R (R ⊗[k] S)) ⁻¹' {p}
+      exact (PrimeSpectrum.preimageHomeomorphFiber R (R ⊗[k] S) p).symm q
+    exact ⟨x.1, by
+      have hx := x.2
+      change f x.1 ∈ ({p} : Set (PrimeSpectrum R)) at hx
+      simpa using hx⟩
+  let e := irreducibleComponentsEquivOfIsPreirreducibleFiber f hcont hopen hfiber hsurj
+  refine ⟨e.symm.toEquiv, ?_⟩
+  intro C
+  rfl
 
 /-! ## Geometrically irreducible field extensions -/
 

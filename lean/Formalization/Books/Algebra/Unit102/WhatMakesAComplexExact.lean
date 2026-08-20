@@ -616,19 +616,36 @@ theorem lemma_add_trivial_complex
             (C.previousDifferential (i - 1) hpos).comp f = 0 := by
           apply LinearMap.ext
           intro x
+          have hI : i - 2 + 1 = i - 1 := by omega
+          have hI2 : i - 1 + 1 = i := Nat.sub_add_cancel hi
+          have hsub : i - 1 - 1 = i - 2 := by omega
+          have hsub : i - 1 - 1 = i - 2 := by omega
+          have hf : f =
+              (show (Fin (C.termRank i) → R) →ₗ[R]
+                  (Fin (C.termRank (i - 1)) → R) from
+                hI2 ▸ C.differential (i - 1)) := by
+            dsimp [f, FiniteFreeComplex.previousDifferential]
+          have hp : C.previousDifferential (i - 1) (by omega) =
+              (show (Fin (C.termRank (i - 1)) → R) →ₗ[R]
+                  (Fin (C.termRank (i - 2)) → R) from
+                hI ▸ C.differential (i - 2)) := by
+            apply LinearMap.ext
+            intro x
+            have ht := transport_differential_fixed (rank := C.termRank)
+              hI (by omega) C.differential x
+            simpa [FiniteFreeComplex.previousDifferential, hsub] using ht
+          rw [hf, hp]
           have hC : i - 2 + 1 + 1 = i := by omega
-          have hC' : C.termRank (i - 2 + 1 + 1) = C.termRank i :=
-            congrArg C.termRank hC
           have hsub : i - 1 - 1 = i - 2 := by omega
           have hx := congrArg
-            (fun q => q (fun z => x (Fin.cast hC' z)))
+            (fun q => q (hC.symm ▸ x))
             (C.differential_comp (i - 2))
-          simpa [f, FiniteFreeComplex.previousDifferential,
-            LinearMap.comp_apply, hsub] using hx
+          simpa [LinearMap.comp_apply, hsub, hC] using hx
         apply LinearMap.ext
         intro x
-        simp [g, h1, h2, f, FiniteFreeComplex.previousDifferential,
-          LinearMap.comp_apply, hleft]
+        have hz := LinearMap.congr_fun hleft (coord i x)
+        simpa [g, h1, h2, f, FiniteFreeComplex.previousDifferential,
+          LinearMap.comp_apply] using hz
         -/
         sorry
         /-

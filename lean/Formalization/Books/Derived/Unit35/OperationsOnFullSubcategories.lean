@@ -403,6 +403,8 @@ variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
 variable (A : ℕ → ObjectProperty C) (hA : Monotone A)
 
 /-! Interval shifts commute with an increasing union. -/
+omit [AdditiveCategory C] [∀ n : ℤ, (shiftFunctor C n).Additive] [Pretriangulated C]
+    [CategoryTheory.IsTriangulated C] in
 theorem shiftWindow_iSup (a b : EInt) :
     shiftWindow (⨆ i, A i) a b = ⨆ i, shiftWindow (A i) a b := by
   ext X
@@ -415,6 +417,9 @@ theorem shiftWindow_iSup (a b : EInt) :
     exact ⟨j, Z, ⟨i, hZ⟩, rfl⟩
 
 /-! Direct-summand closure commutes with an increasing union. -/
+omit [AdditiveCategory C] [HasShift C ℤ]
+    [∀ n : ℤ, (shiftFunctor C n).Additive] [Pretriangulated C]
+    [CategoryTheory.IsTriangulated C] in
 theorem smd_iSup :
     smd (⨆ i, A i) = ⨆ i, smd (A i) := by
   apply le_antisymm
@@ -429,6 +434,7 @@ theorem smd_iSup :
     exact ObjectProperty.monotone_retractClosure (le_iSup A i)
 
 /-! Finite direct sums commute with an increasing union. -/
+include hA in
 theorem add_iSup :
     add (⨆ i, A i) = ⨆ i, add (A i) := by
   sorry
@@ -444,6 +450,7 @@ theorem star_iSup (B : ObjectProperty C) :
   sorry
 
 /-! Iterated extension products commute with an increasing union. -/
+include hA in
 theorem starPower_iSup (n : ℕ) :
     starPower (⨆ i, A i) n = ⨆ i, starPower (A i) n := by
   sorry

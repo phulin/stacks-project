@@ -1281,6 +1281,153 @@ def triangleLocalizationIndexToObject₃
     apply MorphismProperty.Under.Hom.ext
     rfl
 
+private theorem triangle_morphism_property_of_first_two
+    {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
+    [CompatibleWithTriangulation S]
+    {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
+    (φ : A ⟶ B) (hφ₁ : S φ.hom₁) (hφ₂ : S φ.hom₂) : S φ.hom₃ := by
+  letI : LeftMultiplicativeSystem S := hS.1.1
+  letI : RightMultiplicativeSystem S := hS.1.2
+  have hφ₃ : IsIso ((S.Q.mapTriangle.map φ).hom₃) := by
+    apply isIso₃_of_isIso₁₂ (S.Q.mapTriangle.map φ)
+      (S.Q.map_distinguished A hA) (S.Q.map_distinguished B hB)
+    · exact MorphismProperty.Q_inverts S φ.hom₁ hφ₁
+    · exact MorphismProperty.Q_inverts S φ.hom₂ hφ₂
+  have hφ₃'' : invertedByLocalization S φ.hom₃ := by
+    change IsIso ((S.Q.mapTriangle.map φ).hom₃)
+    exact hφ₃
+  rw [invertedByLocalization_eq_of_saturated hS] at hφ₃''
+  exact hφ₃''
+
+private theorem triangle_morphism_property_of_last_two
+    {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
+    [CompatibleWithTriangulation S]
+    {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
+    (φ : A ⟶ B) (hφ₂ : S φ.hom₂) (hφ₃ : S φ.hom₃) : S φ.hom₁ := by
+  letI : LeftMultiplicativeSystem S := hS.1.1
+  letI : RightMultiplicativeSystem S := hS.1.2
+  have hφ₁ : IsIso ((S.Q.mapTriangle.map φ).hom₁) := by
+    apply isIso₁_of_isIso₂₃ (S.Q.mapTriangle.map φ)
+      (S.Q.map_distinguished A hA) (S.Q.map_distinguished B hB)
+    · exact MorphismProperty.Q_inverts S φ.hom₂ hφ₂
+    · exact MorphismProperty.Q_inverts S φ.hom₃ hφ₃
+  have hφ₁' : invertedByLocalization S φ.hom₁ := by
+    change IsIso ((S.Q.mapTriangle.map φ).hom₁)
+    exact hφ₁
+  rw [invertedByLocalization_eq_of_saturated hS] at hφ₁'
+  exact hφ₁'
+
+private theorem triangle_morphism_zero_refinement
+    {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
+    [CompatibleWithTriangulation S]
+    {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
+    (φ : A ⟶ B)
+    (hφ₁ : S.Q.map φ.hom₁ = S.Q.map (0 : A.obj₁ ⟶ B.obj₁))
+    (hφ₂ : S.Q.map φ.hom₂ = S.Q.map (0 : A.obj₂ ⟶ B.obj₂))
+    (hφ₃ : S.Q.map φ.hom₃ = S.Q.map (0 : A.obj₃ ⟶ B.obj₃)) :
+    ∃ (D : Triangle C) (hD : D ∈ distTriang C) (ψ : B ⟶ D),
+      triangleMorphismProperty S ψ ∧ φ ≫ ψ = 0 := by
+  letI : LeftMultiplicativeSystem S := hS.1.1
+  letI : RightMultiplicativeSystem S := hS.1.2
+  obtain ⟨X₁, s₁, hs₁, hs₁zero⟩ :=
+    (MorphismProperty.map_eq_iff_postcomp S.Q S φ.hom₁
+      (0 : A.obj₁ ⟶ B.obj₁)).1 hφ₁
+  obtain ⟨ψ₂, hf₂⟩ :=
+    (MorphismProperty.RightFraction.mk s₁ hs₁ B.mor₁).exists_leftFraction
+  let f₂ := ψ₂.f
+  let s₂ := ψ₂.s
+  have hs₂ : S s₂ := ψ₂.hs
+  obtain ⟨X₂, t₂, ht₂, ht₂zero⟩ :=
+    (MorphismProperty.map_eq_iff_postcomp S.Q S (φ.hom₂ ≫ s₂)
+      0).1 (by
+      rw [S.Q.map_comp, hφ₂, ← S.Q.map_comp, zero_comp])
+  let s₂' := s₂ ≫ t₂
+  let f₂' := f₂ ≫ t₂
+  have hf₂' : B.mor₁ ≫ s₂' = s₁ ≫ f₂' := by
+    dsimp [s₂', f₂']
+    rw [← Category.assoc, ← Category.assoc]
+    rw [show B.mor₁ ≫ s₂ = s₁ ≫ f₂ by simpa [f₂, s₂] using hf₂]
+  have hs₂' : S s₂' := S.comp_mem _ _ hs₂ ht₂
+  obtain ⟨D₀, g₀, h₀, hD₀⟩ := distinguished_cocone_triangle f₂'
+  let D₀' := Triangle.mk f₂' g₀ h₀
+  have hD₀' : D₀' ∈ distTriang C := hD₀
+  obtain ⟨s₃, hs₃₂, hs₃₃⟩ :=
+    complete_distinguished_triangle_morphism B D₀' hB hD₀' s₁ s₂' hf₂'
+  let ψ₀ : B ⟶ D₀' := Triangle.homMk _ _ s₁ s₂' s₃ hf₂' hs₃₂ hs₃₃
+  have hψ₀₃ : S s₃ :=
+    triangle_morphism_property_of_first_two hS hB hD₀' ψ₀ hs₁ hs₂'
+  obtain ⟨X₃, t₃, ht₃, ht₃zero⟩ :=
+    (MorphismProperty.map_eq_iff_postcomp S.Q S
+      (φ.hom₃ ≫ ψ₀.hom₃) (0 : A.obj₃ ⟶ D₀'.obj₃)).1 (by
+      rw [S.Q.map_comp, hφ₃, ← S.Q.map_comp, zero_comp])
+  obtain ⟨D, g, h, hD⟩ :=
+    distinguished_cocone_triangle₁ (D₀'.mor₂ ≫ t₃)
+  let D' := Triangle.mk g (D₀'.mor₂ ≫ t₃) h
+  have hD' : D' ∈ distTriang C := hD
+  have hobj₂ : D'.obj₂ = D₀'.obj₂ := rfl
+  have hobj₃ : D'.obj₃ = X₃ := rfl
+  let id₂ : D₀'.obj₂ ⟶ D'.obj₂ := eqToHom hobj₂.symm
+  let ht₃' : D₀'.obj₃ ⟶ D'.obj₃ := t₃ ≫ eqToHom hobj₃.symm
+  have hcomp₂ : D₀'.mor₂ ≫ ht₃' = id₂ ≫ D'.mor₂ := by
+    cases hobj₂
+    cases hobj₃
+    change D₀'.mor₂ ≫ t₃ ≫ 𝟙 X₃ =
+      𝟙 D₀'.obj₂ ≫ (D₀'.mor₂ ≫ t₃)
+    simp
+  let a := (complete_distinguished_triangle_morphism₁
+    D₀' D' hD₀' hD' id₂ ht₃' hcomp₂).choose
+  have ha₁ := (complete_distinguished_triangle_morphism₁
+    D₀' D' hD₀' hD' id₂ ht₃' hcomp₂).choose_spec.1
+  have ha₂ := (complete_distinguished_triangle_morphism₁
+    D₀' D' hD₀' hD' id₂ ht₃' hcomp₂).choose_spec.2
+  let ψ₁ : D₀' ⟶ D' := Triangle.homMk _ _ a id₂ ht₃' ha₁
+    hcomp₂ ha₂
+  have hid₂ : S id₂ := by
+    apply saturated_contains_isomorphisms hS _
+    exact MorphismProperty.isomorphisms.infer_property _
+  have hht₃' : S ht₃' := by
+    apply S.comp_mem _ _ ht₃
+    apply saturated_contains_isomorphisms hS _
+    exact MorphismProperty.isomorphisms.infer_property _
+  have hψ₁₁ : S ψ₁.hom₁ := by
+    apply triangle_morphism_property_of_last_two hS hD₀' hD' ψ₁
+    · dsimp [ψ₁]
+      exact hid₂
+    · dsimp [ψ₁]
+      change S ht₃'
+      exact hht₃'
+  let ψ := ψ₀ ≫ ψ₁
+  have hψ₁₂ : S ψ₁.hom₂ := by
+    dsimp [ψ₁]
+    exact hid₂
+  have hψ₁₃' : S ψ₁.hom₃ := by
+    dsimp [ψ₁]
+    change S ht₃'
+    exact hht₃'
+  have hψ : triangleMorphismProperty S ψ := by
+    refine ⟨S.comp_mem _ _ hs₁ hψ₁₁, S.comp_mem _ _ hs₂' hψ₁₂, ?_⟩
+    exact S.comp_mem _ _ hψ₀₃ hψ₁₃'
+  refine ⟨D', hD', ψ₀ ≫ ψ₁, hψ, ?_⟩
+  have hzero₁ : φ.hom₁ ≫ ψ₀.hom₁ = 0 := by
+    change φ.hom₁ ≫ s₁ = 0
+    rw [hs₁zero, zero_comp]
+  have hzero₂ : φ.hom₂ ≫ ψ₀.hom₂ = 0 := by
+    change φ.hom₂ ≫ s₂' = 0
+    rw [← Category.assoc, ht₂zero, zero_comp]
+  have hzero₃ : (φ.hom₃ ≫ ψ₀.hom₃) ≫ ht₃' = 0 := by
+    change (φ.hom₃ ≫ ψ₀.hom₃) ≫
+      (t₃ ≫ eqToHom hobj₃.symm) = 0
+    rw [← Category.assoc, ht₃zero, zero_comp, zero_comp]
+  apply Triangle.hom_ext
+  · change φ.hom₁ ≫ (ψ₀.hom₁ ≫ ψ₁.hom₁) = 0
+    rw [← Category.assoc, hzero₁, zero_comp]
+  · change φ.hom₂ ≫ (ψ₀.hom₂ ≫ ψ₁.hom₂) = 0
+    rw [← Category.assoc, hzero₂, zero_comp]
+  · change φ.hom₃ ≫ (ψ₀.hom₃ ≫ ψ₁.hom₃) = 0
+    rw [← Category.assoc]
+    change (φ.hom₃ ≫ ψ₀.hom₃) ≫ ht₃' = 0
+    exact hzero₃
+
 theorem triangleLocalizationIndex_filtered
     {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
     [CompatibleWithTriangulation S] (T : Triangle C) (hT : T ∈ distTriang C) :

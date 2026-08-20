@@ -1,5 +1,8 @@
 import Formalization.Books.Schemes.Unit09.Schemes
+import Mathlib.Algebra.Field.ULift
+import Mathlib.AlgebraicGeometry.Gluing
 import Mathlib.AlgebraicGeometry.Limits
+import Mathlib.AlgebraicGeometry.Pullbacks
 import Mathlib.AlgebraicGeometry.Properties
 import Mathlib.AlgebraicGeometry.Sites.SmallAffineZariski
 import Mathlib.Topology.Sober
@@ -29,23 +32,148 @@ noncomputable section
 theorem scheme_is_sober (X : Scheme.{u}) :
     ∀ {Z : Set X}, IsIrreducible Z → IsClosed Z →
       ∃! x : X, IsGenericPoint x Z := by
-  sorry
+  intro Z hZ hZc
+  obtain ⟨x, hx⟩ := QuasiSober.sober hZ hZc
+  exact ⟨x, hx, fun y hy => (hx.eq hy).symm⟩
 
 /-- The affine opens form the topological basis asserted in the chapter. -/
 theorem affine_opens_form_basis (X : Scheme.{u}) :
     Opens.IsBasis X.affineOpens :=
   X.isBasis_affineOpens
 
+private theorem no_three_distinct_bool
+    (i j k : ULift.{u} Bool) (hij : i ≠ j) (hik : i ≠ k) (hjk : j ≠ k) : False := by
+  cases i with
+  | up i =>
+    cases j with
+    | up j =>
+      cases k with
+      | up k => cases i <;> cases j <;> cases k <;> simp_all
+
+private def doubled_origin_glueData' : CategoryTheory.GlueData' (Scheme.{u}) := {
+  J := ULift.{u} Bool
+  U := fun _ => Formalization.Books.Schemes.Unit09.affinePlane (ULift.{u} ℚ)
+  V := fun _ _ _ => Formalization.Books.Schemes.Unit09.puncturedAffinePlane (ULift.{u} ℚ)
+  f := by
+    intro _ _ _
+    exact (Formalization.Books.Schemes.Unit09.affinePlanePuncturedOpen
+      (ULift.{u} ℚ)).ι
+  f_mono := by
+    intro i j h
+    infer_instance
+  f_hasPullback := by
+    intro i j k hij hik
+    infer_instance
+  t := by
+    intro i j h
+    exact 𝟙 _
+  t' := by
+    intro i j k hij hik hjk
+    exact (no_three_distinct_bool i j k hij hik hjk).elim
+  t_fac := by
+    intro i j k hij hik hjk
+    exact (no_three_distinct_bool i j k hij hik hjk).elim
+  t_inv := by
+    intro i j h
+    simp
+  cocycle := by
+    intro i j k hij hik hjk
+    exact (no_three_distinct_bool i j k hij hik hjk).elim }
+
+private def doubled_origin_glueData : Scheme.GlueData.{u} := {
+  toGlueData := CategoryTheory.GlueData.ofGlueData' doubled_origin_glueData'
+  f_open := by
+    intro i j
+    dsimp [CategoryTheory.GlueData.ofGlueData', CategoryTheory.GlueData'.f',
+      doubled_origin_glueData']
+    split_ifs <;> infer_instance }
+
 /-- There are schemes with two affine opens whose intersection is not affine. -/
 theorem exists_nonaffine_intersection_of_affine_opens :
     ∃ (X : Scheme.{u}) (U V : X.Opens),
       IsAffineOpen U ∧ IsAffineOpen V ∧ ¬ IsAffineOpen (U ⊓ V) := by
-  sorry
+  let D := doubled_origin_glueData
+  let X := D.glued
+  letI : IsOpenImmersion (D.ι (ULift.up false)) :=
+    Scheme.GlueData.ι_isOpenImmersion D (ULift.up false)
+  letI : IsOpenImmersion (D.ι (ULift.up true)) :=
+    Scheme.GlueData.ι_isOpenImmersion D (ULift.up true)
+  letI : IsAffine (D.U (ULift.up false)) := by
+    change IsAffine (Formalization.Books.Schemes.Unit09.affinePlane (ULift.{u} ℚ))
+    infer_instance
+  letI : IsAffine (D.U (ULift.up true)) := by
+    change IsAffine (Formalization.Books.Schemes.Unit09.affinePlane (ULift.{u} ℚ))
+    infer_instance
+  let U : X.Opens := (D.ι (ULift.up false)).opensRange
+  let V : X.Opens := (D.ι (ULift.up true)).opensRange
+  refine ⟨X, U, V, ?_, ?_, ?_⟩
+  · change IsAffineOpen (D.ι (ULift.up false)).opensRange
+    exact isAffineOpen_opensRange _
+  · change IsAffineOpen (D.ι (ULift.up true)).opensRange
+    exact isAffineOpen_opensRange _
+  · intro hInt
+    have hpre : IsAffineOpen ((D.ι (ULift.up false)) ⁻¹ᵁ (U ⊓ V)) :=
+      hInt.preimage_of_isOpenImmersion (D.ι (ULift.up false)) inf_le_left
+    have hpreV : IsAffineOpen ((D.ι (ULift.up false)) ⁻¹ᵁ V) := by
+      convert hpre using 1
+      rw [Scheme.Hom.preimage_inf, Scheme.Hom.preimage_opensRange]
+      simp
+    letI : IsOpenImmersion
+        (D.vPullbackCone (ULift.up false) (ULift.up true)).fst := by
+      change IsOpenImmersion (D.f (ULift.up false) (ULift.up true))
+      exact D.f_open _ _
+    letI : IsOpenImmersion (D.f (ULift.up false) (ULift.up true)) := D.f_open _ _
+    let H := (IsPullback.of_isLimit (D.vPullbackConeIsLimit
+      (ULift.up false) (ULift.up true))).flip
+    have hleft : IsAffineOpen
+        ((D.vPullbackCone (ULift.up false) (ULift.up true)).fst ''ᵁ
+          ((D.vPullbackCone (ULift.up false) (ULift.up true)).snd ⁻¹ᵁ
+            (⊤ : (D.U (ULift.up true)).Opens))) := by
+      rw [IsOpenImmersion.image_preimage_eq_preimage_image_of_isPullback H]
+      simpa [V] using hpreV
+    have hsourceRange : IsAffineOpen
+        (D.vPullbackCone (ULift.up false) (ULift.up true)).fst.opensRange := by
+      simpa using hleft
+    have hsourceRange' : IsAffineOpen
+        (D.f (ULift.up false) (ULift.up true)).opensRange := by
+      change IsAffineOpen
+        (D.vPullbackCone (ULift.up false) (ULift.up true)).fst.opensRange
+      exact hsourceRange
+    have hsourceTop : IsAffineOpen
+        (⊤ : (D.V (ULift.up false, ULift.up true)).Opens) := by
+      exact (AlgebraicGeometry.Scheme.Hom.isAffineOpen_iff_of_isOpenImmersion
+        (D.f (ULift.up false) (ULift.up true))
+        (U := (⊤ : (D.V (ULift.up false, ULift.up true)).Opens))).mp
+        (by simpa using hsourceRange')
+    have hsource : IsAffine (D.V (ULift.up false, ULift.up true)) := by
+      exact (IsAffine.iff_of_isIso
+        (Scheme.topIso _).hom).mp hsourceTop
+    have hsource' : IsAffine (Formalization.Books.Schemes.Unit09.puncturedAffinePlane
+        (ULift.{u} ℚ)) := by
+      simpa [D, doubled_origin_glueData, CategoryTheory.GlueData.ofGlueData',
+        doubled_origin_glueData'] using hsource
+    exact Formalization.Books.Schemes.Unit09.puncturedAffinePlane_not_affine
+      (ULift.{u} ℚ) hsource'
 
 /-- The underlying space of a scheme is locally quasi-compact. -/
 theorem scheme_is_locally_quasi_compact (X : Scheme.{u}) :
     LocallyCompactSpace X := by
-  sorry
+  apply LocallyCompactSpace.of_hasBasis
+    (ι := fun _ : X => X.affineOpens)
+    (p := fun x W => x ∈ (W : Set X))
+    (s := fun _ W => (W : Set X))
+  · intro x
+    refine ⟨fun t => ?_⟩
+    constructor
+    · intro ht
+      obtain ⟨O, hOt, hO, hxO⟩ := mem_nhds_iff.mp ht
+      obtain ⟨W, hW, hxW, hWO⟩ := X.isBasis_affineOpens.exists_subset_of_mem_open hxO hO
+      rcases hW with ⟨W, hW, rfl⟩
+      exact ⟨⟨W, hW⟩, hxW, hWO.trans hOt⟩
+    · rintro ⟨W, hxW, hWt⟩
+      exact Filter.mem_of_superset (IsOpen.mem_nhds W.1.isOpen hxW) hWt
+  · intro x W hW
+    exact W.property.isCompact
 
 /-! ## Basic opens on overlapping affine charts -/
 
@@ -59,7 +187,9 @@ theorem exists_affine_basicOpen_neighborhood
       x ∈ (W : X.Opens) ∧
         (W : X.Opens) = X.basicOpen f ∧
         (W : X.Opens) = X.basicOpen g := by
-  sorry
+  obtain ⟨f, g, hfg, hxfg⟩ :=
+    exists_basicOpen_le_affine_inter U.property V.property x hx
+  refine ⟨⟨X.basicOpen f, U.property.basicOpen f⟩, f, g, hxfg, rfl, hfg⟩
 
 /-- A finite affine-basic-open refinement of an affine open inside an affine-open cover. -/
 theorem exists_finite_affineBasicOpen_cover
@@ -69,7 +199,45 @@ theorem exists_finite_affineBasicOpen_cover
       (⨆ j, (W j : X.Opens)) = (V : X.Opens) ∧
         ∀ j, ∃ i : ι, ∃ f : Γ(X, (U i : X.Opens)),
           (W j : X.Opens) = X.basicOpen f := by
-  sorry
+  let A := Σ i : ι, {f : Γ(X, (U i : X.Opens)) //
+    X.basicOpen f ≤ (V : X.Opens)}
+  let S : A → Set X := fun p => (X.basicOpen p.2.1 : Set X)
+  have hcover : (V : Set X) ⊆ ⋃ p : A, S p := by
+    intro x hx
+    have hxTop : x ∈ (⨆ i, (U i : X.Opens)) := by
+      rw [hU]
+      exact Set.mem_univ x
+    obtain ⟨i, hxi⟩ := Opens.mem_iSup.mp hxTop
+    obtain ⟨f, g, hfg, hxf⟩ :=
+      exists_basicOpen_le_affine_inter (U i).property V.property x ⟨hxi, hx⟩
+    have hle : X.basicOpen f ≤ (V : X.Opens) := by
+      rw [hfg]
+      exact Scheme.basicOpen_le X g
+    refine Set.mem_iUnion.2 ⟨⟨i, f, hle⟩, ?_⟩
+    exact hxf
+  obtain ⟨t, ht⟩ :=
+    V.property.isCompact.elim_finite_subcover S
+      (fun p => (X.basicOpen p.2.1).isOpen) hcover
+  let e : Fin t.card ≃ t := t.equivFin.symm
+  let W : Fin t.card → X.affineOpens := fun j =>
+    ⟨X.basicOpen (e j).1.2.1, (U (e j).1.1).property.basicOpen _⟩
+  refine ⟨t.card, W, ?_, ?_⟩
+  · apply le_antisymm
+    · apply iSup_le
+      intro j
+      simpa [W] using (e j).1.2.2
+    · intro x hx
+      obtain ⟨p, hp, hxp⟩ := Set.mem_iUnion₂.mp (ht hx)
+      let j : Fin t.card := e.symm ⟨p, hp⟩
+      have hj : (e j).1 = p := by
+        simp [j]
+      apply Opens.mem_iSup.mpr
+      refine ⟨j, ?_⟩
+      change x ∈ X.basicOpen (e j).1.2.1
+      rw [hj]
+      exact hxp
+  · intro j
+    exact ⟨(e j).1.1, (e j).1.2.1, rfl⟩
 
 /-! ## Sheaves on the affine basis -/
 
@@ -125,7 +293,21 @@ theorem affine_open_presheaf_sheaf_criterion
     {X : Scheme.{u}} (F : AffineOpenPresheaf X) :
     (IsRestrictionOfSchemeSheaf F ↔ IsAffineSiteSheaf F) ∧
       (IsAffineSiteSheaf F ↔ HasBinaryStandardOpenGluing F) := by
-  sorry
+  constructor
+  · constructor
+    · rintro ⟨G, ⟨e⟩⟩
+      change Presheaf.IsSheaf (Scheme.AffineZariskiSite.grothendieckTopology X) F
+      exact (Presheaf.isSheaf_of_iso_iff e).mpr
+        ((Scheme.AffineZariskiSite.sheafEquiv (X := X) (A := Type u)).inverse.obj G).property
+    · intro hF
+      let E := Scheme.AffineZariskiSite.sheafEquiv (X := X) (A := Type u)
+      let G := E.functor.obj ⟨F, hF⟩
+      refine ⟨G, ?_⟩
+      change Nonempty (F ≅ (E.inverse.obj G).val)
+      let e := E.unitIso.app ⟨F, hF⟩
+      exact ⟨Iso.mk e.hom.hom e.inv.hom
+        (ObjectProperty.isoHom_inv_id_hom e) (ObjectProperty.isoInv_hom_id_hom e)⟩
+  · sorry
 
 /-! ## Finite discrete schemes and closed points -/
 

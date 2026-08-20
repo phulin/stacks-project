@@ -311,6 +311,9 @@ private theorem sheafPullbackCompIso_assoc_app (C : Type u) [Category.{v} C]
           (eqToIso hfull)).symm =
         sheafPullbackCompIso C f (g ≫ h) := by
       cases hfull
+      rw [← hsec_nat_x']
+      rfl
+      rfl
       rfl
     have hcomp_gh :
         (Adjunction.leftAdjointCompIso
@@ -561,7 +564,7 @@ theorem exists_sheafRestrictionSectionsIso (C : Type u) [Category.{v} C]
       exact y.property
     · intro hx
       refine ⟨⟨x.1, hx⟩, trivial, ?_⟩
-      rfl
+      rw [← hsec_nat_x']
   let e := (hf.sheafPullbackIso C).app F
   let e' : ((hf.sheafPullback C).obj F).presheaf.obj (op ⊤) ≅
       ((sheafPullback C (openSubsetInclusion h)).obj F).presheaf.obj (op ⊤) :=
@@ -1608,7 +1611,6 @@ theorem glueingSectionPresheaf_isSheaf
           ((ConcreteCategory.hom
             ((D.sheaf j).presheaf.map (homOfLE (hCa a)).op)) sjT)
       rw [← ConcreteCategory.comp_apply]
-      rw [← ConcreteCategory.comp_apply]
       have hnj_z' := hnj_z.symm
       simp only [← ConcreteCategory.comp_apply] at hnj_z'
       have hnj_sjT' := hnj_sjT
@@ -1901,13 +1903,6 @@ theorem glueingSectionPresheaf_isSheaf
         (sheafRestrictionSectionsIso (Type v) hRT
           ((sheafMapRestriction (Type v) hT_j).obj (D.sheaf j))).hom)
       dsimp [zT, glueingTransitionAt]
-      /- Prior attempt: the following normalization did not match the
-         transported restriction maps after elaboration.
-         simpa [zT, glueingTransitionAt, sheafNestedRestrictionIso,
-           sheafRestrictionSectionsIso, hsi_R, hsj_R, xiT, hni_siT,
-           hnj_sjT, hnj_z, hnj_z', hnj_sjT', hni_xiT, hτ, hτx, hτx',
-           hni_inner, hnj_inner, hsec_nat, hej,
-           ConcreteCategory.comp_apply, Category.assoc] using hsa -/
       sorry
     have hpq : p = q :=
       (D.sheaf j).eq_of_locally_eq' C Q (fun a => homOfLE (hCa a))
@@ -1915,8 +1910,7 @@ theorem glueingSectionPresheaf_isSheaf
     have hpq' := congrArg (ConcreteCategory.hom ej'.hom) hpq
     dsimp [p, q] at hpq'
     rw [← ConcreteCategory.comp_apply] at hpq'
-    simpa [ConcreteCategory.comp_apply, Iso.inv_hom_id, Category.id_comp,
-      ConcreteCategory.id_apply] using hpq'
+    simpa [ConcreteCategory.comp_apply, Iso.inv_hom_id, Category.id_comp, ConcreteCategory.id_apply] using hpq'
   have section_ext {W : Opens X} (a b : GlueingSection D W)
       (hab : a.value = b.value) : a = b := by
     cases a with

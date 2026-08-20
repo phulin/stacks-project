@@ -617,6 +617,329 @@ theorem IsomorphicOverBase.transportPullbackChoice
       congrArg (fun H : T ⥤ T => H.obj y.1) hGF
   have hcomp : ∀ {W V U : C} (g : W ⟶ V) (f : V ⟶ U),
       P.pullbackFunctor (g ≫ f) = P.pullbackFunctor f ⋙ P.pullbackFunctor g := by
+    let forwardFunctor (U : C) :
+        Functor.Fiber p U ⥤ Functor.Fiber (G ⋙ p) U :=
+      { obj := forwardFiber
+        map := forwardMap
+        map_id := by
+          intro x
+          apply Functor.Fiber.hom_ext
+          change F.map (𝟙 x.1) = 𝟙 (F.obj x.1)
+          simp
+        map_comp := by
+          intro x y z φ ψ
+          apply Functor.Fiber.hom_ext
+          change F.map (φ.1 ≫ ψ.1) = F.map φ.1 ≫ F.map ψ.1
+          simp }
+    let transportedMap : ∀ {U : C}
+        {x y : Functor.Fiber (G ⋙ p) U}, (x ⟶ y) →
+          (transportedFiber x ⟶ transportedFiber y) := by
+      intro U x y φ
+      let : (G ⋙ p).IsHomLift (𝟙 U) φ.1 := φ.2
+      refine ⟨G.map φ.1, ?_⟩
+      apply CategoryTheory.IsHomLift.of_fac' p (𝟙 U) (G.map φ.1)
+        x.2 y.2
+      simpa only [Functor.comp_map] using
+        (CategoryTheory.IsHomLift.fac' (G ⋙ p) (𝟙 U) φ.1)
+    let transportedFunctor (U : C) :
+        Functor.Fiber (G ⋙ p) U ⥤ Functor.Fiber p U :=
+      { obj := transportedFiber
+        map := transportedMap
+        map_id := by
+          intro x
+          apply Functor.Fiber.hom_ext
+          change G.map (𝟙 x.1) = 𝟙 (G.obj x.1)
+          simp
+        map_comp := by
+          intro x y z φ ψ
+          apply Functor.Fiber.hom_ext
+          change G.map (φ.1 ≫ ψ.1) = G.map φ.1 ≫ G.map ψ.1
+          simp }
+    have transported_forward (U : C) :
+        transportedFunctor U ⋙ forwardFunctor U =
+          𝟭 (Functor.Fiber (G ⋙ p) U) := by
+      refine CategoryTheory.Functor.ext
+        (fun y => by
+          change forwardFiber (transportedFiber y) = y
+          exact backward_forward y) (fun x y φ => ?_)
+      apply Functor.Fiber.hom_ext
+      let dX := Functor.congr_obj hGF x.1
+      let dY := Functor.congr_obj hGF y.1
+      have hmapX :
+          Functor.Fiber.fiberInclusion.map
+              (eqToHom (backward_forward x)) = eqToHom dX := by
+        have h := eqToHom_map
+          (Functor.Fiber.fiberInclusion :
+            Functor.Fiber (G ⋙ p) U ⥤ T) (backward_forward x)
+        have he :
+            congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
+                (backward_forward x) = dX := by
+          apply Subsingleton.elim
+        exact h.trans (congrArg (fun e => eqToHom e) he)
+      have hmapY :
+          Functor.Fiber.fiberInclusion.map
+              (eqToHom (backward_forward y).symm) = eqToHom dY.symm := by
+        have h := eqToHom_map
+          (Functor.Fiber.fiberInclusion :
+            Functor.Fiber (G ⋙ p) U ⥤ T) (backward_forward y).symm
+        have he₀ :
+            congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
+                (backward_forward y) = dY := by
+          apply Subsingleton.elim
+        have he :
+            congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
+                (backward_forward y).symm = dY.symm :=
+          congrArg (fun e => e.symm) he₀
+        exact h.trans (congrArg (fun e => eqToHom e) he)
+      change F.map (G.map φ.1) =
+        Functor.Fiber.fiberInclusion.map
+            (eqToHom (backward_forward x)) ≫ φ.1 ≫
+          Functor.Fiber.fiberInclusion.map
+            (eqToHom (backward_forward y).symm)
+      rw [hmapX, hmapY]
+      change F.map (G.map φ.1) =
+        eqToHom (Functor.congr_obj hGF x.1) ≫ φ.1 ≫
+          eqToHom (Functor.congr_obj hGF y.1).symm
+      simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+        Functor.id_map] using (Functor.congr_hom hGF φ.1)
+    have forward_transported (U : C) :
+        forwardFunctor U ⋙ transportedFunctor U =
+          𝟭 (Functor.Fiber p U) := by
+      have hobj : ∀ x : Functor.Fiber p U,
+          (forwardFunctor U ⋙ transportedFunctor U).obj x =
+            (𝟭 (Functor.Fiber p U)).obj x := by
+        intro x
+        apply Subtype.ext
+        exact correction x
+      refine CategoryTheory.Functor.ext hobj (fun x y φ => ?_)
+      apply Functor.Fiber.hom_ext
+      let dX := congrArg
+        (fun z : Functor.Fiber p U =>
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).obj z)
+        (hobj x)
+      let dY := congrArg
+        (fun z : Functor.Fiber p U =>
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S).obj z)
+        (hobj y)
+      have hmapX :
+          Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) =
+            eqToHom (correction x) := by
+        have h := eqToHom_map
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S) (hobj x)
+        have he : dX = correction x := by
+          apply Subsingleton.elim
+        exact h.trans (congrArg (fun e => eqToHom e) he)
+      have hmapY :
+          Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) =
+            eqToHom (correction y).symm := by
+        have h := eqToHom_map
+          (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S)
+            (hobj y).symm
+        have he : dY.symm = (correction y).symm := by
+          apply Subsingleton.elim
+        exact h.trans (congrArg (fun e => eqToHom e) he)
+      change G.map (F.map φ.1) =
+        Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) ≫ φ.1 ≫
+          Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm)
+      rw [hmapX, hmapY]
+      have hFGstep := Functor.congr_hom hFG φ.1
+      have heX : Functor.congr_obj hFG x.1 = correction x := by
+        apply Subsingleton.elim
+      have heY : Functor.congr_obj hFG y.1 = correction y := by
+        apply Subsingleton.elim
+      rw [heX, heY] at hFGstep
+      simp only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+        Functor.id_map] at hFGstep
+      rw [hFGstep]
+      congr 1 <;> apply Subsingleton.elim
+    have factorization {R V : C} (f : R ⟶ V) :
+        P.pullbackFunctor f =
+          forwardFunctor V ⋙ Q.choice.pullbackFunctor f ⋙
+            transportedFunctor R := by
+      let hobj : ∀ x : Functor.Fiber p V,
+          (P.pullbackFunctor f).obj x =
+            (forwardFunctor V ⋙ Q.choice.pullbackFunctor f ⋙
+              transportedFunctor R).obj x := by
+        intro x
+        change transportedFiber (Q.choice.pullback f (forwardFiber x)) =
+          transportedFiber (Q.choice.pullback f (forwardFiber x))
+        rfl
+      cases hL : P.pullbackFunctor f with
+      | mk Lobj Lmap Lid Lcomp =>
+        cases hR : forwardFunctor V ⋙ Q.choice.pullbackFunctor f ⋙
+            transportedFunctor R with
+        | mk Robj Rmap Rid Rcomp =>
+          cases hL
+          cases hR
+          congr
+          funext x y φ
+          apply Functor.Fiber.hom_ext
+          dsimp [Functor.Fiber.fiberInclusion]
+          change ((P.pullbackFunctor f).map φ).1 =
+            G.map ((Q.choice.pullbackFunctor f).map (forwardMap φ)).1
+          exact pullbackFunctor_map_eq f φ
+    intro W V U g f
+    calc
+      P.pullbackFunctor (g ≫ f) =
+          forwardFunctor U ⋙ Q.choice.pullbackFunctor (g ≫ f) ⋙
+            transportedFunctor W := factorization (g ≫ f)
+      _ = forwardFunctor U ⋙
+          (Q.choice.pullbackFunctor f ⋙ Q.choice.pullbackFunctor g) ⋙
+            transportedFunctor W := by rw [Q.comp_eq g f]
+      _ = (forwardFunctor U ⋙ Q.choice.pullbackFunctor f ⋙
+          transportedFunctor V) ⋙
+          (forwardFunctor V ⋙ Q.choice.pullbackFunctor g ⋙
+            transportedFunctor W) := by
+        have hcancel := congrArg
+          (fun K : Functor.Fiber (G ⋙ p) V ⥤
+              Functor.Fiber (G ⋙ p) V =>
+            forwardFunctor U ⋙ Q.choice.pullbackFunctor f ⋙ K ⋙
+              Q.choice.pullbackFunctor g ⋙ transportedFunctor W)
+          (transported_forward V)
+        simpa only [Functor.assoc, Functor.id_comp] using hcancel.symm
+      _ = P.pullbackFunctor f ⋙ P.pullbackFunctor g := by
+        rw [factorization f, factorization g]
+  refine ⟨{
+    choice := P
+    unital := ?_
+    strict := ?_
+    pullbackFunctor_id := ?_
+    pullbackFunctor_comp := ?_ }⟩
+  · intro U x
+    apply Subtype.ext
+    change G.obj (Q.choice.pullback (𝟙 U) (forwardFiber x)).1 = x.1
+    rw [Q.unital U (forwardFiber x)]
+    exact correction x
+  · intro W V U g f
+    exact hcomp g f
+  · intro U
+    have hobj : ∀ x : Functor.Fiber p U,
+        (P.pullbackFunctor (𝟙 U)).obj x = (𝟭 (Functor.Fiber p U)).obj x := by
+      intro x
+      apply Subtype.ext
+      change G.obj (Q.choice.pullback (𝟙 U) (forwardFiber x)).1 = x.1
+      rw [Q.unital U (forwardFiber x)]
+      exact correction x
+    refine CategoryTheory.Functor.ext (fun x => hobj x) (fun x y φ => ?_)
+    apply Functor.Fiber.hom_ext
+    dsimp [Functor.Fiber.fiberInclusion]
+    change ((P.pullbackFunctor (𝟙 U)).map φ).1 =
+      (eqToHom (hobj x) ≫
+        (𝟭 (Functor.Fiber p U)).map φ ≫ eqToHom (hobj y).symm).1
+    rw [pullbackFunctor_map_eq (𝟙 U) φ]
+    have hQid := Functor.congr_hom (Q.id_eq U) (forwardMap φ)
+    have hQid' := congrArg (fun m => m.1) hQid
+    change ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
+      Functor.Fiber.fiberInclusion.map
+          (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber x))) ≫
+        (forwardMap φ).1 ≫
+          Functor.Fiber.fiberInclusion.map
+            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm) at hQid'
+    let dX := congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
+      (Functor.congr_obj (Q.id_eq U) (forwardFiber x))
+    let dY := congrArg (fun z : Functor.Fiber (G ⋙ p) U => z.1)
+      (Functor.congr_obj (Q.id_eq U) (forwardFiber y))
+    have hmapXq :
+        Functor.Fiber.fiberInclusion.map
+            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber x))) =
+          eqToHom dX := by
+      dsimp [dX]
+      exact eqToHom_map
+        (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) U ⥤ T)
+        (Functor.congr_obj (Q.id_eq U) (forwardFiber x))
+    have hmapYq :
+        Functor.Fiber.fiberInclusion.map
+            (eqToHom (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm) =
+          eqToHom dY.symm := by
+      dsimp [dY]
+      exact eqToHom_map
+        (Functor.Fiber.fiberInclusion : Functor.Fiber (G ⋙ p) U ⥤ T)
+        (Functor.congr_obj (Q.id_eq U) (forwardFiber y)).symm
+    rw [hmapXq, hmapYq] at hQid'
+    have hGQid := congrArg G.map hQid'
+    have hGQid' :
+        G.map ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
+          G.map (eqToHom dX) ≫ G.map (forwardMap φ).1 ≫
+            G.map (eqToHom dY.symm) := by
+      calc
+        _ = G.map (eqToHom dX ≫ (forwardMap φ).1 ≫ eqToHom dY.symm) := hGQid
+        _ = _ := by simp only [Functor.map_comp]
+    have hGQid'' :
+        G.map ((Q.choice.pullbackFunctor (𝟙 U)).map (forwardMap φ)).1 =
+          eqToHom (congrArg G.obj dX) ≫ G.map (forwardMap φ).1 ≫
+            eqToHom (congrArg G.obj dY).symm := by
+      calc
+        _ = G.map (eqToHom dX) ≫ G.map (forwardMap φ).1 ≫
+            G.map (eqToHom dY.symm) := hGQid'
+        _ = _ := by rw [eqToHom_map, eqToHom_map]
+    have hnat : G.map (F.map φ.1) =
+        eqToHom (correction x) ≫ φ.1 ≫
+          eqToHom (correction y).symm := by
+      have hFGstep := Functor.congr_hom hFG φ.1
+      have heX : Functor.congr_obj hFG x.1 = correction x := by
+        apply Subsingleton.elim
+      have heY : Functor.congr_obj hFG y.1 = correction y := by
+        apply Subsingleton.elim
+      rw [heX, heY] at hFGstep
+      simp only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+        Functor.id_map] at hFGstep
+      exact hFGstep
+    have hobjX :
+        congrArg (fun z : Functor.Fiber p U => z.1) (hobj x) =
+          (congrArg G.obj dX).trans (correction x) := by
+      apply Subsingleton.elim
+    have hobjY :
+        congrArg (fun z : Functor.Fiber p U => z.1) (hobj y) =
+          (congrArg G.obj dY).trans (correction y) := by
+      apply Subsingleton.elim
+    have hmapHX :
+        Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) =
+          eqToHom (congrArg (fun z : Functor.Fiber p U => z.1) (hobj x)) := by
+      exact eqToHom_map
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S) (hobj x)
+    have hmapHY :
+        Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) =
+          eqToHom (congrArg (fun z : Functor.Fiber p U => z.1) (hobj y)).symm := by
+      have h := eqToHom_map
+        (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ S) (hobj y).symm
+      have he :
+          congrArg (fun z : Functor.Fiber p U => z.1) (hobj y).symm =
+            (congrArg (fun z : Functor.Fiber p U => z.1) (hobj y)).symm :=
+        Subsingleton.elim _ _
+      exact h.trans (congrArg (fun e => eqToHom e) he)
+    have hright :
+        (eqToHom (hobj x) ≫
+            (𝟭 (Functor.Fiber p U)).map φ ≫ eqToHom (hobj y).symm).1 =
+          eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
+            eqToHom ((congrArg G.obj dY).trans (correction y)).symm := by
+      change Functor.Fiber.fiberInclusion.map (eqToHom (hobj x)) ≫ φ.1 ≫
+          Functor.Fiber.fiberInclusion.map (eqToHom (hobj y).symm) = _
+      rw [hmapHX, hmapHY, hobjX, hobjY]
+      congr 1
+    have hfinal :
+        (eqToHom (congrArg G.obj dX) ≫
+            (eqToHom (correction x) ≫ φ.1 ≫ eqToHom (correction y).symm) ≫
+              eqToHom (congrArg G.obj dY).symm) =
+          eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
+            eqToHom ((congrArg G.obj dY).trans (correction y)).symm := by
+      calc
+        _ = (eqToHom (congrArg G.obj dX) ≫ eqToHom (correction x)) ≫ φ.1 ≫
+            (eqToHom (correction y).symm ≫ eqToHom (congrArg G.obj dY).symm) := by
+          simp only [Category.assoc]
+        _ = eqToHom ((congrArg G.obj dX).trans (correction x)) ≫ φ.1 ≫
+            eqToHom ((correction y).symm.trans (congrArg G.obj dY).symm) := by
+          rw [eqToHom_trans, eqToHom_trans]
+        _ = _ := by
+          have he :
+              (correction y).symm.trans (congrArg G.obj dY).symm =
+                ((congrArg G.obj dY).trans (correction y)).symm :=
+            Subsingleton.elim _ _
+          rw [he]
+    rw [hGQid'', show (forwardMap φ).1 = F.map φ.1 by rfl, hnat, hfinal,
+      hright]
+  · intro W V U g f
+    exact hcomp g f
+  /-
     intro W V U g f
     have hobj : ∀ x : Functor.Fiber p U,
         (P.pullbackFunctor (g ≫ f)).obj x =
@@ -755,7 +1078,6 @@ theorem IsomorphicOverBase.transportPullbackChoice
     leaves precisely the incompatible-looking `hobj` versus `kX`/`kY`
     transport paths seen in the timed-out attempt.
     -/
-    sorry
   refine ⟨{
     choice := P
     unital := ?_
@@ -888,6 +1210,7 @@ theorem IsomorphicOverBase.transportPullbackChoice
     rw [hGQid'', show (forwardMap φ).1 = F.map φ.1 by rfl, hnat, hfinal, hright]
   · intro W V U g f
     exact hcomp g f
+  -/
 
 theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     {S : Type uS} [Category.{vS} S]

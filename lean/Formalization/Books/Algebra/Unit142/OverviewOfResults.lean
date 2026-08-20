@@ -181,7 +181,11 @@ theorem characterize_smooth_kbar_overview
             (Formalization.Books.Algebra.Unit140.DifferentialFiber k S
               (MaximalSpectrum.toPrimeSpectrum m)) : ℕ∞) : WithBot ℕ∞) =
           ringKrullDim (Localization.AtPrime m.asIdeal) ] := by
-  sorry
+  have hchar := Formalization.Books.Algebra.Unit140.characterize_smooth_kbar
+    (k := k) (S := S) m
+  tfae_have 1 ↔ 2 := hchar.out 3 0
+  tfae_have 2 ↔ 3 := hchar.out 0 2
+  tfae_finish
 
 theorem characterize_smooth_over_field_overview
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -192,14 +196,22 @@ theorem characterize_smooth_over_field_overview
             (Formalization.Books.Algebra.Unit140.DifferentialFiber k S q) : ℕ∞) :
           WithBot ℕ∞) =
           Formalization.Books.Topology.Unit10.krullDimensionAt q ] := by
-  sorry
+  have hchar := Formalization.Books.Algebra.Unit140.characterize_smooth_over_field
+    (k := k) (S := S) q
+  tfae_have 1 ↔ 2 := hchar.1.out 0 2
+  tfae_finish
 
 theorem smooth_over_field_regular_localizations
     {k S : Type*} [Field k] [CommRing S] [Algebra k S]
     [Algebra.Smooth k S] :
     ∀ q : PrimeSpectrum S,
       IsRegularLocalRing (Localization.AtPrime q.asIdeal) := by
-  sorry
+  intro q
+  apply (Formalization.Books.Algebra.Unit140.characterize_smooth_over_field
+    (k := k) (S := S) q).2
+  exact
+    (Formalization.Books.Algebra.Unit137.smooth_iff_smooth_at_all_primes
+      (R := k) (S := S)).mp inferInstance q
 
 theorem smooth_at_of_separable_and_regular
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]

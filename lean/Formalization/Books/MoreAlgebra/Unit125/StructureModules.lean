@@ -196,7 +196,151 @@ theorem characterize_pd_modules
     let N : Type (max u v) := ⨁ i : ι, principalQuotient R (q i)
     let e : N →ₗ[R] P :=
       DirectSum.toModule R ι P (fun i => i.2)
-    sorry
+    let up : P →ₗ[R] ULift P :=
+      { toFun := ULift.up
+        map_add' := by intros; rfl
+        map_smul' := by intros; rfl }
+    let down : ULift P →ₗ[R] P :=
+      { toFun := ULift.down
+        map_add' := by intros; rfl
+        map_smul' := by intros; rfl }
+    let e' : N →ₗ[R] ULift P := up.comp e
+    let A : Submodule R N := LinearMap.ker e
+    let fS : (ModuleCat.of R A) ⟶ (ModuleCat.of R N) := ModuleCat.ofHom A.subtype
+    let gS : (ModuleCat.of R N) ⟶ (ModuleCat.of R (ULift P)) := ModuleCat.ofHom e'
+    let S : ShortComplex (ModuleCat.{max u v} R) :=
+      ShortComplex.mk fS gS (by
+        ext x
+        simp [fS, gS, e', up, A])
+    have he_surj : Function.Surjective e := by
+      intro p
+      let φ : principalQuotient R 0 →ₗ[R] P :=
+        Submodule.liftQSpanSingleton 0
+          ((LinearMap.id (R := R) (M := R)).smulRight p)
+          (by simp [LinearMap.smulRight_apply])
+      let i : ι := ⟨0, φ⟩
+      let z : principalQuotient R 0 := Submodule.Quotient.mk 1
+      refine ⟨DirectSum.lof R ι (fun i => principalQuotient R (q i)) i z, ?_⟩
+      dsimp [e, i]
+      rw [DirectSum.toModule_lof]
+      change φ (Submodule.Quotient.mk (1 : R)) = p
+      rw [Submodule.liftQSpanSingleton_apply, LinearMap.smulRight_apply]
+      simp
+    have hPure : IsPureFirstMap S := by
+      intro r x
+      constructor
+      · rintro ⟨y, hy⟩
+        refine ⟨(y : N), ?_⟩
+        exact congrArg Subtype.val hy
+      · rintro ⟨y, hy⟩
+        change r • y = (x : N) at hy
+        have hp : ((LinearMap.id (R := R) (M := R)).smulRight (e y)) r = 0 := by
+          simpa [LinearMap.smulRight_apply] using show r • e y = 0 from by
+            calc
+              r • e y = e (r • y) := (e.map_smul r y).symm
+              _ = e (x : N) := by rw [hy]
+              _ = 0 := x.property
+        let φ : principalQuotient R r →ₗ[R] P :=
+          Submodule.liftQSpanSingleton r
+            ((LinearMap.id (R := R) (M := R)).smulRight (e y)) hp
+        let i : ι := ⟨r, φ⟩
+        let z : principalQuotient R r := Submodule.Quotient.mk 1
+        let zN : N :=
+          DirectSum.lof R ι (fun i => principalQuotient R (q i)) i z
+        have hz : r • zN = 0 := by
+          dsimp [zN, z]
+          rw [← map_smul]
+          have : r • (Ideal.Quotient.mk (Ideal.span ({r} : Set R)) (1 : R)) =
+              (0 : principalQuotient R r) := by
+            change Ideal.Quotient.mk (Ideal.span ({r} : Set R)) (r * 1) = 0
+            rw [Ideal.Quotient.eq_zero_iff_mem]
+            exact Ideal.subset_span (by simp)
+          rw [this, map_zero]
+        have hez : e zN = e y := by
+          dsimp [e, zN, i]
+          rw [DirectSum.toModule_lof]
+          change φ (Submodule.Quotient.mk (1 : R)) = e y
+          rw [Submodule.liftQSpanSingleton_apply, LinearMap.smulRight_apply]
+          change (1 : R) • e y = e y
+          simp
+        have hzA : e (y - zN) = 0 := by rw [map_sub, hez, sub_self]
+        let a : A := ⟨y - zN, hzA⟩
+        refine ⟨a, ?_⟩
+        apply Subtype.ext
+        change r • (y - zN) = (x : N)
+        rw [smul_sub, hy, hz, sub_zero]
+    have hS : S.ShortExact := by
+      apply ShortComplex.ShortExact.mk'
+      · apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mpr
+        intro x
+        constructor
+        · intro hx
+          change e' x = 0 at hx
+          have hx' : e x = 0 := by
+            apply_fun ULift.down at hx
+            simpa [e', up, down] using hx
+          exact ⟨⟨x, hx'⟩, rfl⟩
+        · rintro ⟨x, rfl⟩
+          exact congrArg ULift.up x.property
+      · rw [ModuleCat.mono_iff_injective]
+        exact A.subtype_injective
+      · rw [ModuleCat.epi_iff_surjective]
+        rintro ⟨p⟩
+        obtain ⟨x, hx⟩ := he_surj p
+        refine ⟨x, ?_⟩
+        change e' x = ULift.up p
+        exact congrArg ULift.up hx
+    obtain ⟨s, hs⟩ := hP S hS hPure up
+    have hs' : e.comp s = LinearMap.id := by
+      apply LinearMap.ext
+      intro p
+      have hsp := congrArg ULift.down (LinearMap.congr_fun hs p)
+      change down (e' (s p)) = p at hsp
+      simpa [e', up, down] using hsp
+    refine ⟨ι, q, ?_⟩
+    refine ⟨LinearMap.range s, ?_, ?_⟩
+    · refine ⟨A, ?_⟩
+      constructor
+      · rw [disjoint_iff_inf_le]
+        intro x hx
+        rcases hx with ⟨hx1, hx2⟩
+        rcases hx1 with ⟨y, hy⟩
+        have hsy : e (s y) = 0 := by
+          calc
+            e (s y) = e x := by rw [hy]
+            _ = 0 := hx2
+        have hy0 : y = 0 := by
+          calc
+            y = e (s y) := (LinearMap.congr_fun hs' y).symm
+            _ = 0 := hsy
+        rw [← hy, hy0]
+        simp
+      · intro L hLs hLA x hx
+        have hxA : x - s (e x) ∈ A := by
+          change e (x - s (e x)) = 0
+          have hsex : e (s (e x)) = e x := by
+            simpa [LinearMap.comp_apply] using LinearMap.congr_fun hs' (e x)
+          rw [map_sub, hsex, sub_self]
+        have hdecomp : x = s (e x) + (x - s (e x)) := by
+          calc
+            x = (x - s (e x)) + s (e x) := (sub_add_cancel x _).symm
+            _ = s (e x) + (x - s (e x)) := add_comm _ _
+        rw [hdecomp]
+        exact add_mem (hLs ⟨e x, rfl⟩) (hLA hxA)
+    · let es : P ≃ₗ[R] LinearMap.range s :=
+        LinearEquiv.ofBijective s.rangeRestrict ⟨
+          fun x y hxy => by
+            have hxy' : s x = s y := congrArg Subtype.val hxy
+            apply_fun e at hxy'
+            have hx' : e (s x) = x := by
+              simpa [LinearMap.comp_apply] using LinearMap.congr_fun hs' x
+            have hy' : e (s y) = y := by
+              simpa [LinearMap.comp_apply] using LinearMap.congr_fun hs' y
+            exact hx'.symm.trans (hxy'.trans hy'),
+          fun x => by
+            rcases x.property with ⟨p, hp⟩
+            exact ⟨p, Subtype.ext hp⟩⟩
+      exact ⟨es⟩
 
 /-! ## Generalized valuation rings -/
 

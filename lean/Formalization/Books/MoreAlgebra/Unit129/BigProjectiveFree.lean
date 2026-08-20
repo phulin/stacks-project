@@ -1206,9 +1206,9 @@ private theorem bass_complement_infinite
       LocalizedModule S (R × P) :=
     IsLocalizedModule.mapEquiv S (LocalizedModule.mkLinearMap S (K × C))
       (LocalizedModule.mkLinearMap S (R × P)) L eKC
-  let _ : Module.Finite L (LocalizedModule S (R × P)) :=
-    Module.Finite.equiv eLoc
-    exact (not_lt_of_ge (bass_hasInfinite_product (F := R) hP m))
+  let _ : Module.Finite L (LocalizedModule S (R × P)) := by
+    exact Module.Finite.equiv eLoc
+  exact (not_lt_of_ge (bass_hasInfinite_product (F := R) hP m))
     (Module.rank_lt_aleph0 L (LocalizedModule S (R × P)))
 
 private theorem rank_of_equiv_finite_right

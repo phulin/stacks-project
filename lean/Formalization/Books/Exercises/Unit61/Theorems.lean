@@ -7,8 +7,6 @@ import Mathlib.RingTheory.RegularLocalRing.Defs
 import Mathlib.RingTheory.Spectrum.Prime.Chevalley
 import Mathlib.Topology.Constructible
 
-import Formalization.Books.Exercises.Unit61.Definitions
-
 /-!
 # Exercises, Chapter 61: Theorems
 

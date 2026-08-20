@@ -2,14 +2,15 @@ import Mathlib.RingTheory.LocalRing.RingHom.Basic
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.RingHom.Flat
 
-import Formalization.Books.Exercises.Unit61.Definitions
+import Formalization.Books.Algebra.Unit72.Depth
 
 /-!
 # Exercises, Chapter 61: Depth goes up
 
 Flatness is expressed by Mathlib's `RingHom.Flat`, while locality is the
 canonical `IsLocalHom` instance on the ring homomorphism.  The depth values
-are the local depth of each ring viewed as its regular module.
+are the established `Formalization.Books.Algebra.Unit72.localDepth` of each
+ring viewed as its regular module.
 -/
 
 namespace Formalization.Books.Exercises.Unit61
@@ -25,8 +26,9 @@ theorem depth_goes_up_of_flat_local_hom
     [IsLocalRing A] [IsLocalRing B]
     [IsNoetherianRing A] [IsNoetherianRing B]
     (f : A →+* B) [IsLocalHom f] (hflat : RingHom.Flat f)
-    (k : ℕ∞) (hdepth : LocalModuleDepth A A = k) :
-    k ≤ LocalModuleDepth B B := by
+    (k : ℕ∞)
+    (hdepth : Formalization.Books.Algebra.Unit72.localDepth A A = k) :
+    k ≤ Formalization.Books.Algebra.Unit72.localDepth B B := by
   sorry
 
 end

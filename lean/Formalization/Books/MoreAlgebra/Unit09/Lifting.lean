@@ -583,7 +583,88 @@ theorem bad_factorization_properties :
         (1 : Polynomial ℤ) = badFactor * badFactor ∧
       IsCoprime badFactor badFactor ∧
       ¬ IsUnit badFactor.leadingCoeff := by
-  sorry
+  have h4 : (4 : ℤ ⧸ fourIdeal) = 0 :=
+    Ideal.Quotient.eq_zero_iff_mem.mpr (by
+      apply Ideal.subset_span
+      simp)
+  have h2 : (2 : ℤ ⧸ fourIdeal) * 2 = 0 := by
+    calc
+      (2 : ℤ ⧸ fourIdeal) * 2 = 4 := by norm_num
+      _ = 0 := h4
+  have h2ne : (2 : ℤ ⧸ fourIdeal) ≠ 0 := by
+    intro hz
+    have hm : (2 : ℤ) ∈ fourIdeal :=
+      Ideal.Quotient.eq_zero_iff_mem.mp hz
+    rw [fourIdeal, Ideal.mem_span_singleton] at hm
+    norm_num at hm
+  have hc2 : Polynomial.C (2 : ℤ ⧸ fourIdeal) *
+      Polynomial.C (2 : ℤ ⧸ fourIdeal) = 0 := by
+    rw [← map_mul]
+    rw [h2, map_zero]
+  have hC2pow : Polynomial.C (2 : ℤ ⧸ fourIdeal) ^ 2 = 0 := by
+    simpa [pow_two] using hc2
+  have hcast : (2 : Polynomial (ℤ ⧸ fourIdeal)) =
+      Polynomial.C (2 : ℤ ⧸ fourIdeal) :=
+    (Polynomial.C_eq_natCast 2).symm
+  have hmulX : Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X * 2 = 0 := by
+    rw [hcast]
+    calc
+      Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X *
+          Polynomial.C (2 : ℤ ⧸ fourIdeal) =
+          Polynomial.C (2 : ℤ ⧸ fourIdeal) *
+            Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X := by ring
+      _ = 0 := by rw [hc2, zero_mul]
+  have hmulX2 : Polynomial.C (2 : ℤ ⧸ fourIdeal) *
+      Polynomial.X ^ 2 * 2 = 0 := by
+    rw [hcast]
+    calc
+      Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X ^ 2 *
+          Polynomial.C (2 : ℤ ⧸ fourIdeal) =
+          Polynomial.C (2 : ℤ ⧸ fourIdeal) *
+            Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X ^ 2 := by ring
+      _ = 0 := by rw [hc2, zero_mul]
+  have hsq : badFactor * badFactor =
+      (1 : Polynomial (ℤ ⧸ fourIdeal)) := by
+    simp only [badFactor]
+    ring_nf
+    simp only [Polynomial.C_1, one_mul]
+    rw [hmulX, hmulX2, hC2pow]
+    simp
+  have hn1 : (Polynomial.C 1 + Polynomial.C 2 *
+      Polynomial.X : Polynomial (ℤ ⧸ fourIdeal)).natDegree = 1 := by
+    simpa only [Polynomial.C_1] using
+      (Polynomial.natDegree_C_add
+        (p := Polynomial.C (2 : ℤ ⧸ fourIdeal) * Polynomial.X)
+        (a := (1 : ℤ ⧸ fourIdeal))).trans
+        (Polynomial.natDegree_C_mul_X _ h2ne)
+  have hn2 : (Polynomial.C 2 * Polynomial.X ^ 2 :
+      Polynomial (ℤ ⧸ fourIdeal)).natDegree = 2 :=
+    Polynomial.natDegree_C_mul_X_pow 2 _ h2ne
+  have hn : badFactor.natDegree = 2 := by
+    rw [badFactor]
+    rw [Polynomial.natDegree_add_eq_right_of_natDegree_lt]
+    · exact hn2
+    · rw [hn1, hn2]
+      exact Nat.one_lt_two
+  have hlead : badFactor.leadingCoeff = (2 : ℤ ⧸ fourIdeal) := by
+    rw [Polynomial.leadingCoeff, hn]
+    simp [badFactor, Polynomial.coeff_add]
+    rw [Polynomial.coeff_one]
+    norm_num
+  refine ⟨?_, ?_, ?_⟩
+  · simpa using hsq.symm
+  · exact isCoprime_self.mpr (isUnit_iff_exists_inv.mpr ⟨badFactor, hsq⟩)
+  · intro h
+    have hnotunit : ¬ IsUnit (2 : ℤ ⧸ fourIdeal) := by
+      intro hu
+      obtain ⟨b, hb⟩ := isUnit_iff_exists_inv.mp hu
+      have hh := congrArg
+        (fun z : ℤ ⧸ fourIdeal => (2 : ℤ ⧸ fourIdeal) * z) hb
+      rw [← mul_assoc, h2, zero_mul, mul_one] at hh
+      exact h2ne hh.symm
+    apply hnotunit
+    rw [← hlead]
+    exact h
 
 /-- The source's 2-adic completion warning for an étale extension realizing
 the same quotient as `ℤ / 4ℤ`. -/
@@ -620,7 +701,45 @@ theorem bad_factorization_two_adic_nonunit :
         q.coeff n - badFactorPadic.coeff n ∈
           Ideal.span ({(4 : PadicInt 2)} : Set (PadicInt 2))) →
       ¬ IsUnit q := by
-  sorry
+  intro q hq hunit
+  have hn : q.natDegree = 0 :=
+    Polynomial.natDegree_eq_zero_of_isUnit hunit
+  have hq2 : q.coeff 2 = 0 :=
+    Polynomial.coeff_eq_zero_of_natDegree_lt (by
+      rw [hn]
+      norm_num)
+  have hbad2 : badFactorPadic.coeff 2 = (2 : PadicInt 2) := by
+    simp [badFactorPadic, Polynomial.coeff_add, Polynomial.coeff_one]
+  have hmem := hq 2
+  rw [hq2, hbad2, zero_sub] at hmem
+  have hmem' : -(2 : PadicInt 2) ∈
+      Ideal.span ({(4 : PadicInt 2)} : Set (PadicInt 2)) := hmem
+  rw [Ideal.mem_span_singleton] at hmem'
+  obtain ⟨a, ha⟩ := hmem'
+  have h2ne : (2 : PadicInt 2) ≠ 0 := by norm_num
+  have ha' : (2 : PadicInt 2) * ((2 : PadicInt 2) * a) =
+      (2 : PadicInt 2) * (-1) := by
+    calc
+      (2 : PadicInt 2) * ((2 : PadicInt 2) * a) =
+          (4 : PadicInt 2) * a := by ring
+      _ = -(2 : PadicInt 2) := ha.symm
+      _ = (2 : PadicInt 2) * (-1) := by ring
+  have h2a : (2 : PadicInt 2) * a = -1 :=
+    mul_left_cancel₀ h2ne ha'
+  have hunit2 : IsUnit (2 : PadicInt 2) := by
+    apply isUnit_iff_exists_inv.mpr
+    refine ⟨-a, ?_⟩
+    calc
+      (2 : PadicInt 2) * (-a) = -((2 : PadicInt 2) * a) := by ring
+      _ = 1 := by rw [h2a]; simp
+  have hnorm := PadicInt.isUnit_iff.mp hunit2
+  have hlt : ‖((2 : ℤ) : PadicInt 2)‖ < 1 := by
+    rw [PadicInt.norm_intCast_lt_one_iff]
+    norm_num
+  have hnorm' : ‖((2 : ℤ) : PadicInt 2)‖ = 1 := by
+    simpa using hnorm
+  rw [hnorm'] at hlt
+  exact lt_irrefl 1 hlt
 
 /-- The factorization in the preceding example cannot be lifted through any
 étale extension. -/

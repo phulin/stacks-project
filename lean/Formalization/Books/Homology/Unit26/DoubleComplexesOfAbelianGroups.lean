@@ -311,8 +311,6 @@ private noncomputable def rightResolutionProductTotalMapComponent
     by_cases hp : p = 0
     · subst p
       exact R.augmentation.f n ≫ eqToHom (by
-        change (column R.doubleComplex 0).X n =
-          R.doubleComplex.obj 0 (n - 0)
         dsimp [column]
         simp)
     · exact 0)
@@ -366,10 +364,10 @@ private theorem doubleComplex_d1_transport_heq
     (A : DoubleComplex AddCommGrpCat.{u})
     (p p' q q' : ℤ) (hp : p' = p) (hq : q = q') :
     eqToHom (by
-      change A.obj p' q = A.obj p q'
+      show A.obj p' q = A.obj p q'
       rw [hp, hq]) ≫ A.d1 p q' ≍
       A.d1 p' q ≫ eqToHom (by
-        change A.obj (p' + 1) q = A.obj (p + 1) q'
+        show A.obj (p' + 1) q = A.obj (p + 1) q'
         rw [hp, hq]) := by
   cases hp
   cases hq
@@ -379,10 +377,10 @@ private theorem doubleComplex_d2_transport_heq
     (A : DoubleComplex AddCommGrpCat.{u})
     (p p' q q' : ℤ) (hp : p' = p) (hq : q = q') :
     eqToHom (by
-      change A.obj p' q = A.obj p q'
+      show A.obj p' q = A.obj p q'
       rw [hp, hq]) ≫ A.d2 p q' ≍
       A.d2 p' q ≫ eqToHom (by
-        change A.obj p' (q + 1) = A.obj p (q' + 1)
+        show A.obj p' (q + 1) = A.obj p (q' + 1)
         rw [hp, hq]) := by
   cases hp
   cases hq
@@ -427,17 +425,14 @@ private noncomputable def productTotalD1Term
     A.obj p (n - p) ⟶ A.obj (p + 1) (n + 1 - (p + 1)) :=
   A.d1 p (n - p) ≫
       eqToHom (by
-        change A.obj (p + 1) (n - p) =
-          A.obj (p + 1) (n + 1 - (p + 1))
-        congr 1 <;> ring)
+        congr 1; ring)
 
 private noncomputable def productTotalD2Term
     (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
     A.obj p (n - p) ⟶ A.obj p (n + 1 - p) :=
   A.d2 p (n - p) ≫
       eqToHom (by
-        change A.obj p (n - p + 1) = A.obj p (n + 1 - p)
-        congr 1 <;> ring)
+        congr 1; ring)
 
 private noncomputable def productTotalD1Component
     (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
@@ -446,9 +441,10 @@ private noncomputable def productTotalD1Component
     Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
       productTotalD1Term A n (p - 1) ≫
       eqToHom (by
-        change A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
+        show A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
           A.obj p (n + 1 - p)
-        congr 1 <;> ring)
+        congr 1
+        all_goals ring)
 
 private noncomputable def productTotalD2Component
   (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
@@ -460,18 +456,16 @@ private noncomputable def productTotalD1Object
     (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
     A.obj p (n - p) ⟶ A.obj (p + 1) (n + 1 - (p + 1)) :=
   A.d1 p (n - p) ≫
-    eqToHom (by
-      change A.obj (p + 1) (n - p) =
-        A.obj (p + 1) (n + 1 - (p + 1))
-      congr 1 <;> ring)
+      eqToHom (by
+        congr 1
+        all_goals ring)
 
 private noncomputable def productTotalD2Object
     (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
     A.obj p (n - p) ⟶ A.obj p (n + 1 - p) :=
   A.d2 p (n - p) ≫
     eqToHom (by
-      change A.obj p (n - p + 1) = A.obj p (n + 1 - p)
-      congr 1 <;> ring)
+      congr 1; ring)
 
 private noncomputable def productTotalDifferentialComponent
     (A : DoubleComplex AddCommGrpCat.{u}) (n p : ℤ) :
@@ -480,9 +474,10 @@ private noncomputable def productTotalDifferentialComponent
     ((Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
         productTotalD1Term A n (p - 1) ≫
         eqToHom (by
-          change A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
+          show A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
             A.obj p (n + 1 - p)
-          congr 1 <;> ring)) +
+          congr 1
+          all_goals ring)) +
       p.negOnePow •
         (Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
           productTotalD2Term A n p))
@@ -501,9 +496,10 @@ private theorem productTotalDifferential_π
     (Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
         productTotalD1Term A n (p - 1) ≫
         eqToHom (by
-          change A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
+          show A.obj (p - 1 + 1) (n + 1 - (p - 1 + 1)) =
             A.obj p (n + 1 - p)
-          congr 1 <;> ring)) +
+          congr 1
+          all_goals ring)) +
       p.negOnePow •
         (Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
           productTotalD2Term A n p)
@@ -511,15 +507,17 @@ private theorem productTotalDifferential_π
     (Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
         A.d1 (p - 1) (n - (p - 1)) ≫
         eqToHom (by
-          change A.obj (p - 1 + 1) (n - (p - 1)) =
+          show A.obj (p - 1 + 1) (n - (p - 1)) =
             A.obj p (n + 1 - p)
-          congr 1 <;> ring)) +
+          congr 1
+          all_goals ring)) +
       p.negOnePow •
         (Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
           A.d2 p (n - p) ≫
           eqToHom (by
-            change A.obj p (n - p + 1) = A.obj p (n + 1 - p)
-            congr 1 <;> ring))
+            show A.obj p (n - p + 1) = A.obj p (n + 1 - p)
+            congr 1
+            all_goals ring))
   have hgf : g ≍ f := by
     simp only [g, f, productTotalD1Term, productTotalD2Term,
       Category.assoc, eqToHom_trans]
@@ -866,8 +864,7 @@ noncomputable def rightResolutionProductTotalMap
       by_cases hp0 : p = 0
       · subst p
         rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
-        simp [rightResolutionProductTotalMapComponent_π, Category.assoc,
-          R.augmentation.comm n (n + 1)]
+        simp
         rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
         have hcolumn :
             R.augmentation.f n ≫
@@ -878,7 +875,7 @@ noncomputable def rightResolutionProductTotalMap
                 eqToHom (by
                   change R.doubleComplex.obj 0 (n + 1) =
                     R.doubleComplex.obj 0 (n - 0 + 1)
-                  congr 1 <;> ring) := by
+                  congr 1; ring) := by
           rw [← eqToHom_naturality_assoc
             (fun q : ℤ => (column R.doubleComplex 0).d q (q + 1))
             (show n = n - 0 by ring)]
@@ -886,20 +883,20 @@ noncomputable def rightResolutionProductTotalMap
           simp only [Category.assoc]
           congr 1
         convert hcolumn using 1
-        · congr 1 <;> ring
-        · simp [rightResolutionProductTotalMapComponent_π, column, Category.assoc]
+        · congr 1; ring_nf
+        · simp [column, Category.assoc]
           exact comp_eqToHom_heq
             (R.augmentation.f (n - 0) ≫ R.doubleComplex.d2 0 (n - 0)) _
         · congr 2
-          · congr 1 <;> ring
-          · congr 1 <;> ring
+          · ring_nf
+          · congr 1; ring_nf
           · apply eqToHom_heq_of_eq' (C := AddCommGrpCat)
-            · congr 1 <;> ring
-            · congr 1 <;> ring
+            · ring_nf
+            · ring_nf
       · by_cases hp1 : p = 1
         · subst p
           rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
-          simp [rightResolutionProductTotalMapComponent_π, Category.assoc]
+          simp [Category.assoc]
           have haug_d := congrArg (fun f => f.f n) R.augmentation_d
           simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d
           have hzero :
@@ -910,8 +907,6 @@ noncomputable def rightResolutionProductTotalMap
           have hhor :
               R.augmentation.f n ≫
                   eqToHom (by
-                    change (column R.doubleComplex 0).X n =
-                      (column R.doubleComplex 0).X (n - 0)
                     dsimp [column]
                     congr 1
                     ring) ≫
@@ -927,8 +922,6 @@ noncomputable def rightResolutionProductTotalMap
           have hhor' :
               R.augmentation.f n ≫
                   eqToHom (by
-                    change (column R.doubleComplex 0).X n =
-                      R.doubleComplex.obj 0 (n + 1 - 1)
                     dsimp [column]
                     congr 1
                     ring) ≫
@@ -936,8 +929,6 @@ noncomputable def rightResolutionProductTotalMap
             have hnat :
                 R.augmentation.f n ≫
                     eqToHom (by
-                      change (column R.doubleComplex 0).X n =
-                        (column R.doubleComplex 0).X (n + 1 - 1)
                       dsimp [column]
                       congr 1
                       ring) ≫
@@ -952,13 +943,13 @@ noncomputable def rightResolutionProductTotalMap
               rw [← Category.assoc, haug_d, zero_comp]
             convert hnat using 1
             · congr 1
-            · simp [columnMap, column, Category.assoc]
+            · simp [columnMap, column]
           have hvert :
               -rightResolutionProductTotalMapComponent R n ≫
                   Pi.π (fun r : ℤ => R.doubleComplex.obj r (n - r)) 1 ≫
                   R.doubleComplex.d2 1 (n - 1) ≫
                   eqToHom (by
-                    change R.doubleComplex.obj 1 (n - 1 + 1) =
+                    show R.doubleComplex.obj 1 (n - 1 + 1) =
                       R.doubleComplex.obj 1 (n + 1 - 1)
                     congr 1
                     ring) = 0 := by
@@ -968,10 +959,9 @@ noncomputable def rightResolutionProductTotalMap
           rw [hvert]
         · have hp_prev : p - 1 ≠ 0 := by omega
           rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
-          simp [rightResolutionProductTotalMapComponent_π, hp0, hp_prev, hp1,
-            Category.assoc]
+          simp [hp0, hp_prev]
           rw [← Category.assoc, rightResolutionProductTotalMapComponent_π]
-          simp [hp0, hp_prev, hp1, Category.assoc]
+          simp [hp0]
     · exact (h rfl).elim
 
 /-- The map from the coproduct total complex of a left resolution to its
@@ -995,15 +985,13 @@ noncomputable def leftResolutionTotalMap
       simpa only [ComplexShape.up_Rel] using hnm
     subst m
     cases hnm'
-    simp only [totalComplex, dif_pos, totalDifferential,
-      Category.assoc, Preadditive.comp_add]
+    simp only [totalComplex, dif_pos, totalDifferential]
     apply Sigma.hom_ext
     intro p
     simp [Category.assoc]
     by_cases hp0 : p = 0
     · subst p
-      simp [totalD2Component, column, Category.assoc,
-        R.augmentation.comm n (n + 1)]
+      simp [totalD2Component, column, Category.assoc]
       have hcomm := R.augmentation.comm n (n + 1)
       convert hcomm using 1
       · congr 1
@@ -1011,59 +999,53 @@ noncomputable def leftResolutionTotalMap
         congr 1
         ring
       · exact eqToHom_comp_heq _ _
-      · simp only [column, dif_pos, eqToHom_trans]
+      · simp only [column, dif_pos]
         have hnat :=
           eqToHom_naturality_assoc
             (fun q : ℤ => R.doubleComplex.d2 0 q)
             (show n - 0 = n by ring)
             (eqToHom (by
-              change R.doubleComplex.obj 0 (n + 1) =
-                (column R.doubleComplex 0).X (n + 1)
-              dsimp [column]
-              ) ≫ R.augmentation.f (n + 1))
+              dsimp [column]) ≫ R.augmentation.f (n + 1))
         have hremove_in :
             eqToHom (by
-                change R.doubleComplex.obj 0 (n - 0) =
+                show R.doubleComplex.obj 0 (n - 0) =
                   R.doubleComplex.obj 0 n
                 congr 1
                 ring) ≫ R.doubleComplex.d2 0 n ≫
                 (eqToHom (by
-                  change R.doubleComplex.obj 0 (n + 1) =
+                  show R.doubleComplex.obj 0 (n + 1) =
                     (column R.doubleComplex 0).X (n + 1)
                   dsimp [column]) ≫ R.augmentation.f (n + 1)) ≍
               R.doubleComplex.d2 0 n ≫
                 (eqToHom (by
-                  change R.doubleComplex.obj 0 (n + 1) =
+                  show R.doubleComplex.obj 0 (n + 1) =
                     (column R.doubleComplex 0).X (n + 1)
                   dsimp [column]) ≫ R.augmentation.f (n + 1)) := by
           exact eqToHom_comp_heq _ _
         have hremove_out :
             R.doubleComplex.d2 0 n ≫
                 eqToHom (by
-                  change R.doubleComplex.obj 0 (n + 1) =
+                  show R.doubleComplex.obj 0 (n + 1) =
                     (column R.doubleComplex 0).X (n + 1)
                   dsimp [column]) ≫ R.augmentation.f (n + 1) ≍
               R.doubleComplex.d2 0 n ≫ R.augmentation.f (n + 1) := by
           have h := comp_eqToHom_heq (R.doubleComplex.d2 0 n) (by
-            change R.doubleComplex.obj 0 (n + 1) =
-              (column R.doubleComplex 0).X (n + 1)
             dsimp [column])
           apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
           · exact h
           · rfl
         convert (heq_of_eq hnat).trans (hremove_in.trans hremove_out) using 1
         congr 2
-        · congr 1
-          ring
+        · congr 1 <;> try ring
         · apply eqToHom_heq_of_eq' (C := AddCommGrpCat)
-          · congr 1 <;> ring
-          · congr 1 <;> ring
+          · ring_nf
+          · ring_nf
         · apply eqToHom_comp_heq_of_eq (C := AddCommGrpCat)
-          congr 1 <;> ring
+          all_goals ring_nf
     · by_cases hp1 : p + 1 = 0
       · have hp : p = -1 := by omega
         subst p
-        simp [Category.assoc]
+        simp
         have haug_d := congrArg (fun f => f.f (n + 1)) R.augmentation_d
         simp only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] at haug_d
         convert haug_d.symm using 1
@@ -1077,7 +1059,7 @@ noncomputable def leftResolutionTotalMap
           apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
           · exact HEq.rfl
           · exact HEq.rfl
-      · simp [hp0, hp1, Category.assoc]
+      · simp [hp0, hp1]
 
 /-- The map from the product total complex of a left resolution to its
 resolved complex. -/
@@ -1116,19 +1098,19 @@ noncomputable def leftResolutionProductTotalMap
     rw [Pi.lift_π]
     dsimp [productTotalDifferentialComponent, productTotalD1Term,
       productTotalD2Term]
-    simp only [Category.assoc, Preadditive.comp_add, Preadditive.comp_zsmul]
+    simp only [Category.assoc]
     have hhor :
         (Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) (-1) ≫
             R.doubleComplex.d1 (-1) (n - (-1)) ≫
             eqToHom (by
-              change R.doubleComplex.obj (-1 + 1) (n - (-1)) =
+              show R.doubleComplex.obj (-1 + 1) (n - (-1)) =
                 R.doubleComplex.obj (-1 + 1) (n + 1 - (-1 + 1))
-              congr 1 <;> ring)) ≫
+              congr 1; ring)) ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n + 1 - 0) =
+              show R.doubleComplex.obj 0 (n + 1 - 0) =
                 (column R.doubleComplex 0).X (n + 1)
               dsimp [column]
-              congr 1 <;> ring) ≫
+              congr 1; ring) ≫
             R.augmentation.f (n + 1) = 0 := by
       simp only [Category.assoc]
       rw [eqToHom_naturality_assoc
@@ -1140,14 +1122,13 @@ noncomputable def leftResolutionProductTotalMap
         (fun f =>
           Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) (-1) ≫
             eqToHom (by
-              change R.doubleComplex.obj (-1) (n - (-1)) =
+              show R.doubleComplex.obj (-1) (n - (-1)) =
                 (column R.doubleComplex (-(0 + 1))).X (n + 1)
               dsimp [column]
-              congr 1 <;> ring) ≫ f)
+              congr 1) ≫ f)
         haug_d
       convert haug_d' using 1
-      · simp [leftResolutionColumnMap, columnMap, column, Category.assoc,
-          eqToHom_trans]
+      · simp [leftResolutionColumnMap, columnMap, column, Category.assoc]
         apply eq_of_heq
         symm
         apply heq_comp_left_fixed
@@ -1157,7 +1138,7 @@ noncomputable def leftResolutionProductTotalMap
           · have houter :
                 column R.doubleComplex (-(0 + 1) + 1) =
                   column R.doubleComplex (-0) := by
-              congr 1 <;> ring
+              congr 1
             have hinner :
                 (eqToHom houter).f (n + 1) ≫ R.augmentation.f (n + 1) ≍
                   R.augmentation.f (n + 1) := by
@@ -1172,54 +1153,51 @@ noncomputable def leftResolutionProductTotalMap
         (Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
             R.doubleComplex.d2 0 (n - 0) ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n - 0 + 1) =
+              show R.doubleComplex.obj 0 (n - 0 + 1) =
                 R.doubleComplex.obj 0 (n + 1 - 0)
-              congr 1 <;> ring)) ≫
+              congr 1; ring)) ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n + 1 - 0) =
+              show R.doubleComplex.obj 0 (n + 1 - 0) =
                 (column R.doubleComplex 0).X (n + 1)
               dsimp [column]
-              congr 1 <;> ring) ≫ R.augmentation.f (n + 1) =
+              congr 1; ring) ≫ R.augmentation.f (n + 1) =
           (Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n - 0) =
+              show R.doubleComplex.obj 0 (n - 0) =
                 (column R.doubleComplex 0).X n
               dsimp [column]
-              congr 1 <;> ring) ≫ R.augmentation.f n) ≫
+              congr 1; ring) ≫ R.augmentation.f n) ≫
             M.d n (n + 1) := by
       simp only [Category.assoc]
       have hcomm := congrArg
         (fun f =>
           Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n - 0) =
-                (column R.doubleComplex 0).X n
-              change R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
-              congr 1 <;> ring) ≫ f)
+              show R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
+              congr 1; ring) ≫ f)
         (R.augmentation.comm n (n + 1)).symm
       convert hcomm using 1
-      · simp only [column, dif_pos, eqToHom_trans]
+      · simp only [column, dif_pos]
         have hnat :=
           eqToHom_naturality_assoc
             (fun q : ℤ => R.doubleComplex.d2 0 q)
             (show n - 0 = n by ring)
             (eqToHom (by
-              change R.doubleComplex.obj 0 (n + 1) =
+              show R.doubleComplex.obj 0 (n + 1) =
                 (column R.doubleComplex 0).X (n + 1)
-              dsimp [column]
-              ) ≫ R.augmentation.f (n + 1))
+              dsimp [column]) ≫ R.augmentation.f (n + 1))
         have hnat' := congrArg
           (fun f => Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫ f)
           hnat
         have hremove_out :
             R.doubleComplex.d2 0 n ≫
                 eqToHom (by
-                  change R.doubleComplex.obj 0 (n + 1) =
+                  show R.doubleComplex.obj 0 (n + 1) =
                     (column R.doubleComplex 0).X (n + 1)
                   dsimp [column]) ≫ R.augmentation.f (n + 1) ≍
               R.doubleComplex.d2 0 n ≫ R.augmentation.f (n + 1) := by
           have h := comp_eqToHom_heq (R.doubleComplex.d2 0 n) (by
-            change R.doubleComplex.obj 0 (n + 1) =
+            show R.doubleComplex.obj 0 (n + 1) =
               (column R.doubleComplex 0).X (n + 1)
             dsimp [column])
           apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
@@ -1228,17 +1206,13 @@ noncomputable def leftResolutionProductTotalMap
         have hremove_out' := heq_comp_left_fixed
           (Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
             eqToHom (by
-              change R.doubleComplex.obj 0 (n - 0) =
-                (column R.doubleComplex 0).X n
-              change R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
-              congr 1 <;> ring)) rfl hremove_out
+              show R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
+              congr 1; ring)) rfl hremove_out
         have hremove_out'' :
             Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
                 eqToHom (by
-                  change R.doubleComplex.obj 0 (n - 0) =
-                    (column R.doubleComplex 0).X n
-                  change R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
-                  congr 1 <;> ring) ≫
+                  show R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
+                  congr 1; ring) ≫
                 R.doubleComplex.d2 0 n ≫
                 eqToHom (by
                   change R.doubleComplex.obj 0 (n + 1) =
@@ -1246,10 +1220,8 @@ noncomputable def leftResolutionProductTotalMap
                   dsimp [column]) ≫ R.augmentation.f (n + 1) ≍
               Pi.π (fun p : ℤ => R.doubleComplex.obj p (n - p)) 0 ≫
                 eqToHom (by
-                  change R.doubleComplex.obj 0 (n - 0) =
-                    (column R.doubleComplex 0).X n
-                  change R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
-                  congr 1 <;> ring) ≫
+                  show R.doubleComplex.obj 0 (n - 0) = R.doubleComplex.obj 0 n
+                  congr 1; ring) ≫
                 R.doubleComplex.d2 0 n ≫ R.augmentation.f (n + 1) := by
           simpa only [Category.assoc] using hremove_out'
         convert (eq_of_heq ((heq_of_eq hnat').trans hremove_out'')) using 1
@@ -1259,19 +1231,18 @@ noncomputable def leftResolutionProductTotalMap
         apply heq_comp (eq1 := rfl) (eq2 := rfl) (eq3 := rfl)
         · apply heq_comp
           · rfl
-          · congr 1 <;> ring
+          · congr 1; ring
           · change R.doubleComplex.obj 0 (n + 1) = R.doubleComplex.obj 0 (n + 1)
             rfl
           · apply eqToHom_heq_of_eq' (C := AddCommGrpCat)
-            · congr 1 <;> ring
-            · congr 1 <;> ring
+            all_goals (try ring_nf)
+            all_goals dsimp [column]
           · apply eqToHom_heq_of_eq' (C := AddCommGrpCat)
-            · congr 1 <;> ring
-            · congr 1 <;> ring
+            all_goals (try ring_nf)
+            all_goals dsimp [column]
         · rfl
     simp only [Category.assoc] at hhor hvert
-    simp only [Preadditive.add_comp, Preadditive.comp_add,
-      Preadditive.comp_zsmul, Category.assoc, one_smul]
+    simp only [Preadditive.add_comp, Category.assoc, one_smul]
     rw [hhor, hvert]
     simp
 
@@ -1297,7 +1268,7 @@ private theorem sigma_element_finite_support
   refine ⟨S, y, ?_⟩
   have hxy := congrArg (fun z => e.hom z) hy
   have hleft : e.hom (e.inv x) = x := by
-    simpa using congrArg (fun f => f x) e.inv_hom_id
+    simp
   have hleg : (colimit.ι H S) ≫ e.hom =
       (CategoryTheory.Limits.CoproductsFromFiniteFiltered.finiteSubcoproductsCocone F).ι.app S :=
     IsColimit.comp_coconePointUniqueUpToIso_hom (colimit.isColimit H)
@@ -1320,7 +1291,7 @@ private theorem finite_sum_hom_apply
     | empty => simp
     | @insert a s ha ih =>
       simp only [Finset.sum_insert ha, AddCommGrpCat.hom_add_apply, ih]
-  simpa using hsum Finset.univ
+  convert hsum Finset.univ using 1 <;> simp
 
 private theorem hom_finite_sum_apply
     {α : Type} [Fintype α] {X Y : AddCommGrpCat.{u}}
@@ -1333,7 +1304,7 @@ private theorem hom_finite_sum_apply
     | empty => simp
     | @insert a s ha ih =>
       simp only [Finset.sum_insert ha, map_add, ih]
-  simpa using hsum Finset.univ
+  convert hsum Finset.univ using 1 <;> simp
 
 private theorem finite_coproduct_element_sum
     {α : Type} [Fintype α] (F : α → AddCommGrpCat.{u})
@@ -1377,7 +1348,7 @@ private theorem sigma_element_finite_sum
   change (Sigma.desc (fun s : S => Sigma.ι F s.1.as)) y₀ = _
   rw [hy, hom_finite_sum_apply]
   simp only [← ConcreteCategory.comp_apply, Category.assoc, Sigma.ι_desc]
-  simpa only [Finset.univ_eq_attach]
+  simp only [Finset.univ_eq_attach]
 
 /-- A right resolution of complexes becomes a quasi-isomorphism after
 coproduct totalization. -/

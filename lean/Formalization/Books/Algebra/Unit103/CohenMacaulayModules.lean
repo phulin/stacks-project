@@ -514,7 +514,8 @@ private theorem supportDim_le_supportCutDim_add_length
   induction xs generalizing N with
   | nil =>
       have e : quotientByList N [] ≃ₗ[R] N :=
-        Submodule.quotEquivOfEq _ _ (by simp)
+        Submodule.quotEquivOfEqBot
+          (p := Ideal.ofList [] • (⊤ : Submodule R N)) (by simp [Ideal.ofList])
       have hcut : supportCutDim R N [] = Module.supportDim R N := by
         rw [supportCutDim_eq_supportDim_quotientByList]
         exact Module.supportDim_eq_of_equiv e
@@ -534,7 +535,7 @@ private theorem supportDim_le_supportCutDim_add_length
             Module.supportDim R (QuotSMulTop x N) + 1 := hstep
         _ ≤ (supportCutDim R (QuotSMulTop x N) xs +
             (((xs.length : ℕ∞) : WithBot ℕ∞))) + 1 :=
-          add_le_add_right htail 1
+          by simpa [add_assoc, add_comm, add_left_comm] using add_le_add_right htail 1
         _ = supportCutDim R N (x :: xs) +
             ((((x :: xs).length : ℕ∞) : WithBot ℕ∞)) := by
           rw [supportCutDim_quotSMulTop_eq_cons]

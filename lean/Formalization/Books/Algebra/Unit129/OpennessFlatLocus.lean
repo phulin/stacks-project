@@ -1,5 +1,8 @@
+import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
 import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
+import Formalization.Books.Algebra.Unit104.CohenMacaulayRings
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
+import Formalization.Books.Algebra.Unit125.DimensionOfFibres
 import Formalization.Books.Algebra.Unit128.MoreFlatnessCriteria
 import Formalization.Books.Topology.Unit10.KrullDimension
 import Mathlib.RingTheory.FinitePresentation
@@ -146,6 +149,9 @@ theorem cm_dim_finite_type
     (hS : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S)
     (hequidim : Equidimensional (X := PrimeSpectrum S))
     (hdim : ringKrullDim S = (((d : ℕ∞) : WithBot ℕ∞)))
+    (hVnonempty :
+      (PrimeSpectrum.zeroLocus (Ideal.ofList fs : Set S)).Nonempty)
+    (hlen : fs.length ≤ d)
     (hVdim :
       topologicalKrullDim
           (PrimeSpectrum.zeroLocus (Ideal.ofList fs : Set S)) ≤
@@ -168,11 +174,11 @@ theorem open_regular_sequence
     (hfibres : AllFibresCohenMacaulayEquidimensional f d)
     (fs : List S) :
     IsOpen
-      {q : PrimeSpectrum S |
-        q ∈ PrimeSpectrum.zeroLocus (Ideal.ofList fs : Set S) ∧
+      {q : {q : PrimeSpectrum S //
+          q ∈ PrimeSpectrum.zeroLocus (Ideal.ofList fs : Set S)} |
           RingTheory.Sequence.IsRegular
-            (localRingOfFibre f (PrimeSpectrum.comap f q) q rfl)
-            (localFibreSequence f fs q)} := by
+            (localRingOfFibre f (PrimeSpectrum.comap f q.1) q.1 rfl)
+            (localFibreSequence f fs q.1)} := by
   sorry
 
 /-! ## Exact complexes on fibres -/

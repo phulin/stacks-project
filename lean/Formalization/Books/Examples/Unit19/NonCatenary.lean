@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Localization.Integral
 import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.Localization.LocalizationLocalization
+import Mathlib.RingTheory.LocalProperties.Semilocal
 import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RegularLocalRing.Defs
@@ -3444,7 +3445,7 @@ theorem b_is_k_algebra (d : PowerSeriesData k) :
 /-- The two displayed ideals remain maximal after passing from `R` to `B`. -/
 theorem mBIdeal_isMaximal (d : PowerSeriesData k) :
     (mBIdeal d).IsMaximal := by
-  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+  haveI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
     unfold B
     infer_instance
   have hdisjoint :
@@ -3727,10 +3728,80 @@ theorem b_localization_m_equiv (d : PowerSeriesData k) :
   change Nonempty (Localization.AtPrime p ≃+* Localization.AtPrime (mIdeal d))
   exact ⟨he.symm.toRingEquiv⟩
 
+private theorem b_localization_n_equiv_core (d : PowerSeriesData k) :
+    Nonempty (Localization.AtPrime (nBIdeal d) ≃+*
+      Localization.AtPrime (nIdeal d)) := by
+  haveI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  have hdisjoint :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (nIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsn
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inr hsn)
+  have hunder : (nBIdeal d).under (R d) = nIdeal d := by
+    rw [nBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (nIdeal_isPrime d) hdisjoint
+  let p : Ideal (Localization (multiplicativeSubmonoid d)) :=
+    Ideal.map (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) (nIdeal d)
+  have hp : p.IsPrime := by
+    change (nBIdeal d).IsPrime
+    exact nBIdeal_isPrime d
+  haveI : p.IsPrime := hp
+  have hcomap : p.comap
+      (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) = nIdeal d := by
+    change (nBIdeal d).under (R d) = nIdeal d
+    exact hunder
+  have hloc : IsLocalization.AtPrime (Localization.AtPrime p) (nIdeal d) := by
+    have hloc' : IsLocalization.AtPrime (Localization.AtPrime p)
+        (p.comap (algebraMap (R d) (Localization (multiplicativeSubmonoid d)))) :=
+      inferInstance
+    simpa only [hcomap] using hloc'
+  haveI : IsLocalization.AtPrime (Localization.AtPrime p) (nIdeal d) := hloc
+  have he : Localization.AtPrime (nIdeal d) ≃ₐ[R d]
+      Localization.AtPrime p :=
+    IsLocalization.algEquiv (nIdeal d).primeCompl
+      (Localization.AtPrime (nIdeal d)) (Localization.AtPrime p)
+  change Nonempty (Localization.AtPrime p ≃+* Localization.AtPrime (nIdeal d))
+  exact ⟨he.symm.toRingEquiv⟩
+
 theorem b_localization_n_equiv (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (nBIdeal d) ≃+*
       Localization.AtPrime (nIdeal d)) := by
-  sorry
+  exact b_localization_n_equiv_core d
+
+private theorem b_localization_m_properties_core (d : PowerSeriesData k) :
+    IsNoetherianRing (Localization.AtPrime (mBIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (mBIdeal d)) ∧
+      IsDiscreteValuationRing (Localization.AtPrime (mBIdeal d)) ∧
+      ringKrullDim (Localization.AtPrime (mBIdeal d)) = 1 ∧
+      Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mBIdeal d)) ≃+* k) := by
+  rcases b_localization_m_equiv d with ⟨e⟩
+  rcases localization_m_is_noetherian_regular d with ⟨hnoeth, hreg⟩
+  haveI : IsNoetherianRing (Localization.AtPrime (mIdeal d)) := hnoeth
+  haveI : IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := hreg
+  haveI : IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) :=
+    localization_m_is_dvr d
+  have hnoeth' : IsNoetherianRing (Localization.AtPrime (mBIdeal d)) :=
+    isNoetherianRing_of_ringEquiv _ e.symm
+  have hreg' : IsRegularLocalRing (Localization.AtPrime (mBIdeal d)) :=
+    IsRegularLocalRing.of_ringEquiv
+      (R := Localization.AtPrime (mIdeal d)) e.symm
+  have hdvr' : IsDiscreteValuationRing (Localization.AtPrime (mBIdeal d)) :=
+    IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing e.symm
+  refine ⟨hnoeth', hreg', hdvr', ?_, ?_⟩
+  · calc
+      ringKrullDim (Localization.AtPrime (mBIdeal d)) =
+          ringKrullDim (Localization.AtPrime (mIdeal d)) :=
+        ringKrullDim_eq_of_ringEquiv e
+      _ = 1 := localization_m_has_dimension_one d
+  · rcases b_residue_fields d with ⟨⟨em⟩, _⟩
+    exact ⟨(@IsLocalization.AtPrime.equivQuotMaximalIdeal (B d) _ (mBIdeal d)
+      (mBIdeal_isMaximal d) (Localization.AtPrime (mBIdeal d)) _ _ _ _).symm.trans em⟩
 
 theorem b_localization_m_properties (d : PowerSeriesData k) :
     IsNoetherianRing (Localization.AtPrime (mBIdeal d)) ∧
@@ -3738,22 +3809,95 @@ theorem b_localization_m_properties (d : PowerSeriesData k) :
       IsDiscreteValuationRing (Localization.AtPrime (mBIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (mBIdeal d)) = 1 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mBIdeal d)) ≃+* k) := by
-  sorry
+  exact b_localization_m_properties_core d
+
+private theorem b_localization_n_properties_core (d : PowerSeriesData k) :
+    IsNoetherianRing (Localization.AtPrime (nBIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) ∧
+      ringKrullDim (Localization.AtPrime (nBIdeal d)) = 2 ∧
+      Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nBIdeal d)) ≃+* k) := by
+  rcases b_localization_n_equiv d with ⟨e⟩
+  rcases localization_n_is_regular_local_dim_two d with
+    ⟨hnoeth, hreg, hdim, hres⟩
+  haveI : IsNoetherianRing (Localization.AtPrime (nIdeal d)) := hnoeth
+  haveI : IsRegularLocalRing (Localization.AtPrime (nIdeal d)) := hreg
+  have hnoeth' : IsNoetherianRing (Localization.AtPrime (nBIdeal d)) :=
+    isNoetherianRing_of_ringEquiv _ e.symm
+  have hreg' : IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) :=
+    IsRegularLocalRing.of_ringEquiv
+      (R := Localization.AtPrime (nIdeal d)) e.symm
+  refine ⟨hnoeth', hreg', ?_, ?_⟩
+  · calc
+      ringKrullDim (Localization.AtPrime (nBIdeal d)) =
+          ringKrullDim (Localization.AtPrime (nIdeal d)) :=
+        ringKrullDim_eq_of_ringEquiv e
+      _ = 2 := hdim
+  · rcases b_residue_fields d with ⟨_, ⟨en⟩⟩
+    exact ⟨(@IsLocalization.AtPrime.equivQuotMaximalIdeal (B d) _ (nBIdeal d)
+      (nBIdeal_isMaximal d) (Localization.AtPrime (nBIdeal d)) _ _ _ _).symm.trans en⟩
 
 theorem b_localization_n_properties (d : PowerSeriesData k) :
     IsNoetherianRing (Localization.AtPrime (nBIdeal d)) ∧
       IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (nBIdeal d)) = 2 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nBIdeal d)) ≃+* k) := by
-  sorry
+  exact b_localization_n_properties_core d
+
+private theorem b_isNoetherian_core (d : PowerSeriesData k) :
+    IsNoetherianRing (B d) := by
+  have hfinite : Set.Finite {I : Ideal (B d) | I.IsMaximal} := by
+    have hinsert : Set.Finite (insert (mBIdeal d) (Set.singleton (nBIdeal d))) :=
+      (Set.finite_insert).2 (Set.finite_singleton (nBIdeal d))
+    apply hinsert.subset
+    intro I hI
+    exact (b_maximal_ideals d).2 I |>.mp hI
+  haveI : Finite (MaximalSpectrum (B d)) :=
+    @Finite.of_equiv (MaximalSpectrum (B d)) {I : Ideal (B d) // I.IsMaximal}
+      (Set.finite_coe_iff.mp hfinite) (MaximalSpectrum.equivSubtype (B d)).symm
+  refine IsNoetherianRing.of_isLocalization_maximal
+    (fun P : Ideal (B d) => Localization.AtPrime P) ?_
+  intro P hP
+  rcases (b_maximal_ideals d).2 P |>.mp hP with rfl | rfl
+  · exact (b_localization_m_properties d).1
+  · exact (b_localization_n_properties d).1
 
 theorem b_isNoetherian (d : PowerSeriesData k) :
     IsNoetherianRing (B d) := by
-  sorry
+  exact b_isNoetherian_core d
+
+private theorem b_dimension_two_core (d : PowerSeriesData k) :
+    ringKrullDim (B d) = 2 := by
+  have hfinite : Set.Finite {I : Ideal (B d) | I.IsMaximal} := by
+    have hinsert : Set.Finite (insert (mBIdeal d) (Set.singleton (nBIdeal d))) :=
+      (Set.finite_insert).2 (Set.finite_singleton (nBIdeal d))
+    apply hinsert.subset
+    intro I hI
+    exact (b_maximal_ideals d).2 I |>.mp hI
+  haveI : Finite (MaximalSpectrum (B d)) :=
+    @Finite.of_equiv (MaximalSpectrum (B d)) {I : Ideal (B d) // I.IsMaximal}
+      (Set.finite_coe_iff.mp hfinite) (MaximalSpectrum.equivSubtype (B d)).symm
+  have hle : Ring.KrullDimLE 2 (B d) := by
+    refine Ring.krullDimLE_of_isLocalization_maximal
+      (fun P : Ideal (B d) => Localization.AtPrime P) ?_
+    intro P hP
+    rw [Ring.krullDimLE_iff]
+    rcases (b_maximal_ideals d).2 P |>.mp hP with rfl | rfl
+    · rw [(b_localization_m_properties d).2.2.2.1]
+      norm_num
+    · rw [(b_localization_n_properties d).2.2.1]
+      norm_num
+  have hheight : ((nBIdeal d).height : WithBot ℕ∞) = 2 := by
+    rw [← IsLocalization.AtPrime.ringKrullDim_eq_height
+      (nBIdeal d) (Localization.AtPrime (nBIdeal d))]
+    exact (b_localization_n_properties d).2.2.1
+  apply le_antisymm
+  · exact (Ring.krullDimLE_iff.mp hle)
+  · rw [← hheight]
+    exact Ideal.height_le_ringKrullDim_of_isPrime
 
 theorem b_dimension_two (d : PowerSeriesData k) :
     ringKrullDim (B d) = 2 := by
-  sorry
+  exact b_dimension_two_core d
 
 end TheTwoLocalizations
 
@@ -3767,7 +3911,16 @@ noncomputable def jacobsonRadical (d : PowerSeriesData k) : Ideal (B d) :=
 
 theorem jacobsonRadical_eq_inf (d : PowerSeriesData k) :
     jacobsonRadical d = mBIdeal d ⊓ nBIdeal d := by
-  sorry
+  rw [jacobsonRadical, Ring.jacobson_eq_sInf_isMaximal]
+  apply le_antisymm
+  · exact le_inf
+      (sInf_le (Set.mem_ofPred_eq.mpr (mBIdeal_isMaximal d)))
+      (sInf_le (Set.mem_ofPred_eq.mpr (nBIdeal_isMaximal d)))
+  · refine le_sInf ?_
+    intro I hI
+    rcases ((b_maximal_ideals d).2 I).mp hI with rfl | rfl
+    · exact inf_le_left
+    · exact inf_le_right
 
 /- The canonical subalgebra implementation of `A = k + rad(B)`. -/
 noncomputable def A (d : PowerSeriesData k) : Subalgebra k (B d) :=

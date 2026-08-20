@@ -73,6 +73,9 @@ structure DgHomotopyCategoryModel
   acyclic : ObjectProperty K
   quasiIsomorphisms : MorphismProperty K
   cohomologyZero : K ⥤ ModuleCat.{u} R
+  cohomologyZero_homological : cohomologyZero.IsHomological
+  acyclic_eq_homologicalKernel :
+    acyclic = homologicalFunctorKernel cohomologyZero
   acyclic_iff : ∀ M : DGModule.{u, v, w} D,
     acyclic (quotient.obj M) ↔ DgAcyclic M
   quasiIsomorphism_iff : ∀ {M N : DGModule.{u, v, w} D}
@@ -125,8 +128,11 @@ theorem acyclic_subcategory_properties
     [HasShift K ℤ] [∀ n : ℤ, (shiftFunctor K n).Additive]
     [Pretriangulated K]
     (H : DgHomotopyCategoryModel D K) :
-    DgAcyclicSubcategoryProperties H := by
-  sorry
+  DgAcyclicSubcategoryProperties H := by
+  letI : H.cohomologyZero.IsHomological := H.cohomologyZero_homological
+  change IsStrictlyFullSaturatedPretriangulated H.acyclic
+  rw [H.acyclic_eq_homologicalKernel]
+  exact homologicalFunctorKernel_properties H.cohomologyZero
 
 theorem quasi_isomorphisms_saturated_and_compatible
     {D : DifferentialGradedAlgebraData R A}

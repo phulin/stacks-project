@@ -515,7 +515,7 @@ theorem sectionwiseExtensionOfScalarsMap_exists
       (sectionwiseExtensionOfScalarsSection α G U ⟶
         (ModuleCat.restrictScalars (O'.map i).hom).obj
           (sectionwiseExtensionOfScalarsSection α G V)) := by
-  sorry
+  exact ⟨pointwiseExtensionMap α G i⟩
 
 /-- The chosen restriction map on sectionwise extensions of scalars. -/
 noncomputable def sectionwiseExtensionOfScalarsMap

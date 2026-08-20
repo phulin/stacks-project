@@ -447,7 +447,67 @@ theorem isGeometricallyIrreducible_of_finiteType_subalgebras
      nontrivial tensor product into `K ⊗[k] S`.  Do not infer this merely from
      `CommRing`, which permits the trivial ring.
   -/
-  sorry
+  classical
+  intro K _ _
+  rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
+  let B : Subalgebra k S := ⊥
+  have hB : Algebra.FiniteType k B := by
+    apply (Subalgebra.fg_iff_finiteType B).mp
+    refine ⟨∅, ?_⟩
+    simp [B]
+  have hBprime : (nilradical (K ⊗[k] B)).IsPrime :=
+    PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS B hB K)
+  let mB :=
+    Algebra.TensorProduct.map (AlgHom.id k K) B.val
+  have hmB : Function.Injective mB :=
+    Module.Flat.lTensor_preserves_injective_linearMap B.val.toLinearMap
+      Subtype.val_injective
+  have hcomapB : Ideal.comap mB.toRingHom (nilradical (K ⊗[k] S)) =
+      nilradical (K ⊗[k] B) := by
+    ext x
+    rw [Ideal.mem_comap, mem_nilradical, mem_nilradical]
+    exact IsNilpotent.map_iff hmB
+  have hne : nilradical (K ⊗[k] S) ≠ ⊤ := by
+    intro htop
+    apply hBprime.ne_top
+    rw [← hcomapB, htop, Ideal.comap_top]
+  refine ⟨hne, ?_⟩
+  intro x y hxy
+  obtain ⟨n, a, b, hab⟩ := TensorProduct.exists_sum_tmul_eq x
+  obtain ⟨m, c, d, hcd⟩ := TensorProduct.exists_sum_tmul_eq y
+  let rset : Finset S := Finset.univ.image b ∪ Finset.univ.image d
+  let A : Subalgebra k S := Algebra.adjoin k (↑rset : Set S)
+  have hA : Algebra.FiniteType k A := by
+    apply (Subalgebra.fg_iff_finiteType A).mp
+    exact Subalgebra.fg_adjoin_finset _
+  let xA : K ⊗[k] A :=
+    ∑ j, (a j ⊗ₜ[k] ⟨b j, Algebra.subset_adjoin (by simp [rset])⟩)
+  let yA : K ⊗[k] A :=
+    ∑ j, (c j ⊗ₜ[k] ⟨d j, Algebra.subset_adjoin (by simp [rset])⟩)
+  let mA :=
+    Algebra.TensorProduct.map (AlgHom.id k K) A.val
+  have hmA : Function.Injective mA :=
+    Module.Flat.lTensor_preserves_injective_linearMap A.val.toLinearMap
+      Subtype.val_injective
+  have hxA : mA xA = x := by
+    simp only [xA, map_sum, mA, Algebra.TensorProduct.map_tmul]
+    exact hab.symm
+  have hyA : mA yA = y := by
+    simp only [yA, map_sum, mA, Algebra.TensorProduct.map_tmul]
+    exact hcd.symm
+  have hxyA : IsNilpotent (xA * yA) := by
+    apply (IsNilpotent.map_iff hmA).mp
+    rw [map_mul, hxA, hyA]
+    exact hxy
+  have hAprime : (nilradical (K ⊗[k] A)).IsPrime :=
+    PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical.mp (hS A hA K)
+  rcases hAprime.2 hxyA with hxnil | hynil
+  · left
+    have := (IsNilpotent.map_iff hmA).mpr hxnil
+    rwa [hxA] at this
+  · right
+    have := (IsNilpotent.map_iff hmA).mpr hynil
+    rwa [hyA] at this
 
 /-- A directed colimit of geometrically irreducible algebras is geometrically
 irreducible. -/

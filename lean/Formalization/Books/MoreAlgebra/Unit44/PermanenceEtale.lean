@@ -19,7 +19,7 @@ interfaces.
 
 namespace Formalization.Books.MoreAlgebra.Unit44
 
-universe u
+universe u v
 
 /- The introductory flatness facts are already covered by Mathlib's
 `RingHom.Etale.iff_flat_and_formallyUnramified` and
@@ -31,7 +31,7 @@ are needed. -/
 /-- An étale map preserves Noetherianity of corresponding prime localizations.
 -/
 theorem isNoetherianRing_localization_atPrime_iff_of_etale
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : RingHom.Etale f)
     (p : PrimeSpectrum A) (q : PrimeSpectrum B)
     (hpq : PrimeSpectrum.comap f q = p) :
@@ -44,7 +44,7 @@ theorem isNoetherianRing_localization_atPrime_iff_of_etale
 /-- Corresponding prime localizations of an étale map have equal Krull
 dimension. -/
 theorem ringKrullDim_localization_atPrime_eq_of_etale
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : RingHom.Etale f)
     (p : PrimeSpectrum A) (q : PrimeSpectrum B)
     (hpq : PrimeSpectrum.comap f q = p) :
@@ -57,7 +57,7 @@ theorem ringKrullDim_localization_atPrime_eq_of_etale
 /-- Corresponding prime localizations of an étale map are regular local rings
 simultaneously. -/
 theorem isRegularLocalRing_localization_atPrime_iff_of_etale
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : RingHom.Etale f)
     (p : PrimeSpectrum A) (q : PrimeSpectrum B)
     (hpq : PrimeSpectrum.comap f q = p) :
@@ -73,16 +73,16 @@ to a finite product of commutative Dedekind domains.
 The bundled `CommRingCat` factors retain their ring structures while the
 finite index type records that this is a finite product. -/
 def IsFiniteProductOfDedekindDomains
-    (B : Type u) [CommRing B] : Prop :=
-  ∃ (ι : Type u) (hι : Fintype ι) (S : ι → CommRingCat.{u}),
+    (B : Type v) [CommRing B] : Prop :=
+  ∃ (ι : Type v) (hι : Fintype ι) (S : ι → CommRingCat.{v}),
     letI : Fintype ι := hι
     (∀ i, IsDedekindDomain (S i)) ∧
-      Nonempty (B ≃+* (∀ i, (S i : Type u)))
+      Nonempty (B ≃+* (∀ i, (S i : Type v)))
 
 /-- An étale extension of a Dedekind domain is a finite product of Dedekind
 domains. -/
 theorem isFiniteProductOfDedekindDomains_of_etale
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : RingHom.Etale f) [IsDedekindDomain A] :
     IsFiniteProductOfDedekindDomains B := by
   sorry
@@ -93,7 +93,7 @@ ideals of an étale extension are discrete valuation rings.
 The non-field hypothesis is needed because Mathlib's discrete valuation ring
 notion excludes fields. -/
 theorem isDiscreteValuationRing_localization_atPrime_of_etale
-    {A B : Type u} [CommRing A] [CommRing B]
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (hf : RingHom.Etale f) [IsDedekindDomain A]
     (hA : ¬ IsField A) :
     ∀ q : MaximalSpectrum B,

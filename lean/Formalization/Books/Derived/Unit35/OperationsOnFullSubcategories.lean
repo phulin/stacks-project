@@ -339,17 +339,56 @@ theorem functorImage_smd (P : ObjectProperty C) :
 /-! Exact functors preserve finite direct sums up to finite direct sums. -/
 theorem functorImage_add (P : ObjectProperty C) :
     functorImage F (add P) ≤ add (functorImage F P) := by
-  sorry
+  rintro Y ⟨X, hX, ⟨e⟩⟩
+  rcases hX with ⟨n, A, hA, ⟨eA⟩⟩
+  refine ⟨n, F.obj ∘ A, ?_, ⟨?_⟩⟩
+  · intro i
+    exact P.prop_map_obj F (hA i)
+  · exact (biproduct.isoCoproduct (F.obj ∘ A)).symm ≪≫
+      (F.mapBiproduct A).symm ≪≫
+      F.mapIso (biproduct.isoCoproduct A ≪≫ eA) ≪≫ e
 
 /-! Exact functors preserve extension products. -/
 theorem functorImage_star (P Q : ObjectProperty C) :
     functorImage F (star P Q) ≤ star (functorImage F P) (functorImage F Q) := by
-  sorry
+  rintro Y ⟨X, hX, ⟨e⟩⟩
+  rcases hX with ⟨X₁, X₂, f, g, h, hT, hP, hQ⟩
+  have hT' := F.map_distinguished (Triangle.mk f g h) hT
+  change Triangle.mk (F.map f) (F.map g)
+      (F.map h ≫ (F.commShiftIso (1 : ℤ)).hom.app X₁) ∈ distTriang D at hT'
+  refine ⟨F.obj X₁, F.obj X₂, F.map f ≫ e.hom, e.inv ≫ F.map g,
+    F.map h ≫ (F.commShiftIso (1 : ℤ)).hom.app X₁, ?_, ?_, ?_⟩
+  · exact isomorphic_distinguished _ hT' _
+      (Triangle.isoMk _ _ (Iso.refl _) e.symm (Iso.refl _)
+        (by
+          change (F.map f ≫ e.hom) ≫ e.inv = 𝟙 _ ≫ F.map f
+          simp)
+        (by
+          change (e.inv ≫ F.map g) ≫ 𝟙 _ = e.inv ≫ F.map g
+          simp)
+        (by
+          change (F.map h ≫ (F.commShiftIso (1 : ℤ)).hom.app X₁) ≫
+              (shiftFunctor D (1 : ℤ)).map (𝟙 _) =
+            𝟙 _ ≫ (F.map h ≫ (F.commShiftIso (1 : ℤ)).hom.app X₁)
+          simp))
+  · exact P.prop_map_obj F hP
+  · exact Q.prop_map_obj F hQ
 
 /-! Exact functors preserve iterated extension products. -/
 theorem functorImage_starPower (P : ObjectProperty C) (n : ℕ) :
     functorImage F (starPower P n) ≤ starPower (functorImage F P) n := by
-  sorry
+  cases n with
+  | zero => simp [starPower]
+  | succ n =>
+      change functorImage F (P.extensionProductIter n) ≤
+        (functorImage F P).extensionProductIter n
+      induction n with
+      | zero => simp [ObjectProperty.extensionProductIter_zero]
+      | succ n ih =>
+          rw [ObjectProperty.extensionProductIter_succ,
+            ObjectProperty.extensionProductIter_succ]
+          exact (functorImage_star F P (P.extensionProductIter n)).trans
+            (ObjectProperty.monotone_extensionProduct_right _ ih)
 
 end FunctorOperations
 
@@ -366,12 +405,28 @@ variable (A : ℕ → ObjectProperty C) (hA : Monotone A)
 /-! Interval shifts commute with an increasing union. -/
 theorem shiftWindow_iSup (a b : EInt) :
     shiftWindow (⨆ i, A i) a b = ⨆ i, shiftWindow (A i) a b := by
-  sorry
+  ext X
+  simp only [shiftWindow, ObjectProperty.prop_iSup_iff,
+    ObjectProperty.strictMap_iff]
+  constructor
+  · rintro ⟨j, Z, ⟨i, hZ⟩, rfl⟩
+    exact ⟨i, j, Z, hZ, rfl⟩
+  · rintro ⟨i, j, Z, hZ, rfl⟩
+    exact ⟨j, Z, ⟨i, hZ⟩, rfl⟩
 
 /-! Direct-summand closure commutes with an increasing union. -/
 theorem smd_iSup :
     smd (⨆ i, A i) = ⨆ i, smd (A i) := by
-  sorry
+  apply le_antisymm
+  · intro X hX
+    rcases hX with ⟨Y, hY, ⟨r⟩⟩
+    rw [ObjectProperty.prop_iSup_iff] at hY
+    obtain ⟨i, hY⟩ := hY
+    exact (ObjectProperty.prop_iSup_iff _ _).2
+      ⟨i, ObjectProperty.prop_retractClosure hY r⟩
+  · refine iSup_le ?_
+    intro i
+    exact ObjectProperty.monotone_retractClosure (le_iSup A i)
 
 /-! Finite direct sums commute with an increasing union. -/
 theorem add_iSup :

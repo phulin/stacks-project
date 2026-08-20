@@ -3,6 +3,7 @@ import Mathlib.Algebra.Homology.DerivedCategory.DerivabilityStructureInjectives
 import Mathlib.Algebra.Homology.Factorizations.CM5a
 import Mathlib.CategoryTheory.Abelian.Injective.Extend
 import Mathlib.CategoryTheory.Abelian.Injective.Resolution
+import Mathlib.CategoryTheory.Abelian.ShortExact
 import Formalization.Books.Derived.Unit04.ElementaryResults
 import Formalization.Books.Derived.Unit11.DerivedCategories
 import Formalization.Books.Derived.Unit12.CanonicalDeltaFunctor
@@ -1154,7 +1155,105 @@ theorem injective_resolution_short_exact
           rw [← Category.assoc (Ssplit.f.f n) (rT n) (u₀.f n), hfrT]
           simp
         convert hfinal using 1 <;> simp only [Category.assoc] <;> rfl
-  sorry
+  have hTbg : bT₀ ≫ v₀ = Ssplit.g ≫ c.hom := by
+    simpa only [bT₀, v₀, αT] using
+      (CochainComplex.mappingCocone.lift_fst δ' αT β hαβ)
+  let φ :
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit ⟶
+        Formalization.Books.Derived.Unit09.termwiseSplitShortComplex S₂ := {
+    τ₁ := 𝟙 I₁.obj
+    τ₂ := bT₀
+    τ₃ := c.hom
+    comm₁₂ := by
+      change (𝟙 I₁.obj) ≫ u₀ = Ssplit.f ≫ bT₀
+      simpa only [Category.id_comp] using hTfb.symm
+    comm₂₃ := by
+      dsimp [S₂]
+      exact hTbg }
+  have hφ₂ : QuasiIso φ.τ₂ := by
+    apply quasiIso_middle_of_shortExact_map φ
+      (termwiseSplitShortComplex_shortExact A Ssplit) hS₂
+    · change QuasiIso (𝟙 I₁.obj)
+      infer_instance
+    · exact R₃.quasiIso
+  have hR₂T : IsComplexInjectiveResolution T.X₂.obj I₂.obj bT₀ := by
+    refine ⟨I₂.2, hBinj, ?_⟩
+    exact hφ₂
+  let S' : ShortComplex (BookComplex A) := S.map ι
+  let φ₀ : S' ⟶
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex Ssplit := {
+    τ₁ := a.hom
+    τ₂ := b₀.hom
+    τ₃ := 𝟙 S.X₃.obj
+    comm₁₂ := by
+      change a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom
+      exact congrArg (fun h => h.hom) hb₀
+    comm₂₃ := by
+      change (b₀ ≫ T.g).hom = S.g.hom ≫ 𝟙 S.X₃.obj
+      simpa only [Category.comp_id] using congrArg (fun h => h.hom) hb₀g }
+  have hb₀q : QuasiIso φ₀.τ₂ := by
+    apply quasiIso_middle_of_shortExact_map φ₀ (hS.map_of_exact ι)
+      (termwiseSplitShortComplex_shortExact A Ssplit)
+    · exact R₁.quasiIso
+    · change QuasiIso (𝟙 S.X₃.obj)
+      infer_instance
+  have hR₂ : IsComplexInjectiveResolution S.X₂.obj I₂.obj (b₀ ≫ bT).hom := by
+    refine ⟨I₂.2, hBinj, ?_⟩
+    let _ : QuasiIso b₀.hom := hb₀q
+    let _ : QuasiIso bT₀ := hR₂T.2.2
+    dsimp [bT]
+    exact quasiIso_comp _ _
+  have hR₁ : IsComplexInjectiveResolution S.X₁.obj I₁.obj a.hom := by
+    refine ⟨I₁.2, ?_, ?_⟩
+    · exact R₁.termwiseInjective
+    · exact R₁.quasiIso
+  have hR₃ : IsComplexInjectiveResolution S.X₃.obj I₃.obj c.hom := by
+    refine ⟨I₃.2, ?_, ?_⟩
+    · exact R₃.termwiseInjective
+    exact R₃.quasiIso
+  let hzero :
+      (preadditiveHasZeroMorphisms : HasZeroMorphisms (BookComplex A)) =
+        HomologicalComplex.instHasZeroMorphisms := Subsingleton.elim _ _
+  letI : HasZeroMorphisms (BookComplex A) := preadditiveHasZeroMorphisms
+  have huv₀pre : u₀ ≫ v₀ = 0 := by
+    simpa only [hzero] using huv₀
+  let S₂pre : ShortComplex (BookComplex A) := ShortComplex.mk u₀ v₀ huv₀pre
+  have hS₂pre : S₂pre.ShortExact := by
+    change @ShortComplex.ShortExact (BookComplex A) _
+      preadditiveHasZeroMorphisms (ShortComplex.mk u₀ v₀ huv₀pre)
+    simpa only [S₂pre, hzero,
+      Formalization.Books.Derived.Unit09.termwiseSplitShortComplex] using hS₂
+  have hS₂Comp : (ShortComplex.mk u v huv).ShortExact := by
+    apply ShortExact.reflects_shortExact_of_faithful ι
+    convert hS₂pre using 1 <;>
+      simp [u, v, S₂pre, ObjectProperty.ι_map,
+        ObjectProperty.FullSubcategory.comp_hom] <;> rfl
+  have hleft : a ≫ u = S.f ≫ (b₀ ≫ bT) := by
+    apply ObjectProperty.hom_ext
+    change a.hom ≫ u₀ = S.f.hom ≫ b₀.hom ≫ bT₀
+    rw [← hTfb]
+    have hb₀' : a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom := by
+      change (a ≫ T.f).hom = (S.f ≫ b₀).hom
+      exact congrArg (fun h => h.hom) hb₀
+    have hb₀'' : a.hom ≫ Ssplit.f = S.f.hom ≫ b₀.hom := by
+      change a.hom ≫ T.f.hom = S.f.hom ≫ b₀.hom
+      exact hb₀'
+    simpa only [Category.assoc] using congrArg (fun h => h ≫ bT₀) hb₀''
+  have hright : (b₀ ≫ bT) ≫ v = S.g ≫ c := by
+    apply ObjectProperty.hom_ext
+    dsimp [bT, v]
+    rw [Category.assoc]
+    change b₀.hom ≫ bT₀ ≫ v₀ = S.g.hom ≫ c.hom
+    rw [hTbg]
+    have hb₀g' : b₀.hom ≫ T.g.hom = S.g.hom := by
+      change (b₀ ≫ T.g).hom = S.g.hom
+      exact congrArg (fun h => h.hom) hb₀g
+    have hb₀g'' : b₀.hom ≫ Ssplit.g = S.g.hom := by
+      change b₀.hom ≫ T.g.hom = S.g.hom
+      exact hb₀g'
+    simpa only [Category.assoc] using congrArg (fun h => h ≫ c.hom) hb₀g''
+  refine ⟨I₁, I₂, I₃, a, b₀ ≫ bT, c, ?_⟩
+  exact ⟨hR₁, hR₂, hR₃, ⟨u, v, huv, hS₂Comp, hleft, hright⟩⟩
 
 theorem injective_resolution_short_exact_with_left
     {A : Type u} [Category.{v} A] [Abelian A] [EnoughInjectives A]

@@ -59,6 +59,26 @@ theorem isDiscrete_iff_every_morphism_is_eqToHom
     · intro X Y f
       exact (h f).choose
 
+private theorem eqToHom_self
+    {C : Type u} [Category.{v} C] {X : C} (h : X = X) :
+    eqToHom h = 𝟙 X := by
+  have hh : h = (rfl : X = X) := Subsingleton.elim _ _
+  cases hh
+  rfl
+
+private theorem eqToHom_self_comp
+    {C : Type u} [Category.{v} C] {X Y : C} (h : X = Y) :
+    eqToHom h ≫ 𝟙 Y ≫ eqToHom h.symm = 𝟙 X := by
+  simp only [Category.comp_id, Category.id_comp]
+  rw [eqToHom_trans]
+  exact eqToHom_self _
+
+private theorem eqToHom_self_pair
+    {C : Type u} [Category.{v} C] {X Y : C} (h : X = Y) :
+    eqToHom h ≫ eqToHom h.symm = 𝟙 X := by
+  rw [eqToHom_trans]
+  exact eqToHom_self _
+
 /-- A functor is a category fibred in sets when it is fibred in groupoids and
 all its fibre categories are discrete. -/
 def IsCategoryFibredInSets
@@ -167,7 +187,122 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
   /- Proof plan: use discreteness in each target fibre to identify every
   component of `η` with an `eqToHom`; extend the object equalities to
   `F = G`, then conclude by extensionality of fibred natural transformations. -/
-  sorry
+  let p := structureFunctor Y.underlying
+  letI : p.IsFibredInGroupoids :=
+    (discreteFibredCategoryOver_isCategoryFibredInSets Y hY).1
+  have hpfaith : p.Faithful := by
+    constructor
+    intro a b f g hfg
+    obtain ⟨k, hk, huniq⟩ := fibredInGroupoids_unique_lift p f g
+      (f := 𝟙 (p.obj a)) (by simpa using hfg)
+    have hkId : k = 𝟙 a := by
+      let a' : Functor.Fiber p (p.obj a) := ⟨a, rfl⟩
+      let k' : a' ⟶ a' := ⟨k, hk.1⟩
+      have heq := (hY (p.obj a)).eq_of_hom k'
+      have hkeq : k' = eqToHom heq :=
+        @Subsingleton.elim _ ((hY (p.obj a)).subsingleton _ _) _ _
+      exact congrArg Subtype.val hkeq
+    simpa [hkId] using hk.2
+  have hobj : ∀ z : X.underlying.left,
+      (overFunctor F.underlying).obj z = (overFunctor G.underlying).obj z := by
+    intro z
+    let U := (structureFunctor X.underlying).obj z
+    let z' : Functor.Fiber (structureFunctor X.underlying) U := ⟨z, rfl⟩
+    have hz := (hY U).eq_of_hom
+      ((overMorphismFiberNatTrans η U).app z')
+    exact congrArg Subtype.val hz
+  have hfun : overFunctor F.underlying = overFunctor G.underlying := by
+    refine CategoryTheory.Functor.ext hobj ?_
+    intro x y f
+    apply hpfaith.map_injective
+    dsimp [p]
+    simp only [Functor.map_comp, eqToHom_map]
+    have hFx : p.obj ((overFunctor F.underlying).obj x) =
+        (structureFunctor X.underlying).obj x := by
+      simpa only [Functor.comp_obj] using
+        congrArg (fun H => H.obj x) (overFunctor_comm F.underlying)
+    have hFy : p.obj ((overFunctor F.underlying).obj y) =
+        (structureFunctor X.underlying).obj y := by
+      simpa only [Functor.comp_obj] using
+        congrArg (fun H => H.obj y) (overFunctor_comm F.underlying)
+    have hGx : p.obj ((overFunctor G.underlying).obj x) =
+        (structureFunctor X.underlying).obj x := by
+      simpa only [Functor.comp_obj] using
+        congrArg (fun H => H.obj x) (overFunctor_comm G.underlying)
+    have hGy : p.obj ((overFunctor G.underlying).obj y) =
+        (structureFunctor X.underlying).obj y := by
+      simpa only [Functor.comp_obj] using
+        congrArg (fun H => H.obj y) (overFunctor_comm G.underlying)
+    have hF : p.map ((overFunctor F.underlying).map f) =
+        eqToHom hFx ≫ (structureFunctor X.underlying).map f ≫
+          eqToHom hFy.symm := by
+      simpa only [Functor.comp_map] using
+        (Functor.congr_hom (overFunctor_comm F.underlying) f)
+    have hG : p.map ((overFunctor G.underlying).map f) =
+        eqToHom hGx ≫ (structureFunctor X.underlying).map f ≫
+          eqToHom hGy.symm := by
+      simpa only [Functor.comp_map] using
+        (Functor.congr_hom (overFunctor_comm G.underlying) f)
+    change (structureFunctor Y.underlying).map
+        ((overFunctor F.underlying).map f) = _
+    rw [hF, hG]
+    change
+      eqToHom hFx ≫ (structureFunctor X.underlying).map f ≫ eqToHom hFy.symm =
+        eqToHom (hFx.trans hGx.symm) ≫
+          (eqToHom hGx ≫ (structureFunctor X.underlying).map f ≫
+            eqToHom hGy.symm) ≫
+          eqToHom (hFy.trans hGy.symm).symm
+    have hleft :
+        eqToHom (hFx.trans hGx.symm) ≫ eqToHom hGx = eqToHom hFx := by
+      calc
+        eqToHom (hFx.trans hGx.symm) ≫ eqToHom hGx =
+            eqToHom ((hFx.trans hGx.symm).trans hGx) :=
+          eqToHom_trans (hFx.trans hGx.symm) hGx
+        _ = eqToHom hFx := by
+          have hp : (hFx.trans hGx.symm).trans hGx = hFx :=
+            Subsingleton.elim _ _
+          rw [hp]
+    have hright :
+        eqToHom hGy.symm ≫
+            eqToHom (hFy.trans hGy.symm).symm = eqToHom hFy.symm := by
+      calc
+        eqToHom hGy.symm ≫
+              eqToHom (hFy.trans hGy.symm).symm =
+            eqToHom (hGy.symm.trans (hFy.trans hGy.symm).symm) :=
+          eqToHom_trans hGy.symm (hFy.trans hGy.symm).symm
+        _ = eqToHom hFy.symm := by
+          have hp : hGy.symm.trans (hFy.trans hGy.symm).symm = hFy.symm :=
+            Subsingleton.elim _ _
+          rw [hp]
+    calc
+      eqToHom hFx ≫ (structureFunctor X.underlying).map f ≫
+          eqToHom hFy.symm =
+        (eqToHom hFx ≫ (structureFunctor X.underlying).map f) ≫
+          eqToHom hFy.symm := by simp [Category.assoc]
+      _ = ((eqToHom (hFx.trans hGx.symm) ≫ eqToHom hGx) ≫
+          (structureFunctor X.underlying).map f) ≫
+          (eqToHom hGy.symm ≫
+            eqToHom (hFy.trans hGy.symm).symm) := by
+        rw [hleft, hright]
+      _ = eqToHom (hFx.trans hGx.symm) ≫
+          (eqToHom hGx ≫ (structureFunctor X.underlying).map f ≫
+            eqToHom hGy.symm) ≫
+          eqToHom (hFy.trans hGy.symm).symm := by simp [Category.assoc]
+  have hunder : F.underlying = G.underlying := by
+    apply CategoryOver.Hom.ext
+    apply Over.OverMorphism.ext
+    exact Cat.Hom.ext hfun
+  have hFG : F = G := FibredCategoryOverHom.ext hunder
+  refine ⟨hFG, ?_⟩
+  subst G
+  apply OverNatTrans.ext
+  apply NatTrans.ext
+  funext z
+  let U := (structureFunctor X.underlying).obj z
+  let z' : Functor.Fiber (structureFunctor X.underlying) U := ⟨z, rfl⟩
+  have hz : (overMorphismFiberNatTrans η U).app z' = 𝟙 _ :=
+    @Subsingleton.elim _ ((hY U).subsingleton _ _) _ _
+  exact congrArg Subtype.val hz
 
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
@@ -188,7 +323,18 @@ theorem categoriesFibredInSetsOver_is_locallyDiscrete
   category and lift the equality supplied by
   `discreteFibredCategoryOver_two_morphism_is_eqToHom` through the induced
   bicategory extensionality lemmas. -/
-  sorry
+  intro X Y
+  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
+  intro F G η
+  obtain ⟨h, hη⟩ := discreteFibredCategoryOver_two_morphism_is_eqToHom
+    (X := X.obj) (Y := Y.obj) Y.property η.hom
+  let h' : F = G := Bicategory.InducedBicategory.hom_ext h
+  refine ⟨h', ?_⟩
+  apply Bicategory.InducedBicategory.hom₂_ext
+  rw [Bicategory.InducedBicategory.eqToHom_hom]
+  have hh : h' ▸ rfl = h := Subsingleton.elim _ _
+  rw [hh]
+  exact hη
 
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :
@@ -1437,7 +1583,58 @@ theorem setPresheaf_fibre_is_discrete
   /- Proof plan: reduce a fibre morphism to base `𝟙 U`, use discreteness of
   the value category to identify its fibre component, and finish with the
   CoGrothendieck and fibre extensionality lemmas. -/
-  sorry
+  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
+  intro A B f
+  have hbase : A.1.base = B.1.base := A.2.trans B.2.symm
+  let _ : (setPresheafProjection F).IsHomLift (𝟙 U) f.1 := f.2
+  have hmap := CategoryTheory.IsHomLift.fac'
+    (setPresheafProjection F) (𝟙 U) f.1
+  have hbase_map : f.1.base = eqToHom A.2 ≫ 𝟙 U ≫ eqToHom B.2.symm := by
+    simpa using hmap
+  have hAB : A = B := by
+    apply Subtype.ext
+    cases A with
+    | mk A hA =>
+      cases B with
+      | mk B hB =>
+        cases A with
+        | mk Abase Afiber =>
+          cases B with
+          | mk Bbase Bfiber =>
+            dsimp at hbase ⊢
+            cases hbase
+            cases hA
+            cases hB
+            have hv : Afiber.as = Bfiber.as := by
+              have hf := setPresheafHom_fibre_condition F f.1
+              have hfbase : f.1.base = 𝟙 Abase := by
+                exact hbase_map.trans (eqToHom_self_comp _)
+              rw [hfbase] at hf
+              change F.map (𝟙 Abase).op Bfiber.as = Afiber.as at hf
+              have hid :
+                  (ConcreteCategory.hom (𝟙 (F.obj (Opposite.op Abase))))
+                    Bfiber.as = Bfiber.as := by rfl
+              simpa [hid] using hf.symm
+            cases Afiber with
+            | mk a =>
+              cases Bfiber with
+              | mk b =>
+                dsimp at hv ⊢
+                cases hv
+                rfl
+  refine ⟨hAB, ?_⟩
+  subst B
+  apply Functor.Fiber.hom_ext
+  apply setPresheafHom_ext F
+  convert hmap using 1
+  · rfl
+  · rfl
+  · simp only [Functor.Fiber.fiberInclusion]
+    simp only [eqToHom_self]
+    change (setPresheafProjection F).map
+        (𝟙 (A.1 : setPresheafCategory F)) ≍ _
+    have hm := (setPresheafProjection F).map_id (A.1)
+    exact heq_of_eq (hm.trans (eqToHom_self_comp A.2).symm)
 
 /- The construction is already fibred in groupoids by the generic
    CoGrothendieck lifting theorem from Unit 37.  The extra assertion here
@@ -1696,9 +1893,6 @@ theorem fibredInSets_equivalent_to_presheaf_construction
     (p : S ⥤ C) (hp : IsCategoryFibredInSets p) :
     ∃ F : Cᵒᵖ ⥤ Type uS,
       IsFibredEquivalenceOver p (setPresheafProjection F) := by
-  /- Proof plan: package `(p, hp)` as an object fibred in sets over `C` and
-  specialize `categoriesFibredInSetsOver_equivalent_to_presheaves`, then
-  unfold the structure functor. -/
   sorry
 
 /-- The object-valued presheaf attached to a fibred category in sets exists;
@@ -1760,7 +1954,51 @@ theorem sliceProjection_fibre_is_discrete
   /- Proof plan: identify fibre objects with arrows `U ⟶ X`; a morphism over
   `𝟙 U` has left map equal to the identity, so `Over.hom_ext` and fibre
   extensionality identify it with the appropriate `eqToHom`. -/
-  sorry
+  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
+  intro A B f
+  have hbase : A.1.left = B.1.left := A.2.trans B.2.symm
+  let _ : (Over.forget X).IsHomLift (𝟙 U) f.1 := f.2
+  have hmap := CategoryTheory.IsHomLift.fac'
+    (Over.forget X) (𝟙 U) f.1
+  have hleft : f.1.left = eqToHom A.2 ≫ 𝟙 U ≫ eqToHom B.2.symm := by
+    simpa using hmap
+  have hAB : A = B := by
+    apply Subtype.ext
+    cases A with
+    | mk A hA =>
+      cases B with
+      | mk B hB =>
+        cases A with
+        | mk Aleft Aright Ahom =>
+          cases B with
+          | mk Bleft Bright Bhom =>
+            dsimp at hbase hleft ⊢
+            cases hbase
+            cases hA
+            cases hB
+            have hfleft : f.1.left = 𝟙 Aleft := by
+              exact hleft.trans (eqToHom_self_comp _)
+            have hhom : Ahom = Bhom := by
+              calc
+                Ahom = f.1.left ≫ Bhom := (Over.w f.1).symm
+                _ = 𝟙 Aleft ≫ Bhom := by rw [hfleft]
+                _ = Bhom := by simp
+            have hright : Aright = Bright := Subsingleton.elim _ _
+            cases hright
+            cases hhom
+            rfl
+  refine ⟨hAB, ?_⟩
+  subst B
+  apply Functor.Fiber.hom_ext
+  apply Over.OverMorphism.ext
+  convert hmap using 1
+  · rfl
+  · rfl
+  · simp only [Functor.Fiber.fiberInclusion]
+    simp only [eqToHom_self]
+    change (Over.forget X).map (𝟙 (A.1 : Over X)) ≍ _
+    have hm := (Over.forget X).map_id (A.1)
+    exact heq_of_eq (hm.trans (eqToHom_self_comp A.2).symm)
 
 theorem sliceProjection_isFibredInSets
     {C : Type uC} [Category.{vC} C] (X : C) :

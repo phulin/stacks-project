@@ -7,6 +7,7 @@ import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.FreeModule.PID
 import Mathlib.LinearAlgebra.Pi
+import Mathlib.LinearAlgebra.Quotient.Pi
 import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.LinearAlgebra.Transvection.Generation
 import Mathlib.RingTheory.KrullDimension.Basic
@@ -928,6 +929,789 @@ theorem orderOfVanishing_det_comp
   simpa only [LinearEquiv.det_trans] using
     orderOfVanishing_mul hnoetherian hdim (LinearEquiv.det φ) (LinearEquiv.det ψ)
 
+private noncomputable def coordinateLattice
+    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K] (n : ℕ) :
+    Submodule R (Fin n → K) :=
+  LinearMap.range (LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K))
+
+private theorem coordinateLattice_isLattice
+    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K] (n : ℕ) :
+    Submodule.IsLattice K (coordinateLattice (R := R) (K := K) n) := by
+  let f : (Fin n → R) →ₗ[R] (Fin n → K) :=
+    LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)
+  have hf : Function.Injective f := by
+    intro x y hxy
+    funext i
+    have h := congrArg (fun z : Fin n → K => z i) hxy
+    simpa [f, LinearMap.piMap, Algebra.linearMap] using h
+  have hfg : (LinearMap.range f).FG := by
+    rw [← Module.Finite.iff_fg]
+    exact Module.Finite.range f
+  have hspan : Submodule.span K (LinearMap.range f : Set (Fin n → K)) = ⊤ := by
+    apply top_unique
+    intro x hx
+    rw [pi_eq_sum_univ x]
+    apply Submodule.sum_mem
+    intro i hi
+    apply Submodule.smul_mem
+    · exact Submodule.subset_span ⟨Pi.single i 1, by
+        ext j
+        by_cases hji : i = j <;>
+          simp [f, LinearMap.piMap, Algebra.linearMap, hji]⟩
+  exact ⟨hfg, hspan⟩
+
+private theorem coordinateLattice_length_smul
+    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K] (n : ℕ) (c : R)
+    (_hc : c ≠ 0) :
+    latticeLengthInt R
+        (LinearMap.range
+          ((LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)).comp
+            (LinearMap.lsmul R (Fin n → R) c)))
+        (coordinateLattice (R := R) (K := K) n) =
+      (n : ℤ) * principalQuotientLength R c := by
+  let f : (Fin n → R) →ₗ[R] (Fin n → K) :=
+    LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)
+  let g : (Fin n → R) →ₗ[R] (Fin n → K) :=
+    f.comp (LinearMap.lsmul R (Fin n → R) c)
+  let U : Submodule R (Fin n → K) := LinearMap.range f
+  let N : Submodule R (Fin n → K) := LinearMap.range g
+  let Q : Submodule R (Fin n → R) :=
+    Submodule.pi Set.univ (fun _ : Fin n => Ideal.span ({c} : Set R))
+  have hf : Function.Injective f := by
+    intro x y hxy
+    funext i
+    have h := congrArg (fun z : Fin n → K => z i) hxy
+    simpa [f, LinearMap.piMap, Algebra.linearMap] using h
+  have hQ : Q = LinearMap.range (LinearMap.lsmul R (Fin n → R) c) := by
+    ext x
+    constructor
+    · intro hx
+      rw [Submodule.mem_pi] at hx
+      choose y hy using fun i =>
+        (Submodule.mem_span_singleton.mp (hx i (Set.mem_univ i)))
+      refine ⟨y, ?_⟩
+      ext i
+      simpa [LinearMap.lsmul_apply, smul_eq_mul, mul_comm] using hy i
+    · rintro ⟨y, rfl⟩
+      rw [Submodule.mem_pi]
+      intro i hi
+      apply Submodule.mem_span_singleton.mpr
+      refine ⟨y i, ?_⟩
+      simp [LinearMap.lsmul_apply, smul_eq_mul, mul_comm]
+  have hN_le_U : N ≤ U := by
+    intro z hz
+    rcases hz with ⟨y, rfl⟩
+    exact ⟨LinearMap.lsmul R (Fin n → R) c y, rfl⟩
+  let fU : (Fin n → R) →ₗ[R] U := f.codRestrict U (by
+    intro x
+    exact ⟨x, rfl⟩)
+  have hfU : Function.Bijective fU := by
+    constructor
+    · intro x y hxy
+      exact hf (Subtype.ext_iff.mp hxy)
+    · intro z
+      rcases z.property with ⟨x, hx⟩
+      refine ⟨x, ?_⟩
+      apply Subtype.ext
+      exact hx
+  let e : (Fin n → R) ≃ₗ[R] U := LinearEquiv.ofBijective fU hfU
+  let P : Submodule R U := N.comap U.subtype
+  have hmap : Q.map e.toLinearMap = P := by
+    have he_apply (w : Fin n → R) : (e w : Fin n → K) = f w := by
+      change (fU w : Fin n → K) = f w
+      rfl
+    ext z
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      change (e y : Fin n → K) ∈ N
+      rw [hQ] at hy
+      rcases hy with ⟨w, rfl⟩
+      exact ⟨w, by rw [he_apply]; rfl⟩
+    · intro hz
+      change (z : Fin n → K) ∈ N at hz
+      rcases hz with ⟨y, hy⟩
+      refine ⟨LinearMap.lsmul R (Fin n → R) c y, ?_, ?_⟩
+      · rw [hQ]
+        exact ⟨y, rfl⟩
+      · apply Subtype.ext
+        calc
+          (e (LinearMap.lsmul R (Fin n → R) c y) : Fin n → K) =
+              f (LinearMap.lsmul R (Fin n → R) c y) := he_apply _
+          _ = g y := by rfl
+          _ = (z : Fin n → K) := hy
+  have hquot :
+      Module.length R (U ⧸ P) = Module.length R ((Fin n → R) ⧸ Q) := by
+    have h := LinearEquiv.length_eq (Submodule.Quotient.equiv Q P e hmap)
+    exact h.symm
+  have hquot_pi :
+      Module.length R ((Fin n → R) ⧸ Q) =
+        ∑ i : Fin n, Module.length R (R ⧸ Ideal.span ({c} : Set R)) := by
+    rw [show Q = Submodule.pi Set.univ
+      (fun _ : Fin n => Ideal.span ({c} : Set R)) from rfl]
+    rw [LinearEquiv.length_eq
+      (Submodule.quotientPi (fun _ : Fin n => Ideal.span ({c} : Set R)))]
+    rw [Module.length_pi_of_fintype]
+  have hlength : Module.length R (U ⧸ P) = (n : ℕ∞) * Ring.ord R c := by
+    rw [hquot, hquot_pi]
+    simp [Ring.ord]
+  change (latticeLengthNat R N U : ℤ) = _
+  rw [show latticeLengthNat R N U = (Module.length R (U ⧸ P)).toNat by rfl,
+    hlength]
+  simp [principalQuotientLength, ENat.toNat_mul]
+
+private theorem coordinateLattice_length_diagonal
+    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
+    (n : ℕ) (d : Fin n → R)
+    (hd : ∀ i, d i ≠ 0) :
+    latticeLengthInt R
+        (LinearMap.range
+          ((LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)).comp
+            (LinearMap.piMap (fun i : Fin n =>
+              LinearMap.lsmul R R (d i)))))
+        (coordinateLattice (R := R) (K := K) n) =
+      ∑ i : Fin n, principalQuotientLength R (d i) := by
+  let _ : IsNoetherianRing R := hnoetherian
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  let f : (Fin n → R) →ₗ[R] (Fin n → K) :=
+    LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)
+  let s : (Fin n → R) →ₗ[R] (Fin n → R) :=
+    LinearMap.piMap (fun i : Fin n => LinearMap.lsmul R R (d i))
+  let g : (Fin n → R) →ₗ[R] (Fin n → K) := f.comp s
+  let U : Submodule R (Fin n → K) := LinearMap.range f
+  let N : Submodule R (Fin n → K) := LinearMap.range g
+  let Q : Submodule R (Fin n → R) :=
+    Submodule.pi Set.univ (fun i : Fin n => Ideal.span ({d i} : Set R))
+  have hf : Function.Injective f := by
+    intro x y hxy
+    funext i
+    have h := congrArg (fun z : Fin n → K => z i) hxy
+    simpa [f, LinearMap.piMap, Algebra.linearMap] using h
+  have hQ : Q = LinearMap.range s := by
+    ext x
+    constructor
+    · intro hx
+      rw [Submodule.mem_pi] at hx
+      choose y hy using fun i =>
+        (Submodule.mem_span_singleton.mp (hx i (Set.mem_univ i)))
+      refine ⟨y, ?_⟩
+      ext i
+      simpa [s, LinearMap.piMap, LinearMap.lsmul_apply, smul_eq_mul, mul_comm] using
+        hy i
+    · rintro ⟨y, rfl⟩
+      rw [Submodule.mem_pi]
+      intro i hi
+      apply Submodule.mem_span_singleton.mpr
+      refine ⟨y i, ?_⟩
+      simp [s, LinearMap.piMap, LinearMap.lsmul_apply, smul_eq_mul, mul_comm]
+  let fU : (Fin n → R) →ₗ[R] U := f.codRestrict U (by
+    intro x
+    exact ⟨x, rfl⟩)
+  have hfU : Function.Bijective fU := by
+    constructor
+    · intro x y hxy
+      exact hf (Subtype.ext_iff.mp hxy)
+    · intro z
+      rcases z.property with ⟨x, hx⟩
+      refine ⟨x, ?_⟩
+      apply Subtype.ext
+      exact hx
+  let e : (Fin n → R) ≃ₗ[R] U := LinearEquiv.ofBijective fU hfU
+  let P : Submodule R U := N.comap U.subtype
+  have hmap : Q.map e.toLinearMap = P := by
+    have he_apply (w : Fin n → R) : (e w : Fin n → K) = f w := by
+      change (fU w : Fin n → K) = f w
+      rfl
+    ext z
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      change (e y : Fin n → K) ∈ N
+      rw [hQ] at hy
+      rcases hy with ⟨w, rfl⟩
+      exact ⟨w, by rw [he_apply]; rfl⟩
+    · intro hz
+      change (z : Fin n → K) ∈ N at hz
+      rcases hz with ⟨y, hy⟩
+      refine ⟨s y, ?_, ?_⟩
+      · rw [hQ]
+        exact ⟨y, rfl⟩
+      · apply Subtype.ext
+        calc
+          (e (s y) : Fin n → K) = f (s y) := he_apply _
+          _ = g y := by rfl
+          _ = (z : Fin n → K) := hy
+  have hquot :
+      Module.length R (U ⧸ P) = Module.length R ((Fin n → R) ⧸ Q) := by
+    have h := LinearEquiv.length_eq (Submodule.Quotient.equiv Q P e hmap)
+    exact h.symm
+  have hquot_pi :
+      Module.length R ((Fin n → R) ⧸ Q) =
+        ∑ i : Fin n, Module.length R (R ⧸ Ideal.span ({d i} : Set R)) := by
+    rw [LinearEquiv.length_eq
+      (Submodule.quotientPi (fun i : Fin n => Ideal.span ({d i} : Set R)))]
+    rw [Module.length_pi_of_fintype]
+  have hlength : Module.length R (U ⧸ P) =
+      ∑ i : Fin n, Ring.ord R (d i) := by
+    rw [hquot, hquot_pi]
+    simp [Ring.ord]
+  change (latticeLengthNat R N U : ℤ) = _
+  rw [show latticeLengthNat R N U = (Module.length R (U ⧸ P)).toNat by rfl,
+    hlength]
+  simp only [principalQuotientLength]
+  rw [ENat.toNat_sum (fun i _ => Ring.ord_ne_top
+    (mem_nonZeroDivisors_iff_ne_zero.mpr (hd i)))]
+
+private noncomputable def coordinateDiagonal
+    {K : Type v} [Field K] (n : ℕ) (i : Fin n) (a : Kˣ) :
+    (Fin n → K) ≃ₗ[K] (Fin n → K) :=
+  LinearEquiv.piCongrRight (fun j =>
+    if _h : j = i then a.mulLeftLinearEquiv K K else LinearEquiv.refl K K)
+
+private theorem coordinateDiagonal_matrix
+    {K : Type u} {n : ℕ} [Field K] (i : Fin n) (a : Kˣ) :
+    (coordinateDiagonal n i a).toLinearMap =
+        Matrix.toLin' (Matrix.diagonal (Function.update 1 i (a : K))) := by
+  ext x j
+  by_cases hj : j = i <;>
+    simp [coordinateDiagonal, Matrix.toLin'_apply, Matrix.diagonal,
+      Matrix.mulVec, dotProduct, hj]
+
+private theorem latticeDistance_coordinateDiagonal
+    {R : Type u} {K : Type v} [CommRing R] [IsLocalRing R]
+    [IsDomain R] [Field K] [Algebra R K] [IsFractionRing R K]
+    (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
+    (n : ℕ) (i : Fin n) (a : Kˣ) (M : Submodule R (Fin n → K))
+    (hM : Submodule.IsLattice K M) :
+    latticeDistance R M (latticeMap (coordinateDiagonal n i a) M) =
+      orderOfVanishing hnoetherian hdim a := by
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  let D := coordinateDiagonal n i a
+  let U : Submodule R (Fin n → K) := coordinateLattice (R := R) (K := K) n
+  have hU : Submodule.IsLattice K U := coordinateLattice_isLattice n
+  have hDU : Submodule.IsLattice K (latticeMap D U) :=
+    isLattice_latticeMap hdim D U hU
+  have hdist := latticeDistance_map_independent hdim D M U hM hU
+  obtain ⟨x, y, hy, hxy⟩ := IsFractionRing.div_surjective (A := R) (a : K)
+  have hx : x ≠ 0 := by
+    intro hx
+    have hz : (a : K) = 0 := by
+      rw [← hxy]
+      simp [hx]
+    exact a.ne_zero hz
+  have hyK : (algebraMap R K) y ≠ 0 := by
+    intro h
+    apply mem_nonZeroDivisors_iff_ne_zero.mp hy
+    apply IsFractionRing.injective R K
+    simpa using h
+  have hxy' : (a : K) * (algebraMap R K) y = (algebraMap R K) x := by
+    rw [← hxy]
+    field_simp [hyK]
+  let c : R := x * y
+  let d : Fin n → R := fun j => if j = i then y ^ 2 else c
+  let f : (Fin n → R) →ₗ[R] (Fin n → K) :=
+    LinearMap.piMap (fun _ : Fin n => Algebra.linearMap R K)
+  let U' : Submodule R (Fin n → K) := LinearMap.range f
+  let N : Submodule R (Fin n → K) :=
+    LinearMap.range (f.comp (LinearMap.lsmul R (Fin n → R) c))
+  let N' : Submodule R (Fin n → K) :=
+    LinearMap.range (f.comp (LinearMap.piMap (fun j : Fin n =>
+      LinearMap.lsmul R R (d j))))
+  have hc : c ≠ 0 := mul_ne_zero hx (mem_nonZeroDivisors_iff_ne_zero.mp hy)
+  have hd : ∀ j, d j ≠ 0 := by
+    intro j
+    by_cases hji : j = i
+    · simp [d, hji, mem_nonZeroDivisors_iff_ne_zero.mp hy]
+    · simp [d, hji, hc]
+  have hU_eq : U' = U := by rfl
+  have hN_le_U : N ≤ U := by
+    intro z hz
+    rcases hz with ⟨w, rfl⟩
+    exact ⟨LinearMap.lsmul R (Fin n → R) c w, rfl⟩
+  have hN_le_DU : N ≤ latticeMap D U := by
+    intro z hz
+    rcases hz with ⟨w, rfl⟩
+    refine ⟨f (fun j => if j = i then y ^ 2 * w j else c * w j), ?_, ?_⟩
+    · exact ⟨_, rfl⟩
+    · ext j
+      by_cases hji : j = i
+      · subst j
+        simp [D, coordinateDiagonal, f, LinearMap.piMap,
+          LinearMap.lsmul_apply, c, Algebra.linearMap]
+        calc
+          (a : K) * ((algebraMap R K y) ^ 2 * (algebraMap R K (w i))) =
+              ((a : K) * algebraMap R K y) *
+                (algebraMap R K y * algebraMap R K (w i)) := by ring
+          _ = (algebraMap R K x) *
+                (algebraMap R K y * algebraMap R K (w i)) := by rw [hxy']
+          _ = _ := by
+            rw [Algebra.smul_def, map_mul]
+            have h := mul_assoc ((algebraMap R K) x) ((algebraMap R K) y)
+              ((algebraMap R K) (w i))
+            exact h.symm
+      · simp [D, f, LinearMap.piMap, LinearMap.lsmul_apply, c, hji,
+          coordinateDiagonal, Algebra.linearMap, Algebra.smul_def, map_mul,
+          mul_assoc]
+  have hN'_eq : latticeMap D.symm N = N' := by
+    ext z
+    constructor
+    · rintro ⟨w, ⟨v, rfl⟩, rfl⟩
+      refine ⟨v, ?_⟩
+      ext j
+      by_cases hji : j = i
+      · subst j
+        simp [D, coordinateDiagonal, f, LinearMap.piMap,
+          LinearMap.lsmul_apply, c, d, Algebra.linearMap]
+        rw [Units.symm_mulLeftLinearEquiv_apply]
+        rw [Algebra.smul_def, map_mul, ← hxy']
+        field_simp
+        rw [Units.val_inv_eq_inv_val]
+        simp [a.ne_zero]
+      · simp [D, coordinateDiagonal, f, LinearMap.piMap,
+          LinearMap.lsmul_apply, c, d, hji, Algebra.linearMap,
+          Algebra.smul_def, map_mul, mul_assoc]
+    · rintro ⟨v, rfl⟩
+      refine ⟨f ((LinearMap.lsmul R (Fin n → R) c) v),
+        ⟨v, rfl⟩, ?_⟩
+      ext j
+      by_cases hji : j = i
+      · subst j
+        simp [D, coordinateDiagonal, f, LinearMap.piMap,
+          LinearMap.lsmul_apply, c, d, Algebra.linearMap]
+        rw [Units.symm_mulLeftLinearEquiv_apply]
+        rw [Algebra.smul_def, map_mul, ← hxy']
+        field_simp
+        rw [Units.val_inv_eq_inv_val]
+        simp [a.ne_zero]
+      · simp [D, coordinateDiagonal, f, LinearMap.piMap,
+          LinearMap.lsmul_apply, c, d, hji, Algebra.linearMap,
+          Algebra.smul_def, map_mul, mul_assoc]
+  have hcomp : latticeMap D.symm (latticeMap D U) = U := by
+    ext z
+    constructor
+    · rintro ⟨w, hw, hzw⟩
+      rcases hw with ⟨v, hv, hvw⟩
+      change D.symm w = z at hzw
+      change D v = w at hvw
+      have hvz : v = z := by
+        calc
+          v = D.symm (D v) := by simp
+          _ = D.symm w := by rw [hvw]
+          _ = z := hzw
+      rw [← hvz]
+      exact hv
+    · intro hz
+      refine ⟨D z, ⟨z, hz, rfl⟩, ?_⟩
+      simp
+  have hlenN : latticeLengthInt R N U =
+      (n : ℤ) * principalQuotientLength R c := by
+    simpa [N, U, U', f] using coordinateLattice_length_smul n c hc
+  have hlenN' : latticeLengthInt R N' U =
+      ∑ j : Fin n, principalQuotientLength R (d j) := by
+    simpa [N', U, U', f] using
+      coordinateLattice_length_diagonal hnoetherian hdim n d hd
+  have hN : Submodule.IsLattice K N := by
+    have hfg : N.FG := by
+      rw [← Module.Finite.iff_fg]
+      exact Module.Finite.range _
+    have hspan : Submodule.span K (N : Set (Fin n → K)) = ⊤ := by
+      apply top_unique
+      intro z hz
+      rw [pi_eq_sum_univ z]
+      apply Submodule.sum_mem
+      intro j hj
+      apply Submodule.smul_mem
+      · have hmem : f (Pi.single j c) ∈ N := by
+          refine ⟨Pi.single j 1, ?_⟩
+          ext k
+          by_cases hkj : k = j
+          · subst k
+            simp [f, LinearMap.comp_apply, LinearMap.piMap,
+              LinearMap.lsmul_apply, Algebra.linearMap]
+            rw [Algebra.smul_def]
+            simp
+          · simp [f, LinearMap.comp_apply, LinearMap.piMap,
+              LinearMap.lsmul_apply, Algebra.linearMap, hkj]
+        have hcK : (algebraMap R K) c ≠ 0 := by
+          intro hcK
+          apply hc
+          apply IsFractionRing.injective R K
+          simpa using hcK
+        have hmem' : f (Pi.single j c) ∈
+            Submodule.span K (N : Set (Fin n → K)) :=
+          Submodule.subset_span hmem
+        have heq : (Pi.single j 1 : Fin n → K) =
+            ((algebraMap R K) c)⁻¹ • f (Pi.single j c) := by
+          ext k
+          by_cases hkj : k = j <;>
+            simp [f, LinearMap.piMap, Algebra.linearMap, hkj,
+              smul_eq_mul, hcK]
+        have hsingle : (Pi.single j 1 : Fin n → K) ∈
+            Submodule.span K (N : Set (Fin n → K)) := by
+          rw [heq]
+          exact Submodule.smul_mem _ _ hmem'
+        rw [show (fun j_1 : Fin n => if j = j_1 then (1 : K) else 0) =
+            (Pi.single j 1 : Fin n → K) by
+              funext k
+              by_cases hkj : k = j
+              · subst k
+                simp
+              · have hkj' : j ≠ k := Ne.symm hkj
+                simp [hkj, hkj']]
+        exact hsingle
+    exact ⟨hfg, hspan⟩
+  have hlenmap := latticeLengthNat_latticeMap_of_le D.symm N (latticeMap D U)
+    hN_le_DU
+  have hlenDU : latticeLengthInt R N (latticeMap D U) =
+      latticeLengthInt R N' U := by
+    have hlenmap_int : latticeLengthInt R N (latticeMap D U) =
+        latticeLengthInt R (latticeMap D.symm N)
+          (latticeMap D.symm (latticeMap D U)) := by
+      change (latticeLengthNat R N (latticeMap D U) : ℤ) =
+        (latticeLengthNat R (latticeMap D.symm N)
+          (latticeMap D.symm (latticeMap D U)) : ℤ)
+      exact_mod_cast hlenmap.symm
+    rw [hN'_eq, hcomp] at hlenmap_int
+    exact hlenmap_int
+  have hsup : Submodule.IsLattice K (U ⊔ latticeMap D U) :=
+    lattice_intersection_and_sum hdim U (latticeMap D U) hU hDU |>.2
+  have hcompare := lattice_length_comparison hdim U (latticeMap D U) N
+    (U ⊔ latticeMap D U) hU hDU hN hsup
+    (by
+      intro z hz
+      exact ⟨hN_le_U hz, hN_le_DU hz⟩) (by exact le_rfl)
+  rw [hdist]
+  change latticeLengthInt R (U ⊓ latticeMap D U) U -
+      latticeLengthInt R (U ⊓ latticeMap D U) (latticeMap D U) = _
+  rw [hcompare.1, hlenN, hlenDU]
+  have hpc : principalQuotientLength R c =
+      principalQuotientLength R x + principalQuotientLength R y := by
+    have hx' : x ∈ nonZeroDivisors R :=
+      mem_nonZeroDivisors_iff_ne_zero.mpr hx
+    have hy' : y ∈ nonZeroDivisors R :=
+      mem_nonZeroDivisors_iff_ne_zero.mpr
+        (mem_nonZeroDivisors_iff_ne_zero.mp hy)
+    have h := congrArg ENat.toNat (Ring.ord_mul R (a := x) (b := y) hy')
+    rw [ENat.toNat_add (Ring.ord_ne_top hx') (Ring.ord_ne_top hy')] at h
+    simpa [principalQuotientLength, c] using h
+  have hpy : principalQuotientLength R (y ^ 2) =
+      2 * principalQuotientLength R y := by
+    have hy' : y ∈ nonZeroDivisors R :=
+      mem_nonZeroDivisors_iff_ne_zero.mpr
+        (mem_nonZeroDivisors_iff_ne_zero.mp hy)
+    have h := congrArg ENat.toNat
+      (Ring.ord_mul R (a := y) (b := y) hy')
+    rw [ENat.toNat_add (Ring.ord_ne_top hy') (Ring.ord_ne_top hy')] at h
+    simpa [pow_two, principalQuotientLength, two_mul] using h
+  have hsum : ∑ j : Fin n, (principalQuotientLength R (d j) : ℤ) =
+      (principalQuotientLength R (y ^ 2) : ℤ) +
+        ((n : ℤ) - 1) * principalQuotientLength R c := by
+    rw [← Finset.add_sum_erase _ _ (Finset.mem_univ i)]
+    congr 1
+    · simp [d]
+    · calc
+        (Finset.univ.erase i).sum (fun j =>
+            (principalQuotientLength R (d j) : ℤ)) =
+            (Finset.univ.erase i).sum (fun j =>
+              (principalQuotientLength R c : ℤ)) := by
+          apply Finset.sum_congr rfl
+          intro j hj
+          have hji : j ≠ i := (Finset.mem_erase.mp hj).1
+          simp [d, hji]
+        _ = (Finset.card (Finset.univ.erase i) : ℤ) *
+            principalQuotientLength R c := by
+          rw [Finset.sum_const]
+          simp
+        _ = ((n : ℤ) - 1) * principalQuotientLength R c := by
+          rw [Finset.card_erase_of_mem (Finset.mem_univ i)]
+          rw [Finset.card_univ]
+          simp only [Fintype.card_fin]
+          have hi : (i : ℕ) < n := i.isLt
+          have hn : 1 ≤ n := by omega
+          rw [Nat.cast_sub hn]
+          norm_num
+  have hfinal : (n : ℤ) * principalQuotientLength R c -
+      ∑ j : Fin n, (principalQuotientLength R (d j) : ℤ) =
+      principalQuotientLength R x - principalQuotientLength R y := by
+    rw [hsum, hpc, hpy]
+    push_cast
+    ring
+  rw [hlenN']
+  push_cast
+  rw [hfinal]
+  have ha : a = fractionUnit (R := R) (K := K) x y
+      (mem_nonZeroDivisors_iff_ne_zero.mpr hx) hy := by
+    apply Units.ext
+    change (a : K) = algebraMap R K x / algebraMap R K y
+    exact hxy.symm
+  rw [ha]
+  exact (orderOfVanishing_fractionUnit hnoetherian hdim x y
+    (mem_nonZeroDivisors_iff_ne_zero.mpr hx) hy).symm
+
+private theorem transvection_square_add_pre
+    {K : Type u} {V : Type v} [Field K] [AddCommGroup V] [Module K V]
+    {f : Module.Dual K V} {v : V} (hfv : f v = 0) (x : V) :
+    LinearEquiv.transvection hfv (LinearEquiv.transvection hfv x) =
+      LinearEquiv.transvection hfv x + LinearEquiv.transvection hfv x - x := by
+  simp [LinearMap.transvection.apply]
+  rw [hfv]
+  module
+
+private theorem latticeDistance_transvection_pre
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] [Module.Finite K V]
+    (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
+    (M : Submodule R V) (hM : Submodule.IsLattice K M)
+    {f : Module.Dual K V} {v : V} (hfv : f v = 0) :
+    latticeDistance R M
+        (latticeMap (LinearEquiv.transvection hfv) M) = 0 := by
+  let e := LinearEquiv.transvection hfv
+  let L := M ⊔ latticeMap e M
+  have heM : Submodule.IsLattice K (latticeMap e M) :=
+    isLattice_latticeMap hdim e M hM
+  have hL : Submodule.IsLattice K L :=
+    (lattice_intersection_and_sum hdim M (latticeMap e M) hM heM).2
+  have hmap_sup (N P : Submodule R V) :
+      latticeMap e (N ⊔ P) = latticeMap e N ⊔ latticeMap e P := by
+    change (N ⊔ P).map (e.restrictScalars R).toLinearMap =
+      N.map (e.restrictScalars R).toLinearMap ⊔
+        P.map (e.restrictScalars R).toLinearMap
+    rw [Submodule.map_sup]
+  have hpow (x : V) : e (e x) = e x + e x - x := by
+    exact transvection_square_add_pre hfv x
+  have he2 : latticeMap e (latticeMap e M) ≤ L := by
+    intro x hx
+    rcases hx with ⟨y, hy, rfl⟩
+    rcases hy with ⟨z, hz, rfl⟩
+    have hez : e z ∈ L :=
+      (show latticeMap e M ≤ L from le_sup_right) ⟨z, hz, rfl⟩
+    have hzL : z ∈ L := (show M ≤ L from le_sup_left) hz
+    have hxy : e (e z) ∈ L := by
+      rw [hpow]
+      exact sub_mem (add_mem hez hez) hzL
+    exact hxy
+  have heL : latticeMap e L = L := by
+    rw [hmap_sup]
+    apply le_antisymm
+    · exact sup_le le_sup_right he2
+    · apply sup_le
+      · intro x hx
+        have hx₁ : e x ∈ latticeMap e M ⊔ latticeMap e (latticeMap e M) :=
+          (show latticeMap e M ≤ latticeMap e M ⊔ latticeMap e (latticeMap e M)
+            from le_sup_left) ⟨x, hx, rfl⟩
+        have hx₂ : e (e x) ∈ latticeMap e M ⊔ latticeMap e (latticeMap e M) := by
+          exact (show latticeMap e (latticeMap e M) ≤
+              latticeMap e M ⊔ latticeMap e (latticeMap e M) from le_sup_right)
+            (⟨e x, ⟨x, hx, rfl⟩, rfl⟩)
+        have hxe : x = e x + e x - e (e x) := by
+          rw [hpow]
+          abel
+        rw [hxe]
+        exact sub_mem (add_mem hx₁ hx₁) hx₂
+      · intro x hx
+        rcases hx with ⟨y, hy, rfl⟩
+        exact (show latticeMap e M ≤ latticeMap e M ⊔ latticeMap e (latticeMap e M)
+          from le_sup_left) ⟨y, hy, rfl⟩
+  calc
+    latticeDistance R M (latticeMap e M) =
+        latticeDistance R L (latticeMap e L) :=
+      latticeDistance_map_independent hdim e M L hM hL
+    _ = 0 := by rw [heL]; simp [latticeDistance]
+
+private theorem coordinate_transvection_explicit
+    {K : Type u} {n : Type v} [Field K] [Fintype n] [DecidableEq n]
+    (t : Matrix.TransvectionStruct n K) :
+    ∃ (e : (n → K) ≃ₗ[K] (n → K)) (f : Module.Dual K (n → K))
+      (w : n → K) (hfw : f w = 0),
+      e = LinearEquiv.transvection hfw ∧
+        e.toLinearMap = Matrix.toLin' t.toMatrix := by
+  let f : Module.Dual K (n → K) := LinearMap.proj t.j
+  let w : n → K := t.c • Pi.single t.i 1
+  have hfw : f w = 0 := by
+    simp [f, w, t.hij]
+  refine ⟨LinearEquiv.transvection hfw, f, w, hfw, rfl, ?_⟩
+  ext x j
+  change (LinearMap.transvection f w (Pi.single x 1)) j = _
+  rw [LinearMap.transvection.apply]
+  simp [f, w, Matrix.toLin'_apply, Matrix.TransvectionStruct.toMatrix,
+    Matrix.transvection, LinearMap.proj, Matrix.single_apply]
+  split_ifs <;> simp_all [Pi.single_apply]
+
+private theorem coordinate_diagonal_product_pre
+    {K : Type u} {n : ℕ} [CommRing K] (D : Fin n → K) :
+    Finset.noncommProd (Finset.univ : Finset (Fin n))
+        (fun i => Matrix.diagonal (Function.update 1 i (D i))) (by
+          intro i _ j _ _
+          exact Matrix.commute_diagonal _ _) = Matrix.diagonal D := by
+  let f : Fin n → (Fin n → K) := fun i => Function.update 1 i (D i)
+  have hdiagprod :
+      ∀ (s : Finset (Fin n)) (g : Fin n → (Fin n → K))
+        (comm : (s : Set (Fin n)).Pairwise
+          (fun i j => Commute
+            (Matrix.diagonal (g i) : Matrix (Fin n) (Fin n) K)
+            (Matrix.diagonal (g j) : Matrix (Fin n) (Fin n) K))),
+        Finset.noncommProd s
+            (fun i => (Matrix.diagonal (g i) : Matrix (Fin n) (Fin n) K)) comm =
+          (Matrix.diagonal (Finset.prod s g) : Matrix (Fin n) (Fin n) K) := by
+    intro s
+    induction s using Finset.cons_induction_on with
+    | empty =>
+        intro g comm
+        simp
+    | cons i s hi ih =>
+        intro g comm
+        rw [Finset.noncommProd_cons]
+        rw [ih g (comm.mono fun _ h => Finset.mem_cons.2 (Or.inr h))]
+        rw [Matrix.diagonal_mul_diagonal]
+        congr 1
+        ext j
+        rw [Finset.prod_apply]
+        rw [Finset.cons_eq_insert, Finset.prod_insert hi]
+        simp [Finset.prod_apply]
+  calc
+    _ = Matrix.diagonal (Finset.prod (Finset.univ : Finset (Fin n)) f) := by
+      simpa [f] using hdiagprod (Finset.univ : Finset (Fin n)) f (by
+        intro i _ j _ _
+        exact Matrix.commute_diagonal _ _)
+    _ = Matrix.diagonal D := by
+      congr 1
+      ext j
+      rw [Finset.prod_apply]
+      change (Finset.univ : Finset (Fin n)).prod
+        (fun c => Function.update (1 : Fin n → K) c (D c) j) = D j
+      simpa [f] using
+        (Finset.prod_eq_single (s := (Finset.univ : Finset (Fin n)))
+          (f := fun c => Function.update (1 : Fin n → K) c (D c) j) j
+          (by
+            intro i _ hij
+            simp [Function.update, Ne.symm hij])
+          (by simp [Function.update]))
+
+private theorem basis_coordinate_matrix_pre
+    {K : Type u} {V : Type v} {n : ℕ} [Field K]
+    [AddCommGroup V] [Module K V] (b : Module.Basis (Fin n) K V) (φ : V ≃ₗ[K] V) :
+    LinearMap.toMatrix (Pi.basisFun K (Fin n)) (Pi.basisFun K (Fin n))
+        ((b.equivFun.symm.trans φ).trans b.equivFun).toLinearMap =
+      LinearMap.toMatrix b b φ.toLinearMap := by
+  simp only [LinearMap.toMatrix]
+  ext x
+  simp [LinearEquiv.trans_apply]
+
+private theorem isLattice_equivMap
+    {R : Type u} {K : Type v} {V : Type v} {W : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [AddCommGroup W] [Module K W] [Module R W]
+    [IsScalarTower R K V] [IsScalarTower R K W] [Module.Finite K V]
+    [Module.Finite K W] (hdim : ringKrullDim R = 1)
+    (e : V ≃ₗ[K] W) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
+    Submodule.IsLattice K (M.map (e.restrictScalars R).toLinearMap) := by
+  have _ := hdim
+  refine ⟨hM.fg.map _, ?_⟩
+  have hspan : (Submodule.span K (M : Set V)).map e.toLinearMap ≤
+      Submodule.span K (M.map (e.restrictScalars R).toLinearMap : Set W) := by
+    rw [Submodule.map_span]
+    apply Submodule.span_mono
+    rintro z ⟨y, hy, rfl⟩
+    apply (Submodule.mem_map (f := (e.restrictScalars R).toLinearMap)).mpr
+    exact ⟨y, hy, rfl⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hy : e (e.symm x) ∈ (Submodule.span K (M : Set V)).map e.toLinearMap := by
+    refine Submodule.mem_map.mpr ⟨e.symm x, ?_, rfl⟩
+    rw [hM.span_eq_top]
+    exact Submodule.mem_top
+  simpa using hspan hy
+
+private theorem latticeLengthNat_equivMap_of_le
+    {R : Type u} {K : Type v} {V : Type v} {W : Type v}
+    [CommRing R] [Field K] [Algebra R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [AddCommGroup W] [Module K W] [Module R W]
+    [IsScalarTower R K V] [IsScalarTower R K W]
+    (e : V ≃ₗ[K] W) (N M : Submodule R V) (hNM : N ≤ M) :
+    latticeLengthNat R (N.map (e.restrictScalars R).toLinearMap)
+        (M.map (e.restrictScalars R).toLinearMap) =
+      latticeLengthNat R N M := by
+  let eM : M ≃ₗ[R] M.map (e.restrictScalars R).toLinearMap :=
+    Submodule.equivMapOfInjective (e.restrictScalars R).toLinearMap
+      (e.restrictScalars R).injective M
+  let P : Submodule R (M : Type v) := Submodule.comap M.subtype N
+  let Q : Submodule R (M.map (e.restrictScalars R).toLinearMap : Type v) :=
+    Submodule.comap (M.map (e.restrictScalars R).toLinearMap).subtype
+      (N.map (e.restrictScalars R).toLinearMap)
+  have hPQ : P.map (eM : (M : Type v) →ₗ[R]
+      (M.map (e.restrictScalars R).toLinearMap : Type v)) = Q := by
+    ext z
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      change e (y : V) ∈ N.map (e.restrictScalars R).toLinearMap
+      exact ⟨(y : V), hy, rfl⟩
+    · intro hz
+      change (z : W) ∈ N.map (e.restrictScalars R).toLinearMap at hz
+      rcases hz with ⟨y, hy, hzy⟩
+      let y' : M := ⟨y, hNM hy⟩
+      refine ⟨y', ?_, ?_⟩
+      · change y ∈ N
+        exact hy
+      apply Subtype.ext
+      simpa [eM, y'] using hzy
+  have hquot := Submodule.Quotient.equiv P Q eM hPQ
+  have hlength := LinearEquiv.length_eq hquot
+  simpa [latticeLengthNat, latticeQuotient, P, Q] using
+    (congrArg ENat.toNat hlength).symm
+
+private theorem latticeDistance_equivMap_pair
+    {R : Type u} {K : Type v} {V : Type v} {W : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [AddCommGroup W] [Module K W] [Module R W]
+    [IsScalarTower R K V] [IsScalarTower R K W] [Module.Finite K V]
+    [Module.Finite K W] (_hdim : ringKrullDim R = 1) (e : V ≃ₗ[K] W)
+    (M M' : Submodule R V) (_hM : Submodule.IsLattice K M)
+    (_hM' : Submodule.IsLattice K M') :
+    latticeDistance R (M.map (e.restrictScalars R).toLinearMap)
+        (M'.map (e.restrictScalars R).toLinearMap) =
+      latticeDistance R M M' := by
+  have hmap_inf : (M ⊓ M').map (e.restrictScalars R).toLinearMap =
+      M.map (e.restrictScalars R).toLinearMap ⊓
+        M'.map (e.restrictScalars R).toLinearMap := by
+    ext x
+    constructor
+    · rintro ⟨y, hy, hxy⟩
+      exact ⟨⟨y, hy.1, hxy⟩, ⟨y, hy.2, hxy⟩⟩
+    · rintro ⟨⟨y, hy, hxy⟩, ⟨z, hz, hzx⟩⟩
+      have hyz : y = z := e.injective (hxy.trans hzx.symm)
+      subst z
+      exact ⟨y, ⟨hy, hz⟩, hxy⟩
+  have hleft := latticeLengthNat_equivMap_of_le e (M ⊓ M') M inf_le_left
+  have hright := latticeLengthNat_equivMap_of_le e (M ⊓ M') M' inf_le_right
+  change latticeLengthInt R
+      (M.map (e.restrictScalars R).toLinearMap ⊓
+        M'.map (e.restrictScalars R).toLinearMap)
+      (M.map (e.restrictScalars R).toLinearMap) -
+      latticeLengthInt R
+        (M.map (e.restrictScalars R).toLinearMap ⊓
+          M'.map (e.restrictScalars R).toLinearMap)
+        (M'.map (e.restrictScalars R).toLinearMap) =
+    latticeLengthInt R (M ⊓ M') M - latticeLengthInt R (M ⊓ M') M'
+  rw [← hmap_inf]
+  change (latticeLengthNat R ((M ⊓ M').map (e.restrictScalars R).toLinearMap)
+      (M.map (e.restrictScalars R).toLinearMap) : ℤ) -
+      latticeLengthNat R ((M ⊓ M').map (e.restrictScalars R).toLinearMap)
+        (M'.map (e.restrictScalars R).toLinearMap) =
+    (latticeLengthNat R (M ⊓ M') M : ℤ) -
+      latticeLengthNat R (M ⊓ M') M'
+  rw [hleft, hright]
+
 theorem latticeDistance_map_eq_orderOfVanishing
     {R : Type u} {K : Type v} {V : Type v}
     [CommRing R] [IsLocalRing R] [IsDomain R]
@@ -938,7 +1722,146 @@ theorem latticeDistance_map_eq_orderOfVanishing
     (M : Submodule R V) (hM : Submodule.IsLattice K M) (φ : V ≃ₗ[K] V) :
     latticeDistance R M (latticeMap φ M) =
       orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) := by
-  sorry
+  let b := Module.finBasis K V
+  let q : (Fin (Module.finrank K V) → K) ≃ₗ[K] V := b.equivFun.symm
+  let M0 : Submodule R (Fin (Module.finrank K V) → K) :=
+    M.map (q.symm.restrictScalars R).toLinearMap
+  have hM0 : Submodule.IsLattice K M0 :=
+    isLattice_equivMap hdim q.symm M hM
+  let A := LinearMap.toMatrix b b φ.toLinearMap
+  have hA : A.det ≠ 0 := by
+    change (LinearMap.toMatrix b b φ.toLinearMap).det ≠ 0
+    rw [LinearMap.det_toMatrix]
+    simpa only [LinearEquiv.coe_det] using (LinearEquiv.det φ).ne_zero
+  let P : Matrix (Fin (Module.finrank K V)) (Fin (Module.finrank K V)) K → Prop :=
+    fun B => ∃ e : (Fin (Module.finrank K V) → K) ≃ₗ[K]
+        (Fin (Module.finrank K V) → K),
+      e.toLinearMap = Matrix.toLin' B ∧
+        latticeDistance R M0 (latticeMap e M0) =
+          orderOfVanishing hnoetherian hdim (LinearEquiv.det e)
+  have hPA : P A := by
+    apply Matrix.diagonal_transvection_induction_of_det_ne_zero P A hA
+    · intro D hD
+      have hDi : ∀ i : Fin (Module.finrank K V), D i ≠ 0 := by
+        intro i hi
+        apply hD
+        rw [Matrix.det_diagonal]
+        exact Finset.prod_eq_zero (Finset.mem_univ i) hi
+      have hPprod : P (Finset.noncommProd
+          (Finset.univ : Finset (Fin (Module.finrank K V)))
+          (fun i => Matrix.diagonal (Function.update 1 i (D i))) (by
+            intro i _ j _ _
+            exact Matrix.commute_diagonal _ _)) := by
+        apply Finset.noncommProd_induction
+        · intro B C hB hC
+          rcases hB with ⟨e, he, hde⟩
+          rcases hC with ⟨f, hf, hdf⟩
+          refine ⟨f.trans e, ?_, ?_⟩
+          · rw [show (f.trans e).toLinearMap = e.toLinearMap.comp f.toLinearMap by rfl,
+              Matrix.toLin'_mul, he, hf]
+          · have hcomp := latticeDistance_comp_decomposition hdim e f M0 hM0
+            have hord := orderOfVanishing_det_comp hnoetherian hdim e f
+            calc
+              latticeDistance R M0 (latticeMap (f.trans e) M0) =
+                  latticeDistance R M0 (latticeMap f M0) +
+                    latticeDistance R (latticeMap f M0)
+                      (latticeMap (f.trans e) M0) := hcomp.1
+              _ = orderOfVanishing hnoetherian hdim (LinearEquiv.det f) +
+                    orderOfVanishing hnoetherian hdim (LinearEquiv.det e) := by
+                rw [hdf, hcomp.2, hde]
+              _ = orderOfVanishing hnoetherian hdim
+                    (LinearEquiv.det (f.trans e)) := by
+                rw [hord]
+                ring
+        · refine ⟨LinearEquiv.refl K _, ?_, ?_⟩
+          · rw [Matrix.toLin'_one]
+            rfl
+          · simp [latticeDistance, latticeMap, orderOfVanishing]
+        · intro i hi
+          let ai : Kˣ := Units.mk0 (D i) (hDi i)
+          let e := coordinateDiagonal (Module.finrank K V) i ai
+          have he : e.toLinearMap = Matrix.toLin'
+              (Matrix.diagonal (Function.update 1 i (D i))) := by
+            simpa [e, ai] using coordinateDiagonal_matrix i ai
+          have hdet : LinearEquiv.det e = ai := by
+            apply Units.ext
+            rw [LinearEquiv.coe_det]
+            rw [he, LinearMap.det_toLin', Matrix.det_diagonal]
+            rw [Finset.prod_eq_single i]
+            · simp [ai]
+            · intro j _ hji
+              simp [Function.update_of_ne hji]
+            · simp
+          refine ⟨e, he, ?_⟩
+          rw [hdet]
+          exact latticeDistance_coordinateDiagonal hnoetherian hdim
+            (Module.finrank K V) i ai M0 hM0
+      rw [coordinate_diagonal_product_pre] at hPprod
+      assumption
+    · intro t
+      rcases coordinate_transvection_explicit t with
+        ⟨e, f, w, hfw, he, hmatrix⟩
+      refine ⟨e, hmatrix, ?_⟩
+      rw [he]
+      rw [latticeDistance_transvection_pre hnoetherian hdim M0 hM0 hfw]
+      simp [orderOfVanishing]
+    · intro B C hBdet hCdet hB hC
+      rcases hB with ⟨e, he, hde⟩
+      rcases hC with ⟨f, hf, hdf⟩
+      refine ⟨f.trans e, ?_, ?_⟩
+      · rw [show (f.trans e).toLinearMap = e.toLinearMap.comp f.toLinearMap by rfl,
+          Matrix.toLin'_mul, he, hf]
+      · have hcomp := latticeDistance_comp_decomposition hdim e f M0 hM0
+        have hord := orderOfVanishing_det_comp hnoetherian hdim e f
+        calc
+          latticeDistance R M0 (latticeMap (f.trans e) M0) =
+              latticeDistance R M0 (latticeMap f M0) +
+                latticeDistance R (latticeMap f M0)
+                  (latticeMap (f.trans e) M0) := hcomp.1
+          _ = orderOfVanishing hnoetherian hdim (LinearEquiv.det f) +
+                orderOfVanishing hnoetherian hdim (LinearEquiv.det e) := by
+            rw [hdf, hcomp.2, hde]
+          _ = orderOfVanishing hnoetherian hdim
+                (LinearEquiv.det (f.trans e)) := by
+            rw [hord]
+            ring
+  rcases hPA with ⟨e, he, hdistance⟩
+  have hecoord : e = (q.trans φ).trans q.symm := by
+    apply LinearEquiv.toLinearMap_injective
+    apply LinearMap.toMatrix'.injective
+    rw [he, LinearMap.toMatrix'_toLin']
+    simpa [q, LinearMap.toMatrix_eq_toMatrix'] using
+      (basis_coordinate_matrix_pre b φ).symm
+  have hmap :
+      (latticeMap φ M).map (q.symm.restrictScalars R).toLinearMap =
+        latticeMap e M0 := by
+    rw [hecoord]
+    ext z
+    constructor
+    · rintro ⟨w, ⟨x, hx, rfl⟩, rfl⟩
+      refine ⟨q.symm x, ?_, ?_⟩
+      · exact ⟨x, hx, rfl⟩
+      · change q.symm (φ (q (q.symm x))) = q.symm (φ x)
+        simp
+    · rintro ⟨x, hx, rfl⟩
+      rcases hx with ⟨y, hy, hxy⟩
+      refine ⟨φ y, ⟨y, hy, rfl⟩, ?_⟩
+      change q.symm (φ y) = q.symm (φ (q x))
+      rw [← hxy]
+      simp
+  have hdistmap := latticeDistance_equivMap_pair hdim q.symm M
+    (latticeMap φ M) hM (isLattice_latticeMap hdim φ M hM)
+  have hdetcoord : LinearEquiv.det e = LinearEquiv.det φ := by
+    rw [hecoord]
+    simp [q]
+  calc
+    latticeDistance R M (latticeMap φ M) =
+        latticeDistance R M0
+          ((latticeMap φ M).map (q.symm.restrictScalars R).toLinearMap) :=
+      hdistmap.symm
+    _ = latticeDistance R M0 (latticeMap e M0) := by rw [hmap]
+    _ = orderOfVanishing hnoetherian hdim (LinearEquiv.det e) := hdistance
+    _ = orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) := by rw [hdetcoord]
 
 private theorem coordinate_transvection
     {K : Type u} {n : Type v} [Field K] [Fintype n] [DecidableEq n]
@@ -954,10 +1877,9 @@ private theorem coordinate_transvection
   · ext x j
     change (LinearMap.transvection f w (Pi.single x 1)) j = _
     rw [LinearMap.transvection.apply]
-    simp [f, w, LinearEquiv.transvection.apply, Matrix.toLin'_apply,
-      Matrix.TransvectionStruct.toMatrix, Matrix.transvection, Matrix.mulVec,
-      dotProduct, LinearMap.proj, Matrix.single_apply, Pi.single_apply, t.hij] <;>
-      split_ifs <;> simp_all [Pi.single_apply, t.hij]
+    simp [f, w, Matrix.toLin'_apply, Matrix.TransvectionStruct.toMatrix,
+      Matrix.transvection, LinearMap.proj, Matrix.single_apply]
+    split_ifs <;> simp_all [Pi.single_apply]
   · exact LinearEquiv.transvection_mem_dilatransvections hfw
 
 private theorem coordinate_diagonal
@@ -980,9 +1902,9 @@ private theorem coordinate_diagonal_mem
   ext x j
   by_cases hj : j = i
   · subst j
-    simp [f, w, LinearMap.transvection.apply, LinearEquiv.trans_apply]
+    simp [f, w, LinearMap.transvection.apply]
     ring
-  · simp [f, w, LinearMap.transvection.apply, LinearEquiv.trans_apply, hj]
+  · simp [f, w, LinearMap.transvection.apply, hj]
 
 private theorem coordinate_diagonal_product
     {K : Type u} {n : ℕ} [CommRing K] (D : Fin n → K) :
@@ -1046,7 +1968,7 @@ private theorem conjugate_dilatransvection
   ext x
   change q (e.toLinearMap (q.symm x)) = _
   rw [h]
-  simp [LinearEquiv.trans_apply, LinearMap.transvection.apply, LinearMap.comp_apply]
+  simp [LinearMap.transvection.apply, LinearMap.comp_apply]
 
 private theorem basis_coordinate_matrix
     {K : Type u} {V : Type v} {n : ℕ} [Field K]
@@ -1054,7 +1976,7 @@ private theorem basis_coordinate_matrix
     LinearMap.toMatrix (Pi.basisFun K (Fin n)) (Pi.basisFun K (Fin n))
         ((b.equivFun.symm.trans φ).trans b.equivFun).toLinearMap =
       LinearMap.toMatrix b b φ.toLinearMap := by
-  simp only [LinearMap.toMatrix, LinearMap.toMatrix_eq_toMatrix']
+  simp only [LinearMap.toMatrix]
   ext x
   simp [LinearEquiv.trans_apply]
 
@@ -1262,7 +2184,23 @@ theorem latticeDistance_elementaryDiagonal
     (hM : Submodule.IsLattice K M) :
     latticeDistance R M (latticeMap (elementaryDiagonal n i a) M) =
       orderOfVanishing hnoetherian hdim a := by
-  sorry
+  have hdet : LinearEquiv.det (elementaryDiagonal n i a) = a := by
+    apply Units.ext
+    rw [LinearEquiv.coe_det]
+    have hmatrix : (elementaryDiagonal n i a).toLinearMap =
+        Matrix.toLin' (Matrix.diagonal (Function.update 1 i (a : K))) := by
+      ext x j
+      by_cases hj : j = i <;>
+        simp [elementaryDiagonal, Matrix.toLin'_apply, Matrix.diagonal,
+          Matrix.mulVec, dotProduct, hj]
+    rw [hmatrix, LinearMap.det_toLin', Matrix.det_diagonal]
+    rw [Finset.prod_eq_single i]
+    · simp
+    · intro j _ hji
+      simp [Function.update, hji]
+    · simp
+  rw [latticeDistance_map_eq_orderOfVanishing hnoetherian hdim M hM
+    (elementaryDiagonal n i a), hdet]
 
 /-! ## Finite extensions and norm formulas -/
 

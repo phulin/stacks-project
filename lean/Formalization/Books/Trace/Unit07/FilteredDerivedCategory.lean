@@ -28,7 +28,8 @@ namespace Formalization.Books.Trace.Unit07
 
 /-! ## Filtered objects and finite filtrations -/
 
-/- The source's `Fil(𝒜)` is Homology 19's category of filtered objects. -/
+/- The source's `Fil(𝒜)` is Homology 19's category of filtered objects.  Its
+   additive structure is supplied by the earlier filtration chapter. -/
 abbrev Fil (A : Type u) [Category.{v} A] := FilteredObject A
 
 /- A finite filtration is the canonical `FilteredObject.IsFinite` predicate.
@@ -195,7 +196,9 @@ def restrictMorphismProperty
   fun {_X _Y} f => W ((P.ι).map f)
 
 /- The restrictions of the filtered quasi-isomorphism property to bounded
-   homotopy subcategories are the source's `DF⁺` and `DF⁻` inputs. -/
+   homotopy subcategories are the source's `DF⁺` and `DF⁻` inputs.  The source
+   names only `DF⁺` in the preceding definition but uses `DF⁻` in the lemma,
+   so the latter is supplied by the evident analogous restriction. -/
 def filteredQuasiIsoPlus
     (A : Type u) [Category.{v} A] [Abelian A] :
     MorphismProperty (FilteredHomotopyCategoryPlus A) :=

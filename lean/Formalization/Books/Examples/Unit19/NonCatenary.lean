@@ -8,6 +8,7 @@ import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Localization.Integral
 import Mathlib.RingTheory.Localization.Ideal
+import Mathlib.RingTheory.Localization.LocalizationLocalization
 import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.RegularLocalRing.Defs
@@ -3414,7 +3415,17 @@ noncomputable instance b_algebra_k_instance (d : PowerSeriesData k) : Algebra k 
 
 theorem b_isDomain (d : PowerSeriesData k) :
     IsDomain (B d) := by
-  sorry
+  change IsDomain (Localization (multiplicativeSubmonoid d))
+  apply IsLocalization.isDomain_localization
+  intro s hs
+  change s ∈ multiplicativeSet d at hs
+  rw [multiplicativeSet_eq_complement_union d] at hs
+  simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+  rw [mem_nonZeroDivisors_iff_ne_zero]
+  intro hs0
+  apply hs
+  rw [hs0]
+  exact Or.inl (Ideal.zero_mem _)
 
 instance b_isDomain_instance (d : PowerSeriesData k) : IsDomain (B d) := b_isDomain d
 
@@ -3433,11 +3444,49 @@ theorem b_is_k_algebra (d : PowerSeriesData k) :
 /-- The two displayed ideals remain maximal after passing from `R` to `B`. -/
 theorem mBIdeal_isMaximal (d : PowerSeriesData k) :
     (mBIdeal d).IsMaximal := by
-  sorry
+  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  have hdisjoint :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (mIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsm
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inl hsm)
+  have hunder : (mBIdeal d).under (R d) = mIdeal d := by
+    rw [mBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (mIdeal_isPrime d) hdisjoint
+  letI : ((mBIdeal d).under (R d)).IsMaximal := by
+    rw [hunder]
+    exact mIdeal_isMaximal d
+  exact Ideal.IsMaximal.of_isLocalization_of_disjoint
+    (R := R d) (S := B d) (M := multiplicativeSubmonoid d) (J := mBIdeal d)
 
 theorem nBIdeal_isMaximal (d : PowerSeriesData k) :
     (nBIdeal d).IsMaximal := by
-  sorry
+  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  have hdisjoint :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (nIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsn
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inr hsn)
+  have hunder : (nBIdeal d).under (R d) = nIdeal d := by
+    rw [nBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (nIdeal_isPrime d) hdisjoint
+  letI : ((nBIdeal d).under (R d)).IsMaximal := by
+    rw [hunder]
+    exact nIdeal_isMaximal d
+  exact Ideal.IsMaximal.of_isLocalization_of_disjoint
+    (R := R d) (S := B d) (M := multiplicativeSubmonoid d) (J := nBIdeal d)
 
 theorem mBIdeal_isPrime (d : PowerSeriesData k) :
     (mBIdeal d).IsPrime :=
@@ -3456,17 +3505,227 @@ instance nBIdeal_isPrime_instance (d : PowerSeriesData k) :
 theorem b_maximal_ideals (d : PowerSeriesData k) :
     mBIdeal d ≠ nBIdeal d ∧
       ∀ I : Ideal (B d), I.IsMaximal ↔ I = mBIdeal d ∨ I = nBIdeal d := by
-  sorry
+  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  have hdisjoint_m :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (mIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsm
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inl hsm)
+  have hdisjoint_n :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (nIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsn
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inr hsn)
+  have hunder_m : (mBIdeal d).under (R d) = mIdeal d := by
+    rw [mBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (mIdeal_isPrime d) hdisjoint_m
+  have hunder_n : (nBIdeal d).under (R d) = nIdeal d := by
+    rw [nBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (nIdeal_isPrime d) hdisjoint_n
+  constructor
+  · intro hmn
+    have hmn' : mIdeal d = nIdeal d := by
+      calc
+        mIdeal d = (mBIdeal d).under (R d) := hunder_m.symm
+        _ = (nBIdeal d).under (R d) := by rw [hmn]
+        _ = nIdeal d := hunder_n
+    have hxM : xInGeneratedRing d ∈ mIdeal d := by
+      exact Ideal.subset_span (by simp [mIdeal])
+    have hx1N : xInGeneratedRing d - 1 ∈ nIdeal d := by
+      exact Ideal.subset_span (by simp [nIdeal])
+    have hx1M : xInGeneratedRing d - 1 ∈ mIdeal d := by
+      rw [hmn']
+      exact hx1N
+    have hone : (1 : R d) ∈ mIdeal d := by
+      have hsub := (mIdeal d).sub_mem hxM hx1M
+      simpa using hsub
+    exact (Ideal.ne_top_iff_one (mIdeal d)).mp (mIdeal_isMaximal d).ne_top hone
+  · intro I
+    constructor
+    · intro hI
+      have hIunder : I.under (R d) ≤ (mIdeal d : Set (R d)) ∪ (nIdeal d : Set (R d)) := by
+        intro r hr
+        by_contra hrnot
+        have hrs : r ∈ multiplicativeSet d := by
+          rw [multiplicativeSet_eq_complement_union d]
+          exact ⟨Set.mem_univ _, hrnot⟩
+        have hrI : algebraMap (R d) (B d) r ∈ I := hr
+        exact hI.ne_top (Ideal.eq_top_of_isUnit_mem _ hrI
+          (IsLocalization.map_units (S := B d) (M := multiplicativeSubmonoid d)
+            ⟨r, hrs⟩))
+      have hsplit : I.under (R d) ≤ mIdeal d ∨ I.under (R d) ≤ nIdeal d := by
+        by_cases hm : I.under (R d) ≤ mIdeal d
+        · exact Or.inl hm
+        by_cases hn : I.under (R d) ≤ nIdeal d
+        · exact Or.inr hn
+        exfalso
+        have hnotm : ∃ a : R d, a ∈ I.under (R d) ∧ a ∉ mIdeal d := by
+          by_contra h
+          apply hm
+          intro a ha
+          by_contra ham
+          exact h ⟨a, ha, ham⟩
+        have hnotn : ∃ b : R d, b ∈ I.under (R d) ∧ b ∉ nIdeal d := by
+          by_contra h
+          apply hn
+          intro b hb
+          by_contra hbn
+          exact h ⟨b, hb, hbn⟩
+        obtain ⟨a, ha, ham⟩ := hnotm
+        obtain ⟨b, hb, hbn⟩ := hnotn
+        have han : a ∈ nIdeal d := (hIunder ha).resolve_left ham
+        have hbm : b ∈ mIdeal d := (hIunder hb).resolve_right hbn
+        rcases hIunder ((I.under (R d)).add_mem ha hb) with habm | habn
+        · exact ham (by simpa using (mIdeal d).sub_mem habm hbm)
+        · exact hbn (by simpa using (nIdeal d).sub_mem habn han)
+      rcases hsplit with hIm | hIn
+      · have hle : I ≤ mBIdeal d := by
+          rw [← IsLocalization.map_under (multiplicativeSubmonoid d) (B d) I, mBIdeal]
+          exact Ideal.map_mono hIm
+        exact Or.inl (hI.eq_of_le (mBIdeal_isMaximal d).ne_top hle)
+      · have hle : I ≤ nBIdeal d := by
+          rw [← IsLocalization.map_under (multiplicativeSubmonoid d) (B d) I, nBIdeal]
+          exact Ideal.map_mono hIn
+        exact Or.inr (hI.eq_of_le (nBIdeal_isMaximal d).ne_top hle)
+    · rintro (rfl | rfl)
+      · exact mBIdeal_isMaximal d
+      · exact nBIdeal_isMaximal d
+
+private theorem b_quotient_equiv_of_disjoint
+    (d : PowerSeriesData k) (I : Ideal (R d))
+    (e : R d ⧸ I ≃+* k)
+    (hdisjoint :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (I : Set (R d))) :
+    Nonempty (B d ⧸ Ideal.map (algebraMap (R d) (B d)) I ≃+* k) := by
+  letI : Nontrivial (R d ⧸ I) := e.toEquiv.nontrivial
+  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  let q : R d →+* k := e.toRingHom.comp (Ideal.Quotient.mk I)
+  have hunit : ∀ s : multiplicativeSubmonoid d, IsUnit (q s) := by
+    intro s
+    apply isUnit_iff_ne_zero.mpr
+    intro hs
+    have hsi : (s : R d) ∈ I := by
+      apply (Ideal.Quotient.eq_zero_iff_mem).mp
+      apply e.injective
+      simpa [q] using hs
+    exact Set.disjoint_left.mp hdisjoint s.property hsi
+  let f : B d →+* k :=
+    IsLocalization.lift (M := multiplicativeSubmonoid d) (g := q) hunit
+  have hker : RingHom.ker f = Ideal.map (algebraMap (R d) (B d)) I := by
+    apply le_antisymm
+    · intro x hx
+      obtain ⟨r, s, hrs⟩ :=
+        IsLocalization.exists_mk'_eq (multiplicativeSubmonoid d) x
+      have hxr : f (IsLocalization.mk' (B d) r s) = 0 := by
+        rw [hrs]
+        exact hx
+      have hqr : q r = q s * 0 :=
+        (IsLocalization.lift_mk'_spec hunit r 0 s).mp hxr
+      have hri : r ∈ I := by
+        apply (Ideal.Quotient.eq_zero_iff_mem).mp
+        apply e.injective
+        simpa [q] using hqr
+      rw [← hrs]
+      apply (IsLocalization.mk'_mem_map_algebraMap_iff
+        (M := multiplicativeSubmonoid d) (S := B d) I r s).2
+      exact ⟨s, s.property, I.mul_mem_left s hri⟩
+    · rw [Ideal.map_le_iff_le_comap]
+      intro r hr
+      change f (algebraMap (R d) (B d) r) = 0
+      simp [f, q, (Ideal.Quotient.eq_zero_iff_mem).2 hr]
+  have hf : Function.Surjective f := by
+    intro c
+    obtain ⟨r, hr⟩ := Ideal.Quotient.mk_surjective (e.symm c)
+    refine ⟨algebraMap (R d) (B d) r, ?_⟩
+    calc
+      f (algebraMap (R d) (B d) r) = q r := by
+        simpa [f] using (IsLocalization.lift_eq hunit r)
+      _ = c := by
+        change e (Ideal.Quotient.mk I r) = c
+        rw [hr]
+        exact e.apply_symm_apply c
+  exact ⟨(Ideal.quotEquivOfEq hker.symm).trans
+    (RingHom.quotientKerEquivOfSurjective (f := f) hf)⟩
 
 theorem b_residue_fields (d : PowerSeriesData k) :
     Nonempty (B d ⧸ mBIdeal d ≃+* k) ∧
       Nonempty (B d ⧸ nBIdeal d ≃+* k) := by
-  sorry
+  constructor
+  · rcases quotient_mIdeal_equiv d with ⟨e⟩
+    have hdisjoint :
+        Disjoint (multiplicativeSubmonoid d : Set (R d)) (mIdeal d : Set (R d)) := by
+      rw [Set.disjoint_left]
+      intro s hs hsm
+      change s ∈ multiplicativeSet d at hs
+      rw [multiplicativeSet_eq_complement_union d] at hs
+      simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+      exact hs (Or.inl hsm)
+    change Nonempty (B d ⧸ Ideal.map (algebraMap (R d) (B d)) (mIdeal d) ≃+* k)
+    exact b_quotient_equiv_of_disjoint d (mIdeal d) e hdisjoint
+  · rcases quotient_nIdeal_equiv d with ⟨e⟩
+    have hdisjoint :
+        Disjoint (multiplicativeSubmonoid d : Set (R d)) (nIdeal d : Set (R d)) := by
+      rw [Set.disjoint_left]
+      intro s hs hsn
+      change s ∈ multiplicativeSet d at hs
+      rw [multiplicativeSet_eq_complement_union d] at hs
+      simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+      exact hs (Or.inr hsn)
+    change Nonempty (B d ⧸ Ideal.map (algebraMap (R d) (B d)) (nIdeal d) ≃+* k)
+    exact b_quotient_equiv_of_disjoint d (nIdeal d) e hdisjoint
 
 theorem b_localization_m_equiv (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (mBIdeal d) ≃+*
       Localization.AtPrime (mIdeal d)) := by
-  sorry
+  letI : IsLocalization (multiplicativeSubmonoid d) (B d) := by
+    unfold B
+    infer_instance
+  have hdisjoint :
+      Disjoint (multiplicativeSubmonoid d : Set (R d)) (mIdeal d : Set (R d)) := by
+    rw [Set.disjoint_left]
+    intro s hs hsm
+    change s ∈ multiplicativeSet d at hs
+    rw [multiplicativeSet_eq_complement_union d] at hs
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and, Set.mem_union] at hs
+    exact hs (Or.inl hsm)
+  have hunder : (mBIdeal d).under (R d) = mIdeal d := by
+    rw [mBIdeal]
+    exact IsLocalization.under_map_of_isPrime_disjoint
+      (multiplicativeSubmonoid d) (B d) (mIdeal_isPrime d) hdisjoint
+  let p : Ideal (Localization (multiplicativeSubmonoid d)) :=
+    Ideal.map (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) (mIdeal d)
+  have hp : p.IsPrime := by
+    change (mBIdeal d).IsPrime
+    exact mBIdeal_isPrime d
+  letI : p.IsPrime := hp
+  have hcomap : p.comap
+      (algebraMap (R d) (Localization (multiplicativeSubmonoid d))) = mIdeal d := by
+    change (mBIdeal d).under (R d) = mIdeal d
+    exact hunder
+  have hloc : IsLocalization.AtPrime (Localization.AtPrime p) (mIdeal d) := by
+    have hloc' : IsLocalization.AtPrime (Localization.AtPrime p)
+        (p.comap (algebraMap (R d) (Localization (multiplicativeSubmonoid d)))) :=
+      inferInstance
+    simpa only [hcomap] using hloc'
+  letI : IsLocalization.AtPrime (Localization.AtPrime p) (mIdeal d) := hloc
+  have he : Localization.AtPrime (mIdeal d) ≃ₐ[R d]
+      Localization.AtPrime p :=
+    IsLocalization.algEquiv (mIdeal d).primeCompl
+      (Localization.AtPrime (mIdeal d)) (Localization.AtPrime p)
+  change Nonempty (Localization.AtPrime p ≃+* Localization.AtPrime (mIdeal d))
+  exact ⟨he.symm.toRingEquiv⟩
 
 theorem b_localization_n_equiv (d : PowerSeriesData k) :
     Nonempty (Localization.AtPrime (nBIdeal d) ≃+*

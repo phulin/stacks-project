@@ -627,7 +627,94 @@ theorem classical_generator_is_generator {E : C}
 theorem classical_generator_is_strong_generator {E : C}
     (_hC : HasStrongGenerator C)
     (_hE : IsClassicalGenerator E) : IsStrongGenerator E := by
-  sorry
+  obtain ⟨F, hF⟩ := _hC
+  rw [isStrongGenerator_iff F] at hF
+  obtain ⟨n, hn, hFn⟩ := hF
+  have hFgen : generatedSubcategory E F := by
+    rw [(isClassicalGenerator_iff E).1 _hE]
+    trivial
+  rw [generatedSubcategory_eq_iSup E, ObjectProperty.prop_iSup_iff] at hFgen
+  obtain ⟨m, hm⟩ := hFgen
+  change generatedSubcategoryIter E (m : ℕ) F at hm
+  have hmpos : 1 ≤ (m : ℕ) := m.2
+  have hsingleton : ObjectProperty.singleton F ≤ generatedSubcategoryIter E (m : ℕ) := by
+    intro X hX
+    have hFX : F = X := (ObjectProperty.singleton_iff F X).1 hX
+    subst X
+    exact hm
+  have htransfer : ∀ k : ℕ, 1 ≤ k →
+      generatedSubcategoryIter F k ≤ generatedSubcategoryIter E ((m : ℕ) * k) := by
+    let Q : ObjectProperty C := generatedSubcategoryIter E (m : ℕ)
+    have hQshift : Q.IsStableUnderShift ℤ :=
+      generatedSubcategoryIter_isStableUnderShifts E hmpos
+    let : Q.IsStableUnderRetracts :=
+      generatedSubcategoryIter_isStableUnderRetracts E hmpos
+    have hFQ : Q F := hsingleton F ((ObjectProperty.singleton_iff F F).2 rfl)
+    have hWindow :
+        shiftWindow (ObjectProperty.singleton F) (⊥ : EInt) (⊤ : EInt) ≤ Q := by
+      intro X hX
+      change shiftWindow (ObjectProperty.singleton F) (⊥ : EInt) (⊤ : EInt) X at hX
+      rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX
+      obtain ⟨i, hi⟩ := hX
+      obtain ⟨Y, hY, rfl⟩ :=
+        (ObjectProperty.strictMap_iff (ObjectProperty.singleton F)
+          (shiftFunctor C (-(i : ℤ))) _).1 hi
+      have hFY : F = Y := (ObjectProperty.singleton_iff F Y).1 hY
+      subst Y
+      have hshift :=
+        (hQshift.isStableUnderShiftBy (-(i : ℤ))).le_shift _ hFQ
+      exact (ObjectProperty.prop_shift_iff Q _ _).1 hshift
+    have hAdd : add
+        (shiftWindow (ObjectProperty.singleton F) (⊥ : EInt) (⊤ : EInt)) ≤ Q := by
+      intro X hX
+      rcases hX with ⟨r, A, hA, ⟨e⟩⟩
+      have hsum : Q (∐ A) :=
+        (generatedSubcategoryIter_closedUnderFiniteDirectSums E hmpos) r A
+          (fun i => hWindow (A i) (hA i))
+      exact Q.prop_of_iso e hsum
+    have hOne : generatedSubcategoryOne F ≤ Q := by
+      rw [generatedSubcategoryOne_eq_smd_add_allShifts F]
+      rw [ObjectProperty.retractClosure_le_iff]
+      exact hAdd
+    intro k
+    induction k with
+    | zero =>
+        intro hk
+        omega
+    | succ k ih =>
+        intro hk
+        cases k with
+        | zero =>
+            simpa using hOne
+        | succ k =>
+            have hk' : 1 ≤ k + 1 := by omega
+            rw [generatedSubcategoryIter_succ F hk']
+            have hrewrite :
+                (m : ℕ) * (k + 1 + 1) =
+                  (m : ℕ) + (m : ℕ) * (k + 1) := by
+              calc
+                (m : ℕ) * (k + 1 + 1) =
+                    (m : ℕ) * (k + 1) + (m : ℕ) := by
+                      rw [Nat.mul_succ]
+                _ = (m : ℕ) + (m : ℕ) * (k + 1) := by ac_rfl
+            rw [hrewrite]
+            have hmk : 1 ≤ (m : ℕ) * (k + 1) :=
+              Nat.mul_pos hmpos (by omega)
+            rw [generatedSubcategoryIter_add E hmpos hmk]
+            apply ObjectProperty.monotone_retractClosure
+            exact
+              (ObjectProperty.monotone_extensionProduct_left
+                (generatedSubcategoryIter F (k + 1)) hOne).trans
+                (ObjectProperty.monotone_extensionProduct_right
+                  (generatedSubcategoryIter E (m : ℕ)) (ih (by omega)))
+  have htop : (⊤ : ObjectProperty C) ≤
+      generatedSubcategoryIter E ((m : ℕ) * n) := by
+    rw [← hFn]
+    exact htransfer n hn
+  have hEq : generatedSubcategoryIter E ((m : ℕ) * n) = (⊤ : ObjectProperty C) :=
+    le_antisymm le_top htop
+  exact (isStrongGenerator_iff E).2
+    ⟨(m : ℕ) * n, Nat.mul_pos hmpos hn, hEq⟩
 
 /-!
 The source's generator-check remark.  Closure under direct summands is
@@ -635,6 +722,7 @@ represented by `smd = retractClosure` in Lean.  The displayed source
 conditions imply this retract closure via split distinguished triangles,
 so no extra retract hypothesis is needed here.
 -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem property_holds_on_generatedSubcategory
     (E : C) (P : ObjectProperty C)
     (hIso : P.IsClosedUnderIsomorphisms)
@@ -647,7 +735,62 @@ theorem property_holds_on_generatedSubcategory
     (hSummands : ∀ ⦃K L : C⦄, P (K ⊞ L) → P K ∧ P L)
     (hShifts : ∀ n : ℤ, P (E⟦n⟧)) :
     generatedSubcategory E ≤ P := by
-  sorry
+  have hSat : IsSaturated P := by
+    let : P.IsClosedUnderIsomorphisms := hIso
+    intro X Y hXY
+    rw [ObjectProperty.isoClosure_eq_self] at hXY ⊢
+    exact hSummands hXY
+  let : P.IsStableUnderRetracts :=
+    isStableUnderRetracts_of_isSaturated P hIso hSat
+  have hWindow :
+      shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) ≤ P := by
+    intro X hX
+    change shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) X at hX
+    rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX
+    obtain ⟨i, hi⟩ := hX
+    obtain ⟨Y, hY, rfl⟩ :=
+      (ObjectProperty.strictMap_iff (ObjectProperty.singleton E)
+        (shiftFunctor C (-(i : ℤ))) _).1 hi
+    have hEY : E = Y := (ObjectProperty.singleton_iff E Y).1 hY
+    subst Y
+    simpa using hShifts (-(i : ℤ))
+  have hAdd : add
+      (shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt)) ≤ P := by
+    intro X hX
+    rcases hX with ⟨r, A, hA, ⟨e⟩⟩
+    have hsum : P (∐ A) :=
+      hFiniteSums r A (fun i => hWindow (A i) (hA i))
+    exact P.prop_of_iso e hsum
+  have hOne : generatedSubcategoryOne E ≤ P := by
+    rw [generatedSubcategoryOne_eq_smd_add_allShifts E]
+    rw [ObjectProperty.retractClosure_le_iff]
+    exact hAdd
+  have hstage : ∀ n : ℕ, 1 ≤ n → generatedSubcategoryIter E n ≤ P := by
+    intro n
+    induction n with
+    | zero =>
+        intro hn
+        omega
+    | succ n ih =>
+        intro hn
+        cases n with
+        | zero =>
+            simpa using hOne
+        | succ n =>
+            have hn' : 1 ≤ n + 1 := by omega
+            rw [generatedSubcategoryIter_succ E hn']
+            rw [ObjectProperty.retractClosure_le_iff]
+            intro X hX
+            change ObjectProperty.extensionProduct
+              (generatedSubcategoryOne E)
+              (generatedSubcategoryIter E (n + 1)) X at hX
+            rw [ObjectProperty.extensionProduct_iff] at hX
+            obtain ⟨Y, Z, f, g, h, hT, hY, hZ⟩ := hX
+            exact (hTriangle _ hT).2.2 ⟨hOne Y hY, ih (by omega) Z hZ⟩
+  rw [generatedSubcategory_eq_iSup E]
+  refine iSup_le ?_
+  intro n
+  exact hstage n n.2
 
 end Generators
 

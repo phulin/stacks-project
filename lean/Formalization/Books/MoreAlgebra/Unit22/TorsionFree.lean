@@ -178,7 +178,7 @@ theorem torsion_eq_ker_fractionFieldTensorMap
     have hsmul : algebraMap R K r • g x = 0 := by
       rw [algebraMap_smul K]
       rw [← g.map_smul]
-      simpa [hrx]
+      simp [hrx]
     have hg : g x = 0 :=
       (smul_eq_zero.mp hsmul).resolve_left
         (fun h => hr (IsFractionRing.injective R K (by simpa using h)))
@@ -280,7 +280,7 @@ theorem shortExact_middle_isTorsionFree
     (f : M →ₗ[R] M') (g : M' →ₗ[R] M'')
     (hf : Function.Injective f)
     (h_exact : Function.Exact (f : M → M') (g : M' → M''))
-    (hg : Function.Surjective g)
+    (_hg : Function.Surjective g)
     [Module.IsTorsionFree R M] [Module.IsTorsionFree R M''] :
     Module.IsTorsionFree R M' := by
   apply Module.IsTorsionFree.of_smul_eq_zero
@@ -351,7 +351,7 @@ theorem torsionFree_iff_localized_at_maximal
         rw [algebraMap_smul (Localization S)]
         change r • (LocalizedModule.mkLinearMap S M x) = 0
         rw [← (LocalizedModule.mkLinearMap S M).map_smul]
-        simpa [hrx]
+        simp [hrx]
       have hmk : LocalizedModule.mk x (1 : S) = 0 :=
         (Module.isTorsionFree_iff_smul_eq_zero.mp (h p)
           (algebraMap R (Localization S) r) (LocalizedModule.mk x (1 : S)) hsmul).resolve_left hrp

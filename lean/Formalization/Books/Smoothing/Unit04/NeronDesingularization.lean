@@ -1,10 +1,12 @@
 import Formalization.Books.Smoothing.Unit03
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
+import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Formalization.Books.MoreAlgebra.Unit112
 import Mathlib.LinearAlgebra.Dimension.Finite
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.KrullDimension.Basic
 
 /-!
 # Smoothing Ring Maps, Chapter 4: Néron desingularization
@@ -71,6 +73,25 @@ def NeronSituation.p
     (S : NeronSituation R A Λ) : Ideal A :=
   (IsLocalRing.maximalIdeal Λ).comap S.mapToLambda
 
+/-- The prime of `A` lying over the closed point of `Λ`. -/
+def NeronSituation.pPrime
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (S : NeronSituation R A Λ) : PrimeSpectrum A :=
+  PrimeSpectrum.comap S.mapToLambda
+    ⟨IsLocalRing.maximalIdeal Λ, (IsLocalRing.maximalIdeal.isMaximal Λ).isPrime⟩
+
+/-- The kernel prime of the generic point map. -/
+def NeronSituation.qPrime
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (S : NeronSituation R A Λ) : PrimeSpectrum A :=
+  ⟨S.q, RingHom.ker_isPrime S.mapToLambda⟩
+
 /-- The canonical affine Néron blowup chart `A[p/π]`. -/
 abbrev neronBlowupAlgebra
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
@@ -118,6 +139,17 @@ def NeronBlowupData.p'
     {S : NeronSituation R A Λ} {π : R} (D : NeronBlowupData S π) :
     Ideal (neronBlowupAlgebra S π) :=
   (IsLocalRing.maximalIdeal Λ).comap D.mapToLambda
+
+/-- The generic-point prime is contained in the closed-point prime on the
+Néron chart. -/
+theorem NeronBlowupData.q'_le_p'
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    {S : NeronSituation R A Λ} {π : R} (D : NeronBlowupData S π) :
+    D.q' ≤ D.p' := by
+  sorry
 
 /-- The affine blowup is regular in the selected denominator. -/
 theorem neronBlowup_denominator_isRegular
@@ -241,13 +273,12 @@ theorem neronBlowup_functorial
 
 /-! ## Smoothness of one blowup -/
 
-/-- A short exact sequence of modules, retaining the zero, injective, exact,
+/-- A short exact sequence interface retaining the zero, injective, exact,
 and surjective assertions in the displayed source sequence. -/
 structure ShortExactSequence
-    {M N P : Type u} [AddCommMonoid M] [AddCommMonoid N]
-    [AddCommMonoid P] where
-  left : M →+ N
-  right : N →+ P
+    {M N P : Type u} [Zero P] where
+  left : M → N
+  right : N → P
   left_injective : Function.Injective left
   exact : Function.Exact left right
   right_surjective : Function.Surjective right
@@ -267,8 +298,7 @@ abbrev neronPiQuotient
     [IsDomain R] [IsDomain Λ]
     [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
     [Algebra R A] [Algebra R Λ]
-    {S : NeronSituation R A Λ} {π : R}
-    (D : NeronBlowupData S π) : Type u :=
+    {S : NeronSituation R A Λ} {π : R} : Type u :=
   neronBlowupAlgebra S π ⧸
     Ideal.span ({algebraMap R (neronBlowupAlgebra S π) π} :
       Set (neronBlowupAlgebra S π))
@@ -279,8 +309,7 @@ abbrev neronPiLocalizedRing
     [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
     [Algebra R A] [Algebra R Λ]
     {S : NeronSituation R A Λ} {π : R}
-    (D : NeronBlowupData S π)
-    (qbar : PrimeSpectrum (neronPiQuotient D)) : Type u :=
+    (qbar : PrimeSpectrum (neronPiQuotient (S := S) (π := π))) : Type u :=
   Localization.AtPrime qbar.asIdeal
 
 structure NeronBlowupDifferentialSequence
@@ -290,14 +319,18 @@ structure NeronBlowupDifferentialSequence
     [Algebra R A] [Algebra R Λ]
     {S : NeronSituation R A Λ} {π : R}
     (D : NeronBlowupData S π) (c : ℕ) where
-  quotientPrime : PrimeSpectrum (neronPiQuotient D)
+  quotientPrime : PrimeSpectrum (neronPiQuotient (S := S) (π := π))
   quotientPrime_comap :
     (Ideal.comap (Ideal.Quotient.mk _) quotientPrime.asIdeal) = D.p'
+  dimension :
+    ringKrullDim (Localization.AtPrime
+      (R := neronPiQuotient (S := S) (π := π)) quotientPrime.asIdeal) =
+      (c : WithBot ℕ∞)
   sequence : ShortExactSequence
     (M := TensorProduct A (ModuleOfDifferentials R A) (neronLocalizedRing D))
     (N := TensorProduct (neronBlowupAlgebra S π)
       (ModuleOfDifferentials R (neronBlowupAlgebra S π)) (neronLocalizedRing D))
-    (P := Fin c → neronLocalizedRing D)
+    (P := Fin c → neronPiLocalizedRing (S := S) (π := π) quotientPrime)
 
 /-- If the original map is smooth at the center and the residue extension is
 separable, the Néron chart is smooth at the induced center and has the
@@ -310,7 +343,7 @@ theorem neronBlowup_smooth
     (S : NeronSituation R A Λ) (π : R)
     (hπ : algebraMap R A π ∈ S.p)
     (D : NeronBlowupData S π)
-    (hq : IsSmoothAt R A ⟨S.p, by sorry⟩)
+    (hq : IsSmoothAt R A S.pPrime)
     (hres : letI := residueFieldAlgebra S.extension
       Algebra.IsSeparable (DVRResidueField R) (DVRResidueField Λ)) :
       IsSmoothAt R (neronBlowupAlgebra S π) D.pPrime ∧
@@ -326,38 +359,55 @@ def IsFreeCokernel
     [Module R M] [Module R N] (d : M →ₗ[R] N) : Prop :=
   Module.Free R (N ⧸ LinearMap.range d)
 
+/- The two modules in the ``when smooth'' criterion are Mathlib's canonical
+conormal module `I/I^2` after base change to `Λ`, and the base-changed module
+of differentials.  The `letI` binders record the ring maps induced by the
+presentation and by `A → Λ`. -/
+abbrev neronConormalAfterLambda
+    {R A B Λ : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R B] [Algebra R Λ]
+    (S : NeronSituation R A Λ) (g : B →+* A)
+    (hg : Function.Surjective g) : Type u :=
+  letI : Algebra B A := g.toAlgebra
+  letI : Algebra A Λ := S.mapToLambda.toAlgebra
+  TensorProduct A Λ
+    (Formalization.Books.Algebra.Unit134.surjectiveExtension hg).Cotangent
+
+abbrev neronDifferentialsAfterLambda
+    {R A B Λ : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R B] [Algebra R Λ]
+    (S : NeronSituation R A Λ) (g : B →+* A) : Type u :=
+  letI : Algebra B Λ := (S.mapToLambda.comp g).toAlgebra
+  TensorProduct B Λ (ModuleOfDifferentials R B)
+
+def HasFreeNeronDifferentialCokernel
+    {R A B Λ : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing Λ]
+    [IsDomain R] [IsDomain Λ]
+    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
+    [Algebra R A] [Algebra R B] [Algebra R Λ]
+    (S : NeronSituation R A Λ) (g : B →+* A)
+    (hg : Function.Surjective g) : Prop :=
+  ∃ d : neronConormalAfterLambda S g hg →ₗ[Λ]
+      neronDifferentialsAfterLambda S g,
+    IsFreeCokernel d
+
 theorem neron_when_smooth
     {R A B Λ : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing Λ]
     [IsDomain R] [IsDomain Λ]
     [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
     [Algebra R A] [Algebra R B] [Algebra R Λ]
     (S : NeronSituation R A Λ) (g : B →+* A) (hg : Function.Surjective g)
+    (hfactor : g.comp (algebraMap R B) = algebraMap R A)
     (I : Ideal B) (hI : I = RingHom.ker g)
     (pB : PrimeSpectrum B) (hpB : pB.asIdeal = S.p.comap g)
     (hB : IsSmoothAt R B pB)
-    (hAq : IsSmoothAt R A ⟨S.q, by sorry⟩)
-    {M N : Type u} [AddCommGroup M] [AddCommGroup N]
-    [Module Λ M] [Module Λ N] (d : M →ₗ[Λ] N)
-    (hfree : IsFreeCokernel (R := Λ) d) :
-    IsSmoothAt R A ⟨S.p, by sorry⟩ := by
-  sorry
-
-/-- One blowup does not increase the defect, and it decreases it strictly when
-the original algebra is not smooth at the closed center. -/
-def NeronDefectChange (e e' : ℕ) : Prop := e' < e
-
-theorem neron_defect_decreases
-    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
-    [IsDomain R] [IsDomain Λ]
-    [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
-    [Algebra R A] [Algebra R Λ]
-    (S : NeronSituation R A Λ) (π : R)
-    (hπ : algebraMap R A π ∈ S.p)
-    (D : NeronBlowupData S π)
-    (hres : letI := residueFieldAlgebra S.extension
-      Algebra.IsSeparable (DVRResidueField R) (DVRResidueField Λ))
-    (hnot : ¬ IsSmoothAt R A ⟨S.p, by sorry⟩) :
-    ∃ e e' : ℕ, NeronDefectChange e e' := by
+    (hAq : IsSmoothAt R A S.qPrime)
+    (hfree : HasFreeNeronDifferentialCokernel S g hg) :
+    IsSmoothAt R A S.pPrime := by
   sorry
 
 /-! ## Néron desingularization -/
@@ -374,10 +424,15 @@ structure NeronBlowupIteration
   terminal : Type u
   [terminalCommRing : CommRing terminal]
   [terminalAlgebra : Algebra R terminal]
+  initialToTerminal : A →+* terminal
+  initialToTerminal_comp_algebraMap :
+    initialToTerminal.comp (algebraMap R A) = algebraMap R terminal
   terminalMap : terminal →+* Λ
-  factorization : terminalMap.comp (algebraMap R terminal) = algebraMap R Λ
-  isFiniteSequenceOfAffineNeronBlowups : Prop
+  factorization : terminalMap.comp initialToTerminal = S.mapToLambda
   terminalPrime : PrimeSpectrum terminal
+  terminalPrime_over_p :
+    Ideal.comap initialToTerminal terminalPrime.asIdeal = S.p
+  isFiniteSequenceOfAffineNeronBlowups : Prop
   terminalSmooth : IsSmoothAt R terminal terminalPrime
 
 theorem neron_desingularization
@@ -386,7 +441,7 @@ theorem neron_desingularization
     [IsDiscreteValuationRing R] [IsDiscreteValuationRing Λ]
     [Algebra R A] [Algebra R Λ]
     (S : NeronSituation R A Λ) (π : R) (hπ : IsUniformizer R π)
-    (hq : IsSmoothAt R A ⟨S.q, by sorry⟩)
+    (hq : IsSmoothAt R A S.qPrime)
     (hres : letI := residueFieldAlgebra S.extension
       Algebra.IsSeparable (DVRResidueField R) (DVRResidueField Λ)) :
     Nonempty (NeronBlowupIteration S π) := by

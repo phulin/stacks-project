@@ -262,7 +262,7 @@ private def pivotLinearEquiv
         ext j
         by_cases hj : j = q
         · subst hj
-          simp [q, Fin.removeNth]
+          simp [q]
         · obtain ⟨k, rfl⟩ := Fin.exists_succAbove_eq hj
           simp [q, Fin.removeNth_apply]
       map_add' := by
@@ -270,9 +270,9 @@ private def pivotLinearEquiv
         ext j
         by_cases hj : j = q
         · subst hj
-          simp [q, Fin.removeNth_apply]
+          simp [q]
         · obtain ⟨k, rfl⟩ := Fin.exists_succAbove_eq hj
-          simp [q, Fin.removeNth_apply]
+          simp [q]
       map_smul' := by
         intro r x
         ext j
@@ -280,7 +280,7 @@ private def pivotLinearEquiv
         · subst hj
           simp [q]
         · obtain ⟨k, rfl⟩ := Fin.exists_succAbove_eq hj
-          simp [q, Fin.removeNth] }
+          simp [q] }
   exact e ≪≫ₗ LinearEquiv.piCongrLeft R (fun _ : Fin m => R) (finCongr h)
 
 private def sourceShear
@@ -290,10 +290,10 @@ private def sourceShear
     invFun := fun z => (z.1 + v * h z.2, z.2)
     left_inv := by
       intro z
-      ext <;> simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+      ext <;> simp [sub_eq_add_neg, add_left_comm, add_comm]
     right_inv := by
       intro z
-      ext <;> simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+      ext <;> simp [sub_eq_add_neg, add_assoc]
     map_add' := by
       intro x y
       ext
@@ -304,7 +304,7 @@ private def sourceShear
     map_smul' := by
       intro r x
       ext
-      · simp [map_smul, smul_eq_mul, mul_assoc, mul_comm, mul_left_comm] <;> ring
+      · simp [map_smul, smul_eq_mul]; ring
       · simp }
 
 private def targetShear
@@ -332,7 +332,7 @@ private def targetShear
       · calc
           c * (v * z.1) = (c * v) * z.1 := by ring
           _ = z.1 := by rw [hcv, one_mul]
-      · simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+      · simp [sub_eq_add_neg, add_left_comm]
     map_add' := by
       intro x y
       ext
@@ -342,7 +342,7 @@ private def targetShear
     map_smul' := by
       intro r x
       ext
-      · simp [smul_eq_mul, mul_assoc, mul_comm, mul_left_comm]
+      · simp [smul_eq_mul, mul_left_comm]
       · change g (r • x.1) + r • x.2 = r • (g x.1 + x.2)
         simpa [smul_eq_mul] using g.map_smul r x.1 }
 
@@ -396,13 +396,13 @@ theorem lemma_add_trivial_complex
     (LinearMap.snd R R (Fin (C.termRank (i - 1) - 1) → R)).comp
       (f0.comp (LinearMap.inr R R (Fin (C.termRank i - 1) → R)))
   have hsp : sp (1, 0) = Pi.single b 1 := by
-    simp [sp, pivotLinearEquiv, Fin.insertNth, Fin.removeNth,
+    simp [sp, pivotLinearEquiv,
       LinearEquiv.piCongrLeft, LinearEquiv.piCongrLeft']
     ext j
     simp [Equiv.piCongrLeft', Pi.single_apply]
   have htpa (x : Fin (C.termRank (i - 1)) → R) :
       (tp.symm x).1 = x a := by
-    simp [tp, pivotLinearEquiv, Fin.insertNth, Fin.removeNth,
+    simp [tp, pivotLinearEquiv,
       LinearEquiv.piCongrLeft, LinearEquiv.piCongrLeft']
   have hf00 : f00 1 = LinearMap.toMatrix' f a b := by
     change (tp.symm (f (sp (1, 0)))).1 = f (Pi.single b 1) a
@@ -414,10 +414,10 @@ theorem lemma_add_trivial_complex
   have hc : c = (u : R) := hcu
   have hcv : c * v = 1 := by
     rw [hc]
-    simpa [v] using congrArg (fun z : Rˣ => (z : R)) (mul_inv_cancel u)
+    simp [v]
   have hvc : v * c = 1 := by
     rw [hc]
-    simpa [v] using congrArg (fun z : Rˣ => (z : R)) (inv_mul_cancel u)
+    simp [v]
   let ss := sourceShear v f01
   let ts := targetShear c v f10 hcv hvc
   let srcPre : ((Fin (C.termRank i - 1) → R) × (Fin 1 → R)) ≃ₗ[R]
@@ -445,7 +445,7 @@ theorem lemma_add_trivial_complex
       (Fin (C.termRank j) → R) := fun j => by
     by_cases hji : j = i
     · subst j
-      have hd : dRank i = C.termRank i - 1 := by simp [dRank, hi_ne_prev]
+      have hd : dRank i = C.termRank i - 1 := by simp [dRank]
       have ht : tRank i = 1 := by simp [tRank]
       let ed : (Fin (dRank i) → R) ≃ₗ[R]
           (Fin (C.termRank i - 1) → R) :=
@@ -589,13 +589,13 @@ theorem lemma_add_trivial_complex
         rw [show g (i - 1 + 1) =
             (coord (i - 1 + 1)).symm.toLinearMap.comp
               ((C.differential (i - 1 + 1)).comp
-                (coord (i - 1 + 1 + 1)).toLinearMap) by simp [g, hne]]
+                (coord (i - 1 + 1 + 1)).toLinearMap) by simp [g]]
         exact transport_generic (i - 1 + 1) i hplus
       have hgj :
           g (i - 1) = hplus.symm ▸
             ((coord (i - 1)).symm.toLinearMap.comp
               (f.comp (coord i).toLinearMap)) := by
-        simp [g, hplus]
+        simp [g]
       rw [hgi, hgj]
       exact htransport
     · by_cases h2 : j + 1 = i - 1
@@ -648,15 +648,15 @@ theorem lemma_add_trivial_complex
   have hcoord_inr :
       coord i (0, Pi.single (Fin.cast hti0.symm (0 : Fin 1)) 1) =
         Pi.single b 1 := by
-    simp [coord, coordI, srcPre, ss, sp, sourceShear, hsp, hf010, hf010', dRank, tRank,
-      hi_ne_prev, hprev_ne_i, Nat.sub_add_cancel hi, pivotLinearEquiv,
-      Fin.insertNth, Fin.removeNth, LinearEquiv.piCongrLeft,
+    simp [coord, coordI, srcPre, ss, sp, sourceShear, hf010', dRank, tRank,
+      hi_ne_prev, hprev_ne_i, pivotLinearEquiv,
+      Fin.insertNth, LinearEquiv.piCongrLeft,
       LinearEquiv.piCongrLeft', Equiv.piCongrLeft', Pi.single_apply]
     ext x
     by_cases hx : x = b
     · subst x
-      simp [Fin.succAboveCases, Pi.single_apply]
-    · simp [Fin.succAboveCases, Pi.single_apply, hx]
+      simp [Fin.succAboveCases]
+    · simp [Fin.succAboveCases, hx]
   have htarget_pivot :
       coordIm1.symm (f (Pi.single b 1)) =
         (0, Pi.single (0 : Fin 1) 1) := by
@@ -670,7 +670,7 @@ theorem lemma_add_trivial_complex
       · change f10 1 = f10 1
         rfl
     rw [hf0pivot]
-    simp [tgtPre, ts, targetShear, hcv, hvc, c, v]
+    simp [tgtPre, ts, targetShear, hvc, c, v]
     ext x
     fin_cases x
     simp

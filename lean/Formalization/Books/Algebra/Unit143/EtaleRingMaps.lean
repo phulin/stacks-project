@@ -167,7 +167,17 @@ theorem etale_local_on_target
     (hgen : Ideal.span (Set.range g) = (⊤ : Ideal S))
     (hEtale : ∀ i, Algebra.Etale R (Localization.Away (g i))) :
     Algebra.Etale R S := by
-  sorry
+  rw [← RingHom.etale_algebraMap]
+  refine @RingHom.Etale.ofLocalizationSpanTarget R S _ _ (algebraMap R S)
+    (Set.range g) hgen ?_
+  rintro ⟨r, ⟨i, rfl⟩⟩
+  have hcomp :
+      (algebraMap S (Localization.Away (g i))).comp (algebraMap R S) =
+        algebraMap R (Localization.Away (g i)) :=
+    (IsScalarTower.algebraMap_eq R S (Localization.Away (g i))).symm
+  rw [hcomp]
+  exact (RingHom.etale_algebraMap (R := R)
+    (S := Localization.Away (g i))).mpr (hEtale i)
 
 /-- The étale locus commutes with flat base change for a finitely presented
 algebra.  The inverse image is taken along the canonical map from `S` to the
@@ -233,7 +243,17 @@ theorem etale_finite_type_approximation
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.Etale R S] :
     Nonempty (EtaleFiniteTypeApproximation R S) := by
-  sorry
+  obtain ⟨R₀, S₀, _, _, hfg, hEtale, hbase⟩ :=
+    Algebra.Etale.exists_subalgebra_fg (R := ℤ) (A := R) (B := S)
+  obtain ⟨hbase⟩ := hbase
+  letI : Algebra.FiniteType ℤ R₀ := ⟨R₀.fg_top.mpr hfg⟩
+  exact ⟨{
+    R₀ := R₀
+    S₀ := S₀
+    finiteTypeOverInt := inferInstance
+    etale := hEtale
+    baseChange := ⟨hbase.symm⟩
+  }⟩
 
 /-- A stage of a directed ring colimit together with an étale algebra whose
 base change is the given étale algebra.  The directed-ring-colimit fields are

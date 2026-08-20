@@ -986,6 +986,7 @@ private lemma exact_of_retract_composableArrows
       simpa [a, b] using h
   exact exact_of_retract_addCommGrp a b hab (hS'.exact i hi)
 
+omit [Pretriangulated C] in
 private lemma special_of_retract
     {T T' : Triangle C} (hT' : SpecialTriangle T')
     (φ : T ⟶ T') (ψ : T' ⟶ T) (hφψ : φ ≫ ψ = 𝟙 T) :
@@ -1316,10 +1317,10 @@ private def directSumProductTriangleIso (T T' : Triangle C) :
     apply biprod.hom_ext
     · simp only [e₁, e₂, productBiprodIso]
       rw [Category.assoc, biprod.lift_fst, Pi.map_π]
-      simp [e₁, e₂, productBiprodIso, Category.assoc]
+      simp [Category.assoc]
     · simp only [e₁, e₂, productBiprodIso]
       rw [Category.assoc, biprod.lift_snd, Pi.map_π]
-      simp [e₁, e₂, productBiprodIso, Category.assoc]
+      simp [Category.assoc]
   · change
       Limits.Pi.map
           (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₂) ≫ e₃.hom =
@@ -1327,10 +1328,10 @@ private def directSumProductTriangleIso (T T' : Triangle C) :
     apply biprod.hom_ext
     · simp only [e₂, e₃, productBiprodIso]
       rw [Category.assoc, biprod.lift_fst, Pi.map_π]
-      simp [e₂, e₃, productBiprodIso, Category.assoc]
+      simp [Category.assoc]
     · simp only [e₂, e₃, productBiprodIso]
       rw [Category.assoc, biprod.lift_snd, Pi.map_π]
-      simp [e₂, e₃, productBiprodIso, Category.assoc]
+      simp [Category.assoc]
   · change
       (Limits.Pi.map
           (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
@@ -1353,12 +1354,12 @@ private def directSumProductTriangleIso (T T' : Triangle C) :
         dsimp [shiftBiprodIso]
         rw [Category.assoc, Functor.biprodComparison_fst, ← Functor.map_comp,
           biprod.lift_fst]
-        simp [e₁, e₁s, productBiprodIso]
+        simp [e₁s, productBiprodIso]
       · simp only [e₁, productBiprodIso]
         dsimp [shiftBiprodIso]
         rw [Category.assoc, Functor.biprodComparison_snd, ← Functor.map_comp,
           biprod.lift_snd]
-        simp [e₁, e₁s, productBiprodIso]
+        simp [e₁s, productBiprodIso]
     have hmap :
         Limits.Pi.map
               (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫

@@ -1573,23 +1573,47 @@ theorem filteredGradedHomologyZero_is_homological
 theorem filteredGradedPieceHomologyZero_is_homological
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ) :
     (filteredGradedPieceHomologyZeroFunctor C p).IsHomological := by
-  sorry
+  infer_instance
 
 theorem filteredForgetfulHomologyZero_is_homological
     (C : Type u) [Category.{v} C] [Abelian C] :
     (filteredForgetfulHomologyZeroFunctor C).IsHomological := by
-  sorry
+  infer_instance
 
 theorem filteredAcyclic_properties
     (C : Type u) [Category.{v} C] [Abelian C] :
     IsStrictlyFullSaturatedPretriangulated (filteredAcyclic C) := by
-  sorry
+  have hEq : filteredAcyclic C =
+      (filteredGradedHomologyZeroFunctor C).homologicalKernel := by
+    ext K
+    rw [Functor.mem_homologicalKernel_iff]
+    rfl
+  rw [hEq]
+  exact homologicalFunctorKernel_properties (filteredGradedHomologyZeroFunctor C)
 
 theorem filteredQuasiIso_properties
     (C : Type u) [Category.{v} C] [Abelian C] :
     SaturatedMultiplicativeSystem (filteredQuasiIso C) ∧
       CompatibleWithTriangulation (filteredQuasiIso C) := by
-  sorry
+  have hEq : filteredQuasiIso C =
+      homologicalFunctorMorphismProperty (filteredGradedHomologyZeroFunctor C) := by
+    ext X Y f
+    dsimp [filteredQuasiIso, MorphismProperty.inverseImage, HomotopyCategory.quasiIso,
+      homologicalFunctorMorphismProperty,
+      Formalization.Books.Derived.Unit03.homologicalDegree]
+    change (∀ n : ℤ, IsIso ((filteredGradedHomologyFunctor C n).map f)) ↔ _
+    constructor
+    · intro h i
+      exact (NatIso.isIso_map_iff
+        ((filteredGradedHomologyZeroFunctor C).isoShift i) f).2 (h i)
+    · intro h i
+      exact (NatIso.isIso_map_iff
+        ((filteredGradedHomologyZeroFunctor C).isoShift i) f).1 (h i)
+  change SaturatedMultiplicativeSystem (filteredQuasiIso C) ∧
+    CompatibleWithTriangulation (filteredQuasiIso C)
+  rw [hEq]
+  exact homologicalFunctorMorphismProperty_saturated
+    (H := filteredGradedHomologyZeroFunctor C)
 
 noncomputable instance filteredQuasiIso_leftCalculus
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -1622,7 +1646,7 @@ abbrev filteredLocalizationFunctor
 theorem filteredDerivedCategory_additiveCategory_exists
     (C : Type u) [Category.{v} C] [Abelian C] :
     Nonempty (AdditiveCategory (FilteredDerivedCategory C)) := by
-  sorry
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 noncomputable instance filteredDerivedCategory_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -1647,7 +1671,13 @@ theorem filteredLocalizationFunctor_is_localization
 theorem filteredGradedHomologyZero_inverts
     (C : Type u) [Category.{v} C] [Abelian C] :
     (filteredQuasiIso C).IsInvertedBy (filteredGradedHomologyZeroFunctor C) := by
-  sorry
+  intro X Y f hf
+  change IsIso ((filteredGradedHomologyFunctor C 0).map f)
+  change HomotopyCategory.quasiIso (GradedObject ℤ C) (ComplexShape.up ℤ)
+    ((filteredAssociatedGradedHomotopyFunctor C).map f) at hf
+  exact (HomotopyCategory.homologyFunctor_inverts_quasiIso
+    (GradedObject ℤ C) (ComplexShape.up ℤ) 0)
+    ((filteredAssociatedGradedHomotopyFunctor C).map f) hf
 
 noncomputable def filteredGradedHomologyZeroLocalizationFunctor
     (C : Type u) [Category.{v} C] [Abelian C] :

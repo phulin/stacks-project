@@ -35,9 +35,10 @@ def moduleHomRestriction {R : Type u} [Ring R] {M M' J : ModuleCat R}
     (f : M ⟶ M') : (M' ⟶ J) → (M ⟶ J) := fun φ => f ≫ φ
 
 theorem moduleHomRestriction_injective {R : Type u} [Ring R]
-    {M M' J : ModuleCat R} (f : M ⟶ M') (hf : Mono f) :
+    {M M' J : ModuleCat R} (f : M ⟶ M') (hf : Epi f) :
     Function.Injective (moduleHomRestriction f (J := J)) := by
-  sorry
+  intro φ ψ h
+  exact hf.left_cancellation φ ψ h
 
 theorem injective_iff_hom_exact {R : Type u} [Ring R] (J : ModuleCat R) :
     Injective J ↔ IsExact (preadditiveYoneda.obj J) := by

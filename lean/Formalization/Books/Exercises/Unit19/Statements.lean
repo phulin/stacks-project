@@ -1329,6 +1329,56 @@ private lemma source_square_relations
       simpa using h
     exact sub_eq_zero.mp h0
 
+private def planeCurveX : planeCurveRing :=
+  Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (0 : Fin 2))
+
+private def planeCurveY : planeCurveRing :=
+  Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.X (1 : Fin 2))
+
+private def planeCurveP : planeCurveRing :=
+  (planeCurveX - 1) * (planeCurveX - 2) * (planeCurveX - 3)
+
+private def planeCurveQ : planeCurveRing :=
+  (planeCurveX + 1) * (planeCurveX + 2) * (planeCurveX + 3)
+
+private theorem planeCurve_mk_C (r : ℚ) :
+    (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      (MvPolynomial.C r) : planeCurveRing) = algebraMap ℚ planeCurveRing r := by
+  change Ideal.Quotient.mk (Ideal.span {planeRelation})
+    (algebraMap ℚ planePolynomialRing r) = algebraMap ℚ planeCurveRing r
+  rw [Ideal.Quotient.mk_algebraMap]
+
+private theorem planeCurve_relation_in_curve :
+    (planeCurveY ^ 2 - planeCurveP - planeCurveQ) ^ 2 =
+      4 * planeCurveP * planeCurveQ := by
+  have h := Ideal.Quotient.eq_zero_iff_mem.mpr
+    (show planeRelation ∈ Ideal.span {planeRelation} from
+      Ideal.subset_span (by simp))
+  change Ideal.Quotient.mk (Ideal.span {planeRelation})
+    (((MvPolynomial.X (1 : Fin 2)) ^ 2 - planeFirstCubic - planeSecondCubic) ^ 2 -
+      4 * planeFirstCubic * planeSecondCubic) = 0 at h
+  simp only [map_sub, map_mul, map_pow, map_add] at h
+  have hFirst : (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      planeFirstCubic : planeCurveRing) = planeCurveP := by
+    simp [planeFirstCubic, planeCurveP, planeCurveX]
+    rw [planeCurve_mk_C, planeCurve_mk_C, map_ofNat, map_ofNat]
+  have hSecond : (Ideal.Quotient.mk (Ideal.span {planeRelation})
+      planeSecondCubic : planeCurveRing) = planeCurveQ := by
+    simp [planeSecondCubic, planeCurveQ, planeCurveX]
+    rw [planeCurve_mk_C, planeCurve_mk_C, map_ofNat, map_ofNat]
+  rw [hFirst, hSecond] at h
+  simpa only [planeCurveY, map_ofNat] using sub_eq_zero.mp h
+
+private theorem planeCurve_relation_in_away {y p q : planeCurveRing}
+    (h : (y ^ 2 - p - q) ^ 2 = 4 * p * q) :
+    let y' := algebraMap planeCurveRing (Localization.Away y) y
+    let p' := algebraMap planeCurveRing (Localization.Away y) p
+    let q' := algebraMap planeCurveRing (Localization.Away y) q
+    (y' ^ 2 - p' - q') ^ 2 = 4 * p' * q' := by
+  dsimp only
+  simpa only [map_sub, map_mul, map_pow, map_ofNat] using
+    congrArg (algebraMap planeCurveRing (Localization.Away y)) h
+
 theorem source_fraction_field_equiv_plane_curve :
     Nonempty (FractionRing sourceRing ≃+* FractionRing planeCurveRing) := by
   let xA : sourceRing :=
@@ -1417,50 +1467,9 @@ theorem source_fraction_field_equiv_plane_curve :
     rw [← map_ofNat (algebraMap ℚ B') 2, ← map_mul]
     norm_num
   have hB_rel : (yB' ^ 2 - pB' - qB') ^ 2 = 4 * pB' * qB' := by
-    have h := Ideal.Quotient.eq_zero_iff_mem.mpr
-      (show planeRelation ∈ Ideal.span {planeRelation} from Ideal.subset_span (by simp))
-    have h0 := h
-    change (Ideal.Quotient.mk (Ideal.span {planeRelation}))
-      (((MvPolynomial.X (1 : Fin 2)) ^ 2 - planeFirstCubic - planeSecondCubic) ^ 2 -
-        4 * planeFirstCubic * planeSecondCubic) = 0 at h0
-    simp only [map_sub, map_mul, map_pow, map_add] at h0
-    have hC2 :
-        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C (2 : ℚ)) :
-          planeCurveRing) = 2 := by
-      change Ideal.Quotient.mk (Ideal.span {planeRelation})
-        (algebraMap ℚ planePolynomialRing 2) = 2
-      rw [Ideal.Quotient.mk_algebraMap]
-      exact map_ofNat (algebraMap ℚ planeCurveRing) 2
-    have hC3 :
-        (Ideal.Quotient.mk (Ideal.span {planeRelation}) (MvPolynomial.C (3 : ℚ)) :
-          planeCurveRing) = 3 := by
-      change Ideal.Quotient.mk (Ideal.span {planeRelation})
-        (algebraMap ℚ planePolynomialRing 3) = 3
-      rw [Ideal.Quotient.mk_algebraMap]
-      exact map_ofNat (algebraMap ℚ planeCurveRing) 3
-    have hFirst :
-        (Ideal.Quotient.mk (Ideal.span {planeRelation}) planeFirstCubic :
-          planeCurveRing) = pB := by
-      simp [planeFirstCubic, pB, xB]
-      rw [hC2, hC3]
-    have hSecond :
-        (Ideal.Quotient.mk (Ideal.span {planeRelation}) planeSecondCubic :
-          planeCurveRing) = qB := by
-      simp [planeSecondCubic, qB, xB]
-      rw [hC2, hC3]
-    rw [hFirst, hSecond] at h0
-    simp only [map_ofNat] at h0
-    have h0' : (yB ^ 2 - pB - qB) ^ 2 - 4 * pB * qB = 0 := by
-      simpa [pB, qB, xB] using h0
-    have h' := congrArg (algebraMap planeCurveRing B') h0'
-    simp only [map_sub, map_mul, map_pow, map_add] at h'
-    have hC4 : algebraMap planeCurveRing B' (4 : planeCurveRing) = 4 :=
-      map_ofNat (algebraMap planeCurveRing B') 4
-    rw [hC4] at h'
-    have h0'' :
-        (yB' ^ 2 - pB' - qB') ^ 2 - 4 * pB' * qB' = 0 := by
-      simpa [pB', qB', yB'] using h'
-    exact sub_eq_zero.mp h0''
+    apply planeCurve_relation_in_away
+    simpa [yB, pB, qB, xB, planeCurveY, planeCurveP, planeCurveQ,
+      planeCurveX] using planeCurve_relation_in_curve
   have hsB : sB' ^ 2 = pB' := by
     exact (primitive_element_quadratic_identities hYB hcB hB_rel).1
   have htB : tB' ^ 2 = qB' := by

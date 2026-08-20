@@ -1151,18 +1151,25 @@ structure ShiftedLongExactSequence {C : Type u} [Category.{v} C]
   exact : ∀ n,
     (ShortComplex.mk (differential n) (differential (n + 1)) (complex n)).Exact
 
+/-- The five-term fragment of the shifted long homology sequence attached to a
+short exact sequence of shifted differential objects. -/
+structure ShiftedDifferentialHomologyExactData
+    {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
+    (A B D : ShiftedDifferentialObject C S) where
+  boundary : S.inverse.obj (shiftedDifferentialHomology D) ⟶
+    shiftedDifferentialHomology A
+  map_f : shiftedDifferentialHomology A ⟶ shiftedDifferentialHomology B
+  map_g : shiftedDifferentialHomology B ⟶ shiftedDifferentialHomology D
+  shifted_boundary : shiftedDifferentialHomology D ⟶
+    S.functor.obj (shiftedDifferentialHomology A)
+  exact : ExactFiveTerm boundary map_f map_g shifted_boundary
+
 theorem shiftedDifferentialShortExact_homology_long_exact
     {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
     {A B D : ShiftedDifferentialObject C S}
     (_Q : ShiftedDifferentialShortExact A B D) :
-    ∃ X : ℤ → C, Nonempty (ShiftedLongExactSequence S X) := by
-  let := HasZeroObject.zero' C
-  refine ⟨(fun _ => (0 : C)), ⟨{ differential := (fun _ => 0), complex := ?_, exact := ?_ }⟩⟩
-  · intro n
-    simp
-  · intro n
-    apply ShortComplex.exact_of_isZero_X₂
-    exact isZero_zero C
+    Nonempty (ShiftedDifferentialHomologyExactData A B D) := by
+  sorry
 
 theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
     [Abelian C] {S : C ≌ C} :
@@ -1771,7 +1778,11 @@ structure ShiftedSelfMapData (C : Type u) [Category.{v} C]
     [Abelian C] (S T : C ≌ C) where
   commute : T.functor ⋙ S.functor = S.functor ⋙ T.functor
   A : ShiftedDifferentialObject C S
+  /-- The comparison identifying `T⁻¹S` with `ST⁻¹`. -/
+  target_comparison : (S.functor ⋙ T.inverse) ≅ (T.inverse ⋙ S.functor)
   targetDifferential : T.inverse.obj A.carrier ⟶ S.functor.obj (T.inverse.obj A.carrier)
+  target_differential_eq :
+    T.inverse.map A.d ≫ target_comparison.hom.app A.carrier = targetDifferential
   target_d_squared : targetDifferential ≫ S.functor.map targetDifferential = 0
   alpha : ShiftedDifferentialObjectHom A
     { carrier := T.inverse.obj A.carrier
@@ -1792,6 +1803,27 @@ def shiftedSelfMapQuotient {C : Type u} [Category.{v} C]
   carrier := cokernel D.alpha.hom
   d := D.quotientDifferential
   d_squared := D.quotient_d_squared
+
+/-- The shifted short exact sequence underlying an injective self-map. -/
+def shiftedSelfMapShortExact {C : Type u} [Category.{v} C]
+    [Abelian C] {S T : C ≌ C} (D : ShiftedSelfMapData C S T) :
+    ShiftedDifferentialShortExact D.A
+      { carrier := T.inverse.obj D.A.carrier
+        d := D.targetDifferential
+        d_squared := D.target_d_squared }
+      (shiftedSelfMapQuotient D) where
+  f := D.alpha
+  g := { hom := cokernel.π D.alpha.hom
+         comm := D.quotient_induced.symm }
+  complex := cokernel.condition _
+  exact := by
+    refine { exact := ?_, mono_f := D.injective, epi_g := ?_ }
+    · apply ShortComplex.exact_of_g_is_cokernel
+        (ShortComplex.mk D.alpha.hom (cokernel.π D.alpha.hom)
+          (cokernel.condition _))
+      exact cokernelIsCokernel _
+    · change Epi (cokernel.π D.alpha.hom)
+      infer_instance
 
 theorem shiftedSelfMap_exact_couple_exists {C : Type u} [Category.{v} C]
     [Abelian C] {S T : C ≌ C} (D : ShiftedSelfMapData C S T) :

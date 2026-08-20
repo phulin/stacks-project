@@ -351,6 +351,60 @@ theorem kollar_local_ring_alternative
     ∃! i : Fin 4, kollarAlternative R i := by
   sorry
 
+/- The depth alternative excludes the finite local modification branch.  This
+   is the reusable form of the depth contradiction in Kollár's lemma: callers
+   only need the branch witness supplied by `kollarAlternative R 3`. -/
+theorem kollarAlternative_three_false_of_depth_two
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (hdepth : 2 ≤ Formalization.Books.Algebra.Unit72.localDepth R R)
+    (hbranch : kollarAlternative R 3) : False := by
+  have htwo : kollarAlternative R 2 := by
+    simpa [kollarAlternative] using hdepth
+  obtain ⟨i, hi, hu⟩ := kollar_local_ring_alternative (R := R)
+  have htwo_eq : (2 : Fin 4) = i := hu 2 htwo
+  have hthree_eq : (3 : Fin 4) = i := hu 3 hbranch
+  have hval : (2 : ℕ) = 3 := by
+    exact congrArg Fin.val (htwo_eq.trans hthree_eq.symm)
+  omega
+
+/- A finite birational extension of a normal domain is already the base
+   domain.  The fraction-field equivalence is written explicitly so this
+   lemma applies to the `HasFiniteBirationalExtension` interface below. -/
+theorem finite_birational_surjective_of_isIntegrallyClosed
+    {R S : Type u} [CommRing R] [CommRing S] [IsDomain R] [IsDomain S]
+    (hclosed : IsIntegrallyClosed R) (f : R →+* S) (hf : RingHom.Finite f)
+    (e : FractionRing R ≃+* FractionRing S)
+    (he : e.toRingHom.comp (algebraMap R (FractionRing R)) =
+      (algebraMap S (FractionRing S)).comp f) :
+    Function.Surjective f := by
+  let g : S →+* FractionRing R :=
+    e.symm.toRingHom.comp (algebraMap S (FractionRing S))
+  have hcomp : g.comp f = algebraMap R (FractionRing R) := by
+    rw [show g.comp f =
+        e.symm.toRingHom.comp
+          ((algebraMap S (FractionRing S)).comp f) by
+      rfl, ← he]
+    ext r
+    simp
+  intro s
+  have hsint : f.IsIntegralElem s := hf.to_isIntegral s
+  have hgsint : (g.comp f).IsIntegralElem (g s) := hsint.map g
+  have hgsint' : IsIntegral R (g s) := by
+    change (algebraMap R (FractionRing R)).IsIntegralElem (g s)
+    rw [← hcomp]
+    exact hgsint
+  obtain ⟨r, hr⟩ := (isIntegrallyClosed_iff (FractionRing R)).mp hclosed hgsint'
+  refine ⟨r, ?_⟩
+  apply (IsFractionRing.injective S (FractionRing S))
+  have hfr : e (algebraMap R (FractionRing R) r) =
+      algebraMap S (FractionRing S) (f r) := by
+    exact congrArg (fun k : R →+* FractionRing S => k r) he
+  calc
+    algebraMap S (FractionRing S) (f r) =
+        e (algebraMap R (FractionRing R) r) := hfr.symm
+    _ = e (g s) := by rw [hr]
+    _ = algebraMap S (FractionRing S) s := by simp [g]
+
 theorem exists_finite_local_modification_of_nonregular_dimension_one
     {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
     (hdim : ringKrullDim R = 1)

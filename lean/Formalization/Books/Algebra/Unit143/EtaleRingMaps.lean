@@ -183,7 +183,9 @@ structure EtaleFiniteTypeApproximation
   [algebraR₀S₀ : Algebra R₀ S₀]
   finiteTypeOverInt : Algebra.FiniteType ℤ R₀
   etale : Algebra.Etale R₀ S₀
-  baseChange : Nonempty (R ⊗[R₀] S₀ ≃ₐ[R] S)
+  baseChange :
+    letI : Algebra R (R ⊗[R₀] S₀) := Algebra.TensorProduct.leftAlgebra
+    Nonempty (R ⊗[R₀] S₀ ≃ₐ[R] S)
 
 /-- Every étale map is obtained by base change from one whose source is of
 finite type over the integers. -/
@@ -234,7 +236,8 @@ structure EtaleLocalizationDescentData
   [algebraAB : Algebra A B]
   etale : Algebra.Etale A B
   localizationEquiv :
-    Nonempty (B' ≃+* Localization (M.map (algebraMap A B)))
+    Nonempty (B' ≃ₐ[Localization M]
+      Localization (Algebra.algebraMapSubmonoid B M))
 
 /-- An étale map out of a localization spreads out to an étale map before
 localization. -/
@@ -415,9 +418,23 @@ structure SquareZeroEtaleDiagram
   exactB : Function.Exact j B'ToB
   iInjective : Function.Injective i
   jInjective : Function.Injective j
+  i_smul : ∀ (a' : A') (x : I),
+    i ((A'ToA a') • x) = a' * i x
+  j_smul : ∀ (b' : B') (y : J),
+    j ((B'ToB b') • y) = b' * j y
+  kernelMap :
+    letI : Algebra A B := AToB.toAlgebra
+    letI : Module A J := Module.restrictScalars A B J
+    I →ₗ[A] J
+  kernelMap_commutes :
+    letI : Algebra A B := AToB.toAlgebra
+    letI : Module A J := Module.restrictScalars A B J
+    ∀ x, j (kernelMap x) = A'ToB' (i x)
   kernelBaseChange :
     letI : Algebra A B := AToB.toAlgebra
-    Nonempty (B ⊗[A] I ≃ₗ[B] J)
+    letI : Module A J := Module.restrictScalars A B J
+    ∃ e : B ⊗[A] I ≃ₗ[B] J,
+      ∀ (b : B) (x : I), e (b ⊗ₜ[A] x) = b • kernelMap x
 
 /-- Étaleness lifts across the source's square-zero exact diagram. -/
 theorem etale_lift_infinitesimal

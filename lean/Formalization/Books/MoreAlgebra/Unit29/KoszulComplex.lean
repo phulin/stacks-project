@@ -7,7 +7,6 @@ import Mathlib.Algebra.Homology.HomotopyCofiber
 import Mathlib.Algebra.Homology.Monoidal
 import Mathlib.Algebra.Homology.TotalComplex
 import Mathlib.LinearAlgebra.Alternating.Uncurry.Fin
-import Mathlib.LinearAlgebra.Matrix.ToLinearEquiv
 
 /-!
 # More on Algebra, Chapter 29: The Koszul complex
@@ -119,25 +118,27 @@ def IsKoszulDerivation (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
             ((x : ExteriorAlgebra R E) * d (y : ExteriorAlgebra R E))) ∧
     (∀ e, d (ExteriorAlgebra.ι R e) = algebraMap R (ExteriorAlgebra R E) (φ e))
 
+/-- The algebra differential is a graded derivation and squares to zero. -/
+def IsKoszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
+    (φ : E →ₗ[R] R) (D : ExteriorAlgebra R E →ₗ[R] ExteriorAlgebra R E) : Prop :=
+  IsKoszulDerivation R E φ D ∧ D.comp D = 0
+
 /-- The commutative DGA underlying the Koszul complex. -/
 structure KoszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
     (φ : E →ₗ[R] R) where
   differential : ExteriorAlgebra R E →ₗ[R] ExteriorAlgebra R E
+  isDGA : IsKoszulDGA R E φ differential
 
-/-- The canonical Koszul DGA structure. -/
+/-! The canonical Koszul DGA structure. -/
 def koszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
     (φ : E →ₗ[R] R) : KoszulDGA R E φ :=
-  { differential := koszulAlgebraDifferential R E φ }
-
-/-- The algebra differential is a graded derivation and squares to zero. -/
-def IsKoszulDGA (R E : Type u) [CommRing R] [AddCommGroup E] [Module R E]
-    (φ : E →ₗ[R] R) (D : KoszulDGA R E φ) : Prop :=
-  IsKoszulDerivation R E φ D.differential ∧
-    D.differential.comp D.differential = 0
+  { differential := koszulAlgebraDifferential R E φ
+    isDGA := by sorry }
 
 theorem koszulDGA_isDGA (R E : Type u) [CommRing R] [AddCommGroup E]
-    [Module R E] (φ : E →ₗ[R] R) : IsKoszulDGA R E φ (koszulDGA R E φ) := by
-  sorry
+    [Module R E] (φ : E →ₗ[R] R) :
+    IsKoszulDGA R E φ (koszulDGA R E φ).differential := by
+  exact (koszulDGA R E φ).isDGA
 
 theorem koszulAlgebraDifferential_on_generator (R E : Type u) [CommRing R]
     [AddCommGroup E] [Module R E] (φ : E →ₗ[R] R) (e : E) :
@@ -305,19 +306,19 @@ theorem koszul_functorial
 /-- Data of an isomorphism between two Koszul DGAs. -/
 structure KoszulDGAIso (R E E' : Type u) [CommRing R] [AddCommGroup E]
     [AddCommGroup E'] [Module R E] [Module R E']
-    (φ : E →ₗ[R] R) (φ' : E' →ₗ[R] R) (ψ : E →ₗ[R] E') where
+    (φ : E →ₗ[R] R) (φ' : E' →ₗ[R] R) (ψ : E ≃ₗ[R] E') where
   algebraEquiv : ExteriorAlgebra R E ≃ₐ[R] ExteriorAlgebra R E'
-  algebraEquiv_eq_induced : algebraEquiv.toAlgHom = koszulAlgebraMap R E E' ψ
+  algebraEquiv_eq_induced :
+    algebraEquiv.toAlgHom = koszulAlgebraMap R E E' ψ.toLinearMap
   differential_commutes :
     algebraEquiv.toLinearMap.comp (koszulAlgebraDifferential R E φ) =
       (koszulAlgebraDifferential R E' φ').comp algebraEquiv.toLinearMap
 
-/-- The change-of-basis sequence associated with an invertible matrix acting on
-the standard free module. -/
+/-! The change-of-basis sequence associated with an invertible matrix.  The
+source uses the rows of the matrix: `g i = ∑ j, X i j * f j`. -/
 noncomputable def matrixChangeSequence (R : Type u) [CommRing R] (r : ℕ)
-    (X : Matrix (Fin r) (Fin r) R) [Invertible X] (f : Fin r → R) : Fin r → R :=
-  fun i => sequenceLinearMap R r f
-    (Matrix.toLinearEquiv' X (inferInstance : Invertible X) (Pi.single i 1))
+    (X : Matrix (Fin r) (Fin r) R) (f : Fin r → R) : Fin r → R :=
+  fun i => ∑ j, X i j * f j
 
 theorem koszul_change_basis
     (R : Type u) [CommRing R] (r : ℕ) (f : Fin r → R)
@@ -389,6 +390,19 @@ noncomputable abbrev coneProjectionComponent {R : Type u} [CommRing R]
     (i j : ℤ) (hij : (ComplexShape.down ℤ).Rel i j) :
     (homotopyCone f).X i ⟶ A.X j :=
   HomologicalComplex.homotopyCofiber.fstX f i j hij
+
+/-- The canonical projection from a cone to the shifted source. -/
+noncomputable def coneProjection {R : Type u} [CommRing R]
+    {A B : ChainComplex (ModuleCat.{u} R) ℤ} (f : A ⟶ B) :
+    homotopyCone f ⟶
+      (Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor
+        (ModuleCat.{u} R) (-1 : ℤ)).obj A :=
+  { f := fun i =>
+      HomologicalComplex.homotopyCofiber.fstX f i (i - 1) (by
+        simpa [ComplexShape.down, ComplexShape.down'] using (sub_add_cancel i 1))
+    comm' := by
+      intro i j hij
+      sorry }
 
 theorem homotopyCone_d_fst
     {R : Type u} [CommRing R] {A B : ChainComplex (ModuleCat.{u} R) ℤ}

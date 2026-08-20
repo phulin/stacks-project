@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit10.InternalHom
+import Formalization.Books.Algebra.Unit11.CharacterizingFinite
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.Algebra.Homology.ShortComplex.Limits
@@ -491,64 +492,110 @@ also useful as a separate local claim.
    `Unit10.internalHomPostcomp_apply` from
    `Formalization/Books/Algebra/Unit10/InternalHom.lean`.
 
-5. The substantial step is (5) -> (6).  Introduce private, source-local data
-   for an explicit finite presentation over `M₃`: natural numbers `n,m`, a
-   relation map `(Fin m →₀ R) →ₗ[R] (Fin n →₀ R)`, and a map from its
-   quotient by the relation range to `M₃`.  Make these presentations a
-   category, with morphisms the linear maps commuting with the maps to
-   `M₃`.  This category lives in `Type u` (unlike the category of all
-   `ModuleCat.{u} R` objects).  Prove it filtered directly with
-   `IsFiltered.mk` (`Mathlib/CategoryTheory/Filtered/Basic.lean`): the zero
-   presentation is an object; products give a common successor; and the
-   quotient by the range of the difference of two parallel maps gives an
-   equalizing successor.  The latter quotient is finitely presented by
-   `Module.finitePresentation_of_surjective`, since
-   `Module.Finite.fg_top` and `Submodule.FG.map` make that range finitely
-   generated.  Re-encode each product or quotient using
-   `Module.FinitePresentation.exists_fin'` and
-   `Finsupp.linearEquivFunOnFinite`.
+5. The substantial step is (5) -> (6).  Do not rebuild the finite-presentation
+   index.  Choose
+   `C : Unit11.FilteredFinitelyPresentedModuleColimit (ModuleCat.of R M₃)`
+   from `Unit11.exists_filteredColimit_finitelyPresented`
+   (`Formalization/Books/Algebra/Unit11/CharacterizingFinite.lean`).  Put
+   `I := C.index : Type u`, install `Category.{u} I` and `IsFiltered I` from
+   `C`, and abbreviate `D := C.presentation.diag : I ⥤ ModuleCat.{u} R` and
+   `q i := (C.presentation.ι.app i).hom`.  Thus
+   `C.presentation.isColimit` is the required colimit proof for `q`, and
+   `C.finitelyPresented i` supplies precisely the final structure field.
 
-   Let `D₃` send a presentation to its quotient module.  Its tautological
-   cocone to `ModuleCat.of R M₃` is colimiting: represent an element of
-   `M₃` at the one-generator, no-relation presentation; prove additivity and
-   scalar compatibility at a two-generator common successor; and use the
-   equalizing successor for independence and uniqueness.  This gives a
-   `ColimitPresentation` of `M₃` by finitely presented modules without a
-   later-chapter or large-category import.
+   For each `i`, install `C.finitelyPresented i` and specialize (5) to the
+   underlying `Type u` of `D.obj i` and to `q i`.  By surjectivity choose
+   `s i : D.obj i →ₗ[R] M₂` with `f₂.comp (s i) = q i`; normalize this
+   equation with `Unit10.internalHomPostcomp_apply`
+   (`Formalization/Books/Algebra/Unit10/InternalHom.lean`).  These lifts need
+   not be natural.  For `a : i ⟶ j`, set
+   `d a := s i - (s j).comp (D.map a).hom`.  Naturality of
+   `C.presentation.ι`, together with the equations for `s i` and `s j`,
+   gives `f₂.comp (d a) = 0`.  Hence `hshort.2.1` puts every `d a p` in
+   `LinearMap.range f₁`.  With
+   `e : M₁ ≃ₗ[R] LinearMap.range f₁ :=
+     LinearEquiv.ofInjective f₁ hshort.1`, define
+   `δ a := e.symm.toLinearMap.comp
+     ((d a).codRestrict (LinearMap.range f₁) ...)` and prove the API equation
+   `f₁.comp (δ a) = d a` by `e.apply_symm_apply`.  Keep this equation as the
+   only unfolding lemma for `δ`.
 
-   For every stage `i`, condition (5) chooses a lift
-   `s i : D₃.obj i →ₗ[R] M₂` of its structure map.  Use the split stage
-   `M₁ → M₁ × D₃.obj i → D₃.obj i`, with `inl` and `snd`, and map its middle
-   term to `M₂` by `(x,p) ↦ f₁ x + s i p`.  On a transition `a : i ⟶ j`,
-   the difference `s i - (s j).comp a` lands in `range f₁`; use
-   `LinearEquiv.ofInjective f₁ hshort.1` to define the unique correction
-   `δ a : D₃.obj i →ₗ[R] M₁`.  The middle transition is
-   `(x,p) ↦ (x + δ a p, a p)`.  Injectivity of `f₁` proves identities and
-   composition, hence these stages form a functor to
-   `ShortComplex (ModuleCat.{u} R)` and a cocone to
-   `ShortComplex.moduleCatMk f₁ f₂ hshort.2.1.comp_eq_zero`.
+   Write `X := ModuleCat.of R M₁`.  Define the stage at `i` to be exactly
+   `ShortComplex.mk (biprod.inl : X ⟶ X ⊞ D.obj i)
+     (biprod.snd : X ⊞ D.obj i ⟶ D.obj i) (by simp)`.  For `a : i ⟶ j`, its
+   three components are `𝟙 X`, `D.map a`, and the middle map
+   `biprod.lift
+     (biprod.fst + biprod.snd ≫ ModuleCat.ofHom (δ a))
+     (biprod.snd ≫ D.map a)`.
+   The equation `f₁.comp (δ a) = d a` proves the two short-complex squares.
+   Injectivity of `f₁` gives
+   `δ (𝟙 i) = 0` and
+   `δ (a ≫ b) = δ a + (δ b).comp (D.map a).hom`; these are the exact
+   identities needed for `Functor.map_id` and `Functor.map_comp`.  This
+   yields `F : I ⥤ ShortComplex (ModuleCat.{u} R)`.
 
-   Prove the component cocones colimiting: component one is the constant
-   cocone, handled by `isColimitConstCocone` because a filtered category is
-   connected; component three is the preceding presentation; component two
-   is an elementwise diagram chase using exactness of `hshort` and the
-   equalizing property of the index.  Assemble them with
-   `ShortComplex.isColimitOfIsColimitπ`
-   (`Mathlib/Algebra/Homology/ShortComplex/Limits.lean`).  Each stage has
-   `Module.FinitePresentation` by construction, and its standard splitting
-   is `ShortComplex.Splitting.ofHasBinaryBiproduct`; use
-   `ShortComplex.Splitting.shortExact` for `stage_split`.  These data fill
-   `DirectedSplitExactColimitPresentation`.
+   Define a cocone `c : Cocone F` with point
+   `S₀ := ShortComplex.moduleCatMk f₁ f₂ hshort.2.1.comp_eq_zero`.  Its legs
+   have components `𝟙 X`, `C.presentation.ι.app i`, and
+   `biprod.desc (ModuleCat.ofHom f₁) (ModuleCat.ofHom (s i))` in the middle.
+   The first short-complex square is a biproduct simp lemma; the second uses
+   `f₂.comp f₁ = 0` and `f₂.comp (s i) = q i`.  Cocone naturality in the
+   middle is exactly the correction equation for `δ`; components one and
+   three are respectively trivial and `C.presentation.ι.naturality`.
+
+   Prove the middle colimit without an elementwise choice construction.
+   First, the first component of `c` is colimiting by
+   `isColimitConstCocone I X`
+   (`Mathlib/CategoryTheory/Limits/Connected.lean`), and the third is
+   colimiting by `C.presentation.isColimit`.  Let
+   `cCol := ShortComplex.colimitCocone F` and
+   `hcCol := ShortComplex.isColimitColimitCocone F`
+   (`Mathlib/Algebra/Homology/ShortComplex/Limits.lean`), and set
+   `κ := hcCol.desc c : cCol.pt ⟶ S₀`.  The first and third components of
+   `κ` are isomorphisms: identify them, using the corresponding colimit
+   `hom_ext`, with the `.hom` maps of
+   `IsColimit.coconePointUniqueUpToIso` between the canonical component
+   cocones and the two colimit proofs just obtained.
+
+   It remains to prove that the source of `κ` is short exact.  Form the
+   pointwise short complex of functors exactly as the local `S` in
+   `universallyExact_of_directedColimit` above, and prove it exact with
+   `JointlyReflectIsomorphisms.exact_iff`, since every evaluated stage has
+   the standard splitting.  Apply `colim.exact_mapShortComplex`, then
+   `colim.map_mono'` to its first natural transformation and
+   `colim.map_epi'` to its second
+   (`Mathlib/CategoryTheory/Abelian/GrothendieckAxioms/Colim.lean`); after a
+   `change`, these are the exact, mono, and epi fields of `cCol.pt`.
+   Construct `S₀.ShortExact` directly from `hshort` using
+   `ModuleCat.mono_iff_injective`, `ModuleCat.epi_iff_surjective`, and
+   `ShortComplex.ShortExact.moduleCat_exact_iff_function_exact`.
+
+   Now apply `ShortComplex.isIso₂_of_shortExact_of_isIso₁₃' κ`
+   (`Mathlib/Algebra/Homology/ShortComplex/ShortExact.lean`) to the two short
+   exact rows and the endpoint isomorphisms.  This proves that `κ.τ₂`--the
+   canonical map from the colimit of the middle stages to `M₂`--is an
+   isomorphism, which is the missing middle-colimit argument.  Install
+   `IsIso κ` with `ShortComplex.isIso_of_isIso`, and transfer `hcCol` to `c`
+   using `IsColimit.ofIsoColimit` and
+   `Cocone.ext (asIso κ) (fun i => hcCol.fac c i)`.  Use this as the
+   `ColimitPresentation.isColimit` field.  Finally, at every `i`, take
+   `ShortComplex.Splitting.ofHasBinaryBiproduct X (D.obj i)` and its
+   `.shortExact` (`Mathlib/Algebra/Homology/ShortComplex/Exact.lean`) for
+   `stage_split`, and use `C.finitelyPresented i` for `finitelyPresented`.
+   These data fill `DirectedSplitExactColimitPresentation` without changing
+   its interface.
 
 6. For (6) -> (1), simply choose the presentation and apply
    `universallyExact_of_directedSplitColimit` above.  Close the equivalence
    list with `tfae_finish`.
 
 Known dead ends: do not index by all finitely presented `ModuleCat.{u} R`
-objects, since that index is one universe too large for the structure above.
-Also, `Module.FinitePresentation.exists_fin'` alone does not produce the
-filtered colimit; the explicit presentation category and its equalizing
-quotients are the missing construction.
+objects, since that index is one universe too large for the structure above;
+use the small `Type u` witness from Unit 11.  Do not use the uncorrected middle
+transition `𝟙 X ⊞ D.map a`: the independently chosen `s i` are not natural.
+Also avoid an elementwise definition of the middle colimit map; the short-five
+argument above reduces it to the two endpoint colimits and exact filtered
+colimits.
 -/
 theorem universallyExact_criteria
     {R : Type u} {M₁ M₂ M₃ : Type u} [CommRing R]

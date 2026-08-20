@@ -381,7 +381,18 @@ theorem canonicalFieldPoint_unique_up_to_unique_iso
       Quotient.mk (FieldPoint.setoid X) (canonicalFieldPoint X y)) :
     ∃! e : Spec (residueFieldAt X x) ⟶ Spec (residueFieldAt X y),
       e ≫ X.fromSpecResidueField y = X.fromSpecResidueField x := by
-  sorry
+  have heq : FieldPoint.Equivalent (canonicalFieldPoint X x)
+      (canonicalFieldPoint X y) := Quotient.exact h
+  have himage := FieldPoint.equivalent_same_image heq
+  have hcanon (z : X) : (canonicalFieldPoint X z).image = z := by
+    change X.fromSpecResidueField z
+      (IsLocalRing.closedPoint (residueFieldAt X z)) = z
+    exact Scheme.fromSpecResidueField_apply z _
+  have hxy : x = y := (hcanon x).symm.trans (himage.trans (hcanon y))
+  subst y
+  refine ⟨𝟙 _, by simp, ?_⟩
+  intro e he
+  exact (cancel_mono (X.fromSpecResidueField x)).1 (by simpa using he)
 
 /-- The canonical field-point morphism is the smallest representative of the
 class corresponding to `x`; the equivalence above identifies all classes. -/
@@ -397,7 +408,9 @@ theorem fieldPoint_factors_through_stalk
     {X : Scheme.{u}} {x x' : X} (h : x' ⤳ x) :
     ∃ g : Spec (residueFieldAt X x') ⟶ Spec (localRingAt X x),
       g ≫ canonicalFromSpecStalk X x = X.fromSpecResidueField x' := by
-  sorry
+  refine ⟨Spec.map (X.residue x') ≫ Spec.map (X.presheaf.stalkSpecializes h), ?_⟩
+  rw [Category.assoc, Scheme.SpecMap_stalkSpecializes_fromSpecStalk h]
+  rfl
 
 /-- The residue-field square induced by a morphism of schemes. -/
 theorem residueField_square {X S : Scheme.{u}} (f : X ⟶ S) (x : X) :

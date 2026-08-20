@@ -116,7 +116,7 @@ theorem adjoin_one_root
 /-- A finite ring map becomes a split polynomial quotient after a finite free
 injective base extension. -/
 theorem finite_split
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (hf : RingHom.Finite f) :
     letI : Algebra R S := f.toAlgebra
     ∃ (R' : Type u) (_ : CommRing R') (g : R →+* R'),

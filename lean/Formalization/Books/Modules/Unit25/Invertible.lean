@@ -173,59 +173,67 @@ theorem exists_nonfree_invertible_module_of_nontrivialPicard
 /-! ## Tensor powers -/
 
 noncomputable def tensorPower {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) : ℤ → CommRingSheafModule O
+    (L : CommRingSheafModule O) (_hL : IsInvertibleModule O L) :
+    ℤ → CommRingSheafModule O
   | Int.ofNat n => tensorPowerSheaf O L n
   | Int.negSucc n => tensorPowerSheaf O (invertibleDual O L) (n + 1)
 
 @[simp] theorem tensorPower_zero {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    tensorPower O L 0 = sheafModuleUnit O := rfl
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    tensorPower O L hL 0 = sheafModuleUnit O := rfl
 
 @[simp] theorem tensorPower_negOne {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    tensorPower O L (-1) = invertibleDual O L := rfl
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    tensorPower O L hL (-1) = invertibleDual O L := rfl
 
 theorem tensorPower_ofNat {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) (n : ℕ) :
-    tensorPower O L (Int.ofNat n) = tensorPowerSheaf O L n := rfl
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L) (n : ℕ) :
+    tensorPower O L hL (Int.ofNat n) = tensorPowerSheaf O L n := rfl
 
 theorem tensorPower_negSucc {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) (n : ℕ) :
-    tensorPower O L (Int.negSucc n) =
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L) (n : ℕ) :
+    tensorPower O L hL (Int.negSucc n) =
       tensorPowerSheaf O (invertibleDual O L) (n + 1) := rfl
 
 theorem tensorPower_add_iso_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
     Nonempty (∀ n m : ℤ,
-      tensorProductSheaf O (tensorPower O L n) (tensorPower O L m) ≅
-        tensorPower O L (n + m)) := by
+      tensorProductSheaf O (tensorPower O L hL n) (tensorPower O L hL m) ≅
+        tensorPower O L hL (n + m)) := by
   sorry
 
 noncomputable def tensorPowerAddIso {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) (n m : ℤ) :
-    tensorProductSheaf O (tensorPower O L n) (tensorPower O L m) ≅
-      tensorPower O L (n + m) :=
-  Classical.choice (tensorPower_add_iso_exists O L) n m
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) (n m : ℤ) :
+    tensorProductSheaf O (tensorPower O L hL n) (tensorPower O L hL m) ≅
+      tensorPower O L hL (n + m) :=
+  Classical.choice (tensorPower_add_iso_exists O L hL) n m
 
 structure TensorPowerCoherenceData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) where
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) where
   addIso : ∀ n m : ℤ,
-    tensorProductSheaf O (tensorPower O L n) (tensorPower O L m) ≅
-      tensorPower O L (n + m)
+    tensorProductSheaf O (tensorPower O L hL n) (tensorPower O L hL m) ≅
+      tensorPower O L hL (n + m)
   commutativity : Prop
   commutativity_proof : commutativity
   associativity : Prop
   associativity_proof : associativity
 
 theorem tensorPowerCoherenceData_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    Nonempty (TensorPowerCoherenceData O L) := by
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Nonempty (TensorPowerCoherenceData O L hL) := by
   sorry
 
 noncomputable def tensorPowerCoherenceData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    TensorPowerCoherenceData O L :=
-  Classical.choice (tensorPowerCoherenceData_exists O L)
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    TensorPowerCoherenceData O L hL :=
+  Classical.choice (tensorPowerCoherenceData_exists O L hL)
 
 /-! ## Associated graded ring and module -/
 
@@ -245,104 +253,141 @@ instance sectionType_addCommGroup {X : TopCat.{v}} (O : CommRingSheaf X)
   infer_instance
 
 def gammaStarCarrier {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) : Type v :=
-  ⨁ n : ℕ, sectionType O (tensorPower O L (Int.ofNat n)) (⊤ : Opens X)
+    (L : CommRingSheafModule O) (_hL : IsInvertibleModule O L) : Type v :=
+  ⨁ n : ℕ, sectionType O (tensorPower O L _hL (Int.ofNat n)) (⊤ : Opens X)
 
 abbrev gammaStarModuleCarrier {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L F : CommRingSheafModule O) : Type v :=
+    (L F : CommRingSheafModule O) (_hL : IsInvertibleModule O L) : Type v :=
   ⨁ n : ℤ, sectionType O
-    (tensorProductSheaf O F (tensorPower O L n)) (⊤ : Opens X)
+    (tensorProductSheaf O F (tensorPower O L _hL n)) (⊤ : Opens X)
 
 def signedGammaStarCarrier {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) : Type v :=
-  ⨁ n : ℤ, sectionType O (tensorPower O L n) (⊤ : Opens X)
+    (L : CommRingSheafModule O) (_hL : IsInvertibleModule O L) : Type v :=
+  ⨁ n : ℤ, sectionType O (tensorPower O L _hL n) (⊤ : Opens X)
 
 def HasNoNegativeDegrees {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) : Prop :=
-  ∀ n : ℤ, n < 0 → ∀ s : sectionType O (tensorPower O L n) (⊤ : Opens X),
+    (L : CommRingSheafModule O) (_hL : IsInvertibleModule O L) : Prop :=
+  ∀ n : ℤ, n < 0 → ∀ s : sectionType O (tensorPower O L _hL n) (⊤ : Opens X),
     s = 0
 
 structure SignedGammaStarData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) where
-  ring : Ring (signedGammaStarCarrier O L)
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) where
+  ring : Ring (signedGammaStarCarrier O L hL)
   multiplication_is_tensor_product : Prop
   multiplication_is_tensor_product_proof : multiplication_is_tensor_product
 
 theorem signedGammaStarData_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    Nonempty (SignedGammaStarData O L) := by
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Nonempty (SignedGammaStarData O L hL) := by
   sorry
 
 abbrev associatedGradedRing {X : TopCat.{v}} (O : CommRingSheaf X)
-    (L : CommRingSheafModule O) : Type v := gammaStarCarrier O L
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L) : Type v :=
+  gammaStarCarrier O L hL
 
 structure AssociatedGradedRingData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) where
-  ring : Ring (gammaStarCarrier O L)
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) where
+  ring : Ring (gammaStarCarrier O L hL)
   homogeneousMultiplication : Prop
   homogeneousMultiplication_proof : homogeneousMultiplication
 
 theorem associatedGradedRingData_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    Nonempty (AssociatedGradedRingData O L) := by
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Nonempty (AssociatedGradedRingData O L hL) := by
   sorry
 
 noncomputable def associatedGradedRingData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    AssociatedGradedRingData O L :=
-  Classical.choice (associatedGradedRingData_exists O L)
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    AssociatedGradedRingData O L hL :=
+  Classical.choice (associatedGradedRingData_exists O L hL)
 
 noncomputable instance gammaStarRingInstance {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L : CommRingSheafModule O) :
-    Ring (gammaStarCarrier O L) :=
-  (associatedGradedRingData O L).ring
+    (O : CommRingSheaf X) (L : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Ring (gammaStarCarrier O L hL) :=
+  (associatedGradedRingData O L hL).ring
 
 structure AssociatedGradedModuleData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L F : CommRingSheafModule O) where
-  module : Module (gammaStarCarrier O L) (gammaStarModuleCarrier O L F)
+    (O : CommRingSheaf X) (L F : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) where
+  module : Module (gammaStarCarrier O L hL) (gammaStarModuleCarrier O L F hL)
   gradedModuleLaws : Prop
   gradedModuleLaws_proof : gradedModuleLaws
 
 theorem associatedGradedModuleData_exists {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L F : CommRingSheafModule O) :
-    Nonempty (AssociatedGradedModuleData O L F) := by
+    (O : CommRingSheaf X) (L F : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Nonempty (AssociatedGradedModuleData O L F hL) := by
   sorry
 
 noncomputable def associatedGradedModuleData {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L F : CommRingSheafModule O) :
-    AssociatedGradedModuleData O L F :=
-  Classical.choice (associatedGradedModuleData_exists O L F)
+    (O : CommRingSheaf X) (L F : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    AssociatedGradedModuleData O L F hL :=
+  Classical.choice (associatedGradedModuleData_exists O L F hL)
 
 noncomputable instance gammaStarModuleInstance {X : TopCat.{v}}
-    (O : CommRingSheaf X) (L F : CommRingSheafModule O) :
-    Module (gammaStarCarrier O L) (gammaStarModuleCarrier O L F) :=
-  (associatedGradedModuleData O L F).module
+    (O : CommRingSheaf X) (L F : CommRingSheafModule O)
+    (hL : IsInvertibleModule O L) :
+    Module (gammaStarCarrier O L hL) (gammaStarModuleCarrier O L F hL) :=
+  (associatedGradedModuleData O L F hL).module
 
 theorem gammaStar_ringHom_exists {X : TopCat.{v}}
     (O : CommRingSheaf X) (L N : CommRingSheafModule O)
     (hL : IsInvertibleModule O L) (hN : IsInvertibleModule O N)
     (α : L ⟶ N) :
-    Nonempty (gammaStarCarrier O L →+* gammaStarCarrier O N) := by
+    Nonempty (gammaStarCarrier O L hL →+* gammaStarCarrier O N hN) := by
   sorry
 
 noncomputable def gammaStarRingHom {X : TopCat.{v}}
     (O : CommRingSheaf X) (L N : CommRingSheafModule O)
     (hL : IsInvertibleModule O L) (hN : IsInvertibleModule O N)
-    (α : L ⟶ N) : gammaStarCarrier O L →+* gammaStarCarrier O N :=
+    (α : L ⟶ N) : gammaStarCarrier O L hL →+* gammaStarCarrier O N hN :=
   Classical.choice (gammaStar_ringHom_exists O L N hL hN α)
+
+theorem pullback_gammaStar_ringHom_exists
+    {X Y : TopCat.{v}} {OX : CommRingSheaf X} {OY : CommRingSheaf Y}
+    (f : X ⟶ Y)
+    (α : commRingSheafToRingSheaf OY ⟶
+      (Formalization.Books.Sheaves.Unit24.sheafRingPushforward f).obj
+        (commRingSheafToRingSheaf OX))
+    [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
+    {L : CommRingSheafModule OY} (hL : IsInvertibleModule OY L) :
+    Nonempty (gammaStarCarrier OY L hL →+*
+      gammaStarCarrier OX ((pullbackModule f α).obj L)
+        (pullback_isInvertibleModule f α hL)) := by
+  sorry
+
+noncomputable def pullbackGammaStarRingHom
+    {X Y : TopCat.{v}} {OX : CommRingSheaf X} {OY : CommRingSheaf Y}
+    (f : X ⟶ Y)
+    (α : commRingSheafToRingSheaf OY ⟶
+      (Formalization.Books.Sheaves.Unit24.sheafRingPushforward f).obj
+        (commRingSheafToRingSheaf OX))
+    [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
+    {L : CommRingSheafModule OY} (hL : IsInvertibleModule OY L) :
+    gammaStarCarrier OY L hL →+*
+      gammaStarCarrier OX ((pullbackModule f α).obj L)
+        (pullback_isInvertibleModule f α hL) :=
+  Classical.choice (pullback_gammaStar_ringHom_exists f α hL)
 
 theorem gammaStar_moduleHom_exists {X : TopCat.{v}}
     (O : CommRingSheaf X) (L F G : CommRingSheafModule O)
     (hL : IsInvertibleModule O L) (γ : F ⟶ G) :
-    Nonempty (gammaStarModuleCarrier O L F →ₗ[gammaStarCarrier O L]
-      gammaStarModuleCarrier O L G) := by
+    Nonempty (gammaStarModuleCarrier O L F hL →ₗ[gammaStarCarrier O L hL]
+      gammaStarModuleCarrier O L G hL) := by
   sorry
 
 noncomputable def gammaStarModuleHom {X : TopCat.{v}}
     (O : CommRingSheaf X) (L F G : CommRingSheafModule O)
     (hL : IsInvertibleModule O L) (γ : F ⟶ G) :
-    gammaStarModuleCarrier O L F →ₗ[gammaStarCarrier O L]
-      gammaStarModuleCarrier O L G :=
+    gammaStarModuleCarrier O L F hL →ₗ[gammaStarCarrier O L hL]
+      gammaStarModuleCarrier O L G hL :=
   Classical.choice (gammaStar_moduleHom_exists O L F G hL γ)
 
 /-! ## A set of representatives and the Picard group -/
@@ -355,8 +400,8 @@ noncomputable def invertibleModuleSetoid {X : TopCat.{v}}
   r L N := Nonempty (L.1 ≅ N.1)
   iseqv := {
     refl := fun L => ⟨Iso.refl L.1⟩
-    symm := fun {L N} h => ⟨h.some.symm⟩
-    trans := fun {L N P} h₁ h₂ => ⟨h₁.some ≪≫ h₂.some⟩
+    symm := fun {_L _N} h => ⟨h.some.symm⟩
+    trans := fun {_L _N _P} h₁ h₂ => ⟨h₁.some ≪≫ h₂.some⟩
   }
 
 def PicardRepresentativeSet {X : TopCat.{v}} (O : CommRingSheaf X) :=
@@ -365,6 +410,7 @@ def PicardRepresentativeSet {X : TopCat.{v}} (O : CommRingSheaf X) :=
 theorem exists_picard_representative_set {X : TopCat.{v}}
     (O : CommRingSheaf X) :
     ∃ S : PicardRepresentativeSet O,
+      (∀ N : CommRingSheafModule O, S N → IsInvertibleModule O N) ∧
       ∀ L : CommRingSheafModule O, IsInvertibleModule O L →
         ∃! N : CommRingSheafModule O,
           S N ∧ Nonempty (L ≅ N) := by
@@ -449,19 +495,22 @@ noncomputable def sectionGerm {X : TopCat.{v}} (O : CommRingSheaf X)
 
 def nonvanishingLocus {X : TopCat.{v}} (O : CommRingSheaf X)
     (hO : CommRingSheafHasLocalStalks O) (L : CommRingSheafModule O)
+    (_hL : IsInvertibleModule O L)
     (s : globalModuleSections O L) : Set X :=
   {x | sectionGerm O L x s ∉ stalkMaximalSubmodule O L x (hO x)}
 
 theorem nonvanishingLocus_isOpen {X : TopCat.{v}}
     (O : CommRingSheaf X) (hO : CommRingSheafHasLocalStalks O)
-    (L : CommRingSheafModule O) (s : globalModuleSections O L) :
-    IsOpen (nonvanishingLocus O hO L s) := by
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L)
+    (s : globalModuleSections O L) :
+    IsOpen (nonvanishingLocus O hO L hL s) := by
   sorry
 
 noncomputable def nonvanishingOpen {X : TopCat.{v}}
     (O : CommRingSheaf X) (hO : CommRingSheafHasLocalStalks O)
-    (L : CommRingSheafModule O) (s : globalModuleSections O L) : Opens X :=
-  ⟨nonvanishingLocus O hO L s, nonvanishingLocus_isOpen O hO L s⟩
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L)
+    (s : globalModuleSections O L) : Opens X :=
+  ⟨nonvanishingLocus O hO L hL s, nonvanishingLocus_isOpen O hO L hL s⟩
 
 abbrev localRestriction {X : TopCat.{v}} (O : CommRingSheaf X)
     (L : CommRingSheafModule O) (U : Opens X) :
@@ -497,8 +546,9 @@ theorem sectionInducedMap_isInducedBySection {X : TopCat.{v}}
 
 theorem nonvanishing_section_map_isIso {X : TopCat.{v}}
     (O : CommRingSheaf X) (hO : CommRingSheafHasLocalStalks O)
-    (L : CommRingSheafModule O) (s : globalModuleSections O L) :
-    IsIso (sectionInducedMap O L (nonvanishingOpen O hO L s) s) := by
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L)
+    (s : globalModuleSections O L) :
+    IsIso (sectionInducedMap O L (nonvanishingOpen O hO L hL s) s) := by
   sorry
 
 noncomputable def restrictGlobalSection {X : TopCat.{v}}
@@ -541,12 +591,13 @@ noncomputable def unitSection {X : TopCat.{v}} (O : CommRingSheaf X)
 
 theorem exists_local_inverse_section {X : TopCat.{v}}
     (O : CommRingSheaf X) (hO : CommRingSheafHasLocalStalks O)
-    (L : CommRingSheafModule O) (s : globalModuleSections O L) :
+    (L : CommRingSheafModule O) (hL : IsInvertibleModule O L)
+    (s : globalModuleSections O L) :
     ∃ t : sectionType O (invertibleDual O L)
-        (nonvanishingOpen O hO L s),
-      sectionEvaluation O L (nonvanishingOpen O hO L s)
-          (restrictGlobalSection O L s (nonvanishingOpen O hO L s)) t =
-        unitSection O (nonvanishingOpen O hO L s) := by
+        (nonvanishingOpen O hO L hL s),
+      sectionEvaluation O L (nonvanishingOpen O hO L hL s)
+          (restrictGlobalSection O L s (nonvanishingOpen O hO L hL s)) t =
+        unitSection O (nonvanishingOpen O hO L hL s) := by
   sorry
 
 /-! The pullback remark is stated in the same commutative-sheaf model as the
@@ -595,9 +646,11 @@ theorem pullback_nonvanishingLocus_eq
     [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
     (hOX : CommRingSheafHasLocalStalks OX)
     (hOY : CommRingSheafHasLocalStalks OY)
-    {L : CommRingSheafModule OY} (s : globalModuleSections OY L) :
-    f ⁻¹' nonvanishingLocus OY hOY L s =
+    {L : CommRingSheafModule OY} (hL : IsInvertibleModule OY L)
+    (s : globalModuleSections OY L) :
+    f ⁻¹' nonvanishingLocus OY hOY L hL s =
       nonvanishingLocus OX hOX ((pullbackModule f α).obj L)
+        (pullback_isInvertibleModule f α hL)
         (pullbackGlobalSection f α s) := by
   sorry
 

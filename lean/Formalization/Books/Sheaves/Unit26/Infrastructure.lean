@@ -72,7 +72,42 @@ theorem ringedSpaceModulePullback_formula {X Y : RingedSpace.{v}}
         Formalization.Books.Sheaves.Unit17.tensorProductSheaf
           (ringedSpacePullbackRingMap f)
           ((ringedSpaceInverseImageModule f).obj G)) := by
-  sorry
+  let β := ringedSpacePullbackRingMap f
+  let adj₂ :
+      Formalization.Books.Sheaves.Unit17.sheafChangeOfRings β ⊣
+        SheafOfModules.pushforward (F := 𝟭 (Opens X)) β := by
+    exact (Formalization.Books.Sheaves.Unit17.sheafChangeOfRingsAdjunction β).ofNatIsoRight
+      (Iso.refl _)
+  have hβ :
+      (moduleSheafPullbackUnit f.continuous Y.structureSheaf) ≫
+        (moduleRingSheafPushforward f.continuous).map β = f.sharp := by
+    change
+      ((TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f.continuous).homEquiv
+        Y.structureSheaf X.structureSheaf) β = f.sharp
+    exact ((TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f.continuous).homEquiv
+      Y.structureSheaf X.structureSheaf).apply_symm_apply f.sharp
+  have eR :
+      SheafOfModules.pushforward (F := 𝟭 (Opens X)) β ⋙
+          SheafOfModules.pushforward (F := Opens.map f.continuous)
+            (moduleSheafPullbackUnit f.continuous Y.structureSheaf) ≅
+        SheafOfModules.pushforward (F := Opens.map f.continuous) f.sharp := by
+    exact
+      (SheafOfModules.pushforwardComp
+        (F := Opens.map f.continuous) (G := 𝟭 (Opens X))
+        (moduleSheafPullbackUnit f.continuous Y.structureSheaf) β) ≪≫
+        SheafOfModules.pushforwardCongr hβ
+  have eL :
+      (SheafOfModules.pullback
+        (moduleSheafPullbackUnit f.continuous Y.structureSheaf) ⋙
+        Formalization.Books.Sheaves.Unit17.sheafChangeOfRings β) ≅
+        ringedSpaceModulePullback f :=
+    Adjunction.leftAdjointCompIso
+      (SheafOfModules.pullbackPushforwardAdjunction
+        (moduleSheafPullbackUnit f.continuous Y.structureSheaf))
+      adj₂
+      (SheafOfModules.pullbackPushforwardAdjunction f.sharp)
+      eR
+  exact ⟨(eL.app G).symm⟩
 
 /-! ## Stalk tensor formula -/
 
@@ -93,6 +128,110 @@ noncomputable def ringedSpaceModulePullbackStalkTensor
         (ringedSpacePullbackRingMap f)
         ((ringedSpaceInverseImageModule f).obj G)).val.presheaf x))
 
+private theorem moduleStalkIso_of_sheafModuleIso
+    {X : TopCat.{v}} {O : RingSheaf X} {F T : Mod O}
+    (e : F ≅ T) (x : X) :
+    Nonempty
+      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x)) ≅
+        ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) T.val.presheaf x))) := by
+  classical
+  let R := TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x
+  let M : ModuleCat R := ModuleCat.of R
+    (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
+  let N : ModuleCat R := ModuleCat.of R
+    (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) T.val.presheaf x))
+  change Nonempty (M ≅ N)
+  let eVal : F.val ≅ T.val :=
+    (SheafOfModules.forget O).mapIso e
+  let eAddIso :
+      (forget₂ (ModuleCat R) AddCommGrpCat).obj M ≅
+        (forget₂ (ModuleCat R) AddCommGrpCat).obj N :=
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso
+      ((PresheafOfModules.toPresheaf O.obj).mapIso eVal)
+  have hsmul (r : R) : eAddIso.hom ≫ N.smul r = M.smul r ≫ eAddIso.hom := by
+    apply TopCat.Presheaf.stalk_hom_ext F.val.presheaf
+    intro U hxU
+    apply ConcreteCategory.hom_ext
+    intro m
+    obtain ⟨V, hxV, rV, hr⟩ :=
+      TopCat.Presheaf.exists_germ_eq O.obj r
+    let W : Opens X := U ⊓ V
+    let hxW : x ∈ W := ⟨hxU, hxV⟩
+    let rW : O.obj.obj (Opposite.op W) :=
+      O.obj.map (homOfLE (show W ≤ V from inf_le_right)).op rV
+    have hrW :
+        TopCat.Presheaf.germ O.obj W x hxW rW = r := by
+      dsimp [rW]
+      rw [TopCat.Presheaf.germ_res_apply]
+      simpa using hr
+    let mU : F.val.obj (Opposite.op U) := m
+    let mW : F.val.obj (Opposite.op W) :=
+      F.val.map (homOfLE (show W ≤ U from inf_le_left)).op mU
+    let mW0 : F.val.presheaf.obj (Opposite.op W) :=
+      F.val.presheaf.map (homOfLE (show W ≤ U from inf_le_left)).op m
+    have hmW0 : mW0 = mW := by
+      dsimp [mW0, mW, mU]
+      rfl
+    have hmW :
+        TopCat.Presheaf.germ F.val.presheaf W x hxW mW0 =
+          TopCat.Presheaf.germ F.val.presheaf U x hxU m := by
+      simpa only [mW0] using
+        (TopCat.Presheaf.germ_res_apply F.val.presheaf
+          (homOfLE (show W ≤ U from inf_le_left)) x hxW m)
+    rw [← hrW]
+    simp only [ConcreteCategory.comp_apply]
+    rw [← hmW]
+    rw [hmW0]
+    let φAdd : F.val.presheaf ⟶ T.val.presheaf :=
+      (PresheafOfModules.toPresheaf O.obj).map e.hom.val
+    have hmap_section (n : F.val.obj (Opposite.op W)) :
+        eAddIso.hom
+            (TopCat.Presheaf.germ F.val.presheaf W x hxW n) =
+          TopCat.Presheaf.germ T.val.presheaf W x hxW
+            (e.hom.val.app (Opposite.op W) n) := by
+      let n0 : F.val.presheaf.obj (Opposite.op W) := n
+      let p0 : T.val.presheaf.obj (Opposite.op W) :=
+        e.hom.val.app (Opposite.op W) n
+      change
+        (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map φAdd
+            (TopCat.Presheaf.germ F.val.presheaf W x hxW n0) =
+          TopCat.Presheaf.germ T.val.presheaf W x hxW p0
+      rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+      rfl
+    have hsmulF :
+        (M.smul (TopCat.Presheaf.germ O.obj W x hxW rW)).hom
+            (TopCat.Presheaf.germ F.val.presheaf W x hxW mW) =
+          TopCat.Presheaf.germ F.val.presheaf W x hxW (rW • mW) := by
+      change
+        (TopCat.Presheaf.germ O.obj W x hxW rW) •
+            TopCat.Presheaf.germ F.val.presheaf W x hxW mW =
+          TopCat.Presheaf.germ F.val.presheaf W x hxW (rW • mW)
+      exact (PresheafOfModules.germ_ringCat_smul F.val x W hxW rW mW).symm
+    have hsmulT :
+        (N.smul (TopCat.Presheaf.germ O.obj W x hxW rW)).hom
+            (TopCat.Presheaf.germ T.val.presheaf W x hxW
+              (e.hom.val.app (Opposite.op W) mW)) =
+          TopCat.Presheaf.germ T.val.presheaf W x hxW
+            (rW • e.hom.val.app (Opposite.op W) mW) := by
+      change
+        (TopCat.Presheaf.germ O.obj W x hxW rW) •
+            TopCat.Presheaf.germ T.val.presheaf W x hxW
+              (e.hom.val.app (Opposite.op W) mW) =
+          TopCat.Presheaf.germ T.val.presheaf W x hxW
+            (rW • e.hom.val.app (Opposite.op W) mW)
+      exact (PresheafOfModules.germ_ringCat_smul T.val x W hxW rW
+        (e.hom.val.app (Opposite.op W) mW)).symm
+    rw [hmap_section mW, hsmulT]
+    have hsection_smul :
+        rW • e.hom.val.app (Opposite.op W) mW =
+          e.hom.val.app (Opposite.op W) (rW • mW) := by
+      exact ((e.hom.val.app (Opposite.op W)).hom.map_smul rW mW).symm
+    rw [hsection_smul]
+    rw [hsmulF, hmap_section (rW • mW)]
+  exact ⟨ModuleCat.isoMk eAddIso hsmul⟩
+
 /-- The stalk of the pullback module is the source's stalk tensor module. -/
 theorem ringedSpaceModulePullback_stalk_formula
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -102,12 +241,14 @@ theorem ringedSpaceModulePullback_stalk_formula
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       (moduleSheafPullbackUnit f.continuous Y.structureSheaf)).IsRightAdjoint)] :
     Nonempty
-      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v})
+        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v})
           X.structureSheaf.obj x)
           (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
             ((ringedSpaceModulePullback f).obj G).val.presheaf x)) ≅
         ringedSpaceModulePullbackStalkTensor f G x) := by
-  sorry
+  simpa [ringedSpaceModulePullbackStalkTensor] using
+    (moduleStalkIso_of_sheafModuleIso
+      (Classical.choice (ringedSpaceModulePullback_formula f G)) x)
 
 /-! ## Adjunction, composition, and `f`-maps -/
 
@@ -139,7 +280,7 @@ theorem exists_ringedSpaceModulePushforwardCompIso
     Nonempty
       (ringedSpaceModulePushforward f ⋙ ringedSpaceModulePushforward g ≅
         ringedSpaceModulePushforward (RingedSpaceHom.comp f g)) := by
-  sorry
+  exact ⟨SheafOfModules.pushforwardComp g.sharp f.sharp⟩
 
 noncomputable def ringedSpaceModulePushforwardCompIso
     {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -162,7 +303,7 @@ theorem exists_ringedSpaceModulePullbackCompIso
     Nonempty
       (ringedSpaceModulePullback (RingedSpaceHom.comp f g) ≅
         ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f) := by
-  sorry
+  exact ⟨(SheafOfModules.pullbackComp g.sharp f.sharp).symm⟩
 
 noncomputable def ringedSpaceModulePullbackCompIso
     {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -233,10 +374,82 @@ theorem moduleStalkAddMap_smul {X : TopCat.{v}} {O : RingSheaf X}
     moduleStalkAddMap φ x ≫
         (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
           (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x))).smul r =
-      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
+        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
         moduleStalkAddMap φ x := by
-  sorry
+  classical
+  apply TopCat.Presheaf.stalk_hom_ext F.val.presheaf
+  intro U hxU
+  apply ConcreteCategory.hom_ext
+  intro m
+  obtain ⟨V, hxV, rV, hr⟩ :=
+    TopCat.Presheaf.exists_germ_eq O.obj r
+  let W : Opens X := U ⊓ V
+  let hxW : x ∈ W := ⟨hxU, hxV⟩
+  let rW : O.obj.obj (Opposite.op W) :=
+    O.obj.map (homOfLE (show W ≤ V from inf_le_right)).op rV
+  have hrW :
+      TopCat.Presheaf.germ O.obj W x hxW rW = r := by
+    dsimp [rW]
+    rw [TopCat.Presheaf.germ_res_apply]
+    simpa using hr
+  let mU : F.val.obj (Opposite.op U) := m
+  let mW : F.val.obj (Opposite.op W) :=
+    F.val.map (homOfLE (show W ≤ U from inf_le_left)).op mU
+  let mW0 : F.val.presheaf.obj (Opposite.op W) :=
+    F.val.presheaf.map (homOfLE (show W ≤ U from inf_le_left)).op m
+  have hmW0 : mW0 = mW := by
+    dsimp [mW0, mW, mU]
+    rfl
+  have hmW :
+      TopCat.Presheaf.germ F.val.presheaf W x hxW mW0 =
+        TopCat.Presheaf.germ F.val.presheaf U x hxU m := by
+    simpa only [mW0] using
+      (TopCat.Presheaf.germ_res_apply F.val.presheaf
+        (homOfLE (show W ≤ U from inf_le_left)) x hxW m)
+  rw [← hrW]
+  simp only [ConcreteCategory.comp_apply]
+  rw [← hmW]
+  rw [hmW0]
+  change
+    (TopCat.Presheaf.germ O.obj W x hxW rW) •
+        moduleStalkAddMap φ x
+          (TopCat.Presheaf.germ F.val.presheaf W x hxW mW) =
+      moduleStalkAddMap φ x
+        ((TopCat.Presheaf.germ O.obj W x hxW rW) •
+          TopCat.Presheaf.germ F.val.presheaf W x hxW mW)
+  let φAdd : F.val.presheaf ⟶ G.val.presheaf :=
+    (PresheafOfModules.toPresheaf O.obj).map φ.val
+  have hmap_section (n : F.val.obj (Opposite.op W)) :
+      moduleStalkAddMap φ x
+          (TopCat.Presheaf.germ F.val.presheaf W x hxW n) =
+        TopCat.Presheaf.germ G.val.presheaf W x hxW
+          (φ.val.app (Opposite.op W) n) := by
+    let n0 : F.val.presheaf.obj (Opposite.op W) := n
+    let p0 : G.val.presheaf.obj (Opposite.op W) :=
+      φ.val.app (Opposite.op W) n
+    change
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map φAdd
+          (TopCat.Presheaf.germ F.val.presheaf W x hxW n0) =
+        TopCat.Presheaf.germ G.val.presheaf W x hxW p0
+    rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+    rfl
+  have hsmulF :
+      (TopCat.Presheaf.germ O.obj W x hxW rW) •
+          TopCat.Presheaf.germ F.val.presheaf W x hxW mW =
+        TopCat.Presheaf.germ F.val.presheaf W x hxW (rW • mW) := by
+    exact (PresheafOfModules.germ_ringCat_smul F.val x W hxW rW mW).symm
+  have hsmulG :
+      (TopCat.Presheaf.germ O.obj W x hxW rW) •
+          TopCat.Presheaf.germ G.val.presheaf W x hxW
+            (φ.val.app (Opposite.op W) mW) =
+        TopCat.Presheaf.germ G.val.presheaf W x hxW
+          (rW • φ.val.app (Opposite.op W) mW) := by
+    exact (PresheafOfModules.germ_ringCat_smul G.val x W hxW rW
+      (φ.val.app (Opposite.op W) mW)).symm
+  rw [hmap_section mW, hsmulF, hmap_section (rW • mW)]
+  rw [(φ.val.app (Opposite.op W)).hom.map_smul]
+  rw [← hsmulG]
 
 /-- The stalk functor on sheaves of `O`-modules, with its canonical stalk
 module structure. -/

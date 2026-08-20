@@ -88,16 +88,16 @@ theorem isFiniteProductOfDedekindDomains_of_etale
     IsFiniteProductOfDedekindDomains B := by
   sorry
 
-/-- If the base Dedekind domain is not a field, the localizations at maximal
-ideals of an étale extension are discrete valuation rings.
+/-- A localization at a maximal ideal lying over a nonzero prime of an étale
+extension of a Dedekind domain is a discrete valuation ring.
 
-The non-field hypothesis is needed because Mathlib's discrete valuation ring
-notion excludes fields. -/
+The nonzero-prime hypothesis is needed because Mathlib's discrete valuation
+ring notion excludes fields. -/
 theorem isDiscreteValuationRing_localization_atPrime_of_etale
     {A : Type u} {B : Type v} [CommRing A] [CommRing B]
-    (f : A →+* B) (hf : RingHom.Etale f) [IsDedekindDomain A]
-    (hA : ¬ IsField A) :
+    (f : A →+* B) (hf : RingHom.Etale f) [IsDedekindDomain A] :
     ∀ q : MaximalSpectrum B,
+      q.asIdeal.comap f ≠ ⊥ →
       ∃ hq : IsDomain (Localization.AtPrime q.asIdeal),
         @IsDiscreteValuationRing (Localization.AtPrime q.asIdeal) _ hq := by
   sorry

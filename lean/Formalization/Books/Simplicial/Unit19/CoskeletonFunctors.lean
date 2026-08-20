@@ -1985,13 +1985,344 @@ noncomputable def inductiveCoskeletonLevel {C : Type u} [Category.{v} C]
 noncomputable def inductiveCoskeletonComponent {C : Type u} [Category.{v} C]
     {m : ℕ} {U : SimplicialObject.Truncated C m}
     (T : InductiveCoskeletonTower m U) (r k : ℕ) (h : r ≤ k) : C :=
-  (T.level k).obj
+    (T.level k).obj
     (op ⟨SimplexCategory.mk (m + r), by exact Nat.add_le_add_left h m⟩)
+
+private structure FiniteOneStepData {C : Type u} [Category.{v} C]
+    (n : ℕ) (U : SimplicialObject.Truncated C n) where
+  next : SimplicialObject.Truncated C (n + 1)
+  restrict_eq :
+    (SimplicialObject.Truncated.trunc C (n + 1) n).obj next = U
+  homEquiv : ∀ V : SimplicialObject.Truncated C (n + 1),
+    (V ⟶ next) ≃
+      ((SimplicialObject.Truncated.trunc C (n + 1) n).obj V ⟶ U)
+
+private theorem finite_one_step_index_limit {C : Type u} [Category.{v} C]
+    [HasFiniteLimits C] (n : ℕ) (U : SimplicialObject.Truncated C n) :
+    HasLimit (StructuredArrow.proj
+      (op ⟨SimplexCategory.mk (n + 1), by simp⟩)
+      (SimplexCategory.Truncated.incl n (n + 1)).op ⋙ U) := by
+  classical
+  let S : (SimplexCategory.Truncated (n + 1))ᵒᵖ :=
+    op ⟨SimplexCategory.mk (n + 1), by simp⟩
+  let L := (SimplexCategory.Truncated.incl n (n + 1)).op
+  let D := StructuredArrow.proj S L ⋙ U
+  let : Finite (SimplexCategory.Truncated n) :=
+    Finite.of_injective
+      (fun x => ⟨x.1.len, Nat.lt_succ_of_le x.2⟩ :
+        SimplexCategory.Truncated n → Fin (n + 1))
+      (by
+        intro x y h
+        cases x with
+        | mk x hx =>
+          cases y with
+          | mk y hy =>
+            congr
+            exact SimplexCategory.ext (Fin.ext_iff.mp h))
+  let : Fintype (SimplexCategory.Truncated n) := Fintype.ofFinite _
+  let : Fintype ((SimplexCategory.Truncated n)ᵒᵖ) :=
+    Fintype.ofEquiv _ equivToOpposite
+  let : ∀ T : (SimplexCategory.Truncated n)ᵒᵖ,
+      Finite (S ⟶ L.obj T) := fun T =>
+    Finite.of_injective (fun f => f.unop.hom.toOrderHom.toFun)
+      (by
+        intro f g h
+        apply Opposite.unop_injective
+        apply InducedCategory.hom_ext
+        apply SimplexCategory.Hom.ext
+        exact DFunLike.ext _ _ (fun i => congrFun h i))
+  let : ∀ T : (SimplexCategory.Truncated n)ᵒᵖ,
+      Fintype (S ⟶ L.obj T) := fun T => Fintype.ofFinite _
+  let : Fintype (StructuredArrow S L) :=
+    Fintype.ofInjective
+      (fun j : StructuredArrow S L =>
+        (⟨j.right, j.hom⟩ : Σ T, S ⟶ L.obj T))
+      (by
+        rintro ⟨⟨⟩, jr, jh⟩ ⟨⟨⟩, kr, kh⟩ h
+        cases h
+        rfl)
+  let : ∀ j k : StructuredArrow S L, Finite (j ⟶ k) :=
+    fun j k =>
+      Finite.of_injective (fun f => f.right.unop.hom.toOrderHom.toFun)
+        (by
+          intro f g h
+          apply Comma.hom_ext f g
+          · exact Subsingleton.elim _ _
+          · apply Opposite.unop_injective
+            apply SimplexCategory.Truncated.Hom.ext
+            exact DFunLike.ext _ _ (fun i => congrFun h i))
+  let : FinCategory (StructuredArrow S L) :=
+    { fintypeObj := inferInstance
+      fintypeHom := fun j k => Fintype.ofFinite _ }
+  change HasLimit D
+  infer_instance
+
+private theorem exists_finite_one_step {C : Type u} [Category.{v} C]
+    [HasFiniteLimits C] (n : ℕ) (U : SimplicialObject.Truncated C n) :
+    Nonempty (FiniteOneStepData n U) := by
+  classical
+  let S : (SimplexCategory.Truncated (n + 1))ᵒᵖ :=
+    op ⟨SimplexCategory.mk (n + 1), by simp⟩
+  let L := (SimplexCategory.Truncated.incl n (n + 1)).op
+  let D := StructuredArrow.proj S L ⋙ U
+  let hTop : HasLimit D := by
+    dsimp [D, S, L]
+    exact finite_one_step_index_limit n U
+  let hAll : ∀ Y : (SimplexCategory.Truncated (n + 1))ᵒᵖ,
+      HasLimit (StructuredArrow.proj Y L ⋙ U) := by
+    intro Y
+    by_cases hY : Y.unop.1.len ≤ n
+    · let X : (SimplexCategory.Truncated n)ᵒᵖ :=
+        op ⟨Y.unop.1, hY⟩
+      have e : L.obj X = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        rfl
+      rw [← e]
+      let hInitial : IsInitial (StructuredArrow.mk (𝟙 (L.obj X))) :=
+        StructuredArrow.mkIdInitial
+      exact HasLimit.mk
+        { cone := coneOfDiagramInitial hInitial
+            (StructuredArrow.proj (L.obj X) L ⋙ U)
+          isLimit := limitOfDiagramInitial hInitial
+            (StructuredArrow.proj (L.obj X) L ⋙ U) }
+    · have hlen : Y.unop.1.len = n + 1 := by
+        have hy := Y.unop.property
+        omega
+      have e : Y = S := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        simpa [S] using hlen
+      rw [e]
+      exact hTop
+  let hAllInst : ∀ Y : (SimplexCategory.Truncated (n + 1))ᵒᵖ,
+      HasLimit (StructuredArrow.proj Y L ⋙ U) := hAll
+  let G := @Functor.pointwiseRightKanExtension _ _ _ _ _ _ L U hAllInst
+  let counitG := @Functor.pointwiseRightKanExtensionCounit _ _ _ _ _ _ L U hAllInst
+  have hCounitIso : ∀ X : (SimplexCategory.Truncated n)ᵒᵖ,
+      IsIso (counitG.app X) := by
+    intro X
+    change IsIso (limit.π (StructuredArrow.proj (L.obj X) L ⋙ U)
+      (StructuredArrow.mk (𝟙 (L.obj X))))
+    exact isIso_π_of_isInitial
+      (StructuredArrow.mkIdInitial (T := L) (Y := X)) _
+  let obj : (SimplexCategory.Truncated (n + 1))ᵒᵖ → C := fun Y =>
+    if hY : Y.unop.1.len ≤ n then
+      U.obj (op ⟨Y.unop.1, hY⟩)
+    else
+      limit D
+  let eObj : ∀ Y : (SimplexCategory.Truncated (n + 1))ᵒᵖ,
+      obj Y ≅ G.obj Y := by
+    intro Y
+    by_cases hY : Y.unop.1.len ≤ n
+    · let X : (SimplexCategory.Truncated n)ᵒᵖ :=
+        op ⟨Y.unop.1, hY⟩
+      have eY : L.obj X = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        rfl
+      have hobj : obj Y = U.obj X := by
+        dsimp [obj]
+        simp only [dif_pos hY]
+        rfl
+      letI : IsIso (counitG.app X) := hCounitIso X
+      exact eqToIso hobj ≪≫ (asIso (counitG.app X)).symm ≪≫
+        G.mapIso (eqToIso eY)
+    · have hlen : Y.unop.1.len = n + 1 := by
+        have hy := Y.unop.property
+        omega
+      have eY : Y = S := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        apply SimplexCategory.ext
+        simpa [S] using hlen
+      have hobj : obj Y = limit D := by
+        dsimp [obj]
+        simp only [dif_neg hY]
+      rw [hobj, eY]
+      exact Iso.refl _
+  let F := strictifyFunctor
+    (B := (SimplexCategory.Truncated (n + 1))ᵒᵖ) (C := C) G obj eObj
+  let eNat : F ≅ G := NatIso.ofComponents eObj (by
+    intro X Y f
+    dsimp [F, strictifyFunctor]
+    simp)
+  have hrestrict :
+      (SimplicialObject.Truncated.trunc C (n + 1) n).obj F = U := by
+    refine CategoryTheory.Functor.ext (fun X => ?_) (fun X Y f => ?_)
+    · dsimp [SimplicialObject.Truncated.trunc, F, strictifyFunctor]
+      have hx :
+          ((SimplexCategory.Truncated.incl n (n + 1)).obj X.unop).obj.len ≤ n :=
+        X.unop.property
+      have hX : op ⟨((SimplexCategory.Truncated.incl n (n + 1)).obj X.unop).obj,
+          hx⟩ = X := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      simp only [obj, dif_pos hx]
+      rw [hX]
+    · dsimp [SimplicialObject.Truncated.trunc, F, strictifyFunctor]
+      have hx : X.unop.obj.len ≤ n := X.unop.property
+      have hy : Y.unop.obj.len ≤ n := Y.unop.property
+      have hLx : (L.obj X).unop.obj.len ≤ n := by
+        change X.unop.obj.len ≤ n
+        exact hx
+      have hLy : (L.obj Y).unop.obj.len ≤ n := by
+        change Y.unop.obj.len ≤ n
+        exact hy
+      have hX0 : op ⟨(L.obj X).unop.obj, hLx⟩ = X := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      have hY0 : op ⟨(L.obj Y).unop.obj, hLy⟩ = Y := by
+        apply Opposite.unop_injective
+        apply ObjectProperty.FullSubcategory.ext
+        rfl
+      change (eObj (L.obj X)).hom ≫ G.map (L.map f) ≫
+          (eObj (L.obj Y)).inv = _
+      dsimp [eObj, obj]
+      simp only [dif_pos hLx, dif_pos hLy]
+      simp only [Iso.trans_hom, Iso.trans_inv, Functor.mapIso_hom,
+        Functor.mapIso_inv, Iso.symm_hom, Iso.symm_inv, Iso.refl_hom,
+        Iso.refl_inv, eqToIso.hom, eqToIso.inv]
+      simp only [asIso_hom, asIso_inv, Category.assoc]
+      have hmapX :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) = G.map (L.map f) := by
+        rw [← G.map_comp]
+        congr 1
+        cases hX0
+        exact Category.id_comp (L.map f)
+      have hmapY :
+          G.map (L.map f) ≫
+              G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) =
+            G.map (L.map f) := by
+        rw [← G.map_comp]
+        congr 1
+        cases hY0
+        exact Category.comp_id (L.map f)
+      have hcore :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) =
+            G.map (L.map f) := by
+        calc
+          _ = (G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f)) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) := by
+            simp only [Category.assoc]
+          _ = G.map (L.map f) ≫
+              G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) := by
+            rw [hmapX]
+          _ = G.map (L.map f) := hmapY
+      have hnat :
+          G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) =
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f := by
+        have hleft :
+            G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) ≍
+              G.map (L.map f) ≫ counitG.app Y := by
+          cases hY0
+          rfl
+        have hright :
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f ≍
+              counitG.app X ≫ U.map f := by
+          cases hX0
+          rfl
+        have hn :
+            G.map (L.map f) ≫ counitG.app Y =
+              counitG.app X ≫ U.map f := by
+          simpa only [Functor.comp_obj, Functor.comp_map, G] using
+            counitG.naturality f
+        exact eq_of_heq (hleft.trans ((heq_of_eq hn).trans hright.symm))
+      have hcore_assoc {Z : C}
+          (k : G.obj (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩)) ⟶ Z) :
+          G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩))) ≫ k =
+            G.map (L.map f) ≫ k := by
+        calc
+          _ = (G.map (𝟙 (L.obj (op ⟨(L.obj X).unop.obj, hLx⟩))) ≫
+              G.map (L.map f) ≫
+                G.map (𝟙 (L.obj (op ⟨(L.obj Y).unop.obj, hLy⟩)))) ≫ k := by
+            simp only [Category.assoc]
+          _ = G.map (L.map f) ≫ k := by rw [hcore]
+      have hnat_assoc {Z : C}
+          (k : U.obj (op ⟨(L.obj Y).unop.obj, hLy⟩) ⟶ Z) :
+          G.map (L.map f) ≫ counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩) ≫ k =
+            counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f ≫ k := by
+        calc
+          _ = (G.map (L.map f) ≫
+              counitG.app (op ⟨(L.obj Y).unop.obj, hLy⟩)) ≫ k := by
+            simp only [Category.assoc]
+          _ = (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩) ≫ U.map f) ≫ k := by
+            rw [hnat]
+          _ = _ := by simp only [Category.assoc]
+      rw [hcore_assoc]
+      rw [hnat_assoc]
+      have hIso : IsIso (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩)) :=
+        hCounitIso _
+      simpa only [Category.assoc] using
+        congrArg
+          (fun k => eqToHom _ ≫ k)
+          (@IsIso.inv_hom_id_assoc _ _ _ _
+            (counitG.app (op ⟨(L.obj X).unop.obj, hLx⟩)) hIso _
+            (U.map f ≫ eqToHom _))
+  have hG : G.IsRightKanExtension counitG := by
+    dsimp [G, counitG]
+    infer_instance
+  let alpha := Functor.whiskerLeft L eNat.hom ≫ counitG
+  have hF : F.IsRightKanExtension alpha := by
+    exact @Functor.isRightKanExtension_of_iso _ _ _ _ _ _ G F eNat.symm L U
+      counitG alpha (by
+      dsimp [alpha]
+      rw [← Functor.whiskerLeft_comp_assoc, eNat.inv_hom_id,
+        Functor.whiskerLeft_id', Category.id_comp]) hG
+  refine ⟨{ next := F, restrict_eq := hrestrict, homEquiv := ?_ }⟩
+  intro V
+  simpa [SimplicialObject.Truncated.trunc] using
+    (@Functor.homEquivOfIsRightKanExtension _ _ _ _ _ _ F L U alpha hF V)
 
 theorem exists_inductive_coskeleton_tower {C : Type u} [Category.{v} C]
     [HasFiniteLimits C] (m : ℕ) (U : SimplicialObject.Truncated C m) :
     Nonempty (InductiveCoskeletonTower m U) := by
-  sorry
+  let stepData : ∀ k : ℕ, (V : SimplicialObject.Truncated C (m + k)) →
+      FiniteOneStepData (m + k) V :=
+    fun k V => Classical.choice (exists_finite_one_step (m + k) V)
+  let level : ∀ k : ℕ, SimplicialObject.Truncated C (m + k) :=
+    Nat.rec U (fun k V => (stepData k V).next)
+  have hnext (k : ℕ) :
+      (SimplicialObject.Truncated.trunc C (m + k + 1) (m + k)).obj
+          (level (k + 1)) = level k := by
+    change (SimplicialObject.Truncated.trunc C (m + k + 1) (m + k)).obj
+        (stepData k (level k)).next = level k
+    exact (stepData k (level k)).restrict_eq
+  have hmap (k : ℕ) (V : SimplicialObject.Truncated C (m + k)) :
+      (V ⟶ level k) ≃
+        ((SimplicialObject.Truncated.trunc C (m + k) m).obj V ⟶ U) := by
+    induction k with
+    | zero =>
+        have hV : (SimplicialObject.Truncated.trunc C m m).obj V = V := by
+          refine CategoryTheory.Functor.ext (fun X => ?_) (fun X Y f => ?_)
+          · apply congrArg V.obj
+            apply Opposite.unop_injective
+            apply ObjectProperty.FullSubcategory.ext
+            rfl
+          · dsimp [SimplicialObject.Truncated.trunc]
+            simp
+            rfl
+        simpa [level, hV] using (Equiv.refl (V ⟶ U))
+    | succ k ih =>
+        exact (stepData k (level k)).homEquiv V |>.trans
+          (ih ((SimplicialObject.Truncated.trunc C (m + k + 1) (m + k)).obj V))
+  exact ⟨{
+    level := level
+    base := by simpa using (show level 0 = U from rfl)
+    next_restrict := hnext
+    mapping_property := hmap
+  }⟩
 
 theorem inductive_tower_mapping_property {C : Type u} [Category.{v} C]
     {m : ℕ} {U : SimplicialObject.Truncated C m}

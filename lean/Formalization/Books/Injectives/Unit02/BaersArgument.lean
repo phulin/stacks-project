@@ -3,10 +3,12 @@ import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.CategoryTheory.Limits.Types.Colimits
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
+import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.Monomorphisms
 import Mathlib.CategoryTheory.MorphismProperty.Basic
 import Mathlib.CategoryTheory.MorphismProperty.FunctorCategory
 import Mathlib.CategoryTheory.SmallObject.Construction
 import Mathlib.CategoryTheory.SmallObject.TransfiniteIteration
+import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.RingTheory.Ideal.Defs
 import Mathlib.SetTheory.Cardinal.Cofinality.Ordinal
 
@@ -741,7 +743,30 @@ theorem baerIteration_succ {R : Type u} [Ring R] (α : Ordinal.{u})
     Nonempty (baerIteration R (α + 1) ≅
       (baerIterationFunctor R (α + 1)).obj
           ⟨α, by simp⟩ ⋙ baerStepFunctor R) := by
-  sorry
+  let j : Set.Iic (α + 1) := ⟨α, by simp⟩
+  have hj : ¬ IsMax j := by
+    apply not_isMax_iff.mpr
+    refine ⟨(⊤ : Set.Iic (α + 1)), ?_⟩
+    change α < α + 1
+    simp
+  have hsucc : Order.succ j =
+      (⟨α + 1, by simp⟩ : Set.Iic (α + 1)) := by
+    apply Subtype.ext
+    rw [Set.Iic.coe_succ_of_not_isMax hj]
+    simp [j]
+  have hsucc_obj :
+      (baerSuccStruct R).succ
+          (((baerSuccStruct R).iterationFunctor (Set.Iic (α + 1))).obj j) =
+        ((baerSuccStruct R).iterationFunctor (Set.Iic (α + 1))).obj j ⋙
+          baerStepFunctor R := by
+    rfl
+  exact ⟨by
+    simpa only [baerIteration, baerIterationFunctor] using
+      (eqToIso (congrArg
+          ((baerSuccStruct R).iterationFunctor (Set.Iic (α + 1))).obj
+          hsucc).symm ≪≫
+        (baerSuccStruct R).iterationFunctorObjSuccIso j hj ≪≫
+        eqToIso hsucc_obj)⟩
 
 /-- At a limit stage, the iteration is the colimit of its earlier stages. -/
 theorem baerIteration_limit {R : Type u} [Ring R] (α : Ordinal.{u})
@@ -781,6 +806,321 @@ theorem baer_grothendieck
     (hα : idealCardinal R < Ordinal.cof α) :
     Injective ((baerIteration R α).obj N) ∧
       Mono ((baerIterationEmbedding R α).app N) := by
-  sorry
+  let ev := (evaluation (ModuleCat.{u} R) (ModuleCat.{u} R)).obj N
+  have hle :
+      (baerSuccStruct R).prop ≤
+        (MorphismProperty.monomorphisms (ModuleCat.{u} R)).inverseImage ev := by
+    intro X Y f hf
+    change Mono (ev.map f)
+    have hto : Mono ((baerSuccStruct R).toSucc X) := by
+      letI : ∀ M, Mono (((baerSuccStruct R).toSucc X).app M) := by
+        intro M
+        change Mono ((baerStepEmbedding R).app (X.obj M))
+        exact baerStepEmbedding_mono _
+      exact NatTrans.mono_of_mono_app _
+    rw [hf.fac]
+    rw [Functor.map_comp]
+    infer_instance
+  let t :=
+    (baerSuccStruct R).transfiniteCompositionOfShapeιIteration (Set.Iic α)
+  have htop (i : Set.Iic α) : Mono (ev.map (t.incl.app i)) := by
+    letI : HasColimitsOfShape (Set.Ici i) (ModuleCat.{u} R) := by
+      infer_instance
+    letI : HasIterationOfShape (Set.Ici i) (ModuleCat.{u} R) := by
+      constructor <;> infer_instance
+    letI : IsGrothendieckAbelian.{u} (ModuleCat.{u} R) := by
+      infer_instance
+    letI : MorphismProperty.IsStableUnderFilteredColimits.{u, u}
+        (MorphismProperty.monomorphisms (ModuleCat.{u} R)) := by
+      infer_instance
+    let hfiltered : MorphismProperty.IsStableUnderFilteredColimits.{u, u}
+        (MorphismProperty.monomorphisms (ModuleCat.{u} R)) := by
+      infer_instance
+    letI := hfiltered
+    letI : (MorphismProperty.monomorphisms (ModuleCat.{u} R)).IsStableUnderTransfiniteCompositionOfShape
+        (Shrink.{u} (Set.Ici i)) := by
+      exact
+        MorphismProperty.IsStableUnderTransfiniteCompositionOfShape.of_isStableUnderColimitsOfShape
+          (fun J _ _ _ _ ↦ hfiltered.isStableUnderColimitsOfShape J)
+    have hmap :=
+      MorphismProperty.TransfiniteCompositionOfShape.map
+        (F := ev) ((t.ici i).ofLE hle)
+    let e : Shrink.{u} (Set.Ici i) ≃o Set.Ici i :=
+      (orderIsoShrink.{u} (Set.Ici i)).symm
+    exact (MorphismProperty.transfiniteCompositionsOfShape_le
+      (MorphismProperty.monomorphisms (ModuleCat.{u} R))
+      (Shrink.{u} (Set.Ici i))) _ (hmap.ofOrderIso e).mem
+  let F : Set.Iio α ⥤ ModuleCat.{u} R :=
+    baerIterationDiagram R α ⋙ ev
+  have hF : ∀ {i j : Set.Iio α} (q : i ⟶ j), Mono (F.map q) := by
+    intro i j q
+    change Mono (ev.map ((baerIterationDiagram R α).map q))
+    have hiα : (i : Ordinal) ≤ α := le_of_lt i.2
+    have hjα : (j : Ordinal) ≤ α := le_of_lt j.2
+    let i' : Set.Iic α := ⟨(i : Ordinal), hiα⟩
+    let j' : Set.Iic α := ⟨(j : Ordinal), hjα⟩
+    have hnat := t.incl.naturality (show i' ⟶ j' from q)
+    have hcomp :
+        ev.map ((baerIterationDiagram R α).map q) ≫ ev.map (t.incl.app j') =
+          ev.map (t.incl.app i') := by
+      have hnat' := congrArg ev.map hnat
+      rw [Functor.map_comp] at hnat'
+      change
+        ev.map (t.F.map (show i' ⟶ j' from q)) ≫
+            ev.map (t.incl.app j') =
+          ev.map (t.incl.app i') ≫
+            ev.map (((Functor.const _).obj
+              ((baerSuccStruct R).iteration (Set.Iic α))).map
+              (show i' ⟶ j' from q)) at hnat'
+      change
+        ev.map (t.F.map (show i' ⟶ j' from q)) ≫
+            ev.map (t.incl.app j') =
+          ev.map (t.incl.app i')
+      simpa using hnat'
+    have hmono : Mono (ev.map ((baerIterationDiagram R α).map q) ≫
+        ev.map (t.incl.app j')) := by
+      rw [hcomp]
+      exact htop i'
+    constructor
+    intro Z g h e
+    apply (cancel_mono (ev.map ((baerIterationDiagram R α).map q) ≫
+      ev.map (t.incl.app j'))).mp
+    rw [← Category.assoc, e, Category.assoc]
+  have hcard : (1 : Cardinal.{u}) ≤ idealCardinal R := by
+    rw [Cardinal.one_le_iff_ne_zero]
+    simp [idealCardinal]
+  have hαlim : Order.IsSuccLimit α :=
+    (Ordinal.one_lt_cof_iff).mp (hcard.trans_lt hα)
+  have hsucc_lt (i : Set.Iio α) : Order.succ (i : Ordinal) < α := by
+    exact hαlim.succ_lt i.2
+  let eα : baerIteration R α ≅ colimit (baerIterationDiagram R α) :=
+    (baerIteration_limit α hαlim).some
+  have hcolim : IsColimit (ev.mapCocone
+      (colimit.cocone (baerIterationDiagram R α))) :=
+    isColimitOfPreserves ev (colimit.isColimit (baerIterationDiagram R α))
+  let eN := eα.app N
+  let eF : ev.obj (colimit (baerIterationDiagram R α)) ≅ colimit F :=
+    IsColimit.coconePointUniqueUpToIso hcolim (colimit.isColimit F)
+  constructor
+  · rw [baer_criterion]
+    intro I φ
+    let idealMap : Submodule R (I : Type u) → Ideal R :=
+      fun K => K.map I.subtype
+    have idealMap_inj : Function.Injective idealMap := by
+      intro K L h
+      apply le_antisymm
+      · apply (Submodule.map_le_map_iff_of_injective (f := I.subtype)
+          Subtype.val_injective K L).mp
+        exact le_of_eq h
+      · apply (Submodule.map_le_map_iff_of_injective (f := I.subtype)
+          Subtype.val_injective L K).mp
+        exact le_of_eq h.symm
+    have hcardI : moduleSubmoduleCardinal R (ModuleCat.of R I) ≤
+        idealCardinal R := by
+      change Cardinal.mk (Submodule R (I : Type u)) ≤ Cardinal.mk (Ideal R)
+      exact Cardinal.mk_le_of_injective idealMap_inj
+    have hsmall := module_is_alpha_small (ModuleCat.of R I) α
+      (hcardI.trans_lt hα)
+    have hbij := hsmall F hF (by infer_instance) (by infer_instance)
+    let φ' : ModuleCat.of R I ⟶ colimit F :=
+      φ ≫ eN.hom ≫ eF.hom
+    obtain ⟨x, hx⟩ := hbij.2 φ'
+    obtain ⟨i, f, hf⟩ := Types.jointly_surjective
+      (F ⋙ coyoneda.obj (Opposite.op (ModuleCat.of R I)))
+      (colimit.isColimit (F ⋙ coyoneda.obj
+        (Opposite.op (ModuleCat.of R I)))) x
+    have hfactor : f ≫ colimit.ι F i = φ' := by
+      rw [← hf] at hx
+      simpa [comparisonMap] using hx
+    have hiα : (i : Ordinal) ≤ α := le_of_lt i.2
+    let j : Set.Iic α := ⟨(i : Ordinal), hiα⟩
+    have hj : ¬ IsMax j := by
+      apply not_isMax_iff.mpr
+      refine ⟨(⟨α, by simp⟩ : Set.Iic α), ?_⟩
+      exact i.2
+    have hsuccj : Order.succ j =
+        (⟨Order.succ (i : Ordinal), (hsucc_lt i).le⟩ : Set.Iic α) := by
+      apply Subtype.ext
+      exact Set.Iic.coe_succ_of_not_isMax hj
+    let k : Set.Iio α := ⟨Order.succ (i : Ordinal), hsucc_lt i⟩
+    let q : i ⟶ k := homOfLE (Order.le_succ (i : Ordinal))
+    have hpi :
+        ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).obj i =
+          (⟨(i : Ordinal), hiα⟩ : Set.Iic α) := by
+      rfl
+    have hpk :
+        ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).obj k =
+          (⟨Order.succ (i : Ordinal), (hsucc_lt i).le⟩ : Set.Iic α) := by
+      rfl
+    obtain ⟨ψ, hψ⟩ := baerStep_ideal_extension (F.obj i) I f
+    have hobj_i : F.obj i =
+        (((baerSuccStruct R).iterationFunctor (Set.Iic α)).obj j).obj N := by
+      rfl
+    have hobj_k : F.obj k =
+        (((baerSuccStruct R).iterationFunctor (Set.Iic α)).obj
+          (Order.succ j)).obj N := by
+      simp [F, baerIterationDiagram, baerIterationFunctor, ev, j, k, hsuccj]
+    have hjs : j ≤ Order.succ j := by
+      exact Order.le_succ j
+    have hpk_succ :
+          ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).obj k =
+          Order.succ j := by
+      calc
+        _ = (⟨Order.succ (i : Ordinal), (hsucc_lt i).le⟩ : Set.Iic α) := hpk
+        _ = Order.succ j := hsuccj.symm
+    let q' :
+        ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).obj i ⟶
+          ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).obj k :=
+      eqToHom hpi ≫ homOfLE hjs ≫ eqToHom hpk_succ.symm
+    have hq_q :
+        ((Set.principalSegIioIicOfLE (le_rfl : α ≤ α)).monotone.functor).map q = q' := by
+      apply Subsingleton.elim
+    have hsource : baerStep R (F.obj i) =
+        ((baerSuccStruct R).succ
+          (((baerSuccStruct R).iterationFunctor (Set.Iic α)).obj j)).obj N := by
+      rfl
+    let heSuccN : baerStep R (F.obj i) ≅ F.obj k :=
+      eqToIso hsource ≪≫
+        (((baerSuccStruct R).iterationFunctorObjSuccIso j hj).app N |>.symm) ≪≫
+        eqToIso hobj_k.symm
+    have hcomp :
+        (baerStepEmbedding R).app (F.obj i) ≫ heSuccN.hom ≍
+          ((((baerSuccStruct R).iterationFunctor (Set.Iic α)).obj j).whiskerLeft
+              (baerStepEmbedding R)).app N ≫
+            ((baerSuccStruct R).iterationFunctorObjSuccIso j hj).inv.app N := by
+      apply CategoryTheory.heq_comp (eq1 := hobj_i) (eq2 := hsource)
+        (eq3 := hobj_k)
+      · have hobj_i' :
+            ((baerIterationDiagram R α).obj i).obj N =
+              (((baerSuccStruct R).iterationFunctor (Set.Iic α)).obj j).obj N := by
+          simpa [F, baerIterationDiagram, ev, j] using hobj_i
+        simp only [baerStepEmbedding]
+        cases hobj_i'
+        rfl
+      · have hsymm :
+            (((baerSuccStruct R).iterationFunctorObjSuccIso j hj).app N).symm.hom =
+              ((baerSuccStruct R).iterationFunctorObjSuccIso j hj).inv.app N := by
+          rfl
+        simpa only [heSuccN, Iso.trans_hom, eqToIso.hom, Category.assoc,
+          hsymm, eqToHom_comp_heq_iff, heq_comp_eqToHom_iff] using
+          (CategoryTheory.comp_eqToHom_heq
+            (((baerSuccStruct R).iterationFunctorObjSuccIso j hj).inv.app N)
+            hobj_k.symm)
+    have hmap : F.map q =
+        (baerStepEmbedding R).app (F.obj i) ≫ heSuccN.hom := by
+      have hiter := (baerSuccStruct R).iterationFunctor_map_succ j hj
+      have hiterN := congrArg (fun m => m.app N) hiter
+      convert hiterN using 1
+      · rw [hobj_i, hobj_k]
+      · have hq_map := congrArg (fun m => m.app N)
+            (congrArg ((baerSuccStruct R).iterationFunctor (Set.Iic α)).map hq_q)
+        have hq'_map_heq :
+            (((baerSuccStruct R).iterationFunctor (Set.Iic α)).map q').app N ≍
+              (((baerSuccStruct R).iterationFunctor (Set.Iic α)).map
+                (homOfLE hjs)).app N := by
+          simp only [q', Functor.map_comp]
+          rw [CategoryTheory.eqToHom_map, CategoryTheory.eqToHom_map]
+          simp only [NatTrans.comp_app, Category.assoc,
+            CategoryTheory.eqToHom_app,
+            CategoryTheory.eqToHom_comp_heq_iff,
+            CategoryTheory.heq_comp_eqToHom_iff]
+          symm
+          rw [CategoryTheory.heq_comp_eqToHom_iff]
+        simpa [F, baerIterationDiagram, baerIterationFunctor, ev, q] using
+          (HEq.trans (heq_of_eq hq_map) hq'_map_heq)
+      · simpa [baerSuccStruct, CategoryTheory.SmallObject.SuccStruct.ofNatTrans,
+          baerStep, baerStepFunctor, baerStepEmbedding, F,
+          baerIterationDiagram, baerIterationFunctor, ev, j, k, hsuccj,
+          hsource, heSuccN]
+          using hcomp
+    let g0 : ModuleCat.of R R ⟶ colimit F :=
+      ψ ≫ heSuccN.hom ≫ colimit.ι F k
+    have hstage :
+        ModuleCat.ofHom I.subtype ≫
+            (ψ ≫ heSuccN.hom ≫ colimit.ι F k) =
+          f ≫ colimit.ι F i := by
+      rw [← Category.assoc, ← Category.assoc, hψ]
+      have hmap_f := congrArg
+        (fun m => f ≫ m ≫ colimit.ι F k) hmap.symm
+      calc
+        ((f ≫ (baerStepEmbedding R).app (F.obj i)) ≫ heSuccN.hom) ≫
+              colimit.ι F k =
+            f ≫ ((baerStepEmbedding R).app (F.obj i) ≫ heSuccN.hom) ≫
+              colimit.ι F k := by simp only [Category.assoc, baerStep]
+        _ = f ≫ F.map q ≫ colimit.ι F k := hmap_f
+        _ = f ≫ colimit.ι F i := by rw [colimit.w F q]
+    refine ⟨g0 ≫ eF.inv ≫ eN.inv, ?_⟩
+    have hfinal := congrArg (fun m => m ≫ eF.inv ≫ eN.inv) hstage
+    simpa [g0, Category.assoc, hfactor, φ'] using hfinal
+  · have hmono : Mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥)) := by
+      rw [Functor.map_comp]
+      letI : Mono (ev.map (t.incl.app ⊥)) := htop ⊥
+      infer_instance
+    have hι :
+        ((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
+            (⟨α, by simp⟩ : Set.Iic α) =
+          t.isoBot.inv ≫ t.F.map (homOfLE bot_le) := by
+      rfl
+    have hnat := t.incl.naturality (homOfLE bot_le :
+      (⊥ : Set.Iic α) ⟶ (⟨α, by simp⟩ : Set.Iic α))
+    have hnat' :
+        t.isoBot.inv ≫ t.F.map (homOfLE bot_le) ≫
+            t.incl.app (⟨α, by simp⟩ : Set.Iic α) =
+          t.isoBot.inv ≫ t.incl.app ⊥ := by
+      simpa [Category.assoc] using
+        congrArg (fun m => t.isoBot.inv ≫ m) hnat
+    have hcomp :
+        ev.map (((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
+          (⟨α, by simp⟩ : Set.Iic α)) ≫
+            ev.map (t.incl.app (⟨α, by simp⟩ : Set.Iic α)) =
+          ev.map (t.isoBot.inv ≫ t.incl.app ⊥) := by
+      change
+        (((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
+          (⟨α, by simp⟩ : Set.Iic α)).app N ≫
+          (t.incl.app (⟨α, by simp⟩ : Set.Iic α)).app N =
+            (t.isoBot.inv ≫ t.incl.app ⊥).app N
+      have hιN := congrArg (fun m => m.app N) hι
+      have hnatN' := congrArg (fun m => m.app N) hnat'
+      rw [hιN]
+      change
+        (t.isoBot.inv.app N ≫
+            (t.F.map (homOfLE bot_le)).app N) ≫
+          (t.incl.app (⟨α, by simp⟩ : Set.Iic α)).app N =
+            t.isoBot.inv.app N ≫ (t.incl.app ⊥).app N at hnatN'
+      exact hnatN'
+    let m : ev.obj (t.F.obj (⟨α, by simp⟩ : Set.Iic α)) ⟶
+        ev.obj ((baerSuccStruct R).iteration (Set.Iic α)) := by
+      exact ev.map (t.incl.app (⟨α, by simp⟩ : Set.Iic α))
+    have hcomp' :
+        ev.map (((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
+          (⟨α, by simp⟩ : Set.Iic α)) ≫ m =
+          ev.map (t.isoBot.inv ≫ t.incl.app ⊥) := by
+      change ev.map (((baerSuccStruct R).ιIterationFunctor (Set.Iic α)).app
+          (⟨α, by simp⟩ : Set.Iic α)) ≫
+            ev.map (t.incl.app (⟨α, by simp⟩ : Set.Iic α)) =
+          ev.map (t.isoBot.inv ≫ t.incl.app ⊥)
+      exact hcomp
+    change Mono (ev.map (((baerSuccStruct R).ιIterationFunctor
+      (Set.Iic α)).app (⟨α, by simp⟩ : Set.Iic α)))
+    rw [hι] at hcomp'
+    have hm0 : Mono (ev.map (t.isoBot.inv ≫
+        t.F.map (homOfLE (bot_le :
+          (⊥ : Set.Iic α) ≤ (⟨α, by simp⟩ : Set.Iic α))))) := by
+      letI : Mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥)) := hmono
+      constructor
+      intro Z g h e
+      apply (cancel_mono (ev.map (t.isoBot.inv ≫ t.incl.app ⊥))).mp
+      rw [← hcomp']
+      simp only [Functor.const_obj_obj]
+      change
+        (g ≫ ev.map (t.isoBot.inv ≫
+          t.F.map (homOfLE (bot_le :
+            (⊥ : Set.Iic α) ≤ (⟨α, by simp⟩ : Set.Iic α))))) ≫ m =
+          (h ≫ ev.map (t.isoBot.inv ≫
+            t.F.map (homOfLE (bot_le :
+              (⊥ : Set.Iic α) ≤ (⟨α, by simp⟩ : Set.Iic α))))) ≫ m
+      rw [e]
+    rw [hι]
+    exact hm0
 
 end Formalization.Books.Injectives.Unit02

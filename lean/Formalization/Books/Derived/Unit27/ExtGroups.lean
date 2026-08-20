@@ -134,7 +134,7 @@ theorem derivedExtComp_add_right
     (η : DerivedExt Y Z j) (ξ₁ ξ₂ : DerivedExt X Y i) (h : j + i = k) :
     derivedExtComp η (ξ₁ + ξ₂) h =
       derivedExtComp η ξ₁ h + derivedExtComp η ξ₂ h := by
-  simp [derivedExtComp, ShiftedHom.comp_add]
+  simp [derivedExtComp]
 
 theorem derivedExtComp_add_left
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -142,7 +142,7 @@ theorem derivedExtComp_add_left
     (η₁ η₂ : DerivedExt Y Z j) (ξ : DerivedExt X Y i) (h : j + i = k) :
     derivedExtComp (η₁ + η₂) ξ h =
       derivedExtComp η₁ ξ h + derivedExtComp η₂ ξ h := by
-  simp [derivedExtComp, ShiftedHom.add_comp]
+  simp [derivedExtComp]
 
 theorem derivedExtComp_assoc
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -259,7 +259,6 @@ theorem derivedExtCovariantWindow_exact
         ComposableArrows.Precomp.obj]
       apply AddCommGrpCat.ext
       intro ξ
-      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
       change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) _ =
         ξ ≫ (shiftFunctor (DerivedCategory C) i).map T.mor₁
       simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₁)
@@ -271,7 +270,6 @@ theorem derivedExtCovariantWindow_exact
         ComposableArrows.Precomp.obj]
       apply AddCommGrpCat.ext
       intro ξ
-      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
       change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) _ =
         ξ ≫ (shiftFunctor (DerivedCategory C) i).map T.mor₂
       simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₂)
@@ -283,7 +281,6 @@ theorem derivedExtCovariantWindow_exact
         ComposableArrows.Precomp.obj]
       apply AddCommGrpCat.ext
       intro ξ
-      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
       change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) _ =
         ξ ≫ (shiftFunctor (DerivedCategory C) (i + 1)).map T.mor₁
       simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₁)
@@ -295,7 +292,6 @@ theorem derivedExtCovariantWindow_exact
         ComposableArrows.Precomp.obj]
       apply AddCommGrpCat.ext
       intro ξ
-      simp only [h₀, h₁, h₂, h₃, h₄, h₅, eqToHom_refl, Category.id_comp, Category.comp_id]
       change ShiftedHom.comp ξ (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) _ =
         ξ ≫ (shiftFunctor (DerivedCategory C) (i + 1)).map T.mor₂
       simpa using (ShiftedHom.comp_mk₀ ξ (0 : ℤ) rfl T.mor₂)
@@ -334,7 +330,6 @@ theorem derivedExtContravariantWindow_exact
       intro ξ
       change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) ξ _ = _
       simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
-        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
         ShiftedHom.mk₀_comp]
       change T.mor₂ ≫ ξ = T.mor₂ ≫ ξ
       rfl
@@ -344,7 +339,6 @@ theorem derivedExtContravariantWindow_exact
       intro ξ
       change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) ξ _ = _
       simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
-        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
         ShiftedHom.mk₀_comp]
       change T.mor₁ ≫ ξ = T.mor₁ ≫ ξ
       rfl
@@ -362,7 +356,6 @@ theorem derivedExtContravariantWindow_exact
       intro ξ
       change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₂) ξ _ = _
       simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
-        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
         ShiftedHom.mk₀_comp]
       change T.mor₂ ≫ ξ = T.mor₂ ≫ ξ
       rfl
@@ -372,7 +365,6 @@ theorem derivedExtContravariantWindow_exact
       intro ξ
       change ShiftedHom.comp (ShiftedHom.mk₀ (0 : ℤ) rfl T.mor₁) ξ _ = _
       simp [T', Functor.shift, preadditiveYoneda, preadditiveYonedaObj,
-        derivedExtPrecomp, derivedExtComp, preadditiveYoneda_shiftMap_apply,
         ShiftedHom.mk₀_comp]
       change T.mor₁ ≫ ξ = T.mor₁ ≫ ξ
       rfl

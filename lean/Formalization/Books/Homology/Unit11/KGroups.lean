@@ -984,7 +984,7 @@ private def shortComplex_biproduct_pos
     (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g)
     (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂)) (by
       rw [biprod.lift_eq, biprod.desc_eq]
-      simp [S.zero])
+      simp)
 
 private def shortComplex_biproduct_neg
     {D : Type u'} [Category.{v'} D] [Abelian D]
@@ -993,7 +993,7 @@ private def shortComplex_biproduct_neg
     (biprod.desc S.f (0 : S.X₃ ⟶ S.X₂))
     (biprod.lift (0 : S.X₂ ⟶ S.X₁) S.g) (by
       rw [biprod.desc_eq, biprod.lift_eq]
-      simp [S.zero])
+      simp)
 
 private noncomputable def binary_biproduct_iso
     {D : Type u'} [Category.{v'} D] [Abelian D]
@@ -1094,17 +1094,26 @@ theorem kZero_serre_kernel
       apply (QuotientAddGroup.eq_iff_sub_mem).mp
       exact hAB'
     classical
-    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteProducts
-    letI : HasBinaryBiproducts C := hasBinaryBiproducts_of_finite_biproducts C
-    letI : HasFiniteProducts (ShortComplex C) := inferInstance
-    letI : HasFiniteBiproducts (ShortComplex C) :=
+    let hFiniteBiproductsC : HasFiniteBiproducts C :=
       HasFiniteBiproducts.of_hasFiniteProducts
-    letI : (ShortComplex.π₁ : ShortComplex C ⥤ C).Additive :=
+    let : HasFiniteBiproducts C := hFiniteBiproductsC
+    let hBinaryBiproductsC : HasBinaryBiproducts C :=
+      hasBinaryBiproducts_of_finite_biproducts C
+    let : HasBinaryBiproducts C := hBinaryBiproductsC
+    let hFiniteProductsShortComplex : HasFiniteProducts (ShortComplex C) := inferInstance
+    let : HasFiniteProducts (ShortComplex C) := hFiniteProductsShortComplex
+    let hFiniteBiproductsShortComplex : HasFiniteBiproducts (ShortComplex C) :=
+      HasFiniteBiproducts.of_hasFiniteProducts
+    let : HasFiniteBiproducts (ShortComplex C) := hFiniteBiproductsShortComplex
+    let hAdditivePi₁ : (ShortComplex.π₁ : ShortComplex C ⥤ C).Additive :=
       { map_add := by intros; rfl }
-    letI : (ShortComplex.π₂ : ShortComplex C ⥤ C).Additive :=
+    let : (ShortComplex.π₁ : ShortComplex C ⥤ C).Additive := hAdditivePi₁
+    let hAdditivePi₂ : (ShortComplex.π₂ : ShortComplex C ⥤ C).Additive :=
       { map_add := by intros; rfl }
-    letI : (ShortComplex.π₃ : ShortComplex C ⥤ C).Additive :=
+    let : (ShortComplex.π₂ : ShortComplex C ⥤ C).Additive := hAdditivePi₂
+    let hAdditivePi₃ : (ShortComplex.π₃ : ShortComplex C ⥤ C).Additive :=
       { map_add := by intros; rfl }
+    let : (ShortComplex.π₃ : ShortComplex C ⥤ C).Additive := hAdditivePi₃
     obtain ⟨rplus, rminus, hr⟩ :=
       kZeroRelations_signed_sum
         (FreeAbelianGroup.of (P.ι.obj A) - FreeAbelianGroup.of (P.ι.obj B)) hrel
@@ -1318,7 +1327,7 @@ theorem kZero_serre_kernel
       rw [← hs₁, ← hs₂]
       rw [Fintype.sum_sigma, Fintype.sum_sigma]
       simp [I₁, I₂, J, n₁, n₂, Fintype.sum_option, Fintype.sum_sum_type,
-        g₁, g₂, pairFunction, Fin.sum_ofFn]
+        g₁, g₂, pairFunction]
       simp_rw [Finset.sum_add_distrib]
       simp [finTwoEquiv, WalkingPair.equivBool]
       rw [hminus (fun r => FreeAbelianGroup.of r.sequence.X₁),
@@ -1361,8 +1370,11 @@ theorem kZero_serre_kernel
           eqToIso (by simp [l₂, ec]))
     let e : S.X₁ ≅ S.X₂ :=
       u₁ ≪≫ e₁ ≪≫ biproduct_list_perm_iso l₁ l₂ hp ≪≫ e₂.symm ≪≫ u₂.symm
-    let e₃ : S.X₃ ≅ S.X₁ := u₃ ≪≫ u₁.symm
-    let R : ShortComplex C := ⨁ Frev
+    have hS₁ : S.X₁ = ShortComplex.π₁.obj (⨁ F) := by rfl
+    have hS₂ : S.X₂ = ShortComplex.π₂.obj (⨁ F) := by rfl
+    have hS₃ : S.X₃ = ShortComplex.π₃.obj (⨁ F) := by rfl
+    let e₃ : S.X₃ ≅ S.X₁ :=
+      eqToIso hS₃ ≪≫ u₃ ≪≫ u₁.symm ≪≫ (eqToIso hS₁).symm
     have hr₁ : ∀ j, (⨁ fun i : Fin (n₂ j) => g₂ ⟨j, i⟩) ≅
         (Frev j).X₁ := by
       intro j
@@ -1387,21 +1399,28 @@ theorem kZero_serre_kernel
         (⨁ fun j => ⨁ fun i : Fin (n₂ j) => g₂ ⟨j, i⟩) ≅
           (⨁ fun j => (ShortComplex.π₃.obj (Frev j))) :=
       biproduct.whiskerEquiv (Equiv.refl J) (fun j => (hr₃ j).symm)
-    let r₁ : (ShortComplex.π₁.obj (⨁ Frev)) ≅ (⨁ fun p : I₂ => g₂ p) :=
-      (ShortComplex.π₁.mapBiproduct Frev ≪≫ rw₁.symm ≪≫
+    let R : ShortComplex C := ⨁ Frev
+    have hR₁ : R.X₁ = ShortComplex.π₁.obj (⨁ Frev) := by rfl
+    have hR₂ : R.X₂ = ShortComplex.π₂.obj (⨁ Frev) := by rfl
+    have hR₃ : R.X₃ = ShortComplex.π₃.obj (⨁ Frev) := by rfl
+    let r₁ : R.X₁ ≅ (⨁ fun p : I₂ => g₂ p) :=
+      eqToIso hR₁ ≪≫ ShortComplex.π₁.mapBiproduct Frev ≪≫ rw₁.symm ≪≫
         biproductBiproductIso (fun j : J => Fin (n₂ j))
-          (fun j i => g₂ ⟨j, i⟩))
-    let r₂ : (ShortComplex.π₂.obj (⨁ Frev)) ≅ (⨁ fun p : I₁ => g₁ p) :=
-      (ShortComplex.π₂.mapBiproduct Frev ≪≫ rw₂.symm ≪≫
+          (fun j i => g₂ ⟨j, i⟩)
+    let r₂ : R.X₂ ≅ (⨁ fun p : I₁ => g₁ p) :=
+      eqToIso hR₂ ≪≫ ShortComplex.π₂.mapBiproduct Frev ≪≫ rw₂.symm ≪≫
         biproductBiproductIso (fun j : J => Fin (n₁ j))
-          (fun j i => g₁ ⟨j, i⟩))
-    let r₃ : (ShortComplex.π₃.obj (⨁ Frev)) ≅ (⨁ fun p : I₂ => g₂ p) :=
-      (ShortComplex.π₃.mapBiproduct Frev ≪≫ rw₃.symm ≪≫
+          (fun j i => g₁ ⟨j, i⟩)
+    let r₃ : R.X₃ ≅ (⨁ fun p : I₂ => g₂ p) :=
+      eqToIso hR₃ ≪≫ ShortComplex.π₃.mapBiproduct Frev ≪≫ rw₃.symm ≪≫
         biproductBiproductIso (fun j : J => Fin (n₂ j))
-          (fun j i => g₂ ⟨j, i⟩))
-    let c₁ : S.X₂ ≅ R.X₁ := u₂ ≪≫ r₁.symm
-    let c₂ : S.X₁ ≅ R.X₂ := u₁ ≪≫ r₂.symm
-    let c₃ : S.X₂ ≅ R.X₃ := u₂ ≪≫ r₃.symm
+          (fun j i => g₂ ⟨j, i⟩)
+    let c₁ : S.X₂ ≅ R.X₁ :=
+      eqToIso hS₂ ≪≫ u₂ ≪≫ r₁.symm
+    let c₂ : S.X₁ ≅ R.X₂ :=
+      eqToIso hS₁ ≪≫ u₁ ≪≫ r₂.symm
+    let c₃ : S.X₂ ≅ R.X₃ :=
+      eqToIso hS₂ ≪≫ u₂ ≪≫ r₃.symm
     have hSg : S.g ≫
         (ShortComplex.π₃.mapBiproduct F).hom =
         biproduct.lift (fun j => (biproduct.π F j).τ₂ ≫ (F j).g) := by
@@ -1428,6 +1447,10 @@ theorem kZero_serre_kernel
           biproduct.π (fun j => (F j).X₂) j
       rw [Category.assoc, biproduct.lift_π, biproduct.lift_π]
       exact (biproduct.π F j).comm₁₂.symm
+    let fR : ShortComplex.π₁.obj (⨁ Frev) ⟶ ShortComplex.π₂.obj (⨁ Frev) :=
+      R.f
+    let gR : ShortComplex.π₂.obj (⨁ Frev) ⟶ ShortComplex.π₃.obj (⨁ Frev) :=
+      R.g
     have hRf : R.f ≫
         (ShortComplex.π₂.mapBiproduct Frev).hom =
         biproduct.lift (fun j => (biproduct.π Frev j).τ₁ ≫ (Frev j).f) := by
@@ -1488,47 +1511,92 @@ theorem kZero_serre_kernel
       dsimp [u₃]
       simp only [Category.assoc]
     have hr₁_hom : r₁.hom =
-        (ShortComplex.π₁.mapBiproduct Frev).hom ≫ rw₁.inv ≫
+        eqToHom hR₁ ≫ (ShortComplex.π₁.mapBiproduct Frev).hom ≫ rw₁.inv ≫
           (biproductBiproductIso (fun j : J => Fin (n₂ j))
             (fun j i => g₂ ⟨j, i⟩)).hom := by
       dsimp [r₁]
     have hr₁_inv : r₁.inv =
-        (biproductBiproductIso (fun j : J => Fin (n₂ j))
+          (biproductBiproductIso (fun j : J => Fin (n₂ j))
             (fun j i => g₂ ⟨j, i⟩)).inv ≫ rw₁.hom ≫
-          (ShortComplex.π₁.mapBiproduct Frev).inv := by
+          (ShortComplex.π₁.mapBiproduct Frev).inv ≫ eqToHom hR₁.symm := by
       dsimp [r₁]
       simp only [Category.assoc]
     have hr₂_hom : r₂.hom =
-        (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
+        eqToHom hR₂ ≫ (ShortComplex.π₂.mapBiproduct Frev).hom ≫ rw₂.inv ≫
           (biproductBiproductIso (fun j : J => Fin (n₁ j))
             (fun j i => g₁ ⟨j, i⟩)).hom := by
       dsimp [r₂]
     have hr₂_inv : r₂.inv =
-        (biproductBiproductIso (fun j : J => Fin (n₁ j))
+          (biproductBiproductIso (fun j : J => Fin (n₁ j))
             (fun j i => g₁ ⟨j, i⟩)).inv ≫ rw₂.hom ≫
-          (ShortComplex.π₂.mapBiproduct Frev).inv := by
+          (ShortComplex.π₂.mapBiproduct Frev).inv ≫ eqToHom hR₂.symm := by
       dsimp [r₂]
       simp only [Category.assoc]
     have hr₃_hom : r₃.hom =
-        (ShortComplex.π₃.mapBiproduct Frev).hom ≫ rw₃.inv ≫
+        eqToHom hR₃ ≫ (ShortComplex.π₃.mapBiproduct Frev).hom ≫ rw₃.inv ≫
           (biproductBiproductIso (fun j : J => Fin (n₂ j))
             (fun j i => g₂ ⟨j, i⟩)).hom := by
       dsimp [r₃]
     have hr₃_inv : r₃.inv =
-        (biproductBiproductIso (fun j : J => Fin (n₂ j))
+          (biproductBiproductIso (fun j : J => Fin (n₂ j))
             (fun j i => g₂ ⟨j, i⟩)).inv ≫ rw₃.hom ≫
-          (ShortComplex.π₃.mapBiproduct Frev).inv := by
+          (ShortComplex.π₃.mapBiproduct Frev).inv ≫ eqToHom hR₃.symm := by
       dsimp [r₃]
       simp only [Category.assoc]
+    have hSg' : S.g ≫ eqToHom hS₃ ≫
+        (ShortComplex.π₃.mapBiproduct F).hom =
+        biproduct.lift (fun j => (biproduct.π F j).τ₂ ≫ (F j).g) := by
+      apply eq_of_heq
+      simpa only [Category.assoc] using
+        ((CategoryTheory.heq_comp
+          (f := S.g ≫ eqToHom hS₃) (f' := S.g)
+          (g := (ShortComplex.π₃.mapBiproduct F).hom)
+          (g' := (ShortComplex.π₃.mapBiproduct F).hom)
+          rfl rfl rfl (CategoryTheory.comp_eqToHom_heq S.g hS₃)
+          (heq_of_eq rfl)).trans (heq_of_eq hSg))
+    have hSf' : S.f ≫ eqToHom hS₂ ≫
+        (ShortComplex.π₂.mapBiproduct F).hom =
+        biproduct.lift (fun j => (biproduct.π F j).τ₁ ≫ (F j).f) := by
+      apply eq_of_heq
+      simpa only [Category.assoc] using
+        ((CategoryTheory.heq_comp
+          (f := S.f ≫ eqToHom hS₂) (f' := S.f)
+          (g := (ShortComplex.π₂.mapBiproduct F).hom)
+          (g' := (ShortComplex.π₂.mapBiproduct F).hom)
+          rfl rfl rfl (CategoryTheory.comp_eqToHom_heq S.f hS₂)
+          (heq_of_eq rfl)).trans (heq_of_eq hSf))
+    have hRf' : R.f ≫ eqToHom hR₂ ≫
+        (ShortComplex.π₂.mapBiproduct Frev).hom =
+        biproduct.lift (fun j => (biproduct.π Frev j).τ₁ ≫ (Frev j).f) := by
+      apply eq_of_heq
+      simpa only [Category.assoc] using
+        ((CategoryTheory.heq_comp
+          (f := R.f ≫ eqToHom hR₂) (f' := R.f)
+          (g := (ShortComplex.π₂.mapBiproduct Frev).hom)
+          (g' := (ShortComplex.π₂.mapBiproduct Frev).hom)
+          rfl rfl rfl (CategoryTheory.comp_eqToHom_heq R.f hR₂)
+          (heq_of_eq rfl)).trans (heq_of_eq hRf))
+    have hRg' : R.g ≫ eqToHom hR₃ ≫
+        (ShortComplex.π₃.mapBiproduct Frev).hom =
+        biproduct.lift (fun j => (biproduct.π Frev j).τ₂ ≫ (Frev j).g) := by
+      apply eq_of_heq
+      simpa only [Category.assoc] using
+        ((CategoryTheory.heq_comp
+          (f := R.g ≫ eqToHom hR₃) (f' := R.g)
+          (g := (ShortComplex.π₃.mapBiproduct Frev).hom)
+          (g' := (ShortComplex.π₃.mapBiproduct Frev).hom)
+          rfl rfl rfl (CategoryTheory.comp_eqToHom_heq R.g hR₃)
+          (heq_of_eq rfl)).trans (heq_of_eq hRg))
     have hcomm₁ : c₁.hom ≫ R.f = S.g ≫ e₃.hom ≫ c₂.hom := by
       apply (cancel_mono r₂.hom).1
+      apply (cancel_epi (eqToIso hS₂).inv).1
       apply (cancel_epi u₂.inv).1
-      simp only [c₁, c₂, Iso.trans_hom, Iso.symm_hom]
+      dsimp [c₁, c₂]
       rw [hr₁_inv, hr₂_hom]
-      simp only [e₃, Iso.trans_hom, Iso.symm_hom]
-      rw [hu₂_inv, hu₃_hom]
+      dsimp [e₃]
+      rw [hu₂_inv, hu₂_hom, hu₃_hom]
       simp only [Category.assoc, Iso.inv_hom_id_assoc]
-      rw [← hRf, ← hSg]
+      rw [hRf', hSg']
       apply biproduct.hom_ext
       intro j
       rcases j with ⟨j, k⟩
@@ -1551,11 +1619,13 @@ theorem kZero_serre_kernel
             Category.assoc]
     have hcomm₂ : c₂.hom ≫ R.g = S.f ≫ c₃.hom := by
       apply (cancel_mono r₃.hom).1
+      apply (cancel_epi (eqToIso hS₁).inv).1
       apply (cancel_epi u₁.inv).1
-      simp only [c₂, c₃, Iso.trans_hom, Iso.symm_hom]
+      dsimp [c₂, c₃]
       rw [hr₂_inv, hr₃_hom]
       rw [hu₁_inv, hu₂_hom]
-      rw [← hRg, ← hSf]
+      simp only [Category.assoc, Iso.inv_hom_id_assoc]
+      rw [hRg', hSf']
       apply biproduct.hom_ext
       intro j
       rcases j with ⟨j, k⟩
@@ -1592,7 +1662,7 @@ theorem kZero_serre_kernel
         φ := S.f ≫ e.inv
         ψ := e.hom ≫ S.g ≫ e₃.hom
         φψ := by
-          simp [Category.assoc, hgf]
+          simp [Category.assoc]
         ψφ := by
           calc
             ((e.hom ≫ S.g ≫ e₃.hom) ≫ (S.f ≫ e.inv)) =
@@ -1607,11 +1677,11 @@ theorem kZero_serre_kernel
     let e₁' : K₁ ≅ T := ShortComplex.isoMk (e ≪≫ c₁) c₂ (e ≪≫ c₃)
       (by
         dsimp [K₁, K, T, R]
-        simp only [Iso.trans_hom, Category.assoc]
+        simp only [Category.assoc]
         rw [hcomm₁])
       (by
         dsimp [K₁, K, T, R]
-        simp only [Iso.trans_hom, Category.assoc, Iso.inv_hom_id_assoc]
+        simp only [Category.assoc, Iso.inv_hom_id_assoc]
         rw [hcomm₂])
     let hK₀ : K.H0 ≅ S.homology := ShortComplex.homologyMapIso e₀
     let hK₁ : K.H1 ≅ T.homology := ShortComplex.homologyMapIso e₁'

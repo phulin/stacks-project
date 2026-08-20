@@ -486,6 +486,7 @@ theorem postnikovShiftedTriangle_distinguished
     (i : Fin n) :
     postnikovShiftedTriangle P i ∈ distTriang C := by
   let _ := (inferInstance : IsTriangulated C)
+  classical
   exact Triangle.shift_distinguished _
     (rot_of_distTriang _ (rot_of_distTriang _ (P.distinguished i))) (i.val : ℤ)
 
@@ -664,12 +665,205 @@ theorem postnikovSystem_exists_length_one
     rw [htoX_zero]
     simp [Category.assoc]
 
+private lemma homIsZero_of_iso
+    {X X' Y Y' : C} (eX : X ≅ X') (eY : Y ≅ Y')
+    (h : HomIsZero X' Y) : HomIsZero X Y' := by
+  intro f
+  have hf : eX.inv ≫ f ≫ eY.inv = 0 := h _
+  have hf' : f ≫ eY.inv = 0 := by
+    calc
+      f ≫ eY.inv = eX.hom ≫ (eX.inv ≫ f ≫ eY.inv) := by simp
+      _ = 0 := by rw [hf, comp_zero]
+  apply (cancel_mono eY.inv).1
+  simpa using hf'
+
+private lemma homIsZero_shift_of_neg
+    {X Y : C} (a b : ℤ) (hab : a + b = 0)
+    (h : HomIsZero ((shiftFunctor C a).obj X) Y) :
+    HomIsZero X ((shiftFunctor C b).obj Y) := by
+  letI : (shiftEquiv' C a b hab).functor.Additive := by
+    change (shiftFunctor C a).Additive
+    infer_instance
+  intro f
+  let e := (shiftEquiv' C a b hab).toAdjunction.homEquiv X Y
+  have hf : e.symm f = 0 := h _
+  apply e.symm.injective
+  have : e.symm f = e.symm 0 := by
+    calc
+      e.symm f = 0 := hf
+      _ = e.symm 0 := by
+        symm
+        change ((shiftEquiv' C a b hab).toAdjunction.homEquiv X Y).symm 0 = 0
+        exact CategoryTheory.Adjunction.homAddEquiv_symm_zero
+          ((shiftEquiv' C a b hab).toAdjunction) X Y
+  exact this
+
+private lemma homIsZero_shift_add_left
+    {X Y : C} (a b : ℤ) (h : HomIsZero ((shiftFunctor C (a + b)).obj X) Y) :
+    HomIsZero ((shiftFunctor C b).obj ((shiftFunctor C a).obj X)) Y := by
+  let eX : (shiftFunctor C b).obj ((shiftFunctor C a).obj X) ≅
+      (shiftFunctor C (a + b)).obj X :=
+    ((shiftFunctorAdd' C a b (a + b) rfl).app X).symm
+  exact homIsZero_of_iso eX (Iso.refl Y) h
+
+private lemma eqToHom_comp_family
+    {I : Type*} {F G : I → C} (u : ∀ i, F i ⟶ G i)
+    {i j : I} (h : i = j) :
+    eqToHom (congrArg F h) ≫ u j ≫ eqToHom (congrArg G h.symm) = u i := by
+  subst j
+  simp
+
+private lemma eqToHom_comp_binary
+    {I : Type*} {F : I → C} (u : ∀ i j, F i ⟶ F j)
+    {i i' j j' : I} (hi : i = i') (hj : j = j') :
+    eqToHom (congrArg F hi) ≫ u i' j' ≫
+        eqToHom (congrArg F hj.symm) = u i j := by
+  subst i'
+  subst j'
+  simp
+
 /-- Any map of length-one complexes extends to a map of chosen systems. -/
 theorem postnikovSystemHom_exists_length_one
     {K K' : FinitePostnikovComplex C 1}
     (f : K ⟶ K') (P : PostnikovSystem K) (P' : PostnikovSystem K') :
     Nonempty (PostnikovSystemHom (P := P) (P' := P') f) := by
-  sorry
+  let _ := (inferInstance : IsTriangulated C)
+  let i₁ : Fin 2 := finitePostnikovSuccIndex (0 : Fin 1)
+  have hidx : finitePostnikovIndex (0 : Fin 1) = finitePostnikovZeroIndex 1 := by
+    apply Fin.ext
+    rfl
+  let eP : P.Y (finitePostnikovIndex (0 : Fin 1)) ≅ K.X (finitePostnikovIndex (0 : Fin 1)) :=
+    eqToIso (congrArg P.Y hidx) ≪≫ P.baseIso ≪≫
+      eqToIso (congrArg K.X hidx.symm)
+  let eP' : P'.Y (finitePostnikovIndex (0 : Fin 1)) ≅ K'.X (finitePostnikovIndex (0 : Fin 1)) :=
+    eqToIso (congrArg P'.Y hidx) ≪≫ P'.baseIso ≪≫
+      eqToIso (congrArg K'.X hidx.symm)
+  have heP : eP.hom = P.toX (finitePostnikovIndex (0 : Fin 1)) := by
+    dsimp [eP]
+    rw [P.baseIso_hom]
+    exact eqToHom_comp_family P.toX hidx
+  have heP' : eP'.hom = P'.toX (finitePostnikovIndex (0 : Fin 1)) := by
+    dsimp [eP']
+    rw [P'.baseIso_hom]
+    exact eqToHom_comp_family P'.toX hidx
+  let y₀ : P.Y (finitePostnikovIndex (0 : Fin 1)) ⟶ P'.Y (finitePostnikovIndex (0 : Fin 1)) :=
+    eP.hom ≫ f.f (finitePostnikovIndex (0 : Fin 1)) ≫ eP'.inv
+  have hcompat :
+      P.fromX (0 : Fin 1) ≫ P.toX (finitePostnikovIndex (0 : Fin 1)) =
+        finitePostnikovDifferential K 0 := by
+    exact P.compatibility (0 : Fin 1)
+  have hcompat' :
+      P'.fromX (0 : Fin 1) ≫ P'.toX (finitePostnikovIndex (0 : Fin 1)) =
+        finitePostnikovDifferential K' 0 := by
+    exact P'.compatibility (0 : Fin 1)
+  have hchain :
+      finitePostnikovDifferential K 0 ≫ f.f (finitePostnikovIndex (0 : Fin 1)) =
+        f.f i₁ ≫ finitePostnikovDifferential K' 0 := by
+    simpa [finitePostnikovDifferential, i₁] using
+      f.comm' i₁ (finitePostnikovIndex (0 : Fin 1)) (by
+        dsimp [finitePostnikovShape, i₁]
+        rfl)
+  have hcomm :
+      P.fromX (0 : Fin 1) ≫ y₀ = f.f i₁ ≫ P'.fromX (0 : Fin 1) := by
+    apply (cancel_mono eP'.hom).1
+    dsimp [y₀]
+    simp only [Category.assoc]
+    rw [Iso.inv_hom_id, Category.comp_id]
+    rw [heP, ← Category.assoc, hcompat, hchain, ← hcompat', ← heP']
+  let T := postnikovTriangle P (0 : Fin 1)
+  let T' := postnikovTriangle P' (0 : Fin 1)
+  obtain ⟨y₁, hy₁, hy₃⟩ := complete_distinguished_triangle_morphism₁
+    T T' (P.distinguished (0 : Fin 1)) (P'.distinguished (0 : Fin 1))
+    (f.f i₁) y₀ hcomm
+  dsimp [T, T', postnikovTriangle] at y₁ hy₁ hy₃
+  change P.Y (finitePostnikovSuccIndex (0 : Fin 1)) ⟶
+      P'.Y (finitePostnikovSuccIndex (0 : Fin 1)) at y₁
+  change P.toX (finitePostnikovSuccIndex (0 : Fin 1)) ≫ f.f i₁ =
+      y₁ ≫ P'.toX (finitePostnikovSuccIndex (0 : Fin 1)) at hy₁
+  have hzero : (0 : Fin 2) = finitePostnikovIndex (0 : Fin 1) := by
+    apply Fin.ext
+    rfl
+  have hs : i₁ = Fin.succ (0 : Fin 1) := by
+    apply Fin.ext
+    rfl
+  let yzero : P.Y (0 : Fin 2) ⟶ P'.Y (0 : Fin 2) :=
+    eqToHom (congrArg P.Y hzero) ≫ y₀ ≫
+      eqToHom (congrArg P'.Y hzero.symm)
+  let hk_of (k : Fin 1) : i₁ = Fin.succ k := by
+    have hk0 : k = 0 := Fin.eq_zero k
+    subst k
+    exact hs
+  let ys : ∀ k : Fin 1, P.Y (Fin.succ k) ⟶ P'.Y (Fin.succ k) := fun k =>
+    eqToHom (congrArg P.Y (hk_of k).symm) ≫ y₁ ≫
+      eqToHom (congrArg P'.Y (hk_of k))
+  let y : ∀ i, P.Y i ⟶ P'.Y i := Fin.cases yzero ys
+  have hy_zero : y (0 : Fin 2) =
+      eqToHom (congrArg P.Y hzero) ≫ y₀ ≫
+        eqToHom (congrArg P'.Y hzero.symm) := by
+    dsimp [y, yzero]
+  have hy_succ : y i₁ = y₁ := by
+    have hy_one : y (Fin.succ (0 : Fin 1)) =
+        eqToHom (congrArg P.Y hs.symm) ≫ y₁ ≫
+          eqToHom (congrArg P'.Y hs) := by
+      calc
+        y (Fin.succ (0 : Fin 1)) = ys 0 := by
+          change Fin.cases yzero ys (Fin.succ (0 : Fin 1)) = ys 0
+          rfl
+        _ = eqToHom (congrArg P.Y hs.symm) ≫ y₁ ≫
+            eqToHom (congrArg P'.Y hs) := by
+          dsimp [ys, hk_of]
+    have hy_family := eqToHom_comp_family y hs
+    calc
+      y i₁ = eqToHom (congrArg P.Y hs) ≫
+          y (Fin.succ (0 : Fin 1)) ≫
+            eqToHom (congrArg P'.Y hs.symm) := hy_family.symm
+      _ = eqToHom (congrArg P.Y hs) ≫
+          (eqToHom (congrArg P.Y hs.symm) ≫ y₁ ≫
+            eqToHom (congrArg P'.Y hs)) ≫
+              eqToHom (congrArg P'.Y hs.symm) := by rw [hy_one]
+      _ = y₁ := by simp
+  have hy_index : y (finitePostnikovIndex (0 : Fin 1)) = y₀ := by
+    have hy_family := eqToHom_comp_family y hzero
+    apply (cancel_mono (eqToHom (congrArg P'.Y hzero.symm))).1
+    apply (cancel_epi (eqToHom (congrArg P.Y hzero))).1
+    exact hy_family.trans hy_zero
+  let tm : ∀ i : Fin 1, postnikovTriangle P i ⟶ postnikovTriangle P' i := fun i =>
+    Fin.cases
+      (Triangle.homMk T T' y₁ (f.f i₁) y₀ hy₁
+        (by
+          change P.fromX (0 : Fin 1) ≫ y₀ = f.f i₁ ≫ P'.fromX (0 : Fin 1)
+          exact hcomm) hy₃)
+      (fun j => Fin.elim0 j) i
+  refine ⟨⟨y, ?_, tm, ?_, ?_, ?_⟩⟩
+  · intro i
+    fin_cases i
+    · change P.toX (0 : Fin 2) ≫ f.f 0 = y 0 ≫ P'.toX 0
+      rw [hy_zero]
+      dsimp [y₀]
+      have hP0 := eqToHom_comp_family P.toX hzero
+      have hP'0 := eqToHom_comp_family P'.toX hzero
+      have hf0 := eqToHom_comp_family f.f hzero
+      rw [← hP0, ← hf0, ← hP'0, ← heP, ← heP']
+      simp [Category.assoc]
+    · change P.toX (1 : Fin 2) ≫ f.f 1 = y 1 ≫ P'.toX 1
+      have hs : (1 : Fin 2) = i₁ := by
+        dsimp [i₁]
+        rfl
+      rw [hs]
+      rw [hy_succ]
+      simpa [T, T', i₁, postnikovTriangle] using hy₁
+  · intro i
+    fin_cases i
+    dsimp [tm]
+    exact hy_succ.symm
+  · intro i
+    fin_cases i
+    dsimp [tm]
+    rfl
+  · intro i
+    fin_cases i
+    dsimp [tm]
+    exact hy_index.symm
 
 /-- The source's warning that length-one extensions need not be unique. -/
 def HasLengthOnePostnikovExtensionNonuniqueness : Prop :=
@@ -682,7 +876,389 @@ def HasLengthOnePostnikovExtensionNonuniqueness : Prop :=
 theorem postnikovSystem_exists_length_two
     (K : FinitePostnikovComplex C 2) :
     Nonempty (PostnikovSystem K) := by
-  sorry
+  classical
+  let e : ∀ i : Fin 2, Fin 3 := fun i => ⟨i.val, by omega⟩
+  let d01 : ∀ i j : Fin 2, K.X (e i) ⟶ K.X (e j) := fun i j =>
+    if h : finitePostnikovShape 1 |>.Rel i j then
+      K.d (e i) (e j)
+    else 0
+  let K01 : FinitePostnikovComplex C 1 :=
+    { X := fun i => K.X (e i)
+      d := d01
+      shape := by
+        intro i j hij
+        dsimp [d01]
+        exact if_neg hij
+      d_comp_d' := by
+        intro i j k hij hjk
+        have hij' : j.val + 1 = i.val := hij
+        have hjk' : k.val + 1 = j.val := hjk
+        omega }
+  obtain ⟨P01⟩ := postnikovSystem_exists_length_one K01
+  have he0 : e (finitePostnikovIndex (0 : Fin 1)) =
+      finitePostnikovIndex (0 : Fin 2) := by
+    apply Fin.ext
+    rfl
+  have he1 : e (finitePostnikovSuccIndex (0 : Fin 1)) =
+      finitePostnikovIndex (1 : Fin 2) := by
+    apply Fin.ext
+    rfl
+  have hd01 : d01 (finitePostnikovSuccIndex (0 : Fin 1))
+      (finitePostnikovIndex (0 : Fin 1)) =
+      K.d (e (finitePostnikovSuccIndex (0 : Fin 1)))
+        (e (finitePostnikovIndex (0 : Fin 1))) := by
+    dsimp [d01]
+    rw [if_pos (show (finitePostnikovShape 1).Rel
+      (finitePostnikovSuccIndex (0 : Fin 1))
+      (finitePostnikovIndex (0 : Fin 1)) by rfl)]
+  let d21 : K.X (finitePostnikovSuccIndex (1 : Fin 2)) ⟶
+      K.X (finitePostnikovIndex (1 : Fin 2)) :=
+    finitePostnikovDifferential K (1 : Fin 2)
+  let d21' : K.X (finitePostnikovSuccIndex (1 : Fin 2)) ⟶
+      K01.X (finitePostnikovSuccIndex (0 : Fin 1)) :=
+    d21 ≫ eqToHom (congrArg K.X he1.symm)
+  have hd21 : d21' ≫ P01.fromX (0 : Fin 1) = 0 := by
+    letI : IsIso (P01.toX (finitePostnikovIndex (0 : Fin 1))) := by
+      have hzero : finitePostnikovIndex (0 : Fin 1) =
+          finitePostnikovZeroIndex 1 := by
+        apply Fin.ext
+        change (0 : ℕ) = 0
+        rfl
+      rw [hzero, ← P01.baseIso_hom]
+      infer_instance
+    letI : IsIso (eqToHom (congrArg K.X he0)) := inferInstance
+    apply (cancel_mono (P01.toX (finitePostnikovIndex (0 : Fin 1)))).1
+    have hcomp := K.d_comp_d
+      (finitePostnikovSuccIndex (1 : Fin 2))
+      (finitePostnikovIndex (1 : Fin 2))
+      (finitePostnikovIndex (0 : Fin 2))
+    rw [Category.assoc, P01.compatibility]
+    simp only [zero_comp]
+    apply (cancel_mono (eqToHom (congrArg K.X he0))).1
+    dsimp [finitePostnikovDifferential, K01, d01]
+    rw [if_pos (show (finitePostnikovShape 1).Rel
+      (finitePostnikovSuccIndex (0 : Fin 1))
+      (finitePostnikovIndex (0 : Fin 1)) by rfl)]
+    dsimp [d21', d21]
+    simp only [Category.assoc, zero_comp]
+    rw [eqToHom_comp_binary K.d he1.symm he0.symm]
+    exact hcomp
+  let T01 := postnikovTriangle P01 (0 : Fin 1)
+  have hT01 : T01 ∈ distTriang C := P01.distinguished (0 : Fin 1)
+  obtain ⟨α, hα⟩ := T01.coyoneda_exact₂ hT01 d21' hd21
+  obtain ⟨Y₂, u₂, v₂, hT₂⟩ := distinguished_cocone_triangle₁ α
+  let Y : Fin 3 → C := fun j =>
+    Fin.cases (P01.Y (finitePostnikovIndex (0 : Fin 1)))
+      (fun k => Fin.cases (P01.Y (finitePostnikovSuccIndex (0 : Fin 1)))
+        (fun _ => Y₂) k) j
+  have hY0 : Y (finitePostnikovIndex (0 : Fin 2)) =
+      P01.Y (finitePostnikovIndex (0 : Fin 1)) := by rfl
+  have hY1 : Y (finitePostnikovIndex (1 : Fin 2)) =
+      P01.Y (finitePostnikovSuccIndex (0 : Fin 1)) := by rfl
+  have hY2 : Y (finitePostnikovLastIndex 2) = Y₂ := by rfl
+  have hidx1 : finitePostnikovSuccIndex (0 : Fin 2) =
+      finitePostnikovIndex (1 : Fin 2) := by
+    apply Fin.ext
+    rfl
+  have he1s : e (finitePostnikovSuccIndex (0 : Fin 1)) =
+      finitePostnikovSuccIndex (0 : Fin 2) :=
+    he1.trans hidx1.symm
+  have hY1s : Y (finitePostnikovSuccIndex (0 : Fin 2)) =
+      P01.Y (finitePostnikovSuccIndex (0 : Fin 1)) :=
+    (congrArg Y hidx1).trans hY1
+  have hsucc2 : finitePostnikovSuccIndex (1 : Fin 2) =
+      finitePostnikovLastIndex 2 := by
+    apply Fin.ext
+    rfl
+  have hidx2 : finitePostnikovSuccIndex (1 : Fin 2) =
+      Fin.succ (Fin.succ (0 : Fin 1)) := by rfl
+  have hss : Fin.succ (Fin.succ (0 : Fin 1)) =
+      finitePostnikovLastIndex 2 := by rfl
+  have hY2s : Y (finitePostnikovSuccIndex (1 : Fin 2)) = Y₂ :=
+    (congrArg Y hsucc2).trans hY2
+  have hY2ss : Y (Fin.succ (Fin.succ (0 : Fin 1))) = Y₂ := by rfl
+  have hzero : finitePostnikovZeroIndex 2 =
+      finitePostnikovIndex (0 : Fin 2) := by
+    apply Fin.ext
+    dsimp [finitePostnikovZeroIndex, finitePostnikovIndex]
+  have hYzero : Y (finitePostnikovZeroIndex 2) =
+      P01.Y (finitePostnikovIndex (0 : Fin 1)) :=
+    (congrArg Y hzero).trans hY0
+  have hezero : e (finitePostnikovIndex (0 : Fin 1)) =
+      finitePostnikovZeroIndex 2 := by
+    apply Fin.ext
+    omega
+  have hzero1 : finitePostnikovZeroIndex 1 =
+      finitePostnikovIndex (0 : Fin 1) := by
+    apply Fin.ext
+    dsimp [finitePostnikovZeroIndex, finitePostnikovIndex]
+  have hYzeroA : Y (finitePostnikovZeroIndex 2) =
+      P01.Y (finitePostnikovZeroIndex 1) :=
+    hYzero.trans (congrArg P01.Y hzero1.symm)
+  have hezeroA : e (finitePostnikovZeroIndex 1) =
+      finitePostnikovZeroIndex 2 :=
+    (congrArg e hzero1).trans hezero
+  let toX : ∀ j, Y j ⟶ K.X j := fun j =>
+    Fin.cases
+      (eqToHom hYzeroA ≫ P01.toX (finitePostnikovZeroIndex 1) ≫
+        eqToHom (congrArg K.X hezeroA))
+      (fun k => Fin.cases
+        (eqToHom hY1 ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) ≫
+          eqToHom (congrArg K.X he1))
+        (fun l => by
+          have hl : l = (0 : Fin 1) := Fin.ext (by omega)
+          subst l
+          exact eqToHom hY2ss ≫ u₂ ≫
+            eqToHom (congrArg K.X hidx2)) k) j
+  let fromX : ∀ i : Fin 2, K.X (finitePostnikovSuccIndex i) ⟶
+      Y (finitePostnikovIndex i) := fun i =>
+    Fin.cases
+      (eqToHom (congrArg K.X he1s.symm) ≫ P01.fromX (0 : Fin 1) ≫
+        eqToHom hY0.symm)
+      (fun k => by
+        have hk : k = (0 : Fin 1) := Fin.ext (by omega)
+        subst k
+        exact α ≫ eqToHom hY1.symm) i
+  let connecting : ∀ i : Fin 2, Y (finitePostnikovIndex i) ⟶
+      (shiftFunctor C (1 : ℤ)).obj (Y (finitePostnikovSuccIndex i)) := fun i =>
+    Fin.cases
+      (eqToHom hY0 ≫ P01.connecting (0 : Fin 1) ≫
+        (shiftFunctor C (1 : ℤ)).map (eqToHom hY1s.symm))
+      (fun k => by
+        have hk : k = (0 : Fin 1) := Fin.ext (by omega)
+        subst k
+        exact eqToHom hY1 ≫ v₂ ≫
+          (shiftFunctor C (1 : ℤ)).map (eqToHom hY2s.symm)) i
+  let baseIso : Y (finitePostnikovZeroIndex 2) ≅
+      K.X (finitePostnikovZeroIndex 2) :=
+    eqToIso hYzeroA ≪≫ P01.baseIso ≪≫ eqToIso (congrArg K.X hezeroA)
+  have hbase : baseIso.hom = toX (finitePostnikovZeroIndex 2) := by
+    dsimp [baseIso, toX, Iso.trans]
+    change eqToHom hYzeroA ≫ P01.baseIso.hom ≫
+        eqToHom (congrArg K.X hezeroA) =
+      eqToHom hYzeroA ≫ P01.toX (finitePostnikovZeroIndex 1) ≫
+        eqToHom (congrArg K.X hezeroA)
+    rw [P01.baseIso_hom]
+  have htoX1 : toX (finitePostnikovSuccIndex (0 : Fin 2)) =
+      eqToHom hY1s ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) ≫
+        eqToHom (congrArg K.X he1s) := by
+    rfl
+  have hY1T : Y (finitePostnikovIndex (1 : Fin 2)) = T01.obj₁ := by
+    simpa [T01, postnikovTriangle] using hY1
+  have hY1Ts : Y (finitePostnikovIndex (Fin.succ (0 : Fin 1))) = T01.obj₁ := by
+    simpa using hY1T
+  have hY2Ts : Y (finitePostnikovSuccIndex (Fin.succ (0 : Fin 1))) = Y₂ := by
+    simpa using hY2s
+  have htoX_general (j : Fin 3)
+      (hj : j = Fin.succ (Fin.succ (0 : Fin 1))) :
+      toX j =
+        eqToHom (congrArg Y hj) ≫ eqToHom hY2ss ≫ u₂ ≫
+          eqToHom (congrArg K.X
+            (hidx2.trans hj.symm)) := by
+    subst j
+    change Fin.cases _
+      (fun k => Fin.cases _
+        (fun l => by
+          have hl : l = (0 : Fin 1) := Fin.ext (by omega)
+          subst l
+          exact eqToHom hY2ss ≫ u₂ ≫
+            eqToHom (congrArg K.X hidx2)) k)
+      (Fin.succ (Fin.succ (0 : Fin 1))) =
+      eqToHom (congrArg Y rfl) ≫ eqToHom hY2ss ≫ u₂ ≫
+        eqToHom (congrArg K.X
+          (hidx2.trans rfl))
+    rw [Fin.cases_succ, Fin.cases_succ]
+    have hidx2eq : hidx2.trans rfl = hidx2 := Subsingleton.elim _ _
+    rw [hidx2eq]
+    simp [Category.assoc, eqToHom_trans]
+  have hY2to : Y (finitePostnikovSuccIndex (1 : Fin 2)) = Y₂ :=
+    (congrArg Y hidx2).trans hY2ss
+  have hK2to : finitePostnikovSuccIndex (1 : Fin 2) =
+      finitePostnikovSuccIndex (1 : Fin 2) :=
+    hidx2.trans hidx2.symm
+  have hj1 : (1 : Fin 2) = Fin.succ (0 : Fin 1) := by rfl
+  have hY2target : Y₂ =
+      Y (finitePostnikovSuccIndex (1 : Fin 2)) :=
+    hY2Ts.symm.trans
+      (congrArg Y ((congrArg finitePostnikovSuccIndex hj1).symm))
+  have hfromX_general (j : Fin 2)
+      (hj : j = Fin.succ (0 : Fin 1)) :
+      fromX j =
+        eqToHom (congrArg (fun q => K.X (finitePostnikovSuccIndex q)) hj) ≫
+          α ≫ eqToHom hY1Ts.symm ≫
+            eqToHom (congrArg Y ((congrArg finitePostnikovIndex hj).symm)) := by
+    subst j
+    change @Fin.cases 1
+      (fun i : Fin 2 => K.X (finitePostnikovSuccIndex i) ⟶
+        Y (finitePostnikovIndex i))
+      (eqToHom (congrArg K.X he1s.symm) ≫ P01.fromX (0 : Fin 1) ≫
+        eqToHom hY0.symm)
+      (fun k => by
+        have hk : k = (0 : Fin 1) := Fin.ext (by omega)
+        subst k
+        exact α ≫ eqToHom hY1Ts.symm)
+      (Fin.succ (0 : Fin 1)) =
+      eqToHom (congrArg (fun q => K.X (finitePostnikovSuccIndex q)) rfl) ≫
+        α ≫ eqToHom hY1Ts.symm ≫ eqToHom (congrArg Y rfl)
+    rw [Fin.cases_succ]
+    simp [eqToHom_trans]
+  have hfromX1 : fromX (1 : Fin 2) =
+      α ≫ eqToHom hY1T.symm := by
+    simpa [eqToHom_trans] using
+      hfromX_general (1 : Fin 2) (by rfl)
+  have hconnecting_general (j : Fin 2)
+      (hj : j = Fin.succ (0 : Fin 1)) :
+      connecting j =
+        eqToHom (congrArg Y (congrArg finitePostnikovIndex hj)) ≫
+          eqToHom hY1Ts ≫ v₂ ≫
+            (shiftFunctor C (1 : ℤ)).map (eqToHom
+              (hY2Ts.symm.trans
+                (congrArg Y ((congrArg finitePostnikovSuccIndex hj).symm)))) := by
+    subst j
+    change Fin.cases
+      _
+      (fun k => by
+        have hk : k = (0 : Fin 1) := Fin.ext (by omega)
+        subst k
+        exact eqToHom hY1Ts ≫ v₂ ≫
+          (shiftFunctor C (1 : ℤ)).map (eqToHom hY2Ts.symm))
+      (Fin.succ (0 : Fin 1)) =
+      eqToHom (congrArg Y rfl) ≫ eqToHom hY1Ts ≫ v₂ ≫
+        (shiftFunctor C (1 : ℤ)).map (eqToHom
+          (hY2Ts.symm.trans (congrArg Y rfl)))
+    rw [Fin.cases_succ]
+    simp [eqToHom_trans]
+  refine ⟨{ Y := Y, toX := toX, baseIso := baseIso, baseIso_hom := hbase, fromX := fromX, connecting := connecting, distinguished := ?_, compatibility := ?_ }⟩
+  · intro i
+    fin_cases i
+    · let e₁ : Y (finitePostnikovSuccIndex (0 : Fin 2)) ≅
+          T01.obj₁ := eqToIso hY1s
+      let e₂ : K.X (finitePostnikovSuccIndex (0 : Fin 2)) ≅
+          T01.obj₂ := eqToIso (congrArg K.X he1s.symm)
+      let e₃ : Y (finitePostnikovIndex (0 : Fin 2)) ≅
+          T01.obj₃ := eqToIso hY0
+      apply isomorphic_distinguished _ hT01 _
+        (Triangle.isoMk _ _ e₁ e₂ e₃ ?_ ?_ ?_)
+      · dsimp [Triangle.mk, e₁, e₂]
+        change toX (finitePostnikovSuccIndex (0 : Fin 2)) ≫
+            eqToHom (congrArg K.X he1s.symm) =
+          eqToHom hY1s ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1))
+        rw [htoX1]
+        simp [Category.assoc, eqToHom_trans]
+      · dsimp [Triangle.mk, e₂, e₃]
+        change fromX (0 : Fin 2) ≫ eqToHom hY0 =
+          eqToHom (congrArg K.X he1s.symm) ≫ P01.fromX (0 : Fin 1)
+        simp [fromX, Category.assoc, eqToHom_trans]
+      · dsimp [Triangle.mk, e₁, e₃]
+        change connecting (0 : Fin 2) ≫
+            (shiftFunctor C (1 : ℤ)).map (eqToHom hY1s) =
+          eqToHom hY0 ≫ T01.mor₃
+        dsimp [connecting]
+        have hcancel :
+            (shiftFunctor C (1 : ℤ)).map (eqToHom hY1s.symm) ≫
+                (shiftFunctor C (1 : ℤ)).map (eqToHom hY1s) =
+              𝟙 ((shiftFunctor C (1 : ℤ)).obj
+                (P01.Y (finitePostnikovSuccIndex (0 : Fin 1)))) := by
+          rw [← Functor.map_comp]
+          simp [eqToHom_trans]
+        simp only [Category.assoc]
+        rw [hcancel]
+        simp only [Category.comp_id]
+        change eqToHom hY0 ≫ P01.connecting (0 : Fin 1) =
+          eqToHom hY0 ≫ P01.connecting (0 : Fin 1)
+        rfl
+    · let e₁ : Y (finitePostnikovSuccIndex (1 : Fin 2)) ≅ Y₂ :=
+          eqToIso hY2target.symm
+      let e₂ : K.X (finitePostnikovSuccIndex (1 : Fin 2)) ≅
+          K.X (finitePostnikovSuccIndex (1 : Fin 2)) :=
+        eqToIso (congrArg K.X hK2to)
+      let e₃ : Y (finitePostnikovIndex (1 : Fin 2)) ≅
+          T01.obj₁ := eqToIso hY1Ts
+      apply isomorphic_distinguished _ hT₂ _
+        (Triangle.isoMk _ _ e₁ e₂ e₃ ?_ ?_ ?_)
+      · dsimp [Triangle.mk, e₁, e₂]
+        rw [htoX_general (finitePostnikovSuccIndex (1 : Fin 2)) hidx2]
+        simp [Category.assoc, eqToHom_trans]
+      · dsimp [Triangle.mk, e₂, e₃]
+        rw [hfromX1]
+        simp [Category.assoc, eqToHom_trans]
+      · dsimp [Triangle.mk, e₁, e₃]
+        rw [hconnecting_general (1 : Fin 2) hj1]
+        cases hY2target
+        simp only [Category.assoc]
+        rw [← Functor.map_comp]
+        simp [eqToHom_trans]
+  · intro i
+    fin_cases i
+    · change fromX (0 : Fin 2) ≫
+          toX (finitePostnikovIndex (0 : Fin 2)) =
+        finitePostnikovDifferential K (0 : Fin 2)
+      have hfromX0 : fromX (0 : Fin 2) =
+          eqToHom (congrArg K.X he1s.symm) ≫ P01.fromX (0 : Fin 1) ≫
+            eqToHom hY0.symm := by
+        rfl
+      have hYzeroB : Y (finitePostnikovIndex (0 : Fin 2)) =
+          P01.Y (finitePostnikovIndex (0 : Fin 1)) :=
+        (congrArg Y hzero.symm).trans hYzero
+      have htoX0 : toX (finitePostnikovIndex (0 : Fin 2)) =
+          eqToHom hYzeroB ≫ P01.toX (finitePostnikovIndex (0 : Fin 1)) ≫
+            eqToHom (congrArg K.X he0) := by
+        cases hzero
+        rfl
+      rw [hfromX0, htoX0]
+      simp only [Category.assoc]
+      have hYcancel :
+          eqToHom hY0.symm ≫ eqToHom hYzeroB =
+            𝟙 (P01.Y (finitePostnikovIndex (0 : Fin 1))) := by
+        have hp : hY0.symm.trans hYzeroB = (rfl :
+            P01.Y (finitePostnikovIndex (0 : Fin 1)) =
+              P01.Y (finitePostnikovIndex (0 : Fin 1))) := by
+          apply Subsingleton.elim
+        rw [eqToHom_trans, hp, eqToHom_refl]
+      simp only [← Category.assoc, hYcancel, Category.id_comp,
+        Category.comp_id]
+      simp only [Category.assoc]
+      rw [← Category.assoc (P01.fromX (0 : Fin 1))
+        (P01.toX (finitePostnikovIndex (0 : Fin 1)))]
+      rw [P01.compatibility (0 : Fin 1)]
+      dsimp [finitePostnikovDifferential, K01, d01]
+      rw [if_pos (show (finitePostnikovShape 1).Rel
+        (finitePostnikovSuccIndex (0 : Fin 1))
+        (finitePostnikovIndex (0 : Fin 1)) by rfl)]
+      exact eqToHom_comp_binary K.d he1s.symm he0.symm
+    · change fromX (1 : Fin 2) ≫
+          toX (finitePostnikovIndex (1 : Fin 2)) =
+        finitePostnikovDifferential K (1 : Fin 2)
+      have htoX1' : toX (finitePostnikovIndex (1 : Fin 2)) =
+          eqToHom hY1T ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) ≫
+            eqToHom (congrArg K.X he1) := by
+        cases hY1T
+        rfl
+      have hα' : d21' =
+          α ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) := by
+        change d21' =
+          α ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) at hα
+        exact hα
+      rw [hfromX1, htoX1']
+      simp only [Category.assoc]
+      have hY1cancel :
+          eqToHom hY1T.symm ≫ eqToHom hY1T =
+            𝟙 T01.obj₁ := by
+        have hp : hY1T.symm.trans hY1T = (rfl :
+            T01.obj₁ = T01.obj₁) := by
+          apply Subsingleton.elim
+        rw [eqToHom_trans, hp, eqToHom_refl]
+      simp only [← Category.assoc, hY1cancel, Category.id_comp,
+        Category.comp_id]
+      change α ≫ P01.toX (finitePostnikovSuccIndex (0 : Fin 1)) ≫
+          eqToHom (congrArg K.X he1) =
+        finitePostnikovDifferential K (1 : Fin 2)
+      rw [← Category.assoc α
+        (P01.toX (finitePostnikovSuccIndex (0 : Fin 1)))]
+      rw [← hα']
+      dsimp [d21']
+      simp
+      rfl
 
 /-- The source's warning that length-two maps need not extend is represented
 by the exact existential failure predicate; no particular counterexample is
@@ -720,7 +1296,141 @@ theorem postnikovSystem_vanishing_to_Y
       HomIsZero
         ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 1)).obj (K.X i))
         (P'.Y j) := by
-  sorry
+  intro i j hij
+  induction j using Fin.induction with
+  | zero =>
+      let hzero := hP i (finitePostnikovZeroIndex n) (by simpa [finitePostnikovZeroIndex] using hij)
+      have hidx0 : finitePostnikovZeroIndex n = (0 : Fin (n + 1)) := by
+        apply Fin.ext
+        rfl
+      cases hidx0
+      intro f
+      apply (cancel_mono P'.baseIso.hom).1
+      rw [P'.baseIso_hom]
+      calc
+        f ≫ P'.toX (finitePostnikovZeroIndex n) = 0 :=
+          hzero (f ≫ P'.toX (finitePostnikovZeroIndex n))
+        _ = 0 ≫ P'.toX (finitePostnikovZeroIndex n) := by rw [zero_comp]
+  | succ j ih =>
+      let T := postnikovTriangle P' j
+      have hT : T ∈ distTriang C := P'.distinguished j
+      change j.val + 2 < i.val at hij
+      have hij' : j.val + 2 < i.val := by simpa using hij
+      have hto₀ := ih (by
+        change j.val + 1 < i.val
+        omega)
+      have hidx : finitePostnikovIndex j = j.castSucc := by
+        apply Fin.ext
+        rfl
+      have hto : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 1)).obj (K.X i))
+          (P'.Y (finitePostnikovIndex j)) := by
+        rw [hidx]
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hto₀
+      have hto' : HomIsZero
+          ((shiftFunctor C (1 : ℤ)).obj
+            ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 2)).obj (K.X i)))
+          (P'.Y (finitePostnikovIndex j)) := by
+        exact homIsZero_shift_add_left (i.val - j.val - 2 : ℤ) 1
+          (by simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hto)
+      have hprev : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 2)).obj (K.X i))
+          ((shiftFunctor C (-1 : ℤ)).obj (P'.Y (finitePostnikovIndex j))) :=
+        homIsZero_shift_of_neg 1 (-1) (by omega) hto'
+      have hprev' : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - ((Fin.succ j).val : ℤ) - 1)).obj (K.X i))
+          (Triangle.invRotate T).obj₁ := by
+        have hobj : (Triangle.invRotate T).obj₁ =
+            (shiftFunctor C (-1 : ℤ)).obj (P'.Y (finitePostnikovIndex j)) := by
+          change (shiftFunctor C (-1 : ℤ)).obj T.obj₃ = _
+          simp [T, postnikovTriangle, hidx]
+        rw [hobj]
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hprev
+      intro f
+      have hcond : (finitePostnikovSuccIndex j).val + 1 < i.val := by
+        change j.val + 2 < i.val
+        exact hij'
+      have hf : f ≫ T.mor₁ = 0 := by
+        apply (hP i (finitePostnikovSuccIndex j) hcond)
+      obtain ⟨g, hg⟩ := (Triangle.invRotate T).coyoneda_exact₂
+        (inv_rot_of_distTriang _ hT) f hf
+      rw [hg, hprev' g]
+      simp only [zero_comp]
+      rfl
+
+private theorem postnikovSystem_exists_vanishing_to_Y
+    {n : ℕ} {K K' : FinitePostnikovComplex C n}
+    (P' : PostnikovSystem K')
+    (hK : ∀ (i j : Fin (n + 1)), j.val + 2 < i.val →
+      HomIsZero
+        ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 2)).obj (K.X i))
+        (K'.X j)) :
+    ∀ (i j : Fin (n + 1)), j.val + 2 < i.val →
+      HomIsZero
+        ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 2)).obj (K.X i))
+        (P'.Y j) := by
+  intro i j hij
+  induction j using Fin.induction with
+  | zero =>
+      let hzero := hK i (finitePostnikovZeroIndex n)
+        (by simpa [finitePostnikovZeroIndex] using hij)
+      have hidx0 : finitePostnikovZeroIndex n = (0 : Fin (n + 1)) := by
+        apply Fin.ext
+        rfl
+      cases hidx0
+      intro f
+      apply (cancel_mono P'.baseIso.hom).1
+      rw [P'.baseIso_hom]
+      calc
+        f ≫ P'.toX (finitePostnikovZeroIndex n) = 0 :=
+          hzero (f ≫ P'.toX (finitePostnikovZeroIndex n))
+        _ = 0 ≫ P'.toX (finitePostnikovZeroIndex n) := by rw [zero_comp]
+  | succ j ih =>
+      let T := postnikovTriangle P' j
+      have hT : T ∈ distTriang C := P'.distinguished j
+      change j.val + 3 < i.val at hij
+      have hij' : j.val + 3 < i.val := by simpa using hij
+      have hto₀ := ih (by
+        change j.val + 2 < i.val
+        omega)
+      have hidx : finitePostnikovIndex j = j.castSucc := by
+        apply Fin.ext
+        rfl
+      have hto : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 2)).obj (K.X i))
+          (P'.Y (finitePostnikovIndex j)) := by
+        rw [hidx]
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hto₀
+      have hto' : HomIsZero
+          ((shiftFunctor C (1 : ℤ)).obj
+            ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 3)).obj (K.X i)))
+          (P'.Y (finitePostnikovIndex j)) := by
+        exact homIsZero_shift_add_left (i.val - j.val - 3 : ℤ) 1
+          (by simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hto)
+      have hprev : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - (j.val : ℤ) - 3)).obj (K.X i))
+          ((shiftFunctor C (-1 : ℤ)).obj (P'.Y (finitePostnikovIndex j))) :=
+        homIsZero_shift_of_neg 1 (-1) (by omega) hto'
+      have hprev' : HomIsZero
+          ((shiftFunctor C ((i.val : ℤ) - ((Fin.succ j).val : ℤ) - 2)).obj (K.X i))
+          (Triangle.invRotate T).obj₁ := by
+        have hobj : (Triangle.invRotate T).obj₁ =
+            (shiftFunctor C (-1 : ℤ)).obj (P'.Y (finitePostnikovIndex j)) := by
+          change (shiftFunctor C (-1 : ℤ)).obj T.obj₃ = _
+          simp [T, postnikovTriangle, hidx]
+        rw [hobj]
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hprev
+      intro f
+      obtain ⟨g, hg⟩ := (Triangle.invRotate T).coyoneda_exact₂
+        (inv_rot_of_distTriang _ hT) f (by
+          have hf := hK i (finitePostnikovSuccIndex j)
+            (by
+              simpa [finitePostnikovSuccIndex] using hij')
+          change f ≫ P'.toX (finitePostnikovSuccIndex j) = 0
+          exact hf _)
+      rw [hg, hprev' g]
+      simp only [zero_comp]
+      rfl
 
 /-- Under `(P)`, a map of complexes extends to a map of Postnikov systems. -/
 theorem postnikovSystemHom_exists_of_vanishing

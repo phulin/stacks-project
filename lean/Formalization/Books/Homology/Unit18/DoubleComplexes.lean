@@ -1940,17 +1940,217 @@ structure HorizontalHomotopy {A B : DoubleComplex C}
   map : ∀ p q,
     h p q ≫ B.d2 (p - 1) q = A.d2 p q ≫ h p (q + 1)
 
+private theorem vertical_total_homotopy_data [HasCountableCoproducts C]
+    {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
+    (h : VerticalHomotopy f g) :
+    ∃ H : Homotopy (totalMap f) (totalMap g),
+      ∀ n : ℤ,
+        H.hom n (n + (-1 : ℤ)) =
+          verticalTotalHomotopyComponent h.h n := by
+  let H : ∀ n m : ℤ, (totalComplex A).X n ⟶ (totalComplex B).X m :=
+    fun n m => dite (m = n - 1)
+      (fun hm => verticalTotalHomotopyComponent h.h n ≫
+        eqToHom (by subst m; rfl))
+      (fun _ => 0)
+  refine ⟨{ hom := H, zero := ?_, comm := ?_ }, ?_⟩
+  · intro i j hij
+    dsimp [H]
+    split_ifs with h'
+    · exfalso
+      apply hij
+      change j + 1 = i
+      omega
+    · rfl
+  · intro i
+    change totalMapComponent f i = dNext i H + prevD i H + totalMapComponent g i
+    have hd :
+        dNext i H =
+          (totalComplex A).d i (i + 1) ≫ H (i + 1) i :=
+      dNext_eq H (by simp [ComplexShape.up])
+    have hp :
+        prevD i H =
+          H i (i - 1) ≫ (totalComplex B).d (i - 1) i :=
+      prevD_eq H (by simp [ComplexShape.up])
+    rw [hd, hp]
+    simp [H]
+    rw [← sub_eq_iff_eq_add]
+    apply Sigma.hom_ext
+    intro p
+    have hsub :=
+      Preadditive.comp_sub (Sigma.ι (fun r : ℤ => A.obj r (i - r)) p)
+        (totalMapComponent f i) (totalMapComponent g i)
+    calc
+      _ = Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent f i -
+          Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent g i := hsub
+      _ = _ := by
+        have hadd :
+            Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                ((totalComplex A).d i (i + 1) ≫
+                    verticalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia) +
+                  verticalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) =
+              Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  ((totalComplex A).d i (i + 1) ≫
+                    verticalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia)) +
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  (verticalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) := by
+          apply Preadditive.comp_add
+        have hfirst :
+            Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent f i -
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent g i =
+              Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  ((totalComplex A).d i (i + 1) ≫
+                    verticalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia)) +
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  (verticalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) := by
+          simp [totalMapComponent, totalComplex, totalDifferential,
+            verticalTotalHomotopyComponent, totalD1Component, totalD2Component]
+          have hhom :
+              f.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p -
+                  g.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p =
+                h.h p (i - p) ≫ B.d2 p (i - p - 1) ≫
+                    eqToHom (by congr 1; lia) ≫
+                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p +
+                  A.d2 p (i - p) ≫ h.h p (i - p + 1) ≫
+                    eqToHom (by congr 1; lia) ≫
+                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p := by
+            simpa [Category.assoc] using
+              congrArg (fun k =>
+                k ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p)
+                (h.homotopy p (i - p))
+          have hmap := congrArg (fun k =>
+            k ≫ eqToHom (by congr 1; ring) ≫
+              Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p + 1))
+            (h.map p (i - p))
+          rw [hhom]
+          simp only [sub_eq_add_neg, Category.assoc, smul_add, smul_smul,
+            Int.negOnePow_succ, Linear.units_smul_comp]
+          rw [← hmap]
+          simp [add_assoc, add_comm, add_left_comm]
+        refine hfirst.trans ?_
+        convert hadd.symm using 1
+        congr 1
+  · intro n
+    dsimp [H]
+    simp
+
 theorem totalMap_homotopic_of_vertical [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
     (h : VerticalHomotopy f g) :
     Nonempty (Homotopy (totalMap f) (totalMap g)) := by
-  sorry
+  exact ⟨(vertical_total_homotopy_data h).choose⟩
+
+private theorem horizontal_total_homotopy_data [HasCountableCoproducts C]
+    {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
+    (h : HorizontalHomotopy f g) :
+    ∃ H : Homotopy (totalMap f) (totalMap g),
+      ∀ n : ℤ,
+        H.hom n (n + (-1 : ℤ)) =
+          horizontalTotalHomotopyComponent h.h n := by
+  let H : ∀ n m : ℤ, (totalComplex A).X n ⟶ (totalComplex B).X m :=
+    fun n m => dite (m = n - 1)
+      (fun hm => horizontalTotalHomotopyComponent h.h n ≫
+        eqToHom (by subst m; rfl))
+      (fun _ => 0)
+  refine ⟨{ hom := H, zero := ?_, comm := ?_ }, ?_⟩
+  · intro i j hij
+    dsimp [H]
+    split_ifs with h'
+    · exfalso
+      apply hij
+      change j + 1 = i
+      omega
+    · rfl
+  · intro i
+    change totalMapComponent f i = dNext i H + prevD i H + totalMapComponent g i
+    have hd :
+        dNext i H =
+          (totalComplex A).d i (i + 1) ≫ H (i + 1) i :=
+      dNext_eq H (by simp [ComplexShape.up])
+    have hp :
+        prevD i H =
+          H i (i - 1) ≫ (totalComplex B).d (i - 1) i :=
+      prevD_eq H (by simp [ComplexShape.up])
+    rw [hd, hp]
+    simp [H]
+    rw [← sub_eq_iff_eq_add]
+    apply Sigma.hom_ext
+    intro p
+    have hsub :=
+      Preadditive.comp_sub (Sigma.ι (fun r : ℤ => A.obj r (i - r)) p)
+        (totalMapComponent f i) (totalMapComponent g i)
+    calc
+      _ = Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent f i -
+          Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent g i := hsub
+      _ = _ := by
+        have hadd :
+            Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                ((totalComplex A).d i (i + 1) ≫
+                    horizontalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia) +
+                  horizontalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) =
+              Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  ((totalComplex A).d i (i + 1) ≫
+                    horizontalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia)) +
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  (horizontalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) := by
+          apply Preadditive.comp_add
+        have hfirst :
+            Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent f i -
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫ totalMapComponent g i =
+              Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  ((totalComplex A).d i (i + 1) ≫
+                    horizontalTotalHomotopyComponent h.h (i + 1) ≫
+                    eqToHom (by congr 1; lia)) +
+                Sigma.ι (fun r : ℤ => A.obj r (i - r)) p ≫
+                  (horizontalTotalHomotopyComponent h.h i ≫
+                    (totalComplex B).d (i - 1) i) := by
+          simp [totalMapComponent, totalComplex, totalDifferential,
+            horizontalTotalHomotopyComponent, totalD1Component, totalD2Component]
+          have hhom :
+              f.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p -
+                  g.f p (i - p) ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p =
+                h.h p (i - p) ≫ B.d1 (p - 1) (i - p) ≫
+                    eqToHom (by congr 1; lia) ≫
+                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p +
+                  A.d1 p (i - p) ≫ h.h (p + 1) (i - p) ≫
+                    eqToHom (by congr 1; lia) ≫
+                    Sigma.ι (fun r : ℤ => B.obj r (i - r)) p := by
+            simpa [Category.assoc] using
+              congrArg (fun k =>
+                k ≫ Sigma.ι (fun r : ℤ => B.obj r (i - r)) p)
+                (h.homotopy p (i - p))
+          have hmap := congrArg (fun k =>
+            k ≫ eqToHom (by congr 1; ring) ≫
+              Sigma.ι (fun r : ℤ => B.obj r (i - r)) (p - 1))
+            (h.map p (i - p))
+          have hsign : (p - 1).negOnePow = -p.negOnePow := by
+            rw [show p = (p - 1) + 1 by ring, Int.negOnePow_succ]
+          rw [hhom]
+          simp only [sub_eq_add_neg, Category.assoc, smul_add, smul_smul,
+            Int.negOnePow_succ, Linear.units_smul_comp, hsign]
+          rw [← hmap]
+          simp [add_assoc, add_comm, add_left_comm]
+        refine hfirst.trans ?_
+        convert hadd.symm using 1
+        congr 1
+  · intro n
+    dsimp [H]
+    simp
 
 theorem totalMap_homotopic_of_horizontal [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
     (h : HorizontalHomotopy f g) :
     Nonempty (Homotopy (totalMap f) (totalMap g)) := by
-  sorry
+  exact ⟨(horizontal_total_homotopy_data h).choose⟩
 
 theorem vertical_total_homotopy_components [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
@@ -1959,7 +2159,7 @@ theorem vertical_total_homotopy_components [HasCountableCoproducts C]
       ∀ n : ℤ,
         H.hom n (n + (-1 : ℤ)) =
           verticalTotalHomotopyComponent h.h n := by
-  sorry
+  exact vertical_total_homotopy_data h
 
 theorem horizontal_total_homotopy_components [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f g : DoubleComplexMap A B}
@@ -1968,7 +2168,7 @@ theorem horizontal_total_homotopy_components [HasCountableCoproducts C]
       ∀ n : ℤ,
         H.hom n (n + (-1 : ℤ)) =
           horizontalTotalHomotopyComponent h.h n := by
-  sorry
+  exact horizontal_total_homotopy_data h
 
 theorem verticalTotalShiftedHomotopy_comm [HasCountableCoproducts C]
     {A B : DoubleComplex C} {f : DoubleComplexMap A B}

@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit03.Opposite
+import Formalization.Books.Sites.Unit02.Presheaves
 import Mathlib.Algebra.Category.Grp.Basic
 
 /-!
@@ -26,9 +27,9 @@ universe u v
 
 /-! ## Presheaves and their sections -/
 
-/-- A presheaf of sets on `C`, namely a functor `Cᵒᵖ ⥤ Type`. -/
+/-- A presheaf of sets on `C`, reusing the established site-level interface. -/
 abbrev Presheaf (C : Type u) [Category.{v} C] :=
-  Formalization.Books.Categories.Unit03.Presheaf C
+  Formalization.Books.Sites.Unit02.Presheaf C
 
 /-- An abelian presheaf on `C`, namely a functor to abelian groups. -/
 abbrev AbelianPresheaf (C : Type u) [Category.{v} C] :=
@@ -36,7 +37,7 @@ abbrev AbelianPresheaf (C : Type u) [Category.{v} C] :=
 
 /-- The sections of a presheaf over an object `U`. -/
 abbrev Sections {C : Type u} [Category.{v} C] (F : Presheaf C) (U : C) :=
-  F.obj (op U)
+  Formalization.Books.Sites.Unit02.Sections F U
 
 /-- The value of a presheaf at an object, in the source's `Γ(U, F)` notation. -/
 abbrev Gamma {C : Type u} [Category.{v} C] (F : Presheaf C) (U : C) :=
@@ -46,7 +47,7 @@ abbrev Gamma {C : Type u} [Category.{v} C] (F : Presheaf C) (U : C) :=
 def sectionRestriction {C : Type u} [Category.{v} C]
     (F : Presheaf C) {U V : C} (f : V ⟶ U) :
     Sections F U → Sections F V :=
-  fun s => F.map f.op s
+  Formalization.Books.Sites.Unit02.sectionRestriction F f
 
 /-- Restriction along an identity morphism is the identity. -/
 @[simp]
@@ -61,16 +62,49 @@ theorem sectionRestriction_comp {C : Type u} [Category.{v} C]
     (s : Sections F U) :
     sectionRestriction F g (sectionRestriction F f s) =
       sectionRestriction F (g ≫ f) s := by
-  simp [sectionRestriction]
+  exact Formalization.Books.Sites.Unit02.sectionRestriction_comp F f g s
+
+/-! The same terminology for abelian-group-valued presheaves. -/
+
+/-- The underlying type of sections of an abelian presheaf. -/
+abbrev AbelianSections {C : Type u} [Category.{v} C]
+    (F : AbelianPresheaf C) (U : C) :=
+  (F.obj (op U) : Type v)
+
+/-- The value of an abelian presheaf at `U`, in `Γ(U, F)` notation. -/
+abbrev AbelianGamma {C : Type u} [Category.{v} C]
+    (F : AbelianPresheaf C) (U : C) :=
+  AbelianSections F U
+
+/-- Restriction of an abelian section along a morphism `V ⟶ U`. -/
+def abelianSectionRestriction {C : Type u} [Category.{v} C]
+    (F : AbelianPresheaf C) {U V : C} (f : V ⟶ U) :
+    AbelianSections F U → AbelianSections F V :=
+  fun s => F.map f.op s
+
+@[simp]
+theorem abelianSectionRestriction_id {C : Type u} [Category.{v} C]
+    (F : AbelianPresheaf C) {U : C} (s : AbelianSections F U) :
+    abelianSectionRestriction F (𝟙 U) s = s := by
+  simp [abelianSectionRestriction]
+
+theorem abelianSectionRestriction_comp {C : Type u} [Category.{v} C]
+    (F : AbelianPresheaf C) {U V W : C} (f : V ⟶ U) (g : W ⟶ V)
+    (s : AbelianSections F U) :
+    abelianSectionRestriction F g (abelianSectionRestriction F f s) =
+      abelianSectionRestriction F (g ≫ f) s := by
+  simp [abelianSectionRestriction]
 
 /-! ## The categories of presheaves -/
 
 /-- A morphism of presheaves is a natural transformation. -/
 abbrev PresheafMorphism {C : Type u} [Category.{v} C]
-    {F G : Presheaf C} := F ⟶ G
+    {F G : Presheaf C} :=
+  Formalization.Books.Sites.Unit02.PresheafMorphism (F := F) (G := G)
 
 /-- The category `PSh(C)` of set-valued presheaves. -/
-abbrev PSh (C : Type u) [Category.{v} C] := Presheaf C
+abbrev PSh (C : Type u) [Category.{v} C] :=
+  Formalization.Books.Sites.Unit02.PSh C
 
 /-- The category `PAb(C)` of abelian presheaves. -/
 abbrev PAb (C : Type u) [Category.{v} C] := AbelianPresheaf C
@@ -82,12 +116,23 @@ theorem presheafMorphism_naturality {C : Type u} [Category.{v} C]
     F.map f.op ≫ η.app (op V) = η.app (op U) ≫ G.map f.op :=
   η.naturality f.op
 
+/-- A morphism of abelian presheaves is a natural transformation. -/
+abbrev AbelianPresheafMorphism {C : Type u} [Category.{v} C]
+    {F G : AbelianPresheaf C} := F ⟶ G
+
+/-- Naturality of an abelian-presheaf morphism along restriction. -/
+theorem abelianPresheafMorphism_naturality {C : Type u} [Category.{v} C]
+    {F G : AbelianPresheaf C} (η : AbelianPresheafMorphism (F := F) (G := G))
+    {U V : C} (f : V ⟶ U) :
+    F.map f.op ≫ η.app (op V) = η.app (op U) ≫ G.map f.op :=
+  η.naturality f.op
+
 /-! ## Representable presheaves -/
 
 /-- The representable presheaf `h_X`, reused from the Yoneda embedding. -/
 abbrev representablePresheaf {C : Type u} [Category.{v} C] (X : C) :
     Presheaf C :=
-  Formalization.Books.Categories.Unit03.representablePresheaf X
+  Formalization.Books.Sites.Unit02.representablePresheaf X
 
 /-- Its value at `U` is the hom-set `Mor_C(U, X)`. -/
 theorem representablePresheaf_obj {C : Type u} [Category.{v} C]
@@ -98,6 +143,11 @@ theorem representablePresheaf_obj {C : Type u} [Category.{v} C]
 theorem representablePresheaf_map_apply {C : Type u} [Category.{v} C]
     {X U V : C} (f : V ⟶ U) (g : U ⟶ X) :
     (representablePresheaf X).map f.op g = f ≫ g := rfl
+
+/- The source notes that representables are not sheaves for every topology.
+   This is recorded at the interface boundary: the sheaf condition belongs to
+   the following source section, so no duplicate or forward local definition
+   is introduced here. -/
 
 /-- The morphism of representables induced by `ψ : X ⟶ Y`. -/
 def representableMap {C : Type u} [Category.{v} C] {X Y : C} (ψ : X ⟶ Y) :

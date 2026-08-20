@@ -1,7 +1,6 @@
 import Formalization.Books.Algebra.Unit72.Depth
 import Formalization.Books.Algebra.Unit103.CohenMacaulayModules
-import Formalization.Books.Dualizing.Unit08.DerivingTorsion
-import Formalization.Books.Dualizing.Unit09.LocalCohomology
+import Formalization.Books.Dualizing.Unit10.LocalCohomologyNoetherian
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
 
@@ -22,29 +21,13 @@ open CategoryTheory
 open CategoryTheory.Limits
 open Formalization.Books.Algebra.Unit72
 open Formalization.Books.Algebra.Unit103
-open Formalization.Books.Dualizing.Unit08
 open Formalization.Books.Dualizing.Unit09
+open Formalization.Books.Dualizing.Unit10
 open Formalization.Books.MoreAlgebra.Unit89
 
 universe u w
 
 noncomputable section
-
-/-! ## Ideal-power and closed-support local cohomology -/
-
-noncomputable def idealTorsionAmbient
-    {A : Type u} [CommRing A]
-    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I : Ideal A) (hI : I.FG) :
-    Formalization.Books.Dualizing.Unit09.D A ⥤
-      Formalization.Books.Dualizing.Unit09.D A := by
-  letI : Abelian (TorsionModuleCategory A I) :=
-    Classical.choice (torsion_module_category_is_abelian I hI)
-  letI : HasDerivedCategory.{w} (TorsionModuleCategory A I) :=
-    Classical.choice (torsion_module_category_has_derived_category I hI)
-  exact
-    derivedTorsionFunctor I hI
-        (idealPowerTorsionFunctor_isLeftExact I hI) ⋙
-      derivedTorsionInclusionFunctor I hI
 
 /-- The module `H^p_I(M)` for the ideal-power torsion functor. -/
 noncomputable def idealLocalCohomologyModule
@@ -55,15 +38,6 @@ noncomputable def idealLocalCohomologyModule
   (Formalization.Books.MoreAlgebra.Unit67.derivedCohomology A p).obj
     ((idealTorsionAmbient I hI).obj
       (Formalization.Books.MoreAlgebra.Unit67.moduleInDerived A (ModuleCat.of A M)))
-
-/-- The module `H^p_Z(M)` for `Z = V(I)`. -/
-noncomputable abbrev supportLocalCohomologyModule
-    {A M : Type u} [CommRing A]
-    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
-    [AddCommGroup M] [Module A M] (I : Ideal A) (hI : I.FG) (p : ℤ) :
-    ModuleCat.{u} A :=
-  localCohomologyModule I hI
-    (Formalization.Books.MoreAlgebra.Unit67.moduleInDerived A (ModuleCat.of A M)) p
 
 /-! ## The Ext and local-cohomology characterization of depth -/
 
@@ -232,7 +206,7 @@ structure DivideByTorsionData
     (idealLocalCohomologyModule I hI (M := M) 0 ≅
       idealPowerTorsionModule (M := M) I)
   h0_support : Nonempty
-    (supportLocalCohomologyModule I hI (M := M) 0 ≅
+    (localCohomologyModuleGroup I hI (ModuleCat.of A M) 0 ≅
       idealPowerTorsionModule (M := M) I)
   /- The two `H⁰` isomorphisms to the same canonical object account for the
      source's equality `H⁰_I(M) = H⁰_Z(M)`. -/
@@ -240,22 +214,22 @@ structure DivideByTorsionData
     (idealLocalCohomologyModule I hI
       (M := (torsionFreeQuotient (M := M) I : Type u)) 0)
   h0_support_quotient : IsZero
-    (supportLocalCohomologyModule I hI
-      (M := (torsionFreeQuotient (M := M) I : Type u)) 0)
+    (localCohomologyModuleGroup I hI
+      (ModuleCat.of A (torsionFreeQuotient (M := M) I : Type u)) 0)
   higher_ideal_torsion : ∀ p : ℤ, 0 < p →
     IsZero (idealLocalCohomologyModule I hI
       (M := (idealPowerTorsionModule (M := M) I : Type u)) p)
   higher_support_torsion : ∀ p : ℤ, 0 < p →
-    IsZero (supportLocalCohomologyModule I hI
-      (M := (idealPowerTorsionModule (M := M) I : Type u)) p)
+    IsZero (localCohomologyModuleGroup I hI
+      (ModuleCat.of A (idealPowerTorsionModule (M := M) I : Type u)) p)
   higher_ideal_quotient : ∀ p : ℤ, 0 < p →
     Nonempty (idealLocalCohomologyModule I hI (M := M) p ≅
       idealLocalCohomologyModule I hI
         (M := (torsionFreeQuotient (M := M) I : Type u)) p)
   higher_support_quotient : ∀ p : ℤ, 0 < p →
-    Nonempty (supportLocalCohomologyModule I hI (M := M) p ≅
-      supportLocalCohomologyModule I hI
-        (M := (torsionFreeQuotient (M := M) I : Type u)) p)
+    Nonempty (localCohomologyModuleGroup I hI (ModuleCat.of A M) p ≅
+      localCohomologyModuleGroup I hI
+        (ModuleCat.of A (torsionFreeQuotient (M := M) I : Type u)) p)
 
 theorem divide_by_torsion
     {A M : Type u} [CommRing A]

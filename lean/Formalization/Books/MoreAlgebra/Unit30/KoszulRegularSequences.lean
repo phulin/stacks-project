@@ -89,7 +89,7 @@ theorem isMHOneRegular_of_isMKoszulRegular
     (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M]
     (f : List R) (hf : IsMKoszulRegular R M f) :
     IsMHOneRegular R M f := by
-  sorry
+  exact hf 1 (by norm_num)
 
 theorem isHOneRegular_of_isKoszulRegular
     (R : Type u) [CommRing R] (f : List R)

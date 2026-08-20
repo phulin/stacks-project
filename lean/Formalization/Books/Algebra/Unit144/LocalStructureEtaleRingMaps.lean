@@ -99,6 +99,18 @@ structure StandardEtaleCompositionCounterexample where
 /-- The composition of standard étale maps need not be standard étale. -/
 theorem standardEtale_composition_counterexample :
     Nonempty StandardEtaleCompositionCounterexample := by
+  /-
+  Take `k = ZMod 2` and `K = FiniteField.Extension k 2`.  The first map is
+  standard étale by the primitive-element presentation.  Present `K^4` over
+  `K` using the four distinct roots of `X ^ 4 - X`.
+
+  For the composite, apply Unit 143's
+  `not_isStandardEtale_of_card_lt_card_algHom` with target `K`.  The four
+  coordinate projections, composed with the identity and Frobenius
+  automorphisms of `K/k`, give eight distinct `k`-algebra maps `K^4 → K`,
+  whereas `K` has four elements.  This isolates the remaining work to finite
+  field cardinalities and the injectivity of that explicit family of maps.
+  -/
   sorry
 
 /-! ## Prescribed residue fields -/

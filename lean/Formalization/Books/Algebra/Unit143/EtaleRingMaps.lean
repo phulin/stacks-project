@@ -177,6 +177,16 @@ theorem card_algHom_le_of_isStandardEtale
   exact Fintype.card_le_of_injective (fun f : S →ₐ[R] T ↦ f P.x)
     (fun _ _ h ↦ P.hom_ext h)
 
+/-- A finite algebra with more maps to a finite target than the target has
+elements cannot be standard étale. -/
+theorem not_isStandardEtale_of_card_lt_card_algHom
+    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    [Algebra R S] [Algebra R T] [Fintype T] [Fintype (S →ₐ[R] T)]
+    (hcard : Fintype.card T < Fintype.card (S →ₐ[R] T)) :
+    ¬ Algebra.IsStandardEtale R S := by
+  intro hS
+  exact (Nat.not_le_of_lt hcard) (card_algHom_le_of_isStandardEtale hS)
+
 /-- Étaleness is local on the target for a finite basic-open cover. -/
 theorem etale_local_on_target
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]

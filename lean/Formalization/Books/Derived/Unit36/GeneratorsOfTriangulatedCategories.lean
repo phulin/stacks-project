@@ -386,7 +386,13 @@ theorem generatedSubcategory_eq_iSup_finite_windows (E : C) :
     generatedSubcategory E =
       ⨆ (n : {n : ℕ // 1 ≤ n}) (m : {m : ℕ // 1 ≤ m}),
         smd (starPower (add (generatorWindow E m.1)) n.1) := by
-  sorry
+  calc
+    generatedSubcategory E =
+        ⨆ n : {n : ℕ // 1 ≤ n}, generatedSubcategoryIter E n.1 :=
+      generatedSubcategory_eq_iSup (C := C) E
+    _ = ⨆ (n : {n : ℕ // 1 ≤ n}) (m : {m : ℕ // 1 ≤ m}),
+        smd (starPower (add (generatorWindow E m.1)) n.1) :=
+      iSup_congr fun n => generatedSubcategoryIter_eq_iSup_finite_windows E n.2
 
 /-! Concatenating positive stages adds their extension lengths. -/
 theorem generatedSubcategoryIter_add
@@ -394,7 +400,38 @@ theorem generatedSubcategoryIter_add
     generatedSubcategoryIter E (n + n') =
       smd (star (generatedSubcategoryIter E n)
         (generatedSubcategoryIter E n')) := by
-  sorry
+  change (ObjectProperty.singleton E).triangEnvelopeIter ((n + n') - 1) =
+    smd (star ((ObjectProperty.singleton E).triangEnvelopeIter (n - 1))
+      ((ObjectProperty.singleton E).triangEnvelopeIter (n' - 1)))
+  have hindex : (n + n') - 1 = n + (n' - 1) := by omega
+  rw [hindex]
+  exact ObjectProperty.triangEnvelopeIter_add (P := ObjectProperty.singleton E)
+    (n := n) (m := n' - 1) (n' := n - 1) (by omega)
+
+omit [CategoryTheory.IsTriangulated C] in
+private lemma isStableUnderRetracts_of_isSaturated
+    (P : ObjectProperty C) (hIso : P.IsClosedUnderIsomorphisms)
+    (hSat : IsSaturated P) : P.IsStableUnderRetracts := by
+  let : P.IsClosedUnderIsomorphisms := hIso
+  refine ⟨?_⟩
+  intro X Y r hY
+  let : IsSplitMono r.i := IsSplitMono.mk' { retraction := r.r }
+  obtain ⟨Z, g, h, hT⟩ := distinguished_cocone_triangle r.i
+  have hmono : Mono r.i := by infer_instance
+  have hmono' : Mono (Triangle.mk r.i g h).mor₁ := by
+    change Mono r.i
+    exact hmono
+  have hzero : h = 0 :=
+    (Triangle.mk r.i g h).mor₃_eq_zero_of_mono₁ hT hmono'
+  obtain ⟨s, hs⟩ := distinguished_triangle_second_right_inverse hT hzero
+  have hIso' : IsIso (biprod.desc r.i s) := by
+    change IsIso (biprod.desc (Triangle.mk r.i g h).mor₁ s)
+    exact split_triangle_biproduct_iso hT s hs
+  let e : X ⊞ Z ≅ Y := @asIso _ _ _ _ (biprod.desc r.i s) hIso'
+  have hsum : P (X ⊞ Z) := P.prop_of_iso e.symm hY
+  have hX : P.isoClosure X := (hSat (P.le_isoClosure _ hsum)).1
+  rw [ObjectProperty.isoClosure_eq_self] at hX
+  exact hX
 
 /-!
 The generated subcategory is the smallest strictly full, saturated,
@@ -409,7 +446,28 @@ theorem generatedSubcategory_is_smallest (E : C) :
         ObjectProperty.singleton E ≤ P →
         P.IsClosedUnderIsomorphisms → P.IsTriangulated → IsSaturated P →
           generatedSubcategory E ≤ P := by
-  sorry
+  have hIso : (generatedSubcategory E).IsClosedUnderIsomorphisms := by
+    infer_instance
+  have hSat : IsSaturated (generatedSubcategory E) := by
+    let : (generatedSubcategory E).IsClosedUnderIsomorphisms := hIso
+    intro X Y hXY
+    rw [ObjectProperty.isoClosure_eq_self] at hXY ⊢
+    exact ⟨
+      ObjectProperty.IsStableUnderRetracts.of_biprod_left
+        (generatedSubcategory E) hXY,
+      ObjectProperty.IsStableUnderRetracts.of_biprod_right
+        (generatedSubcategory E) hXY⟩
+  have hTri : (generatedSubcategory E).IsTriangulated := by
+    infer_instance
+  refine ⟨hIso, hSat, hTri, ?_, ?_⟩
+  · exact (ObjectProperty.singleton E).le_triangEnvelope
+  · intro P hP hPI hPT hPS
+    let : P.IsClosedUnderIsomorphisms := hPI
+    let : P.IsTriangulated := hPT
+    let : P.IsStableUnderRetracts :=
+      isStableUnderRetracts_of_isSaturated P hPI hPS
+    exact (ObjectProperty.triangEnvelope_le_iff
+      (P := ObjectProperty.singleton E) (Q := P)).2 hP
 
 end GeneratedSubcategories
 
@@ -446,21 +504,124 @@ theorem isClassicalGenerator_iff (E : C) :
     IsClassicalGenerator E ↔ generatedSubcategory E = (⊤ : ObjectProperty C) := Iff.rfl
 
 /-! The positive-index form of the source's strong-generator definition. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem isStrongGenerator_iff (E : C) :
     IsStrongGenerator E ↔
       ∃ n : ℕ, 1 ≤ n ∧ generatedSubcategoryIter E n = (⊤ : ObjectProperty C) := by
-  sorry
+  change (∃ n : ℕ,
+      (ObjectProperty.singleton E).triangEnvelopeIter n = (⊤ : ObjectProperty C)) ↔ _
+  constructor
+  · rintro ⟨n, hn⟩
+    refine ⟨n + 1, by omega, ?_⟩
+    change (ObjectProperty.singleton E).triangEnvelopeIter ((n + 1) - 1) = ⊤
+    simpa using hn
+  · rintro ⟨n, hn, hN⟩
+    refine ⟨n - 1, ?_⟩
+    change (ObjectProperty.singleton E).triangEnvelopeIter (n - 1) = ⊤ at hN
+    exact hN
 
 /-! The source's right-orthogonal characterization. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem rightOrthogonal_iff (E K : C) :
     (∀ i : ℤ, HomIsZero E (K⟦i⟧)) ↔
       ∀ E' : C, generatedSubcategory E E' → HomIsZero E' K := by
-  sorry
+  constructor
+  · intro hEK
+    let Q : ObjectProperty C :=
+      ((ObjectProperty.singleton K).shiftClosure ℤ).leftOrthogonal
+    have hQiso : Q.IsClosedUnderIsomorphisms := by
+      dsimp [Q]
+      infer_instance
+    have hQtri : Q.IsTriangulated := by
+      dsimp [Q]
+      infer_instance
+    have hQsat : IsSaturated Q := by
+      let : Q.IsClosedUnderIsomorphisms := hQiso
+      intro X Y hXY
+      rw [ObjectProperty.isoClosure_eq_self] at hXY ⊢
+      constructor
+      · change ∀ ⦃Z : C⦄ (f : X ⟶ Z),
+          (ObjectProperty.singleton K).shiftClosure ℤ Z → f = 0
+        intro Z f hZ
+        have hzero : biprod.desc f (0 : Y ⟶ Z) = 0 :=
+          hXY (biprod.desc f (0 : Y ⟶ Z)) hZ
+        simpa using congrArg
+          (fun q : (X ⊞ Y) ⟶ Z => (biprod.inl : X ⟶ X ⊞ Y) ≫ q) hzero
+      · change ∀ ⦃Z : C⦄ (f : Y ⟶ Z),
+          (ObjectProperty.singleton K).shiftClosure ℤ Z → f = 0
+        intro Z f hZ
+        have hzero : biprod.desc (0 : X ⟶ Z) f = 0 :=
+          hXY (biprod.desc (0 : X ⟶ Z) f) hZ
+        simpa using congrArg
+          (fun q : (X ⊞ Y) ⟶ Z => (biprod.inr : Y ⟶ X ⊞ Y) ≫ q) hzero
+    have hE : ObjectProperty.singleton E ≤ Q := by
+      intro X hX
+      obtain rfl := (ObjectProperty.singleton_iff E X).1 hX
+      change ∀ ⦃Z : C⦄ (f : E ⟶ Z),
+        (ObjectProperty.singleton K).shiftClosure ℤ Z → f = 0
+      intro Z f hZ
+      obtain ⟨Y, a, e, hY⟩ := hZ
+      obtain rfl := (ObjectProperty.singleton_iff K Y).1 hY
+      apply (cancel_mono e.hom).1
+      simpa using hEK a (f ≫ e.hom)
+    have hgen : generatedSubcategory E ≤ Q := by
+      let : Q.IsClosedUnderIsomorphisms := hQiso
+      let : Q.IsTriangulated := hQtri
+      let : Q.IsStableUnderRetracts :=
+        isStableUnderRetracts_of_isSaturated Q hQiso hQsat
+      exact (ObjectProperty.triangEnvelope_le_iff
+        (P := ObjectProperty.singleton E) (Q := Q)).2 hE
+    intro E' hE'
+    change ∀ f : E' ⟶ K, f = 0
+    intro f
+    have hE'Q : Q E' := hgen E' hE'
+    change ∀ ⦃Z : C⦄ (g : E' ⟶ Z),
+      (ObjectProperty.singleton K).shiftClosure ℤ Z → g = 0 at hE'Q
+    have hKshift : (ObjectProperty.singleton K).shiftClosure ℤ K :=
+      (ObjectProperty.le_shiftClosure (A := ℤ) (ObjectProperty.singleton K)) K
+        ((ObjectProperty.singleton_iff K K).2 rfl)
+    exact hE'Q (Z := K) f hKshift
+  · intro hE' i f
+    obtain ⟨g, rfl⟩ :=
+      ((shiftEquiv C i).symm.toAdjunction.homEquiv _ _).surjective f
+    have hEgen : generatedSubcategory E E := by
+      exact (ObjectProperty.singleton E).le_triangEnvelope E
+        ((ObjectProperty.singleton_iff E E).2 rfl)
+    have hStable : (generatedSubcategory E).IsStableUnderShift ℤ := inferInstance
+    have hshift : generatedSubcategory E (E⟦(-i : ℤ)⟧) :=
+      (hStable.isStableUnderShiftBy (-i)).le_shift _ hEgen
+    let : (shiftEquiv C i).symm.functor.Additive := by
+      change (shiftFunctor C (-i)).Additive
+      infer_instance
+    let : (shiftEquiv C i).symm.inverse.Additive := by
+      change (shiftFunctor C i).Additive
+      infer_instance
+    have hg : g = 0 := hE' _ hshift g
+    have hzero :
+        ((shiftEquiv C i).symm.toAdjunction.homEquiv E K) 0 = 0 := by
+      rw [Adjunction.homEquiv_unit]
+      simp
+    rw [hg]
+    exact hzero
 
 /-! A classical generator is a weak generator. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem classical_generator_is_generator {E : C}
     (hE : IsClassicalGenerator E) : IsGenerator E := by
-  sorry
+  intro K hK
+  by_contra h
+  have horth : ∀ i : ℤ, HomIsZero E (K⟦i⟧) := by
+    intro i f
+    by_contra hf
+    exact h ⟨i, f, hf⟩
+  have hgenEq : generatedSubcategory E = (⊤ : ObjectProperty C) :=
+    (isClassicalGenerator_iff E).1 hE
+  have hgen : generatedSubcategory E K := by
+    rw [hgenEq]
+    trivial
+  have hz : (𝟙 K) = 0 :=
+    ((rightOrthogonal_iff E K).1 horth) K hgen (𝟙 K)
+  exact hK ((IsZero.iff_id_eq_zero K).2 hz)
 
 /-! If the category has a strong generator, every classical generator is strong. -/
 theorem classical_generator_is_strong_generator {E : C}

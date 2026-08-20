@@ -559,6 +559,131 @@ structure FilteredComplexSpectralSequence {C : Type u}
   first_page : ∀ p q : ℤ,
     Nonempty (page 1 (p, q) ≅ filteredComplexE₁ K p q)
 
+/-
+Proof roadmap for `filteredComplex_spectral_sequence_exists`.
+
+The record above is sufficiently specified: `next_page` names the actual
+image/kernel subquotient, while `differential_compatibility` and
+`zero_differential_compatibility` compare both kinds of chosen page
+differential with their source models.  The `Nonempty`
+wrappers are appropriate here because kernels, images, and cokernels are only
+canonical up to isomorphism; no field needs strengthening.
+
+Keep the construction small by first adding the following source-local helper
+lemmas immediately above this theorem.
+
+1. Construct
+   `filteredComplex_zero_page_iso (K) (p q) :
+      filteredComplexPage K 0 p q ≅ filteredComplexE₀ K p q`.
+   Prove separately that
+   `filteredComplexCyclePlus K 0 p q = (K.X (p + q)).filtration.obj p`
+   and
+   `filteredComplexBoundaryPlus K 0 p q =
+      (K.X (p + q)).filtration.obj (p + 1)`.
+   For the cycle equality, use `FilteredHom.map_filtration` for
+   `K.d (p + q) (p + q + 1)`, the pullback adjunction, and
+   `filteredComplexCycleCore`; for the boundary equality use the same
+   filtration-preservation statement for
+   `K.d (p + q - 1) (p + q)`, the exists adjunction, and
+   `filteredComplexBoundaryCore`.  The exact subobject APIs are
+   `CategoryTheory.Limits.pullback_factors_iff` and
+   `(Subobject.existsPullbackAdj _).homEquiv`.  Finish by rewriting
+   `filteredComplexPage`, `filteredComplexE₀`, and
+   `Formalization.Books.Homology.Unit20.subquotientObject`.  Do not ask `simp`
+   to unfold the filtered objects globally.
+
+2. Package the page-to-page calculation as a left homology datum.  For
+   `r : ℕ`, `p q : ℤ`, put `n : ℤ := p + q` and let the source page be
+   `filteredComplexE₀ K p q` when `r = 0`, and
+   `filteredComplexPage K (r : ℤ) p q` when `r > 0`.  Let `f` be the incoming
+   differential from `(p - r, q + r - 1)` after the displayed `eqToHom`, and
+   let `d` be the outgoing differential at `(p,q)`.  In the successor case
+   write `r = s + 1` and use
+   `(filteredComplexPageDifferentials K).differential s`; its bidegree is
+   `(s+1,-s)`, i.e. `(r,-r+1)`.  Build a
+   `ShortComplex.LeftHomologyData (ShortComplex.mk f d ...)` whose homology
+   object is `filteredComplexPage K (r + 1 : ℕ) p q`.
+
+   The kernel object should be the intermediate quotient
+   `Z_(r+1) / B_r`.  Its map into `Z_r / B_r` is induced by
+   `filteredComplex_cycle_antitone K r p q`; its projection onto
+   `Z_(r+1) / B_(r+1)` is induced by
+   `filteredComplex_boundary_monotone K r p q`.  Prove the kernel universal
+   property using
+   `FilteredComplexPageDifferentials.lift_rule` and
+   `FilteredComplexPageDifferentials.lift_exists` from this file.  Prove the
+   cokernel universal property by identifying the incoming image with
+   `B_(r+1) / B_r`; use `Subobject.factorThru`,
+   `Subobject.factorThru_arrow`, `Abelian.factorThruImage`, `cokernel.desc`,
+   and `cokernel.π_desc`.  The epi-cancellation pattern in
+   `differentialObjectSelfMap_page_formula` in
+   `Formalization/Books/Homology/Unit22/DifferentialObjects.lean` is the
+   reusable model for this quotient-of-quotients argument.  Give `f`, `d`,
+   the intermediate quotient, and both structure maps explicit types so that
+   Lean does not unfold all four filtration subobjects during unification.
+
+   Split off `r = 0`: there the short complex is the three consecutive terms
+   of `filteredComplexGradedPiece K p`, at the integral degrees
+   `n - 1`, `n`, and `n + 1`.  Use
+   `HomologicalComplex.homologyIsoSc'` and
+   `ShortComplex.LeftHomologyData.homologyIso` (Mathlib,
+   `Algebra/Homology/ShortComplex/HomologicalComplex.lean` and
+   `.../Homology.lean`) to obtain both
+   `filteredComplexPage K 1 p q ≅ filteredComplexE₁ K p q` and the page-zero
+   `next_page` isomorphism.  Record, as a separate simp-free lemma, how the
+   hom of this isomorphism acts on a class from
+   `filteredComplexCycleCore K 1 p q`; the useful API equations are
+   `HomologicalComplex.π_homologyIsoSc'_hom` and
+   `ShortComplex.LeftHomologyData.homologyπ_comp_homologyIso_hom`.  The d1
+   proof below must reuse this exact isomorphism and class formula.
+
+3. For the quotient occurring literally in `next_page`, build the canonical
+   second `ShortComplex.LeftHomologyData` with
+   `K := (Subobject.mk (kernel.ι d) : C)` and
+   `H := subquotientObject (Subobject.mk (Abelian.image.ι f))
+      (Subobject.mk (kernel.ι d)) _`.  Transport `kernelIsKernel d` across
+   `Subobject.underlyingIso (kernel.ι d)`; the cokernel part is
+   `cokernelIsCokernel _`.  Compose the inverse of the explicit-page datum's
+   `homologyIso` with this canonical datum's `homologyIso`.  This gives
+   exactly the orientation demanded by `next_page`.  Reuse the already
+   elaborated image-to-kernel proof in the field type; only the two homology
+   presentations need comparison.
+
+4. Define the record page by cases:
+   `page 0 (p,q) := filteredComplexE₀ K p q` and
+   `page (r+1) (p,q) := filteredComplexPage K (r+1 : ℕ) p q`.
+   A `GradedObject (ℤ × ℤ) C` is a dependent function, so define the page and
+   its morphisms componentwise.  At page zero use `filteredComplexD₀`; at
+   page `r+1` use
+   `(filteredComplexPageDifferentials K).differential r p q`, followed by the
+   one `eqToHom` from `(p + r + 1, q - r)` to the raw shifted index
+   `((r+1 : ℤ) + p, (-(r+1 : ℤ) + 1) + q)`.
+
+   Prove `square_zero` componentwise with `GradedObject.hom_ext`.  The zero
+   case is `(filteredComplexGradedPiece K p).d_comp_d` at `n,n+1,n+2`, after
+   `filteredComplex_D₀_formula`; the successor case is
+   `FilteredComplexPageDifferentials.square_zero`.  Normalize only the three
+   integral index equalities with `omega`/`ring_nf`; the transports already
+   present in the structure fields should not be rebuilt.
+
+5. Fill `component_iso` by the inverse of
+   `filteredComplex_zero_page_iso` at page zero and `Iso.refl _` on successor
+   pages.  Fill `zero_page` by `Iso.refl _`, `first_page` with the isomorphism
+   from step 2, and `next_page` with step 3.  Set `page_differentials :=
+   filteredComplexPageDifferentials K`.  The successor differential was
+   defined from that same value, so `differential_compatibility` reduces to
+   cancellation of the two `eqToHom`s.  Witness
+   `zero_differential_compatibility` by `Iso.refl _` at both ends; it reduces
+   to `filteredComplexD₀` and the index equality `1 + q = q + 1`.  Finish both
+   fields with `simpa only` using `Category.comp_id`, `Category.assoc`, and
+   proof irrelevance.
+
+Do not try to copy a value furnished by
+`Formalization.Books.Homology.Unit20.filteredComplex_spectral_sequence_exists`:
+the older record has no field relating its opaque differential to the chosen
+`FilteredComplexPageDifferentials`, so it cannot discharge the enhanced
+compatibility field.
+-/
 theorem filteredComplex_spectral_sequence_exists
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
     Nonempty (FilteredComplexSpectralSequence K) := by
@@ -611,6 +736,82 @@ structure FilteredComplexD1BoundaryData {C : Type u}
         eqToHom (by congr 1 <;> omega) ≫ e₁.hom = e₀.hom ≫ d₁ p q
   d₁_is_boundary : ∀ p q : ℤ, d₁ p q = boundary p q
 
+/-
+Proof roadmap for `filteredComplex_d1_boundary_data_exists`.
+
+The structure is not under-specified.  Its `boundary` is required to be the
+fixed Snake-Lemma map `filteredComplexD1Boundary`, and the last two fields say
+that this same map is the page-one differential after the displayed
+isomorphisms.  The existential isomorphisms only account for categorical
+choices and the equality `(p + 1) + q = p + q + 1`.
+
+1. Reuse the *specific* page-one isomorphism and representative formula built
+   in step 2 of the preceding roadmap; an arbitrary inhabitant of a
+   `Nonempty (filteredComplexPage K 1 p q ≅ filteredComplexE₁ K p q)` does not
+   carry enough information to prove the comparison.
+
+2. For each `p q`, choose the two already proved identifications
+   `Formalization.Books.Homology.Unit20.filteredComplexD1_target_homology_iso
+      K p q`
+   and
+   `Formalization.Books.Homology.Unit20.filteredComplexD1_source_homology_iso
+      K p q`
+   from `Formalization/Books/Homology/Unit20/FilteredComplexes.lean`.
+   The first is `Iso.refl`; the second is the `eqToIso` induced by
+   `(p + 1) + q = p + q + 1`.  Name them with the explicit types appearing in
+   `boundary_is_connecting`.  Define
+   `boundary p q := e₀.hom ≫ filteredComplexD1Boundary K p q ≫ e₁.inv`
+   and set `d₁ := boundary`.  Then `boundary_is_connecting` is witnessed by
+   these same `e₀,e₁`, and `d₁_is_boundary` is reflexivity.
+
+3. Isolate the only mathematical comparison as a helper with the exact
+   conclusion of `page_differential_is_d₁`.  Put `n : ℤ := p + q` and
+   `S := filteredComplexD1ShortExact K p`.  Precompose the desired equality
+   with the page-class map from
+   `(filteredComplexCycleCore K 1 p q : C)`.  Prove this map is epi: the
+   complementary summand `(K.X n).filtration.obj (p + 1)` in
+   `filteredComplexCyclePlus` already lies in
+   `filteredComplexBoundaryPlus K 1 p q`, so the cokernel projection is
+   generated by the core summand.  Use `cokernel.π_desc`, `epi_of_epi_fac`,
+   and the two `le_sup_*` inclusions, then cancel this epi at the end.
+
+4. Apply
+   `(filteredComplexPageDifferentials K).lift_exists 0 p q` to the inclusion
+   of that cycle core.  It supplies the target representative `zNext`, its
+   equality with the original differential in degree `n`, and exactly the
+   page-class equation for `filteredComplexD K 0 p q`.  Thus the left side of
+   the comparison is reduced to the page class of `zNext`; use only the
+   integral normalization `(p + 0 + 1, q - 0) = (p + 1,q)` for the field's
+   `eqToHom`.
+
+5. Compute the connecting-map side with
+   `CategoryTheory.ShortComplex.ShortExact.δ_eq` from Mathlib
+   `Algebra/Homology/HomologySequence.lean`; do not unfold the Snake Lemma.
+   Instantiate it at `i := n`, `j := n + 1`, and `k := n + 2` for
+   `ComplexShape.up ℤ`.  Use these three explicitly typed representatives:
+   the core representative modulo `F^(p+1)` in `S.X₃.X n`, the same
+   representative modulo `F^(p+2)` in `S.X₂.X n`, and its differential modulo
+   `F^(p+2)` in `S.X₁.X (n+1)`.  The two hypotheses of `δ_eq` are the component
+   formulas for `filteredComplexD1Projection` and
+   `filteredComplexD1Inclusion`; prove them by cancelling their defining
+   cokernel epis and using `cokernel.π_desc`.  The core factorization is the
+   cycle hypothesis required by `HomologicalComplex.liftCycles`.
+
+6. Rewrite `cochainConnectingMap` only far enough to expose
+   `(filteredComplexD1_short_exact K p).δ n (n+1) _`.  The result of `δ_eq`
+   is the homology class of the differential representative.  Convert its
+   source and target with
+   `HomologicalComplex.π_homologyIsoSc'_hom`,
+   `ShortComplex.LeftHomologyData.homologyπ_comp_homologyIso_hom`, and the
+   page-one class formula from step 1.  This identifies it with the page class
+   of `zNext`.  Cancel the epi from step 3, insert the target/source
+   `eqToIso`s from step 2, and use the resulting equality to fill
+   `page_differential_is_d₁`; the record then assembles directly.
+
+Avoid choosing the page-one isomorphisms independently in the two fields:
+without the representative formula there is no route from the opaque
+categorical isomorphism to `ShortComplex.ShortExact.δ_eq`.
+-/
 theorem filteredComplex_d1_boundary_data_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) :

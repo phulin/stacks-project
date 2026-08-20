@@ -85,7 +85,156 @@ theorem exists_universalDividedPowerDifferential
     (A : Type u) [CommRing A] (B : DividedPowerRing.{u})
     (f : A →+* (B : Type u)) :
     Nonempty (UniversalDividedPowerDifferential A B f) := by
-  sorry
+  let _ : Algebra A (B : Type u) := f.toAlgebra
+  let R : Submodule (B : Type u) (ModuleOfDifferentials A (B : Type u)) :=
+    Submodule.span (B : Type u)
+      {y | ∃ n : ℕ, n ≠ 0 ∧ ∃ x : B, x ∈ B.ideal ∧
+        y = universalDifferential A (B : Type u)
+              (B.dividedPowers.dpow n x) -
+          B.dividedPowers.dpow (n - 1) x •
+            universalDifferential A (B : Type u) x}
+  let Ω : ModuleCat (B : Type u) :=
+    ModuleCat.of (B : Type u)
+      ((ModuleOfDifferentials A (B : Type u)) ⧸ R)
+  let q : ModuleOfDifferentials A (B : Type u) →ₗ[B] (Ω : Type u) := R.mkQ
+  let dθ : DividedPowerDerivation A B f Ω := by
+    exact
+      { toAddMonoidHom :=
+          { toFun := fun b => q (universalDifferential A (B : Type u) b)
+            map_zero' := by simp
+            map_add' := by intro b b'; simp }
+        map_base' := by
+          intro a
+          change q (universalDifferential A (B : Type u)
+            (algebraMap A (B : Type u) a)) = 0
+          simp
+        leibniz' := by
+          intro b b'
+          change q (universalDifferential A (B : Type u) (b * b')) =
+            b • q (universalDifferential A (B : Type u) b') +
+              b' • q (universalDifferential A (B : Type u) b)
+          rw [Derivation.leibniz]
+          simp [LinearMap.map_add]
+        dpow' := by
+          intro n x hn hx
+          change q (universalDifferential A (B : Type u)
+              (B.dividedPowers.dpow n x)) =
+            B.dividedPowers.dpow (n - 1) x •
+              q (universalDifferential A (B : Type u) x)
+          rw [← q.map_smul, ← sub_eq_zero]
+          apply (Submodule.Quotient.mk_eq_zero R).mpr
+          apply Submodule.subset_span
+          exact ⟨n, hn, x, hx, rfl⟩ }
+  refine ⟨{ omega := Ω, d := dθ, lift := ?_, factor := ?_, unique := ?_ }⟩
+  · intro M θ
+    letI : Module A (M : Type u) := Module.compHom (M : Type u) f
+    let _ : IsScalarTower A (B : Type u) (M : Type u) :=
+      IsScalarTower.of_compHom A (M : Type u)
+    let θlin : B →ₗ[A] (M : Type u) :=
+      { toFun := θ.toAddMonoidHom
+        map_add' := by
+          intro b b'
+          exact θ.toAddMonoidHom.map_add b b'
+        map_smul' := by
+          intro a b
+          change θ.toAddMonoidHom (f a * b) = f a • θ.toAddMonoidHom b
+          rw [θ.leibniz', θ.map_base']
+          simp }
+    let Dθ : Derivation A (B : Type u) (M : Type u) :=
+      Derivation.mk' θlin (by
+        intro b b'
+        simpa [θlin] using θ.leibniz' b b')
+    let L : ModuleOfDifferentials A (B : Type u) →ₗ[B] (M : Type u) :=
+      Dθ.liftKaehlerDifferential
+    have hL : R ≤ LinearMap.ker L := by
+      apply Submodule.span_le.2
+      rintro y ⟨n, hn, x, hx, rfl⟩
+      rw [LinearMap.mem_ker, map_sub, map_smul,
+        Dθ.liftKaehlerDifferential_comp_D]
+      rw [Dθ.liftKaehlerDifferential_comp_D]
+      change θ.toAddMonoidHom (B.dividedPowers.dpow n x) -
+        B.dividedPowers.dpow (n - 1) x • θ.toAddMonoidHom x = 0
+      rw [θ.dpow' hn hx]
+      exact sub_self _
+    exact ModuleCat.ofHom (R.liftQ L hL)
+  · intro M θ b
+    letI : Module A (M : Type u) := Module.compHom (M : Type u) f
+    let _ : IsScalarTower A (B : Type u) (M : Type u) :=
+      IsScalarTower.of_compHom A (M : Type u)
+    let θlin : B →ₗ[A] (M : Type u) :=
+      { toFun := θ.toAddMonoidHom
+        map_add' := by
+          intro b b'
+          exact θ.toAddMonoidHom.map_add b b'
+        map_smul' := by
+          intro a b
+          change θ.toAddMonoidHom (f a * b) = f a • θ.toAddMonoidHom b
+          rw [θ.leibniz', θ.map_base']
+          simp }
+    let Dθ : Derivation A (B : Type u) (M : Type u) :=
+      Derivation.mk' θlin (by
+        intro b b'
+        simpa [θlin] using θ.leibniz' b b')
+    let L : ModuleOfDifferentials A (B : Type u) →ₗ[B] (M : Type u) :=
+      Dθ.liftKaehlerDifferential
+    have hL : R ≤ LinearMap.ker L := by
+      apply Submodule.span_le.2
+      rintro y ⟨n, hn, x, hx, rfl⟩
+      rw [LinearMap.mem_ker, map_sub, map_smul,
+        Dθ.liftKaehlerDifferential_comp_D]
+      change θ.toAddMonoidHom (B.dividedPowers.dpow n x) -
+        B.dividedPowers.dpow (n - 1) x • θ.toAddMonoidHom x = 0
+      rw [θ.dpow' hn hx]
+      exact sub_self _
+    change (R.liftQ L hL) (q (universalDifferential A (B : Type u) b)) =
+      θ.toAddMonoidHom b
+    rw [Submodule.liftQ_mkQ]
+    exact Dθ.liftKaehlerDifferential_comp_D b
+  · intro M θ ξ hξ
+    letI : Module A (M : Type u) := Module.compHom (M : Type u) f
+    let _ : IsScalarTower A (B : Type u) (M : Type u) :=
+      IsScalarTower.of_compHom A (M : Type u)
+    let θlin : B →ₗ[A] (M : Type u) :=
+      { toFun := θ.toAddMonoidHom
+        map_add' := by
+          intro b b'
+          exact θ.toAddMonoidHom.map_add b b'
+        map_smul' := by
+          intro a b
+          change θ.toAddMonoidHom (f a * b) = f a • θ.toAddMonoidHom b
+          rw [θ.leibniz', θ.map_base']
+          simp }
+    let Dθ : Derivation A (B : Type u) (M : Type u) :=
+      Derivation.mk' θlin (by
+        intro b b'
+        simpa [θlin] using θ.leibniz' b b')
+    let L : ModuleOfDifferentials A (B : Type u) →ₗ[B] (M : Type u) :=
+      Dθ.liftKaehlerDifferential
+    have hL : R ≤ LinearMap.ker L := by
+      apply Submodule.span_le.2
+      rintro y ⟨n, hn, x, hx, rfl⟩
+      rw [LinearMap.mem_ker, map_sub, map_smul,
+        Dθ.liftKaehlerDifferential_comp_D]
+      change θ.toAddMonoidHom (B.dividedPowers.dpow n x) -
+        B.dividedPowers.dpow (n - 1) x • θ.toAddMonoidHom x = 0
+      rw [θ.dpow' hn hx]
+      exact sub_self _
+    have hmaps :
+        (ξ.hom.comp q).compDer (universalDifferential A (B : Type u)) =
+          L.compDer (universalDifferential A (B : Type u)) := by
+      ext b
+      change ξ.hom (q (universalDifferential A (B : Type u) b)) =
+        θ.toAddMonoidHom b
+      rw [← hξ b, Submodule.liftQ_mkQ]
+      exact Dθ.liftKaehlerDifferential_comp_D b
+    have hmaps' : ξ.hom.comp q = L :=
+      Derivation.liftKaehlerDifferential_unique _ _ hmaps
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro z
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective R z
+    rw [← Submodule.liftQ_mkQ R L hL y]
+    exact congrArg (fun g => g y) hmaps'
 
 /-- A chosen universal divided-power differential. -/
 noncomputable def universalDividedPowerDifferential
@@ -297,7 +446,109 @@ theorem dividedPowerOmega_is_ordinary_quotient
     (f : A →+* (B : Type u)) :
     Nonempty (dividedPowerOmega A B f ≅
       dividedPowerOrdinaryQuotientModule A B f) := by
-  sorry
+  let _ : Algebra A (B : Type u) := f.toAlgebra
+  let U := universalDividedPowerDifferential A B f
+  let N := dividedPowerDifferentialRelation A B f
+  let qN : ModuleOfDifferentials A (B : Type u) →ₗ[B]
+      (dividedPowerOrdinaryQuotientModule A B f : Type u) := N.mkQ
+  let dQ : DividedPowerDerivation A B f
+      (dividedPowerOrdinaryQuotientModule A B f) :=
+    { toAddMonoidHom :=
+        { toFun := fun b => qN (universalDifferential A (B : Type u) b)
+          map_zero' := by simp
+          map_add' := by intro b b'; simp }
+      map_base' := by
+        intro a
+        change qN (universalDifferential A (B : Type u)
+          (algebraMap A (B : Type u) a)) = 0
+        simp
+      leibniz' := by
+        intro b b'
+        change qN (universalDifferential A (B : Type u) (b * b')) =
+          b • qN (universalDifferential A (B : Type u) b') +
+            b' • qN (universalDifferential A (B : Type u) b)
+        rw [Derivation.leibniz]
+        simp [LinearMap.map_add]
+      dpow' := by
+        intro n x hn hx
+        by_cases hn' : 1 < n
+        · change qN (universalDifferential A (B : Type u)
+              (B.dividedPowers.dpow n x)) =
+            B.dividedPowers.dpow (n - 1) x •
+              qN (universalDifferential A (B : Type u) x)
+          rw [← qN.map_smul, ← sub_eq_zero]
+          apply (Submodule.Quotient.mk_eq_zero N).mpr
+          apply Submodule.subset_span
+          exact ⟨n, hn', x, hx, rfl⟩
+        · have hn1 : n = 1 := by omega
+          subst n
+          simp [B.dividedPowers.dpow_one hx] }
+  let φ : (dividedPowerOmega A B f) ⟶
+      dividedPowerOrdinaryQuotientModule A B f :=
+    U.lift _ dQ
+  let _ : Module A (dividedPowerOmega A B f : Type u) :=
+    Module.compHom (dividedPowerOmega A B f : Type u) f
+  let _ : IsScalarTower A (B : Type u)
+      (dividedPowerOmega A B f : Type u) :=
+    IsScalarTower.of_compHom A (dividedPowerOmega A B f : Type u)
+  let θlin : (B : Type u) →ₗ[A]
+      (dividedPowerOmega A B f : Type u) :=
+    { toFun := (dividedPowerUniversalDifferential A B f).toAddMonoidHom
+      map_add' := by intro b b'; simp
+      map_smul' := by
+        intro a b
+        change (dividedPowerUniversalDifferential A B f).toAddMonoidHom
+            (f a * b) = f a •
+              (dividedPowerUniversalDifferential A B f).toAddMonoidHom b
+        rw [(dividedPowerUniversalDifferential A B f).leibniz',
+          (dividedPowerUniversalDifferential A B f).map_base']
+        simp }
+  let Dω : Derivation A (B : Type u)
+      (dividedPowerOmega A B f : Type u) :=
+    Derivation.mk' θlin (by
+      intro b b'
+      simpa [θlin] using
+        (dividedPowerUniversalDifferential A B f).leibniz' b b')
+  let L : ModuleOfDifferentials A (B : Type u) →ₗ[B]
+      (dividedPowerOmega A B f : Type u) := Dω.liftKaehlerDifferential
+  have hN : N ≤ LinearMap.ker L := by
+    apply Submodule.span_le.2
+    rintro y ⟨n, hn, x, hx, rfl⟩
+    rw [LinearMap.mem_ker, map_sub, map_smul,
+      Dω.liftKaehlerDifferential_comp_D]
+    change (dividedPowerUniversalDifferential A B f).toAddMonoidHom
+          (B.dividedPowers.dpow n x) -
+        B.dividedPowers.dpow (n - 1) x •
+          (dividedPowerUniversalDifferential A B f).toAddMonoidHom x = 0
+    rw [(dividedPowerUniversalDifferential A B f).dpow'
+      (by omega) hx]
+    exact sub_self _
+  let ψ : dividedPowerOrdinaryQuotientModule A B f ⟶
+      dividedPowerOmega A B f := ModuleCat.ofHom (N.liftQ L hN)
+  have hbase : φ.hom.comp (N.liftQ L hN) = qN := by
+    apply Derivation.liftKaehlerDifferential_unique
+    ext b
+    change φ.hom (L (universalDifferential A (B : Type u) b)) =
+      qN (universalDifferential A (B : Type u) b)
+    rw [Dω.liftKaehlerDifferential_comp_D]
+    change φ.hom ((dividedPowerUniversalDifferential A B f).toAddMonoidHom b) = _
+    rw [U.factor]
+    rfl
+  refine ⟨{ hom := φ, inv := ψ, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
+  · apply U.unique U.omega U.d (φ ≫ ψ)
+    intro b
+    change ψ (φ (U.d.toAddMonoidHom b)) = U.d.toAddMonoidHom b
+    rw [U.factor]
+    change (N.liftQ L hN) (qN (universalDifferential A (B : Type u) b)) = _
+    rw [N.liftQ_mkQ]
+    exact Dω.liftKaehlerDifferential_comp_D b
+  · apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro z
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective N z
+    change φ.hom ((N.liftQ L hN) (N.mkQ y)) = N.mkQ y
+    rw [N.liftQ_mkQ]
+    exact congrArg (fun g => g y) hbase
 
 noncomputable def dividedPowerDifferentialSubmodule
     (A : Type u) [CommRing A] (B : DividedPowerRing.{u})
@@ -315,7 +566,10 @@ theorem dividedPowerDifferentialSubmodule_minimal
     (hN : ∀ x : B, x ∈ B.ideal →
       (dividedPowerUniversalDifferential A B f).toAddMonoidHom x ∈ N) :
     dividedPowerDifferentialSubmodule A B f ≤ N := by
-  sorry
+  unfold dividedPowerDifferentialSubmodule
+  apply Submodule.span_le.2
+  rintro y ⟨x, hx, rfl⟩
+  exact hN x hx
 
 /-! ## Divided-power powers of an ideal -/
 

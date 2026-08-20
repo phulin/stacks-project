@@ -867,77 +867,180 @@ theorem lemma_surjection {X : TopCat.{u}} (B : Set (Opens X))
 
 /-- Every sheaf is a filtered colimit of finite coequalizer presentations. -/
 /-
-Proof roadmap (the missing boundary is the finite-support/coequalizer construction).
+Proof roadmap (the missing boundary is the finite-support/coequalizer
+construction).  The structure above is intentionally unchanged: `cocone.pt`
+is abstract, so `targetIso` is the nonredundant datum identifying its colimit
+with `F`; fixing the cocone point definitionally to `F` would only make the
+   interface less reusable.  Add the focused imports
+   `Formalization.Books.Sheaves.Unit29.Infrastructure`,
+   `Mathlib.CategoryTheory.Sites.RegularEpi`,
+   `Mathlib.CategoryTheory.Limits.MonoCoprod` when implementing the helpers below.
 
-1. Apply `lemma_surjection B hB F`, writing its source as `F₀` and its
-   locally-surjective map as `q : F₀ ⟶ F`.  By
-   `sheaf_epi_iff_surjective` (Sheaves/Unit16/ExactnessAndPoints.lean), `q`
-   is epi.  After the focused import `Mathlib.CategoryTheory.Sites.RegularEpi`,
-   the regular-epi instance for type-valued sheaves makes it an
-   `EffectiveEpi`.  Form its kernel pair `K := pullback q q`; then
-   `isColimitCoforkOfEffectiveEpi q _ (pullbackIsPullback q q)` identifies
-   `F` as the coequalizer of `pullback.fst q q` and `pullback.snd q q`.
-   Apply `lemma_surjection B hB K` and compose the resulting epi `r : F₁ ⟶ K`
-   with these projections.  A small categorical helper is needed here:
-   precomposing both legs of a coequalizer by an epi is again a coequalizer
-   (prove the universal property by `cancel_epi r`).  This gives an arbitrary
-   presentation `F₁ ⇉ F₀ ⟶ F` by `openExtensionCoproduct`s.
+1. First obtain one arbitrary coproduct/coequalizer presentation.  Apply
+   `lemma_surjection B hB F`, and name its source `F₀ :=
+   openExtensionCoproduct I U S` and its map `q : F₀ ⟶ F`.  Install `Epi q`
+   with `(sheaf_epi_iff_surjective q).2 hq`
+   (Sheaves/Unit16/ExactnessAndPoints.lean).  Use `regularEpiOfEpi q` directly;
+   its fields `W`, `left`, `right`, `w`, and `isColimit`
+   (Mathlib/CategoryTheory/Limits/Shapes/RegularMono.lean), together with the
+   sheaf instance supplied by `Sites/RegularEpi.lean`, exhibit `q` as a
+   coequalizer.  Apply `lemma_surjection B hB` to `W`, obtaining
+   `r : F₁ ⟶ W`, where `F₁ := openExtensionCoproduct J V T`, and install
+   `Epi r`.  Add a small helper saying that if
+   `h : IsColimit (Cofork.ofπ q w)` and `r` is epi, then the same `q` is a
+   colimit cofork for `r ≫ left` and `r ≫ right`: in the `desc` clause use
+   `h.desc`, and recover `left ≫ k = right ≫ k` from the new cofork condition
+   by `cancel_epi r`.  `Cofork.IsColimit.mk'` is the convenient constructor.
+   Retain the resulting data as
+   `a b : F₁ ⟶ F₀`, `hab : a ≫ q = b ≫ q`, and
+   `hq : IsColimit (Cofork.ofπ q hab)`.
 
-2. Add the local finite-subcoproduct API before this theorem.  For a finite
-   subset `A₀ : Finset I`, define the subcoproduct indexed by
-   `{a // a ∈ A₀}` and its canonical map to `openExtensionCoproduct I U S`.
-   Provide (a) an `openExtensionCoproductReindexIso` for an equivalence of
-   index types and (b) injectivity on sections of the maps for
-   `A₀ ⊆ A₁`.  The latter is what permits the finite-subcoproduct diagram to
-   use the following result after proving, by the coproduct universal
-   property, that this diagram has colimit the full coproduct:
-   `directedColimitSectionsMap_bijective_of_quasiCompact_of_injective`
-   (Sheaves/Unit29/Infrastructure.lean).  Instantiate that result at
-   universe `v := u`, at each `V b`, with quasi-compactness
-   `hB_quasiCompact (V b) (V_mem b)`.  Do not apply it to an arbitrary
-   filtered category: its interface specifically expects a directed
-   preorder with injective transitions.  Prove transition injectivity on
-   stalks using `sheaf_injective_iff_stalk_injective`,
-   `sheafColimitStalkIso`, and the evident inclusion of the corresponding
-   finite sigma types.
+2. Add a finite-subcoproduct API, parametrized by `I : Type u`, `U`, and
+   `S`.  For `A : Finset I` put
+   `E A := openExtensionCoproduct {i // i ∈ A} (fun i => U i.1)
+   (fun i => S i.1)`.  Define `E.map h : E A ⟶ E A'` for `h : A ⊆ A'`
+   and `E.ι A : E A ⟶ openExtensionCoproduct I U S` by `colimit.desc`, with
+   legs the corresponding `colimit.ι`; prove identity, composition, and
+   `E.map h ≫ E.ι A' = E.ι A` using `colimit.hom_ext` and
+   `colimit.ι_desc`.  Also define `openExtensionCoproductReindexIso` for
+   `e : K ≃ I` by the same two universal properties.
 
-3. Package the resulting factorization as a helper with the following
-   boundary: for a morphism between two arbitrary `openExtensionCoproduct`s
-   and `B₀ : Finset J`, there are `A₀ : Finset I` and a morphism between the
-   two finite subcoproducts whose composite with the target inclusion is the
-   restriction of the original morphism.  To prove it, use
-   `openSetSheafExtensionHomEquiv`
-   (Sheaves/Unit31/Infrastructure.lean) on every `b ∈ B₀`.  A leg is then a
-   finite family (indexed by the finite type `T b`) of sections over `V b`;
-   the bijectivity from step 2 descends every section, and directedness plus
-   finiteness of `B₀` and all `T b` supplies one common `A₀`.  Apply this
-   helper to both parallel arrows and enlarge the two supports by union.
+   Do not prove injectivity by transporting through the chosen
+   `sheafColimitStalkIso`.  The type-valued sheaf category is finitarily
+   extensive (`Sites/LeftExact.lean`), hence has `MonoCoprod`; apply
+   `MonoCoprod.mono_of_injective` (Limits/MonoCoprod.lean) to the injective
+   subtype inclusion `{i // i ∈ A} → {i // i ∈ A'}` and the two colimit
+   cofans.  Apply the same lemma to `{i // i ∈ A} → I` to obtain
+   `Mono (E.ι A)`.  Thus `Mono (E.map h)`, and
+   `(sheaf_mono_iff_injective (E.map h)).1 inferInstance` gives the exact
+   sectionwise injectivity required below.
 
-4. Define `FiniteSubpresentationIndex` to consist of finite supports
-   `A₀, B₀` together with factorizations of both arrows.  Order it by support
-   inclusion (factorizations are unique because the inclusions are
-   sectionwise injective).  The empty supports give an object and unions give
-   upper bounds, hence its thin category is filtered.  At an index take the
-   coequalizer of the two finite factorizations.  Reindex the two finite
-   support types with `Fintype.equivFin` followed by the appropriate
-   `Equiv.ulift` equivalence (so the index is `ULift.{u} (Fin n)` exactly as in
-   `FiniteOpenCoequalizerPresentation`) and use
-   `coequalizerIsCoequalizer` to fill `isColimit`; this proves
-   `stagesInPresentation` without changing the definition above.
+3. Regard `Finset I` as its preorder category and form
+   `D : Finset I ⥤ TopCat.Sheaf (Type u) X`, with `D.obj A := E A` and
+   `D.map f := E.map (leOfHom f)`.  It has `Nonempty` and `IsDirectedOrder`
+   instances from `OrderBot` and `SemilatticeSup`.  Make `E.ι` a cocone on
+   `D` with point the full coproduct, and prove it colimiting: given a cocone
+   `c`, define the map on the `i`-th full summand through the singleton stage
+   `{i}`, then use the full coproduct's `colimit.desc`; both factorization and
+   uniqueness reduce to `colimit.hom_ext`.  Let
+   `eFull := IsColimit.coconePointUniqueUpToIso (colimit.isColimit D) hD`.
 
-5. The final missing helper is the universal-property statement that the
-   cocone from these finite coequalizers to the arbitrary coequalizer `F` is
-   colimiting.  Construct a map out of `F` by first gluing the compatible
-   maps out of all finite target subcoproducts; every target generator occurs
-   at the stage `(A₀, ∅)`, and every source relation occurs after step 3 at a
-   stage containing its finite support.  Uniqueness reduces in the same way
-   to finite supports.  Assemble `FilteredFiniteOpenCoequalizerColimit` with
-   this index and diagram, cocone point `F`, this `IsColimit`, and
+   Prove a reusable section-descent lemma.  First fill
+   `DirectedSectionTransitionsInjective D` from step 2.  At `W : Opens X`
+   with `hW : IsCompact (W : Set X)`, apply, with universe `v := u`,
+   `directedColimitSectionsMap_bijective_of_quasiCompact_of_injective D W`
+   (Sheaves/Unit29/Infrastructure.lean), using `hW` as `QuasiCompactOpen W`.
+   Move a section of the full coproduct across `eFull.inv`, use surjectivity
+   of this map, and then use `Types.jointly_surjective` for the colimit of the
+   section functor.  This produces
+   `A : Finset I` and `sA : (E A).presheaf.obj (op W)` with
+   `(E.ι A).hom.app (op W) sA = s`.  Add the small API equation that
+   `directedColimitSectionsMap D W` sends a `colimit.ι`-representative to the
+   corresponding component of `colimit.ι D`; it follows from
+   `colimit.ι_desc` after unfolding only `directedColimitSectionsMapCore`.
+   This theorem applies only to the directed preorder `Finset I`, not to the
+   later arbitrary filtered category.
+
+4. Convert section descent into finite factorization of a morphism.  Add the
+   local equivalence
+
+     `((openSetSheafExtensionByEmpty W).obj
+         (constantSheaf (openSubspace W) R) ⟶ G) ≃
+       (R → G.presheaf.obj (op W))`.
+
+   Build it from `openSetSheafExtensionHomEquiv` and
+   `constantTypeSheafIso` (Sheaves/Unit31/Infrastructure.lean), followed by
+   the hom equivalence of
+   `constantSheafAdj (Opens.grothendieckTopology (openSubspace W))
+     (Type u) isTerminalTop` (Sites/ConstantSheaf.lean).  Evaluate at
+   `⊤ : Opens (openSubspace W)` and finish with
+   `openSheafRestrictionFormulaIso` from this file and the equality that the
+   image of this top open is `W`.  Record its naturality under postcomposition
+   using `Adjunction.homEquiv_naturality_right` and
+   `openSheafRestrictionFormulaNatIso`; this avoids unfolding the equivalence
+   in every factorization proof.
+
+   Now prove the exact helper needed later.  For
+   `f : openExtensionCoproduct J V T ⟶ openExtensionCoproduct I U S` and
+   `C : Finset J`, assuming every `V j` is quasi-compact, produce
+   `A : Finset I` and `fAC : E₁ C ⟶ E₀ A` such that
+   `fAC ≫ E₀.ι A = E₁.ι C ≫ f`.  Under the equivalence above, the restriction
+   of `f` to a summand `j ∈ C` is the family, indexed by `t : T j`, of its
+   sections over `V j`.  Apply step 3 to each section using
+   `hB_quasiCompact (V j) (V_mem j)`.  Install
+   `Fintype.ofFinite (T j)` locally; the sigma type of pairs
+   `(j : {j // j ∈ C})` and `t : T j.1` is finite, so a finite union of the
+   chosen supports gives one `A`.  Promote every descended section to this
+   union, invert the displayed equivalence on each summand, and assemble
+   `fAC` by `colimit.desc`.  Its equation follows from the naturality lemma
+   and `colimit.hom_ext`.  Apply the helper separately to `a` and `b` and
+   replace their target supports by the union, obtaining common finite legs.
+
+5. Define a namespace-level `FiniteSubpresentationIndex : Type u`.  An
+   object has supports `A : Finset I`, `C : Finset J`, legs
+   `left right : E₁ C ⟶ E₀ A`, and equations
+   `left ≫ E₀.ι A = E₁.ι C ≫ a` and similarly for `right` and `b`.  Put a
+   preorder on it by inclusion of both supports.  For a comparison, the
+   transition maps of the two subcoproducts form a morphism of parallel
+   pairs: after composing with `E₀.ι` the squares are the two factorization
+   equations, and cancellation is valid because `E₀.ι` is mono by step 2.
+   The empty supports and the unique maps from the initial subcoproduct give
+   `Nonempty`.  To bound two objects, union their source supports, apply step
+   4 to both global legs, and union the resulting target support with the two
+   old target supports.  Uniqueness after the mono inclusions shows that the
+   old legs transition to the new ones.  This proves `IsDirectedOrder`; the
+   standard preorder instance
+   `isFiltered_of_directed_le_nonempty` (Filtered/Basic.lean) then supplies
+   `IsFiltered` without any explicit parallel-arrow work.
+
+6. Define the stage functor by
+   `Q.obj p := coequalizer p.left p.right`.  For `p ≤ p'`, use
+   `parallelPairHom` and `colimMap`; prove the functor laws with
+   `coequalizer.hom_ext` after precomposing by `coequalizer.π`.  To construct
+   `stagesInPresentation p`, set
+   `n := Fintype.card {i // i ∈ p.A}` and
+   `m := Fintype.card {j // j ∈ p.C}`.  The exact reindexing equivalences are
+
+     `Equiv.ulift.trans (Fintype.equivFin {i // i ∈ p.A}).symm`
+       `: ULift.{u} (Fin n) ≃ {i // i ∈ p.A}`
+
+   and the analogous equivalence for `p.C`.  Define the structure's `U`,
+   `V`, `S`, and `T` using `(Fintype.equivFin _).symm : Fin n → _`; membership
+   and finiteness come from the original arbitrary presentation.  Conjugate
+   `p.left` and `p.right` by the two reindexing isomorphisms, and take the
+   augmentation to be the target reindexing map followed by
+   `coequalizer.π p.left p.right`.  Transport
+   `coequalizerIsCoequalizer` to this conjugate cofork with
+   `Cofork.isColimitOfIsos` (Limits/Shapes/Equalizers.lean).  This fills all
+   fields of `FiniteOpenCoequalizerPresentation` without changing its
+   interface.
+
+7. Give `Q` its cocone with point `F`.  At `p`, the map
+   `E₀ p.A ⟶ F` is `E₀.ι p.A ≫ q`; it coequalizes `p.left` and `p.right` by
+   their factorization equations and `hab`, so define
+   `Q.obj p ⟶ F` with `coequalizer.desc`.  Cocone naturality follows after
+   cancelling `coequalizer.π`.
+
+   Prove this cocone colimiting by an explicit universal property.  Given a
+   cocone `s : Cocone Q`, for every `A : Finset I` use the canonical index
+   object with supports `(A, ∅)`; the maps
+   `E₀ A ⟶ Q.obj (A, ∅) ⟶ s.pt` form a cocone on the finite-target diagram
+   from step 3, hence glue via `hD` to `g : F₀ ⟶ s.pt`.  Show
+   `a ≫ g = b ≫ g` by `colimit.hom_ext` on `F₁`: for a source summand use
+   step 4 with its singleton support to choose an index containing that
+   relation, then use its coequalizer condition and the naturality of `s`.
+   Define `F ⟶ s.pt` as `hq.desc (Cofork.ofπ g this)`.  Its factorization on
+   each stage follows after cancelling `coequalizer.π`; uniqueness follows
+   by `hq.hom_ext`, reducing equality on `F₀` to the `(A, ∅)` stages.  Finally
+   assemble `FilteredFiniteOpenCoequalizerColimit` with this index, `Q`, the
+   cocone point `F`, the preceding `IsColimit`, and
    `targetIso := Iso.refl F`.
 
-Known dead end: `lemma_surjection` plus `sheaf_epi_iff_surjective` only gives
-the arbitrary kernel-pair coequalizer.  It cannot produce the required finite
-stages until the quasi-compact finite-support helper in steps 2--3 exists.
+Known dead ends: the effective-epi kernel-pair route duplicates the
+`RegularEpi` data already returned by `regularEpiOfEpi`; and chosen
+`sheafColimitStalkIso`s have no naturality API suitable for proving the
+finite-subcoproduct transition maps injective.  Neither route removes the
+need for the quasi-compact section-descent helper in steps 3--4.
 -/
 theorem lemma_filtered_colimit_constructibles {X : TopCat.{u}}
     (B : Set (Opens X)) (hB : Opens.IsBasis B)

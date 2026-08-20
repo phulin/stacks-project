@@ -402,6 +402,44 @@ theorem sheafificationUnit_stalk_bijective {X : TopCat.{v}}
     change p (u (p b')) = p b' at h
     exact h
 
+/-- The stalk is initial when every section over a neighborhood is initial. -/
+noncomputable def isInitial_stalk_of_isInitial_sections {X : TopCat.{v}} (C : Type u)
+    [Category.{v} C] [HasColimits C] (F : TopCat.Presheaf C X) (x : X)
+    (hF : ∀ (U : Opens X) (_ : x ∈ U), IsInitial (F.obj (op U))) :
+    IsInitial (F.stalk x) := by
+  let h : ∀ Y : C, F.stalk x ⟶ Y := fun Y =>
+    colimit.desc ((OpenNhds.inclusion x).op ⋙ F)
+      { pt := Y
+        ι :=
+          { app := fun V => (hF V.unop.1 V.unop.2).to Y
+            naturality := by
+              intro V W i
+              apply (hF V.unop.1 V.unop.2).hom_ext } }
+  apply IsInitial.ofUniqueHom h
+  intro Y m
+  dsimp [h]
+  apply (colimit.isColimit ((OpenNhds.inclusion x).op ⋙ F)).hom_ext
+  intro V
+  apply (hF V.unop.1 V.unop.2).hom_ext
+
+/-- The sheafified stalk is initial when every neighborhood section is initial. -/
+noncomputable def isInitial_sheafify_stalk_of_isInitial_sections
+    {X : TopCat.{v}} (C : Type u) [Category.{v} C] [HasColimits C]
+    [HasTerminal C] (F : TopCat.Presheaf C X) (x : X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C]
+    (hF : ∀ (U : Opens X) (_ : x ∈ U), IsInitial (F.obj (op U))) :
+    IsInitial (TopCat.Presheaf.stalk
+      (CategoryTheory.sheafify (Opens.grothendieckTopology X) F) x) := by
+  let f : F.stalk x ⟶ TopCat.Presheaf.stalk
+      (CategoryTheory.sheafify (Opens.grothendieckTopology X) F) x :=
+    (TopCat.Presheaf.stalkFunctor C x).map
+      (CategoryTheory.toSheafify (Opens.grothendieckTopology X) F)
+  letI : IsIso f := by
+    exact TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso x C F
+  let e : F.stalk x ≅ TopCat.Presheaf.stalk
+      (CategoryTheory.sheafify (Opens.grothendieckTopology X) F) x := asIso f
+  exact IsInitial.ofIso (isInitial_stalk_of_isInitial_sections C F x hF) e
+
 /-- Every map from `F` to a sheaf factors through `F#`. -/
 theorem existsUnique_sheafificationLift {X : TopCat.{v}}
     (F : TopCat.Presheaf (Type v) X) (G : TopCat.Sheaf (Type v) X)

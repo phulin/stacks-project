@@ -614,7 +614,7 @@ theorem exists_sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
     Nonempty ((sheafLimit F).presheaf.stalk x ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         TopCat.Presheaf.stalkFunctor (Type v) x)) := by
-  letI := Formalization.Books.Sheaves.Unit28.presheafStalkPreservesFiniteLimits x
+  let := Formalization.Books.Sheaves.Unit28.presheafStalkPreservesFiniteLimits x
   let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
   let e' := preservesLimitIso (TopCat.Presheaf.stalkFunctor (Type v) x)
     (F ⋙ TopCat.Sheaf.forget (Type v) X)

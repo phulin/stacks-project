@@ -55,6 +55,48 @@ structure QuotientStep {A : Type u} [CommRing A] (I : Ideal A)
       transitionMap F (i := n + 1) (j := n)
         (PNat.lt_add_right n 1).le
 
+theorem QuotientStep.transition_surjective
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (F : NaturalInverseSystem.{u, w} A) (n : ℕ+)
+    (s : QuotientStep I F n) :
+    Function.Surjective (successiveTransitionMap F n).hom := by
+  intro x
+  obtain ⟨z, hz⟩ := Submodule.mkQ_surjective
+    (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1)))))
+    (s.equivalence.inv.hom x)
+  refine ⟨z, ?_⟩
+  have heq := congrArg ModuleCat.Hom.hom s.transition_eq
+  rw [successiveTransitionMap, ← heq]
+  change s.equivalence.hom.hom
+    ((I ^ (n : ℕ) • (⊤ : Submodule A
+      (F.obj (Opposite.op (n + 1))))).mkQ z) = x
+  rw [hz]
+  exact s.equivalence.inv_hom_id_apply x
+
+theorem QuotientStep.transition_ker
+    {A : Type u} [CommRing A] (I : Ideal A)
+    (F : NaturalInverseSystem.{u, w} A) (n : ℕ+)
+    (s : QuotientStep I F n) :
+    LinearMap.ker (successiveTransitionMap F n).hom =
+      I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1)))) := by
+  have heq := congrArg ModuleCat.Hom.hom s.transition_eq
+  rw [successiveTransitionMap, ← heq]
+  apply le_antisymm
+  · intro x hx
+    have hx' : s.equivalence.hom.hom
+        ((I ^ (n : ℕ) • (⊤ : Submodule A
+          (F.obj (Opposite.op (n + 1))))).mkQ x) = 0 := hx
+    have hmk := congrArg (fun y => s.equivalence.inv.hom y) hx'
+    exact (Submodule.Quotient.mk_eq_zero _).mp (by simpa using hmk)
+  · intro x hx
+    change s.equivalence.hom.hom
+      ((I ^ (n : ℕ) • (⊤ : Submodule A
+        (F.obj (Opposite.op (n + 1))))).mkQ x) = 0
+    have hmk : (I ^ (n : ℕ) • (⊤ : Submodule A
+        (F.obj (Opposite.op (n + 1))))).mkQ x = 0 :=
+      (Submodule.Quotient.mk_eq_zero _).mpr hx
+    rw [hmk, map_zero]
+
 /-- The transition maps of `F` are the canonical quotient maps by powers of `I`. -/
 def IsQuotientInverseSystem {A : Type u} [CommRing A] (I : Ideal A)
     (F : NaturalInverseSystem.{u, w} A) : Prop :=
@@ -313,17 +355,7 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
         (successiveTransitionMap F k).hom := by
       intro k
       rcases hF k with ⟨s⟩
-      intro x
-      obtain ⟨z, hz⟩ := Submodule.mkQ_surjective
-        (I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))))
-        (s.equivalence.inv.hom x)
-      refine ⟨z, ?_⟩
-      have heq := congrArg ModuleCat.Hom.hom s.transition_eq
-      rw [successiveTransitionMap, ← heq]
-      change s.equivalence.hom.hom
-        ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ z) = x
-      rw [hz]
-      exact s.equivalence.inv_hom_id_apply x
+      exact s.transition_surjective I F k
     have hgeneral : ∀ (i j : ℕ+) (h : j ≤ i),
         Function.Surjective (transitionMap F (i := i) (j := j) h).hom := by
       intro i
@@ -504,41 +536,7 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
           I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))) := by
       intro k
       rcases hF k with ⟨s⟩
-      have heq : s.equivalence.hom.hom ∘ₗ
-            (I ^ (k : ℕ) • (⊤ : Submodule A
-              (F.obj (Opposite.op (k + 1))))).mkQ =
-          (successiveTransitionMap F k).hom := by
-        have heq' := congrArg ModuleCat.Hom.hom s.transition_eq
-        change s.equivalence.hom.hom ∘ₗ
-              (I ^ (k : ℕ) • (⊤ : Submodule A
-                (F.obj (Opposite.op (k + 1))))).mkQ =
-            (successiveTransitionMap F k).hom at heq'
-        exact heq'
-      apply le_antisymm
-      · intro x hx
-        have hx' : s.equivalence.hom.hom
-            ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ x) = 0 := by
-          change (s.equivalence.hom.hom ∘ₗ
-            (I ^ (k : ℕ) • (⊤ : Submodule A
-              (F.obj (Opposite.op (k + 1))))).mkQ) x = 0
-          rw [heq]
-          exact hx
-        have hmk : (I ^ (k : ℕ) •
-            (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ x = 0 := by
-          have hmk' := congrArg (fun y => s.equivalence.inv.hom y) hx'
-          simpa using hmk'
-        exact (Submodule.Quotient.mk_eq_zero _).mp hmk
-      · refine Submodule.smul_le.mpr ?_
-        intro a ha x hx
-        change (successiveTransitionMap F k).hom (a • x) = 0
-        rw [← heq]
-        change s.equivalence.hom.hom
-          ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ (a • x)) = 0
-        have hmk : (I ^ (k : ℕ) •
-            (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ (a • x) = 0 := by
-          apply (Submodule.Quotient.mk_eq_zero _).mpr
-          exact Submodule.smul_mem_smul ha hx
-        rw [hmk, map_zero]
+      exact s.transition_ker I F k
     let K (n : ℕ+) : Submodule A (inverseLimitModule F) :=
       LinearMap.ker (limit.π F (Opposite.op n)).hom
     let D (n : ℕ+) : Submodule A (K n) :=

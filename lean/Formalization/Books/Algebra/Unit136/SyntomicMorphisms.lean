@@ -92,10 +92,9 @@ def IsPolynomialQuotientPresentation
 def IsRelativeGlobalCompleteIntersection
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
   letI : Algebra R S := f.toAlgebra
-  ∃ (n c : ℕ) (P : Formalization.Books.Algebra.Unit134.Presentation
+    ∃ (n c : ℕ) (P : Formalization.Books.Algebra.Unit134.Presentation
       R S (Fin n)) (fs : Fin c → P.Ring),
     IsPolynomialQuotientPresentation P fs ∧
-      c ≤ n ∧
       ∀ p : PrimeSpectrum R,
         Nonempty (PrimeSpectrum (Fiber R S p)) →
           ringKrullDim (Fiber R S p) =
@@ -150,7 +149,8 @@ theorem relative_global_complete_intersection_localization
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (c : ℕ) (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
-      c ≤ n →
+      HasFiberDimension f
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) →
       ∀ (h₀ : P.Ring), algebraMap P.Ring S h₀ = g₀ →
         IsRelativeGlobalCompleteIntersection
           (algebraMap R (Localization.Away g₀)) := by
@@ -270,6 +270,8 @@ theorem factorPolynomialMap_is_relative_global_complete_intersection
 
 abbrev RootsPolynomialBase (n : ℕ) := MvPolynomial (Fin n) ℤ
 
+/- The empty summand keeps the target's root variables visibly separate from
+   the coefficient variables while still giving exactly `n` root variables. -/
 abbrev RootsPolynomialTarget (n : ℕ) :=
   MvPolynomial (Sum (Fin n) Empty) ℤ
 
@@ -281,10 +283,11 @@ def elementarySymmetric
 noncomputable def rootsPolynomialMap (n : ℕ) :
     RootsPolynomialBase n →ₐ[ℤ] RootsPolynomialTarget n :=
   MvPolynomial.aeval (fun k =>
-    elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inl i)))
+    elementarySymmetric (n := n) (k.1 + 1)
+      (fun i => MvPolynomial.X (Sum.inl i)))
 
 noncomputable def rootsTargetPolynomial (n : ℕ) :
-    Polynomial (RootsPolynomialTarget n) :=
+  Polynomial (RootsPolynomialTarget n) :=
   ∏ i : Fin n, (Polynomial.X +
     Polynomial.C (MvPolynomial.X (Sum.inl i)))
 
@@ -297,7 +300,8 @@ def rootMonomial (n : ℕ) (e : RootMonomialIndex n) :
 
 theorem rootsPolynomialMap_spec (n : ℕ) (k : Fin n) :
     rootsPolynomialMap n (MvPolynomial.X k) =
-      elementarySymmetric n k.1 (fun i => MvPolynomial.X (Sum.inl i)) := by
+      elementarySymmetric (n := n) (k.1 + 1)
+        (fun i => MvPolynomial.X (Sum.inl i)) := by
   sorry
 
 theorem rootsPolynomial_factorization (n : ℕ) :
@@ -366,7 +370,6 @@ theorem localize_relative_complete_intersection_at_fibre
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
-      c ≤ n →
       (p : PrimeSpectrum R) →
       (hdim : ringKrullDim (Fiber R S p) =
         (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞)) →
@@ -384,7 +387,6 @@ theorem localize_relative_complete_intersection_at_prime
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
-      c ≤ n →
       (p : PrimeSpectrum R) → (q' : PrimeSpectrum P.Ring) →
       (q : PrimeSpectrum S) →
       (hlying : PrimeSpectrum.comap f q = p) →
@@ -454,12 +456,14 @@ def FlatQuotientOfRingHom
 
 theorem relative_global_complete_intersection_conormal
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
-    (hrel : IsRelativeGlobalCompleteIntersection f) :
+    :
     letI : Algebra R S := f.toAlgebra
     ∀ {n c : ℕ}
       (P : Formalization.Books.Algebra.Unit134.Presentation R S (Fin n))
       (fs : Fin c → P.Ring),
       IsPolynomialQuotientPresentation P fs →
+      HasFiberDimension f
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) →
       (q : PrimeSpectrum S) → (q' : PrimeSpectrum P.Ring) →
       PrimeSpectrum.comap (algebraMap P.Ring S) q = q' →
     RingTheory.Sequence.IsRegular (Localization.AtPrime q'.asIdeal)
@@ -562,9 +566,9 @@ theorem composition_syntomic
 /-! ## Lifting a syntomic map through a quotient -/
 
 def SyntomicLiftPiece
-    {R I : Type u} [CommRing R] [CommRing I]
-    (J : Ideal R) (fbar : (R ⧸ J) →+* I) (g : I) : Prop :=
-  letI : Algebra (R ⧸ J) I := fbar.toAlgebra
+    {R Sbar : Type u} [CommRing R] [CommRing Sbar]
+    (J : Ideal R) (fbar : (R ⧸ J) →+* Sbar) (g : Sbar) : Prop :=
+  letI : Algebra (R ⧸ J) Sbar := fbar.toAlgebra
   ∃ (T : Type u) (hT : CommRing T) (f : R →+* T),
     letI : CommRing T := hT
     IsRelativeGlobalCompleteIntersection f ∧

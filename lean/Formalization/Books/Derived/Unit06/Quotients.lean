@@ -65,42 +65,57 @@ def IsStrictlyFullSaturatedPretriangulated (P : ObjectProperty C) : Prop :=
 theorem isSaturated_iff_isEpaissse (P : ObjectProperty C)
     [CategoryTheory.IsTriangulated C] [P.IsTriangulated] :
     IsSaturated P ↔ IsEpaissse P := by
-  /-
-  Proof roadmap (Rickard's direct-summand criterion; normal `prove` stage):
-
-  * Work throughout with `R := P.isoClosure : ObjectProperty C`.  The instance
-    `P.isoClosure.IsTriangulated` is provided by
-    `Mathlib/CategoryTheory/Triangulated/Subcategory.lean`, so `R.le_shift` and
-    `R.ext_of_isTriangulatedClosed₁'`/`₂'`/`₃'` may be used without replacing
-    the given, possibly non-strict, predicate `P` by a stricter hypothesis.
-  * For the forward implication, formulate the Rickard intermediate claim for
-    `X S Y T : C`: if `a : X ⟶ S`, `c : S ⟶ Y`, `b = a ≫ c`, and
-    `Triangle.mk b d e` is distinguished, then from `R S` and `R T` construct
-    `X' Y' : C` with `R (X ⊞ X')` and `R (Y ⊞ Y')`.  Complete `a` and `c`
-    using `distinguished_cocone_triangle`, and apply
-    `Triangulated.someOctahedron` to the three triangles for `a`, `c`, and
-    `a ≫ c`; the needed fourth distinguished triangle is `Octahedron.mem`.
-    Combine it with `binaryBiproductTriangle_distinguished` and transport the
-    resulting triangles with `isomorphic_distinguished`/`Triangle.isoMk`.
-    This is precisely the TR4 step for which the ambient
-    `[CategoryTheory.IsTriangulated C]` instance is required.  Apply the
-    assumed `IsSaturated P` to the two resulting `R`-biproducts and retain the
-    first components, giving `R X ∧ R Y`.
-  * For the reverse implication, given `hXY : R (X ⊞ Y)`, use
-    `(binaryBiproductTriangle Y X).invRotate`.  It is distinguished by
-    `inv_rot_of_distTriang _ (binaryBiproductTriangle_distinguished Y X)`, its
-    first morphism is zero, and its third object is `Y ⊞ X`.  Feed this triangle
-    to the epaissse hypothesis with both auxiliary objects equal to `Y ⊞ X`,
-    factor the zero map through that object with zero morphisms, and transport
-    `hXY` along `biprod.braiding X Y`.  The result is `R (X⟦-1⟧) ∧ R Y`.
-    Apply `R.le_shift (1 : ℤ)` to the first component and transport along
-    `shiftNegShift X (1 : ℤ)` to obtain `R X`; pair it with `R Y`.
-
-  Do not try to close the forward direction with `quotientFunctor_kernel_iff`
-  or `quotientKernel_is_smallest`: both occur later in this file, and the latter
-  already depends on the same saturation/direct-summand argument.
-  -/
-  sorry
+  constructor
+  · intro hsat X S Y T a b c d e hab hdist hS hT
+    let R : ObjectProperty C := P.isoClosure
+    obtain ⟨A, p, q, hTa⟩ := distinguished_cocone_triangle a
+    let i : X ⟶ S ⊞ Y := biprod.lift a b
+    obtain ⟨Q, r, s, hTi⟩ := distinguished_cocone_triangle i
+    have hi : i ≫ (biprod.snd : S ⊞ Y ⟶ Y) = b := by simp [i]
+    let o₂ := Triangulated.someOctahedron hi hTi
+      (rot_of_distTriang _ (binaryBiproductTriangle_distinguished S Y)) hdist
+    have hS₁ : R (S⟦(1 : ℤ)⟧) := R.le_shift (1 : ℤ) _ hS
+    have hQ : R Q := R.ext_of_isTriangulatedClosed₁ _ o₂.mem hT hS₁
+    let E := Biprod.unipotentUpper (-c)
+    have hiE : i ≫ E.hom = a ≫ (biprod.inl : S ⟶ S ⊞ Y) := by
+      dsimp [i, E]
+      rw [← hab]
+      ext <;> simp
+    have hTi' : Triangle.mk (a ≫ (biprod.inl : S ⟶ S ⊞ Y)) (E.inv ≫ r) s ∈
+        distTriang C :=
+      isomorphic_distinguished (Triangle.mk i r s) hTi
+        (Triangle.mk (a ≫ (biprod.inl : S ⟶ S ⊞ Y)) (E.inv ≫ r) s)
+        (Triangle.isoMk _ _ (Iso.refl _) E.symm (Iso.refl _)
+          (by
+            dsimp
+            rw [← cancel_mono E.hom]
+            simpa only [Category.assoc, E.inv_hom_id, Category.comp_id,
+              Category.id_comp] using hiE.symm)
+          (by simp)
+          (by dsimp; simp only [Functor.map_id, Category.comp_id, Category.id_comp]))
+    let o₁ := Triangulated.someOctahedron rfl hTa
+      (binaryBiproductTriangle_distinguished S Y) hTi'
+    have ho₁ : Triangle.mk o₁.m₁ o₁.m₃ (0 : Y ⟶ A⟦(1 : ℤ)⟧) ∈ distTriang C := by
+      simpa only [zero_comp] using o₁.mem
+    obtain ⟨eQ, _⟩ := exists_iso_binaryBiproduct_of_distTriang
+      (Triangle.mk o₁.m₁ o₁.m₃ (0 : Y ⟶ A⟦(1 : ℤ)⟧)) ho₁ rfl
+    obtain ⟨hA, hY⟩ := hsat (R.prop_of_iso eQ hQ)
+    exact ⟨R.ext_of_isTriangulatedClosed₁ _ hTa hS hA, hY⟩
+  · intro h
+    intro X Y hXY
+    let R : ObjectProperty C := P.isoClosure
+    have hYX : R (Y ⊞ X) := R.prop_of_iso (biprod.braiding X Y) hXY
+    let T := (binaryBiproductTriangle Y X).invRotate
+    have hTd : T ∈ distTriang C :=
+      inv_rot_of_distTriang _ (binaryBiproductTriangle_distinguished Y X)
+    have hzero : T.mor₁ = 0 := by
+      simp [T, Triangle.invRotate, binaryBiproductTriangle, Functor.map_zero]
+    obtain ⟨hXneg, hY⟩ := h
+      (0 : X⟦(-1 : ℤ)⟧ ⟶ Y ⊞ X) T.mor₁
+      (0 : Y ⊞ X ⟶ Y) T.mor₂ T.mor₃
+      (by rw [hzero]; simp) hTd hYX hYX
+    exact ⟨R.prop_of_iso (shiftNegShift X (1 : ℤ))
+      (R.le_shift (1 : ℤ) _ hXneg), hY⟩
 
 end SaturatedSubcategories
 

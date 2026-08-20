@@ -337,11 +337,39 @@ instance differentialGradedModuleCategory {R : Type u} [CommRing R]
     (A : DifferentialGradedAlgebra R) :
     Category (DifferentialGradedModuleCategory A) where
   Hom M N := DifferentialGradedModuleHom M N
-  id M := ⟨𝟙 M.complex, by sorry⟩
-  comp f g := ⟨f.underlying ≫ g.underlying, by sorry⟩
-  id_comp f := by sorry
-  comp_id f := by sorry
-  assoc f g h := by sorry
+  id M := ⟨𝟙 M.complex, by
+    change M.action ≫ 𝟙 M.complex =
+      (𝟙 M.complex ⊗ₘ 𝟙 A.complex) ≫ M.action
+    simp⟩
+  comp {X Y Z} f g := ⟨f.underlying ≫ g.underlying, by
+    have hf : X.action ≫ f.underlying =
+        (f.underlying ⊗ₘ (𝟙 A.complex)) ≫ Y.action := f.2
+    have hg : Y.action ≫ g.underlying =
+        (g.underlying ⊗ₘ (𝟙 A.complex)) ≫ Z.action := g.2
+    change X.action ≫ (f.underlying ≫ g.underlying) =
+      ((f.underlying ≫ g.underlying) ⊗ₘ (𝟙 A.complex)) ≫ Z.action
+    calc
+      X.action ≫ (f.underlying ≫ g.underlying) =
+          (X.action ≫ f.underlying) ≫ g.underlying := by
+            simp only [Category.assoc]
+      _ = ((f.underlying ⊗ₘ (𝟙 A.complex)) ≫ Y.action) ≫
+          g.underlying := by rw [hf]
+      _ = (f.underlying ⊗ₘ (𝟙 A.complex)) ≫
+          (Y.action ≫ g.underlying) := by simp only [Category.assoc]
+      _ = (f.underlying ⊗ₘ (𝟙 A.complex)) ≫
+          ((g.underlying ⊗ₘ (𝟙 A.complex)) ≫ Z.action) := by
+            rw [hg]
+      _ = ((f.underlying ⊗ₘ (𝟙 A.complex)) ≫
+          (g.underlying ⊗ₘ (𝟙 A.complex))) ≫ Z.action := by
+            simp only [Category.assoc]
+      _ = ((f.underlying ≫ g.underlying) ⊗ₘ
+          ((𝟙 A.complex) ≫ (𝟙 A.complex))) ≫ Z.action := by
+            rw [MonoidalCategory.tensorHom_comp_tensorHom]
+      _ = ((f.underlying ≫ g.underlying) ⊗ₘ (𝟙 A.complex)) ≫ Z.action := by
+            simp⟩
+  id_comp f := by simp [DifferentialGradedModuleHom.underlying]
+  comp_id f := by simp [DifferentialGradedModuleHom.underlying]
+  assoc f g h := by simp [DifferentialGradedModuleHom.underlying, Category.assoc]
 
 instance differentialGradedModuleHomAddCommGroup
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}

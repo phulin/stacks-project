@@ -228,7 +228,8 @@ theorem rationalGroupAlgebraCotangentGenerator_add
     exact Ideal.mul_mem_mul
       (rationalGroupAlgebra_basisElement_sub_one_mem_kernel k α)
       (rationalGroupAlgebra_basisElement_sub_one_mem_kernel k β)
-  convert hmem using 1 <;> abel
+  convert hmem using 1
+  · abel
 
 private theorem rationalGroupAlgebra_smul_cotangent_eq_augmentation_smul
     (k : Type u) [Field k] (a : rationalGroupAlgebra k)

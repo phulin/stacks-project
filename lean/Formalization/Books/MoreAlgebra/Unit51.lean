@@ -37,7 +37,15 @@ noncomputable section
 
 universe u
 
-/-! ## The property-of-fibres framework -/
+/-! ## The property-of-fibres framework
+
+The source's displayed fibre map `κ(q) → B ⊗[A] κ(q)` is represented by
+the residue-field algebra instance installed in `HasPropertyOnFibres`.
+Likewise, `formalFiberAt` from Chapter 50 and
+`HasQuotientFormalFiberProperty` below are the two displayed presentations
+of the formal fibre used in the source's prime-pair criterion, so no separate
+proposition is needed for a merely notational rewrite of those presentations.
+-/
 
 /-- A property of an algebra over a field.
 
@@ -66,7 +74,7 @@ def HasPropertyOnFibres
       Algebra.TensorProduct.rightAlgebra
     P q.asIdeal.ResidueField (B ⊗[A] q.asIdeal.ResidueField)
 
-/-- `P` holds for the formal fibres of a local ring. -/
+/-- `P` holds for the formal fibre at the pair of primes `q ≤ p`. -/
 def HasFormalFiberAtProperty
     (P : RingMapProperty)
     (R : Type u) [CommRing R] (p q : PrimeSpectrum R) : Prop :=
@@ -356,8 +364,8 @@ theorem geometricallyNormalProperty_A_to_E :
             PropertyE GeometricallyNormalProperty := by
   sorry
 
-/-- `(S_n)` satisfies the source's assertions (A)--(E). -/
-theorem serreSProperty_A_to_E (n : ℕ) :
+/-- For `n ≥ 1`, `(S_n)` satisfies the source's assertions (A)--(E). -/
+theorem serreSProperty_A_to_E (n : ℕ) (hn : 1 ≤ n) :
     PropertyA (SerreSProperty n) ∧
       PropertyB (SerreSProperty n) ∧
         PropertyC (SerreSProperty n) ∧

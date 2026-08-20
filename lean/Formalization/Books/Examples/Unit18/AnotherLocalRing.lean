@@ -22,6 +22,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.Pullback
 import Mathlib.RingTheory.MvPowerSeries.Rename
 import Mathlib.RingTheory.PowerSeries.Basic
+import Formalization.Books.Algebra.Unit69.QuasiRegularSequences
 import Formalization.Books.Algebra.Unit119.AroundKrullAkizuki
 import Formalization.Books.Examples.Unit12.NonflatCompletions
 
@@ -1202,7 +1203,7 @@ theorem a_quotient_is_fiberProduct :
         Finsupp.single (0 : Fin 2) i := by
       ext j
       have he0 : e () = (0 : Fin 2) := rfl
-      fin_cases j <;> simp [he0, Finsupp.single_apply]
+      fin_cases j <;> simp [he0]
     rw [he]
     apply hF
     left
@@ -1225,7 +1226,7 @@ theorem a_quotient_is_fiberProduct :
         Finsupp.single (1 : Fin 2) i := by
       ext j
       have he1 : e' () = (1 : Fin 2) := rfl
-      fin_cases j <;> simp [he1, Finsupp.single_apply]
+      fin_cases j <;> simp [he1]
     rw [he]
     apply hF
     right
@@ -1248,7 +1249,7 @@ theorem a_quotient_is_fiberProduct :
     · have heq : d = Finsupp.embDomain e (Finsupp.single () (d 0)) := by
         ext j
         have he0 : e () = (0 : Fin 2) := rfl
-        fin_cases j <;> simp [hd1, he0, Finsupp.single_apply]
+        fin_cases j <;> simp [hd1, he0]
       rw [heq]
       change MvPowerSeries.coeff
         (Finsupp.embDomain e (Finsupp.single () (d 0)))
@@ -1279,7 +1280,7 @@ theorem a_quotient_is_fiberProduct :
     · have heq : d = Finsupp.embDomain e' (Finsupp.single () (d 1)) := by
         ext j
         have he1 : e' () = (1 : Fin 2) := rfl
-        fin_cases j <;> simp [hd0, he1, Finsupp.single_apply]
+        fin_cases j <;> simp [hd0, he1]
       rw [heq]
       change MvPowerSeries.coeff
         (Finsupp.embDomain e' (Finsupp.single () (d 1)))
@@ -1358,7 +1359,7 @@ theorem a_quotient_is_fiberProduct :
           Finsupp.single (0 : Fin 2) i := by
         ext j
         have he0 : e () = (0 : Fin 2) := rfl
-        fin_cases j <;> simp [hi, he0, Finsupp.single_apply]
+        fin_cases j <;> simp [he0]
       change MvPowerSeries.coeff (Finsupp.single () i)
           (MvPowerSeries.killCompl e (MvPowerSeries.rename e' f)) = _
       rw [MvPowerSeries.coeff_killCompl, heq]
@@ -1373,7 +1374,7 @@ theorem a_quotient_is_fiberProduct :
         have := Finsupp.mapDomain_of_notMem_range q 0 h0
         have hcoord := this
         rw [hq] at hcoord
-        simpa [Finsupp.single_apply, hi] using hcoord
+        simp [hi] at hcoord
       rw [MvPowerSeries.coeff_rename_eq_zero e' f hnot]
       simp [PowerSeries.coeff_C, hi]
   have hyx (f : PowerSeries k) :
@@ -1399,7 +1400,7 @@ theorem a_quotient_is_fiberProduct :
           Finsupp.single (1 : Fin 2) i := by
         ext j
         have he1 : e' () = (1 : Fin 2) := rfl
-        fin_cases j <;> simp [hi, he1, Finsupp.single_apply]
+        fin_cases j <;> simp [he1]
       change MvPowerSeries.coeff (Finsupp.single () i)
           (MvPowerSeries.killCompl e' (MvPowerSeries.rename e f)) = _
       rw [MvPowerSeries.coeff_killCompl, heq]
@@ -1414,7 +1415,7 @@ theorem a_quotient_is_fiberProduct :
         have := Finsupp.mapDomain_of_notMem_range q 1 h1
         have hcoord := this
         rw [hq] at hcoord
-        simpa [Finsupp.single_apply, hi] using hcoord
+        simp [hi] at hcoord
       rw [MvPowerSeries.coeff_rename_eq_zero e f hnot]
       simp [PowerSeries.coeff_C, hi]
 
@@ -1578,7 +1579,7 @@ theorem a_quotient_is_fiberProduct :
         have heq : d = Finsupp.embDomain e' (Finsupp.single () (d 1)) := by
           ext j
           have he1 : e' () = (1 : Fin 2) := rfl
-          fin_cases j <;> simp [hd0, he1, Finsupp.single_apply]
+          fin_cases j <;> simp [hd0, he1]
         rw [heq]
         change PowerSeries.coeff (d 1) (r' (z : TwoVariablePowerSeries k)) = 0
         rw [hr'zero]
@@ -1590,7 +1591,7 @@ theorem a_quotient_is_fiberProduct :
         have heq : d = Finsupp.embDomain e (Finsupp.single () (d 0)) := by
           ext j
           have he0 : e () = (0 : Fin 2) := rfl
-          fin_cases j <;> simp [hd1, he0, Finsupp.single_apply]
+          fin_cases j <;> simp [hd1, he0]
         rw [heq]
         change PowerSeries.coeff (d 0) (r (z : TwoVariablePowerSeries k)) = 0
         rw [hrzero]
@@ -1637,9 +1638,9 @@ theorem a_quotient_is_noetherian :
       map_mul' := by intro c d; rfl
       map_zero' := by rfl
       map_add' := by intro c d; rfl }
-  letI : Algebra (badDvrRing k p) P :=
+  let : Algebra (badDvrRing k p) P :=
     diag.toAlgebra
-  letI : IsDiscreteValuationRing (badDvrRing k p) :=
+  let : IsDiscreteValuationRing (badDvrRing k p) :=
     badDvrRing_isDiscreteValuationRing k p
   let gen : P :=
     ⟨(badDvrVariable k p, 0), by
@@ -1687,7 +1688,7 @@ theorem a_quotient_is_noetherian :
     rw [hw_eq]
     exact add_mem (Subalgebra.algebraMap_mem _ _)
       (mul_mem (Algebra.subset_adjoin (by simp)) (Subalgebra.algebraMap_mem _ _))
-  letI : Algebra.FiniteType (badDvrRing k p) P := ⟨hfg⟩
+  let : Algebra.FiniteType (badDvrRing k p) P := ⟨hfg⟩
   have hP : IsNoetherianRing P :=
     Algebra.FiniteType.isNoetherianRing (badDvrRing k p) P
   obtain ⟨e⟩ := a_quotient_is_C_fiberProduct k p
@@ -1695,7 +1696,16 @@ theorem a_quotient_is_noetherian :
 
 theorem a_is_noetherian :
     IsNoetherianRing (aRing k p) := by
-  sorry
+  let : IsNoetherianRing (aRing k p ⧸ aXYIdeal k p) :=
+    a_quotient_is_noetherian k p
+  let : IsAdicComplete (aXYIdeal k p) (aRing k p) :=
+    a_is_complete k p
+  exact Formalization.Books.Algebra.Unit69.isNoetherianRing_of_isAdicComplete_of_fg_quotient
+    (aXYIdeal k p) (by
+      change Submodule.FG
+        (Ideal.span {aX k p * aY k p} :
+          Submodule (aRing k p) (aRing k p))
+      exact Submodule.fg_span_singleton _)
 
 private theorem quotient_mk_isLocalHom_of_le_jacobson_bot
     {R : Type*} [CommRing R] (I : Ideal R)
@@ -1720,23 +1730,23 @@ private theorem quotient_mk_isLocalHom_of_le_jacobson_bot
 
 theorem a_is_local :
     IsLocalRing (aRing k p) := by
-  letI : IsDiscreteValuationRing (badDvrRing k p) :=
+  let : IsDiscreteValuationRing (badDvrRing k p) :=
     badDvrRing_isDiscreteValuationRing k p
-  letI : IsLocalRing (badDvrRing k p) := by infer_instance
-  letI : IsLocalHom (badDvrConstantCoeff k p) :=
+  let : IsLocalRing (badDvrRing k p) := by infer_instance
+  let : IsLocalHom (badDvrConstantCoeff k p) :=
     { map_nonunit := by
         intro z hz
         apply oneVariableFiniteDegree_isUnit_of_constantCoeff_ne_zero k p z.property
         exact (isUnit_iff_ne_zero.mp hz) }
   let P := ↥(RingHom.pullback (badDvrConstantCoeff k p)
     (badDvrConstantCoeff k p))
-  letI : IsLocalRing P :=
+  let : IsLocalRing P :=
     RingHom.isLocalRing_pullback (badDvrConstantCoeff k p)
       (badDvrConstantCoeff k p)
   obtain ⟨e⟩ := a_quotient_is_C_fiberProduct k p
-  letI : Nontrivial (aRing k p ⧸ aXYIdeal k p) :=
+  let : Nontrivial (aRing k p ⧸ aXYIdeal k p) :=
     e.symm.injective.nontrivial
-  letI : IsLocalRing (aRing k p ⧸ aXYIdeal k p) := by
+  let : IsLocalRing (aRing k p ⧸ aXYIdeal k p) := by
     apply IsLocalRing.of_isUnit_or_isUnit_one_sub_self
     intro a
     have h := IsLocalRing.isUnit_or_isUnit_one_sub_self (e a)
@@ -1747,9 +1757,9 @@ theorem a_is_local :
     · right
       have h' : IsUnit (e.symm (1 - e a)) := IsUnit.map e.symm h
       simpa only [map_sub, map_one, e.symm_apply_apply] using h'
-  letI : IsAdicComplete (aXYIdeal k p) (aRing k p) :=
+  let : IsAdicComplete (aXYIdeal k p) (aRing k p) :=
     a_is_complete k p
-  letI : IsLocalHom (Ideal.Quotient.mk (aXYIdeal k p)) :=
+  let : IsLocalHom (Ideal.Quotient.mk (aXYIdeal k p)) :=
     quotient_mk_isLocalHom_of_le_jacobson_bot (aXYIdeal k p)
       (IsAdicComplete.le_jacobson_bot (aXYIdeal k p))
   exact RingHom.domain_isLocalRing (Ideal.Quotient.mk (aXYIdeal k p))

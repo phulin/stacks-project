@@ -222,7 +222,7 @@ private theorem exists_factorial_multiple_of_span
             have hk_eq : k = n := Nat.le_antisymm hle (Nat.sub_eq_zero_iff_le.mp hkn)
             subst k
             simp only [Nat.sub_self, pow_zero, mul_one,
-              Nat.choose_self, Nat.cast_one, one_mul]
+              Nat.choose_self, Nat.cast_one]
             simpa using hz_eq
           · rcases hx' hkpos with ⟨u, hu, hu_eq⟩
             rcases hy' (Nat.pos_of_ne_zero hkn) with ⟨v, hv, hv_eq⟩

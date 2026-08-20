@@ -707,7 +707,11 @@ theorem glue_maps_of_concrete_category (C : Type u) [Category.{v} C]
           (H.1.map (homOfLE (show V.unop ≤ ⊤ from le_top)).op s₀) =
         H.1.map (homOfLE (show W.unop ≤ ⊤ from le_top)).op s₀
       rw [← ConcreteCategory.comp_apply, ← H.1.map_comp]
-      congr 1
+      simpa [zT, glueingTransitionAt, sheafNestedRestrictionIso,
+        sheafRestrictionSectionsIso, hsi_R, hsj_R, xiT, hni_siT,
+        hnj_sjT, hnj_z, hnj_z', hnj_sjT', hni_xiT, hτ, hτx, hτx',
+        hni_inner, hnj_inner, hsec_nat, hej,
+        ConcreteCategory.comp_apply, Category.assoc] using hsa
       simp⟩
   let ψ : F ⟶ G := (CategoryTheory.sheafHomSectionsEquiv F G) sec
   refine ⟨ψ, ?_, ?_⟩
@@ -1598,7 +1602,7 @@ theorem glueingSectionPresheaf_isSheaf
       rw [← ConcreteCategory.comp_apply]
       rw [← ConcreteCategory.comp_apply]
       have hnj_z' := hnj_z.symm
-      simp only [← ConcreteCategory.comp_apply, Category.assoc] at hnj_z'
+      simp only [← ConcreteCategory.comp_apply] at hnj_z'
       have hnj_sjT' := hnj_sjT
       simp only [ConcreteCategory.comp_apply] at hnj_sjT'
       rw [hnj_z', ← hnj_sjT']
@@ -1611,6 +1615,156 @@ theorem glueingSectionPresheaf_isSheaf
         (Type v) hT hRT
         ((sheafMapRestriction (Type v)
           (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))
+      have hsec_nat :
+          (D.transition i j).hom.hom.app
+                (op (Opens.comap (openInclusion (U i ⊓ U j)).hom T)) ≫
+              (sheafRestrictionSectionsIso (Type v) hT
+                ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom =
+            (sheafRestrictionSectionsIso (Type v) hT
+                ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom ≫
+              ((sheafMapRestriction (Type v) hT).map
+                (D.transition i j).hom).hom.app (op ⊤) := by
+        let hf : Topology.IsOpenEmbedding (openSubsetInclusion hT).hom := by
+          change Topology.IsOpenEmbedding (Set.inclusion (SetLike.coe_subset_coe.2 hT))
+          exact Opens.isOpenEmbedding_of_le hT
+        have htop : hf.functor.obj ⊤ =
+            Opens.comap (openInclusion (U i ⊓ U j)).hom T := by
+          ext x
+          constructor
+          · rintro ⟨y, -, hxy⟩
+            rw [← hxy]
+            exact y.property
+          · intro hx
+            refine ⟨⟨x.1, hx⟩, trivial, ?_⟩
+            rfl
+        let _ := Topology.IsOpenEmbedding.functor_isContinuous hf
+        let E := hf.sheafPullbackIso (Type v)
+        have hn := E.inv.naturality (D.transition i j).hom
+        have hn' := congrArg (fun f => f.hom.app (op ⊤)) hn
+        let g : op (Opens.comap (openInclusion (U i ⊓ U j)).hom T) ⟶
+            op (hf.functor.obj ⊤) := eqToHom (congrArg op htop.symm)
+        have hnat_obj := (D.transition i j).hom.hom.naturality g
+        have hnat_obj' := hnat_obj
+        change
+          ((sheafMapRestriction (Type v)
+            (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g ≫
+              (D.transition i j).hom.hom.app (op (hf.functor.obj ⊤)) =
+            (D.transition i j).hom.hom.app
+                (op (Opens.comap (openInclusion (U i ⊓ U j)).hom T)) ≫
+              ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j)).presheaf.map g at hnat_obj'
+        have hsection_i :
+            (sheafRestrictionSectionsIso (Type v) hT
+                ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom =
+              ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g ≫
+                (E.inv.app ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom.app (op ⊤) := by
+          unfold sheafRestrictionSectionsIso
+          simp only [Iso.trans_hom]
+          rw [show g = eqToHom (congrArg op htop.symm) by rfl]
+          rw [eqToHom_map
+            ((sheafMapRestriction (Type v)
+              (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf]
+          rfl
+        have hsection_j :
+            (sheafRestrictionSectionsIso (Type v) hT
+                ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom =
+              ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j)).presheaf.map g ≫
+                (E.inv.app ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom.app (op ⊤) := by
+          unfold sheafRestrictionSectionsIso
+          simp only [Iso.trans_hom]
+          rw [show g = eqToHom (congrArg op htop.symm) by rfl]
+          rw [eqToHom_map
+            ((sheafMapRestriction (Type v)
+              (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j)).presheaf]
+          rfl
+        rw [hsection_j, hsection_i]
+        ext x
+        change
+          (ConcreteCategory.hom
+              ((E.inv.app ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom.app
+                (op ⊤)))
+              ((ConcreteCategory.hom
+                (((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j)).presheaf.map g))
+                ((ConcreteCategory.hom
+                  (((D.transition i j).hom.hom.app
+                    (op (Opens.comap (openInclusion (U i ⊓ U j)).hom T))))) x)) =
+            (ConcreteCategory.hom
+              (((sheafMapRestriction (Type v) hT).map
+                (D.transition i j).hom).hom.app (op ⊤)))
+              ((ConcreteCategory.hom
+                ((E.inv.app ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom.app
+                  (op ⊤)))
+                ((ConcreteCategory.hom
+                  (((sheafMapRestriction (Type v)
+                    (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g))
+                  x))
+        have hnat_x := congrArg (fun f => f x) hnat_obj'
+        have hnat_x' := congrArg
+          (fun y => (ConcreteCategory.hom
+            ((E.inv.app ((sheafMapRestriction (Type v)
+              (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom.app
+                (op ⊤))) y) hnat_x.symm
+        have hn_x := congrArg
+          (fun f => f
+            ((ConcreteCategory.hom
+              (((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g)) x)) hn'
+        have hn_x' := hn_x
+        change
+          (ConcreteCategory.hom
+              ((E.inv.app ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom.app
+                (op ⊤)))
+              ((ConcreteCategory.hom
+                (((D.transition i j).hom.hom.app (op (hf.functor.obj ⊤)))))
+                ((ConcreteCategory.hom
+                  (((sheafMapRestriction (Type v)
+                    (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g)) x)) =
+            (ConcreteCategory.hom
+              (((sheafMapRestriction (Type v) hT).map
+                (D.transition i j).hom).hom.app (op ⊤)))
+              ((ConcreteCategory.hom
+                ((E.inv.app ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom.app
+                    (op ⊤)))
+                ((ConcreteCategory.hom
+                  (((sheafMapRestriction (Type v)
+                    (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g)) x)) at hn_x'
+        calc
+          _ = (ConcreteCategory.hom
+              ((E.inv.app ((sheafMapRestriction (Type v)
+                (show U i ⊓ U j ≤ U j from inf_le_right)).obj (D.sheaf j))).hom.app
+                (op ⊤)))
+              ((ConcreteCategory.hom
+                (((D.transition i j).hom.hom.app (op (hf.functor.obj ⊤)))))
+                ((ConcreteCategory.hom
+                  (((sheafMapRestriction (Type v)
+                    (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g)) x)) := by
+            simpa only [ConcreteCategory.comp_apply] using hnat_x'
+          _ = (ConcreteCategory.hom
+              (((sheafMapRestriction (Type v) hT).map
+                (D.transition i j).hom).hom.app (op ⊤)))
+              ((ConcreteCategory.hom
+                ((E.inv.app ((sheafMapRestriction (Type v)
+                  (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).hom.app
+                  (op ⊤)))
+                ((ConcreteCategory.hom
+                  (((sheafMapRestriction (Type v)
+                    (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i)).presheaf.map g)) x)) := by
+            exact hn_x'
+      have hτ := (D.transition i j).hom.hom.naturality
+        (homOfLE (Opens.comap_mono (openInclusion (U i ⊓ U j)).hom hRT)).op
       have hti := htA i a
       change (D.sheaf i).presheaf.map (Opens.leSupr (A i) a).op (tA i) =
         (s a).value i at hti
@@ -1718,14 +1872,39 @@ theorem glueingSectionPresheaf_isSheaf
           apply Subsingleton.elim
         rw [hcomp]
         exact htj_R_R
+      let xiT :=
+        (ConcreteCategory.hom
+          (sheafRestrictionSectionsIso (Type v) hT
+            ((sheafMapRestriction (Type v)
+              (show U i ⊓ U j ≤ U i from inf_le_left)).obj (D.sheaf i))).inv)
+          ((ConcreteCategory.hom
+            ((sheafNestedRestrictionIso (Type v)
+              (show U i ⊓ U j ≤ U i from inf_le_left) hT (D.sheaf i)).inv.hom.app
+              (op ⊤))) ((ConcreteCategory.hom ei'.hom) siT))
+      have hni_xiT := congrArg (fun f => f xiT) hni_inner
+      have hτx := congrArg (fun f => f xiT) hτ
+      have hτx' := hτx
+      simp only [ConcreteCategory.comp_apply] at hτx'
       simp only [ConcreteCategory.comp_apply]
+      apply congrArg (ConcreteCategory.hom
+        ((sheafNestedRestrictionIso (Type v) hT_j hRT (D.sheaf j)).hom.hom.app
+          (op ⊤)))
+      apply congrArg (ConcreteCategory.hom
+        (sheafRestrictionSectionsIso (Type v) hRT
+          ((sheafMapRestriction (Type v) hT_j).obj (D.sheaf j))).hom)
+      dsimp [zT, glueingTransitionAt]
+      simpa [zT, glueingTransitionAt, sheafNestedRestrictionIso,
+        sheafRestrictionSectionsIso, hsi_R, hsj_R, xiT, hni_siT,
+        hnj_sjT, hnj_z, hnj_z', hnj_sjT', hni_xiT, hτ, hτx, hτx',
+        hni_inner, hnj_inner, hsec_nat, hej,
+        ConcreteCategory.comp_apply, Category.assoc] using hsa
     have hpq : p = q :=
       (D.sheaf j).eq_of_locally_eq' C Q (fun a => homOfLE (hCa a))
         hC.symm.le p q hlocal
     have hpq' := congrArg (ConcreteCategory.hom ej'.hom) hpq
     dsimp [p, q] at hpq'
     rw [← ConcreteCategory.comp_apply] at hpq'
-    simpa only [Iso.inv_hom_id, Category.id_comp,
+    simpa [ConcreteCategory.comp_apply, Iso.inv_hom_id, Category.id_comp,
       ConcreteCategory.id_apply] using hpq'
   have section_ext {W : Opens X} (a b : GlueingSection D W)
       (hab : a.value = b.value) : a = b := by

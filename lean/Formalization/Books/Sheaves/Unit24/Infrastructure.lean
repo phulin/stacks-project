@@ -89,6 +89,24 @@ noncomputable def modulePresheafPullback {X Y : TopCat.{v}}
     (F := Opens.map f)
     ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O)
 
+/-!
+The module pullback is implemented by Mathlib as an abstract left adjoint.
+This coherent comparison is the reusable bridge from that interface to the
+underlying additive presheaf pullback.  It is stated for an arbitrary scalar
+map so that the sheafification construction below can use the same bridge.
+-/
+
+/-- The underlying additive presheaf of a module pullback is the corresponding
+presheaf pullback. -/
+theorem presheafOfModulesPullback_underlying_formula {X Y : TopCat.{v}}
+    {O_X : RingPresheaf.{v, v} X} {O_Y : RingPresheaf.{v, v} Y}
+    (f : X ⟶ Y) (α : O_Y ⟶ (moduleRingPresheafPushforward f).obj O_X)
+    (G : PMod O_Y) :
+    Nonempty
+      ((((PresheafOfModules.pullback (F := Opens.map f) α).obj G).presheaf) ≅
+        (TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf) := by
+  sorry
+
 /-- The sectionwise scalar action on a module pushforward. -/
 abbrev modulePresheafPushforwardAction {X Y : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (f : X ⟶ Y) (F : PMod O) (V : Opens Y) :
@@ -129,7 +147,10 @@ theorem modulePresheafPullback_sections_formula {X Y : TopCat.{v}}
       (((modulePresheafPullback f).obj G).presheaf.obj (op U) ≅
         ((TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf).obj
           (op U)) := by
-  sorry
+  obtain ⟨e⟩ :=
+    presheafOfModulesPullback_underlying_formula f
+      ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O) G
+  exact ⟨e.app (op U)⟩
 
 /-- A chosen isomorphism for the underlying pullback-section formula. -/
 noncomputable def modulePresheafPullback_sectionsIso {X Y : TopCat.{v}}
@@ -268,8 +289,7 @@ theorem exists_modulePresheafTensorHomEquiv {X Y : TopCat.{v}}
     have eapp_apply (V : (Opens Y)ᵒᵖ) (m : H.obj V) :
         (eapp V).hom m = m := by
       dsimp [eapp]
-      simp [ModuleCat.restrictScalarsComp'App_inv_apply,
-        ModuleCat.restrictScalarsCongr_hom_app]
+      simp
       rfl
     refine PresheafOfModules.isoMk eapp ?_
     intro U V i
@@ -902,7 +922,7 @@ theorem moduleSheafFMapStalkAddMap_smul {X Y : TopCat.{v}}
       (fun k : ((TopCat.Presheaf.pushforward RingCat f).obj O_X.obj).obj
           (Opposite.op W) ⟶ TopCat.Presheaf.stalk (C := RingCat) O_X.obj x =>
         RingCat.Hom.hom k ((RingCat.Hom.hom (α.hom.app (Opposite.op W))) rW)) hpush
-    convert hpush' using 1 <;> rfl
+    convert hpush' using 1; rfl
   let nF : F.val.obj (Opposite.op ((Opens.map f).obj W)) :=
     toF mW
   let nF0 : F.val.presheaf.obj (Opposite.op ((Opens.map f).obj W)) :=

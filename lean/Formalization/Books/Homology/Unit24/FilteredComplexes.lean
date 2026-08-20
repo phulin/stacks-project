@@ -495,7 +495,7 @@ structure FilteredComplexSpectralSequence {C : Type u}
               dsimp [f, d]
               rw [Category.assoc]
               convert hsq using 1
-              · congr 1 <;> ring
+              · congr 1; ring
               · let ht : (bigradedShift r (-r + 1)).obj (page r) (p, q) =
                     (bigradedShift r (-r + 1)).obj (page r)
                       (r + (p - r), (-r + 1) + (q + r - 1)) :=
@@ -518,8 +518,8 @@ structure FilteredComplexSpectralSequence {C : Type u}
                         eqToHom ht.symm
                     have hc := congrArg
                       (fun f => eqToHom hs0 ≫ f) hn.symm
-                    convert hc using 1 <;>
-                      simp [Category.assoc, eqToHom_trans, ht] <;> rfl
+                    convert hc using 1;
+                      simp; rfl
                   exact (heq_of_eq hn').trans (comp_eqToHom_heq _ _)
                 exact heq_comp rfl hs0 ht HEq.rfl hleft
               · simpa only [zero_comp] using
@@ -545,7 +545,7 @@ structure FilteredComplexSpectralSequence {C : Type u}
           change page (r + 1)
             ((r + 1 : ℤ) + p, (-(r + 1 : ℤ) + 1) + q) =
             page (r + 1) (p + r + 1, q - r)
-          congr 1 <;> ring_nf) ≫ e₁.hom =
+          congr 1; ring_nf) ≫ e₁.hom =
       e₀.hom ≫ page_differentials.differential r p q
   zero_differential_compatibility : ∀ p q : ℤ, ∃
     e₀ : page 0 (p, q) ≅ filteredComplexE₀ K p q,

@@ -2033,22 +2033,22 @@ theorem isMittagLefflerModule_of_restrictScalars
     IsMittagLefflerModule (R := R)
       (ModuleCat.of R (M : Type (max v w))) := by
   dsimp
-  letI : Module R (M : Type (max v w)) :=
+  let : Module R (M : Type (max v w)) :=
     Module.compHom (M : Type (max v w)) f
-  letI : Algebra R S := f.toAlgebra
-  letI : IsScalarTower R S (M : Type (max v w)) :=
+  let : Algebra R S := f.toAlgebra
+  let : IsScalarTower R S (M : Type (max v w)) :=
     ⟨fun r s m => by
       change (f r * s) • m = f r • s • m
       rw [mul_smul]⟩
-  letI : SMulCommClass S R (M : Type (max v w)) :=
+  let : SMulCommClass S R (M : Type (max v w)) :=
     ⟨fun s r m => by
       change s • f r • m = f r • s • m
       rw [smul_smul, smul_smul, mul_comm]⟩
   change Module.Finite R S at hfinite
   change Algebra.FinitePresentation R S at hfinitelyPresented
-  letI : Module.Finite R S := hfinite
-  letI : Algebra.FinitePresentation R S := hfinitelyPresented
-  letI : Module.FinitePresentation R S :=
+  let : Module.Finite R S := hfinite
+  let : Algebra.FinitePresentation R S := hfinitelyPresented
+  let : Module.FinitePresentation R S :=
     Module.FinitePresentation.of_finite_of_finitePresentation R S
   intro P hP fP
   let P' := ModuleCat.of S (S ⊗[R] (P : Type (max v w)))
@@ -2068,7 +2068,7 @@ theorem isMittagLefflerModule_of_restrictScalars
       map_smul' := fun s t => by
         apply LinearMap.ext
         intro p
-        simp [smul_smul, mul_comm] }
+        simp [smul_smul] }
   let f' : (P' : Type (max v w)) →ₗ[S] (M : Type (max v w)) :=
     TensorProduct.AlgebraTensorModule.lift φ
   obtain ⟨Q, hQ, g', hg'⟩ := hM P' hP' f'
@@ -2080,15 +2080,15 @@ theorem isMittagLefflerModule_of_restrictScalars
     change TensorProduct.AlgebraTensorModule.lift φ (1 ⊗ₜ[R] p) = fP p
     rw [TensorProduct.AlgebraTensorModule.lift_tmul]
     simp [φ]
-  letI : Module R (Q : Type (max v w)) :=
+  let : Module R (Q : Type (max v w)) :=
     Module.compHom (Q : Type (max v w)) f
-  letI : IsScalarTower R S (Q : Type (max v w)) :=
+  let : IsScalarTower R S (Q : Type (max v w)) :=
     ⟨fun r s q => by
       change (f r * s) • q = f r • s • q
       rw [mul_smul]⟩
   let gR : (P : Type (max v w)) →ₗ[R] (Q : Type (max v w)) :=
     (g'.restrictScalars R).comp ι
-  letI : Module.FinitePresentation S (Q : Type (max v w)) := hQ
+  let : Module.FinitePresentation S (Q : Type (max v w)) := hQ
   have hQR : Module.FinitePresentation R (Q : Type (max v w)) :=
     Module.FinitePresentation.trans R Q S
   refine ⟨ModuleCat.of R (Q : Type (max v w)), hQR, gR, ?_⟩

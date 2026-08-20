@@ -4492,7 +4492,85 @@ theorem ftB_local_annihilator_under_flat (k : Type u) [Field k] (g : ftB k)
     (hflat : RingHom.Flat (ftAToBLocal k g)) :
     (Submodule.span (Localization.Away g) ({ftBLocalGenerator k g n} :
       Set (Localization.Away g))).annihilator = ftBLocalPrime k g n := by
-  sorry
+  letI : Algebra (ftA k) (Localization.Away g) := (ftAToBLocal k g).toAlgebra
+  letI : Module (ftA k) (Localization.Away g) :=
+    (ftAToBLocal k g).toAlgebra.toModule
+  have hflat' : Module.Flat (ftA k) (Localization.Away g) := by
+    exact RingHom.flat_algebraMap_iff.mp hflat
+  have hbase := @ft_annihilator_element_flat_base_change (ftA k)
+    (Localization.Away g) (ftA k) _ _ _ _
+      (inferInstance : Module (ftA k) (ftA k)) hflat' (ftAGenerator k n)
+  have hgen : ftBLocalGenerator k g n =
+      algebraMap (ftA k) (Localization.Away g) (ftAGenerator k n) := by
+    change algebraMap (ftB k) (Localization.Away g)
+        (ftCToB k (ftAToC k (ftAGenerator k n))) = _
+    change algebraMap (ftB k) (Localization.Away g)
+        ((ftAToB k) (ftAGenerator k n)) = _
+    rfl
+  let rid := TensorProduct.rid (ftA k) (Localization.Away g)
+  have hrid (s : Localization.Away g) :
+      rid (s • ((1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n))) =
+        s * algebraMap (ftA k) (Localization.Away g) (ftAGenerator k n) := by
+    have heq : s • ((1 : Localization.Away g) ⊗ₜ[ftA k]
+        (ftAGenerator k n)) = s ⊗ₜ[ftA k] (ftAGenerator k n) :=
+      (TensorProduct.tmul_eq_smul_one_tmul s (ftAGenerator k n)).symm
+    rw [heq]
+    simp [rid, Algebra.smul_def, mul_comm]
+  have hmem (s : Localization.Away g) :
+      s ∈ (Submodule.span (Localization.Away g)
+        ({algebraMap (ftA k) (Localization.Away g) (ftAGenerator k n)} :
+          Set (Localization.Away g))).annihilator ↔
+        s ∈ (Submodule.span (Localization.Away g)
+          ({(1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+            Set (TensorProduct (ftA k) (Localization.Away g) (ftA k)))).annihilator := by
+    rw [Submodule.mem_annihilator_span_singleton,
+      Submodule.mem_annihilator_span_singleton]
+    change s • algebraMap (ftA k) (Localization.Away g) (ftAGenerator k n) = 0 ↔
+      s • ((1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n)) = 0
+    constructor
+    · intro hs
+      apply rid.injective
+      rw [map_zero, hrid]
+      simpa [Algebra.smul_def, mul_comm] using hs
+    · intro hs
+      have h := congrArg rid hs
+      rw [hrid] at h
+      rw [map_zero] at h
+      exact h
+  apply le_antisymm
+  · intro s hs
+    have hs' := (hmem s).mp (hgen ▸ hs)
+    have hs'' : s ∈ (Submodule.span (Localization.Away g)
+        ({(1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+          Set (TensorProduct (ftA k) (Localization.Away g) (ftA k)))).annihilator := by
+      simpa using hs'
+    have hsmap : s ∈ Ideal.map (algebraMap (ftA k) (Localization.Away g))
+        (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator := by
+      exact hbase.symm ▸ hs''
+    change s ∈ Ideal.map (ftAToBLocal k g) (ftAPrime k n)
+    have hmap : Ideal.map (algebraMap (ftA k) (Localization.Away g))
+        (ftAPrime k n) = Ideal.map (ftAToBLocal k g) (ftAPrime k n) := by
+      congr 1
+    rw [← hmap]
+    simpa only [ftAGenerator_annihilator k n] using hsmap
+  · intro s hs
+    change s ∈ Ideal.map (ftAToBLocal k g) (ftAPrime k n) at hs
+    have hmap : Ideal.map (algebraMap (ftA k) (Localization.Away g))
+        (ftAPrime k n) = Ideal.map (ftAToBLocal k g) (ftAPrime k n) := by
+      congr 1
+    rw [← hmap] at hs
+    have hsmap : s ∈ Ideal.map (algebraMap (ftA k) (Localization.Away g))
+        (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator := by
+      simpa only [ftAGenerator_annihilator k n, ftAToBLocal] using hs
+    have hs'' : s ∈ (Submodule.span (Localization.Away g)
+        ({(1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+          Set (TensorProduct (ftA k) (Localization.Away g) (ftA k)))).annihilator := by
+      exact hbase ▸ hsmap
+    have hs' : s ∈ (Submodule.span (Localization.Away g)
+        ({(1 : Localization.Away g) ⊗ₜ[ftA k] (ftAGenerator k n)} :
+          Set (TensorProduct (ftA k) (Localization.Away g) (ftA k)))).annihilator := by
+      simpa using hs''
+    exact (hmem s).mpr hs'
 
 theorem ftB_local_difference_not_mem_prime (k : Type u) [Field k] (g : ftC k)
     (hg : g ∉ ftCQ k) (n : ℕ) (hgn : g ∉ ftCQPrimeIdeal k n) :
@@ -4567,7 +4645,60 @@ theorem ftB_local_finitePresentation_iff_kernel_fg (k : Type u) [Field k]
     (g : ftC k) :
     RingHom.FinitePresentation (ftAToBLocal k (ftCToB k g)) ↔
       (RingHom.ker (ftCLocalizationMap k g)).FG := by
-  sorry
+  let hC : ftC k →+* Localization.Away g :=
+    algebraMap (ftC k) (Localization.Away g)
+  let hA : ftA k →+* Localization.Away g := hC.comp (ftAToC k)
+  let hB : Localization.Away g →+*
+      Localization.Away (ftCToB k g) := ftCLocalizationMap k g
+  have hsurj : Function.Surjective hB := by
+    change Function.Surjective (Localization.awayMap (ftCToB k) g)
+    apply (Localization.awayMap_surjective_iff
+      (f := ftCToB k) (r := g)).2
+    intro a
+    obtain ⟨c, rfl⟩ := (ftCToCAtQ k).rangeRestrict_surjective a
+    refine ⟨c, 0, ?_⟩
+    change ftCToB k c = (ftCToB k g) ^ 0 * ftCToB k c
+    simp
+  have hcomp : hB.comp hA = ftAToBLocal k (ftCToB k g) := by
+    ext a
+    change Localization.awayMap (ftCToB k) g
+        (algebraMap (ftC k) (Localization.Away g) (ftAToC k a)) = _
+    rw [Localization.awayMap, IsLocalization.Away.map]
+    simp [ftAToBLocal, ftAToB, ftAToC, IsLocalization.map_eq]
+  have hCfp : RingHom.FinitePresentation hC := by
+    rw [RingHom.finitePresentation_algebraMap]
+    exact IsLocalization.Away.finitePresentation g
+  have hAfp : RingHom.FinitePresentation hA := by
+    exact RingHom.FinitePresentation.comp hCfp
+      ((RingHom.Etale.iff_flat_and_formallyUnramified.mp
+        (ftAToC_etale k)).2.2)
+  have hAft : RingHom.FiniteType hA :=
+    RingHom.FiniteType.of_finitePresentation hAfp
+  have hB_iff : RingHom.FinitePresentation hB ↔
+      (RingHom.ker hB).FG := by
+    constructor
+    · intro hBfp
+      letI : Algebra (Localization.Away g)
+          (Localization.Away (ftCToB k g)) := hB.toAlgebra
+      letI : Algebra.FinitePresentation (Localization.Away g)
+          (Localization.Away (ftCToB k g)) := hBfp
+      have heq : algebraMap (Localization.Away g)
+          (Localization.Away (ftCToB k g)) = hB := rfl
+      rw [← heq]
+      simpa using
+        (Algebra.FinitePresentation.ker_fG_of_surjective
+          (Algebra.ofId (Localization.Away g)
+            (Localization.Away (ftCToB k g))) hsurj)
+    · intro hker
+      exact RingHom.FinitePresentation.of_surjective hB hsurj hker
+  constructor
+  · intro htarget
+    apply hB_iff.mp
+    apply RingHom.FinitePresentation.of_comp_finiteType hA
+      (hcomp ▸ htarget) hAft
+  · intro hker
+    have hBfp : RingHom.FinitePresentation hB := hB_iff.mpr hker
+    exact hcomp ▸ RingHom.FinitePresentation.comp hBfp hAfp
 
 theorem ftB_local_not_finitePresentation (k : Type u) [Field k] (g : ftB k)
     (hg : g ∉ ftBQPrime k) :

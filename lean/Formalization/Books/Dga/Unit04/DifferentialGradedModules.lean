@@ -94,7 +94,8 @@ def DifferentialGradedModule.SatisfiesLeibniz
           (M.actionOnHomogeneous (n + 1) m
             ((M.complex.d n (n + 1)).hom x) a) +
         ((n.negOnePow : ℤ) : R) •
-          transportComponent (C := M.complex) (by omega)
+          transportComponent (C := M.complex)
+            (by omega : n + (m + 1) = n + m + 1)
             (M.actionOnHomogeneous n (m + 1) x
               ((A.complex.d m (m + 1)).hom a))
 
@@ -102,7 +103,58 @@ def DifferentialGradedModule.SatisfiesLeibniz
 theorem DifferentialGradedModule.satisfiesLeibniz
     {R : Type u} [CommRing R] {A : DifferentialGradedAlgebra R}
     (M : DifferentialGradedModule A) : M.SatisfiesLeibniz := by
-  sorry
+  intro n m x a
+  have h := congrArg (fun f => f.hom
+      ((HomologicalComplex.ιTensorObj M.complex A.complex n m (n + m) rfl).hom
+        (x ⊗ₜ[R] a)))
+    (M.action.comm (n + m) (n + m + 1))
+  have ht := tensorProductComplex_differential_formula R M.complex A.complex n m
+  have ht' := congrArg (fun f => (M.action.f (n + m + 1)).hom
+      (f.hom (x ⊗ₜ[R] a))) ht
+  have hAction (p q r : ℤ) (h : p + q = r)
+      (u : M.complex.X p) (v : A.complex.X q) :
+      transportComponent (C := M.complex) h
+          (M.actionOnHomogeneous p q u v) =
+        (M.action.f r).hom
+          ((HomologicalComplex.ιTensorObj M.complex A.complex p q r h).hom
+            (u ⊗ₜ[R] v)) := by
+    subst r
+    rfl
+  have h₁ := hAction (n + 1) m (n + m + 1) (by omega)
+    ((M.complex.d n (n + 1)).hom x) a
+  have h₂ := hAction n (m + 1) (n + m + 1) (by omega)
+    x ((A.complex.d m (m + 1)).hom a)
+  calc
+    _ = (M.action.f (n + m + 1)).hom
+        (((tensorProductComplex R M.complex A.complex).d (n + m) (n + m + 1)).hom
+          ((HomologicalComplex.ιTensorObj M.complex A.complex n m (n + m) rfl).hom
+            (x ⊗ₜ[R] a))) := by
+      simpa only [ModuleCat.comp_apply,
+        DifferentialGradedModule.actionOnHomogeneous,
+        DifferentialGradedModule.homogeneousAction] using h
+    _ = (M.action.f (n + m + 1)).hom
+        (((((M.complex.d n (n + 1) ⊗ₘ 𝟙 (A.complex.X m)) ≫
+          HomologicalComplex.ιTensorObj M.complex A.complex (n + 1) m (n + m + 1) (by omega)) +
+          n.negOnePow •
+            ((𝟙 (M.complex.X n) ⊗ₘ A.complex.d m (m + 1)) ≫
+              HomologicalComplex.ιTensorObj M.complex A.complex n (m + 1)
+                (n + m + 1) (by omega))).hom (x ⊗ₜ[R] a))) := by
+      simpa only [ModuleCat.comp_apply] using ht'
+    _ = (M.action.f (n + m + 1)).hom
+          ((HomologicalComplex.ιTensorObj M.complex A.complex (n + 1) m
+              (n + m + 1) (by omega)).hom
+            ((M.complex.d n (n + 1)).hom x ⊗ₜ[R] a)) +
+        n.negOnePow •
+          (M.action.f (n + m + 1)).hom
+            ((HomologicalComplex.ιTensorObj M.complex A.complex n (m + 1)
+                (n + m + 1) (by omega)).hom
+              (x ⊗ₜ[R] (A.complex.d m (m + 1)).hom a)) := by
+      simp [ModuleCat.comp_apply, Category.assoc, TensorProduct.map_tmul]
+    _ = _ := by
+      rw [← h₁, ← h₂]
+      simp only [Units.smul_def]
+      congr 1
+      rw [Int.cast_smul_eq_zsmul]
 
 /-- A homomorphism of differential graded modules.  Its underlying map is a
 map of cochain complexes and the second field is compatibility with the
@@ -114,13 +166,130 @@ def DifferentialGradedModuleHomSubgroup
   carrier := {f |
     M.action ≫ f = tensorHomComplex f (𝟙 A.complex) ≫ N.action}
   zero_mem' := by
-    sorry
+    have hz : tensorHomComplex (0 : M.complex ⟶ N.complex) (𝟙 A.complex) = 0 := by
+      apply HomologicalComplex.hom_ext
+      intro j
+      apply ModuleCat.hom_ext
+      let φ := HomologicalComplex₂.toGradedObjectMap
+        (((((curriedTensor (ModuleCat R)).mapBifunctorHomologicalComplex
+          (up ℤ) (up ℤ)).map (0 : M.complex ⟶ N.complex)).app A.complex) ≫
+          (((curriedTensor (ModuleCat R)).mapBifunctorHomologicalComplex
+            (up ℤ) (up ℤ)).obj N.complex).map (𝟙 A.complex))
+      change ModuleCat.Hom.hom
+        (GradedObject.mapMap φ ((up ℤ).π (up ℤ) (up ℤ)) j) = 0
+      have hm : GradedObject.mapMap φ ((up ℤ).π (up ℤ) (up ℤ)) j = 0 := by
+        apply GradedObject.mapObj_ext
+        rintro ⟨i₁, i₂⟩ hij
+        simp only [GradedObject.mapMap, GradedObject.ι_descMapObj]
+        simp [φ, HomologicalComplex₂.toGradedObjectMap,
+          Functor.map_zero, zero_app]
+        all_goals
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              simp only [zero_comp, comp_zero]
+      rw [hm]
+      rfl
+    change M.action ≫ (0 : M.complex ⟶ N.complex) =
+      tensorHomComplex 0 (𝟙 A.complex) ≫ N.action
+    rw [hz]
+    simp
   add_mem' := by
     intro f g hf hg
-    sorry
+    change M.action ≫ (f + g) =
+      tensorHomComplex (f + g) (𝟙 A.complex) ≫ N.action
+    change M.action ≫ f = tensorHomComplex f (𝟙 A.complex) ≫ N.action at hf
+    change M.action ≫ g = tensorHomComplex g (𝟙 A.complex) ≫ N.action at hg
+    have htensor : tensorHomComplex (f + g) (𝟙 A.complex) =
+        tensorHomComplex f (𝟙 A.complex) + tensorHomComplex g (𝟙 A.complex) := by
+      apply HomologicalComplex.hom_ext
+      intro j
+      change GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j =
+        GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j +
+          GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j
+      apply GradedObject.mapObj_ext
+      rintro ⟨i₁, i₂⟩ hij
+      simp [GradedObject.mapMap, HomologicalComplex₂.toGradedObjectMap,
+        MonoidalPreadditive.add_tensor]
+      calc
+        _ = (f.f i₁ ▷ A.complex.X i₂ + g.f i₁ ▷ A.complex.X i₂) ≫
+              (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
+                N.complex.X).obj A.complex.X).ιMapObj
+                ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              rw [GradedObject.ι_descMapObj]
+        _ = (f.f i₁ ▷ A.complex.X i₂ ≫
+              (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
+                N.complex.X).obj A.complex.X).ιMapObj
+                ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij) +
+            (g.f i₁ ▷ A.complex.X i₂ ≫
+              (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
+                N.complex.X).obj A.complex.X).ιMapObj
+                ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij) := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              apply Preadditive.add_comp
+        _ = _ := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              rw [Preadditive.comp_add _ _ _ _ _ _]
+          set_option backward.isDefEq.respectTransparency.types false in
+            simp only [GradedObject.ι_descMapObj]
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              rfl
+    rw [htensor]
+    simp [Preadditive.comp_add, hf, hg]
   neg_mem' := by
     intro f hf
-    sorry
+    change M.action ≫ (-f) =
+      tensorHomComplex (-f) (𝟙 A.complex) ≫ N.action
+    change M.action ≫ f = tensorHomComplex f (𝟙 A.complex) ≫ N.action at hf
+    have htensor : tensorHomComplex (-f) (𝟙 A.complex) =
+        -(tensorHomComplex f (𝟙 A.complex)) := by
+      apply HomologicalComplex.hom_ext
+      intro j
+      change GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j =
+        -GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j
+      apply GradedObject.mapObj_ext
+      rintro ⟨i₁, i₂⟩ hij
+      have hneg : (-f.f i₁) ▷ A.complex.X i₂ =
+          -(f.f i₁ ▷ A.complex.X i₂) := by
+        apply eq_neg_of_add_eq_zero_left
+        rw [add_comm]
+        rw [← MonoidalPreadditive.add_whiskerRight (f.f i₁) (-f.f i₁)]
+        simp
+      have hnegPair : (-f.f (i₁, i₂).1) ▷ A.complex.X (i₁, i₂).2 =
+          -(f.f (i₁, i₂).1 ▷ A.complex.X (i₁, i₂).2) := by
+        apply eq_neg_of_add_eq_zero_left
+        rw [add_comm]
+        rw [← MonoidalPreadditive.add_whiskerRight
+          (f.f (i₁, i₂).1) (-f.f (i₁, i₂).1)]
+        simp
+      simp [GradedObject.mapMap, HomologicalComplex₂.toGradedObjectMap,
+        Functor.map_neg, hneg]
+      calc
+        _ = (-(f.f (i₁, i₂).1 ▷ A.complex.X (i₁, i₂).2)) ≫
+              (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
+                N.complex.X).obj A.complex.X).ιMapObj
+                ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              rw [GradedObject.ι_descMapObj]
+        _ = -((f.f (i₁, i₂).1 ▷ A.complex.X (i₁, i₂).2) ≫
+              (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
+                N.complex.X).obj A.complex.X).ιMapObj
+                ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij) := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              simpa only [Preadditive.neg_comp]
+        _ = _ := by
+          set_option backward.isDefEq.respectTransparency false in
+            set_option backward.isDefEq.respectTransparency.types false in
+              simpa only [Preadditive.comp_neg, GradedObject.ι_descMapObj]
+    rw [htensor]
+    simpa only [Preadditive.comp_neg, Preadditive.neg_comp] using
+      congrArg (fun h => -h) hf
 
 /-- The morphism type in the category of differential graded modules. -/
 abbrev DifferentialGradedModuleHom

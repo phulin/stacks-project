@@ -1,6 +1,6 @@
 import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
 import Formalization.Books.MoreAlgebra.Unit72.HomComplexes
-import Formalization.Books.Derived.Unit19.ProjectiveResolutions
+import Mathlib.Algebra.Module.Projective
 
 /-!
 # More on Algebra, Chapter 74: derived hom
@@ -72,6 +72,16 @@ theorem derivedTensor_represented {R : Type u} [CommRing R]
     Formalization.Books.MoreAlgebra.Unit59.derivedTensor_represented K L
   exact ⟨K', L', eK, eL, hK, hL, h⟩
 
+/- The source construction starts with an arbitrary derived object and then
+   chooses a K-injective complex representing it.  The preceding chapters
+   provide enough K-injectives for complexes, but do not expose this derived
+   object-facing formulation. -/
+theorem exists_kInjective_representation {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (M : D R) :
+    ∃ I : Comp R, CochainComplex.IsKInjective I ∧
+      Nonempty ((derivedQuotient R).obj I ≅ M) := by
+  sorry
+
 /-! ## Derived Hom -/
 
 /- The representation field is the precise source construction: for a complex
@@ -119,6 +129,16 @@ theorem rHom_on_KInjective {R : Type u} [CommRing R]
     Nonempty (RHom (R := R) ((derivedQuotient R).obj L) ((derivedQuotient R).obj I) ≅
       (derivedQuotient R).obj (homComplex L I)) := by
   exact (derivedHomFunctorData (R := R)).onKInjective L I hI
+
+theorem rHom_represented {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (L M : D R) :
+    ∃ (L' I : Comp R),
+      Nonempty ((derivedQuotient R).obj L' ≅ L) ∧
+      CochainComplex.IsKInjective I ∧
+      Nonempty ((derivedQuotient R).obj I ≅ M) ∧
+      Nonempty (RHom (R := R) L M ≅
+        (derivedQuotient R).obj (homComplex L' I)) := by
+  sorry
 
 /- Independence of the K-injective representative is the well-definedness
    assertion made immediately after the cohomology formula in the source. -/

@@ -1009,8 +1009,41 @@ Proof roadmap for the consumer
   the remaining values to coerced `ℕ∞` terms.
 -/
 
+/- Proof roadmap and universe audit for
+   `regular_sequence_extend_to_localDepth`.
+
+   Keep the ring and module in independent universes, `R : Type u` and
+   `M : Type v`.  The construction below is universe-polymorphic: for
+   `x : R`, `QuotSMulTop x M` is again in `Type v`, so the induction can
+   generalize `M` without lifting it.
+
+   * In the empty case, use `smul_top_ne_top_of_le_ring_jacobson` and
+     `depth_lt_top_of_noetherian` from this file to show that `localDepth R M`
+     is below `top`.  Apply `ENat.sSup_mem_of_nonempty_of_lt_top` from
+     `Mathlib/Data/ENat/Lattice.lean` to the defining set for `depth`; the
+     resulting list is the required extension.
+   * In the cons case, split regularity with
+     `RingTheory.Sequence.isRegular_cons_iff` from
+     `Mathlib/RingTheory/Regular/RegularSequence.lean`.  Recurse with
+     `M := QuotSMulTop x M : Type v`; its `Nontrivial` instance is the second
+     component of the split regularity hypothesis.  Prove that `x` lies in
+     the maximal ideal by ruling out a unit, since a unit would make
+     `x • (top : Submodule R M) = top` and contradict nontriviality of the
+     quotient.
+   * The singleton regular sequence gives `1 <= localDepth R M`.  Combine
+     this with the mixed-universe theorem `localDepth_drops_by_one` from this
+     file to obtain
+     `localDepth R M = localDepth R (QuotSMulTop x M) + 1` via
+     `tsub_add_cancel_of_le`.  Prepend `x` to the recursively constructed
+     regular sequence and finish by rewriting `List.cons_append`,
+     `List.length_append`, and `Nat.cast_add`.
+
+   The public theorem is then exactly the private constructive result; no
+   `ULift` is needed at this layer because `localDepth_drops_by_one` already
+   handles independent universes internally.
+-/
 private theorem exists_regular_extension_to_localDepth
-    {R M : Type u} [CommRing R] [IsLocalRing R]
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Nontrivial M] :
     ∀ xs : List R, RingTheory.Sequence.IsRegular M xs →
@@ -1089,7 +1122,7 @@ private theorem exists_regular_extension_to_localDepth
 
 /-- Every regular sequence can be extended to one of maximal local depth. -/
 theorem regular_sequence_extend_to_localDepth
-    {R M : Type u} [CommRing R] [IsLocalRing R]
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Nontrivial M] :
     ∀ xs : List R, RingTheory.Sequence.IsRegular M xs →

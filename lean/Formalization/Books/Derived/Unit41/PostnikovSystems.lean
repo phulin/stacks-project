@@ -4,6 +4,7 @@ import Mathlib.CategoryTheory.Functor.OfSequence
 import Mathlib.CategoryTheory.Limits.Shapes.Biproducts
 import Formalization.Books.Derived.Unit04.ElementaryResults
 import Formalization.Books.Derived.Unit33.DerivedColimits
+import Formalization.Books.Homology.Unit15.TruncationOfComplexes
 
 /-!
 # Derived Categories, Chapter 41: Postnikov systems
@@ -141,12 +142,14 @@ structure PostnikovSystemHom
   triangleMap_hom₃ : ∀ i : Fin n,
     (triangleMap i).hom₃ = y (finitePostnikovIndex i)
 
-/-- A morphism of Postnikov systems whose maps on the `Y_i` are isomorphisms. -/
+/-- An isomorphism of Postnikov systems, including an isomorphism of the
+underlying finite complexes. -/
 structure PostnikovSystemIso
     {n : ℕ} {K K' : FinitePostnikovComplex C n}
     {P : PostnikovSystem K} {P' : PostnikovSystem K'}
     (f : K ⟶ K') where
   hom : PostnikovSystemHom (P := P) (P' := P') f
+  f_isIso : IsIso f
   y_isIso : ∀ i, IsIso (hom.y i)
 
 /-- The maps `Y_i → Y_(i+1)[1]` form the source's Postnikov tower. -/
@@ -359,6 +362,15 @@ noncomputable def chainComplexTotalization
     (K : ChainComplex A ℕ) : CochainComplex A ℤ :=
   (ComplexShape.embeddingDownNat.extendFunctor A).obj K
 
+/- The source's finite complex keeps `A_n` itself at its left boundary.  The
+project's Chapter 15 `stupidTruncGE` is the established strict-truncation
+interface; the smart `truncGE` would replace that boundary by opcycles. -/
+noncomputable def finiteChainTotalization
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (K : ChainComplex A ℕ) (n : ℕ) : CochainComplex A ℤ :=
+  Formalization.Books.Homology.Unit15.CochainComplex.stupidTruncGE
+    (chainComplexTotalization K) (-(n : ℤ))
+
 /-- The chain complex of the terms `A_n` viewed in the derived category. -/
 noncomputable def derivedChainComplex
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -373,14 +385,14 @@ noncomputable def derivedChainComplex
       Functor.map_zero]
 
 /-- The finite derived object represented by the first `n + 1` terms of the
-chain complex.  With Mathlib's cochain indexing this is the realization of
-`(A_n → ⋯ → A_0)[-n]`. -/
+chain complex.  The strict segment has `A_n` in degree `-n`; shifting it by
+`-n` gives the source's `(A_n → ⋯ → A_0)[-n]`. -/
 noncomputable def abelianPostnikovTerm
     {A : Type u} [Category.{v} A] [Abelian A]
     [HasDerivedCategory.{w} A]
-    (K : ChainComplex A ℕ) (n : ℕ) : DerivedCategory A :=
-  (DerivedCategory.Q (C := A)).obj
-    ((chainComplexTotalization K).truncGE (-(n : ℤ)))
+  (K : ChainComplex A ℕ) (n : ℕ) : DerivedCategory A :=
+  (shiftFunctor (DerivedCategory A) (-(n : ℤ))).obj
+    ((DerivedCategory.Q (C := A)).obj (finiteChainTotalization K n))
 
 /-- The infinite extension of the finite Postnikov-system structure. -/
 structure InfinitePostnikovSystem

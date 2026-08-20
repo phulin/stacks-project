@@ -45,7 +45,9 @@ theorem openImmersion_source_is_scheme
     (j : U ⟶ X.toLocallyRingedSpace)
     (hj : LocallyRingedSpace.IsOpenImmersion j) :
     IsSchemeLocallyRingedSpace U := by
-  sorry
+  let _ := hj
+  exact ⟨X.restrict hj.base_open,
+    ⟨AlgebraicGeometry.LocallyRingedSpace.IsOpenImmersion.isoRestrict j⟩⟩
 
 /-- The scheme structure on an open subspace is the canonical restricted scheme. -/
 abbrev openSubspaceScheme (X : Scheme.{u}) (U : X.Opens) : Scheme.{u} :=
@@ -102,7 +104,37 @@ def affinePlaneOriginIdeal (k : Type u) [Field k] : Ideal (affinePlaneRing k) :=
 
 theorem affinePlaneOriginIdeal_eq_kernel (k : Type u) [Field k] :
     affinePlaneOriginIdeal k = RingHom.ker (affinePlaneOriginEvaluation k) := by
-  sorry
+  have hdecomp : ∀ p : affinePlaneRing k,
+      p - MvPolynomial.C (MvPolynomial.constantCoeff p) ∈ affinePlaneOriginIdeal k := by
+    intro p
+    induction p using MvPolynomial.induction_on with
+    | C a =>
+        simp
+    | add p q hp hq =>
+        simpa [map_add, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+          Ideal.add_mem _ hp hq
+    | mul_X p i hp =>
+        have hconst : MvPolynomial.constantCoeff (p * MvPolynomial.X i) = 0 := by
+          simp
+        rw [hconst, map_zero, sub_zero]
+        have hi : MvPolynomial.X i ∈ affinePlaneOriginIdeal k := by
+          unfold affinePlaneOriginIdeal
+          fin_cases i <;> exact Ideal.subset_span (by simp [affinePlaneX, affinePlaneY])
+        exact Ideal.mul_mem_left _ _ hi
+  have hJ : affinePlaneOriginIdeal k ≤ RingHom.ker (affinePlaneOriginEvaluation k) := by
+    refine Ideal.span_le.2 ?_
+    intro z hz
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+    rcases hz with rfl | rfl
+    · simp [affinePlaneOriginEvaluation, affinePlaneX]
+    · simp [affinePlaneOriginEvaluation, affinePlaneY]
+  apply le_antisymm hJ
+  intro p hp
+  rw [RingHom.mem_ker] at hp
+  have hconst : MvPolynomial.constantCoeff p = 0 := by
+    simpa [affinePlaneOriginEvaluation] using hp
+  have hd := hdecomp p
+  simpa [hconst] using hd
 
 /-- The standard opens `D(x)`, `D(y)`, and `D(xy)`. -/
 abbrev affinePlaneDX (k : Type u) [Field k] : (affinePlane k).Opens :=
@@ -120,15 +152,19 @@ theorem affinePlaneDXY_eq_inter (k : Type u) [Field k] :
 
 theorem affinePlaneDX_is_affine (k : Type u) [Field k] :
     IsAffine (affinePlaneDX k).toScheme := by
-  sorry
+  change IsAffineOpen (affinePlaneDX k)
+  exact IsAffineOpen.Spec_basicOpen (R := CommRingCat.of (affinePlaneRing k)) (affinePlaneX k)
 
 theorem affinePlaneDY_is_affine (k : Type u) [Field k] :
     IsAffine (affinePlaneDY k).toScheme := by
-  sorry
+  change IsAffineOpen (affinePlaneDY k)
+  exact IsAffineOpen.Spec_basicOpen (R := CommRingCat.of (affinePlaneRing k)) (affinePlaneY k)
 
 theorem affinePlaneDXY_is_affine (k : Type u) [Field k] :
     IsAffine (affinePlaneDXY k).toScheme := by
-  sorry
+  change IsAffineOpen (affinePlaneDXY k)
+  exact IsAffineOpen.Spec_basicOpen (R := CommRingCat.of (affinePlaneRing k))
+    (affinePlaneX k * affinePlaneY k)
 
 /-- The localization descriptions of the two affine charts. -/
 noncomputable def affinePlaneDX_iso (k : Type u) [Field k] :
@@ -177,7 +213,10 @@ abbrev puncturedAffinePlaneDXY (k : Type u) [Field k] :
 
 theorem puncturedAffinePlane_open_cover (k : Type u) [Field k] :
     puncturedAffinePlaneDX k ⊔ puncturedAffinePlaneDY k = ⊤ := by
-  sorry
+  change (puncturedAffinePlaneInclusion k ⁻¹ᵁ affinePlaneDX k) ⊔
+    (puncturedAffinePlaneInclusion k ⁻¹ᵁ affinePlaneDY k) = ⊤
+  rw [← Scheme.Hom.preimage_sup]
+  simp [affinePlanePuncturedOpen]
 
 theorem puncturedAffinePlaneDX_is_affine (k : Type u) [Field k] :
     IsAffine (puncturedAffinePlaneDX k).toScheme := by

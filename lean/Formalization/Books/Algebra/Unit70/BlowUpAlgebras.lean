@@ -1935,7 +1935,7 @@ theorem valuationRing_directedColimit_affineBlowups
       mapToA F (transition hEF z) = mapToA E z := by
     apply Subtype.ext
     exact htrans_k hEF z
-  letI : DirectedSystem
+  let directedSystem : DirectedSystem
       (fun E : Finset A => affineBlowup (I E) (a E))
       (fun {E F} hEF => transition hEF) :=
     { map_self := by
@@ -2063,7 +2063,7 @@ theorem valuationRing_directedColimit_affineBlowups
     fibre_nontrivial := hfibre
     transition := transition
     transition_injective := htransition_injective
-    directedSystem := inferInstance
+    directedSystem := directedSystem
     mapToA := mapToA
     mapToA_injective := hmapToA_injective
     mapToA_comp_algebraMap := hmap_alg_K

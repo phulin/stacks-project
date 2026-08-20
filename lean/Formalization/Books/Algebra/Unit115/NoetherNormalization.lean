@@ -1894,9 +1894,12 @@ theorem noether_normalization_over_domain
                 (S'.val.toRingHom.comp g.toRingHom).comp
                     (MvPolynomial.C : R →+* MvPolynomial (Fin d) R) = φ ∧
                   ∃ f : R, f ≠ 0 ∧
-                    Nonempty
-                      (Localization.Away (algebraMap R S' f) ≃+*
-                        Localization.Away (φ f)) := by
+                    ∃ e : Localization.Away (algebraMap R S' f) ≃+*
+                        Localization.Away (φ f),
+                      e.toRingHom.comp
+                          (algebraMap S' (Localization.Away (algebraMap R S' f))) =
+                        (algebraMap S (Localization.Away (φ f))).comp
+                          S'.val.toRingHom := by
   sorry
 
 end

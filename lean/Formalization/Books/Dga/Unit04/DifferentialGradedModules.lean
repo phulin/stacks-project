@@ -149,7 +149,7 @@ theorem DifferentialGradedModule.satisfiesLeibniz
             ((HomologicalComplex.ιTensorObj M.complex A.complex n (m + 1)
                 (n + m + 1) (by omega)).hom
               (x ⊗ₜ[R] (A.complex.d m (m + 1)).hom a)) := by
-      simp [ModuleCat.comp_apply, Category.assoc, TensorProduct.map_tmul]
+      simp
     _ = _ := by
       rw [← h₁, ← h₂]
       simp only [Units.smul_def]
@@ -181,8 +181,7 @@ def DifferentialGradedModuleHomSubgroup
         apply GradedObject.mapObj_ext
         rintro ⟨i₁, i₂⟩ hij
         simp only [GradedObject.mapMap, GradedObject.ι_descMapObj]
-        simp [φ, HomologicalComplex₂.toGradedObjectMap,
-          Functor.map_zero, zero_app]
+        simp [φ, Functor.map_zero, zero_app]
         all_goals
           set_option backward.isDefEq.respectTransparency false in
             set_option backward.isDefEq.respectTransparency.types false in
@@ -208,8 +207,7 @@ def DifferentialGradedModuleHomSubgroup
           GradedObject.mapMap _ ((up ℤ).π (up ℤ) (up ℤ)) j
       apply GradedObject.mapObj_ext
       rintro ⟨i₁, i₂⟩ hij
-      simp [GradedObject.mapMap, HomologicalComplex₂.toGradedObjectMap,
-        MonoidalPreadditive.add_tensor]
+      simp [GradedObject.mapMap, HomologicalComplex₂.toGradedObjectMap]
       calc
         _ = (f.f i₁ ▷ A.complex.X i₂ + g.f i₁ ▷ A.complex.X i₂) ≫
               (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
@@ -267,7 +265,7 @@ def DifferentialGradedModuleHomSubgroup
           (f.f (i₁, i₂).1) (-f.f (i₁, i₂).1)]
         simp
       simp [GradedObject.mapMap, HomologicalComplex₂.toGradedObjectMap,
-        Functor.map_neg, hneg]
+        Functor.map_neg]
       calc
         _ = (-(f.f (i₁, i₂).1 ▷ A.complex.X (i₁, i₂).2)) ≫
               (((GradedObject.mapBifunctor (curriedTensor (ModuleCat R)) ℤ ℤ).obj
@@ -282,11 +280,11 @@ def DifferentialGradedModuleHomSubgroup
                 ((up ℤ).π (up ℤ) (up ℤ)) (i₁, i₂) j hij) := by
           set_option backward.isDefEq.respectTransparency false in
             set_option backward.isDefEq.respectTransparency.types false in
-              simpa only [Preadditive.neg_comp]
+              simp only [Preadditive.neg_comp]
         _ = _ := by
           set_option backward.isDefEq.respectTransparency false in
             set_option backward.isDefEq.respectTransparency.types false in
-              simpa only [Preadditive.comp_neg, GradedObject.ι_descMapObj]
+              simp only [Preadditive.comp_neg, GradedObject.ι_descMapObj]
     rw [htensor]
     simpa only [Preadditive.comp_neg, Preadditive.neg_comp] using
       congrArg (fun h => -h) hf
@@ -363,6 +361,29 @@ noncomputable instance differentialGradedModuleAbelian
     {R : Type u} [CommRing R] (A : DifferentialGradedAlgebra R) :
     Abelian (DifferentialGradedModuleCategory A) := by
   sorry
+
+/-- The abelian structure makes the category of differential graded modules
+balanced.  Mathlib does not register this consequence of `Abelian` as a
+global instance, but the exact lifting API uses it explicitly. -/
+instance differentialGradedModuleBalanced
+    {R : Type u} [CommRing R] (A : DifferentialGradedAlgebra R) :
+    Balanced (DifferentialGradedModuleCategory A) where
+  isIso_of_mono_of_epi f := by
+    let : Preadditive (DifferentialGradedModuleCategory A) :=
+      (differentialGradedModuleAbelian A).toPreadditive
+    let : IsNormalMonoCategory (DifferentialGradedModuleCategory A) :=
+      (differentialGradedModuleAbelian A).toIsNormalMonoCategory
+    intro _ _
+    let : NormalMono f := normalMonoOfMono f
+    have hg : NormalMono.g (f := f) = 0 := by
+      apply (cancel_epi f).1
+      rw [NormalMono.w (f := f), comp_zero]
+    have hk : (𝟙 _) ≫ NormalMono.g (f := f) = 0 := by
+      rw [Category.id_comp, hg]
+    let l := NormalMono.lift' f (𝟙 _) hk
+    refine ⟨⟨l.1, ?_, l.2⟩⟩
+    apply (cancel_mono f).1
+    rw [Category.assoc, l.2, Category.id_comp, Category.comp_id]
 
 /-- The category of differential graded modules has arbitrary limits. -/
 noncomputable instance differentialGradedModuleHasLimits

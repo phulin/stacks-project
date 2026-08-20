@@ -1208,8 +1208,44 @@ private theorem bass_complement_infinite
       (LocalizedModule.mkLinearMap S (R × P)) L eKC
   let _ : Module.Finite L (LocalizedModule S (R × P)) :=
     Module.Finite.equiv eLoc
-  exact (not_lt_of_ge (bass_hasInfinite_product (F := R) hP m))
+    exact (not_lt_of_ge (bass_hasInfinite_product (F := R) hP m))
     (Module.rank_lt_aleph0 L (LocalizedModule S (R × P)))
+
+private theorem rank_of_equiv_finite_right
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [Module.Projective R M]
+    (hM : HasInfiniteMaximalRank R M)
+    {A B : Type v} [AddCommGroup A] [Module R A] [Module.Projective R A]
+    [AddCommGroup B] [Module R B] [Module.Finite R B]
+    (eM : M ≃ₗ[R] A × B) : HasInfiniteMaximalRank R A := by
+  intro m
+  by_contra hA
+  let L := Localization.AtPrime m.asIdeal
+  let S := m.asIdeal.primeCompl
+  have hlt : Module.rank L (LocalizedModule S A) < Cardinal.aleph0 :=
+    lt_of_not_ge hA
+  let _ : Module.Projective L (LocalizedModule S A) := inferInstance
+  let _ : Module.Free L (LocalizedModule S A) :=
+    Formalization.Books.Algebra.Unit85.projective_free_over_local_ring
+      (R := L) (P := LocalizedModule S A) inferInstance
+  let _ : Module.Finite L (LocalizedModule S A) :=
+    Module.rank_lt_aleph0_iff.mp hlt
+  let _ : Module.Finite L (LocalizedModule S B) :=
+    Module.Finite.of_isLocalizedModule S (LocalizedModule.mkLinearMap S B)
+  let eProd : LocalizedModule S (A × B) ≃ₗ[L]
+      LocalizedModule S A × LocalizedModule S B :=
+    IsLocalizedModule.linearEquiv S (LocalizedModule.mkLinearMap S (A × B))
+      ((LocalizedModule.mkLinearMap S A).prodMap
+        (LocalizedModule.mkLinearMap S B)) |>.extendScalarsOfIsLocalization S L
+  let _ : Module.Finite L (LocalizedModule S (A × B)) :=
+    Module.Finite.equiv eProd.symm
+  let eLoc : LocalizedModule S (A × B) ≃ₗ[L]
+      LocalizedModule S M :=
+    IsLocalizedModule.mapEquiv S (LocalizedModule.mkLinearMap S (A × B))
+      (LocalizedModule.mkLinearMap S M) L eM.symm
+  let _ : Module.Finite L (LocalizedModule S M) :=
+    Module.Finite.equiv eLoc
+  exact (not_lt_of_ge (hM m)) (Module.rank_lt_aleph0 L (LocalizedModule S M))
 
 set_option maxHeartbeats 1000000 in
 private theorem bass_rank_one_step
@@ -1637,6 +1673,109 @@ theorem element_in_free_summand
   exact bass_finite_summand hR hP n K hKcomp hKfin
     (inferInstance : Module.IsStablyFree R K) s hsK
 
+set_option maxHeartbeats 1000000 in
+private theorem finite_rank_summand
+    {R : Type u} [CommRing R]
+    (hR : IsNoetherianRing (R ⧸ Ring.jacobson R))
+    (n : ℕ) (C : Type v) [AddCommGroup C] [Module R C]
+    [Module.Projective R C] (hC : HasInfiniteMaximalRank R C) :
+    ∃ G : Submodule R C, IsComplemented G ∧
+      Nonempty ((Fin n →₀ R) ≃ₗ[R] G) := by
+  induction n generalizing C with
+  | zero =>
+      refine ⟨⊥, ?_, ?_⟩
+      · exact ⟨⊤, isCompl_bot_top⟩
+      · exact ⟨LinearEquiv.ofSubsingleton _ _⟩
+  | succ n ih =>
+      obtain ⟨m, hm, hU, ⟨eU⟩⟩ :=
+        trick_to_find_good_element hR hC (0 : C) ⊤ (by simp)
+      let U : Submodule R C :=
+        Submodule.span R ({(0 : C) + m} : Set C)
+      have hUcomp : IsComplemented U := by
+        simpa [U] using hU
+      obtain ⟨D, hUD⟩ := hUcomp
+      let eU' : R ≃ₗ[R] U := by simpa [U] using eU
+      let _ : Module.Finite R U := Module.Finite.equiv eU'
+      let _ : Module.Free R U := Module.Free.of_equiv eU'
+      let projD : C →ₗ[R] D := D.projectionOnto U hUD.symm
+      let _ : Module.Projective R D := Module.Projective.of_split D.subtype projD (by
+        apply LinearMap.ext
+        intro d
+        exact D.projectionOnto_apply_left hUD.symm d)
+      let eCD : C ≃ₗ[R] D × U :=
+        (Submodule.prodEquivOfIsCompl U D hUD).symm.trans
+          (LinearEquiv.prodComm R U D)
+      have hDrank : HasInfiniteMaximalRank R D :=
+        rank_of_equiv_finite_right hC eCD
+      obtain ⟨G, hGD, ⟨eG⟩⟩ := ih D hDrank
+      obtain ⟨H, hGH⟩ := hGD
+      let eGH : (G × H) ≃ₗ[R] D :=
+        Submodule.prodEquivOfIsCompl G H hGH
+      let eUD : (U × D) ≃ₗ[R] C :=
+        Submodule.prodEquivOfIsCompl U D hUD
+      let eNested : ((G × U) × H) ≃ₗ[R] C :=
+        ((((LinearEquiv.prodComm R G U).prodCongr (LinearEquiv.refl R H)).trans
+          (LinearEquiv.prodAssoc R U G H)).trans
+            ((LinearEquiv.refl R U).prodCongr eGH)).trans eUD
+      let iQ : (G × U) →ₗ[R] (G × U) × H := LinearMap.inl R (G × U) H
+      let iH : H →ₗ[R] (G × U) × H := LinearMap.inr R (G × U) H
+      let Q : Submodule R C :=
+        (LinearMap.range iQ).map eNested.toLinearMap
+      let H' : Submodule R C :=
+        (LinearMap.range iH).map eNested.toLinearMap
+      have hQcomp : IsCompl Q H' := by
+        constructor
+        · exact Submodule.disjoint_map eNested.injective
+            LinearMap.isCompl_range_inl_inr.disjoint
+        · exact Submodule.codisjoint_map eNested.surjective
+            LinearMap.isCompl_range_inl_inr.codisjoint
+      have hQmem (z : G × U) : eNested (iQ z) ∈ Q := by
+        exact Submodule.mem_map.mpr ⟨iQ z, ⟨z, rfl⟩, rfl⟩
+      let fQ : (G × U) →ₗ[R] Q :=
+        (eNested.toLinearMap.comp iQ).codRestrict Q hQmem
+      have hfQinj : Function.Injective fQ := by
+        intro z z' hzz'
+        have hval : eNested (iQ z) = eNested (iQ z') := by
+          exact congrArg (fun w : Q => (w : C)) hzz'
+        have hi : iQ z = iQ z' := eNested.injective hval
+        exact congrArg Prod.fst hi
+      have hfQsurj : Function.Surjective fQ := by
+        intro z
+        rcases z.property with ⟨w, hw, hzw⟩
+        rcases hw with ⟨z', hz'w⟩
+        refine ⟨z', ?_⟩
+        apply Subtype.ext
+        change eNested (iQ z') = (z : C)
+        rw [hz'w]
+        exact hzw
+      let eRange : (G × U) ≃ₗ[R] Q :=
+        LinearEquiv.ofBijective fQ ⟨hfQinj, hfQsurj⟩
+      let econs : (R × (Fin n →₀ R)) ≃ₗ[R] (Fin (n + 1) →₀ R) :=
+        { toFun := fun z => Finsupp.cons z.1 z.2
+          invFun := fun f => (f 0, Finsupp.tail f)
+          left_inv := by
+            intro z
+            apply Prod.ext
+            · simp
+            · ext i
+              simp
+          right_inv := by
+            intro f
+            ext i
+            refine Fin.cases ?_ (fun j => ?_) i <;> simp
+          map_add' := by
+            intro x y
+            ext i
+            refine Fin.cases ?_ (fun j => ?_) i <;> simp
+          map_smul' := by
+            intro r x
+            ext i
+            refine Fin.cases ?_ (fun j => ?_) i <;> simp }
+      let eGU : (Fin (n + 1) →₀ R) ≃ₗ[R] G × U :=
+        econs.symm.trans
+          ((eU'.prodCongr eG).trans (LinearEquiv.prodComm R U G))
+      exact ⟨Q, ⟨H', hQcomp⟩, ⟨eGU.trans eRange⟩⟩
+
 /-! ## Countably generated projective modules -/
 
 /-- A countably generated projective module of infinite rank at every maximal
@@ -1763,7 +1902,100 @@ theorem countable_free
      `Module.Free.of_equiv`.  Return `Q`, its membership, complement, and
      free instance to the Unit85 theorem, which concludes `Module.Free R P`.
   -/
-  sorry
+  classical
+  refine Formalization.Books.Algebra.Unit85.free_of_countablyGenerated_of_free_direct_summand_property
+      (R := R) (M := P) hPgen ?_
+  intro N N' _ _ _ _ _ _ hNN' x
+  rcases hNN' with ⟨ePN⟩
+  let iN : N →ₗ[R] P :=
+    ePN.symm.toLinearMap.comp (LinearMap.inl R N N')
+  let pN : P →ₗ[R] N :=
+    (LinearMap.fst R N N').comp ePN.toLinearMap
+  have hpN : pN.comp iN = LinearMap.id := by
+    apply LinearMap.ext
+    intro y
+    simp [iN, pN]
+  let _ : Module.Projective R N := Module.Projective.of_split iN pN hpN
+  have hNrank : HasInfiniteMaximalRank R N :=
+    rank_of_equiv_finite_right hP ePN
+  obtain ⟨A, hxA, hAcomp, hAfin, hAstable⟩ :=
+    element_in_free_summand hR hNrank x
+  let _ : Module.Finite R A := hAfin
+  let _ : Module.IsStablyFree R A := hAstable
+  obtain ⟨C, hAC⟩ := hAcomp
+  let projC : N →ₗ[R] C := C.projectionOnto A hAC.symm
+  let _ : Module.Projective R C := Module.Projective.of_split C.subtype projC (by
+    apply LinearMap.ext
+    intro c
+    exact C.projectionOnto_apply_left hAC.symm c)
+  let eNC : N ≃ₗ[R] C × A :=
+    (Submodule.prodEquivOfIsCompl A C hAC).symm.trans
+      (LinearEquiv.prodComm R A C)
+  have hCrank : HasInfiniteMaximalRank R C :=
+    rank_of_equiv_finite_right hNrank eNC
+  obtain ⟨T, hTadd, hTmod, hTfin, hTfree, hATfree⟩ :=
+    Module.IsStablyFree.exist_free_prod R A
+  let _ : AddCommGroup T := hTadd
+  let _ : Module R T := hTmod
+  let _ : Module.Finite R T := hTfin
+  let _ : Module.Free R T := hTfree
+  let _ : Module.Free R (A × T) := hATfree
+  let ι := Module.Free.ChooseBasisIndex R T
+  let _ : Fintype ι := Module.Free.ChooseBasisIndex.fintype R T
+  let n := Fintype.card ι
+  let eT : T ≃ₗ[R] (Fin n →₀ R) :=
+    (Module.Free.chooseBasis R T).repr.trans
+      (Finsupp.domLCongr (Fintype.equivFin ι))
+  obtain ⟨G, hGcomp, ⟨eG⟩⟩ := finite_rank_summand hR n C hCrank
+  obtain ⟨D, hGD⟩ := hGcomp
+  let eGD : (G × D) ≃ₗ[R] C :=
+    Submodule.prodEquivOfIsCompl G D hGD
+  let eNested : ((A × G) × D) ≃ₗ[R] N :=
+    ((LinearEquiv.prodAssoc R A G D).trans
+      ((LinearEquiv.refl R A).prodCongr eGD)).trans
+      (Submodule.prodEquivOfIsCompl A C hAC)
+  let iQ : (A × G) →ₗ[R] (A × G) × D := LinearMap.inl R (A × G) D
+  let iD : D →ₗ[R] (A × G) × D := LinearMap.inr R (A × G) D
+  let Q : Submodule R N :=
+    (LinearMap.range iQ).map eNested.toLinearMap
+  let Q' : Submodule R N :=
+    (LinearMap.range iD).map eNested.toLinearMap
+  have hQcomp : IsCompl Q Q' := by
+    constructor
+    · exact Submodule.disjoint_map eNested.injective
+        LinearMap.isCompl_range_inl_inr.disjoint
+    · exact Submodule.codisjoint_map eNested.surjective
+        LinearMap.isCompl_range_inl_inr.codisjoint
+  have hxQ : x ∈ Q := by
+    apply Submodule.mem_map.mpr
+    refine ⟨iQ (⟨x, hxA⟩, 0), ⟨(⟨x, hxA⟩, 0), rfl⟩, ?_⟩
+    simp [iQ, eNested, eGD]
+  let fQ : (A × G) →ₗ[R] Q :=
+    (eNested.toLinearMap.comp iQ).codRestrict Q (by
+      intro z
+      exact Submodule.mem_map.mpr ⟨iQ z, ⟨z, rfl⟩, rfl⟩)
+  have hfQinj : Function.Injective fQ := by
+    intro z z' hzz'
+    have hval : eNested (iQ z) = eNested (iQ z') := by
+      exact congrArg (fun w : Q => (w : N)) hzz'
+    have hi : iQ z = iQ z' := eNested.injective hval
+    exact congrArg Prod.fst hi
+  have hfQsurj : Function.Surjective fQ := by
+    intro z
+    rcases z.property with ⟨w, hw, hzw⟩
+    rcases hw with ⟨z', hz'w⟩
+    refine ⟨z', ?_⟩
+    apply Subtype.ext
+    change eNested (iQ z') = (z : N)
+    rw [hz'w]
+    exact hzw
+  let eAQ : (A × G) ≃ₗ[R] Q :=
+    LinearEquiv.ofBijective fQ ⟨hfQinj, hfQsurj⟩
+  let eAG : (A × T) ≃ₗ[R] A × G :=
+    (LinearEquiv.refl R A).prodCongr (eT.trans eG)
+  let _ : Module.Free R (A × G) := Module.Free.of_equiv eAG
+  let _ : Module.Free R Q := Module.Free.of_equiv eAQ
+  exact ⟨Q, hxQ, ⟨Q', hQcomp⟩, inferInstance⟩
 
 end
 

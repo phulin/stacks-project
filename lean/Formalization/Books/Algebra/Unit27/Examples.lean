@@ -3743,24 +3743,21 @@ private lemma affine_second_polynomial_mem (a : ℚ) :
   rw [hP_eq, affine_second_presentation_relation]
   exact I.add_mem I.zero_mem (I.mul_mem_left _ hGmem)
 
+private lemma degree_C_mul_X_pow_le (r : ℚ) (n : ℕ) :
+    (Polynomial.C r * Polynomial.X ^ n).degree ≤ (n : WithBot ℕ) := by
+  calc
+    _ ≤ (Polynomial.C r).degree + (Polynomial.X ^ n).degree :=
+      Polynomial.degree_mul_le _ _
+    _ ≤ 0 + n := add_le_add Polynomial.degree_C_le (by simp)
+    _ = n := by simp
+
 private lemma affine_second_remainder_degree (a : ℚ) :
     (affineSecondRemainder a).degree < (3 : WithBot ℕ) := by
   let d := affineSecondOffset a
   let c := affineSecondConstant a
-  have h2 : (Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2).degree ≤
-      (2 : WithBot ℕ) := by
-    calc
-      _ ≤ (Polynomial.C (d ^ 2 + d)).degree + (Polynomial.X ^ 2).degree :=
-        Polynomial.degree_mul_le _ _
-      _ ≤ 0 + 2 := add_le_add Polynomial.degree_C_le (by simp)
-      _ = 2 := by simp
+  have h2 := degree_C_mul_X_pow_le (d ^ 2 + d) 2
   have h1 : (Polynomial.C (c * (2 * d + 1)) * Polynomial.X).degree ≤
-      (1 : WithBot ℕ) := by
-    calc
-      _ ≤ (Polynomial.C (c * (2 * d + 1))).degree + Polynomial.X.degree :=
-        Polynomial.degree_mul_le _ _
-      _ ≤ 0 + 1 := add_le_add Polynomial.degree_C_le (by simp)
-      _ = 1 := by simp
+      (1 : WithBot ℕ) := by simpa using degree_C_mul_X_pow_le (c * (2 * d + 1)) 1
   have hsub := Polynomial.degree_sub_le
     (-(Polynomial.C (d ^ 2 + d) * Polynomial.X ^ 2))
     (Polynomial.C (c * (2 * d + 1)) * Polynomial.X)

@@ -53,7 +53,7 @@ theorem mem_torsion_iff_exists_smul_eq_zero
     [AddCommGroup M] [Module R M] (x : M) :
     x ∈ Submodule.torsion R M ↔
       ∃ r : R, r ≠ 0 ∧ r • x = 0 := by
-  sorry
+  simp [Submodule.torsion]
 
 /-- The usual elementwise characterization of the source's torsion-free
 condition. -/
@@ -70,7 +70,7 @@ theorem torsionModule_iff_forall_mem_torsion
     {R M : Type*} [CommRing R] [IsDomain R]
     [AddCommGroup M] [Module R M] :
     TorsionModule R M ↔ ∀ x : M, x ∈ Submodule.torsion R M := by
-  sorry
+  simp [TorsionModule, Module.IsTorsion, Submodule.torsion]
 
 /-! ## Localization and torsion quotients -/
 
@@ -89,7 +89,31 @@ theorem torsionFree_iff_nonZeroDivisorLocalization_injective
     TorsionFree R M ↔
       Function.Injective
         (LocalizedModule.mkLinearMap (nonZeroDivisors R) M) := by
-  sorry
+  change Module.IsTorsionFree R M ↔
+    Function.Injective (fun m : M => LocalizedModule.mk m 1)
+  rw [Module.isTorsionFree_iff_smul_eq_zero]
+  constructor
+  · intro h m₁ m₂ hm
+    obtain ⟨u, hu⟩ := LocalizedModule.mk_eq.mp hm
+    have hu0 : (u : R) ≠ 0 := nonZeroDivisors.ne_zero u.property
+    have hu' : (u : R) • m₁ = (u : R) • m₂ := by
+      simpa [Submonoid.smul_def] using hu
+    have hzero : (u : R) • (m₁ - m₂) = 0 := by
+      rw [smul_sub, sub_eq_zero]
+      exact hu'
+    have hdiff : m₁ - m₂ = 0 :=
+      (h (u : R) (m₁ - m₂) hzero).resolve_left hu0
+    exact sub_eq_zero.mp hdiff
+  · intro h r m hr
+    by_cases hr0 : r = 0
+    · exact Or.inl hr0
+    · apply Or.inr
+      apply h
+      change LocalizedModule.mk m 1 = LocalizedModule.mk 0 1
+      let s : nonZeroDivisors R := ⟨r, by simpa using hr0⟩
+      rw [← LocalizedModule.mk_cancel s m]
+      rw [Submonoid.smul_def, hr]
+      simp
 
 /-- For a fraction field, the localization criterion can be written using
 the canonical map into the tensor product with that field. -/
@@ -100,7 +124,36 @@ theorem torsionFree_iff_fractionFieldTensorMap_injective
     TorsionFree R M ↔
       Function.Injective
         (fractionFieldTensorMap (R := R) (M := M) (K := K)) := by
-  sorry
+  change Module.IsTorsionFree R M ↔ Function.Injective ⇑fractionFieldTensorMap
+  let S := nonZeroDivisors R
+  let g : M →ₗ[R] K ⊗[R] M := TensorProduct.mk R K M 1
+  have hg : Function.Injective g ↔
+      Function.Injective (LocalizedModule.mkLinearMap S M) := by
+    let e := IsLocalizedModule.linearEquiv S (LocalizedModule.mkLinearMap S M) g
+    constructor
+    · intro h x y hxy
+      apply h
+      have heq := congrArg e hxy
+      simpa only [e, IsLocalizedModule.linearEquiv_apply] using heq
+    · intro h x y hxy
+      apply h
+      apply e.injective
+      simpa only [e, IsLocalizedModule.linearEquiv_apply] using hxy
+  have hloc : Module.IsTorsionFree R M ↔ Function.Injective g := by
+    rw [hg]
+    exact torsionFree_iff_nonZeroDivisorLocalization_injective
+  have hmap : fractionFieldTensorMap (R := R) (M := M) (K := K) =
+      (TensorProduct.comm R K M).toLinearMap.comp g := by
+    ext m
+    rfl
+  rw [hloc, hmap]
+  constructor
+  · intro h
+    exact (TensorProduct.comm R K M).injective.comp h
+  · intro h x y hxy
+    apply h
+    change (TensorProduct.comm R K M) (g x) = (TensorProduct.comm R K M) (g y)
+    exact congrArg ((TensorProduct.comm R K M).toLinearMap) hxy
 
 /-- The torsion submodule is the kernel of the fraction-field map. -/
 theorem torsion_eq_ker_fractionFieldTensorMap

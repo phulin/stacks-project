@@ -106,17 +106,14 @@ theorem smd_smd_star_eq (P Q : ObjectProperty C) :
     smd (star (smd P) (smd Q)) = smd (star P Q) :=
   ObjectProperty.retractClosure_extensionProduct_retractClosure_retractClosure P Q
 
-/-! `add(P) ⋆ add(Q)` is closed under binary direct sums. -/
+/-! `add(P) ⋆ add(Q)` is closed under finite direct sums. -/
 theorem add_star_closedUnderDirectSums (P Q : ObjectProperty C) :
-    ∀ ⦃X Y : C⦄,
-      star (add P) (add Q) X → star (add P) (add Q) Y →
-        star (add P) (add Q) (X ⊞ Y) := by
+    (star (add P) (add Q)).IsClosedUnderFiniteCoproducts := by
   sorry
 
-/-! `smd(add(P))` is closed under binary direct sums. -/
+/-! `smd(add(P))` is closed under finite direct sums. -/
 theorem smd_add_closedUnderDirectSums (P : ObjectProperty C) :
-    ∀ ⦃X Y : C⦄,
-      smd (add P) X → smd (add P) Y → smd (add P) (X ⊞ Y) := by
+    (smd (add P)).IsClosedUnderFiniteCoproducts := by
   sorry
 
 /-! `C_n` is strictly full. -/
@@ -131,11 +128,10 @@ theorem conePower_isStableUnderRetracts (P : ObjectProperty C) {n : ℕ} :
     (conePower P n).IsStableUnderRetracts := by
   infer_instance
 
-/-! `C_n` is closed under binary direct sums for positive `n`. -/
+/-! `C_n` is closed under finite direct sums for positive `n`. -/
 theorem conePower_closedUnderDirectSums (P : ObjectProperty C) {n : ℕ}
     (hn : 1 ≤ n) :
-    ∀ ⦃X Y : C⦄,
-      conePower P n X → conePower P n Y → conePower P n (X ⊞ Y) := by
+    (conePower P n).IsClosedUnderFiniteCoproducts := by
   sorry
 
 /-! The source's concatenation law for the subcategories `C_n`. -/
@@ -163,10 +159,10 @@ def functorImage (F : C ⥤ D) (P : ObjectProperty C) : ObjectProperty D :=
 
 variable (F : C ⥤ D) [F.CommShift ℤ] [F.IsTriangulated]
 
-/-! Exact functors commute with the interval-shift operation. -/
+/-! Exact functors commute with the interval-shift operation up to strict fullness. -/
 theorem functorImage_shiftWindow (P : ObjectProperty C) (a b : EInt) :
     functorImage F (shiftWindow P a b) =
-      shiftWindow (functorImage F P) a b := by
+      (shiftWindow (functorImage F P) a b).isoClosure := by
   sorry
 
 /-! Exact functors preserve direct summands up to direct summands. -/

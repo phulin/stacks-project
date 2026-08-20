@@ -241,11 +241,26 @@ def IsIrreducibleAfterFiniteSeparableBaseChange
 
 /-- Geometric irreducibility can be checked after finite separable field
 extensions.  Both sides deliberately use the same test-field universe. -/
+theorem IsGeometricallyIrreducible.isIrreducibleAfterFiniteSeparableBaseChange
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsGeometricallyIrreducible.{u, v, u} k S) :
+    IsIrreducibleAfterFiniteSeparableBaseChange k S := by
+  intro k'
+  exact hS.irreducibleSpace_tensorProduct
+
+/-- Finite separable base changes detect geometric irreducibility. -/
+theorem isGeometricallyIrreducible_of_isIrreducibleAfterFiniteSeparableBaseChange
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsIrreducibleAfterFiniteSeparableBaseChange k S) :
+    IsGeometricallyIrreducible.{u, v, u} k S := by
+  sorry
+
 theorem isGeometricallyIrreducible_iff_finiteSeparable
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
     IsGeometricallyIrreducible.{u, v, u} k S ↔
       IsIrreducibleAfterFiniteSeparableBaseChange k S := by
-  sorry
+  exact ⟨IsGeometricallyIrreducible.isIrreducibleAfterFiniteSeparableBaseChange,
+    isGeometricallyIrreducible_of_isIrreducibleAfterFiniteSeparableBaseChange⟩
 
 /-- The finite-separable test is equivalent to testing on the canonical
 separable closure. -/

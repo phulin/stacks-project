@@ -488,7 +488,7 @@ theorem quasi_finite_open_integral_closure
             (algebraMap (T q) (Localization.Away (r q)) x)
         simp only [Localization.awayMap, IsLocalization.Away.map]
         simp only [IsLocalization.map_eq]
-        rfl
+        exact IsLocalization.map_eq _ _
       intro y
       obtain ⟨x, hx⟩ := (hT q).2 y
       refine ⟨Localization.awayMap j.toRingHom (r q) x, ?_⟩

@@ -90,20 +90,19 @@ noncomputable def modulePresheafPullback {X Y : TopCat.{v}}
     ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O)
 
 /-!
-The module pullback is implemented by Mathlib as an abstract left adjoint.
-This coherent comparison is the reusable bridge from that interface to the
-underlying additive presheaf pullback.  It is stated for an arbitrary scalar
-map so that the sheafification construction below can use the same bridge.
+The canonical module pullback is implemented by Mathlib as an abstract left
+adjoint.  This coherent comparison is the reusable bridge from that
+interface to the underlying additive presheaf pullback.  The restriction to
+the scalar unit is essential: for a general scalar map, the module pullback
+also performs extension of scalars.
 -/
 
-/-- The underlying additive presheaf of a module pullback is the corresponding
-presheaf pullback. -/
-theorem presheafOfModulesPullback_underlying_formula {X Y : TopCat.{v}}
-    {O_X : RingPresheaf.{v, v} X} {O_Y : RingPresheaf.{v, v} Y}
-    (f : X ⟶ Y) (α : O_Y ⟶ (moduleRingPresheafPushforward f).obj O_X)
-    (G : PMod O_Y) :
+/-- The underlying additive presheaf of the canonical module pullback is the
+corresponding presheaf pullback. -/
+theorem modulePresheafPullback_underlying_formula {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} Y} (f : X ⟶ Y) (G : PMod O) :
     Nonempty
-      ((((PresheafOfModules.pullback (F := Opens.map f) α).obj G).presheaf) ≅
+      ((((modulePresheafPullback f).obj G).presheaf) ≅
         (TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf) := by
   sorry
 
@@ -147,9 +146,7 @@ theorem modulePresheafPullback_sections_formula {X Y : TopCat.{v}}
       (((modulePresheafPullback f).obj G).presheaf.obj (op U) ≅
         ((TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf).obj
           (op U)) := by
-  obtain ⟨e⟩ :=
-    presheafOfModulesPullback_underlying_formula f
-      ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O) G
+  obtain ⟨e⟩ := modulePresheafPullback_underlying_formula f G
   exact ⟨e.app (op U)⟩
 
 /-- A chosen isomorphism for the underlying pullback-section formula. -/
@@ -679,7 +676,7 @@ noncomputable abbrev moduleSheafTensorHomEquiv {X Y : TopCat.{v}}
     (F := Opens.map f)
     (𝟙 ((moduleRingSheafPushforward f).obj O))).homEquiv G F
 
-/-- The stalk-level tensor formula for module sheaf pullback. -/
+/-- The canonical additive stalk formula for module sheaf pullback. -/
 theorem moduleSheafPullback_stalk_formula {X Y : TopCat.{v}}
     {O : RingSheaf Y} (f : X ⟶ Y) (G : Mod O) (x : X)
     [((SheafOfModules.pushforward (F := Opens.map f)

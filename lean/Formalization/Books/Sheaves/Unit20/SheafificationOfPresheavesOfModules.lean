@@ -341,7 +341,7 @@ private theorem unit20_mem_top {U : Opens unit20X} {x : unit20Point}
   · exact hx
 
 private noncomputable instance unit20PointDecidable (x : unit20Point) :
-    ∀ U : Opens unit20X, Decidable (x ∈ U) := fun U => Classical.propDecidable _
+    ∀ U : Opens unit20X, Decidable (x ∈ U) := fun _ => Classical.propDecidable _
 
 private theorem unit20_commRing_eqToHom_apply {A B : CommRingCat.{v}}
     (h : A = B) (x : A) :
@@ -403,12 +403,12 @@ private noncomputable def unit20AlphaLeftApp (U : (Opens unit20X)ᵒᵖ) :
           (skyscraperPresheaf (X := unit20X) unit20Top
             (CommRingCat.of (ULift.{v} ℤ))).obj U =
             CommRingCat.of (ULift.{v} ℤ) := by
-        simp [skyscraperPresheaf, h, ht]
+        simp [skyscraperPresheaf, ht]
       have hL :
           (skyscraperPresheaf (X := unit20X) unit20Left
             (CommRingCat.of (ULift.{v} (ZMod 2)))).obj U =
             CommRingCat.of (ULift.{v} (ZMod 2)) := by
-        simp [skyscraperPresheaf, h, ht]
+        simp [skyscraperPresheaf, h]
       exact eqToHom hT ≫ unit20Mod2Cast ≫ eqToHom hL.symm
     · change (skyscraperPresheaf (X := unit20X) unit20Top
           (CommRingCat.of (ULift.{v} ℤ))).obj U ⟶
@@ -487,12 +487,12 @@ private noncomputable def unit20AlphaLeft : unit20O1.obj ⟶ unit20O2Left.obj wh
         exact hmap
       have happX : unit20AlphaLeftApp X =
           eqToHom hTX ≫ unit20Mod2Cast ≫ eqToHom hLX.symm := by
-        simp [unit20AlphaLeftApp, hX, htX, hTX, hLX]
-        congr 1 <;> apply Subsingleton.elim
+        simp [unit20AlphaLeftApp, hX]
+        congr 1
       have happY : unit20AlphaLeftApp Y =
           eqToHom hTY ≫ unit20Mod2Cast ≫ eqToHom hLY.symm := by
-        simp [unit20AlphaLeftApp, hY, htY, hTY, hLY]
-        congr 1 <;> apply Subsingleton.elim
+        simp [unit20AlphaLeftApp, hY]
+        congr 1
       change unit20O1.obj.map f ≫ unit20AlphaLeftApp Y =
         unit20AlphaLeftApp X ≫ unit20O2Left.obj.map f
       rw [happY, happX]
@@ -531,12 +531,12 @@ private noncomputable def unit20AlphaRightApp (U : (Opens unit20X)ᵒᵖ) :
         (skyscraperPresheaf (X := unit20X) unit20Top
           (CommRingCat.of (ULift.{v} ℤ))).obj U =
           CommRingCat.of (ULift.{v} ℤ) := by
-      simp [skyscraperPresheaf, h, ht]
+      simp [skyscraperPresheaf, ht]
     have hR :
         (skyscraperPresheaf (X := unit20X) unit20Right
           (CommRingCat.of (ULift.{v} ℤ))).obj U =
           CommRingCat.of (ULift.{v} ℤ) := by
-      simp [skyscraperPresheaf, h, ht]
+      simp [skyscraperPresheaf, h]
     exact eqToHom hT ≫ 𝟙 _ ≫ eqToHom hR.symm
   · simpa [unit20O1, unit20O2Right, skyscraperPresheaf, h] using
       (terminalIsTerminal.from
@@ -618,11 +618,11 @@ private noncomputable def unit20AlphaRight : unit20O1.obj ⟶ unit20O2Right.obj 
         rw [← hRYeq, ← hRXeq]
         exact hmap
       have happX : unit20AlphaRightApp X = eqToHom hTX ≫ 𝟙 _ ≫ eqToHom hRX.symm := by
-        simp [unit20AlphaRightApp, hX, htX, hTX, hRX]
-        congr 1 <;> apply Subsingleton.elim
+        simp [unit20AlphaRightApp, hX, hRX]
+        congr 1
       have happY : unit20AlphaRightApp Y = eqToHom hTY ≫ 𝟙 _ ≫ eqToHom hRY.symm := by
-        simp [unit20AlphaRightApp, hY, htY, hTY, hRY]
-        congr 1 <;> apply Subsingleton.elim
+        simp [unit20AlphaRightApp, hY, hRY]
+        congr 1
       change unit20O1.obj.map f ≫ unit20AlphaRightApp Y =
         unit20AlphaRightApp X ≫ unit20O2Right.obj.map f
       rw [happY, happX]
@@ -665,11 +665,11 @@ private theorem unit20_uliftInt_module_ext
   rcases r with ⟨r⟩
   have hP : @SMul.smul (ULift.{v} ℤ) (ULift.{v} ℤ)
       P.toSMul (r : ULift.{v} ℤ) m = r • m := by
-    letI : Module (ULift.{v} ℤ) (ULift.{v} ℤ) := P
+    let : Module (ULift.{v} ℤ) (ULift.{v} ℤ) := P
     exact Int.cast_smul_eq_zsmul (ULift.{v} ℤ) r m
   have hQ : @SMul.smul (ULift.{v} ℤ) (ULift.{v} ℤ)
       Q.toSMul (r : ULift.{v} ℤ) m = r • m := by
-    letI : Module (ULift.{v} ℤ) (ULift.{v} ℤ) := Q
+    let : Module (ULift.{v} ℤ) (ULift.{v} ℤ) := Q
     exact Int.cast_smul_eq_zsmul (ULift.{v} ℤ) r m
   change @SMul.smul (ULift.{v} ℤ) (ULift.{v} ℤ)
       P.toSMul (r : ULift.{v} ℤ) m =
@@ -677,7 +677,7 @@ private theorem unit20_uliftInt_module_ext
       Q.toSMul (r : ULift.{v} ℤ) m
   exact hP.trans hQ.symm
 
-private noncomputable def unit20_moduleTransport
+@[instance_reducible] private noncomputable def unit20_moduleTransport
     {R R' : RingCat.{v}} {M M' : AddCommGrpCat.{v}}
     (hR : R = R') (hM : M = M') (inst : Module (↑R) (↑M)) :
     Module (↑R') (↑M') := by
@@ -802,7 +802,7 @@ private noncomputable def unit20GVal :
         apply (cancel_mono (eqToHom hGV')).1
         exact hpost
       have hGmap : unit20GPresheaf.map f = eqToHom hGUv := by
-        simpa [unit20GPresheaf, skyscraperPresheaf, h, h'] using hGmap'
+        simp [unit20GPresheaf, skyscraperPresheaf, h, h']
       have hRmap :
           ((unit20O1.obj ⋙ (forget₂ CommRingCat RingCat)).map f) =
             eqToHom hRUv := by
@@ -847,14 +847,14 @@ private noncomputable def unit20GVal :
         rw [hGV]
         exact Module.compHom (ULift.{v} ℤ) (eqToHom hRV).hom
       have hinstV : moduleInst V = transportedV := by
-        letI : Subsingleton (Module
+        let : Subsingleton (Module
             (↑((unit20O1.obj ⋙ (forget₂ CommRingCat RingCat)).obj V))
             (↑(unit20GPresheaf.obj V))) := by
           rw [hRV, hGV]
           exact ⟨fun P Q => unit20_uliftInt_module_ext P Q⟩
         exact Subsingleton.elim _ _
       have htransport : transportedV = unit20_moduleTransport hRUv hGUv instU₀ := by
-        letI : Subsingleton (Module
+        let : Subsingleton (Module
             (↑((unit20O1.obj ⋙ (forget₂ CommRingCat RingCat)).obj V))
             (↑(unit20GPresheaf.obj V))) := by
           rw [hRV, hGV]
@@ -873,7 +873,7 @@ private noncomputable def unit20GVal :
       exact hsmul
     · have hGV : unit20GPresheaf.obj V = ⊤_ AddCommGrpCat := by
         simp [unit20GPresheaf, skyscraperPresheaf, h]
-      letI : Subsingleton (↑(unit20GPresheaf.obj V)) := by
+      let : Subsingleton (↑(unit20GPresheaf.obj V)) := by
         rw [hGV]
         exact AddCommGrpCat.subsingleton_of_isZero
           ((isZero_zero AddCommGrpCat).of_iso
@@ -1058,9 +1058,7 @@ private noncomputable def unit20TopAdjointMap :
         have hO1smul : unit20GTopToO1 (r • m) =
             r • unit20GTopToO1 m := by
           convert hsmul' using 1 <;>
-            simp_all [unit20GTopToO1, transport, unit20O1TopAdd_eq_ulift]
-          all_goals subst_vars
-          all_goals try simp [unit20GTopToO1]
+            simp_all [unit20GTopToO1, transport]
           all_goals
             have hcast : unit20TopRingCast
                 (ConcreteCategory.hom (eqToHom unit20O1TopRing_eq_ulift) r) = r := by
@@ -1092,14 +1090,14 @@ private noncomputable def unit20TopAdjointMap :
         rfl }
 
 private noncomputable def unit20TopTensorToRing :
-    unit20E.obj (op (⊤ : Opens unit20X)) ⟶
-      ModuleCat.of (unit20O2.obj.obj (op (⊤ : Opens unit20X)))
+    unit20E.{v}.obj (op (⊤ : Opens unit20X)) ⟶
+      ModuleCat.of.{v, v} (unit20O2.obj.obj (op (⊤ : Opens unit20X)))
         (unit20O2.obj.obj (op (⊤ : Opens unit20X))) :=
   ((ModuleCat.extendRestrictScalarsAdj
       (unit20Alpha.hom.app (op (⊤ : Opens unit20X))).hom).homEquiv
-    (ModuleCat.of (unit20O1.obj.obj (op (⊤ : Opens unit20X)))
+    (ModuleCat.of.{v, v} (unit20O1.obj.obj (op (⊤ : Opens unit20X)))
       (unit20G.val.obj (op (⊤ : Opens unit20X))))
-    (ModuleCat.of (unit20O2.obj.obj (op (⊤ : Opens unit20X)))
+    (ModuleCat.of.{v, v} (unit20O2.obj.obj (op (⊤ : Opens unit20X)))
       (unit20O2.obj.obj (op (⊤ : Opens unit20X))))).symm unit20TopAdjointMap
 
 private theorem unit20GTopOne_to_ulift :
@@ -1145,11 +1143,6 @@ private theorem unit20_extendRestrictScalars_apply_tmul
 private theorem unit20TopTensorToRing_apply :
     ConcreteCategory.hom unit20TopTensorToRing unit20TopTensor =
       (1 : unit20O2.obj.obj (op (⊤ : Opens unit20X))) := by
-  letI : Module (↑unit20O1Top) (↑unit20GTop) := by
-    change Module
-      (↑((Formalization.Books.Sheaves.Unit17.commRingSheafToRingSheaf unit20O1).obj.obj
-        (op (⊤ : Opens unit20X)))) (↑unit20GTop)
-    exact unit20GTop.isModule
   have htm := unit20_extendRestrictScalars_apply_tmul
     (unit20Alpha.hom.app (op (⊤ : Opens unit20X))).hom unit20TopAdjointMap
     (1 : unit20O2.obj.obj (op (⊤ : Opens unit20X))) unit20GTopOne
@@ -1160,11 +1153,11 @@ private theorem unit20TopTensorToRing_apply :
       (1 : unit20O2.obj.obj (op (⊤ : Opens unit20X))) = 1 := by
     exact one_smul _ _
   rw [hone] at htm
-  convert htm using 1 <;>
-    simp [unit20TopTensorToRing, unit20TopTensor, one_smul]
+  convert htm using 1 ;
+    simp [unit20TopTensorToRing, unit20TopTensor]
   all_goals congr 1
 
-private noncomputable def unit20O2TopTwo_ne_zero :
+private theorem unit20O2TopTwo_ne_zero :
     (2 : unit20O2.{v}.obj.obj (op (⊤ : Opens unit20X))) ≠ 0 := by
   intro h
   let ε : unit20O2.{v}.obj.obj (op (⊤ : Opens unit20X)) ⟶
@@ -1224,8 +1217,8 @@ private theorem unit20TopTensorInT_ne_zero :
       _ = ConcreteCategory.hom (e.inv.app (op (⊤ : Opens unit20X))) 0 := by rw [h]
       _ = 0 := (e.inv.app (op (⊤ : Opens unit20X))).hom.map_zero
   have hx' := congrArg
-    (fun z => ConcreteCategory.hom unit20TopTensorToRing.{v, v} z) hx
-  rw [unit20TopTensorToRing_apply.{v, v}] at hx'
+    (fun z => ConcreteCategory.hom unit20TopTensorToRing.{v} z) hx
+  rw [unit20TopTensorToRing_apply.{v}] at hx'
   apply unit20O2TopTwo_ne_zero
   calc
     (2 : unit20O2.{v}.obj.obj (op (⊤ : Opens unit20X))) = 1 + 1 := by norm_num
@@ -1272,9 +1265,9 @@ private theorem unit20TopTensorInT_double_ne_zero :
       ConcreteCategory.hom (e.inv.app (op (⊤ : Opens unit20X))) z) h_obj
   rw [map_zsmul, map_zero, hi] at h'
   have h'' := congrArg
-    (fun z => ConcreteCategory.hom unit20TopTensorToRing.{v, v} z) h'
+    (fun z => ConcreteCategory.hom unit20TopTensorToRing.{v} z) h'
   apply unit20O2TopTwo_ne_zero
-  rw [map_zsmul, map_zero, unit20TopTensorToRing_apply.{v, v}] at h''
+  rw [map_zsmul, map_zero, unit20TopTensorToRing_apply.{v}] at h''
   simpa using h''
 
 private theorem unit20ZeroMap_ne_unit20DoubleMap :
@@ -1308,20 +1301,20 @@ private theorem unit20ProdLeft_two_eq_zero :
     TopCat.Sheaf.forget (CommRingCat.{v}) unit20X ⋙
       (evaluation (Opens unit20X)ᵒᵖ (CommRingCat.{v})).obj
         (op (Alexandrov.principalOpen unit20Left))
-  letI : PreservesLimits
+  let : PreservesLimits
       (TopCat.Sheaf.forget (CommRingCat.{v}) unit20X) := by
     infer_instance
-  letI : PreservesLimit
+  let : PreservesLimit
       ((pair unit20O2Left unit20O2Right) ⋙
         TopCat.Sheaf.forget (CommRingCat.{v}) unit20X)
       ((evaluation (Opens unit20X)ᵒᵖ (CommRingCat.{v})).obj
         (op (Alexandrov.principalOpen unit20Left))) := by
     exact evaluation_preservesLimit _ _
-  letI : PreservesLimit (pair unit20O2Left unit20O2Right) F := by
+  let : PreservesLimit (pair unit20O2Left unit20O2Right) F := by
     dsimp [F]
-    letI : PreservesLimit (pair unit20O2Left unit20O2Right)
+    let : PreservesLimit (pair unit20O2Left unit20O2Right)
         (TopCat.Sheaf.forget (CommRingCat.{v}) unit20X) := by
-      letI : PreservesLimitsOfSize.{0, 0}
+      let : PreservesLimitsOfSize.{0, 0}
           (TopCat.Sheaf.forget (CommRingCat.{v}) unit20X) :=
         preservesLimitsOfSize_shrink
           (TopCat.Sheaf.forget (CommRingCat.{v}) unit20X)
@@ -1412,7 +1405,7 @@ private theorem unit20ProdLeft_two_eq_zero :
         map_add _ _ _
       _ = 0 := by
         rw [map_one, hR]
-        letI : Subsingleton (⊤_ CommRingCat : Type v) :=
+        let : Subsingleton (⊤_ CommRingCat : Type v) :=
           CommRingCat.subsingleton_of_isTerminal
             (terminalIsTerminal : IsTerminal (⊤_ CommRingCat))
         exact Subsingleton.elim _ _
@@ -1437,7 +1430,7 @@ private noncomputable abbrev unit20GA := unit20G.val.obj (op unit20A)
 private theorem unit20T_restrict_double_left :
     unit20T.map (homOfLE (show unit20A ≤ ⊤ from le_top)).op
       ((2 : ℤ) • unit20TopTensorInT) = 0 := by
-  letI : Module
+  let : Module
       (unit20O2.obj.obj (op (⊤ : Opens unit20X)))
       (unit20T.obj (op (⊤ : Opens unit20X))) := by
     change Module
@@ -1487,8 +1480,8 @@ private theorem unit20T_restrict_topTensor_right :
         unit20TopTensorInT.{v} = 0 := by
   have hsub : Subsingleton (unit20T.obj (op unit20B)) := by
     let e := tensorProductPresheaf_sectionwiseIso unit20Alpha.hom unit20G.val
-    letI : Subsingleton (unit20E.obj (op unit20B)) := by
-      letI : Subsingleton (unit20G.val.obj (op unit20B)) := by
+    let : Subsingleton (unit20E.obj (op unit20B)) := by
+      let : Subsingleton (unit20G.val.obj (op unit20B)) := by
         change Subsingleton (unit20GPresheaf.obj (op unit20B) : Type v)
         have hnot : unit20Left ∉ Alexandrov.principalOpen unit20Right := by
           change ¬unit20Right ≤ unit20Left
@@ -1504,7 +1497,7 @@ private theorem unit20T_restrict_topTensor_right :
         ((ModuleCat.extendScalars
           (unit20Alpha.hom.app (op unit20B)).hom).obj
           (unit20G.val.obj (op unit20B)) : Type v)
-      letI : Module
+      let : Module
           (unit20O1.obj.obj (op unit20B) : Type v)
           (unit20G.val.obj (op unit20B) : Type v) := by
         exact (unit20G.val.obj (op unit20B)).isModule

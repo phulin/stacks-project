@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit52.Length
 import Mathlib.Algebra.Algebra.RestrictScalars
+import Mathlib.Algebra.Module.Lattice
 import Mathlib.Algebra.Module.Equiv.Basic
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
@@ -47,20 +48,28 @@ def principalQuotientHasFiniteLength
     (R : Type u) [CommRing R] (a : R) : Prop :=
   IsFiniteLength R (R ⧸ Ideal.span ({a} : Set R))
 
+theorem principal_smul_span_eq
+    {R : Type u} [CommRing R] (a b : R) :
+    (({b} : Set R) • Ideal.span ({a} : Set R)) =
+      Ideal.span ({a * b} : Set R) := by
+  simp [← Ideal.submodule_span_eq, Submodule.set_smul_span, mul_comm]
+
 /- The source's exact sequence is already the canonical Mathlib sequence.  Its
-   middle term is written `R ⧸ (b • I)`, which is definitionally the target
-   used by `Ideal.mulQuot`; for `I = (a)` this is the source's `R/(ab)` after
-   the standard principal-ideal identification. -/
+   middle term is written `R ⧸ (b • I)`, with `principal_smul_span_eq`
+   providing the source's identification with `R/(ab)`. -/
 theorem principal_quotient_short_exact
     {R : Type u} [CommRing R] {a b : R}
     (_ha : a ∈ nonZeroDivisors R) (hb : b ∈ nonZeroDivisors R) :
     Function.Injective (Ideal.mulQuot b (Ideal.span ({a} : Set R))) ∧
       Function.Surjective (Ideal.quotOfMul b (Ideal.span ({a} : Set R))) ∧
         Function.Exact (Ideal.mulQuot b (Ideal.span ({a} : Set R)))
-          (Ideal.quotOfMul b (Ideal.span ({a} : Set R))) := by
+          (Ideal.quotOfMul b (Ideal.span ({a} : Set R))) ∧
+      (({b} : Set R) • Ideal.span ({a} : Set R)) =
+        Ideal.span ({a * b} : Set R) := by
   exact ⟨Ideal.mulQuot_injective (Ideal.span ({a} : Set R)) hb,
     Ideal.quotOfMul_surjective (Ideal.span ({a} : Set R)),
-    Ideal.exact_mulQuot_quotOfMul (Ideal.span ({a} : Set R))⟩
+    Ideal.exact_mulQuot_quotOfMul (Ideal.span ({a} : Set R)),
+    principal_smul_span_eq a b⟩
 
 theorem principal_quotient_length_additive
     {R : Type u} [CommRing R] [IsNoetherianRing R]
@@ -89,7 +98,7 @@ theorem principal_quotient_length_additive
     (Ideal.exact_mulQuot_quotOfMul (Ideal.span ({a} : Set R)))
   have hideal : (({b} : Set R) • Ideal.span ({a} : Set R)) =
       Ideal.span ({b * a} : Set R) := by
-    simp [← Ideal.submodule_span_eq, Submodule.set_smul_span]
+    simpa [mul_comm] using principal_smul_span_eq a b
   have hsmul : (({b} : Set R) • Ideal.span ({a} : Set R)) =
       b • Ideal.span ({a} : Set R) :=
     Submodule.singleton_set_smul (Ideal.span ({a} : Set R)) b
@@ -101,7 +110,7 @@ theorem principal_quotient_length_additive
    canonical fraction-field API needs the corresponding `KrullDimLE 1`
    instance, which is installed locally in this definition. -/
 noncomputable def orderOfVanishing
-    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    {R : Type u} {K : Type v} [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     (hnoetherian : IsNoetherianRing R)
     (hdim : ringKrullDim R = 1) : Kˣ → ℤ :=
@@ -120,7 +129,7 @@ noncomputable def fractionUnit
       (IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors hy))
 
 theorem orderOfVanishing_fractionUnit
-    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    {R : Type u} {K : Type v} [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
     (x y : R) (hx : x ∈ nonZeroDivisors R)
@@ -153,7 +162,7 @@ theorem orderOfVanishing_fractionUnit
 
 @[simp]
 theorem orderOfVanishing_mul
-    {R : Type u} {K : Type v} [CommRing R] [IsDomain R]
+    {R : Type u} {K : Type v} [CommRing R] [IsLocalRing R] [IsDomain R]
     [Field K] [Algebra R K] [IsFractionRing R K]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
     (x y : Kˣ) :
@@ -175,18 +184,6 @@ theorem orderOfVanishing_mul
 
 /-! ## Lattices and their finite colengths -/
 
-/- The tensor-product condition in the source is expressed by the equivalent
-   and more usable condition that the `K`-span of the submodule is `⊤`.  The
-   accompanying finite-generation condition is the source's finite
-   `R`-submodule condition. -/
-def IsLattice
-    (R : Type u) (K : Type v) (V : Type v)
-    [CommRing R] [Field K] [Algebra R K]
-    [AddCommGroup V] [Module K V] [Module R V]
-    [IsScalarTower R K V] (M : Submodule R V) : Prop :=
-  Module.Finite R (M : Type v) ∧
-    Submodule.span K (M : Set V) = (⊤ : Submodule K V)
-
 /- This records the source's warning about the DVR case as a usable theorem:
    the non-DVR freeness caution is deliberately not strengthened into a
    universal counterexample assertion. -/
@@ -196,11 +193,8 @@ theorem lattice_free_over_dvr
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (M : Submodule R V)
-    (hM : IsLattice R K V M) : Module.Free R (M : Type v) := by
-  let _ : Module.Finite R (M : Type v) := hM.1
-  let _ : Module.IsTorsionFree R V :=
-    Module.IsTorsionFree.trans_faithfulSMul R K V
-  exact Module.free_of_finite_type_torsion_free'
+    (hM : Submodule.IsLattice K M) : Module.Free R (M : Type v) := by
+  exact @Submodule.IsLattice.free R _ K _ _ V _ _ _ _ _ _ _ M hM
 
 abbrev latticeQuotient
     (R : Type u) {V : Type v} [CommRing R]
@@ -232,9 +226,9 @@ theorem lattice_comparison_upper
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : IsLattice R K V M) (hMM' : M ≤ M') :
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hMM' : M ≤ M') :
     List.TFAE
-      [ IsLattice R K V M',
+      [ Submodule.IsLattice K M',
         latticeQuotientHasFiniteLength R M M',
         Module.Finite R (M' : Type v) ] := by
   sorry
@@ -245,8 +239,8 @@ theorem lattice_comparison_lower
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : IsLattice R K V M) (hM'M : M' ≤ M) :
-    IsLattice R K V M' ↔ latticeQuotientHasFiniteLength R M' M := by
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hM'M : M' ≤ M) :
+    Submodule.IsLattice K M' ↔ latticeQuotientHasFiniteLength R M' M := by
   sorry
 
 theorem lattice_intersection_and_sum
@@ -255,9 +249,9 @@ theorem lattice_intersection_and_sum
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : IsLattice R K V M)
-    (hM' : IsLattice R K V M') :
-    IsLattice R K V (M ⊓ M') ∧ IsLattice R K V (M ⊔ M') := by
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
+    (hM' : Submodule.IsLattice K M') :
+    Submodule.IsLattice K (M ⊓ M') ∧ Submodule.IsLattice K (M ⊔ M') := by
   sorry
 
 theorem lattice_length_additive
@@ -266,8 +260,8 @@ theorem lattice_length_additive
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' M'' : Submodule R V) (hM : IsLattice R K V M)
-    (hM' : IsLattice R K V M') (hM'' : IsLattice R K V M'')
+    (M M' M'' : Submodule R V) (hM : Submodule.IsLattice K M)
+    (hM' : Submodule.IsLattice K M') (hM'' : Submodule.IsLattice K M'')
     (hMM' : M ≤ M') (hM'M'' : M' ≤ M'') :
     latticeLengthNat R M M'' =
       latticeLengthNat R M M' + latticeLengthNat R M' M'' := by
@@ -280,8 +274,8 @@ theorem lattice_length_comparison
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
     (M M' N N' : Submodule R V)
-    (hM : IsLattice R K V M) (hM' : IsLattice R K V M')
-    (hN : IsLattice R K V N) (hN' : IsLattice R K V N')
+    (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M')
+    (hN : Submodule.IsLattice K N) (hN' : Submodule.IsLattice K N')
     (hNM : N ≤ M ⊓ M') (hMM'N' : M ⊔ M' ≤ N') :
     latticeLengthInt R (M ⊓ M') M - latticeLengthInt R (M ⊓ M') M' =
         latticeLengthInt R N M - latticeLengthInt R N M' ∧
@@ -303,8 +297,8 @@ theorem latticeDistance_of_le
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : IsLattice R K V M)
-    (hM' : IsLattice R K V M') (hM'M : M' ≤ M) :
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
+    (hM' : Submodule.IsLattice K M') (hM'M : M' ≤ M) :
     latticeDistance R M M' = latticeLengthInt R M' M := by
   sorry
 
@@ -315,8 +309,8 @@ theorem latticeDistance_additive
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
     (M M' M'' : Submodule R V)
-    (hM : IsLattice R K V M) (hM' : IsLattice R K V M')
-    (hM'' : IsLattice R K V M'') :
+    (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M')
+    (hM'' : Submodule.IsLattice K M'') :
     latticeDistance R M M'' =
       latticeDistance R M M' + latticeDistance R M' M'' := by
   sorry
@@ -327,8 +321,8 @@ theorem latticeDistance_antisymm
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (M M' : Submodule R V) (hM : IsLattice R K V M)
-    (hM' : IsLattice R K V M') :
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
+    (hM' : Submodule.IsLattice K M') :
     latticeDistance R M M' = -latticeDistance R M' M := by
   sorry
 
@@ -348,8 +342,8 @@ theorem isLattice_latticeMap
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (φ : V ≃ₗ[K] V) (M : Submodule R V) (hM : IsLattice R K V M) :
-    IsLattice R K V (latticeMap φ M) := by
+    (φ : V ≃ₗ[K] V) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
+    Submodule.IsLattice K (latticeMap φ M) := by
   sorry
 
 theorem latticeDistance_latticeMap_pair
@@ -359,7 +353,7 @@ theorem latticeDistance_latticeMap_pair
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M M' : Submodule R V)
-    (hM : IsLattice R K V M) (hM' : IsLattice R K V M') :
+    (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R (latticeMap φ M) (latticeMap φ M') =
       latticeDistance R M M' := by
   sorry
@@ -371,7 +365,7 @@ theorem latticeDistance_map_independent
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
     (φ : V ≃ₗ[K] V) (M M' : Submodule R V)
-    (hM : IsLattice R K V M) (hM' : IsLattice R K V M') :
+    (hM : Submodule.IsLattice K M) (hM' : Submodule.IsLattice K M') :
     latticeDistance R M (latticeMap φ M) =
       latticeDistance R M' (latticeMap φ M') := by
   sorry
@@ -382,7 +376,7 @@ theorem latticeDistance_comp_decomposition
     [Field K] [Algebra R K] [IsFractionRing R K]
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] (hdim : ringKrullDim R = 1)
-    (φ ψ : V ≃ₗ[K] V) (M : Submodule R V) (hM : IsLattice R K V M) :
+    (φ ψ : V ≃ₗ[K] V) (M : Submodule R V) (hM : Submodule.IsLattice K M) :
     latticeDistance R M (latticeMap (ψ.trans φ) M) =
         latticeDistance R M (latticeMap ψ M) +
           latticeDistance R (latticeMap ψ M) (latticeMap (ψ.trans φ) M) ∧
@@ -409,7 +403,7 @@ theorem latticeDistance_map_eq_orderOfVanishing
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
-    (M : Submodule R V) (hM : IsLattice R K V M) (φ : V ≃ₗ[K] V) :
+    (M : Submodule R V) (hM : Submodule.IsLattice K M) (φ : V ≃ₗ[K] V) :
     latticeDistance R M (latticeMap φ M) =
       orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) := by
   sorry
@@ -435,7 +429,7 @@ theorem latticeDistance_transvection
     [AddCommGroup V] [Module K V] [Module R V]
     [IsScalarTower R K V] [Module.Finite K V]
     (hnoetherian : IsNoetherianRing R) (hdim : ringKrullDim R = 1)
-    (M : Submodule R V) (hM : IsLattice R K V M)
+    (M : Submodule R V) (hM : Submodule.IsLattice K M)
     {f : Module.Dual K V} {v : V} (hfv : f v = 0) :
     latticeDistance R M
         (latticeMap (LinearEquiv.transvection hfv) M) = 0 := by
@@ -453,7 +447,7 @@ theorem latticeDistance_elementaryDiagonal
     [IsFractionRing R K] (hnoetherian : IsNoetherianRing R)
     (hdim : ringKrullDim R = 1) (n : ℕ) (i : Fin n) (a : Kˣ)
     (M : Submodule R (Fin n → K))
-    (hM : IsLattice R K (Fin n → K) M) :
+    (hM : Submodule.IsLattice K M) :
     latticeDistance R M (latticeMap (elementaryDiagonal n i a) M) =
       orderOfVanishing hnoetherian hdim a := by
   sorry
@@ -485,6 +479,13 @@ noncomputable def localizedOrderOfVanishing
       (localizedFractionRingAt (B := B) (L := L) q))
     (hdim : ringKrullDim (localizedFractionRingAt (B := B) (L := L) q) = 1)
     (y : Lˣ) : ℤ :=
+  letI : IsLocalization q.asIdeal.primeCompl
+      (localizedFractionRingAt (B := B) (L := L) q) := by
+    unfold localizedFractionRingAt
+    infer_instance
+  letI : IsLocalRing (localizedFractionRingAt (B := B) (L := L) q) :=
+    IsLocalization.AtPrime.isLocalRing
+      (localizedFractionRingAt (B := B) (L := L) q) q.asIdeal
   orderOfVanishing hnoetherian hdim y
 
 theorem norm_eq_det_multiplication

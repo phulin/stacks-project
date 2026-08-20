@@ -22,7 +22,10 @@ open Formalization.Books.Derived.Unit03
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit10
 open Formalization.Books.Derived.Unit11
+open Formalization.Books.Derived.Unit14
 open Formalization.Books.Derived.Unit20
+open Formalization.Books.Categories.Unit22
+open Formalization.Books.Categories.Unit27
 open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe v u v' u' w w'
@@ -200,8 +203,7 @@ theorem rightDerivedFunctorPlus_isExact
           Formalization.Books.Derived.Unit14.rightDerivedIdentityIndex,
           P, q, MorphismProperty.Under.mk] ;
         constructor <;> intro h <;>
-          simpa [hJobj, hJmap, J, P, G0,
-            Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor] using h }
+          simpa [hJobj, hJmap, J, P, G0] using h }
   have hβ : ∀ (Y : HomotopyCategory.Plus (InjectiveObject A)),
       IsIso (β.app ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj Y)) := by
     intro Y
@@ -209,31 +211,164 @@ theorem rightDerivedFunctorPlus_isExact
       toPreadditive := inferInstance,
       toHasFiniteProducts := inferInstance }
     obtain ⟨I, rfl⟩ := HomotopyCategory.Plus.quotient_obj_surjective Y
+    let K : CompPlus A :=
+      (InjectiveObject.ι A).mapCochainComplexPlus.obj I
     have hI : IsTermwiseInjectiveComplex
-        ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) := by
+        K := by
       intro n
       change Injective ((InjectiveObject.ι A).obj (I.obj.X n))
       infer_instance
-    obtain ⟨hX, hXiso⟩ := termwiseInjectiveComplex_computes
-      (rightDerivedSourceFunctor F) ⟨hF⟩
-      ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) hI
+    let X : KPlus A := (HomotopyCategory.Plus.quotient A).obj K
     have hobj :
         (HomotopyCategory.Plus.quotient A).obj
             ((InjectiveObject.ι A).mapCochainComplexPlus.obj I) =
           (InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
             ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I) := by
       rfl
-    have hXiso' : IsIso (Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap
+    have hXiso : IsIso (Formalization.Books.Derived.Unit14.rightDerivedCanonicalMap
         (quasiIsoPlusProperty A) hS (rightDerivedSourceFunctor F)
         ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
           ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I))
         (hDef ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
           ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I)))) := by
+      let S : MorphismProperty (KPlus A) := quasiIsoPlusProperty A
+      let Qh := DerivedCategory.Plus.Qh (C := A)
+      let _ : Formalization.Books.Categories.Unit27.LeftMultiplicativeSystem S := hS.1.1
+      let _ : IsFiltered (Formalization.Books.Categories.Unit27.LeftDenominatorCategory S X) :=
+        Formalization.Books.Categories.Unit27.left_denominator_category_is_filtered X
+      have hK : CochainComplex.IsKInjective X.1.as := by
+        change CochainComplex.IsKInjective K.obj
+        obtain ⟨n, hn⟩ := K.property
+        let _ : K.obj.IsStrictlyGE n := hn
+        let _ : ∀ n : ℤ, Injective (K.obj.X n) := hI
+        exact CochainComplex.isKInjective_of_injective K.obj n
+      have hRetract : ∀ s : Formalization.Books.Categories.Unit27.LeftDenominatorCategory S X,
+          ∃ r : s.right ⟶ X, s.hom ≫ r = 𝟙 X := by
+        intro s
+        let _ : IsIso (Qh.map s.hom) := Localization.inverts Qh S s.hom s.prop
+        obtain ⟨r, hr⟩ :=
+          (DerivedCategory.Plus.Qh_map_bijective_of_isKInjective s.right X hK).surjective
+            (inv (Qh.map s.hom))
+        refine ⟨r, ?_⟩
+        apply
+          (DerivedCategory.Plus.Qh_map_bijective_of_isKInjective X X hK).injective
+        rw [Functor.map_comp, hr]
+        simp
+      let r : ∀ s : Formalization.Books.Categories.Unit27.LeftDenominatorCategory S X, s.right ⟶ X :=
+        fun s => (hRetract s).choose
+      have hr (s : Formalization.Books.Categories.Unit27.LeftDenominatorCategory S X) : s.hom ≫ r s = 𝟙 X :=
+        (hRetract s).choose_spec
+      have hRetractUnique (s : Formalization.Books.Categories.Unit27.LeftDenominatorCategory S X)
+          (a b : s.right ⟶ X) (ha : s.hom ≫ a = 𝟙 X)
+          (hb : s.hom ≫ b = 𝟙 X) : a = b := by
+        let _ : IsIso (Qh.map s.hom) := Localization.inverts Qh S s.hom s.prop
+        apply
+          (DerivedCategory.Plus.Qh_map_bijective_of_isKInjective s.right X hK).injective
+        apply (cancel_epi (Qh.map s.hom)).1
+        rw [← Qh.map_comp, ← Qh.map_comp, ha, hb]
+      let M := Formalization.Books.Derived.Unit14.rightDerivedDiagram S
+        (rightDerivedSourceFunctor F) X
+      let c : Cocone M :=
+        { pt := (rightDerivedSourceFunctor F).obj X
+          ι :=
+            { app := fun s => (rightDerivedSourceFunctor F).map (r s)
+              naturality := by
+                intro s t f
+                change (rightDerivedSourceFunctor F).map f.right ≫
+                    (rightDerivedSourceFunctor F).map (r t) =
+                  (rightDerivedSourceFunctor F).map (r s) ≫ 𝟙 _
+                simp only [Category.comp_id]
+                rw [← (rightDerivedSourceFunctor F).map_comp]
+                exact congrArg (fun q => (rightDerivedSourceFunctor F).map q)
+                  (hRetractUnique s (f.right ≫ r t) (r s)
+                    (by rw [← Category.assoc, MorphismProperty.Under.w f, hr])
+                    (hr s)) } }
+      let hX' : rightDerivedDefined S hS (rightDerivedSourceFunctor F) X :=
+        ⟨c, by
+          have hr₀ : r (rightDerivedIdentityIndex S X) = 𝟙 X := by
+            apply hRetractUnique (rightDerivedIdentityIndex S X)
+              (r (rightDerivedIdentityIndex S X)) (𝟙 X)
+            · exact hr (rightDerivedIdentityIndex S X)
+            · change (𝟙 X) ≫ 𝟙 X = 𝟙 X
+              simp
+          refine ⟨rightDerivedIdentityIndex S X, 𝟙 _, ?_, ?_⟩
+          · change 𝟙 ((rightDerivedSourceFunctor F).obj X) ≫
+                (rightDerivedSourceFunctor F).map
+              (r (rightDerivedIdentityIndex S X)) = 𝟙 _
+            rw [hr₀]
+            simp
+          · intro j
+            let g : j ⟶ rightDerivedIdentityIndex S X :=
+              MorphismProperty.Under.homMk (r j) (hr j)
+            refine ⟨rightDerivedIdentityIndex S X, 𝟙 _, g, ?_⟩
+            dsimp [rightDerivedIdentityIndex, MorphismProperty.Under.mk]
+            dsimp [M, c, g, Formalization.Books.Derived.Unit14.rightDerivedDiagram,
+              rightDerivedIdentityIndex,
+              MorphismProperty.Under.mk]
+            simp⟩
+      have hc' : IsEssentiallyConstantInd M
+          (rightDerivedCocone S hS (rightDerivedSourceFunctor F) X hX') := by
+        exact Classical.choose_spec hX'
+      obtain ⟨i, s, hs, hfactor⟩ := hc'
+      let gi : i ⟶ rightDerivedIdentityIndex S X :=
+        MorphismProperty.Under.homMk (r i) (hr i)
+      have hgi : M.map gi ≫
+          (rightDerivedCocone S hS (rightDerivedSourceFunctor F) X hX').ι.app
+            (rightDerivedIdentityIndex S X) =
+          (rightDerivedCocone S hS (rightDerivedSourceFunctor F) X hX').ι.app i := by
+        exact (rightDerivedCocone S hS (rightDerivedSourceFunctor F) X hX').w gi
+      obtain ⟨k, f, g, hfg⟩ := hfactor (rightDerivedIdentityIndex S X)
+      let gk : k ⟶ rightDerivedIdentityIndex S X :=
+        MorphismProperty.Under.homMk (r k) (hr k)
+      have hgk : g ≫ gk = 𝟙 (rightDerivedIdentityIndex S X) := by
+        dsimp [rightDerivedIdentityIndex, MorphismProperty.Under.mk] at g gk ⊢
+        apply MorphismProperty.Under.Hom.ext
+        rw [MorphismProperty.Comma.comp_right]
+        dsimp [MorphismProperty.Under.homMk]
+        change g.right ≫ r k = 𝟙 X
+        have hg : g.right = k.hom := by
+          simpa using MorphismProperty.Under.w g
+        rw [hg, hr k]
+      let a := (rightDerivedCocone S hS (rightDerivedSourceFunctor F) X hX').ι.app
+        (rightDerivedIdentityIndex S X)
+      let b := s ≫ M.map gi
+      let q := s ≫ M.map f ≫ M.map gk
+      have hba : b ≫ a = 𝟙 _ := by
+        dsimp [b]
+        rw [Category.assoc, hgi, hs]
+      have haq : a ≫ q = 𝟙 (M.obj (rightDerivedIdentityIndex S X)) := by
+        calc
+          a ≫ q = (a ≫ s ≫ M.map f) ≫ M.map gk := by simp [q, Category.assoc]
+          _ = M.map g ≫ M.map gk := by rw [hfg]
+          _ = M.map (g ≫ gk) := by rw [M.map_comp]
+          _ = 𝟙 _ := by rw [hgk]; simp
+      have hbq : b = q := by
+        calc
+          b = b ≫ 𝟙 _ := by simp
+          _ = b ≫ (a ≫ q) := by rw [haq]
+          _ = (b ≫ a) ≫ q := by simp [Category.assoc]
+          _ = q := by rw [hba]; apply Category.id_comp
+      have ha : IsIso a := by
+        let _ : IsIso a := IsIso.mk ⟨q, haq, by rw [← hbq, hba]; simp⟩
+        infer_instance
+      have haFinal : IsIso ((rightDerivedCocone S hS
+          (rightDerivedSourceFunctor F) X hX').ι.app
+            (rightDerivedIdentityIndex S X)) := by
+        simpa [a, rightDerivedIdentityIndex, MorphismProperty.Under.mk] using ha
+      let Y : KPlus A :=
+        (HomotopyCategory.Plus.quotient A).obj
+          ((InjectiveObject.ι A).mapCochainComplexPlus.obj I)
+      let hD0 : rightDerivedDefined S hS (rightDerivedSourceFunctor F) Y :=
+        hDef ((InjectiveObject.ι A).mapHomotopyCategoryPlus.obj
+          ((HomotopyCategory.Plus.quotient (InjectiveObject A)).obj I))
       rw [← hobj]
-      simpa only using hXiso
-    simpa [β, G0, J, P, Formalization.Books.Derived.Unit14.rightDerivedFunctor,
-      Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor,
-      Functor.mapHomotopyCategoryPlus] using hXiso'
+      change IsIso ((rightDerivedSourceFunctor F).map (𝟙 Y) ≫
+        (rightDerivedCocone S hS (rightDerivedSourceFunctor F) Y hD0).ι.app
+          (rightDerivedIdentityIndex S Y))
+      exact IsIso.comp_isIso'
+        (Functor.map_isIso (rightDerivedSourceFunctor F) (𝟙 Y)) haFinal
+    dsimp [β, G0, J, P, Functor.mapHomotopyCategoryPlus]
+    exact hXiso
   have hInv : (quasiIsoPlusProperty A).IsInvertedBy G0 := by
     have hInv0 := Formalization.Books.Derived.Unit14.rightDerivedEverywhereFunctor_inverts
       hS (rightDerivedSourceFunctor F) hDef

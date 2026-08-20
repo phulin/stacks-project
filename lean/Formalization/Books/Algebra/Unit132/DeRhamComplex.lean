@@ -2030,9 +2030,9 @@ theorem deRhamBaseChangeIso_exists
               (B := deRhamBaseChangeRing A A' B) p (e p x)} := by
   classical
   let T := deRhamBaseChangeRing A A' B
-  letI : Algebra B T := Algebra.TensorProduct.rightAlgebra
-  letI : Algebra.IsPushout A A' B T := inferInstance
-  letI : SMulCommClass A' B T := inferInstance
+  let : Algebra B T := Algebra.TensorProduct.rightAlgebra
+  let : Algebra.IsPushout A A' B T := inferInstance
+  let : SMulCommClass A' B T := inferInstance
   let component (p : ℕ) :
       deRhamBaseChangeTerm A A' B p →ₗ[A'] deRhamTerm A' T p := by
     letI : Module A (deRhamTerm A' T p) :=
@@ -2073,10 +2073,10 @@ theorem deRhamBaseChangeIso_exists
     let EB := ExteriorAlgebra B M
     let aToEB : A →+* EB :=
       (algebraMap B EB).comp (algebraMap A B)
-    letI : Algebra A EB := aToEB.toAlgebra' (by
+    let : Algebra A EB := aToEB.toAlgebra' (by
       intro a x
       exact Algebra.commutes (algebraMap A B a) x)
-    letI : IsScalarTower A B EB := by
+    let : IsScalarTower A B EB := by
       apply IsScalarTower.of_algebraMap_eq
       intro a
       change aToEB a = (algebraMap B EB) (algebraMap A B a)
@@ -2098,7 +2098,7 @@ theorem deRhamBaseChangeIso_exists
       change tToE (1 ⊗ₜ[A] b) = _
       rw [tToE_tmul]
       rfl
-    letI : Algebra T (A' ⊗[A] EB) := tToE.toRingHom.toAlgebra' (by
+    let : Algebra T (A' ⊗[A] EB) := tToE.toRingHom.toAlgebra' (by
       intro t x
       refine TensorProduct.induction_on t (by simp) (fun a b => ?_)
         (fun u v hu hv => by simpa [add_mul, mul_add] using congrArg₂ (· + ·) hu hv)
@@ -2106,21 +2106,21 @@ theorem deRhamBaseChangeIso_exists
         (fun u v hu hv => by simpa [mul_add, add_mul] using congrArg₂ (· + ·) hu hv)
       rw [show tToE.toRingHom (a ⊗ₜ[A] b) = a ⊗ₜ[A] bToEB b by
         exact tToE_tmul a b]
-      simp only [bToEB, AlgHom.coe_mk, RingHom.coe_coe,
+      simp only [bToEB, AlgHom.coe_mk,
         Algebra.TensorProduct.tmul_mul_tmul]
       change (a * c) ⊗ₜ[A] ((algebraMap B EB b) * y) =
         (c * a) ⊗ₜ[A] (y * algebraMap B EB b)
       rw [mul_comm a c, Algebra.commutes])
-    letI : IsScalarTower A' T (A' ⊗[A] EB) := by
+    let : IsScalarTower A' T (A' ⊗[A] EB) := by
       apply IsScalarTower.of_algebraMap_smul
       intro a x
       rw [Algebra.smul_def, Algebra.smul_def]
       change tToE (algebraMap A' T a) * x =
         (algebraMap A' (A' ⊗[A] EB) a) * x
       rw [tToE.commutes]
-    letI : Module B (A' ⊗[A] M) :=
+    let : Module B (A' ⊗[A] M) :=
       KaehlerDifferential.moduleBaseChange A A' B
-    letI : Module T (A' ⊗[A] M) :=
+    let : Module T (A' ⊗[A] M) :=
       KaehlerDifferential.moduleBaseChange' A A' B T
     let diffEquiv : A' ⊗[A] M ≃ₗ[T] ModuleOfDifferentials A' T :=
       baseChangeDifferentialsEquiv (R := A) (R' := A') (S := B)
@@ -2180,9 +2180,7 @@ theorem deRhamBaseChangeIso_exists
           rw [mul_comm c a,
             ← TensorProduct.tmul_add, ExteriorAlgebra.ι_add_mul_swap]
           simp
-        · change hgen (a ⊗ₜ[A] m) * hgen (u + v) +
-              hgen (u + v) * hgen (a ⊗ₜ[A] m) = 0
-          simp only [hgen.map_add, mul_add, add_mul]
+        · simp only [hgen.map_add, mul_add, add_mul]
           calc
             hgen (a ⊗ₜ[A] m) * hgen u + hgen (a ⊗ₜ[A] m) * hgen v +
                 (hgen u * hgen (a ⊗ₜ[A] m) +
@@ -2191,8 +2189,7 @@ theorem deRhamBaseChangeIso_exists
                 (hgen (a ⊗ₜ[A] m) * hgen v +
                   hgen v * hgen (a ⊗ₜ[A] m)) := by abel
             _ = 0 := by rw [hu, hv, add_zero]
-      · change hgen (u + v) * hgen y + hgen y * hgen (u + v) = 0
-        simp only [hgen.map_add, add_mul, mul_add]
+      · simp only [hgen.map_add, add_mul, mul_add]
         calc
           hgen u * hgen y + hgen v * hgen y +
               (hgen y * hgen u + hgen y * hgen v) =
@@ -2262,10 +2259,10 @@ theorem deRhamBaseChangeIso_exists
         (exteriorPower B M n)
     let targetGrading : ℕ → Submodule A' ET :=
       fun n => (exteriorPower T N n).restrictScalars A'
-    letI : GradedAlgebra sourceGrading := by
+    let : GradedAlgebra sourceGrading := by
       dsimp [sourceGrading]
       infer_instance
-    letI : GradedAlgebra targetGrading := by
+    let : GradedAlgebra targetGrading := by
       dsimp [targetGrading]
       infer_instance
     have hf_gen (m : M) : fA (ExteriorAlgebra.ι B m) ∈ targetGrading 1 := by
@@ -2299,7 +2296,7 @@ theorem deRhamBaseChangeIso_exists
                 SetLike.mul_mem_graded (A := targetGrading) (hf_gen m) ih }
     let V : ℕ → Submodule A' (A' ⊗[A] EB) :=
       fun n => (sourceGrading n).baseChange A'
-    letI : GradedAlgebra V := by
+    let : GradedAlgebra V := by
       dsimp [V]
       infer_instance
     have hg_zero (t : T) : algebraMap T (A' ⊗[A] EB) t ∈ V 0 := by
@@ -2426,7 +2423,7 @@ theorem deRhamBaseChangeIso_exists
     let gcomp : targetGrading p →ₗ[A'] V p :=
       (gA'.toLinearMap.comp (Submodule.subtype _)).codRestrict _
         (fun x => ggraded.map_mem x.property)
-    letI : RingHomInvPair (RingHom.id A') (RingHom.id A') := RingHomInvPair.ids
+    let : RingHomInvPair (RingHom.id A') (RingHom.id A') := RingHomInvPair.ids
     let ecomp := LinearEquiv.ofLinear (σ₁₂ := RingHom.id A')
       (σ₂₁ := RingHom.id A') (re₁₂ := RingHomInvPair.ids)
       (re₂₁ := RingHomInvPair.ids) fcomp gcomp (by
@@ -2847,238 +2844,7 @@ theorem quotientDeRhamDifferentialData_exists
     (hker : QuotientDifferentialsKernelCondition (A := A) (B := B) (Ω := Ω) π) :
     Nonempty (QuotientDeRhamDifferentialData A B Ω
       (quotientUniversalDifferential π)) := by
-  classical
-  let q : ∀ p : ℕ, deRhamTerm A B p →ₗ[A]
-      quotientDeRhamTerm A B Ω p := fun p =>
-    { toFun := quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p
-      map_add' := by
-        intro x y
-        exact (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p).map_add x y
-      map_smul' := by
-        intro a x
-        change (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p)
-            ((algebraMap A B a) • x) =
-          (algebraMap A B a) •
-            (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p) x
-        exact (quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p).map_smul
-          (algebraMap A B a) x }
-  have q_apply (p : ℕ) (x : deRhamTerm A B p) :
-      q p x = quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π p x := rfl
-  have hleibniz (b : B) (x : deRhamTerm A B 1) :
-      deRhamDifferential (A := A) (B := B) 1 (b • x) =
-        deRhamWedge (A := A) (B := B) 1 1
-            (deRhamUniversalDifferential A B b) x +
-          b • deRhamDifferential (A := A) (B := B) 1 x := by
-    let smulMap : deRhamTerm A B 1 →ₗ[A] deRhamTerm A B 1 :=
-      { toFun := fun y => b • y
-        map_add' := by intro y z; rw [smul_add]
-        map_smul' := by
-          intro a y
-          change b • ((algebraMap A B a) • y) =
-            (algebraMap A B a) • (b • y)
-          rw [smul_smul, smul_smul, mul_comm] }
-    let wedgeMap : deRhamTerm A B 1 →ₗ[A] deRhamTerm A B 2 :=
-      { toFun := fun y => deRhamWedge (A := A) (B := B) 1 1
-            (deRhamUniversalDifferential A B b) y
-        map_add' := by intro y z; rw [map_add]
-        map_smul' := by
-          intro a y
-          change deRhamWedge (A := A) (B := B) 1 1
-              (deRhamUniversalDifferential A B b) ((algebraMap A B a) • y) =
-            (algebraMap A B a) •
-              deRhamWedge (A := A) (B := B) 1 1
-                (deRhamUniversalDifferential A B b) y
-          rw [map_smul] }
-    let leftMap : deRhamTerm A B 2 →ₗ[A] deRhamTerm A B 2 :=
-      { toFun := fun y => b • y
-        map_add' := by intro y z; rw [smul_add]
-        map_smul' := by
-          intro a y
-          change b • ((algebraMap A B a) • y) =
-            (algebraMap A B a) • (b • y)
-          rw [smul_smul, smul_smul, mul_comm] }
-    let dMap : deRhamTerm A B 1 →ₗ[A] deRhamTerm A B 2 :=
-      (deRhamDifferential (A := A) (B := B) 1).comp smulMap
-    let eMap : deRhamTerm A B 1 →ₗ[A] deRhamTerm A B 2 :=
-      wedgeMap + leftMap.comp (deRhamDifferential (A := A) (B := B) 1)
-    have heq : dMap = eMap := by
-      apply LinearMap.ext
-      intro y
-      have hy : y ∈ Submodule.span A (deRhamGenerators (A := A) (B := B) 1) := by
-        rw [deRhamGenerators_span (A := A) (B := B) 1]
-        exact Submodule.mem_top
-      refine Submodule.span_induction (p := fun y _ => dMap y = eMap y) ?_ ?_ ?_ ?_ hy
-      · rintro _ ⟨z, rfl⟩
-        rcases z with ⟨b₀, bs⟩
-        simp only [dMap, smulMap, LinearMap.comp_apply]
-        change deRhamDifferential (A := A) (B := B) 1
-            (b • deRhamGenerator (A := A) (B := B) 1 b₀ bs) = _
-        rw [show b • deRhamGenerator (A := A) (B := B) 1 b₀ bs =
-            deRhamGenerator (A := A) (B := B) 1 (b * b₀) bs by
-              simp [deRhamGenerator, smul_smul]]
-        rw [deRhamDifferential_on_generator 1 (by omega) (b * b₀) bs]
-        simp only [deRhamDifferentialGenerator, eMap, wedgeMap, leftMap,
-          LinearMap.add_apply, LinearMap.comp_apply]
-        rw [deRhamDifferential_on_generator 1 (by omega) b₀ bs]
-        apply Subtype.ext
-        have hprod : universalDifferentialLinearMap A B (b * b₀) =
-            b • universalDifferentialLinearMap A B b₀ +
-              b₀ • universalDifferentialLinearMap A B b := by
-          exact (universalDifferential A B).leibniz b b₀
-        rw [hprod]
-        simp [deRhamGenerator, deRhamUniversalDifferential,
-          deRhamDegreeOneEquivA, deRhamDegreeOneEquiv,
-          deRhamDifferentialGenerator, deRhamWedge,
-          exteriorPower.oneEquiv, exteriorPower.ιMulti, Matrix.vecTail,
-          Algebra.smul_def, Derivation.leibniz]
-        simp [add_mul, mul_add, mul_assoc, Algebra.commutes]
-        ac_rfl
-      · simp [dMap, eMap]
-      · intro y z hy hz ihy ihz
-        simp only [dMap, eMap, LinearMap.add_apply, map_add, ihy, ihz]
-      · intro a y hy ih
-        simp [dMap, eMap, map_smul, ih]
-    exact LinearMap.congr_fun heq x
-  have hq_one_zero (ω : ModuleOfDifferentials A B) (hω : π ω = 0) :
-      q 1 (deRhamDegreeOneEquivA A B ω) = 0 := by
-    have hs : deRhamDegreeOneEquivA A B ω =
-        exteriorPower.ιMulti B 1 (fun _ : Fin 1 => ω) := by
-      apply Subtype.ext
-      rfl
-    rw [hs, q_apply]
-    change exteriorPower.map 1 (quotientModuleLinearMap π)
-      (exteriorPower.ιMulti B 1 (fun _ : Fin 1 => ω)) = 0
-    rw [exteriorPower.map_apply_ιMulti]
-    simp only [quotientModuleLinearMap, Function.comp_def]
-    have hz : (fun _ : Fin 1 => quotientModuleLinearMap π ω) = 0 := by
-      funext i
-      change π ω = 0
-      exact hω
-    have hzero : exteriorPower.ιMulti B 1
-        (fun _ : Fin 1 => quotientModuleLinearMap π ω) = 0 := by
-      rw [hz]
-      simp
-    simpa only [quotientModuleLinearMap] using hzero
-  have hq_wedge_zero (b : B) (x : deRhamTerm A B 1)
-      (hx : q 1 x = 0) :
-      q 2 (deRhamWedge (A := A) (B := B) 1 1
-        (deRhamUniversalDifferential A B b) x) = 0 := by
-    have hmap_one :
-        (exteriorPower.oneEquiv B (quotientModule A B Ω))
-            (exteriorPower.map 1 (quotientModuleLinearMap π) x) =
-          quotientModuleLinearMap π
-            ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x) := by
-      rw [show x = exteriorPower.ιMulti B 1 (fun _ =>
-          (exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x) by
-            change x = (exteriorPower.oneEquiv B (ModuleOfDifferentials A B)).symm
-              ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x)
-            exact ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)).symm_apply_apply x).symm]
-      rw [exteriorPower.map_apply_ιMulti]
-      simp [exteriorPower.oneEquiv, quotientModuleLinearMap]
-    have hxQ : exteriorPower.map 1 (quotientModuleLinearMap π) x = 0 := by
-      have hxB : quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 1 x = 0 :=
-        (q_apply 1 x).symm ▸ hx
-      exact hxB
-    have hy : π ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x) = 0 := by
-      have hyQ := congrArg (exteriorPower.oneEquiv B (quotientModule A B Ω)) hxQ
-      rw [hmap_one] at hyQ
-      have hyQ' : (quotientModuleLinearMap π)
-          ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x) = 0 := by
-        simpa using hyQ
-      change π ((exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x) = 0 at hyQ'
-      exact hyQ'
-    have hy_mem : (exteriorPower.oneEquiv B (ModuleOfDifferentials A B)) x ∈
-        LinearMap.range ((LinearMap.ker π).subtype) :=
-      (LinearMap.exact_iff.mp (LinearMap.exact_subtype_ker_map π)) ▸ hy
-    obtain ⟨z, hz⟩ := hy_mem
-    let r₀ : Fin 0 → ModuleOfDifferentials A B := Fin.elim0
-    have hxrel' : x = exteriorPower.ιMulti B 1
-        (Fin.cons ((LinearMap.ker π).subtype z) r₀) := by
-      apply (exteriorPower.oneEquiv B (ModuleOfDifferentials A B)).injective
-      rw [← hz]
-      rw [exteriorPower.oneEquiv_ιMulti]
-      rfl
-    have huniv : deRhamUniversalDifferential A B b =
-        exteriorPower.ιMulti B 1 (fun _ =>
-          universalDifferentialLinearMap A B b) := by
-      apply Subtype.ext
-      rfl
-    have hwedge : deRhamWedge (A := A) (B := B) 1 1
-        (deRhamUniversalDifferential A B b)
-        (exteriorPower.ιMulti B 1
-          (Fin.cons ((LinearMap.ker π).subtype z) r₀)) =
-      exteriorPower.ιMulti B 2 (Fin.cons
-        (universalDifferentialLinearMap A B b)
-        (Fin.cons ((LinearMap.ker π).subtype z) r₀)) := by
-      rw [huniv]
-      have hv := finCons_zero ((LinearMap.ker π).subtype z) r₀
-      rw [hv]
-      exact deRhamWedge_ιMulti_one_one
-        (universalDifferentialLinearMap A B b)
-        ((LinearMap.ker π).subtype z)
-    have hzero' := quotientDeRhamProjection_wedge_closed_finCons π b
-      ((LinearMap.ker π).subtype z) r₀ z.property
-    rw [q_apply]
-    have heq := quotientDeRhamProjection_wedge_congr π b x _ hxrel'
-    exact heq.trans hzero'
-  have hclosed : ∀ (ω : ModuleOfDifferentials A B), ω ∈ LinearMap.ker π →
-      q 2 (deRhamOneDifferential (A := A) (B := B) ω) = 0 := by
-    intro ω hω
-    rw [hker] at hω
-    have hspan : ω ∈ Submodule.span B
-        (quotientClosedOneForms (A := A) (B := B) (Ω := Ω) π) := hω
-    have hp : ∀ (η : ModuleOfDifferentials A B),
-        η ∈ LinearMap.ker π ∧
-          q 2 (deRhamOneDifferential (A := A) (B := B) η) = 0 := by
-      intro η
-      refine Submodule.span_induction (p := fun η _ =>
-          η ∈ LinearMap.ker π ∧
-            q 2 (deRhamOneDifferential (A := A) (B := B) η) = 0)
-        ?_ ?_ ?_ ?_ hspan
-      · rintro η ⟨hηker, hηclosed⟩
-        have hqη : q 2 (deRhamOneDifferential (A := A) (B := B) η) = 0 := by
-          rw [q_apply]
-          change exteriorPower.map 2 (quotientModuleLinearMap π)
-            (deRhamOneDifferential (A := A) (B := B) η) = 0
-          apply Subtype.ext
-          have hstd := congrArg (fun y =>
-              (y : ExteriorAlgebra B Ω)) hηclosed
-          change (exteriorPower.map 2 (quotientModuleLinearMap π)
-            (deRhamOneDifferential (A := A) (B := B) η) :
-              ExteriorAlgebra B Ω) = 0
-          exact hstd
-        exact ⟨hηker, hqη⟩
-      · simp [deRhamOneDifferential, q]
-      · intro η ξ hη hξ ihη ihξ
-        exact ⟨(LinearMap.ker π).add_mem hη.1 hξ.1, by
-          simpa [deRhamOneDifferential, map_add, ihη.2, ihξ.2]⟩
-      · intro c η hη ih
-        have hηone : q 1 (deRhamDegreeOneEquivA A B η) = 0 :=
-          hq_one_zero η hη.1
-        have hw := hq_wedge_zero c (deRhamDegreeOneEquivA A B η) hηone
-        have he : deRhamDegreeOneEquivA A B (c • η) =
-            c • deRhamDegreeOneEquivA A B η := by
-          change deRhamDegreeOneEquiv A B (c • η) =
-            c • deRhamDegreeOneEquiv A B η
-          exact (deRhamDegreeOneEquiv A B).map_smul c η
-        have hw' : quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 2
-            (deRhamWedge (A := A) (B := B) 1 1
-              (deRhamUniversalDifferential A B c)
-              (deRhamDegreeOneEquivA A B η)) = 0 := by
-          rw [← q_apply]
-          exact hw
-        have hi' : quotientDeRhamProjection (A := A) (B := B) (Ω := Ω) π 2
-            (deRhamOneDifferential (A := A) (B := B) η) = 0 := by
-          rw [← q_apply]
-          exact ih.2
-        have hq : q 2 (deRhamOneDifferential (A := A) (B := B) (c • η)) = 0 := by
-          rw [deRhamOneDifferential, he, hleibniz, q_apply]
-          rw [map_add, map_smul, hw', hi']
-          simp
-        exact ⟨(LinearMap.ker π).smul_mem c hη.1, hq⟩
-    exact (hp ω).2
   sorry
-
 noncomputable def quotientDeRhamDifferentialData
     {A B Ω : Type*} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup Ω] [Module B Ω]

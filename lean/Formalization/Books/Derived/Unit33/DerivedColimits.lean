@@ -103,7 +103,8 @@ noncomputable def DerivedColimitPresentation.coproductMap
 /-- The existence assertion supplied by TR1 once the coproduct exists. -/
 theorem exists_isDerivedColimit (F : SequentialSystem C)
     [HasCoproduct (fun n => F.obj n)] : ∃ K : C, IsDerivedColimit F K := by
-  sorry
+  obtain ⟨K, g, c, h⟩ := distinguished_cone_exists (hocolimDifferenceMap F)
+  exact ⟨K, g, c, h⟩
 
 /-- A chosen homotopy colimit, used only when an existence witness has been
 fixed. -/
@@ -122,7 +123,41 @@ theorem presentation_of_isDerivedColimit
     {F : SequentialSystem C} {K : C}
     [HasCoproduct (fun n => F.obj n)] (hK : IsDerivedColimit F K) :
     Nonempty (DerivedColimitPresentation F K) := by
-  sorry
+  rcases hK with ⟨i, c, hi⟩
+  have hzero : hocolimDifferenceMap F ≫ i = 0 :=
+    comp_distTriang_mor_zero₁₂ _ hi
+  let ι : ∀ n, F.obj n ⟶ K := fun n => Sigma.ι (fun n => F.obj n) n ≫ i
+  have hsucc (m : ℕ) : sequentialTransition F m ≫ ι (m + 1) = ι m := by
+    have hh := congrArg (fun t => Sigma.ι (fun n => F.obj n) m ≫ t) hzero
+    unfold hocolimDifferenceMap at hh
+    rw [← Category.assoc, Sigma.ι_desc] at hh
+    rw [sub_comp, comp_zero, Category.assoc] at hh
+    dsimp [ι]
+    exact (sub_eq_zero.mp hh).symm
+  refine ⟨{ ι := ι, compatible := ?_, c := c, distinguished := ?_ }⟩
+  · intro m n f
+    obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_le (leOfHom f)
+    obtain rfl := Subsingleton.elim f (homOfLE (by omega))
+    revert m n
+    induction k with
+    | zero =>
+        intro m n hk
+        obtain rfl : n = m := by omega
+        simp
+    | succ k hk =>
+        intro m n hk'
+        obtain rfl : n = m + k + 1 := by omega
+        rw [← homOfLE_comp (show m ≤ m + k by omega)
+          (show m + k ≤ m + k + 1 by omega), F.map_comp, Category.assoc]
+        change F.map (homOfLE (show m ≤ m + k by omega)) ≫
+          sequentialTransition F (m + k) ≫ ι ((m + k) + 1) = ι m
+        rw [hsucc]
+        exact hk rfl
+  · have hiι : Sigma.desc ι = i := by
+      ext n
+      simp [ι]
+    rw [hiι]
+    exact hi
 
 /-- The TR3 uniqueness statement for two presented derived colimits. -/
 theorem derivedColimit_iso_of_presentations
@@ -132,7 +167,22 @@ theorem derivedColimit_iso_of_presentations
     (p' : DerivedColimitPresentation F K') :
     ∃ e : K ≅ K',
       (∀ n, p.ι n ≫ e.hom = p'.ι n) ∧ e.hom ≫ p'.c = p.c := by
-  sorry
+  obtain ⟨eT, h₁, h₂⟩ :=
+    distinguished_cone_unique p.distinguished p'.distinguished
+  let e : K ≅ K' := Triangle.π₃.mapIso eT
+  have he : eT.hom.hom₃ = e.hom := by rfl
+  refine ⟨e, ?_, ?_⟩
+  · intro n
+    have h := eT.hom.comm₂
+    dsimp [Triangle.mk] at h
+    rw [he, h₂] at h
+    simp only [Category.id_comp] at h
+    have hn := congrArg (fun t => Sigma.ι (fun n => F.obj n) n ≫ t) h
+    simpa only [← Category.assoc, Sigma.ι_desc] using hn
+  · have h := eT.hom.comm₃.symm
+    dsimp [Triangle.mk] at h
+    rw [he, h₁] at h
+    simpa using h
 
 /-- A derived colimit object is unique up to isomorphism, without exposing a
 chosen stagewise presentation in the statement. -/
@@ -156,7 +206,22 @@ theorem derivedColimit_map
     ∃ φ : K ⟶ L,
       (∀ n, p.ι n ≫ φ = a.app n ≫ q.ι n) ∧
         φ ≫ q.c = p.c ≫ (sequentialCoproductMap F G a)⟦(1 : ℤ)⟧' := by
-  sorry
+  let s := sequentialCoproductMap F G a
+  have hdiff : hocolimDifferenceMap F ≫ s = s ≫ hocolimDifferenceMap G := by
+    apply Sigma.hom_ext
+    intro n
+    simp [s, hocolimDifferenceMap, sequentialCoproductMap, sequentialTransition]
+  obtain ⟨φ, hφ₂, hφ₃⟩ :=
+    Pretriangulated.complete_distinguished_triangle_morphism
+      _ _ p.distinguished q.distinguished s s hdiff
+  dsimp [Triangle.mk] at φ hφ₂ hφ₃
+  refine ⟨φ, ?_, ?_⟩
+  · intro n
+    have hn := congrArg (fun t => Sigma.ι (fun n => F.obj n) n ≫ t) hφ₂
+    simp only [← Category.assoc, Sigma.ι_desc, s, sequentialCoproductMap] at hn
+    rw [Category.assoc, Sigma.ι_desc] at hn
+    exact hn
+  · simpa [s] using hφ₃.symm
 
 /-! ## Passing to a cofinal subsequence -/
 

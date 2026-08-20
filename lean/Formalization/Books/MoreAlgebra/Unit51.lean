@@ -70,10 +70,8 @@ def HasPropertyOnFibres
 def HasFormalFiberAtProperty
     (P : RingMapProperty)
     (R : Type u) [CommRing R] (p q : PrimeSpectrum R) : Prop :=
-  letI : Algebra R (completionAtPrime R p) :=
-    completionAtPrimeAlgebra R p
-  letI : Algebra R q.asIdeal.ResidueField :=
-    primeResidueFieldAlgebra R q
+  letI : Algebra R (completionAtPrime R p) := completionAtPrimeAlgebra R p
+  letI : Algebra R q.asIdeal.ResidueField := primeResidueFieldAlgebra R q
   letI : Module R (completionAtPrime R p) := Algebra.toModule
   letI : Module R q.asIdeal.ResidueField := Algebra.toModule
   letI : Algebra q.asIdeal.ResidueField (formalFiberAt R p q) :=

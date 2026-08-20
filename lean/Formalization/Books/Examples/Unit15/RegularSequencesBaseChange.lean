@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Module.Torsion.Free
 import Mathlib.Algebra.Module.RingHom
 import Mathlib.Algebra.TrivSqZeroExt.Basic
+import Mathlib.LinearAlgebra.ExteriorPower.Basis
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial
@@ -245,7 +246,102 @@ theorem koszulH₂_not_isZero_of_common_annihilator
     {S : Type u} [CommRing S] {x y a : S}
     (ha : a ≠ 0) (hxa : x * a = 0) (hya : y * a = 0) :
     ¬ IsZero (koszulH₂ x y) := by
-  sorry
+  intro hz
+  let K₀ :=
+    Formalization.Books.MoreAlgebra.Unit30.koszulComplexOnList S [x, y]
+  let K :=
+    Formalization.Books.MoreAlgebra.Unit30.koszulComplexOnListWithCoefficients
+      S S [x, y]
+  have hK : IsZero (K.homology 2) := hz
+  have hKexact : K.ExactAt 2 :=
+    (HomologicalComplex.exactAt_iff_isZero_homology (K := K) (i := 2)).2 hK
+  have hK₀exact : K₀.ExactAt 2 :=
+    hKexact.of_iso (HomologicalComplex.rightUnitor K₀)
+  let φ : (Fin 2 → S) →ₗ[S] S :=
+    Formalization.Books.MoreAlgebra.Unit29.sequenceLinearMap S 2
+      (fun i => [x, y].get i)
+  have hK₀d₃ : K₀.d 3 2 = 0 := by
+    change ModuleCat.ofHom
+      (Formalization.Books.MoreAlgebra.Unit29.koszulDifferential
+        S (Fin 2 → S) φ 2) = 0
+    apply ModuleCat.hom_ext
+    apply exteriorPower.linearMap_ext
+    ext v
+    let b := Pi.basisFun S (Fin 2)
+    let B := b.exteriorPower 3
+    have hEmpty : IsEmpty (Set.powersetCard (Fin 2) 3) := by
+      constructor
+      intro s
+      have hle := Finset.card_le_univ s.1
+      have hle' : s.1.card ≤ 2 := by
+        simpa only [Finset.card_univ, Fintype.card_fin] using hle
+      have hcard' : s.1.card = 3 := Set.powersetCard.card_eq s
+      omega
+    have hsub : Subsingleton (⋀[S]^3 (Fin 2 → S)) := by
+      constructor
+      intro p q
+      apply B.repr.injective
+      ext i
+      exact False.elim (hEmpty.false i)
+    have hzv : exteriorPower.ιMulti S 3 v = 0 :=
+      @Subsingleton.elim (⋀[S]^3 (Fin 2 → S)) hsub _ _
+    simp only [LinearMap.compAlternatingMap_apply]
+    rw [hzv]
+    simp
+  let e₀ : Fin 2 → S := ![1, 0]
+  let e₁ : Fin 2 → S := ![0, 1]
+  let v₂ : Fin 2 → (Fin 2 → S) := ![e₀, e₁]
+  let w : K₀.X 2 := a • exteriorPower.ιMulti S 2 v₂
+  have hw : K₀.d 2 1 w = 0 := by
+    change Formalization.Books.MoreAlgebra.Unit29.koszulDifferential
+      S (Fin 2 → S) φ 1 (a • exteriorPower.ιMulti S 2 v₂) = 0
+    rw [map_smul,
+      Formalization.Books.MoreAlgebra.Unit29.koszulDifferential_apply_ιMulti]
+    rw [Fin.sum_univ_two]
+    simp [v₂, e₀, e₁, φ,
+      Formalization.Books.MoreAlgebra.Unit29.sequenceLinearMap_apply, hxa, hya,
+      smul_smul, mul_comm]
+  have hsc : (K₀.sc' 3 2 1).Exact :=
+    (HomologicalComplex.exactAt_iff' (K := K₀) (i := 3) (j := 2) (k := 1)
+      (by simp) (by simp)).1 hK₀exact
+  obtain ⟨b, hb⟩ :=
+    (ShortComplex.moduleCat_exact_iff (K₀.sc' 3 2 1)).1 hsc w hw
+  have hw₀ : w = 0 := by
+    change K₀.d 3 2 b = w at hb
+    rw [← hb, hK₀d₃]
+    rfl
+  let b₂ := Pi.basisFun S (Fin 2)
+  let e₂ : Fin 2 ↪o Fin 2 := (OrderIso.refl _).toOrderEmbedding
+  let s₂ : Set.powersetCard (Fin 2) 2 :=
+    Set.powersetCard.ofFinEmbEquiv e₂
+  have hv₂ : exteriorPower.ιMulti_family S 2 b₂ s₂ =
+      exteriorPower.ιMulti S 2 v₂ := by
+    apply congrArg (exteriorPower.ιMulti S 2)
+    funext i
+    fin_cases i <;> ext j <;> fin_cases j <;>
+      simp [s₂, e₂, b₂, v₂, e₀, e₁]
+  let ω : (Fin 2 → S) [⋀^(Fin 2)]→ₗ[S] S :=
+    (exteriorPower.alternatingMapLinearEquiv (R := S) (n := 2)).symm
+      (exteriorPower.ιMultiDual S 2 b₂ s₂)
+  have hω : ω v₂ = 1 := by
+    change exteriorPower.ιMultiDual S 2 b₂ s₂
+      (exteriorPower.ιMulti S 2 v₂) = 1
+    rw [← hv₂]
+    exact exteriorPower.ιMultiDual_apply_diag S 2 b₂ s₂
+  have ha0 := congrArg (exteriorPower.alternatingMapLinearEquiv ω) hw₀
+  have hAw : (exteriorPower.alternatingMapLinearEquiv ω) w = a := by
+    change (exteriorPower.alternatingMapLinearEquiv ω)
+      (a • exteriorPower.ιMulti S 2 v₂) = a
+    calc
+      (exteriorPower.alternatingMapLinearEquiv ω)
+          (a • exteriorPower.ιMulti S 2 v₂) =
+          a • (exteriorPower.alternatingMapLinearEquiv ω)
+            (exteriorPower.ιMulti S 2 v₂) := map_smul _ _ _
+      _ = a • ω v₂ := by
+        rw [exteriorPower.alternatingMapLinearEquiv_apply_ιMulti]
+      _ = a := by rw [hω]; simp
+  apply ha
+  exact hAw.symm.trans (ha0.trans (map_zero _))
 
 /-- The regular-sequence predicate used below, reusing Mathlib's list API. -/
 abbrev IsRegularSequence (S : Type u) [CommRing S] (rs : List S) : Prop :=
@@ -259,12 +355,36 @@ noncomputable def strangeTopLeftToTopMiddle (k : Type u) [Field k] :
   let fxy : YLocalization k →ₗ[PolynomialRing k] XYLocalization k :=
     { toFun := yLocalizationToXY k
       map_add' := by intro a b; exact (yLocalizationToXY k).map_add a b
-      map_smul' := by sorry }
+      map_smul' := by
+        intro r a
+        simp only [Algebra.smul_def, map_mul, yLocalizationToXY,
+          IsLocalization.Away.awayToAwayLeft_eq, RingHom.id_apply] }
   let f : StrangeTopLeftNumerator k →ₗ[PolynomialRing k] StrangeTopMiddle k :=
     (yTimesXLocalizationInXY k).mkQ.comp
       (fxy.comp
         (xTimesYLocalization k).subtype)
-  exact (strangeTopLeftDenominator k).liftQ f (by sorry)
+  exact (strangeTopLeftDenominator k).liftQ f (by
+    intro a ha
+    rw [LinearMap.mem_ker]
+    change (yTimesXLocalizationInXY k).mkQ
+      (yLocalizationToXY k (a : YLocalization k)) = 0
+    apply (Submodule.Quotient.mk_eq_zero
+      (p := yTimesXLocalizationInXY k)
+      (x := yLocalizationToXY k (a : YLocalization k))).2
+    change (a : YLocalization k) ∈
+      Submodule.span (PolynomialRing k)
+        {algebraMap (PolynomialRing k) (YLocalization k)
+          (xPolynomial k * yPolynomial k)} at ha
+    rcases Submodule.mem_span_singleton.mp ha with ⟨r, hr⟩
+    apply Submodule.subset_span
+    refine ⟨algebraMap (PolynomialRing k) (XLocalization k)
+      (xPolynomial k * r), ?_⟩
+    have hmap := congrArg (yLocalizationToXY k) hr
+    rw [← hmap]
+    simp [Algebra.smul_def, xLocalizationToXY, yLocalizationToXY,
+      IsLocalization.Away.awayToAwayLeft_eq,
+      IsLocalization.Away.awayToAwayRight_eq, map_mul,
+      mul_comm, mul_left_comm])
 
 noncomputable def strangeTopLeftToBottomLeft (k : Type u) [Field k] :
     StrangeTopLeft k →ₗ[PolynomialRing k] StrangeBottomLeft k := by
@@ -273,11 +393,74 @@ noncomputable def strangeTopLeftToBottomLeft (k : Type u) [Field k] :
   let mz : YLocalization k →ₗ[PolynomialRing k] YLocalization k :=
     LinearMap.lsmul (PolynomialRing k) (YLocalization k) (zPolynomial k)
   let emx : YLocalization k ≃ₗ[PolynomialRing k] StrangeTopLeftNumerator k :=
-    LinearEquiv.ofBijective mx.rangeRestrict (by sorry)
+    LinearEquiv.ofBijective mx.rangeRestrict (by
+      constructor
+      · intro a b hab
+        have hx : algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) ≠ 0 :=
+          IsLocalization.to_map_ne_zero_of_mem_nonZeroDivisors
+            (S := YLocalization k)
+            (powers_le_nonZeroDivisors_of_noZeroDivisors
+              (x := yPolynomial k)
+              (by simp [yPolynomial, polynomialVariable]))
+            (mem_nonZeroDivisors_iff_ne_zero.mpr
+              (by simp [xPolynomial, polynomialVariable]))
+        have hmul :
+            algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) * a =
+              algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) * b := by
+          have hab' := congrArg (fun q : mx.range => (q : YLocalization k)) hab
+          change mx a = mx b at hab'
+          simpa only [mx, LinearMap.lsmul_apply, Algebra.smul_def] using
+            hab'
+        exact mul_left_cancel₀ hx hmul
+      · intro a
+        rcases a.property with ⟨b, hb⟩
+        exact ⟨b, Subtype.ext hb⟩)
   let f : StrangeTopLeftNumerator k →ₗ[PolynomialRing k] YLocalization k :=
     mz.comp emx.symm.toLinearMap
   exact (strangeTopLeftDenominator k).liftQ
-    ((yzPolynomialSubmodule k).mkQ.comp f) (by sorry)
+    ((yzPolynomialSubmodule k).mkQ.comp f) (by
+      intro a ha
+      rw [LinearMap.mem_ker]
+      change (yzPolynomialSubmodule k).mkQ (mz (emx.symm a)) = 0
+      apply (Submodule.Quotient.mk_eq_zero
+        (p := yzPolynomialSubmodule k) (x := mz (emx.symm a))).2
+      change (a : YLocalization k) ∈
+        Submodule.span (PolynomialRing k)
+          {algebraMap (PolynomialRing k) (YLocalization k)
+            (xPolynomial k * yPolynomial k)} at ha
+      rcases Submodule.mem_span_singleton.mp ha with ⟨r, hr⟩
+      have hx : algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) ≠ 0 :=
+        IsLocalization.to_map_ne_zero_of_mem_nonZeroDivisors
+          (S := YLocalization k)
+          (powers_le_nonZeroDivisors_of_noZeroDivisors
+            (x := yPolynomial k)
+            (by simp [yPolynomial, polynomialVariable]))
+          (mem_nonZeroDivisors_iff_ne_zero.mpr
+            (by simp [xPolynomial, polynomialVariable]))
+      have hmx : mx (emx.symm a) = (a : YLocalization k) := by
+        have h := congrArg Subtype.val (emx.apply_symm_apply a)
+        change mx (emx.symm a) = (a : YLocalization k) at h
+        exact h
+      have hc : emx.symm a =
+          algebraMap (PolynomialRing k) (YLocalization k) (yPolynomial k * r) := by
+        apply mul_left_cancel₀ hx
+        calc
+          algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) *
+              emx.symm a = (a : YLocalization k) := by
+                simpa [mx, LinearMap.lsmul, Algebra.smul_def] using hmx
+          _ = r • algebraMap (PolynomialRing k) (YLocalization k)
+                (xPolynomial k * yPolynomial k) := hr.symm
+          _ = algebraMap (PolynomialRing k) (YLocalization k) (xPolynomial k) *
+                algebraMap (PolynomialRing k) (YLocalization k) (yPolynomial k * r) := by
+                simp [Algebra.smul_def, map_mul, mul_comm, mul_left_comm]
+      rw [hc]
+      have hyz : algebraMap (PolynomialRing k) (YLocalization k)
+          (yPolynomial k * zPolynomial k) ∈ yzPolynomialSubmodule k := by
+        apply Submodule.subset_span
+        rfl
+      simpa [mz, LinearMap.lsmul_apply, Algebra.smul_def, map_mul,
+        mul_assoc, mul_comm, mul_left_comm] using
+        (yzPolynomialSubmodule k).smul_mem r hyz)
 
 noncomputable def strangeTopMiddleToStrangeRight (k : Type u) [Field k] :
     StrangeTopMiddle k →ₗ[PolynomialRing k] StrangeRight k := by

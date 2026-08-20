@@ -1661,7 +1661,29 @@ theorem quasiFiniteAt_of_finite_composite
     (hrq : PrimeSpectrum.comap g r = q)
     (hquasi : IsQuasiFiniteAt (g.comp f) r) :
     IsQuasiFiniteAt g r := by
-  sorry
+  let : Algebra A B := f.toAlgebra
+  let : Algebra B C := g.toAlgebra
+  let : Algebra A C := (g.comp f).toAlgebra
+  have hcompat : PrimeSpectrum.comap (g.comp f) r = p := by
+    change PrimeSpectrum.comap f (PrimeSpectrum.comap g r) = p
+    rw [hrq, hqp]
+  have hqcomp : Algebra.QuasiFiniteAt A r.asIdeal :=
+    (show PrimeSpectrum.comap (g.comp f) r = p ∧
+        Algebra.QuasiFiniteAt A r.asIdeal from ⟨hcompat, hquasi.2⟩).2
+  let : Algebra.QuasiFiniteAt A r.asIdeal := hqcomp
+  let : IsScalarTower A B (Localization.AtPrime r.asIdeal) := by
+    apply IsScalarTower.of_algebraMap_eq'
+    ext x
+    calc
+      algebraMap A (Localization.AtPrime r.asIdeal) x =
+          algebraMap C (Localization.AtPrime r.asIdeal) ((g.comp f) x) :=
+        (IsScalarTower.algebraMap_apply A C (Localization.AtPrime r.asIdeal) x).symm
+      _ = algebraMap C (Localization.AtPrime r.asIdeal) (g (f x)) := by rfl
+      _ = algebraMap B (Localization.AtPrime r.asIdeal) (f x) :=
+        IsScalarTower.algebraMap_apply B C (Localization.AtPrime r.asIdeal) (f x)
+  have hqg : Algebra.QuasiFiniteAt B r.asIdeal :=
+    Algebra.QuasiFinite.of_restrictScalars A B (Localization.AtPrime r.asIdeal)
+  exact ⟨RingHom.FiniteType.of_comp_finiteType hfinite, hqg⟩
 
 /- A minimal prime is represented by membership in the canonical
    `minimalPrimes` set, and the localized finite map is Mathlib's

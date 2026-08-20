@@ -146,7 +146,31 @@ theorem glue_valuation_ring
     [ValuationRing (s.B : Type u)] :
     ∀ u : (s.A : Type u)ˣ,
       (u : K) ∈ s.R ∨ (u : K)⁻¹ ∈ s.R := by
-  sorry
+  intro u
+  rcases @ValuationRing.isInteger_or_isInteger (s.B : Type u) _ _ K _ _
+      s.B_isFractionRing inferInstance (u : K) with h | h
+  · left
+    have huB : (u : K) ∈ s.B := by
+      rcases h with ⟨b, hb⟩
+      rw [← hb]
+      exact b.property
+    change (u : K) ∈ s.A ∧ (u : K) ∈ s.B
+    constructor
+    · exact u.val.property
+    · exact huB
+  · right
+    have huB : (u : K)⁻¹ ∈ s.B := by
+      rcases h with ⟨b, hb⟩
+      rw [← hb]
+      exact b.property
+    have huA : (u : K)⁻¹ ∈ s.A := by
+      change (algebraMap (s.A : Type u) K (u : s.A))⁻¹ ∈ s.A
+      rw [← map_units_inv]
+      exact u⁻¹.val.property
+    change (u : K)⁻¹ ∈ s.A ∧ (u : K)⁻¹ ∈ s.B
+    constructor
+    · exact huA
+    · exact huB
 
 /-- Lemma `lemma-glue-separated`. -/
 theorem glue_separated

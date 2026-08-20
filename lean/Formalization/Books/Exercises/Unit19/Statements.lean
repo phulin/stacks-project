@@ -985,7 +985,6 @@ private lemma source_sum_ne_zero :
       (Ideal.mem_span_singleton_self (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)))
     change q (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) = 0 at h
     rw [map_add, map_pow] at h
-    norm_num at h
     exact h
   have hS : sourceRelationsIdeal ≤ RingHom.ker f := by
     rw [sourceRelationsIdeal, Ideal.span_le]
@@ -994,10 +993,10 @@ private lemma source_sum_ne_zero :
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
     rcases hp with rfl | rfl
     · rw [sourceSRelation]
-      simp [f, MvPolynomial.eval₂Hom_X']
-      convert hquad using 1 <;> norm_num [map_ofNat]
+      simp [f]
+      convert hquad using 1 ; norm_num [map_ofNat]
     · rw [sourceTRelation]
-      simp [f, MvPolynomial.eval₂Hom_X']
+      simp [f]
   let F : sourceRing →+* quadraticAuxiliaryRing :=
     Ideal.Quotient.lift sourceRelationsIdeal f (by
       intro a ha
@@ -1005,7 +1004,7 @@ private lemma source_sum_ne_zero :
   intro h
   have h' := congrArg F h
   dsimp [F] at h'
-  simp only [map_add, map_zero, Ideal.Quotient.lift_mk] at h'
+  simp only [map_add, map_zero] at h'
   have h'' : q Polynomial.X = 0 := by
     simpa [f] using h'
   exact quadraticAuxiliary_X_ne_zero h''
@@ -1022,7 +1021,6 @@ private lemma plane_y_ne_zero :
       (Ideal.mem_span_singleton_self (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)))
     change q (Polynomial.X ^ 2 + Polynomial.C (24 : ℚ)) = 0 at h
     rw [map_add, map_pow] at h
-    norm_num at h
     exact h
   have hP : Ideal.span {planeRelation} ≤ RingHom.ker f := by
     rw [Ideal.span_le]
@@ -1031,7 +1029,7 @@ private lemma plane_y_ne_zero :
     simp only [Set.mem_singleton_iff] at hp
     subst p
     rw [planeRelation]
-    simp [f, planeFirstCubic, planeSecondCubic, MvPolynomial.eval₂Hom_X']
+    simp [f, planeFirstCubic, planeSecondCubic]
     convert congrArg (fun z : quadraticAuxiliaryRing => z ^ 2) hquad using 1 <;>
       norm_num [map_ofNat]
   let F : planeCurveRing →+* quadraticAuxiliaryRing :=
@@ -1041,7 +1039,7 @@ private lemma plane_y_ne_zero :
   intro h
   have h' := congrArg F h
   dsimp [F] at h'
-  simp only [map_zero, Ideal.Quotient.lift_mk] at h'
+  simp only [map_zero] at h'
   have h'' : q Polynomial.X = 0 := by
     simpa [f] using h'
   exact quadraticAuxiliary_X_ne_zero h''
@@ -1272,10 +1270,10 @@ private lemma fractionRing_equiv_of_away_equiv
         ((map_ne_zero_iff _
           (IsFractionRing.injective planeCurveRing (FractionRing planeCurveRing))).mpr hyB))
   let _ : Algebra (Localization.Away yB) (FractionRing planeCurveRing) := algB.toAlgebra
-  letI : IsFractionRing (Localization.Away yA) (FractionRing sourceRing) :=
+  let : IsFractionRing (Localization.Away yA) (FractionRing sourceRing) :=
     IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
       (Submonoid.powers yA) (Localization.Away yA) (FractionRing sourceRing)
-  letI : IsFractionRing (Localization.Away yB) (FractionRing planeCurveRing) :=
+  let : IsFractionRing (Localization.Away yB) (FractionRing planeCurveRing) :=
     IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
       (Submonoid.powers yB) (Localization.Away yB) (FractionRing planeCurveRing)
   exact ⟨(IsFractionRing.ringEquivOfRingEquiv e :
@@ -1306,7 +1304,7 @@ private lemma source_square_relations
       (show sourceSRelation ∈ sourceRelationsIdeal from
         Ideal.subset_span (by simp))
     rw [sourceSRelation] at h
-    simp only [map_sub, map_mul, map_pow, map_add] at h
+    simp only [map_sub, map_mul, map_pow] at h
     rw [hC2, hC3] at h
     have h0 :
         (Ideal.Quotient.mk sourceRelationsIdeal (MvPolynomial.X (1 : Fin 3))) ^ 2 -
@@ -1357,7 +1355,7 @@ private theorem planeCurve_relation_in_curve :
   change Ideal.Quotient.mk (Ideal.span {planeRelation})
     (((MvPolynomial.X (1 : Fin 2)) ^ 2 - planeFirstCubic - planeSecondCubic) ^ 2 -
       4 * planeFirstCubic * planeSecondCubic) = 0 at h
-  simp only [map_sub, map_mul, map_pow, map_add] at h
+  simp only [map_sub, map_mul, map_pow] at h
   have hFirst : (Ideal.Quotient.mk (Ideal.span {planeRelation})
       planeFirstCubic : planeCurveRing) = planeCurveP := by
     simp [planeFirstCubic, planeCurveP, planeCurveX]
@@ -1422,9 +1420,9 @@ theorem source_fraction_field_equiv_plane_curve :
   have htA' : tA' ^ 2 = algebraMap sourceRing A' qA := by
     simpa [tA', qA] using congrArg (algebraMap sourceRing A') htA
   have hC2A : algebraMap ℚ A' (2 : ℚ) = algebraMap sourceRing A' (2 : sourceRing) := by
-    simpa only [map_ofNat] using IsScalarTower.algebraMap_apply ℚ sourceRing A' (2 : ℚ)
+    simp only [map_ofNat]
   have hC3A : algebraMap ℚ A' (3 : ℚ) = algebraMap sourceRing A' (3 : sourceRing) := by
-    simpa only [map_ofNat] using IsScalarTower.algebraMap_apply ℚ sourceRing A' (3 : ℚ)
+    simp only [map_ofNat]
   have hpA' :
       (xA' - 1) * (xA' - algebraMap ℚ A' 2) * (xA' - algebraMap ℚ A' 3) =
         algebraMap sourceRing A' pA := by
@@ -1438,8 +1436,7 @@ theorem source_fraction_field_equiv_plane_curve :
   let fB : planePolynomialRing →+* A' :=
     MvPolynomial.eval₂Hom (algebraMap ℚ A') ![xA', sA' + tA']
   have hfB_rel : fB planeRelation = 0 := by
-    simp [fB, planeRelation, planeFirstCubic, planeSecondCubic,
-      MvPolynomial.eval₂Hom_X']
+    simp [fB, planeRelation, planeFirstCubic, planeSecondCubic]
     rw [hpA', hqA']
     rw [← hsA', ← htA']
     ring
@@ -1483,17 +1480,15 @@ theorem source_fraction_field_equiv_plane_curve :
   have hfA_rel : fA sourceSRelation = 0 ∧ fA sourceTRelation = 0 := by
     have hC2B : algebraMap ℚ B' (2 : ℚ) =
         algebraMap planeCurveRing B' (2 : planeCurveRing) := by
-      simpa only [map_ofNat] using
-        IsScalarTower.algebraMap_apply ℚ planeCurveRing B' (2 : ℚ)
+      simp only [map_ofNat]
     have hC3B : algebraMap ℚ B' (3 : ℚ) =
         algebraMap planeCurveRing B' (3 : planeCurveRing) := by
-      simpa only [map_ofNat] using
-        IsScalarTower.algebraMap_apply ℚ planeCurveRing B' (3 : ℚ)
+      simp only [map_ofNat]
     have hpB' :
         pB' = (xB' - 1) * (xB' - algebraMap ℚ B' 2) *
           (xB' - algebraMap ℚ B' 3) := by
       dsimp [pB', pB, xB', xB]
-      simp only [map_mul, map_sub, map_add, map_one]
+      simp only [map_mul, map_sub, map_one]
       rw [hC2B, hC3B]
     have hqB' :
         qB' = (xB' + 1) * (xB' + algebraMap ℚ B' 2) *
@@ -1502,8 +1497,8 @@ theorem source_fraction_field_equiv_plane_curve :
       simp only [map_mul, map_add, map_one]
       rw [hC2B, hC3B]
     constructor
-    · simp [fA, sourceSRelation, MvPolynomial.eval₂Hom_X', hsB, hpB']
-    · simp [fA, sourceTRelation, MvPolynomial.eval₂Hom_X', htB, hqB']
+    · simp [fA, sourceSRelation, hsB, hpB']
+    · simp [fA, sourceTRelation, htB, hqB']
   have hFA : sourceRelationsIdeal ≤ RingHom.ker fA := by
     rw [sourceRelationsIdeal, Ideal.span_le]
     intro p hp
@@ -1537,8 +1532,7 @@ theorem source_fraction_field_equiv_plane_curve :
   let FA : A' →+* B' :=
     IsLocalization.lift (M := Submonoid.powers yA) (g := gA) hgA_powers
   have hFA_comp : FA.comp (algebraMap sourceRing A') = gA := by
-    simpa [FA, yA, sA', tA'] using
-      (IsLocalization.lift_comp (M := Submonoid.powers yA) (g := gA) hgA_powers)
+    simp [FA, yA]
   have hFA_xA : FA xA' = xB' := by
     dsimp [xA']
     calc
@@ -1559,14 +1553,13 @@ theorem source_fraction_field_equiv_plane_curve :
   let FB : B' →+* A' :=
     IsLocalization.lift (M := Submonoid.powers yB) (g := gB) hgB_powers
   have hFB_comp : FB.comp (algebraMap planeCurveRing B') = gB := by
-    simpa [FB] using
-      (IsLocalization.lift_comp (M := Submonoid.powers yB) (g := gB) hgB_powers)
+    simp [FB]
   have hFB_yB : FB yB' = yA' := by
     dsimp [yB']
     exact (RingHom.congr_fun hFB_comp yB).trans hgB_y
   let invYA : A' := IsLocalization.Away.invSelf yA
   have hYA : yA' * invYA = 1 := by
-    simpa [invYA, yA'] using IsLocalization.Away.mul_invSelf yA
+    simp [invYA, yA']
   have hFB_invYB : FB invYB = invYA := by
     apply (IsLocalization.Away.algebraMap_isUnit yA).mul_left_inj.mp
     change FB invYB * yA' = invYA * yA'

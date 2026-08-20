@@ -50,8 +50,8 @@ theorem isNoetherianRing_localization_atPrime_iff_of_etale
       q.asIdeal p.asIdeal hpq'
   have hfess : f.EssFiniteType := by
     change @Algebra.EssFiniteType A B _ _ f.toAlgebra
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
+    let : Algebra A B := f.toAlgebra
+    let : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
     infer_instance
   have hlocess : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := by
     exact Algebra.EssFiniteType.of_isLocalization
@@ -61,60 +61,60 @@ theorem isNoetherianRing_localization_atPrime_iff_of_etale
     have heq : g.comp (algebraMap A (Localization.AtPrime p.asIdeal)) =
         (algebraMap B (Localization.AtPrime q.asIdeal)).comp f := by
       ext x
-      simp [g, hpq']
+      simp [g]
     change @Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) _ _
       ((g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra)
     rw [heq]
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A B := f.toAlgebra
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       ((algebraMap B (Localization.AtPrime q.asIdeal)).comp f).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
+    let : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A B := hfess
-    letI : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
+    let : Algebra.EssFiniteType A B := hfess
+    let : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
     exact Algebra.EssFiniteType.comp A B (Localization.AtPrime q.asIdeal)
   have hgess : g.EssFiniteType := by
     change @Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) _ _ g.toAlgebra
-    letI : Algebra (Localization.AtPrime p.asIdeal)
+    let : Algebra (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := g.toAlgebra
-    letI : Algebra A (Localization.AtPrime p.asIdeal) :=
+    let : Algebra A (Localization.AtPrime p.asIdeal) :=
       (algebraMap A (Localization.AtPrime p.asIdeal)).toAlgebra
-    letI : SMul A (Localization.AtPrime p.asIdeal) :=
+    let : SMul A (Localization.AtPrime p.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime p.asIdeal)).toSMul
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       (g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A (Localization.AtPrime p.asIdeal)
+    let : IsScalarTower A (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
+    let : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
     exact Algebra.EssFiniteType.of_comp A (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal)
   constructor
   · intro h
-    letI : IsNoetherianRing (Localization.AtPrime p.asIdeal) := h
-    letI : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
+    let : IsNoetherianRing (Localization.AtPrime p.asIdeal) := h
+    let : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
       g.toAlgebra
-    letI : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
+    let : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := hgess
     exact Algebra.EssFiniteType.isNoetherianRing
       (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal)
   · intro h
-    letI : IsNoetherianRing (Localization.AtPrime q.asIdeal) := h
-    letI : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
+    let : IsNoetherianRing (Localization.AtPrime q.asIdeal) := h
+    let : Algebra (Localization.AtPrime p.asIdeal) (Localization.AtPrime q.asIdeal) :=
       g.toAlgebra
-    letI : Module.Flat (Localization.AtPrime p.asIdeal)
+    let : Module.Flat (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := hflat
-    letI : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
+    let : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal)) := by
       change IsLocalHom g
       exact Localization.isLocalHom_localRingHom
         (I := p.asIdeal) (R := A) (P := B) q.asIdeal f hpq'
-    letI : Module.FaithfullyFlat (Localization.AtPrime p.asIdeal)
+    let : Module.FaithfullyFlat (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) :=
       Module.FaithfullyFlat.of_flat_of_isLocalHom
     apply Submodule.IsNoetherian.of_isNoetherian_tensorProduct_of_faithfullyFlat
@@ -146,8 +146,8 @@ theorem ringKrullDim_localization_atPrime_eq_of_etale
       q.asIdeal p.asIdeal hpq'
   have hfess : f.EssFiniteType := by
     change @Algebra.EssFiniteType A B _ _ f.toAlgebra
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
+    let : Algebra A B := f.toAlgebra
+    let : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
     infer_instance
   have hlocess : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := by
     exact Algebra.EssFiniteType.of_isLocalization
@@ -157,78 +157,78 @@ theorem ringKrullDim_localization_atPrime_eq_of_etale
     have heq : g.comp (algebraMap A (Localization.AtPrime p.asIdeal)) =
         (algebraMap B (Localization.AtPrime q.asIdeal)).comp f := by
       ext x
-      simp [g, hpq']
+      simp [g]
     change @Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) _ _
       ((g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra)
     rw [heq]
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A B := f.toAlgebra
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       ((algebraMap B (Localization.AtPrime q.asIdeal)).comp f).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
+    let : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A B := hfess
-    letI : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
+    let : Algebra.EssFiniteType A B := hfess
+    let : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
     exact Algebra.EssFiniteType.comp A B (Localization.AtPrime q.asIdeal)
   have hgess : g.EssFiniteType := by
     change @Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) _ _ g.toAlgebra
-    letI : Algebra (Localization.AtPrime p.asIdeal)
+    let : Algebra (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := g.toAlgebra
-    letI : Algebra A (Localization.AtPrime p.asIdeal) :=
+    let : Algebra A (Localization.AtPrime p.asIdeal) :=
       (algebraMap A (Localization.AtPrime p.asIdeal)).toAlgebra
-    letI : SMul A (Localization.AtPrime p.asIdeal) :=
+    let : SMul A (Localization.AtPrime p.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime p.asIdeal)).toSMul
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       (g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A (Localization.AtPrime p.asIdeal)
+    let : IsScalarTower A (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
+    let : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
     exact Algebra.EssFiniteType.of_comp A (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal)
-  letI : Algebra (Localization.AtPrime p.asIdeal)
+  let : Algebra (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := g.toAlgebra
-  letI : Module.Flat (Localization.AtPrime p.asIdeal)
+  let : Module.Flat (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := hflat
-  letI : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
+  let : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal)) := by
     change IsLocalHom g
     exact Localization.isLocalHom_localRingHom
       (I := p.asIdeal) (R := A) (P := B) q.asIdeal f hpq'
-  letI : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
+  let : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := hgess
-  letI : Algebra.FormallyUnramified (Localization.AtPrime p.asIdeal)
+  let : Algebra.FormallyUnramified (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := by
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A B := f.toAlgebra
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       ((algebraMap B (Localization.AtPrime q.asIdeal)).comp f).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
+    let : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra A (Localization.AtPrime p.asIdeal) :=
+    let : Algebra A (Localization.AtPrime p.asIdeal) :=
       (algebraMap A (Localization.AtPrime p.asIdeal)).toAlgebra
-    letI : SMul A (Localization.AtPrime p.asIdeal) :=
+    let : SMul A (Localization.AtPrime p.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime p.asIdeal)).toSMul
-    letI : IsScalarTower A (Localization.AtPrime p.asIdeal)
+    let : IsScalarTower A (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := by
       apply IsScalarTower.of_algebraMap_eq'
       ext x
       change algebraMap B (Localization.AtPrime q.asIdeal) (f x) =
         g (algebraMap A (Localization.AtPrime p.asIdeal) x)
       exact (Localization.localRingHom_to_map p.asIdeal q.asIdeal f hpq' x).symm
-    letI : Algebra.FormallyUnramified A B := by
+    let : Algebra.FormallyUnramified A B := by
       change @Algebra.FormallyUnramified A B _ _ f.toAlgebra
       exact hf.formallyUnramified
-    letI : Algebra.FormallyUnramified B (Localization.AtPrime q.asIdeal) :=
+    let : Algebra.FormallyUnramified B (Localization.AtPrime q.asIdeal) :=
       Algebra.FormallyUnramified.of_isLocalization q.asIdeal.primeCompl
-    letI : Algebra.FormallyUnramified A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra.FormallyUnramified A (Localization.AtPrime q.asIdeal) :=
       Algebra.FormallyUnramified.comp A B (Localization.AtPrime q.asIdeal)
     exact Algebra.FormallyUnramified.localization_base p.asIdeal.primeCompl
-  letI : Algebra.QuasiFinite (Localization.AtPrime p.asIdeal)
+  let : Algebra.QuasiFinite (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := inferInstance
   have hstrict : StrictMono
       (PrimeSpectrum.comap (algebraMap (Localization.AtPrime p.asIdeal)
@@ -264,7 +264,7 @@ theorem ringKrullDim_localization_atPrime_eq_of_etale
             (Localization.AtPrime q.asIdeal)) =
         IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal) :=
     Algebra.FormallyUnramified.map_maximalIdeal
-  letI : Algebra.HasGoingDown (Localization.AtPrime p.asIdeal)
+  let : Algebra.HasGoingDown (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := inferInstance
   have hge : ringKrullDim (Localization.AtPrime p.asIdeal) ≤
       ringKrullDim (Localization.AtPrime q.asIdeal) := by
@@ -279,8 +279,8 @@ theorem ringKrullDim_localization_atPrime_eq_of_etale
         (p := l.last.asIdeal)
         (q := IsLocalRing.maximalIdeal (Localization.AtPrime p.asIdeal))
         (by exact IsLocalRing.le_maximalIdeal_of_isPrime _)
-    letI : P.IsPrime := hPprime
-    letI : P.LiesOver l.last.asIdeal := hPover
+    let : P.IsPrime := hPprime
+    let : P.LiesOver l.last.asIdeal := hPover
     obtain ⟨l', hlen, _, _⟩ :=
       Ideal.exists_ltSeries_of_hasGoingDown l P
     calc
@@ -300,7 +300,7 @@ private theorem spanFinrank_maximalIdeal_eq_of_flat_of_formallyUnramified
     [Algebra.FormallyUnramified R S] :
     (IsLocalRing.maximalIdeal R).spanFinrank =
       (IsLocalRing.maximalIdeal S).spanFinrank := by
-  letI : Module.FaithfullyFlat R S :=
+  let : Module.FaithfullyFlat R S :=
     Module.FaithfullyFlat.of_flat_of_isLocalHom
   let mR := IsLocalRing.maximalIdeal R
   let mS := IsLocalRing.maximalIdeal S
@@ -390,7 +390,7 @@ private theorem spanFinrank_maximalIdeal_eq_of_flat_of_formallyUnramified
     rw [hcot]
     simpa using (IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace S).symm
   have hge : mR.spanFinrank ≤ mS.spanFinrank := by
-    letI : Fintype (Set.range j') := Fintype.ofFinite _
+    let : Fintype (Set.range j') := Fintype.ofFinite _
     calc
       mR.spanFinrank = J.spanFinrank := by rw [hJ']
       _ ≤ (Set.range j').ncard := by
@@ -425,8 +425,8 @@ private theorem spanFinrank_maximalIdeal_eq_localization_atPrime_of_etale
       q.asIdeal p.asIdeal hpq'
   have hfess : f.EssFiniteType := by
     change @Algebra.EssFiniteType A B _ _ f.toAlgebra
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
+    let : Algebra A B := f.toAlgebra
+    let : Algebra.Etale A B := RingHom.Etale.toAlgebra hf
     infer_instance
   have hlocess : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := by
     exact Algebra.EssFiniteType.of_isLocalization
@@ -436,73 +436,73 @@ private theorem spanFinrank_maximalIdeal_eq_localization_atPrime_of_etale
     have heq : g.comp (algebraMap A (Localization.AtPrime p.asIdeal)) =
         (algebraMap B (Localization.AtPrime q.asIdeal)).comp f := by
       ext x
-      simp [g, hpq']
+      simp [g]
     change @Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) _ _
       ((g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra)
     rw [heq]
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A B := f.toAlgebra
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       ((algebraMap B (Localization.AtPrime q.asIdeal)).comp f).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
+    let : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A B := hfess
-    letI : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
+    let : Algebra.EssFiniteType A B := hfess
+    let : Algebra.EssFiniteType B (Localization.AtPrime q.asIdeal) := hlocess
     exact Algebra.EssFiniteType.comp A B (Localization.AtPrime q.asIdeal)
   have hgess : g.EssFiniteType := by
     change @Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) _ _ g.toAlgebra
-    letI : Algebra (Localization.AtPrime p.asIdeal)
+    let : Algebra (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := g.toAlgebra
-    letI : Algebra A (Localization.AtPrime p.asIdeal) :=
+    let : Algebra A (Localization.AtPrime p.asIdeal) :=
       (algebraMap A (Localization.AtPrime p.asIdeal)).toAlgebra
-    letI : SMul A (Localization.AtPrime p.asIdeal) :=
+    let : SMul A (Localization.AtPrime p.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime p.asIdeal)).toSMul
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       (g.comp (algebraMap A (Localization.AtPrime p.asIdeal))).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A (Localization.AtPrime p.asIdeal)
+    let : IsScalarTower A (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
+    let : Algebra.EssFiniteType A (Localization.AtPrime q.asIdeal) := hcomp
     exact Algebra.EssFiniteType.of_comp A (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal)
-  letI : Algebra (Localization.AtPrime p.asIdeal)
+  let : Algebra (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := g.toAlgebra
-  letI : Module.Flat (Localization.AtPrime p.asIdeal)
+  let : Module.Flat (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := hflat
-  letI : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
+  let : IsLocalHom (algebraMap (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal)) := by
     change IsLocalHom g
     exact Localization.isLocalHom_localRingHom
       (I := p.asIdeal) (R := A) (P := B) q.asIdeal f hpq'
-  letI : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
+  let : Algebra.EssFiniteType (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := hgess
-  letI : Algebra.FormallyUnramified (Localization.AtPrime p.asIdeal)
+  let : Algebra.FormallyUnramified (Localization.AtPrime p.asIdeal)
       (Localization.AtPrime q.asIdeal) := by
-    letI : Algebra A B := f.toAlgebra
-    letI : Algebra A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra A B := f.toAlgebra
+    let : Algebra A (Localization.AtPrime q.asIdeal) :=
       ((algebraMap B (Localization.AtPrime q.asIdeal)).comp f).toAlgebra
-    letI : SMul A (Localization.AtPrime q.asIdeal) :=
+    let : SMul A (Localization.AtPrime q.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime q.asIdeal)).toSMul
-    letI : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
+    let : IsScalarTower A B (Localization.AtPrime q.asIdeal) :=
       IsScalarTower.of_algebraMap_eq' rfl
-    letI : Algebra A (Localization.AtPrime p.asIdeal) :=
+    let : Algebra A (Localization.AtPrime p.asIdeal) :=
       (algebraMap A (Localization.AtPrime p.asIdeal)).toAlgebra
-    letI : SMul A (Localization.AtPrime p.asIdeal) :=
+    let : SMul A (Localization.AtPrime p.asIdeal) :=
       (inferInstance : Algebra A (Localization.AtPrime p.asIdeal)).toSMul
-    letI : IsScalarTower A (Localization.AtPrime p.asIdeal)
+    let : IsScalarTower A (Localization.AtPrime p.asIdeal)
         (Localization.AtPrime q.asIdeal) := by
       apply IsScalarTower.of_algebraMap_eq'
       ext x
       change algebraMap B (Localization.AtPrime q.asIdeal) (f x) =
         g (algebraMap A (Localization.AtPrime p.asIdeal) x)
       exact (Localization.localRingHom_to_map p.asIdeal q.asIdeal f hpq' x).symm
-    letI : Algebra.FormallyUnramified A B := hf.formallyUnramified
-    letI : Algebra.FormallyUnramified B (Localization.AtPrime q.asIdeal) :=
+    let : Algebra.FormallyUnramified A B := hf.formallyUnramified
+    let : Algebra.FormallyUnramified B (Localization.AtPrime q.asIdeal) :=
       Algebra.FormallyUnramified.of_isLocalization q.asIdeal.primeCompl
-    letI : Algebra.FormallyUnramified A (Localization.AtPrime q.asIdeal) :=
+    let : Algebra.FormallyUnramified A (Localization.AtPrime q.asIdeal) :=
       Algebra.FormallyUnramified.comp A B (Localization.AtPrime q.asIdeal)
     exact Algebra.FormallyUnramified.localization_base p.asIdeal.primeCompl
   exact spanFinrank_maximalIdeal_eq_of_flat_of_formallyUnramified
@@ -519,9 +519,9 @@ theorem isRegularLocalRing_localization_atPrime_iff_of_etale
   have hnoeth := isNoetherianRing_localization_atPrime_iff_of_etale f hf p q hpq
   constructor
   · intro hreg
-    letI : IsRegularLocalRing (Localization.AtPrime p.asIdeal) := hreg
-    letI : IsNoetherianRing (Localization.AtPrime p.asIdeal) := inferInstance
-    letI : IsNoetherianRing (Localization.AtPrime q.asIdeal) := hnoeth.mp inferInstance
+    let : IsRegularLocalRing (Localization.AtPrime p.asIdeal) := hreg
+    let : IsNoetherianRing (Localization.AtPrime p.asIdeal) := inferInstance
+    let : IsNoetherianRing (Localization.AtPrime q.asIdeal) := hnoeth.mp inferInstance
     let hspan := spanFinrank_maximalIdeal_eq_localization_atPrime_of_etale
       f hf p q hpq
     let hdim := ringKrullDim_localization_atPrime_eq_of_etale f hf p q hpq
@@ -534,9 +534,9 @@ theorem isRegularLocalRing_localization_atPrime_iff_of_etale
       _ = ringKrullDim (Localization.AtPrime p.asIdeal) := hreg
       _ = ringKrullDim (Localization.AtPrime q.asIdeal) := hdim
   · intro hreg
-    letI : IsRegularLocalRing (Localization.AtPrime q.asIdeal) := hreg
-    letI : IsNoetherianRing (Localization.AtPrime q.asIdeal) := inferInstance
-    letI : IsNoetherianRing (Localization.AtPrime p.asIdeal) := hnoeth.mpr inferInstance
+    let : IsRegularLocalRing (Localization.AtPrime q.asIdeal) := hreg
+    let : IsNoetherianRing (Localization.AtPrime q.asIdeal) := inferInstance
+    let : IsNoetherianRing (Localization.AtPrime p.asIdeal) := hnoeth.mpr inferInstance
     let hspan := spanFinrank_maximalIdeal_eq_localization_atPrime_of_etale
       f hf p q hpq
     let hdim := ringKrullDim_localization_atPrime_eq_of_etale f hf p q hpq

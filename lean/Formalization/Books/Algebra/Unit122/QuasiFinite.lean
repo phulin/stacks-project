@@ -10,6 +10,7 @@ import Formalization.Books.Algebra.Unit21.OpenAndClosed
 import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.ZariskisMainTheorem
+import Mathlib.RingTheory.Etale.QuasiFinite
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 
@@ -1696,7 +1697,172 @@ theorem exists_finite_localization_of_finite_fibre_over_minimal_prime
     (hfibre : Set.Finite
       {q : PrimeSpectrum S | PrimeSpectrum.comap f q = p}) :
     ∃ a : R, a ∉ p.asIdeal ∧ RingHom.Finite (Localization.awayMap f a) := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Algebra.FiniteType R S := hfiniteType
+  let hset : (PrimeSpectrum.comap (algebraMap R S) ⁻¹'
+      ({p} : Set (PrimeSpectrum R))) =
+      {q : PrimeSpectrum S | PrimeSpectrum.comap f q = p} := by
+    ext q
+    simp [RingHom.algebraMap_toAlgebra]
+  let : Fintype {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} :=
+    hfibre.fintype
+  let : Fintype {q : PrimeSpectrum S // q ∈
+      PrimeSpectrum.comap (algebraMap R S) ⁻¹' ({p} : Set (PrimeSpectrum R))} := by
+    simpa [hset]
+  let e := PrimeSpectrum.preimageHomeomorphFiber R S p
+  have hspec : Finite (PrimeSpectrum (p.asIdeal.Fiber S)) :=
+    Finite.of_injective (f := e.symm) e.symm.injective
+  have hmodule : Module.Finite p.asIdeal.ResidueField (p.asIdeal.Fiber S) :=
+    (quasiFiniteAt_above_prime_criteria f p hfiniteType).out 2 1 |>.mp hspec
+  have hall : ∀ q : PrimeSpectrum S, PrimeSpectrum.comap f q = p →
+      IsQuasiFiniteAt f q :=
+    (quasiFiniteAt_above_prime_criteria f p hfiniteType).out 1 0 |>.mp hmodule
+  let A := integralClosure R S
+  have hlocal (q : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p}) :
+      ∃ u : A, u.1 ∉ q.1.asIdeal ∧
+        Function.Bijective (Localization.awayMap A.val.toRingHom u) := by
+    let : q.1.asIdeal.LiesOver p.asIdeal := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+        (congrArg PrimeSpectrum.asIdeal q.2).symm
+    let : Algebra.QuasiFiniteAt R q.1.asIdeal := (hall q.1 q.2).2
+    exact Algebra.ZariskisMainProperty.of_finiteType (R := R) q.1.asIdeal
+  choose u huq hbij using hlocal
+  let I : Ideal A := Ideal.span (Set.range u)
+  have hnotle : ¬ I.comap (algebraMap R A) ≤ p.asIdeal := by
+    intro hle
+    have hpmin : p.asIdeal ∈ (I.comap (algebraMap R A)).minimalPrimes := by
+      refine ⟨⟨hp.isPrime, hle⟩, ?_⟩
+      intro r hr hle'
+      exact hp.2 ⟨hr.1, bot_le⟩ hle'
+    obtain ⟨Q, hQprime, hIQ, hQcomap⟩ :=
+      Ideal.exists_comap_eq_of_mem_minimalPrimes
+        (algebraMap R A) p hpmin
+    let : Q.IsPrime := hQprime
+    have hQmin : Q ∈ minimalPrimes A := by
+      obtain ⟨Q₀, hQ₀min, hQ₀le⟩ :=
+        Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal A)) (J := Q) bot_le
+      let : Q₀.IsPrime := hQ₀min.isPrime
+      have hQ₀under : Q₀.comap (algebraMap R A) = p.asIdeal := by
+        apply le_antisymm
+        · exact (Ideal.comap_mono hQ₀le).trans_eq hQcomap
+        · have h₁ : Q₀.comap (algebraMap R A) ≤ p.asIdeal :=
+            (Ideal.comap_mono hQ₀le).trans_eq hQcomap
+          exact hp.2 ⟨Ideal.comap_isPrime _ _, bot_le⟩ h₁
+      have hEq : Q₀ = Q := by
+        by_contra hne
+        have hlt : Q₀ < Q := lt_of_le_of_ne hQ₀le hne
+        have hlt' := Ideal.IsIntegral.comap_lt_comap (R := R) (A := A) hlt
+        rw [hQ₀under, hQcomap] at hlt'
+        exact (lt_irrefl _ hlt')
+      exact hEq ▸ hQ₀min
+    obtain ⟨Q', hQ'prime, hQ'comap⟩ :=
+      Ideal.exists_comap_eq_of_mem_minimalPrimes_of_injective
+        (FaithfulSMul.algebraMap_injective A S) Q hQmin
+    let q' : PrimeSpectrum S := ⟨Q', hQ'prime⟩
+    have hq'R : PrimeSpectrum.comap f q' = p := by
+      apply PrimeSpectrum.ext
+      change Q'.comap (algebraMap R S) = p.asIdeal
+      calc
+        Q'.comap (algebraMap R S) =
+            (Q'.comap (algebraMap A S)).comap (algebraMap R A) := by
+          rw [Ideal.comap_comap]
+          rfl
+        _ = Q.comap (algebraMap R A) := by rw [hQ'comap]
+        _ = p.asIdeal := hQcomap
+    let q₀ : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} :=
+      ⟨q', hq'R⟩
+    have huI : u q₀ ∈ I := by
+      apply Ideal.subset_span
+      exact ⟨q₀, rfl⟩
+    have huQ : u q₀ ∈ Q := hIQ huI
+    have huQ' : (u q₀).1 ∈ Q' := by
+      have hmem : u q₀ ∈ Q'.comap (algebraMap A S) := by
+        rw [hQ'comap]
+        exact huQ
+      simpa using hmem
+    exact (huq q₀) huQ'
+  obtain ⟨a, haI, ha⟩ := SetLike.not_le_iff_exists.mp hnotle
+  let aA : A := algebraMap R A a
+  let R₀ := Localization.Away (algebraMap R A a)
+  have hmem_map :
+      algebraMap A R₀ (algebraMap R A a) ∈
+        Ideal.map (algebraMap A R₀) I :=
+    Ideal.mem_map_of_mem _ haI
+  have hmem_map' :
+      algebraMap A R₀ (algebraMap R A a) ∈
+        Ideal.span ((algebraMap A R₀) '' Set.range u) := by
+    simpa [I, Ideal.map_span] using hmem_map
+  have himage :
+      (algebraMap A R₀) '' Set.range u =
+        Set.range (fun q : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} =>
+          algebraMap A R₀ (u q)) := by
+    ext x
+    constructor
+    · rintro ⟨x, ⟨q, rfl⟩, rfl⟩
+      exact ⟨q, rfl⟩
+    · rintro ⟨q, rfl⟩
+      exact ⟨u q, ⟨q, rfl⟩, rfl⟩
+  rw [himage] at hmem_map'
+  have hmem :
+      algebraMap A R₀ (algebraMap R A a) ∈
+        Ideal.span (Set.range (fun q : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} =>
+          algebraMap A R₀ (u q))) :=
+    hmem_map'
+  have hspan :
+      Ideal.span (Set.range (fun q : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} =>
+        algebraMap A R₀ (u q))) = ⊤ := by
+    apply Ideal.eq_top_of_isUnit_mem _ hmem
+    exact IsLocalization.Away.algebraMap_isUnit _
+  let fAS : A →ₐ[R] S := A.val
+  have hsurj : Function.Surjective (Localization.awayMapₐ fAS aA) := by
+    apply RingHom.surjective_ofLocalizationSpan
+      (Localization.awayMapₐ fAS aA).toRingHom
+      (Set.range (fun q : {q : PrimeSpectrum S // PrimeSpectrum.comap f q = p} =>
+        algebraMap A R₀ (u q))) hspan
+    rintro ⟨_, q, rfl⟩
+    have hdvd : u q ∣ (algebraMap R A a) * u q := by
+      exact ⟨algebraMap R A a, by simp [mul_comm]⟩
+    have hmul : Function.Surjective
+        (Localization.awayMap A.val.toRingHom
+          ((algebraMap R A a) * (u q))) :=
+      Localization.awayMap_surjective_of_dvd A.val.toRingHom hdvd (hbij q).2
+    have hdouble := Localization.awayMap_awayMap_surjective
+      A.val.toRingHom (algebraMap R A a) (u q) hmul
+    have hbase :
+        (Localization.awayMapₐ fAS aA).toRingHom =
+          Localization.awayMap A.val.toRingHom (algebraMap R A a) := by
+      ext x
+      rfl
+    rw [hbase]
+    exact hdouble
+  have ha0 : algebraMap R p.asIdeal.ResidueField a ≠ 0 := by
+    simpa [Ideal.algebraMap_residueField_eq_zero] using ha
+  have hu : IsUnit (algebraMap R p.asIdeal.ResidueField a) :=
+    isUnit_iff_ne_zero.mpr ha0
+  have hEq : (1 ⊗ₜ[R] aA : p.asIdeal.Fiber A) =
+      algebraMap R (p.asIdeal.Fiber A) a := by
+    rw [Algebra.TensorProduct.algebraMap_apply']
+  have hgp : IsUnit (1 ⊗ₜ[R] aA : p.asIdeal.Fiber A) := by
+    rw [hEq]
+    have hmap := hu.map
+      (algebraMap p.asIdeal.ResidueField (p.asIdeal.Fiber A))
+    rw [← IsScalarTower.algebraMap_apply R p.asIdeal.ResidueField
+      (p.asIdeal.Fiber A) a] at hmap
+    exact hmap
+  obtain ⟨a', ha', hfin⟩ :=
+    Localization.exists_finite_awayMapₐ_of_surjective_awayMapₐ
+      fAS aA hsurj p.asIdeal hgp
+  refine ⟨a', ha', ?_⟩
+  have hbase' :
+      (Localization.awayMapₐ (Algebra.ofId R S) a').toRingHom =
+        Localization.awayMap f a' := by
+    ext x
+    rfl
+  change RingHom.Finite
+    (Localization.awayMapₐ (Algebra.ofId R S) a').toRingHom at hfin
+  rw [hbase'] at hfin
+  exact hfin
 
 end
 

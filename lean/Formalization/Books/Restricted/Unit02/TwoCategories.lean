@@ -2052,7 +2052,98 @@ theorem polynomialCompletion_property {A : Type u} [CommRing A]
 theorem polynomialCompletion_fg_property {A : Type u} [CommRing A]
     (I : Ideal A) (hI : I.FG) (r : ℕ) :
     CompleteAlgebraProperty I (polynomialCompletion I r) := by
-  sorry
+  let P : CommAlgCat A := polynomialAlgebra r
+  let J : Ideal P := cprimeIdeal I P
+  let Q := AdicCompletion J (P : Type u)
+  let K : Ideal Q := Ideal.map (algebraMap A Q) I
+  have hJ : J.FG := by
+    dsimp [J, P, cprimeIdeal, polynomialAlgebra]
+    exact hI.map _
+  have hAlg : algebraMap A Q =
+      (algebraMap P Q).comp (algebraMap A P) :=
+    (IsScalarTower.algebraMap_eq A P Q).symm
+  have hcomplete : IsAdicComplete K Q := by
+    rw [show K = J.map (algebraMap P Q) by
+      dsimp [K, J, cprimeIdeal]
+      rw [hAlg, ← Ideal.map_map]]
+    exact (IsAdicComplete.map_algebraMap_iff
+      (I := J) (M := Q)).mpr (AdicCompletion.isAdicComplete hJ)
+  have hqP : RingHom.FiniteType
+      (Ideal.Quotient.mk J : P →+* (P ⧸ J)) :=
+    RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective
+  have hpoly : RingHom.FiniteType (algebraMap A P) := by
+    change RingHom.FiniteType (algebraMap A (MvPolynomial (Fin r) A))
+    rw [RingHom.finiteType_algebraMap]
+    infer_instance
+  have hle : I ≤ J.comap (algebraMap A P) := by
+    dsimp [J, cprimeIdeal]
+    exact Ideal.le_comap_map
+  let _ : Algebra A (P ⧸ J) :=
+    ((Ideal.Quotient.mk J).comp (algebraMap A P)).toAlgebra
+  let qA : (A ⧸ I) →+* (P ⧸ J) :=
+    Ideal.quotientMap J (algebraMap A P) hle
+  have hqA : RingHom.FiniteType qA := by
+    apply RingHom.FiniteType.of_comp_finiteType
+      (f := Ideal.Quotient.mk I)
+    convert hqP.comp hpoly using 1
+    ext x
+    rfl
+  have hK : K = J.map (algebraMap P Q) := by
+    dsimp [K, J, cprimeIdeal]
+    rw [hAlg, ← Ideal.map_map]
+  have hker : J.map (algebraMap P Q) =
+      RingHom.ker (AdicCompletion.evalOneₐ J).toRingHom :=
+    (AdicCompletion.ker_evalOneₐ_eq_map J hJ).symm
+  let eK : (Q ⧸ K) ≃+* (Q ⧸ J.map (algebraMap P Q)) :=
+    Ideal.quotEquivOfEq hK
+  let eJ : (Q ⧸ J.map (algebraMap P Q)) ≃+*
+      (Q ⧸ RingHom.ker (AdicCompletion.evalOneₐ J).toRingHom) :=
+    Ideal.quotEquivOfEq hker
+  let e : (Q ⧸ K) ≃+* (P ⧸ J) :=
+    (eK.trans eJ).trans
+      (RingHom.quotientKerEquivOfSurjective
+        (f := (AdicCompletion.evalOneₐ J).toRingHom)
+        (AdicCompletion.evalOneₐ_surjective J))
+  let hqQ : (A ⧸ I) →+* (Q ⧸ K) :=
+    e.symm.toRingHom.comp qA
+  have hqQ' : RingHom.FiniteType hqQ :=
+    hqA.comp_surjective e.symm.surjective
+  have hfinal : RingHom.FiniteType (algebraMap (A ⧸ I) (Q ⧸ K)) := by
+    convert hqQ' using 1
+    apply RingHom.ext
+    intro x
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    apply e.injective
+    dsimp [hqQ]
+    rw [e.apply_symm_apply]
+    change e (Ideal.Quotient.mk K (algebraMap A Q x)) =
+      qA (Ideal.Quotient.mk I x)
+    rw [hAlg]
+    simp only [e, eK, eJ, RingEquiv.trans_apply,
+      Ideal.quotEquivOfEq_mk,
+      RingHom.quotientKerEquivOfSurjective_apply_mk]
+    change ((AdicCompletion.evalOneₐ J).toRingHom.comp
+        (algebraMap P Q)) ((algebraMap A P) x) = _
+    rw [AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk (I := J)]
+    change (algebraMap A (P ⧸ J)) x = qA (Ideal.Quotient.mk I x)
+    have hqA_mk : qA (Ideal.Quotient.mk I x) =
+        Ideal.Quotient.mk J (algebraMap A P x) := by
+      dsimp [qA]
+      rw [Ideal.quotientMap_mk]
+      change (Ideal.Quotient.mk J) ((algebraMap A P) x) =
+        ((Ideal.Quotient.mk J).comp (algebraMap A P)) x
+      rw [RingHom.comp_apply]
+    rw [hqA_mk]
+    change (Ideal.Quotient.mk J) ((algebraMap A P) x) =
+      ((Ideal.Quotient.mk J).comp (algebraMap A P)) x
+    rw [RingHom.comp_apply]
+  let _ : Algebra (A ⧸ I) (Q ⧸ K) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  constructor
+  · change IsAdicComplete (Ideal.map (algebraMap A Q) I) Q
+    exact hcomplete
+  · change Algebra.FiniteType (A ⧸ I) (Q ⧸ K)
+    exact RingHom.finiteType_algebraMap.mp hfinal
 
 /-- Every complete algebra in `𝓒'` is a quotient of a completed polynomial algebra. -/
 theorem exists_polynomialCompletion_quotient {A : Type u} [CommRing A]
@@ -2061,7 +2152,188 @@ theorem exists_polynomialCompletion_quotient {A : Type u} [CommRing A]
         Nonempty
         (B.obj ≃ₐ[A]
           (polynomialCompletion I r : Type u) ⧸ J) := by
-  sorry
+  let K : Ideal B.obj := cprimeIdeal I B.obj
+  have hres : Algebra.FiniteType (A ⧸ I) (cprimeResidueAlgebra I B.obj) := B.property.2
+  obtain ⟨r, g, hg⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp hres
+  let P : Type u := MvPolynomial (Fin r) A
+  let J : Ideal P := Ideal.map (algebraMap A P) I
+  have hJ : J = cprimeIdeal I (polynomialAlgebra r) := by rfl
+  let e : MvPolynomial (Fin r) (A ⧸ I) ≃ₐ[A] P ⧸ J := by
+    dsimp [P, J]
+    exact MvPolynomial.quotientEquivQuotientMvPolynomial I
+  choose x hx using fun i : Fin r => Ideal.Quotient.mk_surjective (g (MvPolynomial.X i))
+  let f : P →ₐ[A] B.obj :=
+    { MvPolynomial.eval₂Hom (algebraMap A B.obj) x with
+      commutes' := by
+        intro a
+        change MvPolynomial.eval₂ (algebraMap A B.obj) x (MvPolynomial.C a) = algebraMap A B.obj a
+        simp }
+  let hbar : P ⧸ J →ₐ[A] (B.obj ⧸ K) :=
+    { toRingHom := g.toRingHom.comp e.symm.toRingHom
+      commutes' := by
+        intro a
+        change g (e.symm (algebraMap A (P ⧸ J) a)) = algebraMap A (B.obj ⧸ K) a
+        rw [e.symm.commutes]
+        change g (algebraMap (A ⧸ I) _ (Ideal.Quotient.mk I a)) = _
+        rw [g.commutes]
+        rfl }
+  have hqf : (Ideal.Quotient.mkₐ A K).comp f = hbar.comp (Ideal.Quotient.mkₐ A J) := by
+    apply MvPolynomial.algHom_ext
+    intro i
+    have hei : e (MvPolynomial.X i) = Ideal.Quotient.mk J (MvPolynomial.X i) := by
+      change MvPolynomial.eval₂ _ _ (MvPolynomial.X i) =
+        Ideal.Quotient.mk (Ideal.map (MvPolynomial.C : A →+* MvPolynomial (Fin r) A) I) (MvPolynomial.X i)
+      simp
+    have hes : e.symm (Ideal.Quotient.mk J (MvPolynomial.X i)) = MvPolynomial.X i := by
+      apply e.injective
+      rw [e.apply_symm_apply, hei]
+    change Ideal.Quotient.mk K (MvPolynomial.eval₂Hom (algebraMap A B.obj) x (MvPolynomial.X i)) =
+      g (e.symm (Ideal.Quotient.mk J (MvPolynomial.X i)))
+    rw [MvPolynomial.eval₂Hom_X', hes]
+    simpa [K] using hx i
+  have hmap : Ideal.map f.toRingHom J = K := by
+    change Ideal.map f.toRingHom (Ideal.map (algebraMap A P) I) = Ideal.map (algebraMap A B.obj) I
+    rw [Ideal.map_map]
+    rw [show f.toRingHom.comp (algebraMap A P) = algebraMap A B.obj by
+      ext a
+      exact f.commutes a]
+  have hpow (n : ℕ) : J ^ n ≤ (K ^ n).comap f := by
+    have hmap_pow : Ideal.map f.toRingHom (J ^ n) = K ^ n := by
+      rw [Ideal.map_pow, hmap]
+    rw [← hmap_pow]
+    exact Ideal.le_comap_map
+  let fn : ∀ n : ℕ, AdicCompletion J P →ₐ[A] B.obj ⧸ K ^ n :=
+    fun n => (Ideal.quotientMapₐ (K ^ n) f (hpow n)).comp
+      ((AdicCompletion.evalₐ J n).restrictScalars A)
+  have h_eval {m n : ℕ} (hle : m ≤ n) (z : AdicCompletion J P) :
+      Ideal.Quotient.factor (Ideal.pow_le_pow_right hle) (AdicCompletion.evalₐ J n z) =
+        AdicCompletion.evalₐ J m z := by
+    let hn : (J ^ n • ⊤ : Submodule P P) ≤ J ^ n := le_of_eq (Ideal.mul_top _)
+    let hm : (J ^ m • ⊤ : Submodule P P) ≤ J ^ m := le_of_eq (Ideal.mul_top _)
+    have hfac : ∀ y : P ⧸ (J ^ n • ⊤ : Submodule P P),
+        Ideal.Quotient.factorPow J hle (Submodule.factor hn y) =
+          Submodule.factor hm (AdicCompletion.transitionMap J P hle y) := by
+      intro y
+      induction y using Quotient.inductionOn' with
+      | _ p => rfl
+    rw [← AdicCompletion.factor_eval_eq_evalₐ J z hn]
+    rw [← AdicCompletion.factor_eval_eq_evalₐ J z hm]
+    rw [hfac]
+    exact congrArg (fun q => Submodule.factor hm q)
+      (AdicCompletion.transitionMap_comp_eval_apply J P hle z)
+  have hfn : ∀ {m n : ℕ} (hle : m ≤ n),
+      (Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp (fn n) = fn m := by
+    intro m n hle
+    have hqmap :
+        (Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+            (Ideal.quotientMapₐ (K ^ n) f (hpow n)) =
+          (Ideal.quotientMapₐ (K ^ m) f (hpow m)).comp
+            (Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)) := by
+      apply Ideal.Quotient.algHom_ext A
+      ext p
+      simp
+    have heval :
+        (Ideal.Quotient.factorₐ A (Ideal.pow_le_pow_right hle)).comp
+            ((AdicCompletion.evalₐ J n).restrictScalars A) =
+          (AdicCompletion.evalₐ J m).restrictScalars A := by
+      ext z
+      exact h_eval hle z
+    dsimp [fn]
+    rw [← AlgHom.comp_assoc, hqmap, AlgHom.comp_assoc, heval]
+  let _ : IsAdicComplete K B.obj := B.property.1
+  let F : AdicCompletion J P →ₐ[A] B.obj :=
+    ((AdicCompletion.ofAlgEquiv K).symm.toAlgHom.restrictScalars A).comp
+      (AdicCompletion.liftAlgHom K fn hfn)
+  have hqf_surj : Function.Surjective ((Ideal.Quotient.mk K).comp f.toRingHom) := by
+    intro y
+    obtain ⟨x, hx⟩ := (hg.comp e.symm.surjective).comp Ideal.Quotient.mk_surjective y
+    refine ⟨x, ?_⟩
+    change Ideal.Quotient.mk K (f x) = y
+    calc
+      Ideal.Quotient.mk K (f x) = hbar (Ideal.Quotient.mk J x) :=
+        congrArg (fun q => q x) hqf
+      _ = y := hx
+  have hqmap1 : Function.Surjective (Ideal.quotientMapₐ (K ^ 1) f (hpow 1)) := by
+    let eK1 : (B.obj ⧸ K ^ 1) ≃+* (B.obj ⧸ K) :=
+      Ideal.quotEquivOfEq (by simp)
+    intro y
+    obtain ⟨x, hx⟩ := hqf_surj (eK1 y)
+    refine ⟨Ideal.Quotient.mk (J ^ 1) x, ?_⟩
+    change Ideal.Quotient.mk (K ^ 1) (f x) = y
+    apply eK1.injective
+    simpa [eK1, pow_one] using hx
+  have hFmod : Function.Surjective ((Ideal.Quotient.mk K).comp F.toRingHom) := by
+    let eK1 : (B.obj ⧸ K ^ 1) ≃+* (B.obj ⧸ K) :=
+      Ideal.quotEquivOfEq (by simp)
+    intro y
+    obtain ⟨x, hx⟩ :=
+      (hqmap1.comp (AdicCompletion.surjective_evalₐ J 1)) (eK1.symm y)
+    refine ⟨x, ?_⟩
+    change Ideal.Quotient.mk K
+      ((AdicCompletion.ofAlgEquiv K).symm
+        (AdicCompletion.liftAlgHom K fn hfn x)) = y
+    change (Ideal.quotientMapₐ (K ^ 1) f (hpow 1))
+        (AdicCompletion.evalₐ J 1 x) = eK1.symm y at hx
+    have hx' := congrArg eK1 hx
+    have heK1 (z : B.obj ⧸ K ^ 1) :
+        Ideal.Quotient.factor (show K ^ 1 ≤ K by simp) z = eK1 z := by
+      induction z using Quotient.inductionOn' with
+      | _ b => rfl
+    calc
+      Ideal.Quotient.mk K
+          ((AdicCompletion.ofAlgEquiv K).symm
+            (AdicCompletion.liftAlgHom K fn hfn x)) =
+          Ideal.Quotient.factor (show K ^ 1 ≤ K by simp)
+            ((Ideal.quotientMapₐ (K ^ 1) f (hpow 1))
+              (AdicCompletion.evalₐ J 1 x)) := by
+                simp [fn]
+      _ = eK1 ((Ideal.quotientMapₐ (K ^ 1) f (hpow 1))
+        (AdicCompletion.evalₐ J 1 x)) := heK1 _
+      _ = eK1 (eK1.symm y) := hx'
+      _ = y := eK1.apply_symm_apply y
+  have hJfg : J.FG := by
+    dsimp [J]
+    exact hI.map _
+  let L : Ideal (AdicCompletion J P) :=
+    Ideal.map (algebraMap A (AdicCompletion J P)) I
+  have hAlg : algebraMap A (AdicCompletion J P) =
+      (algebraMap P (AdicCompletion J P)).comp (algebraMap A P) :=
+    (IsScalarTower.algebraMap_eq A P (AdicCompletion J P)).symm
+  have hcomplete : IsAdicComplete L (AdicCompletion J P) := by
+    rw [show L = J.map (algebraMap P (AdicCompletion J P)) by
+      dsimp [L, J]
+      rw [hAlg, ← Ideal.map_map]]
+    exact (IsAdicComplete.map_algebraMap_iff
+      (I := J) (M := AdicCompletion J P)).mpr
+      (AdicCompletion.isAdicComplete hJfg)
+  have hLF : Ideal.map F.toRingHom L = K := by
+    calc
+      Ideal.map F.toRingHom L =
+          Ideal.map F.toRingHom
+            (Ideal.map (algebraMap A (AdicCompletion J P)) I) := by
+        rfl
+      _ = Ideal.map
+            (F.toRingHom.comp (algebraMap A (AdicCompletion J P))) I :=
+        Ideal.map_map (I := I)
+          (algebraMap A (AdicCompletion J P)) F.toRingHom
+      _ = Ideal.map (algebraMap A B.obj) I := by
+        rw [show F.toRingHom.comp (algebraMap A (AdicCompletion J P)) =
+            algebraMap A B.obj by
+          ext a
+          exact F.commutes a]
+      _ = K := by rfl
+  have hFmod' : Function.Surjective
+      ((Ideal.Quotient.mk (Ideal.map F.toRingHom L)).comp F.toRingHom) := by
+    rw [hLF]
+    exact hFmod
+  let _ : IsAdicComplete L (AdicCompletion J P) := hcomplete
+  let _ : IsHausdorff (Ideal.map F.toRingHom L) B.obj := by
+    rw [hLF]
+    exact B.property.1.toIsHausdorff
+  have hF : Function.Surjective F.toRingHom :=
+    surjective_of_mk_map_comp_surjective (I := L) (f := F.toRingHom) hFmod'
+  refine ⟨r, RingHom.ker F.toRingHom, ?_⟩
+  exact ⟨(Ideal.quotientKerAlgEquivOfSurjective hF).symm⟩
 
 /-! ## The four Noetherian assertions -/
 

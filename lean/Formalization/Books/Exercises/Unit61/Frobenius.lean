@@ -32,7 +32,20 @@ theorem frobeniusMap_apply
 theorem exists_frobenius_ring_hom_of_char_p
     (R : Type u) [CommRing R] (p : ℕ) (hp : p.Prime) (hchar : (p : R) = 0) :
     ∃ F : R →+* R, ∀ x, F x = x ^ p := by
-  sorry
+  classical
+  rcases subsingleton_or_nontrivial R with hR | hR
+  · refine ⟨RingHom.id R, ?_⟩
+    intro x
+    have hx : x = 0 := @Subsingleton.elim R hR x 0
+    rw [hx]
+    simp [hp.ne_zero]
+  · have hCharP : CharP R p :=
+      (CharP.charP_iff_prime_eq_zero (R := R) hp).2 hchar
+    let F : R →+* R :=
+      @frobenius R _ p (@ExpChar.prime R _ p hp hCharP)
+    refine ⟨F, ?_⟩
+    intro x
+    rfl
 
 /-- Under the source's explicit hypotheses, Frobenius and its identity map on
 the spectrum can be packaged together. -/
@@ -40,13 +53,25 @@ theorem exists_frobenius_ring_hom_and_spec_identity_of_char_p
     (R : Type u) [CommRing R] (p : ℕ) (hp : p.Prime) (hchar : (p : R) = 0) :
     ∃ F : R →+* R,
       (∀ x, F x = x ^ p) ∧ PrimeSpectrum.comap F = id := by
-  sorry
+  obtain ⟨F, hF⟩ := exists_frobenius_ring_hom_of_char_p R p hp hchar
+  refine ⟨F, hF, ?_⟩
+  funext P
+  apply PrimeSpectrum.ext
+  ext a
+  change F a ∈ P.asIdeal ↔ a ∈ P.asIdeal
+  rw [hF]
+  exact P.2.pow_mem_iff_mem p hp.pos
 
 /-- The map induced by Frobenius on the prime spectrum is the identity. -/
 theorem frobenius_spec_map_eq_identity
     (R : Type u) [CommRing R] (p : ℕ) [Fact p.Prime] [CharP R p] :
     PrimeSpectrum.comap (frobeniusMap R p) = id := by
-  sorry
+  funext P
+  apply PrimeSpectrum.ext
+  ext a
+  change frobeniusMap R p a ∈ P.asIdeal ↔ a ∈ P.asIdeal
+  rw [frobeniusMap_apply]
+  exact P.2.pow_mem_iff_mem p (Nat.Prime.pos (Fact.out : p.Prime))
 
 end
 

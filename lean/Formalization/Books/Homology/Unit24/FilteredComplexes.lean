@@ -465,7 +465,73 @@ structure FilteredComplexSpectralSequence {C : Type u}
               (bigradedShift r (-r + 1)).obj (page r)
                   (p - r, q + r - 1) ⟶ page r (p, q)))))
         (Subobject.mk (kernel.ι (differential r (p, q))))
-        (by sorry))
+        (by
+          let hp : (r + (p - r), (-r + 1) + (q + r - 1)) = (p, q) := by
+            congr 1 <;> ring_nf
+          let hs0 : (bigradedShift r (-r + 1)).obj (page r)
+              (p - r, q + r - 1) = page r
+                (r + (p - r), (-r + 1) + (q + r - 1)) := by
+            change page r
+              (r + (p - r), (-r + 1) + (q + r - 1)) = page r
+                (r + (p - r), (-r + 1) + (q + r - 1))
+            rfl
+          let h0 : page r
+              (r + (p - r), (-r + 1) + (q + r - 1)) = page r (p, q) :=
+            congrArg (page r) hp
+          let h : (bigradedShift r (-r + 1)).obj (page r)
+              (p - r, q + r - 1) = page r (p, q) := hs0.trans h0
+          let f := differential r (p - r, q + r - 1) ≫
+            (eqToHom h :
+              (bigradedShift r (-r + 1)).obj (page r)
+                  (p - r, q + r - 1) ⟶ page r (p, q))
+          let d := differential r (p, q)
+          change Subobject.mk (Abelian.image.ι f) ≤ Subobject.mk (kernel.ι d)
+          apply Subobject.mk_le_mk_of_comm
+            (kernel.lift d (Abelian.image.ι f) (by
+              apply Abelian.image_ι_comp_eq_zero
+              have hsq := congrFun (square_zero r) (p - r, q + r - 1)
+              change differential r (p - r, q + r - 1) ≫
+                differential r (r + (p - r), (-r + 1) + (q + r - 1)) = 0 at hsq
+              dsimp [f, d]
+              rw [Category.assoc]
+              convert hsq using 1
+              · congr 1 <;> ring
+              · let ht : (bigradedShift r (-r + 1)).obj (page r) (p, q) =
+                    (bigradedShift r (-r + 1)).obj (page r)
+                      (r + (p - r), (-r + 1) + (q + r - 1)) :=
+                  congrArg
+                    (fun x : ℤ × ℤ =>
+                      (bigradedShift r (-r + 1)).obj (page r) x) hp.symm
+                have hn := eqToHom_naturality (differential r) hp
+                have hleft :
+                    eqToHom h ≫ differential r (p, q) ≍
+                      differential r
+                        (r + (p - r), (-r + 1) + (q + r - 1)) := by
+                  have hn' :
+                      eqToHom h ≫ differential r (p, q) =
+                        differential r
+                            (r + (p - r), (-r + 1) + (q + r - 1)) ≫
+                          eqToHom ht.symm := by
+                    change eqToHom (hs0.trans h0) ≫ differential r (p, q) =
+                      differential r
+                          (r + (p - r), (-r + 1) + (q + r - 1)) ≫
+                        eqToHom ht.symm
+                    have hc := congrArg
+                      (fun f => eqToHom hs0 ≫ f) hn.symm
+                    convert hc using 1 <;>
+                      simp [Category.assoc, eqToHom_trans, ht] <;> rfl
+                  exact (heq_of_eq hn').trans (comp_eqToHom_heq _ _)
+                exact heq_comp rfl hs0 ht HEq.rfl hleft
+              · simpa only [zero_comp] using
+                  (comp_eqToHom_heq
+                    (0 : page r (p - r, q + r - 1) ⟶
+                      (bigradedShift r (-r + 1)).obj (page r)
+                        (r + (p - r), (-r + 1) + (q + r - 1)))
+                    (congrArg
+                      (fun x : ℤ × ℤ =>
+                        (bigradedShift r (-r + 1)).obj (page r) x) hp))
+              ))
+          simp [f, d]))
   page_differentials : FilteredComplexPageDifferentials K
   component_iso : ∀ (r : ℕ) (p q : ℤ),
     Nonempty (page (r + 1) (p, q) ≅
@@ -475,7 +541,11 @@ structure FilteredComplexSpectralSequence {C : Type u}
     ∃ e₁ : page (r + 1) (p + r + 1, q - r) ≅
       filteredComplexPage K (r + 1 : ℕ) (p + r + 1) (q - r),
     differential (r + 1) (p, q) ≫
-        eqToHom (by sorry) ≫ e₁.hom =
+        eqToHom (by
+          change page (r + 1)
+            ((r + 1 : ℤ) + p, (-(r + 1 : ℤ) + 1) + q) =
+            page (r + 1) (p + r + 1, q - r)
+          congr 1 <;> ring_nf) ≫ e₁.hom =
       e₀.hom ≫ page_differentials.differential r p q
   zero_differential_compatibility : ∀ p q : ℤ, ∃
     e₀ : page 0 (p, q) ≅ filteredComplexE₀ K p q,

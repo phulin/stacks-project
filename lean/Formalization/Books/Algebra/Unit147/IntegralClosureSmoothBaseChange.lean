@@ -3,6 +3,7 @@ import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Polynomial.Cyclotomic.Roots
 import Mathlib.RingTheory.Smooth.IntegralClosure
+import Mathlib.GroupTheory.MonoidLocalization.UniqueFactorization
 
 /-!
 # Commutative Algebra, Chapter 147: Integral closure and smooth base change
@@ -51,7 +52,27 @@ theorem lemma_trick
           (f.derivative.map (algebraMap R B)) * h =
         integralPolynomialQuotientMk R B f g ∧
       ∀ i, IsIntegral R (g.coeff i) := by
-  sorry
+  let φ : Polynomial B →ₐ[R] IntegralPolynomialQuotient R B f :=
+    { integralPolynomialQuotientMk R B f with
+      commutes' := by
+        intro r
+        rw [AdjoinRoot.algebraMap_eq' R]
+        rfl }
+  have hmain :=
+    exists_derivative_mul_eq_and_isIntegral_coeff (φ := φ)
+      (f := f.map (algebraMap R B)) (y := h)
+      (by exact AdjoinRoot.mk_surjective)
+      (hf.map (algebraMap R B))
+      (by
+        intro i
+        simp only [Polynomial.coeff_map]
+        exact isIntegral_algebraMap)
+      (by
+        ext q
+        simp [φ, integralPolynomialQuotientMk, AdjoinRoot.mk_eq_zero,
+          Ideal.mem_span_singleton])
+      hh
+  simpa [φ, integralPolynomialQuotientMk, Polynomial.derivative_map] using hmain
 
 /-! ## The etale comparison -/
 
@@ -151,20 +172,226 @@ theorem fourier_root_is_root
     Polynomial.IsRoot
       (Polynomial.X ^ p - Polynomial.C (1 : fourierExtension p))
       (fourierRoot p ^ (i : ℕ)) := by
-  sorry
+  let : Fact p.Prime := ⟨hp⟩
+  have hpoly :
+      fourierPolynomial p (fourierBaseRing p) *
+          (Polynomial.X - 1) =
+        Polynomial.X ^ p - 1 := by
+    simpa [fourierPolynomial, Polynomial.cyclotomic_prime] using
+      (Polynomial.cyclotomic_prime_mul_X_sub_one (fourierBaseRing p) p)
+  have hpow : (fourierRoot p) ^ p = 1 := by
+    have h := congrArg
+      (fun q : Polynomial (fourierBaseRing p) =>
+        q.eval₂ (AdjoinRoot.of (fourierPolynomial p (fourierBaseRing p)))
+          (fourierRoot p)) hpoly
+    simp [fourierRoot, Polynomial.eval₂_mul, Polynomial.eval₂_sub,
+      Polynomial.eval₂_X_pow, Polynomial.eval₂_X, Polynomial.eval₂_one,
+      AdjoinRoot.eval₂_root] at h
+    exact sub_eq_zero.mp h.symm
+  have hi_pow : (fourierRoot p ^ (i : ℕ)) ^ p = 1 := by
+    rw [← pow_mul, Nat.mul_comm, pow_mul, hpow, one_pow]
+  rw [Polynomial.IsRoot, Polynomial.eval_sub, Polynomial.eval_pow,
+    Polynomial.eval_X, Polynomial.eval_C]
+  simpa [hi_pow]
+
+private theorem fourier_root_is_primitive_root
+    (p : ℕ) (hp : Nat.Prime p) :
+    IsPrimitiveRoot (fourierRoot p) p := by
+  let hfact : Fact p.Prime := ⟨hp⟩
+  let f : Polynomial (fourierBaseRing p) :=
+    fourierPolynomial p (fourierBaseRing p)
+  have hpZ : (p : ℤ) ≠ 0 := by
+    exact_mod_cast hp.ne_zero
+  have hdom : IsDomain (fourierBaseRing p) :=
+    Localization.Away.isDomain hpZ
+  have hnontriv : Nontrivial (fourierBaseRing p) := hdom.toNontrivial
+  have hfcycl : f = Polynomial.cyclotomic p (fourierBaseRing p) := by
+    simpa [f, fourierPolynomial] using
+      (@Polynomial.cyclotomic_prime (fourierBaseRing p) _ p hfact).symm
+  have hfmonic : f.Monic := by
+    rw [hfcycl]
+    exact Polynomial.cyclotomic.monic p (fourierBaseRing p)
+  have hfnat : f.natDegree = p - 1 := by
+    calc
+      f.natDegree = (Polynomial.cyclotomic p (fourierBaseRing p)).natDegree := by
+        rw [hfcycl]
+      _ = Nat.totient p :=
+        @Polynomial.natDegree_cyclotomic p (fourierBaseRing p) _ hnontriv
+      _ = p - 1 := Nat.totient_prime hp
+  have hfd : f.degree ≠ 0 := by
+    rw [Polynomial.degree_eq_natDegree hfmonic.ne_zero, hfnat]
+    exact_mod_cast (Nat.sub_pos_iff_lt.mpr hp.one_lt).ne'
+  have hpow : fourierRoot p ^ p = 1 := by
+    have hr := fourier_root_is_root p hp ⟨1, hp.one_lt⟩
+    have hr' : fourierRoot p ^ p - 1 = 0 := by
+      simpa [Polynomial.IsRoot] using hr
+    exact sub_eq_zero.mp hr'
+  have hne_one : fourierRoot p ≠ 1 := by
+    intro hx
+    let : IsDomain (fourierBaseRing p) := hdom
+    have hof : Function.Injective (AdjoinRoot.of f) :=
+      AdjoinRoot.of.injective_of_degree_ne_zero hfd
+    have hroot := AdjoinRoot.eval₂_root f
+    have hx' : AdjoinRoot.root f = 1 := by
+      simpa [f, fourierRoot] using hx
+    rw [hx'] at hroot
+    have hsum : f = ∑ k ∈ Finset.range p,
+        (Polynomial.X : Polynomial (fourierBaseRing p)) ^ k := by
+      rfl
+    have heval := congrArg
+      (fun q : Polynomial (fourierBaseRing p) =>
+        q.eval₂ (AdjoinRoot.of f) 1) hsum
+    have hpq : AdjoinRoot.of f (p : fourierBaseRing p) = 0 := by
+      have heval' :
+          (∑ k ∈ Finset.range p,
+            (Polynomial.X : Polynomial (fourierBaseRing p)) ^ k).eval₂
+              (AdjoinRoot.of f) 1 = 0 := by
+        rw [← heval, hroot]
+      simpa [Polynomial.eval₂_finsetSum] using heval'
+    have hmap : Function.Injective (algebraMap ℤ (fourierBaseRing p)) :=
+      IsLocalization.injective (fourierBaseRing p)
+        (powers_le_nonZeroDivisors_of_noZeroDivisors hpZ)
+    have hpne : (p : fourierBaseRing p) ≠ 0 := by
+      intro hz
+      have hz' : (p : ℤ) = 0 := by
+        apply hmap
+        simpa using hz
+      exact hp.ne_zero (by exact_mod_cast hz')
+    apply hpne
+    apply hof
+    simpa using hpq
+  let : NeZero p := ⟨hp.ne_zero⟩
+  refine IsPrimitiveRoot.mk_of_lt _ hp.pos hpow ?_
+  intro l hl hlbound
+  by_cases hlt : l < p - 1
+  · have hq0 :
+        (Polynomial.X : Polynomial (fourierBaseRing p)) ^ l -
+            Polynomial.C 1 ≠ 0 :=
+      @Polynomial.X_pow_sub_C_ne_zero (fourierBaseRing p) _ hnontriv l hl 1
+    have hne := AdjoinRoot.mk_ne_zero_of_natDegree_lt hfmonic hq0
+      (by rw [Polynomial.natDegree_X_pow_sub_C, hfnat]; exact hlt)
+    intro hpow_l
+    apply hne
+    have hmk :
+        AdjoinRoot.mk f
+            ((Polynomial.X : Polynomial (fourierBaseRing p)) ^ l -
+              Polynomial.C 1) =
+          fourierRoot p ^ l - 1 := by
+      simp [f, fourierRoot]
+    rw [hmk, sub_eq_zero.mpr hpow_l]
+  · have hl_eq : l = p - 1 := by omega
+    subst l
+    intro hlast
+    apply hne_one
+    calc
+      fourierRoot p = fourierRoot p * 1 := (mul_one _).symm
+      _ = fourierRoot p * fourierRoot p ^ (p - 1) := by rw [hlast]
+      _ = fourierRoot p ^ p := by
+        rw [← pow_succ', Nat.sub_add_cancel hp.one_le]
+      _ = 1 := hpow
 
 /-- The explicit roots are pairwise distinct. -/
 theorem fourier_roots_injective
     (p : ℕ) (hp : Nat.Prime p) :
     Function.Injective (fourierRoots p p) := by
-  sorry
+  have hprim := fourier_root_is_primitive_root p hp
+  intro i j hij
+  exact Fin.ext (hprim.pow_inj i.isLt j.isLt hij)
 
 /-- The factorization of T^p - 1 in the Fourier extension. -/
 theorem fourier_factorization
     (p : ℕ) (hp : Nat.Prime p) :
     (Polynomial.X ^ p - Polynomial.C (1 : fourierExtension p)) =
       fourierFactorizationProduct p := by
-  sorry
+  classical
+  let : Fact p.Prime := ⟨hp⟩
+  have hbase : IsDomain (fourierBaseRing p) :=
+    Localization.Away.isDomain (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero)
+  let : IsDomain (fourierBaseRing p) := hbase
+  have hIC : IsIntegrallyClosed (fourierBaseRing p) :=
+    isIntegrallyClosed_of_isLocalization (R := ℤ) (S := fourierBaseRing p)
+      (Submonoid.powers (p : ℤ))
+      (powers_le_nonZeroDivisors_of_noZeroDivisors
+        (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero))
+  let : IsIntegrallyClosed (fourierBaseRing p) := hIC
+  letI : Algebra ℤ ℚ := Ring.toIntAlgebra ℚ
+  have hpQ : IsUnit ((algebraMap ℤ ℚ) (p : ℤ)) := by
+    rw [isUnit_iff_ne_zero]
+    intro hz
+    apply hp.ne_zero
+    have hz' : (p : ℚ) = 0 := by simpa using hz
+    exact_mod_cast hz'
+  let g : fourierBaseRing p →+* ℚ :=
+    IsLocalization.Away.lift (p : ℤ) hpQ
+  letI : Algebra (fourierBaseRing p) ℚ := g.toAlgebra
+  letI : SMul ℤ (fourierBaseRing p) :=
+    (inferInstance : Algebra ℤ (fourierBaseRing p)).toSMul
+  letI : SMul ℤ ℚ := (inferInstance : Algebra ℤ ℚ).toSMul
+  have hscalar : IsScalarTower ℤ (fourierBaseRing p) ℚ :=
+    IsScalarTower.of_algebraMap_eq' (R := ℤ) (S := fourierBaseRing p) (A := ℚ) (by
+      ext z
+      change (algebraMap ℤ ℚ) z = g (algebraMap ℤ (fourierBaseRing p) z)
+      simp [g])
+  letI : IsScalarTower ℤ (fourierBaseRing p) ℚ := hscalar
+  letI : IsFractionRing (fourierBaseRing p) ℚ :=
+    IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
+      (M := Submonoid.powers (p : ℤ)) (fourierBaseRing p) ℚ
+  have hmonic : (fourierPolynomial p (fourierBaseRing p)).Monic := by
+    rw [show fourierPolynomial p (fourierBaseRing p) =
+        Polynomial.cyclotomic p (fourierBaseRing p) by
+      simpa [fourierPolynomial] using
+        (Polynomial.cyclotomic_prime (fourierBaseRing p) p).symm]
+    exact Polynomial.cyclotomic.monic p (fourierBaseRing p)
+  have hirr : Irreducible (fourierPolynomial p (fourierBaseRing p)) := by
+    rw [hmonic.irreducible_iff_irreducible_map_fraction_map (K := ℚ)]
+    have hmap_poly :
+        (fourierPolynomial p (fourierBaseRing p)).map
+            (algebraMap (fourierBaseRing p) ℚ) =
+          fourierPolynomial p ℚ := by
+      simp only [fourierPolynomial, Polynomial.map_sum, Polynomial.map_pow,
+        Polynomial.map_X, map_one, one_pow]
+    rw [hmap_poly]
+    exact fourierPolynomial_rat_irreducible p hp
+  have hprime : Prime (fourierPolynomial p (fourierBaseRing p)) :=
+    hirr.prime
+  let : IsDomain (fourierExtension p) :=
+    AdjoinRoot.isDomain_of_prime hprime
+  let : NeZero p := ⟨hp.ne_zero⟩
+  have hprim := fourier_root_is_primitive_root p hp
+  have hset :
+      Finset.univ.image (fourierRoots p p) =
+        Polynomial.nthRootsFinset p (1 : fourierExtension p) := by
+    apply Finset.Subset.antisymm
+    · intro x hx
+      rcases Finset.mem_image.mp hx with ⟨i, -, rfl⟩
+      rw [Polynomial.mem_nthRootsFinset hp.pos]
+      have hi := fourier_root_is_root p hp i
+      have hi' :
+          (fourierRoot p ^ (i : ℕ)) ^ p - 1 = 0 := by
+        simpa [fourierRoots, Polynomial.IsRoot] using hi
+      exact sub_eq_zero.mp hi'
+    · intro x hx
+      rw [Polynomial.mem_nthRootsFinset hp.pos] at hx
+      obtain ⟨i, hi, hxi⟩ := hprim.eq_pow_of_pow_eq_one hx
+      exact Finset.mem_image.mpr ⟨⟨i, hi⟩, Finset.mem_univ _, by
+        simpa [fourierRoots] using hxi⟩
+  have hprod :
+      (∏ x ∈ Finset.univ.image (fourierRoots p p),
+        (Polynomial.X - Polynomial.C x)) =
+        fourierFactorizationProduct p := by
+    rw [Finset.prod_image]
+    · rfl
+    · intro i hi j hj hij
+      exact fourier_roots_injective p hp hij
+  calc
+    Polynomial.X ^ p - Polynomial.C (1 : fourierExtension p) =
+        Polynomial.X ^ p - 1 := by rfl
+    _ = ∏ ζ ∈ Polynomial.nthRootsFinset p (1 : fourierExtension p),
+        (Polynomial.X - Polynomial.C ζ) :=
+      Polynomial.X_pow_sub_one_eq_prod hp.pos hprim
+    _ = ∏ x ∈ Finset.univ.image (fourierRoots p p),
+        (Polynomial.X - Polynomial.C x) := by rw [hset]
+    _ = fourierFactorizationProduct p := hprod
 
 /-- Differentiating the Fourier factorization at an explicit root gives the
 product of all its pairwise differences. -/

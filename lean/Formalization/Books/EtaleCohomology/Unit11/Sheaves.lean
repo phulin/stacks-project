@@ -63,14 +63,14 @@ abbrev AbelianSheaf {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (F : AbelianPresheaf C) : Prop :=
   IsSheaf J F
 
-/-! ## The equalizer diagram and its canonical limit form -/
+/-! ## The equalizer diagram and its canonical limit forms -/
 
 /-- The sheaf condition for one covering sieve.
 
-The cone over `S.arrows` is Mathlib's canonical form of the displayed
-equalizer diagram: its cone point is the sections over the target, its legs
-are restrictions to covering objects, and its relations encode the two
-restrictions to pairwise pullbacks. -/
+The cone over `S.arrows` is Mathlib's canonical sieve form of the displayed
+equalizer condition: its cone point is the sections over the target, its legs
+are restrictions along arrows in the sieve, and its morphisms encode the
+compatibility relations among those restrictions. -/
 def CoveringSieveSheafCondition {C : Type u} [Category.{v} C]
     {A : Type w} [Category.{z} A] (F : Cᵒᵖ ⥤ A)
     {X : C} (S : Sieve X) : Prop :=
@@ -87,21 +87,22 @@ theorem isSheaf_iff_coveringSieveSheafCondition
   simpa only [IsSheaf, CoveringSieveSheafCondition] using
     (CategoryTheory.Presheaf.isSheaf_iff_isLimit (J := J) (P := F))
 
-/-- The source's indexed covering-family form is the canonical multifork
-limit condition used by Mathlib for a pretopology. -/
-def CoveringFamilySheafCondition {C : Type u} [Category.{v} C]
+/-- The source's indexed covering-family form is represented here by
+Mathlib's multifork condition for a covering sieve. -/
+def CoveringSieveMultiforkSheafCondition {C : Type u} [Category.{v} C]
     {A : Type w} [Category.{z} A] (F : Cᵒᵖ ⥤ A)
     {J : GrothendieckTopology C} {X : C} (S : J.Cover X) : Prop :=
   Nonempty (IsLimit (S.multifork F))
 
-/-- A presheaf is a sheaf exactly when every covering-family multifork is a
-limit.  This is the source's equalizer diagram in its product/equalizer form. -/
-theorem isSheaf_iff_coveringFamilySheafCondition
+/-- A presheaf is a sheaf exactly when every covering-sieve multifork is a
+limit.  This is Mathlib's sieve-indexed form of the source's equalizer
+condition. -/
+theorem isSheaf_iff_coveringSieveMultiforkSheafCondition
     {C : Type u} [Category.{v} C] {A : Type w} [Category.{z} A]
     (J : GrothendieckTopology C) (F : Cᵒᵖ ⥤ A) :
     IsSheaf J F ↔
-      ∀ (X : C) (S : J.Cover X), CoveringFamilySheafCondition F S := by
-  simpa only [IsSheaf, CoveringFamilySheafCondition] using
+      ∀ (X : C) (S : J.Cover X), CoveringSieveMultiforkSheafCondition F S := by
+  simpa only [IsSheaf, CoveringSieveMultiforkSheafCondition] using
     (CategoryTheory.Presheaf.isSheaf_iff_multifork (J := J) (P := F))
 
 /-! ## Empty coverings -/

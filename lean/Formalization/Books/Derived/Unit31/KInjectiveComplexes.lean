@@ -109,12 +109,12 @@ theorem isKInjective_iff_quasiIso_precomposition_bijective_iff_derived_hom_bijec
                   (HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj I) =>
               (HomotopyCategory.quotient A (ComplexShape.up ℤ)).map s ≫ f) := by
     intro hI M N s hs
-    haveI : I.IsKInjective := hI
+    have : I.IsKInjective := hI
     have hs' : HomotopyCategory.quasiIso A (ComplexShape.up ℤ)
         ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map s) := by
       rw [HomotopyCategory.quotient_map_mem_quasiIso_iff]
       exact hs
-    haveI : IsIso ((DerivedCategory.Qh (C := A)).map
+    have : IsIso ((DerivedCategory.Qh (C := A)).map
         ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map s)) :=
       Localization.inverts _ _ _ hs'
     let hM := CochainComplex.IsKInjective.Qh_map_bijective
@@ -165,7 +165,7 @@ theorem isKInjective_iff_quasiIso_precomposition_bijective_iff_derived_hom_bijec
           (0 : M ⟶ (0 : BookComplex A))) := by
       rw [HomotopyCategory.quotient_map_mem_quasiIso_iff]
       exact hq
-    haveI : IsIso ((DerivedCategory.Qh (C := A)).map
+    have : IsIso ((DerivedCategory.Qh (C := A)).map
         ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map
           (0 : M ⟶ (0 : BookComplex A)))) :=
       Localization.inverts _ _ _ hq'
@@ -211,7 +211,7 @@ theorem isKInjective_iff_quasiIso_precomposition_bijective_iff_derived_hom_bijec
   · exact ⟨hQmap_of_isKInjective, isKInjective_of_precomposition⟩
   · constructor
     · intro h
-      haveI : I.IsKInjective := isKInjective_of_precomposition h
+      have : I.IsKInjective := isKInjective_of_precomposition h
       intro N
       exact CochainComplex.IsKInjective.Qh_map_bijective
         ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj N) I
@@ -323,7 +323,7 @@ theorem productComplex_isKInjective_and_represents_derived_product
   have hKInjective : (productComplex I).IsKInjective := by
     refine ⟨fun {K} f hK => ?_⟩
     have hHt (t : T) : Nonempty (Homotopy (f ≫ productComplexProjection I t) 0) := by
-      haveI : (I t).IsKInjective := hI t
+      have : (I t).IsKInjective := hI t
       exact CochainComplex.IsKInjective.nonempty_homotopy_zero
         (f ≫ productComplexProjection I t) hK
     let Ht (t : T) : Homotopy (f ≫ productComplexProjection I t) 0 := (hHt t).some
@@ -502,7 +502,7 @@ theorem productComplex_isKInjective_and_represents_derived_product
           (e.hom ≫ s.proj t))
     have hf (t : T) :
         (DerivedCategory.Qh (C := A)).map (f t) = e.hom ≫ s.proj t := by
-      letI : (I t).IsKInjective := hI t
+      let : (I t).IsKInjective := hI t
       exact Classical.choose_spec
         (((CochainComplex.IsKInjective.Qh_map_bijective K (I t) :
           Function.Bijective (DerivedCategory.Qh (C := A)).map)).2
@@ -521,7 +521,7 @@ theorem productComplex_isKInjective_and_represents_derived_product
           (e.hom ≫ s.proj t))
     have hf (t : T) :
         (DerivedCategory.Qh (C := A)).map (f t) = e.hom ≫ s.proj t := by
-      letI : (I t).IsKInjective := hI t
+      let : (I t).IsKInjective := hI t
       exact Classical.choose_spec
         (((CochainComplex.IsKInjective.Qh_map_bijective K (I t) :
           Function.Bijective (DerivedCategory.Qh (C := A)).map)).2
@@ -547,7 +547,7 @@ theorem productComplex_isKInjective_and_represents_derived_product
     let K := (DerivedCategory.Qh (C := A)).objPreimage s.pt
     let e := (DerivedCategory.Qh (C := A)).objObjPreimageIso s.pt
     unfold productDerivedCone at m hm ⊢
-    letI : (productComplex I).IsKInjective := hKInjective
+    let : (productComplex I).IsKInjective := hKInjective
     let f : ∀ t : T, K ⟶
         (HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj (I t) := fun t =>
       letI : (I t).IsKInjective := hI t
@@ -557,7 +557,7 @@ theorem productComplex_isKInjective_and_represents_derived_product
           (e.hom ≫ s.proj t))
     have hf (t : T) :
         (DerivedCategory.Qh (C := A)).map (f t) = e.hom ≫ s.proj t := by
-      letI : (I t).IsKInjective := hI t
+      let : (I t).IsKInjective := hI t
       exact Classical.choose_spec
         (((CochainComplex.IsKInjective.Qh_map_bijective K (I t) :
           Function.Bijective (DerivedCategory.Qh (C := A)).map)).2

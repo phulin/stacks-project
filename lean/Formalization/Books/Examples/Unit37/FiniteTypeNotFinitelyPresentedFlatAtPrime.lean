@@ -3342,24 +3342,228 @@ theorem ftCPrimeIdeal_eq_mul (k : Type u) [Field k] (n : ℕ) :
 theorem ftCQPrimeIdeal_annihilator_Xi (k : Type u) [Field k] (n : ℕ) :
     (Submodule.span (ftC k) ({ftXi k n} : Set (ftC k))).annihilator =
       ftCQPrimeIdeal k n := by
-  sorry
+  rw [Submodule.annihilator_span_singleton]
+  ext r
+  constructor
+  · intro hr
+    change r * ftXi k n = 0 at hr
+    have hP : r * (ftCZ k - (ftCX k) ^ n) ∈ ftCPrimeIdeal k n := by
+      rw [← ftCZn_annihilator k n]
+      rw [Submodule.mem_annihilator_span_singleton]
+      simpa [ftXi, mul_assoc] using hr
+    rw [ftCPrimeIdeal_eq_inf k n] at hP
+    have hxA : ftAX k ∈ IsLocalRing.maximalIdeal (ftA k) := by
+      rw [ftA_maximalIdeal_eq_span_generators k]
+      exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hpowA : (ftAX k) ^ (n + 1) ∈ IsLocalRing.maximalIdeal (ftA k) :=
+      (IsLocalRing.maximalIdeal (ftA k)).pow_mem_of_mem hxA (n + 1)
+        (Nat.succ_pos n)
+    have hunitA : IsUnit (1 + 2 * (ftAX k) ^ (n + 1)) := by
+      apply (IsLocalRing.notMem_maximalIdeal).mp
+      intro hmem
+      have hterm : 2 * (ftAX k) ^ (n + 1) ∈
+          IsLocalRing.maximalIdeal (ftA k) :=
+        (IsLocalRing.maximalIdeal (ftA k)).mul_mem_left 2 hpowA
+      have hone := (IsLocalRing.maximalIdeal (ftA k)).sub_mem hmem hterm
+      have hone' : (1 : ftA k) ∈ IsLocalRing.maximalIdeal (ftA k) := by
+        convert hone using 1 <;> ring
+      apply (IsLocalRing.maximalIdeal.isMaximal (ftA k)).ne_top
+      rw [Ideal.eq_top_iff_one]
+      exact hone'
+    have hunit : IsUnit (1 + 2 * (ftCX k) ^ (n + 1)) := by
+      simpa only [map_add, map_mul, map_pow, map_one, map_ofNat, ftCX] using
+        IsUnit.map (ftAToC k) hunitA
+    have hb : ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1 ∈
+        ftCQPrimeIdeal k n :=
+      Ideal.mem_sup_right (Ideal.subset_span (by simp))
+    have h := (ftCQPrimeIdeal k n).sub_mem
+      ((ftCQPrimeIdeal k n).mul_mem_left r hb)
+      ((ftCQPrimeIdeal k n).mul_mem_left (ftCX k)
+        (by simpa [mul_comm] using hP.2))
+    have h' : r * (1 + 2 * (ftCX k) ^ (n + 1)) ∈
+        ftCQPrimeIdeal k n := by
+      convert h using 1 <;> ring
+    apply (Ideal.unit_mul_mem_iff_mem _ hunit).mp
+    simpa [mul_comm] using h'
+  · intro hr
+    change r * ftXi k n = 0
+    have ha : ftCZ k - (ftCX k) ^ n ∈ ftCRPrimeIdeal k n :=
+      Ideal.mem_sup_right (Ideal.subset_span (by simp))
+    have hP : r * (ftCZ k - (ftCX k) ^ n) ∈ ftCPrimeIdeal k n := by
+      rw [ftCPrimeIdeal_eq_inf k n]
+      exact ⟨(ftCRPrimeIdeal k n).mul_mem_left r ha,
+        by simpa [mul_comm] using
+          (ftCQPrimeIdeal k n).mul_mem_left
+            (ftCZ k - (ftCX k) ^ n) hr⟩
+    rw [← ftCZn_annihilator k n] at hP
+    rw [Submodule.mem_annihilator_span_singleton] at hP
+    simpa [ftXi, mul_assoc] using hP
 
 theorem ftCRPrimeIdeal_le_CQ (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     ftCRPrimeIdeal k n ≤ ftCQ k := by
-  sorry
+  rw [ftCRPrimeIdeal, ftCPrimeIdeal]
+  refine sup_le ?_ ?_
+  · rw [Ideal.map_le_iff_le_comap]
+    intro a ha
+    have hmax0 : Ideal.map (algebraMap (ftBasePolynomialRing k) (ftA0 k))
+        (ftBaseMaximalIdeal k) = IsLocalRing.maximalIdeal (ftA0 k) := by
+      unfold ftA0
+      exact IsLocalization.AtPrime.map_eq_maximalIdeal
+        (Rₚ := Localization.AtPrime (ftBaseMaximalIdeal k))
+        (ftBaseMaximalIdeal k)
+    have hx : ftX k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
+      rw [← hmax0]
+      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp [ftX]))
+    have hy : ftY k ∈ IsLocalRing.maximalIdeal (ftA0 k) := by
+      rw [← hmax0]
+      exact Ideal.mem_map_of_mem _ (Ideal.subset_span (by simp [ftY]))
+    have hpow (m : ℕ) (hm : 0 < m) :
+        (ftX k) ^ m ∈ IsLocalRing.maximalIdeal (ftA0 k) :=
+      (IsLocalRing.maximalIdeal (ftA0 k)).pow_mem_of_mem hx m hm
+    have hP0 : ftP0 k n ≤ IsLocalRing.maximalIdeal (ftA0 k) := by
+      rw [ftP0]
+      refine Ideal.span_le.2 ?_
+      intro z hz
+      rcases hz with rfl
+      exact (IsLocalRing.maximalIdeal (ftA0 k)).add_mem
+        ((IsLocalRing.maximalIdeal (ftA0 k)).add_mem hy (hpow n hn))
+        (hpow (2 * n + 1) (by omega))
+    have hcomp : IsLocalRing.maximalIdeal (ftA k) =
+        (IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k) :=
+      (IsLocalRing.eq_maximalIdeal
+        (Ideal.comap_isMaximal_of_surjective (ftAToA0 k)
+          (ftAToA0_surjective k))).symm
+    have haM : a ∈ IsLocalRing.maximalIdeal (ftA k) := by
+      rw [hcomp]
+      exact hP0 ha
+    have hmap : Ideal.map (ftAToC k)
+        (IsLocalRing.maximalIdeal (ftA k)) ≤ ftCQ k := by
+      rw [ftA_maximalIdeal_eq_span_generators k, Ideal.map_span]
+      refine Ideal.span_le.2 ?_
+      rintro z ⟨b, hb, rfl⟩
+      rcases hb with hb | hb
+      · rcases (show b = ftAX k ∨ b = ftAY k by simpa using hb) with rfl | rfl
+        · exact Ideal.subset_span (Set.mem_union_left _ (by simp [ftCX]))
+        · exact Ideal.subset_span (Set.mem_union_left _ (by simp [ftCY]))
+      · rcases hb with ⟨i, rfl⟩
+        exact Ideal.subset_span (Set.mem_union_right _ ⟨i, rfl⟩)
+    exact hmap (Ideal.mem_map_of_mem (ftAToC k) haM)
+  · refine Ideal.span_le.2 ?_
+    intro z hz
+    rcases hz with rfl
+    have hx : ftCX k ∈ ftCQ k :=
+      Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hz : ftCZ k ∈ ftCQ k :=
+      Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hxn : (ftCX k) ^ n ∈ ftCQ k :=
+      (ftCQ k).pow_mem_of_mem hx n hn
+    exact (ftCQ k).sub_mem hz hxn
 
 theorem ftCQPrimeIdeal_sup_CQ (k : Type u) [Field k] (n : ℕ) :
     ftCQPrimeIdeal k n ⊔ ftCQ k = ⊤ := by
-  sorry
+  apply top_unique
+  let I : Ideal (ftC k) := ftCQPrimeIdeal k n ⊔ ftCQ k
+  have hb : ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1 ∈ I :=
+    Ideal.mem_sup_left (Ideal.mem_sup_right (Ideal.subset_span (by simp)))
+  have hx : ftCX k ∈ ftCQ k :=
+    Ideal.subset_span (Set.mem_union_left _ (by simp))
+  have hz : ftCZ k ∈ ftCQ k :=
+    Ideal.subset_span (Set.mem_union_left _ (by simp))
+  have hzx : ftCX k * ftCZ k ∈ I :=
+    Ideal.mem_sup_right ((ftCQ k).mul_mem_left (ftCX k) hz)
+  have hpow : (ftCX k) ^ (n + 1) ∈ I :=
+    Ideal.mem_sup_right ((ftCQ k).pow_mem_of_mem hx (n + 1)
+      (Nat.succ_pos n))
+  have hone : (1 : ftC k) ∈ I := by
+    have h := I.sub_mem (I.sub_mem hb hzx) hpow
+    convert h using 1 <;> ring
+  intro r hr
+  change r ∈ I
+  simpa using I.mul_mem_left r hone
 
 theorem ftCQPrimeIdeal_sup_CQPrimeIdeal (k : Type u) [Field k] {n m : ℕ}
     (hnm : n ≠ m) :
     ftCQPrimeIdeal k n ⊔ ftCQPrimeIdeal k m = ⊤ := by
-  sorry
+  have haux (a b : ℕ) (hab : a < b) :
+      ftCQPrimeIdeal k a ⊔ ftCQPrimeIdeal k b = ⊤ := by
+    let I : Ideal (ftC k) := ftCQPrimeIdeal k a ⊔ ftCQPrimeIdeal k b
+    have hba0 : ftCX k * ftCZ k + (ftCX k) ^ (a + 1) + 1 ∈
+        ftCQPrimeIdeal k a :=
+      Ideal.mem_sup_right (Ideal.subset_span (by simp))
+    have hbb0 : ftCX k * ftCZ k + (ftCX k) ^ (b + 1) + 1 ∈
+        ftCQPrimeIdeal k b :=
+      Ideal.mem_sup_right (Ideal.subset_span (by simp))
+    have hba : ftCX k * ftCZ k + (ftCX k) ^ (a + 1) + 1 ∈ I :=
+      Ideal.mem_sup_left hba0
+    have hbb : ftCX k * ftCZ k + (ftCX k) ^ (b + 1) + 1 ∈ I :=
+      Ideal.mem_sup_right hbb0
+    have hdiff : (ftCX k) * ((ftCX k) ^ a - (ftCX k) ^ b) ∈ I := by
+      have h := I.sub_mem hba hbb
+      convert h using 1 <;> ring
+    have hcancel (u : ftC k) (hu : ftCX k * u ∈ I) : u ∈ I := by
+      have hbm : ftCX k * ftCZ k + (ftCX k) ^ (b + 1) + 1 ∈ I := hbb
+      have h := I.sub_mem (I.mul_mem_left u hbm)
+        (I.mul_mem_left (ftCZ k + (ftCX k) ^ b) hu)
+      convert h using 1 <;> ring
+    have hdiff' : (ftCX k) ^ a - (ftCX k) ^ b ∈ I :=
+      hcancel _ hdiff
+    have hfactor : (ftCX k) ^ a - (ftCX k) ^ b =
+        (ftCX k) ^ a * (1 - (ftCX k) ^ (b - a)) := by
+      have hpow : (ftCX k) ^ b =
+          (ftCX k) ^ a * (ftCX k) ^ (b - a) := by
+        calc
+          (ftCX k) ^ b = (ftCX k) ^ (a + (b - a)) := by
+            congr 1
+            exact (Nat.add_sub_of_le (Nat.le_of_lt hab)).symm
+          _ = (ftCX k) ^ a * (ftCX k) ^ (b - a) := by rw [pow_add]
+      rw [hpow]
+      ring
+    have hfactor' : (ftCX k) ^ a *
+        (1 - (ftCX k) ^ (b - a)) ∈ I := hfactor ▸ hdiff'
+    have hcancel_pow (j : ℕ) (u : ftC k)
+        (hu : (ftCX k) ^ j * u ∈ I) : u ∈ I := by
+      induction j with
+      | zero => simpa using hu
+      | succ j ih =>
+          apply ih
+          apply hcancel ((ftCX k) ^ j * u)
+          convert hu using 1 <;> simp [pow_succ] <;> ring
+    have hu : 1 - (ftCX k) ^ (b - a) ∈ I :=
+      hcancel_pow a _ hfactor'
+    have hxA : ftAX k ∈ IsLocalRing.maximalIdeal (ftA k) := by
+      rw [ftA_maximalIdeal_eq_span_generators k]
+      exact Ideal.subset_span (Set.mem_union_left _ (by simp))
+    have hpowA : (ftAX k) ^ (b - a) ∈
+        IsLocalRing.maximalIdeal (ftA k) :=
+      (IsLocalRing.maximalIdeal (ftA k)).pow_mem_of_mem hxA (b - a)
+        (Nat.sub_pos_of_lt hab)
+    have hunitA : IsUnit (1 - (ftAX k) ^ (b - a)) := by
+      apply (IsLocalRing.notMem_maximalIdeal).mp
+      intro hmem
+      have hone := (IsLocalRing.maximalIdeal (ftA k)).add_mem hmem hpowA
+      have hone' : (1 : ftA k) ∈ IsLocalRing.maximalIdeal (ftA k) := by
+        convert hone using 1 <;> ring
+      apply (IsLocalRing.maximalIdeal.isMaximal (ftA k)).ne_top
+      rw [Ideal.eq_top_iff_one]
+      exact hone'
+    have hunit : IsUnit (1 - (ftCX k) ^ (b - a)) := by
+      simpa only [map_sub, map_pow, map_one, ftCX] using
+        IsUnit.map (ftAToC k) hunitA
+    exact I.eq_top_of_isUnit_mem hu hunit
+  rcases lt_or_gt_of_ne hnm with h | h
+  · exact haux n m h
+  · rw [sup_comm]
+    exact haux m n h
 
 theorem ftCQPrimeIdeal_mul_Xi (k : Type u) [Field k] (n : ℕ) {r : ftC k}
     (hr : r ∈ ftCQPrimeIdeal k n) : r * ftXi k n = 0 := by
-  sorry
+  have hr' : r ∈
+      (Submodule.span (ftC k) ({ftXi k n} : Set (ftC k))).annihilator := by
+    rw [ftCQPrimeIdeal_annihilator_Xi k n]
+    exact hr
+  rw [Submodule.annihilator_span_singleton] at hr'
+  change r * ftXi k n = 0 at hr'
+  exact hr'
 
 /-! ## The image algebra `B` -/
 

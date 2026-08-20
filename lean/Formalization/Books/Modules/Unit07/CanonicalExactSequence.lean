@@ -127,7 +127,7 @@ theorem canonicalExactSequence_shortExact {X : TopCat.{v}} (U : Opens X) (F : Ab
   let S (x : X) := (canonicalExactSequence U F).map (T x)
   have hstalk (x : X) : (S x).ShortExact := by
     by_cases hx : x ∈ U
-    · haveI : IsIso (S x).f := by
+    · have : IsIso (S x).f := by
         change IsIso ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
           (canonicalExactSequenceLeft U F).hom)
         exact openAbelianSheafExtension_counit_stalk_map_isIso U F x hx
@@ -138,13 +138,13 @@ theorem canonicalExactSequence_shortExact {X : TopCat.{v}} (U : Opens X) (F : Ab
               simpa [canonicalClosedSubset] using hx) with ⟨e⟩
       have hzero : IsZero (S x).X₃ :=
         IsZero.of_iso (isZero_zero (AddCommGrpCat.{v})) e
-      haveI : Epi (S x).g := hzero.isInitial.epi_to _
+      have : Epi (S x).g := hzero.isInitial.epi_to _
       exact ShortComplex.ShortExact.mk'
         (((S x).exact_iff_epi (hzero.eq_zero_of_tgt _)).2 (by infer_instance))
         (by infer_instance) (by infer_instance)
     · have hxZ : x ∈ canonicalClosedSubset U := by
         simpa [canonicalClosedSubset] using hx
-      haveI : IsIso (S x).g := by
+      have : IsIso (S x).g := by
         change IsIso ((TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
           (canonicalExactSequenceRight U F).hom)
         exact closedAbelianSheafRestriction_unit_stalk_map_isIso
@@ -154,7 +154,7 @@ theorem canonicalExactSequence_shortExact {X : TopCat.{v}} (U : Opens X) (F : Ab
       have hzero : IsZero (S x).X₁ :=
         IsZero.of_iso (isZero_zero (AddCommGrpCat.{v}))
           (e ≪≫ HasZeroObject.zeroIsoInitial.symm)
-      haveI : Mono (S x).f := hzero.isTerminal.mono_from _
+      have : Mono (S x).f := hzero.isTerminal.mono_from _
       exact ShortComplex.ShortExact.mk'
         (((S x).exact_iff_mono (hzero.eq_zero_of_src _)).2 (by infer_instance))
         (by infer_instance) (by infer_instance)

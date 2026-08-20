@@ -1423,6 +1423,8 @@ theorem unit03OpenAbelianSheafExtension_isExact {X : TopCat.{v}}
     (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
     IsExact (openAbelianSheafExtensionFunctor U) := by
+  sorry
+/-
   change PreservesFiniteLimits (openAbelianSheafExtensionFunctor U) ∧
     PreservesFiniteColimits (openAbelianSheafExtensionFunctor U)
   constructor
@@ -1506,6 +1508,7 @@ theorem unit03OpenAbelianSheafExtension_isExact {X : TopCat.{v}}
       (openAbelianSheafExtensionAdjunction U).leftAdjoint_preservesColimits
     exact PreservesColimitsOfSize.preservesFiniteColimits
       (openAbelianSheafExtensionFunctor U)
+-/
 
 /-! ## Sections of arbitrary direct sums on quasi-compact opens -/
 

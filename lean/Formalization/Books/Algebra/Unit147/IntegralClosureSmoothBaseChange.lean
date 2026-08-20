@@ -543,7 +543,7 @@ theorem integralClosure_baseChange_of_filtered_smooth
     [Algebra R S] [Algebra R B]
     (D : FilteredSmoothAlgebraColimit R S) :
     Function.Bijective
-      (TensorProduct.toIntegralClosure R S B) := by
+  (TensorProduct.toIntegralClosure R S B) := by
   sorry
 
 /-- The canonical isomorphism in the filtered-colimit statement. -/

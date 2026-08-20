@@ -4404,6 +4404,14 @@ def ftAToBLocal (k : Type u) [Field k] (g : ftB k) :
     ftA k →+* Localization.Away g :=
   (algebraMap (ftB k) (Localization.Away g)).comp (ftAToB k)
 
+private noncomputable instance ftAToBLocalAlgebra (k : Type u) [Field k]
+    (g : ftB k) : Algebra (ftA k) (Localization.Away g) :=
+  (ftAToBLocal k g).toAlgebra
+
+private noncomputable instance ftAToBLocalModule (k : Type u) [Field k]
+    (g : ftB k) : Module (ftA k) (Localization.Away g) :=
+  (ftAToBLocal k g).toAlgebra.toModule
+
 def ftAToBQ (k : Type u) [Field k] :
     ftA k →+* Localization.AtPrime (ftBQPrime k) :=
   (algebraMap (ftB k) (Localization.AtPrime (ftBQPrime k))).comp (ftAToB k)
@@ -4488,13 +4496,10 @@ def ftBLocalDifference (k : Type u) [Field k] (g : ftB k) (n : ℕ) :
     (ftCToB k (ftCZ k) - (ftBX k) ^ n)
 
 theorem ftB_local_annihilator_under_flat (k : Type u) [Field k] (g : ftB k)
-    (hg : g ∉ ftBQPrime k) (n : ℕ)
+    (_hg : g ∉ ftBQPrime k) (n : ℕ)
     (hflat : RingHom.Flat (ftAToBLocal k g)) :
     (Submodule.span (Localization.Away g) ({ftBLocalGenerator k g n} :
       Set (Localization.Away g))).annihilator = ftBLocalPrime k g n := by
-  letI : Algebra (ftA k) (Localization.Away g) := (ftAToBLocal k g).toAlgebra
-  letI : Module (ftA k) (Localization.Away g) :=
-    (ftAToBLocal k g).toAlgebra.toModule
   have hflat' : Module.Flat (ftA k) (Localization.Away g) := by
     exact RingHom.flat_algebraMap_iff.mp hflat
   have hbase := @ft_annihilator_element_flat_base_change (ftA k)
@@ -4617,6 +4622,11 @@ def ftCLocalizationMap (k : Type u) [Field k] (g : ftC k) :
     Localization.Away g →+* Localization.Away (ftCToB k g) :=
   Localization.awayMap (ftCToB k) g
 
+private noncomputable instance ftCLocalizationMapAlgebra (k : Type u) [Field k]
+    (g : ftC k) :
+    Algebra (Localization.Away g) (Localization.Away (ftCToB k g)) :=
+  (ftCLocalizationMap k g).toAlgebra
+
 theorem ftKernelMap_on_summand (k : Type u) [Field k] (g : ftC k)
     (n : ftKernelIndex k g) (c : ftKernelSummand k g n) :
     ftKernelMap k g (DirectSum.of _ n c) = ftCPrimeSummandMap k g n c := by
@@ -4678,17 +4688,18 @@ theorem ftB_local_finitePresentation_iff_kernel_fg (k : Type u) [Field k]
       (RingHom.ker hB).FG := by
     constructor
     · intro hBfp
-      letI : Algebra (Localization.Away g)
-          (Localization.Away (ftCToB k g)) := hB.toAlgebra
-      letI : Algebra.FinitePresentation (Localization.Away g)
-          (Localization.Away (ftCToB k g)) := hBfp
+      have hBfp' : Algebra.FinitePresentation (Localization.Away g)
+          (Localization.Away (ftCToB k g)) := by
+        exact hBfp
       have heq : algebraMap (Localization.Away g)
           (Localization.Away (ftCToB k g)) = hB := rfl
       rw [← heq]
       simpa using
-        (Algebra.FinitePresentation.ker_fG_of_surjective
+        (@Algebra.FinitePresentation.ker_fG_of_surjective
+          (Localization.Away g) (Localization.Away g)
+          (Localization.Away (ftCToB k g)) _ _ _ _ _
           (Algebra.ofId (Localization.Away g)
-            (Localization.Away (ftCToB k g))) hsurj)
+            (Localization.Away (ftCToB k g))) hsurj _ hBfp')
     · intro hker
       exact RingHom.FinitePresentation.of_surjective hB hsurj hker
   constructor

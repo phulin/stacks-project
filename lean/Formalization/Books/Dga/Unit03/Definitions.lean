@@ -312,18 +312,228 @@ noncomputable def tensorFlipInvComponent
             rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
             exact h)))
 
+private lemma tensorProductComplex_differential_formula_aux
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q : ℤ) :
+    ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q (p + q) rfl ≫
+        (tensorProductComplex R A B).d (p + q) (p + q + 1) =
+      (A.d p (p + 1) ⊗ₘ 𝟙 (B.X q)) ≫
+            ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (p + 1) q (p + q + 1) (by dsimp; omega) +
+        p.negOnePow •
+          ((𝟙 (A.X p) ⊗ₘ B.d q (q + 1)) ≫
+            ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) p (q + 1) (p + q + 1) (by dsimp; omega)) := by
+  change _ ≫ (HomologicalComplex.mapBifunctor A B
+    (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)).d
+      (p + q) (p + q + 1) = _
+  rw [HomologicalComplex.mapBifunctor.d_eq, Preadditive.comp_add,
+    HomologicalComplex.mapBifunctor.ι_D₁, HomologicalComplex.mapBifunctor.ι_D₂]
+  rw [HomologicalComplex.mapBifunctor.d₁_eq A B
+      (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)
+      (by rfl) q _ (by dsimp; omega),
+    HomologicalComplex.mapBifunctor.d₂_eq A B
+      (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)
+      p (by rfl) _ (by dsimp; omega)]
+  dsimp
+  simp
+
+private lemma tensorProductComplex_differential_formula_swap_aux
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : q + p = n) :
+    ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) q p n (by dsimp; omega) ≫
+        (tensorProductComplex R B A).d n (n + 1) =
+      (B.d q (q + 1) ⊗ₘ 𝟙 (A.X p)) ≫
+          ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (q + 1) p (n + 1) (by dsimp; omega) +
+        q.negOnePow •
+          ((𝟙 (B.X q) ⊗ₘ A.d p (p + 1)) ≫
+            ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) q (p + 1) (n + 1) (by dsimp; omega)) := by
+  subst n
+  exact tensorProductComplex_differential_formula_aux R B A q p
+
+private lemma tensorProductComplex_differential_formula_comm_aux
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : q + p = n) :
+    ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) q p n (by dsimp; omega) ≫
+        (tensorProductComplex R A B).d n (n + 1) =
+      (A.d q (q + 1) ⊗ₘ 𝟙 (B.X p)) ≫
+          ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (q + 1) p (n + 1) (by dsimp; omega) +
+        q.negOnePow •
+          ((𝟙 (A.X q) ⊗ₘ B.d p (p + 1)) ≫
+            ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) q (p + 1) (n + 1) (by dsimp; omega)) := by
+  subst n
+  exact tensorProductComplex_differential_formula_aux R A B q p
+
+private lemma tensorProductComplex_differential_formula_right_aux
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q : ℤ)
+    {Z : ModuleCat.{u} R} (f : (tensorProductComplex R A B).X (p + q + 1) ⟶ Z) :
+    ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q (p + q) rfl ≫
+        ((tensorProductComplex R A B).d (p + q) (p + q + 1) ≫ f) =
+      ((A.d p (p + 1) ⊗ₘ 𝟙 (B.X q)) ≫
+          ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (p + 1) q (p + q + 1) (by dsimp; omega) +
+        p.negOnePow •
+          ((𝟙 (A.X p) ⊗ₘ B.d q (q + 1)) ≫
+            ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) p (q + 1) (p + q + 1) (by dsimp; omega))) ≫ f := by
+  simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+    (tensorProductComplex_differential_formula_aux R A B p q)
+
+@[reassoc] private lemma tensorFlipHomComponent_on_summand
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : p + q = n) :
+    ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ tensorFlipHomComponent R A B n =
+      (p * q).negOnePow •
+        ((β_ (A.X p) (B.X q)).hom ≫
+          ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h)) := by
+  dsimp [tensorFlipHomComponent]
+  rw [HomologicalComplex.ι_mapBifunctorDesc]
+
+@[reassoc] private lemma tensorFlipInvComponent_on_summand
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : p + q = n) :
+    ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ tensorFlipInvComponent R A B n =
+      (p * q).negOnePow •
+        ((β_ (B.X p) (A.X q)).hom ≫
+          ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h)) := by
+  dsimp [tensorFlipInvComponent]
+  rw [HomologicalComplex.ι_mapBifunctorDesc]
+
+private lemma tensorFlipHomComponent_on_summand_right
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : p + q = n) {Z : ModuleCat.{u} R}
+    (f : (tensorProductComplex R B A).X n ⟶ Z) :
+    ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ (tensorFlipHomComponent R A B n ≫ f) =
+      ((p * q).negOnePow •
+        ((β_ (A.X p) (B.X q)).hom ≫
+          ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h))) ≫ f := by
+  simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+    (tensorFlipHomComponent_on_summand R A B p q n h)
+
+private lemma tensorFlipInvComponent_on_summand_right
+    (R : Type u) [CommRing R] (A B : CochainComplexOver R) (p q n : ℤ)
+    (h : p + q = n) {Z : ModuleCat.{u} R}
+    (f : (tensorProductComplex R A B).X n ⟶ Z) :
+    ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ (tensorFlipInvComponent R A B n ≫ f) =
+      ((p * q).negOnePow •
+        ((β_ (B.X p) (A.X q)).hom ≫
+          ιMapBifunctor A B (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h))) ≫ f := by
+  simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+    (tensorFlipInvComponent_on_summand R A B p q n h)
+
 /-- The signed Koszul flip of total tensor products. -/
 noncomputable def tensorFlipIso
     (R : Type u) [CommRing R] (A B : CochainComplexOver R) :
     tensorProductComplex R A B ≅ tensorProductComplex R B A :=
   { hom :=
       { f := tensorFlipHomComponent R A B
-        comm' := by sorry }
+        comm' := by
+          rintro i _ rfl
+          apply HomologicalComplex.mapBifunctor.hom_ext
+          intro p q h
+          dsimp at h
+          subst i
+          rw [tensorFlipHomComponent_on_summand_right R A B p q (p + q) rfl]
+          simp only [Linear.units_smul_comp, Category.assoc]
+          rw [tensorProductComplex_differential_formula_swap_aux R A B p q
+                (p + q) (by omega),
+              tensorProductComplex_differential_formula_right_aux R A B p q
+                (tensorFlipHomComponent R A B (p + q + 1))]
+          simp only [Preadditive.add_comp, Linear.units_smul_comp, Category.assoc]
+          rw [tensorFlipHomComponent_on_summand R A B (p + 1) q (p + q + 1)
+                (by omega),
+              tensorFlipHomComponent_on_summand R A B p (q + 1) (p + q + 1)
+                (by omega)]
+          simp [MonoidalCategory.tensorHom_def, Int.negOnePow_add, mul_add,
+            smul_smul, mul_comm]
+          have hp : p.negOnePow * (p.negOnePow * (p * q).negOnePow) =
+              (p * q).negOnePow := by
+            rw [← mul_assoc, Int.units_mul_self, one_mul]
+          rw [hp]
+          exact add_comm _ _ }
     inv :=
       { f := tensorFlipInvComponent R A B
-        comm' := by sorry }
-    hom_inv_id := by sorry
-    inv_hom_id := by sorry }
+        comm' := by
+          rintro i _ rfl
+          apply HomologicalComplex.mapBifunctor.hom_ext
+          intro p q h
+          dsimp at h
+          subst i
+          rw [tensorFlipInvComponent_on_summand_right R A B p q (p + q) rfl]
+          simp only [Linear.units_smul_comp, Category.assoc]
+          rw [tensorProductComplex_differential_formula_comm_aux R A B p q
+                (p + q) (by omega),
+              tensorProductComplex_differential_formula_right_aux R B A p q
+                (tensorFlipInvComponent R A B (p + q + 1))]
+          simp only [Preadditive.add_comp, Linear.units_smul_comp, Category.assoc]
+          rw [tensorFlipInvComponent_on_summand R A B (p + 1) q (p + q + 1)
+                (by omega),
+              tensorFlipInvComponent_on_summand R A B p (q + 1) (p + q + 1)
+                (by omega)]
+          simp [MonoidalCategory.tensorHom_def, Int.negOnePow_add, mul_add,
+            smul_smul, mul_comm]
+          have hp : p.negOnePow * (p.negOnePow * (p * q).negOnePow) =
+              (p * q).negOnePow := by
+            rw [← mul_assoc, Int.units_mul_self, one_mul]
+          rw [hp]
+          exact add_comm _ _ }
+    hom_inv_id := by
+      apply HomologicalComplex.hom_ext _ _
+      intro n
+      apply HomologicalComplex.mapBifunctor.hom_ext
+      intro p q h
+      dsimp
+      dsimp at h
+      subst n
+      rw [tensorFlipHomComponent_on_summand_right R A B p q (p + q) rfl
+        (tensorFlipInvComponent R A B (p + q))]
+      simp only [Linear.units_smul_comp, Category.assoc]
+      rw [tensorFlipInvComponent_on_summand R A B q p (p + q)
+        (by omega)]
+      simp
+      have hsign : (p * q).negOnePow * (q * p).negOnePow = (1 : ℤˣ) := by
+        rw [mul_comm q p, Int.units_mul_self]
+      simp only [smul_smul, hsign, one_smul]
+    inv_hom_id := by
+      apply HomologicalComplex.hom_ext _ _
+      intro n
+      apply HomologicalComplex.mapBifunctor.hom_ext
+      intro p q h
+      dsimp
+      dsimp at h
+      subst n
+      rw [tensorFlipInvComponent_on_summand_right R A B p q (p + q) rfl
+        (tensorFlipHomComponent R A B (p + q))]
+      simp only [Linear.units_smul_comp, Category.assoc]
+      rw [tensorFlipHomComponent_on_summand R A B q p (p + q)
+        (by omega)]
+      simp
+      have hsign : (p * q).negOnePow * (q * p).negOnePow = (1 : ℤˣ) := by
+        rw [mul_comm q p, Int.units_mul_self]
+      simp only [smul_smul, hsign, one_smul] }
 
 /-- On the `A^p ⊗ B^q` summand, the signed flip is `(-1)^(pq)` followed by
 the ordinary tensor braiding. -/
@@ -334,8 +544,9 @@ theorem tensorFlip_on_summand
       (p * q).negOnePow •
         ((β_ (A.X p) (B.X q)).hom ≫
           ιMapBifunctor B A (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
-            (.up ℤ) q p (p + q) (by dsimp; omega)) := by
-  sorry
+              (.up ℤ) q p (p + q) (by dsimp; omega)) := by
+  dsimp [tensorFlipIso, tensorFlipHomComponent]
+  simp
 
 /-- The interchange map which brings the two `A` factors and the two `B`
 factors together before multiplying. -/

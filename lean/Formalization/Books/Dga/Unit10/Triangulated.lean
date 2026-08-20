@@ -210,6 +210,20 @@ structure DgmTR4Witness
   cone_obj₁ : cone_triangle.obj₁ = Q₁
   cone_obj₂ : cone_triangle.obj₂ = Q₂
   cone_obj₃ : cone_triangle.obj₃ = Q₃
+  /- The two triangle morphisms are the downward arrows in the source's
+  three-row diagram: the first has identity on `K` and `β` on `L`, while the
+  second has `α` on `K` and identity on `M`.  Their third components are the
+  first two maps of the fourth triangle. -/
+  first_morphism_first : HEq first_morphism.first
+    ((DgmHomotopyQuotient A).map (𝟙 K))
+  first_morphism_second : HEq first_morphism.second
+    ((DgmHomotopyQuotient A).map β)
+  second_morphism_first : HEq second_morphism.first
+    ((DgmHomotopyQuotient A).map α)
+  second_morphism_second : HEq second_morphism.second
+    ((DgmHomotopyQuotient A).map (𝟙 M))
+  cone_morphism₁ : HEq cone_triangle.mor₁ first_morphism.third
+  cone_morphism₂ : HEq cone_triangle.mor₂ second_morphism.third
 
 /-- The additional exact rows and splittings exhibited in the special TR4
 lemma for admissible monomorphisms. -/

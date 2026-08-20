@@ -64,7 +64,7 @@ theorem finiteFiltered_additiveCategory_exists
       exact (isZero_zero C).eq_of_src _ _
   let Z : FiniteFilteredObject C :=
     ⟨zeroFilteredObject (C := C), show finiteFilteredProperty C _ from hzero⟩
-  letI : ∀ A B : FiniteFilteredObject C,
+  let : ∀ A B : FiniteFilteredObject C,
       HasLimit (pair A B) := by
     intro A B
     let hA := A.property
@@ -86,7 +86,7 @@ theorem finiteFiltered_additiveCategory_exists
           (A.obj.filtration.obj (min a₁ b₁)).arrow
           (B.obj.filtration.obj (min a₁ b₁)).arrow) = ⊤
         rw [hA', hB']
-        letI : IsIso (biprod.map (⊤ : Subobject A.obj.carrier).arrow
+        let : IsIso (biprod.map (⊤ : Subobject A.obj.carrier).arrow
             (⊤ : Subobject B.obj.carrier).arrow) := by
           apply isIso_of_mono_of_epi
         exact Subobject.mk_eq_top_of_isIso _
@@ -142,17 +142,17 @@ theorem finiteFiltered_additiveCategory_exists
         apply biprod.hom_ext
         · have hm₁' := congrArg (fun k => k.hom.hom) hm₁
           change m.hom.hom ≫ biprod.desc (𝟙 A.obj.carrier) 0 = f.hom.hom at hm₁'
-          simp only [biprod.desc_eq, Category.assoc, Category.comp_id, comp_zero, add_zero,
+          simp only [biprod.desc_eq, Category.comp_id, comp_zero, add_zero,
             biprod.lift_fst] at hm₁' ⊢
           exact hm₁'
         · have hm₂' := congrArg (fun k => k.hom.hom) hm₂
           change m.hom.hom ≫ biprod.desc 0 (𝟙 B.obj.carrier) = g.hom.hom at hm₂'
-          simp only [biprod.desc_eq, Category.assoc, Category.comp_id, comp_zero, zero_add,
+          simp only [biprod.desc_eq, Category.comp_id, comp_zero, zero_add,
             biprod.lift_snd] at hm₂' ⊢
           exact hm₂')⟩⟩
   let : HasBinaryProducts (FiniteFilteredObject C) :=
     hasBinaryProducts_of_hasLimit_pair (FiniteFilteredObject C)
-  letI : ∀ A : FiniteFilteredObject C,
+  let : ∀ A : FiniteFilteredObject C,
       Unique (A ⟶ Z) :=
     fun A =>
       { default := 0
@@ -933,10 +933,10 @@ private noncomputable def finiteGradedPieceFunctor_iso
       finiteAssociatedGraded C ⋙ GradedObject.eval p := by
   let hAbelianGraded : Abelian (GradedObject ℤ C) := by infer_instance
   letI := hAbelianGraded
-  letI : Preadditive (ℤ → C) :=
+  let : Preadditive (ℤ → C) :=
     Preadditive.ofFullyFaithful
       (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor
-  letI : (piEquivalenceFunctorDiscrete ℤ C).functor.Additive :=
+  let : (piEquivalenceFunctorDiscrete ℤ C).functor.Additive :=
     (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor.additive_ofFullyFaithful
   letI : (GradedObject.eval (C := C) p).Additive := by
     exact Functor.additive_of_iso
@@ -958,28 +958,13 @@ private noncomputable def finiteGradedPieceFunctor_iso
       ((heq_of_eq hmap).trans
         (CategoryTheory.eqToHom_comp_heq _ (hobj A)).symm)
 
-private noncomputable def filteredGradedPieceHomotopyFunctor_iso
-    (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ) := by
-  let hAbelianGraded : Abelian (GradedObject ℤ C) := by infer_instance
-  letI := hAbelianGraded
-  letI : Preadditive (ℤ → C) :=
-    Preadditive.ofFullyFaithful
-      (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor
-  letI : (piEquivalenceFunctorDiscrete ℤ C).functor.Additive :=
-    (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor.additive_ofFullyFaithful
-  letI : (GradedObject.eval (C := C) p).Additive := by
-    exact Functor.additive_of_iso
-      (piEquivalenceFunctorDiscreteCompEvaluationIso C p)
-  exact (Functor.mapHomotopyCategoryCompIso
-    (finiteGradedPieceFunctor_iso C p).symm (ComplexShape.up ℤ)).symm
-
 private noncomputable instance gradedObject_eval_additive
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ) :
     (GradedObject.eval (C := C) p).Additive := by
-  letI : Preadditive (ℤ → C) :=
+  let : Preadditive (ℤ → C) :=
     Preadditive.ofFullyFaithful
       (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor
-  letI : (piEquivalenceFunctorDiscrete ℤ C).functor.Additive :=
+  let : (piEquivalenceFunctorDiscrete ℤ C).functor.Additive :=
     (piEquivalenceFunctorDiscrete ℤ C).fullyFaithfulFunctor.additive_ofFullyFaithful
   exact Functor.additive_of_iso
     (piEquivalenceFunctorDiscreteCompEvaluationIso C p)
@@ -1264,7 +1249,7 @@ theorem filteredAcyclic_iff_gr_piece_acyclic
       intro X Y
       change 0 = 0
       rfl⟩
-    letI := hEvalZero
+    let _ := hEvalZero
     exact IsZero.of_iso
       ((GradedObject.eval (C := C) p).map_isZero h')
       (filteredGradedHomology_component_iso C K p n)
@@ -1288,23 +1273,23 @@ theorem filteredQuasiIso_iff_gr_piece
         ((HomotopyCategory.quotient (FiniteFilteredObject C)
           (ComplexShape.up ℤ)).map f))
     let Efun := piEquivalenceFunctorDiscrete ℤ C
-    letI : Preadditive (ℤ → C) :=
+    let : Preadditive (ℤ → C) :=
       Preadditive.ofFullyFaithful Efun.fullyFaithfulFunctor
-    letI : HasZeroMorphisms (ℤ → C) :=
+    let : HasZeroMorphisms (ℤ → C) :=
       Preadditive.preadditiveHasZeroMorphisms
-    letI : Preadditive (GradedObject ℤ C) :=
+    let : Preadditive (GradedObject ℤ C) :=
       Preadditive.ofFullyFaithful Efun.fullyFaithfulFunctor
-    letI : HasZeroMorphisms (GradedObject ℤ C) :=
+    let : HasZeroMorphisms (GradedObject ℤ C) :=
       Preadditive.preadditiveHasZeroMorphisms
-    letI : (finiteAssociatedGraded C).Additive := by
+    let : (finiteAssociatedGraded C).Additive := by
       let _ : (associatedGraded (C := C)).Additive :=
         associatedGraded_is_additive (C := C)
       infer_instance
-    letI : Efun.functor.Additive :=
+    let : Efun.functor.Additive :=
       Efun.fullyFaithfulFunctor.additive_ofFullyFaithful
     let hEfunHomology : Efun.functor.PreservesHomology := by
       infer_instance
-    letI := hEfunHomology
+    let _ := hEfunHomology
     have htest := HomologicalComplex.quasiIso_map_iff_of_preservesHomology
       (C₁ := GradedObject ℤ C) (C₂ := Discrete ℤ ⥤ C)
       (c := ComplexShape.up ℤ)
@@ -1329,6 +1314,22 @@ theorem filteredQuasiIso_iff_gr_piece
       rw [quasiIso_iff]
       simp only [HomologicalComplex.quasiIsoAt_iff_evaluation, quasiIso_iff]
       tauto
+    have hcomp : ∀ p : ℤ,
+        Efun.functor.mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+            ((evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+              (ComplexShape.up ℤ) ≅
+          (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+            (ComplexShape.up ℤ) := by
+      intro p
+      letI : ((evaluation (Discrete ℤ) C).obj ⟨p⟩).Additive :=
+        { map_add := by
+            intro X Y f g
+            rfl }
+      letI : (Pi.eval (fun _ : ℤ => C) p).Additive :=
+        gradedObject_eval_additive C p
+      exact Functor.mapHomologicalComplexCompIso
+        (piEquivalenceFunctorDiscreteCompEvaluationIso C p)
+        (ComplexShape.up ℤ)
     have hPieces :
         (∀ p : ℤ,
             QuasiIso
@@ -1340,9 +1341,206 @@ theorem filteredQuasiIso_iff_gr_piece
           ∀ p : ℤ,
             QuasiIso
               (((finiteGradedPieceFunctor C p).mapHomologicalComplex
-                  (ComplexShape.up ℤ)).map f) := by sorry
-    have hcomp := Functor.mapHomologicalComplexCompIso
-    sorry
+                  (ComplexShape.up ℤ)).map f) := by
+      constructor
+      · intro h p
+        let : (GradedObject.eval (C := C) p).Additive :=
+          gradedObject_eval_additive C p
+        let eEvalBase :
+            Pi.eval (fun _ : ℤ => C) p ≅ GradedObject.eval p := by
+          refine NatIso.ofComponents (fun X => Iso.refl _) ?_
+          intro X Y f
+          dsimp [Pi.eval, GradedObject.eval]
+          simp
+        let : (Pi.eval (fun _ : ℤ => C) p).Additive := by
+          exact Functor.additive_of_iso eEvalBase.symm
+        let ePiEval :
+            finiteAssociatedGraded C ⋙ Pi.eval (fun _ : ℤ => C) p ≅
+              finiteAssociatedGraded C ⋙ GradedObject.eval p := by
+          refine NatIso.ofComponents (fun A => Iso.refl _) ?_
+          intro A B f
+          simp [finiteAssociatedGraded, Functor.comp_obj,
+            Functor.comp_map, Pi.eval, GradedObject.eval]
+        let eEval0 :
+            finiteAssociatedGraded C ⋙
+                (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩) ≅
+              finiteAssociatedGraded C ⋙ Pi.eval (fun _ : ℤ => C) p := by
+          refine NatIso.ofComponents
+            (fun A => (piEquivalenceFunctorDiscreteCompEvaluationIso C p).app
+              ((finiteAssociatedGraded C).obj A)) ?_
+          intro A B f
+          simpa only [finiteAssociatedGraded, finiteFilteredInclusion, Efun,
+            Functor.comp_obj, Functor.comp_map, Iso.app_hom] using
+            (piEquivalenceFunctorDiscreteCompEvaluationIso C p).hom.naturality
+              ((finiteAssociatedGraded C).map f)
+        let eEval :=
+          NatIso.mapHomologicalComplex eEval0 (ComplexShape.up ℤ) ≪≫
+            NatIso.mapHomologicalComplex ePiEval (ComplexShape.up ℤ)
+        let eComp := Functor.mapHomologicalComplexCompIso
+          (Iso.refl (finiteAssociatedGraded C ⋙
+            (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩)))
+          (ComplexShape.up ℤ)
+        let ePiece :
+            (finiteGradedPieceFunctor C p).mapHomologicalComplex
+                (ComplexShape.up ℤ) ≅
+              (finiteAssociatedGraded C ⋙ GradedObject.eval p).mapHomologicalComplex
+                (ComplexShape.up ℤ) :=
+          NatIso.mapHomologicalComplex (finiteGradedPieceFunctor_iso C p)
+            (ComplexShape.up ℤ)
+        let hcomp' :
+            (finiteAssociatedGraded C).mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                (Efun.functor.mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                  ((evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+                    (ComplexShape.up ℤ)) ≅
+              (finiteAssociatedGraded C).mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+                  (ComplexShape.up ℤ) := by
+          refine NatIso.ofComponents
+            (fun Z => asIso ((hcomp p).hom.app
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).obj Z))) ?_
+          intro Z W g
+          simpa only [Functor.comp_map, asIso_hom] using
+            (hcomp p).hom.naturality
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).map g)
+        let hTotal := hcomp' ≪≫ eComp ≪≫ eEval ≪≫ ePiece.symm
+        let eX := hTotal.app X
+        let eY := hTotal.app Y
+        let φEval :=
+          (((evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+              (ComplexShape.up ℤ)).map
+            ((Efun.functor.mapHomologicalComplex (ComplexShape.up ℤ)).map
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).map f))
+        let φPiece :=
+          ((finiteGradedPieceFunctor C p).mapHomologicalComplex
+              (ComplexShape.up ℤ)).map f
+        have hArrow : Arrow.mk φEval ≅ Arrow.mk φPiece := by
+          refine Arrow.isoMk eX eY ?_
+          dsimp [φEval, φPiece, eX, eY]
+          simpa only [Functor.comp_map] using
+            (hTotal.hom.naturality f).symm
+        let : QuasiIso φEval := h p
+        exact quasiIso_of_arrow_mk_iso φEval φPiece hArrow
+      · intro h p
+        let : (GradedObject.eval (C := C) p).Additive :=
+          gradedObject_eval_additive C p
+        let eEvalBase :
+            Pi.eval (fun _ : ℤ => C) p ≅ GradedObject.eval p := by
+          refine NatIso.ofComponents (fun X => Iso.refl _) ?_
+          intro X Y f
+          dsimp [Pi.eval, GradedObject.eval]
+          simp
+        let : (Pi.eval (fun _ : ℤ => C) p).Additive := by
+          exact Functor.additive_of_iso eEvalBase.symm
+        let ePiEval :
+            finiteAssociatedGraded C ⋙ Pi.eval (fun _ : ℤ => C) p ≅
+              finiteAssociatedGraded C ⋙ GradedObject.eval p := by
+          refine NatIso.ofComponents (fun A => Iso.refl _) ?_
+          intro A B f
+          simp [finiteAssociatedGraded, Functor.comp_obj,
+            Functor.comp_map, Pi.eval, GradedObject.eval]
+        let eEval0 :
+            finiteAssociatedGraded C ⋙
+                (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩) ≅
+              finiteAssociatedGraded C ⋙ Pi.eval (fun _ : ℤ => C) p := by
+          refine NatIso.ofComponents
+            (fun A => (piEquivalenceFunctorDiscreteCompEvaluationIso C p).app
+              ((finiteAssociatedGraded C).obj A)) ?_
+          intro A B f
+          simpa only [finiteAssociatedGraded, finiteFilteredInclusion, Efun,
+            Functor.comp_obj, Functor.comp_map, Iso.app_hom] using
+            (piEquivalenceFunctorDiscreteCompEvaluationIso C p).hom.naturality
+              ((finiteAssociatedGraded C).map f)
+        let eEval :=
+          NatIso.mapHomologicalComplex eEval0 (ComplexShape.up ℤ) ≪≫
+            NatIso.mapHomologicalComplex ePiEval (ComplexShape.up ℤ)
+        let eComp := Functor.mapHomologicalComplexCompIso
+          (Iso.refl (finiteAssociatedGraded C ⋙
+            (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩)))
+          (ComplexShape.up ℤ)
+        let ePiece :
+            (finiteGradedPieceFunctor C p).mapHomologicalComplex
+                (ComplexShape.up ℤ) ≅
+              (finiteAssociatedGraded C ⋙ GradedObject.eval p).mapHomologicalComplex
+                (ComplexShape.up ℤ) :=
+          NatIso.mapHomologicalComplex (finiteGradedPieceFunctor_iso C p)
+            (ComplexShape.up ℤ)
+        let hcomp' :
+            (finiteAssociatedGraded C).mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                (Efun.functor.mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                  ((evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+                    (ComplexShape.up ℤ)) ≅
+              (finiteAssociatedGraded C).mapHomologicalComplex (ComplexShape.up ℤ) ⋙
+                (Efun.functor ⋙ (evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+                  (ComplexShape.up ℤ) := by
+          refine NatIso.ofComponents
+            (fun Z => asIso ((hcomp p).hom.app
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).obj Z))) ?_
+          intro Z W g
+          simpa only [Functor.comp_map, asIso_hom] using
+            (hcomp p).hom.naturality
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).map g)
+        let hTotal := hcomp' ≪≫ eComp ≪≫ eEval ≪≫ ePiece.symm
+        let eX := hTotal.app X
+        let eY := hTotal.app Y
+        let φEval :=
+          (((evaluation (Discrete ℤ) C).obj ⟨p⟩).mapHomologicalComplex
+              (ComplexShape.up ℤ)).map
+            ((Efun.functor.mapHomologicalComplex (ComplexShape.up ℤ)).map
+              (((finiteAssociatedGraded C).mapHomologicalComplex
+                (ComplexShape.up ℤ)).map f))
+        let φPiece :=
+          ((finiteGradedPieceFunctor C p).mapHomologicalComplex
+              (ComplexShape.up ℤ)).map f
+        have hArrow : Arrow.mk φEval ≅ Arrow.mk φPiece := by
+          refine Arrow.isoMk eX eY ?_
+          dsimp [φEval, φPiece, eX, eY]
+          simpa only [Functor.comp_map] using
+            (hTotal.hom.naturality f).symm
+        let : QuasiIso φPiece := h p
+        exact quasiIso_of_arrow_mk_iso φPiece φEval hArrow.symm
+    change
+      HomotopyCategory.quasiIso (GradedObject ℤ C) (ComplexShape.up ℤ)
+          ((filteredAssociatedGradedHomotopyFunctor C).map
+            ((HomotopyCategory.quotient (FiniteFilteredObject C)
+              (ComplexShape.up ℤ)).map f)) ↔
+        ∀ p : ℤ,
+          HomotopyCategory.quasiIso C (ComplexShape.up ℤ)
+            ((filteredGradedPieceHomotopyFunctor C p).map
+              ((HomotopyCategory.quotient (FiniteFilteredObject C)
+                (ComplexShape.up ℤ)).map f))
+    rw [Functor.mapHomotopyCategory_map]
+    have hqAssoc := HomotopyCategory.quotient_map_mem_quasiIso_iff
+      (((finiteAssociatedGraded C).mapHomologicalComplex
+        (ComplexShape.up ℤ)).map f)
+    have hRight :
+        (∀ p : ℤ,
+          HomotopyCategory.quasiIso C (ComplexShape.up ℤ)
+            ((filteredGradedPieceHomotopyFunctor C p).map
+              ((HomotopyCategory.quotient (FiniteFilteredObject C)
+                (ComplexShape.up ℤ)).map f))) ↔
+          ∀ p : ℤ,
+            QuasiIso
+              (((finiteGradedPieceFunctor C p).mapHomologicalComplex
+                (ComplexShape.up ℤ)).map f) := by
+      constructor
+      · intro h p
+        have hp := h p
+        dsimp [filteredGradedPieceHomotopyFunctor] at hp
+        exact (HomotopyCategory.quotient_map_mem_quasiIso_iff
+          (((finiteGradedPieceFunctor C p).mapHomologicalComplex
+            (ComplexShape.up ℤ)).map f)).mp hp
+      · intro h p
+        rw [Functor.mapHomotopyCategory_map]
+        exact (HomotopyCategory.quotient_map_mem_quasiIso_iff
+          (((finiteGradedPieceFunctor C p).mapHomologicalComplex
+            (ComplexShape.up ℤ)).map f)).mpr (h p)
+    exact hqAssoc.trans
+      ((htest.symm.trans (hEval.trans hPieces)).trans hRight.symm)
 
 theorem filteredQuasiIso_iff_associated_grading
     (C : Type u) [Category.{v} C] [Abelian C]

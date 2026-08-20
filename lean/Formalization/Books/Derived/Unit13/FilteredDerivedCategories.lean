@@ -1985,31 +1985,96 @@ noncomputable instance filteredDerivedGradedPieceFunctor_commShift
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ)
     [HasDerivedCategory.{w} C] :
     (filteredDerivedGradedPieceFunctor C p).CommShift ℤ := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredGradedPieceHomotopyFunctor C p ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedGradedPieceFunctor C p) :=
+    ⟨filteredDerivedGradedPieceFunctor_fac C p⟩
+  exact Functor.commShiftOfLocalization (filteredLocalizationFunctor C)
+    (filteredQuasiIso C) ℤ
+    (filteredGradedPieceHomotopyFunctor C p ⋙
+      DerivedCategory.Qh (C := C)) (filteredDerivedGradedPieceFunctor C p)
 
 noncomputable instance filteredDerivedForgetfulFunctor_commShift
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] :
     (filteredDerivedForgetfulFunctor C).CommShift ℤ := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredForgetfulHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedForgetfulFunctor C) :=
+    ⟨filteredDerivedForgetfulFunctor_fac C⟩
+  exact Functor.commShiftOfLocalization (filteredLocalizationFunctor C)
+    (filteredQuasiIso C) ℤ
+    (filteredForgetfulHomotopyFunctor C ⋙
+      DerivedCategory.Qh (C := C)) (filteredDerivedForgetfulFunctor C)
 
 theorem filteredDerivedGradedFunctor_is_exact
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} (GradedObject ℤ C)] :
     (filteredDerivedGradedFunctor C).IsTriangulated := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredAssociatedGradedHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := GradedObject ℤ C)) (filteredDerivedGradedFunctor C) :=
+    ⟨filteredDerivedGradedFunctor_fac C⟩
+  let : (filteredLocalizationFunctor C).mapArrow.EssSurj :=
+    Localization.essSurj_mapArrow (filteredLocalizationFunctor C) (filteredQuasiIso C)
+  let : (filteredAssociatedGradedHomotopyFunctor C).IsTriangulated :=
+    filteredAssociatedGradedHomotopyFunctor_is_exact C
+  let e : filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C ≅
+      filteredAssociatedGradedHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := GradedObject ℤ C) :=
+    Localization.Lifting.iso (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredAssociatedGradedHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := GradedObject ℤ C)) (filteredDerivedGradedFunctor C)
+  let : NatTrans.CommShift e.hom ℤ := by
+    dsimp [e]
+    infer_instance
+  exact Functor.isTriangulated_of_precomp_iso e
 
 theorem filteredDerivedGradedPieceFunctor_is_exact
     (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ)
     [HasDerivedCategory.{w} C] :
     (filteredDerivedGradedPieceFunctor C p).IsTriangulated := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredGradedPieceHomotopyFunctor C p ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedGradedPieceFunctor C p) :=
+    ⟨filteredDerivedGradedPieceFunctor_fac C p⟩
+  let : (filteredLocalizationFunctor C).mapArrow.EssSurj :=
+    Localization.essSurj_mapArrow (filteredLocalizationFunctor C) (filteredQuasiIso C)
+  let : (filteredGradedPieceHomotopyFunctor C p).IsTriangulated :=
+    filteredGradedPieceHomotopyFunctor_is_exact C p
+  let e : filteredLocalizationFunctor C ⋙ filteredDerivedGradedPieceFunctor C p ≅
+      filteredGradedPieceHomotopyFunctor C p ⋙
+        DerivedCategory.Qh (C := C) :=
+    Localization.Lifting.iso (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredGradedPieceHomotopyFunctor C p ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedGradedPieceFunctor C p)
+  let : NatTrans.CommShift e.hom ℤ := by
+    dsimp [e]
+    infer_instance
+  exact Functor.isTriangulated_of_precomp_iso e
 
 theorem filteredDerivedForgetfulFunctor_is_exact
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] :
     (filteredDerivedForgetfulFunctor C).IsTriangulated := by
-  sorry
+  letI : Localization.Lifting (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredForgetfulHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedForgetfulFunctor C) :=
+    ⟨filteredDerivedForgetfulFunctor_fac C⟩
+  let : (filteredLocalizationFunctor C).mapArrow.EssSurj :=
+    Localization.essSurj_mapArrow (filteredLocalizationFunctor C) (filteredQuasiIso C)
+  let : (filteredForgetfulHomotopyFunctor C).IsTriangulated :=
+    filteredForgetfulHomotopyFunctor_is_exact C
+  let e : filteredLocalizationFunctor C ⋙ filteredDerivedForgetfulFunctor C ≅
+      filteredForgetfulHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := C) :=
+    Localization.Lifting.iso (filteredLocalizationFunctor C) (filteredQuasiIso C)
+      (filteredForgetfulHomotopyFunctor C ⋙
+        DerivedCategory.Qh (C := C)) (filteredDerivedForgetfulFunctor C)
+  let : NatTrans.CommShift e.hom ℤ := by
+    dsimp [e]
+    infer_instance
+  exact Functor.isTriangulated_of_precomp_iso e
 
 noncomputable def filteredDerivedGradedCohomologyZero_fac
     (C : Type u) [Category.{v} C] [Abelian C]
@@ -2017,7 +2082,10 @@ noncomputable def filteredDerivedGradedCohomologyZero_fac
     filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C ⋙
         derivedCohomologyFunctor (GradedObject ℤ C) 0 ≅
       filteredGradedHomologyZeroFunctor C := by
-  sorry
+  exact Functor.isoWhiskerRight (filteredDerivedGradedFunctor_fac C)
+      (derivedCohomologyFunctor (GradedObject ℤ C) 0) ≪≫
+    Functor.isoWhiskerLeft (filteredAssociatedGradedHomotopyFunctor C)
+      (derivedCohomologyZeroFactorIso (GradedObject ℤ C))
 
 /-! ## Bounded filtered derived categories -/
 

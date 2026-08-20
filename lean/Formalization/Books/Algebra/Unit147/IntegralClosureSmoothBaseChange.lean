@@ -398,7 +398,37 @@ theorem fourier_derivative_at_root
         (fourierRoot p ^ (i : ℕ)) ^ (p - 1) =
       ∏ j ∈ Finset.univ.erase i,
         (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (j : ℕ)) := by
-  sorry
+  classical
+  have hfac := fourier_factorization p hp
+  have hder := congrArg Polynomial.derivative hfac
+  have heval := congrArg
+    (fun q : Polynomial (fourierExtension p) =>
+      q.eval (fourierRoot p ^ (i : ℕ))) hder
+  simp only [Polynomial.derivative_sub, Polynomial.derivative_pow,
+    Polynomial.derivative_C, Polynomial.derivative_X,
+    Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+    fourierFactorizationProduct, Polynomial.derivative_prod_finset,
+    Polynomial.eval_finsetSum, Polynomial.eval_prod] at heval
+  simp only [Polynomial.eval_X, Polynomial.eval_X_pow, Polynomial.eval_one,
+    Polynomial.eval_zero, sub_zero, mul_one] at heval
+  have hsum :
+      (∑ x : Fin p, ∏ y ∈ Finset.univ.erase x,
+        (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (y : ℕ))) =
+        ∏ y ∈ Finset.univ.erase i,
+          (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (y : ℕ)) := by
+    apply Finset.sum_eq_single i
+    · intro a ha hai
+      have hmem : i ∈ Finset.univ.erase a :=
+        Finset.mem_erase.mpr ⟨hai.symm, Finset.mem_univ _⟩
+      rw [Finset.prod_eq_zero hmem]
+      exact sub_self _
+    · intro hi
+      exact False.elim (hi (Finset.mem_univ i))
+  calc
+    ↑p * (fourierRoot p ^ (i : ℕ)) ^ (p - 1) =
+        ∑ x : Fin p, ∏ y ∈ Finset.univ.erase x,
+          (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (y : ℕ)) := heval
+    _ = _ := hsum
 
 /-- The derivative product in the source proof is a unit. -/
 theorem fourier_derivative_product_isUnit
@@ -406,14 +436,54 @@ theorem fourier_derivative_product_isUnit
     IsUnit
       (∏ j ∈ Finset.univ.erase i,
         (fourierRoot p ^ (i : ℕ) - fourierRoot p ^ (j : ℕ))) := by
-  sorry
+  classical
+  rw [← fourier_derivative_at_root p hp i]
+  apply IsUnit.mul
+  · have hbase :
+        IsUnit (algebraMap (ℤ) (fourierBaseRing p) (p : ℤ)) :=
+      IsLocalization.Away.algebraMap_isUnit (R := ℤ)
+        (S := fourierBaseRing p) p
+    have htotal :
+        IsUnit
+          (algebraMap (fourierBaseRing p) (fourierExtension p)
+            (algebraMap (ℤ) (fourierBaseRing p) (p : ℤ))) :=
+      IsUnit.map (algebraMap (fourierBaseRing p) (fourierExtension p)) hbase
+    simpa using htotal
+  · have hpow : fourierRoot p ^ p = 1 := by
+      have hr := fourier_root_is_root p hp ⟨1, hp.one_lt⟩
+      have hr' : fourierRoot p ^ p - 1 = 0 := by
+        simpa [Polynomial.IsRoot] using hr
+      exact sub_eq_zero.mp hr'
+    have hi_pow : (fourierRoot p ^ (i : ℕ)) ^ p = 1 := by
+      rw [← pow_mul, Nat.mul_comm, pow_mul, hpow, one_pow]
+    exact (IsUnit.of_pow_eq_one hi_pow hp.ne_zero).pow (p - 1)
 
 /-- The explicit Fourier roots give a unit Vandermonde product whenever
 d < p. -/
 theorem fourier_vandermonde_isUnit
     (p d : ℕ) (hp : Nat.Prime p) (hd : d < p) :
     IsUnit (fourierVandermondeProduct p d) := by
-  sorry
+  classical
+  unfold fourierVandermondeProduct vandermondeProduct
+  apply IsUnit.prod_iff.mpr
+  intro i hi
+  apply IsUnit.prod_iff.mpr
+  intro j hj
+  let ip : Fin p := ⟨(i : ℕ), lt_of_lt_of_le i.isLt hd.le⟩
+  let jp : Fin p := ⟨(j : ℕ), lt_of_lt_of_le j.isLt hd.le⟩
+  have hij : (i : ℕ) < (j : ℕ) := (Finset.mem_filter.mp hj).2
+  have hne : ip ≠ jp := by
+    intro h
+    have hvals : (ip : ℕ) = (jp : ℕ) := congrArg Fin.val h
+    exact (Nat.ne_of_lt hij) hvals
+  have hmem : jp ∈ Finset.univ.erase ip :=
+    Finset.mem_erase.mpr ⟨hne.symm, Finset.mem_univ _⟩
+  have hder := fourier_derivative_product_isUnit p hp ip
+  have hdiff :
+      ∀ k ∈ Finset.univ.erase ip,
+        IsUnit (fourierRoot p ^ (ip : ℕ) - fourierRoot p ^ (k : ℕ)) :=
+    (IsUnit.prod_iff.mp hder)
+  simpa [fourierRoots, ip, jp] using hdiff jp hmem
 
 /-- The existence statement in the source example, with Fin d indexing. -/
 theorem exists_fourier_vandermonde_unit

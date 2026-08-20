@@ -1379,7 +1379,7 @@ theorem exampleIdealAtPrime_isPrincipal_nonzero
       have ha0 : a = 0 := by
         by_contra ha0
         exact h ⟨a, ha, ha0⟩
-      simpa [ha0]
+      simp [ha0]
     · exact bot_le
   obtain ⟨a, ha, ha0⟩ := hI
   have hmem : algebraMap exampleAlgebra (Localization q.primeCompl) a ∈

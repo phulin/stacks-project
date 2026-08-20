@@ -242,7 +242,7 @@ structure HomotopyOctahedronWitness
 theorem two_split_injections_tr4
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {A B D : BookComplex C} (α : A ⟶ B) (β : B ⟶ D)
-    (hα : termwiseSplitInjection α) (hβ : termwiseSplitInjection β) :
+    (_hα : termwiseSplitInjection α) (_hβ : termwiseSplitInjection β) :
     Nonempty (HomotopyOctahedronWitness
       ((homotopyQuotient C).map α) ((homotopyQuotient C).map β)) := by
   let q := homotopyQuotient C
@@ -450,14 +450,14 @@ theorem additive_homotopy_functors_are_exact
   have h₁ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyFunctor F)) := by
     let hG : (additiveHomotopyFunctor F).CommShift ℤ :=
       (inferInstance : (F.mapHomotopyCategory (ComplexShape.up ℤ)).CommShift ℤ)
-    letI : (additiveHomotopyFunctor F).CommShift ℤ := hG
+    let : (additiveHomotopyFunctor F).CommShift ℤ := hG
     have hT : (F.mapHomotopyCategory (ComplexShape.up ℤ)).IsTriangulated := inferInstance
     refine ⟨{ commShift := hG, isTriangulated := ?_ }⟩
     simpa only [additiveHomotopyFunctor] using hT
   have h₂ : Nonempty (ExactTriangulatedFunctorData (additiveHomotopyPlusFunctor F)) := by
     let hG : (additiveHomotopyPlusFunctor F).CommShift ℤ :=
       (inferInstance : F.mapHomotopyCategoryPlus.CommShift ℤ)
-    letI : (additiveHomotopyPlusFunctor F).CommShift ℤ := hG
+    let : (additiveHomotopyPlusFunctor F).CommShift ℤ := hG
     have hT : F.mapHomotopyCategoryPlus.IsTriangulated := inferInstance
     refine ⟨{ commShift := hG, isTriangulated := ?_ }⟩
     simpa only [additiveHomotopyPlusFunctor] using hT
@@ -465,15 +465,15 @@ theorem additive_homotopy_functors_are_exact
     let hbase : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := by
       dsimp [additiveHomotopyFunctor]
       infer_instance
-    letI : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
+    let : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
     let hbaseT : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := by
       dsimp [additiveHomotopyFunctor]
       infer_instance
-    letI : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
+    let : (homotopyMinusInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
     let hG : (additiveHomotopyMinusFunctor F).CommShift ℤ := by
       dsimp [additiveHomotopyMinusFunctor]
       infer_instance
-    letI : (additiveHomotopyMinusFunctor F).CommShift ℤ := hG
+    let : (additiveHomotopyMinusFunctor F).CommShift ℤ := hG
     have hT : (additiveHomotopyMinusFunctor F).IsTriangulated := by
       dsimp [additiveHomotopyMinusFunctor]
       infer_instance
@@ -482,15 +482,15 @@ theorem additive_homotopy_functors_are_exact
     let hbase : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := by
       dsimp [additiveHomotopyFunctor]
       infer_instance
-    letI : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
+    let : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).CommShift ℤ := hbase
     let hbaseT : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := by
       dsimp [additiveHomotopyFunctor]
       infer_instance
-    letI : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
+    let : (homotopyBoundedInclusion C ⋙ additiveHomotopyFunctor F).IsTriangulated := hbaseT
     let hG : (additiveHomotopyBoundedFunctor F).CommShift ℤ := by
       dsimp [additiveHomotopyBoundedFunctor]
       infer_instance
-    letI : (additiveHomotopyBoundedFunctor F).CommShift ℤ := hG
+    let : (additiveHomotopyBoundedFunctor F).CommShift ℤ := hG
     have hT : (additiveHomotopyBoundedFunctor F).IsTriangulated := by
       dsimp [additiveHomotopyBoundedFunctor]
       infer_instance
@@ -549,8 +549,8 @@ theorem improve_distinguished_triangle_homotopy
     rw [CochainComplex.HomComplex.Cochain.rightUnshift_v
       (CochainComplex.mappingCocone.snd f) 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.units_smul_comp,
+      Preadditive.comp_neg, Category.assoc]
     have hzero :
         (CochainComplex.mappingCocone.inr f).1.v (n - 1) n (by omega) ≫
             (CochainComplex.mappingCocone.snd f).v n (n - 1) (by omega) = 𝟙 _ := by
@@ -581,14 +581,12 @@ theorem improve_distinguished_triangle_homotopy
     rw [CochainComplex.HomComplex.Cochain.leftUnshift_v
       (CochainComplex.mappingCocone.inr f).1 0 (by omega) n n (by omega)
       (n - 1) (by omega)]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+    simp only [Linear.comp_units_smul, Preadditive.neg_comp, Category.assoc]
     have hsign :
         (1 * 1 + 1 * (1 - 1) / 2 : ℤ).negOnePow = -1 := by
       norm_num [Int.negOnePow_def]
     rw [hsign]
-    simp only [Linear.units_smul_comp, Linear.comp_units_smul,
-      Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
+    simp only [Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc,
       Iso.hom_inv_id_assoc]
     simp
     rw [add_comm]
@@ -627,7 +625,7 @@ theorem improve_distinguished_triangle_homotopy
     rw [← Category.assoc]
     have he : (CochainComplex.mappingCone f).X (n + 1 + -1) =
         (CochainComplex.mappingCone f).X n := by
-      congr 1 <;> omega
+      congr 1; omega
     change
       -((CochainComplex.mappingCone.inl f).v n (n + -1) (by omega) ≫
           (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
@@ -656,11 +654,11 @@ theorem improve_distinguished_triangle_homotopy
             (CochainComplex.mappingCone f).d (n + -1) (n + 1 + -1)) ≫
           eqToHom he) ≫
             (CochainComplex.mappingCone.snd f).v n n (by omega) := by
-      simp only [Preadditive.neg_comp, Preadditive.comp_neg, neg_neg, Category.assoc]
+      simp only [Preadditive.comp_neg, neg_neg, Category.assoc]
     rw [hcollapse, hcone_comp]
     simp only [Preadditive.sub_comp, Category.assoc,
       CochainComplex.mappingCone.inr_f_snd_v,
-      CochainComplex.mappingCone.inl_v_snd_v, zero_comp, comp_zero, sub_zero]
+      CochainComplex.mappingCone.inl_v_snd_v, comp_zero, sub_zero]
     rw [Category.comp_id]
   have hsplit : termwiseSplitTriangleh S ∈
       distTriang (BookHomotopyCategory C) := by
@@ -683,7 +681,7 @@ theorem improve_distinguished_triangle_homotopy
     complete_distinguished_triangle_morphism₂
       (Triangle.mk a b c) (termwiseSplitTriangleh S) hT hsplit
       (𝟙 _) (𝟙 _) hcomm₃
-  letI : IsIso m := by
+  let hIsIso : IsIso m := by
     apply isIso₂_of_isIso₁₃
       (Triangle.homMk (Triangle.mk a b c) (termwiseSplitTriangleh S)
       (𝟙 _) m (𝟙 _) hm₁ hm₂ hcomm₃)
@@ -692,8 +690,9 @@ theorem improve_distinguished_triangle_homotopy
       infer_instance
     · change IsIso (𝟙 _)
       infer_instance
+  obtain ⟨mInv, hmInvId, hInvMId⟩ := hIsIso.out
   refine ⟨S, Triangle.isoMk (Triangle.mk a b c) (termwiseSplitTriangleh S)
-    (Iso.refl _) (asIso m) (Iso.refl _)
+    (Iso.refl _) (Iso.mk m mInv hmInvId hInvMId) (Iso.refl _)
     hm₁ hm₂ hcomm₃, ?_, ?_⟩
   · rfl
   · rfl
@@ -1220,8 +1219,7 @@ theorem tensorProductLeft_respects_homotopy
         convert congrArg
           (fun k => T.functor.map (Prod.mkHom (𝟙 (X.X p)) k)) hc using 1 <;>
           simp [tensorProductDoubleComplex, tensorProductDoubleComplexLeftFunctor,
-            HomologicalComplex.comp_f, hY, hX, T.map_add_right,
-            T.functor.map_comp, hcomp₁, hcomp₂]
+            hY, hX, T.map_add_right, hcomp₁, hcomp₂]
         have reorder (a b c :
             ((tensorProductDoubleComplexLeftFunctor T X).obj Y).obj p q ⟶
               ((tensorProductDoubleComplexLeftFunctor T X).obj Y').obj p q) :
@@ -1316,8 +1314,7 @@ theorem tensorProductRight_respects_homotopy
         convert congrArg
           (fun k => T.functor.map (Prod.mkHom k (𝟙 (Y.X q)))) hc using 1 <;>
           simp [tensorProductDoubleComplex, tensorProductDoubleComplexRightFunctor,
-            HomologicalComplex.comp_f, hY, hX, T.map_add_left,
-            T.functor.map_comp, hcomp₁, hcomp₂]
+            hY, hX, T.map_add_left, hcomp₁, hcomp₂]
         have reorder (a b c :
             ((tensorProductDoubleComplexRightFunctor T Y).obj X).obj p q ⟶
               ((tensorProductDoubleComplexRightFunctor T Y).obj X').obj p q) :

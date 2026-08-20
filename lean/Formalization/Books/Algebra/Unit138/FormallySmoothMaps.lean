@@ -230,6 +230,30 @@ theorem formallySmooth_iff_cotangent_criterion
   · rintro ⟨hsubsingleton, hprojective⟩
     exact ⟨hprojective, hsubsingleton⟩
 
+theorem h1Cotangent_subsingleton_of_formallySmooth
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.FormallySmooth R S] :
+    Subsingleton (Algebra.H1Cotangent R S) :=
+  ((formallySmooth_iff_cotangent_criterion
+    (R := R) (S := S)).mp inferInstance).1
+
+theorem differentials_projective_of_formallySmooth
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.FormallySmooth R S] :
+    Module.Projective S
+      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) :=
+  ((formallySmooth_iff_cotangent_criterion
+    (R := R) (S := S)).mp inferInstance).2
+
+theorem formallySmooth_of_h1Cotangent_subsingleton_of_differentials_projective
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (hH1 : Subsingleton (Algebra.H1Cotangent R S))
+    (hΩ : Module.Projective S
+      (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)) :
+    Algebra.FormallySmooth R S :=
+  (formallySmooth_iff_cotangent_criterion
+    (R := R) (S := S)).mpr ⟨hH1, hΩ⟩
+
 theorem formallySmooth_presentation_characterization
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S] :
     List.TFAE
@@ -743,7 +767,18 @@ theorem formallySmooth_iff_faithfullyFlat_baseChange
       (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).FormallySmooth := by
   constructor
   · exact formallySmooth_baseChange f g
-  · sorry
+  · /-
+    This is precisely the missing fpqc descent theorem
+    `Algebra.FormallySmooth.of_formallySmooth_tensorProduct_of_faithfullyFlat`
+    in Mathlib's `RingTheory/Etale/Descent.lean` (currently marked
+    `proof_wanted`).  A source-faithful proof uses
+    `formallySmooth_iff_cotangent_criterion`: flat base change for
+    `H1Cotangent` is already in `Extension/Cotangent/BaseChange`, projectivity
+    descends along faithfully flat maps, and faithful tensoring reflects a
+    subsingleton module.  Those three generic results should close this
+    branch without another presentation calculation here.
+    -/
+    sorry
 
 theorem smooth_strong_lift
     {R S A : Type*} [CommRing R] [CommRing S] [CommRing A]

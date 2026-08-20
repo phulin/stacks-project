@@ -1,14 +1,14 @@
 import Formalization.Books.Algebra.Unit143.EtaleRingMaps
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Etale.StandardEtale
 
 /-!
 # Commutative Algebra, Chapter 144: Local structure of étale ring maps
 
-The source's standard étale presentation is expressed using the canonical
-polynomial quotient and principal localization.  The map-level predicate
-`IsStandardEtale` records an arbitrary algebra which is isomorphic to such a
-presentation; this is needed for the localization and neighborhood statements
-in the section.
+The source's standard étale presentation is expressed through Mathlib's
+canonical `StandardEtalePair` and `Algebra.IsStandardEtale` interfaces.  The
+canonical pair also supplies the equivalent polynomial-quotient/localization
+presentations used by the source.
 -/
 
 namespace Formalization.Books.Algebra.Unit144
@@ -22,81 +22,43 @@ universe u v
 
 /-! ## Standard étale presentations -/
 
-/-- The quotient `R[X] / (f)` used in a standard étale presentation. -/
-abbrev PolynomialQuotient (R : Type u) [CommRing R] (f : Polynomial R) : Type u :=
-  Polynomial R ⧸ Ideal.span ({f} : Set (Polynomial R))
-
-/-- The image of a polynomial in the quotient by `(f)`. -/
-def polynomialQuotientMk
-    {R : Type u} [CommRing R] {f : Polynomial R} (p : Polynomial R) :
-    PolynomialQuotient R f :=
-  Ideal.Quotient.mk _ p
-
-/-- The algebra `R[X]_g/(f)`, written as the localization of the polynomial
-quotient at the image of `g`. -/
-abbrev StandardEtaleAlgebra
-    (R : Type u) [CommRing R] (f g : Polynomial R) : Type u :=
-  Localization.Away (polynomialQuotientMk (f := f) g)
-
-/-- The image of the derivative of `f` in a standard étale algebra. -/
-def standardEtaleDerivative
-    {R : Type u} [CommRing R] (f g : Polynomial R) :
-    StandardEtaleAlgebra R f g :=
-  algebraMap (PolynomialQuotient R f) (StandardEtaleAlgebra R f g)
-    (polynomialQuotientMk (f := f) (Polynomial.derivative f))
-
-/-- The polynomial condition in the source definition of standard étale. -/
-def IsStandardEtalePresentation
-    {R : Type u} [CommRing R] (f g : Polynomial R) : Prop :=
-  f.Monic ∧ IsUnit (standardEtaleDerivative f g)
+/- The source's pair `(f, g)` is Mathlib's `StandardEtalePair`; its `Ring`
+   is the canonical presentation, with equivalences to both
+   `R[X][1/g]/(f)` and `R[X]/(f)[1/g]`.  Using that API avoids a parallel
+   quotient/localization construction and retains the source's polynomial
+   condition in the pair's `cond` field. -/
 
 /-- The canonical ring map in a standard étale presentation. -/
 def standardEtaleMap
-    (R : Type u) [CommRing R] (f g : Polynomial R) :
-    R →+* StandardEtaleAlgebra R f g :=
-  algebraMap R (StandardEtaleAlgebra R f g)
+    {R : Type u} [CommRing R] (P : StandardEtalePair R) :
+    R →+* P.Ring :=
+  algebraMap R P.Ring
 
-/-- A ring map is standard étale when its target is algebra-isomorphic to a
-standard étale polynomial presentation. -/
-def IsStandardEtale
-    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
-    (f : R →+* S) : Prop :=
-  letI : Algebra R S := f.toAlgebra
-  ∃ (p q : Polynomial R),
-    IsStandardEtalePresentation p q ∧
-      Nonempty (S ≃ₐ[R] StandardEtaleAlgebra R p q)
-
-/-- The source's standard étale map is standard étale by its presentation. -/
+/-- The standard étale algebra attached to a standard étale pair is standard
+étale in Mathlib's presentation-independent sense. -/
 theorem standardEtaleMap_isStandardEtale
-    {R : Type u} [CommRing R] (f g : Polynomial R)
-    (h : IsStandardEtalePresentation f g) :
-    IsStandardEtale (standardEtaleMap R f g) := by
-  sorry
+    {R : Type u} [CommRing R] (P : StandardEtalePair R) :
+    Algebra.IsStandardEtale R P.Ring := by
+  infer_instance
 
 /-- A standard étale presentation gives an étale ring map. -/
 theorem standardEtaleMap_isEtale
-    {R : Type u} [CommRing R] (f g : Polynomial R)
-    (h : IsStandardEtalePresentation f g) :
-    RingHom.Etale (standardEtaleMap R f g) := by
+    {R : Type u} [CommRing R] (P : StandardEtalePair R) :
+    RingHom.Etale (standardEtaleMap P) := by
   sorry
 
-/-- Standard étale maps are stable under base change, with coefficients
-mapped along the base ring map. -/
+/-- Standard étale algebras are stable under base change. -/
 theorem standardEtale_baseChange
     {R R' : Type u} [CommRing R] [CommRing R'] [Algebra R R']
-    (f g : Polynomial R) (h : IsStandardEtalePresentation f g) :
-    IsStandardEtale
-      (algebraMap R'
-        (StandardEtaleAlgebra R'
-          (f.map (algebraMap R R')) (g.map (algebraMap R R')))) := by
+    (P : StandardEtalePair R) :
+    Algebra.IsStandardEtale R' (R' ⊗[R] P.Ring) := by
   sorry
 
 /-- A principal localization of a standard étale algebra is standard étale. -/
 theorem standardEtale_localization
-    {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (h : IsStandardEtale f) :
-    letI : Algebra R S := f.toAlgebra
-    ∀ s : S, IsStandardEtale (algebraMap R (Localization.Away s)) := by
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (h : Algebra.IsStandardEtale R S) :
+    ∀ s : S, Algebra.IsStandardEtale R (Localization.Away s) := by
   sorry
 
 /-! ## The composition warning -/
@@ -125,10 +87,12 @@ structure StandardEtaleCompositionCounterexample where
   card_k : Fintype.card k = 2
   card_K : Fintype.card K = 4
   finrank : Module.finrank k K = 2
-  first_standard : IsStandardEtale (algebraMap k K)
-  second_standard : IsStandardEtale (diagonalFourRingHom K)
+  first_standard : Algebra.IsStandardEtale k K
+  second_standard : Algebra.IsStandardEtale K (K × K × K × K)
   composite_not_standard :
-    ¬ IsStandardEtale ((diagonalFourRingHom K).comp (algebraMap k K))
+    letI : Algebra k (K × K × K × K) :=
+      ((diagonalFourRingHom K).comp (algebraMap k K)).toAlgebra
+    ¬ Algebra.IsStandardEtale k (K × K × K × K)
 
 /-- The composition of standard étale maps need not be standard étale. -/
 theorem standardEtale_composition_counterexample :
@@ -142,7 +106,7 @@ field at a prime. -/
 structure PrescribedResidueFieldEtaleData
     (R : Type u) [CommRing R] (p : PrimeSpectrum R)
     (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L] where
-  R' : Type v
+  R' : Type u
   [commRingR' : CommRing R']
   [algebraRR' : Algebra R R']
   etale : RingHom.Etale (algebraMap R R')
@@ -172,7 +136,7 @@ theorem etaleAt_standardEtale_neighborhood
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) (h : Formalization.Books.Algebra.Unit143.IsEtaleAt R S q) :
     ∃ g : S, g ∉ q.asIdeal ∧
-      IsStandardEtale (algebraMap R (Localization.Away g)) := by
+      Algebra.IsStandardEtale R (Localization.Away g) := by
   sorry
 
 /-! ## Finite flat covers -/
@@ -181,13 +145,12 @@ theorem etaleAt_standardEtale_neighborhood
 last two lemmas of the source section. -/
 structure FiniteFlatZariskiCover
     {R : Type u} [CommRing R] where
-  S' : Type v
+  S' : Type u
   [commRingS' : CommRing S']
   [algebraRS' : Algebra R S']
   finite : RingHom.Finite (algebraMap R S')
   finitePresentation : RingHom.FinitePresentation (algebraMap R S')
   flat : RingHom.Flat (algebraMap R S')
-  finiteProjective : Formalization.Books.Algebra.Unit78.FiniteProjective R S'
   specSurjective :
     Function.Surjective (PrimeSpectrum.comap (algebraMap R S'))
 
@@ -210,7 +173,8 @@ structure StandardEtaleFiniteFlatZariskiData
 source. -/
 theorem standardEtale_finiteFlatZariski
     {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (h : IsStandardEtale f) :
+    (f : R →+* S)
+    (h : letI : Algebra R S := f.toAlgebra; Algebra.IsStandardEtale R S) :
     Nonempty (StandardEtaleFiniteFlatZariskiData f) := by
   sorry
 

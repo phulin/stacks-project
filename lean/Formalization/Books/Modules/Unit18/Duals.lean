@@ -66,6 +66,7 @@ noncomputable def sheafModuleRightUnitor {X : TopCat.{v}}
    associator/unitors.  The coherence fields below are exactly the standard
    `MonoidalCategory` interface, so the dual declarations can reuse
    Mathlib's `ExactPairing` without creating a parallel notion of dual. -/
+@[instance_reducible]
 noncomputable def sheafModuleMonoidalCategory {X : TopCat.{v}}
     (O : CommRingSheaf X) : MonoidalCategory (CommRingSheafModule O) where
   tensorObj F G := tensorProductSheaf O F G
@@ -116,9 +117,9 @@ def IsLocallyDirectSummandOfFiniteFree {Y : RingedSpace.{v}}
     (F : Mod Y.structureSheaf) : Prop :=
   ∀ x : Y, ∃ U : Opens Y.carrier, x ∈ U ∧ ∃ n : ℕ,
     Nonempty (Retract
-      ((openModuleRestrictionFunctor Y U).obj F)
       (SheafOfModules.free (R := (ringedOpenSubspace Y U).structureSheaf)
-        (ULift.{v} (Fin n))))
+        (ULift.{v} (Fin n)))
+      ((openModuleRestrictionFunctor Y U).obj F))
 
 abbrev IsLocallyDirectSummand {X : TopCat.{v}} {O : CommRingSheaf X}
     (F : CommRingSheafModule O) : Prop :=
@@ -195,6 +196,35 @@ noncomputable def finiteDualTensorToEndomorphism {X : TopCat.{v}}
   exact (sheafModuleInternalHomEquiv O F F
     (tensorProductSheaf O F dual)).symm h
 
+/- The identity endomorphism is represented by the unit map under the
+   internal-Hom equivalence.  This is the categorical form of the source's
+   instruction that `eta` sends `1` to the tensor corresponding to
+   `id_F`. -/
+noncomputable def finiteDualIdentityMap {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F : CommRingSheafModule O) :
+    sheafModuleUnit O ⟶ sheafModuleInternalHom O F F :=
+  (sheafModuleInternalHomEquiv O F F (sheafModuleUnit O)).symm
+    (sheafModuleLeftUnitor O F).hom
+
+/- Generic evaluation and coevaluation maps for an arbitrary left-dual
+   pairing.  `ExactPairing` supplies the two snake identities, so no parallel
+   dual structure or duplicate triangle fields are introduced here. -/
+noncomputable def leftDualCoevaluation {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F G : CommRingSheafModule O)
+    (p : @ExactPairing (CommRingSheafModule O) _
+      (sheafModuleMonoidalCategory O) F G) :
+    sheafModuleUnit O ⟶ tensorProductSheaf O F G :=
+  @ExactPairing.coevaluation (CommRingSheafModule O) _
+    (sheafModuleMonoidalCategory O) F G p
+
+noncomputable def leftDualEvaluation {X : TopCat.{v}}
+    (O : CommRingSheaf X) (F G : CommRingSheafModule O)
+    (p : @ExactPairing (CommRingSheafModule O) _
+      (sheafModuleMonoidalCategory O) F G) :
+    tensorProductSheaf O G F ⟶ sheafModuleUnit O :=
+  @ExactPairing.evaluation (CommRingSheafModule O) _
+    (sheafModuleMonoidalCategory O) F G p
+
 noncomputable def finiteDualCoevaluation {X : TopCat.{v}}
     (O : CommRingSheaf X) (F : CommRingSheafModule O)
     (p : @ExactPairing (CommRingSheafModule O) _
@@ -202,17 +232,14 @@ noncomputable def finiteDualCoevaluation {X : TopCat.{v}}
         (sheafModuleInternalHom O F (sheafModuleUnit O))) :
     sheafModuleUnit O ⟶
       tensorProductSheaf O F (sheafModuleInternalHom O F (sheafModuleUnit O)) :=
-  @ExactPairing.coevaluation (CommRingSheafModule O) _
-    (sheafModuleMonoidalCategory O) F
-      (sheafModuleInternalHom O F (sheafModuleUnit O)) p
+  leftDualCoevaluation O F (sheafModuleInternalHom O F (sheafModuleUnit O)) p
 
 noncomputable def finiteDualCoevaluationFromIdentity {X : TopCat.{v}}
-    (O : CommRingSheaf X) (F : CommRingSheafModule O)
+  (O : CommRingSheaf X) (F : CommRingSheafModule O)
     [IsIso (finiteDualTensorToEndomorphism O F)] :
     sheafModuleUnit O ⟶
       tensorProductSheaf O F (sheafModuleInternalHom O F (sheafModuleUnit O)) :=
-  (sheafModuleInternalHomEquiv O F F (sheafModuleUnit O)).symm
-      (sheafModuleLeftUnitor O F).hom ≫
+  finiteDualIdentityMap O F ≫
     inv (finiteDualTensorToEndomorphism O F)
 
 noncomputable def finiteDualEvaluation {X : TopCat.{v}}
@@ -222,9 +249,7 @@ noncomputable def finiteDualEvaluation {X : TopCat.{v}}
         (sheafModuleInternalHom O F (sheafModuleUnit O))) :
     tensorProductSheaf O (sheafModuleInternalHom O F (sheafModuleUnit O)) F ⟶
       sheafModuleUnit O :=
-  @ExactPairing.evaluation (CommRingSheafModule O) _
-    (sheafModuleMonoidalCategory O) F
-      (sheafModuleInternalHom O F (sheafModuleUnit O)) p
+  leftDualEvaluation O F (sheafModuleInternalHom O F (sheafModuleUnit O)) p
 
 /-! ## Example `example-dual` -/
 
@@ -291,8 +316,7 @@ structure LeftDualComparisonData {X : TopCat.{v}}
   comparison_inverse_formula :
     comparisonIso.inv =
       (sheafModuleInternalHomEquiv O F (sheafModuleUnit O) G).symm
-        (@ExactPairing.evaluation (CommRingSheafModule O) _
-          (sheafModuleMonoidalCategory O) F G pairing)
+        (leftDualEvaluation O F G pairing)
 
 theorem leftDual_comparison
     {X : TopCat.{v}} (O : CommRingSheaf X)
@@ -319,30 +343,40 @@ structure LocalFiniteFreeFactorization {X : TopCat.{v}}
   U : Opens X
   n : ℕ
   inclusion :
-    SheafOfModules.free (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
-        (ULift.{v} (Fin n)) ⟶
-    (openModuleRestrictionFunctor (underlyingRingedSpace O) U).obj F
-  retraction :
     (openModuleRestrictionFunctor (underlyingRingedSpace O) U).obj F ⟶
       SheafOfModules.free
         (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
         (ULift.{v} (Fin n))
+  retraction :
+    SheafOfModules.free
+        (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
+        (ULift.{v} (Fin n)) ⟶
+      (openModuleRestrictionFunctor (underlyingRingedSpace O) U).obj F
   retract_eq : inclusion ≫ retraction = 𝟙 _
 
 /-- The iterated local factorization data in the flat finite-presentation proof. -/
 structure FlatFinitePresentationFactorization {X : TopCat.{v}}
     (O : CommRingSheaf X) (F : CommRingSheafModule O) where
+  U : Opens X
   r : ℕ
   n : ℕ
   relationMap :
-    SheafOfModules.free (R := (commRingSheafToRingSheaf O))
+    SheafOfModules.free
+        (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
         (ULift.{v} (Fin r)) ⟶
-      SheafOfModules.free (R := (commRingSheafToRingSheaf O))
+      SheafOfModules.free
+        (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
         (ULift.{v} (Fin n))
   presentationMap :
-    SheafOfModules.free (R := (commRingSheafToRingSheaf O))
-        (ULift.{v} (Fin n)) ⟶ F
+    SheafOfModules.free
+        (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
+        (ULift.{v} (Fin n)) ⟶ restrictedModule O F U
+  presentation_section :
+    restrictedModule O F U ⟶ SheafOfModules.free
+      (R := (ringedOpenSubspace (underlyingRingedSpace O) U).structureSheaf)
+      (ULift.{v} (Fin n))
   relation_comp_presentation : relationMap ≫ presentationMap = 0
+  presentation_split : presentationMap ≫ presentation_section = 𝟙 _
   presentation_epi : Epi presentationMap
   presentation_exact :
     (ShortComplex.mk relationMap presentationMap
@@ -358,7 +392,7 @@ theorem exists_localFiniteFreeFactorization_of_hasLeftDual
 theorem exists_flatFinitePresentationFactorization_of_isFinitePresentation_of_isFlat
     {X : TopCat.{v}} (O : CommRingSheaf X) (F : CommRingSheafModule O)
     (hF : IsFinitePresentation F) (hflat : IsFlat O F) :
-    Nonempty (FlatFinitePresentationFactorization O F) := by
+    ∀ x : X, ∃ d : FlatFinitePresentationFactorization O F, x ∈ d.U := by
   sorry
 
 end

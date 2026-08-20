@@ -72,7 +72,7 @@ private lemma diamondBoundary_comp
     (A : ChainComplex C ℤ) (n : ℤ) :
     diamondBoundary A n ≫ diamondBoundary A (n - 1) = 0 := by
   change diamondBoundary_explicit A n ≫ diamondBoundary_explicit A (n - 1) = 0
-  simp [diamondBoundary_explicit, Category.assoc]
+  simp [diamondBoundary_explicit]
   apply biprod.hom_ext
   · apply biprod.hom_ext'
     · apply biprod.hom_ext
@@ -91,7 +91,7 @@ private lemma diamondBoundary_comp
     · simp [Category.assoc]
       have h₁ : n - 1 - 1 = n - 2 := by omega
       have h₂ : n - 1 - 2 = n - 1 - 1 - 1 := by omega
-      simp [h₁, h₂, Category.assoc]
+      simp [h₁, h₂]
 
 /-- The differential with the zero maps away from the immediate predecessor. -/
 def diamondDifferential
@@ -175,17 +175,17 @@ private lemma diamond_endpoint_formula
         (biprod.inl ≫ biprod.snd :
           A.X (q - 1) ⟶
             ((A.X (q - 1) ⊞ A.X (q - 1)) ⊞ A.X (q - 1 - 1))) := by
-  simp [diamondBoundary_explicit, Category.assoc]
+  simp [diamondBoundary_explicit]
   apply biprod.hom_ext
   · rw [Preadditive.add_comp]
     simp [Category.assoc]
     apply biprod.hom_ext
-    · simp [Category.assoc]
-    · simp [Category.assoc]
+    · simp
+    · simp
   · rw [Preadditive.add_comp]
     simp [Category.assoc]
     have h : q - 1 - 1 = q - 2 := by omega
-    simp [h, Category.assoc]
+    simp [h]
 
 private lemma diamond_endpoint_formula_transport
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -223,15 +223,13 @@ def diamondLeft
     apply biprod.hom_ext
     · simp only [diamondBoundary]
       erw [Category.assoc, biprod.lift_fst]
-      simp [diamondThirdInclusionChain, diamondThirdInclusion, diamondObject,
-        Category.assoc]
+      simp [Category.assoc]
       apply biprod.hom_ext
       · simp [Category.assoc]
       · simp [Category.assoc]
     · simp only [diamondBoundary]
       erw [Category.assoc, biprod.lift_snd]
-      simp [diamondThirdInclusionChain, diamondThirdInclusion, diamondObject,
-        Category.assoc]
+      simp [Category.assoc]
 
 def diamondRight
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -273,9 +271,9 @@ def diamondHomotopy
       simp [diamondLeft, diamondRight, diamondHomComponent, diamond,
         diamondDifferential, diamondBoundary,
         diamondBoundary_explicit, diamondThirdInclusionChain,
-        diamondThirdInclusion, diamondObject, Category.assoc, eqToHom_trans,
-        eqToHom_refl, eqToHom_trans_assoc, Category.comp_id,
-        Category.id_comp] <;>
+        diamondThirdInclusion, diamondObject, Category.assoc, eqToHom_refl,
+        Category.id_comp]
+    all_goals
       abel_nf
 
 /-! ## Representability and functoriality -/

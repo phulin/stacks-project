@@ -573,8 +573,7 @@ theorem sectionwiseExtensionOfScalarsMap_comp
         (pointwiseExtensionMap α G i
           ((1 : O'.obj U) ⊗ₜ[(O.obj U), (α.app U).hom] m)))
   simp only [ModuleCat.restrictScalars.map_apply,
-    ModuleCat.restrictScalarsComp'_inv_app,
-    ModuleCat.restrictScalarsComp'App_inv_apply]
+    ModuleCat.restrictScalarsComp'_inv_app]
   rw [pointwiseExtensionMap_one_tmul, pointwiseExtensionMap_one_tmul,
     G.map_comp_apply]
   rfl

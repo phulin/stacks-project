@@ -114,6 +114,30 @@ noncomputable def exampleThresholdComponent {A : CosimplicialRing.{u}}
         simp [Finsupp.filter_apply]
         }
 
+/- The formula in the source is recovered on the standard direct-sum basis. -/
+theorem exampleThresholdComponent_single {A : CosimplicialRing.{u}} (n : ℕ)
+    (i : Fin (n + 1)) (j : Fin (n + 2)) :
+    exampleThresholdComponent (A := A) n (exampleIntervalSimplex n j)
+        (Finsupp.single i 1) =
+      if i.val < j.val then Finsupp.single i 1 else 0 := by
+  classical
+  ext k
+  change (Finsupp.filter
+      (fun x : Fin (n + 1) => (exampleIntervalSimplex n j).toOrderHom x = 0)
+      (Finsupp.single i 1)) k = _
+  rw [Finsupp.filter_apply]
+  by_cases hk : k = i
+  · subst k
+    have hmap : (exampleIntervalSimplex n j).toOrderHom i =
+        (if i.val < j.val then (0 : Fin 2) else 1) := by
+      rfl
+    rw [hmap]
+    by_cases h : i.val < j.val <;>
+      simp [Finsupp.single_eq_same, h]
+  · by_cases h : i.val < j.val <;>
+      simp [Finsupp.single_eq_of_ne hk,
+        Finsupp.single_eq_of_ne' (Ne.symm hk), exampleIntervalSimplex, h]
+
 /-- In the explicit homotopy, evaluation at the zero vertex is the identity. -/
 theorem exampleThresholdComponent_at_zero {A : CosimplicialRing.{u}} (n : ℕ) :
     exampleThresholdComponent (A := A) n

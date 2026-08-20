@@ -1250,15 +1250,15 @@ abbrev restrictedRingSheaf (O : RingSheaf.{v, v} X) (V : Opens X) :
   (TopologicalSpace.Opens.sheafRestrict V).obj O
 
 /-- The underlying additive sheaf of a sheaf of modules. -/
-def moduleUnderlyingSheaf {Y : TopCat.{v}} {O : RingSheaf.{v, v} Y}
+abbrev moduleUnderlyingSheaf {Y : TopCat.{v}} {O : RingSheaf.{v, v} Y}
     (M : Mod O) : TopCat.Sheaf (AddCommGrpCat.{v}) Y :=
-  ⟨M.val.presheaf, M.isSheaf⟩
+  (SheafOfModules.toSheaf O).obj M
 
 /-- The underlying additive morphism of a morphism of sheaf modules. -/
-def moduleUnderlyingSheafMorphism {Y : TopCat.{v}} {O : RingSheaf.{v, v} Y}
+abbrev moduleUnderlyingSheafMorphism {Y : TopCat.{v}} {O : RingSheaf.{v, v} Y}
     {M N : Mod O} (f : M ⟶ N) :
     moduleUnderlyingSheaf M ⟶ moduleUnderlyingSheaf N :=
-  ⟨(PresheafOfModules.toPresheaf O.obj).map f.val⟩
+  (SheafOfModules.toSheaf O).map f
 
 /-- A scalar-compatibility certificate for a transition of local module
 sheaves.  The two local restrictions are presented by module sheaves over
@@ -1277,21 +1277,21 @@ structure OModuleGlueingTransition {O : RingSheaf.{v, v} X}
           (moduleUnderlyingSheaf Mj)) where
   left : Mod (restrictedRingSheaf (X := X) O (U i ⊓ U j))
   right : Mod (restrictedRingSheaf (X := X) O (U i ⊓ U j))
-  leftIso :
-    moduleUnderlyingSheaf left ≅
+  leftUnderlying :
+    moduleUnderlyingSheaf left =
       (sheafMapRestriction (AddCommGrpCat.{v})
         (show U i ⊓ U j ≤ U i from inf_le_left)).obj
           (moduleUnderlyingSheaf Mi)
-  rightIso :
-    moduleUnderlyingSheaf right ≅
+  rightUnderlying :
+    moduleUnderlyingSheaf right =
       (sheafMapRestriction (AddCommGrpCat.{v})
         (show U i ⊓ U j ≤ U j from inf_le_right)).obj
           (moduleUnderlyingSheaf Mj)
   map : left ≅ right
   comm :
-    leftIso.hom ≫ τ.hom =
+    eqToHom leftUnderlying ≫ τ.hom =
       moduleUnderlyingSheafMorphism map.hom ≫
-        rightIso.hom
+        eqToHom rightUnderlying
 
 /-- Glueing data for sheaves of modules over a fixed sheaf of rings. -/
 structure OModuleGlueingData (O : RingSheaf.{v, v} X) (U : ι → Opens X) where
@@ -1333,22 +1333,33 @@ def OModuleGlueingData.underlying
 structure OModuleGlueingSolution {O : RingSheaf.{v, v} X}
     {U : ι → Opens X} (D : OModuleGlueingData O U) where
   sheaf : Mod O
+  restriction : ∀ i, Mod (restrictedRingSheaf O (U i))
+  restrictionUnderlying : ∀ i,
+    moduleUnderlyingSheaf (restriction i) =
+      (sheafRestriction (AddCommGrpCat.{v}) (U i)).obj
+        (moduleUnderlyingSheaf sheaf)
   iso : ∀ i,
-    (sheafRestriction (AddCommGrpCat.{v}) (U i)).obj
-        (moduleUnderlyingSheaf sheaf) ≅
-      moduleUnderlyingSheaf (D.module i)
+    restriction i ≅ D.module i
   comm : ∀ i j,
     (sheafRestrictionRestrictionIso (AddCommGrpCat.{v})
         (show U i ⊓ U j ≤ U i from inf_le_left)
         (moduleUnderlyingSheaf sheaf)).inv ≫
         (sheafMapRestriction (AddCommGrpCat.{v})
-          (show U i ⊓ U j ≤ U i from inf_le_left)).map (iso i).hom ≫
+          (show U i ⊓ U j ≤ U i from inf_le_left)).map
+          (eqToHom (restrictionUnderlying i).symm) ≫
+        (sheafMapRestriction (AddCommGrpCat.{v})
+          (show U i ⊓ U j ≤ U i from inf_le_left)).map
+          (moduleUnderlyingSheafMorphism (iso i).hom) ≫
         (D.transition i j).hom =
       (sheafRestrictionRestrictionIso (AddCommGrpCat.{v})
         (show U i ⊓ U j ≤ U j from inf_le_right)
         (moduleUnderlyingSheaf sheaf)).inv ≫
         (sheafMapRestriction (AddCommGrpCat.{v})
-          (show U i ⊓ U j ≤ U j from inf_le_right)).map (iso j).hom
+          (show U i ⊓ U j ≤ U j from inf_le_right)).map
+          (eqToHom (restrictionUnderlying j).symm) ≫
+        (sheafMapRestriction (AddCommGrpCat.{v})
+          (show U i ⊓ U j ≤ U j from inf_le_right)).map
+          (moduleUnderlyingSheafMorphism (iso j).hom)
 
 /-- Sheaf glueing preserves sheaves of modules over a fixed sheaf of rings. -/
 theorem exists_omoduleGlueingSolution
@@ -1379,7 +1390,7 @@ abbrev AlgebraicSheafGlueingData (C : Type u) [Category.{v} C]
 
 /-- The source's existence lemma for sheaves of sets. -/
 theorem glueingSectionPresheaf_isSheaf
-    (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
+    (D : SetSheafGlueingData U) :
     TopCat.Presheaf.IsSheaf (glueingSectionPresheaf D) := by
   refine (TopCat.Presheaf.isSheaf_iff_isSheafUniqueGluing_types _).2 ?_
   intro κ V s hs
@@ -1953,26 +1964,24 @@ theorem glueingSectionPresheaf_isSheaf
 
 /-- The explicit sheaf from the compatible-family construction. -/
 noncomputable def glueingSectionSheaf
-    (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
+    (D : SetSheafGlueingData U) :
     Sh.{v, v} X :=
-  ⟨glueingSectionPresheaf D, glueingSectionPresheaf_isSheaf hU D⟩
+  ⟨glueingSectionPresheaf D, glueingSectionPresheaf_isSheaf D⟩
 
 /-- The explicit compatible-family sheaf carries the local isomorphisms and
 commuting intersection squares required by the abstract glueing solution. -/
 theorem glueingSectionSheaf_solution
     (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
     Nonempty {S : SheafGlueingSolution D //
-      S.sheaf = glueingSectionSheaf hU D} := by
+      S.sheaf = glueingSectionSheaf D} := by
   sorry
 
 @[simp]
 theorem glueingSectionSheaf_sections
-    (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U)
-    (W : Opens X) :
-    (glueingSectionSheaf hU D).presheaf.obj (op W) = GlueingSection D W := rfl
+    (D : SetSheafGlueingData U) (W : Opens X) :
+    (glueingSectionSheaf D).presheaf.obj (op W) = GlueingSection D W := rfl
 
-/-- The chosen explicit sections are the sectionwise construction used by the
-source's first proof of the glueing lemma. -/
+/-- The source-facing existence statement for the sheaf-glueing lemma. -/
 theorem glue_sheaves
     (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
     Nonempty (SheafGlueingSolution D) :=

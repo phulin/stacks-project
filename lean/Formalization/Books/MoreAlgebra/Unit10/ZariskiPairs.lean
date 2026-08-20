@@ -38,18 +38,19 @@ def PairHom {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (P : Pair A) (Q : Pair B) (f : A →+* B) : Prop :=
   Ideal.map f P.ideal ≤ Q.ideal
 
-/-- The condition that an ideal is contained in the Jacobson radical. -/
-def ZariskiPair {A : Type u} [CommRing A] (I : Ideal A) : Prop :=
-  I ≤ Ring.jacobson A
+/-- The condition that the distinguished ideal of a pair is contained in the
+Jacobson radical. -/
+def ZariskiPair {A : Type u} [CommRing A] (P : Pair A) : Prop :=
+  P.ideal ≤ Ring.jacobson A
 
 /-! ## Idempotents modulo a Jacobson-radical ideal -/
 
 /-- Idempotents are determined by their reductions modulo a Jacobson-radical
 ideal. -/
 theorem idempotents_determined_modulo_radical
-    {A : Type u} [CommRing A] (I : Ideal A) (hI : ZariskiPair I) :
+    {A : Type u} [CommRing A] (P : Pair A) (hP : ZariskiPair P) :
     Function.Injective
-      (Formalization.Books.Algebra.Unit32.quotientIdempotentMap I) := by
+      (Formalization.Books.Algebra.Unit32.quotientIdempotentMap P.ideal) := by
   sorry
 
 /-! ## Checking an isomorphism from the quotient -/
@@ -58,11 +59,11 @@ theorem idempotents_determined_modulo_radical
 reduction modulo a Zariski-pair ideal is already an isomorphism. -/
 theorem check_isomorphism_zariski
     {A : Type u} {B : Type v} [CommRing A] [CommRing B]
-    (I : Ideal A) (hI : ZariskiPair I)
+    (P : Pair A) (hP : ZariskiPair P)
     (f : A →+* B) (hflat : f.Flat) (hintegral : f.IsIntegral)
     (hfp : f.FinitePresentation)
     (hquot : Function.Bijective
-      (Formalization.Books.Algebra.Unit138.quotientBaseChangeRingMap f I)) :
+      (Formalization.Books.Algebra.Unit138.quotientBaseChangeRingMap f P.ideal)) :
     Function.Bijective f := by
   sorry
 
@@ -98,15 +99,15 @@ the distinguished element `(1, 0)` produce a monic annihilating polynomial
 whose reduction is `(X - 1) X^d` for some positive `d`. -/
 theorem helper_finite
     {A B : Type u} [CommRing A] [CommRing B]
-    (I : Ideal A) (hI : ZariskiPair I)
+    (P : Pair A) (hP : ZariskiPair P)
     (f : A →+* B) (hfinite : RingHom.Finite f)
     (B₁ B₂ : Type w) [CommRing B₁] [CommRing B₂]
-    [Algebra (A ⧸ I) B₁] [Algebra (A ⧸ I) B₂]
-    (b : B) (hfactor : FiniteHelperFactorization f I B₁ B₂ b) :
+    [Algebra (A ⧸ P.ideal) B₁] [Algebra (A ⧸ P.ideal) B₂]
+    (b : B) (hfactor : FiniteHelperFactorization f P.ideal B₁ B₂ b) :
     ∃ p : Polynomial A, p.Monic ∧ Polynomial.eval₂ f b p = 0 ∧
       ∃ d : ℕ, 1 ≤ d ∧
-        Polynomial.map (Ideal.Quotient.mk I) p =
-          (Polynomial.X - Polynomial.C (1 : A ⧸ I)) * Polynomial.X ^ d := by
+        Polynomial.map (Ideal.Quotient.mk P.ideal) p =
+          (Polynomial.X - Polynomial.C (1 : A ⧸ P.ideal)) * Polynomial.X ^ d := by
   sorry
 
 /-! ## Jacobson complements -/
@@ -115,7 +116,7 @@ theorem helper_finite
 ideal produces a Jacobson ring. -/
 theorem noetherian_zariski_jacobson_complement
     {A : Type u} [CommRing A] [IsNoetherianRing A]
-    (I : Ideal A) (hI : ZariskiPair I) (f : A) (hf : f ∈ I) :
+    (P : Pair A) (hP : ZariskiPair P) (f : A) (hf : f ∈ P.ideal) :
     IsJacobsonRing (Localization.Away f) := by
   sorry
 

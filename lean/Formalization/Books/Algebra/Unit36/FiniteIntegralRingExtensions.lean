@@ -1125,7 +1125,255 @@ noncomputable def sillyNormalRight
     (ratioYXToBoth x y).toLinearMap.comp
       (LinearMap.snd R (ratioXYSubalgebra x y) (ratioYXSubalgebra x y))
 
-/-- The final source sequence is short exact for nonzerodivisors when the base
+private theorem integral_of_two_ratio_presentations
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (t u : S) (htu : t * u = 1) (a : S)
+    (p q : Polynomial R)
+    (hp : Polynomial.eval₂ (algebraMap R S) t p = a)
+    (hq : Polynomial.eval₂ (algebraMap R S) u q = a) :
+    IsIntegral R a := by
+  classical
+  let n : ℕ := max p.natDegree q.natDegree
+  let powers : Set S :=
+    Set.range (fun i : Fin (n + 1) => t ^ (i : ℕ)) ∪
+      Set.range (fun i : Fin (n + 1) => u ^ (i : ℕ))
+  have hpowers : powers.Finite := by
+    dsimp [powers]
+    exact Set.Finite.union (Set.finite_range _) (Set.finite_range _)
+  let M : Submodule R S := Submodule.span R powers
+  letI : Module.Finite R M := Module.Finite.span_of_finite R hpowers
+  have hpow (i j : ℕ) : u ^ j * t ^ i =
+      if j ≤ i then t ^ (i - j) else u ^ (j - i) := by
+    have hcancel (k : ℕ) : t ^ k * u ^ k = 1 := by
+      rw [← mul_pow, htu, one_pow]
+    by_cases hji : j ≤ i
+    · obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hji
+      rw [if_pos (Nat.le_add_right j k), Nat.add_sub_cancel_left]
+      calc
+        u ^ j * t ^ (j + k) = (t ^ j * u ^ j) * t ^ k := by ring
+        _ = t ^ k := by rw [hcancel]; simp
+    · have hij : i ≤ j := Nat.le_of_lt (Nat.lt_of_not_ge hji)
+      obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hij
+      rw [if_neg (by omega), Nat.add_sub_cancel_left]
+      calc
+        u ^ (i + k) * t ^ i = (t ^ i * u ^ i) * u ^ k := by ring
+        _ = u ^ k := by rw [hcancel]; simp
+  have hpow_mem (i j : ℕ) (hi : i ≤ n) (hj : j ≤ n) :
+      u ^ j * t ^ i ∈ M := by
+    rw [hpow]
+    split
+    · apply Submodule.subset_span
+      exact Or.inl ⟨⟨i - j, Nat.lt_succ_of_le ((Nat.sub_le i j).trans hi)⟩, rfl⟩
+    · apply Submodule.subset_span
+      exact Or.inr ⟨⟨j - i, Nat.lt_succ_of_le ((Nat.sub_le j i).trans hj)⟩, rfl⟩
+  have h_eval_u (i : ℕ) (hi : i ≤ n) :
+      Polynomial.eval₂ (algebraMap R S) u q * t ^ i ∈ M := by
+    rw [Polynomial.eval₂_eq_sum_range' (algebraMap R S) (p := q)
+      (n := n + 1) (lt_of_le_of_lt
+      (le_max_right p.natDegree q.natDegree) (Nat.lt_succ_self _))]
+    rw [Finset.sum_mul]
+    refine Submodule.sum_mem M fun j hj => ?_
+    have hjn : j ≤ n := Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+    simpa [Algebra.smul_def, mul_assoc, mul_left_comm, mul_comm] using
+      M.smul_mem (q.coeff j) (hpow_mem i j hi hjn)
+  have h_eval_t (i : ℕ) (hi : i ≤ n) :
+      Polynomial.eval₂ (algebraMap R S) t p * u ^ i ∈ M := by
+    rw [Polynomial.eval₂_eq_sum_range' (algebraMap R S) (p := p)
+      (n := n + 1) (lt_of_le_of_lt
+      (le_max_left p.natDegree q.natDegree) (Nat.lt_succ_self _))]
+    rw [Finset.sum_mul]
+    refine Submodule.sum_mem M fun j hj => ?_
+    have hjn : j ≤ n := Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+    simpa [Algebra.smul_def, mul_assoc, mul_left_comm, mul_comm] using
+      M.smul_mem (p.coeff j) (hpow_mem j i hjn hi)
+  have h1 : (1 : S) ∈ M := by
+    apply Submodule.subset_span
+    exact Or.inl ⟨⟨0, Nat.zero_lt_succ _⟩, by simp⟩
+  have hstable : ∀ m ∈ M, a * m ∈ M := by
+    intro m hm
+    refine Submodule.span_induction (p := fun z _ => a * z ∈ M) ?_ ?_ ?_ ?_ hm
+    · intro z hz
+      rcases hz with ⟨i, rfl⟩ | ⟨i, rfl⟩
+      · rw [← hq]
+        exact h_eval_u i (Nat.lt_succ_iff.mp i.isLt)
+      · rw [← hp]
+        exact h_eval_t i (Nat.lt_succ_iff.mp i.isLt)
+    · simp
+    · intro z w _ _ hz hw
+      simpa [mul_add] using M.add_mem hz hw
+    · intro r z _ hz
+      simpa [Algebra.smul_def, mul_assoc, mul_left_comm, mul_comm] using
+        M.smul_mem r hz
+  exact isIntegral_of_finite_submodule M a h1 hstable
+
+private theorem adjoin_two_ratio_sum
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (t u : S) (htu : t * u = 1)
+    (z : Algebra.adjoin R ({t, u} : Set S)) :
+    ∃ a : Algebra.adjoin R ({t} : Set S),
+      ∃ b : Algebra.adjoin R ({u} : Set S),
+        (a : S) + b = z := by
+  classical
+  let tA : Algebra.adjoin R ({t} : Set S) :=
+    ⟨t, Algebra.subset_adjoin (by simp)⟩
+  let uB : Algebra.adjoin R ({u} : Set S) :=
+    ⟨u, Algebra.subset_adjoin (by simp)⟩
+  let Good : S → Prop := fun z =>
+    ∃ a : Algebra.adjoin R ({t} : Set S),
+      ∃ b : Algebra.adjoin R ({u} : Set S), (a : S) + b = z
+  have hgood_add {z w : S} : Good z → Good w → Good (z + w) := by
+    rintro ⟨a, b, hab⟩ ⟨a', b', hab'⟩
+    refine ⟨a + a', b + b', ?_⟩
+    dsimp at *
+    rw [← hab, ← hab']
+    simp only [add_left_comm, add_comm]
+  have hgood_A (a : Algebra.adjoin R ({t} : Set S)) : Good (a : S) := by
+    exact ⟨a, 0, by simp⟩
+  have hgood_B (b : Algebra.adjoin R ({u} : Set S)) : Good (b : S) := by
+    exact ⟨0, b, by simp⟩
+  have hpow (i j : ℕ) : u ^ j * t ^ i =
+      if j ≤ i then t ^ (i - j) else u ^ (j - i) := by
+    have hcancel (k : ℕ) : t ^ k * u ^ k = 1 := by
+      rw [← mul_pow, htu, one_pow]
+    by_cases hji : j ≤ i
+    · obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hji
+      rw [if_pos (Nat.le_add_right j k), Nat.add_sub_cancel_left]
+      calc
+        u ^ j * t ^ (j + k) = (t ^ j * u ^ j) * t ^ k := by ring
+        _ = t ^ k := by rw [hcancel]; simp
+    · have hij : i ≤ j := Nat.le_of_lt (Nat.lt_of_not_ge hji)
+      obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hij
+      rw [if_neg (by omega), Nat.add_sub_cancel_left]
+      calc
+        u ^ (i + k) * t ^ i = (t ^ i * u ^ i) * u ^ k := by ring
+        _ = u ^ k := by rw [hcancel]; simp
+  have hpow' (i j : ℕ) : t ^ i * u ^ j =
+      if j ≤ i then t ^ (i - j) else u ^ (j - i) := by
+    simpa [mul_comm] using hpow i j
+  have hmonomial (n m : ℕ) (a b : R) :
+      Good ((algebraMap R S (a * b)) * t ^ n * u ^ m) := by
+    by_cases hmn : m ≤ n
+    · refine ⟨algebraMap R (Algebra.adjoin R ({t} : Set S)) (a * b) *
+          tA ^ (n - m), 0, ?_⟩
+      dsimp [Good]
+      calc
+        (↑(algebraMap R (Algebra.adjoin R ({t} : Set S)) (a * b) *
+            tA ^ (n - m)) : S) + ↑(0 : Algebra.adjoin R ({u} : Set S)) =
+            algebraMap R S (a * b) * t ^ (n - m) := by simp [tA]
+        _ = algebraMap R S (a * b) * (t ^ n * u ^ m) := by
+          rw [hpow', if_pos hmn]
+        _ = _ := by ring
+    · refine ⟨0, algebraMap R (Algebra.adjoin R ({u} : Set S)) (a * b) *
+          uB ^ (m - n), ?_⟩
+      dsimp [Good]
+      calc
+        (↑(0 : Algebra.adjoin R ({t} : Set S)) : S) +
+            ↑(algebraMap R (Algebra.adjoin R ({u} : Set S)) (a * b) *
+              uB ^ (m - n)) =
+            algebraMap R S (a * b) * u ^ (m - n) := by simp [uB]
+        _ = algebraMap R S (a * b) * (t ^ n * u ^ m) := by
+          rw [hpow', if_neg hmn]
+        _ = _ := by ring
+  have hpoly_monomial (n : ℕ) (a : R) (q : Polynomial R) :
+      Good (Polynomial.eval₂ (algebraMap R S) t (Polynomial.monomial n a) *
+        Polynomial.eval₂ (algebraMap R S) u q) := by
+    induction q using Polynomial.induction_on' with
+    | add q r hq hr =>
+        rw [Polynomial.eval₂_add, mul_add]
+        exact hgood_add hq hr
+    | monomial m b =>
+        convert hmonomial n m a b using 1 <;>
+          simp [Polynomial.eval₂_monomial] <;> ring
+  have hpoly (p q : Polynomial R) :
+      Good (Polynomial.eval₂ (algebraMap R S) t p *
+        Polynomial.eval₂ (algebraMap R S) u q) := by
+    induction p using Polynomial.induction_on' generalizing q with
+    | add p r hp hr =>
+        rw [Polynomial.eval₂_add, add_mul]
+        exact hgood_add (hp q) (hr q)
+    | monomial n a =>
+        exact hpoly_monomial n a q
+  have hcross (a : Algebra.adjoin R ({t} : Set S))
+      (b : Algebra.adjoin R ({u} : Set S)) : Good ((a : S) * b) := by
+    obtain ⟨p, hp⟩ := Algebra.adjoin_eq_exists_aeval R t a
+    obtain ⟨q, hq⟩ := Algebra.adjoin_eq_exists_aeval R u b
+    simpa only [Polynomial.aeval_def] using (hp ▸ hq ▸ hpoly p q)
+  have hgood_mul {z w : S} : Good z → Good w → Good (z * w) := by
+    rintro ⟨a, b, hab⟩ ⟨a', b', hab'⟩
+    have hs :=
+      hgood_add (hgood_add (hgood_add (hgood_A (a * a'))
+        (hcross a b')) (hcross a' b)) (hgood_B (b * b'))
+    rw [← hab, ← hab']
+    dsimp [Good] at hs ⊢
+    rcases hs with ⟨A, B, hAB⟩
+    refine ⟨A, B, ?_⟩
+    rw [hAB]
+    simp only [mul_add, add_mul]
+    ring_nf
+  have hgood : Good (z : S) := by
+    refine Algebra.adjoin_induction (p := fun z _ => Good z) ?_ ?_ ?_ ?_ z.property
+    · intro z hz
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+      rcases hz with rfl | rfl
+      · exact hgood_A tA
+      · exact hgood_B uB
+    · intro r
+      simpa using hgood_A (algebraMap R (Algebra.adjoin R ({t} : Set S)) r)
+    · intro z w hz hw hzw hww
+      exact hgood_add hzw hww
+    · intro z w hz hw hzw hww
+      exact hgood_mul hzw hww
+  exact hgood
+
+private theorem silly_normal_right_apply
+    {R : Type u} [CommRing R] (x y : R)
+    (a : ratioXYSubalgebra x y) (b : ratioYXSubalgebra x y) :
+    ((sillyNormalRight x y (a, b) : ratioBothSubalgebra x y) :
+      ratioLocalization R x y) = (a : ratioLocalization R x y) + b := by
+  simp only [sillyNormalRight, LinearMap.add_apply, LinearMap.comp_apply,
+    LinearMap.fst_apply, LinearMap.snd_apply]
+  simp only [ratioXYToBoth, ratioYXToBoth, map_add, Subalgebra.coe_add,
+    AlgHom.toLinearMap_apply]
+  have ha :
+      ((Subalgebra.inclusion (show ratioXYSubalgebra x y ≤
+          ratioBothSubalgebra x y from le_sup_left) a : ratioBothSubalgebra x y) :
+        ratioLocalization R x y) = a := by
+    exact Subalgebra.coe_inclusion _ _
+  have hb :
+      ((Subalgebra.inclusion (show ratioYXSubalgebra x y ≤
+          ratioBothSubalgebra x y from le_sup_right) b : ratioBothSubalgebra x y) :
+        ratioLocalization R x y) = b := by
+    exact Subalgebra.coe_inclusion _ _
+  rw [ha, hb]
+
+private theorem silly_normal_right_surjective
+    {R : Type u} [CommRing R] (x y : R)
+    (hxy : (ratioXY x y : ratioLocalization R x y) * ratioYX x y = 1) :
+    Function.Surjective (sillyNormalRight x y) := by
+  intro z
+  let z' : Algebra.adjoin R
+      ({ratioXY x y, ratioYX x y} : Set (ratioLocalization R x y)) :=
+    ⟨(z : ratioLocalization R x y), by
+      rw [← ratioBothSubalgebra_eq_adjoin]
+      exact z.property⟩
+  obtain ⟨a, b, hab⟩ := adjoin_two_ratio_sum
+    (ratioXY x y) (ratioYX x y) hxy z'
+  let a' : ratioXYSubalgebra x y :=
+    ⟨(a : ratioLocalization R x y), by
+      change (a : ratioLocalization R x y) ∈
+        Algebra.adjoin R ({ratioXY x y} : Set _)
+      exact a.property⟩
+  let b' : ratioYXSubalgebra x y :=
+    ⟨(b : ratioLocalization R x y), by
+      change (b : ratioLocalization R x y) ∈
+        Algebra.adjoin R ({ratioYX x y} : Set _)
+      exact b.property⟩
+  refine ⟨(a', b'), ?_⟩
+  apply Subtype.ext
+  rw [silly_normal_right_apply]
+  simpa [a', b', z'] using hab
+
+/- The final source sequence is short exact for nonzerodivisors when the base
 ring is integrally closed in either of the two one-element localizations. -/
 theorem silly_normal_short_exact
     {R : Type u} [CommRing R] (x y : R)
@@ -1136,11 +1384,7 @@ theorem silly_normal_short_exact
     Function.Injective (sillyNormalLeft x y) ∧
       Function.Exact (sillyNormalLeft x y) (sillyNormalRight x y) ∧
       Function.Surjective (sillyNormalRight x y) := by
-  /- Prior attempt: the proof below established the unit identities, the
-  polynomial normal-form argument, and the injectivity and surjectivity
-  components, but did not close the middle exactness goal and exceeded the
-  kernel elaboration timeout.
-
+  /-
   classical
   let hxunit : IsUnit (algebraMap R (ratioLocalization R x y) x) :=
     IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_right x y)
@@ -1321,8 +1565,284 @@ theorem silly_normal_short_exact
     have hsecond := congrArg (fun p => (p.2 : ratioLocalization R x y)) hrs
     simpa [sillyNormalLeft] using hsecond
   refine ⟨hinjLeft, ?_, hsurj⟩
-  -/
-  sorry
+  sorry -/
+  classical
+  let hxunit : IsUnit (algebraMap R (ratioLocalization R x y) x) :=
+    IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_right x y)
+  let hyunit : IsUnit (algebraMap R (ratioLocalization R x y) y) :=
+    IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_left y x)
+  have hxi : (algebraMap R (ratioLocalization R x y) x) *
+      ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+        ratioLocalization R x y) = 1 := by
+    calc
+      _ = (hxunit.unit : ratioLocalization R x y) *
+          ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y) := by rw [hxunit.unit_spec]
+      _ = 1 := hxunit.unit.mul_inv
+  have hyi : (algebraMap R (ratioLocalization R x y) y) *
+      ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+        ratioLocalization R x y) = 1 := by
+    calc
+      _ = (hyunit.unit : ratioLocalization R x y) *
+          ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y) := by rw [hyunit.unit_spec]
+      _ = 1 := hyunit.unit.mul_inv
+  have hxy : (ratioXY x y : ratioLocalization R x y) * ratioYX x y = 1 := by
+    change ((algebraMap R (ratioLocalization R x y) x) *
+        ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+          ratioLocalization R x y)) *
+      ((algebraMap R (ratioLocalization R x y) y) *
+        ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+          ratioLocalization R x y)) = 1
+    calc
+      _ = ((algebraMap R (ratioLocalization R x y) x) *
+          ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y)) *
+        ((algebraMap R (ratioLocalization R x y) y) *
+          ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y)) := by ring
+      _ = 1 := by rw [hxi, hyi]; simp
+  have hxyreg : x * y ∈ nonZeroDivisors R :=
+    (mul_mem_nonZeroDivisors).2 ⟨hx, hy⟩
+  have hinjR : Function.Injective
+      (algebraMap R (ratioLocalization R x y)) :=
+    IsLocalization.injective _ (Submonoid.powers_le.mpr hxyreg)
+  have hinjLeft : Function.Injective (sillyNormalLeft x y) := by
+    intro r s hrs
+    apply hinjR
+    have hsecond := congrArg (fun p => (p.2 : ratioLocalization R x y)) hrs
+    simpa [sillyNormalLeft] using hsecond
+  have hsurj : Function.Surjective (sillyNormalRight x y) := by
+    exact silly_normal_right_surjective x y hxy
+  refine ⟨hinjLeft, ?_, hsurj⟩
+  intro z
+  have hzero : z ∈ Set.range (sillyNormalLeft x y) →
+      sillyNormalRight x y z = 0 := by
+    rintro ⟨r, rfl⟩
+    apply Subtype.ext
+    change ((sillyNormalRight x y
+        (-algebraMap R (ratioXYSubalgebra x y) r,
+          algebraMap R (ratioYXSubalgebra x y) r) :
+        ratioBothSubalgebra x y) : ratioLocalization R x y) = 0
+    rw [silly_normal_right_apply]
+    simp
+  have hrange : sillyNormalRight x y z = 0 →
+      z ∈ Set.range (sillyNormalLeft x y) := by
+    intro hz
+    have hab0 : (z.1 : ratioLocalization R x y) + z.2 = 0 := by
+      have h := congrArg (fun w : ratioBothSubalgebra x y =>
+        (w : ratioLocalization R x y)) hz
+      change ((sillyNormalRight x y (z.1, z.2) : ratioBothSubalgebra x y) :
+        ratioLocalization R x y) = 0 at h
+      rw [silly_normal_right_apply] at h
+      exact h
+    have hneg : -(z.1 : ratioLocalization R x y) = z.2 := by
+      exact (eq_neg_of_add_eq_zero_right hab0).symm
+    have hneg' : (z.1 : ratioLocalization R x y) =
+        -(z.2 : ratioLocalization R x y) := by
+      simpa using congrArg Neg.neg hneg
+    obtain ⟨p, hp⟩ := Algebra.adjoin_eq_exists_aeval R (ratioXY x y) (-z.1)
+    obtain ⟨q, hq⟩ := Algebra.adjoin_eq_exists_aeval R (ratioYX x y) z.2
+    have hp' : Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+        (ratioXY x y) p = z.2 := by
+      calc
+        _ = ((-z.1 : ratioXYSubalgebra x y) : ratioLocalization R x y) := by
+          simpa only [Polynomial.aeval_def] using hp
+        _ = -(z.1 : ratioLocalization R x y) := by rfl
+        _ = z.2 := hneg
+    have hq' : Polynomial.eval₂ (algebraMap R (ratioLocalization R x y))
+        (ratioYX x y) q = z.2 := by
+      simpa only [Polynomial.aeval_def] using hq
+    have hzint : IsIntegral R (z.2 : ratioLocalization R x y) :=
+      integral_of_two_ratio_presentations (ratioXY x y) (ratioYX x y) hxy
+        (z.2 : ratioLocalization R x y) p q hp' hq'
+    let xunit : IsUnit (algebraMap R (Localization.Away x) x) :=
+      IsLocalization.Away.algebraMap_isUnit x
+    let mapX : Localization.Away x →ₐ[R] ratioLocalization R x y :=
+      IsLocalization.Away.liftAlgHom x (f := Algebra.ofId R
+        (ratioLocalization R x y)) hxunit
+    have hinjAwayX : Function.Injective
+        (algebraMap R (Localization.Away x)) :=
+      IsLocalization.injective _ (Submonoid.powers_le.mpr hx)
+    have hmapunits : ∀ s : Submonoid.powers x,
+        IsUnit ((Algebra.ofId R (ratioLocalization R x y)).toRingHom s) := by
+      intro s
+      obtain ⟨n, hn⟩ := s.2
+      rw [← hn, map_pow]
+      exact IsUnit.pow _ hxunit
+    have hinjX : Function.Injective mapX := by
+      change Function.Injective
+        (IsLocalization.lift (M := Submonoid.powers x)
+          (g := (Algebra.ofId R (ratioLocalization R x y)).toRingHom) hmapunits)
+      rw [IsLocalization.lift_injective_iff]
+      intro a b
+      constructor
+      · intro h
+        exact congrArg (Algebra.ofId R (ratioLocalization R x y)).toRingHom
+          (hinjAwayX h)
+      · intro h
+        have hab : a = b := hinjR (by simpa using h)
+        exact congrArg (algebraMap R (Localization.Away x)) hab
+    let invX : Localization.Away x :=
+      ((xunit.unit⁻¹ : Units (Localization.Away x)) : Localization.Away x)
+    have hinvX : mapX invX =
+        ((hxunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+          ratioLocalization R x y) := by
+      apply hxunit.mul_left_cancel
+      calc
+        _ = mapX (algebraMap R (Localization.Away x) x) * mapX invX := by
+          rw [mapX.commutes]
+        _ = mapX (algebraMap R (Localization.Away x) x * invX) := by
+          exact (mapX.map_mul _ _).symm
+        _ = 1 := by
+          rw [← xunit.unit_spec]
+          simp [invX]
+        _ = _ := hxi.symm
+    let yX : Localization.Away x :=
+      algebraMap R (Localization.Away x) y * invX
+    have hratioYX : mapX yX = ratioYX x y := by
+      dsimp [yX, ratioYX]
+      calc
+        mapX (algebraMap R (Localization.Away x) y * invX) =
+            mapX (algebraMap R (Localization.Away x) y) * mapX invX :=
+          mapX.map_mul _ _
+        _ = _ := by rw [mapX.commutes, hinvX]
+    let betaX : Localization.Away x :=
+      Polynomial.eval₂ (algebraMap R (Localization.Away x)) yX q
+    have hbetaX : mapX betaX = (z.2 : ratioLocalization R x y) := by
+      dsimp [betaX]
+      change (mapX.toRingHom)
+          (Polynomial.eval₂ (algebraMap R (Localization.Away x)) yX q) = _
+      rw [Polynomial.hom_eval₂]
+      have hmapXbase :
+          mapX.toRingHom.comp (algebraMap R (Localization.Away x)) =
+            algebraMap R (ratioLocalization R x y) := by
+        ext r
+        exact mapX.commutes r
+      have hyX' : mapX.toRingHom yX = ratioYX x y := by
+        exact hratioYX
+      rw [hmapXbase, hyX']
+      simpa only [mapX.commutes, RingHom.coe_comp, Function.comp_apply] using hq'
+    have hbetaXint : IsIntegral R betaX := by
+      apply (isIntegral_algHom_iff mapX hinjX).mp
+      rw [hbetaX]
+      exact hzint
+    rcases hclosed with hclosed | hclosed
+    · letI : IsIntegrallyClosedIn R (Localization.Away x) := hclosed
+      obtain ⟨r, hr⟩ :=
+        IsIntegrallyClosedIn.algebraMap_eq_of_integral hbetaXint
+      refine ⟨r, ?_⟩
+      have hb : (algebraMap R (ratioLocalization R x y) r) =
+          (z.2 : ratioLocalization R x y) := by
+        calc
+          _ = mapX (algebraMap R (Localization.Away x) r) :=
+            (mapX.commutes r).symm
+          _ = mapX betaX := by rw [hr]
+          _ = _ := hbetaX
+      apply Prod.ext
+      · apply Subtype.ext
+        calc
+          (-algebraMap R (ratioXYSubalgebra x y) r :
+              ratioLocalization R x y) =
+              -(algebraMap R (ratioLocalization R x y) r) := by rfl
+          _ = -(z.2 : ratioLocalization R x y) := by rw [hb]
+          _ = (z.1 : ratioLocalization R x y) := hneg'.symm
+      · apply Subtype.ext
+        exact hb
+    · let yunitAway : IsUnit (algebraMap R (Localization.Away y) y) :=
+          IsLocalization.Away.algebraMap_isUnit y
+      let mapY : Localization.Away y →ₐ[R] ratioLocalization R x y :=
+        IsLocalization.Away.liftAlgHom y (f := Algebra.ofId R
+          (ratioLocalization R x y)) hyunit
+      have hinjAwayY : Function.Injective
+          (algebraMap R (Localization.Away y)) :=
+        IsLocalization.injective _ (Submonoid.powers_le.mpr hy)
+      have hmapunitsY : ∀ s : Submonoid.powers y,
+          IsUnit ((Algebra.ofId R (ratioLocalization R x y)).toRingHom s) := by
+        intro s
+        obtain ⟨n, hn⟩ := s.2
+        rw [← hn, map_pow]
+        exact IsUnit.pow _ hyunit
+      have hinjY : Function.Injective mapY := by
+        change Function.Injective
+          (IsLocalization.lift (M := Submonoid.powers y)
+            (g := (Algebra.ofId R (ratioLocalization R x y)).toRingHom)
+            hmapunitsY)
+        rw [IsLocalization.lift_injective_iff]
+        intro a b
+        constructor
+        · intro h
+          exact congrArg (Algebra.ofId R (ratioLocalization R x y)).toRingHom
+            (hinjAwayY h)
+        · intro h
+          have hab : a = b := hinjR (by simpa using h)
+          exact congrArg (algebraMap R (Localization.Away y)) hab
+      let invY : Localization.Away y :=
+        ((yunitAway.unit⁻¹ : Units (Localization.Away y)) : Localization.Away y)
+      have hinvY : mapY invY =
+          ((hyunit.unit⁻¹ : Units (ratioLocalization R x y)) :
+            ratioLocalization R x y) := by
+        apply hyunit.mul_left_cancel
+        calc
+          _ = mapY (algebraMap R (Localization.Away y) y) * mapY invY := by
+            rw [mapY.commutes]
+          _ = mapY (algebraMap R (Localization.Away y) y * invY) :=
+            (mapY.map_mul _ _).symm
+          _ = 1 := by
+            rw [← yunitAway.unit_spec]
+            simp [invY]
+          _ = _ := hyi.symm
+      let xY : Localization.Away y :=
+        algebraMap R (Localization.Away y) x * invY
+      have hratioXY : mapY xY = ratioXY x y := by
+        dsimp [xY, ratioXY]
+        calc
+          mapY (algebraMap R (Localization.Away y) x * invY) =
+              mapY (algebraMap R (Localization.Away y) x) * mapY invY :=
+            mapY.map_mul _ _
+          _ = _ := by rw [mapY.commutes, hinvY]
+      let betaY : Localization.Away y :=
+        Polynomial.eval₂ (algebraMap R (Localization.Away y)) xY p
+      have hbetaY : mapY betaY = (z.2 : ratioLocalization R x y) := by
+        dsimp [betaY]
+        change (mapY.toRingHom)
+            (Polynomial.eval₂ (algebraMap R (Localization.Away y)) xY p) = _
+        rw [Polynomial.hom_eval₂]
+        have hmapYbase :
+            mapY.toRingHom.comp (algebraMap R (Localization.Away y)) =
+              algebraMap R (ratioLocalization R x y) := by
+          ext r
+          exact mapY.commutes r
+        have hxY' : mapY.toRingHom xY = ratioXY x y := by
+          exact hratioXY
+        rw [hmapYbase, hxY']
+        simpa only [mapY.commutes, RingHom.coe_comp, Function.comp_apply] using hp'
+      have hbetaYint : IsIntegral R betaY := by
+        apply (isIntegral_algHom_iff mapY hinjY).mp
+        rw [hbetaY]
+        exact hzint
+      letI : IsIntegrallyClosedIn R (Localization.Away y) := hclosed
+      obtain ⟨r, hr⟩ :=
+        IsIntegrallyClosedIn.algebraMap_eq_of_integral hbetaYint
+      refine ⟨r, ?_⟩
+      have hb : (algebraMap R (ratioLocalization R x y) r) =
+          (z.2 : ratioLocalization R x y) := by
+        calc
+          _ = mapY (algebraMap R (Localization.Away y) r) :=
+            (mapY.commutes r).symm
+          _ = mapY betaY := by rw [hr]
+          _ = _ := hbetaY
+      apply Prod.ext
+      · apply Subtype.ext
+        calc
+          (-algebraMap R (ratioXYSubalgebra x y) r :
+              ratioLocalization R x y) =
+              -(algebraMap R (ratioLocalization R x y) r) := by rfl
+          _ = -(z.2 : ratioLocalization R x y) := by rw [hb]
+          _ = (z.1 : ratioLocalization R x y) := hneg'.symm
+      · apply Subtype.ext
+        exact hb
+  exact ⟨hrange, hzero⟩
 
 end
 

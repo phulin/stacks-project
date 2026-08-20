@@ -390,11 +390,11 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
                   exact hni1 (h.le)
                 have hneq : ¬i + 1 = i := ne_of_gt (PNat.lt_add_right i 1)
                 have hy2 : y ((i + 1) + 1) = x := by
-                  simp [y, hni, hn0]
+                  simp [y, hni]
                 have hy1 : y (i + 1) =
                     (transitionMap G (i := (i + 1) + 1) (j := i + 1)
                       (PNat.lt_add_right (i + 1) 1).le).hom x := by
-                  simp [y, hni1, hn1, hneq]
+                  simp [y, hni1, hneq]
                 rw [hy2, hy1]
                 rfl
               · have hni0 : ¬n ≤ i := by
@@ -785,7 +785,6 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
       intro y
       obtain ⟨x, hx⟩ := hproj n y
       refine ⟨(I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ x, ?_⟩
-      change q ((I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ x) = y
       change (limit.π F (Opposite.op n)).hom x = y
       exact hx
     let e : (inverseLimitModule F ⧸

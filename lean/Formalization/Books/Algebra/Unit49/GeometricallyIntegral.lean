@@ -162,7 +162,26 @@ theorem isGeometricallyIntegral_of_isDomain_finiteExtension
     (hS : ∀ (k' : Type u) [Field k'] [Algebra k k']
       [FiniteDimensional k k'], IsDomain (k' ⊗[k] S)) :
     IsGeometricallyIntegral.{u, v, u} k S := by
-  sorry
+  have hS0 : IsDomain S := by
+    let _ : IsDomain (k ⊗[k] S) := hS k
+    exact (Algebra.TensorProduct.lid k S).symm.toMulEquiv.isDomain _
+  have hSred : IsReduced S := by
+    let _ : IsDomain S := hS0
+    infer_instance
+  have hred : IsGeometricallyReduced k S := by
+    apply isGeometricallyReduced_of_finitePurelyInseparable_baseChanges hSred
+    intro k' _ _ _ _
+    let _ : IsDomain (k' ⊗[k] S) := hS k'
+    infer_instance
+  have hirrBase : IsIrreducibleAfterFiniteSeparableBaseChange k S := by
+    intro k' _ _ _ _
+    let _ : IsDomain (k' ⊗[k] S) := hS k'
+    infer_instance
+  have hirr :=
+    isGeometricallyIrreducible_of_isIrreducibleAfterFiniteSeparableBaseChange hirrBase
+  exact
+    (isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyReduced).mpr
+      ⟨hirr, hred⟩
 
 theorem isGeometricallyIntegral_iff_finiteExtension
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
@@ -179,7 +198,8 @@ theorem isDomain_algebraicClosure_of_isDomain_finiteExtension
     (hS : ∀ (k' : Type u) [Field k'] [Algebra k k']
       [FiniteDimensional k k'], IsDomain (k' ⊗[k] S)) :
     IsDomain (AlgebraicClosure k ⊗[k] S) := by
-  sorry
+  exact
+    (isGeometricallyIntegral_of_isDomain_finiteExtension hS).isDomain_tensorProduct
 
 /-- Integrality after base change to an algebraic closure descends to every
 finite field extension. -/

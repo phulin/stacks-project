@@ -107,7 +107,7 @@ structure ScalarQuotientDGA {R A : Type u} [CommRing R] [Ring A]
       ∃ u : Q →ₐ[R] B, f = u.comp quotient_map
   lift_unique : ∀ {B : Type u} [Ring B] [Algebra R B]
     (f : A →ₐ[R] B)
-    (hf : ∀ r : R, r ∈ I → f (algebraMap R A r) = 0)
+    (_hf : ∀ r : R, r ∈ I → f (algebraMap R A r) = 0)
     (u v : Q →ₐ[R] B),
     f = u.comp quotient_map → f = v.comp quotient_map → u = v
 
@@ -356,7 +356,7 @@ def QuotientHasFiniteTorDimension
 /-- The quotient of an ideal by a smaller ideal, as a module quotient of the
 ideal subtype. -/
 abbrev idealModuloIdeal {A : Type u} [CommRing A]
-    (I K : Ideal A) (hKI : K ≤ I) : Type u :=
+    (I K : Ideal A) (_hKI : K ≤ I) : Type u :=
   ((I : Type u) ⧸ Submodule.comap I.subtype K)
 
 /-- The map `I / K_I -> J / K_J` induced by `I ⊆ J`. -/
@@ -404,7 +404,7 @@ def IsGeneratedByRegularSequence
 
 /-- The ideal `J/I` in the quotient ring `A/I`. -/
 def quotientIdealOfIdeal {A : Type u} [CommRing A]
-    (I J : Ideal A) (hIJ : I ≤ J) : Ideal (A ⧸ I) :=
+    (I J : Ideal A) (_hIJ : I ≤ J) : Ideal (A ⧸ I) :=
   Ideal.map (Ideal.Quotient.mk I) J
 
 /-- If `A/J` has finite Tor dimension over `A/I` and `J` is regular, then

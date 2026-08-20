@@ -228,7 +228,98 @@ theorem liftingRing_evaluation_descends
       ∀ v : Fin d.n ⊕ Fin d.m,
         φ (Ideal.Quotient.mk (liftingDefiningIdeal d) (MvPolynomial.X v)) =
           liftingEvaluationPolynomial d ev (MvPolynomial.X v) := by
-  sorry
+  let F := liftingEvaluationPolynomial d ev
+  have hIdeal : liftingDefiningIdeal d ≤ Ideal.comap F.toRingHom (⊥ : Ideal Λ) := by
+    apply Ideal.span_le.2
+    intro p hp
+    rcases hp with hp | hp
+    · rcases hp with ⟨ℓ, rfl⟩
+      simp [F, liftingEvaluationPolynomial, liftingBaseRelation,
+        liftLiftingPolynomial, MvPolynomial.aeval_rename,
+        ev.relation_evaluation]
+      change liftingEvaluation ev.lambda (d.relations ℓ) -
+        (algebraMap R Λ π) * ((algebraMap R Λ π) * ev.mu ℓ) = 0
+      rw [ev.relation_evaluation]
+      simp [pow_two, mul_assoc]
+    · rcases Set.mem_iUnion.1 hp with ⟨k, hp⟩
+      rcases hp with ⟨ℓ, rfl⟩
+      simp [F, liftingEvaluationPolynomial, liftingCorrectionRelation,
+        liftLiftingPolynomial, MvPolynomial.aeval_rename]
+      change liftingEvaluation ev.lambda (d.a k) *
+          ((algebraMap R Λ π) * ev.mu ℓ) -
+        ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+          ((algebraMap R Λ π) * ev.mu (d.selected k x)) -
+        (algebraMap R Λ π) * liftingEvaluation ev.lambda (d.g k ℓ) = 0
+      have hrel :=
+        congrArg (liftingEvaluation ev.lambda) (d.relation_identity k ℓ)
+      simp only [map_mul, map_add, map_sum, map_pow, MvPolynomial.map_C]
+        at hrel
+      simp only [MvPolynomial.algHom_C] at hrel
+      simp [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm, mul_left_comm]
+        at hrel
+      simp only [ev.relation_evaluation] at hrel
+      have hsum :
+          (∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+            ((algebraMap R Λ π) ^ 2 * ev.mu (d.selected k x))) =
+            (algebraMap R Λ π) ^ 2 *
+              ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+                ev.mu (d.selected k x) := by
+        calc
+          (∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+              ((algebraMap R Λ π) ^ 2 * ev.mu (d.selected k x))) =
+              ∑ x, (algebraMap R Λ π) ^ 2 *
+                (liftingEvaluation ev.lambda (d.h k ℓ x) *
+                  ev.mu (d.selected k x)) := by
+                apply Finset.sum_congr rfl
+                intro x hx
+                ring
+          _ = (algebraMap R Λ π) ^ 2 *
+                ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+                  ev.mu (d.selected k x) := by
+                rw [Finset.mul_sum]
+      rw [hsum] at hrel
+      have hq2 : (algebraMap R Λ π) ^ 2 *
+          (liftingEvaluation ev.lambda (d.a k) * ev.mu ℓ -
+            ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+              ev.mu (d.selected k x) -
+            liftingEvaluation ev.lambda (d.g k ℓ)) = 0 := by
+        linear_combination hrel
+      have hcancel : ∀ x : Λ,
+          (algebraMap R Λ π) ^ 2 * x = 0 →
+            (algebraMap R Λ π) * x = 0 := by
+        intro x hx
+        have hx' : x ∈ annihilatorOf (R := Λ) (M := Λ)
+            ((algebraMap R Λ π) ^ 2) := by
+          apply (annihilatorOf_mem_iff
+            (R := Λ) (M := Λ) ((algebraMap R Λ π) ^ 2) x).2
+          simpa [smul_eq_mul, mul_comm] using hx
+        rw [hAnnΛ] at hx'
+        have hx'' := (annihilatorOf_mem_iff
+          (R := Λ) (M := Λ) (algebraMap R Λ π) x).1 hx'
+        simpa [smul_eq_mul, mul_comm] using hx''
+      calc
+        liftingEvaluation ev.lambda (d.a k) *
+              ((algebraMap R Λ π) * ev.mu ℓ) -
+            ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+              ((algebraMap R Λ π) * ev.mu (d.selected k x)) -
+            (algebraMap R Λ π) * liftingEvaluation ev.lambda (d.g k ℓ) =
+          (algebraMap R Λ π) *
+            (liftingEvaluation ev.lambda (d.a k) * ev.mu ℓ -
+              ∑ x, liftingEvaluation ev.lambda (d.h k ℓ x) *
+                ev.mu (d.selected k x) -
+              liftingEvaluation ev.lambda (d.g k ℓ)) := by
+          rw [Finset.mul_sum]
+          congr 1
+          · apply Finset.sum_congr rfl
+            intro x hx
+            ring
+          · ring
+        _ = 0 := hcancel _ hq2
+  have hF : ∀ p : liftingPolynomial R d.n d.m,
+      p ∈ liftingDefiningIdeal d → F p = 0 := fun p hp => hIdeal hp
+  refine ⟨Ideal.Quotient.liftₐ (liftingDefiningIdeal d) F hF, ?_⟩
+  intro v
+  simp [Ideal.Quotient.liftₐ_apply, F]
 
 /-- The quotient map `D_k → D` supplied by inclusion of defining ideals. -/
 noncomputable def liftingAuxiliaryToLiftingRing
@@ -253,7 +344,14 @@ theorem liftingCorrectionRelation_selected
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) (k : Fin d.r) (j : Fin (d.e k)) :
     liftingCorrectionRelation π d.a d.h d.g d.selected k (d.selected k j) = 0 := by
-  sorry
+  classical
+  unfold liftingCorrectionRelation
+  rw [Finset.sum_eq_single j]
+  · simp [d.selected_h, d.selected_g, liftLiftingPolynomial]
+  · intro b hb hbj
+    simp [d.selected_h, hbj, liftLiftingPolynomial]
+  · intro hj
+    exact (hj (Finset.mem_univ j)).elim
 
 /-- The key equality expressing `π p_{k,ℓ}` in the base relations. -/
 theorem liftingKeyIdentity
@@ -266,7 +364,21 @@ theorem liftingKeyIdentity
         ∑ j : Fin (d.e k),
           liftLiftingPolynomial (d.h k ℓ j) *
             liftingBaseRelation π d.relations (d.selected k j) := by
-  sorry
+  have hrel :=
+    congrArg (fun p : MvPolynomial (Fin d.n) R =>
+      liftLiftingPolynomial (m := d.m) p) (d.relation_identity k ℓ)
+  simp only [liftLiftingPolynomial, map_mul, map_add, map_sum, map_sub,
+    map_zero, map_pow, MvPolynomial.map_C] at hrel
+  rw [MvPolynomial.rename_C] at hrel
+  change liftLiftingPolynomial (d.a k) * liftLiftingPolynomial (d.relations ℓ) =
+      (∑ j : Fin (d.e k),
+        liftLiftingPolynomial (d.h k ℓ j) *
+          liftLiftingPolynomial (d.relations (d.selected k j))) +
+        (MvPolynomial.C π) ^ 2 * liftLiftingPolynomial (d.g k ℓ) at hrel
+  simp [liftingCorrectionRelation, liftingBaseRelation]
+  linear_combination (MvPolynomial.C π) * hrel
+  simp only [Finset.mul_sum]
+  ring
 
 /-- The polynomial presentation model for `\bar C`. -/
 abbrev liftingPresentationModel
@@ -362,8 +474,376 @@ theorem liftingAuxiliary_modPi_localized_equiv
     Nonempty
       (Localization.Away (liftingAuxiliaryModPiElement d k) ≃+*
         MvPolynomial (Fin (d.e k))
-          (Localization.Away (liftingPresentationModPiElement d k))) := by
-  sorry
+      (Localization.Away (liftingPresentationModPiElement d k))) := by
+  classical
+  let A := liftingAuxiliaryModPiRing d k
+  let U := Localization.Away (liftingAuxiliaryModPiElement d k)
+  let qmk : liftingPolynomial R d.n d.m →+* A :=
+    (Ideal.Quotient.mk (liftingAuxiliaryModPiIdeal d k)).comp
+      (Ideal.Quotient.mk (liftingAuxiliaryDefiningIdeal d k))
+  let rmapU : R →+* U :=
+    (algebraMap A U).comp (qmk.comp MvPolynomial.C)
+  let qvar : (Fin d.n ⊕ Fin d.m) → U := fun v =>
+    algebraMap A U (qmk (MvPolynomial.X v))
+  let qmap : liftingPolynomial R d.n d.m →+* U :=
+    MvPolynomial.eval₂Hom rmapU qvar
+  have qmap_eq : qmap = (algebraMap A U).comp qmk := by
+    apply MvPolynomial.ringHom_ext'
+    · ext r
+      simp [qmap, rmapU]
+    · intro v
+      simp [qmap, qvar]
+  have qkill : ∀ p : liftingPolynomial R d.n d.m,
+      p ∈ liftingAuxiliaryDefiningIdeal d k → qmap p = 0 := by
+    intro p hp
+    rw [qmap_eq]
+    have hp' : Ideal.Quotient.mk (liftingAuxiliaryDefiningIdeal d k) p = 0 :=
+      (Ideal.Quotient.eq_zero_iff_mem).2 hp
+    simp [qmk, hp']
+  have hpi : qmap (MvPolynomial.C π) = 0 := by
+    rw [qmap_eq]
+    change algebraMap A U
+      (Ideal.Quotient.mk (liftingAuxiliaryModPiIdeal d k)
+        (algebraMap R (liftingAuxiliaryRing d k) π)) = 0
+    apply (map_eq_zero_iff _).2
+    apply Ideal.Quotient.eq_zero_iff_mem.2
+    exact Ideal.mem_map_of_mem (algebraMap R (liftingAuxiliaryRing d k))
+      (Ideal.subset_span (by simp))
+  have hsel : ∀ j : Fin (d.e k),
+      qmap (liftingBaseRelation π d.relations (d.selected k j)) = 0 := by
+    intro j
+    apply qkill
+    exact Ideal.subset_span (Or.inl ⟨j, rfl⟩)
+  have haunit : IsUnit (qmap (liftLiftingPolynomial (d.a k))) := by
+    rw [qmap_eq]
+    change IsUnit (algebraMap A U (liftingAuxiliaryModPiElement d k))
+    exact IsLocalization.Away.algebraMap_isUnit _
+  have hbase : ∀ ℓ : Fin d.m,
+      qmap (liftLiftingPolynomial (d.relations ℓ)) = 0 := by
+    intro ℓ
+    have hid := congrArg
+      (fun p : MvPolynomial (Fin d.n) R => qmap (liftLiftingPolynomial p))
+      (d.relation_identity k ℓ)
+    simp only [map_mul, map_add, map_sum, map_pow, MvPolynomial.map_C]
+      at hid
+    simp only [MvPolynomial.algHom_C] at hid
+    simp [hsel, hpi, Finset.mul_sum, Finset.sum_mul, mul_assoc,
+      mul_comm, mul_left_comm] at hid
+    exact haunit.mul_left_cancel (by simpa using hid)
+  let rmap2 : piQuotient R (π ^ 2) →+* U :=
+    Ideal.Quotient.lift (Ideal.span ({π ^ 2} : Set R)) rmapU (by
+      intro x hx
+      apply (Ideal.map_le_iff_le_comap).1
+        (show Ideal.map rmapU (Ideal.span ({π ^ 2} : Set R)) ≤ ⊥ by
+          apply Ideal.map_le_iff_le_comap.2
+          apply Ideal.span_le.2
+          intro y hy
+          rcases Set.mem_singleton_iff.mp hy with rfl
+          simp [hpi])) hx
+  let xvar : Fin d.n → U := fun i => qvar (Sum.inl i)
+  let pmap : MvPolynomial (Fin d.n) (piQuotient R (π ^ 2)) →+* U :=
+    MvPolynomial.eval₂Hom rmap2 xvar
+  have hred : ∀ p : MvPolynomial (Fin d.n) (piQuotient R (π ^ 2)),
+      p ∈ liftingReducedRelationIdeal d → pmap p = 0 := by
+    intro p hp
+    have hle : liftingReducedRelationIdeal d ≤ Ideal.comap pmap ⊥ := by
+      unfold liftingReducedRelationIdeal
+      rw [Ideal.map_le_iff_le_comap]
+      apply Ideal.span_le.2
+      rintro _ ⟨ℓ, rfl⟩
+      change pmap
+        ((MvPolynomial.map (piQuotientMk (π ^ 2))) (d.relations ℓ)) = 0
+      simpa [pmap, xvar, qmap, qvar, rmap2, rmapU,
+        liftLiftingPolynomial, MvPolynomial.eval₂Hom_rename,
+        MvPolynomial.eval₂Hom_map_hom] using hbase ℓ
+    exact hle hp
+  let smap : liftingPresentationModel d →+* U :=
+    Ideal.Quotient.lift (liftingReducedRelationIdeal d) pmap (by
+      intro p hp
+      exact hred p hp)
+  have hpiS : smap (liftingPresentationModelMap d π) = 0 := by
+    change pmap (MvPolynomial.C (piQuotientMk (π ^ 2) π)) = 0
+    simpa [pmap, rmap2, qmap, rmapU] using hpi
+  let smap2 : liftingPresentationModPiModel d →+* U :=
+    Ideal.Quotient.lift (liftingPresentationModPiIdeal d) smap (by
+      intro p hp
+      have hp' : p ∈ Ideal.map (liftingPresentationModelMap d)
+          (Ideal.span ({π} : Set R)) := hp
+      apply (Ideal.map_le_iff_le_comap).1 at hp'
+      · exact hp'
+      · apply Ideal.map_le_iff_le_comap.2
+        apply Ideal.span_le.2
+        intro x hx
+        rcases Set.mem_singleton_iff.mp hx with rfl
+        simpa [Ideal.mem_comap] using hpiS)
+  let T := Localization.Away (liftingPresentationModPiElement d k)
+  let B := MvPolynomial (Fin (d.e k)) T
+  let p2mk : MvPolynomial (Fin d.n) (piQuotient R (π ^ 2)) →+*
+      liftingPresentationModPiModel d :=
+    (Ideal.Quotient.mk (liftingPresentationModPiIdeal d)).comp
+      (Ideal.Quotient.mk (liftingReducedRelationIdeal d))
+  let evalx : MvPolynomial (Fin d.n) R →+* T :=
+    (algebraMap (liftingPresentationModPiModel d) T).comp p2mk |>.comp
+      (MvPolynomial.map (piQuotientMk (π ^ 2)))
+  let pmod : R →+* T := evalx.comp MvPolynomial.C
+  let pX : Fin d.n → T := fun i => evalx (MvPolynomial.X i)
+  let bcoeff : R →+* B := MvPolynomial.C.comp pmod
+  let ainv : T := IsLocalization.Away.invSelf (liftingPresentationModPiElement d k)
+  let bvar : (Fin d.n ⊕ Fin d.m) → B := fun v =>
+    match v with
+    | Sum.inl i => MvPolynomial.C (pX i)
+    | Sum.inr ℓ =>
+        ainv * ∑ j : Fin (d.e k),
+          MvPolynomial.C (evalx (d.h k ℓ j)) *
+            MvPolynomial.X j
+  let bmap : liftingPolynomial R d.n d.m →+* B :=
+    MvPolynomial.eval₂Hom bcoeff bvar
+  have bmap_lift : ∀ p : MvPolynomial (Fin d.n) R,
+      bmap (liftLiftingPolynomial p) = MvPolynomial.C (evalx p) := by
+    intro p
+    simp [bmap, liftLiftingPolynomial, bcoeff, bvar, pmod, pX,
+      evalx, MvPolynomial.eval₂Hom_rename]
+  have hpiModel :
+      p2mk (MvPolynomial.C (piQuotientMk (π ^ 2) π)) = 0 := by
+    change Ideal.Quotient.mk (liftingPresentationModPiIdeal d)
+      (liftingPresentationModelMap d π) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.2
+    exact Ideal.mem_map_of_mem (liftingPresentationModelMap d)
+      (Ideal.subset_span (by simp))
+  have bpi : bcoeff π = 0 := by
+    change MvPolynomial.C (pmod π) = 0
+    change MvPolynomial.C
+      ((algebraMap (liftingPresentationModPiModel d) T)
+        (p2mk (MvPolynomial.C (piQuotientMk (π ^ 2) π)))) = 0
+    rw [hpiModel]
+    simp
+  have hevalbase : ∀ ℓ : Fin d.m, evalx (d.relations ℓ) = 0 := by
+    intro ℓ
+    have hmem :
+        (MvPolynomial.map (piQuotientMk (π ^ 2))) (d.relations ℓ) ∈
+          liftingReducedRelationIdeal d :=
+      Ideal.mem_map_of_mem (MvPolynomial.map (piQuotientMk (π ^ 2)))
+        (Ideal.subset_span ⟨ℓ, rfl⟩)
+    have hzero : p2mk
+        ((MvPolynomial.map (piQuotientMk (π ^ 2))) (d.relations ℓ)) = 0 := by
+      change Ideal.Quotient.mk (liftingPresentationModPiIdeal d)
+        (Ideal.Quotient.mk (liftingReducedRelationIdeal d)
+          ((MvPolynomial.map (piQuotientMk (π ^ 2))) (d.relations ℓ))) = 0
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact Ideal.mem_map_of_mem (Ideal.Quotient.mk (liftingReducedRelationIdeal d))
+        hmem
+    change (algebraMap (liftingPresentationModPiModel d) T)
+        (p2mk ((MvPolynomial.map (piQuotientMk (π ^ 2)))
+          (d.relations ℓ))) = 0
+    rw [hzero]
+    simp
+  have bbase : ∀ ℓ : Fin d.m,
+      bmap (liftingBaseRelation π d.relations ℓ) = 0 := by
+    intro ℓ
+    simp [liftingBaseRelation, bmap_lift, bpi, hevalbase]
+  have haT : evalx (d.a k) * ainv = 1 := by
+    change (algebraMap (liftingPresentationModPiModel d) T)
+        (liftingPresentationModPiElement d k) *
+        IsLocalization.Away.invSelf (liftingPresentationModPiElement d k) = 1
+    exact IsLocalization.Away.mul_invSelf _
+  have bcorr : ∀ ℓ : Fin d.m,
+      bmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 := by
+    intro ℓ
+    simp [liftingCorrectionRelation, bmap, bcoeff, bvar, bmap_lift, bpi,
+      d.selected_h, d.selected_g, haT, Finset.mul_sum, Finset.sum_mul,
+      mul_assoc, mul_comm, mul_left_comm]
+  have hDideal : ∀ p : liftingPolynomial R d.n d.m,
+      p ∈ liftingAuxiliaryDefiningIdeal d k → bmap p = 0 := by
+    intro p hp
+    have hle : liftingAuxiliaryDefiningIdeal d k ≤ Ideal.comap bmap ⊥ := by
+      apply Ideal.span_le.2
+      intro x hx
+      rcases hx with hx | hx
+      · rcases hx with ⟨j, rfl⟩
+        exact bbase (d.selected k j)
+      · rcases hx with ⟨ℓ, rfl⟩
+        exact bcorr ℓ
+    exact hle hp
+  let fD : liftingAuxiliaryRing d k →+* B :=
+    Ideal.Quotient.lift (liftingAuxiliaryDefiningIdeal d k) bmap (by
+      intro p hp
+      exact hDideal p hp)
+  have fD_pi : fD (algebraMap R (liftingAuxiliaryRing d k) π) = 0 := by
+    change bmap (MvPolynomial.C π) = 0
+    simp [bmap, bcoeff, bpi]
+  let f0 : A →+* B :=
+    Ideal.Quotient.lift (liftingAuxiliaryModPiIdeal d k) fD (by
+      intro p hp
+      have hle : liftingAuxiliaryModPiIdeal d k ≤ Ideal.comap fD ⊥ := by
+        rw [liftingAuxiliaryModPiIdeal, Ideal.map_le_iff_le_comap]
+        apply Ideal.span_le.2
+        intro x hx
+        rcases Set.mem_singleton_iff.mp hx with rfl
+        simpa [Ideal.mem_comap] using fD_pi
+      exact hle hp)
+  have hfunit : IsUnit (f0 (liftingAuxiliaryModPiElement d k)) := by
+    have hf : f0 (liftingAuxiliaryModPiElement d k) =
+        MvPolynomial.C
+          ((algebraMap (liftingPresentationModPiModel d) T)
+            (liftingPresentationModPiElement d k)) := by
+      simp [f0, fD, liftingAuxiliaryModPiElement, liftingPresentationElement,
+        bmap, bcoeff, pmod, evalx, p2mk]
+    rw [hf]
+    exact IsUnit.map MvPolynomial.C (IsLocalization.Away.algebraMap_isUnit _)
+  let f : U →+* B :=
+    IsLocalization.Away.lift (liftingAuxiliaryModPiElement d k) hfunit
+  have hsunit : IsUnit
+      (smap2 (liftingPresentationModPiElement d k)) := by
+    have hs : smap2 (liftingPresentationModPiElement d k) =
+        algebraMap A U (liftingAuxiliaryModPiElement d k) := by
+      simp [smap2, smap, liftingPresentationModPiElement,
+        liftingPresentationElement, p2mk, evalx, qmap, qvar, qmk,
+        rmapU, pmap]
+    rw [hs]
+    exact IsLocalization.Away.algebraMap_isUnit _
+  let tmap : T →+* U :=
+    IsLocalization.Away.lift (liftingPresentationModPiElement d k) hsunit
+  let gvar : Fin (d.e k) → U := fun j =>
+    algebraMap A U (qmk (MvPolynomial.X (Sum.inr (d.selected k j))))
+  let gmap : B →+* U :=
+    MvPolynomial.eval₂Hom tmap gvar
+  have qcorr : ∀ ℓ : Fin d.m,
+      qmap (liftingCorrectionRelation π d.a d.h d.g d.selected k ℓ) = 0 := by
+    intro ℓ
+    apply qkill
+    exact Ideal.subset_span (Or.inr ⟨ℓ, rfl⟩)
+  have hqa : qmap (liftLiftingPolynomial (d.a k)) =
+      algebraMap A U (liftingAuxiliaryModPiElement d k) := by
+    rw [qmap_eq]
+    rfl
+  have hqainv : qmap (liftLiftingPolynomial (d.a k)) *
+      IsLocalization.Away.invSelf (liftingAuxiliaryModPiElement d k) = 1 := by
+    rw [hqa]
+    exact IsLocalization.Away.mul_invSelf _
+  have qsolve : ∀ ℓ : Fin d.m,
+      qmap (MvPolynomial.X (Sum.inr ℓ)) =
+        IsLocalization.Away.invSelf (liftingAuxiliaryModPiElement d k) *
+          ∑ j : Fin (d.e k),
+            qmap (liftLiftingPolynomial (d.h k ℓ j)) *
+              qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
+    intro ℓ
+    have h := qcorr ℓ
+    simp only [liftingCorrectionRelation, map_sub, map_mul, map_sum,
+      MvPolynomial.map_C] at h
+    simp only [MvPolynomial.algHom_C, hpi] at h
+    have hmul : qmap (liftLiftingPolynomial (d.a k)) *
+          qmap (MvPolynomial.X (Sum.inr ℓ)) =
+        ∑ j : Fin (d.e k),
+          qmap (liftLiftingPolynomial (d.h k ℓ j)) *
+            qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
+      simpa [Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm,
+        mul_left_comm] using h
+    calc
+      qmap (MvPolynomial.X (Sum.inr ℓ)) =
+          1 * qmap (MvPolynomial.X (Sum.inr ℓ)) := by simp
+      _ = (IsLocalization.Away.invSelf
+          (liftingAuxiliaryModPiElement d k) *
+          qmap (liftLiftingPolynomial (d.a k))) *
+          qmap (MvPolynomial.X (Sum.inr ℓ)) := by
+            rw [mul_comm, hqainv]
+            simp
+      _ = IsLocalization.Away.invSelf
+          (liftingAuxiliaryModPiElement d k) *
+          (qmap (liftLiftingPolynomial (d.a k)) *
+            qmap (MvPolynomial.X (Sum.inr ℓ))) := by ring
+      _ = _ := by rw [hmul]
+  have htmap_pmod : ∀ r : R, tmap (pmod r) = qmap (MvPolynomial.C r) := by
+    intro r
+    simp [tmap, pmod, pmod, smap2, smap, p2mk, qmap, qvar, qmk,
+      rmapU, pmap, evalx]
+  have htmap_pX : ∀ i : Fin d.n, tmap (pX i) =
+      qmap (MvPolynomial.X (Sum.inl i)) := by
+    intro i
+    simp [tmap, pX, evalx, p2mk, smap2, smap, qmap, qvar, qmk,
+      rmapU, pmap]
+  have htmap_evalx : ∀ p : MvPolynomial (Fin d.n) R,
+      tmap (evalx p) = qmap (liftLiftingPolynomial p) := by
+    have hh : tmap.comp evalx =
+        qmap.comp (MvPolynomial.rename Sum.inl).toRingHom := by
+      apply MvPolynomial.ringHom_ext'
+      · ext r
+        simpa [MvPolynomial.rename_C] using htmap_pmod r
+      · intro i
+        simpa [liftLiftingPolynomial] using htmap_pX i
+    intro p
+    exact RingHom.congr_fun hh p
+  have htmap_ainv : tmap ainv =
+      IsLocalization.Away.invSelf (liftingAuxiliaryModPiElement d k) := by
+    have hta : qmap (liftLiftingPolynomial (d.a k)) * tmap ainv = 1 := by
+      have h := IsLocalization.Away.mul_invSelf
+        (liftingPresentationModPiElement d k)
+      have h' := congrArg tmap h
+      simpa [tmap, smap2, smap, p2mk, evalx, qmap, qvar, qmk,
+        rmapU, pmap, hqa] using h'
+    calc
+      tmap ainv = 1 * tmap ainv := by simp
+      _ = (IsLocalization.Away.invSelf
+          (liftingAuxiliaryModPiElement d k) *
+          qmap (liftLiftingPolynomial (d.a k))) * tmap ainv := by
+            rw [mul_comm, hqainv]
+            simp
+      _ = IsLocalization.Away.invSelf
+          (liftingAuxiliaryModPiElement d k) *
+          (qmap (liftLiftingPolynomial (d.a k)) * tmap ainv) := by ring
+      _ = _ := by rw [hta]; simp
+  have gf_base : gmap.comp bmap = qmap := by
+    apply MvPolynomial.ringHom_ext'
+    · ext r
+      simp [gmap, bmap, bcoeff, htmap_pmod]
+    · intro v
+      rcases v with i | ℓ
+      · simp [gmap, bmap, bvar, bcoeff, pX, htmap_pX]
+      · simp [gmap, bmap, bvar, bcoeff, htmap_ainv, htmap_evalx]
+        rw [qsolve ℓ]
+  have gf0 : gmap.comp f0 = algebraMap A U := by
+    apply Ideal.Quotient.ringHom_ext
+    apply Ideal.Quotient.ringHom_ext
+    simpa [f0, fD, qmk] using gf_base
+  have gf : gmap.comp f = RingHom.id U := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers
+      (liftingAuxiliaryModPiElement d k))
+    simpa [f, gf0]
+  have fqmap : f.comp qmap = bmap := by
+    simpa [qmap_eq, f, f0, fD, qmk] 
+  have fsbase : f.comp smap2 =
+      (algebraMap T B).comp (algebraMap
+        (liftingPresentationModPiModel d) T) := by
+    apply Ideal.Quotient.ringHom_ext
+    apply Ideal.Quotient.ringHom_ext
+    apply MvPolynomial.ringHom_ext'
+    · ext r
+      simp [smap2, smap, p2mk, pmap, rmap2, f, f0, fD, qmk,
+        qmap, qvar, rmapU, bmap, bcoeff, pmod]
+    · intro i
+      simp [smap2, smap, p2mk, pmap, rmap2, f, f0, fD, qmk,
+        qmap, qvar, rmapU, bmap, bcoeff, bvar, pX, pmod, evalx]
+  have ft : f.comp tmap = algebraMap T B := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers
+      (liftingPresentationModPiElement d k))
+    simpa [tmap, fsbase]
+  have fgvar : ∀ j : Fin (d.e k), f (gvar j) = MvPolynomial.X j := by
+    intro j
+    simp [gvar, f, f0, fD, qmk, bmap, bvar, d.selected_h,
+      haT, Finset.mul_sum, Finset.sum_mul, mul_assoc, mul_comm,
+      mul_left_comm]
+  have fg : f.comp gmap = RingHom.id B := by
+    apply MvPolynomial.ringHom_ext'
+    · ext s
+      simpa [gmap, ft]
+    · intro j
+      simpa [gmap, fgvar]
+  refine ⟨RingEquiv.ofBijective f ⟨?_, ?_⟩⟩
+  · intro x y hxy
+    have := congrArg gmap hxy
+    simpa [gf] using this
+  · intro y
+    refine ⟨gmap y, ?_⟩
+    simpa [fg] using rfl
 
 /-- The polynomial algebra in the localized mod-`π` presentation is smooth
 over its coefficient ring; the preceding equivalence identifies it with the

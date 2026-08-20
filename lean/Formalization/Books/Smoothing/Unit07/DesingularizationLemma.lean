@@ -150,12 +150,14 @@ def desingularizationSelectedRelationIdeal
     (relations : Fin m → A) : Ideal A :=
   Ideal.span (Set.range (fun j : Fin c => relations (Fin.castLE hcm j)))
 
-/-- The source's displayed `(★)` condition, written in the presented algebra. -/
+/- The source's displayed `(★)` condition in the presentation ring.  The
+relations are polynomials before passing to the quotient presenting `A`; using
+their classes in `A` would make both sides of the condition vanish. -/
 def DesingularizationStarCondition
-    {R A : Type u} [CommRing R] [CommRing A] [Algebra R A]
-    {m c : ℕ} (hcm : c ≤ m) (π : R) (relations : Fin m → A) : Prop :=
+    {R P : Type u} [CommRing R] [CommRing P] [Algebra R P]
+    {m c : ℕ} (hcm : c ≤ m) (π : R) (relations : Fin m → P) : Prop :=
   ∀ j : Fin (m - c),
-    algebraMap R A π * relations (desingularizationUnselectedIndex hcm j) ∈
+    algebraMap R P π * relations (desingularizationUnselectedIndex hcm j) ∈
       desingularizationSelectedRelationIdeal hcm relations +
         (Ideal.span (Set.range relations)) ^ 2
 

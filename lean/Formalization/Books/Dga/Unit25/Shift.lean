@@ -273,10 +273,8 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
     · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
     · congr 1
       · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
-      · congr 1
-        · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
-        · exact (comp_eqToHom_heq _ _).trans
-            (comp_eqToHom_heq _ _).symm
+      · exact (comp_eqToHom_heq _ _).trans
+          (comp_eqToHom_heq _ _).symm
   refine ⟨
     { homogeneous_id := fun X => homogeneousId S X
       homogeneous_comp := fun f g => homogeneousComp S _ _ f g
@@ -1173,7 +1171,386 @@ The relevant universes are the surrounding `R : Type u`, `C : Type v`, and
 theorem reconstructs_from_degree_zero :
     Nonempty
       (C ≌ LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) := by
-  sorry
+  let down (U : LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) : C :=
+    DegreeZero.obj (inferInstance : GradedCategory R C) U.underlying
+  let transportEquiv
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (n : ℤ) :
+      LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+          U.underlying V.underlying n ≃ₗ[R]
+        (GradedCategory.hom (R := R) (down U)
+          ((S.shift n).obj (down V))).component 0 := by
+    let h := degree_zero_shift_family_restricts S n
+    let hobj := congrArg (fun F :
+        DegreeZero (inferInstance : GradedCategory R C) ⥤
+          DegreeZero (inferInstance : GradedCategory R C) => F.obj V.underlying) h
+    let asHom (f :
+        (GradedCategory.hom (R := R) (down U)
+          ((S.shift n).obj (down V))).component 0) :
+        U.underlying ⟶ ((S.graded n).degreeZero.obj V.underlying) :=
+      ⟨f.1, f.property⟩
+    change
+      (U.underlying ⟶
+          ((degree_zero_shift_family S).shift n).obj V.underlying) ≃ₗ[R]
+        (GradedCategory.hom (R := R) (down U)
+          ((S.shift n).obj (down V))).component 0
+    refine
+      { toFun := fun f =>
+          ⟨(f ≫ eqToHom hobj).1, by
+            change (f ≫ eqToHom hobj).1 ∈
+              (GradedCategory.hom (R := R) (down U)
+                ((S.shift n).obj (down V))).component 0
+            dsimp [down]
+            exact (f ≫ eqToHom hobj).property⟩
+        invFun := fun f => asHom f ≫ eqToHom hobj.symm
+        left_inv := by
+          intro f
+          apply Subtype.ext
+          change ((f ≫ eqToHom hobj) ≫ eqToHom hobj.symm).1 = f.1
+          simp only [Category.assoc, eqToHom_trans, eqToHom_refl, Category.comp_id]
+        right_inv := by
+          intro f
+          apply Subtype.ext
+          change ((asHom f ≫ eqToHom hobj.symm) ≫ eqToHom hobj).1 = f.1
+          simp only [Category.assoc, eqToHom_trans, eqToHom_refl, Category.comp_id]
+          dsimp [asHom]
+        map_add' := by
+          intro f g
+          apply Subtype.ext
+          change ((f + g) ≫ eqToHom hobj).1 =
+            (f ≫ eqToHom hobj).1 + (g ≫ eqToHom hobj).1
+          exact congrArg (fun q : U.underlying ⟶
+              ((S.graded n).degreeZero.obj V.underlying) => q.1)
+            (Preadditive.add_comp U.underlying
+              (((degree_zero_shift_family S).shift n).obj V.underlying)
+              ((S.graded n).degreeZero.obj V.underlying)
+              f g (eqToHom hobj))
+        map_smul' := by
+          intro r f
+          apply Subtype.ext
+          change ((r • f) ≫ eqToHom hobj).1 =
+            r • (f ≫ eqToHom hobj).1
+          rw [CategoryTheory.Linear.smul_comp]
+          rfl }
+  let transported
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (n : ℤ)
+      (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying n) :
+      down U ⟶ (S.shift n).obj (down V) :=
+    transportEquiv U V n f
+  let componentIndexEquiv
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      {i j : ℤ} (h : i = j) :
+      (GradedCategory.hom (R := R) (down U) (down V)).component i ≃ₗ[R]
+        (GradedCategory.hom (R := R) (down U) (down V)).component j := by
+    subst j
+    exact
+      { toFun := id
+        invFun := id
+        left_inv := by intro x; rfl
+        right_inv := by intro x; rfl
+        map_add' := by intro x y; rfl
+        map_smul' := by intro r x; rfl }
+  let componentEquiv
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (n : ℤ) :
+      LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+          U.underlying V.underlying n ≃ₗ[R]
+        (GradedCategory.hom (R := R) (down U) (down V)).component n := by
+    exact
+      (transportEquiv U V n).trans
+        (((S.hom_shift (down U) (down V) n).component 0).trans
+          (componentIndexEquiv U V (zero_add n)))
+  have componentIndexEquiv_coe
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      {i j : ℤ} (h : i = j)
+      (x : (GradedCategory.hom (R := R) (down U) (down V)).component i) :
+      ((componentIndexEquiv U V h x :
+          (GradedCategory.hom (R := R) (down U) (down V)).component j) :
+          down U ⟶ down V) = (x : down U ⟶ down V) := by
+    subst j
+    rfl
+  let homEquiv
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) :
+      (U ⟶ V) ≃ₗ[R] (down U ⟶ down V) := by
+    letI : DirectSum.Decomposition
+        (fun n : ℤ =>
+          (GradedCategory.hom (R := R) (down U) (down V)).component n) :=
+      GradedCategory.homDecomposition R _ _
+    exact
+      (DirectSum.congrLinearEquiv (R := R) (ι := ℤ)
+        (fun n => componentEquiv U V n)).trans
+        (DirectSum.decomposeLinearEquiv (R := R) (ι := ℤ)
+          (fun n =>
+            (GradedCategory.hom (R := R) (down U) (down V)).component n)).symm
+  have componentEquiv_coe
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (n : ℤ)
+      (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying n) :
+      (componentEquiv U V n f : down U ⟶ down V) =
+        (S.hom_shift (down U) (down V) n).total
+          (transported U V n f) := by
+    change
+      (componentIndexEquiv U V (zero_add n)
+          ((S.hom_shift (down U) (down V) n).component 0
+            (transportEquiv U V n f)) : down U ⟶ down V) = _
+    rw [componentIndexEquiv_coe]
+    exact ((S.hom_shift (down U) (down V) n).component_coe 0
+      (transportEquiv U V n f)).symm
+  have hcoe2 {X Y : DegreeZero (inferInstance : GradedCategory R C)}
+      (h : X = Y) {U V : C} (k : U = V)
+      (hU : DegreeZero.obj (inferInstance : GradedCategory R C) X = U)
+      (hV : DegreeZero.obj (inferInstance : GradedCategory R C) Y = V) :
+      HEq (eqToHom h : X ⟶ Y).1 (eqToHom k) := by
+    cases h
+    cases hU
+    cases hV
+    cases k
+    rfl
+  have transported_comp
+      (U V W : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (i j : ℤ)
+      (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying i)
+      (g : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        V.underlying W.underlying j) :
+      transported U W (i + j)
+          (LinearShiftFamily.homogeneousComp (degree_zero_shift_family S) i j f g) =
+      transported U V i f ≫ (S.shift i).map (transported V W j g) ≫
+          eqToHom (congrArg (fun F : C ⥤ C => F.obj (down W)) (S.shift_comp i j)) := by
+    let hi := degree_zero_shift_family_restricts S i
+    let hj := degree_zero_shift_family_restricts S j
+    let hij := degree_zero_shift_family_restricts S (i + j)
+    have transported_apply
+        (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+        (n : ℤ)
+        (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+          U.underlying V.underlying n) :
+        transported U V n f =
+          (f ≫ eqToHom (congrArg (fun F : DegreeZero
+            (inferInstance : GradedCategory R C) ⥤
+              DegreeZero (inferInstance : GradedCategory R C) =>
+            F.obj V.underlying)
+            (degree_zero_shift_family_restricts S n))).1 := by
+      rfl
+    have htransport :
+        transported U W (i + j)
+            (LinearShiftFamily.homogeneousComp (degree_zero_shift_family S) i j f g) =
+          transported U V i f ≫ (S.shift i).map (transported V W j g) ≫
+            eqToHom (congrArg (fun F : C ⥤ C => F.obj (down W))
+              (S.shift_comp i j)) := by
+      rw [transported_apply, transported_apply, transported_apply]
+      dsimp [LinearShiftFamily.homogeneousComp, GradedFunctor.degreeZero,
+        CategoryTheory.Functor.comp, DegreeZero.category]
+      have hq := congrArg (fun h => h.1) (Functor.congr_hom hi g)
+      rw [hq]
+      let hjobj := congrArg (fun F : DegreeZero (inferInstance : GradedCategory R C) ⥤
+        DegreeZero (inferInstance : GradedCategory R C) => F.obj W.underlying) hj
+      change _ = _ ≫ ((S.graded i).degreeZero.map (g ≫ eqToHom hjobj)).1 ≫ _
+      rw [Functor.map_comp]
+      simp only [Category.assoc, eqToHom_trans, eqToHom_refl, Category.comp_id]
+      change _ = _ ≫
+        (((S.graded i).degreeZero.map g).1 ≫
+          ((S.graded i).degreeZero.map (eqToHom hjobj)).1) ≫ _
+      have hjcoe :
+          HEq (eqToHom hjobj : _).1
+            (eqToHom (congrArg (fun X : DegreeZero
+              (inferInstance : GradedCategory R C) =>
+                DegreeZero.obj (inferInstance : GradedCategory R C) X) hjobj)) := by
+        exact hcoe2 hjobj _ rfl rfl
+      change _ = _ ≫
+        (((S.graded i).degreeZero.map g).1 ≫
+          (S.shift i).map (eqToHom hjobj).1) ≫ _
+      rw [eq_of_heq hjcoe]
+      have hmapC :
+          (S.shift i).map
+              (eqToHom (congrArg (fun X : DegreeZero
+                (inferInstance : GradedCategory R C) =>
+                  DegreeZero.obj (inferInstance : GradedCategory R C) X) hjobj)) =
+            eqToHom (congrArg (fun X : C => (S.shift i).obj X)
+              (congrArg (fun X : DegreeZero
+                (inferInstance : GradedCategory R C) =>
+                  DegreeZero.obj (inferInstance : GradedCategory R C) X) hjobj)) := by
+        exact CategoryTheory.eqToHom_map (S.shift i) _
+      rw [hmapC]
+      have eqToHom_coe_eq {X Y : DegreeZero
+          (inferInstance : GradedCategory R C)} (h : X = Y) :
+          (eqToHom h : X ⟶ Y).1 =
+            eqToHom (congrArg (fun X : DegreeZero
+              (inferInstance : GradedCategory R C) =>
+                DegreeZero.obj (inferInstance : GradedCategory R C) X) h) := by
+        exact eq_of_heq (hcoe2 h _ rfl rfl)
+      change f.1 ≫ _ ≫ _ ≫ _ ≫ _ = (f.1 ≫ _) ≫ _ ≫ _
+      simp only [eqToHom_coe_eq]
+      dsimp [down]
+      let hiV := congrArg (fun F : DegreeZero
+        (inferInstance : GradedCategory R C) ⥤
+          DegreeZero (inferInstance : GradedCategory R C) => F.obj V.underlying) hi
+      have hVobj :
+          DegreeZero.obj (inferInstance : GradedCategory R C)
+              ((S.graded i).degreeZero.obj V.underlying) =
+            ((S.graded i).degreeZero.obj V.underlying).down := by
+        rfl
+      have hiVdown :
+          DegreeZero.obj (inferInstance : GradedCategory R C)
+              ((S.degree_zero_shift_family.shift i).obj V.underlying) =
+            ((S.graded i).degreeZero.obj V.underlying).down := by
+        exact (congrArg (fun X : DegreeZero
+          (inferInstance : GradedCategory R C) =>
+          DegreeZero.obj (inferInstance : GradedCategory R C) X) hiV).trans hVobj
+      congr 1
+      · apply HEq.trans (comp_eqToHom_heq f.1 hiVdown).symm
+        congr 1
+        exact eq_of_heq (hcoe2 hiV hiVdown rfl hVobj).symm
+      · rw [Category.assoc]
+        congr 1
+        exact eq_of_heq (hcoe2 hiV hiVdown rfl hVobj)
+    rw [htransport]
+  have homEquiv_lof
+      (U V : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (n : ℤ)
+      (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying n) :
+      homEquiv U V
+          (DirectSum.lof R ℤ
+            (fun k => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying k) n f) =
+        (componentEquiv U V n f : down U ⟶ down V) := by
+    letI : DirectSum.Decomposition
+        (fun n : ℤ =>
+          (GradedCategory.hom (R := R) (down U) (down V)).component n) :=
+      GradedCategory.homDecomposition R _ _
+    dsimp [homEquiv]
+    rw [DirectSum.coe_congrLinearEquiv, DirectSum.lmap_lof,
+      DirectSum.decomposeLinearEquiv_symm_lof]
+    rfl
+  have component_comp
+      (U V W : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (i j : ℤ)
+      (f : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        U.underlying V.underlying i)
+      (g : LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+        V.underlying W.underlying j) :
+      (componentEquiv U W (i + j)
+          (LinearShiftFamily.homogeneousComp (degree_zero_shift_family S) i j f g) :
+        down U ⟶ down W) =
+        (componentEquiv U V i f : down U ⟶ down V) ≫
+      (componentEquiv V W j g : down V ⟶ down W) := by
+    rw [componentEquiv_coe, componentEquiv_coe, componentEquiv_coe]
+    rw [transported_comp]
+    exact S.hom_shift_comp i j (transported U V i f) (transported V W j g)
+  have homEquiv_comp
+      (U V W : LinearShiftFamily.GradedCategory (degree_zero_shift_family S))
+      (f : U ⟶ V) (g : V ⟶ W) :
+      homEquiv U W (f ≫ g) = homEquiv U V f ≫ homEquiv V W g := by
+    refine DirectSum.induction_on f ?_ ?_ ?_
+    · simp
+    · intro i f
+      refine DirectSum.induction_on g ?_ ?_ ?_
+      · simp
+      · intro j g
+        change homEquiv U W
+            ((LinearShiftFamily.categoryData (degree_zero_shift_family S)).total_comp
+              (DirectSum.lof R ℤ
+                (fun n => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+                  U.underlying V.underlying n) i f)
+              (DirectSum.lof R ℤ
+                (fun n => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+                  V.underlying W.underlying n) j g)) = _
+        rw [(LinearShiftFamily.categoryData (degree_zero_shift_family S)).total_comp_lof]
+        simpa only [DirectSum.lof_eq_of] using
+          (show homEquiv U W
+              (DirectSum.lof R ℤ
+                (fun n => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+                  U.underlying W.underlying n) (i + j)
+                ((LinearShiftFamily.categoryData (degree_zero_shift_family S)).homogeneous_comp f g)) =
+            homEquiv U V
+              (DirectSum.lof R ℤ
+                (fun n => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+                  U.underlying V.underlying n) i f) ≫
+            homEquiv V W
+              (DirectSum.lof R ℤ
+                (fun n => LinearShiftFamily.homogeneous (degree_zero_shift_family S)
+                  V.underlying W.underlying n) j g) by
+            rw [LinearShiftFamily.categoryData_homogeneous_comp,
+              homEquiv_lof, homEquiv_lof, homEquiv_lof]
+            exact component_comp U V W i j f g)
+      · intro g g' hg hg'
+        simp only [Preadditive.comp_add, (homEquiv V W).map_add, hg, hg']
+    · intro f f' hf hf'
+      simp only [Preadditive.add_comp, (homEquiv U W).map_add, hf, hf']
+  have homEquiv_id
+      (U : LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) :
+      homEquiv U U (𝟙 U) = 𝟙 (down U) := by
+    let p : U ⟶ U := (homEquiv U U).symm (𝟙 (down U))
+    have h := homEquiv_comp U U U (𝟙 U) p
+    rw [Category.id_comp, LinearEquiv.apply_symm_apply, Category.comp_id] at h
+    exact h.symm
+  let Fobj (X : C) : LinearShiftFamily.GradedCategory
+      (degree_zero_shift_family S) :=
+    LinearShiftFamily.categoryObject (degree_zero_shift_family S)
+      (DegreeZero.of (inferInstance : GradedCategory R C) X)
+  let Fmap {X Y : C} (f : X ⟶ Y) : Fobj X ⟶ Fobj Y :=
+    (homEquiv (Fobj X) (Fobj Y)).symm f
+  let F : C ⥤ LinearShiftFamily.GradedCategory
+      (degree_zero_shift_family S) :=
+    { obj := Fobj
+      map := @Fmap
+      map_id := by
+        intro X
+        apply (homEquiv (Fobj X) (Fobj X)).injective
+        dsimp [Fmap, down, Fobj]
+        rw [LinearEquiv.apply_symm_apply, homEquiv_id]
+      map_comp := by
+        intro X Y Z f g
+        apply (homEquiv (Fobj X) (Fobj Z)).injective
+        dsimp [Fmap, down, Fobj]
+        change homEquiv (Fobj X) (Fobj Z)
+            ((homEquiv (Fobj X) (Fobj Z)).symm (f ≫ g)) =
+          homEquiv (Fobj X) (Fobj Z)
+            (Fmap f ≫ Fmap g)
+        rw [LinearEquiv.apply_symm_apply, homEquiv_comp,
+          LinearEquiv.symm_apply_apply, LinearEquiv.symm_apply_apply] }
+  let G : LinearShiftFamily.GradedCategory
+      (degree_zero_shift_family S) ⥤ C :=
+    { obj := down
+      map := fun {U V} f => homEquiv U V f
+      map_id := by
+        intro U
+        exact homEquiv_id U
+      map_comp := by
+        intro U V W f g
+        exact homEquiv_comp U V W f g }
+  let unitIso (X : C) : X ≅ (F ⋙ G).obj X := by
+    exact Iso.refl _
+  let counitIso
+      (U : LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) :
+      (G ⋙ F).obj U ≅ U := by
+    cases U with
+    | mk U =>
+      cases U with
+      | up X =>
+        exact Iso.refl _
+  let unitNatIso : 𝟭 C ≅ F ⋙ G := by
+    refine NatIso.ofComponents (fun X => unitIso X) (fun {X Y} f => ?_)
+    simp [unitIso, F, G, Fmap]
+  let counitNatIso :
+      G ⋙ F ≅ 𝟭 (LinearShiftFamily.GradedCategory (degree_zero_shift_family S)) := by
+    refine NatIso.ofComponents (fun U => counitIso U) (fun {U V} f => ?_)
+    cases U with
+    | mk U =>
+      cases U with
+      | up X =>
+        cases V with
+        | mk V =>
+          cases V with
+          | up Y =>
+            simp [counitIso, F, G, Fmap]
+  refine ⟨⟨F, G, unitNatIso, counitNatIso, ?_⟩⟩
+  intro X
+  simp [unitIso, counitIso, F, G, Fmap]
 
 end GradedShiftFamily
 

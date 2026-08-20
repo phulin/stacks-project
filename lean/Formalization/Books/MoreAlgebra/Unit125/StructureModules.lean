@@ -78,15 +78,15 @@ def IsPureFirstMap {R : Type u} [CommRing R]
 /-- Postcomposition with the second map of a module short complex. -/
 def homToThirdMap {R : Type u} {P : Type v} [CommRing R]
     [AddCommGroup P] [Module R P]
-    (S : ShortComplex (ModuleCat.{v} R)) :
-    (P →ₗ[R] (S.X₂ : Type v)) → (P →ₗ[R] (S.X₃ : Type v)) :=
+    (S : ShortComplex (ModuleCat.{w} R)) :
+    (P →ₗ[R] (S.X₂ : Type w)) → (P →ₗ[R] (S.X₃ : Type w)) :=
   fun φ => S.g.hom.comp φ
 
 private lemma cyclic_quotient_lift_of_pure
-    {R : Type u} [CommRing R] {S : ShortComplex (ModuleCat.{v} R)}
+    {R : Type u} [CommRing R] {S : ShortComplex (ModuleCat.{max u v} R)}
     (hS : S.ShortExact) (hP : IsPureFirstMap S) (r : R)
-    (φ : principalQuotient R r →ₗ[R] (S.X₃ : Type v)) :
-    ∃ ψ : principalQuotient R r →ₗ[R] (S.X₂ : Type v),
+    (φ : principalQuotient R r →ₗ[R] (S.X₃ : Type (max u v))) :
+    ∃ ψ : principalQuotient R r →ₗ[R] (S.X₂ : Type (max u v)),
       S.g.hom.comp ψ = φ := by
   let q₁ : principalQuotient R r := Ideal.Quotient.mk _ 1
   have hq₁ : r • q₁ = 0 := by
@@ -112,7 +112,7 @@ private lemma cyclic_quotient_lift_of_pure
     rw [map_sub, hb, S.moduleCat_zero_apply, sub_zero]
   have hbψ : ((LinearMap.id (R := R) (M := R)).smulRight b₀) r = 0 := by
     simpa [LinearMap.smulRight_apply] using hb₀
-  let ψ : principalQuotient R r →ₗ[R] (S.X₂ : Type v) :=
+  let ψ : principalQuotient R r →ₗ[R] (S.X₂ : Type (max u v)) :=
     Submodule.liftQSpanSingleton r
       ((LinearMap.id (R := R) (M := R)).smulRight b₀) hbψ
   refine ⟨ψ, ?_⟩
@@ -138,7 +138,7 @@ private lemma cyclic_quotient_lift_of_pure
 theorem characterize_pd_modules
     {R : Type u} {P : Type v} [CommRing R] [AddCommGroup P] [Module R P] :
     IsCyclicDirectSummand R P ↔
-      ∀ (S : ShortComplex (ModuleCat.{v} R)),
+      ∀ (S : ShortComplex (ModuleCat.{max u v} R)),
         S.ShortExact → IsPureFirstMap S →
           Function.Surjective (homToThirdMap (P := P) S) := by
   constructor
@@ -148,14 +148,14 @@ theorem characterize_pd_modules
     intro S hS hPure φ
     let proj : (⨁ i : ι, principalQuotient R (f i)) →ₗ[R] K :=
       K.projectionOnto L hKL
-    let φK : K →ₗ[R] (S.X₃ : Type v) := φ.comp eP.symm.toLinearMap
-    let φN : (⨁ i : ι, principalQuotient R (f i)) →ₗ[R] (S.X₃ : Type v) :=
+    let φK : K →ₗ[R] (S.X₃ : Type (max u v)) := φ.comp eP.symm.toLinearMap
+    let φN : (⨁ i : ι, principalQuotient R (f i)) →ₗ[R] (S.X₃ : Type (max u v)) :=
       φK.comp proj
     choose ψ hψ using fun i =>
       cyclic_quotient_lift_of_pure hS hPure (f i)
         (φN.comp (DirectSum.lof R ι (fun i => principalQuotient R (f i)) i))
-    let liftN : (⨁ i : ι, principalQuotient R (f i)) →ₗ[R] (S.X₂ : Type v) :=
-      DirectSum.toModule R ι (S.X₂ : Type v) ψ
+    let liftN : (⨁ i : ι, principalQuotient R (f i)) →ₗ[R] (S.X₂ : Type (max u v)) :=
+      DirectSum.toModule R ι (S.X₂ : Type (max u v)) ψ
     have hlift : S.g.hom.comp liftN = φN := by
       apply LinearMap.ext
       intro z

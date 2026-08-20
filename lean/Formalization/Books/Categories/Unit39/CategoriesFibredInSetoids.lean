@@ -438,10 +438,45 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
             ((fibreFunctor p p' G over U).obj x =
               (fibreFunctor p p' G over U).obj y) ↔
               Nonempty (x ≅ y) := by
-  /- Proof plan: restrict the over-base equivalence to each fibre; transfer
-  groupoidness and hom subsingletonness from the discrete target fibre, then
-  read essential surjectivity and full faithfulness as the two class claims. -/
-  sorry
+  have htransport := fibredInGroupoids_of_isEquivalenceOverFunctor
+    p p' G over hG hp'.1
+  refine ⟨?_, ?_⟩
+  · refine ⟨htransport.1, ?_⟩
+    intro U
+    apply isSetoid_of_groupoid_of_hom_subsingleton
+      (((fibredInGroupoids_iff_fibred_groupoid_fibres p).mp htransport.1).1 U)
+    intro x y
+    constructor
+    intro f g
+    let F := fibreFunctor p p' G over U
+    let _ : F.IsEquivalence := htransport.2 U
+    apply (Functor.FullyFaithful.ofFullyFaithful F).faithful.map_injective
+    exact @Subsingleton.elim _ ((hp'.2 U).subsingleton _ _) _ _
+  · intro U
+    let F := fibreFunctor p p' G over U
+    let _ : F.IsEquivalence := htransport.2 U
+    let hF : F.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful F
+    let hdiscrete := hp'.2 U
+    change Function.Surjective F.obj ∧
+      ∀ x y : Functor.Fiber p U,
+        (F.obj x = F.obj y) ↔ Nonempty (x ≅ y)
+    constructor
+    · intro y
+      obtain ⟨x, ⟨e⟩⟩ := Functor.EssSurj.mem_essImage F y
+      exact ⟨x, hdiscrete.eq_of_hom e.hom⟩
+    · intro x y
+      constructor
+      · intro hxy
+        let e : F.obj x ≅ F.obj y := eqToIso hxy
+        obtain ⟨f, hf⟩ := hF.full.map_surjective e.hom
+        obtain ⟨g, hg⟩ := hF.full.map_surjective e.inv
+        refine ⟨{ hom := f, inv := g, hom_inv_id := ?_, inv_hom_id := ?_ }⟩
+        · apply hF.faithful.map_injective
+          simpa [Functor.map_comp, hf, hg] using e.hom_inv_id
+        · apply hF.faithful.map_injective
+          simpa [Functor.map_comp, hf, hg] using e.inv_hom_id
+      · rintro ⟨e⟩
+        exact hdiscrete.eq_of_hom (F.map e.hom)
 
 /- The objectwise part of the source's quotient construction is exposed
    through a set-valued presheaf whose values are the object classes in

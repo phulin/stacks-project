@@ -379,25 +379,25 @@ theorem cohomologyLongExactWindow_termwiseSplit_compatibility
           Category.comp_id, Category.assoc, Functor.map_comp] using
           congrArg ((H.shift (n + 1)).map) e.hom.comm₂)
   have hψ : IsIso ψ := by
-    letI : ∀ X : Fin (5 + 1), IsIso (ψ.app X) := by
+    let : ∀ X : Fin (5 + 1), IsIso (ψ.app X) := by
       intro j
       fin_cases j
-      · simp only [ψ, ComposableArrows.homMk₅_app_zero]
+      · simp only [ψ]
         change IsIso ((H.shift n).map e.hom.hom₁)
         infer_instance
-      · simp only [ψ, ComposableArrows.homMk₅_app_one]
+      · simp only [ψ]
         change IsIso ((H.shift n).map e.hom.hom₂)
         infer_instance
-      · simp only [ψ, ComposableArrows.homMk₅_app_two]
+      · simp only [ψ]
         change IsIso ((H.shift n).map e.hom.hom₃)
         infer_instance
-      · simp only [ψ, ComposableArrows.homMk₅_app_three]
+      · simp only [ψ]
         change IsIso ((H.shift (n + 1)).map e.hom.hom₁)
         infer_instance
-      · simp only [ψ, ComposableArrows.homMk₅_app_four]
+      · simp only [ψ]
         change IsIso ((H.shift (n + 1)).map e.hom.hom₂)
         infer_instance
-      · simp only [ψ, ComposableArrows.homMk₅_app_five]
+      · simp only [ψ]
         change IsIso ((H.shift (n + 1)).map e.hom.hom₃)
         infer_instance
     exact NatIso.isIso_of_isIso_app ψ
@@ -614,10 +614,9 @@ theorem cohomologyLongExactWindow_termwiseSplit_compatibility
           simp only [Category.assoc] at hraw
           set_option backward.isDefEq.respectTransparency false in
           set_option backward.defeqAttrib.useBackward true in
-          (convert hraw using 1 <;>
-            simp only [Fₙ, Category.assoc, HomologicalComplex.homologyFunctor_obj,
-              Category.comp_id] <;>
-            rw [hG] <;>
+          (convert hraw using 1;
+            simp only [Fₙ, Category.assoc, HomologicalComplex.homologyFunctor_obj] ;
+            rw [hG] ;
             simp only [HomologicalComplex.homologyFunctor_obj, Category.comp_id])
         set_option backward.isDefEq.respectTransparency false in
         set_option backward.defeqAttrib.useBackward true in
@@ -645,13 +644,13 @@ theorem cohomologyLongExactWindow_termwiseSplit_compatibility
         have hnat'' := hnat'.trans (Category.assoc _ _ _)
         convert hnat'' using 1 <;> rfl)
   have hφ : IsIso φ := by
-    letI : ∀ X : Fin (5 + 1), IsIso (φ.app X) := by
+    let : ∀ X : Fin (5 + 1), IsIso (φ.app X) := by
       intro j
       fin_cases j
-      · simp only [φ, ComposableArrows.homMk₅_app_zero]
+      · simp only [φ]
         change IsIso e₀.hom
         infer_instance
-      · simp only [φ, ComposableArrows.homMk₅_app_one]
+      · simp only [φ]
         change IsIso e₁.hom
         infer_instance
       · simp only [φ, ComposableArrows.homMk₅_app_two]

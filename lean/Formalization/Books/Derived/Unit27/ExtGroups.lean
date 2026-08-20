@@ -409,13 +409,15 @@ theorem shortExactDerivedExtCovariantWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex C} (hS : S.ShortExact) (X : DerivedCategory C) (i : ℤ) :
     (shortExactDerivedExtCovariantWindow hS X i).Exact := by
-  sorry
+  exact derivedExtCovariantWindow_exact hS.singleTriangle
+    hS.singleTriangle_distinguished X i
 
 theorem shortExactDerivedExtContravariantWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex C} (hS : S.ShortExact) (Y : DerivedCategory C) (i : ℤ) :
     (shortExactDerivedExtContravariantWindow hS Y i).Exact := by
-  sorry
+  exact derivedExtContravariantWindow_exact hS.singleTriangle
+    hS.singleTriangle_distinguished Y i
 
 theorem shortExactDerivedExtCovariantInitialWindow_exact
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
@@ -437,7 +439,14 @@ theorem fullFaithful_shiftedHom_bijective
     (X Y : C) (i : ℤ) :
     Function.Bijective
       (fun f : ShiftedHom X Y i => ShiftedHom.map f F) := by
-  sorry
+  constructor
+  · intro f g h
+    apply F.map_injective
+    apply (cancel_mono ((F.commShiftIso i).hom.app Y)).1
+    simpa [ShiftedHom.map] using h
+  · intro g
+    obtain ⟨f, hf⟩ := F.map_surjective (g ≫ (F.commShiftIso i).inv.app Y)
+    exact ⟨f, by simp [ShiftedHom.map, hf]⟩
 
 /-! ## Resolution computations -/
 
@@ -457,6 +466,20 @@ abbrev DerivedComplexExt
     (K L : BookComplex C) (i : ℤ) : Type _ :=
   DerivedExt (DerivedComplexObject K) (DerivedComplexObject L) i
 
+private noncomputable def shiftedHomPostcompAddEquiv
+    {C : Type u} [Category.{v} C] [Preadditive C] [HasShift C ℤ]
+    {X Y Z : C} (e : Y ≅ Z) (i : ℤ) :
+    ShiftedHom X Y i ≃+ ShiftedHom X Z i :=
+  AddEquiv.mk'
+    { toFun := fun f => f ≫ e.hom⟦i⟧'
+      invFun := fun f => f ≫ e.inv⟦i⟧'
+      left_inv := by intro f; simp [Category.assoc]
+      right_inv := by intro f; simp [Category.assoc] }
+    (by
+      intro f g
+      change (f + g) ≫ e.hom⟦i⟧' = (f ≫ e.hom⟦i⟧') + (g ≫ e.hom⟦i⟧')
+      rw [Preadditive.add_comp])
+
 theorem derivedExt_compute_by_injective_resolution
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (K L : BookComplex C) (R : ComplexInjectiveResolution L) (i : ℤ) :
@@ -464,7 +487,51 @@ theorem derivedExt_compute_by_injective_resolution
       (DerivedComplexExt K L i ≃+
         ShiftedHom (HomotopyComplexObject K)
           (HomotopyComplexObject R.target) i) := by
-  sorry
+  let I := R.target
+  let Qh := (DerivedCategory.Qh (C := C))
+  let q := (HomotopyCategory.quotient C (ComplexShape.up ℤ))
+  let _ : I.IsKInjective :=
+    isKInjective_of_bounded_below_termwise_injective I R.boundedBelow
+      R.termwiseInjective
+  let qComm : q.obj (I⟦i⟧) ≅ (q.obj I)⟦i⟧ :=
+    (q.commShiftIso i).app I
+  let eSource :
+      ShiftedHom (q.obj K) (q.obj I) i ≃
+        (q.obj K ⟶ q.obj (I⟦i⟧)) :=
+    Iso.homCongr (Iso.refl _) qComm.symm
+  let dComm :
+      Qh.obj ((q.obj I)⟦i⟧) ≅ (Qh.obj (q.obj I))⟦i⟧ := by
+    change
+      (shiftFunctor (HomotopyCategory C (ComplexShape.up ℤ)) i ⋙ Qh).obj
+          (q.obj I) ≅
+        (Qh ⋙ shiftFunctor (DerivedCategory C) i).obj (q.obj I)
+    exact (Qh.commShiftIso i).app (q.obj I)
+  let eTarget :
+      (Qh.obj (q.obj K) ⟶ Qh.obj (q.obj (I⟦i⟧))) ≃
+        ShiftedHom (Qh.obj (q.obj K)) (Qh.obj (q.obj I)) i :=
+    Iso.homCongr (Iso.refl _)
+      ((Qh.mapIso qComm).trans dComm)
+  let qmap :
+      ShiftedHom (q.obj K) (q.obj I) i →+
+        ShiftedHom (Qh.obj (q.obj K)) (Qh.obj (q.obj I)) i :=
+    AddMonoidHom.mk' (fun f => eTarget (Qh.map (eSource f))) (by
+      intro f g
+      simp [eSource, eTarget, qComm, Iso.homCongr])
+  have hqmap : Function.Bijective qmap := by
+    have h := eTarget.bijective.comp
+      ((CochainComplex.IsKInjective.Qh_map_bijective (q.obj K) (I⟦i⟧)).comp
+        eSource.bijective)
+    change Function.Bijective (fun f => eTarget (Qh.map (eSource f)))
+    exact h
+  let qequiv := AddEquiv.ofBijective qmap hqmap
+  let rIso : DerivedComplexObject L ≅ DerivedComplexObject I := by
+    have hq : HomotopyCategory.quasiIso C (ComplexShape.up ℤ) (q.map R.map) := by
+      rw [HomotopyCategory.quotient_map_mem_quasiIso_iff]
+      exact R.quasiIso
+    haveI : IsIso (Qh.map (q.map R.map)) :=
+      Localization.inverts _ _ _ hq
+    exact asIso (Qh.map (q.map R.map))
+  exact ⟨(shiftedHomPostcompAddEquiv rIso i).trans qequiv.symm⟩
 
 theorem derivedExt_compute_by_projective_resolution
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]

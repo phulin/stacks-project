@@ -69,7 +69,7 @@ isomorphisms identify its terms with the canonical Čech cohomology objects;
 the comparison maps are the canonical maps to derived cohomology. -/
 structure CechCohomologyComparisonData
     (X : TopCat.{v}) (F : TopCat.Sheaf AddCommGrpCat.{v} X) where
-  diagram : ∀ p : ℕ, GlobalCechOpenCover X ⥤ AddCommGrpCat.{v}
+  diagram : ℕ → GlobalCechOpenCover X ⥤ AddCommGrpCat.{v}
   object_iso : ∀ (p : ℕ) (𝒰 : GlobalCechOpenCover X),
     Nonempty ((diagram p).obj 𝒰 ≅
       cechCohomologyObject 𝒰.1 F.presheaf p)

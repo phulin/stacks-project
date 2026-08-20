@@ -69,7 +69,7 @@ private theorem eqToHom_self
 private theorem eqToHom_self_comp
     {C : Type u} [Category.{v} C] {X Y : C} (h : X = Y) :
     eqToHom h ≫ 𝟙 Y ≫ eqToHom h.symm = 𝟙 X := by
-  simp only [Category.comp_id, Category.id_comp]
+  simp only [Category.id_comp]
   rw [eqToHom_trans]
   exact eqToHom_self _
 
@@ -188,13 +188,14 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
   component of `η` with an `eqToHom`; extend the object equalities to
   `F = G`, then conclude by extensionality of fibred natural transformations. -/
   let p := structureFunctor Y.underlying
-  letI : p.IsFibredInGroupoids :=
+  let hpgroup : p.IsFibredInGroupoids :=
     (discreteFibredCategoryOver_isCategoryFibredInSets Y hY).1
   have hpfaith : p.Faithful := by
     constructor
     intro a b f g hfg
-    obtain ⟨k, hk, huniq⟩ := fibredInGroupoids_unique_lift p f g
-      (f := 𝟙 (p.obj a)) (by simpa using hfg)
+    obtain ⟨k, hk, huniq⟩ :=
+      @fibredInGroupoids_unique_lift _ _ _ _ p hpgroup _ _ _ f g
+        (𝟙 (p.obj a)) (by simpa using hfg)
     have hkId : k = 𝟙 a := by
       let a' : Functor.Fiber p (p.obj a) := ⟨a, rfl⟩
       let k' : a' ⟶ a' := ⟨k, hk.1⟩
@@ -1396,14 +1397,14 @@ def setPresheafCategoryMapCompIso
         change F.map (𝟙 X.base).op x =
           e.inv.app (Opposite.op X.base)
             (e.hom.app (Opposite.op X.base) x)
-        simpa using h.symm)
+        simp [h])
     let inv : X ⟶ (setPresheafCategoryMap e.hom ⋙
         setPresheafCategoryMap e.inv).obj X :=
       setPresheafHomOf F (𝟙 X.base) (by
         change F.map (𝟙 X.base).op
             (e.inv.app (Opposite.op X.base)
               (e.hom.app (Opposite.op X.base) x)) = x
-        simpa using h)
+        simp [h])
     exact
       { hom := hom
         inv := inv
@@ -1521,12 +1522,11 @@ theorem isIso_of_setPresheafCategoryMap_isEquivalenceOverFunctor
         (F.map (eqToHom hZ.symm).op (setPresheafObjectValue F Z)) =
       G.map (eqToHom hZ.symm).op
         (α.app (Opposite.op Z.base) (setPresheafObjectValue F Z)) := by
-      simpa using hn
+      exact hn
     change α.app U
         (F.map (eqToHom hZ.symm).op (setPresheafObjectValue F Z)) = y
     rw [hn', ← hcvalue]
-    simpa using congrArg (fun k => k y)
-      (G.map_comp (eqToHom hZ).op (eqToHom hZ.symm).op)
+    simp
 
 /-- A specified equivalence-over-base structure on the CoGrothendieck map of
 a natural transformation recovers a natural presheaf isomorphism. -/
@@ -1736,20 +1736,25 @@ theorem fibredInSets_pullback_eq
       (⟨x, rfl⟩ : Functor.Fiber p (p.obj x)) := by
   let cart := P.pullbackMap (p.map f)
     (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))
-  letI : p.IsStronglyCartesian (p.map f) cart :=
+  let cartStrong : p.IsStronglyCartesian (p.map f) cart :=
     P.pullbackMap_isStronglyCartesian _ _
   have hf : p.IsHomLift (p.map f) f := inferInstance
-  letI : p.IsHomLift (p.map f) f := hf
   have hcomp : p.map f = 𝟙 (p.obj x) ≫ p.map f :=
     (Category.id_comp _).symm
-  let lift : x ⟶ (P.pullback (p.map f)
-      (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))).1 :=
-    Functor.IsStronglyCartesian.map p (p.map f) cart
-      (f' := p.map f) (g := 𝟙 (p.obj x)) hcomp f
-  have hlift : p.IsHomLift (𝟙 (p.obj x)) lift := by
-    dsimp [lift]
-    exact Functor.IsStronglyCartesian.map_isHomLift p (p.map f) cart hcomp f
-  exact (hp (p.obj x)).eq_of_hom ⟨lift, hlift⟩ |>.symm
+  let liftData :
+      {lift : x ⟶ (P.pullback (p.map f)
+        (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))).1 //
+        p.IsHomLift (𝟙 (p.obj x)) lift} := by
+    letI : p.IsStronglyCartesian (p.map f) cart := cartStrong
+    letI : p.IsHomLift (p.map f) f := hf
+    let lift : x ⟶ (P.pullback (p.map f)
+        (⟨y, rfl⟩ : Functor.Fiber p (p.obj y))).1 :=
+      Functor.IsStronglyCartesian.map p (p.map f) cart
+        (f' := p.map f) (g := 𝟙 (p.obj x)) hcomp f
+    exact ⟨lift, by
+      dsimp [lift]
+      exact Functor.IsStronglyCartesian.map_isHomLift p (p.map f) cart hcomp f⟩
+  exact (hp (p.obj x)).eq_of_hom ⟨liftData.1, liftData.2⟩ |>.symm
 
 /-- The canonical comparison from a fibred category in sets to the category
 of elements of its fibre-object presheaf. -/
@@ -1761,7 +1766,7 @@ noncomputable def fibredInSetsToFibrePresheafCategory
     (P : PullbackChoice p) :
     S ⥤ setPresheafCategory (fibredInSetsFibrePresheaf p hp P) where
   obj x := ⟨p.obj x, Discrete.mk (⟨x, rfl⟩ : Functor.Fiber p (p.obj x))⟩
-  map {x y} f := setPresheafHomOf _ (p.map f)
+  map {_x _y} f := setPresheafHomOf _ (p.map f)
     (fibredInSets_pullback_eq p hp P f)
   map_id x := setPresheafHom_ext _ (p.map_id x)
   map_comp f g := setPresheafHom_ext _ (p.map_comp f g)
@@ -1904,9 +1909,8 @@ theorem fibredInSets_object_presheaf_exists
     ∃ F : Cᵒᵖ ⥤ Type uS,
       ∀ U : C, Nonempty (F.obj (Opposite.op U) ≃ Functor.Fiber p U) := by
   have h := (isCategoryFibredInSets_iff_isFibered_and_discreteFibres p).mp hp
-  letI : p.IsFibered := h.1
-  let P := PullbackChoice.default p
-  refine ⟨fibredInSetsFibrePresheaf p h.2 P, ?_⟩
+  let P := @PullbackChoice.default _ _ _ _ p h.1
+  refine ⟨@fibredInSetsFibrePresheaf _ _ _ _ p h.1 h.2 P, ?_⟩
   intro U
   exact ⟨Equiv.refl _⟩
 
@@ -2014,9 +2018,9 @@ def sliceToRepresentablePresheafCategory
     {C : Type uC} [Category.{vC} C] (X : C) :
     Functor (Over X) (setPresheafCategory (representablePresheaf X)) where
   obj Y := ⟨Y.left, Discrete.mk Y.hom⟩
-  map {Y Z} f := setPresheafHomOf (representablePresheaf X) f.left (Over.w f)
-  map_id Y := setPresheafHom_ext _ rfl
-  map_comp f g := setPresheafHom_ext _ rfl
+  map {_Y _Z} f := setPresheafHomOf (representablePresheaf X) f.left (Over.w f)
+  map_id _Y := setPresheafHom_ext _ rfl
+  map_comp _f _g := setPresheafHom_ext _ rfl
 
 /-- The inverse Yoneda comparison sends `(U, u : U ⟶ X)` to the object
 `u` of the slice. -/

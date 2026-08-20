@@ -152,10 +152,16 @@ theorem isGeometricallyIntegral_iff_finiteExtension_iff_algebraicClosure
 /-- Tensoring a geometrically integral algebra with an integral-domain
 `k`-algebra remains an integral domain. -/
 theorem isGeometricallyIntegral_any_integral_base_change
-    {k : Type u} {S : Type v} {R : Type u}
+    {k : Type u} {S : Type v} {R : Type w}
     [Field k] [CommRing S] [CommRing R] [Algebra k S] [Algebra k R]
-    [IsDomain R] (hS : IsGeometricallyIntegral.{u, v, u} k S) :
+    [IsDomain R] (hS : IsGeometricallyIntegral.{u, v, w} k S) :
     IsDomain (R ⊗[k] S) := by
+  /-
+  Prior attempt: the original proof specialized `hS` to the equal-universe
+  geometric-integrality equivalence.  After widening `R` to the arbitrary
+  universe required by the source statement, that equivalence no longer has
+  the required universe and the dependent steps below no longer elaborate.
+
   have hparts :=
     isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyReduced.mp hS
   let : IsReduced R := inferInstance
@@ -170,6 +176,8 @@ theorem isGeometricallyIntegral_any_integral_base_change
   rw [nilradical_eq_zero] at hp
   let : (⊥ : Ideal (R ⊗[k] S)).IsPrime := hp
   exact IsDomain.of_bot_isPrime _
+  -/
+  sorry
 
 end
 

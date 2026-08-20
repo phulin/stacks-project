@@ -107,18 +107,24 @@ abbrev sectionConormal
     (σ : S →ₐ[R] R) : Type _ :=
   (sectionExtension σ).Cotangent
 
+/-- The ideal of a smooth retraction is finitely generated. -/
+theorem sectionIdeal_fg
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.Smooth R S] (σ : S →ₐ[R] R) :
+    (sectionIdeal σ).FG := by
+  apply Algebra.FinitePresentation.ker_fG_of_surjective σ
+  intro r
+  exact ⟨algebraMap R S r, σ.commutes r⟩
+
 theorem section_smooth_conormal_finiteLocallyFree
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.Smooth R S] (σ : S →ₐ[R] R) :
     Formalization.Books.Algebra.Unit78.FiniteLocallyFree R
       (sectionConormal σ) := by
   let P := sectionExtension σ
-  have hσ : Function.Surjective σ := by
-    intro r
-    exact ⟨algebraMap R S r, σ.commutes r⟩
   have hker : P.ker.FG := by
     change (RingHom.ker σ.toRingHom).FG
-    exact Algebra.FinitePresentation.ker_fG_of_surjective σ hσ
+    exact sectionIdeal_fg σ
   let oldAlg : Algebra R S := inferInstance
   let oldFormal : @Algebra.FormallySmooth R S _ _ oldAlg := by
     let : Algebra R S := oldAlg
@@ -161,6 +167,25 @@ theorem section_smooth_completion_eq_powerSeries
       Nonempty
         (AdicCompletion (sectionIdeal σ) S ≃ₐ[R]
           MvPowerSeries (Fin d) R) := by
+  /-
+  Roadmap.  `section_smooth_conormal_finiteLocallyFree` supplies finiteness;
+  together with `hfree`, choose a finite basis and reindex it by `Fin d`.
+  The missing reusable theorem is a formal inverse-function theorem:
+
+      if `σ : S →ₐ[R] R` is a smooth retraction and `ker σ / (ker σ)²`
+      has basis `Fin d`, then the `(ker σ)`-adic completion of `S` is
+      `MvPowerSeries (Fin d) R`.
+
+  Construct the forward map by lifting basis elements of the conormal module
+  to `ker σ` and evaluating power series in the completion.  Construct the
+  inverse inductively modulo powers of `ker σ`, using formal smoothness and
+  `Algebra.FormallySmooth.exists_kerProj_comp_eq_id`.  The associated-graded
+  map is the symmetric algebra on the conormal basis; completeness and
+  separatedness then promote the degreewise equivalence to an algebra
+  equivalence.  This theorem belongs with Mathlib's
+  `RingTheory/Smooth/AdicCompletion`, while the present result should remain
+  its finite-free source-facing corollary.
+  -/
   sorry
 
 end

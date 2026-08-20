@@ -1134,6 +1134,43 @@ private lemma kPrimeZeroClass_fin_free_field (k : Type u) [Field k] (n : ℕ) :
       rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
       simp [add_smul, add_comm]
 
+private lemma kZeroClassOfPresentation_field
+    (k : Type u) [Field k] (P : FiniteProjectivePresentation k) :
+    kZeroClassOfPresentation P = (finiteProjectiveRank P : ℤ) •
+      kZeroClass (R := k) (M := k) := by
+  let _ : Module.Free k P.presentation.module := finite_projective_is_free_pid
+  let n := Classical.choose
+    (exists_finite_free_equiv (R := k) (M := P.presentation.module))
+  let e := Classical.choice (Classical.choose_spec
+    (exists_finite_free_equiv (R := k) (M := P.presentation.module)))
+  have hn : finiteProjectiveRank P = n := by
+    rw [finiteProjectiveRank_field]
+    simpa [Module.finrank_pi] using e.finrank_eq
+  calc
+    kZeroClassOfPresentation P =
+        kZeroClass (R := k) (M := P.presentation.module) :=
+      (kZeroClass_eq_of_presentation P).symm
+    _ = kZeroClass (R := k) (M := Fin n → k) := kZeroClass_eq_of_linearEquiv e
+    _ = (n : ℤ) • kZeroClass (R := k) (M := k) := kZeroClass_fin_free_field k n
+    _ = (finiteProjectiveRank P : ℤ) • kZeroClass (R := k) (M := k) := by rw [hn]
+
+private lemma kPrimeZeroClassOfPresentation_field
+    (k : Type u) [Field k] (P : FiniteModulePresentation k) :
+    kPrimeZeroClassOfPresentation P =
+      (Classical.choose (exists_finite_free_equiv (R := k) (M := P.module)) : ℕ) •
+        kPrimeZeroClass (R := k) (M := k) := by
+  let _ : Module.Free k P.module := inferInstance
+  let n := Classical.choose (exists_finite_free_equiv (R := k) (M := P.module))
+  let e := Classical.choice (Classical.choose_spec
+    (exists_finite_free_equiv (R := k) (M := P.module)))
+  calc
+    kPrimeZeroClassOfPresentation P = kPrimeZeroClass (R := k) (M := P.module) :=
+      (kPrimeZeroClass_eq_of_presentation P).symm
+    _ = kPrimeZeroClass (R := k) (M := Fin n → k) :=
+      kPrimeZeroClass_eq_of_linearEquiv e
+    _ = (n : ℤ) • kPrimeZeroClass (R := k) (M := k) :=
+      kPrimeZeroClass_fin_free_field k n
+
 theorem kGroups_field
     (k : Type u) [Field k] :
     ∃ e₀ : KZero k ≃+ ℤ, ∃ e₀' : KPrimeZero k ≃+ ℤ,
@@ -1143,48 +1180,8 @@ theorem kGroups_field
   have hfiniteProjectiveRank := finiteProjectiveRank_field k
   have hfreeZero := kZeroClass_fin_free_field k
   have hfreePrime := kPrimeZeroClass_fin_free_field k
-  have hclassZero (P : FiniteProjectivePresentation k) :
-      kZeroClassOfPresentation P =
-        (finiteProjectiveRank P : ℤ) •
-          kZeroClass (R := k) (M := k) := by
-    let _ : Module.Free k P.presentation.module :=
-      finite_projective_is_free_pid
-    let n := Classical.choose
-      (exists_finite_free_equiv (R := k) (M := P.presentation.module))
-    let e := Classical.choice
-      (Classical.choose_spec
-        (exists_finite_free_equiv (R := k) (M := P.presentation.module)))
-    have hn : finiteProjectiveRank P = n := by
-      rw [hfiniteProjectiveRank]
-      have he := e.finrank_eq
-      simpa [Module.finrank_pi] using he
-    calc
-      kZeroClassOfPresentation P =
-          kZeroClass (R := k) (M := P.presentation.module) :=
-        (kZeroClass_eq_of_presentation P).symm
-      _ = kZeroClass (R := k) (M := Fin n → k) :=
-        kZeroClass_eq_of_linearEquiv e
-      _ = (n : ℤ) • kZeroClass (R := k) (M := k) := hfreeZero n
-      _ = (finiteProjectiveRank P : ℤ) •
-          kZeroClass (R := k) (M := k) := by rw [hn]
-  have hclassPrime (P : FiniteModulePresentation k) :
-      kPrimeZeroClassOfPresentation P =
-        (Classical.choose
-          (exists_finite_free_equiv (R := k) (M := P.module)) : ℕ) •
-          kPrimeZeroClass (R := k) (M := k) := by
-    let _ : Module.Free k P.module := inferInstance
-    let n := Classical.choose
-      (exists_finite_free_equiv (R := k) (M := P.module))
-    let e := Classical.choice
-      (Classical.choose_spec
-        (exists_finite_free_equiv (R := k) (M := P.module)))
-    calc
-      kPrimeZeroClassOfPresentation P =
-          kPrimeZeroClass (R := k) (M := P.module) :=
-        (kPrimeZeroClass_eq_of_presentation P).symm
-      _ = kPrimeZeroClass (R := k) (M := Fin n → k) :=
-        kPrimeZeroClass_eq_of_linearEquiv e
-      _ = (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := hfreePrime n
+  have hclassZero := kZeroClassOfPresentation_field k
+  have hclassPrime := kPrimeZeroClassOfPresentation_field k
   let P₀ := Classical.choose
     (exists_finite_projective_presentation (R := k) (M := k))
   let eP₀ := Classical.choice

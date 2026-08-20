@@ -56,12 +56,14 @@ theorem rationalGroupAlgebraBasisElement_mul (k : Type u) [Field k]
     (α β : ℚ) :
     rationalGroupAlgebraBasisElement k α * rationalGroupAlgebraBasisElement k β =
       rationalGroupAlgebraBasisElement k (α + β) := by
-  sorry
+  simp [rationalGroupAlgebraBasisElement]
 
 /-- The augmentation is surjective. -/
 theorem rationalGroupAlgebraAugmentation_surjective (k : Type u) [Field k] :
     Function.Surjective (rationalGroupAlgebraAugmentation k).toRingHom := by
-  sorry
+  intro y
+  refine ⟨y • rationalGroupAlgebraBasisElement k 0, ?_⟩
+  simp [rationalGroupAlgebraAugmentation]
 
 /-! ## The kernel and its cotangent space -/
 
@@ -86,7 +88,68 @@ theorem rationalGroupAlgebra_basisElement_sub_one_mem_kernel
 theorem rationalGroupAlgebraKernel_eq_span_generators (k : Type u) [Field k] :
     rationalGroupAlgebraKernel k =
       Ideal.span (rationalGroupAlgebraKernelGenerators k) := by
-  sorry
+  classical
+  apply le_antisymm
+  · intro x hx
+    change (rationalGroupAlgebraAugmentation k).toRingHom x = 0 at hx
+    have hsum : x.coeff.sum (fun _ a => a) = 0 := by
+      simpa [rationalGroupAlgebraAugmentation, AddMonoidAlgebra.lift_apply] using hx
+    have hsum_smul : ∀ f : ℚ →₀ k,
+        f.sum (fun _ a => a • (1 : rationalGroupAlgebra k)) =
+          (f.sum (fun _ a => a)) • (1 : rationalGroupAlgebra k) := by
+      intro f
+      induction f using Finsupp.induction with
+      | zero => simp
+      | @single_add i a f h ha ih =>
+          rw [Finsupp.sum_add_index'
+            (h := fun _ b => b • (1 : rationalGroupAlgebra k))
+            (fun _ => by simp)
+            (fun _ _ _ => by simp [add_smul]),
+            Finsupp.sum_add_index'
+            (h := fun _ b => b)
+            (fun _ => by simp)
+            (fun _ _ _ => by simp)]
+          rw [ih]
+          simp [add_smul]
+    have hmem : x.coeff.sum (fun i a =>
+        a • (rationalGroupAlgebraBasisElement k i - 1)) ∈
+        Ideal.span (rationalGroupAlgebraKernelGenerators k) := by
+      apply Ideal.sum_mem
+      intro i hi
+      have hi' : rationalGroupAlgebraBasisElement k i - 1 ∈
+          rationalGroupAlgebraKernelGenerators k := ⟨i, rfl⟩
+      simpa [Algebra.smul_def] using
+        Ideal.mul_mem_left (Ideal.span (rationalGroupAlgebraKernelGenerators k))
+          (algebraMap k (rationalGroupAlgebra k) (x.coeff i))
+          (b := rationalGroupAlgebraBasisElement k i - 1)
+          (Ideal.subset_span hi')
+    have h_eq : x = x.coeff.sum (fun i a =>
+        a • (rationalGroupAlgebraBasisElement k i - 1)) := by
+      calc
+        x = x.coeff.sum (fun i a => AddMonoidAlgebra.single i a) :=
+          x.sum_coeff_single.symm
+        _ = x.coeff.sum (fun i a =>
+            a • (AddMonoidAlgebra.single i 1)) := by
+          simp
+        _ = (x.coeff.sum (fun i a =>
+              a • (AddMonoidAlgebra.single i 1) -
+                a • (1 : rationalGroupAlgebra k))) +
+            x.coeff.sum (fun i a => a • (1 : rationalGroupAlgebra k)) := by
+          rw [Finsupp.sum_sub]
+          exact (sub_add_cancel _ _).symm
+        _ = x.coeff.sum (fun i a =>
+            a • (rationalGroupAlgebraBasisElement k i - 1)) +
+            x.coeff.sum (fun i a => a • (1 : rationalGroupAlgebra k)) := by
+          simp [rationalGroupAlgebraBasisElement, smul_sub]
+        _ = x.coeff.sum (fun i a =>
+            a • (rationalGroupAlgebraBasisElement k i - 1)) := by
+          rw [hsum_smul, hsum]
+          simp
+    exact h_eq ▸ hmem
+  · apply Ideal.span_le.mpr
+    rintro x ⟨α, rfl⟩
+    change rationalGroupAlgebraBasisElement k α - 1 ∈ rationalGroupAlgebraKernel k
+    exact rationalGroupAlgebra_basisElement_sub_one_mem_kernel k α
 
 /-- The conormal module `J / J²`. -/
 abbrev rationalGroupAlgebraCotangent (k : Type u) [Field k] :=
@@ -106,7 +169,14 @@ theorem rationalGroupAlgebraBasisElement_sub_one_mul_sub_one
       (rationalGroupAlgebraBasisElement k (α + β) - 1) -
         (rationalGroupAlgebraBasisElement k α - 1) -
         (rationalGroupAlgebraBasisElement k β - 1) := by
-  sorry
+  calc
+    (rationalGroupAlgebraBasisElement k α - 1) *
+        (rationalGroupAlgebraBasisElement k β - 1) =
+      rationalGroupAlgebraBasisElement k α *
+          rationalGroupAlgebraBasisElement k β -
+        rationalGroupAlgebraBasisElement k α -
+        rationalGroupAlgebraBasisElement k β + 1 := by ring
+    _ = _ := by rw [rationalGroupAlgebraBasisElement_mul]; ring
 
 /-- The image of `x_α` in the residue ring `k[ℚ] / J`. -/
 def rationalGroupAlgebraBasisElementResidue (k : Type u) [Field k] (α : ℚ) :

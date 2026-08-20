@@ -98,7 +98,70 @@ theorem tensorProductComplex_differential_formula
           ((𝟙 (L.X p) ⊗ₘ M.d q (q + 1)) ≫
             ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
               (.up ℤ) p (q + 1) (p + q + 1) (by dsimp; omega)) := by
-  sorry
+  change _ ≫ (HomologicalComplex.mapBifunctor L M
+    (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)).d
+      (p + q) (p + q + 1) = _
+  rw [HomologicalComplex.mapBifunctor.d_eq, Preadditive.comp_add,
+    HomologicalComplex.mapBifunctor.ι_D₁, HomologicalComplex.mapBifunctor.ι_D₂]
+  rw [HomologicalComplex.mapBifunctor.d₁_eq L M
+      (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)
+      (by rfl) q _ (by dsimp; omega),
+    HomologicalComplex.mapBifunctor.d₂_eq L M
+      (MonoidalCategory.curriedTensor (ModuleCat.{u} R)) (.up ℤ)
+      p (by rfl) _ (by dsimp; omega)]
+  dsimp
+  simp
+
+private lemma tensorProductComplex_differential_formula_swap
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : q + p = n) :
+    ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) q p n (by dsimp; omega) ≫
+        (tensorProductComplex R M L).d n (n + 1) =
+      (M.d q (q + 1) ⊗ₘ 𝟙 (L.X p)) ≫
+          ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (q + 1) p (n + 1) (by dsimp; omega) +
+        q.negOnePow •
+          ((𝟙 (M.X q) ⊗ₘ L.d p (p + 1)) ≫
+            ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) q (p + 1) (n + 1) (by dsimp; omega)) := by
+  subst n
+  exact tensorProductComplex_differential_formula R M L q p
+
+private lemma tensorProductComplex_differential_formula_comm
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : q + p = n) :
+    ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) q p n (by dsimp; omega) ≫
+        (tensorProductComplex R L M).d n (n + 1) =
+      (L.d q (q + 1) ⊗ₘ 𝟙 (M.X p)) ≫
+          ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (q + 1) p (n + 1) (by dsimp; omega) +
+        q.negOnePow •
+          ((𝟙 (L.X q) ⊗ₘ M.d p (p + 1)) ≫
+            ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) q (p + 1) (n + 1) (by dsimp; omega)) := by
+  subst n
+  exact tensorProductComplex_differential_formula R L M q p
+
+private lemma tensorProductComplex_differential_formula_right
+    (R : Type u) [CommRing R] (L M : Comp R) (p q : ℤ)
+    {Z : ModuleCat.{u} R} (f : (tensorProductComplex R L M).X (p + q + 1) ⟶ Z) :
+    ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q (p + q) rfl ≫
+        ((tensorProductComplex R L M).d (p + q) (p + q + 1) ≫ f) =
+      ((L.d p (p + 1) ⊗ₘ 𝟙 (M.X q)) ≫
+          ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) (p + 1) q (p + q + 1) (by dsimp; omega) +
+        p.negOnePow •
+          ((𝟙 (L.X p) ⊗ₘ M.d q (q + 1)) ≫
+            ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+              (.up ℤ) p (q + 1) (p + q + 1) (by dsimp; omega))) ≫ f := by
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+    simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+      (tensorProductComplex_differential_formula R L M p q)
 
 /- The sign appearing in the commutativity constraint is the Koszul sign
    `(-1)^(pq)` on the summand in degrees `p` and `q`.  Mathlib also has a
@@ -137,21 +200,221 @@ noncomputable def tensorBraidingInvComponent
             rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
             exact h)))
 
+@[reassoc] private lemma tensorBraidingHomComponent_on_summand
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : p + q = n) :
+    ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ tensorBraidingHomComponent R L M n =
+      koszulSign p q •
+        ((β_ (L.X p) (M.X q)).hom ≫
+          ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h)) := by
+  dsimp [tensorBraidingHomComponent]
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+    rw [HomologicalComplex.ι_mapBifunctorDesc]
+
+@[reassoc] private lemma tensorBraidingInvComponent_on_summand
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : p + q = n) :
+    ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ tensorBraidingInvComponent R L M n =
+      koszulSign p q •
+        ((β_ (M.X p) (L.X q)).hom ≫
+          ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h)) := by
+  dsimp [tensorBraidingInvComponent]
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+    rw [HomologicalComplex.ι_mapBifunctorDesc]
+
+private lemma tensorBraidingHomComponent_on_summand_right
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : p + q = n) {Z : ModuleCat.{u} R}
+    (f : (tensorProductComplex R M L).X n ⟶ Z) :
+    ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ (tensorBraidingHomComponent R L M n ≫ f) =
+      (koszulSign p q •
+        ((β_ (L.X p) (M.X q)).hom ≫
+          ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h))) ≫ f := by
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+    simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+      (tensorBraidingHomComponent_on_summand R L M p q n h)
+
+private lemma tensorBraidingInvComponent_on_summand_right
+    (R : Type u) [CommRing R] (L M : Comp R) (p q n : ℤ)
+    (h : p + q = n) {Z : ModuleCat.{u} R}
+    (f : (tensorProductComplex R L M).X n ⟶ Z) :
+    ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+        (.up ℤ) p q n h ≫ (tensorBraidingInvComponent R L M n ≫ f) =
+      (koszulSign p q •
+        ((β_ (M.X p) (L.X q)).hom ≫
+          ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+            (.up ℤ) q p n (by
+              rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+              exact h))) ≫ f := by
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  set_option backward.isDefEq.respectTransparency.types false in
+    simpa only [Category.assoc] using congrArg (fun k => k ≫ f)
+      (tensorBraidingInvComponent_on_summand R L M p q n h)
+
 /-- The signed commutativity constraint for total tensor products. -/
 noncomputable def tensorBraiding (R : Type u) [CommRing R]
     (L M : Comp R) : tensorProductComplex R L M ≅ tensorProductComplex R M L :=
   { hom :=
       { f := tensorBraidingHomComponent R L M
         comm' := by
-          sorry }
+          rintro i _ rfl
+          apply HomologicalComplex.mapBifunctor.hom_ext
+          intro p q h
+          dsimp at h
+          subst i
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingHomComponent_on_summand_right R L M p q (p + q) rfl]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            simp only [Linear.units_smul_comp, Category.assoc]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorProductComplex_differential_formula_swap R L M p q (p + q) (by omega),
+              tensorProductComplex_differential_formula_right R L M p q
+                (tensorBraidingHomComponent R L M (p + q + 1))]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            simp only [Preadditive.add_comp, Linear.units_smul_comp, Category.assoc]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingHomComponent_on_summand R L M (p + 1) q (p + q + 1)
+              (by omega)]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingHomComponent_on_summand R L M p (q + 1) (p + q + 1)
+              (by omega)]
+          simp [MonoidalCategory.tensorHom_def, koszulSign,
+            Int.negOnePow_add, mul_add, smul_smul,
+            mul_comm]
+          have hp : p.negOnePow * (p.negOnePow * (p * q).negOnePow) =
+              (p * q).negOnePow := by
+            rw [← mul_assoc, Int.units_mul_self, one_mul]
+          rw [hp]
+          exact add_comm _ _ }
     inv :=
       { f := tensorBraidingInvComponent R L M
         comm' := by
-          sorry }
+          rintro i _ rfl
+          apply HomologicalComplex.mapBifunctor.hom_ext
+          intro p q h
+          dsimp at h
+          subst i
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingInvComponent_on_summand_right R L M p q (p + q) rfl]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            simp only [Linear.units_smul_comp, Category.assoc]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorProductComplex_differential_formula_comm R L M p q (p + q) (by omega),
+              tensorProductComplex_differential_formula_right R M L p q
+                (tensorBraidingInvComponent R L M (p + q + 1))]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            simp only [Preadditive.add_comp, Linear.units_smul_comp, Category.assoc]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingInvComponent_on_summand R L M (p + 1) q (p + q + 1)
+              (by omega)]
+          set_option backward.defeqAttrib.useBackward true in
+          set_option backward.isDefEq.respectTransparency false in
+          set_option backward.isDefEq.respectTransparency.types false in
+            rw [tensorBraidingInvComponent_on_summand R L M p (q + 1) (p + q + 1)
+              (by omega)]
+          simp [MonoidalCategory.tensorHom_def, koszulSign,
+            Int.negOnePow_add, mul_add, smul_smul,
+            mul_comm]
+          have hp : p.negOnePow * (p.negOnePow * (p * q).negOnePow) =
+              (p * q).negOnePow := by
+            rw [← mul_assoc, Int.units_mul_self, one_mul]
+          rw [hp]
+          exact add_comm _ _ }
     hom_inv_id := by
-      sorry
+      apply HomologicalComplex.hom_ext _ _
+      intro n
+      apply HomologicalComplex.mapBifunctor.hom_ext
+      intro p q h
+      dsimp
+      dsimp at h
+      subst n
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        rw [tensorBraidingHomComponent_on_summand_right R L M p q (p + q) rfl
+          (tensorBraidingInvComponent R L M (p + q))]
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        simp only [Linear.units_smul_comp, Category.assoc]
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        rw [tensorBraidingInvComponent_on_summand R L M q p (p + q)
+          (by omega)]
+      simp
+      have hsign : koszulSign p q * koszulSign q p = (1 : ℤˣ) := by
+        change (p * q).negOnePow * (q * p).negOnePow = (1 : ℤˣ)
+        rw [mul_comm q p, Int.units_mul_self]
+      simp only [smul_smul, hsign, one_smul]
     inv_hom_id := by
-      sorry }
+      apply HomologicalComplex.hom_ext _ _
+      intro n
+      apply HomologicalComplex.mapBifunctor.hom_ext
+      intro p q h
+      dsimp
+      dsimp at h
+      subst n
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        rw [tensorBraidingInvComponent_on_summand_right R L M p q (p + q) rfl
+          (tensorBraidingHomComponent R L M (p + q))]
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        simp only [Linear.units_smul_comp, Category.assoc]
+      set_option backward.defeqAttrib.useBackward true in
+      set_option backward.isDefEq.respectTransparency false in
+      set_option backward.isDefEq.respectTransparency.types false in
+        rw [tensorBraidingHomComponent_on_summand R L M q p (p + q)
+          (by omega)]
+      simp
+      have hsign : koszulSign p q * koszulSign q p = (1 : ℤˣ) := by
+        change (p * q).negOnePow * (q * p).negOnePow = (1 : ℤˣ)
+        rw [mul_comm q p, Int.units_mul_self]
+      simp only [smul_smul, hsign, one_smul] }
 
 /-- The chapter's precise signed component formula for the commutativity
 constraint.  On the summand `L^p ⊗ M^q`, the sign is `(-1)^(pq)`. -/
@@ -163,7 +426,7 @@ theorem tensorBraiding_on_summand
         ((β_ (L.X p) (M.X q)).hom ≫
           ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
             (.up ℤ) q p (p + q) (by dsimp; omega)) := by
-  sorry
+  exact tensorBraidingHomComponent_on_summand R L M p q (p + q) rfl
 
 /- A small source-facing bundle is useful because Mathlib represents a
 symmetric monoidal structure by separate typeclasses, while the chapter

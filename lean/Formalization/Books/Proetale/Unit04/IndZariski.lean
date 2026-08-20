@@ -47,7 +47,7 @@ private theorem isLocalIsomorphism_localizationAway
     Formalization.Books.Proetale.Unit03.IsLocalIsomorphism
       (algebraMap A (Localization.Away r)) := by
   have hcanon : Algebra.IsLocalIso A (Localization.Away r) := by
-    letI : Algebra (Localization.Away r)
+    let : Algebra (Localization.Away r)
         (Localization.Away (1 : Localization.Away r)) := inferInstance
     let hs : Algebra.IsStandardOpenImmersion A (Localization.Away r) :=
       ⟨r, inferInstance⟩
@@ -234,8 +234,7 @@ private noncomputable def localizationAwayCocone
       IsLocalization.map_units (Localization S) ⟨rt, hrt_mem⟩
     apply Under.UnderMorphism.ext
     apply CommRingCat.hom_ext
-    simp only [Under.comp_right, Under.homMk_right, CommRingCat.hom_comp,
-      CommRingCat.hom_ofHom]
+    simp only [Under.comp_right, CommRingCat.hom_comp]
     change (Localization.awayLift
         (algebraMap A (Localization S))
         rv hrv).comp
@@ -284,8 +283,7 @@ private noncomputable def localizationAwayIsColimit
   · intro s j
     apply Under.UnderMorphism.ext
     apply CommRingCat.hom_ext
-    simp only [localizationAwayCocone, Under.comp_right, Under.homMk_right,
-      CommRingCat.hom_comp, CommRingCat.hom_ofHom]
+    simp only [localizationAwayCocone, Under.comp_right, CommRingCat.hom_comp]
     let rj := j.carrier.prod (fun s : S => (s : A))
     have hrj_mem : rj ∈ S := by
       exact S.prod_mem (fun s hs => s.property)
@@ -304,8 +302,6 @@ private noncomputable def localizationAwayIsColimit
     have hrel :
         (s.ι.app j).right.hom.comp (algebraMap A (Localization.Away rj)) =
           s.pt.hom.hom := by
-      change (s.ι.app j).right.hom.comp
-          (algebraMap A (Localization.Away rj)) = s.pt.hom.hom
       exact congrArg CommRingCat.Hom.hom (Under.w (s.ι.app j))
     exact hrel.symm
   · intro s m hm

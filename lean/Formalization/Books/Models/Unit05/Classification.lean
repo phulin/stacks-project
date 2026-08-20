@@ -8055,6 +8055,232 @@ theorem lemma_long {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T t)
             (hdiag_of r (4 * r) hleftDiag' hrightDiag) hfK hbK
             (by norm_num) (by norm_num)
             (by norm_num; ring) (by norm_num; ring)
+private lemma d5_reordered_data (D : LocalNumericalData 5)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hedges : hasD5Edges D)
+    (h : UpToReordering D (fun E => isD5 E)) :
+    ∃ r : ℤ, 0 < r ∧ (∀ i, D.w i = r) ∧
+      D.a = scalarMatrix (branchPrefixMatrix 5 2 3 4 (-2) 1) r := by
+  rcases h with ⟨e, h⟩
+  unfold isD5 realizesPattern at h
+  rcases h with ⟨r, hr, hmat, hvec, _, _⟩
+  let f : Fin 5 ≃ Fin 5 := e.symm
+  have hentry (i j : Fin 5) :
+      D.a i j = r * branchPrefixMatrix 5 2 3 4 (-2) 1 (f i) (f j) := by
+    have hh := congrArg (fun M : Matrix (Fin 5) (Fin 5) ℤ =>
+      M (f i) (f j)) hmat
+    simpa [f, reindexLocalData, scalarMatrix] using hh
+  have hweights : ∀ i : Fin 5, D.w i = r := by
+    intro i
+    have hh := congrArg (fun v : Fin 5 → ℤ => v (f i)) hvec
+    simpa [f, reindexLocalData, scalarVector, constantVector] using hh
+  rcases hedges with ⟨h01, h12, h23, h24⟩
+  have ha01 : 0 < D.a (0 : Fin 5) 1 := by
+    rcases h01 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 0 := Fin.ext hi
+    have hj' : j = 1 := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have ha12 : 0 < D.a (1 : Fin 5) 2 := by
+    rcases h12 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 1 := Fin.ext hi
+    have hj' : j = 2 := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have ha23 : 0 < D.a (2 : Fin 5) 3 := by
+    rcases h23 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 2 := Fin.ext hi
+    have hj' : j = 3 := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have ha24 : 0 < D.a (2 : Fin 5) 4 := by
+    rcases h24 with ⟨i, j, hi, hj, hp⟩
+    have hi' : i = 2 := Fin.ext hi
+    have hj' : j = 4 := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have hCedge (i j : Fin 5) (ha : 0 < D.a i j) :
+      0 < branchPrefixMatrix 5 2 3 4 (-2) 1 (f i) (f j) := by
+    rw [hentry i j] at ha
+    by_cases heq : f i = f j
+    · simp [branchPrefixMatrix, heq] at ha
+      omega
+    · by_cases hpath :
+          (f i).val + 1 = (f j).val ∧ (f j).val ≤ 2 ∨
+            (f j).val + 1 = (f i).val ∧ (f i).val ≤ 2
+      · simp [branchPrefixMatrix, heq, hpath]
+      · by_cases hleaf3 :
+            (f i).val = 2 ∧ (f j).val = 3 ∨
+              (f i).val = 3 ∧ (f j).val = 2
+        · simp [branchPrefixMatrix, heq, hpath, hleaf3]
+        · by_cases hleaf4 :
+              (f i).val = 2 ∧ (f j).val = 4 ∨
+                (f i).val = 4 ∧ (f j).val = 2
+          · simp [branchPrefixMatrix, heq, hpath, hleaf3, hleaf4]
+          · simp [branchPrefixMatrix, heq, hpath, hleaf3, hleaf4] at ha
+  have hAdj (u v : Fin 5)
+      (huv : 0 < branchPrefixMatrix 5 2 3 4 (-2) 1 u v) :
+      u ≠ v ∧
+        ((u.val + 1 = v.val ∧ v.val ≤ 2) ∨
+          (v.val + 1 = u.val ∧ u.val ≤ 2) ∨
+          (u.val = 2 ∧ v.val = 3) ∨ (u.val = 3 ∧ v.val = 2) ∨
+          (u.val = 2 ∧ v.val = 4) ∨ (u.val = 4 ∧ v.val = 2)) := by
+    fin_cases u <;> fin_cases v <;>
+      simp [branchPrefixMatrix] at huv ⊢
+  have hcenter : f 2 = (2 : Fin 5) := by
+    have h1 := hCedge 2 1 (by rw [hsymm]; exact ha12)
+    have h2 := hCedge 2 3 ha23
+    have h3 := hCedge 2 4 ha24
+    have h1' := hAdj (f 2) (f 1) h1
+    have h2' := hAdj (f 2) (f 3) h2
+    have h3' := hAdj (f 2) (f 4) h3
+    generalize hc2 : f 2 = c2
+    generalize hc1 : f 1 = c1
+    generalize hc3 : f 3 = c3
+    generalize hc4 : f 4 = c4
+    have hne13 : c1 ≠ c3 := by
+      intro h
+      have hh : f 1 = f 3 := by simpa [hc1, hc3] using h
+      exact (by simpa using f.injective hh)
+    have hne14 : c1 ≠ c4 := by
+      intro h
+      have hh : f 1 = f 4 := by simpa [hc1, hc4] using h
+      exact (by simpa using f.injective hh)
+    have hne34 : c3 ≠ c4 := by
+      intro h
+      have hh : f 3 = f 4 := by simpa [hc3, hc4] using h
+      exact (by simpa using f.injective hh)
+    have hnot_two (x y z : Fin 5)
+        (hx : x = (0 : Fin 5) ∨ x = 2)
+        (hy : y = (0 : Fin 5) ∨ y = 2)
+        (hz : z = (0 : Fin 5) ∨ z = 2)
+        (hxy : x ≠ y) (hxz : x ≠ z) (hyz : y ≠ z) : False := by
+      rcases hx with hx | hx <;> rcases hy with hy | hy <;>
+        rcases hz with hz | hz <;> omega
+    fin_cases c2
+    · have hc1 : c1 = (1 : Fin 5) := by
+        have hh := h1'.2
+        simp [hc2, hc1] at hh
+        fin_cases c1 <;> simp at hh ⊢
+      have hc3 : c3 = (1 : Fin 5) := by
+        have hh := h2'.2
+        simp [hc2, hc3] at hh
+        fin_cases c3 <;> simp at hh ⊢
+      have hc4 : c4 = (1 : Fin 5) := by
+        have hh := h3'.2
+        simp [hc2, hc4] at hh
+        fin_cases c4 <;> simp at hh ⊢
+      exact False.elim (hne13 (hc1.trans hc3.symm))
+    · have hc1 : c1 = (0 : Fin 5) ∨ c1 = 2 := by
+        have hh := h1'.2
+        simp [hc2, hc1] at hh
+        fin_cases c1 <;> simp at hh ⊢
+      have hc3 : c3 = (0 : Fin 5) ∨ c3 = 2 := by
+        have hh := h2'.2
+        simp [hc2, hc3] at hh
+        fin_cases c3 <;> simp at hh ⊢
+      have hc4 : c4 = (0 : Fin 5) ∨ c4 = 2 := by
+        have hh := h3'.2
+        simp [hc2, hc4] at hh
+        fin_cases c4 <;> simp at hh ⊢
+      exact False.elim (hnot_two c1 c3 c4 hc1 hc3 hc4 hne13 hne14 hne34)
+    · rfl
+    · have hc1 : c1 = (2 : Fin 5) := by
+        have hh := h1'.2
+        simp [hc2, hc1] at hh
+        fin_cases c1 <;> simp at hh ⊢
+      have hc3 : c3 = (2 : Fin 5) := by
+        have hh := h2'.2
+        simp [hc2, hc3] at hh
+        fin_cases c3 <;> simp at hh ⊢
+      exact False.elim (hne13 (hc1.trans hc3.symm))
+    · have hc1 : c1 = (2 : Fin 5) := by
+        have hh := h1'.2
+        simp [hc2, hc1] at hh
+        fin_cases c1 <;> simp at hh ⊢
+      have hc3 : c3 = (2 : Fin 5) := by
+        have hh := h2'.2
+        simp [hc2, hc3] at hh
+        fin_cases c3 <;> simp at hh ⊢
+      exact False.elim (hne13 (hc1.trans hc3.symm))
+  have hf1 : f 1 = (1 : Fin 5) := by
+    have h1 := hCedge 1 2 ha12
+    have h0 := hCedge 0 1 ha01
+    have h1' := hAdj (f 1) (f 2) h1
+    have h0' := hAdj (f 0) (f 1) h0
+    generalize hc1 : f 1 = c1
+    generalize hc0 : f 0 = c0
+    rw [hc1, hcenter] at h1'
+    rw [hc1, hc0] at h0'
+    have hne02 : c0 ≠ (2 : Fin 5) := by
+      intro h
+      have hh : f 0 = f 2 := hc0.trans (h.trans hcenter.symm)
+      simpa using f.injective hh
+    fin_cases c1 <;> fin_cases c0 <;> simp_all
+  have hf0 : f 0 = (0 : Fin 5) := by
+    have h0 := hCedge 0 1 ha01
+    have h0' := hAdj (f 0) (f 1) h0
+    generalize hc0 : f 0 = c0
+    rw [hc0, hf1] at h0'
+    have hne02 : c0 ≠ (2 : Fin 5) := by
+      intro h
+      have hh : f 0 = f 2 := hc0.trans (h.trans hcenter.symm)
+      simpa using f.injective hh
+    fin_cases c0 <;> simp_all
+  have hmap : f 0 = (0 : Fin 5) ∧ f 1 = (1 : Fin 5) ∧
+      f 2 = (2 : Fin 5) ∧
+      ((f 3 = (3 : Fin 5) ∧ f 4 = (4 : Fin 5)) ∨
+        (f 3 = (4 : Fin 5) ∧ f 4 = (3 : Fin 5))) := by
+    have hrem : f 3 ≠ (0 : Fin 5) ∧ f 3 ≠ 1 ∧ f 3 ≠ 2 := by
+      constructor
+      · intro h
+        have := f.injective (h.trans hf0.symm)
+        have hval : (3 : ℕ) = 0 := congrArg Fin.val this
+        omega
+      constructor
+      · intro h
+        have := f.injective (h.trans hf1.symm)
+        have hval : (3 : ℕ) = 1 := congrArg Fin.val this
+        omega
+      · intro h
+        have := f.injective (h.trans hcenter.symm)
+        have hval : (3 : ℕ) = 2 := congrArg Fin.val this
+        omega
+    have hrem' : f 4 ≠ (0 : Fin 5) ∧ f 4 ≠ 1 ∧ f 4 ≠ 2 := by
+      constructor
+      · intro h
+        have := f.injective (h.trans hf0.symm)
+        have hval : (4 : ℕ) = 0 := congrArg Fin.val this
+        omega
+      constructor
+      · intro h
+        have := f.injective (h.trans hf1.symm)
+        have hval : (4 : ℕ) = 1 := congrArg Fin.val this
+        omega
+      · intro h
+        have := f.injective (h.trans hcenter.symm)
+        have hval : (4 : ℕ) = 2 := congrArg Fin.val this
+        omega
+    have hcases : f 3 = (3 : Fin 5) ∨ f 3 = 4 := by
+      generalize hc3 : f 3 = c3
+      fin_cases c3 <;> simp_all
+    have hcases' : f 4 = (3 : Fin 5) ∨ f 4 = 4 := by
+      generalize hc4 : f 4 = c4
+      fin_cases c4 <;> simp_all
+    rcases hcases with h3 | h3 <;> rcases hcases' with h4 | h4
+    · have hbad := f.injective (Eq.trans h3 (Eq.symm h4))
+      have hval : (3 : ℕ) = 4 := congrArg Fin.val hbad
+      omega
+    · exact ⟨hf0, hf1, hcenter, Or.inl ⟨h3, h4⟩⟩
+    · exact ⟨hf0, hf1, hcenter, Or.inr ⟨h3, h4⟩⟩
+    · have hbad := f.injective (Eq.trans h3 (Eq.symm h4))
+      have hval : (3 : ℕ) = 4 := congrArg Fin.val hbad
+      omega
+  rcases hmap with ⟨hf0', hf1', hf2', htail⟩
+  rcases htail with ⟨hf3', hf4'⟩ | ⟨hf3', hf4'⟩
+  all_goals
+    refine ⟨r, hr, hweights, ?_⟩
+    ext i j
+    rw [hentry i j]
+    fin_cases i <;> fin_cases j <;>
+      simp [scalarMatrix, branchPrefixMatrix, hf0', hf1', hf2', hf3', hf4']
+
 theorem lemma_Dn {t : ℕ} (T : NumericalType) (S : MinusTwoSubgraph T (t + 1))
     (ht : 4 < t) (hn : t + 1 < T.n)
     (hedges : (∀ ⦃i j : Fin (t + 1)⦄, i.val + 1 = j.val → j.val ≤ t - 1 →

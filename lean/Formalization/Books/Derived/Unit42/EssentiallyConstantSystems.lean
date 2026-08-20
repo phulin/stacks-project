@@ -1,7 +1,6 @@
 import Formalization.Books.Categories.Unit22.EssentiallyConstantSystems
 import Formalization.Books.Derived.Unit12.CanonicalDeltaFunctor
 import Formalization.Books.Homology.Unit31.InverseSystems
-import Mathlib.CategoryTheory.Category.ULift
 
 /-!
 # Derived Categories, Chapter 42: essentially constant systems

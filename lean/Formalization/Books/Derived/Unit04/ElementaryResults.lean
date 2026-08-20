@@ -1763,53 +1763,49 @@ variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
   [hAdditive : ∀ n : ℤ, (shiftFunctor C n).Additive]
   [hPretriangulated : Pretriangulated C]
 
-omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- A shift equivalence transports any existing product to the product of the
 shifted family. -/
-lemma shift_has_product
-    [∀ n : ℤ, (shiftFunctor C n).Additive]
-    [Pretriangulated C]
+theorem shift_has_product
     {J : Type w} (X : J → C) [HasProduct X] :
     HasProduct (fun j => X j⟦(1 : ℤ)⟧) := by
+  let _ := hAdditive
+  let _ := hPretriangulated
   let : HasLimit (Discrete.functor X ⋙ shiftFunctor C (1 : ℤ)) :=
     CategoryTheory.Adjunction.hasLimit_comp_equivalence
       (Discrete.functor X) (shiftFunctor C (1 : ℤ))
   exact hasLimit_of_iso
     (Discrete.compNatIsoDiscrete X (shiftFunctor C (1 : ℤ)))
 
-omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The dual coproduct transport along a shift equivalence. -/
-lemma shift_has_coproduct
-    [∀ n : ℤ, (shiftFunctor C n).Additive]
-    [Pretriangulated C]
+theorem shift_has_coproduct
     {J : Type w} (X : J → C) [HasCoproduct X] :
     HasCoproduct (fun j => X j⟦(1 : ℤ)⟧) := by
+  let _ := hAdditive
+  let _ := hPretriangulated
   let : HasColimit (Discrete.functor X ⋙ shiftFunctor C (1 : ℤ)) :=
     CategoryTheory.Adjunction.hasColimit_comp_equivalence
       (Discrete.functor X) (shiftFunctor C (1 : ℤ))
   exact hasColimit_of_iso
     (Discrete.compNatIsoDiscrete X (shiftFunctor C (1 : ℤ))).symm
 
-omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The shift comparison for a product is an isomorphism whenever the source
 and shifted products exist. -/
-lemma shift_product_comparison_isIso
-    [∀ n : ℤ, (shiftFunctor C n).Additive]
-    [Pretriangulated C]
+theorem shift_product_comparison_isIso
     {J : Type w} (X : J → C)
     [HasProduct X] [HasProduct (fun j => X j⟦(1 : ℤ)⟧)] :
     IsIso (piComparison (shiftFunctor C (1 : ℤ)) X) := by
+  let _ := hAdditive
+  let _ := hPretriangulated
   infer_instance
 
-omit [∀ (n : ℤ), (shiftFunctor C n).Additive] [Pretriangulated C] in
 /-- The dual shift comparison for a coproduct is an isomorphism whenever the
 source and shifted coproducts exist. -/
-lemma shift_coproduct_comparison_isIso
-    [∀ n : ℤ, (shiftFunctor C n).Additive]
-    [Pretriangulated C]
+theorem shift_coproduct_comparison_isIso
     {J : Type w} (X : J → C)
     [HasCoproduct X] [HasCoproduct (fun j => X j⟦(1 : ℤ)⟧)] :
     IsIso (sigmaComparison (shiftFunctor C (1 : ℤ)) X) := by
+  let _ := hAdditive
+  let _ := hPretriangulated
   infer_instance
 
 /-- Products of distinguished triangles are distinguished. -/

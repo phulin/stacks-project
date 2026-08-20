@@ -320,14 +320,33 @@ noncomputable def sheafHomIntoKInjective
           ((openRestrictionComplexFunctor X U).obj I)) :=
   Classical.choice (sheafHomIntoKInjective_exists X U L I hI)
 
+/-! The map in the well-definedness lemma is induced by postcomposition in the
+target and precomposition in the source.  Recording its component formula
+makes the chosen representative usable as that canonical map, rather than as
+an unrelated morphism having the same quasi-isomorphism property. -/
+
+structure SheafHomWellDefinedData
+    (X : CommutativeRingedSpace.{v})
+    {I I' L L' : SheafComplex X}
+    (fI : I' ⟶ I) (fL : L' ⟶ L) where
+  map : sheafHomComplex X L I' ⟶ sheafHomComplex X L' I
+  component_formula : ∀ (n p : ℤ),
+    map.f n ≫
+        (sheafHomComplex_degree_identification X L' I n).hom ≫
+        sheafHomTermProjection X L' I n p =
+      (sheafHomComplex_degree_identification X L I' n).hom ≫
+        sheafHomTermProjection X L I' n p ≫
+          internalHomPrecomp (fL.f (p - n)) ≫
+          internalHomPostcomp (fI.f p)
+  quasiIso : QuasiIso map
+
 theorem sheafHomWellDefined_exists
     (X : CommutativeRingedSpace.{v})
     {I I' L L' : SheafComplex X}
     (fI : I' ⟶ I) (fL : L' ⟶ L)
     (hI : QuasiIso fI) (hL : QuasiIso fL)
     (hI' : I'.IsKInjective) (hI0 : I.IsKInjective) :
-    Nonempty {f : sheafHomComplex X L I' ⟶ sheafHomComplex X L' I //
-      QuasiIso f} := by
+    Nonempty (SheafHomWellDefinedData X fI fL) := by
   sorry
 
 noncomputable def sheafHomWellDefinedMap
@@ -338,7 +357,23 @@ noncomputable def sheafHomWellDefinedMap
     (hI' : I'.IsKInjective) (hI0 : I.IsKInjective) :
     sheafHomComplex X L I' ⟶ sheafHomComplex X L' I :=
   (Classical.choice
-    (sheafHomWellDefined_exists X fI fL hI hL hI' hI0)).1
+    (sheafHomWellDefined_exists X fI fL hI hL hI' hI0)).map
+
+theorem sheafHomWellDefinedMap_component_formula
+    (X : CommutativeRingedSpace.{v})
+    {I I' L L' : SheafComplex X}
+    (fI : I' ⟶ I) (fL : L' ⟶ L)
+    (hI : QuasiIso fI) (hL : QuasiIso fL)
+    (hI' : I'.IsKInjective) (hI0 : I.IsKInjective) (n p : ℤ) :
+    (sheafHomWellDefinedMap X fI fL hI hL hI' hI0).f n ≫
+        (sheafHomComplex_degree_identification X L' I n).hom ≫
+        sheafHomTermProjection X L' I n p =
+      (sheafHomComplex_degree_identification X L I' n).hom ≫
+        sheafHomTermProjection X L I' n p ≫
+          internalHomPrecomp (fL.f (p - n)) ≫
+          internalHomPostcomp (fI.f p) := by
+  exact (Classical.choice
+    (sheafHomWellDefined_exists X fI fL hI hL hI' hI0)).component_formula n p
 
 theorem sheafHomWellDefinedMap_isQuasiIso
     (X : CommutativeRingedSpace.{v})
@@ -348,7 +383,7 @@ theorem sheafHomWellDefinedMap_isQuasiIso
     (hI' : I'.IsKInjective) (hI0 : I.IsKInjective) :
     QuasiIso (sheafHomWellDefinedMap X fI fL hI hL hI' hI0) :=
   (Classical.choice
-    (sheafHomWellDefined_exists X fI fL hI hL hI' hI0)).2
+    (sheafHomWellDefined_exists X fI fL hI hL hI' hI0)).quasiIso
 
 theorem sheafHomFromKFlatIntoKInjective_isKInjective
     (X : CommutativeRingedSpace.{v})

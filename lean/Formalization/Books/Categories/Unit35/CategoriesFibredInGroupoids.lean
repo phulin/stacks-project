@@ -3643,6 +3643,24 @@ theorem categoryPresheafStrictificationProjection_isFibered
     exact categoryPresheafStrictificationHom_ext hhom
   exact ⟨A, κ, hκstrong⟩
 
+instance categoryPresheafStrictificationProjection_isFibered_instance
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    (categoryPresheafStrictificationProjection P).IsFibered :=
+  categoryPresheafStrictificationProjection_isFibered P
+
+/- The source's groupoid strictification also needs the omitted verification
+   that vertical morphisms in the new category are invertible.  Keep this
+   transport result adjacent to the fibredness interface so the groupoid
+   presentation can reuse it rather than reproving the fibre check inline. -/
+theorem categoryPresheafStrictificationProjection_isFibredInGroupoids
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
+    (p : S ⥤ C) [p.IsFibered]
+    (hp : p.IsFibredInGroupoids) (P : PullbackChoice p) :
+    (categoryPresheafStrictificationProjection P).IsFibredInGroupoids := by
+  sorry
+
 private def categoryPresheafStrictificationInverse
     {S C : Type*} [Category* S] [Category* C]
     {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
@@ -4198,6 +4216,19 @@ theorem categoryPresheafStrictification_exists_equivalence
         simp
   · intro x
     rfl
+
+/- The strictification has the strict cleavage used in the source proof:
+   reindexing an object `(x, f : V ⟶ U)` along `g : W ⟶ V` replaces `f` by
+   `g ≫ f`.  Expose this as the reverse strict-pullback-choice interface so
+   the presheaf presentation can use the earlier splitting criterion without
+   trying to strictify the original `PullbackChoice` itself. -/
+theorem categoryPresheafStrictificationProjection_exists_strictPullbackChoice
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
+    ∃ Q : PullbackChoice (categoryPresheafStrictificationProjection P),
+      Q.IsUnital ∧ isStrictPullbackChoice Q := by
+  sorry
 
 /- The explicit strictification is not itself a `CategoryPresheaf`: its
    objects remember both the source and target of the chosen base arrow.

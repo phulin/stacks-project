@@ -58,7 +58,37 @@ theorem canonicalTruncLETransition_exists
         CochainComplex.canonicalTruncLE K ((n : ℤ) + 2),
       f ≫ CochainComplex.canonicalTruncLEι K ((n : ℤ) + 2) =
         CochainComplex.canonicalTruncLEι K ((n : ℤ) + 1) := by
-  sorry
+  have hLow : (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).IsStrictlyLE
+      ((n : ℤ) + 1) := by
+    dsimp [CochainComplex.canonicalTruncLE]
+    infer_instance
+  have hHigh : (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).IsStrictlyLE
+      ((n : ℤ) + 2) := by
+    rw [CochainComplex.isStrictlyLE_iff]
+    intro i hi
+    exact (CochainComplex.isStrictlyLE_iff
+      (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)) ((n : ℤ) + 1)).1 hLow i (by omega)
+  have hs : IsIso ((CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).ιTruncLE
+      ((n : ℤ) + 2)) :=
+    (CochainComplex.isIso_ιTruncLE_iff _ _).2 hHigh
+  let i : (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).truncLE ((n : ℤ) + 2) ≅
+      CochainComplex.canonicalTruncLE K ((n : ℤ) + 1) :=
+    { hom := (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).ιTruncLE ((n : ℤ) + 2)
+      inv := Classical.choose hs.out
+      hom_inv_id := (Classical.choose_spec hs.out).1
+      inv_hom_id := (Classical.choose_spec hs.out).2 }
+  let g : (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).truncLE ((n : ℤ) + 2) ⟶
+      CochainComplex.canonicalTruncLE K ((n : ℤ) + 2) := by
+    change (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).truncLE ((n : ℤ) + 2) ⟶
+      CochainComplex.truncLE K ((n : ℤ) + 2)
+    exact CochainComplex.truncLEMap (CochainComplex.canonicalTruncLEι K ((n : ℤ) + 1))
+      ((n : ℤ) + 2)
+  have hg : g ≫ CochainComplex.canonicalTruncLEι K ((n : ℤ) + 2) =
+      (CochainComplex.canonicalTruncLE K ((n : ℤ) + 1)).ιTruncLE ((n : ℤ) + 2) ≫
+        CochainComplex.canonicalTruncLEι K ((n : ℤ) + 1) := by
+    dsimp [g, CochainComplex.canonicalTruncLEι, CochainComplex.canonicalTruncLE]
+    exact CochainComplex.ιTruncLE_naturality _ _
+  exact ⟨i.inv ≫ g, by rw [Category.assoc, hg, i.inv_hom_id_assoc]⟩
 
 noncomputable def canonicalTruncLETransition
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -82,7 +112,38 @@ theorem canonicalTruncGETransition_exists
         CochainComplex.canonicalTruncGE K (-((n : ℤ) + 1)),
       CochainComplex.canonicalTruncGEπ K (-((n : ℤ) + 2)) ≫ f =
         CochainComplex.canonicalTruncGEπ K (-((n : ℤ) + 1)) := by
-  sorry
+  let low : ℤ := -((n : ℤ) + 2)
+  let high : ℤ := -((n : ℤ) + 1)
+  have hHigh : (CochainComplex.canonicalTruncGE K high).IsStrictlyGE high := by
+    dsimp [high, CochainComplex.canonicalTruncGE]
+    infer_instance
+  have hLow : (CochainComplex.canonicalTruncGE K high).IsStrictlyGE low := by
+    rw [CochainComplex.isStrictlyGE_iff]
+    intro i hi
+    exact (CochainComplex.isStrictlyGE_iff
+      (CochainComplex.canonicalTruncGE K high) high).1 hHigh i (by omega)
+  have hs : IsIso ((CochainComplex.canonicalTruncGE K high).πTruncGE low) :=
+    (CochainComplex.isIso_πTruncGE_iff _ _).2 hLow
+  let i : CochainComplex.canonicalTruncGE K high ≅
+      (CochainComplex.canonicalTruncGE K high).truncGE low :=
+    { hom := (CochainComplex.canonicalTruncGE K high).πTruncGE low
+      inv := Classical.choose hs.out
+      hom_inv_id := (Classical.choose_spec hs.out).1
+      inv_hom_id := (Classical.choose_spec hs.out).2 }
+  let g : CochainComplex.canonicalTruncGE K low ⟶
+      (CochainComplex.canonicalTruncGE K high).truncGE low := by
+    change CochainComplex.truncGE K low ⟶ (CochainComplex.truncGE K high).truncGE low
+    exact CochainComplex.truncGEMap (CochainComplex.canonicalTruncGEπ K high) low
+  have hg : CochainComplex.canonicalTruncGEπ K low ≫ g =
+      CochainComplex.canonicalTruncGEπ K high ≫
+        (CochainComplex.canonicalTruncGE K high).πTruncGE low := by
+    dsimp [g]
+    exact CochainComplex.πTruncGE_naturality _ _
+  refine ⟨g ≫ i.inv, ?_⟩
+  rw [← Category.assoc, hg]
+  change (CochainComplex.canonicalTruncGEπ K high ≫ i.hom) ≫ i.inv =
+    CochainComplex.canonicalTruncGEπ K high
+  simp
 
 noncomputable def canonicalTruncGETransition
     {C : Type u} [Category.{v} C] [Abelian C]

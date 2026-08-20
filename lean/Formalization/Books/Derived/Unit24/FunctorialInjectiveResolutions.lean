@@ -124,6 +124,27 @@ abbrev ResolutionFunctorData
    of its map to the value at zero.  This records the resulting normalized
    choice while retaining the canonical `HasFunctorialInjectiveEmbeddings`
    interface from Homology, Chapter 27. -/
+private theorem injective_kernel_of_split_epi
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {X Y : A} (f : X ⟶ Y) (s : Y ⟶ X) (hs : s ≫ f = 𝟙 Y)
+    (hX : Injective X) : Injective (kernel f) := by
+  let p : X ⟶ kernel f :=
+    kernel.lift f (𝟙 X - f ≫ s) (by
+      simp only [sub_comp, Category.id_comp, Category.assoc, hs,
+        Category.comp_id, sub_self])
+  have hp : p ≫ kernel.ι f = 𝟙 X - f ≫ s := by
+    exact kernel.lift_ι _ _ _
+  have hpk : kernel.ι f ≫ p = 𝟙 (kernel f) := by
+    apply (cancel_mono (kernel.ι f)).1
+    rw [Category.assoc, hp]
+    simp [Preadditive.comp_sub]
+  refine ⟨?_⟩
+  intro Z W g m hm
+  let : Mono m := hm
+  let q : W ⟶ X := Injective.factorThru (g ≫ kernel.ι f) m
+  refine ⟨q ≫ p, ?_⟩
+  simp [q, Category.assoc, hpk]
+
 theorem functorial_injective_embedding_zero_normalization
     {A : Type u} [Category.{v} A] [Abelian A]
     (hA : HasFunctorialInjectiveEmbeddings (C := A)) :
@@ -132,7 +153,112 @@ theorem functorial_injective_embedding_zero_normalization
         (∀ X : A, Mono (J.obj X).hom) ∧
           (∀ X : A, Injective (J.obj X).right) ∧
             IsZero (J.obj (0 : A)).right := by
-  sorry
+  classical
+  obtain ⟨J₀, hleft, hmono, hinj⟩ := hA
+  let I : A ⥤ A := J₀ ⋙ Arrow.rightFunc
+  let η : 𝟭 A ⟶ I :=
+    eqToHom hleft.symm ≫ Functor.whiskerLeft J₀ Arrow.leftToRight
+  let r : ∀ X : A, I.obj X ⟶ I.obj (0 : A) := fun X =>
+    I.map (0 : X ⟶ 0)
+  let s : ∀ X : A, I.obj (0 : A) ⟶ I.obj X := fun X =>
+    I.map (0 : (0 : A) ⟶ X)
+  have hrs : ∀ X : A, s X ≫ r X = 𝟙 (I.obj (0 : A)) := by
+    intro X
+    dsimp [s, r]
+    rw [← I.map_comp]
+    have hzero : (0 : (0 : A) ⟶ X) ≫ (0 : X ⟶ 0) = 𝟙 (0 : A) :=
+      (isZero_zero A).eq_of_src _ _
+    rw [hzero, I.map_id]
+  have hrnat : ∀ {X Y : A} (f : X ⟶ Y),
+      I.map f ≫ r Y = r X := by
+    intro X Y f
+    dsimp [r]
+    rw [← I.map_comp]
+    simp
+  have hηker : ∀ X : A, η.app X ≫ r X = 0 := by
+    intro X
+    simpa [r] using (η.naturality (0 : X ⟶ (0 : A))).symm
+  let e : ∀ X : A, X ⟶ kernel (r X) := fun X =>
+    kernel.lift (r X) (η.app X) (hηker X)
+  let kmap : ∀ {X Y : A} (f : X ⟶ Y),
+      kernel (r X) ⟶ kernel (r Y) := fun {X Y} f =>
+    kernel.map (r X) (r Y) (I.map f) (𝟙 _) (by
+      simpa using (hrnat f).symm)
+  have hecomp : ∀ X : A, e X ≫ kernel.ι (r X) = η.app X := by
+    intro X
+    exact kernel.lift_ι _ _ _
+  have hkcomp : ∀ {X Y : A} (f : X ⟶ Y),
+      kmap f ≫ kernel.ι (r Y) = kernel.ι (r X) ≫ I.map f := by
+    intro X Y f
+    dsimp [kmap, kernel.map]
+    exact kernel.lift_ι _ _ _
+  let J : A ⥤ Arrow A :=
+    { obj := fun X => Arrow.mk (e X)
+      map := fun {X Y} f => Arrow.homMk f (kmap f) (by
+        apply (cancel_mono (kernel.ι (r Y))).1
+        change (f ≫ e Y) ≫ kernel.ι (r Y) =
+          (e X ≫ kmap f) ≫ kernel.ι (r Y)
+        simp only [Category.assoc]
+        rw [hecomp Y, hkcomp f, ← Category.assoc, hecomp X]
+        simpa only [Functor.id_map] using η.naturality f)
+      map_id := by
+        intro X
+        apply Arrow.hom_ext <;> simp [kmap]
+      map_comp := by
+        intro X Y Z f g
+        apply Arrow.hom_ext
+        · rfl
+        · apply (cancel_mono (kernel.ι (r Z))).1
+          change (kmap (f ≫ g)) ≫ kernel.ι (r Z) =
+            (kmap f ≫ kmap g) ≫ kernel.ι (r Z)
+          calc
+            kmap (f ≫ g) ≫ kernel.ι (r Z) =
+                kernel.ι (r X) ≫ I.map (f ≫ g) := hkcomp (f ≫ g)
+            _ = kernel.ι (r X) ≫ (I.map f ≫ I.map g) := by
+              rw [I.map_comp]
+            _ = (kmap f ≫ kernel.ι (r Y)) ≫ I.map g := by
+              simpa only [Category.assoc] using
+                congrArg (fun h => h ≫ I.map g) (hkcomp f).symm
+            _ = (kmap f ≫ kmap g) ≫ kernel.ι (r Z) := by
+              simpa only [Category.assoc] using
+                congrArg (fun h => kmap f ≫ h) (hkcomp g).symm }
+  have hJmono : ∀ X : A, Mono (J.obj X).hom := by
+    intro X
+    dsimp [J]
+    let : Mono (Arrow.leftToRight.app (J₀.obj X)) := by
+      change Mono (J₀.obj X).hom
+      exact hmono X
+    have heta : η.app X =
+        (eqToHom hleft.symm).app X ≫ Arrow.leftToRight.app (J₀.obj X) := rfl
+    let : Mono (η.app X) := by
+      rw [heta]
+      constructor
+      intro Z a b hab
+      apply (cancel_mono ((eqToHom hleft.symm).app X)).1
+      apply (cancel_mono (Arrow.leftToRight.app (J₀.obj X))).1
+      simpa only [Category.assoc] using hab
+    apply mono_of_mono_fac (kernel.lift_ι _ _ _)
+  have hJinj : ∀ X : A, Injective (J.obj X).right := by
+    intro X
+    dsimp [J]
+    apply injective_kernel_of_split_epi (r X) (s X) (hrs X)
+    exact hinj X
+  have hJzero : IsZero (J.obj (0 : A)).right := by
+    dsimp [J]
+    have hr0 : r (0 : A) = 𝟙 (I.obj (0 : A)) := by
+      dsimp [r]
+      rw [show (0 : (0 : A) ⟶ 0) = 𝟙 (0 : A) by
+        exact (isZero_zero A).eq_of_src _ _, I.map_id]
+    let : Mono (r (0 : A)) := by
+      rw [hr0]
+      infer_instance
+    exact isZero_kernel_of_mono (r (0 : A))
+  refine ⟨J, ?_, hJmono, hJinj, hJzero⟩
+  apply CategoryTheory.Functor.hext
+  · intro X
+    rfl
+  · intro X Y f
+    rfl
 
 /-! ## The double-complex construction -/
 
@@ -254,6 +380,63 @@ theorem functorial_double_complex_totalization_quasiIso
     QuasiIso (doubleComplexResolutionMap T D.resolution) :=
   doubleComplex_gives_resolution T D.resolution
 
+private theorem total_diagonal_isZero
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {K : CompPlus A} {J : A ⥤ Arrow A}
+    (D : FunctorialInjectiveDoubleComplex K J)
+    (T : TotalComplexPresentation D.doubleComplex)
+    (n B : ℤ) (hB : ∀ p q : ℤ, p < B →
+      IsZero (D.doubleComplex.obj p q)) (hn : n < B) :
+    IsZero (T.diagonal n).cocone.pt := by
+  have hobj : ∀ p : ℤ,
+      IsZero (D.doubleComplex.obj p (n - p)) := by
+    intro p
+    by_cases hp : p < B
+    · exact hB p (n - p) hp
+    · apply D.resolution.supported p (n - p)
+      omega
+  have hfun : IsZero
+      (Discrete.functor (fun p : ℤ => D.doubleComplex.obj p (n - p))) :=
+    Functor.isZero _ (fun p => hobj p.as)
+  exact (T.diagonal n).isColimit.isZero_pt hfun
+
+private theorem total_diagonal_injective
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {K : CompPlus A} {J : A ⥤ Arrow A}
+    (D : FunctorialInjectiveDoubleComplex K J)
+    (T : TotalComplexPresentation D.doubleComplex) (n : ℤ) :
+    Injective (T.diagonal n).cocone.pt := by
+  let S : Finset ℤ :=
+    (D.resolution.finite_diagonal n).toFinset
+  let f : S → A := fun p => D.doubleComplex.obj p.1 (n - p.1)
+  let c : Cofan (fun p : ℤ => D.doubleComplex.obj p (n - p)) :=
+    Cofan.mk (⨁ f) (fun p =>
+      if hp : p ∈ S then biproduct.ι f ⟨p, hp⟩ else 0)
+  have hc : IsColimit c := by
+    refine Cofan.IsColimit.mk c
+      (fun t => biproduct.desc (fun p => t.inj p.1)) ?_ ?_
+    · intro t p
+      by_cases hp : p ∈ S
+      · simp [c, hp, f]
+      · have hz : IsZero (D.doubleComplex.obj p (n - p)) := by
+          apply not_not.mp
+          intro hne
+          apply hp
+          exact (D.resolution.finite_diagonal n).mem_toFinset.mpr hne
+        simp [c, hp]
+        exact hz.eq_of_src _ _
+    · intro t m hm
+      apply biproduct.hom_ext' _ _
+      intro p
+      have hm' := hm p.1
+      simpa [c, f, p.2] using hm'
+  let : ∀ p : S, Injective (f p) := fun p =>
+    D.entryInjective p.1 (n - p.1)
+  have hsum : Injective (⨁ f) := by infer_instance
+  let e : (T.diagonal n).cocone.pt ≅ c.pt :=
+    (T.diagonal n).isColimit.coconePointUniqueUpToIso hc
+  exact Injective.of_iso e.symm hsum
+
 theorem functorial_double_complex_totalization_is_resolution
     {A : Type u} [Category.{v} A] [Abelian A]
     {K : CompPlus A} {J : A ⥤ Arrow A}
@@ -262,7 +445,19 @@ theorem functorial_double_complex_totalization_is_resolution
     IsBoundedBelow T.complex ∧
       (∀ n : ℤ, Injective (T.complex.X n)) ∧
       QuasiIso (doubleComplexResolutionMap T D.resolution) := by
-  sorry
+  obtain ⟨B, hB⟩ := D.zeroBelow
+  have hbounded : IsBoundedBelow T.complex := by
+    refine ⟨B, ?_⟩
+    rw [CochainComplex.isStrictlyGE_iff]
+    intro n hn
+    exact IsZero.of_iso
+      (total_diagonal_isZero D T n B hB hn) (T.term_iso n)
+  have hinjective : ∀ n : ℤ, Injective (T.complex.X n) := by
+    intro n
+    exact Injective.of_iso (T.term_iso n).symm
+      (total_diagonal_injective D T n)
+  exact ⟨hbounded, hinjective,
+    functorial_double_complex_totalization_quasiIso D T⟩
 
 /-! ## The functorial-resolution lemma -/
 
@@ -285,7 +480,39 @@ theorem resolutionFunctorData_exists_of_inj
     (inj : CompPlus A ⥤ InjRes A)
     (hsource : inj ⋙ injResSourceFunctor = 𝟭 (CompPlus A)) :
     Nonempty (ResolutionFunctorData A) := by
-  sorry
+  classical
+  let Kc : ∀ K : KPlus A, CompPlus A := fun K =>
+    ⟨K.obj.as, by
+      have hK : HomotopyCategory.plus A
+          ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj K.obj.as) := by
+        exact K.property
+      exact (HomotopyCategory.plus_quotient_obj_iff K.obj.as).mp hK⟩
+  let f : ∀ K : KPlus A, K.obj.as ⟶ (inj.obj (Kc K)).obj.right := fun K => by
+    have hsource_obj := congrArg (fun F : CompPlus A ⥤ CompPlus A => F.obj (Kc K)) hsource
+    change injResSourceFunctor.obj (inj.obj (Kc K)) = Kc K at hsource_obj
+    have hleft : (inj.obj (Kc K)).obj.left = K.obj.as := by
+      exact congrArg (fun X : CompPlus A => X.obj) hsource_obj
+    exact eqToHom hleft.symm ≫ (inj.obj (Kc K)).obj.hom
+  let j : ∀ K : KPlus A, KPlusInjective A := fun K =>
+    (injResTargetFunctor (A := A)).obj (inj.obj (Kc K))
+  let i : ∀ K : KPlus A,
+      K ⟶
+        (Formalization.Books.Derived.Unit23.injectiveHomotopyInclusion
+          (A := A)).obj (j K) := fun K => by
+    exact ObjectProperty.homMk
+      ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).map
+        (f K))
+  refine ⟨{ j := j, i := i, i_quasiIso := ?_ }⟩
+  intro K
+  change (HomotopyCategory.Plus.quasiIso A) (i K)
+  rw [HomotopyCategory.Plus.quasiIso_iff]
+  let : QuasiIso (inj.obj (Kc K)).obj.hom :=
+    (inj.obj (Kc K)).property.2.2.2
+  have hf : QuasiIso (f K) := by
+    dsimp [f]
+    infer_instance
+  exact (HomotopyCategory.quotient_map_mem_quasiIso_iff
+      (f K)).2 hf
 
 /-! ## Matching the induced homotopy functor -/
 

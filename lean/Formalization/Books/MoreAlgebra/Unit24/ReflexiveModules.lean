@@ -3,10 +3,13 @@ import Formalization.Books.Algebra.Unit157.SerresCriterion
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Dual.Lemmas
+import Mathlib.LinearAlgebra.Dual.Basis
+import Mathlib.LinearAlgebra.StdBasis
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Localization.FractionRing
+import Mathlib.RingTheory.Localization.Integer
 import Mathlib.RingTheory.MvPolynomial.Basic
 
 /-!
@@ -21,6 +24,7 @@ concrete tensor-product models for `M_K`; this makes the source's phrase
 namespace Formalization.Books.MoreAlgebra.Unit24
 
 open Set
+open Module
 open Formalization.Books.Algebra.Unit37
 open Formalization.Books.Algebra.Unit63
 open Formalization.Books.Algebra.Unit72
@@ -58,7 +62,7 @@ theorem reflexivityMap_apply
 theorem reflexive_iff_bijective_reflexivityMap
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] :
     Reflexive R M ↔ Function.Bijective (reflexivityMap (R := R) (M := M)) := by
-  sorry
+  exact ⟨fun h => h.bijective_dual_eval', fun h => ⟨h⟩⟩
 
 /-- A reflexive module is torsion free. -/
 theorem reflexive_torsionFree
@@ -66,7 +70,92 @@ theorem reflexive_torsionFree
     [AddCommGroup M] [Module R M]
     (hM : Reflexive R M) :
     Module.IsTorsionFree R M := by
-  sorry
+  constructor
+  intro r hr m₁ m₂ hm
+  apply hM.bijective_dual_eval'.injective
+  ext n
+  simpa [hr.1.eq_iff] using congr(n $hm)
+
+private theorem exists_smul_dualRestrict
+    {R : Type*} [CommRing R] [IsDomain R]
+    {F : Type*} [AddCommGroup F] [Module R F]
+    {n : ℕ} (b : Basis (Fin n) R F) (N : Submodule R F)
+    (φ : N →ₗ[R] R) :
+    ∃ a : nonZeroDivisors R, ∃ ψ : F →ₗ[R] R,
+      a • φ = N.dualRestrict ψ := by
+  let S := nonZeroDivisors R
+  let K := Localization S
+  let qN := LocalizedModule.mkLinearMap S N
+  let qF := LocalizedModule.mkLinearMap S F
+  let i : LocalizedModule S N →ₗ[K] LocalizedModule S F :=
+    LocalizedModule.map S N.subtype
+  have hi : Function.Injective i := by
+    exact LocalizedModule.map_injective S N.subtype N.injective_subtype
+  let φR : N →ₗ[R] K := (Algebra.linearMap R K).comp φ
+  have hK : ∀ x : S, IsUnit ((algebraMap R (Module.End R K)) x) := by
+    intro x
+    exact IsLocalizedModule.map_units (Algebra.linearMap R K) x
+  let φK : LocalizedModule S N →ₗ[K] K :=
+    (IsLocalizedModule.lift S qN φR hK).extendScalarsOfIsLocalization S K
+  obtain ⟨gK, hgK⟩ := LinearMap.dualMap_surjective_of_injective hi φK
+  let c' : Fin n → K := fun j => gK (qF (b j))
+  obtain ⟨a, ha⟩ := IsLocalization.exist_integer_multiples_of_finite S c'
+  choose c hc using ha
+  let ψ : F →ₗ[R] R := b.constr R c
+  let ψR : F →ₗ[R] K := (Algebra.linearMap R K).comp ψ
+  let ψK : LocalizedModule S F →ₗ[K] K :=
+    (IsLocalizedModule.lift S qF ψR hK).extendScalarsOfIsLocalization S K
+  let aK : K := algebraMap R K (a : R)
+  have hR :
+      ((aK • gK).restrictScalars R).comp qF =
+        (ψK.restrictScalars R).comp qF := by
+    apply b.ext
+    intro j
+    change aK • gK (qF (b j)) =
+      (IsLocalizedModule.lift S qF ψR hK) (qF (b j))
+    rw [IsLocalizedModule.lift_apply]
+    simpa [aK, c', ψ, ψR, Algebra.smul_def] using (hc j).symm
+  have hK' : (aK • gK).restrictScalars R = ψK.restrictScalars R := by
+    apply IsLocalizedModule.ext S qF hK
+    exact hR
+  refine ⟨a, ψ, ?_⟩
+  apply LinearMap.ext
+  intro x
+  apply (IsFractionRing.injective R K)
+  have hx := congrArg (fun f : LocalizedModule S F →ₗ[R] K => f (qF x)) hK'
+  have hxi := congrArg (fun f : Module.Dual K (LocalizedModule S N) => f (qN x)) hgK
+  have hxi' : gK (qF x) = algebraMap R K (φ x) := by
+    calc
+      gK (qF x) = gK (i (qN x)) := by
+        congr 1
+        change LocalizedModule.mk (x : F) 1 =
+          (LocalizedModule.map S N.subtype) (LocalizedModule.mk x 1)
+        rw [LocalizedModule.map_mk]
+        rfl
+      _ = (i.dualMap gK) (qN x) := rfl
+      _ = φK (qN x) := hxi
+      _ = algebraMap R K (φ x) := by
+        change (IsLocalizedModule.lift S qN φR hK) (qN x) = _
+        rw [IsLocalizedModule.lift_apply]
+        simp [φR, LinearMap.comp_apply]
+  have hx' : aK • gK (qF x) = algebraMap R K (ψ x) := by
+    calc
+      aK • gK (qF x) = ((aK • gK).restrictScalars R) (qF x) := rfl
+      _ = (ψK.restrictScalars R) (qF x) := hx
+      _ = algebraMap R K (ψ x) := by
+        change (IsLocalizedModule.lift S qF ψR hK) (qF x) = _
+        rw [IsLocalizedModule.lift_apply]
+        simp [ψR, LinearMap.comp_apply]
+  calc
+    algebraMap R K (a • φ x) = aK • algebraMap R K (φ x) := by
+      change algebraMap R K ((a : R) * φ x) =
+        algebraMap R K (a : R) • algebraMap R K (φ x)
+      rw [map_mul]
+      rfl
+    _ = aK • gK (qF x) := by rw [hxi'.symm]
+    _ = algebraMap R K (ψ x) := hx'
+    _ = algebraMap R K (N.dualRestrict ψ x) := by
+      rw [Submodule.dualRestrict_apply]
 
 /-- For a finite module, the kernel and cokernel of the natural map are
 torsion modules.  The cokernel is represented by the quotient by its range. -/
@@ -77,7 +166,66 @@ theorem dualEval_kernel_cokernel_isTorsion
       Module.IsTorsion R
         (Module.Dual R (Module.Dual R M) ⧸
           LinearMap.range (reflexivityMap (R := R) (M := M))) := by
-  sorry
+  constructor
+  · intro x
+    let T := Submodule.torsion R M
+    let Q := M ⧸ T
+    let q : M →ₗ[R] Q := T.mkQ
+    obtain ⟨n, f, hf⟩ :=
+      (Formalization.Books.MoreAlgebra.Unit22.finite_torsionFree_iff_embeds_finiteFree
+        (R := R) (M := Q)).mp inferInstance
+    have hfx : f (q x) = 0 := by
+      ext i
+      have hi := congrArg
+        (fun g : Module.Dual R (Module.Dual R M) =>
+          g ((Finsupp.lapply i).comp f |>.comp q)) x.property
+      change (f (q (x : M))) i = (0 : Fin n →₀ R) i at hi
+      exact hi
+    have hqx : q x = 0 := hf (hfx.trans (f.map_zero).symm)
+    have hxT : (x : M) ∈ T := by
+      change T.mkQ (x : M) = 0 at hqx
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at hqx
+      exact hqx
+    obtain ⟨a, ha⟩ := (Submodule.mem_torsion_iff (x := (x : M))).mp hxT
+    refine ⟨a, ?_⟩
+    apply Subtype.ext
+    exact ha
+  · intro z
+    obtain ⟨φ, rfl⟩ :=
+      (Submodule.Quotient.mk_surjective
+        (p := LinearMap.range (reflexivityMap (R := R) (M := M)))) z
+    obtain ⟨n, p, hp⟩ := Module.Finite.exists_fin' R M
+    let q := p.dualMap
+    have hq : Function.Injective q :=
+      LinearMap.dualMap_injective_of_surjective hp
+    let W := LinearMap.range q
+    let e : Module.Dual R M ≃ₗ[R] W :=
+      LinearEquiv.ofBijective q.rangeRestrict
+        ⟨(q.injective_rangeRestrict_iff).2 hq, q.surjective_rangeRestrict⟩
+    let φW : W →ₗ[R] R := φ.comp e.symm.toLinearMap
+    obtain ⟨a, ψ, hψ⟩ :=
+      exists_smul_dualRestrict (b := (Pi.basisFun R (Fin n)).dualBasis) W φW
+    have hqψ : a • φ = q.dualMap ψ := by
+      ext f
+      change a • φ f = ψ (q f)
+      calc
+        a • φ f = (a • φW) (e f) := by simp [φW]
+        _ = (W.dualRestrict ψ) (e f) :=
+          congrArg (fun l : W →ₗ[R] R => l (e f)) hψ
+        _ = ψ (q f) := by
+          change ψ (e f) = ψ (q f)
+          congr 1
+    obtain ⟨y, hy⟩ := (Module.bijective_dual_eval R (Fin n → R)).2 ψ
+    have hq_eval : q.dualMap ψ =
+        reflexivityMap (R := R) (M := M) (p y) := by
+      ext f
+      rw [← hy]
+      simp [q, LinearMap.dualMap_apply]
+    refine ⟨a, ?_⟩
+    rw [← Submodule.Quotient.mk_smul]
+    apply (Submodule.Quotient.mk_eq_zero _).2
+    rw [hqψ, hq_eval]
+    exact ⟨p y, rfl⟩
 
 /-- For a finite module over a domain, the natural map is injective exactly
 when the module is torsion free. -/
@@ -86,7 +234,22 @@ theorem dualEval_injective_iff_torsionFree
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     Function.Injective (reflexivityMap (R := R) (M := M)) ↔
       Module.IsTorsionFree R M := by
-  sorry
+  constructor
+  · intro h
+    exact h.moduleIsTorsionFree (reflexivityMap (R := R) (M := M)) (by
+      intro r m
+      exact (reflexivityMap (R := R) (M := M)).map_smul r m)
+  · intro hM
+    obtain ⟨n, f, hf⟩ :=
+      (Formalization.Books.MoreAlgebra.Unit22.finite_torsionFree_iff_embeds_finiteFree
+        (R := R) (M := M)).mp hM
+    intro x y hxy
+    apply hf
+    ext i
+    have hi := congrArg
+      (fun g : Module.Dual R (Module.Dual R M) =>
+        g (Finsupp.lapply i ∘ₗ f)) hxy
+    simpa [LinearMap.comp_apply, reflexivityMap_apply, Finsupp.lapply_apply] using hi
 
 /-- Over a discrete valuation ring, the natural map is surjective for every
 finite module, including modules with torsion. -/

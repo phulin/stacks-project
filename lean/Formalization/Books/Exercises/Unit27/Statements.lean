@@ -3368,7 +3368,30 @@ theorem blowupStrictTransformComponentAsSet_eq
     {Q : BlowupPresentation (blowupQuotientIdeal I p)}
     (F : BlowupQuotientMapData P Q) (d : ℕ) :
     blowupStrictTransformComponentAsSet F d =
-      ((I ^ d : Ideal A) : Set A) ∩ (p : Set A) := by sorry
+      ((I ^ d : Ideal A) : Set A) ∩ (p : Set A) := by
+  letI : GradedRing P.gradedPieces := P.graded
+  letI : GradedRing Q.gradedPieces := Q.graded
+  apply Set.ext
+  intro a
+  change (∃ ha : a ∈ I ^ d,
+      F.map (reesHomogeneousElement I d ha) ∈
+        (⊥ : HomogeneousIdeal Q.gradedPieces)) ↔
+    a ∈ I ^ d ∧ a ∈ p
+  constructor
+  · rintro ⟨ha, hzero⟩
+    refine ⟨ha, ?_⟩
+    have hmap := F.map_on_rees d a ha
+    apply (Ideal.Quotient.eq_zero_iff_mem p).mp
+    change (Ideal.Quotient.mk p) a = 0
+    simpa [hmap] using hzero
+  · rintro ⟨ha, hap⟩
+    refine ⟨ha, ?_⟩
+    have hmap := F.map_on_rees d a ha
+    change (F.map (reesHomogeneousElement I d ha) :
+      blowupAlgebra (blowupQuotientIdeal I p)) = 0
+    apply Subtype.ext
+    rw [hmap]
+    simp [Ideal.Quotient.eq_zero_iff_mem, hap]
 theorem primeStrictTransform_eq_vPlus_of_blowupQuotient
     {A : Type u} [CommRing A] {I p : Ideal A}
     {P : BlowupPresentation I}

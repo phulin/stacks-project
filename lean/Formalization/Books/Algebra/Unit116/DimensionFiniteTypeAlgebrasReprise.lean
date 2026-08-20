@@ -169,6 +169,11 @@ theorem codimension
 
 /-! ## Base change by a field extension -/
 
+private structure TensorDimensionWitness
+    {k S K : Type u} [Field k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] [Field K] [Algebra k K] (r : ℕ) where
+  dimension : ringKrullDim (K ⊗[k] S) = r
+
 /- The global Krull dimension is unchanged by extension of the ground field. -/
 theorem dimension_preserved_field_extension
     {k S K : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -176,7 +181,7 @@ theorem dimension_preserved_field_extension
     ringKrullDim S = ringKrullDim (K ⊗[k] S) := by
   classical
   by_cases hS : Nontrivial S
-  · letI : Nontrivial S := hS
+  · let _ : Nontrivial S := hS
     obtain ⟨n, φ, hφ⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
       (inferInstance : Algebra.FiniteType k S)
     have hI : RingHom.ker φ ≠ ⊤ := by
@@ -186,7 +191,7 @@ theorem dimension_preserved_field_extension
           rw [hI]
           trivial
         exact hmem
-      simpa using hzero
+      simp at hzero
     let A := (MvPolynomial (Fin n) k) ⧸ RingHom.ker φ
     let e : A ≃ₐ[k] S :=
       AlgEquiv.ofBijective (Ideal.kerLiftAlg φ) ⟨
@@ -209,56 +214,54 @@ theorem dimension_preserved_field_extension
     let pK : (K ⊗[k] MvPolynomial (Fin r) k) ≃ₐ[K]
         MvPolynomial (Fin r) K :=
       MvPolynomial.algebraTensorAlgEquiv k K
-    letI cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
-    letI cKA : CommRing (K ⊗[k] A) := inferInstance
-    letI cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
-    letI cAK : CommRing (A ⊗[k] K) := inferInstance
-    letI : Semiring (K ⊗[k] MvPolynomial (Fin r) k) := cKP.toSemiring
-    letI : Semiring (K ⊗[k] A) := cKA.toSemiring
-    letI : Semiring (MvPolynomial (Fin r) k ⊗[k] K) := cPK.toSemiring
-    letI : Semiring (A ⊗[k] K) := cAK.toSemiring
-    let gT : (K ⊗[k] MvPolynomial (Fin r) k) →+*
-        (K ⊗[k] A) :=
-      (Algebra.TensorProduct.map (AlgHom.id K K) g).toRingHom
-    let gK : MvPolynomial (Fin r) K →+* (K ⊗[k] S) :=
-      eK.toRingEquiv.toRingHom.comp
-        (gT.comp pK.symm.toRingEquiv.toRingHom)
-    have hgTinj : Function.Injective gT := by
-      change Function.Injective ((g.toLinearMap).lTensor K)
-      exact Module.Flat.lTensor_preserves_injective_linearMap g.toLinearMap hginj
-    have hgKinj : Function.Injective gK := by
-      exact eK.injective.comp (hgTinj.comp pK.symm.injective)
-    have hgTfinite : RingHom.Finite gT := by
-      let gT' : (MvPolynomial (Fin r) k ⊗[k] K) →+* (A ⊗[k] K) :=
-        (Algebra.TensorProduct.map g (AlgHom.id k K)).toRingHom
-      have hgT'finite : RingHom.Finite gT' :=
-        RingHom.Finite.tensorProductMap hgfinite (AlgHom.Finite.id k K)
-      have hcomm :
-          (Algebra.TensorProduct.comm k A K).toRingEquiv.toRingHom.comp
-              (gT'.comp (Algebra.TensorProduct.comm k K
-                (MvPolynomial (Fin r) k)).toRingEquiv.toRingHom) = gT := by
-        ext <;> simp [gT, gT']
-      rw [← hcomm]
-      exact (Algebra.TensorProduct.comm k A K).toRingEquiv.finite.comp
-        (hgT'finite.comp
-          (Algebra.TensorProduct.comm k K (MvPolynomial (Fin r) k)).toRingEquiv.finite)
-    have hgKfinite : RingHom.Finite gK := by
-      exact eK.toRingEquiv.finite.comp
-        (hgTfinite.comp pK.symm.toRingEquiv.finite)
-    have hdimK : ringKrullDim (K ⊗[k] S) = r := by
-      have hdim' : ringKrullDim (MvPolynomial (Fin r) K) =
-        ringKrullDim (K ⊗[k] S) :=
-        Formalization.Books.Algebra.Unit112.integral_subring_ringKrullDim_eq
-          gK hgKinj hgKfinite.to_isIntegral
-      calc
-        ringKrullDim (K ⊗[k] S) = ringKrullDim (MvPolynomial (Fin r) K) := hdim'.symm
-        _ = r := by
-          rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
-            ringKrullDim_eq_zero_of_field]
-          simp [Nat.card_fin]
-    exact hdimS.trans hdimK.symm
-  · letI : Subsingleton S := not_nontrivial_iff_subsingleton.mp hS
-    haveI : Subsingleton (K ⊗[k] S) := inferInstance
+    let hdimKData : TensorDimensionWitness (k := k) (S := S) (K := K) r := by
+      letI cKP : CommRing (K ⊗[k] MvPolynomial (Fin r) k) := inferInstance
+      letI cKA : CommRing (K ⊗[k] A) := inferInstance
+      letI cPK : CommRing (MvPolynomial (Fin r) k ⊗[k] K) := inferInstance
+      letI cAK : CommRing (A ⊗[k] K) := inferInstance
+      let gT : (K ⊗[k] MvPolynomial (Fin r) k) →+*
+          (K ⊗[k] A) :=
+        (Algebra.TensorProduct.map (AlgHom.id K K) g).toRingHom
+      let gK : MvPolynomial (Fin r) K →+* (K ⊗[k] S) :=
+        eK.toRingEquiv.toRingHom.comp
+          (gT.comp pK.symm.toRingEquiv.toRingHom)
+      have hgTinj : Function.Injective gT := by
+        change Function.Injective ((g.toLinearMap).lTensor K)
+        exact Module.Flat.lTensor_preserves_injective_linearMap g.toLinearMap hginj
+      have hgKinj : Function.Injective gK := by
+        exact eK.injective.comp (hgTinj.comp pK.symm.injective)
+      have hgTfinite : RingHom.Finite gT := by
+        let gT' : (MvPolynomial (Fin r) k ⊗[k] K) →+* (A ⊗[k] K) :=
+          (Algebra.TensorProduct.map g (AlgHom.id k K)).toRingHom
+        have hgT'finite : RingHom.Finite gT' :=
+          RingHom.Finite.tensorProductMap hgfinite (AlgHom.Finite.id k K)
+        have hcomm :
+            (Algebra.TensorProduct.comm k A K).toRingEquiv.toRingHom.comp
+                (gT'.comp (Algebra.TensorProduct.comm k K
+                  (MvPolynomial (Fin r) k)).toRingEquiv.toRingHom) = gT := by
+          ext <;> simp [gT, gT']
+        rw [← hcomm]
+        exact (Algebra.TensorProduct.comm k A K).toRingEquiv.finite.comp
+          (hgT'finite.comp
+            (Algebra.TensorProduct.comm k K (MvPolynomial (Fin r) k)).toRingEquiv.finite)
+      have hgKfinite : RingHom.Finite gK := by
+        exact eK.toRingEquiv.finite.comp
+          (hgTfinite.comp pK.symm.toRingEquiv.finite)
+      have hdimK : ringKrullDim (K ⊗[k] S) = r := by
+        have hdim' : ringKrullDim (MvPolynomial (Fin r) K) =
+          ringKrullDim (K ⊗[k] S) :=
+          Formalization.Books.Algebra.Unit112.integral_subring_ringKrullDim_eq
+            gK hgKinj hgKfinite.to_isIntegral
+        calc
+          ringKrullDim (K ⊗[k] S) = ringKrullDim (MvPolynomial (Fin r) K) := hdim'.symm
+          _ = r := by
+            rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+              ringKrullDim_eq_zero_of_field]
+            simp
+      exact ⟨hdimK⟩
+    exact hdimS.trans hdimKData.dimension.symm
+  · let _ : Subsingleton S := not_nontrivial_iff_subsingleton.mp hS
+    have : Subsingleton (K ⊗[k] S) := inferInstance
     simp only [ringKrullDim_eq_bot_of_subsingleton]
 
 /- The local dimension is unchanged at corresponding points after base change.

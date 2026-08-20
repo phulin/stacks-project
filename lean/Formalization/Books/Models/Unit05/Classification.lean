@@ -8167,7 +8167,43 @@ theorem lemma_E7 (T : NumericalType) (S : MinusTwoSubgraph T 7)
 theorem lemma_E7_not_full (T : NumericalType) (S : MinusTwoSubgraph T 7)
     (hn : T.n = 7) (hedges : hasE7Edges (localData S))
     (hpattern : isE7 (localData S)) : False := by
-  sorry
+  classical
+  let D := localData S
+  let f : Fin 7 → Fin 7 := fun i => Fin.cast hn (S.index i)
+  have hf : Function.Injective f := by
+    intro i j hij
+    apply S.index_injective
+    exact Fin.cast_injective hn hij
+  have hfs : Function.Surjective f := Finite.surjective_of_injective hf
+  have hs : Function.Surjective S.index := by
+    intro j
+    obtain ⟨i, hi⟩ := hfs (Fin.cast hn j)
+    exact ⟨i, Fin.cast_injective hn (by simpa [f] using hi)⟩
+  let e : Fin 7 ≃ Fin T.n := Equiv.ofBijective S.index
+    ⟨S.index_injective, hs⟩
+  have heval : ∀ j : Fin 7, e j = S.index j := by
+    intro j
+    rfl
+  have hkernel : Matrix.mulVec D.a D.m = 0 := by
+    funext i
+    rw [Matrix.mulVec_apply_eq_sum]
+    change (∑ j : Fin 7, T.a (S.index i) (S.index j) * T.m (S.index j)) = 0
+    calc
+      (∑ j : Fin 7, T.a (S.index i) (S.index j) * T.m (S.index j)) =
+          ∑ j : Fin T.n, T.a (S.index i) j * T.m j := by
+            simpa only [heval] using
+              (Equiv.sum_comp e (fun j : Fin T.n => T.a (S.index i) j * T.m j))
+      _ = 0 := T.row_sum (S.index i)
+  have hdet0 : Matrix.det D.a = 0 := by
+    apply Matrix.det_eq_zero_of_mulVec_eq_zero_of_mem_nonZeroDivisors
+      (i := (0 : Fin 7)) hkernel
+    simpa [D] using (ne_of_gt (local_m_pos S (0 : Fin 7)))
+  rcases hpattern with ⟨r, hr, hmat, _, _, _⟩
+  have hdetneg : Matrix.det D.a < 0 := by
+    rw [hmat, e7_matrix_determinant]
+    nlinarith [pow_pos hr 7]
+  rw [hdet0] at hdetneg
+  exact (lt_irrefl 0) hdetneg
 
 /-! The eight-index `E₈` configuration. -/
 theorem lemma_E8 (T : NumericalType) (S : MinusTwoSubgraph T 8)

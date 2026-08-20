@@ -1,0 +1,366 @@
+import Formalization.Books.Dpa.Unit03.DividedPowerRings
+import Mathlib.RingTheory.DividedPowerAlgebra.Init
+
+/-!
+# Divided Power Algebra, Chapter 5: Divided power polynomial algebras
+
+This file uses Mathlib's `DividedPowerAlgebra` for the polynomial algebra
+construction. For a finite set of variables, the free module on the variables
+is represented by `Fin t →₀ A`; for an arbitrary set it is `W →₀ A`.
+-/
+
+namespace Formalization.Books.Dpa.Unit05
+
+open CategoryTheory CategoryTheory.Limits
+open Formalization.Books.Dpa.Unit02
+open Formalization.Books.Dpa.Unit03
+open Formalization.Books.Dpa.Unit03.DividedPowerRing
+
+universe u
+
+noncomputable section
+
+/-! ## Finite divided power polynomial algebras -/
+
+/-- The divided power polynomial algebra on `t` finite variables. -/
+abbrev dividedPowerPolynomialAlgebra (A : Type u) [CommRing A] (t : ℕ) : Type u :=
+  DividedPowerAlgebra A (Fin t →₀ A)
+
+/-- The divided power `x_i^[n]` in the finite-variable algebra. -/
+def dividedPowerVariable {A : Type u} [CommRing A] (t : ℕ) (i : Fin t)
+    (n : ℕ) : dividedPowerPolynomialAlgebra A t :=
+  DividedPowerAlgebra.dp A n (Finsupp.single i 1)
+
+/-- The degree-one generator `x_i`. -/
+abbrev dividedPowerGenerator {A : Type u} [CommRing A] (t : ℕ) (i : Fin t) :=
+  dividedPowerVariable (A := A) t i 1
+
+/-- The monomial `∏ i, x_i^[n_i]`. -/
+def dividedPowerMonomial {A : Type u} [CommRing A] (t : ℕ)
+    (n : Fin t → ℕ) : dividedPowerPolynomialAlgebra A t :=
+  ∏ i : Fin t, dividedPowerVariable t i (n i)
+
+/-- The zero multi-index gives the multiplicative unit. -/
+theorem dividedPowerMonomial_zero {A : Type u} [CommRing A] (t : ℕ) :
+    dividedPowerMonomial (A := A) t (fun _ ↦ 0) =
+      (1 : dividedPowerPolynomialAlgebra A t) := by
+  classical
+  simp [dividedPowerMonomial, dividedPowerVariable,
+    DividedPowerAlgebra.dp_zero]
+
+/-- The monomials give the direct-sum `A`-module basis indexed by tuples of
+nonnegative exponents. -/
+theorem dividedPowerPolynomialAlgebra_monomial_basis
+    {A : Type u} [CommRing A] (t : ℕ) :
+    ∃ b : Module.Basis (Fin t → ℕ) A (dividedPowerPolynomialAlgebra A t),
+      ∀ n, b n = dividedPowerMonomial t n := by
+  sorry
+
+/-- Multiplication of two divided powers of one variable. -/
+theorem dividedPowerVariable_mul {A : Type u} [CommRing A] (t : ℕ)
+    (i : Fin t) (n m : ℕ) :
+    dividedPowerVariable t i n * dividedPowerVariable t i m =
+      (Nat.choose (n + m) n : dividedPowerPolynomialAlgebra A t) *
+        dividedPowerVariable t i (n + m) := by
+  simpa [dividedPowerVariable, nsmul_eq_mul] using
+    (DividedPowerAlgebra.dp_mul (R := A) (M := Fin t →₀ A)
+      (n := n) (p := m) (m := Finsupp.single i 1))
+
+/-- The canonical augmentation, sending every positive divided-power variable
+to zero. -/
+noncomputable def dividedPowerAugmentation {A : Type u} [CommRing A] (t : ℕ) :
+    dividedPowerPolynomialAlgebra A t →ₐ[A] A :=
+  DividedPowerAlgebra.lift (dividedPowersBot A)
+    (0 : (Fin t →₀ A) →ₗ[A] A) (by simp)
+
+/-- The augmentation ideal `A⟨x₁, …, xₜ⟩₊`. -/
+def dividedPowerAugmentationIdeal {A : Type u} [CommRing A] (t : ℕ) :
+    Ideal (dividedPowerPolynomialAlgebra A t) :=
+  RingHom.ker (dividedPowerAugmentation t).toRingHom
+
+/-- The augmentation kills every positive divided power of every variable. -/
+theorem dividedPowerAugmentation_variable {A : Type u} [CommRing A] (t : ℕ)
+    (i : Fin t) (n : ℕ) (hn : n ≠ 0) :
+    dividedPowerAugmentation (A := A) t (dividedPowerVariable (A := A) t i n) =
+      (0 : A) := by
+  sorry
+
+/-- The divided-power ideal in the polynomial algebra: the coefficient ideal
+extended to the algebra plus the positive-degree augmentation ideal. -/
+def dividedPowerPolynomialIdeal (A : Type u) [CommRing A]
+    (I : Ideal A) (t : ℕ) : Ideal (dividedPowerPolynomialAlgebra A t) :=
+  Ideal.map (algebraMap A (dividedPowerPolynomialAlgebra A t)) I ⊔
+    dividedPowerAugmentationIdeal t
+
+/-- The polynomial algebra equipped with a divided-power structure on its
+coefficient-plus-positive-degree ideal. -/
+def dividedPowerPolynomialRing (A : DividedPowerRing.{u}) (t : ℕ)
+    (δ : DividedPowers (dividedPowerPolynomialIdeal (A : Type u) A.ideal t)) :
+    DividedPowerRing.{u} :=
+  { toCommRing := CommRingCat.of (dividedPowerPolynomialAlgebra (A : Type u) t)
+    ideal := dividedPowerPolynomialIdeal (A : Type u) A.ideal t
+    dividedPowers := δ }
+
+/-- Compatibility of a divided-power structure on the polynomial ideal with
+the canonical coefficient map. -/
+def CoefficientDpowCompatible (A : DividedPowerRing.{u}) (t : ℕ)
+    (δ : DividedPowers (dividedPowerPolynomialIdeal (A : Type u) A.ideal t)) : Prop :=
+  ∀ {n : ℕ} {x : A}, x ∈ A.ideal →
+    δ.dpow n (algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t) x) =
+      algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)
+        (A.dividedPowers.dpow n x)
+
+/-- The coefficient homomorphism once divided-power compatibility has been
+specified. -/
+def dividedPowerPolynomialCoefficientHom (A : DividedPowerRing.{u}) (t : ℕ)
+    (δ : DividedPowers (dividedPowerPolynomialIdeal (A : Type u) A.ideal t))
+    (hδ : CoefficientDpowCompatible A t δ) :
+    DividedPowerRing.Hom A (dividedPowerPolynomialRing A t δ) :=
+  { hom := algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)
+    ideal_map := by
+      intro x hx
+      exact Ideal.mem_sup_left (Ideal.mem_map_of_mem
+        (algebraMap (A : Type u) (dividedPowerPolynomialAlgebra (A : Type u) t)) hx)
+    dpow_comm := hδ }
+
+/-- Data on the target of the universal property: a divided-power-ring map
+from the coefficient ring and one element of the target ideal per variable. -/
+def DividedPowerPolynomialTargetData (A C : DividedPowerRing.{u}) (t : ℕ) : Type u :=
+  DividedPowerRing.Hom A C × { k : Fin t → C // ∀ i, k i ∈ C.ideal }
+
+/-- The finite-variable divided-power polynomial algebra has the source's
+existence, uniqueness, and universal property. -/
+theorem exists_unique_dividedPowerPolynomialDividedPowers
+    (A : DividedPowerRing.{u}) (t : ℕ) (ht : 1 ≤ t) :
+    ∃! δ : DividedPowers (dividedPowerPolynomialIdeal (A : Type u) A.ideal t),
+      (CoefficientDpowCompatible A t δ ∧
+        (∀ (i : Fin t) (n : ℕ),
+          δ.dpow n (dividedPowerVariable t i 1) =
+            dividedPowerVariable t i n) ∧
+        ∀ C : DividedPowerRing.{u},
+          Nonempty ((dividedPowerPolynomialRing A t δ ⟶ C) ≃
+            DividedPowerPolynomialTargetData A C t)) := by
+  sorry
+
+/-! ## Infinitely many variables -/
+
+/-- The divided power polynomial algebra on an arbitrary (same-universe) set
+of variables. -/
+abbrev infiniteDividedPowerPolynomialAlgebra (A : Type u) [CommRing A]
+    (W : Type u) : Type u :=
+  DividedPowerAlgebra A (W →₀ A)
+
+/-- The variable `x_w^[n]` in the infinite-variable algebra. -/
+def infiniteDividedPowerVariable {A : Type u} [CommRing A] (W : Type u)
+    (w : W) (n : ℕ) : infiniteDividedPowerPolynomialAlgebra A W :=
+  DividedPowerAlgebra.dp A n (Finsupp.single w 1)
+
+/-- The universal mapping property for infinitely many divided-power
+variables. -/
+theorem infiniteDividedPowerPolynomial_universal
+    (A : DividedPowerRing.{u}) (W : Type u) (C : DividedPowerRing.{u}) :
+    Nonempty ((DividedPowerAlgebra A (W →₀ A) ⟶ C) ≃
+      (DividedPowerRing.Hom A C ×
+        { k : W → C // ∀ w, k w ∈ C.ideal })) := by
+  sorry
+
+/-- The linear map inserting `s` finite variables into `t` finite variables. -/
+def finiteVariableModuleMap {A : Type u} [CommRing A] {s t : ℕ}
+    (h : s ≤ t) : (Fin s →₀ A) →ₗ[A] (Fin t →₀ A) :=
+  Finsupp.lmapDomain A A (Fin.castLE h)
+
+/-- The canonical algebra map for an inclusion of finite variable sets. -/
+def finiteVariableAlgebraMap {A : Type u} [CommRing A] {s t : ℕ}
+    (h : s ≤ t) :
+    dividedPowerPolynomialAlgebra A s →ₐ[A] dividedPowerPolynomialAlgebra A t :=
+  DividedPowerAlgebra.map A (finiteVariableModuleMap h)
+
+/-- The canonical map sends each source divided-power variable to the
+corresponding target variable. -/
+theorem finiteVariableAlgebraMap_variable {A : Type u} [CommRing A]
+    {s t : ℕ} (h : s ≤ t) (i : Fin s) (n : ℕ) :
+    finiteVariableAlgebraMap (A := A) h (dividedPowerVariable (A := A) s i n) =
+      dividedPowerVariable (A := A) t (Fin.castLE h i) n := by
+  simp [finiteVariableAlgebraMap, dividedPowerVariable,
+    finiteVariableModuleMap]
+
+/-- The module map associated to an inclusion of finite subsets of a variable
+set. -/
+def finiteSubsetVariableModuleMap {A : Type u} [CommRing A] {W : Type u}
+    {E F : Finset W} (h : E ≤ F) : (E →₀ A) →ₗ[A] (F →₀ A) :=
+  Finsupp.lmapDomain A A (fun x : E ↦ ⟨x, h x.property⟩)
+
+/-- The canonical divided-power algebra map between finite subset stages. -/
+def finiteSubsetVariableAlgebraMap {A : Type u} [CommRing A] {W : Type u}
+    {E F : Finset W} (h : E ≤ F) :
+    DividedPowerAlgebra A (E →₀ A) →ₐ[A] DividedPowerAlgebra A (F →₀ A) :=
+  DividedPowerAlgebra.map A (finiteSubsetVariableModuleMap h)
+
+/-- Objectwise identifications of a finite-variable diagram with the finite
+stages from the source. -/
+abbrev FiniteVariableStageEquivalences (A : DividedPowerRing.{u}) (W : Type u)
+    (F : (Finset W) ⥤ CommRingCat.{u}) : Type u :=
+  ∀ E : Finset W,
+    F.obj E ≅ CommRingCat.of
+      (DividedPowerAlgebra (A : Type u) (E →₀ (A : Type u)))
+
+/-- The colimit assertion in the infinite-variable remark, stated with the
+finite-variable stages and their canonical transition maps. -/
+def IsFiniteVariableColimit (A : DividedPowerRing.{u}) (W : Type u)
+    (B : Type u) [CommRing B] : Prop :=
+  ∃ (F : (Finset W) ⥤ CommRingCat.{u}) (c : Cocone F),
+    c.pt = CommRingCat.of B ∧
+      (∃ e : FiniteVariableStageEquivalences A W F,
+        (∀ {E G : Finset W} (h : E ≤ G),
+          (e E).hom ≫
+              CommRingCat.ofHom (finiteSubsetVariableAlgebraMap h).toRingHom =
+            F.map h.hom ≫ (e G).hom) ∧
+      Nonempty (IsColimit c))
+
+/-- The infinite-variable algebra is the colimit of its finite-variable
+subalgebras, as asserted in the source. -/
+theorem infiniteDividedPowerPolynomial_isFiniteVariableColimit
+    (A : DividedPowerRing.{u}) (W : Type u) :
+    IsFiniteVariableColimit A W (infiniteDividedPowerPolynomialAlgebra (A : Type u) W) := by
+  sorry
+
+/-! ## Detection of divided powers at a prime -/
+
+/-- Every factorial below a prime is a unit in a `Z_(p)`-algebra. -/
+theorem factorial_isUnit_of_lt_prime
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {n : ℕ} (hn : n < p) :
+    IsUnit (Nat.factorial n : A) := by
+  sorry
+
+/-- The inverse of a unit, viewed back in the ring. -/
+noncomputable def localizedUnitInverse {A : Type u} [CommRing A]
+    {a : A} (ha : IsUnit a) : A :=
+  (↑(ha.unit⁻¹) : A)
+
+/-- The canonical inverse of a factorial below a fixed prime. -/
+noncomputable def primeLocalizedFactorialInverse
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) (n : ℕ) : A :=
+  if hn : n < p then
+    localizedUnitInverse (factorial_isUnit_of_lt_prime p hp hA hn)
+  else 0
+
+/-- The divided-power operation on the ideal itself, for a positive index. -/
+def dividedPowerOnIdeal {A : Type u} [CommRing A] {I : Ideal A}
+    (γ : DividedPowers I) (n : ℕ) (hn : n ≠ 0) : I → I :=
+  fun x ↦ ⟨γ.dpow n x, γ.dpow_mem hn x.property⟩
+
+/-- The source's prime-local coefficient in the addition formula. -/
+noncomputable def primeDividedPowerCrossTerm {A : Type u} [CommRing A]
+    (p : ℕ) (hp : Nat.Prime p) (hA : IsZLocalizedAtPrime p A)
+    (x y : A) : A := by
+  classical
+  exact (Finset.antidiagonal p).filter
+      (fun k ↦ k.1 ≠ 0 ∧ k.2 ≠ 0) |>.sum
+    (fun k ↦ (primeLocalizedFactorialInverse p hp hA k.1 *
+      primeLocalizedFactorialInverse p hp hA k.2) *
+      x ^ k.1 * y ^ k.2)
+
+/-- An operation on an ideal with the three conditions in the prime-local
+criterion. -/
+structure PrimeDividedPowerOperation {A : Type u} [CommRing A]
+    (p : ℕ) (I : Ideal A) where
+  op : A → A
+  op_mem : ∀ {x : A}, x ∈ I → op x ∈ I
+
+/-- The three source conditions for a prime-local divided-power operation. -/
+def IsPrimeDividedPowerOperation {A : Type u} [CommRing A]
+    (p : ℕ) (hp : Nat.Prime p) (hA : IsZLocalizedAtPrime p A)
+    (I : Ideal A) (δ : PrimeDividedPowerOperation p I) : Prop :=
+  (∀ {x : A}, x ∈ I →
+    (Nat.factorial p : A) * δ.op x = x ^ p) ∧
+  (∀ (a : A) {x : A}, x ∈ I →
+    δ.op (a * x) = a ^ p * δ.op x) ∧
+  (∀ {x y : A}, x ∈ I → y ∈ I →
+    δ.op (x + y) = δ.op x + primeDividedPowerCrossTerm p hp hA x y + δ.op y)
+
+/-- The prime-local criterion determines a divided-power structure from its
+`p`-th operation. -/
+theorem dividedPowers_eq_iff_prime_operation_eq
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {I : Ideal A}
+    (γ γ' : DividedPowers I) :
+    γ = γ' ↔
+      dividedPowerOnIdeal γ p hp.ne_zero = dividedPowerOnIdeal γ' p hp.ne_zero := by
+  sorry
+
+/-- Existence and uniqueness of divided powers from an operation satisfying
+the three prime-local conditions. -/
+theorem exists_unique_dividedPowers_of_prime_operation
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {I : Ideal A}
+    (δ : PrimeDividedPowerOperation p I)
+    (hδ : IsPrimeDividedPowerOperation p hp hA I δ) :
+    ∃! γ : DividedPowers I,
+      dividedPowerOnIdeal γ p hp.ne_zero =
+        (fun x ↦ ⟨δ.op x, δ.op_mem x.property⟩) := by
+  sorry
+
+/-! ## The Ryo--Suzuki observation -/
+
+/-- The second and third conditions in the prime-local criterion. -/
+def IsPrimeDividedPowerOperationWithoutPower {A : Type u} [CommRing A]
+    (p : ℕ) (hp : Nat.Prime p) (hA : IsZLocalizedAtPrime p A)
+    (I : Ideal A) (δ : PrimeDividedPowerOperation p I) : Prop :=
+  (∀ (a : A) {x : A}, x ∈ I →
+    δ.op (a * x) = a ^ p * δ.op x) ∧
+  (∀ {x y : A}, x ∈ I → y ∈ I →
+    δ.op (x + y) = δ.op x + primeDividedPowerCrossTerm p hp hA x y + δ.op y)
+
+/-- Scalar homogeneity, one of the two assumptions used in the follow-up
+remark. -/
+theorem primeOperation_nat_smul
+    {p : ℕ} (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {I : Ideal A}
+    {δ : PrimeDividedPowerOperation p I}
+    (hδ : IsPrimeDividedPowerOperationWithoutPower p hp hA I δ)
+    (n : ℕ) {x : A} (hx : x ∈ I) :
+    δ.op (n • x) = n ^ p • δ.op x := by
+  simpa [nsmul_eq_mul] using hδ.1 (n : A) hx
+
+/-- The integer-multiple identity displayed in the proof of the follow-up
+remark. -/
+theorem primeOperation_nat_multiple_formula
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {I : Ideal A}
+    (δ : PrimeDividedPowerOperation p I)
+    (hδ : IsPrimeDividedPowerOperationWithoutPower p hp hA I δ)
+    (n : ℕ) (hn : 1 ≤ n) {x : A} (hx : x ∈ I) :
+    δ.op (n • x) = n • δ.op x +
+      ((Nat.div (n ^ p - n) (Nat.factorial p) : A) * x ^ p) := by
+  sorry
+
+/-- For a prime `p`, some integer fails the congruence `n^p = n mod p^2`. -/
+theorem exists_nat_not_primeSquare_dvd_pow_sub_self
+    (p : ℕ) (hp : Nat.Prime p) :
+    ∃ n : ℕ, ¬ p ^ 2 ∣ n ^ p - n := by
+  sorry
+
+/-- The cyclic-unit-group fact used in the number-theoretic argument of the
+follow-up remark. -/
+theorem units_mod_primeSquare_additive_cyclic
+    (p : ℕ) (hp : Nat.Prime p) :
+    Nonempty ((ZMod (p ^ 2))ˣ ≃*
+      Multiplicative (ZMod (p * (p - 1)))) := by
+  sorry
+
+/-- The first condition of the prime-local criterion follows from the other
+two conditions. -/
+theorem primeOperation_power_formula
+    (p : ℕ) (hp : Nat.Prime p) {A : Type u} [CommRing A]
+    (hA : IsZLocalizedAtPrime p A) {I : Ideal A}
+    (δ : PrimeDividedPowerOperation p I)
+    (hδ : IsPrimeDividedPowerOperationWithoutPower p hp hA I δ) :
+    ∀ {x : A}, x ∈ I →
+      (Nat.factorial p : A) * δ.op x = x ^ p := by
+  sorry
+
+end
+
+end Formalization.Books.Dpa.Unit05

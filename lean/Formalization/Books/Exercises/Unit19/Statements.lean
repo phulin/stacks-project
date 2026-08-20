@@ -54,6 +54,41 @@ private lemma monic_quadratic_eq {p : Polynomial ℚ} (hm : p.Monic)
       apply Polynomial.coeff_eq_zero_of_natDegree_lt
       omega
     simp [hp]
+
+private lemma no_symmetric_quadratic_coefficients (a b d : ℚ)
+    (constantCoeff : (144 : ℚ) = a * a)
+    (quadraticCoeff : (0 : ℚ) = a + b * d + a) (d_eq : d = -b) : False := by
+  have ha : a = 12 ∨ a = -12 := by
+    have : (a - 12) * (a + 12) = 0 := by
+      calc
+        (a - 12) * (a + 12) = a * a - 144 := by ring
+        _ = 0 := by rw [← constantCoeff]; ring
+    rcases mul_eq_zero.mp this with h | h
+    · exact Or.inl (sub_eq_zero.mp h)
+    · exact Or.inr (eq_neg_of_add_eq_zero_left h)
+  rcases ha with a_pos | a_neg
+  · rw [d_eq, a_pos] at quadraticCoeff
+    exact no_rat_square_24 b (by nlinarith only [quadraticCoeff])
+  · rw [d_eq, a_neg] at quadraticCoeff
+    nlinarith only [quadraticCoeff, sq_nonneg b]
+
+private lemma no_quadratic_factor_coefficients (a b c d : ℚ)
+    (constantCoeff : (144 : ℚ) = a * c) (linearCoeff : (0 : ℚ) = a * d + b * c)
+    (quadraticCoeff : (0 : ℚ) = a + b * d + c) (cubicCoeff : (0 : ℚ) = b + d) : False := by
+  have d_eq : d = -b := by linarith only [cubicCoeff]
+  have factor_eq : b * (c - a) = 0 := by
+    calc
+      b * (c - a) = a * (-b) + b * c := by ring
+      _ = 0 := by rw [← d_eq]; exact linearCoeff.symm
+  rcases mul_eq_zero.mp factor_eq with b_zero | c_eq
+  · have c_neg : c = -a := by
+      rw [b_zero, d_eq] at quadraticCoeff
+      linarith only [quadraticCoeff]
+    rw [c_neg] at constantCoeff
+    nlinarith only [constantCoeff, sq_nonneg a]
+  · rw [sub_eq_zero.mp c_eq] at constantCoeff quadraticCoeff
+    exact no_symmetric_quadratic_coefficients a b d constantCoeff quadraticCoeff d_eq
+
 private lemma quartic_plus_144_irreducible :
     Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by
   have hm : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).Monic := by
@@ -96,35 +131,8 @@ private lemma quartic_plus_144_irreducible :
     rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk] at h2 h3
     simp at h0 h1
     norm_num [Finset.sum_range_succ, Polynomial.coeff_X, Polynomial.coeff_C] at h2 h3
-    have h0' : (144 : ℚ) = q.coeff 0 * r.coeff 0 := h0
-    have h1' : (0 : ℚ) = q.coeff 0 * r.coeff 1 + q.coeff 1 * r.coeff 0 := h1
-    have h2' : (0 : ℚ) = q.coeff 0 + q.coeff 1 * r.coeff 1 + r.coeff 0 := h2
-    have h3' : (0 : ℚ) = q.coeff 1 + r.coeff 1 := h3
-    have hr1 : r.coeff 1 = -q.coeff 1 := by linarith [h3']
-    have hfac : q.coeff 1 * (r.coeff 0 - q.coeff 0) = 0 := by
-      calc
-        q.coeff 1 * (r.coeff 0 - q.coeff 0) =
-            q.coeff 0 * (-q.coeff 1) + q.coeff 1 * r.coeff 0 := by ring
-        _ = 0 := by rw [← hr1]; exact h1'.symm
-    rcases mul_eq_zero.mp hfac with hqa | hdiff
-    · have hrd0 : r.coeff 0 = -q.coeff 0 := by
-        nlinarith [h2', hr1, hqa]
-      rw [hrd0] at h0'
-      nlinarith [h0', sq_nonneg (q.coeff 0)]
-    · have hrd0 : r.coeff 0 = q.coeff 0 := sub_eq_zero.mp hdiff
-      rw [hrd0] at h0'
-      have hpm : (q.coeff 0 - 12) * (q.coeff 0 + 12) = 0 := by
-        nlinarith [h0']
-      rcases mul_eq_zero.mp hpm with hplus | hminus
-      · have hq0 : q.coeff 0 = 12 := by linarith
-        have h2'' := h2'
-        rw [hr1, hq0, hrd0] at h2''
-        apply no_rat_square_24 (q.coeff 1)
-        nlinarith [h2'']
-      · have hq0 : q.coeff 0 = -12 := by linarith
-        have h2'' := h2'
-        rw [hr1, hq0, hrd0] at h2''
-        nlinarith [h2'', sq_nonneg (q.coeff 1)]
+    exact no_quadratic_factor_coefficients
+      (q.coeff 0) (q.coeff 1) (r.coeff 0) (r.coeff 1) h0 h1 h2 h3
 private def planeFirstPolynomial : Polynomial ℚ :=
   (Polynomial.X - Polynomial.C (1 : ℚ)) *
     (Polynomial.X - Polynomial.C (2 : ℚ)) *

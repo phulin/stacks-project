@@ -1,7 +1,6 @@
 import Formalization.Books.Derived.Unit14.DerivedFunctors
 import Formalization.Books.Derived.Unit15.ClassicalDerivedFunctors
-import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
-import Mathlib.CategoryTheory.Functor.Derived.RightDerived
+import Mathlib.CategoryTheory.Functor.Derived.Adjunction
 
 /-!
 # Derived Categories, Chapter 30: deriving adjoints
@@ -65,6 +64,7 @@ structure PartialDerivedAdjunction
     (S : MorphismProperty D) (hS : SaturatedMultiplicativeSystem S)
     (S' : MorphismProperty D') (hS' : SaturatedMultiplicativeSystem S')
     (Q : D ⥤ E) (Q' : D' ⥤ E')
+    [Q.IsLocalization S] [Q'.IsLocalization S']
     (F : D ⥤ D') (G : D' ⥤ D) (adj : G ⊣ F) where
   /-- The bijection `Hom(Q'M, RF(K)) ≃ Hom(LG(M), QK)`. -/
   homEquiv :
@@ -186,27 +186,62 @@ variable {A : Type u} [Category.{v} A] [Abelian A]
   {B : Type u'} [Category.{v'} B] [Abelian B]
   [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
 
-/-- `RF` is a right derived functor on the unbounded derived category when it
-carries the canonical localization comparison map and satisfies Mathlib's
-right-derived universal property. -/
+/-- `RF` is an exact right derived functor on the unbounded derived category
+when it carries the canonical localization comparison map, satisfies
+Mathlib's right-derived universal property, and is exact as a triangulated
+functor. -/
 def IsUnboundedRightDerivedFunctor
     (F : A ⥤ B) [F.Additive]
     (RF : DerivedCategory A ⥤ DerivedCategory B) : Prop :=
   ∃ α : classicalHomotopyToDerived F ⟶
       (DerivedCategory.Qh (C := A)) ⋙ RF,
-    Functor.IsRightDerivedFunctor RF α (quasiIsoHomotopyProperty A)
+    Functor.IsRightDerivedFunctor RF α (quasiIsoHomotopyProperty A) ∧
+      Nonempty (ExactTriangulatedFunctorData RF)
 
-/-- `LG` is a left derived functor on the unbounded derived category when it
-carries the canonical localization comparison map and satisfies Mathlib's
-left-derived universal property. -/
+/-- `LG` is an exact left derived functor on the unbounded derived category
+when it carries the canonical localization comparison map, satisfies
+Mathlib's left-derived universal property, and is exact as a triangulated
+functor. -/
 def IsUnboundedLeftDerivedFunctor
     (G : B ⥤ A) [G.Additive]
     (LG : DerivedCategory B ⥤ DerivedCategory A) : Prop :=
   ∃ β : (DerivedCategory.Qh (C := B)) ⋙ LG ⟶ classicalHomotopyToDerived G,
-    Functor.IsLeftDerivedFunctor LG β (quasiIsoHomotopyProperty B)
+    Functor.IsLeftDerivedFunctor LG β (quasiIsoHomotopyProperty B) ∧
+      Nonempty (ExactTriangulatedFunctorData LG)
+
+/- The generic Mathlib construction of a derived adjunction requires the
+   two comparison transformations for the original adjunction and the
+   corresponding derived-functor structures for their composites.  This is
+   the precise absolute-derived-functor interface used below. -/
+
+/-- A derived adjunction obtained from explicit comparison maps and the
+absolute-derived-functor hypotheses of Mathlib's `Adjunction.derived`. -/
+theorem derivedAdjunction_of_absolute
+    (F : A ⥤ B) (G : B ⥤ A) [F.Additive] [G.Additive]
+    (adj : G ⊣ F)
+    (RF : DerivedCategory A ⥤ DerivedCategory B)
+    (LG : DerivedCategory B ⥤ DerivedCategory A)
+    (α : classicalHomotopyToDerived F ⟶
+      (DerivedCategory.Qh (C := A)) ⋙ RF)
+    (β : (DerivedCategory.Qh (C := B)) ⋙ LG ⟶ classicalHomotopyToDerived G)
+    (hRF : Functor.IsRightDerivedFunctor RF α (quasiIsoHomotopyProperty A))
+    (hLG : Functor.IsLeftDerivedFunctor LG β (quasiIsoHomotopyProperty B))
+    (hLG_RF : Functor.IsLeftDerivedFunctor (LG ⋙ RF)
+      ((Functor.associator _ _ _).inv ≫ Functor.whiskerRight β RF)
+      (quasiIsoHomotopyProperty B))
+    (hRF_LG : Functor.IsRightDerivedFunctor (RF ⋙ LG)
+      (Functor.whiskerRight α LG ≫ (Functor.associator _ _ _).hom)
+      (quasiIsoHomotopyProperty A)) :
+    Nonempty (LG ⊣ RF) := by
+  /- Prior attempt: install the four derived-functor instances and apply
+     `CategoryTheory.Adjunction.derived` with `β` as its left comparison and
+     `α` as its right comparison.  The current Mathlib elaborator still
+     requests the left-derived instance for `LG` at the final application;
+     the statement is retained while its proof is deferred. -/
+  sorry
 
 /-- The source's final lemma: everywhere-defined derived functors preserve the
-original adjunction, so `LG` is left adjoint to `RF`. -/
+   original adjunction, so `LG` is left adjoint to `RF`. -/
 theorem derivedAdjunction
     (F : A ⥤ B) (G : B ⥤ A) [F.Additive] [G.Additive]
     (adj : G ⊣ F)

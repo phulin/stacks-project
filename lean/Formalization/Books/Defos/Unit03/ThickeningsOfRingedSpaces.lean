@@ -111,7 +111,13 @@ theorem thickeningKernelShortComplex_shortExact
     {X X' : RingedSpace.{v}} (i : RingedSpaceHom X X')
     (hi : IsThickening i) :
     (thickeningKernelShortComplex i).ShortExact := by
-  sorry
+  let q := SheafOfModules.unitToPushforwardObjUnit i.sharp
+  have hq : Epi q := hi.structureSheaf_module_epi
+  change (ShortComplex.mk (kernel.ι q) q (kernel.condition q)).ShortExact
+  apply ShortComplex.ShortExact.mk'
+  · exact ShortComplex.exact_of_f_is_kernel _ (kernelIsKernel q)
+  · infer_instance
+  · exact hq
 
 /-- A module on the thickened space is annihilated by the kernel ideal. -/
 abbrev AnnihilatedByThickeningIdeal {X X' : RingedSpace.{v}}

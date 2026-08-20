@@ -18,6 +18,7 @@ formula while reusing the presentation-independent cotangent API.
 namespace Formalization.Books.Restricted.Unit03
 
 open CategoryTheory
+open CategoryTheory.Limits
 open Formalization.Books.Restricted.Unit02
 open scoped TensorProduct
 
@@ -72,6 +73,15 @@ abbrev NaiveCotangentDifferential
     (P : NaiveCotangentPresentation A I B) :
     NaiveCotangentConormal P →ₗ[B.obj] NaiveCotangentSpace P :=
   P.extension.cotangentComplex
+
+theorem naive_cotangent_differential_on_relation
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    {I : Ideal A} {B : CompleteAlgebraCategory A I}
+    (P : NaiveCotangentPresentation A I B) (g : P.extension.ker) :
+    P.extension.cotangentComplex (Algebra.Extension.Cotangent.mk g) =
+      1 ⊗ₜ[P.extension.Ring]
+        KaehlerDifferential.D A P.extension.Ring g.1 := by
+  exact P.extension.cotangentComplex_mk g
 
 /-- The two terms, in the source order `(-1, 0)`. -/
 abbrev NaiveCotangentTerms
@@ -251,16 +261,80 @@ abbrev AlgebraStage {A : Type u} [CommRing A] (I : Ideal A)
     (B : CompleteAlgebraCategory A I) (n : ℕ+) : Type u :=
   cprimeQuotientStage I B.obj n
 
+/-! At a finite adic stage the completed presentation becomes an ordinary
+polynomial presentation over `Aₙ`.  The let-bound algebra structure is the
+canonical quotient map supplied by Chapter 2. -/
+structure NaiveCotangentStagePresentation
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    {I : Ideal A} {B : CompleteAlgebraCategory A I}
+    (P : NaiveCotangentPresentation A I B) (n : ℕ+) where
+  presentation :
+    letI : Algebra (BaseStage A I n) (AlgebraStage I B n) :=
+      (cprimeBaseComponent I B.obj n).toAlgebra
+    MvPolynomial (Fin P.variableCount) (BaseStage A I n) →ₐ[
+      BaseStage A I n] (AlgebraStage I B n)
+  presentation_surjective :
+    letI : Algebra (BaseStage A I n) (AlgebraStage I B n) :=
+      (cprimeBaseComponent I B.obj n).toAlgebra
+    Function.Surjective presentation
+
+abbrev NaiveCotangentStageTerms
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    {I : Ideal A} {B : CompleteAlgebraCategory A I}
+    {P : NaiveCotangentPresentation A I B} {n : ℕ+}
+    (Q : NaiveCotangentStagePresentation P n) : Type _ :=
+  letI : Algebra (BaseStage A I n) (AlgebraStage I B n) :=
+    (cprimeBaseComponent I B.obj n).toAlgebra
+  let E := Algebra.Extension.ofSurjective Q.presentation Q.presentation_surjective
+  E.Cotangent × E.CotangentSpace
+
+/-! The completed complex after reduction modulo `Iⁿ` is obtained by scalar
+extension to the quotient stage. -/
+abbrev NaiveCotangentCompletedStageTerms
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    {I : Ideal A} {B : CompleteAlgebraCategory A I}
+    (P : NaiveCotangentPresentation A I B) (n : ℕ+) : Type _ :=
+  letI : Algebra B.obj (AlgebraStage I B n) :=
+    (Ideal.Quotient.mk ((cprimeIdeal I B.obj) ^ (n : ℕ))).toAlgebra
+  (AlgebraStage I B n ⊗[B.obj] NaiveCotangentConormal P) ×
+    (AlgebraStage I B n ⊗[B.obj] NaiveCotangentSpace P)
+
 /-- A presentation-level inverse system of naive cotangent complexes. -/
 structure NaiveCotangentStageSystem
     {A : Type u} [CommRing A] [IsNoetherianRing A]
     {I : Ideal A} {B : CompleteAlgebraCategory A I}
     (P : NaiveCotangentPresentation A I B) where
-  stage : ∀ n : ℕ+, Type u
+  /-- The ordinary presentations induced at the adic stages. -/
+  stage_presentation : ∀ n : ℕ+, NaiveCotangentStagePresentation P n
+  stage : ∀ _n : ℕ+, Type u
+  stage_is_presentation_terms : ∀ n,
+    Nonempty (stage n ≃ NaiveCotangentStageTerms (stage_presentation n))
   transition : ∀ {m n : ℕ+}, n ≤ m → stage m → stage n
   transition_id : ∀ n, transition (m := n) (n := n) le_rfl = id
   transition_comp : ∀ {l m n : ℕ+} (hlm : m ≤ l) (hmn : n ≤ m),
     (transition hmn).comp (transition hlm) = transition (hmn.trans hlm)
+
+/-! The stage system is an inverse system in `TypeCat`; this records the
+categorical limit interface used for the source's `R lim` assertion without
+claiming that all stages are isomorphic. -/
+noncomputable def naiveCotangentStageTypeSystem
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    {I : Ideal A} {B : CompleteAlgebraCategory A I}
+    {P : NaiveCotangentPresentation A I B}
+    (S : NaiveCotangentStageSystem P) :
+    Formalization.Books.Categories.Unit21.InverseSystem ℕ+ (Type u) where
+  obj i := S.stage i.unop
+  map f := TypeCat.ofHom
+    (S.transition (CategoryTheory.leOfHom f.unop))
+  map_id := by
+    intro i
+    ext x
+    simpa using congrFun (S.transition_id i.unop) x
+  map_comp := by
+    intro i j k f g
+    ext x
+    simpa [Function.comp_apply] using congrFun (S.transition_comp
+      (CategoryTheory.leOfHom f.unop) (CategoryTheory.leOfHom g.unop)).symm x
 
 /-- Strict isomorphism of the completed and stagewise pro-objects. -/
 structure StrictNaiveCotangentProIsomorphism
@@ -268,8 +342,8 @@ structure StrictNaiveCotangentProIsomorphism
     {I : Ideal A} {B : CompleteAlgebraCategory A I}
     (P : NaiveCotangentPresentation A I B)
     (S : NaiveCotangentStageSystem P) where
-  forward : ∀ n, NaiveCotangentTerms P → S.stage n
-  backward : ∀ n, S.stage n → NaiveCotangentTerms P
+  forward : ∀ n, NaiveCotangentCompletedStageTerms P n ≃ S.stage n
+  backward : ∀ n, S.stage n ≃ NaiveCotangentCompletedStageTerms P n
   forward_backward : ∀ n x, backward n (forward n x) = x
   backward_forward : ∀ n x, forward n (backward n x) = x
 
@@ -287,11 +361,9 @@ theorem naive_cotangent_is_derived_limit
     {A : Type u} [CommRing A] [IsNoetherianRing A]
     {I : Ideal A} {B : CompleteAlgebraCategory A I}
     (P : NaiveCotangentPresentation A I B)
-    (S : NaiveCotangentStageSystem P)
-    (hS : Nonempty (StrictNaiveCotangentProIsomorphism P S)) :
-    ∃ L : Type u,
-      ∀ n, Nonempty (L ≃ S.stage n) := by
-  sorry
+    (S : NaiveCotangentStageSystem P) :
+    Nonempty (IsLimit (limit.cone (naiveCotangentStageTypeSystem S))) := by
+  exact ⟨limit.isLimit _⟩
 
 /-! ## Base change -/
 
@@ -304,6 +376,9 @@ structure NaiveCotangentBaseChangeData
     {B₂ : CompleteAlgebraCategory A₂ D.I₂}
     (P₁ : NaiveCotangentPresentation A₁ D.I₁ B₁)
     (P₂ : NaiveCotangentPresentation A₂ D.I₂ B₂) where
+  /-- `B₂` is the completed tensor-product base change of `B₁`. -/
+  baseChange : Nonempty (B₂ ≅
+    completeBaseChangeObject D (Ideal.fg_of_isNoetherianRing D.I₂) B₁)
   conormalMap : NaiveCotangentConormal P₁ → NaiveCotangentConormal P₂
   cotangentSpaceMap : NaiveCotangentSpace P₁ → NaiveCotangentSpace P₂
 
@@ -329,6 +404,8 @@ theorem naive_cotangent_base_change
     (D : AdicBaseChangeData A₁ A₂)
     {B₁ : CompleteAlgebraCategory A₁ D.I₁}
     {B₂ : CompleteAlgebraCategory A₂ D.I₂}
+    (hB₂ : Nonempty (B₂ ≅
+      completeBaseChangeObject D (Ideal.fg_of_isNoetherianRing D.I₂) B₁))
     (P₁ : NaiveCotangentPresentation A₁ D.I₁ B₁)
     (P₂ : NaiveCotangentPresentation A₂ D.I₂ B₂)
     : ∃ M : NaiveCotangentBaseChangeData D P₁ P₂,
@@ -380,18 +457,16 @@ theorem exact_sequence_naive_cotangent
 /-! ## The transitive local-complete-intersection injection -/
 
 theorem transitive_lci_naive_cotangent_injective
-    {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
-    [Algebra A B] [Algebra A C] [Algebra B C]
-    [IsScalarTower A B C]
-    (I : Ideal A) (J : Ideal B) (K : Ideal C)
-    (stageMap : ∀ n : ℕ+,
-      (B ⧸ J ^ (n : ℕ)) →+* (C ⧸ K ^ (n : ℕ)))
+    {A : Type u} [CommRing A] [IsNoetherianRing A]
+    (I : Ideal A)
+    (B C : CompleteAlgebraCategory A I)
+    (f : B ⟶ C)
     (hlci : ∀ n : ℕ+,
       Formalization.Books.MoreAlgebra.Unit83.IsLocalCompleteIntersectionHom
-        (stageMap n)) :
-    ∃ f : C ⊗[B] IntrinsicNaiveHMinusOne A B →ₗ[C]
-        IntrinsicNaiveHMinusOne A C,
-      Function.Injective f := by
+        (cprimeQuotientMapComponent I f.hom n)) :
+    letI : Algebra B.obj C.obj := f.hom.hom.toAlgebra
+    Function.Injective
+      (Algebra.H1Cotangent.map A B.obj C.obj C.obj) := by
   sorry
 
 end

@@ -1816,6 +1816,12 @@ summand, while the finite-module K-group is ℤ. -/
 Proof roadmap (the node-specific classification layer is not yet in the
 project).
 
+Statement audit: the conclusion is sound for every field, including finite
+fields and fields of positive characteristic.  The ring below is a domain as
+a subring of `k[X]`; the `Infinite k` hypothesis is needed only by the next
+non-bijectivity theorem.  Thus no hypothesis or conclusion of `kGroups_node`
+should be changed.
+
 Put `R := nodeRing k` and `B := Polynomial k`; all the modules below can stay
 in `Type u` (as do `R`, `B`, `k`, `FiniteModulePresentation R`, and
 `FiniteProjectivePresentation R`).  The required result is not a consequence
@@ -1834,18 +1840,66 @@ about an actual product ring; `R` is instead the pullback in the Milnor square
 
 and hence cannot be used to supply either classification below.
 
+Declaration order and checked library API.  Keep every helper below before
+`kGroups_node`; no later declaration in this file is needed.  The existing
+imports already expose `Module.Projective.iff_split_of_projective` from
+`Mathlib/Algebra/Module/Projective.lean`,
+`Function.Exact.splitSurjectiveEquiv` from
+`Mathlib/Algebra/Exact/Basic.lean`, `Module.Flat.lTensor_exact` and
+`Module.Flat.lTensor_preserves_injective_linearMap` from
+`Mathlib/RingTheory/Flat/Basic.lean`, `LinearMap.lTensor_surjective` from
+`Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean`, and
+`Module.Finite.base_change` from
+`Mathlib/RingTheory/TensorProduct/Finite.lean`.  The matrix reduction below
+needs the focused import `Mathlib.LinearAlgebra.Matrix.SpecialLinearGroup`;
+the Noetherian and unit-polynomial arguments may need the focused imports
+`Mathlib.RingTheory.Adjoin.FG` and
+`Mathlib.Algebra.Polynomial.Degree.Units`.  Use
+`Matrix.SpecialLinearGroup.diagonal_transvection_induction'`,
+`Matrix.SpecialLinearGroup.transvection`, and
+`Polynomial.isUnit_iff`; do not introduce an abstract Picard-group layer.
+For the finite `B`-resolution, `Submodule.basisOfPid` is in
+`Mathlib/LinearAlgebra/FreeModule/PID.lean` and takes
+`Pi.basisFun B (Fin n)` as its first argument.
+
+The reusable project declarations are all earlier in this file
+`Formalization/Books/Algebra/Unit55/KGroups.lean`:
+`kPrimeZeroClass_exact`, `kPrimeZeroClass_eq_of_linearEquiv`,
+`kPrimeZeroClass_eq_of_presentation`, `kPrimeZeroClass_prod`,
+`kPrimeZero_generated`, `kZeroClass_prod`, `kZeroClass_free_pid`,
+`kZeroClass_eq_of_linearEquiv`, `kZeroClass_eq_of_presentation`,
+`kZero_generated`, `exists_finite_free_equiv`, and
+`finite_module_rank_add_of_short_exact_pid`.  The quotient-lift and final
+bijectivity patterns should be copied structurally from the earlier proof of
+`kGroups_pid`, with only the class normal forms replaced.
+
+All node-specific rings and modules should be in `Type u`.  In particular,
+put `R : Type u := nodeRing k`, `B : Type u := Polynomial k`, and later
+`K : Type u := FractionRing R`; then `R`, `B`, `k`, every patch module,
+and both factors of `K ⊗[R] P.module` have matching universes.  Matrices use
+the finite index `Fin n`, so no `ULift`/`Shrink` bridge is required.
+
 1. First add the common normalization/conductor interface immediately before
-   this theorem.  Define the residue map `nodeResidue : R →+* k` by evaluation
-   at zero (the equalizer condition identifies evaluation at one), and define
-   `nodeConductor : Ideal R := RingHom.ker nodeResidue`.  Prove:
+   this theorem.  Define the inclusion `nodeNormalization : R →+* B`, the
+   residue map `nodeResidue : R →+* k` by evaluation at zero (the equalizer
+   condition identifies evaluation at one), and
+   `nodeConductor : Ideal R := RingHom.ker nodeResidue`.  Install the `R`-algebra
+   structures on `B` and `k` through these two maps once, rather than making
+   typeclass search rediscover them in each lemma.  Prove, in this order:
 
    * `node_normalization_finite : Module.Finite R B`, using the decomposition
      `f = (f - C (f(1)-f(0)) * X) + C (f(1)-f(0)) * X`, whose first summand is
-     in `R`;
+     in `R`.  This shows that `{1, X}` spans `B`; package the resulting
+     `Submodule.FG` with `Module.Finite.of_fg_top`;
    * `node_isNoetherianRing : IsNoetherianRing R`.  One direct proof writes
      `R = k[X*(X-1), X^2*(X-1)]` (divide a polynomial by the monic quadratic
-     `X*(X-1)`); this finiteness is needed below so that the kernel of the
-     normalization unit map on a finite module is again finite;
+     `X*(X-1)` and induct on the quotient, using
+     `X^2 = X + X*(X-1)`).  State the intermediate equality as
+     `nodeRing_eq_adjoin`, turn it into `Subalgebra.FG` with
+     `Subalgebra.fg_def`, and apply `isNoetherianRing_of_fg` from
+     `Mathlib/RingTheory/Adjoin/FG.lean`.  This finiteness is needed below so
+     that the kernel of the normalization unit map on a finite module is again
+     finite; use `Submodule.FG.of_le` and `Module.Finite.of_fg` there;
    * the exact normalization sequence `0 → R → B → k → 0`, where the last
      map is `f ↦ f(1)-f(0)` and `k` is an `R`-module through `nodeResidue`;
    * `nodeConductor` consists of the polynomials vanishing at both zero and
@@ -1854,23 +1908,79 @@ and hence cannot be used to supply either classification below.
      terms regarded as `R`-modules.  Applying `kPrimeZeroClass_exact` makes
      `kPrimeZeroClass (R := R) (M := k) = 0`; use
      `kPrimeZeroClass_eq_of_linearEquiv` to replace kernels/cokernels by the
-     displayed models.
+     displayed models.  The useful polynomial facts here are
+     `Polynomial.X_dvd_iff` and the surjectivity of evaluation on constants.
 
-2. Supply the missing finite-projective classification.  A convenient
-   concrete normal form is the patched line
+   Also record the quotient interface
+   `nodeResidueQuotientEquiv : (R ⧸ nodeConductor) ≃+* k` using
+   `RingHom.quotientKerEquivOfSurjective` from
+   `Mathlib/RingTheory/Ideal/Quotient/Operations.lean`; it is the clean way to
+   give conductor-killed modules their `k`-module structure in step 3.
+
+2. Supply the missing finite-projective classification (blocker B3936).
+   First make the Milnor-square patching data explicit.  For
+   `g : (Fin n → k) ≃ₗ[k] (Fin n → k)`, define `nodePatch n g` as the
+   kernel/submodule of `(Fin n → B) × (Fin n → k)` cut out by
 
 ```
-nodeLine (a : kˣ) :=
-  {p : B × k // Polynomial.eval 0 p.1 = p.2 ∧
-                  Polynomial.eval 1 p.1 = a * p.2}.
+eval₀(f) = c,       eval₁(f) = g(c).
 ```
 
-   Give it its evident `R`-module structure and prove `Module.Finite R
-   (nodeLine a)` and `Module.Projective R (nodeLine a)`.  The precise missing
-   interface needed by the K-group proof is:
+   Defining it as `LinearMap.ker` of the difference of the two displayed
+   maps gives the additive group and `R`-module instances definitionally and
+   avoids rebuilding a module structure on a raw subtype.  Prove the following
+   small patching API before discussing normal forms.
+
+   * `nodeEvalPair : B →+* k × k` is surjective, by interpolation with
+     `C x * (1-X) + C y * X`, and `R` is its pullback along the diagonal
+     `k →+* k × k`.  It is enough to state this as an explicit ring
+     equivalence plus its two projection simp lemmas; Mathlib's
+     `RingHom.pullback` in `Mathlib/RingTheory/LocalRing/Pullback.lean` is only
+     a convenient carrier, not a projective-patching theorem.
+   * `nodePatch_projective` and `nodePatch_finite`: every `nodePatch n g` is
+     finite projective over `R`.  For projectivity, patch `g` together with
+     `g⁻¹`: the standard block-matrix factorization of
+     `diag(g,g⁻¹)` into upper and lower unipotent matrices lets each block be
+     lifted along the surjective `nodeEvalPair`.  It gives
+     `nodePatch n g × nodePatch n g.symm ≃ₗ[R] (Fin (2*n) → R)`;
+     apply `Module.Projective.of_split` (or
+     `Module.Projective.of_equiv'` after exhibiting the complementary
+     summand).  Finiteness then follows either from this splitting or from
+     Noetherianity and `Submodule.FG.of_le`.
+   * `node_projective_is_patch`: for `M : Type u` with the four finite
+     projective module instances, produce `n`, `g`, and
+     `Nonempty (M ≃ₗ[R] nodePatch n g)`.  Start with a surjection
+     `(Fin N → R) →ₗ[R] M` from `Module.Finite.exists_fin'`, split it with
+     `Module.Projective.iff_split_of_projective`, and prove the reconstruction
+     map for the free module directly from the pullback square.  The chosen
+     splitting reduces reconstruction for `M` to that free case.  Base change
+     to `B` and `k` is finite projective by `Module.Finite.base_change` and
+     `Module.Projective.tensorProduct`; use
+     `finite_projective_is_free_pid` and `exists_finite_free_equiv`, both
+     earlier in this file, to choose bases.  Their ranks agree after either
+     evaluation base change; `LinearEquiv.finrank_eq` over `k` proves the
+     equality of the two `Fin` indices.  Change the `k`-basis so the first
+     gluing matrix is `1`; the second is the required relative `g`.
+
+   Now define the patched line as the rank-one patch
+
+```
+nodeLine (a : kˣ) := nodePatch 1 (nodeScalarEquiv a)
+```
+
+   where `nodeScalarEquiv a` is the explicitly defined rank-one equivalence
+   `c ↦ (a : k) * c` (do not rely on an inferred library name for it).
+
+   Thus its finite/projective instances come from the patch API.  Prove both
+   the actual tensor law requested by the blocker and the stable sum law used
+   by KZero:
 
    * `nodeLine_one : Nonempty (nodeLine (1 : kˣ) ≃ₗ[R] R)`;
-   * `nodeLine_mul (a b : kˣ) : Nonempty
+   * `nodeLine_tensor (a b : kˣ) : Nonempty
+       (nodeLine a ⊗[R] nodeLine b ≃ₗ[R] nodeLine (a * b))`; the map
+     multiplies the polynomial and residue components, and becomes the usual
+     tensor-product equivalence after both base changes;
+   * `nodeLine_stable_mul (a b : kˣ) : Nonempty
        ((nodeLine a × nodeLine b) ≃ₗ[R]
          (nodeLine (a * b) × R))`;
    * `node_projective_normal_form`: for every `M : Type u` with
@@ -1882,18 +1992,37 @@ nodeLine (a : kˣ) :=
      `nodeLine a × (Fin n → R)` and `nodeLine b × (Fin m → R)` are linearly
      equivalent exactly when `a = b` and `n = m`.
 
-   These results are not present in Mathlib or an earlier project module.
-   Prove them by finite-projective patching for the displayed Milnor square.
-   Both base changes of a projective are free (`B` is a PID and `k` is a
-   field).  After choosing rank-`n` bases, the patch is a pair of matrices in
-   `GL (Fin n) k`; changing bases changes the pair by the evaluations at zero
-   and one of a matrix in `GL (Fin n) B` and by a diagonal `GL (Fin n) k`
-   action.  The complete orbit invariant is
-   `det(g₁) * det(g₀)⁻¹ : kˣ`.  Reduce a determinant-one matrix to elementary
-   matrices and interpolate their entries in `B` to obtain the normal form
-   `diag(a, 1, ..., 1)`.  Treat rank zero separately by assigning unit `1`.
-   This matrix reduction is part of the missing interface; generic
-   `Module.Projective` and `Mathlib.RingTheory.PicardGroup` do not provide it.
+   Here is the exact matrix reduction for the last three declarations.  For a
+   nonzero rank `r = n+1`, let `a : kˣ` be the determinant of the matrix of
+   `g` in `Pi.basisFun k (Fin r)`.  Divide `g` by
+   `diag(a,1,...,1)` to obtain an element of `SL (Fin r) k`.  For `r ≥ 2`,
+   apply `Matrix.SpecialLinearGroup.diagonal_transvection_induction'`.
+   A transvection with coefficient `c` lifts to the polynomial transvection
+   with coefficient `C c * X`, whose evaluations are `1` and the desired
+   transvection.  A generator `diag2n i j c c⁻¹` is a product of six
+   transvections by the same block calculation as
+   `Matrix.diag2_decompose`; replace every coefficient by
+   `C coefficient * X` to get a polynomial path from `1`.  Products of these
+   paths give `U : GL (Fin r) B` with `U(0)=1` and
+   `U(1)=g*diag(a⁻¹,1,...,1)`, hence an equivalence
+
+```
+nodePatch r g ≃ₗ[R] nodeLine a × (Fin n → R).
+```
+
+   The same reduction applied to `diag(a,b)` proves
+   `nodeLine_stable_mul`; patchwise multiplication proves
+   `nodeLine_tensor`.  Treat `r=0` separately as the subsingleton module.
+
+   For uniqueness, base-change an alleged equivalence of patches to obtain
+   `U : GL (Fin r) B` and `V : GL (Fin r) k` satisfying the two evaluation
+   compatibility equations.  Rank comparison gives `r=s`.  Taking
+   determinants in those equations gives equality of the two gluing
+   determinants: `det U` is a unit of `k[X]`, hence constant by
+   `Polynomial.isUnit_iff`, so its evaluations at zero and one agree.  This
+   proves `a=b`; the converse is the evident product equivalence.  These
+   patching and matrix-orbit results are not present in Mathlib or an earlier
+   project module and are the irreducible content of B3936.
 
    Package the normal-form data as
    `nodeProjectiveInvariant : FiniteProjectivePresentation R →
@@ -1908,20 +2037,32 @@ nodeProjectiveInvariant S.middle =
 
    for every `S : FiniteProjectiveShortExact R`: split `S.middleToRight`
    with `Module.Projective.iff_split_of_projective`, use
-   `Function.Exact.splitSurjectiveEquiv`, and then `nodeLine_mul`.  Lift this
-   invariant with `FreeAbelianGroup.lift` and `kZeroCon.lift` to an additive
+   `Function.Exact.splitSurjectiveEquiv`, and then
+   `nodeLine_stable_mul`.  Include the zero-module cases explicitly; in the
+   nonzero/nonzero case reassociate products and identify the free ranks with
+   the global equivalence `finSumFinEquiv`.  Lift this
+   invariant exactly as in `kGroups_pid`: set
+   `invFree := FreeAbelianGroup.lift nodeProjectiveInvariant`, prove
+   `kZeroCon R ≤ AddCon.ker invFree` with `AddCon.addConGen_le.2` and the
+   displayed short-exact additivity, and use `kZeroCon.lift` to obtain an additive
    homomorphism
    `nodeKZeroInvariant : KZero R →+ (Additive (kˣ) × ℤ)`.  Record its values
    on `nodeLine a` as `(Additive.ofMul a, 1)` and on `R` as `(0, 1)`.
 
-3. Supply the missing finite-module comparison.  The useful class-level
-   statements are:
+3. Supply the missing finite-module comparison and generic rank (blocker
+   B4089).  The useful class-level statements, in dependency order, are:
 
    * `node_kPrimeZeroClass_eq_zero_of_conductor`: a finite `R`-module killed
      by `nodeConductor` has zero K-prime class.  Such a module is a finite
-     dimensional `k`-space through `nodeResidue`; reduce it to `Fin n → k`
-     and use the zero class of `k` from step 1 together with
-     `kPrimeZeroClass_prod`;
+     dimensional `k`-space through `nodeResidueQuotientEquiv`.  Construct the
+     quotient action using `Module.quotientAnnihilator` from
+     `Mathlib/Algebra/Module/Torsion/Basic.lean` and the map from
+     `R ⧸ nodeConductor` to the annihilator quotient; transport it across the
+     ring equivalence to `k`.  `Module.Finite.of_restrictScalars_finite` makes
+     it finite over `k`.  Reduce it with `exists_finite_free_equiv` to
+     `Fin n → k`, restrict that equivalence back to `R` using
+     `LinearEquiv.restrictScalars`, and use the zero class of `k` from step 1
+     together with `kPrimeZeroClass_prod`;
    * `node_kPrimeZeroClass_eq_normalization`: for every finite `R`-module
      `M`, its class equals the class of `B ⊗[R] M`, restricted back to `R`.
      For the unit map `η : M →ₗ[R] B ⊗[R] M`, compare the two short exact
@@ -1938,6 +2079,18 @@ kPrimeZeroClassOfPresentation P =
     kPrimeZeroClass (R := R) (M := R).
 ```
 
+   In the normalization comparison, take
+   `η m := 1 ⊗ₜ[R] m`.  Apply `kPrimeZeroClass_exact` first to
+   `ker η → M → range η` and then to
+   `range η → B ⊗[R] M → (B ⊗[R] M) ⧸ range η`;
+   `LinearMap.exact_subtype_mkQ` supplies the second exactness statement.
+   Define the conductor multiplication map
+   `B ⊗[R] M →ₗ[R] M`, `b ⊗ₜ m ↦ (a*b) • m`, with
+   `TensorProduct.lift`; induction on tensors proves the cokernel calculation.
+   Noetherianity makes `ker η` finite, and
+   `Module.Finite.tensorProduct` plus quotient finiteness handles the other
+   terms.
+
    To prove the last formula, apply the preceding comparison and present the
    finite `B`-module `B ⊗[R] P.module` by a surjection from `Fin n → B`
    (`Module.Finite.exists_fin'` in
@@ -1947,20 +2100,77 @@ kPrimeZeroClassOfPresentation P =
    sequence to `R`, use `kPrimeZeroClass_exact`, and use the normalization
    sequence plus `[k] = 0` to replace `[B]` by `[R]`.
 
-   Define `nodeGenericRank P` as the `FractionRing R`-dimension of
-   `FractionRing R ⊗[R] P.module`.  Add the generally useful lift
-   `nodeKPrimeGenericRank : KPrimeZero R →+ ℤ`; exactness of scalar extension
-   is `Module.Flat.lTensor_exact` from
-   `Mathlib/RingTheory/Flat/Basic.lean`, and finite-dimensional rank is
-   additive on the resulting short exact sequence.  One algebraic lemma is
-   still needed to identify the integer from the finite free `B`-resolution
-   with this generic rank: localization at `X * (X - 1)` identifies `R` and
-   `B`, equivalently their fraction fields.  No generic-rank/base-change map
-   for this file's presentation model of `KPrimeZero` currently exists.
+   Concretely, if the chosen surjection has rank `n` and
+   `Submodule.basisOfPid (Pi.basisFun B (Fin n)) (LinearMap.ker f)` has index
+   `Fin m`, first prove by induction with `kPrimeZeroClass_prod` that, as
+   `R`-modules, `[Fin t → B] = (t : ℤ) • [B]`.  The restricted exact sequence
+   then gives `[B ⊗[R] P.module] = (n-m : ℤ) • [B]` (form the coefficient as
+   `(n : ℤ) - (m : ℤ)`, not truncated natural subtraction).  Use
+   `Module.Finite.trans B _` to provide the required `R`-finiteness of the
+   kernel and the other finite `B`-modules.
+
+   Define
+
+```
+nodeGenericRank (P : FiniteModulePresentation R) : ℕ :=
+  Module.finrank (FractionRing R) (FractionRing R ⊗[R] P.module).
+```
+
+   `Module.Finite.base_change` supplies finite-dimensionality.  Add the
+   generally useful lift `nodeKPrimeGenericRank : KPrimeZero R →+ ℤ`.
+   Exactness of scalar extension is `Module.Flat.lTensor_exact` from
+   `Mathlib/RingTheory/Flat/Basic.lean`; use `LinearMap.baseChange` for the
+   same maps as `FractionRing R`-linear maps and rewrite their underlying
+   functions with `LinearMap.baseChange_eq_ltensor`.  Injectivity and
+   surjectivity are `Module.Flat.lTensor_preserves_injective_linearMap` and
+   `LinearMap.lTensor_surjective`.  Then instantiate the earlier helper
+   `finite_module_rank_add_of_short_exact_pid` at the field
+   `FractionRing R`.  As in `kGroups_pid`, lift
+   `P ↦ (nodeGenericRank P : ℤ)` first with `FreeAbelianGroup.lift`, prove
+   `kPrimeZeroCon R ≤ AddCon.ker ...` using that rank equality, and apply
+   `kPrimeZeroCon.lift`.
+
+   The remaining integer comparison should not be left as an unspecified
+   fraction-field identification.  Let
+   `q : B := X * (X - 1)` and also regard `q` as an element of `R`.  Every
+   `b : B` satisfies `q*b ∈ R`.  Define explicitly
+
+```
+nodeNormalizationToFraction (b : B) : FractionRing R :=
+  algebraMap R (FractionRing R) ⟨q*b, proof⟩ /
+    algebraMap R (FractionRing R) ⟨q, proof⟩.
+```
+
+   The nonzero denominator and cross-multiplication identities make this a
+   ring homomorphism `B →+* FractionRing R`; record that its composite with
+   `nodeNormalization` is `algebraMap R (FractionRing R)` and that it is
+   injective.  Use it for `Algebra B (FractionRing R)`, obtain
+   `FaithfulSMul B (FractionRing R)` from
+   `faithfulSMul_iff_algebraMap_injective`, and prove the scalar tower.
+   `IsFractionRing.of_field` from
+   `Mathlib/RingTheory/Localization/FractionRing.lean` now shows that the same
+   field is a fraction ring of `B`: every fraction over `R` is already a
+   fraction over `B`.  Base-change the finite free `B`-resolution to this
+   field; the two free ranks give precisely its dimension.  Finally use
+   `TensorProduct.AlgebraTensorModule.cancelBaseChange` from
+   `Mathlib/LinearAlgebra/TensorProduct/Tower.lean` to identify
+
+```
+FractionRing R ⊗[B] (B ⊗[R] P.module)
+  ≃ₗ[FractionRing R]
+FractionRing R ⊗[R] P.module.
+```
+
+   This proves that the coefficient in the restricted `B`-resolution is
+   exactly `nodeGenericRank P`, closing B4089.  There is no pre-existing lift
+   from this file's presentation model of `KPrimeZero`; the preceding
+   `FreeAbelianGroup.lift`/`AddCon.lift` construction is that missing map.
 
 4. Final assembly uses only declarations already earlier in this file.  Let
    `c := kZeroClass (R := R) (M := R)` and
-   `d a := kZeroClass (R := R) (M := nodeLine a) - c`.  By `nodeLine_mul`,
+   `d a := kZeroClass (R := R) (M := nodeLine a) - c`.  By
+   `nodeLine_one`, `nodeLine_stable_mul`, and the earlier private declaration
+   `kZeroClass_prod`, package
    `d : Additive (kˣ) →+ KZero R`; set
    `assemble (a, z) := d a + z • c`.  The normal-form theorem gives, for each
    projective presentation `P`,
@@ -1969,7 +2179,9 @@ kPrimeZeroClassOfPresentation P =
 kZeroClassOfPresentation P = assemble (nodeProjectiveInvariant P).
 ```
 
-   Extend this equality to arbitrary elements with `kZero_generated`; it
+   Use the earlier `kZeroClass_free_pid` (despite its name, its hypotheses here
+   only require that `R` is a domain) for the free summand.  Extend this
+   equality to arbitrary elements with `kZero_generated`; it
    proves that `nodeKZeroInvariant` and `assemble` are inverse.  Construct the
    first requested equivalence with `AddEquiv.ofBijective` (or directly from
    the two inverse identities).

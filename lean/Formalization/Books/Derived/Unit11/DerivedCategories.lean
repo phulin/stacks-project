@@ -916,19 +916,83 @@ theorem derivedPlusProperty_iff
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (X : DerivedCategory C) :
     derivedPlusProperty C X ↔ derivedCohomologyVanishesBelow C X := by
-  sorry
+  change (∃ N : ℤ, (DerivedCategory.TStructure.t (C := C)).IsGE X N) ↔ _
+  constructor
+  · rintro ⟨N, hN⟩
+    refine ⟨N - 1, fun n hn => ?_⟩
+    exact (DerivedCategory.isGE_iff X N).1 hN n
+      (lt_of_le_of_lt hn (Int.sub_one_lt_of_le le_rfl))
+  · rintro ⟨N, hN⟩
+    refine ⟨N + 1, ?_⟩
+    apply (DerivedCategory.isGE_iff X (N + 1)).2
+    exact fun n hn => hN n (Int.le_of_lt_add_one hn)
 
 theorem derivedMinusProperty_iff
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (X : DerivedCategory C) :
     derivedMinusProperty C X ↔ derivedCohomologyVanishesAbove C X := by
-  sorry
+  change (∃ N : ℤ, (DerivedCategory.TStructure.t (C := C)).IsLE X N) ↔ _
+  constructor
+  · rintro ⟨N, hN⟩
+    refine ⟨N + 1, fun n hn => ?_⟩
+    exact (DerivedCategory.isLE_iff X N).1 hN n
+      (lt_of_lt_of_le (lt_add_one N) hn)
+  · rintro ⟨N, hN⟩
+    refine ⟨N - 1, ?_⟩
+    apply (DerivedCategory.isLE_iff X (N - 1)).2
+    exact fun n hn => hN n (Int.le_of_sub_one_lt hn)
 
 theorem derivedBoundedProperty_iff
     (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     (X : DerivedCategory C) :
     derivedBoundedProperty C X ↔ derivedCohomologyVanishesBounded C X := by
-  sorry
+  change (derivedPlusProperty C X ∧ derivedMinusProperty C X) ↔ _
+  rw [derivedPlusProperty_iff, derivedMinusProperty_iff]
+  rfl
+
+private theorem derivedCohomologyVanishesBelow_eq_homologicalKernelBelow
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
+    derivedCohomologyVanishesBelow C =
+      Formalization.Books.Derived.Unit06.homologicalKernelBelow
+        (derivedCohomologyFunctor C 0) := by
+  ext X
+  constructor
+  · rintro ⟨N, hN⟩
+    refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+    simpa only [Formalization.Books.Derived.Unit06.homologicalKernelBelow,
+      Formalization.Books.Derived.Unit03.homologicalDegree,
+      derivedCohomologyVanishesBelow, derivedCohomologyFunctor,
+      DerivedCategory.shift_homologyFunctor] using
+      ((derivedCohomologyFunctor C 0).isoShift n).app X
+  · rintro ⟨N, hN⟩
+    refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+    simpa only [Formalization.Books.Derived.Unit06.homologicalKernelBelow,
+      Formalization.Books.Derived.Unit03.homologicalDegree,
+      derivedCohomologyVanishesBelow, derivedCohomologyFunctor,
+      DerivedCategory.shift_homologyFunctor] using
+      (((derivedCohomologyFunctor C 0).isoShift n).app X).symm
+
+private theorem derivedCohomologyVanishesAbove_eq_homologicalKernelAbove
+    (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C] :
+    derivedCohomologyVanishesAbove C =
+      Formalization.Books.Derived.Unit06.homologicalKernelAbove
+        (derivedCohomologyFunctor C 0) := by
+  ext X
+  constructor
+  · rintro ⟨N, hN⟩
+    refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+    simpa only [Formalization.Books.Derived.Unit06.homologicalKernelAbove,
+      Formalization.Books.Derived.Unit03.homologicalDegree,
+      derivedCohomologyVanishesAbove, derivedCohomologyFunctor,
+      DerivedCategory.shift_homologyFunctor] using
+      ((derivedCohomologyFunctor C 0).isoShift n).app X
+  · rintro ⟨N, hN⟩
+    refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+    simpa only [Formalization.Books.Derived.Unit06.homologicalKernelAbove,
+      Formalization.Books.Derived.Unit03.homologicalDegree,
+      derivedCohomologyVanishesAbove, derivedCohomologyFunctor,
+      DerivedCategory.shift_homologyFunctor] using
+      (((derivedCohomologyFunctor C 0).isoShift n).app X).symm
 
 /-- The three bounded derived pieces are strictly full saturated triangulated subcategories. -/
 theorem derivedBoundedSubcategory_properties
@@ -936,7 +1000,43 @@ theorem derivedBoundedSubcategory_properties
     IsStrictlyFullSaturatedPretriangulated (derivedPlusProperty C) ∧
       IsStrictlyFullSaturatedPretriangulated (derivedMinusProperty C) ∧
       IsStrictlyFullSaturatedPretriangulated (derivedBoundedProperty C) := by
-  sorry
+  have hbelow :=
+    derivedCohomologyVanishesBelow_eq_homologicalKernelBelow C
+  have habove :=
+    derivedCohomologyVanishesAbove_eq_homologicalKernelAbove C
+  have hbounded :
+      derivedCohomologyVanishesBounded C =
+        Formalization.Books.Derived.Unit06.homologicalKernelBounded
+          (derivedCohomologyFunctor C 0) := by
+    ext X
+    change (derivedCohomologyVanishesBelow C X ∧
+        derivedCohomologyVanishesAbove C X) ↔
+      Formalization.Books.Derived.Unit06.homologicalKernelBelow
+          (derivedCohomologyFunctor C 0) X ∧
+        Formalization.Books.Derived.Unit06.homologicalKernelAbove
+          (derivedCohomologyFunctor C 0) X
+    rw [hbelow, habove]
+  have hplus :
+      derivedPlusProperty C =
+        Formalization.Books.Derived.Unit06.homologicalKernelBelow
+          (derivedCohomologyFunctor C 0) := by
+    ext X
+    rw [derivedPlusProperty_iff C X, hbelow]
+  have hminus :
+      derivedMinusProperty C =
+        Formalization.Books.Derived.Unit06.homologicalKernelAbove
+          (derivedCohomologyFunctor C 0) := by
+    ext X
+    rw [derivedMinusProperty_iff C X, habove]
+  have hbounded' :
+      derivedBoundedProperty C =
+        Formalization.Books.Derived.Unit06.homologicalKernelBounded
+          (derivedCohomologyFunctor C 0) := by
+    ext X
+    rw [derivedBoundedProperty_iff C X, hbounded]
+  rw [hplus, hminus, hbounded']
+  exact Formalization.Books.Derived.Unit06.homologicalKernel_bounded_properties
+    (derivedCohomologyFunctor C 0)
 
 /-! ## Bounded-cohomology replacements -/
 
@@ -946,7 +1046,15 @@ theorem boundedCohomology_replacement_below
     (hK : ∃ N : ℤ, ∀ n : ℤ, n ≤ N → IsZero (K.homology n)) :
     ∃ (L : BookComplex C) (f : K ⟶ L),
       QuasiIso f ∧ IsBoundedBelow L := by
-  sorry
+  obtain ⟨N, hN⟩ := hK
+  let _ : K.IsGE (N + 1) := by
+    rw [CochainComplex.isGE_iff]
+    intro n hn
+    rw [HomologicalComplex.exactAt_iff_isZero_homology]
+    exact hN n (Int.le_of_lt_add_one hn)
+  refine ⟨K.truncGE (N + 1), K.πTruncGE (N + 1), ?_, ?_⟩
+  · exact (K.quasiIso_πTruncGE_iff (N + 1)).2 inferInstance
+  · exact ⟨N + 1, inferInstance⟩
 
 theorem boundedCohomology_replacement_above
     (C : Type u) [Category.{v} C] [Abelian C]

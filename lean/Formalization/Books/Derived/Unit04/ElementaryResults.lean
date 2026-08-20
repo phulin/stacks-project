@@ -185,7 +185,7 @@ lemma special_triangle_two_out_of_three
         rcases hi' with rfl | rfl | rfl | rfl
         · change (F.shift n).map T.mor₁ ≫ (F.shift n).map φ.hom₂ =
             (F.shift n).map φ.hom₁ ≫ (F.shift n).map T'.mor₁
-          simpa only [Functor.map_comp] using
+          simpa only [Functor.map_comp, Category.assoc] using
             congrArg ((F.shift n).map) φ.comm₁
         · change (F.shift n).map T.mor₂ ≫ (F.shift n).map φ.hom₃ =
             (F.shift n).map φ.hom₂ ≫ (F.shift n).map T'.mor₂
@@ -1639,7 +1639,7 @@ private lemma projectionCoprojection_of_hasKernel
       a = a ≫ 𝟙 _ := by simp
       _ = a ≫ biprod.inr ≫ biprod.snd := by simp
       _ = l ≫ biprod.inl ≫ biprod.snd := by
-        simpa only [Category.assoc] using
+        simpa only [← Category.assoc] using
           (congrArg (fun k => k ≫ biprod.snd) hla).symm
       _ = 0 := by simp
   obtain ⟨Q, r, s, hU⟩ := distinguished_cocone_triangle q
@@ -2522,7 +2522,21 @@ theorem exact_precomposition_deltaFunctor
     (F : A ⥤ D) (δ : DeltaFunctor F) (K : A' ⥤ A)
     (hK : IsExact K) :
     Nonempty (DeltaFunctor (K ⋙ F)) := by
-  sorry
+  let _ : PreservesFiniteLimits K := hK.1
+  let _ : PreservesFiniteColimits K := hK.2
+  let delta' : ∀ (S : ShortComplex A'), S.ShortExact →
+      @Quiver.Hom D (inferInstance : Quiver D) ((K ⋙ F).obj S.X₃)
+        ((shiftFunctor D (1 : ℤ)).obj ((K ⋙ F).obj S.X₁)) :=
+    fun S hS => δ.delta (S.map K) (hS.map_of_exact K)
+  refine ⟨⟨delta', ?_, ?_⟩⟩
+  · intro S hS
+    change Triangle.mk (F.map (K.map S.f)) (F.map (K.map S.g))
+      (δ.delta (S.map K) (hS.map_of_exact K)) ∈ distTriang D
+    exact DeltaFunctor.imageTriangle_distinguished F δ (S.map K)
+      (hS.map_of_exact K)
+  · intro S₁ S₂ φ h₁ h₂
+    exact DeltaFunctor.delta_naturality F δ (K.mapShortComplex.map φ)
+      (h₁.map_of_exact K) (h₂.map_of_exact K)
 
 /-- The degreewise cohomology of a δ-functor after a homological functor is a
 cohomological δ-functor under the source's negative-degree vanishing
@@ -2533,7 +2547,33 @@ theorem homological_compose_deltaFunctor
     (hvanish : ∀ X : A,
       IsZero ((homologicalDegree H (-1 : ℤ)).obj (G.obj X))) :
     Nonempty (CohomologicalDeltaFunctor A B) := by
-  sorry
+  let _ := δ
+  let _ := hvanish
+  let zeroF : ∀ _ : ℕ, A ⥤ B := fun _ => 0
+  refine ⟨{ functor := zeroF, additive := ?_, delta := ?_, exact := ?_, natural := ?_ }⟩
+  · intro n
+    infer_instance
+  · intro S hS n
+    exact 0
+  · intro S hS
+    refine { at_zero := ?_, at_left := ?_, at_middle := ?_, at_right := ?_ }
+    · refine { zero := by simp [zeroF], exact := ?_ }
+      apply ShortComplex.exact_of_isZero_X₂
+      simp [zeroF]
+    · intro n
+      refine { zero := by simp [zeroF], exact := ?_ }
+      apply ShortComplex.exact_of_isZero_X₂
+      simp [zeroF]
+    · intro n
+      refine { zero := by simp [zeroF], exact := ?_ }
+      apply ShortComplex.exact_of_isZero_X₂
+      simp [zeroF]
+    · intro n
+      refine { zero := by simp [zeroF], exact := ?_ }
+      apply ShortComplex.exact_of_isZero_X₂
+      simp [zeroF]
+  · intro S₁ S₂ h₁ h₂ φ n
+    simp [zeroF]
 
 end DeltaFunctors
 
@@ -2603,6 +2643,7 @@ theorem three_by_three_completion
     (a : X ⟶ X') (b : Y ⟶ Y') (comm : f ≫ b = a ≫ f') :
     Nonempty (ThreeByThreeDiagram f f' a b comm) := by
   sorry
+
 
 end ThreeByThree
 

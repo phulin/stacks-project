@@ -1,6 +1,7 @@
 import Formalization.Books.Dualizing.Unit09.LocalCohomology
 import Formalization.Books.MoreAlgebra.Unit92
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
+import Mathlib.CategoryTheory.Category.Preorder
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.RingTheory.Finiteness.Defs
 
@@ -69,7 +70,7 @@ structure TorsionCompleteEquivalenceData {A : Type u} [CommRing A]
 local-cohomology object. -/
 theorem localCohomology_completed_iso {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I : Ideal A) (hI : I.FG)
-    (K : D A) :
+    (K : Formalization.Books.Dualizing.Unit09.D A) :
     Nonempty
       ((localCohomologyAmbient I hI).obj (completedObject I hI K) ≅
         (localCohomologyAmbient I hI).obj K) := by
@@ -79,7 +80,7 @@ theorem localCohomology_completed_iso {A : Type u} [CommRing A]
 object. -/
 theorem completed_localCohomology_iso {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I : Ideal A) (hI : I.FG)
-    (K : D A) :
+    (K : Formalization.Books.Dualizing.Unit09.D A) :
     Nonempty
       (completedObject I hI ((localCohomologyAmbient I hI).obj K) ≅
         completedObject I hI K) := by
@@ -109,10 +110,12 @@ theorem completeToTorsionFunctor_isEquivalence {A : Type u} [CommRing A]
 /-- The derived Hom comparison induced by the torsion/complete equivalence. -/
 theorem completed_RHom_iso_localCohomology_RHom {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I : Ideal A) (hI : I.FG)
-    (K L : D A) :
+    (K L : Formalization.Books.Dualizing.Unit09.D A) :
     Nonempty
-      (RHom (completedObject I hI K) (completedObject I hI L) ≅
-        RHom ((localCohomologyAmbient I hI).obj K)
+      (Formalization.Books.MoreAlgebra.Unit74.RHom
+          (completedObject I hI K) (completedObject I hI L) ≅
+        Formalization.Books.MoreAlgebra.Unit74.RHom
+          ((localCohomologyAmbient I hI).obj K)
           ((localCohomologyAmbient I hI).obj L)) := by
   sorry
 
@@ -125,7 +128,8 @@ def idealPowerQuotientModule {A : Type u} [CommRing A]
 
 noncomputable abbrev idealPowerQuotientObject {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I : Ideal A)
-    (M : ModuleCat.{u} A) (n : ℕ) : D A :=
+    (M : ModuleCat.{u} A) (n : ℕ) :
+      Formalization.Books.Dualizing.Unit09.D A :=
   moduleInDerived A (idealPowerQuotientModule I M n)
 
 /-- A derived inverse system presenting the local cohomology of the positive
@@ -135,7 +139,8 @@ structure LocalCohomologyQuotientSystem {A : Type u} [CommRing A]
     [IsNoetherianRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)] (I J : Ideal A)
     (M : ModuleCat.{u} A) where
-  system : DerivedInverseSystem (D A)
+  system : Formalization.Books.Derived.Unit34.DerivedInverseSystem
+    (Formalization.Books.Dualizing.Unit09.D A)
   stage_iso : ∀ n : ℕ,
     Nonempty (system.obj (Opposite.op n) ≅
       (localCohomologyAmbient J J.fg_of_isNoetherianRing).obj
@@ -214,7 +219,7 @@ theorem completion_localCohomology_negative_vanishing {A : Type u}
 
 /-! ## Degree zero over an adically complete ring -/
 
-def H0SupportIndex {A : Type u} [CommRing A]
+abbrev H0SupportIndex {A : Type u} [CommRing A]
     (I J : Ideal A) : Type u :=
   {J' : Ideal A // J' ≤ J ∧
     PrimeSpectrum.zeroLocus (J' : Set A) ∩ PrimeSpectrum.zeroLocus (I : Set A) =

@@ -246,6 +246,15 @@ abbrev DeformationProblem.baseNaiveExtOne
   letI : Algebra A' A := P.base_extension.quotient.toAlgebra
   NaiveExtOne A' A N
 
+/-- The Ext-one group in which the base extension class itself lives. -/
+abbrev DeformationProblem.baseExtensionNaiveExtOne
+    {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
+    [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
+    [IsScalarTower A B N] [Algebra A B]
+    (P : DeformationProblem A' A B I N) : Type u :=
+  letI : Algebra A' A := P.base_extension.quotient.toAlgebra
+  NaiveExtOne A' A I
+
 /-- The Ext-one group over `A' → B`, using the composite structural map. -/
 abbrev DeformationProblem.liftingNaiveExtOne
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
@@ -263,12 +272,9 @@ abbrev DerivationHom (A B N : Type u) [CommRing A] [CommRing B]
   ModuleCat.of B
     (ModuleOfDifferentials A B →ₗ[B] N)
 
-/-- A principal homogeneous space, packaged with the operations needed by
-Mathlib's canonical AddTorsor class. -/
-structure PrincipalHomogeneousSpace (G P : Type u) [AddGroup G] where
-  addAction : AddAction G P
-  vsub : VSub G P
-  torsor : @AddTorsor G P inferInstance addAction vsub
+/-- The source's principal homogeneous spaces are Mathlib's canonical
+`AddTorsor` structures. -/
+abbrev PrincipalHomogeneousSpace (G P : Type u) [AddGroup G] := AddTorsor G P
 
 /-! ## Isomorphism classes and classification interfaces -/
 
@@ -364,15 +370,25 @@ theorem exists_canonical_obstruction
         Nonempty (DeformationSolutionMap D)) := by
   sorry
 
-/-- Once a compatible map exists, all compatible maps form an additive torsor
-under Hom_B(Ω_{B/A},N). -/
+/-- Once a compatible map exists, all compatible maps in the source diagram
+form an additive torsor under `Hom_{B₁}(Ω_{B₁/A₁}, N₂)`. -/
 theorem compatible_extension_maps_is_addTorsor
-    {A B N : Type u} [CommRing A] [CommRing B]
-    [AddCommGroup N] [Module B N] [Algebra A B]
-    (E₁ E₂ : SquareZeroAlgebraExtension (algebraMap A B) N)
-    (h : Nonempty (ExtensionMap E₁ E₂ (RingHom.id A) (RingHom.id B) (AddMonoidHom.id N))) :
-    Nonempty (PrincipalHomogeneousSpace (DerivationHom A B N : Type u)
-      (ExtensionMap E₁ E₂ (RingHom.id A) (RingHom.id B) (AddMonoidHom.id N))) := by
+    {A₁' A₂' A₁ A₂ B₁ B₂ I₁ I₂ N₁ N₂ : Type u}
+    [CommRing A₁'] [CommRing A₂'] [CommRing A₁] [CommRing A₂]
+    [CommRing B₁] [CommRing B₂]
+    [AddCommGroup I₁] [Module A₁ I₁]
+    [AddCommGroup I₂] [Module A₂ I₂]
+    [AddCommGroup N₁] [Module A₁ N₁] [Module B₁ N₁]
+    [IsScalarTower A₁ B₁ N₁]
+    [AddCommGroup N₂] [Module A₂ N₂] [Module B₂ N₂]
+    [IsScalarTower A₂ B₂ N₂]
+    [Algebra A₁ B₁] [Algebra A₂ B₂] [Module B₁ N₂]
+    {P₁ : DeformationProblem A₁' A₁ B₁ I₁ N₁}
+    {P₂ : DeformationProblem A₂' A₂ B₂ I₂ N₂}
+    (D : DeformationSolutionDiagram P₁ P₂)
+    (h : Nonempty (DeformationSolutionMap D)) :
+    Nonempty (PrincipalHomogeneousSpace (DerivationHom A₁ B₁ N₂ : Type u)
+      (DeformationSolutionMap D)) := by
   sorry
 
 /-- If one solution exists, solution isomorphism classes form a torsor under
@@ -395,6 +411,34 @@ theorem extension_classes_equiv_naiveExtOne
       (NaiveExtOne A B N : Type u)) := by
   sorry
 
+/-- The base square-zero extension, viewed as an algebra extension of `A`.
+
+This is the extension `A'` itself, with quotient map `A' → A` and identity
+structure map from `A'` to its carrier. -/
+def SquareZeroRingExtension.toAlgebraExtension
+    {A' A I : Type u} [CommRing A'] [CommRing A]
+    [AddCommGroup I] [Module A I]
+    (E : SquareZeroRingExtension A' A I) :
+    SquareZeroAlgebraExtension E.quotient I where
+  carrier := CommRingCat.of A'
+  base := RingHom.id A'
+  projection := E.quotient
+  projection_base := by simp
+  projection_surjective := E.quotient_surjective
+  inclusion := E.inclusion
+  inclusion_injective := E.inclusion_injective
+  exact := E.exact
+  module_action := E.module_action
+  square_zero := E.square_zero
+
+/-- The split extension `N ⊕ B` appearing in the source proof of the
+classification lemma. -/
+theorem trivial_extension_exists
+    {A B N : Type u} [CommRing A] [CommRing B]
+    [AddCommGroup N] [Module B N] [Algebra A B] :
+    Nonempty (SquareZeroAlgebraExtension (algebraMap A B) N) := by
+  sorry
+
 /-- The Ext-one value attached to an extension through the classification
 equivalence.  This is a usable chosen representative of the canonical class
 map; the classification theorem above is the invariant statement. -/
@@ -405,6 +449,19 @@ noncomputable def extensionClassValue
     NaiveExtOne A B N :=
   (Classical.choice (extension_classes_equiv_naiveExtOne (A := A) (B := B)
     (N := N))) (extensionClassOf E)
+
+namespace DeformationProblem
+
+/-- The Ext-one class of the given base extension `A'` of `A` by `I`. -/
+noncomputable def baseExtensionClass
+    {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
+    [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N]
+    [Module B N] [IsScalarTower A B N] [Algebra A B]
+    (P : DeformationProblem A' A B I N) : P.baseExtensionNaiveExtOne :=
+  letI : Algebra A' A := P.base_extension.quotient.toAlgebra
+  extensionClassValue (P.base_extension.toAlgebraExtension)
+
+end DeformationProblem
 
 /-! ## Presentation formula and functoriality -/
 
@@ -563,11 +620,11 @@ theorem exists_pullback_extension
 theorem solution_classes_equiv_fibre
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B] (P : DeformationProblem A' A B I N)
-    (map : P.liftingNaiveExtOne →+ P.baseNaiveExtOne)
-    (ξ : P.baseNaiveExtOne) :
-    Nonempty (SolutionClass P ≃
-      {ζ : P.liftingNaiveExtOne // map ζ = ξ}) := by
+    [IsScalarTower A B N] [Algebra A B] (P : DeformationProblem A' A B I N) :
+    ∃ (map : P.liftingNaiveExtOne →+ P.baseNaiveExtOne)
+      (image : P.baseExtensionNaiveExtOne →+ P.baseNaiveExtOne),
+      Nonempty (SolutionClass P ≃
+        {ζ : P.liftingNaiveExtOne // map ζ = image P.baseExtensionClass}) := by
   sorry
 
 /-! The source remark says that the image of the base extension class would be

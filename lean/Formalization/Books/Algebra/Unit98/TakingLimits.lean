@@ -269,7 +269,537 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
      retain the already completed `limit_complete_pre` argument in the second.
   -/
   constructor
-  · sorry
+  · have hstep : ∀ k : ℕ+, Function.Surjective
+        (successiveTransitionMap F k).hom := by
+      intro k
+      rcases hF k with ⟨s⟩
+      intro x
+      obtain ⟨z, hz⟩ := Submodule.mkQ_surjective
+        (I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))))
+        (s.equivalence.inv.hom x)
+      refine ⟨z, ?_⟩
+      have heq := congrArg ModuleCat.Hom.hom s.transition_eq
+      rw [successiveTransitionMap, ← heq]
+      change s.equivalence.hom.hom
+        ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ z) = x
+      rw [hz]
+      exact s.equivalence.inv_hom_id_apply x
+    have hgeneral : ∀ (i j : ℕ+) (h : j ≤ i),
+        Function.Surjective (transitionMap F (i := i) (j := j) h).hom := by
+      intro i
+      induction i using PNat.recOn with
+      | one =>
+          intro j h
+          have hj : j = 1 := le_one_iff_eq_one.mp h
+          subst j
+          have hh : opHomOfLE h = 𝟙 (Opposite.op (1 : ℕ+)) := Subsingleton.elim _ _
+          change Function.Surjective (F.map (opHomOfLE h)).hom
+          rw [hh, F.map_id]
+          exact Function.surjective_id
+      | succ i ih =>
+          intro j h
+          rcases eq_or_lt_of_le h with rfl | hj
+          · have hh : opHomOfLE h = 𝟙 (Opposite.op (i + 1)) := Subsingleton.elim _ _
+            change Function.Surjective (F.map (opHomOfLE h)).hom
+            rw [hh, F.map_id]
+            exact Function.surjective_id
+          · have hji : j ≤ i := PNat.lt_add_one_iff.mp hj
+            have hcomp : transitionMap F (i := i + 1) (j := j) h =
+                successiveTransitionMap F i ≫ transitionMap F (i := i) (j := j) hji := by
+              change F.map (opHomOfLE h) =
+                F.map (opHomOfLE (PNat.lt_add_right i 1).le) ≫ F.map (opHomOfLE hji)
+              rw [← F.map_comp]
+              congr 1
+            rw [hcomp]
+            exact (ih j hji).comp (hstep i)
+    have hsurj : ∀ ⦃i j : ℕ+ᵒᵖ⦄ (f : i ⟶ j),
+        Function.Surjective (F.map f).hom := by
+      intro i j f
+      let h : j.unop ≤ i.unop := leOfHom f.unop
+      have hf : f = opHomOfLE h := Subsingleton.elim _ _
+      rw [hf]
+      exact hgeneral i.unop j.unop h
+    have hproj_of_surj : ∀ (G : NaturalInverseSystem.{u, w} A),
+        (∀ ⦃i j : ℕ+ᵒᵖ⦄ (f : i ⟶ j), Function.Surjective (G.map f).hom) →
+        ∀ n : ℕ+, Function.Surjective (limit.π G (Opposite.op n)).hom := by
+      intro G hG n x
+      have hstepG : ∀ k : ℕ+, Function.Surjective (successiveTransitionMap G k).hom := by
+        intro k
+        exact hG (opHomOfLE (PNat.lt_add_right k 1).le)
+      let y : ∀ i : ℕ+, G.obj (Opposite.op i) := fun i =>
+        PNat.recOn i
+          (if hn : n = 1 then hn ▸ x else
+            (transitionMap G (i := n) (j := 1) (by simp)).hom x)
+          (fun i ih => if hni : n ≤ i then (hstepG i ih).choose
+            else if hn : n = i + 1 then hn ▸ x
+            else (transitionMap G (i := n) (j := i + 1)
+              (PNat.add_one_le_iff.mpr (lt_of_not_ge hni))).hom x)
+      have hy : ∀ i : ℕ+, (successiveTransitionMap G i).hom (y (i + 1)) = y i := by
+        intro i
+        induction i using PNat.recOn with
+        | one =>
+            by_cases hni : n ≤ 1
+            · have hn : n = 1 := le_one_iff_eq_one.mp hni
+              subst n
+              simpa [y] using (hstepG 1 x).choose_spec
+            · by_cases hn : n = 1 + 1
+              · subst n
+                have hn1 : ¬(1 + 1 : ℕ+) = 1 := by
+                  exact ne_of_gt (PNat.lt_add_right 1 1)
+                have hy2 : y (1 + 1) = x := by simp [y, hn1]
+                have hy1 : y 1 =
+                    (transitionMap G (i := 1 + 1) (j := 1)
+                      (PNat.lt_add_right 1 1).le).hom x := by
+                  simp [y, hn1]
+                rw [hy2, hy1]
+                rfl
+              · have hlt : 1 + 1 ≤ n := PNat.add_one_le_iff.mpr (lt_of_not_ge hni)
+                have hn1 : ¬n = 1 := by
+                  intro hn1
+                  subst n
+                  exact hni le_rfl
+                have hy2 : y (1 + 1) =
+                    (transitionMap G (i := n) (j := 1 + 1) hlt).hom x := by
+                  simp [y, hni, hn]
+                have hy1 : y 1 =
+                    (transitionMap G (i := n) (j := 1) (by simp)).hom x := by
+                  simp [y, hn1]
+                rw [hy2, hy1]
+                change ((transitionMap G (i := n) (j := 1 + 1) hlt ≫
+                    transitionMap G (i := 1 + 1) (j := 1)
+                      (PNat.lt_add_right 1 1).le).hom) x = _
+                exact congrArg (fun f => f.hom x)
+                  (transitionMap_comp G hlt (PNat.lt_add_right 1 1).le)
+        | succ i ih =>
+            by_cases hni : n ≤ i + 1
+            · have hs := (hstepG (i + 1) (y (i + 1))).choose_spec
+              simpa [y, hni] using hs
+            · by_cases hn : n = (i + 1) + 1
+              · subst n
+                have hni0 : ¬(i + 1) + 1 ≤ i + 1 := by
+                  intro h
+                  exact hni h
+                have hni1 : ¬(i + 1) + 1 ≤ i := by
+                  intro h
+                  exact hni (h.trans (PNat.lt_add_right i 1).le)
+                have hn0 : ¬(i + 1) + 1 = i + 1 := by
+                  intro h
+                  exact hni0 h.le
+                have hn1 : ¬(i + 1) + 1 = i := by
+                  intro h
+                  exact hni1 (h.le)
+                have hneq : ¬i + 1 = i := ne_of_gt (PNat.lt_add_right i 1)
+                have hy2 : y ((i + 1) + 1) = x := by
+                  simp [y, hni, hn0]
+                have hy1 : y (i + 1) =
+                    (transitionMap G (i := (i + 1) + 1) (j := i + 1)
+                      (PNat.lt_add_right (i + 1) 1).le).hom x := by
+                  simp [y, hni1, hn1, hneq]
+                rw [hy2, hy1]
+                rfl
+              · have hni0 : ¬n ≤ i := by
+                  intro h
+                  exact hni (h.trans (PNat.lt_add_right i 1).le)
+                have hlt : i + 1 ≤ n :=
+                  PNat.add_one_le_iff.mpr (lt_of_not_ge hni0)
+                have hn0 : ¬n = i + 1 := by
+                  intro h
+                  subst n
+                  exact hni le_rfl
+                have hlt' : (i + 1) + 1 ≤ n :=
+                  PNat.add_one_le_iff.mpr (lt_of_not_ge hni)
+                have hy2 : y ((i + 1) + 1) =
+                    (transitionMap G (i := n) (j := (i + 1) + 1) hlt').hom x := by
+                  simp [y, hni, hn]
+                have hy1 : y (i + 1) =
+                    (transitionMap G (i := n) (j := i + 1) hlt).hom x := by
+                  simp [y, hni0, hn0]
+                rw [hy2, hy1]
+                change ((transitionMap G (i := n) (j := (i + 1) + 1) hlt' ≫
+                    transitionMap G (i := (i + 1) + 1) (j := i + 1)
+                      (PNat.lt_add_right (i + 1) 1).le).hom) x = _
+                exact congrArg (fun f => f.hom x)
+                  (transitionMap_comp G hlt' (PNat.lt_add_right (i + 1) 1).le)
+      have hy' : (fun i : ℕ+ᵒᵖ => y i.unop) ∈ successiveCompatibleFamilies G := by
+        intro i
+        exact hy i
+      let s : inverseLimitFamilies G :=
+        ⟨fun i => y i.unop,
+          (inverseLimitFamilies_iff_successiveCompatibleFamilies G _).2 hy'⟩
+      let z : inverseLimitModule G := (inverseLimitModule_equiv_families G).symm s
+      refine ⟨z, ?_⟩
+      have hz : inverseLimitModule_equiv_families G z = s := by simp [z]
+      have hz' := congrArg (fun q => q.1 (Opposite.op n)) hz
+      have hcoord :
+          (inverseLimitModule_equiv_families G z).1 (Opposite.op n) =
+            (limit.π G (Opposite.op n)).hom z := by
+        change (Types.limitEquivSections
+          (G ⋙ CategoryTheory.forget (ModuleCat.{w} A))
+          ((preservesLimitIso (CategoryTheory.forget (ModuleCat.{w} A)) G).hom.hom z)).1
+            (Opposite.op n) = (limit.π G (Opposite.op n)).hom z
+        rw [Types.limitEquivSections_apply]
+        have hπ := congrArg (fun q => q.hom z)
+          (preservesLimitIso_hom_π
+            (CategoryTheory.forget (ModuleCat.{w} A)) G (Opposite.op n))
+        change (limit.π (G ⋙ CategoryTheory.forget (ModuleCat.{w} A))
+            (Opposite.op n)).hom
+              ((preservesLimitIso (CategoryTheory.forget (ModuleCat.{w} A)) G).hom.hom z) =
+            (limit.π G (Opposite.op n)).hom z at hπ
+        exact hπ
+      rw [hcoord] at hz'
+      change (limit.π G (Opposite.op n)).hom z = y n at hz'
+      have hyn : y n = x := by
+        induction n using PNat.recOn with
+        | one => simp [y]
+        | succ n ih =>
+            have hnot : ¬n + 1 ≤ n :=
+              not_le_of_gt (PNat.lt_add_right n 1)
+            simp [y, hnot]
+      rw [hyn] at hz'
+      exact hz'
+    have hproj : ∀ n : ℕ+, Function.Surjective
+        (limit.π F (Opposite.op n)).hom := hproj_of_surj F hsurj
+    have hkerstep : ∀ k : ℕ+,
+        LinearMap.ker (successiveTransitionMap F k).hom =
+          I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))) := by
+      intro k
+      rcases hF k with ⟨s⟩
+      have heq : s.equivalence.hom.hom ∘ₗ
+            (I ^ (k : ℕ) • (⊤ : Submodule A
+              (F.obj (Opposite.op (k + 1))))).mkQ =
+          (successiveTransitionMap F k).hom := by
+        have heq' := congrArg ModuleCat.Hom.hom s.transition_eq
+        change s.equivalence.hom.hom ∘ₗ
+              (I ^ (k : ℕ) • (⊤ : Submodule A
+                (F.obj (Opposite.op (k + 1))))).mkQ =
+            (successiveTransitionMap F k).hom at heq'
+        exact heq'
+      apply le_antisymm
+      · intro x hx
+        have hx' : s.equivalence.hom.hom
+            ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ x) = 0 := by
+          change (s.equivalence.hom.hom ∘ₗ
+            (I ^ (k : ℕ) • (⊤ : Submodule A
+              (F.obj (Opposite.op (k + 1))))).mkQ) x = 0
+          rw [heq]
+          exact hx
+        have hmk : (I ^ (k : ℕ) •
+            (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ x = 0 := by
+          have hmk' := congrArg (fun y => s.equivalence.inv.hom y) hx'
+          simpa using hmk'
+        exact (Submodule.Quotient.mk_eq_zero _).mp hmk
+      · refine Submodule.smul_le.mpr ?_
+        intro a ha x hx
+        change (successiveTransitionMap F k).hom (a • x) = 0
+        rw [← heq]
+        change s.equivalence.hom.hom
+          ((I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ (a • x)) = 0
+        have hmk : (I ^ (k : ℕ) •
+            (⊤ : Submodule A (F.obj (Opposite.op (k + 1))))).mkQ (a • x) = 0 := by
+          apply (Submodule.Quotient.mk_eq_zero _).mpr
+          exact Submodule.smul_mem_smul ha hx
+        rw [hmk, map_zero]
+    let K (n : ℕ+) : Submodule A (inverseLimitModule F) :=
+      LinearMap.ker (limit.π F (Opposite.op n)).hom
+    let D (n : ℕ+) : Submodule A (K n) :=
+      (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).comap (K n).subtype
+    let Q (n : ℕ+) : ModuleCat.{w} A := ModuleCat.of A ((K n : Type w) ⧸ D n)
+    have hKmono : ∀ ⦃i j : ℕ+⦄ (h : j ≤ i), K i ≤ K j := by
+      intro i j h x hx
+      have heq := congrArg ModuleCat.Hom.hom (limit.w F (opHomOfLE h))
+      change (limit.π F (Opposite.op j)).hom x = 0
+      rw [← heq]
+      change (F.map (opHomOfLE h)).hom
+        ((limit.π F (Opposite.op i)).hom x) = 0
+      rw [hx, map_zero]
+    let kinc {i j : ℕ+} (h : j ≤ i) : K i →ₗ[A] K j :=
+      { toFun := fun x => ⟨x, hKmono h x.property⟩
+        map_add' := by intro x y; rfl
+        map_smul' := by intro a x; rfl }
+    have hDmap : ∀ ⦃i j : ℕ+⦄ (h : j ≤ i), D i ≤ (D j).comap (kinc h) := by
+      intro i j h x hx
+      change (x : inverseLimitModule F) ∈ I ^ (j : ℕ) • (⊤ : Submodule A (inverseLimitModule F))
+      exact (Submodule.smul_mono_left
+        (Ideal.pow_le_pow_right (show (j : ℕ) ≤ i from h))) hx
+    let qmap {i j : ℕ+} (h : j ≤ i) : Q i ⟶ Q j :=
+      ModuleCat.ofHom ((D i).mapQ (D j) (kinc h) (hDmap h))
+    let Qsys : NaturalInverseSystem A :=
+      { obj := fun i => Q i.unop
+        map := fun {i j} f => qmap (leOfHom f.unop)
+        map_id := by
+          intro i; apply ModuleCat.hom_ext; ext x
+          change (D (Opposite.unop i)).mkQ
+              ((kinc (le_rfl : Opposite.unop i ≤ Opposite.unop i)) x) =
+            (D (Opposite.unop i)).mkQ x
+          rfl
+        map_comp := by
+          intro i j k f g; apply ModuleCat.hom_ext; ext x
+          change (D (Opposite.unop k)).mkQ
+              ((kinc (leOfHom (f ≫ g).unop)) x) =
+            (D (Opposite.unop k)).mkQ
+              ((kinc (leOfHom g.unop))
+                ((kinc (leOfHom f.unop)) x))
+          congr 1 }
+    have hqstep : ∀ k : ℕ+, Function.Surjective
+        (Qsys.map (opHomOfLE (PNat.lt_add_right k 1).le)).hom := by
+      intro k q
+      obtain ⟨x, hx⟩ := Submodule.Quotient.mk_surjective (D k) q
+      have hxtrans : (successiveTransitionMap F k).hom
+          ((limit.π F (Opposite.op (k + 1))).hom x) = 0 := by
+        have heq := congrArg ModuleCat.Hom.hom
+          (limit.w F (opHomOfLE (PNat.lt_add_right k 1).le))
+        have heq' := congrArg (fun f => f (x : inverseLimitModule F)) heq
+        change (F.map (opHomOfLE (PNat.lt_add_right k 1).le)).hom
+            ((limit.π F (Opposite.op (k + 1))).hom (x : inverseLimitModule F)) =
+          (limit.π F (Opposite.op k)).hom (x : inverseLimitModule F) at heq'
+        change (F.map (opHomOfLE (PNat.lt_add_right k 1).le)).hom
+          ((limit.π F (Opposite.op (k + 1))).hom (x : inverseLimitModule F)) = 0
+        exact heq'.trans x.property
+      have hxmem : (limit.π F (Opposite.op (k + 1))).hom x ∈
+          I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))) := by
+        rw [← hkerstep k]; exact hxtrans
+      have hmap : Submodule.map (limit.π F (Opposite.op (k + 1))).hom
+          (I ^ (k : ℕ) • (⊤ : Submodule A (inverseLimitModule F))) =
+          I ^ (k : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (k + 1)))) := by
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.2 (hproj (k + 1))]
+      obtain ⟨z, hz, hpz⟩ :=
+        (Submodule.mem_map (f := (limit.π F (Opposite.op (k + 1))).hom)
+          (p := I ^ (k : ℕ) • (⊤ : Submodule A (inverseLimitModule F)))).1 (hmap ▸ hxmem)
+      have hu : (limit.π F (Opposite.op (k + 1))).hom (x - z) = 0 := by
+        rw [map_sub, hpz]; abel
+      let u : K (k + 1) := ⟨x - z, hu⟩
+      refine ⟨(D (k + 1)).mkQ u, ?_⟩
+      rw [← hx]
+      change ((D (k + 1)).mapQ (D k) (kinc (PNat.lt_add_right k 1).le)
+          (hDmap (PNat.lt_add_right k 1).le))
+          ((D (k + 1)).mkQ u) = (D k).mkQ x
+      change (D k).mkQ ((kinc (PNat.lt_add_right k 1).le) u) = (D k).mkQ x
+      apply (Submodule.Quotient.eq _).2
+      change (u : inverseLimitModule F) - (x : inverseLimitModule F) ∈
+        I ^ (k : ℕ) • (⊤ : Submodule A (inverseLimitModule F))
+      simpa [u] using (Submodule.neg_mem _ hz)
+    have hqgeneral : ∀ (i j : ℕ+) (h : j ≤ i),
+        Function.Surjective (Qsys.map (opHomOfLE h)).hom := by
+      intro i
+      induction i using PNat.recOn with
+      | one =>
+          intro j h
+          have hj : j = 1 := le_one_iff_eq_one.mp h
+          subst j
+          have hh : opHomOfLE h = 𝟙 (Opposite.op (1 : ℕ+)) := Subsingleton.elim _ _
+          change Function.Surjective (Qsys.map (opHomOfLE h)).hom
+          rw [hh, Qsys.map_id]
+          exact Function.surjective_id
+      | succ i ih =>
+          intro j h
+          rcases eq_or_lt_of_le h with rfl | hj
+          · have hh : opHomOfLE h = 𝟙 (Opposite.op (i + 1)) := Subsingleton.elim _ _
+            change Function.Surjective (Qsys.map (opHomOfLE h)).hom
+            rw [hh, Qsys.map_id]
+            exact Function.surjective_id
+          · have hji : j ≤ i := PNat.lt_add_one_iff.mp hj
+            have hcomp : Qsys.map (opHomOfLE h) =
+                Qsys.map (opHomOfLE (PNat.lt_add_right i 1).le) ≫
+                  Qsys.map (opHomOfLE hji) := by
+              rw [← Qsys.map_comp]
+            rw [hcomp]
+            exact (ih j hji).comp (hqstep i)
+    have hQsurj : ∀ ⦃i j : ℕ+ᵒᵖ⦄ (f : i ⟶ j),
+        Function.Surjective (Qsys.map f).hom := by
+      intro i j f
+      let h : j.unop ≤ i.unop := leOfHom f.unop
+      have hf : f = opHomOfLE h := Subsingleton.elim _ _
+      rw [hf]
+      exact hqgeneral i.unop j.unop h
+    have hQproj : ∀ n : ℕ+, Function.Surjective
+        (limit.π Qsys (Opposite.op n)).hom := hproj_of_surj Qsys hQsurj
+    have hpower : IsPowerAnnihilated I F := by
+      intro n
+      rcases hF n with ⟨s⟩
+      intro x a
+      obtain ⟨z, hz⟩ := Submodule.mkQ_surjective
+        (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1)))))
+        (s.equivalence.inv.hom x)
+      calc
+        (a : A) • x = (a : A) • s.equivalence.hom.hom (s.equivalence.inv.hom x) := by simp
+        _ = s.equivalence.hom.hom ((a : A) • s.equivalence.inv.hom x) := by rw [map_smul]
+        _ = s.equivalence.hom.hom ((a : A) •
+            (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ z) := by rw [← hz]
+        _ = 0 := by
+          have haz : (I ^ (n : ℕ) •
+              (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ ((a : A) • z) = 0 := by
+            apply (Submodule.Quotient.mk_eq_zero _).mpr
+            exact Submodule.smul_mem_smul a.property (by simp)
+          rw [show (a : A) •
+              (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ z =
+              (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ ((a : A) • z) by
+                simp only [map_smul], haz, map_zero]
+    have hLker : ∀ n : ℕ+,
+        I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) ≤ K n := by
+      intro n
+      refine Submodule.smul_le.mpr ?_
+      intro a ha x hx
+      change (limit.π F (Opposite.op n)).hom (a • x) = 0
+      rw [map_smul]
+      exact @hpower n ((limit.π F (Opposite.op n)).hom x) ⟨a, ha⟩
+    have hcomplete : IsAdicComplete I (inverseLimitModule F) :=
+      limit_complete_pre I hI F hpower
+    have hof : Function.Bijective (AdicCompletion.of I (inverseLimitModule F)) :=
+      (isAdicComplete_iff_completion_map_bijective I (inverseLimitModule F)).mp hcomplete
+    have hQlimit_zero : ∀ q : inverseLimitModule Qsys, q = 0 := by
+      intro q
+      let a : ∀ m : ℕ, K (Nat.succPNat m) := fun m =>
+        (Submodule.Quotient.mk_surjective (D (Nat.succPNat m))
+          ((limit.π Qsys (Opposite.op (Nat.succPNat m))).hom q)).choose
+      have ha : ∀ m : ℕ,
+          (D (Nat.succPNat m)).mkQ (a m) =
+            (limit.π Qsys (Opposite.op (Nat.succPNat m))).hom q := by
+        intro m
+        exact (Submodule.Quotient.mk_surjective (D (Nat.succPNat m))
+          ((limit.π Qsys (Opposite.op (Nat.succPNat m))).hom q)).choose_spec
+      have hcauchy : ∀ m : ℕ,
+          (a m : inverseLimitModule F) ≡ (a (m + 1) : inverseLimitModule F)
+            [SMOD (I ^ m • (⊤ : Submodule A (inverseLimitModule F)))] := by
+        intro m
+        apply SModEq.sub_mem.mpr
+        have hw := congrArg (fun f => f q)
+          (limit.w Qsys (opHomOfLE
+            (PNat.lt_add_right (Nat.succPNat m) 1).le))
+        have hw' :
+            (Qsys.map (opHomOfLE (PNat.lt_add_right (Nat.succPNat m) 1).le)).hom
+                ((limit.π Qsys (Opposite.op (Nat.succPNat (m + 1)))).hom q) =
+              (limit.π Qsys (Opposite.op (Nat.succPNat m))).hom q := hw
+        have ha' (r : ℕ) : (D (Nat.succPNat r)).mkQ (a r) =
+            (limit.π Qsys (Opposite.op (Nat.succPNat r))).hom q := ha r
+        rw [← ha' (m + 1), ← ha' m] at hw'
+        have hmn : Nat.succPNat m ≤ Nat.succPNat (m + 1) := by
+          simpa only [Nat.succ_eq_add_one, PNat.add_one, Nat.succPNat_coe] using
+            (PNat.lt_add_right (Nat.succPNat m) 1).le
+        change (D (Nat.succPNat (m + 1))).mapQ (D (Nat.succPNat m))
+            (kinc hmn) (hDmap hmn)
+            ((D (Nat.succPNat (m + 1))).mkQ (a (m + 1))) =
+          (D (Nat.succPNat m)).mkQ (a m) at hw'
+        change (D (Nat.succPNat m)).mkQ (kinc hmn (a (m + 1))) =
+          (D (Nat.succPNat m)).mkQ (a m) at hw'
+        have hmem := (Submodule.Quotient.eq _).mp hw'
+        change (a (m + 1) : inverseLimitModule F) - (a m : inverseLimitModule F) ∈
+          I ^ (m + 1) • (⊤ : Submodule A (inverseLimitModule F)) at hmem
+        have hmem' := Submodule.smul_mono_left
+          (Ideal.pow_le_pow_right (Nat.le_succ m)) hmem
+        simpa only [neg_sub] using (Submodule.neg_mem _ hmem')
+      let c : AdicCompletion.AdicCauchySequence I (inverseLimitModule F) :=
+        AdicCompletion.AdicCauchySequence.mk I (inverseLimitModule F)
+          (fun m => (a m : inverseLimitModule F)) hcauchy
+      let z := AdicCompletion.mk I (inverseLimitModule F) c
+      obtain ⟨y, hy⟩ := hof.2 z
+      have hcoord : ∀ m : ℕ+,
+          (limit.π F (Opposite.op m)).hom y = 0 := by
+        intro m
+        have heval := congrArg (AdicCompletion.eval I (inverseLimitModule F) (m : ℕ)) hy
+        have heval' :
+            (I ^ (m : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ y =
+              (I ^ (m : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ
+                (a m) := by
+          simpa [z, c, AdicCompletion.eval_of] using heval
+        have hya := (Submodule.Quotient.eq _).mp heval'
+        have hzero := hLker m hya
+        have haK : (a m : inverseLimitModule F) ∈ K m :=
+          hKmono (PNat.lt_add_right m 1).le (a m).property
+        have hpa : (limit.π F (Opposite.op m)).hom
+            (a m : inverseLimitModule F) = 0 := haK
+        change (limit.π F (Opposite.op m)).hom
+            (y - (a m : inverseLimitModule F)) = 0 at hzero
+        rw [map_sub, hpa] at hzero
+        simpa using hzero
+      have hyzero : y = 0 := by
+        apply Concrete.limit_ext F
+        intro m
+        simpa using hcoord m.unop
+      have hzzero : z = 0 := by
+        rw [← hy, hyzero, map_zero]
+      apply Concrete.limit_ext Qsys
+      intro i
+      let n := i.unop
+      have heval := congrArg
+        (AdicCompletion.eval I (inverseLimitModule F) (n : ℕ)) hzzero
+      have hamem : (a n : inverseLimitModule F) ∈
+          I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) := by
+        have heval' :
+            (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ (a n) = 0 := by
+          simpa [z, c, n, AdicCompletion.eval_of] using heval
+        exact (Submodule.Quotient.mk_eq_zero _).mp heval'
+      have hstepq := congrArg (fun f => f q)
+        (limit.w Qsys (opHomOfLE (PNat.lt_add_right n 1).le))
+      have hstepq' :
+          (Qsys.map (opHomOfLE (PNat.lt_add_right n 1).le)).hom
+              ((limit.π Qsys (Opposite.op (n + 1))).hom q) =
+            (limit.π Qsys (Opposite.op n)).hom q := hstepq
+      have han : (D (n + 1)).mkQ (a n) =
+          (limit.π Qsys (Opposite.op (n + 1))).hom q := by
+        exact ha n
+      rw [← han] at hstepq'
+      have hnn : n ≤ n + 1 := (PNat.lt_add_right n 1).le
+      change (D (n + 1)).mapQ (D n) (kinc hnn) (hDmap hnn)
+          ((D (n + 1)).mkQ (a n)) =
+        (limit.π Qsys (Opposite.op n)).hom q at hstepq'
+      have hqzero : (D n).mkQ (kinc (PNat.lt_add_right n 1).le (a n)) = 0 := by
+        apply (Submodule.Quotient.mk_eq_zero _).mpr
+        change (a n : inverseLimitModule F) ∈
+          I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))
+        exact hamem
+      change (D n).mkQ (kinc hnn (a n)) =
+        (limit.π Qsys (Opposite.op n)).hom q at hstepq'
+      rw [hqzero] at hstepq'
+      simpa using hstepq'.symm
+    have hQelt : ∀ (n : ℕ+) (q : Q n), q = 0 := by
+      intro n q
+      obtain ⟨z, hz⟩ := hQproj n q
+      calc
+        q = (limit.π Qsys (Opposite.op n)).hom z := hz.symm
+        _ = (limit.π Qsys (Opposite.op n)).hom 0 := by rw [hQlimit_zero z]
+        _ = 0 := map_zero _
+    have hker : ∀ n : ℕ+,
+        LinearMap.ker (limit.π F (Opposite.op n)).hom =
+          I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) := by
+      intro n
+      apply le_antisymm
+      · intro x hx
+        have hq : (D n).mkQ (⟨x, hx⟩ : K n) = 0 := hQelt n ((D n).mkQ ⟨x, hx⟩)
+        have hqmem := (Submodule.Quotient.mk_eq_zero (D n)).mp hq
+        change (x : inverseLimitModule F) ∈
+          I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) at hqmem
+        exact hqmem
+      · exact hLker n
+    intro n
+    let q : (inverseLimitModule F ⧸
+        (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)))) →ₗ[A]
+        F.obj (Opposite.op n) :=
+      (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).liftQ
+        (limit.π F (Opposite.op n)).hom (hLker n)
+    have hqker : LinearMap.ker q = ⊥ := by
+      apply Submodule.ker_liftQ_eq_bot
+      rw [hker n]
+    have hqinj : Function.Injective q := LinearMap.ker_eq_bot.mp hqker
+    have hqsurj : Function.Surjective q := by
+      intro y
+      obtain ⟨x, hx⟩ := hproj n y
+      refine ⟨(I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ x, ?_⟩
+      change q ((I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ x) = y
+      change (limit.π F (Opposite.op n)).hom x = y
+      exact hx
+    let e : (inverseLimitModule F ⧸
+        (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)))) ≃ₗ[A]
+        F.obj (Opposite.op n) := LinearEquiv.ofBijective q ⟨hqinj, hqsurj⟩
+    refine ⟨{ equivalence := e, projection_eq := ?_ }⟩
+    apply ModuleCat.hom_ext
+    ext x
+    change e ((I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).mkQ x) =
+      (limit.π F (Opposite.op n)).hom x
+    have hfactor := Submodule.liftQ_mkQ
+      (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)))
+      (limit.π F (Opposite.op n)).hom (hLker n)
+    exact congrArg (fun f => f x) hfactor
   · apply limit_complete_pre I hI F
     intro n
     rcases hF n with ⟨s⟩

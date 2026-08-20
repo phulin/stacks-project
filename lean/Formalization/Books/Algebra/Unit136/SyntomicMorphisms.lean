@@ -1,10 +1,14 @@
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
+import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Algebra.Unit135.LocalCompleteIntersections
+import Formalization.Books.Algebra.Unit126.AlgebrasAndModulesFinitePresentation
 import Mathlib.RingTheory.FinitePresentation
+import Mathlib.RingTheory.RingHom.FinitePresentation
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
+import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.Polynomial.Basic
@@ -67,11 +71,290 @@ theorem IsSyntomic.fiber_lci
       p.asIdeal.ResidueField (Fiber R S p) := by
   simpa only [IsSyntomic] using h.2.2 p
 
+private theorem isGlobalCompleteIntersection_of_algEquiv
+    {k A B : Type u} [Field k] [CommRing A] [CommRing B]
+    [Algebra k A] [Algebra k B] (e : A ≃ₐ[k] B)
+    (hA : Formalization.Books.Algebra.Unit135.IsGlobalCompleteIntersection k A) :
+    Formalization.Books.Algebra.Unit135.IsGlobalCompleteIntersection k B := by
+  rcases hA with ⟨hft, hcase⟩
+  rcases hcase with hsub | ⟨n, c, P, f, hker, hc, hdim⟩
+  · let hsubB : Subsingleton B :=
+      ⟨fun x y => e.symm.injective (hsub.elim _ _)⟩
+    let Q : Formalization.Books.Algebra.Unit135.PolynomialPresentation k B 0 :=
+      Algebra.Generators.ofSurjective
+        (fun i : Fin 0 => nomatch i)
+        (by
+          intro x
+          exact ⟨0, hsubB.elim _ _⟩)
+    exact ⟨RingHom.finiteType_algebraMap.mpr Q.finiteType, Or.inl hsubB⟩
+  · let P' : Formalization.Books.Algebra.Unit135.PolynomialPresentation k B n :=
+      P.ofAlgEquiv e
+    have hker' : P'.ker = P.ker := by
+      rw [P'.ker_eq_ker_aeval_val, P.ker_eq_ker_aeval_val]
+      ext z
+      change MvPolynomial.aeval (e ∘ P.val) z = 0 ↔
+        MvPolynomial.aeval P.val z = 0
+      have heval : e (MvPolynomial.aeval P.val z) =
+          MvPolynomial.aeval (e ∘ P.val) z := by
+        simpa [Function.comp_def] using
+          (MvPolynomial.comp_aeval_apply (R := k) (f := P.val) e.toAlgHom z)
+      rw [← heval]
+      constructor
+      · intro hz
+        apply e.injective
+        simpa using hz
+      · intro hz
+        rw [← e.map_zero]
+        exact congrArg e hz
+    have hdim' : ringKrullDim B =
+        (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := by
+      rw [← ringKrullDim_eq_of_ringEquiv e.toRingEquiv]
+      exact hdim
+    exact ⟨RingHom.finiteType_algebraMap.mpr P'.finiteType, Or.inr
+      ⟨n, c, P', f, hker'.trans hker, hc, hdim'⟩⟩
+
+private theorem local_complete_intersection_of_algEquiv
+    {k A B : Type u} [Field k] [CommRing A] [CommRing B]
+    [Algebra k A] [Algebra k B] (e : A ≃ₐ[k] B)
+    (hA : Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k A) :
+    Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k B := by
+  rcases hA with ⟨hft, n, gs, hopen, hglob⟩
+  have hftB : RingHom.FiniteType (algebraMap k B) := by
+    rw [RingHom.finiteType_algebraMap]
+    exact Algebra.FiniteType.equiv (by
+      rw [RingHom.finiteType_algebraMap] at hft
+      exact hft) e
+  refine ⟨hftB, n, (fun i => e (gs i)), ?_, ?_⟩
+  · ext q
+    simp only [Set.mem_iUnion, Set.mem_univ, iff_true]
+    let qA : PrimeSpectrum A := PrimeSpectrum.comap e.toRingHom q
+    have hq : qA ∈ ⋃ i : Fin n,
+        (PrimeSpectrum.basicOpen (gs i) : Set (PrimeSpectrum A)) := by
+      rw [hopen]
+      trivial
+    rcases Set.mem_iUnion.mp hq with ⟨i, hi⟩
+    refine ⟨i, ?_⟩
+    change e (gs i) ∉ q.asIdeal
+    change gs i ∉ qA.asIdeal
+    exact hi
+  · intro i
+    have hmap : Submonoid.map e.toRingEquiv (Submonoid.powers (gs i)) =
+        Submonoid.powers (e (gs i)) := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨m, rfl⟩, rfl⟩
+        exact ⟨m, by simp⟩
+      · rintro ⟨m, rfl⟩
+        exact ⟨(gs i) ^ m, ⟨m, rfl⟩, by simp⟩
+    let ei : Localization.Away (gs i) ≃ₐ[k]
+        Localization.Away (e (gs i)) :=
+      IsLocalization.algEquivOfAlgEquiv
+        (Localization.Away (gs i)) (Localization.Away (e (gs i))) e hmap
+    exact isGlobalCompleteIntersection_of_algEquiv ei (hglob i)
+
+private noncomputable def fiber_base_change_algEquiv
+    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    (f : R →+* S) (g : R →+* R') (p : PrimeSpectrum R)
+    (p' : PrimeSpectrum R') (hp' : PrimeSpectrum.comap g p' = p) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    let K := p'.asIdeal.ResidueField
+    let k₀ := p.asIdeal.ResidueField
+    letI : Algebra k₀ K :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' hp').toAlgebra
+    letI : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
+    K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[k₀] (k₀ ⊗[R] S) := by
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  let K := p'.asIdeal.ResidueField
+  let k₀ := p.asIdeal.ResidueField
+  letI : Algebra k₀ K :=
+    (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' hp').toAlgebra
+  letI : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
+  letI : IsScalarTower R k₀ K := by
+    apply IsScalarTower.of_algebraMap_eq'
+    ext r
+    have hideal : p.asIdeal = p'.asIdeal.comap g := by
+      simpa [PrimeSpectrum.comap_asIdeal] using
+        (congrArg PrimeSpectrum.asIdeal hp').symm
+    change algebraMap R K r =
+      (Ideal.ResidueField.map p.asIdeal p'.asIdeal g hideal)
+        (algebraMap R k₀ r)
+    rw [Ideal.ResidueField.map_algebraMap]
+    exact (IsScalarTower.algebraMap_apply R R' K r).symm
+  let e₀ : K ⊗[R'] (R' ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+    Algebra.TensorProduct.cancelBaseChange R R' K K S
+  let e₁ : K ⊗[k₀] (k₀ ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+    Algebra.TensorProduct.cancelBaseChange R k₀ K K S
+  let c : K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[R'] (R' ⊗[R] S) :=
+    Algebra.TensorProduct.congr (.refl : K ≃ₐ[K] K)
+      (Algebra.TensorProduct.commRight R R' S).symm
+  exact c.trans e₀ |>.trans e₁.symm
+
+private noncomputable def fiber_localization_algEquiv
+    {R S k : Type u} [CommRing R] [CommRing S] [Field k]
+    [Algebra R S] [Algebra R k] (g₀ : S) :
+    let U := Localization.Away g₀
+    let F := k ⊗[R] S
+    letI : Algebra R U :=
+      ((algebraMap S U).comp (algebraMap R S)).toAlgebra
+    letI : Module R U := Algebra.toModule
+    letI : SMul S U := Algebra.toSMul
+    letI : SMul R U := Algebra.toSMul
+    letI : Algebra S F := Algebra.TensorProduct.rightAlgebra
+    k ⊗[R] U ≃ₐ[k] Localization.Away (algebraMap S F g₀) := by
+  dsimp
+  let U := Localization.Away g₀
+  let F := k ⊗[R] S
+  letI : Algebra R U :=
+    ((algebraMap S U).comp (algebraMap R S)).toAlgebra
+  letI : Module R U := Algebra.toModule
+  letI : SMul S U := Algebra.toSMul
+  letI : SMul R U := Algebra.toSMul
+  letI : IsScalarTower R S U := by
+    apply IsScalarTower.of_algebraMap_eq'
+    ext r
+    simp [RingHom.algebraMap_toAlgebra]
+  letI : Algebra S F := Algebra.TensorProduct.rightAlgebra
+  let c₁ : S ⊗[R] k ≃ₐ[S] F :=
+    Algebra.TensorProduct.commRight R S k
+  let c₂ : U ⊗[S] (S ⊗[R] k) ≃ₐ[U] U ⊗[S] F :=
+    Algebra.TensorProduct.congr (.refl : U ≃ₐ[U] U) c₁
+  letI : Algebra U (U ⊗[R] k) := Algebra.TensorProduct.leftAlgebra
+  letI : Algebra U (k ⊗[R] U) := Algebra.TensorProduct.rightAlgebra
+  let c₃ : U ⊗[S] (S ⊗[R] k) ≃ₐ[U] U ⊗[R] k :=
+    Algebra.TensorProduct.cancelBaseChange R S U U k
+  let c₄ : U ⊗[R] k ≃ₐ[U] k ⊗[R] U :=
+    Algebra.TensorProduct.commRight R U k
+  let c : U ⊗[S] F ≃ₐ[U] k ⊗[R] U := c₂.symm.trans c₃ |>.trans c₄
+  letI : Algebra F (U ⊗[S] F) := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra k (U ⊗[S] F) :=
+    Algebra.restrictScalars k F (U ⊗[S] F)
+  letI : IsScalarTower k F (U ⊗[S] F) := by
+    apply IsScalarTower.of_algebraMap_eq'
+    ext x
+    rfl
+  let e₀ : k ⊗[R] U ≃ₐ[k] U ⊗[S] F :=
+    { c.symm.toRingEquiv with
+      commutes' := by
+        intro x
+        change c.symm (algebraMap k (k ⊗[R] U) x) =
+          algebraMap k (U ⊗[S] F) x
+        change c.symm (x ⊗ₜ[R] (1 : U)) =
+          (1 : U) ⊗ₜ[S] (x ⊗ₜ[R] (1 : S))
+        simp [c, c₂, c₃, c₄]
+        rw [Algebra.TensorProduct.commRight_tmul] }
+  let e₁ : U ⊗[S] F ≃ₐ[k] Localization.Away (algebraMap S F g₀) :=
+    (IsLocalization.Away.tensorRightEquiv (r := g₀) F U).restrictScalars k
+  exact e₀.trans e₁
+
 theorem syntomic_over_field_iff_local_complete_intersection
     {k S : Type u} [Field k] [CommRing S] [Algebra k S] :
     IsSyntomic (algebraMap k S) ↔
       Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S := by
-  sorry
+  constructor
+  · intro h
+    let alg₀ : Algebra k S := inferInstance
+    letI : Algebra k S := (algebraMap k S).toAlgebra
+    have hft : RingHom.FiniteType (algebraMap k S) :=
+      RingHom.FiniteType.of_finitePresentation h.finitePresentation
+    rw [RingHom.finiteType_algebraMap] at hft
+    let _ : Algebra.FiniteType k S := hft
+    let p : PrimeSpectrum k := ⟨⊥, Ideal.isPrime_bot⟩
+    letI : p.asIdeal.IsPrime := p.isPrime
+    letI : Field p.asIdeal.ResidueField := inferInstance
+    have hp := h.fiber_lci p
+    have he :=
+      Formalization.Books.Algebra.Unit135.local_complete_intersection_field_change
+        (k := k) (K := p.asIdeal.ResidueField) (S := S)
+    have hlci : Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S := by
+      apply he.mpr
+      convert hp using 1
+    have halg : (algebraMap k S).toAlgebra = alg₀ :=
+      by
+        exact @toAlgebra_algebraMap k S _ _ alg₀
+    have hprop :
+        @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _
+            (algebraMap k S).toAlgebra =
+          @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _ alg₀ :=
+      congrArg (fun a : Algebra k S =>
+        @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _ a) halg
+    change @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _ alg₀
+    exact hprop ▸ hlci
+  · intro h
+    let alg₀ : Algebra k S := inferInstance
+    letI : Algebra k S := (algebraMap k S).toAlgebra
+    have halg : (algebraMap k S).toAlgebra = alg₀ :=
+      by
+        exact @toAlgebra_algebraMap k S _ _ alg₀
+    have hprop :
+        @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _
+            (algebraMap k S).toAlgebra =
+          @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _ alg₀ :=
+      congrArg (fun a : Algebra k S =>
+        @Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S _ _ a) halg
+    have hlocal : Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S :=
+      hprop.symm ▸ h
+    have hft : RingHom.FiniteType (algebraMap k S) := hlocal.finiteType
+    have hfp : RingHom.FinitePresentation (algebraMap k S) :=
+      (RingHom.FinitePresentation.of_finiteType).mp hft
+    rw [RingHom.finiteType_algebraMap] at hft
+    let _ : Algebra.FiniteType k S := hft
+    refine ⟨?_, hfp, ?_⟩
+    · change Module.Flat k S
+      infer_instance
+    · intro p
+      letI : p.asIdeal.IsPrime := p.isPrime
+      letI : Field p.asIdeal.ResidueField := inferInstance
+      letI : Module k p.asIdeal.ResidueField :=
+        IsLocalRing.instModuleResidueFieldOfAlgebra (Localization.AtPrime p.asIdeal)
+      have he :=
+        Formalization.Books.Algebra.Unit135.local_complete_intersection_field_change
+          (k := k) (K := p.asIdeal.ResidueField) (S := S)
+      have hp' := he.mp hlocal
+      convert hp' using 1
+
+private theorem syntomic_base_change_core
+    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    (f : R →+* S) (g : R →+* R') (hf : IsSyntomic f) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    IsSyntomic (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  let f' := Formalization.Books.Algebra.Unit14.baseChangeRingMap f g
+  letI : Algebra R' (S ⊗[R] R') := f'.toAlgebra
+  have hflat : RingHom.Flat f' := by
+    change Module.Flat R' (S ⊗[R] R')
+    letI : Module.Flat R S := hf.flat
+    letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+    letI : Module.Flat R' (R' ⊗[R] S) := inferInstance
+    exact Module.Flat.of_linearEquiv
+      (Algebra.TensorProduct.commRight R R' S).symm.toLinearEquiv
+  have hfp : RingHom.FinitePresentation f' :=
+    Formalization.Books.Algebra.Unit14.baseChange_finite_presentation
+      f g hf.finitePresentation
+  refine ⟨hflat, hfp, ?_⟩
+  intro p'
+  let p : PrimeSpectrum R := PrimeSpectrum.comap g p'
+  let K := p'.asIdeal.ResidueField
+  let k₀ := p.asIdeal.ResidueField
+  letI : Algebra k₀ K :=
+    (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' rfl).toAlgebra
+  let e := fiber_base_change_algEquiv f g p p' rfl
+  letI : Algebra.FiniteType R S := by
+    change RingHom.FiniteType f
+    exact RingHom.FiniteType.of_finitePresentation hf.finitePresentation
+  letI : Algebra.FiniteType k₀ (k₀ ⊗[R] S) := by infer_instance
+  have hfield :
+      Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k₀
+          (k₀ ⊗[R] S) ↔
+        Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection K
+          (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+    Formalization.Books.Algebra.Unit135.local_complete_intersection_field_change
+      (k := k₀) (K := K) (S := k₀ ⊗[R] S)
+  exact local_complete_intersection_of_algEquiv e.symm
+    (hfield.mp (hf.fiber_lci p))
 
 theorem syntomic_descends
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -80,7 +363,57 @@ theorem syntomic_descends
     letI : Algebra R R' := g.toAlgebra
     IsSyntomic f ↔
       IsSyntomic (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  let f' := Formalization.Books.Algebra.Unit14.baseChangeRingMap f g
+  letI : Algebra R' (S ⊗[R] R') := f'.toAlgebra
+  constructor
+  · intro hf
+    exact syntomic_base_change_core f g hf
+  · intro hb
+    have hflat : RingHom.Flat f := by
+      change Module.Flat R S
+      letI : Module.FaithfullyFlat R R' := hff
+      letI : Algebra R' (S ⊗[R] R') := Algebra.TensorProduct.rightAlgebra
+      have hmap : algebraMap R' (S ⊗[R] R') = f' := by
+        ext r
+        rfl
+      have hbflat : Module.Flat R' (S ⊗[R] R') := by
+        rw [← RingHom.flat_algebraMap_iff, hmap]
+        exact hb.flat
+      letI : Module.Flat R' (S ⊗[R] R') := hbflat
+      letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+      letI : Module.Flat R' (R' ⊗[R] S) :=
+        Module.Flat.of_linearEquiv
+          (Algebra.TensorProduct.commRight R R' S).toLinearEquiv
+      exact Module.Flat.of_flat_tensorProduct (R := R) (M := S) R'
+    have hfp : RingHom.FinitePresentation f :=
+      (Formalization.Books.Algebra.Unit126.finite_presentation_descends f g hff).mpr
+        hb.finitePresentation
+    refine ⟨hflat, hfp, ?_⟩
+    intro p
+    letI : Module.FaithfullyFlat R R' := hff
+    have hsurj : Function.Surjective (PrimeSpectrum.comap g) :=
+      (RingHom.FaithfullyFlat.iff_flat_and_comap_surjective.mp hff).2
+    obtain ⟨p', hp'⟩ := hsurj p
+    let K := p'.asIdeal.ResidueField
+    let k₀ := p.asIdeal.ResidueField
+    letI : Algebra k₀ K :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' hp').toAlgebra
+    let e := fiber_base_change_algEquiv f g p p' hp'
+    letI : Algebra.FiniteType R S := by
+      change RingHom.FiniteType f
+      exact RingHom.FiniteType.of_finitePresentation hfp
+    letI : Algebra.FiniteType k₀ (k₀ ⊗[R] S) := by infer_instance
+    have hfield :
+        Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k₀
+            (k₀ ⊗[R] S) ↔
+          Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection K
+            (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+      Formalization.Books.Algebra.Unit135.local_complete_intersection_field_change
+        (k := k₀) (K := K) (S := k₀ ⊗[R] S)
+    exact hfield.mpr (local_complete_intersection_of_algEquiv e
+      (hb.fiber_lci p'))
 
 theorem syntomic_base_change
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -88,7 +421,7 @@ theorem syntomic_base_change
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     IsSyntomic (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  exact syntomic_base_change_core f g hf
 
 theorem syntomic_local_on_source
     {R S : Type u} [CommRing R] [CommRing S]
@@ -97,7 +430,60 @@ theorem syntomic_local_on_source
     letI : Algebra R S := f.toAlgebra
     (∀ i, IsSyntomic (algebraMap R (Localization.Away (gs i)))) →
       IsSyntomic f := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  intro hlocal
+  have hflat : RingHom.Flat f :=
+    RingHom.Flat.propertyIsLocal.ofLocalizationSpanTarget f (Set.range gs) hgen
+      (by
+        rintro ⟨r, ⟨i, rfl⟩⟩
+        have hmap :
+            (algebraMap S (Localization.Away (gs i))).comp f =
+              algebraMap R (Localization.Away (gs i)) := by
+          ext r
+          simpa [RingHom.algebraMap_toAlgebra] using
+            (IsScalarTower.algebraMap_apply R S (Localization.Away (gs i)) r).symm
+        rw [hmap]
+        exact (hlocal i).flat)
+  have hfp : RingHom.FinitePresentation f :=
+    RingHom.finitePresentation_isLocal.ofLocalizationSpanTarget f (Set.range gs) hgen
+      (by
+        rintro ⟨r, ⟨i, rfl⟩⟩
+        have hmap :
+            (algebraMap S (Localization.Away (gs i))).comp f =
+              algebraMap R (Localization.Away (gs i)) := by
+          ext r
+          simpa [RingHom.algebraMap_toAlgebra] using
+            (IsScalarTower.algebraMap_apply R S (Localization.Away (gs i)) r).symm
+        rw [hmap]
+        exact (hlocal i).finitePresentation)
+  refine ⟨hflat, hfp, ?_⟩
+  intro p
+  let F := Fiber R S p
+  let k₀ := p.asIdeal.ResidueField
+  letI : Algebra k₀ F := Algebra.TensorProduct.leftAlgebra
+  letI : Algebra S F := Algebra.TensorProduct.rightAlgebra
+  have hgenF : Ideal.span (Set.range (fun i => algebraMap S F (gs i))) = (⊤ : Ideal F) := by
+    calc
+      Ideal.span (Set.range (fun i => algebraMap S F (gs i))) =
+          Ideal.map (algebraMap S F) (Ideal.span (Set.range gs)) := by
+            rw [Ideal.map_span]
+            congr 1
+            ext x
+            constructor
+            · rintro ⟨i, rfl⟩
+              exact ⟨gs i, ⟨i, rfl⟩, rfl⟩
+            · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+              exact ⟨i, rfl⟩
+      _ = Ideal.map (algebraMap S F) (⊤ : Ideal S) := by rw [hgen]
+      _ = ⊤ := Ideal.map_top (algebraMap S F)
+  have hlocF : ∀ i, Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection
+      k₀ (Localization.Away (algebraMap S F (gs i))) := by
+    intro i
+    let e := fiber_localization_algEquiv (R := R) (S := S) (k := k₀) (gs i)
+    exact local_complete_intersection_of_algEquiv e
+      (by simpa [Fiber, F, k₀] using (hlocal i).fiber_lci p)
+  exact Formalization.Books.Algebra.Unit135.local_complete_intersection_of_localizationSpanTarget
+    m (fun i => algebraMap S F (gs i)) hgenF hlocF
 
 /-! ## Relative global complete intersections -/
 
@@ -151,7 +537,28 @@ theorem relative_global_complete_intersection_is_finite_presentation
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (h : IsRelativeGlobalCompleteIntersection f) :
     RingHom.FinitePresentation f := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  rcases h with ⟨n, c, P, fs, hP, _⟩
+  have hker : P.ker.FG := by
+    rw [hP]
+    change Submodule.FG (Ideal.ofList (List.ofFn fs))
+    rw [Ideal.ofList]
+    rw [← show Set.range fs = {x | x ∈ List.ofFn fs} by
+      ext x
+      simp]
+    exact Submodule.fg_span (R := P.Ring) (M := P.Ring) (Set.finite_range fs)
+  have hPfp : RingHom.FinitePresentation (algebraMap P.Ring S) :=
+    RingHom.FinitePresentation.of_surjective (algebraMap P.Ring S)
+      P.algebraMap_surjective hker
+  have hpoly : RingHom.FinitePresentation (algebraMap R P.Ring) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  have hcomp := hPfp.comp hpoly
+  have hmap : (algebraMap P.Ring S).comp (algebraMap R P.Ring) = f := by
+    ext r
+    simp [P.algebraMap_eq, RingHom.algebraMap_toAlgebra]
+  rw [hmap] at hcomp
+  exact hcomp
 
 theorem relative_global_complete_intersection_base_change
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -160,7 +567,63 @@ theorem relative_global_complete_intersection_base_change
     letI : Algebra R R' := g.toAlgebra
     IsRelativeGlobalCompleteIntersection
       (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  let f' := Formalization.Books.Algebra.Unit14.baseChangeRingMap f g
+  letI : Algebra R' (S ⊗[R] R') := f'.toAlgebra
+  rcases h with ⟨n, c, P, fs, hP, hdim⟩
+  let P₀ : Algebra.Presentation R S (Fin n) (Fin c) :=
+    { __ := P
+      relation := fs
+      span_range_relation_eq_ker := by
+        rw [hP]
+        change Ideal.span (Set.range fs) =
+          Ideal.span {x | x ∈ List.ofFn fs}
+        congr 1
+        ext x
+        simp }
+  let P₁ := P₀.baseChange R'
+  let P₂ := P₁.ofAlgEquiv (Algebra.TensorProduct.commRight R R' S)
+  let P' : Formalization.Books.Algebra.Unit134.Presentation R'
+      (S ⊗[R] R') (Fin n) := P₂.toGenerators
+  let fs' : Fin c → P'.Ring := fun i => P₂.relation i
+  have hP' : IsPolynomialQuotientPresentation P' fs' := by
+    change P₂.ker = Ideal.ofList (List.ofFn fs')
+    rw [← P₂.span_range_relation_eq_ker]
+    change Ideal.span (Set.range P₂.relation) =
+      Ideal.ofList (List.ofFn fs')
+    rw [Ideal.ofList]
+    congr 1
+    ext x
+    simp [fs']
+  refine ⟨n, c, P', fs', hP', ?_⟩
+  intro p' hnon
+  let p : PrimeSpectrum R := PrimeSpectrum.comap g p'
+  let K := p'.asIdeal.ResidueField
+  let k₀ := p.asIdeal.ResidueField
+  letI : Algebra k₀ K :=
+    (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' rfl).toAlgebra
+  letI : Algebra.FiniteType R S := P.finiteType
+  letI : Algebra.FiniteType k₀ (k₀ ⊗[R] S) := by infer_instance
+  let e := fiber_base_change_algEquiv f g p p' rfl
+  let q' : PrimeSpectrum (Fiber R' (S ⊗[R] R') p') := Classical.choice hnon
+  let qK : PrimeSpectrum (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+    PrimeSpectrum.comap e.symm.toRingHom q'
+  let q : PrimeSpectrum (Fiber R S p) :=
+    PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qK
+  have hnonold : Nonempty (PrimeSpectrum (Fiber R S p)) := ⟨q⟩
+  have hdimext : ringKrullDim (Fiber R S p) =
+      ringKrullDim (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+    Formalization.Books.Algebra.Unit116.dimension_preserved_field_extension
+      (k := k₀) (S := k₀ ⊗[R] S) (K := K)
+  refine ⟨?_, ?_⟩
+  · exact (hdim p hnonold).1
+  · calc
+      ringKrullDim (Fiber R' (S ⊗[R] R') p') =
+          ringKrullDim (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+        ringKrullDim_eq_of_ringEquiv e.toRingEquiv
+      _ = ringKrullDim (Fiber R S p) := hdimext.symm
+      _ = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞) := hdim p hnonold |>.2
 
 theorem relative_global_complete_intersection_localization
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)

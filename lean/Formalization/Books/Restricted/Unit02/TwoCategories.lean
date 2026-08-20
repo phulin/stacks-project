@@ -2048,9 +2048,15 @@ theorem polynomialCompletion_property {A : Type u} [CommRing A]
   simpa [polynomialCompletion, adicCompletionAlgebra, polynomialAlgebra] using
     adicCompletionAlgebra_property I (polynomialAlgebra r) h
 
+/-- The completed polynomial algebra is in `𝓒'` for a finitely generated ideal. -/
+theorem polynomialCompletion_fg_property {A : Type u} [CommRing A]
+    (I : Ideal A) (hI : I.FG) (r : ℕ) :
+    CompleteAlgebraProperty I (polynomialCompletion I r) := by
+  sorry
+
 /-- Every complete algebra in `𝓒'` is a quotient of a completed polynomial algebra. -/
 theorem exists_polynomialCompletion_quotient {A : Type u} [CommRing A]
-    [IsNoetherianRing A] (I : Ideal A) (B : CompleteAlgebraCategory A I) :
+    (I : Ideal A) (hI : I.FG) (B : CompleteAlgebraCategory A I) :
     ∃ (r : ℕ) (J : Ideal (polynomialCompletion I r)),
         Nonempty
         (B.obj ≃ₐ[A]

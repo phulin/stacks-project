@@ -619,6 +619,134 @@ noncomputable abbrev degenerateObject
     (U : SimplicialObject C) (n : ℕ) : C :=
   degenerateSubobject U n
 
+/- Precomposition by an epimorphism does not change an image subobject in a
+   balanced category.  `Subobject.imageSubobject_comp_le_epi_of_epi` supplies
+   the comparison epi; the reverse inequality below is the small missing
+   bridge needed when a proof starts on the generators of an image. -/
+private theorem imageSubobject_comp_eq_of_epi
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Y Z : C} (e : X ⟶ Y) [Epi e] (f : Y ⟶ Z) :
+    imageSubobject (e ≫ f) = imageSubobject f := by
+  let h := imageSubobject_comp_le e f
+  apply le_antisymm h
+  let q := Subobject.ofLE (imageSubobject (e ≫ f)) (imageSubobject f) h
+  letI : Epi q := imageSubobject_comp_le_epi_of_epi e f
+  letI : IsIso q := isIso_of_mono_of_epi q
+  exact Subobject.le_of_comm (inv q) (by simp [q])
+
+/- The alternative source description uses all lower-degree terms rather than
+   only normalized summands.  It is deliberately placed before the boundary
+   construction: after the equality below has been proved, boundary stability
+   can be checked on arbitrary lower-degree generators without trying to
+   normalize each face separately. -/
+noncomputable def fullDegenerateSummand
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) : C :=
+  ∐ fun a : DegenerateIndex n => U.obj (op ⦋a.1.1⦌)
+
+noncomputable def fullDegenerateSummandMap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) :
+    fullDegenerateSummand U n ⟶ U.obj (op ⦋n⦌) :=
+  Sigma.desc (fun a => U.map a.2.1.op)
+
+/-
+Proof roadmap for `degenerateSubobject_eq_full`:
+
+* For the easy inclusion, define
+
+    `j : degenerateSummand U n ⟶ fullDegenerateSummand U n :=
+      Sigma.map (fun a => (normalizedSubobject U a.1.1).arrow)`.
+
+  `Sigma.map_ι` and `Sigma.ι_desc` show
+  `j ≫ fullDegenerateSummandMap U n = degenerateSummandMap U n`.
+  Apply `imageSubobject_comp_le` (or `imageSubobject_le` with that equation)
+  to obtain `degenerateSubobject U n ≤ imageSubobject
+  (fullDegenerateSummandMap U n)`.
+* For the reverse inclusion, choose `s` and `hs : IsNormalizedSplitting s`
+  from `abelian_category_has_normalized_splitting U` in
+  `Formalization/Books/Simplicial/Unit18/SplittingSimplicialObjects.lean`.
+  For each outer index `a : DegenerateIndex n`, define a map
+  `U.obj (op ⟦a.1.1⟧) ⟶ degenerateObject U n` with
+  `s.desc (op ⟦a.1.1⟧)`.  On a splitting index
+  `A : SimplicialObject.Splitting.IndexSet (op ⟦a.1.1⟧)`, first use the
+  iso supplied by `hs.1 A.1.unop.len` to replace `s.N ...` by
+  `normalizedObject U A.1.unop.len`, and then use the coproduct injection
+  indexed by the composite epi `a.2.1 ≫ A.e` followed by
+  `factorThruImageSubobject (degenerateSummandMap U n)`.
+* The composite really is a `DegenerateIndex n`: use
+  `SimplexCategory.len_le_of_epi A.e` and `a.1.2` to prove
+  `A.1.unop.len < n`, and use `epi_comp` for `a.2.1 ≫ A.e`.  If Lean does
+  not identify `A.1.unop` with `⟦A.1.unop.len⟧` definitionally, obtain the
+  object equality by `SimplexCategory.ext` and insert the resulting
+  `eqToHom`; finish index equalities with `Splitting.IndexSet.ext`.
+* Assemble these maps with an outer `Sigma.desc`, call the result `r`, and
+  prove
+
+    `r ≫ (degenerateSubobject U n).arrow = fullDegenerateSummandMap U n`.
+
+  Use `Sigma.hom_ext`, then `s.hom_ext'`; on every splitting summand the
+  equation is exactly `s.ι_desc`, `s.cofan_inj_eq`, `Sigma.ι_desc`, and
+  `imageSubobject_arrow_comp`, together with `U.map_comp`.
+  `imageSubobject_le _ r` gives the reverse inclusion, and `le_antisymm`
+  finishes.  The splitting declarations are in
+  `Mathlib/AlgebraicTopology/SimplicialObject/Split.lean`; the image
+  declarations are in `Mathlib/CategoryTheory/Subobject/Limits.lean`.
+
+Do not try to prove the reverse inclusion by a bare comparison of the two
+coproduct domains: the full summand contains whole objects `U_m`, so the
+normalized splitting (and its `desc` universal property) is precisely the
+missing map into the normalized-generator image.
+-/
+theorem degenerateSubobject_eq_full
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) :
+    degenerateSubobject U n = imageSubobject (fullDegenerateSummandMap U n) := by
+  sorry
+
+/- In `AddCommGrpCat`, this equality is the categorical form of the source's
+   statement that degenerate terms are sums of degenerate simplices. -/
+
+/-
+Proof roadmap for `degenerateBoundary_factors`:
+
+* Rewrite both degenerate subobjects with `degenerateSubobject_eq_full`.
+  It is enough to show that the image of
+  `(fullDegenerateSummandMap U (n + 1)) ≫ associatedBoundary U n` lies in
+  the target image: precompose the desired map by the epi
+  `factorThruImageSubobject (fullDegenerateSummandMap U (n + 1))`, use
+  `imageSubobject_arrow_comp`, and remove that epi with the local lemma
+  `imageSubobject_comp_eq_of_epi`.
+* Use `Sigma.hom_ext` and expand `associatedBoundary`.  Fix
+  `a : DegenerateIndex (n + 1)`, with epi
+  `e := a.2.1 : ⟦n + 1⟧ ⟶ ⟦a.1.1⟧`.
+  If `a.1.1 < n`, factor every `SimplexCategory.δ i ≫ e` through its
+  categorical image.  Its epi part has target length at most `a.1.1 < n`
+  by `SimplexCategory.len_le_of_mono`/`len_le_of_epi`; it therefore supplies
+  a `DegenerateIndex n`.  Map `U.obj (op ⟦a.1.1⟧)` first along the mono
+  part (contravariantly), then into that full degenerate summand.  The
+  equations are `image.fac`, `U.map_comp`, and `Sigma.ι_desc`.
+* The only exceptional case is `a.1.1 = n`.  Use
+  `SimplexCategory.eq_σ_of_epi e` from
+  `Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean` to write
+  `e = SimplexCategory.σ j`.  In the alternating sum, the terms
+  `i = j.castSucc` and `i = j.succ` are both the identity by
+  `SimplexCategory.δ_comp_σ_self` and `δ_comp_σ_succ`, and their
+  coefficients cancel.  For `i` on either side, use
+  `δ_comp_σ_of_le` or `δ_comp_σ_of_gt` to expose a surjection
+  to degree `n - 1`, hence a target generator.  Split the finite sum with
+  `Fin.sum_univ_succ` (twice at `j`) so the cancellation is explicit.
+* Assemble the component factorizations by `Sigma.desc` and addition into a
+  map `fullDegenerateSummand U (n + 1) ⟶ degenerateObject U n`.
+  Apply `imageSubobject_le` to its arrow equation, transport back across the
+  two `degenerateSubobject_eq_full` equalities, and conclude `Factors` with
+  `Subobject.factors_iff` (or directly with `factorThru`).
+
+Factoring every `δ i ≫ e` uniformly is a dead end: when `e : [n+1] ↠ [n]`,
+the two identity composites are not degenerate individually; only their
+opposite signed terms cancel.
+-/
+
 theorem degenerateBoundary_factors
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :
@@ -634,6 +762,29 @@ noncomputable def degenerateBoundary
     ((degenerateSubobject U (n + 1)).arrow ≫ associatedBoundary U n)
     (degenerateBoundary_factors U n)
 
+@[reassoc]
+theorem degenerateBoundary_arrow
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) :
+    degenerateBoundary U n ≫ (degenerateSubobject U n).arrow =
+      (degenerateSubobject U (n + 1)).arrow ≫ associatedBoundary U n :=
+  Subobject.factorThru_arrow _ _ _
+
+/-
+Proof roadmap for `degenerateBoundary_comp`:
+
+Cancel the mono `(degenerateSubobject U n).arrow`.  Reassociate, rewrite the
+rightmost boundary with `degenerateBoundary_arrow`, then rewrite the remaining
+boundary with `degenerateBoundary_arrow_assoc`.  The goal becomes
+
+  `(degenerateSubobject U (n + 2)).arrow ≫
+      associatedBoundary U (n + 1) ≫ associatedBoundary U n = 0`.
+
+Close it with `associatedBoundary_comp U n`, `Category.assoc`, `comp_zero`,
+and `zero_comp`.  No image calculation is needed after the arrow lemma; in
+particular, unfolding either `Subobject.factorThru` is counterproductive.
+-/
+
 theorem degenerateBoundary_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : SimplicialObject C) (n : ℕ) :
@@ -648,6 +799,76 @@ noncomputable def degenerateChainComplex
     (fun n => degenerateObject U n)
     (degenerateBoundary U)
     (degenerateBoundary_comp U)
+
+@[simp]
+theorem degenerateChainComplex_d
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) :
+    (degenerateChainComplex U).d (n + 1) n = degenerateBoundary U n := by
+  simp [degenerateChainComplex]
+
+theorem degenerate_to_associated_comm
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) :
+    ∀ i j : ℕ, (ComplexShape.down ℕ).Rel i j →
+      (degenerateSubobject U i).arrow ≫ (associatedChainComplex U).d i j =
+        (degenerateChainComplex U).d i j ≫
+          (degenerateSubobject U j).arrow := by
+  intro i j hij
+  simp only [ComplexShape.down_Rel] at hij
+  subst i
+  simpa only [associatedChainComplex_d, degenerateChainComplex_d] using
+    (degenerateBoundary_arrow U j).symm
+
+/-- The canonical inclusion of the degenerate subcomplex in the associated
+complex.  This map is part of the splitting interface: without it an abstract
+isomorphism `s(U) ≅ N(U) ⊞ D(U)` cannot say which summand is degenerate. -/
+noncomputable def degenerateToAssociated
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) :
+    degenerateChainComplex U ⟶ associatedChainComplex U :=
+  { f := fun n => (degenerateSubobject U n).arrow
+    comm' := degenerate_to_associated_comm U }
+
+@[simp]
+theorem degenerateToAssociated_component
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : SimplicialObject C) (n : ℕ) :
+    (degenerateToAssociated U).f n = (degenerateSubobject U n).arrow :=
+  rfl
+
+/-
+Proof roadmap for `degenerateSubobject_map_factors`:
+
+* Work on the normalized generators; the full-generator equality is not
+  needed here.  Define
+
+    `r : degenerateSummand U n ⟶ degenerateObject V n :=
+      Sigma.desc (fun a =>
+        normalizedSubobjectMap f a.1.1 ≫
+        Sigma.ι (fun b : DegenerateIndex n => normalizedObject V b.1.1) a ≫
+        factorThruImageSubobject (degenerateSummandMap V n))`.
+
+* By `Sigma.hom_ext`, `Sigma.ι_desc`, `normalizedSubobjectMap_arrow`, and
+  naturality of `f` at `a.2.1.op`, prove
+
+    `r ≫ (degenerateSubobject V n).arrow =
+      degenerateSummandMap U n ≫ f.app (op ⦋n⦌)`.
+
+  Use `imageSubobject_arrow_comp` for the last factor and orient naturality as
+  `f.naturality a.2.1.op`.
+* Apply `imageSubobject_le` to this equation.  To pass from the image of the
+  generator composite to the image of
+  `(degenerateSubobject U n).arrow ≫ f.app ...`, precompose the latter by
+  the epi `factorThruImageSubobject (degenerateSummandMap U n)`, simplify
+  with `imageSubobject_arrow_comp`, and use
+  `imageSubobject_comp_eq_of_epi`.  Convert the resulting subobject
+  inequality to `Factors` with `Subobject.factors_iff`/`factorThru`.
+
+The important universe instantiation is unchanged throughout:
+`C : Type u`, `Category.{v} C`; `Sigma.ι` is the finite coproduct in this
+same `C`, not a coproduct in `AddCommGrpCat`.
+-/
 
 theorem degenerateSubobject_map_factors
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -670,6 +891,25 @@ theorem degenerateSubobjectMap_arrow
     degenerateSubobjectMap f n ≫ (degenerateSubobject V n).arrow =
       (degenerateSubobject U n).arrow ≫ f.app (op ⦋n⦌) :=
   Subobject.factorThru_arrow _ _ _
+
+/-
+Proof roadmap for `degenerateChainComplexMap_comm`:
+
+Introduce `i`, `j`, and the shape relation, simplify
+`ComplexShape.down_Rel`, and substitute `i = j + 1`.  Cancel the mono
+`(degenerateSubobject V j).arrow`.  On the left, use
+`degenerateBoundary_arrow` and then `degenerateSubobjectMap_arrow` in degree
+`j + 1`; on the right, use `degenerateSubobjectMap_arrow` in degree `j` and
+`degenerateBoundary_arrow_assoc`.  After reassociation the sole middle
+equality is
+
+  `f.app (op ⦋j + 1⦌) ≫ associatedBoundary V j =
+    associatedBoundary U j ≫ f.app (op ⦋j⦌)`,
+
+which is exactly `associatedBoundary_naturality f j`.  Normalize the two
+complex differentials first with `degenerateChainComplex_d`; do not unfold
+`degenerateSubobjectMap` or `degenerateBoundary`.
+-/
 
 theorem degenerateChainComplexMap_comm
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -722,28 +962,6 @@ def degenerateChainComplexFunctor
     exact degenerateChainComplexMap_id U
   map_comp f g := by
     exact degenerateChainComplexMap_comp f g
-
-/- The alternative source description uses all lower-degree terms rather than
-   only normalized summands. -/
-noncomputable def fullDegenerateSummand
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (U : SimplicialObject C) (n : ℕ) : C :=
-  ∐ fun a : DegenerateIndex n => U.obj (op ⦋a.1.1⦌)
-
-noncomputable def fullDegenerateSummandMap
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (U : SimplicialObject C) (n : ℕ) :
-    fullDegenerateSummand U n ⟶ U.obj (op ⦋n⦌) :=
-  Sigma.desc (fun a => U.map a.2.1.op)
-
-theorem degenerateSubobject_eq_full
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (U : SimplicialObject C) (n : ℕ) :
-    degenerateSubobject U n = imageSubobject (fullDegenerateSummandMap U n) := by
-  sorry
-
-/- In `AddCommGrpCat`, this equality is the categorical form of the source's
-   statement that degenerate terms are sums of degenerate simplices. -/
 
 theorem normalized_and_degenerate_decomposition
     {C : Type u} [Category.{v} C] [Abelian C]

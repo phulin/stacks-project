@@ -1457,7 +1457,7 @@ theorem isQuasiFinite_baseChange
         s ∈ qF.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom
       rw [hqF', hqF]
       change h s ∈ q'.asIdeal ↔ s ∈ q.asIdeal
-      simpa [q, h, PrimeSpectrum.comap_asIdeal]
+      simp [q, h, PrimeSpectrum.comap_asIdeal]
     have hdim :
         Formalization.Books.Topology.Unit10.krullDimensionAt qF =
           Formalization.Books.Topology.Unit10.krullDimensionAt qK := by
@@ -1567,11 +1567,11 @@ theorem isQuasiFinite_baseChange
           (algebraMap R k₀ r)
       rw [Ideal.ResidueField.map_algebraMap]
       exact (IsScalarTower.algebraMap_apply R R' K r).symm
-    letI : IsField k₀ := Field.toIsField k₀
-    letI : Module.Flat k₀ K :=
+    let : IsField k₀ := Field.toIsField k₀
+    let : Module.Flat k₀ K :=
       RingHom.Flat.of_isField (R := k₀) (S := K) (Field.toIsField k₀)
         (algebraMap k₀ K)
-    letI : Module.FaithfullyFlat k₀ K := by
+    let : Module.FaithfullyFlat k₀ K := by
       apply Module.FaithfullyFlat.of_comap_surjective
       intro P
       have hPbot : P.asIdeal = (⊥ : Ideal k₀) :=
@@ -1581,10 +1581,10 @@ theorem isQuasiFinite_baseChange
       rw [hPbot]
       change Ideal.comap (algebraMap k₀ K) (⊥ : Ideal K) = ⊥
       exact Ideal.comap_bot_of_injective _ (RingHom.injective _)
-    letI : Algebra (k₀ ⊗[R] S) (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+    let : Algebra (k₀ ⊗[R] S) (K ⊗[k₀] (k₀ ⊗[R] S)) :=
       (Algebra.TensorProduct.includeRight
         (R := k₀) (A := K) (B := k₀ ⊗[R] S)).toRingHom.toAlgebra
-    letI : Module.FaithfullyFlat (k₀ ⊗[R] S)
+    let : Module.FaithfullyFlat (k₀ ⊗[R] S)
         (K ⊗[k₀] (k₀ ⊗[R] S)) :=
       Module.FaithfullyFlat.of_linearEquiv
         (k₀ ⊗[R] S) ((k₀ ⊗[R] S) ⊗[k₀] K)
@@ -1644,7 +1644,7 @@ theorem isQuasiFinite_baseChange
         rw [hc]
         rw [Algebra.TensorProduct.cancelBaseChange_tmul]
         rw [Algebra.TensorProduct.cancelBaseChange_symm_tmul]
-        simp only [Algebra.smul_def, one_mul, mul_one, map_one]
+        simp only [Algebra.smul_def, mul_one, map_one]
       rw [heval]
       rw [← Ideal.mem_comap, hqK', ← hqF]
       rfl

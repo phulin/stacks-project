@@ -931,28 +931,94 @@ theorem height_le_one_of_minimal_over_singleton
     (x : R) {p : Ideal R}
     (hp : p ∈ (Ideal.span ({x} : Set R)).minimalPrimes) :
     p.height ≤ 1 := by
-  sorry
+  exact Ideal.height_le_one_of_isPrincipal_of_mem_minimalPrimes
+    (Ideal.span ({x} : Set R)) p hp
 
 theorem height_zero_or_one_of_minimal_over_singleton
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     (x : R) {p : Ideal R}
     (hp : p ∈ (Ideal.span ({x} : Set R)).minimalPrimes) :
     p.height = 0 ∨ p.height = 1 := by
-  sorry
+  exact Order.le_one_iff.mp
+    (height_le_one_of_minimal_over_singleton R x hp)
 
 theorem no_prime_strictly_between_minimal_over_singleton
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     (x : R) {p q : Ideal R} (hp : p.IsPrime) (hq : q.IsPrime)
     (hqmin : q ∈ (p ⊔ Ideal.span ({x} : Set R)).minimalPrimes) :
     ¬ ∃ r : Ideal R, r.IsPrime ∧ p < r ∧ r < q := by
-  sorry
+  rintro ⟨r, hr, hpr, hrq⟩
+  let f : R →+* R ⧸ p := Ideal.Quotient.mk p
+  let _ : r.IsPrime := hr
+  let _ : q.IsPrime := hq
+  have hpr' : p.map f < r.map f := by
+    apply lt_of_le_of_ne
+    · exact Ideal.map_mono hpr.le
+    · intro heq
+      apply hpr.ne
+      calc
+        p = (p.map f).comap f := by
+          rw [Ideal.comap_map_quotientMk, sup_eq_left.mpr le_rfl]
+        _ = (r.map f).comap f := by rw [heq]
+        _ = r := by
+          rw [Ideal.comap_map_quotientMk, sup_eq_right.mpr hpr.le]
+  have hrq' : r.map f < q.map f := by
+    apply lt_of_le_of_ne
+    · exact Ideal.map_mono hrq.le
+    · intro heq
+      apply hrq.ne
+      calc
+        r = (r.map f).comap f := by
+          rw [Ideal.comap_map_quotientMk, sup_eq_right.mpr hpr.le]
+        _ = (q.map f).comap f := by rw [heq]
+        _ = q := by
+          rw [Ideal.comap_map_quotientMk,
+            sup_eq_right.mpr (le_sup_left.trans hqmin.le)]
+  have hqupper : (q.map f).height ≤ 1 := by
+    simpa [f] using (Ideal.map_height_le_one_of_mem_minimalPrimes
+      (I := p) (x := x) hqmin)
+  have hmr' : (r.map f).IsPrime :=
+    Ideal.isPrime_map_quotientMk_of_isPrime hpr.le
+  have hmq' : (q.map f).IsPrime :=
+    Ideal.isPrime_map_quotientMk_of_isPrime (le_sup_left.trans hqmin.le)
+  let _ : (p.map f).IsPrime := by
+    simpa [f] using (Ideal.isPrime_map_quotientMk_of_isPrime
+      (I := p) (p := p) le_rfl)
+  let _ : (r.map f).IsPrime := hmr'
+  let _ : (q.map f).IsPrime := hmq'
+  have hzero : p.map f = (⊥ : Ideal (R ⧸ p)) := by
+    simp [f]
+  have hpheight : (p.map f).height = 0 := by
+    rw [hzero]
+    exact Ideal.height_eq_zero_iff_eq_bot.mpr rfl
+  have hfirst : (1 : ℕ∞) ≤ (r.map f).height := by
+    calc
+      (1 : ℕ∞) = 0 + 1 := by simp
+      _ ≤ (p.map f).height + 1 := by rw [hpheight]
+      _ ≤ (r.map f).height :=
+        Ideal.height_add_one_le_of_lt_of_isPrime hpr'
+  have hsecond : (2 : ℕ∞) ≤ (q.map f).height := by
+    calc
+      (2 : ℕ∞) = 1 + 1 := by norm_num
+      _ ≤ (r.map f).height + 1 := add_le_add_left hfirst 1
+      _ ≤ (q.map f).height :=
+        Ideal.height_add_one_le_of_lt_of_isPrime hrq'
+  exact (not_le_of_gt (by norm_num : (1 : ℕ∞) < 2))
+    (hsecond.trans hqupper)
 
 theorem height_le_number_of_generators_of_minimal_over
     (R : Type u) [CommRing R] [IsNoetherianRing R]
     {r : ℕ} (f : Fin r → R) {p : Ideal R}
     (hp : p ∈ (Ideal.span (Set.range f)).minimalPrimes) :
     p.height ≤ r := by
-  sorry
+  have hcard : (Set.range f).ncard ≤ r := by
+    simpa [Set.image_univ] using
+      (Set.ncard_image_le (f := f) (s := (Set.univ : Set (Fin r))))
+  calc
+    p.height ≤ (Set.range f).ncard :=
+      Ideal.height_le_card_of_mem_minimalPrimes_span
+        (Set.toFinite (Set.range f)) hp
+    _ ≤ r := by exact_mod_cast hcard
 
 theorem prime_chain_length_le_number_of_generators_of_minimal_over
     (R : Type u) [CommRing R] [IsNoetherianRing R]
@@ -961,7 +1027,73 @@ theorem prime_chain_length_le_number_of_generators_of_minimal_over
     (hqmin : q ∈ (p ⊔ Ideal.span (Set.range f)).minimalPrimes) :
     ∀ C : PrimeIdealChain R,
       C.head = ⟨p, hp⟩ → C.last = ⟨q, hq⟩ → C.length ≤ r := by
-  sorry
+  intro C hhead hlast
+  let g : R →+* R ⧸ p := Ideal.Quotient.mk p
+  have hpi (i : Fin (C.length + 1)) : p ≤ (C i).asIdeal := by
+    have hi := C.head_le i
+    rw [hhead] at hi
+    exact hi
+  have hmap_prime (i : Fin (C.length + 1)) :
+      ((C i).asIdeal.map g).IsPrime := by
+    let _ : (C i).asIdeal.IsPrime := (C i).isPrime
+    exact Ideal.isPrime_map_quotientMk_of_isPrime (hpi i)
+  let D : PrimeIdealChain (R ⧸ p) :=
+    LTSeries.mk C.length
+      (fun i => ⟨(C i).asIdeal.map g, hmap_prime i⟩)
+      (by
+        intro i j hij
+        have hab : (C i).asIdeal < (C j).asIdeal := C.strictMono hij
+        apply lt_of_le_of_ne
+        · exact Ideal.map_mono hab.le
+        · intro heq
+          have heq' : (C i).asIdeal.map g = (C j).asIdeal.map g := by
+            simpa using congrArg PrimeSpectrum.asIdeal heq
+          apply hab.ne
+          calc
+            (C i).asIdeal = ((C i).asIdeal.map g).comap g := by
+              rw [Ideal.comap_map_quotientMk, sup_eq_right.mpr (hpi i)]
+            _ = ((C j).asIdeal.map g).comap g := by rw [heq']
+            _ = (C j).asIdeal := by
+              rw [Ideal.comap_map_quotientMk,
+                sup_eq_right.mpr ((hpi i).trans hab.le)])
+  have hDlast : D.last.asIdeal = q.map g := by
+    change (C.last).asIdeal.map g = q.map g
+    rw [hlast]
+  have h := (Order.length_le_height_last (p := D))
+  have h' : (D.length : ℕ∞) ≤ D.last.asIdeal.height := by
+    simpa only [PrimeSpectrum.height_eq_orderHeight] using h
+  rw [hDlast] at h'
+  have hmapmin :
+      q.map g ∈ ((p ⊔ Ideal.span (Set.range f)).map g).minimalPrimes := by
+    rw [Ideal.minimalPrimes_map_of_surjective Ideal.Quotient.mk_surjective]
+    refine ⟨q, ?_, rfl⟩
+    simpa [Ideal.mk_ker, sup_eq_left.mpr le_sup_left] using hqmin
+  have hgker : p.map g = (⊥ : Ideal (R ⧸ p)) := by
+    simp [g]
+  have himage :
+      g '' Set.range f = Set.range (fun i => g (f i)) := by
+    ext y
+    constructor
+    · rintro ⟨z, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, rfl⟩
+    · rintro ⟨i, rfl⟩
+      exact ⟨f i, ⟨i, rfl⟩, rfl⟩
+  have hmapmin' :
+      q.map g ∈ (Ideal.span (Set.range (fun i => g (f i)))).minimalPrimes := by
+    simpa [Ideal.map_sup, Ideal.map_span, hgker, himage] using hmapmin
+  have hqheight : (q.map g).height ≤ (r : ℕ∞) := by
+    calc
+      (q.map g).height ≤ (Set.range (fun i => g (f i))).ncard :=
+        Ideal.height_le_card_of_mem_minimalPrimes_span
+          (Set.toFinite _) hmapmin'
+      _ ≤ r := by
+        have hcard : (Set.range (fun i : Fin r => g (f i))).ncard ≤ r := by
+          simpa [Set.image_univ] using
+            (Set.ncard_image_le (f := fun i : Fin r => g (f i))
+              (s := (Set.univ : Set (Fin r))))
+        exact_mod_cast hcard
+  have hlen : (C.length : ℕ∞) ≤ (r : ℕ∞) := h'.trans hqheight
+  exact_mod_cast hlen
 
 /-! ## One equation and successive parameter quotients -/
 

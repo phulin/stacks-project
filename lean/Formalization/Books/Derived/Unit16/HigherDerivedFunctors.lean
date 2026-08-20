@@ -58,6 +58,14 @@ theorem rightDerived_truncation_cohomology_iso
     ∀ i : ℤ, i ≤ a →
       IsIso ((DerivedCategory.Plus.homologyFunctor B i).map
         (R.functor.map (derivedPlusTruncLEMap K a))) := by
+  /-
+  Prior attempt: apply exactness to the canonical truncation triangle, use
+  negative vanishing for its third term, and conclude from the long exact
+  cohomology sequence.  The attempt did not elaborate because the current
+  t-structure, shift, and homology-sequence interfaces do not line up with
+  the selected `RightDerivedFunctorData` without the missing pointwise
+  derived-value comparison.
+
   obtain ⟨eR⟩ := R.exact
   haveI : R.functor.CommShift ℤ := eR.commShift
   haveI : R.functor.IsTriangulated := eR.isTriangulated
@@ -105,6 +113,8 @@ theorem rightDerived_truncation_cohomology_iso
   letI : Epi ((H.shift i).map U.mor₁) := hepi
   have : IsIso ((H.shift i).map U.mor₁) := by infer_instance
   simpa [H, U, T, derivedPlusTruncLEMap] using this
+  -/
+  sorry
 
 /-! ## 16.2. Higher derived functors -/
 
@@ -144,6 +154,13 @@ theorem higherRightDerivedFunctor_zero_is_left_exact
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F) :
     IsLeftExact (higherRightDerivedFunctor F R.functor 0) := by
+  /-
+  Prior attempt: map the single-triangle associated to a short exact
+  sequence, use negative vanishing in the resulting long exact sequence,
+  and identify the two exact short complexes.  The attempt was retained
+  here because its current errors are interface mismatches, not a changed
+  theorem statement.
+
   obtain ⟨eR⟩ := R.exact
   haveI : R.functor.CommShift ℤ := eR.commShift
   haveI : R.functor.IsTriangulated := eR.isTriangulated
@@ -187,6 +204,8 @@ theorem higherRightDerivedFunctor_zero_is_left_exact
   · change (ShortComplex.mk (H.map (R.functor.map (X.map S.f)))
       (H.map (R.functor.map (X.map S.g))) _).Exact
     simpa [H, U, T, X] using hfive.exact 4
+  -/
+  sorry
 
 /-- The canonical map `F ⟶ R⁰F` is an isomorphism exactly when `F` is left
   exact. -/

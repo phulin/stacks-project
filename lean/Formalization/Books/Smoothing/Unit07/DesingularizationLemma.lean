@@ -83,7 +83,9 @@ theorem annihilatorOf_mem_pow_two
     {R : Type u} [CommRing R] (π : R) :
     annihilatorOf (R := R) (M := R) π ≤
       annihilatorOf (R := R) (M := R) (π ^ 2) := by
-  sorry
+  intro x hx
+  rw [annihilatorOf_mem_iff] at hx ⊢
+  simpa [smul_eq_mul, pow_two, mul_assoc] using congrArg (fun y : R => y * π) hx
 
 /-- The ideal `Ann_R(Ann_R(π²)/Ann_R(π))` appearing in the lemma. -/
 def desingularizationAnnihilatorIdeal
@@ -242,7 +244,224 @@ theorem desingularizationAuxiliaryRing_mod_pi_equiv
       (powerQuotient (desingularizationAuxiliaryRing corrections)
           (algebraMap R (desingularizationAuxiliaryRing corrections) π) 1 ≃+*
         MvPolynomial (Fin n) (powerQuotient R π 1)) := by
-  sorry
+  classical
+  let P := MvPolynomial (Fin c ⊕ Fin n) R
+  let A := powerQuotient R π 1
+  let W := MvPolynomial (Fin n) A
+  let I : Ideal P := Ideal.span (Set.range corrections)
+  let coeff : R →+* W :=
+    (MvPolynomial.C : A →+* W).comp (show R →+* A from powerQuotientMk π 1)
+  let vars : Fin c ⊕ Fin n → W := fun z => match z with
+    | Sum.inl j =>
+        -∑ i : Fin n,
+          MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
+            MvPolynomial.X i
+    | Sum.inr i => MvPolynomial.X i
+  let pmap : P →+* W := MvPolynomial.eval₂Hom coeff vars
+  have pmap_C (r : R) : pmap (MvPolynomial.C r) = coeff r := by
+    change MvPolynomial.eval₂Hom coeff vars (MvPolynomial.C r) = coeff r
+    exact MvPolynomial.eval₂Hom_C coeff vars r
+  have pmap_X (z : Fin c ⊕ Fin n) : pmap (MvPolynomial.X z) = vars z := by
+    change MvPolynomial.eval₂Hom coeff vars (MvPolynomial.X z) = vars z
+    exact MvPolynomial.eval₂Hom_X' coeff vars z
+  have hp_pi : pmap (MvPolynomial.C π) = 0 := by
+    rw [pmap_C]
+    have hq : (powerQuotientMk π 1) π = 0 := by
+      apply Ideal.Quotient.eq_zero_iff_mem.2
+      change π ∈ Ideal.span ({π ^ 1} : Set R)
+      simpa using (Ideal.subset_span (Set.mem_singleton π))
+    change (MvPolynomial.C : A →+* W) ((powerQuotientMk π 1) π) = 0
+    rw [hq]
+    exact (MvPolynomial.C : A →+* W).map_zero
+  have hp_linear (j : Fin c) :
+      pmap (MvPolynomial.X (Sum.inl j) +
+        ∑ i : Fin n,
+          MvPolynomial.C (linearCoefficients j i) *
+            MvPolynomial.X (Sum.inr i)) = 0 := by
+    rw [map_add, pmap_X]
+    simp_rw [map_sum, map_mul, pmap_C, pmap_X]
+    simp only [vars]
+    change -(∑ i : Fin n,
+        MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
+          MvPolynomial.X i) +
+      ∑ i : Fin n,
+        MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
+          MvPolynomial.X i = 0
+    simpa [coeff] using
+      (neg_add_cancel (∑ i : Fin n,
+        MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
+          MvPolynomial.X i))
+  have hp_correction : ∀ j : Fin c, pmap (corrections j) = 0 := by
+    intro j
+    have hzero := show pmap (corrections j -
+        (MvPolynomial.X (Sum.inl j) +
+          ∑ i : Fin n,
+            MvPolynomial.C (linearCoefficients j i) *
+              MvPolynomial.X (Sum.inr i))) = 0 from by
+      apply (show Ideal.span ({MvPolynomial.C π} : Set P) ≤
+          RingHom.ker pmap from ?_) (hmod j)
+      apply Ideal.span_le.2
+      rintro _ ⟨rfl⟩
+      exact hp_pi
+    rw [map_sub] at hzero
+    exact (sub_eq_zero.mp hzero).trans (hp_linear j)
+  have hpI : ∀ a : P, a ∈ I → pmap a = 0 := by
+    intro a ha
+    apply (show I ≤ RingHom.ker pmap from ?_) ha
+    apply Ideal.span_le.2
+    rintro _ ⟨j, rfl⟩
+    exact hp_correction j
+  let fB : (P ⧸ I) →+* W := Ideal.Quotient.lift I pmap hpI
+  have hfB_pi : fB (algebraMap R (P ⧸ I) π) = 0 := by
+    change fB (Ideal.Quotient.mk I (MvPolynomial.C π)) = 0
+    rw [Ideal.Quotient.lift_mk]
+    exact hp_pi
+  let fQ : powerQuotient (P ⧸ I) (algebraMap R (P ⧸ I) π) 1 →+* W :=
+    Ideal.Quotient.lift _ fB (by
+      intro a ha
+      rw [Ideal.mem_span_singleton'] at ha
+      rcases ha with ⟨r, rfl⟩
+      simp only [map_mul, RingHom.map_pow, pow_one]
+      simp [hfB_pi])
+  let coeffA : A →+*
+      powerQuotient (P ⧸ I) (algebraMap R (P ⧸ I) π) 1 :=
+    powerQuotientAlgebraMap (R := R) (A := P ⧸ I) π 1
+  let gmap : W →+*
+      powerQuotient (P ⧸ I) (algebraMap R (P ⧸ I) π) 1 :=
+    MvPolynomial.eval₂Hom coeffA
+      (fun i => Ideal.Quotient.mk _
+        (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inr i))))
+  have gmap_C (a : A) : gmap (MvPolynomial.C a) = coeffA a := by
+    change MvPolynomial.eval₂Hom coeffA _ (MvPolynomial.C a) = coeffA a
+    exact MvPolynomial.eval₂Hom_C coeffA _ a
+  have gmap_X (i : Fin n) :
+      gmap (MvPolynomial.X i) =
+        Ideal.Quotient.mk _ (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inr i))) := by
+    change MvPolynomial.eval₂Hom coeffA _ (MvPolynomial.X i) = _
+    exact MvPolynomial.eval₂Hom_X' coeffA _ i
+  refine ⟨(RingEquiv.ofRingHom fQ gmap ?_ ?_)⟩
+  · apply MvPolynomial.ringHom_ext'
+    · apply RingHom.ext
+      intro a
+      change fQ (gmap (MvPolynomial.C a)) =
+        (MvPolynomial.C : A →+* W) a
+      rw [gmap_C]
+      exact Quotient.inductionOn' a (fun r => by
+        change fQ (coeffA ((powerQuotientMk π 1) r)) =
+          (MvPolynomial.C : A →+* W) ((powerQuotientMk π 1) r)
+        change fQ (Ideal.Quotient.mk _
+          (Ideal.Quotient.mk I (MvPolynomial.C r))) = _
+        rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk, pmap_C]
+        rfl)
+    · intro i
+      change fQ (gmap (MvPolynomial.X i)) = MvPolynomial.X i
+      rw [gmap_X]
+      rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk, pmap_X]
+  · apply Ideal.Quotient.ringHom_ext
+    · apply Ideal.Quotient.ringHom_ext
+      apply MvPolynomial.ringHom_ext'
+      · apply RingHom.ext
+        intro r
+        change gmap (fQ (Ideal.Quotient.mk _
+          (Ideal.Quotient.mk I (MvPolynomial.C r)))) =
+          Ideal.Quotient.mk _ (Ideal.Quotient.mk I (MvPolynomial.C r))
+        rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk, pmap_C]
+        change gmap (MvPolynomial.C (powerQuotientMk π 1 r)) = _
+        rw [gmap_C]
+        rfl
+      · intro z
+        cases z with
+        | inl j =>
+            change gmap (fQ (Ideal.Quotient.mk _
+              (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl j))))) =
+              Ideal.Quotient.mk _ (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl j)))
+            rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk, pmap_X]
+            have hzero : Ideal.Quotient.mk
+                (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                (Ideal.Quotient.mk I
+                (corrections j -
+                  (MvPolynomial.X (Sum.inl j) +
+                    ∑ i : Fin n,
+                      MvPolynomial.C (linearCoefficients j i) *
+                        MvPolynomial.X (Sum.inr i)))) = 0 := by
+              rcases Ideal.mem_span_singleton'.1 (hmod j) with ⟨r, hr⟩
+              apply Ideal.Quotient.eq_zero_iff_mem.2
+              rw [← hr, Ideal.mem_span_singleton']
+              refine ⟨Ideal.Quotient.mk I r, ?_⟩
+              rw [map_mul]
+              rw [show Ideal.Quotient.mk I (MvPolynomial.C π) =
+                algebraMap R (P ⧸ I) π by rfl]
+              simp [pow_one, mul_comm]
+            have hcorrection :
+                Ideal.Quotient.mk
+                    (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                    (Ideal.Quotient.mk I (corrections j)) = 0 := by
+              have hcorrection0 : Ideal.Quotient.mk I (corrections j) = 0 := by
+                apply Ideal.Quotient.eq_zero_iff_mem.2
+                exact Ideal.subset_span (Set.mem_range_self j)
+              rw [hcorrection0]
+              exact map_zero _
+            have hsum :
+                Ideal.Quotient.mk
+                    (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                    (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl j))) +
+                  ∑ i : Fin n,
+                    Ideal.Quotient.mk
+                      (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                      (Ideal.Quotient.mk I
+                      (MvPolynomial.C (linearCoefficients j i) *
+                        MvPolynomial.X (Sum.inr i))) = 0 := by
+              have h := hzero
+              simp only [map_sub, map_add, map_sum] at h
+              rw [hcorrection] at h
+              have h' : 0 -
+                  (Ideal.Quotient.mk
+                      (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                      (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl j))) +
+                    ∑ i : Fin n,
+                      Ideal.Quotient.mk
+                        (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                        (Ideal.Quotient.mk I
+                          (MvPolynomial.C (linearCoefficients j i) *
+                            MvPolynomial.X (Sum.inr i)))) = 0 := by
+                simpa only [hcorrection] using h
+              have h'' : -
+                  (Ideal.Quotient.mk
+                      (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                      (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl j))) +
+                    ∑ i : Fin n,
+                      Ideal.Quotient.mk
+                        (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                        (Ideal.Quotient.mk I
+                          (MvPolynomial.C (linearCoefficients j i) *
+                            MvPolynomial.X (Sum.inr i)))) = 0 := by
+                simpa only [zero_sub] using h'
+              exact neg_eq_zero.mp h''
+            have hmap :
+                gmap (vars (Sum.inl j)) =
+                  -∑ i : Fin n,
+                    Ideal.Quotient.mk
+                      (Ideal.span ({(algebraMap R (P ⧸ I) π) ^ 1} : Set (P ⧸ I)))
+                      (Ideal.Quotient.mk I
+                        (MvPolynomial.C (linearCoefficients j i) *
+                          MvPolynomial.X (Sum.inr i))) := by
+              change gmap (-∑ i : Fin n,
+                MvPolynomial.C (powerQuotientMk π 1 (linearCoefficients j i)) *
+                  MvPolynomial.X i) = _
+              rw [map_neg, map_sum]
+              simp_rw [map_mul, gmap_C, gmap_X]
+              rfl
+            rw [hmap]
+            symm
+            apply sub_eq_zero.mp
+            simpa [sub_eq_add_neg] using hsum
+        | inr i =>
+            change gmap (fQ (Ideal.Quotient.mk _
+              (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inr i))))) =
+              Ideal.Quotient.mk _ (Ideal.Quotient.mk I (MvPolynomial.X (Sum.inr i)))
+            rw [Ideal.Quotient.lift_mk, Ideal.Quotient.lift_mk, pmap_X]
+            change gmap (MvPolynomial.X i) = _
+            rw [gmap_X]
 
 /-- Every prime of `B'` containing `π` is a smooth point of `B'` over `R`.
 This is the source's smoothness-on-`V(π)` assertion. -/
@@ -262,7 +481,159 @@ theorem desingularizationAuxiliaryRing_smoothAt_of_pi_mem
       algebraMap R (desingularizationAuxiliaryRing corrections) π ∈ q.asIdeal →
       Formalization.Books.Algebra.Unit137.IsSmoothAt R
         (desingularizationAuxiliaryRing corrections) q := by
-  sorry
+  classical
+  intro q hq
+  let P := MvPolynomial (Fin c ⊕ Fin n) R
+  let I : Ideal P := Ideal.span (Set.range corrections)
+  let ρ : P →+* (P ⧸ I) := Ideal.Quotient.mk I
+  let K : Ideal P := Ideal.comap ρ q.asIdeal
+  have hCπ : MvPolynomial.C π ∈ K := by
+    change ρ (MvPolynomial.C π) ∈ q.asIdeal
+    change algebraMap R (P ⧸ I) π ∈ q.asIdeal
+    exact hq
+  have hderiv (j i : Fin c) :
+      MvPolynomial.pderiv (Sum.inl i) (corrections j) -
+          (if i = j then 1 else 0) ∈ K := by
+    rcases Ideal.mem_span_singleton'.1 (hmod j) with ⟨r, hr⟩
+    have hdiff :
+        MvPolynomial.pderiv (Sum.inl i) (r * MvPolynomial.C π) =
+          MvPolynomial.pderiv (Sum.inl i) (corrections j) -
+            MvPolynomial.pderiv (Sum.inl i)
+              (MvPolynomial.X (Sum.inl j) +
+                ∑ k : Fin n,
+                  MvPolynomial.C (linearCoefficients j k) *
+                    MvPolynomial.X (Sum.inr k)) := by
+      simpa only [map_sub] using
+        congrArg (fun f => MvPolynomial.pderiv (Sum.inl i) f) hr
+    have hlinear :
+        MvPolynomial.pderiv (Sum.inl i)
+            (MvPolynomial.X (Sum.inl j) +
+              ∑ k : Fin n,
+                MvPolynomial.C (linearCoefficients j k) *
+                  MvPolynomial.X (Sum.inr k)) =
+          (if i = j then 1 else 0) := by
+      simp [MvPolynomial.pderiv_C_mul, Pi.single_apply, eq_comm]
+    have hprod : MvPolynomial.pderiv (Sum.inl i) (r * MvPolynomial.C π) ∈ K := by
+      rw [MvPolynomial.pderiv_mul, MvPolynomial.pderiv_C, mul_zero, add_zero]
+      exact K.mul_mem_left _ hCπ
+    rw [← hlinear, ← hdiff]
+    exact hprod
+  let P₀ : Algebra.PreSubmersivePresentation R
+      (MvPolynomial (Fin c ⊕ Fin n) R ⧸
+        Ideal.span (Set.range corrections)) (Fin c ⊕ Fin n) (Fin c) :=
+    Algebra.PreSubmersivePresentation.naive (v := corrections)
+      (fun j : Fin c => Sum.inl j) (by
+        intro j k h
+        exact Sum.inl.inj h)
+  let g : desingularizationAuxiliaryRing corrections := P₀.jacobian
+  let κ : (P ⧸ I) →+* q.asIdeal.ResidueField :=
+    algebraMap (P ⧸ I) q.asIdeal.ResidueField
+  have hmatrix :
+      (fun j i => κ (ρ (MvPolynomial.pderiv (Sum.inl i) (corrections j)))) =
+        (1 : Matrix (Fin c) (Fin c) q.asIdeal.ResidueField) := by
+    ext j i
+    rw [Matrix.one_apply]
+    have hz :
+        κ (ρ (MvPolynomial.pderiv (Sum.inl i) (corrections j) -
+          (if i = j then 1 else 0))) = 0 := by
+      apply Ideal.algebraMap_residueField_eq_zero.mpr
+      change ρ (MvPolynomial.pderiv (Sum.inl i) (corrections j) -
+        (if i = j then 1 else 0)) ∈ q.asIdeal
+      exact hderiv j i
+    rw [map_sub, map_sub] at hz
+    have hh := sub_eq_zero.mp hz
+    by_cases hji : j = i
+    · subst j
+      have hconst : (if i = i then (1 : P) else 0) = 1 := if_pos rfl
+      rw [hconst] at hh
+      rw [if_pos rfl]
+      calc
+        _ = κ (ρ 1) := hh
+        _ = κ 1 := by rw [map_one]
+        _ = 1 := κ.map_one
+    · have hij : ¬ i = j := by
+        intro h
+        exact hji h.symm
+      have hconst : (if i = j then (1 : P) else 0) = 0 := if_neg hij
+      rw [hconst] at hh
+      rw [if_neg hji]
+      calc
+        _ = κ (ρ 0) := hh
+        _ = κ 0 := by rw [map_zero]
+        _ = 0 := κ.map_zero
+  have hgmod : κ g = 1 := by
+    rw [show g = P₀.jacobian by rfl]
+    rw [P₀.jacobian_eq_jacobiMatrix_det]
+    have hmat :
+        (κ.comp (algebraMap P₀.Ring
+          (desingularizationAuxiliaryRing corrections))).mapMatrix P₀.jacobiMatrix =
+          (1 : Matrix (Fin c) (Fin c)
+            q.asIdeal.ResidueField) := by
+      ext j i
+      change κ (algebraMap P₀.Ring
+        (desingularizationAuxiliaryRing corrections) (P₀.jacobiMatrix j i)) =
+        (1 : Matrix (Fin c) (Fin c) q.asIdeal.ResidueField) j i
+      rw [Algebra.PreSubmersivePresentation.jacobiMatrix_apply]
+      change κ (ρ (MvPolynomial.pderiv (Sum.inl j) (corrections i))) =
+        if j = i then 1 else 0
+      by_cases hji : j = i
+      · subst j
+        simpa only [Matrix.one_apply, if_pos rfl] using
+          congrFun (congrFun hmatrix i) i
+      · have hij : ¬ i = j := by
+          intro h
+          exact hji h.symm
+        have hh := congrFun (congrFun hmatrix i) j
+        rw [Matrix.one_apply, if_neg hij] at hh
+        simpa only [if_neg hji] using hh
+    change (κ.comp (algebraMap P₀.Ring
+      (desingularizationAuxiliaryRing corrections))) P₀.jacobiMatrix.det = 1
+    calc
+      _ = ((κ.comp (algebraMap P₀.Ring
+          (desingularizationAuxiliaryRing corrections))).mapMatrix
+            P₀.jacobiMatrix).det := by
+        exact RingHom.map_det
+          (κ.comp (algebraMap P₀.Ring
+            (desingularizationAuxiliaryRing corrections))) P₀.jacobiMatrix
+      _ = 1 := by rw [hmat, Matrix.det_one]
+  have hg : g ∉ q.asIdeal := by
+    intro h
+    have hz : κ g = 0 := Ideal.algebraMap_residueField_eq_zero.mpr h
+    rw [hgmod] at hz
+    exact one_ne_zero hz
+  let Q₀ : Algebra.PreSubmersivePresentation
+      (desingularizationAuxiliaryRing corrections) (Localization.Away g) Unit Unit :=
+    Algebra.PreSubmersivePresentation.localizationAway
+      (S := Localization.Away g) g
+  let C₀ := Q₀.comp P₀
+  let C : Algebra.SubmersivePresentation R (Localization.Away g)
+      (Unit ⊕ (Fin c ⊕ Fin n)) (Unit ⊕ Fin c) := {
+    toPreSubmersivePresentation := C₀
+    jacobian_isUnit := by
+      rw [Algebra.PreSubmersivePresentation.comp_jacobian_eq_jacobian_smul_jacobian]
+      rw [Algebra.smul_def]
+      have hu : IsUnit
+          (algebraMap (desingularizationAuxiliaryRing corrections)
+            (Localization.Away g) g) :=
+        IsLocalization.Away.algebraMap_isUnit (S := Localization.Away g) g
+      have hu' : IsUnit
+          (algebraMap (desingularizationAuxiliaryRing corrections)
+            (Localization.Away g) P₀.jacobian) := by
+        simpa [g] using hu
+      have hQ : IsUnit Q₀.jacobian := by
+        have hQeq : Q₀.jacobian =
+            algebraMap (desingularizationAuxiliaryRing corrections)
+              (Localization.Away g) g := by
+          change (Algebra.PreSubmersivePresentation.localizationAway
+            (S := Localization.Away g) g).jacobian = _
+          exact Algebra.PreSubmersivePresentation.localizationAway_jacobian
+            (S := Localization.Away g) g
+        rw [hQeq]
+        exact hu
+      exact hu'.mul hQ
+  }
+  letI : Algebra.IsStandardSmooth R (Localization.Away g) := C.isStandardSmooth
+  exact ⟨g, hg, Formalization.Books.Algebra.Unit137.standard_smooth_is_smooth⟩
 
 /-- The finitely presented ring `B` displayed in the proof. -/
 abbrev desingularizationConstructionRing
@@ -354,7 +725,116 @@ theorem desingularizationAuxiliaryRelationQuotient_equiv
     Nonempty
       (desingularizationAuxiliaryRelationQuotient π s ≃+*
         MvPolynomial (Fin c ⊕ Fin n) R) := by
-  sorry
+  classical
+  let P := desingularizationPolynomial R n c
+  let Q := MvPolynomial (Fin c ⊕ Fin n) R
+  let I : Ideal P := Ideal.span (Set.range (desingularizationAuxiliaryRelation π s))
+  let pmap : P →ₐ[R] Q := MvPolynomial.aeval (fun z : Fin n ⊕ (Fin c ⊕ Fin n) =>
+    match z with
+    | Sum.inl i =>
+        MvPolynomial.C (π ^ 2) *
+            ∑ j : Fin c, MvPolynomial.C (s i j) * MvPolynomial.X (Sum.inl j) +
+          MvPolynomial.C (π ^ 3) * MvPolynomial.X (Sum.inr i)
+    | Sum.inr z => MvPolynomial.X z)
+  have hpmap : ∀ a : P, a ∈ I → pmap a = 0 := by
+    intro a ha
+    apply (show I ≤ RingHom.ker pmap.toRingHom from ?_) ha
+    apply Ideal.span_le.2
+    rintro _ ⟨i, rfl⟩
+    change MvPolynomial.aeval _ (desingularizationAuxiliaryRelation π s i) = 0
+    simp only [desingularizationAuxiliaryRelation, desingularizationLiftX,
+      MvPolynomial.rename_X, map_sub, map_mul, map_sum, MvPolynomial.aeval_X,
+      MvPolynomial.aeval_C]
+    rw [show algebraMap R Q = MvPolynomial.C from
+      MvPolynomial.algebraMap_eq R (Fin c ⊕ Fin n)]
+    simp only [map_pow]
+    ring
+  let qmap : P ⧸ I →ₐ[R] Q := Ideal.Quotient.liftₐ I pmap hpmap
+  let gmap : Q →ₐ[R] P ⧸ I := MvPolynomial.aeval (fun z : Fin c ⊕ Fin n =>
+    Ideal.Quotient.mkₐ R I (desingularizationLiftVW (n := n) (MvPolynomial.X z)))
+  have hqg : qmap.comp gmap = AlgHom.id R Q := by
+    have hqcomp : qmap.comp (Ideal.Quotient.mkₐ R I) = pmap :=
+      Ideal.Quotient.liftₐ_comp I pmap hpmap
+    apply MvPolynomial.algHom_ext
+    intro z
+    change qmap (gmap (MvPolynomial.X z)) = MvPolynomial.X z
+    rw [show gmap (MvPolynomial.X z) =
+      Ideal.Quotient.mkₐ R I (desingularizationLiftVW (n := n) (MvPolynomial.X z)) by
+        change MvPolynomial.aeval _ (MvPolynomial.X z) = _
+        rw [MvPolynomial.aeval_X]]
+    calc
+      qmap (Ideal.Quotient.mkₐ R I (desingularizationLiftVW (n := n) (MvPolynomial.X z))) =
+          pmap (desingularizationLiftVW (n := n) (MvPolynomial.X z)) :=
+        AlgHom.congr_fun hqcomp _
+      _ = MvPolynomial.X z := by
+        change MvPolynomial.aeval _ (desingularizationLiftVW (n := n) (MvPolynomial.X z)) = _
+        rw [desingularizationLiftVW, MvPolynomial.rename_X, MvPolynomial.aeval_X]
+  have hleft : gmap.comp qmap = AlgHom.id R (P ⧸ I) := by
+    apply Ideal.Quotient.algHom_ext R
+    simp only [AlgHom.comp_assoc, qmap, Ideal.Quotient.liftₐ_comp]
+    apply MvPolynomial.algHom_ext
+    intro z
+    cases z with
+    | inr z =>
+        change gmap (pmap (MvPolynomial.X (Sum.inr z))) =
+          Ideal.Quotient.mkₐ R I (MvPolynomial.X (Sum.inr z))
+        change gmap (MvPolynomial.aeval _ (MvPolynomial.X (Sum.inr z))) = _
+        rw [MvPolynomial.aeval_X]
+        change MvPolynomial.aeval _ (MvPolynomial.X z) = _
+        rw [MvPolynomial.aeval_X]
+        rw [desingularizationLiftVW, MvPolynomial.rename_X]
+    | inl i =>
+        let exprP : P :=
+          MvPolynomial.C (π ^ 2) *
+              ∑ j : Fin c, MvPolynomial.C (s i j) *
+                MvPolynomial.X (Sum.inr (Sum.inl j)) +
+            MvPolynomial.C (π ^ 3) *
+              MvPolynomial.X (Sum.inr (Sum.inr i))
+        let exprQ : Q :=
+          MvPolynomial.C (π ^ 2) *
+              ∑ j : Fin c, MvPolynomial.C (s i j) * MvPolynomial.X (Sum.inl j) +
+            MvPolynomial.C (π ^ 3) * MvPolynomial.X (Sum.inr i)
+        change gmap (pmap (MvPolynomial.X (Sum.inl i))) =
+          Ideal.Quotient.mkₐ R I (MvPolynomial.X (Sum.inl i))
+        have hpX : pmap (MvPolynomial.X (Sum.inl i)) = exprQ := by
+          change MvPolynomial.aeval _ (MvPolynomial.X (Sum.inl i)) = exprQ
+          rw [MvPolynomial.aeval_X]
+        have hi' : Ideal.Quotient.mk I (MvPolynomial.X (Sum.inl i)) =
+            Ideal.Quotient.mk I exprP := by
+          apply sub_eq_zero.mp
+          rw [← map_sub]
+          apply Ideal.Quotient.eq_zero_iff_mem.2
+          rw [show MvPolynomial.X (Sum.inl i) - exprP =
+              desingularizationAuxiliaryRelation π s i by
+            dsimp [exprP, desingularizationAuxiliaryRelation, desingularizationLiftX,
+              desingularizationLiftVW]
+            rw [MvPolynomial.rename_X]
+            ring]
+          exact Ideal.subset_span (Set.mem_range_self i)
+        have hgexpr : gmap exprQ = Ideal.Quotient.mk I exprP := by
+          change MvPolynomial.aeval _ (
+              MvPolynomial.C (π ^ 2) *
+                  ∑ j : Fin c, MvPolynomial.C (s i j) * MvPolynomial.X (Sum.inl j) +
+                MvPolynomial.C (π ^ 3) * MvPolynomial.X (Sum.inr i)) =
+            (Ideal.Quotient.mk I exprP)
+          simp only [map_add, map_mul, map_sum, MvPolynomial.aeval_C,
+            MvPolynomial.aeval_X, desingularizationLiftVW, MvPolynomial.rename_X]
+          simp only [exprP, MvPolynomial.C_eq_algebraMap, Ideal.Quotient.mk_algebraMap]
+          simp only [map_add, map_mul, map_sum, Ideal.Quotient.mk_algebraMap]
+          have hmk (r : R) :
+              Ideal.Quotient.mk I (algebraMap R P r) = algebraMap R (P ⧸ I) r :=
+            Ideal.Quotient.mk_algebraMap R I r
+          rw [hmk (π ^ 2), hmk (π ^ 3)]
+          have hcoeff (x : Fin c) :
+              Ideal.Quotient.mk I
+                  ((algebraMap R (MvPolynomial (Fin n ⊕ (Fin c ⊕ Fin n)) R)) (s i x)) =
+                algebraMap R (P ⧸ I) (s i x) := by
+            exact Ideal.Quotient.mk_algebraMap R I (s i x)
+          simp_rw [hcoeff]
+          simp only [Ideal.Quotient.mkₐ_eq_mk]
+        rw [hpX]
+        exact hgexpr.trans hi'.symm
+  exact ⟨(AlgEquiv.ofAlgHom qmap gmap hqg hleft).toRingEquiv⟩
 
 /-- The polynomial evaluation descends to the constructed ring when the
 original, auxiliary, and correction relations all evaluate to zero. -/
@@ -379,7 +859,30 @@ theorem desingularizationEvaluation_descends
         φ (Ideal.Quotient.mk
           (desingularizationDefiningIdeal π relations s corrections) p) =
           desingularizationEvaluation π lambdaValues p := by
-  sorry
+  let F := desingularizationEvaluation (c := c) π lambdaValues
+  have hFideal : desingularizationDefiningIdeal π relations s corrections ≤
+      RingHom.ker F.toRingHom := by
+    rw [desingularizationDefiningIdeal]
+    apply Ideal.span_le.2
+    intro x hx
+    rcases hx with hx | hx
+    · rcases hx with hx | hx
+      · obtain ⟨j, rfl⟩ := hx
+        exact hrelations j
+      · obtain ⟨i, rfl⟩ := hx
+        exact hauxiliary i
+    · obtain ⟨j, rfl⟩ := hx
+      exact hcorrections j
+  have hF : ∀ a, a ∈ desingularizationDefiningIdeal π relations s corrections → F a = 0 := by
+    intro a ha
+    exact hFideal ha
+  let φ : desingularizationConstructionRing π relations s corrections →ₐ[R] Λ :=
+    Ideal.Quotient.liftₐ (desingularizationDefiningIdeal π relations s corrections) F hF
+  refine ⟨φ, ?_⟩
+  intro p
+  have hcomp := Ideal.Quotient.liftₐ_comp
+    (desingularizationDefiningIdeal π relations s corrections) F hF
+  exact congrArg (fun f => f p) hcomp
 
 /-- The displayed polynomial quotient `B` is of finite presentation over any
 commutative base. -/
@@ -391,7 +894,19 @@ theorem desingularizationConstruction_finitePresentation
     (corrections : Fin c → MvPolynomial (Fin c ⊕ Fin n) R) :
     Algebra.FinitePresentation R
       (desingularizationConstructionRing π relations s corrections) := by
-  sorry
+  have hfinite : Set.Finite
+      (Set.range (fun j : Fin m => desingularizationLiftX (relations j)) ∪
+        Set.range (desingularizationAuxiliaryRelation π s) ∪
+        Set.range (fun j : Fin c => desingularizationLiftVW (corrections j))) := by
+    apply Set.Finite.union
+    · apply Set.Finite.union
+      · exact Set.finite_range _
+      · exact Set.finite_range _
+    · exact Set.finite_range _
+  have hfg : (desingularizationDefiningIdeal π relations s corrections).FG := by
+    rw [desingularizationDefiningIdeal]
+    exact Submodule.fg_span hfinite
+  exact Algebra.FinitePresentation.quotient hfg
 
 /-- After inverting `π`, the `h_i` and `g_j` equations give the polynomial
 description `B_π ≅ A_π[v_1, ..., v_c]` used in the proof. -/

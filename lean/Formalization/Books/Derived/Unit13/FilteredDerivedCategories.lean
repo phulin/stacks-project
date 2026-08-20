@@ -2134,7 +2134,68 @@ theorem filteredDerivedBoundedSubcategory_properties
     IsStrictlyFullSaturatedPretriangulated (filteredDerivedPlusProperty C) ∧
       IsStrictlyFullSaturatedPretriangulated (filteredDerivedMinusProperty C) ∧
       IsStrictlyFullSaturatedPretriangulated (filteredDerivedBoundedProperty C) := by
-  sorry
+  have : (filteredDerivedGradedFunctor C).IsTriangulated :=
+    filteredDerivedGradedFunctor_is_exact C
+  let F := filteredDerivedGradedFunctor C
+  let H := F ⋙ derivedCohomologyFunctor (GradedObject ℤ C) 0
+  have : H.IsHomological := by infer_instance
+  have hbelow : filteredDerivedPlusProperty C =
+      Formalization.Books.Derived.Unit06.homologicalKernelBelow H := by
+    ext X
+    change derivedPlusProperty (GradedObject ℤ C) (F.obj X) ↔ _
+    rw [derivedPlusProperty_iff]
+    constructor
+    · rintro ⟨N, hN⟩
+      refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+      simpa only [Formalization.Books.Derived.Unit06.homologicalKernelBelow,
+        Formalization.Books.Derived.Unit03.homologicalDegree,
+        derivedCohomologyVanishesBelow, F, H, Functor.comp_obj,
+        derivedCohomologyFunctor, DerivedCategory.shift_homologyFunctor] using
+        (derivedCohomologyFunctor (GradedObject ℤ C) 0).mapIso
+            ((F.commShiftIso n).app X) ≪≫
+          ((derivedCohomologyFunctor (GradedObject ℤ C) 0).isoShift n).app (F.obj X)
+    · rintro ⟨N, hN⟩
+      refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+      simpa only [Formalization.Books.Derived.Unit06.homologicalKernelBelow,
+        Formalization.Books.Derived.Unit03.homologicalDegree,
+        derivedCohomologyVanishesBelow, F, H, Functor.comp_obj,
+        derivedCohomologyFunctor, DerivedCategory.shift_homologyFunctor] using
+        (((derivedCohomologyFunctor (GradedObject ℤ C) 0).isoShift n).app (F.obj X)).symm ≪≫
+          ((derivedCohomologyFunctor (GradedObject ℤ C) 0).mapIso
+            ((F.commShiftIso n).app X)).symm
+  have habove : filteredDerivedMinusProperty C =
+      Formalization.Books.Derived.Unit06.homologicalKernelAbove H := by
+    ext X
+    change derivedMinusProperty (GradedObject ℤ C) (F.obj X) ↔ _
+    rw [derivedMinusProperty_iff]
+    constructor
+    · rintro ⟨N, hN⟩
+      refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+      simpa only [Formalization.Books.Derived.Unit06.homologicalKernelAbove,
+        Formalization.Books.Derived.Unit03.homologicalDegree,
+        derivedCohomologyVanishesAbove, F, H, Functor.comp_obj,
+        derivedCohomologyFunctor, DerivedCategory.shift_homologyFunctor] using
+        (derivedCohomologyFunctor (GradedObject ℤ C) 0).mapIso
+            ((F.commShiftIso n).app X) ≪≫
+          ((derivedCohomologyFunctor (GradedObject ℤ C) 0).isoShift n).app (F.obj X)
+    · rintro ⟨N, hN⟩
+      refine ⟨N, fun n hn => (hN n hn).of_iso ?_⟩
+      simpa only [Formalization.Books.Derived.Unit06.homologicalKernelAbove,
+        Formalization.Books.Derived.Unit03.homologicalDegree,
+        derivedCohomologyVanishesAbove, F, H, Functor.comp_obj,
+        derivedCohomologyFunctor, DerivedCategory.shift_homologyFunctor] using
+        (((derivedCohomologyFunctor (GradedObject ℤ C) 0).isoShift n).app (F.obj X)).symm ≪≫
+          ((derivedCohomologyFunctor (GradedObject ℤ C) 0).mapIso
+            ((F.commShiftIso n).app X)).symm
+  have hbounded : filteredDerivedBoundedProperty C =
+      Formalization.Books.Derived.Unit06.homologicalKernelBounded H := by
+    ext X
+    change (filteredDerivedPlusProperty C X ∧ filteredDerivedMinusProperty C X) ↔
+      Formalization.Books.Derived.Unit06.homologicalKernelBelow H X ∧
+        Formalization.Books.Derived.Unit06.homologicalKernelAbove H X
+    rw [hbelow, habove]
+  rw [hbelow, habove, hbounded]
+  exact Formalization.Books.Derived.Unit06.homologicalKernel_bounded_properties H
 
 /-! ## Boundedness replacements for filtered complexes -/
 
@@ -2233,7 +2294,7 @@ abbrev FilteredKBounded
 theorem filteredKPlus_additiveCategory_exists
     (C : Type u) [Category.{v} C] [Abelian C] :
     Nonempty (AdditiveCategory (FilteredKPlus C)) := by
-  sorry
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 noncomputable instance filteredKPlus_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -2245,7 +2306,7 @@ noncomputable instance filteredKPlus_additiveCategory
 theorem filteredKMinus_additiveCategory_exists
     (C : Type u) [Category.{v} C] [Abelian C] :
     Nonempty (AdditiveCategory (FilteredKMinus C)) := by
-  sorry
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 noncomputable instance filteredKMinus_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :

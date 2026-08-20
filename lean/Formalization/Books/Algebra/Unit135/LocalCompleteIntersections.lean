@@ -78,6 +78,7 @@ def IsGlobalCompleteIntersection
       ∃ (n c : ℕ) (P : PolynomialPresentation k S n)
         (f : Fin c → P.Ring),
         P.ker = Ideal.ofList (List.ofFn f) ∧
+          c ≤ n ∧
           ringKrullDim S = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞))
 
 def IsLocalCompleteIntersection
@@ -99,10 +100,10 @@ def IsEquidimensionalSpectrum
    the earlier `Unit114.dim_affine_space` theorem. -/
 theorem global_complete_intersection_maximal_localizations
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsGlobalCompleteIntersection k S)
     (n c : ℕ) (P : PolynomialPresentation k S n)
     (f : Fin c → P.Ring)
     (hker : P.ker = Ideal.ofList (List.ofFn f))
+    (hc : c ≤ n)
     (hdim : ringKrullDim S = (((n - c : ℕ) : ℕ∞) : WithBot ℕ∞))
     (m : MaximalSpectrum S) :
     ringKrullDim (Localization.AtPrime m.asIdeal) =
@@ -112,7 +113,6 @@ theorem global_complete_intersection_maximal_localizations
 
 theorem presentation_codimension_eq_local_dimension
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsGlobalCompleteIntersection k S)
     {n : ℕ} (P : PolynomialPresentation k S n)
     (q : PrimeSpectrum S) (q' : PrimeSpectrum P.Ring)
     (hcorresponding :
@@ -189,7 +189,6 @@ def PresentationLocalCompleteIntersectionConditions
 
 theorem local_complete_intersection_at_presentation_prime
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsGlobalCompleteIntersection k S)
     {n : ℕ} (P : PolynomialPresentation k S n)
     (q : PrimeSpectrum S) (q' : PrimeSpectrum P.Ring)
     (hcorresponding :
@@ -201,7 +200,6 @@ theorem local_complete_intersection_at_presentation_prime
 
 theorem regular_sequence_of_minimal_conormal_generators
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsGlobalCompleteIntersection k S)
     {n : ℕ} (P : PolynomialPresentation k S n)
     (q : PrimeSpectrum S) (q' : PrimeSpectrum P.Ring)
     (hcorresponding :
@@ -260,11 +258,11 @@ def ExistsRegularLocalSurjectionWithRegularKernel
     letI : CommRing R := hR
     letI : Algebra k R := hA
     letI : IsRegularLocalRing R := hreg
-    ∃ f : R →+* S,
+    ∃ f : R →ₐ[k] S,
       Formalization.Books.Algebra.Unit54.RingHom.EssFinitePresentation
         (algebraMap k R) ∧
         Function.Surjective f ∧
-          IsIdealGeneratedByRegularSequence (RingHom.ker f)
+          IsIdealGeneratedByRegularSequence (RingHom.ker f.toRingHom)
 
 def ExistsRegularLocalSurjectionWithDimensionKernel
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -274,11 +272,11 @@ def ExistsRegularLocalSurjectionWithDimensionKernel
     letI : CommRing R := hR
     letI : Algebra k R := hA
     letI : IsRegularLocalRing R := hreg
-    ∃ f : R →+* S,
+    ∃ f : R →ₐ[k] S,
       Formalization.Books.Algebra.Unit54.RingHom.EssFinitePresentation
         (algebraMap k R) ∧
         Function.Surjective f ∧
-          IsGeneratedByDimensionDifference R S (RingHom.ker f)
+          IsGeneratedByDimensionDifference R S (RingHom.ker f.toRingHom)
 
 def ExistsGlobalCompleteIntersectionLocalization
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -306,11 +304,11 @@ theorem local_complete_intersection_characterization
     List.TFAE
       [ IsCompleteIntersection k S,
         (∀ (R : Type u) [CommRing R] [Algebra k R]
-            [IsRegularLocalRing R] (f : R →+* S),
+            [IsRegularLocalRing R] (f : R →ₐ[k] S),
           Formalization.Books.Algebra.Unit54.RingHom.EssFinitePresentation
               (algebraMap k R) →
             Function.Surjective f →
-              IsIdealGeneratedByRegularSequence (RingHom.ker f)),
+              IsIdealGeneratedByRegularSequence (RingHom.ker f.toRingHom)),
         ExistsRegularLocalSurjectionWithDimensionKernel (k := k) (S := S),
         ExistsGlobalCompleteIntersectionLocalization (k := k) (S := S),
         ExistsLocalCompleteIntersectionLocalization (k := k) (S := S) ] := by
@@ -332,7 +330,7 @@ def PresentationIsLocalCompleteIntersectionAtPrime
 
 theorem local_complete_intersection_at_prime_characterization
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    (hS : IsGlobalCompleteIntersection k S)
+    [Algebra.FiniteType k S]
     (q : PrimeSpectrum S) :
     List.TFAE
       [ IsCompleteIntersection k (Localization.AtPrime q.asIdeal),

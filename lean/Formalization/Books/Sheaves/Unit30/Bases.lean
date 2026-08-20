@@ -2428,7 +2428,127 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
     ∃! ψ : AlgebraicFMap f G F,
       ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
-        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by sorry
+        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by
+  let glue : ∀ (V : Opens X) (E : C)
+      (a : ∀ i, Bₓ i ≤ V → E ⟶ F.presheaf.obj (op (Bₓ i)))
+      (ha : ∀ (i i' : ι) (hi : Bₓ i ≤ V) (hi' : Bₓ i' ≤ V)
+        (hii : Bₓ i' ≤ Bₓ i),
+        a i hi ≫ F.presheaf.map (homOfLE hii).op = a i' hi'),
+      E ⟶ F.presheaf.obj (op V) := by
+    intro V E a ha
+    let I := {i : ι // Bₓ i ≤ V}
+    let A : I → Opens X := fun i => Bₓ i.1
+    let q : ∀ i : I, A i ⟶ V := fun i => homOfLE i.2
+    have hq : Sieve.ofArrows A q ∈ Opens.grothendieckTopology X V := by
+      intro x hx
+      obtain ⟨W, ⟨i, rfl⟩, hxW, hiW⟩ := (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+      refine ⟨Bₓ i, homOfLE hiW, ?_, hxW⟩
+      exact Sieve.ofArrows_mk A q ⟨i, hiW⟩
+    let b : ∀ i : I, E ⟶ F.presheaf.obj (op (A i)) := fun i =>
+      a i.1 i.2
+    exact F.property.amalgamateOfArrows q hq b (by
+      intro W i i' u v huv
+      apply F.property.hom_ext_ofArrows
+        (fun k : {k : ι // Bₓ k ≤ W} => homOfLE k.2) (by
+          intro x hx
+          obtain ⟨Z, ⟨k, rfl⟩, hxZ, hkZ⟩ :=
+            (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+          refine ⟨Bₓ k, homOfLE hkZ, ?_, hxZ⟩
+          exact Sieve.ofArrows_mk _ _ ⟨k, hkZ⟩)
+        (by
+          intro k
+          dsimp [b, q, A]
+          rw [F.presheaf.map_comp]
+          have hki : Bₓ k.1 ≤ Bₓ i.1 := by
+            exact le_trans k.2 (show W ≤ Bₓ i.1 from u.le)
+          have hki' : Bₓ k.1 ≤ Bₓ i'.1 := by
+            exact le_trans k.2 (show W ≤ Bₓ i'.1 from v.le)
+          have hiV : Bₓ i.1 ≤ V := i.2
+          have hi'V : Bₓ i'.1 ≤ V := i'.2
+          have hkiV : Bₓ k.1 ≤ V := le_trans k.2 (le_trans u.le i.2)
+          have hki'V : Bₓ k.1 ≤ V := le_trans k.2 (le_trans v.le i'.2)
+          have hleft := ha i.1 k.1 hiV hkiV hki
+          have hright := ha i'.1 k.1 hi'V hki'V hki'
+          rw [← hleft, ← hright]
+          congr 1 <;> subsingleton)
+
+  let φ : BasisFMapData f Bᵧ G F := by
+    let map : ∀ j, G.presheaf.obj (op (Bᵧ j)) ⟶
+        F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j))) := fun j =>
+      glue ((Opens.map f).obj (Bᵧ j))
+        (G.presheaf.obj (op (Bᵧ j)))
+        (fun i h => d.app i j h) (by
+          intro i i' hi hi' hii
+          simpa only [CategoryTheory.Functor.map_id, Category.id_comp] using
+            d.naturality hii (le_refl _) hi hi')
+    exact {
+      map := map
+      compatible := by
+        intro j j' h
+        apply F.property.hom_ext_ofArrows
+          (fun i : {i : ι // Bₓ i ≤ (Opens.map f).obj (Bᵧ j')} =>
+            homOfLE i.2) (by
+              intro x hx
+              obtain ⟨W, ⟨i, rfl⟩, hxW, hiW⟩ :=
+                (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+              refine ⟨Bₓ i, homOfLE hiW, ?_, hxW⟩
+              exact Sieve.ofArrows_mk _ _ ⟨i, hiW⟩)
+          (by
+            intro i
+            dsimp [map]
+            rw [F.presheaf.map_comp]
+            have hi' : Bₓ i.1 ≤ (Opens.map f).obj (Bᵧ j') := i.2
+            have hi : Bₓ i.1 ≤ (Opens.map f).obj (Bᵧ j) :=
+              le_trans hi' ((Opens.map f).monotone h)
+            have hn := d.naturality (le_refl _) h hi hi'
+            simpa only [Category.assoc, CategoryTheory.Functor.map_id,
+              Category.id_comp] using hn) }
+
+  let φ' : (inducedFunctor Bᵧ).op ⋙ G.presheaf ⟶
+      (inducedFunctor Bᵧ).op ⋙ ((TopCat.Sheaf.pushforward C f).obj F).obj :=
+    { app := fun U => φ.map U.unop
+      naturality := by
+        intro U V h
+        dsimp [φ]
+        exact φ.compatible h.unop.hom.le }
+  obtain ⟨ψ, hψ, huniq⟩ := basisFMap_below_unique f F G Bᵧ hBᵧ φ'
+  refine ⟨ψ, ?_, ?_⟩
+  · intro i j h
+    have hj := congr_app hψ (op (show basisIndex Bᵧ from j))
+    have hglue := F.property.amalgamateOfArrows_map
+      (fun k : {k : ι // Bₓ k ≤ (Opens.map f).obj (Bᵧ j)} => homOfLE k.2)
+      (by
+        intro x hx
+        obtain ⟨W, ⟨k, rfl⟩, hxW, hkW⟩ :=
+          (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+        refine ⟨Bₓ k, homOfLE hkW, ?_, hxW⟩
+        exact Sieve.ofArrows_mk _ _ ⟨k, hkW⟩)
+      (fun k => d.app k.1 j k.2) (by
+        intro k k' u v huv
+        apply F.property.hom_ext_ofArrows
+          (fun l : {l : ι // Bₓ l ≤ k.1} => homOfLE l.2) (by
+            intro x hx
+            obtain ⟨W, ⟨l, rfl⟩, hxW, hlW⟩ :=
+              (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+            refine ⟨Bₓ l, homOfLE hlW, ?_, hxW⟩
+            exact Sieve.ofArrows_mk _ _ ⟨l, hlW⟩)
+          (by
+            intro l
+            have hli : Bₓ l.1 ≤ Bₓ k.1 := le_trans l.2 k.1.2
+            have hli' : Bₓ l.1 ≤ Bₓ k'.1 := le_trans l.2 k'.1.2
+            have hn := d.naturality hli (le_refl _) k.1.2 k'.1.2
+            simpa only [Category.assoc, CategoryTheory.Functor.map_id,
+              Category.id_comp] using hn))
+      ⟨i, h⟩
+    change ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = _
+    rw [show ψ.hom.app (op (Bᵧ j)) = φ.map j by
+      simpa [φ'] using hj]
+    simpa [φ] using hglue
+  · intro ψ' hψ'
+    apply huniq ψ'
+    ext U
+    change ψ'.hom.app (op (Bᵧ U.unop)) = φ'.app U
+    simpa [φ'] using hψ' U.unop U.unop.le
 /-
   let glue : ∀ (V : Opens X) (E : C)
       (a : ∀ i, Bₓ i ≤ V → E ⟶ F.presheaf.obj (op (Bₓ i)))
@@ -2574,7 +2694,72 @@ theorem basisFMap_above_below_stalk_colimit_holds
     (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
-    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by sorry
+    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by
+  obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
+  let ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x :=
+    (TopCat.Presheaf.stalkFunctor C (f x)).map
+        (show G.presheaf ⟶ ((TopCat.Sheaf.pushforward C f).obj F).presheaf from ψ.hom) ≫
+      F.presheaf.stalkPushforward C f x
+  refine ⟨ξ, ?_, ?_⟩
+  · intro i j hij hx hy
+    dsimp [ξ]
+    have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := C) (Bᵧ j) (f x) hy ψ.hom
+    have hpush := TopCat.Presheaf.stalkPushforward_germ
+      (C := C) f F.presheaf (Bᵧ j) x hy
+    rw [← Category.assoc, hmap, hpush]
+    rw [hψ i j hij]
+    exact F.presheaf.germ_res' (homOfLE hij).op x hx
+  · intro ξ' hξ'
+    let : IsFiltered ((basisNeighborhoodIndex Bᵧ (f x))ᵒᵖ) :=
+      basisNeighborhoodIndex_isFiltered Bᵧ _hBᵧ (f x)
+    let : IsCofiltered (basisNeighborhoodIndex Bᵧ (f x)) :=
+      isCofiltered_of_isFiltered_op (basisNeighborhoodIndex Bᵧ (f x))
+    let K : (basisNeighborhoodIndex Bᵧ (f x))ᵒᵖ ⥤
+        (OpenNhds (f x))ᵒᵖ :=
+      { obj := fun k => op ⟨Bᵧ k.unop.1, k.unop.2⟩
+        map := fun g => (homOfLE g.unop.hom.hom.le).op
+        map_id := by intro k; subsingleton
+        map_comp := by intro i j k f g; subsingleton }
+    have hK : K.Final := by
+      apply Functor.final_of_exists_of_isFiltered
+      · intro U
+        obtain ⟨V, ⟨j, _, rfl⟩, hxV, hVU⟩ :=
+          (Opens.isBasis_iff_nbhd.mp _hBᵧ) U.unop.2
+        refine ⟨op ⟨j, hxV⟩, ?_⟩
+        exact ⟨(homOfLE hVU).op⟩
+      · intro U V f g
+        exact ⟨V, 𝟙 _, by subsingleton⟩
+    let Gdiag := (OpenNhds.inclusion (f x)).op ⋙ G.presheaf
+    let e : colimit (K ⋙ Gdiag) ≅ G.presheaf.stalk (f x) :=
+      Functor.Final.colimitIso K Gdiag
+    apply (cancel_epi e.hom).1
+    apply colimit.hom_ext
+    intro k
+    change colimit.ι (K ⋙ Gdiag) k ≫
+        (Functor.Final.colimitIso K Gdiag).hom ≫ ξ' =
+      colimit.ι (K ⋙ Gdiag) k ≫
+        (Functor.Final.colimitIso K Gdiag).hom ≫ ξ
+    rw [Functor.Final.ι_colimitIso_hom]
+    let j : κ := k.unop.1
+    let hy : f x ∈ Bᵧ j := k.unop.2
+    obtain ⟨W, ⟨i, rfl⟩, hxW, hiV⟩ :=
+      (Opens.isBasis_iff_nbhd.mp _hBₓ)
+        (show x ∈ (Opens.map f).obj (Bᵧ j) from hy)
+    have hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j) := hiV
+    have hξ'local := hξ' i j hij hxW hy
+    have hξlocal :
+        G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
+          d.app i j hij ≫ F.presheaf.germ (Bₓ i) x hxW := by
+      dsimp [ξ]
+      have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+        (C := C) (Bᵧ j) (f x) hy ψ.hom
+      have hpush := TopCat.Presheaf.stalkPushforward_germ
+        (C := C) f F.presheaf (Bᵧ j) x hy
+      rw [← Category.assoc, hmap, hpush]
+      rw [hψ i j hij]
+      exact F.presheaf.germ_res' (homOfLE hij).op x hxW
+    exact hξ'local.trans hξlocal.symm
 /- Prior attempt (retained for context; replaced by `sorry` above).
   obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f F G Bₓ _hBₓ Bᵧ _hBᵧ d
   let ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x :=
@@ -2655,7 +2840,106 @@ theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ
         (s : G.val.presheaf.obj (op (Bᵧ j))),
         F.val.presheaf.map (homOfLE hij).op
             ((ψ.val.app (op (Bᵧ j))).hom s) = d.app i j hij s := by
-  sorry
+  let FAdd : TopCat.Sheaf AddCommGrpCat X :=
+    ⟨F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat, F.isSheaf⟩
+  let GAdd : TopCat.Sheaf AddCommGrpCat Y :=
+    ⟨G.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat, G.isSheaf⟩
+  let dAdd : BasisFMapAboveBelowData f Bₓ Bᵧ GAdd FAdd :=
+    { app := fun i j hij =>
+        AddCommGrpCat.ofHom (AddMonoidHom.mk' (d.app i j hij) (by
+          intro s₁ s₂
+          exact d.map_add i j hij s₁ s₂))
+      naturality := by
+        intro i i' j j' hii' hjj' hij hi'j'
+        ext s
+        change F.val.presheaf.map (homOfLE hii').op (d.app i j hij s) =
+          d.app i' j' hi'j' (G.val.presheaf.map (homOfLE hjj').op s)
+        exact d.naturality hii' hjj' hij hi'j' s }
+  obtain ⟨ψ, hψ, huniq⟩ := basisFMap_above_below_unique f FAdd GAdd Bₓ hBₓ Bᵧ hBᵧ dAdd
+  let φ : BasisModuleFMapBelowData f Bᵧ G F :=
+    { map := fun j s => (ψ.hom.app (op (Bᵧ j))) s
+      compatible := by
+        intro j j' h
+        funext s
+        change (ψ.hom.app (op (Bᵧ j')))
+              (G.val.presheaf.map (homOfLE h).op s) =
+          F.val.presheaf.map
+              (((Opens.map f.continuous).map (homOfLE h)).op)
+            ((ψ.hom.app (op (Bᵧ j))) s)
+        exact congrFun (ψ.hom.naturality (homOfLE h).op) s
+      map_add := by
+        intro j s₁ s₂
+        exact (ψ.hom.app (op (Bᵧ j))).hom.map_add s₁ s₂
+      linear := by
+        intro j r s
+        let U := (Opens.map f.continuous).obj (Bᵧ j)
+        let I := {i : basisIndex Bₓ // Bₓ i ≤ U}
+        let A : I → Opens X := fun i => Bₓ i.1
+        have hA : iSup A = U := by
+          apply le_antisymm
+          · exact iSup_le fun i => i.2
+          · intro x hx
+            obtain ⟨V, ⟨i, rfl⟩, hxV, hi⟩ :=
+              (Opens.isBasis_iff_nbhd.mp hBₓ) hx
+            exact Opens.mem_iSup.mpr ⟨⟨i, hi⟩, hxV⟩
+        let R : Presieve U := TopCat.Presheaf.presieveOfCoveringAux A U
+        have hR : Sieve.generate R ∈ Opens.grothendieckTopology X U := by
+          change Sieve.generate
+            (TopCat.Presheaf.presieveOfCoveringAux A U) ∈
+              Opens.grothendieckTopology X U
+          exact hA ▸ TopCat.Presheaf.presieveOfCovering.mem_grothendieckTopology A
+        have hFtype : Presheaf.IsSheaf (Opens.grothendieckTopology X)
+            (F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) :=
+          (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+            (J := Opens.grothendieckTopology X) (P' := F.val.presheaf)
+            (CategoryTheory.forget AddCommGrpCat)).mp F.val.isSheaf
+        have hFsheaf : Presieve.IsSheaf (Opens.grothendieckTopology X)
+            (F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) :=
+          (CategoryTheory.isSheaf_iff_isSheaf_of_type
+            (J := Opens.grothendieckTopology X)
+            (F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat)).mp hFtype
+        have hsep : Presieve.IsSeparatedFor
+            (F.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) R :=
+          (hFsheaf.isSheafFor R hR).isSeparatedFor
+        apply hsep.ext
+          (t₁ := (ψ.hom.app (op (Bᵧ j))) (r • s))
+          (t₂ := (ringedSpaceBasisScalarMap
+            (U := U) (V := Bᵧ j) f le_rfl).hom r •
+              (ψ.hom.app (op (Bᵧ j))) s)
+        intro V fV hf
+        obtain ⟨i, rfl⟩ := hf
+        let hij : Bₓ i.1 ≤ U := i.2
+        have hψr := congrArg (fun q => q (r • s)) (hψ i.1 j hij)
+        have hψs := congrArg (fun q => q s) (hψ i.1 j hij)
+        change F.val.presheaf.map (homOfLE hij).op
+              ((ψ.hom.app (op (Bᵧ j))) (r • s)) =
+            d.app i.1 j hij (r • s) at hψr
+        change F.val.presheaf.map (homOfLE hij).op
+              ((ψ.hom.app (op (Bᵧ j))) s) =
+            d.app i.1 j hij s at hψs
+        rw [hψr, hψs, d.linear]
+        rw [F.val.map_smul]
+        congr 1
+        change (X.structureSheaf.1.map (homOfLE hij).op)
+              ((ringedSpaceBasisScalarMap (U := U) (V := Bᵧ j)
+                f le_rfl).hom r) =
+          (ringedSpaceBasisScalarMap f hij).hom r
+        dsimp [ringedSpaceBasisScalarMap]
+        simp only [Category.assoc]
+        rfl }
+  obtain ⟨ψ', hψ', huniq'⟩ := basisFMapModule_below_unique_of_data
+    f F G Bᵧ hBᵧ φ
+  refine ⟨ψ', ?_, ?_⟩
+  · intro i j hij s
+    have hj := hψ' j s
+    have hψj := congrArg (fun q => q s) (hψ i j hij)
+    change F.val.presheaf.map (homOfLE hij).op
+          ((ψ'.val.app (op (Bᵧ j))).hom s) = d.app i j hij s
+    exact hj.trans hψj
+  · intro ψ'' hψ''
+    apply huniq' ψ''
+    ext U s
+    exact hψ'' U.unop s
 
 end
 

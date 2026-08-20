@@ -110,13 +110,42 @@ theorem strictTransformModuleOver_isTorsionBySet
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M]
     (I : Ideal R) (a : R) (ha : a ∈ I) :
-    (let T := S ⊗[R] affineBlowup I a
+    (let T := S ⊗[R] affineBlowup I a;
      letI : Module T (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) :=
-       strictTransformModuleOverBaseModule (R := R) (S := S) (M := M) I a ha
-     Module.IsTorsionBySet T
+       strictTransformModuleOverBaseModule (R := R) (S := S) (M := M) I a ha;
+       Module.IsTorsionBySet T
        (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha)
        (strictTransformTorsionIdeal (S := S) I a : Set T)) := by
-  sorry
+  let T := S ⊗[R] affineBlowup I a
+  let N := T ⊗[S] M
+  let P : Submodule T N :=
+    scalarPowerTorsionSubmodule (R := T) (M := N)
+      (algebraMap S T (algebraMap R S a))
+  change ∀ ⦃x : (@Submodule.hasQuotient T N inferInstance inferInstance inferInstance).Quotient P⦄
+    ⦃b : (strictTransformTorsionIdeal (S := S) I a : Set T)⦄, (b : T) • x = 0
+  intro x b
+  have hb := b.property
+  change (↑b : T) ∈ powerTorsionIdeal T
+      (algebraMap S T (algebraMap R S a)) at hb
+  rw [mem_powerTorsionIdeal_iff] at hb
+  obtain ⟨n, hn⟩ := hb
+  refine Submodule.Quotient.induction_on _ x ?_
+  intro y
+  change (↑b : T) • (@Submodule.Quotient.mk T N _ _ _ P y) = 0
+  rw [← Submodule.Quotient.mk_smul]
+  rw [Submodule.Quotient.mk_eq_zero]
+  rw [Submodule.mem_torsion'_iff]
+  refine ⟨⟨(algebraMap S T (algebraMap R S a)) ^ n,
+    (Submonoid.mem_powers_iff _ _).2 ⟨n, rfl⟩⟩, ?_⟩
+  change (algebraMap S T (algebraMap R S a)) ^ n •
+    ((↑b : T) • y) = 0
+  calc
+    (algebraMap S T (algebraMap R S a)) ^ n • ((↑b : T) • y) =
+        ((algebraMap S T (algebraMap R S a)) ^ n * (↑b : T)) • y := by
+      exact (smul_assoc (M := T) (N := T) (α := N) _ _ _).symm
+    _ = 0 := by
+      rw [hn]
+      exact zero_smul T y
 
 /-- The canonical quotient-ring action on the strict transform of an
 `S`-module. -/
@@ -177,7 +206,7 @@ theorem flattenOnAffineBlowup
       (Module.Flat R (strictTransformAlgebra (S := S) I a ha) ∧
         Algebra.FinitePresentation R
           (strictTransformAlgebra (S := S) I a ha)) ∧
-      (letI : Module (strictTransformAlgebra (S := S) I a ha)
+       (letI : Module (strictTransformAlgebra (S := S) I a ha)
           (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) :=
         strictTransformModuleOverModule (R := R) (S := S) (M := M) I a ha
        letI : Module R (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) :=

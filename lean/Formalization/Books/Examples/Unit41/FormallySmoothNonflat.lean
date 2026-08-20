@@ -1,9 +1,9 @@
 import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.Algebra.MonoidAlgebra.NoZeroDivisors
 import Mathlib.Algebra.Field.ZMod
-import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.RingTheory.Ideal.Cotangent
+import Mathlib.RingTheory.Flat.TorsionFree
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Smooth.Basic
 import Mathlib.RingTheory.RingHom.Smooth

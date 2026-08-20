@@ -399,7 +399,7 @@ noncomputable def coneProjection {R : Type u} [CommRing R]
         (ModuleCat.{u} R) (-1 : ℤ)).obj A :=
   { f := fun i =>
       HomologicalComplex.homotopyCofiber.fstX f i (i - 1) (by
-        simpa [ComplexShape.down, ComplexShape.down'] using (sub_add_cancel i 1))
+        simp [ComplexShape.down, ComplexShape.down'])
     comm' := by
       intro i j hij
       sorry }

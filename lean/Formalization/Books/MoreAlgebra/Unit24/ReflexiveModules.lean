@@ -835,7 +835,7 @@ theorem reflexive_flat_baseChange
     change Function.Exact (f.lTensor R') (q.lTensor R')
     exact Module.Flat.lTensor_exact (M := R') hq
   have hmid : Reflexive R' (R' ⊗[R] (Fin n →₀ R)) := by
-    letI : Module.Free R' (R' ⊗[R] (Fin n →₀ R)) := by infer_instance
+    let _ : Module.Free R' (R' ⊗[R] (Fin n →₀ R)) := by infer_instance
     exact Module.IsReflexive.of_finite_of_free R' (R' ⊗[R] (Fin n →₀ R))
   have hright : Module.IsTorsionFree R'
       (R' ⊗[R] ((Fin n →₀ R) ⧸ LinearMap.range f)) :=

@@ -253,9 +253,65 @@ theorem ftAToA0_surjective (k : Type u) [Field k] :
   rw [Ideal.Quotient.lift_mk]
   simp [ftAAugmentation]
 
+private theorem ftAAugmentation_eq_zero_mem_idealOfVars (k : Type u) [Field k]
+    {p : ftAPolynomialRing k} (hp : ftAAugmentation k p = 0) :
+    p ∈ MvPolynomial.idealOfVars ℕ (ftA0 k) := by
+  rw [MvPolynomial.idealOfVars, ← Set.image_univ,
+    MvPolynomial.mem_ideal_span_X_image]
+  intro m hm
+  by_cases hm0 : m = 0
+  · subst m
+    exfalso
+    apply (MvPolynomial.mem_support_iff.mp hm)
+    have he := MvPolynomial.eval₂Hom_eq_constantCoeff_of_vars
+      (RingHom.id (ftA0 k)) (p := p) (fun i hi => rfl)
+    have he' : ftAAugmentation k p = MvPolynomial.constantCoeff p := by
+      change MvPolynomial.eval₂Hom (RingHom.id _) (fun _ => 0) p = _
+      exact he
+    have hpc : MvPolynomial.constantCoeff p = 0 := he'.symm.trans hp
+    simpa [MvPolynomial.constantCoeff_eq] using hpc
+  · have hex : ∃ i, m i ≠ 0 := by
+      by_contra h
+      push Not at h
+      apply hm0
+      exact Finsupp.ext fun i => h i
+    rcases hex with ⟨i, hi⟩
+    exact ⟨i, Set.mem_univ _, hi⟩
+
+private theorem ftARelationsIdeal_contains_idealOfVars_square (k : Type u) [Field k] :
+    (MvPolynomial.idealOfVars ℕ (ftA0 k)) ^ 2 ≤ ftARelationsIdeal k := by
+  rw [MvPolynomial.idealOfVars, pow_two, Ideal.span_mul_span]
+  refine Ideal.span_le.2 ?_
+  rintro z ⟨a, ha, b, hb, rfl⟩
+  rcases ha with ⟨i, rfl⟩
+  rcases hb with ⟨j, rfl⟩
+  apply Ideal.subset_span
+  exact Set.mem_union_left _ ⟨(i, j), rfl⟩
+
 theorem ftAToA0_kernel_square_zero (k : Type u) [Field k] :
     (RingHom.ker (ftAToA0 k)) ^ 2 = ⊥ := by
-  sorry
+  rw [pow_two]
+  apply le_antisymm
+  · refine Ideal.mul_le.2 ?_
+    intro a ha b hb
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+    have hp0 : ftAAugmentation k p = 0 := by
+      change ftAToA0 k (Ideal.Quotient.mk (ftARelationsIdeal k) p) = 0 at ha
+      exact ha
+    obtain ⟨q, rfl⟩ := Ideal.Quotient.mk_surjective b
+    have hq0 : ftAAugmentation k q = 0 := by
+      change ftAToA0 k (Ideal.Quotient.mk (ftARelationsIdeal k) q) = 0 at hb
+      exact hb
+    have hpI := ftAAugmentation_eq_zero_mem_idealOfVars k hp0
+    have hqI := ftAAugmentation_eq_zero_mem_idealOfVars k hq0
+    have hpq : p * q ∈ (MvPolynomial.idealOfVars ℕ (ftA0 k)) ^ 2 := by
+      rw [pow_two]
+      exact Ideal.mul_mem_mul (I := MvPolynomial.idealOfVars ℕ (ftA0 k))
+        (J := MvPolynomial.idealOfVars ℕ (ftA0 k)) hpI hqI
+    have hpq' := ftARelationsIdeal_contains_idealOfVars_square k hpq
+    change Ideal.Quotient.mk (ftARelationsIdeal k) (p * q) = 0
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr hpq'
+  · exact bot_le
 
 /-- The ideal of `A` corresponding to `𝔭₀,ₙ`, which is prime for `n > 0`. -/
 def ftAPrime (k : Type u) [Field k] (n : ℕ) : Ideal (ftA k) :=
@@ -263,16 +319,59 @@ def ftAPrime (k : Type u) [Field k] (n : ℕ) : Ideal (ftA k) :=
 
 theorem ftAPrime_isPrime (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     (ftAPrime k n).IsPrime := by
-  sorry
+  exact (ftP0_isPrime k n hn).comap (ftAToA0 k)
 
 /-- The prime spectra of `A` and `A₀` correspond through the square-zero
 extension. -/
 theorem ft_primeSpectrum_comap_bijective (k : Type u) [Field k] :
     Function.Bijective (PrimeSpectrum.comap (ftAToA0 k)) := by
-  sorry
+  constructor
+  · exact PrimeSpectrum.comap_injective_of_surjective (ftAToA0 k)
+      (ftAToA0_surjective k)
+  · rw [← Set.range_eq_univ,
+      range_comap_of_surjective (ftA0 k) (ftAToA0 k) (ftAToA0_surjective k)]
+    apply Set.eq_univ_of_forall
+    intro p
+    change ∀ x, x ∈ RingHom.ker (ftAToA0 k) → x ∈ p.asIdeal
+    intro x hx
+    have hxx : x * x ∈ RingHom.ker (ftAToA0 k) ^ 2 := by
+      rw [pow_two]
+      exact Ideal.mul_mem_mul (I := RingHom.ker (ftAToA0 k))
+        (J := RingHom.ker (ftAToA0 k)) hx hx
+    rw [ftAToA0_kernel_square_zero k] at hxx
+    have hzero : x * x = 0 := Ideal.mem_bot.mp hxx
+    exact (p.isPrime.mem_or_mem (hzero ▸ p.asIdeal.zero_mem)).elim id id
 
 instance ftA_isLocalRing (k : Type u) [Field k] : IsLocalRing (ftA k) := by
-  sorry
+  have hker_le : ∀ (I : Ideal (ftA k)), I.IsMaximal →
+      RingHom.ker (ftAToA0 k) ≤ I := by
+    intro I hI x hx
+    have hxx : x * x ∈ RingHom.ker (ftAToA0 k) ^ 2 := by
+      rw [pow_two]
+      exact Ideal.mul_mem_mul (I := RingHom.ker (ftAToA0 k))
+        (J := RingHom.ker (ftAToA0 k)) hx hx
+    rw [ftAToA0_kernel_square_zero k] at hxx
+    have hzero : x * x = 0 := Ideal.mem_bot.mp hxx
+    exact (hI.isPrime.mem_or_mem (hzero ▸ I.zero_mem)).elim id id
+  refine IsLocalRing.of_unique_max_ideal ?_
+  refine ⟨(IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k),
+    Ideal.comap_isMaximal_of_surjective (ftAToA0 k) (ftAToA0_surjective k), ?_⟩
+  intro I hI
+  have hk := hker_le I hI
+  have hmap : (I.map (ftAToA0 k)).IsMaximal :=
+    @Ideal.IsMaximal.map_of_surjective_of_ker_le
+      (ftA k) (ftA0 k) (ftA k →+* ftA0 k) _ _ _ _
+      (ftAToA0 k) (ftAToA0_surjective k) I hI hk
+  have hmap_eq : I.map (ftAToA0 k) = IsLocalRing.maximalIdeal (ftA0 k) :=
+    IsLocalRing.eq_maximalIdeal hmap
+  have hcomp : (I.map (ftAToA0 k)).comap (ftAToA0 k) =
+      I ⊔ RingHom.ker (ftAToA0 k) := by
+    rw [Ideal.comap_map_of_surjective (ftAToA0 k) (ftAToA0_surjective k) I,
+      RingHom.ker_eq_comap_bot]
+  calc
+    I = I ⊔ RingHom.ker (ftAToA0 k) := (sup_eq_left.mpr hk).symm
+    _ = (I.map (ftAToA0 k)).comap (ftAToA0 k) := hcomp.symm
+    _ = (IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k) := by rw [hmap_eq]
 
 theorem ftAGenerator_annihilator (k : Type u) [Field k] (n : ℕ) :
     (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator =

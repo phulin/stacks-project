@@ -1864,14 +1864,16 @@ theorem refined_noether_normalization
       Algebra.trdeg k q.ResidueField = r ∧
         ∃ φ : MvPolynomial (Fin n) k →+*
             MvPolynomial (Fin n) k,
-          RingHom.Finite φ ∧ q.comap φ = tailVariableIdeal k n r := by
+          RingHom.Finite φ ∧ q.comap φ = tailVariableIdeal k n r ∧
+            φ.comp (MvPolynomial.C : k →+* MvPolynomial (Fin n) k) =
+              (MvPolynomial.C : k →+* MvPolynomial (Fin n) k) := by
   classical
   let _ : q.IsPrime := hq
   obtain ⟨r, hr, φ, hφfinite, hcomap, hφC⟩ :=
     exists_refined_normalization_map q hq
   have htrdeg := trdeg_residueField_eq_of_comap_tail
     q hq φ hφfinite hcomap hr hφC
-  exact ⟨r, hr, htrdeg, φ, hφfinite, hcomap⟩
+  exact ⟨r, hr, htrdeg, φ, hφfinite, hcomap, hφC⟩
 
 /-! ## Normalization over a domain -/
 

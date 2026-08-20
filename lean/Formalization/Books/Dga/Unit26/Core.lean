@@ -81,7 +81,31 @@ products. -/
 
 theorem ring_is_a_differentialGradedAlgebra (R : Type u) [CommRing R] :
     Nonempty (DifferentialGradedAlgebra R) := by
-  sorry
+  refine ⟨tensorUnitComplex R,
+    (HomologicalComplex.leftUnitor (tensorUnitComplex R)).hom,
+    𝟙 _,
+    ?_,
+    ?_,
+    ?_⟩
+  · change (MonoidalCategory.tensorHom (𝟙 _) (𝟙 _)) ≫ _ = _
+    simp
+  · change (MonoidalCategory.tensorHom (𝟙 _) (𝟙 _)) ≫ _ = _
+    rw [MonoidalCategory.id_tensorHom_id, Category.id_comp]
+    change (MonoidalCategory.leftUnitor
+      (MonoidalCategory.tensorUnit (CochainComplexOver R))).hom =
+      (MonoidalCategory.rightUnitor
+        (MonoidalCategory.tensorUnit (CochainComplexOver R))).hom
+    exact MonoidalCategory.unitors_equal
+  · change
+      (MonoidalCategory.tensorHom
+        (MonoidalCategory.leftUnitor (tensorUnitComplex R)).hom (𝟙 _)) ≫
+          (MonoidalCategory.leftUnitor (tensorUnitComplex R)).hom =
+        (MonoidalCategory.associator (tensorUnitComplex R)
+            (tensorUnitComplex R) (tensorUnitComplex R)).hom ≫
+          MonoidalCategory.tensorHom (𝟙 _)
+            (MonoidalCategory.leftUnitor (tensorUnitComplex R)).hom ≫
+          (MonoidalCategory.leftUnitor (tensorUnitComplex R)).hom
+    monoidal_coherence
 
 abbrev differentialGradedModuleTensorProduct
     (R : Type u) [CommRing R]
@@ -102,9 +126,19 @@ def boundarySubmodule (X Y : A.Obj) :
     Submodule R (cycleSubmodule X Y) where
   carrier := {f | ∃ g : A.hom X Y (-1),
     (A.differential X Y (-1)).hom g = (f : A.hom X Y 0)}
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  zero_mem' := ⟨0, by simp⟩
+  add_mem' := by
+    intro a b ha hb
+    rcases ha with ⟨g, hg⟩
+    rcases hb with ⟨g', hg'⟩
+    refine ⟨g + g', ?_⟩
+    simp [hg, hg']
+  smul_mem' := by
+    intro r a ha
+    rcases ha with ⟨g, hg⟩
+    refine ⟨r • g, ?_⟩
+    rw [map_smul, hg]
+    rfl
 
 abbrev Cycle (X Y : A.Obj) := cycleSubmodule X Y
 
@@ -119,11 +153,39 @@ abbrev ExplicitCohomologyClass
 def cycleComposition {X Y Z : A.Obj}
     (f : Cycle X Y) (g : Cycle Y Z) : Cycle X Z := by
   refine ⟨A.composition 0 0 (f : A.hom X Y 0) (g : A.hom Y Z 0), ?_⟩
-  sorry
+  change (A.differential X Z 0).hom
+      (A.composition 0 0 (f : A.hom X Y 0) (g : A.hom Y Z 0)) = 0
+  have hf : (A.differential X Y 0).hom (f : A.hom X Y 0) = 0 := f.property
+  have hg : (A.differential Y Z 0).hom (g : A.hom Y Z 0) = 0 := g.property
+  have hzright :
+      A.composition 0 1 (f : A.hom X Y 0) (0 : A.hom Y Z 1) = 0 := by
+    simpa using
+      A.composition_smul_right 0 1 (0 : R) (f : A.hom X Y 0) (0 : A.hom Y Z 1)
+  have hzleft :
+      A.composition 1 0 (0 : A.hom X Y 1) (g : A.hom Y Z 0) = 0 := by
+    simpa using
+      A.composition_smul_left 1 0 (0 : R) (0 : A.hom X Y 1) (g : A.hom Y Z 0)
+  have h := A.composition_differential 0 0
+      (f : A.hom X Y 0) (g : A.hom Y Z 0)
+  simpa [hf, hg, hzright, hzleft] using h
 
 def cycleIdentity (X : A.Obj) : Cycle X X := by
   refine ⟨A.identity X, ?_⟩
-  sorry
+  change (A.differential X X 0).hom (A.identity X) = 0
+  let d : A.hom X X 1 := (A.differential X X 0).hom (A.identity X)
+  have hcomp : A.composition 0 0 (A.identity X) (A.identity X) = A.identity X := by
+    simpa using A.identity_composition 0 (A.identity X)
+  have hleft : A.composition 0 1 (A.identity X) d = d := by
+    simpa using A.identity_composition 1 d
+  have hright : A.composition 1 0 d (A.identity X) = d := by
+    simpa using A.composition_identity 1 d
+  have h := A.composition_differential 0 0 (A.identity X) (A.identity X)
+  have h' : d = d + d := by
+    simpa [d, hcomp, hleft, hright, Int.negOnePow] using h
+  have hz := congrArg (fun x : A.hom X X 1 => x - d) h'
+  have hz' : (0 : A.hom X X 1) = d := by
+    simpa [sub_eq_add_neg, add_assoc] using hz
+  simpa [d] using hz'.symm
 
 /-- The category `Comp(A)` of closed degree-zero morphisms. -/
 def ComplexCategoryObject (A : DifferentialGradedCategory R) := ULift A.Obj

@@ -162,7 +162,7 @@ structure FilteredComplexSpectralSequence {C : Type u} [Category.{v} C]
             (eqToHom (by
               change page r
                 (r + (p - r), (-r + 1) + (q + r - 1)) = page r (p, q)
-              congr 1; ring) :
+              congr 1; ring_nf) :
               (bigradedShift r (-r + 1)).obj (page r)
                   (p - r, q + r - 1) ⟶ page r (p, q)))))
         (Subobject.mk (kernel.ι (differential r (p, q))))

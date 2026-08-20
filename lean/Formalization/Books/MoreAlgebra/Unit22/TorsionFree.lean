@@ -636,7 +636,17 @@ theorem finite_torsionFree_dedekindDomain_isFiniteLocallyFree
     [AddCommGroup M] [Module A M] [Module.Finite A M]
     [Module.IsTorsionFree A M] :
     Formalization.Books.Algebra.Unit78.FiniteLocallyFree A M := by
-  sorry
+  have hflat : Module.Flat A M :=
+    (dedekindDomain_flat_iff_torsionFree (A := A) (M := M)).mpr inferInstance
+  have hfp : Module.FinitePresentation A M :=
+    Module.finitePresentation_of_finite A M
+  have hiff :
+      (Module.FinitePresentation A M ∧ Module.Flat A M) ↔
+        Formalization.Books.Algebra.Unit78.FiniteLocallyFree A M := by
+    simpa [Formalization.Books.Algebra.Unit78.finiteProjectiveConditions] using
+      (Formalization.Books.Algebra.Unit78.finite_projective_characterization
+        (R := A) (M := M)).out 0 6
+  exact hiff.mp ⟨hfp, hflat⟩
 
 /-- A finite torsion-free module over a PID is finite free.  Mathlib's
 `IsPrincipalIdealRing` is the canonical PID class; its domain instance also
@@ -660,7 +670,15 @@ theorem hom_into_torsionFree_isTorsionFree
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     [Module.IsTorsionFree R N] :
     Module.IsTorsionFree R (M →ₗ[R] N) := by
-  sorry
+  apply Module.IsTorsionFree.of_smul_eq_zero
+  intro r f hrf
+  by_cases hr : r = 0
+  · exact Or.inl hr
+  · right
+    ext x
+    apply (Module.isTorsionFree_iff_smul_eq_zero.mp
+      (inferInstance : Module.IsTorsionFree R N) r (f x) ?_).resolve_left hr
+    simpa using congrArg (fun g : M →ₗ[R] N => g x) hrf
 
 end
 

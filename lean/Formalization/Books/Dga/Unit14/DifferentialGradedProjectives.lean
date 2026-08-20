@@ -208,7 +208,7 @@ def IsAdmissibleEpimorphism
     (f : DifferentialGradedModuleHom M P) : Prop :=
   DifferentialGradedModuleHom.DegreewiseSurjective f ∧
     ∃ s : GradedRightModuleHom.{u, v, w} (R := R) (A := A) P.graded M.graded,
-      GradedRightModuleHom.comp f.underlying s = GradedRightModuleHom.id M.graded
+      GradedRightModuleHom.comp s f.underlying = GradedRightModuleHom.id P.graded
 
 /-! ## The graded-projective target lemma -/
 

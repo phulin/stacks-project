@@ -57,6 +57,8 @@ def generatorWindow (E : C) (m : ℕ) : ObjectProperty C :=
   shiftWindow (ObjectProperty.singleton E)
     (((-(m : ℤ) : ℤ) : EInt)) (((m : ℤ) : EInt))
 
+omit [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive] [Pretriangulated C]
+  [CategoryTheory.IsTriangulated C] in
 private lemma retractClosure_binaryProductsClosure_isClosedUnderBinaryProducts
     (P : ObjectProperty C) :
     (P.binaryProductsClosure.retractClosure).IsClosedUnderBinaryProducts := by
@@ -89,9 +91,11 @@ private lemma retractClosure_binaryProductsClosure_isClosedUnderBinaryProducts
   exact P.binaryProductsClosure.retractClosure.prop_of_iso
     (hlim.conePointUniqueUpToIso hX.isLimit) hXprod
 
+omit [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive] [Pretriangulated C]
+  [CategoryTheory.IsTriangulated C] in
 private lemma smd_add_isClosedUnderBinaryProducts (P : ObjectProperty C) :
     (smd (add P)).IsClosedUnderBinaryProducts := by
-  letI : (smd (add P)).IsClosedUnderFiniteCoproducts :=
+  let : (smd (add P)).IsClosedUnderFiniteCoproducts :=
     smd_add_closedUnderDirectSums P
   refine ⟨fun X ⟨hX⟩ => ?_⟩
   let f : WalkingPair → C := fun j => hX.diag.obj ⟨j⟩
@@ -106,9 +110,10 @@ private lemma smd_add_isClosedUnderBinaryProducts (P : ObjectProperty C) :
     (IsLimit.postcomposeHomEquiv eF.symm _).symm (limit.isLimit (Discrete.functor f))
   exact (smd (add P)).prop_of_iso (hlim.conePointUniqueUpToIso hX.isLimit) hprod
 
+omit [CategoryTheory.IsTriangulated C] in
 private lemma smd_add_isClosedUnderEmptyLimits (P : ObjectProperty C) :
     (smd (add P)).IsClosedUnderLimitsOfShape (Discrete PEmpty) := by
-  letI : (smd (add P)).IsClosedUnderFiniteCoproducts :=
+  let : (smd (add P)).IsClosedUnderFiniteCoproducts :=
     smd_add_closedUnderDirectSums P
   refine ⟨fun X ⟨hX⟩ => ?_⟩
   have hzero : smd (add P) (⊥_ C) :=
@@ -121,6 +126,7 @@ private lemma smd_add_isClosedUnderEmptyLimits (P : ObjectProperty C) :
     ((isZero_zero C).isoIsTerminal hterm) hzero'
 
 /-! `⟨E⟩ₙ = smd(⟨E⟩₁ ⋆ ⟨E⟩ₙ₋₁)` for `n > 1`. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem generatedSubcategoryIter_succ (E : C) {n : ℕ} (hn : 1 ≤ n) :
     generatedSubcategoryIter E (n + 1) =
       smd (star (generatedSubcategoryOne E) (generatedSubcategoryIter E n)) := by
@@ -134,6 +140,7 @@ theorem generatedSubcategoryIter_succ (E : C) {n : ℕ} (hn : 1 ≤ n) :
   exact ObjectProperty.triangEnvelopeIter_succ (ObjectProperty.singleton E) (n - 1)
 
 /-! The first stage is the source's finite-sum-and-summand closure of all shifts. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem generatedSubcategoryOne_eq_smd_add_allShifts (E : C) :
     generatedSubcategoryOne E =
       smd (add (shiftWindow (ObjectProperty.singleton E)
@@ -145,8 +152,8 @@ theorem generatedSubcategoryOne_eq_smd_add_allShifts (E : C) :
   let T : ObjectProperty C := smd (add S)
   have hQT : Q ≤ T := by
     change B.binaryProductsClosure.retractClosure ≤ T
-    letI : T.IsClosedUnderBinaryProducts := smd_add_isClosedUnderBinaryProducts S
-    letI : T.IsClosedUnderLimitsOfShape (Discrete PEmpty) :=
+    let : T.IsClosedUnderBinaryProducts := smd_add_isClosedUnderBinaryProducts S
+    let : T.IsClosedUnderLimitsOfShape (Discrete PEmpty) :=
       smd_add_isClosedUnderEmptyLimits S
     rw [ObjectProperty.retractClosure_le_iff]
     apply (ObjectProperty.binaryProductsClosure_le_iff (C := C) (P := B) (Q := T)).2
@@ -169,10 +176,10 @@ theorem generatedSubcategoryOne_eq_smd_add_allShifts (E : C) :
     exact T.prop_of_iso e.symm hT
   have hTS : T ≤ Q := by
     change smd (add S) ≤ Q
-    letI : Q.IsClosedUnderBinaryProducts :=
+    let : Q.IsClosedUnderBinaryProducts :=
       retractClosure_binaryProductsClosure_isClosedUnderBinaryProducts B
-    letI : Q.IsClosedUnderLimitsOfShape (Discrete PEmpty) := by infer_instance
-    letI : Q.IsClosedUnderFiniteProducts :=
+    let : Q.IsClosedUnderLimitsOfShape (Discrete PEmpty) := by infer_instance
+    let : Q.IsClosedUnderFiniteProducts :=
       ObjectProperty.IsClosedUnderFiniteProducts.mk'
     have hSleB : S ≤ B := by
       intro X hX
@@ -222,6 +229,7 @@ theorem generatedSubcategoryIter_isStableUnderShifts (E : C) {n : ℕ} (_hn : 1 
   infer_instance
 
 /-! The source's assertion that each positive stage is additive. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem generatedSubcategoryIter_closedUnderFiniteDirectSums
     (E : C) {n : ℕ} (hn : 1 ≤ n) :
     ∀ (r : ℕ) (X : Fin r → C),
@@ -247,7 +255,7 @@ theorem generatedSubcategoryIter_closedUnderFiniteDirectSums
     exact ObjectProperty.retractClosure_extensionProductIter_retractClosure (add S)
   rw [hStage]
   rw [hStage] at hX
-  letI : (conePower S n).IsClosedUnderFiniteCoproducts :=
+  let : (conePower S n).IsClosedUnderFiniteCoproducts :=
     conePower_closedUnderDirectSums S hn
   exact (conePower S n).prop_of_isColimit_cofan
     (colimit.isColimit (Discrete.functor X)) hX
@@ -256,6 +264,7 @@ theorem generatedSubcategoryIter_closedUnderFiniteDirectSums
    extensions; the source explicitly warns that this need not hold. -/
 
 /-! The explicit n-fold extension-product formula for a positive stage. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem generatedSubcategoryIter_eq_smd_starPower
     (E : C) {n : ℕ} (hn : 1 ≤ n) :
     generatedSubcategoryIter E n =
@@ -263,6 +272,8 @@ theorem generatedSubcategoryIter_eq_smd_starPower
   conv_lhs => rw [← Nat.sub_add_cancel hn]
   simp [generatedSubcategoryIter, generatedSubcategoryOne, starPower, smd]
 
+omit [AdditiveCategory C] [∀ n : ℤ, (shiftFunctor C n).Additive] [Pretriangulated C]
+  [CategoryTheory.IsTriangulated C] in
 private lemma shiftWindow_all_eq_iSup_generatorWindow (E : C) :
     shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) =
       ⨆ m : {m : ℕ // 1 ≤ m}, generatorWindow E m.1 := by
@@ -279,7 +290,7 @@ private lemma shiftWindow_all_eq_iSup_generatorWindow (E : C) :
         dsimp [generatorWindow]
         rw [shiftWindow, ObjectProperty.prop_iSup_iff]
         refine ⟨⟨(k : ℤ), ?_⟩, ?_⟩
-        · constructor <;> simp <;> omega
+        · constructor <;> simp; omega
         · simpa using hXi
     | negSucc k =>
         refine ⟨⟨k + 2, by omega⟩, ?_⟩
@@ -293,11 +304,12 @@ private lemma shiftWindow_all_eq_iSup_generatorWindow (E : C) :
     intro X hX
     change shiftWindow (ObjectProperty.singleton E)
       (((-(m.1 : ℤ) : ℤ) : EInt)) (((m.1 : ℤ) : EInt)) X at hX
-    change shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) X
     rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX ⊢
     obtain ⟨⟨i, hi⟩, hXi⟩ := hX
     exact ⟨⟨i, by simp⟩, hXi⟩
 
+omit [AdditiveCategory C] [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
+  [CategoryTheory.IsTriangulated C] in
 private lemma iSup_positive_eq_iSup_succ (F : ℕ → ObjectProperty C) :
     (⨆ m : {m : ℕ // 1 ≤ m}, F m.1) = ⨆ k : ℕ, F (k + 1) := by
   apply le_antisymm
@@ -332,6 +344,7 @@ theorem generatedSubcategoryIter_eq_iSup_finite_windows
     (fun m => smd (starPower (add (generatorWindow E m)) n))]
 
 /-! The generated subcategory is the increasing union of the positive stages. -/
+omit [CategoryTheory.IsTriangulated C] in
 theorem generatedSubcategory_eq_iSup (E : C) :
     generatedSubcategory E =
       ⨆ n : {n : ℕ // 1 ≤ n}, generatedSubcategoryIter E n := by

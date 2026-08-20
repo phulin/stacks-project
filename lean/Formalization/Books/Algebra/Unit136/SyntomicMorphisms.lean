@@ -47,6 +47,26 @@ def IsSyntomic
       Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection
         p.asIdeal.ResidueField (Fiber R S p)
 
+theorem IsSyntomic.flat
+    {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
+    (h : IsSyntomic f) : RingHom.Flat f := by
+  simpa only [IsSyntomic] using h.1
+
+theorem IsSyntomic.finitePresentation
+    {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
+    (h : IsSyntomic f) : RingHom.FinitePresentation f := by
+  simpa only [IsSyntomic] using h.2.1
+
+theorem IsSyntomic.fiber_lci
+    {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
+    (h : IsSyntomic f) (p : PrimeSpectrum R) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra p.asIdeal.ResidueField (Fiber R S p) :=
+      Algebra.TensorProduct.leftAlgebra
+    Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection
+      p.asIdeal.ResidueField (Fiber R S p) := by
+  simpa only [IsSyntomic] using h.2.2 p
+
 theorem syntomic_over_field_iff_local_complete_intersection
     {k S : Type u} [Field k] [CommRing S] [Algebra k S] :
     IsSyntomic (algebraMap k S) ↔

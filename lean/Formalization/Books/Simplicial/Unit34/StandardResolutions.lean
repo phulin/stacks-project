@@ -343,14 +343,94 @@ noncomputable def standardResolutionOuterHomotopyInverse
     (T : StandardResolutionSituation A S) :
     (SimplicialObject.const (A ⥤ S)).obj T.V ⟶
       standardResolutionOuterObject T := by
-  sorry
+  let h0 : T.V ⟶
+      (standardResolutionOuterObject T).obj (op (SimplexCategory.mk 0)) := by
+    change T.V ⟶ (standardResolutionObject T).obj (op (SimplexCategory.mk 0)) ⋙ T.V
+    let transport :
+        T.V ⋙ (T.U ⋙ T.V) ⟶
+          (standardResolutionDegree T (some 0)) ⋙ T.V :=
+      (Functor.associator T.V T.U T.V).inv ≫
+        Functor.whiskerRight
+          (Functor.rightUnitor (standardResolutionBase T)).inv T.V ≫
+        Functor.whiskerRight
+          (eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
+            standardResolutionDegree T (some 0) from rfl)) T.V
+    let degree_to_object :
+        (standardResolutionDegree T (some 0)) ⋙ T.V ⟶
+          (standardResolutionObject T).obj (op (SimplexCategory.mk 0)) ⋙ T.V :=
+      Functor.whiskerRight
+        (eqToHom (standardResolution_object_degree T 0).symm) T.V
+    exact (Functor.rightUnitor T.V).inv ≫
+      Functor.whiskerLeft T.V T.adjunction.unit ≫ transport ≫ degree_to_object
+  let q : ∀ n : SimplexCategoryᵒᵖ, op (SimplexCategory.mk 0) ⟶ n :=
+    fun n => (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
+  let app : ∀ n : SimplexCategoryᵒᵖ, T.V ⟶
+      (standardResolutionOuterObject T).obj n := fun n =>
+    h0 ≫ (standardResolutionOuterObject T).map (q n)
+  refine { app := app, naturality := ?_ }
+  intro X Y f
+  let qX := q X
+  let qY := q Y
+  have hq : qY = qX ≫ f := by
+    dsimp [q, qX, qY]
+    apply Quiver.Hom.unop_inj
+    change SimplexCategory.const Y.unop (SimplexCategory.mk 0) 0 =
+      f.unop ≫ SimplexCategory.const X.unop (SimplexCategory.mk 0) 0
+    exact (SimplexCategory.eq_const_to_zero _).symm
+  have hconst : ((SimplicialObject.const (A ⥤ S)).obj T.V).map f = 𝟙 T.V := by
+    simp
+  change ((SimplicialObject.const (A ⥤ S)).obj T.V).map f ≫
+      (h0 ≫ (standardResolutionOuterObject T).map qY) =
+    (h0 ≫ (standardResolutionOuterObject T).map qX) ≫
+      (standardResolutionOuterObject T).map f
+  rw [hconst, hq]
+  rw [Functor.map_comp]
+  simpa only [Category.assoc] using
+    congrArg (fun k => k ≫
+      (standardResolutionOuterObject T).map qX ≫
+      (standardResolutionOuterObject T).map f)
+      (Category.id_comp h0)
 
 noncomputable def standardResolutionInnerHomotopyInverse
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
     (T : StandardResolutionSituation A S) :
     (SimplicialObject.const (S ⥤ A)).obj T.U ⟶
       standardResolutionInnerObject T := by
-  sorry
+  let h0 : T.U ⟶
+      (standardResolutionInnerObject T).obj (op (SimplexCategory.mk 0)) := by
+    change T.U ⟶ T.U ⋙ (standardResolutionObject T).obj (op (SimplexCategory.mk 0))
+    rw [standardResolution_object_degree]
+    let raw : (𝟭 S) ⋙ T.U ⟶ (T.U ⋙ T.V) ⋙ T.U :=
+      Functor.whiskerRight T.adjunction.unit T.U
+    exact (Functor.leftUnitor T.U).inv ≫ raw
+  let q : ∀ n : SimplexCategoryᵒᵖ, op (SimplexCategory.mk 0) ⟶ n :=
+    fun n => (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
+  let app : ∀ n : SimplexCategoryᵒᵖ, T.U ⟶
+      (standardResolutionInnerObject T).obj n := fun n =>
+    h0 ≫ (standardResolutionInnerObject T).map (q n)
+  refine { app := app, naturality := ?_ }
+  intro X Y f
+  let qX := q X
+  let qY := q Y
+  have hq : qY = qX ≫ f := by
+    dsimp [q, qX, qY]
+    apply Quiver.Hom.unop_inj
+    change SimplexCategory.const Y.unop (SimplexCategory.mk 0) 0 =
+      f.unop ≫ SimplexCategory.const X.unop (SimplexCategory.mk 0) 0
+    exact (SimplexCategory.eq_const_to_zero _).symm
+  have hconst : ((SimplicialObject.const (S ⥤ A)).obj T.U).map f = 𝟙 T.U := by
+    simp
+  change ((SimplicialObject.const (S ⥤ A)).obj T.U).map f ≫
+      (h0 ≫ (standardResolutionInnerObject T).map qY) =
+    (h0 ≫ (standardResolutionInnerObject T).map qX) ≫
+      (standardResolutionInnerObject T).map f
+  rw [hconst, hq]
+  rw [Functor.map_comp]
+  simpa only [Category.assoc] using
+    congrArg (fun k => k ≫
+      (standardResolutionInnerObject T).map qX ≫
+      (standardResolutionInnerObject T).map f)
+      (Category.id_comp h0)
 
 theorem standardResolution_outer_inverse_section
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
@@ -358,7 +438,47 @@ theorem standardResolution_outer_inverse_section
     standardResolutionOuterHomotopyInverse T ≫
         standardResolutionOuterAugmentation T =
       𝟙 ((SimplicialObject.const (A ⥤ S)).obj T.V) := by
-  sorry
+  apply NatTrans.ext
+  funext n
+  let q : op (SimplexCategory.mk 0) ⟶ n :=
+    (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
+  have hraw := (standardResolutionOuterRawAugmentation T).naturality q
+  have hconst : ((SimplicialObject.const (A ⥤ S)).obj
+      (𝟭 A ⋙ T.V)).map q = 𝟙 (𝟭 A ⋙ T.V) := by
+    simp
+  rw [hconst] at hraw
+  dsimp [q] at hraw
+  have hraw_u := congrArg (fun k => k ≫ (Functor.leftUnitor T.V).hom) hraw
+  simp only [Category.assoc] at hraw_u
+  have haug0 := standardResolution_augmentation_formula T 0
+  rw [(standardResolutionAugmentationData T).component_zero] at haug0
+  dsimp [godementAugmentationComponent] at haug0
+  have haug0' := congrArg (fun k => Functor.whiskerRight k T.V) haug0
+  let transport :
+      T.V ⋙ (T.U ⋙ T.V) ⟶
+        (standardResolutionDegree T (some 0)) ⋙ T.V := by
+    exact (Functor.associator T.V T.U T.V).inv ≫
+      Functor.whiskerRight
+        (Functor.rightUnitor (standardResolutionBase T)).inv T.V ≫
+      Functor.whiskerRight
+        (eqToHom (show standardResolutionBase T ⋙ 𝟭 A =
+          standardResolutionDegree T (some 0) from rfl)) T.V
+  have haug0'' := congrArg (fun k =>
+      ((Functor.rightUnitor T.V).inv ≫
+        Functor.whiskerLeft T.V T.adjunction.unit ≫ transport) ≫ k) haug0'
+  have haug0''' := congrArg (fun k => k ≫ (Functor.leftUnitor T.V).hom) haug0''
+  rw [Functor.whiskerRight_comp] at haug0'''
+  dsimp [transport] at haug0'''
+  simp only [Category.assoc] at haug0'''
+  dsimp [standardResolutionOuterHomotopyInverse]
+  simp only [Category.assoc]
+  rw [hraw_u]
+  dsimp [standardResolutionOuterRawAugmentation]
+  simpa only [id, Category.assoc, Category.comp_id, Category.id_comp] using haug0'''
+  ext X
+  simp
+  rw [← T.U.map_comp, T.adjunction.right_triangle_components]
+  simp
 
 theorem standardResolution_inner_inverse_section
     {A : Type uA} {S : Type uS} [Category.{vA} A] [Category.{vS} S]
@@ -366,7 +486,39 @@ theorem standardResolution_inner_inverse_section
     standardResolutionInnerHomotopyInverse T ≫
         standardResolutionInnerAugmentation T =
       𝟙 ((SimplicialObject.const (S ⥤ A)).obj T.U) := by
-  sorry
+  apply NatTrans.ext
+  funext n
+  let q : op (SimplexCategory.mk 0) ⟶ n :=
+    (SimplexCategory.const n.unop (SimplexCategory.mk 0) 0).op
+  have hraw := (standardResolutionInnerRawAugmentation T).naturality q
+  have hconst : ((SimplicialObject.const (S ⥤ A)).obj
+      (T.U ⋙ 𝟭 A)).map q = 𝟙 (T.U ⋙ 𝟭 A) := by
+    simp
+  rw [hconst] at hraw
+  dsimp [q] at hraw
+  have hraw_u := congrArg (fun k => k ≫ (Functor.rightUnitor T.U).hom) hraw
+  simp only [Category.assoc] at hraw_u
+  have haug0 := standardResolution_augmentation_formula T 0
+  rw [(standardResolutionAugmentationData T).component_zero] at haug0
+  dsimp [godementAugmentationComponent] at haug0
+  have haug0' := congrArg (fun k => Functor.whiskerLeft T.U k) haug0
+  dsimp [standardResolutionInnerHomotopyInverse]
+  simp only [Category.assoc]
+  rw [hraw_u]
+  dsimp [standardResolutionInnerRawAugmentation]
+  change ((Functor.leftUnitor T.U).inv ≫
+      Functor.whiskerRight T.adjunction.unit T.U) ≫
+    Functor.whiskerLeft T.U
+      (eqToHom (standardResolution_object_degree T 0).symm ≫
+        (standardResolutionAugmentation T).app
+          (op (SimplexCategory.mk 0))) ≫
+    𝟙 (T.U ⋙ 𝟭 A) ≫ (Functor.rightUnitor T.U).hom = 𝟙 T.U
+  rw [← Functor.whiskerLeft_comp]
+  rw [haug0']
+  ext X
+  simp
+  rw [← T.V.map_comp, T.adjunction.left_triangle_components]
+  simp
 
 /-- Both augmented whiskered resolutions are homotopy equivalences. The
 proof route is the section from Chapter 33, followed by its two-map homotopy

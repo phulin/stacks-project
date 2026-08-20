@@ -83,7 +83,10 @@ def ftX (k : Type u) [Field k] : ftA0 k :=
 def ftY (k : Type u) [Field k] : ftA0 k :=
   algebraMap (ftBasePolynomialRing k) (ftA0 k) (ftBaseY k)
 
-/-- The element `y + x^n + x^(2n+1)` defining the `n`th prime. -/
+/-- The element `y + x^n + x^(2n+1)` defining the `n`th prime for `n > 0`.
+
+The source construction starts its index at `1`; index `0` would give the
+unit `y + 1 + x` in the local ring `A₀`. -/
 def ftPrimeEquation (k : Type u) [Field k] (n : ℕ) : ftA0 k :=
   ftY k + (ftX k) ^ n + (ftX k) ^ (2 * n + 1)
 
@@ -91,7 +94,7 @@ def ftPrimeEquation (k : Type u) [Field k] (n : ℕ) : ftA0 k :=
 def ftP0 (k : Type u) [Field k] (n : ℕ) : Ideal (ftA0 k) :=
   Ideal.span {ftPrimeEquation k n}
 
-instance ftP0_isPrime (k : Type u) [Field k] (n : ℕ) :
+theorem ftP0_isPrime (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     (ftP0 k n).IsPrime := by
   sorry
 
@@ -154,11 +157,11 @@ theorem ftAToA0_kernel_square_zero (k : Type u) [Field k] :
     (RingHom.ker (ftAToA0 k)) ^ 2 = ⊥ := by
   sorry
 
-/-- The prime of `A` corresponding to `𝔭₀,ₙ`. -/
+/-- The ideal of `A` corresponding to `𝔭₀,ₙ`, which is prime for `n > 0`. -/
 def ftAPrime (k : Type u) [Field k] (n : ℕ) : Ideal (ftA k) :=
   Ideal.comap (ftAToA0 k) (ftP0 k n)
 
-instance ftAPrime_isPrime (k : Type u) [Field k] (n : ℕ) :
+theorem ftAPrime_isPrime (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     (ftAPrime k n).IsPrime := by
   sorry
 
@@ -367,7 +370,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
   sorry
 
 theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
-    (n : ℕ) :
+    (n : ℕ) (hn : 0 < n) :
     Nonempty (ftCPrimePresentation k n ≃+* ftSecondPresentation k n) := by
   sorry
 
@@ -395,7 +398,7 @@ def ftCQPrimeIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (ftC k) :=
   ftCPrimeIdeal k n ⊔
     Ideal.span {ftCX k * ftCZ k + (ftCX k) ^ (n + 1) + 1}
 
-instance ftCQPrimeIdeal_isMaximal (k : Type u) [Field k] (n : ℕ) :
+theorem ftCQPrimeIdeal_isMaximal (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     (ftCQPrimeIdeal k n).IsMaximal := by
   sorry
 
@@ -419,7 +422,7 @@ theorem ftCQPrimeIdeal_annihilator_Xi (k : Type u) [Field k] (n : ℕ) :
       ftCQPrimeIdeal k n := by
   sorry
 
-theorem ftCRPrimeIdeal_le_CQ (k : Type u) [Field k] (n : ℕ) :
+theorem ftCRPrimeIdeal_le_CQ (k : Type u) [Field k] (n : ℕ) (hn : 0 < n) :
     ftCRPrimeIdeal k n ≤ ftCQ k := by
   sorry
 

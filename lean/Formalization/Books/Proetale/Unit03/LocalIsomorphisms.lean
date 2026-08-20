@@ -197,7 +197,7 @@ theorem baseChange_identifiesLocalRings
   have hm_unit : ∀ x : q.asIdeal.primeCompl, IsUnit (m x) := by
     intro x
     by_contra hmx
-    letI : IsLocalHom l := Localization.isLocalHom_localRingHom
+    let _ : IsLocalHom l := Localization.isLocalHom_localRingHom
       r.asIdeal q.asIdeal j rfl
     have hunit : IsUnit (nS x) :=
       IsLocalization.map_units (Localization.AtPrime q.asIdeal) x
@@ -314,9 +314,8 @@ theorem of_isLocalIsomorphism_of_isLocalIsomorphism
   let _ : IsScalarTower A B C := IsScalarTower.of_algHom f
   change Algebra.IsLocalIso B C
   constructor
-  intro P
-  intro hP
-  letI : P.IsPrime := hP
+  intro P hP
+  let _ : P.IsPrime := hP
   let p : PrimeSpectrum B := ⟨P.comap f.toRingHom, inferInstance⟩
   obtain ⟨g, hg, hBg⟩ :=
     @Algebra.IsLocalIso.exists_notMem_isStandardOpenImmersion A B _ _
@@ -342,7 +341,7 @@ theorem of_isLocalIsomorphism_of_isLocalIsomorphism
     let _ : Algebra (Localization.Away g) T := lift_g.toAlgebra
     have hst : IsUnit ((algebraMap C T) s) := by
       apply IsLocalization.Away.isUnit_of_dvd (x := s * f g)
-      exact ⟨f g, by simp [mul_comm]⟩
+      exact ⟨f g, by simp⟩
     let lift_s : Localization.Away s →+* T :=
       IsLocalization.Away.lift s hst
     let Q := Localization.Away
@@ -437,10 +436,10 @@ theorem of_isLocalIsomorphism_of_isLocalIsomorphism
     let _ : SMul A (Localization.Away g) :=
       (inferInstance : Algebra A (Localization.Away g)).toSMul
     let _ : SMul A T := (inferInstance : Algebra A T).toSMul
-    letI : IsLocalization.Away a (Localization.Away g) := ha
+    let _ : IsLocalization.Away a (Localization.Away g) := ha
     have hATalg : Algebra.IsStandardOpenImmersion A T := hATR'.toAlgebra
     obtain ⟨d, hdT⟩ := hATalg
-    letI : IsLocalization.Away d T := hdT
+    let _ : IsLocalization.Away d T := hdT
     have hATower :
         (algebraMap (Localization.Away g) T).comp
             (algebraMap A (Localization.Away g)) = algebraMap A T := by
@@ -457,7 +456,7 @@ theorem of_isLocalIsomorphism_of_isLocalIsomorphism
       exact IsUnit.map (algebraMap (Localization.Away g) T) <|
         IsLocalization.map_units (Localization.Away g)
           (⟨a, 1, by simp⟩ : Submonoid.powers a)
-    letI : IsLocalization.Away (algebraMap A T a) T :=
+    let _ : IsLocalization.Away (algebraMap A T a) T :=
       IsLocalization.away_of_isUnit_of_bijective T hunit_aT
         Function.bijective_id
     let _ : IsScalarTower A T T :=
@@ -466,7 +465,7 @@ theorem of_isLocalIsomorphism_of_isLocalIsomorphism
         IsLocalization.Away (algebraMap A (Localization.Away g) d) T :=
       IsLocalization.Away.commutes
         (Localization.Away g) T T a d
-    letI : IsLocalization.Away (algebraMap A (Localization.Away g) d) T := hdSgT
+    let _ : IsLocalization.Away (algebraMap A (Localization.Away g) d) T := hdSgT
     have hSgT :
         (algebraMap (Localization.Away g) T).IsStandardOpenImmersion :=
       RingHom.IsStandardOpenImmersion.algebraMap

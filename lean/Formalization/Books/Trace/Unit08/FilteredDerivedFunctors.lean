@@ -50,6 +50,36 @@ structure FilteredDerivedCategoryData
     Formalization.Books.Trace.Unit07.DFPlus A ⥤
       Formalization.Books.Trace.Unit06.DPlus A
 
+/- The preceding chapter supplies these functors by descending associated
+   graded pieces and the forgetful functor through the filtered localization.
+   They are kept behind this small interface because that descent is not yet
+   exposed by the Chapter 7 file. -/
+theorem filteredDerivedCategoryData_exists
+    (A : Type u) [Category.{v} A] [Abelian A]
+    [HasDerivedCategory.{w} A] :
+    Nonempty (FilteredDerivedCategoryData A) := by
+  sorry
+
+noncomputable def filteredDerivedCategoryData
+    (A : Type u) [Category.{v} A] [Abelian A]
+    [HasDerivedCategory.{w} A] :
+    FilteredDerivedCategoryData A :=
+  Classical.choice (filteredDerivedCategoryData_exists A)
+
+noncomputable abbrev filteredDerivedGradedFunctor
+    (A : Type u) [Category.{v} A] [Abelian A]
+    [HasDerivedCategory.{w} A] (p : ℤ) :
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit06.DPlus A :=
+  (filteredDerivedCategoryData A).graded_plus p
+
+noncomputable abbrev filteredDerivedForgetfulFunctor
+    (A : Type u) [Category.{v} A] [Abelian A]
+    [HasDerivedCategory.{w} A] :
+    Formalization.Books.Trace.Unit07.DFPlus A ⥤
+      Formalization.Books.Trace.Unit06.DPlus A :=
+  (filteredDerivedCategoryData A).forget_plus
+
 /-! ## Filtered right-derived functors -/
 
 /- The first diagram in the source, with the Chapter 7 equivalence made
@@ -114,6 +144,20 @@ noncomputable def filteredRightDerivedFunctor_comparison
       (Formalization.Books.Trace.Unit07.filteredDerivedCategory_plus_equiv_filteredInjectiveHomotopy A).inverse ⋙
         filteredRightDerivedFunctor T hT :=
   (filteredRightDerivedFunctorData T hT).comparison
+
+/- The lower horizontal arrow in the source diagram is `T` applied to
+   bounded-below complexes of filtered injectives.  This declaration exposes
+   that arrow as part of the chosen derived-functor data. -/
+noncomputable abbrev filteredRightDerivedInputFunctor
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    [EnoughInjectives A]
+    (T : A ⥤ B) (hT : IsLeftExact T) :
+    Formalization.Books.Trace.Unit06.KPlus
+        (Formalization.Books.Trace.Unit07.FilteredInjectiveSubcategory A) ⥤
+      Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryPlus B :=
+  (filteredRightDerivedFunctorData T hT).filtered_functor
 
 /-! ## Filtered left-derived functors -/
 
@@ -180,6 +224,17 @@ noncomputable def filteredLeftDerivedFunctor_comparison
         filteredLeftDerivedFunctor G hG :=
   (filteredLeftDerivedFunctorData G hG).comparison
 
+noncomputable abbrev filteredLeftDerivedInputFunctor
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    [EnoughProjectives A]
+    (G : A ⥤ B) (hG : IsRightExact G) :
+    Formalization.Books.Trace.Unit06.KMinus
+        (Formalization.Books.Trace.Unit07.FilteredProjectiveSubcategory A) ⥤
+      Formalization.Books.Trace.Unit07.FilteredHomotopyCategoryMinus B :=
+  (filteredLeftDerivedFunctorData G hG).filtered_functor
+
 /-! ## Graded comparison and the spectral sequence -/
 
 /-- The source's commuting square, expressed by its canonical isomorphism. -/
@@ -189,11 +244,10 @@ theorem filteredRightDerivedFunctor_graded_comparison
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     [EnoughInjectives A]
     (T : A ⥤ B) (hT : IsLeftExact T)
-    (dA : FilteredDerivedCategoryData A)
-    (dB : FilteredDerivedCategoryData B) (p : ℤ) :
+    (p : ℤ) :
     Nonempty
-      (filteredRightDerivedFunctor T hT ⋙ dB.graded_plus p ≅
-        dA.graded_plus p ⋙
+      (filteredRightDerivedFunctor T hT ⋙ filteredDerivedGradedFunctor B p ≅
+        filteredDerivedGradedFunctor A p ⋙
           Formalization.Books.Trace.Unit06.totalRightDerivedFunctor A B T hT) := by
   sorry
 
@@ -201,7 +255,6 @@ theorem filteredRightDerivedFunctor_graded_comparison
 structure FilteredDerivedSpectralSequence
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w'} B]
-    (dB : FilteredDerivedCategoryData B)
     (K : Formalization.Books.Trace.Unit07.DFPlus B) where
   spectral_sequence :
     CategoryTheory.CohomologicalSpectralSequence B 0
@@ -210,31 +263,29 @@ structure FilteredDerivedSpectralSequence
       Nonempty
         ((spectral_sequence.page 1).X (p, q) ≅
           (DerivedCategory.Plus.homologyFunctor B (p + q)).obj
-            ((dB.graded_plus p).obj K))
+            ((filteredDerivedGradedFunctor B p).obj K))
   abutment : ℤ → B
   abutment_iso :
     ∀ n : ℤ,
       Nonempty
         (abutment n ≅
           (DerivedCategory.Plus.homologyFunctor B n).obj
-            ((dB.forget_plus).obj K))
+            ((filteredDerivedForgetfulFunctor B).obj K))
 
 /-- Every bounded-below filtered-derived object has the source's spectral
 sequence, with `E₁^{p,q} = H^{p+q}(gr^p K)` and the stated abutment. -/
 theorem filteredDerivedSpectralSequence_exists
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w'} B]
-    (dB : FilteredDerivedCategoryData B)
     (K : Formalization.Books.Trace.Unit07.DFPlus B) :
-    Nonempty (FilteredDerivedSpectralSequence dB K) := by
+    Nonempty (FilteredDerivedSpectralSequence K) := by
   sorry
 
 noncomputable def filteredDerivedSpectralSequence
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w'} B]
-    (dB : FilteredDerivedCategoryData B)
     (K : Formalization.Books.Trace.Unit07.DFPlus B) :
-    FilteredDerivedSpectralSequence dB K :=
-  Classical.choice (filteredDerivedSpectralSequence_exists dB K)
+    FilteredDerivedSpectralSequence K :=
+  Classical.choice (filteredDerivedSpectralSequence_exists K)
 
 end Formalization.Books.Trace.Unit08

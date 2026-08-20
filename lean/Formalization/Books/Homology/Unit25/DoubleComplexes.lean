@@ -427,14 +427,16 @@ theorem doubleComplex_finite_diagonal_support_first_filtered_total
     [HasCountableCoproducts C] (A : DoubleComplex C)
     (hA : HasFiniteDiagonalSupport A) :
     doubleComplexFirstFilteredTotalFinite A := by
-  sorry
+  exact (Formalization.Books.Homology.Unit20.doubleComplex_first_quadrant_convergence
+    A hA).2.2.1.1
 
 theorem doubleComplex_finite_diagonal_support_second_filtered_total
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C] (A : DoubleComplex C)
     (hA : HasFiniteDiagonalSupport A) :
     doubleComplexSecondFilteredTotalFinite A := by
-  sorry
+  exact (Formalization.Books.Homology.Unit20.doubleComplex_first_quadrant_convergence
+    A hA).2.2.1.2
 
 theorem doubleComplex_first_quadrant_convergence
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -447,7 +449,23 @@ theorem doubleComplex_first_quadrant_convergence
       FilteredComplexCohomologyFiniteFiltration
         (doubleComplexSecondFilteredTotal A) ∧
       doubleComplexFirstConverges A ∧ doubleComplexSecondConverges A := by
-  sorry
+  have hfirst := doubleComplex_finite_diagonal_support_first_filtered_total A hA
+  have hsecond := doubleComplex_finite_diagonal_support_second_filtered_total A hA
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact filteredComplex_finite_filtration_is_bounded
+      (doubleComplexFirstFilteredTotal A) hfirst
+      (doubleComplexFirstSpectralSequence A)
+  · exact filteredComplex_finite_filtration_is_bounded
+      (doubleComplexSecondFilteredTotal A) hsecond
+      (doubleComplexSecondSpectralSequence A)
+  · exact filteredComplex_finite_filtration_on_cohomology
+      (doubleComplexFirstFilteredTotal A) hfirst
+  · exact filteredComplex_finite_filtration_on_cohomology
+      (doubleComplexSecondFilteredTotal A) hsecond
+  · exact filteredComplex_finite_filtration_converges_to_cohomology
+      (doubleComplexFirstFilteredTotal A) hfirst
+  · exact filteredComplex_finite_filtration_converges_to_cohomology
+      (doubleComplexSecondFilteredTotal A) hsecond
 
 /-- If the vertical cohomology of a finite-diagonal double complex is
 concentrated in degree zero, the first spectral sequence gives its edge

@@ -1390,7 +1390,7 @@ theorem summarize_admissible
   constructor
   · constructor
     · rintro ⟨⟨hAc, hAt, hAdj⟩, hBA⟩
-      haveI : A.IsTriangulated := hAt
+      have : A.IsTriangulated := hAt
       have horth := orthogonal_triangulated A (by infer_instance)
       have hdecA : ∀ X : C, HasRightDecomposition A X :=
         (right_adjoint_iff_decomposition A).1 hAdj
@@ -1409,11 +1409,11 @@ theorem summarize_admissible
       have hBtri : B.IsTriangulated := by
         rw [hBA]
         exact horth.1.2.2
-      haveI : B.IsTriangulated := hBtri
+      have : B.IsTriangulated := hBtri
       refine ⟨⟨hBstrict, hBtri, (left_adjoint_iff_decomposition B).2 hdecB⟩, ?_⟩
       simpa [hBA] using (right_adjoint_eq_left_orthogonal A hAdj hAc)
     · rintro ⟨⟨hBc, hBt, hBAdj⟩, hAB⟩
-      haveI : B.IsTriangulated := hBt
+      have : B.IsTriangulated := hBt
       have horth := orthogonal_triangulated B (by infer_instance)
       have hdecB : ∀ X : C, HasLeftDecomposition B X :=
         (left_adjoint_iff_decomposition B).1 hBAdj
@@ -1433,14 +1433,14 @@ theorem summarize_admissible
       have hAtri : A.IsTriangulated := by
         rw [hAB]
         exact horth.2.2.2
-      haveI : A.IsTriangulated := hAtri
+      have : A.IsTriangulated := hAtri
       refine ⟨⟨hAstrict, hAtri, (right_adjoint_iff_decomposition A).2 hdecA⟩, ?_⟩
       simpa [hAB] using (left_adjoint_eq_right_orthogonal B hBAdj hBc)
   · constructor
     · dsimp [AdmissiblePairConditionThree]
       constructor
       · rintro ⟨⟨hBc, hBt, hBAdj⟩, hAB⟩
-        haveI : B.IsTriangulated := hBt
+        have : B.IsTriangulated := hBt
         have horth := orthogonal_triangulated B (by infer_instance)
         have hAstrict : A.IsClosedUnderIsomorphisms := by
           rw [hAB]
@@ -1448,7 +1448,7 @@ theorem summarize_admissible
         have hAtri : A.IsTriangulated := by
           rw [hAB]
           exact horth.2.2.2
-        haveI : A.IsTriangulated := hAtri
+        have : A.IsTriangulated := hAtri
         have hdecB : ∀ X : C, HasLeftDecomposition B X :=
           (left_adjoint_iff_decomposition B).1 hBAdj
         refine ⟨hAstrict, hAtri, hBc, hBt, ?_, ?_⟩
@@ -1461,7 +1461,7 @@ theorem summarize_admissible
           rw [hAB]
           exact hA'
       · rintro ⟨hAc, hAt, hBc, hBt, hHom, hdec⟩
-        haveI : B.IsTriangulated := hBt
+        have : B.IsTriangulated := hBt
         have hBAdj : HasLeftAdjoint B := by
           apply (left_adjoint_iff_decomposition B).2
           intro X
@@ -1513,18 +1513,18 @@ theorem summarize_admissible
       rcases h with ⟨hRA, hBA⟩
       rcases hRA with ⟨hAc, hAt, hAdj⟩
       subst B
-      haveI : A.IsTriangulated := hAt
+      have : A.IsTriangulated := hAt
       have horth := orthogonal_triangulated A (by infer_instance)
       have hBstrict := horth.1.1
-      haveI : (rightOrthogonal A).IsClosedUnderIsomorphisms := hBstrict
-      haveI : (rightOrthogonal A).IsTriangulated := horth.1.2.2
+      have : (rightOrthogonal A).IsClosedUnderIsomorphisms := hBstrict
+      have : (rightOrthogonal A).IsTriangulated := horth.1.2.2
       have hBsat : IsSaturated (rightOrthogonal A) := horth.1.2.1
       have hS :=
         (quotientMorphismProperty_isSaturated_iff (rightOrthogonal A)).2 hBsat
       rcases hAdj with ⟨v, ⟨adj⟩⟩
-      letI : v.CommShift ℤ := adj.rightAdjointCommShift ℤ
-      haveI : adj.CommShift ℤ := adj.commShift_of_leftAdjoint ℤ
-      haveI : v.IsTriangulated := adj.isTriangulated_rightAdjoint
+      let : v.CommShift ℤ := adj.rightAdjointCommShift ℤ
+      have : adj.CommShift ℤ := adj.commShift_of_leftAdjoint ℤ
+      have : v.IsTriangulated := adj.isTriangulated_rightAdjoint
       have hvzero : ∀ Z : C, rightOrthogonal A Z → IsZero (v.obj Z) := by
         intro Z hZ
         apply (IsZero.iff_id_eq_zero _).2
@@ -1577,21 +1577,21 @@ theorem summarize_admissible
         intro X Y f hf
         change quotientMorphismProperty (rightOrthogonal A) (A.ι.map f) at hf
         have hvf : IsIso (v.map (A.ι.map f)) := hInv (A.ι.map f) hf
-        haveI : IsIso (v.map (A.ι.map f)) := hvf
-        haveI : IsIso adj.unit := by infer_instance
-        haveI : IsIso ((A.ι ⋙ v).map f) := by
+        have : IsIso (v.map (A.ι.map f)) := hvf
+        have : IsIso adj.unit := by infer_instance
+        have : IsIso ((A.ι ⋙ v).map f) := by
           change IsIso (v.map (A.ι.map f))
           infer_instance
-        haveI : IsIso (f ≫ adj.unit.app Y) := by
+        have : IsIso (f ≫ adj.unit.app Y) := by
           change IsIso ((𝟭 A.FullSubcategory).map f ≫ adj.unit.app Y)
           rw [adj.unit.naturality]
           infer_instance
         exact IsIso.of_isIso_comp_right f (adj.unit.app Y)
-      haveI : (𝟭 A.FullSubcategory).IsLocalization R :=
+      have : (𝟭 A.FullSubcategory).IsLocalization R :=
         Functor.IsLocalization.for_id R hRiso
       let eA : R.Localization ≌ A.FullSubcategory :=
         Localization.uniq R.Q (𝟭 A.FullSubcategory) R
-      haveI : F₀.IsEquivalence := hF₀
+      have : F₀.IsEquivalence := hF₀
       have hfac₀ : R.Q ⋙ F₀ = A.ι ⋙ quotientFunctor (rightOrthogonal A) := by
         dsimp [R, F₀,
           Formalization.Books.Derived.Unit05.fullSubcategoryLocalizationFunctor]
@@ -1619,9 +1619,9 @@ theorem summarize_admissible
       have hBleft : HasLeftAdjoint (rightOrthogonal A) :=
         (left_adjoint_iff_decomposition (rightOrthogonal A)).2 hdecB
       rcases hBleft with ⟨u, ⟨ladj⟩⟩
-      letI : u.CommShift ℤ := ladj.leftAdjointCommShift ℤ
-      haveI : ladj.CommShift ℤ := ladj.commShift_of_rightAdjoint ℤ
-      haveI : u.IsTriangulated := ladj.isTriangulated_leftAdjoint
+      let : u.CommShift ℤ := ladj.leftAdjointCommShift ℤ
+      have : ladj.CommShift ℤ := ladj.commShift_of_rightAdjoint ℤ
+      have : u.IsTriangulated := ladj.isTriangulated_leftAdjoint
       have huzero : ∀ Z : C, A Z → IsZero (u.obj Z) := by
         intro Z hZ
         apply (IsZero.iff_id_eq_zero _).2
@@ -1655,14 +1655,13 @@ theorem summarize_admissible
         · intro hf
           exact hInvA f hf
         · intro hf
-          haveI : IsIso (u.map f) := hf
+          have : IsIso (u.map f) := hf
           obtain ⟨Z, g, h, hT⟩ := distinguished_cone_exists f
           have hT' := u.map_distinguished (Triangle.mk f g h) hT
           have hUZ : IsZero (u.obj Z) :=
             (Triangle.isZero₃_iff_isIso₁ _ hT').2 hf
           have hZA' : leftOrthogonal (rightOrthogonal A) Z := by
-            intro X' hX'
-            intro k
+            intro X' hX' k
             have hk : (ladj.homEquiv Z ⟨X', hX'⟩).symm k = 0 := by
               calc
                 (ladj.homEquiv Z ⟨X', hX'⟩).symm k =
@@ -1688,7 +1687,7 @@ theorem summarize_admissible
         ext X Y f
         change IsIso (u.map f) ↔ quotientMorphismProperty A f
         exact (hSiff X Y f).symm
-      haveI : u.IsLocalization (quotientMorphismProperty A) := by
+      have : u.IsLocalization (quotientMorphismProperty A) := by
         rw [← hW]
         exact ladj.isLocalization_leftAdjoint'
       let eB : quotientCategory A ≌ (rightOrthogonal A).FullSubcategory :=
@@ -1696,7 +1695,7 @@ theorem summarize_admissible
       have hcompB : u ⋙ eB.inverse ≅ quotientFunctor A :=
         Localization.compUniqInverse (quotientFunctor A) u
           (quotientMorphismProperty A)
-      haveI : IsIso ladj.counit := by infer_instance
+      have : IsIso ladj.counit := by infer_instance
       have hjeq : (rightOrthogonal A).ι ⋙ quotientFunctor A ≅ eB.inverse := by
         calc
           (rightOrthogonal A).ι ⋙ quotientFunctor A ≅

@@ -77,11 +77,27 @@ theorem not_all_quasiCoherentCategoriesAbelian :
     not quasi-coherent does not by itself refute an `Abelian (QCoh X)`
     instance: one must also rule out a kernel object having the universal
     property internal to the full subcategory.
+  * The intended counterexample is `exists_wedgeOfLinesExample` below.  Its
+    two free sheaves are quasi-coherent by giving each the tautological
+    presentation and applying `SheafOfModules.Presentation.isQuasicoherent`.
+    The key intermediate lemma to prove is that no
+    `K : QCoh E.X` and `k : K.obj ⟶ SheafOfModules.free CountableIndex`
+    can satisfy the kernel universal property for `E.map`: localize a
+    presentation of `K`, apply that universal property to the free
+    generators, and use `E.no_local_matrix` to contradict the resulting
+    finite column support.  This proves nonexistence of a kernel internal to
+    `QCoh E.X`, not just non-quasi-coherence of the ambient kernel.
+  * Given that lemma, an assumed `Abelian (QCoh E.X)` supplies the internal
+    kernel via `kernel.ι` and `limit.isLimit`; specialize the lemma to those
+    data for the contradiction.
   * Once a counterexample `⟨X, hX⟩` is formalized, finish by introducing
     `h : AllQuasiCoherentCategoriesAbelian` and applying
     `hX.false (h X).some`.  Keep `X` in universe `v`; a small counterexample
     may need an explicit universe lift before it can discharge this
-    universe-polymorphic theorem.
+    universe-polymorphic theorem.  At present there is also no earlier API
+    lifting a `RingedSpace.{0}`, its module category, and the internal-kernel
+    obstruction coherently to `RingedSpace.{v}`; either generalize the wedge
+    construction to `v` or add that focused lift before the final step.
   Do not retry typeclass search for a nonexistent negative `Abelian` instance;
   the missing input is the counterexample itself.
   -/
@@ -193,6 +209,26 @@ theorem locallyPresented_has_cokernel_sequence
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ) ∧
     Nonempty (IsColimit
             (CokernelCofork.ofπ (cokernel.π φ) (cokernel.condition φ))) := by
+  /-
+  Proof roadmap:
+  * Reuse `locallyPresented_has_presentation hF x`, not merely the preceding
+    existential theorem, so that the chosen
+    `P : ((openModuleRestrictionFunctor X U).obj F).Presentation` remains
+    available.  Define `φ` exactly as in
+    `locallyPresented_has_generators_and_relations`, with
+    `I := P.generators.I` and `J := P.relations.I` (all in `Type v`).
+  * The restricted object is the point of `P.isColimit`; compare that cofork
+    with the chosen cokernel cofork by
+    `P.isColimit.coconePointUniqueUpToIso (colimit.isColimit _)`.  This gives
+    the required object iso in the orientation used above.
+  * The second conjunct is independent of `P`: package
+    `colimit.isColimit (parallelPair φ 0)` as the requested
+    `IsColimit (CokernelCofork.ofπ (cokernel.π φ)
+      (cokernel.condition φ))` (the cokernel is this chosen colimit).
+  The presentation API is in
+  `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean`; the chosen
+  cokernel API is in `Mathlib/CategoryTheory/Limits/Shapes/Kernels.lean`.
+  -/
   sorry
 
 /-- The displayed presentation is exact after identifying its cokernel with
@@ -206,6 +242,21 @@ theorem locallyPresented_has_exact_presentation
           (SheafOfModules.free I : Mod (ringedOpenSubspace X U).structureSheaf))
         (e : ((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ),
         (ShortComplex.mk φ (cokernel.π φ ≫ e.inv) (by simp)).Exact := by
+  /-
+  Proof roadmap:
+  * Obtain `U, I, J, φ, e` from
+    `locallyPresented_has_generators_and_relations hF x` (or retain the same
+    `P` as in the previous roadmap).  Choose `e : restricted F ≅ cokernel φ`
+    in the statement's orientation.
+  * Start with `ShortComplex.exact_cokernel φ` from
+    `Mathlib/CategoryTheory/Abelian/Exact.lean` for
+    `free J ⟶ free I ⟶ cokernel φ`.
+  * Form `ShortComplex.isoMk (Iso.refl _) (Iso.refl _) e.symm`; its third
+    component has hom `e.inv`, so its right square is exactly
+    `cokernel.π φ ≫ e.inv`.  Transfer exactness with
+    `ShortComplex.exact_of_iso`.  Use `simp only [Category.comp_id,
+    Category.id_comp, Iso.inv_hom_id_assoc]` for the two square obligations.
+  -/
   sorry
 
 /-! ## Direct sums and pullback -/
@@ -214,15 +265,35 @@ theorem locallyPresented_has_exact_presentation
 sections need not commute with an infinite coproduct. -/
 def GlobalSectionsOfCoproductAlwaysCommute : Prop :=
   ∀ (X : RingedSpace.{v}) (I : Type v) (F : I → Mod X.structureSheaf),
-    Nonempty ((SheafOfModules.evaluation X.structureSheaf
-        (op (⊤ : Opens X.carrier))).obj
-      (sheafModuleCoproduct X.structureSheaf F) ≅
-      colimit (Discrete.functor (fun i =>
-        (SheafOfModules.evaluation X.structureSheaf
-          (op (⊤ : Opens X.carrier))).obj (F i))))
+    IsIso (sheafModuleSectionsDirectSumMap X.structureSheaf F ⊤)
 
 theorem not_globalSectionsOfCoproductAlwaysCommute :
     ¬ GlobalSectionsOfCoproductAlwaysCommute := by
+  /-
+  Proof roadmap (for the repaired canonical-comparison statement):
+  * Choose `E := Classical.choice exists_wedgeOfLinesExample`, put
+    `I := ULift.{0} (ℕ × ℕ)`, and take the constant family
+    `F i := SheafOfModules.unit E.X.structureSheaf`.  By definition its
+    sheaf coproduct is `SheafOfModules.free I`; the morphism under test is
+    `sheafModuleSectionsDirectSumMap` from
+    `lean/Formalization/Books/Modules/Unit03/AbelianCategory.lean`.
+  * Use `E.coefficientSections 5` as an element of the target.  If it were in
+    the comparison map's range, represent its preimage in the `ModuleCat`
+    coproduct by a finite set of indices.  The colimit equations
+    `colimit.ι_desc` and `SheafOfModules.freeHomEquiv_apply` show that its
+    restriction to every open has `HasFiniteFreeSupport` with that same
+    finite set.
+  * Restrict to `E.neighbourhood 2` and contradict
+    `E.no_local_matrix 1 5` (since `2 * (1 + 1) < 5`), after rewriting the
+    image of the generator with `E.map_on_generators 5` and
+    `SheafOfModules.sectionsMap_freeHomEquiv_symm_freeSection` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/Free.lean`.
+  * Thus the comparison is not surjective.  Finish from an assumed `IsIso`
+    with `ConcreteCategory.bijective_of_isIso`; the underlying category is
+    `ModuleCat (globalSectionsRing E.X)`.
+  This route is why the definition now names the canonical map rather than
+  asking for the absence of an unrelated abstract object isomorphism.
+  -/
   sorry
 
 /-- The direct sum of two quasi-coherent modules is quasi-coherent. -/
@@ -230,6 +301,30 @@ theorem directSum_isQuasiCoherent
     {X : RingedSpace.{v}} {F G : Mod X.structureSheaf}
     (hF : IsQuasiCoherent F) (hG : IsQuasiCoherent G) :
     IsQuasiCoherent (sheafModuleDirectSum X.structureSheaf F G) := by
+  /-
+  Proof roadmap:
+  * Extract `qF` and `qG` with
+    `SheafOfModules.IsQuasicoherent.nonempty_quasicoherentData.some`.
+    Use the cover indexed by `qF.I × qG.I` whose open is
+    `qF.X i ⊓ qG.X j`.  Prove it covers top through
+    `Opens.coversTop_iff` and pointwise choices from the two original covers.
+  * On each intersection, transport `qF.presentation i` and
+    `qG.presentation j` through the iterated-over equivalence used by
+    `SheafOfModules.QuasicoherentData.bind` in
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean`.  Use
+    `Presentation.map`, the restriction functor's colimit preservation, and
+    `pushforwardPushforwardEquivalence` to obtain presentations of `F` and
+    `G` over the common open.
+  * Combine those presentations.  The relations and generators are the sum
+    types, the free-object comparisons are
+    `SheafOfModules.freeSumIso`, and the cokernel cofork is the binary
+    coproduct of the two `Presentation.isColimit` coforks.  Binary coproduct
+    preserves that colimit in the abelian sheaf-module category.
+  * Package these presentations as
+    `SheafOfModules.QuasicoherentData` and finish with
+    `QuasicoherentData.isQuasicoherent`.  Finally identify the binary
+    coproduct with `sheafModuleDirectSum` by its definition in Unit03.
+  -/
   sorry
 
 /-- The source's infinite-direct-sum warning, expressed using the canonical
@@ -242,6 +337,24 @@ def InfiniteDirectSumsPreserveQuasiCoherent : Prop :=
 
 theorem not_infiniteDirectSumsPreserveQuasiCoherent :
     ¬ InfiniteDirectSumsPreserveQuasiCoherent := by
+  /-
+  Roadmap/blocker for the prove stage:
+  * A proof requires an explicit family with no common presentation
+    neighbourhood.  The exact reusable input should have type
+      `∃ (X : RingedSpace.{v}) (I : Type v) (_ : Infinite I)
+        (F : I → Mod X.structureSheaf),
+        (∀ i, IsQuasiCoherent (F i)) ∧
+        ¬ IsQuasiCoherent (sheafModuleCoproduct X.structureSheaf F)`.
+    No declaration with this content exists in earlier Modules chapters or
+    Mathlib.  `exists_wedgeOfLinesExample` concerns non-finite global
+    sections of one free sheaf and does not by itself provide such a family.
+  * Once that witness is available, introduce the universal hypothesis,
+    specialize it to `X, I, F`, and apply the witness's last conjunct.
+  Do not try to use a coproduct of copies of the structure sheaf: it is the
+  free sheaf and has a global `Presentation`, hence is quasi-coherent by
+  `SheafOfModules.Presentation.isQuasicoherent` in
+  `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean`.
+  -/
   sorry
 
 /-- An existential form of the infinite-direct-sum warning. -/
@@ -252,6 +365,23 @@ def HasInfiniteDirectSumFailure (X : RingedSpace.{v}) : Prop :=
 
 theorem exists_infinite_directSum_failure :
     ∃ X : RingedSpace.{v}, HasInfiniteDirectSumFailure X := by
+  /-
+  Proof roadmap:
+  * This is pure classical logic from
+    `not_infiniteDirectSumsPreserveQuasiCoherent`; no geometric construction
+    should be duplicated here.
+  * By contradiction, push `¬ ∃ X, HasInfiniteDirectSumFailure X` through
+    `not_exists` twice.  For arbitrary `X, I, instInfinite, F` and `hF`, the
+    resulting negation of
+    `(∀ i, IsQuasiCoherent (F i)) ∧ ¬ IsQuasiCoherent (coproduct F)`
+    forces quasi-coherence of the coproduct.  This constructs
+    `InfiniteDirectSumsPreserveQuasiCoherent`, contradicting the preceding
+    theorem.
+  * Keep the instance binder explicit as
+    `letI : Infinite I := instInfinite` before specializing the negated
+    existential; otherwise Lean may create two non-definitionally-equal
+    instance metavariables.
+  -/
   sorry
 
 /-- Pullback preserves quasi-coherence. -/
@@ -261,6 +391,29 @@ theorem pullback_isQuasiCoherent
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     IsQuasiCoherent ((sheafModuleRingedSpacePullback f).obj G) := by
+  /-
+  Proof roadmap:
+  * Extract `q : G.QuasicoherentData`.  Pull its open cover back along
+    `Opens.map f.continuous`; `Opens.coversTop_iff` plus `Opens.map_iSup` and
+    `Opens.map_top` prove that the inverse-image opens cover `X`.
+  * For each cover member, map `q.presentation i` by the appropriate module
+    pullback.  Install colimit preservation with
+    `sheafModuleRingedSpacePullback_preserves_all_colimits f` from
+    `lean/Formalization/Books/Modules/Unit03/AbelianCategory.lean`, and use
+    `SheafOfModules.Presentation.map` with unit comparison
+    `(asIso (SheafOfModules.pullbackObjUnitToUnit _)).symm` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/PullbackFree.lean`.
+  * Identify restriction-after-pullback with pullback-after-restriction via
+    `ringedSpaceModulePullback_restrict_square_iso` in
+    `lean/Formalization/Books/Sheaves/Unit26/RingedSpaceModules.lean`, then
+    transport the mapped presentation with `Presentation.ofIsIso`.
+  * Assemble `QuasicoherentData` and apply `.isQuasicoherent`.
+  The remaining prerequisite is the same open inverse-image square exported
+  in the roadmap for `Unit08.locallyGenerated_pullback`: the current earlier
+  open-immersion API does not yet provide the bundled `RingedSpaceHom` square
+  or its right-adjoint witness.  Do not replace it by equality of continuous
+  maps, which is too weak for the restriction-square iso.
+  -/
   sorry
 
 /-! ## The three associated-sheaf constructions -/
@@ -380,6 +533,30 @@ theorem freeSheaf_associatedSheaf_iso
     {X : RingedSpace.{v}} (I : Type v) :
     Nonempty ((SheafOfModules.free I : Mod X.structureSheaf) ≅
       associatedSheafFreeModule X I) := by
+  /-
+  Proof roadmap:
+  * Regard `(ModuleCat.free (globalSectionsRing X)).obj I` as the coproduct
+    of `I` copies of the rank-one module.  Construct the corresponding
+    colimit cocone using `ModuleCat.free`/`ModuleCat.freeMk` and the standard
+    `ModuleCat` coproduct instances.
+  * Map it successively through `constantModulePresheaf`,
+    `Formalization.Books.Sheaves.Unit06.changeOfRingsCore
+      (globalSectionsPresheafMap (RingHom.id _))`, and
+    `PresheafOfModules.sheafification (𝟙 X.structureSheaf.obj)`.
+    The latter two are left adjoints by
+    `PresheafOfModules.pullbackPushforwardAdjunction` and
+    `PresheafOfModules.sheafificationAdjunction`, so their mapped cocones are
+    colimits.
+  * For one summand, simplify extension along the identity and use the
+    sheafification counit to identify the image with
+    `SheafOfModules.unit X.structureSheaf`.  Compare the resulting coproduct
+    cocone with `SheafOfModules.freeCofan I` using
+    `SheafOfModules.isColimitFreeCofan` and
+    `IsColimit.coconePointUniqueUpToIso` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/Free.lean`.
+  * Orient the final iso from `free I` to `associatedSheafFreeModule X I` and
+    wrap it in `Nonempty`.  Keep all module and index universes at `v`.
+  -/
   sorry
 
 theorem associatedSheaf_isQuasiCoherent
@@ -387,12 +564,51 @@ theorem associatedSheaf_isQuasiCoherent
     (α : R →+* globalSectionsRing X) (M : Type v)
     [AddCommGroup M] [Module R M] :
     IsQuasiCoherent (associatedSheaf α M) := by
+  /-
+  Proof roadmap:
+  * First factor a chronological helper before this theorem which builds a
+    two-free-module presentation of `ModuleCat.of R M`.  Take generators
+    `M`, use `Finsupp.linearCombination R id` and
+    `Finsupp.linearCombination_id_surjective` from
+    `Mathlib/LinearAlgebra/Finsupp/LinearCombination.lean`, then take the
+    carrier of its kernel as relations.  A second use of the same lemma gives
+    a free epimorphism onto the kernel; `Abelian.epiIsCokernelOfKernel`
+    supplies the required cokernel iso.  This is the data later named
+    `ModulePresentation`.
+  * Map that presentation through the presheaf extension-of-scalars and
+    sheafification construction.  Both preserve cokernels by their
+    adjunctions (`PresheafOfModules.pullbackPushforwardAdjunction` and
+    `PresheafOfModules.sheafificationAdjunction`).  Use
+    `SheafOfModules.mapFreeIso` for the images of the two free modules.
+  * The mapped cokernel therefore yields a global
+    `SheafOfModules.Presentation (associatedSheaf α M)` via
+    `SheafOfModules.presentationOfIsCokernelFree`; finish with
+    `Presentation.isQuasicoherent` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean`.
+  The later `associatedPresentationMap_cokernel_iso` is the reusable public
+  form of the same calculation, but it cannot be referenced here without
+  moving its prerequisite definitions earlier.
+  -/
   sorry
 
 theorem associatedSheafModule_isQuasiCoherent
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     IsQuasiCoherent (associatedSheafModule α M) := by
+  /-
+  Proof roadmap:
+  * Apply `associatedSheaf_isQuasiCoherent α M` with the bundled carrier
+    `M : Type v`; the `AddCommGroup M` and `Module R M` instances are
+    inherited from `ModuleCat`.
+  * Close the remaining goal by `change`/`rfl`, since
+    `associatedSheaf α M` abbreviates
+    `associatedSheafModule α (ModuleCat.of R M)` and the bundled module is
+    definitionally recovered by `ModuleCat.of` here.  If that last equality
+    is not definitional in the current Mathlib build, construct the
+    identity-on-elements iso with `ModuleCat.ofHom` and `ModuleCat.hom_ext`,
+    map it through the associated-sheaf construction, and use closure of
+    `SheafOfModules.isQuasicoherent` under isomorphisms.
+  -/
   sorry
 
 /-! The presentation and point descriptions in the source. -/
@@ -437,6 +653,25 @@ theorem ModulePresentation.relationSectionValue_compatible
     (SheafOfModules.free (R := X.structureSheaf) P.generators).val.map f
         (P.relationSectionValue α j _U) =
       P.relationSectionValue α j _V := by
+  /-
+  Proof roadmap:
+  * Unfold only `ModulePresentation.relationSectionValue`; do not unfold the
+    free sheaf.  Move the restriction map through the finite sum with
+    `map_sum` and through scalar multiplication with the component linear
+    map's `map_smul`.
+  * For each `i` in the fixed support, the scalar equality is naturality of
+    `globalSectionsPresheafMap α`; use its `naturality` component and
+    `X.structureSheaf.obj.map_comp` to identify restriction from top to `_V`
+    with restriction via `_U`.
+  * The basis-section equality is
+    `PresheafOfModules.sections_property
+      (SheafOfModules.freeSection i) f`, from
+    `Mathlib/Algebra/Category/ModuleCat/Presheaf.lean`.
+  * Finish termwise with `Finset.sum_congr`; the `Finsupp.support` itself is
+    unchanged because the module-presentation map is fixed.  A focused
+    `simp only [map_sum, map_smul, PresheafOfModules.sections_property]` is
+    preferable to unfolding `SheafOfModules.free`.
+  -/
   sorry
 
 noncomputable def ModulePresentation.relationSection
@@ -474,6 +709,33 @@ theorem associatedPresentationMap_cokernel_iso
     (P : ModulePresentation M) :
     Nonempty (cokernel (associatedPresentationMap α P) ≅
       associatedSheafModule α M) := by
+  /-
+  Proof roadmap:
+  * Let `eM : cokernel P.map ≅ M := (P.presentation).some` and build the
+    functor in `M` used by the associated-sheaf construction: constant module
+    presheaf, `changeOfRingsCore (globalSectionsPresheafMap α)`, then
+    module sheafification.  Prove once that it preserves colimits from the
+    three component adjunctions; this is the same functor constructed in
+    `exists_associatedSheafFunctor` below.
+  * Map the canonical cokernel cofork of `P.map`.  Use
+    `isColimitOfPreserves` and `SheafOfModules.mapFreeIso` to replace the two
+    mapped free modules by the free sheaves on `P.relations` and
+    `P.generators`.
+  * Prove that the conjugated mapped arrow is
+    `associatedPresentationMap α P` by
+    `SheafOfModules.freeHomEquiv.injective`; at generator `j`, expand the
+    sectionwise extension and use
+    `associatedPresentationMap_section` plus
+    `ModulePresentation.relationSectionValue_compatible`.
+  * Compare this mapped colimit cocone with the chosen cokernel cocone via
+    `IsColimit.coconePointUniqueUpToIso`, then compose with the functor's
+    `mapIso eM` and the definitional object comparison to
+    `associatedSheafModule α M`.
+  Relevant APIs are in
+  `Mathlib/Algebra/Category/ModuleCat/Sheaf/Free.lean`,
+  `.../Sheaf/Quasicoherent.lean`, and
+  `.../Presheaf/Sheafification.lean`.
+  -/
   sorry
 
 /-- A one-point ringed space with structure ring `R`. -/
@@ -575,6 +837,32 @@ theorem associatedSheaf_point_description
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     PointModuleDescription α M := by
+  /-
+  Proof roadmap:
+  * Obtain the witness `h` from the generic presheaf pullback construction.
+    The instance for
+    `PresheafOfModules.pushforward (onePointRingedSpaceHom α).sharp.hom`
+    induces the sheaf instance through
+    `SheafOfModules.PullbackConstruction.adjunction` in
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/PullbackContinuous.lean`.
+    Bind it explicitly as `let h := inferInstance` and use the same term in
+    `pointModulePullback α h` so chosen-left-adjoint mismatches cannot occur.
+  * Expand both sides through `SheafOfModules.pullbackIso`.  On the one-point
+    site, use `CategoryTheory.constantSheafAdj` to identify the constant
+    sheaf's global ring with `R`; prove that the induced composite
+    `R →+* globalSectionsRing X` is `α` by the defining hom-equivalence of
+    `onePointRingedSpaceHom` and the triangle identity for
+    `constantSheafAdj`.
+  * Show `onePointRingToGlobalSections R` is an isomorphism from the unit of
+    `constantSheafAdj`; along this ring iso the `ModuleCat.coextendScalars`
+    in `onePointModule` is canonically transport of `M`.  Then use
+    `PresheafOfModules.pullbackComp` from
+    `Mathlib/Algebra/Category/ModuleCat/Presheaf/Pullback.lean` to compose the
+    two presheaf changes of rings.  The result is
+    `associatedSheafPresheaf α M`.
+  * Apply the sheafification comparison iso and finish with the definitional
+    equality `associatedSheafFromPresheaf_eq_associatedSheafModule`.
+  -/
   sorry
 
 /-- A source-facing name for the pullback description. -/
@@ -619,6 +907,23 @@ theorem exists_associatedSheafDescriptions
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     Nonempty (AssociatedSheafDescriptions α M) := by
+  /-
+  Proof roadmap:
+  * Construct `P : ModulePresentation M` by the two-step free presentation
+    described next to `associatedSheaf_isQuasiCoherent`: generators are the
+    carrier of `M`, relations are the carrier of the kernel of the canonical
+    free epimorphism, and the cokernel iso comes from
+    `Abelian.epiIsCokernelOfKernel`.
+  * Fill `presentationCokernelIso` with
+    `associatedPresentationMap_cokernel_iso α P` and `pullbackWitness` with
+    `associatedSheaf_point_description α M`.
+  * For `presheafToAssociated`, the two objects are definitionally equal;
+    use `associatedSheafFromPresheaf_eq_associatedSheafModule` to rewrite and
+    return `Iso.refl _` (or `eqToIso` if rewriting does not reduce).
+  * Package the four fields and wrap the structure in `Nonempty`.  Keep `P`
+    as an explicitly typed intermediate term to prevent Lean from repeatedly
+    elaborating its kernel/cokernel data.
+  -/
   sorry
 
 /-! ## Functorial properties, stalks, and Hom -/
@@ -637,6 +942,31 @@ theorem exists_associatedSheafFunctor
     ∃ F : ModuleCat R ⥤ Mod X.structureSheaf,
       IsAssociatedSheafFunctor α F ∧
         PreservesColimitsOfSize.{v, v} F := by
+  /-
+  Proof roadmap:
+  * Define a helper functor
+    `constantModulePresheafFunctor : ModuleCat R ⥤
+      PresheafOfModules (constantRingPresheaf X R)` whose object is
+    `constantModulePresheaf` and whose map is the same linear map at every
+    open, conjugated by `ModuleCat.restrictScalarsId'`.  Its functor laws are
+    proved componentwise with `ModuleCat.hom_ext`.
+  * Set `F` to its composite with
+    `Formalization.Books.Sheaves.Unit06.changeOfRingsCore
+      (globalSectionsPresheafMap α)` and
+    `PresheafOfModules.sheafification (𝟙 X.structureSheaf.obj)`.  The object
+    comparison with `associatedSheafModule α M` is `Iso.refl _` after
+    unfolding these three small definitions.
+  * Prove colimit preservation of the constant helper using
+    `PresheafOfModules.evaluationJointlyReflectsColimits` and pointwise
+    `ModuleCat` colimits.  The change-of-rings and sheafification components
+    preserve all `v`-small colimits because they are the left adjoints in
+    `PresheafOfModules.pullbackPushforwardAdjunction` and
+    `PresheafOfModules.sheafificationAdjunction`.
+  * Combine the three preservation instances for functor composition and
+    return `⟨F, fun M ↦ ⟨Iso.refl _⟩, inferInstance⟩`.  Name the
+    `PreservesColimitsOfSize.{v,v}` instance for each component before asking
+    typeclass search for the composite.
+  -/
   sorry
 
 /-- The associated-sheaf construction is functorial in `M`. -/
@@ -665,6 +995,16 @@ theorem associatedSheafStalkFunctor_obj
     Nonempty ((associatedSheafStalkFunctor α x).obj M ≅
       (sheafModuleStalkFunctor X.structureSheaf x).obj
         (associatedSheafModule α M)) := by
+  /-
+  Proof roadmap:
+  * Choose `e : (associatedSheafFunctor α).obj M ≅
+      associatedSheafModule α M` from
+    `associatedSheafFunctor_obj α M`.
+  * Apply `(sheafModuleStalkFunctor X.structureSheaf x).mapIso e` and package
+    it in `Nonempty`.  After unfolding only
+    `associatedSheafStalkFunctor`, its source is definitionally the left side
+    of the goal.  No stalk computation or sheafification unfolding is needed.
+  -/
   sorry
 
 /-- The associated-sheaf functor with codomain restricted to quasi-coherent
@@ -696,6 +1036,27 @@ theorem associatedSheafQCohFunctor_preserves_colimits
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     PreservesColimitsOfSize.{v, v} (associatedSheafQCohFunctor α) := by
+  /-
+  Proof roadmap:
+  * Let `ι : QCoh X ⥤ Mod X.structureSheaf` be the full-subcategory
+    inclusion.  Build a natural iso
+      `associatedSheafQCohFunctor α ⋙ ι ≅ associatedSheafFunctor α`
+    whose component is the inverse of the chosen iso in
+    `associatedSheafFunctor_obj`.  Naturality is exactly the conjugation used
+    in `associatedSheafQCohFunctor.map`; prove it with
+    `simp only [Category.assoc, Iso.hom_inv_id_assoc]`.
+  * For a diagram `D` and a colimit cocone in `ModuleCat R`, map it by the
+    QCoh functor.  After applying `ι`, the natural iso above and
+    `associatedSheafFunctor_preserves_colimits α` give an `IsColimit` cocone
+    in the ambient sheaf-module category.
+  * Lift universal morphisms back to `QCoh X` using fullness of `ι`, and
+    apply `IsColimit.ofFaithful ι` from
+    `Mathlib/CategoryTheory/Limits/IsLimit.lean`; faithfulness proves
+    uniqueness and `ObjectProperty.hom_ext` discharges equality of lifted
+    arrows.
+  * Package this for arbitrary `J : Type v`.  Do not infer ambient colimits
+    in `QCoh X`; the mapped object itself is the chosen colimit.
+  -/
   sorry
 
 /-- The map from global sections to a stalk. -/
@@ -731,6 +1092,31 @@ theorem associatedSheaf_stalk_iso
       a * b = b * a) :
     Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
         (associatedSheaf α M) ≅ StalkTensorProduct α M x hR hA) := by
+  /-
+  Proof roadmap:
+  * Install local `CommRing R` and `CommRing A` instances exactly as in
+    `StalkTensorProduct`, where
+    `A := TopCat.Presheaf.stalk X.structureSheaf.obj x`; name both instances
+    before invoking tensor APIs so typeclass search uses the same structures.
+  * Remove sheafification on stalks using
+    `TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso` from
+    `Mathlib/Topology/Sheaves/Sheafify.lean`, applied to the underlying
+    additive presheaf of
+    `associatedSheafPresheaf α (ModuleCat.of R M)`.
+  * Compute the remaining stalk by its universal property.  Use the
+    `PresheafOfModules.pullbackPushforwardAdjunction` defining
+    `changeOfRingsCore`, commute its left adjoint with the filtered stalk
+    colimit, and identify the stalk of `constantModulePresheaf M` with `M`
+    (all transition maps are `ModuleCat.restrictScalarsId'`).  After the
+    local commutative-ring instances are installed, the resulting Hom
+    equivalence is `ModuleCat.extendRestrictScalarsAdj` for
+    `(globalToStalkRing x).comp α`.
+  * Identify that stalk ring map using
+    `TopCat.Presheaf.map_germ_eq_Γgerm` from
+    `Mathlib/Topology/Sheaves/Stalks.lean`, then use Yoneda and
+    `ModuleCat.hom_ext` to obtain the object iso.  Unfold only
+    `associatedSheaf` and `StalkTensorProduct` for the final `simpa`.
+  -/
   sorry
 
 /-- The induced `R`-module of global sections. -/
@@ -746,6 +1132,28 @@ theorem associatedSheaf_hom_equiv
     [AddCommGroup M] [Module R M] (G : Mod X.structureSheaf) :
     Nonempty ((associatedSheaf α M ⟶ G) ≃
       (ModuleCat.of R M ⟶ globalSectionsModule α G)) := by
+  /-
+  Proof roadmap:
+  * Use
+    `(PresheafOfModules.sheafificationAdjunction
+      (𝟙 X.structureSheaf.obj)).homEquiv` to turn a sheaf morphism out of
+    `associatedSheaf α M` into a presheaf-module morphism out of
+    `associatedSheafPresheaf α (ModuleCat.of R M)`.
+  * Apply
+    `PresheafOfModules.pullbackPushforwardAdjunction
+      (globalSectionsPresheafMap α).hom` to move change of rings to the
+    target.  This leaves maps from `constantModulePresheaf M` to the
+    restriction of `G.val`.
+  * Construct the remaining equivalence explicitly: evaluate a natural
+    transformation at `op ⊤`; conversely, restrict the resulting
+    `R`-linear map along the unique arrows `U ⟶ ⊤`.  Naturality follows
+    from `G.val.map_comp`, and the inverse laws follow by extensionality at
+    each open.  Its codomain is definitionally
+    `globalSectionsModule α G`.
+  * Compose the three `Equiv`s and return it in `Nonempty`.  Use
+    `PresheafOfModules.sheafificationAdjunction_homEquiv_apply` to control the
+    first reduction instead of unfolding the adjunction.
+  -/
   sorry
 
 /-! ## Restriction and local presentation -/
@@ -784,12 +1192,38 @@ theorem restrict_associatedSheaf
       associatedSheafModule (RingHom.id _)
         (associatedScalarExtensionModule
           hR hY ((ringedSpaceGlobalSectionsMap g).comp α) M)) := by
+  /-
+  Proof roadmap:
+  * Install the `CommRing R` and `CommRing (globalSectionsRing Y)` instances
+    defined by `hR` and `hY`, once, before unfolding the scalar-extension
+    object.
+  * Rewrite the left side with `SheafOfModules.pullbackIso` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/PullbackContinuous.lean` and
+    expand `associatedSheafModule` only to its presheaf change-of-rings plus
+    sheafification.  Use `SheafOfModules.sheafificationCompPullback` to move
+    pullback past sheafification.
+  * On presheaves, use `PresheafOfModules.pullbackComp` from
+    `Mathlib/Algebra/Category/ModuleCat/Presheaf/Pullback.lean`; this works for
+    the possibly noncommutative intermediate section rings.  Prove its
+    composite scalar map is induced by
+    `((ringedSpaceGlobalSectionsMap g).comp α)` using extensionality and the
+    top component of `g.sharp`; `Opens.map_top` is the only open-set
+    normalization required.
+  * The resulting object is the presheaf defining the right side, with module
+    `(ModuleCat.extendScalars ((ringedSpaceGlobalSectionsMap g).comp α)).obj
+      M`; here `ModuleCat.extendScalars` is used only between the commutative
+    endpoint rings supplied by `hR` and `hY`.  Apply sheafification's
+    `mapIso`, fold
+    `associatedScalarExtensionModule`, and compose the object isos.
+  Avoid unfolding `ringedSpaceModulePullback`: the chosen-left-adjoint
+  comparison is precisely what `SheafOfModules.pullbackIso` controls.
+  -/
   sorry
 
 /-- A fundamental system of quasi-compact neighbourhoods at a point. -/
 def HasQuasiCompactNeighborhoodBasis {X : RingedSpace.{v}} (x : X) : Prop :=
   ∀ U : Opens X.carrier, x ∈ U →
-    ∃ K : Set X.carrier, IsCompact K ∧ x ∈ interior K ∧ K ⊆ U
+    ∃ V : Opens X.carrier, x ∈ V ∧ V ≤ U ∧ IsCompact (V : Set X.carrier)
 
 theorem exists_local_associatedSheaf
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf} (x : X)
@@ -798,6 +1232,33 @@ theorem exists_local_associatedSheaf
       ∃ M : ModuleCat (globalSectionsRing (ringedOpenSubspace X U)),
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅
           associatedSheafModule (RingHom.id _) M) := by
+  /-
+  Proof roadmap (using the repaired quasi-compact-open basis):
+  * From `isQuasiCoherent_iff_locallyPresented.mp hF` choose a presentation
+    neighbourhood `W` of `x`.  Apply `hX W hxW` to choose an actual open
+    `U : Opens X.carrier` with `x ∈ U`, `U ≤ W`, and
+    `IsCompact (U : Set X.carrier)`.  The previous definition only produced
+    a compact set whose interior need not be compact, which was insufficient.
+  * Transport the presentation over `W` to the ringed open subspace `U` using
+    `SheafOfModules.Presentation.map`, the iterated-over equivalence, and
+    `openModuleRestrictionObjIso` from
+    `lean/Formalization/Books/Sheaves/Unit24/Infrastructure.lean`.  Write its
+    displayed map as `φ : free J ⟶ free I`.
+  * Since `U` is compact, apply
+    `sheafModuleSectionsDirectSumMap_bijective` from
+    `lean/Formalization/Books/Modules/Unit03/AbelianCategory.lean` to both free
+    sheaves.  Thus every column of `φ` is represented by a finite-support
+    vector over `globalSectionsRing (ringedOpenSubspace X U)`, giving a
+    `ModuleCat` morphism `φΓ : ModuleCat.free _ J ⟶ ModuleCat.free _ I`.
+  * Let `M := cokernel φΓ`.  Apply
+    `associatedPresentationMap_cokernel_iso (RingHom.id _)` to its canonical
+    `ModulePresentation`, and identify its associated presentation map with
+    `φ` by `SheafOfModules.freeHomEquiv.injective` and the two bijective
+    sections comparisons.
+  * Compose the resulting cokernel iso with `P.isColimit`'s
+    `coconePointUniqueUpToIso` to identify the restricted `F` with
+    `associatedSheafModule (RingHom.id _) M`.
+  -/
   sorry
 
 /-! ## The countable wedge example -/
@@ -840,16 +1301,29 @@ def HasFiniteFreeSupport {X : RingedSpace.{v}} (O : RingSheaf X.carrier)
     sheafModuleSectionsMap O
       (SheafOfModules.freeMap (fun k : ↥K => k.1)) U t = s
 
+/-- Projection from a free sheaf to the rank-one summand with a prescribed
+index.  This is used to state that the analytic coefficients in the wedge
+example really are the coordinate supports of its categorical sections. -/
+noncomputable def freeCoordinateProjection {X : RingedSpace.{v}}
+    (O : RingSheaf X.carrier) {I : Type v} (i : I) :
+    (SheafOfModules.free I : Mod O) ⟶ SheafOfModules.unit O := by
+  classical
+  exact (SheafOfModules.freeHomEquiv (SheafOfModules.unit O)).symm
+    (fun k => if k = i then
+      (SheafOfModules.unit O).unitHomEquiv (𝟙 _) else
+      (SheafOfModules.unit O).unitHomEquiv (0 :
+        SheafOfModules.unit O ⟶ SheafOfModules.unit O))
+
 /-- Failure of a finite matrix expression on the prescribed neighbourhoods. -/
 def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
     (φ : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
-      (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf))
+    (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf))
     (U : ℕ → Opens X.carrier) : Prop :=
-  ∀ n j, 2 * n < j →
-    ¬ HasFiniteFreeSupport X.structureSheaf (U n)
-      (sheafModuleSectionsMap X.structureSheaf φ (U n)
+  ∀ n j, 2 * (n + 1) < j →
+    ¬ HasFiniteFreeSupport X.structureSheaf (U (n + 1))
+      (sheafModuleSectionsMap X.structureSheaf φ (U (n + 1))
         ((SheafOfModules.freeSection (R := X.structureSheaf)
-          (ULift.up j)).eval (op (U n))))
+          (ULift.up j)).eval (op (U (n + 1)))))
 
 /-- Data of the countable wedge example in the source. -/
 structure WedgeOfLinesExample where
@@ -895,6 +1369,15 @@ structure WedgeOfLinesExample where
     (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf)
   coefficientSections : ℕ →
     (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf).sections
+  /-- On every open, the `(i,j)` coordinate of `coefficientSections j`
+  vanishes exactly when the prescribed coefficient function does.  This
+  connects the analytic coefficient data to the categorical map; the former
+  fields were otherwise independent of `coefficientSections`. -/
+  coefficient_support : ∀ j i (U : Opens X.carrier),
+    (∀ x ∈ U, coefficients j i x = 0) ↔
+      ((freeCoordinateProjection X.structureSheaf
+          (ULift.up (i, j))).val.app (op U)).hom
+        ((coefficientSections j).eval (op U)) = 0
   map_on_generators : ∀ j,
     (SheafOfModules.freeHomEquiv
       (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf) map)
@@ -902,6 +1385,53 @@ structure WedgeOfLinesExample where
   no_local_matrix : NotLocallyFiniteLinearCombination map neighbourhood
 
 theorem exists_wedgeOfLinesExample : Nonempty WedgeOfLinesExample := by
+  /-
+  Proof roadmap:
+  * Construct the metric hedgehog as the quotient of `ℕ × ℝ` identifying all
+    `(i, 0)`.  Give representatives the distance `|s - t|` on one branch and
+    `|s| + |t|` on different branches; prove it descends.  Equip the quotient
+    with the topology generated by its metric balls and use
+    `MetricSpace.ofDistTopology` from
+    `Mathlib/Topology/MetricSpace/Defs.lean`, proving its open-set
+    characterization together with separation and the triangle inequality.
+    The maps `line i t := [(i,t)]` are isometric embeddings away from the
+    common zero and satisfy `line_eq_iff`; take `origin := line 0 0`.
+  * Put `neighbourhood 0 := ⊤` and, for `n + 1`, use the metric ball of
+    radius `1/(n+1)` at the origin.  The metric-ball basis gives
+    `neighbourhood_basis`, and direct distance calculation gives
+    `neighbourhood_inter_branch`.  This is why
+    `NotLocallyFiniteLinearCombination` now tests `U (n+1)` with the bound
+    `2*(n+1) < j`; the old `U n` statement used an unspecified zeroth open and
+    an off-by-one cutoff estimate.
+  * Build `cutoff` from a continuous piecewise-linear function which is zero
+    on `[-1,1]` and one outside `[-2,2]`, using `Continuous.if_le` (or the
+    lattice operations `max`/`min`) from Mathlib topology.  Define
+    `coordinate (line i t) := t`; the cross-branch distance inequality makes
+    it Lipschitz.  Set
+      `coefficients j i x := scaledCutoff cutoff j (coordinate x) *
+        branchIndicator (branches i) origin x`.
+    Continuity follows because the cutoff vanishes on a uniform ball at the
+    origin; away from the origin only one branch meets a small ball.
+  * Prove `locallyFinite`: at the origin use the ball of radius `1/(j+1)` so
+    every coefficient is zero; elsewhere use a ball meeting only the unique
+    branch.  On each such open form the finite sum of scalar multiples of
+    `SheafOfModules.freeSection (ULift.up (i,j))`.  Glue these compatible local
+    sections with the sheaf condition of `SheafOfModules.free` to obtain
+    `coefficientSections j`.  The coordinate projections
+    `freeCoordinateProjection` and sheaf extensionality prove
+    `coefficient_support`.
+  * Define `map := (SheafOfModules.freeHomEquiv _).symm
+      (fun j ↦ coefficientSections j.down)`.  Then
+    `map_on_generators` is `Equiv.apply_symm_apply`.
+  * For `2*(n+1) < j`, every branch contains a point of
+    `neighbourhood (n+1)` where the `(i,j)` coefficient equals one: choose
+    `t` with `2/j < |t| < 1/(n+1)` and use `cutoff.one_on`.  A hypothetical
+    `HasFiniteFreeSupport` has a finite index set `K`; choose a branch `i`
+    whose `(i,j)` index is outside `K`, apply its coordinate projection, and
+    contradict `coefficient_support`.  This proves `no_local_matrix`.
+  Keep the construction in universe `0`; `CountableIndex` and
+  `CountablePairIndex` then reduce to the displayed `ULift.{0}` types.
+  -/
   sorry
 
 end

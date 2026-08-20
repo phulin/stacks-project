@@ -256,6 +256,157 @@ def componentAddHom (G : GradedRingData S) (𝓜 : GradedModuleData G M)
     ext
     simp
 
+/-! ## Quotients by homogeneous submodules -/
+
+/-- The degree-`d` component of the quotient by a homogeneous submodule. -/
+def gradedQuotientComponent
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (d : ℤ) : AddSubgroup (M ⧸ N) where
+  carrier := {z | ∃ x : M, x ∈ 𝓜.component d ∧ N.mkQ x = z}
+  zero_mem' := by
+    refine ⟨0, (𝓜.component d).zero_mem, ?_⟩
+    exact map_zero N.mkQ
+  add_mem' := by
+    rintro x y ⟨x', hx', rfl⟩ ⟨y', hy', rfl⟩
+    refine ⟨x' + y', (𝓜.component d).add_mem hx' hy', ?_⟩
+    exact map_add N.mkQ x' y'
+  neg_mem' := by
+    rintro x ⟨x', hx', rfl⟩
+    refine ⟨-x', (𝓜.component d).neg_mem hx', ?_⟩
+    exact map_neg N.mkQ x'
+
+/-- The quotient map on a homogeneous component. -/
+def gradedQuotientComponentMap
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (d : ℤ) :
+    𝓜.component d →+ gradedQuotientComponent G 𝓜 N d where
+  toFun x := ⟨N.mkQ x, ⟨x, x.property, rfl⟩⟩
+  map_zero' := by
+    apply Subtype.ext
+    exact map_zero N.mkQ
+  map_add' x y := by
+    apply Subtype.ext
+    exact N.mkQ.map_add (x : M) (y : M)
+
+/-- The quotient of a graded module by a homogeneous submodule is graded. -/
+theorem gradedQuotient_decomposition_exists
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (hN : IsGradedSubmodule G 𝓜 N) :
+    Nonempty (DirectSum.Decomposition (gradedQuotientComponent G 𝓜 N)) := by
+  classical
+  let decompose₀ : M →+
+      (⨁ d : ℤ, gradedQuotientComponent G 𝓜 N d) :=
+    (DirectSum.map (fun d => gradedQuotientComponentMap G 𝓜 N d)).comp
+      (DirectSum.decomposeAddEquiv 𝓜.component).toAddMonoidHom
+  have hcoe (x : M) :
+      DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)
+          (decompose₀ x) = N.mkQ x := by
+    induction x using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓜.component) with
+    | zero => simp [decompose₀]
+    | homogeneous x => simp [decompose₀, gradedQuotientComponentMap]
+    | add x y hx hy =>
+        change DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)
+            (decompose₀ (x + y)) = N.mkQ (x + y)
+        rw [map_add decompose₀, map_add N.mkQ,
+          map_add (DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N))]
+        exact congrArg₂ (· + ·) hx hy
+  have hzero (x : M) (hx : x ∈ N) : decompose₀ x = 0 := by
+    apply DirectSum.ext
+    intro d
+    change gradedQuotientComponentMap G 𝓜 N d
+        (DirectSum.decompose 𝓜.component x d) = 0
+    apply Subtype.ext
+    exact (Submodule.Quotient.mk_eq_zero N).2 (hN d hx)
+  have hresp : ∀ x y : M, N.quotientRel x y → decompose₀ x = decompose₀ y := by
+    intro x y hxy
+    have hdiff : x - y ∈ N := (Submodule.quotientRel_def N).mp hxy
+    have hdiffzero := hzero (x - y) hdiff
+    rw [map_sub] at hdiffzero
+    exact sub_eq_zero.mp hdiffzero
+  let decomposeQ : (M ⧸ N) →+
+      (⨁ d : ℤ, gradedQuotientComponent G 𝓜 N d) :=
+    { toFun := fun z => Quotient.liftOn' z (fun x => decompose₀ x) hresp
+      map_zero' := by
+        change decompose₀ 0 = 0
+        simp
+      map_add' := by
+        intro x y
+        refine Submodule.Quotient.induction_on N x ?_
+        intro x
+        refine Submodule.Quotient.induction_on N y ?_
+        intro y
+        change decompose₀ (x + y) = decompose₀ x + decompose₀ y
+        exact decompose₀.map_add x y }
+  have hleft :
+      (DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)).comp
+          decomposeQ = AddMonoidHom.id _ := by
+    apply AddMonoidHom.ext
+    intro z
+    refine Submodule.Quotient.induction_on N z ?_
+    intro x
+    change DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)
+        (decompose₀ x) = N.mkQ x
+    exact hcoe x
+  have hright :
+      decomposeQ.comp
+          (DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)) =
+        AddMonoidHom.id _ := by
+    apply DirectSum.addHom_ext
+    intro d z
+    rcases z with ⟨z, hz⟩
+    rcases hz with ⟨x, hx, rfl⟩
+    change decomposeQ
+        (DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)
+          (DirectSum.of (fun d => gradedQuotientComponent G 𝓜 N d) d
+            ⟨N.mkQ x, ⟨x, hx, rfl⟩⟩)) =
+      DirectSum.of (fun d => gradedQuotientComponent G 𝓜 N d) d
+        ⟨N.mkQ x, ⟨x, hx, rfl⟩⟩
+    rw [DirectSum.coeAddMonoidHom_of]
+    change decompose₀ x = _
+    have hdecomp : DirectSum.decompose 𝓜.component x =
+        DirectSum.of (fun d => 𝓜.component d) d ⟨x, hx⟩ :=
+      DirectSum.decompose_coe 𝓜.component ⟨x, hx⟩
+    simp [decompose₀, hdecomp, gradedQuotientComponentMap]
+  exact ⟨DirectSum.Decomposition.ofAddHom
+    (fun d => gradedQuotientComponent G 𝓜 N d) decomposeQ hleft hright⟩
+
+/-- The graded module structure on a quotient by a homogeneous submodule. -/
+noncomputable def gradedQuotientModule
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (hN : IsGradedSubmodule G 𝓜 N) :
+    GradedModuleData G (M ⧸ N) :=
+  { component := gradedQuotientComponent G 𝓜 N
+    decomposition := Classical.choice (gradedQuotient_decomposition_exists G 𝓜 N hN)
+    gradedSMul := by
+      refine { smul_mem := ?_ }
+      intro i j a z ha hz
+      rcases hz with ⟨y, hy, rfl⟩
+      refine ⟨(a : S) • y, 𝓜.gradedSMul.smul_mem ha hy, ?_⟩
+      change (Submodule.Quotient.mk ((a : S) • y) : M ⧸ N) =
+        (a : S) • Submodule.Quotient.mk y
+      rfl
+  }
+
+theorem gradedQuotient_mk_isGraded
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (hN : IsGradedSubmodule G 𝓜 N) :
+    IsGradedLinearMap G 𝓜 (gradedQuotientModule G 𝓜 N hN) N.mkQ := by
+  intro d x hx
+  exact ⟨x, hx, rfl⟩
+
+/-- Every degreewise component map of a homogeneous quotient is surjective. -/
+theorem gradedQuotient_component_map_surjective
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M)
+    (N : Submodule S M) (hN : IsGradedSubmodule G 𝓜 N) (d : ℤ) :
+    Function.Surjective
+      (componentAddHom G 𝓜 (gradedQuotientModule G 𝓜 N hN) N.mkQ
+        (gradedQuotient_mk_isGraded G 𝓜 N hN) d) := by
+  intro z
+  rcases z with ⟨z, hz⟩
+  rcases hz with ⟨x, hx, rfl⟩
+  exact ⟨⟨x, hx⟩, rfl⟩
+
 /-- A short exact sequence of graded modules is short exact in every degree. -/
 theorem graded_short_exact_iff_componentwise
     (G : GradedRingData S) (𝓚 : GradedModuleData G K)

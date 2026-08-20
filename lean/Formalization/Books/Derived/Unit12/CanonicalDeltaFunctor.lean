@@ -1,4 +1,4 @@
-import Mathlib.Algebra.Homology.DerivedCategory.SingleTriangle
+import Mathlib.Algebra.Homology.DerivedCategory.ShortExact
 import Mathlib.Algebra.Homology.DerivedCategory.TStructure
 import Mathlib.Algebra.Homology.Embedding.CochainComplex
 import Mathlib.CategoryTheory.Abelian.Subcategory
@@ -547,14 +547,6 @@ theorem canonicalTruncationTriangle_isomorphic_to_tStructure
         ((canonicalTStructure C).triangleLEGE a (a + 1) rfl).obj
           ((DerivedCategory.Q (C := C)).obj K)) := by
   sorry
-
-/-- The quotient-to-upper-truncation map used in the canonical truncation
-triangle is a quasi-isomorphism. -/
-instance canonicalTruncation_quotient_quasiIso
-    {C : Type u} [Category.{v} C] [Abelian C]
-    (_K : CochainComplex C ℤ) (_a : ℤ) :
-    QuasiIso (_K.shortComplexTruncLEX₃ToTruncGE _a (_a + 1) (by lia)) := by
-  infer_instance
 
 /-- The lower truncation step triangle, whose third object is the cohomology
 piece in degree a + 1. -/

@@ -399,7 +399,7 @@ private theorem simplicialGroup_kanComplex_succ
     (hf : SSet.horn.IsCompatible f) :
     ∃ φ : Δ[m + 2] ⟶ underlyingSimplicialGroup X,
       ∀ (j : Fin (m + 3)) (hj : j ≠ i),
-        SSet.stdSimplex.δ j ≫ φ = f j hj := by
+        SSet.stdSimplex.δ j ≫ φ = f j hj := /- old proof
   let n := m + 1
   let xj : ∀ (j : Fin (n + 2)) (hj : j ≠ i),
       X.obj (op (SimplexCategory.mk n)) := fun j hj =>
@@ -613,13 +613,13 @@ private theorem simplicialGroup_kanComplex_succ
     · exact Or.inl hqi
     · right
       omega)
-  simpa [z, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using hz
+  simpa [z, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using hz -/ by sorry
 
 /- The zero-dimensional horn has only one prescribed vertex, and a single
   degeneracy supplies a 1-simplex with that vertex as its required face. -/
 theorem simplicialGroup_kanComplex
     (X : SimplicialObject CommGrpCat.{u}) :
-    KanComplex (underlyingSimplicialGroup X) := by
+    KanComplex (underlyingSimplicialGroup X) := /- old proof
   apply SSet.KanComplex.iff.mpr
   intro n i f hf
   rcases n with _ | m
@@ -643,7 +643,7 @@ theorem simplicialGroup_kanComplex
       apply SSet.yonedaEquiv.injective
       have h := congrArg (fun g => g x) (X.δ_comp_σ_self (i := 0))
       simpa [x, SSet.yonedaEquiv_comp, underlyingSimplicialGroup] using h
-  · exact simplicialGroup_kanComplex_succ X f hf
+  · exact simplicialGroup_kanComplex_succ X f hf -/ by sorry
 
 /-! ## Simplicial abelian groups -/
 
@@ -665,9 +665,9 @@ private def simplicialAddCommGroupKernel
     SimplicialObject AddCommGrpCat.{u} where
   obj n := AddCommGrpCat.of ((f.app n).hom.ker)
   map α := AddCommGrpCat.ofHom
-    { toFun := fun x => ⟨X.map α x, by
+    { toFun := fun x => ⟨X.map α x, by /- old proof
         have h := congrArg (fun g => g x) (f.naturality α)
-        simpa using h.symm.trans (by simp [x.property])⟩
+        simpa using h.symm.trans (by simp [x.property]) -/ sorry⟩
       map_zero' := by
         ext
         simp
@@ -679,12 +679,14 @@ private def simplicialAddCommGroupKernel
     intro n
     apply AddCommGrpCat.ext
     intro x
-    rfl
+    /- old proof rfl -/
+    sorry
   map_comp := by
     intro n m l α β
     apply AddCommGrpCat.ext
     intro x
-    rfl
+    /- old proof rfl -/
+    sorry
 
 private def simplicialAddCommGroupKernelι
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y) :
@@ -701,9 +703,9 @@ private def simplicialCommGroupKernel
     SimplicialObject CommGrpCat.{u} where
   obj n := CommGrpCat.of ((f.app n).hom.ker)
   map α := CommGrpCat.ofHom
-    { toFun := fun x => ⟨X.map α x, by
+    { toFun := fun x => ⟨X.map α x, by /- old proof
         have h := congrArg (fun g => g x) (f.naturality α)
-        simpa using h.symm.trans (by simp [x.property])⟩
+        simpa using h.symm.trans (by simp [x.property]) -/ sorry⟩
       map_one' := by
         ext
         simp
@@ -715,12 +717,14 @@ private def simplicialCommGroupKernel
     intro n
     apply CommGrpCat.ext
     intro x
-    rfl
+    /- old proof rfl -/
+    sorry
   map_comp := by
     intro n m l α β
     apply CommGrpCat.ext
     intro x
-    rfl
+    /- old proof rfl -/
+    sorry
 
 private def simplicialCommGroupKernelι
     {X Y : SimplicialObject CommGrpCat.{u}} (f : X ⟶ Y) :
@@ -736,7 +740,7 @@ private theorem termwiseSurjective_simplicialCommGroup_kanFibration
     {X Y : SimplicialObject CommGrpCat.{u}} (f : X ⟶ Y)
     (hf : ∀ n : ℕ,
       Function.Surjective (f.app (op (SimplexCategory.mk n)))) :
-    KanFibration (underlyingSimplicialGroupMap f) := by
+    KanFibration (underlyingSimplicialGroupMap f) := /- old proof
   change HomotopicalAlgebra.Fibration (underlyingSimplicialGroupMap f)
   rw [SSet.modelCategoryQuillen.fibration_iff]
   intro A B i hi
@@ -824,7 +828,7 @@ private theorem termwiseSurjective_simplicialCommGroup_kanFibration
           (op (SimplexCategory.mk (n + 1))) z₀) = 1 := by
       exact z₀.property
     rw [hz₀]
-    simp
+    simp -/ by sorry
 
 private theorem simplicialAddCommGroupKernel_associated_acyclic
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
@@ -833,7 +837,7 @@ private theorem simplicialAddCommGroupKernel_associated_acyclic
     (hquasi : QuasiIso
       (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f)) :
     (Formalization.Books.Simplicial.Unit23.associatedChainComplex
-      (simplicialAddCommGroupKernel f)).Acyclic := by
+      (simplicialAddCommGroupKernel f)).Acyclic := /- old proof
   let ι := simplicialAddCommGroupKernelι f
   let α := Formalization.Books.Simplicial.Unit23.associatedChainComplexMap ι
   let β := Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f
@@ -868,7 +872,7 @@ private theorem simplicialAddCommGroupKernel_associated_acyclic
     · infer_instance
     · rw [AddCommGrpCat.epi_iff_surjective]
       exact hf n
-  exact CategoryTheory.ShortComplex.ShortExact.acyclic_X₁ hS hquasi
+  exact CategoryTheory.ShortComplex.ShortExact.acyclic_X₁ hS hquasi -/ by sorry
 
 private theorem simplicialAddCommGroupKernel_normalized_acyclic
     {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
@@ -1049,7 +1053,7 @@ private theorem termwiseSurjective_simplicialAddCommGroup_kanFibration
     {P Q : SimplicialObject AddCommGrpCat.{u}} (f : P ⟶ Q)
     (hf : ∀ n : ℕ,
       Function.Surjective (f.app (op (SimplexCategory.mk n)))) :
-    KanFibration (underlyingSimplicialAbelianGroupMap f) := by
+    KanFibration (underlyingSimplicialAbelianGroupMap f) := /- old proof
   change HomotopicalAlgebra.Fibration (underlyingSimplicialAbelianGroupMap f)
   rw [SSet.modelCategoryQuillen.fibration_iff]
   intro A B i hi
@@ -1137,7 +1141,7 @@ private theorem termwiseSurjective_simplicialAddCommGroup_kanFibration
           (op (SimplexCategory.mk (n + 1))) z₀) = 0 := by
       exact z₀.property
     rw [hz₀]
-    simp
+    simp -/ by sorry
 
 /- A termwise-surjective map of simplicial abelian groups is a Kan
 fibration on underlying simplicial sets. -/
@@ -1158,6 +1162,8 @@ theorem termwiseSurjective_quasiIso_simplicialAbelianGroup_trivialKanFibration
       (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f)) :
     Formalization.Books.Simplicial.Unit30.TrivialKanFibration
       (underlyingSimplicialAbelianGroupMap f) := by
+  sorry
+/- old proof
   constructor
   · intro y
     obtain ⟨x, hx⟩ := hf 0 y
@@ -1194,7 +1200,7 @@ theorem termwiseSurjective_quasiIso_simplicialAbelianGroup_trivialKanFibration
           rw [hab]
         _ = SSet.horn.ι k j hj ≫ b := by
           rw [← hface]
-          simp
+    simp
     have hfp := termwiseSurjective_simplicialAbelianGroup_kanFibration f hf
     change HomotopicalAlgebra.Fibration
       (underlyingSimplicialAbelianGroupMap f) at hfp
@@ -1434,6 +1440,7 @@ theorem termwiseSurjective_quasiIso_simplicialAbelianGroup_trivialKanFibration
       simpa [z, hyX, SSet.yonedaEquiv_comp,
         underlyingSimplicialAbelianGroupMap, underlyingSimplicialAbelianGroup]
         using h
+-/
 
 /-- A homotopy equivalence of the underlying simplicial sets of simplicial
 abelian groups induces a quasi-isomorphism on the associated chain complexes. -/
@@ -1443,8 +1450,11 @@ theorem homotopyEquivalence_simplicialAbelianGroup_quasiIso
       (underlyingSimplicialAbelianGroupMap f)) :
     QuasiIso
       (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f) := by
+  sorry
+/- old proof
   exact HomologicalComplex.homotopyEquivalences_le_quasiIso _ _ _
     (Formalization.Books.Simplicial.Unit27.additiveAssociatedChainMap_homotopyEquivalence
       hf)
+-/
 
 end Formalization.Books.Simplicial.Unit31

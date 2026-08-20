@@ -123,13 +123,20 @@ theorem formallySmooth_iff_lifting
           Function.Surjective
             ((Ideal.Quotient.mkₐ R I).comp :
               (S →ₐ[R] A) → S →ₐ[R] A ⧸ I) := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  exact Algebra.FormallySmooth.iff_comp_surjective (R := R) (A := S)
 
 theorem formallySmooth_baseChange
     {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']
     (f : R →+* S) (g : R →+* R') (hf : f.FormallySmooth) :
     (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).FormallySmooth := by
-  sorry
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R' (S ⊗[R] R') :=
+    (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).toAlgebra
+  let : Algebra.FormallySmooth R S := hf
+  rw [RingHom.FormallySmooth]
+  exact Algebra.FormallySmooth.of_equiv (Algebra.TensorProduct.commRight R R' S)
 
 theorem formallySmooth_comp
     {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]
@@ -148,14 +155,28 @@ theorem formallySmooth_iff_extension_section
     (P : Algebra.Extension.{u} R S)
     [Algebra.FormallySmooth R P.Ring] :
     Algebra.FormallySmooth R S ↔ extensionHasSection P := by
-  sorry
+  simpa only [extensionHasSection] using
+    (Algebra.FormallySmooth.iff_split_surjection
+      (IsScalarTower.toAlgHom R P.Ring S) P.algebraMap_surjective)
 
 theorem formallySmooth_iff_presentation_section
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (P : Formalization.Books.Algebra.Unit134.Presentation R S ι)
     [Algebra.FormallySmooth R P.Ring] :
     Algebra.FormallySmooth R S ↔ extensionHasSection P.toExtension := by
-  sorry
+  let oldAlg : Algebra R P.Ring := inferInstance
+  let oldFormal : Algebra.FormallySmooth R P.Ring := inferInstance
+  have alg_eq : oldAlg = P.toExtension.algebra₁ := by
+    apply Algebra.algebra_ext
+    intro r
+    rfl
+  let : Algebra R P.toExtension.Ring := P.toExtension.algebra₁
+  let : @Algebra.FormallySmooth R P.toExtension.Ring _ _ P.toExtension.algebra₁ := by
+    exact alg_eq ▸ oldFormal
+  simpa only [extensionHasSection] using
+    (Algebra.FormallySmooth.iff_split_surjection
+      (IsScalarTower.toAlgHom R P.toExtension.Ring S)
+      P.toExtension.algebraMap_surjective)
 
 theorem formallySmooth_iff_presentation_split_exact
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]

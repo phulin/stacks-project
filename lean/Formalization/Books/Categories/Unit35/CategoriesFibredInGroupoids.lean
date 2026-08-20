@@ -2030,6 +2030,16 @@ def IsEquivalenceOverFunctor
         ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
           IsNatIsoOver q e over)
 
+theorem isEquivalenceOverFunctor_symm
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    {p : A ⥤ D} {q : B ⥤ D} {h : A ⥤ B}
+    (hh : IsEquivalenceOverFunctor p q h) :
+    ∃ k : B ⥤ A, IsEquivalenceOverFunctor q p k := by
+  rcases hh with ⟨k, hq, hp, ⟨unit, unitOver, hunit⟩,
+    ⟨counit, counitOver, hcounit⟩⟩
+  exact ⟨k, h, hp, hq, ⟨counit, counitOver, hcounit⟩,
+    ⟨unit, unitOver, hunit⟩⟩
+
 /- A universe-polymorphic strictification of an ordinary equivalence over a
 common base.  The inverse is chosen by lifting the components of the
 ordinary counit, and the groupoid lifting uniqueness then makes those choices
@@ -3312,11 +3322,43 @@ theorem categoryPresheafProjection_isFibered
     (categoryPresheafProjection F).IsFibered := by
   infer_instance
 
+theorem categoryPresheaf_fibre_is_groupoid_of_projection_isFibredInGroupoids
+    {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C)
+    (hF : (categoryPresheafProjection F).IsFibredInGroupoids) (U : C) :
+    IsGroupoid (F.obj (Opposite.op U)) := by
+  have hQ : IsGroupoid (Functor.Fiber (categoryPresheafProjection F) U) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres
+      (categoryPresheafProjection F)).mp hF |>.1 U
+  let j :=
+    Functor.Fiber.inducedFunctor
+      (Pseudofunctor.CoGrothendieck.comp_const
+        (categoryPresheafPseudofunctor F) U)
+  have hjFF : j.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful j
+  refine { all_isIso := ?_ }
+  intro X Y f
+  let _ : IsIso (j.map f) := hQ.all_isIso _
+  exact hjFF.isIso_of_isIso_map f
+
 def IsomorphicOverBase
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     (p : S ⥤ C) (q : T ⥤ C) : Prop :=
   ∃ (F : S ⥤ T) (G : T ⥤ S),
     F ⋙ q = p ∧ G ⋙ p = q ∧ F ⋙ G = 𝟭 S ∧ G ⋙ F = 𝟭 T
+
+theorem isomorphicOverBase_exists_equivalenceOverFunctor
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    (p : S ⥤ C) (q : T ⥤ C) (h : IsomorphicOverBase p q) :
+    ∃ F : S ⥤ T, IsEquivalenceOverFunctor p q F := by
+  rcases h with ⟨F, G, hF, hG, hFG, hGF⟩
+  refine ⟨F, G, hF, hG, ?_, ?_⟩
+  · refine ⟨eqToIso hFG, congrArg (fun H : S ⥤ S => H ⋙ p) hFG, ?_⟩
+    intro X
+    change p.map ((eqToIso hFG).hom.app X) = _
+    simp only [eqToIso.hom, eqToHom_app, eqToHom_map]
+  · refine ⟨eqToIso hGF, congrArg (fun H : T ⥤ T => H ⋙ q) hGF, ?_⟩
+    intro X
+    change q.map ((eqToIso hGF).hom.app X) = _
+    simp only [eqToIso.hom, eqToHom_app, eqToHom_map]
 
 def IsSplitFibredCategory
     {C : Type u'} [Category.{v'} C]

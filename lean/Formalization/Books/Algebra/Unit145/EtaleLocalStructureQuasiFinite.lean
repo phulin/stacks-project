@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Mathlib.RingTheory.Etale.QuasiFinite
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.RingHom.Etale
@@ -35,36 +36,47 @@ abbrev localizedMap
     Localization.Away s →+* Localization.Away (g s) :=
   Localization.awayMap g s
 
-/-- The canonical map between residue fields at primes related by a ring map. -/
-noncomputable def residueFieldMapAt
-    {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
-    (hq : PrimeSpectrum.comap f q = p) :
-    p.asIdeal.ResidueField →+* q.asIdeal.ResidueField := by
-  let hcomap : p.asIdeal = q.asIdeal.comap f := by
-    simpa [PrimeSpectrum.comap_asIdeal] using
-      (congrArg PrimeSpectrum.asIdeal hq).symm
-  exact Ideal.ResidueField.map p.asIdeal q.asIdeal f hcomap
-
 /-- A binary product presentation of an algebra over `R`, with its factor
 maps retained for transporting primes from the original algebra. -/
 structure BinaryAlgebraProduct
     (R X : Type u) [CommRing R] [CommRing X] [Algebra R X] where
-  A : CommRingCat.{u}
+  A : Type u
+  [commRingA : CommRing A]
   [algebraA : Algebra R A]
-  B : CommRingCat.{u}
+  B : Type u
+  [commRingB : CommRing B]
   [algebraB : Algebra R B]
   equiv : X ≃ₐ[R] A × B
 
 def BinaryAlgebraProduct.leftMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : BinaryAlgebraProduct R X) : X →+* D.A :=
-  (RingHom.fst D.A D.B).comp D.equiv.toRingHom
+    (D : BinaryAlgebraProduct R X) :
+    letI : CommRing D.A := D.commRingA
+    letI : CommRing D.B := D.commRingB
+    X →+* D.A := by
+  letI : CommRing D.A := D.commRingA
+  letI : CommRing D.B := D.commRingB
+  exact
+    { toFun := fun x => (D.equiv x).1
+      map_one' := by simp
+      map_mul' := by intro x y; simp
+      map_zero' := by simp
+      map_add' := by intro x y; simp }
 
 def BinaryAlgebraProduct.rightMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : BinaryAlgebraProduct R X) : X →+* D.B :=
-  (RingHom.snd D.A D.B).comp D.equiv.toRingHom
+    (D : BinaryAlgebraProduct R X) :
+    letI : CommRing D.A := D.commRingA
+    letI : CommRing D.B := D.commRingB
+    X →+* D.B := by
+  letI : CommRing D.A := D.commRingA
+  letI : CommRing D.B := D.commRingB
+  exact
+    { toFun := fun x => (D.equiv x).2
+      map_one' := by simp
+      map_mul' := by intro x y; simp
+      map_zero' := by simp
+      map_add' := by intro x y; simp }
 
 /-- After localizing at an element, the finite map supplied by the first
 source lemma.  The bijectivity assumption is stronger than the surjectivity
@@ -97,20 +109,26 @@ structure EtaleFiniteAtPrimeData
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
   residueFieldMapBijective :
-    Function.Bijective (residueFieldMapAt (algebraMap R R') p p' liesOver)
+    Function.Bijective
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p p' liesOver)
   decomposition : BinaryAlgebraProduct R' (R' ⊗[R] S)
-  finiteA : letI : Algebra R' decomposition.A := decomposition.algebraA
+  finiteA : letI : CommRing decomposition.A := decomposition.commRingA
+    letI : Algebra R' decomposition.A := decomposition.algebraA
     RingHom.Finite (algebraMap R' decomposition.A)
-  uniquePrime : letI : Algebra R' decomposition.A := decomposition.algebraA
+  uniquePrime : letI : CommRing decomposition.A := decomposition.commRingA
+    letI : Algebra R' decomposition.A := decomposition.algebraA
     ∃! r : PrimeSpectrum decomposition.A,
       PrimeSpectrum.comap (algebraMap R' decomposition.A) r = p'
-  primeOverQ : letI : Algebra R' decomposition.A := decomposition.algebraA
+  primeOverQ : letI : CommRing decomposition.A := decomposition.commRingA
+    letI : Algebra R' decomposition.A := decomposition.algebraA
     ∀ r : PrimeSpectrum decomposition.A,
       PrimeSpectrum.comap (algebraMap R' decomposition.A) r = p' →
         PrimeSpectrum.comap
             (decomposition.leftMap.comp
               Algebra.TensorProduct.includeRight.toRingHom) r = q
-  noPrimeB : letI : Algebra R' decomposition.B := decomposition.algebraB
+  noPrimeB : letI : CommRing decomposition.B := decomposition.commRingB
+    letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
       PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
         PrimeSpectrum.comap
@@ -135,29 +153,62 @@ closed points in the fibre. -/
 structure FiniteAlgebraProduct
     (R X : Type u) [CommRing R] [CommRing X] [Algebra R X] where
   n : ℕ
-  A : Fin n → CommRingCat.{u}
+  A : Fin n → Type u
+  [commRingA : ∀ i, CommRing (A i)]
   [algebraA : ∀ i, Algebra R (A i)]
-  B : CommRingCat.{u}
+  B : Type u
+  [commRingB : CommRing B]
   [algebraB : Algebra R B]
   equiv : X ≃ₐ[R] (∀ i, A i) × B
 
 def FiniteAlgebraProduct.factorMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : FiniteAlgebraProduct R X) (i : Fin D.n) : X →+* D.A i :=
-  { toFun := fun x => (D.equiv x).1 i
-    map_one' := by simp
-    map_mul' := by intro x y; simp
-    map_zero' := by simp
-    map_add' := by intro x y; simp }
+    (D : FiniteAlgebraProduct R X) (i : Fin D.n) :
+    letI : CommRing (D.A i) := D.commRingA i
+    X →+* D.A i := by
+  letI : CommRing (D.A i) := D.commRingA i
+  letI : ∀ j, CommRing (D.A j) := D.commRingA
+  letI : CommRing D.B := D.commRingB
+  exact
+    { toFun := fun x => (D.equiv x).1 i
+      map_one' := by
+        change (D.equiv 1).1 i = 1
+        exact congrArg (fun z => z.1 i) D.equiv.map_one
+      map_mul' := by
+        intro x y
+        change (D.equiv (x * y)).1 i = (D.equiv x).1 i * (D.equiv y).1 i
+        exact congrArg (fun z => z.1 i) (D.equiv.map_mul x y)
+      map_zero' := by
+        change (D.equiv 0).1 i = 0
+        exact congrArg (fun z => z.1 i) D.equiv.map_zero
+      map_add' := by
+        intro x y
+        change (D.equiv (x + y)).1 i = (D.equiv x).1 i + (D.equiv y).1 i
+        exact congrArg (fun z => z.1 i) (D.equiv.map_add x y) }
 
 def FiniteAlgebraProduct.remainderMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : FiniteAlgebraProduct R X) : X →+* D.B :=
-  { toFun := fun x => (D.equiv x).2
-    map_one' := by simp
-    map_mul' := by intro x y; simp
-    map_zero' := by simp
-    map_add' := by intro x y; simp }
+    (D : FiniteAlgebraProduct R X) :
+    letI : CommRing D.B := D.commRingB
+    X →+* D.B := by
+  letI : CommRing D.B := D.commRingB
+  letI : ∀ i, CommRing (D.A i) := D.commRingA
+  exact
+    { toFun := fun x => (D.equiv x).2
+      map_one' := by
+        change (D.equiv 1).2 = 1
+        exact congrArg (fun z => z.2) D.equiv.map_one
+      map_mul' := by
+        intro x y
+        change (D.equiv (x * y)).2 = (D.equiv x).2 * (D.equiv y).2
+        exact congrArg (fun z => z.2) (D.equiv.map_mul x y)
+      map_zero' := by
+        change (D.equiv 0).2 = 0
+        exact congrArg (fun z => z.2) D.equiv.map_zero
+      map_add' := by
+        intro x y
+        change (D.equiv (x + y)).2 = (D.equiv x).2 + (D.equiv y).2
+        exact congrArg (fun z => z.2) (D.equiv.map_add x y) }
 
 /-- The étale neighborhood and finite product around all quasi-finite primes
 over a fixed prime. -/
@@ -171,14 +222,19 @@ structure EtaleFiniteOverPrimeData
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
   residueFieldMapBijective :
-    Function.Bijective (residueFieldMapAt (algebraMap R R') p p' liesOver)
+    Function.Bijective
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p p' liesOver)
   decomposition : FiniteAlgebraProduct R' (R' ⊗[R] S)
-  finiteFactors : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
+  finiteFactors : ∀ i, letI : CommRing (decomposition.A i) := decomposition.commRingA i
+    letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     RingHom.Finite (algebraMap R' (decomposition.A i))
-  uniquePrime : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
+  uniquePrime : ∀ i, letI : CommRing (decomposition.A i) := decomposition.commRingA i
+    letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     ∃! r : PrimeSpectrum (decomposition.A i),
       PrimeSpectrum.comap (algebraMap R' (decomposition.A i)) r = p'
-  noQuasiFiniteB : letI : Algebra R' decomposition.B := decomposition.algebraB
+  noQuasiFiniteB : letI : CommRing decomposition.B := decomposition.commRingB
+    letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
       PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
         ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal
@@ -204,19 +260,25 @@ structure EtaleFinitePurelyInseparableData
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
   decomposition : FiniteAlgebraProduct R' (R' ⊗[R] S)
-  finiteFactors : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
+  finiteFactors : ∀ i, letI : CommRing (decomposition.A i) := decomposition.commRingA i
+    letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     RingHom.Finite (algebraMap R' (decomposition.A i))
-  uniquePrime : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
+  uniquePrime : ∀ i, letI : CommRing (decomposition.A i) := decomposition.commRingA i
+    letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     ∃! r : PrimeSpectrum (decomposition.A i),
       PrimeSpectrum.comap (algebraMap R' (decomposition.A i)) r = p'
-  residuePurelyInseparable : ∀ i (r : PrimeSpectrum (decomposition.A i)),
+  residuePurelyInseparable : ∀ i,
+    letI : CommRing (decomposition.A i) := decomposition.commRingA i
     letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
+    ∀ r : PrimeSpectrum (decomposition.A i),
     ∀ hr : PrimeSpectrum.comap (algebraMap R' (decomposition.A i)) r = p',
       letI : Algebra p'.asIdeal.ResidueField r.asIdeal.ResidueField :=
-        (residueFieldMapAt (algebraMap R' (decomposition.A i)) p' r hr).toAlgebra
+        (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+          (algebraMap R' (decomposition.A i)) p' r hr).toAlgebra
       Module.Finite p'.asIdeal.ResidueField r.asIdeal.ResidueField ∧
         IsPurelyInseparable p'.asIdeal.ResidueField r.asIdeal.ResidueField
-  noQuasiFiniteB : letI : Algebra R' decomposition.B := decomposition.algebraB
+  noQuasiFiniteB : letI : CommRing decomposition.B := decomposition.commRingB
+    letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
       PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
         ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal

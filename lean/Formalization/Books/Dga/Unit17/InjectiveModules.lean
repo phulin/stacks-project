@@ -216,13 +216,101 @@ def rightDualFunctor {A : Type u} [Ring A] :
 theorem leftDualFunctor_exact {R A : Type u} [CommRing R] [Ring A]
     [Algebra R A] :
     IsExact (leftDualFunctor (A := A)) := by
-  sorry
+  letI : (leftDualFunctor (A := A)).Additive := by
+    constructor
+    intro X Y f g
+    apply ModuleCat.hom_ext
+    ext φ
+    apply AddMonoidHom.ext
+    intro x
+    dsimp [leftDualFunctor, leftDualMap]
+    change
+      (show DgaCharacterDual (X.unop : Type u) from φ)
+          ((f.unop.hom + g.unop.hom) x) =
+        (show DgaCharacterDual (X.unop : Type u) from φ) (f.unop.hom x) +
+          (show DgaCharacterDual (X.unop : Type u) from φ) (g.unop.hom x)
+    exact (show DgaCharacterDual (X.unop : Type u) from φ).map_add _ _
+  refine ((Functor.exact_tfae (leftDualFunctor (A := A))).out 1 3).mp ?_
+  intro S hS
+  let U := ModuleCat.restrictScalars (algebraMap R Aᵐᵒᵖ)
+  have hU : (S.unop.map U).Exact := by
+    have hS' := hS.unop
+    rw [CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact] at hS' ⊢
+    exact hS'
+  let T := (S.unop.map U).op
+  letI : (characterDualFunctor R).Additive := by
+    constructor
+    intro X Y f g
+    apply ModuleCat.hom_ext
+    ext φ
+    apply AddMonoidHom.ext
+    intro x
+    dsimp [characterDualFunctor, characterDualMap]
+    change
+      (show CharacterDual R (X.unop : Type u) from φ)
+          ((f.unop.hom + g.unop.hom) x) =
+        (show CharacterDual R (X.unop : Type u) from φ) (f.unop.hom x) +
+          (show CharacterDual R (X.unop : Type u) from φ) (g.unop.hom x)
+    exact (show CharacterDual R (X.unop : Type u) from φ).map_add _ _
+  have hchar_exact :
+      ∀ (Q : ShortComplex (ModuleCat R)ᵒᵖ), Q.Exact →
+        (Q.map (characterDualFunctor R)).Exact :=
+    ((Functor.exact_tfae (characterDualFunctor R)).out 3 1).mp
+      (characterDualFunctor_exact R)
+  have hdual : (T.map (characterDualFunctor R)).Exact :=
+    hchar_exact T hU.op
+  rw [CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact] at hdual ⊢
+  exact hdual
 
 /-- Exactness of the dual functor on left modules. -/
 theorem rightDualFunctor_exact {R A : Type u} [CommRing R] [Ring A]
     [Algebra R A] :
     IsExact (rightDualFunctor (A := A)) := by
-  sorry
+  letI : (rightDualFunctor (A := A)).Additive := by
+    constructor
+    intro X Y f g
+    apply ModuleCat.hom_ext
+    ext φ
+    apply AddMonoidHom.ext
+    intro x
+    dsimp [rightDualFunctor, rightDualMap]
+    change
+      (show DgaCharacterDual (X.unop : Type u) from φ)
+          ((f.unop.hom + g.unop.hom) x) =
+        (show DgaCharacterDual (X.unop : Type u) from φ) (f.unop.hom x) +
+          (show DgaCharacterDual (X.unop : Type u) from φ) (g.unop.hom x)
+    exact (show DgaCharacterDual (X.unop : Type u) from φ).map_add _ _
+  refine ((Functor.exact_tfae (rightDualFunctor (A := A))).out 1 3).mp ?_
+  intro S hS
+  let U := ModuleCat.restrictScalars (algebraMap R A)
+  have hU : (S.unop.map U).Exact := by
+    have hS' := hS.unop
+    rw [CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact] at hS' ⊢
+    exact hS'
+  let T := (S.unop.map U).op
+  letI : (characterDualFunctor R).Additive := by
+    constructor
+    intro X Y f g
+    apply ModuleCat.hom_ext
+    ext φ
+    apply AddMonoidHom.ext
+    intro x
+    dsimp [characterDualFunctor, characterDualMap]
+    change
+      (show CharacterDual R (X.unop : Type u) from φ)
+          ((f.unop.hom + g.unop.hom) x) =
+        (show CharacterDual R (X.unop : Type u) from φ) (f.unop.hom x) +
+          (show CharacterDual R (X.unop : Type u) from φ) (g.unop.hom x)
+    exact (show CharacterDual R (X.unop : Type u) from φ).map_add _ _
+  have hchar_exact :
+      ∀ (Q : ShortComplex (ModuleCat R)ᵒᵖ), Q.Exact →
+        (Q.map (characterDualFunctor R)).Exact :=
+    ((Functor.exact_tfae (characterDualFunctor R)).out 3 1).mp
+      (characterDualFunctor_exact R)
+  have hdual : (T.map (characterDualFunctor R)).Exact :=
+    hchar_exact T hU.op
+  rw [CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact] at hdual ⊢
+  exact hdual
 
 /-! ## Evaluation -/
 
@@ -274,13 +362,21 @@ def leftModuleEvaluation {A : Type u} [Ring A] (M : LeftModule A) :
 theorem rightModuleEvaluation_injective {R A : Type u} [CommRing R] [Ring A]
     [Algebra R A] (M : RightModule A) :
     Function.Injective (rightModuleEvaluation M) := by
-  sorry
+  letI : Module R (M : Type u) :=
+    Module.compHom (M : Type u) (algebraMap R Aᵐᵒᵖ)
+  intro x y h
+  apply characterDualEvaluation_injective (R := R) (M := (M : Type u))
+  exact h
 
 /-- The character-dual evaluation map is injective on left modules. -/
 theorem leftModuleEvaluation_injective {R A : Type u} [CommRing R] [Ring A]
     [Algebra R A] (M : LeftModule A) :
     Function.Injective (leftModuleEvaluation M) := by
-  sorry
+  letI : Module R (M : Type u) :=
+    Module.compHom (M : Type u) (algebraMap R A)
+  intro x y h
+  apply characterDualEvaluation_injective (R := R) (M := (M : Type u))
+  exact h
 
 /-! ## The regular dual and its hom description -/
 
@@ -303,7 +399,41 @@ theorem rightModuleHom_iff_balanced {R A : Type u} [CommRing R] [Ring A]
     (φ : (N : Type u) →+ DgaCharacterDual A) :
     (∃ f : N ⟶ algebraDual (A := A), f.hom.toAddMonoidHom = φ) ↔
       IsRightDualBalanced N φ := by
-  sorry
+  constructor
+  · rintro ⟨f, rfl⟩
+    intro x a
+    change (show DgaCharacterDual A from f.hom x) a =
+      (show DgaCharacterDual A from f.hom (MulOpposite.op a • x)) 1
+    have hsmul := f.hom.map_smul (MulOpposite.op a) x
+    have hsmul' := congrArg
+      (fun z : algebraDual (A := A) =>
+        (show DgaCharacterDual A from z) 1) hsmul
+    have haction :
+        (show DgaCharacterDual A from
+          (MulOpposite.op a • f.hom x : algebraDual (A := A))) 1 =
+          (show DgaCharacterDual A from f.hom x) a := by
+      change (show DgaCharacterDual A from f.hom x) (a • (1 : A)) =
+        (show DgaCharacterDual A from f.hom x) a
+      simp
+    exact (hsmul'.trans haction).symm
+  · intro h
+    let f : (N : Type u) →ₗ[Aᵐᵒᵖ] DgaCharacterDual A :=
+      { toFun := φ
+        map_add' := by
+          intro x y
+          exact φ.map_add x y
+        map_smul' := by
+          intro b x
+          ext a
+          change φ (b • x) a = φ x (b.unop • a)
+          calc
+            φ (b • x) a =
+                φ (MulOpposite.op a • (b • x)) 1 := h (b • x) a
+            _ = φ (MulOpposite.op (b.unop * a) • x) 1 := by
+              rw [smul_smul]
+              congr 2
+            _ = φ x (b.unop * a) := (h x (b.unop * a)).symm }
+    exact ⟨ModuleCat.ofHom f, rfl⟩
 
 /- The following additive equivalence is the usable form of the source's
    two displayed Hom equalities. -/
@@ -312,7 +442,99 @@ theorem rightModuleHom_to_algebraDual_nonempty {R A : Type u} [CommRing R]
     Nonempty
       ((N ⟶ algebraDual (A := A)) ≃+
         DgaCharacterDual (N : Type u)) := by
-  sorry
+  let eval : (N ⟶ algebraDual (A := A)) →+
+      DgaCharacterDual (N : Type u) :=
+    { toFun := fun f =>
+        { toFun := fun x =>
+            (show DgaCharacterDual A from
+              f.hom x) 1
+          map_zero' := by
+            rw [f.hom.map_zero]
+            rfl
+          map_add' := by
+            intro x y
+            rw [f.hom.map_add]
+            rfl }
+      map_zero' := by
+        ext x
+        change (0 : RationalModInteger) = 0
+        rfl
+      map_add' := by
+        intro f g
+        ext x
+        change
+          (show DgaCharacterDual A from f.hom x) 1 +
+              (show DgaCharacterDual A from g.hom x) 1 =
+            (show DgaCharacterDual A from f.hom x) 1 +
+              (show DgaCharacterDual A from g.hom x) 1
+        rfl }
+  let lift : DgaCharacterDual (N : Type u) →+
+      (N ⟶ algebraDual (A := A)) :=
+    { toFun := fun φ =>
+        ModuleCat.ofHom
+          { toFun := fun x =>
+              { toFun := fun a => φ (MulOpposite.op a • x)
+                map_zero' := by simp
+                map_add' := by
+                  intro a b
+                  simp [add_smul, map_add] }
+            map_add' := by
+              intro x y
+              ext a
+              simp [add_smul, map_add]
+            map_smul' := by
+              intro b x
+              ext a
+              change φ (MulOpposite.op a • (b • x)) =
+                φ (MulOpposite.op (b.unop • a) • x)
+              rw [smul_smul]
+              congr 2
+              }
+      map_zero' := by
+        apply ModuleCat.hom_ext
+        ext x a
+        change (0 : RationalModInteger) = 0
+        rfl
+      map_add' := by
+        intro φ ψ
+        apply ModuleCat.hom_ext
+        ext x a
+        change
+          φ (MulOpposite.op a • x) + ψ (MulOpposite.op a • x) =
+            φ (MulOpposite.op a • x) + ψ (MulOpposite.op a • x)
+        rfl }
+  exact ⟨{ toFun := eval
+           invFun := lift
+           left_inv := by
+             intro f
+             apply ModuleCat.hom_ext
+             apply LinearMap.ext
+             intro x
+             apply AddMonoidHom.ext
+             intro a
+             change (show DgaCharacterDual A from f.hom (MulOpposite.op a • x)) 1 =
+               (show DgaCharacterDual A from f.hom x) a
+             have hsmul := f.hom.map_smul (MulOpposite.op a) x
+             have hsmul' := congrArg
+               (fun z : algebraDual (A := A) =>
+                 (show DgaCharacterDual A from z) 1) hsmul
+             have haction :
+                 (show DgaCharacterDual A from
+                   (MulOpposite.op a • f.hom x : algebraDual (A := A))) 1 =
+                   (show DgaCharacterDual A from f.hom x) a := by
+               change (show DgaCharacterDual A from f.hom x)
+                   ((a : A) • (1 : A)) =
+                 (show DgaCharacterDual A from f.hom x) a
+               simp
+             exact hsmul'.trans haction
+           right_inv := by
+             intro φ
+             ext x
+             change φ (MulOpposite.op (1 : A) • x) = φ x
+             simp
+           map_add' := by
+             intro f g
+             exact eval.map_add f g },⟩
 
 noncomputable def rightModuleHom_to_algebraDual {R A : Type u} [CommRing R]
     [Ring A] [Algebra R A] (N : RightModule A) :

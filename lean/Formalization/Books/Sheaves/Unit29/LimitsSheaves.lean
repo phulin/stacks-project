@@ -725,6 +725,82 @@ def HasCofinalFiniteQuasiCompactOpenCover {X : TopCat.{v}} (U : Opens X) : Prop 
           (∀ j, ∃ k, W j ≤ V k) ∧
           (∀ j j', QuasiCompactOpen (W j ⊓ W j'))
 
+private theorem colimitPresheaf_isSeparated_of_injective
+    {X : TopCat.{v}} {I : Type v} [Preorder I] [Nonempty I]
+    [IsDirectedOrder I] (F : I ⥤ TopCat.Sheaf (Type v) X)
+    [HasColimit F]
+    (hF : DirectedSectionTransitionsInjective F) :
+    Presieve.IsSeparated (Opens.grothendieckTopology X)
+      (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) := by
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
+  let P := colimit G
+  intro V S hS fam t₁ t₂ ht₁ ht₂
+  let hcolimV := isColimitOfPreserves
+    ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op V)) (colimit.isColimit G)
+  let cV := ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op V)).mapCocone
+    (colimit.cocone G)
+  obtain ⟨i₁, xi₁, hxi₁⟩ := Types.jointly_surjective _ hcolimV t₁
+  obtain ⟨i₂, xi₂, hyi₂⟩ := Types.jointly_surjective _ hcolimV t₂
+  obtain ⟨i, hi₁', hi₂'⟩ := exists_ge_ge i₁ i₂
+  let hi₁ : i₁ ⟶ i := homOfLE hi₁'
+  let hi₂ : i₂ ⟶ i := homOfLE hi₂'
+  let xi := (F.map hi₁).1.app (op V) xi₁
+  let yi := (F.map hi₂).1.app (op V) xi₂
+  have ht₁rep : t₁ = (colimit.ι G i).app (op V) xi := by
+    calc
+      t₁ = (colimit.ι G i₁).app (op V) xi₁ := hxi₁.symm
+      _ = (colimit.ι G i).app (op V) xi := by
+        exact ConcreteCategory.congr_hom ((cV.ι.naturality hi₁).symm) xi₁
+  have ht₂rep : t₂ = (colimit.ι G i).app (op V) yi := by
+    calc
+      t₂ = (colimit.ι G i₂).app (op V) xi₂ := hyi₂.symm
+      _ = (colimit.ι G i).app (op V) yi := by
+        exact ConcreteCategory.congr_hom ((cV.ι.naturality hi₂).symm) xi₂
+  have hloc : ∀ {Y : Opens X} (f : Y ⟶ V) (_ : S f),
+      P.map f.op t₁ = P.map f.op t₂ := by
+    intro Y f hf
+    exact (ht₁ f hf).trans (ht₂ f hf).symm
+  have hxi : xi = yi := by
+    have hsheaf : Presieve.IsSheaf (Opens.grothendieckTopology X) (F.obj i).1 :=
+      (isSheaf_iff_isSheaf_of_type _ _).mp (F.obj i).2
+    apply hsheaf S hS |>.isSeparatedFor.ext
+    intro Y f hf
+    have hloc' := hloc f hf
+    have hmap (z : (F.obj i).1.obj (op V)) :
+        P.map f.op ((colimit.ι G i).app (op V) z) =
+          (colimit.ι G i).app (op Y) ((F.obj i).1.map f.op z) := by
+      exact ConcreteCategory.congr_hom ((colimit.ι G i).naturality f.op).symm z
+    have hloc'' :
+        (colimit.ι G i).app (op Y) ((F.obj i).1.map f.op xi) =
+          (colimit.ι G i).app (op Y) ((F.obj i).1.map f.op yi) := by
+      calc
+        _ = P.map f.op ((colimit.ι G i).app (op V) xi) := (hmap xi).symm
+        _ = P.map f.op t₁ := congrArg (P.map f.op) ht₁rep.symm
+        _ = P.map f.op t₂ := hloc'
+        _ = P.map f.op ((colimit.ι G i).app (op V) yi) :=
+          congrArg (P.map f.op) ht₂rep
+        _ = _ := hmap yi
+    let hcolim := isColimitOfPreserves
+      ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op Y)) (colimit.isColimit G)
+    obtain ⟨j, g, hg⟩ :=
+      (Types.FilteredColimit.isColimit_eq_iff' hcolim _ _).mp hloc''
+    let gij : i ≤ j := leOfHom g
+    have hg' :
+        ((F.map (homOfLE gij)).1.app (op Y))
+            ((F.obj i).1.map f.op xi) =
+          ((F.map (homOfLE gij)).1.app (op Y))
+            ((F.obj i).1.map f.op yi) := by
+      change ((F.map g).1.app (op Y))
+          ((F.obj i).1.map f.op xi) =
+        ((F.map g).1.app (op Y))
+          ((F.obj i).1.map f.op yi) at hg
+      convert hg using 1 <;> rfl
+    exact (hF gij Y) hg'
+  calc
+    t₁ = (colimit.ι G i).app (op V) xi := ht₁rep
+    _ = (colimit.ι G i).app (op V) yi := congrArg _ hxi
+    _ = t₂ := ht₂rep.symm
+
 /-- Injectivity when all transition maps are injective. -/
 theorem directedColimitSectionsMap_injective_of_injective
     {X : TopCat.{v}} {I : Type v} [Preorder I] [Nonempty I]
@@ -734,7 +810,150 @@ theorem directedColimitSectionsMap_injective_of_injective
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))]
     (hF : DirectedSectionTransitionsInjective F) :
     Function.Injective (directedColimitSectionsMap F U) := by
-  sorry
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
+  let P := colimit G
+  have hsep := colimitPresheaf_isSeparated_of_injective F hF
+  let J := Opens.grothendieckTopology X
+  let E := colimit.cocone G
+  let hE := colimit.isColimit G
+  let hc := CategoryTheory.Sheaf.isColimitSheafifyCocone E hE
+  let hcC := CategoryTheory.Sheaf.sheafifyCocone E
+  let e := (TopCat.Sheaf.forget (Type v) X).mapIso
+    (IsColimit.coconePointUniqueUpToIso (colimit.isColimit F) hc)
+  let H := G ⋙ (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+  let cU := ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapCocone E
+  let hU := isColimitOfPreserves
+    ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) hE
+  let eu := IsColimit.coconePointUniqueUpToIso hU (colimit.isColimit H)
+  let K := TopCat.Sheaf.forget (Type v) X ⋙
+    (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+  have hfactor : ∀ z : colimit H,
+      e.hom.app (op U) (directedColimitSectionsMap F U z) =
+        (CategoryTheory.toSheafify J P).app (op U) (eu.inv z) := by
+    intro z
+    obtain ⟨i, zi, hzi⟩ := Types.jointly_surjective H (colimit.isColimit H) z
+    rw [← hzi]
+    have hcore := ConcreteCategory.congr_hom
+      (colimit.ι_desc
+        ((TopCat.Sheaf.forget (Type v) X ⋙
+          (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapCocone
+            (colimit.cocone F)) i) zi
+    have heu := ConcreteCategory.congr_hom
+      (IsColimit.comp_coconePointUniqueUpToIso_inv hU (colimit.isColimit H) i) zi
+    have hsheafleg := congrArg (fun q => q.app (op U))
+      (CategoryTheory.Sheaf.sheafifyCocone_ι_app_val E i)
+    have hsheafleg' := ConcreteCategory.congr_hom hsheafleg zi
+    have he := IsColimit.comp_coconePointUniqueUpToIso_hom
+      (colimit.isColimit F) hc i
+    have he' := congrArg (fun q =>
+      ((TopCat.Sheaf.forget (Type v) X).map q).app (op U)) he
+    have he'' := ConcreteCategory.congr_hom he' zi
+    have h1 :
+        (ConcreteCategory.hom (e.hom.app (op U)))
+            (directedColimitSectionsMap F U
+              ((ConcreteCategory.hom ((colimit.cocone H).ι.app i)) zi)) =
+          (ConcreteCategory.hom (e.hom.app (op U)))
+            ((ConcreteCategory.hom (((colimit.cocone F).ι.app i).1.app (op U))) zi) := by
+      exact congrArg (e.hom.app (op U)) hcore
+    have hmap := K.map_comp_apply
+      ((colimit.cocone F).ι.app i)
+      ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom zi
+    have h2 :
+        (ConcreteCategory.hom (e.hom.app (op U)))
+            ((ConcreteCategory.hom (((colimit.cocone F).ι.app i).1.app (op U))) zi) =
+          (ConcreteCategory.hom
+            (((TopCat.Sheaf.forget (Type v) X).map
+              ((colimit.cocone F).ι.app i ≫
+                ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)).app
+            (op U))) zi := by
+      change (K.map ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)
+          ((K.map ((colimit.cocone F).ι.app i)) zi) =
+        (K.map (((colimit.cocone F).ι.app i ≫
+          ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)) zi)
+      exact hmap.symm
+    have h3 :
+        (ConcreteCategory.hom
+            (((TopCat.Sheaf.forget (Type v) X).map
+              ((colimit.cocone F).ι.app i ≫
+                ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)).app
+              (op U))) zi =
+          (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi := by
+      exact he''
+    have h4 :
+        (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi =
+          (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom (cU.ι.app i)) zi) := by
+      rw [← ConcreteCategory.comp_apply]
+      change
+        (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi =
+          (ConcreteCategory.hom
+            ((E.ι.app i ≫ CategoryTheory.toSheafify J E.pt).app (op U))) zi
+      exact hsheafleg'
+    have h5 :
+        (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom (cU.ι.app i)) zi) =
+          (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom eu.inv)
+              ((ConcreteCategory.hom ((colimit.cocone H).ι.app i)) zi)) := by
+      exact congrArg ((CategoryTheory.toSheafify J P).app (op U)) heu.symm
+    exact h1.trans (h2.trans (h3.trans (h4.trans h5)))
+  intro x y hxy
+  have hxy' := congrArg (e.hom.app (op U)) hxy
+  rw [hfactor x, hfactor y] at hxy'
+  have hsep' : ∀ (V : Opens X) (S : J.Cover V)
+      (x y : P.obj (op V)),
+      (∀ I : S.Arrow, P.map I.f.op x = P.map I.f.op y) → x = y := by
+    intro V S x y h
+    apply (hsep S.1 S.2).ext
+    intro Y f hf
+    exact h ⟨Y, f, hf⟩
+  have hplus : ∀ (V : Opens X) (S : J.Cover V)
+      (x y : (J.plusObj P).obj (op V)),
+      (∀ I : S.Arrow, (J.plusObj P).map I.f.op x =
+        (J.plusObj P).map I.f.op y) → x = y := by
+    intro V S x y h
+    exact CategoryTheory.GrothendieckTopology.Plus.sep P S x y h
+  have hto1 := CategoryTheory.GrothendieckTopology.Plus.inj_of_sep
+    P hsep' U
+  have hto2 := CategoryTheory.GrothendieckTopology.Plus.inj_of_sep
+    (J.plusObj P) hplus U
+  have htoConcrete : Function.Injective ((J.toSheafify P).app (op U)) := by
+    dsimp [CategoryTheory.GrothendieckTopology.toSheafify]
+    intro a b hab
+    apply hto1
+    apply hto2
+    rw [CategoryTheory.GrothendieckTopology.plusMap_toPlus] at hab
+    change (ConcreteCategory.hom
+      ((J.toPlus P).app (op U) ≫
+        (J.toPlus (J.plusObj P)).app (op U))) a =
+      (ConcreteCategory.hom
+        ((J.toPlus P).app (op U) ≫
+          (J.toPlus (J.plusObj P)).app (op U))) b at hab
+    simpa only [CategoryTheory.types_comp_apply] using hab
+  have hto : Function.Injective ((CategoryTheory.toSheafify J P).app (op U)) := by
+    let M := CategoryTheory.sheafifyLift J (J.toSheafify P)
+      (CategoryTheory.GrothendieckTopology.sheafify_isSheaf J P)
+    have hM := CategoryTheory.toSheafify_sheafifyLift
+      (J := J) (P := P) (Q := J.sheafify P) (J.toSheafify P)
+      (CategoryTheory.GrothendieckTopology.sheafify_isSheaf J P)
+    intro a b hab
+    apply htoConcrete
+    have habM := congrArg (ConcreteCategory.hom (M.app (op U))) hab
+    have hM' := congrArg (fun q => q.app (op U)) hM
+    have hMa := ConcreteCategory.congr_hom hM' a
+    have hMb := ConcreteCategory.congr_hom hM' b
+    calc
+      (ConcreteCategory.hom ((J.toSheafify P).app (op U))) a =
+          (ConcreteCategory.hom (M.app (op U)))
+            ((ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U))) a) := by
+        simpa only [M, NatTrans.comp_app, CategoryTheory.types_comp_apply] using hMa.symm
+      _ = (ConcreteCategory.hom (M.app (op U)))
+          ((ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U))) b) := habM
+      _ = (ConcreteCategory.hom ((J.toSheafify P).app (op U))) b := by
+        simpa only [M, NatTrans.comp_app, CategoryTheory.types_comp_apply] using hMb
+  have hinv := hto hxy'
+  have hxy'' := congrArg (ConcreteCategory.hom eu.hom) hinv
+  simpa using hxy''
 
 /-- Injectivity over a quasi-compact open. -/
 theorem directedColimitSectionsMap_injective_of_quasiCompact
@@ -745,7 +964,307 @@ theorem directedColimitSectionsMap_injective_of_quasiCompact
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))]
     (hU : QuasiCompactOpen U) :
     Function.Injective (directedColimitSectionsMap F U) := by
-  sorry
+  classical
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
+  let P := colimit G
+  let J := Opens.grothendieckTopology X
+  let E := colimit.cocone G
+  let hE := colimit.isColimit G
+  let hc := CategoryTheory.Sheaf.isColimitSheafifyCocone E hE
+  let hcC := CategoryTheory.Sheaf.sheafifyCocone E
+  let e := (TopCat.Sheaf.forget (Type v) X).mapIso
+    (IsColimit.coconePointUniqueUpToIso (colimit.isColimit F) hc)
+  let H := G ⋙ (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+  let cU := ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapCocone E
+  let hU' := isColimitOfPreserves
+    ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) hE
+  let eu := IsColimit.coconePointUniqueUpToIso hU' (colimit.isColimit H)
+  have hfactor : ∀ z : colimit H,
+      e.hom.app (op U) (directedColimitSectionsMap F U z) =
+        (CategoryTheory.toSheafify J P).app (op U) (eu.inv z) := by
+    intro z
+    obtain ⟨i, zi, hzi⟩ := Types.jointly_surjective H (colimit.isColimit H) z
+    rw [← hzi]
+    have hcore := ConcreteCategory.congr_hom
+      (colimit.ι_desc
+        ((TopCat.Sheaf.forget (Type v) X ⋙
+          (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapCocone
+            (colimit.cocone F)) i) zi
+    have heu := ConcreteCategory.congr_hom
+      (IsColimit.comp_coconePointUniqueUpToIso_inv hU'
+        (colimit.isColimit H) i) zi
+    have hsheafleg := congrArg (fun q => q.app (op U))
+      (CategoryTheory.Sheaf.sheafifyCocone_ι_app_val E i)
+    have hsheafleg' := ConcreteCategory.congr_hom hsheafleg zi
+    have he := IsColimit.comp_coconePointUniqueUpToIso_hom
+      (colimit.isColimit F) hc i
+    have he' := congrArg (fun q =>
+      ((TopCat.Sheaf.forget (Type v) X).map q).app (op U)) he
+    have he'' := ConcreteCategory.congr_hom he' zi
+    have h1 :
+        (ConcreteCategory.hom (e.hom.app (op U)))
+            (directedColimitSectionsMap F U
+              ((ConcreteCategory.hom ((colimit.cocone H).ι.app i)) zi)) =
+          (ConcreteCategory.hom (e.hom.app (op U)))
+            ((ConcreteCategory.hom (((colimit.cocone F).ι.app i).1.app (op U))) zi) := by
+      exact congrArg (e.hom.app (op U)) hcore
+    have hmap := (TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).map_comp_apply
+      ((colimit.cocone F).ι.app i)
+      ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom zi
+    have h2 :
+        (ConcreteCategory.hom (e.hom.app (op U)))
+            ((ConcreteCategory.hom (((colimit.cocone F).ι.app i).1.app (op U))) zi) =
+          (ConcreteCategory.hom
+            (((TopCat.Sheaf.forget (Type v) X).map
+              ((colimit.cocone F).ι.app i ≫
+                ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)).app
+            (op U))) zi := by
+      change ((TopCat.Sheaf.forget (Type v) X ⋙
+          (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).map
+            ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)
+          (((TopCat.Sheaf.forget (Type v) X ⋙
+            (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).map
+              ((colimit.cocone F).ι.app i)) zi) = _
+      exact hmap.symm
+    have h3 :
+        (ConcreteCategory.hom
+            (((TopCat.Sheaf.forget (Type v) X).map
+              ((colimit.cocone F).ι.app i ≫
+                ((colimit.isColimit F).coconePointUniqueUpToIso hc).hom)).app
+              (op U))) zi =
+          (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi := by
+      exact he''
+    have h4 :
+        (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi =
+          (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom (cU.ι.app i)) zi) := by
+      rw [← ConcreteCategory.comp_apply]
+      change
+        (ConcreteCategory.hom ((hcC.ι.app i).hom.app (op U))) zi =
+          (ConcreteCategory.hom
+            ((E.ι.app i ≫ CategoryTheory.toSheafify J E.pt).app (op U))) zi
+      exact hsheafleg'
+    have h5 :
+        (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom (cU.ι.app i)) zi) =
+          (ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+            ((ConcreteCategory.hom eu.inv)
+              ((ConcreteCategory.hom ((colimit.cocone H).ι.app i)) zi)) := by
+      exact congrArg ((CategoryTheory.toSheafify J P).app (op U)) heu.symm
+    exact h1.trans (h2.trans (h3.trans (h4.trans h5)))
+  have hcompact : ∀ (S : J.Cover U),
+      ∃ T : Finset S.Arrow, ∀ x : X, x ∈ (U : Set X) →
+        ∃ I ∈ T, x ∈ (I.Y : Set X) := by
+    intro S
+    have hcover : (U : Set X) ⊆ ⋃ I : S.Arrow, (I.Y : Set X) := by
+      intro x hx
+      rcases S.2 x hx with ⟨V, f, hf, hxV⟩
+      exact Set.mem_iUnion.2 ⟨⟨V, f, hf⟩, hxV⟩
+    obtain ⟨T, hT⟩ := (isCompact_iff_finite_subcover.mp hU)
+      (fun I : S.Arrow => (I.Y : Set X))
+      (fun I : S.Arrow => I.Y.2) hcover
+    refine ⟨T, ?_⟩
+    intro x hx
+    rcases Set.mem_iUnion.mp (hT hx) with ⟨I, hI⟩
+    rcases Set.mem_iUnion.mp hI with ⟨hIT, hxI⟩
+    exact ⟨I, hIT, hxI⟩
+  have hbound : ∀ {S : J.Cover U} (k : I) (T : Finset S.Arrow)
+      (q : S.Arrow → I), ∃ l : I, k ≤ l ∧ ∀ a ∈ T, q a ≤ l := by
+    intro S k T
+    induction T using Finset.induction_on with
+    | empty =>
+        intro q
+        exact ⟨k, le_rfl, by simp⟩
+    | @insert a T ha ih =>
+        intro q
+        obtain ⟨k', hk, hkT⟩ := ih q
+        obtain ⟨l, hal, hkl⟩ := exists_ge_ge (q a) k'
+        refine ⟨l, hk.trans hkl, ?_⟩
+        intro b hb
+        rcases Finset.mem_insert.mp hb with rfl | hb
+        · exact hal
+        · exact (hkT b hb).trans hkl
+  intro x y hxy
+  have hxy' := congrArg (e.hom.app (op U)) hxy
+  rw [hfactor x, hfactor y] at hxy'
+  have hplus : Function.Injective ((J.toPlus (J.plusObj P)).app (op U)) :=
+    CategoryTheory.GrothendieckTopology.Plus.inj_of_sep
+      (J.plusObj P)
+      (fun V S a b h => CategoryTheory.GrothendieckTopology.Plus.sep P S a b h)
+      U
+  have hab : (J.toPlus P).app (op U) (eu.inv x) =
+      (J.toPlus P).app (op U) (eu.inv y) := by
+    let M := CategoryTheory.sheafifyLift J (J.toSheafify P)
+      (CategoryTheory.GrothendieckTopology.sheafify_isSheaf J P)
+    have hM := CategoryTheory.toSheafify_sheafifyLift
+      (J := J) (P := P) (Q := J.sheafify P) (J.toSheafify P)
+      (CategoryTheory.GrothendieckTopology.sheafify_isSheaf J P)
+    have hxyM := congrArg (ConcreteCategory.hom (M.app (op U))) hxy'
+    have hM' := congrArg (fun q => q.app (op U)) hM
+    have hMa := ConcreteCategory.congr_hom hM' (eu.inv x)
+    have hMb := ConcreteCategory.congr_hom hM' (eu.inv y)
+    have hxyConcrete :
+        (ConcreteCategory.hom ((J.toSheafify P).app (op U))) (eu.inv x) =
+          (ConcreteCategory.hom ((J.toSheafify P).app (op U))) (eu.inv y) := by
+      calc
+        (ConcreteCategory.hom ((J.toSheafify P).app (op U))) (eu.inv x) =
+            (ConcreteCategory.hom (M.app (op U)))
+              ((ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+                (eu.inv x)) := by
+          simpa only [M, NatTrans.comp_app, CategoryTheory.types_comp_apply] using hMa.symm
+        _ = (ConcreteCategory.hom (M.app (op U)))
+              ((ConcreteCategory.hom ((CategoryTheory.toSheafify J P).app (op U)))
+                (eu.inv y)) := hxyM
+        _ = (ConcreteCategory.hom ((J.toSheafify P).app (op U))) (eu.inv y) := by
+          simpa only [M, NatTrans.comp_app, CategoryTheory.types_comp_apply] using hMb
+    have hxy'' :
+        (ConcreteCategory.hom ((J.toPlus (J.plusObj P)).app (op U)))
+            ((ConcreteCategory.hom ((J.toPlus P).app (op U))) (eu.inv x)) =
+          (ConcreteCategory.hom ((J.toPlus (J.plusObj P)).app (op U)))
+            ((ConcreteCategory.hom ((J.toPlus P).app (op U))) (eu.inv y)) := by
+      dsimp [CategoryTheory.GrothendieckTopology.toSheafify] at hxyConcrete
+      rw [CategoryTheory.GrothendieckTopology.plusMap_toPlus] at hxyConcrete
+      change (ConcreteCategory.hom
+        ((J.toPlus P).app (op U) ≫
+          (J.toPlus (J.plusObj P)).app (op U))) (eu.inv x) =
+        (ConcreteCategory.hom
+          ((J.toPlus P).app (op U) ≫
+            (J.toPlus (J.plusObj P)).app (op U))) (eu.inv y) at hxyConcrete
+      simpa only [CategoryTheory.types_comp_apply] using hxyConcrete
+    simpa only using hplus hxy''
+  simp only [CategoryTheory.GrothendieckTopology.Plus.toPlus_eq_mk] at hab
+  rw [CategoryTheory.GrothendieckTopology.Plus.eq_mk_iff_exists] at hab
+  obtain ⟨S, hSx, hSy, hS⟩ := hab
+  obtain ⟨T, hT⟩ := hcompact S
+  obtain ⟨i₁, a, ha⟩ := Types.jointly_surjective H hU' (eu.inv x)
+  obtain ⟨i₂, b, hb⟩ := Types.jointly_surjective H hU' (eu.inv y)
+  obtain ⟨k, hik, hjk⟩ := exists_ge_ge i₁ i₂
+  let g₁ : i₁ ⟶ k := homOfLE hik
+  let g₂ : i₂ ⟶ k := homOfLE hjk
+  let a' := (F.map g₁).1.app (op U) a
+  let b' := (F.map g₂).1.app (op U) b
+  have ha' : eu.inv x = (colimit.ι G k).app (op U) a' := by
+    calc
+      eu.inv x = (colimit.ι G i₁).app (op U) a := ha.symm
+      _ = (colimit.ι G k).app (op U) a' := by
+        exact ConcreteCategory.congr_hom ((cU.ι.naturality g₁).symm) a
+  have hb' : eu.inv y = (colimit.ι G k).app (op U) b' := by
+    calc
+      eu.inv y = (colimit.ι G i₂).app (op U) b := hb.symm
+      _ = (colimit.ι G k).app (op U) b' := by
+        exact ConcreteCategory.congr_hom ((cU.ι.naturality g₂).symm) b
+  have hqexists : ∀ A : S.Arrow, ∃ j : I, ∃ g : k ⟶ j, ((F.map g).1.app (op A.Y))
+        ((F.obj k).1.map A.f.op a') =
+        ((F.map g).1.app (op A.Y))
+          ((F.obj k).1.map A.f.op b') := by
+    intro A
+    let hcolim := isColimitOfPreserves
+      ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op A.Y)) (colimit.isColimit G)
+    exact (Types.FilteredColimit.isColimit_eq_iff' hcolim _ _).mp (by
+        have hI := congrArg (fun z => z A) hS
+        change P.map A.f.op (eu.inv x) = P.map A.f.op (eu.inv y) at hI
+        have hmap (z : (F.obj k).1.obj (op U)) :
+            P.map A.f.op ((colimit.ι G k).app (op U) z) =
+              (colimit.ι G k).app (op A.Y)
+                ((F.obj k).1.map A.f.op z) := by
+          exact ConcreteCategory.congr_hom ((colimit.ι G k).naturality A.f.op).symm z
+        calc
+          (colimit.ι G k).app (op A.Y)
+              ((F.obj k).1.map A.f.op a') =
+              P.map A.f.op ((colimit.ι G k).app (op U) a') := hmap a' |>.symm
+          _ = P.map A.f.op (eu.inv x) := congrArg (P.map A.f.op) ha'.symm
+          _ = P.map A.f.op (eu.inv y) := hI
+          _ = P.map A.f.op ((colimit.ι G k).app (op U) b') :=
+            congrArg (P.map A.f.op) hb'
+          _ = (colimit.ι G k).app (op A.Y)
+              ((F.obj k).1.map A.f.op b') := hmap b')
+  choose q gq hq using hqexists
+  obtain ⟨l, hkl, hl⟩ := hbound k T q
+  let al := (F.map (homOfLE hkl)).1.app (op U) a'
+  let bl := (F.map (homOfLE hkl)).1.app (op U) b'
+  have hlocal : ∀ I : S.Arrow, I ∈ T →
+      ((F.obj l).1.map I.f.op) al = ((F.obj l).1.map I.f.op) bl := by
+    intro I hIT
+    let hqI := homOfLE (hl I hIT)
+    have hcomp : gq I ≫ hqI = homOfLE hkl := by
+      apply Subsingleton.elim
+    have hnat (g : k ⟶ l) (z : (F.obj k).1.obj (op U)) :
+        (F.obj l).1.map I.f.op ((F.map g).1.app (op U) z) =
+          (F.map g).1.app (op I.Y) ((F.obj k).1.map I.f.op z) := by
+      have hn := ConcreteCategory.congr_hom
+        ((F.map g).1.naturality I.f.op) z
+      simpa only [CategoryTheory.types_comp_apply] using hn.symm
+    have hcomp_apply (z : (F.obj k).1.obj (op I.Y)) :
+        (F.map hqI).1.app (op I.Y) ((F.map (gq I)).1.app (op I.Y) z) =
+          (F.map (gq I ≫ hqI)).1.app (op I.Y) z := by
+      have hh := congrArg (fun q => q.1.app (op I.Y))
+        (F.map_comp (gq I) hqI)
+      have hh' := congrArg (fun q => q z) hh
+      simpa only [TopCat.Sheaf.comp_app, CategoryTheory.types_comp_apply] using hh'.symm
+    calc
+      (F.obj l).1.map I.f.op al =
+          (F.map (homOfLE hkl)).1.app (op I.Y)
+            ((F.obj k).1.map I.f.op a') := hnat (homOfLE hkl) a'
+      _ = (F.map (gq I ≫ hqI)).1.app (op I.Y)
+            ((F.obj k).1.map I.f.op a') := by rw [hcomp]
+      _ = (F.map hqI).1.app (op I.Y)
+            ((F.map (gq I)).1.app (op I.Y)
+              ((F.obj k).1.map I.f.op a')) := hcomp_apply _ |>.symm
+      _ = (F.map hqI).1.app (op I.Y)
+            ((F.map (gq I)).1.app (op I.Y)
+              ((F.obj k).1.map I.f.op b')) := congrArg _ (hq I)
+      _ = (F.map (gq I ≫ hqI)).1.app (op I.Y)
+            ((F.obj k).1.map I.f.op b') := hcomp_apply _
+      _ = (F.map (homOfLE hkl)).1.app (op I.Y)
+            ((F.obj k).1.map I.f.op b') := by rw [hcomp]
+      _ = (F.obj l).1.map I.f.op bl := (hnat (homOfLE hkl) b').symm
+  let R : Presieve U := TopCat.Presheaf.presieveOfCoveringAux
+    (fun I : T => I.1.Y) U
+  have hR : R ∈ (Opens.grothendieckTopology X).toPretopology U := by
+    rw [Opens.toPretopology_grothendieckTopology]
+    intro x hx
+    obtain ⟨I, hIT, hxI⟩ := hT x hx
+    exact ⟨I.Y, I.f, ⟨⟨I, hIT⟩, rfl⟩, hxI⟩
+  have hmem : Sieve.generate R ∈ J U := hR
+  let S' : J.Cover U := ⟨Sieve.generate R, hmem⟩
+  have hQ : ∀ {Y : Opens X} (f : Y ⟶ U) (hf : S' f),
+      (F.obj l).1.map f.op al = (F.obj l).1.map f.op bl := by
+    intro Y f hf
+    have hle : Sieve.generate R ≤
+        ⟨fun Z g => (F.obj l).1.map g.op al = (F.obj l).1.map g.op bl,
+          by
+            intro Z W g h hg
+            have hh := congrArg ((F.obj l).1.map hg.op) h
+            change (F.obj l).1.map (g.op ≫ hg.op) al =
+              (F.obj l).1.map (g.op ≫ hg.op) bl
+            rw [(F.obj l).1.map_comp]
+            exact hh⟩ := by
+      rw [Sieve.generate_le_iff]
+      intro Z g hg
+      obtain ⟨I, hI⟩ := hg
+      subst hI
+      simpa only [Subsingleton.elim g I.1.f] using hlocal I.1 I.2
+    change Sieve.generate R f at hf
+    exact hle f hf
+  have hfinal : al = bl := by
+    have hs : Presieve.IsSheaf J (F.obj l).1 :=
+      (isSheaf_iff_isSheaf_of_type _ _).mp (F.obj l).2
+    apply (hs S'.1 S'.2).isSeparatedFor.ext
+    intro Y f hf
+    exact hQ f hf
+  have hp : (ConcreteCategory.hom eu.inv) x =
+      (ConcreteCategory.hom eu.inv) y := by
+    calc
+      (ConcreteCategory.hom eu.inv) x = (colimit.ι G k).app (op U) a' := ha'
+      _ = (colimit.ι G l).app (op U) al := by
+        exact ConcreteCategory.congr_hom ((cU.ι.naturality (homOfLE hkl)).symm) a'
+      _ = (colimit.ι G l).app (op U) bl := congrArg _ hfinal
+      _ = (colimit.ι G k).app (op U) b' := by
+        exact ConcreteCategory.congr_hom ((cU.ι.naturality (homOfLE hkl)).symm) b' |>.symm
+      _ = (ConcreteCategory.hom eu.inv) y := hb'.symm
+  have hp' := congrArg (ConcreteCategory.hom eu.hom) hp
+  simpa using hp'
 
 /-- Bijectivity over a quasi-compact open when transitions are injective. -/
 theorem directedColimitSectionsMap_bijective_of_quasiCompact_of_injective

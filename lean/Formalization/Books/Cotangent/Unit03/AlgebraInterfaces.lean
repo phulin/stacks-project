@@ -216,9 +216,28 @@ noncomputable def variantFreeAdjunction (A B : Type u) [CommRing A] [CommRing B]
   Adjunction.mkOfHomEquiv
     { homEquiv := fun Y X => variantFreeHomEquiv A B X Y
       homEquiv_naturality_left_symm := by
-        sorry
+        intro X' X Y f g
+        apply CostructuredArrow.hom_ext
+        change (polynomialFreeHomEquiv A X'.left Y.left).symm
+            ((f ≫ g).left) =
+          (polynomialFree A).map f.left ≫
+            (polynomialFreeHomEquiv A X.left Y.left).symm g.left
+        apply CommAlgCat.hom_ext
+        apply MvPolynomial.algHom_ext
+        intro e
+        let g' : X.left ⟶ (polynomialForget A).obj Y.left := g.left
+        change MvPolynomial.aeval (R := A)
+            (fun x : X'.left => g' (f.left x)) (MvPolynomial.X e) =
+          MvPolynomial.aeval (R := A) (fun x : X.left => g' x)
+            (MvPolynomial.rename (R := A) f.left (MvPolynomial.X e))
+        simp
       homEquiv_naturality_right := by
-        sorry }
+        intro X Y Y' f g
+        apply CostructuredArrow.hom_ext
+        change polynomialFreeHomEquiv A X.left Y'.left (f ≫ g).left =
+            polynomialFreeHomEquiv A X.left Y.left f.left ≫
+              (polynomialForget A).map g.left
+        exact (polynomialFreeAdjunction A).homEquiv_naturality_right f.left g.left }
 
 /-- A proposition recording the arrow-category adjunction. -/
 def VariantFreeForgetfulAdjunction (A B : Type u) [CommRing A] [CommRing B]

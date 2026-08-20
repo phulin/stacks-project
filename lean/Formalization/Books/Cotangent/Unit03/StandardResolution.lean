@@ -177,7 +177,17 @@ noncomputable def standardResolutionMap : ∀ {m n : ℕ},
 theorem standardResolutionMap_id {n : ℕ} :
     standardResolutionMap (A := A) (B := B) (𝟙 (SimplexCategory.mk n)) =
       AlgHom.id A _ := by
-  sorry
+  classical
+  have hs : Function.Surjective
+      (SimplexCategory.Hom.toOrderHom (𝟙 (SimplexCategory.mk n))) := by
+    intro x
+    exact ⟨x, rfl⟩
+  have hi : Function.Injective
+      (SimplexCategory.Hom.toOrderHom (𝟙 (SimplexCategory.mk n))) := by
+    intro x y h
+    exact h
+  unfold standardResolutionMap
+  rw [dif_pos hs, dif_pos hi]
 
 theorem standardResolutionMap_comp {m n k : ℕ}
     (f : SimplexCategory.mk m ⟶ SimplexCategory.mk n)

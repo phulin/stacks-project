@@ -30,7 +30,17 @@ theorem exists_prime_over_maximalIdeal_of_finite_injective
     (hinj : Function.Injective (algebraMap A B)) :
     ∃ q : PrimeSpectrum B,
       q.asIdeal.comap (algebraMap A B) = IsLocalRing.maximalIdeal A := by
-  sorry
+  let faithful : FaithfulSMul A B :=
+    { eq_of_smul_eq_smul := by
+        intro a₁ a₂ h
+        apply hinj
+        simpa [Algebra.smul_def] using h (1 : B) }
+  obtain ⟨Q, hQmax, hQover⟩ :=
+    @Ideal.exists_maximal_ideal_liesOver_of_isIntegral _ _ _ _ _ _ faithful
+      (IsLocalRing.maximalIdeal A) inferInstance
+  refine ⟨⟨Q, hQmax.isPrime⟩, ?_⟩
+  rcases hQover with ⟨hQover⟩
+  simpa using hQover.symm
 
 end
 

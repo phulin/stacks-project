@@ -1286,8 +1286,8 @@ private theorem triangle_morphism_property_of_first_two
     [CompatibleWithTriangulation S]
     {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
     (φ : A ⟶ B) (hφ₁ : S φ.hom₁) (hφ₂ : S φ.hom₂) : S φ.hom₃ := by
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : RightMultiplicativeSystem S := hS.1.2
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : RightMultiplicativeSystem S := hS.1.2
   have hφ₃ : IsIso ((S.Q.mapTriangle.map φ).hom₃) := by
     apply isIso₃_of_isIso₁₂ (S.Q.mapTriangle.map φ)
       (S.Q.map_distinguished A hA) (S.Q.map_distinguished B hB)
@@ -1304,8 +1304,8 @@ private theorem triangle_morphism_property_of_last_two
     [CompatibleWithTriangulation S]
     {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
     (φ : A ⟶ B) (hφ₂ : S φ.hom₂) (hφ₃ : S φ.hom₃) : S φ.hom₁ := by
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : RightMultiplicativeSystem S := hS.1.2
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : RightMultiplicativeSystem S := hS.1.2
   have hφ₁ : IsIso ((S.Q.mapTriangle.map φ).hom₁) := by
     apply isIso₁_of_isIso₂₃ (S.Q.mapTriangle.map φ)
       (S.Q.map_distinguished A hA) (S.Q.map_distinguished B hB)
@@ -1320,15 +1320,15 @@ private theorem triangle_morphism_property_of_last_two
 private theorem triangle_morphism_zero_refinement
     {S : MorphismProperty C} (hS : SaturatedMultiplicativeSystem S)
     [CompatibleWithTriangulation S]
-    {A B : Triangle C} (hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
+    {A B : Triangle C} (_hA : A ∈ distTriang C) (hB : B ∈ distTriang C)
     (φ : A ⟶ B)
     (hφ₁ : S.Q.map φ.hom₁ = S.Q.map (0 : A.obj₁ ⟶ B.obj₁))
     (hφ₂ : S.Q.map φ.hom₂ = S.Q.map (0 : A.obj₂ ⟶ B.obj₂))
     (hφ₃ : S.Q.map φ.hom₃ = S.Q.map (0 : A.obj₃ ⟶ B.obj₃)) :
-    ∃ (D : Triangle C) (hD : D ∈ distTriang C) (ψ : B ⟶ D),
+    ∃ (D : Triangle C) (_hD : D ∈ distTriang C) (ψ : B ⟶ D),
       triangleMorphismProperty S ψ ∧ φ ≫ ψ = 0 := by
-  letI : LeftMultiplicativeSystem S := hS.1.1
-  letI : RightMultiplicativeSystem S := hS.1.2
+  let : LeftMultiplicativeSystem S := hS.1.1
+  let : RightMultiplicativeSystem S := hS.1.2
   obtain ⟨X₁, s₁, hs₁, hs₁zero⟩ :=
     (MorphismProperty.map_eq_iff_postcomp S.Q S φ.hom₁
       (0 : A.obj₁ ⟶ B.obj₁)).1 hφ₁

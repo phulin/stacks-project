@@ -243,11 +243,11 @@ theorem hypersurface_jacobian_smooth
         apply P.cotangentSpaceBasis.repr.injective
         ext i
         fin_cases i
-        · simp [t, hdm_repr, a]
+        · simp [t, hdm_repr]
           linear_combination
             -(P.cotangentSpaceBasis.repr x 0) * hc' -
               (c 1) * hqx
-        · simp [t, hdm_repr, a]
+        · simp [t, hdm_repr]
           linear_combination
             -(P.cotangentSpaceBasis.repr x 1) * hc' +
               (c 0) * hqx
@@ -280,7 +280,7 @@ theorem hypersurface_jacobian_smooth
           P.toExtension).mpr ⟨l, hl⟩
       exact { formallySmooth := hformal, finitePresentation :=
         Algebra.FinitePresentation.quotient (Submodule.fg_span_singleton f) }
-  letI : Algebra.Smooth R (Hypersurface R f) := hsmooth
+  let : Algebra.Smooth R (Hypersurface R f) := hsmooth
   have hfree :
       Module.freeLocus (Hypersurface R f)
           (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
@@ -292,10 +292,10 @@ theorem hypersurface_jacobian_smooth
             (Hypersurface R f)) q = 1 := by
     intro q
     by_cases hnt : Nontrivial (Hypersurface R f)
-    · letI : Nontrivial (Hypersurface R f) := hnt
+    · let : Nontrivial (Hypersurface R f) := hnt
       rw [Module.rankAtStalk_eq_of_equiv eΩ, Module.rankAtStalk_self]
       rfl
-    · haveI : Subsingleton (Hypersurface R f) := not_nontrivial_iff_subsingleton.mp hnt
+    · have : Subsingleton (Hypersurface R f) := not_nontrivial_iff_subsingleton.mp hnt
       exfalso
       apply q.2.ne_top
       exact Subsingleton.elim _ _
@@ -315,13 +315,13 @@ theorem inseparable_hypersurface_warning
       Formalization.Books.Algebra.Unit136.IsRelativeGlobalCompleteIntersection
         (algebraMap R (InseparableHypersurface R p)) ∧
       ¬ Algebra.Smooth R (InseparableHypersurface R p) := by
-  letI : Fact p.Prime := ⟨hp⟩
+  let : Fact p.Prime := ⟨hp⟩
   let g : MvPolynomial (Fin 2) R :=
     MvPolynomial.X (0 : Fin 2) ^ p + MvPolynomial.X (1 : Fin 2) ^ p
   have hpderiv (i : Fin 2) : MvPolynomial.pderiv i g = 0 := by
     dsimp [g]
     rw [map_add, MvPolynomial.pderiv_pow, MvPolynomial.pderiv_pow]
-    simp [CharP.cast_eq_zero R p]
+    simp
   let P : Formalization.Books.Algebra.Unit134.Presentation R
       (InseparableHypersurface R p) (Fin 2) :=
     hypersurfacePresentation (R := R)
@@ -370,12 +370,12 @@ theorem inseparable_hypersurface_warning
         P.toExtension.CotangentSpace :=
     (LinearEquiv.ofBijective P.toExtension.toKaehler
       ⟨hto_inj, P.toExtension.toKaehler_surjective⟩).symm
-  letI : Module.Projective (Hypersurface R g) P.toExtension.CotangentSpace :=
+  let : Module.Projective (Hypersurface R g) P.toExtension.CotangentSpace :=
     Module.Projective.of_basis P.cotangentSpaceBasis
-  letI : Module.Projective (Hypersurface R g)
+  let : Module.Projective (Hypersurface R g)
       (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
         (Hypersurface R g)) := Module.Projective.of_equiv' eΩ.symm
-  letI : Module.FinitePresentation (Hypersurface R g)
+  let : Module.FinitePresentation (Hypersurface R g)
       (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
         (Hypersurface R g)) :=
     Module.finitePresentation_of_projective (Hypersurface R g) _
@@ -390,12 +390,12 @@ theorem inseparable_hypersurface_warning
             (Hypersurface R g)) q = 2 := by
     intro q
     by_cases hnt : Nontrivial (Hypersurface R g)
-    · letI : Nontrivial (Hypersurface R g) := hnt
+    · let : Nontrivial (Hypersurface R g) := hnt
       rw [Module.rankAtStalk_eq_of_equiv eΩ,
         Module.rankAtStalk_eq_finrank_of_free,
         Module.finrank_eq_card_basis P.cotangentSpaceBasis]
       simp
-    · haveI : Subsingleton (Hypersurface R g) := not_nontrivial_iff_subsingleton.mp hnt
+    · have : Subsingleton (Hypersurface R g) := not_nontrivial_iff_subsingleton.mp hnt
       exfalso
       apply q.2.ne_top
       exact Subsingleton.elim _ _
@@ -408,14 +408,14 @@ theorem inseparable_hypersurface_warning
         Finsupp.single (0 : Fin 2) p := by
       intro h
       have h' := congrArg (fun z => z (1 : Fin 2)) h
-      simpa [Finsupp.single_apply, hp.ne_zero] using h'
+      simp [Finsupp.single_apply, hp.ne_zero] at h'
     have hc' : (1 : R) = 0 := by
-      simpa [g, hp.ne_zero, MvPolynomial.coeff_X_pow, hne] using hc
+      simp [g, hp.ne_zero, MvPolynomial.coeff_X_pow, hne] at hc
     exact one_ne_zero hc'
   let evalX : MvPolynomial (Fin 2) R →ₐ[R] Polynomial R :=
     MvPolynomial.aeval (fun i => Fin.cases Polynomial.X (fun _ => 0) i)
   have hevalg : evalX g = Polynomial.X ^ p := by
-    simp [evalX, g, hp.ne_zero]
+    simp [evalX, g]
     have h1 : (1 : Fin 2) = Fin.succ (0 : Fin 1) := by decide
     rw [h1, Fin.cases_succ]
     simp [hp.ne_zero]
@@ -429,7 +429,7 @@ theorem inseparable_hypersurface_warning
       apply (Polynomial.isRegular_X_pow (R := R) p).1
       simpa [hevalg, map_mul, pow_two, mul_assoc, mul_comm, mul_left_comm] using hbe
     have hzero := congrArg (fun z : Polynomial R => z.eval 0) hcancel
-    have hzero' : (0 : R) = 1 := by simpa [hp.ne_zero] using hzero
+    have hzero' : (0 : R) = 1 := by simp [hp.ne_zero] at hzero
     exact zero_ne_one hzero'
   have hm0 : m ≠ 0 := by
     intro hm
@@ -438,7 +438,7 @@ theorem inseparable_hypersurface_warning
     simpa [m] using hm
   have hns : ¬ Algebra.Smooth R (Hypersurface R g) := by
     intro hs
-    letI : Algebra.Smooth R (Hypersurface R g) := hs
+    let : Algebra.Smooth R (Hypersurface R g) := hs
     let _ : Algebra.FormallySmooth R P.toExtension.Ring :=
       Algebra.instFormallySmoothMvPolynomial (σ := Fin 2)
     obtain ⟨l, hl⟩ :=
@@ -456,7 +456,7 @@ theorem inseparable_hypersurface_warning
   refine ⟨⟨hfree, hrank⟩, ?_, hns⟩
   let alg : Algebra R (InseparableHypersurface R p) :=
     (algebraMap R (InseparableHypersurface R p)).toAlgebra
-  letI : Algebra R (InseparableHypersurface R p) := alg
+  let : Algebra R (InseparableHypersurface R p) := alg
   have halg : alg = Ideal.Quotient.algebra R := by
     apply Algebra.algebra_ext
     intro r
@@ -479,9 +479,7 @@ theorem inseparable_hypersurface_warning
     rw [Algebra.Generators.ker_ofAlgHom]
     change RingHom.ker φ.toRingHom = _
     rw [hφ_eq]
-    simpa [g] using
-      (Ideal.mk_ker (I := Ideal.span
-        ({g} : Set (MvPolynomial (Fin 2) R))))
+    simp [g]
   let fs : Fin 1 → P'.Ring := fun _ => g
   refine ⟨2, 1, P', fs, ?_, ?_⟩
   · dsimp [Formalization.Books.Algebra.Unit136.IsPolynomialQuotientPresentation, fs]
@@ -493,7 +491,7 @@ theorem inseparable_hypersurface_warning
     let K := q.asIdeal.ResidueField
     let T := MvPolynomial (Fin 2) R
     let I : Ideal T := Ideal.span ({g} : Set T)
-    letI : Algebra R (T ⧸ I) := Ideal.Quotient.algebra R
+    let : Algebra R (T ⧸ I) := Ideal.Quotient.algebra R
     let e1 : K ⊗[R] (T ⧸ I) ≃ₐ[K]
         (K ⊗[R] T) ⧸ I.map
           (Algebra.TensorProduct.includeRight (A := K) (R := R)) :=
@@ -527,12 +525,12 @@ theorem inseparable_hypersurface_warning
           Finsupp.single (0 : Fin 2) p := by
         intro h
         have h' := congrArg (fun z => z (1 : Fin 2)) h
-        simpa [Finsupp.single_apply, hp.ne_zero] using h'
+        simp [Finsupp.single_apply, hp.ne_zero] at h'
       have hcoeff : MvPolynomial.coeff (Finsupp.single (0 : Fin 2) p) r = 1 := by
         rw [hr_map]
-        simp [g, MvPolynomial.coeff_X_pow, hp.ne_zero, hne]
+        simp [g, MvPolynomial.coeff_X_pow, hne]
       rw [hcoeff] at hc
-      have hc' : (1 : K) = 0 := by simpa using hc
+      have hc' : (1 : K) = 0 := by simp at hc
       exact one_ne_zero hc'
     have hrreg : r ∈ nonZeroDivisors (MvPolynomial (Fin 2) K) :=
       mem_nonZeroDivisors_of_ne_zero hr0
@@ -552,7 +550,7 @@ theorem inseparable_hypersurface_warning
     let evalY : MvPolynomial (Fin 2) K →ₐ[K] Polynomial K :=
       MvPolynomial.aeval (fun i =>
         Fin.cases Polynomial.X (fun _ => -Polynomial.X) i)
-    letI : CharP K p := by
+    let : CharP K p := by
       obtain ⟨q', hq'⟩ := CharP.exists K
       have hd : q' ∣ p :=
         CharP.dvd_of_ringHom (algebraMap R K) p q'
@@ -561,7 +559,7 @@ theorem inseparable_hypersurface_warning
       · exact hq'
     have hevalY_r : evalY r = 0 := by
       rw [hr_map]
-      simp [evalY, g, hp.ne_zero]
+      simp [evalY, g]
       have h1 : (1 : Fin 2) = Fin.succ (0 : Fin 1) := by decide
       rw [h1, Fin.cases_succ]
       rw [← add_pow_char]
@@ -577,7 +575,7 @@ theorem inseparable_hypersurface_warning
             simpa [AlgHom.comp_apply, AlgHom.id_apply] using
               congrArg₂ (· + ·) hp hq
         | monomial n a =>
-            simp [evalY, Fin.cases_succ]
+            simp [evalY]
             rw [← Polynomial.C_mul_X_pow_eq_monomial]
       intro z
       refine ⟨Polynomial.aeval (MvPolynomial.X (0 : Fin 2)) z, ?_⟩
@@ -762,7 +760,7 @@ theorem smooth_presentation_module_decomposition
     · change l (d c + s' ω) = c
       rw [map_add]
       have hldc : l (d c) = c := by
-        simpa only [← LinearMap.comp_apply, hld, LinearMap.id_apply]
+        simp only [← LinearMap.comp_apply, hld, LinearMap.id_apply]
       have hlsw : l (s' ω) = 0 := by
         have hw := congrArg (fun g => g ω) hls'
         simpa only [LinearMap.comp_apply, LinearMap.zero_apply] using hw
@@ -786,7 +784,7 @@ theorem smooth_localization_of_base
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (r : R) [Algebra (Localization.Away r) S]
     [IsScalarTower R (Localization.Away r) S]
-    (hunit : IsUnit (algebraMap R S r)) [Algebra.Smooth R S] :
+    (_hunit : IsUnit (algebraMap R S r)) [Algebra.Smooth R S] :
     Algebra.Smooth (Localization.Away r) S := by
   let _ : Algebra.FormallyEtale R (Localization.Away r) :=
     Algebra.FormallyEtale.of_isLocalization (Submonoid.powers r)

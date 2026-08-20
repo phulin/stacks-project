@@ -1,5 +1,9 @@
 import Mathlib.AlgebraicGeometry.ResidueField
 import Mathlib.CategoryTheory.Yoneda
+import Mathlib.RingTheory.Ideal.Maximal
+import Mathlib.RingTheory.Ideal.Quotient.Basic
+import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.RingTheory.TensorProduct.Nontrivial
 
 /-!
 # Schemes, Chapter 13: Points of schemes
@@ -84,7 +88,20 @@ theorem existsUnique_localRing_factorization
     ∃! x : X,
       ∃ φ : localRingAt X x ⟶ R,
         IsLocalHom φ.hom ∧ f = Spec.map φ ≫ canonicalFromSpecStalk X x := by
-  sorry
+  let e := morphismFromLocalRingEquiv R X
+  let y := e f
+  refine ⟨y.1, ?_, ?_⟩
+  · refine ⟨y.2.1, y.2.2, ?_⟩
+    exact (e.left_inv f).symm
+  · intro x' hx'
+    obtain ⟨φ, hφ, hfactor⟩ := hx'
+    have hx' : x' = f (IsLocalRing.closedPoint R) := by
+      rw [hfactor]
+      change x' = canonicalFromSpecStalk X x' (Spec.map φ (IsLocalRing.closedPoint R))
+      rw [Spec_closedPoint, canonicalFromSpecStalk_closedPoint]
+    have hy : y.1 = f (IsLocalRing.closedPoint R) := by
+      rfl
+    exact hx'.trans hy.symm
 
 /-- The local-ring square induced by a morphism of schemes. -/
 theorem localRing_stalk_square {X S : Scheme.{u}} (f : X ⟶ S) (x : X) :
@@ -139,7 +156,60 @@ structure FieldData where
 
 attribute [instance] FieldData.field
 
+private theorem specField_morphism_eq_map
+    {K L : Type u} [Field K] [Field L]
+    (f : Spec (CommRingCat.of L) ⟶ Spec (CommRingCat.of K)) :
+    ∃ φ : CommRingCat.of K ⟶ CommRingCat.of L, f = Spec.map φ := by
+  let φ := (Scheme.ΓSpecIso (CommRingCat.of K)).inv ≫ f.appTop ≫
+    (Scheme.ΓSpecIso (CommRingCat.of L)).hom
+  refine ⟨φ, ?_⟩
+  have hnat : f ≫ Spec.map (Scheme.ΓSpecIso (CommRingCat.of K)).hom =
+      Spec.map (Scheme.ΓSpecIso (CommRingCat.of L)).hom ≫ Spec.map f.appTop := by
+    simpa only [SpecMap_ΓSpecIso_hom] using Scheme.toSpecΓ_naturality f
+  dsimp [φ]
+  rw [Spec.map_comp, Spec.map_comp, ← hnat]
+  simp
+
 namespace FieldPoint
+
+private theorem common_field_refinement
+    {K L M : Type u} [Field K] [Field L] [Field M]
+    (f : CommRingCat.of K ⟶ CommRingCat.of L)
+    (g : CommRingCat.of K ⟶ CommRingCat.of M) :
+    ∃ Ω : FieldData,
+      ∃ a : Spec (CommRingCat.of Ω.carrier) ⟶ Spec (CommRingCat.of L),
+      ∃ b : Spec (CommRingCat.of Ω.carrier) ⟶ Spec (CommRingCat.of M),
+        a ≫ Spec.map f = b ≫ Spec.map g := by
+  letI : Algebra K L := f.hom.toAlgebra
+  letI : Algebra K M := g.hom.toAlgebra
+  let T := TensorProduct K L M
+  letI : Nontrivial T :=
+    Algebra.TensorProduct.nontrivial_of_algebraMap_injective_of_isDomain K L M
+      (by simpa only [RingHom.algebraMap_toAlgebra] using RingHom.injective f.hom)
+      (by simpa only [RingHom.algebraMap_toAlgebra] using RingHom.injective g.hom)
+  obtain ⟨J, hJ⟩ := Ideal.exists_maximal T
+  letI : J.IsMaximal := hJ
+  let Ω := T ⧸ J
+  letI : Field Ω := Ideal.Quotient.field J
+  let iL : L →+* Ω := (Ideal.Quotient.mk J).comp
+    (Algebra.TensorProduct.includeLeftRingHom (R := K) (A := L) (B := M))
+  let iM : M →+* Ω := (Ideal.Quotient.mk J).comp
+    (Algebra.TensorProduct.includeRight (R := K) (A := L) (B := M)).toRingHom
+  refine ⟨{ carrier := Ω }, Spec.map (CommRingCat.ofHom iL),
+    Spec.map (CommRingCat.ofHom iM), ?_⟩
+  rw [← Spec.map_comp, ← Spec.map_comp]
+  congr 1
+  have hcomp :
+      (Algebra.TensorProduct.includeLeftRingHom (R := K) (A := L) (B := M)).comp f.hom =
+        (Algebra.TensorProduct.includeRight (R := K) (A := L) (B := M)).toRingHom.comp g.hom := by
+    simpa only [RingHom.algebraMap_toAlgebra] using
+      (Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+        (R := K) (A := L) (B := M))
+  ext z
+  change iL (f.hom z) = iM (g.hom z)
+  dsimp [iL, iM]
+  exact DFunLike.congr_fun
+    (congrArg (fun k : K →+* T => (Ideal.Quotient.mk J).comp k) hcomp) z
 
 /-- The unique point of `X` hit by a field-valued point. -/
 def image {X : Scheme.{u}} (p : FieldPoint X) : X :=
@@ -159,14 +229,27 @@ def Equivalent {X : Scheme.{u}} (p q : FieldPoint X) : Prop :=
 
 theorem equivalent_same_image {X : Scheme.{u}} {p q : FieldPoint X}
     (h : Equivalent p q) : image p = image q := by
-  sorry
+  obtain ⟨Ω, g, h, heq⟩ := h
+  have heq' := congrArg (fun k : Spec (CommRingCat.of Ω.carrier) ⟶ X =>
+    k (IsLocalRing.closedPoint Ω.carrier)) heq
+  change p.morphism (g (IsLocalRing.closedPoint Ω.carrier)) =
+    q.morphism (h (IsLocalRing.closedPoint Ω.carrier)) at heq'
+  have hg : g (IsLocalRing.closedPoint Ω.carrier) =
+      IsLocalRing.closedPoint p.K := Subsingleton.elim _ _
+  have hh : h (IsLocalRing.closedPoint Ω.carrier) =
+      IsLocalRing.closedPoint q.K := Subsingleton.elim _ _
+  rw [hg, hh] at heq'
+  exact heq'
 
 theorem dominates_refl {X : Scheme.{u}} (p : FieldPoint X) : Dominates p p := by
   exact ⟨𝟙 _, by simp⟩
 
 theorem dominates_trans {X : Scheme.{u}} {p q r : FieldPoint X}
     (hpq : Dominates p q) (hqr : Dominates q r) : Dominates p r := by
-  sorry
+  obtain ⟨g, hg⟩ := hpq
+  obtain ⟨h, hh⟩ := hqr
+  refine ⟨g ≫ h, ?_⟩
+  rw [Category.assoc, hh, hg]
 
 /-- The preorder on morphisms from spectra of fields suggested in the source. -/
 @[instance_reducible]
@@ -178,7 +261,30 @@ def preorder (X : Scheme.{u}) : Preorder (FieldPoint X) where
 /-- The common-field relation is the equivalence relation used for field-valued points. -/
 theorem equivalent_is_equivalence (X : Scheme.{u}) :
     Equivalence (@Equivalent X) := by
-  sorry
+  refine ⟨?_, ?_, ?_⟩
+  · intro p
+    refine ⟨{ carrier := p.K }, 𝟙 _, 𝟙 _, ?_⟩
+    simp
+  · intro p q h
+    obtain ⟨Ω, g, h, heq⟩ := h
+    exact ⟨Ω, h, g, heq.symm⟩
+  · intro p q r hpq hqr
+    obtain ⟨Ω₁, a, b, hab⟩ := hpq
+    obtain ⟨Ω₂, c, d, hcd⟩ := hqr
+    obtain ⟨f, hf⟩ := specField_morphism_eq_map b
+    obtain ⟨g, hg⟩ := specField_morphism_eq_map c
+    obtain ⟨Ω, i, j, hij⟩ := common_field_refinement f g
+    have hij' : i ≫ b = j ≫ c := by
+      simpa [hf, hg] using hij
+    refine ⟨Ω, i ≫ a, j ≫ d, ?_⟩
+    calc
+      (i ≫ a) ≫ p.morphism = i ≫ (a ≫ p.morphism) := Category.assoc _ _ _
+      _ = i ≫ (b ≫ q.morphism) := by rw [hab]
+      _ = (i ≫ b) ≫ q.morphism := (Category.assoc _ _ _).symm
+      _ = (j ≫ c) ≫ q.morphism := by rw [hij']
+      _ = j ≫ (c ≫ q.morphism) := Category.assoc _ _ _
+      _ = j ≫ (d ≫ r.morphism) := by rw [hcd]
+      _ = (j ≫ d) ≫ r.morphism := (Category.assoc _ _ _).symm
 
 /-- The common-field relation is the equivalence relation used for field-valued points. -/
 noncomputable def setoid (X : Scheme.{u}) : Setoid (FieldPoint X) where
@@ -199,7 +305,34 @@ noncomputable def canonicalFieldPoint (X : Scheme.{u}) (x : X) : FieldPoint X wh
 /-- The field-point classification of scheme points. -/
 theorem exists_fieldPointClassEquiv (X : Scheme.{u}) :
     Nonempty (X ≃ fieldPointClasses X) := by
-  sorry
+  let F : X → fieldPointClasses X := fun x =>
+    Quotient.mk (FieldPoint.setoid X) (canonicalFieldPoint X x)
+  have hsurj : Function.Surjective F := by
+    intro c
+    refine Quotient.inductionOn c ?_
+    intro p
+    let e := morphismFromFieldEquiv p.K X
+    let y := e p.morphism
+    refine ⟨y.1, ?_⟩
+    apply Quotient.sound
+    refine ⟨{ carrier := p.K }, Spec.map y.2, 𝟙 _, ?_⟩
+    have hleft := e.left_inv p.morphism
+    rw [Category.id_comp]
+    dsimp [canonicalFieldPoint, e, y, morphismFromFieldEquiv,
+      AlgebraicGeometry.Scheme.SpecToEquivOfField] at hleft ⊢
+    convert hleft using 1
+    rfl
+  have hinj : Function.Injective F := by
+    intro x y hxy
+    have heq : FieldPoint.Equivalent (canonicalFieldPoint X x)
+        (canonicalFieldPoint X y) := Quotient.exact hxy
+    have himage := FieldPoint.equivalent_same_image heq
+    have hcanon (z : X) : (canonicalFieldPoint X z).image = z := by
+      change X.fromSpecResidueField z
+        (IsLocalRing.closedPoint (residueFieldAt X z)) = z
+      exact Scheme.fromSpecResidueField_apply z _
+    exact (hcanon x).symm.trans (himage.trans (hcanon y))
+  exact ⟨Equiv.ofBijective F ⟨hinj, hsurj⟩⟩
 
 /-- A chosen bijection between scheme points and field-point equivalence classes. -/
 noncomputable def fieldPointClassEquiv (X : Scheme.{u}) :
@@ -221,7 +354,24 @@ theorem canonicalFieldPoint_is_smallest
     (hp : Quotient.mk (FieldPoint.setoid X) p =
       Quotient.mk (FieldPoint.setoid X) (canonicalFieldPoint X x)) :
     FieldPoint.Dominates p (canonicalFieldPoint X x) := by
-  sorry
+  have heq : FieldPoint.Equivalent p (canonicalFieldPoint X x) :=
+    Quotient.exact hp
+  have himage := FieldPoint.equivalent_same_image heq
+  have hcanon : (canonicalFieldPoint X x).image = x := by
+    change X.fromSpecResidueField x
+      (IsLocalRing.closedPoint (residueFieldAt X x)) = x
+    exact Scheme.fromSpecResidueField_apply x _
+  have hx : p.image = x := by
+    exact himage.trans hcanon
+  subst x
+  let e := morphismFromFieldEquiv p.K X
+  let y := e p.morphism
+  refine ⟨Spec.map y.2, ?_⟩
+  have hleft := e.left_inv p.morphism
+  dsimp [canonicalFieldPoint, e, y, morphismFromFieldEquiv,
+    AlgebraicGeometry.Scheme.SpecToEquivOfField] at hleft ⊢
+  convert hleft using 1
+  rfl
 
 /-- The canonical smallest representatives are unique up to the unique
 isomorphism over `X` supplied by the residue-field construction. -/

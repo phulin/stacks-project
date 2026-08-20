@@ -3097,12 +3097,12 @@ theorem amelioration_unique_when_strictly_commutative
    CoGrothendieck implementation of the total category. -/
 
 abbrev CategoryPresheaf (C : Type u') [Category.{v'} C] :=
-  Cᵒᵖ ⥤ Cat.{v', u'}
+  Cᵒᵖ ⥤ Cat.{v, u}
 
 noncomputable def categoryPresheafPseudofunctor
     {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
     PseudofunctorFromCategory Cᵒᵖ
-      (Cat.{v', u'}) :=
+      (Cat.{v, u}) :=
   F.toPseudofunctor'
 
 abbrev categoryPresheafCategory
@@ -3136,12 +3136,12 @@ abbrev categoryPresheafRestriction
 theorem categoryPresheafRestriction_comp
     {C : Type u'} [Category.{v'} C]
     (F : CategoryPresheaf C) {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
-    Nonempty (categoryPresheafRestriction F (g ≫ f) ≅
-      categoryPresheafRestriction F f ⋙ categoryPresheafRestriction F g) := by
-  refine ⟨?_⟩
-  change (F.map (g ≫ f).op).toFunctor ≅
+    categoryPresheafRestriction F (g ≫ f) =
+      categoryPresheafRestriction F f ⋙ categoryPresheafRestriction F g := by
+  change (F.map (g ≫ f).op).toFunctor =
     (F.map f.op).toFunctor ⋙ (F.map g.op).toFunctor
-  exact eqToIso (by simp)
+  rw [op_comp, F.map_comp]
+  rfl
 
 @[simp]
 theorem categoryPresheafProjection_obj
@@ -3229,15 +3229,18 @@ def IsomorphicOverBase
     F ⋙ q = p ∧ G ⋙ p = q ∧ F ⋙ G = 𝟭 S ∧ G ⋙ F = 𝟭 T
 
 def IsSplitFibredCategory
-    {S C : Type*} [Category* S] [Category* C]
+    {C : Type u'} [Category.{v'} C]
+    {S : Type u} [Category.{v} S]
     (p : S ⥤ C) : Prop :=
   p.IsFibered ∧
-    ∃ F : CategoryPresheaf C,
+    ∃ F : CategoryPresheaf.{v₁, u₁} C,
       IsomorphicOverBase p (categoryPresheafProjection F)
 
 theorem categoryPresheafProjection_isSplit
-    {C : Type u'} [Category.{v'} C] (F : CategoryPresheaf C) :
-    IsSplitFibredCategory (categoryPresheafProjection F) := by
+    {C : Type u'} [Category.{v'} C]
+    (F : CategoryPresheaf.{v, u} C) :
+    IsSplitFibredCategory.{_, _, v', u', u, v}
+      (categoryPresheafProjection F) := by
   constructor
   · exact categoryPresheafProjection_isFibered F
   · exact ⟨F, 𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _,
@@ -3252,9 +3255,10 @@ def isStrictPullbackChoice
       P.pullbackFunctor f ⋙ P.pullbackFunctor g
 
 theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
     (p : S ⥤ C) [p.IsFibered] :
-    IsSplitFibredCategory p ↔
+    IsSplitFibredCategory.{v, u, v', u', u, v} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
   sorry
 
@@ -4108,9 +4112,10 @@ theorem categoryPresheafStrictification_exists_equivalence
    interface so the final equivalence theorem does not have to identify the
    custom strictification category with a CoGrothendieck category inline. -/
 theorem categoryPresheafStrictification_exists_presheaf_equivalence
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
-    ∃ F : CategoryPresheaf C,
+    ∃ F : CategoryPresheaf.{v, max (max u' v') u} C,
       ∃ e : CategoryPresheafStrictificationCategory p P ⥤
           categoryPresheafCategory F,
         IsEquivalenceOverFunctor
@@ -4119,9 +4124,10 @@ theorem categoryPresheafStrictification_exists_presheaf_equivalence
   sorry
 
 theorem fibredCategory_isEquivalentTo_split
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
     (p : S ⥤ C) [p.IsFibered] :
-    ∃ F : CategoryPresheaf C,
+    ∃ F : CategoryPresheaf.{v, max (max u' v') u} C,
       ∃ h : S ⥤ categoryPresheafCategory F,
         IsEquivalenceOverFunctor p (categoryPresheafProjection F) h := by
   sorry
@@ -4130,18 +4136,18 @@ theorem fibredCategory_isEquivalentTo_split
 
 structure GroupoidPresheaf
   (C : Type u') [Category.{v'} C] where
-  value : CategoryPresheaf C
+  value : CategoryPresheaf.{v, u} C
   fibre_is_groupoid : ∀ U : C,
     IsGroupoid (value.obj (Opposite.op U))
 
 abbrev groupoidPresheafCategory
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) :=
+    (F : GroupoidPresheaf.{v, u} C) :=
   categoryPresheafCategory F.value
 
 abbrev groupoidPresheafProjection
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) :
+    (F : GroupoidPresheaf.{v, u} C) :
     groupoidPresheafCategory F ⥤ C :=
   categoryPresheafProjection F.value
 
@@ -4150,10 +4156,11 @@ abbrev groupoidPresheafProjection
    presentation and forgetting that property, so expose it separately for
    the final groupoid strictification theorem. -/
 theorem categoryPresheafStrictification_exists_groupoidPresheaf_equivalence
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
     (p : S ⥤ C) [p.IsFibered]
     (hp : p.IsFibredInGroupoids) (P : PullbackChoice p) :
-    ∃ F : GroupoidPresheaf C,
+    ∃ F : GroupoidPresheaf.{v, max (max u' v') u} C,
       ∃ e : CategoryPresheafStrictificationCategory p P ⥤
           groupoidPresheafCategory F,
         IsEquivalenceOverFunctor
@@ -4163,20 +4170,21 @@ theorem categoryPresheafStrictification_exists_groupoidPresheaf_equivalence
 
 abbrev groupoidPresheafRestriction
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U) :
+    (F : GroupoidPresheaf.{v, u} C) {V U : C} (f : V ⟶ U) :
     F.value.obj (Opposite.op U) ⥤ F.value.obj (Opposite.op V) :=
   categoryPresheafRestriction F.value f
 
 theorem groupoidPresheafRestriction_comp
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
-    Nonempty (groupoidPresheafRestriction F (g ≫ f) ≅
-      groupoidPresheafRestriction F f ⋙ groupoidPresheafRestriction F g) := by
+    (F : GroupoidPresheaf.{v, u} C)
+    {W V U : C} (g : W ⟶ V) (f : V ⟶ U) :
+    groupoidPresheafRestriction F (g ≫ f) =
+      groupoidPresheafRestriction F f ⋙ groupoidPresheafRestriction F g := by
   exact categoryPresheafRestriction_comp F.value g f
 
 theorem groupoidPresheaf_fibre_is_groupoid
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) (U : C) :
+    (F : GroupoidPresheaf.{v, u} C) (U : C) :
     IsGroupoid (Functor.Fiber (groupoidPresheafProjection F) U) := by
   let j :=
     Functor.Fiber.inducedFunctor
@@ -4196,7 +4204,7 @@ theorem groupoidPresheaf_fibre_is_groupoid
 
 theorem groupoidPresheafProjection_isFibredInGroupoids
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) :
+    (F : GroupoidPresheaf.{v, u} C) :
     (groupoidPresheafProjection F).IsFibredInGroupoids := by
   apply (fibredInGroupoids_iff_fibred_groupoid_fibres
     (groupoidPresheafProjection F)).mpr
@@ -4205,7 +4213,7 @@ theorem groupoidPresheafProjection_isFibredInGroupoids
 
 theorem groupoidPresheaf_exists_lift
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C) {V U : C} (f : V ⟶ U)
+    (F : GroupoidPresheaf.{v, u} C) {V U : C} (f : V ⟶ U)
     (x : F.value.obj (op U)) :
     ∃ y : groupoidPresheafCategory F,
       ∃ φ : y ⟶ (⟨U, x⟩ : groupoidPresheafCategory F),
@@ -4216,7 +4224,7 @@ theorem groupoidPresheaf_exists_lift
 
 theorem groupoidPresheaf_unique_lift
     {C : Type u'} [Category.{v'} C]
-    (F : GroupoidPresheaf C)
+    (F : GroupoidPresheaf.{v, u} C)
     {x y z : groupoidPresheafCategory F} (φ : y ⟶ x) (ψ : z ⟶ x)
     {f : (groupoidPresheafProjection F).obj z ⟶
       (groupoidPresheafProjection F).obj y}
@@ -4228,15 +4236,17 @@ theorem groupoidPresheaf_unique_lift
     φ ψ h
 
 def IsSplitCategoryFibredInGroupoids
-    {S C : Type*} [Category* S] [Category* C]
+    {C : Type u'} [Category.{v'} C]
+    {S : Type u} [Category.{v} S]
     (p : S ⥤ C) : Prop :=
   p.IsFibredInGroupoids ∧
-    ∃ F : GroupoidPresheaf C,
+    ∃ F : GroupoidPresheaf.{v₁, u₁} C,
       IsomorphicOverBase p (groupoidPresheafProjection F)
 
 theorem groupoidPresheafProjection_isSplit
-    {C : Type u'} [Category.{v'} C] (F : GroupoidPresheaf C) :
-    IsSplitCategoryFibredInGroupoids
+    {C : Type u'} [Category.{v'} C]
+    (F : GroupoidPresheaf.{v, u} C) :
+    IsSplitCategoryFibredInGroupoids.{_, _, v', u', u, v}
       (groupoidPresheafProjection F) := by
   constructor
   · exact groupoidPresheafProjection_isFibredInGroupoids F
@@ -4244,9 +4254,10 @@ theorem groupoidPresheafProjection_isSplit
       Functor.id_comp _, Functor.id_comp _⟩
 
 theorem fibredInGroupoids_isEquivalentTo_split
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type u} [Category.{v} S]
+    {C : Type u'} [Category.{v'} C]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
-    ∃ F : GroupoidPresheaf C,
+    ∃ F : GroupoidPresheaf.{v, max (max u' v') u} C,
       ∃ h : S ⥤ groupoidPresheafCategory F,
         IsEquivalenceOverFunctor p (groupoidPresheafProjection F) h := by
   sorry

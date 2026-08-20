@@ -717,10 +717,10 @@ theorem mapExtensionClassOfExact_add
     (x y : Ext B A) :
     mapExtensionClassOfExact F hF (x + y) =
       mapExtensionClassOfExact F hF x + mapExtensionClassOfExact F hF y := by
-  letI : PreservesFiniteLimits F := hF.1
-  letI : PreservesFiniteColimits F := hF.2
-  letI : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
-  letI : PreservesBinaryBiproducts F :=
+  let : PreservesFiniteLimits F := hF.1
+  let : PreservesFiniteColimits F := hF.2
+  let : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
+  let : PreservesBinaryBiproducts F :=
     preservesBinaryBiproducts_of_preservesBiproducts F
   refine Quotient.inductionOn₂ x y ?_
   intro E₁ E₂
@@ -848,8 +848,8 @@ theorem mapExtensionClassOfExact_add
     exact biprod.add_eq_lift_desc_id
       (F.map (biprod.fst : A ⊞ A ⟶ A))
       (F.map (biprod.snd : A ⊞ A ⟶ A))
-  letI : IsIso eM.hom := by infer_instance
-  letI : IsIso eA.hom := by infer_instance
+  let : IsIso eM.hom := by infer_instance
+  let : IsIso eA.hom := by infer_instance
   have hPushout_left :
       F.map (biprodCodiagonal A) ≫ (𝟙 (F.obj A)) =
         eA.hom ≫ biprodCodiagonal (F.obj A) := by
@@ -894,7 +894,7 @@ theorem mapExtensionClassOfExact_add
     pushout.map (F.map (biprodCodiagonal A)) (F.map DS.inclusion)
       (biprodCodiagonal (F.obj A)) DS'.inclusion
       (𝟙 _) eM.hom eA.hom hPushout_left hPushout_right
-  letI : IsIso pMap := by
+  let : IsIso pMap := by
     change IsIso (pushout.map (F.map (biprodCodiagonal A))
       (F.map DS.inclusion) (biprodCodiagonal (F.obj A)) DS'.inclusion
       (𝟙 _) eM.hom eA.hom hPushout_left hPushout_right)
@@ -945,14 +945,12 @@ theorem mapExtensionClassOfExact_add
     apply (cancel_epi
       (PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv).2
     apply pushout.hom_ext
-    · simp [pMap, pushout.map, pProj, pProj', PreservesPushout.inl_iso_hom,
-        ← F.map_comp]
+    · simp [pMap, pushout.map, pProj, pProj']
       rw [← Category.assoc, pushout.inl_desc]
       rw [← Category.assoc, pushout.inl_desc]
       rw [pushout.inl_desc]
       simp
-    · simp [pMap, pushout.map, pProj, pProj', PreservesPushout.inr_iso_hom,
-        hDirectSum_projection, ← F.map_comp]
+    · simp [pMap, pushout.map, pProj, pProj']
       rw [← Category.assoc, pushout.inr_desc]
       rw [Category.assoc, pushout.inr_desc]
       rw [← Category.assoc, pushout.inr_desc]
@@ -968,7 +966,7 @@ theorem mapExtensionClassOfExact_add
       comm_right := by
         change pMiddle ≫ P'.projection = F.map P.projection ≫ eB.hom
         simpa [pMiddle, pProj, pProj', P, P', pushoutExtension] using hM_right_raw }
-  letI : IsIso pMiddle := by
+  let : IsIso pMiddle := by
     have h : IsIso
         ((PreservesPushout.iso F (biprodCodiagonal A) DS.inclusion).inv ≫ pMap) := by
       exact IsIso.comp_isIso
@@ -983,12 +981,12 @@ theorem mapExtensionClassOfExact_add
         exact m.comm_right.symm) (by
         simpa [δ, δ', biprodDiagonal, eB] using
           (biprod.map_lift_mapBiprod F B B (𝟙 B) (𝟙 B)))
-  letI : IsIso qMap := by
+  let : IsIso qMap := by
     dsimp [qMap]
     apply pullback.map_isIso
-  letI : IsIso (PreservesPullback.iso F P.projection δ).hom := by
+  let : IsIso (PreservesPullback.iso F P.projection δ).hom := by
     infer_instance
-  letI : IsIso (pullbackComparison F P.projection δ) := by
+  let : IsIso (pullbackComparison F P.projection δ) := by
     change IsIso (PreservesPullback.iso F P.projection δ).hom
     infer_instance
   let qMiddle' : F.obj (pullback P.projection δ) ⟶
@@ -997,7 +995,7 @@ theorem mapExtensionClassOfExact_add
   have hqMiddle' : IsIso qMiddle' := by
     dsimp [qMiddle']
     exact IsIso.comp_isIso
-  letI : IsIso qMiddle' := hqMiddle'
+  let : IsIso qMiddle' := hqMiddle'
   let n : ExtensionHom
       (mapExtensionOfExact F hF (pullbackExtension P δ))
       (pullbackExtension P' δ') :=
@@ -1014,7 +1012,7 @@ theorem mapExtensionClassOfExact_add
             simpa only [Category.assoc] using
               congrArg (fun k => k ≫ pMiddle) hfst
           simp only [qMiddle', qMap, pullback.map, pullbackExtension,
-            mapExtensionOfExact, Category.assoc, pullback.lift_fst]
+            Category.assoc, pullback.lift_fst]
           rw [hfst_p]
           rw [← Category.assoc]
           rw [← F.map_comp]
@@ -1024,7 +1022,7 @@ theorem mapExtensionClassOfExact_add
             exact m.comm_left
           simpa only [Category.id_comp] using hm
         · simp only [qMiddle', qMap, pullback.map, pullbackExtension,
-            mapExtensionOfExact, Category.assoc]
+            Category.assoc]
           rw [pullback.lift_snd]
           have hsnd := PreservesPullback.iso_hom_snd F P.projection δ
           have hsnd_p :
@@ -1043,7 +1041,7 @@ theorem mapExtensionClassOfExact_add
         change qMiddle' ≫ (pullbackExtension P' δ').projection =
           F.map (pullbackExtension P δ).projection
         simp only [qMiddle', qMap, pullback.map, pullbackExtension,
-          mapExtensionOfExact, Category.assoc]
+          Category.assoc]
         rw [pullback.lift_snd]
         simpa only [Category.assoc, Category.comp_id] using
           (PreservesPullback.iso_hom_snd F P.projection δ) }

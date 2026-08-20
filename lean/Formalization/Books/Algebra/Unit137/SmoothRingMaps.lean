@@ -408,9 +408,9 @@ theorem inseparable_hypersurface_warning
         Finsupp.single (0 : Fin 2) p := by
       intro h
       have h' := congrArg (fun z => z (1 : Fin 2)) h
-      simp [Finsupp.single_apply, hp.ne_zero] at h'
+      simp [hp.ne_zero] at h'
     have hc' : (1 : R) = 0 := by
-      simp [g, hp.ne_zero, MvPolynomial.coeff_X_pow, hne] at hc
+      simp [g, MvPolynomial.coeff_X_pow, hne] at hc
     exact one_ne_zero hc'
   let evalX : MvPolynomial (Fin 2) R →ₐ[R] Polynomial R :=
     MvPolynomial.aeval (fun i => Fin.cases Polynomial.X (fun _ => 0) i)
@@ -525,7 +525,7 @@ theorem inseparable_hypersurface_warning
           Finsupp.single (0 : Fin 2) p := by
         intro h
         have h' := congrArg (fun z => z (1 : Fin 2)) h
-        simp [Finsupp.single_apply, hp.ne_zero] at h'
+        simp [hp.ne_zero] at h'
       have hcoeff : MvPolynomial.coeff (Finsupp.single (0 : Fin 2) p) r = 1 := by
         rw [hr_map]
         simp [g, MvPolynomial.coeff_X_pow, hne]

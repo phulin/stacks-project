@@ -136,13 +136,10 @@ theorem reflexive_iff_finiteFree_presentation
     {R M : Type u} [CommRing R] [IsDomain R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M] :
     Reflexive R M ↔
-      ∃ (F : Type u) (_ : AddCommGroup F) (_ : Module R F)
-        (_ : Module.Finite R F) (_ : Module.Free R F)
-        (N : Type u) (_ : AddCommGroup N) (_ : Module R N)
-        (f : M →ₗ[R] F) (g : F →ₗ[R] N),
+      ∃ n : ℕ, ∃ f : M →ₗ[R] (Fin n →₀ R),
         Function.Injective f ∧
-          Function.Exact (f : M → F) (g : F → N) ∧
-            Function.Surjective g ∧ Module.IsTorsionFree R N := by
+          Module.IsTorsionFree R
+            ((Fin n →₀ R) ⧸ LinearMap.range f) := by
   sorry
 
 /-- Flat base change of a finite reflexive module between Noetherian domains
@@ -225,8 +222,9 @@ theorem reflexiveHullFactor_comp_reflexivityMap
 
 /-- The hull factor is the unique factor through the natural evaluation map. -/
 theorem reflexiveHullFactor_unique
-    {R M N : Type*} [CommRing R]
-    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    {R M N : Type*} [CommRing R] [IsDomain R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M]
+    [AddCommGroup N] [Module R N]
     [Module.IsReflexive R N] (f : M →ₗ[R] N)
     (g : reflexiveHull (R := R) (M := M) →ₗ[R] N)
     (hg : g.comp (reflexivityMap (R := R) (M := M)) = f) :
@@ -388,6 +386,13 @@ def exampleXCubed (k : Type u) [Field k] : exampleRing k :=
 def exampleMaximalIdeal (k : Type u) [Field k] : Ideal (exampleRing k) :=
   Ideal.span ({exampleY k, exampleXSquared k, exampleXY k, exampleXCubed k} :
     Set (exampleRing k))
+
+/-- The example ring is a Noetherian domain, as asserted at the end of the
+source example. -/
+theorem exampleRing_isNoetherianDomain
+    (k : Type u) [Field k] :
+    IsNoetherianRing (exampleRing k) ∧ IsDomain (exampleRing k) := by
+  sorry
 
 /-- The example ring is not `(S_2)`. -/
 theorem exampleRing_not_hasPropertySk_two

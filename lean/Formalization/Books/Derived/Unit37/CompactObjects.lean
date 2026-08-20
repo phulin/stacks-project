@@ -51,7 +51,22 @@ the Chapter 33 homotopy-colimit interface.
 theorem isCountablyCompact_of_isCompactObject
     [HasCountableCoproducts C] (K : C) (hK : IsCompactObject K) :
     IsCountablyCompact K := by
-  sorry
+  let F := preadditiveCoyoneda.obj (Opposite.op K)
+  let _ : PreservesColimitsOfShape (Discrete (ULift.{v} ℕ)) F :=
+    ⟨fun {K} => by
+      let f : ULift.{v} ℕ → C := fun i => K.obj (Discrete.mk i)
+      let _ : IsIso (sigmaComparison F f) := hK (ULift.{v} ℕ) f
+      let _ : PreservesColimit (Discrete.functor f) F :=
+        PreservesCoproduct.of_iso_comparison F f
+      exact preservesColimit_of_iso_diagram F
+        (Discrete.natIso (fun j => Iso.refl (K.obj j)) :
+          Discrete.functor f ≅ K)⟩
+  let _ : PreservesColimitsOfShape (Discrete ℕ) F :=
+    preservesColimitsOfShape_of_equiv
+      (Discrete.equivalence (Equiv.ulift : ULift.{v} ℕ ≃ ℕ)) F
+  intro E
+  change IsIso (sigmaComparison F E)
+  infer_instance
 
 variable [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
   [Pretriangulated C]
@@ -71,7 +86,68 @@ theorem compactObjects_is_strictlyFull_saturated_pretriangulated :
 /-! The full subcategory of compact objects is Karoubian. -/
 theorem compactObjects_fullSubcategory_isKaroubian :
     IsIdempotentComplete (compactObjects (C := C)).FullSubcategory := by
-  sorry
+  let _ : IsIdempotentComplete C :=
+    Formalization.Books.Derived.Unit04.karoubian_of_countable_coproducts
+  let P : ObjectProperty C := compactObjects (C := C)
+  have hP := compactObjects_is_strictlyFull_saturated_pretriangulated (C := C)
+  refine ⟨?_⟩
+  intro X p hp
+  have hp' : p.hom ≫ p.hom = p.hom := by
+    simpa using congrArg (fun f => f.hom) hp
+  obtain ⟨Y, i, e, hie, hei⟩ :=
+    IsIdempotentComplete.idempotents_split X.obj p.hom hp'
+  let q : X.obj ⟶ X.obj := 𝟙 _ - p.hom
+  have hq : q ≫ q = q := by
+    dsimp [q]
+    simp [sub_comp, comp_sub, hp']
+  obtain ⟨Z, j, d, hjd, hdj⟩ :=
+    IsIdempotentComplete.idempotents_split X.obj q hq
+  let a : Y ⊞ Z ⟶ X.obj := biprod.desc i j
+  let b : X.obj ⟶ Y ⊞ Z := biprod.lift e d
+  have hab : b ≫ a = 𝟙 _ := by
+    dsimp [a, b]
+    simp [hei, hdj, q]
+  have hqd : q ≫ d = d := by
+    rw [← hdj, Category.assoc, hjd, Category.comp_id]
+  have hpd' : p.hom ≫ d = 0 := by
+    have h := congrArg (fun z => z - d) hqd
+    dsimp [q] at h
+    simpa [sub_comp, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using h
+  have hid : i ≫ d = 0 := by
+    calc
+      i ≫ d = (i ≫ e) ≫ i ≫ d := by simp [hie]
+      _ = i ≫ (e ≫ i) ≫ d := by simp [Category.assoc]
+      _ = 0 := by rw [hei, hpd', comp_zero]
+  have hqe : q ≫ e = 0 := by
+    have hpe : (e ≫ i) ≫ e = e := by simp [Category.assoc, hie]
+    dsimp [q]
+    rw [sub_comp, ← hei, hpe]
+    simp
+  have hje : j ≫ e = 0 := by
+    calc
+      j ≫ e = (j ≫ d) ≫ j ≫ e := by simp [hjd]
+      _ = j ≫ (d ≫ j) ≫ e := by simp [Category.assoc]
+      _ = 0 := by rw [hdj, hqe, comp_zero]
+  have hba : a ≫ b = 𝟙 _ := by
+    apply biprod.hom_ext
+    · apply biprod.hom_ext'
+      · simp [a, b, hie, Category.assoc]
+      · simp [a, b, hje, Category.assoc]
+    · apply biprod.hom_ext'
+      · simp [a, b, hid, Category.assoc]
+      · simp [a, b, hjd, Category.assoc]
+  let eYZ : Y ⊞ Z ≅ X.obj := { hom := a, inv := b, hom_inv_id := hba, inv_hom_id := hab }
+  let _ : P.IsClosedUnderIsomorphisms := hP.1
+  have hYZ : P (Y ⊞ Z) := P.prop_of_iso eYZ.symm X.property
+  have hY' : P.isoClosure Y := hP.2.2 (P.le_isoClosure _ hYZ) |>.1
+  rw [P.isoClosure_eq_self] at hY'
+  refine ⟨⟨Y, hY'⟩, ?_⟩
+  refine ⟨⟨i⟩, ⟨e⟩, ?_, ?_⟩
+  · apply ObjectProperty.hom_ext
+    simpa only [ObjectProperty.FullSubcategory.comp_hom,
+      ObjectProperty.FullSubcategory.id_hom] using hie
+  · apply ObjectProperty.hom_ext
+    simpa only [ObjectProperty.FullSubcategory.comp_hom] using hei
 
 /-!
 An object obtained as an arbitrary direct sum of shifts of a family `E`.

@@ -1737,13 +1737,13 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
     apply MvPolynomial.ringHom_ext'
     · apply RingHom.ext
       intro s
-      simp only [RingHom.comp_apply, RingHom.id_apply]
+      simp only [RingHom.comp_apply]
       rw [hgmap_C]
       have h := congrArg (fun h => h s) ft
       rw [MvPolynomial.algebraMap_apply] at h
       exact h
     · intro j
-      simp only [RingHom.comp_apply, RingHom.id_apply, gmap,
+      simp only [RingHom.comp_apply, gmap,
         MvPolynomial.eval₂Hom_X']
       rw [fgvar]
       rfl

@@ -538,7 +538,11 @@ theorem relative_flat_module_equivalence_exists
     {A A' B D' : Type u}
     [CommRing A] [CommRing A'] [CommRing B] [CommRing D']
     (S : RelativeFibreProductSituation A A' B D') :
-    Nonempty (relativeFlatModuleCategory S ≌ relativeFlatGluingCategory S) := by
+    Nonempty
+      {e : relativeFlatModuleCategory S ≌ relativeFlatGluingCategory S //
+        Nonempty
+          (e.functor ⋙ (relativeFlatGluingProperty S).ι ≅
+            (relativeFlatModuleProperty S).ι ⋙ relativeModuleFunctor S)} := by
   sorry
 
 /-- A chosen equivalence between the two flat relative module categories. -/
@@ -547,7 +551,7 @@ noncomputable def relative_flat_module_equivalence
     [CommRing A] [CommRing A'] [CommRing B] [CommRing D']
     (S : RelativeFibreProductSituation A A' B D') :
     relativeFlatModuleCategory S ≌ relativeFlatGluingCategory S :=
-  Classical.choice (relative_flat_module_equivalence_exists S)
+  (Classical.choice (relative_flat_module_equivalence_exists S)).1
 
 /-! ## Relative finite presentation -/
 
@@ -882,13 +886,13 @@ structure RelativeModuleQuotientPair
   left : RelativeModuleQuotientMap (relativeModuleLeftBaseChange S L')
   left_finitePresentation :
     Module.FinitePresentation (relativeD S) (left.Q : Type u)
-  left_flat : Module.Flat B (relativeLeftModuleOverB S
-    ((relativeModuleFunctor S).obj L') : Type u)
+  left_flat : Module.Flat B
+    ((ModuleCat.restrictScalars (relativeBToD S)).obj left.Q : Type u)
   right : RelativeModuleQuotientMap (relativeModuleRightBaseChange S L')
   right_finitePresentation :
     Module.FinitePresentation (relativeC' S) (right.Q : Type u)
-  right_flat : Module.Flat A' (relativeRightModuleOverA' S
-    ((relativeModuleFunctor S).obj L') : Type u)
+  right_flat : Module.Flat A'
+    ((ModuleCat.restrictScalars (relativeA'ToC' S)).obj right.Q : Type u)
   common : ModuleCat.{u} (relativeC S)
   left_common :
     (ModuleCat.extendScalars (relativeDToC S)).obj left.Q ⟶ common

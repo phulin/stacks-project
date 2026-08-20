@@ -138,6 +138,14 @@ noncomputable def universalRelativeSheafDerivation {X : TopCat.{v}}
   exact (PresheafOfModules.DifferentialsConstruction.derivation' φ.hom).postcomp
     (moduleOfDifferentialsUnit φ)
 
+@[simp] theorem universalRelativeSheafDerivation_apply
+    {X : TopCat.{v}} {O₁ O₂ : CommRingSheaf X}
+    (φ : O₁ ⟶ O₂) {U : Opens X} (a : O₂.obj.obj (op U)) :
+    (universalRelativeSheafDerivation φ).d a =
+      (moduleOfDifferentialsUnit φ).app (op U)
+        (CommRingCat.KaehlerDifferential.d a) :=
+  rfl
+
 /-- The universal property of the sheaf of differentials, expressed among
 sheaf targets as in the textbook. -/
 structure IsUniversalRelativeSheafDerivation {X : TopCat.{v}}
@@ -294,10 +302,38 @@ def SheafModuleEpi {X : TopCat.{v}} {O : RingSheaf X}
         ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
           ((PresheafOfModules.toPresheaf O.obj).map β.val)))
 
+/-- A sheaf ideal recorded by its underlying module, inclusion, and ideal
+closure.  This is the sheaf-level form of the kernel ideal used in the
+conormal sequence. -/
+structure SheafIdealData {X : TopCat.{v}} (O : CommRingSheaf X) where
+  module : CommRingSheafModule O
+  inclusion :
+    module.val.presheaf ⟶ O.obj ⋙
+      (forget₂ CommRingCat RingCat) ⋙ (forget₂ RingCat AddCommGrpCat)
+  injective : ∀ U, Function.Injective (inclusion.app U)
+  stable_under_multiplication :
+    ∀ U (a : O.obj.obj U) (i : module.val.presheaf.obj U),
+      ∃ j : module.val.presheaf.obj U,
+        inclusion.app U j =
+          (show O.obj.obj U from a) *
+            (show O.obj.obj U from inclusion.app U i)
+
 /-- The sheaf-level data in the conormal--differential sequence. -/
 structure ConormalDifferentialSequence {X : TopCat.{v}}
     {O₁ O₂ O₃ : CommRingSheaf X} (base : O₁ ⟶ O₂) (quotient : O₂ ⟶ O₃) where
+  ideal : SheafIdealData O₂
+  ideal_kernel :
+    ∀ U (a : O₂.obj.obj U), quotient.hom.app U a = 0 ↔
+      ∃ i : ideal.module.val.presheaf.obj U, ideal.inclusion.app U i = a
   conormal : CommRingSheafModule O₃
+  conormalProjection :
+    ideal.module.val.presheaf ⟶ conormal.val.presheaf
+  conormalProjection_square :
+    ∀ U (i j k : ideal.module.val.presheaf.obj U),
+      ideal.inclusion.app U k =
+          (show O₂.obj.obj U from ideal.inclusion.app U i) *
+            (show O₂.obj.obj U from ideal.inclusion.app U j) →
+        conormalProjection.app U k = 0
   leftMap : conormal ⟶
     (sheafChangeOfRings (commRingSheafMorphismToRingSheaf quotient)).obj
       (moduleOfDifferentials base)
@@ -308,10 +344,10 @@ structure ConormalDifferentialSequence {X : TopCat.{v}}
   exact : SheafModuleExact leftMap rightMap
   surjective : SheafModuleEpi rightMap
   leftMap_rule :
-    ∀ (U : Opens X) (a : O₂.obj.obj (op U)),
-      quotient.hom.app (op U) a = 0 →
-      ∃ i : conormal.val.obj (op U),
-        leftMap.val.app (op U) i = baseChangedUniversalDifferential base quotient U a
+    ∀ (U : Opens X) (i : ideal.module.val.presheaf.obj (op U)),
+      leftMap.val.app (op U) (conormalProjection.app (op U) i) =
+        baseChangedUniversalDifferential base quotient U
+          (show O₂.obj.obj (op U) from ideal.inclusion.app (op U) i)
 
 /-- The conormal--differential exact sequence for a surjective map of sheaves
 of commutative rings.  The left map is characterized on local sections by
@@ -501,6 +537,40 @@ theorem ringedSpace_differentials_pushforward_map
           ((SheafOfModules.toSheaf
             (commRingSheafToRingSheaf X'.structureSheaf)).obj
             (ringedSpaceModuleOfDifferentials square.f'))) := by
+  sorry
+
+/-- The source's compatibility of the comparison maps with composition.
+
+The field `pullbackComparison` is the map denoted `g^* c_f` after choosing
+the canonical pullback-module models.  Keeping this map as a field makes the
+composition law usable without introducing a second, parallel definition of
+pullback modules at the ringed-space level. -/
+structure RingedSpaceDifferentialCompositionData
+    {X'' X' X S'' S' S : CommutativeRingedSpace}
+    (first : RingedSpaceDifferentialSquare X' X S' S)
+    (second : RingedSpaceDifferentialSquare X'' X' S'' S')
+    (composite : RingedSpaceDifferentialSquare X'' X S'' S) where
+  targetIdentification :
+    ringedSpaceModuleOfDifferentials second.f' ≅
+      ringedSpaceModuleOfDifferentials composite.f'
+  pullbackComparison :
+    (ringedSpaceDifferentialComparison composite).pullback ⟶
+      (ringedSpaceDifferentialComparison second).pullback
+  composition :
+    (ringedSpaceDifferentialComparison composite).map =
+      pullbackComparison ≫
+        (ringedSpaceDifferentialComparison second).map ≫
+          targetIdentification.hom
+
+/-- For a composable pair of ringed-space squares, the comparison for their
+composite is the composite of the second comparison with the pullback of the
+first one. -/
+theorem ringedSpace_differentials_composition
+    {X'' X' X S'' S' S : CommutativeRingedSpace}
+    (first : RingedSpaceDifferentialSquare X' X S' S)
+    (second : RingedSpaceDifferentialSquare X'' X' S'' S')
+    (composite : RingedSpaceDifferentialSquare X'' X S'' S) :
+    Nonempty (RingedSpaceDifferentialCompositionData first second composite) := by
   sorry
 
 /-! ## The transitivity triangle -/

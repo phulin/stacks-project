@@ -2384,7 +2384,7 @@ theorem noetherian_indecomposable_injective_residue_field_hull
 /-- A Noetherian injective module is a direct sum of indecomposable injectives. -/
 def IsDirectSumOfIndecomposableInjectives
     {R : Type u} [CommRing R] (I : ModuleCat.{v} R) : Prop :=
-  ∃ (ι : Type w) (E : ι → ModuleCat.{v} R),
+  ∃ (ι : Type (max u v)) (E : ι → ModuleCat.{v} R),
     (∀ i, CategoryTheory.Indecomposable (E i) ∧
       CategoryTheory.Injective (E i)) ∧
       Nonempty ((I : Type v) ≃ₗ[R] (⨁ i, (E i : Type v)))

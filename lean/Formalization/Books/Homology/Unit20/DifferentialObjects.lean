@@ -1307,7 +1307,7 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
                       _ = (cokernel.π f.f ≫ cokernel.desc f.f
                             (Y.str ≫ S.functor.map (cokernel.π f.f) ≫ e.hom) hC) ≫ e.inv := by
                             rw [hdesc]
-                            }
+          }
       let w : f ≫ π = 0 := by
         apply Endofunctor.Coalgebra.Hom.ext
         change f.f ≫ cokernel.π f.f = 0
@@ -1676,6 +1676,46 @@ theorem shiftedSelfMap_spectral_sequence {C : Type u} [Category.{v} C]
     ∃ X : TranslatedSpectralSequenceData C,
       X.r₀ = 1 ∧ Nonempty (X.page 1 ≅
         S.inverse.obj (shiftedDifferentialHomology (shiftedSelfMapQuotient D))) := by
-  sorry
+  let E₀ := S.inverse.obj (shiftedDifferentialHomology (shiftedSelfMapQuotient D))
+  let P : ℕ → C :=
+    Nat.rec E₀ (fun _ X =>
+      translatedDifferentialHomology S (0 : X ⟶ S.functor.obj X) (by simp))
+  let X : TranslatedSpectralSequenceData C :=
+    { r₀ := 1
+      translation := fun _ => S
+      page := fun r => if hr : 1 ≤ r then P (Int.toNat (r - 1)) else E₀
+      differential := fun r => 0
+      d_squared := by
+        intro r
+        exact zero_comp
+      nextIso := by
+        intro r hr
+        have hrsub : 0 ≤ r - 1 := by omega
+        have hrsub' : (Int.ofNat (Int.toNat (r - 1)) : ℤ) = r - 1 :=
+          Int.toNat_of_nonneg hrsub
+        have hr' : r = Int.ofNat (Int.toNat (r - 1) + 1) := by
+          calc
+            r = (r - 1) + 1 := by omega
+            _ = Int.ofNat (Int.toNat (r - 1)) + 1 := by rw [hrsub']
+        have hrplus : 1 ≤ r + 1 := by omega
+        simp only [dif_pos hrplus]
+        let k := Int.toNat (r - 1)
+        have hrk : r = Int.ofNat (k + 1) := by simpa [k] using hr'
+        have hrnat : r.toNat = k + 1 := by
+          rw [hrk]
+          simp [k]
+        rw [show r + 1 - 1 = r by omega, hrnat]
+        rw [hrk]
+        have hkpos : 1 ≤ (Int.ofNat (k + 1) : ℤ) := by omega
+        have hknat : (Int.ofNat (k + 1) - 1).toNat = k := by omega
+        have hpage :
+            (if hp : 1 ≤ (Int.ofNat (k + 1) : ℤ) then
+                P (Int.toNat (Int.ofNat (k + 1) - 1)) else E₀) = P k := by
+          simp
+        rw [hpage] }
+  refine ⟨X, rfl, ?_⟩
+  change Nonempty (P 0 ≅
+    S.inverse.obj (shiftedDifferentialHomology (shiftedSelfMapQuotient D)))
+  exact ⟨Iso.refl _⟩
 
 end Formalization.Books.Homology.Unit20

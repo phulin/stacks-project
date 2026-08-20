@@ -57,7 +57,20 @@ def doubleComplexVerticalCohomologyComplex
     · exact (hpr h).elim
     · rfl
   d_comp_d' p r s hpr hrs := by
-    sorry
+    classical
+    have hpr' : p + 1 = r := by
+      simpa only [ComplexShape.up_Rel] using hpr
+    have hrs' : r + 1 = s := by
+      simpa only [ComplexShape.up_Rel] using hrs
+    rw [dif_pos hpr', dif_pos hrs']
+    subst r
+    subst s
+    dsimp [doubleComplexVerticalCohomologyMap]
+    rw [← Functor.map_comp, columnMap_comp_zero]
+    dsimp [cochainCohomologyFunctor]
+    change HomologicalComplex.homologyMap
+      (0 : column A p ⟶ column A (p + 1 + 1)) q = 0
+    exact HomologicalComplex.homologyMap_zero _ _ _
 
 def doubleComplexHorizontalCohomologyComplex
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -70,7 +83,20 @@ def doubleComplexHorizontalCohomologyComplex
     · exact (hpr h).elim
     · rfl
   d_comp_d' p r s hpr hrs := by
-    sorry
+    classical
+    have hpr' : p + 1 = r := by
+      simpa only [ComplexShape.up_Rel] using hpr
+    have hrs' : r + 1 = s := by
+      simpa only [ComplexShape.up_Rel] using hrs
+    rw [dif_pos hpr', dif_pos hrs']
+    subst r
+    subst s
+    dsimp [doubleComplexHorizontalCohomologyMap]
+    rw [← Functor.map_comp, rowMap_comp_zero]
+    dsimp [cochainCohomologyFunctor]
+    change HomologicalComplex.homologyMap
+      (0 : row A p ⟶ row A (p + 1 + 1)) q = 0
+    exact HomologicalComplex.homologyMap_zero _ _ _
 
 def doubleComplexFirstE₀ {C : Type u} [Category.{v} C] [Abelian C]
     (A : DoubleComplex C) (p q : ℤ) : C :=

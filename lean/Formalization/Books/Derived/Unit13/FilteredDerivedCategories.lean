@@ -464,11 +464,11 @@ theorem filteredDerivedForgetfulFunctor_is_exact
     (filteredDerivedForgetfulFunctor C).IsTriangulated := by
   sorry
 
-theorem filteredDerivedGradedCohomologyZero_fac
+noncomputable def filteredDerivedGradedCohomologyZero_fac
     (C : Type u) [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} (GradedObject ℤ C)] :
     filteredLocalizationFunctor C ⋙ filteredDerivedGradedFunctor C ⋙
-        derivedCohomologyFunctor (GradedObject ℤ C) 0 =
+        derivedCohomologyFunctor (GradedObject ℤ C) 0 ≅
       filteredGradedHomologyZeroFunctor C := by
   sorry
 

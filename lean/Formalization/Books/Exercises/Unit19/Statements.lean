@@ -89,50 +89,65 @@ private lemma no_quadratic_factor_coefficients (a b c d : ℚ)
   · rw [sub_eq_zero.mp c_eq] at constantCoeff quadraticCoeff
     exact no_symmetric_quadratic_coefficients a b d constantCoeff quadraticCoeff d_eq
 
+private lemma quartic_has_no_linear_divisor (q : Polynomial ℚ) (hq : q.Monic)
+    (hq1 : q.natDegree = 1)
+    (hqdiv : q ∣ Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) : False := by
+  have q_form : q = Polynomial.X + Polynomial.C (q.coeff 0) :=
+    hq.eq_X_add_C (by omega)
+  rw [q_form, ← sub_neg_eq_add, ← Polynomial.C_neg] at hqdiv
+  rw [Polynomial.dvd_iff_isRoot] at hqdiv
+  simp [Polynomial.IsRoot] at hqdiv
+  nlinarith only [hqdiv, sq_nonneg ((q.coeff 0) ^ 2)]
+
+private lemma quartic_quadratic_product_impossible (q r : Polynomial ℚ)
+    (hq : q.Monic) (hr : r.Monic) (hq2 : q.natDegree = 2) (hr2 : r.natDegree = 2)
+    (product_eq : q * r = Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) : False := by
+  rw [monic_quadratic_eq hq hq2, monic_quadratic_eq hr hr2] at product_eq
+  have h0 := congrArg (fun f : Polynomial ℚ => f.coeff 0) product_eq
+  have h1 := congrArg (fun f : Polynomial ℚ => f.coeff 1) product_eq
+  have h2 := congrArg (fun f : Polynomial ℚ => f.coeff 2) product_eq
+  have h3 := congrArg (fun f : Polynomial ℚ => f.coeff 3) product_eq
+  rw [Polynomial.mul_coeff_zero] at h0
+  rw [Polynomial.mul_coeff_one] at h1
+  rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk] at h2 h3
+  simp at h0 h1
+  norm_num [Finset.sum_range_succ, Polynomial.coeff_X, Polynomial.coeff_C] at h2 h3
+  exact no_quadratic_factor_coefficients
+    (q.coeff 0) (q.coeff 1) (r.coeff 0) (r.coeff 1) h0.symm h1.symm h2.symm h3.symm
+
+private lemma quartic_has_no_quadratic_divisor (q : Polynomial ℚ) (hq : q.Monic)
+    (hq2 : q.natDegree = 2)
+    (hqdiv : q ∣ Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) : False := by
+  obtain ⟨r, product_eq⟩ := hqdiv
+  have quartic_monic : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).Monic :=
+    Polynomial.monic_X_pow_add_C (a := (144 : ℚ)) (by norm_num)
+  have product_monic : (q * r).Monic := by rw [← product_eq]; exact quartic_monic
+  have hr : r.Monic := hq.of_mul_monic_left product_monic
+  have hr2 : r.natDegree = 2 := by
+    have degrees := congrArg Polynomial.natDegree product_eq
+    rw [Polynomial.natDegree_add_C, Polynomial.natDegree_X_pow,
+      Polynomial.natDegree_mul hq.ne_zero hr.ne_zero, hq2] at degrees
+    omega
+  exact quartic_quadratic_product_impossible q r hq hr hq2 hr2 product_eq.symm
+
 private lemma quartic_plus_144_irreducible :
     Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by
-  have hm : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).Monic := by
-    exact Polynomial.monic_X_pow_add_C (a := (144 : ℚ)) (by norm_num)
-  have hnd : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).natDegree = 4 := by
+  have monic : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).Monic :=
+    Polynomial.monic_X_pow_add_C (a := (144 : ℚ)) (by norm_num)
+  have degree : (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)).natDegree = 4 := by
     rw [Polynomial.natDegree_add_C, Polynomial.natDegree_X_pow]
-  have hone : Polynomial.X ^ 4 + Polynomial.C (144 : ℚ) ≠ 1 := by
-    intro h
-    have := congrArg Polynomial.natDegree h
-    rw [hnd] at this
-    norm_num at this
-  rw [hm.irreducible_iff_lt_natDegree_lt hone]
+  have not_one : Polynomial.X ^ 4 + Polynomial.C (144 : ℚ) ≠ 1 := by
+    intro polynomial_eq_one
+    have degrees := congrArg Polynomial.natDegree polynomial_eq_one
+    rw [degree] at degrees
+    norm_num at degrees
+  rw [monic.irreducible_iff_lt_natDegree_lt not_one]
   intro q hq hqdeg hqdiv
   simp only [Finset.mem_Ioc] at hqdeg
-  have hqpos : 0 < q.natDegree := hqdeg.1
-  have hqle : q.natDegree ≤ 2 := by
-    rw [hnd] at hqdeg
-    omega
-  rcases (show q.natDegree = 1 ∨ q.natDegree = 2 by omega) with hq1 | hq2
-  · have hqform : q = Polynomial.X + Polynomial.C (q.coeff 0) :=
-      hq.eq_X_add_C (by omega)
-    rw [hqform, ← sub_neg_eq_add, ← Polynomial.C_neg] at hqdiv
-    rw [Polynomial.dvd_iff_isRoot] at hqdiv
-    simp [Polynomial.IsRoot] at hqdiv
-    nlinarith [sq_nonneg ((q.coeff 0) ^ 2)]
-  · obtain ⟨r, hqr⟩ := hqdiv
-    have hprod : (q * r).Monic := by rw [← hqr]; exact hm
-    have hr : r.Monic := hq.of_mul_monic_left hprod
-    have hrd : r.natDegree = 2 := by
-      have hdeg := congrArg Polynomial.natDegree hqr
-      rw [hnd, Polynomial.natDegree_mul hq.ne_zero hr.ne_zero] at hdeg
-      omega
-    rw [monic_quadratic_eq hq hq2, monic_quadratic_eq hr hrd] at hqr
-    have h0 := congrArg (fun f : Polynomial ℚ => f.coeff 0) hqr
-    have h1 := congrArg (fun f : Polynomial ℚ => f.coeff 1) hqr
-    have h2 := congrArg (fun f : Polynomial ℚ => f.coeff 2) hqr
-    have h3 := congrArg (fun f : Polynomial ℚ => f.coeff 3) hqr
-    rw [Polynomial.mul_coeff_zero] at h0
-    rw [Polynomial.mul_coeff_one] at h1
-    rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk] at h2 h3
-    simp at h0 h1
-    norm_num [Finset.sum_range_succ, Polynomial.coeff_X, Polynomial.coeff_C] at h2 h3
-    exact no_quadratic_factor_coefficients
-      (q.coeff 0) (q.coeff 1) (r.coeff 0) (r.coeff 1) h0 h1 h2 h3
+  have : q.natDegree = 1 ∨ q.natDegree = 2 := by rw [degree] at hqdeg; omega
+  rcases this with hq1 | hq2
+  · exact quartic_has_no_linear_divisor q hq hq1 hqdiv
+  · exact quartic_has_no_quadratic_divisor q hq hq2 hqdiv
 private def planeFirstPolynomial : Polynomial ℚ :=
   (Polynomial.X - Polynomial.C (1 : ℚ)) *
     (Polynomial.X - Polynomial.C (2 : ℚ)) *

@@ -158,22 +158,49 @@ theorem makingPrimeIdeal_le_one_one :
 /-- Different exponents give different principal prime ideals. -/
 theorem makingPrimeIdeal_injective :
     Function.Injective makingPrimeIdeal := by
-  sorry
+  intro n m hnm
+  by_contra hne
+  let φ : twoVariablePolynomialRing ℂ →+* ℂ :=
+    MvPolynomial.eval₂Hom (RingHom.id ℂ) (fun i =>
+      if i = (0 : Fin 2) then 2 else (2 : ℂ) ^ (m + 1))
+  have hmem : makingPrimeEquation n ∈ makingPrimeIdeal m := by
+    rw [← hnm]
+    exact Ideal.subset_span (by simp [makingPrimeIdeal])
+  rw [makingPrimeIdeal, Ideal.mem_span_singleton] at hmem
+  obtain ⟨c, hc⟩ := hmem
+  have hzero : φ (makingPrimeEquation n) = 0 := by
+    rw [hc, map_mul]
+    have hmzero : φ (makingPrimeEquation m) = 0 := by
+      simp [φ, makingPrimeEquation]
+    simp [hmzero]
+  have hpow : (2 : ℂ) ^ (n + 1) = (2 : ℂ) ^ (m + 1) := by
+    have hzero' : (2 : ℂ) ^ (m + 1) = (2 : ℂ) ^ (n + 1) := by
+      simpa [φ, makingPrimeEquation, sub_eq_zero] using hzero
+    exact hzero'.symm
+  have hpow' : 2 ^ (n + 1) = (2 : ℕ) ^ (m + 1) := by
+    exact_mod_cast hpow
+  have hnm' : n + 1 = m + 1 :=
+    Nat.pow_right_injective (by decide : 2 ≤ 2) hpow'
+  exact hne (Nat.add_right_cancel hnm')
 
 /-- The family of explicit prime ideals is infinite. -/
 theorem makingPrimeIdeal_range_infinite :
     Set.Infinite (Set.range makingPrimeIdeal) := by
-  sorry
+  exact Set.infinite_range_of_injective makingPrimeIdeal_injective
 
 /-- There are infinitely many distinct prime ideals whose vanishing sets
 contain both `(0,0)` and `(1,1)`. -/
 theorem infinitely_many_prime_ideals_through_two_points :
     Set.Infinite
       {p : Ideal (twoVariablePolynomialRing ℂ) |
-        p.IsPrime ∧
+          p.IsPrime ∧
           p ≤ twoVariablePointIdeal ℂ 0 0 ∧
           p ≤ twoVariablePointIdeal ℂ 1 1} := by
-  sorry
+  apply makingPrimeIdeal_range_infinite.mono
+  rintro p ⟨n, rfl⟩
+  exact ⟨makingPrimeIdeal_isPrime n,
+    makingPrimeIdeal_le_origin n,
+    makingPrimeIdeal_le_one_one n⟩
 
 end
 

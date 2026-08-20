@@ -72,7 +72,7 @@ theorem exists_multiIndexDominates
       B ^ (n - j.1) ≤ B ^ (n - i.1 - 1) := by
     apply Nat.pow_le_pow_right
     · omega
-    · have hij' : i.1 < j.1 := Fin.lt_iff_val_lt_val.mp hij
+    · have hij' : i.1 < j.1 := by exact hij
       have h' : i.1 + 1 ≤ j.1 := Nat.succ_le_iff.mpr hij'
       have h'' := Nat.sub_le_sub_left h' n
       have heq : n - (i.1 + 1) = n - i.1 - 1 := by omega
@@ -402,8 +402,7 @@ private theorem helper_monomial_substitution_natDegree
   rw [Fin.sum_univ_castSucc]
   simp only [lastVariableSubstitution, Fin.lastCases_castSucc, Fin.lastCases_last]
   simp_rw [hdeg]
-  simp [weightedMultiIndex, lastVariableWeight, Fin.sum_univ_castSucc,
-    add_assoc, add_comm, add_left_comm]
+  simp [weightedMultiIndex, lastVariableWeight, Fin.sum_univ_castSucc, add_comm]
   apply Finset.sum_congr rfl
   intro i hi
   rw [Nat.mul_comm]
@@ -527,7 +526,7 @@ theorem helper_polynomial_leading_term
   have hTne (μ : Fin (n + 1) →₀ ℕ) (hμ : μ ∈ g.support) : T μ ≠ 0 := by
     intro hz
     have hlcz : (T μ).leadingCoeff = 0 := by
-      simpa [hz] using congrArg Polynomial.leadingCoeff hz
+      simp [hz]
     have hc : MvPolynomial.C (g.coeff μ) = 0 := (hTLC μ hμ).symm.trans hlcz
     exact (MvPolynomial.C_ne_zero.mpr (MvPolynomial.mem_support_iff.mp hμ)) hc
   have hνdeg : (T ν).degree ≠ ⊥ := by
@@ -645,7 +644,7 @@ theorem one_relation
       let y : Fin n → MvPolynomial (Fin (n + 1)) k :=
         fun i => MvPolynomial.X i.castSucc - MvPolynomial.X (Fin.last n) ^ e i
       let Q := (MvPolynomial (Fin (n + 1)) k) ⧸ I
-      haveI : Nontrivial Q := by
+      have : Nontrivial Q := by
         dsimp [Q]
         exact Ideal.Quotient.nontrivial_iff.mpr hIproper
       let q : MvPolynomial (Fin (n + 1)) k →ₐ[k] Q := Ideal.Quotient.mkₐ k I
@@ -731,8 +730,7 @@ theorem one_relation
             ring
           rw [hrel]
           apply add_mem
-          · change q (y i) ∈ Algebra.adjoin A ({x} : Set Q)
-            simpa using (Algebra.adjoin A ({x} : Set Q)).algebraMap_mem
+          · simpa using (Algebra.adjoin A ({x} : Set Q)).algebraMap_mem
               (⟨q (y i), by
               change Ideal.Quotient.mk I (y i) ∈ quotientGeneratorSubalgebra I y
               exact Algebra.subset_adjoin ⟨i, rfl⟩⟩ : A)
@@ -847,7 +845,7 @@ theorem noether_normalization
       obtain ⟨j, rfl⟩ := hi
       simpa [integerPolynomialSubalgebra] using hy j
     · intro z
-      simp [Algebra.smul_def]
+      simp
     · intro p q _ _ hp hq
       simpa using add_mem hp hq
     · intro p q _ _ hp hq
@@ -906,7 +904,7 @@ theorem noether_normalization
         · obtain ⟨y, hfiniteA, hy⟩ := one_relation J hJ hJbot
           simp only [Nat.succ_sub_one] at y hfiniteA hy
           let Q := (MvPolynomial (Fin (m + 1)) k) ⧸ J
-          haveI : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hJ
+          have : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hJ
           let q : MvPolynomial (Fin (m + 1)) k →ₐ[k] Q := Ideal.Quotient.mkₐ k J
           let A : Subalgebra k Q := quotientGeneratorSubalgebra J y
           let φ : MvPolynomial (Fin m) k →ₐ[k] A :=
@@ -929,13 +927,11 @@ theorem noether_normalization
                     MvPolynomial (Fin m) k →ₐ[k] MvPolynomial (Fin (m + 1)) k).toRingHom) := by
             apply MvPolynomial.ringHom_ext
             · intro c
-              simp only [MvPolynomial.aeval_def, MvPolynomial.eval₂Hom_C,
-                RingHom.coe_comp, Function.comp_apply]
+              simp only [RingHom.coe_comp, Function.comp_apply]
               simp [q]
               rfl
             · intro i
-              simp only [MvPolynomial.aeval_def, MvPolynomial.eval₂Hom_X',
-                RingHom.coe_comp, Function.comp_apply]
+              simp only [RingHom.coe_comp, Function.comp_apply]
               simp [q]
           have hφsurj : Function.Surjective φ := by
             intro z
@@ -956,7 +952,9 @@ theorem noether_normalization
               have h1 : (1 : MvPolynomial (Fin m) k) ∈ RingHom.ker f := by
                 rw [htop]
                 trivial
-              exact one_ne_zero (show (1 : Q) = 0 by simpa using h1)
+              change f 1 = 0 at h1
+              rw [map_one] at h1
+              exact one_ne_zero h1
           obtain ⟨r, hr, g₀, hg₀inj, hg₀finite, z, hg₀X, hz⟩ :=
             ih (RingHom.ker f) hKtop
           let lift :
@@ -1007,7 +1005,7 @@ theorem noether_normalization
   have hpoly : ringKrullDim (MvPolynomial (Fin r) k) = r := by
     rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
       ringKrullDim_eq_zero_of_field]
-    simp [Nat.card_fin]
+    simp
   exact ⟨r, hr, g, hginj, hgfinite,
     by simpa [hpoly, Nat.card_fin] using hdim.symm, y, hgX, hy⟩
 

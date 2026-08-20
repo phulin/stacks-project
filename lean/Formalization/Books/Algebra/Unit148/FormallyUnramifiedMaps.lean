@@ -16,7 +16,7 @@ open scoped TensorProduct
 
 noncomputable section
 
-universe u v
+universe u v w x
 
 /-! ## The lifting definition and the differential criterion -/
 
@@ -24,16 +24,17 @@ universe u v
 theorem formallyUnramified_iff_lifting
     {R : Type v} {S : Type u} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.FormallyUnramified R S ↔
-      ∀ {A : Type u} [CommRing A] [Algebra R A]
+      ∀ {A : Type max u v} [CommRing A] [Algebra R A]
         (I : Ideal A) (_hI : I ^ 2 = ⊥),
         Function.Injective
           ((Ideal.Quotient.mkₐ R I).comp :
             (S →ₐ[R] A) → S →ₐ[R] A ⧸ I) := by
-  simpa using (Algebra.FormallyUnramified.iff_comp_injective (R := R) (A := S))
+  simpa using
+    (Algebra.FormallyUnramified.iff_comp_injective_of_small.{max u v} (R := R) (A := S))
 
 /-- Formal unramifiedness is stable under arbitrary base change. -/
 theorem formallyUnramified_baseChange
-    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    {R : Type v} {S : Type u} {R' : Type w} [CommRing R] [CommRing S] [CommRing R']
     [Algebra R S] [Algebra R R']
     (h : Algebra.FormallyUnramified R S) :
     letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
@@ -75,8 +76,7 @@ theorem formallyUnramified_iff_local
             (Localization.AtPrime q.asIdeal) ] := by
   sorry
 
-/-- The formal-unramified property is preserved by localization.  This is the
-canonical Mathlib statement for localization of the target. -/
+/-- Every canonical localization map is formally unramified. -/
 theorem formallyUnramified_localization :
     RingHom.HoldsForLocalization RingHom.FormallyUnramified :=
   RingHom.FormallyUnramified.holdsForLocalization
@@ -84,7 +84,8 @@ theorem formallyUnramified_localization :
 /-- Formal unramifiedness is preserved by the canonical map between arbitrary
 source and target localizations. -/
 theorem formallyUnramified_localize_source_and_target
-    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    {A : Type u} {B : Type v} {A' : Type w} {B' : Type x}
+    [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
     {M : Submonoid A} {T : Submonoid B}
     [Algebra A A'] [IsLocalization M A']
     [Algebra B B'] [IsLocalization T B']

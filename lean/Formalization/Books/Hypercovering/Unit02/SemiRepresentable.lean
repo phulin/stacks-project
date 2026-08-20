@@ -500,7 +500,7 @@ theorem semiRepresentableOverPresheafFunctor_preserves_coproducts
     {C : Type u} [Category.{v} C] (X : C) (J : Type v) :
     PreservesColimitsOfShape (Discrete J)
       (semiRepresentableOverPresheafFunctor X) := by
-  letI : ∀ (K : J → SemiRepresentableOver C X),
+  let : ∀ (K : J → SemiRepresentableOver C X),
       PreservesColimit (Discrete.functor K)
         (semiRepresentableOverForget X) := by
     intro K
@@ -572,16 +572,16 @@ theorem semiRepresentableOverPresheafFunctor_preserves_coproducts
     exact IsColimit.ofIsoColimit hstd
       (α ≪≫ (Cocone.functoriality _ _).mapIso
         ((FormalCoproduct.isColimitCofan J K).uniqueUpToIso hc))
-  letI : PreservesColimitsOfShape (Discrete J)
+  let : PreservesColimitsOfShape (Discrete J)
       (semiRepresentableOverForget X) :=
     preservesColimitsOfShape_of_discrete _
-  letI : PreservesColimitsOfShape (Discrete J)
+  let : PreservesColimitsOfShape (Discrete J)
       (semiRepresentablePresheafFunctor (C := C)) :=
     semiRepresentablePresheafFunctor_preserves_coproducts (C := C) J
   have h_under : PreservesColimitsOfShape (Discrete J)
       (semiRepresentableOverUnderlying X) := by
     infer_instance
-  letI : PreservesColimitsOfShape (Discrete J)
+  let : PreservesColimitsOfShape (Discrete J)
       (semiRepresentableOverPresheafFunctor X ⋙
         (Over.forget (representablePresheaf X) :
           PresheafOver C X ⥤ Presheaf C)) := by
@@ -604,10 +604,10 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
     {C : Type u} [Category.{v} C] (X : C) [HasPullbacks C] :
     PreservesFiniteLimits (semiRepresentableOverPresheafFunctor X) := by
   
-  letI : HasTerminal (Over X) := Over.over_hasTerminal X
-  letI : HasTerminal (SemiRepresentableOver C X) :=
+  let : HasTerminal (Over X) := Over.over_hasTerminal X
+  let : HasTerminal (SemiRepresentableOver C X) :=
     (FormalCoproduct.isTerminalIncl (⊤_ (Over X)) terminalIsTerminal).hasTerminal
-  letI : HasTerminal (PresheafOver C X) :=
+  let : HasTerminal (PresheafOver C X) :=
     Over.over_hasTerminal (representablePresheaf X)
   have hterm :
       (semiRepresentableOverPresheafFunctor X).obj
@@ -647,12 +647,11 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
     refine Sigma.hom_ext _ _ (fun i => ?_)
     dsimp [e0', Functor.mapIso, Iso.trans]
     rw [← Category.assoc]
-    simp [Category.assoc, Category.comp_id, Sigma.ι_desc,
+    simp [Category.assoc, Category.comp_id,
       semiRepresentableOverStructureMap,
       representablePresheafMapOfOver,
-      e0', semiRepresentableOverUnderlying,
       semiRepresentablePresheafFunctor, FormalCoproduct.yoneda,
-      FormalCoproduct.eval, Functor.comp_map]
+      FormalCoproduct.eval]
     have he0comp' (j :
         ((semiRepresentableOverForget X).obj
           ((FormalCoproduct.incl (Over X)).obj (Over.mk (𝟙 X)))).I) :
@@ -717,15 +716,15 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
       𝟙 (functorOfPoints.obj X) at he0comp''
     rw [he0comp'']
     exact Category.comp_id _
-  letI : PreservesLimit (Functor.empty (SemiRepresentableOver C X))
+  let : PreservesLimit (Functor.empty (SemiRepresentableOver C X))
       (semiRepresentableOverPresheafFunctor X) :=
     preservesTerminal_of_iso (semiRepresentableOverPresheafFunctor X) hterm
-  letI : PreservesLimitsOfShape (Discrete PEmpty)
+  let : PreservesLimitsOfShape (Discrete PEmpty)
       (semiRepresentableOverPresheafFunctor X) := by
     exact preservesLimitsOfShape_pempty_of_preservesTerminal _
-  letI : PreservesLimits (semiRepresentablePresheafFunctor (C := C)) :=
+  let : PreservesLimits (semiRepresentablePresheafFunctor (C := C)) :=
     semiRepresentablePresheafFunctor_preserves_limits (C := C)
-  letI : PreservesLimitsOfShape WalkingCospan
+  let : PreservesLimitsOfShape WalkingCospan
       (semiRepresentableOverPresheafFunctor X) := by
     refine ⟨fun {K} => ?_⟩
     let f : K.obj WalkingCospan.left ⟶ K.obj WalkingCospan.one :=
@@ -966,8 +965,7 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
       · intro j
         rcases j with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
         · simp only [t, f', g', semiRepresentableOverPresheafFunctor,
-            semiRepresentableOverUnderlying, semiRepresentableOverForget,
-            NatTrans.comp_app, Category.assoc]
+            semiRepresentableOverUnderlying, semiRepresentableOverForget]
           apply Sigma.hom_ext
           intro U
           dsimp only [Functor.mapCone, Cone.functoriality, Cone.postcompose]
@@ -991,8 +989,7 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
                   ((semiRepresentableOverForget X).map (t.π.app none))
           exact (Category.comp_id _).trans (Category.id_comp _).symm
         · simp only [t, f', g', semiRepresentableOverPresheafFunctor,
-            semiRepresentableOverUnderlying, semiRepresentableOverForget,
-            NatTrans.comp_app, Functor.map_comp, Category.assoc]
+            semiRepresentableOverUnderlying, semiRepresentableOverForget]
           apply Sigma.hom_ext
           intro U
           dsimp only [Functor.mapCone, Cone.functoriality, Cone.postcompose]
@@ -1020,8 +1017,7 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
                       (t.π.app (some WalkingPair.left)))
           exact (Category.comp_id _).trans (Category.id_comp _).symm
         · simp only [t, f', g', semiRepresentableOverPresheafFunctor,
-            semiRepresentableOverUnderlying, semiRepresentableOverForget,
-            NatTrans.comp_app, Functor.map_comp, Category.assoc]
+            semiRepresentableOverUnderlying, semiRepresentableOverForget]
           apply Sigma.hom_ext
           intro U
           dsimp only [Functor.mapCone, Cone.functoriality, Cone.postcompose]

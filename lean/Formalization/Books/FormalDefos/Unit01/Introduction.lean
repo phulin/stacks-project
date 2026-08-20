@@ -8,6 +8,7 @@ import Mathlib.CategoryTheory.ObjectProperty.ClosedUnderIsomorphisms
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.RingTheory.AdicCompletion.Basic
+import Mathlib.RingTheory.AdicCompletion.Noetherian
 import Mathlib.RingTheory.Artinian.Ring
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
@@ -201,7 +202,8 @@ def baseCategoryToCompletion
     BaseCategory Λ k coefficientMap ⥤ CompletionCategory Λ k coefficientMap :=
   ObjectProperty.ιOfLE (by
     intro A hA
-    sorry)
+    let _ : IsArtinianRing (A.toCommRing : Type u) := hA
+    exact ⟨inferInstance, inferInstance⟩)
 
 /-- The base category is strictly full in its completion category. -/
 theorem baseCategory_strictlyFull_in_completion
@@ -214,7 +216,31 @@ theorem baseCategory_strictlyFull_in_completion
         (artinianLocalAlgebraProperty Λ k coefficientMap X.obj ↔
           ∃ Y : BaseCategory Λ k coefficientMap,
             Nonempty ((baseCategoryToCompletion Λ k coefficientMap).obj Y ≅ X)) := by
-  sorry
+  have hartinian_of_iso {A B : LocalLambdaAlgebra Λ k coefficientMap}
+      (e : A ≅ B) (hA : artinianLocalAlgebraProperty Λ k coefficientMap A) :
+      artinianLocalAlgebraProperty Λ k coefficientMap B := by
+    have hsurj : Function.Surjective e.hom.hom := by
+      intro y
+      refine ⟨e.inv.hom y, ?_⟩
+      exact congrArg (fun f => f.hom y) e.inv_hom_id
+    exact Function.Surjective.isArtinianRing (f := e.hom.hom) (H := hA) hsurj
+  have hclosed :
+      ObjectProperty.IsClosedUnderIsomorphisms
+        (artinianLocalAlgebraProperty Λ k coefficientMap) :=
+    ⟨hartinian_of_iso⟩
+  refine ⟨⟨ObjectProperty.fullyFaithfulιOfLE _⟩, hclosed, ?_⟩
+  intro X
+  constructor
+  · intro hX
+    refine ⟨⟨X.obj, hX⟩, ?_⟩
+    exact ⟨ObjectProperty.isoMk (P := completeLocalAlgebraProperty Λ k coefficientMap)
+      (Iso.refl X.obj)⟩
+  · intro h
+    rcases h with ⟨Y, h⟩
+    rcases h with ⟨e⟩
+    have e' : Y.obj ≅ X.obj :=
+      (completeLocalAlgebraProperty Λ k coefficientMap).ι.mapIso e
+    exact hartinian_of_iso e' Y.property
 
 /-- The pro-category of a category, using Mathlib's canonical ind/op
 construction. -/
@@ -377,8 +403,23 @@ def canonicalAssociatedIsomorphismClassFunctor {C : Type u}
   toFunctor :=
     { obj A := IsomorphismClasses (F.obj (.mk A))
       map q := ↾(associatedIsomorphismClassMap F q)
-      map_id := by sorry
-      map_comp := by sorry }
+      map_id := by
+        intro X
+        ext x
+        change associatedIsomorphismClassMap F (𝟙 X) x = x
+        refine Quotient.inductionOn x ?_
+        intro Y
+        apply Quotient.sound
+        exact ⟨(Cat.Hom.toNatIso (F.mapId (.mk X))).app Y⟩
+      map_comp := by
+        intro X Y Z f g
+        ext x
+        change associatedIsomorphismClassMap F (f ≫ g) x =
+          associatedIsomorphismClassMap F g (associatedIsomorphismClassMap F f x)
+        refine Quotient.inductionOn x ?_
+        intro W
+        apply Quotient.sound
+        exact ⟨(Cat.Hom.toNatIso (F.mapComp f.toLoc g.toLoc)).app W⟩ }
   fiberIdentification A := Equiv.refl _
   identificationNaturality := by
     intro A B q x

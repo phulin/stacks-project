@@ -61,12 +61,14 @@ def IsPrimeLocallyFinitelyPresentedModule
   BaseChangeModuleFinitePresentation (M := M) (algebraMap R S)
     (algebraMap R (Localization.AtPrime p.asIdeal))
 
-/-- Flatness, finite generation, and prime-local finite presentation imply
-    finite presentation for a module over a polynomial algebra. -/
+/-- Flatness, finite generation, the finite localization cover, and prime-local
+    finite presentation imply finite presentation for a module over a
+    polynomial algebra. -/
 theorem flat_finiteType_finitePresentation_local_module
     {R M : Type*} [CommRing R] (n : ℕ)
     [AddCommGroup M] [Module (MvPolynomial (Fin n) R) M]
     [Module.Finite (MvPolynomial (Fin n) R) M]
+    (hcover : HasFinitePrimeLocalizationCover R)
     (hflat : letI : Module R M :=
       Module.compHom M (algebraMap R (MvPolynomial (Fin n) R));
       Module.Flat R M)
@@ -92,7 +94,7 @@ theorem flat_gradedPolynomial_finitePresentation_module
     {R M : Type*} [CommRing R] (n : ℕ)
     [AddCommGroup M] [Module (MvPolynomial (Fin n) R) M]
     (𝒜 : ℕ → Submodule R (MvPolynomial (Fin n) R))
-    (𝓜 : ℤ → Submodule (MvPolynomial (Fin n) R) M)
+    (𝓜 : ℤ → AddSubgroup M)
     (w : Fin n → ℕ) (hw : ∀ i, 0 < w i)
     (hX : ∀ i, MvPolynomial.X i ∈ 𝒜 (w i))
     [GradedAlgebra 𝒜] [DirectSum.Decomposition 𝓜]
@@ -109,7 +111,7 @@ theorem flat_gradedPolynomial_finitePresentation_module
 theorem flat_graded_finiteType_finitePresentation
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M]
-    (𝒜 : ℕ → Submodule R S) (𝓜 : ℤ → Submodule S M)
+    (𝒜 : ℕ → Submodule R S) (𝓜 : ℤ → AddSubgroup M)
     [GradedAlgebra 𝒜] [DirectSum.Decomposition 𝓜]
     [SetLike.GradedSMul 𝒜 𝓜] [Algebra.FiniteType R S]
     [Module.Finite R (𝒜 0)]
@@ -177,7 +179,8 @@ theorem valuationRing_flat_finitePresentation
 /-- The local essentially-finite-type valuation-ring refinement. -/
 theorem valuationRing_local_essFiniteType_finitePresentation
     {A B M : Type*} [CommRing A] [IsDomain A] [ValuationRing A]
-    [CommRing B] [Algebra A B] [IsLocalHom (algebraMap A B)]
+    [CommRing B] [Algebra A B] [IsLocalRing B]
+    [IsLocalHom (algebraMap A B)]
     [AddCommGroup M] [Module B M] [Module.Finite B M]
     (hess : RingHom.EssFiniteType (algebraMap A B)) :
     (Module.Flat A B →

@@ -54,15 +54,15 @@ def twoStepFiltration
         · have hiPos : 1 ≤ i := by omega
           by_cases hiOne : i = 1
           · by_cases hjOne : j = 1
-            · simp [hi, hiOne, hjOne]
+            · simp [hiOne, hjOne]
             · have hjTwo : 2 ≤ j := by omega
               have hjNotZero : ¬j ≤ 0 := by omega
-              simp [hi, hiOne, hjOne, hjTwo, hjNotZero]
+              simp [hiOne, hjOne, hjNotZero]
           · have hiTwo : 2 ≤ i := by omega
             have hjTwo : 2 ≤ j := le_trans hiTwo hij
             have hjNotZero : ¬j ≤ 0 := by omega
             have hjNotOne : ¬j = 1 := by omega
-            simp [hi, hiOne, hiTwo, hjTwo, hjNotZero, hjNotOne] }
+            simp [hi, hiOne, hjNotZero, hjNotOne] }
 
 noncomputable def twoStepFilteredObject
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -80,8 +80,8 @@ noncomputable def twoStepFilteredObjectFinite
     FiniteFiltered A :=
   ⟨twoStepFilteredObject S hS, by
     refine ⟨0, 2, ?_, ?_⟩
-    · simp [twoStepFilteredObject, twoStepFiltration] <;> rfl
-    · simp [twoStepFilteredObject, twoStepFiltration] <;> rfl⟩
+    · simp [twoStepFilteredObject, twoStepFiltration]; rfl
+    · simp [twoStepFilteredObject, twoStepFiltration]; rfl⟩
 
 theorem twoStepFilteredObject_carrier
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -254,7 +254,7 @@ def derivedLongTerm
     [EnoughInjectives A]
     (T : A ⥤ B) (hT : IsLeftExact T)
     (S : ShortComplex A) (n : ℤ) : B :=
-  if h : n < 0 then 0 else derivedLongTermNat T hT S n.toNat
+  if n < 0 then 0 else derivedLongTermNat T hT S n.toNat
 
 theorem derivedLongTerm_zero
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -333,19 +333,11 @@ def FrobeniusTraceAdditive
     {X : FiniteTypeSchemeOver k} {ell n : ℕ}
     {C : Type v} [Category.{w} C] [Abelian C]
     (D : FrobeniusTraceTheory X ell n C) : Prop :=
-  ∀ (S : ShortComplex C) (hS : S.ShortExact),
+  ∀ (S : ShortComplex C) (_hS : S.ShortExact),
     (D.isFlatConstructible S.X₁ ∧
       D.isFlatConstructible S.X₂ ∧
       D.isFlatConstructible S.X₃) →
       frobeniusTrace D S.X₂ =
         frobeniusTrace D S.X₁ + frobeniusTrace D S.X₃
-
-theorem frobeniusTrace_additive_on_shortExact
-    {k : Type u} [Field k]
-    {X : FiniteTypeSchemeOver k} {ell n : ℕ}
-    {C : Type v} [Category.{w} C] [Abelian C]
-    (D : FrobeniusTraceTheory X ell n C) :
-    FrobeniusTraceAdditive D := by
-  sorry
 
 end Formalization.Books.Trace.Unit09

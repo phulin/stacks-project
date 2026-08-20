@@ -98,8 +98,6 @@ abbrev conormalModule
     (h : Algebra.FormallyUnramified R S) : Type u :=
   (universalFirstOrderThickening h).Cotangent
 
-
-
 theorem universal_first_order_thickening_unique
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     (P Q : Algebra.Extension.{u} R S)
@@ -108,7 +106,144 @@ theorem universal_first_order_thickening_unique
     ∃! e : P.Ring ≃ₐ[R] Q.Ring,
       (IsScalarTower.toAlgHom R Q.Ring S).comp e.toAlgHom =
         IsScalarTower.toAlgHom R P.Ring S := by
-  sorry
+  let pKer : Ideal P.Ring := RingHom.ker (Algebra.ofId P.Ring S)
+  let qKer : Ideal Q.Ring := RingHom.ker (Algebra.ofId Q.Ring S)
+  have hpKer : pKer = P.ker := by rfl
+  have hqKer : qKer = Q.ker := by rfl
+  let pEq₀ := Ideal.quotientKerAlgEquivOfRightInverse
+    (f := Algebra.ofId P.Ring S) (g := P.σ) (by
+      intro x
+      exact P.algebraMap_σ x)
+  let qEq₀ := Ideal.quotientKerAlgEquivOfRightInverse
+    (f := Algebra.ofId Q.Ring S) (g := Q.σ) (by
+      intro x
+      exact Q.algebraMap_σ x)
+  let pEq := pEq₀.restrictScalars R
+  let qEq := qEq₀.restrictScalars R
+  let pMap : P.Ring →ₐ[R] S := IsScalarTower.toAlgHom R P.Ring S
+  let qMap : Q.Ring →ₐ[R] S := IsScalarTower.toAlgHom R Q.Ring S
+  let pLift := pEq.symm.toAlgHom
+  let qLift := qEq.symm.toAlgHom
+  have hpSq : pKer ^ 2 = ⊥ := hpKer.symm ▸ hP.1
+  have hqSq : qKer ^ 2 = ⊥ := hqKer.symm ▸ hQ.1
+  obtain ⟨f, hf, hfu⟩ := hP.2 qKer hqSq qLift
+  obtain ⟨g, hg, hgu⟩ := hQ.2 pKer hpSq pLift
+  obtain ⟨uP, huP, huPu⟩ := hP.2 pKer hpSq pLift
+  obtain ⟨uQ, huQ, huQu⟩ := hQ.2 qKer hqSq qLift
+  have hpMap : pEq.toAlgHom.comp (Ideal.Quotient.mkₐ R pKer) = pMap := by
+    apply AlgHom.ext
+    intro x
+    rfl
+  have hqMap : qEq.toAlgHom.comp (Ideal.Quotient.mkₐ R qKer) = qMap := by
+    apply AlgHom.ext
+    intro x
+    rfl
+  have hpInv : pEq.toAlgHom.comp pLift = AlgHom.id R S := by
+    apply AlgHom.ext
+    intro x
+    exact pEq.apply_symm_apply x
+  have hqInv : qEq.toAlgHom.comp qLift = AlgHom.id R S := by
+    apply AlgHom.ext
+    intro x
+    exact qEq.apply_symm_apply x
+  have hpInv' : pLift.comp pEq.toAlgHom = AlgHom.id _ _ := by
+    apply AlgHom.ext
+    intro x
+    exact pEq.symm_apply_apply x
+  have hqInv' : qLift.comp qEq.toAlgHom = AlgHom.id _ _ := by
+    apply AlgHom.ext
+    intro x
+    exact qEq.symm_apply_apply x
+  have hpCancel (v : Q.Ring →ₐ[R] S) :
+      pEq.toAlgHom.comp (pLift.comp v) = v := by
+    rw [← AlgHom.comp_assoc, hpInv, AlgHom.id_comp]
+  have hqCancel (v : P.Ring →ₐ[R] S) :
+      qEq.toAlgHom.comp (qLift.comp v) = v := by
+    rw [← AlgHom.comp_assoc, hqInv, AlgHom.id_comp]
+  have hpAfterMk :
+      pLift.comp (pEq.toAlgHom.comp (Ideal.Quotient.mkₐ R pKer)) =
+        Ideal.Quotient.mkₐ R pKer := by
+    rw [← AlgHom.comp_assoc, hpInv', AlgHom.id_comp]
+  have hqAfterMk :
+      qLift.comp (qEq.toAlgHom.comp (Ideal.Quotient.mkₐ R qKer)) =
+        Ideal.Quotient.mkₐ R qKer := by
+    rw [← AlgHom.comp_assoc, hqInv', AlgHom.id_comp]
+  have hcompP :
+      (Ideal.Quotient.mkₐ R pKer).comp (g.comp f) = pLift.comp pMap := by
+    calc
+      (Ideal.Quotient.mkₐ R pKer).comp (g.comp f) =
+          ((Ideal.Quotient.mkₐ R pKer).comp g).comp f := by
+            rw [AlgHom.comp_assoc]
+      _ = (pLift.comp qMap).comp f := by rw [hg]
+      _ = pLift.comp (qMap.comp f) := by rw [← AlgHom.comp_assoc]
+      _ = pLift.comp (qEq.toAlgHom.comp
+          ((Ideal.Quotient.mkₐ R qKer).comp f)) := by
+            rw [← hqMap, AlgHom.comp_assoc]
+      _ = pLift.comp (qEq.toAlgHom.comp (qLift.comp pMap)) := by rw [hf]
+      _ = pLift.comp pMap := by rw [hqCancel]
+  have hcompQ :
+      (Ideal.Quotient.mkₐ R qKer).comp (f.comp g) = qLift.comp qMap := by
+    calc
+      (Ideal.Quotient.mkₐ R qKer).comp (f.comp g) =
+          ((Ideal.Quotient.mkₐ R qKer).comp f).comp g := by
+            rw [AlgHom.comp_assoc]
+      _ = (qLift.comp pMap).comp g := by rw [hf]
+      _ = qLift.comp (pMap.comp g) := by rw [← AlgHom.comp_assoc]
+      _ = qLift.comp (pEq.toAlgHom.comp
+          ((Ideal.Quotient.mkₐ R pKer).comp g)) := by
+            rw [← hpMap, AlgHom.comp_assoc]
+      _ = qLift.comp (pEq.toAlgHom.comp (pLift.comp qMap)) := by rw [hg]
+      _ = qLift.comp qMap := by rw [hpCancel]
+  have hIdP :
+      (Ideal.Quotient.mkₐ R pKer).comp (AlgHom.id R P.Ring) = pLift.comp pMap := by
+    calc
+      (Ideal.Quotient.mkₐ R pKer).comp (AlgHom.id R P.Ring) =
+          Ideal.Quotient.mkₐ R pKer := by rw [AlgHom.comp_id]
+      _ = pLift.comp (pEq.toAlgHom.comp (Ideal.Quotient.mkₐ R pKer)) := by
+        exact hpAfterMk.symm
+      _ = pLift.comp pMap := by rw [hpMap]
+  have hIdQ :
+      (Ideal.Quotient.mkₐ R qKer).comp (AlgHom.id R Q.Ring) = qLift.comp qMap := by
+    calc
+      (Ideal.Quotient.mkₐ R qKer).comp (AlgHom.id R Q.Ring) =
+          Ideal.Quotient.mkₐ R qKer := by rw [AlgHom.comp_id]
+      _ = qLift.comp (qEq.toAlgHom.comp (Ideal.Quotient.mkₐ R qKer)) := by
+        exact hqAfterMk.symm
+      _ = qLift.comp qMap := by rw [hqMap]
+  have hfg : g.comp f = AlgHom.id R P.Ring :=
+    (huPu (g.comp f) hcompP).trans (huPu (AlgHom.id R P.Ring) hIdP).symm
+  have hgf : f.comp g = AlgHom.id R Q.Ring :=
+    (huQu (f.comp g) hcompQ).trans (huQu (AlgHom.id R Q.Ring) hIdQ).symm
+  let e : P.Ring ≃ₐ[R] Q.Ring :=
+    { f with
+      invFun := g
+      left_inv := by intro x; exact DFunLike.congr_fun hfg x
+      right_inv := by intro x; exact DFunLike.congr_fun hgf x }
+  have he : qMap.comp f = pMap := by
+    calc
+      qMap.comp f = qEq.toAlgHom.comp ((Ideal.Quotient.mkₐ R qKer).comp f) := by
+        rw [← AlgHom.comp_assoc, hqMap]
+      _ = qEq.toAlgHom.comp (qLift.comp pMap) := by rw [hf]
+      _ = pMap := by rw [hqCancel]
+  refine ⟨e, he, ?_⟩
+  intro e' he'
+  have he'f : e'.toAlgHom = f := hfu e'.toAlgHom (by
+    calc
+      (Ideal.Quotient.mkₐ R qKer).comp e'.toAlgHom =
+          qLift.comp (qMap.comp e'.toAlgHom) := by
+            apply AlgHom.ext
+            intro x
+            apply qEq.injective
+            calc
+              qEq ((Ideal.Quotient.mkₐ R qKer) (e' x)) = qMap (e' x) := by
+                exact DFunLike.congr_fun hqMap (e' x)
+              _ = qEq (qLift (qMap (e' x))) := by
+                simpa only [AlgEquiv.coe_toAlgHom, AlgHom.comp_apply, AlgHom.id_apply] using
+                  (DFunLike.congr_fun (hqCancel (qMap.comp e'.toAlgHom)) x).symm
+      _ = qLift.comp pMap := by rw [he'])
+  exact AlgEquiv.ext (by
+    intro x
+    exact DFunLike.congr_fun he'f x)
 
 /-! ## Quotients -/
 

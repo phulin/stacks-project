@@ -5,6 +5,7 @@ import Mathlib.RingTheory.AdicCompletion.RingHom
 import Mathlib.RingTheory.Finiteness.Quotient
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
+import Mathlib.RingTheory.LocalRing.Quotient
 import Mathlib.RingTheory.AdicCompletion.LocalRing
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
@@ -209,6 +210,92 @@ def LocalCompletionAgreement
       completion
         ((IsLocalRing.maximalIdeal R).map (algebraMap R S)) S)
 
+private theorem completion_factorPow_eval
+    {R : Type u} [CommRing R] (I : Ideal R) {m n : ℕ} (hmn : m ≤ n)
+    (x : ringCompletion I) :
+    Ideal.Quotient.factorPow I hmn (AdicCompletion.evalₐ I n x) =
+      AdicCompletion.evalₐ I m x := by
+  let hn : (I ^ n • (⊤ : Submodule R R)) ≤ I ^ n :=
+    le_of_eq (Ideal.mul_top _)
+  let hm : (I ^ m • (⊤ : Submodule R R)) ≤ I ^ m :=
+    le_of_eq (Ideal.mul_top _)
+  have hfac : ∀ (y : R ⧸ (I ^ n • (⊤ : Submodule R R))),
+      Ideal.Quotient.factorPow I hmn (Submodule.factor hn y) =
+        Submodule.factor hm (AdicCompletion.transitionMap I R hmn y) := by
+    intro y
+    induction y using Quotient.inductionOn' with
+    | _ r => rfl
+  rw [← AdicCompletion.factor_eval_eq_evalₐ I x hn]
+  rw [← AdicCompletion.factor_eval_eq_evalₐ I x hm]
+  rw [hfac]
+  exact congrArg (fun z => Submodule.factor hm z)
+    (AdicCompletion.transitionMap_comp_eval_apply I R hmn x)
+
+private noncomputable def completion_algHom_of_power_le
+    {R : Type u} [CommRing R] (I J : Ideal R) (c : ℕ)
+    (hIJ : I ^ c ≤ J) :
+    AdicCompletion I R →ₐ[R] AdicCompletion J R := by
+  have hpow (n : ℕ) : I ^ (c * n) ≤ J ^ n := by
+    simpa [pow_mul] using (Ideal.pow_right_mono hIJ n)
+  let f : (n : ℕ) → AdicCompletion I R →ₐ[R] R ⧸ J ^ n :=
+    fun n => (Ideal.Quotient.factorₐ R (hpow n)).comp
+      (AdicCompletion.evalₐ I (c * n))
+  have hf : ∀ {m n : ℕ} (hmn : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp (f n) = f m := by
+    intro m n hmn
+    have hcmn : c * m ≤ c * n := Nat.mul_le_mul_left c hmn
+    have hmap :
+        (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp
+            (Ideal.Quotient.factorₐ R (hpow n)) =
+          (Ideal.Quotient.factorₐ R (hpow m)).comp
+            (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hcmn)) := by
+      apply AlgHom.ext
+      intro y
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+      rfl
+    apply AlgHom.ext
+    intro x
+    change (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn))
+        ((Ideal.Quotient.factorₐ R (hpow n))
+          (AdicCompletion.evalₐ I (c * n) x)) =
+      (Ideal.Quotient.factorₐ R (hpow m))
+        (AdicCompletion.evalₐ I (c * m) x)
+    change ((Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp
+        (Ideal.Quotient.factorₐ R (hpow n)))
+        (AdicCompletion.evalₐ I (c * n) x) = _
+    rw [hmap]
+    exact congrArg (Ideal.Quotient.factorₐ R (hpow m))
+      (completion_factorPow_eval I hcmn x)
+  exact AdicCompletion.liftAlgHom J f hf
+
+private noncomputable def completion_algHom_of_le
+    {R : Type u} [CommRing R] (I J : Ideal R) (hIJ : I ≤ J) :
+    AdicCompletion I R →ₐ[R] AdicCompletion J R := by
+  let f : (n : ℕ) → AdicCompletion I R →ₐ[R] R ⧸ J ^ n :=
+    fun n => (Ideal.Quotient.factorₐ R (Ideal.pow_right_mono hIJ n)).comp
+      (AdicCompletion.evalₐ I n)
+  have hf : ∀ {m n : ℕ} (hmn : m ≤ n),
+      (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp (f n) = f m := by
+    intro m n hmn
+    have hmap :
+        (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp
+            (Ideal.Quotient.factorₐ R (Ideal.pow_right_mono hIJ n)) =
+          (Ideal.Quotient.factorₐ R (Ideal.pow_right_mono hIJ m)).comp
+            (Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)) := by
+      apply AlgHom.ext
+      intro y
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+      rfl
+    apply AlgHom.ext
+    intro x
+    change ((Ideal.Quotient.factorₐ R (Ideal.pow_le_pow_right hmn)).comp
+        (Ideal.Quotient.factorₐ R (Ideal.pow_right_mono hIJ n)))
+        (AdicCompletion.evalₐ I n x) = _
+    rw [hmap]
+    exact congrArg (Ideal.Quotient.factorₐ R (Ideal.pow_right_mono hIJ m))
+      (completion_factorPow_eval I hmn x)
+  exact AdicCompletion.liftAlgHom J f hf
+
 theorem local_completion_not_agree_in_general :
     ¬ ∀ (R S : Type u) [CommRing R] [CommRing S] [Algebra R S]
       [IsLocalRing R] [IsLocalRing S] [IsLocalHom (algebraMap R S)],
@@ -223,7 +310,70 @@ theorem local_completion_agrees_of_power_le
     (h : (IsLocalRing.maximalIdeal S) ^ t ≤
       (IsLocalRing.maximalIdeal R).map (algebraMap R S)) :
     LocalCompletionAgreement R S := by
-  sorry
+  let I : Ideal S := IsLocalRing.maximalIdeal S
+  let J : Ideal S := (IsLocalRing.maximalIdeal R).map (algebraMap R S)
+  have hJI : J ≤ I := by
+    exact IsLocalRing.map_maximalIdeal_le (algebraMap R S)
+  have hIJ : I ^ t ≤ J := h
+  have hIpow (n : ℕ) : I ^ (t * n) ≤ J ^ n := by
+    simpa [pow_mul] using (Ideal.pow_right_mono hIJ n)
+  have hJpow (n : ℕ) : J ^ n ≤ I ^ n :=
+    Ideal.pow_right_mono hJI n
+  let F : AdicCompletion I S →ₐ[S] AdicCompletion J S :=
+    completion_algHom_of_power_le I J t hIJ
+  let G : AdicCompletion J S →ₐ[S] AdicCompletion I S :=
+    completion_algHom_of_le J I hJI
+  have hF_eval (n : ℕ) (x : AdicCompletion I S) :
+      AdicCompletion.evalₐ J n (F x) =
+        Ideal.Quotient.factorₐ S (hIpow n)
+          (AdicCompletion.evalₐ I (t * n) x) := by
+    simp [F, completion_algHom_of_power_le]
+  have hG_eval (n : ℕ) (x : AdicCompletion J S) :
+      AdicCompletion.evalₐ I n (G x) =
+        Ideal.Quotient.factorₐ S (hJpow n)
+          (AdicCompletion.evalₐ J n x) := by
+    simp [G, completion_algHom_of_le]
+  have hleft : Function.LeftInverse G F := by
+    intro x
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    have hn : n ≤ t * n := by
+      exact Nat.le_mul_of_pos_left n ht
+    have hcomp :
+        (Ideal.Quotient.factorₐ S (hJpow n)).comp
+            (Ideal.Quotient.factorₐ S (hIpow n)) =
+          Ideal.Quotient.factorₐ S (Ideal.pow_le_pow_right hn) := by
+      apply AlgHom.ext
+      intro y
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+      rfl
+    rw [hG_eval, hF_eval]
+    change ((Ideal.Quotient.factorₐ S (hJpow n)).comp
+        (Ideal.Quotient.factorₐ S (hIpow n)))
+        (AdicCompletion.evalₐ I (t * n) x) = _
+    rw [hcomp]
+    exact completion_factorPow_eval I hn x
+  have hright : Function.RightInverse G F := by
+    intro x
+    apply AdicCompletion.ext_evalₐ
+    intro n
+    have hn : n ≤ t * n := by
+      exact Nat.le_mul_of_pos_left n ht
+    have hcomp :
+        (Ideal.Quotient.factorₐ S (hIpow n)).comp
+            (Ideal.Quotient.factorₐ S (hJpow (t * n))) =
+          Ideal.Quotient.factorₐ S (Ideal.pow_le_pow_right hn) := by
+      apply AlgHom.ext
+      intro y
+      obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+      rfl
+    rw [hF_eval, hG_eval]
+    change ((Ideal.Quotient.factorₐ S (hIpow n)).comp
+        (Ideal.Quotient.factorₐ S (hJpow (t * n))))
+        (AdicCompletion.evalₐ J (t * n) x) = _
+    rw [hcomp]
+    exact completion_factorPow_eval J hn x
+  refine ⟨AlgEquiv.ofBijective F ⟨hleft.injective, hright.surjective⟩⟩
 
 /- The quotient maps used to define the canonical map between the two local
    completions.  The finite-after-completion theorem uses the resulting map
@@ -252,7 +402,33 @@ theorem localQuotientMap_compatible
     ∀ {m n : ℕ} (hmn : m ≤ n),
       (Ideal.Quotient.factorPow (IsLocalRing.maximalIdeal S) hmn).comp
           (localQuotientMap R S n) = localQuotientMap R S m := by
-  sorry
+  intro m n hmn
+  apply RingHom.ext
+  intro x
+  let hmap :
+      (Ideal.Quotient.factorPow (IsLocalRing.maximalIdeal S) hmn).comp
+          (Ideal.quotientMap ((IsLocalRing.maximalIdeal S) ^ n)
+            (algebraMap R S) (maximalIdeal_pow_le_comap_pow R S n)) =
+        (Ideal.quotientMap ((IsLocalRing.maximalIdeal S) ^ m)
+          (algebraMap R S) (maximalIdeal_pow_le_comap_pow R S m)).comp
+          (Ideal.Quotient.factorPow (IsLocalRing.maximalIdeal R) hmn) := by
+    apply RingHom.ext
+    intro y
+    obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective y
+    change Ideal.Quotient.mk ((IsLocalRing.maximalIdeal S) ^ m)
+        (algebraMap R S r) =
+      Ideal.Quotient.mk ((IsLocalRing.maximalIdeal S) ^ m)
+        (algebraMap R S r)
+    rfl
+  change
+    ((Ideal.Quotient.factorPow (IsLocalRing.maximalIdeal S) hmn).comp
+        (Ideal.quotientMap ((IsLocalRing.maximalIdeal S) ^ n)
+          (algebraMap R S) (maximalIdeal_pow_le_comap_pow R S n)))
+        ((AdicCompletion.evalₐ (IsLocalRing.maximalIdeal R) n) x) =
+      (Ideal.quotientMap ((IsLocalRing.maximalIdeal S) ^ m)
+        (algebraMap R S) (maximalIdeal_pow_le_comap_pow R S m))
+        ((AdicCompletion.evalₐ (IsLocalRing.maximalIdeal R) m) x)
+  rw [hmap, RingHom.comp_apply, completion_factorPow_eval]
 
 noncomputable def completedLocalMap
     (R S : Type u) [CommRing R] [CommRing S] [Algebra R S]
@@ -289,6 +465,22 @@ theorem finite_after_completion
        Module.Finite
          (ringCompletion (IsLocalRing.maximalIdeal R))
          (completion (IsLocalRing.maximalIdeal S) S)) := by
+  let K : Ideal S := (IsLocalRing.maximalIdeal R).map (algebraMap R S)
+  have hpower : ∃ n : ℕ, (IsLocalRing.maximalIdeal S) ^ n ≤ K := by
+    letI : (IsLocalRing.maximalIdeal R).IsMaximal :=
+      IsLocalRing.maximalIdeal.isMaximal R
+    letI : Field (R ⧸ IsLocalRing.maximalIdeal R) :=
+      Ideal.Quotient.field (IsLocalRing.maximalIdeal R)
+    letI : Algebra (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    letI : IsScalarTower R (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    letI : Module.Finite (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) := inferInstance
+    letI : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K) :=
+      isArtinian_of_fg_of_artinian'
+    letI : IsArtinianRing (S ⧸ K) :=
+      isArtinian_of_tower (R ⧸ IsLocalRing.maximalIdeal R)
+        (inferInstance : IsArtinian (R ⧸ IsLocalRing.maximalIdeal R) (S ⧸ K))
+    obtain ⟨n, hn⟩ := IsLocalRing.exists_maximalIdeal_pow_le_of_isArtinianRing_quotient K
+    exact ⟨n, hn⟩
   sorry
 
 /-! ## Finite ring maps and completed localizations -/

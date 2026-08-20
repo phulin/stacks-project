@@ -323,6 +323,16 @@ theorem isIdealOfDefinition_iff_exists_pow_maximalIdeal_le
     · intro x hx
       exact Ideal.mem_radical_iff.mpr ⟨r, hr (Ideal.pow_mem_pow hx r)⟩
 
+theorem isNilpotent_of_mem_maximalIdeal_of_bot_isIdealOfDefinition
+    {R : Type u} [CommRing R] [IsLocalRing R] {x : R}
+    (hx : x ∈ IsLocalRing.maximalIdeal R)
+    (hbot : IsIdealOfDefinition R (⊥ : Ideal R)) :
+    IsNilpotent x := by
+  apply mem_nilradical.mp
+  change x ∈ (⊥ : Ideal R).radical
+  rw [hbot]
+  exact hx
+
 theorem finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]

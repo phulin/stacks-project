@@ -1,5 +1,5 @@
 import Formalization.Books.Algebra.Unit144.LocalStructureEtaleRingMaps
-import Mathlib.RingTheory.Ideal.Quotient.Basic
+import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
@@ -54,13 +54,8 @@ def powerQuotientMap
     (f : R →+* S) (t : R) (n : ℕ) :
     R ⧸ Ideal.span ({t ^ n} : Set R) →+*
       S ⧸ Ideal.map f (Ideal.span ({t ^ n} : Set R)) :=
-  Ideal.Quotient.lift (Ideal.span ({t ^ n} : Set R))
-    ((Ideal.Quotient.mk (Ideal.map f (Ideal.span ({t ^ n} : Set R)))).comp f)
-    (by
-      intro a ha
-      change Ideal.Quotient.mk (Ideal.map f (Ideal.span ({t ^ n} : Set R))) (f a) = 0
-      rw [Ideal.Quotient.eq_zero_iff_mem]
-      exact Ideal.mem_map_of_mem f ha)
+  Ideal.quotientMap (Ideal.map f (Ideal.span ({t ^ n} : Set R))) f
+    Ideal.le_comap_map
 
 /-! ## The two source lemmas -/
 

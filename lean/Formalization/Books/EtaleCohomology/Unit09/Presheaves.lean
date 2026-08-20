@@ -1,6 +1,7 @@
 import Formalization.Books.Categories.Unit03.Opposite
 import Formalization.Books.Sites.Unit02.Presheaves
 import Mathlib.Algebra.Category.Grp.Basic
+import Mathlib.CategoryTheory.Sites.Sheaf
 
 /-!
 # Étale Cohomology, Chapter 9: Presheaves
@@ -145,9 +146,16 @@ theorem representablePresheaf_map_apply {C : Type u} [Category.{v} C]
     (representablePresheaf X).map f.op g = f ≫ g := rfl
 
 /- The source notes that representables are not sheaves for every topology.
-   This is recorded at the interface boundary: the sheaf condition belongs to
-   the following source section, so no duplicate or forward local definition
-   is introduced here. -/
+   Mathlib already provides the topology and sheaf-condition interfaces, so
+   the warning can be recorded without importing the later Étale Cohomology
+   sheaf section. -/
+
+/-- Not every representable presheaf is a sheaf for every Grothendieck topology. -/
+theorem representablePresheaf_not_sheaf_in_every_topology :
+    ¬ (∀ (C : Type u) [Category.{v} C]
+      (J : GrothendieckTopology C) (X : C),
+      CategoryTheory.Presheaf.IsSheaf J (representablePresheaf X)) := by
+  sorry
 
 /-- The morphism of representables induced by `ψ : X ⟶ Y`. -/
 def representableMap {C : Type u} [Category.{v} C] {X Y : C} (ψ : X ⟶ Y) :

@@ -335,6 +335,219 @@ theorem isCatenary_of_isDimensionFunction
   refine ⟨hnonneg, ?_⟩
   simpa [hg_closure] using hrel
 
+/-- A catenary sober space with a specialization-top point has a global
+dimension function.  Its value at `x` is the coheight of the interval from
+the top point to `x`. -/
+theorem exists_global_isDimensionFunction_of_isCatenary_of_top
+    [QuasiSober X] [T0Space X]
+    (hX : IsCatenary X) (t : X) (ht : ∀ x : X, x ⤳ t) :
+    ∃ δ : X → ℤ, IsDimensionFunction δ ∧
+      ∀ x : X,
+        δ x =
+          ((relativeCodimension
+            (closureSingletonIrreducibleClosed_le_of_specializes (ht x))).toNat : ℤ) := by
+  classical
+  have htop (x : X) :
+      closureSingletonIrreducibleClosed t ≤
+        closureSingletonIrreducibleClosed x := by
+    exact closureSingletonIrreducibleClosed_le_of_specializes (ht x)
+  have hcodim_self {A : IrreducibleCloseds X} (hAA : A ≤ A) :
+      relativeCodimension hAA = 0 := by
+    have htop' : (⟨A, hAA⟩ : Set.Iic A) = ⊤ := by
+      apply Subtype.ext
+      rfl
+    rw [relativeCodimension, htop', Order.coheight_top]
+  have hcodim_ne_top {A B : IrreducibleCloseds X} (hAB : A ≤ B) :
+      relativeCodimension hAB ≠ ⊤ := by
+    by_cases hEq : A = B
+    · subst B
+      rw [hcodim_self hAB]
+      simp
+    · exact ne_top_of_lt
+        ((isCatenary_iff_finite_and_additive_relativeCodimension.mp hX).1
+          (lt_of_le_of_ne hAB hEq))
+  have hcodim_add {A B C : IrreducibleCloseds X}
+      (hAB : A ≤ B) (hBC : B ≤ C) :
+      relativeCodimension (hAB.trans hBC) =
+        relativeCodimension hAB + relativeCodimension hBC := by
+    by_cases hEqAB : A = B
+    · subst B
+      have hproof : hAB.trans hBC = hBC := Subsingleton.elim _ _
+      rw [hproof]
+      rw [hcodim_self hAB]
+      simp
+    by_cases hEqBC : B = C
+    · subst C
+      have hproof : hAB.trans hBC = hAB := Subsingleton.elim _ _
+      rw [hproof]
+      rw [hcodim_self hBC]
+      simp
+    exact (isCatenary_iff_finite_and_additive_relativeCodimension.mp hX).2
+      (lt_of_le_of_ne hAB hEqAB) (lt_of_le_of_ne hBC hEqBC)
+  have hcodim_add_nat {A B C : IrreducibleCloseds X}
+      (hAB : A ≤ B) (hBC : B ≤ C) :
+      (relativeCodimension (hAB.trans hBC)).toNat =
+        (relativeCodimension hAB).toNat +
+          (relativeCodimension hBC).toNat := by
+    have h := congrArg ENat.toNat (hcodim_add hAB hBC)
+    rw [ENat.toNat_add (hcodim_ne_top hAB) (hcodim_ne_top hBC)] at h
+    exact h
+  have hcodim_pos {A B : IrreducibleCloseds X}
+      (hBA : B < A) :
+      1 ≤ (relativeCodimension (le_of_lt hBA)).toNat := by
+    have hlt :
+        (⟨B, Set.mem_Iic.mpr hBA.le⟩ : Set.Iic A) <
+          (⟨A, Set.mem_Iic.mpr (le_refl A)⟩ : Set.Iic A) := by
+      exact hBA
+    have h := Order.coheight_add_one_le hlt
+    have htop' :
+        (⟨A, Set.mem_Iic.mpr (le_refl A)⟩ : Set.Iic A) = ⊤ := by
+      apply Subtype.ext
+      rfl
+    rw [htop', Order.coheight_top] at h
+    have hpos' :
+        1 ≤ relativeCodimension (le_of_lt hBA) := by
+      simpa [relativeCodimension] using h
+    rw [← ENat.natCast_toNat
+      (hcodim_ne_top (le_of_lt hBA))] at hpos'
+    exact_mod_cast hpos'
+  have hclosure_inj :
+      Function.Injective (closureSingletonIrreducibleClosed (X := X)) :=
+    closureSingleton_injective_iff_t0.mpr (by infer_instance)
+  let g : IrreducibleCloseds X → X :=
+    fun Z => Z.2.genericPoint
+  have hg (Z : IrreducibleCloseds X) :
+      IsGenericPoint (g Z) (Z : Set X) := by
+    dsimp [g]
+    exact Z.2.isGenericPoint_genericPoint Z.3
+  have hg_closure (z : X) :
+      g (closureSingletonIrreducibleClosed z) = z := by
+    apply (hg _).eq
+    exact closureSingleton_isGenericPoint z
+  have hg_def (Z : IrreducibleCloseds X) :
+      closureSingletonIrreducibleClosed (g Z) = Z := by
+    apply IrreducibleCloseds.ext
+    rw [← (hg Z).def]
+    rfl
+  have hspec_of_le {A B : IrreducibleCloseds X} (hAB : A ≤ B) :
+      g B ⤳ g A := by
+    apply (hg B).specializes
+    exact hAB (hg A).mem
+  have hcodim_one {x y : X}
+      (himm : IsImmediateSpecialization x y) :
+      relativeCodimension
+          (closureSingletonIrreducibleClosed_le_of_specializes himm.2.1) = 1 := by
+    have hBA :
+        closureSingletonIrreducibleClosed y <
+          closureSingletonIrreducibleClosed x := by
+      apply lt_of_le_of_ne
+      · exact closureSingletonIrreducibleClosed_le_of_specializes himm.2.1
+      · intro heq
+        apply himm.1
+        exact (hclosure_inj heq).symm
+    let A : IrreducibleCloseds X := closureSingletonIrreducibleClosed x
+    let B : IrreducibleCloseds X := closureSingletonIrreducibleClosed y
+    have hBA' : B < A := by
+      dsimp [A, B]
+      exact hBA
+    have hcoh_one :
+        Order.coheight
+            (⟨B, Set.mem_Iic.mpr hBA'.le⟩ : Set.Iic A) = 1 := by
+      apply (Order.coheight_eq_coe_add_one_iff
+        (x := (⟨B, Set.mem_Iic.mpr hBA'.le⟩ : Set.Iic A)) (n := 0)).2
+      constructor
+      · exact (lt_top_iff_ne_top).2
+          (hcodim_ne_top (A := B) (B := A) hBA'.le)
+      constructor
+      · refine ⟨(⟨A, Set.mem_Iic.mpr (le_refl A)⟩ : Set.Iic A), ?_, ?_⟩
+        · exact hBA'
+        · have htop' :
+              (⟨A, Set.mem_Iic.mpr (le_refl A)⟩ : Set.Iic A) = ⊤ := by
+            apply Subtype.ext
+            rfl
+          rw [htop', Order.coheight_top]
+          exact ENat.natCast_zero.symm
+      · intro C hBC
+        have hBC' : B < (C : IrreducibleCloseds X) := hBC
+        by_cases hCAeq : (C : IrreducibleCloseds X) = A
+        · have hCtop : C = (⊤ : Set.Iic A) := by
+            apply Subtype.ext
+            exact hCAeq
+          rw [hCtop, Order.coheight_top]
+          rw [ENat.natCast_zero]
+        · have hCA : (C : IrreducibleCloseds X) < A :=
+            lt_of_le_of_ne C.property hCAeq
+          have hxC : x ⤳ g (C : IrreducibleCloseds X) := by
+            have h := hspec_of_le hCA.le
+            simpa [A, hg_closure] using h
+          have hCy : g (C : IrreducibleCloseds X) ⤳ y := by
+            have h := hspec_of_le hBC'.le
+            simpa [B, hg_closure] using h
+          have hz_x : g (C : IrreducibleCloseds X) ≠ x := by
+            intro hzx
+            have hEq : (C : IrreducibleCloseds X) = A := by
+              calc
+                (C : IrreducibleCloseds X) =
+                    closureSingletonIrreducibleClosed
+                      (g (C : IrreducibleCloseds X)) :=
+                  (hg_def (C : IrreducibleCloseds X)).symm
+                _ = closureSingletonIrreducibleClosed x := by rw [hzx]
+                _ = A := rfl
+            exact hCAeq hEq
+          have hz_y : g (C : IrreducibleCloseds X) ≠ y := by
+            intro hzy
+            have hEq : (C : IrreducibleCloseds X) = B := by
+              calc
+                (C : IrreducibleCloseds X) =
+                    closureSingletonIrreducibleClosed
+                      (g (C : IrreducibleCloseds X)) :=
+                  (hg_def (C : IrreducibleCloseds X)).symm
+                _ = closureSingletonIrreducibleClosed y := by rw [hzy]
+                _ = B := rfl
+            exact hBC'.ne hEq.symm
+          exact (himm.2.2 ⟨g (C : IrreducibleCloseds X), hz_x, hz_y, hxC, hCy⟩).elim
+    change Order.coheight
+        (⟨B, Set.mem_Iic.mpr hBA'.le⟩ : Set.Iic A) = 1
+    exact hcoh_one
+  let δ : X → ℤ := fun x =>
+    ((relativeCodimension (htop x)).toNat : ℤ)
+  have hδ_strict {x y : X} (hxy : x ⤳ y) (hne : x ≠ y) :
+      δ x > δ y := by
+    have hxy' := closureSingletonIrreducibleClosed_le_of_specializes hxy
+    have hlt :
+        closureSingletonIrreducibleClosed y <
+          closureSingletonIrreducibleClosed x := by
+      apply lt_of_le_of_ne hxy'
+      intro heq
+      apply hne
+      exact (hclosure_inj heq).symm
+    have hadd := hcodim_add_nat (htop y) hxy'
+    have hpos := hcodim_pos hlt
+    dsimp [δ]
+    rw [hadd]
+    have hnat :
+        (relativeCodimension (htop y)).toNat <
+          (relativeCodimension (htop y)).toNat +
+            (relativeCodimension hxy').toNat := by
+      omega
+    exact_mod_cast hnat
+  have hδ_immediate {x y : X}
+      (himm : IsImmediateSpecialization x y) : δ x = δ y + 1 := by
+    have hxy' := closureSingletonIrreducibleClosed_le_of_specializes himm.2.1
+    have hadd := hcodim_add_nat (htop y) hxy'
+    have hone := hcodim_one himm
+    dsimp [δ]
+    rw [hadd, hone]
+    simp
+  refine ⟨δ, ?_, ?_⟩
+  · exact ⟨(by
+      intro x y hxy hne
+      exact hδ_strict hxy hne), (by
+      intro x y himm
+      exact hδ_immediate himm)⟩
+  · intro x
+    simpa [δ]
+
 /-! ## Uniqueness -/
 
 /-- Two dimension functions differ by a locally constant integer-valued map. -/

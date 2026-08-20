@@ -1395,26 +1395,8 @@ theorem iAdicPolynomialCompletion_iAdically_complete_of_fg
     (A : Type u) [CommRing A] (I : Ideal A) (r : ℕ) (hI : I.FG) :
     IsAdicComplete (polynomialExtensionIdeal A I r)
       (iAdicPolynomialCompletion A I r) := by
-  /-
-  Proof roadmap.
-
-  * Put `P := MvPolynomial (Fin r) A` and
-    `J := polynomialExtensionIdeal A I r`.
-  * Obtain `hJ : J.FG` from
-    `hI.map (algebraMap A P)` in
-    `Mathlib/RingTheory/Finiteness/Ideal.lean`; after unfolding
-    `polynomialExtensionIdeal`, this is definitionally the required ideal.
-  * The goal unfolds to `IsAdicComplete J (AdicCompletion J P)`.  Close it
-    with `AdicCompletion.isAdicComplete hJ` from
-    `Mathlib/RingTheory/AdicCompletion/Completeness.lean`.
-
-  Do not use
-  `Formalization.Books.MoreAlgebra.Unit36.adicCompletion_not_always_iAdically_complete`:
-  that theorem quantifies over arbitrary modules `M` and supplies neither a
-  polynomial module specialization nor an I-adically complete coefficient
-  ring, so it cannot prove the former negative interface.
-  -/
-  sorry
+  exact AdicCompletion.isAdicComplete
+    (hI.map (algebraMap A (MvPolynomial (Fin r) A)))
 
 /-- If the defining ideal is finitely generated, the ring identification is
 also an identification of the I-adic and limit topologies. -/

@@ -1,4 +1,3 @@
-import Formalization.Books.MoreAlgebra.Unit17.FlatteningArtinian
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
@@ -147,8 +146,8 @@ def DirectedIdealColimit
           y ∈ I i ∧ D.stageToTarget i y = x)
 
 /-- The flatness-along-`V(I')` condition on a directed colimit descends to a
-sufficiently large stage when the original ring map and module are finitely
-presented.
+  sufficiently large stage when the original ring map and module are finitely
+  presented.
 
 The proof-only open flat locus, its finite basic-open cover of `V(I'S')`, and
 the eventual stage equation used to descend that cover are internal proof

@@ -86,7 +86,7 @@ theorem exists_kInjective_representation {R : Type u} [CommRing R]
   obtain ⟨I, f, hf, hI⟩ :=
     Formalization.Books.MoreAlgebra.Unit56.every_module_complex_has_kInjective_resolution
       R L
-  haveI : QuasiIso f := hf
+  let _ : QuasiIso f := hf
   refine ⟨I, hI, ⟨(asIso ((derivedQuotient R).map f)).symm ≪≫ eM⟩⟩
 
 /-! ## Derived Hom -/

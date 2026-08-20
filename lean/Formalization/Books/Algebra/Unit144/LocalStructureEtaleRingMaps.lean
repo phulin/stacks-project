@@ -103,23 +103,12 @@ theorem standardEtale_composition_counterexample :
 
 /-! ## Prescribed residue fields -/
 
-/-- Data for an étale extension with a prescribed finite separable residue
-field at a prime. -/
-structure PrescribedResidueFieldEtaleData
+/-- Textbook-facing name for the étale prescribed-residue-field data owned
+by the preceding chapter. -/
+abbrev PrescribedResidueFieldEtaleData
     (R : Type u) [CommRing R] (p : PrimeSpectrum R)
-    (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L] where
-  R' : Type u
-  [commRingR' : CommRing R']
-  [algebraRR' : Algebra R R']
-  etale : RingHom.Etale (algebraMap R R')
-  p' : PrimeSpectrum R'
-  liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
-  residueEquiv :
-    letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
-      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
-        (algebraMap R R') p p' liesOver).toAlgebra
-    Nonempty
-      (p'.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField] L)
+    (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L] :=
+  Formalization.Books.Algebra.Unit143.EtalePrescribedResidueFieldData R p L
 
 /-- Every finite separable extension of a residue field occurs as the residue
 field extension of an étale map. -/
@@ -129,7 +118,7 @@ theorem exists_etale_with_prescribed_residue_field
     [Module.Finite p.asIdeal.ResidueField L]
     [Algebra.IsSeparable p.asIdeal.ResidueField L] :
     Nonempty (PrescribedResidueFieldEtaleData R p L) := by
-  sorry
+  exact Formalization.Books.Algebra.Unit143.exists_etale_prescribed_residue_field p L
 
 /-! ## Local standard étale structure -/
 

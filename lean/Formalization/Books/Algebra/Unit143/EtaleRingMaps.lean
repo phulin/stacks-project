@@ -667,6 +667,23 @@ theorem factor_mod_prime_lift_etale
 
 /-! ## Finite separable residue-field extensions -/
 
+/-- An étale algebra realizing a prescribed finite separable extension of
+the residue field at a prime. -/
+structure EtalePrescribedResidueFieldData
+    (A : Type u) [CommRing A] (p : PrimeSpectrum A)
+    (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L] where
+  S : Type u
+  [commRingS : CommRing S]
+  [algebraAS : Algebra A S]
+  etale : RingHom.Etale (algebraMap A S)
+  q : PrimeSpectrum S
+  liesOver : PrimeSpectrum.comap (algebraMap A S) q = p
+  residueEquiv :
+    letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap A S) p q liesOver).toAlgebra
+    Nonempty (q.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField] L)
+
 /-- An étale algebra together with a presentation of a finite separable
 extension as a quotient of it.  The compatibility field keeps the interface
 independent of a chosen `Algebra A L` instance. -/
@@ -890,6 +907,27 @@ theorem exists_etale_surjective_extension_over_atPrime
   simpa using
     (exists_etale_surjective_extension_over_local_ring
       (A := Localization.AtPrime p.asIdeal) L)
+
+/-- A finite separable extension of the residue field at a prime is realized
+by an étale algebra over the original ring. -/
+theorem exists_etale_prescribed_residue_field
+    {A : Type u} [CommRing A] (p : PrimeSpectrum A)
+    (L : Type v) [Field L] [Algebra p.asIdeal.ResidueField L]
+    [Module.Finite p.asIdeal.ResidueField L]
+    [Algebra.IsSeparable p.asIdeal.ResidueField L] :
+    Nonempty (EtalePrescribedResidueFieldData A p L) := by
+  /-
+  The local construction above gives a standard étale presentation over
+  `Localization.AtPrime p.asIdeal`.  Choose the finitely many coefficients
+  and inverse witnesses occurring in that presentation, clear their
+  denominators by one element outside `p`, and descend the pair to
+  `Localization.Away s`.  Composition with `A → Localization.Away s` is
+  étale.  The quotient map to `L` defines `q`; `comap_prime` identifies its
+  contraction, while `residueFieldEquiv_with_baseMap` supplies compatibility
+  on `A`.  Naturality of `Ideal.ResidueField.map` upgrades the resulting ring
+  equivalence to the displayed algebra equivalence.
+  -/
+  sorry
 
 end
 

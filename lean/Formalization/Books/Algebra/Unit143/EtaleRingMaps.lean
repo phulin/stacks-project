@@ -694,6 +694,25 @@ def EtaleSurjectiveExtensionData.prime
   letI := D.algebraAS
   ⟨RingHom.ker D.map, RingHom.ker_isPrime D.map⟩
 
+/-- The prime defined by the quotient map contracts to the kernel of the
+chosen map from the base ring to the residue field. -/
+theorem EtaleSurjectiveExtensionData.comap_prime
+    {A k : Type u} {L : Type v}
+    [CommRing A] [Field k] [Field L]
+    {r : A →+* k} [Algebra k L]
+    (D : EtaleSurjectiveExtensionData A k L r) :
+    let _ : CommRing D.S := D.commRingS
+    let _ : Algebra A D.S := D.algebraAS
+    Ideal.comap (algebraMap A D.S) D.prime.asIdeal = RingHom.ker r := by
+  let _ := D.commRingS
+  let _ := D.algebraAS
+  ext a
+  change D.map (algebraMap A D.S a) = 0 ↔ r a = 0
+  rw [show D.map (algebraMap A D.S a) = algebraMap k L (r a) by
+    exact DFunLike.congr_fun D.commutes a]
+  simpa using
+    (RingHom.injective (algebraMap k L)).eq_iff (a := r a) (b := 0)
+
 /-- The quotient map induces the canonical residue-field ring equivalence. -/
 theorem EtaleSurjectiveExtensionData.residueFieldEquiv
     {A k : Type u} {L : Type v}

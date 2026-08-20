@@ -105,10 +105,25 @@ instance (S : AffineCrystallineSituation.{u}) : Category (AffineThickening S) wh
   Hom := AffineThickening.Hom
   id X :=
     { hom := 𝟙 X.B
-      quotient_commutes := by sorry }
+      quotient_commutes := by
+        change (quotientMapOfIdealMap (RingHom.id (X.B : Type u)) _).comp
+          X.CtoQuotient = X.CtoQuotient
+        rw [quotientMapOfIdealMap_id, RingHom.id_comp] }
   comp f g :=
     { hom := f.hom ≫ g.hom
-      quotient_commutes := by sorry }
+      quotient_commutes := by
+        rw [AffineThickening.quotientMap]
+        change (quotientMapOfIdealMap (g.hom.hom.comp f.hom.hom) _).comp
+          _ = _
+        have hq := quotientMapOfIdealMap_comp f.hom.hom f.hom.ideal_map
+          g.hom.hom g.hom.ideal_map
+        rw [hq, RingHom.comp_assoc]
+        have hf := f.quotient_commutes
+        have hg := g.quotient_commutes
+        rw [show (quotientMapOfIdealMap f.hom.hom _).comp _ = _ by
+          simpa only [AffineThickening.quotientMap] using hf,
+          show (quotientMapOfIdealMap g.hom.hom _).comp _ = _ by
+            simpa only [AffineThickening.quotientMap] using hg] }
   id_comp := by
     intro X Y f
     apply AffineThickening.Hom.ext _ _
@@ -162,14 +177,61 @@ noncomputable def quotientCAlgebraFunctor
           intro c
           have h := congrArg (fun g => g c) f.quotient_commutes
           simpa [RingHom.algebraMap_toAlgebra] using h }
-  map_id := by sorry
-  map_comp := by sorry
+  map_id := by
+    intro X
+    letI : Algebra S.C ((X.B : Type u) ⧸ X.B.ideal) :=
+      X.CtoQuotient.toAlgebra
+    apply CommAlgCat.hom_ext
+    apply AlgHom.ext
+    intro x
+    change (AffineThickening.quotientMap
+      (𝟙 X : AffineThickening.Hom X X).hom) x = x
+    rw [AffineThickening.quotientMap]
+    have hq : quotientMapOfIdealMap
+        (𝟙 X : AffineThickening.Hom X X).hom.hom
+        (𝟙 X : AffineThickening.Hom X X).hom.ideal_map =
+        RingHom.id _ := by
+      apply Ideal.Quotient.ringHom_ext
+      ext y
+      rfl
+    rw [hq]
+    rfl
+  map_comp := by
+    intro X Y Z f g
+    letI : Algebra S.C ((X.B : Type u) ⧸ X.B.ideal) :=
+      X.CtoQuotient.toAlgebra
+    letI : Algebra S.C ((Y.B : Type u) ⧸ Y.B.ideal) :=
+      Y.CtoQuotient.toAlgebra
+    letI : Algebra S.C ((Z.B : Type u) ⧸ Z.B.ideal) :=
+      Z.CtoQuotient.toAlgebra
+    apply CommAlgCat.hom_ext
+    apply AlgHom.ext
+    intro x
+    change (AffineThickening.quotientMap (f.hom ≫ g.hom)) x =
+      (AffineThickening.quotientMap g.hom)
+        ((AffineThickening.quotientMap f.hom) x)
+    rw [AffineThickening.quotientMap]
+    change (quotientMapOfIdealMap (g.hom.hom.comp f.hom.hom) _) x =
+      (quotientMapOfIdealMap g.hom.hom _)
+        ((quotientMapOfIdealMap f.hom.hom _) x)
+    have hq := quotientMapOfIdealMap_comp f.hom.hom f.hom.ideal_map
+      g.hom.hom g.hom.ideal_map
+    rw [hq]
+    rfl
 
 /-- Every thickening has a locally nilpotent divided-power ideal. -/
 theorem ideal_locally_nilpotent
     (S : AffineCrystallineSituation.{u}) (X : AffineThickening S) :
     ∀ x : X.B, x ∈ X.B.ideal → IsNilpotent x := by
-  sorry
+  intro x hx
+  obtain ⟨e, he⟩ := X.p_nilpotent
+  refine ⟨S.p ^ e, ?_⟩
+  apply DividedPowers.nilpotent_of_mem_dpIdeal
+    (n := S.p ^ e) (pow_ne_zero _ S.hp.ne_zero)
+  · intro y hy
+    rw [nsmul_eq_mul, Nat.cast_pow, he, zero_mul]
+  · exact X.B.dividedPowers
+  · exact hx
 
 /-! ## Finite products and nonempty colimits -/
 

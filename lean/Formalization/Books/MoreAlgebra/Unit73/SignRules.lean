@@ -128,7 +128,9 @@ theorem termwiseSplitTriangleh_distinguished {R : Type u} [CommRing R]
     {K L M : Comp R} (S : TermwiseSplitExactSequence K L M) :
     termwiseSplitTriangleh S ∈
       distTriang (Formalization.Books.MoreAlgebra.Unit58.K R) := by
-  sorry
+  rw [HomotopyCategory.distinguished_iff_iso_trianglehOfDegreewiseSplit]
+  exact ⟨Formalization.Books.Derived.Unit09.termwiseSplitShortComplex S, S.splitting,
+    ⟨Iso.refl _⟩⟩
 
 /- The total-complex formula is already the canonical component formula from
 More Algebra, Chapter 58. -/
@@ -221,23 +223,201 @@ abbrev tensorFlip_component_sign {R : Type u} [CommRing R]
 
 /-! ## Duals of modules and complexes -/
 
+private theorem exactPairing_module_data {R : Type u} [CommRing R]
+    (M N : ModuleCat.{u} R) [ExactPairing M N] :
+    ((Module.Finite R (M : Type u) ∧ Module.Projective R (M : Type u)) ∧
+        (Module.Finite R (N : Type u) ∧ Module.Projective R (N : Type u))) ∧
+      ∃ e : Module.Dual R (M : Type u) ≃ₗ[R] (N : Type u),
+        ∀ (n : (N : Type u)) (m : (M : Type u)),
+          (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m) = e.symm n m := by
+  let pairMapM : (N : Type u) →ₗ[R] Module.Dual R (M : Type u) :=
+    { toFun := fun n =>
+        { toFun := fun m =>
+            (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m)
+          map_add' := by
+            intro x y
+            change (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] (x + y)) =
+              (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] x) +
+                (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] y)
+            rw [TensorProduct.tmul_add]
+            simp
+          map_smul' := by
+            intro r x
+            change (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] (r • x)) =
+              r • (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] x)
+            rw [TensorProduct.tmul_smul]
+            simp }
+      map_add' := by
+        intro x y
+        ext m
+        change (ExactPairing.evaluation M N).hom ((x + y) ⊗ₜ[R] m) =
+          (ExactPairing.evaluation M N).hom (x ⊗ₜ[R] m) +
+            (ExactPairing.evaluation M N).hom (y ⊗ₜ[R] m)
+        rw [TensorProduct.add_tmul]
+        simp
+      map_smul' := by
+        intro r x
+        ext m
+        change (ExactPairing.evaluation M N).hom ((r • x) ⊗ₜ[R] m) =
+          r • (ExactPairing.evaluation M N).hom (x ⊗ₜ[R] m)
+        rw [TensorProduct.smul_tmul]
+        simp }
+  let pairMapN : (M : Type u) →ₗ[R] Module.Dual R (N : Type u) :=
+    { toFun := fun m =>
+        { toFun := fun n =>
+            (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m)
+          map_add' := by
+            intro x y
+            change (ExactPairing.evaluation M N).hom ((x + y) ⊗ₜ[R] m) =
+              (ExactPairing.evaluation M N).hom (x ⊗ₜ[R] m) +
+                (ExactPairing.evaluation M N).hom (y ⊗ₜ[R] m)
+            rw [TensorProduct.add_tmul]
+            simp
+          map_smul' := by
+            intro r x
+            change (ExactPairing.evaluation M N).hom ((r • x) ⊗ₜ[R] m) =
+              r • (ExactPairing.evaluation M N).hom (x ⊗ₜ[R] m)
+            rw [TensorProduct.smul_tmul]
+            simp }
+      map_add' := by
+        intro x y
+        ext n
+        change (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] (x + y)) =
+          (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] x) +
+            (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] y)
+        rw [TensorProduct.tmul_add]
+        simp
+      map_smul' := by
+        intro r x
+        ext n
+        change (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] (r • x)) =
+          r • (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] x)
+        rw [TensorProduct.tmul_smul]
+        simp }
+  let t : TensorProduct R M N := (ExactPairing.coevaluation M N).hom 1
+  obtain ⟨s, ht⟩ := TensorProduct.exists_finset t
+  have hsM (m : (M : Type u)) :
+      ∑ i ∈ s, (ExactPairing.evaluation M N).hom (i.2 ⊗ₜ[R] m) • i.1 = m := by
+    have hh := congrArg (fun f => ((f ≫ (ρ_ M).hom) (1 ⊗ₜ[R] m)))
+      (ExactPairing.evaluation_coevaluation M N)
+    simp only [Category.assoc, ModuleCat.comp_apply, ModuleCat.hom_whiskerLeft,
+      ModuleCat.hom_whiskerRight, ModuleCat.hom_hom_associator,
+      ModuleCat.hom_hom_rightUnitor, ModuleCat.hom_inv_rightUnitor] at hh
+    have h_etaM (m : (M : Type u)) :
+        (LinearMap.rTensor (M : Type u)
+          (ModuleCat.Hom.hom (ExactPairing.coevaluation M N)))
+            (1 ⊗ₜ[R] m) = t ⊗ₜ[R] m := by simp [t]
+    rw [h_etaM m] at hh
+    rw [ht] at hh
+    simp only [TensorProduct.sum_tmul, map_sum] at hh
+    calc
+      ∑ i ∈ s, (ExactPairing.evaluation M N).hom (i.2 ⊗ₜ[R] m) • i.1 =
+          ∑ i ∈ s, (TensorProduct.rid R M)
+            ((LinearMap.lTensor (M : Type u) (ModuleCat.Hom.hom
+              (ExactPairing.evaluation M N)))
+              ((TensorProduct.assoc R M N M)
+                ((i.1 ⊗ₜ[R] i.2) ⊗ₜ[R] m))) := by
+            simp
+      _ = (TensorProduct.rid R M)
+          ((TensorProduct.rid R M).symm
+            ((λ_ M).hom (1 ⊗ₜ[R] m))) := hh
+      _ = m := by simp
+  have hsN (n : (N : Type u)) :
+      ∑ i ∈ s, (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] i.1) • i.2 = n := by
+    have hh := congrArg (fun f => ((f ≫ (λ_ N).hom) (n ⊗ₜ[R] 1)))
+      (ExactPairing.coevaluation_evaluation M N)
+    simp only [Category.assoc, ModuleCat.comp_apply, ModuleCat.hom_whiskerLeft,
+      ModuleCat.hom_whiskerRight, ModuleCat.hom_inv_associator,
+      ModuleCat.hom_hom_leftUnitor, ModuleCat.hom_hom_rightUnitor,
+      ModuleCat.hom_inv_leftUnitor] at hh
+    have h_etaN (n : (N : Type u)) :
+        (LinearMap.lTensor (N : Type u)
+          (ModuleCat.Hom.hom (ExactPairing.coevaluation M N)))
+            (n ⊗ₜ[R] 1) = n ⊗ₜ[R] t := by simp [t]
+    rw [h_etaN n] at hh
+    rw [ht] at hh
+    simp only [TensorProduct.tmul_sum, map_sum] at hh
+    calc
+      ∑ i ∈ s, (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] i.1) • i.2 =
+          ∑ i ∈ s, (TensorProduct.lid R N)
+            ((LinearMap.rTensor (N : Type u) (ModuleCat.Hom.hom
+              (ExactPairing.evaluation M N)))
+              ((TensorProduct.assoc R N M N).symm
+                (n ⊗ₜ[R] (i.1 ⊗ₜ[R] i.2)))) := by
+            simp
+      _ = (TensorProduct.lid R N)
+          ((TensorProduct.lid R N).symm
+            ((ρ_ N).hom (n ⊗ₜ[R] 1))) := hh
+      _ = n := by simp
+  let uM := TensorProduct.map pairMapM LinearMap.id (TensorProduct.comm R M N t)
+  let uN := TensorProduct.map pairMapN LinearMap.id t
+  have hM : LinearMap.id ∈ LinearMap.range (dualTensorHom R M M) := by
+    refine ⟨uM, ?_⟩
+    apply LinearMap.ext
+    intro m
+    simp only [uM, ht, TensorProduct.map_tmul, TensorProduct.comm_tmul, map_sum,
+      LinearMap.sum_apply, dualTensorHom_apply, LinearMap.id_apply, pairMapM]
+    exact hsM m
+  have hN : LinearMap.id ∈ LinearMap.range (dualTensorHom R N N) := by
+    refine ⟨uN, ?_⟩
+    apply LinearMap.ext
+    intro n
+    simp only [uN, ht, TensorProduct.map_tmul, map_sum, LinearMap.sum_apply,
+      dualTensorHom_apply, LinearMap.id_apply, pairMapN]
+    exact hsN n
+  have hsurj : Function.Surjective pairMapM := by
+    intro f
+    let n : (N : Type u) := ∑ i ∈ s, f i.1 • i.2
+    refine ⟨n, ?_⟩
+    apply LinearMap.ext
+    intro m
+    have hm := congrArg f (hsM m)
+    simpa [n, pairMapM, map_sum, mul_comm] using hm
+  have hinj : Function.Injective pairMapM := by
+    intro n₁ n₂ h
+    calc
+      n₁ = ∑ i ∈ s, (ExactPairing.evaluation M N).hom (n₁ ⊗ₜ[R] i.1) • i.2 :=
+        (hsN n₁).symm
+      _ = ∑ i ∈ s, (ExactPairing.evaluation M N).hom (n₂ ⊗ₜ[R] i.1) • i.2 := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        have hi' := congrArg (fun f : Module.Dual R (M : Type u) => f i.1) h
+        have hi'' :
+            (ExactPairing.evaluation M N).hom (n₁ ⊗ₜ[R] i.1) =
+              (ExactPairing.evaluation M N).hom (n₂ ⊗ₜ[R] i.1) := by
+          simpa [pairMapM] using hi'
+        rw [hi'']
+      _ = n₂ := hsN n₂
+  let e : Module.Dual R (M : Type u) ≃ₗ[R] (N : Type u) :=
+    (LinearEquiv.ofBijective pairMapM ⟨hinj, hsurj⟩).symm
+  have heval (n : (N : Type u)) (m : (M : Type u)) :
+      (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m) = e.symm n m := by
+    change (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m) = pairMapM n m
+    rfl
+  exact ⟨
+    ⟨⟨Module.Finite.of_one_mem_range_dualTensorHom hM,
+      Module.Projective.of_one_mem_range_dualTensorHom hM⟩,
+      ⟨Module.Finite.of_one_mem_range_dualTensorHom hN,
+        Module.Projective.of_one_mem_range_dualTensorHom hN⟩⟩,
+    ⟨e, heval⟩⟩
+
 theorem leftDualModule_finiteProjective {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) [ExactPairing M N] :
     (Module.Finite R (M : Type u) ∧ Module.Projective R (M : Type u)) ∧
       (Module.Finite R (N : Type u) ∧ Module.Projective R (N : Type u)) := by
-  sorry
+  exact (exactPairing_module_data M N).1
 
 theorem leftDualModule_dualIso {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) [ExactPairing M N] :
     Nonempty (Module.Dual R (M : Type u) ≃ₗ[R] (N : Type u)) := by
-  sorry
+  exact ⟨(exactPairing_module_data M N).2.choose⟩
 
 theorem leftDualModule_evaluationFormula {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) [ExactPairing M N] :
     ∃ e : Module.Dual R (M : Type u) ≃ₗ[R] (N : Type u),
       ∀ (n : (N : Type u)) (m : (M : Type u)),
         (ExactPairing.evaluation M N).hom (n ⊗ₜ[R] m) = e.symm n m := by
-  sorry
+  exact (exactPairing_module_data M N).2
 
 /- The converse construction is the graded dual with the signed dual
 differential `-(-1)^n (d_M^{-n-1})^∨`. -/
@@ -246,9 +426,36 @@ noncomputable def dualComplex {R : Type u} [CommRing R] (M : Comp R) : Comp R wh
   d n m := ModuleCat.ofHom
     (-(n.negOnePow) • (M.d (-m) (-n)).hom.dualMap)
   shape n m hnm := by
-    sorry
+    have h : ¬ (ComplexShape.up ℤ).Rel (-m) (-n) := by
+      intro h'
+      apply hnm
+      simp only [ComplexShape.up_Rel] at h' ⊢
+      omega
+    rw [M.shape _ _ h]
+    apply ModuleCat.hom_ext
+    ext x
+    simp
   d_comp_d' n m p hnm hmp := by
-    sorry
+    simp only [ComplexShape.up_Rel] at hnm hmp
+    subst m
+    subst p
+    rw [← ModuleCat.ofHom_comp]
+    apply ModuleCat.hom_ext
+    ext x y
+    change ((-(n + 1).negOnePow • (M.d (-(n + 1 + 1)) (-(n + 1))).hom.dualMap)
+        ((-n.negOnePow • (M.d (-(n + 1)) (-n)).hom.dualMap) x)) y = 0
+    have hd : M.d (-(n + 1 + 1)) (-(n + 1)) ≫ M.d (-(n + 1)) (-n) = 0 := by
+      apply M.d_comp_d'
+      · simp only [ComplexShape.up_Rel]
+        omega
+      · simp only [ComplexShape.up_Rel]
+        omega
+    have hdy : (M.d (-(n + 1)) (-n)).hom
+        ((M.d (-(n + 1 + 1)) (-(n + 1))).hom y) = 0 := by
+      have := congrArg (fun f => f.hom y) hd
+      simpa only [ModuleCat.hom_comp, LinearMap.comp_apply, ModuleCat.hom_zero,
+        LinearMap.zero_apply] using this
+    simp only [LinearMap.dualMap_apply, LinearMap.smul_apply, hdy, map_zero, smul_zero]
 
 @[simp]
 theorem dualComplex_differential_formula {R : Type u} [CommRing R]

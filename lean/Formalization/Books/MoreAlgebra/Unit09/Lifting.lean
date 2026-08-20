@@ -147,7 +147,7 @@ private theorem quotient_localization_algEquiv
     ext x
     simp [QS, S,
       Formalization.Books.Algebra.Unit09.quotientLocalizationSubmonoid]
-  letI : IsLocalization.Away (Ideal.Quotient.mk I u)
+  let : IsLocalization.Away (Ideal.Quotient.mk I u)
       (Localization QS) := by
     change IsLocalization (Submonoid.powers (Ideal.Quotient.mk I u))
       (Localization QS)
@@ -187,8 +187,8 @@ theorem lift_invertible_element
       etale := Formalization.Books.Algebra.Unit143.etale_localization_away u
       quotientEquiv := quotient_localization_algEquiv I u hu }
   refine ⟨D, ?_⟩
-  letI : CommRing D.S := D.commRingS
-  letI : Algebra A D.S := D.algebraRS
+  let : CommRing D.S := D.commRingS
+  let : Algebra A D.S := D.algebraRS
   refine ⟨algebraMap A D.S u, IsLocalization.Away.algebraMap_isUnit u, ?_⟩
   exact (quotientLiftEquiv I D).commutes (Ideal.Quotient.mk I u)
 
@@ -208,13 +208,13 @@ private theorem standard_etale_idempotent_lift
       monic_f := by
         dsimp [f]
         rcases subsingleton_or_nontrivial A with hA | hA
-        · letI := hA
+        · let := hA
           have hf0 : (Polynomial.X ^ 2 - Polynomial.X : Polynomial A) = 0 :=
             Subsingleton.elim _ _
           rw [hf0]
           exact Polynomial.monic_zero_iff_subsingleton.mpr
             (inferInstance : Subsingleton A)
-        · letI := hA
+        · let := hA
           simpa [sub_eq_add_neg] using
             (Polynomial.monic_X_pow_add (p := -Polynomial.X)
               (by
@@ -225,8 +225,7 @@ private theorem standard_etale_idempotent_lift
         refine ⟨f.derivative * z ^ 2, -4 * z ^ 2, 2, ?_⟩
         have hd : f.derivative = 2 * Polynomial.X - 1 := by
           dsimp [f]
-          simp [Polynomial.derivative_sub, Polynomial.derivative_pow,
-            ← Polynomial.C_eq_natCast]
+          simp [Polynomial.derivative_sub, Polynomial.derivative_pow]
           apply Polynomial.ext
           intro n
           simp
@@ -262,7 +261,7 @@ private theorem standard_etale_idempotent_lift
             _ = 1 := by rw [he.eq]; ring
   let S := P.Ring
   let K : Ideal S := Ideal.map (algebraMap A S) I
-  letI : Algebra (A ⧸ I) (S ⧸ K) :=
+  let : Algebra (A ⧸ I) (S ⧸ K) :=
     Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
   let φ : S →ₐ[A] A ⧸ I :=
     P.lift (Ideal.Quotient.mk I e) hP
@@ -371,7 +370,7 @@ private theorem standard_etale_idempotent_lift
           _ = algebraMap (A ⧸ I) (S ⧸ K) (Ideal.Quotient.mk I b) := by
             rw [Ideal.Quotient.algebraMap_eq]
       have hψb' : ψ (Ideal.Quotient.mk I b) = algebraMap A (S ⧸ K) b := by
-        simpa [ψ]
+        simp [ψ]
       rw [← hmap, ← hψb']
       simpa only [AlgHom.comp_apply, AlgHom.id_apply] using hb)
   let D : EtaleQuotientLiftData A I :=
@@ -379,8 +378,8 @@ private theorem standard_etale_idempotent_lift
       etale := by dsimp [S]; infer_instance
       quotientEquiv := ⟨q⟩ }
   refine ⟨D, ?_⟩
-  letI : CommRing D.S := D.commRingS
-  letI : Algebra A D.S := D.algebraRS
+  let : CommRing D.S := D.commRingS
+  let : Algebra A D.S := D.algebraRS
   refine ⟨P.X, ?_, ?_⟩
   · have := P.hasMap_X.1
     have hx0 : P.X ^ 2 - P.X = 0 := by simpa [P, f] using this
@@ -436,7 +435,7 @@ theorem localize_upstairs
     ∃ g : B, IsUnit (Ideal.Quotient.mk J g) ∧
       Algebra.Etale A (Localization.Away g) := by
   classical
-  letI : Algebra A B := f.toAlgebra
+  let : Algebra A B := f.toAlgebra
   have hex : ∀ q : PrimeSpectrum B, J ≤ q.asIdeal → ∃ x : B,
       x ∉ q.asIdeal ∧ Algebra.Etale A (Localization.Away x) := by
     intro q hq
@@ -471,7 +470,7 @@ theorem localize_upstairs
     have hjs' := congrArg (Ideal.Quotient.mk J) hjs
     rw [map_add, Ideal.Quotient.eq_zero_iff_mem.mpr hj, zero_add] at hjs'
     simpa using hjs'
-  refine ⟨s, isUnit_iff_exists_inv.mpr ⟨1, by simpa [hsmod]⟩, ?_⟩
+  refine ⟨s, isUnit_iff_exists_inv.mpr ⟨1, by simp [hsmod]⟩, ?_⟩
   let T := Localization.Away s
   let r : Set T := Set.range (fun q : Q => algebraMap B T (g q))
   have hmem : algebraMap B T s ∈
@@ -492,14 +491,14 @@ theorem localize_upstairs
   rintro ⟨x, ⟨q, rfl⟩⟩
   let T₁ := Localization.Away (algebraMap B T (g q))
   let T₂ := Localization.Away (algebraMap B (Localization.Away (g q)) s)
-  letI : IsLocalization.Away (s * g q) T₁ := inferInstance
-  letI : IsLocalization.Away (g q * s) T₂ := inferInstance
-  letI : IsLocalization.Away (s * g q) T₂ :=
+  let : IsLocalization.Away (s * g q) T₁ := inferInstance
+  let : IsLocalization.Away (g q * s) T₂ := inferInstance
+  let : IsLocalization.Away (s * g q) T₂ :=
     IsLocalization.Away.of_associated
       (show Associated (g q * s) (s * g q) by rw [mul_comm])
   let e : T₁ ≃ₐ[B] T₂ :=
     IsLocalization.algEquiv (Submonoid.powers (s * g q)) T₁ T₂
-  letI : Algebra.Etale A (Localization.Away (g q)) := (hg q).2
+  let : Algebra.Etale A (Localization.Away (g q)) := (hg q).2
   have hT₂ : Algebra.Etale A T₂ := by
     dsimp [T₂]
     infer_instance

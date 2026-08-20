@@ -1411,13 +1411,101 @@ theorem sheafModuleRingedSpacePullback_preserves_all_colimits
 
 theorem abelianSheafPullback_isExact {X Y : TopCat.{v}} (f : X ⟶ Y) :
     IsExact (abelianSheafPullback f) := by
-  sorry
+  change PreservesFiniteLimits (abelianSheafPullback f) ∧
+    PreservesFiniteColimits (abelianSheafPullback f)
+  constructor
+  · apply CategoryTheory.Functor.sheafPullbackConstruction.preservesFiniteLimits
+  · let h : PreservesColimitsOfSize.{v, v} (abelianSheafPullback f) :=
+      (abelianSheafPullbackPushforwardAdjunction f).leftAdjoint_preservesColimits
+    exact PreservesColimitsOfSize.preservesFiniteColimits (abelianSheafPullback f)
 
 theorem unit03OpenAbelianSheafExtension_isExact {X : TopCat.{v}}
     (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
     IsExact (openAbelianSheafExtensionFunctor U) := by
-  sorry
+  change PreservesFiniteLimits (openAbelianSheafExtensionFunctor U) ∧
+    PreservesFiniteColimits (openAbelianSheafExtensionFunctor U)
+  constructor
+  · let E := openPresheafExtensionByInitial AddCommGrpCat U
+    have hE : PreservesFiniteLimits E := by
+      apply CategoryTheory.preservesFiniteLimits_of_evaluation
+      intro V
+      by_cases hV : V.unop ≤ U
+      · let e : E ⋙ (evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj V ≅
+            (evaluation (Opens (openSubspace U))ᵒᵖ AddCommGrpCat).obj
+              ((Opens.map (openInclusion U)).op.obj V) :=
+          NatIso.ofComponents
+            (fun F => eqToIso (by
+              simp [E, openPresheafExtensionByInitial, hV]))
+            (by
+              intro F G φ
+              let pF : (E.obj F).obj V =
+                  F.obj ((Opens.map (openInclusion U)).op.obj V) := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              let pG : G.obj ((Opens.map (openInclusion U)).op.obj V) =
+                  (E.obj G).obj V := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              simp [E, openPresheafExtensionByInitial, hV]
+              change (eqToHom pF ≫ φ.app _ ≫ eqToHom pG) ≫
+                  eqToHom pG.symm = eqToHom pF ≫ φ.app _
+              simp [Category.assoc])
+        letI : PreservesLimits
+            ((evaluation (Opens (openSubspace U))ᵒᵖ AddCommGrpCat).obj
+              ((Opens.map (openInclusion U)).op.obj V)) :=
+          evaluationPreservesLimits _
+        exact preservesFiniteLimits_of_natIso e.symm
+      · let e : E ⋙ (evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj V ≅
+            (Functor.const _).obj (⊥_ AddCommGrpCat.{v}) :=
+          NatIso.ofComponents
+            (fun F => eqToIso (by
+              simp [E, openPresheafExtensionByInitial, hV]))
+            (by
+              intro F G φ
+              let pF : (E.obj F).obj V = ⊥_ AddCommGrpCat.{v} := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              let pG : (E.obj G).obj V = ⊥_ AddCommGrpCat.{v} := by
+                simp [E, openPresheafExtensionByInitial, hV]
+              change (0 : (E.obj G).obj V ⟶ (⊥_ AddCommGrpCat.{v})) = _
+              exact (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt _ _)
+        letI : PreservesFiniteLimits
+            ((Functor.const (TopCat.Presheaf AddCommGrpCat (openSubspace U))).obj
+              (⊥_ AddCommGrpCat.{v})) := by
+          refine ⟨fun J _ _ => ⟨fun {K} => ⟨fun {c} hc => ?_⟩⟩⟩
+          let H := (Functor.const (TopCat.Presheaf AddCommGrpCat
+            (openSubspace U))).obj (⊥_ AddCommGrpCat.{v})
+          refine ⟨(Cone.isLimitEquivIsTerminal (H.mapCone c)).2 ?_⟩
+          letI : ∀ s : Cone (K ⋙ H), Unique (s ⟶ H.mapCone c) := by
+            intro s
+            exact {
+              default := { hom := by
+                change s.pt ⟶ (⊥_ AddCommGrpCat.{v})
+                exact (isZero_zero (AddCommGrpCat.{v})).from_ s.pt },
+              uniq := fun m => by
+                ext
+                exact (isZero_zero (AddCommGrpCat.{v})).eq_of_tgt _ _ }
+          exact IsTerminal.ofUnique _
+        exact preservesFiniteLimits_of_natIso e.symm
+    letI : PreservesFiniteLimits E := hE
+    letI : PreservesFiniteLimits
+        (TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙ E) :=
+      comp_preservesFiniteLimits _ _
+    letI : HasSheafify (Opens.grothendieckTopology X) AddCommGrpCat := by
+      infer_instance
+    letI : PreservesFiniteLimits
+        (CategoryTheory.presheafToSheaf
+          (Opens.grothendieckTopology X) AddCommGrpCat) := by
+      exact HasSheafify.isLeftExact
+    letI : PreservesFiniteLimits
+        ((TopCat.Sheaf.forget AddCommGrpCat (openSubspace U) ⋙ E) ⋙
+          CategoryTheory.presheafToSheaf
+            (Opens.grothendieckTopology X) AddCommGrpCat) :=
+      comp_preservesFiniteLimits _ _
+    infer_instance
+  · let h : PreservesColimitsOfSize.{v, v}
+        (openAbelianSheafExtensionFunctor U) :=
+      (openAbelianSheafExtensionAdjunction U).leftAdjoint_preservesColimits
+    exact PreservesColimitsOfSize.preservesFiniteColimits
+      (openAbelianSheafExtensionFunctor U)
 
 /-! ## Sections of arbitrary direct sums on quasi-compact opens -/
 

@@ -1,4 +1,5 @@
 import Formalization.Books.Homology.Unit18.DoubleComplexes
+import Formalization.Books.Homology.Unit20.DoubleComplexes
 import Formalization.Books.Homology.Unit24.FilteredComplexes
 import Formalization.Books.Homology.Unit13.Complexes
 import Formalization.Books.Homology.Unit10.SerreSubcategories
@@ -34,70 +35,42 @@ namespace Formalization.Books.Homology.Unit25
 /-! ## Iterated cohomology of a double complex -/
 
 /-- The complex in the first index obtained by taking vertical cohomology
-in a fixed second degree.  Its differential is induced by `d₁`. -/
-def doubleComplexVerticalHomologyComplex
+in a fixed second degree.  This is the established Chapter 20 construction. -/
+abbrev doubleComplexVerticalHomologyComplex
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : DoubleComplex C) (q : ℤ) : CochainComplex C ℤ where
-  X p :=
-    (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
-      (column A p)
-  d p r := if h : p + 1 = r then
-      h ▸ HomologicalComplex.homologyMap (columnMap A p) q
-    else 0
-  shape p r hpr := by
-    classical
-    split_ifs with h
-    · exact (hpr h).elim
-    · rfl
-  d_comp_d' p r s hpr hrs := by
-    sorry
+    (A : DoubleComplex C) (q : ℤ) : CochainComplex C ℤ :=
+  Formalization.Books.Homology.Unit20.doubleComplexVerticalCohomologyComplex A q
 
 /-- The complex in the second index obtained by taking horizontal cohomology
-in a fixed first degree.  Its differential is induced by `d₂`. -/
-def doubleComplexHorizontalHomologyComplex
+in a fixed first degree.  This is the established Chapter 20 construction. -/
+abbrev doubleComplexHorizontalHomologyComplex
     {C : Type u} [Category.{v} C] [Abelian C]
-    (A : DoubleComplex C) (q : ℤ) : CochainComplex C ℤ where
-  X p :=
-    (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
-      (row A p)
-  d p r := if h : p + 1 = r then
-      h ▸ HomologicalComplex.homologyMap (rowMap A p) q
-    else 0
-  shape p r hpr := by
-    classical
-    split_ifs with h
-    · exact (hpr h).elim
-    · rfl
-  d_comp_d' p r s hpr hrs := by
-    sorry
+    (A : DoubleComplex C) (q : ℤ) : CochainComplex C ℤ :=
+  Formalization.Books.Homology.Unit20.doubleComplexHorizontalCohomologyComplex A q
 
 /-- The vertical cohomology object `H^q(K^{p,bullet})`. -/
 abbrev doubleComplexVerticalCohomology
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : DoubleComplex C) (p q : ℤ) : C :=
-  (doubleComplexVerticalHomologyComplex A q).X p
+  Formalization.Books.Homology.Unit20.doubleComplexColumnCohomology A p q
 
 /-- The horizontal cohomology object `H^q(K^{bullet,p})`. -/
 abbrev doubleComplexHorizontalCohomology
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : DoubleComplex C) (p q : ℤ) : C :=
-  (doubleComplexHorizontalHomologyComplex A q).X p
+  Formalization.Books.Homology.Unit20.doubleComplexRowCohomology A p q
 
-/-- The first iterated cohomology object
-`H_I^p(H_{II}^q(K))`. -/
+/-- The first iterated cohomology object `H_I^p(H_{II}^q(K))`. -/
 abbrev doubleComplexFirstIteratedCohomology
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : DoubleComplex C) (p q : ℤ) : C :=
-  (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) p).obj
-    (doubleComplexVerticalHomologyComplex A q)
+  Formalization.Books.Homology.Unit20.doubleComplexFirstE₂ A p q
 
-/-- The second iterated cohomology object
-`H_{II}^p(H_I^q(K))`. -/
+/-- The second iterated cohomology object `H_{II}^p(H_I^q(K))`. -/
 abbrev doubleComplexSecondIteratedCohomology
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : DoubleComplex C) (p q : ℤ) : C :=
-  (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) p).obj
-    (doubleComplexHorizontalHomologyComplex A q)
+  Formalization.Books.Homology.Unit20.doubleComplexSecondE₂ A p q
 
 theorem doubleComplex_vertical_cohomology_formula
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -115,122 +88,83 @@ theorem doubleComplex_horizontal_cohomology_formula
 
 /-! ## The two total-complex filtrations -/
 
-/- The summands in the first filtration are indexed by the subtype
-`{i // p ≤ i}`; the image of their coproduct in the diagonal coproduct is
-the categorical version of `⊕_{i+j=n, i≥p} A^{i,j}`. -/
-noncomputable def doubleComplexFirstFiltrationInjection
+/- The following source-facing names reuse Chapter 20's established
+filtration maps and subobjects.  In the second filtration the indexing
+subtype is written in the filtered variable `j`, which is definitionally
+the source condition `j ≥ p` in `⊕_{i+j=n, j≥p} A^{i,j}`. -/
+abbrev doubleComplexFirstFiltrationInjection
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
     (∐ fun i : {i : ℤ // p ≤ i} => A.obj i.1 (n - i.1)) ⟶
-      (totalComplex A).X n := by
-  change
-    (∐ fun i : {i : ℤ // p ≤ i} => A.obj i.1 (n - i.1)) ⟶
-      ∐ fun i : ℤ => A.obj i (n - i)
-  exact Sigma.desc (fun i => Sigma.ι (fun j : ℤ => A.obj j (n - j)) i.1)
+      (totalComplex A).X n :=
+  Formalization.Books.Homology.Unit20.doubleComplexFirstFiltrationMap A n p
 
-noncomputable def doubleComplexSecondFiltrationInjection
+abbrev doubleComplexSecondFiltrationInjection
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
-    (∐ fun i : {i : ℤ // p ≤ n - i} => A.obj i.1 (n - i.1)) ⟶
-      (totalComplex A).X n := by
-  change
-    (∐ fun i : {i : ℤ // p ≤ n - i} => A.obj i.1 (n - i.1)) ⟶
-      ∐ fun i : ℤ => A.obj i (n - i)
-  exact Sigma.desc (fun i => Sigma.ι (fun j : ℤ => A.obj j (n - j)) i.1)
+    (∐ fun j : {j : ℤ // p ≤ j} => A.obj (n - j.1) j.1) ⟶
+      (totalComplex A).X n :=
+  Formalization.Books.Homology.Unit20.doubleComplexSecondFiltrationMap A n p
 
 /-- The first filtration step on the degree-`n` total term. -/
-noncomputable def doubleComplexFirstFiltrationStep
+abbrev doubleComplexFirstFiltrationStep
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
     Subobject ((totalComplex A).X n) :=
-  Subobject.mk (Abelian.image.ι (doubleComplexFirstFiltrationInjection A n p))
+  Formalization.Books.Homology.Unit20.doubleComplexFirstFiltrationSubobject A n p
 
 /-- The second filtration step on the degree-`n` total term. -/
-noncomputable def doubleComplexSecondFiltrationStep
+abbrev doubleComplexSecondFiltrationStep
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
     Subobject ((totalComplex A).X n) :=
-  Subobject.mk (Abelian.image.ι (doubleComplexSecondFiltrationInjection A n p))
+  Formalization.Books.Homology.Unit20.doubleComplexSecondFiltrationSubobject A n p
 
-noncomputable def doubleComplexFirstFilteredTotalObject
+abbrev doubleComplexFirstFilteredTotalObject
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
-    (A : DoubleComplex C) (n : ℤ) : FilteredObject C where
-  carrier := (totalComplex A).X n
-  filtration :=
-    { obj := doubleComplexFirstFiltrationStep A n
-      antitone := by
-        intro p q hpq
-        sorry }
+    (A : DoubleComplex C) (n : ℤ) : FilteredObject C :=
+  Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredTerm A n
 
-noncomputable def doubleComplexSecondFilteredTotalObject
+abbrev doubleComplexSecondFilteredTotalObject
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
-    (A : DoubleComplex C) (n : ℤ) : FilteredObject C where
-  carrier := (totalComplex A).X n
-  filtration :=
-    { obj := doubleComplexSecondFiltrationStep A n
-      antitone := by
-        intro p q hpq
-        sorry }
+    (A : DoubleComplex C) (n : ℤ) : FilteredObject C :=
+  Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredTerm A n
 
-noncomputable def doubleComplexFirstFilteredTotalDifferential
+abbrev doubleComplexFirstFilteredTotalDifferential
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n m : ℤ) :
     doubleComplexFirstFilteredTotalObject A n ⟶
       doubleComplexFirstFilteredTotalObject A m :=
-  ⟨(totalComplex A).d n m, by
-    intro p
-    sorry⟩
+  Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredDifferential A n m
 
-noncomputable def doubleComplexSecondFilteredTotalDifferential
+abbrev doubleComplexSecondFilteredTotalDifferential
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
     (A : DoubleComplex C) (n m : ℤ) :
     doubleComplexSecondFilteredTotalObject A n ⟶
       doubleComplexSecondFilteredTotalObject A m :=
-  ⟨(totalComplex A).d n m, by
-    intro p
-    sorry⟩
+  Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredDifferential A n m
 
 /-- The total complex with the filtration `F_I`. -/
-noncomputable def doubleComplexFirstFilteredTotal
+abbrev doubleComplexFirstFilteredTotal
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
-    (A : DoubleComplex C) : Formalization.Books.Homology.Unit24.FilteredComplex C where
-  X := doubleComplexFirstFilteredTotalObject A
-  d n m := if h : n + 1 = m then
-      h ▸ doubleComplexFirstFilteredTotalDifferential A n (n + 1)
-    else 0
-  shape n m hnm := by
-    classical
-    split_ifs with h
-    · exact (hnm h).elim
-    · rfl
-  d_comp_d' n m k hnm hmk := by
-    sorry
+    (A : DoubleComplex C) : Formalization.Books.Homology.Unit24.FilteredComplex C :=
+  Formalization.Books.Homology.Unit20.doubleComplexFirstFilteredTotal A
 
 /-- The total complex with the filtration `F_{II}`. -/
-noncomputable def doubleComplexSecondFilteredTotal
+abbrev doubleComplexSecondFilteredTotal
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C]
-    (A : DoubleComplex C) : Formalization.Books.Homology.Unit24.FilteredComplex C where
-  X := doubleComplexSecondFilteredTotalObject A
-  d n m := if h : n + 1 = m then
-      h ▸ doubleComplexSecondFilteredTotalDifferential A n (n + 1)
-    else 0
-  shape n m hnm := by
-    classical
-    split_ifs with h
-    · exact (hnm h).elim
-    · rfl
-  d_comp_d' n m k hnm hmk := by
-    sorry
+    (A : DoubleComplex C) : Formalization.Books.Homology.Unit24.FilteredComplex C :=
+  Formalization.Books.Homology.Unit20.doubleComplexSecondFilteredTotal A
 
 theorem doubleComplex_first_filtration_formula
     {C : Type u} [Category.{v} C] [Abelian C]

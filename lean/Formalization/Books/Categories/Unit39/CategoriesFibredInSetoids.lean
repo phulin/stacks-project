@@ -830,20 +830,12 @@ theorem fibredSetoidObjectPresheaf_exists_slice_of_isRepresentable
   /- Proof plan: unpack `h` as a representable-presheaf isomorphism, lift it
   to an equivalence of Grothendieck constructions, and compose it with the
   chosen equivalence from `p` and the representable slice comparison. -/
-  rcases (Formalization.Books.Categories.Unit03.isRepresentable_iff_exists_yoneda_iso
-    (fibredSetoidObjectPresheaf p hp)).mp h with ⟨X, ⟨e⟩⟩
-  have hF : IsFibredEquivalenceOver p
-      (setPresheafProjection (fibredSetoidObjectPresheaf p hp)) :=
-    fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf p hp
-  have hFG : IsFibredEquivalenceOver
-      (setPresheafProjection (fibredSetoidObjectPresheaf p hp))
-      (setPresheafProjection (representablePresheaf X)) :=
-    setPresheafProjection_isFibredEquivalenceOver_of_iso e
-  have hGX : IsFibredEquivalenceOver
-      (setPresheafProjection (representablePresheaf X)) (Over.forget X) :=
-    isFibredEquivalenceOver_symm (representable_presheaf_slice_equivalence X)
-  exact ⟨X, isFibredEquivalenceOver_trans hF
-    (isFibredEquivalenceOver_trans hFG hGX)⟩
+  /- Prior attempt: `Unit03.isRepresentable_iff_exists_yoneda_iso` is
+  universe-restricted to presheaves whose value universe is the base's
+  morphism universe, so it cannot be applied to the arbitrary `uS` here.
+  The remaining slice-equivalence construction was downstream of that
+  ill-typed step. -/
+  sorry
 
 theorem fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
     {S : Type uS} [Category.{vS} S]
@@ -950,7 +942,8 @@ theorem inertiaStructureMap_over_base
   rfl
 
 theorem setoidFibred_iff_inertia_isEquivalentOverBase
-    {C : Cat.{v, u}} (X : FibredCategoryOver C) :
+    {C : Cat.{v, u}} (X : FibredCategoryOver C)
+    (hX : IsGroupoidFibredCategoryOver X) :
     IsSetoidFibredCategoryOver X ↔
       IsEquivalentOverBase
         (relativeInertiaBase (toBaseFibredHom X).underlying)
@@ -961,7 +954,8 @@ theorem setoidFibred_iff_inertia_isEquivalentOverBase
   sorry
 
 theorem setoidFibred_iff_inertia_structureMap_isEquivalence
-    {C : Cat.{v, u}} (X : FibredCategoryOver C) :
+    {C : Cat.{v, u}} (X : FibredCategoryOver C)
+    (hX : IsGroupoidFibredCategoryOver X) :
     IsSetoidFibredCategoryOver X ↔
       Nonempty (inertiaStructureMap X).IsEquivalence := by
   /- Proof plan: rewrite the inertia map as a functor over the base using

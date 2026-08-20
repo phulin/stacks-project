@@ -144,11 +144,15 @@ noncomputable def flatAtPrimeOverBaseRingHom
   sequences in all local rings on that locus. -/
 theorem cm_dim_finite_type
     {k S : Type u} [Field k] [CommRing S] [Algebra k S]
-    [Algebra.FiniteType k S] [IsNoetherianRing S]
+    [Algebra.FiniteType k S]
     (fs : List S) (d : ℕ)
-    (hS : Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S)
+    (hS :
+      letI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+      Formalization.Books.Algebra.Unit104.IsCohenMacaulayRing S)
     (hequidim : Equidimensional (X := PrimeSpectrum S))
     (hdim : ringKrullDim S = (((d : ℕ∞) : WithBot ℕ∞)))
+    -- The source omits nonemptiness, but its equality is false for an empty
+    -- vanishing locus; `hlen` records the natural-number encoding of `d - i`.
     (hVnonempty :
       (PrimeSpectrum.zeroLocus (Ideal.ofList fs : Set S)).Nonempty)
     (hlen : fs.length ≤ d)

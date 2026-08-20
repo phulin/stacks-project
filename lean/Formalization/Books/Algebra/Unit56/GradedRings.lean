@@ -306,8 +306,6 @@ theorem gradedQuotient_decomposition_exists
     | zero => simp [decompose₀]
     | homogeneous x => simp [decompose₀, gradedQuotientComponentMap]
     | add x y hx hy =>
-        change DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N)
-            (decompose₀ (x + y)) = N.mkQ (x + y)
         rw [map_add decompose₀, map_add N.mkQ,
           map_add (DirectSum.coeAddMonoidHom (gradedQuotientComponent G 𝓜 N))]
         exact congrArg₂ (· + ·) hx hy

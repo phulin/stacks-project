@@ -342,7 +342,7 @@ theorem canonicalDerivedDelta_eq_triangleOfSESδ
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex (CochainComplex C ℤ)} (hS : S.ShortExact) :
     canonicalDerivedDelta hS = DerivedCategory.triangleOfSESδ hS := by
-  sorry
+  rfl
 
 /-- The distinguished triangle attached to a short exact sequence of complexes. -/
 noncomputable def canonicalDerivedTriangle
@@ -356,7 +356,9 @@ theorem canonicalDerivedTriangle_distinguished
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex (CochainComplex C ℤ)} (hS : S.ShortExact) :
     canonicalDerivedTriangle hS ∈ distTriang (DerivedCategory C) := by
-  sorry
+  simpa only [canonicalDerivedTriangle, DerivedCategory.triangleOfSES,
+    canonicalDerivedDelta_eq_triangleOfSESδ hS] using
+    (DerivedCategory.triangleOfSES_distinguished hS)
 
 /-- The canonical triangle is the cone triangle after localization. -/
 noncomputable def canonicalDerivedTriangleIsoCone
@@ -379,7 +381,9 @@ theorem canonicalDerivedDelta_naturality
     canonicalDerivedDelta h₁ ≫
         (DerivedCategory.Q.map φ.τ₁)⟦(1 : ℤ)⟧' =
       DerivedCategory.Q.map φ.τ₃ ≫ canonicalDerivedDelta h₂ := by
-  sorry
+  simpa only [canonicalDerivedDelta_eq_triangleOfSESδ h₁,
+    canonicalDerivedDelta_eq_triangleOfSESδ h₂] using
+    (DerivedCategory.triangleOfSESδ_naturality h₁ h₂ φ)
 
 /-- The cone map induced by a morphism of short exact sequences. -/
 noncomputable def mappingConeMapOfShortComplex
@@ -436,17 +440,34 @@ the imported API. -/
 theorem cochainPlus_containsZero
     (C : Type u) [Category.{v} C] [Abelian C] :
     (CochainComplex.plus C).ContainsZero := by
-  sorry
+  refine ⟨⟨(0 : CochainComplex C ℤ), isZero_zero (CochainComplex C ℤ), ?_⟩⟩
+  refine ⟨0, ?_⟩
+  rw [CochainComplex.isStrictlyGE_iff]
+  intro i hi
+  exact (HomologicalComplex.eval C (.up ℤ) i).map_isZero
+    (isZero_zero (CochainComplex C ℤ))
 
 theorem cochainPlus_isClosedUnderKernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderKernels (CochainComplex.plus C) := by
-  sorry
+  constructor
+  intro _ ⟨f, k, hk, hf⟩
+  apply (CochainComplex.plus C).prop_of_isLimit hk
+  intro j
+  rcases j with (_ | _)
+  · exact hf.1
+  · exact hf.2
 
 theorem cochainPlus_isClosedUnderCokernels
     (C : Type u) [Category.{v} C] [Abelian C] :
     ObjectProperty.IsClosedUnderCokernels (CochainComplex.plus C) := by
-  sorry
+  constructor
+  intro _ ⟨f, k, hk, hf⟩
+  apply (CochainComplex.plus C).prop_of_isColimit hk
+  intro j
+  rcases j with (_ | _)
+  · exact hf.1
+  · exact hf.2
 
 theorem cochainPlus_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :

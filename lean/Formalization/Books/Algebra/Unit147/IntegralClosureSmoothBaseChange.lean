@@ -22,19 +22,19 @@ open scoped BigOperators TensorProduct
 
 noncomputable section
 
-universe u
+universe uR uS uB u
 
 /-! ## The derivative trick -/
 
 /-- The canonical model of B[X]/(f) for a polynomial f over R. -/
 abbrev IntegralPolynomialQuotient
-    (R B : Type u) [CommRing R] [CommRing B] [Algebra R B]
-    (f : Polynomial R) : Type u :=
+    (R : Type uR) (B : Type uB) [CommRing R] [CommRing B] [Algebra R B]
+    (f : Polynomial R) : Type uB :=
   AdjoinRoot (f.map (algebraMap R B))
 
 /-- The quotient map from B[X] to B[X]/(f). -/
 def integralPolynomialQuotientMk
-    (R B : Type u) [CommRing R] [CommRing B] [Algebra R B]
+    (R : Type uR) (B : Type uB) [CommRing R] [CommRing B] [Algebra R B]
     (f : Polynomial R) :
     Polynomial B →+* IntegralPolynomialQuotient R B f :=
   AdjoinRoot.mk (f.map (algebraMap R B))
@@ -43,7 +43,7 @@ def integralPolynomialQuotientMk
    polynomial representative whose coefficients are all integral. This is
    the specialization of Mathlib's more general quotient-algebra lemma. -/
 theorem lemma_trick
-    {R B : Type u} [CommRing R] [CommRing B] [Algebra R B]
+    {R : Type uR} {B : Type uB} [CommRing R] [CommRing B] [Algebra R B]
     {f : Polynomial R} (hf : f.Monic)
     (h : IntegralPolynomialQuotient R B f) (hh : IsIntegral R h) :
     ∃ g : Polynomial B,
@@ -58,7 +58,7 @@ theorem lemma_trick
 /-- The canonical comparison map for integral closures is bijective after an
 etale base change. -/
 theorem integralClosure_baseChange_of_etale
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R : Type uR) (S : Type uS) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B] [Algebra.Etale R S] :
     Function.Bijective
       (TensorProduct.toIntegralClosure R S B) := by
@@ -66,7 +66,7 @@ theorem integralClosure_baseChange_of_etale
 
 /-- The canonical isomorphism asserted by the etale integral-closure lemma. -/
 noncomputable def integralClosureEtaleBaseChangeEquiv
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R : Type uR) (S : Type uS) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B] [Algebra.Etale R S] :
     S ⊗[R] integralClosure R B ≃ₐ[S]
       integralClosure S (S ⊗[R] B) :=
@@ -84,7 +84,7 @@ abbrev fourierBaseRing (p : ℕ) : Type :=
 For prime `p` this is the `p`-th cyclotomic polynomial, but the source
 example is presented using the displayed geometric sum, so that is the
 definition used here. -/
-def fourierPolynomial (p : ℕ) (R : Type u) [CommRing R] : Polynomial R :=
+def fourierPolynomial (p : ℕ) (R : Type uR) [CommRing R] : Polynomial R :=
   ∑ i ∈ Finset.range p, (Polynomial.X : Polynomial R) ^ i
 
 /-- The extension Z[1/p][x]/(x^(p-1) + ... + x + 1). -/
@@ -121,7 +121,7 @@ abbrev fourierRationalExtension (p : ℕ) : Type :=
 
 /-- The chosen presentation is the displayed geometric sum. -/
 theorem fourierPolynomial_eq_geometric_sum
-    (p : ℕ) (R : Type u) [CommRing R] :
+    (p : ℕ) (R : Type uR) [CommRing R] :
     fourierPolynomial p R =
       ∑ i ∈ Finset.range p, (Polynomial.X : Polynomial R) ^ i := by
   rfl
@@ -130,7 +130,7 @@ theorem fourierPolynomial_eq_geometric_sum
 theorem fourierPolynomial_rat_irreducible
     (p : ℕ) (hp : Nat.Prime p) :
     Irreducible (fourierPolynomial p ℚ) := by
-  letI : Fact p.Prime := ⟨hp⟩
+  let : Fact p.Prime := ⟨hp⟩
   have hpoly : fourierPolynomial p ℚ = Polynomial.cyclotomic p ℚ := by
     rw [fourierPolynomial_eq_geometric_sum p ℚ]
     exact (Polynomial.cyclotomic_prime ℚ p).symm
@@ -203,7 +203,7 @@ theorem exists_fourier_vandermonde_unit
    coefficientwise characterization of integral elements. -/
 attribute [local instance] Polynomial.algebra in
 theorem polynomial_isIntegral_iff_coefficients
-    {R B : Type u} [CommRing R] [CommRing B] [Algebra R B]
+    {R : Type uR} {B : Type uB} [CommRing R] [CommRing B] [Algebra R B]
     (f : Polynomial B) :
     IsIntegral (Polynomial R) f ↔ ∀ i, IsIntegral R (f.coeff i) :=
   Polynomial.isIntegral_iff_isIntegral_coeff
@@ -211,7 +211,7 @@ theorem polynomial_isIntegral_iff_coefficients
 /-- The canonical comparison map for integral closures is bijective after a
 smooth base change. -/
 theorem integralClosure_baseChange_of_smooth
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R : Type uR) (S : Type uS) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B] [Algebra.Smooth R S] :
     Function.Bijective
       (TensorProduct.toIntegralClosure R S B) :=
@@ -219,7 +219,7 @@ theorem integralClosure_baseChange_of_smooth
 
 /-- The canonical isomorphism asserted by the smooth integral-closure lemma. -/
 noncomputable def integralClosureSmoothBaseChangeEquiv
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R : Type uR) (S : Type uS) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B] [Algebra.Smooth R S] :
     S ⊗[R] integralClosure R B ≃ₐ[S]
       integralClosure S (S ⊗[R] B) :=
@@ -244,7 +244,7 @@ structure FilteredSmoothAlgebraColimit
 /-- Integral closure commutes with the filtered smooth base change described
 in the source. -/
 theorem integralClosure_baseChange_of_filtered_smooth
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R S : Type u) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B]
     (D : FilteredSmoothAlgebraColimit R S) :
     Function.Bijective
@@ -253,7 +253,7 @@ theorem integralClosure_baseChange_of_filtered_smooth
 
 /-- The canonical isomorphism in the filtered-colimit statement. -/
 noncomputable def integralClosureFilteredSmoothBaseChangeEquiv
-    (R S B : Type u) [CommRing R] [CommRing S] [CommRing B]
+    (R S : Type u) (B : Type uB) [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B]
     (D : FilteredSmoothAlgebraColimit R S) :
     S ⊗[R] integralClosure R B ≃ₐ[S]

@@ -908,9 +908,9 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
           ((↑) '' (t : Set (perfectClosure K (AlgebraicClosure K))))) := by
   classical
   let B := finitePthRootFieldAtLevel base
-  letI : FiniteDimensional k B := base.finite_dimensional
-  letI : IsPurelyInseparable k B := base.purely_inseparable
-  letI : Algebra.EssFiniteType k B := inferInstance
+  let _ : FiniteDimensional k B := base.finite_dimensional
+  let _ : IsPurelyInseparable k B := base.purely_inseparable
+  let _ : Algebra.EssFiniteType k B := inferInstance
   obtain ⟨s, hs⟩ := IntermediateField.fg_top k B
   let lift (a : B) : perfectClosure K (AlgebraicClosure K) :=
     base.mapToPerfectClosure p hp a
@@ -940,7 +940,7 @@ theorem FinitePthRootTower.exists_baseChangeTower_containing
       · intro x y hx hy hmx hmy
         simpa using T.mul_mem hmx hmy
       · exact hx)
-  letI : Algebra B T := RingHom.toAlgebra baseToTop
+  let _ : Algebra B T := RingHom.toAlgebra baseToTop
   let tower : FinitePthRootBaseChangeTower k K p hp :=
     { base := base
       top := top
@@ -1021,7 +1021,7 @@ private theorem isAlgebraic_adjoin_of_isAlgebraic_generators
     (hB : ∀ b : B, IsAlgebraic F (algebraMap B T b))
     (hs : ∀ z ∈ s, IsAlgebraic F z) :
     @Algebra.IsAlgebraic F E _ _ (RingHom.toAlgebra f) := by
-  letI : Algebra F E := RingHom.toAlgebra f
+  let _ : Algebra F E := RingHom.toAlgebra f
   let φ : E →ₐ[F] T :=
     { toRingHom := E.val
       commutes' := hf }
@@ -1054,8 +1054,8 @@ theorem exists_tower_pth_roots_adjoin_finset
           q ^ p = (algebraMap K (finitePthRootTopAtLevel tower)) a := by
   classical
   obtain ⟨num, den, s, hrep⟩ := exists_finite_coefficients_reprField x hx c
-  letI : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
-  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let _ : ExpChar k p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let _ : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
   let baseRoot (a : k) : perfectClosure k (AlgebraicClosure k) :=
     ⟨pthRootInAlgebraicClosure k p hp a, by
       apply (mem_perfectClosure_iff_pow_mem p).2
@@ -1075,8 +1075,8 @@ theorem exists_tower_pth_roots_adjoin_finset
   subst base
   let B := finitePthRootFieldAtLevel tower.base
   let T := finitePthRootTopAtLevel tower
-  letI : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
-  letI : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
+  let _ : Algebra B T := finitePthRootBaseAlgebraAtLevel tower
+  let _ : IsScalarTower k B T := finitePthRootBaseTowerAtLevel tower
   let r (a : k) : T := by
     by_cases ha : a ∈ s
     · let ba : B := ⟨baseRoot a, hbase (baseRoot a)
@@ -1127,7 +1127,7 @@ theorem exists_tower_pth_roots_adjoin_finset
   have hAlgE : @Algebra.IsAlgebraic
       (IntermediateField.adjoin k (Set.range x)) E _ _
       (RingHom.toAlgebra mapF) := by
-    letI : IsPurelyInseparable k B :=
+    let _ : IsPurelyInseparable k B :=
       finitePthRootFieldAtLevel_isPurelyInseparable tower.base
     apply isAlgebraic_adjoin_of_isAlgebraic_generators
       (s := Set.range z) (E := E) rfl mapF
@@ -1297,7 +1297,7 @@ theorem pth_power_of_separable_polynomial
     (P : Polynomial F) (alpha : L) (hPalpha : Polynomial.aeval alpha P = 0)
     (hPsep : P.Separable) (r : ℕ → F) (hr : ∀ i, r i ^ p = P.coeff i) :
     ∃ beta : L, beta ^ p = alpha := by
-  letI : ExpChar L p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let _ : ExpChar L p := ExpChar.prime (Fact.out : Nat.Prime p)
   obtain ⟨Q, hQ⟩ := exists_frobenius_preimage_polynomial p P r hr
   have hQsep : Q.Separable := by
     rw [← Polynomial.separable_map (frobenius F p), hQ]
@@ -1332,11 +1332,11 @@ theorem pth_power_of_separable_polynomial
       (minpoly.dvd F q hQq)
   have hqsepL : IsSeparable L q := hqsepF.tower_top L
   let S : IntermediateField L (AlgebraicClosure L) := L⟮q⟯
-  letI : IsPurelyInseparable L S := by
+  let _ : IsPurelyInseparable L S := by
     rw [IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem L
       (AlgebraicClosure L) p]
     exact ⟨1, alpha, by simpa [S, pow_one] using hq.symm⟩
-  letI : Algebra.IsSeparable L S :=
+  let _ : Algebra.IsSeparable L S :=
     (IntermediateField.isSeparable_adjoin_simple_iff_isSeparable L
       (AlgebraicClosure L)).2 hqsepL
   obtain ⟨beta, hbeta⟩ :=

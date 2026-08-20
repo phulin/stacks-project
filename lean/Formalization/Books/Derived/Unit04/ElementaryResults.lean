@@ -2,6 +2,7 @@ import Mathlib.CategoryTheory.Triangulated.Triangulated
 import Mathlib.CategoryTheory.Triangulated.Subcategory
 import Mathlib.CategoryTheory.Triangulated.Yoneda
 import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
+import Mathlib.Algebra.Homology.ShortComplex.Ab
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Biproducts
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
@@ -910,12 +911,600 @@ def directSumTriangle (T T' : Triangle C) : Triangle C :=
     ((biprod.map T.mor₃ T'.mor₃) ≫
       (shiftBiprodIso T.obj₁ T'.obj₁).inv)
 
+private lemma exact_of_retract_addCommGrp
+    {S S' : ShortComplex AddCommGrpCat} (φ : S ⟶ S') (ψ : S' ⟶ S)
+    (hφψ : φ ≫ ψ = 𝟙 S) (hS' : S'.Exact) : S.Exact := by
+  rw [ShortComplex.ab_exact_iff]
+  intro x hx
+  have hx' : S'.g (φ.τ₂ x) = 0 := by
+    have h := congrArg (fun k => k x) φ.comm₂₃
+    simpa [ConcreteCategory.comp_apply, hx] using h
+  obtain ⟨x', hx'⟩ := (ShortComplex.ab_exact_iff S').1 hS' (φ.τ₂ x) hx'
+  refine ⟨ψ.τ₁ x', ?_⟩
+  have h₁ := congrArg (fun k => k x') ψ.comm₁₂
+  have h₁' : S.f (ψ.τ₁ x') = ψ.τ₂ (S'.f x') := by
+    simpa [ConcreteCategory.comp_apply] using h₁
+  rw [hx'] at h₁'
+  have h₂ := congrArg (fun k => k x) (congrArg (fun k => k.τ₂) hφψ)
+  have h₂' : ψ.τ₂ (φ.τ₂ x) = x := by
+    simpa [ConcreteCategory.comp_apply] using h₂
+  exact h₁'.trans h₂'
+
+private lemma isComplex_of_retract_addCommGrp
+    {n : ℕ} {S S' : ComposableArrows AddCommGrpCat n}
+    (φ : S ⟶ S') (ψ : S' ⟶ S) (hφψ : φ ≫ ψ = 𝟙 S)
+    (hS' : S'.IsComplex) : S.IsComplex := by
+  refine ⟨?_⟩
+  intro i hi
+  let i₀ : Fin (n + 1) := ⟨i, by omega⟩
+  let i₁ : Fin (n + 1) := ⟨i + 1, by omega⟩
+  let i₂ : Fin (n + 1) := ⟨i + 2, by omega⟩
+  have hcomp :
+      φ.app i₂ ≫ ψ.app i₂ = 𝟙 _ := by
+    have h := congrArg (fun k => k.app i₂) hφψ
+    change φ.app i₂ ≫ ψ.app i₂ = 𝟙 _ at h
+    exact h
+  calc
+    S.map' i (i + 1) ≫ S.map' (i + 1) (i + 2) =
+        S.map' i (i + 1) ≫ S.map' (i + 1) (i + 2) ≫
+          φ.app i₂ ≫ ψ.app i₂ := by
+      calc
+        S.map' i (i + 1) ≫ S.map' (i + 1) (i + 2) =
+            S.map' i (i + 1) ≫ S.map' (i + 1) (i + 2) ≫ 𝟙 _ := by simp
+        _ = S.map' i (i + 1) ≫ S.map' (i + 1) (i + 2) ≫
+              (φ.app i₂ ≫ ψ.app i₂) := by rw [hcomp]
+    _ = S.map' i (i + 1) ≫ φ.app i₁ ≫
+          S'.map' (i + 1) (i + 2) ≫ ψ.app i₂ := by
+      rw [reassoc_of% (ComposableArrows.naturality' φ (i + 1) (i + 2))]
+    _ = φ.app i₀ ≫ S'.map' i (i + 1) ≫
+          S'.map' (i + 1) (i + 2) ≫ ψ.app i₂ := by
+      rw [reassoc_of% (ComposableArrows.naturality' φ i (i + 1))]
+    _ = 0 := by rw [reassoc_of% (hS'.zero i hi), zero_comp]; simp
+
+private lemma exact_of_retract_composableArrows
+    {n : ℕ} {S S' : ComposableArrows AddCommGrpCat n}
+    (φ : S ⟶ S') (ψ : S' ⟶ S) (hφψ : φ ≫ ψ = 𝟙 S)
+    (hS' : S'.Exact) : S.Exact := by
+  let hS := isComplex_of_retract_addCommGrp φ ψ hφψ hS'.toIsComplex
+  refine { toIsComplex := hS, exact := ?_ }
+  intro i hi
+  let i₀ : Fin (n + 1) := ⟨i, by omega⟩
+  let i₁ : Fin (n + 1) := ⟨i + 1, by omega⟩
+  let i₂ : Fin (n + 1) := ⟨i + 2, by omega⟩
+  let a := ComposableArrows.scMap φ hS hS'.toIsComplex i
+  let b := ComposableArrows.scMap ψ hS'.toIsComplex hS i
+  have hab : a ≫ b = 𝟙 _ := by
+    apply ShortComplex.hom_ext
+    · have h := congrArg (fun k => k.app i₀) hφψ
+      change φ.app i₀ ≫ ψ.app i₀ = 𝟙 _ at h
+      simpa [a, b] using h
+    · have h := congrArg (fun k => k.app i₁) hφψ
+      change φ.app i₁ ≫ ψ.app i₁ = 𝟙 _ at h
+      simpa [a, b] using h
+    · have h := congrArg (fun k => k.app i₂) hφψ
+      change φ.app i₂ ≫ ψ.app i₂ = 𝟙 _ at h
+      simpa [a, b] using h
+  exact exact_of_retract_addCommGrp a b hab (hS'.exact i hi)
+
+private lemma special_of_retract
+    {T T' : Triangle C} (hT' : SpecialTriangle T')
+    (φ : T ⟶ T') (ψ : T' ⟶ T) (hφψ : φ ≫ ψ = 𝟙 T) :
+    SpecialTriangle T := by
+  dsimp [SpecialTriangle, RepresentableLongExact] at hT' ⊢
+  intro W n
+  let F := preadditiveCoyoneda.obj (Opposite.op W)
+  obtain ⟨h₁₂', h₂₃', h₃₁', e₁₂', e₂₃', e₃₁'⟩ := hT' W n
+  let R : ComposableArrows AddCommGrpCat 4 :=
+    ComposableArrows.mk₄
+      ((F.shift n).map T.mor₁)
+      ((F.shift n).map T.mor₂)
+      (F.homologySequenceδ T n (n + 1) (by rfl))
+      ((F.shift (n + 1)).map T.mor₁)
+  let R' : ComposableArrows AddCommGrpCat 4 :=
+    ComposableArrows.mk₄
+      ((F.shift n).map T'.mor₁)
+      ((F.shift n).map T'.mor₂)
+      (F.homologySequenceδ T' n (n + 1) (by rfl))
+      ((F.shift (n + 1)).map T'.mor₁)
+  have hR' : R'.Exact := by
+    dsimp [R']
+    exact ComposableArrows.exact_of_δ₀
+      e₁₂'.exact_toComposableArrows
+      (ComposableArrows.exact_of_δ₀
+        e₂₃'.exact_toComposableArrows e₃₁'.exact_toComposableArrows)
+  let α : R ⟶ R' := ComposableArrows.homMk
+    (fun i => match i with
+      | ⟨0, _⟩ => (F.shift n).map φ.hom₁
+      | ⟨1, _⟩ => (F.shift n).map φ.hom₂
+      | ⟨2, _⟩ => (F.shift n).map φ.hom₃
+      | ⟨3, _⟩ => (F.shift (n + 1)).map φ.hom₁
+      | ⟨4, _⟩ => (F.shift (n + 1)).map φ.hom₂)
+    (by
+      intro i hi
+      have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+      rcases hi' with rfl | rfl | rfl | rfl
+      · change (F.shift n).map T.mor₁ ≫ (F.shift n).map φ.hom₂ =
+          (F.shift n).map φ.hom₁ ≫ (F.shift n).map T'.mor₁
+        simpa only [Functor.map_comp] using congrArg ((F.shift n).map) φ.comm₁
+      · change (F.shift n).map T.mor₂ ≫ (F.shift n).map φ.hom₃ =
+          (F.shift n).map φ.hom₂ ≫ (F.shift n).map T'.mor₂
+        simpa only [Functor.map_comp] using congrArg ((F.shift n).map) φ.comm₂
+      · change F.homologySequenceδ T n (n + 1) (by rfl) ≫
+          (F.shift (n + 1)).map φ.hom₁ =
+          (F.shift n).map φ.hom₃ ≫
+            F.homologySequenceδ T' n (n + 1) (by rfl)
+        simpa only using
+          (F.homologySequenceδ_naturality T T' φ n (n + 1) (by rfl)).symm
+      · change (F.shift (n + 1)).map T.mor₁ ≫
+            (F.shift (n + 1)).map φ.hom₂ =
+          (F.shift (n + 1)).map φ.hom₁ ≫
+            (F.shift (n + 1)).map T'.mor₁
+        simpa only [Functor.map_comp] using
+          congrArg ((F.shift (n + 1)).map) φ.comm₁)
+  let β : R' ⟶ R := ComposableArrows.homMk
+    (fun i => match i with
+      | ⟨0, _⟩ => (F.shift n).map ψ.hom₁
+      | ⟨1, _⟩ => (F.shift n).map ψ.hom₂
+      | ⟨2, _⟩ => (F.shift n).map ψ.hom₃
+      | ⟨3, _⟩ => (F.shift (n + 1)).map ψ.hom₁
+      | ⟨4, _⟩ => (F.shift (n + 1)).map ψ.hom₂)
+    (by
+      intro i hi
+      have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+      rcases hi' with rfl | rfl | rfl | rfl
+      · change (F.shift n).map T'.mor₁ ≫ (F.shift n).map ψ.hom₂ =
+          (F.shift n).map ψ.hom₁ ≫ (F.shift n).map T.mor₁
+        simpa only [Functor.map_comp] using congrArg ((F.shift n).map) ψ.comm₁
+      · change (F.shift n).map T'.mor₂ ≫ (F.shift n).map ψ.hom₃ =
+          (F.shift n).map ψ.hom₂ ≫ (F.shift n).map T.mor₂
+        simpa only [Functor.map_comp] using congrArg ((F.shift n).map) ψ.comm₂
+      · change F.homologySequenceδ T' n (n + 1) (by rfl) ≫
+          (F.shift (n + 1)).map ψ.hom₁ =
+          (F.shift n).map ψ.hom₃ ≫
+            F.homologySequenceδ T n (n + 1) (by rfl)
+        simpa only using
+          (F.homologySequenceδ_naturality T' T ψ n (n + 1) (by rfl)).symm
+      · change (F.shift (n + 1)).map T'.mor₁ ≫
+            (F.shift (n + 1)).map ψ.hom₂ =
+          (F.shift (n + 1)).map ψ.hom₁ ≫
+            (F.shift (n + 1)).map T.mor₁
+        simpa only [Functor.map_comp] using
+          congrArg ((F.shift (n + 1)).map) ψ.comm₁)
+  have hφψ₁ : φ.hom₁ ≫ ψ.hom₁ = 𝟙 _ := by
+    have h := congrArg (fun k => k.hom₁) hφψ
+    change φ.hom₁ ≫ ψ.hom₁ = 𝟙 _ at h
+    exact h
+  have hφψ₂ : φ.hom₂ ≫ ψ.hom₂ = 𝟙 _ := by
+    have h := congrArg (fun k => k.hom₂) hφψ
+    change φ.hom₂ ≫ ψ.hom₂ = 𝟙 _ at h
+    exact h
+  have hφψ₃ : φ.hom₃ ≫ ψ.hom₃ = 𝟙 _ := by
+    have h := congrArg (fun k => k.hom₃) hφψ
+    change φ.hom₃ ≫ ψ.hom₃ = 𝟙 _ at h
+    exact h
+  have hαβ : α ≫ β = 𝟙 R := by
+    apply ComposableArrows.hom_ext₄
+    · change (F.shift n).map φ.hom₁ ≫ (F.shift n).map ψ.hom₁ = 𝟙 _
+      rw [← Functor.map_comp, hφψ₁]
+      simp
+    · change (F.shift n).map φ.hom₂ ≫ (F.shift n).map ψ.hom₂ = 𝟙 _
+      rw [← Functor.map_comp, hφψ₂]
+      simp
+    · change (F.shift n).map φ.hom₃ ≫ (F.shift n).map ψ.hom₃ = 𝟙 _
+      rw [← Functor.map_comp, hφψ₃]
+      simp
+    · change (F.shift (n + 1)).map φ.hom₁ ≫
+          (F.shift (n + 1)).map ψ.hom₁ = 𝟙 _
+      rw [← Functor.map_comp, hφψ₁]
+      simp
+    · change (F.shift (n + 1)).map φ.hom₂ ≫
+          (F.shift (n + 1)).map ψ.hom₂ = 𝟙 _
+      rw [← Functor.map_comp, hφψ₂]
+      simp
+  have hR : R.Exact := exact_of_retract_composableArrows α β hαβ hR'
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · change (F.shift n).map T.mor₁ ≫ (F.shift n).map T.mor₂ = 0
+    have h := hR.toIsComplex.zero 0
+    dsimp [R] at h
+    exact h
+  · change (F.shift n).map T.mor₂ ≫
+        F.homologySequenceδ T n (n + 1) (by rfl) = 0
+    have h := hR.toIsComplex.zero 1
+    dsimp [R] at h
+    exact h
+  · change F.homologySequenceδ T n (n + 1) (by rfl) ≫
+        (F.shift (n + 1)).map T.mor₁ = 0
+    have h := hR.toIsComplex.zero 2
+    dsimp [R] at h
+    exact h
+  · have h := hR.exact 0
+    change ShortComplex.Exact
+      (ShortComplex.mk ((F.shift n).map T.mor₁) ((F.shift n).map T.mor₂) _) at h
+    exact h
+  · have h := hR.exact 1
+    change ShortComplex.Exact
+      (ShortComplex.mk ((F.shift n).map T.mor₂)
+        (F.homologySequenceδ T n (n + 1) (by rfl)) _) at h
+    exact h
+  · have h := hR.exact 2
+    change ShortComplex.Exact
+      (ShortComplex.mk (F.homologySequenceδ T n (n + 1) (by rfl))
+        ((F.shift (n + 1)).map T.mor₁) _) at h
+    exact h
+
+private lemma shiftBiprodIso_inl
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C] (X Y : C) :
+    biprod.inl ≫ (shiftBiprodIso X Y).inv =
+      (shiftFunctor C (1 : ℤ)).map (biprod.inl : X ⟶ X ⊞ Y) := by
+  apply (cancel_mono (shiftBiprodIso X Y).hom).1
+  dsimp [shiftBiprodIso]
+  simp [Functor.biprodComparison, Functor.biprodComparison']
+
+private lemma shiftBiprodIso_inr
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C] (X Y : C) :
+    biprod.inr ≫ (shiftBiprodIso X Y).inv =
+      (shiftFunctor C (1 : ℤ)).map (biprod.inr : Y ⟶ X ⊞ Y) := by
+  apply (cancel_mono (shiftBiprodIso X Y).hom).1
+  dsimp [shiftBiprodIso]
+  simp [Functor.biprodComparison, Functor.biprodComparison']
+
+private lemma shiftBiprodIso_fst
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C] (X Y : C) :
+    (shiftBiprodIso X Y).inv ≫
+        (shiftFunctor C (1 : ℤ)).map (biprod.fst : X ⊞ Y ⟶ X) =
+      (biprod.fst : (shiftFunctor C (1 : ℤ)).obj X ⊞
+        (shiftFunctor C (1 : ℤ)).obj Y ⟶ (shiftFunctor C (1 : ℤ)).obj X) := by
+  apply biprod.hom_ext'
+  · dsimp [shiftBiprodIso]
+    rw [← Category.assoc, Functor.inl_biprodComparison', ←
+      (shiftFunctor C (1 : ℤ)).map_comp]
+    simp
+  · dsimp [shiftBiprodIso]
+    rw [← Category.assoc, Functor.inr_biprodComparison', ←
+      (shiftFunctor C (1 : ℤ)).map_comp]
+    simp
+
+private lemma shiftBiprodIso_snd
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
+    [Pretriangulated C] (X Y : C) :
+    (shiftBiprodIso X Y).inv ≫
+        (shiftFunctor C (1 : ℤ)).map (biprod.snd : X ⊞ Y ⟶ Y) =
+      (biprod.snd : (shiftFunctor C (1 : ℤ)).obj X ⊞
+        (shiftFunctor C (1 : ℤ)).obj Y ⟶ (shiftFunctor C (1 : ℤ)).obj Y) := by
+  apply biprod.hom_ext'
+  · dsimp [shiftBiprodIso]
+    rw [← Category.assoc, Functor.inl_biprodComparison', ←
+      (shiftFunctor C (1 : ℤ)).map_comp]
+    simp
+  · dsimp [shiftBiprodIso]
+    rw [← Category.assoc, Functor.inr_biprodComparison', ←
+      (shiftFunctor C (1 : ℤ)).map_comp]
+    simp
+
+private def directSumInl (T T' : Triangle C) : T ⟶ directSumTriangle T T' := by
+  dsimp [directSumTriangle]
+  exact Triangle.homMk _ _ biprod.inl biprod.inl biprod.inl
+    (by
+      change T.mor₁ ≫ (biprod.inl : T.obj₂ ⟶ T.obj₂ ⊞ T'.obj₂) =
+        biprod.inl ≫ biprod.map T.mor₁ T'.mor₁
+      rw [biprod.inl_map])
+    (by
+      change T.mor₂ ≫ (biprod.inl : T.obj₃ ⟶ T.obj₃ ⊞ T'.obj₃) =
+        biprod.inl ≫ biprod.map T.mor₂ T'.mor₂
+      rw [biprod.inl_map])
+    (by
+      change T.mor₃ ≫ (shiftFunctor C (1 : ℤ)).map
+          (biprod.inl : T.obj₁ ⟶ T.obj₁ ⊞ T'.obj₁) =
+        biprod.inl ≫ (biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv)
+      rw [biprod.inl_map_assoc, shiftBiprodIso_inl])
+
+private def directSumInr (T T' : Triangle C) : T' ⟶ directSumTriangle T T' := by
+  dsimp [directSumTriangle]
+  exact Triangle.homMk _ _ biprod.inr biprod.inr biprod.inr
+    (by
+      change T'.mor₁ ≫ (biprod.inr : T'.obj₂ ⟶ T.obj₂ ⊞ T'.obj₂) =
+        biprod.inr ≫ biprod.map T.mor₁ T'.mor₁
+      rw [biprod.inr_map])
+    (by
+      change T'.mor₂ ≫ (biprod.inr : T'.obj₃ ⟶ T.obj₃ ⊞ T'.obj₃) =
+        biprod.inr ≫ biprod.map T.mor₂ T'.mor₂
+      rw [biprod.inr_map])
+    (by
+      change T'.mor₃ ≫ (shiftFunctor C (1 : ℤ)).map
+          (biprod.inr : T'.obj₁ ⟶ T.obj₁ ⊞ T'.obj₁) =
+        biprod.inr ≫ (biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv)
+      rw [biprod.inr_map_assoc, shiftBiprodIso_inr])
+
+private def directSumFst (T T' : Triangle C) : directSumTriangle T T' ⟶ T := by
+  dsimp [directSumTriangle]
+  exact Triangle.homMk _ _ biprod.fst biprod.fst biprod.fst
+    (by
+      change (biprod.map T.mor₁ T'.mor₁) ≫
+          (biprod.fst : T.obj₂ ⊞ T'.obj₂ ⟶ T.obj₂) =
+        biprod.fst ≫ T.mor₁
+      rw [biprod.map_fst])
+    (by
+      change (biprod.map T.mor₂ T'.mor₂) ≫
+          (biprod.fst : T.obj₃ ⊞ T'.obj₃ ⟶ T.obj₃) =
+        biprod.fst ≫ T.mor₂
+      rw [biprod.map_fst])
+    (by
+      change (biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv) ≫
+          (shiftFunctor C (1 : ℤ)).map
+            (biprod.fst : T.obj₁ ⊞ T'.obj₁ ⟶ T.obj₁) =
+        biprod.fst ≫ T.mor₃
+      rw [Category.assoc, shiftBiprodIso_fst, biprod.map_fst])
+
+private def directSumSnd (T T' : Triangle C) : directSumTriangle T T' ⟶ T' := by
+  dsimp [directSumTriangle]
+  exact Triangle.homMk _ _ biprod.snd biprod.snd biprod.snd
+    (by
+      change (biprod.map T.mor₁ T'.mor₁) ≫
+          (biprod.snd : T.obj₂ ⊞ T'.obj₂ ⟶ T'.obj₂) =
+        biprod.snd ≫ T'.mor₁
+      rw [biprod.map_snd])
+    (by
+      change (biprod.map T.mor₂ T'.mor₂) ≫
+          (biprod.snd : T.obj₃ ⊞ T'.obj₃ ⟶ T'.obj₃) =
+        biprod.snd ≫ T'.mor₂
+      rw [biprod.map_snd])
+    (by
+      change (biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv) ≫
+          (shiftFunctor C (1 : ℤ)).map
+            (biprod.snd : T.obj₁ ⊞ T'.obj₁ ⟶ T'.obj₁) =
+        biprod.snd ≫ T'.mor₃
+      rw [Category.assoc, shiftBiprodIso_snd, biprod.map_snd])
+
+private lemma directSumInl_fst (T T' : Triangle C) :
+    directSumInl T T' ≫ directSumFst T T' = 𝟙 T := by
+  apply Triangle.hom_ext
+  · change biprod.inl ≫ biprod.fst = 𝟙 _
+    simp
+  · change biprod.inl ≫ biprod.fst = 𝟙 _
+    simp
+  · change biprod.inl ≫ biprod.fst = 𝟙 _
+    simp
+
+private lemma directSumInr_snd (T T' : Triangle C) :
+    directSumInr T T' ≫ directSumSnd T T' = 𝟙 T' := by
+  apply Triangle.hom_ext
+  · change biprod.inr ≫ biprod.snd = 𝟙 _
+    simp
+  · change biprod.inr ≫ biprod.snd = 𝟙 _
+    simp
+  · change biprod.inr ≫ biprod.snd = 𝟙 _
+    simp
+
+private def productBiprodIso (f : WalkingPair → C) :
+    (∏ᶜ f) ≅ f WalkingPair.left ⊞ f WalkingPair.right where
+  hom := biprod.lift (Pi.π f WalkingPair.left) (Pi.π f WalkingPair.right)
+  inv := Pi.lift (fun j => WalkingPair.casesOn j biprod.fst biprod.snd)
+  hom_inv_id := by
+    apply Pi.hom_ext
+    intro j
+    cases j <;> simp
+  inv_hom_id := by
+    apply biprod.hom_ext
+    · simp
+    · simp
+
+private def directSumProductTriangleIso (T T' : Triangle C) :
+    productTriangle (fun j : WalkingPair => WalkingPair.casesOn j T T') ≅
+      directSumTriangle T T' := by
+  let e₁ := productBiprodIso
+    (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁)
+  let e₂ := productBiprodIso
+    (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₂)
+  let e₃ := productBiprodIso
+    (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₃)
+  refine Triangle.isoMk _ _ e₁ e₂ e₃ ?_ ?_ ?_
+  · change
+      Limits.Pi.map
+          (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₁) ≫ e₂.hom =
+        e₁.hom ≫ biprod.map T.mor₁ T'.mor₁
+    apply biprod.hom_ext
+    · simp only [e₁, e₂, productBiprodIso]
+      rw [Category.assoc, biprod.lift_fst, Pi.map_π]
+      simp [e₁, e₂, productBiprodIso, Category.assoc]
+    · simp only [e₁, e₂, productBiprodIso]
+      rw [Category.assoc, biprod.lift_snd, Pi.map_π]
+      simp [e₁, e₂, productBiprodIso, Category.assoc]
+  · change
+      Limits.Pi.map
+          (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₂) ≫ e₃.hom =
+        e₂.hom ≫ biprod.map T.mor₂ T'.mor₂
+    apply biprod.hom_ext
+    · simp only [e₂, e₃, productBiprodIso]
+      rw [Category.assoc, biprod.lift_fst, Pi.map_π]
+      simp [e₂, e₃, productBiprodIso, Category.assoc]
+    · simp only [e₂, e₃, productBiprodIso]
+      rw [Category.assoc, biprod.lift_snd, Pi.map_π]
+      simp [e₂, e₃, productBiprodIso, Category.assoc]
+  · change
+      (Limits.Pi.map
+          (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+          inv (piComparison (shiftFunctor C (1 : ℤ))
+            (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁))) ≫
+          (shiftFunctor C (1 : ℤ)).map e₁.hom =
+        e₃.hom ≫ biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv
+    let e₁s := productBiprodIso
+      (fun j => (shiftFunctor C (1 : ℤ)).obj
+        ((WalkingPair.casesOn j T T' : Triangle C).obj₁))
+    have hcomp :
+        (shiftFunctor C (1 : ℤ)).map e₁.hom ≫
+            (shiftBiprodIso T.obj₁ T'.obj₁).hom =
+          piComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁) ≫
+            e₁s.hom := by
+      apply biprod.hom_ext
+      · simp only [e₁, productBiprodIso]
+        dsimp [shiftBiprodIso]
+        rw [Category.assoc, Functor.biprodComparison_fst, ← Functor.map_comp,
+          biprod.lift_fst]
+        simp [e₁, e₁s, productBiprodIso]
+      · simp only [e₁, productBiprodIso]
+        dsimp [shiftBiprodIso]
+        rw [Category.assoc, Functor.biprodComparison_snd, ← Functor.map_comp,
+          biprod.lift_snd]
+        simp [e₁, e₁s, productBiprodIso]
+    have hmap :
+        Limits.Pi.map
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+            e₁s.hom =
+          e₃.hom ≫ biprod.map T.mor₃ T'.mor₃ := by
+      apply biprod.hom_ext
+      · simp [e₁s, e₃, productBiprodIso, Category.assoc]
+      · simp [e₁s, e₃, productBiprodIso, Category.assoc]
+    apply (cancel_mono (shiftBiprodIso T.obj₁ T'.obj₁).hom).1
+    calc
+      ((Limits.Pi.map
+          (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+          inv (piComparison (shiftFunctor C (1 : ℤ))
+            (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁))) ≫
+          (shiftFunctor C (1 : ℤ)).map e₁.hom) ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).hom =
+        Limits.Pi.map
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+            inv (piComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁)) ≫
+            (shiftFunctor C (1 : ℤ)).map e₁.hom ≫
+              (shiftBiprodIso T.obj₁ T'.obj₁).hom := by
+          simp only [Category.assoc]
+      _ = Limits.Pi.map
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+            inv (piComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁)) ≫
+            piComparison (shiftFunctor C (1 : ℤ))
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).obj₁) ≫
+            e₁s.hom := by rw [hcomp]
+      _ = Limits.Pi.map
+              (fun j => (WalkingPair.casesOn j T T' : Triangle C).mor₃) ≫
+            e₁s.hom := by simp
+      _ = e₃.hom ≫ biprod.map T.mor₃ T'.mor₃ := hmap
+      _ = (e₃.hom ≫ biprod.map T.mor₃ T'.mor₃ ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).inv) ≫
+          (shiftBiprodIso T.obj₁ T'.obj₁).hom := by simp
+
 /-- A direct sum triangle is distinguished exactly when both summands are. -/
 theorem direct_sum_triangle_distinguished_iff
     (T T' : Triangle C) :
     directSumTriangle T T' ∈ distTriang C ↔
       T ∈ distTriang C ∧ T' ∈ distTriang C := by
-  sorry
+  constructor
+  · intro hDS
+    have hDSpecial := distinguished_triangle_special (directSumTriangle T T') hDS
+    have hTspecial : SpecialTriangle T :=
+      special_of_retract hDSpecial (directSumInl T T') (directSumFst T T')
+        (directSumInl_fst T T')
+    have hT'special : SpecialTriangle T' :=
+      special_of_retract hDSpecial (directSumInr T T') (directSumSnd T T')
+        (directSumInr_snd T T')
+    obtain ⟨Q, g, h, hQ⟩ := distinguished_cocone_triangle T.mor₁
+    let U : Triangle C := Triangle.mk T.mor₁ g h
+    have hU : U ∈ distTriang C := hQ
+    let φ : directSumTriangle T T' ⟶ U :=
+      completeDistinguishedTriangleMorphism _ _ hDS hU biprod.fst biprod.fst (by
+        change (biprod.map T.mor₁ T'.mor₁) ≫
+            (biprod.fst : T.obj₂ ⊞ T'.obj₂ ⟶ T.obj₂) =
+          (biprod.fst : T.obj₁ ⊞ T'.obj₁ ⟶ T.obj₁) ≫ T.mor₁
+        rw [biprod.map_fst])
+    let μ : T ⟶ U := directSumInl T T' ≫ φ
+    have hμ₁ : μ.hom₁ = 𝟙 _ := by
+      change biprod.inl ≫ biprod.fst = 𝟙 _
+      simp
+    have hμ₂ : μ.hom₂ = 𝟙 _ := by
+      change biprod.inl ≫ biprod.fst = 𝟙 _
+      simp
+    dsimp [U] at hμ₁ hμ₂
+    have hμ₃ : IsIso μ.hom₃ :=
+      special_triangle_two_out_of_three hTspecial
+        (distinguished_triangle_special U hU) μ
+        (by
+          change IsIso (biprod.inl ≫
+            (biprod.fst : T.obj₁ ⊞ T'.obj₁ ⟶ T.obj₁))
+          simp only [biprod.inl_fst]
+          exact ⟨⟨𝟙 _, by simp⟩⟩)
+        (by
+          change IsIso (biprod.inl ≫
+            (biprod.fst : T.obj₂ ⊞ T'.obj₂ ⟶ T.obj₂))
+          simp only [biprod.inl_fst]
+          exact ⟨⟨𝟙 _, by simp⟩⟩)
+    have hμ : IsIso μ := by
+      apply Triangle.isIso_of_isIsos μ
+      · change IsIso (biprod.inl ≫
+          (biprod.fst : T.obj₁ ⊞ T'.obj₁ ⟶ T.obj₁))
+        simp only [biprod.inl_fst]
+        exact ⟨⟨𝟙 _, by simp⟩⟩
+      · change IsIso (biprod.inl ≫
+          (biprod.fst : T.obj₂ ⊞ T'.obj₂ ⟶ T.obj₂))
+        simp only [biprod.inl_fst]
+        exact ⟨⟨𝟙 _, by simp⟩⟩
+      · exact hμ₃
+    have hT : T ∈ distTriang C :=
+      isomorphic_distinguished _ hU _ (asIso μ)
+    obtain ⟨Q', g', h', hQ'⟩ := distinguished_cocone_triangle T'.mor₁
+    let U' : Triangle C := Triangle.mk T'.mor₁ g' h'
+    have hU' : U' ∈ distTriang C := hQ'
+    let φ' : directSumTriangle T T' ⟶ U' :=
+      completeDistinguishedTriangleMorphism _ _ hDS hU' biprod.snd biprod.snd (by
+        change (biprod.map T.mor₁ T'.mor₁) ≫
+            (biprod.snd : T.obj₂ ⊞ T'.obj₂ ⟶ T'.obj₂) =
+          (biprod.snd : T.obj₁ ⊞ T'.obj₁ ⟶ T'.obj₁) ≫ T'.mor₁
+        rw [biprod.map_snd])
+    let μ' : T' ⟶ U' := directSumInr T T' ≫ φ'
+    have hμ'₁ : μ'.hom₁ = 𝟙 _ := by
+      change biprod.inr ≫ biprod.snd = 𝟙 _
+      simp
+    have hμ'₂ : μ'.hom₂ = 𝟙 _ := by
+      change biprod.inr ≫ biprod.snd = 𝟙 _
+      simp
+    dsimp [U'] at hμ'₁ hμ'₂
+    have hμ'₃ : IsIso μ'.hom₃ :=
+      special_triangle_two_out_of_three hT'special
+        (distinguished_triangle_special U' hU') μ'
+        (by
+          change IsIso (biprod.inr ≫
+            (biprod.snd : T.obj₁ ⊞ T'.obj₁ ⟶ T'.obj₁))
+          simp only [biprod.inr_snd]
+          exact ⟨⟨𝟙 _, by simp⟩⟩)
+        (by
+          change IsIso (biprod.inr ≫
+            (biprod.snd : T.obj₂ ⊞ T'.obj₂ ⟶ T'.obj₂))
+          simp only [biprod.inr_snd]
+          exact ⟨⟨𝟙 _, by simp⟩⟩)
+    have hμ' : IsIso μ' := by
+      apply Triangle.isIso_of_isIsos μ'
+      · change IsIso (biprod.inr ≫
+          (biprod.snd : T.obj₁ ⊞ T'.obj₁ ⟶ T'.obj₁))
+        simp only [biprod.inr_snd]
+        exact ⟨⟨𝟙 _, by simp⟩⟩
+      · change IsIso (biprod.inr ≫
+          (biprod.snd : T.obj₂ ⊞ T'.obj₂ ⟶ T'.obj₂))
+        simp only [biprod.inr_snd]
+        exact ⟨⟨𝟙 _, by simp⟩⟩
+      · exact hμ'₃
+    have hT' : T' ∈ distTriang C :=
+      isomorphic_distinguished _ hU' _ (asIso μ')
+    exact ⟨hT, hT'⟩
+  · rintro ⟨hT, hT'⟩
+    apply (distinguished_iff_of_iso (directSumProductTriangleIso T T')).mp
+    apply productTriangle_distinguished
+    intro j
+    cases j
+    · exact hT
+    · exact hT'
 
 /-- If the third map of a distinguished triangle is zero, its second map has a
 right inverse. -/

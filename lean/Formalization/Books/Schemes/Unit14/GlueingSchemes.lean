@@ -119,6 +119,12 @@ structure GluedMapInto (D : GlueingData.{u}) (Y : LocallyRingedSpace.{u}) where
   cover : IsOpenCover V
   map : ∀ i : D.J,
     Formalization.Books.Schemes.Unit03.openSubspace Y (V i) ⟶ D.U i
+  /-- The inverse image of the `i,j` overlap under the local map is the
+  intersection of the two members of the cover.  The overlap is represented
+  by the image of the open immersion `D.f i j`. -/
+  preimage_overlap : ∀ i j : D.J,
+    ∀ (y : Y) (hy : y ∈ V i),
+    (map i).base ⟨y, hy⟩ ∈ Set.range (D.f i j).base ↔ y ∈ V j
   overlap : ∀ i j : D.J,
     Formalization.Books.Schemes.Unit03.openSubspace Y (V i ⊓ V j) ⟶ D.V (i, j)
   overlap_f : ∀ i j : D.J,
@@ -181,6 +187,10 @@ def affineSpaceOriginEvaluation (k : Type u) [Field k] (n : ℕ) :
 def affineSpaceOrigin (k : Type u) [Field k] (n : ℕ) : affineSpace k n :=
   ⟨RingHom.ker (affineSpaceOriginEvaluation k n),
     RingHom.ker_isPrime (affineSpaceOriginEvaluation k n)⟩
+
+theorem affineSpaceOrigin_is_maximal (k : Type u) [Field k] (n : ℕ) :
+    (RingHom.ker (affineSpaceOriginEvaluation k n)).IsMaximal := by
+  sorry
 
 /-- The punctured affine space, as the union of the coordinate standard opens. -/
 def affineSpacePuncturedOpen (k : Type u) [Field k] (n : ℕ) :
@@ -329,11 +339,33 @@ theorem affineSpaceZeroDoubled_overlap_two_not_affine
     ¬ IsAffine (affineSpaceZeroDoubledOverlap k 2) := by
   sorry
 
+theorem affineSpaceZeroDoubled_overlap_not_affine
+    (k : Type u) [Field k] (n : ℕ) (hn : 1 < n) :
+    ¬ IsAffine (affineSpaceZeroDoubledOverlap k n) := by
+  sorry
+
 /-- The source's irreducible-closed-subset assertion for the doubled origin. -/
 def IsIrreducibleClosedSubsetOfAffineSpaceZeroDoubled
     (k : Type u) [Field k] (n : ℕ)
     (T : Set (affineSpaceZeroDoubled k n)) : Prop :=
   IsClosed T ∧ IsIrreducible T
+
+def affineSpaceZeroDoubledIrreducibleClosedSubsets
+    (k : Type u) [Field k] (n : ℕ) : Set (Set (affineSpaceZeroDoubled k n)) :=
+  {T | IsIrreducibleClosedSubsetOfAffineSpaceZeroDoubled k n T}
+
+theorem affineSpaceZeroDoubled_closure_of_nonclosed_point
+    (k : Type u) [Field k] (n : ℕ)
+    (x : affineSpace k n) (hx : ¬ IsClosed ({x} : Set (affineSpace k n))) :
+    closure ({affineSpaceZeroDoubledChart k n false x} :
+      Set (affineSpaceZeroDoubled k n)) ∈
+      affineSpaceZeroDoubledIrreducibleClosedSubsets k n := by
+  sorry
+
+theorem affineSpaceZeroDoubled_irreducible_closed_subsets_infinite
+    (k : Type u) [Field k] (n : ℕ) (hn : 1 < n) :
+    Set.Infinite (affineSpaceZeroDoubledIrreducibleClosedSubsets k n) := by
+  sorry
 
 theorem affineSpaceZeroDoubled_irreducible_closed_subset_origin_membership
     (k : Type u) [Field k] (n : ℕ) (hn : 1 < n)
@@ -399,6 +431,10 @@ def projectiveLineCoordinatePoint (k : Type u) [Field k] (a : k) :
     projectiveLineAffineChart k :=
   ⟨RingHom.ker (projectiveLineCoordinateEvaluation k a),
     RingHom.ker_isPrime (projectiveLineCoordinateEvaluation k a)⟩
+
+theorem projectiveLineCoordinatePoint_is_maximal (k : Type u) [Field k] (a : k) :
+    (RingHom.ker (projectiveLineCoordinateEvaluation k a)).IsMaximal := by
+  sorry
 
 /-- The point `0` on the first affine chart. -/
 abbrev projectiveLineZero (k : Type u) [Field k] : projectiveLineAffineChart k :=
@@ -518,13 +554,17 @@ theorem projectiveLine_zero_ne_infinity (k : Type u) [Field k] :
     projectiveLineZeroOnGlued k ≠ projectiveLineInfinity k := by
   sorry
 
+theorem projectiveLine_infinite (k : Type u) [Field k] :
+    Infinite (projectiveLine k) := by
+  sorry
+
 /-- The global sections of the projective line are the constants. -/
 theorem projectiveLine_globalSections (k : Type u) [Field k] :
     Nonempty (Γ(projectiveLine k, ⊤) ≅ CommRingCat.of k) := by
   sorry
 
-/-- The projective line is not affine.  This uses the valid point-separation argument,
-rather than the source's overstrong claim that it is infinite over every field. -/
+/-- The projective line is not affine.  The global-sections calculation and the
+two distinct chart points give the required obstruction. -/
 theorem projectiveLine_not_affine (k : Type u) [Field k] :
     ¬ IsAffine (projectiveLine k) := by
   sorry

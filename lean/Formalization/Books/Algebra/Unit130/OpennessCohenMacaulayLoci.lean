@@ -123,14 +123,13 @@ private theorem flatAtPrimeOverBase_iff_localizedFlat
         (Localization.localRingHom
           (PrimeSpectrum.comap f q).asIdeal q.asIdeal f
           (by
-            simpa [PrimeSpectrum.comap_asIdeal] using
-              (rfl : PrimeSpectrum.comap f q = PrimeSpectrum.comap f q))) := by
-  letI : Algebra R S := f.toAlgebra
+            simp [PrimeSpectrum.comap_asIdeal])) := by
+  let : Algebra R S := f.toAlgebra
   let p := PrimeSpectrum.comap f q
-  letI : p.asIdeal.IsPrime := p.isPrime
-  letI : q.asIdeal.IsPrime := q.isPrime
+  let : p.asIdeal.IsPrime := p.isPrime
+  let : q.asIdeal.IsPrime := q.isPrime
   have hqp : q.asIdeal.comap f = p.asIdeal := by
-    simpa [p, PrimeSpectrum.comap_asIdeal]
+    simp [p, PrimeSpectrum.comap_asIdeal]
   let g := Localization.localRingHom p.asIdeal q.asIdeal f hqp
   algebraize [Localization.localRingHom p.asIdeal q.asIdeal f hqp]
   have hST : IsScalarTower R (Localization.AtPrime p.asIdeal)

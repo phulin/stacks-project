@@ -1,4 +1,5 @@
-import Formalization.Books.Defos.Unit03
+import Formalization.Books.Defos.Unit03.ThickeningsOfRingedSpaces
+import Formalization.Books.Defos.Unit02.DeformationsOfRings
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Torsor.Basic
 
@@ -18,18 +19,11 @@ open CategoryTheory CategoryTheory.Limits Opposite
 open Formalization.Books.Sheaves.Unit10
 open Formalization.Books.Sheaves.Unit22
 open Formalization.Books.Defos.Unit03
+open Formalization.Books.Defos.Unit02
 
 universe u v
 
 noncomputable section
-
-/-! The preceding deformation chapter exposes this interface, but its file
-currently depends on an unavailable aggregate torsor import.  Keep the
-chapter-local interface explicit so this chapter remains independently
-buildable; it is exactly the additive torsor data used by the source. -/
-
-structure PrincipalHomogeneousSpace (G P : Type u) [AddGroup G] where
-  torsor : AddTorsor G P
 
 /-! ## The tensor appearing in the source -/
 
@@ -63,15 +57,26 @@ abbrev moduleTensorMap {X : RingedSpace.{v}} [ModuleTensorProduct X]
         (moduleTensor I F) (moduleTensor I' F') :=
   ModuleTensorProduct.map u v
 
-/-! The current sheaf-module library does not provide a `HasExt` instance for
-all sheaf-module categories.  This small interface records the Ext groups
-used by this chapter, retaining their canonical additive-group structure and
-leaving their eventual derived-category implementation to the prove stage. -/
+/-! The generic sheaf-module category in this project does not carry the
+set-theoretic hypotheses required by Mathlib's derived Ext object.  This
+chapter therefore exposes the source's Ext groups through a narrow theory
+interface, while keeping their additive-group structure explicit. -/
 
 class SheafExtTheory (X : RingedSpace.{v}) where
   ext : RingedSpaceModule X → RingedSpaceModule X → ℕ → Type (v + 1)
   group : ∀ (F K : RingedSpaceModule X) (n : ℕ),
     AddCommGroup (ext F K n)
+  map : ∀ {F K L : RingedSpaceModule X} (n : ℕ),
+    (K ⟶ L) → ext F K n → ext F L n
+  map_id : ∀ {F K : RingedSpaceModule X} (n : ℕ) (x : ext F K n),
+    map n (𝟙 K) x = x
+  map_comp : ∀ {F K L M : RingedSpaceModule X} (n : ℕ)
+    (f : K ⟶ L) (g : L ⟶ M) (x : ext F K n),
+    map n (f ≫ g) x = map n g (map n f x)
+  boundary : ∀ {F K₃ K₂ K₁ : RingedSpaceModule X}
+    (k₃₂ : K₃ ⟶ K₂) (k₂₁ : K₂ ⟶ K₁) (zero : k₃₂ ≫ k₂₁ = 0)
+    (_ : (ShortComplex.mk k₃₂ k₂₁ zero).ShortExact),
+    ext F K₁ 1 → ext F K₃ 2
 
 abbrev ExtGroup {X : RingedSpace.{v}} [SheafExtTheory X]
     (F K : RingedSpaceModule X) (n : ℕ) : Type (v + 1) :=
@@ -109,6 +114,15 @@ structure ModuleExtension
   zero : inclusion ≫ projection = 0
   shortExact : (ShortComplex.mk inclusion projection zero).ShortExact
   infinitesimalMap : moduleTensor (firstOrderKernelModule i hi) F ⟶ K
+
+/-- The source notation `c_{F'}` for the infinitesimal action attached to an
+extension.  The selected kernel-module representative is used to expose the
+source's `I ⊗ F → K` map in the project’s module category. -/
+abbrev ModuleExtension.c_F'
+    {X X' : RingedSpace.{v}} {i : RingedSpaceHom X X'}
+    {hi : IsFirstOrderThickening i} [ModuleTensorProduct X]
+    {F K : Mod X.structureSheaf} (E : ModuleExtension i hi F K) :=
+  E.infinitesimalMap
 
 /-- A map of two fixed-endpoint extension sequences. -/
 structure CompatibleExtensionMap
@@ -462,19 +476,21 @@ structure FirstOrderThickeningMorphism (X : RingedSpace.{v}) where
   firstOrder₂ : IsFirstOrderThickening i₂
   hom : RingedSpaceHom X₁ X₂
   commutes : RingedSpaceHom.comp i₁ hom = i₂
+  kernelMapData : firstOrderKernelModule i₂ firstOrder₂ ⟶
+    firstOrderKernelModule i₁ firstOrder₁
 
 theorem FirstOrderThickeningMorphism.kernelMap_exists
     {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X) :
     Nonempty (firstOrderKernelModule M.i₂ M.firstOrder₂ ⟶
-      firstOrderKernelModule M.i₁ M.firstOrder₁) := by
-  sorry
+      firstOrderKernelModule M.i₁ M.firstOrder₁) :=
+  ⟨M.kernelMapData⟩
 
 /-- The induced map on the chosen kernel modules. -/
 noncomputable def FirstOrderThickeningMorphism.kernelMap
     {X : RingedSpace.{v}} (M : FirstOrderThickeningMorphism X) :
     firstOrderKernelModule M.i₂ M.firstOrder₂ ⟶
       firstOrderKernelModule M.i₁ M.firstOrder₁ :=
-  Classical.choice (M.kernelMap_exists)
+  M.kernelMapData
 
 /-- Data for functoriality of extensions under a map of thickenings. -/
 structure ExtensionFunctorialityData
@@ -547,6 +563,21 @@ structure FirstOrderThickeningComplex (X : RingedSpace.{v}) where
   idealMap₃₂ : firstOrderKernelModule i₃ firstOrder₃ ⟶
     firstOrderKernelModule i₂ firstOrder₂
 
+/-- The first two terms of a complex of thickenings form the morphism used by
+the extension-functoriality construction. -/
+def FirstOrderThickeningComplex.toMorphism
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X) :
+    FirstOrderThickeningMorphism X where
+  X₁ := C.X₁
+  X₂ := C.X₂
+  i₁ := C.i₁
+  i₂ := C.i₂
+  firstOrder₁ := C.firstOrder₁
+  firstOrder₂ := C.firstOrder₂
+  hom := C.h₁₂
+  commutes := C.comm₁₂
+  kernelMapData := C.idealMap₂₁
+
 /-- The ideal maps of a thickening sequence form a complex. -/
 def FirstOrderThickeningComplex.IsComplex
     {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X) : Prop :=
@@ -566,6 +597,11 @@ theorem complex_thickening_has_canonical_trivialization
     Nonempty (ThickeningTrivialization C.i₁ C.firstOrder₁) := by
   sorry
 
+noncomputable def FirstOrderThickeningComplex.canonicalTrivialization
+    {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X)
+    (hC : C.IsComplex) : ThickeningTrivialization C.i₁ C.firstOrder₁ :=
+  Classical.choice (complex_thickening_has_canonical_trivialization C hC)
+
 /-! ## Trivialized functoriality and the final Ext-boundary claim -/
 
 /-- A source-facing commutative square of Ext classes for compatible
@@ -576,9 +612,7 @@ structure TrivializedExtClassSquare
     (D : ExtensionFunctorialityData M F) where
   class₂ : ExtGroup F D.K₂ 1
   class₁ : ExtGroup F D.K₁ 1
-  extMap : ExtGroup F D.K₂ 1 →
-    ExtGroup F D.K₁ 1
-  commutes : extMap class₂ = class₁
+  commutes : SheafExtTheory.map 1 D.kernelMap class₂ = class₁
 
 /-- The extension functoriality and the Ext-class map commute for compatible
 trivializations. -/
@@ -604,11 +638,18 @@ structure CoefficientShortExactSequence (X : RingedSpace.{v}) where
 
 /-- The connecting map on Ext groups associated to a coefficient short exact
 sequence. -/
-structure ExtBoundaryData {X : RingedSpace.{v}}
-    [SheafExtTheory X]
-    (S : CoefficientShortExactSequence X)
-    (F : Mod X.structureSheaf) where
+def extBoundary {X : RingedSpace.{v}} [SheafExtTheory X]
+    (S : CoefficientShortExactSequence X) (F : Mod X.structureSheaf) :
+    ExtGroup F S.K₁ 1 → ExtGroup F S.K₃ 2 :=
+  SheafExtTheory.boundary S.k₃₂ S.k₂₁ S.zero S.shortExact
+
+/-- A named package for the canonical connecting map used in the final
+source remark.  The equality field prevents the map from being
+unconstrained. -/
+structure ExtBoundaryData {X : RingedSpace.{v}} [SheafExtTheory X]
+    (S : CoefficientShortExactSequence X) (F : Mod X.structureSheaf) where
   boundary : ExtGroup F S.K₁ 1 → ExtGroup F S.K₃ 2
+  boundary_eq_canonical : boundary = extBoundary S F
 
 /-- Data for the last source remark, including the compatible coefficient
 squares and an extension over the middle thickening. -/
@@ -616,6 +657,7 @@ structure ComplexThickeningModuleData
     {X : RingedSpace.{v}} (C : FirstOrderThickeningComplex X)
     [ModuleTensorProduct X] [SheafExtTheory X] (F : Mod X.structureSheaf)
     (S : CoefficientShortExactSequence X) where
+  complex : C.IsComplex
   c₁ : moduleTensor (firstOrderKernelModule C.i₁ C.firstOrder₁) F ⟶ S.K₁
   c₂ : moduleTensor (firstOrderKernelModule C.i₂ C.firstOrder₂) F ⟶ S.K₂
   c₃ : moduleTensor (firstOrderKernelModule C.i₃ C.firstOrder₃) F ⟶ S.K₃
@@ -624,7 +666,51 @@ structure ComplexThickeningModuleData
   middleExtension : ModuleExtension C.i₂ C.firstOrder₂ F S.K₂
   middleExtension_action : middleExtension.infinitesimalMap = c₂
   boundaryData : ExtBoundaryData S F
-  ξ₁ : ExtGroup F S.K₁ 1
+
+/-- The coefficient square in the last source remark, packaged for the
+first-two-term thickening morphism. -/
+def ComplexThickeningModuleData.functorialityData
+    {X : RingedSpace.{v}} {C : FirstOrderThickeningComplex X}
+    [ModuleTensorProduct X] [SheafExtTheory X] {F : Mod X.structureSheaf}
+    {S : CoefficientShortExactSequence X}
+    (D : ComplexThickeningModuleData C F S) :
+    ExtensionFunctorialityData C.toMorphism F where
+  K₁ := S.K₁
+  K₂ := S.K₂
+  c₁ := D.c₁
+  c₂ := D.c₂
+  kernelMap := S.k₂₁
+  c_square := D.square₂₁
+
+/-- The extension on the first thickening obtained from the middle extension
+by the functoriality construction in the source. -/
+noncomputable def ComplexThickeningModuleData.inducedExtension
+    {X : RingedSpace.{v}} {C : FirstOrderThickeningComplex X}
+    [ModuleTensorProduct X] [SheafExtTheory X] {F : Mod X.structureSheaf}
+    {S : CoefficientShortExactSequence X}
+    (D : ComplexThickeningModuleData C F S) :
+    ModuleExtension C.i₁ C.firstOrder₁ F S.K₁ :=
+  extensionFunctoriality D.functorialityData D.middleExtension
+    D.middleExtension_action
+
+theorem ComplexThickeningModuleData.inducedExtension_action
+    {X : RingedSpace.{v}} {C : FirstOrderThickeningComplex X}
+    [ModuleTensorProduct X] [SheafExtTheory X] {F : Mod X.structureSheaf}
+    {S : CoefficientShortExactSequence X}
+    (D : ComplexThickeningModuleData C F S) :
+    D.inducedExtension.infinitesimalMap = D.c₁ :=
+  extensionFunctoriality_infinitesimalMap D.functorialityData
+    D.middleExtension D.middleExtension_action
+
+/-- The Ext¹ class of the induced first extension, using the canonical
+trivialization supplied by the complex of thickenings. -/
+noncomputable def ComplexThickeningModuleData.ξ₁
+    {X : RingedSpace.{v}} {C : FirstOrderThickeningComplex X}
+    [ModuleTensorProduct X] [SheafExtTheory X] {F : Mod X.structureSheaf}
+    {S : CoefficientShortExactSequence X}
+    (D : ComplexThickeningModuleData C F S) : ExtGroup F S.K₁ 1 :=
+  extensionClass C.i₁ C.firstOrder₁
+    (C.canonicalTrivialization D.complex) D.inducedExtension
 
 /-- The boundary of the induced first extension class is the obstruction
 class of the third coefficient. -/

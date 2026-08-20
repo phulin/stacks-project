@@ -326,6 +326,23 @@ theorem generatedSubcategoryIter_eq_iSup_finite_windows
       ⨆ m : {m : ℕ // 1 ≤ m},
         smd (starPower (add (generatorWindow E m.1)) n) := by
   let W : ℕ → ObjectProperty C := fun k => generatorWindow E (k + 1)
+  have hW : Monotone W := by
+    intro a b hab X hX
+    change generatorWindow E (a + 1) X at hX
+    change generatorWindow E (b + 1) X
+    change shiftWindow (ObjectProperty.singleton E)
+      (((-((a + 1 : ℕ) : ℤ) : ℤ) : EInt)) (((((a + 1 : ℕ) : ℤ) : EInt))) X at hX
+    change shiftWindow (ObjectProperty.singleton E)
+      (((-((b + 1 : ℕ) : ℤ) : ℤ) : EInt)) (((((b + 1 : ℕ) : ℤ) : EInt))) X
+    rw [shiftWindow, ObjectProperty.prop_iSup_iff] at hX ⊢
+    obtain ⟨⟨i, hi⟩, hXi⟩ := hX
+    refine ⟨⟨i, ?_⟩, hXi⟩
+    have hab' : ((a + 1 : ℕ) : ℤ) ≤ ((b + 1 : ℕ) : ℤ) := by omega
+    constructor
+    · rw [WithBotTop.coe_le_coe]
+      exact (neg_le_neg hab').trans (WithBotTop.coe_le_coe.mp hi.1)
+    · rw [WithBotTop.coe_le_coe]
+      exact (WithBotTop.coe_le_coe.mp hi.2).trans hab'
   have hU : shiftWindow (ObjectProperty.singleton E) (⊥ : EInt) (⊤ : EInt) =
       ⨆ k : ℕ, W k := by
     rw [shiftWindow_all_eq_iSup_generatorWindow,
@@ -337,8 +354,12 @@ theorem generatedSubcategoryIter_eq_iSup_finite_windows
   change smd (starPower (add (⨆ k : ℕ, W k)) n) =
     ⨆ m : {m : ℕ // 1 ≤ m},
       smd (starPower (add (generatorWindow E m.1)) n)
-  rw [add_iSup W]
-  rw [starPower_iSup (fun k => add (W k)) n]
+  rw [add_iSup W hW]
+  have hAdd : Monotone (fun k => add (W k)) := by
+    intro a b hab X hX
+    rcases hX with ⟨r, A, hA, e⟩
+    exact ⟨r, A, fun i => hW hab _ (hA i), e⟩
+  rw [starPower_iSup (fun k => add (W k)) hAdd n]
   rw [smd_iSup (fun k => starPower (add (W k)) n)]
   rw [iSup_positive_eq_iSup_succ
     (fun m => smd (starPower (add (generatorWindow E m)) n))]

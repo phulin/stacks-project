@@ -780,7 +780,7 @@ theorem smooth_localization
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.Smooth R S] (g : S) :
     Algebra.Smooth R (Localization.Away g) := by
-  sorry
+  exact Algebra.Smooth.comp R S (Localization.Away g)
 
 theorem smooth_localization_of_base
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -788,7 +788,12 @@ theorem smooth_localization_of_base
     [IsScalarTower R (Localization.Away r) S]
     (hunit : IsUnit (algebraMap R S r)) [Algebra.Smooth R S] :
     Algebra.Smooth (Localization.Away r) S := by
-  sorry
+  let _ : Algebra.FormallyEtale R (Localization.Away r) :=
+    Algebra.FormallyEtale.of_isLocalization (Submonoid.powers r)
+  exact Algebra.Smooth.mk
+    (Algebra.FormallySmooth.of_restrictScalars R (Localization.Away r) S)
+    (Algebra.FinitePresentation.of_restrict_scalars_finitePresentation
+      R (Localization.Away r) S)
 
 theorem smooth_base_change
     {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']
@@ -821,9 +826,20 @@ theorem submersive_presentation_consequences
       Module.Free S P.toExtension.Cotangent ∧
       Nonempty (Basis σ S P.toExtension.Cotangent) ∧
       Module.Free S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) ∧
-      Nonempty (Basis ((Set.range P.map)ᶜ : Set ι) S
+        Nonempty (Basis ((Set.range P.map)ᶜ : Set ι) S
         (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S)) := by
-  sorry
+  let _ : Algebra.IsStandardSmooth R S := P.isStandardSmooth
+  constructor
+  · exact standard_smooth_is_smooth (R := R) (S := S)
+  constructor
+  · exact P.cotangentComplex_injective
+  constructor
+  · infer_instance
+  constructor
+  · exact ⟨P.basisCotangent⟩
+  constructor
+  · infer_instance
+  · exact ⟨P.basisKaehler⟩
 
 theorem submersive_presentation_relative_dimension
     {R S ι σ : Type*} [CommRing R] [CommRing S] [Algebra R S]

@@ -83,6 +83,32 @@ theorem exists_rankProductDecomposition
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Module.Projective R M] :
     Nonempty (RankProductDecomposition R M) := by
+  /-
+  Shepherd roadmap:
+  * Work in universes `R : Type u`, `M : Type v`.  From
+    `Module.isLocallyConstant_rankAtStalk` in
+    `Mathlib/RingTheory/Spectrum/Prime/FreeLocus.lean` (the required finite-presentation and flat
+    instances follow from finite projectivity) and `IsLocallyConstant.range_finite` in
+    `Mathlib/Topology/LocallyConstant/Basic.lean`, choose `t` bounding the finite image of
+    `Module.rankAtStalk (R := R) M`.
+  * For each `i : Fin (t + 1)`, take the clopen fibre where the rank is `i`.  Convert these fibres
+    to idempotents with `PrimeSpectrum.isIdempotentElemEquivClopens` from
+    `Mathlib/RingTheory/Spectrum/Prime/Topology.lean`; prove that they form
+    `CompleteOrthogonalIdempotents`.  Empty fibres are represented by the zero idempotent.
+  * Put `componentRing i := CommRingCat.of (R ⧸ Ideal.span {1 - e i})`.  The map
+    `RingHom.pi (fun i => Ideal.Quotient.mk (Ideal.span {1 - e i}))` is bijective by
+    `CompleteOrthogonalIdempotents.bijective_pi` in `Mathlib/RingTheory/Idempotents.lean`; turn it
+    into `ringEquiv` with `RingEquiv.ofBijective`.
+  * Put the `i`th component module equal to scalar extension of `M` to that quotient.  The usual
+    complete-idempotent map `m \mapsto (1 \otimes m)` and its sum-of-components inverse give the
+    required `moduleEquiv` over `R` (with the target action explicitly
+    `Module.compHom _ ringEquiv.toRingHom`).
+  * Finally unfold `FiniteLocallyFreeOfRank` from
+    `Formalization/Books/Algebra/Unit78/FiniteProjectiveModules.lean`.  On the `i`th clopen fibre,
+    `Module.rankAtStalk_isBaseChange` and the defining fibre equality give constant rank `i`; use
+    the finite-projective characterization/local freeness API in that file to build
+    `componentRank i`.  Assemble the structure and wrap it in `Nonempty.intro`.
+  -/
   sorry
 
 /-- The determinant module as the annihilator of the positive-degree
@@ -125,6 +151,28 @@ theorem determinantModule_equiv_rankProduct
       Module.compHom _ D.ringEquiv.toRingHom
     Nonempty
       (determinantModule R M ≃ₗ[R] rankProductDeterminant D) := by
+  /-
+  Shepherd roadmap:
+  * First prove a private fixed-rank helper over a ring `A`: if `P` is finite locally free of rank
+    `n`, the inclusion `exteriorPower A P n \hookrightarrow exteriorAlgebra A P` has image exactly
+    `determinantModule A P`.  Check this after the basic-open cover in
+    `FiniteLocallyFreeOfRank`; use `(algebra_localization_iso S).2.1` from
+    `Formalization/Books/Algebra/Unit13/TensorAlgebra.lean` to commute exterior algebra with
+    localization.
+  * In the localized free calculation choose the `Fin n` basis, expand with
+    `Module.Basis.ExteriorAlgebra` / `finite_free_exterior_algebra_basis` and use
+    `ExteriorAlgebra.ιMulti_family_mul_of_not_disjoint` plus
+    `ExteriorAlgebra.ιMulti_span` (`Mathlib/LinearAlgebra/ExteriorAlgebra/{Basic,Grading}.lean`).
+    The simultaneous annihilator of every degree-one basis vector is precisely the coefficient of
+    the full `Finset.univ`, i.e. `exteriorPower A P n`.
+  * Apply that helper to every `D.componentModule i`, using `D.componentRank i`, and take the finite
+    product of the resulting equivalences.  Separately transport `determinantModule R M` along
+    `D.moduleEquiv.some` and `D.ringEquiv`; extensionality and
+    `ExteriorAlgebra.map_apply_ι` show that the annihilator condition is preserved componentwise.
+  * Compose those two equivalences.  State the intermediate product module with the explicit action
+    `Module.compHom _ D.ringEquiv.toRingHom`; this avoids asking definitional equality to identify
+    the transported scalar actions.  Return the composite inside `Nonempty`.
+  -/
   sorry
 
 /-- The determinant line is finite locally free of rank one. -/
@@ -133,6 +181,23 @@ theorem determinantModule_finiteLocallyFree_rank_one
     [Module.Finite R M] [Module.Projective R M] :
     Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank
       R (determinantModule R M) 1 := by
+  /-
+  Shepherd roadmap:
+  * Choose `D` from `exists_rankProductDecomposition (R := R) (M := M)` and choose the equivalence
+    from `determinantModule_equiv_rankProduct D`.
+  * Prove componentwise that `exteriorPower (D.componentRing i) (D.componentModule i) i` is finite
+    locally free of rank one.  On each basic open from `D.componentRank i`, transport the standard
+    basis through `Module.Basis.exteriorPower` in
+    `Mathlib/LinearAlgebra/ExteriorPower/Basis.lean`; `Set.powersetCard (Fin i) i` is a singleton,
+    so use `Finsupp.uniqueLinearEquiv` to identify the top exterior power with one copy of the
+    localized ring.
+  * Combine these component covers through `D.ringEquiv` to obtain the defining basic-open cover of
+    `rankProductDeterminant D` of rank `1`.  Then transport that cover back along the chosen linear
+    equivalence.  Keep the transported `Module R (rankProductDeterminant D)` instance named
+    explicitly as in `determinantModule_equiv_rankProduct`.
+  * Finish by folding `Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank`; no rank-product
+    decomposition should be unfolded during the local basis calculation.
+  -/
   sorry
 
 /-- The determinant line is an invertible module. -/
@@ -140,6 +205,16 @@ theorem determinantModule_invertible
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Module.Projective R M] :
     Module.Invertible R (determinantModule R M) := by
+  /-
+  Shepherd roadmap:
+  * Obtain `hdet : FiniteLocallyFreeOfRank R (determinantModule R M) 1` from
+    `determinantModule_finiteLocallyFree_rank_one` with explicit `(R := R) (M := M)`.
+  * Apply the forward implication of
+    `finiteLocallyFreeOfRank_one_iff_invertible` from
+    `Formalization/Books/MoreAlgebra/Unit118/PicardGroups.lean` to `hdet`.
+  * This is a direct interface conversion; do not unfold either `determinantModule` or
+    `Module.Invertible` here.
+  -/
   sorry
 
 /-! ## Determinant maps -/
@@ -154,6 +229,24 @@ theorem determinantMap_mem
     (f : M →ₗ[R] N) (h : SameRankAtPrimes R M N)
     (x : determinantModule R M) :
     exteriorAlgebraMap f x ∈ determinantModule R N := by
+  /-
+  Shepherd roadmap:
+  * Prove a private functoriality helper using rank-product decompositions for `M` and `N`, refined
+    to the same clopen rank partition via `h : Module.rankAtStalk M = Module.rankAtStalk N`.
+    Under `determinantModule_equiv_rankProduct`, the map is the product of
+    `exteriorPower.map i f_i`; hence it carries each top exterior power to the top exterior power.
+  * For the component calculation use `exteriorPower.map_apply_ιMulti` and
+    `ExteriorAlgebra.map_apply_ι` from
+    `Mathlib/LinearAlgebra/ExteriorPower/Basic.lean` and
+    `Mathlib/LinearAlgebra/ExteriorAlgebra/Basic.lean`.  Do not try to lift an arbitrary `n : N`
+    through `f`: `f` is not assumed surjective, and that approach cannot prove the membership goal.
+  * Transport the componentwise result back through the ring/module product equivalences.  Then
+    unfold only `mem_determinantModule_iff` to state the result as
+    `∀ n, ExteriorAlgebra.ι R n * exteriorAlgebraMap f x = 0` and close it with the transported
+    top-degree calculation.
+  * Keep `h` as an equality of full rank functions (rather than proving pointwise equalities
+    repeatedly); use `congrFun h p` at each component prime.
+  -/
   sorry
 
 /-- The determinant map attached to a map between finite projectives of the
@@ -188,6 +281,15 @@ theorem determinantMap_id
     [Module.Finite R M] [Module.Projective R M]
     (h : SameRankAtPrimes R M M) :
     determinantMap (LinearMap.id : M →ₗ[R] M) h = LinearMap.id := by
+  /-
+  Shepherd roadmap:
+  * Apply `LinearMap.ext` and then `Subtype.ext` to an arbitrary
+    `x : determinantModule R M`.
+  * Rewrite the coerced left side with `determinantMap_coe`; rewrite the exterior-algebra map with
+    `exteriorAlgebraMap_id` from
+    `Formalization/Books/Algebra/Unit13/TensorAlgebra.lean`, then use `AlgHom.id_apply`.
+  * The proof argument `h` disappears after coercion, so no proof-irrelevance rewrite is needed.
+  -/
   sorry
 
 /-- Determinant maps compose. -/
@@ -203,6 +305,17 @@ theorem determinantMap_comp
     (hcomp : SameRankAtPrimes R M P) :
     determinantMap (g.comp f) hcomp =
       (determinantMap g hg).comp (determinantMap f hf) := by
+  /-
+  Shepherd roadmap:
+  * Apply `LinearMap.ext`, introduce `x : determinantModule R M`, and apply `Subtype.ext` in
+    `determinantModule R P`.
+  * Use `determinantMap_coe` on the outer map and on both component maps.  The remaining equality in
+    `exteriorAlgebra R P` is exactly `congrArg (fun k => k x)` of
+    `exteriorAlgebraMap_comp f g` from
+    `Formalization/Books/Algebra/Unit13/TensorAlgebra.lean`.
+  * Normalize only `LinearMap.comp_apply` and `AlgHom.comp_apply`.  The three rank proofs are erased
+    by the subtype coercions, so avoid unfolding `determinantMap`.
+  -/
   sorry
 
 /-- An isomorphism of finite projectives induces an isomorphism of determinant
@@ -216,6 +329,19 @@ theorem determinantMap_bijective_of_linearEquiv
     Function.Bijective
       (determinantMap e.toLinearMap
         (sameRankAtPrimes_of_linearEquiv e)) := by
+  /-
+  Shepherd roadmap:
+  * Use `determinantMap e.symm.toLinearMap (sameRankAtPrimes_of_linearEquiv e.symm)` as a two-sided
+    inverse candidate.
+  * Apply `determinantMap_comp` to `e.toLinearMap,e.symm.toLinearMap` in both orders; rewrite the
+    underlying composites with `LinearEquiv.symm_comp` and `LinearEquiv.comp_symm` from
+    `Mathlib/Algebra/Module/Equiv/Defs.lean`, and finish each side with `determinantMap_id`.
+  * If the rank-proof arguments do not match syntactically, use `Subsingleton.elim` for the proofs of
+    `SameRankAtPrimes`; do not unfold that proposition inside the map equality.
+  * Feed the resulting left- and right-inverse identities to
+    `Function.bijective_iff_has_inverse.mpr`.  All module universes remain the original independent
+    `Type*` levels; no `ULift` is needed.
+  -/
   sorry
 
 noncomputable def determinantEquiv
@@ -252,6 +378,17 @@ theorem determinant_map_one
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] [Module.Projective R M] :
     determinant (M := M) (LinearMap.id : Module.End R M) = 1 := by
+  /-
+  Shepherd roadmap:
+  * Install the named local instance
+    `letI : Module.Invertible R (determinantModule R M) :=
+      determinantModule_invertible (R := R) (M := M)` used by `determinant`.
+  * Rewrite `determinantMap (LinearMap.id) sameRankAtPrimes_refl` with `determinantMap_id`.
+    Proof irrelevance identifies its rank proof with the one accepted by that theorem.
+  * Now use `map_one` for the ring equivalence
+    `determinantEndScalarEquiv (R := R) (L := determinantModule R M)`.  Its inverse definition means
+    the scalar-action endomorphism `LinearMap.id` is sent to `1`; finish with `simpa [determinant]`.
+  -/
   sorry
 
 /-- The determinant is multiplicative under composition. -/
@@ -260,6 +397,18 @@ theorem determinant_map_mul
     [Module.Finite R M] [Module.Projective R M]
     (φ ψ : Module.End R M) :
     determinant (φ * ψ) = determinant φ * determinant ψ := by
+  /-
+  Shepherd roadmap:
+  * Name the invertible determinant-line instance exactly as in `determinant_map_one`, and set
+    `E := determinantEndScalarEquiv (R := R) (L := determinantModule R M)`.
+  * Rewrite multiplication with `Module.End.mul_eq_comp`: `φ * ψ = φ.comp ψ`.  Apply
+    `determinantMap_comp ψ φ` with all three rank proofs instantiated by
+    `sameRankAtPrimes_refl`; after proof irrelevance this gives
+    `determinantMap (φ * ψ) _ = determinantMap φ _ * determinantMap ψ _` in the determinant-line
+    endomorphism ring.
+  * Rewrite by that equality and apply `E.map_mul`.  Finish with `simpa [determinant, E]`; avoid
+    unfolding `determinantEndScalarEquiv`, whose ring-equivalence laws already provide the result.
+  -/
   sorry
 
 /-- The multiplicative determinant homomorphism of a finite projective module. -/
@@ -310,6 +459,17 @@ theorem determinantShortExactComplex_shortExact
     (hfg : Function.Exact f g) (hf : Function.Injective f)
     (hg : Function.Surjective g) :
     (determinantShortExactComplex f g hfg).ShortExact := by
+  /-
+  Shepherd roadmap:
+  * Apply `ModuleCat.shortComplex_shortExact` from
+    `Mathlib/Algebra/Homology/ShortComplex/ModuleCat.lean` to
+    `S := determinantShortExactComplex f g hfg`.
+  * Supply `hfg`, `hf`, and `hg`; the `@[simps]` equations for `ShortComplex.moduleCatMk` identify
+    `S.f` and `S.g` with the original linear maps.
+  * If coercions remain, fill the three structure fields directly using
+    `ShortComplex.ShortExact.moduleCat_exact_iff_function_exact`,
+    `ModuleCat.mono_iff_injective`, and `ModuleCat.epi_iff_surjective` from the same file.
+  -/
   sorry
 
 /-- The determinant isomorphism attached to a short exact sequence of finite
@@ -331,6 +491,41 @@ theorem exists_determinantShortExactIso
       {γ : determinantModule R M' ⊗[R] determinantModule R M''
           ≃ₗ[R] determinantModule R M //
         determinantShortExactIsoSpec f g γ} := by
+  /-
+  Shepherd roadmap (the specification was audited and is well-formed):
+  * Since `M''` is projective and `g` is surjective, choose a linear section
+    `s : M'' →ₗ[R] M` from `LinearMap.exists_rightInverse_of_surjective` in
+    `Mathlib/Algebra/Module/Projective.lean`, using `LinearMap.range_eq_top_of_surjective g hg`.
+    Feed `⟨s, hs⟩` to `hfg.splitSurjectiveEquiv hf` from
+    `Mathlib/Algebra/Exact/Basic.lean` to obtain `e : M ≃ₗ[R] M' × M''` with its two compatibility
+    equations.
+  * Before this theorem, add a small private `determinantModule_prodEquiv` helper.  Define its
+    forward map on pure tensors by
+    `x' ⊗ₜ x'' \mapsto exteriorAlgebraMap (LinearMap.inl R M' M'') x' *
+      exteriorAlgebraMap (LinearMap.inr R M' M'') x''` using `TensorProduct.lift`.
+    Prove it is an equivalence by the fixed-rank/product calculation already isolated for
+    `determinantModule_equiv_rankProduct`; use `TensorProduct.ext'` for equality on pure tensors.
+  * Compose that product equivalence with `determinantEquiv e.symm` (or orient `e` so the composite
+    lands in `determinantModule R M`).  This gives the candidate `γ`.
+  * Prove the spec first for the chosen lift `exteriorAlgebraMap s x''`, using
+    `ExteriorAlgebra.map_comp_map`, the two equations attached to the split equivalence, and
+    `ExteriorAlgebra.map_surjective_iff` for the quotient map.
+  * Isolate the needed kernel statement as a private helper: for a surjective `g`,
+    `RingHom.ker (exteriorAlgebraMap g).toRingHom` is the ideal generated by
+    `ExteriorAlgebra.ι R '' LinearMap.ker g`.  Prove it from the universal property
+    `ExteriorAlgebra.lift`, using `ExteriorAlgebra.map_surjective_iff`; in the present split case it
+    can equivalently be checked after transporting by `e` to the projection `M' × M'' → M''`.
+  * For an arbitrary `y` with `exteriorAlgebraMap g y = x''`, the difference
+    `y - exteriorAlgebraMap s x''` is in that kernel.  Rewrite `LinearMap.ker g` as
+    `LinearMap.range f` using `hfg.linearMap_ker_eq`, then show left multiplication by
+    `exteriorAlgebraMap f x'` kills the generated ideal.  Use the fixed-rank/top-power helper from
+    `determinantModule_equiv_rankProduct` to expand `x'` into top wedges; commute a range generator
+    to the left with repeated `ExteriorAlgebra.ι_add_mul_swap`, where it vanishes by
+    `mem_determinantModule_iff`.  Extend this generator calculation to the ideal closure with
+    `ExteriorAlgebra.induction` and associativity.
+    Thus the candidate satisfies the quantified lift-independence equation.  Return `⟨γ, hγ⟩`
+    inside `Nonempty`.
+  -/
   sorry
 
 /-- The canonical determinant isomorphism of a short exact sequence. -/
@@ -388,6 +583,26 @@ theorem determinantShortExactIso_natural
     determinantShortExactIso f₁ g₁ h₁ hf₁ hg₁ ≪≫ₗ determinantEquiv v =
       (TensorProduct.congr (determinantEquiv u) (determinantEquiv w)) ≪≫ₗ
         determinantShortExactIso f₂ g₂ h₂ hf₂ hg₂ := by
+  /-
+  Shepherd roadmap:
+  * Prove a private uniqueness lemma immediately before this theorem: two linear maps
+    `γ₁ γ₂ : det M' ⊗ det M'' →ₗ[R] det M` satisfying `determinantShortExactIsoSpec f g` are equal.
+    Use `TensorProduct.ext'`; for `x' ⊗ₜ x''`, choose a lift `y` with
+    `exteriorAlgebraMap g y = x''` using `(ExteriorAlgebra.map_surjective_iff).2 hg`, and compare the
+    two specification equations.  Apply `Subtype.ext` after comparison in the exterior algebra.
+  * Regard both sides of the desired equality as linear maps and invoke that uniqueness lemma for
+    the lower sequence `(f₂,g₂)`.  The right side satisfies its spec directly from
+    `determinantShortExactIso_spec f₂ g₂ ...`.
+  * For the left side, start with `x' : det M'`, `x'' : det M''` and a lower lift `z` of
+    `determinantEquiv w x''`.  Pull it back through the algebra equivalence induced by `v`; the
+    equation `comm₂` and `exteriorAlgebraMap_comp` show that this is a lift of `x''` for `g₁`.
+  * Apply the upper specification, then push the wedge expression through `v`.  Use `comm₁`,
+    `exteriorAlgebraMap_comp`, `map_mul`, `determinantMap_coe`, and
+    `TensorProduct.congr_tmul` to obtain exactly the lower specification.  Any mismatch between
+    rank proofs is resolved with `Subsingleton.elim`.
+  * Finish with `LinearEquiv.toLinearMap_injective` (or `LinearEquiv.ext`) after uniqueness.  The
+    three module universes all remain `Type v`, matching `TensorProduct.congr` without lifts.
+  -/
   sorry
 
 /-! ## Filtrations -/
@@ -464,6 +679,34 @@ theorem determinant_filtration
           (determinantModule R (M ⧸ L)) ≪≫ₗ
         TensorProduct.congr
           (LinearEquiv.refl R (determinantModule R K)) γquot ≪≫ₗ γKM) := by
+  /-
+  Shepherd roadmap:
+  * Establish the four concrete short exact sequences first.  For subtype/quotient pairs use
+    `LinearMap.exact_subtype_mkQ`, `Submodule.injective_subtype`, and
+    `Submodule.mkQ_surjective` from
+    `Mathlib/LinearAlgebra/TensorProduct/RightExactness.lean` and
+    `Mathlib/LinearAlgebra/Quotient/{Basic,Defs}.lean`.  For the quotient sequence, prove on quotient
+    representatives that `filtrationQuotientInclusion` is injective, that
+    `filtrationQuotientProjection` is surjective, and that its kernel is the range of the inclusion;
+    use `Submodule.ker_mkQ` and `Submodule.Quotient.induction_on`.
+  * Install the missing finite/projective instances in dependency order.  Split
+    `0 → K → L → L/K → 0` with `Function.Exact.splitSurjectiveEquiv` and projectivity of `L/K` to
+    identify `L` with `K × L/K`; then do the same for `M` and for `M/K`.  Transport finiteness and
+    projectivity through those equivalences using `Module.Finite.equiv` and
+    `Module.Projective.of_equiv'`; use the local `moduleProjective_prod` argument (moved to a private
+    helper before this theorem if necessary) for products.
+  * Define `γKL`, `γLM`, `γKM`, and `γquot` with `determinantShortExactIso` for the four sequences.
+    Their first four conjuncts are exactly `determinantShortExactIso_spec`.
+  * For the final equality, apply `TensorProduct.ext_threefold` from
+    `Mathlib/LinearAlgebra/TensorProduct/Basic.lean`.  On
+    `(xK ⊗ₜ xLK) ⊗ₜ xML`, choose compatible exterior-algebra lifts successively and apply the four
+    specs.  Both sides coerce to the same triple wedge
+    `exteriorAlgebraMap K.subtype xK * yLK * yML`; use `mul_assoc`,
+    `TensorProduct.assoc_tmul`, and `Subtype.ext`.
+  * This triple-wedge comparison is the associativity coherence not supplied by
+    `determinantShortExactIso_natural`; trying to finish only with naturality leaves the parenthesized
+    tensor products unrelated.
+  -/
   sorry
 
 /-! ## Direct sums and the switch sign -/
@@ -474,6 +717,19 @@ theorem moduleProjective_prod
     [AddCommGroup M] [Module R M] [Module.Projective R M]
     [AddCommGroup N] [Module R N] [Module.Projective R N] :
     Module.Projective R (M × N) := by
+  /-
+  Shepherd roadmap:
+  * Model the binary product as a finite direct sum.  Let
+    `P : Fin 2 → Type* := Fin.cases M (fun _ => N)` and install the induced additive/module and
+    projective instances componentwise.
+  * `Module.Projective.directSum` in `Mathlib/Algebra/Module/Projective.lean` gives projectivity of
+    `⨁ i, P i`.  Compose `DFinsupp.linearEquivFunOnFintype` with
+    `LinearEquiv.piFinTwo` from `Mathlib/LinearAlgebra/Pi.lean` to get a linear equivalence from that
+    direct sum to `M × N`.
+  * Transport projectivity along its inverse with `Module.Projective.of_equiv'`.  This route handles
+    the universe parameters directly and avoids invoking `Projective.of_lifting_property`, whose
+    `Small` side condition can otherwise force unnecessary `ULift` bookkeeping.
+  -/
   sorry
 
 /-- The determinant isomorphism for the canonical direct-sum exact sequence.
@@ -511,6 +767,20 @@ theorem determinant_neg_identity_isUnit
     IsUnit
       (determinant (M := M ⊗[R] N)
         (-(LinearMap.id : Module.End R (M ⊗[R] N)))) := by
+  /-
+  Shepherd roadmap:
+  * Let `φ : Module.End R (M ⊗[R] N) := -LinearMap.id`.  Its underlying function is bijective, with
+    itself as inverse; prove the two identities pointwise with `neg_neg`.
+  * Convert this to `IsUnit φ` using `Module.End.isUnit_iff` from
+    `Mathlib/Algebra/Module/Equiv/Basic.lean`.
+  * Apply `IsUnit.map` to `determinantMonoidHom (R := R) (M := M ⊗[R] N)`.  The tensor-product
+    finite and projective instances are `Module.Finite.tensorProduct` and
+    `Module.Projective.tensorProduct` from
+    `Mathlib/RingTheory/TensorProduct/Finite.lean` and
+    `Mathlib/Algebra/Module/Projective.lean`.
+  * The mapped element is definitionally `determinant φ`; finish with `simpa [φ,
+    determinantMonoidHom]` without computing the sign exponent.
+  -/
   sorry
 
 /-- The sign unit appearing when the two direct-sum factors are switched. -/
@@ -554,6 +824,28 @@ theorem determinant_directSum_switch
         determinantProductCommEquiv (R := R) (M := M') (N := M'') =
       determinantSwitchTensorEquiv (R := R) (M := M') (N := M'') ≪≫ₗ
         determinantDirectSumIso (R := R) (M' := M'') (M'' := M') := by
+  /-
+  Shepherd roadmap:
+  * Coerce both sides to linear maps and apply `TensorProduct.ext'`; fix pure determinant tensors
+    `x' ⊗ₜ x''`.  Expand the two `determinantDirectSumIso` values with
+    `determinantShortExactIso_spec` for `LinearMap.inl`/`LinearMap.snd`, choosing the evident lift
+    through `LinearMap.inr`.
+  * After `determinantMap_coe` for `LinearEquiv.prodComm`, both sides become the two wedge orders
+    `map inl x' * map inr x''` and `map inl x'' * map inr x'` in the exterior algebra of
+    `M'' × M'`.
+  * Prove a private sign helper on each constant-rank component:
+    `x' ∧ x'' = determinantSwitchSign • (x'' ∧ x')`.  Expand local basis wedges with
+    `ExteriorAlgebra.ιMulti_mul_ιMulti` and `AlternatingMap.map_perm`; the block permutation has sign
+    `(-1)^(rank M' * rank M'')`.
+  * Identify that scalar with `determinantSwitchSign` by applying
+    `determinantModule_equiv_rankProduct` to `M' ⊗[R] M''`: on a component of ranks `r,s`,
+    `Module.rankAtStalk` of the tensor product is `r*s`, and `-LinearMap.id` acts on its top exterior
+    power by `(-1)^(r*s)`.  Use `determinantMap_coe` and the definition of
+    `determinantEndScalarEquiv` to read off the scalar.
+  * Rewrite `determinantSwitchTensorEquiv` on a pure tensor with `TensorProduct.comm_tmul` and the
+    scalar-action simp lemma, apply the sign helper, and conclude by `Subtype.ext` and
+    `LinearEquiv.toLinearMap_injective`.
+  -/
   sorry
 
 /-! ## The switch identity -/
@@ -568,6 +860,35 @@ theorem determinant_switch
         ((LinearMap.id : N →ₗ[R] N) + a.comp b) =
       determinant (M := M)
         ((LinearMap.id : M →ₗ[R] M) + b.comp a) := by
+  /-
+  Shepherd roadmap:
+  * First derive a block-diagonal compatibility lemma from
+    `determinantShortExactIso_natural` for the direct-sum exact sequence: for endomorphisms `p` of
+    `M` and `q` of `N`, determinant of `LinearMap.prodMap p q` is
+    `determinant p * determinant q`.  Compare scalar actions on the invertible determinant line via
+    `determinantDirectSumIso`; use `determinantEndScalarEquiv` and
+    `Module.Invertible.toModuleEnd_bijective` to extract equality of scalars.
+  * More generally derive a block-triangular compatibility lemma from the same naturality square:
+    the determinant of a triangular block map with diagonal maps `p,q` is
+    `determinant p * determinant q`; the off-diagonal block does not enter the induced submodule and
+    quotient maps.  Its unit-triangular specialization has determinant `1` by
+    `determinant_map_one`.
+  * Define the block map `T(m,n) = (m + b n, -a m + n)`.  Verify by `LinearMap.ext` the two right
+    eliminations (remembering `Module.End.mul_eq_comp`): composing `T` with
+    `U_a(m,n) = (m, a m + n)` gives the upper-triangular map
+    `(m,n) \mapsto ((id + b.comp a) m + b n, n)`, while composing it with
+    `U_{-b}(m,n) = (m - b n,n)` gives the lower-triangular map
+    `(m,n) \mapsto (m, -a m + (id + a.comp b) n)`.
+  * Apply `determinant_map_mul` to both identities.  Both `U_a` and `U_{-b}` have determinant `1`,
+    and the block-triangular lemma reduces the two results to the two sides of this theorem.
+  * If the factor order changes the chosen `M × N` versus `N × M` convention, use
+    `determinant_directSum_switch` to conjugate by `LinearEquiv.prodComm`; its sign unit occurs on both
+    sides and can be cancelled with `IsUnit.mul_left_cancel` using
+    `determinant_neg_identity_isUnit`.  This is the projective-module analogue of
+    `Matrix.det_one_add_mul_comm` in
+    `Mathlib/LinearAlgebra/Matrix/SchurComplement.lean`; that matrix theorem cannot be applied
+    directly because neither module is assumed free.
+  -/
   sorry
 
 /-! ## The determinant map on K₀ -/
@@ -595,6 +916,28 @@ theorem determinantKZeroFree_respects_relations
     {R : Type u} [CommRing R] :
     Formalization.Books.Algebra.Unit55.kZeroCon R ≤
       AddCon.ker (determinantKZeroFree (R := R)) := by
+  /-
+  Shepherd roadmap (the additive/Picard interface was audited and needs no statement change):
+  * Follow `kZeroFreeToKPrime_respects_relations` in
+    `Formalization/Books/Algebra/Unit55/KGroups.lean`: start with
+    `refine AddCon.addConGen_le.2 ?_` and
+    `rintro x y ⟨S, rfl, rfl⟩`, where
+    `S : FiniteProjectiveShortExact R`.
+  * Simplify `FreeAbelianGroup.lift` on the three generators.  After unfolding only
+    `determinantClassOfPresentation`, change the additive target equality to the multiplicative
+    Picard equality
+    `Pic.mk R (det middle) = Pic.mk R (det left) * Pic.mk R (det right)`; `Additive.ofMul`
+    definitionally turns `+` into `*`.
+  * Obtain `γ` from `exists_determinantShortExactIso S.leftToMiddle S.middleToRight
+    S.exact S.left_injective S.middle_surjective`.  The corresponding finite/projective instances
+    are supplied by `FiniteProjectivePresentation.finite` and `.isProjective` in `Unit55/KGroups`.
+  * Use `CommRing.Pic.mk_eq_mk_iff` from `Mathlib/RingTheory/PicardGroup.lean` with `γ.symm` to replace
+    the middle determinant class by the class of the tensor product.  Finish with
+    `picard_class_tensor` from
+    `Formalization/Books/MoreAlgebra/Unit118/PicardGroups.lean`.
+  * The subtype proof that `γ` satisfies the wedge spec is not needed for this relation; only its
+    linear equivalence field is used.
+  -/
   sorry
 
 /-- The determinant homomorphism from K₀ to the additive form of the Picard
@@ -614,6 +957,21 @@ theorem determinantKZero_apply_presentation
     determinantKZero (R := R)
         (Formalization.Books.Algebra.Unit55.kZeroClassOfPresentation P) =
       determinantClassOfPresentation P := by
+  /-
+  Shepherd roadmap:
+  * Copy the quotient computation pattern of `kZeroToKPrime_apply_class` in
+    `Formalization/Books/Algebra/Unit55/KGroups.lean`.
+  * Change the left side to
+    `determinantKZeroFree (R := R)
+      (Formalization.Books.Algebra.Unit55.kZeroGenerator P)` using the defining reduction rule for
+    `AddCon.lift` on `(kZeroCon R).mk'`.
+  * Unfold `determinantKZeroFree` and `kZeroGenerator`; close with
+    `FreeAbelianGroup.lift_apply_of` from `Mathlib/GroupTheory/FreeAbelianGroup.lean`.  The result is definitionally
+    `determinantClassOfPresentation P`, so a focused
+    `simp [determinantKZero, determinantKZeroFree,
+      Formalization.Books.Algebra.Unit55.kZeroClassOfPresentation,
+      Formalization.Books.Algebra.Unit55.kZeroGenerator]` should suffice.
+  -/
   sorry
 
 /-- On the class of a finite projective module, the K₀ determinant map is the
@@ -626,6 +984,24 @@ theorem determinantKZero_apply_module
       (letI : Module.Invertible R (determinantModule R M) :=
         determinantModule_invertible (R := R) (M := M)
        Additive.ofMul (CommRing.Pic.mk R (determinantModule R M))) := by
+  /-
+  Shepherd roadmap:
+  * Unfold `Formalization.Books.Algebra.Unit55.kZeroClass` just enough to name
+    `P := Classical.choose (exists_finite_projective_presentation (R := R) (M := M))` and
+    `e := (Classical.choose_spec ...).some : P.presentation.module ≃ₗ[R] M`.
+  * Rewrite the K₀ value with `determinantKZero_apply_presentation P`; the left side is now
+    `determinantClassOfPresentation P`.
+  * Unfold `determinantClassOfPresentation` and change the equality of `Additive` values to
+    `CommRing.Pic.mk R (determinantModule R P.presentation.module) =
+      CommRing.Pic.mk R (determinantModule R M)`.
+  * Apply `CommRing.Pic.mk_eq_mk_iff.mpr` from
+    `Mathlib/RingTheory/PicardGroup.lean` with the equivalence `determinantEquiv e`.  The source
+    finite/projective instances are the presentation instances from `Unit55/KGroups.lean`; the
+    target instances are the theorem hypotheses.
+  * Local `Module.Invertible` instances built by `determinantModule_invertible` may contain different
+    proof terms, but they are propositions; use `Subsingleton.elim` only if elaboration does not
+    identify them after the `change`.
+  -/
   sorry
 
 end

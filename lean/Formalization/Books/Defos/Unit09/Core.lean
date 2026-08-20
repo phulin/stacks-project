@@ -69,6 +69,7 @@ structure SheafIdeal {C : Type u} [Category.{u} C]
   inclusion : (SheafOfModules.toSheaf O).obj carrier ⟶ underlyingAdditiveSheaf O
   inclusion_mono : Mono inclusion
   moduleInclusion : carrier ⟶ SheafOfModules.unit O
+  moduleInclusion_mono : Mono moduleInclusion
   moduleInclusion_underlying :
     (SheafOfModules.toSheaf O).map moduleInclusion = inclusion
   sectionValue : ∀ (U : C), carrier.val.obj (op U) → O.obj.obj (op U)
@@ -173,6 +174,12 @@ structure RingedToposHom {C D : Type u} [Category.{u} C] [Category.{u} D]
   moduleSharp_underlying :
     (SheafOfModules.toSheaf Y.structureSheaf).map moduleSharp =
       (sheafCompose Y.topology (forget₂ RingCat AddCommGrpCat)).map sharp
+  /-- The direct image of the unit module is the unit module with scalars
+  restricted along the structure-sheaf map. -/
+  moduleDirectImage_unit_iso :
+    moduleDirectImage.obj (SheafOfModules.unit X.structureSheaf) ≅
+      (SheafOfModules.restrictScalars sharp).obj
+        (SheafOfModules.unit (directImageRing.obj X.structureSheaf))
   /-- The inclusion of the kernel ideal has zero composite with `sharp`. -/
   kernel_condition :
     kernel.inclusion ≫
@@ -187,6 +194,13 @@ structure RingedToposHom {C D : Type u} [Category.{u} C] [Category.{u} D]
   forgetting the `Y.structureSheaf`-module structure. -/
   module_kernel_is_kernel :
     IsLimit (KernelFork.ofι kernel.moduleInclusion module_kernel_condition)
+
+noncomputable def RingedToposHom.moduleDirectImage_unit_map
+    {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {X : RingedTopos C} {Y : RingedTopos D} (f : RingedToposHom X Y) :
+    SheafOfModules.unit Y.structureSheaf ⟶
+      f.moduleDirectImage.obj (SheafOfModules.unit X.structureSheaf) :=
+  f.moduleSharp ≫ f.moduleDirectImage_unit_iso.inv
 
 /-! ## Thickenings -/
 
@@ -345,6 +359,22 @@ structure MorphismOfThickenings
   direct_ring_iso :
     i.hom.directImageRing ⋙ f'.directImageRing ≅
       f.directImageRing ⋙ t.hom.directImageRing
+  /-- Coherence of direct image on modules for the commutative square. -/
+  module_direct_iso :
+    i.hom.moduleDirectImage ⋙ f'.moduleDirectImage ≅
+      f.moduleDirectImage ⋙ t.hom.moduleDirectImage
+  /-- Compatibility of the module structure-sheaf maps with the direct-image
+  coherence above. -/
+  module_unit_compatibility :
+    f'.moduleDirectImage_unit_map ≫
+        f'.moduleDirectImage.map i.hom.moduleDirectImage_unit_map ≫
+          module_direct_iso.hom.app (SheafOfModules.unit X.structureSheaf) =
+      t.hom.moduleDirectImage_unit_map ≫
+        t.hom.moduleDirectImage.map f.moduleDirectImage_unit_map
+  /-- Coherence of pullback on modules for the commutative square. -/
+  module_pullback_iso :
+    f'.modulePullback ⋙ i.hom.modulePullback ≅
+      t.hom.modulePullback ⋙ f.modulePullback
   sharp_compatibility :
     f'.sharp ≫ f'.directImageRing.map i.hom.sharp ≫
         direct_ring_iso.hom.app X.structureSheaf =
@@ -409,19 +439,49 @@ noncomputable def MorphismOfThickenings.inverseImageKernelMap
       m.inverseImageKernel i.hom.kernel :=
   Classical.choice (inverseImageKernel_map_exists m)
 
-/-- The pullback kernel map supplied by the commutative square. -/
-theorem pullbackKernel_map_exists
+/- The module map before transposing along the pullback/direct-image
+   adjunction.  The factorization equation records that this is the map
+   induced by the commutative square, rather than an arbitrary morphism
+   (in particular, not merely the zero morphism). -/
+theorem pullbackKernel_factorization_exists
     {C D E F : Type u} [Category.{u} C] [Category.{u} D]
     [Category.{u} E] [Category.{u} F]
     {X : RingedTopos C} {Y : RingedTopos D}
     {B : RingedTopos E} {B' : RingedTopos F}
     {i : Thickening X Y} {t : Thickening B B'}
     (m : MorphismOfThickenings i t) :
-    Nonempty
-      (m.pullbackKernel ⟶ i.hom.kernel.carrier) := by
+    ∃ φ : t.hom.kernel.carrier ⟶
+        m.f'.moduleDirectImage.obj i.hom.kernel.carrier,
+      φ ≫ m.f'.moduleDirectImage.map i.hom.kernel.moduleInclusion =
+        t.hom.kernel.moduleInclusion ≫
+          m.f'.moduleDirectImage_unit_map := by
   sorry
 
-/-- A chosen representative of the pullback kernel map. -/
+noncomputable def MorphismOfThickenings.pullbackKernelFactorization
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    t.hom.kernel.carrier ⟶
+      m.f'.moduleDirectImage.obj i.hom.kernel.carrier :=
+  Classical.choose (pullbackKernel_factorization_exists m)
+
+theorem MorphismOfThickenings.pullbackKernelFactorization_fac
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    m.pullbackKernelFactorization ≫
+        m.f'.moduleDirectImage.map i.hom.kernel.moduleInclusion =
+      t.hom.kernel.moduleInclusion ≫
+        m.f'.moduleDirectImage_unit_map :=
+  Classical.choose_spec (pullbackKernel_factorization_exists m)
+
+/- The pullback kernel map is the transpose of the factorization above. -/
 noncomputable def MorphismOfThickenings.pullbackKernelMap
     {C D E F : Type u} [Category.{u} C] [Category.{u} D]
     [Category.{u} E] [Category.{u} F]
@@ -430,7 +490,20 @@ noncomputable def MorphismOfThickenings.pullbackKernelMap
     {i : Thickening X Y} {t : Thickening B B'}
     (m : MorphismOfThickenings i t) :
     m.pullbackKernel ⟶ i.hom.kernel.carrier :=
-  Classical.choice (pullbackKernel_map_exists m)
+  (m.f'.modulePullback_moduleDirectImage.homEquiv
+      t.hom.kernel.carrier i.hom.kernel.carrier).symm
+    m.pullbackKernelFactorization
+
+theorem pullbackKernel_map_exists
+    {C D E F : Type u} [Category.{u} C] [Category.{u} D]
+    [Category.{u} E] [Category.{u} F]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    {B : RingedTopos E} {B' : RingedTopos F}
+    {i : Thickening X Y} {t : Thickening B B'}
+    (m : MorphismOfThickenings i t) :
+    Nonempty
+      (m.pullbackKernel ⟶ i.hom.kernel.carrier) :=
+  ⟨m.pullbackKernelMap⟩
 
 /-- The strictness condition for a morphism of thickenings. -/
 def MorphismOfThickenings.IsStrict

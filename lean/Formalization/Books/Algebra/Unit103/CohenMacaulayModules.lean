@@ -503,6 +503,66 @@ theorem goodElement_isSMulRegular_and_quotient_isCohenMacaulay
 
 /-! ## Cutting by one element -/
 
+/- Proof roadmap for the normal prove stage.
+
+   Universe/interface audit: the previously reported obstruction is stale.
+   In `Formalization/Books/Algebra/Unit72/Depth.lean`, both
+   `localDepth_le_dim_of_associatedPrime` and `localDepth_drops_by_one` now
+   quantify `{R : Type u} {M : Type v}`.  The latter discharges its former
+   smallness obstruction internally by comparing `M` and its quotient with
+   `ULift.{u} M` and `ULift.{u} (QuotSMulTop g M)` through
+   `ULift.moduleEquiv`; do not lift either consumer type here.  Likewise,
+   `associatedPrimes`, `ass_subset_support`, and
+   `iUnion_associatedPrimes_eq_module_zeroDivisors` in
+   `Formalization/Books/Algebra/Unit63/AssociatedPrimes.lean` all accept the
+   same independent universes.  Tactic trials at this hole elaborate the
+   explicit instantiations `(R := R) (M := M)` for both Unit63 and Unit72.
+
+   1. Unfold `IsCohenMacaulay` at a copy of `hM`.  Its left side is a
+      `WithBot` coercion, so `Module.supportDim_ne_bot_iff_nontrivial` gives
+      `Nontrivial M`.  Use
+      `smul_top_ne_top_of_le_ring_jacobson` and
+      `IsLocalRing.maximalIdeal_le_jacobson` to supply the properness
+      hypothesis to Unit72's `depth_lt_top_of_noetherian`; hence
+      `localDepth R M < top`.
+   2. Case-split `localDepth R M`.  The `top` case contradicts that strict
+      bound.  Let `Q := QuotSMulTop g M`; Mathlib's
+      `nontrivial_quotSMulTop_of_mem_maximalIdeal M hg` and
+      `Module.supportDim_ne_bot_iff_nontrivial` show
+      `Module.supportDim R Q != bottom`.  In the finite `0` case, rewrite
+      `hcut` with `hM` and
+      `supportDim_quotSMulTop_eq_supportCutDim_singleton`; then
+      `WithBot.add_one_le_zero_iff` contradicts this non-bottom result.  In
+      the finite successor case, the same rewrites make `hcut` have shape
+      `Module.supportDim R Q + 1 = ((n + 1 : ENat) : WithBot ENat)`; apply
+      the local helper `supportDim_eq_cast_of_add_one_eq n` to record
+      `hQdim : Module.supportDim R Q = ((n : ENat) : WithBot ENat)`.
+   3. Prove regularity by contradiction.  Expand `IsSMulRegular` and use
+      `Function.not_injective_iff` to obtain a nonzero `m : M` killed by
+      `g` (take the difference of the two witnesses).  Rewrite this
+      zero-divisor witness with Unit63's
+      `iUnion_associatedPrimes_eq_module_zeroDivisors` and
+      `Set.mem_iUnion` to obtain `p : PrimeSpectrum R`,
+      `hp : p in Unit63.associatedPrimes R M`, and `g in p.asIdeal`.
+      Unit63's `ass_subset_support hp`, followed by
+      `Module.support_quotSMulTop` (simp with `Set.mem_inter_iff`,
+      `PrimeSpectrum.mem_zeroLocus`, and `Set.singleton_subset_iff`), puts
+      `p` in `Module.support R Q`.
+   4. At the unchanged universe instantiations `R : Type u` and
+      `M : Type v`, chain
+      `Unit72.localDepth_le_dim_of_associatedPrime (R := R) (M := M) p hp`
+      with Unit72's
+      `dim_quotient_le_supportDim_of_mem_support (M := Q) p hpQ`.
+      Rewriting the endpoints by the successor depth case and `hQdim`
+      gives `n + 1 <= n`; `exact_mod_cast` and
+      `Nat.not_succ_le_self` close the contradiction.
+   5. Install the `Nontrivial M` proof as an instance and apply
+      `Unit72.localDepth_drops_by_one (R := R) (M := M) g hg hreg`.
+      In the retained successor case it simplifies to
+      `localDepth R Q = n`.  Unfold `IsCohenMacaulay`, rewrite with this
+      equality and `hQdim`, and return regularity, quotient
+      Cohen--Macaulayness, and the depth-drop equality.
+-/
 theorem isCohenMacaulay_quotient_by_element
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
@@ -517,6 +577,70 @@ theorem isCohenMacaulay_quotient_by_element
 
 /-! ## Regular sequences cut out by the expected dimension -/
 
+/- Proof roadmap for the normal prove stage.
+
+   The statement is sound: `hc : c <= d` is exactly what makes the natural
+   subtraction in `hquot` meaningful.  The repaired Unit72 depth APIs accept
+   `R : Type u`, `M : Type v`; however, the otherwise reusable
+   `Unit72.regular_sequence_extend_to_localDepth` still has
+   `{R M : Type u}`.  A direct application here reproduces that narrower
+   mismatch.  Before proving this theorem, add a private local helper with
+   the same conclusion but parameters `{R : Type u} {N : Type v}`.  Copy the
+   constructive induction from
+   `Formalization/Books/Algebra/Unit72/Depth.lean`:
+   in the empty case use `depth_lt_top_of_noetherian` and
+   `ENat.sSup_mem_of_nonempty_of_lt_top`; in the cons case use
+   `RingTheory.Sequence.isRegular_cons_iff`, recurse on
+   `QuotSMulTop x N`, and use the now-polymorphic
+   `localDepth_drops_by_one`.  No `ULift` is needed in this local helper.
+
+   1. Also prove a private/local iterated cut bound, for `N : Type v`:
+      if every member of `xs : List R` lies in the maximal ideal, then
+      `Module.supportDim R N <= supportCutDim R N xs + xs.length`.
+      Induct on `xs`; the step is
+      `Module.supportDim_le_supportDim_quotSMulTop_succ`, followed by the
+      induction hypothesis on `QuotSMulTop x N`, and the existing local
+      identity `supportCutDim_quotSMulTop_eq_cons`.  The empty case uses
+      `supportCutDim_eq_supportDim_quotientByList` and
+      `Submodule.quotEquivOfEqBot` (or the corresponding `simp`).
+   2. Induct on `c`.  When `c = 0`, `List.ofFn g = []`; use
+      `RingTheory.Sequence.IsRegular.nil` and the universe-polymorphic local
+      extension helper.  Obtain `Nontrivial M` from `hM` and `hMdim` via
+      `Module.supportDim_ne_bot_iff_nontrivial`, and package the helper's two
+      conclusions as `IsMaximalRegularSequence`.
+   3. For `c = n + 1`, write `x := g 0`, `gt := Fin.tail g`, and
+      `Q := QuotSMulTop x M`; normalize the list with `List.ofFn_cons`.
+      From `hc`, record `n <= d - 1`.  The one-element inequality
+      `Module.supportDim_le_supportDim_quotSMulTop_succ (hg 0)` gives the
+      lower bound `((d - 1 : ENat) : WithBot ENat) <= supportDim R Q`.
+      Apply the iterated cut bound to `Q` and `List.ofFn gt` for the upper
+      bound.  Transport its final cut through
+      `supportCutDim_quotSMulTop_eq_cons`, rewrite `List.ofFn_cons`, and use
+      `hquot`; `omega` handles
+      `(d - (n + 1)) + n = d - 1`.  Eliminate `bottom`/`top` before casting
+      to naturals, or use `supportDim_eq_cast_of_add_one_eq`, to conclude
+      `hQdim : Module.supportDim R Q =
+        (((d - 1 : Nat) : ENat) : WithBot ENat)`.
+   4. Rewrite `supportCutDim R M [x]` using
+      `supportDim_quotSMulTop_eq_supportCutDim_singleton`; `hMdim` and
+      `hQdim` now supply the cut equality required by
+      `isCohenMacaulay_quotient_by_element hM x (hg 0)`.  Retain its three
+      outputs `hxreg`, `hQCM`, and `hdrop`.
+   5. Apply the induction hypothesis to parameters `d - 1`, `n`, module
+      `Q`, and function `gt`.  Its final-quotient hypothesis is `hquot`
+      transported by
+      `Submodule.quotOfListConsSMulTopEquivQuotSMulTopInner M x
+        (List.ofFn gt)` and `Module.supportDim_eq_of_equiv`; normalize
+      `(d - 1) - n = d - (n + 1)` using `omega` and `hc`.
+   6. Assemble regularity using
+      `RingTheory.Sequence.IsRegular.cons hxreg htailreg` and
+      `List.ofFn_cons`.  Use the same `ys` returned by the induction
+      hypothesis.  Unfold `IsMaximalRegularSequence`; its regularity field
+      is the same cons assembly, and its depth field follows from `hdrop`,
+      `1 <= localDepth R M` (witness the regular singleton `[x]`),
+      `tsub_add_cancel_of_le`, and the induction hypothesis's maximal-depth
+      equality, followed by list-length arithmetic.
+-/
 theorem regularSequence_of_supportDim_quotient_eq
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
@@ -537,6 +661,48 @@ theorem regularSequence_of_supportDim_quotient_eq
 
 /-! ## Standard consequences -/
 
+/- Proof roadmap for the normal prove stage.
+
+   The statement needs no extra nontriviality hypothesis.  If either
+   Cohen--Macaulay assumption is available, its equality with a coerced
+   local depth forces the relevant support dimension away from `bottom` and
+   hence supplies nontriviality.  The universe obstruction is stale:
+   `localDepth_drops_by_one` in
+   `Formalization/Books/Algebra/Unit72/Depth.lean` has independent
+   `{R : Type u} {M : Type v}`, while
+   `Module.supportDim_quotSMulTop_succ_eq_supportDim` is in
+   `Mathlib/RingTheory/KrullDimension/Regular.lean` and is already
+   universe-polymorphic.
+
+   1. Set `Q := QuotSMulTop x M` and record
+      `hdim : Module.supportDim R Q + 1 = Module.supportDim R M` using
+      `Module.supportDim_quotSMulTop_succ_eq_supportDim hreg hx`.
+   2. Forward implication: rewrite
+      `supportCutDim R M [x]` with
+      `supportDim_quotSMulTop_eq_supportCutDim_singleton`; `hdim` is exactly
+      the cut hypothesis of `isCohenMacaulay_quotient_by_element`.  Its
+      middle conjunct is the desired Cohen--Macaulay result for `Q`.
+   3. Reverse implication: from `hQ : IsCohenMacaulay R Q`, unfold a copy
+      and use `Module.supportDim_ne_bot_iff_nontrivial` to install
+      `Nontrivial Q`.  Pull this instance back to `M` along
+      `Submodule.mkQ_surjective (x • (top : Submodule R M))` via
+      `Function.Surjective.nontrivial`; this is a surjectivity transition,
+      not a universe lift.
+   4. Apply
+      `Unit72.localDepth_drops_by_one (R := R) (M := M) x hx hreg`.
+      Prove `1 <= localDepth R M` by unfolding `localDepth` and using
+      `depth_eq_sSup_weaklyRegular` (or the defining supremum) with the
+      singleton regular sequence: combine `hreg`, `hx`,
+      `RingTheory.Sequence.IsRegular.nil R Q`, and
+      `RingTheory.Sequence.IsRegular.cons`.  Thus
+      `tsub_add_cancel_of_le` converts the depth-drop equality into
+      `localDepth R M = localDepth R Q + 1`.
+   5. Unfold `IsCohenMacaulay` in the goal and in `hQ`, coerce that last
+      `ENat` equality to `WithBot ENat`, then calculate
+      `coe (localDepth R M) = coe (localDepth R Q) + 1
+        = Module.supportDim R Q + 1 = Module.supportDim R M`
+      using `hQ` and `hdim`.
+-/
 theorem isCohenMacaulay_iff_of_isSMulRegular
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]

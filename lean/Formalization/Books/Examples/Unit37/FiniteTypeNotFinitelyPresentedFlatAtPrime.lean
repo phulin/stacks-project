@@ -1,5 +1,7 @@
 import Mathlib.Algebra.DirectSum.Basic
 import Mathlib.Algebra.MvPolynomial.CommRing
+import Mathlib.Algebra.MvPolynomial.Equiv
+import Mathlib.Algebra.TrivSqZeroExt.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.FiniteType
@@ -10,6 +12,7 @@ import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.Smooth.StandardSmoothCotangent
 
 /-!
 # Examples, Chapter 37: finite type, not finitely presented, flat at prime
@@ -373,10 +376,145 @@ instance ftA_isLocalRing (k : Type u) [Field k] : IsLocalRing (ftA k) := by
     _ = (I.map (ftAToA0 k)).comap (ftAToA0 k) := hcomp.symm
     _ = (IsLocalRing.maximalIdeal (ftA0 k)).comap (ftAToA0 k) := by rw [hmap_eq]
 
+private noncomputable def ftAGeneratorTestMap (k : Type u) [Field k] (n : ℕ) :
+    ftAPolynomialRing k →+*
+      TrivSqZeroExt (ftA0 k ⧸ ftP0 k n) (ftA0 k ⧸ ftP0 k n) :=
+  MvPolynomial.eval₂Hom
+    ((TrivSqZeroExt.inlHom _ _).comp (Ideal.Quotient.mk (ftP0 k n)))
+    (fun i => if i = n then TrivSqZeroExt.inr 1 else 0)
+
+private theorem ftARelations_le_testMap_ker (k : Type u) [Field k] (n : ℕ) :
+    ftARelationsIdeal k ≤ RingHom.ker (ftAGeneratorTestMap k n) := by
+  refine Ideal.span_le.2 ?_
+  intro p hp
+  rcases hp with hp | hp
+  · rcases hp with ⟨⟨i, j⟩, rfl⟩
+    simp [ftAGeneratorTestMap, apply_ite, TrivSqZeroExt.inr_mul_inr]
+  · rcases hp with ⟨i, rfl⟩
+    change ftAGeneratorTestMap k n
+        (MvPolynomial.X i * MvPolynomial.C (ftPrimeEquation k i)) = 0
+    calc
+      _ = ftAGeneratorTestMap k n (MvPolynomial.X i) *
+          ftAGeneratorTestMap k n (MvPolynomial.C (ftPrimeEquation k i)) :=
+        (ftAGeneratorTestMap k n).map_mul _ _
+      _ = (if i = n then TrivSqZeroExt.inr 1 else 0) *
+          TrivSqZeroExt.inl (Ideal.Quotient.mk (ftP0 k n) (ftPrimeEquation k i)) := by
+        simp [ftAGeneratorTestMap]
+      _ = 0 := by
+        by_cases hi : i = n
+        · subst i
+          have hqzero : Ideal.Quotient.mk (ftP0 k n) (ftPrimeEquation k n) = 0 :=
+            Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self _)
+          rw [if_pos rfl, hqzero]
+          simp
+        · simp [hi]
+
+private noncomputable def ftAGeneratorTestMapQuotient (k : Type u) [Field k] (n : ℕ) :
+    ftA k →+* TrivSqZeroExt (ftA0 k ⧸ ftP0 k n) (ftA0 k ⧸ ftP0 k n) :=
+  Ideal.Quotient.lift (ftARelationsIdeal k) (ftAGeneratorTestMap k n)
+    (ftARelations_le_testMap_ker k n)
+
+private theorem ftAGeneratorTestMap_fst (k : Type u) [Field k] (n : ℕ)
+    (p : ftAPolynomialRing k) :
+    TrivSqZeroExt.fst (ftAGeneratorTestMap k n p) =
+      Ideal.Quotient.mk (ftP0 k n) (ftAAugmentation k p) := by
+  have hhom :
+      (TrivSqZeroExt.fstHom
+        (ftA0 k ⧸ ftP0 k n) (ftA0 k ⧸ ftP0 k n) (ftA0 k ⧸ ftP0 k n)).toRingHom.comp
+          (ftAGeneratorTestMap k n) =
+        (Ideal.Quotient.mk (ftP0 k n)).comp (ftAAugmentation k) := by
+    apply MvPolynomial.ringHom_ext'
+    · ext a
+      change TrivSqZeroExt.fst (ftAGeneratorTestMap k n (MvPolynomial.C a)) =
+        Ideal.Quotient.mk (ftP0 k n) (ftAAugmentation k (MvPolynomial.C a))
+      rw [show ftAGeneratorTestMap k n (MvPolynomial.C a) =
+          (TrivSqZeroExt.inlHom _ _)
+            (Ideal.Quotient.mk (ftP0 k n) a) by
+          simp [ftAGeneratorTestMap]]
+      change Ideal.Quotient.mk (ftP0 k n) a =
+        Ideal.Quotient.mk (ftP0 k n) (ftAAugmentation k (MvPolynomial.C a))
+      simp only [ftAAugmentation, MvPolynomial.eval₂Hom_C, RingHom.id_apply]
+    · intro i
+      change TrivSqZeroExt.fst (ftAGeneratorTestMap k n (MvPolynomial.X i)) =
+        (Ideal.Quotient.mk (ftP0 k n)) (ftAAugmentation k (MvPolynomial.X i))
+      simp only [ftAGeneratorTestMap, ftAAugmentation]
+      by_cases hi : i = n
+      · simp [hi]
+      · simp [hi]
+  exact DFunLike.congr_fun hhom p
+
 theorem ftAGenerator_annihilator (k : Type u) [Field k] (n : ℕ) :
     (Submodule.span (ftA k) ({ftAGenerator k n} : Set (ftA k))).annihilator =
       ftAPrime k n := by
-  sorry
+  rw [Submodule.annihilator_span_singleton]
+  ext x
+  simp [LinearMap.toSpanSingleton_apply, ftAPrime]
+  constructor
+  · intro hx
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+    have hzero := congrArg (ftAGeneratorTestMapQuotient k n) hx
+    have hsnd := congrArg TrivSqZeroExt.snd hzero
+    have hconst : Ideal.Quotient.mk (ftP0 k n) (ftAAugmentation k p) = 0 := by
+      have hsnd' := hsnd
+      have hmapprod := (ftAGeneratorTestMapQuotient k n).map_mul
+        (Ideal.Quotient.mk (ftARelationsIdeal k) p) (ftAGenerator k n)
+      rw [hmapprod] at hsnd'
+      simp only [ftAGeneratorTestMapQuotient, ftAGenerator] at hsnd'
+      change TrivSqZeroExt.snd
+          (ftAGeneratorTestMap k n p * ftAGeneratorTestMap k n (MvPolynomial.X n)) = 0 at hsnd'
+      have hXmap : ftAGeneratorTestMap k n (MvPolynomial.X n) =
+          TrivSqZeroExt.inr 1 := by
+        simp [ftAGeneratorTestMap]
+      rw [hXmap, TrivSqZeroExt.snd_mul] at hsnd'
+      have hfstzero : TrivSqZeroExt.fst (ftAGeneratorTestMap k n p) = 0 := by
+        simpa using hsnd'
+      calc
+        _ = TrivSqZeroExt.fst (ftAGeneratorTestMap k n p) :=
+          (ftAGeneratorTestMap_fst k n p).symm
+        _ = 0 := hfstzero
+    have hp0 : ftAAugmentation k p ∈ ftP0 k n :=
+      Ideal.Quotient.eq_zero_iff_mem.mp hconst
+    have hmap : ftAToA0 k (Ideal.Quotient.mk (ftARelationsIdeal k) p) =
+        ftAAugmentation k p := by
+      change Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k) _
+          (Ideal.Quotient.mk (ftARelationsIdeal k) p) = _
+      rfl
+    exact hmap.symm ▸ hp0
+  · intro hx
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+    have hmap : ftAToA0 k (Ideal.Quotient.mk (ftARelationsIdeal k) p) =
+        ftAAugmentation k p := by
+      change Ideal.Quotient.lift (ftARelationsIdeal k) (ftAAugmentation k) _
+          (Ideal.Quotient.mk (ftARelationsIdeal k) p) = _
+      rfl
+    have hp0 : ftAAugmentation k p ∈ ftP0 k n := by
+      exact hmap ▸ hx
+    have hpv : p - MvPolynomial.C (ftAAugmentation k p) ∈
+        MvPolynomial.idealOfVars ℕ (ftA0 k) := by
+      apply ftAAugmentation_eq_zero_mem_idealOfVars k
+      simp [ftAAugmentation]
+    have hX : MvPolynomial.X n ∈ MvPolynomial.idealOfVars ℕ (ftA0 k) := by
+      apply Ideal.subset_span
+      exact ⟨n, rfl⟩
+    have hvar : (p - MvPolynomial.C (ftAAugmentation k p)) * MvPolynomial.X n ∈
+        ftARelationsIdeal k :=
+      ftARelationsIdeal_contains_idealOfVars_square k
+        (by
+          simpa only [pow_two] using
+            (Ideal.mul_mem_mul
+              (I := MvPolynomial.idealOfVars ℕ (ftA0 k))
+              (J := MvPolynomial.idealOfVars ℕ (ftA0 k)) hpv hX))
+    obtain ⟨a, ha⟩ := Ideal.mem_span_singleton'.mp hp0
+    have hq : MvPolynomial.C (ftAAugmentation k p) * MvPolynomial.X n ∈
+        ftARelationsIdeal k := by
+      rw [← ha, MvPolynomial.C_mul]
+      simpa [mul_assoc, mul_comm, mul_left_comm] using
+        (ftARelationsIdeal k).mul_mem_left (MvPolynomial.C a)
+          (Ideal.subset_span (Set.mem_union_right _ ⟨n, rfl⟩))
+    change Ideal.Quotient.mk (ftARelationsIdeal k) (p * MvPolynomial.X n) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    simpa [sub_mul, add_comm, add_left_comm, add_assoc] using
+      (ftARelationsIdeal k).add_mem hvar hq
 
 /-! ## The standard-étale algebra `C` -/
 
@@ -424,6 +562,20 @@ noncomputable instance ftAToCAlgebra (k : Type u) [Field k] : Algebra (ftA k) (f
   unfold ftC
   infer_instance
 
+private noncomputable instance ftA_self_finiteType (k : Type u) [Field k] :
+    Algebra.FiniteType (ftA k) (ftA k) :=
+  (RingHom.finiteType_algebraMap (A := ftA k) (B := ftA k)).mp <|
+    by simpa using (RingHom.FiniteType.id (ftA k))
+
+private noncomputable instance ftCQuotient_self_finiteType (k : Type u) [Field k] :
+    Algebra.FiniteType (ftCQuotient k) (ftCQuotient k) :=
+  (RingHom.finiteType_algebraMap (A := ftCQuotient k) (B := ftCQuotient k)).mp <|
+    by simpa using (RingHom.FiniteType.id (ftCQuotient k))
+
+private noncomputable instance ftA_ftC_scalarTower (k : Type u) [Field k] :
+    IsScalarTower (ftA k) (ftCQuotient k) (ftC k) :=
+  IsScalarTower.of_algebraMap_eq fun x => by rfl
+
 def ftAToC (k : Type u) [Field k] : ftA k →+* ftC k :=
   algebraMap (ftA k) (ftC k)
 
@@ -440,17 +592,132 @@ def ftCY (k : Type u) [Field k] : ftC k :=
 def ftCZn (k : Type u) [Field k] (n : ℕ) : ftC k :=
   ftAToC k (ftAGenerator k n)
 
+private def ftCQuotientRelation (k : Type u) [Field k] :
+    PUnit.{u + 1} → MvPolynomial PUnit.{u + 1} (ftA k) :=
+  fun _ => Polynomial.toMvPolynomial PUnit.unit (ftCRelation k)
+
+private theorem ftCQuotient_map_span (k : Type u) [Field k] :
+    ftCRelationsIdeal k =
+      Ideal.map
+        (MvPolynomial.uniqueAlgEquiv (ftA k) PUnit :
+          MvPolynomial PUnit.{u + 1} (ftA k) →+* Polynomial (ftA k))
+        (Ideal.span (Set.range (ftCQuotientRelation k))) := by
+  rw [Ideal.map_span]
+  have hrange : Set.range (ftCQuotientRelation k) =
+      {ftCQuotientRelation k (PUnit.unit : PUnit.{u + 1})} := by
+    ext p
+    simp only [Set.mem_range, Set.mem_singleton_iff]
+    constructor
+    · rintro ⟨x, hx⟩
+      simpa [ftCQuotientRelation] using hx.symm
+    · intro hp
+      refine ⟨PUnit.unit, ?_⟩
+      simpa [ftCQuotientRelation] using hp.symm
+  rw [hrange]
+  simp only [Set.image_singleton]
+  simp [ftCRelationsIdeal, ftCQuotientRelation, ftCRelation]
+
+private noncomputable def ftCQuotientEquiv (k : Type u) [Field k] :
+    (MvPolynomial PUnit.{u + 1} (ftA k) ⧸
+        Ideal.span (Set.range (ftCQuotientRelation k))) ≃ₐ[ftA k] ftCQuotient k := by
+  exact Ideal.quotientEquivAlg _ _ (MvPolynomial.uniqueAlgEquiv (ftA k) PUnit)
+    (ftCQuotient_map_span k)
+
+private noncomputable def ftCQuotientPrePresentation (k : Type u) [Field k] :
+    Algebra.PreSubmersivePresentation (ftA k) (ftCQuotient k)
+      PUnit.{u + 1} PUnit.{u + 1} :=
+  (Algebra.PreSubmersivePresentation.naive
+      (v := ftCQuotientRelation k) (fun _ : PUnit => PUnit.unit) (fun _ _ h => h)).ofAlgEquiv
+    (ftCQuotientEquiv k)
+
+private theorem ftCQuotientPrePresentation_jacobian (k : Type u) [Field k] :
+    (ftCQuotientPrePresentation k).jacobian = ftCDerivative k := by
+  unfold ftCQuotientPrePresentation
+  rw [Algebra.PreSubmersivePresentation.jacobian_eq_jacobiMatrix_det]
+  rw [Algebra.PreSubmersivePresentation.jacobiMatrix_ofAlgEquiv]
+  simp
+  rw [Algebra.PreSubmersivePresentation.jacobiMatrix_apply]
+  simp [Algebra.PreSubmersivePresentation.naive, ftCQuotientRelation, ftCRelation,
+    ftCDerivative, ftCDerivativePolynomial]
+  have hX : ftCQuotientEquiv k
+      (Ideal.Quotient.mk (Ideal.span (Set.range (ftCQuotientRelation k)))
+        (MvPolynomial.X PUnit.unit)) =
+      (Ideal.Quotient.mk (ftCRelationsIdeal k) Polynomial.X :
+        Polynomial (ftA k) ⧸ ftCRelationsIdeal k) := by
+    unfold ftCQuotient
+    unfold ftCQuotientEquiv
+    convert
+      (Ideal.quotientEquivAlg_mk
+        (I := Ideal.span (Set.range (ftCQuotientRelation k)))
+        (J := ftCRelationsIdeal k)
+        (f := MvPolynomial.uniqueAlgEquiv (ftA k) PUnit)
+        (hIJ := ftCQuotient_map_span k) (x := MvPolynomial.X PUnit.unit)) using 1
+    simp
+  rw [hX]
+  have hax : algebraMap (ftA k) (ftCQuotient k) (ftAX k) =
+      Ideal.Quotient.mk (ftCRelationsIdeal k) (Polynomial.C (ftAX k)) := by
+    rfl
+  have htwo : (Ideal.Quotient.mk (ftCRelationsIdeal k)) (Polynomial.C 2) =
+      (2 : ftCQuotient k) := by
+    change (Ideal.Quotient.mk (ftCRelationsIdeal k)) (Polynomial.C (2 : ftA k)) =
+      (Ideal.Quotient.mk (ftCRelationsIdeal k)) (2 : Polynomial (ftA k))
+    congr 1
+  rw [hax, htwo]
+  ring_nf
+  ac_rfl
+
 theorem ftAToC_etale (k : Type u) [Field k] :
     RingHom.Etale (ftAToC k) := by
-  sorry
+  unfold ftAToC
+  rw [RingHom.etale_algebraMap]
+  let P₀ : Algebra.PreSubmersivePresentation (ftA k) (ftCQuotient k)
+      PUnit.{u + 1} PUnit.{u + 1} := ftCQuotientPrePresentation k
+  let P₁ : Algebra.PreSubmersivePresentation (ftCQuotient k) (ftC k) Unit Unit := by
+    change Algebra.PreSubmersivePresentation (ftCQuotient k)
+      (Localization.Away (ftCDerivative k)) Unit Unit
+    exact Algebra.PreSubmersivePresentation.localizationAway
+      (S := Localization.Away (ftCDerivative k)) (ftCDerivative k)
+  let P := P₁.comp P₀
+  have hP : IsUnit P.jacobian := by
+    have hP₁ : P₁.jacobian =
+        algebraMap (ftCQuotient k) (ftC k) (ftCDerivative k) := by
+      change (Algebra.PreSubmersivePresentation.localizationAway
+        (S := Localization.Away (ftCDerivative k)) (ftCDerivative k)).jacobian = _
+      rw [Algebra.PreSubmersivePresentation.localizationAway_jacobian]
+      rfl
+    dsimp [P]
+    rw [Algebra.PreSubmersivePresentation.comp_jacobian_eq_jacobian_smul_jacobian,
+      Algebra.smul_def, ftCQuotientPrePresentation_jacobian, hP₁]
+    have hu : IsUnit (algebraMap (ftCQuotient k) (ftC k) (ftCDerivative k)) := by
+      change IsUnit (algebraMap (ftCQuotient k)
+        (Localization.Away (ftCDerivative k)) (ftCDerivative k))
+      exact IsLocalization.Away.algebraMap_isUnit _
+    exact hu.mul hu
+  let P' : Algebra.SubmersivePresentation (ftA k) (ftC k)
+      (Unit ⊕ PUnit.{u + 1}) (Unit ⊕ PUnit.{u + 1}) :=
+    { P with jacobian_isUnit := hP }
+  have hdim : P'.dimension = 0 := by
+    dsimp [P']
+    rw [Algebra.PreSubmersivePresentation.dimension_comp_eq_dimension_add_dimension]
+    simp [Algebra.Presentation.dimension]
+  exact Algebra.Etale.iff_isStandardSmoothOfRelativeDimension_zero.mpr
+    (P'.isStandardSmoothOfRelativeDimension hdim)
 
 theorem ftAToC_finiteType (k : Type u) [Field k] :
     RingHom.FiniteType (ftAToC k) := by
-  sorry
+  unfold ftAToC
+  rw [RingHom.finiteType_algebraMap]
+  have hQ : Algebra.FiniteType (ftA k) (ftCQuotient k) := by
+    unfold ftCQuotient
+    infer_instance
+  have hQC : Algebra.FiniteType (ftCQuotient k) (ftC k) := by
+    change Algebra.FiniteType (ftCQuotient k) (Localization.Away (ftCDerivative k))
+    infer_instance
+  exact Algebra.FiniteType.trans hQ hQC
 
 theorem ftAToC_flat (k : Type u) [Field k] :
     RingHom.Flat (ftAToC k) := by
-  sorry
+  exact (RingHom.Etale.iff_flat_and_formallyUnramified.mp (ftAToC_etale k)).1
 
 /-- The maximal ideal generated by `x`, `y`, `z`, and all `zₙ`. -/
 def ftCQ (k : Type u) [Field k] : Ideal (ftC k) :=

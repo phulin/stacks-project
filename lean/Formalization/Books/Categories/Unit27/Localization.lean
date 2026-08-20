@@ -1,4 +1,5 @@
 import Mathlib.CategoryTheory.Filtered.Basic
+import Mathlib.CategoryTheory.Filtered.Final
 import Mathlib.CategoryTheory.Functor.Flat
 import Mathlib.CategoryTheory.Localization.CalculusOfFractions
 import Mathlib.CategoryTheory.Limits.FilteredColimitCommutesFiniteLimit
@@ -279,6 +280,29 @@ abbrev LeftDenominatorCategory {C : Type u} [Category.{v} C]
     (W : MorphismProperty C) (Y : C) :=
   MorphismProperty.Under W (⊤ : MorphismProperty C) Y
 
+/- The denominator-change functor induced by a morphism in `W`.  It sends
+   `t : Y ⟶ Y'` to `s ≫ t : X ⟶ Y'`. -/
+def leftDenominatorCategoryPostcompose {C : Type u} [Category.{v} C]
+    {W : MorphismProperty C} [LeftMultiplicativeSystem W]
+    {X Y : C} (s : X ⟶ Y) (hs : W s) :
+    LeftDenominatorCategory W Y ⥤ LeftDenominatorCategory W X where
+  obj t :=
+    MorphismProperty.Under.mk (P := W) (Q := (⊤ : MorphismProperty C))
+      (X := X) (s ≫ t.hom) (W.comp_mem _ _ hs t.prop)
+  map {t t'} a :=
+    MorphismProperty.Under.homMk a.right (by
+      change (s ≫ t.hom) ≫ a.right = s ≫ t'.hom
+      simpa only [Category.assoc] using congrArg (fun z => s ≫ z)
+        (MorphismProperty.Under.w a))
+  map_id t := by
+    apply MorphismProperty.Under.Hom.ext
+    change 𝟙 t.right = 𝟙 t.right
+    rfl
+  map_comp f g := by
+    apply MorphismProperty.Under.Hom.ext
+    change f.right ≫ g.right = f.right ≫ g.right
+    rfl
+
 def leftDenominatorHomDiagram {C : Type u} [Category.{v} C]
     (W : MorphismProperty C) (X Y : C) :
     LeftDenominatorCategory W Y ⥤ Type (max u v) where
@@ -307,6 +331,41 @@ theorem left_denominator_category_is_filtered {C : Type u} [Category.{v} C]
     {W : MorphismProperty C} [LeftMultiplicativeSystem W] (Y : C) :
     IsFiltered (LeftDenominatorCategory W Y) := by
   exact left_denominator_category_is_filtered_aux Y
+
+theorem left_denominator_category_postcompose_is_final {C : Type u}
+    [Category.{v} C] {W : MorphismProperty C} [LeftMultiplicativeSystem W]
+    {X Y : C} (s : X ⟶ Y) (hs : W s) :
+    Functor.Final (leftDenominatorCategoryPostcompose s hs) := by
+  letI : IsFiltered (LeftDenominatorCategory W Y) :=
+    left_denominator_category_is_filtered Y
+  letI : IsFiltered (LeftDenominatorCategory W X) :=
+    left_denominator_category_is_filtered X
+  apply Functor.final_of_exists_of_isFiltered
+    (leftDenominatorCategoryPostcompose s hs)
+  · intro d
+    obtain ⟨ψ, hψ⟩ :=
+      (MorphismProperty.RightFraction.mk d.hom d.prop s).exists_leftFraction
+    let c : LeftDenominatorCategory W Y :=
+      MorphismProperty.Under.mk (P := W) (Q := (⊤ : MorphismProperty C))
+        (X := Y) ψ.s ψ.hs
+    refine ⟨c, ?_⟩
+    change Nonempty (d ⟶ (leftDenominatorCategoryPostcompose s hs).obj c)
+    refine ⟨MorphismProperty.Under.homMk ψ.f ?_⟩
+    change d.hom ≫ ψ.f = s ≫ ψ.s
+    simpa [Category.assoc] using hψ.symm
+  · intro d c f g
+    obtain ⟨Z, t, ht, hfg⟩ :=
+      MorphismProperty.HasLeftCalculusOfFractions.ext
+        f.right g.right d.hom d.prop (by
+          change d.hom ≫ f.right = d.hom ≫ g.right
+          rw [MorphismProperty.Under.w f, MorphismProperty.Under.w g])
+    let c' : LeftDenominatorCategory W Y :=
+      MorphismProperty.Under.mk (P := W) (Q := (⊤ : MorphismProperty C))
+        (X := Y) (c.hom ≫ t) (W.comp_mem _ _ c.prop ht)
+    refine ⟨c', MorphismProperty.Under.homMk t rfl, ?_⟩
+    apply MorphismProperty.Under.Hom.ext
+    change f.right ≫ t = g.right ≫ t
+    exact hfg
 
 theorem left_localization_hom_is_filtered_colimit {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [LeftMultiplicativeSystem W]
@@ -829,6 +888,29 @@ abbrev RightDenominatorCategory {C : Type u} [Category.{v} C]
     (W : MorphismProperty C) (X : C) :=
   MorphismProperty.Over W (⊤ : MorphismProperty C) X
 
+/- The dual denominator-change functor induced by a morphism in `W`.  It
+   sends `t : X' ⟶ X` to `t ≫ s : X' ⟶ Y`. -/
+def rightDenominatorCategoryPrecompose {C : Type u} [Category.{v} C]
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {X Y : C} (s : X ⟶ Y) (hs : W s) :
+    RightDenominatorCategory W X ⥤ RightDenominatorCategory W Y where
+  obj t :=
+    MorphismProperty.Over.mk (P := W) (Q := (⊤ : MorphismProperty C))
+      (X := Y) (t.hom ≫ s) (W.comp_mem _ _ t.prop hs)
+  map {t t'} a :=
+    MorphismProperty.Over.homMk a.left (by
+      change a.left ≫ (t'.hom ≫ s) = t.hom ≫ s
+      simpa only [Category.assoc] using congrArg (fun z => z ≫ s)
+        (MorphismProperty.Over.w a)) trivial
+  map_id t := by
+    apply MorphismProperty.Over.Hom.ext
+    change 𝟙 t.left = 𝟙 t.left
+    rfl
+  map_comp f g := by
+    apply MorphismProperty.Over.Hom.ext
+    change f.left ≫ g.left = f.left ≫ g.left
+    rfl
+
 def rightDenominatorHomDiagram {C : Type u} [Category.{v} C]
     (W : MorphismProperty C) (X Y : C) :
     (RightDenominatorCategory W X)ᵒᵖ ⥤ Type (max u v) where
@@ -857,6 +939,41 @@ theorem right_denominator_category_is_cofiltered {C : Type u} [Category.{v} C]
     {W : MorphismProperty C} [RightMultiplicativeSystem W] (X : C) :
     IsCofiltered (RightDenominatorCategory W X) := by
   exact right_denominator_category_is_cofiltered_aux X
+
+theorem right_denominator_category_precompose_is_initial {C : Type u}
+    [Category.{v} C] {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {X Y : C} (s : X ⟶ Y) (hs : W s) :
+    Functor.Initial (rightDenominatorCategoryPrecompose s hs) := by
+  letI : IsCofiltered (RightDenominatorCategory W X) :=
+    right_denominator_category_is_cofiltered X
+  letI : IsCofiltered (RightDenominatorCategory W Y) :=
+    right_denominator_category_is_cofiltered Y
+  apply Functor.initial_of_exists_of_isCofiltered
+    (rightDenominatorCategoryPrecompose s hs)
+  · intro d
+    obtain ⟨ψ, hψ⟩ :=
+      (MorphismProperty.LeftFraction.mk s d.hom d.prop).exists_rightFraction
+    let c : RightDenominatorCategory W X :=
+      MorphismProperty.Over.mk (P := W) (Q := (⊤ : MorphismProperty C))
+        (X := X) ψ.s ψ.hs
+    refine ⟨c, ?_⟩
+    change Nonempty ((rightDenominatorCategoryPrecompose s hs).obj c ⟶ d)
+    refine ⟨MorphismProperty.Over.homMk ψ.f ?_ trivial⟩
+    change ψ.f ≫ d.hom = ψ.s ≫ s
+    simpa [Category.assoc] using hψ.symm
+  · intro d c f g
+    obtain ⟨Z, t, ht, hfg⟩ :=
+      MorphismProperty.HasRightCalculusOfFractions.ext
+        f.left g.left d.hom d.prop (by
+          change f.left ≫ d.hom = g.left ≫ d.hom
+          rw [MorphismProperty.Over.w f, MorphismProperty.Over.w g])
+    let c' : RightDenominatorCategory W X :=
+      MorphismProperty.Over.mk (P := W) (Q := (⊤ : MorphismProperty C))
+        (X := X) (t ≫ c.hom) (W.comp_mem _ _ ht c.prop)
+    refine ⟨c', MorphismProperty.Over.homMk t rfl trivial, ?_⟩
+    apply MorphismProperty.Over.Hom.ext
+    change t ≫ f.left = t ≫ g.left
+    exact hfg
 
 theorem right_localization_hom_is_filtered_colimit {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [RightMultiplicativeSystem W]

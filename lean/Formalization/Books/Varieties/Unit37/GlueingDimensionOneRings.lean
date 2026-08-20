@@ -251,13 +251,13 @@ theorem power_works
     (hi : i ∈ (minimalPrimeIntersection (A := A)).map
       (Formalization.Books.Algebra.Unit25.mapToMinimalPrimeLocalizations (R := A)))
     (hf : f = i + Formalization.Books.Algebra.Unit25.mapToMinimalPrimeLocalizations a) :
-    ∃ n : ℕ, ∃ b : A,
+    ∃ n : ℕ, 0 < n ∧ ∃ b : A,
       Formalization.Books.Algebra.Unit25.mapToMinimalPrimeLocalizations b = f ^ n := by
   sorry
 
 /-- Lemma `lemma-good-intersection`. -/
 theorem good_intersection
-    {A K : Type u} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
+    {A : Type u} {K : Type v} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
     [CommRing K]
     (hA_dimension : ringKrullDim A = 1)
     (f : K →+* Formalization.Books.Algebra.Unit25.minimalPrimeLocalizations A)

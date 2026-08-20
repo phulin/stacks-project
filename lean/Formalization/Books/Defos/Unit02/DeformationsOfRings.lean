@@ -1,7 +1,7 @@
 import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
 import Formalization.Books.MoreAlgebra.Unit83.PseudoCoherentPerfectRingMaps
 import Mathlib.Algebra.Category.Ring.Basic
-import Mathlib.Algebra.Torsor
+import Mathlib.Algebra.Torsor.Basic
 import Mathlib.LinearAlgebra.BilinearMap
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -23,7 +23,7 @@ open Formalization.Books.Algebra.Unit134
 open Formalization.Books.Algebra.Unit131
 open Formalization.Books.MoreAlgebra.Unit83
 
-universe u
+universe u v
 
 noncomputable section
 
@@ -54,7 +54,7 @@ structure SquareZeroAlgebraExtension {R B N : Type u}
 the named kernel module. -/
 structure SquareZeroAlgebraExtension.Iso
     {R B N : Type u} [CommRing R] [CommRing B] [AddCommGroup N] [Module B N]
-    {f : R →+* B} (E F : SquareZeroAlgebraExtension f N) where
+    {f : R →+* B} (E F : SquareZeroAlgebraExtension (N := N) f) where
   hom : E.carrier ≃+* F.carrier
   base_commutes : hom.toRingHom.comp E.base = F.base
   projection_commutes : F.projection.comp hom.toRingHom = E.projection
@@ -66,14 +66,14 @@ variable {R B N : Type u} [CommRing R] [CommRing B]
   [AddCommGroup N] [Module B N] {f : R →+* B}
 
 /-- The identity isomorphism of a square-zero extension. -/
-def Iso.refl (E : SquareZeroAlgebraExtension f N) : Iso E E where
+def Iso.refl (E : SquareZeroAlgebraExtension (N := N) f) : Iso E E where
   hom := RingEquiv.refl _
   base_commutes := by simp
   projection_commutes := by simp
   inclusion_commutes := by intro n; rfl
 
 /-- The inverse of an extension isomorphism. -/
-def Iso.symm {E F : SquareZeroAlgebraExtension f N} (e : Iso E F) : Iso F E where
+def Iso.symm {E F : SquareZeroAlgebraExtension (N := N) f} (e : Iso E F) : Iso F E where
   hom := e.hom.symm
   base_commutes := by
     apply RingHom.ext
@@ -93,19 +93,28 @@ def Iso.symm {E F : SquareZeroAlgebraExtension f N} (e : Iso E F) : Iso F E wher
     simp [e.inclusion_commutes]
 
 /-- Composition of extension isomorphisms. -/
-def Iso.trans {E F G : SquareZeroAlgebraExtension f N}
+def Iso.trans {E F G : SquareZeroAlgebraExtension (N := N) f}
     (e₁ : Iso E F) (e₂ : Iso F G) : Iso E G where
   hom := e₁.hom.trans e₂.hom
   base_commutes := by
     apply RingHom.ext
     intro r
     change e₂.hom (e₁.hom (E.base r)) = G.base r
-    rw [e₁.base_commutes, e₂.base_commutes]
+    calc
+      e₂.hom (e₁.hom (E.base r)) = e₂.hom (F.base r) := by
+        congr 1
+        exact congrArg (fun h => h r) e₁.base_commutes
+      _ = G.base r := by
+        exact congrArg (fun h => h r) e₂.base_commutes
   projection_commutes := by
     apply RingHom.ext
     intro x
     change G.projection (e₂.hom (e₁.hom x)) = E.projection x
-    rw [← e₂.projection_commutes, ← e₁.projection_commutes]
+    calc
+      G.projection (e₂.hom (e₁.hom x)) = F.projection (e₁.hom x) := by
+        exact congrArg (fun h => h (e₁.hom x)) e₂.projection_commutes
+      _ = E.projection x := by
+        exact congrArg (fun h => h x) e₁.projection_commutes
   inclusion_commutes := by
     intro n
     simp [e₁.inclusion_commutes, e₂.inclusion_commutes]
@@ -127,8 +136,8 @@ structure SquareZeroRingExtension (A' A I : Type u)
 /-- The deformation problem from the source diagram. -/
 structure DeformationProblem (A' A B I N : Type u)
     [CommRing A'] [CommRing A] [CommRing B] [AddCommGroup I] [Module A I]
-    [AddCommGroup N] [Module A N] [Module B N] [IsScalarTower A B N]
-    [Algebra A B] where
+    [AddCommGroup N] [Module A N] [Module B N] [Algebra A B]
+    [IsScalarTower A B N] where
   base_extension : SquareZeroRingExtension A' A I
   coefficient : I →ₗ[A] N
 
@@ -136,7 +145,7 @@ namespace DeformationProblem
 
 variable {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
   [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-  [IsScalarTower A B N] [Algebra A B]
+  [Algebra A B] [IsScalarTower A B N]
 
 /-- The ring map A' → A in the deformation problem. -/
 abbrev quotient (P : DeformationProblem A' A B I N) : A' →+* A :=
@@ -151,11 +160,11 @@ end DeformationProblem
 /-- A solution to the source deformation problem. -/
 structure DeformationSolution {A' A B I N : Type u}
     [CommRing A'] [CommRing A] [CommRing B] [AddCommGroup I] [Module A I]
-    [AddCommGroup N] [Module A N] [Module B N] [IsScalarTower A B N]
-    [Algebra A B]
+    [AddCommGroup N] [Module A N] [Module B N] [Algebra A B]
+    [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) where
-  extension : SquareZeroAlgebraExtension
-    ((algebraMap A B).comp P.base_extension.quotient) N
+  extension : SquareZeroAlgebraExtension (N := N)
+    ((algebraMap A B).comp P.base_extension.quotient)
   base_kernel : ∀ i,
     extension.base (P.base_extension.inclusion i) = extension.inclusion (P.coefficient i)
 
@@ -168,10 +177,9 @@ structure DeformationSolutionDiagram
     [AddCommGroup I₁] [Module A₁ I₁]
     [AddCommGroup I₂] [Module A₂ I₂]
     [AddCommGroup N₁] [Module A₁ N₁] [Module B₁ N₁]
-    [IsScalarTower A₁ B₁ N₁]
+    [Algebra A₁ B₁] [IsScalarTower A₁ B₁ N₁]
     [AddCommGroup N₂] [Module A₂ N₂] [Module B₂ N₂]
-    [IsScalarTower A₂ B₂ N₂]
-    [Algebra A₁ B₁] [Algebra A₂ B₂]
+    [Algebra A₂ B₂] [IsScalarTower A₂ B₂ N₂]
     (P₁ : DeformationProblem A₁' A₁ B₁ I₁ N₁)
     (P₂ : DeformationProblem A₂' A₂ B₂ I₂ N₂) where
   solution₁ : DeformationSolution P₁
@@ -179,8 +187,8 @@ structure DeformationSolutionDiagram
   baseMap : A₁' →+* A₂'
   quotientMap : A₁ →+* A₂
   targetMap : B₁ →+* B₂
-  idealMap : I₁ →+ I₂
-  kernelMap : N₁ →+ N₂
+  idealMap : I₁ →ₛₗ[quotientMap] I₂
+  kernelMap : N₁ →ₛₗ[targetMap] N₂
   base_square : quotientMap.comp P₁.base_extension.quotient =
     P₂.base_extension.quotient.comp baseMap
   target_square : targetMap.comp (algebraMap A₁ B₁) =
@@ -188,9 +196,8 @@ structure DeformationSolutionDiagram
   base_kernel_commutes : ∀ i,
     baseMap (P₁.base_extension.inclusion i) =
       P₂.base_extension.inclusion (idealMap i)
-  coefficient_square :
-    P₂.coefficient.toAddMonoidHom.comp idealMap =
-      kernelMap.comp P₁.coefficient.toAddMonoidHom
+  coefficient_square : ∀ i,
+    P₂.coefficient (idealMap i) = kernelMap (P₁.coefficient i)
 
 /-- A map between the two selected solutions in a solution diagram. -/
 structure DeformationSolutionMap
@@ -200,10 +207,9 @@ structure DeformationSolutionMap
     [AddCommGroup I₁] [Module A₁ I₁]
     [AddCommGroup I₂] [Module A₂ I₂]
     [AddCommGroup N₁] [Module A₁ N₁] [Module B₁ N₁]
-    [IsScalarTower A₁ B₁ N₁]
+    [Algebra A₁ B₁] [IsScalarTower A₁ B₁ N₁]
     [AddCommGroup N₂] [Module A₂ N₂] [Module B₂ N₂]
-    [IsScalarTower A₂ B₂ N₂]
-    [Algebra A₁ B₁] [Algebra A₂ B₂]
+    [Algebra A₂ B₂] [IsScalarTower A₂ B₂ N₂]
     {P₁ : DeformationProblem A₁' A₁ B₁ I₁ N₁}
     {P₂ : DeformationProblem A₂' A₂ B₂ I₂ N₂}
     (D : DeformationSolutionDiagram P₁ P₂) where
@@ -223,8 +229,7 @@ def naiveCotangentHomMap (A B N : Type u) [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B] :
     (CanonicalCotangentSpace A B →ₗ[B] N) →ₗ[B]
       (CanonicalConormal A B →ₗ[B] N) :=
-  LinearMap.llcomp B (CanonicalConormal A B) (CanonicalCotangentSpace A B) N
-    (NaiveCotangentComplex A B)
+  LinearMap.lcomp B N (NaiveCotangentComplex A B)
 
 /-- The degree-one Ext group of the two-term naive cotangent complex.
 
@@ -241,7 +246,7 @@ algebra structure induced by the quotient map. -/
 abbrev DeformationProblem.baseNaiveExtOne
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B]
+    [Algebra A B] [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) : Type u :=
   letI : Algebra A' A := P.base_extension.quotient.toAlgebra
   NaiveExtOne A' A N
@@ -250,7 +255,7 @@ abbrev DeformationProblem.baseNaiveExtOne
 abbrev DeformationProblem.baseExtensionNaiveExtOne
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B]
+    [Algebra A B] [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) : Type u :=
   letI : Algebra A' A := P.base_extension.quotient.toAlgebra
   NaiveExtOne A' A I
@@ -259,7 +264,7 @@ abbrev DeformationProblem.baseExtensionNaiveExtOne
 abbrev DeformationProblem.liftingNaiveExtOne
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B]
+    [Algebra A B] [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) : Type u :=
   letI : Algebra A' B :=
     ((algebraMap A B).comp P.base_extension.quotient).toAlgebra
@@ -274,14 +279,15 @@ abbrev DerivationHom (A B N : Type u) [CommRing A] [CommRing B]
 
 /-- The source's principal homogeneous spaces are Mathlib's canonical
 `AddTorsor` structures. -/
-abbrev PrincipalHomogeneousSpace (G P : Type u) [AddGroup G] := AddTorsor G P
+abbrev PrincipalHomogeneousSpace (G : Type u) (P : Type v) [AddGroup G] :=
+  AddTorsor G P
 
 /-! ## Isomorphism classes and classification interfaces -/
 
 /-- The setoid of square-zero algebra extensions under extension isomorphism. -/
 def extensionSetoid {R B N : Type u} [CommRing R] [CommRing B]
     [AddCommGroup N] [Module B N] {f : R →+* B} :
-    Setoid (SquareZeroAlgebraExtension f N) where
+    Setoid (SquareZeroAlgebraExtension (N := N) f) where
   r E F := Nonempty (SquareZeroAlgebraExtension.Iso E F)
   iseqv := {
     refl := fun E => ⟨SquareZeroAlgebraExtension.Iso.refl E⟩
@@ -303,14 +309,15 @@ abbrev ExtensionClass {R B N : Type u} [CommRing R] [CommRing B]
 /-- The class of a specified square-zero extension. -/
 def extensionClassOf {R B N : Type u} [CommRing R] [CommRing B]
     [AddCommGroup N] [Module B N] {f : R →+* B}
-    (E : SquareZeroAlgebraExtension f N) : ExtensionClass (f := f) N :=
-  Quotient.mk' E
+    (E : SquareZeroAlgebraExtension (N := N) f) :
+      ExtensionClass (N := N) (f := f) :=
+  Quotient.mk (extensionSetoid (f := f) (N := N)) E
 
 /-- The setoid of solutions under isomorphisms of the underlying extensions. -/
 def solutionSetoid {A' A B I N : Type u}
     [CommRing A'] [CommRing A] [CommRing B] [AddCommGroup I] [Module A I]
-    [AddCommGroup N] [Module A N] [Module B N] [IsScalarTower A B N]
-    [Algebra A B]
+    [AddCommGroup N] [Module A N] [Module B N] [Algebra A B]
+    [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) :
     Setoid (DeformationSolution P) where
   r E F := Nonempty (SquareZeroAlgebraExtension.Iso E.extension F.extension)
@@ -329,8 +336,8 @@ def solutionSetoid {A' A B I N : Type u}
 /-- Isomorphism classes of solutions to a deformation problem. -/
 abbrev SolutionClass {A' A B I N : Type u}
     [CommRing A'] [CommRing A] [CommRing B] [AddCommGroup I] [Module A I]
-    [AddCommGroup N] [Module A N] [Module B N] [IsScalarTower A B N]
-    [Algebra A B]
+    [AddCommGroup N] [Module A N] [Module B N] [Algebra A B]
+    [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) :=
   Quotient (solutionSetoid P)
 
@@ -339,8 +346,8 @@ structure ExtensionMap {R₁ R₂ B₁ B₂ N₁ N₂ : Type u}
     [CommRing R₁] [CommRing R₂] [CommRing B₁] [CommRing B₂]
     [AddCommGroup N₁] [Module B₁ N₁] [AddCommGroup N₂] [Module B₂ N₂]
     {f₁ : R₁ →+* B₁} {f₂ : R₂ →+* B₂}
-    (E₁ : SquareZeroAlgebraExtension f₁ N₁)
-    (E₂ : SquareZeroAlgebraExtension f₂ N₂)
+    (E₁ : SquareZeroAlgebraExtension (N := N₁) f₁)
+    (E₂ : SquareZeroAlgebraExtension (N := N₂) f₂)
     (baseMap : R₁ →+* R₂) (quotientMap : B₁ →+* B₂)
     (kernelMap : N₁ →+ N₂) where
   hom : E₁.carrier →+* E₂.carrier
@@ -358,10 +365,9 @@ theorem exists_canonical_obstruction
     [AddCommGroup I₁] [Module A₁ I₁]
     [AddCommGroup I₂] [Module A₂ I₂]
     [AddCommGroup N₁] [Module A₁ N₁] [Module B₁ N₁]
-    [IsScalarTower A₁ B₁ N₁]
+    [Algebra A₁ B₁] [IsScalarTower A₁ B₁ N₁]
     [AddCommGroup N₂] [Module A₂ N₂] [Module B₂ N₂]
-    [IsScalarTower A₂ B₂ N₂]
-    [Algebra A₁ B₁] [Algebra A₂ B₂] [Module B₁ N₂]
+    [Algebra A₂ B₂] [IsScalarTower A₂ B₂ N₂] [Module B₁ N₂]
     {P₁ : DeformationProblem A₁' A₁ B₁ I₁ N₁}
     {P₂ : DeformationProblem A₂' A₂ B₂ I₂ N₂}
     (D : DeformationSolutionDiagram P₁ P₂) :
@@ -379,10 +385,9 @@ theorem compatible_extension_maps_is_addTorsor
     [AddCommGroup I₁] [Module A₁ I₁]
     [AddCommGroup I₂] [Module A₂ I₂]
     [AddCommGroup N₁] [Module A₁ N₁] [Module B₁ N₁]
-    [IsScalarTower A₁ B₁ N₁]
+    [Algebra A₁ B₁] [IsScalarTower A₁ B₁ N₁]
     [AddCommGroup N₂] [Module A₂ N₂] [Module B₂ N₂]
-    [IsScalarTower A₂ B₂ N₂]
-    [Algebra A₁ B₁] [Algebra A₂ B₂] [Module B₁ N₂]
+    [Algebra A₂ B₂] [IsScalarTower A₂ B₂ N₂] [Module B₁ N₂]
     {P₁ : DeformationProblem A₁' A₁ B₁ I₁ N₁}
     {P₂ : DeformationProblem A₂' A₂ B₂ I₂ N₂}
     (D : DeformationSolutionDiagram P₁ P₂)
@@ -396,7 +401,7 @@ Ext one of the naive cotangent complex. -/
 theorem solution_classes_is_addTorsor
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B] (P : DeformationProblem A' A B I N)
+    [Algebra A B] [IsScalarTower A B N] (P : DeformationProblem A' A B I N)
     (h : Nonempty (DeformationSolution P)) :
     Nonempty (PrincipalHomogeneousSpace (NaiveExtOne A B N : Type u)
       (SolutionClass P)) := by
@@ -407,7 +412,7 @@ Ext group of the naive cotangent complex. -/
 theorem extension_classes_equiv_naiveExtOne
     {A B N : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B] :
-    Nonempty (ExtensionClass (f := algebraMap A B) N ≃
+    Nonempty (ExtensionClass (N := N) (f := algebraMap A B) ≃
       (NaiveExtOne A B N : Type u)) := by
   sorry
 
@@ -419,7 +424,7 @@ def SquareZeroRingExtension.toAlgebraExtension
     {A' A I : Type u} [CommRing A'] [CommRing A]
     [AddCommGroup I] [Module A I]
     (E : SquareZeroRingExtension A' A I) :
-    SquareZeroAlgebraExtension E.quotient I where
+    SquareZeroAlgebraExtension (N := I) E.quotient where
   carrier := CommRingCat.of A'
   base := RingHom.id A'
   projection := E.quotient
@@ -436,7 +441,7 @@ classification lemma. -/
 theorem trivial_extension_exists
     {A B N : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B] :
-    Nonempty (SquareZeroAlgebraExtension (algebraMap A B) N) := by
+    Nonempty (SquareZeroAlgebraExtension (N := N) (algebraMap A B)) := by
   sorry
 
 /-- The Ext-one value attached to an extension through the classification
@@ -445,7 +450,7 @@ map; the classification theorem above is the invariant statement. -/
 noncomputable def extensionClassValue
     {A B N : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B]
-    (E : SquareZeroAlgebraExtension (algebraMap A B) N) :
+    (E : SquareZeroAlgebraExtension (N := N) (algebraMap A B)) :
     NaiveExtOne A B N :=
   (Classical.choice (extension_classes_equiv_naiveExtOne (A := A) (B := B)
     (N := N))) (extensionClassOf E)
@@ -456,7 +461,7 @@ namespace DeformationProblem
 noncomputable def baseExtensionClass
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N]
-    [Module B N] [IsScalarTower A B N] [Algebra A B]
+    [Module B N] [Algebra A B] [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N) : P.baseExtensionNaiveExtOne :=
   letI : Algebra A' A := P.base_extension.quotient.toAlgebra
   extensionClassValue (P.base_extension.toAlgebraExtension)
@@ -474,8 +479,7 @@ theorem presentation_naiveExtOne_formula
     Nonempty (
       ((P.toExtension.Cotangent →ₗ[B] N) ⧸
         LinearMap.range
-          (LinearMap.llcomp B P.toExtension.Cotangent
-            P.toExtension.CotangentSpace N P.toExtension.cotangentComplex)) ≃ₗ[B]
+          (LinearMap.lcomp B N P.toExtension.cotangentComplex)) ≃ₗ[B]
         (NaiveExtOne A B N : Type u)) := by
   sorry
 
@@ -488,8 +492,7 @@ abbrev PresentationNaiveExtOne
   ModuleCat.of B
     ((P.toExtension.Cotangent →ₗ[B] N) ⧸
       LinearMap.range
-        (LinearMap.llcomp B P.toExtension.Cotangent
-          P.toExtension.CotangentSpace N P.toExtension.cotangentComplex))
+        (LinearMap.lcomp B N P.toExtension.cotangentComplex))
 
 /-- The quotient map which records a presentation lift's extension class. -/
 noncomputable def presentationExtensionClass
@@ -497,14 +500,14 @@ noncomputable def presentationExtensionClass
     [AddCommGroup N] [Module B N] [Algebra A B]
     (P : Presentation A B ι) :
     (P.toExtension.Cotangent →ₗ[B] N) →ₗ[B]
-      (PresentationNaiveExtOne P N : Type u) :=
+      (PresentationNaiveExtOne (N := N) P : Type u) :=
   Submodule.mkQ _
 
 /-- A chosen lift of a polynomial presentation to an extension. -/
 structure PresentationLift
     {A B N ι : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B]
-    (P : Presentation A B ι) (E : SquareZeroAlgebraExtension (algebraMap A B) N) where
+    (P : Presentation A B ι) (E : SquareZeroAlgebraExtension (N := N) (algebraMap A B)) where
   map : P.toExtension.Ring →+* E.carrier
   map_base : map.comp (algebraMap A P.toExtension.Ring) = E.base
   map_projection : E.projection.comp map = algebraMap P.toExtension.Ring B
@@ -515,7 +518,7 @@ the conormal module; the descent itself is the following theorem interface. -/
 noncomputable def PresentationLift.kernelValue
     {A B N ι : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B]
-    {P : Presentation A B ι} {E : SquareZeroAlgebraExtension (algebraMap A B) N}
+    {P : Presentation A B ι} {E : SquareZeroAlgebraExtension (N := N) (algebraMap A B)}
     (L : PresentationLift P E) (x : P.toExtension.ker) : N :=
   Classical.choose ((E.exact (L.map x)).mp (by
     have hx : E.projection (L.map x) =
@@ -527,7 +530,7 @@ noncomputable def PresentationLift.kernelValue
 theorem PresentationLift.kernelValue_spec
     {A B N ι : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B]
-    {P : Presentation A B ι} {E : SquareZeroAlgebraExtension (algebraMap A B) N}
+    {P : Presentation A B ι} {E : SquareZeroAlgebraExtension (N := N) (algebraMap A B)}
     (L : PresentationLift P E) (x : P.toExtension.ker) :
     E.inclusion (L.kernelValue x) = L.map x := by
   exact Classical.choose_spec ((E.exact (L.map x)).mp (by
@@ -543,7 +546,7 @@ theorem extension_class_is_restriction_of_lift
     {A B N ι : Type u} [CommRing A] [CommRing B]
     [AddCommGroup N] [Module B N] [Algebra A B]
     (P : Presentation A B ι)
-    (E : SquareZeroAlgebraExtension (algebraMap A B) N)
+    (E : SquareZeroAlgebraExtension (N := N) (algebraMap A B))
     (L : PresentationLift P E) :
     ∃ restriction : P.toExtension.Cotangent →ₗ[B] N,
       ∀ x : P.toExtension.ker,
@@ -555,8 +558,8 @@ kernel modules. -/
 structure ExtensionClassComparison
     {A B C M N : Type u} [CommRing A] [CommRing B] [CommRing C]
     [AddCommGroup M] [Module B M] [AddCommGroup N] [Module B N] [Module C N]
-    [IsScalarTower B C N] [Algebra A B] [Algebra B C] [Algebra A C]
-    [IsScalarTower A B C]
+    [Algebra A B] [Algebra B C] [Algebra A C]
+    [IsScalarTower B C N] [IsScalarTower A B C]
     (c : M →ₗ[B] N) where
   sourceMap : NaiveExtOne A B M →+ NaiveExtOne A B N
   targetMap : NaiveExtOne A C N →+ NaiveExtOne A B N
@@ -565,13 +568,13 @@ structure ExtensionClassComparison
 theorem extension_map_iff_classes_agree
     {A B C M N : Type u} [CommRing A] [CommRing B] [CommRing C]
     [AddCommGroup M] [Module B M] [AddCommGroup N] [Module B N] [Module C N]
-    [IsScalarTower B C N] [Algebra A B] [Algebra B C] [Algebra A C]
-    [IsScalarTower A B C]
+    [Algebra A B] [Algebra B C] [Algebra A C]
+    [IsScalarTower B C N] [IsScalarTower A B C]
     (c : M →ₗ[B] N)
-    (E : SquareZeroAlgebraExtension (algebraMap A B) M)
-    (F : SquareZeroAlgebraExtension (algebraMap A C) N) :
+    (E : SquareZeroAlgebraExtension (N := M) (algebraMap A B))
+    (F : SquareZeroAlgebraExtension (N := N) (algebraMap A C)) :
     ∃ comparison : ExtensionClassComparison c,
-      Nonempty (ExtensionMap E F (algebraMap A B) (algebraMap B C)
+      Nonempty (ExtensionMap E F (RingHom.id A) (algebraMap B C)
         c.toAddMonoidHom) ↔
         comparison.sourceMap (extensionClassValue E) =
           comparison.targetMap (extensionClassValue F) := by
@@ -581,26 +584,43 @@ theorem extension_map_iff_classes_agree
 pullback. Their underlying carriers are retained explicitly here. -/
 
 /-- Underlying additive carrier of the pushout (N × B')/M. -/
-def pushoutCarrier {A B M N : Type u} [CommRing A] [CommRing B]
+abbrev pushoutCarrier {A B M N : Type u} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup M] [Module B M] [AddCommGroup N] [Module B N]
-    (E : SquareZeroAlgebraExtension (algebraMap A B) M) (c : M →ₗ[B] N) : Type u :=
+    (E : SquareZeroAlgebraExtension (N := M) (algebraMap A B)) (c : M →ₗ[B] N) : Type u :=
   (N × E.carrier) ⧸
-    Submodule.span ℤ {x : N × E.carrier |
+    AddSubgroup.closure {x : N × E.carrier |
       ∃ m : M, x = (c m, -E.inclusion m)}
 
 /-- Underlying carrier of the pullback C' ×_C B. -/
-def pullbackCarrier {A B C N : Type u} [CommRing A] [CommRing B] [CommRing C]
+def pullbackSubgroup {A B C N : Type u} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A C]
     [AddCommGroup N] [Module C N]
-    (E : SquareZeroAlgebraExtension (algebraMap A C) N) (g : B →+* C) : Type u :=
-  {x : E.carrier × B // E.projection x.1 = g x.2}
+    (E : SquareZeroAlgebraExtension (N := N) (algebraMap A C)) (g : B →+* C) :
+    AddSubgroup (E.carrier × B) where
+  carrier := {x | E.projection x.1 = g x.2}
+  zero_mem' := by simp
+  add_mem' := by
+    intro x y hx hy
+    change E.projection (x.1 + y.1) = g (x.2 + y.2)
+    rw [map_add, map_add, hx, hy]
+  neg_mem' := by
+    intro x hx
+    change E.projection (-x.1) = g (-x.2)
+    rw [map_neg, map_neg, hx]
+
+abbrev pullbackCarrier {A B C N : Type u} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A C]
+    [AddCommGroup N] [Module C N]
+    (E : SquareZeroAlgebraExtension (N := N) (algebraMap A C)) (g : B →+* C) : Type u :=
+  pullbackSubgroup E g
 
 /-- The pushout carrier carries the square-zero extension structure described
 in the source. -/
 theorem exists_pushout_extension
-    {A B M N : Type u} [CommRing A] [CommRing B]
+    {A B M N : Type u} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup M] [Module B M] [AddCommGroup N] [Module B N]
-    (E : SquareZeroAlgebraExtension (algebraMap A B) M) (c : M →ₗ[B] N) :
-    ∃ F : SquareZeroAlgebraExtension (algebraMap A B) N,
+    (E : SquareZeroAlgebraExtension (N := M) (algebraMap A B)) (c : M →ₗ[B] N) :
+    ∃ F : SquareZeroAlgebraExtension (N := N) (algebraMap A B),
       Nonempty (F.carrier ≃+ pushoutCarrier E c) := by
   sorry
 
@@ -608,9 +628,10 @@ theorem exists_pushout_extension
 in the source. -/
 theorem exists_pullback_extension
     {A B C N : Type u} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C]
     [AddCommGroup N] [Module B N] [Module C N]
-    (E : SquareZeroAlgebraExtension (algebraMap A C) N) (g : B →+* C) :
-    ∃ F : SquareZeroAlgebraExtension (algebraMap A B) N,
+    (E : SquareZeroAlgebraExtension (N := N) (algebraMap A C)) (g : B →+* C) :
+    ∃ F : SquareZeroAlgebraExtension (N := N) (algebraMap A B),
       Nonempty (F.carrier ≃+ pullbackCarrier E g) := by
   sorry
 
@@ -620,7 +641,7 @@ theorem exists_pullback_extension
 theorem solution_classes_equiv_fibre
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B] (P : DeformationProblem A' A B I N) :
+    [Algebra A B] [IsScalarTower A B N] (P : DeformationProblem A' A B I N) :
     ∃ (map : P.liftingNaiveExtOne →+ P.baseNaiveExtOne)
       (image : P.baseExtensionNaiveExtOne →+ P.baseNaiveExtOne),
       Nonempty (SolutionClass P ≃
@@ -638,10 +659,11 @@ lifting problem. -/
 theorem exists_solution_of_localCompleteIntersection
     {A' A B I N : Type u} [CommRing A'] [CommRing A] [CommRing B]
     [AddCommGroup I] [Module A I] [AddCommGroup N] [Module A N] [Module B N]
-    [IsScalarTower A B N] [Algebra A B]
+    [Algebra A B] [IsScalarTower A B N]
     (P : DeformationProblem A' A B I N)
     (h : IsLocalCompleteIntersectionHom (algebraMap A B)) :
     Nonempty (DeformationSolution P) := by
   sorry
 
+end
 end Formalization.Books.Defos.Unit02

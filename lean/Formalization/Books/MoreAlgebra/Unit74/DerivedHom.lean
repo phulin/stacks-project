@@ -80,7 +80,14 @@ theorem exists_kInjective_representation {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (M : D R) :
     ∃ I : Comp R, CochainComplex.IsKInjective I ∧
       Nonempty ((derivedQuotient R).obj I ≅ M) := by
-  sorry
+  let L : Comp R := (derivedQuotient R).objPreimage M
+  let eM : (derivedQuotient R).obj L ≅ M :=
+    Functor.objObjPreimageIso (derivedQuotient R) M
+  obtain ⟨I, f, hf, hI⟩ :=
+    Formalization.Books.MoreAlgebra.Unit56.every_module_complex_has_kInjective_resolution
+      R L
+  haveI : QuasiIso f := hf
+  refine ⟨I, hI, ⟨(asIso ((derivedQuotient R).map f)).symm ≪≫ eM⟩⟩
 
 /-! ## Derived Hom -/
 

@@ -1,7 +1,6 @@
 import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Formalization.Books.Algebra.Unit136.SyntomicMorphisms
-import Formalization.Books.Algebra.Unit137.SmoothRingMaps
 import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Etale.Field
 import Mathlib.RingTheory.Etale.Locus
@@ -9,6 +8,7 @@ import Mathlib.RingTheory.Etale.Pi
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.Smooth.StandardSmooth
+import Mathlib.RingTheory.Smooth.StandardSmoothOfFree
 import Mathlib.RingTheory.Polynomial.Resultant.Basic
 
 /-!

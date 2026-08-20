@@ -1298,6 +1298,26 @@ theorem tensorProduct_decomposition_exists
       f x y = F₀ (x ⊗ₜ[degreeZeroSubring G] y) := rfl
   have hF_tmul (x : M) (y : N) : F (x ⊗ₜ[S] y) = f x y :=
     TensorProduct.liftAddHom_tmul f hbal x y
+  have hcoe_of : ∀ i (w : CT i),
+      coe (DirectSum.of (fun d => CT d) i w) =
+        (w : TensorProduct S M N) := by
+    intro i w
+    exact DirectSum.coeAddMonoidHom_of CT i w
+  have hCT_def : ∀ d, CT d = Submodule.span (degreeZeroSubring G)
+      (tensorProductHomogeneousTensors G 𝓜 𝓝 d) := fun _ => rfl
+  have hF₀_pair : ∀ (i j : ℤ) (m : CM i) (n : CN j),
+      ∃ w : CT (i + j),
+        (w : TensorProduct S M N) = (m : M) ⊗ₜ[S] (n : N) ∧
+          F₀ ((m : M) ⊗ₜ[degreeZeroSubring G] (n : N)) =
+            DirectSum.of (fun d => CT d) (i + j) w := by
+    intro i j m n
+    refine ⟨_, ?_, hF₀_hom i j m n⟩
+    rfl
+  have hq_pair : ∀ (i j : ℤ) (m : CM i) (n : CN j),
+      q ((m : M) ⊗ₜ[degreeZeroSubring G] (n : N)) =
+        (m : M) ⊗ₜ[S] (n : N) := by
+    intro i j m n
+    rfl
   have hF₀_hom_recompose (x : M) (z : N) :
       coe (F₀ (x ⊗ₜ[degreeZeroSubring G] z)) = q (x ⊗ₜ[degreeZeroSubring G] z) :=
     tensorProduct_recompose G 𝓜 𝓝 CM CN
@@ -1308,13 +1328,7 @@ theorem tensorProduct_decomposition_exists
         change (z : N) ∈ 𝓝.component i
         exact z.property⟩ : CN i))
       (fun i x => rfl) (fun i z => rfl) hdecM hdecN CT F₀ q coe
-      (fun i w => DirectSum.coeAddMonoidHom_of CT i w)
-      (fun d => by rfl)
-      (fun i j m n => by
-        refine ⟨_, ?_, hF₀_hom i j m n⟩
-        rfl)
-      (fun i j m n => by
-        rfl) x z
+      hcoe_of hCT_def hF₀_pair hq_pair x z
   have hleft : coe.comp F = AddMonoidHom.id _ := by
     /- Prior attempt: the tensor-product induction depended on the
        recomposition equality above. -/

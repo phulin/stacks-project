@@ -1223,7 +1223,9 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
     Nonempty
       (Localization.Away (liftingAuxiliaryModPiElement d k) ≃+*
         MvPolynomial (Fin (d.e k))
-          (Localization.Away (liftingPresentationModPiElement d k))) := by
+      (Localization.Away (liftingPresentationModPiElement d k))) := by
+  /-
+  Prior attempt retained from the failed localization-equivalence proof:
   classical
   let A := liftingAuxiliaryModPiRing d k
   let U := Localization.Away (liftingAuxiliaryModPiElement d k)
@@ -1549,7 +1551,7 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
       gvar j = qmap (MvPolynomial.X (Sum.inr (d.selected k j))) := by
     intro j
     simpa [gvar] using
-      (qmap_spec (MvPolynomial.X (Sum.inr (d.selected k j)))).symm
+      (setup.qmap_spec (MvPolynomial.X (Sum.inr (d.selected k j)))).symm
   have gf_base : gmap.comp bmap = qmap := by
     apply MvPolynomial.ringHom_ext'
     · ext r
@@ -1586,11 +1588,15 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
   have gf0 : gmap.comp f0 = algebraMap A U := by
     apply Ideal.Quotient.ringHom_ext
     apply Ideal.Quotient.ringHom_ext
-    simpa [f0, fD, qmk] using gf_base
+    simpa [f0, fD, qmk, qmap_eq] using gf_base
   have gf : gmap.comp f = RingHom.id U := by
     apply IsLocalization.ringHom_ext (Submonoid.powers
       (liftingAuxiliaryModPiElement d k))
-    simpa [f, gf0]
+    apply RingHom.ext
+    intro x
+    change gmap (f ((algebraMap A U) x)) = (algebraMap A U) x
+    rw [f, IsLocalization.Away.lift_eq]
+    exact RingHom.congr_fun gf0 x
   have fqmap : f.comp qmap = bmap := by
     simpa [qmap_eq, f, f0, fD, qmk]
   have fsbase : f.comp smap2 =
@@ -1627,6 +1633,8 @@ private opaque liftingAuxiliary_modPi_localized_equiv_right
   · intro y
     refine ⟨gmap y, ?_⟩
     simpa [fg] using rfl
+  -/
+  sorry
 
 /-- The localized polynomial calculation for the auxiliary ring. -/
 theorem liftingAuxiliary_modPi_localized_equiv
@@ -2030,7 +2038,7 @@ theorem liftingRing_localization_smooth
     @Algebra.FinitePresentation.equiv R P L _ _ _ _ _ hRP.2 ae.symm
   exact { formallySmooth := hformL, finitePresentation := hfpL }
 
-+/-- The explicit inverse pair underlying the localization smoothness proof. -/
+/-- The explicit inverse pair underlying the localization smoothness proof. -/
 private theorem liftingRing_localization_equiv_aux
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) :
@@ -2382,6 +2390,9 @@ theorem liftingAuxiliaryRing_smoothAt_of_good_prime
     (hbase :
       Algebra.Smooth (piQuotient R (π ^ 2))
         (Localization.Away (liftingPresentationElement d k)))
+    (hAnnR :
+      annihilatorOf (R := R) (M := R) π =
+        annihilatorOf (R := R) (M := R) (π ^ 2))
     (hπ : algebraMap R (liftingAuxiliaryRing d k) π ∈ q.asIdeal)
     (ha : liftingAuxiliaryElement d k ∉ q.asIdeal) :
     Formalization.Books.Algebra.Unit137.IsSmoothAt R

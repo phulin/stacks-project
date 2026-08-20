@@ -98,6 +98,28 @@ theorem IsGeometricallyIntegral.isReduced_tensorProduct
   let _ : IsDomain (K ⊗[k] S) := h.isDomain_tensorProduct
   infer_instance
 
+/-- A geometrically integral algebra is an integral domain. -/
+theorem IsGeometricallyIntegral.isDomain
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (h : IsGeometricallyIntegral.{u, v, u} k S) : IsDomain S := by
+  let _ : IsDomain (k ⊗[k] S) := h.isDomain_tensorProduct
+  exact (Algebra.TensorProduct.lid k S).symm.toMulEquiv.isDomain _
+
+/-- A geometrically integral algebra is reduced. -/
+theorem IsGeometricallyIntegral.isReduced
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (h : IsGeometricallyIntegral.{u, v, u} k S) : IsReduced S := by
+  let _ : IsDomain S := h.isDomain
+  infer_instance
+
+/-- The spectrum of a geometrically integral algebra is irreducible. -/
+theorem IsGeometricallyIntegral.irreducibleSpace
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (h : IsGeometricallyIntegral.{u, v, u} k S) :
+    IrreducibleSpace (PrimeSpectrum S) := by
+  let _ : IsDomain S := h.isDomain
+  infer_instance
+
 /-- Geometric integrality is equivalent to geometric irreducibility together
 with geometric reducedness. -/
 theorem isGeometricallyIntegral_iff_geometricallyIrreducible_and_geometricallyReduced

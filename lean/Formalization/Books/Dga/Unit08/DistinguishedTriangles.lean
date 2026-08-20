@@ -387,7 +387,7 @@ private theorem dgm_splitting_difference_pi'_section
           (c'.splitting.sectionMap.component n x -
             S.f.underlying.f n ((dgm_splitting_difference c c').component n x)) := by
               rw [hsection]
-              abel
+              abel_nf
     _ = c'.splitting.retraction.component n
           (c'.splitting.sectionMap.component n x) -
         (dgm_splitting_difference c c').component n x := by
@@ -469,7 +469,7 @@ private theorem dgm_connecting_difference_formula
   have hf := congrArg
     (fun q => q ((dgm_splitting_difference c c').component n x))
     (S.f.underlying.comm n (n + 1))
-  simp only [CategoryTheory.Category.assoc, ModuleCat.comp_apply] at hg hf
+  simp only [ModuleCat.comp_apply] at hg hf
   rw [dgm_g_section_rightInverse c' n x] at hg
   let z : S.X₁.complex.X (n + 1) :=
     (dgm_splitting_difference c c').component (n + 1)
@@ -561,7 +561,7 @@ theorem dgmConnectingMap_homotopic_of_choices
             (h.component n x ⊗ₜ[R] a) =
           (S.X₁.homogeneousAction n m).hom
             (-(h.component n x) ⊗ₜ[R] a)
-      simp [TensorProduct.neg_tmul]
+      simp
   }
   refine ⟨{
     homotopy := {
@@ -641,10 +641,9 @@ theorem dgmConnectingMap_homotopic_of_choices
                 ((dgm_shiftedHomotopyHom hneg n (n - 1)).hom x))
               ((S.X₁.complex.d n (n + 1)).hom
                 (h.component n x)) := by
-            convert hdiff' using 1 <;>
-              simp [dgm_shiftedHomotopyHom, hneg, ModuleCat.comp_apply,
-                LinearMap.comp_apply, map_neg] <;>
-              try rfl
+            convert hdiff' using 1
+            all_goals
+              simp [dgm_shiftedHomotopyHom, hneg]
             all_goals
               change
                 (ModuleCat.Hom.hom ((dgmShift S.X₁ 1).complex.d (n - 1) n))
@@ -666,13 +665,12 @@ theorem dgmConnectingMap_homotopic_of_choices
                   ⟨n - 1 + 1, ModuleCat.Hom.hom (eqToHom p₀) (h.component n x)⟩
                 have hz := dgm_neg_negOne_smul_hom_apply
                   (S.X₁.complex.d z.1 (n + 1)) z.2
-                simpa [z] using hz
+                exact hz
               rw [Int.negOnePow_one] at hDneg
               exact hDneg.trans hscalar
           have hB_eq := eq_of_heq hB
           rw [hB_eq]
-          simp [dgm_shiftedHomotopyHom, hneg, dgm_shift_sub,
-            dgmShift_differential, sub_add_eq_add_sub, neg_one_smul]
+          simp [dgm_shiftedHomotopyHom, hneg, dgm_shift_sub]
           simp only [sub_eq_add_neg]
           ac_rfl
         have hformula' := (sub_eq_iff_eq_add).mp hformula
@@ -682,7 +680,7 @@ theorem dgmConnectingMap_homotopic_of_choices
     }
     map_action := by
       intro n m x a
-      simp [dgm_shiftedHomotopyHom, hneg, LinearMap.comp_apply]
+      simp [dgm_shiftedHomotopyHom, hneg]
       let p₁ : S.X₁.complex.X (n + m) =
           (dgmShift S.X₁ 1).complex.X ((n + m) - 1) := by
         rw [dgmShift_component]
@@ -730,7 +728,7 @@ theorem dgmConnectingMap_homotopic_of_choices
               (h.component n x ⊗ₜ[R] a) =
             (S.X₁.homogeneousAction n m).hom
               (-(h.component n x) ⊗ₜ[R] a)
-        simp [TensorProduct.neg_tmul]
+        simp
       have hpair : HEq
           (⟨n - 1 + 1, -(ModuleCat.Hom.hom (eqToHom p₀)
             (h.component n x))⟩ :

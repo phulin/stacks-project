@@ -356,7 +356,15 @@ theorem exact_sequential_colimits_give_countable_direct_sums
     (A : Type u) [Category.{v} A] [Abelian A]
     [HasColimitsOfShape ℕ A] [HasExactColimitsOfShape ℕ A] :
     ∃ hA : HasCountableCoproducts A, @CountableAB4 A _ hA := by
-  sorry
+  let hA : HasCountableCoproducts A :=
+    { out := fun J _ => by
+        let hFin : HasColimitsOfShape (Finset (Discrete J)) A :=
+          Functor.Final.hasColimitsOfShape_of_final
+            (IsFiltered.sequentialFunctor (Finset (Discrete J)))
+        exact { has_colimit := fun F => ⟨Nonempty.intro
+          (@CoproductsFromFiniteFiltered.liftToFinsetColimitCocone A _ J inferInstance hFin F)⟩ } }
+  refine ⟨hA, ?_⟩
+  exact (@CountableAB4.of_countableAB5 A _ _ _ _ _ _ hA)
 
 /-- The source's short exact sequence computing a sequential colimit. -/
 theorem sequential_colimit_exact_sequence

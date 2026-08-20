@@ -33,8 +33,9 @@ universe u v w
 /- The exact sequence in the hypersurface example is the specialization of
    `PresentationExtension.exact_cotangentComplex_toKaehler`; the displayed
    polynomial basis is already provided by `Presentation.cotangentSpaceBasis`.
-   We record the presentation-level statement so the source's exact sequence
-   has a named chapter-facing interface. -/
+   The source writes `S` for the first term, but the canonical term is the
+   conormal module `I/I²` unless a regularity hypothesis on the equation is
+   added.  We therefore record the presentation-level statement. -/
 theorem presentation_exact_sequence
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (P : Formalization.Books.Algebra.Unit134.Presentation R S ι) :
@@ -62,15 +63,23 @@ noncomputable def hypersurfacePartial
     (i : Fin 2) : Hypersurface R f :=
   Ideal.Quotient.mk _ (MvPolynomial.pderiv i f)
 
+noncomputable def hypersurfacePresentation
+    {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R) :
+    Formalization.Books.Algebra.Unit134.Presentation R (Hypersurface R f) (Fin 2) :=
+  Algebra.Generators.ofAlgHom
+    (Ideal.Quotient.mkₐ R (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R))))
+    (Ideal.Quotient.mkₐ_surjective R (Ideal.span ({f} : Set (MvPolynomial (Fin 2) R))))
+
 theorem hypersurface_exact_sequence
-    {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R) (hf : f ≠ 0) :
-    ∃ (d : Hypersurface R f →ₗ[Hypersurface R f] (Fin 2 → Hypersurface R f))
-      (π : (Fin 2 → Hypersurface R f) →ₗ[Hypersurface R f]
-        Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R
-          (Hypersurface R f)),
-      Function.Exact d π ∧ Function.Surjective π ∧
-        d 1 = (fun i => hypersurfacePartial (f := f) i) := by
-  sorry
+    {R : Type u} [CommRing R] (f : MvPolynomial (Fin 2) R) :
+    Function.Exact
+        (hypersurfacePresentation (R := R) f).toExtension.cotangentComplex
+        (hypersurfacePresentation (R := R) f).toExtension.toKaehler ∧
+      Function.Surjective
+        (hypersurfacePresentation (R := R) f).toExtension.toKaehler := by
+  constructor
+  · exact (hypersurfacePresentation (R := R) f).toExtension.exact_cotangentComplex_toKaehler
+  · exact (hypersurfacePresentation (R := R) f).toExtension.toKaehler_surjective
 
 /-- A source-facing formulation of a finite module being locally free of a
     fixed rank, using Mathlib's free locus and stalk rank. -/
@@ -144,6 +153,7 @@ theorem smooth_presentation_iff_split_injection
    and the conormal is `PresentationConormal P`. -/
 theorem smooth_presentation_conormal_cokernel
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Finite ι]
     (P : Formalization.Books.Algebra.Unit134.Presentation R S ι)
     [Algebra.Smooth R S] :
     Function.Injective P.toExtension.cotangentComplex ∧
@@ -159,6 +169,7 @@ theorem smooth_presentation_conormal_cokernel
 
 theorem smooth_presentation_module_decomposition
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Finite ι]
     (P : Formalization.Books.Algebra.Unit134.Presentation R S ι)
     [Algebra.Smooth R S] :
     Nonempty (P.toExtension.CotangentSpace ≃ₗ[S]
@@ -199,9 +210,15 @@ theorem smooth_over_field_is_local_complete_intersection
 /- `Algebra.IsStandardSmooth` is Mathlib's quotient-by-relations definition:
    it is existence of a finite `SubmersivePresentation`, whose `map` selects
    the variables used by the Jacobian minor. -/
+theorem standard_smooth_is_smooth
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [Algebra.IsStandardSmooth R S] :
+    Algebra.Smooth R S := by
+  infer_instance
+
 theorem submersive_presentation_consequences
     {R S ι σ : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    [Finite σ] (P : Algebra.SubmersivePresentation R S ι σ) :
+    [Finite ι] [Finite σ] (P : Algebra.SubmersivePresentation R S ι σ) :
     Algebra.Smooth R S ∧
       Function.Injective P.toExtension.cotangentComplex ∧
       Module.Free S P.toExtension.Cotangent ∧

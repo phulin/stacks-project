@@ -112,7 +112,7 @@ theorem modulePresheafPushforward_underlying_formula {X Y : TopCat.{v}}
     Nonempty
       ((((modulePresheafPushforward f).obj F).presheaf) ≅
         (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.presheaf) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 /-- A chosen isomorphism for the underlying presheaf pushforward formula. -/
 noncomputable def modulePresheafPushforward_underlyingIso {X Y : TopCat.{v}}
@@ -221,7 +221,77 @@ theorem exists_modulePresheafTensorHomEquiv {X Y : TopCat.{v}}
     (G : PMod ((moduleRingPresheafPushforward f).obj O)) (F : PMod O) :
     Nonempty ((modulePresheafTensorOverPushforward f G ⟶ F) ≃
       (G ⟶ (modulePresheafPushforward f).obj F)) := by
-  sorry
+  let adj := TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f
+  let α := adj.counit.app O
+  let β := adj.unit.app ((moduleRingPresheafPushforward f).obj O)
+  let H := (modulePresheafPushforwardAlong f β).obj
+    ((restrictionOfScalars α).obj F)
+  let K := (modulePresheafPushforward f).obj F
+  let eapp : ∀ V : (Opens Y)ᵒᵖ, H.obj V ≅ K.obj V := fun V => by
+    let V' := V.unop
+    let a := (asIdentityRingPresheafMorphism α).app
+      (op ((Opens.map f).obj V'))
+    let idVcat :=
+      ((𝟙 _ :
+        (moduleRingPresheafPushforward f).obj O ⟶
+          (moduleRingPresheafPushforward f).obj O).app V)
+    let idV := idVcat.hom
+    have ha : a = α.app (op ((Opens.map f).obj V')) :=
+      asIdentityRingPresheafMorphism_app α _
+    have htri := adj.right_triangle_components O
+    have htri' :
+        (β.app V) ≫ ((moduleRingPresheafPushforward f).map α).app V = idVcat := by
+      convert congr_app htri V using 1 <;> rfl
+    have htri'' := congrArg RingCat.Hom.hom htri'
+    change (α.app (op ((Opens.map f).obj V'))).hom.comp
+      (β.app V).hom = idV at htri''
+    rw [← ha] at htri''
+    have hid : idV = RingHom.id (((moduleRingPresheafPushforward f).obj O).obj V) := by
+      rfl
+    have hgf :
+        RingHom.id (((moduleRingPresheafPushforward f).obj O).obj V) =
+          a.hom.comp (β.app V).hom := by
+      exact hid.symm.trans htri''.symm
+    change
+      (ModuleCat.restrictScalars (β.app V).hom).obj
+          ((ModuleCat.restrictScalars a.hom).obj
+            (F.obj (op ((Opens.map f).obj V')))) ≅
+        (ModuleCat.restrictScalars idV).obj
+          (F.obj (op ((Opens.map f).obj V')))
+    exact
+      (ModuleCat.restrictScalarsComp'App
+        (β.app V).hom a.hom (RingHom.id _) hgf
+        (F.obj (op ((Opens.map f).obj V')))).symm ≪≫
+        (ModuleCat.restrictScalarsCongr hid.symm).app
+          (F.obj (op ((Opens.map f).obj V')))
+  let e : H ≅ K := by
+    have eapp_apply (V : (Opens Y)ᵒᵖ) (m : H.obj V) :
+        (eapp V).hom m = m := by
+      dsimp [eapp]
+      simp [ModuleCat.restrictScalarsComp'App_inv_apply,
+        ModuleCat.restrictScalarsCongr_hom_app]
+      rfl
+    refine PresheafOfModules.isoMk eapp ?_
+    intro U V i
+    ext m
+    let mV : H.obj V := H.map i m
+    change (eapp V).hom mV = K.map i ((eapp U).hom m)
+    rw [eapp_apply, eapp_apply]
+    dsimp [mV, H, K]
+    rfl
+  let h₁ :=
+    (changeOfRingsHomEquiv α ((modulePresheafPullback f).obj G) F).symm
+  let h₂ := modulePresheafHomEquiv f G ((restrictionOfScalars α).obj F)
+  let h₃ : (G ⟶ H) ≃ (G ⟶ K) :=
+    { toFun := fun q => q ≫ e.hom
+      invFun := fun q => q ≫ e.inv
+      left_inv := by
+        intro q
+        simp
+      right_inv := by
+        intro q
+        simp }
+  exact ⟨h₁.trans (h₂.trans h₃)⟩
 
 /-- The tensor/pushforward Hom correspondence for presheaves of modules. -/
 noncomputable def modulePresheafTensorHomEquiv {X Y : TopCat.{v}}
@@ -498,7 +568,7 @@ theorem moduleSheafPushforward_underlying_formula {X Y : TopCat.{v}}
     Nonempty
       ((((moduleSheafPushforward f).obj F).val.presheaf) ≅
         (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.val.presheaf) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 /-- A chosen isomorphism for the underlying sheaf pushforward formula. -/
 noncomputable def moduleSheafPushforward_underlyingIso {X Y : TopCat.{v}}
@@ -708,10 +778,176 @@ theorem moduleSheafFMapStalkAddMap_smul {X Y : TopCat.{v}}
     (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x)) :
     moduleSheafFMapStalkAddMap α φ x ≫
         (moduleSheafFMapStalkTarget α F x).smul r =
-      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x))
+        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x))
         (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf (f x)))).smul r ≫
         moduleSheafFMapStalkAddMap α φ x := by
-  sorry
+  classical
+  apply TopCat.Presheaf.stalk_hom_ext G.val.presheaf
+  intro U hxU
+  apply ConcreteCategory.hom_ext
+  intro m
+  obtain ⟨V, hxV, rV, hr⟩ := TopCat.Presheaf.exists_germ_eq O_Y.obj r
+  let W : Opens Y := U ⊓ V
+  let hxW : (f x) ∈ W := ⟨hxU, hxV⟩
+  let hxW' : x ∈ (Opens.map f).obj W := hxW
+  let rW : O_Y.obj.obj (Opposite.op W) :=
+    O_Y.obj.map (homOfLE (show W ≤ V from inf_le_right)).op rV
+  have hrW :
+      TopCat.Presheaf.germ O_Y.obj W (f x) hxW rW = r := by
+    dsimp [rW]
+    rw [TopCat.Presheaf.germ_res_apply]
+    simpa using hr
+  let mW : G.val.obj (Opposite.op W) :=
+    G.val.map (homOfLE (show W ≤ U from inf_le_left)).op m
+  let mW0 : G.val.presheaf.obj (Opposite.op W) :=
+    G.val.presheaf.map (homOfLE (show W ≤ U from inf_le_left)).op m
+  have hmW0 : mW0 = mW := by
+    dsimp [mW0, mW]
+    rfl
+  have hmW :
+      TopCat.Presheaf.germ G.val.presheaf W (f x) hxW mW0 =
+        TopCat.Presheaf.germ G.val.presheaf U (f x) hxU m := by
+    simpa only [mW0] using
+      (TopCat.Presheaf.germ_res_apply G.val.presheaf
+        (homOfLE (show W ≤ U from inf_le_left)) (f x) hxW m)
+  let φAdd : G.val.presheaf ⟶
+      (TopCat.Presheaf.pushforward AddCommGrpCat f).obj F.val.presheaf :=
+    (PresheafOfModules.toPresheaf O_Y.obj).map φ.val
+  let q : TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf (f x) ⟶
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        ((TopCat.Presheaf.pushforward AddCommGrpCat f).obj F.val.presheaf) (f x) :=
+    (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φAdd
+  let p : TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        ((TopCat.Presheaf.pushforward AddCommGrpCat f).obj F.val.presheaf) (f x) ⟶
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x :=
+    TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.val.presheaf x
+  let a := (RingCat.Hom.hom (moduleSheafFMapStalkScalarMap α x)) r
+  let gmU := (ConcreteCategory.hom
+    (TopCat.Presheaf.germ G.val.presheaf U (f x) hxU)) m
+  let gmW := (ConcreteCategory.hom
+    (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW)) mW
+  have hgm : gmW = gmU := by
+    dsimp [gmW, gmU]
+    rw [← hmW0]
+    exact hmW
+  let toF (n : G.val.obj (Opposite.op W)) :
+      F.val.obj (Opposite.op ((Opens.map f).obj W)) :=
+    φ.val.app (Opposite.op W) n
+  let toF0 (n : G.val.obj (Opposite.op W)) :
+      F.val.presheaf.obj (Opposite.op ((Opens.map f).obj W)) :=
+    toF n
+  change ConcreteCategory.hom
+      ((ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat) O_X.obj x)
+        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) F.val.presheaf x))).smul a)
+      (ConcreteCategory.hom (q ≫ p) gmU) =
+    ConcreteCategory.hom (q ≫ p)
+      (ConcreteCategory.hom
+        ((ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat) O_Y.obj (f x))
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) G.val.presheaf (f x)))).smul r)
+          gmU)
+  rw [← hgm]
+  rw [← hrW]
+  have hmap (n : G.val.obj (Opposite.op W)) :
+      ConcreteCategory.hom (q ≫ p)
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW)
+              (show G.val.presheaf.obj (Opposite.op W) from n)) =
+        ConcreteCategory.hom
+          (TopCat.Presheaf.germ F.val.presheaf ((Opens.map f).obj W) x hxW')
+          (toF0 n) := by
+    change (ConcreteCategory.hom p)
+        ((ConcreteCategory.hom
+          ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φAdd))
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW)
+              (show G.val.presheaf.obj (Opposite.op W) from n))) = _
+    rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+    change (ConcreteCategory.hom
+        (((TopCat.Presheaf.pushforward AddCommGrpCat f).obj F.val.presheaf).germ
+          W (f x) hxW ≫
+          TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.val.presheaf x))
+        ((φ.val.app (Opposite.op W)).hom n) = _
+    have hpush := TopCat.Presheaf.stalkPushforward_germ
+      (C := AddCommGrpCat) f F.val.presheaf W x hxW'
+    have hpush' := congrArg
+        (fun k : ((TopCat.Presheaf.pushforward AddCommGrpCat f).obj F.val.presheaf).obj
+          (Opposite.op W) ⟶
+          TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x =>
+        ConcreteCategory.hom k ((φ.val.app (Opposite.op W)).hom n)) hpush
+    simpa only [toF0, toF, φAdd, TopCat.Presheaf.pushforward,
+      ConcreteCategory.comp_apply] using hpush'
+  let aW : O_X.obj.obj (Opposite.op ((Opens.map f).obj W)) :=
+    (α.hom.app (Opposite.op W)).hom rW
+  have hscalar :
+      a = ConcreteCategory.hom
+        (TopCat.Presheaf.germ O_X.obj ((Opens.map f).obj W) x hxW')
+        aW := by
+    dsimp [a, moduleSheafFMapStalkScalarMap]
+    rw [← hrW]
+    change (RingCat.Hom.hom
+        (TopCat.Presheaf.stalkPushforward RingCat f O_X.obj x))
+        ((RingCat.Hom.hom
+          ((TopCat.Presheaf.stalkFunctor RingCat (f x)).map α.hom))
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ O_Y.obj W (f x) hxW) rW)) = _
+    rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+    change (RingCat.Hom.hom
+        (TopCat.Presheaf.stalkPushforward RingCat f O_X.obj x))
+        ((ConcreteCategory.hom
+          (((TopCat.Presheaf.pushforward RingCat f).obj O_X.obj).germ W
+            (f x) hxW)) ((RingCat.Hom.hom (α.hom.app (Opposite.op W))) rW)) = _
+    have hpush := TopCat.Presheaf.stalkPushforward_germ
+      (C := RingCat) f O_X.obj W x hxW'
+    have hpush' := congrArg
+      (fun k : ((TopCat.Presheaf.pushforward RingCat f).obj O_X.obj).obj
+          (Opposite.op W) ⟶ TopCat.Presheaf.stalk (C := RingCat) O_X.obj x =>
+        RingCat.Hom.hom k ((RingCat.Hom.hom (α.hom.app (Opposite.op W))) rW)) hpush
+    convert hpush' using 1 <;> rfl
+  let nF : F.val.obj (Opposite.op ((Opens.map f).obj W)) :=
+    toF mW
+  let nF0 : F.val.presheaf.obj (Opposite.op ((Opens.map f).obj W)) :=
+    toF0 mW
+  let nFsmul : F.val.presheaf.obj (Opposite.op ((Opens.map f).obj W)) :=
+    aW • nF
+  have hsmulF :
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ O_X.obj ((Opens.map f).obj W) x hxW') aW) •
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ F.val.presheaf ((Opens.map f).obj W) x hxW') nF0) =
+        ConcreteCategory.hom
+          (TopCat.Presheaf.germ F.val.presheaf ((Opens.map f).obj W) x hxW') nFsmul := by
+    simpa [nF0, nFsmul, toF0, nF, toF] using
+      (PresheafOfModules.germ_ringCat_smul F.val x
+        ((Opens.map f).obj W) hxW' aW nF).symm
+  have hφsmul : toF0 (rW • mW) = nFsmul := by
+    change (φ.val.app (Opposite.op W)).hom (rW • mW) = aW • nF
+    exact (φ.val.app (Opposite.op W)).hom.map_smul rW mW
+  have hsmulG :
+      ConcreteCategory.hom
+          ((ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat) O_Y.obj (f x))
+            (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat) G.val.presheaf (f x)))).smul
+            (ConcreteCategory.hom (TopCat.Presheaf.germ O_Y.obj W (f x) hxW) rW))
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW) mW) =
+        ConcreteCategory.hom
+          (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW)
+          (rW • mW) := by
+    change
+      (ConcreteCategory.hom (TopCat.Presheaf.germ O_Y.obj W (f x) hxW) rW) •
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ G.val.presheaf W (f x) hxW) mW) = _
+    exact (PresheafOfModules.germ_ringCat_smul G.val (f x) W hxW rW mW).symm
+  rw [hmap mW]
+  rw [hscalar]
+  change
+    (ConcreteCategory.hom
+      (TopCat.Presheaf.germ O_X.obj ((Opens.map f).obj W) x hxW') aW) •
+        (ConcreteCategory.hom
+          (TopCat.Presheaf.germ F.val.presheaf ((Opens.map f).obj W) x hxW') nF0) = _
+  rw [hsmulF]
+  rw [hsmulG]
+  rw [hmap (rW • mW)]
+  rw [hφsmul]
 
 /-- The induced module morphism on stalks of a module `f`-map. -/
 noncomputable def moduleSheafFMapStalkMap {X Y : TopCat.{v}}

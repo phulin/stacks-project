@@ -897,10 +897,186 @@ theorem quasiFiniteAt_localization_iff
     (a : R) (ha : a ∉ p.asIdeal) (b : S) (hb : b ∉ q.asIdeal)
     (hfinite : RingHom.FiniteType f) :
     IsQuasiFiniteAt f q ↔
-      IsQuasiFiniteAt
+    IsQuasiFiniteAt
         (Formalization.Books.Algebra.Unit30.localizationAwayMulMap f a b)
         (localizedPrimeAwayMul f p q hq a b ha hb) := by
-  sorry
+  classical
+  let : Algebra R S := f.toAlgebra
+  let α := Formalization.Books.Algebra.Unit30.localizationAwayMulMap f a b
+  let T := Localization.Away (f a * b)
+  let q' := localizedPrimeAwayMul f p q hq a b ha hb
+  let : Algebra (Localization.Away a) T := α.toAlgebra
+  have hbase : Algebra.QuasiFinite R (Localization (Submonoid.powers a)) := by
+    exact Algebra.QuasiFinite.of_isLocalization
+      (R := R) (S := R) (Submonoid.powers a)
+  have hfa : f a ∉ q.asIdeal := by
+    intro hfa
+    apply ha
+    have hmem : a ∈ (PrimeSpectrum.comap f q).asIdeal := by
+      simpa [PrimeSpectrum.comap_asIdeal] using hfa
+    simpa [hq] using hmem
+  have hpow : ∀ n : ℕ, f (a ^ n) ∉ q.asIdeal := by
+    intro n hmem
+    apply hfa
+    apply q.isPrime.mem_of_pow_mem _
+    simpa using hmem
+  have hunit : ∀ y : Submonoid.powers a,
+      IsUnit ((algebraMap S (Localization.AtPrime q.asIdeal)) (f y)) := by
+    intro y
+    exact IsLocalization.map_units (Localization.AtPrime q.asIdeal)
+      (⟨f y, by
+        rcases y with ⟨x, hx⟩
+        rcases hx with ⟨n, rfl⟩
+        show f (a ^ n) ∉ q.asIdeal
+        exact hpow n⟩ : q.asIdeal.primeCompl)
+  let β : Localization (Submonoid.powers a) →+*
+      Localization.AtPrime q.asIdeal :=
+    IsLocalization.lift (M := Submonoid.powers a)
+      (g := (algebraMap S (Localization.AtPrime q.asIdeal)).comp f) hunit
+  let : Algebra (Localization (Submonoid.powers a))
+      (Localization.AtPrime q.asIdeal) := β.toAlgebra
+  have hβ : β.comp (algebraMap R (Localization (Submonoid.powers a))) =
+      (algebraMap S (Localization.AtPrime q.asIdeal)).comp f := by
+    simp [β]
+  let : IsScalarTower R (Localization (Submonoid.powers a))
+      (Localization.AtPrime q.asIdeal) :=
+    IsScalarTower.of_algebraMap_eq' hβ.symm
+  have hsource :
+      Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal) ↔
+        Algebra.QuasiFinite (Localization (Submonoid.powers a))
+          (Localization.AtPrime q.asIdeal) := by
+    constructor
+    · intro h
+      let : Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal) := h
+      exact Algebra.QuasiFinite.of_restrictScalars R
+        (Localization (Submonoid.powers a)) (Localization.AtPrime q.asIdeal)
+    · intro h
+      let : Algebra.QuasiFinite (Localization (Submonoid.powers a))
+          (Localization.AtPrime q.asIdeal) := h
+      let : Algebra.QuasiFinite R (Localization (Submonoid.powers a)) := hbase
+      exact Algebra.QuasiFinite.trans R
+        (Localization (Submonoid.powers a)) (Localization.AtPrime q.asIdeal)
+  have hfa_mul : f a * b ∉ q.asIdeal := by
+    intro hprod
+    rcases q.isPrime.mem_or_mem hprod with hfa' | hb'
+    · exact hfa hfa'
+    · exact hb hb'
+  have hdisj : Disjoint (Submonoid.powers (f a * b) : Set S) q.asIdeal := by
+    apply Set.disjoint_left.2
+    intro x hxS hxq
+    rcases hxS with ⟨n, rfl⟩
+    exact hfa_mul (q.isPrime.mem_of_pow_mem _ hxq)
+  have hqmap : q'.asIdeal = q.asIdeal.map (algebraMap S T) := by
+    simp [q', T, localizedPrimeAwayMul,
+      Formalization.Books.Algebra.Unit17.standardOpenSpectrumInverse]
+  have hmap :
+      (q.asIdeal.map (algebraMap S T)).comap (algebraMap S T) = q.asIdeal :=
+    IsLocalization.under_map_of_isPrime_disjoint
+      (Submonoid.powers (f a * b)) T q.isPrime hdisj
+  have hqcomap : q.asIdeal = q'.asIdeal.comap (algebraMap S T) := by
+    rw [hqmap, hmap]
+  have hqcomap' : q.asIdeal =
+      q'.asIdeal.comap
+        (algebraMap S (Localization (Submonoid.powers (f a * b)))) := by
+    simpa [T] using hqcomap
+  have hqf_eq :
+      Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal) ↔
+        Algebra.QuasiFinite R
+          (@Localization.AtPrime S _ (q'.asIdeal.comap
+            (algebraMap S (Localization (Submonoid.powers (f a * b)))))
+            (q'.isPrime.comap
+              (algebraMap S (Localization (Submonoid.powers (f a * b)))))) := by
+    exact hqcomap'.rec
+      (motive := fun I _ => ∀ hI : I.IsPrime,
+        Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal) ↔
+          Algebra.QuasiFinite R (@Localization.AtPrime S _ I hI))
+      (by intro hI; rfl)
+      (q'.isPrime.comap
+        (algebraMap S (Localization (Submonoid.powers (f a * b)))))
+  have e0 :=
+    IsLocalization.localizationLocalizationAtPrimeIsoLocalization
+      (Submonoid.powers (f a * b)) q'.asIdeal
+  have eR := e0.restrictScalars R
+  have heqR :
+      Algebra.QuasiFinite R
+          (@Localization.AtPrime S _ (q'.asIdeal.comap
+            (algebraMap S (Localization (Submonoid.powers (f a * b)))))
+            (q'.isPrime.comap
+              (algebraMap S (Localization (Submonoid.powers (f a * b)))))) ↔
+        Algebra.QuasiFinite R (Localization.AtPrime q'.asIdeal) :=
+    Algebra.QuasiFinite.iff_of_algEquiv eR
+  have htransport :
+      Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal) ↔
+        Algebra.QuasiFinite R (Localization.AtPrime q'.asIdeal) :=
+    hqf_eq.trans heqR
+  have hα :
+      α.comp (algebraMap R (Localization.Away a)) =
+        (algebraMap S T).comp f := by
+    ext r
+    simp [α, T, Formalization.Books.Algebra.Unit30.localizationAwayMulMap]
+  have hfmap : algebraMap R S = f := RingHom.algebraMap_toAlgebra f
+  let : IsScalarTower R (Localization.Away a)
+      (Localization.AtPrime q'.asIdeal) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext r
+      calc
+        algebraMap R (Localization.AtPrime q'.asIdeal) r =
+            algebraMap T (Localization.AtPrime q'.asIdeal)
+              (algebraMap S T (f r)) := by
+          calc
+            algebraMap R (Localization.AtPrime q'.asIdeal) r =
+                algebraMap S (Localization.AtPrime q'.asIdeal) (f r) := by
+              simpa only [hfmap] using
+                (IsScalarTower.algebraMap_apply R S
+                  (Localization.AtPrime q'.asIdeal) r)
+            _ = algebraMap T (Localization.AtPrime q'.asIdeal)
+                  (algebraMap S T (f r)) := by
+              exact (IsScalarTower.algebraMap_apply S
+                (Localization (Submonoid.powers (f a * b)))
+                (Localization.AtPrime q'.asIdeal) (f r)).symm
+        _ = algebraMap T (Localization.AtPrime q'.asIdeal)
+              (α (algebraMap R (Localization.Away a) r)) := by
+          have hr := congrArg (fun z => z r) hα
+          change α (algebraMap R (Localization.Away a) r) =
+            algebraMap S T (f r) at hr
+          exact congrArg (algebraMap T (Localization.AtPrime q'.asIdeal)) hr.symm)
+  have htarget :
+      Algebra.QuasiFinite R (Localization.AtPrime q'.asIdeal) ↔
+        Algebra.QuasiFinite (Localization.Away a)
+          (Localization.AtPrime q'.asIdeal) := by
+    constructor
+    · intro h
+      let : Algebra.QuasiFinite R (Localization.AtPrime q'.asIdeal) := h
+      exact Algebra.QuasiFinite.of_restrictScalars R
+        (Localization.Away a) (Localization.AtPrime q'.asIdeal)
+    · intro h
+      let : Algebra.QuasiFinite (Localization.Away a)
+          (Localization.AtPrime q'.asIdeal) := h
+      let : Algebra.QuasiFinite R (Localization (Submonoid.powers a)) := hbase
+      exact Algebra.QuasiFinite.trans R
+        (Localization.Away a) (Localization.AtPrime q'.asIdeal)
+  have hαfinite : RingHom.FiniteType α := by
+    have hloc : RingHom.FiniteType (algebraMap S T) := by
+      exact RingHom.finiteType_algebraMap.mpr inferInstance
+    have hcomp : RingHom.FiniteType ((algebraMap S T).comp f) :=
+      hloc.comp hfinite
+    have hcomp_eq :
+        α.comp (algebraMap R (Localization.Away a)) =
+          (algebraMap S T).comp f := hα
+    apply RingHom.FiniteType.of_comp_finiteType
+      (f := algebraMap R (Localization.Away a))
+    rw [hcomp_eq]
+    exact hcomp
+  change (RingHom.FiniteType f ∧
+      Algebra.QuasiFinite R (Localization.AtPrime q.asIdeal)) ↔
+    (RingHom.FiniteType α ∧
+      Algebra.QuasiFinite (Localization.Away a)
+        (Localization.AtPrime q'.asIdeal))
+  constructor
+  · rintro ⟨_, hqf⟩
+    exact ⟨hαfinite, htarget.mp (htransport.mp hqf)⟩
+  · rintro ⟨_, hqf⟩
+    exact ⟨hfinite, htransport.mpr (htarget.mpr hqf)⟩
 
 /- The four-ring diagram uses the canonical tensor-product map already
    supplied by Chapter 99. -/
@@ -920,14 +1096,97 @@ theorem quasiFiniteAt_of_surjective_tensorProduct
     (hq'p' : PrimeSpectrum.comap k q' = p')
     (hq : IsQuasiFiniteAt f q) :
     IsQuasiFiniteAt k q' := by
-  sorry
+  classical
+  have _hqp : PrimeSpectrum.comap f q = p := hqp
+  have _hp'p : PrimeSpectrum.comap g p' = p := hp'p
+  have _hq'p' : PrimeSpectrum.comap k q' = p' := hq'p'
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R S' := (h.comp f).toAlgebra
+  let : Algebra R' S' := k.toAlgebra
+  let : Algebra R' (S ⊗[R] R') :=
+    (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g).toAlgebra
+  let T := R' ⊗[R] S
+  let e : T ≃ₐ[R'] S ⊗[R] R' :=
+    Algebra.TensorProduct.commRight R R' S
+  let φ := Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget
+    f g h k compat
+  let φ' : T →+* S' := φ.comp e.toRingHom
+  let iL : R' →+* T :=
+    (Algebra.TensorProduct.includeLeft (R := R) (S := R')
+      (A := R') (B := S)).toRingHom
+  let iR : S →+* T :=
+    (Algebra.TensorProduct.includeRight (R := R) (A := R')
+      (B := S)).toRingHom
+  have hφ' : Function.Surjective φ' := by
+    exact hsurj.comp e.surjective
+  have hφ'comp : φ'.comp iL = k := by
+    ext x
+    change φ (Algebra.TensorProduct.commRight R R' S (x ⊗ₜ[R] 1)) = k x
+    rw [Algebra.TensorProduct.commRight_tmul]
+    simp [φ, Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget]
+  have hφ'h : φ'.comp iR = h := by
+    ext x
+    change φ (Algebra.TensorProduct.commRight R R' S (1 ⊗ₜ[R] x)) = h x
+    rw [Algebra.TensorProduct.commRight_tmul]
+    simp [φ, Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget]
+  let qT : Ideal T := q'.asIdeal.comap φ'
+  have hqT : q.asIdeal = qT.comap iR := by
+    dsimp only [qT]
+    rw [← Ideal.comap_comap]
+    change q.asIdeal = q'.asIdeal.comap (φ'.comp iR)
+    rw [hφ'h]
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq'q).symm
+  let : Algebra R' T := Algebra.TensorProduct.leftAlgebra
+  let : Algebra T S' := φ'.toAlgebra
+  let : IsScalarTower R' T S' := IsScalarTower.of_algebraMap_eq' (by
+    change k = φ'.comp iL
+    exact hφ'comp.symm)
+  let : q'.asIdeal.LiesOver qT := ⟨rfl⟩
+  let : Algebra.QuasiFiniteAt R q.asIdeal := hq.2
+  have hqbase : Algebra.QuasiFiniteAt R' qT :=
+    Algebra.QuasiFiniteAt.baseChange q.asIdeal qT hqT
+  let : Algebra.QuasiFiniteAt R' qT := hqbase
+  have hqtarget : Algebra.QuasiFiniteAt R' q'.asIdeal :=
+    Algebra.QuasiFiniteAt.of_surjectiveOnStalks_of_liesOver qT
+      (RingHom.surjectiveOnStalks_of_surjective hφ') q'.asIdeal
+  have hftT : RingHom.FiniteType (algebraMap R' T) := by
+    exact RingHom.finiteType_algebraMap.mpr (by
+      let : Algebra.FiniteType R S := hfinite
+      infer_instance)
+  have hft' : RingHom.FiniteType (φ'.comp iL) :=
+    RingHom.FiniteType.comp_surjective hftT hφ'
+  exact ⟨(by simpa [hφ'comp] using hft'), hqtarget⟩
 
 theorem isQuasiFinite_comp
     {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
     (f : A →+* B) (g : B →+* C)
     (hf : IsQuasiFinite f) (hg : IsQuasiFinite g) :
     IsQuasiFinite (g.comp f) := by
-  sorry
+  classical
+  let : Algebra A B := f.toAlgebra
+  let : Algebra B C := g.toAlgebra
+  let : Algebra A C := (g.comp f).toAlgebra
+  have hQF_f : RingHom.QuasiFinite f := by
+    rw [RingHom.QuasiFinite]
+    constructor
+    intro p hp
+    let p' : PrimeSpectrum A := ⟨p, hp⟩
+    exact (isQuasiFinite_iff_finite_fibres f hf.1).mp hf p'
+  have hQF_g : RingHom.QuasiFinite g := by
+    rw [RingHom.QuasiFinite]
+    constructor
+    intro p hp
+    let p' : PrimeSpectrum B := ⟨p, hp⟩
+    exact (isQuasiFinite_iff_finite_fibres g hg.1).mp hg p'
+  have hQF : RingHom.QuasiFinite (g.comp f) := hQF_g.comp hQF_f
+  refine ⟨RingHom.FiniteType.comp hg.1 hf.1, ?_⟩
+  intro q
+  change Algebra.QuasiFinite A (Localization.AtPrime q.asIdeal)
+  let : Algebra.QuasiFinite A C := hQF
+  exact Algebra.QuasiFinite.of_isLocalization (R := A)
+    (S := C) q.asIdeal.primeCompl
 
 theorem isQuasiFinite_baseChange
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -948,7 +1207,450 @@ theorem isQuasiFinite_baseChange
       (IsQuasiFinite f →
         IsQuasiFinite
           (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g)) := by
-  sorry
+  classical
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let B := S ⊗[R] R'
+  let h : S →+* B :=
+    Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap f g
+  let k : R' →+* B :=
+    Formalization.Books.Algebra.Unit14.baseChangeRingMap f g
+  let : Algebra R' B := k.toAlgebra
+  have hcomp : h.comp f = k.comp g := by
+    change Algebra.TensorProduct.includeLeftRingHom.comp f =
+      Algebra.TensorProduct.includeRight.toRingHom.comp g
+    rw [← RingHom.algebraMap_toAlgebra f, ← RingHom.algebraMap_toAlgebra g]
+    exact Algebra.TensorProduct.includeLeftRingHom_comp_algebraMap
+  have hφ :
+      Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget
+          f g h k hcomp = RingHom.id B := by
+    apply Algebra.TensorProduct.ringHom_ext
+    · ext x : 1
+      change (Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget
+        f g h k hcomp) (x ⊗ₜ[R] 1) = x ⊗ₜ[R] 1
+      dsimp [Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget]
+      simp [h, Formalization.Books.Algebra.Unit14.baseChangeAlgebraMap]
+      rfl
+    · ext x : 1
+      change (Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget
+        f g h k hcomp) (1 ⊗ₜ[R] x) = 1 ⊗ₜ[R] x
+      dsimp [Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget]
+      simp [k, Formalization.Books.Algebra.Unit14.baseChangeRingMap]
+  have hsurj : Function.Surjective
+      (Formalization.Books.Algebra.Unit99.tensorProductToSquareTarget
+        f g h k hcomp) := by
+    rw [hφ]
+    exact Function.surjective_id
+  have hfinite' : RingHom.FiniteType k := by
+    exact Formalization.Books.Algebra.Unit14.baseChange_finite_type f g hfinite
+  let : Algebra.FiniteType R S := hfinite
+  let : Algebra.FiniteType R' B := hfinite'
+  have hpoint_forward : ∀ q' : PrimeSpectrum B,
+      IsQuasiFiniteAt f (PrimeSpectrum.comap h q') →
+        IsQuasiFiniteAt k q' := by
+    intro q' hq
+    let q : PrimeSpectrum S := PrimeSpectrum.comap h q'
+    let p : PrimeSpectrum R := PrimeSpectrum.comap f q
+    let p' : PrimeSpectrum R' := PrimeSpectrum.comap k q'
+    have hp'p : PrimeSpectrum.comap g p' = p := by
+      rw [← PrimeSpectrum.comap_comp_apply]
+      rw [← hcomp]
+      rfl
+    exact quasiFiniteAt_of_surjective_tensorProduct f g h k hcomp hfinite
+      hsurj p q p' q' rfl hp'p rfl rfl hq
+  have hpoint_reverse : ∀ q' : PrimeSpectrum B,
+      IsQuasiFiniteAt k q' →
+        IsQuasiFiniteAt f (PrimeSpectrum.comap h q') := by
+    intro q' hq'
+    let q : PrimeSpectrum S := PrimeSpectrum.comap h q'
+    let p : PrimeSpectrum R := PrimeSpectrum.comap f q
+    let p' : PrimeSpectrum R' := PrimeSpectrum.comap k q'
+    have hp'p : PrimeSpectrum.comap g p' = p := by
+      rw [← PrimeSpectrum.comap_comp_apply]
+      rw [← hcomp]
+      rfl
+    have hqz : PrimeSpectrum.comap (algebraMap R S) q = p := by
+      simp [q, p, RingHom.algebraMap_toAlgebra]
+    have hq'z : PrimeSpectrum.comap (algebraMap R' B) q' = p' := by
+      simp [p', RingHom.algebraMap_toAlgebra]
+    let qF := Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hqz
+    let qF' := Formalization.Books.Algebra.Unit112.tensorFibrePrime k p' q' hq'z
+    have hqF : qF.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom = q.asIdeal := by
+      have hleft :=
+        (PrimeSpectrum.preimageEquivFiber R S p).left_inv
+          (⟨q, hqz⟩ : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p})
+      exact congr($(hleft).1.asIdeal)
+    have hqF' : qF'.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom = q'.asIdeal := by
+      have hleft :=
+        (PrimeSpectrum.preimageEquivFiber R' B p').left_inv
+          (⟨q', hq'z⟩ : PrimeSpectrum.comap (algebraMap R' B) ⁻¹' {p'})
+      exact congr($(hleft).1.asIdeal)
+    let : q.asIdeal.LiesOver p.asIdeal := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+        (congrArg PrimeSpectrum.asIdeal hqz).symm
+    let : p'.asIdeal.LiesOver p.asIdeal := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+        (congrArg PrimeSpectrum.asIdeal hp'p).symm
+    let : q'.asIdeal.LiesOver p'.asIdeal := by
+      rw [Ideal.liesOver_iff, Ideal.under_def]
+      simpa [PrimeSpectrum.comap_asIdeal, RingHom.algebraMap_toAlgebra] using
+        (congrArg PrimeSpectrum.asIdeal hq'z).symm
+    have hqf_iff_dim_f :
+        IsQuasiFiniteAt f q ↔
+          Formalization.Books.Topology.Unit10.krullDimensionAt qF = 0 := by
+      constructor
+      · intro hqf
+        let : Algebra.QuasiFiniteAt R q.asIdeal := hqf.2
+        let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
+          Algebra.QuasiFiniteAt.baseChange q.asIdeal qF.asIdeal hqF.symm
+        have hlocal : Module.Finite p.asIdeal.ResidueField
+            (Localization.AtPrime qF.asIdeal) :=
+          (Algebra.QuasiFinite.iff_of_isArtinianRing
+            (R := p.asIdeal.ResidueField)
+            (S := Localization.AtPrime qF.asIdeal)).mp inferInstance
+        exact (isolated_point_fibre_criteria f p q hqz hfinite).out 1 3 |>.mp hlocal
+      · intro hdim
+        have hlocal : Module.Finite p.asIdeal.ResidueField
+            (Localization.AtPrime qF.asIdeal) :=
+          (isolated_point_fibre_criteria f p q hqz hfinite).out 3 1 |>.mp hdim
+        let : Algebra.QuasiFiniteAt p.asIdeal.ResidueField qF.asIdeal :=
+          (Algebra.QuasiFinite.iff_of_isArtinianRing
+            (R := p.asIdeal.ResidueField)
+            (S := Localization.AtPrime qF.asIdeal)).mpr hlocal
+        exact ⟨hfinite,
+          Algebra.QuasiFiniteAt.of_quasiFiniteAt_residueField
+            p.asIdeal q.asIdeal qF.asIdeal hqF⟩
+    have hqf_iff_dim_k :
+        IsQuasiFiniteAt k q' ↔
+          Formalization.Books.Topology.Unit10.krullDimensionAt qF' = 0 := by
+      constructor
+      · intro hqf
+        let : Algebra.QuasiFiniteAt R' q'.asIdeal := hqf.2
+        let : Algebra.QuasiFiniteAt p'.asIdeal.ResidueField qF'.asIdeal :=
+          Algebra.QuasiFiniteAt.baseChange q'.asIdeal qF'.asIdeal hqF'.symm
+        have hlocal : Module.Finite p'.asIdeal.ResidueField
+            (Localization.AtPrime qF'.asIdeal) :=
+          (Algebra.QuasiFinite.iff_of_isArtinianRing
+            (R := p'.asIdeal.ResidueField)
+            (S := Localization.AtPrime qF'.asIdeal)).mp inferInstance
+        exact (isolated_point_fibre_criteria k p' q' hq'z hfinite').out 1 3 |>.mp hlocal
+      · intro hdim
+        have hlocal : Module.Finite p'.asIdeal.ResidueField
+            (Localization.AtPrime qF'.asIdeal) :=
+          (isolated_point_fibre_criteria k p' q' hq'z hfinite').out 3 1 |>.mp hdim
+        let : Algebra.QuasiFiniteAt p'.asIdeal.ResidueField qF'.asIdeal :=
+          (Algebra.QuasiFinite.iff_of_isArtinianRing
+            (R := p'.asIdeal.ResidueField)
+            (S := Localization.AtPrime qF'.asIdeal)).mpr hlocal
+        exact ⟨hfinite',
+          Algebra.QuasiFiniteAt.of_quasiFiniteAt_residueField
+            p'.asIdeal q'.asIdeal qF'.asIdeal hqF'⟩
+    let K := p'.asIdeal.ResidueField
+    let k₀ := p.asIdeal.ResidueField
+    let : Algebra k₀ K :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' hp'p).toAlgebra
+    let : IsScalarTower R k₀ K := by
+      apply IsScalarTower.of_algebraMap_eq'
+      ext r
+      have hideal : p.asIdeal = p'.asIdeal.comap g := by
+        simpa [PrimeSpectrum.comap_asIdeal] using
+          (congrArg PrimeSpectrum.asIdeal hp'p).symm
+      change algebraMap R K r =
+        (Ideal.ResidueField.map p.asIdeal p'.asIdeal g hideal)
+          (algebraMap R k₀ r)
+      rw [Ideal.ResidueField.map_algebraMap]
+      exact (IsScalarTower.algebraMap_apply R R' K r).symm
+    let e₀ : K ⊗[R'] (R' ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+      Algebra.TensorProduct.cancelBaseChange R R' K K S
+    let e₁ : K ⊗[k₀] (k₀ ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+      Algebra.TensorProduct.cancelBaseChange R k₀ K K S
+    let c : K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[R'] (R' ⊗[R] S) :=
+      Algebra.TensorProduct.congr (.refl : K ≃ₐ[K] K)
+        (Algebra.TensorProduct.commRight R R' S).symm
+    let e : K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[k₀] (k₀ ⊗[R] S) :=
+      c.trans e₀ |>.trans e₁.symm
+    have heinv : e.symm = e₁.trans (e₀.symm.trans c.symm) := by
+      rfl
+    have hc (a : K) (r' : R') (s : S) :
+        c.symm (a ⊗ₜ[R'] (r' ⊗ₜ[R] s)) =
+          a ⊗ₜ[R'] (s ⊗ₜ[R] r') := by
+      rfl
+    have heq (r : R) :
+        e.symm.toRingHom (Algebra.TensorProduct.includeRight.toRingHom
+          (algebraMap R (p.asIdeal.Fiber S) r)) =
+          algebraMap R' (p'.asIdeal.Fiber B) (g r) := by
+      change e.symm (Algebra.TensorProduct.includeRight
+        (algebraMap R (p.asIdeal.Fiber S) r)) = _
+      rw [heinv]
+      simp only [AlgEquiv.trans_apply,
+        Algebra.TensorProduct.includeRight_apply]
+      change c.symm (e₀.symm (e₁
+        (1 ⊗ₜ[k₀] ((algebraMap R k₀) r ⊗ₜ[R] (1 : S))))) = _
+      rw [Algebra.TensorProduct.cancelBaseChange_tmul]
+      rw [Algebra.TensorProduct.cancelBaseChange_symm_tmul]
+      simp only [Algebra.smul_def, mul_one]
+      rw [hc]
+      rw [← IsScalarTower.algebraMap_apply R k₀ K r]
+      rw [IsScalarTower.algebraMap_apply R R' K r]
+      simp only [Algebra.TensorProduct.algebraMap_apply]
+      change (algebraMap R' K) (g r) ⊗ₜ[R'] (1 ⊗ₜ[R] 1) =
+        (algebraMap R' K) (g r) ⊗ₜ[R'] 1
+      rw [Algebra.TensorProduct.one_def]
+    let qK : PrimeSpectrum (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+      PrimeSpectrum.comap e.symm.toRingHom qF'
+    have hlyingK :
+        PrimeSpectrum.comap
+            (Algebra.TensorProduct.includeRight
+              (R := k₀) (A := K) (B := k₀ ⊗[R] S)).toRingHom qK = qF := by
+      rw [← PrimeSpectrum.comap_comp_apply]
+      apply PrimeSpectrum.ext
+      ext x
+      obtain ⟨r, hr, s, hrs⟩ :=
+        Ideal.Fiber.exists_smul_eq_one_tmul p.asIdeal x
+      have hqFp :
+          qF.asIdeal.comap (algebraMap R (p.asIdeal.Fiber S)) = p.asIdeal := by
+        simpa [Ideal.under_def] using
+          (Ideal.over_def qF.asIdeal p.asIdeal).symm
+      have hnonF : algebraMap R (p.asIdeal.Fiber S) r ∉ qF.asIdeal := by
+        intro hmem
+        apply hr
+        rw [← hqFp]
+        exact hmem
+      have hqFp' :
+          qF'.asIdeal.comap (algebraMap R' (p'.asIdeal.Fiber B)) = p'.asIdeal := by
+        simpa [Ideal.under_def] using
+          (Ideal.over_def qF'.asIdeal p'.asIdeal).symm
+      have hpideal : p'.asIdeal.comap g = p.asIdeal := by
+        simpa [PrimeSpectrum.comap_asIdeal] using
+          congrArg PrimeSpectrum.asIdeal hp'p
+      have hnonT : algebraMap R (p.asIdeal.Fiber S) r ∉
+          (PrimeSpectrum.comap
+            (e.symm.toRingEquiv.toRingHom.comp
+              Algebra.TensorProduct.includeRight.toRingHom) qF').asIdeal := by
+        intro hmem
+        have hmem' : algebraMap R' (p'.asIdeal.Fiber B) (g r) ∈ qF'.asIdeal := by
+          rw [← heq r]
+          exact hmem
+        apply hr
+        rw [← hpideal, ← hqFp']
+        exact hmem'
+      rw [← Ideal.IsPrime.mul_mem_left_iff hnonT,
+        ← Ideal.IsPrime.mul_mem_left_iff hnonF]
+      have hrs' : (algebraMap R (p.asIdeal.Fiber S) r) * x =
+          1 ⊗ₜ[R] s := by
+        simpa only [Algebra.smul_def] using hrs
+      rw [hrs']
+      change e.symm (Algebra.TensorProduct.includeRight
+        (1 ⊗ₜ[R] s)) ∈ qF'.asIdeal ↔ 1 ⊗ₜ[R] s ∈ qF.asIdeal
+      rw [heinv]
+      simp only [AlgEquiv.trans_apply,
+        Algebra.TensorProduct.includeRight_apply]
+      rw [Algebra.TensorProduct.cancelBaseChange_tmul]
+      rw [Algebra.TensorProduct.cancelBaseChange_symm_tmul]
+      rw [hc]
+      simp only [Algebra.smul_def, map_one, mul_one]
+      change (s ⊗ₜ[R] (1 : R')) ∈
+          qF'.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom ↔
+        s ∈ qF.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom
+      rw [hqF', hqF]
+      change h s ∈ q'.asIdeal ↔ s ∈ q.asIdeal
+      simpa [q, h, PrimeSpectrum.comap_asIdeal]
+    have hdim :
+        Formalization.Books.Topology.Unit10.krullDimensionAt qF =
+          Formalization.Books.Topology.Unit10.krullDimensionAt qK := by
+      exact Formalization.Books.Algebra.Unit116.dimension_at_a_point_preserved_field_extension
+        qF qK hlyingK
+    have hdim_equiv {X Y : Type u} [TopologicalSpace X] [TopologicalSpace Y]
+        (eXY : X ≃ₜ Y) (x : X) :
+        Formalization.Books.Topology.Unit10.krullDimensionAt x =
+          Formalization.Books.Topology.Unit10.krullDimensionAt (eXY x) := by
+      rw [Formalization.Books.Topology.Unit10.krullDimensionAt,
+        Formalization.Books.Topology.Unit10.krullDimensionAt]
+      apply le_antisymm
+      · refine le_iInf fun V => ?_
+        let eXYc : C(X, Y) := ⟨eXY, eXY.continuous⟩
+        let V' : TopologicalSpace.OpenNhdsOf (eXYc x) := by
+          simpa [eXYc] using V
+        let U : TopologicalSpace.OpenNhdsOf x :=
+          TopologicalSpace.OpenNhdsOf.comap eXYc x V'
+        have hdimUV :
+            topologicalKrullDim (U : Set X) =
+              topologicalKrullDim (V' : Set Y) := by
+          let hUV := eXY.isEmbedding.homeomorphOfSubsetRange
+            (s := (V' : Set Y)) (by intro y; simp)
+          exact IsHomeomorph.topologicalKrullDim_eq hUV hUV.isHomeomorph
+        calc
+          (⨅ W : TopologicalSpace.OpenNhdsOf x,
+              topologicalKrullDim (W : Set X)) ≤
+              topologicalKrullDim (U : Set X) := iInf_le _ U
+          _ = topologicalKrullDim (V : Set Y) := by
+            simpa [U, V', eXYc] using hdimUV
+      · refine le_iInf fun U => ?_
+        let eXYsymmc : C(Y, X) := ⟨eXY.symm, eXY.symm.continuous⟩
+        let U' : TopologicalSpace.OpenNhdsOf (eXYsymmc (eXY x)) :=
+          { toOpens := U.toOpens
+            mem' := by
+              change eXYsymmc (eXY x) ∈ (U : Set X)
+              simpa [eXYsymmc] using U.mem }
+        let V : TopologicalSpace.OpenNhdsOf (eXY x) :=
+          TopologicalSpace.OpenNhdsOf.comap eXYsymmc (eXY x) U'
+        have hU' : (U' : Set X) = (U : Set X) := by
+          ext z
+          dsimp [U']
+          rfl
+        have hdimVU :
+            topologicalKrullDim (V : Set Y) =
+              topologicalKrullDim (U' : Set X) := by
+          let hVU := eXY.symm.isEmbedding.homeomorphOfSubsetRange
+            (s := (U' : Set X)) (by intro z; simp)
+          exact IsHomeomorph.topologicalKrullDim_eq hVU hVU.isHomeomorph
+        calc
+          (⨅ W : TopologicalSpace.OpenNhdsOf (eXY x),
+              topologicalKrullDim (W : Set Y)) ≤
+              topologicalKrullDim (V : Set Y) := iInf_le _ V
+          _ = topologicalKrullDim (U : Set X) := by
+            rw [← hU']
+            simpa [V, U', eXYsymmc] using hdimVU
+    have hdim_equiv' :
+        Formalization.Books.Topology.Unit10.krullDimensionAt qK =
+          Formalization.Books.Topology.Unit10.krullDimensionAt qF' := by
+      have h := hdim_equiv
+        (PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv) qF'
+      have hqK' :
+          PrimeSpectrum.homeomorphOfRingEquiv e.toRingEquiv qF' = qK := by
+        rfl
+      rw [hqK'] at h
+      exact h.symm
+    exact hqf_iff_dim_f.mpr <| by
+      rw [hdim, hdim_equiv']
+      exact hqf_iff_dim_k.mp hq'
+  have hset :
+      ({q' : PrimeSpectrum B | IsQuasiFiniteAt k q'} : Set (PrimeSpectrum B)) =
+        (PrimeSpectrum.comap h) ⁻¹'
+          {q : PrimeSpectrum S | IsQuasiFiniteAt f q} := by
+    ext q'
+    constructor
+    · exact hpoint_reverse q'
+    · exact hpoint_forward q'
+  have hglobal : IsQuasiFinite f → IsQuasiFinite k := by
+    intro hfq
+    refine ⟨hfinite', ?_⟩
+    intro q'
+    exact (hpoint_forward q' ⟨hfinite, hfq.2 (PrimeSpectrum.comap h q')⟩).2
+  have hglobal_iff :
+      Function.Surjective (PrimeSpectrum.comap g) →
+        (IsQuasiFinite f ↔ IsQuasiFinite k) := by
+    intro hsurj_g
+    refine ⟨hglobal, ?_⟩
+    intro hk
+    refine ⟨hfinite, ?_⟩
+    intro q
+    let p : PrimeSpectrum R := PrimeSpectrum.comap f q
+    obtain ⟨p', hp'p⟩ := hsurj_g p
+    have hqz : PrimeSpectrum.comap (algebraMap R S) q = p := by
+      simp [p, RingHom.algebraMap_toAlgebra]
+    let K := p'.asIdeal.ResidueField
+    let k₀ := p.asIdeal.ResidueField
+    let : Algebra k₀ K :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt g p p' hp'p).toAlgebra
+    let : IsScalarTower R k₀ K := by
+      apply IsScalarTower.of_algebraMap_eq'
+      ext r
+      have hideal : p.asIdeal = p'.asIdeal.comap g := by
+        simpa [PrimeSpectrum.comap_asIdeal] using
+          (congrArg PrimeSpectrum.asIdeal hp'p).symm
+      change algebraMap R K r =
+        (Ideal.ResidueField.map p.asIdeal p'.asIdeal g hideal)
+          (algebraMap R k₀ r)
+      rw [Ideal.ResidueField.map_algebraMap]
+      exact (IsScalarTower.algebraMap_apply R R' K r).symm
+    letI : IsField k₀ := Field.toIsField k₀
+    letI : Module.Flat k₀ K :=
+      RingHom.Flat.of_isField (R := k₀) (S := K) (Field.toIsField k₀)
+        (algebraMap k₀ K)
+    letI : Module.FaithfullyFlat k₀ K := by
+      apply Module.FaithfullyFlat.of_comap_surjective
+      intro P
+      have hPbot : P.asIdeal = (⊥ : Ideal k₀) :=
+        (Ideal.eq_bot_or_top P.asIdeal).resolve_right P.isPrime.ne_top
+      refine ⟨⟨⊥, inferInstance⟩, ?_⟩
+      apply PrimeSpectrum.ext
+      rw [hPbot]
+      change Ideal.comap (algebraMap k₀ K) (⊥ : Ideal K) = ⊥
+      exact Ideal.comap_bot_of_injective _ (RingHom.injective _)
+    letI : Algebra (k₀ ⊗[R] S) (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+      (Algebra.TensorProduct.includeRight
+        (R := k₀) (A := K) (B := k₀ ⊗[R] S)).toRingHom.toAlgebra
+    letI : Module.FaithfullyFlat (k₀ ⊗[R] S)
+        (K ⊗[k₀] (k₀ ⊗[R] S)) :=
+      Module.FaithfullyFlat.of_linearEquiv
+        (k₀ ⊗[R] S) ((k₀ ⊗[R] S) ⊗[k₀] K)
+        (Algebra.TensorProduct.commRight k₀ (k₀ ⊗[R] S) K).symm.toLinearEquiv
+    let qF := Formalization.Books.Algebra.Unit112.tensorFibrePrime f p q hqz
+    have hqF : qF.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom = q.asIdeal := by
+      have hleft :=
+        (PrimeSpectrum.preimageEquivFiber R S p).left_inv
+          (⟨q, hqz⟩ : PrimeSpectrum.comap (algebraMap R S) ⁻¹' {p})
+      exact congr($(hleft).1.asIdeal)
+    let e₀ : K ⊗[R'] (R' ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+      Algebra.TensorProduct.cancelBaseChange R R' K K S
+    let e₁ : K ⊗[k₀] (k₀ ⊗[R] S) ≃ₐ[K] K ⊗[R] S :=
+      Algebra.TensorProduct.cancelBaseChange R k₀ K K S
+    let c : K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[R'] (R' ⊗[R] S) :=
+      Algebra.TensorProduct.congr (.refl : K ≃ₐ[K] K)
+        (Algebra.TensorProduct.commRight R R' S).symm
+    let e : K ⊗[R'] (S ⊗[R] R') ≃ₐ[K] K ⊗[k₀] (k₀ ⊗[R] S) :=
+      c.trans e₀ |>.trans e₁.symm
+    have hc (a : K) (s : S) (r' : R') :
+        c (a ⊗ₜ[R'] (s ⊗ₜ[R] r')) =
+          a ⊗ₜ[R'] (r' ⊗ₜ[R] s) := by
+      rfl
+    obtain ⟨qK, hqK⟩ :=
+      PrimeSpectrum.comap_surjective_of_faithfullyFlat
+        (A := k₀ ⊗[R] S) (B := K ⊗[k₀] (k₀ ⊗[R] S)) qF
+    have hmap :
+        algebraMap (k₀ ⊗[R] S) (K ⊗[k₀] (k₀ ⊗[R] S)) =
+          Algebra.TensorProduct.includeRight.toRingHom := by
+      rfl
+    have hqK' :
+        qK.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom = qF.asIdeal := by
+      simpa only [PrimeSpectrum.comap_asIdeal, hmap] using
+        congrArg PrimeSpectrum.asIdeal hqK
+    let qF' := PrimeSpectrum.comap e.toRingHom qK
+    let z := (PrimeSpectrum.preimageEquivFiber R' B p').symm qF'
+    let q' : PrimeSpectrum B := z.1
+    have hq'z : PrimeSpectrum.comap (algebraMap R' B) q' = p' := z.2
+    have hqF' : qF'.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom = q'.asIdeal := by
+      change qF'.asIdeal.comap Algebra.TensorProduct.includeRight.toRingHom =
+        (PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qF').asIdeal
+      rfl
+    have hqsource : PrimeSpectrum.comap h q' = q := by
+      apply PrimeSpectrum.ext
+      ext x
+      change h x ∈ q'.asIdeal ↔ x ∈ q.asIdeal
+      rw [← hqF']
+      change Algebra.TensorProduct.includeRight.toRingHom (h x) ∈ qF'.asIdeal ↔
+        x ∈ q.asIdeal
+      change e (Algebra.TensorProduct.includeRight.toRingHom (h x)) ∈ qK.asIdeal ↔
+        x ∈ q.asIdeal
+      have heval :
+          e (Algebra.TensorProduct.includeRight.toRingHom (h x)) =
+            Algebra.TensorProduct.includeRight.toRingHom (1 ⊗ₜ[R] x) := by
+        change e₁.symm (e₀ (c (1 ⊗ₜ[R'] (x ⊗ₜ[R] (1 : R'))))) =
+          (1 : K) ⊗ₜ[k₀] (1 ⊗ₜ[R] x)
+        rw [hc]
+        rw [Algebra.TensorProduct.cancelBaseChange_tmul]
+        rw [Algebra.TensorProduct.cancelBaseChange_symm_tmul]
+        simp only [Algebra.smul_def, one_mul, mul_one, map_one]
+      rw [heval]
+      rw [← Ideal.mem_comap, hqK', ← hqF]
+      rfl
+    rw [← hqsource]
+    exact (hpoint_reverse q' ⟨hfinite', hk.2 q'⟩).2
+  refine ⟨?_, hglobal_iff, hglobal⟩
+  simpa [h, k, B] using hset
 
 theorem quasiFiniteAt_of_finite_composite
     {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]

@@ -1,6 +1,6 @@
 import Formalization.Books.Categories.Unit23.ExactFunctors
 import Formalization.Books.Cohomology.Unit03.DerivedFunctors
-import Formalization.Books.Derived.Unit08
+import Formalization.Books.Derived.Unit08.HomotopyCategory
 import Formalization.Books.Derived.Unit10.DistinguishedTriangles
 import Formalization.Books.Derived.Unit11.DerivedCategories
 import Formalization.Books.Sheaves.Unit25.RingedSpaces
@@ -68,13 +68,26 @@ noncomputable abbrev moduleObject {X : RingedSpace.{v}}
     (F : Mod X) : D X :=
   (DerivedCategory.singleFunctor (Mod X) 0).obj F
 
+def tensorSlice {C D : Type*} [Category C] [Category D]
+    (F : (C × C) ⥤ D) (M : C) : C ⥤ D where
+  obj A := F.obj (A, M)
+  map f := F.map (f, 𝟙 M)
+  map_id A := by rw [← F.map_id]; rfl
+  map_comp f g := by
+    rw [← F.map_comp]
+    congr 1
+    simp
+
 /- A derived tensor product is the functor supplied by the canonical
    construction on sheaves of modules.  Its interface is kept local because
    the existing Chapter 19 implementation is specialized to commutative
    sheaves of rings, whereas a ringed space here uses the Chapter 10
-   `RingSheaf` model. -/
+   `RingSheaf` model.  Exactness in the first variable is part of the
+   interface used by the source's triangle and tensor arguments. -/
 structure DerivedTensorData (X : RingedSpace.{v}) where
   functor : (D X × D X) ⥤ D X
+  exact_in_first : ∀ M : D X,
+    Nonempty (ExactTriangulatedFunctorData (tensorSlice functor M))
 
 theorem existsDerivedTensorData (X : RingedSpace.{v}) :
     Nonempty (DerivedTensorData X) := by
@@ -100,16 +113,6 @@ theorem existsModuleTensorData (X : RingedSpace.{v}) :
 noncomputable def moduleTensorData (X : RingedSpace.{v}) :
     ModuleTensorData X :=
   Classical.choice (existsModuleTensorData X)
-
-def tensorSlice {C D : Type*} [Category C] [Category D]
-    (F : (C × C) ⥤ D) (M : C) : C ⥤ D where
-  obj A := F.obj (A, M)
-  map f := F.map (f, 𝟙 M)
-  map_id A := by rw [← F.map_id]; rfl
-  map_comp f g := by
-    rw [← F.map_comp]
-    congr 1
-    simp
 
 noncomputable abbrev tensorRightFunctor (X : RingedSpace.{v})
     (F : Mod X) : Mod X ⥤ Mod X :=
@@ -194,6 +197,8 @@ noncomputable abbrev derivedStalk (X : RingedSpace.{v}) (x : X.carrier) :
 
 structure StalkDerivedTensorData (X : RingedSpace.{v}) (x : X.carrier) where
   functor : (StalkD X x × StalkD X x) ⥤ StalkD X x
+  exact_in_first : ∀ M : StalkD X x,
+    Nonempty (ExactTriangulatedFunctorData (tensorSlice functor M))
 
 theorem existsStalkDerivedTensorData (X : RingedSpace.{v}) (x : X.carrier) :
     Nonempty (StalkDerivedTensorData X x) := by

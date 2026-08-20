@@ -94,14 +94,14 @@ theorem exists_nonaffine_intersection_of_affine_opens :
       IsAffineOpen U ∧ IsAffineOpen V ∧ ¬ IsAffineOpen (U ⊓ V) := by
   let D := doubled_origin_glueData
   let X := D.glued
-  letI : IsOpenImmersion (D.ι (ULift.up false)) :=
+  let : IsOpenImmersion (D.ι (ULift.up false)) :=
     Scheme.GlueData.ι_isOpenImmersion D (ULift.up false)
-  letI : IsOpenImmersion (D.ι (ULift.up true)) :=
+  let : IsOpenImmersion (D.ι (ULift.up true)) :=
     Scheme.GlueData.ι_isOpenImmersion D (ULift.up true)
-  letI : IsAffine (D.U (ULift.up false)) := by
+  let : IsAffine (D.U (ULift.up false)) := by
     change IsAffine (Formalization.Books.Schemes.Unit09.affinePlane (ULift.{u} ℚ))
     infer_instance
-  letI : IsAffine (D.U (ULift.up true)) := by
+  let : IsAffine (D.U (ULift.up true)) := by
     change IsAffine (Formalization.Books.Schemes.Unit09.affinePlane (ULift.{u} ℚ))
     infer_instance
   let U : X.Opens := (D.ι (ULift.up false)).opensRange
@@ -118,11 +118,11 @@ theorem exists_nonaffine_intersection_of_affine_opens :
       convert hpre using 1
       rw [Scheme.Hom.preimage_inf, Scheme.Hom.preimage_opensRange]
       simp
-    letI : IsOpenImmersion
+    let : IsOpenImmersion
         (D.vPullbackCone (ULift.up false) (ULift.up true)).fst := by
       change IsOpenImmersion (D.f (ULift.up false) (ULift.up true))
       exact D.f_open _ _
-    letI : IsOpenImmersion (D.f (ULift.up false) (ULift.up true)) := D.f_open _ _
+    let : IsOpenImmersion (D.f (ULift.up false) (ULift.up true)) := D.f_open _ _
     let H := (IsPullback.of_isLimit (D.vPullbackConeIsLimit
       (ULift.up false) (ULift.up true))).flip
     have hleft : IsAffineOpen
@@ -248,7 +248,7 @@ abbrev AffineOpenPresheaf (X : Scheme.{u}) :=
 /-- The presheaf on affine opens obtained by restricting a sheaf on the underlying space. -/
 noncomputable def affineOpenPresheafOfSchemeSheaf
     (X : Scheme.{u}) (F : TopCat.Sheaf (Type u) X) : AffineOpenPresheaf X :=
-  ((Scheme.AffineZariskiSite.sheafEquiv (X := X) (A := Type u)).inverse.obj F).val
+  ((Scheme.AffineZariskiSite.sheafEquiv (X := X) (A := Type u)).inverse.obj F).obj
 
 /-- A presheaf on affine opens is the restriction of a sheaf on `X`. -/
 def IsRestrictionOfSchemeSheaf
@@ -276,7 +276,7 @@ def HasBinaryStandardOpenGluing
       Subsingleton (F.obj (op (affineEmpty X)))) ∧
     ∀ (U V W : Scheme.AffineZariskiSite X)
       (hVU : V ≤ U) (hWU : W ≤ U)
-      (hcover : U.toOpens = V.toOpens ⊔ W.toOpens),
+      (_hcover : U.toOpens = V.toOpens ⊔ W.toOpens),
       ∃ (T : Scheme.AffineZariskiSite X) (hTV : T ≤ V) (hTW : T ≤ W),
         T.toOpens = V.toOpens ⊓ W.toOpens ∧
         Function.Injective (fun s : F.obj (op U) =>
@@ -303,7 +303,7 @@ theorem affine_open_presheaf_sheaf_criterion
       let E := Scheme.AffineZariskiSite.sheafEquiv (X := X) (A := Type u)
       let G := E.functor.obj ⟨F, hF⟩
       refine ⟨G, ?_⟩
-      change Nonempty (F ≅ (E.inverse.obj G).val)
+      change Nonempty (F ≅ (E.inverse.obj G).obj)
       let e := E.unitIso.app ⟨F, hF⟩
       exact ⟨Iso.mk e.hom.hom e.inv.hom
         (ObjectProperty.isoHom_inv_id_hom e) (ObjectProperty.isoInv_hom_id_hom e)⟩

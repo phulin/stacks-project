@@ -49,8 +49,31 @@ theorem homotopy_single_shift_hom_eq_zero
     ∀ f : (HomotopyCategory.singleFunctor C 0).obj B ⟶
       (shiftFunctor (HomotopyCategory C (.up ℤ)) (1 : ℤ)).obj
         ((HomotopyCategory.singleFunctor C 0).obj A),
-      f = 0 := by
-  sorry
+    f = 0 := by
+  change ∀ f : (HomotopyCategory.quotient C (.up ℤ)).obj
+      ((CochainComplex.singleFunctor C 0).obj B) ⟶
+      (shiftFunctor (HomotopyCategory C (.up ℤ)) (1 : ℤ)).obj
+        ((HomotopyCategory.quotient C (.up ℤ)).obj
+          ((CochainComplex.singleFunctor C 0).obj A)),
+    f = 0
+  intro f
+  let e := HomotopyCategory.shift_quotient_obj
+    ((CochainComplex.singleFunctor C 0).obj A) (1 : ℤ)
+  have hf : f ≫ eqToHom e = 0 := by
+    obtain ⟨g, hg⟩ :=
+      (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map_surjective
+        (f ≫ eqToHom e)
+    have hg0 : g = 0 := by
+      ext i
+      by_cases hi : i = 0
+      · subst hi
+        exact (HomologicalComplex.isZero_single_obj_X (ComplexShape.up ℤ) 0 B 1
+          (by norm_num)).eq_of_tgt _ _
+      · exact (HomologicalComplex.isZero_single_obj_X (ComplexShape.up ℤ) 0 B i hi).eq_of_src _ _
+    rw [← hg, hg0]
+    exact (HomotopyCategory.quotient C (.up ℤ)).map_zero _ _
+  apply (cancel_mono (eqToHom e)).1
+  simpa only [zero_comp] using hf
 
 /-- A delta-functor structure on the homotopy-category functor would split every
 short exact sequence of objects. -/
@@ -59,7 +82,69 @@ theorem homotopy_delta_functor_forces_splitting
     (G : DeltaFunctor (homotopyCanonicalFunctor C))
     {S : ShortComplex C} (hS : S.ShortExact) :
     Nonempty S.Splitting := by
-  sorry
+  let S' := S.map (CochainComplex.singleFunctor C 0)
+  let _ : PreservesFiniteLimits (CochainComplex.singleFunctor C 0) := by
+    dsimp [CochainComplex.singleFunctor, CochainComplex.singleFunctors]
+    infer_instance
+  let _ : PreservesFiniteColimits (CochainComplex.singleFunctor C 0) := by
+    dsimp [CochainComplex.singleFunctor, CochainComplex.singleFunctors]
+    infer_instance
+  have hS' : S'.ShortExact := hS.map_of_exact (CochainComplex.singleFunctor C 0)
+  let T := DeltaFunctor.imageTriangle (homotopyCanonicalFunctor C) G S' hS'
+  have hT : T ∈ distTriang (HomotopyCategory C (.up ℤ)) :=
+    DeltaFunctor.imageTriangle_distinguished (homotopyCanonicalFunctor C) G S' hS'
+  have hδ : T.mor₃ = 0 := by
+    dsimp [T, DeltaFunctor.imageTriangle]
+    exact homotopy_single_shift_hom_eq_zero C S.X₁ S.X₃ _
+  obtain ⟨s', hs'⟩ := T.coyoneda_exact₃ hT (𝟙 T.obj₃) (by simp [hδ])
+  obtain ⟨s, rfl⟩ :=
+    (HomotopyCategory.quotient C (.up ℤ)).map_surjective s'
+  have hcomp :
+      (HomotopyCategory.quotient C (.up ℤ)).map (s ≫ S'.g) =
+        (HomotopyCategory.quotient C (.up ℤ)).map (𝟙 S'.X₃) := by
+    simpa only [Functor.map_comp, Functor.map_id] using
+      (show (HomotopyCategory.quotient C (.up ℤ)).map s ≫
+          (HomotopyCategory.quotient C (.up ℤ)).map S'.g =
+        (HomotopyCategory.quotient C (.up ℤ)).map (𝟙 S'.X₃) from
+        by simpa [T, DeltaFunctor.imageTriangle, homotopyCanonicalFunctor,
+          Triangle.mk] using hs'.symm)
+  have ho : Homotopy (s ≫ S'.g) (𝟙 S'.X₃) :=
+    HomotopyCategory.homotopyOfEq _ _ hcomp
+  have hs0 : s.f 0 ≫ S'.g.f 0 = 𝟙 _ := by
+    have hdz (i j : ℤ) : S'.X₃.d i j = 0 := by
+      change ((HomologicalComplex.single C (.up ℤ) 0).obj S.X₃).d i j = 0
+      exact HomologicalComplex.single_obj_d (c := .up ℤ) 0 S.X₃ i j
+    have hdnext : (dNext (C := S'.X₃) (D := S'.X₃) 0) ho.hom = 0 := by
+      simp [dNext, hdz]
+    have hprev : (prevD (C := S'.X₃) (D := S'.X₃) 0) ho.hom = 0 := by
+      simp [prevD, hdz]
+    simpa only [HomologicalComplex.comp_f, HomologicalComplex.id_f, hdnext, hprev,
+      zero_add, add_zero] using ho.comm 0
+  let s₀ : S.X₃ ⟶ S.X₂ :=
+    (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₃).inv ≫
+      s.f 0 ≫ (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₂).hom
+  have hs₀ : s₀ ≫ S.g = 𝟙 S.X₃ := by
+    dsimp [S', ShortComplex.map] at hs0
+    change s.f 0 ≫
+        ((HomologicalComplex.single C (.up ℤ) 0).map S.g).f 0 =
+      𝟙 (((HomologicalComplex.single C (.up ℤ) 0).obj S.X₃).X 0) at hs0
+    rw [HomologicalComplex.single_map_f_self] at hs0
+    apply (cancel_mono (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₃).inv).1
+    dsimp [s₀]
+    have h' := congrArg
+      (fun x =>
+        (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₃).inv ≫ x) hs0
+    have reassoc5 {W X Y Z V U : C} (a : W ⟶ X) (b : X ⟶ Y) (c : Y ⟶ Z)
+        (d : Z ⟶ V) (e : V ⟶ U) :
+        (((a ≫ (b ≫ c)) ≫ d) ≫ e) = a ≫ b ≫ c ≫ d ≫ e := by
+      simp only [Category.assoc]
+    convert h' using 1
+    · exact reassoc5
+        (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₃).inv (s.f 0)
+        (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₂).hom S.g
+        (HomologicalComplex.singleObjXSelf (.up ℤ) 0 S.X₃).inv
+    · rw [Category.id_comp, Category.comp_id]
+  exact ⟨ShortComplex.Splitting.ofExactOfSection S hS.exact s₀ hs₀ hS.mono_f⟩
 
 /-- Hence the homotopy-category functor is not a delta-functor whenever a
 nonsplit short exact sequence exists. -/
@@ -67,7 +152,9 @@ theorem homotopyCanonicalFunctor_not_deltaFunctor_of_nonsplit
     (C : Type u) [Category.{v} C] [Abelian C]
     (hC : HasNonsplitShortExactSequence C) :
     ¬ Nonempty (DeltaFunctor (homotopyCanonicalFunctor C)) := by
-  sorry
+  rintro ⟨G⟩
+  obtain ⟨S, hS, hns⟩ := hC
+  exact hns (homotopy_delta_functor_forces_splitting G hS)
 
 /-! ## The mapping-cone construction -/
 
@@ -107,7 +194,8 @@ theorem coneToShortExact_derived_isIso
     {C : Type u} [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
     {S : ShortComplex (CochainComplex C ℤ)} (hS : S.ShortExact) :
     IsIso (DerivedCategory.Q.map (coneToShortExact S)) := by
-  sorry
+  rw [DerivedCategory.isIso_Q_map_iff_quasiIso]
+  exact coneToShortExact_quasiIso hS
 
 /-- The kernel of q is the cone of the identity on the first complex. -/
 theorem coneToShortExact_kernel_iso_mappingCone_identity
@@ -116,7 +204,102 @@ theorem coneToShortExact_kernel_iso_mappingCone_identity
     Nonempty
       (kernel (coneToShortExact S) ≅
         CochainComplex.mappingCone (𝟙 S.X₁)) := by
-  sorry
+  let k : CochainComplex.mappingCone (𝟙 S.X₁) ⟶ CochainComplex.mappingCone S.f :=
+    CochainComplex.mappingCone.desc (𝟙 S.X₁)
+      (CochainComplex.mappingCone.inl S.f)
+      (S.f ≫ CochainComplex.mappingCone.inr S.f) (by simp)
+  have hk : k ≫ coneToShortExact S = 0 := by
+    ext n
+    apply CochainComplex.mappingCone.ext_from (𝟙 S.X₁) (n + 1) n rfl
+    · simp [k, coneToShortExact]
+    · simp [k, coneToShortExact, Category.assoc]
+      simpa only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] using
+        congrArg (fun h => h.f n) S.zero
+  have hc : IsLimit (KernelFork.ofι k hk) := by
+    apply HomologicalComplex.isLimitOfEval
+    intro n
+    refine (isLimitMapConeForkEquiv' (HomologicalComplex.eval C (.up ℤ) n) hk).symm.toFun ?_
+    have hq : (coneToShortExact S).f n =
+        (CochainComplex.mappingCone.snd S.f).v n n (add_zero n) ≫ S.g.f n := by
+      change (CochainComplex.mappingCone.desc S.f 0 S.g (by simp)).f n = _
+      simpa [CochainComplex.mappingCone.snd] using
+        (CochainComplex.mappingCone.desc_f S.f 0 S.g (by simp) n (n + 1) rfl)
+    have hfn : IsLimit (KernelFork.ofι (S.f.f n) (by
+        simpa only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] using
+          congrArg (fun h => h.f n) S.zero)) := by
+      convert (hS.map_of_exact (HomologicalComplex.eval C (.up ℤ) n)).fIsKernel using 1
+      · change parallelPair (S.g.f n) 0 =
+          parallelPair ((HomologicalComplex.eval C (.up ℤ) n).map S.g) 0
+        simp [HomologicalComplex.eval]
+        rfl
+      · rfl
+    let liftAt : ∀ {W' : C}
+        (g' : W' ⟶ (CochainComplex.mappingCone S.f).X n)
+        (_ : g' ≫ (coneToShortExact S).f n = 0),
+        W' ⟶ (CochainComplex.mappingCone (𝟙 S.X₁)).X n :=
+      fun {W'} g' eq' =>
+        let b : W' ⟶ S.X₁.X n := hfn.lift (KernelFork.ofι
+          (g' ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n)) (by
+            rw [Category.assoc, ← hq]
+            exact eq'))
+        (g' ≫ (CochainComplex.mappingCone.fst S.f).1.v n (n + 1) rfl) ≫
+            (CochainComplex.mappingCone.inl (𝟙 S.X₁)).v (n + 1) n (by simp) +
+          b ≫
+            (CochainComplex.mappingCone.inr (𝟙 S.X₁)).f n
+    have hkn : k.f n ≫ (coneToShortExact S).f n = 0 := by
+      simpa only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] using
+        congrArg (fun h => h.f n) hk
+    have hkfst :
+        k.f n ≫ (CochainComplex.mappingCone.fst S.f).1.v n (n + 1) rfl =
+          (CochainComplex.mappingCone.fst (𝟙 S.X₁)).1.v n (n + 1) rfl := by
+      apply CochainComplex.mappingCone.ext_from (𝟙 S.X₁) (n + 1) n rfl
+      · simp [k]
+      · simp [k]
+    have hksnd :
+        k.f n ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n) =
+          (CochainComplex.mappingCone.snd (𝟙 S.X₁)).v n n (add_zero n) ≫ S.f.f n := by
+      apply CochainComplex.mappingCone.ext_from (𝟙 S.X₁) (n + 1) n rfl
+      · simp [k]
+      · simp [k]
+    refine KernelFork.IsLimit.ofι (k.f n) hkn liftAt ?_ ?_
+    · intro W' g' eq'
+      dsimp [liftAt]
+      apply CochainComplex.mappingCone.ext_to S.f n (n + 1) rfl
+      · simp [k, Category.assoc]
+      · simp only [add_comp, Category.assoc]
+        rw [hksnd]
+        simp
+        simpa only [Fork.app_zero_eq_ι, Fork.ι_ofι] using
+          (hfn.fac (KernelFork.ofι
+            (g' ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n)) (by
+              rw [Category.assoc, ← hq]
+              exact eq')) WalkingParallelPair.zero)
+    · intro W' g' eq' m hm
+      apply CochainComplex.mappingCone.ext_to (𝟙 S.X₁) n (n + 1) rfl
+      · have hm' := congrArg
+          (fun x => x ≫ (CochainComplex.mappingCone.fst S.f).1.v n (n + 1) rfl) hm
+        rw [Category.assoc, hkfst] at hm'
+        simpa [liftAt, Category.assoc] using hm'
+      · have hm' := congrArg
+          (fun x => x ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n)) hm
+        rw [Category.assoc, hksnd] at hm'
+        have hmb : m ≫ (CochainComplex.mappingCone.snd (𝟙 S.X₁)).v n n (add_zero n) =
+            hfn.lift (KernelFork.ofι
+              (g' ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n)) (by
+                rw [Category.assoc, ← hq]
+                exact eq')) := by
+          exact hfn.uniq
+            (KernelFork.ofι
+              (g' ≫ (CochainComplex.mappingCone.snd S.f).v n n (add_zero n)) (by
+                rw [Category.assoc, ← hq]
+                exact eq'))
+            (m ≫ (CochainComplex.mappingCone.snd (𝟙 S.X₁)).v n n (add_zero n)) (by
+              intro j
+              rcases j with (_ | _)
+              · simpa using hm'
+              · simpa [Category.assoc] using congrArg (fun x => x ≫ S.g.f n) hm')
+        simpa [liftAt, Category.assoc] using hmb
+  exact ⟨(hc.conePointUniqueUpToIso (kernelIsKernel _)).symm⟩
 
 /-- The kernel of the mapping-cone projection is represented by the acyclic
 cone of the identity. -/
@@ -124,7 +307,12 @@ theorem mappingCone_identity_acyclic
     (C : Type u) [Category.{v} C] [Abelian C]
     (A : CochainComplex C ℤ) :
     (CochainComplex.mappingCone (𝟙 A)).Acyclic := by
-  sorry
+  rw [Formalization.Books.Homology.Unit13.cochain_acyclic_iff_cohomology_isZero]
+  intro n
+  apply (IsZero.iff_id_eq_zero _).2
+  rw [← HomologicalComplex.homologyMap_id (K := CochainComplex.mappingCone (𝟙 A)) n]
+  rw [(CochainComplex.mappingCone.homotopyToZeroOfId A).homologyMap_eq n]
+  exact HomologicalComplex.homologyMap_zero _ _ n
 
 /-- The mapping-cone triangle is distinguished already in the homotopy
 category, before applying the derived localization. -/

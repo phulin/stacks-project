@@ -1924,7 +1924,7 @@ theorem degeneracy_tuple_degree_one_first {C : Type u} [Category.{v} C]
       degeneracyTuple 0 U (0 : Fin 2) 1 = 𝟙 _ ∧
       degeneracyTuple 0 U (0 : Fin 2) 2 =
         extensionFace 0 U (1 : Fin 2) ≫ extensionDegeneracy 0 U (0 : Fin 1) := by
-  sorry
+  simp [degeneracyTuple, extensionFace, extensionDegeneracy, truncatedFace]
 
 theorem degeneracy_tuple_degree_one_second {C : Type u} [Category.{v} C]
     (U : SimplicialObject.Truncated C 1) :
@@ -1932,7 +1932,7 @@ theorem degeneracy_tuple_degree_one_second {C : Type u} [Category.{v} C]
         extensionFace 0 U (0 : Fin 2) ≫ extensionDegeneracy 0 U (0 : Fin 1) ∧
       degeneracyTuple 0 U (1 : Fin 2) 1 = 𝟙 _ ∧
       degeneracyTuple 0 U (1 : Fin 2) 2 = 𝟙 _ := by
-  sorry
+  simp [degeneracyTuple, extensionFace, extensionDegeneracy, truncatedFace]
 
 theorem degeneracy_tuple_degree_two_first {C : Type u} [Category.{v} C]
     (U : SimplicialObject.Truncated C 2) :
@@ -1942,7 +1942,7 @@ theorem degeneracy_tuple_degree_two_first {C : Type u} [Category.{v} C]
         extensionFace 1 U (1 : Fin 3) ≫ extensionDegeneracy 1 U (0 : Fin 2) ∧
       degeneracyTuple 1 U (0 : Fin 3) 3 =
         extensionFace 1 U (2 : Fin 3) ≫ extensionDegeneracy 1 U (0 : Fin 2) := by
-  sorry
+  simp [degeneracyTuple, extensionFace, extensionDegeneracy, truncatedFace]
 
 theorem degeneracy_tuple_degree_two_second {C : Type u} [Category.{v} C]
     (U : SimplicialObject.Truncated C 2) :
@@ -1952,7 +1952,7 @@ theorem degeneracy_tuple_degree_two_second {C : Type u} [Category.{v} C]
       degeneracyTuple 1 U (1 : Fin 3) 2 = 𝟙 _ ∧
       degeneracyTuple 1 U (1 : Fin 3) 3 =
         extensionFace 1 U (2 : Fin 3) ≫ extensionDegeneracy 1 U (1 : Fin 2) := by
-  sorry
+  simp [degeneracyTuple, extensionFace, extensionDegeneracy, truncatedFace]
 
 theorem degeneracy_tuple_degree_two_third {C : Type u} [Category.{v} C]
     (U : SimplicialObject.Truncated C 2) :
@@ -1962,7 +1962,7 @@ theorem degeneracy_tuple_degree_two_third {C : Type u} [Category.{v} C]
         extensionFace 1 U (1 : Fin 3) ≫ extensionDegeneracy 1 U (1 : Fin 2) ∧
       degeneracyTuple 1 U (2 : Fin 3) 2 = 𝟙 _ ∧
       degeneracyTuple 1 U (2 : Fin 3) 3 = 𝟙 _ := by
-  sorry
+  simp [degeneracyTuple, extensionFace, extensionDegeneracy, truncatedFace]
 
 /-! ## Inductive construction -/
 

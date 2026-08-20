@@ -3,6 +3,7 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.Ideal.Maps
+import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.Support
 import Mathlib.RingTheory.Spectrum.Prime.Module
@@ -320,6 +321,79 @@ theorem annihilator_module_flat_base_change
           (TensorProduct.mk R S M 1 '' (s : Set M))).annihilator := hspan s
     _ = Module.annihilator S (S ⊗[R] M) := by
       rw [← Submodule.annihilator_top, htop]
+
+/-! ### Finite-coordinate annihilator descent -/
+
+/- A minimal prime of the annihilator of a finitely supported coordinate vector is already
+   minimal over the annihilator of one of its nonzero coordinates.  This is the coordinate
+   step needed when a tensor-product element is represented in a basis. -/
+theorem exists_minimalPrime_annihilator_finsupp
+    {A X ι : Type*} [CommRing A] [AddCommGroup X] [Module A X]
+    (p : PrimeSpectrum A) (z : ι →₀ X)
+    (hp : p.asIdeal ∈
+      ((⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X))).minimalPrimes) :
+    ∃ i ∈ z.support,
+      p.asIdeal ∈ ((⊥ : Submodule A X).colon ({z i} : Set X)).minimalPrimes := by
+  classical
+  let I : ι → Ideal A := fun i =>
+    (⊥ : Submodule A X).colon ({z i} : Set X)
+  have hprod :
+      ∀ (s : Finset ι), (∀ i ∈ s, ¬ I i ≤ p.asIdeal) →
+        ∃ a : A, a ∉ p.asIdeal ∧ ∀ i ∈ s, a ∈ I i := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        intro _
+        have hone : (1 : A) ∉ p.asIdeal := by
+          intro h
+          exact p.2.ne_top ((Ideal.eq_top_iff_one p.asIdeal).2 h)
+        exact ⟨1, hone, by simp⟩
+    | @insert i s hi ih =>
+        intro hs
+        obtain ⟨b, hbI, hbp⟩ := not_subset.mp (hs i (by simp))
+        obtain ⟨a, hap, ha⟩ := ih (by
+          intro j hj
+          exact hs j (by simp [hj]))
+        refine ⟨a * b, ?_, ?_⟩
+        · intro habp
+          exact (p.2.mem_or_mem habp).elim hap hbp
+        · intro j hj
+          by_cases hji : j = i
+          · subst j
+            exact (I i).mul_mem_left a hbI
+          · exact (I j).mul_mem_right b
+              (ha j (by simpa [Finset.mem_insert, hji] using hj))
+  have hsome : ∃ i ∈ z.support, I i ≤ p.asIdeal := by
+    by_contra hnone
+    push Not at hnone
+    obtain ⟨a, hap, ha⟩ := hprod z.support hnone
+    have hacol :
+        a ∈ (⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X)) := by
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot]
+      ext i
+      by_cases hi : i ∈ z.support
+      · have hai := ha i hi
+        simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai
+      · have hzi : z i = 0 := by
+          by_contra hzi
+          exact hi (Finsupp.mem_support_iff.mpr hzi)
+        simp [hzi]
+    exact hap (hp.1.2 hacol)
+  obtain ⟨i, hi, hIp⟩ := hsome
+  refine ⟨i, hi, ?_⟩
+  refine ⟨⟨p.2, hIp⟩, ?_⟩
+  intro P hP hPle
+  have hIP : I i ≤ P := by
+    simpa [I] using hP.2
+  have hP' : P.IsPrime ∧
+      (⊥ : Submodule A (ι →₀ X)).colon ({z} : Set (ι →₀ X)) ≤ P := by
+    refine ⟨hP.1, ?_⟩
+    intro a ha
+    have hai : a • z i = 0 := by
+      rw [Submodule.mem_colon_singleton, Submodule.mem_bot] at ha
+      exact congrArg (fun v : ι →₀ X => v i) ha
+    exact hIP (by simpa [I, Submodule.mem_colon_singleton, Submodule.mem_bot] using hai)
+  exact hp.2 hP' hPle
 
 /-! ### Support of finite modules -/
 

@@ -1907,7 +1907,22 @@ theorem reflexive_local_depth_ge_two
       (Localization.AtPrime p.asIdeal)) :
     2 ≤ localDepth (Localization.AtPrime p.asIdeal)
       (LocalizedModule.AtPrime p.asIdeal M) := by
-  sorry
+  let A := Localization.AtPrime p.asIdeal
+  let L := LocalizedModule.AtPrime p.asIdeal M
+  have hloc : ∀ q : PrimeSpectrum R,
+      Reflexive (Localization.AtPrime q.asIdeal)
+        (LocalizedModule.AtPrime q.asIdeal M) :=
+    ((reflexive_localization_iff (R := R) (M := M)).out 0 1).mp hM
+  letI : Module.IsReflexive A L :=
+    hloc p
+  have hdouble := hom_depth_ge_two
+    (R := A) (M := Module.Dual A L) (N := A) hR
+  have heq : localDepth A L =
+      localDepth A (Module.Dual A (Module.Dual A L)) :=
+    localDepth_eq_of_linearEquiv (Module.evalEquiv A L)
+  change 2 ≤ localDepth A L
+  rw [heq]
+  exact hdouble
 
 /-- If a Noetherian domain has property `(S_2)`, a finite reflexive module has
 the module property `(S_2)`. -/
@@ -1916,7 +1931,63 @@ theorem reflexive_hasPropertySkModule_two
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     (hM : Reflexive R M) (hR : HasPropertySk R 2) :
     HasPropertySkModule R M 2 := by
-  sorry
+  unfold HasPropertySkModule
+  intro p
+  let A := Localization.AtPrime p.asIdeal
+  let L := LocalizedModule.AtPrime p.asIdeal M
+  have hlocAll : ∀ q : PrimeSpectrum R,
+      Reflexive (Localization.AtPrime q.asIdeal)
+        (LocalizedModule.AtPrime q.asIdeal M) :=
+    ((reflexive_localization_iff (R := R) (M := M)).out 0 1).mp hM
+  have hloc : Reflexive A L := hlocAll p
+  letI : Module.IsReflexive A L := hloc
+  have hdim : Module.supportDim A L ≤ ringKrullDim A :=
+    Module.supportDim_le_ringKrullDim A L
+  have hR' := hR p
+  by_cases htwo : (2 : WithBot ℕ∞) ≤ ringKrullDim A
+  · have hdepthR' : (2 : WithBot ℕ∞) ≤
+        ((localDepth A A : ℕ∞) : WithBot ℕ∞) := by
+      simpa [min_eq_left htwo, A] using hR'
+    have hdepthR : 2 ≤ localDepth A A :=
+      WithBot.coe_le_coe.mp hdepthR'
+    have hdepthL := reflexive_local_depth_ge_two hM p hdepthR
+    have hdepthL' : (2 : WithBot ℕ∞) ≤
+        ((localDepth A L : ℕ∞) : WithBot ℕ∞) :=
+      WithBot.coe_le_coe.mpr hdepthL
+    exact (min_le_left _ _).trans hdepthL'
+  · have hdim_le : ringKrullDim A ≤ (1 : WithBot ℕ∞) :=
+      le_one_of_not_two_le htwo
+    by_cases hbot : Module.supportDim A L = ⊥
+    · rw [hbot]
+      exact bot_le
+    by_cases hzero : Module.supportDim A L = 0
+    · rw [hzero]
+      exact WithBot.coe_le_coe.mpr (by simp)
+    · have honeL : (1 : WithBot ℕ∞) ≤ Module.supportDim A L :=
+        one_le_of_ne_bot_of_ne_zero hbot hzero
+      have honeR : (1 : WithBot ℕ∞) ≤ ringKrullDim A :=
+        honeL.trans hdim
+      have hmin : (1 : WithBot ℕ∞) ≤
+          min ((2 : ℕ∞) : WithBot ℕ∞) (ringKrullDim A) :=
+        le_min (by norm_num) honeR
+      have hdepthR' : (1 : WithBot ℕ∞) ≤
+          ((localDepth A A : ℕ∞) : WithBot ℕ∞) :=
+        hmin.trans hR'
+      have hdepthR : 1 ≤ localDepth A A :=
+        WithBot.coe_le_coe.mp hdepthR'
+      have hdouble := hom_depth_ge_one
+        (R := A) (M := Module.Dual A L) (N := A) hdepthR
+      have heq : localDepth A L =
+          localDepth A (Module.Dual A (Module.Dual A L)) :=
+        localDepth_eq_of_linearEquiv (Module.evalEquiv A L)
+      have hdepthL' : (1 : WithBot ℕ∞) ≤
+          ((localDepth A L : ℕ∞) : WithBot ℕ∞) := by
+        rw [heq]
+        exact WithBot.coe_le_coe.mpr hdouble
+      have hdimL : Module.supportDim A L = 1 :=
+        le_antisymm (hdim.trans hdim_le) honeL
+      rw [hdimL]
+      simpa using hdepthL'
 
 /-! ## The example separating reflexivity from `(S_2)` -/
 
@@ -1956,7 +2027,11 @@ source example. -/
 theorem exampleRing_isNoetherianDomain
     (k : Type u) [Field k] :
     IsNoetherianRing (exampleRing k) ∧ IsDomain (exampleRing k) := by
-  sorry
+  constructor
+  · apply isNoetherianRing_of_fg
+    rw [Subalgebra.fg_def]
+    exact ⟨_, Set.toFinite _, rfl⟩
+  · infer_instance
 
 /-- The example ring is not `(S_2)`. -/
 theorem exampleRing_not_hasPropertySk_two

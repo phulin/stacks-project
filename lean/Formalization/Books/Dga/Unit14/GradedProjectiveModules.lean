@@ -27,6 +27,10 @@ theorem graded_right_module_category_is_abelian :
     Nonempty (Abelian (GradedRightModuleCategory (R := R) (A := A))) := by
   sorry
 
+noncomputable instance gradedRightModuleCategoryAbelian :
+    Abelian (GradedRightModuleCategory (R := R) (A := A)) :=
+  Classical.choice (graded_right_module_category_is_abelian (R := R) (A := A))
+
 /-! ## Shifts -/
 
 /-- Data specifying the standard shift of a graded right module.

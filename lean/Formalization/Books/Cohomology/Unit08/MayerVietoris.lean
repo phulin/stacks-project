@@ -1,16 +1,18 @@
 import Formalization.Books.Cohomology.Unit07.LocalityOfCohomology
 import Formalization.Books.Homology.Unit20.DifferentialObjects
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
+import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.HasExt
+import Mathlib.CategoryTheory.Sites.SheafCohomology.MayerVietoris
+import Mathlib.Topology.Sheaves.Abelian
+import Mathlib.Topology.Sheaves.MayerVietoris
 
 /-!
 # Cohomology of Sheaves, Chapter 8: Mayer--Vietoris
 
-This file records the injective restriction lemma and the absolute and
-relative Mayer--Vietoris long exact sequences.  Cohomology objects and open
-restrictions are the canonical constructions from Chapters 3 and 7.  The
-long exact sequence itself is represented by the earlier Homology
-`LongExactSequence` interface, with additive groups used for the absolute
-sequence and sheaves of modules on the target for the relative sequence.
+This file records the absolute and relative Mayer--Vietoris long exact
+sequences.  The absolute sequence is Mathlib's Mayer--Vietoris sequence for
+the underlying sheaf of abelian groups; this file only packages that API for
+sheaves of modules on a ringed space.  The relative sequence uses the higher
+direct images from Chapters 3 and 7.
 -/
 
 noncomputable section
@@ -32,100 +34,61 @@ universe v u
 
 namespace Formalization.Books.Cohomology.Unit08
 
-/-! ## A morphism of long exact sequences -/
+/-! ## Absolute Mayer--Vietoris -/
 
-/-- A degree-preserving morphism of the long exact sequences used below. -/
+/-- The underlying sheaf of abelian groups of a sheaf of modules. -/
+abbrev underlyingAdditiveSheaf
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) :=
+  (SheafOfModules.toSheaf X.structureSheaf).obj F
+
+/-- The cohomology `Hⁱ(U, F)` of an open subset, computed by Mathlib on the
+underlying sheaf of abelian groups. -/
+abbrev cohomologyOnOpenAdditive
+    (X : RingedSpace.{v}) (U : Opens X.carrier)
+    (F : Mod X.structureSheaf) (i : ℕ) : AddCommGrpCat.{v} :=
+  CategoryTheory.Sheaf.H'.{v} (underlyingAdditiveSheaf X F) i U
+
+/-- Restriction in cohomology along an inclusion of open subsets. -/
+abbrev cohomologyOnOpenRestriction
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℕ)
+    {U V : Opens X.carrier} (h : U ≤ V) :
+    cohomologyOnOpenAdditive X V F i ⟶ cohomologyOnOpenAdditive X U F i :=
+  ((underlyingAdditiveSheaf X F).cohomologyPresheaf i).map (homOfLE h).op
+
+/-- The connecting map in the Mayer--Vietoris sequence of two open subsets. -/
+noncomputable abbrev mayerVietorisδ
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
+    (U V : Opens X.carrier) (n₀ n₁ : ℕ) (h : n₀ + 1 = n₁) :
+    cohomologyOnOpenAdditive X (U ⊓ V) F n₀ ⟶
+      cohomologyOnOpenAdditive X (U ⊔ V) F n₁ :=
+  (Opens.mayerVietorisSquare U V).δ (underlyingAdditiveSheaf X F) n₀ n₁ h
+
+/-- Six consecutive terms of the Mayer--Vietoris long exact sequence. -/
+noncomputable abbrev mayerVietorisSequence
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
+    (U V : Opens X.carrier) (n₀ n₁ : ℕ) (h : n₀ + 1 = n₁) :
+    ComposableArrows AddCommGrpCat.{v} 5 :=
+  (Opens.mayerVietorisSquare U V).sequence
+    (underlyingAdditiveSheaf X F) n₀ n₁ h
+
+/-- The Mayer--Vietoris sequence of two open subsets is exact. -/
+theorem mayerVietorisSequence_exact
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
+    (U V : Opens X.carrier) (n₀ n₁ : ℕ) (h : n₀ + 1 = n₁) :
+    (mayerVietorisSequence X F U V n₀ n₁ h).Exact :=
+  (Opens.mayerVietorisSquare U V).sequence_exact
+    (underlyingAdditiveSheaf X F) n₀ n₁ h
+
+/-! ## Relative Mayer--Vietoris -/
+
+/-- A degree-preserving morphism between the source-facing relative long
+exact sequences. -/
 structure LongExactSequenceMorphism {C : Type u} [Category.{v} C]
     [Abelian C] {X Y : ℤ → C}
     (S : LongExactSequence X) (T : LongExactSequence Y) where
   app : ∀ n, X n ⟶ Y n
   comm : ∀ n, S.differential n ≫ app (n + 1) =
     app n ≫ T.differential n
-
-/-! ## The injective restriction lemma -/
-
-/- The source's restriction map is Mathlib's presheaf-of-modules map.  Its
-   codomain is a restriction-of-scalars module, whose underlying additive
-   group is the group of sections on the smaller open. -/
-theorem injective_restriction_surjective
-  (X : RingedSpace.{v}) {U' U : Opens X.carrier} (h : U' ≤ U)
-    (I : Mod X.structureSheaf) [Injective I] :
-    Function.Surjective (moduleRestriction I.val h).hom := by
-  sorry
-
-/-! ## Absolute Mayer--Vietoris -/
-
-/-- The additive group underlying `Hⁱ(U, F)`. -/
-noncomputable abbrev cohomologyOnOpenAdditive
-    (X : RingedSpace.{v}) (U : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) : AddCommGrpCat.{v} :=
-  (forget₂ (ModuleCat (X.structureSheaf.obj.obj (op U))) AddCommGrpCat).obj
-    (ringedSpaceModuleSectionsCohomologyObject X U F i)
-
-/-- The additive group underlying the middle term
-`Hⁱ(U, F) ⊕ Hⁱ(V, F)`. -/
-noncomputable abbrev mayerVietorisMiddleAdditive
-    (X : RingedSpace.{v}) (U V : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) : AddCommGrpCat.{v} :=
-  cohomologyOnOpenAdditive X U F i ⨯ cohomologyOnOpenAdditive X V F i
-
-/-- The terms of the absolute Mayer--Vietoris sequence, indexed so that
-negative indices are zero and the nonnegative part begins
-`H⁰(X,F), H⁰(U,F) ⊕ H⁰(V,F), H⁰(U ∩ V,F), H¹(X,F), ...`. -/
-noncomputable def mayerVietorisTerm
-    (X : RingedSpace.{v}) (U V : Opens X.carrier)
-    (F : Mod X.structureSheaf) (n : ℤ) : AddCommGrpCat.{v} :=
-  if n < 0 then 0
-  else if n % 3 = 0 then
-    cohomologyOnOpenAdditive X (⊤ : Opens X.carrier) F (n / 3)
-  else if n % 3 = 1 then
-    mayerVietorisMiddleAdditive X U V F (n / 3)
-  else
-    cohomologyOnOpenAdditive X (U ⊓ V) F (n / 3)
-
-/-- The canonical termwise map induced by a morphism of coefficient sheaves. -/
-noncomputable def mayerVietorisTermMap
-    (X : RingedSpace.{v}) (U V : Opens X.carrier)
-    {F G : Mod X.structureSheaf} (φ : F ⟶ G) (n : ℤ) :
-    mayerVietorisTerm X U V F n ⟶ mayerVietorisTerm X U V G n := by
-  by_cases hn : n < 0
-  · simp only [mayerVietorisTerm, hn, ↓reduceIte]
-    exact 0
-  · by_cases h₀ : n % 3 = 0
-    · simp only [mayerVietorisTerm, hn, ↓reduceIte, h₀]
-      exact (forget₂
-        (ModuleCat (X.structureSheaf.obj.obj
-          (op (⊤ : Opens X.carrier)))) AddCommGrpCat).map
-        ((ringedSpaceModuleSectionsCohomology X
-          (⊤ : Opens X.carrier) (n / 3)).map φ)
-    · by_cases h₁ : n % 3 = 1
-      · simp only [mayerVietorisTerm, hn, ↓reduceIte, h₁]
-        exact Limits.prod.map
-          ((forget₂
-            (ModuleCat (X.structureSheaf.obj.obj (op U))) AddCommGrpCat).map
-            ((ringedSpaceModuleSectionsCohomology X U (n / 3)).map φ))
-          ((forget₂
-            (ModuleCat (X.structureSheaf.obj.obj (op V))) AddCommGrpCat).map
-            ((ringedSpaceModuleSectionsCohomology X V (n / 3)).map φ))
-      · simp only [mayerVietorisTerm, hn, ↓reduceIte, h₀, h₁]
-        exact (forget₂
-          (ModuleCat (X.structureSheaf.obj.obj (op (U ⊓ V)))) AddCommGrpCat).map
-          ((ringedSpaceModuleSectionsCohomology X (U ⊓ V) (n / 3)).map φ)
-
-/-- The absolute Mayer--Vietoris long exact sequence, including its
-functoriality in the coefficient module. -/
-theorem exists_mayer_vietoris_long_exact
-    (X : RingedSpace.{v}) {U V : Opens X.carrier}
-    (hcover : (U : Set X.carrier) ∪ (V : Set X.carrier) = Set.univ) :
-    ∃ S : ∀ F : Mod X.structureSheaf,
-      LongExactSequence (mayerVietorisTerm X U V F),
-      ∀ (F G : Mod X.structureSheaf) (φ : F ⟶ G),
-        Nonempty (LongExactSequenceMorphism (S F) (S G)) ∧
-          ∀ (η : LongExactSequenceMorphism (S F) (S G)) (n : ℤ),
-            η.app n = mayerVietorisTermMap X U V φ n := by
-  sorry
-
-/-! ## Relative Mayer--Vietoris -/
 
 /-- The open restrictions of a coefficient module used in the relative
 sequence. -/

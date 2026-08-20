@@ -131,6 +131,15 @@ theorem IsGeometricallyConnected.connectedSpace_tensorProduct
     ConnectedSpace (PrimeSpectrum (K ⊗[k] S)) := by
   exact hS K
 
+/-- A geometrically connected algebra has connected spectrum. -/
+theorem IsGeometricallyConnected.connectedSpace
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsGeometricallyConnected.{u, v, u} k S) :
+    ConnectedSpace (PrimeSpectrum S) := by
+  have h := hS.connectedSpace_tensorProduct (K := k)
+  exact (PrimeSpectrum.homeomorphOfRingEquiv
+    (Algebra.TensorProduct.lid k S).toRingEquiv).connectedSpace_iff.mp h
+
 /-- A geometrically connected algebra has no nontrivial idempotents after
 any field base change in the universe quantified over by the predicate. -/
 theorem IsGeometricallyConnected.isIdempotentElem_eq_zero_or_one

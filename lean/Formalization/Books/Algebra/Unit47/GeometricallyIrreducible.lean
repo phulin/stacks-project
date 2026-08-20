@@ -44,6 +44,15 @@ theorem IsGeometricallyIrreducible.irreducibleSpace_tensorProduct
     IrreducibleSpace (PrimeSpectrum (K ⊗[k] S)) :=
   hS K
 
+/-- A geometrically irreducible algebra has irreducible spectrum. -/
+theorem IsGeometricallyIrreducible.irreducibleSpace
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsGeometricallyIrreducible.{u, v, u} k S) :
+    IrreducibleSpace (PrimeSpectrum S) := by
+  have h := hS.irreducibleSpace_tensorProduct (K := k)
+  exact (PrimeSpectrum.homeomorphOfRingEquiv
+    (Algebra.TensorProduct.lid k S).toRingEquiv).irreducibleSpace_iff.mp h
+
 /-- The source's introductory unique-minimal-prime formulation of geometric
 irreducibility. -/
 theorem isGeometricallyIrreducible_iff_unique_minimalPrime

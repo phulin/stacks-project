@@ -1166,7 +1166,7 @@ theorem shiftedDifferentialShortExact_homology_long_exact
 
 theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
     [Abelian C] {S : C ≌ C} :
-    Nonempty (Abelian (ShiftedDifferentialObject C S)) := by sorry
+    Nonempty (Abelian (ShiftedDifferentialObject C S)) := by
 /-
   let _ : HasZeroMorphisms C := inferInstance
   let _ : HasTerminal C := inferInstance
@@ -1190,7 +1190,7 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
   let _ : S.functor.Additive :=
     Functor.additive_of_preserves_binary_products S.functor
   let _ : Preadditive (Endofunctor.Coalgebra S.functor) := inferInstance
-  let _ : HasKernels (Endofunctor.Coalgebra S.functor) :=
+  letI hKernels : HasKernels (Endofunctor.Coalgebra S.functor) :=
     ⟨fun {X Y} (f : X ⟶ Y) => by
       let e := PreservesKernel.iso S.functor f.f
       have hK : (kernel.ι f.f ≫ X.str) ≫ S.functor.map f.f = 0 := by
@@ -1262,7 +1262,7 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
           congrArg (fun h : W ⟶ X => h.f) hm
         rw [hm']
         simp [l₀]⟩
-  let _ : HasCokernels (Endofunctor.Coalgebra S.functor) :=
+  letI hCokernels : HasCokernels (Endofunctor.Coalgebra S.functor) :=
     ⟨fun {X Y} (f : X ⟶ Y) => by
       let e := PreservesCokernel.iso (G := S.functor) (f := f.f)
       have hC₀ : f.f ≫ (Y.str ≫ S.functor.map (cokernel.π f.f)) = 0 := by
@@ -1301,14 +1301,9 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
                     rw [PreservesCokernel.π_iso_hom]
               _ = (cokernel.π f.f ≫ cokernel.desc f.f
                     (Y.str ≫ S.functor.map (cokernel.π f.f) ≫ e.hom) hC) ≫ e.inv := by
-                    calc
-                      Y.str ≫ cokernel.π (S.functor.map f.f) ≫ e.inv =
-                          (Y.str ≫ S.functor.map (cokernel.π f.f) ≫ e.hom) ≫ e.inv := by
-                            rw [hπ]
-                            simp only [Category.assoc]
-                      _ = (cokernel.π f.f ≫ cokernel.desc f.f
-                            (Y.str ≫ S.functor.map (cokernel.π f.f) ≫ e.hom) hC) ≫ e.inv := by
-                            rw [hdesc]
+                    rw [← hπ]
+                    simpa only [Category.assoc] using
+                      (congrArg (fun z => z ≫ e.inv) hdesc).symm
           }
       let w : f ≫ π = 0 := by
         apply Endofunctor.Coalgebra.Hom.ext
@@ -1325,9 +1320,9 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
         refine { f := l₀, h := ?_ }
         apply (cancel_epi (cokernel.π f.f)).1
         dsimp [P, π, r, l₀]
-        simp only [Category.assoc, cokernel.π_desc]
+        simp only [Category.assoc, cokernel.π_desc_assoc, Iso.hom_inv_id_assoc]
         rw [← S.functor.map_comp]
-        simpa using g.h
+        simpa using g.h.symm
       · have hg' : f.f ≫ g.f = 0 := by
           simpa using congrArg (fun h : X ⟶ W => h.f) hg
         let l₀ := cokernel.desc f.f g.f hg'
@@ -1346,14 +1341,23 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
         simp [l₀]⟩
   let _ : HasFiniteProducts (Endofunctor.Coalgebra S.functor) :=
     ⟨fun n => ⟨fun K => by
-      let D := K ⋙ Endofunctor.Coalgebra.forget S.functor
+      let D : Discrete (Fin n) ⥤ C :=
+        { obj := fun j => (K.obj j).V
+          map := fun f => (K.map f).f
+          map_id := by
+            intro j
+            change (K.map (𝟙 j)).f = 𝟙 (K.obj j).V
+            rw [K.map_id]
+            exact Endofunctor.Coalgebra.id_f (K.obj j)
+          map_comp := by
+            intro i j k f g
+            rw [K.map_comp, Endofunctor.Coalgebra.comp_f] }
       let c : Cone (D ⋙ S.functor) :=
         { pt := limit D
           π :=
             { app := fun j => limit.π D j ≫ (K.obj j).str
               naturality := by
-                rintro ⟨i⟩ ⟨j⟩ f
-                subst j
+                rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
                 simp } }
       let str := (isLimitOfPreserves S.functor (limit.isLimit D)).lift c
       let P : Endofunctor.Coalgebra S.functor :=
@@ -1363,47 +1367,83 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
         { f := limit.π D j
           h := by
             dsimp [P, str]
-            simpa [c] using
-              (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j }
+            change
+              (isLimitOfPreserves S.functor (limit.isLimit D)).lift c ≫
+                  S.functor.map (limit.π D j) =
+                limit.π D j ≫ (K.obj j).str
+            exact (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j }
       let q : Cone K :=
         { pt := P
           π :=
             { app := fun j => p j
               naturality := by
-                rintro ⟨i⟩ ⟨j⟩ f
-                subst j
+                rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
                 apply Endofunctor.Coalgebra.Hom.ext
                 simp [p] } }
-      refine ⟨⟨q, ?_⟩⟩
-      constructor
-      · let s₀ := (Endofunctor.Coalgebra.forget S.functor).mapCone s
+      refine ⟨⟨q, { lift := fun s => ?_, fac := fun s j => ?_, uniq := fun s m hm => ?_ }⟩⟩
+      · let s₀ : Cone D :=
+          { pt := s.pt.V
+            π :=
+              { app := fun j => (s.π.app j).f
+                naturality := by
+                  rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
+                  simp } }
         let l := (limit.isLimit D).lift s₀
         refine { f := l, h := ?_ }
         apply (isLimitOfPreserves S.functor (limit.isLimit D)).hom_ext
         intro j
-        have hfac := (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
-        have hlim := (limit.isLimit D).fac s₀ j
-        calc
-          (s.pt.str ≫ S.functor.map l) ≫ S.functor.map (limit.π D j) =
-              s.pt.str ≫ S.functor.map (l ≫ limit.π D j) := by
-                rw [S.functor.map_comp, Category.assoc]
-          _ = s.pt.str ≫ S.functor.map (s.π.app j).f := by rw [hlim]
-          _ = (s.π.app j).f ≫ (K.obj j).str := (s.π.app j).h
-          _ = (l ≫ limit.π D j) ≫ (K.obj j).str := by rw [hlim]
-          _ = l ≫ (limit.π D j ≫ (K.obj j).str) := by simp [Category.assoc]
-          _ = l ≫ (str ≫ S.functor.map (limit.π D j)) := by rw [hfac]
-          _ = (l ≫ str) ≫ S.functor.map (limit.π D j) := by simp [Category.assoc]
-      · intro s j
+        have hfac : str ≫ S.functor.map (limit.π D j) =
+            limit.π D j ≫ (K.obj j).str := by
+          exact (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
+        have hlim : l ≫ limit.π D j = (s.π.app j).f := by
+          exact (limit.isLimit D).fac s₀ j
+        have h1 :
+            (s.pt.str ≫ S.functor.map l) ≫ S.functor.map (limit.π D j) =
+              s.pt.str ≫ S.functor.map (s.π.app j).f := by
+          rw [Category.assoc]
+          exact
+            (congrArg (fun z => s.pt.str ≫ z)
+              (S.functor.map_comp l (limit.π D j)).symm).trans
+              (congrArg (fun z => s.pt.str ≫ S.functor.map z) hlim)
+        have h2 :
+            s.pt.str ≫ S.functor.map (s.π.app j).f =
+              (s.π.app j).f ≫ (K.obj j).str := (s.π.app j).h
+        have h3 :
+              (s.π.app j).f ≫ (K.obj j).str =
+                l ≫ (limit.π D j ≫ (K.obj j).str) := by
+          dsimp [D] at hlim ⊢
+          rw [← hlim]
+          simp only [Category.assoc]
+        have h5 :
+            l ≫ (limit.π D j ≫ (K.obj j).str) =
+              l ≫ (str ≫ S.functor.map (limit.π D j)) :=
+          congrArg (fun z => l ≫ z) hfac.symm
+        have h6 :
+            l ≫ (str ≫ S.functor.map (limit.π D j)) =
+              (l ≫ str) ≫ S.functor.map (limit.π D j) := by
+          simp only [Category.assoc]
+        exact h1.trans (h2.trans (h3.trans (h5.trans h6)))
+      ·
         apply Endofunctor.Coalgebra.Hom.ext
         dsimp [q, p]
         exact (limit.isLimit D).fac
           ((Endofunctor.Coalgebra.forget S.functor).mapCone s) j
-      · intro s m hm
+      ·
+        let s₀ : Cone D :=
+          { pt := s.pt.V
+            π :=
+              { app := fun j => (s.π.app j).f
+                naturality := by
+                  rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
+                  simp } }
+        let l := (limit.isLimit D).lift s₀
         apply Endofunctor.Coalgebra.Hom.ext
         apply (limit.isLimit D).hom_ext
         intro j
-        dsimp [q, p]
-        exact congrArg (fun t => t.f) (hm j) ⟩⟩
+        have hm' := congrArg (fun t => t.f) (hm j)
+        dsimp [q, p] at hm'
+        change m.f ≫ limit.π D j = l ≫ limit.π D j
+        exact Eq.trans hm' ((limit.isLimit D).fac s₀ j).symm ⟩⟩
   let P : ObjectProperty (Endofunctor.Coalgebra S.functor) :=
     fun X => X.str ≫ S.functor.map X.str = 0
   let _ : P.ContainsZero :=
@@ -1434,69 +1474,115 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
       intro X Y e hX
       change X.str ≫ S.functor.map X.str = 0 at hX
       change Y.str ≫ S.functor.map Y.str = 0
-      apply (cancel_mono (S.functor.map (S.functor.map e.inv))).1
+      letI : IsIso e.inv.f :=
+        ⟨⟨e.hom.f,
+          congrArg (fun t => t.f) e.inv_hom_id,
+          congrArg (fun t => t.f) e.hom_inv_id⟩⟩
+      letI : Mono (S.functor.map (S.functor.map e.inv.f)) := by infer_instance
+      apply (cancel_mono (S.functor.map (S.functor.map e.inv.f))).1
+      simp only [zero_comp]
       calc
-        Y.str ≫ S.functor.map Y.str ≫ S.functor.map (S.functor.map e.inv) =
-            Y.str ≫ S.functor.map (Y.str ≫ S.functor.map e.inv) := by
+        (Y.str ≫ S.functor.map Y.str) ≫
+            S.functor.map (S.functor.map e.inv.f) =
+            Y.str ≫ S.functor.map (Y.str ≫ S.functor.map e.inv.f) := by
               rw [S.functor.map_comp]
               simp only [Category.assoc]
-        _ = Y.str ≫ S.functor.map (e.inv ≫ X.str) := by rw [e.inv.h]
-        _ = Y.str ≫ S.functor.map e.inv ≫ S.functor.map X.str := by
+        _ = Y.str ≫ S.functor.map (e.inv.f ≫ X.str) := by
+              congr 1
+              exact congrArg S.functor.map e.inv.h
+        _ = Y.str ≫ S.functor.map e.inv.f ≫ S.functor.map X.str := by
               rw [S.functor.map_comp]
-        _ = (e.inv ≫ X.str) ≫ S.functor.map X.str := by rw [e.inv.h]
-        _ = e.inv ≫ (X.str ≫ S.functor.map X.str) := by
+        _ = (e.inv.f ≫ X.str) ≫ S.functor.map X.str := by
+              simpa only [Category.assoc] using
+                congrArg (fun z => z ≫ S.functor.map X.str) e.inv.h
+        _ = e.inv.f ≫ (X.str ≫ S.functor.map X.str) := by
               simp only [Category.assoc]
         _ = 0 := by rw [hX, comp_zero]⟩
   let _ : P.IsClosedUnderKernels :=
     ⟨by
-      intro _ ⟨_, k, hk, hXY⟩
-      let _ : Mono k.ι := Fork.IsLimit.mono hk
-      change k.pt.str ≫ S.functor.map k.pt.str = 0
-      apply (cancel_mono (S.functor.map (S.functor.map k.ι))).1
-      calc
-        k.pt.str ≫ S.functor.map k.pt.str ≫
-              S.functor.map (S.functor.map k.ι) =
-            k.pt.str ≫ S.functor.map (k.pt.str ≫ S.functor.map k.ι) := by
-              rw [S.functor.map_comp]
-              simp only [Category.assoc]
-        _ = k.pt.str ≫ S.functor.map (k.ι ≫ X.str) := by rw [k.ι.h]
-        _ = k.pt.str ≫ S.functor.map k.ι ≫ S.functor.map X.str := by
-              rw [S.functor.map_comp]
-        _ = (k.ι ≫ X.str) ≫ S.functor.map X.str := by rw [k.ι.h]
-        _ = k.ι ≫ (X.str ≫ S.functor.map X.str) := by
-              simp only [Category.assoc]
-        _ = 0 := by rw [hXY.1, comp_zero]⟩
+      rintro _ ⟨f, k, hk, hXY⟩
+      have hker : P (kernel f) := by
+        change (kernel f).str ≫ S.functor.map (kernel f).str = 0
+        letI : Mono ((kernel.ι f).f) := by
+          dsimp [kernel, hKernels]
+          infer_instance
+        letI : Mono (S.functor.map (kernel.ι f).f) :=
+          preserves_mono_of_preservesLimit S.functor _
+        apply (cancel_mono (S.functor.map (kernel.ι f).f)).1
+        simp only [zero_comp]
+        calc
+          ((kernel f).str ≫ S.functor.map (kernel f).str) ≫
+              S.functor.map (kernel.ι f).f =
+              (kernel f).str ≫
+                S.functor.map ((kernel f).str ≫ (kernel.ι f).f) := by
+                  rw [S.functor.map_comp]
+                  simp only [Category.assoc]
+          _ = (kernel f).str ≫ S.functor.map ((kernel.ι f).f ≫ X.str) := by
+                rw [(kernel.ι f).h]
+          _ = (kernel f).str ≫ S.functor.map (kernel.ι f).f ≫
+                S.functor.map X.str := by rw [S.functor.map_comp]
+          _ = ((kernel f).str ≫ S.functor.map (kernel.ι f).f) ≫
+                S.functor.map X.str := by simp only [Category.assoc]
+          _ = ((kernel.ι f).f ≫ X.str) ≫ S.functor.map X.str := by
+                rw [(kernel.ι f).h]
+          _ = (kernel.ι f).f ≫ (X.str ≫ S.functor.map X.str) := by
+                simp only [Category.assoc]
+          _ = 0 := by rw [hXY.1, comp_zero]
+      exact P.prop_of_iso
+        (hk.conePointUniqueUpToIso (kernelIsKernel f)).symm
+        hker⟩
   let _ : P.IsClosedUnderCokernels :=
     ⟨by
-      intro _ ⟨_, k, hk, hXY⟩
-      let _ : Epi k.π := Cofork.IsColimit.epi hk
-      change k.pt.str ≫ S.functor.map k.pt.str = 0
-      apply (cancel_epi k.π).1
-      calc
-        k.π ≫ k.pt.str ≫ S.functor.map k.pt.str =
-            Y.str ≫ S.functor.map k.π ≫ S.functor.map k.pt.str := by
-              rw [k.π.h]
-              simp only [Category.assoc]
-        _ = Y.str ≫ S.functor.map (k.π ≫ k.pt.str) := by
-              rw [S.functor.map_comp]
-              simp only [Category.assoc]
-        _ = Y.str ≫ S.functor.map (Y.str ≫ S.functor.map k.π) := by
-              rw [k.π.h]
-        _ = (Y.str ≫ S.functor.map Y.str) ≫
-              S.functor.map (S.functor.map k.π) := by
-              simp only [S.functor.map_comp, Category.assoc]
-        _ = 0 := by rw [hXY.2, S.functor.map_zero, comp_zero]⟩
+      rintro _ ⟨f, k, hk, hXY⟩
+      have hcoker : P (cokernel f) := by
+        change (cokernel f).str ≫ S.functor.map (cokernel f).str = 0
+        letI : Epi (cokernel.π f) := by infer_instance
+        apply (cancel_epi (cokernel.π f)).1
+        simp only [comp_zero]
+        calc
+          cokernel.π f ≫
+              ((cokernel f).str ≫ S.functor.map (cokernel f).str) =
+              (cokernel.π f ≫ (cokernel f).str) ≫
+                S.functor.map (cokernel f).str := by simp only [Category.assoc]
+          _ = (Y.str ≫ S.functor.map (cokernel.π f)) ≫
+                S.functor.map (cokernel f).str := by
+                rw [(cokernel.π f).h]
+          _ = Y.str ≫ (S.functor.map (cokernel.π f) ≫
+                S.functor.map (cokernel f).str) := by simp only [Category.assoc]
+          _ = Y.str ≫ S.functor.map ((cokernel.π f) ≫ (cokernel f).str) := by
+                rw [S.functor.map_comp]
+          _ = Y.str ≫ S.functor.map (Y.str ≫ S.functor.map (cokernel.π f)) := by
+                rw [(cokernel.π f).h]
+          _ = Y.str ≫ S.functor.map Y.str ≫
+                S.functor.map (S.functor.map (cokernel.π f)) := by
+                rw [S.functor.map_comp]
+          _ = (Y.str ≫ S.functor.map Y.str) ≫
+                S.functor.map (S.functor.map (cokernel.π f)) := by
+                simp only [Category.assoc]
+          _ = 0 := by rw [hXY.2, zero_comp]
+      exact P.prop_of_iso
+        (hk.coconePointUniqueUpToIso (cokernelIsCokernel f)).symm
+        hcoker⟩
   let _ : P.IsClosedUnderBinaryProducts :=
     ⟨by
       rintro _ ⟨p⟩
-      let D := p.diag ⋙ Endofunctor.Coalgebra.forget S.functor
+      let D : Discrete WalkingPair ⥤ C :=
+        { obj := fun j => (p.diag.obj j).V
+          map := fun f => (p.diag.map f).f
+          map_id := by
+            intro j
+            change (p.diag.map (𝟙 j)).f = 𝟙 (p.diag.obj j).V
+            rw [p.diag.map_id]
+            exact Endofunctor.Coalgebra.id_f (p.diag.obj j)
+          map_comp := by
+            intro i j k f g
+            rw [p.diag.map_comp, Endofunctor.Coalgebra.comp_f] }
       let c : Cone (D ⋙ S.functor) :=
         { pt := limit D
           π :=
             { app := fun j => limit.π D j ≫ (p.diag.obj j).str
               naturality := by
-                rintro ⟨i⟩ ⟨j⟩ f
-                subst j
+                rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
                 simp } }
       let str := (isLimitOfPreserves S.functor (limit.isLimit D)).lift c
       let Q : Endofunctor.Coalgebra S.functor :=
@@ -1506,15 +1592,17 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
         { f := limit.π D j
           h := by
             dsimp [Q, str]
-            simpa [c] using
-              (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j }
+            change
+              (isLimitOfPreserves S.functor (limit.isLimit D)).lift c ≫
+                  S.functor.map (limit.π D j) =
+                limit.π D j ≫ (p.diag.obj j).str
+            exact (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j }
       let q : Cone p.diag :=
         { pt := Q
           π :=
             { app := fun j => pQ j
               naturality := by
-                rintro ⟨i⟩ ⟨j⟩ f
-                subst j
+                rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
                 apply Endofunctor.Coalgebra.Hom.ext
                 simp [pQ] } }
       have hQ : P Q := by
@@ -1522,7 +1610,9 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
         let L := isLimitOfPreserves (S.functor ⋙ S.functor) (limit.isLimit D)
         apply L.hom_ext
         intro j
-        have hfac := (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
+        have hfac : str ≫ S.functor.map (limit.π D j) =
+            limit.π D j ≫ (p.diag.obj j).str := by
+          exact (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
         calc
           (str ≫ S.functor.map str) ≫
                 S.functor.map (S.functor.map (limit.π D j)) =
@@ -1536,48 +1626,85 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
                 rw [S.functor.map_comp]
           _ = (limit.π D j ≫ (p.diag.obj j).str) ≫
                 S.functor.map (p.diag.obj j).str := by
-                rw [hfac]
+                simpa only [Category.assoc] using
+                  congrArg (fun z => z ≫ S.functor.map (p.diag.obj j).str) hfac
           _ = limit.π D j ≫
                 ((p.diag.obj j).str ≫ S.functor.map (p.diag.obj j).str) := by
                 simp only [Category.assoc]
           _ = 0 := by
-                rw [p.prop_diag_obj j, S.functor.map_zero, comp_zero]
+                rw [p.prop_diag_obj j]
+                simp
       have hq : IsLimit q := by
-        constructor
-        · let s₀ := (Endofunctor.Coalgebra.forget S.functor).mapCone s
+        refine { lift := fun s => ?_, fac := fun s j => ?_, uniq := fun s m hm => ?_ }
+        · let s₀ : Cone D :=
+            { pt := s.pt.V
+              π :=
+                { app := fun j => (s.π.app j).f
+                  naturality := by
+                    rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
+                    simp } }
           let l := (limit.isLimit D).lift s₀
           refine { f := l, h := ?_ }
           apply (isLimitOfPreserves S.functor (limit.isLimit D)).hom_ext
           intro j
-          have hfac := (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
-          have hlim := (limit.isLimit D).fac s₀ j
-          calc
-            (s.pt.str ≫ S.functor.map l) ≫ S.functor.map (limit.π D j) =
-                s.pt.str ≫ S.functor.map (l ≫ limit.π D j) := by
-                  rw [S.functor.map_comp, Category.assoc]
-            _ = s.pt.str ≫ S.functor.map (s.π.app j).f := by rw [hlim]
-            _ = (s.π.app j).f ≫ (p.diag.obj j).str := (s.π.app j).h
-            _ = (l ≫ limit.π D j) ≫ (p.diag.obj j).str := by rw [hlim]
-            _ = l ≫ (limit.π D j ≫ (p.diag.obj j).str) := by
-                  simp [Category.assoc]
-            _ = l ≫ (str ≫ S.functor.map (limit.π D j)) := by rw [hfac]
-            _ = (l ≫ str) ≫ S.functor.map (limit.π D j) := by
-                  simp [Category.assoc]
-        · intro s j
+          have hfac : str ≫ S.functor.map (limit.π D j) =
+              limit.π D j ≫ (p.diag.obj j).str := by
+            exact (isLimitOfPreserves S.functor (limit.isLimit D)).fac c j
+          have hlim : l ≫ limit.π D j = (s.π.app j).f := by
+            exact (limit.isLimit D).fac s₀ j
+          have h1 :
+              (s.pt.str ≫ S.functor.map l) ≫ S.functor.map (limit.π D j) =
+                s.pt.str ≫ S.functor.map (s.π.app j).f := by
+            rw [Category.assoc]
+            exact
+              (congrArg (fun z => s.pt.str ≫ z)
+                (S.functor.map_comp l (limit.π D j)).symm).trans
+                (congrArg (fun z => s.pt.str ≫ S.functor.map z) hlim)
+          have h2 :
+              s.pt.str ≫ S.functor.map (s.π.app j).f =
+                (s.π.app j).f ≫ (p.diag.obj j).str := (s.π.app j).h
+          have h3 :
+                (s.π.app j).f ≫ (p.diag.obj j).str =
+                l ≫ (limit.π D j ≫ (p.diag.obj j).str) := by
+            dsimp [D] at hlim ⊢
+            rw [← hlim]
+            simp only [Category.assoc]
+          have h5 :
+              l ≫ (limit.π D j ≫ (p.diag.obj j).str) =
+                l ≫ (str ≫ S.functor.map (limit.π D j)) :=
+            congrArg (fun z => l ≫ z) hfac.symm
+          have h6 :
+              l ≫ (str ≫ S.functor.map (limit.π D j)) =
+                (l ≫ str) ≫ S.functor.map (limit.π D j) := by
+            simp only [Category.assoc]
+          exact h1.trans (h2.trans (h3.trans (h5.trans h6)))
+        ·
           apply Endofunctor.Coalgebra.Hom.ext
           dsimp [q, pQ]
           exact (limit.isLimit D).fac
             ((Endofunctor.Coalgebra.forget S.functor).mapCone s) j
-        · intro s m hm
+        ·
+          let s₀ : Cone D :=
+            { pt := s.pt.V
+              π :=
+                { app := fun j => (s.π.app j).f
+                  naturality := by
+                    rintro ⟨i⟩ ⟨j⟩ ⟨⟨⟨rfl⟩⟩⟩
+                    simp } }
+          let l := (limit.isLimit D).lift s₀
           apply Endofunctor.Coalgebra.Hom.ext
           apply (limit.isLimit D).hom_ext
           intro j
-          dsimp [q, pQ]
-          exact congrArg (fun t => t.f) (hm j)
+          have hm' := congrArg (fun t => t.f) (hm j)
+          dsimp [q, pQ] at hm'
+          change m.f ≫ limit.π D j = l ≫ limit.π D j
+          calc
+            m.f ≫ limit.π D j = (s.π.app j).f := hm'
+            _ = l ≫ limit.π D j := ((limit.isLimit D).fac s₀ j).symm
       exact P.prop_of_iso (p.isLimit.conePointUniqueUpToIso hq).symm hQ⟩
   let _ : P.IsClosedUnderLimitsOfShape (Discrete.{0} PEmpty) := by infer_instance
   let _ : P.IsClosedUnderFiniteProducts :=
-    ObjectProperty.IsClosedUnderFiniteProducts.mk' P
+    ObjectProperty.IsClosedUnderFiniteProducts.mk'
   let _ : Abelian P.FullSubcategory := by infer_instance
   let F : ShiftedDifferentialObject C S ⥤ P.FullSubcategory :=
     { obj := fun A =>
@@ -1633,7 +1760,7 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
       essSurj := inferInstance }
   exact ⟨CategoryTheory.abelianOfEquivalence F⟩
 -/
-
+  sorry
 noncomputable instance shiftedDifferentialObjectAbelian {C : Type u} [Category.{v} C]
     [Abelian C] {S : C ≌ C} : Abelian (ShiftedDifferentialObject C S) :=
   Classical.choice (shiftedDifferentialObject_abelian (C := C) (S := S))

@@ -194,7 +194,10 @@ theorem doubleComplexFirstFiltrationMap_mono
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
     Mono (doubleComplexFirstFiltrationMap A n p) := by
-  sorry
+  exact MonoCoprod.mono_of_injective'
+    (fun i : ℤ => A.obj i (n - i))
+    (fun i : {i : ℤ // p ≤ i} => i.1)
+    (fun _ _ h => Subtype.ext h)
 
 def doubleComplexFirstFiltrationSubobject
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
@@ -215,7 +218,41 @@ theorem doubleComplexSecondFiltrationMap_mono
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (A : DoubleComplex C) (n p : ℤ) :
     Mono (doubleComplexSecondFiltrationMap A n p) := by
-  sorry
+  let X : ℤ → C := fun i => A.obj i (n - i)
+  let Y : {j : ℤ // p ≤ j} → C := fun j => A.obj (n - j.1) j.1
+  let ι : {j : ℤ // p ≤ j} → ℤ := fun j => n - j.1
+  let e : ∀ j, Y j ≅ X (ι j) := fun j =>
+    eqToIso (by dsimp [X, Y, ι]; congr 1 <;> ring)
+  let m : (∐ Y) ⟶ (∐ fun j => X (ι j)) :=
+    Limits.Sigma.map (fun j => (e j).hom)
+  let r : (∐ fun j => X (ι j)) ⟶ (∐ X) :=
+    Limits.Sigma.map' ι (fun j => 𝟙 (X (ι j)))
+  have hr₀ : Mono r :=
+    MonoCoprod.mono_map'_of_injective X ι (by
+      intro a b h
+      dsimp [ι] at h
+      apply Subtype.ext
+      omega)
+  have hm : IsIso m := by infer_instance
+  have hmap : doubleComplexSecondFiltrationMap A n p = m ≫ r := by
+    dsimp [doubleComplexSecondFiltrationMap, totalComplex]
+    apply Limits.Sigma.hom_ext
+    intro j
+    dsimp [m, r, e, X, Y, ι]
+    simp only [Limits.Sigma.ι_desc]
+    rw [← Category.assoc]
+    rw [Limits.Sigma.ι_map]
+    rw [Category.assoc]
+    rw [Limits.Sigma.ι_comp_map']
+    simp
+  letI : IsIso m := hm
+  letI : Mono m := by infer_instance
+  let hm' : Mono m := inferInstance
+  let hr' : Mono r := hr₀
+  have hcomp : Mono (m ≫ r) := ⟨fun {Z} g h w =>
+    hm'.right_cancellation g h (hr'.right_cancellation (g ≫ m) (h ≫ m)
+      (by simpa only [Category.assoc] using w))⟩
+  exact hmap ▸ hcomp
 
 def doubleComplexSecondFiltrationSubobject
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
@@ -230,7 +267,21 @@ def doubleComplexFirstFiltration
   obj p := doubleComplexFirstFiltrationSubobject A n p
   antitone := by
     intro p q hpq
-    sorry
+    letI : Mono (doubleComplexFirstFiltrationMap A n p) :=
+      doubleComplexFirstFiltrationMap_mono A n p
+    letI : Mono (doubleComplexFirstFiltrationMap A n q) :=
+      doubleComplexFirstFiltrationMap_mono A n q
+    change Subobject.mk (doubleComplexFirstFiltrationMap A n q) ≤
+      Subobject.mk (doubleComplexFirstFiltrationMap A n p)
+    apply Subobject.mk_le_mk_of_comm
+      (Limits.Sigma.desc (fun j : {j : ℤ // q ≤ j} =>
+        Limits.Sigma.ι (fun i : {i : ℤ // p ≤ i} => A.obj i.1 (n - i.1))
+          ⟨j.1, hpq.trans j.2⟩))
+    apply Limits.Sigma.hom_ext
+    intro j
+    dsimp [doubleComplexFirstFiltrationMap, totalComplex]
+    rw [← Category.assoc]
+    simp only [Limits.Sigma.ι_desc]
 
 def doubleComplexSecondFiltration
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
@@ -239,7 +290,19 @@ def doubleComplexSecondFiltration
   obj p := doubleComplexSecondFiltrationSubobject A n p
   antitone := by
     intro p q hpq
-    sorry
+    letI : Mono (doubleComplexSecondFiltrationMap A n p) :=
+      doubleComplexSecondFiltrationMap_mono A n p
+    letI : Mono (doubleComplexSecondFiltrationMap A n q) :=
+      doubleComplexSecondFiltrationMap_mono A n q
+    change Subobject.mk (doubleComplexSecondFiltrationMap A n q) ≤
+      Subobject.mk (doubleComplexSecondFiltrationMap A n p)
+    apply Subobject.mk_le_mk_of_comm
+      (Limits.Sigma.desc (fun j : {j : ℤ // q ≤ j} =>
+        Limits.Sigma.ι (fun i : {i : ℤ // p ≤ i} => A.obj (n - i.1) i.1)
+          ⟨j.1, hpq.trans j.2⟩))
+    apply Limits.Sigma.hom_ext
+    intro j
+    simp [doubleComplexSecondFiltrationMap]
 
 def doubleComplexFirstFilteredTerm
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]

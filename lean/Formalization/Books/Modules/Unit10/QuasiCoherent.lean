@@ -30,7 +30,10 @@ local notation "Mod" => Formalization.Books.Sheaves.Unit10.Mod
 
 /-! ## The definition and its exact presentation -/
 
-/-- A free-cokernel presentation of a module on an open subspace. -/
+/-- A free-cokernel presentation after transporting a module to the ringed
+open subspace.  This is the source-facing form used by the explicit cokernel
+statements below; `HasLocalPresentation` uses Mathlib's native `F.over U`
+instead. -/
 def hasPresentationOn {X : RingedSpace.{v}} (F : Mod X.structureSheaf)
     (U : Opens X.carrier) : Prop :=
   Nonempty (((openModuleRestrictionFunctor X U).obj F).Presentation)
@@ -45,7 +48,7 @@ explanation of quasi-coherence. The underlying presentation is Mathlib's
 canonical `SheafOfModules.Presentation`, whose generators present the module
 and whose relations generate the kernel of the associated epimorphism. -/
 def HasLocalPresentation {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
-  ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧ hasPresentationOn F U
+  ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧ Nonempty ((F.over U).Presentation)
 
 /- The source calls this condition “locally presented” immediately after the
 definition of quasi-coherence. -/
@@ -64,11 +67,89 @@ def AllQuasiCoherentCategoriesAbelian : Prop :=
 
 theorem not_all_quasiCoherentCategoriesAbelian :
     ¬ AllQuasiCoherentCategoriesAbelian := by
+  /-
+  Roadmap/blocker for the prove stage:
+  * The statement is the source's warning and is mathematically sound, but a
+    proof must start from an actual categorical counterexample
+      `∃ X : RingedSpace.{v}, IsEmpty (Abelian (QCoh X))`.
+    No such declaration is presently available in Mathlib or in the earlier
+    project modules.  In particular, merely showing that an ambient kernel is
+    not quasi-coherent does not by itself refute an `Abelian (QCoh X)`
+    instance: one must also rule out a kernel object having the universal
+    property internal to the full subcategory.
+  * Once a counterexample `⟨X, hX⟩` is formalized, finish by introducing
+    `h : AllQuasiCoherentCategoriesAbelian` and applying
+    `hX.false (h X).some`.  Keep `X` in universe `v`; a small counterexample
+    may need an explicit universe lift before it can discharge this
+    universe-polymorphic theorem.
+  Do not retry typeclass search for a nonexistent negative `Abelian` instance;
+  the missing input is the counterexample itself.
+  -/
   sorry
 
 theorem isQuasiCoherent_iff_locallyPresented
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
     IsQuasiCoherent F ↔ LocallyPresented F := by
+  /-
+  Proof roadmap (all cited site/module universes specialize to `v`):
+  * Forward: unpack
+    `SheafOfModules.IsQuasicoherent.nonempty_quasicoherentData` to
+    `q : SheafOfModules.QuasicoherentData.{v} F`.  Its fields are
+    `q.X : q.I → Opens X.carrier`,
+    `q.coversTop : (Opens.grothendieckTopology X.carrier).CoversTop q.X`,
+    and `q.presentation i : (F.over (q.X i)).Presentation`.
+  * Apply `Opens.coversTop_iff q.X` from
+    `Mathlib/CategoryTheory/Sites/Spaces.lean` to `q.coversTop`.  The resulting
+    `hcover : TopologicalSpace.IsOpenCover q.X` is the equality
+    `iSup q.X = ⊤`; rewrite by it and use `Opens.mem_iSup.mp` to obtain, for
+    each `x : X`, an `i : q.I` with `x ∈ q.X i`.  Return `U := q.X i` and
+    `⟨q.presentation i⟩`.
+  * Reverse: use classical choice on the pointwise hypothesis to obtain
+    `U : X → Opens X.carrier`, membership `hx : ∀ x, x ∈ U x`, and
+    `hP : ∀ x, Nonempty ((F.over (U x)).Presentation)`; put
+    `P x := (hP x).some`.  Build
+    `q : SheafOfModules.QuasicoherentData.{v} F` with index type `X`, open
+    family `U`, presentations `P`, and prove `q.coversTop` via the reverse
+    implication of `Opens.coversTop_iff U`.  For its
+    `iSup U = ⊤` goal use `eq_top_iff` and `Opens.mem_iSup.mpr ⟨x, hx x⟩`
+    pointwise.
+  * Finish with `SheafOfModules.QuasicoherentData.isQuasicoherent q` from
+    `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean`.
+  This native `F.over U` formulation deliberately avoids the unrelated
+  open-subspace restriction comparison that blocked the previous proof.
+  -/
+  sorry
+
+/-
+Roadmap/blocker for transporting the native local presentation to the older
+ringed-open-subspace interface:
+* Given `P : (F.over U).Presentation`, first use
+  `SheafOfModules.Presentation.map` from
+  `Mathlib/Algebra/Category/ModuleCat/Sheaf/Quasicoherent.lean` with the
+  equivalence functor `(U.sheafOfModulesEquivOver X.structureSheaf).functor`
+  and `U.sheafOfModulesEquivOverUnit X.structureSheaf`; these are in
+  `Mathlib/Topology/Sheaves/Module.lean`.  This produces a presentation of
+  the equivalence image of `F.over U`.
+* Transport that presentation with `SheafOfModules.Presentation.ofIsIso`
+  along `openModuleRestrictionObjIso U X.structureSheaf F` from
+  `Formalization/Books/Sheaves/Unit24/Infrastructure.lean`.
+* The remaining interface obligation is not a presentation argument: the
+  comparison lemma requires
+  `[(openModuleRestrictionDirectImage U X.structureSheaf).IsRightAdjoint]`
+  and lands in that functor's chosen `leftAdjoint.obj F`, while the target is
+  `(openModuleRestrictionFunctor X U).obj F`.  The current Unit31 restriction
+  definition hides its local right-adjoint witness and exports no iso making
+  these two chosen left adjoints equal.  Supply that focused functor/object
+  iso upstream, or expose the witness, before completing this declaration;
+  do not try to close the mismatch by unfolding the large pullback
+  constructions.
+-/
+/-- Native `F.over U` presentations give presentations on the corresponding
+ringed open subspace. -/
+theorem locallyPresented_has_presentation
+    {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
+    (hF : LocallyPresented F) :
+    ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧ hasPresentationOn F U := by
   sorry
 
 /-! The first part of the source's generators-and-relations explanation. -/
@@ -77,7 +158,7 @@ theorem locallyPresented_isLocallyGenerated
     (hF : LocallyPresented F) :
     locallyGenerated F := by
   intro x
-  rcases hF x with ⟨U, hxU, ⟨P⟩⟩
+  rcases locallyPresented_has_presentation hF x with ⟨U, hxU, ⟨P⟩⟩
   exact ⟨U, hxU, ⟨P.generators⟩⟩
 
 /-- The generators-and-relations form of the local definition. -/
@@ -90,7 +171,7 @@ theorem locallyPresented_has_generators_and_relations
           (SheafOfModules.free I : Mod (ringedOpenSubspace X U).structureSheaf)),
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ) := by
   intro x
-  rcases hF x with ⟨U, hxU, ⟨P⟩⟩
+  rcases locallyPresented_has_presentation hF x with ⟨U, hxU, ⟨P⟩⟩
   let φ : (SheafOfModules.free P.relations.I :
       Mod (ringedOpenSubspace X U).structureSheaf) ⟶
       (SheafOfModules.free P.generators.I :
@@ -99,14 +180,6 @@ theorem locallyPresented_has_generators_and_relations
       kernel.ι P.generators.π
   refine ⟨U, hxU, P.generators.I, P.relations.I, φ, ?_⟩
   exact ⟨P.isColimit.coconePointUniqueUpToIso (colimit.isColimit _)⟩
-
-/-- The presentation object is the canonical Mathlib packaging of the two
-parts of the source's generators-and-relations explanation. -/
-theorem locallyPresented_has_presentation
-    {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
-    (hF : LocallyPresented F) :
-    ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧ hasPresentationOn F U := by
-  sorry
 
 /-- The cokernel projection is the last arrow in every displayed local
 presentation. -/

@@ -940,13 +940,242 @@ theorem latticeDistance_map_eq_orderOfVanishing
       orderOfVanishing hnoetherian hdim (LinearEquiv.det φ) := by
   sorry
 
+private theorem coordinate_transvection
+    {K : Type u} {n : Type v} [Field K] [Fintype n] [DecidableEq n]
+    (t : Matrix.TransvectionStruct n K) :
+    ∃ e : (n → K) ≃ₗ[K] (n → K),
+      e.toLinearMap = Matrix.toLin' t.toMatrix ∧
+        e ∈ LinearEquiv.dilatransvections K (n → K) := by
+  let f : Module.Dual K (n → K) := LinearMap.proj t.j
+  let w : n → K := t.c • Pi.single t.i 1
+  have hfw : f w = 0 := by
+    simp [f, w, t.hij]
+  refine ⟨LinearEquiv.transvection hfw, ?_, ?_⟩
+  · ext x j
+    change (LinearMap.transvection f w (Pi.single x 1)) j = _
+    rw [LinearMap.transvection.apply]
+    simp [f, w, LinearEquiv.transvection.apply, Matrix.toLin'_apply,
+      Matrix.TransvectionStruct.toMatrix, Matrix.transvection, Matrix.mulVec,
+      dotProduct, LinearMap.proj, Matrix.single_apply, Pi.single_apply, t.hij] <;>
+      split_ifs <;> simp_all [Pi.single_apply, t.hij]
+  · exact LinearEquiv.transvection_mem_dilatransvections hfw
+
+private theorem coordinate_diagonal
+    {K : Type u} {n : ℕ} [Field K] (i : Fin n) (a : Kˣ) :
+    (LinearEquiv.piCongrRight (fun j : Fin n =>
+      if _h : j = i then a.mulLeftLinearEquiv K K else LinearEquiv.refl K K)).toLinearMap =
+        Matrix.toLin' (Matrix.diagonal (Function.update 1 i (a : K))) := by
+  ext x j
+  by_cases hj : j = i <;>
+    simp [Matrix.toLin'_apply, Matrix.diagonal, Matrix.mulVec, dotProduct, hj]
+
+private theorem coordinate_diagonal_mem
+    {K : Type u} {n : ℕ} [Field K] (i : Fin n) (a : Kˣ) :
+    (LinearEquiv.piCongrRight (fun j : Fin n =>
+      if _h : j = i then a.mulLeftLinearEquiv K K else LinearEquiv.refl K K)) ∈
+        LinearEquiv.dilatransvections K (Fin n → K) := by
+  let f : Module.Dual K (Fin n → K) := LinearMap.proj i
+  let w : Fin n → K := ((a : K) - 1) • Pi.single i 1
+  refine ⟨f, w, ?_⟩
+  ext x j
+  by_cases hj : j = i
+  · subst j
+    simp [f, w, LinearMap.transvection.apply, LinearEquiv.trans_apply]
+    ring
+  · simp [f, w, LinearMap.transvection.apply, LinearEquiv.trans_apply, hj]
+
+private theorem coordinate_diagonal_product
+    {K : Type u} {n : ℕ} [CommRing K] (D : Fin n → K) :
+    Finset.noncommProd (Finset.univ : Finset (Fin n))
+        (fun i => Matrix.diagonal (Function.update 1 i (D i))) (by
+          intro i _ j _ _
+          exact Matrix.commute_diagonal _ _ ) = Matrix.diagonal D := by
+  let f : Fin n → (Fin n → K) := fun i => Function.update 1 i (D i)
+  have hdiagprod :
+      ∀ (s : Finset (Fin n)) (g : Fin n → (Fin n → K))
+        (comm : (s : Set (Fin n)).Pairwise
+          (fun i j => Commute
+            (Matrix.diagonal (g i) : Matrix (Fin n) (Fin n) K)
+            (Matrix.diagonal (g j) : Matrix (Fin n) (Fin n) K))),
+        Finset.noncommProd s
+            (fun i => (Matrix.diagonal (g i) : Matrix (Fin n) (Fin n) K)) comm =
+          (Matrix.diagonal (Finset.prod s g) :
+            Matrix (Fin n) (Fin n) K) := by
+    intro s
+    induction s using Finset.cons_induction_on with
+    | empty =>
+        intro g comm
+        simp
+    | cons i s hi ih =>
+        intro g comm
+        rw [Finset.noncommProd_cons]
+        rw [ih g (comm.mono fun _ h => Finset.mem_cons.2 (Or.inr h))]
+        rw [Matrix.diagonal_mul_diagonal]
+        congr 1
+        ext j
+        rw [Finset.prod_apply]
+        rw [Finset.cons_eq_insert, Finset.prod_insert hi]
+        simp [Finset.prod_apply]
+  calc
+    _ = Matrix.diagonal (Finset.prod (Finset.univ : Finset (Fin n)) f) := by
+      simpa [f] using hdiagprod (Finset.univ : Finset (Fin n)) f (by
+        intro i _ j _ _
+        exact Matrix.commute_diagonal _ _)
+    _ = Matrix.diagonal D := by
+      congr 1
+      ext j
+      rw [Finset.prod_apply]
+      change (Finset.univ : Finset (Fin n)).prod
+        (fun c => Function.update (1 : Fin n → K) c (D c) j) = D j
+      simpa [f] using
+        (Finset.prod_eq_single (s := (Finset.univ : Finset (Fin n)))
+          (f := fun c => Function.update (1 : Fin n → K) c (D c) j) j
+          (by
+            intro i _ hij
+            simp [Function.update, Ne.symm hij])
+          (by simp [Function.update]))
+
+private theorem conjugate_dilatransvection
+    {K : Type u} {V : Type v} {W : Type v} [Field K]
+    [AddCommGroup V] [Module K V] [AddCommGroup W] [Module K W]
+    (q : W ≃ₗ[K] V) {e : W ≃ₗ[K] W}
+    (he : e ∈ LinearEquiv.dilatransvections K W) :
+    (q.symm.trans e).trans q ∈ LinearEquiv.dilatransvections K V := by
+  rcases he with ⟨f, w, h⟩
+  refine ⟨f.comp q.symm.toLinearMap, q w, ?_⟩
+  ext x
+  change q (e.toLinearMap (q.symm x)) = _
+  rw [h]
+  simp [LinearEquiv.trans_apply, LinearMap.transvection.apply, LinearMap.comp_apply]
+
+private theorem basis_coordinate_matrix
+    {K : Type u} {V : Type v} {n : ℕ} [Field K]
+    [AddCommGroup V] [Module K V] (b : Module.Basis (Fin n) K V) (φ : V ≃ₗ[K] V) :
+    LinearMap.toMatrix (Pi.basisFun K (Fin n)) (Pi.basisFun K (Fin n))
+        ((b.equivFun.symm.trans φ).trans b.equivFun).toLinearMap =
+      LinearMap.toMatrix b b φ.toLinearMap := by
+  simp only [LinearMap.toMatrix, LinearMap.toMatrix_eq_toMatrix']
+  ext x
+  simp [LinearEquiv.trans_apply]
+
+private theorem conjugate_dilatransvection_pow
+    {K : Type u} {V : Type v} {W : Type v} [Field K]
+    [AddCommGroup V] [Module K V] [AddCommGroup W] [Module K W]
+    (q : W ≃ₗ[K] V) {e : W ≃ₗ[K] W} (m : ℕ)
+    (he : e ∈ (LinearEquiv.dilatransvections K W) ^ m) :
+    (q.symm.trans e).trans q ∈ (LinearEquiv.dilatransvections K V) ^ m := by
+  induction m generalizing e with
+  | zero =>
+      change (q.symm.trans e).trans q ∈
+        ({1} : Set (V ≃ₗ[K] V))
+      change e ∈ ({1} : Set (W ≃ₗ[K] W)) at he
+      rw [Set.mem_singleton_iff]
+      have hq : (q.symm.trans (1 : W ≃ₗ[K] W)).trans q = 1 := by
+        ext x
+        simp [LinearEquiv.trans_apply]
+      rw [← hq]
+      exact congrArg (fun x : W ≃ₗ[K] W => (q.symm.trans x).trans q)
+        (Set.mem_singleton_iff.mp he)
+  | succ m ih =>
+      rw [pow_succ] at he ⊢
+      rcases Set.mem_mul.mp he with ⟨e₁, he₁, e₂, he₂, rfl⟩
+      have h₁ := ih he₁
+      have h₂ := conjugate_dilatransvection q he₂
+      have hmul : (q.symm.trans (e₁ * e₂)).trans q =
+          (q.symm.trans e₁).trans q * (q.symm.trans e₂).trans q := by
+        ext x
+        simp [LinearEquiv.trans_apply, LinearEquiv.mul_apply]
+      rw [hmul]
+      exact Set.mul_mem_mul h₁ h₂
+
+private theorem coordinate_general_linear_generation
+    {K : Type u} {n : ℕ} [Field K] :
+    ∀ A : Matrix (Fin n) (Fin n) K, A.det ≠ 0 →
+      ∃ m : ℕ, ∃ e : (Fin n → K) ≃ₗ[K] (Fin n → K),
+        e.toLinearMap = Matrix.toLin' A ∧
+          e ∈ (LinearEquiv.dilatransvections K (Fin n → K)) ^ m := by
+  intro A hA
+  let P : Matrix (Fin n) (Fin n) K → Prop := fun B =>
+    ∃ m : ℕ, ∃ e : (Fin n → K) ≃ₗ[K] (Fin n → K),
+      e.toLinearMap = Matrix.toLin' B ∧
+        e ∈ (LinearEquiv.dilatransvections K (Fin n → K)) ^ m
+  apply Matrix.diagonal_transvection_induction_of_det_ne_zero P A hA
+  · intro D hD
+    have hDi : ∀ i : Fin n, D i ≠ 0 := by
+      intro i hi
+      apply hD
+      rw [Matrix.det_diagonal]
+      exact Finset.prod_eq_zero (Finset.mem_univ i) hi
+    have hPprod : P (Finset.noncommProd (Finset.univ : Finset (Fin n))
+        (fun i => Matrix.diagonal (Function.update 1 i (D i))) (by
+          intro i _ j _ _
+          exact Matrix.commute_diagonal _ _)) := by
+      apply Finset.noncommProd_induction
+      · intro B C hB hC
+        rcases hB with ⟨m, e, he, hme⟩
+        rcases hC with ⟨k, f, hf, hkf⟩
+        refine ⟨m + k, e * f, ?_, ?_⟩
+        · rw [show (e * f).toLinearMap = e.toLinearMap.comp f.toLinearMap by rfl,
+            Matrix.toLin'_mul, he, hf]
+        · simpa [pow_add] using Set.mul_mem_mul hme hkf
+      · refine ⟨0, LinearEquiv.refl K (Fin n → K), ?_, ?_⟩
+        · simp [Matrix.toLin'_one]
+        · ext x
+          rfl
+      · intro i hi
+        let a : Kˣ := Units.mk0 (D i) (hDi i)
+        let e := LinearEquiv.piCongrRight (fun j : Fin n =>
+          if _h : j = i then a.mulLeftLinearEquiv K K else LinearEquiv.refl K K)
+        refine ⟨1, e, ?_, ?_⟩
+        · simpa [e, a] using coordinate_diagonal i a
+        · simpa [e] using coordinate_diagonal_mem i a
+    simpa [coordinate_diagonal_product] using hPprod
+  · intro t
+    rcases coordinate_transvection t with ⟨e, he, hme⟩
+    exact ⟨1, e, he, by simpa using hme⟩
+  · intro B C hB hC hPB hPC
+    rcases hPB with ⟨m, e, he, hme⟩
+    rcases hPC with ⟨k, f, hf, hkf⟩
+    refine ⟨m + k, e * f, ?_, ?_⟩
+    · rw [show (e * f).toLinearMap = e.toLinearMap.comp f.toLinearMap by rfl,
+        Matrix.toLin'_mul, he, hf]
+    · simpa [pow_add] using Set.mul_mem_mul hme hkf
+
+private theorem transvection_square_add
+    {K : Type u} {V : Type v} [Field K] [AddCommGroup V] [Module K V]
+    {f : Module.Dual K V} {v : V} (hfv : f v = 0) (x : V) :
+    LinearEquiv.transvection hfv (LinearEquiv.transvection hfv x) =
+      LinearEquiv.transvection hfv x + LinearEquiv.transvection hfv x - x := by
+  simp [LinearMap.transvection.apply]
+  rw [hfv]
+  module
+
 /- The source's elementary matrices are represented by Mathlib's canonical
    rank-one transvections and dilatransvections. -/
 theorem generalLinearEquiv_mem_generated_dilatransvections
     {K : Type v} {V : Type v} [Field K] [AddCommGroup V] [Module K V]
     [Module.Finite K V] (φ : V ≃ₗ[K] V) :
     ∃ n : ℕ, φ ∈ (LinearEquiv.dilatransvections K V) ^ n := by
-  sorry
+  let b := Module.finBasis K V
+  let q : (Fin (Module.finrank K V) → K) ≃ₗ[K] V := b.equivFun.symm
+  let A := LinearMap.toMatrix b b φ.toLinearMap
+  have hA : A.det ≠ 0 := by
+    change (LinearMap.toMatrix b b φ.toLinearMap).det ≠ 0
+    rw [LinearMap.det_toMatrix]
+    simpa only [LinearEquiv.coe_det] using (LinearEquiv.det φ).ne_zero
+  rcases coordinate_general_linear_generation A hA with ⟨m, e, he, hme⟩
+  have hcoord : e = (q.trans φ).trans q.symm := by
+    apply LinearEquiv.toLinearMap_injective
+    apply LinearMap.toMatrix'.injective
+    rw [he, LinearMap.toMatrix'_toLin']
+    simpa [q, LinearMap.toMatrix_eq_toMatrix'] using
+      (basis_coordinate_matrix b φ).symm
+  have hconj : (q.symm.trans e).trans q = φ := by
+    rw [hcoord]
+    ext x
+    simp [LinearEquiv.trans_apply]
+  refine ⟨m, ?_⟩
+  simpa [hconj] using conjugate_dilatransvection_pow q m hme
 
 theorem exists_fin_basis_equiv
     {K : Type v} {V : Type v} [Field K] [AddCommGroup V]
@@ -965,7 +1194,58 @@ theorem latticeDistance_transvection
     {f : Module.Dual K V} {v : V} (hfv : f v = 0) :
     latticeDistance R M
         (latticeMap (LinearEquiv.transvection hfv) M) = 0 := by
-  sorry
+  let e := LinearEquiv.transvection hfv
+  let L := M ⊔ latticeMap e M
+  have heM : Submodule.IsLattice K (latticeMap e M) :=
+    isLattice_latticeMap hdim e M hM
+  have hL : Submodule.IsLattice K L :=
+    (lattice_intersection_and_sum hdim M (latticeMap e M) hM heM).2
+  have hmap_sup (N P : Submodule R V) :
+      latticeMap e (N ⊔ P) = latticeMap e N ⊔ latticeMap e P := by
+    change (N ⊔ P).map (e.restrictScalars R).toLinearMap =
+      N.map (e.restrictScalars R).toLinearMap ⊔
+        P.map (e.restrictScalars R).toLinearMap
+    rw [Submodule.map_sup]
+  have hpow (x : V) : e (e x) = e x + e x - x := by
+    exact transvection_square_add hfv x
+  have he2 : latticeMap e (latticeMap e M) ≤ L := by
+    intro x hx
+    rcases hx with ⟨y, hy, rfl⟩
+    rcases hy with ⟨z, hz, rfl⟩
+    have hez : e z ∈ L :=
+      (show latticeMap e M ≤ L from le_sup_right) ⟨z, hz, rfl⟩
+    have hzL : z ∈ L := (show M ≤ L from le_sup_left) hz
+    have hxy : e (e z) ∈ L := by
+      rw [hpow]
+      exact sub_mem (add_mem hez hez) hzL
+    exact hxy
+  have heL : latticeMap e L = L := by
+    rw [hmap_sup]
+    apply le_antisymm
+    · exact sup_le le_sup_right he2
+    · apply sup_le
+      · intro x hx
+        have hx₁ : e x ∈ latticeMap e M ⊔ latticeMap e (latticeMap e M) :=
+          (show latticeMap e M ≤ latticeMap e M ⊔ latticeMap e (latticeMap e M)
+            from le_sup_left) ⟨x, hx, rfl⟩
+        have hx₂ : e (e x) ∈ latticeMap e M ⊔ latticeMap e (latticeMap e M) := by
+          exact (show latticeMap e (latticeMap e M) ≤
+              latticeMap e M ⊔ latticeMap e (latticeMap e M) from le_sup_right)
+            (⟨e x, ⟨x, hx, rfl⟩, rfl⟩)
+        have hxe : x = e x + e x - e (e x) := by
+          rw [hpow]
+          abel
+        rw [hxe]
+        exact sub_mem (add_mem hx₁ hx₁) hx₂
+      · intro x hx
+        rcases hx with ⟨y, hy, rfl⟩
+        exact (show latticeMap e M ≤ latticeMap e M ⊔ latticeMap e (latticeMap e M)
+          from le_sup_left) ⟨y, hy, rfl⟩
+  calc
+    latticeDistance R M (latticeMap e M) =
+        latticeDistance R L (latticeMap e L) :=
+      latticeDistance_map_independent hdim e M L hM hL
+    _ = 0 := by rw [heL]; simp [latticeDistance]
 
 noncomputable def elementaryDiagonal
     {K : Type v} [Field K] (n : ℕ) (i : Fin n) (a : Kˣ) :

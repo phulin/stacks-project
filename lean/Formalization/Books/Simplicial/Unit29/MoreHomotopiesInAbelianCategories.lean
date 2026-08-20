@@ -303,7 +303,6 @@ def tripleToDiamond
       (biprod.desc (t.a.f n) (t.b.f n))
       (t.h.hom (n - 1) n)
   comm' := by
-    intro i j hij
     sorry
 
 def chainHomotopyTripleMap
@@ -320,10 +319,8 @@ def chainHomotopyTripleFunctor
   obj B := ChainHomotopyTriple A B
   map g := TypeCat.homEquiv.symm (chainHomotopyTripleMap A g)
   map_id := by
-    intro B
     sorry
   map_comp := by
-    intro B D E g h
     sorry
 
 /-- The universal property of `◇ A`: maps out of it are exactly homotopy
@@ -346,7 +343,6 @@ def diamondMap
       0)
     (biprod.desc 0 (f.f (n - 1)))
   comm' := by
-    intro i j hij
     sorry
 
 /-- The construction `A ↦ ◇ A` is functorial. -/

@@ -10,6 +10,7 @@ import Mathlib.LinearAlgebra.Pi
 import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.LinearAlgebra.Transvection.Generation
 import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.KrullDimension.Field
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.AsSubring
@@ -222,6 +223,184 @@ def latticeLengthInt
     (N M : Submodule R V) : ℤ :=
   latticeLengthNat R N M
 
+private theorem exists_nonzero_smul_mem_of_isLattice
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [IsDomain R] [Field K] [Algebra R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] [IsFractionRing R K]
+    (M : Submodule R V) (hM : Submodule.IsLattice K M) (x : V) :
+    ∃ a : R, a ≠ 0 ∧ a • x ∈ M := by
+  let P : Submodule K V := Submodule.span K (M : Set V)
+  have hx : x ∈ P := by
+    change x ∈ Submodule.span K (M : Set V)
+    rw [hM.span_eq_top]
+    exact Submodule.mem_top
+  let Q : V → Prop := fun y => ∃ a : R, a ≠ 0 ∧ a • y ∈ M
+  have hQ : ∀ y, y ∈ P → Q y := by
+    intro y hy
+    change y ∈ Submodule.span K (M : Set V) at hy
+    refine Submodule.span_induction (fun z hz => ?_) ?_
+      (fun z w _ _ hz hw => ?_) (fun a z _ hz => ?_) hy
+    ·
+      exact ⟨1, one_ne_zero, by simpa using hz⟩
+    · exact ⟨1, one_ne_zero, by simp⟩
+    · rcases hz with ⟨a, ha, hay⟩
+      rcases hw with ⟨b, hb, hbz⟩
+      refine ⟨a * b, mul_ne_zero ha hb, ?_⟩
+      rw [smul_add]
+      apply M.add_mem
+      · rw [mul_comm, mul_smul]
+        exact M.smul_mem b hay
+      · rw [mul_smul]
+        exact M.smul_mem a hbz
+    · rcases hz with ⟨b, hb, hby⟩
+      obtain ⟨c, d, hcd⟩ := IsLocalization.exists_mk'_eq
+        (S := K) (nonZeroDivisors R) a
+      have had : algebraMap R K d * a = algebraMap R K c := by
+        rw [← hcd]
+        exact IsLocalization.mk'_spec' K c d
+      refine ⟨d * b, mul_ne_zero (mem_nonZeroDivisors_iff_ne_zero.mp d.2) hb, ?_⟩
+      have heq : (d * b) • (a • z) = c • (b • z) := by
+        calc
+          (d * b) • (a • z) =
+              (algebraMap R K (d * b) * a) • z := by
+                rw [← IsScalarTower.algebraMap_smul (R := R) K (M := V),
+                  ← IsScalarTower.smul_assoc]
+                simp [smul_eq_mul]
+          _ = (algebraMap R K c * algebraMap R K b) • z := by
+                congr 1
+                rw [map_mul]
+                calc
+                  algebraMap R K (↑d) * algebraMap R K b * a =
+                      (algebraMap R K (↑d) * a) * algebraMap R K b := by ring
+                  _ = algebraMap R K c * algebraMap R K b := by rw [had]
+          _ = c • (b • z) := by
+                simp only [mul_smul,
+                  IsScalarTower.algebraMap_smul (R := R) K (M := V)]
+      rw [heq]
+      exact M.smul_mem c hby
+  exact hQ x hx
+
+private theorem exists_nonzero_smul_mem_of_finset
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [IsDomain R] [Field K] [Algebra R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] [IsFractionRing R K]
+    (M : Submodule R V) (hM : Submodule.IsLattice K M) (s : Finset V) :
+    ∃ a : R, a ≠ 0 ∧ ∀ x ∈ s, a • x ∈ M := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => exact ⟨1, one_ne_zero, by simp⟩
+  | @insert x s hxs ih =>
+      rcases ih with ⟨a, ha, has⟩
+      rcases exists_nonzero_smul_mem_of_isLattice M hM x with ⟨b, hb, hbx⟩
+      refine ⟨b * a, mul_ne_zero hb ha, ?_⟩
+      intro y hy
+      simp only [Finset.mem_insert] at hy
+      rcases hy with rfl | hy
+      · rw [mul_comm, mul_smul]
+        exact M.smul_mem a hbx
+      · rw [mul_smul]
+        exact M.smul_mem b (has y hy)
+
+private theorem not_isFiniteLength_self
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsDomain R]
+    [IsNoetherianRing R] (hdim : ringKrullDim R = 1) :
+    ¬ IsFiniteLength R R := by
+  intro h
+  letI : IsArtinianRing R := (isFiniteLength_iff_isNoetherian_isArtinian.mp h).2
+  have hfield : IsField R := IsArtinianRing.isField_of_isReduced_of_isLocalRing R
+  have hz := ringKrullDim_eq_zero_of_isField (F := R) hfield
+  rw [hdim] at hz
+  exact one_ne_zero hz
+
+private theorem finiteLength_isTorsion
+    {R : Type u} {Q : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [AddCommGroup Q] [Module R Q] (hdim : ringKrullDim R = 1)
+    (hQ : IsFiniteLength R Q) : Module.IsTorsion R Q := by
+  have hQ' := isFiniteLength_iff_isNoetherian_isArtinian.mp hQ
+  letI : IsNoetherian R Q := hQ'.1
+  letI : IsArtinian R Q := hQ'.2
+  intro q
+  have hcyc : IsFiniteLength R (R ∙ q) := by
+    rw [isFiniteLength_iff_isNoetherian_isArtinian]
+    exact ⟨inferInstance, inferInstance⟩
+  have hquot : IsFiniteLength R (R ⧸ Ideal.torsionOf R Q q) :=
+    hcyc.of_injective (Ideal.quotTorsionOfEquivSpanSingleton R Q q).injective
+  have hT : Ideal.torsionOf R Q q ≠ ⊥ := by
+    intro hT
+    have hR : IsFiniteLength R R := by
+      apply hquot.of_injective (f := (Ideal.torsionOf R Q q).mkQ)
+      apply LinearMap.ker_eq_bot.mp
+      rw [Submodule.ker_mkQ, hT]
+    exact not_isFiniteLength_self hdim hR
+  obtain ⟨a, haT, ha⟩ : ∃ a : R, a ∈ Ideal.torsionOf R Q q ∧ a ≠ 0 := by
+    by_contra h
+    apply hT
+    apply (Submodule.eq_bot_iff _).mpr
+    intro a haT'
+    by_contra ha'
+    exact h ⟨a, haT', ha'⟩
+  exact ⟨⟨a, mem_nonZeroDivisors_iff_ne_zero.mpr ha⟩,
+    (Ideal.mem_torsionOf_iff q a).mp haT⟩
+
+private theorem latticeQuotient_finiteLength_of_finite
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
+    (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hMM' : M ≤ M')
+    [Module.Finite R (M' : Type v)] :
+    IsFiniteLength R (latticeQuotient R M M') := by
+  classical
+  let _ : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr hdim.le
+  obtain ⟨n, s, hs⟩ := Module.Finite.exists_fin (R := R) (M := (M' : Type v))
+  obtain ⟨a, ha, has⟩ := exists_nonzero_smul_mem_of_finset M hM
+    (Finset.univ.image fun i : Fin n => (s i : V))
+  have hgen : ∀ x : M', a • (x : V) ∈ M := by
+    intro x
+    let L : (M' : Type v) →ₗ[R] V := M'.subtype
+    let P : Submodule R (M' : Type v) :=
+      M.comap ((DistribSMul.toLinearMap R V a).comp L)
+    have hP : Submodule.span R (Set.range s) ≤ P := by
+      apply Submodule.span_le.2
+      rintro _ ⟨i, rfl⟩
+      change a • (s i : V) ∈ M
+      exact has _ (Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩)
+    have hxP : x ∈ P := hP (by rw [hs]; exact Submodule.mem_top)
+    exact hxP
+  have hQ : Module.IsTorsionBy R (latticeQuotient R M M') a := by
+    rw [Module.isTorsionBy_quotient_iff]
+    intro x
+    exact hgen x
+  have hQset : Module.IsTorsionBySet R (latticeQuotient R M M')
+      (Ideal.span ({a} : Set R)) := by
+    rw [← Module.isTorsionBySet_iff_is_torsion_by_span,
+      Module.isTorsionBySet_singleton_iff]
+    exact hQ
+  letI : Module.IsTorsionBySet R (latticeQuotient R M M')
+      (Ideal.span ({a} : Set R)) := hQset
+  letI : Module (R ⧸ Ideal.span ({a} : Set R))
+      (latticeQuotient R M M') := hQset.module
+  letI : Module.Finite (R ⧸ Ideal.span ({a} : Set R))
+      (latticeQuotient R M M') :=
+    Module.Finite.of_restrictScalars_finite R (R ⧸ Ideal.span ({a} : Set R)) _
+  have hSart : IsArtinianRing (R ⧸ Ideal.span ({a} : Set R)) := by
+    rw [isArtinianRing_iff_krullDimLE_zero, Ring.KrullDimLE, Order.krullDimLE_iff,
+      ← ENat.WithBot.add_le_add_one_right_iff, Nat.cast_zero, zero_add]
+    exact (ringKrullDim_quotient_succ_le_of_nonZeroDivisor
+      (mem_nonZeroDivisors_iff_ne_zero.mpr ha)).trans
+        (Order.KrullDimLE.krullDim_le)
+  letI : IsArtinianRing (R ⧸ Ideal.span ({a} : Set R)) := hSart
+  have hArtQ : IsArtinian R (latticeQuotient R M M') := by
+    exact isArtinian_of_surjective_algebraMap
+      (R := R ⧸ Ideal.span ({a} : Set R)) (S := R)
+      (M := latticeQuotient R M M')
+      (Ideal.Quotient.mk_surjective (I := Ideal.span ({a} : Set R)))
+  exact isFiniteLength_iff_isNoetherian_isArtinian.mpr ⟨inferInstance, hArtQ⟩
+
 theorem lattice_comparison_upper
     {R : Type u} {K : Type v} {V : Type v}
     [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
@@ -233,7 +412,48 @@ theorem lattice_comparison_upper
       [ Submodule.IsLattice K M',
         latticeQuotientHasFiniteLength R M M',
         Module.Finite R (M' : Type v) ] := by
-  sorry
+  tfae_have 1 → 2 := by
+    intro hM'
+    letI : Submodule.IsLattice K M' := hM'
+    exact latticeQuotient_finiteLength_of_finite hdim M M' hM hMM'
+  tfae_have 2 → 3 := by
+    intro hQ
+    letI : Submodule.IsLattice K M := hM
+    letI : IsFiniteLength R (latticeQuotient R M M') := hQ
+    let N : Submodule R (M' : Type v) := Submodule.comap M'.subtype M
+    letI : IsNoetherian R (M' ⧸ N) := by
+      change IsNoetherian R (latticeQuotient R M M')
+      exact (isFiniteLength_iff_isNoetherian_isArtinian.mp hQ).1
+    letI : Module.Finite R (M' ⧸ N) := by
+      constructor
+      exact (isNoetherian_submodule.mp inferInstance) ⊤ le_top
+    have hexact : Function.Exact (M.inclusion hMM') N.mkQ := by
+      rw [LinearMap.exact_iff]
+      ext x
+      constructor
+      · intro hx
+        change (Submodule.Quotient.mk x : (M' : Type v) ⧸ N) = 0 at hx
+        rw [Submodule.Quotient.mk_eq_zero] at hx
+        have hxM : (x : V) ∈ M := hx
+        refine ⟨⟨(x : V), hxM⟩, ?_⟩
+        apply Subtype.ext
+        rfl
+      · rintro ⟨y, hy⟩
+        change N.mkQ x = 0
+        calc
+          N.mkQ x = N.mkQ ((M.inclusion hMM') y) := congrArg N.mkQ hy.symm
+          _ = 0 := by
+            change (Submodule.Quotient.mk ((M.inclusion hMM') y) :
+              (M' : Type v) ⧸ N) = 0
+            rw [Submodule.Quotient.mk_eq_zero]
+            exact y.property
+    exact Module.Finite.of_exact hexact N.mkQ_surjective
+  tfae_have 3 → 1 := by
+    intro hM'
+    letI : Submodule.IsLattice K M := hM
+    exact Submodule.IsLattice.of_le_of_isLattice_of_fg K hMM'
+      ((Module.Finite.iff_fg).mp hM')
+  tfae_finish
 
 theorem lattice_comparison_lower
     {R : Type u} {K : Type v} {V : Type v}
@@ -243,7 +463,47 @@ theorem lattice_comparison_lower
     [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M) (hM'M : M' ≤ M) :
     Submodule.IsLattice K M' ↔ latticeQuotientHasFiniteLength R M' M := by
-  sorry
+  constructor
+  · intro hM'
+    letI : Submodule.IsLattice K M' := hM'
+    letI : Submodule.IsLattice K M := hM
+    exact latticeQuotient_finiteLength_of_finite hdim M' M hM' hM'M
+  · intro hQ
+    letI : Submodule.IsLattice K M := hM
+    letI : IsFiniteLength R (latticeQuotient R M' M) := hQ
+    have hfg : M'.FG := by
+      exact (isNoetherian_submodule.mp inferInstance) M' hM'M
+    have hspan : Submodule.span K (M' : Set V) = ⊤ := by
+      apply le_antisymm le_top
+      rw [← hM.span_eq_top]
+      apply Submodule.span_le.2
+      intro x hx
+      let q : latticeQuotient R M' M := Submodule.Quotient.mk ⟨x, hx⟩
+      have htors : Module.IsTorsion R (latticeQuotient R M' M) :=
+        finiteLength_isTorsion hdim hQ
+      have htq := htors (x := q)
+      rcases htq with ⟨a, hak⟩
+      have hax : a • x ∈ M' := by
+        have hak' : (Submodule.Quotient.mk ((a : R) • (⟨x, hx⟩ : M)) :
+            latticeQuotient R M' M) = 0 := by
+          rw [Submodule.Quotient.mk_smul]
+          exact hak
+        rw [Submodule.Quotient.mk_eq_zero] at hak'
+        exact hak'
+      have hamap : algebraMap R K (a : R) ≠ 0 :=
+        IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors a.2
+      have hxeq : x = (algebraMap R K (a : R))⁻¹ • ((a : R) • x) := by
+        calc
+          x = 1 • x := by simp
+          _ = ((algebraMap R K (a : R))⁻¹ * algebraMap R K (a : R)) • x := by
+            simp [inv_mul_cancel₀ hamap]
+          _ = (algebraMap R K (a : R))⁻¹ • (algebraMap R K (a : R) • x) := by
+            rw [mul_smul]
+          _ = (algebraMap R K (a : R))⁻¹ • ((a : R) • x) := by
+            rw [IsScalarTower.algebraMap_smul]
+      rw [hxeq]
+      exact Submodule.smul_mem _ _ (Submodule.subset_span hax)
+    exact ⟨hfg, hspan⟩
 
 theorem lattice_intersection_and_sum
     {R : Type u} {K : Type v} {V : Type v}
@@ -254,7 +514,36 @@ theorem lattice_intersection_and_sum
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') :
     Submodule.IsLattice K (M ⊓ M') ∧ Submodule.IsLattice K (M ⊔ M') := by
-  sorry
+  letI : Submodule.IsLattice K M := hM
+  letI : Submodule.IsLattice K M' := hM'
+  have hfg : (M ⊓ M').FG := by
+    have hnoethI : IsNoetherian R ↥(M ⊓ M') := isNoetherian_of_le inf_le_left
+    exact (isNoetherian_submodule.mp hnoethI) (M ⊓ M') le_rfl
+  have hspan : Submodule.span K ((M ⊓ M' : Submodule R V) : Set V) = ⊤ := by
+    apply le_antisymm le_top
+    rw [← hM.span_eq_top]
+    apply Submodule.span_le.2
+    intro x hx
+    obtain ⟨a, ha, hax⟩ := exists_nonzero_smul_mem_of_isLattice M' hM' x
+    have hax' : a • x ∈ M ⊓ M' := ⟨M.smul_mem a hx, hax⟩
+    have hmem : a • x ∈ Submodule.span K ((M ⊓ M' : Submodule R V) : Set V) :=
+      Submodule.subset_span hax'
+    have hamap : algebraMap R K a ≠ 0 :=
+      IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
+        (mem_nonZeroDivisors_iff_ne_zero.mpr ha)
+    have hxeq : x = (algebraMap R K a)⁻¹ • (a • x) := by
+      calc
+        x = 1 • x := by simp
+        _ = ((algebraMap R K a)⁻¹ * algebraMap R K a) • x := by
+          simp [inv_mul_cancel₀ hamap]
+        _ = (algebraMap R K a)⁻¹ • (algebraMap R K a • x) := by
+          rw [mul_smul]
+        _ = (algebraMap R K a)⁻¹ • (a • x) := by
+          rw [IsScalarTower.algebraMap_smul]
+    rw [hxeq]
+    exact Submodule.smul_mem _ _ hmem
+  refine ⟨⟨hfg, hspan⟩, ?_⟩
+  infer_instance
 
 theorem lattice_length_additive
     {R : Type u} {K : Type v} {V : Type v}
@@ -267,7 +556,90 @@ theorem lattice_length_additive
     (hMM' : M ≤ M') (hM'M'' : M' ≤ M'') :
     latticeLengthNat R M M'' =
       latticeLengthNat R M M' + latticeLengthNat R M' M'' := by
-  sorry
+  letI : Submodule.IsLattice K M := hM
+  letI : Submodule.IsLattice K M' := hM'
+  letI : Submodule.IsLattice K M'' := hM''
+  let N : Submodule R (M' : Type v) := Submodule.comap M'.subtype M
+  let N' : Submodule R (M'' : Type v) := Submodule.comap M''.subtype M
+  let P : Submodule R (M'' : Type v) := Submodule.comap M''.subtype M'
+  have hNN' : N ≤ (N'.comap (M'.inclusion hM'M'')) := by
+    intro x hx
+    exact hx
+  have hN'P : N' ≤ P := by
+    intro x hx
+    exact hMM' hx
+  let f : (M' ⧸ N) →ₗ[R] (M'' ⧸ N') :=
+    N.mapQ N' (M'.inclusion hM'M'') hNN'
+  let g : (M'' ⧸ N') →ₗ[R] (M'' ⧸ P) := Submodule.factor hN'P
+  have hf : Function.Injective f := by
+    apply LinearMap.ker_eq_bot.mp
+    apply (Submodule.eq_bot_iff _).mpr
+    intro z hz
+    obtain ⟨x, rfl⟩ := N.mkQ_surjective z
+    change f (N.mkQ x) = 0 at hz
+    have hxN' : (M'.inclusion hM'M'') x ∈ N' := by
+      have hx : (Submodule.Quotient.mk ((M'.inclusion hM'M'') x) :
+          (M'' : Type v) ⧸ N') = 0 := by
+        simpa [f] using hz
+      rw [Submodule.Quotient.mk_eq_zero] at hx
+      exact hx
+    change (Submodule.Quotient.mk x : (M' : Type v) ⧸ N) = 0
+    rw [Submodule.Quotient.mk_eq_zero]
+    exact hxN'
+  have hg : Function.Surjective g := Submodule.factor_surjective hN'P
+  have hex : Function.Exact f g := by
+    rw [LinearMap.exact_iff]
+    ext z
+    constructor
+    · intro hz
+      change g z = 0 at hz
+      obtain ⟨x, rfl⟩ := N'.mkQ_surjective z
+      have hxP : x ∈ P := by
+        have hx : (Submodule.Quotient.mk x : (M'' : Type v) ⧸ P) = 0 := by
+          simpa [g] using hz
+        rw [Submodule.Quotient.mk_eq_zero] at hx
+        exact hx
+      refine ⟨N.mkQ ⟨(x : V), hxP⟩, ?_⟩
+      rfl
+    · rintro ⟨y, hy⟩
+      change g z = 0
+      rw [← hy]
+      obtain ⟨w, rfl⟩ := N.mkQ_surjective y
+      have hwP : (M'.inclusion hM'M'') w ∈ P := by
+        exact w.property
+      have hw : (Submodule.Quotient.mk ((M'.inclusion hM'M'') w) :
+          (M'' : Type v) ⧸ P) = 0 := by
+        rw [Submodule.Quotient.mk_eq_zero]
+        exact hwP
+      simpa [f, g] using hw
+  have hQ : IsFiniteLength R (latticeQuotient R M M'') := by
+    exact latticeQuotient_finiteLength_of_finite hdim M M'' hM
+      (hMM'.trans hM'M'')
+  have hQ' : IsFiniteLength R (latticeQuotient R M M') :=
+    latticeQuotient_finiteLength_of_finite hdim M M' hM hMM'
+  have hQ'' : IsFiniteLength R (latticeQuotient R M' M'') :=
+    latticeQuotient_finiteLength_of_finite hdim M' M'' hM' hM'M''
+  have hlen := Module.length_eq_add_of_exact f g hf hg hex
+  have hlen' := congrArg ENat.toNat hlen
+  rw [ENat.toNat_add
+    (Module.length_ne_top_iff.mpr hQ') (Module.length_ne_top_iff.mpr hQ'')] at hlen'
+  simpa [latticeLengthNat, latticeQuotient, N, N', P] using hlen'
+
+private theorem lattice_length_additive_int
+    {R : Type u} {K : Type v} {V : Type v}
+    [CommRing R] [IsLocalRing R] [IsDomain R] [IsNoetherianRing R]
+    [Field K] [Algebra R K] [IsFractionRing R K]
+    [AddCommGroup V] [Module K V] [Module R V]
+    [IsScalarTower R K V] [Module.Finite K V] (hdim : ringKrullDim R = 1)
+    (M M' M'' : Submodule R V) (hM : Submodule.IsLattice K M)
+    (hM' : Submodule.IsLattice K M') (hM'' : Submodule.IsLattice K M'')
+    (hMM' : M ≤ M') (hM'M'' : M' ≤ M'') :
+    latticeLengthInt R M M'' =
+      latticeLengthInt R M M' + latticeLengthInt R M' M'' := by
+  have h := lattice_length_additive hdim M M' M'' hM hM' hM'' hMM' hM'M''
+  change (latticeLengthNat R M M'' : ℤ) =
+    (latticeLengthNat R M M' : ℤ) + (latticeLengthNat R M' M'' : ℤ)
+  exact_mod_cast h
 
 theorem lattice_length_comparison
     {R : Type u} {K : Type v} {V : Type v}
@@ -285,7 +657,26 @@ theorem lattice_length_comparison
         latticeLengthInt R M' (M ⊔ M') - latticeLengthInt R M (M ⊔ M') ∧
       latticeLengthInt R M' (M ⊔ M') - latticeLengthInt R M (M ⊔ M') =
         latticeLengthInt R M' N' - latticeLengthInt R M N' := by
-  sorry
+  have hAS := lattice_intersection_and_sum hdim M M' hM hM'
+  have hA : Submodule.IsLattice K (M ⊓ M') := hAS.1
+  have hS : Submodule.IsLattice K (M ⊔ M') := hAS.2
+  have h1 := lattice_length_additive_int hdim N (M ⊓ M') M
+    hN hA hM hNM inf_le_left
+  have h2 := lattice_length_additive_int hdim N (M ⊓ M') M'
+    hN hA hM' hNM inf_le_right
+  have h3 := lattice_length_additive_int hdim N M (M ⊔ M')
+    hN hM hS (hNM.trans inf_le_left) le_sup_left
+  have h4 := lattice_length_additive_int hdim N M' (M ⊔ M')
+    hN hM' hS (hNM.trans inf_le_right) le_sup_right
+  have h5 := lattice_length_additive_int hdim M' (M ⊔ M') N'
+    hM' hS hN' le_sup_right hMM'N'
+  have h6 := lattice_length_additive_int hdim M (M ⊔ M') N'
+    hM hS hN' le_sup_left hMM'N'
+  constructor
+  · omega
+  constructor
+  · omega
+  · omega
 
 def latticeDistance
     (R : Type u) {V : Type v} [CommRing R]
@@ -302,7 +693,9 @@ theorem latticeDistance_of_le
     (M M' : Submodule R V) (hM : Submodule.IsLattice K M)
     (hM' : Submodule.IsLattice K M') (hM'M : M' ≤ M) :
     latticeDistance R M M' = latticeLengthInt R M' M := by
-  sorry
+  have hinf : M ⊓ M' = M' := inf_eq_right.mpr hM'M
+  rw [latticeDistance, hinf]
+  simp [latticeLengthInt, latticeLengthNat, latticeQuotient]
 
 theorem latticeDistance_additive
     {R : Type u} {K : Type v} {V : Type v}

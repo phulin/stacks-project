@@ -208,7 +208,7 @@ theorem projectiveLineQuotient_graded
   classical
   let C : ℕ → Submodule R (BinaryPolynomial R) :=
     MvPolynomial.homogeneousSubmodule (Fin 2) R
-  letI : GradedAlgebra C := MvPolynomial.gradedAlgebra
+  let _ : GradedAlgebra C := MvPolynomial.gradedAlgebra
   let q : BinaryPolynomial R →ₗ[R] projectiveLineQuotient F :=
     (Ideal.Quotient.mkₐ R (projectiveLineQuotientIdeal F)).toLinearMap
   have hI : (projectiveLineQuotientIdeal F).IsHomogeneous C := by
@@ -222,7 +222,7 @@ theorem projectiveLineQuotient_graded
     exact Ideal.Quotient.eq_zero_iff_mem
   have hqsurj : Function.Surjective q := by
     exact Ideal.Quotient.mkₐ_surjective R (projectiveLineQuotientIdeal F)
-  letI : DirectSum.Decomposition C := MvPolynomial.decomposition
+  let _ : DirectSum.Decomposition C := MvPolynomial.decomposition
   rcases quotient_decomposition C (projectiveLineQuotientIdeal F) q hq hqsurj hI with ⟨hQ⟩
   rcases addSubgroup_decomposition_of_submodule (fun n : ℕ => (C n).map q) with ⟨hQ'⟩
   let Q : ℕ → AddSubgroup (projectiveLineQuotient F) :=
@@ -232,7 +232,7 @@ theorem projectiveLineQuotient_graded
         change (1 : projectiveLineQuotient F) ∈ projectiveLineQuotientComponent F 0
         refine Submodule.mem_map.mpr
           ⟨1, MvPolynomial.isHomogeneous_one (Fin 2) R, ?_⟩
-        simp [q]
+        simp
       mul_mem := by
         intro m n x y hx hy
         change x ∈ projectiveLineQuotientComponent F m at hx
@@ -270,7 +270,7 @@ def projectiveLineMultiplication
 
 theorem rel_prime_pols
     {k : Type u} [Field k] (F G : BinaryPolynomial k)
-    (d e : ℕ) (hF : F.IsHomogeneous d) (hG : G.IsHomogeneous e)
+    (d e : ℕ) (_hF : F.IsHomogeneous d) (_hG : G.IsHomogeneous e)
     (hcop : IsRelPrime F G) :
     Function.Injective (projectiveLineMultiplication F G) := by
   intro x y hxy
@@ -323,9 +323,9 @@ def projectiveLineComponentMultiplication
 
 theorem projectiveLine_localize
     {R : Type u} [CommRing R] (F : BinaryPolynomial R) (d : ℕ)
-    (hF : F.IsHomogeneous d)
+    (_hF : F.IsHomogeneous d)
     (p : PrimeSpectrum R)
-    (hp : ∃ m : Fin 2 →₀ ℕ, F.coeff m ∉ p.asIdeal) :
+    (_hp : ∃ m : Fin 2 →₀ ℕ, F.coeff m ∉ p.asIdeal) :
     ∃ f : R, f ∉ p.asIdeal ∧ ∃ e : ℕ, ∃ G : BinaryPolynomial R,
       ∃ hG : G.IsHomogeneous e,
         ∀ n : ℕ, d ≤ n →
@@ -482,14 +482,14 @@ theorem projectiveLine_power_multiplication_bijective
       Function.Bijective (projectiveLineComponentMultiplication F G e n hG)) :
     Function.Bijective (projectiveLinePowerMultiplication F G e d hG) := by
   have hdeg : projectiveLinePowerDegree e d (e * d) = (e * d) + (e * d) := by
-    simpa [projectiveLinePowerDegree_eq]
+    simp [projectiveLinePowerDegree_eq]
   have h := projectiveLinePowerMultiplicationAt_bijective F G d e hG hmul d (e * d)
     hstart
   let ecast :
       projectiveLineQuotientComponent F (projectiveLinePowerDegree e d (e * d)) ≃
         projectiveLineQuotientComponent F ((e * d) + (e * d)) :=
-    { toFun := fun z => ⟨z.1, by simpa [hdeg] using z.2⟩
-      invFun := fun z => ⟨z.1, by simpa [hdeg] using z.2⟩
+    { toFun := fun z => ⟨z.1, by rw [← hdeg]; exact z.2⟩
+      invFun := fun z => ⟨z.1, by rw [hdeg]; exact z.2⟩
       left_inv := by intro z; rfl
       right_inv := by intro z; rfl }
   have hcast : Function.Bijective ecast := ecast.bijective
@@ -550,7 +550,7 @@ structure ProjectiveLineFiniteAlgebraConstruction
 
 theorem projectiveLine_finite_algebra_construction
     {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
-    (d e : ℕ) (hF : F.IsHomogeneous d) (hG : G.IsHomogeneous e)
+    (d e : ℕ) (_hF : F.IsHomogeneous d) (hG : G.IsHomogeneous e)
     (hstart : d ≤ e * d)
     (hfinite : ∀ n : ℕ, d ≤ n →
       Formalization.Books.Algebra.Unit78.FiniteLocallyFreeOfRank R
@@ -655,7 +655,7 @@ theorem projectiveLine_finite_algebra_construction
       left_distrib := hμ_right_distrib
       right_distrib := hμ_left_distrib
       mul_comm := hμ_comm }
-  letI : CommRing (A : Type u) := ring
+  let _ : CommRing (A : Type u) := ring
   let i : R →+* A :=
     { toFun := fun r => r • p
       map_one' := by
@@ -675,7 +675,7 @@ theorem projectiveLine_finite_algebra_construction
       map_zero' := by simp
       map_add' := by intro r s; rw [add_smul] }
   let algebra : Algebra R (A : Type u) := i.toAlgebra
-  letI : Algebra R (A : Type u) := algebra
+  let _ : Algebra R (A : Type u) := algebra
   refine ⟨ProjectiveLineFiniteAlgebraConstruction.mk ring algebra
     (hfinite (e * d) hstart)
     (by

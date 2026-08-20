@@ -1,12 +1,15 @@
+import Formalization.Books.Algebra.Unit15.Miscellany
+import Formalization.Books.Algebra.Unit24.GlueingFunctions
 import Formalization.Books.Algebra.Unit66.WeaklyAssociatedPrimes
 import Formalization.Books.Algebra.Unit82.UniversallyInjective
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Formalization.Books.Algebra.Unit88.MittagLefflerModules
+import Formalization.Books.Algebra.Unit91.ExamplesAndNonExamples
 import Formalization.Books.Algebra.Unit102.WhatMakesAComplexExact
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 import Mathlib.RingTheory.Ideal.Quotient.Operations
-import Mathlib.RingTheory.LocalRing.Defs
+import Mathlib.RingTheory.Spectrum.Prime.Topology
 
 /-!
 # More on Algebra, Chapter 15: Auto-associated rings
@@ -30,16 +33,12 @@ noncomputable section
 
 /-! ## Auto-associated rings -/
 
-/-- The point of the spectrum defined by the maximal ideal of a local ring. -/
-def maximalIdealPoint (R : Type u) [CommRing R] [IsLocalRing R] : PrimeSpectrum R :=
-  ⟨IsLocalRing.maximalIdeal R, inferInstance⟩
-
 /-- A ring is auto-associated when it is local and its maximal ideal is weakly
 associated to the ring itself. -/
 def AutoAssociated (R : Type u) [CommRing R] : Prop :=
   ∃ hR : IsLocalRing R,
     letI : IsLocalRing R := hR
-    maximalIdealPoint R ∈ weaklyAssociatedPrimes R R
+    IsLocalRing.closedPoint R ∈ weaklyAssociatedPrimes R R
 
 /-- The annihilator of an ideal is nonzero. -/
 def HasPropertyP (R : Type u) [CommRing R] : Prop :=

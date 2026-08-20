@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Homology.DerivedCategory.RightDerivedFunctorPlus
+import Formalization.Books.Derived.Unit10.DistinguishedTriangles
 import Formalization.Books.Derived.Unit11.DerivedCategories
 import Formalization.Books.Derived.Unit14.Core
 import Formalization.Books.Derived.Unit14.DerivedFunctors
@@ -19,6 +20,7 @@ open CategoryTheory.Limits
 open CategoryTheory.Preadditive
 open CategoryTheory.Pretriangulated
 open Formalization.Books.Derived.Unit08
+open Formalization.Books.Derived.Unit10
 open Formalization.Books.Derived.Unit11
 open Formalization.Books.Derived.Unit14
 open Formalization.Books.Homology.Unit03
@@ -77,7 +79,8 @@ theorem termwiseInjectiveComplex_computes
     [HasZeroObject D] [HasShift D ℤ]
     [∀ n : ℤ, (shiftFunctor D n).Additive]
     [Pretriangulated D] [CategoryTheory.IsTriangulated D]
-    (F : KPlus A ⥤ D) [F.CommShift ℤ] [F.IsTriangulated]
+    (F : KPlus A ⥤ D)
+    (hF : Nonempty (ExactTriangulatedFunctorData F))
     (I : CompPlus A) (hI : IsTermwiseInjectiveComplex I) :
     ComputesRightDerivedComplex F I := by
   sorry
@@ -100,7 +103,7 @@ theorem rightDerived_everywhere_defined_of_enoughInjectives
     [HasZeroObject D] [HasShift D ℤ]
     [∀ n : ℤ, (shiftFunctor D n).Additive]
     [Pretriangulated D] [CategoryTheory.IsTriangulated D]
-    (F : KPlus A ⥤ D) [F.CommShift ℤ] [F.IsTriangulated] :
+    (F : KPlus A ⥤ D) (hF : Nonempty (ExactTriangulatedFunctorData F)) :
     RightDerivable (quasiIsoPlusProperty A)
       (boundedQuasiIsoProperty_properties A).1 F := by
   sorry

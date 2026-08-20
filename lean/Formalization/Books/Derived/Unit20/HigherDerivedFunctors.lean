@@ -109,7 +109,7 @@ theorem rightDerived_shortExact_longExact
 /-- Objectwise vanishing of a functor. -/
 def FunctorObjectwiseIsZero
     {A : Type u} [Category.{v} A]
-    {B : Type u'} [Category.{v'} B] [HasZeroObject B]
+    {B : Type u'} [Category.{v'} B]
     (G : A ⥤ B) : Prop :=
   ∀ X : A, IsZero (G.obj X)
 

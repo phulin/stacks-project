@@ -18,6 +18,7 @@ open CategoryTheory.Preadditive
 open CategoryTheory.Pretriangulated
 open Formalization.Books.Derived.Unit03
 open Formalization.Books.Derived.Unit08
+open Formalization.Books.Derived.Unit10
 open Formalization.Books.Derived.Unit11
 open Formalization.Books.Derived.Unit20
 open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
@@ -67,9 +68,7 @@ theorem rightDerivedFunctorPlus_isExact
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
-    ∃ hG : (F.rightDerivedFunctorPlus).CommShift ℤ,
-      letI : (F.rightDerivedFunctorPlus).CommShift ℤ := hG
-      (F.rightDerivedFunctorPlus).IsTriangulated := by
+    Nonempty (ExactTriangulatedFunctorData F.rightDerivedFunctorPlus) := by
   sorry
 
 /-- The right-derived functor induces an exact functor from `K⁺(A)` to
@@ -79,9 +78,7 @@ theorem rightDerivedHomotopyFunctor_isExact
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     (F : A ⥤ B) [F.Additive] :
-    ∃ hG : (rightDerivedHomotopyFunctor F).CommShift ℤ,
-      letI : (rightDerivedHomotopyFunctor F).CommShift ℤ := hG
-      (rightDerivedHomotopyFunctor F).IsTriangulated := by
+    Nonempty (ExactTriangulatedFunctorData (rightDerivedHomotopyFunctor F)) := by
   sorry
 
 /-- The right-derived functor on bounded-below complexes carries the

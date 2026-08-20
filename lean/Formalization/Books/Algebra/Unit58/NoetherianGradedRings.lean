@@ -426,6 +426,38 @@ one-variable quotient statement. -/
 def IsEventuallyZero {A : Type v} [AddCommGroup A] (f : ℤ → A) : Prop :=
   ∀ᶠ n : ℤ in Filter.atTop, f n = 0
 
+theorem isNumericalPolynomialOfDegreeLessThan_iff
+    {A : Type v} [AddCommGroup A] (f : ℤ → A) (d : ℕ) :
+    IsNumericalPolynomialOfDegreeLessThan f d ↔
+      ∃ r : ℕ, r < d ∧ ∃ a : ℕ → A,
+        ∀ᶠ n : ℤ in Filter.atTop,
+          f n = ∑ i ∈ Finset.range (r + 1), integerBinomial n i • a i :=
+  Iff.rfl
+
+theorem IsNumericalPolynomialOfDegreeLessThan.isNumericalPolynomial
+    {A : Type v} [AddCommGroup A] {f : ℤ → A} {d : ℕ}
+    (hf : IsNumericalPolynomialOfDegreeLessThan f d) :
+    IsNumericalPolynomial f := by
+  rcases hf with ⟨r, -, a, ha⟩
+  exact ⟨r, a, ha⟩
+
+theorem isEventuallyZero_iff
+    {A : Type v} [AddCommGroup A] (f : ℤ → A) :
+    IsEventuallyZero f ↔ ∀ᶠ n : ℤ in Filter.atTop, f n = 0 :=
+  Iff.rfl
+
+theorem IsEventuallyZero.isNumericalPolynomial
+    {A : Type v} [AddCommGroup A] {f : ℤ → A}
+    (hf : IsEventuallyZero f) : IsNumericalPolynomial f := by
+  refine ⟨0, fun _ => 0, ?_⟩
+  filter_upwards [hf] with n hn
+  simp [hn]
+
+theorem isNumericalPolynomial_zero
+    {A : Type v} [AddCommGroup A] :
+    IsNumericalPolynomial (fun _ : ℤ => (0 : A)) :=
+  IsEventuallyZero.isNumericalPolynomial (Filter.Eventually.of_forall fun _ => rfl)
+
 theorem numericalPolynomial_comp_addMonoidHom
     {A A' : Type v} [AddCommGroup A] [AddCommGroup A']
     (φ : A →+ A') (f : ℤ → A) (hf : IsNumericalPolynomial f) :
@@ -1572,6 +1604,19 @@ def IsPeriodicNumericalPolynomial
   ∃ q : ℕ, 0 < q ∧
     ∀ r : Fin q,
       IsNumericalPolynomial (fun m : ℤ => f ((r : ℤ) + (q : ℤ) * m))
+
+theorem IsNumericalPolynomial.isPeriodicNumericalPolynomial
+    {A : Type v} [AddCommGroup A] {f : ℤ → A}
+    (hf : IsNumericalPolynomial f) :
+    IsPeriodicNumericalPolynomial f := by
+  refine ⟨1, by omega, fun r => ?_⟩
+  simpa using hf
+
+theorem IsEventuallyZero.isPeriodicNumericalPolynomial
+    {A : Type v} [AddCommGroup A] {f : ℤ → A}
+    (hf : IsEventuallyZero f) :
+    IsPeriodicNumericalPolynomial f :=
+  hf.isNumericalPolynomial.isPeriodicNumericalPolynomial
 
 theorem graded_hilbert_periodic_polynomial
     (G : GradedRingData S) (𝓜 : GradedModuleData G M)

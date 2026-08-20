@@ -219,7 +219,7 @@ theorem moduleExtensionExtIso {R : Type u} [Ring R] (M N : ModuleCat R) :
       (kernel.condition (Projective.π M))
   have hS : S.ShortExact :=
     { exact := ShortComplex.exact_kernel (Projective.π M) }
-  letI : Projective S.X₂ := by
+  let : Projective S.X₂ := by
     dsimp [S]
     infer_instance
   let d := (contravariantBoundary hS N).hom
@@ -250,7 +250,7 @@ theorem injective_iff_ext_one_vanishes {R : Type u} [Ring R] (J : ModuleCat R) :
   · intro hExt
     apply (injective_iff_moduleHomRestriction_surjective J).mpr
     intro M M' f hf φ
-    letI : Mono f := hf
+    let : Mono f := hf
     let S : ShortComplex (ModuleCat R) :=
       ShortComplex.mk f (cokernel.π f) (cokernel.condition f)
     have hS : S.ShortExact :=

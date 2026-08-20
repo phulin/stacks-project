@@ -2496,7 +2496,7 @@ theorem deRhamBaseChangeIso_exists
           ExteriorAlgebra.ιMulti T p (fun i => diffEquiv (1 ⊗ₜ[A] m i)) := by
       rw [exteriorPower.ιMulti_apply_coe, ExteriorAlgebra.ιMulti_apply,
         ExteriorAlgebra.ιMulti_apply, map_list_prod]
-      simp only [List.map_ofFn, fR_ι]
+      simp only [List.map_ofFn]
       congr 1
       congr 1
       funext i
@@ -2533,7 +2533,7 @@ theorem deRhamBaseChangeIso_exists
         exact (IsScalarTower.algebraMap_smul T b₀ _).symm
       · simp
       · intro x y hx hy ihx ihy
-        simpa only [map_add, Submodule.coe_add, ihx, ihy]
+        simp only [map_add, Submodule.coe_add, ihx, ihy]
       · intro a x hx ih
         change fA (a • (x : EB)) =
           (deRhamMapComponent (A := A) (A' := A')

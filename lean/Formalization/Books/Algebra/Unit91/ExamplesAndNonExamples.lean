@@ -10,6 +10,7 @@ import Mathlib.RingTheory.AdicCompletion.Functoriality
 import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Henselian
 import Mathlib.RingTheory.Ideal.Quotient.Basic
+import Mathlib.RingTheory.Ideal.Operations
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.RingTheory.MvPolynomial.Basic
 import Mathlib.RingTheory.PowerSeries.Basic
@@ -3407,11 +3408,154 @@ theorem artinianLocalExample_baseRing_isArtinian
     exact ⟨{(1 : R), A, B}, by simp, hspan⟩
   exact IsArtinianRing.of_finite k R
 
+private def artinianLocalExample_residuePolynomial (k : Type u) [Field k] :
+    artinianLocalExamplePolynomialRing k →+* k :=
+  MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
+
+private lemma artinianLocalExample_relationIdeal_le_residueKernel
+    (k : Type u) [Field k] :
+    artinianLocalExampleRelationIdeal k ≤
+      RingHom.ker (artinianLocalExample_residuePolynomial k) := by
+  rw [artinianLocalExampleRelationIdeal, Ideal.span_le]
+  intro p hp
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+  rcases hp with rfl | rfl | rfl <;>
+    simp [artinianLocalExample_residuePolynomial]
+
+private def artinianLocalExample_residue (k : Type u) [Field k] :
+    artinianLocalExampleBaseRing k →+* k :=
+  Ideal.Quotient.lift (artinianLocalExampleRelationIdeal k)
+    (artinianLocalExample_residuePolynomial k)
+    (fun _p hp => RingHom.mem_ker.mp
+      (artinianLocalExample_relationIdeal_le_residueKernel k hp))
+
+private lemma artinianLocalExample_residue_mk (k : Type u) [Field k]
+    (p : artinianLocalExamplePolynomialRing k) :
+    artinianLocalExample_residue k
+        (Ideal.Quotient.mk (artinianLocalExampleRelationIdeal k) p) =
+      artinianLocalExample_residuePolynomial k p := by
+  rw [artinianLocalExample_residue, Ideal.Quotient.lift_mk]
+
+private lemma artinianLocalExample_residue_surjective
+    (k : Type u) [Field k] :
+    Function.Surjective (artinianLocalExample_residue k) := by
+  intro c
+  refine ⟨Ideal.Quotient.mk (artinianLocalExampleRelationIdeal k)
+      (MvPolynomial.C c), ?_⟩
+  rw [artinianLocalExample_residue_mk]
+  simp [artinianLocalExample_residuePolynomial]
+
+private lemma artinianLocalExample_residue_kernel_square
+    (k : Type u) [Field k] :
+    (RingHom.ker (artinianLocalExample_residue k)) ^ 2 = ⊥ := by
+  let I := artinianLocalExampleRelationIdeal k
+  let J : Ideal (artinianLocalExamplePolynomialRing k) :=
+    Ideal.span {MvPolynomial.X (0 : Fin 2), MvPolynomial.X (1 : Fin 2)}
+  have hset : (MvPolynomial.X '' (Set.univ : Set (Fin 2))) =
+      ({MvPolynomial.X (0 : Fin 2), MvPolynomial.X (1 : Fin 2)} :
+        Set (artinianLocalExamplePolynomialRing k)) := by
+    ext p
+    constructor
+    · rintro ⟨i, -, rfl⟩
+      fin_cases i <;> simp
+    · intro hp
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+      rcases hp with rfl | rfl
+      · exact ⟨0, Set.mem_univ _, rfl⟩
+      · exact ⟨1, Set.mem_univ _, rfl⟩
+  have hker0 : RingHom.ker (artinianLocalExample_residuePolynomial k) = J := by
+    apply le_antisymm
+    · intro p hp
+      change p ∈ J
+      rw [show J = Ideal.span (MvPolynomial.X ''
+          (Set.univ : Set (Fin 2))) by rw [hset]]
+      rw [MvPolynomial.mem_ideal_span_X_image]
+      intro m hm
+      by_contra hnot
+      have hmzero : m = 0 := by
+        ext i
+        by_contra hi
+        exact hnot ⟨i, Set.mem_univ _, hi⟩
+      have hmcoeff := MvPolynomial.mem_support_iff.mp hm
+      apply hmcoeff
+      simpa [hmzero, artinianLocalExample_residuePolynomial,
+        MvPolynomial.constantCoeff_eq] using (RingHom.mem_ker.mp hp)
+    · change Ideal.span {MvPolynomial.X (0 : Fin 2), MvPolynomial.X (1 : Fin 2)} ≤ _
+      rw [Ideal.span_le]
+      intro p hp
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+      rcases hp with rfl | rfl <;>
+        simp [artinianLocalExample_residuePolynomial]
+  have hJJ : J * J ≤ I := by
+    dsimp [J]
+    rw [Ideal.span_pair_mul_span_pair]
+    apply Ideal.span_le.2
+    intro p hp
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with rfl | rfl | rfl | rfl <;>
+      exact Ideal.subset_span (by simp [pow_two, mul_comm])
+  apply bot_unique
+  rw [pow_two]
+  rw [Ideal.mul_le]
+  intro x hx y hy
+  obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective x
+  obtain ⟨q, rfl⟩ := Ideal.Quotient.mk_surjective y
+  have hp : p ∈ J := by
+    rw [← hker0]
+    rw [RingHom.mem_ker] at hx ⊢
+    rw [artinianLocalExample_residue_mk] at hx
+    exact hx
+  have hq : q ∈ J := by
+    rw [← hker0]
+    rw [RingHom.mem_ker] at hy ⊢
+    rw [artinianLocalExample_residue_mk] at hy
+    exact hy
+  change Ideal.Quotient.mk I (p * q) = 0
+  rw [Ideal.Quotient.eq_zero_iff_mem]
+  exact hJJ (Ideal.mul_mem_mul hp hq)
+
+private lemma isAdicComplete_of_ideal_square_eq_bot
+    {R : Type u} [CommRing R] (I : Ideal R) (hI : I ^ 2 = ⊥) :
+    IsAdicComplete I R := by
+  refine { haus' := ?_, prec' := ?_ }
+  · intro x hx
+    simpa [hI] using hx 2
+  · intro f hf
+    refine ⟨f 2, ?_⟩
+    intro n
+    by_cases hn : n ≤ 2
+    · exact hf hn
+    · have h2n : 2 ≤ n := by omega
+      have hpow : I ^ n = ⊥ := by
+        obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le h2n
+        simp [pow_add, hI]
+      simpa [hpow, hI] using (SModEq.symm (hf h2n))
+
 /-- The base ring is local. -/
 theorem artinianLocalExample_baseRing_isLocal
     (k : Type u) [Field k] :
     IsLocalRing (artinianLocalExampleBaseRing k) := by
-  sorry
+  let m := RingHom.ker (artinianLocalExample_residue k)
+  have hm : m.IsMaximal :=
+    RingHom.ker_isMaximal_of_surjective _
+      (artinianLocalExample_residue_surjective k)
+  have hmsq : m ^ 2 = ⊥ := by
+    exact artinianLocalExample_residue_kernel_square k
+  apply IsLocalRing.of_unique_max_ideal
+  refine ⟨m, hm, ?_⟩
+  intro J hJ
+  have hmle : m ≤ J := by
+    intro x hx
+    have hxpow : x ^ 2 ∈ (⊥ : Ideal (artinianLocalExampleBaseRing k)) := by
+      rw [← hmsq]
+      simp only [pow_two]
+      exact Ideal.mul_mem_mul hx hx
+    have hxzero : x ^ 2 = 0 := hxpow
+    have hxpowJ : x ^ 2 ∈ J := by
+      rw [hxzero]
+      exact J.zero_mem
+    exact hJ.isPrime.mem_of_pow_mem 2 hxpowJ
+  exact (hm.eq_of_le hJ.ne_top hmle).symm
 
 /-- The base ring is complete at its maximal ideal. -/
 theorem artinianLocalExample_baseRing_isComplete
@@ -3421,13 +3565,46 @@ theorem artinianLocalExample_baseRing_isComplete
     IsAdicComplete
       (IsLocalRing.maximalIdeal (artinianLocalExampleBaseRing k))
       (artinianLocalExampleBaseRing k) := by
-  sorry
+  let R := artinianLocalExampleBaseRing k
+  let m := RingHom.ker (artinianLocalExample_residue k)
+  let hlocal : IsLocalRing R := artinianLocalExample_baseRing_isLocal k
+  have hm : m.IsMaximal :=
+    RingHom.ker_isMaximal_of_surjective _
+      (artinianLocalExample_residue_surjective k)
+  have hm_eq : m = @IsLocalRing.maximalIdeal R _ hlocal :=
+    IsLocalRing.eq_maximalIdeal (I := m) hm
+  have hmsq : m ^ 2 = ⊥ := by
+    exact artinianLocalExample_residue_kernel_square k
+  rw [← hm_eq]
+  exact isAdicComplete_of_ideal_square_eq_bot m hmsq
 
 /-- The base ring is henselian local. -/
 theorem artinianLocalExample_baseRing_isHenselianLocal
     (k : Type u) [Field k] :
     HenselianLocalRing (artinianLocalExampleBaseRing k) := by
-  sorry
+  let R := artinianLocalExampleBaseRing k
+  let m := RingHom.ker (artinianLocalExample_residue k)
+  let _ : IsLocalRing R := artinianLocalExample_baseRing_isLocal k
+  have hm : m.IsMaximal :=
+    RingHom.ker_isMaximal_of_surjective _
+      (artinianLocalExample_residue_surjective k)
+  have hm_eq : m = IsLocalRing.maximalIdeal R :=
+    IsLocalRing.eq_maximalIdeal hm
+  have hmsq : m ^ 2 = ⊥ := by
+    exact artinianLocalExample_residue_kernel_square k
+  let _ : IsAdicComplete m R :=
+    isAdicComplete_of_ideal_square_eq_bot m hmsq
+  let _ : HenselianRing R m := IsAdicComplete.henselianRing R m
+  refine { is_henselian := ?_ }
+  intro f hf a₀ h₁ h₂
+  have h₁' : f.eval a₀ ∈ m := by
+    rw [hm_eq]
+    exact h₁
+  obtain ⟨a, ha, ha₀⟩ :=
+    HenselianRing.is_henselian f hf a₀ h₁' (h₂.map (Ideal.Quotient.mk m))
+  refine ⟨a, ha, ?_⟩
+  rw [← hm_eq]
+  exact ha₀
 
 /- The source's forward reference to `lemma-split-ML-henselian` is exposed as
    a small, named interface because the later source lemma is not an earlier
@@ -3456,7 +3633,11 @@ theorem artinianLocalExample_mittagLeffler_implies_directSum
     (hML : IsMittagLefflerModule (artinianLocalExampleModule k)) :
     IsDirectSumOfFinitelyPresentedModules
       (artinianLocalExampleBaseRing k) (artinianLocalExampleModule k) := by
-  sorry
+  let _ : HenselianLocalRing (artinianLocalExampleBaseRing k) :=
+    artinianLocalExample_baseRing_isHenselianLocal k
+  exact split_mittagLeffler_over_henselian_local
+    (artinianLocalExampleModule k)
+    (artinianLocalExample_countablyGenerated k) hML
 
 /-- The finitely presented algebra in the final non-example is not
 Mittag-Leffler as a module over the Artinian local base ring. -/

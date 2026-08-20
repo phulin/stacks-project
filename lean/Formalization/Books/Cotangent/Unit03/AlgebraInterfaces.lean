@@ -167,8 +167,7 @@ noncomputable def variantFreeHomEquiv (A B : Type u) [CommRing A] [CommRing B]
                       ((polynomialFreeHomEquiv A Y.left X.left).symm g.left) ≫
                     X.hom)) (MvPolynomial.X e) = X.hom.hom (g.left e) := by
                 let g' : Y.left ⟶ (polynomialForget A).obj X.left := g.left
-                simp only [Functor.id_map, CommAlgCat.hom_comp, AlgHom.comp_apply,
-                  Function.comp_apply]
+                simp only [Functor.id_map, CommAlgCat.hom_comp]
                 have hx := congrArg (fun k => k e)
                   (Equiv.apply_symm_apply
                     (polynomialFreeHomEquiv A Y.left X.left) g')

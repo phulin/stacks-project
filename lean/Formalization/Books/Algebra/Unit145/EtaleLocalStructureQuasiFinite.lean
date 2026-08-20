@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit113.DimensionFormula
 import Formalization.Books.Algebra.Unit122.QuasiFinite
+import Formalization.Books.Algebra.Unit144.LocalStructureEtaleRingMaps
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.RingHom.Etale
 
@@ -26,14 +27,6 @@ universe u
 /- The introductory remarks recall the openness and base-change properties of
 quasi-finite loci from the preceding quasi-finite chapter; they are not
 duplicated here. -/
-
-/-- The source localization map `S'_g → S_g` is represented by the canonical
-map between localizations away from an element. -/
-abbrev localizedMap
-    {S' S : Type u} [CommRing S'] [CommRing S]
-    (g : S' →+* S) (s : S') :
-    Localization.Away s →+* Localization.Away (g s) :=
-  Localization.awayMap g s
 
 /-- A binary product presentation of an algebra over `R`, with its factor
 maps retained for transporting primes from the original algebra. -/
@@ -86,7 +79,7 @@ theorem produce_finite
     (f : R →+* S') (g : S' →+* S) (p : PrimeSpectrum R) (s : S')
     (hintegral : f.IsIntegral)
     (hfiniteType : (g.comp f).FiniteType)
-    (hloc : Function.Bijective (localizedMap g s))
+    (hloc : Function.Bijective (Localization.awayMap g s))
     (hinvertible :
       letI : Algebra R S' := f.toAlgebra
       IsUnit (algebraMap S' (S' ⊗[R] p.asIdeal.ResidueField) s)) :
@@ -159,55 +152,6 @@ structure FiniteAlgebraProduct
   [commRingB : CommRing B]
   [algebraB : Algebra R B]
   equiv : X ≃ₐ[R] (∀ i, A i) × B
-
-def FiniteAlgebraProduct.factorMap
-    {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : FiniteAlgebraProduct R X) (i : Fin D.n) :
-    letI : CommRing (D.A i) := D.commRingA i
-    X →+* D.A i := by
-  letI : CommRing (D.A i) := D.commRingA i
-  letI : ∀ j, CommRing (D.A j) := D.commRingA
-  letI : CommRing D.B := D.commRingB
-  exact
-    { toFun := fun x => (D.equiv x).1 i
-      map_one' := by
-        change (D.equiv 1).1 i = 1
-        exact congrArg (fun z => z.1 i) D.equiv.map_one
-      map_mul' := by
-        intro x y
-        change (D.equiv (x * y)).1 i = (D.equiv x).1 i * (D.equiv y).1 i
-        exact congrArg (fun z => z.1 i) (D.equiv.map_mul x y)
-      map_zero' := by
-        change (D.equiv 0).1 i = 0
-        exact congrArg (fun z => z.1 i) D.equiv.map_zero
-      map_add' := by
-        intro x y
-        change (D.equiv (x + y)).1 i = (D.equiv x).1 i + (D.equiv y).1 i
-        exact congrArg (fun z => z.1 i) (D.equiv.map_add x y) }
-
-def FiniteAlgebraProduct.remainderMap
-    {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
-    (D : FiniteAlgebraProduct R X) :
-    letI : CommRing D.B := D.commRingB
-    X →+* D.B := by
-  letI : CommRing D.B := D.commRingB
-  letI : ∀ i, CommRing (D.A i) := D.commRingA
-  exact
-    { toFun := fun x => (D.equiv x).2
-      map_one' := by
-        change (D.equiv 1).2 = 1
-        exact congrArg (fun z => z.2) D.equiv.map_one
-      map_mul' := by
-        intro x y
-        change (D.equiv (x * y)).2 = (D.equiv x).2 * (D.equiv y).2
-        exact congrArg (fun z => z.2) (D.equiv.map_mul x y)
-      map_zero' := by
-        change (D.equiv 0).2 = 0
-        exact congrArg (fun z => z.2) D.equiv.map_zero
-      map_add' := by
-        intro x y
-        change (D.equiv (x + y)).2 = (D.equiv x).2 + (D.equiv y).2
-        exact congrArg (fun z => z.2) (D.equiv.map_add x y) }
 
 /-- The étale neighborhood and finite product around all quasi-finite primes
 over a fixed prime. -/

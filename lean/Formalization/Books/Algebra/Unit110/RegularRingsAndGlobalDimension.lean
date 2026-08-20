@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Formalization.Books.Algebra.Unit60.Dimension
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
+import Formalization.Books.Algebra.Unit104.CohenMacaulayRings
 import Formalization.Books.Algebra.Unit106.RegularLocalRings
 import Formalization.Books.Algebra.Unit109.FiniteGlobalDimension
 import Mathlib.RingTheory.LocalProperties.ProjectiveDimension
@@ -31,6 +32,236 @@ noncomputable section
    `0 → F_(d-e) → ... → F₀ → M → 0` is the finite prefix encoded by
    `HasFiniteFreeResolutionWithFiniteTermsLE`. -/
 
+private theorem resolution_hasProjectiveDimensionLE_of_free_prefix
+    {R M : Type u} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M] (n : ℕ)
+    (F : Formalization.Books.Algebra.Unit71.Resolution R (ModuleCat.of R M))
+    (hfree : ∀ i : Fin n, Module.Free R (F.complex.X i : Type u))
+    (hterminal : Module.Free R (F.complex.X n : Type u))
+    (hcondition : (n = 0 → Function.Bijective F.augmentation.hom) ∧
+      (0 < n → Function.Injective (F.complex.d n (n - 1)).hom)) :
+    CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) n := by
+  change CategoryTheory.HasProjectiveDimensionLT (ModuleCat.of R M) (n + 1)
+  revert M
+  induction n with
+  | zero =>
+      intro M _ _ F hfree hterminal hcondition
+      have hbij := hcondition.1 rfl
+      let e : F.complex.X 0 ≃ₗ[R] M :=
+        LinearEquiv.ofBijective F.augmentation.hom hbij
+      have hprojX : CategoryTheory.Projective (F.complex.X 0) := by
+        let : Module.Free R (F.complex.X 0 : Type u) := hterminal
+        exact ModuleCat.projective_of_free
+          (Module.Free.chooseBasis R (F.complex.X 0 : Type u))
+      have hprojM : CategoryTheory.Projective (ModuleCat.of R M) :=
+        CategoryTheory.Projective.of_iso e.toModuleIso hprojX
+      exact CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hprojM
+  | succ n ih =>
+      intro M _ _ F hfree hterminal hcondition
+      let K : ModuleCat.{u} R := CategoryTheory.Limits.kernel F.augmentation
+      let p : F.complex.X 1 ⟶ K :=
+        CategoryTheory.Limits.kernel.lift F.augmentation (F.complex.d 1 0)
+          F.augmentation_condition
+      let C : Formalization.Books.Algebra.Unit71.ModuleChainComplex R :=
+        { X := fun i => F.complex.X (i + 1)
+          d := fun i j => F.complex.d (i + 1) (j + 1)
+          shape := by
+            intro i j hij
+            apply F.complex.shape
+            simp only [ComplexShape.down_Rel] at hij ⊢
+            omega
+          d_comp_d' := by
+            intro i j k hij hjk
+            apply F.complex.d_comp_d'
+            · simp only [ComplexShape.down_Rel] at hij ⊢
+              omega
+            · simp only [ComplexShape.down_Rel] at hjk ⊢
+              omega }
+      have hpι : p ≫ CategoryTheory.Limits.kernel.ι F.augmentation =
+          F.complex.d 1 0 := by
+        exact CategoryTheory.Limits.kernel.lift_ι _ _ _
+      have hpzero : F.complex.d 2 1 ≫ p = 0 := by
+        apply (CategoryTheory.cancel_mono
+          (CategoryTheory.Limits.kernel.ι F.augmentation)).1
+        simp [hpι, F.complex.d_comp_d]
+      have htail_exact : Function.Exact
+          (F.complex.d 2 1).hom p.hom := by
+        apply LinearMap.exact_iff.mpr
+        apply le_antisymm
+        · intro x hx
+          have hx0 : p.hom x = 0 := (LinearMap.mem_ker).1 hx
+          have hx' : (F.complex.d 1 0).hom x = 0 := by
+            have h := congrArg (fun q => q.hom x) hpι
+            simpa [hx0] using h.symm
+          have hFexact : Function.Exact
+              (F.complex.d 2 1).hom (F.complex.d 1 0).hom :=
+            (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).mp
+              (F.exact_succ 0)
+          have hxrange : x ∈ LinearMap.range (F.complex.d 2 1).hom := by
+            rw [← (LinearMap.exact_iff.mp hFexact)]
+            exact hx'
+          exact hxrange
+        · rw [LinearMap.range_le_ker_iff]
+          ext y
+          simpa using congrArg (fun q => q.hom y) hpzero
+      have htail_zero : C.d 1 0 ≫ p = 0 := by
+        exact hpzero
+      have htail_exact_zero :
+          (CategoryTheory.ShortComplex.mk (C.d 1 0) p htail_zero).Exact := by
+        exact (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).mpr
+          htail_exact
+      have htail_exact_succ : ∀ k : ℕ,
+          (CategoryTheory.ShortComplex.mk (C.d (k + 2) (k + 1))
+            (C.d (k + 1) k) (C.d_comp_d (k + 2) (k + 1) k)).Exact := by
+        intro k
+        simpa [C] using F.exact_succ (k + 1)
+      have htail_epi : Epi p := by
+        exact (CategoryTheory.ShortComplex.exact_iff_epi_kernel_lift _).mp
+          F.exact_zero
+      let G : Formalization.Books.Algebra.Unit71.Resolution R K :=
+        { complex := C
+          augmentation := p
+          augmentation_condition := htail_zero
+          exact_zero := htail_exact_zero
+          exact_succ := htail_exact_succ
+          augmentation_epi := htail_epi }
+      have hfree_tail : ∀ i : Fin n,
+          Module.Free R (G.complex.X i : Type u) := by
+        intro i
+        change Module.Free R (F.complex.X (i.1 + 1) : Type u)
+        exact hfree ⟨i.1 + 1, by omega⟩
+      have hterminal_tail : Module.Free R (G.complex.X n : Type u) := by
+        change Module.Free R (F.complex.X (n + 1) : Type u)
+        exact hterminal
+      have hcondition_tail :
+          (n = 0 → Function.Bijective G.augmentation.hom) ∧
+            (0 < n → Function.Injective (G.complex.d n (n - 1)).hom) := by
+        constructor
+        · intro hn
+          subst n
+          have hinj : Function.Injective p.hom := by
+            intro x y hxy
+            apply hcondition.2 (by omega)
+            have hxy' := congrArg
+              (fun z => (CategoryTheory.Limits.kernel.ι F.augmentation).hom z) hxy
+            change (p ≫ CategoryTheory.Limits.kernel.ι F.augmentation).hom x =
+              (p ≫ CategoryTheory.Limits.kernel.ι F.augmentation).hom y at hxy'
+            simpa [hpι] using hxy'
+          have hsurj : Function.Surjective p.hom :=
+            (ModuleCat.epi_iff_surjective p).mp htail_epi
+          exact ⟨hinj, hsurj⟩
+        · intro hn
+          obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hn)
+          dsimp [G, C]
+          have hinj := hcondition.2 (by omega)
+          simpa using hinj
+      have hK : CategoryTheory.HasProjectiveDimensionLE K n := by
+        apply ih G hfree_tail hterminal_tail hcondition_tail
+      let S := CategoryTheory.ShortComplex.mk
+        (CategoryTheory.Limits.kernel.ι F.augmentation) F.augmentation
+        (CategoryTheory.Limits.kernel.condition F.augmentation)
+      have hS : S.ShortExact := by
+        dsimp [S]
+        refine { exact := ?_, mono_f := inferInstance, epi_g := F.augmentation_epi }
+        apply CategoryTheory.ShortComplex.exact_of_f_is_kernel
+        exact CategoryTheory.Limits.kernelIsKernel F.augmentation
+      have hproj0 : CategoryTheory.Projective S.X₂ := by
+        dsimp [S]
+        let : Module.Free R (F.complex.X 0 : Type u) := hfree ⟨0, by omega⟩
+        exact ModuleCat.projective_of_free
+          (Module.Free.chooseBasis R (F.complex.X 0 : Type u))
+      have hproj0' : CategoryTheory.HasProjectiveDimensionLT S.X₂ (n + 2) := by
+        exact @CategoryTheory.hasProjectiveDimensionLT_of_ge _ _ _ S.X₂ 1
+          (n + 2) (by omega)
+          (CategoryTheory.projective_iff_hasProjectiveDimensionLT_one.mp hproj0)
+      exact hS.hasProjectiveDimensionLT_X₃ (n + 1)
+        (by simpa [CategoryTheory.HasProjectiveDimensionLE] using hK) hproj0'
+
+private theorem finite_free_resolution_with_finite_terms_of_mcm_prefix
+    {R M : Type u} [CommRing R] [IsRegularLocalRing R]
+    [AddCommGroup M] [Module R M] [Module.Finite R M] (n : ℕ)
+    (hprefix : Formalization.Books.Algebra.Unit104.HasMCMFiniteFreeResolutionPrefix
+      R M n) :
+    HasFiniteFreeResolutionWithFiniteTermsLE (ModuleCat.of R M) n := by
+  rcases hprefix with ⟨F, hterms, hterminal⟩
+  rcases hterminal with ⟨hK, hKcm, hzero, hinj⟩
+  let : Module.Finite R (F.complex.X n : Type u) := hK
+  have hfree : ∀ i : Fin n,
+      Module.Free R (F.complex.X i : Type u) := by
+    intro i
+    exact (hterms i).1
+  have hterminal_free : Module.Free R (F.complex.X n : Type u) :=
+    Formalization.Books.Algebra.Unit106.regular_mcm_free hKcm
+  have hpd : CategoryTheory.HasProjectiveDimensionLE
+      (ModuleCat.of R M) n :=
+    resolution_hasProjectiveDimensionLE_of_free_prefix n F hfree hterminal_free
+      ⟨hzero, hinj⟩
+  exact ((projective_dimension_resolution_criteria_noetherian_local
+    (ModuleCat.of R M) n).out 0 6).mp hpd
+
+private theorem exists_minimal_maximalIdeal_generating_list
+    {R : Type u} [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
+    ∃ xs : List R,
+      Formalization.Books.Algebra.Unit106.IsMinimalIdealGeneratingList
+        (maximalIdeal R) xs ∧
+        xs.length = (maximalIdeal R).spanFinrank := by
+  classical
+  let S : Set R := (maximalIdeal R).generators
+  let hfg : (maximalIdeal R).FG := IsNoetherian.noetherian (maximalIdeal R)
+  let hS : S.Finite := Submodule.FG.finite_generators hfg
+  let F : Finset R := hS.toFinset
+  let xs : List R := F.toList
+  have hSF : (F : Set R) = S := hS.coe_toFinset
+  have hspan : Ideal.ofList xs = maximalIdeal R := by
+    simpa [Ideal.ofList, xs, hSF] using (maximalIdeal R).span_generators
+  have hgen : (maximalIdeal R).spanFinrank = F.card := by
+    rw [← Submodule.FG.generators_ncard hfg]
+    simpa [F, S] using Set.ncard_eq_toFinset_card (hs := hS)
+  refine ⟨xs, ⟨hspan, ?_⟩, ?_⟩
+  · intro i hi
+    have hcard : (xs.eraseIdx i.1).length + 1 = xs.length :=
+      List.length_eraseIdx_add_one i.isLt
+    have hspan_erase : Ideal.ofList (xs.eraseIdx i.1) = maximalIdeal R := by
+      apply le_antisymm
+      · rw [← hspan]
+        apply Ideal.span_le.mpr
+        intro y hy
+        change y ∈ Ideal.span {r | r ∈ xs}
+        exact Ideal.subset_span (List.eraseIdx_subset hy)
+      · rw [← hspan]
+        apply Ideal.span_le.mpr
+        intro y hy
+        by_cases hyeq : y = xs.get i
+        · simpa [hyeq] using hi
+        · have hy' : y ∈ xs.eraseIdx i.1 := by
+            change y ∈ xs at hy
+            obtain ⟨j, hj, hget⟩ := (List.mem_iff_getElem.mp hy)
+            have hji : j ≠ i.1 := by
+              intro hji
+              apply hyeq
+              subst j
+              exact hget.symm
+            rw [List.mem_eraseIdx_iff_getElem]
+            exact ⟨j, hj, hji, hget⟩
+          change y ∈ Ideal.span {r | r ∈ xs.eraseIdx i.1}
+          exact Ideal.subset_span hy'
+    let E : Finset R := (xs.eraseIdx i.1).toFinset
+    have hspanE : Ideal.span (↑E : Set R) = maximalIdeal R := by
+      simpa [E, Ideal.ofList] using hspan_erase
+    have hle := Submodule.spanFinrank_span_le_ncard_of_finite
+      (R := R) (M := R) (s := (↑E : Set R)) E.finite_toSet
+    have hspanE' : Submodule.span R (↑E : Set R) = maximalIdeal R := hspanE
+    rw [hspanE'] at hle
+    rw [hgen] at hle
+    have hcard' : E.card ≤ (xs.eraseIdx i.1).length := by
+      simpa [E] using List.toFinset_card_le (xs.eraseIdx i.1)
+    have hle' : F.card ≤ (xs.eraseIdx i.1).length :=
+      le_trans (by simpa using hle) hcard'
+    have hle'' : xs.length ≤ (xs.eraseIdx i.1).length := by
+      simpa [xs] using hle'
+    omega
+  · simpa [xs] using hgen.symm
+
 /-- A finite module of depth `e` over a regular local ring of dimension `d`
 has a finite free resolution of length at most `d - e`. -/
 theorem regular_local_finite_free_resolution
@@ -40,47 +271,19 @@ theorem regular_local_finite_free_resolution
     (hdim : ringKrullDim R = d)
     (hdepth : localDepth R M = (e : ℕ∞)) :
     HasFiniteFreeResolutionWithFiniteTermsLE (ModuleCat.of R M) (d - e) := by
-  /-
-  Proof roadmap (the source's `lemma-mcm-resolution` is not yet exposed by
-  Unit103):
-  1. Split on `Subsingleton M`.  The zero module is finite free, so unfold
-     `HasFiniteFreeResolutionWithFiniteTermsLE`; otherwise install
-     `Nontrivial M`.
-  2. First establish `localDepth R R = (d : ℕ∞)`.  Construct a minimal
-     generating list for `maximalIdeal R` by the finite-generator argument
-     used in Unit106's private `exists_minimalIdealGeneratingList`, then apply
-     `Unit106.regular_ring_CM` to that list.  Unfold Unit103's
-     `IsCohenMacaulay` and rewrite with
-     `Module.supportDim_self_eq_ringKrullDim` and `hdim`.  Prefer promoting
-     that private existence lemma in `Unit106/RegularLocalRings.lean` rather
-     than duplicating its proof here when the upstream file becomes editable.
-  3. Prove a local helper which iterates finite free covers.  Start with
-     `Formalization.Books.Algebra.Unit71.exists_finite_free_resolution`
-     (`Unit71/ExtGroups.lean`).  At each differential use
-     `Resolution.exact_zero` / `Resolution.exact_succ` and Noetherianity to
-     make the kernel finite.  Apply
-     `Formalization.Books.Algebra.Unit72.localDepth_shortExact`
-     (`Unit72/Depth.lean`), splitting off a zero kernel before installing its
-     `Nontrivial` instance.  After `d - e` steps the terminal syzygy has depth
-     at least `d`.
-  4. Identify that syzygy as maximal Cohen--Macaulay.  Use
-     `Module.supportDim_le_ringKrullDim`, `hdim`, and
-     `Formalization.Books.Algebra.Unit103.IsMaximalCohenMacaulay`
-     (`Unit103/CohenMacaulayModules.lean`); the reverse depth bound is
-     `Unit72.supportDim_ge_localDepth`.  Then
-     `Unit106.regular_mcm_free` (`Unit106/RegularLocalRings.lean`) makes the
-     terminal syzygy free.
-  5. Dimension-shift back through the short exact sequences to obtain
-     `CategoryTheory.HasProjectiveDimensionLE (ModuleCat.of R M) (d - e)`.
-     Convert this bound to the requested finite-free predicate with
-     `(Unit109.projective_dimension_resolution_criteria_noetherian_local
-       (ModuleCat.of R M) (d - e)).out 0 6`.
-
-  Do not cite `Unit109.auslander_buchsbaum_of_finite_projective_dimension`:
-  the entire minimal-resolution/depth section containing it is currently
-  block-commented and hence is not a Lean declaration.
-  -/
-  sorry
+  have hcm : Formalization.Books.Algebra.Unit104.IsCohenMacaulayLocalRing R := by
+    obtain ⟨xs, hxs, _⟩ :=
+      exists_minimal_maximalIdeal_generating_list (R := R)
+    change Formalization.Books.Algebra.Unit103.IsCohenMacaulay R R
+    exact (Formalization.Books.Algebra.Unit106.regular_ring_CM xs hxs).2.2
+  have hdim' : ringKrullDim R = (((d : ℕ∞) : WithBot ℕ∞)) := by
+    simpa using hdim
+  obtain ⟨n, hne, hprefix⟩ :=
+    Formalization.Books.Algebra.Unit104.exists_mcm_finite_free_resolution_prefix
+      (R := R) (M := M) hcm d e hdim' hdepth
+  have hde : d - e = n := by omega
+  rw [hde]
+  exact finite_free_resolution_with_finite_terms_of_mcm_prefix n hprefix
 
 /-- A regular local ring of dimension `d` has global dimension at most `d`. -/
 theorem regular_local_global_dimension_le

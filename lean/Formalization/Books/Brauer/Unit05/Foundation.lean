@@ -229,12 +229,12 @@ theorem wedderburn_artin_finite_central_division_representative
   classical
   obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
     wedderburn_artin_finite k A.carrier
-  letI : NeZero n := hn
-  letI : DivisionRing D := hD
-  letI : Algebra k D := hDalg
-  letI : FiniteDimensional k D := hDfinite
-  letI : Algebra.IsCentral k A.carrier := A.isCentral
-  letI : Algebra.IsCentral k D :=
+  let : NeZero n := hn
+  let : DivisionRing D := hD
+  let : Algebra k D := hDalg
+  let : FiniteDimensional k D := hDfinite
+  let : Algebra.IsCentral k A.carrier := A.isCentral
+  let : Algebra.IsCentral k D :=
     matrix_division_factor_is_central k A.carrier D n e
   let division : FiniteCentralDivisionAlgebra k :=
     { carrier := D }

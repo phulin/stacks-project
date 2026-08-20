@@ -495,8 +495,8 @@ theorem boundedAbove_isClosedUnderKernels
   exact (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
     (fun j ↦ by
       rcases j with (_ | _)
-      · apply (CochainComplex.isZero_of_isStrictlyLE X₁ n₁ i (by omega)).eq_of_tgt
-      · apply (CochainComplex.isZero_of_isStrictlyLE X₂ n₂ i (by omega)).eq_of_tgt)
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i (by omega) hn₁).eq_of_tgt
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i (by omega) hn₂).eq_of_tgt)
 
 theorem boundedAbove_isClosedUnderCokernels
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -510,8 +510,8 @@ theorem boundedAbove_isClosedUnderCokernels
   exact (isColimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
     (fun j ↦ by
       rcases j with (_ | _)
-      · apply (CochainComplex.isZero_of_isStrictlyLE X₁ n₁ i (by omega)).eq_of_src
-      · apply (CochainComplex.isZero_of_isStrictlyLE X₂ n₂ i (by omega)).eq_of_src)
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i (by omega) hn₁).eq_of_src
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i (by omega) hn₂).eq_of_src)
 
 theorem boundedAbove_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -537,8 +537,8 @@ theorem boundedAbove_isClosedUnderFiniteProducts
   rw [IsZero.iff_id_eq_zero]
   apply (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) p.isLimit).hom_ext
   intro j
-  have hzero : IsZero ((p.diag.obj j).X i) :=
-    @CochainComplex.isZero_of_isStrictlyLE C _ _ (p.diag.obj j) (s.max' hs) i hi (hn' j)
+  have hzero : IsZero ((p.diag.obj j).X i) := by
+    exact @CochainComplex.isZero_of_isStrictlyLE C _ _ (p.diag.obj j) (s.max' hs) i hi (hn' j)
   have hπ : (p.π.app j).f i = 0 := by
     apply hzero.eq_of_tgt
   change 𝟙 _ ≫ (p.π.app j).f i = 0 ≫ (p.π.app j).f i

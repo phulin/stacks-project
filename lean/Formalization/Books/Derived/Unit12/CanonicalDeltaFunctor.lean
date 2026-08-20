@@ -495,8 +495,10 @@ theorem boundedAbove_isClosedUnderKernels
   exact (isLimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
     (fun j ↦ by
       rcases j with (_ | _)
-      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i (by omega) hn₁).eq_of_tgt
-      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i (by omega) hn₂).eq_of_tgt)
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i
+        (lt_of_le_of_lt (le_max_left _ _) hi) hn₁).eq_of_tgt
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i
+        (lt_of_le_of_lt (le_max_right _ _) hi) hn₂).eq_of_tgt)
 
 theorem boundedAbove_isClosedUnderCokernels
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -510,8 +512,10 @@ theorem boundedAbove_isClosedUnderCokernels
   exact (isColimitOfPreserves (HomologicalComplex.eval C (.up ℤ) i) hk).hom_ext
     (fun j ↦ by
       rcases j with (_ | _)
-      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i (by omega) hn₁).eq_of_src
-      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i (by omega) hn₂).eq_of_src)
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₁ n₁ i
+        (lt_of_le_of_lt (le_max_left _ _) hi) hn₁).eq_of_src
+      · apply (@CochainComplex.isZero_of_isStrictlyLE C _ _ X₂ n₂ i
+        (lt_of_le_of_lt (le_max_right _ _) hi) hn₂).eq_of_src)
 
 theorem boundedAbove_isClosedUnderFiniteProducts
     (C : Type u) [Category.{v} C] [Abelian C] :

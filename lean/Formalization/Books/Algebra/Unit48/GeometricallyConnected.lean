@@ -131,6 +131,20 @@ theorem IsGeometricallyConnected.connectedSpace_tensorProduct
     ConnectedSpace (PrimeSpectrum (K ⊗[k] S)) := by
   exact hS K
 
+/-- A geometrically connected algebra has no nontrivial idempotents after
+any field base change in the universe quantified over by the predicate. -/
+theorem IsGeometricallyConnected.isIdempotentElem_eq_zero_or_one
+    {k : Type u} {S : Type v} {K : Type w} [Field k] [CommRing S]
+    [Algebra k S] [Field K] [Algebra k K]
+    (hS : IsGeometricallyConnected.{u, v, w} k S)
+    {e : K ⊗[k] S} (he : IsIdempotentElem e) : e = 0 ∨ e = 1 := by
+  let _ : ConnectedSpace (PrimeSpectrum (K ⊗[k] S)) :=
+    hS.connectedSpace_tensorProduct
+  let _ : Nontrivial (K ⊗[k] S) :=
+    nontrivial_of_connected_primeSpectrum _ inferInstance
+  exact (Formalization.Books.Algebra.Unit21.primeSpectrum_connected_iff_no_nontrivial_idempotents
+    (K ⊗[k] S)).mp inferInstance e he
+
 /-- Geometric connectedness can be tested after finite separable extensions of
 the base field. -/
 theorem isGeometricallyConnected_iff_finiteSeparable

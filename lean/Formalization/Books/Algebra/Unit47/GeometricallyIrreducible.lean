@@ -35,6 +35,15 @@ def IsGeometricallyIrreducible (k : Type u) (S : Type v) [Field k]
   ∀ (K : Type w) [Field K] [Algebra k K],
     IrreducibleSpace (PrimeSpectrum (K ⊗[k] S))
 
+/-- Specialize geometric irreducibility to a field in the universe quantified
+over by the predicate. -/
+theorem IsGeometricallyIrreducible.irreducibleSpace_tensorProduct
+    {k : Type u} {S : Type v} {K : Type w} [Field k] [CommRing S]
+    [Algebra k S] [Field K] [Algebra k K]
+    (hS : IsGeometricallyIrreducible.{u, v, w} k S) :
+    IrreducibleSpace (PrimeSpectrum (K ⊗[k] S)) :=
+  hS K
+
 /-- The source's introductory unique-minimal-prime formulation of geometric
 irreducibility. -/
 theorem isGeometricallyIrreducible_iff_unique_minimalPrime
@@ -86,6 +95,16 @@ theorem isGeometricallyIrreducible_iff_unique_minimalPrime
     rw [PrimeSpectrum.irreducibleSpace_iff_isPrime_nilradical]
     rw [hnil]
     exact hp.isPrime
+
+/-- Every field base change of a geometrically irreducible algebra has a
+unique minimal prime. -/
+theorem IsGeometricallyIrreducible.existsUnique_minimalPrime_tensorProduct
+    {k : Type u} {S : Type v} {K : Type w} [Field k] [CommRing S]
+    [Algebra k S] [Field K] [Algebra k K]
+    (hS : IsGeometricallyIrreducible.{u, v, w} k S) :
+    ∃! p : PrimeSpectrum (K ⊗[k] S),
+      p.asIdeal ∈ minimalPrimes (K ⊗[k] S) :=
+  (isGeometricallyIrreducible_iff_unique_minimalPrime.mp hS) K
 
 /-- The fibre of an algebra map at a point of the base spectrum. -/
 def irreducibleFiber {R S : Type*} [CommRing R] [CommRing S]

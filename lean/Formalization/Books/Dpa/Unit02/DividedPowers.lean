@@ -28,10 +28,11 @@ noncomputable section
 theorem zero_factorial : Nat.factorial 0 = 1 := by
   exact Nat.factorial_zero
 
-/- The two rational-looking coefficients in the source are natural numbers.
-The first divisibility is Mathlib's factorial divisibility theorem; the second
-is recorded in the form needed by the divided-power composition coefficient. -/
-theorem divided_power_coefficients_are_integral (n m : ℕ) :
+/- The two rational-looking coefficients in the source are natural numbers
+under its standing assumptions `n ≥ 0` and `m > 0`.  The first divisibility is
+Mathlib's factorial divisibility theorem; the second is recorded in the form
+needed by the divided-power composition coefficient. -/
+theorem divided_power_coefficients_are_integral (n m : ℕ) (hm : 0 < m) :
     Nat.factorial n * Nat.factorial m ∣ Nat.factorial (n + m) ∧
       Nat.factorial n * (Nat.factorial m) ^ n ∣ Nat.factorial (n * m) := by
   constructor

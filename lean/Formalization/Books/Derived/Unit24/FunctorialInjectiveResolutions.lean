@@ -3,8 +3,8 @@ import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.CategoryTheory.Sites.Sheaf
-import Formalization.Books.Derived.Unit18.InjectiveResolutions
 import Formalization.Books.Derived.Unit20.InjectiveResolutions
+import Formalization.Books.Derived.Unit23.ResolutionFunctors
 import Formalization.Books.Homology.Unit25.DoubleComplexes
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.Sheaves.Unit10.SheavesOfModules
@@ -27,7 +27,6 @@ open CategoryTheory.Limits
 open CategoryTheory.Preadditive
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit11
-open Formalization.Books.Derived.Unit18
 open Formalization.Books.Derived.Unit20
 open Formalization.Books.Homology.Unit18
 open Formalization.Books.Homology.Unit25
@@ -58,15 +57,11 @@ abbrev InjRes
   (injResObjectProperty (A := A)).FullSubcategory
 
 /- The source's `I` is the canonical strictly full subcategory of injective
-   objects. -/
-def injectiveObjectProperty
-    {A : Type u} [Category.{v} A] [Abelian A] : ObjectProperty A :=
-  fun I => Injective I
-
-/-- The strictly full subcategory of injective objects of `A`. -/
+   objects.  Keep this chapter-local name as a compatibility interface while
+   reusing the established Chapter 23 construction. -/
 abbrev InjectiveSubcategory
     (A : Type u) [Category.{v} A] [Abelian A] :=
-  (injectiveObjectProperty (A := A)).FullSubcategory
+  Formalization.Books.Derived.Unit23.InjectiveSubcategory A
 
 /- The source writes `K⁺(I)` for complexes of injective objects.  We use the
    canonical full subcategory of `K⁺(A)` consisting of objects represented by
@@ -112,11 +107,11 @@ def injResTargetFunctor
 /-! ## Resolution-functor data -/
 
 /- The previous source section defines a resolution functor objectwise.  Reuse
-   the canonical earlier-chapter package for a bounded-below termwise
-   injective complex equipped with a quasi-isomorphism. -/
+   the canonical earlier-chapter package rather than introducing a second
+   resolution-data structure in this chapter. -/
 abbrev ResolutionFunctorData
     (A : Type u) [Category.{v} A] [Abelian A] :=
-  ∀ K : CompPlus A, ComplexInjectiveResolution K.obj
+  Formalization.Books.Derived.Unit23.ResolutionFunctorData A
 
 /-! ## Normalizing a functorial embedding -/
 
@@ -322,45 +317,39 @@ theorem resolutionFunctorCompatibility_exists
 
 /-! ## Big abelian categories and the stated examples -/
 
-/- The construction only uses an objectwise functorial injective embedding;
-   it does not quantify over the class of all objects. -/
-def SupportsFunctorialResolutionConstruction
-    {A : Type u} [Category.{v} A] [Abelian A] : Prop :=
-  HasFunctorialInjectiveEmbeddings (C := A)
-
 theorem functorial_resolution_exists_of_construction_support
     {A : Type u} [Category.{v} A] [Abelian A]
-    (hA : SupportsFunctorialResolutionConstruction (A := A)) :
+    (hA : HasFunctorialInjectiveEmbeddings (C := A)) :
     ∃ inj : CompPlus A ⥤ InjRes A,
       inj ⋙ injResSourceFunctor = 𝟭 (CompPlus A) :=
   functorial_injective_resolution_exists hA
 
 /- The concrete module and sheaf examples are already provided by the
-   earlier injective-development chapters; these aliases make the chapter's
-   applications available at its own interface. -/
+   earlier injective-development chapters; these statements expose the
+   chapter's applications using that established predicate directly. -/
 theorem moduleCat_supports_functorial_resolution
     (R : Type u) [CommRing R] :
-    SupportsFunctorialResolutionConstruction (A := ModuleCat.{u} R) := by
+    HasFunctorialInjectiveEmbeddings (C := ModuleCat.{u} R) := by
   sorry
 
 theorem presheafOfModules_supports_functorial_resolution
     {C : Type u} [Category.{u} C]
     (R : Cᵒᵖ ⥤ RingCat.{u}) :
-    SupportsFunctorialResolutionConstruction
-      (A := PresheafOfModules.{u} R) := by
+    HasFunctorialInjectiveEmbeddings
+      (C := PresheafOfModules.{u} R) := by
   sorry
 
 theorem sheafOfModules_supports_functorial_resolution
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u}) :
-    SupportsFunctorialResolutionConstruction
-      (A := SheafOfModules.{u} R) := by
+    HasFunctorialInjectiveEmbeddings
+      (C := SheafOfModules.{u} R) := by
   sorry
 
 theorem ringedSpaceModuleCat_supports_functorial_resolution
     (X : RingedSpace.{u}) :
-    SupportsFunctorialResolutionConstruction
-      (A := Mod X.structureSheaf) := by
+    HasFunctorialInjectiveEmbeddings
+      (C := Mod X.structureSheaf) := by
   sorry
 
 end Formalization.Books.Derived.Unit24

@@ -98,7 +98,8 @@ abbrev conormalModule
     (h : Algebra.FormallyUnramified R S) : Type u :=
   (universalFirstOrderThickening h).Cotangent
 
-/-- Any two universal first-order thickenings are uniquely isomorphic over `S`. -/
+
+
 theorem universal_first_order_thickening_unique
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     (P Q : Algebra.Extension.{u} R S)

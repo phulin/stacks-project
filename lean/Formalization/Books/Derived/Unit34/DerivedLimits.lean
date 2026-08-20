@@ -107,14 +107,59 @@ theorem derivedLimit_isDerivedLimit (F : DerivedInverseSystem C)
 theorem exists_isDerivedLimit (F : DerivedInverseSystem C)
     [HasProduct (fun n : ℕ => F.obj (Opposite.op n))] :
     ∃ K : C, IsDerivedLimit F K := by
-  sorry
+  obtain ⟨K, g, c, h⟩ :=
+    Formalization.Books.Derived.Unit04.distinguished_cone_exists
+      (inverseSystemDifferenceMap F (productPresentation F))
+  let T := (Triangle.mk (inverseSystemDifferenceMap F (productPresentation F)) g c).invRotate
+  exact ⟨T.obj₁, ⟨{ product := productPresentation F, inclusion := T.mor₁, connecting := T.mor₃, distinguished := inv_rot_of_distTriang _ h }⟩⟩
 
 /-- TR3 uniqueness of a derived limit, up to a generally non-unique isomorphism. -/
 theorem derivedLimit_unique_up_to_iso
     {F : DerivedInverseSystem C} {K L : C}
     (hK : IsDerivedLimit F K) (hL : IsDerivedLimit F L) :
     Nonempty (K ≅ L) := by
-  sorry
+  obtain ⟨pK⟩ := hK
+  obtain ⟨pL⟩ := hL
+  let e : pK.product.product ≅ pL.product.product :=
+    pK.product.isLimit.conePointUniqueUpToIso pL.product.isLimit
+  have he (n : ℕ) : e.hom ≫ pL.product.projection n = pK.product.projection n := by
+    exact pK.product.isLimit.conePointUniqueUpToIso_hom_comp
+      pL.product.isLimit ⟨n⟩
+  have hdiff :
+      inverseSystemDifferenceMap F pK.product ≫ e.hom =
+        e.hom ≫ inverseSystemDifferenceMap F pL.product := by
+    apply pL.product.isLimit.hom_ext
+    intro n
+    simp only [Category.assoc]
+    change inverseSystemDifferenceMap F pK.product ≫ e.hom ≫ pL.product.projection n.as =
+      e.hom ≫ inverseSystemDifferenceMap F pL.product ≫ pL.product.projection n.as
+    rw [he n.as]
+    have hk := Fan.IsLimit.fac pK.product.isLimit
+      (fun n => pK.product.projection n -
+        pK.product.projection (n + 1) ≫ inverseSystemTransition F n) n.as
+    have hl := Fan.IsLimit.fac pL.product.isLimit
+      (fun n => pL.product.projection n -
+        pL.product.projection (n + 1) ≫ inverseSystemTransition F n) n.as
+    simp only [inverseSystemDifferenceMap]
+    rw [show pK.product.isLimit.lift _ ≫ pK.product.projection n.as = _ by
+      simpa [Fan.proj, Fan.IsLimit.lift] using hk,
+      show pL.product.isLimit.lift _ ≫ pL.product.projection n.as = _ by
+        simpa [Fan.proj, Fan.IsLimit.lift] using hl]
+    simp only [comp_sub, sub_comp]
+    rw [← Category.assoc, he (n.as + 1), he n.as]
+  obtain ⟨eT, _, _⟩ :=
+    CategoryTheory.Pretriangulated.exists_iso_of_arrow_iso
+      ((rotate C).obj
+        (Triangle.mk pK.inclusion (inverseSystemDifferenceMap F pK.product) pK.connecting))
+      ((rotate C).obj
+        (Triangle.mk pL.inclusion (inverseSystemDifferenceMap F pL.product) pL.connecting))
+      (rot_of_distTriang _ pK.distinguished) (rot_of_distTriang _ pL.distinguished)
+      (Arrow.isoMk e e hdiff.symm)
+  let eShift : (shiftFunctor C (1 : ℤ)).obj K ≅
+      (shiftFunctor C (1 : ℤ)).obj L := Triangle.π₃.mapIso eT
+  exact ⟨(shiftEquiv C (1 : ℤ)).unitIso.app K ≪≫
+    (shiftEquiv C (1 : ℤ)).inverse.mapIso eShift ≪≫
+      ((shiftEquiv C (1 : ℤ)).unitIso.app L).symm⟩
 
 /-- The source's example: once the standard countable-product infrastructure
 for abelian groups is installed, every inverse system in `D(Ab)` has a
@@ -144,7 +189,119 @@ theorem derivedLimit_exists_of_boundedBelow
     [EnoughInjectives A]
     (F : DerivedInverseSystem (DPlus A)) :
     ∃ K : DerivedCategory A, IsDerivedLimit (derivedPlusInverseSystem F) K := by
-  sorry
+  have hbound (i : ℕ) : ∃ n : ℤ, (F.obj (Opposite.op i)).IsGE n := by
+    obtain ⟨n, hn⟩ := (F.obj (Opposite.op i)).property
+    exact ⟨n, (DerivedCategory.Plus.isGE_ι_obj_iff _ _).mp hn⟩
+  choose n hn using hbound
+  have hrep (i : ℕ) :
+      ∃ (K : BookComplex A) (_ : K.IsStrictlyGE (n i)),
+        Nonempty ((DerivedCategory.Plus.ι (C := A)).obj (F.obj (Opposite.op i)) ≅
+          (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj K) := by
+    letI : (F.obj (Opposite.op i)).IsGE (n i) := hn i
+    exact DerivedCategory.exists_iso_Q_obj_of_isGE
+      ((DerivedCategory.Plus.ι (C := A)).obj (F.obj (Opposite.op i))) (n i)
+  have hres (i : ℕ) :
+      ∃ R : Formalization.Books.Derived.Unit18.ComplexInjectiveResolution
+          (hrep i).choose,
+        R.target.IsStrictlyGE (n i) ∧ ∀ m : ℤ, Mono (R.map.f m) := by
+    exact Formalization.Books.Derived.Unit18.complex_injective_resolution_exists_with_mono
+      (hrep i).choose (n i) (hrep i).choose_spec.choose
+  let R (i : ℕ) := (hres i).choose
+  let I (i : ℕ) : BookComplex A := (R i).target
+  let e (i : ℕ) :
+      (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj (I i) ≅
+        (derivedPlusInverseSystem F).obj (Opposite.op i) := by
+    letI : QuasiIso (R i).map := (R i).quasiIso
+    exact ((Classical.choice (hrep i).choose_spec.choose_spec ≪≫
+      asIso ((DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map (R i).map)).symm)
+  have hI (i : ℕ) : (I i).IsKInjective := by
+    exact Formalization.Books.Derived.Unit18.isKInjective_of_bounded_below_termwise_injective
+      (R i).target (R i).boundedBelow (R i).termwiseInjective
+  let I' (i : ULift.{w} ℕ) : BookComplex A := I i.down
+  have hprod' : Nonempty (IsLimit
+      (Formalization.Books.Derived.Unit31.productDerivedCone I')) :=
+    Formalization.Books.Derived.Unit31.productComplex_isKInjective_and_represents_derived_product
+      (A := A) (T := ULift.{w} ℕ) I' (fun i => hI i.down) |>.2
+  obtain ⟨hprod⟩ := hprod'
+  let α :
+      Discrete.functor (fun i : ULift.{w} ℕ =>
+        (DerivedCategory.Qh (C := A)).obj
+          ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj (I' i))) ≅
+      Discrete.functor (fun i : ULift.{w} ℕ =>
+        (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj (I' i)) :=
+    Discrete.natIso (fun i => (DerivedCategory.quotientCompQhIso A).app (I' i.as))
+  have hpost : IsLimit ((Cone.postcompose α.hom).obj
+      (Formalization.Books.Derived.Unit31.productDerivedCone I')) :=
+    (IsLimit.postcomposeHomEquiv α _).symm hprod
+  let qprod :
+      (DerivedCategory.Qh (C := A)).obj
+          ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj
+            (Formalization.Books.Derived.Unit31.productComplex I')) ≅
+        (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj
+          (Formalization.Books.Derived.Unit31.productComplex I') :=
+    (DerivedCategory.quotientCompQhIso A).app
+      (Formalization.Books.Derived.Unit31.productComplex I')
+  have hprodQ : IsLimit (Fan.mk
+      ((DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj
+        (Formalization.Books.Derived.Unit31.productComplex I'))
+      (fun i => (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map
+        (Formalization.Books.Derived.Unit31.productComplexProjection I' i))) := by
+    apply hpost.ofIsoLimit
+    refine Cone.ext qprod ?_
+    rintro ⟨i⟩
+    simpa [α, qprod, Formalization.Books.Derived.Unit31.productDerivedCone] using
+      (DerivedCategory.quotientCompQhIso_hom_naturality (C := A)
+        (Formalization.Books.Derived.Unit31.productComplexProjection I' i))
+  let π (i : ℕ) :=
+    (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map
+        (Formalization.Books.Derived.Unit31.productComplexProjection I' ⟨i⟩) ≫ (e i).hom
+  have hP : IsLimit (Fan.mk
+      ((DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj
+        (Formalization.Books.Derived.Unit31.productComplex I')) π) := by
+    refine Fan.IsLimit.mk _
+      (fun s => Fan.IsLimit.lift hprodQ (fun i => s.proj i.down ≫ (e i.down).inv)) ?_ ?_
+    · intro s i
+      dsimp [π]
+      have hfac :
+          Fan.IsLimit.lift hprodQ (fun j => s.proj j.down ≫ (e j.down).inv) ≫
+              (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map
+                (Formalization.Books.Derived.Unit31.productComplexProjection I' ⟨i⟩) =
+            s.proj i ≫ (e i).inv := by
+        simpa using (Fan.IsLimit.fac hprodQ
+          (fun j => s.proj j.down ≫ (e j.down).inv) ⟨i⟩)
+      rw [← Category.assoc, hfac]
+      simp
+    · intro s m hm
+      apply Fan.IsLimit.hom_ext hprodQ m _
+      rintro ⟨i⟩
+      have hi := hm i
+      dsimp [π] at hi ⊢
+      have hfac :
+          Fan.IsLimit.lift hprodQ (fun j => s.proj j.down ≫ (e j.down).inv) ≫
+              (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map
+                (Formalization.Books.Derived.Unit31.productComplexProjection I' ⟨i⟩) =
+            s.proj i ≫ (e i).inv := by
+        have hh := Fan.IsLimit.fac hprodQ
+          (fun j => s.proj j.down ≫ (e j.down).inv) ⟨i⟩
+        simpa [Fan.proj] using hh
+      have hmq :
+          m ≫ (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).map
+              (Formalization.Books.Derived.Unit31.productComplexProjection I' ⟨i⟩) =
+            s.proj i ≫ (e i).inv := by
+        rw [← cancel_mono (e i).hom]
+        simp only [Category.assoc]
+        rw [hi]
+        simp
+      exact hmq.trans hfac.symm
+  let p : ProductPresentation (derivedPlusInverseSystem F) :=
+    { product := (DerivedCategory.Q : BookComplex A ⥤ DerivedCategory A).obj
+        (Formalization.Books.Derived.Unit31.productComplex I'), projection := π, isLimit := hP }
+  obtain ⟨K, g, c, h⟩ :=
+    Formalization.Books.Derived.Unit04.distinguished_cone_exists
+      (inverseSystemDifferenceMap (derivedPlusInverseSystem F) p)
+  let T :=
+    (Triangle.mk (inverseSystemDifferenceMap (derivedPlusInverseSystem F) p) g c).invRotate
+  exact ⟨T.obj₁, ⟨{ product := p, inclusion := T.mor₁, connecting := T.mor₃, distinguished := inv_rot_of_distTriang _ h }⟩⟩
 
 /-! ## Products in derived categories -/
 

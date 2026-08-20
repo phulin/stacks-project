@@ -97,6 +97,18 @@ theorem smallExtension_kernel_principal
     have hyx := Module.mem_annihilator.mp hy_ann (⟨x, hxmem⟩ : RingHom.ker φ)
     simpa [smul_eq_mul] using congrArg Subtype.val hyx
 
+/-- The kernel of a map out of an Artinian ring admits a composition series.
+This is the module-theoretic filtration used to decompose an Artinian
+surjection into small extensions. -/
+theorem exists_kernel_compositionSeries_of_artinian
+    {B' B : Type*} [CommRing B'] [CommRing B] [IsArtinianRing B']
+    (φ : B' →+* B) :
+    ∃ s : CompositionSeries
+        (Submodule B' (RingHom.ker φ)),
+      s.head = ⊥ ∧ s.last = ⊤ := by
+  exact exists_compositionSeries_of_isNoetherian_isArtinian
+    B' (RingHom.ker φ)
+
 /-! ## Lifting conditions -/
 
 /-- The square-zero lifting condition at a prime, with all solid diagrams
@@ -186,6 +198,42 @@ theorem smooth_test_artinian
         squareZeroLiftingAt R S q,
         smallExtensionLiftingAt R S q,
         smallExtensionResidueFieldLiftingAt R S q ] := by
+  /-
+  Roadmap matching `lemma-smooth-test-artinian`.
+
+  * `(1) → (2)`: choose a basic open witnessing `IsSmoothAt`.  The image of
+    its denominator under `g : S →ₐ[R] B` lies outside the maximal ideal of
+    the local ring `B`, hence is a unit.  Extend `g` to the localization and
+    use formal smoothness (`Unit138.formallySmooth_iff_lifting`).  This step
+    should first expose a general `AlgHom` extension to `Localization.Away`.
+
+  * `(2) → (3) → (4)` are exactly
+    `smallExtensionLiftingAt_of_squareZeroLiftingAt` and
+    `smallExtensionResidueFieldLiftingAt_of_smallExtensionLiftingAt` above.
+
+  * `(4) → (1)`: take the finite polynomial presentation supplied by
+    Noetherian finite type.  Replace its kernel `I` by `I²`, localize at the
+    prime over `q`, and quotient by powers of the maximal ideal.  The
+    resulting Artinian kernel has a composition series by
+    `exists_kernel_compositionSeries_of_artinian`.  A reusable remaining
+    lemma should say that adjacent quotients in such a series give a small
+    extension; this is `covBy_iff_quot_is_simple` plus
+    `Module.length_eq_one_iff`, transported from submodules of the kernel to
+    ideals between `⊥` and that kernel.
+
+    Successively apply condition `(4)` to split every Artinian quotient.
+    Passing to the inverse limit yields a splitting of the completed
+    conormal map.  Krull intersection makes the localized conormal module
+    inject into that limit, and finite presentation descends the splitting
+    to a neighbourhood of `q`.  Finish with
+    `Unit137.smooth_at_iff_local_cotangent_conditions` (equivalently its
+    split-injection presentation form).
+
+  Thus the genuinely missing library layers are the quotient tower attached
+  to a module composition series and compatibility of the conormal complex
+  with localization/completion; the elementary implications are no longer
+  hidden in this terminal theorem.
+  -/
   sorry
 
 end

@@ -1982,7 +1982,203 @@ theorem intervalCylinder_id_homotopic_endpoint_one
     (U : SimplicialObject C) :
     Homotopic (𝟙 (intervalCylinder U))
       (intervalProjection U ≫ intervalEndpoint U 1) := by
-  sorry
+  obtain ⟨μ, hμ⟩ := intervalMaxMap_exists
+  let hh (n : ℕ) (i : Fin (n + 2)) :
+      (intervalCylinder U).obj (op (SimplexCategory.mk n)) ⟶
+        (intervalCylinder U).obj (op (SimplexCategory.mk n)) :=
+    let _ : HasCoproduct
+        (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n))) :=
+      Unit13.degreewiseCoproductInstance (Δ[1] : SSet.{u}) U
+        (Unit13.standardSimplex_finite_nonempty 1) n
+    Sigma.desc (fun β =>
+      Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+          U.obj (op (SimplexCategory.mk n)))
+        (μ.app (op (SimplexCategory.mk n))
+          (β, intervalSimplex n i)))
+  have component_naturality :
+      ∀ {r s : ℕ} (f : SimplexCategory.mk r ⟶ SimplexCategory.mk s)
+        (i : Fin (s + 2)) (k : Fin (r + 2)),
+        (Δ[1] : SSet.{u}).map f.op (intervalSimplex s i) =
+          intervalSimplex r k →
+        (intervalCylinder U).map f.op ≫ hh r k =
+          hh s i ≫ (intervalCylinder U).map f.op := by
+    intro r s f i k hk
+    let _ : HasCoproduct
+        (fun _ : (Δ[1] : SSet.{u}) _⦋r⦌ => U.obj (op (SimplexCategory.mk r))) :=
+      Unit13.degreewiseCoproductInstanceAt (intervalCoproducts U)
+        (op (SimplexCategory.mk r))
+    let _ : HasCoproduct
+        (fun _ : (Δ[1] : SSet.{u}) _⦋s⦌ => U.obj (op (SimplexCategory.mk s))) :=
+      Unit13.degreewiseCoproductInstanceAt (intervalCoproducts U)
+        (op (SimplexCategory.mk s))
+    apply Sigma.hom_ext
+    intro β
+    have hn := congrArg
+      (fun q => q ((β : (Δ[1] : SSet.{u}) _⦋s⦌), intervalSimplex s i))
+      (μ.naturality f.op)
+    change
+      μ.app (op (SimplexCategory.mk r))
+          ((Δ[1] : SSet.{u}).map f.op β,
+            (Δ[1] : SSet.{u}).map f.op (intervalSimplex s i)) =
+        (Δ[1] : SSet.{u}).map f.op
+          (μ.app (op (SimplexCategory.mk s))
+            (β, intervalSimplex s i)) at hn
+    dsimp [intervalCylinder, Unit13.simplicialSetProductOf, hh]
+    rw [← Category.assoc, Sigma.ι_desc, Category.assoc, Sigma.ι_desc]
+    rw [hk] at hn
+    calc
+      _ = U.map f.op ≫
+          Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋r⦌ =>
+            U.obj (op (SimplexCategory.mk r)))
+            ((Δ[1] : SSet.{u}).map f.op
+              (μ.app (op (SimplexCategory.mk s))
+                (β, intervalSimplex s i))) := by
+        convert congrArg
+          (fun z => U.map f.op ≫
+            Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋r⦌ =>
+              U.obj (op (SimplexCategory.mk r))) z) hn using 1
+        all_goals rfl
+      _ = _ := by
+        rw [← Category.assoc, Sigma.ι_desc]
+        exact (Sigma.ι_desc
+          (fun u : (Δ[1] : SSet.{u}) _⦋s⦌ =>
+            U.map f.op ≫
+              Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋r⦌ =>
+                U.obj (op (SimplexCategory.mk r)))
+                ((Δ[1] : SSet.{u}).map f.op u)
+          ) (μ.app (op (SimplexCategory.mk s))
+            (β, intervalSimplex s i))).symm
+  let K : DegreewiseHomotopy
+      (𝟙 (intervalCylinder U))
+      (intervalProjection U ≫ intervalEndpoint U 1) := {
+    h := hh
+    h_zero := by
+      intro n
+      let _ : HasCoproduct
+          (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n))) :=
+        Unit13.degreewiseCoproductInstanceAt (intervalCoproducts U)
+          (op (SimplexCategory.mk n))
+      apply Sigma.hom_ext
+      intro β
+      have hβ :
+          μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n 0) =
+            SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)) := by
+        apply SSet.stdSimplex.objEquiv.injective
+        ext j
+        simp only [SSet.stdSimplex.objEquiv_toOrderHom_apply]
+        rw [hμ]
+        have hle : (β j : ℕ) ≤ 1 := (β j).is_le
+        simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply,
+          SSet.stdSimplex.const, hle]
+      rw [NatTrans.comp_app]
+      dsimp [intervalCylinder, Unit13.simplicialSetProductOf, hh,
+        intervalProjection, intervalEndpoint]
+      rw [Unit13.productWithSimplicialSetTo_app]
+      change
+        Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj
+            (op (SimplexCategory.mk n))) β ≫
+          Sigma.desc (fun β =>
+            Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj
+              (op (SimplexCategory.mk n)))
+              (μ.app (op (SimplexCategory.mk n))
+                (β, intervalSimplex n 0))) =
+        Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj
+            (op (SimplexCategory.mk n))) β ≫
+          Sigma.desc (fun _ => 𝟙 (U.obj (op (SimplexCategory.mk n)))) ≫
+            Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj
+              (op (SimplexCategory.mk n)))
+              (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n)))
+      have hdesc :
+          Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n))) β ≫
+            Sigma.desc (fun β =>
+              Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+                U.obj (op (SimplexCategory.mk n)))
+                (μ.app (op (SimplexCategory.mk n))
+                  (β, intervalSimplex n 0))) =
+          Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n)))
+            (μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n 0)) := by
+        simp
+      calc
+        _ = Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n)))
+            (μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n 0)) := hdesc
+        _ = Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n)))
+            (SSet.stdSimplex.const 1 1 (op (SimplexCategory.mk n))) := by
+          rw [hβ]
+        _ = _ := by simp
+    h_last := by
+      intro n
+      let _ : HasCoproduct
+          (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ => U.obj (op (SimplexCategory.mk n))) :=
+        Unit13.degreewiseCoproductInstanceAt (intervalCoproducts U)
+          (op (SimplexCategory.mk n))
+      apply Sigma.hom_ext
+      intro β
+      have hβ :
+          μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n (Fin.last (n + 1))) = β := by
+        apply SSet.stdSimplex.objEquiv.injective
+        ext j
+        simp only [SSet.stdSimplex.objEquiv_toOrderHom_apply]
+        rw [hμ]
+        simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply]
+      have hdesc :
+          Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n))) β ≫
+            Sigma.desc (fun β =>
+              Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+                U.obj (op (SimplexCategory.mk n)))
+                (μ.app (op (SimplexCategory.mk n))
+                  (β, intervalSimplex n (Fin.last (n + 1))))) =
+          Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n)))
+            (μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n (Fin.last (n + 1)))) := by
+        simp
+      dsimp [intervalCylinder, Unit13.simplicialSetProductOf, hh]
+      calc
+        _ = Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n)))
+            (μ.app (op (SimplexCategory.mk n))
+              (β, intervalSimplex n (Fin.last (n + 1)))) := hdesc
+        _ = Sigma.ι (fun _ : (Δ[1] : SSet.{u}) _⦋n⦌ =>
+              U.obj (op (SimplexCategory.mk n))) β := by
+          rw [hβ]
+        _ = _ := by simp
+    face_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.pred (Fin.ne_zero_of_lt hji)) (by
+            simpa only [intervalSimplex, SimplicialObject.δ] using
+              SSet.stdSimplex.δ_objMk₁_of_lt i j hji)).symm
+    face_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.δ] using
+        (component_naturality (SimplexCategory.δ j) i
+          (i.castPred (Fin.ne_last_of_lt
+            (lt_of_le_of_lt hij j.castSucc_lt_succ))) (by
+            simpa only [intervalSimplex, SimplicialObject.δ] using
+              SSet.stdSimplex.δ_objMk₁_of_le i j hij)).symm
+    degeneracy_of_gt := by
+      intro n i j hji
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.succ (by
+          simpa only [intervalSimplex, SimplicialObject.σ] using
+            SSet.stdSimplex.σ_objMk₁_of_lt i j hji)).symm
+    degeneracy_of_le := by
+      intro n i j hij
+      simpa only [SimplicialObject.σ] using
+        (component_naturality (SimplexCategory.σ j) i i.castSucc (by
+          simpa only [intervalSimplex, SimplicialObject.σ] using
+            SSet.stdSimplex.σ_objMk₁_of_le i j hij)).symm }
+  exact Relation.EqvGen.rel _ _ ⟨degreewiseHomotopy_to_homotopy K⟩
 
 theorem intervalCylinder_homotopy_equivalent
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -2031,7 +2227,8 @@ theorem cechNerveSelfMap_app_projection
       WidePullback.π (B := f.right)
           (objs := fun _ : Fin (n + 1) => f.left)
           (arrows := fun _ => f.hom) i ≫ f.hom ≫ s := by
-  sorry
+  simp [cechNerveSelfMap, cechNerveSectionArrowHom]
+  apply WidePullback.lift_π
 
 theorem cechNerveSelfMap_homotopic_identity
     {C : Type u} [Category.{v} C]
@@ -2040,7 +2237,91 @@ theorem cechNerveSelfMap_homotopic_identity
     [∀ n : ℕ, HasWidePullback f.right
       (fun _ : Fin (n + 1) => f.left) (fun _ => f.hom)] :
     Homotopic (cechNerveSelfMap f s hs) (𝟙 f.cechNerve) := by
-  sorry
+  let ed := Arrow.AugmentedCechNerve.extraDegeneracy f
+    (splitEpiOfSection f.hom s hs)
+  have hmap : cechNerveSelfMap f s hs = f.augmentedCechNerve.hom ≫ ed.section_ := by
+    dsimp [CategoryTheory.Arrow.augmentedCechNerve] at ed ⊢
+    apply NatTrans.ext
+    funext X
+    induction X using Opposite.rec with
+    | _ X =>
+        induction X using SimplexCategory.rec with
+        | _ n =>
+            apply WidePullback.hom_ext
+            · intro i
+              change (cechNerveSelfMap f s hs).app (op (SimplexCategory.mk n)) ≫
+                  WidePullback.π (B := f.right)
+                    (objs := fun _ : Fin (n + 1) => f.left)
+                    (arrows := fun _ => f.hom) i = _
+              rw [cechNerveSelfMap_app_projection f s hs n i]
+              rw [NatTrans.comp_app]
+              have hsection :
+                  ed.section_.app (op (SimplexCategory.mk n)) ≫
+                    WidePullback.π (B := f.right)
+                      (objs := fun _ : Fin (n + 1) => f.left)
+                      (arrows := fun _ => f.hom) i = s := by
+                dsimp [CategoryTheory.SimplicialObject.Augmented.ExtraDegeneracy.section_]
+                change
+                  (ed.s' ≫ f.cechNerve.map
+                    (SimplexCategory.isTerminalZero.from
+                      (SimplexCategory.mk n)).op) ≫
+                      WidePullback.π (B := f.right)
+                        (objs := fun _ : Fin (n + 1) => f.left)
+                        (arrows := fun _ => f.hom) i = s
+                have hσ :
+                    f.cechNerve.map
+                        (SimplexCategory.isTerminalZero.from
+                          (SimplexCategory.mk n)).op ≫
+                      WidePullback.π (B := f.right)
+                        (objs := fun _ : Fin (n + 1) => f.left)
+                        (arrows := fun _ => f.hom) i =
+                    WidePullback.π (B := f.right)
+                      (objs := fun _ : Fin 1 => f.left)
+                      (arrows := fun _ => f.hom) 0 := by
+                  change
+                    WidePullback.lift
+                        (WidePullback.base (B := f.right)
+                          (objs := fun _ : Fin 1 => f.left)
+                          (arrows := fun _ => f.hom))
+                        (fun j => WidePullback.π (B := f.right)
+                          (objs := fun _ : Fin 1 => f.left)
+                          (arrows := fun _ => f.hom)
+                          ((SimplexCategory.isTerminalZero.from
+                            (SimplexCategory.mk n)).toOrderHom j)) (by simp) ≫
+                      WidePullback.π (B := f.right)
+                        (objs := fun _ : Fin (n + 1) => f.left)
+                        (arrows := fun _ => f.hom) i = _
+                  rw [WidePullback.lift_π]
+                  rfl
+                simp only [Category.assoc, hσ]
+                simp [ed,
+                  CategoryTheory.Arrow.AugmentedCechNerve.extraDegeneracy,
+                  CategoryTheory.Arrow.augmentedCechNerve,
+                  WidePullback.lift_π, splitEpiOfSection, Category.assoc]
+              calc
+                _ = WidePullback.base (B := f.right)
+                      (objs := fun _ : Fin (n + 1) => f.left)
+                      (arrows := fun _ => f.hom) ≫ s := by
+                  rw [← Category.assoc, WidePullback.π_arrow]
+                _ = _ := by
+                  change _ =
+                    (WidePullback.base (B := f.right)
+                        (objs := fun _ : Fin (n + 1) => f.left)
+                        (arrows := fun _ => f.hom) ≫
+                      ed.section_.app (op (SimplexCategory.mk n))) ≫
+                      WidePullback.π (B := f.right)
+                        (objs := fun _ : Fin (n + 1) => f.left)
+                        (arrows := fun _ => f.hom) i
+                  rw [Category.assoc, hsection]
+            · change _ ≫ WidePullback.base (B := f.right)
+                  (objs := fun _ : Fin (n + 1) => f.left)
+                  (arrows := fun _ => f.hom) = _
+              simp [cechNerveSelfMap, cechNerveSectionArrowHom,
+                Arrow.mapCechNerve, Category.assoc,
+                ed.section_app_comp_hom_app]
+              rw [WidePullback.lift_base]
+  rw [hmap]
+  exact homotopicOfHomotopy ed.homotopy
 
 theorem cechNerveHomotopyEquivalence
     {C : Type u} [Category.{v} C]
@@ -2105,7 +2386,11 @@ theorem indexedProductMap_comp_projection
     indexedProductMap hF hG f ≫
         limit.π (Discrete.functor G) ⟨t⟩ =
       limit.π (Discrete.functor F) ⟨t⟩ ≫ f t := by
-  sorry
+  let _ : HasLimit (Discrete.functor F) := hF
+  let _ : HasLimit (Discrete.functor G) := hG
+  change (limit.lift (Discrete.functor G) _) ≫
+      limit.π (Discrete.functor G) ⟨t⟩ = _
+  apply limit.lift_π
 
 theorem indexedProduct_homotopy_of_components
     {C : Type u} [Category.{v} C] {T : Type w}

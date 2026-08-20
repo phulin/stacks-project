@@ -212,6 +212,17 @@ structure Thickening {C D : Type u} [Category.{u} C] [Category.{u} D]
   sharp_is_locally_surjective : Sheaf.IsLocallySurjective hom.sharp
   kernel_is_locally_nilpotent : hom.kernel.IsLocallyNilpotent
 
+/- The source's surjectivity of the structure-sheaf map also gives
+   surjectivity of the corresponding map of modules.  This is kept as a
+   theorem rather than as redundant data in `Thickening`: it is a consequence
+   of the local-surjectivity field and the underlying compatibility of
+   `moduleSharp`. -/
+theorem moduleSharp_is_epi
+    {C D : Type u} [Category.{u} C] [Category.{u} D]
+    {X : RingedTopos C} {Y : RingedTopos D}
+    (i : Thickening X Y) : Epi i.hom.moduleSharp := by
+  sorry
+
 /-- The additive-sheaf map induced by the map on structure sheaves. -/
 noncomputable abbrev underlyingSharp
     {C D : Type u} [Category.{u} C] [Category.{u} D]
@@ -287,7 +298,7 @@ theorem underlyingShortExactSequence
 theorem shortExactSequence
     {C D : Type u} [Category.{u} C] [Category.{u} D]
     {X : RingedTopos C} {Y : RingedTopos D}
-    (i : Thickening X Y) [HasSheafify Y.topology AddCommGrpCat.{u}] :
+    (i : Thickening X Y) :
     (thickeningKernelModuleShortComplex i).ShortExact := by
   sorry
 
@@ -505,7 +516,10 @@ theorem pullbackKernel_map_exists
       (m.pullbackKernel ⟶ i.hom.kernel.carrier) :=
   ⟨m.pullbackKernelMap⟩
 
-/-- The strictness condition for a morphism of thickenings. -/
+/-- The strictness condition for a morphism of thickenings.
+
+The source's word "surjective" refers to the map of sheaves of modules, so
+the categorical `Epi` predicate is the appropriate interface here. -/
 def MorphismOfThickenings.IsStrict
     {C D E F : Type u} [Category.{u} C] [Category.{u} D]
     [Category.{u} E] [Category.{u} F]
@@ -513,8 +527,7 @@ def MorphismOfThickenings.IsStrict
     {B : RingedTopos E} {B' : RingedTopos F}
     {i : Thickening X Y} {t : Thickening B B'}
     (m : MorphismOfThickenings i t) : Prop :=
-  Sheaf.IsLocallySurjective
-    ((SheafOfModules.toSheaf Y.structureSheaf).map m.pullbackKernelMap)
+  Epi m.pullbackKernelMap
 
 /-- The kernel ideals of the horizontal thickenings in the displayed square. -/
 abbrev MorphismOfThickenings.sourceKernel

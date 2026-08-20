@@ -1,6 +1,7 @@
 import Formalization.Books.Exercises.Unit57.Definitions
 
 import Mathlib.Algebra.Polynomial.Basic
+import Mathlib.Algebra.Polynomial.Degree.Units
 import Mathlib.RingTheory.Localization.Away.Basic
 
 /-!

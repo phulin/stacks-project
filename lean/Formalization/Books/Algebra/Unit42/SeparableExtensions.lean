@@ -1508,12 +1508,10 @@ private theorem isSeparable_of_finite_coefficients
     ext n
     simp only [Polynomial.coeff_map]
     by_cases hn : n ∈ (minpoly F z).support
-    · simp [g, Polynomial.coeff_sum, Polynomial.coeff_C_mul_X_pow,
-        Finset.sum_eq_single, hn, hb]
+    · simp [g, hn, hb]
     · have hzero : (minpoly F z).coeff n = 0 :=
         Polynomial.notMem_support_iff.mp hn
-      simp [g, Polynomial.coeff_sum, Polynomial.coeff_C_mul_X_pow,
-        Finset.sum_eq_zero, hn, hzero]
+      simp [g, hn, hzero]
   have hg : g.Separable := by
     apply (Polynomial.separable_map (algebraMap U E)).mp
     rw [hmap]
@@ -1661,7 +1659,7 @@ private theorem perfectClosureFiniteTypeSetup
     exists_isTranscendenceBasis_and_isSeparable_of_perfectField P M
   refine ⟨M, sK, u, rfl, hsK, hu, ?_⟩
   have hrange : range (fun z : u => (z : M)) = (u : Set M) := by
-    simpa using (Subtype.range_val (p := fun z : M => z ∈ u))
+    simp
   rw [hrange]
   exact hsep
 

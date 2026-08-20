@@ -1,6 +1,8 @@
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
+import Formalization.Books.Algebra.Unit100.BaseChangeAndFlatness
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
+import Formalization.Books.Algebra.Unit129.OpennessFlatLocus
 
 /-!
 # More on Algebra, Chapter 18: Flattening over a closed subset of the base

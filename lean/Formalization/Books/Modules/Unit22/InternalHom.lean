@@ -1,4 +1,5 @@
 import Formalization.Books.Modules.Unit16.TensorProduct
+import Formalization.Books.Modules.Unit18.Duals
 import Formalization.Books.Modules.Unit20.FlatMorphisms
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
@@ -24,6 +25,7 @@ open Formalization.Books.Sheaves.Unit24
 open Formalization.Books.Sheaves.Unit22
 open Formalization.Books.Modules.Unit04
 open Formalization.Books.Modules.Unit16
+open Formalization.Books.Modules.Unit18
 
 universe v
 
@@ -45,15 +47,20 @@ noncomputable def stalkModuleHom {X : TopCat.{v}} (O : CommRingSheaf X)
   exact ModuleCat.of (↑(TopCat.Presheaf.stalk O.obj x))
     (commRingSheafModuleStalk F x ⟶ commRingSheafModuleStalk G x)
 
-/- The two scalar actions in the source are retained explicitly.  The
-   sectionwise module structure is part of the data, while the equality field
-   records that multiplication before a local map and multiplication after it
-   agree. -/
+/- Chapter 18 already provides the canonical representer for the functor
+   `H ↦ Hom(H ⊗ F, G)`.  Since the structure sheaf is commutative, that is
+   the same internal Hom object used here.  The remaining fields package the
+   source's local-section and stalk comparison, for which this project has no
+   canonical sheaf-Hom construction. -/
+noncomputable abbrev internalHom {X : TopCat.{v}} (O : CommRingSheaf X)
+    (F G : CommRingSheafModule O) : CommRingSheafModule O :=
+  sheafModuleInternalHom O F G
+
 structure InternalHomData {X : TopCat.{v}} (O : CommRingSheaf X)
     (F G : CommRingSheafModule O) where
-  hom : CommRingSheafModule O
   sections : ∀ U : Opens X,
-    Nonempty ((hom.val.obj (op U) : Type v) ≃ LocalModuleHom O F G U)
+    Nonempty (((internalHom O F G).val.obj (op U) : Type v) ≃
+      LocalModuleHom O F G U)
   sectionwiseModule : ∀ U : Opens X,
     Module (↑(O.obj.obj (op U))) (LocalModuleHom O F G U)
   precomposeScalar : ∀ (U : Opens X),
@@ -69,22 +76,16 @@ structure InternalHomData {X : TopCat.{v}} (O : CommRingSheaf X)
   scalar_actions_agree : ∀ (U : Opens X) (r : O.obj.obj (op U))
     (φ : LocalModuleHom O F G U),
     precomposeScalar U r φ = postcomposeScalar U r φ
-  evaluation : Formalization.Books.Modules.Unit16.tensorProductSheaf O F hom ⟶ G
-  stalkMap : ∀ x : X, commRingSheafModuleStalk hom x ⟶ stalkModuleHom O F G x
+  stalkMap : ∀ x : X, commRingSheafModuleStalk (internalHom O F G) x ⟶
+    stalkModuleHom O F G x
 
 theorem internalHomData_exists {X : TopCat.{v}} (O : CommRingSheaf X)
     (F G : CommRingSheafModule O) : Nonempty (InternalHomData O F G) := by
   sorry
 
-/- The source's sheaf Hom.  Its body is a chosen instance of the canonical
-   local-Hom sheaf supplied by `InternalHomData`. -/
 noncomputable def internalHomData {X : TopCat.{v}} (O : CommRingSheaf X)
     (F G : CommRingSheafModule O) : InternalHomData O F G :=
   Classical.choice (internalHomData_exists O F G)
-
-noncomputable abbrev internalHom {X : TopCat.{v}} (O : CommRingSheaf X)
-    (F G : CommRingSheafModule O) : CommRingSheafModule O :=
-  (internalHomData O F G).hom
 
 noncomputable def internalHomSectionsEquiv {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) (U : Opens X) :
@@ -107,34 +108,26 @@ theorem internalHom_scalar_actions_agree {X : TopCat.{v}}
 noncomputable abbrev internalHomEvaluation {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) :
     Formalization.Books.Modules.Unit16.tensorProductSheaf O F (internalHom O F G) ⟶ G :=
-  (internalHomData O F G).evaluation
+  (tensorProductSymmetry F (internalHom O F G)).hom ≫
+    sheafModuleInternalHomEvaluation O F G
 
 noncomputable abbrev internalHomStalkMap {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G : CommRingSheafModule O) (x : X) :
     commRingSheafModuleStalk (internalHom O F G) x ⟶ stalkModuleHom O F G x :=
   (internalHomData O F G).stalkMap x
 
-/- The chosen pre- and post-composition maps are the two functorial Hom
-   actions used throughout the rest of the chapter. -/
-theorem internalHomPrecomp_exists {X : TopCat.{v}} {O : CommRingSheaf X}
-    {F₁ F₂ G : CommRingSheafModule O} (f : F₁ ⟶ F₂) :
-    Nonempty (internalHom O F₂ G ⟶ internalHom O F₁ G) := by
-  sorry
-
 noncomputable def internalHomPrecomp {X : TopCat.{v}} {O : CommRingSheaf X}
     {F₁ F₂ G : CommRingSheafModule O} (f : F₁ ⟶ F₂) :
     internalHom O F₂ G ⟶ internalHom O F₁ G :=
-  Classical.choice (internalHomPrecomp_exists f)
-
-theorem internalHomPostcomp_exists {X : TopCat.{v}} {O : CommRingSheaf X}
-    {F G₁ G₂ : CommRingSheafModule O} (g : G₁ ⟶ G₂) :
-    Nonempty (internalHom O F G₁ ⟶ internalHom O F G₂) := by
-  sorry
+  (sheafModuleInternalHomEquiv O F₁ G (internalHom O F₂ G)).symm
+    (tensorProductMap (𝟙 (internalHom O F₂ G)) f ≫
+      sheafModuleInternalHomEvaluation O F₂ G)
 
 noncomputable def internalHomPostcomp {X : TopCat.{v}} {O : CommRingSheaf X}
     {F G₁ G₂ : CommRingSheafModule O} (g : G₁ ⟶ G₂) :
     internalHom O F G₁ ⟶ internalHom O F G₂ :=
-  Classical.choice (internalHomPostcomp_exists g)
+  (sheafModuleInternalHomEquiv O F G₂ (internalHom O F G₁)).symm
+    (sheafModuleInternalHomEvaluation O F G₁ ≫ g)
 
 theorem internalHomPrecomp_comp {X : TopCat.{v}} {O : CommRingSheaf X}
     {F₂ F₁ F G : CommRingSheafModule O}
@@ -166,19 +159,19 @@ theorem internalHom_tensor_hom_equiv_exists {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
     Nonempty ((Formalization.Books.Modules.Unit16.tensorProductSheaf O F G ⟶ H) ≃
       (F ⟶ internalHom O G H)) := by
-  sorry
+  exact ⟨(sheafModuleInternalHomEquiv O G H F).symm⟩
 
 noncomputable def internalHomTensorCurry {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
     (Formalization.Books.Modules.Unit16.tensorProductSheaf O F G ⟶ H) ≃
       (F ⟶ internalHom O G H) :=
-  Classical.choice (internalHom_tensor_hom_equiv_exists O F G H)
+  (sheafModuleInternalHomEquiv O G H F).symm
 
 noncomputable def internalHomTensorUncurry {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G H : CommRingSheafModule O) :
     (F ⟶ internalHom O G H) ≃
       (Formalization.Books.Modules.Unit16.tensorProductSheaf O F G ⟶ H) :=
-  (internalHomTensorCurry O F G H).symm
+  sheafModuleInternalHomEquiv O G H F
 
 @[simp] theorem internalHomTensorUncurry_curry {X : TopCat.{v}}
     (O : CommRingSheaf X) (F G H : CommRingSheafModule O)
@@ -270,6 +263,10 @@ structure ChangeOfRingsInternalHomData {X : TopCat.{v}}
       internalHom O₁ (restrictedStructureModule α) G
   homEquiv : ∀ F : CommRingSheafModule O₂,
     ((restrictScalarsModule α).obj F ⟶ G) ≃ (F ⟶ hom)
+  homEquiv_natural_F : ∀ {F₁ F₂ : CommRingSheafModule O₂}
+    (f : F₁ ⟶ F₂) (φ : (restrictScalarsModule α).obj F₂ ⟶ G),
+    homEquiv F₁ ((restrictScalarsModule α).map f ≫ φ) =
+      f ≫ homEquiv F₂ φ
 
 /- The `homEquiv` field is refined below to the source-facing adjunction; its
    type is intentionally kept in a separate theorem so the O₂-action on the
@@ -289,6 +286,59 @@ noncomputable abbrev changeOfRingsInternalHom {X : TopCat.{v}}
     (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
     (G : CommRingSheafModule O₁) : CommRingSheafModule O₂ :=
   (changeOfRingsInternalHomData O₁ O₂ α G).hom
+
+theorem changeOfRingsInternalHom_underlyingIso {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    (G : CommRingSheafModule O₁) :
+    Nonempty ((restrictScalarsModule α).obj
+        (changeOfRingsInternalHom O₁ O₂ α G) ≅
+      internalHom O₁ (restrictedStructureModule α) G) := by
+  exact ⟨(changeOfRingsInternalHomData O₁ O₂ α G).underlyingIso⟩
+
+/- The second variable in the source's “bifunctorially” is represented by
+   postcomposition between the chosen change-of-rings internal Homs. -/
+structure ChangeOfRingsInternalHomPostcompData {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    {G₁ G₂ : CommRingSheafModule O₁} (g : G₁ ⟶ G₂) where
+  map : changeOfRingsInternalHom O₁ O₂ α G₁ ⟶
+    changeOfRingsInternalHom O₁ O₂ α G₂
+  naturality : ∀ (F : CommRingSheafModule O₂)
+    (φ : (restrictScalarsModule α).obj F ⟶ G₁),
+    (changeOfRingsInternalHomData O₁ O₂ α G₁).homEquiv F φ ≫ map =
+      (changeOfRingsInternalHomData O₁ O₂ α G₂).homEquiv F (φ ≫ g)
+
+theorem changeOfRingsInternalHomPostcomp_exists {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    {G₁ G₂ : CommRingSheafModule O₁} (g : G₁ ⟶ G₂) :
+    Nonempty (ChangeOfRingsInternalHomPostcompData O₁ O₂ α g) := by
+  sorry
+
+noncomputable def changeOfRingsInternalHomPostcomp {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    {G₁ G₂ : CommRingSheafModule O₁} (g : G₁ ⟶ G₂) :
+    changeOfRingsInternalHom O₁ O₂ α G₁ ⟶
+      changeOfRingsInternalHom O₁ O₂ α G₂ :=
+  (Classical.choice (changeOfRingsInternalHomPostcomp_exists O₁ O₂ α g)).map
+
+theorem changeOfRingsInternalHomPostcomp_natural {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    {G₁ G₂ : CommRingSheafModule O₁} (g : G₁ ⟶ G₂)
+    (F : CommRingSheafModule O₂)
+    (φ : (restrictScalarsModule α).obj F ⟶ G₁) :
+    (changeOfRingsInternalHomData O₁ O₂ α G₁).homEquiv F φ ≫
+        changeOfRingsInternalHomPostcomp O₁ O₂ α g =
+      (changeOfRingsInternalHomData O₁ O₂ α G₂).homEquiv F (φ ≫ g) := by
+  exact (Classical.choice
+    (changeOfRingsInternalHomPostcomp_exists O₁ O₂ α g)).naturality F φ
+
+theorem changeOfRingsInternalHom_natural_F {X : TopCat.{v}}
+    (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
+    (G : CommRingSheafModule O₁) {F₁ F₂ : CommRingSheafModule O₂}
+    (f : F₁ ⟶ F₂) (φ : (restrictScalarsModule α).obj F₂ ⟶ G) :
+    (changeOfRingsInternalHomData O₁ O₂ α G).homEquiv F₁
+        ((restrictScalarsModule α).map f ≫ φ) =
+      f ≫ (changeOfRingsInternalHomData O₁ O₂ α G).homEquiv F₂ φ := by
+  exact (changeOfRingsInternalHomData O₁ O₂ α G).homEquiv_natural_F f φ
 
 theorem internalHom_changeOfRings
     {X : TopCat.{v}} (O₁ O₂ : CommRingSheaf X) (α : O₁ ⟶ O₂)
@@ -335,6 +385,30 @@ theorem pullback_internalHom
       ((pullbackModule f α).obj (internalHom OY F G) ≅
         internalHom OX ((pullbackModule f α).obj F)
           ((pullbackModule f α).obj G)) := by
+  sorry
+
+noncomputable def pullbackInternalHomComparison
+    {X Y : TopCat.{v}} {OX : CommRingSheaf X} {OY : CommRingSheaf Y}
+    (f : X ⟶ Y)
+    (α : commRingSheafToRingSheaf OY ⟶
+      (sheafRingPushforward f).obj (commRingSheafToRingSheaf OX))
+    [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
+    (F G : CommRingSheafModule OY)
+    (hF : IsFinitePresentation F) (hf : IsFlatMorphism f α) :
+    (pullbackModule f α).obj (internalHom OY F G) ⟶
+      internalHom OX ((pullbackModule f α).obj F)
+        ((pullbackModule f α).obj G) :=
+  (Classical.choice (pullback_internalHom f α F G hF hf)).hom
+
+theorem pullbackInternalHomComparison_isIso
+    {X Y : TopCat.{v}} {OX : CommRingSheaf X} {OY : CommRingSheaf Y}
+    (f : X ⟶ Y)
+    (α : commRingSheafToRingSheaf OY ⟶
+      (sheafRingPushforward f).obj (commRingSheafToRingSheaf OX))
+    [((SheafOfModules.pushforward (F := Opens.map f) α).IsRightAdjoint)]
+    (F G : CommRingSheafModule OY)
+    (hF : IsFinitePresentation F) (hf : IsFlatMorphism f α) :
+    IsIso (pullbackInternalHomComparison f α F G hF hf) := by
   sorry
 
 noncomputable def finiteCopyDirectSum

@@ -44,27 +44,44 @@ abbrev Ab (X : TopCat.{v}) := TopCat.Sheaf AddCommGrpCat.{w} X
 `AddCommGrpCat`-valued sheaf condition. -/
 theorem abelianSheaf_iff_categoryValuedSheaf
     {X : TopCat.{w}} (F : AbelianPresheaf.{w, w} X) :
-    AbelianSheaf F ↔ TopCat.Presheaf.IsSheaf F := by sorry
+    AbelianSheaf F ↔ TopCat.Presheaf.IsSheaf F := by
+  change TopCat.Presheaf.IsSheaf (F ⋙ (forget AddCommGrpCat)) ↔
+    TopCat.Presheaf.IsSheaf F
+  exact (TopCat.Presheaf.isSheaf_iff_isSheaf_comp (forget AddCommGrpCat) F).symm
 theorem abelianSheaf_of_categoryValuedSheaf
     {X : TopCat.{w}} (F : Ab.{w, w} X) :
-    AbelianSheaf F.presheaf := by sorry
+    AbelianSheaf F.presheaf := by
+  exact (abelianSheaf_iff_categoryValuedSheaf F.presheaf).mpr F.property
 abbrev AbelianSheafSurjective {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) : Prop :=
-  sorry
+  CategoryTheory.Sheaf.IsLocallySurjective φ
 
 /-- In `Ab(X)`, categorical epimorphisms are exactly locally surjective maps. -/
 theorem abelianSheaf_epi_iff_surjective
     {X : TopCat.{v}} {F G : Ab.{w, v} X} (φ : F ⟶ G) :
-    Epi φ ↔ AbelianSheafSurjective φ := by sorry
+    Epi φ ↔ AbelianSheafSurjective φ := by
+  sorry
 noncomputable def countableProductMap {C : Type u} [Category.{v} C]
     [HasCountableProducts C] (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) :
     limit (Discrete.functor A) ⟶ limit (Discrete.functor B) :=
-    by sorry
+  let c : Cone (Discrete.functor B) :=
+    { pt := limit (Discrete.functor A)
+      π :=
+        { app := fun n =>
+            limit.π (Discrete.functor A) n ≫ φ n.as
+          naturality := by
+            rintro ⟨i⟩ ⟨j⟩ g
+            obtain rfl : i = j := Discrete.eq_of_hom g
+            simp } }
+  limit.lift (Discrete.functor B) c
 
 @[reassoc (attr := simp)] theorem countableProductMap_π
     {C : Type u} [Category.{v} C] [HasCountableProducts C]
     (A B : ℕ → C) (φ : ∀ n, A n ⟶ B n) (n : ℕ) :
     countableProductMap A B φ ≫ limit.π (Discrete.functor B) (Discrete.mk n) =
-      limit.π (Discrete.functor A) (Discrete.mk n) ≫ φ n := by sorry
+      limit.π (Discrete.functor A) (Discrete.mk n) ≫ φ n := by
+  change limit.lift (Discrete.functor B) _ ≫
+      limit.π (Discrete.functor B) (Discrete.mk n) = _
+  rw [limit.lift_π]
 structure CountableShortExactFamily (C : Type u) [Category.{v} C]
     [HasCountableProducts C] [HasZeroMorphisms C] where
   complex : ℕ → ShortComplex C

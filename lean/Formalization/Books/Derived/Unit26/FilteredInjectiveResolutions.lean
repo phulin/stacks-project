@@ -951,8 +951,10 @@ theorem filtered_derived_spectral_sequence_functorial
     {K L : FilteredComplexPlus C} (f : K ⟶ L)
     (Sₖ : FilteredDerivedSpectralSequenceData T hT K)
     (Sₗ : FilteredDerivedSpectralSequenceData T hT L) :
-    Nonempty (FilteredComplexSpectralSequenceHom
-      Sₖ.spectral_sequence Sₗ.spectral_sequence) := by
+    ∃ g : filteredDerivedSpectralInput T hT Sₖ.resolution ⟶
+        filteredDerivedSpectralInput T hT Sₗ.resolution,
+      Nonempty (FilteredComplexSpectralSequenceHom g
+        Sₖ.spectral_sequence Sₗ.spectral_sequence) := by
   sorry
 
 theorem filtered_derived_spectral_sequence_choice_independent

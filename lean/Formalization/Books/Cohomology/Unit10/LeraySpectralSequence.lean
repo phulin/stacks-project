@@ -335,7 +335,9 @@ structure RelativeLerayFunctorialityData
   source_data : RelativeLeraySpectralSequenceData f g F source
   target : FilteredComplex (Mod Z.structureSheaf)
   target_data : RelativeLeraySpectralSequenceData f g G target
+  filteredMap : source ⟶ target
   map : FilteredComplexSpectralSequenceHom
+    filteredMap
     source_data.spectralSequence target_data.spectralSequence
 
 theorem relativeLeray_functorial

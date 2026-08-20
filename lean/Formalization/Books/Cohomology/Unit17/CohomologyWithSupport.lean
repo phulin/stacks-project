@@ -338,6 +338,7 @@ structure SupportGrothendieckSpectralSequenceFamily
       K (complexes.obj K)
   spectralMap : ∀ {K L : DPlus (Ab X)} (_f : K ⟶ L),
     Nonempty (FilteredComplexSpectralSequenceHom
+      (complexes.map _f)
       (spectralData K).spectralSequence
       (spectralData L).spectralSequence)
 

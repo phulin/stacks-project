@@ -558,7 +558,156 @@ theorem projectiveLine_finite_algebra_construction
     (hmul : ∀ n : ℕ, d ≤ n →
       Function.Bijective (projectiveLineComponentMultiplication F G e n hG)) :
     Nonempty (ProjectiveLineFiniteAlgebraConstruction F G d e hG) := by
-  sorry
+  let A := projectiveLineQuotientComponent F (e * d)
+  let p : A := projectiveLinePowerElement F G e d hG
+  let β := projectiveLinePowerMultiplication F G e d hG
+  have hβ : Function.Bijective β :=
+    projectiveLine_power_multiplication_bijective F G d e hG hstart hmul
+  have hβ_apply (x : A) : (β x).1 = p.1 * x.1 := by
+    change p.1 * x.1 = p.1 * x.1
+    rfl
+  have hpow (k : ℕ) (hk : d ≤ k) :
+      Function.Bijective (projectiveLinePowerMultiplicationAt F G e d k hG) :=
+    projectiveLinePowerMultiplicationAt_bijective F G d e hG hmul d k hk
+  have hp_cancel (k : ℕ) (hk : d ≤ k)
+      (x y : projectiveLineQuotientComponent F k)
+      (hxy : p.1 * x.1 = p.1 * y.1) : x = y := by
+    apply (hpow k hk).1
+    apply Subtype.ext
+    simpa [projectiveLinePowerMultiplicationAt, projectiveLineMultiplication,
+      projectiveLinePowerDegree_eq, p, projectiveLinePowerElement,
+      projectiveLineHomogeneousElement] using hxy
+  let prod : A → A → projectiveLineQuotientComponent F (e * d + e * d) :=
+    fun x y =>
+      ⟨x.1 * y.1,
+        projectiveLine_component_product_mem F (e * d) (e * d) x y⟩
+  let μ : A → A → A :=
+    fun x y => Classical.choose (hβ.2 (prod x y))
+  have hμ (x y : A) : β (μ x y) = prod x y :=
+    Classical.choose_spec (hβ.2 (prod x y))
+  have hμ_apply (x y : A) : p.1 * (μ x y).1 = x.1 * y.1 := by
+    have h := congrArg Subtype.val (hμ x y)
+    simpa [hβ_apply, prod] using h
+  have hμ_comm (x y : A) : μ x y = μ y x := by
+    apply hp_cancel (e * d) hstart
+    rw [hμ_apply, hμ_apply]
+    exact mul_comm _ _
+  have hμ_zero (x : A) : μ 0 x = 0 := by
+    apply hp_cancel (e * d) hstart
+    rw [hμ_apply]
+    simp
+  have hed2 : d ≤ e * d + e * d := hstart.trans (Nat.le_add_right _ _)
+  have hμ_assoc (x y z : A) : μ (μ x y) z = μ x (μ y z) := by
+    let lhs : projectiveLineQuotientComponent F (e * d + e * d) :=
+      ⟨(μ x y).1 * z.1,
+        projectiveLine_component_product_mem F (e * d) (e * d) (μ x y) z⟩
+    let rhs : projectiveLineQuotientComponent F (e * d + e * d) :=
+      ⟨x.1 * (μ y z).1,
+        projectiveLine_component_product_mem F (e * d) (e * d) x (μ y z)⟩
+    have hlr : lhs = rhs := by
+      apply hp_cancel (e * d + e * d) hed2
+      dsimp [lhs, rhs]
+      calc
+        p.1 * ((μ x y).1 * z.1) = (p.1 * (μ x y).1) * z.1 := by
+          rw [← mul_assoc]
+        _ = (x.1 * y.1) * z.1 := by rw [hμ_apply]
+        _ = x.1 * (y.1 * z.1) := by rw [mul_assoc]
+        _ = x.1 * (p.1 * (μ y z).1) := by rw [hμ_apply]
+        _ = p.1 * (x.1 * (μ y z).1) := by ac_rfl
+    apply hp_cancel (e * d) hstart
+    calc
+      p.1 * (μ (μ x y) z).1 = (μ x y).1 * z.1 := hμ_apply _ _
+      _ = lhs.1 := rfl
+      _ = rhs.1 := congrArg Subtype.val hlr
+      _ = x.1 * (μ y z).1 := rfl
+      _ = p.1 * (μ x (μ y z)).1 := (hμ_apply _ _).symm
+  have hμ_right_id (x : A) : μ x p = x := by
+    apply hp_cancel (e * d) hstart
+    rw [hμ_apply]
+    exact mul_comm _ _
+  have hμ_left_id (x : A) : μ p x = x := by
+    rw [hμ_comm]
+    exact hμ_right_id x
+  have hμ_right_distrib (x y z : A) : μ x (y + z) = μ x y + μ x z := by
+    apply hp_cancel (e * d) hstart
+    calc
+      p.1 * (μ x (y + z)).1 = x.1 * (y.1 + z.1) := hμ_apply _ _
+      _ = x.1 * y.1 + x.1 * z.1 := by rw [mul_add]
+      _ = p.1 * (μ x y).1 + p.1 * (μ x z).1 := by rw [hμ_apply, hμ_apply]
+      _ = p.1 * ((μ x y).1 + (μ x z).1) := by rw [← mul_add]
+      _ = p.1 * ((μ x y + μ x z).1) := by
+        simp only [Submodule.coe_add]
+  have hμ_left_distrib (x y z : A) : μ (x + y) z = μ x z + μ y z := by
+    rw [hμ_comm (x + y) z, hμ_right_distrib, hμ_comm x z, hμ_comm y z]
+  let addCommGroup : AddCommGroup (A : Type u) := inferInstance
+  let ring : CommRing (A : Type u) :=
+    { addCommGroup with
+      mul := μ
+      one := p
+      mul_assoc := hμ_assoc
+      one_mul := hμ_left_id
+      mul_one := hμ_right_id
+      zero_mul := hμ_zero
+      mul_zero := by
+        intro x
+        change μ x 0 = 0
+        rw [hμ_comm, hμ_zero]
+      left_distrib := hμ_right_distrib
+      right_distrib := hμ_left_distrib
+      mul_comm := hμ_comm }
+  letI : CommRing (A : Type u) := ring
+  let i : R →+* A :=
+    { toFun := fun r => r • p
+      map_one' := by
+        change (1 : R) • p = (1 : A)
+        rw [one_smul]
+        change p = ring.one
+        rfl
+      map_mul' := by
+        intro r s
+        apply hp_cancel (e * d) hstart
+        change p.1 * ((r * s) • p).1 =
+          p.1 * (μ (r • p) (s • p)).1
+        rw [hμ_apply]
+        simp only [Submodule.coe_smul]
+        rw [mul_smul_comm, smul_mul_assoc, mul_smul_comm]
+        rw [mul_smul]
+      map_zero' := by simp
+      map_add' := by intro r s; rw [add_smul] }
+  let algebra : Algebra R (A : Type u) := i.toAlgebra
+  letI : Algebra R (A : Type u) := algebra
+  refine ⟨ProjectiveLineFiniteAlgebraConstruction.mk ring algebra
+    (hfinite (e * d) hstart)
+    (by
+      intro H₁ H₂
+      change H₁.1 + H₂.1 = H₁.1 + H₂.1
+      rfl)
+    (by
+      change (0 : projectiveLineQuotient F) = 0
+      rfl)
+    (by
+      intro H
+      change -H.1 = -H.1
+      rfl)
+    (by
+      intro r H
+      change r • H.1 = r • H.1
+      rfl)
+    μ p
+    (by
+      intro H₁ H₂
+      rfl)
+    (by rfl)
+    (by
+      intro H₁ H₂ H₃
+      constructor
+      · intro h
+        rw [← h, hμ_apply]
+      · intro h
+        apply hp_cancel (e * d) hstart
+        rw [hμ_apply]
+        exact h.symm)
+    (by rfl)⟩
 
 end
 

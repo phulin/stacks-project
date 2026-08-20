@@ -4,6 +4,7 @@ import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.MoreAlgebra.Unit30.KoszulRegularSequences
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.RingHom.Smooth
 
 /-!
 # More on Algebra, Chapter 31: More on Koszul regular sequences
@@ -34,12 +35,11 @@ universe u
 /-- Source-facing data for the extended alternating Čech complex associated to
 a finite list.  The complex is the localization/direct-sum complex from the
 source; its construction is not available in the current Mathlib API, so the
-formula assertion is kept as an explicit field until that construction is
-formalized. -/
+degreewise comparison needed by the source proof is kept as an explicit field
+until that construction is formalized. -/
 structure ExtendedAlternatingCechComplexData
     (R : Type u) [CommRing R] (f : List R) where
   complex : CochainComplex (ModuleCat.{u} R) ℕ
-  is_extended_alternating : Prop
   /-- The source's filtered-colimit comparison, expressed on homology until
   the chain-level colimit construction is available in the project.  The
   objects of `D` are the homology of the Koszul complexes on the powers of
@@ -48,9 +48,9 @@ structure ExtendedAlternatingCechComplexData
     ∀ i : ℕ, i < f.length →
       ∃ D : ℕ ⥤ ModuleCat.{u} R,
         (∀ n : ℕ,
-          D.obj n =
+          Nonempty (D.obj n ≅
             (koszulComplexOnListWithCoefficients R R
-              (f.map (fun x => x ^ (n + 1)))).homology (f.length - i)) ∧
+              (f.map (fun x => x ^ (n + 1)))).homology (f.length - i))) ∧
         Nonempty (complex.homology i ≅ colimit D)
   /-- The extended alternating Čech complex has no terms above its top degree.
   This boundedness is the part of the source interface needed for indices
@@ -69,7 +69,6 @@ its top degree. -/
 theorem vanishing_extended_alternating_koszul
     {R : Type u} [CommRing R] (f : List R)
     (C : ExtendedAlternatingCechComplexData R f)
-    (hC : C.is_extended_alternating)
     (hf : IsKoszulRegular R f) :
     CohomologyOnlyInDegree C.complex f.length := by
   sorry
@@ -123,32 +122,36 @@ def baseChangedList
   letI : Algebra A A' := g.toAlgebra
   exact xs.map (baseChangeAlgebraMap f g)
 
-/-- The source and target modules of the `H₁` base-change map. -/
+/-- The source module of the canonical `H₁` base-change map, with its natural
+`B ⊗[A] A'`-module structure.  This is the project’s extension-of-scalars
+model for `H₁(K(B, f)) ⊗[A] A'`. -/
 noncomputable abbrev koszulHOneBaseChangeSource
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
-    (f : A →+* B) (g : A →+* A') (xs : List B) : ModuleCat.{u} A' :=
+    (f : A →+* B) (g : A →+* A') (xs : List B) :
+    letI : Algebra A B := f.toAlgebra
+    letI : Algebra A A' := g.toAlgebra
+    ModuleCat.{u} (B ⊗[A] A') :=
   letI : Algebra A B := f.toAlgebra
   letI : Algebra A A' := g.toAlgebra
-  (ModuleCat.extendScalars g).obj
-    ((ModuleCat.restrictScalars f).obj
-      ((koszulComplexOnListWithCoefficients B B xs).homology 1))
+  (ModuleCat.extendScalars (baseChangeAlgebraMap f g)).obj
+    ((koszulComplexOnListWithCoefficients B B xs).homology 1)
 
 noncomputable abbrev koszulHOneBaseChangeTarget
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
-    (f : A →+* B) (g : A →+* A') (xs : List B) : ModuleCat.{u} A' :=
+    (f : A →+* B) (g : A →+* A') (xs : List B) :
+    letI : Algebra A B := f.toAlgebra
+    letI : Algebra A A' := g.toAlgebra
+    ModuleCat.{u} (B ⊗[A] A') :=
   letI : Algebra A B := f.toAlgebra
   letI : Algebra A A' := g.toAlgebra
-  (ModuleCat.restrictScalars (baseChangeRingMap f g)).obj
-    ((koszulComplexOnListWithCoefficients (B ⊗[A] A') (B ⊗[A] A')
-        (baseChangedList f g xs)).homology 1)
+  (koszulComplexOnListWithCoefficients (B ⊗[A] A') (B ⊗[A] A')
+    (baseChangedList f g xs)).homology 1
 
-/-- Data for a surjective `H₁` base-change map.
+/-- Data for the source’s canonical surjective `H₁` base-change map.
 
-The source calls this map canonical.  The current project does not yet expose
-the chain-level base-change morphism whose induced map on homology would give
-that canonical representative, so this interface records the map and the
-surjectivity assertion without making an arbitrary choice part of the
-mathematical statement. -/
+The current project does not yet expose the chain-level base-change morphism
+whose induced map on homology gives the canonical representative, so this
+source-facing interface records that representative at the homology level. -/
 structure KoszulHOneBaseChangeData
     {A B A' : Type u} [CommRing A] [CommRing B] [CommRing A']
     (f : A →+* B) (g : A →+* A') (xs : List B) where

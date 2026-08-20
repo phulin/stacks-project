@@ -2911,7 +2911,8 @@ theorem amelioration_unique_when_strictly_commutative
    strict-to-pseudofunctor embedding only to reuse Mathlib's
    CoGrothendieck implementation of the total category. -/
 
-abbrev CategoryPresheaf (C : Type u') [Category.{v'} C] :=
+abbrev CategoryPresheaf (C : Type u') [Category.{v'} C]
+    (X : Type u := ULift.{u} PUnit) :=
   Cᵒᵖ ⥤ Cat.{v, u}
 
 noncomputable def categoryPresheafPseudofunctor
@@ -3960,8 +3961,9 @@ theorem fibredCategory_isEquivalentTo_split
 /-! ## Presheaves of groupoids -/
 
 structure GroupoidPresheaf
-  (C : Type u') [Category.{v'} C] where
-  value : CategoryPresheaf.{v, u} C
+  (C : Type u') [Category.{v'} C]
+  (X : Type u := ULift.{u} PUnit) where
+  value : CategoryPresheaf.{v, u} C X
   fibre_is_groupoid : ∀ U : C,
     IsGroupoid (value.obj (Opposite.op U))
 

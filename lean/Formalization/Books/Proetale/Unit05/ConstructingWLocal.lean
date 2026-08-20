@@ -136,7 +136,135 @@ theorem localizedPieceRing_closedQuotient_equiv_away
       ((localizedPieceRing Z ⧸
           Ideal.map (localizedPieceRingHom Z) Z.I) ≃+*
         Localization.Away (Ideal.Quotient.mk Z.I Z.f)) := by
-  sorry
+  let Q := A ⧸ Z.I
+  let qf : Q := Ideal.Quotient.mk Z.I Z.f
+  have hloc : IsLocalization (Z.units.map (Ideal.Quotient.mk Z.I))
+      (Localization.Away qf) := by
+    apply IsLocalization.of_le_of_exists_dvd (Submonoid.powers qf)
+      (Z.units.map (Ideal.Quotient.mk Z.I))
+    · intro s hs
+      obtain ⟨n, rfl⟩ := hs
+      refine Submonoid.mem_map.mpr ?_
+      refine ⟨Z.f ^ n, ?_, ?_⟩
+      · change IsUnit
+          (algebraMap Q (Localization.Away qf)
+            (Ideal.Quotient.mk Z.I (Z.f ^ n)))
+        simpa [qf, map_pow] using
+          IsUnit.pow _ (IsLocalization.Away.algebraMap_isUnit qf)
+      · simp [qf]
+    · intro s hs
+      rcases hs with ⟨a, ha, rfl⟩
+      change IsUnit
+        (algebraMap Q (Localization.Away qf) (Ideal.Quotient.mk Z.I a)) at ha
+      obtain ⟨n, hn⟩ :=
+        (IsLocalization.Away.algebraMap_isUnit_iff qf).mp ha
+      exact ⟨qf ^ n, ⟨n, rfl⟩, hn⟩
+  rcases localizedPieceRing_quotient_equiv_localizedQuotient Z with ⟨e⟩
+  let e' := @IsLocalization.algEquiv Q _
+    (Z.units.map (Ideal.Quotient.mk Z.I))
+    (Localization (Z.units.map (Ideal.Quotient.mk Z.I))) _ _ _
+    (Localization.Away qf) _ _ hloc
+  refine ⟨?_⟩
+  exact e.trans e'.toRingEquiv
+
+private theorem localizedPieceSpectrumMap_range_eq_disjoint
+    {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
+    Set.range (localizedPieceSpectrumMap Z) =
+      {p | Disjoint (Z.units : Set A) p.asIdeal} := by
+  have hmap :
+      localizedPieceRingHom Z =
+        algebraMap A (Localization Z.units) := by
+    rfl
+  have hrange :
+      Set.range
+          (PrimeSpectrum.comap
+            (algebraMap A (Localization Z.units))) =
+        {p | Disjoint (Z.units : Set A) p.asIdeal} :=
+    @PrimeSpectrum.localization_comap_range A (Localization Z.units)
+      _ _ OreLocalization.instAlgebra Z.units
+      (@Localization.isLocalization A _ Z.units)
+  change Set.range (PrimeSpectrum.comap (localizedPieceRingHom Z)) =
+    {p | Disjoint (Z.units : Set A) p.asIdeal}
+  rw [hmap, hrange]
+
+private theorem localizedPieceSpectrumMap_range_eq_pointsSpecializingTo
+    {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
+    Set.range (localizedPieceSpectrumMap Z) =
+      pointsSpecializingToPiece Z := by
+  rw [localizedPieceSpectrumMap_range_eq_disjoint]
+  ext p
+  constructor
+  · intro hp
+    change Disjoint (Z.units : Set A) p.asIdeal at hp
+    have hdisj : Disjoint (↑(p.asIdeal ⊔ Z.I) : Set A)
+        (Submonoid.powers Z.f) := by
+      rw [Set.disjoint_left]
+      intro a ha hs
+      obtain ⟨n, rfl⟩ := hs
+      obtain ⟨b, hb, c, hc, hbc⟩ := Submodule.mem_sup.mp ha
+      have hmk :
+          Ideal.Quotient.mk Z.I b =
+            Ideal.Quotient.mk Z.I (Z.f ^ n) := by
+        apply (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr
+        change b - (fun x => Z.f ^ x) n ∈ Z.I
+        rw [← hbc]
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+          Z.I.neg_mem hc
+      have hunit : b ∈ Z.units := by
+        change IsUnit
+          (algebraMap (A ⧸ Z.I)
+            (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+            (Ideal.Quotient.mk Z.I b))
+        rw [hmk]
+        simpa [map_pow] using
+          IsLocalization.Away.algebraMap_pow_isUnit
+            (Ideal.Quotient.mk Z.I Z.f) n
+      exact (Set.disjoint_left.mp hp) hunit hb
+    obtain ⟨q, hqprime, hqle, hqdisj⟩ :=
+      Ideal.exists_le_prime_disjoint (p.asIdeal ⊔ Z.I)
+        (Submonoid.powers Z.f) hdisj
+    let y : PrimeSpectrum A := ⟨q, hqprime⟩
+    refine ⟨y, ?_, ?_⟩
+    · constructor
+      · apply (PrimeSpectrum.mem_basicOpen Z.f y).mpr
+        intro hf
+        exact (Set.disjoint_left.mp hqdisj) hf
+          (Submonoid.mem_powers Z.f)
+      · apply (PrimeSpectrum.mem_zeroLocus y (Z.I : Set A)).mpr
+        intro b hb
+        exact hqle (Ideal.mem_sup_right hb)
+    · exact (PrimeSpectrum.le_iff_specializes p y).mp
+        (show p.asIdeal ≤ q from le_trans le_sup_left hqle)
+  · rintro ⟨q, hq, hspec⟩
+    change Disjoint (Z.units : Set A) p.asIdeal
+    rw [Set.disjoint_left]
+    intro a ha hunit
+    change IsUnit
+      (algebraMap (A ⧸ Z.I)
+        (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+        (Ideal.Quotient.mk Z.I a)) at ha
+    obtain ⟨n, hn⟩ :=
+        (IsLocalization.Away.algebraMap_isUnit_iff
+        (Ideal.Quotient.mk Z.I Z.f)).mp ha
+    obtain ⟨b, hb⟩ := hn
+    obtain ⟨c, rfl⟩ := Ideal.Quotient.mk_surjective b
+    have hmk :
+        Ideal.Quotient.mk Z.I (Z.f ^ n) =
+          Ideal.Quotient.mk Z.I (a * c) := by
+      simpa [map_mul] using hb
+    have hdiff : Z.f ^ n - a * c ∈ Z.I :=
+      (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mp hmk
+    have hap : a ∈ q.asIdeal :=
+      (PrimeSpectrum.le_iff_specializes p q).mpr hspec hunit
+    have hab : a * c ∈ q.asIdeal := by
+      simpa [mul_comm] using q.asIdeal.mul_mem_left c hap
+    have hpow : Z.f ^ n ∈ q.asIdeal := by
+      have hdiff' : Z.f ^ n - a * c ∈ q.asIdeal :=
+        hq.2 hdiff
+      have hadd := q.asIdeal.add_mem hdiff' hab
+      simpa [sub_add_cancel] using hadd
+    have hf : Z.f ∈ q.asIdeal := q.2.mem_of_pow_mem _ hpow
+    exact (PrimeSpectrum.mem_basicOpen Z.f q).mp hq.1 hf
 
 /-! ## The localization lemma -/
 
@@ -149,7 +277,65 @@ theorem localization_piece_properties
       (∀ x, (e x : PrimeSpectrum A) = localizedPieceSpectrumMap Z x) ∧
         IsClosed
           (localizedPieceSpectrumMap Z ⁻¹' Z.carrier) := by
-  sorry
+  have hrange := localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z
+  have hmap :
+      localizedPieceRingHom Z =
+        algebraMap A (Localization Z.units) := by
+    rfl
+  have hemb' :
+      IsEmbedding
+        (PrimeSpectrum.comap
+          (algebraMap A (Localization Z.units))) :=
+    @PrimeSpectrum.localization_comap_isEmbedding A
+      (Localization Z.units) _ _ OreLocalization.instAlgebra Z.units
+      (@Localization.isLocalization A _ Z.units)
+  have hemb : IsEmbedding (localizedPieceSpectrumMap Z) := by
+    simpa [localizedPieceSpectrumMap, hmap] using hemb'
+  have hpre :
+      localizedPieceSpectrumMap Z ⁻¹' pointsSpecializingToPiece Z =
+        Set.univ := by
+    apply Set.eq_univ_of_forall
+    intro x
+    rw [← hrange]
+    exact ⟨x, rfl⟩
+  let e0 := hemb.homeomorphOfSubsetRange
+    (s := pointsSpecializingToPiece Z) (by
+      simpa only [hrange] using
+        (show pointsSpecializingToPiece Z ⊆ pointsSpecializingToPiece Z from
+          subset_rfl))
+  let e : PrimeSpectrum (Localization Z.units) ≃ₜ
+      LocallyClosedPointSpace Z :=
+    (Homeomorph.Set.univ _).symm.trans
+      ((Homeomorph.setCongr hpre.symm).trans e0)
+  refine ⟨e, ?_, ?_⟩
+  · intro x
+    rfl
+  · have hf : Z.f ∈ Z.units := by
+      change IsUnit
+        (algebraMap (A ⧸ Z.I)
+          (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+          (Ideal.Quotient.mk Z.I Z.f))
+      exact IsLocalization.Away.algebraMap_isUnit
+        (Ideal.Quotient.mk Z.I Z.f)
+    have hbasic :
+        localizedPieceSpectrumMap Z ⁻¹'
+            (PrimeSpectrum.basicOpen Z.f : Set (PrimeSpectrum A)) =
+          Set.univ := by
+      apply Set.eq_univ_of_forall
+      intro x
+      apply (PrimeSpectrum.mem_basicOpen Z.f _).mpr
+      intro hfx
+      have hx : Disjoint (Z.units : Set A)
+          (localizedPieceSpectrumMap Z x).asIdeal := by
+        have hx' : localizedPieceSpectrumMap Z x ∈
+            Set.range (localizedPieceSpectrumMap Z) := ⟨x, rfl⟩
+        rw [localizedPieceSpectrumMap_range_eq_disjoint] at hx'
+        exact hx'
+      exact (Set.disjoint_left.mp hx) hf hfx
+    rw [LocallyClosedPiece.carrier, Set.preimage_inter, hbasic,
+      univ_inter]
+    exact (PrimeSpectrum.isClosed_zeroLocus
+      (Z.I : Set A)).preimage (PrimeSpectrum.continuous_comap _)
 
 theorem localization_piece_has_closed_subscheme
     {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
@@ -158,14 +344,194 @@ theorem localization_piece_has_closed_subscheme
         AlgebraicGeometry.IsClosedImmersion i ∧
           Set.range i.base =
             (localizedPieceSpectrumMap Z ⁻¹' Z.carrier) := by
-  sorry
+  let B := localizedPieceRing Z
+  let J : Ideal B := Ideal.map (localizedPieceRingHom Z) Z.I
+  let Y : AlgebraicGeometry.Scheme :=
+    AlgebraicGeometry.Spec (CommRingCat.of (B ⧸ J))
+  let i : Y ⟶
+      AlgebraicGeometry.Spec (CommRingCat.of B) :=
+    AlgebraicGeometry.Spec.map
+      (CommRingCat.ofHom (Ideal.Quotient.mk J))
+  refine ⟨Y, i, ?_, ?_⟩
+  · change AlgebraicGeometry.IsClosedImmersion
+      (AlgebraicGeometry.Spec.map
+        (CommRingCat.ofHom (Ideal.Quotient.mk J)))
+    exact AlgebraicGeometry.IsClosedImmersion.spec_of_surjective _
+      Ideal.Quotient.mk_surjective
+  · change Set.range
+      (PrimeSpectrum.comap (Ideal.Quotient.mk J)) =
+        (localizedPieceSpectrumMap Z ⁻¹' Z.carrier)
+    rw [range_comap_of_surjective _ _
+      Ideal.Quotient.mk_surjective]
+    have hJ :
+        Ideal.map (localizedPieceRingHom Z) Z.I =
+          Ideal.span (localizedPieceRingHom Z '' (Z.I : Set A)) := by
+      calc
+        Ideal.map (localizedPieceRingHom Z) Z.I =
+            Ideal.map (localizedPieceRingHom Z)
+              (Ideal.span (Z.I : Set A)) := by rw [Z.I.span_eq]
+        _ = Ideal.span (localizedPieceRingHom Z '' (Z.I : Set A)) := by
+          rw [Ideal.map_span]
+    have hf : Z.f ∈ Z.units := by
+      change IsUnit
+        (algebraMap (A ⧸ Z.I)
+          (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+          (Ideal.Quotient.mk Z.I Z.f))
+      exact IsLocalization.Away.algebraMap_isUnit
+        (Ideal.Quotient.mk Z.I Z.f)
+    have hbasic :
+        localizedPieceSpectrumMap Z ⁻¹'
+            (PrimeSpectrum.basicOpen Z.f : Set (PrimeSpectrum A)) =
+          Set.univ := by
+      apply Set.eq_univ_of_forall
+      intro x
+      apply (PrimeSpectrum.mem_basicOpen Z.f _).mpr
+      intro hfx
+      have hx : Disjoint (Z.units : Set A)
+          (localizedPieceSpectrumMap Z x).asIdeal := by
+        have hx' : localizedPieceSpectrumMap Z x ∈
+            Set.range (localizedPieceSpectrumMap Z) := ⟨x, rfl⟩
+        rw [localizedPieceSpectrumMap_range_eq_disjoint] at hx'
+        exact hx'
+      exact (Set.disjoint_left.mp hx) hf hfx
+    rw [LocallyClosedPiece.carrier, Set.preimage_inter, hbasic,
+      univ_inter]
+    change PrimeSpectrum.zeroLocus
+        (RingHom.ker (Ideal.Quotient.mk J) : Set B) =
+      (PrimeSpectrum.comap (localizedPieceRingHom Z) ⁻¹'
+        PrimeSpectrum.zeroLocus (Z.I : Set A))
+    rw [Ideal.mk_ker]
+    change PrimeSpectrum.zeroLocus
+        (Ideal.map (localizedPieceRingHom Z) Z.I : Set B) =
+      (PrimeSpectrum.comap (localizedPieceRingHom Z) ⁻¹'
+        PrimeSpectrum.zeroLocus (Z.I : Set A))
+    rw [hJ, PrimeSpectrum.preimage_comap_zeroLocus,
+      PrimeSpectrum.zeroLocus_span]
+
+private theorem localizedPiece_units_eq_of_carrier_eq
+    {A : Type u} [CommRing A] (Z Z' : LocallyClosedPiece A)
+    (h : Z.carrier = Z'.carrier) :
+    Z.units = Z'.units := by
+  ext a
+  constructor
+  · intro ha
+    by_contra ha'
+    have hdisj : Disjoint (Ideal.span ({a} : Set A) : Set A)
+        (Z'.units : Set A) := by
+      rw [Set.disjoint_left]
+      intro b hb hbunit
+      obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hb
+      apply ha'
+      change IsUnit
+        (algebraMap (A ⧸ Z'.I)
+          (Localization.Away (Ideal.Quotient.mk Z'.I Z'.f))
+          (Ideal.Quotient.mk Z'.I a))
+      apply isUnit_of_mul_isUnit_right
+      change IsUnit
+        (algebraMap (A ⧸ Z'.I)
+          (Localization.Away (Ideal.Quotient.mk Z'.I Z'.f))
+          (Ideal.Quotient.mk Z'.I b)) at hbunit
+      simpa [← hc, map_mul] using hbunit
+    obtain ⟨q, hqprime, hqle, hqdisj⟩ :=
+      Ideal.exists_le_prime_disjoint (Ideal.span ({a} : Set A))
+        Z'.units hdisj
+    let qx : PrimeSpectrum A := ⟨q, hqprime⟩
+    have hqpoints' : qx ∈ pointsSpecializingToPiece Z' := by
+      rw [← localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z',
+        localizedPieceSpectrumMap_range_eq_disjoint]
+      change Disjoint (Z'.units : Set A) qx.asIdeal
+      exact hqdisj.symm
+    have hqpoints : qx ∈ pointsSpecializingToPiece Z := by
+      simpa [pointsSpecializingToPiece, h] using hqpoints'
+    have hqrange : qx ∈ Set.range (localizedPieceSpectrumMap Z) := by
+      rw [localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z]
+      exact hqpoints
+    obtain ⟨p, hp⟩ := hqrange
+    have hdisjZ : Disjoint (Z.units : Set A) qx.asIdeal := by
+      have hp' : qx ∈ Set.range (localizedPieceSpectrumMap Z) :=
+        ⟨p, hp⟩
+      rw [localizedPieceSpectrumMap_range_eq_disjoint] at hp'
+      exact hp'
+    exact (Set.disjoint_left.mp hdisjZ) ha
+      (hqle (Ideal.mem_span_singleton_self a))
+  · intro ha
+    by_contra ha'
+    have hdisj : Disjoint (Ideal.span ({a} : Set A) : Set A)
+        (Z.units : Set A) := by
+      rw [Set.disjoint_left]
+      intro b hb hbunit
+      obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hb
+      apply ha'
+      change IsUnit
+        (algebraMap (A ⧸ Z.I)
+          (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+          (Ideal.Quotient.mk Z.I a))
+      apply isUnit_of_mul_isUnit_right
+      change IsUnit
+        (algebraMap (A ⧸ Z.I)
+          (Localization.Away (Ideal.Quotient.mk Z.I Z.f))
+          (Ideal.Quotient.mk Z.I b)) at hbunit
+      simpa [← hc, map_mul] using hbunit
+    obtain ⟨q, hqprime, hqle, hqdisj⟩ :=
+      Ideal.exists_le_prime_disjoint (Ideal.span ({a} : Set A))
+        Z.units hdisj
+    let qx : PrimeSpectrum A := ⟨q, hqprime⟩
+    have hqpoints : qx ∈ pointsSpecializingToPiece Z := by
+      rw [← localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z,
+        localizedPieceSpectrumMap_range_eq_disjoint]
+      change Disjoint (Z.units : Set A) qx.asIdeal
+      exact hqdisj.symm
+    have hqpoints' : qx ∈ pointsSpecializingToPiece Z' := by
+      simpa [pointsSpecializingToPiece, h] using hqpoints
+    have hqrange' : qx ∈ Set.range (localizedPieceSpectrumMap Z') := by
+      rw [localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z']
+      exact hqpoints'
+    obtain ⟨p, hp⟩ := hqrange'
+    have hdisjZ' : Disjoint (Z'.units : Set A) qx.asIdeal := by
+      have hp' : qx ∈ Set.range (localizedPieceSpectrumMap Z') :=
+        ⟨p, hp⟩
+      rw [localizedPieceSpectrumMap_range_eq_disjoint] at hp'
+      exact hp'
+    exact (Set.disjoint_left.mp hdisjZ') ha
+      (hqle (Ideal.mem_span_singleton_self a))
+
+private theorem localizedPieceRing_algEquiv_of_units_eq
+    {A : Type u} [CommRing A] (Z Z' : LocallyClosedPiece A)
+    (hu : Z.units = Z'.units) :
+    Nonempty (localizedPieceRing Z ≃ₐ[A] localizedPieceRing Z') := by
+  have hAlgZ :
+      localizedPieceRing.algebra Z =
+        OreLocalization.instAlgebra := by
+    apply Algebra.algebra_ext
+    intro a
+    rfl
+  have hAlgZ' :
+      localizedPieceRing.algebra Z' =
+        OreLocalization.instAlgebra := by
+    apply Algebra.algebra_ext
+    intro a
+    rfl
+  have hloc' :
+      @IsLocalization A _ Z.units (Localization Z'.units)
+        OreLocalization.instCommSemiring OreLocalization.instAlgebra := by
+    rw [hu]
+    exact @Localization.isLocalization A _ Z'.units
+  let e :=
+    @IsLocalization.algEquiv A _ Z.units (Localization Z.units)
+      OreLocalization.instCommSemiring OreLocalization.instAlgebra
+      (@Localization.isLocalization A _ Z.units)
+      (Localization Z'.units) OreLocalization.instCommSemiring
+      OreLocalization.instAlgebra hloc'
+  rw [hAlgZ, hAlgZ']
+  exact ⟨e⟩
 
 /-- The ring `A_Z^~` depends only on the underlying locally closed subset. -/
 theorem localizedPieceRing_depends_only_on_carrier
     {A : Type u} [CommRing A] (Z Z' : LocallyClosedPiece A)
     (h : Z.carrier = Z'.carrier) :
     Nonempty (localizedPieceRing Z ≃ₐ[A] localizedPieceRing Z') := by
-  sorry
+  have hu := localizedPiece_units_eq_of_carrier_eq Z Z' h
+  exact localizedPieceRing_algEquiv_of_units_eq Z Z' hu
 
 /-- Functoriality of the localization along locally closed pieces. -/
 def MapsIntoLocallyClosedPiece
@@ -173,6 +539,71 @@ def MapsIntoLocallyClosedPiece
     (f : A →+* B) (Z : LocallyClosedPiece A) (Z' : LocallyClosedPiece B) : Prop :=
   ∀ y : PrimeSpectrum B, y ∈ Z'.carrier →
     PrimeSpectrum.comap f y ∈ Z.carrier
+
+private theorem localizedPiece_units_map_mem
+    {A B : Type u} [CommRing A] [CommRing B]
+    (f : A →+* B) (Z : LocallyClosedPiece A) (Z' : LocallyClosedPiece B)
+    (h : MapsIntoLocallyClosedPiece f Z Z') :
+    ∀ a ∈ Z.units, f a ∈ Z'.units := by
+  intro a ha
+  by_contra ha'
+  have hdisj : Disjoint (Ideal.span ({f a} : Set B) : Set B)
+      (Z'.units : Set B) := by
+    rw [Set.disjoint_left]
+    intro b hb hbunit
+    obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hb
+    apply ha'
+    change IsUnit
+      (algebraMap (B ⧸ Z'.I)
+        (Localization.Away (Ideal.Quotient.mk Z'.I Z'.f))
+        (Ideal.Quotient.mk Z'.I (f a)))
+    apply isUnit_of_mul_isUnit_right
+    change IsUnit
+      (algebraMap (B ⧸ Z'.I)
+        (Localization.Away (Ideal.Quotient.mk Z'.I Z'.f))
+        (Ideal.Quotient.mk Z'.I b)) at hbunit
+    simpa [← hc, map_mul] using hbunit
+  obtain ⟨q, hqprime, hqle, hqdisj⟩ :=
+    Ideal.exists_le_prime_disjoint (Ideal.span ({f a} : Set B))
+      Z'.units hdisj
+  let qx : PrimeSpectrum B := ⟨q, hqprime⟩
+  have hqpoints : qx ∈ pointsSpecializingToPiece Z' := by
+    rw [← localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z',
+      localizedPieceSpectrumMap_range_eq_disjoint]
+    change Disjoint (Z'.units : Set B) qx.asIdeal
+    exact hqdisj.symm
+  obtain ⟨y, hy, hxy⟩ := hqpoints
+  have hsource : PrimeSpectrum.comap f qx ∈
+      pointsSpecializingToPiece Z := by
+    refine ⟨PrimeSpectrum.comap f y, h y hy, ?_⟩
+    exact hxy.map (PrimeSpectrum.continuous_comap f)
+  have hrange : PrimeSpectrum.comap f qx ∈
+      Set.range (localizedPieceSpectrumMap Z) := by
+    rw [localizedPieceSpectrumMap_range_eq_pointsSpecializingTo Z]
+    exact hsource
+  obtain ⟨p, hp⟩ := hrange
+  have hdisjZ : Disjoint (Z.units : Set A)
+      (PrimeSpectrum.comap f qx).asIdeal := by
+    have hp' : PrimeSpectrum.comap f qx ∈
+        Set.range (localizedPieceSpectrumMap Z) := ⟨p, hp⟩
+    rw [localizedPieceSpectrumMap_range_eq_disjoint] at hp'
+    exact hp'
+  exact (Set.disjoint_left.mp hdisjZ) ha
+    (show f a ∈ qx.asIdeal from
+      hqle (Ideal.mem_span_singleton_self (f a)))
+
+private theorem localizedPieceRing_isLocalization
+    {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
+    @IsLocalization A _ Z.units (localizedPieceRing Z) _
+      (localizedPieceRing.algebra Z) := by
+  have hAlg :
+      localizedPieceRing.algebra Z =
+        OreLocalization.instAlgebra := by
+    apply Algebra.algebra_ext
+    intro a
+    rfl
+  rw [hAlg]
+  exact @Localization.isLocalization A _ Z.units
 
 theorem exists_localizedPieceRingHom
     {A B : Type u} [CommRing A] [CommRing B]
@@ -183,7 +614,42 @@ theorem exists_localizedPieceRingHom
     ∃! g : localizedPieceRing Z →ₐ[A] localizedPieceRing Z',
       g.toRingHom.comp (localizedPieceRingHom Z) =
         (localizedPieceRingHom Z').comp f := by
-  sorry
+  let algP : Algebra A (localizedPieceRing Z') :=
+    ((localizedPieceRingHom Z').comp f).toAlgebra
+  let F := @Algebra.ofId A (localizedPieceRing Z') _ _ algP
+  let hscalar :=
+    @IsScalarTower.of_algebraMap_eq' A A (localizedPieceRing Z)
+      _ _ _ _ (localizedPieceRing.algebra Z)
+      (localizedPieceRing.algebra Z) (by
+        apply RingHom.ext
+        intro a
+        rfl)
+  have hlocZ := localizedPieceRing_isLocalization Z
+  have hlocZ' := localizedPieceRing_isLocalization Z'
+  have hF : ∀ y : Z.units, IsUnit (F y) := by
+    intro y
+    change IsUnit
+      (algebraMap B (localizedPieceRing Z') (f y))
+    exact @IsLocalization.map_units B _ Z'.units
+      (localizedPieceRing Z') _ (localizedPieceRing.algebra Z') hlocZ'
+      ⟨f y, localizedPiece_units_map_mem f Z Z' h y y.property⟩
+  let g :=
+    @IsLocalization.liftAlgHom A _ A _ _ Z.units
+      (localizedPieceRing Z) _ (localizedPieceRing.algebra Z)
+      (localizedPieceRing.algebra Z) hscalar
+      (localizedPieceRing Z') _ algP hlocZ F hF
+  have hg :
+      g.toRingHom.comp (localizedPieceRingHom Z) =
+        (localizedPieceRingHom Z').comp f := by
+    ext a
+    change g (algebraMap A (localizedPieceRing Z) a) =
+      algebraMap A (localizedPieceRing Z') a
+    exact g.commutes a
+  refine ⟨g, hg, ?_⟩
+  rintro g' hg'
+  apply AlgHom.coe_ringHom_injective
+  apply IsLocalization.ringHom_ext Z.units
+  exact hg'.trans hg.symm
 
 /-! ## Finite vanishing-pattern stratifications -/
 
@@ -210,7 +676,29 @@ theorem mem_stratum_iff_vanishing_pattern
     x ∈ stratum p ↔
       (∀ f ∈ p.nonvanishing, f ∉ x.asIdeal) ∧
         (∀ f ∈ p.vanishing, f ∈ x.asIdeal) := by
-  sorry
+  change
+    (x ∈ (PrimeSpectrum.basicOpen (p.nonvanishing.prod id) :
+        Set (PrimeSpectrum A)) ∧
+      x ∈ PrimeSpectrum.zeroLocus
+        (Ideal.span (↑p.vanishing : Set A) : Set A)) ↔
+      (∀ f ∈ p.nonvanishing, f ∉ x.asIdeal) ∧
+        (∀ f ∈ p.vanishing, f ∈ x.asIdeal)
+  simp only [PrimeSpectrum.mem_zeroLocus]
+  constructor
+  · rintro ⟨hprod, hvan⟩
+    refine ⟨?_, ?_⟩
+    · intro f hf hfx
+      exact hprod (Ideal.prod_mem x.asIdeal hf hfx)
+    · intro f hf
+      exact hvan (Ideal.subset_span hf)
+  · rintro ⟨hnv, hvan⟩
+    refine ⟨?_, Ideal.span_le.mpr ?_⟩
+    · intro hprod
+      obtain ⟨f, hf, hfx⟩ :=
+        (x.2.prod_mem_iff_exists_mem p.nonvanishing).mp hprod
+      exact hnv f hf hfx
+    · intro f hf
+      exact hvan f hf
 
 /-- The displayed description of a stratum as `D(∏ E') ∩ V((E''))`. -/
 theorem stratum_eq_basicOpen_inter_zeroLocus

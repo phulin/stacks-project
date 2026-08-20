@@ -1717,10 +1717,26 @@ theorem family_of_edge_quasiIso {R : Type u} [CommRing R]
         (isoOfQuasiIsoAt (upEdge B) i).hom := by rw [hc, Category.id_comp]
     _ = _ := hu
 
+/-! These are the source-specific edge comparison results needed to feed the
+generic family constructor above.  The proof is the zig-zag exactness
+argument from the source; keeping the two directions separate matches the
+two independent resolution hypotheses. -/
+theorem rightEdge_quasiIso_of_rows {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (hrow : RowsAreResolutions A) (i : ℕ) :
+    QuasiIsoAt (rightEdge A) i := by
+  sorry
+
+theorem upEdge_quasiIso_of_columns {R : Type u} [CommRing R]
+    (A : DoubleComplex R) (hcol : ColumnsAreResolutions A) (i : ℕ) :
+    QuasiIsoAt (upEdge A) i := by
+  sorry
+
 /-- The source's canonical, functorial double-complex comparison. -/
 theorem exists_doubleComplex_homology_iso_family {R : Type u} [CommRing R] :
     Nonempty (DoubleComplexHomologyIsoFamily R) := by
-  sorry
+  exact family_of_edge_quasiIso
+    (fun A hrow i => rightEdge_quasiIso_of_rows A hrow i)
+    (fun A hcol i => upEdge_quasiIso_of_columns A hcol i)
 
 /-- A chosen family of the canonical double-complex comparisons. -/
 noncomputable def doubleComplexHomologyIsoFamily {R : Type u} [CommRing R] :

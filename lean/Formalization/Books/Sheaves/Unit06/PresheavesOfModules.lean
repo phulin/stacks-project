@@ -517,7 +517,7 @@ theorem sectionwiseExtensionOfScalarsMap_exists
           (sectionwiseExtensionOfScalarsSection α G V)) := by
   exact ⟨pointwiseExtensionMap α G i⟩
 
-/-- The chosen restriction map on sectionwise extensions of scalars. -/
+/-- The canonical restriction map on sectionwise extensions of scalars. -/
 noncomputable def sectionwiseExtensionOfScalarsMap
     {X : TopCat.{w}} {O O' : CommRingPresheaf X}
     (α : O ⟶ O') (G : CommRingPresheafModule O)
@@ -525,7 +525,7 @@ noncomputable def sectionwiseExtensionOfScalarsMap
     sectionwiseExtensionOfScalarsSection α G U ⟶
       (ModuleCat.restrictScalars (O'.map i).hom).obj
         (sectionwiseExtensionOfScalarsSection α G V) :=
-  Classical.choice (sectionwiseExtensionOfScalarsMap_exists α G i)
+  pointwiseExtensionMap α G i
 
 /-- Identity coherence for the sectionwise extension restriction maps. -/
 theorem sectionwiseExtensionOfScalarsMap_id

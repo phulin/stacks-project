@@ -51,7 +51,37 @@ theorem syntomic_over_field_iff_local_complete_intersection
     {k S : Type u} [Field k] [CommRing S] [Algebra k S] :
     IsSyntomic (algebraMap k S) ↔
       Formalization.Books.Algebra.Unit135.IsLocalCompleteIntersection k S := by
-  sorry
+  unfold IsSyntomic
+  constructor
+  · rintro ⟨_, hfp, hfibre⟩
+    have hft : RingHom.FiniteType (algebraMap k S) :=
+      RingHom.FiniteType.of_finitePresentation hfp
+    letI : Algebra.FiniteType k S := (RingHom.finiteType_algebraMap.mp hft)
+    letI : Algebra k S := (algebraMap k S).toAlgebra
+    have hf := hfibre (⟨⊥, Ideal.isPrime_bot⟩ : PrimeSpectrum k)
+    have hchange := Unit135.local_complete_intersection_field_change
+      (k := k) (K := (⊥ : Ideal k).ResidueField) (S := S)
+    have hf' : Unit135.IsLocalCompleteIntersection
+        (⊥ : Ideal k).ResidueField ((⊥ : Ideal k).ResidueField ⊗[k] S) := by
+      convert hf using 1
+    exact hchange.mpr hf'
+  · intro h
+    letI : Algebra k S := (algebraMap k S).toAlgebra
+    letI : Algebra.FiniteType k S :=
+      (RingHom.finiteType_algebraMap.mp
+        (RingHom.FiniteType.of_finitePresentation
+          (RingHom.finitePresentation_algebraMap.mpr
+            ((Algebra.FinitePresentation.of_finiteType).mp inferInstance))))
+    have hfpAlg : Algebra.FinitePresentation k S :=
+      (Algebra.FinitePresentation.of_finiteType).mp inferInstance
+    refine ⟨RingHom.Flat.of_isField (Field.toIsField k) (algebraMap k S),
+      RingHom.finitePresentation_algebraMap.mpr hfpAlg, ?_⟩
+    intro p
+    have hchange := Unit135.local_complete_intersection_field_change
+      (k := k) (K := p.asIdeal.ResidueField) (S := S)
+    have hf' : Unit135.IsLocalCompleteIntersection
+        p.asIdeal.ResidueField (p.asIdeal.ResidueField ⊗[k] S) := hchange.mp h
+    convert hf' using 1
 
 theorem syntomic_descends
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -60,7 +90,50 @@ theorem syntomic_descends
     letI : Algebra R R' := g.toAlgebra
     IsSyntomic f ↔
       IsSyntomic (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  constructor
+  · intro h
+    unfold IsSyntomic at h ⊢
+    rcases h with ⟨hflat, hfp, hfibre⟩
+    refine ⟨RingHom.Flat.isStableUnderBaseChange g hflat,
+      Unit14.baseChange_finite_presentation f g hfp, ?_⟩
+    intro p
+    let q : PrimeSpectrum R := PrimeSpectrum.comap g p
+    have hq : q.asIdeal = p.asIdeal.comap g := rfl
+    let e : q.asIdeal.ResidueField →ₐ[R] p.asIdeal.ResidueField :=
+      Ideal.ResidueField.mapₐ q.asIdeal p.asIdeal (Algebra.ofId R R') hq
+    letI : Algebra q.asIdeal.ResidueField p.asIdeal.ResidueField :=
+      e.toRingHom.toAlgebra
+    have hqf := hfibre q
+    have hchange := Unit135.local_complete_intersection_field_change
+      (k := q.asIdeal.ResidueField) (K := p.asIdeal.ResidueField)
+      (S := Fiber R S q)
+    exact hchange.mp hqf
+  · intro h
+    unfold IsSyntomic at h ⊢
+    rcases h with ⟨hflat, hfp, hfibre⟩
+    letI : Module.FaithfullyFlat R R' := by
+      exact hff
+    have hflat' : Module.Flat R' (S ⊗[R] R') := by
+      exact RingHom.flat_algebraMap_iff.mp hflat
+    letI : Module.Flat R' (S ⊗[R] R') := hflat'
+    have hflat'' : Module.Flat R' (R' ⊗[R] S) :=
+      Module.Flat.of_linearEquiv (Algebra.TensorProduct.commRight R R' S).toLinearEquiv
+    have hflatS : Module.Flat R S :=
+      Module.Flat.of_flat_tensorProduct R' S
+    refine ⟨RingHom.flat_algebraMap_iff.mpr hflatS, ?_, ?_⟩
+    · exact RingHom.FinitePresentation.codescendsAlong_faithfullyFlat hff hfp
+    · intro p
+      obtain ⟨p', hp'⟩ := PrimeSpectrum.comap_surjective_of_faithfullyFlat p
+      have hpideal : p.asIdeal = p'.asIdeal.comap g := by
+        exact congrArg PrimeSpectrum.asIdeal hp'.symm
+      let e : p.asIdeal.ResidueField →ₐ[R] p'.asIdeal.ResidueField :=
+        Ideal.ResidueField.mapₐ p.asIdeal p'.asIdeal (Algebra.ofId R R') hpideal
+      letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
+        e.toRingHom.toAlgebra
+      have hchange := Unit135.local_complete_intersection_field_change
+        (k := p.asIdeal.ResidueField) (K := p'.asIdeal.ResidueField)
+        (S := Fiber R S p)
+      exact hchange.mpr (by simpa [hp'] using hfibre p')
 
 theorem syntomic_base_change
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
@@ -68,7 +141,22 @@ theorem syntomic_base_change
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     IsSyntomic (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  unfold IsSyntomic at hf ⊢
+  rcases hf with ⟨hflat, hfp, hfibre⟩
+  refine ⟨?_, Unit14.baseChange_finite_presentation f g hfp, ?_⟩
+  · exact RingHom.Flat.isStableUnderBaseChange g hflat
+  · intro p
+    let q : PrimeSpectrum R := PrimeSpectrum.comap g p
+    have hq : q.asIdeal = p.asIdeal.comap g := rfl
+    let e : q.asIdeal.ResidueField →ₐ[R] p.asIdeal.ResidueField :=
+      Ideal.ResidueField.mapₐ q.asIdeal p.asIdeal (Algebra.ofId R R') hq
+    letI : Algebra q.asIdeal.ResidueField p.asIdeal.ResidueField :=
+      e.toRingHom.toAlgebra
+    have hqf := hfibre q
+    have hchange := Unit135.local_complete_intersection_field_change
+      (k := q.asIdeal.ResidueField) (K := p.asIdeal.ResidueField)
+      (S := Fiber R S q)
+    exact hchange.mp hqf
 
 theorem syntomic_local_on_source
     {R S : Type u} [CommRing R] [CommRing S]
@@ -77,7 +165,20 @@ theorem syntomic_local_on_source
     letI : Algebra R S := f.toAlgebra
     (∀ i, IsSyntomic (algebraMap R (Localization.Away (gs i)))) →
       IsSyntomic f := by
-  sorry
+  intro hloc
+  unfold IsSyntomic at hloc ⊢
+  refine ⟨?_, ?_, ?_⟩
+  · apply RingHom.Flat.propertyIsLocal.ofLocalizationSpanTarget f (Set.range gs) hgen
+    intro r hr
+    obtain ⟨i, rfl⟩ := hr
+    simpa only [RingHom.algebraMap_toAlgebra, RingHom.coe_comp] using (hloc i).1
+  · apply RingHom.FinitePresentation.propertyIsLocal.ofLocalizationSpanTarget
+      f (Set.range gs) hgen
+    intro r hr
+    obtain ⟨i, rfl⟩ := hr
+    simpa only [RingHom.algebraMap_toAlgebra, RingHom.coe_comp] using (hloc i).2.1
+  · intro p
+    sorry
 
 /-! ## Relative global complete intersections -/
 

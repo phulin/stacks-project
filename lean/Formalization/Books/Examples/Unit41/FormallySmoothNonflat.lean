@@ -328,7 +328,7 @@ private theorem rationalGroupAlgebraCotangentGenerator_nsmul
             rationalGroupAlgebra_basisElement_sub_one_mem_kernel k 0⟩ :
               rationalGroupAlgebraKernel k) = 0 := by
         simp
-      rw [zero_nsmul, hzero, map_zero]
+      rw [zero_nsmul, zero_nsmul, hzero, map_zero]
   | succ n ih =>
       rw [succ_nsmul, ih, succ_nsmul,
         rationalGroupAlgebraCotangentGenerator_add]

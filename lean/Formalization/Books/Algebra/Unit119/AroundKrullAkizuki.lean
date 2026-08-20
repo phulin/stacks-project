@@ -789,21 +789,21 @@ theorem integral_closure_is_dedekind
     [Module.Finite K L]
     (hdim : ringKrullDim R = 1) :
     IsDedekindDomain (integralClosure R L) := by
-  letI : Ring.KrullDimLE 1 R :=
-    Ring.krullDimLE_iff.mpr (by simpa [hdim])
-  letI : Ring.DimensionLEOne R :=
+  let : Ring.KrullDimLE 1 R :=
+    Ring.krullDimLE_iff.mpr (by simp [hdim])
+  let : Ring.DimensionLEOne R :=
     { maximalOfPrime := by
         intro p hp0 hp
         exact
           (Ring.krullDimLE_one_iff_of_noZeroDivisors.mp
             (inferInstance : Ring.KrullDimLE 1 R)) p hp0 hp }
-  letI : IsNoetherianRing (integralClosure R L) :=
+  let : IsNoetherianRing (integralClosure R L) :=
     krull_akizuki (R := R) (K := K) (L := L) hdim (integralClosure R L)
-  letI : Ring.DimensionLEOne (integralClosure R L) :=
+  let : Ring.DimensionLEOne (integralClosure R L) :=
     Ring.DimensionLEOne.integralClosure R L
-  letI : IsFractionRing (integralClosure R L) L :=
+  let : IsFractionRing (integralClosure R L) L :=
     integralClosure.isFractionRing_of_finite_extension (A := R) K L
-  letI : IsIntegrallyClosed (integralClosure R L) :=
+  let : IsIntegrallyClosed (integralClosure R L) :=
     integralClosure.isIntegrallyClosedOfFiniteExtension (R := R) K
   exact (isDedekindDomain_iff (A := integralClosure R L) L).2
     ⟨inferInstance, inferInstance, inferInstance,

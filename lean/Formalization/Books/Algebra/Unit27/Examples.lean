@@ -3771,6 +3771,32 @@ private lemma affine_second_remainder_degree (a : ℚ) :
         (by norm_num)
     · exact Polynomial.degree_C_le.trans_lt (by norm_num)
 
+private theorem card_primeSpectrum_le_finrank
+    (Q : Type*) [CommRing Q] [Algebra ℚ Q] [Module.Finite ℚ Q]
+    [IsArtinianRing Q] [Fintype (PrimeSpectrum Q)] :
+    Fintype.card (PrimeSpectrum Q) ≤ Module.finrank ℚ Q := by
+  have hloc (p : PrimeSpectrum Q) :
+      1 ≤ Module.finrank ℚ (Localization.AtPrime p.asIdeal) := by
+    let : Module.Finite ℚ (Localization.AtPrime p.asIdeal) :=
+      Module.Finite.of_surjective
+        (Algebra.algHom ℚ Q (Localization.AtPrime p.asIdeal)).toLinearMap
+        (IsArtinianRing.localization_surjective (R := Q) p.asIdeal.primeCompl
+          (Localization.AtPrime p.asIdeal))
+    let : Nontrivial (Localization.AtPrime p.asIdeal) :=
+      IsLocalization.AtPrime.nontrivial (Localization.AtPrime p.asIdeal) p.asIdeal
+    have hne : (⊤ : Submodule ℚ (Localization.AtPrime p.asIdeal)) ≠ ⊥ :=
+      Ne.symm bot_ne_top
+    simpa only [finrank_top] using
+      (Submodule.one_le_finrank_iff (R := ℚ)
+        (S := (⊤ : Submodule ℚ (Localization.AtPrime p.asIdeal)))).2 hne
+  calc
+    Fintype.card (PrimeSpectrum Q) = ∑ _p : PrimeSpectrum Q, 1 := by simp
+    _ ≤ ∑ p : PrimeSpectrum Q,
+        Module.finrank ℚ (Localization.AtPrime p.asIdeal) := by
+      exact Finset.sum_le_sum (fun p hp => hloc p)
+    _ = Module.finrank ℚ Q :=
+      (IsArtinianRing.finrank_eq_sum_primeSpectrum Q ℚ).symm
+
 private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
     (_ha1 : a ≠ 1) (_haHalf : a ≠ 1 / 2) :
     ∃ t : Finset (PrimeSpectrum affineBaseSubalgebra), t.card ≤ 3 ∧
@@ -4124,29 +4150,8 @@ private theorem affine_second_finite_data (a : ℚ) (_ha0 : a ≠ 0)
   let : Fintype (PrimeSpectrum Q) := Fintype.ofFinite _
   let : Fintype {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} :=
     Fintype.ofFinite _
-  have hloc (p : PrimeSpectrum Q) :
-      1 ≤ Module.finrank ℚ (Localization.AtPrime p.asIdeal) := by
-    let : Module.Finite ℚ (Localization.AtPrime p.asIdeal) :=
-      Module.Finite.of_surjective
-        (Algebra.algHom ℚ Q (Localization.AtPrime p.asIdeal)).toLinearMap
-        (IsArtinianRing.localization_surjective (R := Q) p.asIdeal.primeCompl
-          (Localization.AtPrime p.asIdeal))
-    let : Nontrivial (Localization.AtPrime p.asIdeal) :=
-      IsLocalization.AtPrime.nontrivial (Localization.AtPrime p.asIdeal) p.asIdeal
-    have hne : (⊤ : Submodule ℚ (Localization.AtPrime p.asIdeal)) ≠ ⊥ := by
-      exact Ne.symm bot_ne_top
-    simpa only [finrank_top] using
-      (Submodule.one_le_finrank_iff (R := ℚ)
-        (S := (⊤ : Submodule ℚ (Localization.AtPrime p.asIdeal)))).2 hne
-  have hcardQ : Fintype.card (PrimeSpectrum Q) ≤ Module.finrank ℚ Q := by
-    calc
-      Fintype.card (PrimeSpectrum Q) = ∑ p : PrimeSpectrum Q, 1 := by simp
-      _ ≤ ∑ p : PrimeSpectrum Q,
-          Module.finrank ℚ (Localization.AtPrime p.asIdeal) := by
-        exact Finset.sum_le_sum (fun p hp => hloc p)
-      _ = Module.finrank ℚ Q := by
-        symm
-        exact IsArtinianRing.finrank_eq_sum_primeSpectrum Q ℚ
+  have hcardQ : Fintype.card (PrimeSpectrum Q) ≤ Module.finrank ℚ Q :=
+    card_primeSpectrum_le_finrank Q
   have htcard : t.card = Fintype.card (PrimeSpectrum Q) := by
     rw [← Set.ncard_eq_toFinset_card T hTfinite]
     symm

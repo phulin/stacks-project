@@ -176,6 +176,16 @@ theorem flat_fibres_irreducible
   exact irreducibleSpectrum_of_openMap_of_dense_irreducibleFiber hR
     PrimeSpectrum.isOpenMap_comap_of_hasGoingDown_of_finitePresentation h
 
+/-! ## Irreducible components after base change -/
+
+/-- A function induces a bijection on irreducible components when its images
+give the corresponding components. -/
+def InducesBijectionOnIrreducibleComponents
+    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y]
+    (f : X → Y) : Prop :=
+  ∃ e : irreducibleComponents X ≃ irreducibleComponents Y,
+    ∀ C : irreducibleComponents X, f '' C.1 = (e C).1
+
 /-- Over a separably closed field, the tensor product of two algebras with
 irreducible spectra again has irreducible spectrum. -/
 theorem separablyClosed_tensorProduct_irreducible
@@ -1082,16 +1092,6 @@ theorem isGeometricallyIrreducible_directLimit
     have hnil := hynil.map (φ q)
     rw [hφf l q hlq, hy] at hnil
     exact hnil
-
-/-! ## Irreducible components after base change -/
-
-/-- A function induces a bijection on irreducible components when its images
-give the corresponding components. -/
-def InducesBijectionOnIrreducibleComponents
-    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y]
-    (f : X → Y) : Prop :=
-  ∃ e : irreducibleComponents X ≃ irreducibleComponents Y,
-    ∀ C : irreducibleComponents X, f '' C.1 = (e C).1
 
 /-- The canonical inclusion of the left tensor factor. -/
 noncomputable def tensorLeftRingHom

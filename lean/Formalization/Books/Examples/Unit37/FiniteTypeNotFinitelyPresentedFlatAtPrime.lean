@@ -1380,7 +1380,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
       refine Ideal.span_le.2 ?_
       intro z hz
       rcases hz with rfl
-      exact Ideal.subset_span (by simp [I₀])
+      exact Ideal.subset_span (by simp)
     change Polynomial.C b ∈ I₀
     exact hle hb
   have hLmap : Ideal.map fpoly L = I₀ := by
@@ -1419,14 +1419,14 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
       rcases hz with rfl | rfl
       · have hzL : ftCRelation k ∈ L :=
           (show ftCRelationsIdeal k ≤ L from le_sup_left)
-            (Ideal.subset_span (by simp [ftCRelationsIdeal]))
+            (Ideal.subset_span (by simp))
         have hz' := Ideal.mem_map_of_mem fpoly hzL
         simpa [fpoly, ftCRelation, ftCRelationOverA0, ftAX, ftAY, hA0] using hz'
       · have hpa : ftAPrimeEquation k n ∈ ftAPrime k n := by
           change ftAToA0 k (ftAPrimeEquation k n) ∈ ftP0 k n
           change ftAToA0 k (ftA0ToA k (ftPrimeEquation k n)) ∈ ftP0 k n
           rw [hA0]
-          exact Ideal.subset_span (by simp [ftP0])
+          exact Ideal.subset_span (by simp)
         have hzP : Polynomial.C (ftAPrimeEquation k n) ∈ L :=
           (show P ≤ L from le_sup_right)
             (Ideal.mem_map_of_mem
@@ -1449,7 +1449,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
             (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k) :
               ftCQuotient k) = (0 : ftCQuotient k) := by
           apply Ideal.Quotient.eq_zero_iff_mem.mpr
-          exact Ideal.subset_span (by simp [ftCRelationsIdeal])
+          exact Ideal.subset_span (by simp)
         calc
           algebraMap (ftCQuotient k) (ftC k)
               (Ideal.Quotient.mk (ftCRelationsIdeal k) (ftCRelation k)) =
@@ -1544,7 +1544,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
             ftCQuotient k) = (0 : ftCQuotient k) := by
         apply Ideal.Quotient.eq_zero_iff_mem.mpr
         have hmem : ftCRelation k ∈ ftCRelationsIdeal k :=
-          Ideal.subset_span (by simp [ftCRelationsIdeal])
+          Ideal.subset_span (by simp)
         simpa [fpoly', ftCRelationOverA0, ftCRelation, ftAX, ftAY] using hmem
       calc
         qf (algebraMap (ftCQuotient k) (ftC k)
@@ -1560,7 +1560,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
       have hpa : ftAPrimeEquation k n ∈ ftAPrime k n := by
         change ftAToA0 k (ftA0ToA k (ftPrimeEquation k n)) ∈ ftP0 k n
         rw [hA0]
-        exact Ideal.subset_span (by simp [ftP0])
+        exact Ideal.subset_span (by simp)
       have hmem : algebraMap (ftCQuotient k) (ftC k)
           (Ideal.Quotient.mk (ftCRelationsIdeal k)
             (fpoly' (Polynomial.C (ftPrimeEquation k n)))) ∈
@@ -1612,7 +1612,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
         change Polynomial.map (ftA0ToA k)
             (Polynomial.C (2 * ftX k) * Polynomial.X + 1) = _
         rw [Polynomial.map_add, Polynomial.map_mul]
-        simp [ftCDerivativePolynomial, ftAX, htwo, map_ofNat]
+        simp [ftCDerivativePolynomial, ftAX, map_ofNat]
       rw [hp]
       rfl
     rw [heq]
@@ -1697,7 +1697,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
     apply Ideal.Quotient.ringHom_ext
     change (gbar.comp fbar).comp qf = (RingHom.id _).comp qf
     rw [RingHom.comp_assoc, hfbar]
-    letI : IsLocalization (Submonoid.powers (ftCDerivative k)) (ftC k) := by
+    let : IsLocalization (Submonoid.powers (ftCDerivative k)) (ftC k) := by
       change IsLocalization (Submonoid.powers (ftCDerivative k))
         (Localization.Away (ftCDerivative k))
       infer_instance
@@ -1805,7 +1805,7 @@ theorem ftCPrimeFibre_equiv_first_presentation (k : Type u) [Field k] (n : ℕ) 
             rfl]
           rw [show fpoly Polynomial.X = Polynomial.X by simp [fpoly]]
   have hright : fbar.comp gbar = RingHom.id _ := by
-    letI : IsLocalization (Submonoid.powers
+    let : IsLocalization (Submonoid.powers
         (ftCPrimePresentationDerivative k n))
         (ftCPrimePresentation k n) := by
       change IsLocalization (Submonoid.powers
@@ -1908,7 +1908,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
         Ideal.comap r0 (IsLocalRing.maximalIdeal (ftKXLocal k)) := hs
     rw [hr0_comap] at hs'
     exact hs'
-  letI : IsLocalization (ftBaseMaximalIdeal k).primeCompl (ftA0 k) := by
+  let : IsLocalization (ftBaseMaximalIdeal k).primeCompl (ftA0 k) := by
     change IsLocalization (ftBaseMaximalIdeal k).primeCompl
       (Localization.AtPrime (ftBaseMaximalIdeal k))
     infer_instance
@@ -1921,8 +1921,6 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     exact IsLocalization.lift_comp _
   have hprime : a0toK (ftPrimeEquation k n) = 0 := by
     simp only [ftPrimeEquation, map_add, map_pow]
-    change a0toK (ftY k) + a0toK (ftX k) ^ n +
-      a0toK (ftX k) ^ (2 * n + 1) = 0
     rw [show a0toK (ftY k) = r0 (ftBaseY k) by
       exact congrArg (fun h : ftBasePolynomialRing k →+* ftKXLocal k =>
         h (ftBaseY k)) ha0_comp]
@@ -2011,7 +2009,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
       rw [Ideal.Quotient.lift_mk]
       simpa [RingHom.comp_apply] using ha0_embed Polynomial.X
   have hleft : qbase.comp kToQ = RingHom.id _ := by
-    letI : IsLocalization (ftKXMaximalIdeal k).primeCompl
+    let : IsLocalization (ftKXMaximalIdeal k).primeCompl
         (ftKXLocal k) := by
       change IsLocalization (ftKXMaximalIdeal k).primeCompl
         (Localization.AtPrime (ftKXMaximalIdeal k))
@@ -2022,7 +2020,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
   have hprimeQ :
       Ideal.Quotient.mk P0 (ftPrimeEquation k n) = 0 := by
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [P0, ftP0])
+    exact Ideal.subset_span (by simp)
   have hbasepoly : qmap.comp ePoly =
       (Ideal.Quotient.mk P0).comp
         (algebraMap (ftBasePolynomialRing k) (ftA0 k)) := by
@@ -2032,7 +2030,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     · intro i
       fin_cases i
       · simp [qmap, a0Poly, ePoly, embedPoly, ftBaseX, ftBaseXVar]
-      · simp [qmap, a0Poly, ePoly, embedPoly, ftBaseY, ftBaseYVar]
+      · simp [qmap, a0Poly, ePoly, embedPoly]
         have hqrel := hprimeQ
         change algebraMap (ftBasePolynomialRing k) (ftA0 k ⧸ P0)
               (ftBaseY k) +
@@ -2044,7 +2042,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
         linear_combination -hqrel
   have hkToQ_comp : kToQ.comp a0toK =
       Ideal.Quotient.mk P0 := by
-    letI : IsLocalization (ftKXMaximalIdeal k).primeCompl
+    let : IsLocalization (ftKXMaximalIdeal k).primeCompl
         (ftKXLocal k) := by
       change IsLocalization (ftKXMaximalIdeal k).primeCompl
         (Localization.AtPrime (ftKXMaximalIdeal k))
@@ -2079,7 +2077,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
       refine Ideal.span_le.2 ?_
       intro z hz
       rcases hz with rfl
-      exact Ideal.subset_span (by simp [I1])
+      exact Ideal.subset_span (by simp)
     intro a ha
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
     change Polynomial.C a ∈ I1
@@ -2119,9 +2117,9 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     rcases hz with rfl | rfl
     · apply Ideal.Quotient.eq_zero_iff_mem.mpr
       rw [hmaprel]
-      exact Ideal.subset_span (by simp [I2])
+      exact Ideal.subset_span (by simp)
     · apply Ideal.Quotient.eq_zero_iff_mem.mpr
-      simp [pmap1, hprime, I1]
+      simp [pmap1, hprime]
   have hker1' : ∀ a ∈ I1, (q2.comp pmap1) a = 0 := by
     intro a ha
     exact hker1 ha
@@ -2161,11 +2159,11 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
       cfp (a0Poly Polynomial.X) at h
     rw [show algebraMap (Polynomial k) (ftKXLocal k) Polynomial.X =
         ftKX k by rfl, show a0Poly Polynomial.X = ftX k by
-      simp [a0Poly, embedPoly, ftX, hX]] at h
+      simp [a0Poly, embedPoly, ftX]] at h
     exact h
   have hrelFP : q1 (Polynomial.C (ftPrimeEquation k n)) = 0 := by
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [I1])
+    exact Ideal.subset_span (by simp)
   have hyFP : q1 (Polynomial.C (ftY k)) =
       -(q1 (Polynomial.C (ftX k)) ^ n +
         q1 (Polynomial.C (ftX k)) ^ (2 * n + 1)) := by
@@ -2190,7 +2188,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     rcases hz with rfl
     change pmap2 (ftSecondRelationPolynomial k n) = 0
     rw [hmaprel2]
-    exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp [I1]))
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp))
   have hker2' : ∀ a ∈ I2, pmap2 a = 0 := by
     intro a ha
     exact hker2 ha
@@ -2211,8 +2209,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
         (2 : ftCPrimePresentationBase k n) := by
       change q1 (2 : Polynomial (ftA0 k)) = _
       exact map_ofNat q1 2
-    simp [pmap2, ftSecondDerivative,
-      ftCPrimePresentationDerivative, htwoB, hbcoefX, hCtwo, q1]
+    simp [pmap2, ftSecondDerivative, htwoB, hbcoefX, hCtwo, q1]
   have hcoefA (a : ftA0 k) :
       qToFP (kToQ (a0toK a)) = cfp a := by
     have h1 := congrArg
@@ -2305,9 +2302,9 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
       rw [Ideal.Quotient.lift_mk]
       change q2 (pmap1 Polynomial.X) = q2 Polynomial.X
       rw [show pmap1 Polynomial.X = Polynomial.X by simp [pmap1]]
-  letI : Semiring (ftCPrimePresentationBase k n) :=
+  let : Semiring (ftCPrimePresentationBase k n) :=
     (inferInstance : CommSemiring (ftCPrimePresentationBase k n)).toSemiring
-  letI : Semiring (ftSecondBase k n) :=
+  let : Semiring (ftSecondBase k n) :=
     (inferInstance : CommSemiring (ftSecondBase k n)).toSemiring
   let map12' : ftCPrimePresentationBase k n →+* ftSecondBase k n := by
     exact
@@ -2401,7 +2398,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     exact IsLocalization.Away.lift_comp
       (x := ftSecondDerivativeQuotient k n) (g := g21) hunit21
   have hFG : F.comp G = RingHom.id _ := by
-    letI : IsLocalization (Submonoid.powers
+    let : IsLocalization (Submonoid.powers
         (ftSecondDerivativeQuotient k n))
         (ftSecondPresentation k n) := by
       change IsLocalization (Submonoid.powers
@@ -2419,7 +2416,7 @@ theorem ftCPrimePresentation_equiv_second_presentation (k : Type u) [Field k]
     rw [RingHom.comp_assoc, hbase21_12']
     simp
   have hGF : G.comp F = RingHom.id _ := by
-    letI : IsLocalization (Submonoid.powers
+    let : IsLocalization (Submonoid.powers
         (ftCPrimePresentationDerivative k n))
         (ftCPrimePresentation k n) := by
       change IsLocalization (Submonoid.powers

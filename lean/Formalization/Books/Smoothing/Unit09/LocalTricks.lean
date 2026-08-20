@@ -1,4 +1,7 @@
-import Formalization.Books.Smoothing.Unit08
+import Formalization.Books.Algebra.Unit03.BasicNotions
+import Formalization.Books.Smoothing.Unit02.SingularIdeals
+import Mathlib.RingTheory.FinitePresentation
+import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -17,8 +20,6 @@ namespace Formalization.Books.Smoothing.Unit09
 
 open Formalization.Books.Algebra.Unit03
 open Formalization.Books.Smoothing.Unit02
-open Formalization.Books.Smoothing.Unit03
-open Formalization.Books.Smoothing.Unit08
 
 noncomputable section
 
@@ -36,6 +37,13 @@ structure LocalSituation
   map_base : map.comp (algebraMap R A) = algebraMap R Λ
   q : PrimeSpectrum Λ
   finitePresentation : Algebra.FinitePresentation R A
+
+/-- The contracted prime `p = R ∩ q` in the source situation. -/
+abbrev LocalSituation.p
+    {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
+    [Algebra R A] [Algebra R Λ]
+    (s : LocalSituation R A Λ) : Ideal R :=
+  s.q.asIdeal.comap (algebraMap R Λ)
 
 /-- The extension of the singular ideal of `A` to the target. -/
 def localSingularIdeal
@@ -191,9 +199,9 @@ noncomputable def localLocalizationMap
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
     [Algebra R A] [Algebra R Λ]
     (s : LocalSituation R A Λ) :
-      Localization ((s.q.asIdeal.comap (algebraMap R Λ)).primeCompl.map
+      Localization (s.p.primeCompl.map
       (algebraMap R A)) →+* Localization.AtPrime s.q.asIdeal := by
-  let p := s.q.asIdeal.comap (algebraMap R Λ)
+  let p := s.p
   letI : s.q.asIdeal.IsPrime := s.q.2
   letI : p.IsPrime := Ideal.comap_isPrime (algebraMap R Λ) s.q.asIdeal
   apply IsLocalization.map (Q := Localization.AtPrime s.q.asIdeal)
@@ -240,18 +248,18 @@ structure LocalizedSituation
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
     [Algebra R A] [Algebra R Λ]
     (s : LocalSituation R A Λ) where
-  map : Localization ((s.q.asIdeal.comap (algebraMap R Λ)).primeCompl.map
+  map : Localization (s.p.primeCompl.map
       (algebraMap R A)) →+* Localization.AtPrime s.q.asIdeal
   map_base :
-    map.comp (baseLocalizationMap (s.q.asIdeal.comap (algebraMap R Λ))) =
+    map.comp (baseLocalizationMap s.p) =
       targetLocalizationMap s.q
   q : PrimeSpectrum (Localization.AtPrime s.q.asIdeal)
   q_eq_maximal :
     q.asIdeal = IsLocalRing.maximalIdeal (Localization.AtPrime s.q.asIdeal)
   finitePresentation :
     Algebra.FinitePresentation
-      (Localization.AtPrime (s.q.asIdeal.comap (algebraMap R Λ)))
-      (Localization ((s.q.asIdeal.comap (algebraMap R Λ)).primeCompl.map
+      (Localization.AtPrime s.p)
+      (Localization (s.p.primeCompl.map
         (algebraMap R A)))
 
 /-- The local situation represented by a `LocalizedSituation`. -/
@@ -260,8 +268,8 @@ def LocalizedSituation.toLocalSituation
     [Algebra R A] [Algebra R Λ] {s : LocalSituation R A Λ}
     (t : LocalizedSituation s) :
     LocalSituation
-      (Localization.AtPrime (s.q.asIdeal.comap (algebraMap R Λ)))
-      (Localization ((s.q.asIdeal.comap (algebraMap R Λ)).primeCompl.map
+      (Localization.AtPrime s.p)
+      (Localization (s.p.primeCompl.map
         (algebraMap R A)))
       (Localization.AtPrime s.q.asIdeal) :=
   { map := t.map
@@ -279,8 +287,8 @@ def CanBeResolvedLocally
 
 /-! ## Delocalization -/
 
-/-- A weak delocalization conclusion: the extended, unradicalized singular
-ideal of the new finite-presentation algebra is not contained in `q`. -/
+/-- A weak delocalization conclusion: the extension of the singular ideal
+of the new finite-presentation algebra is not contained in `q`. -/
 def HasWeakDelocalization
     {R A Λ : Type u} [CommRing R] [CommRing A] [CommRing Λ]
     [Algebra R A] [Algebra R Λ] (s : LocalSituation R A Λ) : Prop :=

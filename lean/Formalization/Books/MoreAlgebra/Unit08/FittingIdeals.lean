@@ -1176,7 +1176,6 @@ private theorem fittingIdealOfSurjection_prod
   classical
   let r := n + m - l
   let pp := prodSurjection p q
-  let hpp := prodSurjection_surjective p q hp hq
   unfold fittingIdealOfSurjection
   apply le_antisymm
   · refine iSup_le ?_
@@ -1247,9 +1246,7 @@ private theorem fittingIdealOfSurjection_prod
           refine le_iSup_of_le k₁ (le_iSup_of_le k₂ ?_)
           refine le_iSup_of_le hsum ?_
           apply mul_le_mul
-          · have hsub := minorIdeal_kerMatrix_subfamily_le
-              (p := p) (z := u) (r := r₁)
-            have hfitU : minorIdeal U r₁ ≤
+          · have hfitU : minorIdeal U r₁ ≤
                 fittingIdealOfSurjection p hp k₁ := by
               unfold fittingIdealOfSurjection
               change minorIdeal U r₁ ≤
@@ -1262,9 +1259,7 @@ private theorem fittingIdealOfSurjection_prod
                 (p := p) (z := u) (r := n - k₁)
               simpa [U, heq] using hsub'
             exact hfitU
-          · have hsub := minorIdeal_kerMatrix_subfamily_le
-              (p := q) (z := v) (r := r₂)
-            have hfitV : minorIdeal V r₂ ≤
+          · have hfitV : minorIdeal V r₂ ≤
                 fittingIdealOfSurjection q hq k₂ := by
               unfold fittingIdealOfSurjection
               change minorIdeal V r₂ ≤
@@ -1970,14 +1965,6 @@ theorem fittingIdeal_zero_le_annihilator
       (Finset.univ.orderEmbOfFin hrows i : Fin h.choose)) = id := by
     have h := Finset.orderEmbOfFin_unique
       (s := (Finset.univ : Finset (Fin h.choose)))       (by simpa only [Nat.sub_zero, Fintype.card_fin] using hrows)
-      (f := (id : Fin h.choose → Fin h.choose))
-      (fun _ => Finset.mem_univ _) strictMono_id
-    exact h.symm
-  have huniv' : (fun i : Fin h.choose =>
-      (Finset.univ.orderEmbOfFin hcols i : Fin h.choose)) = id := by
-    have h := Finset.orderEmbOfFin_unique
-      (s := (Finset.univ : Finset (Fin h.choose)))
-      (by simpa only [Nat.sub_zero, Fintype.card_fin] using hcols)
       (f := (id : Fin h.choose → Fin h.choose))
       (fun _ => Finset.mem_univ _) strictMono_id
     exact h.symm

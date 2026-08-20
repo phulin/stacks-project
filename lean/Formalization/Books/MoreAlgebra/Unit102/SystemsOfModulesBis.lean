@@ -31,6 +31,9 @@ open Formalization.Books.MoreAlgebra.Unit65
 open Formalization.Books.MoreAlgebra.Unit74
 open Formalization.Books.MoreAlgebra.Unit87
 open Formalization.Books.MoreAlgebra.Unit92
+open Formalization.Books.MoreAlgebra.Unit53
+open Formalization.Books.Derived.Unit34
+open Formalization.Books.Homology.Unit31
 open scoped BigOperators CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe u v w
@@ -130,6 +133,45 @@ def powerLinearMap {A : Type u} [CommRing A]
     rw [map_add]
     exact (idealPowerSubmodule I n N).add_mem hx hy
 
+/- The termwise ideal-power complex used by the Deligne comparison. -/
+def idealPowerComplex {A : Type u} [CommRing A]
+    (I : Ideal A) (K : Comp A) (n : ℕ) : Comp A where
+  X i := idealPowerModule I n (K.X i)
+  d i j := powerLinearMap I n (K.d i j)
+  shape i j hij := by
+    rw [K.shape i j hij]
+    apply ModuleCat.hom_ext
+    ext x
+    rfl
+  d_comp_d' i j k hij hjk := by
+    apply ModuleCat.hom_ext
+    ext x
+    change K.d j k (K.d i j (x : K.X i)) = 0
+    exact congrArg (fun f : K.X i ⟶ K.X k => f.hom (x : K.X i))
+      (K.d_comp_d i j k)
+
+def idealPowerComplexMap {A : Type u} [CommRing A]
+    (I : Ideal A) (K : Comp A) {m n : ℕ} (h : n ≤ m) :
+    idealPowerComplex I K m ⟶ idealPowerComplex I K n where
+  f i := idealPowerInclusion I (K.X i) h
+  comm' i j hij := by
+    apply ModuleCat.hom_ext
+    ext x
+    rfl
+
+def idealPowerComplexSystem {A : Type u} [CommRing A]
+    (I : Ideal A) (K : Comp A) : ℕᵒᵖ ⥤ Comp A where
+  obj n := idealPowerComplex I K n.unop
+  map f := idealPowerComplexMap I K f.unop.le
+  map_id := by
+    intro n
+    ext i x
+    rfl
+  map_comp := by
+    intro X Y Z f g
+    ext i x
+    rfl
+
 def powerComplex {A : Type u} [CommRing A] [IsNoetherianRing A]
     (I : Ideal A) (C : FiniteModuleComplex A) (n : ℕ) :
     FiniteModuleComplex A where
@@ -170,9 +212,12 @@ structure PowerHomologySystemData {A : Type u} [CommRing A]
     [IsNoetherianRing A]
     (I : Ideal A) (C : FiniteModuleComplex A) where
   system : ℕᵒᵖ ⥤ Mod A
-  stage : ∀ n, Nonempty (system.obj (Opposite.op n) ≅ powerComplexHomology I C n)
-  transition : ∀ m n : ℕ, n ≤ m →
-    powerComplexHomology I C m ⟶ powerComplexHomology I C n
+  stage : ∀ n, system.obj (Opposite.op n) ≅ powerComplexHomology I C n
+  transition : ∀ m n : ℕ, (n ≤ m) →
+    (powerComplexHomology I C m ⟶ powerComplexHomology I C n)
+  transition_compatibility : ∀ {m n : ℕ} (h : n ≤ m),
+    (stage m).hom ≫ @transition m n h =
+      system.map (opHomOfLE h) ≫ (stage n).hom
 
 /-- All comparison maps in the Artin--Rees conclusion, including the image
 containment and the pro-isomorphism of inverse systems. -/
@@ -190,9 +235,21 @@ structure ArtinReesBisData {A : Type u} [CommRing A]
   fromH : ∀ (n : ℕ),
     idealPowerModule I n (finiteModuleHomology C) ⟶
       powerComplexHomology I C (n - c)
-  comparison_to_H : ∀ (n : ℕ) (_hn : 2 * c ≤ n),
-    fromH n ≫ toH (n - c) =
-      idealPowerToAmbient I n (finiteModuleHomology C)
+  toPower : ∀ (n : ℕ),
+    powerComplexHomology I C n ⟶
+      idealPowerModule I (n - c) (finiteModuleHomology C)
+  toPower_factorization : ∀ (n : ℕ) (_hn : c ≤ n),
+    toPower n ≫ idealPowerToAmbient I (n - c) (finiteModuleHomology C) =
+      toH n
+  comparison_to_power : ∀ (n : ℕ) (_hn : 2 * c ≤ n),
+    fromH n ≫ toPower (n - c) =
+      idealPowerInclusion I (finiteModuleHomology C)
+        (m := n) (n := n - c - c)
+        (by exact (Nat.sub_le (n - c) c).trans (Nat.sub_le n c))
+  comparison_to_lower : ∀ (n : ℕ) (_hn : 2 * c ≤ n),
+    toPower n ≫ fromH (n - c) =
+      systemData.transition n (n - c - c)
+        (by exact (Nat.sub_le (n - c) c).trans (Nat.sub_le n c))
   pro_isomorphism : IsProIsomorphism systemData.system
     (idealPowerSystem I (finiteModuleHomology C))
 
@@ -230,13 +287,12 @@ structure ExtFactorizationData {A : Type u} [CommRing A]
   n : ℕ
   positive : 0 < p
   bounds : c ≤ n
-  originalToPower : ExtAt M N p →+ ExtAt (idealPowerModule I n M) N p
   factor : ExtAt M N p →+ ExtAt (idealPowerModule I n M)
       (idealPowerModule I (n - c) N) p
-  post : ExtAt (idealPowerModule I n M)
-      (idealPowerModule I (n - c) N) p →+
-    ExtAt (idealPowerModule I n M) N p
-  factorization : ∀ x, originalToPower x = post (factor x)
+  factorization : ∀ x,
+    extPrecompMap (idealPowerToAmbient I n M) p x =
+      extPostcompMap
+        (idealPowerToAmbient I (n - c) N) p (factor x)
 
 theorem lemma_ext_factors {A : Type u} [CommRing A]
     [IsNoetherianRing A] (I : Ideal A) (M N : Mod A) (p : ℕ) (hp : 0 < p)
@@ -247,8 +303,8 @@ theorem lemma_ext_factors {A : Type u} [CommRing A]
 structure ExtAnnihilationData {A : Type u} [CommRing A]
     (I : Ideal A) (M N : Mod A) (p : ℕ) where
   n : ℕ
-  originalToPower : ExtAt M N p →+ ExtAt (idealPowerModule I n M) N p
-  vanishes : ∀ x, originalToPower x = 0
+  vanishes : ∀ (x : ExtAt M N p),
+    extPrecompMap (idealPowerToAmbient I n M) p x = 0
 
 theorem lemma_ext_annihilated {A : Type u} [CommRing A]
     [IsNoetherianRing A] (I : Ideal A) (M N : Mod A) (p : ℕ) (hp : 0 < p)
@@ -294,11 +350,8 @@ structure DerivedExtTopologyData {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (I : Ideal A) (K : D A)
     (M : Mod A) (p : ℤ) where
   c : ℕ
-  image_map : ∀ n : ℕ,
-    derivedExt K (moduleInDerived A (idealPowerModule I n M)) p ⟶
-      derivedExt K (moduleInDerived A M) p
   image_contained : ∀ {n : ℕ} (_hn : c ≤ n),
-    LinearMap.range (image_map n).hom ≤
+    LinearMap.range (derivedExtPowerMap I K M p n).hom ≤
       idealPowerSubmodule I (n - c) (derivedExt K (moduleInDerived A M) p)
 
 theorem lemma_ext_induced_topology {A : Type u} [CommRing A]
@@ -414,7 +467,7 @@ theorem lemma_sequence_powers_pro_bounded {A : Type u} [CommRing A]
     (I : Ideal A) (r : ℕ) (f : Fin r → A)
     (S : KoszulSituation A I r f) (hgen : I = Ideal.span (Set.range f)) :
     ∃ T : KoszulDerivedSystemData I r f S,
-      IsProIsomorphism T.system (derivedIdealPowerSystem I (ModuleCat.of A I)) := by
+      IsProIsomorphism T.system (derivedIdealPowerSystem I (ModuleCat.of A A)) := by
   sorry
 
 /-! ## Derived tensoring of powers -/
@@ -424,13 +477,27 @@ structure BoundedFiniteModuleComplex (A : Type u) [CommRing A] where
   bounded : IsBounded complex
   finite : ∀ i : ℤ, Module.Finite A (complex.X i : Type u)
 
+noncomputable def deligneTensorSource {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (I : Ideal A)
+    (M : BoundedFiniteModuleComplex A) :
+    ℕᵒᵖ ⥤ D A :=
+  derivedTensorInverseSystem
+    ((Unit74.derivedQuotient A).obj M.complex)
+    (derivedIdealPowerSystem I (ModuleCat.of A A))
+
+noncomputable def deligneTensorTarget {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (Mod A)] (I : Ideal A)
+    (M : BoundedFiniteModuleComplex A) :
+    ℕᵒᵖ ⥤ D A :=
+  idealPowerComplexSystem I M.complex ⋙ Unit74.derivedQuotient A
+
 structure DerivedTensorComparisonData {A : Type u} [CommRing A]
     [HasDerivedCategory.{w} (Mod A)] (I : Ideal A)
     (M : BoundedFiniteModuleComplex A) where
-  source : ℕᵒᵖ ⥤ D A
-  target : ℕᵒᵖ ⥤ D A
-  comparison : ∀ n, source.obj n ⟶ target.obj n
-  pro_isomorphism : IsProIsomorphism source target
+  comparison : ∀ n,
+    (deligneTensorSource I M).obj n ⟶ (deligneTensorTarget I M).obj n
+  pro_isomorphism : IsProIsomorphism
+    (deligneTensorSource I M) (deligneTensorTarget I M)
 
 theorem lemma_tensoring_Deligne_system {A : Type u} [CommRing A]
     [IsNoetherianRing A] [HasDerivedCategory.{w} (Mod A)]

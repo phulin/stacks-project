@@ -329,10 +329,25 @@ theorem projectiveLine_localize
     ∃ f : R, f ∉ p.asIdeal ∧ ∃ e : ℕ, ∃ G : BinaryPolynomial R,
       ∃ hG : G.IsHomogeneous e,
         ∀ n : ℕ, d ≤ n →
-          Function.Bijective
+      Function.Bijective
             (LocalizedModule.map (Submonoid.powers f)
               (projectiveLineComponentMultiplication F G e n hG)) := by
-  sorry
+  refine ⟨1, p.asIdeal.one_notMem, 0, 1,
+    MvPolynomial.isHomogeneous_one (Fin 2) R, ?_⟩
+  intro n hn
+  have hmap :
+      projectiveLineComponentMultiplication F 1 0 n
+        (MvPolynomial.isHomogeneous_one (Fin 2) R) =
+        (LinearMap.id : projectiveLineQuotientComponent F n →ₗ[R]
+          projectiveLineQuotientComponent F n) := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    simp [projectiveLineComponentMultiplication, projectiveLineMultiplication]
+  rw [hmap]
+  rw [LocalizedModule.map_id (M := projectiveLineQuotientComponent F n)
+    (Submonoid.powers (1 : R))]
+  exact Function.bijective_id
 
 /-! ## The finite algebra in the periodic case -/
 
@@ -349,7 +364,14 @@ theorem projectiveLine_component_product_mem
     (m n : ℕ) (x : projectiveLineQuotientComponent F m)
     (y : projectiveLineQuotientComponent F n) :
     x.1 * y.1 ∈ projectiveLineQuotientComponent F (m + n) := by
-  sorry
+  rcases x.2 with ⟨P, hP, hPx⟩
+  rcases y.2 with ⟨Q, hQ, hQy⟩
+  refine Submodule.mem_map.mpr ⟨P * Q, ?_, ?_⟩
+  · exact (MvPolynomial.homogeneousSubmodule_mul m n)
+      (Submodule.mul_mem_mul hP hQ)
+  · change (Ideal.Quotient.mk (projectiveLineQuotientIdeal F)) (P * Q) = x.1 * y.1
+    simpa [map_mul] using
+      congrArg₂ (fun a b : projectiveLineQuotient F => a * b) hPx hQy
 
 def projectiveLineComponentProductLeft
     {R : Type u} [CommRing R] (F : BinaryPolynomial R)
@@ -375,6 +397,83 @@ def projectiveLinePowerMultiplication
   projectiveLineComponentProductLeft F (e * d) (e * d)
     (projectiveLinePowerElement F G e d hG)
 
+private def projectiveLinePowerDegree (e k n : ℕ) : ℕ :=
+  Nat.rec n (fun _ t => t + e) k
+
+private theorem projectiveLinePowerDegree_eq (e k n : ℕ) :
+    projectiveLinePowerDegree e k n = n + e * k := by
+  induction k with
+  | zero => simp [projectiveLinePowerDegree]
+  | succ k ih =>
+      change projectiveLinePowerDegree e k n + e = n + e * (k + 1)
+      rw [ih, Nat.mul_succ, Nat.add_assoc]
+
+private def projectiveLinePowerMultiplicationAt
+    {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
+    (e k n : ℕ) (hG : G.IsHomogeneous e) :
+    projectiveLineQuotientComponent F n →ₗ[R]
+      projectiveLineQuotientComponent F (projectiveLinePowerDegree e k n) :=
+  ((projectiveLineMultiplication F (G ^ k)).comp
+      (projectiveLineQuotientComponent F n).subtype).codRestrict
+    (projectiveLineQuotientComponent F (projectiveLinePowerDegree e k n))
+    (fun x => by
+      simpa [projectiveLinePowerDegree_eq] using
+        (projectiveLine_multiplication_mem_component F (G ^ k) (e * k) n
+          (hG.pow k) x))
+
+private theorem projectiveLinePowerMultiplicationAt_bijective
+    {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
+    (d e : ℕ) (hG : G.IsHomogeneous e)
+    (hmul : ∀ n : ℕ, d ≤ n →
+      Function.Bijective (projectiveLineComponentMultiplication F G e n hG))
+    (k n : ℕ) (hstart : d ≤ n) :
+    Function.Bijective (projectiveLinePowerMultiplicationAt F G e k n hG) := by
+  revert n
+  induction k with
+  | zero =>
+      intro n hstart
+      have hmap :
+          ((projectiveLineMultiplication F (1 : BinaryPolynomial R)).comp
+            (projectiveLineQuotientComponent F n).subtype).codRestrict
+            (projectiveLineQuotientComponent F n)
+            (projectiveLine_multiplication_mem_component F 1 0 n
+              (MvPolynomial.isHomogeneous_one (Fin 2) R)) =
+          (LinearMap.id : projectiveLineQuotientComponent F n →ₗ[R]
+            projectiveLineQuotientComponent F n) := by
+        apply LinearMap.ext
+        intro x
+        apply Subtype.ext
+        simp [projectiveLineMultiplication]
+      have htarget :
+          projectiveLinePowerMultiplicationAt F G e 0 n hG =
+            ((projectiveLineMultiplication F (1 : BinaryPolynomial R)).comp
+              (projectiveLineQuotientComponent F n).subtype).codRestrict
+              (projectiveLineQuotientComponent F n)
+              (projectiveLine_multiplication_mem_component F 1 0 n
+                (MvPolynomial.isHomogeneous_one (Fin 2) R)) := by
+        rfl
+      rw [htarget, hmap]
+      exact Function.bijective_id
+  | succ k ih =>
+      intro n hstart
+      have hstep : Function.Bijective
+          (projectiveLineComponentMultiplication F G e
+            (projectiveLinePowerDegree e k n) hG) :=
+        hmul (projectiveLinePowerDegree e k n)
+          (hstart.trans (by simp [projectiveLinePowerDegree_eq]))
+      have hprev : Function.Bijective
+          (projectiveLinePowerMultiplicationAt F G e k n hG) := ih n hstart
+      have hcomp := hstep.comp hprev
+      dsimp [projectiveLinePowerDegree] at hcomp ⊢
+      convert hcomp using 1
+      funext x
+      apply Subtype.ext
+      change (Ideal.Quotient.mk (projectiveLineQuotientIdeal F)) (G ^ (k + 1)) * x.1 =
+        (Ideal.Quotient.mk (projectiveLineQuotientIdeal F)) G *
+          ((Ideal.Quotient.mk (projectiveLineQuotientIdeal F)) (G ^ k) * x.1)
+      rw [pow_succ, map_mul]
+      ac_rfl
+
 theorem projectiveLine_power_multiplication_bijective
     {R : Type u} [CommRing R] (F G : BinaryPolynomial R)
     (d e : ℕ) (hG : G.IsHomogeneous e)
@@ -382,7 +481,27 @@ theorem projectiveLine_power_multiplication_bijective
     (hmul : ∀ n : ℕ, d ≤ n →
       Function.Bijective (projectiveLineComponentMultiplication F G e n hG)) :
     Function.Bijective (projectiveLinePowerMultiplication F G e d hG) := by
-  sorry
+  have hdeg : projectiveLinePowerDegree e d (e * d) = (e * d) + (e * d) := by
+    simpa [projectiveLinePowerDegree_eq]
+  have h := projectiveLinePowerMultiplicationAt_bijective F G d e hG hmul d (e * d)
+    hstart
+  let ecast :
+      projectiveLineQuotientComponent F (projectiveLinePowerDegree e d (e * d)) ≃
+        projectiveLineQuotientComponent F ((e * d) + (e * d)) :=
+    { toFun := fun z => ⟨z.1, by simpa [hdeg] using z.2⟩
+      invFun := fun z => ⟨z.1, by simpa [hdeg] using z.2⟩
+      left_inv := by intro z; rfl
+      right_inv := by intro z; rfl }
+  have hcast : Function.Bijective ecast := ecast.bijective
+  have hc := hcast.comp h
+  convert hc using 1
+  funext x
+  apply Subtype.ext
+  change (projectiveLinePowerMultiplication F G e d hG x).1 =
+    (ecast (projectiveLinePowerMultiplicationAt F G e d (e * d) hG x)).1
+  simp [ecast, projectiveLinePowerMultiplicationAt, projectiveLinePowerMultiplication,
+    projectiveLinePowerElement, projectiveLineComponentProductLeft,
+    projectiveLineHomogeneousElement, projectiveLineMultiplication, mul_comm]
 
 /- The following structure records the output of the source's transported
    multiplication.  The ring and algebra structures are fields so the

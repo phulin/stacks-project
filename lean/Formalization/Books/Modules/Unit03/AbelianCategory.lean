@@ -732,9 +732,9 @@ theorem sheafModuleCokernel_π_locallySurjective {X : TopCat.{v}}
       Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
         ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val)) := by
     let eπ := PreservesCokernel.iso (PresheafOfModules.toPresheaf O.obj) φ.val
-    haveI : Epi (cokernel.π
+    have : Epi (cokernel.π
         ((PresheafOfModules.toPresheaf O.obj).map φ.val)) := inferInstance
-    haveI : Epi ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val)) := by
+    have : Epi ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val)) := by
       apply (epi_comp_iff_of_isIso
         ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val)) eπ.hom).1
       rw [PreservesCokernel.π_iso_hom]
@@ -743,9 +743,9 @@ theorem sheafModuleCokernel_π_locallySurjective {X : TopCat.{v}}
     intro U
     rw [← AddCommGrpCat.epi_iff_surjective]
     exact (NatTrans.epi_iff_epi_app _).1 inferInstance U
-  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       ((PresheafOfModules.toPresheaf O.obj).map (cokernel.π φ.val)) := hπPresheaf
-  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       ((PresheafOfModules.toPresheaf O.obj).map
         (adj.unit.app (cokernel φ.val))) := by
     change Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
@@ -755,7 +755,7 @@ theorem sheafModuleCokernel_π_locallySurjective {X : TopCat.{v}}
     rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
     exact (Opens.grothendieckTopology X).W_toSheafify
       (cokernel φ.val).presheaf |>.isLocallySurjective
-  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       ((PresheafOfModules.toPresheaf O.obj).map
         ((SheafOfModules.forget O).map e.inv)) := by
     infer_instance
@@ -892,7 +892,7 @@ theorem sheafModule_exact_iff_stalkwise {X : TopCat.{v}} (O : RingSheaf.{v, v} X
             TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x) _
       exact (TopCat.Sheaf.forget AddCommGrpCat X ⋙
         TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x).preservesFiniteLimits_of_preservesHomology
-    letI : PreservesFiniteLimits
+    let : PreservesFiniteLimits
         (sheafModuleStalkFunctor O x ⋙
           forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
             AddCommGrpCat) := by
@@ -918,32 +918,32 @@ theorem sheafModule_exact_iff_stalkwise {X : TopCat.{v}} (O : RingSheaf.{v, v} X
         (TopCat.Sheaf.forget AddCommGrpCat X ⋙
           TopCat.Presheaf.stalkFunctor (X := X) AddCommGrpCat x)
         hF hG
-    letI : PreservesFiniteLimits (sheafModuleStalkFunctor O x) := by
+    let : PreservesFiniteLimits (sheafModuleStalkFunctor O x) := by
       apply preservesFiniteLimits_of_reflects_of_preserves
         (sheafModuleStalkFunctor O x)
         (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat) O.obj x))
           AddCommGrpCat)
-    letI : Functor.IsLeftAdjoint (sheafModuleStalkFunctor O x) :=
+    let : Functor.IsLeftAdjoint (sheafModuleStalkFunctor O x) :=
       (Classical.choice
         (Formalization.Books.Sheaves.Unit22.exists_moduleStalkSkyscraperAdjunction
           O x)).isLeftAdjoint
     infer_instance
   constructor
   · intro hS x
-    letI : (sheafModuleStalkFunctor O x).PreservesHomology :=
+    let : (sheafModuleStalkFunctor O x).PreservesHomology :=
       stalkPreservesHomology x
     exact hS.map (sheafModuleStalkFunctor O x)
   · intro hS
     have hq_stalk (x : X) :
         (sheafModuleStalkFunctor O x).map
             (kernel.ι g ≫ cokernel.π f) = 0 := by
-      letI : (sheafModuleStalkFunctor O x).PreservesHomology :=
+      let : (sheafModuleStalkFunctor O x).PreservesHomology :=
         stalkPreservesHomology x
-      letI : PreservesLimit (parallelPair g 0)
+      let : PreservesLimit (parallelPair g 0)
           (sheafModuleStalkFunctor O x) :=
         Functor.PreservesHomology.preservesKernel
           (sheafModuleStalkFunctor O x) g
-      letI : PreservesColimit (parallelPair f 0)
+      let : PreservesColimit (parallelPair f 0)
           (sheafModuleStalkFunctor O x) :=
         Functor.PreservesHomology.preservesCokernel
           (sheafModuleStalkFunctor O x) f
@@ -960,12 +960,12 @@ theorem sheafModule_exact_iff_stalkwise {X : TopCat.{v}} (O : RingSheaf.{v, v} X
               cokernel.π ((sheafModuleStalkFunctor O x).map f) := by
         dsimp [eK, eC]
         simp only [Functor.map_comp, Category.assoc,
-          PreservesKernel.iso_inv_ι, PreservesKernel.iso_inv_ι_assoc,
+          PreservesKernel.iso_inv_ι_assoc,
           PreservesCokernel.π_iso_hom]
       apply (cancel_mono eC.hom).1
       apply (cancel_epi eK.inv).1
       rw [hrel]
-      simp only [Functor.map_zero, zero_comp, comp_zero]
+      simp only [zero_comp, comp_zero]
       exact hzero
     rw [ShortComplex.exact_iff_kernel_ι_comp_cokernel_π_zero]
     apply (SheafOfModules.toSheaf O).map_injective

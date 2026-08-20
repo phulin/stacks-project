@@ -1267,7 +1267,7 @@ private theorem simplicialAddCommGroupKernel_associated_acyclic
       let e := AddCommGrpCat.kernelIsoKer
         (f.app (op (SimplexCategory.mk n)))
       change Epi e.inv
-      letI : IsIso e.inv := e.isIso_inv
+      let : IsIso e.inv := e.isIso_inv
       infer_instance
     · dsimp [ι, simplicialAddCommGroupKernelι]
       apply ConcreteCategory.mono_of_injective

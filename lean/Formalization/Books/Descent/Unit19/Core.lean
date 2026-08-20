@@ -23,6 +23,18 @@ abbrev AlgebraicSpaceTheory :=
 class RegularSpaceTheory [AlgebraicSpaceTheory.{u}] where
   isRegular : Space.{u} → Prop
 
+/-! The topological stand-in does not expose the local rings used by the
+source proof of regularity descent.  Keep that geometric input as a narrow
+law interface instead of treating the arbitrary predicate above as if it
+were determined by the carrier. -/
+class RegularSpaceDescentLaws [AlgebraicSpaceTheory.{u}]
+    [RegularSpaceTheory.{u}] where
+  descend_regular : ∀ {X Y : Space.{u}} (f : Hom X Y),
+    Formalization.Books.SpacesCohomology.Unit01.IsLocallyOfFinitePresentation f →
+    Formalization.Books.SpacesCohomology.Unit01.IsFlat f →
+    Formalization.Books.SpacesCohomology.Unit01.IsSurjective f →
+    RegularSpaceTheory.isRegular X → RegularSpaceTheory.isRegular Y
+
 def IsRegular (X : Space.{u}) [AlgebraicSpaceTheory.{u}]
     [RegularSpaceTheory.{u}] : Prop :=
   RegularSpaceTheory.isRegular X

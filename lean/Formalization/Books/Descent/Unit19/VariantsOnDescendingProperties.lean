@@ -29,12 +29,15 @@ theorem descend_regular_of_lfp_flat_surjective
     {X Y : AlgebraicSpaceInterface.Space.{u}}
     [AlgebraicSpaceInterface.AlgebraicSpaceTheory.{u}]
     [AlgebraicSpaceInterface.RegularSpaceTheory.{u}]
+    [AlgebraicSpaceInterface.RegularSpaceDescentLaws.{u}]
     (f : AlgebraicSpaceInterface.Hom X Y)
     (hfp : AlgebraicSpaceInterface.IsLocallyOfFinitePresentation f)
     (hflat : AlgebraicSpaceInterface.IsFlat f)
     (hsurj : AlgebraicSpaceInterface.IsSurjective f)
     (hX : AlgebraicSpaceInterface.IsRegular X) :
     AlgebraicSpaceInterface.IsRegular Y := by
-  sorry
+  change AlgebraicSpaceInterface.RegularSpaceTheory.isRegular Y
+  exact AlgebraicSpaceInterface.RegularSpaceDescentLaws.descend_regular
+    f hfp hflat hsurj hX
 
 end Formalization.Books.Descent.Unit19

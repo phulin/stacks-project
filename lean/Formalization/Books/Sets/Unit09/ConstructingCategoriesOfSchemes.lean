@@ -110,13 +110,13 @@ def HasColimitCocone {C : Type u} [Category C] {I : Type v} [Category I]
 def LimitConeAgreesWithAmbient {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     {I : Type v} [Category I] (F : I ⥤ Sch c α) : Prop :=
   ∀ (t : LimitCone F) (s : LimitCone (F ⋙ schInclusion c α)),
-    Nonempty ((schInclusion c α).obj t.cone.pt ≅ s.cone.pt)
+    Nonempty ((schInclusion c α).mapCone t.cone ≅ s.cone)
 
 /-- The source's phrase “isomorphic to the ambient colimit” for a chosen subcategory cocone. -/
 def ColimitCoconeAgreesWithAmbient {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     {I : Type v} [Category I] (F : I ⥤ Sch c α) : Prop :=
   ∀ (t : ColimitCocone F) (s : ColimitCocone (F ⋙ schInclusion c α)),
-    Nonempty ((schInclusion c α).obj t.cocone.pt ≅ s.cocone.pt)
+    Nonempty ((schInclusion c α).mapCocone t.cocone ≅ s.cocone)
 
 /-! ### The bounded-size and category-construction lemmas -/
 
@@ -247,7 +247,8 @@ theorem scheme_category_has_pullbacks {c : SchemeCoding.{u}} {α : Ordinal.{u}}
     ∃ t : LimitCone (cospan f g),
       ∀ s : LimitCone
           (cospan ((schInclusion c α).map f) ((schInclusion c α).map g)),
-        Nonempty ((schInclusion c α).obj t.cone.pt ≅ s.cone.pt) := by
+        Nonempty ((schInclusion c α).mapCone t.cone ≅
+          (Cone.postcompose (cospanCompIso (schInclusion c α) f g).inv).obj s.cone) := by
   sorry
 
 /-- Countable coproducts of objects of `Sch α` remain in `Sch α`. -/
@@ -259,7 +260,7 @@ theorem scheme_category_has_countable_coproducts {c : SchemeCoding.{u}} {α : Or
     {I : Type u} [Countable I] (S : I → Sch c α) :
     ∃ t : ColimitCocone (Discrete.functor S),
       ∀ s : ColimitCocone (Discrete.functor S ⋙ schInclusion c α),
-        Nonempty ((schInclusion c α).obj t.cocone.pt ≅ s.cocone.pt) := by
+        Nonempty ((schInclusion c α).mapCocone t.cocone ≅ s.cocone) := by
   sorry
 
 /-- Open subschemes of objects of `Sch α` have representatives in `Sch α`. -/

@@ -102,9 +102,9 @@ theorem smallExtension_kernel_principal
 /-- The square-zero lifting condition at a prime, with all solid diagrams
 encoded by `R`-algebra homomorphisms. -/
 def squareZeroLiftingAt
-    (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
+    (R : Type u) (S : Type v) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=
-  ∀ {B' B : Type*} [CommRing B'] [CommRing B]
+  ∀ {B' B : Type max u v} [CommRing B'] [CommRing B]
     [Algebra R B'] [Algebra R B]
     [IsLocalRing B'] [IsLocalRing B]
     (e : B' →ₐ[R] B),
@@ -116,9 +116,9 @@ def squareZeroLiftingAt
 
 /-- The lifting condition restricted to small extensions. -/
 def smallExtensionLiftingAt
-    (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
+    (R : Type u) (S : Type v) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=
-  ∀ {B' B : Type*} [CommRing B'] [CommRing B]
+  ∀ {B' B : Type max u v} [CommRing B'] [CommRing B]
     [Algebra R B'] [Algebra R B]
     [IsLocalRing B'] [IsLocalRing B]
     (e : B' →ₐ[R] B),
@@ -139,9 +139,9 @@ def residueFieldMapIsBijective
 /-- The small-extension lifting condition with the additional residue-field
 isomorphism required in the final condition of the source lemma. -/
 def smallExtensionResidueFieldLiftingAt
-    (R S : Type*) [CommRing R] [CommRing S] [Algebra R S]
+    (R : Type u) (S : Type v) [CommRing R] [CommRing S] [Algebra R S]
     (q : PrimeSpectrum S) : Prop :=
-  ∀ {B' B : Type*} [CommRing B'] [CommRing B]
+  ∀ {B' B : Type max u v} [CommRing B'] [CommRing B]
     [Algebra R B'] [Algebra R B]
     [IsLocalRing B'] [IsLocalRing B]
     (e : B' →ₐ[R] B),
@@ -150,6 +150,25 @@ def smallExtensionResidueFieldLiftingAt
         (hq : q.asIdeal = (IsLocalRing.maximalIdeal B).comap g.toRingHom) →
           residueFieldMapIsBijective q g.toRingHom hq →
             ∃ lift : S →ₐ[R] B', e.comp lift = g
+
+/-- The square-zero lifting condition implies the small-extension lifting
+condition.  The only input is that a small extension has square-zero kernel. -/
+theorem smallExtensionLiftingAt_of_squareZeroLiftingAt
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S] [Algebra R S]
+    {q : PrimeSpectrum S} (h : squareZeroLiftingAt R S q) :
+    smallExtensionLiftingAt R S q := by
+  intro B' B _ _ _ _ _ _ e he g hq
+  exact h (B' := B') (B := B) e he.2.2.2.2.1
+    (smallExtension_kernel_square_zero e.toRingHom he) g hq
+
+/-- The unrestricted small-extension lifting condition implies the version
+where the residue-field map is required to be an isomorphism. -/
+theorem smallExtensionResidueFieldLiftingAt_of_smallExtensionLiftingAt
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S] [Algebra R S]
+    {q : PrimeSpectrum S} (h : smallExtensionLiftingAt R S q) :
+    smallExtensionResidueFieldLiftingAt R S q := by
+  intro B' B _ _ _ _ _ _ e he g hq _
+  exact h (B' := B') (B := B) e he g hq
 
 /-! ## The Noetherian smoothness test -/
 

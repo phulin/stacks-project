@@ -1039,6 +1039,81 @@ private theorem range_of_sq_cube_of_field
     simpa using this
   field_simp [ha0, hx]
 
+private theorem residueFieldMap_surjective_of_twoThreeGenerated
+    {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
+    (hgen : twoThreeGenerated f) :
+    ∀ q : PrimeSpectrum S, Function.Surjective (residueFieldMap f q) := by
+  letI : Algebra R S := f.toAlgebra
+  let U : Set S := {x : S | x ^ 2 ∈ f.range ∧ x ^ 3 ∈ f.range}
+  have hgen' : Algebra.adjoin R U = ⊤ := by
+    simpa [U, twoThreeGenerated, generatedBy] using hgen
+  intro q
+  let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
+  let L := q.asIdeal.ResidueField
+  let hq := residueFieldMap f q
+  letI : Algebra K L := hq.toAlgebra
+  have hS : ∀ s : S, algebraMap S L s ∈ hq.range := by
+    intro s
+    have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
+    refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ hq.range)
+      ?_ ?_ ?_ ?_ hs
+    · intro x hx
+      refine range_of_sq_cube_of_field hq (algebraMap S L x) ?_ ?_
+      · obtain ⟨r, hr⟩ := hx.1
+        refine ⟨algebraMap R K r, ?_⟩
+        calc
+          hq (algebraMap R K r) = algebraMap S L (f r) := by
+            simpa [K, L, hq, residueFieldMap] using
+              (Ideal.ResidueField.map_algebraMap
+                (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+          _ = algebraMap S L (x ^ 2) := by rw [hr]
+          _ = algebraMap S L x ^ 2 := by rw [map_pow]
+      · obtain ⟨r, hr⟩ := hx.2
+        refine ⟨algebraMap R K r, ?_⟩
+        calc
+          hq (algebraMap R K r) = algebraMap S L (f r) := by
+            simpa [K, L, hq, residueFieldMap] using
+              (Ideal.ResidueField.map_algebraMap
+                (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+          _ = algebraMap S L (x ^ 3) := by rw [hr]
+          _ = algebraMap S L x ^ 3 := by rw [map_pow]
+    · intro r
+      refine ⟨algebraMap R K r, ?_⟩
+      calc
+        hq (algebraMap R K r) = algebraMap S L (f r) := by
+          simpa [K, L, hq, residueFieldMap] using
+            (Ideal.ResidueField.map_algebraMap
+              (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+        _ = algebraMap S L (algebraMap R S r) := by
+          simp [RingHom.algebraMap_toAlgebra]
+    · intro x y hx hy hxp hyp
+      rcases hxp with ⟨a, ha⟩
+      rcases hyp with ⟨b, hb⟩
+      refine ⟨a + b, ?_⟩
+      calc
+        hq (a + b) = hq a + hq b := map_add hq a b
+        _ = algebraMap S L x + algebraMap S L y := by rw [ha, hb]
+        _ = algebraMap S L (x + y) := (map_add (algebraMap S L) x y).symm
+    · intro x y hx hy hxp hyp
+      rcases hxp with ⟨a, ha⟩
+      rcases hyp with ⟨b, hb⟩
+      refine ⟨a * b, ?_⟩
+      calc
+        hq (a * b) = hq a * hq b := map_mul hq a b
+        _ = algebraMap S L x * algebraMap S L y := by rw [ha, hb]
+        _ = algebraMap S L (x * y) := (map_mul (algebraMap S L) x y).symm
+  have hz : Function.Surjective hq := by
+    intro z
+    obtain ⟨aa, bb, hbb, hz⟩ := IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
+    obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective aa
+    obtain ⟨w, hw⟩ := Ideal.Quotient.mk_surjective bb
+    obtain ⟨r, hr⟩ := hS y
+    obtain ⟨s, hs⟩ := hS w
+    refine ⟨r / s, ?_⟩
+    rw [map_div₀, hr, hs]
+    simpa [K, L, Ideal.algebraMap_quotient_residueField_mk, ← hy, ← hw] using hz
+  simpa [K, L, hq] using hz
+
 /-- The square-and-cube criterion gives a universal homeomorphism with
     residue-field isomorphisms. -/
 /- Proof roadmap (`twoThreeGenerated_locallyNilpotentKernel`).
@@ -1170,73 +1245,7 @@ theorem twoThreeGenerated_locallyNilpotentKernel
   have hsurj : Function.Surjective (PrimeSpectrum.comap f) := by
     exact (PrimeSpectrum.comap_quotientMk_bijective_of_le_nilradical hker').2.comp
       (hfint.kerLift.comap_surjective f.kerLift_injective)
-  have hres_surj : ∀ q : PrimeSpectrum S, Function.Surjective (residueFieldMap f q) := by
-    intro q
-    let K := (PrimeSpectrum.comap f q).asIdeal.ResidueField
-    let L := q.asIdeal.ResidueField
-    let hq := residueFieldMap f q
-    letI : Algebra K L := hq.toAlgebra
-    have hS : ∀ s : S, algebraMap S L s ∈ hq.range := by
-      intro s
-      have hs : s ∈ Algebra.adjoin R U := by rw [hgen']; trivial
-      refine Algebra.adjoin_induction (p := fun x _ => algebraMap S L x ∈ hq.range)
-        ?_ ?_ ?_ ?_ hs
-      · intro x hx
-        refine range_of_sq_cube_of_field hq (algebraMap S L x) ?_ ?_
-        · obtain ⟨r, hr⟩ := hx.1
-          refine ⟨algebraMap R K r, ?_⟩
-          calc
-            hq (algebraMap R K r) = algebraMap S L (f r) := by
-              simpa [K, L, hq, residueFieldMap] using
-                (Ideal.ResidueField.map_algebraMap
-                  (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
-            _ = algebraMap S L (x ^ 2) := by rw [hr]
-            _ = algebraMap S L x ^ 2 := by rw [map_pow]
-        · obtain ⟨r, hr⟩ := hx.2
-          refine ⟨algebraMap R K r, ?_⟩
-          calc
-            hq (algebraMap R K r) = algebraMap S L (f r) := by
-              simpa [K, L, hq, residueFieldMap] using
-                (Ideal.ResidueField.map_algebraMap
-                  (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
-            _ = algebraMap S L (x ^ 3) := by rw [hr]
-            _ = algebraMap S L x ^ 3 := by rw [map_pow]
-      · intro r
-        refine ⟨algebraMap R K r, ?_⟩
-        calc
-          hq (algebraMap R K r) = algebraMap S L (f r) := by
-            simpa [K, L, hq, residueFieldMap] using
-              (Ideal.ResidueField.map_algebraMap
-                (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
-          _ = algebraMap S L (algebraMap R S r) := by
-            simp [RingHom.algebraMap_toAlgebra]
-      · intro x y hx hy hxp hyp
-        rcases hxp with ⟨a, ha⟩
-        rcases hyp with ⟨b, hb⟩
-        refine ⟨a + b, ?_⟩
-        calc
-          hq (a + b) = hq a + hq b := map_add hq a b
-          _ = algebraMap S L x + algebraMap S L y := by rw [ha, hb]
-          _ = algebraMap S L (x + y) := (map_add (algebraMap S L) x y).symm
-      · intro x y hx hy hxp hyp
-        rcases hxp with ⟨a, ha⟩
-        rcases hyp with ⟨b, hb⟩
-        refine ⟨a * b, ?_⟩
-        calc
-          hq (a * b) = hq a * hq b := map_mul hq a b
-          _ = algebraMap S L x * algebraMap S L y := by rw [ha, hb]
-          _ = algebraMap S L (x * y) := (map_mul (algebraMap S L) x y).symm
-    have hz : Function.Surjective hq := by
-      intro z
-      obtain ⟨aa, bb, hbb, hz⟩ := IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
-      obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective aa
-      obtain ⟨w, hw⟩ := Ideal.Quotient.mk_surjective bb
-      obtain ⟨r, hr⟩ := hS y
-      obtain ⟨s, hs⟩ := hS w
-      refine ⟨r / s, ?_⟩
-      rw [map_div₀, hr, hs]
-      simpa [K, L, Ideal.algebraMap_quotient_residueField_mk, ← hy, ← hw] using hz
-    simpa [K, L, hq] using hz
+  have hres_surj := residueFieldMap_surjective_of_twoThreeGenerated f hgen
   have hres : residueFieldMapsBijective f := by
     intro q
     refine ⟨RingHom.injective _, hres_surj q⟩

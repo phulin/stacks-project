@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit17.Spectrum
 import Formalization.Books.Algebra.Unit50.ValuationRings
 import Formalization.Books.Algebra.Unit112.HomomorphismsAndDimension
@@ -16,7 +17,9 @@ import Mathlib.RingTheory.RingHom.QuasiFinite
 The relative dimension at a point is the topological Krull dimension of the
 canonical point of the canonical tensor-product fibre.  Polynomial algebras
 use `MvPolynomial (Fin n)`, and quasi-finiteness uses Mathlib's canonical
-`RingHom.QuasiFinite` and `RingHom.QuasiFiniteAt` predicates.
+`RingHom.QuasiFinite` and `RingHom.QuasiFiniteAt` predicates.  The
+finite-type component of the source's quasi-finite maps is recorded
+explicitly where the polynomial cover is produced.
 -/
 
 namespace Formalization.Books.Algebra.Unit125
@@ -96,7 +99,8 @@ theorem quasiFinite_over_polynomial_algebra
     letI : Algebra R S := f.toAlgebra
     ∃ g : S, g ∉ q.asIdeal ∧
       ∃ φ : MvPolynomial (Fin n) R →ₐ[R] Localization.Away g,
-        RingHom.QuasiFinite φ.toRingHom := by
+        RingHom.FiniteType φ.toRingHom ∧
+          RingHom.QuasiFinite φ.toRingHom := by
   sorry
 
 /-- The refined polynomial cover whose point contracts to the base prime and
@@ -117,9 +121,10 @@ theorem refined_quasiFinite_over_polynomial_algebra
               let α := localizedBaseMap f a g hdiv
               letI : Algebra (Localization.Away a) (Localization.Away g) :=
                 α.toAlgebra
-              ∃ φ : MvPolynomial (Fin n) (Localization.Away a) →ₐ[
+                ∃ φ : MvPolynomial (Fin n) (Localization.Away a) →ₐ[
                   Localization.Away a] Localization.Away g,
-                RingHom.QuasiFinite φ.toRingHom ∧
+                RingHom.FiniteType φ.toRingHom ∧
+                  RingHom.QuasiFinite φ.toRingHom ∧
                   Ideal.comap φ.toRingHom
                       (localizedPrimeAway q g hg).asIdeal =
                     (p.asIdeal.map (algebraMap R (Localization.Away a))).map

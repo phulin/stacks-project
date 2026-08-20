@@ -1,6 +1,8 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
+import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.LinearAlgebra.Matrix.Adjugate
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.Nilpotent.Basic
 
 /-!
 # Commutative Algebra, Chapter 15: Miscellany
@@ -489,5 +491,39 @@ theorem fin_free_module_rank_unique
     {R : Type*} [CommRing R] [Nontrivial R] {n m : ℕ}
     (e : (Fin n → R) ≃ₗ[R] (Fin m → R)) : n = m := by
   exact eq_of_fin_equiv R e
+
+/- Every polynomial with zero constant term becomes nilpotent after evaluating
+   all variables at nilpotent elements.  The finite support of a multivariate
+   polynomial is the reason this remains valid for an arbitrary variable type. -/
+theorem mvPolynomial_eval₂Hom_isNilpotent_of_constantCoeff_eq_zero
+    {k S ι : Type*} [CommSemiring k] [CommSemiring S]
+    (f : k →+* S) (g : ι → S) (p : MvPolynomial ι k)
+    (hp : p.coeff 0 = 0) (hg : ∀ i, IsNilpotent (g i)) :
+    IsNilpotent (MvPolynomial.eval₂Hom f g p) := by
+  classical
+  rw [p.as_sum, map_sum]
+  apply isNilpotent_sum
+  intro d hd
+  have hd0 : d ≠ 0 := by
+    intro hzero
+    subst d
+    exact (Finsupp.mem_support_iff.mp hd) hp
+  obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hd0
+  rw [MvPolynomial.eval₂Hom_monomial]
+  have hprod : IsNilpotent (d.prod (fun i e => g i ^ e)) := by
+    obtain ⟨n, hn⟩ := hg i
+    have hpow : IsNilpotent (g i ^ d i) := by
+      refine ⟨n, ?_⟩
+      calc
+        (g i ^ d i) ^ n = g i ^ (d i * n) := by rw [pow_mul]
+        _ = g i ^ (n * d i) := by rw [Nat.mul_comm]
+        _ = (g i ^ n) ^ d i := by rw [pow_mul]
+        _ = 0 := by rw [hn, zero_pow (Finsupp.mem_support_iff.mp hi)]
+    have hmul : IsNilpotent
+        ((g i ^ d i) * (d.erase i).prod (fun i e => g i ^ e)) :=
+      (Commute.all _ _).isNilpotent_mul_right hpow
+    rw [Finsupp.mul_prod_erase d i (fun i e => g i ^ e) hi] at hmul
+    exact hmul
+  exact (Commute.all _ _).isNilpotent_mul_left hprod
 
 end Formalization.Books.Algebra.Unit15
